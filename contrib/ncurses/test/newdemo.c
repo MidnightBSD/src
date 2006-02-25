@@ -2,7 +2,7 @@
  *  newdemo.c	-	A demo program using PDCurses. The program illustrate
  *  	 		the use of colours for text output.
  *
- * $Id: newdemo.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: newdemo.c,v 1.1.1.2 2006-02-25 02:33:43 laffer1 Exp $
  */
 
 #include <time.h>

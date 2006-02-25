@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_vnops.c,v 1.61 2005/04/13 10:59:08 jeff Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_vnops.c,v 1.61.2.1 2006/02/20 00:53:13 yar Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -214,7 +214,7 @@ smbfs_open(ap)
 	}
 	if (error == 0) {
 		np->n_flag |= NOPEN;
-		vnode_create_vobject(ap->a_vp, vattr.va_size, ap->a_td);
+		vnode_create_vobject_off(ap->a_vp, vattr.va_size, ap->a_td);
 	}
 	smbfs_attr_cacheremove(vp);
 	return error;

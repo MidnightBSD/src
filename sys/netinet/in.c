@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.c	8.4 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/netinet/in.c,v 1.85.2.5 2005/11/04 18:22:59 glebius Exp $
+ * $FreeBSD: src/sys/netinet/in.c,v 1.85.2.6 2006/01/31 16:11:37 andre Exp $
  */
 
 #include "opt_carp.h"
@@ -479,7 +479,8 @@ in_control(so, cmd, data, ifp, td)
 	s = splnet();
 	TAILQ_REMOVE(&ifp->if_addrhead, &ia->ia_ifa, ifa_link);
 	TAILQ_REMOVE(&in_ifaddrhead, ia, ia_link);
-	LIST_REMOVE(ia, ia_hash);
+	if (ia->ia_addr.sin_family == AF_INET)
+		LIST_REMOVE(ia, ia_hash);
 	IFAFREE(&ia->ia_ifa);
 	splx(s);
 

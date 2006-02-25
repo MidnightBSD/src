@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.types.h,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/sh.types.h,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
 /* sh.types.h: Do the necessary typedefs for each system.
  *             Up till now I avoided making this into a separate file
  *	       But I just wanted to eliminate the whole mess from sh.h

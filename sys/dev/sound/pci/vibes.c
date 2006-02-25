@@ -36,7 +36,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/vibes.c,v 1.19 2005/03/01 08:58:05 imp Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/vibes.c,v 1.19.2.1 2006/01/24 18:54:22 joel Exp $");
 
 /* ------------------------------------------------------------------------- */
 /* Constants */
@@ -712,13 +712,10 @@ sv_probe(device_t dev)
 
 static int
 sv_attach(device_t dev) {
-	struct snddev_info	*d;
 	struct sc_info	*sc;
 	u_int32_t	data;
 	char		status[SND_STATUSLEN];
 	u_long		midi_start, games_start, count, sdmaa, sdmac, ml, mu;
-
-	d = device_get_softc(dev);
 
 	sc = malloc(sizeof(struct sc_info), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (sc == NULL) {

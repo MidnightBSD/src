@@ -27,7 +27,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_netgraph/snmp_netgraph.c,v 1.5 2005/05/23 11:24:39 harti Exp $
+ * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_netgraph/snmp_netgraph.c,v 1.5.2.1 2006/01/25 13:22:59 harti Exp $
  *
  * Netgraph interface for SNMPd.
  */
@@ -44,7 +44,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <netgraph.h>
-#include "snmpmod.h"
+#include <bsnmp/snmpmod.h>
 #include "snmp_netgraph.h"
 #include "netgraph_tree.h"
 #include "netgraph_oid.h"

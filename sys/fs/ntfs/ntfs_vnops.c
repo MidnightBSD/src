@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.55 2005/03/28 14:26:01 jeff Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.55.2.1 2006/02/20 00:53:13 yar Exp $
  *
  */
 
@@ -441,7 +441,7 @@ ntfs_open(ap)
 	printf("ntfs_open: %d\n",ip->i_number);
 #endif
 
-	vnode_create_vobject(ap->a_vp, VTOF(ap->a_vp)->f_size, ap->a_td);
+	vnode_create_vobject_off(ap->a_vp, VTOF(ap->a_vp)->f_size, ap->a_td);
 
 	/*
 	 * Files marked append-only must be opened for appending.

@@ -57,7 +57,7 @@ static char sccsid[] = "@(#)finger.c	8.5 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/finger/finger.c,v 1.35 2005/05/21 09:55:05 ru Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/finger/finger.c,v 1.35.2.1 2006/01/22 11:56:15 dds Exp $");
 
 /*
  * Finger prints out information about users.  It is not portable since
@@ -95,6 +95,7 @@ int entries, gflag, kflag, lflag, mflag, pplan, sflag, oflag, Tflag;
 sa_family_t family = PF_UNSPEC;
 int d_first = -1;
 char tbuf[1024];
+int invoker_root = 0;
 
 static void loginlist(void);
 static int option(int, char **);
@@ -168,6 +169,7 @@ main(int argc, char **argv)
 	static char myname[] = "finger";
 
 	if (getuid() == 0 || geteuid() == 0) {
+		invoker_root = 1;
 		if ((pw = getpwnam(UNPRIV_NAME)) && pw->pw_uid > 0) {
 			 setgid(pw->pw_gid);
 			 setuid(pw->pw_uid);

@@ -10,7 +10,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: use_client_ptr.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: use_client_ptr.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 divert(-1)
 
 # if defined, check_relay will use {client_ptr} instead of whatever

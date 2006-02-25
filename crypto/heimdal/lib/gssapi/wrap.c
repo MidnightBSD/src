@@ -33,7 +33,7 @@
 
 #include "gssapi_locl.h"
 
-RCSID("$Id: wrap.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: wrap.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 OM_uint32
 gss_krb5_get_localkey(const gss_ctx_id_t context_handle,

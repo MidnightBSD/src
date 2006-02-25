@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vfsops.c,v 1.290.2.4 2005/10/29 06:42:25 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vfsops.c,v 1.290.2.6 2006/01/14 01:18:03 tegge Exp $");
 
 #include "opt_mac.h"
 #include "opt_quota.h"
@@ -116,7 +116,10 @@ static struct buf_ops ffs_ops = {
 	.bop_sync =	bufsync,
 };
 
-static const char *ffs_opts[] = { "from", "export", NULL };
+static const char *ffs_opts[] = { "acls", "async", "atime", "clusterr",
+    "clusterw", "exec", "export", "force", "from", "multilabel", 
+    "snapshot", "suid", "suiddir", "symfollow", "sync",
+    "update", "union", NULL };
 
 static int
 ffs_mount(struct mount *mp, struct thread *td)
@@ -400,7 +403,7 @@ ffs_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
 static int
 ffs_reload(struct mount *mp, struct thread *td)
 {
-	struct vnode *vp, *nvp, *devvp;
+	struct vnode *vp, *mvp, *devvp;
 	struct inode *ip;
 	void *space;
 	struct buf *bp;
@@ -491,7 +494,7 @@ ffs_reload(struct mount *mp, struct thread *td)
 
 loop:
 	MNT_ILOCK(mp);
-	MNT_VNODE_FOREACH(vp, mp, nvp) {
+	MNT_VNODE_FOREACH(vp, mp, mvp) {
 		VI_LOCK(vp);
 		if (vp->v_iflag & VI_DOOMED) {
 			VI_UNLOCK(vp);
@@ -502,6 +505,7 @@ loop:
 		 * Step 4: invalidate all cached file data.
 		 */
 		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td)) {
+			MNT_VNODE_FOREACH_ABORT(mp, mvp);
 			goto loop;
 		}
 		if (vinvalbuf(vp, 0, td, 0, 0))
@@ -516,6 +520,7 @@ loop:
 		if (error) {
 			VOP_UNLOCK(vp, 0, td);
 			vrele(vp);
+			MNT_VNODE_FOREACH_ABORT(mp, mvp);
 			return (error);
 		}
 		ffs_load_inode(bp, ip, fs, ip->i_number);
@@ -1061,7 +1066,7 @@ ffs_sync(mp, waitfor, td)
 	int waitfor;
 	struct thread *td;
 {
-	struct vnode *nvp, *vp, *devvp;
+	struct vnode *mvp, *vp, *devvp;
 	struct inode *ip;
 	struct ufsmount *ump = VFSTOUFS(mp);
 	struct fs *fs;
@@ -1085,7 +1090,7 @@ ffs_sync(mp, waitfor, td)
 	lockreq |= LK_INTERLOCK | LK_SLEEPFAIL;
 	MNT_ILOCK(mp);
 loop:
-	MNT_VNODE_FOREACH(vp, mp, nvp) {
+	MNT_VNODE_FOREACH(vp, mp, mvp) {
 		/*
 		 * Depend on the mntvnode_slock to keep things stable enough
 		 * for a quick test.  Since there might be hundreds of
@@ -1107,8 +1112,10 @@ loop:
 		MNT_IUNLOCK(mp);
 		if ((error = vget(vp, lockreq, td)) != 0) {
 			MNT_ILOCK(mp);
-			if (error == ENOENT || error == ENOLCK)
+			if (error == ENOENT || error == ENOLCK) {
+				MNT_VNODE_FOREACH_ABORT_ILOCKED(mp, mvp);
 				goto loop;
+			}
 			continue;
 		}
 		if ((error = ffs_syncvnode(vp, waitfor)) != 0)

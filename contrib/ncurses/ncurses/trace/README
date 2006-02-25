@@ -1,4 +1,4 @@
--- $Id: README,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $
+-- $Id: README,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $
 
 The files in this directory (trace) support both the terminfo and ncurses
 libraries.  Most of the functions are linked in only when the libraries

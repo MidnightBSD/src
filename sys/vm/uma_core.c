@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/uma_core.c,v 1.119.2.14 2005/11/13 08:44:24 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/uma_core.c,v 1.119.2.15 2006/02/14 03:37:58 rwatson Exp $");
 
 /* I should really use ktr.. */
 /*
@@ -3015,6 +3015,8 @@ restart:
 			for (i = 0; i < (mp_maxid + 1); i++) {
 				bzero(&ups, sizeof(ups));
 				if (kz->uk_flags & UMA_ZFLAG_INTERNAL)
+					goto skip;
+				if (CPU_ABSENT(i))
 					goto skip;
 				cache = &z->uz_cpu[i];
 				if (cache->uc_allocbucket != NULL)

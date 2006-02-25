@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static char rcsid[] = "$Id: res_query.c,v 1.1.1.1 2006-02-25 02:26:49 laffer1 Exp $";
+static char rcsid[] = "$Id: res_query.c,v 1.1.1.2 2006-02-25 02:34:56 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/lib/libc/net/res_query.c,v 1.30 2005/04/15 14:42:29 ume Exp $");

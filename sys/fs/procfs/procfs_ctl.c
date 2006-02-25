@@ -33,7 +33,7 @@
  *	@(#)procfs_ctl.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_ctl.c,v 1.1.1.1 2006-02-25 02:28:14 laffer1 Exp $
+ *	$Id: procfs_ctl.c,v 1.1.1.2 2006-02-25 02:37:05 laffer1 Exp $
  * $FreeBSD: src/sys/fs/procfs/procfs_ctl.c,v 1.53 2005/01/06 18:10:40 imp Exp $
  */
 

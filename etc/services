@@ -16,7 +16,7 @@
 # Kerberos services are for Kerberos v4, and are unofficial.  Sites running
 # v5 should uncomment v5 entries and comment v4 entries.
 #
-# $FreeBSD: src/etc/services,v 1.102 2004/08/16 11:52:22 cperciva Exp $
+# $FreeBSD: src/etc/services,v 1.102.8.1 2006/01/29 11:32:48 maxim Exp $
 #	From: @(#)services	5.8 (Berkeley) 5/9/91
 #
 # WELL KNOWN PORT NUMBERS
@@ -1917,6 +1917,8 @@ eppc		3031/tcp   #Remote AppleEvents/PPC Toolbox
 eppc		3031/udp   #Remote AppleEvents/PPC Toolbox
 NSWS		3049/tcp
 NSWS		3049/udp
+gds_db		3050/tcp   #InterBase Database Remote Protocol
+gds_db		3050/udp   #InterBase Database Remote Protocol
 sj3		3086/tcp   #SJ3 (kanji input)
 vmodem		3141/tcp
 vmodem		3141/udp

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/mld6_var.h,v 1.6 2005/01/07 02:30:35 imp Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/mld6_var.h,v 1.6.2.1 2005/12/25 14:03:38 suz Exp $	*/
 /*	$KAME: mld6_var.h,v 1.4 2000/03/25 07:23:54 sumikawa Exp $	*/
 
 /*-
@@ -42,6 +42,7 @@
  */
 #define MLD_OTHERLISTENER			0
 #define MLD_IREPORTEDLAST			1
+#define	MLD_REPORTPENDING			2 /* implementation specific */
 
 void	mld6_init(void);
 void	mld6_input(struct mbuf *, int);

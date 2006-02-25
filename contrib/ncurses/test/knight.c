@@ -6,7 +6,7 @@
  * Eric S. Raymond <esr@snark.thyrsus.com> July 22 1995.  Mouse support
  * added September 20th 1995.
  *
- * $Id: knight.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: knight.c,v 1.1.1.2 2006-02-25 02:33:43 laffer1 Exp $
  */
 
 #include <ctype.h>

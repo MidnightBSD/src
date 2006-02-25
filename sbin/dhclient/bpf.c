@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/bpf.c,v 1.2.2.2 2005/09/10 17:01:16 brooks Exp $");
+__FBSDID("$FreeBSD: src/sbin/dhclient/bpf.c,v 1.2.2.3 2005/12/20 21:11:16 brooks Exp $");
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
@@ -223,7 +223,6 @@ if_register_receive(struct interface_info *info)
 	if (ioctl(info->rfdesc, BIOCSETF, &p) < 0)
 		error("Can't install packet filter program: %m");
 
-#ifdef BIOCSETWF
 	/* Set up the bpf write filter program structure. */
 	p.bf_len = dhcp_bpf_wfilter_len;
 	p.bf_insns = dhcp_bpf_wfilter;
@@ -236,7 +235,6 @@ if_register_receive(struct interface_info *info)
 
 	if (ioctl(info->rfdesc, BIOCLOCK, NULL) < 0)
 		error("Cannot lock bpf");
-#endif
 }
 
 ssize_t

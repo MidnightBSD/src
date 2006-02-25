@@ -34,7 +34,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/hme.4,v 1.4.8.1 2005/09/24 01:59:37 keramida Exp $
+.\" $FreeBSD: src/share/man/man4/hme.4,v 1.4.8.2 2006/02/02 07:50:00 trhodes Exp $
 .\"
 .Dd July 16, 2005
 .Dt HME 4
@@ -43,18 +43,16 @@
 .Nm hme
 .Nd "Sun Microelectronics STP2002-STQ Ethernet interfaces device driver"
 .Sh SYNOPSIS
-To compile support for the
-.Nm
-driver into your kernel, place the following lines in your
+To compile this driver into the kernel,
+place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device miibus"
 .Cd "device hme"
 .Ed
 .Pp
-Alternatively, to load the
-.Nm
-driver at boot time, place the following line in
+Alternatively, to load the driver as a
+module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_hme_load="YES"

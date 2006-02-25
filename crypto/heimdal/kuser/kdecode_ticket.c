@@ -33,7 +33,7 @@
 
 #include "kuser_locl.h"
 
-RCSID("$Id: kdecode_ticket.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: kdecode_ticket.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
 
 static char *etype_str;
 static int version_flag;

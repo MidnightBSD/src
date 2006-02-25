@@ -27,7 +27,7 @@
  *	main.c - isdndecode main program file
  *	-------------------------------------
  *
- *	$Id: main.c,v 1.1.1.1 2006-02-25 02:29:42 laffer1 Exp $
+ *	$Id: main.c,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $
  *
  * $FreeBSD: src/usr.sbin/i4b/isdndecode/main.c,v 1.10 2003/06/07 18:43:09 imp Exp $
  *

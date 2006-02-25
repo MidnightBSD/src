@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.78.2.1 2005/09/30 06:26:42 delphij Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.78.2.2 2006/02/20 00:53:13 yar Exp $
  */
 
 
@@ -621,7 +621,7 @@ ntfs_fhtovp(
 	/* XXX as unlink/rmdir/mkdir/creat are not currently possible
 	 * with NTFS, we don't need to check anything else for now */
 	*vpp = nvp;
-	vnode_create_vobject(nvp, VTOF(nvp)->f_size, curthread);
+	vnode_create_vobject_off(nvp, VTOF(nvp)->f_size, curthread);
 	return (0);
 }
 

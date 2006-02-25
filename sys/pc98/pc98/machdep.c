@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pc98/pc98/machdep.c,v 1.363.2.2 2005/11/06 04:58:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/pc98/pc98/machdep.c,v 1.363.2.3 2006/02/15 13:53:22 nyan Exp $");
 
 #include "opt_atalk.h"
 #include "opt_compat.h"
@@ -2401,9 +2401,11 @@ get_mcontext(struct thread *td, mcontext_t *mcp, int flags)
 	mcp->mc_esi = tp->tf_esi;
 	mcp->mc_ebp = tp->tf_ebp;
 	mcp->mc_isp = tp->tf_isp;
+	mcp->mc_eflags = tp->tf_eflags;
 	if (flags & GET_MC_CLEAR_RET) {
 		mcp->mc_eax = 0;
 		mcp->mc_edx = 0;
+		mcp->mc_eflags &= ~PSL_C;
 	} else {
 		mcp->mc_eax = tp->tf_eax;
 		mcp->mc_edx = tp->tf_edx;
@@ -2412,7 +2414,6 @@ get_mcontext(struct thread *td, mcontext_t *mcp, int flags)
 	mcp->mc_ecx = tp->tf_ecx;
 	mcp->mc_eip = tp->tf_eip;
 	mcp->mc_cs = tp->tf_cs;
-	mcp->mc_eflags = tp->tf_eflags;
 	mcp->mc_esp = tp->tf_esp;
 	mcp->mc_ss = tp->tf_ss;
 	mcp->mc_len = sizeof(*mcp);

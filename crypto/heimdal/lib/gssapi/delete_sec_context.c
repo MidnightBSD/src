@@ -33,7 +33,7 @@
 
 #include "gssapi_locl.h"
 
-RCSID("$Id: delete_sec_context.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: delete_sec_context.c,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $");
 
 OM_uint32 gss_delete_sec_context
            (OM_uint32 * minor_status,

@@ -25,10 +25,10 @@ static const char copyright[] =
 The Regents of the University of California.  All rights reserved.\n";
 #if 0
 static const char rcsid[] =
-    "@(#)$Id: traceroute.c,v 1.1.1.1 2006-02-25 02:26:27 laffer1 Exp $ (LBL)";
+    "@(#)$Id: traceroute.c,v 1.1.1.2 2006-02-25 02:34:12 laffer1 Exp $ (LBL)";
 #endif
 static const char rcsid[] =
-    "$FreeBSD: src/contrib/traceroute/traceroute.c,v 1.26.8.1 2005/08/29 17:57:36 andre Exp $";
+    "$FreeBSD: src/contrib/traceroute/traceroute.c,v 1.26.8.2 2006/01/11 12:59:39 pav Exp $";
 #endif
 
 /*
@@ -946,7 +946,7 @@ main(int argc, char **argv)
 					continue;
 				if (!gotlastaddr ||
 				    from->sin_addr.s_addr != lastaddr) {
-					if (probe > 0) printf("\n   ");
+					if (gotlastaddr) printf("\n   ");
 					print(packet, cc, from);
 					lastaddr = from->sin_addr.s_addr;
 					++gotlastaddr;

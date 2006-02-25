@@ -32,7 +32,7 @@
  */
 
 #include "ftp_locl.h"
-RCSID("$Id: domacro.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: domacro.c,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $");
 
 void
 domacro(int argc, char **argv)

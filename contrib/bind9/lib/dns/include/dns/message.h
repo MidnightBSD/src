@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: message.h,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $ */
+/* $Id: message.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 #ifndef DNS_MESSAGE_H
 #define DNS_MESSAGE_H 1

@@ -52,7 +52,7 @@
  * and PIM-SMv2 and PIM-DM support, advanced API support,
  * bandwidth metering and signaling
  *
- * $FreeBSD: src/sys/netinet/ip_mroute.c,v 1.111.2.1 2005/11/16 10:31:22 ru Exp $
+ * $FreeBSD: src/sys/netinet/ip_mroute.c,v 1.111.2.2 2006/01/31 16:13:22 andre Exp $
  */
 
 #include "opt_mac.h"
@@ -1756,7 +1756,7 @@ ip_mdq(struct mbuf *m, struct ifnet *ifp, struct mfc *rt, vifi_t xmt_vif)
 
 	    GET_TIME(now);
 
-	    TV_DELTA(rt->mfc_last_assert, now, delta);
+	    TV_DELTA(now, rt->mfc_last_assert, delta);
 
 	    if (delta > ASSERT_MSG_TIME) {
 		struct sockaddr_in k_igmpsrc = { sizeof k_igmpsrc, AF_INET };

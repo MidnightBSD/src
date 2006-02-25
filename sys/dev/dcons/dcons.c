@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons.c,v 1.1.1.1 2006-02-25 02:27:59 laffer1 Exp $
+ * $Id: dcons.c,v 1.1.1.2 2006-02-25 02:36:22 laffer1 Exp $
  * $FreeBSD: src/sys/dev/dcons/dcons.c,v 1.20 2005/01/06 01:42:34 imp Exp $
  */
 

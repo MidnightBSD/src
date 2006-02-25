@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_subr.c,v 1.38 2005/05/06 00:15:57 robert Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_subr.c,v 1.38.2.1 2006/01/08 20:28:48 maxim Exp $
  */
 
 #include <sys/param.h>
@@ -1092,7 +1092,7 @@ ntfs_isnamepermitted(
 
 	switch (iep->ie_fnametype) {
 	case 2:
-		ddprintf(("ntfs_isnamepermitted: skiped DOS name\n"));
+		ddprintf(("ntfs_isnamepermitted: skipped DOS name\n"));
 		return 0;
 	case 0: case 1: case 3:
 		return 1;

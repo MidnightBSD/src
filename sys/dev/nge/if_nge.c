@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nge/if_nge.c,v 1.75.2.4 2005/11/05 00:53:41 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nge/if_nge.c,v 1.75.2.6 2006/01/13 19:21:44 glebius Exp $");
 
 /*
  * National Semiconductor DP83820/DP83821 gigabit ethernet driver
@@ -1228,8 +1228,10 @@ nge_rxeof(sc)
 		 * to vlan_input() instead of ether_input().
 		 */
 		if (extsts & NGE_RXEXTSTS_VLANPKT) {
-			VLAN_INPUT_TAG(ifp, m,
-			    ntohs(extsts & NGE_RXEXTSTS_VTCI), continue);
+			VLAN_INPUT_TAG_NEW(ifp, m,
+			    ntohs(extsts & NGE_RXEXTSTS_VTCI));
+			if (m == NULL)
+				continue;
 		}
 		NGE_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);

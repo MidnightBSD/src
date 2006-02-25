@@ -37,7 +37,7 @@
 #include <curses.priv.h>
 #include <tic.h>
 
-MODULE_ID("$Id: home_terminfo.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: home_terminfo.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 #define my_length (strlen(home) + sizeof(PRIVATE_INFO))
 

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/ip_fw.h,v 1.100.2.1 2005/08/20 08:36:57 bz Exp $
+ * $FreeBSD: src/sys/netinet/ip_fw.h,v 1.100.2.3 2006/02/17 16:46:47 ru Exp $
  */
 
 #ifndef _IPFW2_H
@@ -474,6 +474,8 @@ typedef struct	_ipfw_table {
 	ipfw_table_entry ent[0];	/* entries			*/
 } ipfw_table;
 
+#define IP_FW_TABLEARG	65535
+
 /*
  * Main firewall chains definitions and global var's definitions.
  */
@@ -520,8 +522,6 @@ struct ip_fw_args {
 	struct sockaddr_in *next_hop;	/* forward address		*/
 	struct ip_fw	*rule;		/* matching rule		*/
 	struct ether_header *eh;	/* for bridged packets		*/
-
-	int flags;			/* for dummynet			*/
 
 	struct ipfw_flow_id f_id;	/* grabbed from IP header	*/
 	u_int32_t	cookie;		/* a cookie depending on rule action */

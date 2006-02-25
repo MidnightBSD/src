@@ -89,7 +89,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sys_pipe.c,v 1.184 2005/07/01 16:28:30 ssouhlal Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/sys_pipe.c,v 1.184.2.2 2006/01/31 15:44:51 glebius Exp $");
 
 #include "opt_mac.h"
 
@@ -357,10 +357,11 @@ pipe(td, uap)
 	    NULL);
 
 	/* Only the forward direction pipe is backed by default */
-	if (pipe_create(rpipe, 1) || pipe_create(wpipe, 0)) {
+	if ((error = pipe_create(rpipe, 1)) != 0 ||
+	    (error = pipe_create(wpipe, 0)) != 0) {
 		pipeclose(rpipe);
 		pipeclose(wpipe);
-		return (ENFILE);
+		return (error);
 	}
 
 	rpipe->pipe_state |= PIPE_DIRECTOK;
@@ -1176,6 +1177,8 @@ pipe_write(fp, uio, active_cred, flags, td)
 					("Pipe buffer overflow"));
 			}
 			pipeunlock(wpipe);
+			if (error != 0)
+				break;
 		} else {
 			/*
 			 * If the "read-side" has been blocked, wake it up now.

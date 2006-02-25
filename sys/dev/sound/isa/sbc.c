@@ -30,7 +30,7 @@
 
 #include <isa/isavar.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/sbc.c,v 1.44 2005/01/06 01:43:17 imp Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/sbc.c,v 1.44.2.1 2005/12/30 19:55:53 netchild Exp $");
 
 #define IO_MAX	3
 #define IRQ_MAX	1
@@ -259,6 +259,7 @@ static struct isa_pnp_id sbc_ids[] = {
 
 	{0x81167316, "ESS ES1681"},			/* ESS1681 */
 	{0x02017316, "ESS ES1688"},			/* ESS1688 */
+	{0x68097316, "ESS ES1688"},			/* ESS1688 */
 	{0x68187316, "ESS ES1868"},			/* ESS1868 */
 	{0x03007316, "ESS ES1869"},			/* ESS1869 */
 	{0x69187316, "ESS ES1869"},			/* ESS1869 */

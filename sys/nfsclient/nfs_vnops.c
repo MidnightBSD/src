@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vnops.c,v 1.258.2.1 2005/11/25 13:27:22 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vnops.c,v 1.258.2.2 2006/02/20 00:53:14 yar Exp $");
 
 /*
  * vnode op calls for Sun NFS version 2 and 3
@@ -466,7 +466,7 @@ nfs_open(struct vop_open_args *ap)
 		np->n_directio_opens++;
 	}
 	np->ra_expect_lbn = 0;
-	vnode_create_vobject(vp, vattr.va_size, ap->a_td);
+	vnode_create_vobject_off(vp, vattr.va_size, ap->a_td);
 	return (0);
 }
 

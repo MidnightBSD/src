@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vnops.c,v 1.160 2005/02/27 21:16:26 phk Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vnops.c,v 1.160.2.1 2006/02/20 00:53:12 yar Exp $ */
 /*	$NetBSD: msdosfs_vnops.c,v 1.68 1998/02/10 14:10:04 mrg Exp $	*/
 
 /*-
@@ -221,7 +221,7 @@ msdosfs_open(ap)
 	} */ *ap;
 {
 	struct denode *dep = VTODE(ap->a_vp);
-	vnode_create_vobject(ap->a_vp, dep->de_FileSize, ap->a_td);
+	vnode_create_vobject_off(ap->a_vp, dep->de_FileSize, ap->a_td);
 	return 0;
 }
 

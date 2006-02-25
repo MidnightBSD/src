@@ -34,7 +34,7 @@
 #include "iprop.h"
 #include <rtbl.h>
 
-RCSID("$Id: ipropd_master.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: ipropd_master.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 static krb5_log_facility *log_facility;
 

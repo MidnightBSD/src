@@ -2,7 +2,8 @@
  * PCI specific probe and attach routines for Qlogic ISP SCSI adapters.
  * FreeBSD Version.
  *
- * Copyright (c) 1997, 1998, 1999, 2000, 2001 by Matthew Jacob
+ * Copyright (c) 1997-2006 by Matthew Jacob
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/isp/isp_sbus.c,v 1.15 2004/08/12 17:41:29 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/isp/isp_sbus.c,v 1.15.8.2 2006/02/12 22:57:04 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -135,7 +136,7 @@ static int
 isp_sbus_attach(device_t dev)
 {
 	struct resource *regs;
-	int tval, iqd, isp_debug, role, rid, ispburst, freq;
+	int tval, iqd, isp_debug, role, rid, ispburst;
 	struct isp_sbussoftc *sbs;
 	struct ispsoftc *isp = NULL;
 	int locksetup = 0;
@@ -202,16 +203,12 @@ isp_sbus_attach(device_t dev)
 	isp->isp_role = role;
 	isp->isp_dev = dev;
 
-	freq = sbus_get_clockfreq(dev);
-	if (freq) {
-		/*
-		 * Convert from HZ to MHz, rounding up.
-		 */
-		freq = (freq + 500000)/1000000;
-	} else {
-		freq = 25;
-	}
-	sbs->sbus_mdvec.dv_clock = freq << 8;
+	/*
+	 * Get the clock frequency and convert it from HZ to MHz,
+	 * rounding up. This defaults to 25MHz if there isn't a
+	 * device specific one in the OFW device tree.
+	 */
+	sbs->sbus_mdvec.dv_clock = (sbus_get_clockfreq(dev) + 500000)/1000000;
 
 	/*
 	 * Now figure out what the proper burst sizes, etc., to use.

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/load_elf.c,v 1.32 2004/08/28 23:03:05 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/load_elf.c,v 1.32.2.1 2005/12/30 22:13:58 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -744,7 +744,7 @@ __elfN(reloc_ptr)(struct preloaded_file *mp, elf_file_t ef,
 }
 
 static Elf_Addr
-__elfN(symaddr)(struct elf_file *ef, Elf_Word symidx)
+__elfN(symaddr)(struct elf_file *ef, Elf_Size symidx)
 {
 
 	/* Symbol lookup by index not required here. */

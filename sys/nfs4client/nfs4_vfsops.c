@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.20 2005/03/24 07:37:22 jeff Exp $ */
-/* $Id: nfs4_vfsops.c,v 1.1.1.1 2006-02-25 02:28:32 laffer1 Exp $ */
+/* $FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.20.2.3 2006/01/27 18:22:53 rees Exp $ */
+/* $Id: nfs4_vfsops.c,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.20 2005/03/24 07:37:22 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.20.2.3 2006/01/27 18:22:53 rees Exp $");
 
 #include "opt_bootp.h"
 #include "opt_nfsroot.h"
@@ -652,7 +652,7 @@ mountnfs(struct nfs_args *argp, struct mount *mp, struct sockaddr *nam,
 	if (mrep != NULL)
 		m_freem(mrep);
 bad:
-	nfs_disconnect(nmp);
+	nfs4_disconnect(nmp);
 	uma_zfree(nfsmount_zone, nmp);
 	FREE(nam, M_SONAME);
 
@@ -692,7 +692,7 @@ nfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 	/*
 	 * We are now committed to the unmount.
 	 */
-	nfs_disconnect(nmp);
+	nfs4_disconnect(nmp);
 	FREE(nmp->nm_nam, M_SONAME);
 
 	/* XXX there's a race condition here for SMP */
@@ -733,7 +733,7 @@ nfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
 static int
 nfs_sync(struct mount *mp, int waitfor, struct thread *td)
 {
-	struct vnode *vp, *nvp;
+	struct vnode *vp, *mvp;
 	int error, allerror = 0;
 
 	/*
@@ -741,7 +741,7 @@ nfs_sync(struct mount *mp, int waitfor, struct thread *td)
 	 */
 	MNT_ILOCK(mp);
 loop:
-	MNT_VNODE_FOREACH(vp, mp, nvp) {
+	MNT_VNODE_FOREACH(vp, mp, mvp) {
 		VI_LOCK(vp);
 		MNT_IUNLOCK(mp);
 		if (VOP_ISLOCKED(vp, NULL) ||
@@ -752,6 +752,8 @@ loop:
 			continue;
 		}
 		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td)) {
+			MNT_ILOCK(mp);
+			MNT_VNODE_FOREACH_ABORT_ILOCKED(mp, mvp);
 			goto loop;
 		}
 		error = VOP_FSYNC(vp, waitfor, td);

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	BSDI $Id: exception.S,v 1.1.1.1 2006-02-25 02:28:42 laffer1 Exp $
+ *	BSDI $Id: exception.S,v 1.1.1.2 2006-02-25 02:37:48 laffer1 Exp $
  */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
@@ -54,7 +54,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/exception.S,v 1.70 2005/04/16 15:05:56 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/exception.S,v 1.70.2.1 2006/01/28 04:02:54 kris Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -1841,7 +1841,7 @@ tl0_fp_ieee:
 tl0_fp_other:
 	tl0_gen		T_FP_EXCEPTION_OTHER		! 0x22
 tl0_tag_ovflw:
-	tl0_gen		T_TAG_OFERFLOW			! 0x23
+	tl0_gen		T_TAG_OVERFLOW			! 0x23
 tl0_clean_window:
 	clean_window					! 0x24
 tl0_divide:
@@ -1946,7 +1946,7 @@ tl1_fp_ieee:
 tl1_fp_other:
 	tl1_gen		T_FP_EXCEPTION_OTHER		! 0x222
 tl1_tag_ovflw:
-	tl1_gen		T_TAG_OFERFLOW			! 0x223
+	tl1_gen		T_TAG_OVERFLOW			! 0x223
 tl1_clean_window:
 	clean_window					! 0x224
 tl1_divide:

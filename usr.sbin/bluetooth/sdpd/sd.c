@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sd.c,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
+ * $Id: sd.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bluetooth/sdpd/sd.c,v 1.1 2004/01/20 20:48:26 emax Exp $
  */
 

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000 - 2005 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2000 - 2006 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,8 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -25,27 +23,29 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-raid.h,v 1.34.2.1 2005/09/23 18:06:11 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/ata-raid.h,v 1.34.2.3 2006/02/19 15:18:23 sos Exp $
  */
 
 /* misc defines */
 #define MAX_ARRAYS      16
+#define MAX_VOLUMES     4
 #define MAX_DISKS       16
 #define AR_PROXIMITY    2048    /* how many sectors is "close" */
 
 #define ATA_MAGIC       "FreeBSD ATA driver RAID "
 
 struct ata_raid_subdisk {
-    struct ar_softc     *raid;
-    int                 disk_number;
+    struct ar_softc     *raid[MAX_VOLUMES];
+    int                 disk_number[MAX_VOLUMES];
 };
 
 /*  ATA PseudoRAID Metadata */
 struct ar_softc {
-    int                 lun;            /* logical unit number of this RAID */
-    u_int8_t            name[32];       /* name of array if any */
-    u_int64_t           magic_0;        /* magic for this array */
-    u_int64_t           magic_1;        /* magic for this array */
+    int                 lun;
+    u_int8_t            name[32];
+    int                 volume;
+    u_int64_t           magic_0;
+    u_int64_t           magic_1;
     int                 type;
 #define AR_T_JBOD               0x0001
 #define AR_T_SPAN               0x0002
@@ -68,22 +68,24 @@ struct ar_softc {
 #define AR_F_HPTV3_RAID         0x0008
 #define AR_F_INTEL_RAID         0x0010
 #define AR_F_ITE_RAID           0x0020
-#define AR_F_LSIV2_RAID         0x0040
-#define AR_F_LSIV3_RAID         0x0080
-#define AR_F_NVIDIA_RAID        0x0100
-#define AR_F_PROMISE_RAID       0x0200
-#define AR_F_SII_RAID           0x0400
-#define AR_F_VIA_RAID           0x0800
-#define AR_F_FORMAT_MASK        0x0fff
+#define AR_F_JMICRON_RAID       0x0040
+#define AR_F_LSIV2_RAID         0x0080
+#define AR_F_LSIV3_RAID         0x0100
+#define AR_F_NVIDIA_RAID        0x0200
+#define AR_F_PROMISE_RAID       0x0400
+#define AR_F_SII_RAID           0x0800
+#define AR_F_SIS_RAID           0x1000
+#define AR_F_VIA_RAID           0x2000
+#define AR_F_FORMAT_MASK        0x1fff
 
-    u_int               generation;     /* generation of this array */
+    u_int               generation;
     u_int64_t           total_sectors;
     u_int64_t           offset_sectors; /* offset from start of disk */
     u_int16_t           heads;
     u_int16_t           sectors;
     u_int32_t           cylinders;
     u_int               width;          /* array width in disks */
-    u_int               interleave;     /* interleave in blocks */
+    u_int               interleave;     /* interleave in sectors */
     u_int               total_disks;    /* number of disks in this array */
     struct ar_disk {
 	device_t        dev;
@@ -280,13 +282,17 @@ struct hptv3_raid_conf {
 
 /* Intel MatrixRAID Metadata */
 #define INTEL_LBA(dev) \
-	(((struct ad_softc *)device_get_ivars(dev))->total_secs - 2)
+	(((struct ad_softc *)device_get_ivars(dev))->total_secs - 3)
 
 struct intel_raid_conf {
     u_int8_t            intel_id[24];
 #define INTEL_MAGIC             "Intel Raid ISM Cfg Sig. "
 
     u_int8_t            version[6];
+#define INTEL_VERSION_1100      "1.1.00"
+#define INTEL_VERSION_1201      "1.2.01"
+#define INTEL_VERSION_1202      "1.2.02"
+
     u_int8_t            dummy_0[2];
     u_int32_t           checksum;
     u_int32_t           config_size;
@@ -317,7 +323,7 @@ struct intel_raid_mapping {
     u_int64_t           total_sectors __packed;
     u_int32_t           state;
     u_int32_t           reserved;
-    u_int32_t           filler_1[20];
+    u_int32_t           filler_0[20];
     u_int32_t           offset;
     u_int32_t           disk_sectors;
     u_int32_t           stripe_count;
@@ -331,10 +337,11 @@ struct intel_raid_mapping {
     u_int8_t            type;
 #define INTEL_T_RAID0           0x00
 #define INTEL_T_RAID1           0x01
+#define INTEL_T_RAID5           0x05
 
     u_int8_t            total_disks;
-    u_int8_t            dummy_2[3];
-    u_int32_t           filler_2[7];
+    u_int8_t            magic[3];
+    u_int32_t           filler_1[7];
     u_int32_t           disk_idx[1];
 } __packed;
 
@@ -390,6 +397,50 @@ struct ite_raid_conf {
     u_int32_t           dummy_7[4];
     u_int32_t           filler_20[104];
 } __packed;
+
+
+/* JMicron Technology Corp Metadata */
+#define JMICRON_LBA(dev) \
+	(((struct ad_softc *)device_get_ivars(dev))->total_secs - 1)
+#define	JM_MAX_DISKS		8
+
+struct jmicron_raid_conf {
+    u_int8_t            signature[2];
+#define JMICRON_MAGIC		"JM"
+
+    u_int16_t           version;
+#define JMICRON_VERSION		0x0001
+
+    u_int16_t           checksum;
+    u_int8_t		filler_1[10];
+    u_int32_t           disk_id;
+    u_int32_t           offset;
+    u_int32_t           disk_sectors_high;
+    u_int16_t           disk_sectors_low;
+    u_int8_t		filler_2[2];
+    u_int8_t            name[16];
+    u_int8_t            type;
+#define	JM_T_RAID0		0
+#define	JM_T_RAID1		1
+#define	JM_T_RAID01		2
+#define	JM_T_JBOD		3
+#define	JM_T_RAID5		5
+
+    u_int8_t            stripe_shift;
+    u_int16_t           flags;
+#define	JM_F_READY		0x0001
+#define JM_F_BOOTABLE		0x0002
+#define JM_F_BAD		0x0004
+#define JM_F_ACTIVE		0c0010
+#define JM_F_UNSYNC		0c0020
+#define JM_F_NEWEST		0c0040
+
+    u_int8_t		filler_3[4];
+    u_int32_t           spare[2];
+    u_int32_t           disks[JM_MAX_DISKS];
+    u_int8_t		filler_4[32];
+    u_int8_t		filler_5[384];
+};
 
 
 /* LSILogic V2 MegaRAID Metadata */
@@ -576,7 +627,7 @@ struct nvidia_raid_conf {
 
 
 /* Promise FastTrak Metadata */
-#define PR_LBA(dev) \
+#define PROMISE_LBA(dev) \
 	(((((struct ad_softc *)device_get_ivars(dev))->total_secs / (((struct ad_softc *)device_get_ivars(dev))->heads * ((struct ad_softc *)device_get_ivars(dev))->sectors)) * ((struct ad_softc *)device_get_ivars(dev))->heads * ((struct ad_softc *)device_get_ivars(dev))->sectors) - ((struct ad_softc *)device_get_ivars(dev))->sectors)
 
 struct promise_raid_conf {
@@ -656,41 +707,72 @@ struct promise_raid_conf {
 	( ((struct ad_softc *)device_get_ivars(dev))->total_secs - 1)
 
 struct sii_raid_conf {
-    u_int16_t   ata_params_00_53[54];
-    u_int64_t   total_sectors;
-    u_int16_t   ata_params_58_79[70];
-    u_int16_t   dummy_0;
-    u_int16_t   dummy_1;
-    u_int32_t   controller_pci_id;
-    u_int16_t   version_minor;
-    u_int16_t   version_major;
-    u_int8_t    timestamp[6];
-    u_int16_t   stripe_sectors;
-    u_int16_t   dummy_2;
-    u_int8_t    disk_number;
-    u_int8_t    type;
+    u_int16_t           ata_params_00_53[54];
+    u_int64_t           total_sectors;
+    u_int16_t           ata_params_58_79[70];
+    u_int16_t           dummy_0;
+    u_int16_t           dummy_1;
+    u_int32_t           controller_pci_id;
+    u_int16_t           version_minor;
+    u_int16_t           version_major;
+    u_int8_t            timestamp[6];
+    u_int16_t           stripe_sectors;
+    u_int16_t           dummy_2;
+    u_int8_t            disk_number;
+    u_int8_t            type;
 #define SII_T_RAID0             0x00
 #define SII_T_RAID1             0x01
 #define SII_T_RAID01            0x02
 #define SII_T_SPARE             0x03
 
-    u_int8_t    raid0_disks;
-    u_int8_t    raid0_ident;
-    u_int8_t    raid1_disks;
-    u_int8_t    raid1_ident;
-    u_int64_t   rebuild_lba;
-    u_int32_t   generation;
-    u_int8_t    status;
+    u_int8_t            raid0_disks;
+    u_int8_t            raid0_ident;
+    u_int8_t            raid1_disks;
+    u_int8_t            raid1_ident;
+    u_int64_t           rebuild_lba;
+    u_int32_t           generation;
+    u_int8_t            status;
 #define SII_S_READY             0x01
     
-    u_int8_t    base_raid1_position;
-    u_int8_t    base_raid0_position;
-    u_int8_t    position;
-    u_int16_t   dummy_3;
-    u_int8_t    name[16];
-    u_int16_t   checksum_0;
-    int8_t      filler1[190];
-    u_int16_t   checksum_1;
+    u_int8_t            base_raid1_position;
+    u_int8_t            base_raid0_position;
+    u_int8_t            position;
+    u_int16_t           dummy_3;
+    u_int8_t            name[16];
+    u_int16_t           checksum_0;
+    int8_t              filler1[190];
+    u_int16_t           checksum_1;
+} __packed;
+
+
+/* Silicon Integrated Systems RAID Metadata */
+#define SIS_LBA(dev) \
+	( ((struct ad_softc *)device_get_ivars(dev))->total_secs - 16)
+
+struct sis_raid_conf {
+    u_int16_t           magic;
+#define SIS_MAGIC               0x0010
+
+    u_int8_t            disks;
+#define SIS_D_MASTER            0xf0
+#define SIS_D_MIRROR            0x0f
+
+    u_int8_t            type_total_disks;
+#define SIS_D_MASK              0x0f
+#define SIS_T_MASK              0xf0
+#define SIS_T_JBOD              0x10
+#define SIS_T_RAID0             0x20
+#define SIS_T_RAID1             0x30
+
+    u_int32_t           dummy_0;
+    u_int32_t           controller_pci_id;
+    u_int16_t           stripe_sectors;
+    u_int16_t           dummy_1;
+    u_int32_t           timestamp;
+    u_int8_t            model[40];
+    u_int8_t            disk_number;
+    u_int8_t            dummy_2[3];
+    int8_t              filler1[448];
 } __packed;
 
 
@@ -699,28 +781,33 @@ struct sii_raid_conf {
 	( ((struct ad_softc *)device_get_ivars(dev))->total_secs - 1)
 
 struct via_raid_conf {
-    u_int16_t   magic;
+    u_int16_t           magic;
 #define VIA_MAGIC               0xaa55
 
-    u_int8_t    dummy_0;
-    u_int8_t    type;
-#define VIA_T_MASK              0xfe
+    u_int8_t            dummy_0;
+    u_int8_t            type;
+#define VIA_T_MASK              0x7e
 #define VIA_T_BOOTABLE          0x01
 #define VIA_T_RAID0             0x04
 #define VIA_T_RAID1             0x0c
+#define VIA_T_RAID01            0x4c
+#define VIA_T_RAID5             0x2c
 #define VIA_T_SPAN              0x44
+#define VIA_T_UNKNOWN           0x80
 
-    u_int8_t    disk_index;
-#define VIA_D_MASK		0x0f
-#define VIA_D_DEGRADED		0x10
+    u_int8_t            disk_index;
+#define VIA_D_MASK              0x0f
+#define VIA_D_DEGRADED          0x10
+#define VIA_D_HIGH_IDX          0x20
 
-    u_int8_t    stripe_layout;
-#define VIA_L_MASK              0x07
+    u_int8_t            stripe_layout;
+#define VIA_L_DISKS             0x07
+#define VIA_L_MASK              0xf0
 #define VIA_L_SHIFT             4
 
-    u_int64_t   total_sectors;
-    u_int32_t   disk_id;
-    u_int32_t   disks[8];
-    u_int8_t    checksum;
-    u_int8_t    filler_1[461];
+    u_int64_t           disk_sectors;
+    u_int32_t           disk_id;
+    u_int32_t           disks[8];
+    u_int8_t            checksum;
+    u_int8_t            filler_1[461];
 } __packed;

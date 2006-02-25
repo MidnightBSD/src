@@ -41,7 +41,7 @@
 #include <getarg.h>
 #include <err.h>
 
-RCSID("$Id: convert_db.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: convert_db.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 static krb5_error_code
 update_keytypes(krb5_context context, HDB *db, hdb_entry *entry, void *data)

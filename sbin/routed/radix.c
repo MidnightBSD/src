@@ -42,8 +42,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$FreeBSD: src/sbin/routed/radix.c,v 1.9 2005/05/31 20:28:49 stefanf Exp $");
 #else
-__RCSID("$Revision: 1.1.1.1 $");
-#ident "$Revision: 1.1.1.1 $"
+__RCSID("$Revision: 1.1.1.2 $");
+#ident "$Revision: 1.1.1.2 $"
 #endif
 
 #define log(x, msg) syslog(x, msg)

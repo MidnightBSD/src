@@ -21,7 +21,7 @@
 
 #include <tack.h>
 
-MODULE_ID("$Id: fun.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $")
+MODULE_ID("$Id: fun.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
 
 /*
  * Test the function keys on the terminal.  The code for echo tests

@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/ifconfig.c,v 1.113.2.3 2005/10/06 15:01:56 yar Exp $";
+  "$FreeBSD: src/sbin/ifconfig/ifconfig.c,v 1.113.2.4 2006/02/09 10:48:43 yar Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -535,6 +535,12 @@ ifconfig(int argc, char *const *argv, const struct afswtch *afp)
 	if (afp->af_postproc != NULL)
 		afp->af_postproc(s, afp);
 	/*
+	 * Do deferred callbacks registered while processing
+	 * command-line arguments.
+	 */
+	for (cb = callbacks; cb != NULL; cb = cb->cb_next)
+		cb->cb_func(s, cb->cb_arg);
+	/*
 	 * Do deferred operations.
 	 */
 	if (clearaddr) {
@@ -567,13 +573,6 @@ ifconfig(int argc, char *const *argv, const struct afswtch *afp)
 		if (ioctl(s, afp->af_aifaddr, afp->af_addreq) < 0)
 			Perror("ioctl (SIOCAIFADDR)");
 	}
-
-	/*
-	 * Do deferred callbacks registered while processing
-	 * command-line arguments.
-	 */
-	for (cb = callbacks; cb != NULL; cb = cb->cb_next)
-		cb->cb_func(s, cb->cb_arg);
 
 	close(s);
 	return(0);

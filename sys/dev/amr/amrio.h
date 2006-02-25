@@ -52,7 +52,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD: src/sys/dev/amr/amrio.h,v 1.6 2004/08/16 17:23:09 ambrisko Exp $
+ *	$FreeBSD: src/sys/dev/amr/amrio.h,v 1.6.8.1 2006/01/26 22:04:21 ambrisko Exp $
  */
 
 /*
@@ -65,7 +65,7 @@
 /*
  * Fetch the driver's interface version.
  */
-#define AMR_IO_VERSION_NUMBER	0x01
+#define AMR_IO_VERSION_NUMBER	153
 #define AMR_IO_VERSION	_IOR('A', 0x200, int)
 
 /*

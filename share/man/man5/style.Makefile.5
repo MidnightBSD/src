@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/style.Makefile.5,v 1.15 2005/02/28 18:32:25 obrien Exp $
+.\" $FreeBSD: src/share/man/man5/style.Makefile.5,v 1.15.2.1 2006/01/22 16:33:46 yar Exp $
 .\"
 .Dd January 8, 2005
 .Dt STYLE.MAKEFILE 5
@@ -145,7 +145,7 @@ The usage of
 is spelled
 .Dq Li "WARNS?=	" ,
 so that it may be overridden on the command line or in
-.Pa /etc/make.conf .
+.Xr make.conf 5 .
 .It
 .Dq Li "NO_WERROR= yes"
 should not be used,
@@ -263,6 +263,7 @@ SRCS=	foo.c
 .Ed
 .Sh SEE ALSO
 .Xr make 1 ,
+.Xr make.conf 5 ,
 .Xr style 9
 .Sh HISTORY
 This manual page is inspired from the same source as

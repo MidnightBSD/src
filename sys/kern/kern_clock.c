@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_clock.c,v 1.178.2.1 2005/10/07 14:00:05 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_clock.c,v 1.178.2.2 2006/01/03 16:43:33 emaste Exp $");
 
 #include "opt_device_polling.h"
 #include "opt_hwpmc_hooks.h"
@@ -540,8 +540,7 @@ watchdog_config(void *unused __unused, u_int cmd, int *err)
 	u_int u;
 
 	u = cmd & WD_INTERVAL;
-	if (cmd && u >= WD_TO_1SEC) {
-		u = cmd & WD_INTERVAL;
+	if ((cmd & WD_ACTIVE) && u >= WD_TO_1SEC) {
 		watchdog_ticks = (1 << (u - WD_TO_1SEC)) * hz;
 		watchdog_enabled = 1;
 		*err = 0;

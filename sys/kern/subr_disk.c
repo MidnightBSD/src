@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_disk.c,v 1.85 2005/06/15 23:32:07 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_disk.c,v 1.85.2.1 2006/02/14 03:29:31 rwatson Exp $");
 
 #include "opt_geom.h"
 
@@ -153,7 +153,7 @@ bioq_disksort(bioq, bp)
 	/*
 	 * If the queue is empty then it's easy.
 	 */
-	if ((bq = bioq_first(bioq)) == NULL) {
+	if (bioq_first(bioq) == NULL) {
 		bioq_insert_tail(bioq, bp);
 		return;
 	}

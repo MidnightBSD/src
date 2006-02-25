@@ -40,7 +40,7 @@
 #include <term_entry.h>		/* TTY, cur_term */
 #include <termcap.h>		/* ospeed */
 
-MODULE_ID("$Id: lib_cur_term.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: lib_cur_term.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 NCURSES_EXPORT_VAR(TERMINAL *) cur_term = 0;
 

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/utrap.h,v 1.4 2003/04/29 21:30:59 jake Exp $
+ * $FreeBSD: src/sys/sparc64/include/utrap.h,v 1.4.12.1 2006/01/28 04:02:54 kris Exp $
  */
 
 #ifndef	_MACHINE_UTRAP_H_
@@ -38,7 +38,7 @@
 #define	UT_FP_DISABLED			7
 #define	UT_FP_EXCEPTION_IEEE_754	8
 #define	UT_FP_EXCEPTION_OTHER		9
-#define	UT_TAG_OFERFLOW			10
+#define	UT_TAG_OVERFLOW			10
 #define	UT_DIVISION_BY_ZERO		11
 #define	UT_DATA_EXCEPTION		12
 #define	UT_DATA_ERROR			13

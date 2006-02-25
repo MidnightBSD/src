@@ -40,7 +40,7 @@
 
 #include <tic.h>
 
-MODULE_ID("$Id: comp_error.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: comp_error.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 NCURSES_EXPORT_VAR(bool) _nc_suppress_warnings = FALSE;
 NCURSES_EXPORT_VAR(int) _nc_curr_line = 0; /* current line # in input */

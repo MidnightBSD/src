@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/elf_machdep.c,v 1.19.8.1 2005/09/13 20:54:00 marcel Exp $
+ * $FreeBSD: src/sys/ia64/ia64/elf_machdep.c,v 1.19.8.3 2006/01/28 18:40:55 marcel Exp $
  */
 
 #include <sys/param.h>
@@ -118,7 +118,7 @@ elf64_dump_thread(struct thread *td, void *dst, size_t *off __unused)
 
 
 static Elf_Addr
-lookup_fdesc(linker_file_t lf, Elf_Word symidx, elf_lookup_fn lookup)
+lookup_fdesc(linker_file_t lf, Elf_Size symidx, elf_lookup_fn lookup)
 {
 	linker_file_t top;
 	Elf_Addr addr;
@@ -171,7 +171,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 {
 	Elf_Addr *where;
 	Elf_Addr addend, addr;
-	Elf_Word rtype, symidx;
+	Elf_Size rtype, symidx;
 	const Elf_Rel *rel;
 	const Elf_Rela *rela;
 
@@ -182,9 +182,9 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		rtype = ELF_R_TYPE(rel->r_info);
 		symidx = ELF_R_SYM(rel->r_info);
 		switch (rtype) {
-		case R_IA64_DIR64LSB:
-		case R_IA64_FPTR64LSB:
-		case R_IA64_REL64LSB:
+		case R_IA_64_DIR64LSB:
+		case R_IA_64_FPTR64LSB:
+		case R_IA_64_REL64LSB:
 			addend = *where;
 			break;
 		default:
@@ -204,21 +204,21 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	}
 
 	if (local) {
-		if (rtype == R_IA64_REL64LSB)
+		if (rtype == R_IA_64_REL64LSB)
 			*where = relocbase + addend;
 		return (0);
 	}
 
 	switch (rtype) {
-	case R_IA64_NONE:
+	case R_IA_64_NONE:
 		break;
-	case R_IA64_DIR64LSB:	/* word64 LSB	S + A */
+	case R_IA_64_DIR64LSB:	/* word64 LSB	S + A */
 		addr = lookup(lf, symidx, 1);
 		if (addr == 0)
 			return (-1);
 		*where = addr + addend;
 		break;
-	case R_IA64_FPTR64LSB:	/* word64 LSB	@fptr(S + A) */
+	case R_IA_64_FPTR64LSB:	/* word64 LSB	@fptr(S + A) */
 		if (addend != 0) {
 			printf("%s: addend ignored for OPD relocation\n",
 			    __func__);
@@ -228,9 +228,9 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			return (-1);
 		*where = addr;
 		break;
-	case R_IA64_REL64LSB:	/* word64 LSB	BD + A */
+	case R_IA_64_REL64LSB:	/* word64 LSB	BD + A */
 		break;
-	case R_IA64_IPLTLSB:
+	case R_IA_64_IPLTLSB:
 		addr = lookup_fdesc(lf, symidx, lookup);
 		if (addr == 0)
 			return (-1);

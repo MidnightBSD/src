@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ohci.c,v 1.154.2.1 2005/12/04 05:52:23 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ohci.c,v 1.154.2.2 2006/01/29 01:26:46 iedowse Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -393,6 +393,8 @@ ohci_detach(struct ohci_softc *sc, int flags)
 
 	if (rv != 0)
 		return (rv);
+#else
+	sc->sc_dying = 1;
 #endif
 
 	usb_uncallout(sc->sc_tmo_rhsc, ohci_rhsc_enable, sc);

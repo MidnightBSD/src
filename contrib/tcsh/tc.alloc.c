@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.alloc.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.alloc.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
 /*
  * tc.alloc.c (Caltech) 2/21/82
  * Chris Kingsley, kingsley@cit-20.
@@ -40,7 +40,7 @@
  */
 #include "sh.h"
 
-RCSID("$Id: tc.alloc.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $")
+RCSID("$Id: tc.alloc.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $")
 
 static char   *memtop = NULL;		/* PWP: top of current memory */
 static char   *membot = NULL;		/* PWP: bottom of allocatable memory */

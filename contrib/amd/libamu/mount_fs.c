@@ -38,7 +38,7 @@
  *
  *      %W% (Berkeley) %G%
  *
- * $Id: mount_fs.c,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $
+ * $Id: mount_fs.c,v 1.1.1.2 2006-02-25 02:32:01 laffer1 Exp $
  * $FreeBSD: src/contrib/amd/libamu/mount_fs.c,v 1.7 2004/07/06 13:16:47 mbr Exp $
  *
  */

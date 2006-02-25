@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/lbl/os-hpux11.h,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/lbl/os-hpux11.h,v 1.1.1.2 2006-02-25 02:33:30 laffer1 Exp $
  */
 
 /* Prototypes missing in HP-UX 11.x */

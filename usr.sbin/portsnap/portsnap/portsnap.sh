@@ -25,7 +25,7 @@
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# $FreeBSD: src/usr.sbin/portsnap/portsnap/portsnap.sh,v 1.8.2.2 2005/11/13 06:45:36 cperciva Exp $
+# $FreeBSD: src/usr.sbin/portsnap/portsnap/portsnap.sh,v 1.8.2.4 2006/01/30 04:18:12 cperciva Exp $
 
 #### Usage function -- called from command-line handling code.
 
@@ -255,9 +255,11 @@ fetch_check_params() {
 
 # Perform sanity checks and set some final parameters
 # in preparation for extracting or updating ${PORTSDIR}
+# Complain if ${PORTSDIR} exists but is not writable,
+# but don't complain if ${PORTSDIR} doesn't exist.
 extract_check_params() {
 	_WORKDIR_bad="Directory does not exist: "
-	_PORTSDIR_bad="Directory does not exist or is not writable: "
+	_PORTSDIR_bad="Directory is not writable: "
 
 	if ! [ -d "${WORKDIR}" ]; then
 		echo -n "`basename $0`: "
@@ -265,7 +267,7 @@ extract_check_params() {
 		echo ${WORKDIR}
 		exit 1
 	fi
-	if ! [ -d "${PORTSDIR}" -a -w "${PORTSDIR}" ]; then
+	if [ -d "${PORTSDIR}" ] && ! [ -w "${PORTSDIR}" ]; then
 		echo -n "`basename $0`: "
 		echo -n "${_PORTSDIR_bad}"
 		echo ${PORTSDIR}
@@ -570,14 +572,13 @@ fetch_snapshot() {
 	fetch_metadata || return 1
 	fetch_metadata_sanity || return 1
 
-	rm -f ${SNAPSHOTHASH}.tgz
 	rm -rf snap/
 
 # Don't ask fetch(1) to be quiet -- downloading a snapshot of ~ 35MB will
 # probably take a while, so the progrees reports that fetch(1) generates
 # will be useful for keeping the users' attention from drifting.
 	echo "Fetching snapshot generated at `date -r ${SNAPSHOTDATE}`:"
-	fetch http://${SERVERNAME}/s/${SNAPSHOTHASH}.tgz || return 1
+	fetch -r http://${SERVERNAME}/s/${SNAPSHOTHASH}.tgz || return 1
 
 	echo -n "Extracting snapshot... "
 	tar -xzf ${SNAPSHOTHASH}.tgz snap/ || return 1
@@ -812,6 +813,8 @@ extract_metadata() {
 
 # Do the actual work involved in "extract"
 extract_run() {
+	mkdir -p ${PORTSDIR} || return 1
+
 	if !
 		if ! [ -z "${EXTRACTPATH}" ]; then
 			grep "^${EXTRACTPATH}" ${WORKDIR}/INDEX

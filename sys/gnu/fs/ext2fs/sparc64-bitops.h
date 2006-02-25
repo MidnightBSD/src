@@ -1,5 +1,5 @@
 /*-
- * $Id: sparc64-bitops.h,v 1.1.1.1 2006-02-25 02:28:16 laffer1 Exp $
+ * $Id: sparc64-bitops.h,v 1.1.1.2 2006-02-25 02:37:08 laffer1 Exp $
  * bitops.h: Bit string operations on the V9.
  *
  * Copyright 1996, 1997 David S. Miller (davem@caip.rutgers.edu)

@@ -25,7 +25,7 @@ SM_UNUSED(static char copyright[]) =
 	The Regents of the University of California.  All rights reserved.\n";
 #endif /* ! lint */
 
-SM_RCSID("@(#)$Id: main.c,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $")
+SM_RCSID("@(#)$Id: main.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $")
 
 
 #if NETINET || NETINET6

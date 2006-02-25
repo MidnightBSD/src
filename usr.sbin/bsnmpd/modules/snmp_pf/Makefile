@@ -1,8 +1,6 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_pf/Makefile,v 1.1 2005/03/14 22:16:39 philip Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_pf/Makefile,v 1.1.2.1 2006/01/25 13:22:59 harti Exp $
 # 
 # Author: Philip Paeps <philip@freebsd.org>
-
-CONTRIB=${.CURDIR}/../../../../contrib/bsnmp
 
 MOD=	pf
 SRCS=	pf_snmp.c
@@ -12,4 +10,4 @@ XSYM=	begemotPf
 DEFS=	${MOD}_tree.def
 BMIBS=	BEGEMOT-PF-MIB.txt
 
-.include <bsd.lib.mk>
+.include <bsd.snmpmod.mk>

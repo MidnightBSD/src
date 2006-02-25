@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: vers.h,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $ */
+/* $Id: vers.h,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $ */
 
 #ifndef __VERS_H__
 #define __VERS_H__

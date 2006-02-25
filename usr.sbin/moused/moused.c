@@ -45,7 +45,7 @@
  **/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.1 2005/12/04 00:48:33 philip Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 philip Exp $");
 
 #include <sys/param.h>
 #include <sys/consio.h>
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.1 2005/12/04 00:48:33 
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libutil.h>
 #include <limits.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -158,9 +159,11 @@ typedef struct {
 int	debug = 0;
 int	nodaemon = FALSE;
 int	background = FALSE;
+int	paused = FALSE;
 int	identify = ID_NONE;
 int	extioctl = FALSE;
 char	*pidfile = "/var/run/moused.pid";
+struct pidfh *pfh;
 
 #define SCROLL_NOTSCROLLING	0
 #define SCROLL_PREPARE		1
@@ -494,6 +497,7 @@ static struct drift_xy  drift_previous={0,0}; /* steps in previous drift_time */
 static void	moused(void);
 static void	hup(int sig);
 static void	cleanup(int sig);
+static void	pause_mouse(int sig);
 static void	usage(void);
 static void	log_or_warn(int log_pri, int errnum, const char *fmt, ...)
 		    __printflike(3, 4);
@@ -831,6 +835,7 @@ main(int argc, char *argv[])
 	    signal(SIGINT , cleanup);
 	    signal(SIGQUIT, cleanup);
 	    signal(SIGTERM, cleanup);
+	    signal(SIGUSR1, pause_mouse);
 	    for (i = 0; i < retry; ++i) {
 		if (i > 0)
 		    sleep(2);
@@ -940,7 +945,7 @@ moused(void)
     struct timeval timeout;
     fd_set fds;
     u_char b;
-    FILE *fp;
+    pid_t mpid;
     int flags;
     int c;
     int i;
@@ -949,15 +954,20 @@ moused(void)
 	logerr(1, "cannot open /dev/consolectl");
 
     if (!nodaemon && !background) {
+	pfh = pidfile_open(pidfile, 0600, &mpid);
+	if (pfh == NULL) {
+	    if (errno == EEXIST)
+		logerrx(1, "moused already running, pid: %d", mpid);
+	    logwarn("cannot open pid file");
+	}
 	if (daemon(0, 0)) {
+	    int saved_errno = errno;
+	    pidfile_remove(pfh);
+	    errno = saved_errno;
 	    logerr(1, "failed to become a daemon");
 	} else {
 	    background = TRUE;
-	    fp = fopen(pidfile, "w");
-	    if (fp != NULL) {
-		fprintf(fp, "%d\n", getpid());
-		fclose(fp);
-	    }
+	    pidfile_write(pfh);
 	}
     }
 
@@ -1188,7 +1198,8 @@ moused(void)
 		    mouse.u.data.y = action2.dy * rodent.accely;
 		    mouse.u.data.z = action2.dz;
 		    if (debug < 2)
-			ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
+			if (!paused)
+				ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
 		}
 	    } else {
 		mouse.operation = MOUSE_ACTION;
@@ -1197,7 +1208,8 @@ moused(void)
 		mouse.u.data.y = action2.dy * rodent.accely;
 		mouse.u.data.z = action2.dz;
 		if (debug < 2)
-		    ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
+		    if (!paused)
+			ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
 	    }
 
 	    /*
@@ -1219,7 +1231,8 @@ moused(void)
 		    mouse.u.data.buttons = action2.button;
 		    mouse.u.data.x = mouse.u.data.y = mouse.u.data.z = 0;
 		    if (debug < 2)
-			ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
+			if (!paused)
+			    ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
 		}
 	    }
 	}
@@ -1239,6 +1252,12 @@ cleanup(int sig)
     if (rodent.rtype == MOUSE_PROTO_X10MOUSEREM)
 	unlink(_PATH_MOUSEREMOTE);
     exit(0);
+}
+
+static void
+pause_mouse(int sig)
+{
+    paused = !paused;
 }
 
 /**
@@ -2529,7 +2548,8 @@ r_click(mousestatus_t *act)
 	    mouse.operation = MOUSE_BUTTON_EVENT;
 	    mouse.u.event.id = button;
 	    if (debug < 2)
-		ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
+		if (!paused)
+		    ioctl(rodent.cfd, CONS_MOUSECTL, &mouse);
 	    debug("button %d  count %d", i + 1, mouse.u.event.value);
 	}
 	button <<= 1;

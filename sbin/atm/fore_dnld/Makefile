@@ -20,7 +20,7 @@
 # Copies of this Software may be made, however, the above copyright
 # notice must be reproduced on all copies.
 #
-#	@(#) $Id: Makefile,v 1.1.1.1 2006-02-25 02:27:05 laffer1 Exp $
+#	@(#) $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:20 laffer1 Exp $
 # $FreeBSD: src/sbin/atm/fore_dnld/Makefile,v 1.11 2003/08/18 15:32:16 obrien Exp $
 
 PROG=	fore_dnld

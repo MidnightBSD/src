@@ -18,9 +18,6 @@
  *
  *---------------------------------------------------------------------------
  * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2005/12/24 02:43:38  laffer1
- * Imported from FreeBSD 6.0 sources
- *
  * 
  *    Rev 1.9   25 Jan 1999 09:56:28   EGS
  * Added 3150

@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: lock.h,v 1.1.1.1 2006-02-25 02:28:43 laffer1 Exp $
- * $FreeBSD: src/sys/sys/lock.h,v 1.52 2005/04/22 22:37:41 jeff Exp $
+ *	from BSDI $Id: lock.h,v 1.1.1.2 2006-02-25 02:37:50 laffer1 Exp $
+ * $FreeBSD: src/sys/sys/lock.h,v 1.52.2.1 2005/12/20 19:28:24 jhb Exp $
  */
 
 #ifndef _SYS_LOCK_H_
@@ -50,6 +50,7 @@ struct thread;
 struct lock_class {
 	const	char *lc_name;
 	u_int	lc_flags;
+	void	(*lc_ddb_show)(struct lock_object *lock);
 };
 
 #define	LC_SLEEPLOCK	0x00000001	/* Sleep lock. */

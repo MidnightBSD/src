@@ -32,7 +32,7 @@
 
 
 #ifndef	lint
-FILE_RCSID("@(#)$Id: apptype.c,v 1.1.1.1 2006-02-25 02:25:36 laffer1 Exp $")
+FILE_RCSID("@(#)$Id: apptype.c,v 1.1.1.2 2006-02-25 02:32:35 laffer1 Exp $")
 #endif /* lint */
 
 #ifdef __EMX__

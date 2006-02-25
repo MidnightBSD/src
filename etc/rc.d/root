@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $NetBSD: root,v 1.2 2000/05/13 08:45:09 lukem Exp $
-# $FreeBSD: src/etc/rc.d/root,v 1.10.2.1 2005/12/15 18:59:21 dougb Exp $
+# $FreeBSD: src/etc/rc.d/root,v 1.10.2.2 2006/01/21 17:25:00 wes Exp $
 #
 
 # PROVIDE: root
@@ -34,9 +34,7 @@ root_start()
 
 	# If we booted a special kernel remove the record
 	# so we will boot the default kernel next time.
-	if [ -e /boot/nextkernel ]; then
-		rm -f /boot/nextkernel
-	fi
+	/sbin/nextboot -D
 }
 
 load_rc_config $name

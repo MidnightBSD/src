@@ -1,4 +1,4 @@
-# $Id: MKunctrl.awk,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $
+# $Id: MKunctrl.awk,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $
 ##############################################################################
 # Copyright (c) 1998,2000,2001 Free Software Foundation, Inc.                #
 #                                                                            #

@@ -1,4 +1,4 @@
-# $Id: dist.mk,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $
+# $Id: dist.mk,v 1.1.1.2 2006-02-25 02:33:37 laffer1 Exp $
 # Makefile for creating ncurses distributions.
 #
 # This only needs to be used directly as a makefile by developers, but

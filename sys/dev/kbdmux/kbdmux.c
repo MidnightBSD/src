@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbdmux.c,v 1.1.1.1 2006-02-25 02:28:07 laffer1 Exp $
- * $FreeBSD: src/sys/dev/kbdmux/kbdmux.c,v 1.2.2.1 2005/07/21 16:40:07 kensmith Exp $
+ * $Id: kbdmux.c,v 1.1.1.2 2006-02-25 02:37:03 laffer1 Exp $
+ * $FreeBSD: src/sys/dev/kbdmux/kbdmux.c,v 1.2.2.2 2006/01/22 14:54:24 yar Exp $
  */
 
 #include "opt_kbd.h"
@@ -1283,7 +1283,9 @@ kbdmux_modevent(module_t mod, int type, void *data)
 
 		if ((error = (*sw->enable)(kbd)) != 0) {
 			(*sw->disable)(kbd);
+#ifdef KBD_INSTALL_CDEV
 			kbd_detach(kbd);
+#endif
 			(*sw->term)(kbd);
 			kbd_delete_driver(&kbdmux_kbd_driver);
 			break;

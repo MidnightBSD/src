@@ -1,6 +1,10 @@
-# $FreeBSD: src/sys/modules/amr/Makefile,v 1.9 2002/10/18 21:29:14 emoore Exp $
+# $FreeBSD: src/sys/modules/amr/Makefile,v 1.9.14.1 2006/01/26 22:12:31 ambrisko Exp $
 
 .PATH: ${.CURDIR}/../../dev/amr
+
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
+SUBDIR= amr_linux
+.endif
 
 KMOD=	amr
 SRCS=	amr.c amr_pci.c amr_disk.c device_if.h bus_if.h pci_if.h

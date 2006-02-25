@@ -36,7 +36,7 @@
 #include <curses.priv.h>
 #include <ctype.h>
 
-MODULE_ID("$Id: lib_addch.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: lib_addch.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
 
 /*
  * Ugly microtweaking alert.  Everything from here to end of module is

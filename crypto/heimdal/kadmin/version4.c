@@ -41,7 +41,7 @@
 #include <krb_err.h>
 #include <kadm_err.h>
 
-RCSID("$Id: version4.c,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $");
+RCSID("$Id: version4.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
 
 #define KADM_NO_OPCODE -1
 #define KADM_NO_ENCRYPT -2

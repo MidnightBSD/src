@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sio/Makefile,v 1.8 2005/05/10 12:02:16 nyan Exp $
+# $FreeBSD: src/sys/modules/sio/Makefile,v 1.8.2.1 2006/02/10 00:38:06 yar Exp $
 
 .if ${MACHINE} == "pc98"
 .PATH: ${.CURDIR}/../../pc98/cbus
@@ -15,6 +15,7 @@ SRCS+=	sio_cbus.c
 SRCS+=	sio_isa.c
 .endif
 
+.if !defined(KERNBUILDDIR)
 opt_compat.h:
 	echo "#define COMPAT_43 1" > ${.TARGET}
 
@@ -22,6 +23,7 @@ opt_compat.h:
 opt_sio.h:
 	echo "#define COM_MULTIPORT 1" > ${.TARGET}
 	echo "#define COM_ESP 1" >> ${.TARGET}
+.endif
 .endif
 
 .include <bsd.kmod.mk>

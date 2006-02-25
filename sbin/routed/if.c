@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/routed/if.c,v 1.15 2005/05/31 20:28:48 stefanf Exp $
+ * $FreeBSD: src/sbin/routed/if.c,v 1.15.2.1 2005/12/28 10:01:46 maxim Exp $
  */
 
 #include "defs.h"
@@ -35,10 +35,10 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: src/sbin/routed/if.c,v 1.15 2005/05/31 20:28:48 stefanf Exp $");
+__RCSID("$FreeBSD: src/sbin/routed/if.c,v 1.15.2.1 2005/12/28 10:01:46 maxim Exp $");
 #else
-__RCSID("$Revision: 1.1.1.1 $");
-#ident "$Revision: 1.1.1.1 $"
+__RCSID("$Revision: 1.1.1.2 $");
+#ident "$Revision: 1.1.1.2 $"
 #endif
 
 struct interface *ifnet;		/* all interfaces */
@@ -805,13 +805,8 @@ ifinit(void)
 
 		if (ifs.int_if_flags & IFF_LOOPBACK) {
 			ifs.int_state |= IS_NO_RIP | IS_NO_RDISC;
-			if (ifs.int_addr == htonl(INADDR_LOOPBACK)) {
-				printf("loop %x\n", ifs.int_addr);
+			if (ifs.int_addr == htonl(INADDR_LOOPBACK))
 				ifs.int_state |= IS_PASSIVE;
-			} else {
-				printf("alias %x\n", ifs.int_addr);
-			}
-			
 			ifs.int_dstaddr = ifs.int_addr;
 			ifs.int_mask = HOST_MASK;
 			ifs.int_ripv1_mask = HOST_MASK;

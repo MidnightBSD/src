@@ -1,4 +1,4 @@
-# $FreeBSD: src/release/Makefile,v 1.887.2.3 2005/11/16 08:03:33 ru Exp $
+# $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
 #     [RELEASETAG=tag]
@@ -34,6 +34,10 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 # src/ tree from a CVS checkout. For "rerelease", this will NOT
 # be copied; cvs update will be used instead.
 #EXTSRCDIR=/usr/src
+#
+# To use a checked-out ports collection directory instead of
+# checking out from a local CVS repository, set this option.
+#EXTPORTSDIR=/usr/ports
 #
 # To add other options to the CVS subcommands (co,up), set
 #CVSCMDARGS="-D '01/01/2002 00:00:00 UTC'"
@@ -385,8 +389,14 @@ release rerelease:
 .endif
 	rm -rf ${CHROOTDIR}/usr/ports
 .if !defined(NOPORTSATALL)
+.if defined(EXTPORTSDIR)
+	cd ${CHROOTDIR}/usr && cp -R -H ${EXTPORTSDIR} ports
+	# If there are distfiles downloaded removing them
+	rm -rf ports/distfiles/*
+.else
 	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs -R ${CVSARGS} -d ${CVSROOT} \
 	    co ${CVSCMDARGS} ${CVS_PORTSARGS} ${RELEASEPORTSMODULE}
+.endif
 .endif
 .if !defined(NODOC)
 	rm -rf ${CHROOTDIR}/usr/doc
@@ -416,7 +426,7 @@ release rerelease:
 	    update ${CVSCMDARGS} -P -d -r ${RELEASETAG}
 .endif
 	rm -f ${CHROOTDIR}/tmp/.world_done 
-.if !defined(NOPORTS)
+.if !defined(NOPORTS) && !defined(EXTPORTSDIR)
 	cd ${CHROOTDIR}/usr/ports && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d
 	rm -f ${CHROOTDIR}/tmp/.skip_ports_index
@@ -655,10 +665,11 @@ release.6:
 	  -czf ${RD}/dists/ports/ports.tgz -C /usr ports
 	@cp ${.CURDIR}/scripts/ports-install.sh ${RD}/dists/ports/install.sh
 	@(cd ${RD}/dists/ports; \
-	  rm -f .CHECKSUM.MD5 CHECKSUM.SHA256; \
+	  rm -f CHECKSUM.MD5 CHECKSUM.SHA256; \
 	  md5 * > .CHECKSUM.MD5; \
-	  sha256 * > CHECKSUM.SHA256; \
-	  mv .CHECKSUM.MD5 CHECKSUM.MD5)
+	  sha256 * > .CHECKSUM.SHA256; \
+	  mv .CHECKSUM.MD5 CHECKSUM.MD5; \
+	  mv .CHECKSUM.SHA256 CHECKSUM.SHA256)
 	@echo "ports distribution is finished."
 .endif
 	touch ${.TARGET}
@@ -690,10 +701,11 @@ release.7:
 	done
 .endif
 	(cd ${RD}/dists/src; \
-	  rm -f .CHECKSUM.MD5 CHECKSUM.SHA256; \
+	  rm -f CHECKSUM.MD5 CHECKSUM.SHA256; \
 	  md5 * > .CHECKSUM.MD5; \
-	  sha256 * > CHECKSUM.SHA256; \
-	  mv .CHECKSUM.MD5 CHECKSUM.MD5)
+	  sha256 * > .CHECKSUM.SHA256; \
+	  mv .CHECKSUM.MD5 CHECKSUM.MD5; \
+	  mv .CHECKSUM.SHA256 CHECKSUM.SHA256)
 	@echo "src distribution is finished."
 .endif
 	touch ${.TARGET}
@@ -953,11 +965,11 @@ cdrom.2:
 	@mv ${CD_DISC1}/INSTALLATION.TXT ${CD_DISC1}/INSTALL.TXT
 	@mv ${CD_DISC1}/INSTALLATION.HTM ${CD_DISC1}/INSTALL.HTM
 .endif
-	@echo "CD_VOLUME = 1" >> ${CD_DISC1}/cdrom.inf
 .if defined(SEPARATE_LIVEFS)
 	@cp -Rp ${CD_LIVEFS}/boot ${CD_DISC1}
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DISC1}/cdrom.inf
 .endif
+	@echo "CD_VOLUME = 1" >> ${CD_DISC1}/cdrom.inf
 	@echo "Building CDROM disc2 filesystem image"
 	@mkdir -p ${CD_DISC2}
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_DISC2}/cdrom.inf
@@ -1095,10 +1107,11 @@ doTARBALL:
 			true; \
 		fi; \
 		( cd ${RD}/dists/${TD}; \
-		rm -f .CHECKSUM.MD5 CHECKSUM.SHA256; \
+		rm -f CHECKSUM.MD5 CHECKSUM.SHA256; \
 		md5 * > .CHECKSUM.MD5; \
-		sha256 * > CHECKSUM.SHA256; \
-		mv .CHECKSUM.MD5 CHECKSUM.MD5) \
+		sha256 * > .CHECKSUM.SHA256; \
+		mv .CHECKSUM.MD5 CHECKSUM.MD5; \
+		mv .CHECKSUM.SHA256 CHECKSUM.SHA256) \
 	)
 
 doRELEASE: release.1 release.2 ${DOCREL} release.3 release.4 \
@@ -1247,6 +1260,9 @@ buildBootFloppy:
 	@echo 'mfsroot_name="/mfsroot"' >> ${IMAGEDIR}/boot/loader.conf
 .if !exists(${ACPI_KO})
 	@echo 'mfsroot_before="read -p \"Insert boot floppy and press Enter\""' >> ${IMAGEDIR}/boot/loader.conf
+.endif
+.if defined(SPLIT_MFSROOT)
+	@echo 'mfsroot_after="read -p \"Insert boot floppy and press Enter\""' >> ${IMAGEDIR}/boot/loader.conf
 .endif
 .if ${TARGET_ARCH} == "i386" && ${AUTO_KEYBOARD_DETECT}
 	@echo "-P" >> ${IMAGEDIR}/boot.config

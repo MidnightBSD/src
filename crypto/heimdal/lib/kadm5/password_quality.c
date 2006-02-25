@@ -33,7 +33,7 @@
 
 #include "kadm5_locl.h"
 
-RCSID("$Id: password_quality.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: password_quality.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>

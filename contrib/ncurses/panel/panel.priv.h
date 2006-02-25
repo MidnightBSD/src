@@ -26,7 +26,7 @@
  * authorization.                                                           *
  ****************************************************************************/
 
-/* $Id: panel.priv.h,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $ */
+/* $Id: panel.priv.h,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $ */
 
 #ifndef NCURSES_PANEL_PRIV_H
 #define NCURSES_PANEL_PRIV_H 1

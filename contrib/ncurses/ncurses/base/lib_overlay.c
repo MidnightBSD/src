@@ -40,7 +40,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_overlay.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: lib_overlay.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
 
 static int
 overlap(const WINDOW *const s, WINDOW *const d, int const flag)

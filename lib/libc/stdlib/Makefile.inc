@@ -1,15 +1,15 @@
 #	from @(#)Makefile.inc	8.3 (Berkeley) 2/4/95
-# $FreeBSD: src/lib/libc/stdlib/Makefile.inc,v 1.48 2004/05/12 08:13:40 ru Exp $
+# $FreeBSD: src/lib/libc/stdlib/Makefile.inc,v 1.48.8.2 2006/01/27 23:05:38 trhodes Exp $
 
 # machine-independent stdlib sources
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/stdlib ${.CURDIR}/stdlib
 
-MISRCS+=_Exit.c abort.c abs.c atexit.c atof.c atoi.c atol.c atoll.c \
+MISRCS+=_Exit.c a64l.c abort.c abs.c atexit.c atof.c atoi.c atol.c atoll.c \
 	bsearch.c calloc.c div.c exit.c getenv.c getopt.c getopt_long.c \
 	getsubopt.c grantpt.c hcreate.c heapsort.c imaxabs.c imaxdiv.c \
-	insque.c labs.c ldiv.c llabs.c lldiv.c lsearch.c malloc.c merge.c \
-	putenv.c qsort.c qsort_r.c radixsort.c rand.c random.c reallocf.c \
-	realpath.c remque.c setenv.c strfmon.c strtoimax.c \
+	insque.c l64a.c labs.c ldiv.c llabs.c lldiv.c lsearch.c malloc.c \
+	merge.c putenv.c qsort.c qsort_r.c radixsort.c rand.c random.c \
+	reallocf.c realpath.c remque.c setenv.c strfmon.c strtoimax.c \
 	strtol.c strtoll.c strtoq.c strtoul.c strtoull.c strtoumax.c strtouq.c \
 	system.c tdelete.c tfind.c tsearch.c twalk.c
 
@@ -18,12 +18,14 @@ MISRCS+=_Exit.c abort.c abs.c atexit.c atof.c atoi.c atol.c atoll.c \
 .include "${.CURDIR}/${MACHINE_ARCH}/stdlib/Makefile.inc"
 .endif
 
-MAN+=	abort.3 abs.3 alloca.3 atexit.3 atof.3 atoi.3 atol.3 bsearch.3 \
+MAN+=	a64l.3 abort.3 abs.3 alloca.3 atexit.3 atof.3 atoi.3 atol.3 bsearch.3 \
 	div.3 exit.3 getenv.3 getopt.3 getopt_long.3 getsubopt.3 grantpt.3 \
 	hcreate.3 imaxabs.3 imaxdiv.3 insque.3 labs.3 ldiv.3 llabs.3 lldiv.3 \
-	lsearch.3 malloc.3 memory.3 qsort.3 radixsort.3 rand.3 random.3 \
+	lsearch.3 malloc.3 memory.3 qsort.3 radixsort.3 \
+	rand.3 random.3 \
 	realpath.3 strfmon.3 strtod.3 strtol.3 strtoul.3 system.3 tsearch.3
 
+MLINKS+=a64l.3 l64a.3 a64l.3 l64a_r.3
 MLINKS+=atol.3 atoll.3
 MLINKS+=exit.3 _Exit.3
 MLINKS+=getenv.3 putenv.3 getenv.3 setenv.3 getenv.3 unsetenv.3

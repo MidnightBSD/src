@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)swapon.8	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: src/sbin/dumpon/dumpon.8,v 1.33 2005/01/18 10:09:31 ru Exp $
+.\" $FreeBSD: src/sbin/dumpon/dumpon.8,v 1.33.2.1 2006/01/14 12:10:26 pav Exp $
 .\"
 .Dd May 12, 1995
 .Dt DUMPON 8
@@ -58,7 +58,7 @@ variable in the boot time configuration file
 .Pp
 For most systems the size of the specified dump device must be at
 least the size of physical memory.
-Even though an additional header is added to the dump, the BIOS for a
+Even though an additional 64 kB header is added to the dump, the BIOS for a
 platform typically holds back some memory, so it is not usually
 necessary to size the dump device larger than the actual amount of RAM
 available in the machine.

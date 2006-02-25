@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_mib.h,v 1.7 2005/01/07 01:45:34 imp Exp $
+ * $FreeBSD: src/sys/net/if_mib.h,v 1.7.2.1 2006/01/26 07:46:28 harti Exp $
  */
 
 #ifndef _NET_IF_MIB_H
@@ -54,6 +54,7 @@ struct ifmibdata {
  */
 #define	IFDATA_GENERAL	1	/* generic stats for all kinds of ifaces */
 #define	IFDATA_LINKSPECIFIC	2 /* specific to the type of interface */
+#define	IFDATA_DRIVERNAME	3 /* driver name and unit */
 
 /*
  * MIB tags at the net.link.generic.system level

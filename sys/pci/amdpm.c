@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/amdpm.c,v 1.15 2005/05/29 04:42:29 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/amdpm.c,v 1.15.2.1 2005/12/21 11:00:53 ru Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -66,7 +66,7 @@ static int amdpm_debug = 0;
 #define AMDPM_DEVICEID_AMD756PM 0x740b
 #define AMDPM_DEVICEID_AMD766PM 0x7413
 #define AMDPM_DEVICEID_AMD768PM 0x7443
-#define AMDPM_DEVICEID_AMD8111PM 0x746A
+#define AMDPM_DEVICEID_AMD8111PM 0x746B
 
 /* nVidia nForce chipset */
 #define AMDPM_VENDORID_NVIDIA 0x10de

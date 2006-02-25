@@ -3,7 +3,7 @@
 #
 # This might look like a com_err file, but is not
 #
-id "$Id: heim_err.et,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $"
+id "$Id: heim_err.et,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $"
 
 error_table heim
 

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdpcontrol.h,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
+ * $Id: sdpcontrol.h,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bluetooth/sdpcontrol/sdpcontrol.h,v 1.1 2003/10/12 22:04:24 emax Exp $
  */
 

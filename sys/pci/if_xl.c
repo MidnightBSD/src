@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_xl.c,v 1.190.2.6 2005/10/09 04:11:20 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_xl.c,v 1.190.2.7 2006/01/18 09:40:29 glebius Exp $");
 
 /*
  * 3Com 3c90x Etherlink XL PCI NIC driver
@@ -1690,7 +1690,7 @@ xl_detach(device_t dev)
 	KASSERT(mtx_initialized(&sc->xl_mtx), ("xl mutex not initialized"));
 
 #ifdef DEVICE_POLLING
-	if (ifp->if_capenable & IFCAP_POLLING)
+	if (ifp && ifp->if_capenable & IFCAP_POLLING)
 		ether_poll_deregister(ifp);
 #endif
 

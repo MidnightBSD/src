@@ -1,6 +1,6 @@
 # $FreeBSD: src/release/doc/de_DE.ISO8859-1/relnotes/sparc64/Makefile,v 1.1 2002/03/12 18:35:53 ue Exp $
 # $FreeBSDde: de-docproj/relnotes/de_DE.ISO8859-1/relnotes/sparc64/Makefile,v 1.1 2002/03/10 18:38:07 ue Exp $
-# $Id: Makefile,v 1.1.1.1 2006-02-25 02:26:59 laffer1 Exp $
+# $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:14 laffer1 Exp $
 # basiert auf: 1.1
 
 RELN_ROOT?= ${.CURDIR}/../../..

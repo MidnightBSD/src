@@ -33,7 +33,7 @@
 
 #include "login_locl.h"
 
-RCSID("$Id: utmp_login.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: utmp_login.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
 
 /* try to put something useful from hostname into dst, dst_sz:
  * full name, first component or address */

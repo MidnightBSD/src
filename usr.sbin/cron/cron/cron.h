@@ -17,7 +17,7 @@
 
 /* cron.h - header for vixie's cron
  *
- * $FreeBSD: src/usr.sbin/cron/cron/cron.h,v 1.15 2004/05/16 19:29:33 yar Exp $
+ * $FreeBSD: src/usr.sbin/cron/cron/cron.h,v 1.15.8.1 2006/01/15 17:50:36 delphij Exp $
  *
  * vix 14nov88 [rest of log is in RCS]
  * vix 14jan87 [0 or 7 can be sunday; thanks, mwm@berkeley]
@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <libutil.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
@@ -210,7 +211,6 @@ void		set_cron_uid __P((void)),
 		env_free __P((char **)),
 		unget_char __P((int, FILE *)),
 		free_entry __P((entry *)),
-		acquire_daemonlock __P((int)),
 		skip_comments __P((FILE *)),
 		log_it __P((char *, int, char *, char *)),
 		log_close __P((void));
@@ -289,6 +289,7 @@ extern	int	LineNumber;
 extern unsigned	Jitter,
 		RootJitter;
 extern	time_t	TargetTime;
+extern struct pidfh *pfh;
 # if DEBUGGING
 extern	int	DebugFlags;
 extern	char	*DebugFlagNames[];

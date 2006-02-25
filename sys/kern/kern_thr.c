@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_thr.c,v 1.34 2005/07/10 23:31:10 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_thr.c,v 1.34.2.2 2006/01/16 06:25:32 davidxu Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_thr.c,v 1.34 2005/07/10 23:31:10 davidxu E
 #include <sys/signalvar.h>
 #include <sys/ucontext.h>
 #include <sys/thr.h>
+#include <sys/umtx.h>
 
 #include <machine/frame.h>
 
@@ -275,8 +276,10 @@ thr_exit(struct thread *td, struct thr_exit_args *uap)
 	p = td->td_proc;
 
 	/* Signal userland that it can free the stack. */
-	if ((void *)uap->state != NULL)
+	if ((void *)uap->state != NULL) {
 		suword((void *)uap->state, 1);
+		kern_umtx_wake(td, uap->state, INT_MAX);
+	}
 
 	PROC_LOCK(p);
 	mtx_lock_spin(&sched_lock);
@@ -305,22 +308,37 @@ thr_kill(struct thread *td, struct thr_kill_args *uap)
 	p = td->td_proc;
 	error = 0;
 	PROC_LOCK(p);
-	FOREACH_THREAD_IN_PROC(p, ttd) {
-		if (ttd->td_tid == uap->id)
-			break;
+	if (uap->id == -1) {
+		if (uap->sig != 0 && !_SIG_VALID(uap->sig)) {
+			error = EINVAL;
+		} else {
+			error = ESRCH;
+			FOREACH_THREAD_IN_PROC(p, ttd) {
+				if (ttd != td) {
+					error = 0;
+					if (uap->sig == 0)
+						break;
+					tdsignal(ttd, uap->sig, SIGTARGET_TD);
+				}
+			}
+		}
+	} else {
+		if (uap->id != td->td_tid) {
+			FOREACH_THREAD_IN_PROC(p, ttd) {
+				if (ttd->td_tid == uap->id)
+					break;
+			}
+		} else
+			ttd = td;
+		if (ttd == NULL)
+			error = ESRCH;
+		else if (uap->sig == 0)
+			;
+		else if (!_SIG_VALID(uap->sig))
+			error = EINVAL;
+		else
+			tdsignal(ttd, uap->sig, SIGTARGET_TD);
 	}
-	if (ttd == NULL) {
-		error = ESRCH;
-		goto out;
-	}
-	if (uap->sig == 0)
-		goto out;
-	if (!_SIG_VALID(uap->sig)) {
-		error = EINVAL;
-		goto out;
-	}
-	tdsignal(ttd, uap->sig, SIGTARGET_TD);
-out:
 	PROC_UNLOCK(p);
 	return (error);
 }

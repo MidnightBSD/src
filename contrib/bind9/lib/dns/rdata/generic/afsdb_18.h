@@ -18,7 +18,7 @@
 #ifndef GENERIC_AFSDB_18_H
 #define GENERIC_AFSDB_18_H 1
 
-/* $Id: afsdb_18.h,v 1.1.1.1 2006-02-25 02:25:19 laffer1 Exp $ */
+/* $Id: afsdb_18.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 /* RFC 1183 */
 

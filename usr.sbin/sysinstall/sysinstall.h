@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.1 2005/10/07 15:56:30 nyan Exp $
+ * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -702,6 +702,7 @@ extern u_char		default_scrnmap[];
 
 /* media.c */
 extern char	*cpioVerbosity(void);
+extern int	mediaOpen(void);
 extern void	mediaClose(void);
 extern int	mediaTimeout(void);
 extern int	mediaSetCDROM(dialogMenuItem *self);

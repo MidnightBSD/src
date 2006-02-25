@@ -29,7 +29,7 @@
 /*
  * Author: Thomas E. Dickey <dickey@clark.net> 1999
  *
- * $Id: dots.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: dots.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
  *
  * A simple demo of the terminfo interface.
  */

@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/rc.shutdown,v 1.30 2004/12/14 14:36:35 rse Exp $
+# $FreeBSD: src/etc/rc.shutdown,v 1.30.2.1 2005/12/21 07:11:34 dougb Exp $
 #
 
 # Site-specific closing actions for daemons run by init on shutdown,
@@ -82,7 +82,13 @@ fi
 #
 rcorder_opts="-k shutdown"
 [ `/sbin/sysctl -n security.jail.jailed` -eq 1 ] && rcorder_opts="$rcorder_opts -s nojail"
-files=`rcorder ${rcorder_opts} /etc/rc.d/* 2>/dev/null`
+
+case ${local_startup} in
+[Nn][Oo] | '') ;;
+*)     find_local_scripts_new ;;
+esac
+
+files=`rcorder ${rcorder_opts} /etc/rc.d/* ${local_rc} 2>/dev/null`
 
 for _rc_elem in `reverse_list $files`; do
 	debug "run_rc_script $_rc_elem faststop"

@@ -12,7 +12,7 @@ divert(-1)
 #
 #
 divert(0)
-VERSIONID(`$Id: cssubdomain.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: cssubdomain.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 
 divert(2)
 # find possible (old & new) versions of our name via short circuit hack

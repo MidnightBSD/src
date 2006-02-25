@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.638.2.4 2005/11/28 19:42:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.638.2.5 2006/02/07 00:29:33 davidxu Exp $");
 
 #include "opt_atalk.h"
 #include "opt_atpic.h"
@@ -1579,16 +1579,17 @@ get_mcontext(struct thread *td, mcontext_t *mcp, int flags)
 	mcp->mc_rbp = tp->tf_rbp;
 	mcp->mc_rbx = tp->tf_rbx;
 	mcp->mc_rcx = tp->tf_rcx;
+	mcp->mc_rflags = tp->tf_rflags;
 	if (flags & GET_MC_CLEAR_RET) {
 		mcp->mc_rax = 0;
 		mcp->mc_rdx = 0;
+		mcp->mc_rflags &= ~PSL_C;
 	} else {
 		mcp->mc_rax = tp->tf_rax;
 		mcp->mc_rdx = tp->tf_rdx;
 	}
 	mcp->mc_rip = tp->tf_rip;
 	mcp->mc_cs = tp->tf_cs;
-	mcp->mc_rflags = tp->tf_rflags;
 	mcp->mc_rsp = tp->tf_rsp;
 	mcp->mc_ss = tp->tf_ss;
 	mcp->mc_len = sizeof(*mcp);

@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/nfs.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /home/cvs/src/contrib/tcpdump/nfs.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL) */
 /*	$NetBSD: nfs.h,v 1.1 1996/05/23 22:49:53 fvdl Exp $	*/
 
 /*

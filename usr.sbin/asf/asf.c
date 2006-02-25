@@ -23,7 +23,7 @@
  * negligence or otherwise) arising in any way out of the use of this
  * software, even if advised of the possibility of such damage.
  */
-/* $Id: asf.c,v 1.1.1.1 2006-02-25 02:29:34 laffer1 Exp $ */
+/* $Id: asf.c,v 1.1.1.2 2006-02-25 02:38:23 laffer1 Exp $ */
 /* $FreeBSD: src/usr.sbin/asf/asf.c,v 1.6.10.1 2005/10/03 23:45:01 grog Exp $ */
 
 #define MAXLINE 1024

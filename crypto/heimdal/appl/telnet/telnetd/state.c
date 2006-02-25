@@ -33,7 +33,7 @@
 
 #include "telnetd.h"
 
-RCSID("$Id: state.c,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $");
+RCSID("$Id: state.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
 
 unsigned char	doopt[] = { IAC, DO, '%', 'c', 0 };
 unsigned char	dont[] = { IAC, DONT, '%', 'c', 0 };

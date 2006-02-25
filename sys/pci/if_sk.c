@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_sk.c,v 1.106.2.5 2005/11/06 16:00:54 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_sk.c,v 1.106.2.7 2006/01/27 21:37:56 bz Exp $");
 
 /*
  * SysKonnect SK-NET gigabit ethernet driver for FreeBSD. Supports
@@ -136,7 +136,7 @@ MODULE_DEPEND(sk, miibus, 1, 1, 1);
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sys/pci/if_sk.c,v 1.106.2.5 2005/11/06 16:00:54 jhb Exp $";
+  "$FreeBSD: src/sys/pci/if_sk.c,v 1.106.2.7 2006/01/27 21:37:56 bz Exp $";
 #endif
 
 static struct sk_type sk_devs[] = {
@@ -1304,10 +1304,7 @@ static int
 skc_probe(dev)
 	device_t		dev;
 {
-	struct sk_softc		*sc;
 	struct sk_type		*t = sk_devs;
-
-	sc = device_get_softc(dev);
 
 	while(t->sk_name != NULL) {
 		if ((pci_get_vendor(dev) == t->sk_vid) &&
@@ -1470,6 +1467,12 @@ sk_attach(dev)
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
+	/*
+	 * The hardware should be ready for VLAN_MTU by default:
+	 * XMAC II has 0x8100 in VLAN Tag Level 1 register initially;
+	 * YU_SMR_MFL_VLAN is set by this driver in Yukon.
+	 */
+	ifp->if_capabilities = ifp->if_capenable = IFCAP_VLAN_MTU;
 	ifp->if_ioctl = sk_ioctl;
 	ifp->if_start = sk_start;
 	ifp->if_watchdog = sk_watchdog;

@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.1.1.1 2006-02-25 02:26:02 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.1.1.2 2006-02-25 02:33:22 laffer1 Exp $";
 #endif
 
 #ifndef	SOLARIS

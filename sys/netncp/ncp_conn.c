@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_conn.c,v 1.26 2005/01/07 01:45:48 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netncp/ncp_conn.c,v 1.26.2.1 2006/02/14 21:55:15 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -656,13 +656,7 @@ ncp_sysctl_connstat(SYSCTL_HANDLER_ARGS)
 		if (error) break;
 		/* I can't do conn_lock while list is locked */
 		ncp->nc_lwant++;
-		if (!error) {
-			ncp_conn_getinfo(ncp, &ncs);
-		} else {
-			bzero(&ncs,sizeof(ncs));
-			ncs.connRef = ncp->nc_id;
-			strcpy(ncs.li.server,"***");
-		}
+		ncp_conn_getinfo(ncp, &ncs);
 		ncp->nc_lwant--;
 		error = SYSCTL_OUT(req, &ncs, sizeof(ncs));
 	}

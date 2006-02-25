@@ -2989,4 +2989,4 @@
    - (djm) Trim deprecated options from INSTALL. Mention UsePAM
    - (djm) Fix quote handling in sftp; Patch from admorten AT umich.edu
 
-$Id: ChangeLog,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $
+$Id: ChangeLog,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $

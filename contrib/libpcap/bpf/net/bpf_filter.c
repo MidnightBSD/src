@@ -40,7 +40,7 @@
 
 #if !(defined(lint) || defined(KERNEL) || defined(_KERNEL))
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/bpf/net/bpf_filter.c,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/bpf/net/bpf_filter.c,v 1.1.1.2 2006-02-25 02:33:30 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H

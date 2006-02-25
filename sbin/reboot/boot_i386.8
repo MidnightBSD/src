@@ -34,7 +34,7 @@
 .\"
 .\"     @(#)boot_i386.8	8.2 (Berkeley) 4/19/94
 .\"
-.\" $FreeBSD: src/sbin/reboot/boot_i386.8,v 1.52.2.3 2005/12/15 04:03:05 sobomax Exp $
+.\" $FreeBSD: src/sbin/reboot/boot_i386.8,v 1.52.2.5 2006/02/15 15:10:55 ru Exp $
 .\"
 .Dd August 18, 2005
 .Dt BOOT 8 i386
@@ -260,7 +260,7 @@ is disabled.
 This option only affects second-stage bootstrap,
 to prevent next stages from writing to the console use in
 combination with the
-.Fl m 
+.Fl m
 option.
 .It Fl r
 use the statically configured default for the device containing the
@@ -281,8 +281,8 @@ set the speed of the serial console to
 The default is 9600 unless it has been overridden by setting
 .Va BOOT_COMCONSOLE_SPEED
 in
-.Pa /etc/make.conf
-and recompiling the boot blocks.
+.Xr make.conf 5
+and recompiling and reinstalling the boot blocks.
 .It Fl v
 be verbose during device probing (and later).
 .El
@@ -352,6 +352,7 @@ is reported by the second-stage bootstrap, it generally means that this
 requirement has not been adhered to.
 .Sh SEE ALSO
 .Xr ddb 4 ,
+.Xr make.conf 5 ,
 .Xr ttys 5 ,
 .Xr boot0cfg 8 ,
 .Xr bsdlabel 8 ,

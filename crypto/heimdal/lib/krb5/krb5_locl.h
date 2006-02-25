@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: krb5_locl.h,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $ */
+/* $Id: krb5_locl.h,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $ */
 /* $FreeBSD: src/crypto/heimdal/lib/krb5/krb5_locl.h,v 1.9 2002/09/16 21:07:11 nectar Exp $ */
 
 #ifndef __KRB5_LOCL_H__

@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: src/sys/conf/files.sparc64,v 1.73 2005/06/12 00:47:21 marcel Exp $
+# $FreeBSD: src/sys/conf/files.sparc64,v 1.73.2.1 2006/02/13 11:39:01 marius Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -41,6 +41,7 @@ dev/hwpmc/hwpmc_sparc64.c	optional	hwpmc
 dev/kbd/kbd.c			optional	atkbd
 dev/kbd/kbd.c			optional	sc
 dev/kbd/kbd.c			optional	ukbd
+dev/le/if_le_ledma.c		optional	le sbus
 dev/ofw/ofw_bus_if.m		standard
 dev/ofw/ofw_console.c		optional	ofw_console
 dev/ofw/openfirm.c		standard

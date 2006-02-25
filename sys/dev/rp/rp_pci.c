@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/rp/rp_pci.c,v 1.11 2005/03/25 03:10:51 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/rp/rp_pci.c,v 1.11.2.1 2006/02/14 23:09:10 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -67,6 +67,7 @@ __FBSDID("$FreeBSD: src/sys/dev/rp/rp_pci.c,v 1.11 2005/03/25 03:10:51 jhb Exp $
 #define RP_DEVICE_ID_4J		0x0007
 #define RP_DEVICE_ID_6M		0x000C
 #define RP_DEVICE_ID_4M		0x000D
+#define RP_DEVICE_ID_UPCI_32	0x0801
 #define RP_DEVICE_ID_UPCI_8O	0x0805
 
 /**************************************************************************
@@ -179,6 +180,7 @@ rp_pciattach(device_t dev)
 	ctlp->bus_ctlp = NULL;
 
 	switch (pci_get_device(dev)) {
+	case RP_DEVICE_ID_UPCI_32:
 	case RP_DEVICE_ID_UPCI_8O:
 		ctlp->io_rid[0] = PCIR_BAR(2);
 		break;

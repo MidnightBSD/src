@@ -48,7 +48,7 @@
 
 #include <gnu/dev/sound/pci/csaimg.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/csa.c,v 1.33 2005/06/27 07:43:57 glebius Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/csa.c,v 1.33.2.1 2005/12/30 19:55:53 netchild Exp $");
 
 /* This is the pci device id. */
 #define CS4610_PCI_ID 0x60011013
@@ -644,7 +644,7 @@ csa_initialize(sc_p scp)
 	/*
 	 * Set the serial port FIFO pointer to the first sample in the FIFO.
 	 */
-#if notdef
+#ifdef notdef
 	csa_writeio(resp, BA0_SERBSP, 0);
 #endif /* notdef */
 
@@ -698,7 +698,7 @@ csa_initialize(sc_p scp)
 		 * First, lets wait a short while to let things settle out a bit,
 		 * and to prevent retrying the read too quickly.
 		 */
-#if notdef
+#ifdef notdef
 		DELAY(10000000L); /* clw */
 #else
 		DELAY(1000);
@@ -728,7 +728,7 @@ csa_initialize(sc_p scp)
 	 * Power down the DAC and ADC.  We will power them up (if) when we need
 	 * them.
 	 */
-#if notdef
+#ifdef notdef
 	csa_writeio(resp, BA0_AC97_POWERDOWN, 0x300);
 #endif /* notdef */
 
@@ -736,7 +736,7 @@ csa_initialize(sc_p scp)
 	 * Turn off the Processor by turning off the software clock enable flag in
 	 * the clock control register.
 	 */
-#if notdef
+#ifdef notdef
 	clkcr1 = csa_readio(resp, BA0_CLKCR1) & ~CLKCR1_SWCE;
 	csa_writeio(resp, BA0_CLKCR1, clkcr1);
 #endif /* notdef */

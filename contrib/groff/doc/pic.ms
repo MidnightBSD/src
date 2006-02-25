@@ -10,7 +10,7 @@
 .\" This document was written for free use and redistribution by
 .\" Eric S. Raymond <esr@thyrsus.com> in August 1995.
 .\"
-.\"	$Id: pic.ms,v 1.1.1.1 2006-02-25 02:25:58 laffer1 Exp $	
+.\"	$Id: pic.ms,v 1.1.1.2 2006-02-25 02:33:15 laffer1 Exp $	
 .\"
 .\" Set a proper TeX and LaTeX
 .ie t \{\

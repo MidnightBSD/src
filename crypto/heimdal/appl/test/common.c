@@ -33,7 +33,7 @@
 
 #include "test_locl.h"
 
-RCSID("$Id: common.c,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $");
+RCSID("$Id: common.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
 
 static int help_flag;
 static int version_flag;

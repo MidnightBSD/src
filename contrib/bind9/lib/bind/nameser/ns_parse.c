@@ -16,7 +16,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_parse.c,v 1.1.1.1 2006-02-25 02:25:17 laffer1 Exp $";
+static const char rcsid[] = "$Id: ns_parse.c,v 1.1.1.2 2006-02-25 02:32:08 laffer1 Exp $";
 #endif
 
 /* Import. */
@@ -40,7 +40,12 @@ static void	setsection(ns_msg *msg, ns_sect sect);
 
 /* Macros. */
 
+#ifndef SOLARIS2
 #define RETERR(err) do { errno = (err); return (-1); } while (0)
+#else
+#define RETERR(err) \
+	do { errno = (err); if (errno == errno) return (-1); } while (0)
+#endif
 
 /* Public. */
 
@@ -135,7 +140,8 @@ ns_parserr(ns_msg *handle, ns_sect section, int rrnum, ns_rr *rr) {
 	int tmp;
 
 	/* Make section right. */
-	if ((tmp = section) < 0 || section >= ns_s_max)
+	tmp = section;
+	if (tmp < 0 || section >= ns_s_max)
 		RETERR(ENODEV);
 	if (section != handle->_sect)
 		setsection(handle, section);

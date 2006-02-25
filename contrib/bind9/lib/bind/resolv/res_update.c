@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $";
 #endif /* not lint */
 
 /*

@@ -34,7 +34,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/locate/locate/fastfind.c,v 1.13 2001/01/06 18:17:06 wosch Exp $
+ * $FreeBSD: src/usr.bin/locate/locate/fastfind.c,v 1.13.14.1 2005/12/21 12:17:49 des Exp $
  */
 
 
@@ -103,6 +103,7 @@ statistic (fp, path_fcodes)
 }
 #endif /* _LOCATE_STATISTIC_ */
 
+extern	char	separator;
 
 void
 #ifdef FF_MMAP
@@ -315,11 +316,11 @@ fastfind
 						else if (f_limit) {
 							counter++;
 							if (f_limit >= counter)
-								(void)puts(path);
+								(void)printf("%s%c",path,separator);
 							else 
 								errx(0, "[show only %d lines]", counter - 1);
 						} else
-							(void)puts(path);
+							(void)printf("%s%c",path,separator);
 					}
 					break;
 				}

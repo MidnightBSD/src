@@ -37,7 +37,7 @@
  * SUCH DAMAGE.
  *
  *
- * $Id: fsinfo.c,v 1.1.1.1 2006-02-25 02:25:13 laffer1 Exp $
+ * $Id: fsinfo.c,v 1.1.1.2 2006-02-25 02:32:01 laffer1 Exp $
  * $FreeBSD: src/contrib/amd/fsinfo/fsinfo.c,v 1.6 2004/07/06 13:16:46 mbr Exp $
  *
  */

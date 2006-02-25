@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/ef.c,v 1.8 2004/08/28 19:31:10 iedowse Exp $
+ * $FreeBSD: src/usr.sbin/kldxref/ef.c,v 1.8.2.1 2005/12/30 22:13:59 marcel Exp $
  */
 
 #include <sys/param.h>
@@ -92,7 +92,7 @@ static int ef_seg_read_entry(elf_file_t ef, Elf_Off offset, size_t len,
     void **ptr);
 static int ef_seg_read_entry_rel(elf_file_t ef, Elf_Off offset, size_t len,
     void **ptr);
-static Elf_Addr ef_symaddr(elf_file_t ef, Elf_Word symidx);
+static Elf_Addr ef_symaddr(elf_file_t ef, Elf_Size symidx);
 static int ef_lookup_set(elf_file_t ef, const char *name, long *startp,
     long *stopp, long *countp);
 static int ef_lookup_symbol(elf_file_t ef, const char* name, Elf_Sym** sym);
@@ -246,7 +246,7 @@ out:
 }
 
 static Elf_Addr
-ef_symaddr(elf_file_t ef, Elf_Word symidx)
+ef_symaddr(elf_file_t ef, Elf_Size symidx)
 {
 	const Elf_Sym *sym;
 

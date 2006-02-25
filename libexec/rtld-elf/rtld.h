@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/rtld.h,v 1.35 2005/02/27 12:55:40 dfr Exp $
+ * $FreeBSD: src/libexec/rtld-elf/rtld.h,v 1.35.2.1 2005/12/30 22:13:56 marcel Exp $
  */
 
 #ifndef RTLD_H /* { */
@@ -122,8 +122,8 @@ typedef struct Struct_Obj_Entry {
      * These two items have to be set right for compatibility with the
      * original ElfKit crt1.o.
      */
-    Elf_Word magic;		/* Magic number (sanity check) */
-    Elf_Word version;		/* Version number of struct format */
+    Elf_Size magic;		/* Magic number (sanity check) */
+    Elf_Size version;		/* Version number of struct format */
 
     struct Struct_Obj_Entry *next;
     char *path;			/* Pathname of underlying file (%) */

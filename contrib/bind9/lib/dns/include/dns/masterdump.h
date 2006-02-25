@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: masterdump.h,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $ */
+/* $Id: masterdump.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 #ifndef DNS_MASTERDUMP_H
 #define DNS_MASTERDUMP_H 1
@@ -122,7 +122,7 @@ LIBDNS_EXTERNAL_DATA extern const dns_master_style_t dns_master_style_full;
  * stop of its own, but the class and type share one.
  */
 LIBDNS_EXTERNAL_DATA extern const dns_master_style_t
-				  dns_master_style_explicitttl;
+					dns_master_style_explicitttl;
 
 /*
  * A master style format designed for cache files.  It prints explicit TTL

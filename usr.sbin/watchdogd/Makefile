@@ -1,12 +1,12 @@
-# $FreeBSD: src/usr.sbin/watchdogd/Makefile,v 1.4 2004/02/28 20:56:34 phk Exp $
+# $FreeBSD: src/usr.sbin/watchdogd/Makefile,v 1.4.8.1 2006/01/15 17:50:38 delphij Exp $
 
 PROG=	watchdogd
 LINKS=	${BINDIR}/watchdogd ${BINDIR}/watchdog
 MAN=	watchdogd.8 watchdog.8
 WARNS?=	6
 
-LDADD=	-lm
-DPADD=	${LIBM}
+LDADD=	-lm -lutil
+DPADD=	${LIBM} ${LIBUTIL}
 
 .include <bsd.prog.mk>
 

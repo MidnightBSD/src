@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002 - 2005 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2002 - 2006 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,8 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -27,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-cbus.c,v 1.22 2005/04/30 16:22:06 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-cbus.c,v 1.22.2.1 2006/01/25 08:13:44 sos Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>

@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.48.2.3 2005/11/15 22:07:00 ru Exp $
+.\" $FreeBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.48.2.4 2006/01/12 15:44:42 ru Exp $
 .\"
 .\"     %beginstrip%
 .
@@ -61,10 +61,7 @@
 .ds doc-default-operating-system FreeBSD\~6.0
 .
 .\" FreeBSD releases not found in doc-common
-.ds doc-operating-system-FreeBSD-4.11   4.11
-.ds doc-operating-system-FreeBSD-5.4    5.4
 .ds doc-operating-system-FreeBSD-5.5    5.5
-.ds doc-operating-system-FreeBSD-6.0    6.0
 .ds doc-operating-system-FreeBSD-7.0    7.0
 .
 .ec

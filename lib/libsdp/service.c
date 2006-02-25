@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: service.c,v 1.1.1.1 2006-02-25 02:26:53 laffer1 Exp $
+ * $Id: service.c,v 1.1.1.2 2006-02-25 02:35:07 laffer1 Exp $
  * $FreeBSD: src/lib/libsdp/service.c,v 1.1 2004/01/20 20:48:25 emax Exp $
  */
 

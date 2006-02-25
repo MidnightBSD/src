@@ -16,7 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: cc.h,v 1.1.1.1 2006-02-25 02:25:20 laffer1 Exp $ */
+/* $Id: cc.h,v 1.1.1.2 2006-02-25 02:32:13 laffer1 Exp $ */
 
 #ifndef ISCCC_CC_H
 #define ISCCC_CC_H 1

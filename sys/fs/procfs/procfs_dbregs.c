@@ -39,7 +39,7 @@
  *	From: @(#)procfs_regs.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_dbregs.c,v 1.1.1.1 2006-02-25 02:28:14 laffer1 Exp $
+ *	$Id: procfs_dbregs.c,v 1.1.1.2 2006-02-25 02:37:05 laffer1 Exp $
  * $FreeBSD: src/sys/fs/procfs/procfs_dbregs.c,v 1.26 2005/06/30 07:49:21 peter Exp $
  */
 

@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
-# $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.5 2005/11/16 10:50:10 ru Exp $
+# $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -84,6 +84,7 @@ MAN=	aac.4 \
 	gdb.4 \
 	gem.4 \
 	geom.4 \
+	geom_fox.4 \
 	gif.4 \
 	gre.4 \
 	harp.4 \
@@ -127,6 +128,7 @@ MAN=	aac.4 \
 	kld.4 \
 	ktr.4 \
 	kue.4 \
+	le.4 \
 	led.4 \
 	lge.4 \
 	lo.4 \
@@ -278,6 +280,7 @@ MAN=	aac.4 \
 	sn.4 \
 	snd_ad1816.4 \
 	snd_als4000.4 \
+	snd_atiixp.4 \
 	snd_cmi.4 \
 	snd_cs4281.4 \
 	snd_csa.4 \
@@ -290,6 +293,7 @@ MAN=	aac.4 \
 	snd_ich.4 \
 	snd_maestro.4 \
 	snd_maestro3.4 \
+	snd_mss.4 \
 	snd_neomagic.4 \
 	snd_sbc.4 \
 	snd_solo.4 \

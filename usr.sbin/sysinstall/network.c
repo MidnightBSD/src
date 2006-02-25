@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/network.c,v 1.51 2002/11/01 02:05:05 kuriyama Exp $
+ * $FreeBSD: src/usr.sbin/sysinstall/network.c,v 1.51.14.1 2006/02/12 15:23:50 delphij Exp $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -126,8 +126,12 @@ mediaInitNetwork(Device *dev)
     snprintf(ifconfig, 255, "%s%s", VAR_IFCONFIG, dev->name);
     cp = variable_get(ifconfig);
     if (cp) {
-	if (strcmp(cp, "DHCP")) {
-	    msgDebug("ifconfig %s %s\n", dev->name, cp);
+	/*
+	 * If this interface isn't a DHCP one, bring it up.
+	 * If it is, then it's already up.
+	 */
+	if (strstr(cp, "DHCP") == NULL) {
+	    msgDebug("Not a DHCP interface.\n");
 	    i = vsystem("ifconfig %s %s", dev->name, cp);
 	    if (i) {
 		msgConfirm("Unable to configure the %s interface!\n"
@@ -144,6 +148,8 @@ mediaInitNetwork(Device *dev)
 		msgDebug("Adding default route to %s.\n", rp);
 		vsystem("route -n add default %s", rp);
 	    }
+	} else {
+	    msgDebug("A DHCP interface.  Should already be up.\n");
 	}
     } else if ((cp = variable_get(VAR_IPV6ADDR)) == NULL || *cp == '\0') {
 	msgConfirm("The %s device is not configured.  You will need to do so\n"

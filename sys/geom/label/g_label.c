@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.13.2.2 2005/08/30 15:16:14 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.13.2.3 2005/12/29 06:22:37 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -81,6 +81,7 @@ const struct g_label_desc *g_labels[] = {
 	&g_label_msdosfs,
 	&g_label_ext2fs,
 	&g_label_reiserfs,
+	&g_label_ntfs,
 	NULL
 };
 

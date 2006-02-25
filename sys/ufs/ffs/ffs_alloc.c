@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.132.2.2 2005/10/29 06:38:13 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.132.2.3 2005/12/28 20:11:51 ps Exp $");
 
 #include "opt_quota.h"
 
@@ -140,6 +140,8 @@ ffs_alloc(ip, lbn, bpref, size, cred, bnp)
 	struct ufsmount *ump;
 	ufs2_daddr_t bno;
 	int cg, reclaimed;
+	static struct timeval lastfail;
+	static int curfail;
 #ifdef QUOTA
 	int error;
 #endif
@@ -200,8 +202,11 @@ nospace:
 		goto retry;
 	}
 	UFS_UNLOCK(ump);
-	ffs_fserr(fs, ip->i_number, "filesystem full");
-	uprintf("\n%s: write failed, filesystem is full\n", fs->fs_fsmnt);
+	if (ppsratecheck(&lastfail, &curfail, 1)) {
+		ffs_fserr(fs, ip->i_number, "filesystem full");
+		uprintf("\n%s: write failed, filesystem is full\n",
+		    fs->fs_fsmnt);
+	}
 	return (ENOSPC);
 }
 
@@ -229,6 +234,8 @@ ffs_realloccg(ip, lbprev, bprev, bpref, osize, nsize, cred, bpp)
 	struct ufsmount *ump;
 	int cg, request, error, reclaimed;
 	ufs2_daddr_t bno;
+	static struct timeval lastfail;
+	static int curfail;
 
 	*bpp = 0;
 	vp = ITOV(ip);
@@ -398,8 +405,11 @@ nospace:
 	UFS_UNLOCK(ump);
 	if (bp)
 		brelse(bp);
-	ffs_fserr(fs, ip->i_number, "filesystem full");
-	uprintf("\n%s: write failed, filesystem is full\n", fs->fs_fsmnt);
+	if (ppsratecheck(&lastfail, &curfail, 1)) {
+		ffs_fserr(fs, ip->i_number, "filesystem full");
+		uprintf("\n%s: write failed, filesystem is full\n",
+		    fs->fs_fsmnt);
+	}
 	return (ENOSPC);
 }
 
@@ -889,6 +899,8 @@ ffs_valloc(pvp, mode, cred, vpp)
 	struct ufsmount *ump;
 	ino_t ino, ipref;
 	int cg, error;
+	static struct timeval lastfail;
+	static int curfail;
 
 	*vpp = NULL;
 	pip = VTOI(pvp);
@@ -960,8 +972,11 @@ ffs_valloc(pvp, mode, cred, vpp)
 	return (0);
 noinodes:
 	UFS_UNLOCK(ump);
-	ffs_fserr(fs, pip->i_number, "out of inodes");
-	uprintf("\n%s: create/symlink failed, no inodes free\n", fs->fs_fsmnt);
+	if (ppsratecheck(&lastfail, &curfail, 1)) {
+		ffs_fserr(fs, pip->i_number, "out of inodes");
+		uprintf("\n%s: create/symlink failed, no inodes free\n",
+		    fs->fs_fsmnt);
+	}
 	return (ENOSPC);
 }
 

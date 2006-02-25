@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/Makefile,v 1.450.2.8 2005/12/01 02:43:13 yongari Exp $
+# $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
 
 # oldcard -- specialized use for debugging only.
 # owi -- totally unsupported for debugging only.
@@ -126,6 +126,7 @@ SUBDIR=	${_3dfx} \
 	joy \
 	kbdmux \
 	kue \
+	le \
 	lge \
 	libalias \
 	libiconv \

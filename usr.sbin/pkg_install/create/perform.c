@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/create/perform.c,v 1.80.2.1 2005/11/11 08:07:24 krion Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/create/perform.c,v 1.80.2.2 2006/01/10 22:15:05 krion Exp $");
 
 #include "lib.h"
 #include "create.h"
@@ -345,6 +345,8 @@ make_dist(const char *homedir, const char *pkg, const char *suff, Package *plist
     FILE *totar;
     pid_t pid;
     const char *cname;
+    char *prefix = NULL;
+
 
     args[nargs++] = "tar";	/* argv[0] */
 
@@ -428,12 +430,17 @@ make_dist(const char *homedir, const char *pkg, const char *suff, Package *plist
     for (p = plist->head; p; p = p->next) {
 	if (p->type == PLIST_FILE)
 	    fprintf(totar, "%s\n", p->name);
+	else if (p->type == PLIST_CWD && p->name == NULL)
+	    fprintf(totar, "-C\n%s\n", prefix);
 	else if (p->type == PLIST_CWD && BaseDir && p->name && p->name[0] == '/')
 	    fprintf(totar, "-C\n%s%s\n", BaseDir, p->name);
 	else if (p->type == PLIST_CWD || p->type == PLIST_SRC)
 	    fprintf(totar, "-C\n%s\n", p->name);
 	else if (p->type == PLIST_IGNORE)
 	     p = p->next;
+	if (p->type == PLIST_CWD && !prefix)
+	    prefix = p->name;
+
     }
 
     fclose(totar);

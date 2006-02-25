@@ -33,7 +33,7 @@
 #include "gssapi_locl.h"
 #include <err.h>
 
-RCSID("$Id: test_acquire_cred.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: test_acquire_cred.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 static void
 print_time(OM_uint32 time_rec)

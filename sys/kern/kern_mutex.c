@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: kern_mutex.c,v 1.1.1.1 2006-02-25 02:28:21 laffer1 Exp $
- *	and BSDI $Id: kern_mutex.c,v 1.1.1.1 2006-02-25 02:28:21 laffer1 Exp $
+ *	from BSDI $Id: kern_mutex.c,v 1.1.1.2 2006-02-25 02:37:17 laffer1 Exp $
+ *	and BSDI $Id: kern_mutex.c,v 1.1.1.2 2006-02-25 02:37:17 laffer1 Exp $
  */
 
 /*
@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mutex.c,v 1.154.2.4 2005/11/06 15:58:06 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_mutex.c,v 1.154.2.5 2005/12/20 19:28:23 jhb Exp $");
 
 #include "opt_adaptive_mutexes.h"
 #include "opt_ddb.h"
@@ -89,16 +89,26 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_mutex.c,v 1.154.2.4 2005/11/06 15:58:06 jh
 #define mtx_owner(m)	(mtx_unowned((m)) ? NULL \
 	: (struct thread *)((m)->mtx_lock & MTX_FLAGMASK))
 
+#ifdef DDB
+static void	db_show_mtx(struct lock_object *lock);
+#endif
+
 /*
  * Lock classes for sleep and spin mutexes.
  */
 struct lock_class lock_class_mtx_sleep = {
 	"sleep mutex",
-	LC_SLEEPLOCK | LC_RECURSABLE
+	LC_SLEEPLOCK | LC_RECURSABLE,
+#ifdef DDB
+	db_show_mtx
+#endif
 };
 struct lock_class lock_class_mtx_spin = {
 	"spin mutex",
-	LC_SPINLOCK | LC_RECURSABLE
+	LC_SPINLOCK | LC_RECURSABLE,
+#ifdef DDB
+	db_show_mtx
+#endif
 };
 
 /*
@@ -905,3 +915,64 @@ mutex_init(void)
 	mtx_init(&devmtx, "cdev", NULL, MTX_DEF);
 	mtx_lock(&Giant);
 }
+
+#ifdef DDB
+/* XXX: This function is not mutex-specific. */
+DB_SHOW_COMMAND(lock, db_show_lock)
+{
+	struct lock_object *lock;
+
+	if (!have_addr)
+		return;
+	lock = (struct lock_object *)addr;
+	if (lock->lo_class != &lock_class_mtx_sleep &&
+	    lock->lo_class != &lock_class_mtx_spin &&
+	    lock->lo_class != &lock_class_sx) {
+		db_printf("Unknown lock class\n");
+		return;
+	}
+	db_printf(" class: %s\n", lock->lo_class->lc_name);
+	db_printf(" name: %s\n", lock->lo_name);
+	if (lock->lo_type && lock->lo_type != lock->lo_name)
+		db_printf(" type: %s\n", lock->lo_type);
+	lock->lo_class->lc_ddb_show(lock);
+}
+
+void
+db_show_mtx(struct lock_object *lock)
+{
+	struct thread *td;
+	struct mtx *m;
+
+	m = (struct mtx *)lock;
+
+	db_printf(" flags: {");
+	if (m->mtx_object.lo_class == &lock_class_mtx_spin)
+		db_printf("SPIN");
+	else
+		db_printf("DEF");
+	if (m->mtx_object.lo_flags & LO_RECURSABLE)
+		db_printf(", RECURSE");
+	if (m->mtx_object.lo_flags & LO_DUPOK)
+		db_printf(", DUPOK");
+	db_printf("}\n");
+	db_printf(" state: {");
+	if (mtx_unowned(m))
+		db_printf("UNOWNED");
+	else {
+		db_printf("OWNED");
+		if (m->mtx_lock & MTX_CONTESTED)
+			db_printf(", CONTESTED");
+		if (m->mtx_lock & MTX_RECURSED)
+			db_printf(", RECURSED");
+	}
+	db_printf("}\n");
+	if (!mtx_unowned(m)) {
+		td = mtx_owner(m);
+		db_printf(" owner: %p (tid %d, pid %d, \"%s\")\n", td,
+		    td->td_tid, td->td_proc->p_pid, td->td_proc->p_comm);
+		if (mtx_recursed(m))
+			db_printf(" recursed: %d\n", m->mtx_recurse);
+	}
+}
+#endif

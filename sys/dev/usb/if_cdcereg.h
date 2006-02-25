@@ -29,7 +29,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/if_cdcereg.h,v 1.5 2005/06/10 16:49:15 brooks Exp $
+ * $FreeBSD: src/sys/dev/usb/if_cdcereg.h,v 1.5.2.1 2005/12/29 05:30:39 sobomax Exp $
  */
 
 #ifndef _USB_IF_CDCEREG_H_
@@ -45,6 +45,7 @@ struct cdce_type {
 struct cdce_softc {
 	struct ifnet		 *cdce_ifp;
 #define GET_IFP(sc) ((sc)->cdce_ifp)
+	struct ifmedia		 cdce_ifmedia;
 
 	usbd_device_handle	 cdce_udev;
 	usbd_interface_handle	 cdce_data_iface;

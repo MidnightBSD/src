@@ -33,7 +33,7 @@
 
 #include "kafs_locl.h"
 
-RCSID("$Id: common.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: common.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 #define AUTH_SUPERUSER "afs"
 

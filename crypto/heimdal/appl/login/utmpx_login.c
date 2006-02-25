@@ -18,7 +18,7 @@
 
 #include "login_locl.h"
 
-RCSID("$Id: utmpx_login.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: utmpx_login.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
 
 /* utmpx_login - update utmp and wtmp after login */
 

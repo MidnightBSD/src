@@ -1,4 +1,4 @@
-/* $Id: auth-pam.h,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $ */
+/* $Id: auth-pam.h,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $ */
 /* $FreeBSD: src/crypto/openssh/auth-pam.h,v 1.11 2005/06/05 15:46:07 des Exp $ */
 
 /*

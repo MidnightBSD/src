@@ -1,4 +1,4 @@
-/* $FreeBSD: src/lib/bind/isc/isc/platform.h,v 1.1.4.1 2005/07/30 07:56:26 des Exp $ */
+/* $FreeBSD: src/lib/bind/isc/isc/platform.h,v 1.1.4.2 2006/01/14 10:13:49 dougb Exp $ */
 
 /*
  * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h,v 1.1.1.1 2006-02-25 02:26:46 laffer1 Exp $ */
+/* $Id: platform.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
 
 #ifndef ISC_PLATFORM_H
 #define ISC_PLATFORM_H 1
@@ -91,7 +91,7 @@
 /*
  * If this system needs inet_pton(), ISC_PLATFORM_NEEDPTON will be defined.
  */
-#define ISC_PLATFORM_NEEDPTON 1
+#undef ISC_PLATFORM_NEEDPTON
 
 /*
  * If this system needs inet_aton(), ISC_PLATFORM_NEEDATON will be defined.

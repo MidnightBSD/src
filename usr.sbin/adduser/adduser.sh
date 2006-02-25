@@ -24,7 +24,7 @@
 #
 #       Email: Mike Makonnen <mtm@FreeBSD.Org>
 #
-# $FreeBSD: src/usr.sbin/adduser/adduser.sh,v 1.26 2005/04/28 12:44:02 robert Exp $
+# $FreeBSD: src/usr.sbin/adduser/adduser.sh,v 1.26.2.1 2006/01/25 07:43:48 matteo Exp $
 #
 
 # err msg
@@ -447,7 +447,10 @@ get_homedir() {
 #	allocates one if it is not specified.
 #
 get_uid() {
-	uuid=${uidstart}
+	if [ -z "$uuid" ]; then
+		uuid=${uidstart}
+	fi
+
 	_input=
 	_prompt=
 

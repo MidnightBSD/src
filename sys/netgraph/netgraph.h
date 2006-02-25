@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/netgraph.h,v 1.55.2.4 2005/11/25 14:23:27 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/netgraph.h,v 1.55.2.6 2006/01/21 10:00:51 glebius Exp $
  * $Whistle: netgraph.h,v 1.29 1999/11/01 07:56:13 julian Exp $
  */
 
@@ -411,7 +411,6 @@ static __inline void _chknode(node_p node, char *file, int line);
 static __inline char * _ng_node_name(node_p node, char *file, int line);
 static __inline int _ng_node_has_name(node_p node, char *file, int line);
 static __inline ng_ID_t _ng_node_id(node_p node, char *file, int line);
-void ng_ref_node(node_p node);
 static __inline void _ng_node_ref(node_p node, char *file, int line);
 static __inline int _ng_node_unref(node_p node, char *file, int line);
 static __inline void _ng_node_set_private(node_p node, void * val,
@@ -461,8 +460,7 @@ static __inline void
 _ng_node_ref(node_p node, char *file, int line)
 {
 	_chknode(node, file, line);
-	/*_NG_NODE_REF(node);*/
-	ng_ref_node(node);
+	_NG_NODE_REF(node);
 }
 
 static __inline int
@@ -821,16 +819,18 @@ _ngi_hook(item_p item, char *file, int line)
 /*
  * Assuming the data is already ok, just set the new address and send
  */
-#define NG_FWD_ITEM_HOOK(error, item, hook)				\
+#define NG_FWD_ITEM_HOOK_FLAGS(error, item, hook, flags)		\
 	do {								\
 		(error) =						\
-		    ng_address_hook(NULL, (item), (hook), 0);	\
+		    ng_address_hook(NULL, (item), (hook), NG_NOFLAGS);	\
 		if (error == 0) {					\
 			SAVE_LINE(item);				\
-			(error) = ng_snd_item((item), 0);		\
+			(error) = ng_snd_item((item), (flags));		\
 		}							\
 		(item) = NULL;						\
 	} while (0)
+#define	NG_FWD_ITEM_HOOK(error, item, hook)	\
+		NG_FWD_ITEM_HOOK_FLAGS(error, item, hook, NG_NOFLAGS)
 
 /*
  * Forward a data packet. Mbuf pointer is updated to new value. We
@@ -839,29 +839,35 @@ _ngi_hook(item_p item, char *file, int line)
  * the mbuf. You should probably use NGI_GET_M() if you are going to use
  * this too.
  */
-#define NG_FWD_NEW_DATA(error, item, hook, m)				\
+#define NG_FWD_NEW_DATA_FLAGS(error, item, hook, m, flags)		\
 	do {								\
 		NGI_M(item) = (m);					\
 		(m) = NULL;						\
-		NG_FWD_ITEM_HOOK(error, item, hook);			\
+		NG_FWD_ITEM_HOOK_FLAGS(error, item, hook, flags);	\
 	} while (0)
+#define	NG_FWD_NEW_DATA(error, item, hook, m)	\
+		NG_FWD_NEW_DATA_FLAGS(error, item, hook, m, NG_NOFLAGS)
 
 /* Send a previously unpackaged mbuf. XXX: This should be called
  * NG_SEND_DATA in future, but this name is kept for compatibility
  * reasons.
  */
-#define NG_SEND_DATA_ONLY(error, hook, m)				\
+#define NG_SEND_DATA_FLAGS(error, hook, m, flags)			\
 	do {								\
 		item_p _item;						\
-		if ((_item = ng_package_data((m), NG_NOFLAGS))) {	\
-			NG_FWD_ITEM_HOOK(error, _item, hook);		\
+		if ((_item = ng_package_data((m), flags))) {		\
+			NG_FWD_ITEM_HOOK_FLAGS(error, _item, hook, flags);\
 		} else {						\
 			(error) = ENOMEM;				\
 		}							\
 		(m) = NULL;						\
 	} while (0)
 
-#define NG_SEND_DATA(error, hook, m, x) NG_SEND_DATA_ONLY(error, hook, m)
+#define NG_SEND_DATA_ONLY(error, hook, m)	\
+		NG_SEND_DATA_FLAGS(error, hook, m, NG_NOFLAGS)
+/* NG_SEND_DATA() compat for meta-data times */
+#define	NG_SEND_DATA(error, hook, m, x)	\
+		NG_SEND_DATA_FLAGS(error, hook, m, NG_NOFLAGS)
 
 #define NG_FREE_MSG(msg)						\
 	do {								\

@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbd.c,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidd/kbd.c,v 1.1 2004/11/18 18:05:15 emax Exp $
+ * $Id: kbd.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/bthidd/kbd.c,v 1.1.2.1 2006/02/23 15:37:43 markus Exp $
  */
 
 #include <sys/consio.h>
@@ -139,7 +139,7 @@ static int const	x[] =
 /* F10                          43 */ 0x44, /* C4 */
 /* F11                          44 */ 0x57, /* D7 */
 /* F12                          45 */ 0x58, /* D8 */
-/* Print Screen                 46 */ E0PREFIX|37, /* E0 B7 */
+/* Print Screen                 46 */ E0PREFIX|0x37, /* E0 B7 */
 /* Scroll Lock                  47 */ 0x46, /* C6 */
 #if 0
 /* Break (Ctrl-Pause)           48 */ E0 46 E0 C6, /* None */
@@ -273,6 +273,7 @@ static int const	x[] =
 /* Reserved                     C4 */ -1,   /* Reserved */
 /* Reserved                     C5 */ -1,   /* Reserved */
 /* Reserved                     C6 */ -1,   /* Reserved */
+/* Reserved                     C7 */ -1,   /* Reserved */
 /* Reserved                     C8 */ -1,   /* Reserved */
 /* Reserved                     C9 */ -1,   /* Reserved */
 /* Reserved                     CA */ -1,   /* Reserved */
@@ -288,6 +289,7 @@ static int const	x[] =
 /* Reserved                     D4 */ -1,   /* Reserved */
 /* Reserved                     D5 */ -1,   /* Reserved */
 /* Reserved                     D6 */ -1,   /* Reserved */
+/* Reserved                     D7 */ -1,   /* Reserved */
 /* Reserved                     D8 */ -1,   /* Reserved */
 /* Reserved                     D9 */ -1,   /* Reserved */
 /* Reserved                     DA */ -1,   /* Reserved */
@@ -296,7 +298,6 @@ static int const	x[] =
 /* Reserved                     DD */ -1,   /* Reserved */
 /* Reserved                     DE */ -1,   /* Reserved */
 /* Reserved                     DF */ -1,   /* Reserved */
-/* Left Control                 E0 */ 0x1D, /* 9D */
 /* Left Control                 E0 */ 0x1D, /* 9D */
 /* Left Shift                   E1 */ 0x2A, /* AA */
 /* Left Alt                     E2 */ 0x38, /* B8 */

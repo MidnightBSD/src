@@ -21,7 +21,7 @@ POPDIVERT
 ###  USENET Mailer specification ###
 ####################################
 
-VERSIONID(`$Id: usenet.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: usenet.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 
 Musenet,	P=USENET_MAILER_PATH, F=_MODMF_(USENET_MAILER_FLAGS, `USENET'), S=EnvFromL, R=EnvToL,
 		_OPTINS(`USENET_MAILER_MAX', `M=', `, ')T=X-Usenet/X-Usenet/X-Unix,_USENET_QGRP

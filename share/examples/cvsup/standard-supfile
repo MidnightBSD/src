@@ -1,7 +1,7 @@
-# $FreeBSD: src/share/examples/cvsup/standard-supfile,v 1.23.4.1 2005/07/11 16:07:25 kensmith Exp $
+# $FreeBSD: src/share/examples/cvsup/standard-supfile,v 1.23.4.2 2006/02/14 02:32:25 hrs Exp $
 #
 # This file contains all of the "CVSup collections" that make up the
-# FreeBSD-current source tree.
+# FreeBSD 6.x-STABLE source tree.
 #
 # CVSup (CVS Update Protocol) allows you to download the latest CVS
 # tree (or any branch of development therefrom) to your system easily

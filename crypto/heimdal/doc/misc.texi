@@ -1,4 +1,4 @@
-@c $Id: misc.texi,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+@c $Id: misc.texi,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
 
 @node Things in search for a better place, Kerberos 4 issues, Setting up a realm, Top
 @chapter Things in search for a better place

@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ataraid.4,v 1.3.2.1 2005/12/02 16:48:42 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/ataraid.4,v 1.3.2.3 2006/02/19 18:33:07 brueffer Exp $
 .\"
-.Dd November 27, 2005
+.Dd February 17, 2006
 .Dt ATARAID 4
 .Os
 .Sh NAME
@@ -82,6 +82,8 @@ Intel MatrixRAID
 .It
 Integrated Technology Express (ITE)
 .It
+JMicron
+.It
 LSI Logic V2 MegaRAID
 .It
 LSI Logic V3 MegaRAID
@@ -91,6 +93,8 @@ NVIDIA MediaShield
 Promise FastTrak
 .It
 Silicon Image Medley
+.It
+Silicon Integrated Systems (SiS)
 .It
 VIA Tech V-RAID
 .It
@@ -105,7 +109,15 @@ driver can write the following metadata formats:
 .It
 Highpoint V2 RocketRAID
 .It
+Intel MatrixRAID
+.It
+JMicron
+.It
 Promise FastTrak
+.It
+Silicon Integrated Systems (SiS)
+.It
+VIA Tech V-RAID
 .It
 FreeBSD PseudoRAID
 .El

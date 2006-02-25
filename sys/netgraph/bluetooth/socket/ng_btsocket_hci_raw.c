@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_hci_raw.c,v 1.1.1.1 2006-02-25 02:28:29 laffer1 Exp $
+ * $Id: ng_btsocket_hci_raw.c,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
  * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_hci_raw.c,v 1.17.2.1 2005/08/29 17:00:54 emax Exp $
  */
 

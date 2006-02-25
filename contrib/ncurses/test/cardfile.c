@@ -29,7 +29,7 @@
 /*
  * Author: Thomas E. Dickey <dickey@clark.net> 1999
  *
- * $Id: cardfile.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: cardfile.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
  *
  * File format: text beginning in column 1 is a title; other text forms the content.
  */

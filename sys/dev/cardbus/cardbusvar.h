@@ -23,18 +23,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/cardbus/cardbusvar.h,v 1.11 2005/02/06 21:03:13 imp Exp $
+ * $FreeBSD: src/sys/dev/cardbus/cardbusvar.h,v 1.11.2.1 2006/01/30 20:04:59 imp Exp $
  */
 
 /*
  * Structure definitions for the Cardbus Bus driver
  */
-struct cardbus_devinfo {
+struct cardbus_devinfo
+{
 	struct pci_devinfo pci;
 	uint8_t        mprefetchable; /* bit mask of prefetchable BARs */
 	uint8_t        mbelow1mb; /* bit mask of BARs which require below 1Mb */
 	uint8_t        ibelow1mb; /* bit mask of BARs which require below 1Mb */
-#define        BARBIT(RID) (1<<(((RID)-CARDBUS_BASE0_REG)/4))
 	uint16_t	mfrid;		/* manufacturer id */
 	uint16_t	prodid;		/* product id */
 	u_int		funcid;		/* function id */
@@ -45,3 +45,35 @@ struct cardbus_devinfo {
 	} funce;
 	uint32_t	fepresent;	/* bit mask of funce values present */
 };
+
+struct cis_buffer
+{
+	size_t	len;			/* Actual length of the CIS */
+	uint8_t buffer[2040];		/* small enough to be 2k */
+};
+
+struct cardbus_softc 
+{
+	/* XXX need mutex XXX */
+	device_t	sc_dev;
+	struct cdev 	*sc_cisdev;
+	struct cis_buffer *sc_cis;
+	int		sc_cis_open;
+};
+
+struct tuple_callbacks;
+
+typedef int (tuple_cb) (device_t cbdev, device_t child, int id, int len,
+		 uint8_t *tupledata, uint32_t start, uint32_t *off,
+		 struct tuple_callbacks *info, void *);
+
+struct tuple_callbacks {
+	int	id;
+	char	*name;
+	tuple_cb *func;
+};
+
+int	cardbus_device_create(struct cardbus_softc *);
+int	cardbus_device_destroy(struct cardbus_softc *);
+int	cardbus_parse_cis(device_t cbdev, device_t child,
+	    struct tuple_callbacks *callbacks, void *);

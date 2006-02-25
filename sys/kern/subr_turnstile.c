@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_turnstile.c,v 1.1.1.1 2006-02-25 02:28:21 laffer1 Exp $
- *	and BSDI $Id: subr_turnstile.c,v 1.1.1.1 2006-02-25 02:28:21 laffer1 Exp $
+ *	from BSDI $Id: subr_turnstile.c,v 1.1.1.2 2006-02-25 02:37:17 laffer1 Exp $
+ *	and BSDI $Id: subr_turnstile.c,v 1.1.1.2 2006-02-25 02:37:17 laffer1 Exp $
  */
 
 /*

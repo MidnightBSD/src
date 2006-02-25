@@ -29,7 +29,7 @@
 /*
  * Author:  Thomas E. Dickey <dickey@clark.net> 1998
  *
- * $Id: filter.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: filter.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
  */
 #include <test.priv.h>
 

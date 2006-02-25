@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/select.h,v 1.19 2004/04/07 04:19:49 imp Exp $
+ * $FreeBSD: src/sys/sys/select.h,v 1.19.8.1 2006/01/13 03:11:16 marcel Exp $
  */
 
 #ifndef _SYS_SELECT_H_
@@ -80,7 +80,7 @@ typedef	struct fd_set {
 #if __BSD_VISIBLE
 #define	FD_COPY(f, t)	(void)(*(t) = *(f))
 #endif
-#define	FD_ISSET(n, p)	((p)->__fds_bits[(n)/_NFDBITS] & __fdset_mask(n))
+#define	FD_ISSET(n, p)	(((p)->__fds_bits[(n)/_NFDBITS] & __fdset_mask(n)) != 0)
 #define	FD_SET(n, p)	((p)->__fds_bits[(n)/_NFDBITS] |= __fdset_mask(n))
 #define	FD_ZERO(p) do {					\
 	fd_set *_p;					\

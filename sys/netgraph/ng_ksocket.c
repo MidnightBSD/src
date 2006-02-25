@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_ksocket.c,v 1.55.2.2 2005/09/09 06:13:25 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_ksocket.c,v 1.55.2.3 2006/02/24 11:23:05 ru Exp $
  * $Whistle: ng_ksocket.c,v 1.1 1999/11/16 20:04:40 archie Exp $
  */
 
@@ -1120,6 +1120,7 @@ ng_ksocket_incoming2(node_p node, hook_p hook, void *arg1, int waitflag)
 		 * Also, do not trust that soreceive() will clear m_nextpkt
 		 * for us (e.g. kern/84952, kern/82413).
 		 */
+		m->m_pkthdr.csum_flags = 0;
 		for (n = m, m->m_pkthdr.len = 0; n != NULL; n = n->m_next) {
 			m->m_pkthdr.len += n->m_len;
 			n->m_nextpkt = NULL;

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label_iso9660.c,v 1.1.8.1 2005/08/30 15:18:54 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/label/g_label_iso9660.c,v 1.1.8.2 2005/12/29 05:59:50 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,7 +47,7 @@ g_label_iso9660_taste(struct g_consumer *cp, char *label, size_t size)
 {
 	struct g_provider *pp;
 	char *sector, *volume;
-	int i, error;
+	int i;
 
 	g_topology_assert_not();
 	pp = cp->provider;
@@ -56,8 +56,8 @@ g_label_iso9660_taste(struct g_consumer *cp, char *label, size_t size)
 	if ((ISO9660_OFFSET % pp->sectorsize) != 0)
 		return;
 	sector = (char *)g_read_data(cp, ISO9660_OFFSET, pp->sectorsize,
-	    &error);
-	if (sector == NULL || error != 0)
+	    NULL);
+	if (sector == NULL)
 		return;
 	if (bcmp(sector, ISO9660_MAGIC, sizeof(ISO9660_MAGIC) - 1) != 0) {
 		g_free(sector);

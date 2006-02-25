@@ -48,7 +48,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: file.c,v 1.1.1.1 2006-02-25 02:25:20 laffer1 Exp $ */
+/* $Id: file.c,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
 
 #include <config.h>
 

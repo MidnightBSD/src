@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_output.c,v 1.26.2.2 2005/09/03 22:40:02 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_output.c,v 1.26.2.5 2006/02/15 03:21:15 sam Exp $");
 
 #include "opt_inet.h"
 
@@ -142,7 +142,7 @@ ieee80211_send_setup(struct ieee80211com *ic,
  */
 static int
 ieee80211_mgmt_output(struct ieee80211com *ic, struct ieee80211_node *ni,
-    struct mbuf *m, int type)
+    struct mbuf *m, int type, int timer)
 {
 	struct ifnet *ifp = ic->ic_ifp;
 	struct ieee80211_frame *wh;
@@ -192,7 +192,13 @@ ieee80211_mgmt_output(struct ieee80211com *ic, struct ieee80211_node *ni,
 #endif
 	IEEE80211_NODE_STAT(ni, tx_mgmt);
 	IF_ENQUEUE(&ic->ic_mgtq, m);
-	ifp->if_timer = 1;
+	if (timer) {
+		/*
+		 * Set the mgt frame timeout.
+		 */
+		ic->ic_mgt_timer = timer;
+		ifp->if_timer = 1;
+	}
 	if_start(ifp);
 	return 0;
 }
@@ -1366,12 +1372,8 @@ ieee80211_send_mgmt(struct ieee80211com *ic, struct ieee80211_node *ni,
 		senderr(EINVAL, is_tx_unknownmgt);
 		/* NOTREACHED */
 	}
-
-	ret = ieee80211_mgmt_output(ic, ni, m, type);
-	if (ret == 0) {
-		if (timer)
-			ic->ic_mgt_timer = timer;
-	} else {
+	ret = ieee80211_mgmt_output(ic, ni, m, type, timer);
+	if (ret != 0) {
 bad:
 		ieee80211_free_node(ni);
 	}
@@ -1490,8 +1492,10 @@ ieee80211_beacon_alloc(struct ieee80211com *ic, struct ieee80211_node *ni,
 	}
 	if (ic->ic_flags & IEEE80211_F_WPA)
 		frm = ieee80211_add_wpa(frm, ic);
-	if (ic->ic_curmode == IEEE80211_MODE_11G)
+	if (ic->ic_curmode == IEEE80211_MODE_11G) {
+		bo->bo_erp = frm;
 		frm = ieee80211_add_erp(frm, ic);
+	}
 	efrm = ieee80211_add_xrates(frm, rs);
 	bo->bo_trailer_len = efrm - bo->bo_trailer;
 	m->m_pkthdr.len = m->m_len = efrm - mtod(m, u_int8_t *);
@@ -1616,10 +1620,13 @@ ieee80211_beacon_update(struct ieee80211com *ic, struct ieee80211_node *ni,
 			}
 			if (timlen != bo->bo_tim_len) {
 				/* copy up/down trailer */
-				ovbcopy(bo->bo_trailer, tie->tim_bitmap+timlen,
+				int adjust = tie->tim_bitmap+timlen
+					   - bo->bo_trailer;
+				ovbcopy(bo->bo_trailer, bo->bo_trailer+adjust,
 					bo->bo_trailer_len);
-				bo->bo_trailer = tie->tim_bitmap+timlen;
-				bo->bo_wme = bo->bo_trailer;
+				bo->bo_trailer += adjust;
+				bo->bo_wme += adjust;
+				bo->bo_erp += adjust;
 				bo->bo_tim_len = timlen;
 
 				/* update information element */
@@ -1642,10 +1649,17 @@ ieee80211_beacon_update(struct ieee80211com *ic, struct ieee80211_node *ni,
 		else
 			tie->tim_count--;
 		/* update state for buffered multicast frames on DTIM */
-		if (mcast && (tie->tim_count == 1 || tie->tim_period == 1))
+		if (mcast && tie->tim_count == 0)
 			tie->tim_bitctl |= 1;
 		else
 			tie->tim_bitctl &= ~1;
+		if (ic->ic_flags_ext & IEEE80211_FEXT_ERPUPDATE) {
+			/*
+			 * ERP element needs updating.
+			 */
+			(void) ieee80211_add_erp(bo->bo_erp, ic);
+			ic->ic_flags_ext &= ~IEEE80211_FEXT_ERPUPDATE;
+		}
 	}
 	IEEE80211_BEACON_UNLOCK(ic);
 

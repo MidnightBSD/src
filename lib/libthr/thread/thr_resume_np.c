@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_resume_np.c,v 1.8 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_resume_np.c,v 1.8.2.1 2006/01/16 05:36:30 davidxu Exp $
  */
 
 #include <errno.h>
@@ -88,5 +88,4 @@ resume_common(struct pthread *thread)
 	thread->flags &= ~THR_FLAGS_NEED_SUSPEND;
 	thread->cycle++;
 	_thr_umtx_wake(&thread->cycle, 1);
-	_thr_send_sig(thread, SIGCANCEL);
 }

@@ -1,5 +1,5 @@
-# $FreeBSD: src/lib/libthr/pthread.map,v 1.3.2.2 2005/12/15 06:43:18 davidxu Exp $
-LIBPTHREAD_1_0 {
+# $FreeBSD: src/lib/libthr/pthread.map,v 1.3.2.3 2005/12/26 12:30:53 davidxu Exp $
+LIBTHREAD_1_0 {
 global:
 	___creat;
 	__accept;

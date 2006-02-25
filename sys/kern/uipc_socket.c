@@ -32,11 +32,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.242.2.3 2005/10/06 18:31:38 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.242.2.4 2005/12/28 18:05:13 ps Exp $");
 
 #include "opt_inet.h"
 #include "opt_mac.h"
 #include "opt_zero.h"
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,6 +65,12 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_socket.c,v 1.242.2.3 2005/10/06 18:31:38 d
 
 #include <vm/uma.h>
 
+#ifdef COMPAT_IA32
+#include <sys/mount.h>
+#include <compat/freebsd32/freebsd32.h>
+
+extern struct sysentvec ia32_freebsd_sysvec;
+#endif
 
 static int	soreceive_rcvoob(struct socket *so, struct uio *uio,
 		    int flags);
@@ -1651,8 +1658,18 @@ sosetopt(so, sopt)
 
 		case SO_SNDTIMEO:
 		case SO_RCVTIMEO:
-			error = sooptcopyin(sopt, &tv, sizeof tv,
-					    sizeof tv);
+#ifdef COMPAT_IA32
+			if (curthread->td_proc->p_sysent == &ia32_freebsd_sysvec) {
+				struct timeval32 tv32;
+
+				error = sooptcopyin(sopt, &tv32, sizeof tv32,
+				    sizeof tv32);
+				CP(tv32, tv, tv_sec);
+				CP(tv32, tv, tv_usec);
+			} else
+#endif
+				error = sooptcopyin(sopt, &tv, sizeof tv,
+				    sizeof tv);
 			if (error)
 				goto bad;
 
@@ -1821,7 +1838,16 @@ integer:
 
 			tv.tv_sec = optval / hz;
 			tv.tv_usec = (optval % hz) * tick;
-			error = sooptcopyout(sopt, &tv, sizeof tv);
+#ifdef COMPAT_IA32
+			if (curthread->td_proc->p_sysent == &ia32_freebsd_sysvec) {
+				struct timeval32 tv32;
+
+				CP(tv, tv32, tv_sec);
+				CP(tv, tv32, tv_usec);
+				error = sooptcopyout(sopt, &tv32, sizeof tv32);
+			} else
+#endif
+				error = sooptcopyout(sopt, &tv, sizeof tv);
 			break;
 
 		case SO_LABEL:

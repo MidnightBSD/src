@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rap.c,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $
+ * $Id: rap.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
  * $FreeBSD: src/contrib/smbfs/lib/smb/rap.c,v 1.4 2004/06/19 19:03:01 le Exp $
  *
  * This is very simple implementation of RAP protocol.

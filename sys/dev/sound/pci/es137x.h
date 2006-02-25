@@ -18,7 +18,7 @@
  * 4. Modifications may be freely made to this file if the above conditions
  *    are met.
  *
- * $FreeBSD: src/sys/dev/sound/pci/es137x.h,v 1.5 2005/01/06 01:43:19 imp Exp $
+ * $FreeBSD: src/sys/dev/sound/pci/es137x.h,v 1.5.2.1 2005/12/30 19:55:53 netchild Exp $
  */
 
 #ifndef _ES1370_REG_H
@@ -165,6 +165,17 @@
 #define ES1371_SRC_RAM_ADDRO(o) (((o)&0x7f)<<25)	/* address of the sample rate converter */
 #define ES1371_SRC_RAM_DATAO(o) (((o)&0xffff)<<0)	/* current value of the sample rate converter */
 #define ES1371_SRC_RAM_DATAI(i) (((i)>>0)&0xffff)	/* current value of the sample rate converter */
+
+/*
+ * S/PDIF specific
+ */
+
+/* Use ES1370_REG_CONTROL */
+#define RECEN_B			0x08000000	/* Used to control mixing of analog with digital data */
+#define SPDIFEN_B		0x04000000	/* Reset to switch digital output mux to "THRU" mode */
+/* Use ES1370_REG_STATUS */
+#define ENABLE_SPDIF		0x00040000	/* Used to enable the S/PDIF circuitry */
+#define TEST_SPDIF		0x00020000	/* Used to put the S/PDIF module in "test mode" */
 
 /*
  *  Sample rate converter addresses

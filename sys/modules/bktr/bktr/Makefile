@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/bktr/bktr/Makefile,v 1.7 2004/12/29 08:43:14 imp Exp $
+# $FreeBSD: src/sys/modules/bktr/bktr/Makefile,v 1.7.2.1 2006/02/10 00:37:59 yar Exp $
 
 # Makefile for the bktr Brooktree Bt848/Bt878 PCI video capture device
 
@@ -9,7 +9,6 @@ SRCS=	bktr_core.c bktr_os.c bktr_audio.c bktr_tuner.c bktr_card.c msp34xx.c \
 	opt_devfs.h opt_bktr.h bus_if.h device_if.h \
 	pci_if.h
 
-opt_bktr.h:
-	echo "#define BKTR_FREEBSD_MODULE 1" > opt_bktr.h
+CFLAGS+= -DBKTR_FREEBSD_MODULE
 
 .include <bsd.kmod.mk>

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ethersubr.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_ethersubr.c,v 1.193.2.7 2005/11/16 08:49:22 ru Exp $
+ * $FreeBSD: src/sys/net/if_ethersubr.c,v 1.193.2.9 2006/01/26 23:16:24 oleg Exp $
  */
 
 #include "opt_atalk.h"
@@ -119,7 +119,6 @@ struct mbuf *(*bridge_input_p)(struct ifnet *, struct mbuf *);
 int	(*bridge_output_p)(struct ifnet *, struct mbuf *, 
 		struct sockaddr *, struct rtentry *);
 void	(*bridge_dn_p)(struct mbuf *, struct ifnet *);
-void	(*bridge_detach_p)(struct ifnet *ifp);
 
 static const u_char etherbroadcastaddr[ETHER_ADDR_LEN] =
 			{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
@@ -153,7 +152,7 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 	int error, hdrcmplt = 0;
 	u_char esrc[ETHER_ADDR_LEN], edst[ETHER_ADDR_LEN];
 	struct ether_header *eh;
-	int loop_copy = 0;
+	int loop_copy = 1;
 	int hlen;	/* link layer header length */
 
 #ifdef MAC
@@ -183,7 +182,7 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 		ah = mtod(m, struct arphdr *);
 		ah->ar_hrd = htons(ARPHRD_ETHER);
 
-		loop_copy = -1; /* if this is for us, don't do it */
+		loop_copy = 0; /* if this is for us, don't do it */
 
 		switch(ntohs(ah->ar_op)) {
 		case ARPOP_REVREQUEST:
@@ -264,7 +263,7 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 		/* FALLTHROUGH */
 
 	case AF_UNSPEC:
-		loop_copy = -1; /* if this is for us, don't do it */
+		loop_copy = 0; /* if this is for us, don't do it */
 		eh = (struct ether_header *)dst->sa_data;
 		(void)memcpy(edst, eh->ether_dhost, sizeof (edst));
 		type = eh->ether_type;
@@ -310,7 +309,7 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 	 * on the wire). However, we don't do that here for security
 	 * reasons and compatibility with the original behavior.
 	 */
-	if ((ifp->if_flags & IFF_SIMPLEX) && (loop_copy != -1) &&
+	if ((ifp->if_flags & IFF_SIMPLEX) && loop_copy &&
 	    m_tag_find(m, PACKET_TAG_PF_ROUTED, NULL) == NULL) {
 		int csum_flags = 0;
 
@@ -319,7 +318,7 @@ ether_output(struct ifnet *ifp, struct mbuf *m,
 		if (m->m_pkthdr.csum_flags & CSUM_DELAY_DATA)
 			csum_flags |= (CSUM_DATA_VALID|CSUM_PSEUDO_HDR);
 
-		if ((m->m_flags & M_BCAST) || (loop_copy > 0)) {
+		if (m->m_flags & M_BCAST) {
 			struct mbuf *n;
 
 			if ((n = m_copy(m, 0, (int)M_COPYALL)) != NULL) {
@@ -922,12 +921,6 @@ ether_ifdetach(struct ifnet *ifp)
 {
 	if (IFP2AC(ifp)->ac_netgraph != NULL)
 		(*ng_ether_detach_p)(ifp);
-
-	if (ifp->if_bridge) {
-		KASSERT(bridge_detach_p != NULL,
-		    ("bridge_detach_p is NULL"));
-		(*bridge_detach_p)(ifp);
-	}
 
 	bpfdetach(ifp);
 	if_detach(ifp);

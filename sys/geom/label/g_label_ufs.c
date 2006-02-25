@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label_ufs.c,v 1.3 2005/04/19 21:55:28 wollman Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/label/g_label_ufs.c,v 1.3.2.1 2005/12/29 05:59:50 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,7 +46,7 @@ static void
 g_label_ufs_taste(struct g_consumer *cp, char *label, size_t size)
 {
 	struct g_provider *pp;
-	int error, sb, superblock;
+	int sb, superblock;
 	struct fs *fs;
 
 	g_topology_assert_not();
@@ -71,8 +71,8 @@ g_label_ufs_taste(struct g_consumer *cp, char *label, size_t size)
 			continue;
 
 		fs = (struct fs *)g_read_data(cp, superblock, SBLOCKSIZE,
-		    &error);
-		if (fs == NULL || error != 0)
+		    NULL);
+		if (fs == NULL)
 			continue;
 		/* Check for magic and make sure things are the right size */
 		if (fs->fs_magic == FS_UFS1_MAGIC) {

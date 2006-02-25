@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_bsdextended/mac_bsdextended.c,v 1.25.2.1 2005/08/17 14:35:20 avatar Exp $
+ * $FreeBSD: src/sys/security/mac_bsdextended/mac_bsdextended.c,v 1.25.2.2 2006/01/24 04:11:45 csjp Exp $
  */
 
 /*
@@ -150,7 +150,7 @@ sysctl_rule(SYSCTL_HANDLER_ARGS)
 		return (EINVAL);
 
 	index = name[0];
-        if (index > MAC_BSDEXTENDED_MAXRULES)
+        if (index >= MAC_BSDEXTENDED_MAXRULES)
 		return (ENOENT);
 
 	ruleptr = NULL;

@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bluetooth.c,v 1.1.1.1 2006-02-25 02:28:29 laffer1 Exp $
+ * $Id: ng_bluetooth.c,v 1.1.1.2 2006-02-25 02:37:33 laffer1 Exp $
  * $FreeBSD: src/sys/netgraph/bluetooth/common/ng_bluetooth.c,v 1.6 2005/04/08 05:13:53 peter Exp $
  */
 

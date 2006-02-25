@@ -2,7 +2,7 @@
 #
 # $FreeBSD: src/usr.bin/sed/TEST/math.sed,v 1.2 2004/05/01 02:15:58 smkelly Exp $
 #
-# $Id: math.sed,v 1.1.1.1 2006-02-25 02:29:23 laffer1 Exp $
+# $Id: math.sed,v 1.1.1.2 2006-02-25 02:38:18 laffer1 Exp $
 # expr ::= (expr) | expr! |
 #	expr ^ expr |
 #	-expr | expr * expr | expr / expr | expr % expr |

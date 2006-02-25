@@ -47,7 +47,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)locate.c    8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/locate/locate/locate.c,v 1.15 2002/03/22 01:22:48 imp Exp $";
+  "$FreeBSD: src/usr.bin/locate/locate/locate.c,v 1.15.14.1 2005/12/21 12:17:49 des Exp $";
 #endif /* not lint */
 
 /*
@@ -112,6 +112,7 @@ int f_statistic;        /* print statistic */
 int f_silent;           /* suppress output, show only count of matches */
 int f_limit;            /* limit number of output lines, 0 == infinite */
 u_int counter;          /* counter for matches [-c] */
+char separator='\n';	/* line separator */
 
 
 void    usage(void);
@@ -145,8 +146,11 @@ main(argc, argv)
 #endif
 	(void) setlocale(LC_ALL, "");
 
-        while ((ch = getopt(argc, argv, "Scd:il:ms")) != -1)
+        while ((ch = getopt(argc, argv, "0Scd:il:ms")) != -1)
                 switch(ch) {
+                case '0':	/* 'find -print0' style */
+			separator = '\0';
+			break;
                 case 'S':	/* statistic lines */   
                         f_statistic = 1;
                         break;

@@ -47,7 +47,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $Id: ip6fw.c,v 1.1.1.1 2006-02-25 02:27:08 laffer1 Exp $
+ * $Id: ip6fw.c,v 1.1.1.2 2006-02-25 02:35:23 laffer1 Exp $
  * $FreeBSD: src/sbin/ip6fw/ip6fw.c,v 1.18 2004/07/29 18:04:06 kan Exp $
  */
 

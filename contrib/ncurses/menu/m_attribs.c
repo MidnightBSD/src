@@ -37,7 +37,7 @@
 
 #include "menu.priv.h"
 
-MODULE_ID("$Id: m_attribs.c,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $")
+MODULE_ID("$Id: m_attribs.c,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $")
 
 /* Macro to redraw menu if it is posted and changed */
 #define Refresh_Menu(menu) \

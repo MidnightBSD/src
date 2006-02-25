@@ -18,7 +18,7 @@
 #ifndef GENERIC_DNAME_39_H
 #define GENERIC_DNAME_39_H 1
 
-/* $Id: dname_39.h,v 1.1.1.1 2006-02-25 02:25:19 laffer1 Exp $ */
+/* $Id: dname_39.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 /* RFC2672 */
 

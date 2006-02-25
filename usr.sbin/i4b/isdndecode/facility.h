@@ -27,7 +27,7 @@
  *	facility.h - facility header file
  *	---------------------------------
  *
- *	$Id: facility.h,v 1.1.1.1 2006-02-25 02:29:42 laffer1 Exp $
+ *	$Id: facility.h,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
  *
  * $FreeBSD: src/usr.sbin/i4b/isdndecode/facility.h,v 1.7 2000/10/09 14:22:41 hm Exp $
  *

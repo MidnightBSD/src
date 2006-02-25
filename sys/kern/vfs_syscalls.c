@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_syscalls.c,v 1.392.2.3 2005/11/21 01:12:37 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_syscalls.c,v 1.392.2.5 2006/01/25 02:12:09 truckman Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -1635,7 +1635,7 @@ restart:
 	bwillwrite();
 	NDINIT(&nd, DELETE, LOCKPARENT | LOCKLEAF | MPSAFE, pathseg, path, td);
 	if ((error = namei(&nd)) != 0)
-		return (error);
+		return (error == EINVAL ? EPERM : error);
 	vfslocked = NDHASGIANT(&nd);
 	vp = nd.ni_vp;
 	if (vp->v_type == VDIR)
@@ -2740,6 +2740,9 @@ getutimes(usrtvp, tvpseg, tsp)
 			tvp = tv;
 		}
 
+		if (tvp[0].tv_usec < 0 || tvp[0].tv_usec >= 1000000 ||
+		    tvp[1].tv_usec < 0 || tvp[1].tv_usec >= 1000000)
+			return (EINVAL);
 		TIMEVAL_TO_TIMESPEC(&tvp[0], &tsp[0]);
 		TIMEVAL_TO_TIMESPEC(&tvp[1], &tsp[1]);
 	}

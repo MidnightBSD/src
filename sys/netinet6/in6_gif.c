@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_gif.c,v 1.22 2005/06/20 20:17:00 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_gif.c,v 1.22.2.2 2006/01/31 15:56:47 glebius Exp $	*/
 /*	$KAME: in6_gif.c,v 1.49 2001/05/14 14:02:17 itojun Exp $	*/
 
 /*-
@@ -93,8 +93,11 @@ in6_gif_output(ifp, family, m)
 	struct sockaddr_in6 *sin6_src = (struct sockaddr_in6 *)sc->gif_psrc;
 	struct sockaddr_in6 *sin6_dst = (struct sockaddr_in6 *)sc->gif_pdst;
 	struct ip6_hdr *ip6;
+	struct etherip_header eiphdr;
 	int proto, error;
 	u_int8_t itos, otos;
+
+	GIF_LOCK_ASSERT(sc);
 
 	if (sin6_src == NULL || sin6_dst == NULL ||
 	    sin6_src->sin6_family != AF_INET6 ||
@@ -135,6 +138,20 @@ in6_gif_output(ifp, family, m)
 		break;
 	    }
 #endif
+	case AF_LINK:
+ 		proto = IPPROTO_ETHERIP;
+ 		eiphdr.eip_ver = ETHERIP_VERSION & ETHERIP_VER_VERS_MASK;
+ 		eiphdr.eip_pad = 0;
+ 		/* prepend Ethernet-in-IP header */
+ 		M_PREPEND(m, sizeof(struct etherip_header), M_DONTWAIT);
+ 		if (m && m->m_len < sizeof(struct etherip_header))
+ 			m = m_pullup(m, sizeof(struct etherip_header));
+ 		if (m == NULL)
+ 			return ENOBUFS;
+ 		bcopy(&eiphdr, mtod(m, struct etherip_header *),
+		    sizeof(struct etherip_header));
+		break;
+
 	default:
 #ifdef DEBUG
 		printf("in6_gif_output: warning: unknown family %d passed\n",
@@ -301,6 +318,10 @@ in6_gif_input(mp, offp, proto)
 		break;
 	    }
 #endif
+ 	case IPPROTO_ETHERIP:
+ 		af = AF_LINK;
+ 		break;	
+
 	default:
 		ip6stat.ip6s_nogif++;
 		m_freem(m);

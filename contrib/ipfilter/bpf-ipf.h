@@ -39,7 +39,7 @@
  *
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  *
- * @(#) $Header: /home/cvs/src/contrib/ipfilter/bpf-ipf.h,v 1.1.1.1 2006-02-25 02:26:02 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/ipfilter/bpf-ipf.h,v 1.1.1.2 2006-02-25 02:33:23 laffer1 Exp $ (LBL)
  */
 
 #ifndef BPF_MAJOR_VERSION

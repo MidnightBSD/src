@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libbsnmp/libbsnmp/Makefile,v 1.5 2004/08/06 13:43:29 harti Exp $
+# $FreeBSD: src/lib/libbsnmp/libbsnmp/Makefile,v 1.5.8.1 2006/01/20 16:07:04 harti Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
@@ -7,8 +7,10 @@ CONTRIB= ${.CURDIR}/../../../contrib/bsnmp/lib
 
 LIB	= bsnmp
 SHLIBDIR ?= /lib
+WARNS	?= 6
 
 CFLAGS+= -I${CONTRIB} -DHAVE_ERR_H -DHAVE_GETADDRINFO -DHAVE_STRLCPY
+CFLAGS+= -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DQUADFMT='"llu"' -DQUADXFMT='"llx"'
 
 SRCS=	asn1.c snmp.c snmpagent.c snmpclient.c support.c
 INCS=	asn1.h snmp.h snmpagent.h snmpclient.h

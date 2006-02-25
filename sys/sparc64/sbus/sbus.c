@@ -98,7 +98,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sbus/sbus.c,v 1.35 2005/05/19 14:47:31 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sbus/sbus.c,v 1.35.2.1 2006/01/30 22:30:51 marius Exp $");
 
 /*
  * SBus support.
@@ -225,6 +225,9 @@ static device_method_t sbus_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		sbus_probe),
 	DEVMETHOD(device_attach,	sbus_attach),
+	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
+	DEVMETHOD(device_suspend,	bus_generic_suspend),
+	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
 	DEVMETHOD(bus_print_child,	sbus_print_child),

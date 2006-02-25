@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libnetgraph/msg.c,v 1.11 2005/04/26 14:25:11 mux Exp $");
+__FBSDID("$FreeBSD: src/lib/libnetgraph/msg.c,v 1.11.2.1 2006/01/21 10:04:39 glebius Exp $");
 
 #include <sys/types.h>
 #include <stdarg.h>
@@ -230,6 +230,22 @@ NgDeliverMsg(int cs, const char *path,
 			NGLOG("sendto(%s)", sg->sg_data);
 		rtn = -1;
 		goto done;
+	}
+
+	/* Wait for reply if there should be one. */
+	if (msg->header.cmd & NGM_HASREPLY) {
+		fd_set rfds;
+		int n;
+
+		FD_ZERO(&rfds);
+		FD_SET(cs, &rfds);
+		n = select(cs + 1, &rfds, NULL, NULL, NULL);
+		if (n == -1) {
+			errnosv = errno;
+			if (_gNgDebugLevel >= 1)
+				NGLOG("select");
+			rtn = -1;
+		}
 	}
 
 done:

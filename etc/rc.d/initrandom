@@ -1,10 +1,9 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/initrandom,v 1.5 2005/03/02 19:03:08 brooks Exp $
+# $FreeBSD: src/etc/rc.d/initrandom,v 1.5.2.1 2005/12/21 07:11:34 dougb Exp $
 #
 
 # PROVIDE: initrandom
-# REQUIRE: rcconf
 # BEFORE: disks
 # KEYWORD: nojail
 

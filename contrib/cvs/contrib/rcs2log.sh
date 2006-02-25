@@ -29,7 +29,7 @@ Options:
 
 Report bugs to <bug-gnu-emacs@gnu.org>.'
 
-Id='$Id: rcs2log.sh,v 1.1.1.1 2006-02-25 02:25:33 laffer1 Exp $'
+Id='$Id: rcs2log.sh,v 1.1.1.2 2006-02-25 02:32:31 laffer1 Exp $'
 
 # Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2001, 2003
 #  Free Software Foundation, Inc.

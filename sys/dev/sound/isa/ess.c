@@ -38,7 +38,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ess.c,v 1.34 2005/01/06 01:43:17 imp Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ess.c,v 1.34.2.2 2006/01/19 01:17:00 ariff Exp $");
 
 #define ESS_BUFFSIZE (4096)
 #define ABS(x) (((x) < 0)? -(x) : (x))
@@ -61,7 +61,7 @@ static u_int32_t ess_pfmt[] = {
 	0
 };
 
-static struct pcmchan_caps ess_playcaps = {5000, 49000, ess_pfmt, 0};
+static struct pcmchan_caps ess_playcaps = {6000, 48000, ess_pfmt, 0};
 
 static u_int32_t ess_rfmt[] = {
 	AFMT_U8,
@@ -75,7 +75,7 @@ static u_int32_t ess_rfmt[] = {
 	0
 };
 
-static struct pcmchan_caps ess_reccaps = {5000, 49000, ess_rfmt, 0};
+static struct pcmchan_caps ess_reccaps = {6000, 48000, ess_rfmt, 0};
 
 struct ess_info;
 
@@ -361,8 +361,11 @@ ess_intr(void *arg)
 	rirq = (src & sc->rch.hwch)? 1 : 0;
 
 	if (pirq) {
-		if (sc->pch.run)
+		if (sc->pch.run) {
+			ess_unlock(sc);
 			chn_intr(sc->pch.channel);
+			ess_lock(sc);
+		}
 		if (sc->pch.stopping) {
 			sc->pch.run = 0;
 			sndbuf_dma(sc->pch.buffer, PCMTRIG_STOP);
@@ -375,8 +378,11 @@ ess_intr(void *arg)
 	}
 
 	if (rirq) {
-		if (sc->rch.run)
+		if (sc->rch.run) {
+			ess_unlock(sc);
 			chn_intr(sc->rch.channel);
+			ess_lock(sc);
+		}
 		if (sc->rch.stopping) {
 			sc->rch.run = 0;
 			sndbuf_dma(sc->rch.buffer, PCMTRIG_STOP);

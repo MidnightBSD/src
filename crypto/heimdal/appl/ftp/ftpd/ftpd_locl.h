@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: ftpd_locl.h,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $ */
+/* $Id: ftpd_locl.h,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $ */
 
 #ifndef __ftpd_locl_h__
 #define __ftpd_locl_h__

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_socket.c,v 1.125.2.5 2005/12/15 18:10:37 maxim Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_socket.c,v 1.125.2.6 2006/02/16 02:39:52 rees Exp $");
 
 /*
  * Socket operations for use by nfs
@@ -808,7 +808,7 @@ nfs_clnt_tcp_soupcall(struct socket *so, void *arg, int waitflag)
 			 * connection.
 			 */
 			if (error || auio.uio_resid > 0) {
-				if (error != ECONNRESET) {
+				if (error && error != ECONNRESET) {
 					log(LOG_ERR, 
 					    "nfs/tcp clnt: Error %d reading socket, tearing down TCP connection\n",
 					    error);
@@ -852,7 +852,7 @@ nfs_clnt_tcp_soupcall(struct socket *so, void *arg, int waitflag)
 				(so, (struct sockaddr **)0,
 				 &auio, &mp, (struct mbuf **)0, &rcvflg);
 			if (error || auio.uio_resid > 0) {
-				if (error != ECONNRESET) {
+				if (error && error != ECONNRESET) {
 					log(LOG_ERR, 
 					    "nfs/tcp clnt: Error %d reading socket, tearing down TCP connection\n",
 					    error);

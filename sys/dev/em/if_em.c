@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$FreeBSD: src/sys/dev/em/if_em.c,v 1.65.2.9 2005/12/08 14:06:12 glebius Exp $*/
+/*$FreeBSD: src/sys/dev/em/if_em.c,v 1.65.2.14 2006/02/16 12:44:19 glebius Exp $*/
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -138,8 +138,11 @@ static int  em_probe(device_t);
 static int  em_attach(device_t);
 static int  em_detach(device_t);
 static int  em_shutdown(device_t);
+static int  em_suspend(device_t);
+static int  em_resume(device_t);
 static void em_intr(void *);
 static void em_start(struct ifnet *);
+static void em_start_locked(struct ifnet *ifp);
 static int  em_ioctl(struct ifnet *, u_long, caddr_t);
 static void em_watchdog(struct ifnet *);
 static void em_init(void *);
@@ -217,6 +220,8 @@ static device_method_t em_methods[] = {
 	DEVMETHOD(device_attach, em_attach),
 	DEVMETHOD(device_detach, em_detach),
 	DEVMETHOD(device_shutdown, em_shutdown),
+	DEVMETHOD(device_suspend, em_suspend),
+	DEVMETHOD(device_resume, em_resume),
 	{0, 0}
 };
 
@@ -599,6 +604,37 @@ em_shutdown(device_t dev)
 	return(0);
 }
 
+/*
+ * Suspend/resume device methods.
+ */
+static int
+em_suspend(device_t dev)
+{
+	struct adapter *adapter = device_get_softc(dev);
+
+	EM_LOCK(adapter);
+	em_stop(adapter);
+	EM_UNLOCK(adapter);
+
+	return bus_generic_suspend(dev);
+}
+
+static int
+em_resume(device_t dev)
+{
+	struct adapter *adapter = device_get_softc(dev);
+	struct ifnet *ifp = adapter->ifp;
+
+	EM_LOCK(adapter);
+	em_init_locked(adapter);
+	if ((ifp->if_flags & IFF_UP) &&
+	    (ifp->if_drv_flags & IFF_DRV_RUNNING))
+		em_start_locked(ifp);
+	EM_UNLOCK(adapter);
+
+	return bus_generic_resume(dev);
+}
+
 
 /*********************************************************************
  *  Transmit entry point
@@ -837,7 +873,7 @@ em_watchdog(struct ifnet *ifp)
 		return;
 	}
 
-	if (em_check_for_link(&adapter->hw))
+	if (!em_check_for_link(&adapter->hw))
 		printf("em%d: watchdog timeout -- resetting\n", adapter->unit);
 
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
@@ -1054,6 +1090,15 @@ em_intr(void *arg)
 		    (reg_icr & E1000_ICR_INT_ASSERTED) == 0)
 			break;
 		else if (reg_icr == 0)
+			break;
+
+		/*
+		 * XXX: some laptops trigger several spurious interrupts
+		 * on em(4) when in the resume cycle. The ICR register
+		 * reports all-ones value in this case. Processing such
+		 * interrupts would lead to a freeze. I don't know why.
+		 */
+		if (reg_icr == 0xffffffff)
 			break;
 
 		if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
@@ -1820,7 +1865,7 @@ em_allocate_pci_resources(struct adapter * adapter)
 
 	if (adapter->hw.mac_type > em_82543) {
 		/* Figure our where our IO BAR is ? */
-		for (rid = PCIR_BAR(0); rid < PCIR_CARDBUSCIS;) {
+		for (rid = PCIR_BAR(0); rid < PCIR_CIS;) {
 			val = pci_read_config(dev, rid, 4);
 			if (E1000_BAR_TYPE(val) == E1000_BAR_TYPE_IO) {
 				adapter->io_rid = rid;
@@ -1831,7 +1876,7 @@ em_allocate_pci_resources(struct adapter * adapter)
 			if (E1000_BAR_MEM_TYPE(val) == E1000_BAR_MEM_TYPE_64BIT)
 				rid += 4;
 		}
-		if (rid >= PCIR_CARDBUSCIS) {
+		if (rid >= PCIR_CIS) {
 			printf("em%d: Unable to locate IO BAR\n", adapter->unit);
 			return (ENXIO);
 		}
@@ -2558,7 +2603,7 @@ em_clean_transmit_interrupts(struct adapter * adapter)
                 ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
                 if (num_avail == adapter->num_tx_desc)
                         ifp->if_timer = 0;
-                else if (num_avail == adapter->num_tx_desc_avail)
+                else if (num_avail != adapter->num_tx_desc_avail)
                         ifp->if_timer = EM_TX_TIMEOUT;
         }
         adapter->num_tx_desc_avail = num_avail;
@@ -2970,11 +3015,9 @@ em_process_receive_interrupts(struct adapter * adapter, int count)
                                 em_receive_checksum(adapter, current_desc,
                                                     adapter->fmp);
                                 if (current_desc->status & E1000_RXD_STAT_VP)
-					VLAN_INPUT_TAG(ifp, adapter->fmp,
+					VLAN_INPUT_TAG_NEW(ifp, adapter->fmp,
 					    (le16toh(current_desc->special) &
-					    E1000_RXD_SPC_VLAN_MASK),
-					    adapter->fmp = NULL);
-
+					    E1000_RXD_SPC_VLAN_MASK));
 				m = adapter->fmp;
 				adapter->fmp = NULL;
 				adapter->lmp = NULL;

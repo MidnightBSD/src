@@ -93,7 +93,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_attr.c,v 1.3 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_attr.c,v 1.3.2.1 2006/01/16 05:36:30 davidxu Exp $
  */
 
 #include <errno.h>
@@ -145,6 +145,8 @@ _pthread_attr_get_np(pthread_t pid, pthread_attr_t *dst)
 	if ((ret = _thr_ref_add(curthread, pid, /*include dead*/0)) != 0)
 		return (ret);
 	attr = pid->attr;
+	if (pid->tlflags & TLFLAGS_DETACHED)
+		attr.flags |= PTHREAD_DETACHED;
 	_thr_ref_delete(curthread, pid);
 	memcpy(*dst, &attr, sizeof(struct pthread_attr));
 

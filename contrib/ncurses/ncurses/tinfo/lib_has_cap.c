@@ -42,7 +42,7 @@
 
 #include <term.h>
 
-MODULE_ID("$Id: lib_has_cap.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: lib_has_cap.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 NCURSES_EXPORT(bool)
 has_ic(void)

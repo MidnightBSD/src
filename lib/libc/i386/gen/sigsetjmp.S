@@ -38,7 +38,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 	.text
-	.asciz "$Id: sigsetjmp.S,v 1.1.1.1 2006-02-25 02:26:48 laffer1 Exp $"
+	.asciz "$Id: sigsetjmp.S,v 1.1.1.2 2006-02-25 02:34:54 laffer1 Exp $"
 #endif /* LIBC_SCCS and not lint */
 #include <machine/asm.h>
 __FBSDID("$FreeBSD: src/lib/libc/i386/gen/sigsetjmp.S,v 1.24 2002/03/23 02:05:19 obrien Exp $");

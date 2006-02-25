@@ -1,5 +1,5 @@
 .\" grep man page
-.\" $FreeBSD: src/gnu/usr.bin/grep/grep.1,v 1.26 2004/11/09 17:00:06 keramida Exp $
+.\" $FreeBSD: src/gnu/usr.bin/grep/grep.1,v 1.26.2.1 2005/12/26 19:02:53 remko Exp $
 .if !\n(.g \{\
 .	if !\w|\*(lq| \{\
 .		ds lq ``
@@ -13,7 +13,7 @@
 .de Id
 .ds Dt \\$4
 ..
-.Id $Id: grep.1,v 1.1.1.1 2006-02-25 02:26:44 laffer1 Exp $
+.Id $Id: grep.1,v 1.1.1.2 2006-02-25 02:34:44 laffer1 Exp $
 .TH GREP 1 \*(Dt "GNU Project"
 .SH NAME
 grep, egrep, fgrep, zgrep, zegrep, zfgrep,
@@ -201,6 +201,7 @@ Interpret
 .I PATTERN
 as a list of fixed strings, separated by newlines,
 any of which is to be matched.
+.TP
 .BR \-P ", " \-\^\-perl-regexp
 Interpret
 .I PATTERN
@@ -510,6 +511,7 @@ bracket expressions, as follows.
 Their names are self explanatory, and they are
 .BR [:alnum:] ,
 .BR [:alpha:] ,
+.BR [:blank:] ,
 .BR [:cntrl:] ,
 .BR [:digit:] ,
 .BR [:graph:] ,

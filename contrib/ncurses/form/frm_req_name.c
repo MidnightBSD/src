@@ -37,7 +37,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: frm_req_name.c,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $")
+MODULE_ID("$Id: frm_req_name.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 
 static const char *request_names[ MAX_FORM_COMMAND - MIN_FORM_COMMAND + 1 ] = {
   "NEXT_PAGE"	 ,

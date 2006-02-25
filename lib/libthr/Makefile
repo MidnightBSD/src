@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libthr/Makefile,v 1.13.2.1 2005/07/22 17:29:08 kensmith Exp $
+# $FreeBSD: src/lib/libthr/Makefile,v 1.13.2.2 2006/01/16 05:36:29 davidxu Exp $
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -32,7 +32,6 @@ CFLAGS+=-g
 PRECIOUSLIB=
 
 .include "${.CURDIR}/arch/${MACHINE_ARCH}/Makefile.inc"
-.include "${.CURDIR}/support/Makefile.inc"
 .include "${.CURDIR}/sys/Makefile.inc"
 .include "${.CURDIR}/thread/Makefile.inc"
 

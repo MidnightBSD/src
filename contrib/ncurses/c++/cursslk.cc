@@ -36,7 +36,7 @@
 #include "cursesapp.h"
 #include <string.h>
 
-MODULE_ID("$Id: cursslk.cc,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $")
+MODULE_ID("$Id: cursslk.cc,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 
 void Soft_Label_Key_Set::Soft_Label_Key::operator=(char *text)  {
   delete[] label;

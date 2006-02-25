@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_subr.c,v 1.76.2.1 2005/12/14 01:26:51 flz Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_subr.c,v 1.76.2.2 2006/02/15 22:51:08 iedowse Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -777,23 +777,6 @@ usbd_setup_pipe(usbd_device_handle dev, usbd_interface_handle iface,
 			 ep->edesc->bEndpointAddress, usbd_errstr(err)));
 		free(p, M_USB);
 		return (err);
-	}
-
-	if (!(dev->quirks->uq_flags & UQ_NO_OPEN_CLEARSTALL)) {
-		/* Clear any stall and make sure DATA0 toggle will be used next. */
-		if (UE_GET_ADDR(ep->edesc->bEndpointAddress) != USB_CONTROL_ENDPOINT) {
-			err = usbd_clear_endpoint_stall(p);
-			/*
-			 * Some devices reject this command, so ignore a STALL.
-			 * Some device just time out on this command, so ignore
-			 * that too.
-			 */
-			if (err && err != USBD_STALLED && err != USBD_TIMEOUT) {
-				printf("usbd_setup_pipe: failed to start "
-				    "endpoint, %s\n", usbd_errstr(err));
-				return (err);
-			}
-		}
 	}
 
 	*pipe = p;

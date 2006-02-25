@@ -32,7 +32,7 @@
 # We don't have complete option coverage on eqn because this is primarily
 # intended as a pic translator; we can live with eqn defaults. 
 #
-# $Id: pic2graph.sh,v 1.1.1.1 2006-02-25 02:25:59 laffer1 Exp $
+# $Id: pic2graph.sh,v 1.1.1.2 2006-02-25 02:33:14 laffer1 Exp $
 #
 groffpic_opts=""
 gs_opts=""

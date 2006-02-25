@@ -37,7 +37,7 @@
  *
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-bpf.h,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-bpf.h,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)
  */
 
 /*

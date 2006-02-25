@@ -35,7 +35,7 @@
 #include "cursesp.h"
 #include <string.h>
 
-MODULE_ID("$Id: cursesp.cc,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $")
+MODULE_ID("$Id: cursesp.cc,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 
 NCursesPanel* NCursesPanel::dummy = (NCursesPanel*)0;
 

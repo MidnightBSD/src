@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/info/show.c,v 1.38.2.1 2005/09/27 13:37:53 krion Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/info/show.c,v 1.38.2.2 2006/01/10 22:15:05 krion Exp $");
 
 #include "lib.h"
 #include "info.h"
@@ -86,6 +86,7 @@ show_plist(const char *title, Package *plist, plist_t type, Boolean showall)
 {
     PackingList p;
     Boolean ign = FALSE;
+    char *prefix = NULL;
 
     if (!Quiet)
 	printf("%s%s", InfoPrefix, title);
@@ -106,7 +107,9 @@ show_plist(const char *title, Package *plist, plist_t type, Boolean showall)
 	    break;
 
 	case PLIST_CWD:
-	    printf(Quiet ? "@cwd %s\n" : "\tCWD to %s\n", p->name);
+	    if (!prefix)
+		prefix = p->name;
+	    printf(Quiet ? "@cwd %s\n" : "\tCWD to %s\n", (p->name == NULL) ? prefix : p->name);
 	    break;
 
 	case PLIST_SRC:

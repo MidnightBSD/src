@@ -2,9 +2,6 @@
 #$FreeBSD: src/usr.sbin/pkg_install/tkpkg,v 1.7 1999/08/29 15:54:49 peter Exp $
 #
 #$Log: not supported by cvs2svn $
-#Revision 1.1.1.1  2005/12/24 02:44:19  laffer1
-#Imported from FreeBSD 6.0 sources
-#
 #Revision 1.2  1994/12/06 00:51:21  jkh
 #Many of John T. Kohl's patches from NetBSD.  Thanks, John!
 #Submitted by:	jkohl

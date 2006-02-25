@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_ctl.c,v 1.1.2.2 2005/08/30 15:27:30 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_ctl.c,v 1.1.2.3 2006/01/17 09:28:00 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -164,7 +164,7 @@ g_eli_ctl_detach(struct gctl_req *req, struct g_class *mp)
 	int *force, *last, *nargs, error;
 	const char *prov;
 	char param[16];
-	u_int i;
+	int i;
 
 	g_topology_assert();
 
@@ -188,11 +188,11 @@ g_eli_ctl_detach(struct gctl_req *req, struct g_class *mp)
 		return;
 	}
 
-	for (i = 0; i < (u_int)*nargs; i++) {
-		snprintf(param, sizeof(param), "arg%u", i);
+	for (i = 0; i < *nargs; i++) {
+		snprintf(param, sizeof(param), "arg%d", i);
 		prov = gctl_get_asciiparam(req, param);
 		if (prov == NULL) {
-			gctl_error(req, "No 'arg%u' argument.", i);
+			gctl_error(req, "No 'arg%d' argument.", i);
 			return;
 		}
 		sc = g_eli_find_device(mp, prov);
@@ -609,12 +609,16 @@ g_eli_ctl_kill(struct gctl_req *req, struct g_class *mp)
 		int i;
 
 		for (i = 0; i < *nargs; i++) {
-			snprintf(param, sizeof(param), "arg%u", i);
+			snprintf(param, sizeof(param), "arg%d", i);
 			prov = gctl_get_asciiparam(req, param);
+			if (prov == NULL) {
+				G_ELI_DEBUG(0, "No 'arg%d' argument.", i);
+				continue;
+			}
 
 			sc = g_eli_find_device(mp, prov);
 			if (sc == NULL) {
-				G_ELI_DEBUG(1, "No such provider: %s.", prov);
+				G_ELI_DEBUG(0, "No such provider: %s.", prov);
 				continue;
 			}
 			error = g_eli_kill_one(sc);

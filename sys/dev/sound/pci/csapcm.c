@@ -38,7 +38,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/csapcm.c,v 1.34 2005/06/27 07:43:57 glebius Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/csapcm.c,v 1.34.2.1 2005/12/30 19:55:53 netchild Exp $");
 
 /* Buffer size on dma transfer. Fixed for CS416x. */
 #define CS461x_BUFFSIZE   (4 * 1024)
@@ -667,6 +667,14 @@ csa_init(struct csa_info *csa)
 	/* Crank up the power on the DAC and ADC. */
 	csa_setplaysamplerate(resp, 8000);
 	csa_setcapturesamplerate(resp, 8000);
+	/* Set defaults */
+	csa_writeio(resp, BA0_EGPIODR, EGPIODR_GPOE0);
+	csa_writeio(resp, BA0_EGPIOPTR, EGPIOPTR_GPPT0);
+	/* Power up amplifier */
+	csa_writeio(resp, BA0_EGPIODR, csa_readio(resp, BA0_EGPIODR) |
+		EGPIODR_GPOE2);
+	csa_writeio(resp, BA0_EGPIOPTR, csa_readio(resp, BA0_EGPIOPTR) | 
+		EGPIOPTR_GPPT2);
 
 	return 0;
 }

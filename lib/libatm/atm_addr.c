@@ -26,7 +26,7 @@
 
 #ifndef lint
 #if 0	/* original (broken) import id */
-static char *RCSid = "@(#) $Id: atm_addr.c,v 1.1.1.1 2006-02-25 02:26:47 laffer1 Exp $";
+static char *RCSid = "@(#) $Id: atm_addr.c,v 1.1.1.2 2006-02-25 02:34:50 laffer1 Exp $";
 #endif
 #endif
 #include <sys/cdefs.h>

@@ -20,7 +20,7 @@
  */
 
 /*
- * $Id: hesiod_p.h,v 1.1.1.1 2006-02-25 02:25:17 laffer1 Exp $
+ * $Id: hesiod_p.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
  */
 
 /*

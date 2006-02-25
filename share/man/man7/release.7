@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man7/release.7,v 1.54 2005/06/15 13:31:23 ru Exp $
+.\" $FreeBSD: src/share/man/man7/release.7,v 1.54.2.2 2006/01/22 16:33:46 yar Exp $
 .\"
 .Dd May 17, 2005
 .Dt RELEASE 7
@@ -283,6 +283,18 @@ instead of that directory being populated by a CVS checkout.
 For
 .Dq Li "rerelease" ,
 this will NOT be copied; cvs update will be used instead.
+.It Va EXTDOCDIR
+The directory specified by this variable will be copied into
+.Pa ${CHROOTDIR}/usr/doc .
+For
+.Dq Li "rerelease" ,
+this will NOT be copied; cvs update will be used instead.
+.It Va EXTPORTSDIR
+The directory specified by this variable will be copied into
+.Pa ${CHROOTDIR}/usr/ports .
+For
+.Dq Li "rerelease" ,
+this will do NOTHING.
 .It Va KERNEL_FLAGS
 The contents of this variable are passed to
 .Xr make 1
@@ -410,7 +422,6 @@ to execute up to four processes at a time.
 .El
 .Sh FILES
 .Bl -tag -compact
-.It Pa /etc/make.conf
 .It Pa /usr/doc/Makefile
 .It Pa /usr/doc/share/mk/doc.project.mk
 .It Pa /usr/ports/Mk/bsd.port.mk

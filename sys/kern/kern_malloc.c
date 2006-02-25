@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_malloc.c,v 1.142.2.5 2005/11/16 07:34:44 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_malloc.c,v 1.142.2.7 2006/01/17 10:19:37 pjd Exp $");
 
 #include "opt_ddb.h"
 #include "opt_vm.h"
@@ -437,7 +437,7 @@ if (mtp == M_SUBPROC) {
 	    ("realloc: address %p out of range", (void *)addr));
 
 	/* Get the size of the original block */
-	if (slab->us_keg)
+	if (!(slab->us_flags & UMA_SLAB_MALLOC))
 		alloc = slab->us_keg->uk_size;
 	else
 		alloc = slab->us_size;
@@ -608,7 +608,10 @@ void
 malloc_uninit(void *data)
 {
 	struct malloc_type_internal *mtip;
+	struct malloc_type_stats *mtsp;
 	struct malloc_type *mtp, *temp;
+	long temp_allocs, temp_bytes;
+	int i;
 
 	mtp = data;
 	KASSERT(mtp->ks_handle != NULL, ("malloc_deregister: cookie NULL"));
@@ -625,6 +628,24 @@ malloc_uninit(void *data)
 		kmemstatistics = mtp->ks_next;
 	kmemcount--;
 	mtx_unlock(&malloc_mtx);
+
+	/*
+	 * Look for memory leaks.
+	 */
+	temp_allocs = temp_bytes = 0;
+	for (i = 0; i < MAXCPU; i++) {
+		mtsp = &mtip->mti_stats[i];
+		temp_allocs += mtsp->mts_numallocs;
+		temp_allocs -= mtsp->mts_numfrees;
+		temp_bytes += mtsp->mts_memalloced;
+		temp_bytes -= mtsp->mts_memfreed;
+	}
+	if (temp_allocs > 0 || temp_bytes > 0) {
+		printf("Warning: memory type %s leaked memory on destroy "
+		    "(%ld allocations, %ld bytes leaked).\n", mtp->ks_shortdesc,
+		    temp_allocs, temp_bytes);
+	}
+
 	uma_zfree(mt_zone, mtip);
 }
 

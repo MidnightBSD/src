@@ -34,7 +34,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)xargs.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/xargs/xargs.1,v 1.34 2005/05/21 09:55:09 ru Exp $
+.\" $FreeBSD: src/usr.bin/xargs/xargs.1,v 1.34.2.1 2005/12/21 12:16:39 des Exp $
 .\" $xMach: xargs.1,v 1.2 2002/02/23 05:23:37 tim Exp $
 .\"
 .Dd August 2, 2004
@@ -74,8 +74,7 @@ Any arguments specified on the command line are given to
 upon each invocation, followed by some number of the arguments read
 from the standard input of
 .Nm .
-The utility
-is repeatedly executed until standard input is exhausted.
+This is repeated until standard input is exhausted.
 .Pp
 Spaces, tabs and newlines may be embedded in arguments using single
 (``\ '\ '')
@@ -303,7 +302,7 @@ extensions which may not be available on other operating systems.
 .Sh HISTORY
 The
 .Nm
-command appeared in PWB UNIX.
+utility appeared in PWB UNIX.
 .Sh BUGS
 If
 .Ar utility

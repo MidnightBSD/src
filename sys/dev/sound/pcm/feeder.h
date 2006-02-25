@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pcm/feeder.h,v 1.12 2005/01/06 01:43:21 imp Exp $
+ * $FreeBSD: src/sys/dev/sound/pcm/feeder.h,v 1.12.2.1 2006/01/29 02:27:28 ariff Exp $
  */
 
 struct pcm_feederdesc {
@@ -53,6 +53,10 @@ struct pcm_feeder {
 void feeder_register(void *p);
 struct feeder_class *feeder_getclass(struct pcm_feederdesc *desc);
 
+int chn_fmtscore(u_int32_t fmt);
+u_int32_t chn_fmtbestbit(u_int32_t fmt, u_int32_t *fmts);
+u_int32_t chn_fmtbeststereo(u_int32_t fmt, u_int32_t *fmts);
+u_int32_t chn_fmtbest(u_int32_t fmt, u_int32_t *fmts);
 u_int32_t chn_fmtchain(struct pcm_channel *c, u_int32_t *to);
 int chn_addfeeder(struct pcm_channel *c, struct feeder_class *fc, struct pcm_feederdesc *desc);
 int chn_removefeeder(struct pcm_channel *c);

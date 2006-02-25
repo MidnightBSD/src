@@ -33,7 +33,7 @@
 
 #include <krb5_locl.h>
 
-RCSID("$Id: aname_to_localname.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: aname_to_localname.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 krb5_error_code
 krb5_aname_to_localname (krb5_context context,

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/elf2aout/elf2aout.c,v 1.9 2003/03/29 03:03:42 obrien Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/elf2aout/elf2aout.c,v 1.9.12.1 2005/12/30 22:13:59 marcel Exp $");
 
 #include <sys/types.h>
 #include <sys/elf64.h>
@@ -66,15 +66,15 @@ static void usage(void);
 int
 main(int ac, char **av)
 {
-	Elf64_Quarter phentsize;
-	Elf64_Quarter machine;
-	Elf64_Quarter phnum;
-	Elf64_Size filesz;
-	Elf64_Size memsz;
+	Elf64_Half phentsize;
+	Elf64_Half machine;
+	Elf64_Half phnum;
+	Elf64_Xword filesz;
+	Elf64_Xword memsz;
 	Elf64_Addr entry;
 	Elf64_Off offset;
 	Elf64_Off phoff;
-	Elf64_Half type;
+	Elf64_Word type;
 	unsigned char data;
 	struct stat sb;
 	struct exec a;

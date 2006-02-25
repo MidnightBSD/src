@@ -1,5 +1,5 @@
 /* $FreeBSD: src/sys/nfs4client/nfs4_vfs.h,v 1.2 2005/01/07 01:45:50 imp Exp $ */
-/* $Id: nfs4_vfs.h,v 1.1.1.1 2006-02-25 02:28:32 laffer1 Exp $ */
+/* $Id: nfs4_vfs.h,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003

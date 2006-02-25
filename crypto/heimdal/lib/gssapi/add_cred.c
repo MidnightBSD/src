@@ -33,7 +33,7 @@
 
 #include "gssapi_locl.h"
 
-RCSID("$Id: add_cred.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: add_cred.c,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $");
 
 OM_uint32 gss_add_cred (
      OM_uint32           *minor_status,

@@ -27,7 +27,7 @@
  *	isdnphone - header file
  *      =======================
  *
- *	$Id: defs.h,v 1.1.1.1 2006-02-25 02:29:42 laffer1 Exp $ 
+ *	$Id: defs.h,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
  *
  * $FreeBSD: src/usr.sbin/i4b/isdnphone/defs.h,v 1.2 2000/10/13 11:55:13 bde Exp $
  *

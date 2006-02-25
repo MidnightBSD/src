@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: parse.y,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $ */
+/* $Id: parse.y,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $ */
 
 %{
 #ifdef HAVE_CONFIG_H
@@ -44,7 +44,7 @@
 #include "lex.h"
 #include "gen_locl.h"
 
-RCSID("$Id: parse.y,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: parse.y,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $");
 
 static Type *new_type (Typetype t);
 void yyerror (char *);

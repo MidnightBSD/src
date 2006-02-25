@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.13.2.1 2005/09/29 18:40:36 rwatson Exp $ */
-/* $Id: rpcclnt.c,v 1.1.1.1 2006-02-25 02:28:39 laffer1 Exp $ */
+/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.13.2.2 2006/01/27 18:22:11 rees Exp $ */
+/* $Id: rpcclnt.c,v 1.1.1.2 2006-02-25 02:37:44 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -423,7 +423,11 @@ rpcclnt_connect(rpc, td)
 		sin.sin_family = AF_INET;
 		sin.sin_addr.s_addr = INADDR_ANY;
 		sin.sin_port = htons(0);
-		error = sobind(so, (struct sockaddr *) & sin, td);
+		/*
+		 * &thread0 gives us root credentials to ensure sobind
+		 * will give us a reserved ephemeral port.
+		 */
+		error = sobind(so, (struct sockaddr *) & sin, &thread0);
 #endif
 		if (error)
 			goto bad;

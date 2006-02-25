@@ -1,5 +1,5 @@
 /*	$NetBSD: if_gre.c,v 1.49 2003/12/11 00:22:29 itojun Exp $ */
-/*	 $FreeBSD: src/sys/net/if_gre.c,v 1.32.2.3 2005/11/16 10:31:21 ru Exp $ */
+/*	 $FreeBSD: src/sys/net/if_gre.c,v 1.32.2.5 2006/02/16 01:08:40 qingli Exp $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -123,7 +123,7 @@ static const struct protosw in_gre_protosw = {
 	.pr_domain =		&inetdomain,
 	.pr_protocol =		IPPROTO_GRE,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		(pr_input_t *)gre_input,
+	.pr_input =		gre_input,
 	.pr_output =		(pr_output_t *)rip_output,
 	.pr_ctlinput =		rip_ctlinput,
 	.pr_ctloutput =		rip_ctloutput,
@@ -134,7 +134,7 @@ static const struct protosw in_mobile_protosw = {
 	.pr_domain =		&inetdomain,
 	.pr_protocol =		IPPROTO_MOBILE,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		(pr_input_t *)gre_mobile_input,
+	.pr_input =		gre_mobile_input,
 	.pr_output =		(pr_output_t *)rip_output,
 	.pr_ctlinput =		rip_ctlinput,
 	.pr_ctloutput =		rip_ctloutput,
@@ -618,9 +618,9 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			error = EINVAL;
 			break;
 		}
-		sc->g_src = (satosin((struct sockadrr *)&lifr->addr))->sin_addr;
+		sc->g_src = (satosin(&lifr->addr))->sin_addr;
 		sc->g_dst =
-		    (satosin((struct sockadrr *)&lifr->dstaddr))->sin_addr;
+		    (satosin(&lifr->dstaddr))->sin_addr;
 		goto recompute;
 	case SIOCDIFPHYADDR:
 		if ((error = suser(curthread)) != 0)

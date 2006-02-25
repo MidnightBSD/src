@@ -1,5 +1,5 @@
 # $NetBSD: Makefile,v 1.16 2001/01/14 15:37:22 minoura Exp $
-# $FreeBSD: src/etc/rc.d/Makefile,v 1.53.2.3 2005/11/23 18:03:33 emax Exp $
+# $FreeBSD: src/etc/rc.d/Makefile,v 1.53.2.8 2006/02/12 22:13:15 flz Exp $
 
 FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
@@ -9,10 +9,10 @@ FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	devd devfs dhclient \
 	dmesg dumpon \
 	early.sh encswap \
-	fsck \
+	fsck ftpd \
 	gbde geli geli2 \
 	hcsecd \
-	hostname \
+	hostapd hostname \
 	ike \
 	inetd initrandom \
 	ip6addrctl ip6fw ipfilter ipfs ipfw ipmon \
@@ -27,12 +27,12 @@ FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	nfslocking nfsserver nisdomain nsswitch ntpd ntpdate \
 	othermta \
 	pccard pcvt pf pflog pfsync \
-	powerd power_profile ppp-user pppoed pwcheck \
+	powerd power_profile ppp pppoed pwcheck \
 	quota \
-	ramdisk ramdisk-own random rarpd rcconf.sh resolv root \
+	ramdisk ramdisk-own random rarpd resolv root \
 	route6d routed routing rpcbind rtadvd rwho \
 	savecore sdpd securelevel sendmail \
-	serial sppp sshd swap1 \
+	serial sppp swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
 	ugidfw usbd \
@@ -40,6 +40,11 @@ FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	watchdogd wpa_supplicant \
 	ypbind yppasswdd ypserv \
 	ypset ypupdated ypxfrd
+
+.if !defined(NO_OPENSSH)
+FILES+=	sshd
+.endif
+
 FILESDIR=	/etc/rc.d
 FILESMODE=	${BINMODE}
 

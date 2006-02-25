@@ -13,7 +13,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fty_enum.c,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $")
+MODULE_ID("$Id: fty_enum.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 
 typedef struct {
   char **kwds;

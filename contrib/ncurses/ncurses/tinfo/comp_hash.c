@@ -48,7 +48,7 @@
 #define DEBUG(level, params)	/*nothing */
 #endif
 
-MODULE_ID("$Id: comp_hash.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: comp_hash.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 static int hash_function(const char *);
 

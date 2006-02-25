@@ -1,4 +1,4 @@
-static const char rcsid[] = "$Header: /home/cvs/src/contrib/bind9/lib/bind/dst/Attic/support.c,v 1.1.1.1 2006-02-25 02:25:17 laffer1 Exp $";
+static const char rcsid[] = "$Header: /home/cvs/src/contrib/bind9/lib/bind/dst/Attic/support.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
 
 
 /*
@@ -103,7 +103,7 @@ dst_s_id_calc(const u_char *key, const int keysize)
 	int size = keysize;
 
 	if (!key || (keysize <= 0))
-		return (-1);
+		return (0xffffU);
  
 	for (ac = 0; size > 1; size -= 2, kp += 2)
 		ac += ((*kp) << 8) + *(kp + 1);
@@ -311,19 +311,15 @@ dst_s_fopen(const char *filename, const char *mode, int perm)
 {
 	FILE *fp;
 	char pathname[PATH_MAX];
-	size_t plen = sizeof(pathname);
+
+	if (strlen(filename) + strlen(dst_path) >= sizeof(pathname))
+		return (NULL);
 
 	if (*dst_path != '\0') {
 		strcpy(pathname, dst_path);
-		plen -= strlen(pathname);
-	}
-	else 
-		pathname[0] = '\0';
-
-	if (plen > strlen(filename))
-		strncpy(&pathname[PATH_MAX - plen], filename, plen-1);
-	else 
-		return (NULL);
+		strcat(pathname, filename);
+	} else
+		strcpy(pathname, filename);
 	
 	fp = fopen(pathname, mode);
 	if (perm)

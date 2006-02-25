@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_subr.c,v 1.18 2005/01/07 01:45:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_subr.c,v 1.18.2.1 2006/01/24 04:08:48 csjp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -117,7 +117,7 @@ char *
 smb_strdupin(char *s, int maxlen)
 {
 	char *p, bt;
-	int len = 0;
+	int error, len = 0;
 
 	for (p = s; ;p++) {
 		if (copyin(p, &bt, 1))
@@ -129,7 +129,11 @@ smb_strdupin(char *s, int maxlen)
 			break;
 	}
 	p = malloc(len, M_SMBSTR, M_WAITOK);
-	copyin(s, p, len);
+	error = copyin(s, p, len);
+	if (error) {
+		free(p, M_SMBSTR);
+		return (NULL);
+	}
 	return p;
 }
 

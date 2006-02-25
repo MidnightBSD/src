@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sar.c,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
+ * $Id: sar.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bluetooth/sdpd/sar.c,v 1.2 2004/02/26 20:44:55 emax Exp $
  */
 

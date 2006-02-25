@@ -10,7 +10,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: relay_based_on_MX.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: relay_based_on_MX.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 divert(-1)
 
 define(`_RELAY_MX_SERVED_', 1)

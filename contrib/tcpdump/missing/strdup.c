@@ -33,7 +33,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char rcsid[] =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/missing/strdup.c,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/missing/strdup.c,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)";
 #endif /* LIBC_SCCS and not lint */
 
 #include <stddef.h>

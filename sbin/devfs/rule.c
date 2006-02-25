@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/devfs/rule.c,v 1.7 2005/02/27 17:22:36 phk Exp $");
+__FBSDID("$FreeBSD: src/sbin/devfs/rule.c,v 1.7.2.1 2006/01/08 20:25:24 maxim Exp $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -395,7 +395,7 @@ rulespec_intok(struct devfs_rule *dr, int ac __unused, char **av,
 			dr->dr_iacts |= DRA_MODE;
 			set = setmode(av[1]);
 			if (set == NULL)
-				errx(1, "invald mode: %s", av[1]);
+				errx(1, "invalid mode: %s", av[1]);
 			dr->dr_mode = getmode(set, 0);
 			av += 2;
 		} else if (strcmp(av[0], "include") == 0) {

@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)vfscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/vfscanf.c,v 1.38 2005/04/08 20:58:47 stefanf Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/stdio/vfscanf.c,v 1.38.2.1 2005/12/23 06:07:43 davidxu Exp $");
 
 #include "namespace.h"
 #include <ctype.h>
@@ -412,7 +412,7 @@ literal:
 				}
 				nread += sum;
 			} else {
-				size_t r = fread((void *)va_arg(ap, char *), 1,
+				size_t r = __fread((void *)va_arg(ap, char *), 1,
 				    width, fp);
 
 				if (r == 0)

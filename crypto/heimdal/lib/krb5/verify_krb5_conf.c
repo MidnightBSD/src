@@ -35,7 +35,7 @@
 #include <getarg.h>
 #include <parse_bytes.h>
 #include <err.h>
-RCSID("$Id: verify_krb5_conf.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: verify_krb5_conf.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 
 /* verify krb5.conf */
 

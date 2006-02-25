@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic7xxx_osm.c,v 1.1.1.1 2006-02-25 02:27:55 laffer1 Exp $
+ * $Id: aic7xxx_osm.c,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>

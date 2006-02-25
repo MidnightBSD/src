@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_umtx.h,v 1.1.2.1 2005/08/05 19:43:57 jhb Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_umtx.h,v 1.1.2.2 2006/01/16 05:36:30 davidxu Exp $
  */
 
 #ifndef _THR_FBSD_UMTX_H_
@@ -33,10 +33,10 @@
 
 typedef long umtx_t;
 
-int __thr_umtx_lock(volatile umtx_t *mtx, long id);
+int __thr_umtx_lock(volatile umtx_t *mtx, long id) __hidden;
 int __thr_umtx_timedlock(volatile umtx_t *mtx, long id,
-	const struct timespec *timeout);
-int __thr_umtx_unlock(volatile umtx_t *mtx, long id);
+	const struct timespec *timeout) __hidden;
+int __thr_umtx_unlock(volatile umtx_t *mtx, long id) __hidden;
 
 static inline void
 _thr_umtx_init(volatile umtx_t *mtx)
@@ -82,6 +82,6 @@ _thr_umtx_unlock(volatile umtx_t *mtx, long id)
 }
 
 int _thr_umtx_wait(volatile umtx_t *mtx, umtx_t exp,
-	const struct timespec *timeout);
-int _thr_umtx_wake(volatile umtx_t *mtx, int count);
+	const struct timespec *timeout) __hidden;
+int _thr_umtx_wake(volatile umtx_t *mtx, int count) __hidden;
 #endif

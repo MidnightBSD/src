@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: context.h,v 1.1.1.1 2006-02-25 02:25:20 laffer1 Exp $ */
+/* $Id: context.h,v 1.1.1.2 2006-02-25 02:32:13 laffer1 Exp $ */
 
 #ifndef LWRES_CONTEXT_H
 #define LWRES_CONTEXT_H 1

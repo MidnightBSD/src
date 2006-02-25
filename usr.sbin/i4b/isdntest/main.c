@@ -27,7 +27,7 @@
  *	main.c - i4b selftest utility
  *	-----------------------------
  *
- *	$Id: main.c,v 1.1.1.1 2006-02-25 02:29:42 laffer1 Exp $ 
+ *	$Id: main.c,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
  *
  * $FreeBSD: src/usr.sbin/i4b/isdntest/main.c,v 1.8 2000/10/09 14:22:45 hm Exp $
  *

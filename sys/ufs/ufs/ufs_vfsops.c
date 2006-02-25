@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vfsops.c,v 1.45 2005/03/24 07:32:50 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vfsops.c,v 1.45.2.1 2006/02/20 00:53:15 yar Exp $");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -205,6 +205,6 @@ ufs_fhtovp(mp, ufhp, vpp)
 		return (ESTALE);
 	}
 	*vpp = nvp;
-	vnode_create_vobject(*vpp, DIP(ip, i_size), curthread);
+	vnode_create_vobject_off(*vpp, DIP(ip, i_size), curthread);
 	return (0);
 }

@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_mutex.c,v 1.33.2.1 2005/12/15 07:28:19 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_mutex.c,v 1.33.2.2 2006/01/16 05:36:30 davidxu Exp $
  */
 
 #include <stdlib.h>
@@ -261,12 +261,17 @@ _mutex_reinit(pthread_mutex_t *mutex)
 void
 _mutex_fork(struct pthread *curthread)
 {
-	TAILQ_INIT(&curthread->mutexq);
-	TAILQ_INIT(&curthread->pri_mutexq);
-	curthread->priority_mutex_count = 0;
-#if 0
 	struct pthread_mutex *m;
 
+	/*
+	 * Fix mutex ownership for child process.
+	 * note that process shared mutex should not
+	 * be inherited because owner is forking thread
+	 * which is in parent process, they should be
+	 * removed from the owned mutex list, current,
+	 * process shared mutex is not supported, so I
+	 * am not worried.
+	 */
 	TAILQ_FOREACH(m, &curthread->mutexq, m_qe) {
 		m->m_lock = (umtx_t)curthread->tid;
 	}
@@ -277,7 +282,6 @@ _mutex_fork(struct pthread *curthread)
 		_thr_umtx_init(&m->m_lock);
 		TAILQ_INIT(&m->m_queue);
 	}
-#endif
 }
 
 int
@@ -854,7 +858,8 @@ _mutex_cv_lock(pthread_mutex_t *m)
 {
 	int	ret;
 
-	if ((ret = _pthread_mutex_lock(m)) == 0)
+	ret = mutex_lock_common(_get_curthread(), m, NULL);
+	if (ret == 0)
 		(*m)->m_refcount--;
 	return (ret);
 }

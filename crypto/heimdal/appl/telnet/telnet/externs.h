@@ -33,7 +33,7 @@
  *	@(#)externs.h	8.3 (Berkeley) 5/30/95
  */
 
-/* $Id: externs.h,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $ */
+/* $Id: externs.h,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $ */
 
 #ifndef	BSD
 # define BSD 43

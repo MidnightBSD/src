@@ -12,7 +12,7 @@ divert(-1)
 ifdef(`DNSBL_MAP', `', `define(`DNSBL_MAP', `dns -R A')')
 divert(0)
 ifdef(`_DNSBL_R_',`dnl',`dnl
-VERSIONID(`$Id: dnsbl.m4,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $')
+VERSIONID(`$Id: dnsbl.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 define(`_DNSBL_R_',`')
 LOCAL_CONFIG
 # map for DNS based blacklist lookups

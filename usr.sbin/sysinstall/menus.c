@@ -34,7 +34,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/sysinstall/menus.c,v 1.410.2.1 2005/08/25 00:42:26 rodrigc Exp $";
+  "$FreeBSD: src/usr.sbin/sysinstall/menus.c,v 1.410.2.3 2006/02/13 21:02:35 ceri Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -1591,6 +1591,9 @@ DMenu MenuNTP = {
       { "Czech",		"ntp.karpo.cz",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
 	"ntpdate_enable=YES,ntpdate_flags=ntp.karpo.cz" },
+      { "Czech #2",		"ntp.cgi.cz",
+	dmenuVarsCheck, dmenuSetVariables, NULL,
+	"ntpdate_enable=YES,ntpdate_flags=ntp.cgi.cz" },
       { "Denmark",		"clock.netcetera.dk",
 	dmenuVarsCheck, dmenuSetVariables, NULL,
 	"ntpdate_enable=YES,ntpdate_flags=clock.netcetera.dk" },
@@ -2226,7 +2229,7 @@ DMenu MenuSecurity = {
       { " LOMAC",         "Use Low Watermark Mandatory Access Control at boot",
 	dmenuVarCheck,  dmenuToggleVariable, NULL, "lomac_enable=YES" },
 #endif
-      { " NFS port",	"Require that the NFS clients used reserved ports",
+      { " NFS port",	"Require that the NFS clients use reserved ports",
 	dmenuVarCheck,  dmenuToggleVariable, NULL, "nfs_reserved_port_only=YES" },
       { NULL } },
 };

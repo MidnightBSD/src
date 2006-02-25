@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/wpa/wpa_supplicant/wpa_supplicant.conf.5,v 1.3.2.2 2005/08/18 15:01:27 keramida Exp $
+.\" $FreeBSD: src/usr.sbin/wpa/wpa_supplicant/wpa_supplicant.conf.5,v 1.3.2.4 2006/02/21 17:19:54 sam Exp $
 .\"
-.Dd June 16, 2005
+.Dd February 14, 2006
 .Dt WPA_SUPPLICANT.CONF 5
 .Os
 .Sh NAME
@@ -248,11 +248,11 @@ If not set this defaults to all available methods compiled in to
 .Xr wpa_supplicant 8 .
 Note that by default
 .Xr wpa_supplicant 8
-is not compiled with EAP support; see
+is compiled with EAP support; see
 .Xr make.conf 5
 for the
-.Va ENABLE_WPA_SUPPLICANT_EAPOL
-configuration variable.
+.Va NO_WPA_SUPPLICANT_EAPOL
+configuration variable that can be used to disable EAP support.
 .It Va identity
 Identity string for EAP.
 .It Va anonymous_identity
@@ -493,6 +493,20 @@ network={
         password="foobar"
         ca_cert="/etc/cert/ca.pem"
         phase2="auth=MD5"
+}
+.Ed
+.Pp
+Traditional WEP configuration with 104 bit key specified in hexadecimal.
+Note the WEP key is not quoted.
+.Bd -literal
+ctrl_interface=/var/run/wpa_supplicant
+ctrl_interface_group=wheel
+network={
+        ssid="example"
+        scan_ssid=1
+        key_mgmt=NONE
+        wep_tx_keyidx=0
+        wep_key0=42FEEDDEAFBABEDEAFBEEFAA55
 }
 .Ed
 .Sh SEE ALSO

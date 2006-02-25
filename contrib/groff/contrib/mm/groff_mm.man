@@ -1,5 +1,5 @@
 .\"
-.\" $Id: groff_mm.man,v 1.1.1.1 2006-02-25 02:25:58 laffer1 Exp $
+.\" $Id: groff_mm.man,v 1.1.1.2 2006-02-25 02:33:12 laffer1 Exp $
 .\"
 .de T2
 .if t .ne 2v

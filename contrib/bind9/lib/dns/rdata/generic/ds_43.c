@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ds_43.c,v 1.1.1.1 2006-02-25 02:25:19 laffer1 Exp $ */
+/* $Id: ds_43.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 /* draft-ietf-dnsext-delegation-signer-05.txt */
 
@@ -28,6 +28,7 @@
 static inline isc_result_t
 fromtext_ds(ARGS_FROMTEXT) {
 	isc_token_t token;
+	unsigned char c;
 
 	REQUIRE(type == 43);
 
@@ -49,11 +50,10 @@ fromtext_ds(ARGS_FROMTEXT) {
 	/*
 	 * Algorithm.
 	 */
-	RETERR(isc_lex_getmastertoken(lexer, &token, isc_tokentype_number,
+	RETERR(isc_lex_getmastertoken(lexer, &token, isc_tokentype_string,
 				      ISC_FALSE));
-	if (token.value.as_ulong > 0xffU)
-		RETTOK(ISC_R_RANGE);
-	RETERR(uint8_tobuffer(token.value.as_ulong, target));
+	RETTOK(dns_secalg_fromtext(&c, &token.value.as_textregion));
+	RETERR(mem_tobuffer(target, &c, 1));
 
 	/*
 	 * Digest type.

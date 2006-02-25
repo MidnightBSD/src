@@ -19,7 +19,7 @@
 ** Boston, MA 02111-1307, USA.
 */
 
-/* $Id: tack.h,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $ */
+/* $Id: tack.h,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $ */
 
 #ifndef NCURSES_TACK_H_incl
 #define NCURSES_TACK_H_incl 1

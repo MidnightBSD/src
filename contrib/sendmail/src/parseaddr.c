@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: parseaddr.c,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $")
+SM_RCSID("@(#)$Id: parseaddr.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $")
 
 static void	allocaddr __P((ADDRESS *, int, char *, ENVELOPE *));
 static int	callsubr __P((char**, int, ENVELOPE *));

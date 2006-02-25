@@ -77,7 +77,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_ti.c,v 1.107.2.3 2005/10/09 04:11:19 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_ti.c,v 1.107.2.5 2006/01/14 10:05:07 glebius Exp $");
 
 #include "opt_ti.h"
 
@@ -2532,8 +2532,11 @@ ti_rxeof(sc)
 		 * If we received a packet with a vlan tag,
 		 * tag it before passing the packet upward.
 		 */
-		if (have_tag)
-			VLAN_INPUT_TAG(ifp, m, vlan_tag, continue);
+		if (have_tag) {
+			VLAN_INPUT_TAG_NEW(ifp, m, vlan_tag);
+			if (m == NULL)
+				continue;
+		}
 		TI_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);
 		TI_LOCK(sc);

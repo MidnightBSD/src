@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_frame_relay.c,v 1.24 2005/01/07 01:45:39 imp Exp $
+ * $FreeBSD: src/sys/netgraph/ng_frame_relay.c,v 1.24.2.1 2006/01/21 10:13:03 glebius Exp $
  * $Whistle: ng_frame_relay.c,v 1.20 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -329,12 +329,12 @@ static int
 ngfrm_rcvdata(hook_p hook, item_p item)
 {
 	struct	ctxinfo *const ctxp = NG_HOOK_PRIVATE(hook);
+	struct	mbuf *m = NULL;
 	int     error = 0;
 	int     dlci;
 	sc_p    sc;
 	int     alen;
 	char   *data;
-	struct mbuf *m;
 
 	/* Data doesn't come in from just anywhere (e.g debug hook) */
 	if (ctxp == NULL) {

@@ -47,7 +47,7 @@
 #include <tic.h>
 #include <term_entry.h>
 
-MODULE_ID("$Id: alloc_entry.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: alloc_entry.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 #define ABSENT_OFFSET    -1
 #define CANCELLED_OFFSET -2

@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.2 (Berkeley) 4/20/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/mail/main.c,v 1.14 2004/02/29 20:44:44 mikeh Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/mail/main.c,v 1.14.8.1 2006/01/22 12:40:06 yar Exp $");
 
 #include "rcv.h"
 #include <fcntl.h>
@@ -208,13 +208,12 @@ main(argc, argv)
 			break;
 		case '?':
 			fprintf(stderr, "\
-Usage: %s [-EiInv] [-s subject] [-c cc-addr] [-b bcc-addr] [-F] to-addr ...\n\
-       %*s [- sendmail-options ...]\n\
-       %s [-EHiInNv] [-F] -f [name]\n\
-       %s [-EHiInNv] [-F] [-u user]\n\
-       %s -e [-f name]\n\
-       %s -H\n",__progname, strlen(__progname), "",
-			    __progname, __progname, __progname, __progname);
+Usage: %s [-dEiInv] [-s subject] [-c cc-addr] [-b bcc-addr] [-F] to-addr ...\n\
+       %*s [-sendmail-option ...]\n\
+       %s [-dEHiInNv] [-F] -f [name]\n\
+       %s [-dEHiInNv] [-F] [-u user]\n\
+       %s [-d] -e [-f name]\n", __progname, strlen(__progname), "",
+				__progname, __progname, __progname);
 			exit(1);
 		}
 	}

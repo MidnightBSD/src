@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_exit.c,v 1.18.2.1 2005/12/15 06:36:57 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_exit.c,v 1.18.2.2 2006/01/16 05:36:30 davidxu Exp $
  */
 
 #include <errno.h>
@@ -124,9 +124,16 @@ _pthread_exit(void *status)
 		exit(0);
 		/* Never reach! */
 	}
+	THR_LOCK(curthread);
+	curthread->state = PS_DEAD;
+	THR_UNLOCK(curthread);
+	/*
+	 * Thread was created with initial refcount 1, we drop the
+	 * reference count to allow it to be garbage collected.
+	 */
+	curthread->refcount--;
 	if (curthread->tlflags & TLFLAGS_DETACHED)
 		THR_GCLIST_ADD(curthread);
-	curthread->state = PS_DEAD;
 	THREAD_LIST_UNLOCK(curthread);
 	if (SHOULD_REPORT_EVENT(curthread, TD_DEATH))
 		_thr_report_death(curthread);

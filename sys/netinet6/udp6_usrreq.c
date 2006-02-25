@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/udp6_usrreq.c,v 1.54.2.1 2005/11/04 20:26:15 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/udp6_usrreq.c,v 1.54.2.2 2006/02/09 02:29:06 ume Exp $	*/
 /*	$KAME: udp6_usrreq.c,v 1.27 2001/05/21 05:45:10 jinmei Exp $	*/
 
 /*-
@@ -549,7 +549,7 @@ udp6_attach(struct socket *so, int proto, struct thread *td)
 	INP_LOCK(inp);
 	INP_INFO_WUNLOCK(&udbinfo);
 	inp->inp_vflag |= INP_IPV6;
-	if (!ip6_v6only)
+	if ((inp->inp_flags & IN6P_IPV6_V6ONLY) == 0)
 		inp->inp_vflag |= INP_IPV4;
 	inp->in6p_hops = -1;	/* use kernel default */
 	inp->in6p_cksum = -1;	/* just to be sure */
@@ -653,7 +653,8 @@ udp6_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 	error = in6_pcbconnect(inp, nam, td->td_ucred);
 	splx(s);
 	if (error == 0) {
-		if (!ip6_v6only) { /* should be non mapped addr */
+		if ((inp->inp_flags & IN6P_IPV6_V6ONLY) == 0) {
+			/* should be non mapped addr */
 			inp->inp_vflag &= ~INP_IPV4;
 			inp->inp_vflag |= INP_IPV6;
 		}
@@ -754,7 +755,7 @@ udp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	}
 
 #ifdef INET
-	if (!ip6_v6only) {
+	if ((inp->inp_flags & IN6P_IPV6_V6ONLY) == 0) {
 		int hasv4addr;
 		struct sockaddr_in6 *sin6 = 0;
 
@@ -768,15 +769,6 @@ udp6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 		if (hasv4addr) {
 			struct pr_usrreqs *pru;
 
-			if ((inp->inp_flags & IN6P_IPV6_V6ONLY)) {
-				/*
-				 * since a user of this socket set the
-				 * IPV6_V6ONLY flag, we discard this
-				 * datagram destined to a v4 addr.
-				 */
-				error = EINVAL;
-				goto out;
-			}
 			if (!IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_laddr) &&
 			    !IN6_IS_ADDR_V4MAPPED(&inp->in6p_laddr)) {
 				/*

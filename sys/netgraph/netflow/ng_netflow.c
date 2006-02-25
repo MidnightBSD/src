@@ -28,7 +28,7 @@
  */
 
 static const char rcs_id[] =
-    "@(#) $FreeBSD: src/sys/netgraph/netflow/ng_netflow.c,v 1.9.2.1 2005/08/10 15:00:57 glebius Exp $";
+    "@(#) $FreeBSD: src/sys/netgraph/netflow/ng_netflow.c,v 1.9.2.3 2006/01/21 10:11:01 glebius Exp $";
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -318,7 +318,7 @@ ng_netflow_rcvmsg (node_p node, item_p item, hook_p lasthook)
 				 ERROUT(EINVAL);
 
 			index  = (uint16_t *)msg->data;
-			if (*index > NG_NETFLOW_MAXIFACES)
+			if (*index >= NG_NETFLOW_MAXIFACES)
 				ERROUT(EINVAL);
 
 			/* connected iface? */
@@ -342,7 +342,7 @@ ng_netflow_rcvmsg (node_p node, item_p item, hook_p lasthook)
 				ERROUT(EINVAL);
 
 			set = (struct ng_netflow_setdlt *)msg->data;
-			if (set->iface > NG_NETFLOW_MAXIFACES)
+			if (set->iface >= NG_NETFLOW_MAXIFACES)
 				ERROUT(EINVAL);
 			iface = &priv->ifaces[set->iface];
 
@@ -371,7 +371,7 @@ ng_netflow_rcvmsg (node_p node, item_p item, hook_p lasthook)
 				ERROUT(EINVAL);
 
 			set = (struct ng_netflow_setifindex *)msg->data;
-			if (set->iface > NG_NETFLOW_MAXIFACES)
+			if (set->iface >= NG_NETFLOW_MAXIFACES)
 				ERROUT(EINVAL);
 			iface = &priv->ifaces[set->iface];
 
@@ -614,8 +614,12 @@ ng_netflow_disconnect(hook_p hook)
 	priv_p priv = NG_NODE_PRIVATE(node);
 	iface_p iface = NG_HOOK_PRIVATE(hook);
 
-	if (iface != NULL)
-		iface->hook = NULL;
+	if (iface != NULL) {
+		if (iface->hook == hook)
+			iface->hook = NULL;
+		if (iface->out == hook)
+			iface->out = NULL;
+	}
 
 	/* if export hook disconnected stop running expire(). */
 	if (hook == priv->export) {

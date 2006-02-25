@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/ike,v 1.4 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: src/etc/rc.d/ike,v 1.4.2.1 2006/01/22 13:24:58 yar Exp $
 #
 
 # PROVIDE: ike
@@ -12,6 +12,7 @@
 
 name="ike"
 rcvar=`set_rcvar`
+command="/usr/local/sbin/isakmpd"
 extra_commands="reload"
 
 load_rc_config $name

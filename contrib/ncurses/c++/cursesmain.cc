@@ -34,7 +34,7 @@
 #include "internal.h"
 #include "cursesapp.h"
 
-MODULE_ID("$Id: cursesmain.cc,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $")
+MODULE_ID("$Id: cursesmain.cc,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 
 /* This is the default implementation of main() for a NCursesApplication.
  * You only have to instantiate a static NCursesApplication object in your

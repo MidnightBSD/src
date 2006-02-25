@@ -29,7 +29,7 @@
  *			   University of Maryland at College Park
  */
 /*
- * $Id: strstr.c,v 1.1.1.1 2006-02-25 02:26:14 laffer1 Exp $
+ * $Id: strstr.c,v 1.1.1.2 2006-02-25 02:33:46 laffer1 Exp $
  *
  * replacement for missing ANSI-C strstr function
  */

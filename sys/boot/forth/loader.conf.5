@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sys/boot/forth/loader.conf.5,v 1.23.2.1 2005/11/17 06:59:53 ru Exp $
+.\" $FreeBSD: src/sys/boot/forth/loader.conf.5,v 1.23.2.3 2006/02/14 06:20:15 ru Exp $
 .Dd November 15, 2005
 .Dt LOADER.CONF 5
 .Os
@@ -164,6 +164,17 @@ a bitmap will be loaded to be displayed on screen while booting.
 .Pq Dq Pa /boot/splash.bmp
 Name of the bitmap to be loaded.
 Any other name can be used.
+.It Va comconsole_speed
+.Dq ( 9600
+or the value of the
+.Va BOOT_COMCONSOLE_SPEED
+variable when
+.Xr loader 8
+was compiled).
+Sets the speed of the serial console.
+If the previous boot loader stage specified that a serial console
+is in use then the default speed is determined from the current
+serial port speed setting.
 .It Va console
 .Pq Dq vidconsole
 .Dq comconsole

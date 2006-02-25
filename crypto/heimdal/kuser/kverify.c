@@ -33,7 +33,7 @@
 
 #include "kuser_locl.h"
 
-RCSID("$Id: kverify.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: kverify.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
 
 static int help_flag = 0;
 static int version_flag = 0;

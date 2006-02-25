@@ -1,4 +1,4 @@
-$FreeBSD: src/sys/dev/usb/usbdevs,v 1.232.2.3 2005/12/14 01:26:51 flz Exp $
+$FreeBSD: src/sys/dev/usb/usbdevs,v 1.232.2.11 2006/01/29 14:16:36 damien Exp $
 /* $NetBSD: usbdevs,v 1.392 2004/12/29 08:38:44 imp Exp $ */
 
 /*-
@@ -506,6 +506,7 @@ vendor LINKSYS4		0x13b1	Linksys
 vendor SHARK		0x13d2	Shark
 vendor SILICOM		0x1485	Silicom
 vendor RALINK		0x148f	Ralink Technology
+vendor IMAGINATION	0x149a	Imagination Technologies
 vendor CONCEPTRONIC	0x14b2	Conceptronic
 vendor SILICONPORTALS	0x1527	Silicon Portals
 vendor SOHOWARE		0x15e8	SOHOware
@@ -578,6 +579,7 @@ product ACERP ACERSCAN_C310U	0x12a6	Acerscan C310U
 product ACERP ACERSCAN_320U	0x2022	Acerscan 320U
 product ACERP ACERSCAN_640U	0x2040	Acerscan 640U
 product ACERP ACERSCAN_620U	0x2060	Acerscan 620U
+product ACERP ACERSCAN_1240U	0x20c0	Acerscan 1240U
 product ACERP AWL300		0x9000	AWL300 Wireless adapter
 product ACERP AWL400		0x9001	AWL400 Wireless adapter
 
@@ -630,7 +632,7 @@ product ALTEC ADA70		0x0070	ADA70 Speakers
 product ALTEC ASC495		0xff05	ASC495 Speakers
 
 /* American Power Conversion products */
-product APC UPSPRO500		0x0002	Back-UPS Pro 500
+product APC UPS			0x0002	Uninterruptible Power Supply
 
 /* Anchor products */
 product ANCHOR EZUSB		0x2131	EZUSB
@@ -644,6 +646,7 @@ product APPLE OPTMOUSE		0x0302	Optical mouse
 product APPLE SPEAKERS		0x1101	Speakers
 product APPLE IPOD3G		0x1203	iPod 3G
 product APPLE IPODVIDEO		0x1209	iPod Video
+product APPLE IPODNANO		0x120a	iPod Nano
 
 /* Asahi Optical products */
 product ASAHIOPTICAL OPTIO230	0x0004	Digital camera
@@ -977,6 +980,9 @@ product HP2 C500		0x6002	PhotoSmart C500
 /* IBM Corporation */
 product IBM USBCDROMDRIVE	0x4427	USB CD-ROM Drive
 
+/* Imagination Technologies products */
+product IMAGINATION DBX1	0x2107	DBX1 DSP core
+
 /* Inside Out Networks products */
 product INSIDEOUT EDGEPORT4	0x0001	EdgePort/4 serial ports
 
@@ -1089,6 +1095,7 @@ product LINKSYS2 USB200M	0x2226	USB 2.0 10/100 ethernet
 product LINKSYS3 WUSB11v28	0x2233	WUSB11 v2.8 wireless adapter
 product LINKSYS4 WUSB54G	0x000d	WUSB54G wireless adapter
 product LINKSYS4 WUSB54GP	0x0011	WUSB54GP wireless adapter
+product LINKSYS4 HU200TS	0x001a	HU200TS wireless adapter
 
 /* Logitech products */
 product LOGITECH M2452		0x0203	M2452 keyboard
@@ -1149,9 +1156,14 @@ product MELCO LUAU2KTX		0x003d	LUA-U2-KTX Ethernet
 product MELCO KG54YB		0x005e	WLI-U2-KG54-YB WLAN
 product MELCO KG54		0x0066	WLI-U2-KG54 WLAN
 product MELCO KG54AI		0x0067	WLI-U2-KG54-AI WLAN
+product MELCO NINWIFI		0x008b	Nintendo Wi-Fi
 
 /* Metricom products */
 product METRICOM RICOCHET_GS	0x0001	Ricochet GS
+
+/* MGE UPS Systems */
+product MGE UPS1		0x0001	MGE UPS SYSTEMS PROTECTIONCENTER 1
+product MGE UPS2		0xffff	MGE UPS SYSTEMS PROTECTIONCENTER 2
 
 /* Micro Star International products */
 product MSI BT_DONGLE		0x1967	Bluetooth USB dongle
@@ -1204,6 +1216,7 @@ product MITSUMI BT_DONGLE	0x641f	Bluetooth USB dongle
 /* Motorola products */
 product MOTOROLA MC141555	0x1555	MC141555 hub controller
 product MOTOROLA SB4100		0x4100	SB4100 USB Cable Modem
+product MOTOROLA2 E398		0x4810  E398 Mobile Phone
 
 /* MultiTech products */
 product MULTITECH ATLAS		0xf101	MT5634ZBA-USB modem
@@ -1308,6 +1321,8 @@ product PLX TESTBOARD		0x9060	test board
 
 /* PNY products */
 product PNY ATTACHE		0x1300	USB 2.0 Flash Drive
+product PNY A256MB		0x1400	Attache 256MB USB 2.0 Flash Drive
+product PNY DISKPRO512		0x1420	USB 2.0 Flash Drive (DANE-ELEC zMate 512MB USB flash drive)
 
 /* Primax products */
 product PRIMAX G2X300		0x0300	G2-200 scanner
@@ -1382,6 +1397,8 @@ product SANDISK SDDR12		0x0100	ImageMate SDDR-12
 product SANDISK SDDR09		0x0200	ImageMate SDDR-09
 product SANDISK SDDR75		0x0810	ImageMate SDDR-75
 product SANDISK SDCZ2_256	0x7104	Cruzer Mini 256MB
+product SANDISK SDCZ4_128	0x7112	Cruzer Micro 128MB
+product SANDISK SDCZ4_256	0x7113	Cruzer Micro 256MB
 
 /* Sanyo Electric products */
 product SANYO SCP4900 		0x0701	Sanyo SCP-4900 USB Phone
@@ -1573,7 +1590,7 @@ product VTECH RT2570		0x3012	RT2570
 /* Wacom products */
 product WACOM CT0405U		0x0000	CT-0405-U Tablet
 product WACOM GRAPHIRE		0x0010	Graphire
-product WACOM GRAPHIRE3		0x0013	Graphire 3
+product WACOM GRAPHIRE3_4X5	0x0013	Graphire 3 4x5
 product WACOM INTUOSA5		0x0021	Intuos A5
 product WACOM GD0912U		0x0022	Intuos 9x12 Graphics Tablet
 

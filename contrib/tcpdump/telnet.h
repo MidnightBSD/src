@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/telnet.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /home/cvs/src/contrib/tcpdump/telnet.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
 
 /*	$NetBSD: telnet.h,v 1.9 2001/06/11 01:50:50 wiz Exp $	*/
 

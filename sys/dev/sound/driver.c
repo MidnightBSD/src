@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/driver.c,v 1.13 2005/01/06 01:43:17 imp Exp $
+ * $FreeBSD: src/sys/dev/sound/driver.c,v 1.13.2.2 2006/01/24 18:56:11 joel Exp $
  */
 
 #include <dev/sound/pcm/sound.h>
@@ -54,6 +54,7 @@ MODULE_VERSION(snd_driver, 1);
 
 MODULE_DEPEND(snd_driver, snd_ad1816, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_als4000, 1, 1, 1);
+MODULE_DEPEND(snd_driver, snd_atiixp, 1, 1, 1);
 /* MODULE_DEPEND(snd_driver, snd_aureal, 1, 1, 1); */
 MODULE_DEPEND(snd_driver, snd_cmi, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_cs4281, 1, 1, 1);
@@ -71,8 +72,8 @@ MODULE_DEPEND(snd_driver, snd_maestro, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_maestro3, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_mss, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_neomagic, 1, 1, 1);
-MODULE_DEPEND(snd_driver, snd_sb8, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_sb16, 1, 1, 1);
+MODULE_DEPEND(snd_driver, snd_sb8, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_sbc, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_solo, 1, 1, 1);
 MODULE_DEPEND(snd_driver, snd_t4dwave, 1, 1, 1);

@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.nls.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.nls.c,v 1.1.1.2 2006-02-25 02:34:06 laffer1 Exp $ */
 /*
  * tc.nls.c: NLS handling
  */
@@ -32,7 +32,7 @@
  */
 #include "sh.h"
 
-RCSID("$Id: tc.nls.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $")
+RCSID("$Id: tc.nls.c,v 1.1.1.2 2006-02-25 02:34:06 laffer1 Exp $")
 
 #ifdef SHORT_STRINGS
 int

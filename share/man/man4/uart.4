@@ -23,7 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/uart.4,v 1.5 2004/06/21 17:42:49 mpp Exp $
+.\" $FreeBSD: src/share/man/man4/uart.4,v 1.5.8.1 2006/02/11 06:30:41 marcel Exp $
 .\"
 .Dd August 25, 2003
 .Dt UART 4
@@ -103,6 +103,23 @@ This allows the UART to be used for terminals, modems and serial line IP
 applications.
 System devices, with the notable exception of serial consoles, generally
 have specialized kernel interfaces.
+.\"
+.Sh HARDWARE
+The
+.Nm
+driver supports the following classes of UARTs:
+.Pp
+.Bl -bullet -compact
+.It
+NS8250: standard hardware based on the 8250, 16450, 16550, 16650, 16750 or
+the 16950 UARTs
+.It
+SAB82532: Siemens SAB 82532 based serial communications controllers in
+asynchronuous mode.
+.It
+Z8530: Zilog 8530 based serial communications controllers in asynchronuous
+mode.
+.El
 .\"
 .Sh SEE ALSO
 .Xr puc 4

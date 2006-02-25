@@ -33,7 +33,7 @@
  *	@(#)ext.h	8.2 (Berkeley) 12/15/93
  */
 
-/* $Id: ext.h,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $ */
+/* $Id: ext.h,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $ */
 
 #ifndef __EXT_H__
 #define __EXT_H__

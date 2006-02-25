@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm.c,v 1.27 2005/06/29 22:39:41 peter Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm.c,v 1.27.2.1 2006/01/24 04:05:47 csjp Exp $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -177,6 +177,11 @@ _kvm_open(kd, uf, mf, flag, errout)
 	}
 	if (fstat(kd->pmfd, &st) < 0) {
 		_kvm_syserr(kd, kd->program, "%s", mf);
+		goto failed;
+	}
+	if (S_ISREG(st.st_mode) && st.st_size <= 0) {
+		errno = EINVAL;
+		_kvm_syserr(kd, kd->program, "empty file");
 		goto failed;
 	}
 	if (fcntl(kd->pmfd, F_SETFD, FD_CLOEXEC) < 0) {

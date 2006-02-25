@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap.h,v 1.1.1.1 2006-02-25 02:28:29 laffer1 Exp $
+ * $Id: ng_l2cap.h,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
  * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_l2cap.h,v 1.3.2.1 2005/09/03 03:34:23 emax Exp $
  */
 

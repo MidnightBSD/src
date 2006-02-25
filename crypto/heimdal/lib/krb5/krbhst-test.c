@@ -36,7 +36,7 @@
 #include <err.h>
 #include <getarg.h>
 
-RCSID("$Id: krbhst-test.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: krbhst-test.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 
 static int version_flag = 0;
 static int help_flag	= 0;

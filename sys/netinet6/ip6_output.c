@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ip6_output.c,v 1.90.2.7 2005/11/04 20:35:14 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ip6_output.c,v 1.90.2.10 2006/02/14 21:38:46 rwatson Exp $	*/
 /*	$KAME: ip6_output.c,v 1.279 2002/01/26 06:12:30 jinmei Exp $	*/
 
 /*-
@@ -113,7 +113,7 @@
 #include <netinet6/ip6protosw.h>
 #include <netinet6/scope6_var.h>
 
-static MALLOC_DEFINE(M_IPMOPTS, "ip6_moptions", "internet multicast options");
+static MALLOC_DEFINE(M_IP6MOPTS, "ip6_moptions", "internet multicast options");
 
 struct ip6_exthdrs {
 	struct mbuf *ip6e_ip6;
@@ -525,7 +525,7 @@ skip_ipsec2:;
 
 	/* Source address validation */
 	if (IN6_IS_ADDR_UNSPECIFIED(&ip6->ip6_src) &&
-	    (flags & IPV6_DADOUTPUT) == 0) {
+	    (flags & IPV6_UNSPECSRC) == 0) {
 		error = EOPNOTSUPP;
 		ip6stat.ip6s_badscope++;
 		goto bad;
@@ -2595,7 +2595,7 @@ ip6_setmoptions(optname, im6op, m)
 		 * allocate one and initialize to default values.
 		 */
 		im6o = (struct ip6_moptions *)
-			malloc(sizeof(*im6o), M_IPMOPTS, M_WAITOK);
+			malloc(sizeof(*im6o), M_IP6MOPTS, M_WAITOK);
 
 		if (im6o == NULL)
 			return (ENOBUFS);
@@ -2764,16 +2764,9 @@ ip6_setmoptions(optname, im6op, m)
 		 * Everything looks good; add a new record to the multicast
 		 * address list for the given interface.
 		 */
-		imm = malloc(sizeof(*imm), M_IPMADDR, M_WAITOK);
-		if (imm == NULL) {
-			error = ENOBUFS;
+		imm = in6_joingroup(ifp, &mreq->ipv6mr_multiaddr,  &error, 0);
+		if (imm == NULL)
 			break;
-		}
-		if ((imm->i6mm_maddr =
-		     in6_addmulti(&mreq->ipv6mr_multiaddr, ifp, &error)) == NULL) {
-			free(imm, M_IPMADDR);
-			break;
-		}
 		LIST_INSERT_HEAD(&im6o->im6o_memberships, imm, i6mm_chain);
 		break;
 
@@ -2861,7 +2854,7 @@ ip6_setmoptions(optname, im6op, m)
 		 */
 		LIST_REMOVE(imm, i6mm_chain);
 		in6_delmulti(imm->i6mm_maddr);
-		free(imm, M_IPMADDR);
+		free(imm, M_IP6MADDR);
 		break;
 
 	default:
@@ -2876,7 +2869,7 @@ ip6_setmoptions(optname, im6op, m)
 	    im6o->im6o_multicast_hlim == ip6_defmcasthlim &&
 	    im6o->im6o_multicast_loop == IPV6_DEFAULT_MULTICAST_LOOP &&
 	    im6o->im6o_memberships.lh_first == NULL) {
-		free(*im6op, M_IPMOPTS);
+		free(*im6op, M_IP6MOPTS);
 		*im6op = NULL;
 	}
 
@@ -2946,9 +2939,9 @@ ip6_freemoptions(im6o)
 		LIST_REMOVE(imm, i6mm_chain);
 		if (imm->i6mm_maddr)
 			in6_delmulti(imm->i6mm_maddr);
-		free(imm, M_IPMADDR);
+		free(imm, M_IP6MADDR);
 	}
-	free(im6o, M_IPMOPTS);
+	free(im6o, M_IP6MOPTS);
 }
 
 /*
@@ -3206,7 +3199,9 @@ ip6_setpktopt(optname, buf, len, opt, priv, sticky, cmsg, uproto)
 
 		/* turn off the previous option, then set the new option. */
 		ip6_clearpktopts(opt, IPV6_NEXTHOP);
-		opt->ip6po_nexthop = malloc(*buf, M_IP6OPT, M_WAITOK);
+		opt->ip6po_nexthop = malloc(*buf, M_IP6OPT, M_NOWAIT);
+		if (opt->ip6po_nexthop == NULL)
+			return (ENOBUFS);
 		bcopy(buf, opt->ip6po_nexthop, *buf);
 		break;
 
@@ -3239,7 +3234,9 @@ ip6_setpktopt(optname, buf, len, opt, priv, sticky, cmsg, uproto)
 
 		/* turn off the previous option, then set the new option. */
 		ip6_clearpktopts(opt, IPV6_HOPOPTS);
-		opt->ip6po_hbh = malloc(hbhlen, M_IP6OPT, M_WAITOK);
+		opt->ip6po_hbh = malloc(hbhlen, M_IP6OPT, M_NOWAIT);
+		if (opt->ip6po_hbh == NULL)
+			return (ENOBUFS);
 		bcopy(hbh, opt->ip6po_hbh, hbhlen);
 
 		break;
@@ -3301,7 +3298,9 @@ ip6_setpktopt(optname, buf, len, opt, priv, sticky, cmsg, uproto)
 
 		/* turn off the previous option, then set the new option. */
 		ip6_clearpktopts(opt, optname);
-		*newdest = malloc(destlen, M_IP6OPT, M_WAITOK);
+		*newdest = malloc(destlen, M_IP6OPT, M_NOWAIT);
+		if (*newdest == NULL)
+			return (ENOBUFS);
 		bcopy(dest, *newdest, destlen);
 
 		break;
@@ -3341,7 +3340,9 @@ ip6_setpktopt(optname, buf, len, opt, priv, sticky, cmsg, uproto)
 
 		/* turn off the previous option */
 		ip6_clearpktopts(opt, IPV6_RTHDR);
-		opt->ip6po_rthdr = malloc(rthlen, M_IP6OPT, M_WAITOK);
+		opt->ip6po_rthdr = malloc(rthlen, M_IP6OPT, M_NOWAIT);
+		if (opt->ip6po_rthdr == NULL)
+			return (ENOBUFS);
 		bcopy(rth, opt->ip6po_rthdr, rthlen);
 
 		break;

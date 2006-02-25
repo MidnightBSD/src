@@ -33,7 +33,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/if_athioctl.h,v 1.10.2.1 2005/12/11 22:45:38 sam Exp $
+ * $FreeBSD: src/sys/dev/ath/if_athioctl.h,v 1.10.2.3 2006/02/24 19:51:11 sam Exp $
  */
 
 /*
@@ -46,6 +46,7 @@ struct ath_stats {
 	u_int32_t	ast_watchdog;	/* device reset by watchdog */
 	u_int32_t	ast_hardware;	/* fatal hardware error interrupts */
 	u_int32_t	ast_bmiss;	/* beacon miss interrupts */
+	u_int32_t	ast_bmiss_phantom;/* beacon miss interrupts */
 	u_int32_t	ast_bstuck;	/* beacon stuck interrupts */
 	u_int32_t	ast_rxorn;	/* rx overrun interrupts */
 	u_int32_t	ast_rxeol;	/* rx eol interrupts */
@@ -105,6 +106,7 @@ struct ath_stats {
 	u_int32_t	ast_ant_txswitch;/* tx antenna switches */
 	u_int32_t	ast_ant_rx[8];	/* rx frames with antenna */
 	u_int32_t	ast_ant_tx[8];	/* tx frames with antenna */
+	u_int32_t	ast_pad[32];
 };
 
 #define	SIOCGATHSTATS	_IOWR('i', 137, struct ifreq)
@@ -128,24 +130,29 @@ struct ath_diag {
  * Radio capture format.
  */
 #define ATH_RX_RADIOTAP_PRESENT (		\
+	(1 << IEEE80211_RADIOTAP_TSFT)		| \
 	(1 << IEEE80211_RADIOTAP_FLAGS)		| \
 	(1 << IEEE80211_RADIOTAP_RATE)		| \
 	(1 << IEEE80211_RADIOTAP_CHANNEL)	| \
 	(1 << IEEE80211_RADIOTAP_ANTENNA)	| \
-	(1 << IEEE80211_RADIOTAP_DB_ANTSIGNAL)	| \
+	(1 << IEEE80211_RADIOTAP_DBM_ANTSIGNAL)	| \
+	(1 << IEEE80211_RADIOTAP_DBM_ANTNOISE)	| \
 	0)
 
 struct ath_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
-	u_int8_t	wr_flags;		/* XXX for padding */
+	u_int64_t	wr_tsf;
+	u_int8_t	wr_flags;
 	u_int8_t	wr_rate;
 	u_int16_t	wr_chan_freq;
 	u_int16_t	wr_chan_flags;
-	u_int8_t	wr_antenna;
 	u_int8_t	wr_antsignal;
+	u_int8_t	wr_antnoise;
+	u_int8_t	wr_antenna;
 };
 
 #define ATH_TX_RADIOTAP_PRESENT (		\
+	(1 << IEEE80211_RADIOTAP_TSFT)		| \
 	(1 << IEEE80211_RADIOTAP_FLAGS)		| \
 	(1 << IEEE80211_RADIOTAP_RATE)		| \
 	(1 << IEEE80211_RADIOTAP_CHANNEL)	| \
@@ -155,7 +162,8 @@ struct ath_rx_radiotap_header {
 
 struct ath_tx_radiotap_header {
 	struct ieee80211_radiotap_header wt_ihdr;
-	u_int8_t	wt_flags;		/* XXX for padding */
+	u_int64_t	wt_tsf;
+	u_int8_t	wt_flags;
 	u_int8_t	wt_rate;
 	u_int16_t	wt_chan_freq;
 	u_int16_t	wt_chan_flags;

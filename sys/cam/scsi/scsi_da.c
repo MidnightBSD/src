@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.180.2.1 2005/11/26 22:55:20 jdp Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.180.2.4 2006/01/29 00:45:12 flz Exp $");
 
 #include <sys/param.h>
 
@@ -353,6 +353,79 @@ static struct da_quirk_entry da_quirk_table[] =
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Kingston" , "DataTraveler II+", "*"},
 		/*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Motorola E398 Mobile Phone (TransFlash memory card).
+		 * Reported by: Wojciech A. Koszek <dunstan@FreeBSD.czest.pl>
+		 * PR: usb/89889
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Motorola" , "Motorola Phone",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Qware BeatZkey! Pro
+		 * PR: usb/79164
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "GENERIC", "USB DISK DEVICE",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Time DPA20B 1GB MP3 Player
+		 * PR: usb/81846
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "USB2.0*", "(FS) FLASH DISK*",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Samsung USB key 128Mb
+		 * PR: usb/90081
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "USB-DISK", "FreeDik-FlashUsb",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Kingston DataTraveler 2.0 USB Flash memory.
+		 * PR: usb/89196
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Kingston", "DataTraveler 2.0",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Creative MUVO Slim mp3 player (USB)
+		 * PR: usb/86131
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "CREATIVE", "MuVo Slim",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE|DA_Q_NO_PREVENT
+		},
+	{
+		/*
+		 * United MP5512 Portable MP3 Player (2-in-1 USB DISK/MP3)
+		 * PR: usb/80487
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Generic*", "MUSIC DISK",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * SanDisk Micro Cruzer 128MB
+		 * PR: usb/75970
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "SanDisk" , "Micro Cruzer",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * PNY USB Flash keys
+		 * PR: usb/75578, usb/72344, usb/65436 
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "*" , "USB DISK*",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
 	},
 };
 

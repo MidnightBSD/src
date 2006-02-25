@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)local.h	8.3 (Berkeley) 7/3/94
- * $FreeBSD: src/lib/libc/stdio/local.h,v 1.26 2004/07/16 05:52:51 tjr Exp $
+ * $FreeBSD: src/lib/libc/stdio/local.h,v 1.26.8.1 2005/12/23 06:07:43 davidxu Exp $
  */
 
 #include <sys/types.h>	/* for off_t */
@@ -79,7 +79,8 @@ extern int	__vfscanf(FILE *, const char *, __va_list);
 extern int	__vfwprintf(FILE *, const wchar_t *, __va_list);
 extern int	__vfwscanf(FILE * __restrict, const wchar_t * __restrict,
 		    __va_list);
-
+extern size_t	__fread(void * __restrict buf, size_t size, size_t count,
+		FILE * __restrict fp);
 extern int	__sdidinit;
 
 

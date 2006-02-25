@@ -35,7 +35,7 @@
 #include <dev/pci/pcivar.h>
 #include <sys/queue.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/emu10k1.c,v 1.55 2005/03/01 08:58:05 imp Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/emu10k1.c,v 1.55.2.1 2005/12/30 19:55:53 netchild Exp $");
 
 /* -------------------------------------------------------------------- */
 
@@ -494,12 +494,12 @@ emu_vinit(struct sc_info *sc, struct emu_voice *m, struct emu_voice *s,
 	m->buf = tmp_addr;
 	m->slave = s;
 	if (sc->audigy) {
-		m->fxrt1 = FXBUS_MIDI_CHORUS | FXBUS_PCM_LEFT << 8 |
-		    FXBUS_PCM_RIGHT << 16 | FXBUS_MIDI_REVERB << 24;
+		m->fxrt1 = FXBUS_MIDI_CHORUS | FXBUS_PCM_RIGHT << 8 |
+		    FXBUS_PCM_LEFT << 16 | FXBUS_MIDI_REVERB << 24;
 		m->fxrt2 = 0x3f3f3f3f;	/* No effects on second route */
 	} else {
-		m->fxrt1 = FXBUS_MIDI_CHORUS | FXBUS_PCM_LEFT << 4 |
-		    FXBUS_PCM_RIGHT << 8 | FXBUS_MIDI_REVERB << 12;
+		m->fxrt1 = FXBUS_MIDI_CHORUS | FXBUS_PCM_RIGHT << 4 |
+		    FXBUS_PCM_LEFT << 8 | FXBUS_MIDI_REVERB << 12;
 		m->fxrt2 = 0;
 	}
 

@@ -32,7 +32,7 @@
  */
 
 /* 
- * $Id: headers.h,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $ 
+ * $Id: headers.h,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $ 
  * $FreeBSD: src/crypto/heimdal/kdc/headers.h,v 1.7 2002/09/16 21:07:11 nectar Exp $ 
  */
 

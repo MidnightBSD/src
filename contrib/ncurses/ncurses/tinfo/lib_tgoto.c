@@ -35,7 +35,7 @@
 #include <ctype.h>
 #include <termcap.h>
 
-MODULE_ID("$Id: lib_tgoto.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: lib_tgoto.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 #if !PURE_TERMINFO
 static bool

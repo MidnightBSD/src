@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+# $Id: Makefile.in,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
 # Makefile for tack
 #
 # The variable 'srcdir' refers to the source-distribution, and can be set with

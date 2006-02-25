@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_default.c,v 1.127 2005/06/14 20:32:27 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_default.c,v 1.127.2.1 2006/01/14 01:18:02 tegge Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -544,7 +544,7 @@ vfs_stdsync(mp, waitfor, td)
 	int waitfor;
 	struct thread *td;
 {
-	struct vnode *vp, *nvp;
+	struct vnode *vp, *mvp;
 	int error, lockreq, allerror = 0;
 
 	lockreq = LK_EXCLUSIVE | LK_INTERLOCK;
@@ -555,7 +555,7 @@ vfs_stdsync(mp, waitfor, td)
 	 */
 	MNT_ILOCK(mp);
 loop:
-	MNT_VNODE_FOREACH(vp, mp, nvp) {
+	MNT_VNODE_FOREACH(vp, mp, mvp) {
 
 		VI_LOCK(vp);
 		if (vp->v_bufobj.bo_dirty.bv_cnt == 0) {
@@ -566,8 +566,10 @@ loop:
 
 		if ((error = vget(vp, lockreq, td)) != 0) {
 			MNT_ILOCK(mp);
-			if (error == ENOENT)
+			if (error == ENOENT) {
+				MNT_VNODE_FOREACH_ABORT_ILOCKED(mp, mvp);
 				goto loop;
+			}
 			continue;
 		}
 		error = VOP_FSYNC(vp, waitfor, td);

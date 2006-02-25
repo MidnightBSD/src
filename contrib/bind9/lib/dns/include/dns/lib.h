@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lib.h,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $ */
+/* $Id: lib.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 #ifndef DNS_LIB_H
 #define DNS_LIB_H 1

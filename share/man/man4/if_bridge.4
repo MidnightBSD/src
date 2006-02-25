@@ -33,7 +33,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/if_bridge.4,v 1.5.2.2 2005/09/09 08:47:26 thompsa Exp $
+.\" $FreeBSD: src/share/man/man4/if_bridge.4,v 1.5.2.4 2006/01/03 21:55:25 thompsa Exp $
 .\"
 .Dd June 10, 2005
 .Dt IF_BRIDGE 4
@@ -88,7 +88,14 @@ inbound on the originating interface, on the bridge interface and outbound on
 the appropriate interfaces.
 Either stage can be disabled, this behaviour can be controlled using
 .Xr sysctl 8 :
-.Bl -tag -width ".Va net.link.bridge.pfil_member"
+.Bl -tag -width ".Va net.link.bridge.pfil_onlyip"
+.It Va net.link.bridge.pfil_onlyip
+Set to
+.Li 1
+to only allow IP packets to pass when packet filtering is enabled (subject to
+firewall rules), set to
+.Li 0
+to unconditionally pass all non-IP Ethernet frames.
 .It Va net.link.bridge.pfil_member
 Set to
 .Li 1
@@ -173,8 +180,25 @@ ifconfig bridge0 \e
     addm fxp7 stp fxp7 \e
     up
 .Ed
+.Pp
+The bridge can tunnel Ethernet across an IP internet using the EtherIP
+protocol.
+This can be combined with
+.Xr ipsec 4
+to provide an encrypted connection.
+Create a
+.Xr gif 4
+interface and set the local and remote IP addresses for the
+tunnel, these are reversed on the remote bridge.
+.Bd -literal -offset indent
+ifconfig gif0 create
+ifconfig gif0 tunnel 1.2.3.4 5.6.7.8 up
+ifconfig bridge0 create
+ifconfig bridge0 addm fxp0 addm gif0 up
+.Ed
 .Sh SEE ALSO
 .Xr ifconfig 8 ,
+.Xr gif 4 ,
 .Xr ipfw 4 ,
 .Xr ipf 4 ,
 .Xr pf 4

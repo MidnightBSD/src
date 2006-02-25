@@ -1,4 +1,4 @@
-.\" $Id: pic2graph.man,v 1.1.1.1 2006-02-25 02:25:59 laffer1 Exp $
+.\" $Id: pic2graph.man,v 1.1.1.2 2006-02-25 02:33:14 laffer1 Exp $
 .\" This documentation is released to the public domain.
 .TH PIC2GRAPH @MAN1EXT@ "@MDATE@" "Groff Version @VERSION@"
 .IX pic2graph

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/pc98/loader/main.c,v 1.20 2005/05/27 19:31:00 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/pc98/loader/main.c,v 1.20.2.1 2006/02/15 13:55:13 nyan Exp $");
 
 /*
  * MD bootstrap main() and assorted miscellaneous
@@ -98,8 +98,8 @@ main(void)
      * We can use printf() etc. once this is done.
      * If the previous boot stage has requested a serial console, prefer that.
      */
+    bi_setboothowto(initial_howto);
     if (initial_howto & RB_MULTIPLE) {
-	setenv("boot_multicons", "YES", 1);
 	if (initial_howto & RB_SERIAL)
 	    setenv("console", "comconsole vidconsole", 1);
 	else

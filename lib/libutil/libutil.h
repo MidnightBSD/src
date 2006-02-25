@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libutil/libutil.h,v 1.40 2004/05/24 22:19:27 pjd Exp $
+ * $FreeBSD: src/lib/libutil/libutil.h,v 1.40.8.1 2006/01/15 17:50:35 delphij Exp $
  */
 
 #ifndef _LIBUTIL_H_
@@ -48,6 +48,16 @@ typedef struct _property {
 	char *name;
 	char *value;
 } *properties;
+
+#ifdef _SYS_PARAM_H_
+/* for pidfile.c */
+struct pidfh {
+	int	pf_fd;
+	char	pf_path[MAXPATHLEN + 1];
+	__dev_t	pf_dev;
+	ino_t	pf_ino;
+};
+#endif
 
 /* Avoid pulling in all the include files for no need */
 struct termios;
@@ -101,6 +111,13 @@ int	pw_lock(void);
 struct passwd *pw_scan(const char *_line, int _flags);
 const char *pw_tempname(void);
 int	pw_tmp(int _mfd);
+#endif
+
+#ifdef _SYS_PARAM_H_
+struct pidfh *pidfile_open(const char *path, mode_t mode, pid_t *pidptr);
+int pidfile_write(struct pidfh *pfh);
+int pidfile_close(struct pidfh *pfh);
+int pidfile_remove(struct pidfh *pfh);
 #endif
 __END_DECLS
 

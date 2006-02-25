@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/ral/if_ral_pccard.c,v 1.2 2005/06/24 14:36:53 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/ral/if_ral_pccard.c,v 1.2.2.1 2006/01/29 15:21:46 damien Exp $	*/
 
 /*-
  * Copyright (c) 2005
@@ -18,10 +18,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ral/if_ral_pccard.c,v 1.2 2005/06/24 14:36:53 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ral/if_ral_pccard.c,v 1.2.2.1 2006/01/29 15:21:46 damien Exp $");
 
 /*
  * CardBus front-end for the Ralink RT2500 driver.
+ * XXX this is actually a PC Card front end.  Maybe?
  */
 
 #include <sys/param.h>
@@ -60,7 +61,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ral/if_ral_pccard.c,v 1.2 2005/06/24 14:36:53 im
 #include "card_if.h"
 #include "pccarddevs.h"
 
-MODULE_DEPEND(ral, pccard, 1, 1, 1);
 MODULE_DEPEND(ral, wlan, 1, 1, 1);
 
 static const struct pccard_product ral_pccard_products[] = {
@@ -69,21 +69,15 @@ static const struct pccard_product ral_pccard_products[] = {
 	{ NULL }
 };
 
-static int ral_pccard_match(device_t);
 static int ral_pccard_probe(device_t);
 static int ral_pccard_attach(device_t);
 
 static device_method_t ral_pccard_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
+	DEVMETHOD(device_probe,		ral_pccard_probe),
+	DEVMETHOD(device_attach,	ral_pccard_attach),
 	DEVMETHOD(device_detach,	ral_detach),
 	DEVMETHOD(device_shutdown,	ral_shutdown),
-
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	ral_pccard_match),
-	DEVMETHOD(card_compat_probe,	ral_pccard_probe),
-	DEVMETHOD(card_compat_attach,	ral_pccard_attach),
 
 	{ 0, 0 }
 };
@@ -97,7 +91,7 @@ static driver_t ral_pccard_driver = {
 DRIVER_MODULE(ral, pccard, ral_pccard_driver, ral_devclass, 0, 0);
 
 static int
-ral_pccard_match(device_t dev)
+ral_pccard_probe(device_t dev)
 {
 	const struct pccard_product *pp;
 
@@ -108,20 +102,6 @@ ral_pccard_match(device_t dev)
 		return 0;
 	}
 	return ENXIO;
-}
-
-static int
-ral_pccard_probe(device_t dev)
-{
-	int error;
-
-	error = ral_alloc(dev, 0);
-	if (error != 0)
-		return error;
-
-	ral_free(dev);
-
-	return 0;
 }
 
 static int

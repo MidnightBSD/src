@@ -1,7 +1,9 @@
-/* $FreeBSD: src/sys/dev/isp/isp_freebsd.h,v 1.79 2005/05/29 04:42:22 nyan Exp $ */
+/* $FreeBSD: src/sys/dev/isp/isp_freebsd.h,v 1.79.2.3 2006/02/04 23:53:08 mjacob Exp $ */
 /*-
  * Qlogic ISP SCSI Host Adapter FreeBSD Wrapper Definitions
- * Copyright (c) 1997, 1998, 1999, 2000, 2001, 2002 by Matthew Jacob
+ *
+ * Copyright (c) 1997-2006 by Matthew Jacob
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,14 +61,13 @@
 #include "opt_ddb.h"
 #include "opt_isp.h"
 
-#ifdef	PAE
-#define	ISP_DAC_SUPPORTED	1
-#endif
+/* disabled until done correctly */
+/* #define	ISP_DAC_SUPPORTED	1 */
 
 /*
  * Efficiency- get rid of SBus code && tests unless we need them.
  */
-#if	_MACHINE_ARCH == sparc64
+#ifdef __sparc64__
 #define	ISP_SBUS_SUPPORTED	1
 #else
 #define	ISP_SBUS_SUPPORTED	0
@@ -179,8 +180,6 @@ struct isposinfo {
 /*
  * Required Macros/Defines
  */
-
-#define	INLINE			__inline
 
 #define	ISP2100_SCRLEN		0x800
 
@@ -405,12 +404,13 @@ extern int isp_announced;
 #define	XS_CMD_DONE_P(sccb)	((sccb)->ccb_h.spriv_field0 & ISP_SPRIV_DONE)
 
 #define	XS_CMD_S_CLEAR(sccb)	(sccb)->ccb_h.spriv_field0 = 0
+
 /*
  * Platform specific inline functions
  */
 
-static INLINE void isp_mbox_wait_complete(struct ispsoftc *);
-static INLINE void
+static __inline void isp_mbox_wait_complete(struct ispsoftc *);
+static __inline void
 isp_mbox_wait_complete(struct ispsoftc *isp)
 {
 	if (isp->isp_osinfo.intsok) {
@@ -454,8 +454,8 @@ isp_mbox_wait_complete(struct ispsoftc *isp)
 	}
 }
 
-static INLINE u_int64_t nanotime_sub(struct timespec *, struct timespec *);
-static INLINE u_int64_t
+static __inline u_int64_t nanotime_sub(struct timespec *, struct timespec *);
+static __inline u_int64_t
 nanotime_sub(struct timespec *b, struct timespec *a)
 {
 	u_int64_t elapsed;
@@ -467,8 +467,8 @@ nanotime_sub(struct timespec *b, struct timespec *a)
 	return (elapsed);
 }
 
-static INLINE char *strncat(char *, const char *, size_t);
-static INLINE char *
+static __inline char *strncat(char *, const char *, size_t);
+static __inline char *
 strncat(char *d, const char *s, size_t c)
 {
         char *t = d;
@@ -487,8 +487,9 @@ strncat(char *d, const char *s, size_t c)
 }
 
 /*
- * Common inline functions
+ * ISP Library functions
  */
 
-#include <dev/isp/isp_inline.h>
+#include <dev/isp/isp_library.h>
+
 #endif	/* _ISP_FREEBSD_H */

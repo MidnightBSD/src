@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: src/sys/netinet/in.h,v 1.90.2.3 2005/10/02 15:45:47 andre Exp $
+ * $FreeBSD: src/sys/netinet/in.h,v 1.90.2.4 2005/12/27 00:52:24 gnn Exp $
  */
 
 #ifndef _NETINET_IN_H_
@@ -228,6 +228,7 @@ __END_DECLS
 #define	IPPROTO_APES		99		/* any private encr. scheme */
 #define	IPPROTO_GMTP		100		/* GMTP*/
 #define	IPPROTO_IPCOMP		108		/* payload compression (IPComp) */
+#define IPPROTO_SCTP		132		/* SCTP */
 /* 101-254: Partly Unassigned */
 #define	IPPROTO_PIM		103		/* Protocol Independent Mcast */
 #define	IPPROTO_CARP		112		/* CARP */

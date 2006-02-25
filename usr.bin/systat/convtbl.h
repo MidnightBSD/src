@@ -91,7 +91,7 @@ extern	const char	*get_string(const u_long, const u_int);
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: convtbl.h,v 1.1.1.1 2006-02-25 02:29:24 laffer1 Exp $
+ * $Id: convtbl.h,v 1.1.1.2 2006-02-25 02:38:18 laffer1 Exp $
  */
 
 #ifndef _CONVTBL_H_

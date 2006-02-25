@@ -17,7 +17,7 @@
  * Cronyx Id: ng_sppp.c,v 1.1.2.10 2004/03/01 15:17:21 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/ng_sppp.c,v 1.8.2.1 2005/08/25 05:01:21 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/ng_sppp.c,v 1.8.2.2 2006/02/01 04:50:07 rik Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -262,6 +262,7 @@ ng_sppp_constructor (node_p node)
 
 	/* Link them together */
 	ifp->if_softc = priv;
+	priv->ifp = ifp;
 
 	/* Get an interface unit number */
 	if ((error = ng_sppp_get_unit(&priv->unit)) != 0) {

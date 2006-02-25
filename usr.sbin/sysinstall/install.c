@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363 2005/03/02 22:48:13 jhb Exp $
+ * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
  *	Jordan Hubbard.  All rights reserved.
@@ -605,14 +605,14 @@ nodisks:
     }
 
     msgConfirm("Now you need to create BSD partitions inside of the fdisk partition(s)\n"
-	       "just created.  If you have a reasonable amount of disk space (200MB or more)\n"
+	       "just created.  If you have a reasonable amount of disk space (1GB or more)\n"
 	       "and don't have any special requirements, simply use the (A)uto command to\n"
 	       "allocate space automatically.  If you have more specific needs or just don't\n"
 	       "care for the layout chosen by (A)uto, press F1 for more information on\n"
 	       "manual layout.");
 #else
     msgConfirm("First you need to create BSD partitions on the disk which you are\n"
-	       "installing to.  If you have a reasonable amount of disk space (200MB or more)\n"
+	       "installing to.  If you have a reasonable amount of disk space (1GB or more)\n"
 	       "and don't have any special requirements, simply use the (A)uto command to\n"
 	       "allocate space automatically.  If you have more specific needs or just don't\n"
 	       "care for the layout chosen by (A)uto, press F1 for more information on\n"

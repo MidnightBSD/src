@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/genassym.c,v 1.57 2005/04/16 15:05:56 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/genassym.c,v 1.57.2.1 2006/01/23 15:04:09 marius Exp $");
 
 #include "opt_kstack_pages.h"
 
@@ -138,20 +138,6 @@ ASSYM(IC_SIZE, offsetof(struct cacheinfo, ic_size));
 ASSYM(IC_LINESIZE, offsetof(struct cacheinfo, ic_linesize));
 
 ASSYM(ICA_PA, offsetof(struct ipi_cache_args, ica_pa));
-
-ASSYM(KTR_PROC, KTR_PROC);
-ASSYM(KTR_TRAP, KTR_TRAP);
-ASSYM(KTR_SMP, KTR_SMP);
-ASSYM(KTR_SYSC, KTR_SYSC);
-ASSYM(KTR_INTR, KTR_INTR);
-ASSYM(KTR_CT1, KTR_CT1);
-ASSYM(KTR_CT2, KTR_CT2);
-ASSYM(KTR_CT3, KTR_CT3);
-ASSYM(KTR_CT4, KTR_CT4);
-ASSYM(KTR_CT5, KTR_CT5);
-ASSYM(KTR_CT6, KTR_CT6);
-ASSYM(KTR_CT7, KTR_CT7);
-ASSYM(KTR_CT8, KTR_CT8);
 
 ASSYM(KTR_SIZEOF, sizeof(struct ktr_entry));
 ASSYM(KTR_LINE, offsetof(struct ktr_entry, ktr_line));

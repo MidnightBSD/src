@@ -37,7 +37,7 @@
  * Implements draft-brezak-win2k-krb-rc4-hmac-04.txt
  */
 
-RCSID("$Id: arcfour.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: arcfour.c,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $");
 
 static krb5_error_code
 arcfour_mic_key(krb5_context context, krb5_keyblock *key,

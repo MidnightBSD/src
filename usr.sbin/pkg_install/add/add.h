@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.sbin/pkg_install/add/add.h,v 1.11.8.1 2005/11/17 18:08:58 krion Exp $ */
+/* $FreeBSD: src/usr.sbin/pkg_install/add/add.h,v 1.11.8.2 2006/01/16 19:48:17 flz Exp $ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -29,6 +29,7 @@ extern char	*Prefix;
 extern Boolean	PrefixRecursive;
 extern Boolean	NoInstall;
 extern Boolean	NoRecord;
+extern Boolean	KeepPackage;
 extern char	*Mode;
 extern char	*Owner;
 extern char	*Group;

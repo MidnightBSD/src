@@ -33,7 +33,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ad1816.c,v 1.37 2005/03/01 08:58:04 imp Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ad1816.c,v 1.37.2.1 2005/12/30 19:55:53 netchild Exp $");
 
 struct ad1816_info;
 
@@ -138,12 +138,16 @@ ad1816_intr(void *arg)
     	}
     	/* check for capture interupt */
     	if (sndbuf_runsz(ad1816->rch.buffer) && (c & AD1816_INTRCI)) {
+		ad1816_unlock(ad1816);
 		chn_intr(ad1816->rch.channel);
+		ad1816_lock(ad1816);
 		served |= AD1816_INTRCI;		/* cp served */
     	}
     	/* check for playback interupt */
     	if (sndbuf_runsz(ad1816->pch.buffer) && (c & AD1816_INTRPI)) {
+		ad1816_unlock(ad1816);
 		chn_intr(ad1816->pch.channel);
+		ad1816_lock(ad1816);
 		served |= AD1816_INTRPI;		/* pb served */
     	}
     	if (served == 0) {

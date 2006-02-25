@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/if_ef/Makefile,v 1.11 2004/01/19 14:00:26 ru Exp $
+# $FreeBSD: src/sys/modules/if_ef/Makefile,v 1.11.8.1 2006/02/10 00:38:01 yar Exp $
 
 .PATH: ${.CURDIR}/../../net
 
@@ -16,6 +16,7 @@ ETHER_SNAP=
 CFLAGS+= -DEF_DEBUG
 .endif
 
+.if !defined(KERNBUILDDIR)
 opt_inet.h:
 	echo "#define INET 1" > opt_inet.h
 
@@ -28,5 +29,6 @@ opt_ef.h:
 	echo "#define ${frame} 1" >> opt_ef.h
 .endif
 .endfor
+.endif
 
 .include <bsd.kmod.mk>

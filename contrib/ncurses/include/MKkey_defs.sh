@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: MKkey_defs.sh,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $
+# $Id: MKkey_defs.sh,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $
 ##############################################################################
 # Copyright (c) 2001,2002 Free Software Foundation, Inc.                     #
 #                                                                            #

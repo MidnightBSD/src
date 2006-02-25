@@ -29,7 +29,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/soundcard.h,v 1.44 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/soundcard.h,v 1.44.2.1 2005/12/30 19:55:52 netchild Exp $
  */
 
 #ifndef _SYS_SOUNDCARD_H_
@@ -180,6 +180,10 @@ struct snd_size {
 #define AFMT_S32_BE	0x00002000	/* Big endian signed 32-bit */
 #define AFMT_U32_LE	0x00004000	/* Little endian unsigned 32-bit */
 #define AFMT_U32_BE	0x00008000	/* Big endian unsigned 32-bit */
+#define AFMT_S24_LE	0x00010000	/* Little endian signed 24-bit */
+#define AFMT_S24_BE	0x00020000	/* Big endian signed 24-bit */
+#define AFMT_U24_LE	0x00040000	/* Little endian unsigned 24-bit */
+#define AFMT_U24_BE	0x00080000	/* Big endian unsigned 24-bit */
 
 #define AFMT_STEREO	0x10000000	/* can do/want stereo	*/
 

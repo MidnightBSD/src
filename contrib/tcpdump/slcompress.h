@@ -1,7 +1,7 @@
 /*
  * Definitions for tcp compression routines.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/slcompress.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/slcompress.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)
  *
  * Copyright (c) 1989, 1990, 1992, 1993 Regents of the University of
  * California. All rights reserved.

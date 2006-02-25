@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ifiter_getifaddrs.c,v 1.1.1.1 2006-02-25 02:25:20 laffer1 Exp $ */
+/* $Id: ifiter_getifaddrs.c,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
 
 /*
  * Obtain the list of network interfaces using the getifaddrs(3) library.

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/linux/Makefile,v 1.63 2005/06/04 16:57:04 imp Exp $
+# $FreeBSD: src/sys/modules/linux/Makefile,v 1.63.2.1 2006/02/10 00:38:03 yar Exp $
 
 .PATH: ${.CURDIR}/../../compat/linux ${.CURDIR}/../../${MACHINE_ARCH}/linux
 
@@ -37,10 +37,12 @@ linux_locore.o: linux_locore.s linux_assym.h
 linux_genassym.o: linux_genassym.c linux.h @ machine
 	${CC} -c ${CFLAGS:N-fno-common} ${.IMPSRC}
 
+.if !defined(KERNBUILDDIR)
 opt_compat.h:
 	echo "#define COMPAT_43 1" > opt_compat.h
 
 opt_inet6.h:
 	echo "#define INET6 1" > opt_inet6.h
+.endif
 
 .include <bsd.kmod.mk>

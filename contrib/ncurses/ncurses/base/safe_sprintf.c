@@ -33,7 +33,7 @@
 #include <curses.priv.h>
 #include <ctype.h>
 
-MODULE_ID("$Id: safe_sprintf.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: safe_sprintf.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
 
 #if USE_SAFE_SPRINTF
 

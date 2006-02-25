@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.40.2.1 2005/10/27 18:32:39 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.40.2.2 2006/02/14 00:06:32 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -230,7 +230,6 @@ nfs_dolock(struct vop_advlock_args *ap)
 	struct vnode *vp;
 	int error;
 	struct flock *fl;
-	int ioflg;
 	struct proc *p;
 
 	td = curthread;
@@ -310,10 +309,8 @@ nfs_dolock(struct vop_advlock_args *ap)
 			if (error == EWOULDBLOCK) {
 				/*
 				 * We timed out, so we rewrite the request
-				 * to the fifo, but only if it isn't already
-				 * full.
+				 * to the fifo.
 				 */
-				ioflg |= IO_NDELAY;
 				continue;
 			}
 

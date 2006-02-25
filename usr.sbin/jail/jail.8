@@ -31,7 +31,7 @@
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: src/usr.sbin/jail/jail.8,v 1.67.2.3 2005/09/24 01:59:39 keramida Exp $
+.\" $FreeBSD: src/usr.sbin/jail/jail.8,v 1.67.2.4 2006/01/30 00:38:37 philip Exp $
 .\"
 .Dd August 7, 2005
 .Dt JAIL 8
@@ -42,6 +42,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl i
+.Op Fl J Ar jid_file
 .Op Fl l u Ar username | Fl U Ar username
 .Ar path hostname ip-number command ...
 .Sh DESCRIPTION
@@ -53,6 +54,9 @@ The options are as follows:
 .Bl -tag -width ".Fl u Ar username"
 .It Fl i
 Output the jail identifier of the newly created jail.
+.It Fl J Ar jid_file
+Write a JidFile, like a PidFile, containing jailid, path, hostname, ip and
+command used to start the jail.
 .It Fl l
 Run program in the clean environment.
 The environment is discarded except for

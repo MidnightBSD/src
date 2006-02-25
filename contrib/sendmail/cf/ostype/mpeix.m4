@@ -10,7 +10,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: mpeix.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: mpeix.m4,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $')
 
 ifdef(`LOCAL_MAILER_PATH',, `define(`LOCAL_MAILER_PATH', `/bin/tsmail')')dnl
 _DEFIFNOT(`LOCAL_MAILER_FLAGS', `mu9')dnl

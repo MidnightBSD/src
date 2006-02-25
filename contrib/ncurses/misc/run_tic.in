@@ -29,7 +29,7 @@
 #
 # Author: Thomas E. Dickey 1996,2000
 #
-# $Id: run_tic.in,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $
+# $Id: run_tic.in,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $
 # This script is used to install terminfo.src using tic.  We use a script
 # because the path checking is too awkward to do in a makefile.
 #

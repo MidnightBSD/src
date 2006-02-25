@@ -10,4 +10,4 @@ variable (see grotty(1) man page), e.g.,
 csh% setenv GROFF_NO_SGR 1
 sh$ GROFF_NO_SGR=1; export GROFF_NO_SGR
 
-$Id: README,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $
+$Id: README,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $

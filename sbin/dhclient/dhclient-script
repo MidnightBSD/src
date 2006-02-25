@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $OpenBSD: dhclient-script,v 1.6 2004/05/06 18:22:41 claudio Exp $
-# $FreeBSD: src/sbin/dhclient/dhclient-script,v 1.4.2.2 2005/09/10 17:01:16 brooks Exp $
+# $FreeBSD: src/sbin/dhclient/dhclient-script,v 1.4.2.3 2006/01/24 06:01:59 brooks Exp $
 #
 # Copyright (c) 2003 Kenneth R Westerback <krw@openbsd.org>
 #
@@ -19,9 +19,10 @@
 #
 #
 
-NETSTAT=/usr/bin/netstat
+ARP=/usr/sbin/arp
 AWK=/usr/bin/awk
 HOSTNAME=/bin/hostname
+NETSTAT=/usr/bin/netstat
 
 LOCALHOST=127.0.0.1
 
@@ -257,7 +258,9 @@ EXPIRE|FAIL)
 		delete_old_address
 		delete_old_routes
 	fi
-	ifconfig $interface delete
+	if [ -x $ARP ]; then
+		$ARP -d -a -i $interface
+	fi
 	# XXX Why add alias we just deleted above?
 	add_new_alias
 	if [ -f /etc/resolv.conf.save ]; then

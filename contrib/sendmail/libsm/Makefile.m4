@@ -1,4 +1,4 @@
-dnl $Id: Makefile.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $
+dnl $Id: Makefile.m4,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $
 define(`confREQUIRE_LIBUNIX')
 include(confBUILDTOOLSDIR`/M4/switch.m4')
 

@@ -32,7 +32,7 @@
  */
 
 /* $FreeBSD: src/contrib/com_err/com_err.h,v 1.3 2004/04/03 21:17:01 nectar Exp $ */
-/* $Id: com_err.h,v 1.1.1.1 2006-02-25 02:25:33 laffer1 Exp $ */
+/* $Id: com_err.h,v 1.1.1.2 2006-02-25 02:32:30 laffer1 Exp $ */
 
 /* MIT compatible com_err library */
 

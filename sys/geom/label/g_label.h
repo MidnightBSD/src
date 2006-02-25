@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/label/g_label.h,v 1.4.2.1 2005/08/16 08:20:47 pjd Exp $
+ * $FreeBSD: src/sys/geom/label/g_label.h,v 1.4.2.2 2005/12/29 06:22:37 sobomax Exp $
  */
 
 #ifndef	_G_LABEL_H_
@@ -69,6 +69,7 @@ extern const struct g_label_desc g_label_iso9660;
 extern const struct g_label_desc g_label_msdosfs;
 extern const struct g_label_desc g_label_ext2fs;
 extern const struct g_label_desc g_label_reiserfs;
+extern const struct g_label_desc g_label_ntfs;
 #endif	/* _KERNEL */
 
 struct g_label_metadata {

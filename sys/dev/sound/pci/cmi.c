@@ -51,7 +51,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/cmi.c,v 1.32 2005/03/01 08:58:05 imp Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/cmi.c,v 1.32.2.2 2006/01/24 18:54:22 joel Exp $");
 
 /* Supported chip ID's */
 #define CMI8338A_PCI_ID   0x010013f6
@@ -830,12 +830,10 @@ cmi_probe(device_t dev)
 static int
 cmi_attach(device_t dev)
 {
-	struct snddev_info	*d;
 	struct sc_info		*sc;
 	u_int32_t		data;
 	char			status[SND_STATUSLEN];
 
-	d = device_get_softc(dev);
 	sc = malloc(sizeof(struct sc_info), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (sc == NULL) {
 		device_printf(dev, "cannot allocate softc\n");
@@ -876,8 +874,8 @@ cmi_attach(device_t dev)
 			       /*filter*/NULL, /*filterarg*/NULL,
 			       /*maxsize*/sc->bufsz, /*nsegments*/1,
 			       /*maxsegz*/0x3ffff, /*flags*/0,
-			       /*lockfunc*/busdma_lock_mutex,
-			       /*lockfunc*/&Giant,
+			       /*lockfunc*/NULL,
+			       /*lockfunc*/NULL,
 			       &sc->parent_dmat) != 0) {
 		device_printf(dev, "cmi_attach: Unable to create dma tag\n");
 		goto bad;

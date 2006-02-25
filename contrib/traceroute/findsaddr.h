@@ -18,6 +18,6 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Id: findsaddr.h,v 1.1.1.1 2006-02-25 02:26:27 laffer1 Exp $ (LBL)
+ * @(#) $Id: findsaddr.h,v 1.1.1.2 2006-02-25 02:34:12 laffer1 Exp $ (LBL)
  */
 const char *findsaddr(const struct sockaddr_in *, struct sockaddr_in *);

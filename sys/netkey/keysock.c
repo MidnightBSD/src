@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netkey/keysock.c,v 1.30.2.1 2005/11/16 10:31:23 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/netkey/keysock.c,v 1.30.2.2 2006/01/27 21:50:11 bz Exp $");
 
 #include "opt_ipsec.h"
 
@@ -75,23 +75,11 @@ struct pfkeystat pfkeystat;
  * key_output()
  */
 int
-#if __STDC__
-key_output(struct mbuf *m, ...)
-#else
-key_output(m, va_alist)
-	struct mbuf *m;
-	va_dcl
-#endif
+key_output(struct mbuf *m, struct socket *so)
 {
 	struct sadb_msg *msg;
 	int len, error = 0;
 	int s;
-	struct socket *so;
-	va_list ap;
-
-	va_start(ap, m);
-	so = va_arg(ap, struct socket *);
-	va_end(ap);
 
 	if (m == 0)
 		panic("key_output: NULL pointer was passed.");
@@ -500,7 +488,7 @@ struct protosw keysw[] = {
 	.pr_domain =		&keydomain,
 	.pr_protocol =		PF_KEY_V2,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_output =		(pr_output_t *)key_output,
+	.pr_output =		key_output,
 	.pr_ctlinput =		raw_ctlinput,
 	.pr_init =		raw_init,
 	.pr_usrreqs =		&key_usrreqs

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: log.c,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $ */
+/* $Id: log.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
 
 /* Principal Authors: DCL */
 

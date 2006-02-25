@@ -37,7 +37,7 @@
 #include <time.h>
 #include <term.h>		/* exit_ca_mode, non_rev_rmcup */
 
-MODULE_ID("$Id: lib_screen.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: lib_screen.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
 
 static time_t dumptime;
 

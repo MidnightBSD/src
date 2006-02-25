@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet/in_gif.c,v 1.31.2.1 2005/11/16 10:31:22 ru Exp $	*/
+/*	$FreeBSD: src/sys/netinet/in_gif.c,v 1.31.2.3 2006/01/31 15:56:46 glebius Exp $	*/
 /*	$KAME: in_gif.c,v 1.54 2001/05/14 14:02:16 itojun Exp $	*/
 
 /*-
@@ -100,8 +100,11 @@ in_gif_output(ifp, family, m)
 	struct sockaddr_in *sin_src = (struct sockaddr_in *)sc->gif_psrc;
 	struct sockaddr_in *sin_dst = (struct sockaddr_in *)sc->gif_pdst;
 	struct ip iphdr;	/* capsule IP header, host byte ordered */
+	struct etherip_header eiphdr;
 	int proto, error;
 	u_int8_t tos;
+
+	GIF_LOCK_ASSERT(sc);
 
 	if (sin_src == NULL || sin_dst == NULL ||
 	    sin_src->sin_family != AF_INET ||
@@ -142,6 +145,20 @@ in_gif_output(ifp, family, m)
 		break;
 	    }
 #endif /* INET6 */
+	case AF_LINK:
+ 		proto = IPPROTO_ETHERIP;
+ 		eiphdr.eip_ver = ETHERIP_VERSION & ETHERIP_VER_VERS_MASK;
+ 		eiphdr.eip_pad = 0;
+ 		/* prepend Ethernet-in-IP header */
+ 		M_PREPEND(m, sizeof(struct etherip_header), M_DONTWAIT);
+ 		if (m && m->m_len < sizeof(struct etherip_header))
+ 			m = m_pullup(m, sizeof(struct etherip_header));
+ 		if (m == NULL)
+ 			return ENOBUFS;
+ 		bcopy(&eiphdr, mtod(m, struct etherip_header *),
+		    sizeof(struct etherip_header));
+		break;
+
 	default:
 #ifdef DEBUG
 		printf("in_gif_output: warning: unknown family %d passed\n",
@@ -302,6 +319,10 @@ in_gif_input(m, off)
 		break;
 	    }
 #endif /* INET6 */
+ 	case IPPROTO_ETHERIP:
+ 		af = AF_LINK;
+ 		break;	
+
 	default:
 		ipstat.ips_nogif++;
 		m_freem(m);

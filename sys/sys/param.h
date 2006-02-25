@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $FreeBSD: src/sys/sys/param.h,v 1.244.2.3 2005/11/01 23:51:19 scottl Exp $
+ * $FreeBSD: src/sys/sys/param.h,v 1.244.2.8 2006/01/18 13:24:24 andre Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -57,7 +57,7 @@
  *		is created, otherwise 1.
  */
 #undef __FreeBSD_version
-#define __FreeBSD_version 600100	/* Master, propagated to newvers */
+#define __FreeBSD_version 600104	/* Master, propagated to newvers */
 
 #ifndef LOCORE
 #include <sys/types.h>
@@ -144,6 +144,10 @@
 #endif	/* MCLSHIFT */
 
 #define MCLBYTES	(1 << MCLSHIFT)	/* size of an mbuf cluster */
+
+#define	MJUM4BYTES	(4 * 1024)	/* jumbo cluster 4k */
+#define	MJUM9BYTES	(9 * 1024)	/* jumbo cluster 9k */
+#define	MJUM16BYTES	(16 * 1024)	/* jumbo cluster 16k */
 
 /*
  * Some macros for units conversion

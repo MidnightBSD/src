@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/kbdmap/kbdmap.c,v 1.3 2005/06/30 05:31:01 ru Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/kbdmap/kbdmap.c,v 1.3.2.1 2006/01/12 01:25:38 flz Exp $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -823,9 +823,6 @@ main(int argc, char **argv)
 
 	program = extract_name(argv[0]);
 
-	/* Parse command line arguments */
-	parse_args(argc, argv);
-
 	font_current = get_font();
 	if (font_current == NULL)
 		font_current = font_default;
@@ -834,6 +831,9 @@ main(int argc, char **argv)
 		dir = fontdir;
 	else
 		dir = keymapdir;
+
+	/* Parse command line arguments */
+	parse_args(argc, argv);
 
 	/* Read and display options */
 	menu_read();

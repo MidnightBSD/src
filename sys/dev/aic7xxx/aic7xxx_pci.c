@@ -39,7 +39,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic7xxx_pci.c,v 1.1.1.1 2006-02-25 02:27:55 laffer1 Exp $
+ * $Id: aic7xxx_pci.c,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
  */
 
 #ifdef __linux__

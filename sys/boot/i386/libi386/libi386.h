@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/i386/libi386/libi386.h,v 1.20 2005/05/27 19:28:04 jhb Exp $
+ * $FreeBSD: src/sys/boot/i386/libi386/libi386.h,v 1.20.2.1 2006/02/14 06:20:15 ru Exp $
  */
 
 
@@ -104,6 +104,7 @@ void	gateA20(void);
 int	i386_autoload(void);
 
 int	bi_getboothowto(char *kargs);
+void	bi_setboothowto(int howto);
 vm_offset_t	bi_copyenv(vm_offset_t addr);
 int	bi_load32(char *args, int *howtop, int *bootdevp, vm_offset_t *bip,
 	    vm_offset_t *modulep, vm_offset_t *kernend);

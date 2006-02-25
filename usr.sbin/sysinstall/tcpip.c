@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132 2005/07/11 03:57:04 scottl Exp $
+ * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132.2.2 2006/02/12 15:23:50 delphij Exp $
  *
  * Copyright (c) 1995
  *      Gary J Palmer. All rights reserved.
@@ -596,9 +596,12 @@ netconfig:
 	    ipv4_enable = TRUE;
 	if (ipv4_enable) {
 	    sprintf(ifn, "%s%s", VAR_IFCONFIG, devp->name);
-	    if (use_dhcp)
-		sprintf(temp, "DHCP");
-	    else
+	    if (use_dhcp) {
+		if (strlen(extras) > 0)
+		    sprintf(temp, "DHCP %s", extras);
+		else
+		    sprintf(temp, "DHCP");
+	    } else
 		sprintf(temp, "inet %s %s netmask %s",
 			ipaddr, extras, netmask);
 	    variable_set2(ifn, temp, 1);

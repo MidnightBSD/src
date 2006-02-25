@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $Id: if_nvereg.h,v 1.1.1.1 2006-02-25 02:28:09 laffer1 Exp $
+ * $Id: if_nvereg.h,v 1.1.1.2 2006-02-25 02:36:50 laffer1 Exp $
  * $FreeBSD: src/sys/dev/nve/if_nvereg.h,v 1.3.2.1 2005/12/12 19:40:04 jhb Exp $
  */
  

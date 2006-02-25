@@ -34,7 +34,7 @@
 //	  - devd.conf needs more details on the supported statements.
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/devd/devd.cc,v 1.22.2.4 2005/10/25 19:59:22 imp Exp $");
+__FBSDID("$FreeBSD: src/sbin/devd/devd.cc,v 1.22.2.5 2005/12/19 03:33:05 jkoshy Exp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -82,6 +82,8 @@ int Dflag;
 int dflag;
 int nflag;
 int romeo_must_die = 0;
+
+static const char *configfile = CF;
 
 static void event_loop(void);
 static void usage(void);
@@ -357,7 +359,7 @@ config::parse(void)
 {
 	vector<string>::const_iterator i;
 
-	parse_one_file(CF);
+	parse_one_file(configfile);
 	for (i = _dir_list.begin(); i != _dir_list.end(); i++)
 		parse_files_in_dir((*i).c_str());
 	sort_vector(_attach_list);
@@ -912,13 +914,16 @@ main(int argc, char **argv)
 	int ch;
 
 	check_devd_enabled();
-	while ((ch = getopt(argc, argv, "Ddn")) != -1) {
+	while ((ch = getopt(argc, argv, "Ddf:n")) != -1) {
 		switch (ch) {
 		case 'D':
 			Dflag++;
 			break;
 		case 'd':
 			dflag++;
+			break;
+		case 'f':
+			configfile = optarg;
 			break;
 		case 'n':
 			nflag++;

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/bktr/bktr_tuner.h,v 1.6 2005/01/23 07:13:09 julian Exp $ */
+/* $FreeBSD: src/sys/dev/bktr/bktr_tuner.h,v 1.6.2.1 2006/01/14 14:18:34 netchild Exp $ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -60,7 +60,8 @@
 #define ALPS_TSCH5		12
 #define ALPS_TSBH1		13
 #define TUNER_MT2032		14
-#define Bt848_MAX_TUNER		15
+#define	LG_TPI8PSB12P_PAL	15
+#define Bt848_MAX_TUNER		16
 
 /* experimental code for Automatic Frequency Control */ 
 #define TUNER_AFC

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_vfs.c,v 1.9 2005/02/19 11:44:56 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_vfs.c,v 1.9.2.1 2006/02/20 00:53:13 yar Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -147,7 +147,7 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 		g_wither_geom(gp, ENXIO);
 		return (error);
 	}
-	vnode_create_vobject(vp, pp->mediasize, curthread);
+	vnode_create_vobject_off(vp, pp->mediasize, curthread);
 	*cpp = cp;
 	bo = &vp->v_bufobj;
 	bo->bo_ops = g_vfs_bufops;

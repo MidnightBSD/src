@@ -33,7 +33,7 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: get_in_tkt_with_skey.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: get_in_tkt_with_skey.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 
 static krb5_error_code
 krb5_skey_key_proc (krb5_context context,

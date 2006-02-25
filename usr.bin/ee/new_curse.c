@@ -37,7 +37,7 @@
  |	Copyright (c) 1986, 1987, 1988, 1991, 1992, 1993, 1994, 1995 Hugh Mahon
  |	All are rights reserved.
  |
- |	$Header: /home/cvs/src/usr.bin/ee/Attic/new_curse.c,v 1.1.1.1 2006-02-25 02:29:10 laffer1 Exp $
+ |	$Header: /home/cvs/src/usr.bin/ee/Attic/new_curse.c,v 1.1.1.2 2006-02-25 02:38:12 laffer1 Exp $
  |
  */
 

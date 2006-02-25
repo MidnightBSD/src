@@ -19,7 +19,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: knecht.mc,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $')
+VERSIONID(`$Id: knecht.mc,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 OSTYPE(bsd4.4)
 DOMAIN(generic)
 

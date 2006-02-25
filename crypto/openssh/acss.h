@@ -1,4 +1,4 @@
-/*	$Id: acss.h,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $ */
+/*	$Id: acss.h,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $ */
 /*
  * Copyright (c) 2004 The OpenBSD project
  *

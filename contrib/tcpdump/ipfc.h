@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/ipfc.h,v 1.1.1.1 2006-02-25 02:26:22 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/ipfc.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)
  */
 
 struct ipfc_header {

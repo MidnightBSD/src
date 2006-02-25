@@ -9,9 +9,6 @@ char rcsid[] =
  * money off of it, or pretend that you wrote it.
  *
  * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2005/12/24 02:43:05  laffer1
- * Imported from FreeBSD 6.0 sources
- *
  * Revision 2.0.2.0  90/05/01  22:17:50  davison
  * patch12u: unidiff support added
  *

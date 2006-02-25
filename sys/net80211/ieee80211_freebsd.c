@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_freebsd.c,v 1.7.2.1 2005/09/03 22:40:02 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_freebsd.c,v 1.7.2.2 2005/12/22 19:22:51 sam Exp $");
 
 /*
  * IEEE 802.11 support (FreeBSD-specific code)
@@ -126,6 +126,9 @@ ieee80211_sysctl_attach(struct ieee80211com *ic)
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
 		"driver_caps", CTLFLAG_RW, &ic->ic_caps, 0,
 		"driver capabilities");
+	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
+		"bmiss_max", CTLFLAG_RW, &ic->ic_bmiss_max, 0,
+		"consecutive beacon misses before scanning");
 	ic->ic_sysctl = ctx;
 }
 

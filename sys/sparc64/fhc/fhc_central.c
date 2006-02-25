@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>                                                         
-__FBSDID("$FreeBSD: src/sys/sparc64/fhc/fhc_central.c,v 1.8 2005/05/19 15:09:56 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/fhc/fhc_central.c,v 1.8.2.1 2006/01/30 22:30:50 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,6 +51,9 @@ static device_method_t fhc_central_methods[] = {
 	/* Device interface. */
 	DEVMETHOD(device_probe,		fhc_central_probe),
 	DEVMETHOD(device_attach,	fhc_central_attach),
+	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
+	DEVMETHOD(device_suspend,	bus_generic_suspend),
+	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface. */
 	DEVMETHOD(bus_print_child,	fhc_print_child),

@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)xargs.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/xargs/xargs.c,v 1.57 2005/02/27 02:01:31 gad Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/xargs/xargs.c,v 1.57.2.1 2005/12/21 12:15:52 des Exp $");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -124,7 +124,7 @@ main(int argc, char *argv[])
 		nline -= strlen(*ep++) + 1 + sizeof(*ep);
 	}
 	maxprocs = 1;
-	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:s:tx")) != -1)
+	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:s:rtx")) != -1)
 		switch(ch) {
 		case 'E':
 			eofstr = optarg;
@@ -162,6 +162,9 @@ main(int argc, char *argv[])
 			Rflag = strtol(optarg, &endptr, 10);
 			if (*endptr != '\0')
 				errx(1, "replacements must be a number");
+			break;
+		case 'r':
+			/* GNU compatibility */
 			break;
 		case 's':
 			nline = atoi(optarg);

@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ifiter_sysctl.c,v 1.1.1.1 2006-02-25 02:26:14 laffer1 Exp $ */
+/* $Id: ifiter_sysctl.c,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
 
 /*
  * Obtain the list of network interfaces using sysctl.

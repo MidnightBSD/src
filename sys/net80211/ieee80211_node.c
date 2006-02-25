@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_node.c,v 1.48.2.3 2005/12/11 22:58:43 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_node.c,v 1.48.2.9 2006/01/29 07:20:23 sam Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h> 
@@ -217,10 +217,12 @@ ieee80211_node_unauthorize(struct ieee80211_node *ni)
  * Set/change the channel.  The rate set is also updated as
  * to insure a consistent view by drivers.
  */
-static __inline void
+static void
 ieee80211_set_chan(struct ieee80211com *ic,
 	struct ieee80211_node *ni, struct ieee80211_channel *chan)
 {
+	if (chan == IEEE80211_CHAN_ANYC)	/* XXX while scanning */
+		chan = ic->ic_curchan;
 	ni->ni_chan = chan;
 	ni->ni_rates = ic->ic_sup_rates[ieee80211_chan2mode(ic, chan)];
 }
@@ -405,6 +407,11 @@ ieee80211_create_ibss(struct ieee80211com* ic, struct ieee80211_channel *chan)
 			IEEE80211_ADDR_COPY(ni->ni_bssid, ic->ic_des_bssid);
 		else
 			ni->ni_bssid[0] |= 0x02;	/* local bit for IBSS */
+	} else if (ic->ic_opmode == IEEE80211_M_AHDEMO) {
+		if (ic->ic_flags & IEEE80211_F_DESBSSID)
+			IEEE80211_ADDR_COPY(ni->ni_bssid, ic->ic_des_bssid);
+		else
+			memset(ni->ni_bssid, 0, IEEE80211_ADDR_LEN);
 	}
 	/* 
 	 * Fix the channel and related attributes.
@@ -676,7 +683,7 @@ ieee80211_end_scan(struct ieee80211com *ic)
 		 * Decrement the failure counts so entries will be
 		 * reconsidered the next time around.  We really want
 		 * to do this only for sta's where we've previously
-		 had some success.
+		 * had some success.
 		 */
 		IEEE80211_NODE_LOCK(nt);
 		TAILQ_FOREACH(ni, &nt->nt_node, ni_list)
@@ -785,8 +792,10 @@ ieee80211_sta_join(struct ieee80211com *ic, struct ieee80211_node *selbs)
 	 */
 	obss = ic->ic_bss;
 	ic->ic_bss = selbs;		/* NB: caller assumed to bump refcnt */
-	if (obss != NULL)
+	if (obss != NULL) {
+		copy_bss(selbs, obss);
 		ieee80211_free_node(obss);
+	}
 	/*
 	 * Set the erp state (mostly the slot time) to deal with
 	 * the auto-select case; this should be redundant if the
@@ -1087,6 +1096,15 @@ ieee80211_fakeup_adhoc_node(struct ieee80211_node_table *nt,
 			ic->ic_newassoc(ni, 1);
 		/* XXX not right for 802.1x/WPA */
 		ieee80211_node_authorize(ni);
+		if (ic->ic_opmode == IEEE80211_M_AHDEMO) {
+			/*
+			 * Blindly propagate capabilities based on the
+			 * local configuration.  In particular this permits
+			 * us to use QoS to disable ACK's.
+			 */
+			if (ic->ic_flags & IEEE80211_F_WME)
+				ni->ni_flags |= IEEE80211_NODE_QOS;
+		}
 	}
 	return ni;
 }
@@ -1766,7 +1784,7 @@ ieee80211_timeout_stations(struct ieee80211_node_table *nt)
 	isadhoc = (ic->ic_opmode == IEEE80211_M_IBSS ||
 		   ic->ic_opmode == IEEE80211_M_AHDEMO);
 	IEEE80211_SCAN_LOCK(nt);
-	gen = nt->nt_scangen++;
+	gen = ++nt->nt_scangen;
 	IEEE80211_DPRINTF(ic, IEEE80211_MSG_NODE,
 		"%s: %s scangen %u\n", __func__, nt->nt_name, gen);
 restart:
@@ -1910,7 +1928,7 @@ ieee80211_iterate_nodes(struct ieee80211_node_table *nt, ieee80211_iter_func *f,
 	u_int gen;
 
 	IEEE80211_SCAN_LOCK(nt);
-	gen = nt->nt_scangen++;
+	gen = ++nt->nt_scangen;
 restart:
 	IEEE80211_NODE_LOCK(nt);
 	TAILQ_FOREACH(ni, &nt->nt_node, ni_list) {
@@ -2010,6 +2028,8 @@ ieee80211_node_join_11g(struct ieee80211com *ic, struct ieee80211_node *ni)
 			ic->ic_flags |= IEEE80211_F_USEBARKER;
 			ic->ic_flags &= ~IEEE80211_F_SHPREAMBLE;
 		}
+		if (ic->ic_nonerpsta == 1)
+			ic->ic_flags_ext |= IEEE80211_FEXT_ERPUPDATE;
 	} else
 		ni->ni_flags |= IEEE80211_NODE_ERP;
 }
@@ -2125,6 +2145,7 @@ ieee80211_node_leave_11g(struct ieee80211com *ic, struct ieee80211_node *ni)
 				ic->ic_flags |= IEEE80211_F_SHPREAMBLE;
 				ic->ic_flags &= ~IEEE80211_F_USEBARKER;
 			}
+			ic->ic_flags_ext |= IEEE80211_FEXT_ERPUPDATE;
 		}
 	}
 }

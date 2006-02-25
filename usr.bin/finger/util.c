@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)util.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/finger/util.c,v 1.21 2003/04/02 20:22:29 rwatson Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/finger/util.c,v 1.21.12.1 2006/01/22 11:56:15 dds Exp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -408,6 +408,7 @@ userinfo(PERSON *pn, struct passwd *pw)
 /*
  * Is this user hiding from finger?
  * If ~<user>/.nofinger exists, return 1 (hide), else return 0 (nohide).
+ * Nobody can hide from root.
  */
 
 int
@@ -416,7 +417,7 @@ hide(struct passwd *pw)
 	struct stat st;
 	char buf[MAXPATHLEN];
 
-	if (!pw->pw_dir)
+	if (invoker_root || !pw->pw_dir)
 		return 0;
 
 	snprintf(buf, sizeof(buf), "%s/%s", pw->pw_dir, _PATH_NOFINGER);

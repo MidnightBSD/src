@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet6/raw_ip6.c,v 1.50.2.6 2005/11/04 20:26:15 ume Exp $
+ * $FreeBSD: src/sys/netinet6/raw_ip6.c,v 1.50.2.7 2005/12/26 00:59:12 suz Exp $
  */
 
 /*-
@@ -167,7 +167,7 @@ docontinue:
 			goto docontinue;
 		if (in6p->in6p_cksum != -1) {
 			rip6stat.rip6s_isum++;
-			if (in6_cksum(m, ip6->ip6_nxt, *offp,
+			if (in6_cksum(m, proto, *offp,
 			    m->m_pkthdr.len - *offp)) {
 				rip6stat.rip6s_badsum++;
 				goto docontinue;

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/load_elf_obj.c,v 1.1 2004/08/29 00:48:41 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/load_elf_obj.c,v 1.1.4.1 2005/12/30 22:13:58 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -70,7 +70,7 @@ static int __elfN(obj_reloc_ptr)(struct preloaded_file *mp, elf_file_t ef,
     Elf_Addr p, void *val, size_t len);
 static int __elfN(obj_parse_modmetadata)(struct preloaded_file *mp,
     elf_file_t ef);
-static Elf_Addr __elfN(obj_symaddr)(struct elf_file *ef, Elf_Word symidx);
+static Elf_Addr __elfN(obj_symaddr)(struct elf_file *ef, Elf_Size symidx);
 
 const char	*__elfN(obj_kerneltype) = "elf kernel";
 const char	*__elfN(obj_moduletype) = "elf obj module";
@@ -495,7 +495,7 @@ __elfN(obj_reloc_ptr)(struct preloaded_file *mp, elf_file_t ef, Elf_Addr p,
 
 /* Look up the address of a specified symbol. */
 static Elf_Addr
-__elfN(obj_symaddr)(struct elf_file *ef, Elf_Word symidx)
+__elfN(obj_symaddr)(struct elf_file *ef, Elf_Size symidx)
 {
 	Elf_Sym sym;
 	Elf_Addr base;

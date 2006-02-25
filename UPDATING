@@ -8,6 +8,59 @@ Items affecting the ports and packages system can be found in
 /usr/ports/UPDATING.  Please read that file before running
 portupgrade.
 
+20060211:
+	An IPv6 support of ipfw was enabled by default.  If you don't
+	want to filter an IPv6 by ipfw, please add following line into
+	your ipfw rule:
+
+		pass ip6 from any to any
+
+20060210:
+	Now most modules get their build-time options from the kernel
+	configuration file.  A few modules still have fixed options
+	due to their non-conformant implementation, but they will be
+	corrected eventually.  You may need to review the options of
+	the modules in use, explicitly specify the non-default options
+	in the kernel configuration file, and rebuild the kernel and
+	modules afterwards.
+
+20060122:
+	/etc/rc.d/ppp-user has been renamed to /etc/rc.d/ppp.
+	Its /etc/rc.conf.d configuration file has been `ppp' from
+	the beginning, and hence there is no need to touch it.
+
+20060113:
+	si(4)'s device files now contain the unit number.
+	Uses of {cua,tty}A[0-9a-f] should be replaced by {cua,tty}A0[0-9a-f].
+	
+20051230:
+	A lot of fixes and new features in the soundsystem. To get all
+	benefits, you may want to recompile mplayer (if installed) after
+	booting the new world.
+
+20051222:
+	Bug fixes to the trimdomain(3) function in libutil may result in
+	slight changes to the host names appearing in log files under
+	relatively rare circumstances.
+
+20051220:
+	Scripts in the local_startup directories (as defined in
+	/etc/defaults/rc.conf) that have the new rc.d semantics will
+	now be run as part of the base system rcorder. If there are
+	errors or problems with one of these local scripts, it could
+	cause boot problems. If you encounter such problems, boot in
+	single user mode, remove that script from the */rc.d directory.
+	Please report the problem to the port's maintainer, and the
+	freebsd-ports@freebsd.org mailing list.
+
+20051215:
+	The setkey(8) utility was moved from /usr/sbin/setkey to /sbin/setkey.
+	You may want to update scripts which depend on its location.
+
+20051108:
+	rp(4)'s device files now contain the unit number.
+	Uses of {cua,tty}R[0-9a-f] should be replaced by {cua,tty}R0[0-9a-f].
+
 20051101:
 	FreeBSD 6.0-RELEASE
 
@@ -282,6 +335,7 @@ COMMON ITEMS:
 	<reboot in single user>				[3]
 	mergemaster -p					[5]
 	make installworld
+	make delete-old
 	mergemaster					[4]
 	<reboot>
 
@@ -319,6 +373,7 @@ COMMON ITEMS:
 	<reboot in single user>				[3]
 	mergemaster -p					[5]
 	make installworld
+	make delete-old
 	mergemaster -i					[4]
 	<reboot>
 
@@ -410,4 +465,4 @@ author a beer.
 Contact Warner Losh if you have any questions about your use of
 this document.
 
-$FreeBSD: src/UPDATING,v 1.416.2.9 2005/12/08 14:09:50 glebius Exp $
+$FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $

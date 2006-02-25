@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_quirks.c,v 1.41.2.1 2005/12/14 01:26:51 flz Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_quirks.c,v 1.41.2.4 2006/02/15 22:51:08 iedowse Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -79,8 +79,6 @@ Static const struct usbd_quirk_entry {
  { USB_VENDOR_TELEX, USB_PRODUCT_TELEX_MIC1,	    0x009, { UQ_AU_NO_FRAC }},
  { USB_VENDOR_SILICONPORTALS, USB_PRODUCT_SILICONPORTALS_YAPPHONE,
    						    0x100, { UQ_AU_INP_ASYNC }},
- { USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPOD3G,	    ANY,   { UQ_NO_OPEN_CLEARSTALL }},
- { USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPODVIDEO,   ANY,   { UQ_NO_OPEN_CLEARSTALL }},
  /* XXX These should have a revision number, but I don't know what they are. */
  { USB_VENDOR_HP, USB_PRODUCT_HP_895C,		    ANY,   { UQ_BROKEN_BIDIR }},
  { USB_VENDOR_HP, USB_PRODUCT_HP_880C,		    ANY,   { UQ_BROKEN_BIDIR }},
@@ -103,6 +101,15 @@ Static const struct usbd_quirk_entry {
 	ANY, { UQ_ASSUME_CM_OVER_DATA }},
  { USB_VENDOR_SUNTAC, USB_PRODUCT_SUNTAC_AS64LX,
 	0x100, { UQ_ASSUME_CM_OVER_DATA }},
+ /* Devices which should be ignored by uhid */
+ { USB_VENDOR_APC, USB_PRODUCT_APC_UPS,
+	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_DELORME, USB_PRODUCT_DELORME_EARTHMATE,
+	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_MGE, USB_PRODUCT_MGE_UPS1,
+	ANY, { UQ_HID_IGNORE }},
+ { USB_VENDOR_MGE, USB_PRODUCT_MGE_UPS2,
+	ANY, { UQ_HID_IGNORE }},
  { 0, 0, 0, { 0 } }
 };
 

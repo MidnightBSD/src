@@ -1,5 +1,5 @@
 # $NetBSD: rc.subr,v 1.60 2003/07/26 05:13:47 lukem Exp $
-# $FreeBSD: src/etc/rc.subr,v 1.34.2.5 2005/11/06 15:53:30 jhb Exp $
+# $FreeBSD: src/etc/rc.subr,v 1.34.2.9 2006/02/19 18:36:01 ceri Exp $
 #
 # Copyright (c) 1997-2002 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -236,6 +236,7 @@ check_process()
 #		`basename procname`
 #		`basename procname` + ":"
 #		"(" + `basename procname` + ")"
+#		"[" + `basename procname` + "]"
 #
 #	If interpreter != ".", read the first line of procname, remove the
 #	leading #!, normalise whitespace, append procname, and attempt to
@@ -426,6 +427,8 @@ wait_for_pids()
 #	reload		Similar to stop, except use $sig_reload instead,
 #			and doesn't wait_for_pids.
 #			$sig_reload defaults to HUP.
+#			Note that `reload' isn't provided by default,
+#			it should be enabled via $extra_commands.
 #
 #	restart		Run `stop' then `start'.
 #
@@ -493,9 +496,7 @@ run_rc_command()
 	esac
 
 	eval _overide_command=\$${name}_program
-	if [ -n "$_overide_command" ]; then
-		command=$_overide_command
-	fi
+	command=${command:+${_overide_command:-$command}}
 
 	_keywords="start stop restart rcvar $extra_commands"
 	rc_pid=
@@ -515,7 +516,7 @@ run_rc_command()
 	fi
 
 	if [ -z "$rc_arg" ]; then
-		rc_usage "$_keywords"
+		rc_usage $_keywords
 	fi
 
 	if [ -n "$flags" ]; then	# allow override from environment
@@ -598,12 +599,12 @@ run_rc_command()
 		start)
 			if [ -z "$rc_fast" -a -n "$rc_pid" ]; then
 				echo "${name} already running? (pid=$rc_pid)."
-				exit 1
+				return 1
 			fi
 
 			if [ ! -x ${_chroot}${command} ]; then
 				info "run_rc_command: cannot run ($command)."
-				return 0
+				return 1
 			fi
 
 					# check for required variables,
@@ -681,14 +682,14 @@ $command $rc_flags $command_args"
 
 		stop)
 			if [ -z "$rc_pid" ]; then
-				[ -n "$rc_fast" ] && exit 0
+				[ -n "$rc_fast" ] && return 0
 				if [ -n "$pidfile" ]; then
 					echo \
 				    "${name} not running? (check $pidfile)."
 				else
 					echo "${name} not running?"
 				fi
-				exit 1
+				return 1
 			fi
 
 					# if the precmd failed and force
@@ -733,7 +734,7 @@ $command $rc_flags $command_args"
 				else
 					echo "${name} not running?"
 				fi
-				exit 1
+				return 1
 			fi
 			echo "Reloading ${name} config files."
 			if [ -n "$_precmd" ]; then
@@ -770,8 +771,9 @@ $command $rc_flags $command_args"
 			fi
 			_rc_restart_done=true
 
-			( $0 ${_rc_prefix}stop $rc_extra_args )
-			$0 ${_rc_prefix}start $rc_extra_args
+			# run stop in a subshell to keep variables for start
+			( run_rc_command ${_rc_prefix}stop $rc_extra_args )
+			run_rc_command ${_rc_prefix}start $rc_extra_args
 
 			if [ -n "$_postcmd" ]; then
 				eval $_postcmd $rc_extra_args
@@ -797,7 +799,7 @@ $command $rc_flags $command_args"
 			;;
 
 		*)
-			rc_usage "$_keywords"
+			rc_usage $_keywords
 			;;
 
 		esac
@@ -805,8 +807,8 @@ $command $rc_flags $command_args"
 	done
 
 	echo 1>&2 "$0: unknown directive '$rc_arg'."
-	rc_usage "$_keywords"
-	exit 1
+	rc_usage $_keywords
+	# not reached
 }
 
 #
@@ -831,10 +833,10 @@ run_rc_script()
 	eval unset ${_arg}_cmd ${_arg}_precmd ${_arg}_postcmd
 
 	case "$_file" in
-	*.sh)				# run in current shell
+	/etc/rc.d/*.sh)			# run in current shell
 		set $_arg; . $_file
 		;;
-	*[~#]|*.OLD|*.orig|*,v)		# scratch file; skip
+	*[~#]|*.OLD|*.bak|*.orig|*,v)	# scratch file; skip
 		warn "Ignoring scratch file $_file"
 		;;
 	*)				# run in subshell
@@ -1328,13 +1330,22 @@ geli_make_list()
 
 	# Create list of GELI providers from fstab.
 	while read provider mountpoint type options rest ; do
+		case ":${options}" in
+		:*noauto*)
+			noauto=yes
+			;;
+		*)
+			noauto=no
+			;;
+		esac
+
 		case ":${provider}" in
 		:#*)
 			continue
 			;;
 		*.eli)
 			# Skip swap devices.
-			if [ "${type}" = "swap" -o "${options}" = "sw" ]; then
+			if [ "${type}" = "swap" -o "${options}" = "sw" -o "${noauto}" = "yes" ]; then
 				continue
 			fi
 			devices="${devices} ${provider}"
@@ -1352,6 +1363,44 @@ geli_make_list()
 	done
 
 	echo ${devices2}
+}
+
+# Find scripts in local_startup directories that use the old syntax
+#
+find_local_scripts_old () {
+	zlist=''
+	slist=''
+	for dir in ${local_startup}; do
+		if [ -d "${dir}" ]; then
+			for file in ${dir}/[0-9]*.sh; do
+				grep '^# PROVIDE:' $file >/dev/null 2>&1 &&
+				    continue
+				zlist="$zlist $file"
+			done
+			for file in ${dir}/[^0-9]*.sh; do
+				grep '^# PROVIDE:' $file >/dev/null 2>&1 &&
+				    continue
+				slist="$slist $file"
+			done
+		fi
+	done
+}
+
+find_local_scripts_new () {
+	local_rc=''
+	for dir in ${local_startup}; do
+		if [ -d "${dir}" ]; then
+			for file in `grep -l '^# PROVIDE:' ${dir}/* 2>/dev/null`; do
+				case "$file" in
+				*.sample) ;;
+				*)	if [ -x "$file" ]; then
+						local_rc="${local_rc} ${file}"
+					fi
+					;;
+				esac
+			done
+		fi
+	done
 }
 
 fi

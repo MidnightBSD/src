@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_l2cap.c,v 1.1.1.1 2006-02-25 02:28:29 laffer1 Exp $
+ * $Id: ng_btsocket_l2cap.c,v 1.1.1.2 2006-02-25 02:37:35 laffer1 Exp $
  * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c,v 1.16 2005/02/21 21:58:16 rwatson Exp $
  */
 

@@ -33,7 +33,7 @@
 
 #include "kadmin_locl.h"
 
-RCSID("$Id: kadmind.c,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $");
+RCSID("$Id: kadmind.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
 
 static char *check_library  = NULL;
 static char *check_function = NULL;

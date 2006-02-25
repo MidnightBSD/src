@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: misc.h,v 1.1.1.1 2006-02-25 02:25:17 laffer1 Exp $
+ * $Id: misc.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
  */
 
 #ifndef _ISC_MISC_H

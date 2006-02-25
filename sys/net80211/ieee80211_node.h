@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_node.h,v 1.17.2.3 2005/12/11 22:58:43 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_node.h,v 1.17.2.4 2006/02/12 19:00:39 sam Exp $
  */
 #ifndef _NET80211_IEEE80211_NODE_H_
 #define _NET80211_IEEE80211_NODE_H_
@@ -147,6 +147,7 @@ struct ieee80211_node {
 	int			ni_txrate;	/* index to ni_rates[] */
 	struct	ifqueue		ni_savedq;	/* ps-poll queue */
 	struct ieee80211_nodestats ni_stats;	/* per-node statistics */
+	u_int32_t		ni_pad[8];	/* future expansion */
 };
 MALLOC_DECLARE(M_80211_NODE);
 

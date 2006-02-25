@@ -27,15 +27,15 @@
 ######################################################################
 ######################################################################
 
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
 
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
 
 
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
 
 # level 10 config file format
 V10/Berkeley
@@ -1283,7 +1283,7 @@ R$*			$#relay $@ ${MTAHost} $: $1 < @ $j >
 ###   Local and Program Mailer specification   ###
 ##################################################
 
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
 
 #
 #  Envelope sender rewriting
@@ -1335,7 +1335,7 @@ Mprog,		P=[IPC], F=lmDFMuXk5, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL, D=$z:/,
 ###   SMTP Mailer specification   ###
 #####################################
 
-#####  $Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
 
 #
 #  common sender and masquerading recipient rewriting
@@ -1441,7 +1441,7 @@ Mrelay,		P=[IPC], F=mDFMuXa8k, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=
 # #
 # 
 # divert(0)dnl
-# VERSIONID(`$Id: submit.cf,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $')
+# VERSIONID(`$Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 # define(`confCF_VERSION', `Submit')dnl
 # define(`__OSTYPE__',`')dnl dirty hack to keep proto.m4 from complaining
 # define(`_USE_DECNET_SYNTAX_', `1')dnl support DECnet

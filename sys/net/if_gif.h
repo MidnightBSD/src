@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/net/if_gif.h,v 1.17 2005/06/10 16:49:18 brooks Exp $	*/
+/*	$FreeBSD: src/sys/net/if_gif.h,v 1.17.2.2 2006/01/31 15:56:46 glebius Exp $	*/
 /*	$KAME: if_gif.h,v 1.17 2000/09/11 11:36:41 sumikawa Exp $	*/
 
 /*-
@@ -57,6 +57,7 @@ extern	void (*ng_gif_detach_p)(struct ifnet *ifp);
 
 struct gif_softc {
 	struct ifnet	*gif_ifp;
+	struct mtx	gif_mtx;
 	struct sockaddr	*gif_psrc; /* Physical src addr */
 	struct sockaddr	*gif_pdst; /* Physical dst addr */
 	union {
@@ -72,6 +73,12 @@ struct gif_softc {
 	LIST_ENTRY(gif_softc) gif_list; /* all gif's are linked */
 };
 #define	GIF2IFP(sc)	((sc)->gif_ifp)
+#define	GIF_LOCK_INIT(sc)	mtx_init(&(sc)->gif_mtx, "gif softc",	\
+				     NULL, MTX_DEF)
+#define	GIF_LOCK_DESTROY(sc)	mtx_destroy(&(sc)->gif_mtx)
+#define	GIF_LOCK(sc)		mtx_lock(&(sc)->gif_mtx)
+#define	GIF_UNLOCK(sc)		mtx_unlock(&(sc)->gif_mtx)
+#define	GIF_LOCK_ASSERT(sc)	mtx_assert(&(sc)->gif_mtx, MA_OWNED)
 
 #define gif_ro gifsc_gifscr.gifscr_ro
 #ifdef INET6
@@ -85,8 +92,15 @@ struct gif_softc {
 #define	MTAG_GIF	1080679712
 #define	MTAG_GIF_CALLED	0
 
+struct etherip_header {
+	u_int8_t eip_ver;	/* version/reserved */
+	u_int8_t eip_pad;	/* required padding byte */
+};
+#define ETHERIP_VER_VERS_MASK   0x0f
+#define ETHERIP_VER_RSVD_MASK   0xf0
+#define ETHERIP_VERSION         0x03
+
 /* Prototypes */
-void gifattach0(struct gif_softc *);
 void gif_input(struct mbuf *, int, struct ifnet *);
 int gif_output(struct ifnet *, struct mbuf *, struct sockaddr *,
 	       struct rtentry *);

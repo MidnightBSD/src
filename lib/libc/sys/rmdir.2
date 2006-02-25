@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)rmdir.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/sys/rmdir.2,v 1.13 2002/12/19 09:40:25 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/rmdir.2,v 1.13.12.1 2006/01/25 02:19:35 truckman Exp $
 .\"
-.Dd June 4, 1993
+.Dd January 22, 2006
 .Dt RMDIR 2
 .Os
 .Sh NAME
@@ -85,6 +85,11 @@ to be removed.
 The directory containing the directory to be removed is marked sticky,
 and neither the containing directory nor the directory to be removed
 are owned by the effective user ID.
+.It Bq Er EINVAL
+The last component of the path is
+.Ql .\&
+or
+.Ql .. .
 .It Bq Er EBUSY
 The directory to be removed is the mount point
 for a mounted file system.

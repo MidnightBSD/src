@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: log.h,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $ */
+/* $Id: log.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
 
 #ifndef NAMED_LOG_H
 #define NAMED_LOG_H 1

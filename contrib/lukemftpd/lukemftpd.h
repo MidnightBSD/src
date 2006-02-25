@@ -1,4 +1,4 @@
-/* $Id: lukemftpd.h,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $ */
+/* $Id: lukemftpd.h,v 1.1.1.2 2006-02-25 02:33:37 laffer1 Exp $ */
 
 #define	FTPD_VERSION	"lukemftpd 1.2 beta 2"
 

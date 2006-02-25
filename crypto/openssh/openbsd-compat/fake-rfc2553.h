@@ -1,4 +1,4 @@
-/* $Id: fake-rfc2553.h,v 1.1.1.1 2006-02-25 02:26:33 laffer1 Exp $ */
+/* $Id: fake-rfc2553.h,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $ */
 /* $FreeBSD: src/crypto/openssh/openbsd-compat/fake-rfc2553.h,v 1.6.2.1 2005/09/11 16:50:37 des Exp $ */
 
 /*

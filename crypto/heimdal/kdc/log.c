@@ -32,7 +32,7 @@
  */
 
 #include "kdc_locl.h"
-RCSID("$Id: log.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: log.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
 
 static krb5_log_facility *logf;
 

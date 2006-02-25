@@ -1,4 +1,4 @@
-#$FreeBSD: src/rescue/rescue/Makefile,v 1.45 2005/06/07 04:51:24 brooks Exp $
+#$FreeBSD: src/rescue/rescue/Makefile,v 1.45.2.1 2005/12/22 21:17:12 jhb Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
 PROG=	rescue
@@ -6,7 +6,7 @@ BINDIR?=/rescue
 
 # Shell scripts need #! line to be edited from /bin/sh to /rescue/sh
 SCRIPTS= nextboot_FIXED
-SCRIPTSNAME_nextboot_FIXED= nextboot.sh
+SCRIPTSNAME_nextboot_FIXED= nextboot
 nextboot_FIXED: ../../sbin/reboot/nextboot.sh
 	sed '1s/\/bin\//\/rescue\//' ${.ALLSRC} > ${.TARGET}
 CLEANFILES+= nextboot_FIXED

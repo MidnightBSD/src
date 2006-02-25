@@ -11,7 +11,7 @@
 .\" works or modified versions.
 .\"
 .\" Cronyx Id: cx.4,v 1.1.2.6 2004/06/21 17:56:40 rik Exp $
-.\" $FreeBSD: src/share/man/man4/man4.i386/cx.4,v 1.25.8.1 2005/09/24 01:59:38 keramida Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/cx.4,v 1.25.8.2 2006/02/02 07:50:02 trhodes Exp $
 .\"
 .Dd July 16, 2005
 .Dt CX 4 i386
@@ -20,17 +20,15 @@
 .Nm cx
 .Nd "driver for synchronous/asynchronous Cronyx Sigma WAN adapters"
 .Sh SYNOPSIS
-To compile support for the
-.Nm
-driver into your kernel, place the following line in your
+To compile this driver into the kernel,
+place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device cx"
 .Ed
-Pp
-Alternatively, to load the
-.Nm
-driver at boot time, place the following line in
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_cx_load="YES"

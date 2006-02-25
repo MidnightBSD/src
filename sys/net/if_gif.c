@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/net/if_gif.c,v 1.52.2.2 2005/11/04 20:26:14 ume Exp $	*/
+/*	$FreeBSD: src/sys/net/if_gif.c,v 1.52.2.4 2006/01/31 15:56:46 glebius Exp $	*/
 /*	$KAME: if_gif.c,v 1.87 2001/10/19 08:50:27 itojun Exp $	*/
 
 /*-
@@ -80,6 +80,8 @@
 #endif /* INET6 */
 
 #include <netinet/ip_encap.h>
+#include <net/ethernet.h>
+#include <net/if_bridgevar.h>
 #include <net/if_gif.h>
 
 #include <net/net_osdep.h>
@@ -88,7 +90,6 @@
 
 /*
  * gif_mtx protects the global gif_softc_list.
- * XXX: Per-softc locking is still required.
  */
 static struct mtx gif_mtx;
 static MALLOC_DEFINE(M_GIF, "gif", "Generic Tunnel Interface");
@@ -99,6 +100,7 @@ void	(*ng_gif_input_orphan_p)(struct ifnet *ifp, struct mbuf *m, int af);
 void	(*ng_gif_attach_p)(struct ifnet *ifp);
 void	(*ng_gif_detach_p)(struct ifnet *ifp);
 
+static void	gif_start(struct ifnet *);
 static int	gif_clone_create(struct if_clone *, int);
 static void	gif_clone_destroy(struct ifnet *);
 
@@ -151,21 +153,10 @@ gif_clone_create(ifc, unit)
 		return (ENOSPC);
 	}
 
+	GIF_LOCK_INIT(sc);
+
 	GIF2IFP(sc)->if_softc = sc;
 	if_initname(GIF2IFP(sc), ifc->ifc_name, unit);
-
-	gifattach0(sc);
-
-	mtx_lock(&gif_mtx);
-	LIST_INSERT_HEAD(&gif_softc_list, sc, gif_list);
-	mtx_unlock(&gif_mtx);
-	return (0);
-}
-
-void
-gifattach0(sc)
-	struct gif_softc *sc;
-{
 
 	sc->encap_cookie4 = sc->encap_cookie6 = NULL;
 
@@ -177,12 +168,19 @@ gifattach0(sc)
 	GIF2IFP(sc)->if_flags  |= IFF_LINK2;
 #endif
 	GIF2IFP(sc)->if_ioctl  = gif_ioctl;
+	GIF2IFP(sc)->if_start  = gif_start;
 	GIF2IFP(sc)->if_output = gif_output;
 	GIF2IFP(sc)->if_snd.ifq_maxlen = IFQ_MAXLEN;
 	if_attach(GIF2IFP(sc));
 	bpfattach(GIF2IFP(sc), DLT_NULL, sizeof(u_int32_t));
 	if (ng_gif_attach_p != NULL)
 		(*ng_gif_attach_p)(GIF2IFP(sc));
+
+	mtx_lock(&gif_mtx);
+	LIST_INSERT_HEAD(&gif_softc_list, sc, gif_list);
+	mtx_unlock(&gif_mtx);
+
+	return (0);
 }
 
 static void
@@ -210,6 +208,8 @@ gif_destroy(struct gif_softc *sc)
 	bpfdetach(ifp);
 	if_detach(ifp);
 	if_free(ifp);
+
+	GIF_LOCK_DESTROY(sc);
 
 	free(sc, M_GIF);
 }
@@ -306,6 +306,9 @@ gif_encapcheck(m, off, proto, arg)
 	case IPPROTO_IPV6:
 		break;
 #endif
+	case IPPROTO_ETHERIP:
+		break;
+
 	default:
 		return 0;
 	}
@@ -336,6 +339,28 @@ gif_encapcheck(m, off, proto, arg)
 	default:
 		return 0;
 	}
+}
+
+static void
+gif_start(struct ifnet *ifp)
+{
+	struct gif_softc *sc;
+	struct mbuf *m;
+
+	sc = ifp->if_softc;
+
+	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+	for (;;) {
+		IFQ_DEQUEUE(&ifp->if_snd, m);
+		if (m == 0)
+			break;
+
+		gif_output(ifp, m, sc->gif_pdst, NULL);
+
+	}
+	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+
+	return;
 }
 
 int
@@ -399,6 +424,9 @@ gif_output(ifp, m, dst, rt)
 	m_tag_prepend(m, mtag);
 
 	m->m_flags &= ~(M_BCAST|M_MCAST);
+
+	GIF_LOCK(sc);
+
 	if (!(ifp->if_flags & IFF_UP) ||
 	    sc->gif_psrc == NULL || sc->gif_pdst == NULL) {
 		m_freem(m);
@@ -412,12 +440,16 @@ gif_output(ifp, m, dst, rt)
 		dst->sa_family = af;
 	}
 
+	af = dst->sa_family;
 	if (ifp->if_bpf) {
-		af = dst->sa_family;
 		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);
 	}
 	ifp->if_opackets++;	
 	ifp->if_obytes += m->m_pkthdr.len;
+
+	/* override to IPPROTO_ETHERIP for bridged traffic */
+	if (ifp->if_bridge)
+		af = AF_LINK;
 
 	/* inner AF-specific encapsulation */
 
@@ -427,12 +459,12 @@ gif_output(ifp, m, dst, rt)
 	switch (sc->gif_psrc->sa_family) {
 #ifdef INET
 	case AF_INET:
-		error = in_gif_output(ifp, dst->sa_family, m);
+		error = in_gif_output(ifp, af, m);
 		break;
 #endif
 #ifdef INET6
 	case AF_INET6:
-		error = in6_gif_output(ifp, dst->sa_family, m);
+		error = in6_gif_output(ifp, af, m);
 		break;
 #endif
 	default:
@@ -444,7 +476,8 @@ gif_output(ifp, m, dst, rt)
   end:
 	if (error)
 		ifp->if_oerrors++;
-	return error;
+	GIF_UNLOCK(sc);
+	return (error);
 }
 
 void
@@ -453,7 +486,8 @@ gif_input(m, af, ifp)
 	int af;
 	struct ifnet *ifp;
 {
-	int isr;
+	int isr, n;
+	struct etherip_header *eip;
 
 	if (ifp == NULL) {
 		/* just in case */
@@ -500,6 +534,35 @@ gif_input(m, af, ifp)
 		isr = NETISR_IPV6;
 		break;
 #endif
+	case AF_LINK:
+		n = sizeof(struct etherip_header) + sizeof(struct ether_header);
+		if (n > m->m_len) {
+			m = m_pullup(m, n);
+			if (m == NULL) {
+				ifp->if_ierrors++;
+				return;
+			}
+		}
+
+		eip = mtod(m, struct etherip_header *);
+ 		if (eip->eip_ver !=
+		    (ETHERIP_VERSION & ETHERIP_VER_VERS_MASK)) {
+			/* discard unknown versions */
+			m_freem(m);
+			return;
+		}
+		m_adj(m, sizeof(struct etherip_header));
+
+		m->m_flags &= ~(M_BCAST|M_MCAST);
+		m->m_pkthdr.rcvif = ifp;
+
+		if (ifp->if_bridge)
+			BRIDGE_INPUT(ifp, m);
+		
+		if (m != NULL)
+			m_freem(m);
+		return;
+
 	default:
 		if (ng_gif_input_orphan_p != NULL)
 			(*ng_gif_input_orphan_p)(ifp, m, af);
@@ -781,10 +844,7 @@ gif_set_tunnel(ifp, src, dst)
 	struct gif_softc *sc = ifp->if_softc;
 	struct gif_softc *sc2;
 	struct sockaddr *osrc, *odst, *sa;
-	int s;
 	int error = 0; 
-
-	s = splnet();
 
 	mtx_lock(&gif_mtx);
 	LIST_FOREACH(sc2, &gif_softc_list, gif_list) {
@@ -879,7 +939,6 @@ gif_set_tunnel(ifp, src, dst)
 		ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	else
 		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	splx(s);
 
 	return 0;
 
@@ -888,7 +947,6 @@ gif_set_tunnel(ifp, src, dst)
 		ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	else
 		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	splx(s);
 
 	return error;
 }
@@ -898,9 +956,6 @@ gif_delete_tunnel(ifp)
 	struct ifnet *ifp;
 {
 	struct gif_softc *sc = ifp->if_softc;
-	int s;
-
-	s = splnet();
 
 	if (sc->gif_psrc) {
 		free((caddr_t)sc->gif_psrc, M_IFADDR);
@@ -922,5 +977,4 @@ gif_delete_tunnel(ifp)
 		ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	else
 		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	splx(s);
 }

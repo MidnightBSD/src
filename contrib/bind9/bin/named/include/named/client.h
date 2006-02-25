@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: client.h,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $ */
+/* $Id: client.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
 
 #ifndef NAMED_CLIENT_H
 #define NAMED_CLIENT_H 1
@@ -322,10 +322,16 @@ ns_client_aclmsg(const char *msg, dns_name_t *name, dns_rdatatype_t type,
 	 DNS_RDATACLASS_FORMATSIZE + sizeof(x) + sizeof("'/'"))
 
 void
-ns_client_recursing(ns_client_t *client, isc_boolean_t killoldest);
-/*
+ns_client_recursing(ns_client_t *client);
+/*%
  * Add client to end of recursing list.  If 'killoldest' is true
  * kill the oldest recursive client (list head). 
+ */
+
+void
+ns_client_killoldestquery(ns_client_t *client);
+/*%
+ * Kill the oldest recursive query (recursing list head).
  */
 
 void

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/keysock.h,v 1.2 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/keysock.h,v 1.2.2.1 2006/01/27 21:50:11 bz Exp $	*/
 /*	$KAME: keysock.h,v 1.8 2000/03/27 05:11:06 sumikawa Exp $	*/
 
 /*-
@@ -71,7 +71,7 @@ struct keycb {
 
 extern struct pfkeystat pfkeystat;
 
-extern int key_output __P((struct mbuf *, ...));
+extern int key_output(struct mbuf *m, struct socket *so);
 extern int key_usrreq __P((struct socket *,
 	int, struct mbuf *, struct mbuf *, struct mbuf *));
 

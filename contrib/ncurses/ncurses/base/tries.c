@@ -39,7 +39,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: tries.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: tries.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
 
 /*
  * Expand a keycode into the string that it corresponds to, returning null if

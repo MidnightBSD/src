@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/uni/unisig_encode.c,v 1.14 2005/01/07 01:45:37 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/uni/unisig_encode.c,v 1.14.2.1 2006/01/29 06:55:03 sam Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -1533,7 +1533,7 @@ usf_enc_ie_ident(usf, ie, tbl)
 		 */
 		cp = (char *) ((intptr_t)ie + tbl[i].f_offs);
 		if (tbl[i].len == 0) {
-			if ((*cp == T_NO || *cp == T_ATM_ABSENT))
+			if ((*cp == T_NO || *(int8_t *)cp == T_ATM_ABSENT))
 				continue;
 		} else {
 			switch (tbl[i].f_size) {

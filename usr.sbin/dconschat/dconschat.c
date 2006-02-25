@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dconschat.c,v 1.1.1.1 2006-02-25 02:29:40 laffer1 Exp $
+ * $Id: dconschat.c,v 1.1.1.2 2006-02-25 02:38:27 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/dconschat/dconschat.c,v 1.9 2005/03/11 14:20:09 stefanf Exp $
  */
 

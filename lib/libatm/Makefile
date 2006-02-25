@@ -20,7 +20,7 @@
 # Copies of this Software may be made, however, the above copyright
 # notice must be reproduced on all copies.
 #
-#	@(#) $Id: Makefile,v 1.1.1.1 2006-02-25 02:26:47 laffer1 Exp $
+#	@(#) $Id: Makefile,v 1.1.1.2 2006-02-25 02:34:50 laffer1 Exp $
 # $FreeBSD: src/lib/libatm/Makefile,v 1.12 2005/04/22 18:57:31 trhodes Exp $
 
 LIB=	atm

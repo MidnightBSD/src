@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_sysvec.c,v 1.30 2005/01/29 23:11:58 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_sysvec.c,v 1.30.2.1 2006/01/10 21:44:58 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -105,6 +105,8 @@ ibcs2_modevent(module_t mod, int type, void *unused)
 	int rval = 0;
 
 	switch(type) {
+	case MOD_LOAD:
+		break;
 	case MOD_UNLOAD:
 		/* if this was an ELF module we'd use elf_brand_inuse()... */
 		sx_slock(&allproc_lock);
@@ -115,8 +117,9 @@ ibcs2_modevent(module_t mod, int type, void *unused)
 			}
 		}
 		sx_sunlock(&allproc_lock);
+		break;
 	default:
-	        return (EOPNOTSUPP);
+	        rval = EOPNOTSUPP;
 		break;
 	}
 	return (rval);

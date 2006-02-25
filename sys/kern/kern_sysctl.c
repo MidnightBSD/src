@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.165.2.1 2005/08/19 04:50:08 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.165.2.2 2006/01/28 00:31:56 truckman Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -1118,7 +1118,8 @@ int
 sysctl_wire_old_buffer(struct sysctl_req *req, size_t len)
 {
 	int ret;
-	size_t wiredlen;
+	size_t i, wiredlen;
+	char *cp, dummy;
 
 	wiredlen = (len > 0 && len < req->oldlen) ? len : req->oldlen;
 	ret = 0;
@@ -1130,6 +1131,16 @@ sysctl_wire_old_buffer(struct sysctl_req *req, size_t len)
 				if (ret != ENOMEM)
 					return (ret);
 				wiredlen = 0;
+			}
+			/*
+			 * Touch all the wired pages to avoid PTE modified
+			 * bit emulation traps on Alpha while holding locks
+			 * in the sysctl handler.
+			 */
+			for (i = (wiredlen + PAGE_SIZE - 1) / PAGE_SIZE,
+			    cp = req->oldptr; i > 0; i--, cp += PAGE_SIZE) {
+				copyin(cp, &dummy, 1);
+				copyout(&dummy, cp, 1);
 			}
 		}
 		req->lock = REQ_WIRED;

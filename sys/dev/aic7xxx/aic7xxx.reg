@@ -39,7 +39,7 @@
  *
  * $FreeBSD: src/sys/dev/aic7xxx/aic7xxx.reg,v 1.47 2005/01/06 01:42:26 imp Exp $
  */
-VERSION = "$Id: aic7xxx.reg,v 1.1.1.1 2006-02-25 02:27:55 laffer1 Exp $"
+VERSION = "$Id: aic7xxx.reg,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $"
 
 /*
  * This file is processed by the aic7xxx_asm utility for use in assembling

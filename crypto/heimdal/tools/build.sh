@@ -2,7 +2,7 @@
 #
 # Build many combinations of kth-krb/heimdal/openssl
 #
-# $Id: build.sh,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $
+# $Id: build.sh,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $
 
 opt_n= #:
 make_f= #-j

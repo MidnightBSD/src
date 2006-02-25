@@ -67,7 +67,7 @@
  *
  *	last edit-date: [Mon Dec 13 21:44:01 1999]
  *
- *	$Id: g711conv.c,v 1.1.1.1 2006-02-25 02:29:41 laffer1 Exp $
+ *	$Id: g711conv.c,v 1.1.1.2 2006-02-25 02:38:28 laffer1 Exp $
  *
  * $FreeBSD: src/usr.sbin/i4b/g711conv/g711conv.c,v 1.6 2003/06/08 06:24:46 imp Exp $
  *

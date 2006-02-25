@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom_fox.c,v 1.9 2005/01/06 18:27:29 imp Exp $
+ * $FreeBSD: src/sys/geom/geom_fox.c,v 1.9.2.1 2005/12/29 05:59:51 sobomax Exp $
  */
 
 /* This is a GEOM module for handling path selection for multi-path
@@ -371,9 +371,9 @@ g_fox_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	do {
 		sectorsize = cp->provider->sectorsize;
 		g_topology_unlock();
-		buf = g_read_data(cp, 0, sectorsize, &error);
+		buf = g_read_data(cp, 0, sectorsize, NULL);
 		g_topology_lock();
-		if (buf == NULL || error != 0)
+		if (buf == NULL)
 			break;
 		if (memcmp(buf, FOX_MAGIC, strlen(FOX_MAGIC)))
 			break;

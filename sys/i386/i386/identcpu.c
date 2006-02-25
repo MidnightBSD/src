@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/identcpu.c,v 1.145.2.1 2005/11/07 08:41:12 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/identcpu.c,v 1.145.2.2 2006/02/23 15:03:42 dwmalone Exp $");
 
 #include "opt_cpu.h"
 
@@ -701,8 +701,8 @@ printcpuinfo(void)
 				"\003RSVD2"	/* "Reserved" bit 2 */
 				"\004MON"	/* MONITOR/MWAIT Instructions */
 				"\005DS_CPL"	/* CPL Qualified Debug Store */
-				"\006<b5>"	/* Machine specific registers */
-				"\007<b6>"	/* Physical address extension */
+				"\006VMX"	/* Virtual Machine Extensions */
+				"\007<b6>"
 				"\010EST"	/* Enhanced SpeedStep */
 				"\011TM2"	/* Thermal Monitor 2 */
 				"\012<b9>"

@@ -1,5 +1,5 @@
 #	From: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: src/sys/conf/kmod.mk,v 1.192.2.3 2005/11/16 08:54:29 ru Exp $
+# $FreeBSD: src/sys/conf/kmod.mk,v 1.192.2.4 2006/02/23 02:13:31 mlaier Exp $
 #
 # The include file <bsd.kmod.mk> handles building and installing loadable
 # kernel modules.
@@ -35,6 +35,8 @@
 #		If not supplied, ${KMOD}.ko is used.
 #
 # SRCS		List of source files.
+#
+# FIRMWS	List of firmware images in format filename:shortname:version
 #
 # DESTDIR	The tree where the module gets installed. [not set]
 #
@@ -131,6 +133,34 @@ CFLAGS+=	-fno-omit-frame-pointer
 
 .if ${MACHINE_ARCH} == "powerpc"
 CFLAGS+=	-mlongcall -fno-omit-frame-pointer
+.endif
+
+.if defined(FIRMWS)
+.if !exists(@)
+${KMOD:S/$/.c/}: @
+.else
+${KMOD:S/$/.c/}: @/tools/fw_stub.awk
+.endif
+	${AWK} -f @/tools/fw_stub.awk ${FIRMWS} -m${KMOD} -c${KMOD:S/$/.c/g}
+
+SRCS+=	${KMOD:S/$/.c/}
+CLEANFILES+=	${KMOD:S/$/.c/}
+
+.for _firmw in ${FIRMWS}
+${_firmw:C/\:.*$/.fwo/}:	${_firmw:C/\:.*$//}
+	@${ECHO} ${_firmw:C/\:.*$//} ${.ALLSRC:M*${_firmw:C/\:.*$//}}
+	@if [ -e ${_firmw:C/\:.*$//} ]; then			\
+		${LD} -b binary ${LDFLAGS} -r -d -o ${.TARGET}	\
+		    ${_firmw:C/\:.*$//};			\
+	else							\
+		ln -s ${.ALLSRC:M*${_firmw:C/\:.*$//}} ${_firmw:C/\:.*$//}; \
+		${LD} -b binary ${LDFLAGS} -r -d -o ${.TARGET}	\
+		    ${_firmw:C/\:.*$//};			\
+		rm ${_firmw:C/\:.*$//};				\
+	fi
+
+OBJS+=	${_firmw:C/\:.*$/.fwo/}
+.endfor
 .endif
 
 OBJS+=	${SRCS:N*.h:R:S/$/.o/g}

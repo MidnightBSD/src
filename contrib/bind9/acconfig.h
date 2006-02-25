@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: acconfig.h,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $ */
+/* $Id: acconfig.h,v 1.1.1.2 2006-02-25 02:32:02 laffer1 Exp $ */
 
 /***
  *** This file is not to be included by any public header files, because

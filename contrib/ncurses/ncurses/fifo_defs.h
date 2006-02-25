@@ -34,7 +34,7 @@
 /*
  * Common macros for lib_getch.c, lib_ungetch.c
  *
- * $Id: fifo_defs.h,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $
+ * $Id: fifo_defs.h,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $
  */
 
 #ifndef FIFO_DEFS_H

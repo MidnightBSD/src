@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: MKncurses_def.sh,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $
+# $Id: MKncurses_def.sh,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $
 ##############################################################################
 # Copyright (c) 2000 Free Software Foundation, Inc.                          #
 #                                                                            #

@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/ed.term.h,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/ed.term.h,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
 /*
  * ed.term.h: Local terminal header
  */

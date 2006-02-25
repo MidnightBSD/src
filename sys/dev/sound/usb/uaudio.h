@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/sound/usb/uaudio.h,v 1.6 2005/04/27 17:16:27 julian Exp $ */
+/* $FreeBSD: src/sys/dev/sound/usb/uaudio.h,v 1.6.2.1 2005/12/30 19:55:54 netchild Exp $ */
 
 /*-
  * Copyright (c) 2000-2002 Hiroyuki Aizu <aizu@navi.org>
@@ -41,7 +41,7 @@ int	uaudio_halt_in_dma(device_t dev);
 #endif
 void	uaudio_chan_set_param(device_t, u_char *, u_char *);
 void	uaudio_chan_set_param_blocksize(device_t dev, u_int32_t blocksize, int dir);
-void	uaudio_chan_set_param_speed(device_t dev, u_int32_t speed, int dir);
+int	uaudio_chan_set_param_speed(device_t dev, u_int32_t speed, int reqdir);
 void	uaudio_chan_set_param_format(device_t dev, u_int32_t format,int dir);
 int	uaudio_chan_getptr(device_t dev, int);
 void	uaudio_mixer_set(device_t dev, unsigned type, unsigned left,
@@ -49,5 +49,5 @@ void	uaudio_mixer_set(device_t dev, unsigned type, unsigned left,
 u_int32_t uaudio_mixer_setrecsrc(device_t dev, u_int32_t src);
 u_int32_t uaudio_query_mix_info(device_t dev);
 u_int32_t uaudio_query_recsrc_info(device_t dev);
-void	uaudio_query_formats(device_t dev, u_int32_t *pfmt, u_int32_t *rfmt);
+unsigned uaudio_query_formats(device_t dev, int dir, unsigned maxfmt, struct pcmchan_caps *fmt);
 void	uaudio_sndstat_register(device_t dev);

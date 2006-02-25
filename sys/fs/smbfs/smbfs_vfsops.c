@@ -29,12 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_vfsops.c,v 1.34 2005/03/24 07:36:15 jeff Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_vfsops.c,v 1.34.2.1 2006/02/10 00:37:57 yar Exp $
  */
-#include "opt_netsmb.h"
-#ifndef NETSMB
-#error "SMBFS requires option NETSMB"
-#endif
 
 #include <sys/param.h>
 #include <sys/systm.h>

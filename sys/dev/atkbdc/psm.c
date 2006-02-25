@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/psm.c,v 1.86 2005/06/10 20:56:37 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/atkbdc/psm.c,v 1.86.2.1 2006/01/11 20:27:23 dumbbell Exp $");
 
 #include "opt_isa.h"
 #include "opt_psm.h"
@@ -2546,7 +2546,7 @@ psmsoftintr(void *arg)
 	    /* Sanity check for out of sync packets. */
 	    if ((pb->ipacket[0] & 0xc8) != 0x80 ||
 		(pb->ipacket[3] & 0xc8) != 0xc0)
-		continue;
+		goto NEXT;
 
 	    x = y = x0 = y0 = 0;
 
@@ -2818,6 +2818,7 @@ psmsoftintr(void *arg)
 	}
         pb->inputbytes = 0;
 
+NEXT:
 	if (++sc->pqueue_start >= PSM_PACKETQUEUE)
 		sc->pqueue_start = 0;
     } while (sc->pqueue_start != sc->pqueue_end);

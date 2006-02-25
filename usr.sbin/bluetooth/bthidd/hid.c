@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hid.c,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
+ * $Id: hid.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bluetooth/bthidd/hid.c,v 1.2 2004/11/18 18:05:15 emax Exp $
  */
 

@@ -33,7 +33,7 @@
 
 #include "gssapi_locl.h"
 
-RCSID("$Id: get_mic.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: get_mic.c,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $");
 
 static OM_uint32
 mic_des

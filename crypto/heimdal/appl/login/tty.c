@@ -33,7 +33,7 @@
 
 #include "login_locl.h"
 
-RCSID("$Id: tty.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: tty.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
 
 /*
  * Clean the tty name.  Return a pointer to the cleaned version.

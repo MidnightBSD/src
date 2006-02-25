@@ -92,4 +92,4 @@ If you are forced to use ssh-rand-helper consider still downloading
 prngd/egd and configure OpenSSH using --with-prngd-port=xx or
 --with-prngd-socket=xx (refer to INSTALL for more information).
 
-$Id: WARNING.RNG,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $
+$Id: WARNING.RNG,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $

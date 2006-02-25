@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$FreeBSD: src/sys/dev/ixgb/if_ixgb.c,v 1.10.2.4 2005/10/07 14:00:04 glebius Exp $*/
+/*$FreeBSD: src/sys/dev/ixgb/if_ixgb.c,v 1.10.2.6 2006/01/13 19:21:44 glebius Exp $*/
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -2143,7 +2143,7 @@ ixgb_process_receive_interrupts(struct adapter * adapter, int count)
 						      adapter->fmp);
 
 				if (current_desc->status & IXGB_RX_DESC_STATUS_VP)
-					VLAN_INPUT_TAG(eh, adapter->fmp,
+					VLAN_INPUT_TAG_NEW(eh, adapter->fmp,
 						     current_desc->special);
 				else
 					ether_input(ifp, eh, adapter->fmp);
@@ -2151,9 +2151,8 @@ ixgb_process_receive_interrupts(struct adapter * adapter, int count)
 				ixgb_receive_checksum(adapter, current_desc,
 						      adapter->fmp);
 				if (current_desc->status & IXGB_RX_DESC_STATUS_VP)
-					VLAN_INPUT_TAG(ifp, adapter->fmp,
-						       current_desc->special,
-						       adapter->fmp = NULL);
+					VLAN_INPUT_TAG_NEW(ifp, adapter->fmp,
+						       current_desc->special);
 
 				if (adapter->fmp != NULL) {
 					IXGB_UNLOCK(adapter);

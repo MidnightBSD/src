@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/icmp6.c,v 1.62.2.3 2005/11/04 20:48:12 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/icmp6.c,v 1.62.2.6 2005/12/25 14:03:37 suz Exp $	*/
 /*	$KAME: icmp6.c,v 1.211 2001/04/04 05:56:20 itojun Exp $	*/
 
 /*-
@@ -511,8 +511,10 @@ icmp6_input(mp, offp, proto)
 		icmp6_ifstat_inc(m->m_pkthdr.rcvif, ifs6_in_timeexceed);
 		switch (code) {
 		case ICMP6_TIME_EXCEED_TRANSIT:
+			code = PRC_TIMXCEED_INTRANS;
+			break;
 		case ICMP6_TIME_EXCEED_REASSEMBLY:
-			code += PRC_TIMXCEED_INTRANS;
+			code = PRC_TIMXCEED_REASS;
 			break;
 		default:
 			goto badcode;
@@ -1217,6 +1219,7 @@ ni6_input(m, off)
 		/* FALLTHROUGH */
 	case NI_QTYPE_FQDN:
 	case NI_QTYPE_NODEADDR:
+	case NI_QTYPE_IPV4ADDR:
 		switch (ni6->ni_code) {
 		case ICMP6_NI_SUBJ_IPV6:
 #if ICMP6_NI_SUBJ_IPV6 != 0
@@ -1315,6 +1318,7 @@ ni6_input(m, off)
 			goto bad;
 		break;
 	case NI_QTYPE_NODEADDR:
+	case NI_QTYPE_IPV4ADDR:
 		if ((icmp6_nodeinfo & 2) == 0)
 			goto bad;
 		break;
@@ -1336,6 +1340,9 @@ ni6_input(m, off)
 		if ((replylen += addrs * (sizeof(struct in6_addr) +
 		    sizeof(u_int32_t))) > MCLBYTES)
 			replylen = MCLBYTES; /* XXX: will truncate pkt later */
+		break;
+	case NI_QTYPE_IPV4ADDR:
+		/* unsupported - should respond with unknown Qtype? */
 		break;
 	default:
 		/*
@@ -2171,7 +2178,7 @@ void
 icmp6_fasttimo()
 {
 
-	mld6_fasttimeo();
+	return;
 }
 
 static const char *
@@ -2408,7 +2415,7 @@ icmp6_redirect_output(m0, rt)
 	icmp6_errcount(&icmp6stat.icp6s_outerrhist, ND_REDIRECT, 0);
 
 	/* if we are not router, we don't send icmp6 redirect */
-	if (!ip6_forwarding || ip6_accept_rtadv)
+	if (!ip6_forwarding)
 		goto fail;
 
 	/* sanity check */

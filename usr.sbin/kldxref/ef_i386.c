@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/ef_i386.c,v 1.2 2004/08/28 19:31:10 iedowse Exp $
+ * $FreeBSD: src/usr.sbin/kldxref/ef_i386.c,v 1.2.4.1 2005/12/30 22:13:59 marcel Exp $
  */
 
 #include <sys/types.h>
@@ -46,7 +46,7 @@ ef_reloc(struct elf_file *ef, const void *reldata, int reltype, Elf_Off relbase,
     Elf_Off dataoff, size_t len, void *dest)
 {
 	Elf_Addr *where, addr, addend;
-	Elf_Word rtype, symidx;
+	Elf_Size rtype, symidx;
 	const Elf_Rel *rel;
 	const Elf_Rela *rela;
 

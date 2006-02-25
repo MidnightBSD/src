@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/imgact_elf.h,v 1.27 2004/08/11 02:35:06 marcel Exp $
+ * $FreeBSD: src/sys/sys/imgact_elf.h,v 1.27.8.1 2005/12/30 22:13:58 marcel Exp $
  */
 
 #ifndef _SYS_IMGACT_ELF_H_
@@ -44,15 +44,15 @@ struct thread;
  * stack fixup routine.
  */
 typedef struct {
-	Elf_Sword	execfd;
-	Elf_Word	phdr;
-	Elf_Word	phent;
-	Elf_Word	phnum;
-	Elf_Word	pagesz;
-	Elf_Word	base;
-	Elf_Word	flags;
-	Elf_Word	entry;
-	Elf_Word	trace;
+	Elf_Ssize	execfd;
+	Elf_Size	phdr;
+	Elf_Size	phent;
+	Elf_Size	phnum;
+	Elf_Size	pagesz;
+	Elf_Size	base;
+	Elf_Size	flags;
+	Elf_Size	entry;
+	Elf_Size	trace;
 } __ElfN(Auxargs);
 
 typedef struct {

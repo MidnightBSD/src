@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_dev.c,v 1.27.2.1 2005/08/13 21:24:17 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_dev.c,v 1.27.2.2 2006/01/13 10:23:39 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -346,7 +346,8 @@ nsmb_dev_load(module_t mod, int cmd, void *arg)
 	    case MOD_UNLOAD:
 		smb_iod_done();
 		error = smb_sm_done();
-		error = 0;
+		if (error)
+			break;
 		EVENTHANDLER_DEREGISTER(dev_clone, nsmb_dev_tag);
 		printf("netsmb_dev: unloaded\n");
 		break;

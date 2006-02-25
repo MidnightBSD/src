@@ -11,7 +11,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: timers.c,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $")
+SM_RCSID("@(#)$Id: timers.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $")
 
 #if _FFR_TIMERS
 # include <sys/types.h>

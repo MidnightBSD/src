@@ -35,7 +35,7 @@
 #include "cursesm.h"
 #include "cursesapp.h"
 
-MODULE_ID("$Id: cursesm.cc,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $")
+MODULE_ID("$Id: cursesm.cc,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 
 NCursesMenuItem::~NCursesMenuItem() {
   if (item)

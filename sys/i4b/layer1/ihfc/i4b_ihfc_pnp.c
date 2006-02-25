@@ -31,7 +31,7 @@
  *	  been put here, except the chip spesific "PnP" setup.
  *
  *      last edit-date: [Tue Jan 23 16:03:33 2001]
- *      $Id: i4b_ihfc_pnp.c,v 1.1.1.1 2006-02-25 02:28:19 laffer1 Exp $
+ *      $Id: i4b_ihfc_pnp.c,v 1.1.1.2 2006-02-25 02:37:13 laffer1 Exp $
  *     
  *---------------------------------------------------------------------------*/
 

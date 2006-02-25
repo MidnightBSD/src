@@ -5,7 +5,7 @@
  *  pcap-dos.c: Interface to PKTDRVR, NDIS2 and 32-bit pmode
  *              network drivers.
  *
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-dos.c,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-dos.c,v 1.1.1.2 2006-02-25 02:33:30 laffer1 Exp $ (LBL)
  */
 
 #include <stdio.h>

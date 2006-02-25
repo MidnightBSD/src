@@ -15,7 +15,7 @@
  * WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: boolean.h,v 1.1.1.1 2006-02-25 02:26:13 laffer1 Exp $ */
+/* $Id: boolean.h,v 1.1.1.2 2006-02-25 02:33:45 laffer1 Exp $ */
 
 #ifndef ISC_BOOLEAN_H
 #define ISC_BOOLEAN_H 1

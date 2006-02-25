@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_lookup.c	8.6 (Berkeley) 4/1/94
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_lookup.c,v 1.50 2005/06/15 02:36:10 rodrigc Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_lookup.c,v 1.50.2.1 2006/01/04 19:32:00 truckman Exp $
  */
 
 #include <sys/param.h>
@@ -319,6 +319,7 @@ ext2_lookup(ap)
 	int flags = cnp->cn_flags;
 	int nameiop = cnp->cn_nameiop;
 	struct thread *td = cnp->cn_thread;
+	ino_t saved_ino;
 
 	int	DIRBLKSIZ = VTOI(ap->a_dvp)->i_e2fs->s_blocksize;
 
@@ -655,8 +656,9 @@ found:
 	 */
 	pdp = vdp;
 	if (flags & ISDOTDOT) {
+		saved_ino = dp->i_ino;
 		VOP_UNLOCK(pdp, 0, td);	/* race to get the inode */
-		error = VFS_VGET(vdp->v_mount, dp->i_ino, LK_EXCLUSIVE, &tdp);
+		error = VFS_VGET(vdp->v_mount, saved_ino, LK_EXCLUSIVE, &tdp);
 		vn_lock(pdp, LK_EXCLUSIVE | LK_RETRY, td);
 		if (error != 0)
 			return (error);

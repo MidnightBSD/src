@@ -64,8 +64,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$FreeBSD: src/sbin/routed/rtquery/rtquery.c,v 1.17 2004/04/09 19:58:38 markm Exp $");
 #else
-__RCSID("$Revision: 1.1.1.1 $");
-#ident "$Revision: 1.1.1.1 $"
+__RCSID("$Revision: 1.1.1.2 $");
+#ident "$Revision: 1.1.1.2 $"
 #endif
 
 #ifndef sgi

@@ -37,7 +37,7 @@
 #include <getarg.h>
 
 #if 0
-RCSID("$Id: compile_et.c,v 1.1.1.1 2006-02-25 02:25:33 laffer1 Exp $");
+RCSID("$Id: compile_et.c,v 1.1.1.2 2006-02-25 02:32:30 laffer1 Exp $");
 #endif
 
 #include <err.h>

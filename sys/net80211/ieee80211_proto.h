@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_proto.h,v 1.11.2.2 2005/09/03 22:40:02 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_proto.h,v 1.11.2.5 2006/02/12 19:00:39 sam Exp $
  */
 #ifndef _NET80211_IEEE80211_PROTO_H_
 #define _NET80211_IEEE80211_PROTO_H_
@@ -218,6 +218,7 @@ void	ieee80211_wme_updateparams_locked(struct ieee80211com *);
 
 #define	ieee80211_new_state(_ic, _nstate, _arg) \
 	(((_ic)->ic_newstate)((_ic), (_nstate), (_arg)))
+void	ieee80211_beacon_miss(struct ieee80211com *);
 void	ieee80211_print_essid(const u_int8_t *, int);
 void	ieee80211_dump_pkt(const u_int8_t *, int, int, int);
 
@@ -236,6 +237,8 @@ struct ieee80211_beacon_offsets {
 	u_int8_t	*bo_trailer;	/* start of fixed-size trailer */
 	u_int16_t	bo_tim_len;	/* atim/dtim length in bytes */
 	u_int16_t	bo_trailer_len;	/* trailer length in bytes */
+	u_int8_t	*bo_erp;	/* start of ERP element */
+	void		*bo_pad[8];	/* future expansion */
 };
 struct mbuf *ieee80211_beacon_alloc(struct ieee80211com *,
 		struct ieee80211_node *, struct ieee80211_beacon_offsets *);

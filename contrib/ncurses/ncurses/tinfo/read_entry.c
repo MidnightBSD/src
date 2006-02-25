@@ -41,7 +41,7 @@
 #include <tic.h>
 #include <term_entry.h>
 
-MODULE_ID("$Id: read_entry.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: read_entry.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 #if !HAVE_TELL
 #define tell(fd) 0		/* lseek() is POSIX, but not tell() - odd... */

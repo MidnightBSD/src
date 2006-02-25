@@ -21,7 +21,7 @@ POPDIVERT
 ###   Cyrus V2 Mailer specification   ###
 #########################################
 
-VERSIONID(`$Id: cyrusv2.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: cyrusv2.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 
 Mcyrusv2,	P=[IPC], F=_MODMF_(CONCAT(_DEF_CYRUSV2_MAILER_FLAGS, CYRUSV2_MAILER_FLAGS), `CYRUSV2'),
 		S=EnvFromSMTP/HdrFromL, R=EnvToL/HdrToL, E=\r\n,

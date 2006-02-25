@@ -42,7 +42,7 @@ static char const sccsid[] = "@(#)from: arp.c	8.2 (Berkeley) 1/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/arp/arp.c,v 1.58.2.1 2005/11/14 22:24:00 thompsa Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/arp/arp.c,v 1.58.2.3 2006/02/16 12:40:27 glebius Exp $");
 
 /*
  * arp - display, set, and delete arp table entries
@@ -152,7 +152,7 @@ main(int argc, char *argv[])
 	if (!func)
 		func = F_GET;
 	if (rifname) {
-		if (func != F_GET)
+		if (func != F_GET && !(func == F_DELETE && aflag))
 			errx(1, "-i not applicable to this operation");
 		if (if_nametoindex(rifname) == 0) {
 			if (errno == ENXIO)
@@ -348,9 +348,10 @@ set(int argc, char **argv)
 	} else {
 		struct ether_addr *ea1 = ether_aton(eaddr);
 
-		if (ea1 == NULL)
+		if (ea1 == NULL) {
 			warnx("invalid Ethernet address '%s'", eaddr);
-		else {
+			return (1);
+		} else {
 			*ea = *ea1;
 			sdl_m.sdl_alen = ETHER_ADDR_LEN;
 		}
@@ -625,7 +626,7 @@ usage(void)
 		"usage: arp [-n] [-i interface] hostname",
 		"       arp [-n] [-i interface] -a",
 		"       arp -d hostname [pub]",
-		"       arp -d -a",
+		"       arp -d [-i interface] -a",
 		"       arp -s hostname ether_addr [temp] [pub]",
 		"       arp -S hostname ether_addr [temp] [pub]",
 		"       arp -f filename");

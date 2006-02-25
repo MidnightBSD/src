@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)jobs.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/jobs.c,v 1.68.2.1 2005/11/06 20:39:47 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/jobs.c,v 1.68.2.2 2006/01/12 05:24:46 maxim Exp $");
 
 #include <fcntl.h>
 #include <signal.h>
@@ -924,6 +924,8 @@ dowait(int block, struct job *job)
 	} while ((pid == -1 && errno == EINTR && breakwaitcmd == 0) ||
 		 (pid > 0 && WIFSTOPPED(status) && !iflag));
 	in_dowait--;
+	if (pid == -1 && errno == ECHILD && job != NULL)
+		job->state = JOBDONE;
 	if (breakwaitcmd != 0) {
 		breakwaitcmd = 0;
 		if (pid <= 0)

@@ -24,9 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man8/diskless.8,v 1.26 2005/01/21 08:36:40 ru Exp $
+.\" $FreeBSD: src/share/man/man8/diskless.8,v 1.26.2.4 2006/01/24 18:26:21 ceri Exp $
 .\"
-.Dd September 28, 2004
+.Dd January 24, 2006
 .Dt DISKLESS 8
 .Os
 .Sh NAME
@@ -106,7 +106,7 @@ you can install a version that uses
 by setting
 .Li LOADER_TFTP_SUPPORT=YES
 in your
-.Pa /etc/make.conf ,
+.Xr make.conf 5 ,
 then recompiling and reinstalling
 .Xr pxeboot 8
 via the command listed below.
@@ -146,18 +146,11 @@ scripts recognize a
 .Nm
 startup and perform
 the actions found in
-.Pa /etc/rc.d/initdiskless ,
 .Pa /etc/rc.d/resolv ,
 .Pa /etc/rc.d/tmp ,
+.Pa /etc/rc.d/var ,
 and
-.Pa /etc/rc.d/var .
-On early 5.x releases, the functions of latter three scripts where
-implemented in
-.Pa /etc/rc.d/diskless .
-On older systems, the scripts are located in
-.Pa /etc/rc.diskless1
-and
-.Pa /etc/rc.diskless2 .
+.Pa /etc/rc.initdiskless .
 .Sh CONFIGURATION
 In order to run a
 .Nm
@@ -248,6 +241,18 @@ scripts provide a mechanism through which you can override various files
 in
 .Pa /etc
 (as well as other subdirectories of root).
+.Pp
+One difference that you should pay particular attention to is
+the value of
+.Va local_startup
+in
+.Pa /etc/defaults/rc.conf .
+A typical value for a
+.Nm
+boot is
+.Va mountcritremote ,
+however your needs may be different.
+.Pp
 The scripts provide four
 overriding directories situated in
 .Pa /conf/base ,
@@ -452,6 +457,7 @@ encryption keys.
 .Sh SEE ALSO
 .Xr ethers 5 ,
 .Xr exports 5 ,
+.Xr make.conf 5 ,
 .Xr bootpd 8 ,
 .Xr mountd 8 ,
 .Xr nfsd 8 ,

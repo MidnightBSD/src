@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/syscallsubr.h,v 1.31 2005/07/07 18:17:55 jhb Exp $
+ * $FreeBSD: src/sys/sys/syscallsubr.h,v 1.31.2.1 2005/12/28 19:30:41 ps Exp $
  */
 
 #ifndef _SYS_SYSCALLSUBR_H_
@@ -60,6 +60,12 @@ int	kern_chmod(struct thread *td, char *path, enum uio_seg pathseg,
 	    int mode);
 int	kern_chown(struct thread *td, char *path, enum uio_seg pathseg, int uid,
 	    int gid);
+int	kern_clock_getres(struct thread *td, clockid_t clock_id,
+	    struct timespec *ts);
+int	kern_clock_gettime(struct thread *td, clockid_t clock_id,
+	    struct timespec *ats);
+int	kern_clock_settime(struct thread *td, clockid_t clock_id,
+	    struct timespec *ats);
 int	kern_connect(struct thread *td, int fd, struct sockaddr *sa);
 int	kern_execve(struct thread *td, struct image_args *args,
 	    struct mac *mac_p);
@@ -105,6 +111,8 @@ int	kern_pwritev(struct thread *td, int fd, struct uio *auio, off_t offset);
 int	kern_readlink(struct thread *td, char *path, enum uio_seg pathseg,
 	    char *buf, enum uio_seg bufseg, int count);
 int	kern_readv(struct thread *td, int fd, struct uio *auio);
+int	kern_recvit(struct thread *td, int s, struct msghdr *mp, void *namelenp,
+	    enum uio_seg segflg, struct mbuf **controlp);
 int	kern_rename(struct thread *td, char *from, char *to,
 	    enum uio_seg pathseg);
 int	kern_rmdir(struct thread *td, char *path, enum uio_seg pathseg);

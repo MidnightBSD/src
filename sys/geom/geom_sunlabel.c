@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_sunlabel.c,v 1.44 2005/04/12 08:14:15 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_sunlabel.c,v 1.44.2.1 2005/12/29 05:59:51 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -276,9 +276,9 @@ g_sunlabel_taste(struct g_class *mp, struct g_provider *pp, int flags)
 		if (ms->sectorsize < 512)
 			break;
 		g_topology_unlock();
-		buf = g_read_data(cp, 0, ms->sectorsize, &error);
+		buf = g_read_data(cp, 0, ms->sectorsize, NULL);
 		g_topology_lock();
-		if (buf == NULL || error != 0)
+		if (buf == NULL)
 			break;
 
 		/*

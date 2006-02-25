@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_proto.c,v 1.17.2.2 2005/09/03 22:40:02 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_proto.c,v 1.17.2.7 2006/02/16 16:57:24 sam Exp $");
 
 /*
  * IEEE 802.11 protocol support.
@@ -97,6 +97,9 @@ ieee80211_proto_attach(struct ieee80211com *ic)
 	ic->ic_rtsthreshold = IEEE80211_RTS_DEFAULT;
 	ic->ic_fragthreshold = IEEE80211_FRAG_DEFAULT;
 	ic->ic_fixed_rate = IEEE80211_FIXED_RATE_NONE;
+	ic->ic_bmiss_max = IEEE80211_BMISS_MAX;
+	callout_init(&ic->ic_swbmiss, CALLOUT_MPSAFE);
+	ic->ic_mcast_rate = IEEE80211_MCAST_RATE_DEFAULT;
 	ic->ic_protmode = IEEE80211_PROT_CTSONLY;
 	ic->ic_roaming = IEEE80211_ROAMING_AUTO;
 
@@ -737,7 +740,7 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 	 */
         if ((ic->ic_opmode == IEEE80211_M_HOSTAP &&
 	     (wme->wme_flags & WME_F_AGGRMODE) == 0) ||
-	    (ic->ic_opmode != IEEE80211_M_HOSTAP &&
+	    (ic->ic_opmode == IEEE80211_M_STA &&
 	     (ic->ic_bss->ni_flags & IEEE80211_NODE_QOS) == 0) ||
 	    (ic->ic_flags & IEEE80211_F_WME) == 0) {
 		chanp = &wme->wme_chanParams.cap_wmeParams[WME_AC_BE];
@@ -750,7 +753,7 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 		chanp->wmep_logcwmax = bssp->wmep_logcwmax =
 			phyParam[ic->ic_curmode].logcwmax;
 		chanp->wmep_txopLimit = bssp->wmep_txopLimit =
-			(ic->ic_caps & IEEE80211_C_BURST) ?
+			(ic->ic_flags & IEEE80211_F_BURST) ?
 				phyParam[ic->ic_curmode].txopLimit : 0;		
 		IEEE80211_DPRINTF(ic, IEEE80211_MSG_WME,
 			"%s: %s [acm %u aifsn %u log2(cwmin) %u "
@@ -816,6 +819,63 @@ ieee80211_wme_updateparams(struct ieee80211com *ic)
 	}
 }
 
+void
+ieee80211_beacon_miss(struct ieee80211com *ic)
+{
+
+	if (ic->ic_flags & IEEE80211_F_SCAN) {
+		/* XXX check ic_curchan != ic_bsschan? */
+		return;
+	}
+	IEEE80211_DPRINTF(ic,
+		IEEE80211_MSG_STATE | IEEE80211_MSG_DEBUG,
+		"%s\n", "beacon miss");
+
+	/*
+	 * Our handling is only meaningful for stations that are
+	 * associated; any other conditions else will be handled
+	 * through different means (e.g. the tx timeout on mgt frames).
+	 */
+	if (ic->ic_opmode != IEEE80211_M_STA || ic->ic_state != IEEE80211_S_RUN)
+		return;
+
+	if (++ic->ic_bmiss_count < ic->ic_bmiss_max) {
+		/*
+		 * Send a directed probe req before falling back to a scan;
+		 * if we receive a response ic_bmiss_count will be reset.
+		 * Some cards mistakenly report beacon miss so this avoids
+		 * the expensive scan if the ap is still there.
+		 */
+		ieee80211_send_probereq(ic->ic_bss, ic->ic_myaddr,
+			ic->ic_bss->ni_bssid, ic->ic_bss->ni_bssid,
+			ic->ic_bss->ni_essid, ic->ic_bss->ni_esslen,
+			ic->ic_opt_ie, ic->ic_opt_ie_len);
+		return;
+	}
+	ic->ic_bmiss_count = 0;
+	ieee80211_new_state(ic, IEEE80211_S_SCAN, 0);
+}
+
+/*
+ * Software beacon miss handling.  Check if any beacons
+ * were received in the last period.  If not post a
+ * beacon miss; otherwise reset the counter.
+ */
+static void
+ieee80211_swbmiss(void *arg)
+{
+	struct ieee80211com *ic = arg;
+
+	if (ic->ic_swbmiss_count == 0) {
+		ieee80211_beacon_miss(ic);
+		if (ic->ic_bmiss_count == 0)	/* don't re-arm timer */
+			return;
+	} else
+		ic->ic_swbmiss_count = 0;
+	callout_reset(&ic->ic_swbmiss, ic->ic_swbmiss_period,
+		ieee80211_swbmiss, ic);
+}
+
 static void
 sta_disassoc(void *arg, struct ieee80211_node *ni)
 {
@@ -849,6 +909,8 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 		ieee80211_state_name[ostate], ieee80211_state_name[nstate]);
 	ic->ic_state = nstate;			/* state transition */
 	ni = ic->ic_bss;			/* NB: no reference held */
+	if (ic->ic_flags_ext & IEEE80211_FEXT_SWBMISS)
+		callout_stop(&ic->ic_swbmiss);
 	switch (nstate) {
 	case IEEE80211_S_INIT:
 		switch (ostate) {
@@ -1053,6 +1115,20 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 					arg == IEEE80211_FC0_SUBTYPE_ASSOC_RESP);
 			if_start(ifp);		/* XXX not authorized yet */
 			break;
+		}
+		if (ostate != IEEE80211_S_RUN &&
+		    ic->ic_opmode == IEEE80211_M_STA &&
+		    (ic->ic_flags_ext & IEEE80211_FEXT_SWBMISS)) {
+			/*
+			 * Start s/w beacon miss timer for devices w/o
+			 * hardware support.  We fudge a bit here since
+			 * we're doing this in software.
+			 */
+			ic->ic_swbmiss_period = IEEE80211_TU_TO_TICKS(
+				2 * ic->ic_bmissthreshold * ni->ni_intval);
+			ic->ic_swbmiss_count = 0;
+			callout_reset(&ic->ic_swbmiss, ic->ic_swbmiss_period,
+				ieee80211_swbmiss, ic);
 		}
 		/*
 		 * Start/stop the authenticator when operating as an

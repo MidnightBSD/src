@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/ip6.h,v 1.1.1.1 2006-02-25 02:26:22 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /home/cvs/src/contrib/tcpdump/ip6.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL) */
 /*	$NetBSD: ip6.h,v 1.9 2000/07/13 05:34:21 itojun Exp $	*/
 /*	$KAME: ip6.h,v 1.9 2000/07/02 21:01:32 itojun Exp $	*/
 

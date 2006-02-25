@@ -165,7 +165,7 @@
 # include <libutil.h>
 #endif
 
-RCSID("$Id: loginrec.c,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $");
+RCSID("$Id: loginrec.c,v 1.1.1.2 2006-02-25 02:34:24 laffer1 Exp $");
 RCSID("$FreeBSD: src/crypto/openssh/loginrec.c,v 1.9.2.1 2005/09/11 16:50:34 des Exp $");
 
 /**

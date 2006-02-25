@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/main.c,v 1.61.2.3 2005/11/17 18:08:58 krion Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/main.c,v 1.61.2.4 2006/01/16 19:48:17 flz Exp $");
 
 #include <err.h>
 #include <sys/param.h>
@@ -27,7 +27,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/main.c,v 1.61.2.3 2005/11/17 18
 #include "lib.h"
 #include "add.h"
 
-static char Options[] = "hvIRfnrp:P:SMt:C:";
+static char Options[] = "hvIRfnrp:P:SMt:C:K";
 
 char	*Prefix		= NULL;
 Boolean	PrefixRecursive	= FALSE;
@@ -35,6 +35,7 @@ char	*Chroot		= NULL;
 Boolean	NoInstall	= FALSE;
 Boolean	NoRecord	= FALSE;
 Boolean Remote		= FALSE;
+Boolean KeepPackage	= FALSE;
 
 char	*Mode		= NULL;
 char	*Owner		= NULL;
@@ -130,9 +131,12 @@ main(int argc, char **argv)
 	    Force = TRUE;
 	    break;
 
+	case 'K':
+	    KeepPackage = TRUE;
+	    break;
+
 	case 'n':
 	    Fake = TRUE;
-	    Verbose = TRUE;
 	    break;
 
 	case 'r':
@@ -316,7 +320,7 @@ static void
 usage()
 {
     fprintf(stderr, "%s\n%s\n",
-	"usage: pkg_add [-vInrfRMS] [-t template] [-p prefix] [-P prefix] [-C chrootdir]",
+	"usage: pkg_add [-vInrfRMSK] [-t template] [-p prefix] [-P prefix] [-C chrootdir]",
 	"               pkg-name [pkg-name ...]");
     exit(1);
 }

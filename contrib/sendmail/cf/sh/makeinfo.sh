@@ -11,7 +11,7 @@
 # the sendmail distribution.
 #
 #
-#	$Id: makeinfo.sh,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $
+#	$Id: makeinfo.sh,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $
 #
 # $FreeBSD: src/contrib/sendmail/cf/sh/makeinfo.sh,v 1.7 2002/06/11 21:16:35 gshapiro Exp $
 #

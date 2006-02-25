@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/3dfx/Makefile,v 1.11 2001/03/27 19:04:09 cokane Exp $
+# $FreeBSD: src/sys/modules/3dfx/Makefile,v 1.11.14.1 2006/02/10 00:37:57 yar Exp $
 
 MAINTAINER=	cokane@FreeBSD.org
 
@@ -18,7 +18,9 @@ TDFX_OPTS=	"\#define TDFX_LINUX"
 # Uncomment this for debugging messages
 #CFLAGS+=	-DDEBUG
 
+.if !defined(KERNBUILDDIR)
 opt_tdfx.h:
 	echo $(TDFX_OPTS) > opt_tdfx.h
+.endif
 
 .include <bsd.kmod.mk>

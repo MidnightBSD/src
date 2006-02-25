@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: if_nve.c,v 1.1.1.1 2006-02-25 02:28:09 laffer1 Exp $
+ * $Id: if_nve.c,v 1.1.1.2 2006-02-25 02:36:50 laffer1 Exp $
  */
 
 /*
@@ -74,7 +74,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nve/if_nve.c,v 1.7.2.7 2005/12/12 19:40:04 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nve/if_nve.c,v 1.7.2.8 2005/12/25 21:57:03 bz Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -637,6 +637,8 @@ nve_init_locked(struct nve_softc *sc)
 	nve_stop(sc);
 	DEBUGOUT(NVE_DEBUG_INIT, "nve: do pfnInit\n");
 
+	nve_ifmedia_upd_locked(ifp);
+
 	/* Setup Hardware interface and allocate memory structures */
 	error = sc->hwapi->pfnInit(sc->hwapi->pADCX, 
 	    0, /* force speed */ 
@@ -657,7 +659,6 @@ nve_init_locked(struct nve_softc *sc)
 
 	/* Setup multicast filter */
 	nve_setmulti(sc);
-	nve_ifmedia_upd_locked(ifp);
 
 	/* Update interface parameters */
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
@@ -1300,7 +1301,7 @@ nve_osalloc(PNV_VOID ctx, PMEMORY_BLOCK mem)
 	sc = (struct nve_softc *)ctx;
 
 	mem->pLogical = (PVOID)contigmalloc(mem->uiLength, M_DEVBUF,
-	    M_NOWAIT | M_ZERO, 0, ~0, PAGE_SIZE, 0);
+	    M_NOWAIT | M_ZERO, 0, 0xffffffff, PAGE_SIZE, 0);
 
 	if (!mem->pLogical) {
 		device_printf(sc->dev, "memory allocation failed\n");

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_mib.c,v 1.23 2005/01/14 04:44:56 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_mib.c,v 1.23.2.1 2005/12/22 21:25:19 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -153,13 +153,6 @@ linux_get_prison(struct thread *td)
 			free(lpr, M_PRISON);
 	}
 	return (pr);
-}
-
-void
-linux_mib_destroy(void)
-{
-
-	mtx_destroy(&osname_lock);
 }
 
 void

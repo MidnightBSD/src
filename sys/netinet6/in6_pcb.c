@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_pcb.c,v 1.62.2.1 2005/11/04 20:26:15 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_pcb.c,v 1.62.2.2 2005/12/25 12:44:12 suz Exp $	*/
 /*	$KAME: in6_pcb.c,v 1.31 2001/05/21 05:45:10 jinmei Exp $	*/
   
 /*-
@@ -839,7 +839,7 @@ in6_pcbpurgeif0(head, ifp)
 				if (imm->i6mm_maddr->in6m_ifp == ifp) {
 					LIST_REMOVE(imm, i6mm_chain);
 					in6_delmulti(imm->i6mm_maddr);
-					free(imm, M_IPMADDR);
+					free(imm, M_IP6MADDR);
 				}
 			}
 		}

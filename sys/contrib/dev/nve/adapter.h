@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define HDA_VERSION_STRING "HDR A: $Revision: 1.1.1.1 $"
+#define HDA_VERSION_STRING "HDR A: $Revision: 1.1.1.2 $"
 
 #ifdef MODS_NETWORK_BUILD
 #ifndef _DRVAPP_H_

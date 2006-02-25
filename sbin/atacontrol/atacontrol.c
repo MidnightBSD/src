@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000 - 2005 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2000 - 2006 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,8 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -25,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/atacontrol/atacontrol.c,v 1.36.2.1 2005/08/07 11:16:58 sos Exp $
+ * $FreeBSD: src/sbin/atacontrol/atacontrol.c,v 1.36.2.4 2006/01/30 10:20:28 sos Exp $
  */
 
 #include <sys/types.h>
@@ -103,7 +101,7 @@ usage()
 		"        atacontrol detach channel\n"
 		"        atacontrol reinit channel\n"
 		"        atacontrol create type [interleave] disk0 ... diskN\n"
-		"        atacontrol delete channel\n"
+		"        atacontrol delete array\n"
 		"        atacontrol addspare array disk\n"
 		"        atacontrol rebuild array\n"
 		"        atacontrol status array\n"
@@ -131,10 +129,12 @@ param_print(struct ata_params *parm)
 {
 	printf("<%.40s/%.8s> ", parm->model, parm->revision);
 	if (parm->satacapabilities && parm->satacapabilities != 0xffff) {
-		if (parm->satacapabilities & ATA_SATA_GEN1)
-			printf("Serial ATA v1.0\n");
 		if (parm->satacapabilities & ATA_SATA_GEN2)
 			printf("Serial ATA II\n");
+		else if (parm->satacapabilities & ATA_SATA_GEN1)
+			printf("Serial ATA v1.0\n");
+		else
+			printf("Unknown serial ATA version\n");
 	}
 	else
 		printf("ATA/ATAPI revision %d\n", version(parm->version_major));
@@ -154,10 +154,12 @@ cap_print(struct ata_params *parm)
 	printf("\n");
 	printf("Protocol              ");
 	if (parm->satacapabilities && parm->satacapabilities != 0xffff) {
-		if (parm->satacapabilities & ATA_SATA_GEN1)
-			printf("Serial ATA v1.0\n");
 		if (parm->satacapabilities & ATA_SATA_GEN2)
 			printf("Serial ATA II\n");
+		else if (parm->satacapabilities & ATA_SATA_GEN1)
+			printf("Serial ATA v1.0\n");
+		else
+			printf("Unknown serial ATA version\n");
 	}
 	else
 		printf("ATA/ATAPI revision %d\n", version(parm->version_major));

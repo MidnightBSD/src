@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/random/yarrow.c,v 1.45 2005/03/11 15:42:50 ume Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/random/yarrow.c,v 1.45.2.1 2006/02/08 05:58:17 ps Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -57,7 +57,7 @@ static void generator_gate(void);
 static void reseed(u_int);
 
 /* The reseed thread mutex */
-static struct mtx random_reseed_mtx;
+struct mtx random_reseed_mtx;
 
 /* Process a single stochastic event off the harvest queue */
 void
@@ -258,11 +258,11 @@ reseed(u_int fastslow)
 	/* 7. Dump to seed file */
 	/* XXX Not done here yet */
 
-	/* Release the reseed mutex */
-	mtx_unlock(&random_reseed_mtx);
-
 	/* Unblock the device if it was blocked due to being unseeded */
 	random_yarrow_unblock();
+
+	/* Release the reseed mutex */
+	mtx_unlock(&random_reseed_mtx);
 }
 
 /* Internal function to return processed entropy from the PRNG */

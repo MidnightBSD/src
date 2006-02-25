@@ -31,7 +31,7 @@
  *   Author: Juergen Pfeifer <juergen.pfeifer@gmx.net> 1997                 *
  ****************************************************************************/
 
-// $Id: cursesapp.h,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $
+// $Id: cursesapp.h,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $
 
 #ifndef NCURSES_CURSESAPP_H_incl
 #define NCURSES_CURSESAPP_H_incl

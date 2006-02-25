@@ -1,4 +1,4 @@
-@c $Id: programming.texi,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+@c $Id: programming.texi,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
 
 @node Programming with Kerberos
 @chapter Programming with Kerberos

@@ -18,7 +18,7 @@
 #include "includes.h"
 #include "xmalloc.h"
 
-RCSID("$Id: bsd-misc.c,v 1.1.1.1 2006-02-25 02:26:33 laffer1 Exp $");
+RCSID("$Id: bsd-misc.c,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $");
 
 #ifndef HAVE___PROGNAME
 char *__progname;

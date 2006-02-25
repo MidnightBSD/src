@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/uzip/g_uzip.c,v 1.4.2.1 2005/10/02 11:22:28 fjoe Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/uzip/g_uzip.c,v 1.4.2.3 2006/01/25 15:55:27 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -287,6 +287,7 @@ g_uzip_start(struct bio *bp)
 	    bp2->bio_offset, bp2->bio_length));
 	bp2->bio_data = malloc(bp2->bio_length, M_GEOM_UZIP, M_NOWAIT);
 	if (bp2->bio_data == NULL) {
+		g_destroy_bio(bp2);
 		g_io_deliver(bp, ENOMEM);
 		return;
 	}
@@ -379,8 +380,8 @@ g_uzip_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	 */
 	DPRINTF(("%s: media sectorsize %u, mediasize %lld\n",
 	    gp->name, pp->sectorsize, pp->mediasize));
-	buf = g_read_data(cp, 0, pp->sectorsize, &error);
-	if (buf == NULL || error != 0)
+	buf = g_read_data(cp, 0, pp->sectorsize, NULL);
+	if (buf == NULL)
 		goto err;
 	header = (struct cloop_header *) buf;
 	if (strncmp(header->magic, CLOOP_MAGIC_START,
@@ -429,8 +430,8 @@ g_uzip_taste(struct g_class *mp, struct g_provider *pp, int flags)
 
 		free(buf, M_GEOM);
 		buf = g_read_data(
-		    cp, blk * pp->sectorsize, pp->sectorsize, &error);
-		if (buf == NULL || error != 0)
+		    cp, blk * pp->sectorsize, pp->sectorsize, NULL);
+		if (buf == NULL)
 			goto err;
 		nread = MIN(total_offsets - offsets_read,
 		     pp->sectorsize / sizeof(uint64_t));

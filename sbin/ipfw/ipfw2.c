@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: src/sbin/ipfw/ipfw2.c,v 1.76.2.2 2005/12/06 02:51:41 ume Exp $
+ * $FreeBSD: src/sbin/ipfw/ipfw2.c,v 1.76.2.5 2006/01/15 01:00:55 glebius Exp $
  */
 
 #include <sys/param.h>
@@ -419,6 +419,8 @@ struct _s_x rule_options[] = {
 	{ ")",			TOK_ENDBRACE },		/* pseudo option */
 	{ NULL, 0 }	/* terminator */
 };
+
+#define	TABLEARG	"tablearg"
 
 static __inline uint64_t
 align_uint64(uint64_t *pll) {
@@ -1391,9 +1393,6 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 			twidth = strlen(timestr);
 		}
 		if (rule->timestamp) {
-#if _FreeBSD_version < 500000 /* XXX check */
-#define	_long_to_time(x)	(time_t)(x)
-#endif
 			t = _long_to_time(rule->timestamp);
 
 			strcpy(timestr, ctime(&t));
@@ -1460,33 +1459,28 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 				print_unreach6_code(cmd->arg1);
 			break;
 
+#define	PRINT_WITH_ARG(o)						\
+			if (cmd->arg1 == IP_FW_TABLEARG)		\
+				printf("%s tablearg", (o));		\
+			else						\
+				printf("%s %u", (o), cmd->arg1);	\
+			break;
+
 		case O_SKIPTO:
-			printf("skipto %u", cmd->arg1);
-			break;
-
+			PRINT_WITH_ARG("skipto");
 		case O_PIPE:
-			printf("pipe %u", cmd->arg1);
-			break;
-
+			PRINT_WITH_ARG("pipe");
 		case O_QUEUE:
-			printf("queue %u", cmd->arg1);
-			break;
-
+			PRINT_WITH_ARG("queue");
 		case O_DIVERT:
-			printf("divert %u", cmd->arg1);
-			break;
-
+			PRINT_WITH_ARG("divert");
 		case O_TEE:
-			printf("tee %u", cmd->arg1);
-			break;
-
+			PRINT_WITH_ARG("tee");
 		case O_NETGRAPH:
-			printf("netgraph %u", cmd->arg1);
-			break;
-
+			PRINT_WITH_ARG("netgraph");
 		case O_NGTEE:
-			printf("ngtee %u", cmd->arg1);
-			break;
+			PRINT_WITH_ARG("ngtee");
+#undef PRINT_WITH_ARG
 
 		case O_FORWARD_IP:
 		    {
@@ -2163,7 +2157,7 @@ list_pipes(void *data, uint nbytes, int ac, char *av[])
 		char buf[30];
 		char prefix[80];
 
-		if (p->next != (struct dn_pipe *)DN_IS_PIPE)
+		if (p->next.sle_next != (struct dn_pipe *)DN_IS_PIPE)
 			break;	/* done with pipes, now queues */
 
 		/*
@@ -2202,7 +2196,7 @@ list_pipes(void *data, uint nbytes, int ac, char *av[])
 	for (fs = next; nbytes >= sizeof *fs; fs = next) {
 		char prefix[80];
 
-		if (fs->next != (struct dn_flow_set *)DN_IS_QUEUE)
+		if (fs->next.sle_next != (struct dn_flow_set *)DN_IS_QUEUE)
 			break;
 		l = sizeof(*fs) + fs->rq_elements * sizeof(*q);
 		next = (char *)fs + l;
@@ -3866,26 +3860,38 @@ add(int ac, char *av[])
 		break;
 
 	case TOK_QUEUE:
+		action->len = F_INSN_SIZE(ipfw_insn_pipe);
+		action->opcode = O_QUEUE;
+		goto chkarg;
 	case TOK_PIPE:
 		action->len = F_INSN_SIZE(ipfw_insn_pipe);
+		action->opcode = O_PIPE;
+		goto chkarg;
 	case TOK_SKIPTO:
-		if (i == TOK_QUEUE)
-			action->opcode = O_QUEUE;
-		else if (i == TOK_PIPE)
-			action->opcode = O_PIPE;
-		else if (i == TOK_SKIPTO)
-			action->opcode = O_SKIPTO;
-		NEED1("missing skipto/pipe/queue number");
-		action->arg1 = strtoul(*av, NULL, 10);
-		av++; ac--;
-		break;
-
+		action->opcode = O_SKIPTO;
+		goto chkarg;
+	case TOK_NETGRAPH:
+		action->opcode = O_NETGRAPH;
+		goto chkarg;
+	case TOK_NGTEE:
+		action->opcode = O_NGTEE;
+		goto chkarg;
 	case TOK_DIVERT:
+		action->opcode = O_DIVERT;
+		goto chkarg;
 	case TOK_TEE:
-		action->opcode = (i == TOK_DIVERT) ? O_DIVERT : O_TEE;
-		NEED1("missing divert/tee port");
-		action->arg1 = strtoul(*av, NULL, 0);
-		if (action->arg1 == 0) {
+		action->opcode = O_TEE;
+chkarg:	
+		if (!ac)
+			errx(EX_USAGE, "missing argument for %s", *(av - 1));
+		if (isdigit(**av)) {
+			action->arg1 = strtoul(*av, NULL, 10);
+			if (action->arg1 <= 0 || action->arg1 >= IP_FW_TABLEARG)
+				errx(EX_DATAERR, "illegal argument for %s",
+				    *(av - 1));
+		} else if (_substrcmp(*av, TABLEARG) == 0) {
+			action->arg1 = IP_FW_TABLEARG;
+		} else if (i == TOK_DIVERT || i == TOK_TEE) {
 			struct servent *s;
 			setservent(1);
 			s = getservbyname(av[0], "divert");
@@ -3893,17 +3899,8 @@ add(int ac, char *av[])
 				action->arg1 = ntohs(s->s_port);
 			else
 				errx(EX_DATAERR, "illegal divert/tee port");
-		}
-		ac--; av++;
-		break;
-
-	case TOK_NETGRAPH:
-	case TOK_NGTEE:
-		action->opcode = (i == TOK_NETGRAPH ) ? O_NETGRAPH : O_NGTEE;
-		NEED1("missing netgraph cookie");
-		action->arg1 = strtoul(*av, NULL, 0);
-		if (action->arg1 == 0)
-			errx(EX_DATAERR, "illegal netgraph cookie");
+		} else
+			errx(EX_DATAERR, "illegal argument for %s", *(av - 1));
 		ac--; av++;
 		break;
 

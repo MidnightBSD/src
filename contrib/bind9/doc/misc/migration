@@ -252,4 +252,4 @@ necessary, the umask should be set explicitly in the script used to
 start the named process.
 
 
-$Id: migration,v 1.1.1.1 2006-02-25 02:25:16 laffer1 Exp $
+$Id: migration,v 1.1.1.2 2006-02-25 02:32:05 laffer1 Exp $

@@ -1,5 +1,5 @@
 /* krb5-types.h -- this file was generated for i386-unknown-freebsd5.0 by
-                   $Id: krb5-types.h,v 1.1.1.1 2006-02-25 02:26:46 laffer1 Exp $ */
+                   $Id: krb5-types.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
 
 /* $FreeBSD: src/kerberos5/include/krb5-types.h,v 1.3 2002/08/30 21:33:16 nectar Exp $ */
 

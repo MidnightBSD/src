@@ -1,4 +1,4 @@
-# $Id: Makefile.inc,v 1.1.1.1 2006-02-25 02:29:33 laffer1 Exp $
+# $Id: Makefile.inc,v 1.1.1.2 2006-02-25 02:38:23 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/acpi/Makefile.inc,v 1.8 2003/08/07 16:51:50 njl Exp $
 
 ACPICA_DIR= ${.CURDIR}/../../../sys/contrib/dev/acpica

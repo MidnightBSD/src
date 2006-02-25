@@ -21,7 +21,7 @@
 
 #include <tack.h>
 
-MODULE_ID("$Id: modes.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $")
+MODULE_ID("$Id: modes.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
 
 /*
  * Tests boolean flags and terminal modes.

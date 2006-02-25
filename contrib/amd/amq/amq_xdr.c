@@ -38,7 +38,7 @@
  *
  *      %W% (Berkeley) %G%
  *
- * $Id: amq_xdr.c,v 1.1.1.1 2006-02-25 02:25:13 laffer1 Exp $
+ * $Id: amq_xdr.c,v 1.1.1.2 2006-02-25 02:32:00 laffer1 Exp $
  *
  */
 

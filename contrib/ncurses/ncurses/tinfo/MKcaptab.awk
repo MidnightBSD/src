@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: MKcaptab.awk,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $
+# $Id: MKcaptab.awk,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $
 AWK=${1-awk}
 DATA=${2-../include/Caps}
 

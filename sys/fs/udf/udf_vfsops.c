@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/udf_vfsops.c,v 1.33.2.1 2005/09/30 06:26:42 delphij Exp $
+ * $FreeBSD: src/sys/fs/udf/udf_vfsops.c,v 1.33.2.2 2006/02/20 00:53:13 yar Exp $
  */
 
 /* udf_vfsops.c */
@@ -692,7 +692,7 @@ udf_fhtovp(struct mount *mp, struct fid *fhp, struct vnode **vpp)
 	}
 
 	*vpp = nvp;
-	vnode_create_vobject(*vpp, 0, curthread);
+	vnode_create_vobject_off(*vpp, 0, curthread);
 	return (0);
 }
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/NOTES,v 1.1325.2.6 2005/10/28 19:02:22 jhb Exp $
+# $FreeBSD: src/sys/conf/NOTES,v 1.1325.2.13 2006/02/23 02:13:30 mlaier Exp $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
 #
@@ -434,6 +434,9 @@ options 	COMPILING_LINT
 # counters for performance monitoring.  The base kernel needs to configured
 # with the 'options' line, while the hwpmc device can be either compiled
 # in or loaded as a loadable kernel module.
+#
+# Additional configuration options may be required on specific architectures,
+# please see hwpmc(4).
 #
 device  	hwpmc			# Driver (also a loadable module)
 options 	HWPMC_HOOKS		# Other necessary kernel hooks
@@ -1187,6 +1190,7 @@ device		nmdm		#back-to-back tty devices
 device		md		#Memory/malloc disk
 device		snp		#Snoop device - to look at pty/vty/etc..
 device		ccd		#Concatenated disk driver
+device		firmware	#firmware(9) support
 
 # Kernel side iconv library
 options 	LIBICONV
@@ -1725,6 +1729,7 @@ device		miibus
 # fxp:  Intel EtherExpress Pro/100B
 #	(hint of prefer_iomap can be done to prefer I/O instead of Mem mapping)
 # hme:  Sun HME (Happy Meal Ethernet)
+# le:   AMD Am7900 LANCE and Am79C9xx PCnet
 # lge:	Support for PCI gigabit ethernet adapters based on the Level 1
 #	LXT1001 NetCellerator chipset. This includes the D-Link DGE-500SX,
 #	SMC TigerCard 1000 (SMC9462SX), and some Addtron cards.
@@ -1842,6 +1847,7 @@ device		xl		# 3Com 3c90x (``Boomerang'', ``Cyclone'')
 
 # PCI Ethernet NICs.
 device		de		# DEC/Intel DC21x4x (``Tulip'')
+device		le		# AMD Am7900 LANCE and Am79C9xx PCnet
 device		txp		# 3Com 3cR990 (``Typhoon'')
 device		vx		# 3Com 3c590, 3c595 (``Vortex'')
 
@@ -1925,9 +1931,13 @@ device		sound
 #		    zero if don't know what to put in (and you don't,
 #		    since this is unsupported at the moment...).
 #
-# snd_als4000:		Avance Logic ALS4000 PCI.
 # snd_ad1816:		Analog Devices AD1816 ISA PnP/non-PnP.
-# snd_audiocs:		Crystal Semiconductor CS4231 SBus/EBus.
+# snd_als4000:		Avance Logic ALS4000 PCI.
+# snd_atiixp:		ATI IXP 200/300/400 PCI.
+# snd_au88x0		Aureal Vortex 1/2/Advantage PCI. This driver
+#			lacks support for playback and recording.
+# snd_audiocs:		Crystal Semiconductor CS4231 SBus/EBus. Only
+#			for sparc64.
 # snd_cmi:		CMedia CMI8338/CMI8738 PCI.
 # snd_cs4281:		Crystal Semiconductor CS4281 PCI.
 # snd_csa:		Crystal Semiconductor CS461x/428x PCI. (except
@@ -1940,7 +1950,8 @@ device		sound
 # snd_fm801:		Forte Media FM801 PCI.
 # snd_gusc:		Gravis UltraSound ISA PnP/non-PnP.
 # snd_ich:		Intel ICH PCI and some more audio controllers
-#			embedded in a chipset.
+#			embedded in a chipset, for example nVidia
+#			nForce controllers.
 # snd_maestro:		ESS Technology Maestro-1/2x PCI.
 # snd_maestro3:		ESS Technology Maestro-3/Allegro PCI.
 # snd_mss:		Microsoft Sound System ISA PnP/non-PnP.
@@ -1952,7 +1963,7 @@ device		sound
 # snd_sbc:		Creative SoundBlaster ISA PnP/non-PnP.
 #			Supports ESS and Avance ISA chips as well.
 # snd_solo:		ESS Solo-1x PCI.
-# snd_t4dwave:		Trident 4DWave PCI, Sis 7018 PCI and Acer Labs
+# snd_t4dwave:		Trident 4DWave DX/NX PCI, Sis 7018 PCI and Acer Labs
 #			M5451 PCI.
 # snd_via8233:		VIA VT8233x PCI.
 # snd_via82c686:	VIA VT82C686A PCI.
@@ -1961,6 +1972,7 @@ device		sound
 
 device		snd_ad1816
 device		snd_als4000
+device		snd_atiixp
 #device		snd_au88x0
 #device		snd_audiocs
 device		snd_cmi
@@ -1985,7 +1997,6 @@ device		snd_t4dwave
 device		snd_via8233
 device		snd_via82c686
 device		snd_vibes
-#device		snd_vortex1
 device		snd_uaudio
 
 # For non-pnp sound cards:

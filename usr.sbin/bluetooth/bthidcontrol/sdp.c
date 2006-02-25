@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdp.c,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/sdp.c,v 1.1 2004/04/10 00:18:00 emax Exp $
+ * $Id: sdp.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/sdp.c,v 1.1.8.1 2006/02/19 15:39:04 markus Exp $
  */
 
 #include <sys/queue.h>
@@ -54,9 +54,9 @@ SDP_ATTR_RANGE(	SDP_ATTR_PROTOCOL_DESCRIPTOR_LIST,
 SDP_ATTR_RANGE	(SDP_ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LISTS,
 		SDP_ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LISTS),
 SDP_ATTR_RANGE(	0x0205,		/* HIDReconnectInitiate */
-		0x0206),	/* HIDDesctiptorList */
-SDP_ATTR_RANGE(	0x020a,		/* HIDBatteryPower */
-		0x020a),
+		0x0206),	/* HIDDescriptorList */
+SDP_ATTR_RANGE(	0x0209,		/* HIDBatteryPower */
+		0x0209),
 SDP_ATTR_RANGE(	0x020d,		/* HIDNormallyConnectable */
 		0x020d)
 	};
@@ -131,14 +131,14 @@ hid_sdp_query(bdaddr_t const *local, struct hid_device *hd, int32_t *error)
 			reconnect_initiate = hid_sdp_parse_boolean(&values[i]);
 			break;
 
-		case 0x0206: /* HIDDesctiptorList */
+		case 0x0206: /* HIDDescriptorList */
 			if (hid_sdp_parse_hid_descriptor(&values[i]) == 0) {
 				hid_descriptor = values[i].value;
 				hid_descriptor_length = values[i].vlen;
 			}
 			break;
 
-		case 0x020a: /* HIDBatteryPower */
+		case 0x0209: /* HIDBatteryPower */
 			battery_power = hid_sdp_parse_boolean(&values[i]);
 			break;
 

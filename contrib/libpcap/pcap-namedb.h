@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/contrib/libpcap/pcap-namedb.h,v 1.6 2005/07/11 03:43:25 sam Exp $
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-namedb.h,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap-namedb.h,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)
  */
 
 #ifndef lib_pcap_namedb_h

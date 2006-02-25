@@ -35,7 +35,7 @@
 #include <gssapi.h>
 #include "nt_gss_common.h"
 
-RCSID("$Id: nt_gss_client.c,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $");
+RCSID("$Id: nt_gss_client.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
 
 /*
  * This program tries to act as a client for the sample in `Sample

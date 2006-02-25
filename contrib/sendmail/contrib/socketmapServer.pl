@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #
 # Contributed by Bastiaan Bakker for SOCKETMAP
-# $Id: socketmapServer.pl,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $
+# $Id: socketmapServer.pl,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $
 
 use strict;
 use IO::Socket;

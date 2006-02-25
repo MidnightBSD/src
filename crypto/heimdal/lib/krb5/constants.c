@@ -33,7 +33,7 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: constants.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: constants.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 const char *krb5_config_file = SYSCONFDIR "/krb5.conf:/etc/krb5.conf";
 const char *krb5_defkeyname = KEYTAB_DEFAULT;

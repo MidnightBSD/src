@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: vkbd.c,v 1.1.1.1 2006-02-25 02:28:14 laffer1 Exp $
+ * $Id: vkbd.c,v 1.1.1.2 2006-02-25 02:37:01 laffer1 Exp $
  * $FreeBSD: src/sys/dev/vkbd/vkbd.c,v 1.7.2.2 2005/08/13 21:24:16 rwatson Exp $
  */
 

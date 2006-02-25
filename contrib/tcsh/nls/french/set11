@@ -1,4 +1,4 @@
-$ $Id: set11,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $
+$ $Id: set11,v 1.1.1.2 2006-02-25 02:34:06 laffer1 Exp $
 $ sh.c
 $set 11 
 1 Attention: pas d'accès au tty (%s).\n

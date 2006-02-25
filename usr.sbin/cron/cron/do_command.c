@@ -17,7 +17,7 @@
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/cron/do_command.c,v 1.22 2004/05/16 19:29:33 yar Exp $";
+  "$FreeBSD: src/usr.sbin/cron/cron/do_command.c,v 1.22.8.1 2006/01/15 17:50:36 delphij Exp $";
 #endif
 
 
@@ -59,7 +59,7 @@ do_command(e, u)
 		break;
 	case 0:
 		/* child process */
-		acquire_daemonlock(1);
+		pidfile_close(pfh);
 		child_process(e, u);
 		Debug(DPROC, ("[%d] child process done, exiting\n", getpid()))
 		_exit(OK_EXIT);

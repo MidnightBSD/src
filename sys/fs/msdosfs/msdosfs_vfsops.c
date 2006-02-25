@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vfsops.c,v 1.144.2.2 2005/10/04 13:13:57 peadar Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vfsops.c,v 1.144.2.3 2006/02/20 00:53:12 yar Exp $ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
 /*-
@@ -929,7 +929,7 @@ msdosfs_fhtovp(mp, fhp, vpp)
 		return (error);
 	}
 	*vpp = DETOV(dep);
-	vnode_create_vobject(*vpp, dep->de_FileSize, curthread);
+	vnode_create_vobject_off(*vpp, dep->de_FileSize, curthread);
 	return (0);
 }
 

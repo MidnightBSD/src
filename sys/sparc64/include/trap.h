@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/trap.h,v 1.11 2003/04/29 21:30:59 jake Exp $
+ * $FreeBSD: src/sys/sparc64/include/trap.h,v 1.11.12.1 2006/01/28 04:02:54 kris Exp $
  */
 
 #ifndef	_MACHINE_TRAP_H_
@@ -41,7 +41,7 @@
 #define	T_FP_DISABLED			7
 #define	T_FP_EXCEPTION_IEEE_754		8
 #define	T_FP_EXCEPTION_OTHER		9
-#define	T_TAG_OFERFLOW			10
+#define	T_TAG_OVERFLOW			10
 #define	T_DIVISION_BY_ZERO		11
 #define	T_DATA_EXCEPTION		12
 #define	T_DATA_ERROR			13

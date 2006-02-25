@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/traceroute/lbl/os-sunos4.h,v 1.1.1.1 2006-02-25 02:26:27 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/traceroute/lbl/os-sunos4.h,v 1.1.1.2 2006-02-25 02:34:12 laffer1 Exp $ (LBL)
  */
 
 /* Prototypes missing in SunOS 4 */

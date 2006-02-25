@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_ef.c,v 1.34.2.1 2005/08/25 05:01:19 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_ef.c,v 1.34.2.3 2006/02/14 21:11:19 rwatson Exp $
  */
 
 #include "opt_inet.h"
@@ -477,8 +477,10 @@ ef_clone(struct ef_link *efl, int ft)
 	efp->ef_pifp = ifp;
 	efp->ef_frametype = ft;
 	eifp = efp->ef_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL)
+	if (eifp == NULL) {
+		free(efp, M_IFADDR);
 		return (ENOSPC);
+	}
 	snprintf(eifp->if_xname, IFNAMSIZ,
 	    "%sf%d", ifp->if_xname, efp->ef_frametype);
 	eifp->if_dname = "ef";
@@ -495,7 +497,7 @@ ef_load(void)
 {
 	struct ifnet *ifp;
 	struct efnet *efp;
-	struct ef_link *efl = NULL;
+	struct ef_link *efl = NULL, *efl_temp;
 	int error = 0, d;
 
 	IFNET_RLOCK();
@@ -533,7 +535,7 @@ ef_load(void)
 	if (error) {
 		if (efl)
 			SLIST_INSERT_HEAD(&efdev, efl, el_next);
-		SLIST_FOREACH(efl, &efdev, el_next) {
+		SLIST_FOREACH_SAFE(efl, &efdev, el_next, efl_temp) {
 			for (d = 0; d < EF_NFT; d++)
 				if (efl->el_units[d]) {
 					if (efl->el_units[d]->ef_pifp != NULL)

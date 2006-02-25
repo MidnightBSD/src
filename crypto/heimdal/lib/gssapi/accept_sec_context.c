@@ -33,7 +33,7 @@
 
 #include "gssapi_locl.h"
 
-RCSID("$Id: accept_sec_context.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: accept_sec_context.c,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $");
 
 krb5_keytab gssapi_krb5_keytab;
 

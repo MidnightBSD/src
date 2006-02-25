@@ -23,7 +23,7 @@
 /*
  * Rx protocol format
  *
- * $Id: rx.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $
+ * $Id: rx.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $
  */
 
 #define FS_RX_PORT	7000

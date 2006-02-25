@@ -42,7 +42,7 @@
 
 #if !(defined(lint) || defined(KERNEL) || defined(_KERNEL))
 static const char rcsid[] =
-    "@(#) $Header: /home/cvs/src/contrib/ipfilter/bpf_filter.c,v 1.1.1.1 2006-02-25 02:26:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/ipfilter/bpf_filter.c,v 1.1.1.2 2006-02-25 02:33:23 laffer1 Exp $ (LBL)";
 #endif
 
 #include <sys/param.h>

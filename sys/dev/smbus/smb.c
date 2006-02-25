@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/smbus/smb.c,v 1.34 2004/06/16 09:46:56 phk Exp $
+ * $FreeBSD: src/sys/dev/smbus/smb.c,v 1.34.8.1 2006/01/12 10:34:38 ru Exp $
  */
 
 #include <sys/param.h>
@@ -58,13 +58,11 @@ struct smb_softc {
 static int smb_probe(device_t);
 static int smb_attach(device_t);
 static int smb_detach(device_t);
-static void smb_identify(driver_t *driver, device_t parent);
 
 static devclass_t smb_devclass;
 
 static device_method_t smb_methods[] = {
 	/* device interface */
-	DEVMETHOD(device_identify,	smb_identify),
 	DEVMETHOD(device_probe,		smb_probe),
 	DEVMETHOD(device_attach,	smb_attach),
 	DEVMETHOD(device_detach,	smb_detach),
@@ -93,12 +91,6 @@ static struct cdevsw smb_cdevsw = {
 	.d_ioctl =	smbioctl,
 	.d_name =	"smb",
 };
-
-static void
-smb_identify(driver_t *driver, device_t parent)
-{
-	BUS_ADD_CHILD(parent, 0, "smb", -1);
-}
 
 static int
 smb_probe(device_t dev)

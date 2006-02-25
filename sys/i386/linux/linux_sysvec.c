@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/linux/linux_sysvec.c,v 1.137 2005/02/07 18:37:51 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/linux/linux_sysvec.c,v 1.137.2.1 2005/12/22 21:25:20 jhb Exp $");
 
 /* XXX we use functions that might not exist. */
 #include "opt_compat.h"
@@ -912,7 +912,6 @@ linux_elf_modevent(module_t mod, int type, void *data)
 				linux_ioctl_unregister_handler(*lihp);
 			if (bootverbose)
 				printf("Linux ELF exec handler removed\n");
-			linux_mib_destroy();
 		} else
 			printf("Could not deinstall ELF interpreter entry\n");
 		break;

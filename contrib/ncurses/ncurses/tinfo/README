@@ -1,4 +1,4 @@
--- $Id: README,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $
+-- $Id: README,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $
 
 The files in this directory (tinfo) are those that support the terminfo
 database and interfaces for ncurses.  The terminfo library can be built

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: gen-unix.h,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $ */
+/* $Id: gen-unix.h,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
 
 /*
  * This file is responsible for defining two operations that are not
@@ -39,6 +39,10 @@
 
 #include <isc/boolean.h>
 #include <isc/lang.h>
+
+#ifdef NEED_OPTARG
+extern char *optarg;
+#endif
 
 #define isc_commandline_parse		getopt
 #define isc_commandline_argument 	optarg

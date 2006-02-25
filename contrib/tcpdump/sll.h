@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/sll.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/sll.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)
  */
 
 /*

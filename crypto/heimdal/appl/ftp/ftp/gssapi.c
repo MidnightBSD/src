@@ -39,7 +39,7 @@
 #include <gssapi.h>
 #include <krb5_err.h>
 
-RCSID("$Id: gssapi.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: gssapi.c,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $");
 
 int ftp_do_gss_bindings = 0;
 

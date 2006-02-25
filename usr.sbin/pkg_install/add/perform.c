@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/perform.c,v 1.77.8.1 2005/11/17 18:08:58 krion Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/perform.c,v 1.77.8.2 2006/01/16 19:48:17 flz Exp $");
 
 #include <err.h>
 #include <paths.h>
@@ -102,7 +102,7 @@ pkg_do(char *pkg)
     else {
 	/* Is it an ftp://foo.bar.baz/file.t[bg]z specification? */
 	if (isURL(pkg)) {
-	    if (!(Home = fileGetURL(NULL, pkg))) {
+	    if (!(Home = fileGetURL(NULL, pkg, KeepPackage))) {
 		warnx("unable to fetch '%s' by URL", pkg);
 		return 1;
 	    }
@@ -334,7 +334,7 @@ pkg_do(char *pkg)
 			    ++code;
 		    }
 		}
-		else if ((cp = fileGetURL(pkg, p->name)) != NULL) {
+		else if ((cp = fileGetURL(pkg, p->name, KeepPackage)) != NULL) {
 		    if (Verbose)
 			printf("Finished loading %s over FTP.\n", p->name);
 		    if (!fexists("+CONTENTS")) {
@@ -547,8 +547,11 @@ pkg_do(char *pkg)
 		fputs(buf, stdout);
 	    putc('\n', stdout);
 	    (void) fclose(fp);
-	} else
-	    warnx("cannot open %s as display file", buf);
+	} else {
+    	    if (!Fake) {
+		warnx("cannot open %s as display file", buf);  
+	    }
+	}
     }
 
     goto success;

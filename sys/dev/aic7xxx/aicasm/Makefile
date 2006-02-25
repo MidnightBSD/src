@@ -1,7 +1,7 @@
 #
-# $Id: Makefile,v 1.1.1.1 2006-02-25 02:27:55 laffer1 Exp $
+# $Id: Makefile,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
 #
-# $FreeBSD: src/sys/dev/aic7xxx/aicasm/Makefile,v 1.20 2004/12/21 08:47:19 ru Exp $
+# $FreeBSD: src/sys/dev/aic7xxx/aicasm/Makefile,v 1.20.2.1 2005/12/27 21:35:40 ru Exp $
 
 PROG=	aicasm
 
@@ -20,7 +20,7 @@ LDADD=	-ll
 # Don't rely on the kernel's .depend file
 .ifdef MAKESRCPATH
 .PATH: ${MAKESRCPATH}
-DEPENDFILE=
+DEPENDFILE=	.depend_aicasm
 .endif
 
 .if ${CC} == "icc"

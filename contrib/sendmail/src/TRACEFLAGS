@@ -1,4 +1,4 @@
-#	$Id: TRACEFLAGS,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $
+#	$Id: TRACEFLAGS,v 1.1.1.2 2006-02-25 02:33:58 laffer1 Exp $
 0, 4	main.c		main	canonical name, UUCP node name, a.k.a.s
 0, 15	main.c		main	print configuration
 0, 44	util.c		printav	print address of each string

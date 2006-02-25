@@ -67,7 +67,7 @@
  *
  * OpenBSD: if_bridge.h,v 1.14 2001/03/22 03:48:29 jason Exp
  *
- * $FreeBSD: src/sys/net/if_bridgevar.h,v 1.4.2.1 2005/10/23 02:36:58 thompsa Exp $
+ * $FreeBSD: src/sys/net/if_bridgevar.h,v 1.4.2.4 2006/01/18 20:49:21 thompsa Exp $
  */
 
 /*
@@ -105,7 +105,9 @@
 #define	BRDGGMA			19	/* get max age (ifbrparam) */
 #define	BRDGSMA			20	/* set max age (ifbrparam) */
 #define	BRDGSIFPRIO		21	/* set if priority (ifbreq) */
-#define BRDGSIFCOST		22	/* set if path cost (ifbreq) */
+#define	BRDGSIFCOST		22	/* set if path cost (ifbreq) */
+#define	BRDGADDS		23	/* add bridge span member (ifbreq) */
+#define	BRDGDELS		24	/* delete bridge span member (ifbreq) */
 
 /*
  * Generic bridge control request.
@@ -123,8 +125,9 @@ struct ifbreq {
 #define	IFBIF_LEARNING		0x01	/* if can learn */
 #define	IFBIF_DISCOVER		0x02	/* if sends packets w/ unknown dest. */
 #define	IFBIF_STP		0x04	/* if participates in spanning tree */
+#define	IFBIF_SPAN		0x08	/* if is a span port */
 
-#define	IFBIFBITS	"\020\1LEARNING\2DISCOVER\3STP"
+#define	IFBIFBITS	"\020\1LEARNING\2DISCOVER\3STP\4SPAN"
 
 /* BRDGFLUSH */
 #define	IFBF_FLUSHDYN		0x00	/* flush learned addresses only */
@@ -245,6 +248,7 @@ struct bridge_iflist {
 	uint8_t			bif_priority;
 	struct ifnet		*bif_ifp;	/* member if */
 	uint32_t		bif_flags;	/* member if flags */
+	int			bif_mutecap;	/* member muted caps */
 };
 
 /*
@@ -296,6 +300,7 @@ struct bridge_softc {
 	LIST_HEAD(, bridge_rtnode) *sc_rthash;	/* our forwarding table */
 	LIST_HEAD(, bridge_rtnode) sc_rtlist;	/* list version of above */
 	uint32_t		sc_rthash_key;	/* key for hash */
+	LIST_HEAD(, bridge_iflist) sc_spanlist;	/* span ports list */
 };
 
 #define BRIDGE_LOCK_INIT(_sc)		do {			\
@@ -359,7 +364,6 @@ extern	struct mbuf *(*bridge_input_p)(struct ifnet *, struct mbuf *);
 extern	int (*bridge_output_p)(struct ifnet *, struct mbuf *,
 		struct sockaddr *, struct rtentry *);
 extern	void (*bridge_dn_p)(struct mbuf *, struct ifnet *);
-extern	void (*bridge_detach_p)(struct ifnet *);
 extern	void (*bstp_linkstate_p)(struct ifnet *ifp, int state);
 
 void	bstp_initialization(struct bridge_softc *);

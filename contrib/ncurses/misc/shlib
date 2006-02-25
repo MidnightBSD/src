@@ -29,7 +29,7 @@
 #
 # Author: Thomas E. Dickey <dickey@clark.net> 1996
 #
-# $Id: shlib,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $
+# $Id: shlib,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $
 # Use this script as a wrapper when running executables linked to shared
 # libraries on systems that use the $LD_LIBRARY_PATH variable and don't embed
 # the soname's path within the linked executable (such as IRIX), e.g,

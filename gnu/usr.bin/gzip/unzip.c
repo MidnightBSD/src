@@ -14,7 +14,7 @@
  */
 
 #ifdef RCSID
-static char rcsid[] = "$Id: unzip.c,v 1.1.1.1 2006-02-25 02:26:45 laffer1 Exp $";
+static char rcsid[] = "$Id: unzip.c,v 1.1.1.2 2006-02-25 02:34:45 laffer1 Exp $";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/gnu/usr.bin/gzip/unzip.c,v 1.8 2004/05/03 10:33:27 obrien Exp $");

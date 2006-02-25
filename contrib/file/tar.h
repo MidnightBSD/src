@@ -32,7 +32,7 @@
  *
  * Created 25 August 1985 by John Gilmore, ihnp4!hoptoad!gnu.
  *
- * $Id: tar.h,v 1.1.1.1 2006-02-25 02:25:36 laffer1 Exp $ # checkin only
+ * $Id: tar.h,v 1.1.1.2 2006-02-25 02:32:35 laffer1 Exp $ # checkin only
  */
 
 /*

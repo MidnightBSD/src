@@ -23,7 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/de.4,v 1.19.2.3 2005/11/17 21:07:39 wilko Exp $
+.\" $FreeBSD: src/share/man/man4/de.4,v 1.19.2.4 2006/02/02 07:50:00 trhodes Exp $
 .\"
 .Dd July 16, 2005
 .Dt DE 4
@@ -32,17 +32,15 @@
 .Nm de
 .Nd "DEC DC21x4x Ethernet device driver"
 .Sh SYNOPSIS
-To compile support for the
-.Nm
-driver into your kernel, place the following line in your
+To compile this driver into the kernel,
+place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device de"
 .Ed
 .Pp
-Alternatively, to load the
-.Nm
-driver at boot time, place the following line in
+Alternatively, to load the driver as a
+module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_de_load="YES"

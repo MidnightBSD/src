@@ -1,10 +1,9 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_atm/Makefile,v 1.3 2005/05/25 12:04:44 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_atm/Makefile,v 1.3.2.1 2006/01/25 13:22:58 harti Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
-CONTRIB=${.CURDIR}/../../../../contrib/bsnmp
-SNMP_ATM=${.CURDIR}/../../../../contrib/ngatm/snmp_atm
-.PATH: ${SNMP_ATM}
+CONTRIB= ${.CURDIR}/../../../../contrib/ngatm
+.PATH: ${CONTRIB}/snmp_atm
 
 MOD=	atm
 SRCS=	snmp_atm.c atm_sys.c
@@ -17,6 +16,6 @@ INCS=	snmp_${MOD}.h
 
 EXTRAMIBDEFS= atm_freebsd.def
 
-CFLAGS+= -I${SNMP_ATM}
+CFLAGS+= -I${CONTRIB}/snmp_atm
 
-.include <bsd.lib.mk>
+.include <bsd.snmpmod.mk>

@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_softdep.c,v 1.181.2.4 2005/10/02 08:25:33 truckman Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_softdep.c,v 1.181.2.6 2006/01/14 01:09:10 tegge Exp $");
 
 /*
  * For now we want the safety net that the DIAGNOSTIC and DEBUG flags provide.
@@ -5526,13 +5526,26 @@ softdep_request_cleanup(fs, vp)
 			return (0);
 		UFS_UNLOCK(ump);
 		ACQUIRE_LOCK(&lk);
+		if (softdep_worklist_busy < 0) {
+			request_cleanup(FLUSH_REMOVE_WAIT);
+			FREE_LOCK(&lk);
+			UFS_LOCK(ump);
+			return (0);
+		}
+		softdep_worklist_busy += 1;
 		if (num_on_worklist > 0 &&
 		    process_worklist_item(NULL, LK_NOWAIT) != -1) {
 			stat_worklist_push += 1;
+			softdep_worklist_busy -= 1;
+			if (softdep_worklist_req && softdep_worklist_busy == 0)
+				wakeup(&softdep_worklist_req);
 			FREE_LOCK(&lk);
 			UFS_LOCK(ump);
 			continue;
 		}
+		softdep_worklist_busy -= 1;
+		if (softdep_worklist_req && softdep_worklist_busy == 0)
+			wakeup(&softdep_worklist_req);
 		request_cleanup(FLUSH_REMOVE_WAIT);
 		FREE_LOCK(&lk);
 		UFS_LOCK(ump);
@@ -5564,12 +5577,17 @@ request_cleanup(resource)
 	 * inode as that could lead to deadlock.  We set TDP_SOFTDEP
 	 * to avoid recursively processing the worklist.
 	 */
-	if (num_on_worklist > max_softdeps / 10) {
+	if (num_on_worklist > max_softdeps / 10 &&
+	    softdep_worklist_busy >= 0) {
+		softdep_worklist_busy += 1;
 		td->td_pflags |= TDP_SOFTDEP;
 		process_worklist_item(NULL, LK_NOWAIT);
 		process_worklist_item(NULL, LK_NOWAIT);
 		td->td_pflags &= ~TDP_SOFTDEP;
 		stat_worklist_push += 2;
+		softdep_worklist_busy -= 1;
+		if (softdep_worklist_req && softdep_worklist_busy == 0)
+			wakeup(&softdep_worklist_req);
 		return(1);
 	}
 	/*
@@ -5883,6 +5901,19 @@ getdirtybuf(bp, mtx, waitfor)
 		return (NULL);
 	}
 	if ((bp->b_vflags & BV_BKGRDINPROG) != 0) {
+		if (mtx == &lk && waitfor == MNT_WAIT) {
+			mtx_unlock(mtx);
+			BO_LOCK(bp->b_bufobj);
+			BUF_UNLOCK(bp);
+			if ((bp->b_vflags & BV_BKGRDINPROG) != 0) {
+				bp->b_vflags |= BV_BKGRDWAIT;
+				msleep(&bp->b_xflags, BO_MTX(bp->b_bufobj),
+				       PRIBIO | PDROP, "getbuf", 0);
+			} else
+				BO_UNLOCK(bp->b_bufobj);
+			mtx_lock(mtx);
+			return (NULL);
+		}
 		BUF_UNLOCK(bp);
 		if (waitfor != MNT_WAIT)
 			return (NULL);

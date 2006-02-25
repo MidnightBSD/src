@@ -11,7 +11,7 @@ divert(-1)
 
 divert(0)
 ifdef(`_EDNSBL_R_',`dnl',`dnl
-VERSIONID(`$Id: enhdnsbl.m4,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $')
+VERSIONID(`$Id: enhdnsbl.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 LOCAL_CONFIG
 define(`_EDNSBL_R_',`')dnl
 # map for enhanced DNS based blacklist lookups

@@ -1,4 +1,4 @@
-/* $Id: openssl-compat.h,v 1.1.1.1 2006-02-25 02:26:33 laffer1 Exp $ */
+/* $Id: openssl-compat.h,v 1.1.1.2 2006-02-25 02:34:26 laffer1 Exp $ */
 
 /*
  * Copyright (c) 2005 Darren Tucker <dtucker@zip.com.au>

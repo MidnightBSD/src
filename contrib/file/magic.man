@@ -240,4 +240,4 @@ indirect offsets.
 .\" the changes I posted to the S5R2 version.
 .\"
 .\" Modified for Ian Darwin's version of the file command.
-.\" @(#)$Id: magic.man,v 1.1.1.1 2006-02-25 02:25:36 laffer1 Exp $
+.\" @(#)$Id: magic.man,v 1.1.1.2 2006-02-25 02:32:35 laffer1 Exp $

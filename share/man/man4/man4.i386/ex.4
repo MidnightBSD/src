@@ -23,7 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/ex.4,v 1.21.2.1 2005/09/24 01:59:38 keramida Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/ex.4,v 1.21.2.2 2006/02/02 07:50:02 trhodes Exp $
 .\"
 .Dd July 16, 2005
 .Dt EX 4 i386
@@ -32,17 +32,15 @@
 .Nm ex
 .Nd "Ethernet device driver for the Intel EtherExpress Pro/10 and Pro/10+"
 .Sh SYNOPSIS
-To compile support for the
-.Nm
-driver into your kernel, place the following line in your
+To compile this driver into the kernel,
+place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device ex"
 .Ed
 .Pp
-Alternatively, to load the
-.Nm
-driver at boot time, place the following line in
+Alternatively, to load the driver as a
+module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_ex_load="YES"

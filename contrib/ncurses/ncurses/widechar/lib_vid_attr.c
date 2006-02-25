@@ -33,7 +33,7 @@
 #include <curses.priv.h>
 #include <term.h>
 
-MODULE_ID("$Id: lib_vid_attr.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: lib_vid_attr.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
 
 #define set_color(mode, pair) mode &= ~A_COLOR; mode |= COLOR_PAIR(pair)
 

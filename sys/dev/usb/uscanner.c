@@ -5,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uscanner.c,v 1.63 2005/01/06 01:43:29 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uscanner.c,v 1.63.2.1 2006/01/11 00:27:28 flz Exp $");
 
 /*-
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
@@ -102,6 +102,7 @@ static const struct uscan_info uscanner_devs[] = {
  {{ USB_VENDOR_ACERP, USB_PRODUCT_ACERP_ACERSCAN_320U }, 0 },
  {{ USB_VENDOR_ACERP, USB_PRODUCT_ACERP_ACERSCAN_640U }, 0 },
  {{ USB_VENDOR_ACERP, USB_PRODUCT_ACERP_ACERSCAN_620U }, 0 },
+ {{ USB_VENDOR_ACERP, USB_PRODUCT_ACERP_ACERSCAN_1240U }, 0 },
  {{ USB_VENDOR_ACERP, USB_PRODUCT_ACERP_ACERSCAN_C310U }, 0 },
 
   /* AGFA */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: acpiconf.c,v 1.1.1.1 2006-02-25 02:29:33 laffer1 Exp $
+ *	$Id: acpiconf.c,v 1.1.1.2 2006-02-25 02:38:23 laffer1 Exp $
  *	$FreeBSD: src/usr.sbin/acpi/acpiconf/acpiconf.c,v 1.22.2.1 2005/07/29 16:31:58 njl Exp $
  */
 

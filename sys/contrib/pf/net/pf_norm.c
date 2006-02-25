@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/net/pf_norm.c,v 1.11.2.1 2005/10/09 05:50:43 ume Exp $	*/
+/*	$FreeBSD: src/sys/contrib/pf/net/pf_norm.c,v 1.11.2.3 2006/01/25 10:00:58 cperciva Exp $	*/
 /*	$OpenBSD: pf_norm.c,v 1.97 2004/09/21 16:59:12 aaron Exp $ */
 
 /*
@@ -712,15 +712,16 @@ pf_fragcache(struct mbuf **m0, struct ip *h, struct pf_fragment **frag, int mff,
 				 */
 #ifdef __FreeBSD__
 				*m0 = m_dup(m, M_DONTWAIT);
-				/* From KAME Project : We have missed this! */
-				m_adj(*m0, (h->ip_hl << 2) -
-				    (*m0)->m_pkthdr.len);
 #else
 				*m0 = m_copym2(m, 0, h->ip_hl << 2, M_NOWAIT);
 #endif
 				if (*m0 == NULL)
 					goto no_mem;
 #ifdef __FreeBSD__
+				/* From KAME Project : We have missed this! */
+				m_adj(*m0, (h->ip_hl << 2) -
+				    (*m0)->m_pkthdr.len);
+
 				KASSERT(((*m0)->m_next == NULL), 
 				    ("(*m0)->m_next != NULL: %s", 
 				    __FUNCTION__));
@@ -817,7 +818,7 @@ pf_fragcache(struct mbuf **m0, struct ip *h, struct pf_fragment **frag, int mff,
 			} else {
 				hosed++;
 			}
-		} else {
+		} else if (frp == NULL) {
 			/* There is a gap between fragments */
 			DPFPRINTF(("fragcache[%d]: gap %d %d-%d (%d-%d)\n",
 			    h->ip_id, -aftercut, off, max, fra->fr_off,

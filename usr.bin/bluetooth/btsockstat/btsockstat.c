@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: btsockstat.c,v 1.1.1.1 2006-02-25 02:29:04 laffer1 Exp $
+ * $Id: btsockstat.c,v 1.1.1.2 2006-02-25 02:38:11 laffer1 Exp $
  * $FreeBSD: src/usr.bin/bluetooth/btsockstat/btsockstat.c,v 1.5 2004/04/09 23:01:41 emax Exp $
  */
 

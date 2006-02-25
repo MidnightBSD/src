@@ -1,9 +1,9 @@
-# $FreeBSD: src/sys/modules/de/Makefile,v 1.3 2004/07/09 02:38:25 bms Exp $
+# $FreeBSD: src/sys/modules/de/Makefile,v 1.3.8.1 2005/12/27 02:39:44 delphij Exp $
 
 .PATH: ${.CURDIR}/../../pci
 
 KMOD=	if_de
-SRCS=	if_de.c opt_bdg.h device_if.h bus_if.h pci_if.h
+SRCS=	if_de.c opt_bdg.h opt_ddb.h device_if.h bus_if.h pci_if.h
 
 # Compile-time options.
 

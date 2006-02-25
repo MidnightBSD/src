@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1.1.1 2006-02-25 02:26:53 laffer1 Exp $
+# $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:07 laffer1 Exp $
 # $FreeBSD: src/lib/libsdp/Makefile,v 1.3.8.1 2005/07/22 17:29:07 kensmith Exp $
 
 LIB=		sdp

@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/enc.h,v 1.1.1.1 2006-02-25 02:26:22 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /home/cvs/src/contrib/tcpdump/enc.h,v 1.1.1.2 2006-02-25 02:34:01 laffer1 Exp $ (LBL) */
 /* From $OpenBSD: if_enc.h,v 1.8 2001/06/25 05:14:00 angelos Exp $ */
 /*
  * The authors of this code are John Ioannidis (ji@tla.org),

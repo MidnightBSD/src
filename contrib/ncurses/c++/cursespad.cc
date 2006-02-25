@@ -35,7 +35,7 @@
 #include "etip.h"
 #include "cursesw.h"
 
-MODULE_ID("$Id: cursespad.cc,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $")
+MODULE_ID("$Id: cursespad.cc,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 
 NCursesPad::NCursesPad(int lines, int cols)
   : NCursesWindow(),

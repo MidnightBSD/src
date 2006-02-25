@@ -1,10 +1,11 @@
-# $FreeBSD$
+# $FreeBSD: src/sys/modules/if_gre/Makefile,v 1.5.10.1 2006/02/10 00:38:02 yar Exp $
 
 .PATH: ${.CURDIR}/../../net ${.CURDIR}/../../netinet ${.CURDIR}/../../netinet6
 
 KMOD=	if_gre
 SRCS=	if_gre.c ip_gre.c opt_inet.h opt_inet6.h opt_atalk.h
 
+.if !defined(KERNBUILDDIR)
 opt_inet.h:
 	echo "#define INET 1" > ${.TARGET}
 
@@ -13,5 +14,6 @@ opt_inet6.h:
 
 opt_atalk.h:
 	echo "#define NETATALK 1" > ${.TARGET}
+.endif
 
 .include <bsd.kmod.mk>

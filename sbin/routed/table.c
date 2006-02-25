@@ -36,8 +36,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$FreeBSD: src/sbin/routed/table.c,v 1.21 2005/05/31 20:28:49 stefanf Exp $");
 #else
-__RCSID("$Revision: 1.1.1.1 $");
-#ident "$Revision: 1.1.1.1 $"
+__RCSID("$Revision: 1.1.1.2 $");
+#ident "$Revision: 1.1.1.2 $"
 #endif
 
 static struct rt_spare *rts_better(struct rt_entry *);

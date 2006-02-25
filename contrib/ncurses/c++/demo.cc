@@ -6,7 +6,7 @@
  *   Demo code for NCursesMenu and NCursesForm written by
  *   Juergen Pfeifer <juergen.pfeifer@gmx.net>
  *
- * $Id: demo.cc,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $
+ * $Id: demo.cc,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $
  */
 
 #include "cursesapp.h"

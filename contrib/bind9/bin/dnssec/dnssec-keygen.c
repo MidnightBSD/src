@@ -16,7 +16,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-keygen.c,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $ */
+/* $Id: dnssec-keygen.c,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
 
 #include <config.h>
 

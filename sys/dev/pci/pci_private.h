@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.14 2005/02/28 01:14:15 imp Exp $
+ * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.14.2.1 2006/01/30 18:38:08 imp Exp $
  *
  */
 
@@ -41,6 +41,8 @@ extern devclass_t pci_devclass;
 
 void		pci_add_children(device_t dev, int busno, size_t dinfo_size);
 void		pci_add_child(device_t bus, struct pci_devinfo *dinfo);
+void		pci_add_resources(device_t bus, device_t dev, int force,
+		    uint32_t prefetchmask);
 void		pci_driver_added(device_t dev, driver_t *driver);
 int		pci_print_child(device_t dev, device_t child);
 void		pci_probe_nomatch(device_t dev, device_t child);

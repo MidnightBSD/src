@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/usb/umass.c,v 1.122.2.2 2005/12/04 05:48:31 iedowse Exp $
+ *	$FreeBSD: src/sys/dev/usb/umass.c,v 1.122.2.6 2006/01/29 00:45:11 flz Exp $
  *	$NetBSD: umass.c,v 1.28 2000/04/02 23:46:53 augustss Exp $
  */
 
@@ -202,6 +202,7 @@ typedef struct {
 typedef struct {
 	uDWord		dCSWSignature;
 #	define CSWSIGNATURE	0x53425355
+#	define CSWSIGNATURE_IMAGINATION_DBX1	0x43425355
 #	define CSWSIGNATURE_OLYMPUS_C1	0x55425355
 	uDWord		dCSWTag;
 	uDWord		dCSWDataResidue;
@@ -347,6 +348,10 @@ Static struct umass_devdescr_t umass_devdescrs[] = {
 	  UMASS_PROTO_ATAPI | UMASS_PROTO_CBI_I,
 	  NO_TEST_UNIT_READY | NO_START_STOP
 	},
+	{ USB_VENDOR_IMAGINATION, USB_PRODUCT_IMAGINATION_DBX1, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  WRONG_CSWSIG
+	},
 	{ USB_VENDOR_INSYSTEM, USB_PRODUCT_INSYSTEM_USBCABLE, RID_WILDCARD,
 	  UMASS_PROTO_ATAPI | UMASS_PROTO_CBI,
 	  NO_TEST_UNIT_READY | NO_START_STOP | ALT_IFACE_1
@@ -380,6 +385,10 @@ Static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_MICROTECH, USB_PRODUCT_MICROTECH_DPCM, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_CBI,
 	  NO_TEST_UNIT_READY | NO_START_STOP
+	},
+	{ USB_VENDOR_MOTOROLA2, USB_PRODUCT_MOTOROLA2_E398, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  FORCE_SHORT_INQUIRY | NO_INQUIRY_EVPD | NO_GETMAXLUN
 	},
 	{ USB_VENDOR_MSYSTEMS, USB_PRODUCT_MSYSTEMS_DISKONKEY, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
@@ -417,7 +426,23 @@ Static struct umass_devdescr_t umass_devdescrs[] = {
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  IGNORE_RESIDUE
 	},
+	{ USB_VENDOR_PNY, USB_PRODUCT_PNY_A256MB, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  IGNORE_RESIDUE
+	},
+	{ USB_VENDOR_PNY, USB_PRODUCT_PNY_DISKPRO512, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  IGNORE_RESIDUE
+	},
 	{ USB_VENDOR_SANDISK, USB_PRODUCT_SANDISK_SDCZ2_256, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  IGNORE_RESIDUE
+	},
+	{ USB_VENDOR_SANDISK, USB_PRODUCT_SANDISK_SDCZ4_128, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  IGNORE_RESIDUE
+	},
+	{ USB_VENDOR_SANDISK, USB_PRODUCT_SANDISK_SDCZ4_256, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  IGNORE_RESIDUE
 	},
@@ -1092,7 +1117,8 @@ USB_ATTACH(umass)
 
 	/* Get the maximum LUN supported by the device.
 	 */
-	if ((sc->proto & UMASS_PROTO_WIRE) == UMASS_PROTO_BBB)
+	if (((sc->proto & UMASS_PROTO_WIRE) == UMASS_PROTO_BBB) &&
+	    !(sc->quirks & NO_GETMAXLUN))
 		sc->maxlun = umass_bbb_get_max_lun(sc);
 	else
 		sc->maxlun = 0;
@@ -1616,9 +1642,12 @@ umass_bbb_state(usbd_xfer_handle xfer, usbd_private_handle priv,
 		DIF(UDMASS_BBB, umass_bbb_dump_csw(sc, &sc->csw));
 
 		/* Translate weird command-status signatures. */
-		if ((sc->quirks & WRONG_CSWSIG) &&
-		    UGETDW(sc->csw.dCSWSignature) == CSWSIGNATURE_OLYMPUS_C1)
-			USETDW(sc->csw.dCSWSignature, CSWSIGNATURE);
+		if (sc->quirks & WRONG_CSWSIG) {
+			u_int32_t dCSWSignature = UGETDW(sc->csw.dCSWSignature);
+			if (dCSWSignature == CSWSIGNATURE_OLYMPUS_C1 ||
+			    dCSWSignature == CSWSIGNATURE_IMAGINATION_DBX1)
+				USETDW(sc->csw.dCSWSignature, CSWSIGNATURE);
+		}
 
 		int Residue;
 		Residue = UGETDW(sc->csw.dCSWDataResidue);

@@ -1,10 +1,10 @@
-dnl $Id: configure.in,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $
+dnl $Id: configure.in,v 1.1.1.2 2006-02-25 02:33:37 laffer1 Exp $
 dnl
 dnl configure.in --
 dnl	process this file with autoconf to produce a configure script.
 dnl
 
-AC_REVISION($Revision: 1.1.1.1 $)dnl
+AC_REVISION($Revision: 1.1.1.2 $)dnl
 
 AC_INIT(lukemftpd.h)
 

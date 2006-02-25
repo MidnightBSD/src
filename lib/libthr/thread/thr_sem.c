@@ -27,10 +27,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_sem.c,v 1.5 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_sem.c,v 1.5.2.1 2006/01/16 05:36:30 davidxu Exp $
  */
 
 #include "namespace.h"
+#include <sys/types.h>
 #include <sys/queue.h>
 #include <errno.h>
 #include <fcntl.h>

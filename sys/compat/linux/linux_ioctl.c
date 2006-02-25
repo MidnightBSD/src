@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_ioctl.c,v 1.127.2.2 2005/09/02 03:52:28 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_ioctl.c,v 1.127.2.3 2006/01/11 15:39:10 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -806,22 +806,22 @@ linux_ioctl_termio(struct thread *td, struct linux_ioctl_args *args)
 	}
 
 	case LINUX_TCFLSH: {
-		args->cmd = TIOCFLUSH;
+		int val;
 		switch (args->arg) {
 		case LINUX_TCIFLUSH:
-			args->arg = FREAD;
+			val = FREAD;
 			break;
 		case LINUX_TCOFLUSH:
-			args->arg = FWRITE;
+			val = FWRITE;
 			break;
 		case LINUX_TCIOFLUSH:
-			args->arg = FREAD | FWRITE;
+			val = FREAD | FWRITE;
 			break;
 		default:
 			fdrop(fp, td);
 			return (EINVAL);
 		}
-		error = (ioctl(td, (struct ioctl_args *)args));
+		error = (fo_ioctl(fp,TIOCFLUSH,(caddr_t)&val,td->td_ucred,td));
 		break;
 	}
 

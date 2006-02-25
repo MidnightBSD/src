@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: named-checkzone.c,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $ */
+/* $Id: named-checkzone.c,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
 
 #include <config.h>
 

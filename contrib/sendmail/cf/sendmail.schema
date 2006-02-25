@@ -5,7 +5,7 @@
 # forth in the LICENSE file which can be found at the top level of
 # the sendmail distribution.
 #
-# $Id: sendmail.schema,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $
+# $Id: sendmail.schema,v 1.1.1.2 2006-02-25 02:33:53 laffer1 Exp $
 
 # Note that this schema is experimental at this point as it has had little
 # public review.  Therefore, it may change in future versions.  Feedback

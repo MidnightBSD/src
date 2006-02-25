@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/lib/libautofs/libautofs.c,v 1.5 2004/09/09 01:23:27 alfred Exp $
- * $Id: libautofs.c,v 1.1.1.1 2006-02-25 02:26:47 laffer1 Exp $
+ * $Id: libautofs.c,v 1.1.1.2 2006-02-25 02:35:11 laffer1 Exp $
  */
 #include <err.h>
 #include <ctype.h>

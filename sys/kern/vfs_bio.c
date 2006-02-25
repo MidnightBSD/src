@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_bio.c,v 1.491.2.4 2005/10/29 06:45:38 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_bio.c,v 1.491.2.5 2006/01/21 20:41:42 tegge Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1864,7 +1864,6 @@ restart:
 		int flags;
 		char *waitmsg;
 
-		mtx_unlock(&bqlock);
 		if (defrag) {
 			flags = VFS_BIO_NEED_BUFSPACE;
 			waitmsg = "nbufkv";
@@ -1875,11 +1874,14 @@ restart:
 			waitmsg = "newbuf";
 			flags = VFS_BIO_NEED_ANY;
 		}
+		mtx_lock(&nblock);
+		needsbuffer |= flags;
+		mtx_unlock(&nblock);
+		mtx_unlock(&bqlock);
 
 		bd_speedup();	/* heeeelp */
 
 		mtx_lock(&nblock);
-		needsbuffer |= flags;
 		while (needsbuffer & flags) {
 			if (msleep(&needsbuffer, &nblock,
 			    (PRIBIO + 4) | slpflag, waitmsg, slptimeo)) {

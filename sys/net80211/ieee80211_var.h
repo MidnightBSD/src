@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_var.h,v 1.22.2.2 2005/09/03 22:40:02 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_var.h,v 1.22.2.9 2006/02/16 16:57:24 sam Exp $
  */
 #ifndef _NET80211_IEEE80211_VAR_H_
 #define _NET80211_IEEE80211_VAR_H_
@@ -70,16 +70,21 @@
 #define	IEEE80211_BINTVAL_MIN	25	/* min beacon interval (TU's) */
 #define	IEEE80211_BINTVAL_DEFAULT 100	/* default beacon interval (TU's) */
 
+#define	IEEE80211_BMISS_MAX	2	/* maximum consecutive bmiss allowed */
+#define	IEEE80211_SWBMISS_THRESHOLD 50	/* s/w bmiss threshold (TU's) */
+
 #define	IEEE80211_PS_SLEEP	0x1	/* STA is in power saving mode */
 #define	IEEE80211_PS_MAX_QUEUE	50	/* maximum saved packets */
 
 #define	IEEE80211_FIXED_RATE_NONE	-1
+#define	IEEE80211_MCAST_RATE_DEFAULT	(2*1)	/* default mcast rate (1M) */
 
 #define	IEEE80211_RTS_DEFAULT		IEEE80211_RTS_MAX
 #define	IEEE80211_FRAG_DEFAULT		IEEE80211_FRAG_MAX
 
-#define	IEEE80211_MS_TO_TU(x)	(((x) * 1000) / 1024)
-#define	IEEE80211_TU_TO_MS(x)	(((x) * 1024) / 1000)
+#define	IEEE80211_MS_TO_TU(x)	(((x) * 1024) / 1000)
+#define	IEEE80211_TU_TO_MS(x)	(((x) * 1000) / 1024)
+#define	IEEE80211_TU_TO_TICKS(x)(((x) * hz) / 1024)
 
 struct ieee80211_aclator;
 struct sysctl_ctx_list;
@@ -138,8 +143,15 @@ struct ieee80211com {
 	struct ieee80211_channel *ic_ibss_chan;
 	struct ieee80211_channel *ic_curchan;	/* current channel */
 	int			ic_fixed_rate;	/* index to ic_sup_rates[] */
+	int			ic_mcast_rate;	/* rate for mcast frames */
 	u_int16_t		ic_rtsthreshold;
 	u_int16_t		ic_fragthreshold;
+	u_int8_t		ic_bmissthreshold;
+	u_int8_t		ic_bmiss_count;	/* current beacon miss count */
+	int			ic_bmiss_max;	/* max bmiss before scan */
+	u_int16_t		ic_swbmiss_count;/* beacons in last period */
+	u_int16_t		ic_swbmiss_period;/* s/w bmiss period */
+	struct callout		ic_swbmiss;	/* s/w beacon miss timer */
 	struct ieee80211_node	*(*ic_node_alloc)(struct ieee80211_node_table*);
 	void			(*ic_node_free)(struct ieee80211_node *);
 	void			(*ic_node_cleanup)(struct ieee80211_node *);
@@ -151,7 +163,7 @@ struct ieee80211com {
 	u_int16_t		ic_txmax;	/* max tx retry count */
 	u_int16_t		ic_txlifetime;	/* tx lifetime */
 	u_int16_t		ic_txpowlimit;	/* global tx power limit */
-	u_int16_t		ic_bmisstimeout;/* beacon miss threshold (ms) */
+	u_int16_t		ic_pad0;	/* was ic_bmisstimeout */
 	u_int16_t		ic_nonerpsta;	/* # non-ERP stations */
 	u_int16_t		ic_longslotsta;	/* # long slot time stations */
 	int			ic_mgt_timer;	/* mgmt timeout */
@@ -197,6 +209,7 @@ struct ieee80211com {
 	 */
 	const struct ieee80211_aclator *ic_acl;
 	void			*ic_as;
+	u_int32_t		ic_pad[56];	/* future expansion */
 };
 
 #define	IEEE80211_ADDR_EQ(a1,a2)	(memcmp(a1,a2,IEEE80211_ADDR_LEN) == 0)
@@ -206,6 +219,7 @@ struct ieee80211com {
 /* NB: bits 0x4c available */
 #define	IEEE80211_F_FF		0x00000001	/* CONF: ATH FF enabled */
 #define	IEEE80211_F_TURBOP	0x00000002	/* CONF: ATH Turbo enabled*/
+#define	IEEE80211_F_BURST	0x00000004	/* CONF: bursting enabled */
 /* NB: this is intentionally setup to be IEEE80211_CAPINFO_PRIVACY */
 #define	IEEE80211_F_PRIVACY	0x00000010	/* CONF: privacy enabled */
 #define	IEEE80211_F_PUREG	0x00000020	/* CONF: 11g w/o 11b sta's */
@@ -239,6 +253,8 @@ struct ieee80211com {
 #define	IEEE80211_FEXT_WDS	0x00000001	/* CONF: 4 addr allowed */
 /* 0x00000006 reserved */
 #define	IEEE80211_FEXT_BGSCAN	0x00000008	/* STATUS: enable full bgscan completion */
+#define	IEEE80211_FEXT_ERPUPDATE 0x00000200	/* STATUS: update ERP element */
+#define	IEEE80211_FEXT_SWBMISS	0x00000400	/* CONF: do bmiss in s/w */
 
 /* ic_caps */
 #define	IEEE80211_C_WEP		0x00000001	/* CAPABILITY: WEP available */

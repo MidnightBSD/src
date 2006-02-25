@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)output.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/output.c,v 1.19 2004/04/06 20:06:51 markm Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/output.c,v 1.19.8.1 2005/12/26 15:43:54 stefanf Exp $");
 
 /*
  * Shell output routines.  We use our own output routines because:
@@ -134,6 +134,10 @@ outqstr(const char *p, struct output *file)
 {
 	char ch;
 
+	if (p[0] == '\0') {
+		outstr("''", file);
+		return;
+	}
 	if (p[strcspn(p, "|&;<>()$`\\\"'")] == '\0' && (!ifsset() ||
 	    p[strcspn(p, ifsval())] == '\0')) {
 		outstr(p, file);

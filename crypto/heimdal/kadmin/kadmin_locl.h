@@ -32,7 +32,7 @@
  */
 
 /* 
- * $Id: kadmin_locl.h,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+ * $Id: kadmin_locl.h,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
  * $FreeBSD: src/crypto/heimdal/kadmin/kadmin_locl.h,v 1.7 2002/09/16 21:07:10 nectar Exp $
  */
 

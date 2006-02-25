@@ -1,7 +1,7 @@
-/* $FreeBSD: src/lib/bind/lwres/lwres/platform.h,v 1.1 2004/09/21 19:01:44 des Exp $ */
+/* $FreeBSD: src/lib/bind/lwres/lwres/platform.h,v 1.1.4.1 2006/01/14 10:13:50 dougb Exp $ */
 
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h,v 1.1.1.1 2006-02-25 02:26:46 laffer1 Exp $ */
+/* $Id: platform.h,v 1.1.1.2 2006-02-25 02:34:49 laffer1 Exp $ */
 
 #ifndef LWRES_PLATFORM_H
 #define LWRES_PLATFORM_H 1
@@ -89,6 +89,16 @@
  * If this system need a modern sprintf() that returns (int) not (char*).
  */
 #undef LWRES_PLATFORM_NEEDSPRINTF
+
+/*
+ * The printf format string modifier to use with lwres_uint64_t values.
+ */
+#define LWRES_PLATFORM_QUADFORMAT "ll"
+
+/*! \brief
+ * Define if this system needs strtoul.
+ */
+#undef ISC_PLATFORM_NEEDSTRTOUL
 
 #ifndef LWRES_PLATFORM_USEDECLSPEC
 #define LIBLWRES_EXTERNAL_DATA

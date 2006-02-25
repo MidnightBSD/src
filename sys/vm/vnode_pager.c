@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vnode_pager.c,v 1.221.2.2 2005/08/15 14:04:47 kan Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vnode_pager.c,v 1.221.2.4 2006/02/20 00:53:15 yar Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,9 +95,30 @@ struct pagerops vnodepagerops = {
 
 int vnode_pbuf_freecnt;
 
-/* Create the VM system backing object for this vnode */
+/*
+ * Compatibility function for RELENG_6, in which vnode_create_vobject()
+ * takes file size as size_t due to an oversight.  The type may not just
+ * change to off_t because the ABI to 3rd party modules must be preserved
+ * for RELENG_6 lifetime.
+ */
 int
-vnode_create_vobject(struct vnode *vp, size_t isize, struct thread *td)
+vnode_create_vobject(struct vnode *vp, size_t isize __unused, struct thread *td)
+{
+
+	/*
+	 * Size of 0 will indicate to vnode_create_vobject_off()
+	 * VOP_GETATTR() is to be called to get the actual size.
+	 */
+	return (vnode_create_vobject_off(vp, 0, td));
+}
+
+/*
+ * Create the VM system backing object for this vnode -- for RELENG_6 only.
+ * In HEAD, vnode_create_vobject() has been fixed to take file size as off_t
+ * and so it can be used as is.
+ */
+int
+vnode_create_vobject_off(struct vnode *vp, off_t isize, struct thread *td)
 {
 	vm_object_t object;
 	vm_ooffset_t size = isize;
@@ -1061,6 +1082,9 @@ vnode_pager_generic_putpages(vp, m, bytecount, flags, rtvals)
 	struct iovec aiov;
 	int error;
 	int ioflags;
+	int ppscheck = 0;
+	static struct timeval lastfail;
+	static int curfail;
 
 	object = vp->v_object;
 	count = bytecount / PAGE_SIZE;
@@ -1144,11 +1168,13 @@ vnode_pager_generic_putpages(vp, m, bytecount, flags, rtvals)
 	cnt.v_vnodepgsout += ncount;
 
 	if (error) {
-		printf("vnode_pager_putpages: I/O error %d\n", error);
+		if ((ppscheck = ppsratecheck(&lastfail, &curfail, 1)))
+			printf("vnode_pager_putpages: I/O error %d\n", error);
 	}
 	if (auio.uio_resid) {
-		printf("vnode_pager_putpages: residual I/O %d at %lu\n",
-		    auio.uio_resid, (u_long)m[0]->pindex);
+		if (ppscheck || ppsratecheck(&lastfail, &curfail, 1))
+			printf("vnode_pager_putpages: residual I/O %d at %lu\n",
+			    auio.uio_resid, (u_long)m[0]->pindex);
 	}
 	for (i = 0; i < ncount; i++) {
 		rtvals[i] = VM_PAGER_OK;

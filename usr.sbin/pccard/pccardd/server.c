@@ -2,7 +2,7 @@
  *	pccardd UNIX-domain socket interface
  *	Copyright (C) 1996 by Tatsumi Hosokawa <hosokawa@mt.cs.keio.ac.jp>
  *
- * $Id: server.c,v 1.1.1.1 2006-02-25 02:29:47 laffer1 Exp $
+ * $Id: server.c,v 1.1.1.2 2006-02-25 02:38:33 laffer1 Exp $
  */
 
 #ifndef lint

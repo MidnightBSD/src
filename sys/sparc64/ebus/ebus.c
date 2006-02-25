@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/ebus/ebus.c,v 1.23 2005/06/04 20:31:20 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/ebus/ebus.c,v 1.23.2.1 2006/01/30 22:30:50 marius Exp $");
 
 /*
  * UltraSPARC 5 and beyond Ebus support.
@@ -125,6 +125,9 @@ static device_method_t ebus_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		ebus_probe),
 	DEVMETHOD(device_attach,	ebus_attach),
+	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
+	DEVMETHOD(device_suspend,	bus_generic_suspend),
+	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
 	DEVMETHOD(bus_print_child,	ebus_print_child),

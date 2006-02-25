@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.34.2.2 2005/09/12 11:25:17 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.34.2.3 2005/12/30 00:50:18 mlaier Exp $	*/
 /*	$OpenBSD: pf.c,v 1.483 2005/03/15 17:38:43 dhartmei Exp $ */
 
 /*
@@ -726,6 +726,9 @@ pf_src_connlimit(struct pf_state **state)
 	int bad = 0;
 
 	(*state)->src_node->conn++;
+#ifdef __FreeBSD__
+	(*state)->local_flags |= PFSTATE_SRC_CONN;
+#endif
 	pf_add_threshold(&(*state)->src_node->conn_rate);
 
 	if ((*state)->rule.ptr->max_src_conn &&
@@ -1058,8 +1061,12 @@ pf_src_tree_remove_state(struct pf_state *s)
 
 	if (s->src_node != NULL) {
 		if (s->proto == IPPROTO_TCP) {
+#ifdef __FreeBSD__
+			if (s->local_flags & PFSTATE_SRC_CONN)
+#else
 			if (s->src.state == PF_TCPS_PROXY_DST ||
 			    s->timeout >= PFTM_TCP_ESTABLISHED)
+#endif
 				--s->src_node->conn;
 		}
 		if (--s->src_node->states <= 0) {
@@ -1086,9 +1093,9 @@ void
 pf_purge_expired_state(struct pf_state *cur)
 {
 #ifdef __FreeBSD__
-	if (cur->sync_flags & PFSTATE_EXPIRING)
+	if (cur->local_flags & PFSTATE_EXPIRING)
 		return;
-	cur->sync_flags |= PFSTATE_EXPIRING;
+	cur->local_flags |= PFSTATE_EXPIRING;
 #endif
 	if (cur->src.state == PF_TCPS_PROXY_DST)
 		pf_send_tcp(cur->rule.ptr, cur->af,

@@ -31,7 +31,7 @@
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
  ****************************************************************************/
 
-/* $Id: term_entry.h,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $ */
+/* $Id: term_entry.h,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $ */
 
 /*
  *	term_entry.h -- interface to entry-manipulation code

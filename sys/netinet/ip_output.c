@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_output.c	8.3 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/netinet/ip_output.c,v 1.242.2.5 2005/10/09 04:24:45 delphij Exp $
+ * $FreeBSD: src/sys/netinet/ip_output.c,v 1.242.2.8 2006/01/31 16:06:05 andre Exp $
  */
 
 #include "opt_ipfw.h"
@@ -378,6 +378,7 @@ again:
 	{
 		error = ENOBUFS;
 		ipstat.ips_odropped++;
+		ifp->if_snd.ifq_drops += (ip->ip_len / ifp->if_mtu + 1);
 		goto bad;
 	}
 
@@ -787,7 +788,8 @@ passout:
 		 * them, there is no way for one to update all its
 		 * routes when the MTU is changed.
 		 */
-		if ((ro->ro_rt->rt_flags & (RTF_UP | RTF_HOST)) &&
+		if (ro != NULL &&
+		    (ro->ro_rt->rt_flags & (RTF_UP | RTF_HOST)) &&
 		    (ro->ro_rt->rt_rmx.rmx_mtu > ifp->if_mtu)) {
 			ro->ro_rt->rt_rmx.rmx_mtu = ifp->if_mtu;
 		}
@@ -1034,9 +1036,9 @@ in_delayed_cksum(struct mbuf *m)
 		 * XXX
 		 * this shouldn't happen, but if it does, the
 		 * correct behavior may be to insert the checksum
-		 * in the existing chain instead of rearranging it.
+		 * in the appropriate next mbuf in the chain.
 		 */
-		m = m_pullup(m, offset + sizeof(u_short));
+		return;
 	}
 	*(u_short *)(m->m_data + offset) = csum;
 }

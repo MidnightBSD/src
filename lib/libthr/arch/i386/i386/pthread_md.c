@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/i386/i386/pthread_md.c,v 1.5 2005/04/23 03:34:43 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/arch/i386/i386/pthread_md.c,v 1.5.2.1 2006/01/16 05:36:30 davidxu Exp $
  */
 
 #include <sys/types.h>
@@ -57,18 +57,4 @@ _tcb_dtor(struct tcb *tcb)
 {
 
 	_rtld_free_tls(tcb, sizeof(struct tcb), 16);
-}
-
-int
-i386_get_gsbase(void **addr)
-{
-
-	return (sysarch(I386_GET_GSBASE, addr));
-}
-
-int
-i386_set_gsbase(void *addr)
-{
-
-	return (sysarch(I386_SET_GSBASE, &addr));
 }

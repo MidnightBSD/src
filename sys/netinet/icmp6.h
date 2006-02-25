@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet/icmp6.h,v 1.16.2.3 2005/11/04 20:26:14 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet/icmp6.h,v 1.16.2.4 2005/12/25 14:03:37 suz Exp $	*/
 /*	$KAME: icmp6.h,v 1.46 2001/04/27 15:09:48 itojun Exp $	*/
 
 /*-
@@ -619,7 +619,11 @@ struct icmp6stat {
 #define ICMPV6CTL_ND6_DEBUG	18
 #define ICMPV6CTL_ND6_DRLIST	19
 #define ICMPV6CTL_ND6_PRLIST	20
-#define ICMPV6CTL_MAXID		21
+#define ICMPV6CTL_MLD_MAXSRCFILTER	21
+#define ICMPV6CTL_MLD_SOMAXSRC	22
+#define ICMPV6CTL_MLD_VERSION	23
+#define ICMPV6CTL_ND6_MAXQLEN	24
+#define ICMPV6CTL_MAXID		25
 
 #define RTF_PROBEMTU	RTF_PROTO1
 

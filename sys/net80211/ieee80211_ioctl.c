@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_ioctl.c,v 1.25.2.3 2005/09/03 22:40:02 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_ioctl.c,v 1.25.2.10 2006/02/23 02:03:39 sam Exp $");
 
 /*
  * IEEE 802.11 ioctl support (FreeBSD-specific)
@@ -884,7 +884,7 @@ static int
 ieee80211_ioctl_getchanlist(struct ieee80211com *ic, struct ieee80211req *ireq)
 {
 
-	if (sizeof(ic->ic_chan_active) > ireq->i_len)
+	if (sizeof(ic->ic_chan_active) < ireq->i_len)
 		ireq->i_len = sizeof(ic->ic_chan_active);
 	return copyout(&ic->ic_chan_active, ireq->i_data, ireq->i_len);
 }
@@ -976,13 +976,25 @@ get_scan_result(struct ieee80211req_scan_result *sr,
 	const struct ieee80211_node *ni)
 {
 	struct ieee80211com *ic = ni->ni_ic;
+	u_int ielen = 0;
 
 	memset(sr, 0, sizeof(*sr));
 	sr->isr_ssid_len = ni->ni_esslen;
 	if (ni->ni_wpa_ie != NULL)
-		sr->isr_ie_len += 2+ni->ni_wpa_ie[1];
+		ielen += 2+ni->ni_wpa_ie[1];
 	if (ni->ni_wme_ie != NULL)
-		sr->isr_ie_len += 2+ni->ni_wme_ie[1];
+		ielen += 2+ni->ni_wme_ie[1];
+
+	/*
+	 * The value sr->isr_ie_len is defined as a uint8_t, so we
+	 * need to be careful to avoid an integer overflow.  If the
+	 * value would overflow, we will set isr_ie_len to zero, and
+	 * ieee80211_ioctl_getscanresults (below) will avoid copying
+	 * the (overflowing) data.
+	 */
+	if (ielen > 255)
+		ielen = 0;
+	sr->isr_ie_len = ielen;
 	sr->isr_len = sizeof(*sr) + sr->isr_ssid_len + sr->isr_ie_len;
 	sr->isr_len = roundup(sr->isr_len, sizeof(u_int32_t));
 	if (ni->ni_chan != IEEE80211_CHAN_ANYC) {
@@ -1030,11 +1042,11 @@ ieee80211_ioctl_getscanresults(struct ieee80211com *ic, struct ieee80211req *ire
 		cp = (u_int8_t *)(sr+1);
 		memcpy(cp, ni->ni_essid, ni->ni_esslen);
 		cp += ni->ni_esslen;
-		if (ni->ni_wpa_ie != NULL) {
+		if (sr->isr_ie_len > 0 && ni->ni_wpa_ie != NULL) {
 			memcpy(cp, ni->ni_wpa_ie, 2+ni->ni_wpa_ie[1]);
 			cp += 2+ni->ni_wpa_ie[1];
 		}
-		if (ni->ni_wme_ie != NULL) {
+		if (sr->isr_ie_len > 0 && ni->ni_wme_ie != NULL) {
 			memcpy(cp, ni->ni_wme_ie, 2+ni->ni_wme_ie[1]);
 			cp += 2+ni->ni_wme_ie[1];
 		}
@@ -1480,11 +1492,17 @@ ieee80211_ioctl_get80211(struct ieee80211com *ic, u_long cmd, struct ieee80211re
 	case IEEE80211_IOC_PUREG:
 		ireq->i_val = (ic->ic_flags & IEEE80211_F_PUREG) != 0;
 		break;
+	case IEEE80211_IOC_MCAST_RATE:
+		ireq->i_val = ic->ic_mcast_rate;
+		break;
 	case IEEE80211_IOC_FRAGTHRESHOLD:
 		ireq->i_val = ic->ic_fragthreshold;
 		break;
 	case IEEE80211_IOC_MACCMD:
 		error = ieee80211_ioctl_getmaccmd(ic, ireq);
+		break;
+	case IEEE80211_IOC_BURST:
+		ireq->i_val = (ic->ic_flags & IEEE80211_F_BURST) != 0;
 		break;
 	default:
 		error = EINVAL;
@@ -1497,7 +1515,7 @@ static int
 ieee80211_ioctl_setoptie(struct ieee80211com *ic, struct ieee80211req *ireq)
 {
 	int error;
-	void *ie;
+	void *ie, *oie;
 
 	/*
 	 * NB: Doing this for ap operation could be useful (e.g. for
@@ -1509,16 +1527,25 @@ ieee80211_ioctl_setoptie(struct ieee80211com *ic, struct ieee80211req *ireq)
 		return EINVAL;
 	if (ireq->i_len > IEEE80211_MAX_OPT_IE)
 		return EINVAL;
-	/* NB: data.length is validated by the wireless extensions code */
-	MALLOC(ie, void *, ireq->i_len, M_DEVBUF, M_WAITOK);
-	if (ie == NULL)
-		return ENOMEM;
-	error = copyin(ireq->i_data, ie, ireq->i_len);
+	if (ireq->i_len > 0) {
+		MALLOC(ie, void *, ireq->i_len, M_DEVBUF, M_NOWAIT);
+		if (ie == NULL)
+			return ENOMEM;
+		error = copyin(ireq->i_data, ie, ireq->i_len);
+		if (error) {
+			FREE(ie, M_DEVBUF);
+			return error;
+		}
+	} else {
+		ie = NULL;
+		ireq->i_len = 0;
+	}
 	/* XXX sanity check data? */
-	if (ic->ic_opt_ie != NULL)
-		FREE(ic->ic_opt_ie, M_DEVBUF);
+	oie = ic->ic_opt_ie;
 	ic->ic_opt_ie = ie;
 	ic->ic_opt_ie_len = ireq->i_len;
+	if (oie != NULL)
+		FREE(oie, M_DEVBUF);
 	return 0;
 }
 
@@ -2296,9 +2323,6 @@ ieee80211_ioctl_set80211(struct ieee80211com *ic, u_long cmd, struct ieee80211re
 		error = (ic->ic_flags & IEEE80211_F_WPA) ? ENETRESET : 0;
 		break;
 	case IEEE80211_IOC_BSSID:
-		/* NB: should only be set when in STA mode */
-		if (ic->ic_opmode != IEEE80211_M_STA)
-			return EINVAL;
 		if (ireq->i_len != sizeof(tmpbssid))
 			return EINVAL;
 		error = copyin(ireq->i_data, tmpbssid, ireq->i_len);
@@ -2370,6 +2394,9 @@ ieee80211_ioctl_set80211(struct ieee80211com *ic, u_long cmd, struct ieee80211re
 		if (ic->ic_curmode == IEEE80211_MODE_11G)
 			error = ENETRESET;
 		break;
+	case IEEE80211_IOC_MCAST_RATE:
+		ic->ic_mcast_rate = ireq->i_val & IEEE80211_RATE_VAL;
+		break;
 	case IEEE80211_IOC_FRAGTHRESHOLD:
 		if ((ic->ic_caps & IEEE80211_C_TXFRAG) == 0 &&
 		    ireq->i_val != IEEE80211_FRAG_MAX)
@@ -2379,6 +2406,15 @@ ieee80211_ioctl_set80211(struct ieee80211com *ic, u_long cmd, struct ieee80211re
 			return EINVAL;
 		ic->ic_fragthreshold = ireq->i_val;
 		error = IS_UP(ic) ? ic->ic_reset(ic->ic_ifp) : 0;
+		break;
+	case IEEE80211_IOC_BURST:
+		if (ireq->i_val) {
+			if ((ic->ic_caps & IEEE80211_C_BURST) == 0)
+				return EINVAL;
+			ic->ic_flags |= IEEE80211_F_BURST;
+		} else
+			ic->ic_flags &= ~IEEE80211_F_BURST;
+		error = ENETRESET;		/* XXX maybe not for station? */
 		break;
 	default:
 		error = EINVAL;

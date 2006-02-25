@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sound/sound/Makefile,v 1.16 2005/07/10 10:43:59 marius Exp $
+# $FreeBSD: src/sys/modules/sound/sound/Makefile,v 1.16.2.1 2005/12/30 19:55:55 netchild Exp $
 
 .PATH: ${.CURDIR}/../../../dev/sound/pcm
 .PATH: ${.CURDIR}/../../../dev/sound/isa
@@ -8,7 +8,7 @@ SRCS=	device_if.h bus_if.h isa_if.h pci_if.h opt_isa.h
 SRCS+=	ac97_if.h channel_if.h feeder_if.h mixer_if.h
 SRCS+=	ac97_if.c channel_if.c feeder_if.c mixer_if.c
 SRCS+=	ac97.c ac97_patch.c buffer.c channel.c dsp.c
-SRCS+=	fake.c feeder.c feeder_fmt.c feeder_rate.c
+SRCS+=	fake.c feeder.c feeder_fmt.c feeder_rate.c feeder_volume.c
 SRCS+=	mixer.c sndstat.c sound.c vchan.c
 
 EXPORT_SYMS=	YES	# XXX evaluate

@@ -1,5 +1,5 @@
 ** README for file(1) Command **
-@(#) $Id: README,v 1.1.1.1 2006-02-25 02:25:35 laffer1 Exp $
+@(#) $Id: README,v 1.1.1.2 2006-02-25 02:32:35 laffer1 Exp $
 
 This is Release 4.x of Ian Darwin's (copyright but distributable)
 file(1) command. This version is the standard "file" command for Linux,

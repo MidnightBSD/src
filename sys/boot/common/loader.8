@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sys/boot/common/loader.8,v 1.82 2005/06/14 08:49:14 ru Exp $
+.\" $FreeBSD: src/sys/boot/common/loader.8,v 1.82.2.2 2006/02/14 06:20:14 ru Exp $
 .\"
-.Dd May 27, 2005
+.Dd September 22, 2005
 .Dt LOADER 8
 .Os
 .Sh NAME
@@ -370,6 +370,8 @@ Instructs the kernel to try to mount the root file system from CD-ROM.
 .It Va boot_ddb
 Instructs the kernel to start in the DDB debugger, rather than
 proceeding to initialize when booted.
+.It Va boot_dfltroot
+Instructs the kernel to mount the statically compiled-in root file system.
 .It Va boot_gdb
 Selects gdb-remote mode for the kernel debugger by default.
 .It Va boot_multicons
@@ -378,6 +380,13 @@ In a running system, console configuration can be manipulated
 by the
 .Xr conscontrol 8
 utility.
+.It Va boot_mute
+All console output is suppressed when console is muted.
+In a running system, the state of console muting can be manipulated by the
+.Xr conscontrol 8
+utility.
+.It Va boot_pause
+During the device probe, pause after each line is printed.
 .It Va boot_serial
 Force the use of a serial console even when an internal console
 is present.
@@ -392,6 +401,19 @@ by the kernel during the boot phase.
 List of semicolon-separated search path for bootable kernels.
 The default is
 .Dq Li kernel .
+.It Va comconsole_speed
+Defines the speed of the serial console (i386 and amd64 only).
+If the previous boot stage indicated that a serial console is in use
+then this variable is initialized to the current speed of the console
+serial port.
+Otherwise it is set to 9600 unless this was overridden using the
+.Va BOOT_COMCONSOLE_SPEED
+variable when
+.Nm
+was compiled.
+Changes to the
+.Va comconsole_speed
+variable take effect immediately.
 .It Va console
 Defines the current console or consoles.
 Multiple consoles may be specified.

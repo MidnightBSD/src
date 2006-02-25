@@ -5,7 +5,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uhid.c,v 1.77 2005/01/06 01:43:28 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uhid.c,v 1.77.2.3 2006/01/20 22:55:45 mux Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -89,8 +89,12 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/uhid.c,v 1.77 2005/01/06 01:43:28 imp Exp $"
 #include <dev/usb/usbdi_util.h>
 #include <dev/usb/hid.h>
 
-/* Report descriptor for broken Wacom Graphire */
+/* Replacement report descriptors for devices shipped with broken ones */
 #include <dev/usb/ugraphire_rdesc.h>
+#include <dev/usb/uxb360gp_rdesc.h>
+
+/* For hid blacklist quirk */
+#include <dev/usb/usb_quirks.h>
 
 #ifdef USB_DEBUG
 #define DPRINTF(x)	if (uhiddebug) logprintf x
@@ -190,7 +194,16 @@ USB_MATCH(uhid)
 	if (uaa->iface == NULL)
 		return (UMATCH_NONE);
 	id = usbd_get_interface_descriptor(uaa->iface);
-	if (id == NULL || id->bInterfaceClass != UICLASS_HID)
+	if (id == NULL)
+		return (UMATCH_NONE);
+	if  (id->bInterfaceClass != UICLASS_HID) {
+		/* The Xbox 360 gamepad doesn't use the HID class. */
+		if (id->bInterfaceClass != UICLASS_VENDOR ||
+		    id->bInterfaceSubClass != UISUBCLASS_XBOX360_CONTROLLER ||
+		    id->bInterfaceProtocol != UIPROTO_XBOX360_GAMEPAD)
+			return (UMATCH_NONE);
+	}
+	if (usbd_get_quirks(uaa->device)->uq_flags & UQ_HID_IGNORE)
 		return (UMATCH_NONE);
 #if 0
 	if (uaa->matchlvl)
@@ -208,6 +221,7 @@ USB_ATTACH(uhid)
 	usb_endpoint_descriptor_t *ed;
 	int size;
 	void *desc;
+	const void *descptr;
 	usbd_status err;
 	char devinfo[1024];
 
@@ -243,17 +257,41 @@ USB_ATTACH(uhid)
 
 	sc->sc_ep_addr = ed->bEndpointAddress;
 
-	if (uaa->vendor == USB_VENDOR_WACOM &&
-	    uaa->product == USB_PRODUCT_WACOM_GRAPHIRE /* &&
-	    uaa->revision == 0x???? */) { /* XXX should use revision */
+	descptr = NULL;
+	if (uaa->vendor == USB_VENDOR_WACOM) {
 		/* The report descriptor for the Wacom Graphire is broken. */
-		size = sizeof uhid_graphire_report_descr;
+		if (uaa->product == USB_PRODUCT_WACOM_GRAPHIRE) {
+			size = sizeof uhid_graphire_report_descr;
+			descptr = uhid_graphire_report_descr;
+		} else if (uaa->product == USB_PRODUCT_WACOM_GRAPHIRE3_4X5) {
+			static uByte reportbuf[] = {2, 2, 2};
+
+			/*
+			 * The Graphire3 needs 0x0202 to be written to
+			 * feature report ID 2 before it'll start
+			 * returning digitizer data.
+			 */
+			usbd_set_report(uaa->iface, UHID_FEATURE_REPORT, 2,
+			    &reportbuf, sizeof reportbuf);
+
+			size = sizeof uhid_graphire3_4x5_report_descr;
+			descptr = uhid_graphire3_4x5_report_descr;
+		}
+	} else if (id->bInterfaceClass == UICLASS_VENDOR &&
+	    id->bInterfaceSubClass == UISUBCLASS_XBOX360_CONTROLLER &&
+	    id->bInterfaceProtocol == UIPROTO_XBOX360_GAMEPAD) {
+		/* The Xbox 360 gamepad has no report descriptor. */
+		size = sizeof uhid_xb360gp_report_descr;
+		descptr = uhid_xb360gp_report_descr;
+	}
+
+	if (descptr) {
 		desc = malloc(size, M_USBDEV, M_NOWAIT);
 		if (desc == NULL)
 			err = USBD_NOMEM;
 		else {
 			err = USBD_NORMAL_COMPLETION;
-			memcpy(desc, uhid_graphire_report_descr, size);
+			memcpy(desc, descptr, size);
 		}
 	} else {
 		desc = NULL;

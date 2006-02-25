@@ -1,4 +1,4 @@
-@c $Id: intro.texi,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+@c $Id: intro.texi,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
 
 @node Introduction, What is Kerberos?, Top, Top
 @c @node Introduction, What is Kerberos?, Top, Top

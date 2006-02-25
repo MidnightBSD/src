@@ -2,7 +2,8 @@
  * PCI specific probe and attach routines for Qlogic ISP SCSI adapters.
  * FreeBSD Version.
  *
- * Copyright (c) 1997, 1998, 1999, 2000, 2001 by Matthew Jacob
+ * Copyright (c) 1997-2006 by Matthew Jacob
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,16 +25,18 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/isp/isp_pci.c,v 1.104 2005/05/29 04:42:22 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/isp/isp_pci.c,v 1.104.2.3 2006/02/04 23:53:08 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/stdint.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
@@ -42,12 +45,6 @@ __FBSDID("$FreeBSD: src/sys/dev/isp/isp_pci.c,v 1.104 2005/05/29 04:42:22 nyan E
 #include <machine/resource.h>
 #include <sys/rman.h>
 #include <sys/malloc.h>
-
-#ifdef	ISP_TARGET_MODE
-#ifdef	PAE
-#error	"PAE and ISP_TARGET_MODE not supported yet"
-#endif
-#endif
 
 #include <dev/isp/isp_freebsd.h>
 
@@ -219,6 +216,14 @@ static struct ispmdvec mdvec_2300 = {
 #define	PCI_PRODUCT_QLOGIC_ISP2312	0x2312
 #endif
 
+#ifndef	PCI_PRODUCT_QLOGIC_ISP2322
+#define	PCI_PRODUCT_QLOGIC_ISP2322	0x2322
+#endif
+
+#ifndef	PCI_PRODUCT_QLOGIC_ISP2422
+#define	PCI_PRODUCT_QLOGIC_ISP2422	0x2422
+#endif
+
 #ifndef	PCI_PRODUCT_QLOGIC_ISP6312
 #define	PCI_PRODUCT_QLOGIC_ISP6312	0x6312
 #endif
@@ -252,6 +257,12 @@ static struct ispmdvec mdvec_2300 = {
 
 #define	PCI_QLOGIC_ISP2312	\
 	((PCI_PRODUCT_QLOGIC_ISP2312 << 16) | PCI_VENDOR_QLOGIC)
+
+#define	PCI_QLOGIC_ISP2322	\
+	((PCI_PRODUCT_QLOGIC_ISP2322 << 16) | PCI_VENDOR_QLOGIC)
+
+#define	PCI_QLOGIC_ISP2422	\
+	((PCI_PRODUCT_QLOGIC_ISP2422 << 16) | PCI_VENDOR_QLOGIC)
 
 #define	PCI_QLOGIC_ISP6312	\
 	((PCI_PRODUCT_QLOGIC_ISP6312 << 16) | PCI_VENDOR_QLOGIC)
@@ -334,6 +345,12 @@ isp_pci_probe(device_t dev)
 		break;
 	case PCI_QLOGIC_ISP2312:
 		device_set_desc(dev, "Qlogic ISP 2312 PCI FC-AL Adapter");
+		break;
+	case PCI_QLOGIC_ISP2322:
+		device_set_desc(dev, "Qlogic ISP 2322 PCI FC-AL Adapter");
+		break;
+	case PCI_QLOGIC_ISP2422:
+		device_set_desc(dev, "Qlogic ISP 2422 PCI FC-AL Adapter");
 		break;
 	case PCI_QLOGIC_ISP6312:
 		device_set_desc(dev, "Qlogic ISP 6312 PCI FC-AL Adapter");
@@ -533,6 +550,20 @@ isp_pci_attach(device_t dev)
 		pcs->pci_poff[MBOX_BLOCK >> _BLK_REG_SHFT] =
 		    PCI_MBOX_REGS2300_OFF;
 	}
+	if (pci_get_devid(dev) == PCI_QLOGIC_ISP2322) {
+		mdvp = &mdvec_2300;
+		basetype = ISP_HA_FC_2322;
+		psize = sizeof (fcparam);
+		pcs->pci_poff[MBOX_BLOCK >> _BLK_REG_SHFT] =
+		    PCI_MBOX_REGS2300_OFF;
+	}
+	if (pci_get_devid(dev) == PCI_QLOGIC_ISP2422) {
+		mdvp = &mdvec_2300;
+		basetype = ISP_HA_FC_2422;
+		psize = sizeof (fcparam);
+		pcs->pci_poff[MBOX_BLOCK >> _BLK_REG_SHFT] =
+		    PCI_MBOX_REGS2300_OFF;
+	}
 	isp = &pcs->pci_isp;
 	isp->isp_param = malloc(psize, M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (isp->isp_param == NULL) {
@@ -549,7 +580,10 @@ isp_pci_attach(device_t dev)
 	 * Try and find firmware for this device.
 	 */
 
-	if (isp_get_firmware_p) {
+	/*
+	 * Don't even attempt to get firmware for the 2322/2422 (yet)
+	 */
+	if (IS_2322(isp) == 0 && IS_24XX(isp) == 0 && isp_get_firmware_p) {
 		int device = (int) pci_get_device(dev);
 #ifdef	ISP_TARGET_MODE
 		(*isp_get_firmware_p)(0, 1, device, &mdvp->dv_ispfw);
@@ -743,7 +777,7 @@ isp_pci_attach(device_t dev)
 	/*
 	 * Last minute checks...
 	 */
-	if (IS_2312(isp)) {
+	if (IS_23XX(isp)) {
 		isp->isp_port = pci_get_function(dev);
 	}
 
@@ -837,7 +871,7 @@ isp_pci_intr(void *arg)
 	bus_space_write_2(pcs->pci_st, pcs->pci_sh, off, v)
 
 
-static INLINE int
+static __inline int
 isp_pci_rd_debounced(struct ispsoftc *isp, int off, u_int16_t *rp)
 {
 	struct isp_pcisoftc *pcs = (struct isp_pcisoftc *) isp;
@@ -1088,7 +1122,9 @@ isp_pci_mbxdma(struct ispsoftc *isp)
 	caddr_t base;
 	u_int32_t len;
 	int i, error, ns;
-	bus_size_t alim, slim, xlim;
+	bus_size_t slim;	/* segment size */
+	bus_addr_t llim;	/* low limit of unavailable dma */
+	bus_addr_t hlim;	/* high limit of unavailable dma */
 	struct imush im;
 
 	/*
@@ -1099,19 +1135,19 @@ isp_pci_mbxdma(struct ispsoftc *isp)
 	}
 
 #ifdef	ISP_DAC_SUPPORTED
-	alim = BUS_SPACE_UNRESTRICTED;
-	xlim = BUS_SPACE_MAXADDR_32BIT;
+	llim = hlim = BUS_SPACE_MAXADDR;
 #else
-	xlim = alim = BUS_SPACE_MAXADDR_32BIT;
+	llim = BUS_SPACE_MAXADDR_32BIT;
+	hlim = BUS_SPACE_MAXADDR;
 #endif
 	if (IS_ULTRA2(isp) || IS_FC(isp) || IS_1240(isp)) {
-		slim = BUS_SPACE_MAXADDR_32BIT;
+		slim = (bus_size_t) (1ULL << 32);
 	} else {
-		slim = BUS_SPACE_MAXADDR_24BIT;
+		slim = (1 << 24);
 	}
 
 	ISP_UNLOCK(isp);
-	if (bus_dma_tag_create(NULL, 1, slim+1, alim, alim,
+	if (bus_dma_tag_create(NULL, 1, slim, llim, hlim,
 	    NULL, NULL, BUS_SPACE_MAXSIZE, ISP_NSEGS, slim, 0, 
 	    busdma_lock_mutex, &Giant, &pcs->dmat)) {
 		isp_prt(isp, ISP_LOGERR, "could not create master dma tag");
@@ -1158,7 +1194,11 @@ isp_pci_mbxdma(struct ispsoftc *isp)
 	}
 
 	ns = (len / PAGE_SIZE) + 1;
-	if (bus_dma_tag_create(pcs->dmat, QENTRY_LEN, slim+1, xlim, xlim,
+	/*
+	 * Create a tag for the control spaces- force it to within 32 bits.
+	 */
+	if (bus_dma_tag_create(pcs->dmat, QENTRY_LEN, slim,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
 	    NULL, NULL, len, ns, slim, 0, busdma_lock_mutex, &Giant,
 	    &isp->isp_cdmat)) {
 		isp_prt(isp, ISP_LOGERR,
@@ -1577,9 +1617,9 @@ tdma_mkfc(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 		    dm_segs[segcnt].ds_len;
 		cto->rsp.m0.ct_xfrlen += dm_segs[segcnt].ds_len;
 		isp_prt(isp, ISP_LOGTDEBUG1,
-		    "isp_send_ctio2: ent0[%d]0x%llx:%lld",
-		    cto->ct_seg_count, (long long)dm_segs[segcnt].ds_addr,
-		    (long long)dm_segs[segcnt].ds_len);
+		    "isp_send_ctio2: ent0[%d]0x%jx:%ju",
+		    cto->ct_seg_count, (uintmax_t)dm_segs[segcnt].ds_addr,
+		    (uintmax_t)dm_segs[segcnt].ds_len);
 	}
 
 	while (segcnt < nseg) {
@@ -1606,10 +1646,10 @@ tdma_mkfc(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 			crq->req_dataseg[seg].ds_base = dm_segs[segcnt].ds_addr;
 			crq->req_dataseg[seg].ds_count = dm_segs[segcnt].ds_len;
 			isp_prt(isp, ISP_LOGTDEBUG1,
-			    "isp_send_ctio2: ent%d[%d]0x%llx:%lld",
+			    "isp_send_ctio2: ent%d[%d]%jx:%ju",
 			    cto->ct_header.rqs_entry_count-1, seg,
-			    (long long) dm_segs[segcnt].ds_addr,
-			    (long long) dm_segs[segcnt].ds_len);
+			    (uintmax_t)dm_segs[segcnt].ds_addr,
+			    (uintmax_t)dm_segs[segcnt].ds_len);
 			cto->rsp.m0.ct_xfrlen += dm_segs[segcnt].ds_len;
 			cto->ct_seg_count++;
 		}
@@ -1635,7 +1675,7 @@ tdma_mkfc(void *arg, bus_dma_segment_t *dm_segs, int nseg, int error)
 
 static void dma2(void *, bus_dma_segment_t *, int, int);
 
-#ifdef	PAE
+#if	defined(ISP_DAC_SUPPORTED) && (ISP_64BIT_CORRECTLY_DONE)
 #define	LOWD(x)		((uint32_t) x)
 #define	HIWD(x)		((uint32_t) (x >> 32))
 

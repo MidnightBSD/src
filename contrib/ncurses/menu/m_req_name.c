@@ -37,7 +37,7 @@
 
 #include "menu.priv.h"
 
-MODULE_ID("$Id: m_req_name.c,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $")
+MODULE_ID("$Id: m_req_name.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
 
 static const char *request_names[ MAX_MENU_COMMAND - MIN_MENU_COMMAND + 1 ] = {
   "LEFT_ITEM"    ,

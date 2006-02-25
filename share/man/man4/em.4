@@ -29,7 +29,7 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD: src/share/man/man4/em.4,v 1.20.2.3 2005/12/02 16:49:36 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/em.4,v 1.20.2.4 2006/02/02 07:50:00 trhodes Exp $
 .\"
 .Dd November 27, 2005
 .Dt EM 4
@@ -38,17 +38,15 @@
 .Nm em
 .Nd "Intel(R) PRO/1000 Gigabit Ethernet adapter driver"
 .Sh SYNOPSIS
-To compile support for the
-.Nm
-driver into your kernel, place the following line in your
+To compile this driver into the kernel,
+place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device em"
 .Ed
 .Pp
-Alternatively, to load the
-.Nm
-driver at boot time, place the following line in
+Alternatively, to load the driver as a
+module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_em_load="YES"
@@ -177,7 +175,7 @@ Intel PRO/1000 XT Server Adapter (82544)
 Tunables can be set at the
 .Xr loader 8
 prompt before booting the kernel or stored in
-.Pa /boot/loader.conf .
+.Xr loader.conf 5 .
 .Bl -tag -width indent
 .It Va hw.em.rxd
 Number of receive descriptors allocated by the driver.

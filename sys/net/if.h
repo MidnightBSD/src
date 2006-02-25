@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if.h,v 1.96.2.3 2005/10/07 14:00:05 glebius Exp $
+ * $FreeBSD: src/sys/net/if.h,v 1.96.2.4 2006/02/15 03:37:15 ps Exp $
  */
 
 #ifndef _NET_IF_H_
@@ -347,6 +347,15 @@ struct	ifconf {
 #define	ifc_req	ifc_ifcu.ifcu_req	/* array of structures returned */
 };
 
+#if defined (__amd64__) || defined (COMPAT_32BIT)
+struct ifconf32 {
+	int	ifc_len;		/* size of associated buffer */
+	union {
+		u_int	ifcu_buf;
+		u_int	ifcu_req;
+	} ifc_ifcu;
+};
+#endif
 
 /*
  * Structure for SIOC[AGD]LIFADDR

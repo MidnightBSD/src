@@ -247,4 +247,4 @@ Kresolve sequence dnsmx canon
   be used if set instead of LOCAL_RELAY ($R).  This will be fixed in a
   future version.
 
-$Revision: 1.1.1.1 $, Last updated $Date: 2006-02-25 02:26:19 $
+$Revision: 1.1.1.2 $, Last updated $Date: 2006-02-25 02:33:53 $

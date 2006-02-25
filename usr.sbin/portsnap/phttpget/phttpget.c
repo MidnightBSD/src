@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/portsnap/phttpget/phttpget.c,v 1.4.2.3 2005/11/25 12:56:04 cperciva Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/portsnap/phttpget/phttpget.c,v 1.4.2.4 2006/01/27 14:44:15 cperciva Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -326,7 +326,7 @@ main(int argc, char *argv[])
 	error = getaddrinfo(env_HTTP_PROXY ? env_HTTP_PROXY : servername,
 	    env_HTTP_PROXY ? proxyport : "http", &hints, &res0);
 	if (error)
-		errx(1, "%s: host = %s, port = %s",
+		errx(1, "host = %s, port = %s: %s",
 		    env_HTTP_PROXY ? env_HTTP_PROXY : servername,
 		    env_HTTP_PROXY ? proxyport : "http",
 		    gai_strerror(error));

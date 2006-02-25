@@ -31,7 +31,7 @@
  *  Author: Thomas E. Dickey <dickey@clark.net> 1997                        *
  ****************************************************************************/
 /*
- * $Id: ncurses_cfg.h,v 1.1.1.1 2006-02-25 02:26:53 laffer1 Exp $
+ * $Id: ncurses_cfg.h,v 1.1.1.2 2006-02-25 02:35:05 laffer1 Exp $
  *
  * This is a template-file used to generate the "ncurses_cfg.h" file.
  *

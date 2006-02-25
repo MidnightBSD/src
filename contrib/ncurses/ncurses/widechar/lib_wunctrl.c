@@ -37,7 +37,7 @@
 
 #if USE_WIDEC_SUPPORT
 
-MODULE_ID("$Id: lib_wunctrl.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: lib_wunctrl.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
 
 NCURSES_EXPORT(wchar_t *)
 wunctrl(cchar_t * wc)

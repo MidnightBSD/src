@@ -33,7 +33,7 @@
 
 #include "ftpd_locl.h"
 
-RCSID("$Id: kauth.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: kauth.c,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $");
 
 static KTEXT_ST cip;
 static unsigned int lifetime;

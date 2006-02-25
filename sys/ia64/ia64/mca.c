@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/mca.c,v 1.10 2005/02/09 04:48:23 marcel Exp $
+ * $FreeBSD: src/sys/ia64/ia64/mca.c,v 1.10.2.1 2006/02/14 03:40:49 marcel Exp $
  */
 
 #include <sys/param.h>
@@ -109,7 +109,7 @@ ia64_mca_save_state(int type)
 		mtx_unlock_spin(&mca_info_block_lock);
 
 		totsz = sizeof(struct sysctl_oid) + recsz + 32;
-		oidp = malloc(totsz, M_MCA, M_WAITOK|M_ZERO);
+		oidp = malloc(totsz, M_MCA, M_NOWAIT|M_ZERO);
 		state = (char*)(oidp + 1);
 		name = state + recsz;
 		sprintf(name, "%lld", (long long)seqnr);

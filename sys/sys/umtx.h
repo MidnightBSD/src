@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/umtx.h,v 1.16 2005/03/05 09:15:03 davidxu Exp $
+ * $FreeBSD: src/sys/sys/umtx.h,v 1.16.2.1 2006/01/16 05:48:40 davidxu Exp $
  *
  */
 
@@ -135,6 +135,8 @@ umtx_wake(struct umtx *umtx, int nr_wakeup)
 
 struct umtx_q *umtxq_alloc(void);
 void umtxq_free(struct umtx_q *);
+struct thread;
+int kern_umtx_wake(struct thread *td, void *uaddr, int n_wake);
 
 #endif /* !_KERNEL */
 #endif /* !_SYS_UMTX_H_ */

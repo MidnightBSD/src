@@ -4,7 +4,7 @@
 *** 11,31 ****
 --- 11,41 ----
    */
-  static	char	RcsId[] = "$Header: /home/cvs/src/contrib/ipfilter/FWTK/ftp-gw.diff,v 1.1.1.1 2006-02-25 02:26:02 laffer1 Exp $";
+  static	char	RcsId[] = "$Header: /home/cvs/src/contrib/ipfilter/FWTK/ftp-gw.diff,v 1.1.1.2 2006-02-25 02:33:23 laffer1 Exp $";
   
 + /*
 +  * Patches for IP Filter NAT extensions written by Darren Reed, 7/7/96

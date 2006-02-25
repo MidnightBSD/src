@@ -36,7 +36,7 @@
 #include <util.h>
 #endif
 
-RCSID("$Id: main.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: main.c,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $");
 
 sig_atomic_t exit_flag = 0;
 krb5_context context;

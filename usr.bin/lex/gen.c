@@ -26,7 +26,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Header: /home/cvs/src/usr.bin/lex/gen.c,v 1.1.1.1 2006-02-25 02:29:15 laffer1 Exp $ */
+/* $Header: /home/cvs/src/usr.bin/lex/gen.c,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/lex/gen.c,v 1.7 2004/01/06 18:54:55 nectar Exp $");
 

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005 Robert N. M. Watson
+ * Copyright (c) 2005-2006 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libmemstat/memstat_uma.c,v 1.7.2.4 2005/11/09 10:20:48 rwatson Exp $
+ * $FreeBSD: src/lib/libmemstat/memstat_uma.c,v 1.7.2.10 2006/02/14 03:38:31 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <kvm.h>
 #include <nlist.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,6 +53,8 @@ static struct nlist namelist[] = {
 	{ .n_name = "_uma_kegs" },
 #define	X_MP_MAXID	1
 	{ .n_name = "_mp_maxid" },
+#define	X_ALL_CPUS	2
+	{ .n_name = "_all_cpus" },
 	{ .n_name = "" },
 };
 
@@ -301,14 +304,15 @@ kread_symbol(kvm_t *kvm, int index, void *address, size_t size,
 int
 memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 {
-	static LIST_HEAD(, uma_keg) uma_kegs;
+	LIST_HEAD(, uma_keg) uma_kegs;
 	struct memory_type *mtp;
 	struct uma_bucket *ubp, ub;
-	struct uma_cache *ucp;
+	struct uma_cache *ucp, *ucp_array;
 	struct uma_zone *uzp, uz;
 	struct uma_keg *kzp, kz;
 	int hint_dontsearch, i, mp_maxid, ret;
 	char name[MEMTYPE_MAXNAME];
+	__cpumask_t all_cpus;
 	kvm_t *kvm;
 
 	kvm = (kvm_t *)kvm_handle;
@@ -332,10 +336,21 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 		list->mtl_error = ret;
 		return (-1);
 	}
+	ret = kread_symbol(kvm, X_ALL_CPUS, &all_cpus, sizeof(all_cpus), 0);
+	if (ret != 0) {
+		list->mtl_error = ret;
+		return (-1);
+	}
+	ucp_array = malloc(sizeof(struct uma_cache) * (mp_maxid + 1));
+	if (ucp_array == NULL) {
+		list->mtl_error = MEMSTAT_ERROR_NOMEMORY;
+		return (-1);
+	}
 	for (kzp = LIST_FIRST(&uma_kegs); kzp != NULL; kzp =
 	    LIST_NEXT(&kz, uk_link)) {
 		ret = kread(kvm, kzp, &kz, sizeof(kz), 0);
 		if (ret != 0) {
+			free(ucp_array);
 			_memstat_mtl_empty(list);
 			list->mtl_error = ret;
 			return (-1);
@@ -344,6 +359,16 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 		    LIST_NEXT(&uz, uz_link)) {
 			ret = kread(kvm, uzp, &uz, sizeof(uz), 0);
 			if (ret != 0) {
+				free(ucp_array);
+				_memstat_mtl_empty(list);
+				list->mtl_error = ret;
+				return (-1);
+			}
+			ret = kread(kvm, uzp, ucp_array,
+			    sizeof(struct uma_cache) * (mp_maxid + 1),
+			    offsetof(struct uma_zone, uz_cpu[0]));
+			if (ret != 0) {
+				free(ucp_array);
 				_memstat_mtl_empty(list);
 				list->mtl_error = ret;
 				return (-1);
@@ -351,6 +376,7 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 			ret = kread_string(kvm, uz.uz_name, name,
 			    MEMTYPE_MAXNAME);
 			if (ret != 0) {
+				free(ucp_array);
 				_memstat_mtl_empty(list);
 				list->mtl_error = ret;
 				return (-1);
@@ -364,6 +390,7 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 				mtp = _memstat_mt_allocate(list, ALLOCATOR_UMA,
 				    name);
 			if (mtp == NULL) {
+				free(ucp_array);
 				_memstat_mtl_empty(list);
 				list->mtl_error = MEMSTAT_ERROR_NOMEMORY;
 				return (-1);
@@ -378,7 +405,9 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 			if (kz.uk_flags & UMA_ZFLAG_INTERNAL)
 				goto skip_percpu;
 			for (i = 0; i < mp_maxid + 1; i++) {
-				ucp = &uz.uz_cpu[i];
+				if ((all_cpus & (1 << i)) == 0)
+					continue;
+				ucp = &ucp_array[i];
 				mtp->mt_numallocs += ucp->uc_allocs;
 				mtp->mt_numfrees += ucp->uc_frees;
 
@@ -386,9 +415,9 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 					ret = kread(kvm, ucp->uc_allocbucket,
 					    &ub, sizeof(ub), 0);
 					if (ret != 0) {
+						free(ucp_array);
 						_memstat_mtl_empty(list);
-						list->mtl_error =
-						    MEMSTAT_ERROR_NOMEMORY;
+						list->mtl_error = ret;
 						return (-1);
 					}
 					mtp->mt_free += ub.ub_cnt;
@@ -397,9 +426,9 @@ memstat_kvm_uma(struct memory_type_list *list, void *kvm_handle)
 					ret = kread(kvm, ucp->uc_freebucket,
 					    &ub, sizeof(ub), 0);
 					if (ret != 0) {
+						free(ucp_array);
 						_memstat_mtl_empty(list);
-						list->mtl_error =
-						    MEMSTAT_ERROR_NOMEMORY;
+						list->mtl_error = ret;
 						return (-1);
 					}
 					mtp->mt_free += ub.ub_cnt;
@@ -409,7 +438,7 @@ skip_percpu:
 			mtp->mt_size = kz.uk_size;
 			mtp->mt_memalloced = mtp->mt_numallocs * mtp->mt_size;
 			mtp->mt_memfreed = mtp->mt_numfrees * mtp->mt_size;
-			mtp->mt_bytes = mtp->mt_memalloced = mtp->mt_memfreed;
+			mtp->mt_bytes = mtp->mt_memalloced - mtp->mt_memfreed;
 			if (kz.uk_ppera > 1)
 				mtp->mt_countlimit = kz.uk_maxpages /
 				    kz.uk_ipers;
@@ -431,5 +460,6 @@ skip_percpu:
 			mtp->mt_free += mtp->mt_zonefree;
 		}
 	}
+	free(ucp_array);
 	return (0);
 }

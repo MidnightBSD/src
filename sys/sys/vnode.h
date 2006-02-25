@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vnode.h	8.7 (Berkeley) 2/4/94
- * $FreeBSD: src/sys/sys/vnode.h,v 1.304.2.2 2005/09/18 07:10:57 phk Exp $
+ * $FreeBSD: src/sys/sys/vnode.h,v 1.304.2.6 2006/02/20 00:53:15 yar Exp $
  */
 
 #ifndef _SYS_VNODE_H_
@@ -59,7 +59,8 @@
 /*
  * Vnode types.  VNON means no type.
  */
-enum vtype	{ VNON, VREG, VDIR, VBLK, VCHR, VLNK, VSOCK, VFIFO, VBAD };
+enum vtype	{ VNON, VREG, VDIR, VBLK, VCHR, VLNK, VSOCK, VFIFO, VBAD,
+		  VMARKER };
 
 /*
  * Each underlying filesystem allocates its own private area and hangs
@@ -289,7 +290,7 @@ struct vattr {
  */
 #define	VA_UTIMES_NULL	0x01		/* utimes argument was NULL */
 #define	VA_EXCLUSIVE	0x02		/* exclusive create request */
-#define	VA_EXECVE_ATIME	0x04		/* setting atime for execve */
+#define	VA_MARK_ATIME	0x04		/* setting atime for execve/mmap */
 
 /*
  * Flags for ioflag. (high 16 bits used to ask for read-ahead and
@@ -587,8 +588,9 @@ int	speedup_syncer(void);
 	vn_fullpath(FIRST_THREAD_IN_PROC(p), (p)->p_textvp, rb, rfb)
 int	vn_fullpath(struct thread *td, struct vnode *vn,
 	    char **retbuf, char **freebuf);
-int	vaccess(enum vtype type, mode_t file_mode, uid_t uid, gid_t gid,
-	    mode_t acc_mode, struct ucred *cred, int *privused);
+int	vaccess(enum vtype type, mode_t file_mode, uid_t file_uid,
+	    gid_t file_gid, mode_t acc_mode, struct ucred *cred,
+	    int *privused);
 int	vaccess_acl_posix1e(enum vtype type, uid_t file_uid,
 	    gid_t file_gid, struct acl *acl, mode_t acc_mode,
 	    struct ucred *cred, int *privused);
@@ -714,6 +716,7 @@ int	vrefcnt(struct vnode *vp);
 void 	v_addpollinfo(struct vnode *vp);
 
 int vnode_create_vobject(struct vnode *vp, size_t size, struct thread *td);
+int vnode_create_vobject_off(struct vnode *vp, off_t size, struct thread *td);
 void vnode_destroy_vobject(struct vnode *vp);
 
 extern struct vop_vector fifo_specops;
@@ -736,6 +739,7 @@ void vfs_hash_rehash(struct vnode *vp, u_int hash);
 void vfs_hash_remove(struct vnode *vp);
 
 int vfs_kqfilter(struct vop_kqfilter_args *);
+void vfs_mark_atime(struct vnode *vp, struct thread *td);
 struct dirent;
 int vfs_read_dirent(struct vop_readdir_args *ap, struct dirent *dp, off_t off);
 

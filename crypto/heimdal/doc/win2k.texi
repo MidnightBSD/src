@@ -1,4 +1,4 @@
-@c $Id: win2k.texi,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+@c $Id: win2k.texi,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
 
 @node Windows 2000 compatability, Programming with Kerberos, Kerberos 4 issues, Top
 @comment  node-name,  next,  previous,  up

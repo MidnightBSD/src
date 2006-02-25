@@ -1,7 +1,7 @@
 dnl 
 dnl See if there is any X11 present
 dnl
-dnl $Id: check-x.m4,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+dnl $Id: check-x.m4,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
 
 AC_DEFUN([KRB_CHECK_X],[
 AC_PATH_XTRA

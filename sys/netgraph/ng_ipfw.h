@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_ipfw.h,v 1.1 2005/02/05 12:06:33 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_ipfw.h,v 1.1.2.1 2006/02/17 16:46:47 ru Exp $
  */
 
 #define NG_IPFW_NODE_TYPE    "ipfw"
@@ -42,7 +42,6 @@ struct ng_ipfw_tag {
 	int		dir;
 #define	NG_IPFW_OUT	0
 #define	NG_IPFW_IN	1
-	int		flags;		/* flags, for ip_output (IPv6 ?) */
 };
 
 #define	TAGSIZ	(sizeof(struct ng_ipfw_tag) - sizeof(struct m_tag))

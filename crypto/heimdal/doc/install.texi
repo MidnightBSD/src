@@ -1,4 +1,4 @@
-@c $Id: install.texi,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+@c $Id: install.texi,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
 
 @node Building and Installing, Setting up a realm, What is Kerberos?, Top
 @comment  node-name,  next,  previous,  up

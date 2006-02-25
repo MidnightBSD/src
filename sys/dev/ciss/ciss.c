@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/ciss/ciss.c,v 1.64.2.1 2005/09/16 17:59:48 ps Exp $
+ *	$FreeBSD: src/sys/dev/ciss/ciss.c,v 1.64.2.2 2005/12/29 08:28:01 ps Exp $
  */
 
 /*
@@ -1928,8 +1928,11 @@ ciss_report_request(struct ciss_request *cr, int *command_status, int *scsi_stat
      * Logical/Physical LUNs commands.
      */
     if ((cc->header.host_tag & CISS_HDR_HOST_TAG_ERROR) &&
+	((ce->command_status == CISS_CMD_STATUS_DATA_OVERRUN) ||
+	 (ce->command_status == CISS_CMD_STATUS_DATA_UNDERRUN)) &&
 	((cc->cdb.cdb[0] == CISS_OPCODE_REPORT_LOGICAL_LUNS) ||
-	 (cc->cdb.cdb[0] == CISS_OPCODE_REPORT_PHYSICAL_LUNS))) {
+	 (cc->cdb.cdb[0] == CISS_OPCODE_REPORT_PHYSICAL_LUNS) ||
+	 (cc->cdb.cdb[0] == INQUIRY))) {
 	cc->header.host_tag &= ~CISS_HDR_HOST_TAG_ERROR;
 	debug(2, "ignoring irrelevant under/overrun error");
     }

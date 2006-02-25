@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/re/if_re.c,v 1.46.2.9 2005/11/27 02:56:42 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/re/if_re.c,v 1.46.2.12 2006/01/13 19:21:44 glebius Exp $");
 
 /*
  * RealTek 8139C+/8169/8169S/8110S PCI NIC driver
@@ -1670,9 +1670,12 @@ re_rxeof(sc)
 			}
 		}
 
-		if (rxvlan & RL_RDESC_VLANCTL_TAG)
-			VLAN_INPUT_TAG(ifp, m,
-			    ntohs((rxvlan & RL_RDESC_VLANCTL_DATA)), continue);
+		if (rxvlan & RL_RDESC_VLANCTL_TAG) {
+			VLAN_INPUT_TAG_NEW(ifp, m,
+			    ntohs((rxvlan & RL_RDESC_VLANCTL_DATA)));
+			if (m == NULL)
+				continue;
+		}
 		RL_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);
 		RL_LOCK(sc);
@@ -2504,5 +2507,12 @@ re_shutdown(dev)
 
 	RL_LOCK(sc);
 	re_stop(sc);
+	/*
+	 * Mark interface as down since otherwise we will panic if
+	 * interrupt comes in later on, which can happen in some
+	 * cases. Another option is to call re_detach() instead of
+	 * re_stop(), like ve(4) does.
+	 */
+	sc->rl_ifp->if_flags &= ~IFF_UP;
 	RL_UNLOCK(sc);
 }

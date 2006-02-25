@@ -21,7 +21,7 @@ SM_IDSTR(copyright,
      Copyright (c) 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: smrsh.c,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: smrsh.c,v 1.1.1.2 2006-02-25 02:33:57 laffer1 Exp $")
 
 /*
 **  SMRSH -- sendmail restricted shell

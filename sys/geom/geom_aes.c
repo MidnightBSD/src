@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_aes.c,v 1.28 2005/03/11 15:42:50 ume Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_aes.c,v 1.28.2.1 2005/12/29 05:59:51 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -299,8 +299,8 @@ g_aes_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 			break;
 		sectorsize = cp->provider->sectorsize;
 		mediasize = cp->provider->mediasize;
-		buf = g_read_data(cp, 0, sectorsize, &error);
-		if (buf == NULL || error != 0) {
+		buf = g_read_data(cp, 0, sectorsize, NULL);
+		if (buf == NULL) {
 			break;
 		}
 		sc = g_malloc(sizeof(struct g_aes_softc), M_WAITOK | M_ZERO);

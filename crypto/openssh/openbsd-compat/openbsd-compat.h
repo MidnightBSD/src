@@ -1,4 +1,4 @@
-/* $Id: openbsd-compat.h,v 1.1.1.1 2006-02-25 02:26:33 laffer1 Exp $ */
+/* $Id: openbsd-compat.h,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $ */
 
 /*
  * Copyright (c) 1999-2003 Damien Miller.  All rights reserved.

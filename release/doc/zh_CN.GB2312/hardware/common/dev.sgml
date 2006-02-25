@@ -35,7 +35,7 @@
 
 <sect1 id="support">
   <sect1info>
-    <pubdate>$FreeBSD: src/release/doc/zh_CN.GB2312/hardware/common/dev.sgml,v 1.3.2.1 2005/10/13 17:30:58 delphij Exp $</pubdate>
+    <pubdate>$FreeBSD: src/release/doc/zh_CN.GB2312/hardware/common/dev.sgml,v 1.3.2.2 2006/01/31 18:30:41 joel Exp $</pubdate>
   </sect1info>
 
   <title>支持的硬件</title>
@@ -653,8 +653,6 @@
   </sect2>
   <sect2 id="sound">
     <title>声音设备</title>
-
-    &hwlist.sound;
 
     &hwlist.snd.ad1816;
 

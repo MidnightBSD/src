@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bluetooth.c,v 1.1.1.1 2006-02-25 02:26:47 laffer1 Exp $
+ * $Id: bluetooth.c,v 1.1.1.2 2006-02-25 02:34:50 laffer1 Exp $
  * $FreeBSD: src/lib/libbluetooth/bluetooth.c,v 1.2 2004/03/05 08:10:17 markm Exp $
  */
 

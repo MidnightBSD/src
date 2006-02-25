@@ -1,17 +1,17 @@
-# $FreeBSD: src/sys/modules/ar/Makefile,v 1.4 2004/06/25 19:22:05 julian Exp $
+# $FreeBSD: src/sys/modules/ar/Makefile,v 1.4.8.1 2006/02/10 00:37:58 yar Exp $
 
 .PATH:  ${.CURDIR}/../../dev/ar
 KMOD    = if_ar
 SRCS    = if_ar.c if_ar_isa.c if_ar_pci.c
 SRCS    += device_if.h bus_if.h pci_if.h isa_if.h opt_netgraph.h
 
+.if !defined(KERNBUILDDIR)
 NETGRAPH?=	0
 
-opt_netgraph.h:
 .if ${NETGRAPH} != 0
+opt_netgraph.h:
 	echo "#define NETGRAPH ${NETGRAPH}" > opt_netgraph.h
-.else
-	echo "" > opt_netgraph.h
+.endif
 .endif
 
 .include <bsd.kmod.mk>

@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tw.help.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tw.help.c,v 1.1.1.2 2006-02-25 02:34:06 laffer1 Exp $ */
 /* tw.help.c: actually look up and print documentation on a file.
  *	      Look down the path for an appropriate file, then print it.
  *	      Note that the printing is NOT PAGED.  This is because the
@@ -35,7 +35,7 @@
  */
 #include "sh.h"
 
-RCSID("$Id: tw.help.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $")
+RCSID("$Id: tw.help.c,v 1.1.1.2 2006-02-25 02:34:06 laffer1 Exp $")
 
 #include "tw.h"
 #include "tc.h"

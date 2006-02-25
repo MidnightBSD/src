@@ -1,8 +1,8 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile,v 1.5 2004/01/23 16:22:49 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile,v 1.5.6.2 2006/01/25 13:22:59 harti Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
-CONTRIB=${.CURDIR}/../../../../contrib/bsnmp
+CONTRIB= ${.CURDIR}/../../../../contrib/bsnmp
 .PATH: ${CONTRIB}/snmp_mibII
 
 MOD=	mibII
@@ -13,7 +13,9 @@ XSYM=	ipAddrTable ifTable ifRcvAddressEntry ifMIB ipMIB tcpMIB udpMIB	\
 	ipForward ifIndex linkDown linkUp
 MAN=	snmp_mibII.3
 
+CFLAGS+= -I${CONTRIB}/lib -I${CONTRIB}/snmpd
+
 DEFS=	${MOD}_tree.def
 INCS=	snmp_${MOD}.h
 
-.include <bsd.lib.mk>
+.include <bsd.snmpmod.mk>

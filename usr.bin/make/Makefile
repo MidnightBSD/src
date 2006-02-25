@@ -1,5 +1,5 @@
 #	@(#)Makefile	5.2 (Berkeley) 12/28/90
-#	$Id: Makefile,v 1.1.1.1 2006-02-25 02:29:18 laffer1 Exp $
+#	$Id: Makefile,v 1.1.1.2 2006-02-25 02:38:15 laffer1 Exp $
 # $FreeBSD: src/usr.bin/make/Makefile,v 1.61 2005/05/25 08:46:31 harti Exp $
 
 PROG=	make

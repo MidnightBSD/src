@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/osf1/Makefile,v 1.13 2005/06/03 12:37:56 gallatin Exp $
+# $FreeBSD: src/sys/modules/osf1/Makefile,v 1.13.2.1 2006/02/10 00:38:05 yar Exp $
 
 .PATH: ${.CURDIR}/../../alpha/osf1
 
@@ -8,7 +8,9 @@ SRCS=	osf1_ioctl.c osf1_misc.c osf1_signal.c osf1_sysent.c \
 	opt_ddb.h opt_mac.h opt_nfs.h device_if.h bus_if.h \
 	vnode_if.h
 
+.if !defined(KERNBUILDDIR)
 opt_compat.h:
 	echo "#define COMPAT_43 1" > ${.TARGET}
+.endif
 
 .include <bsd.kmod.mk>

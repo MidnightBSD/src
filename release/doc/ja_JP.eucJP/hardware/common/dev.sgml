@@ -26,13 +26,13 @@
 	this file to fix "missed" conversions are likely to break the
 	build.
 
-        $FreeBSD: src/release/doc/ja_JP.eucJP/hardware/common/dev.sgml,v 1.29 2005/06/30 12:54:57 rushani Exp $
+        $FreeBSD: src/release/doc/ja_JP.eucJP/hardware/common/dev.sgml,v 1.29.2.1 2006/01/31 18:30:41 joel Exp $
         Original revision: 1.282
 -->
 
 <sect1 id="support">
   <sect1info>
-    <pubdate>$FreeBSD: src/release/doc/ja_JP.eucJP/hardware/common/dev.sgml,v 1.29 2005/06/30 12:54:57 rushani Exp $</pubdate>
+    <pubdate>$FreeBSD: src/release/doc/ja_JP.eucJP/hardware/common/dev.sgml,v 1.29.2.1 2006/01/31 18:30:41 joel Exp $</pubdate>
   </sect1info>
 
   <title>対応ハードウェア</title>
@@ -669,8 +669,6 @@
 
   <sect2 id="sound">
     <title>サウンドデバイス</title>
-
-    &hwlist.sound;
 
     &hwlist.snd.ad1816;
 

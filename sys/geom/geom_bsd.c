@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.73 2005/03/16 20:48:13 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.73.2.1 2005/12/29 05:59:51 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -204,10 +204,9 @@ g_bsd_try(struct g_geom *gp, struct g_slicer *gsp, struct g_consumer *cp, int se
 	 * We need to read entire aligned sectors, and we assume that the
 	 * disklabel does not span sectors, so one sector is enough.
 	 */
-	error = 0;
 	secoff = offset % secsize;
-	buf = g_read_data(cp, offset - secoff, secsize, &error);
-	if (buf == NULL || error != 0)
+	buf = g_read_data(cp, offset - secoff, secsize, NULL);
+	if (buf == NULL)
 		return (ENOENT);
 
 	/* Decode into our native format. */
@@ -248,7 +247,7 @@ g_bsd_writelabel(struct g_geom *gp, u_char *bootcode)
 	secoff = ms->labeloffset % secsize;
 	if (bootcode == NULL) {
 		buf = g_read_data(cp, ms->labeloffset - secoff, secsize, &error);
-		if (buf == NULL || error != 0)
+		if (buf == NULL)
 			return (error);
 		bcopy(ms->label, buf + secoff, sizeof(ms->label));
 	} else {

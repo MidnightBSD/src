@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_socket.c,v 1.59 2005/07/09 12:26:22 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_socket.c,v 1.59.2.1 2006/01/10 10:12:55 glebius Exp $");
 
 /* XXX we use functions that might not exist. */
 #include "opt_compat.h"
@@ -154,7 +154,7 @@ do_sa_get(struct sockaddr **sap, const struct osockaddr *osa, int *osalen,
 			sin6->sin6_scope_id = 0;
 		} else {
 			log(LOG_DEBUG,
-			    "obsolete pre-RFC2553 sockaddr_in6 rejected");
+			    "obsolete pre-RFC2553 sockaddr_in6 rejected\n");
 			error = EINVAL;
 			goto out;
 		}

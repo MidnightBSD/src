@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/Attic/pf.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/Attic/pf.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)
  */
 
 /*	from $OpenBSD: pfvar.h,v 1.170 2003/08/22 21:50:34 david Exp $ */

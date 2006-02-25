@@ -27,9 +27,10 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp_usrreq.c	8.6 (Berkeley) 5/23/95
- * $FreeBSD: src/sys/netinet/udp_usrreq.c,v 1.175.2.3 2005/11/04 18:34:45 maxim Exp $
+ * $FreeBSD: src/sys/netinet/udp_usrreq.c,v 1.175.2.5 2006/02/14 21:40:21 rwatson Exp $
  */
 
+#include "opt_ipfw.h"
 #include "opt_ipsec.h"
 #include "opt_inet6.h"
 #include "opt_mac.h"
@@ -150,10 +151,12 @@ udp_input(m, off)
 	register struct ip *ip;
 	register struct udphdr *uh;
 	register struct inpcb *inp;
-	struct mbuf *opts = 0;
 	int len;
 	struct ip save_ip;
 	struct sockaddr_in udp_in;
+#ifdef IPFIREWALL_FORWARD
+	struct m_tag *fwd_tag;
+#endif
 
 	udpstat.udps_ipackets++;
 
@@ -242,6 +245,22 @@ udp_input(m, off)
 		}
 	} else
 		udpstat.udps_nosum++;
+
+#ifdef IPFIREWALL_FORWARD
+	/* Grab info from PACKET_TAG_IPFORWARD tag prepended to the chain. */
+	fwd_tag = m_tag_find(m, PACKET_TAG_IPFORWARD, NULL);
+
+	if (fwd_tag != NULL) {
+		struct sockaddr_in *next_hop;
+
+		/* Do the hack. */
+		next_hop = (struct sockaddr_in *)(fwd_tag + 1);
+		ip->ip_dst = next_hop->sin_addr;
+		uh->uh_dport = ntohs(next_hop->sin_port);
+		/* Remove the tag from the packet.  We don't need it anymore. */
+		m_tag_delete(m, fwd_tag);
+	}
+#endif
 
 	INP_INFO_RLOCK(&udbinfo);
 
@@ -398,8 +417,6 @@ badheadlocked:
 	INP_INFO_RUNLOCK(&udbinfo);
 badunlocked:
 	m_freem(m);
-	if (opts)
-		m_freem(opts);
 	return;
 }
 

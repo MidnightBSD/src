@@ -1,7 +1,7 @@
 /*-
- * Copyright (C) 1998 Specialix International.
+ * Copyright (C) 1988-1998 Specialix International.
  *
- * Download code for SI/XIO/SX host cards.
+ * Download code for SI/XIO host cards.
  *
  * Redistribution and use in binary forms (this file is a binary form), with
  * or without modification, are permitted provided that the following
@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/si/si2_z280.c,v 1.6 2005/01/06 01:43:13 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/si/si2_z280.c,v 1.6.2.1 2006/01/13 19:27:35 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

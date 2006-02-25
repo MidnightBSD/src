@@ -1,4 +1,4 @@
-// $Header: /home/cvs/src/usr.bin/lex/FlexLexer.h,v 1.1.1.1 2006-02-25 02:29:15 laffer1 Exp $
+// $Header: /home/cvs/src/usr.bin/lex/FlexLexer.h,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $
 // $FreeBSD: src/usr.bin/lex/FlexLexer.h,v 1.4 2004/03/11 10:43:35 josef Exp $
 
 // FlexLexer.h -- define interfaces for lexical analyzer classes generated

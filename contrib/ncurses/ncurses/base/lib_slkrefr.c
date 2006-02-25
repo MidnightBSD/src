@@ -38,7 +38,7 @@
 #include <curses.priv.h>
 #include <term.h>		/* num_labels, label_*, plab_norm */
 
-MODULE_ID("$Id: lib_slkrefr.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: lib_slkrefr.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
 
 /*
  * Write the soft labels to the soft-key window.

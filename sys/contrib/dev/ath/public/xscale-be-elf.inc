@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2002-2004 Sam Leffler, Errno Consulting
+# Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $Id: xscale-be-elf.inc,v 1.1.1.1 2006-02-25 02:27:47 laffer1 Exp $
+# $Id: xscale-be-elf.inc,v 1.1.1.2 2006-02-25 02:36:12 laffer1 Exp $
 #
 
 #

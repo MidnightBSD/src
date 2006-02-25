@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ahd_pci.c,v 1.1.1.1 2006-02-25 02:27:54 laffer1 Exp $
+ * $Id: ahd_pci.c,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>

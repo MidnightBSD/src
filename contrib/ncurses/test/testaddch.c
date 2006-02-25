@@ -2,7 +2,7 @@
  * This is an example written by Alexander V. Lukyanov <lav@yars.free.net>,
  * to demonstrate an inconsistency between ncurses and SVr4 curses.
  *
- * $Id: testaddch.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: testaddch.c,v 1.1.1.2 2006-02-25 02:33:43 laffer1 Exp $
  */
 #include <test.priv.h>
 

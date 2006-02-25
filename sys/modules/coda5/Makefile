@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/coda5/Makefile,v 1.4 2004/09/01 06:51:43 ru Exp $
+# $FreeBSD: src/sys/modules/coda5/Makefile,v 1.4.2.2 2006/02/22 11:55:26 yar Exp $
 
 .PATH: ${.CURDIR}/../../coda
 
@@ -8,7 +8,6 @@ SRCS=	vnode_if.h \
 	coda_venus.c coda_vfsops.c coda_vnops.c \
 	opt_coda.h
 
-opt_coda.h:
-	echo "#define CODA_COMPAT_5" > ${.TARGET}
+CFLAGS+= -DCODA_COMPAT_5
 
 .include <bsd.kmod.mk>

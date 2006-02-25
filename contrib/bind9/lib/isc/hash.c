@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hash.c,v 1.1.1.1 2006-02-25 02:25:19 laffer1 Exp $ */
+/* $Id: hash.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 /*
  * Some portion of this code was derived from universal hash function

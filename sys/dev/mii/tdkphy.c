@@ -67,7 +67,7 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.16 2005/01/06 01:42:56 imp Exp 
 #if 0
 #if !defined(lint)
 static const char rcsid[] =
-  "$Id: tdkphy.c,v 1.1.1.1 2006-02-25 02:28:08 laffer1 Exp $";
+  "$Id: tdkphy.c,v 1.1.1.2 2006-02-25 02:36:48 laffer1 Exp $";
 #endif
 #endif
 

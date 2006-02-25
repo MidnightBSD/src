@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/immio.c,v 1.17 2003/08/24 17:54:16 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/immio.c,v 1.17.10.1 2006/01/29 06:52:35 sam Exp $");
 
 /*
  * Iomega ZIP+ Matchmaker Parallel Port Interface driver
@@ -789,7 +789,7 @@ imm_do_scsi(struct vpoio_data *vpo, int host, int target, char *command,
 		}
 
 	/* Experience showed that we should discard this */
-	if (h == -1)
+	if (h == (char) -1)
 		h = 0;
 
 	*result = ((int) h << 8) | ((int) l & 0xff);

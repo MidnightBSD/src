@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: tar-copy.sh,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $
+# $Id: tar-copy.sh,v 1.1.1.2 2006-02-25 02:33:37 laffer1 Exp $
 ##############################################################################
 # Copyright (c) 1998 Free Software Foundation, Inc.                          #
 #                                                                            #

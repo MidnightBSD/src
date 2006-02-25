@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: forward.h,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $ */
+/* $Id: forward.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 #ifndef DNS_FORWARD_H
 #define DNS_FORWARD_H 1
@@ -67,6 +67,10 @@ dns_fwdtable_add(dns_fwdtable_t *fwdtable, dns_name_t *name,
 isc_result_t
 dns_fwdtable_find(dns_fwdtable_t *fwdtable, dns_name_t *name,
 		  dns_forwarders_t **forwardersp);
+
+isc_result_t
+dns_fwdtable_find2(dns_fwdtable_t *fwdtable, dns_name_t *name,
+		   dns_name_t *foundname, dns_forwarders_t **forwardersp);
 /*
  * Finds a domain in the forwarding table.  The closest matching parent
  * domain is returned.
@@ -75,6 +79,7 @@ dns_fwdtable_find(dns_fwdtable_t *fwdtable, dns_name_t *name,
  * 	fwdtable is a valid forwarding table.
  * 	name is a valid name
  * 	forwardersp != NULL && *forwardersp == NULL
+ *	foundname to be NULL or a valid name with buffer.
  *
  * Returns:
  * 	ISC_R_SUCCESS

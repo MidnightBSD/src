@@ -33,7 +33,7 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: sock_principal.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: sock_principal.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 			
 krb5_error_code
 krb5_sock_to_principal (krb5_context context,

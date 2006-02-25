@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)eval.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/eval.h,v 1.10 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/eval.h,v 1.10.8.1 2005/12/26 15:43:54 stefanf Exp $
  */
 
 extern char *commandname;	/* currently executing command */
@@ -56,6 +56,7 @@ int returncmd(int, char **);
 int falsecmd(int, char **);
 int truecmd(int, char **);
 int execcmd(int, char **);
+int timescmd(int, char **);
 int commandcmd(int, char **);
 
 /* in_function returns nonzero if we are currently evaluating a function */

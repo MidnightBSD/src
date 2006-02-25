@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vfsops.c,v 1.177 2005/06/10 23:50:40 green Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vfsops.c,v 1.177.2.1 2006/01/14 01:18:02 tegge Exp $");
 
 #include "opt_bootp.h"
 #include "opt_nfsroot.h"
@@ -981,7 +981,7 @@ nfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
 static int
 nfs_sync(struct mount *mp, int waitfor, struct thread *td)
 {
-	struct vnode *vp, *nvp;
+	struct vnode *vp, *mvp;
 	int error, allerror = 0;
 
 	/*
@@ -989,7 +989,7 @@ nfs_sync(struct mount *mp, int waitfor, struct thread *td)
 	 */
 	MNT_ILOCK(mp);
 loop:
-	MNT_VNODE_FOREACH(vp, mp, nvp) {
+	MNT_VNODE_FOREACH(vp, mp, mvp) {
 		VI_LOCK(vp);
 		MNT_IUNLOCK(mp);
 		if (VOP_ISLOCKED(vp, NULL) ||
@@ -1001,6 +1001,7 @@ loop:
 		}
 		if (vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td)) {
 			MNT_ILOCK(mp);
+			MNT_VNODE_FOREACH_ABORT_ILOCKED(mp, mvp);
 			goto loop;
 		}
 		error = VOP_FSYNC(vp, waitfor, td);

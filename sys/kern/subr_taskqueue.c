@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_taskqueue.c,v 1.27 2005/05/01 00:38:11 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_taskqueue.c,v 1.27.2.1 2006/01/30 07:51:10 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -410,7 +410,7 @@ taskqueue_define_fast(void *arg)
 	mtx_unlock(&taskqueue_queues_mutex);
 
 	swi_add(NULL, "Fast task queue", taskqueue_fast_run,
-		NULL, SWI_TQ_FAST, 0, &taskqueue_fast_ih);
+		NULL, SWI_TQ_FAST, INTR_MPSAFE, &taskqueue_fast_ih);
 }
 SYSINIT(taskqueue_fast, SI_SUB_CONFIGURE, SI_ORDER_SECOND,
     taskqueue_define_fast, NULL);

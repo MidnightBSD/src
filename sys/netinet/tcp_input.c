@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_input.c	8.12 (Berkeley) 5/24/95
- * $FreeBSD: src/sys/netinet/tcp_input.c,v 1.281.2.3 2005/11/07 18:54:53 rwatson Exp $
+ * $FreeBSD: src/sys/netinet/tcp_input.c,v 1.281.2.4 2006/01/31 16:09:34 andre Exp $
  */
 
 #include "opt_ipfw.h"		/* for ipfw_fwd		*/
@@ -742,8 +742,15 @@ findpcb:
 	INP_LOCK(inp);
 
 	/* Check the minimum TTL for socket. */
-	if (inp->inp_ip_minttl && inp->inp_ip_minttl > ip->ip_ttl)
-		goto drop;
+	if (inp->inp_ip_minttl != 0) {
+#ifdef INET6
+		if (isipv6 && inp->inp_ip_minttl > ip6->ip6_hlim)
+			goto drop;
+		else
+#endif
+		if (inp->inp_ip_minttl > ip->ip_ttl)
+			goto drop;
+	}
 
 	if (inp->inp_vflag & INP_TIMEWAIT) {
 		/*

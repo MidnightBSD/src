@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/tcp_syncache.c,v 1.74.2.3 2005/09/26 12:03:37 andre Exp $
+ * $FreeBSD: src/sys/netinet/tcp_syncache.c,v 1.74.2.5 2006/02/16 01:06:22 qingli Exp $
  */
 
 #include "opt_inet.h"
@@ -766,8 +766,11 @@ syncache_expand(inc, th, sop, m)
 	/*
 	 * If seg contains an ACK, but not for our SYN/ACK, send a RST.
 	 */
-	if (th->th_ack != sc->sc_iss + 1)
+	if (th->th_ack != sc->sc_iss + 1) {
+		if (sch == NULL)
+			syncache_free(sc);
 		return (0);
+	}
 
 	so = syncache_socket(sc, *sop, m);
 	if (so == NULL) {
@@ -878,7 +881,7 @@ syncache_add(inc, to, th, sop, m)
 		return (1);
 	}
 
-	sc = uma_zalloc(tcp_syncache.zone, M_NOWAIT);
+	sc = uma_zalloc(tcp_syncache.zone, M_NOWAIT | M_ZERO);
 	if (sc == NULL) {
 		/*
 		 * The zone allocator couldn't provide more entries.
@@ -894,7 +897,7 @@ syncache_add(inc, to, th, sop, m)
 		sc->sc_tp->ts_recent = ticks;
 		syncache_drop(sc, NULL);
 		tcpstat.tcps_sc_zonefail++;
-		sc = uma_zalloc(tcp_syncache.zone, M_NOWAIT);
+		sc = uma_zalloc(tcp_syncache.zone, M_NOWAIT | M_ZERO);
 		if (sc == NULL) {
 			if (ipopts)
 				(void) m_free(ipopts);
@@ -905,7 +908,6 @@ syncache_add(inc, to, th, sop, m)
 	/*
 	 * Fill in the syncache values.
 	 */
-	bzero(sc, sizeof(*sc));
 	sc->sc_tp = tp;
 	sc->sc_inp_gencnt = tp->t_inpcb->inp_gencnt;
 	sc->sc_ipopts = ipopts;
@@ -1369,7 +1371,7 @@ syncookie_lookup(inc, th, so)
 		return (NULL);
 	data = data >> SYNCOOKIE_WNDBITS;
 
-	sc = uma_zalloc(tcp_syncache.zone, M_NOWAIT);
+	sc = uma_zalloc(tcp_syncache.zone, M_NOWAIT | M_ZERO);
 	if (sc == NULL)
 		return (NULL);
 	/*

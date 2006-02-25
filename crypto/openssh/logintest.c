@@ -43,7 +43,7 @@
 
 #include "loginrec.h"
 
-RCSID("$Id: logintest.c,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $");
+RCSID("$Id: logintest.c,v 1.1.1.2 2006-02-25 02:34:24 laffer1 Exp $");
 
 extern char *__progname;
 

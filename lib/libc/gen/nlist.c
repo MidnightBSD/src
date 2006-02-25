@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)nlist.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/nlist.c,v 1.18 2003/02/27 13:40:00 nectar Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/nlist.c,v 1.18.12.1 2005/12/30 22:13:56 marcel Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -243,8 +243,8 @@ __elf_fdnlist(fd, list)
 {
 	struct nlist *p;
 	Elf_Off symoff = 0, symstroff = 0;
-	Elf_Word symsize = 0, symstrsize = 0;
-	Elf_Sword cc, i;
+	Elf_Size symsize = 0, symstrsize = 0;
+	Elf_Ssize cc, i;
 	int nent = -1;
 	int errsave;
 	Elf_Sym sbuf[1024];
@@ -252,7 +252,7 @@ __elf_fdnlist(fd, list)
 	Elf_Ehdr ehdr;
 	char *strtab = NULL;
 	Elf_Shdr *shdr = NULL;
-	Elf_Word shdr_size;
+	Elf_Size shdr_size;
 	void *base;
 	struct stat st;
 

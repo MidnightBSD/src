@@ -38,7 +38,7 @@
  *
  *      %W% (Berkeley) %G%
  *
- * $Id: mk-amd-map.c,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $
+ * $Id: mk-amd-map.c,v 1.1.1.2 2006-02-25 02:32:01 laffer1 Exp $
  * $FreeBSD: src/contrib/amd/mk-amd-map/mk-amd-map.c,v 1.10 2004/07/06 13:16:49 mbr Exp $
  */
 

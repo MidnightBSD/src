@@ -1,9 +1,10 @@
-# $FreeBSD: src/sys/modules/netgraph/iface/Makefile,v 1.15 2003/03/08 21:54:32 jlemon Exp $
+# $FreeBSD: src/sys/modules/netgraph/iface/Makefile,v 1.15.12.1 2006/02/10 00:38:04 yar Exp $
 # $Whistle: Makefile,v 1.2 1999/01/19 19:39:21 archie Exp $
 
 KMOD=	ng_iface
 SRCS= 	ng_iface.c opt_atalk.h opt_inet.h opt_inet6.h opt_ipx.h
 
+.if !defined(KERNBUILDDIR)
 opt_atalk.h:
 	echo "#define NETATALK 1" > ${.TARGET}
 
@@ -15,5 +16,6 @@ opt_inet6.h:
 
 opt_ipx.h:
 	echo "#define IPX 1" > ${.TARGET}
+.endif
 
 .include <bsd.kmod.mk>

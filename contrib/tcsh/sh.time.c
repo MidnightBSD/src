@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.time.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/sh.time.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
 /*
  * sh.time.c: Shell time keeping and printing.
  */
@@ -32,7 +32,7 @@
  */
 #include "sh.h"
 
-RCSID("$Id: sh.time.c,v 1.1.1.1 2006-02-25 02:26:24 laffer1 Exp $")
+RCSID("$Id: sh.time.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $")
 
 #ifdef SUNOS4
 # include <machine/param.h>

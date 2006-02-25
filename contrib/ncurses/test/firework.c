@@ -1,5 +1,5 @@
 /*
- * $Id: firework.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: firework.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
  */
 #include <time.h>
 

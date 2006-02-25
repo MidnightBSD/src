@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/tools/nanobsd/nanobsd.sh,v 1.7.2.4 2005/10/11 06:42:02 phk Exp $
+# $FreeBSD: src/tools/tools/nanobsd/nanobsd.sh,v 1.7.2.5 2006/01/31 15:56:33 phk Exp $
 #
 
 set -e
@@ -92,6 +92,12 @@ NANO_CONFSIZE=2048
 # If zero: no partition configured.
 # If negative: max size possible
 NANO_DATASIZE=0
+
+# Size of the /etc ramdisk in 512 bytes sectors
+NANO_RAM_ETCSIZE=10240
+
+# Size of the /tmp+/var ramdisk in 512 bytes sectors
+NANO_RAM_TMPVARSIZE=10240
 
 # Media geometry, only relevant if bios doesn't understand LBA.
 NANO_SECTS=32
@@ -242,6 +248,9 @@ setup_nanobsd ( ) (
 		find $d -print | cpio -dumpl conf/base/
 	done
 
+	echo "$NANO_RAM_ETCSIZE" > conf/base/etc/md_size
+	echo "$NANO_RAM_TMPVARSIZE" > conf/base/var/md_size
+
 	# pick up config files from the special partition
 	echo "mount -o ro /dev/${NANO_DRIVE}s3" > conf/default/etc/remount
 
@@ -379,6 +388,13 @@ create_i386_diskimage ( ) (
 	dd if=/dev/${MD}s1 of=${MAKEOBJDIRPREFIX}/_.disk.image bs=64k
 	mdconfig -d -u $MD
 	) > ${MAKEOBJDIRPREFIX}/_.di 2>&1
+)
+
+last_orders () (
+	# Redefine this function with any last orders you may have
+	# after the build completed, for instance to copy the finished
+	# image to a more convenient place:
+	# cp ${MAKEOBJDIRPREFIX}/_.disk.image /home/ftp/pub/nanobsd.disk
 )
 
 #######################################################################
@@ -550,5 +566,6 @@ run_customize
 setup_nanobsd
 prune_usr
 create_${NANO_ARCH}_diskimage
+last_orders
 
 echo "# NanoBSD image completed"

@@ -33,7 +33,7 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: net_read.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: net_read.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 
 krb5_ssize_t
 krb5_net_read (krb5_context context,

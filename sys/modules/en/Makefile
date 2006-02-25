@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/en/Makefile,v 1.3 2003/08/06 16:01:32 harti Exp $
+# $FreeBSD: src/sys/modules/en/Makefile,v 1.3.10.1 2006/02/10 00:38:00 yar Exp $
 
 .PATH: ${.CURDIR}/../../dev/en
 
@@ -8,6 +8,7 @@ SRCS+=	opt_inet.h opt_natm.h opt_ddb.h
 CFLAGS+= -DENABLE_BPF
 # CFLAGS+= -DINVARIANT_SUPPORT -DINVARIANTS -DEN_DEBUG=0
 
+.if !defined(KERNBUILDDIR)
 opt_inet.h:
 	echo "#define INET 1" > ${.TARGET}
 
@@ -16,5 +17,6 @@ opt_natm.h:
 
 # opt_ddb.h:
 # 	echo "#define DDB 1" > ${.TARGET}
+.endif
 
 .include <bsd.kmod.mk>

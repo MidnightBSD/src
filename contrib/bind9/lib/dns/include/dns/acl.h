@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: acl.h,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $ */
+/* $Id: acl.h,v 1.1.1.2 2006-02-25 02:32:10 laffer1 Exp $ */
 
 #ifndef DNS_ACL_H
 #define DNS_ACL_H 1

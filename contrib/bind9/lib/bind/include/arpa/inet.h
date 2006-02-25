@@ -55,7 +55,7 @@
 
 /*
  *	@(#)inet.h	8.1 (Berkeley) 6/2/93
- *	$Id: inet.h,v 1.1.1.1 2006-02-25 02:25:17 laffer1 Exp $
+ *	$Id: inet.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
  */
 
 #ifndef _INET_H_

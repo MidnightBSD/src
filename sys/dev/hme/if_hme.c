@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hme/if_hme.c,v 1.37.2.5 2005/11/30 02:23:53 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hme/if_hme.c,v 1.37.2.6 2006/01/20 06:27:49 yongari Exp $");
 
 /*
  * HME Ethernet module driver.
@@ -1230,7 +1230,7 @@ hme_rxcksum(struct mbuf *m, u_int32_t flags)
 		return;
 	}
 
-	cksum = ~(flags & HME_XD_RXCKSUM);
+	cksum = htons(~(flags & HME_XD_RXCKSUM));
 	/* checksum fixup for IP options */
 	len = hlen - sizeof(struct ip);
 	if (len > 0) {

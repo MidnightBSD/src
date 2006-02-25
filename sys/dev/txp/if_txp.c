@@ -35,14 +35,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.3 2005/11/15 19:54:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 glebius Exp $");
 
 /*
  * Driver for 3c990 (Typhoon) Ethernet ASIC
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.3 2005/11/15 19:54:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 glebius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,7 +92,7 @@ __FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.3 2005/11/15 19:54:10 jhb 
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.3 2005/11/15 19:54:10 jhb Exp $";
+  "$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 glebius Exp $";
 #endif
 
 /*
@@ -766,8 +766,9 @@ txp_rx_reclaim(sc, r)
 		}
 
 		if (rxd->rx_stat & RX_STAT_VLAN) {
-			VLAN_INPUT_TAG(ifp,
-				m, htons(rxd->rx_vlan >> 16), goto next);
+			VLAN_INPUT_TAG_NEW(ifp, m, htons(rxd->rx_vlan >> 16));
+			if (m == NULL)
+				goto next;
 		}
 
 		TXP_UNLOCK(sc);

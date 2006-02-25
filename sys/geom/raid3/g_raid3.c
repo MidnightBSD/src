@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3.c,v 1.40.2.2 2005/10/28 20:26:19 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3.c,v 1.40.2.4 2006/01/25 15:54:02 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2571,11 +2571,9 @@ g_raid3_read_metadata(struct g_consumer *cp, struct g_raid3_metadata *md)
 	    &error);
 	g_topology_lock();
 	g_access(cp, -1, 0, 0);
-	if (error != 0) {
+	if (buf == NULL) {
 		G_RAID3_DEBUG(1, "Cannot read metadata from %s (error=%d).",
 		    cp->provider->name, error);
-		if (buf != NULL)
-			g_free(buf);
 		return (error);
 	}
 

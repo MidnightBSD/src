@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/rup/rup.c,v 1.18 2005/05/21 09:55:07 ru Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/rup/rup.c,v 1.18.2.1 2006/01/30 00:29:15 philip Exp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -101,6 +101,7 @@ rstat_reply(caddr_t replyp, struct sockaddr_in *raddrp)
 	struct hostent *hp;
 	char *host;
 	statstime *host_stat = (statstime *)replyp;
+	time_t tmp_time_t;
 
 	if (search_host(raddrp->sin_addr))
 		return(0);
@@ -118,13 +119,26 @@ rstat_reply(caddr_t replyp, struct sockaddr_in *raddrp)
 
 	printf("%-*s\t", HOST_WIDTH, host);
 
-	tmp_time = localtime((time_t *)&host_stat->curtime.tv_sec);
-	host_time = *tmp_time;
+	if (sizeof(time_t) == sizeof(host_stat->curtime.tv_sec)) {
+		tmp_time = localtime((time_t *)&host_stat->curtime.tv_sec);
+		host_time = *tmp_time;
 
-	host_stat->curtime.tv_sec -= host_stat->boottime.tv_sec;
+		host_stat->curtime.tv_sec -= host_stat->boottime.tv_sec;
 
-	tmp_time = gmtime((time_t *)&host_stat->curtime.tv_sec);
-	host_uptime = *tmp_time;
+		tmp_time = gmtime((time_t *)&host_stat->curtime.tv_sec);
+		host_uptime = *tmp_time;
+	}
+	else {			/* non-32-bit time_t */
+		tmp_time_t = host_stat->curtime.tv_sec;
+		tmp_time = localtime(&tmp_time_t);
+		host_time = *tmp_time;
+
+		host_stat->curtime.tv_sec -= host_stat->boottime.tv_sec;
+
+		tmp_time_t = host_stat->curtime.tv_sec;
+		tmp_time = gmtime(&tmp_time_t);
+		host_uptime = *tmp_time;
+	}
 
 	#define updays (host_stat->curtime.tv_sec  / 86400)
 	if (host_uptime.tm_yday != 0)

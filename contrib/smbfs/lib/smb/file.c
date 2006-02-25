@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: file.c,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $
+ * $Id: file.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
  * $FreeBSD: src/contrib/smbfs/lib/smb/file.c,v 1.2 2004/07/28 05:33:58 kan Exp $
  */
 #include <sys/param.h>

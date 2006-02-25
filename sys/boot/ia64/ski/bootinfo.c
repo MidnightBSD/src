@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/ia64/ski/bootinfo.c,v 1.12 2004/12/01 04:59:32 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/ia64/ski/bootinfo.c,v 1.12.2.1 2006/02/14 06:20:16 ru Exp $");
 
 #include <stand.h>
 #include <string.h>
@@ -49,11 +49,14 @@ static struct
     {"boot_askname",	RB_ASKNAME},
     {"boot_cdrom",	RB_CDROM},
     {"boot_ddb",	RB_KDB},
+    {"boot_dfltroot",	RB_DFLTROOT},
     {"boot_gdb",	RB_GDB},
+    {"boot_multicons",	RB_MULTIPLE},
+    {"boot_mute",	RB_MUTE},
+    {"boot_pause",	RB_PAUSE},
+    {"boot_serial",	RB_SERIAL},
     {"boot_single",	RB_SINGLE},
     {"boot_verbose",	RB_VERBOSE},
-    {"boot_multicons",	RB_MULTIPLE},
-    {"boot_serial",	RB_SERIAL},
     {NULL,	0}
 };
 
@@ -98,6 +101,9 @@ bi_getboothowto(char *kargs)
 		    break;
 		case 'h':
 		    howto |= RB_SERIAL;
+		    break;
+		case 'p':
+		    howto |= RB_PAUSE;
 		    break;
 		case 'r':
 		    howto |= RB_DFLTROOT;

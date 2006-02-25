@@ -20,7 +20,7 @@ divert(-1)
 #
 
 divert(0)dnl
-VERSIONID(`$Id: generic-ultrix4.mc,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $')
+VERSIONID(`$Id: generic-ultrix4.mc,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 OSTYPE(ultrix4)dnl
 DOMAIN(generic)dnl
 MAILER(local)dnl

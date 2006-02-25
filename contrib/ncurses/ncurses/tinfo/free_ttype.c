@@ -43,7 +43,7 @@
 #include <tic.h>
 #include <term_entry.h>
 
-MODULE_ID("$Id: free_ttype.c,v 1.1.1.1 2006-02-25 02:26:10 laffer1 Exp $")
+MODULE_ID("$Id: free_ttype.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 NCURSES_EXPORT(void)
 _nc_free_termtype(TERMTYPE * ptr)

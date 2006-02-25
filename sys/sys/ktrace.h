@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ktrace.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/ktrace.h,v 1.29.2.1 2005/11/16 08:11:06 rwatson Exp $
+ * $FreeBSD: src/sys/sys/ktrace.h,v 1.29.2.2 2006/02/14 00:02:01 rwatson Exp $
  */
 
 #ifndef _SYS_KTRACE_H_
@@ -54,7 +54,7 @@ struct ktr_header {
 	pid_t	ktr_pid;		/* process id */
 	char	ktr_comm[MAXCOMLEN+1];	/* command name */
 	struct	timeval ktr_time;	/* timestamp */
-	intptr_t	ktr_unused;	/* was ktr_buffer */
+	intptr_t	ktr_tid;	/* was ktr_buffer */
 };
 
 /*

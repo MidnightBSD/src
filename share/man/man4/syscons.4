@@ -24,7 +24,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/syscons.4,v 1.40 2005/02/14 21:14:00 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/syscons.4,v 1.40.2.1 2006/02/14 16:41:27 brooks Exp $
 .\"
 .Dd June 30, 1999
 .Dt SYSCONS 4
@@ -288,10 +288,20 @@ It will prevent users from
 entering the kernel debugger (KDB) by pressing the key combination.
 KDB will still be invoked when the kernel panics or hits a break point
 if it is included in the kernel.
+If this option is not defined, this behavior may be controled at runtime
+by the
+.Xr sysctl 8
+variable
+.Pq Va hw.syscons.kbd_kbdkey .
 .It Dv SC_DISABLE_REBOOT
 This option disables the ``reboot'' key (by default, it is
 .Dv Ctl-Alt-Del ) ,
 so that the casual user may not accidentally reboot the system.
+If this option is not defined, this behavior may be controled at runtime
+by the
+.Xr sysctl 8
+variable
+.Pq Va hw.syscons.kbd_reboot .
 .It Dv SC_HISTORY_SIZE=N
 Sets the size of back scroll buffer to
 .Fa N

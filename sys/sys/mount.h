@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mount.h	8.21 (Berkeley) 5/20/95
- * $FreeBSD: src/sys/sys/mount.h,v 1.197.2.1 2005/08/15 06:01:36 ssouhlal Exp $
+ * $FreeBSD: src/sys/sys/mount.h,v 1.197.2.2 2006/01/14 01:18:02 tegge Exp $
  */
 
 #ifndef _SYS_MOUNT_H_
@@ -160,14 +160,28 @@ struct mount {
 	struct label	*mnt_fslabel;		/* MAC label for the fs */
 	int		mnt_nvnodelistsize;	/* # of vnodes on this mount */
 	u_int		mnt_hashseed;		/* Random seed for vfs_hash */
+	int		mnt_markercnt;		/* marker vnodes in use */
+	int		mnt_holdcnt;		/* hold count */
+	int		mnt_holdcntwaiters;	/* waits on hold count */
 };
 
-struct vnode *__mnt_vnode_next(struct vnode **nvp, struct mount *mp);
+struct vnode *__mnt_vnode_next(struct vnode **mvp, struct mount *mp);
+struct vnode *__mnt_vnode_first(struct vnode **mvp, struct mount *mp);
+void          __mnt_vnode_markerfree(struct vnode **mvp, struct mount *mp);
 
-#define MNT_VNODE_FOREACH(vp, mp, vp2) \
-	for ((vp2) = TAILQ_FIRST(&(mp)->mnt_nvnodelist);	\
-		(vp = __mnt_vnode_next(&(vp2), (mp))) != NULL;)
+#define MNT_VNODE_FOREACH(vp, mp, mvp) \
+	for (vp = __mnt_vnode_first(&(mvp), (mp)); \
+		(vp) != NULL; vp = __mnt_vnode_next(&(mvp), (mp)))
 
+#define MNT_VNODE_FOREACH_ABORT_ILOCKED(mp, mvp)			\
+	__mnt_vnode_markerfree(&(mvp), (mp)) 
+
+#define MNT_VNODE_FOREACH_ABORT(mp, mvp)				\
+        do {								\
+	  MNT_ILOCK(mp);						\
+          MNT_VNODE_FOREACH_ABORT_ILOCKED(mp, mvp);			\
+	  MNT_IUNLOCK(mp);						\
+	} while (0)
 
 #define	MNT_ILOCK(mp)	mtx_lock(&(mp)->mnt_mtx)
 #define	MNT_IUNLOCK(mp)	mtx_unlock(&(mp)->mnt_mtx)

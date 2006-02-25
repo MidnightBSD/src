@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/elfdump/elfdump.c,v 1.12 2004/03/02 14:06:27 jake Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/elfdump/elfdump.c,v 1.12.8.2 2006/01/28 18:40:55 marcel Exp $");
 
 #include <sys/types.h>
 #include <sys/elf32.h>
@@ -232,7 +232,7 @@ d_tags(u_int64_t tag) {
 	case 0x6fffffff: return "DT_VERNEEDNUM";
 	case 0x6ffffff0: return "DT_GNU_VERSYM";
 	/* 0x70000000 - 0x7fffffff processor-specific semantics */
-	case 0x70000000: return "DT_IA64_PLT_RESERVE";
+	case 0x70000000: return "DT_IA_64_PLT_RESERVE";
 	case 0x7ffffffd: return "DT_SUNW_AUXILIARY";
 	case 0x7ffffffe: return "DT_SUNW_USED";
 	case 0x7fffffff: return "DT_SUNW_FILTER";
@@ -243,6 +243,8 @@ d_tags(u_int64_t tag) {
 static const char *
 e_machines(u_int mach)
 {
+	static char machdesc[64];
+
 	switch (mach) {
 	case EM_NONE:	return "EM_NONE";
 	case EM_M32:	return "EM_M32";
@@ -250,12 +252,18 @@ e_machines(u_int mach)
 	case EM_386:	return "EM_386";
 	case EM_68K:	return "EM_68K";
 	case EM_88K:	return "EM_88K";
-	case EM_486:	return "EM_486";
 	case EM_860:	return "EM_860";
 	case EM_MIPS:	return "EM_MIPS";
+	case EM_PPC:	return "EM_PPC";
+	case EM_ARM:	return "EM_ARM";
+	case EM_ALPHA:	return "EM_ALPHA (legacy)";
+	case EM_SPARCV9:return "EM_SPARCV9";
 	case EM_IA_64:	return "EM_IA_64";
+	case EM_X86_64:	return "EM_X86_64";
 	}
-	return "(unknown machine)";
+	snprintf(machdesc, sizeof(machdesc),
+	    "(unknown machine) -- type 0x%x", mach);
+	return (machdesc);
 }
 
 const char *e_types[] = {

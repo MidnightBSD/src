@@ -13,7 +13,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: unknown.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: unknown.m4,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $')
 errprint(`*** ERROR: You have not specified a valid operating system type.')
 errprint(`	Use the OSTYPE macro to select a valid system type.  This')
 errprint(`	is necessary in order to get the proper pathnames and flags')

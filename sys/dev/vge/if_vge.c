@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/vge/if_vge.c,v 1.14.2.4 2005/10/09 04:15:12 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/vge/if_vge.c,v 1.14.2.6 2006/01/13 19:21:45 glebius Exp $");
 
 /*
  * VIA Networking Technologies VT612x PCI gigabit ethernet NIC driver.
@@ -1490,9 +1490,12 @@ vge_rxeof(sc)
 			}
 		}
 
-		if (rxstat & VGE_RDSTS_VTAG)
-			VLAN_INPUT_TAG(ifp, m,
-			    ntohs((rxctl & VGE_RDCTL_VLANID)), continue);
+		if (rxstat & VGE_RDSTS_VTAG) {
+			VLAN_INPUT_TAG_NEW(ifp, m,
+			    ntohs((rxctl & VGE_RDCTL_VLANID)));
+			if (m == NULL)
+				continue;
+		}
 
 		VGE_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);

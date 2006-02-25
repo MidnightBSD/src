@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/net/pfvar.h,v 1.11.2.1 2005/08/06 01:52:35 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/pf/net/pfvar.h,v 1.11.2.2 2005/12/30 00:50:18 mlaier Exp $	*/
 /*	$OpenBSD: pfvar.h,v 1.213 2005/03/03 07:13:39 dhartmei Exp $ */
 
 /*
@@ -791,9 +791,12 @@ struct pf_state {
 #define	PFSTATE_FROMSYNC 0x02
 #define	PFSTATE_STALE	 0x04
 #ifdef __FreeBSD__
-#define	PFSTATE_EXPIRING 0x10
-#endif
+	u_int8_t	 local_flags;
+#define	PFSTATE_EXPIRING 0x01
+#define	PFSTATE_SRC_CONN 0x02
+#else
 	u_int8_t	 pad;
+#endif
 };
 
 TAILQ_HEAD(pf_rulequeue, pf_rule);

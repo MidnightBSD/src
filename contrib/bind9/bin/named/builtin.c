@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: builtin.c,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $ */
+/* $Id: builtin.c,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
 
 /*
  * The built-in "version", "hostname", "id" and "authors" databases.

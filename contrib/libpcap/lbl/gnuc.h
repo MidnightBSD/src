@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/libpcap/lbl/Attic/gnuc.h,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /home/cvs/src/contrib/libpcap/lbl/Attic/gnuc.h,v 1.1.1.2 2006-02-25 02:33:30 laffer1 Exp $ (LBL) */
 
 /* Define __P() macro, if necessary */
 #ifndef __P

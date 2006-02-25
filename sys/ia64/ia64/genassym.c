@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/genassym.c,v 1.41 2004/11/20 02:28:14 das Exp $
+ * $FreeBSD: src/sys/ia64/ia64/genassym.c,v 1.41.2.1 2006/01/28 18:40:55 marcel Exp $
  */
 
 #include "opt_compat.h"
@@ -100,10 +100,10 @@ ASSYM(PCB_CURRENT_PMAP,	offsetof(struct pcb, pcb_current_pmap));
 ASSYM(PCB_ONFAULT,	offsetof(struct pcb, pcb_onfault));
 ASSYM(PCB_SPECIAL_RP,	offsetof(struct pcb, pcb_special.rp));
 
-ASSYM(R_IA64_DIR64LSB,	R_IA64_DIR64LSB);
-ASSYM(R_IA64_FPTR64LSB,	R_IA64_FPTR64LSB);
-ASSYM(R_IA64_NONE,	R_IA64_NONE);
-ASSYM(R_IA64_REL64LSB,	R_IA64_REL64LSB);
+ASSYM(R_IA_64_DIR64LSB,	R_IA_64_DIR64LSB);
+ASSYM(R_IA_64_FPTR64LSB, R_IA_64_FPTR64LSB);
+ASSYM(R_IA_64_NONE,	R_IA_64_NONE);
+ASSYM(R_IA_64_REL64LSB,	R_IA_64_REL64LSB);
 
 ASSYM(SIZEOF_PCB,	sizeof(struct pcb));
 ASSYM(SIZEOF_SPECIAL,	sizeof(struct _special));

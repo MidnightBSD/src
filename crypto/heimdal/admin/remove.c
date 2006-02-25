@@ -33,7 +33,7 @@
 
 #include "ktutil_locl.h"
 
-RCSID("$Id: remove.c,v 1.1.1.1 2006-02-25 02:26:27 laffer1 Exp $");
+RCSID("$Id: remove.c,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $");
 
 int
 kt_remove(int argc, char **argv)

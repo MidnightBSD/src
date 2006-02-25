@@ -39,7 +39,7 @@
 #include "pathnames.h"
 #include "log.h"
 
-RCSID("$Id: ssh-rand-helper.c,v 1.1.1.1 2006-02-25 02:26:33 laffer1 Exp $");
+RCSID("$Id: ssh-rand-helper.c,v 1.1.1.2 2006-02-25 02:34:24 laffer1 Exp $");
 
 /* Number of bytes we write out */
 #define OUTPUT_SEED_SIZE	48

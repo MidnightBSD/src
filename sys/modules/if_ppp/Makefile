@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/if_ppp/Makefile,v 1.33 2004/12/29 08:45:48 imp Exp $
+# $FreeBSD: src/sys/modules/if_ppp/Makefile,v 1.33.2.1 2006/02/10 00:38:02 yar Exp $
 
 .PATH:  ${.CURDIR}/../../net
 
@@ -19,6 +19,7 @@ SRCS+=	bsd_comp.c
 SRCS+=	ppp_deflate.c zlib.c
 .endif
 
+.if !defined(KERNBUILDDIR)
 .if ${PPP_INET} > 0
 opt_inet.h:
 	echo "#define INET 1" >> ${.TARGET}
@@ -39,6 +40,7 @@ opt_ppp.h:
 .endif
 .if ${PPP_FILTER} > 0
 	echo "#define PPP_FILTER ${PPP_FILTER}" >> ${.TARGET}
+.endif
 .endif
 
 .include <bsd.kmod.mk>

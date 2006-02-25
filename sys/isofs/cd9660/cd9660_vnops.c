@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isofs/cd9660/cd9660_vnops.c,v 1.110 2005/03/17 14:43:40 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/isofs/cd9660/cd9660_vnops.c,v 1.110.2.2 2006/02/20 00:53:14 yar Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -108,6 +108,7 @@ cd9660_setattr(ap)
 		case VFIFO:
 		case VNON:
 		case VBAD:
+		case VMARKER:
 			return (0);
 		}
 	}
@@ -169,7 +170,7 @@ cd9660_open(ap)
 {
 	struct iso_node *ip = VTOI(ap->a_vp);
 
-	vnode_create_vobject(ap->a_vp, ip->i_size, ap->a_td);
+	vnode_create_vobject_off(ap->a_vp, ip->i_size, ap->a_td);
 	return 0;
 }
 

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: afssysdefs.h,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $ */
+/* $Id: afssysdefs.h,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $ */
 
 /*
  * This section is for machines using single entry point AFS syscalls!

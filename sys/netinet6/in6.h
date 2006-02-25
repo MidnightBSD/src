@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6.h,v 1.36.2.4 2005/11/04 20:55:31 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6.h,v 1.36.2.5 2005/12/25 14:03:37 suz Exp $	*/
 /*	$KAME: in6.h,v 1.89 2001/05/27 13:28:35 itojun Exp $	*/
 
 /*-
@@ -249,14 +249,6 @@ extern const struct in6_addr in6addr_linklocal_allrouters;
 #endif
 #endif
 
-#ifdef _KERNEL			/* non standard */
-/* see if two addresses are equal in a scope-conscious manner. */
-#define SA6_ARE_ADDR_EQUAL(a, b) \
-	(((a)->sin6_scope_id == 0 || (b)->sin6_scope_id == 0 || \
-	  ((a)->sin6_scope_id == (b)->sin6_scope_id)) && \
-	 (bcmp(&(a)->sin6_addr, &(b)->sin6_addr, sizeof(struct in6_addr)) == 0))
-#endif
-
 /*
  * Unspecified
  */
@@ -382,11 +374,13 @@ extern const struct in6_addr in6addr_linklocal_allrouters;
 	 (IN6_IS_ADDR_MC_LINKLOCAL(a)))
 
 #define IFA6_IS_DEPRECATED(a) \
-	((a)->ia6_lifetime.ia6t_preferred != 0 && \
-	 (a)->ia6_lifetime.ia6t_preferred < time_second)
+	((a)->ia6_lifetime.ia6t_pltime != ND6_INFINITE_LIFETIME && \
+	 (u_int32_t)((time_second - (a)->ia6_updatetime)) > \
+	 (a)->ia6_lifetime.ia6t_pltime)
 #define IFA6_IS_INVALID(a) \
-	((a)->ia6_lifetime.ia6t_expire != 0 && \
-	 (a)->ia6_lifetime.ia6t_expire < time_second)
+	((a)->ia6_lifetime.ia6t_vltime != ND6_INFINITE_LIFETIME && \
+	 (u_int32_t)((time_second - (a)->ia6_updatetime)) > \
+	 (a)->ia6_lifetime.ia6t_vltime)
 #endif /* _KERNEL */
 
 /*

@@ -33,7 +33,7 @@
 
 #include "krb5_locl.h"
 
-RCSID("$Id: keytab_file.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: keytab_file.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 
 #define KRB5_KT_VNO_1 1
 #define KRB5_KT_VNO_2 2

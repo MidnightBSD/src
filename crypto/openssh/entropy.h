@@ -22,7 +22,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $Id: entropy.h,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $ */
+/* $Id: entropy.h,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $ */
 
 #ifndef _RANDOMS_H
 #define _RANDOMS_H

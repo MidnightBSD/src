@@ -36,7 +36,7 @@
 #include <termcap.h>
 #endif
 
-RCSID("$Id: telnet.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: telnet.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
 
 #define	strip(x) (eight ? (x) : ((x) & 0x7f))
 

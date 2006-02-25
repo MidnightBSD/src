@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/nfs4client/Makefile,v 1.4 2004/09/04 06:37:57 ru Exp $
+# $FreeBSD: src/sys/modules/nfs4client/Makefile,v 1.4.2.1 2006/02/10 00:38:04 yar Exp $
 
 .PATH: ${.CURDIR}/../../nfsclient ${.CURDIR}/../../nfs4client \
 	${.CURDIR}/../../nfs ${.CURDIR}/../../rpc
@@ -11,15 +11,16 @@ SRCS=	vnode_if.h \
 	nfs4_vfs_subs.c  nfs4_vfsops.c nfs4_vn_subs.c nfs4_vnops.c
 SRCS+=	opt_inet6.h
 
-NFS_INET?=	1	# 0/1 - requires INET to be configured in kernel
-NFS_INET6?=	1	# 0/1 - requires INET6 to be configured in kernel
-
 # USE THE RPCCLNT:
 CFLAGS+= -DRPCCLNT_DEBUG
 SRCS+= rpcclnt.c
 
 # USE THE NEW IDMAPPER
 CFLAGS+= -DUSE_NEW_IDMAPPER
+
+.if !defined(KERNBUILDDIR)
+NFS_INET?=	1	# 0/1 - requires INET to be configured in kernel
+NFS_INET6?=	1	# 0/1 - requires INET6 to be configured in kernel
 
 .if ${NFS_INET} > 0
 opt_inet.h:
@@ -29,6 +30,7 @@ opt_inet.h:
 .if ${NFS_INET6} > 0
 opt_inet6.h:
 	echo "#define INET6 1" > ${.TARGET}
+.endif
 .endif
 
 .include <bsd.kmod.mk>

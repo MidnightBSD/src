@@ -38,7 +38,7 @@
  *
  *      %W% (Berkeley) %G%
  *
- * $Id: nfs_prot_svc.c,v 1.1.1.1 2006-02-25 02:25:13 laffer1 Exp $
+ * $Id: nfs_prot_svc.c,v 1.1.1.2 2006-02-25 02:32:00 laffer1 Exp $
  * $FreeBSD: src/contrib/amd/amd/nfs_prot_svc.c,v 1.2 2004/07/06 13:16:44 mbr Exp $
  *
  */

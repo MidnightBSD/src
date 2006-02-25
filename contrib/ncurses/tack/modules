@@ -1,4 +1,4 @@
-# $Id: modules,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+# $Id: modules,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
 @ base
 ansi      progs   $(srcdir) $(srcdir)/tack.h ../include/term.h
 charset   progs   $(srcdir) $(srcdir)/tack.h ../include/term.h

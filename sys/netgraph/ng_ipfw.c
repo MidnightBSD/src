@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_ipfw.c,v 1.8 2005/05/29 12:20:41 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_ipfw.c,v 1.8.2.1 2006/02/17 16:46:47 ru Exp $
  */
 
 #include <sys/param.h>
@@ -244,7 +244,7 @@ ng_ipfw_rcvdata(hook_p hook, item_p item)
 		ip->ip_len = ntohs(ip->ip_len);
 		ip->ip_off = ntohs(ip->ip_off);
 
-		return ip_output(m, NULL, NULL, ngit->flags, NULL, NULL);
+		return ip_output(m, NULL, NULL, IP_FORWARDING, NULL, NULL);
 	    }
 	case NG_IPFW_IN:
 		ip_input(m);
@@ -293,8 +293,6 @@ ng_ipfw_input(struct mbuf **m0, int dir, struct ip_fw_args *fwa, int tee)
 		ngit->rule = fwa->rule;
 		ngit->dir = dir;
 		ngit->ifp = fwa->oif;
-		if (dir == NG_IPFW_OUT)
-			ngit->flags = fwa->flags;
 		m_tag_prepend(m, &ngit->mt);
 
 	} else

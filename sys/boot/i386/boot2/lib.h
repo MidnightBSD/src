@@ -14,10 +14,10 @@
  */
 
 /*
- * $FreeBSD: src/sys/boot/i386/boot2/lib.h,v 1.2 1999/08/28 00:40:02 peter Exp $
+ * $FreeBSD: src/sys/boot/i386/boot2/lib.h,v 1.2.34.1 2006/02/15 15:08:51 ru Exp $
  */
 
-void sio_init(void);
+void sio_init(int);
 void sio_flush(void);
 void sio_putc(int);
 int sio_getc(void);

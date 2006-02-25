@@ -28,7 +28,7 @@
 #
 # Author: Thomas Dickey
 #
-# $Id: Caps.uwin,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $
+# $Id: Caps.uwin,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $
 #
 # This is an adaptation of ncurses' termcap/terminfo capability table, which
 # is designed to align with U/Win's terminfo.

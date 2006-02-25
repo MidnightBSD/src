@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_dc.c,v 1.160.2.6 2005/10/09 04:11:19 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_dc.c,v 1.160.2.7 2006/01/10 10:24:05 glebius Exp $");
 
 /*
  * DEC "tulip" clone ethernet driver. Supports the DEC/Intel 21143
@@ -3131,8 +3131,9 @@ dc_intr(void *arg)
 	/* Disable interrupts. */
 	CSR_WRITE_4(sc, DC_IMR, 0x00000000);
 
-	while (((status = CSR_READ_4(sc, DC_ISR)) & DC_INTRS)
-	      && status != 0xFFFFFFFF) {
+	while (((status = CSR_READ_4(sc, DC_ISR)) & DC_INTRS) &&
+	    status != 0xFFFFFFFF &&
+	    (ifp->if_drv_flags & IFF_DRV_RUNNING)) {
 
 		CSR_WRITE_4(sc, DC_ISR, status);
 

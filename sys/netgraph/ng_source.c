@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/ng_source.c,v 1.25 2005/04/05 17:22:04 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/ng_source.c,v 1.25.2.2 2006/01/31 15:39:05 glebius Exp $");
 
 /*
  * This node is used for high speed packet geneneration.  It queues
@@ -179,6 +179,13 @@ static const struct ng_cmdlist ng_source_cmds[] = {
 	  NGM_SOURCE_SETIFACE,
 	  "setiface",
 	  &ng_parse_string_type,
+	  NULL
+	},
+	{
+	  NGM_SOURCE_COOKIE,
+	  NGM_SOURCE_SETPPS,
+	  "setpps",
+	  &ng_parse_uint32_type,
 	  NULL
 	},
 	{ 0 }
@@ -350,6 +357,21 @@ ng_source_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			}
 
 			ng_source_store_output_ifp(sc, ifname);
+			break;
+		    }
+		case NGM_SOURCE_SETPPS:
+		    {
+			uint32_t pps;
+
+			if (msg->header.arglen != sizeof(uint32_t)) {
+				error = EINVAL;
+				break;
+			}
+
+			pps = *(uint32_t *)msg->data;
+
+			sc->stats.maxPps = pps;
+
 			break;
 		    }
 		default:
@@ -548,6 +570,7 @@ ng_source_start(sc_p sc, uint64_t packets)
 	timevalclear(&sc->stats.elapsedTime);
 	timevalclear(&sc->stats.endTime);
 	getmicrotime(&sc->stats.startTime);
+	getmicrotime(&sc->stats.lastTime);
 	ng_callout(&sc->intr_ch, sc->node, NULL, 0,
 	    ng_source_intr, sc, 0);
 
@@ -593,6 +616,21 @@ ng_source_intr(node_p node, hook_p hook, void *arg1, int arg2)
 	} else
 		packets = sc->snd_queue.ifq_len;
 
+	if (sc->stats.maxPps != 0) {
+		struct timeval	now, elapsed;
+		uint64_t	usec;
+		int		maxpkt;
+
+		getmicrotime(&now);
+		elapsed = now;
+		timevalsub(&elapsed, &sc->stats.lastTime);
+		usec = elapsed.tv_sec * 1000000 + elapsed.tv_usec;
+		maxpkt = (uint64_t)sc->stats.maxPps * usec / 1000000;
+		sc->stats.lastTime = now;
+		if (packets > maxpkt)
+			packets = maxpkt;
+	}
+
 	ng_source_send(sc, packets, NULL);
 	if (sc->packets == 0)
 		ng_source_stop(sc);
@@ -602,14 +640,13 @@ ng_source_intr(node_p node, hook_p hook, void *arg1, int arg2)
 }
 
 /*
- * Send packets out our output hook
+ * Send packets out our output hook.
  */
 static int
-ng_source_send (sc_p sc, int tosend, int *sent_p)
+ng_source_send(sc_p sc, int tosend, int *sent_p)
 {
-	struct ifqueue tmp_queue;
 	struct mbuf *m, *m2;
-	int sent = 0;
+	int sent;
 	int error = 0;
 
 	KASSERT(tosend >= 0, ("%s: negative tosend param", __func__));
@@ -619,14 +656,13 @@ ng_source_send (sc_p sc, int tosend, int *sent_p)
 	if ((uint64_t)tosend > sc->packets)
 		tosend = sc->packets;
 
-	/* Copy the required number of packets to a temporary queue */
-	bzero (&tmp_queue, sizeof (tmp_queue));
+	/* Go through the queue sending packets one by one. */
 	for (sent = 0; error == 0 && sent < tosend; ++sent) {
 		_IF_DEQUEUE(&sc->snd_queue, m);
 		if (m == NULL)
 			break;
 
-		/* duplicate the packet */
+		/* Duplicate the packet. */
 		m2 = m_copypacket(m, M_DONTWAIT);
 		if (m2 == NULL) {
 			_IF_PREPEND(&sc->snd_queue, m);
@@ -637,25 +673,11 @@ ng_source_send (sc_p sc, int tosend, int *sent_p)
 		/* Re-enqueue the original packet for us. */
 		_IF_ENQUEUE(&sc->snd_queue, m);
 
-		/* Queue the copy for sending at splimp. */
-		_IF_ENQUEUE(&tmp_queue, m2);
-	}
-
-	sent = 0;
-	for (;;) {
-		_IF_DEQUEUE(&tmp_queue, m2);
-		if (m2 == NULL)
+		sc->stats.outFrames++;
+		sc->stats.outOctets += m2->m_pkthdr.len;
+		NG_SEND_DATA_ONLY(error, sc->output, m2);
+		if (error)
 			break;
-		if (error == 0) {
-			++sent;
-			sc->stats.outFrames++;
-			sc->stats.outOctets += m2->m_pkthdr.len;
-			NG_SEND_DATA_ONLY(error, sc->output, m2);
-			if (error)
-				log(LOG_DEBUG, "%s: error=%d", __func__, error);
-		} else {
-			NG_FREE_M(m2);
-		}
 	}
 
 	sc->packets -= sent;

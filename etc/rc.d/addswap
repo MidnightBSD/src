@@ -2,7 +2,7 @@
 #
 # Add additional swap files
 #
-# $FreeBSD: src/etc/rc.d/addswap,v 1.4 2004/10/07 13:55:25 mtm Exp $
+# $FreeBSD: src/etc/rc.d/addswap,v 1.4.2.1 2006/01/20 14:24:34 matteo Exp $
 #
 
 # PROVIDE: addswap
@@ -22,7 +22,7 @@ addswap_start()
 	[Nn][Oo] | '')
 		;;
 	*)
-		if [ -w "${swapfile}" -a -c /dev/mdctl ]; then
+		if [ -w "${swapfile}" ]; then
 			echo "Adding ${swapfile} as additional swap"
 			mdev=`mdconfig -a -t vnode -f ${swapfile}` && swapon /dev/${mdev}
 		fi

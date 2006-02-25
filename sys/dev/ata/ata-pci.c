@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2005 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,8 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -27,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.105.2.1 2005/10/13 08:07:46 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.105.2.4 2006/02/19 15:18:23 sos Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -36,6 +34,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.105.2.1 2005/10/13 08:07:46 so
 #include <sys/module.h>
 #include <sys/ata.h>
 #include <sys/bus.h>
+#include <sys/conf.h>
 #include <sys/malloc.h>
 #include <sys/sema.h>
 #include <sys/taskqueue.h>
@@ -54,13 +53,11 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.105.2.1 2005/10/13 08:07:46 so
 #include <ata_if.h>
 
 /* local vars */
-static MALLOC_DEFINE(M_ATAPCI, "ATA PCI", "ATA driver PCI");
+static MALLOC_DEFINE(M_ATAPCI, "ata_pci", "ATA driver PCI");
 
 /* misc defines */
 #define IOMASK                  0xfffffffc
-
-/* prototypes */
-static void ata_pci_dmainit(device_t);
+#define ATA_PROBE_OK            -10
 
 int
 ata_legacy(device_t dev)
@@ -80,73 +77,81 @@ ata_pci_probe(device_t dev)
     switch (pci_get_vendor(dev)) {
     case ATA_ACARD_ID: 
 	if (!ata_acard_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_ACER_LABS_ID:
 	if (!ata_ali_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_AMD_ID:
 	if (!ata_amd_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_ATI_ID:
 	if (!ata_ati_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_CYRIX_ID:
 	if (!ata_cyrix_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_CYPRESS_ID:
 	if (!ata_cypress_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_HIGHPOINT_ID: 
 	if (!ata_highpoint_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_INTEL_ID:
 	if (!ata_intel_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_ITE_ID:
 	if (!ata_ite_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
+	break;
+    case ATA_JMICRON_ID:
+	if (!ata_jmicron_ident(dev))
+	    return ATA_PROBE_OK;
+	break;
+    case ATA_MARVELL_ID:
+	if (!ata_marvell_ident(dev))
+	    return ATA_PROBE_OK;
 	break;
     case ATA_NATIONAL_ID:
 	if (!ata_national_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_NVIDIA_ID:
 	if (!ata_nvidia_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_PROMISE_ID:
 	if (!ata_promise_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_SERVERWORKS_ID: 
 	if (!ata_serverworks_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_SILICON_IMAGE_ID:
 	if (!ata_sii_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_SIS_ID:
 	if (!ata_sis_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_VIA_ID: 
 	if (!ata_via_ident(dev))
-	    return 0;
+	    return ATA_PROBE_OK;
 	break;
     case ATA_CENATEK_ID:
 	if (pci_get_devid(dev) == ATA_CENATEK_ROCKET) {
 	    ata_generic_ident(dev);
 	    device_set_desc(dev, "Cenatek Rocket Drive controller");
-	    return 0;
+	    return ATA_PROBE_OK;
 	}
 	break;
     case ATA_MICRON_ID:
@@ -155,16 +160,17 @@ ata_pci_probe(device_t dev)
 	    ata_generic_ident(dev);
 	    device_set_desc(dev, 
 		"RZ 100? ATA controller !WARNING! data loss/corruption risk");
-	    return 0;
+	    return ATA_PROBE_OK;
 	}
 	break;
     }
 
     /* unknown chipset, try generic DMA if it seems possible */
     if ((pci_get_class(dev) == PCIC_STORAGE) &&
-	(pci_get_subclass(dev) == PCIS_STORAGE_IDE))
-	return ata_generic_ident(dev);
-
+	(pci_get_subclass(dev) == PCIS_STORAGE_IDE)) {
+	if (!ata_generic_ident(dev))
+	    return ATA_PROBE_OK;
+    }
     return ENXIO;
 }
 
@@ -199,7 +205,8 @@ ata_pci_attach(device_t dev)
 					      RF_ACTIVE);
     }
 
-    ctlr->chipinit(dev);
+    if (ctlr->chipinit(dev))
+	return ENXIO;
 
     /* attach all channels on this controller */
     for (unit = 0; unit < ctlr->channels; unit++) {
@@ -416,8 +423,41 @@ ata_pci_allocate(device_t dev)
 	}
     }
 
-    ata_generic_hw(dev);
+    ata_pci_hw(dev);
     return 0;
+}
+
+void
+ata_pci_hw(device_t dev)
+{
+    struct ata_channel *ch = device_get_softc(dev);
+
+    ata_generic_hw(dev);
+    ch->hw.status = ata_pci_status;
+}
+
+int
+ata_pci_status(device_t dev)
+{
+    struct ata_channel *ch = device_get_softc(dev);
+
+    if ((dumping || !ata_legacy(device_get_parent(dev))) &&
+	ch->dma && ((ch->flags & ATA_ALWAYS_DMASTAT) ||
+		    (ch->dma->flags & ATA_DMA_ACTIVE))) {
+	int bmstat = ATA_IDX_INB(ch, ATA_BMSTAT_PORT) & ATA_BMSTAT_MASK;
+
+	if ((bmstat & (ATA_BMSTAT_ACTIVE | ATA_BMSTAT_INTERRUPT)) !=
+	    ATA_BMSTAT_INTERRUPT)
+	    return 0;
+	ATA_IDX_OUTB(ch, ATA_BMSTAT_PORT, bmstat & ~ATA_BMSTAT_ERROR);
+	DELAY(1);
+    }
+    if (ATA_IDX_INB(ch, ATA_ALTSTAT) & ATA_S_BUSY) {
+	DELAY(100);
+	if (ATA_IDX_INB(ch, ATA_ALTSTAT) & ATA_S_BUSY)
+	    return 0;
+    }
+    return 1;
 }
 
 static int
@@ -462,7 +502,7 @@ ata_pci_dmareset(device_t dev)
     ch->dma->unload(dev);
 }
 
-static void
+void
 ata_pci_dmainit(device_t dev)
 {
     struct ata_channel *ch = device_get_softc(dev);

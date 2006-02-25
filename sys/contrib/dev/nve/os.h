@@ -26,7 +26,7 @@
 
 #include "phy.h"
 
-#define HDO_VERSION_STRING "HDR O: $Revision: 1.1.1.1 $";
+#define HDO_VERSION_STRING "HDR O: $Revision: 1.1.1.2 $";
 
 // This is the maximum packet size that we will be sending
 // #define MAX_PACKET_SIZE     2048

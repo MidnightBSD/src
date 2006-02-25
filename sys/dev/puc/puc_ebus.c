@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/puc/puc_ebus.c,v 1.5 2005/06/04 20:29:28 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/puc/puc_ebus.c,v 1.5.2.1 2006/02/15 09:16:01 marius Exp $");
 
 #include "opt_puc.h"
 
@@ -48,10 +48,11 @@ __FBSDID("$FreeBSD: src/sys/dev/puc/puc_ebus.c,v 1.5 2005/06/04 20:29:28 marius 
 static int
 puc_ebus_probe(device_t dev)
 {
-	const char *nm;
+	const char *nm, *cmpt;
 
 	nm = ofw_bus_get_name(dev);
-	if (!strcmp(nm, "se")) {
+	cmpt = ofw_bus_get_compat(dev);
+	if (!strcmp(nm, "se") || (cmpt != NULL && !strcmp(cmpt, "sab82532"))) {
 		device_set_desc(dev, "Siemens SAB 82532 dual channel SCC");
 		return (0);
 	}

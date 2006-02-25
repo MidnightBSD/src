@@ -27,7 +27,7 @@
  *
  *	i4b_ifpnp_l1.c - AVM Fritz PnP layer 1 handler
  *	----------------------------------------------
- *	$Id: i4b_ifpnp_l1.c,v 1.1.1.1 2006-02-25 02:28:19 laffer1 Exp $ 
+ *	$Id: i4b_ifpnp_l1.c,v 1.1.1.2 2006-02-25 02:37:13 laffer1 Exp $ 
  *	$Ust: src/i4b/layer1-nb/ifpnp/i4b_ifpnp_l1.c,v 1.4 2000/04/18 08:03:05 ust Exp $ 
  *      last edit-date: [Fri Jun  2 14:55:49 2000]
  *

@@ -38,7 +38,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_mppc.c,v 1.4 1999/11/25 00:10:12 archie Exp $
- * $FreeBSD: src/sys/netgraph/ng_mppc.c,v 1.23 2005/06/03 09:06:00 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_mppc.c,v 1.23.2.1 2006/02/10 00:37:57 yar Exp $
  */
 
 /*
@@ -63,7 +63,13 @@
 #include "opt_netgraph.h"
 
 #if !defined(NETGRAPH_MPPC_COMPRESSION) && !defined(NETGRAPH_MPPC_ENCRYPTION)
+#ifdef KLD_MODULE
+/* XXX NETGRAPH_MPPC_COMPRESSION isn't functional yet */
+#define NETGRAPH_MPPC_ENCRYPTION
+#else
+/* This case is indicative of an error in sys/conf files */
 #error Need either NETGRAPH_MPPC_COMPRESSION or NETGRAPH_MPPC_ENCRYPTION
+#endif
 #endif
 
 #ifdef NG_SEPARATE_MALLOC

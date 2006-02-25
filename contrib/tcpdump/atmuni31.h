@@ -29,7 +29,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/atmuni31.h,v 1.1.1.1 2006-02-25 02:26:22 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/atmuni31.h,v 1.1.1.2 2006-02-25 02:34:01 laffer1 Exp $ (LBL)
  */
 
 /* Based on UNI3.1 standard by ATM Forum */

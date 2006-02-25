@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/bsnmpd/Makefile,v 1.11 2005/04/26 16:49:15 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/bsnmpd/Makefile,v 1.11.2.1 2006/01/20 16:34:36 harti Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
@@ -24,7 +24,8 @@ DEFS=	tree.def
 DEFSDIR= ${SHAREDIR}/snmp/defs
 
 CFLAGS+= -I${CONTRIB}/lib -I${CONTRIB}/snmpd -I. -DUSE_LIBBEGEMOT
-CFLAGS+= -DUSE_TCPWRAPPERS
+CFLAGS+= -DUSE_TCPWRAPPERS -DQUADFMT='"llu"' -DQUADXFMT='"llx"'
+CFLAGS+= -DHAVE_STDINT_H -DHAVE_INTTYPES_H
 DPADD=	${LIBBEGEMOT} ${LIBBSNMP}
 LDADD=	-lbegemot -lbsnmp -lwrap
 

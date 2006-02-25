@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/bde/g_bde_lock.c,v 1.16 2005/03/11 15:42:51 ume Exp $
+ * $FreeBSD: src/sys/geom/bde/g_bde_lock.c,v 1.16.2.1 2005/12/29 05:34:46 sobomax Exp $
  */
 /* This souce file contains routines which operates on the lock sectors, both
  * for the kernel and the userland program gbde(1).
@@ -405,7 +405,7 @@ g_bde_decrypt_lockx(struct g_bde_softc *sc, u_char *meta, off_t mediasize, u_int
 	AES_init(&ci);
 	AES_makekey(&ki, DIR_DECRYPT, 256, sc->sha2 + 16);
 	AES_decrypt(&ci, &ki, q, q, G_BDE_LOCKSIZE);
-	
+
 	/* Decode the byte-sequence */
 	i = g_bde_decode_lock(sc, gl, q);
 	q = NULL;

@@ -29,27 +29,25 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/pcn.4,v 1.11.2.1 2005/09/24 01:59:37 keramida Exp $
+.\" $FreeBSD: src/share/man/man4/pcn.4,v 1.11.2.4 2006/02/12 22:20:09 marius Exp $
 .\"
-.Dd July 16, 2005
+.Dd January 31, 2006
 .Dt PCN 4
 .Os
 .Sh NAME
 .Nm pcn
 .Nd "AMD PCnet/PCI Fast Ethernet device driver"
 .Sh SYNOPSIS
-To compile support for the
-.Nm
-driver into your kernel, place the following lines in your
+To compile this driver into the kernel,
+place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device miibus"
 .Cd "device pcn"
 .Ed
 .Pp
-Alternatively, to load the
-.Nm
-driver at boot time, place the following line in
+Alternatively, to load the driver as a
+module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 if_pcn_load="YES"
@@ -60,7 +58,7 @@ The
 driver provides support for PCI Ethernet adapters and embedded
 controllers based on the AMD PCnet/FAST, PCnet/FAST+, PCnet/FAST III,
 PCnet/PRO and PCnet/Home Ethernet controller chips.
-Supported NIC's include the Allied Telesyn AT-2700 familly.
+Supported NIC's include the Allied Telesyn AT-2700 family.
 .Pp
 The PCnet/PCI chips include a 100Mbps Ethernet MAC and support
 both a serial and MII-compliant transceiver interface.
@@ -123,10 +121,6 @@ PCnet/FAST+, PCnet/FAST III, PCnet/PRO and PCnet/Home Fast Ethernet chips:
 .Pp
 .Bl -bullet -compact
 .It
-AMD Am53C974/Am79C970/Am79C974 PCnet-PCI
-.It
-AMD Am79C970A PCnet-PCI II
-.It
 AMD Am79C971 PCnet-FAST
 .It
 AMD Am79C972 PCnet-FAST+
@@ -135,11 +129,9 @@ AMD Am79C973/Am79C975 PCnet-FAST III
 .It
 AMD Am79C976 PCnet-PRO
 .It
-AMD PCnet/Home HomePNA
+AMD Am79C978 PCnet-Home
 .It
 Allied-Telesis LA-PCI
-.It
-Contec C-NET(98)S (PC-98)
 .It
 NEC SV-98/2-B05, B06
 .El

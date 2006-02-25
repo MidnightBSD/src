@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2004 Sam Leffler, Errno Consulting, Atheros
+ * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting, Atheros
  * Communications, Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms are permitted
@@ -33,7 +33,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGES.
  *
- * $Id: ah_osdep.c,v 1.1.1.1 2006-02-25 02:27:45 laffer1 Exp $
+ * $Id: ah_osdep.c,v 1.1.1.2 2006-02-25 02:36:09 laffer1 Exp $
  */
 #include "opt_ah.h"
 
@@ -95,16 +95,18 @@ SYSCTL_INT(_hw_ath_hal, OID_AUTO, swba_backoff, CTLFLAG_RW,
 	   &ath_hal_additional_swba_backoff, 0,
 	   "Atheros HAL additional SWBA backoff time");
 
+MALLOC_DEFINE(M_ATH_HAL, "ath_hal", "ath hal data");
+
 void*
 ath_hal_malloc(size_t size)
 {
-	return malloc(size, M_DEVBUF, M_NOWAIT | M_ZERO);
+	return malloc(size, M_ATH_HAL, M_NOWAIT | M_ZERO);
 }
 
 void
 ath_hal_free(void* p)
 {
-	return free(p, M_DEVBUF);
+	return free(p, M_ATH_HAL);
 }
 
 void

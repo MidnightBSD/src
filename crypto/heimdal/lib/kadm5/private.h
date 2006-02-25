@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: private.h,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $ */
+/* $Id: private.h,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $ */
 
 #ifndef __kadm5_privatex_h__
 #define __kadm5_privatex_h__

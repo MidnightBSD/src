@@ -27,7 +27,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* $Header: /home/cvs/src/usr.bin/lex/scan.l,v 1.1.1.1 2006-02-25 02:29:15 laffer1 Exp $ */
+/* $Header: /home/cvs/src/usr.bin/lex/scan.l,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
 /* $FreeBSD: src/usr.bin/lex/scan.l,v 1.5 1999/10/27 07:56:46 obrien Exp $ */
 
 #include "flexdef.h"

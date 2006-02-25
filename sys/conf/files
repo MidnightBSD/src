@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/files,v 1.1031.2.12 2005/12/14 00:52:57 anholt Exp $
+# $FreeBSD: src/sys/conf/files,v 1.1031.2.22 2006/02/23 02:13:30 mlaier Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -408,6 +408,7 @@ dev/amd/amd.c			optional amd
 dev/amr/amr.c			optional amr
 dev/amr/amr_cam.c		optional amr
 dev/amr/amr_disk.c		optional amr
+dev/amr/amr_linux.c		optional amr compat_linux
 dev/amr/amr_pci.c		optional amr pci
 dev/an/if_an.c			optional an
 dev/an/if_an_isa.c		optional an isa
@@ -454,6 +455,7 @@ dev/buslogic/bt_mca.c		optional bt mca
 dev/buslogic/bt_pci.c		optional bt pci
 dev/cardbus/cardbus.c		optional cardbus
 dev/cardbus/cardbus_cis.c	optional cardbus
+dev/cardbus/cardbus_device.c	optional cardbus
 dev/ciss/ciss.c			optional ciss
 dev/cm/smc90cx6.c		optional cm
 dev/cnw/if_cnw.c		optional cnw pccard
@@ -626,6 +628,7 @@ dev/ips/ips_pci.c		optional ips pci
 dev/ipw/if_ipw.c		optional ipw
 dev/isp/isp.c			optional isp
 dev/isp/isp_freebsd.c		optional isp
+dev/isp/isp_library.c		optional isp
 dev/isp/isp_pci.c		optional isp pci
 dev/isp/isp_sbus.c		optional isp sbus
 dev/isp/isp_target.c		optional isp
@@ -638,6 +641,10 @@ dev/joy/joy.c			optional joy
 dev/joy/joy_isa.c		optional joy isa
 dev/joy/joy_pccard.c		optional joy pccard
 dev/kbdmux/kbdmux.c		optional kbdmux
+dev/le/am7990.c			optional le
+dev/le/am79900.c		optional le
+dev/le/if_le_pci.c		optional le pci
+dev/le/lance.c			optional le
 dev/led/led.c			standard
 dev/lge/if_lge.c		optional lge
 dev/lnc/if_lnc.c		optional lnc
@@ -798,6 +805,7 @@ dev/sound/isa/sb8.c		optional snd_sb8 isa
 dev/sound/isa/sbc.c		optional snd_sbc isa
 dev/sound/isa/sndbuf_dma.c	optional sound isa
 dev/sound/pci/als4000.c		optional snd_als4000 pci
+dev/sound/pci/atiixp.c		optional snd_atiixp pci
 #dev/sound/pci/au88x0.c		optional snd_au88x0 pci
 dev/sound/pci/cmi.c		optional snd_cmi pci
 dev/sound/pci/cs4281.c		optional snd_cs4281 pci
@@ -817,7 +825,6 @@ dev/sound/pci/t4dwave.c		optional snd_t4dwave pci
 dev/sound/pci/via8233.c		optional snd_via8233 pci
 dev/sound/pci/via82c686.c	optional snd_via82c686 pci
 dev/sound/pci/vibes.c		optional snd_vibes pci
-#dev/sound/pci/vortex1.c	optional snd_vortex1 pci
 dev/sound/pcm/ac97.c		optional sound
 dev/sound/pcm/ac97_if.m		optional sound
 dev/sound/pcm/ac97_patch.c	optional sound
@@ -830,6 +837,7 @@ dev/sound/pcm/feeder.c		optional sound
 dev/sound/pcm/feeder_fmt.c	optional sound
 dev/sound/pcm/feeder_if.m	optional sound
 dev/sound/pcm/feeder_rate.c	optional sound
+dev/sound/pcm/feeder_volume.c	optional sound
 dev/sound/pcm/mixer.c		optional sound
 dev/sound/pcm/mixer_if.m	optional sound
 dev/sound/pcm/sndstat.c		optional sound
@@ -1067,6 +1075,7 @@ geom/label/g_label.c		optional geom_label
 geom/label/g_label_ext2fs.c	optional geom_label
 geom/label/g_label_iso9660.c	optional geom_label
 geom/label/g_label_msdosfs.c	optional geom_label
+geom/label/g_label_ntfs.c	optional geom_label
 geom/label/g_label_reiserfs.c	optional geom_label
 geom/label/g_label_ufs.c	optional geom_label
 geom/mirror/g_mirror.c		optional geom_mirror
@@ -1247,6 +1256,7 @@ kern/subr_clock.c		optional genclock
 kern/subr_devstat.c		standard
 kern/subr_disk.c		standard
 kern/subr_eventhandler.c	standard
+kern/subr_firmware.c		optional firmware
 kern/subr_hints.c		standard
 kern/subr_kdb.c			standard
 kern/subr_kobj.c		standard

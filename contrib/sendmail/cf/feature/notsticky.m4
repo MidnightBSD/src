@@ -13,7 +13,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: notsticky.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: notsticky.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 #
 #  This is now the default.  Use ``FEATURE(stickyhost)'' if you want
 #  the old default behaviour.

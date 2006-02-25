@@ -36,7 +36,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: NetBSD: mdreloc.c,v 1.5 2001/04/25 12:24:51 kleink Exp
- * $FreeBSD: src/sys/sparc64/sparc64/elf_machdep.c,v 1.19 2004/08/11 02:35:06 marcel Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/elf_machdep.c,v 1.19.8.1 2005/12/30 22:13:58 marcel Exp $
  */
 
 #include <sys/param.h>
@@ -288,9 +288,9 @@ elf_reloc(linker_file_t lf, Elf_Addr relocbase, const void *data, int type,
     elf_lookup_fn lookup)
 {
 	const Elf_Rela *rela;
-	Elf_Half *where32;
+	Elf_Word *where32;
 	Elf_Addr *where;
-	Elf_Word rtype, symidx;
+	Elf_Size rtype, symidx;
 	Elf_Addr value;
 	Elf_Addr mask;
 	Elf_Addr addr;
@@ -300,7 +300,7 @@ elf_reloc(linker_file_t lf, Elf_Addr relocbase, const void *data, int type,
 
 	rela = (const Elf_Rela *)data;
 	where = (Elf_Addr *)(relocbase + rela->r_offset);
-	where32 = (Elf_Half *)where;
+	where32 = (Elf_Word *)where;
 	rtype = ELF_R_TYPE(rela->r_info);
 	symidx = ELF_R_SYM(rela->r_info);
 

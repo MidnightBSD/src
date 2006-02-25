@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: tsig.c,v 1.1.1.1 2006-02-25 02:25:18 laffer1 Exp $
+ * $Id: tsig.c,v 1.1.1.2 2006-02-25 02:32:10 laffer1 Exp $
  */
 
 #include <config.h>
@@ -167,7 +167,7 @@ dns_tsigkey_createfromkey(dns_name_t *name, dns_name_t *algorithm,
 			goto cleanup_name;
 		}
 	} else {
-		if (key != NULL) {
+		if (dstkey != NULL) {
 			ret = DNS_R_BADALG;
 			goto cleanup_name;
 		}

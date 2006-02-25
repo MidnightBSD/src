@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/reloc_elf.c,v 1.1 2004/08/28 23:03:05 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/reloc_elf.c,v 1.1.4.1 2005/12/30 22:13:58 marcel Exp $");
 
 #include <sys/types.h>
 #include <machine/elf.h>
@@ -54,7 +54,7 @@ __elfN(reloc)(struct elf_file *ef, symaddr_fn *symaddr, const void *reldata,
     int reltype, Elf_Addr relbase, Elf_Addr dataaddr, void *data, size_t len)
 {
 #ifdef __sparc__
-	Elf_Word w;
+	Elf_Size w;
 	const Elf_Rela *a;
 
 	switch (reltype) {
@@ -81,7 +81,7 @@ __elfN(reloc)(struct elf_file *ef, symaddr_fn *symaddr, const void *reldata,
 #elif defined(__i386__) && __ELF_WORD_SIZE == 64
 	Elf64_Addr *where, val;
 	Elf_Addr addend, addr;
-	Elf_Word rtype, symidx;
+	Elf_Size rtype, symidx;
 	const Elf_Rel *rel;
 	const Elf_Rela *rela;
 
@@ -138,7 +138,7 @@ __elfN(reloc)(struct elf_file *ef, symaddr_fn *symaddr, const void *reldata,
 	return (0);
 #elif defined(__i386__) && __ELF_WORD_SIZE == 32
 	Elf_Addr addend, addr, *where, val;
-	Elf_Word rtype, symidx;
+	Elf_Size rtype, symidx;
 	const Elf_Rel *rel;
 	const Elf_Rela *rela;
 

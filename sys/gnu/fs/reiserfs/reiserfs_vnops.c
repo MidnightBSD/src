@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_vnops.c,v 1.1 2005/06/18 17:06:09 dumbbell Exp $
+ * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_vnops.c,v 1.1.2.1 2006/02/20 00:53:14 yar Exp $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -154,7 +154,7 @@ reiserfs_open(struct vop_open_args *ap)
 	    (ap->a_mode & (FWRITE | O_APPEND)) == FWRITE)
 		return (EPERM);
 
-	vnode_create_vobject(ap->a_vp, VTOI(ap->a_vp)->i_size, ap->a_td);
+	vnode_create_vobject_off(ap->a_vp, VTOI(ap->a_vp)->i_size, ap->a_td);
 
 	return (0);
 }

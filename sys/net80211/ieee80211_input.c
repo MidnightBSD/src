@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_input.c,v 1.62.2.4 2005/12/11 22:58:43 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_input.c,v 1.62.2.9 2006/02/16 16:57:24 sam Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -710,8 +710,9 @@ ieee80211_deliver_data(struct ieee80211com *ic,
 	if (m != NULL) {
 		if (ni->ni_vlan != 0) {
 			/* attach vlan tag */
-			/* XXX goto err? */
-			VLAN_INPUT_TAG(ifp, m, ni->ni_vlan, goto out);
+			VLAN_INPUT_TAG_NEW(ifp, m, ni->ni_vlan);
+			if (m == NULL)
+				goto out;	/* XXX goto err? */
 		}
 		(*ifp->if_input)(ifp, m);
 	}
@@ -1768,6 +1769,7 @@ ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 		scan.chan = scan.bchan;
 
 		while (frm < efrm) {
+			IEEE80211_VERIFY_LENGTH(efrm - frm, frm[1]);
 			switch (*frm) {
 			case IEEE80211_ELEMID_SSID:
 				scan.ssid = frm;
@@ -1899,6 +1901,9 @@ ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 			/* record tsf of last beacon */
 			memcpy(ni->ni_tstamp.data, scan.tstamp,
 				sizeof(ni->ni_tstamp));
+			/* count beacon frame for s/w bmiss handling */
+			ic->ic_swbmiss_count++;
+			ic->ic_bmiss_count = 0;
 			if (ni->ni_erp != scan.erp) {
 				IEEE80211_DPRINTF(ic, IEEE80211_MSG_ASSOC,
 				    "[%s] erp change: was 0x%x, now 0x%x\n",
@@ -1999,6 +2004,7 @@ ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 		 */
 		ssid = rates = xrates = NULL;
 		while (frm < efrm) {
+			IEEE80211_VERIFY_LENGTH(efrm - frm, frm[1]);
 			switch (*frm) {
 			case IEEE80211_ELEMID_SSID:
 				ssid = frm;
@@ -2175,6 +2181,7 @@ ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 			frm += 6;	/* ignore current AP info */
 		ssid = rates = xrates = wpa = wme = NULL;
 		while (frm < efrm) {
+			IEEE80211_VERIFY_LENGTH(efrm - frm, frm[1]);
 			switch (*frm) {
 			case IEEE80211_ELEMID_SSID:
 				ssid = frm;
@@ -2379,6 +2386,7 @@ ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 
 		rates = xrates = wpa = wme = NULL;
 		while (frm < efrm) {
+			IEEE80211_VERIFY_LENGTH(efrm - frm, frm[1]);
 			switch (*frm) {
 			case IEEE80211_ELEMID_RATES:
 				rates = frm;

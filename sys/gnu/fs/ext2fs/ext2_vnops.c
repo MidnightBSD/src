@@ -39,7 +39,7 @@
  *
  *	@(#)ufs_vnops.c	8.7 (Berkeley) 2/3/94
  *	@(#)ufs_vnops.c 8.27 (Berkeley) 5/27/95
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vnops.c,v 1.103.2.1 2005/10/28 18:44:26 cracauer Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vnops.c,v 1.103.2.3 2006/02/20 00:53:14 yar Exp $
  */
 
 #include "opt_suiddir.h"
@@ -235,10 +235,6 @@ ext2_create(ap)
 	return (0);
 }
 
-/*
- * Open called.
- */
-
 static int
 ext2_open(ap)
 	struct vop_open_args /* {
@@ -248,8 +244,6 @@ ext2_open(ap)
 		struct thread *a_td;
 	} */ *ap;
 {
-	struct vnode *vp = ap->a_vp;
-	struct inode *ip = VTOI(vp);
 
 	if (ap->a_vp->v_type == VBLK || ap->a_vp->v_type == VCHR)
 		return (EOPNOTSUPP);
@@ -261,7 +255,7 @@ ext2_open(ap)
 	    (ap->a_mode & (FWRITE | O_APPEND)) == FWRITE)
 		return (EPERM);
 
-	vnode_create_vobject(ap->a_vp, ip->i_size, ap->a_td);
+	vnode_create_vobject_off(ap->a_vp, VTOI(ap->a_vp)->i_size, ap->a_td);
 
 	return (0);
 }

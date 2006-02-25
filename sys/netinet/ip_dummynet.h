@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/ip_dummynet.h,v 1.36 2005/06/10 01:25:22 thompsa Exp $
+ * $FreeBSD: src/sys/netinet/ip_dummynet.h,v 1.36.2.2 2006/02/17 16:46:47 ru Exp $
  */
 
 #ifndef _IP_DUMMYNET_H
@@ -130,7 +130,6 @@ struct dn_pkt_tag {
 
     dn_key output_time;		/* when the pkt is due for delivery	*/
     struct ifnet *ifp;		/* interface, for ip_output		*/
-    int flags ;			/* flags, for ip_output (IPv6 ?)	*/
     struct _ip6dn_args ip6opt;	/* XXX ipv6 options			*/
 };
 #endif /* _KERNEL */
@@ -249,7 +248,7 @@ struct dn_flow_queue {
  * latter case, the structure is located inside the struct dn_pipe).
  */
 struct dn_flow_set {
-    struct dn_flow_set *next; /* next flow set in all_flow_sets list */
+    SLIST_ENTRY(dn_flow_set)	next;	/* linked list in a hash slot */
 
     u_short fs_nr ;             /* flow_set number       */
     u_short flags_fs;
@@ -297,7 +296,8 @@ struct dn_flow_set {
     int lookup_weight ;		/* equal to (1-w_q)^t / (1-w_q)^(t+1) */
     int avg_pkt_size ;		/* medium packet size */
     int max_pkt_size ;		/* max packet size */
-} ;
+};
+SLIST_HEAD(dn_flow_set_head, dn_flow_set);
 
 /*
  * Pipe descriptor. Contains global parameters, delay-line queue,
@@ -314,7 +314,7 @@ struct dn_flow_set {
  *
  */
 struct dn_pipe {		/* a pipe */
-    struct dn_pipe *next ;
+    SLIST_ENTRY(dn_pipe)	next;	/* linked list in a hash slot */
 
     int	pipe_nr ;		/* number	*/
     int bandwidth;		/* really, bytes/tick.	*/
@@ -343,6 +343,7 @@ struct dn_pipe {		/* a pipe */
 
     struct dn_flow_set fs ; /* used with fixed-rate flows */
 };
+SLIST_HEAD(dn_pipe_head, dn_pipe);
 
 #ifdef _KERNEL
 typedef	int ip_dn_ctl_t(struct sockopt *); /* raw_ip.c */

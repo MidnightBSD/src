@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hex.c,v 1.1.1.1 2006-02-25 02:25:19 laffer1 Exp $ */
+/* $Id: hex.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
 
 #include <config.h>
 

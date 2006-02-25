@@ -6,7 +6,7 @@
  * modified 10-18-89 for curses (jrl)
  * 10-18-89 added signal handling
  *
- * $Id: gdc.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: gdc.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
  */
 
 #include <time.h>

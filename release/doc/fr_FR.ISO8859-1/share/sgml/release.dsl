@@ -2,7 +2,7 @@
      The FreeBSD Documentation Project
      The FreeBSD French Documentation Project
 
-     $Id: release.dsl,v 1.1.1.1 2006-02-25 02:27:01 laffer1 Exp $
+     $Id: release.dsl,v 1.1.1.2 2006-02-25 02:35:16 laffer1 Exp $
      $FreeBSD: src/release/doc/fr_FR.ISO8859-1/share/sgml/release.dsl,v 1.6 2003/05/23 10:30:27 hrs Exp $
      Original revision: 1.6
 -->

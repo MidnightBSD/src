@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/fnmatch.c,v 1.19 2005/01/07 00:24:32 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/libkern/fnmatch.c,v 1.19.2.1 2006/02/13 23:52:29 rwatson Exp $");
 
 /*
  * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.
@@ -51,9 +51,7 @@ __FBSDID("$FreeBSD: src/sys/libkern/fnmatch.c,v 1.19 2005/01/07 00:24:32 imp Exp
 static int rangematch(const char *, char, int, char **);
 
 int
-fnmatch(pattern, string, flags)
-	const char *pattern, *string;
-	int flags;
+fnmatch(const char *pattern, const char *string, int flags)
 {
 	const char *stringstart;
 	char *newp;
@@ -156,11 +154,7 @@ fnmatch(pattern, string, flags)
 }
 
 static int
-rangematch(pattern, test, flags, newp)
-	const char *pattern;
-	char test;
-	int flags;
-	char **newp;
+rangematch(const char *pattern, char test, int flags, char **newp)
 {
 	int negate, ok;
 	char c, c2;

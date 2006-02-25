@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_umtx.c,v 1.33 2005/03/05 09:15:03 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_umtx.c,v 1.33.2.1 2006/01/16 05:48:40 davidxu Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -687,8 +687,8 @@ out:
 	return (error);
 }
 
-static int
-do_wake(struct thread *td, void *uaddr, int n_wake)
+int
+kern_umtx_wake(struct thread *td, void *uaddr, int n_wake)
 {
 	struct umtx_key key;
 	int ret;
@@ -762,7 +762,7 @@ _umtx_op(struct thread *td, struct _umtx_op_args *uap)
 		error = do_wait(td, uap->umtx, uap->id, ts);
 		break;
 	case UMTX_OP_WAKE:
-		error = do_wake(td, uap->umtx, uap->id);
+		error = kern_umtx_wake(td, uap->umtx, uap->id);
 		break;
 	default:
 		error = EINVAL;

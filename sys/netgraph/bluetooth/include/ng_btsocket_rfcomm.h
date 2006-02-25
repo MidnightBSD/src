@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_rfcomm.h,v 1.1.1.1 2006-02-25 02:28:29 laffer1 Exp $
+ * $Id: ng_btsocket_rfcomm.h,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
  * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_btsocket_rfcomm.h,v 1.4 2005/01/11 01:39:53 emax Exp $
  */
 

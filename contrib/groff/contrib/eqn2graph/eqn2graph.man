@@ -1,4 +1,4 @@
-.\" $Id: eqn2graph.man,v 1.1.1.1 2006-02-25 02:25:58 laffer1 Exp $
+.\" $Id: eqn2graph.man,v 1.1.1.2 2006-02-25 02:33:12 laffer1 Exp $
 .\" This documentation is released to the public domain.
 .
 .

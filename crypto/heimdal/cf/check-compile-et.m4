@@ -1,4 +1,4 @@
-dnl $Id: check-compile-et.m4,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+dnl $Id: check-compile-et.m4,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $
 dnl
 dnl CHECK_COMPILE_ET
 AC_DEFUN([CHECK_COMPILE_ET], [

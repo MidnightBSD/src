@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: vkbd_var.h,v 1.1.1.1 2006-02-25 02:28:14 laffer1 Exp $
+ * $Id: vkbd_var.h,v 1.1.1.2 2006-02-25 02:37:01 laffer1 Exp $
  * $FreeBSD: src/sys/dev/vkbd/vkbd_var.h,v 1.2 2005/01/06 01:43:32 imp Exp $
  */
 

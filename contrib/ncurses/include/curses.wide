@@ -1,7 +1,7 @@
 
 #ifdef _XOPEN_SOURCE_EXTENDED
 
-/* $Id: curses.wide,v 1.1.1.1 2006-02-25 02:26:09 laffer1 Exp $ */
+/* $Id: curses.wide,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $ */
 
 extern NCURSES_EXPORT_VAR(cchar_t *) _nc_wacs;
 

@@ -7,7 +7,7 @@
  * v2.0 featuring strict ANSI/POSIX conformance, November 1993.
  * v2.1 with ncurses mouse support, September 1995
  *
- * $Id: bs.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: bs.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $
  */
 
 #include <ctype.h>

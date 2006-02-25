@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdp.h,v 1.1.1.1 2006-02-25 02:26:53 laffer1 Exp $
+ * $Id: sdp.h,v 1.1.1.2 2006-02-25 02:35:07 laffer1 Exp $
  * $FreeBSD: src/lib/libsdp/sdp.h,v 1.5 2005/05/27 19:11:33 emax Exp $
  */
 

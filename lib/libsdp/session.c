@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: session.c,v 1.1.1.1 2006-02-25 02:26:53 laffer1 Exp $
+ * $Id: session.c,v 1.1.1.2 2006-02-25 02:35:07 laffer1 Exp $
  * $FreeBSD: src/lib/libsdp/session.c,v 1.3 2004/01/09 22:44:28 emax Exp $
  */
 

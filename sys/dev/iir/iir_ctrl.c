@@ -35,7 +35,7 @@
  * Written by: Achim Leubner <achim_leubner@adaptec.com>
  * Fixes/Additions: Boji Tony Kannanthanam <boji.t.kannanthanam@intel.com>
  *
- * $Id: iir_ctrl.c,v 1.1.1.1 2006-02-25 02:28:06 laffer1 Exp $"
+ * $Id: iir_ctrl.c,v 1.1.1.2 2006-02-25 02:36:39 laffer1 Exp $"
  */
 
 #include <sys/cdefs.h>

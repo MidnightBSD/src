@@ -36,7 +36,7 @@ static char sccsid[] = "@(#)trap.c	8.5 (Berkeley) 6/5/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/trap.c,v 1.29.8.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/trap.c,v 1.29.8.2 2005/12/26 15:43:54 stefanf Exp $");
 
 #include <signal.h>
 #include <unistd.h>
@@ -153,15 +153,14 @@ trapcmd(int argc, char **argv)
 	if (argc <= 1) {
 		for (signo = 0 ; signo < sys_nsig ; signo++) {
 			if (signo < NSIG && trap[signo] != NULL) {
+				out1str("trap -- ");
+				out1qstr(trap[signo]);
 				if (signo == 0) {
-					out1fmt("trap -- '%s' %s\n",
-					    trap[signo], "exit");
+					out1str(" exit\n");
 				} else if (sys_signame[signo]) {
-					out1fmt("trap -- '%s' %s\n",
-					    trap[signo], sys_signame[signo]);
+					out1fmt(" %s\n", sys_signame[signo]);
 				} else {
-					out1fmt("trap -- '%s' %d\n",
-					    trap[signo], signo);
+					out1fmt(" %d\n", signo);
 				}
 			}
 		}

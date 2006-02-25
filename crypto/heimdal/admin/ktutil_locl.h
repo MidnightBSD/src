@@ -32,7 +32,7 @@
  */
 
 /* 
- * $Id: ktutil_locl.h,v 1.1.1.1 2006-02-25 02:26:27 laffer1 Exp $
+ * $Id: ktutil_locl.h,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $
  * $FreeBSD: src/crypto/heimdal/admin/ktutil_locl.h,v 1.7 2002/09/16 21:07:08 nectar Exp $
  */
 

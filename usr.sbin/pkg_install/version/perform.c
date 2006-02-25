@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/version/perform.c,v 1.12.2.2 2005/10/29 15:45:53 krion Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/version/perform.c,v 1.12.2.3 2006/02/22 16:27:58 krion Exp $");
 
 #include "lib.h"
 #include "version.h"
@@ -261,11 +261,12 @@ show_version(Package plist, const char *latest, const char *source)
 	return;
     if (ShowOrigin != FALSE)
 	strlcpy(tmp, plist.origin, PATH_MAX);
-    else
+    else {
 	strlcpy(tmp, plist.name, PATH_MAX);
-    if (!Verbose) {
-	if ((ch = strrchr(tmp, '-')) != NULL)
-	    ch[0] = '\0';
+	if (!Verbose) {
+	    if ((ch = strrchr(tmp, '-')) != NULL)
+		ch[0] = '\0';
+	}
     }
     if (latest == NULL) {
 	if (source == NULL && OUTPUT('!')) {

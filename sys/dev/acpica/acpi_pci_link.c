@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pci_link.c,v 1.44.2.5 2005/12/12 19:35:11 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pci_link.c,v 1.44.2.6 2006/01/10 21:37:18 jhb Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -440,8 +440,10 @@ acpi_pci_link_attach(device_t dev)
 		}
 	}
 	sc->pl_num_links = creq.count;
-	if (creq.count == 0)
+	if (creq.count == 0) {
+		ACPI_SERIAL_END(pci_link);
 		return (0);
+	}
 	sc->pl_links = malloc(sizeof(struct link) * sc->pl_num_links,
 	    M_PCI_LINK, M_WAITOK | M_ZERO);
 
@@ -616,8 +618,11 @@ acpi_pci_link_add_reference(device_t dev, int index, device_t pcib, int slot,
 	/* Bump the reference count. */
 	ACPI_SERIAL_BEGIN(pci_link);
 	link = acpi_pci_link_lookup(dev, index);
-	if (link == NULL)
-		panic("%s: apparently invalid index %d", __func__, index);
+	if (link == NULL) {
+		device_printf(dev, "apparently invalid index %d\n", index);
+		ACPI_SERIAL_END(pci_link);
+		return;
+	}
 	link->l_references++;
 	if (link->l_routed)
 		pci_link_interrupt_weights[link->l_irq]++;

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hccontrol.h,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
+ * $Id: hccontrol.h,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/hccontrol.h,v 1.4 2004/04/09 23:58:53 emax Exp $
  */
 

@@ -33,7 +33,7 @@
 
 #include "kadm5_locl.h"
 
-RCSID("$Id: privs_s.c,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $");
+RCSID("$Id: privs_s.c,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $");
 
 kadm5_ret_t
 kadm5_s_get_privs(void *server_handle, u_int32_t *privs)

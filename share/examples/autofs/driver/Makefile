@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1.1.1 2006-02-25 02:27:20 laffer1 Exp $
+# $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:37 laffer1 Exp $
 # $FreeBSD: src/share/examples/autofs/driver/Makefile,v 1.5 2004/12/21 08:47:08 ru Exp $
 
 PROG=autodriver

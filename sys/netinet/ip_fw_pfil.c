@@ -23,18 +23,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/ip_fw_pfil.c,v 1.19 2005/04/18 18:35:05 brooks Exp $
+ * $FreeBSD: src/sys/netinet/ip_fw_pfil.c,v 1.19.2.1 2006/02/11 08:19:37 ume Exp $
  */
 
 #if !defined(KLD_MODULE)
 #include "opt_ipfw.h"
 #include "opt_ipdn.h"
 #include "opt_inet.h"
-#include "opt_inet6.h"
 #ifndef INET
 #error IPFIREWALL requires INET.
 #endif /* INET */
 #endif /* KLD_MODULE */
+#include "opt_inet6.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>

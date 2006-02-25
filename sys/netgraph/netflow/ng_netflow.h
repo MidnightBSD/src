@@ -25,16 +25,16 @@
  * SUCH DAMAGE.
  *
  *	 $SourceForge: ng_netflow.h,v 1.26 2004/09/04 15:44:55 glebius Exp $
- *	 $FreeBSD: src/sys/netgraph/netflow/ng_netflow.h,v 1.7 2005/05/12 13:52:49 glebius Exp $
+ *	 $FreeBSD: src/sys/netgraph/netflow/ng_netflow.h,v 1.7.2.2 2006/02/16 12:37:14 glebius Exp $
  */
 
 #ifndef	_NG_NETFLOW_H_
 #define	_NG_NETFLOW_H_
 
 #define NG_NETFLOW_NODE_TYPE	"netflow"
-#define NGM_NETFLOW_COOKIE	1115810374
+#define NGM_NETFLOW_COOKIE	1137078102
 
-#define	NG_NETFLOW_MAXIFACES	512
+#define	NG_NETFLOW_MAXIFACES	2048
 
 /* Hook names */
 
@@ -44,12 +44,12 @@
 
 /* Netgraph commands understood by netflow node */
 enum {
-    NGM_NETFLOW_INFO = 1,	/* get node info */
-    NGM_NETFLOW_IFINFO,		/* get iface info */
-    NGM_NETFLOW_SHOW,		/* show ip cache flow */
-    NGM_NETFLOW_SETDLT,		/* set data-link type */	
-    NGM_NETFLOW_SETIFINDEX, 	/* set interface index */
-    NGM_NETFLOW_SETTIMEOUTS, 	/* set active/inactive flow timeouts */
+    NGM_NETFLOW_INFO = 1|NGM_READONLY|NGM_HASREPLY,	/* get node info */
+    NGM_NETFLOW_IFINFO = 2|NGM_READONLY|NGM_HASREPLY,	/* get iface info */
+    NGM_NETFLOW_SHOW = 3|NGM_READONLY|NGM_HASREPLY,	/* show ip cache flow */
+    NGM_NETFLOW_SETDLT		= 4,	/* set data-link type */	
+    NGM_NETFLOW_SETIFINDEX	= 5, 	/* set interface index */
+    NGM_NETFLOW_SETTIMEOUTS	= 6, 	/* set active/inactive flow timeouts */
 };
 
 /* This structure is returned by the NGM_NETFLOW_INFO message */
@@ -219,13 +219,9 @@ typedef struct ng_netflow_ifinfo *ifinfo_p;
 /* Structure describing our flow engine */
 struct netflow {
 	node_p			node;		/* link to the node itself */
-
-	struct ng_netflow_iface	ifaces[NG_NETFLOW_MAXIFACES];	/* incoming */
 	hook_p			export;		/* export data goes there */
 
 	struct ng_netflow_info	info;
-	uint32_t		flow_seq;	/* current flow sequence */
-
 	struct callout		exp_callout;	/* expiry periodic job */
 
 	/*
@@ -236,8 +232,8 @@ struct netflow {
 #define	CACHESIZE			(65536*4)
 #define	CACHELOWAT			(CACHESIZE * 3/4)
 #define	CACHEHIGHWAT			(CACHESIZE * 9/10)
-	uma_zone_t			zone;
-	struct flow_hash_entry		*hash;
+	uma_zone_t		zone;
+	struct flow_hash_entry	*hash;
 
 	/*
 	 * NetFlow data export
@@ -250,8 +246,11 @@ struct netflow {
 	 * current incomplete datagram is sent. 
 	 * export_mtx is used for attaching/detaching.
 	 */
-	item_p				export_item;
-	struct mtx			export_mtx;
+	item_p			export_item;
+	struct mtx		export_mtx;
+	uint32_t		flow_seq;	/* current flow sequence */
+
+	struct ng_netflow_iface	ifaces[NG_NETFLOW_MAXIFACES];
 };
 
 typedef struct netflow *priv_p;

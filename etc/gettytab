@@ -1,4 +1,4 @@
-# $FreeBSD: src/etc/gettytab,v 1.22 2004/06/06 11:46:27 schweikh Exp $
+# $FreeBSD: src/etc/gettytab,v 1.22.8.1 2006/01/25 07:39:42 matteo Exp $
 #	from: @(#)gettytab	5.14 (Berkeley) 3/27/91
 #
 # Most of the table entries here are just copies of the old getty table,
@@ -211,6 +211,8 @@ autologin|al.9600:\
 #
 3wire.9600|9600-3wire:\
 	:np:nc:sp#9600:
+3wire.19200|19200-3wire:\
+	:np:nc:sp#19200:
 3wire.38400|38400-3wire:\
 	:np:nc:sp#38400:
 3wire.57600|57600-3wire:\

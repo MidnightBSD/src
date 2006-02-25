@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.sbin/pkg_install/lib/lib.h,v 1.56 2005/06/14 15:05:43 krion Exp $ */
+/* $FreeBSD: src/usr.sbin/pkg_install/lib/lib.h,v 1.56.2.1 2006/01/16 19:48:17 flz Exp $ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -172,7 +172,7 @@ Boolean         isfile(const char *);
 Boolean		isempty(const char *);
 Boolean		issymlink(const char *);
 Boolean		isURL(const char *);
-char		*fileGetURL(const char *, const char *);
+char		*fileGetURL(const char *, const char *, int);
 char		*fileFindByPath(const char *, const char *);
 char		*fileGetContents(const char *);
 void		write_file(const char *, const char *);

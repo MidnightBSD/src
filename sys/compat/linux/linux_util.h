@@ -28,7 +28,7 @@
  *
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
- * $FreeBSD: src/sys/compat/linux/linux_util.h,v 1.25 2005/03/01 17:57:45 jhb Exp $
+ * $FreeBSD: src/sys/compat/linux/linux_util.h,v 1.25.2.1 2005/12/19 17:06:51 glebius Exp $
  */
 
 /*
@@ -97,19 +97,17 @@ int linux_emul_convpath(struct thread *, char *, enum uio_seg, char **, int);
 int									\
 linux_ ## s(struct thread *td, struct linux_ ## s ## _args *args)	\
 {									\
-	return (unimplemented_syscall(td, #s));				\
+	static pid_t pid;						\
+									\
+	if (pid != td->td_proc->p_pid) {				\
+		linux_msg(td, "syscall %s not implemented", #s);	\
+		pid = td->td_proc->p_pid;				\
+	};								\
+	return (ENOSYS);						\
 }									\
 struct __hack
 
 void linux_msg(const struct thread *td, const char *fmt, ...)
 	__printflike(2, 3);
-
-static __inline int
-unimplemented_syscall(struct thread *td, const char *syscallname)
-{
-
-	linux_msg(td, "syscall %s not implemented", syscallname);
-	return (ENOSYS);
-}
 
 #endif /* !_LINUX_UTIL_H_ */

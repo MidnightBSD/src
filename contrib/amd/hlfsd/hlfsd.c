@@ -38,7 +38,7 @@
  *
  *      %W% (Berkeley) %G%
  *
- * $Id: hlfsd.c,v 1.1.1.1 2006-02-25 02:25:14 laffer1 Exp $
+ * $Id: hlfsd.c,v 1.1.1.2 2006-02-25 02:32:01 laffer1 Exp $
  * $FreeBSD: src/contrib/amd/hlfsd/hlfsd.c,v 1.8 2004/07/06 13:16:46 mbr Exp $
  *
  * HLFSD was written at Columbia University Computer Science Department, by

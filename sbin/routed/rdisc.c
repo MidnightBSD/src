@@ -39,8 +39,8 @@ __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
 __RCSID("$FreeBSD: src/sbin/routed/rdisc.c,v 1.11 2005/05/31 20:28:49 stefanf Exp $");
 #else
-__RCSID("$Revision: 1.1.1.1 $");
-#ident "$Revision: 1.1.1.1 $"
+__RCSID("$Revision: 1.1.1.2 $");
+#ident "$Revision: 1.1.1.2 $"
 #endif
 
 /* router advertisement ICMP packet */

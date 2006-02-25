@@ -3,7 +3,7 @@
 
 /* config.h.  Generated automatically by configure.  */
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */
-/* $Id: config.h,v 1.1.1.1 2006-02-25 02:29:12 laffer1 Exp $ */
+/* $Id: config.h,v 1.1.1.2 2006-02-25 02:38:13 laffer1 Exp $ */
 
 
 /* Define if on AIX 3.

@@ -13,7 +13,7 @@ divert(-1)
 #
 
 divert(0)
-VERSIONID(`$Id: qnx.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: qnx.m4,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $')
 define(`QUEUE_DIR', /usr/spool/mqueue)dnl
 define(`LOCAL_MAILER_ARGS', `mail $u')dnl
 _DEFIFNOT(`LOCAL_MAILER_FLAGS', `Sh')dnl

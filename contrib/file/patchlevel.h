@@ -3,12 +3,9 @@
 
 /*
  * Patchlevel file for Ian Darwin's MAGIC command.
- * $Id: patchlevel.h,v 1.1.1.1 2006-02-25 02:25:36 laffer1 Exp $
+ * $Id: patchlevel.h,v 1.1.1.2 2006-02-25 02:32:35 laffer1 Exp $
  *
  * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2005/12/24 02:42:17  laffer1
- * Imported from FreeBSD 6.0 sources
- *
  * Revision 1.55  2004/11/24 18:57:47  christos
  * Re-do the autoconf stuff once more; passes make dist now.
  *

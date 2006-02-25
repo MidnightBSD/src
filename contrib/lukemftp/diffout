@@ -81,7 +81,7 @@ diff -Nru src/Makefile.in /home/spock/ftp/Makefile.in
 +++ /home/spock/ftp/Makefile.in	Wed Dec 31 19:00:00 1969
 @@ -1,43 +0,0 @@
 -#
--#	$Id: diffout,v 1.1.1.1 2006-02-25 02:26:08 laffer1 Exp $
+-#	$Id: diffout,v 1.1.1.2 2006-02-25 02:33:36 laffer1 Exp $
 -#
 -
 -srcdir	= @srcdir@

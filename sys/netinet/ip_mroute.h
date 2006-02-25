@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_mroute.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/ip_mroute.h,v 1.24 2005/01/07 01:45:44 imp Exp $
+ * $FreeBSD: src/sys/netinet/ip_mroute.h,v 1.24.2.1 2006/02/03 15:51:17 ru Exp $
  */
 
 #ifndef _NETINET_IP_MROUTE_H_
@@ -294,8 +294,8 @@ struct mfc {
  * note the convenient similarity to an IP packet
  */
 struct igmpmsg {
-    u_long	    unused1;
-    u_long	    unused2;
+    uint32_t	    unused1;
+    uint32_t	    unused2;
     u_char	    im_msgtype;			/* what type of message	    */
 #define IGMPMSG_NOCACHE		1	/* no MFC in the kernel		    */
 #define IGMPMSG_WRONGVIF	2	/* packet came from wrong interface */

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/common/bootstrap.h,v 1.41 2004/08/29 00:48:41 iedowse Exp $
+ * $FreeBSD: src/sys/boot/common/bootstrap.h,v 1.41.2.1 2005/12/30 22:13:58 marcel Exp $
  */
 
 #include <sys/types.h>
@@ -240,7 +240,7 @@ int  file_addmodule(struct preloaded_file *fp, char *modname, int version,
 #define ELF_RELOC_RELA	2
 
 struct elf_file;
-typedef Elf_Addr (symaddr_fn)(struct elf_file *ef, Elf_Word symidx);
+typedef Elf_Addr (symaddr_fn)(struct elf_file *ef, Elf_Size symidx);
 
 int	__elfN(loadfile)(char *filename, u_int64_t dest, struct preloaded_file **result);
 int	__elfN(obj_loadfile)(char *filename, u_int64_t dest,

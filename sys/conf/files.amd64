@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: src/sys/conf/files.amd64,v 1.71.2.4 2005/11/16 10:50:11 ru Exp $
+# $FreeBSD: src/sys/conf/files.amd64,v 1.71.2.5 2006/01/26 22:12:31 ambrisko Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -230,6 +230,7 @@ compat/linux/linux_sysctl.c	optional	compat_linux32
 compat/linux/linux_uid16.c	optional	compat_linux32
 compat/linux/linux_util.c	optional	compat_linux32
 #
+dev/amr/amr_linux.c		optional	compat_linux32 amr
 # Windows NDIS driver support
 #
 compat/ndis/kern_ndis.c		optional	ndisapi pci

@@ -29,7 +29,7 @@
 
 #include "includes.h"
 
-RCSID("$Id: bsd-cygwin_util.c,v 1.1.1.1 2006-02-25 02:26:33 laffer1 Exp $");
+RCSID("$Id: bsd-cygwin_util.c,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $");
 
 #ifdef HAVE_CYGWIN
 

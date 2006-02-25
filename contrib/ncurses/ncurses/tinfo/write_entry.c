@@ -52,7 +52,7 @@
 #define TRACE_OUT(p)		/*nothing */
 #endif
 
-MODULE_ID("$Id: write_entry.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: write_entry.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
 
 static int total_written;
 

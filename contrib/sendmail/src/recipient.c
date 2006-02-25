@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: recipient.c,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $")
+SM_RCSID("@(#)$Id: recipient.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $")
 
 static void	includetimeout __P((int));
 static ADDRESS	*self_reference __P((ADDRESS *));

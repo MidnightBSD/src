@@ -33,7 +33,7 @@
 
 #include "telnetd.h"
 
-RCSID("$Id: telnetd.c,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $");
+RCSID("$Id: telnetd.c,v 1.1.1.2 2006-02-25 02:34:17 laffer1 Exp $");
 
 #ifdef _SC_CRAY_SECURE_SYS
 #include <sys/sysv.h>

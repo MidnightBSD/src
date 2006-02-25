@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/login_ok.c,v 1.11 2003/10/18 10:04:16 markm Exp $");
+__FBSDID("$FreeBSD: src/lib/libutil/login_ok.c,v 1.11.10.1 2006/02/14 03:32:15 rwatson Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -82,7 +82,7 @@ login_str2inlist(const char **ttlst, const char *str1, const char *str2, int fla
 
 /*
  * login_timelist()
- * This function is intentinoally public - reused by TAS.
+ * This function is intentionally public - reused by TAS.
  * Returns an allocated list of time periods given an array
  * of time periods in ascii form.
  */

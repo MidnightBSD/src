@@ -1,5 +1,5 @@
 /*	$NetBSD: usb.h,v 1.69 2002/09/22 23:20:50 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usb.h,v 1.39 2005/01/06 01:43:29 imp Exp $    */
+/*	$FreeBSD: src/sys/dev/usb/usb.h,v 1.39.2.1 2006/01/20 22:47:49 mux Exp $    */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -489,6 +489,8 @@ typedef struct {
 #define  UIPROTO_IRDA			0
 
 #define UICLASS_VENDOR		0xff
+#define  UISUBCLASS_XBOX360_CONTROLLER	0x5d
+#define  UIPROTO_XBOX360_GAMEPAD	0x01
 
 
 #define USB_HUB_MAX_DEPTH 5

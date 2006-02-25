@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/random/randomdev.h,v 1.6 2004/04/16 17:10:54 markm Exp $
+ * $FreeBSD: src/sys/dev/random/randomdev.h,v 1.6.8.1 2006/02/08 05:58:17 ps Exp $
  */
 
 /* This header contains only those definitions that are global
@@ -32,8 +32,10 @@
 
 typedef void random_init_func_t(void);
 typedef void random_deinit_func_t(void);
+typedef int random_block_func_t(int);
 typedef int random_read_func_t(void *, int);
 typedef void random_write_func_t(void *, int);
+typedef int random_poll_func_t(int, struct thread *);
 typedef void random_reseed_func_t(void);
 
 struct random_systat {
@@ -42,8 +44,10 @@ struct random_systat {
 	int			seeded;
 	random_init_func_t	*init;
 	random_deinit_func_t	*deinit;
+	random_block_func_t	*block;
 	random_read_func_t	*read;
 	random_write_func_t	*write;
+	random_poll_func_t	*poll;
 	random_reseed_func_t	*reseed;
 };
 

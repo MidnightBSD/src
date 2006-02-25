@@ -1,8 +1,9 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/share/man/man7/Makefile,v 1.29 2004/01/20 10:27:23 ru Exp $
+# $FreeBSD: src/share/man/man7/Makefile,v 1.29.8.1 2006/01/25 13:22:58 harti Exp $
 
 #MISSING: eqnchar.7 ms.7 term.7
 MAN=	ascii.7 \
+	bsd.snmpmod.mk.7 \
 	build.7 \
 	clocks.7 \
 	development.7 \

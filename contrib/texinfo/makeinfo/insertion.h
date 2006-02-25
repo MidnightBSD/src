@@ -1,5 +1,5 @@
 /* insertion.h -- declarations for insertion.c.
-   $Id: insertion.h,v 1.1.1.1 2006-02-25 02:26:27 laffer1 Exp $
+   $Id: insertion.h,v 1.1.1.2 2006-02-25 02:34:11 laffer1 Exp $
 
    Copyright (C) 1998, 1999, 2001, 2002, 2003 Free Software Foundation, Inc.
 

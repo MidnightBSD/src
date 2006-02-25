@@ -19,7 +19,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
  * $FreeBSD: src/contrib/libpcap/gencode.h,v 1.8 2005/07/11 03:43:25 sam Exp $
- * @(#) $Header: /home/cvs/src/contrib/libpcap/gencode.h,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/gencode.h,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)
  */
 
 /*

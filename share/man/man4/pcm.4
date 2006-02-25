@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/pcm.4,v 1.39.2.3 2005/12/08 01:55:53 jcamou Exp $
+.\" $FreeBSD: src/share/man/man4/pcm.4,v 1.39.2.5 2006/01/31 18:31:34 joel Exp $
 .\"
-.Dd August 17, 2005
+.Dd November 28, 2005
 .Dt SOUND 4
 .Os
 .Sh NAME
@@ -91,13 +91,6 @@ channel (generally used for capture in full duplex cards).
 Flags are set to 0 for cards not using a secondary
 .Tn DMA
 channel, or to 0x10 + C to specify channel C.
-.Pp
-The driver works best with
-.Tn WSS/MSS
-cards, which have a very clean
-architecture and an orthogonal set of features.
-They also happen to be
-among the cheapest audio cards on the market.
 .Pp
 The driver does its best to recognize the installed hardware and drive
 it correctly so the user is not required to add several lines in
@@ -266,25 +259,6 @@ See
 for a complete list of the supported
 .Fn ioctl
 functions.
-.Sh HARDWARE
-The
-.Nm
-driver supports the following sound cards:
-.Pp
-.Bl -bullet -compact
-.It
-CS4231, CS4232, CS4236, CS4237 (ISA)
-.It
-Creative Labs SoundBlaster PCI
-.It
-Intel 443MX, 810, 815, and 815E integrated sound devices
-.It
-MSS/WSS Compatible DSPs
-.It
-OPTi931/82C931 (ISA)
-.It
-Yamaha OPL-SAx (ISA)
-.El
 .Sh FILES
 The
 .Nm
@@ -331,6 +305,7 @@ A device node is not created properly.
 .Sh SEE ALSO
 .Xr snd_ad1816 4 ,
 .Xr snd_als4000 4 ,
+.Xr snd_atiixp 4 ,
 .Xr snd_audiocs 4 ,
 .Xr snd_cmi 4 ,
 .Xr snd_cs4281 4 ,
@@ -344,6 +319,7 @@ A device node is not created properly.
 .Xr snd_ich 4 ,
 .Xr snd_maestro 4 ,
 .Xr snd_maestro3 4 ,
+.Xr snd_mss 4 ,
 .Xr snd_neomagic 4 ,
 .Xr snd_sbc 4 ,
 .Xr snd_solo 4 ,

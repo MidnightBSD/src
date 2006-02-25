@@ -45,4 +45,4 @@ number is already in use on your system, you may change it at build time
 by configure'ing --with-cflags=-DAUE_openssh=32801 then rebuilding.
 
 
-$Id: README.platform,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $
+$Id: README.platform,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $

@@ -29,7 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump-stdinc.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump-stdinc.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)
  *
  * $FreeBSD: src/contrib/tcpdump/tcpdump-stdinc.h,v 1.3 2005/07/11 04:14:02 sam Exp $
  */

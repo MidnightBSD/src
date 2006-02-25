@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: if_xereg.h,v 1.1.1.1 2006-02-25 02:28:14 laffer1 Exp $
+ *	$Id: if_xereg.h,v 1.1.1.2 2006-02-25 02:37:02 laffer1 Exp $
  * $FreeBSD: src/sys/dev/xe/if_xereg.h,v 1.6 2003/10/14 22:51:35 rsm Exp $
  */
 #ifndef DEV_XE_IF_XEREG_H

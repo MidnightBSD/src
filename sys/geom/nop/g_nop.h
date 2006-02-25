@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/nop/g_nop.h,v 1.4 2004/07/30 08:19:22 pjd Exp $
+ * $FreeBSD: src/sys/geom/nop/g_nop.h,v 1.4.8.1 2006/01/17 09:11:30 pjd Exp $
  */
 
 #ifndef	_G_NOP_H_
@@ -55,8 +55,12 @@
 } while (0)
 
 struct g_nop_softc {
-	off_t	sc_offset;
-	u_int	sc_failprob;
+	off_t		sc_offset;
+	u_int		sc_failprob;
+	uintmax_t	sc_reads;
+	uintmax_t	sc_writes;
+	uintmax_t	sc_readbytes;
+	uintmax_t	sc_wrotebytes;
 };
 #endif	/* _KERNEL */
 

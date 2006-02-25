@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/nop/geom_nop.c,v 1.6 2005/03/14 14:25:47 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/nop/geom_nop.c,v 1.6.2.1 2006/01/17 09:11:30 pjd Exp $");
 
 #include <stdio.h>
 #include <stdint.h>
@@ -67,6 +67,9 @@ struct g_command class_commands[] = {
 		G_OPT_SENTINEL
 	    },
 	    "[-fv] prov ..."
+	},
+	{ "reset", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	    "[-v] prov ..."
 	},
 	G_CMD_SENTINEL
 };

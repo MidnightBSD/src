@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)mbuf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.42.8.3 2005/11/28 18:07:36 rwatson Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.42.8.5 2006/02/14 03:39:04 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -162,19 +162,6 @@ mbpr(void *kvmd, u_long mbaddr)
 	printf("%llu mbuf tags in use\n", tag_count);
 #endif
 
-	if (live) {
-		mlen = sizeof(nsfbufs);
-		if (!sysctlbyname("kern.ipc.nsfbufs", &nsfbufs, &mlen, NULL,
-		    0) &&
-		    !sysctlbyname("kern.ipc.nsfbufsused", &nsfbufsused,
-		    &mlen, NULL, 0) &&
-		    !sysctlbyname("kern.ipc.nsfbufspeak", &nsfbufspeak,
-		    &mlen, NULL, 0)) {
-			printf("%d/%d/%d sfbufs in use (current/peak/max)\n",
-			    nsfbufsused, nsfbufspeak, nsfbufs);
-		}
-	}
-
 	/*-
 	 * Calculate in-use bytes as:
 	 * - straight mbuf memory
@@ -218,13 +205,20 @@ mbpr(void *kvmd, u_long mbaddr)
 	    "(current/cache/total)\n", bytes_inuse / 1024,
 	    bytes_incache / 1024, bytes_total / 1024);
 
-#if 0
 	printf("%llu/%llu/%llu requests for mbufs denied (mbufs/clusters/"
 	    "mbuf+clusters)\n", mbuf_failures, cluster_failures,
 	    packet_failures);
-#endif
 
 	if (live) {
+		mlen = sizeof(nsfbufs);
+		if (!sysctlbyname("kern.ipc.nsfbufs", &nsfbufs, &mlen, NULL,
+		    0) &&
+		    !sysctlbyname("kern.ipc.nsfbufsused", &nsfbufsused,
+		    &mlen, NULL, 0) &&
+		    !sysctlbyname("kern.ipc.nsfbufspeak", &nsfbufspeak,
+		    &mlen, NULL, 0))
+			printf("%d/%d/%d sfbufs in use (current/peak/max)\n",
+			    nsfbufsused, nsfbufspeak, nsfbufs);
 		mlen = sizeof(mbstat);
 		if (sysctlbyname("kern.ipc.mbstat", &mbstat, &mlen, NULL, 0)) {
 			warn("kern.ipc.mbstat");

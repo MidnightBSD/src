@@ -27,11 +27,11 @@
  * SUCH DAMAGE.
  *
  *	@(#)kern_proc.c	8.7 (Berkeley) 2/14/95
- * $FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.1 2005/10/05 05:30:24 truckman Exp $
+ * $FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.3 2006/01/05 20:23:10 truckman Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.1 2005/10/05 05:30:24 truckman Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.3 2006/01/05 20:23:10 truckman Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_kstack_pages.h"
@@ -776,6 +776,8 @@ fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp)
 		} else {
 			kp->ki_stat = SWAIT;
 		}
+	} else if (p->p_state == PRS_ZOMBIE) {
+		kp->ki_stat = SZOMB;
 	} else {
 		kp->ki_stat = SIDL;
 	}
@@ -816,7 +818,7 @@ void
 fill_kinfo_proc(struct proc *p, struct kinfo_proc *kp)
 {
 
-        fill_kinfo_proc_only(p, kp);
+	fill_kinfo_proc_only(p, kp);
 	mtx_lock_spin(&sched_lock);
 	if (FIRST_THREAD_IN_PROC(p) != NULL)
 		fill_kinfo_thread(FIRST_THREAD_IN_PROC(p), kp);
@@ -885,7 +887,7 @@ sysctl_out_proc(struct proc *p, struct sysctl_req *req, int flags)
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 
-	fill_kinfo_proc(p, &kinfo_proc);
+	fill_kinfo_proc_only(p, &kinfo_proc);
 	if (flags & KERN_PROC_NOTHREADS) {
 		mtx_lock_spin(&sched_lock);
 		if (FIRST_THREAD_IN_PROC(p) != NULL)

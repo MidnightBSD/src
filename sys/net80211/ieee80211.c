@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211.c,v 1.19.2.2 2005/09/03 22:40:02 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211.c,v 1.19.2.6 2006/01/29 07:33:27 sam Exp $");
 
 /*
  * IEEE 802.11 generic handler
@@ -184,11 +184,13 @@ ieee80211_ifattach(struct ieee80211com *ic)
 	if (ic->ic_caps & IEEE80211_C_WME)
 		ic->ic_flags |= IEEE80211_F_WME;
 #endif
+	if (ic->ic_caps & IEEE80211_C_BURST)
+		ic->ic_flags |= IEEE80211_F_BURST;
 	(void) ieee80211_setmode(ic, ic->ic_curmode);
 
 	if (ic->ic_bintval == 0)
 		ic->ic_bintval = IEEE80211_BINTVAL_DEFAULT;
-	ic->ic_bmisstimeout = 7*ic->ic_bintval;	/* default 7 beacons */
+	ic->ic_bmissthreshold = 7;		/* default 7 beacons */
 	ic->ic_dtim_period = IEEE80211_DTIM_DEFAULT;
 	IEEE80211_BEACON_LOCK_INIT(ic, "beacon");
 
@@ -792,9 +794,11 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
 	modeflags = chanflags[mode];
 	for (i = 0; i <= IEEE80211_CHAN_MAX; i++) {
 		c = &ic->ic_channels[i];
+		if (c->ic_flags == 0)
+			continue;
 		if (mode == IEEE80211_MODE_AUTO) {
-			/* ignore turbo channels for autoselect */
-			if ((c->ic_flags &~ IEEE80211_CHAN_TURBO) != 0)
+			/* ignore static turbo channels for autoselect */
+			if (!IEEE80211_IS_CHAN_T(c))
 				break;
 		} else {
 			if ((c->ic_flags & modeflags) == modeflags)
@@ -813,9 +817,11 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
 	memset(ic->ic_chan_active, 0, sizeof(ic->ic_chan_active));
 	for (i = 0; i <= IEEE80211_CHAN_MAX; i++) {
 		c = &ic->ic_channels[i];
+		if (c->ic_flags == 0)
+			continue;
 		if (mode == IEEE80211_MODE_AUTO) {
-			/* take anything but pure turbo channels */
-			if ((c->ic_flags &~ IEEE80211_CHAN_TURBO) != 0)
+			/* take anything but static turbo channels */
+			if (!IEEE80211_IS_CHAN_T(c))
 				setbit(ic->ic_chan_active, i);
 		} else {
 			if ((c->ic_flags & modeflags) == modeflags)
@@ -890,13 +896,9 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
 enum ieee80211_phymode
 ieee80211_chan2mode(struct ieee80211com *ic, struct ieee80211_channel *chan)
 {
-	if (IEEE80211_IS_CHAN_5GHZ(chan)) {
-		/*
-		 * This assumes all 11a turbo channels are also
-		 * usable withut turbo, which is currently true.
-		 */
-		if (ic->ic_curmode == IEEE80211_MODE_TURBO_A)
-			return IEEE80211_MODE_TURBO_A;
+	if (IEEE80211_IS_CHAN_T(chan)) {
+		return IEEE80211_MODE_TURBO_A;
+	} else if (IEEE80211_IS_CHAN_5GHZ(chan)) {
 		return IEEE80211_MODE_11A;
 	} else if (IEEE80211_IS_CHAN_FHSS(chan))
 		return IEEE80211_MODE_FH;

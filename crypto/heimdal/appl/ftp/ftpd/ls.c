@@ -33,7 +33,7 @@
 #ifndef TEST
 #include "ftpd_locl.h"
 
-RCSID("$Id: ls.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: ls.c,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $");
 
 #else
 #include <stdio.h>

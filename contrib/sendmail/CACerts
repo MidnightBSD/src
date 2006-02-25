@@ -1,4 +1,4 @@
-# $Id: CACerts,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $
+# $Id: CACerts,v 1.1.1.2 2006-02-25 02:33:53 laffer1 Exp $
 # This file contains some CA certificates that are used to sign the
 # certificates of mail servers of members of the sendmail consortium
 # who may reply to questions etc sent to sendmail.org.

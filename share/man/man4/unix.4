@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)unix.4	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: src/share/man/man4/unix.4,v 1.12 2005/06/15 13:31:22 ru Exp $
+.\" $FreeBSD: src/share/man/man4/unix.4,v 1.12.2.1 2005/12/28 09:58:42 maxim Exp $
 .\"
 .Dd July 15, 2001
 .Dt UNIX 4
@@ -228,7 +228,7 @@ structure, defined in
 as follows:
 .Bd -literal
 struct sockcred {
-  id_t	sc_uid;		/* real user id */
+  uid_t	sc_uid;		/* real user id */
   uid_t	sc_euid;	/* effective user id */
   gid_t	sc_gid;		/* real group id */
   gid_t	sc_egid;	/* effective group id */
@@ -247,7 +247,7 @@ The
 .Vt cmsghdr
 fields have the following values:
 .Bd -literal
-cmsg_len = sizeof(struct cmsghdr) + SOCKCREDSIZE(ngroups)
+cmsg_len = CMSG_LEN(SOCKCREDSIZE(ngroups))
 cmsg_level = SOL_SOCKET
 cmsg_type = SCM_CREDS
 .Ed

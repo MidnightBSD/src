@@ -32,7 +32,7 @@
  */
 
 #include "rsh_locl.h"
-RCSID("$Id: rshd.c,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: rshd.c,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $");
 
 int
 login_access( struct passwd *user, char *from);

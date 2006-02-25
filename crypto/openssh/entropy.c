@@ -45,7 +45,7 @@
  * XXX: we should tell the child how many bytes we need.
  */
 
-RCSID("$Id: entropy.c,v 1.1.1.1 2006-02-25 02:26:32 laffer1 Exp $");
+RCSID("$Id: entropy.c,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $");
 
 #ifndef OPENSSL_PRNG_ONLY
 #define RANDOM_SEED_SIZE 48

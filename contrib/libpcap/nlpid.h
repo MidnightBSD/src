@@ -16,7 +16,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
  * $FreeBSD: src/contrib/libpcap/nlpid.h,v 1.3 2004/03/31 09:13:37 bms Exp $
- * @(#) $Header: /home/cvs/src/contrib/libpcap/nlpid.h,v 1.1.1.1 2006-02-25 02:26:05 laffer1 Exp $ (Juniper)
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/nlpid.h,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (Juniper)
  */
 
 /* Types missing from some systems */

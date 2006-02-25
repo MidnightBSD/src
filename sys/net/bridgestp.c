@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net/bridgestp.c,v 1.3.2.5 2005/11/16 10:17:15 thompsa Exp $");
+__FBSDID("$FreeBSD: src/sys/net/bridgestp.c,v 1.3.2.6 2006/01/03 21:47:34 thompsa Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -698,7 +698,7 @@ bstp_input(struct ifnet *ifp, struct mbuf *m)
 		goto out;
 	}
 
- out:
+out:
 	if (m)
 		m_freem(m);
 	return (NULL);

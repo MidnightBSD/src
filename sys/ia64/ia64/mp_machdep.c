@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/mp_machdep.c,v 1.55.2.1 2005/09/13 21:07:14 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/ia64/ia64/mp_machdep.c,v 1.55.2.2 2006/02/14 03:40:49 marcel Exp $");
 
 #include "opt_kstack_pages.h"
 
@@ -112,6 +112,16 @@ ia64_ap_startup(void)
 	PCPU_SET(curthread, PCPU_GET(idlethread));
 
 	/*
+	 * Correct spinlock nesting.  The idle thread context that we are
+	 * borrowing was created so that it would start out with a single
+	 * spin lock (sched_lock) held in fork_trampoline().  Since we
+	 * don't have any locks and explicitly acquire locks when we need
+	 * to, the nesting count will be off by 1.
+	 */
+	curthread->td_md.md_spinlock_count = 0;
+	critical_exit();
+
+	/*
 	 * Get and save the CPU specific MCA records. Should we get the
 	 * MCA state for each processor, or just the CMC state?
 	 */
@@ -125,18 +135,6 @@ ia64_ap_startup(void)
 	CTR1(KTR_SMP, "SMP: cpu%d launched", PCPU_GET(cpuid));
 
 	mtx_lock_spin(&sched_lock);
-
-	/*
-	 * Correct spinlock nesting.  The idle thread context that we are
-	 * borrowing was created so that it would start out with a single
-	 * spin lock (sched_lock) held in fork_trampoline().  Since we've
-	 * explicitly acquired locks in this function, the nesting count
-	 * is now 2 rather than 1.  Since we are nested, calling
-	 * spinlock_exit() will simply adjust the counts without allowing
-	 * spin lock using code to interrupt us.
-	 */
-	spinlock_exit();
-	KASSERT(curthread->td_md.md_spinlock_count == 1, ("invalid count"));
 
 	binuptime(PCPU_PTR(switchtime));
 	PCPU_SET(switchticks, ticks);

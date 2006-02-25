@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_message.h,v 1.27 2005/04/20 12:18:22 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_message.h,v 1.27.2.1 2006/01/21 10:04:40 glebius Exp $
  * $Whistle: ng_message.h,v 1.12 1999/01/25 01:17:44 archie Exp $
  */
 
@@ -78,8 +78,10 @@ struct ng_mesg {
 	char	data[];			/* placeholder for actual data */
 };
 
-/* this command is guaranteed to not alter data or'd into the command */
+/* This command is guaranteed to not alter data (or'd into the command). */
 #define NGM_READONLY	0x10000000
+/* This command is guaranteed to have a reply (or'd into the command). */
+#define NGM_HASREPLY	0x20000000
 
 /* Keep this in sync with the above structure definition */
 #define NG_GENERIC_NG_MESG_INFO(dtype)	{			\

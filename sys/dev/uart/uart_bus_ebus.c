@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_ebus.c,v 1.6.2.3 2005/11/05 19:04:08 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_ebus.c,v 1.6.2.5 2006/02/15 09:16:01 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,8 +72,12 @@ uart_ebus_probe(device_t dev)
 
 	nm = ofw_bus_get_name(dev);
 	cmpt = ofw_bus_get_compat(dev);
-	if (!strcmp(nm, "su") || !strcmp(nm, "su_pnp") || (cmpt != NULL &&
-	    (!strcmp(cmpt, "su") || !strcmp(cmpt, "su16550")))) {
+	if (cmpt == NULL)
+		cmpt = "";
+	if (!strcmp(nm, "lom-console") || !strcmp(nm, "su") ||
+	    !strcmp(nm, "su_pnp") || !strcmp(cmpt, "rsc-console") ||
+	    !strcmp(cmpt, "rsc-control") || !strcmp(cmpt, "su") ||
+	    !strcmp(cmpt, "su16550")) {
 		/*
 		 * On AXi and AXmp boards the NS16550 (used to connect
 		 * keyboard/mouse) share their IRQ lines with the i8042.
@@ -92,25 +96,10 @@ uart_ebus_probe(device_t dev)
 				device_disable(dev);
 				return (ENXIO);
 		}
-		/*
-		 * XXX Hack
-		 * On E250 the IRQ of the on-board HME gets erroneously
-		 * also assigned to the second NS16550 due to interrupt
-		 * routing problems at some layer. As uart(4) uses a
-		 * INTR_FAST handler while hme(4) doesn't the IRQ can't
-		 * be actually "shared" causing hme(4) to not attach to
-		 * the on-board HME. Prefer the on-board HME at the
-		 * expense of the mouse port for now.
-		 */
-		if (!strcmp(sparc64_model, "SUNW,Ultra-250") &&
-		    device_get_unit(dev) % 2 == 1) {
-				device_disable(dev);
-				return (ENXIO);
-		}
 		sc->sc_class = &uart_ns8250_class;
 		return (uart_bus_probe(dev, 0, 0, 0, 0));
 	}
-	if (!strcmp(nm, "se") || (cmpt != NULL && !strcmp(cmpt, "sab82532"))) {
+	if (!strcmp(nm, "se") || !strcmp(cmpt, "sab82532")) {
 		sc->sc_class = &uart_sab82532_class;
 		return (uart_bus_probe(dev, 0, 0, 0, 1));
 	}

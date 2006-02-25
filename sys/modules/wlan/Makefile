@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/wlan/Makefile,v 1.4 2004/12/08 17:38:37 sam Exp $
+# $FreeBSD: src/sys/modules/wlan/Makefile,v 1.4.2.1 2006/02/10 00:38:08 yar Exp $
 
 .PATH: ${.CURDIR}/../../net80211
 
@@ -8,10 +8,12 @@ SRCS=	ieee80211.c ieee80211_crypto.c ieee80211_crypto_none.c \
 	ieee80211_node.c ieee80211_output.c ieee80211_proto.c
 SRCS+=	bus_if.h device_if.h opt_inet.h opt_ipx.h
 
+.if !defined(KERNBUILDDIR)
 opt_inet.h:
 	echo "#define INET 1" > opt_inet.h
 
 opt_ipx.h:
 	echo "#define IPX 1" > opt_ipx.h
+.endif
 
 .include <bsd.kmod.mk>

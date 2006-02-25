@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.200.2.1 2005/10/09 03:05:23 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.200.2.2 2005/12/26 13:47:20 dds Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -1164,6 +1164,8 @@ vm_mmap_vnode(struct thread *td, vm_size_t objsize,
 	}
 	*objp = obj;
 	*flagsp = flags;
+	vfs_mark_atime(vp, td);
+
 done:
 	vput(vp);
 	VFS_UNLOCK_GIANT(vfslocked);

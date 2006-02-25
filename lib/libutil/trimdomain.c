@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/trimdomain.c,v 1.5 2003/10/18 10:04:16 markm Exp $");
+__FBSDID("$FreeBSD: src/lib/libutil/trimdomain.c,v 1.5.10.1 2005/12/22 00:34:48 brooks Exp $");
 
 #include <sys/param.h>
 
@@ -75,18 +75,16 @@ trimdomain(char *fullhost, int hostsize)
 
 	s = fullhost;
 	end = s + hostsize + 1;
-	for (; (s = memchr(s, '.', (size_t)(end - s))) != NULL; s++) {
+	if ((s = memchr(s, '.', (size_t)(end - s))) != NULL) {
 		if (strncasecmp(s + 1, domain, dlen) == 0) {
 			if (s[dlen + 1] == '\0') {
 				/* Found -- lose the domain. */
 				*s = '\0';
-				break;
 			} else if (s[dlen + 1] == ':' &&
 			    isDISP(s + dlen + 2) &&
 			    (len = strlen(s + dlen + 1)) < (size_t)(end - s)) {
 				/* Found -- shuffle the DISPLAY back. */
 				memmove(s, s + dlen + 1, len + 1);
-				break;
 			}
 		}
 	}

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.20.2.1 2005/10/09 06:39:21 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.20.2.2 2006/01/30 17:56:07 scottl Exp $");
 
 /*
  * CAM front-end for communicating with non-DASD devices
@@ -428,7 +428,7 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 
 	cm->cm_complete = aac_cam_complete;
 	cm->cm_private = ccb;
-	cm->cm_timestamp = time_second;
+	cm->cm_timestamp = time_uptime;
 	cm->cm_queue = AAC_ADAP_NORM_CMD_QUEUE;
 
 	fib->Header.XferState =

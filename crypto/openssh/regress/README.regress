@@ -101,4 +101,4 @@ Known Issues.
   test to fail.  The old behaviour can be restored by setting (and
   exporting) _POSIX2_VERSION=199209 before running the tests.
 
-$Id: README.regress,v 1.1.1.1 2006-02-25 02:26:33 laffer1 Exp $
+$Id: README.regress,v 1.1.1.2 2006-02-25 02:34:26 laffer1 Exp $

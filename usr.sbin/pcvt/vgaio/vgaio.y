@@ -38,9 +38,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/pcvt/vgaio/vgaio.y,v 1.7 2005/05/31 20:07:46 st
 
 /*
  * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2005/12/24 02:44:19  laffer1
- * Imported from FreeBSD 6.0 sources
- *
  * Revision 1.1  1994/03/29  02:47:27  mycroft
  * pcvt 3.0, with some performance enhancements by Joerg Wunsch and me.
  *

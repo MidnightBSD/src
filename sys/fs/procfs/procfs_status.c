@@ -33,7 +33,7 @@
  *	@(#)procfs_status.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_status.c,v 1.1.1.1 2006-02-25 02:28:14 laffer1 Exp $
+ *	$Id: procfs_status.c,v 1.1.1.2 2006-02-25 02:37:05 laffer1 Exp $
  * $FreeBSD: src/sys/fs/procfs/procfs_status.c,v 1.56 2005/03/15 11:05:11 phk Exp $
  */
 

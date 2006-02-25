@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/alpha/reloc.c,v 1.20 2005/06/02 05:34:08 marcel Exp $
+ * $FreeBSD: src/libexec/rtld-elf/alpha/reloc.c,v 1.20.2.1 2005/12/30 22:13:56 marcel Exp $
  */
 
 /*
@@ -135,9 +135,9 @@ reloc_non_plt_obj(Obj_Entry *obj_rtld, Obj_Entry *obj, const Elf_Rela *rela,
 		break;
 
 		default:
-			_rtld_error("%s: Unsupported relocation type %d"
+			_rtld_error("%s: Unsupported relocation type %u"
 			    " in non-PLT relocations\n", obj->path,
-			    ELF_R_TYPE(rela->r_info));
+			    (unsigned int)ELF_R_TYPE(rela->r_info));
 			return -1;
 	}
 	return(0);

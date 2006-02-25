@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.271.2.1 2005/11/12 20:55:59 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.271.2.3 2006/02/20 00:53:15 yar Exp $");
 
 #include "opt_mac.h"
 #include "opt_quota.h"
@@ -245,7 +245,7 @@ ufs_open(struct vop_open_args *ap)
 	if ((ip->i_flags & APPEND) &&
 	    (ap->a_mode & (FWRITE | O_APPEND)) == FWRITE)
 		return (EPERM);
-	vnode_create_vobject(vp, DIP(ip, i_size), ap->a_td);
+	vnode_create_vobject_off(vp, DIP(ip, i_size), ap->a_td);
 	return (0);
 }
 
@@ -436,13 +436,13 @@ ufs_setattr(ap)
 		return (EINVAL);
 	}
 	/*
-	 * Update the file's access time when it has been executed.  We are
-	 * doing this here to specifically avoid some of the checks done
+	 * Mark for update the file's access time for vfs_mark_atime().
+	 * We are doing this here to avoid some of the checks done
 	 * below -- this operation is done by request of the kernel and
 	 * should bypass some security checks.  Things like read-only
 	 * checks get handled by other levels (e.g., ffs_update()).
 	 */
-	if (vap->va_vaflags & VA_EXECVE_ATIME) {
+	if (vap->va_vaflags & VA_MARK_ATIME) {
 		ip->i_flag |= IN_ACCESS;
 		return (0);
 	}

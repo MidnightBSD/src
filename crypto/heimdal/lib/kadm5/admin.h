@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */
-/* $Id: admin.h,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $ */
+/* $Id: admin.h,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $ */
 
 #ifndef __KADM5_ADMIN_H__
 #define __KADM5_ADMIN_H__

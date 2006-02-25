@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)fstat.c	8.3 (Berkeley) 5/2/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/fstat/fstat.c,v 1.60.2.2 2005/11/12 20:58:03 csjp Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/fstat/fstat.c,v 1.60.2.3 2006/01/14 01:18:03 tegge Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -692,6 +692,7 @@ nfs_filestat(struct vnode *vp, struct filestat *fsp)
 		break;
 	case VNON:
 	case VBAD:
+	case VMARKER:
 		return 0;
 	};
 	fsp->mode = mode;

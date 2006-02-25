@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 1992-2005 The FreeBSD Project. All rights reserved.
+ * Copyright (C) 1992-2006 The FreeBSD Project. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/copyright.h,v 1.19 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/copyright.h,v 1.19.2.1 2006/02/08 09:11:58 ru Exp $
  */
 
 
@@ -30,7 +30,7 @@
   
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
-	"Copyright (c) 1992-2005 The FreeBSD Project.\n"
+	"Copyright (c) 1992-2006 The FreeBSD Project.\n"
 
 /* Berkeley */
 #define COPYRIGHT_UCB \
@@ -38,11 +38,11 @@
 
 /* a port of FreeBSD to the NEC PC98, Japan */
 #define COPYRIGHT_PC98 \
-	"Copyright (c) 1994-2005 FreeBSD(98) porting team.\nCopyright (c) 1992  A.Kojima F.Ukai M.Ishii (KMC).\n"
+	"Copyright (c) 1994-2006 FreeBSD(98) porting team.\nCopyright (c) 1992  A.Kojima F.Ukai M.Ishii (KMC).\n"
 
 #if defined(PC98)
-char copyright[] = COPYRIGHT_FreeBSD/**/COPYRIGHT_PC98/**/COPYRIGHT_UCB;
+char copyright[] = COPYRIGHT_FreeBSD COPYRIGHT_PC98 COPYRIGHT_UCB;
 
 #else
-char copyright[] = COPYRIGHT_FreeBSD/**/COPYRIGHT_UCB;
+char copyright[] = COPYRIGHT_FreeBSD COPYRIGHT_UCB;
 #endif

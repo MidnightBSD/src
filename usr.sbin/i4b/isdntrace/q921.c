@@ -30,7 +30,7 @@
  *	q.921.c - print Q.921 traces
  *	----------------------------
  *
- *	$Id: q921.c,v 1.1.1.1 2006-02-25 02:29:42 laffer1 Exp $ 
+ *	$Id: q921.c,v 1.1.1.2 2006-02-25 02:38:29 laffer1 Exp $ 
  *
  * $FreeBSD: src/usr.sbin/i4b/isdntrace/q921.c,v 1.7 2000/10/09 14:22:49 hm Exp $
  *

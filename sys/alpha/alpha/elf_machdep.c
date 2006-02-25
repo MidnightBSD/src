@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/alpha/alpha/elf_machdep.c,v 1.19 2004/08/11 02:35:04 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/alpha/alpha/elf_machdep.c,v 1.19.8.1 2005/12/30 22:13:57 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -121,7 +121,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	Elf_Addr *where;
 	Elf_Addr addr;
 	Elf_Addr addend;
-	Elf_Word rtype, symidx;
+	Elf_Size rtype, symidx;
 	const Elf_Rel *rel;
 	const Elf_Rela *rela;
 

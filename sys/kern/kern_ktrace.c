@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_ktrace.c,v 1.101.2.1 2005/11/16 08:11:06 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_ktrace.c,v 1.101.2.2 2006/02/14 00:02:01 rwatson Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_mac.h"
@@ -237,8 +237,8 @@ ktr_getrequest(int type)
 		mtx_unlock(&ktrace_mtx);
 		microtime(&req->ktr_header.ktr_time);
 		req->ktr_header.ktr_pid = p->p_pid;
+		req->ktr_header.ktr_tid = td->td_tid;
 		bcopy(p->p_comm, req->ktr_header.ktr_comm, MAXCOMLEN + 1);
-		req->ktr_header.ktr_unused = 0;
 		req->ktr_buffer = NULL;
 		req->ktr_header.ktr_len = 0;
 	} else {

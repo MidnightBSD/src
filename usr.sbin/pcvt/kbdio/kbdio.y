@@ -39,9 +39,6 @@ __FBSDID("$FreeBSD: src/usr.sbin/pcvt/kbdio/kbdio.y,v 1.8 2005/05/31 20:07:46 st
 
 /*
  * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2005/12/24 02:44:19  laffer1
- * Imported from FreeBSD 6.0 sources
- *
  * Revision 1.2  1994/09/18  19:49:22  j
  * Refined expr handling; can now set/clear bits.
  *

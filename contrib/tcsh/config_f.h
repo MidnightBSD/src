@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/config_f.h,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/config_f.h,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
 /*
  * config_f.h -- configure various defines for tcsh
  *

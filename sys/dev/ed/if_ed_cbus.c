@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ed/if_ed_cbus.c,v 1.21.2.1 2005/09/17 04:01:03 imp Exp $
+ * $FreeBSD: src/sys/dev/ed/if_ed_cbus.c,v 1.21.2.2 2006/02/24 14:36:22 nyan Exp $
  */
 
 #include <sys/param.h>
@@ -541,6 +541,8 @@ ed98_alloc_port(device_t dev, int rid)
 	sc->port_rid = rid;
 	sc->port_res = res;
 	sc->port_used = n;
+	sc->port_bst = rman_get_bustag(res);
+	sc->port_bsh = rman_get_bushandle(res);
 
 	/* Re-map i/o table if needed */
 	switch (sc->type) {

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ipcomp_input.c,v 1.8 2005/01/07 02:30:34 imp Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ipcomp_input.c,v 1.8.2.1 2006/02/14 21:36:23 rwatson Exp $	*/
 /*	$KAME: ipcomp_input.c,v 1.25 2001/03/01 09:12:09 itojun Exp $	*/
 
 /*-
@@ -258,7 +258,7 @@ ipcomp6_input(mp, offp, proto)
 	off = *offp;
 
 	md = m_pulldown(m, off, sizeof(*ipcomp), NULL);
-	if (!m) {
+	if (!md) {
 		m = NULL;	/* already freed */
 		ipseclog((LOG_DEBUG, "IPv6 IPComp input: assumption failed "
 		    "(pulldown failure)\n"));

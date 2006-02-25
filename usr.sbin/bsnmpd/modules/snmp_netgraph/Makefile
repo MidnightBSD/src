@@ -1,8 +1,6 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_netgraph/Makefile,v 1.6 2004/01/24 20:12:30 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_netgraph/Makefile,v 1.6.6.1 2006/01/25 13:22:59 harti Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
-
-CONTRIB=${.CURDIR}/../../../../contrib/bsnmp
 
 MOD=	netgraph
 SRCS=	snmp_netgraph.c
@@ -16,4 +14,4 @@ INCS=	snmp_${MOD}.h
 DPADD=	${LIBNETGRAPH}
 LDADD=	-lnetgraph
 
-.include <bsd.lib.mk>
+.include <bsd.snmpmod.mk>

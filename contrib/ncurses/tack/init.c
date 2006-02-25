@@ -22,7 +22,7 @@
 
 #include <tack.h>
 
-MODULE_ID("$Id: init.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $")
+MODULE_ID("$Id: init.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
 
 #if NCURSES_VERSION_MAJOR >= 5 || NCURSES_VERSION_PATCH >= 981219
 #define _nc_get_curterm(p) _nc_get_tty_mode(p)

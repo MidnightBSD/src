@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_mbr.c,v 1.65.2.1 2005/08/16 22:44:39 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_mbr.c,v 1.65.2.2 2005/12/29 05:59:51 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -283,8 +283,8 @@ g_mbr_taste(struct g_class *mp, struct g_provider *pp, int insist)
 		if (sectorsize < 512)
 			break;
 		ms->sectorsize = sectorsize;
-		buf = g_read_data(cp, 0, sectorsize, &error);
-		if (buf == NULL || error != 0)
+		buf = g_read_data(cp, 0, sectorsize, NULL);
+		if (buf == NULL)
 			break;
 
 		/*
@@ -453,8 +453,8 @@ g_mbrext_taste(struct g_class *mp, struct g_provider *pp, int insist __unused)
 		if (sectorsize != 512)
 			break;
 		for (;;) {
-			buf = g_read_data(cp, off, sectorsize, &error);
-			if (buf == NULL || error != 0)
+			buf = g_read_data(cp, off, sectorsize, NULL);
+			if (buf == NULL)
 				break;
 			if (buf[0x1fe] != 0x55 && buf[0x1ff] != 0xaa) {
 				g_free(buf);

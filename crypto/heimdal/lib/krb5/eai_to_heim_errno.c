@@ -33,7 +33,7 @@
 
 #include <krb5_locl.h>
 
-RCSID("$Id: eai_to_heim_errno.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: eai_to_heim_errno.c,v 1.1.1.2 2006-02-25 02:34:21 laffer1 Exp $");
 
 /*
  * convert the getaddrinfo error code in `eai_errno' into a

@@ -72,7 +72,7 @@
 
 #include <term.h>
 
-MODULE_ID("$Id: tty_update.c,v 1.1.1.1 2006-02-25 02:26:11 laffer1 Exp $")
+MODULE_ID("$Id: tty_update.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
 
 /*
  * This define controls the line-breakout optimization.  Every once in a

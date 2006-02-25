@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.80.2.3 2005/09/29 18:53:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.80.2.4 2006/01/25 02:12:09 truckman Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_mac.h"
@@ -467,18 +467,25 @@ dirloop:
 	}
 
 	/*
-	 * Handle "..": two special cases.
-	 * 1. If at root directory (e.g. after chroot)
+	 * Handle "..": four special cases.
+	 * 1. Return an error if this is the last component of
+	 *    the name and the operation is DELETE or RENAME.
+	 * 2. If at root directory (e.g. after chroot)
 	 *    or at absolute root directory
 	 *    then ignore it so can't get out.
-	 * 2. If this vnode is the root of a mounted
+	 * 3. If this vnode is the root of a mounted
 	 *    filesystem, then replace it with the
 	 *    vnode which was mounted on so we take the
 	 *    .. in the other filesystem.
-	 * 3. If the vnode is the top directory of
+	 * 4. If the vnode is the top directory of
 	 *    the jail or chroot, don't let them out.
 	 */
 	if (cnp->cn_flags & ISDOTDOT) {
+		if ((cnp->cn_flags & ISLASTCN) != 0 &&
+		    (cnp->cn_nameiop == DELETE || cnp->cn_nameiop == RENAME)) {
+			error = EINVAL;
+			goto bad;
+		}
 		for (;;) {
 			if (dp == ndp->ni_rootdir || 
 			    dp == ndp->ni_topdir || 

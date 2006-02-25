@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/info/perform.c,v 1.53 2004/06/29 18:59:18 eik Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/pkg_install/info/perform.c,v 1.53.8.1 2006/01/16 19:48:17 flz Exp $");
 
 #include "lib.h"
 #include "info.h"
@@ -100,7 +100,7 @@ pkg_do(char *pkg)
     int code = 0;
 
     if (isURL(pkg)) {
-	if ((cp = fileGetURL(NULL, pkg)) != NULL) {
+	if ((cp = fileGetURL(NULL, pkg, KeepPackage)) != NULL) {
 	    strcpy(fname, cp);
 	    isTMP = TRUE;
 	}

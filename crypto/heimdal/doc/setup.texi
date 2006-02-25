@@ -1,4 +1,4 @@
-@c $Id: setup.texi,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+@c $Id: setup.texi,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
 
 @node Setting up a realm, Things in search for a better place, Building and Installing, Top
 

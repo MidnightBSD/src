@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/devfs/devfs_rule.c,v 1.14.2.2 2005/09/26 14:36:52 phk Exp $
+ * $FreeBSD: src/sys/fs/devfs/devfs_rule.c,v 1.14.2.3 2006/01/11 10:15:57 rwatson Exp $
  */
 
 /*
@@ -186,8 +186,10 @@ devfs_rules_ioctl(struct devfs_mount *dm, u_long cmd, caddr_t data, struct threa
 			error = EEXIST;
 			break;
 		}
-		if (rid2rsn(dr->dr_id) == 0)
-			return (EIO);
+		if (rid2rsn(dr->dr_id) == 0) {
+			error = EIO;
+			break;
+		}
 		error = devfs_rule_insert(dr);
 		break;
 	case DEVFSIO_RAPPLY:

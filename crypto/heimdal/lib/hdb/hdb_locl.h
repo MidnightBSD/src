@@ -31,7 +31,7 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: hdb_locl.h,v 1.1.1.1 2006-02-25 02:26:30 laffer1 Exp $ */
+/* $Id: hdb_locl.h,v 1.1.1.2 2006-02-25 02:34:20 laffer1 Exp $ */
 /* $FreeBSD: src/crypto/heimdal/lib/hdb/hdb_locl.h,v 1.8 2004/04/03 21:31:09 nectar Exp $ */
 
 #ifndef __HDB_LOCL_H__

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.1 2005/10/09 07:48:48 netchild Exp $
+ * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $
  */
 
 #ifndef	_SYS_CDEFS_H_
@@ -324,11 +324,13 @@
 #if !__GNUC_PREREQ__(2, 7) && !defined(__INTEL_COMPILER)
 #define	__printflike(fmtarg, firstvararg)
 #define	__scanflike(fmtarg, firstvararg)
+#define	__format_arg(fmtarg)
 #else
 #define	__printflike(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf__, fmtarg, firstvararg)))
 #define	__scanflike(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__scanf__, fmtarg, firstvararg)))
+#define	__format_arg(fmtarg)	__attribute__((__format_arg__ (fmtarg)))
 #endif
 
 /* Compiler-dependent macros that rely on FreeBSD-specific extensions. */
@@ -379,7 +381,7 @@
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__FBSDID("$FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.1 2005/10/09 07:48:48 netchild Exp $");
+ *	__FBSDID("$FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $");
  */
 #ifndef	__FBSDID
 #if !defined(lint) && !defined(STRIP_FBSDID)

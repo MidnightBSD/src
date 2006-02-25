@@ -30,7 +30,7 @@ static const char copyright[] _U_ =
     "@(#) Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 2000\n\
 The Regents of the University of California.  All rights reserved.\n";
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump.c,v 1.1.1.1 2006-02-25 02:26:23 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump.c,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)";
 #endif
 
 /* $FreeBSD: src/contrib/tcpdump/tcpdump.c,v 1.10 2005/07/11 04:14:02 sam Exp $ */

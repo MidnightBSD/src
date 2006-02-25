@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp.c,v 1.46 2004/10/24 07:12:13 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp.c,v 1.46.2.1 2005/12/28 16:52:45 jhb Exp $");
 
 #include "opt_bus.h"
 
@@ -274,9 +274,10 @@ int
 agp_generic_detach(device_t dev)
 {
 	struct agp_softc *sc = device_get_softc(dev);
+
+	destroy_dev(sc->as_devnode);
 	bus_release_resource(dev, SYS_RES_MEMORY, AGP_APBASE, sc->as_aperture);
 	mtx_destroy(&sc->as_lock);
-	destroy_dev(sc->as_devnode);
 	agp_flush_cache();
 	return 0;
 }

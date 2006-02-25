@@ -38,7 +38,7 @@
 
 #ifndef HAVE_SWAB
 
-RCSID("$Id: swab.c,v 1.1.1.1 2006-02-25 02:26:31 laffer1 Exp $");
+RCSID("$Id: swab.c,v 1.1.1.2 2006-02-25 02:34:22 laffer1 Exp $");
 
 void
 swab (char *from, char *to, int nbytes)

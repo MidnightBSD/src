@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/coda/coda_vnops.c,v 1.66 2005/04/13 10:59:07 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/coda/coda_vnops.c,v 1.66.2.1 2006/02/14 21:59:07 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -345,13 +345,8 @@ coda_write(struct vop_write_args *ap)
 }
 
 int
-coda_rdwr(vp, uiop, rw, ioflag, cred, td)
-    struct vnode *vp;
-    struct uio *uiop;
-    enum uio_rw rw;
-    int ioflag;
-    struct ucred *cred;
-    struct thread *td;
+coda_rdwr(struct vnode *vp, struct uio *uiop, enum uio_rw rw, int ioflag,
+    struct ucred *cred, struct thread *td)
 { 
 /* upcall decl */
   /* NOTE: container file operation!!! */
@@ -1710,8 +1705,7 @@ coda_grab_vnode(struct cdev *dev, ino_t ino, struct vnode **vpp)
 }
 
 void
-print_vattr( attr )
-	struct vattr *attr;
+print_vattr(struct vattr *attr)
 {
     char *typestr;
 
@@ -1769,8 +1763,7 @@ print_vattr( attr )
 
 /* How to print a ucred */
 void
-print_cred(cred)
-	struct ucred *cred;
+print_cred(struct ucred *cred)
 {
 
 	int i;
@@ -1792,8 +1785,7 @@ print_cred(cred)
  * table when coda_inactive calls coda_unsave.
  */
 struct cnode *
-make_coda_node(fid, vfsp, type)
-     CodaFid *fid; struct mount *vfsp; short type;
+make_coda_node(CodaFid *fid, struct mount *vfsp, short type)
 {
     struct cnode *cp;
     int          err;
@@ -1821,7 +1813,7 @@ make_coda_node(fid, vfsp, type)
 }
 
 int
-coda_pathconf( struct vop_pathconf_args *ap)
+coda_pathconf(struct vop_pathconf_args *ap)
 {
 	int error;
 	register_t *retval;

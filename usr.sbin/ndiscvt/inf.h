@@ -1,5 +1,5 @@
 /*
- * $Id: inf.h,v 1.1.1.1 2006-02-25 02:29:46 laffer1 Exp $
+ * $Id: inf.h,v 1.1.1.2 2006-02-25 02:38:32 laffer1 Exp $
  *
  * $FreeBSD: src/usr.sbin/ndiscvt/inf.h,v 1.1 2003/12/11 22:38:14 wpaul Exp $
  */

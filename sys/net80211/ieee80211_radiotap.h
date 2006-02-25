@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/net80211/ieee80211_radiotap.h,v 1.5 2005/01/22 20:12:05 sam Exp $ */
+/* $FreeBSD: src/sys/net80211/ieee80211_radiotap.h,v 1.5.2.1 2006/01/29 07:13:58 sam Exp $ */
 /* $NetBSD: ieee80211_radiotap.h,v 1.10 2005/01/04 00:34:58 dyoung Exp $ */
 
 /*-
@@ -212,5 +212,6 @@ enum ieee80211_radiotap_type {
 						 * 802.11 header and payload
 						 * (to 32-bit boundary)
 						 */
+#define	IEEE80211_RADIOTAP_F_BADFCS	0x40	/* does not pass FCS check */
 
 #endif /* _NET_IF_IEEE80211RADIOTAP_H_ */

@@ -7,7 +7,7 @@
  *  wrs(5/28/93) -- modified to be consistent (perform identically) with either
  *                  PDCurses or under Unix System V, R4
  *
- * $Id: testcurs.c,v 1.1.1.1 2006-02-25 02:26:12 laffer1 Exp $
+ * $Id: testcurs.c,v 1.1.1.2 2006-02-25 02:33:43 laffer1 Exp $
  */
 
 #include <test.priv.h>

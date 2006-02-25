@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.275.2.2 2005/10/09 17:28:12 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.275.2.3 2005/12/26 13:47:19 dds Exp $");
 
 #include "opt_hwpmc_hooks.h"
 #include "opt_ktrace.h"
@@ -292,7 +292,7 @@ do_execve(td, args, mac_p)
 	register_t *stack_base;
 	int error, len, i;
 	struct image_params image_params, *imgp;
-	struct vattr atimeattr, attr;
+	struct vattr attr;
 	int (*img_first)(struct image_params *);
 	struct pargs *oldargs = NULL, *newargs = NULL;
 	struct sigacts *oldsigacts, *newsigacts;
@@ -709,17 +709,7 @@ interpret:
 		exec_setregs(td, imgp->entry_addr,
 		    (u_long)(uintptr_t)stack_base, imgp->ps_strings);
 
-	/*
-	 * Here we should update the access time of the file.  This must
-	 * be implemented by the underlying filesystem in the same way as
-	 * access timestamps for a VOP_READ() because we want to avoid
-	 * blocking and/or I/O, and have not called vn_start_write().
-	 */
-	if ((imgp->vp->v_mount->mnt_flag & (MNT_NOATIME | MNT_RDONLY)) == 0) {
-		VATTR_NULL(&atimeattr);
-		atimeattr.va_vaflags |= VA_EXECVE_ATIME;
-		(void)VOP_SETATTR(imgp->vp, &atimeattr, td->td_ucred, td);
-	}
+	vfs_mark_atime(imgp->vp, td);
 
 done1:
 	/*

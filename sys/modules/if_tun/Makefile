@@ -1,10 +1,11 @@
-# $FreeBSD: src/sys/modules/if_tun/Makefile,v 1.28 2004/12/29 08:45:48 imp Exp $
+# $FreeBSD: src/sys/modules/if_tun/Makefile,v 1.28.2.1 2006/02/10 00:38:03 yar Exp $
 
 .PATH: ${.CURDIR}/../../net
 
 KMOD=	if_tun
 SRCS=	if_tun.c opt_atalk.h opt_inet.h opt_inet6.h opt_ipx.h opt_mac.h
 
+.if !defined(KERNBUILDDIR)
 opt_atalk.h:
 	echo "#define NETATALK 1" > ${.TARGET}
 
@@ -16,5 +17,6 @@ opt_inet6.h:
 
 opt_ipx.h:
 	echo "#define IPX 1" > ${.TARGET}
+.endif
 
 .include <bsd.kmod.mk>

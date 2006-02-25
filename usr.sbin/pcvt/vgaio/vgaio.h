@@ -37,9 +37,6 @@
  * The author may be reached unter <joerg_wunsch@uriah.sax.de>
  *
  * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2005/12/24 02:44:19  laffer1
- * Imported from FreeBSD 6.0 sources
- *
  * Revision 1.1  1994/03/29  02:47:25  mycroft
  * pcvt 3.0, with some performance enhancements by Joerg Wunsch and me.
  *

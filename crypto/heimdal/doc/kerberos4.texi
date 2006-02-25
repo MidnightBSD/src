@@ -1,4 +1,4 @@
-@c $Id: kerberos4.texi,v 1.1.1.1 2006-02-25 02:26:29 laffer1 Exp $
+@c $Id: kerberos4.texi,v 1.1.1.2 2006-02-25 02:34:18 laffer1 Exp $
 
 @node Kerberos 4 issues, Windows 2000 compatability, Things in search for a better place, Top
 @comment  node-name,  next,  previous,  up

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/ef_sparc64.c,v 1.3 2004/08/28 19:31:10 iedowse Exp $
+ * $FreeBSD: src/usr.sbin/kldxref/ef_sparc64.c,v 1.3.2.1 2005/12/30 22:13:59 marcel Exp $
  */
 
 #include <sys/types.h>
@@ -44,7 +44,7 @@ ef_reloc(struct elf_file *ef, const void *reldata, int reltype, Elf_Off relbase,
     Elf_Off dataoff, size_t len, void *dest)
 {
 	const Elf_Rela *a;
-	Elf_Word w;
+	Elf_Size w;
 
 	switch (reltype) {
 	case EF_RELOC_RELA:
@@ -59,7 +59,7 @@ ef_reloc(struct elf_file *ef, const void *reldata, int reltype, Elf_Off relbase,
 				break;
 			default:
 				warnx("unhandled relocation type %u",
-				    ELF_R_TYPE(a->r_info));
+				    (unsigned int)ELF_R_TYPE(a->r_info));
 				break;
 			}
 		}

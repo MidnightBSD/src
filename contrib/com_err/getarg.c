@@ -39,7 +39,7 @@
  */
 
 #if 0
-RCSID("$Id: getarg.c,v 1.1.1.1 2006-02-25 02:25:33 laffer1 Exp $");
+RCSID("$Id: getarg.c,v 1.1.1.2 2006-02-25 02:32:30 laffer1 Exp $");
 #endif
 
 #include <sys/ttycom.h>

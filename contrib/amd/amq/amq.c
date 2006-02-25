@@ -38,7 +38,7 @@
  *
  *      %W% (Berkeley) %G%
  *
- * $Id: amq.c,v 1.1.1.1 2006-02-25 02:25:13 laffer1 Exp $
+ * $Id: amq.c,v 1.1.1.2 2006-02-25 02:32:00 laffer1 Exp $
  *
  */
 
@@ -57,7 +57,7 @@ char copyright[] = "\
 @(#)Copyright (c) 1990 The Regents of the University of California.\n\
 @(#)All rights reserved.\n";
 #if __GNUC__ < 2
-static char rcsid[] = "$Id: amq.c,v 1.1.1.1 2006-02-25 02:25:13 laffer1 Exp $";
+static char rcsid[] = "$Id: amq.c,v 1.1.1.2 2006-02-25 02:32:00 laffer1 Exp $";
 static char sccsid[] = "%W% (Berkeley) %G%";
 #endif /* __GNUC__ < 2 */
 #endif /* not lint */

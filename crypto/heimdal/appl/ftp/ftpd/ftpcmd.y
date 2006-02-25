@@ -43,7 +43,7 @@
 %{
 
 #include "ftpd_locl.h"
-RCSID("$Id: ftpcmd.y,v 1.1.1.1 2006-02-25 02:26:28 laffer1 Exp $");
+RCSID("$Id: ftpcmd.y,v 1.1.1.2 2006-02-25 02:34:15 laffer1 Exp $");
 
 off_t	restart_point;
 

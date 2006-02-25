@@ -12,6 +12,6 @@ divert(-1)
 #
 #
 divert(0)
-VERSIONID(`$Id: EECS.Berkeley.EDU.m4,v 1.1.1.1 2006-02-25 02:26:19 laffer1 Exp $')
+VERSIONID(`$Id: EECS.Berkeley.EDU.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 DOMAIN(Berkeley.EDU)dnl
 MASQUERADE_AS(EECS.Berkeley.EDU)dnl

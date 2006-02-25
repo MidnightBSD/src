@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: link_policy.c,v 1.1.1.1 2006-02-25 02:29:36 laffer1 Exp $
+ * $Id: link_policy.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/link_policy.c,v 1.6 2004/08/05 16:32:41 emax Exp $
  */
 

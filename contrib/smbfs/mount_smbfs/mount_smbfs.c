@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: mount_smbfs.c,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $
+ * $Id: mount_smbfs.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
  * $FreeBSD: src/contrib/smbfs/mount_smbfs/mount_smbfs.c,v 1.5 2004/09/05 06:42:51 tjr Exp $
  */
 #include <sys/param.h>

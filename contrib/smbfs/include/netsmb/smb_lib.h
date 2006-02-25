@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: smb_lib.h,v 1.1.1.1 2006-02-25 02:26:21 laffer1 Exp $
+ * $Id: smb_lib.h,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
  */
 #ifndef _NETSMB_SMB_LIB_H_
 #define _NETSMB_SMB_LIB_H_

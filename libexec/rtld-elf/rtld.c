@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/rtld.c,v 1.106.2.1 2005/11/28 19:19:39 jhb Exp $
+ * $FreeBSD: src/libexec/rtld-elf/rtld.c,v 1.106.2.2 2005/12/30 22:13:56 marcel Exp $
  */
 
 /*
@@ -449,7 +449,7 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
 }
 
 Elf_Addr
-_rtld_bind(Obj_Entry *obj, Elf_Word reloff)
+_rtld_bind(Obj_Entry *obj, Elf_Size reloff)
 {
     const Elf_Rel *rel;
     const Elf_Sym *def;

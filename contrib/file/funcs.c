@@ -32,7 +32,7 @@
 #include <ctype.h>
 
 #ifndef	lint
-FILE_RCSID("@(#)$Id: funcs.c,v 1.1.1.1 2006-02-25 02:25:36 laffer1 Exp $")
+FILE_RCSID("@(#)$Id: funcs.c,v 1.1.1.2 2006-02-25 02:32:35 laffer1 Exp $")
 #endif	/* lint */
 /*
  * Like printf, only we print to a buffer and advance it.

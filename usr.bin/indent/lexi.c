@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)lexi.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/indent/lexi.c,v 1.18 2004/02/09 15:27:02 bde Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/indent/lexi.c,v 1.18.8.1 2005/12/25 16:26:40 dds Exp $");
 
 /*
  * Here we have the token scanner for indent.  It scans off one token and puts
@@ -370,7 +370,7 @@ lexi(void)
 	do {			/* copy the string */
 	    while (1) {		/* move one character or [/<char>]<char> */
 		if (*buf_ptr == '\n') {
-		    printf("%d: Unterminated literal\n", line_no);
+		    diag2(1, "Unterminated literal");
 		    goto stop_lit;
 		}
 		CHECK_SIZE_TOKEN;	/* Only have to do this once in this loop,

@@ -32,7 +32,7 @@
  *	@(#)null_vfsops.c	8.2 (Berkeley) 1/21/94
  *
  * @(#)lofs_vfsops.c	1.2 (Berkeley) 6/18/92
- * $FreeBSD: src/sys/fs/nullfs/null_vfsops.c,v 1.72.2.1 2005/10/25 20:33:31 kris Exp $
+ * $FreeBSD: src/sys/fs/nullfs/null_vfsops.c,v 1.72.2.2 2006/02/14 23:15:16 jhb Exp $
  */
 
 /*
@@ -180,7 +180,7 @@ nullfs_mount(struct mount *mp, struct thread *td)
 
 	if (NULLVPTOLOWERVP(nullm_rootvp)->v_mount->mnt_flag & MNT_LOCAL)
 		mp->mnt_flag |= MNT_LOCAL;
-	mp->mnt_kern_flag |= lowerrootvp->v_mount->mnt_kern_flag | MNTK_MPSAFE;
+	mp->mnt_kern_flag |= lowerrootvp->v_mount->mnt_kern_flag & MNTK_MPSAFE;
 	mp->mnt_data = (qaddr_t) xmp;
 	vfs_getnewfsid(mp);
 

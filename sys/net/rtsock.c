@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)rtsock.c	8.7 (Berkeley) 10/12/95
- * $FreeBSD: src/sys/net/rtsock.c,v 1.123.2.5 2005/11/16 10:31:21 ru Exp $
+ * $FreeBSD: src/sys/net/rtsock.c,v 1.123.2.6 2006/01/12 00:22:12 glebius Exp $
  */
 
 #include <sys/param.h>
@@ -477,10 +477,10 @@ route_output(struct mbuf *m, struct socket *so)
 			    (info.rti_info[RTAX_IFA] != NULL &&
 			     !sa_equal(info.rti_info[RTAX_IFA],
 				       rt->rt_ifa->ifa_addr))) {
-				if ((error = rt_getifa(&info)) != 0) {
-					RT_UNLOCK(rt);
+				RT_UNLOCK(rt);
+				if ((error = rt_getifa(&info)) != 0)
 					senderr(error);
-				}
+				RT_LOCK(rt);
 			}
 			if (info.rti_info[RTAX_GATEWAY] != NULL &&
 			    (error = rt_setgate(rt, rt_key(rt),

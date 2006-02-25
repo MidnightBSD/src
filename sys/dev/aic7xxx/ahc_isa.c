@@ -32,7 +32,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: ahc_isa.c,v 1.1.1.1 2006-02-25 02:27:54 laffer1 Exp $
+ * $Id: ahc_isa.c,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>

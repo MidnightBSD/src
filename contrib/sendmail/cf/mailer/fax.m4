@@ -28,7 +28,7 @@ POPDIVERT
 ###   FAX Mailer specification   ###
 ####################################
 
-VERSIONID(`$Id: fax.m4,v 1.1.1.1 2006-02-25 02:26:20 laffer1 Exp $')
+VERSIONID(`$Id: fax.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
 
 Mfax,		P=FAX_MAILER_PATH, F=DFMhu, S=14, R=24,
 		M=FAX_MAILER_MAX, T=X-Phone/X-FAX/X-Unix,_FAX_QGRP

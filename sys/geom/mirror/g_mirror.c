@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.66 2005/05/25 15:54:17 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.66.2.2 2006/01/25 15:54:02 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -2346,11 +2346,9 @@ g_mirror_read_metadata(struct g_consumer *cp, struct g_mirror_metadata *md)
 	    &error);
 	g_topology_lock();
 	g_access(cp, -1, 0, 0);
-	if (error != 0) {
+	if (buf == NULL) {
 		G_MIRROR_DEBUG(1, "Cannot read metadata from %s (error=%d).",
 		    cp->provider->name, error);
-		if (buf != NULL)
-			g_free(buf);
 		return (error);
 	}
 

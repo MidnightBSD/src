@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/ipx_input.c,v 1.51 2005/04/10 18:05:02 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netipx/ipx_input.c,v 1.51.2.1 2006/02/14 21:35:07 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -332,7 +332,6 @@ struct mbuf *m;
 {
 	register struct ipx *ipx = mtod(m, struct ipx *);
 	register int error;
-	struct mbuf *mcopy = NULL;
 	int agedelta = 1;
 	int flags = IPX_FORWARDING;
 	int ok_there = 0;
@@ -409,36 +408,12 @@ struct mbuf *m;
 			ipx_printhost(&ipx->ipx_dna);
 			printf(" hops %d\n", ipx->ipx_tc);
 		}
-	} else if (mcopy != NULL) {
-		ipx = mtod(mcopy, struct ipx *);
-		switch (error) {
-
-		case ENETUNREACH:
-		case EHOSTDOWN:
-		case EHOSTUNREACH:
-		case ENETDOWN:
-		case EPERM:
-			ipxstat.ipxs_noroute++;
-			break;
-
-		case EMSGSIZE:
-			ipxstat.ipxs_mtutoosmall++;
-			break;
-
-		case ENOBUFS:
-			ipxstat.ipxs_odropped++;
-			break;
-		}
-		mcopy = NULL;
-		m_freem(m);
-	}
+	} 
 cleanup:
 	if (ok_there)
 		ipx_undo_route(&ipx_droute);
 	if (ok_back)
 		ipx_undo_route(&ipx_sroute);
-	if (mcopy != NULL)
-		m_freem(mcopy);
 }
 
 static int

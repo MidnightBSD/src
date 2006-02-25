@@ -32,7 +32,7 @@ char copyright[] =
  All rights reserved.\n";
 #endif /* not lint */
 
-/* $Header: /home/cvs/src/usr.bin/lex/main.c,v 1.1.1.1 2006-02-25 02:29:15 laffer1 Exp $ */
+/* $Header: /home/cvs/src/usr.bin/lex/main.c,v 1.1.1.2 2006-02-25 02:38:14 laffer1 Exp $ */
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/lex/main.c,v 1.8 2002/06/30 05:25:04 obrien Exp $");
 

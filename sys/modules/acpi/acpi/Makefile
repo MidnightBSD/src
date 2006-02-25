@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/acpi/acpi/Makefile,v 1.11.2.1 2005/11/05 23:55:56 njl Exp $
+# $FreeBSD: src/sys/modules/acpi/acpi/Makefile,v 1.11.2.2 2006/02/10 00:37:57 yar Exp $
 
 .PATH: ${.CURDIR}/../../../contrib/dev/acpica \
        ${.CURDIR}/../../../pci \
@@ -63,6 +63,7 @@ DBSRC+=	dbinput.c dbstats.c dbutils.c dbxface.c
 DBSRC+=	dmbuffer.c dmnames.c dmopcode.c dmobject.c dmresrc.c dmresrcl.c
 DBSRC+=	dmresrcs.c dmutils.c dmwalk.c
 
+.if !defined(KERNBUILDDIR)
 .if ACPI_MAX_THREADS
 CFLAGS+=-DACPI_MAX_THREADS=${ACPI_MAX_THREADS}
 .endif
@@ -77,6 +78,7 @@ opt_ddb.h: Makefile
 .else
 opt_ddb.h: Makefile
 	echo -n > ${.TARGET}
+.endif
 .endif
 
 # Machine-specific code such as sleep/wakeup
