@@ -1,0 +1,5 @@
+#	$FreeBSD: src/contrib/ipfilter/rules/example.1,v 1.1.1.3 2005/04/25 17:31:24 darrenr Exp $
+#
+# block all incoming TCP packets on le0 from host 10.1.1.1 to any destination.
+#
+block in on le0 proto tcp from 10.1.1.1/32 to any

@@ -1,0 +1,8 @@
+$FreeBSD: src/contrib/gperf/FREEBSD-Xlist,v 1.2 2004/02/17 01:51:07 ache Exp $
+*/*.dvi
+*/*.html
+*/*.info
+*/*.ps
+*/texinfo.tex
+*/tests
+*/getopt*

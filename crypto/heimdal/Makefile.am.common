@@ -1,0 +1,4 @@
+# $Id: Makefile.am.common,v 1.1.1.1 2006-02-25 02:26:27 laffer1 Exp $
+
+include $(top_srcdir)/cf/Makefile.am.common
+

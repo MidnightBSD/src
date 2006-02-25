@@ -1,0 +1,11 @@
+$ $Id: set6,v 1.1.1.1 2006-02-25 02:26:25 laffer1 Exp $
+$ ed.inputl.c
+$set 6
+1 ERROR: illegal command from key 0%o\r\n
+2 tak\n
+3 edytuj\n
+4 przerwij\n
+5 nie\n
+6 Brak pasuj±cego polecenia\n
+7 Niejasne polecenie\n
+8 *** B£¡D fatalny edytora ***\r\n\n

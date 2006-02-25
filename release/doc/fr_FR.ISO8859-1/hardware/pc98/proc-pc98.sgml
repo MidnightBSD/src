@@ -1,0 +1,14 @@
+<!--
+     The FreeBSD Documentation Project
+     The FreeBSD French Documentation Project
+
+     $Id: proc-pc98.sgml,v 1.1.1.1 2006-02-25 02:27:00 laffer1 Exp $
+     $FreeBSD: src/release/doc/fr_FR.ISO8859-1/hardware/pc98/proc-pc98.sgml,v 1.2 2002/09/09 22:26:07 gioria Exp $
+     Original revision: 1.1
+-->
+<sect1>
+  <title>Systèmes support&eacute;s</title>
+
+  <para>Les machines NEC PC-98x1</para>
+  <para>Les machines EPSON PC-x86 (compatibles avec les NEC PC-98x1)</para>
+</sect1>

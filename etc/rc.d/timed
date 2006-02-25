@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# $NetBSD: timed,v 1.5 2002/03/22 04:34:00 thorpej Exp $
+# $FreeBSD: src/etc/rc.d/timed,v 1.5 2004/10/07 13:55:26 mtm Exp $
+#
+
+# PROVIDE: timed
+# REQUIRE: DAEMON
+# BEFORE:  LOGIN
+# KEYWORD: nojail
+
+. /etc/rc.subr
+
+name="timed"
+rcvar=`set_rcvar`
+command="/usr/sbin/${name}"
+
+load_rc_config $name
+run_rc_command "$1"

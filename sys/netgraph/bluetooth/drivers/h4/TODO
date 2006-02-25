@@ -1,0 +1,13 @@
+$Id: TODO,v 1.1.1.1 2006-02-25 02:28:29 laffer1 Exp $
+$FreeBSD: src/sys/netgraph/bluetooth/drivers/h4/TODO,v 1.2 2003/05/10 21:44:39 julian Exp $
+
+FIXME/TODO list
+
+This is a list of open issues for H4 node
+
+1) Locking/SMP
+
+	External code now uses ng_send_fn to inject data into Netgraph, but
+	i still use splXXX to lock tty level. this is wrong and should be
+	fixed!
+
