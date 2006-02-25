@@ -1,1 +1,21 @@
 * text=auto !eol
+crypto/openssl/certs/RegTP-5R.pem -text
+crypto/openssl/certs/RegTP-6R.pem -text
+crypto/openssl/certs/eng1.pem -text
+crypto/openssl/certs/eng2.pem -text
+crypto/openssl/certs/eng3.pem -text
+crypto/openssl/certs/eng4.pem -text
+crypto/openssl/certs/eng5.pem -text
+crypto/openssl/certs/expired/ICE-CA.pem -text
+crypto/openssl/certs/expired/ICE-root.pem -text
+crypto/openssl/certs/expired/ICE-user.pem -text
+crypto/openssl/certs/expired/rsa-ssca.pem -text
+crypto/openssl/certs/expired/vsign3.pem -text
+crypto/openssl/certs/thawteCb.pem -text
+crypto/openssl/certs/thawteCp.pem -text
+crypto/openssl/certs/vsign1.pem -text
+crypto/openssl/certs/vsign3.pem -text
+crypto/openssl/certs/vsignss.pem -text
+crypto/openssl/crypto/md5/asm/md5-sparcv9.S -text
+sys/compat/svr4/svr4_ttold.c -text
+sys/compat/svr4/svr4_ttold.h -text
