@@ -20328,6 +20328,10 @@ sbin/geom/class/shsec/gshsec.8 -text
 sbin/geom/class/stripe/Makefile -text
 sbin/geom/class/stripe/geom_stripe.c -text
 sbin/geom/class/stripe/gstripe.8 -text
+sbin/geom/core/Makefile -text
+sbin/geom/core/geom.8 -text
+sbin/geom/core/geom.c -text
+sbin/geom/core/geom.h -text
 sbin/geom/misc/subr.c -text
 sbin/geom/misc/subr.h -text
 sbin/ggate/Makefile -text
