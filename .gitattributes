@@ -33,6 +33,7 @@ bin/csh/USD.doc/csh.1 -text
 bin/csh/USD.doc/csh.2 -text
 bin/csh/USD.doc/csh.3 -text
 bin/csh/USD.doc/csh.4 -text
+bin/csh/USD.doc/csh.a -text
 bin/csh/USD.doc/csh.g -text
 bin/csh/USD.doc/tabs -text
 bin/csh/config.h -text
