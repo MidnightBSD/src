@@ -2,7 +2,7 @@
 # $FreeBSD: src/share/doc/usd/Makefile,v 1.16 2004/01/20 13:08:33 ru Exp $
 
 # The following modules are not provided:
-# 14.jove
+# 14.jove 13.viref
 
 SUBDIR=	title \
 	contents \
@@ -11,7 +11,6 @@ SUBDIR=	title \
 	10.exref \
 	11.vitut \
 	12.vi \
-	13.viref \
 	18.msdiffs \
 	19.memacros \
 	20.meref \
