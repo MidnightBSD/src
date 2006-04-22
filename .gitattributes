@@ -26496,6 +26496,7 @@ sys/i386/compile/.cvsignore -text
 sys/i386/conf/.cvsignore -text
 sys/i386/conf/DEFAULTS -text
 sys/i386/conf/GENERIC -text
+sys/i386/conf/GENERIC.hints -text
 sys/i386/conf/Makefile -text
 sys/i386/conf/NOTES -text
 sys/i386/conf/PAE -text
