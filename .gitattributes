@@ -26876,6 +26876,10 @@ sys/ia64/acpica/acpi_wakeup.c -text
 sys/ia64/acpica/madt.c -text
 sys/ia64/compile/.cvsignore -text
 sys/ia64/conf/.cvsignore -text
+sys/ia64/conf/GENERIC.hints -text
+sys/ia64/conf/Makefile -text
+sys/ia64/conf/NOTES -text
+sys/ia64/conf/SKI -text
 sys/ia64/disasm/disasm.h -text
 sys/ia64/disasm/disasm_decode.c -text
 sys/ia64/disasm/disasm_extract.c -text
