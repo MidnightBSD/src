@@ -26488,6 +26488,12 @@ sys/i386/bios/smbios.c -text
 sys/i386/bios/vpd.c -text
 sys/i386/compile/.cvsignore -text
 sys/i386/conf/.cvsignore -text
+sys/i386/conf/DEFAULTS -text
+sys/i386/conf/GENERIC -text
+sys/i386/conf/Makefile -text
+sys/i386/conf/NOTES -text
+sys/i386/conf/PAE -text
+sys/i386/conf/SMP -text
 sys/i386/cpufreq/est.c -text
 sys/i386/cpufreq/p4tcc.c -text
 sys/i386/cpufreq/powernow.c -text
