@@ -665,7 +665,6 @@ run_rc_command()
 
 					# setup the command to run, and run it
 					#
-			echo "Starting ${name}."
 			if [ -n "$_chroot" ]; then
 				_doit="\
 ${_nice:+nice -n $_nice }\
@@ -845,12 +844,13 @@ echo_fancy() {
 		labelsuffix=""
 		labelprepad=""
 		labelpostpad=""
+		
 		do_msg_width=${#label}
 		if [ $rc_fancy_msg_width -gt ${#label} ]; then
 			spaceavail=$(($rc_fancy_msg_width - ${#label}))
 			labelprepad=$(($spaceavail / 2))
-			labelpostpad=$(($spaceavail -$labelprepad))
-			labelpostpad="\e[${labelpostpad)C"
+			labelpostpad=$(($spaceavail - $labelprepad))
+			labelpostpad="\e[${labelpostpad}C"
 			labelprepad="\e[${labelprepad}C"
 			do_msg_width=$rc_fancy_msg_width
 		fi
@@ -859,20 +859,20 @@ echo_fancy() {
 			labelsuffix="\e[0m"
 			case $label in
 			$rc_fancy_msg_ok)
-				labelprefix=\e[1;32;40m"
+				labelprefix="\e[1;32;40m"
 				;;
-			$rc_fancy_msg_error[$rc_fancy_msg_failed)
+			$rc_fancy_msg_error|$rc_fancy_msg_failed)
 				labelprefix="\e[1;31;40m"
 				;;
-			$rc_fancy_msg_skip[$rc_fancy_msg_skipped)
+			$rc_fancy_msg_skip|$rc_fancy_msg_skipped)
 				labelprefix="\e[1;33;40m"
 				;;
 			esac
 		fi
 		if [ ${2:-0} ]; then
-			echo -e "\rRunning ${rc_arg} $name ${padding} [$(labelprepad}${labelprefix}${label}${labelsuffix}${labelpostpad}]"
+			echo -e "\r${rc_arg} $name ${padding} [${labelprepad}${labelprefix}${label}${labelsuffix}${labelpostpad}]"
 		else
-			echo -e " ...${padding} [${labelprepad}${labelprefix}${label}${labelsuffix}${labelpostpad}]"
+			echo -e " ... ${padding} [${labelprepad}${labelprefix}${label}${labelsuffix}${labelpostpad}]"
 		fi
 	else
 		if [ ${2:-0} ]; then
