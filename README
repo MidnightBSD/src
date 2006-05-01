@@ -1,6 +1,7 @@
 This is the top level of the FreeBSD source directory.  This file
 was last revised on:
 $FreeBSD: src/README,v 1.22 2003/03/08 10:01:26 markm Exp $
+$Id: README,v 1.2 2006-05-01 17:50:15 laffer1 Exp $
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
