@@ -1,7 +1,7 @@
-This is the top level of the FreeBSD source directory.  This file
+This is the top level of the MidnightBSD source directory.  This file
 was last revised on:
 $FreeBSD: src/README,v 1.22 2003/03/08 10:01:26 markm Exp $
-$Id: README,v 1.3 2006-05-22 04:05:53 laffer1 Exp $
+$Id: README,v 1.4 2006-05-22 04:09:41 laffer1 Exp $
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
@@ -9,9 +9,9 @@ sources in this tree - please see the specific source directories for
 more information).
 
 The Makefile in this directory supports a number of targets for
-building components (or all) of the FreeBSD source tree, the most
+building components (or all) of the MidnightBSD source tree, the most
 commonly used one being ``world'', which rebuilds and installs
-everything in the FreeBSD system from the source tree except the
+everything in the MidnightBSD system from the source tree except the
 kernel, the kernel-modules and the contents of /etc.  The
 ``buildkernel'' and ``installkernel'' targets build and install
 the kernel and the modules (see below).  Please see the top of
@@ -24,7 +24,7 @@ for which can be found at:
 And in the config(8) man page.
 Note: If you want to build and install the kernel with the
 ``buildkernel'' and ``installkernel'' targets, you might need to build
-world before.  More information is available in the handbook.
+world before.  More information is available in the FreeBSD handbook.
 
 The sample kernel configuration files reside in the sys/<arch>/conf
 sub-directory (assuming that you've installed the kernel sources), the
