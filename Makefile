@@ -1,5 +1,6 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
+# $MidnightBSD$
 #
 # The user-driven targets are:
 #
