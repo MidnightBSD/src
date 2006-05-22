@@ -1,7 +1,8 @@
 #	@(#)bsd.README	8.2 (Berkeley) 4/2/94
 # $FreeBSD: src/share/mk/bsd.README,v 1.28 2004/12/21 08:46:54 ru Exp $
+# $MidnightBSD$
 
-This is the README file for the "include" files for the FreeBSD
+This is the README file for the "include" files for the MidnightBSD
 source tree.  The files are installed in /usr/share/mk, and are by
 convention, named with the suffix ".mk".  These files store several
 build options and should be handled with caution.
@@ -37,7 +38,7 @@ bsd.port.pre.mk		- building ports
 bsd.port.subdir.mk	- targets for building subdirectories for ports
 bsd.prog.mk		- building programs from source files
 bsd.subdir.mk		- targets for building subdirectories
-bsd.sys.mk		- common settings used for building FreeBSD sources
+bsd.sys.mk		- common settings used for building MidnightBSD sources
 sys.mk			- default rules for all makes
 
 This file does not document bsd.port*.mk.  They are documented in ports(7).
@@ -55,7 +56,7 @@ In some cases the default value depend on other values (e.g. system
 architecture).  In these cases the most common value is indicated.
 
 This document contains some simple examples of the usage of the BSD make
-include files.  For more examples look at the makefiles in the FreeBSD
+include files.  For more examples look at the makefiles in the MidnightBSD
 source tree.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

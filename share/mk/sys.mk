@@ -1,8 +1,8 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
 # $FreeBSD: src/share/mk/sys.mk,v 1.86.2.1 2005/11/16 08:12:03 ru Exp $
 
-unix		?=	We run FreeBSD, not UNIX.
-.FreeBSD	?=	true
+unix		?=	We run MidnightBSD, not UNIX.
+.MidnightBSD	?=	true
 
 # If the special target .POSIX appears (without prerequisites or
 # commands) before the first noncomment line in the makefile, make shall
@@ -252,7 +252,7 @@ YFLAGS		?=	-d
 	${CC} ${CFLAGS} ${LDFLAGS} ${.PREFIX}.tmp.c ${LDLIBS} -ll -o ${.TARGET}
 	rm -f ${.PREFIX}.tmp.c
 
-# FreeBSD build pollution.  Hide it in the non-POSIX part of the ifdef.
+# MidnightBSD build pollution.  Hide it in the non-POSIX part of the ifdef.
 __MAKE_CONF?=/etc/make.conf
 .if exists(${__MAKE_CONF})
 .include "${__MAKE_CONF}"

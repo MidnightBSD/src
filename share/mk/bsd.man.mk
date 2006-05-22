@@ -1,4 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.man.mk,v 1.56 2005/01/06 11:12:43 krion Exp $
+# $MidnightBSD$
 #
 # The include file <bsd.man.mk> handles installing manual pages and
 # their links.

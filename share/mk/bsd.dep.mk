@@ -1,4 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.dep.mk,v 1.48 2005/01/06 11:12:43 krion Exp $
+# $MidnightBSD$
 #
 # The include file <bsd.dep.mk> handles Makefile dependencies.
 #

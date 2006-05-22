@@ -1,4 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.compat.mk,v 1.20 2005/03/02 11:53:21 trhodes Exp $
+# $MidnightBSD$
 
 .if !defined(BURN_BRIDGES)
 .for oldnew in \
