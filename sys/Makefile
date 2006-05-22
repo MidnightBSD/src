@@ -21,7 +21,7 @@ ARCHDIR	?=	${MACHINE}
 SUBDIR+=modules
 .endif
 
-HTAGSFLAGS+= -at `awk -F= '/^RELEASE *=/{release=$2}; END {print "FreeBSD", release, "kernel"}' < conf/newvers.sh`
+HTAGSFLAGS+= -at `awk -F= '/^RELEASE *=/{release=$2}; END {print "MidnightBSD", release, "kernel"}' < conf/newvers.sh`
 
 cscope:	${.CURDIR}/cscopenamefile
 	cd ${.CURDIR}; cscope -k -p4 -i cscopenamefile

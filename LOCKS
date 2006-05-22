@@ -1,4 +1,5 @@
 $FreeBSD: src/LOCKS,v 1.2.2.1 2006/02/06 16:39:06 ru Exp $
+$MidnightBSD$
 
 This file documents formal review/approval requirements that have been
 approved by core.

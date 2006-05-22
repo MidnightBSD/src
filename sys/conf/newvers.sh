@@ -29,9 +29,10 @@
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
 # $FreeBSD: src/sys/conf/newvers.sh,v 1.69.2.10 2006/02/01 18:04:43 kensmith Exp $
+# $MidnightBSD$
 
-TYPE="FreeBSD"
-REVISION="6.1"
+TYPE="MidnightBSD"
+REVISION="0.1"
 BRANCH="PRERELEASE"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
@@ -55,9 +56,9 @@ for bsd_copyright in ../$b ../../$b ../../../$b /usr/src/$b /usr/$b
 do
 	if [ -r "$bsd_copyright" ]; then
 		COPYRIGHT=`sed \
-		    -e "s/\[year\]/1992-$year/" \
-		    -e 's/\[your name here\]\.* /The FreeBSD Project./' \
-		    -e 's/\[your name\]\.*/The FreeBSD Project./' \
+		    -e "s/\[year\]/2006-$year/" \
+		    -e 's/\[your name here\]\.* /The MidnightBSD Project./' \
+		    -e 's/\[your name\]\.*/The MidnightBSD Project./' \
 		    -e '/\[id for your version control system, if any\]/d' \
 		    $bsd_copyright` 
 		break
@@ -67,7 +68,7 @@ done
 # no copyright found, use a dummy
 if [ X"$COPYRIGHT" = X ]; then
 	COPYRIGHT="/*-
- * Copyright (c) 1992-$year The FreeBSD Project.
+ * Copyright (c) 2006-$year The MidnightBSD Project.
  * All rights reserved.
  *
  */"
