@@ -1,6 +1,7 @@
 #!/bin/sh -
 #
-# $FreeBSD: src/sys/boot/common/newvers.sh,v 1.5 2004/07/01 06:40:12 ps Exp $
+# $MidnightBSD$
+# 	$FreeBSD: src/sys/boot/common/newvers.sh,v 1.5 2004/07/01 06:40:12 ps Exp $
 #	$NetBSD: newvers.sh,v 1.1 1997/07/26 01:50:38 thorpej Exp $
 #
 # Copyright (c) 1984, 1986, 1990, 1993
@@ -37,7 +38,7 @@ u=${USER-root} h=${HOSTNAME-`hostname`} t=`date`
 #r=`head -n 6 $1 | tail -n 1 | awk -F: ' { print $1 } '`
 r=`awk -F: ' /^[0-9]\.[0-9]+:/ { print $1; exit }' $1`
 
-echo "char bootprog_name[] = \"FreeBSD/${3} ${2}\";" > vers.c
+echo "char bootprog_name[] = \"MidnightBSD/${3} ${2}\";" > vers.c
 echo "char bootprog_rev[] = \"${r}\";" >> vers.c
 echo "char bootprog_date[] = \"${t}\";" >> vers.c
 echo "char bootprog_maker[] = \"${u}@${h}\";" >> vers.c

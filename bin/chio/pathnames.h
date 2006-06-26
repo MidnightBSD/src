@@ -1,4 +1,6 @@
-/* $FreeBSD: src/bin/chio/pathnames.h,v 1.3 2005/01/10 08:39:20 imp Exp $	*/
+/* $FreeBSD: src/bin/chio/pathnames.h,v 1.3 2005/01/10 08:39:20 imp Exp $i
+   $MidnightBSD$
+*/
 
 /*-
  * Copyright (c) 1996 Jason R. Thorpe <thorpej@and.com>

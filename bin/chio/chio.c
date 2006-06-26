@@ -34,6 +34,7 @@
  * Additional Copyright (c) 1997, by Matthew Jacob, for NASA/Ames Research Ctr.
  * Addidional Copyright (c) 2000, by C. Stephen Gunn, Waterspout Communications
  */
+/* $FreeBSD: src/bin/chio/chio.c,v 1.27 2005/01/10 08:39:20 imp Exp $ */
 
 #if 0
 #ifndef lint
@@ -43,7 +44,7 @@ static const char copyright[] =
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/chio/chio.c,v 1.27 2005/01/10 08:39:20 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/chio.h> 
