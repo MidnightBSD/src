@@ -23,9 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/* $FreeBSD: src/bin/date/vary.c,v 1.16 2004/08/09 13:43:39 yar Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/date/vary.c,v 1.16 2004/08/09 13:43:39 yar Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <err.h>
 #include <time.h>
