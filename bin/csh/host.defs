@@ -1,6 +1,7 @@
 newcode	:
-/* $Header: /home/cvs/src/bin/csh/Attic/host.defs,v 1.1.1.2 2006-02-25 02:31:58 laffer1 Exp $ */
+/* $Header: /home/cvs/src/bin/csh/Attic/host.defs,v 1.2 2006-07-07 13:50:33 laffer1 Exp $ */
 /* $FreeBSD: src/bin/csh/host.defs,v 1.3 2004/04/06 20:06:45 markm Exp $ */
+/* $MidnightBSD$ */
 /*
  * host.defs: Hosttype/Machtype etc.
  */
@@ -34,7 +35,7 @@ newcode	:
  */
 #include "sh.h"
 
-RCSID("$Id: host.defs,v 1.1.1.2 2006-02-25 02:31:58 laffer1 Exp $")
+RCSID("$Id: host.defs,v 1.2 2006-07-07 13:50:33 laffer1 Exp $")
 
 endcode	:
 

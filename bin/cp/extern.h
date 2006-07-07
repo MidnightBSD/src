@@ -28,7 +28,8 @@
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/1/94
  * $FreeBSD: src/bin/cp/extern.h,v 1.19.8.1 2005/11/12 21:21:45 csjp Exp $
- */
+ * $MidnightBSD$ 
+*/
 
 typedef struct {
 	char	*p_end;			/* pointer to NULL at end of path */

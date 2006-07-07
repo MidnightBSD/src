@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/bin/csh/Makefile,v 1.36 2005/04/24 19:44:43 mp Exp $
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 #

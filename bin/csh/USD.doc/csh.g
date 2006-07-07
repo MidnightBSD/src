@@ -28,6 +28,7 @@
 .\"
 .\"	@(#)csh.g	8.1 (Berkeley) 6/8/93
 .\" $FreeBSD: src/bin/csh/USD.doc/csh.g,v 1.9 2005/01/10 08:39:21 imp Exp $
+.\" $MidnightBSD$
 .\"
 .SH
 Glossary
