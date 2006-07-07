@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/dd/Makefile,v 1.18 2004/04/09 07:13:27 njl Exp $
+# $MidnightBSD$
 
 MAINTAINER=	green@FreeBSD.org
 

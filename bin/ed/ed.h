@@ -26,6 +26,7 @@
  *
  *	@(#)ed.h,v 1.5 1994/02/01 00:34:39 alm Exp
  * $FreeBSD: src/bin/ed/ed.h,v 1.20 2005/01/10 08:39:22 imp Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/param.h>

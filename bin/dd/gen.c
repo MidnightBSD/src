@@ -2,6 +2,7 @@
  * This program is in the public domain
  *
  * $FreeBSD: src/bin/dd/gen.c,v 1.2 2005/01/10 08:39:21 imp Exp $
+ * $MidnightBSD$
  */
 
 #include <stdio.h>

@@ -30,6 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/* $FreeBSD: src/bin/dd/position.c,v 1.23 2004/04/06 20:06:46 markm Exp $ */
 
 #ifndef lint
 #if 0
@@ -37,7 +38,7 @@ static char sccsid[] = "@(#)position.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/dd/position.c,v 1.23 2004/04/06 20:06:46 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/mtio.h>

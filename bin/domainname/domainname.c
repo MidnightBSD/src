@@ -26,6 +26,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/* $FreeBSD: src/bin/domainname/domainname.c,v 1.19 2005/01/10 08:39:22 i
+mp Exp $ */
 
 #if 0
 #ifndef lint
@@ -39,7 +41,7 @@ static char const sccsid[] = "From: @(#)hostname.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/domainname/domainname.c,v 1.19 2005/01/10 08:39:22 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 

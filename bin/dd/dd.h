@@ -32,6 +32,7 @@
  *
  *	@(#)dd.h	8.3 (Berkeley) 4/2/94
  * $FreeBSD: src/bin/dd/dd.h,v 1.22 2004/08/15 19:10:05 rwatson Exp $
+ * $MidnightBSD$
  */
 
 /* Input/output stream state. */

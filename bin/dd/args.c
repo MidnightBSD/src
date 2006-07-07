@@ -30,6 +30,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/* $FreeBSD: src/bin/dd/args.c,v 1.40 2004/08/15 19:10:05 rwatson Exp $ */
+
 
 #ifndef lint
 #if 0
@@ -37,7 +39,7 @@ static char sccsid[] = "@(#)args.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/dd/args.c,v 1.40 2004/08/15 19:10:05 rwatson Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 

@@ -30,6 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/* $FreeBSD: src/bin/dd/conv_tab.c,v 1.12 2004/04/06 20:06:45 markm Exp $ */
 
 #ifndef lint
 #if 0
@@ -37,7 +38,7 @@ static char sccsid[] = "@(#)conv_tab.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/dd/conv_tab.c,v 1.12 2004/04/06 20:06:45 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 

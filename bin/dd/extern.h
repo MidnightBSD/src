@@ -32,6 +32,7 @@
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
  * $FreeBSD: src/bin/dd/extern.h,v 1.15 2004/08/15 19:10:05 rwatson Exp $
+ * $MidnightBSD$
  */
 
 void block(void);
