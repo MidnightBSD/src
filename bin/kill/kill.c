@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+/* $FreeBSD: src/bin/kill/kill.c,v 1.20 2005/01/10 08:39:23 imp Exp $ */
 #if 0
 #ifndef lint
 static char const copyright[] =
@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)kill.c	8.4 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/kill/kill.c,v 1.20 2005/01/10 08:39:23 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <err.h>

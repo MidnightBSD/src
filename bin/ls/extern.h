@@ -28,6 +28,7 @@
  *
  *	from: @(#)extern.h	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/bin/ls/extern.h,v 1.24 2005/06/03 11:05:58 dd Exp $
+ * $MidnightBSD$
  */
 
 int	 acccmp(const FTSENT *, const FTSENT *);

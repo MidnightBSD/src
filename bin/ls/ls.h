@@ -31,6 +31,7 @@
  *
  *	from: @(#)ls.h	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/bin/ls/ls.h,v 1.21 2005/01/10 08:39:23 imp Exp $
+ * $MidnightBSD$
  */
 
 #define NO_PRINT	1
