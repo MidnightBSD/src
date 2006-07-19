@@ -25,9 +25,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+/* $FreeBSD: src/bin/ed/re.c,v 1.20 2003/07/20 10:24:09 ru Exp $ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ed/re.c,v 1.20 2003/07/20 10:24:09 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include "ed.h"
 
