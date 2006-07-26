@@ -1,4 +1,5 @@
 # $FreeBSD: src/sys/boot/alpha/Makefile.inc,v 1.11 2004/08/23 16:25:07 obrien Exp $
+# $MidnightBSD$ 
 # Options used when building app-specific libalpha components
 
 BINDIR?=		/boot

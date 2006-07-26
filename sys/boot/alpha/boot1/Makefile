@@ -1,5 +1,6 @@
 # $NetBSD: Makefile,v 1.15 1998/03/28 00:21:35 thorpej Exp $
 # $FreeBSD: src/sys/boot/alpha/boot1/Makefile,v 1.18 2004/12/21 08:47:11 ru Exp $
+# $MidnightBSD$
 
 PROG=	boot1.sym
 INTERNALPROG=
