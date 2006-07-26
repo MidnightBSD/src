@@ -24,6 +24,7 @@
 \ SUCH DAMAGE.
 \
 \ $FreeBSD: src/sys/boot/forth/beastie.4th,v 1.10.2.1 2005/10/30 14:37:02 scottl Exp $
+\ $MidnightBSD$
 
 marker task-beastie.4th
 
@@ -95,12 +96,7 @@ at-xy ."         `--{__________) [0m"
 ;
 
 : fbsdbw-logo ( x y -- )
-	2dup at-xy ."      ______" 1+
-	2dup at-xy ."     |  ____| __ ___  ___ " 1+
-	2dup at-xy ."     | |__ | '__/ _ \/ _ \" 1+
-	2dup at-xy ."     |  __|| | |  __/  __/" 1+
-	2dup at-xy ."     | |   | | |    |    |" 1+
-	2dup at-xy ."     |_|   |_|  \___|\___|" 1+
+	2dup at-xy ."       M i d n i g h t " 1+
 	2dup at-xy ."      ____   _____ _____" 1+
 	2dup at-xy ."     |  _ \ / ____|  __ \" 1+
 	2dup at-xy ."     | |_) | (___ | |  | |" 1+
@@ -179,11 +175,11 @@ at-xy ."         `--{__________) [0m"
 	clear
 	46 4 print-logo
 	42 20 2 2 box
-	13 6 at-xy ." Welcome to FreeBSD!"
-	printmenuitem ."  Boot FreeBSD [default]" bootkey !
+	13 6 at-xy ." Welcome to MidnightBSD!"
+	printmenuitem ."  Boot MidnightBSD [default]" bootkey !
 	s" arch-i386" environment? if
 		drop
-		printmenuitem ."  Boot FreeBSD with ACPI " bootacpikey !
+		printmenuitem ."  Boot MidnightBSD with ACPI " bootacpikey !
 		acpienabled? if
 			." disabled"
 		else
@@ -192,13 +188,13 @@ at-xy ."         `--{__________) [0m"
 	else
 		-2 bootacpikey !
 	then
-	printmenuitem ."  Boot FreeBSD in Safe Mode" bootsafekey !
-	printmenuitem ."  Boot FreeBSD in single user mode" bootsinglekey !
-	printmenuitem ."  Boot FreeBSD with verbose logging" bootverbosekey !
+	printmenuitem ."  Boot MidnightBSD in Safe Mode" bootsafekey !
+	printmenuitem ."  Boot MidnightBSD in single user mode" bootsinglekey !
+	printmenuitem ."  Boot MidnightBSD with verbose logging" bootverbosekey !
 	printmenuitem ."  Escape to loader prompt" escapekey !
 	s" arch-i386" environment? if
 		drop
-		printmenuitem ."  Boot FreeBSD with USB keyboard" bootusbkey !
+		printmenuitem ."  Boot MidnightBSD with USB keyboard" bootusbkey !
 	else
 		-2 bootusbkey !
 	then
