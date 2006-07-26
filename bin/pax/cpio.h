@@ -32,6 +32,7 @@
  *
  *	@(#)cpio.h	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/bin/pax/cpio.h,v 1.7 2004/04/06 20:06:48 markm Exp $
+ * $MidnightBSD$
  */
 
 /*
