@@ -23,6 +23,7 @@
 \ SUCH DAMAGE.
 \
 \ $FreeBSD: src/sys/boot/forth/pnp.4th,v 1.2 2001/12/11 00:49:34 jhb Exp $
+\ $MidnightBSD$
 
 pnpdevices drop
 

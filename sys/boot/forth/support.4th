@@ -23,7 +23,8 @@
 \ SUCH DAMAGE.
 \
 \ $FreeBSD: src/sys/boot/forth/support.4th,v 1.15 2002/05/24 02:28:58 gordon Exp $
-
+\ $MidnightBSD$ 
+\
 \ Loader.rc support functions:
 \
 \ initialize_support ( -- )	initialize global variables

@@ -23,6 +23,7 @@
 \ SUCH DAMAGE.
 \
 \ $FreeBSD: src/sys/boot/forth/loader.4th,v 1.24 2002/05/24 02:28:58 gordon Exp $
+\ $MidnightBSD$ 
 
 s" arch-alpha" environment? [if] [if]
 	s" loader_version" environment?  [if]
