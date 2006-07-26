@@ -31,7 +31,7 @@
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
  * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/cdefs.h,v 1.2 2006/06/26 15:12:15 laffer1 Exp $
  */
 
 #ifndef	_SYS_CDEFS_H_
@@ -382,7 +382,7 @@
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $");
+ *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.2 2006/06/26 15:12:15 laffer1 Exp $");
  */
 #ifndef	__MBSDID
 #if !defined(lint) && !defined(STRIP_MBSDID)
@@ -390,6 +390,11 @@
 #else
 #define	__MBSDID(s)	struct __hack
 #endif
+#endif
+
+/* XXX temporary hack until the source tree is updated */
+#ifndef __FBSDID
+#define __FBSDID(s)	struct __hack
 #endif
 
 #ifndef	__RCSID
