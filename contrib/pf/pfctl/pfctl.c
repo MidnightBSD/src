@@ -62,6 +62,10 @@ __FBSDID("$FreeBSD: src/contrib/pf/pfctl/pfctl.c,v 1.6 2005/05/03 16:55:20 mlaie
 #define HTONL(x)	(x) = htonl((__uint32_t)(x))
 #endif
 
+#ifdef __MidnightBSD__
+#define HTONL(x)	(x) = htonl((__uint32_t)(x))
+#endif
+
 void	 usage(void);
 int	 pfctl_enable(int, int);
 int	 pfctl_disable(int, int);
@@ -1043,7 +1047,7 @@ pfctl_rules(int dev, char *filename, int opts, char *anchorname,
 			    pfctl_add_trans(t, PF_RULESET_RDR, anchorname))
 				ERR("pfctl_rules");
 		}
-		if (((altqsupport && (pf.loadopt & PFCTL_FLAG_ALTQ) != 0))) {
+		if (((altqsupport && (pf.loadopt & PFCTL_FLAG_ALTQ) != 0)i) {
 			if (pfctl_add_trans(t, PF_RULESET_ALTQ, anchorname))
 				ERR("pfctl_rules");
 		}

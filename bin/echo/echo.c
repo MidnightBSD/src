@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)echo.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
---MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/echo/echo.c,v 1.2 2006/07/07 15:51:44 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/uio.h>
