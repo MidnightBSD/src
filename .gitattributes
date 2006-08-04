@@ -10484,6 +10484,7 @@ contrib/sendmail/include/sm/signal.h -text
 contrib/sendmail/include/sm/string.h -text
 contrib/sendmail/include/sm/sysexits.h -text
 contrib/sendmail/include/sm/test.h -text
+contrib/sendmail/include/sm/time.h -text
 contrib/sendmail/include/sm/types.h -text
 contrib/sendmail/include/sm/varargs.h -text
 contrib/sendmail/include/sm/xtrap.h -text
@@ -10591,6 +10592,7 @@ contrib/sendmail/libsm/local.h -text
 contrib/sendmail/libsm/makebuf.c -text
 contrib/sendmail/libsm/match.c -text
 contrib/sendmail/libsm/mbdb.c -text
+contrib/sendmail/libsm/memstat.c -text
 contrib/sendmail/libsm/mpeix.c -text
 contrib/sendmail/libsm/niprop.c -text
 contrib/sendmail/libsm/path.c -text
@@ -10625,6 +10627,7 @@ contrib/sendmail/libsm/t-float.c -text
 contrib/sendmail/libsm/t-fopen.c -text
 contrib/sendmail/libsm/t-heap.c -text
 contrib/sendmail/libsm/t-match.c -text
+contrib/sendmail/libsm/t-memstat.c -text
 contrib/sendmail/libsm/t-path.c -text
 contrib/sendmail/libsm/t-rpool.c -text
 contrib/sendmail/libsm/t-scanf.c -text

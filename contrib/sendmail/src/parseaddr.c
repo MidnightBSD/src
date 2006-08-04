@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: parseaddr.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $")
+SM_RCSID("@(#)$Id: parseaddr.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $")
 
 static void	allocaddr __P((ADDRESS *, int, char *, ENVELOPE *));
 static int	callsubr __P((char**, int, ENVELOPE *));
@@ -1337,7 +1337,7 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 					/* $&{x} replacement */
 					char *mval = macvalue(rp[1], e);
 					char **xpvp;
-					int trsize = 0;
+					size_t trsize = 0;
 					static size_t pvpb1_size = 0;
 					static char **pvpb1 = NULL;
 					char pvpbuf[PSBUFSIZE];
@@ -1352,7 +1352,7 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 					/* save the remainder of the input */
 					for (xpvp = pvp; *xpvp != NULL; xpvp++)
 						trsize += sizeof *xpvp;
-					if ((size_t) trsize > pvpb1_size)
+					if (trsize > pvpb1_size)
 					{
 						if (pvpb1 != NULL)
 							sm_free(pvpb1);
@@ -1407,7 +1407,7 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 		{
 			char **hbrvp;
 			char **xpvp;
-			int trsize;
+			size_t trsize;
 			char *replac;
 			int endtoken;
 			STAB *map;
@@ -1415,7 +1415,7 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 			char **key_rvp;
 			char **arg_rvp;
 			char **default_rvp;
-			char cbuf[MAXNAME + 1];
+			char cbuf[MAXKEY];
 			char *pvpb1[MAXATOM + 1];
 			char *argvect[MAX_MAP_ARGS];
 			char pvpbuf[PSBUFSIZE];
@@ -1442,7 +1442,11 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 				endtoken = LOOKUPEND;
 				mapname = *++rvp;
 				if (mapname == NULL)
+				{
 					syserr("554 5.3.0 rewrite: missing mapname");
+					/* NOTREACHED */
+					SM_ASSERT(0);
+				}
 			}
 			map = stab(mapname, ST_MAP, ST_FIND);
 			if (map == NULL)
@@ -1452,8 +1456,12 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 			/* extract the match part */
 			key_rvp = ++rvp;
 			if (key_rvp == NULL)
+			{
 				syserr("554 5.3.0 rewrite: missing key for map %s",
 					mapname);
+				/* NOTREACHED */
+				SM_ASSERT(0);
+			}
 			default_rvp = NULL;
 			arg_rvp = argvect;
 			xpvp = NULL;
@@ -1509,7 +1517,7 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 				*++arg_rvp = NULL;
 
 			/* save the remainder of the input string */
-			trsize = (int) (avp - rvp + 1) * sizeof *rvp;
+			trsize = (avp - rvp + 1) * sizeof *rvp;
 			memmove((char *) pvpb1, (char *) rvp, trsize);
 
 			/* look it up */
@@ -1522,7 +1530,8 @@ rewrite(pvp, ruleset, reclevel, e, maxatom)
 			if (replac == NULL && default_rvp != NULL)
 			{
 				/* create the default */
-				cataddr(default_rvp, NULL, cbuf, sizeof cbuf, '\0');
+				cataddr(default_rvp, NULL, cbuf, sizeof cbuf,
+					'\0');
 				replac = cbuf;
 			}
 
@@ -2949,7 +2958,7 @@ rscheck(rwset, p1, p2, e, flags, logl, host, logid)
 	char *logid;
 {
 	char *volatile buf;
-	int bufsize;
+	size_t bufsize;
 	int saveexitstat;
 	int volatile rstat = EX_OK;
 	char **pvp;
@@ -3163,7 +3172,7 @@ rscap(rwset, p1, p2, e, pvp, pvpbuf, size)
 	int size;
 {
 	char *volatile buf;
-	int bufsize;
+	size_t bufsize;
 	int volatile rstat = EX_OK;
 	int rsno;
 	bool saveQuickAbort = QuickAbort;
@@ -3175,8 +3184,7 @@ rscap(rwset, p1, p2, e, pvp, pvpbuf, size)
 		sm_dprintf("rscap(%s, %s, %s)\n", rwset, p1,
 			p2 == NULL ? "(NULL)" : p2);
 
-	if (pvp != NULL)
-		*pvp = NULL;
+	SM_REQUIRE(pvp != NULL);
 	rsno = strtorwset(rwset, NULL, ST_FIND);
 	if (rsno < 0)
 		return EX_UNAVAILABLE;

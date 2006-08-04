@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2005 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2000-2006 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -10,7 +10,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: tls.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $")
+SM_RCSID("@(#)$Id: tls.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
 
 #if STARTTLS
 #  include <openssl/err.h>
@@ -497,6 +497,22 @@ tls_safe_f(var, sff, srv)
 **		succeeded?
 */
 
+/*
+**  The session_id_context identifies the service that created a session.
+**  This information is used to distinguish between multiple TLS-based
+**  servers running on the same server. We use the name of the mail system.
+**  Note: the session cache is not persistent.
+*/
+
+static char server_session_id_context[] = "sendmail8";
+
+/* 0.9.8a and b have a problem with SSL_OP_TLS_BLOCK_PADDING_BUG */
+#if (OPENSSL_VERSION_NUMBER >= 0x0090800fL)
+# define SM_SSL_OP_TLS_BLOCK_PADDING_BUG	1
+#else
+# define SM_SSL_OP_TLS_BLOCK_PADDING_BUG	0
+#endif
+
 bool
 inittls(ctx, req, srv, certfile, keyfile, cacertpath, cacertfile, dhparam)
 	SSL_CTX **ctx;
@@ -509,7 +525,7 @@ inittls(ctx, req, srv, certfile, keyfile, cacertpath, cacertfile, dhparam)
 # endif /* !NO_DH */
 	int r;
 	bool ok;
-	long sff, status;
+	long sff, status, options;
 	char *who;
 # if _FFR_TLS_1
 	char *cf2, *kf2;
@@ -522,11 +538,19 @@ inittls(ctx, req, srv, certfile, keyfile, cacertpath, cacertfile, dhparam)
 	X509_CRL *crl;
 	X509_STORE *store;
 # endif /* OPENSSL_VERSION_NUMBER > 0x00907000L */
+#if SM_SSL_OP_TLS_BLOCK_PADDING_BUG
+	long rt_version;
+	STACK_OF(SSL_COMP) *comp_methods;
+#endif
 
 	status = TLS_S_NONE;
 	who = srv ? "server" : "client";
 	if (ctx == NULL)
+	{
 		syserr("STARTTLS=%s, inittls: ctx == NULL", who);
+		/* NOTREACHED */
+		SM_ASSERT(ctx != NULL);
+	}
 
 	/* already initialized? (we could re-init...) */
 	if (*ctx != NULL)
@@ -886,7 +910,29 @@ inittls(ctx, req, srv, certfile, keyfile, cacertpath, cacertfile, dhparam)
 # endif /* _FFR_TLS_1 */
 
 	/* SSL_CTX_set_quiet_shutdown(*ctx, 1); violation of standard? */
-	SSL_CTX_set_options(*ctx, SSL_OP_ALL);	/* XXX bug compatibility? */
+
+	options = SSL_OP_ALL;	/* bug compatibility? */
+#if SM_SSL_OP_TLS_BLOCK_PADDING_BUG
+
+	/*
+	**  In OpenSSL 0.9.8[ab], enabling zlib compression breaks the
+	**  padding bug work-around, leading to false positives and
+	**  failed connections. We may not interoperate with systems
+	**  with the bug, but this is better than breaking on all 0.9.8[ab]
+	**  systems that have zlib support enabled.
+	**  Note: this checks the runtime version of the library, not
+	**  just the compile time version.
+	*/
+
+	rt_version = SSLeay();
+	if (rt_version >= 0x00908000L && rt_version <= 0x0090802fL)
+	{
+		comp_methods = SSL_COMP_get_compression_methods();
+		if (comp_methods != NULL && sk_SSL_COMP_num(comp_methods) > 0)
+			options &= ~SSL_OP_TLS_BLOCK_PADDING_BUG;
+	}
+#endif
+	SSL_CTX_set_options(*ctx, options);
 
 # if !NO_DH
 	/* Diffie-Hellman initialization */
@@ -972,8 +1018,20 @@ inittls(ctx, req, srv, certfile, keyfile, cacertpath, cacertfile, dhparam)
 
 	/* XXX do we need this cache here? */
 	if (bitset(TLS_I_CACHE, req))
-		SSL_CTX_sess_set_cache_size(*ctx, 128);
-	/* timeout? SSL_CTX_set_timeout(*ctx, TimeOut...); */
+	{
+		SSL_CTX_sess_set_cache_size(*ctx, 1);
+		SSL_CTX_set_timeout(*ctx, 1);
+		SSL_CTX_set_session_id_context(*ctx,
+			(void *) &server_session_id_context,
+			sizeof(server_session_id_context));
+		(void) SSL_CTX_set_session_cache_mode(*ctx,
+				SSL_SESS_CACHE_SERVER);
+	}
+	else
+	{
+		(void) SSL_CTX_set_session_cache_mode(*ctx,
+				SSL_SESS_CACHE_OFF);
+	}
 
 	/* load certificate locations and default CA paths */
 	if (bitset(TLS_S_CERTP_EX, status) && bitset(TLS_S_CERTF_EX, status))
@@ -1557,7 +1615,7 @@ tls_verify_cb(ctx, unused)
 
 void
 tlslogerr(who)
-	char *who;
+	const char *who;
 {
 	unsigned long l;
 	int line, flags;

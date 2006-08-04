@@ -11,11 +11,11 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: timers.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $")
+SM_RCSID("@(#)$Id: timers.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
 
 #if _FFR_TIMERS
 # include <sys/types.h>
-# include <sys/time.h>
+# include <sm/time.h>
 # include "sendmail.h"
 # include <sys/resource.h>	/* Must be after sendmail.h for NCR MP-RAS */
 

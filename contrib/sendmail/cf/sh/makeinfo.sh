@@ -11,9 +11,7 @@
 # the sendmail distribution.
 #
 #
-#	$Id: makeinfo.sh,v 1.1.1.2 2006-02-25 02:33:55 laffer1 Exp $
-#
-# $FreeBSD: src/contrib/sendmail/cf/sh/makeinfo.sh,v 1.7 2002/06/11 21:16:35 gshapiro Exp $
+#	$Id: makeinfo.sh,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $
 #
 
 usewhoami=0
@@ -54,7 +52,7 @@ then
 else
 	host=`uname -n`
 fi
-echo '#####' built by $user@$host on `LC_ALL=C LC_TIME=C date`
+echo '#####' built by $user@$host on `date`
 echo '#####' in `pwd` | sed 's/\/tmp_mnt//'
 echo '#####' using $1 as configuration include directory | sed 's/\/tmp_mnt//'
 echo "define(\`__HOST__', $host)dnl"

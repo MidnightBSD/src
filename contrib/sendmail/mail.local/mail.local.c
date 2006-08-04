@@ -8,8 +8,6 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- * $FreeBSD: src/contrib/sendmail/mail.local/mail.local.c,v 1.26 2005/02/14 02:39:14 gshapiro Exp $
- *
  */
 
 #include <sm/gen.h>
@@ -20,7 +18,7 @@ SM_IDSTR(copyright,
      Copyright (c) 1990, 1993, 1994\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: mail.local.c,v 1.1.1.2 2006-02-25 02:33:57 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: mail.local.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
 
 #include <stdlib.h>
 #include <sm/errstring.h>
@@ -143,8 +141,6 @@ off_t	BodyLength;
 bool	EightBitMime = true;		/* advertise 8BITMIME in LMTP */
 char	ErrBuf[10240];			/* error buffer */
 int	ExitVal = EX_OK;		/* sysexits.h error value. */
-bool	nobiff = false;
-bool	nofsync = false;
 bool	HoldErrs = false;		/* Hold errors in ErrBuf */
 bool	LMTPMode = false;
 bool	BounceQuota = false;		/* permanent error when over quota */
@@ -227,19 +223,15 @@ main(argc, argv)
 		sm_exit(EX_CONFIG);
 	}
 #if HASHSPOOL
-	while ((ch = getopt(argc, argv, "7BbdD:f:h:r:lH:p:ns")) != -1)
+	while ((ch = getopt(argc, argv, "7bdD:f:h:r:lH:p:n")) != -1)
 #else /* HASHSPOOL */
-	while ((ch = getopt(argc, argv, "7BbdD:f:h:r:ls")) != -1)
+	while ((ch = getopt(argc, argv, "7bdD:f:h:r:l")) != -1)
 #endif /* HASHSPOOL */
 	{
 		switch(ch)
 		{
 		  case '7':		/* Do not advertise 8BITMIME */
 			EightBitMime = false;
-			break;
-
-		  case 'B':
-			nobiff = true;
 			break;
 
 		  case 'b':		/* bounce mail when over quota. */
@@ -277,9 +269,6 @@ main(argc, argv)
 			LMTPMode = true;
 			break;
 
-		  case 's':
-			nofsync++;
-			break;
 
 #if HASHSPOOL
 		  case 'H':
@@ -345,8 +334,7 @@ main(argc, argv)
 	argv += optind;
 
 	/* initialize biff structures */
-	if (!nobiff)
-		notifybiff(NULL);
+	notifybiff(NULL);
 
 	err = sm_mbdb_initialize(mbdbname);
 	if (err != EX_OK)
@@ -1268,12 +1256,8 @@ tryagain:
 
 	/* Get the starting offset of the new message */
 	curoff = lseek(mbfd, (off_t) 0, SEEK_END);
-
-	if (!nobiff)
-	{
-		(void) sm_snprintf(biffmsg, sizeof(biffmsg), "%s@%lld\n",
-				   name, (LONGLONG_T) curoff);
-	}
+	(void) sm_snprintf(biffmsg, sizeof(biffmsg), "%s@%lld\n",
+			   name, (LONGLONG_T) curoff);
 
 	/* Copy the message into the file. */
 	if (lseek(fd, (off_t) 0, SEEK_SET) == (off_t) -1)
@@ -1334,7 +1318,7 @@ tryagain:
 	}
 
 	/* Flush to disk, don't wait for update. */
-	if (!nofsync && fsync(mbfd) < 0)
+	if (fsync(mbfd) < 0)
 	{
 		mailerr("450 4.2.0", "%s: %s", path, sm_errstring(errno));
 err3:
@@ -1401,7 +1385,7 @@ err0:		(void) setreuid(0, 0);
 		/* Attempt to truncate back to pre-write size */
 		goto err3;
 	}
-	else if (!nobiff)
+	else
 		notifybiff(biffmsg);
 
 	if (setreuid(0, 0) < 0)
@@ -1580,7 +1564,7 @@ void
 usage()
 {
 	ExitVal = EX_USAGE;
-	mailerr(NULL, "usage: mail.local [-7] [-B] [-b] [-d] [-l] [-s] [-f from|-r from] [-h filename] user ...");
+	mailerr(NULL, "usage: mail.local [-7] [-b] [-d] [-l] [-f from|-r from] [-h filename] user ...");
 	sm_exit(ExitVal);
 }
 

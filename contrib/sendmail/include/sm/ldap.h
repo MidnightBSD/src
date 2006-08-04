@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2001-2002 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2001-2003, 2005 Sendmail, Inc. and its suppliers.
  *      All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- *	$Id: ldap.h,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $
+ *	$Id: ldap.h,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $
  */
 
 #ifndef	SM_LDAP_H
@@ -44,6 +44,7 @@
 #  define SM_LDAP_SINGLEMATCH	0x0001
 #  define SM_LDAP_MATCHONLY	0x0002
 #  define SM_LDAP_USE_ALLATTR	0x0004
+#  define SM_LDAP_SINGLEDN	0x0008
 
 struct sm_ldap_struct
 {

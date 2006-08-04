@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2004 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2004, 2006 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1986, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -14,9 +14,9 @@
 #include <sendmail.h>
 
 #if NAMED_BIND
-SM_RCSID("@(#)$Id: domain.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $ (with name server)")
+SM_RCSID("@(#)$Id: domain.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $ (with name server)")
 #else /* NAMED_BIND */
-SM_RCSID("@(#)$Id: domain.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $ (without name server)")
+SM_RCSID("@(#)$Id: domain.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $ (without name server)")
 #endif /* NAMED_BIND */
 
 #if NAMED_BIND
@@ -521,7 +521,7 @@ punt:
 			}
 # if NETINET6
 			freehostent(h);
-			hp = NULL;
+			h = NULL;
 # endif /* NETINET6 */
 		}
 		if (strlen(host) >= sizeof MXHostBuf)
@@ -972,11 +972,7 @@ nexttype:
 		/* avoid problems after truncation in tcp packets */
 		if (ret > sizeof(answer))
 			ret = sizeof(answer);
-		if (ret < 0)
-		{
-			*statp = EX_SOFTWARE;
-			return false;
-		}
+		SM_ASSERT(ret >= 0);
 
 		/*
 		**  Appear to have a match.  Confirm it by searching for A or

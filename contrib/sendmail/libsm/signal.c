@@ -8,10 +8,10 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: signal.c,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $")
+SM_RCSID("@(#)$Id: signal.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
 
 #if SM_CONF_SETITIMER
-# include <sys/time.h>
+# include <sm/time.h>
 #endif /* SM_CONF_SETITIMER */
 #include <errno.h>
 #include <stdlib.h>

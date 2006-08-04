@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2005 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2006 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: daemon.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $")
+SM_RCSID("@(#)$Id: daemon.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $")
 
 #if defined(SOCK_STREAM) || defined(__GNU_LIBRARY__)
 # define USE_SOCK_STREAM	1
@@ -34,7 +34,7 @@ SM_RCSID("@(#)$Id: daemon.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $")
 #  include <openssl/rand.h>
 #endif /* STARTTLS */
 
-#include <sys/time.h>
+#include <sm/time.h>
 
 #if IP_SRCROUTE && NETINET
 # include <netinet/in_systm.h>
@@ -89,9 +89,6 @@ typedef struct daemon DAEMON_T;
 
 #define SAFE_NOTSET	(-1)	/* SuperSafe (per daemon) option not set */
 /* see also sendmail.h: SuperSafe values */
-
-#define DM_NOTSET	(-1)	/* DeliveryMode (per daemon) option not set */
-/* see also sendmail.h: values for e_sendmode -- send modes */
 
 static void		connecttimeout __P((int));
 static int		opendaemonsocket __P((DAEMON_T *, bool));
@@ -390,8 +387,8 @@ getrequests(e)
 #endif /* _FFR_QUEUE_RUN_PARANOIA */
 			}
 #if _FFR_QUEUE_RUN_PARANOIA
-			else if (QueueIntvl > 0 &&
-				 lastrun + QueueIntvl + 60 < now)
+			else if (CheckQueueRunners > 0 && QueueIntvl > 0 &&
+				 lastrun + QueueIntvl + CheckQueueRunners < now)
 			{
 
 				/*
@@ -523,18 +520,22 @@ getrequests(e)
 
 			syserr("getrequests: accept");
 
-			/* arrange to re-open the socket next time around */
-			(void) close(Daemons[curdaemon].d_socket);
-			Daemons[curdaemon].d_socket = -1;
+			if (curdaemon >= 0)
+			{
+				/* arrange to re-open socket next time around */
+				(void) close(Daemons[curdaemon].d_socket);
+				Daemons[curdaemon].d_socket = -1;
 #if SO_REUSEADDR_IS_BROKEN
-			/*
-			**  Give time for bound socket to be released.
-			**  This creates a denial-of-service if you can
-			**  force accept() to fail on affected systems.
-			*/
+				/*
+				**  Give time for bound socket to be released.
+				**  This creates a denial-of-service if you can
+				**  force accept() to fail on affected systems.
+				*/
 
-			Daemons[curdaemon].d_refuse_connections_until = curtime() + 15;
+				Daemons[curdaemon].d_refuse_connections_until =
+					curtime() + 15;
 #endif /* SO_REUSEADDR_IS_BROKEN */
+			}
 			continue;
 		}
 
@@ -764,7 +765,6 @@ getrequests(e)
 					set_delivery_mode(
 						Daemons[curdaemon].d_dm, e);
 #endif /* _FFR_DM_PER_DAEMON */
-					
 
 				sm_setproctitle(true, e, "startup with %s",
 						anynet_ntoa(&RealHostAddr));
@@ -1455,6 +1455,12 @@ setsockaddroptions(p, d)
 	if (d->d_addr.sa.sa_family == AF_UNSPEC)
 		d->d_addr.sa.sa_family = AF_INET;
 #endif /* NETINET */
+#if _FFR_SS_PER_DAEMON
+	d->d_supersafe = SAFE_NOTSET;
+#endif /* _FFR_SS_PER_DAEMON */
+#if _FFR_DM_PER_DAEMON
+	d->d_dm = DM_NOTSET;
+#endif /* _FFR_DM_PER_DAEMON */
 
 	while (p != NULL)
 	{
@@ -1476,12 +1482,6 @@ setsockaddroptions(p, d)
 			continue;
 		if (isascii(*f) && islower(*f))
 			*f = toupper(*f);
-#if _FFR_SS_PER_DAEMON
-		d->d_supersafe = SAFE_NOTSET;
-#endif /* _FFR_SS_PER_DAEMON */
-#if _FFR_DM_PER_DAEMON
-		d->d_dm = DM_NOTSET;
-#endif /* _FFR_DM_PER_DAEMON */
 
 		switch (*f)
 		{
@@ -1496,7 +1496,7 @@ setsockaddroptions(p, d)
 			  case SM_QUEUE:
 			  case SM_DEFER:
 			  case SM_DELIVER:
-			  case SM_FORK:	
+			  case SM_FORK:
 				d->d_dm = *v;
 				break;
 			  default:
@@ -2087,7 +2087,7 @@ makeconnection(host, port, mci, e, enough)
 	SOCKADDR clt_addr;
 	int save_errno = 0;
 	volatile SOCKADDR_LEN_T addrlen;
-	volatile bool firstconnect;
+	volatile bool firstconnect = true;
 	SM_EVENT *volatile ev = NULL;
 #if NETINET6
 	volatile bool v6found = false;
@@ -2490,7 +2490,6 @@ gothostent:
 	}
 #endif /* XLA */
 
-	firstconnect = true;
 	for (;;)
 	{
 		if (tTd(16, 1))

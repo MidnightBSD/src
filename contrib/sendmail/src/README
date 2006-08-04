@@ -9,7 +9,7 @@
 # the sendmail distribution.
 #
 #
-#	$Id: README,v 1.1.1.2 2006-02-25 02:33:58 laffer1 Exp $
+#	$Id: README,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $
 #
 
 This directory contains the source files for sendmail(TM).
@@ -502,6 +502,12 @@ NEEDINTERRNO	Set this if <errno.h> does not declare errno, i.e., if an
 		extern int errno;
 USE_TTYPATH	Set this to 1 to enable ErrorMode=write.
 USESYSCTL	Use sysctl(3) to determine the number of CPUs in a system.
+HASSNPRINTF	Set this to 1 if your OS has a working snprintf(3), i.e.,
+		it properly obeys the size of the buffer and returns the
+		number of characters that would have been printed if the
+		size were unlimited.
+LDAP_REFERRALS	Set this if you want to use the -R flag (do not auto chase
+		referrals) for LDAP maps (requires -DLDAPMAP).
 
 
 +-----------------------+
@@ -1710,6 +1716,18 @@ Regular Expressions (MAP_REGEX)
 	Make sure, your compiler reads regex.h from the distribution,
 	not from /usr/include, otherwise sendmail will dump a core.
 
+Fedora Core 5, 64 bit version
+	If the ld stage fails with undefined functions like
+	__res_querydomain, __dn_expand
+	then add these lines to devtools/Site/site.config.m4
+
+	APPENDDEF(`confLIBDIRS', `-L/usr/lib64')
+	APPENDDEF(`confINCDIRS', `-I/usr/include/bind9')
+
+	and rebuild (sh ./Build -c).
+
+	Problem noted by Daniel Krones, solution suggested by
+	Anthony Howe.
 
 +--------------+
 | MANUAL PAGES |
@@ -1826,4 +1844,4 @@ util.c		Some general purpose routines used by sendmail.
 version.c	The version number and information about this
 		version of sendmail.
 
-(Version $Revision: 1.1.1.2 $, last update $Date: 2006-02-25 02:33:58 $ )
+(Version $Revision: 1.1.1.3 $, last update $Date: 2006-08-04 02:03:04 $ )

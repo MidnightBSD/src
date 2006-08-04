@@ -9,7 +9,6 @@
 # forth in the LICENSE file which can be found at the top level of
 # the sendmail distribution.
 #
-# $FreeBSD: src/contrib/sendmail/cf/m4/cfhead.m4,v 1.17 2004/08/01 01:16:14 gshapiro Exp $
 #
 
 ######################################################################
@@ -269,8 +268,7 @@ define(`_REC_AUTH_', `$.$?{auth_type}(authenticated')
 define(`_REC_FULL_AUTH_', `$.$?{auth_type}(user=${auth_authen} $?{auth_author}author=${auth_author} $.mech=${auth_type}')
 define(`_REC_HDR_', `$?sfrom $s $.$?_($?s$|from $.$_)')
 define(`_REC_END_', `for $u; $|;
-	$.$b$?g
-	(envelope-from $g)$.')
+	$.$b')
 define(`_REC_TLS_', `(version=${tls_version} cipher=${cipher} bits=${cipher_bits} verify=${verify})$.$?u')
 define(`_REC_BY_', `$.by $j ($v/$Z)$?r with $r$. id $i$?{tls_version}')
 define(`confRECEIVED_HEADER', `_REC_HDR_
@@ -308,4 +306,4 @@ define(`confMILTER_MACROS_EOM', `{msg_id}')
 
 
 divert(0)dnl
-VERSIONID(`$Id: cfhead.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
+VERSIONID(`$Id: cfhead.m4,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $')

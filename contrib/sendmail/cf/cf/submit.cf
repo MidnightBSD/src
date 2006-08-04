@@ -16,8 +16,8 @@
 #####
 #####		SENDMAIL CONFIGURATION FILE
 #####
-##### built by ca@wiz.smi.sendmail.com on Sun Mar 27 16:38:48 PST 2005
-##### in /extra/home/ca/sm-8.13.4/OpenSource/sendmail-8.13.4/cf/cf
+##### built by ca@nother.smi.sendmail.com on Mon Jun 5 15:34:16 PDT 2006
+##### in /extra/home/ca/sm-8.13.7/OpenSource/sendmail-8.13.7/cf/cf
 ##### using ../ as configuration include directory
 #####
 ######################################################################
@@ -27,15 +27,15 @@
 ######################################################################
 ######################################################################
 
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
 
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
 
 
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
 
 # level 10 config file format
 V10/Berkeley
@@ -114,7 +114,7 @@ D{MTAHost}[127.0.0.1]
 
 
 # Configuration version number
-DZ8.13.4/Submit
+DZ8.13.7/Submit
 
 
 ###############
@@ -252,7 +252,7 @@ O PrivacyOptions=goaway,noetrn,restrictqrun
 #O MinQueueAge=30m
 
 # how many jobs can you process in the queue?
-#O MaxQueueRunSize=10000
+#O MaxQueueRunSize=0
 
 # perform initial split of envelope without checking MX records
 #O FastSplit=1
@@ -380,13 +380,13 @@ O TimeZoneSpec=
 #O HostsFile=/etc/hosts
 
 # dialup line delay on connection failure
-#O DialDelay=10s
+#O DialDelay=0s
 
 # action to take if there are no recipients in the message
-#O NoRecipientAction=add-to-undisclosed
+#O NoRecipientAction=none
 
 # chrooted environment for writing to files
-#O SafeFileEnvironment=/arch
+#O SafeFileEnvironment
 
 # are colons OK in addresses?
 #O ColonOkInAddr=True
@@ -1283,7 +1283,7 @@ R$*			$#relay $@ ${MTAHost} $: $1 < @ $j >
 ###   Local and Program Mailer specification   ###
 ##################################################
 
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
 
 #
 #  Envelope sender rewriting
@@ -1335,7 +1335,7 @@ Mprog,		P=[IPC], F=lmDFMuXk5, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL, D=$z:/,
 ###   SMTP Mailer specification   ###
 #####################################
 
-#####  $Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $  #####
+#####  $Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $  #####
 
 #
 #  common sender and masquerading recipient rewriting
@@ -1441,7 +1441,7 @@ Mrelay,		P=[IPC], F=mDFMuXa8k, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=
 # #
 # 
 # divert(0)dnl
-# VERSIONID(`$Id: submit.cf,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
+# VERSIONID(`$Id: submit.cf,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $')
 # define(`confCF_VERSION', `Submit')dnl
 # define(`__OSTYPE__',`')dnl dirty hack to keep proto.m4 from complaining
 # define(`_USE_DECNET_SYNTAX_', `1')dnl support DECnet

@@ -9,12 +9,11 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- * $FreeBSD: src/contrib/sendmail/src/mci.c,v 1.20 2005/06/07 04:17:21 gshapiro Exp $
  */
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: mci.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $")
+SM_RCSID("@(#)$Id: mci.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $")
 
 #if NETINET || NETINET6
 # include <arpa/inet.h>
@@ -48,11 +47,9 @@ static int	mci_read_persistent __P((SM_FILE_T *, MCI *));
 **	MciCacheTimeout is the time (in seconds) that a connection
 **	is permitted to survive without activity.
 **
-**	We actually try any cached connections by sending a NOOP
-**	before we use them; if the NOOP fails we close down the
-**	connection and reopen it.  Note that this means that a
-**	server SMTP that doesn't support NOOP will hose the
-**	algorithm -- but that doesn't seem too likely.
+**	We actually try any cached connections by sending a RSET
+**	before we use them; if the RSET fails we close down the
+**	connection and reopen it (see smtpprobe()).
 **
 **	The persistent MCI code is donated by Mark Lovell and Paul
 **	Vixie.  It is based on the long term host status code in KJS
@@ -925,9 +922,17 @@ mci_read_persistent(fp, mci)
 	char buf[MAXLINE];
 
 	if (fp == NULL)
+	{
 		syserr("mci_read_persistent: NULL fp");
+		/* NOTREACHED */
+		return -1;
+	}
 	if (mci == NULL)
+	{
 		syserr("mci_read_persistent: NULL mci");
+		/* NOTREACHED */
+		return -1;
+	}
 	if (tTd(56, 93))
 	{
 		sm_dprintf("mci_read_persistent: fp=%lx, mci=",
@@ -1127,6 +1132,9 @@ mci_traverse_persistent(action, pathname)
 		char *newptr;
 		struct dirent *e;
 		char newpath[MAXPATHLEN];
+#if MAXPATHLEN <= MAXNAMLEN - 3
+ ERROR "MAXPATHLEN <= MAXNAMLEN - 3"
+#endif /* MAXPATHLEN  <= MAXNAMLEN - 3 */
 
 		if ((d = opendir(pathname)) == NULL)
 		{

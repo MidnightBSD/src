@@ -1,6 +1,6 @@
 divert(-1)
 #
-# Copyright (c) 2000-2002 Sendmail, Inc. and its suppliers.
+# Copyright (c) 2000-2002, 2005, 2006 Sendmail, Inc. and its suppliers.
 #	All rights reserved.
 #
 # By using this file, you agree to the terms and conditions set
@@ -9,16 +9,18 @@ divert(-1)
 #
 #
 
+ifelse(defn(`_ARG_'), `', 
+	`errprint(`*** ERROR: missing argument for FEATURE(`enhdnsbl')')')
 divert(0)
 ifdef(`_EDNSBL_R_',`dnl',`dnl
-VERSIONID(`$Id: enhdnsbl.m4,v 1.1.1.2 2006-02-25 02:33:54 laffer1 Exp $')
+VERSIONID(`$Id: enhdnsbl.m4,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $')
 LOCAL_CONFIG
 define(`_EDNSBL_R_',`')dnl
 # map for enhanced DNS based blacklist lookups
 Kednsbl dns -R A -a. -T<TMP> -r`'ifdef(`EDNSBL_TO',`EDNSBL_TO',`5')
 ')
 divert(-1)
-define(`_EDNSBL_SRV_', `ifelse(len(X`'_ARG_),`1',`blackholes.mail-abuse.org',_ARG_)')dnl
+define(`_EDNSBL_SRV_', `_ARG_')dnl
 define(`_EDNSBL_MSG_', `ifelse(len(X`'_ARG2_),`1',`"550 Rejected: " $`'&{client_addr} " listed at '_EDNSBL_SRV_`"',`_ARG2_')')dnl
 define(`_EDNSBL_MSG_TMP_', `ifelse(_ARG3_,`t',`"451 Temporary lookup failure of " $`'&{client_addr} " at '_EDNSBL_SRV_`"',`_ARG3_')')dnl
 define(`_EDNSBL_MATCH_', `ifelse(len(X`'_ARG4_),`1',`$`'+',_ARG4_)')dnl
@@ -29,7 +31,7 @@ R$-.$-.$-.$-		$: <?> $(ednsbl $4.$3.$2.$1._EDNSBL_SRV_. $: OK $)
 R<?>OK			$: OKSOFAR
 ifelse(len(X`'_ARG3_),`1',
 `R<?>$+<TMP>		$: TMPOK',
-`R<?>$+<TMP>		$#error $@ 4.7.1 $: _EDNSBL_MSG_TMP_')
+`R<?>$+<TMP>		$#error $@ 4.4.3 $: _EDNSBL_MSG_TMP_')
 R<?>_EDNSBL_MATCH_	$#error $@ 5.7.1 $: _EDNSBL_MSG_
 ifelse(len(X`'_ARG5_),`1',`dnl',
 `R<?>_ARG5_	$#error $@ 5.7.1 $: _EDNSBL_MSG_')

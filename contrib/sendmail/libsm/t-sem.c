@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2001 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2000-2001, 2005-2006 Sendmail, Inc. and its suppliers.
  *      All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -8,7 +8,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: t-sem.c,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $")
+SM_RCSID("@(#)$Id: t-sem.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
 
 #include <stdio.h>
 
@@ -307,7 +307,7 @@ main(argc, argv)
 		pid_t pid;
 
 		printf("This test takes about 8 seconds.\n");
-		printf("If it takes longer than 30 second, please interrupt it\n");
+		printf("If it takes longer than 30 seconds, please interrupt it\n");
 		printf("and compile again without semaphore support, i.e.,");
 		printf("-DSM_CONF_SEM=0\n");
 		if ((pid = fork()) < 0)

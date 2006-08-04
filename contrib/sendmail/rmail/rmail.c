@@ -8,8 +8,6 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- * $FreeBSD: src/contrib/sendmail/rmail/rmail.c,v 1.13 2002/08/28 18:12:09 gshapiro Exp $
- *
  */
 
 #include <sm/gen.h>
@@ -20,7 +18,7 @@ SM_IDSTR(copyright,
      Copyright (c) 1988, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: rmail.c,v 1.1.1.2 2006-02-25 02:33:57 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: rmail.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
 
 /*
  * RMAIL -- UUCP mail server.
@@ -278,11 +276,7 @@ main(argc, argv)
 	args[i++] = _PATH_SENDMAIL;	/* Build sendmail's argument list. */
 	args[i++] = "-G";		/* relay submission */
 	args[i++] = "-oee";		/* No errors, just status. */
-#ifdef QUEUE_ONLY
 	args[i++] = "-odq";		/* Queue it, don't try to deliver. */
-#else
-	args[i++] = "-odi";		/* Deliver in foreground. */
-#endif
 	args[i++] = "-oi";		/* Ignore '.' on a line by itself. */
 
 	/* set from system and protocol used */

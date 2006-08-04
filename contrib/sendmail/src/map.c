@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: map.c,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $")
+SM_RCSID("@(#)$Id: map.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $")
 
 #if LDAPMAP
 # include <sm/ldap.h>
@@ -3493,7 +3493,7 @@ ldapmap_lookup(map, name, av, statp)
 	char *result = NULL;
 	SM_RPOOL_T *rpool;
 	SM_LDAP_STRUCT *lmap = NULL;
-	char keybuf[MAXNAME + 1];
+	char keybuf[MAXKEY];
 
 	if (tTd(38, 20))
 		sm_dprintf("ldapmap_lookup(%s, %s)\n", map->map_mname, name);
@@ -3551,6 +3551,10 @@ ldapmap_lookup(map, name, av, statp)
 		flags |= SM_LDAP_SINGLEMATCH;
 	if (bitset(MF_MATCHONLY, map->map_mflags))
 		flags |= SM_LDAP_MATCHONLY;
+# if _FFR_LDAP_SINGLEDN
+	if (bitset(MF_SINGLEDN, map->map_mflags))
+		flags |= SM_LDAP_SINGLEDN;
+# endif /* _FFR_LDAP_SINGLEDN */
 
 	/* Create an rpool for search related memory usage */
 	rpool = sm_rpool_new_x(NULL);
@@ -3910,6 +3914,12 @@ ldapmap_parseargs(map, args)
 		  case '1':
 			map->map_mflags |= MF_SINGLEMATCH;
 			break;
+
+# if _FFR_LDAP_SINGLEDN
+		  case '2':
+			map->map_mflags |= MF_SINGLEDN;
+			break;
+# endif /* _FFR_LDAP_SINGLEDN */
 
 			/* args stolen from ldapsearch.c */
 		  case 'R':		/* don't auto chase referrals */
@@ -5982,6 +5992,10 @@ user_map_lookup(map, key, av, statp)
 		  case 7:
 			rwval = user.mbdb_shell;
 			break;
+		  default:
+			syserr("user_map %s: bogus field %d",
+				map->map_mname, map->map_valcolno);
+			return NULL;
 		}
 		return map_rewrite(map, rwval, strlen(rwval), av);
 	}
