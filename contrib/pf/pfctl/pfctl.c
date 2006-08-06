@@ -60,7 +60,7 @@ __FBSDID("$FreeBSD: src/contrib/pf/pfctl/pfctl.c,v 1.6 2005/05/03 16:55:20 mlaie
 
 #ifdef __FreeBSD__
 #define HTONL(x)	(x) = htonl((__uint32_t)(x))
-#endif
+#endif 
 
 #ifdef __MidnightBSD__
 #define HTONL(x)	(x) = htonl((__uint32_t)(x))
@@ -232,7 +232,12 @@ pfctl_enable(int dev, int opts)
 			errx(1, "pf already enabled");
 #ifdef __FreeBSD__
 		else if (errno == ESRCH)
-			errx(1, "pfil registeration failed");
+
+			errx(1, "pfil registration failed");
+#endif
+#ifdef __MidnightBSD__
+		else if (errno == ESRCH)
+			errx(1, "pfil registration failed");
 #endif
 		else
 			err(1, "DIOCSTART");
@@ -1047,7 +1052,7 @@ pfctl_rules(int dev, char *filename, int opts, char *anchorname,
 			    pfctl_add_trans(t, PF_RULESET_RDR, anchorname))
 				ERR("pfctl_rules");
 		}
-		if (((altqsupport && (pf.loadopt & PFCTL_FLAG_ALTQ) != 0)i) {
+		if (((altqsupport && (pf.loadopt & PFCTL_FLAG_ALTQ) != 0))) {
 			if (pfctl_add_trans(t, PF_RULESET_ALTQ, anchorname))
 				ERR("pfctl_rules");
 		}
@@ -1507,8 +1512,10 @@ pfctl_clear_rule_counters(int dev, int opts)
 int
 pfctl_test_altqsupport(int dev, int opts)
 {
-#if defined(__FreeBSD__) && !defined(ENABLE_ALTQ)
+#if defined(__MidnightBSD__) && !defined(ENABLE_ALTQ)
 	return (0);
+#elseif defined(__FreeBSD__) && !defined(ENABLE_ALTQ)
+	return (0); 
 #else
 	struct pfioc_altq pa;
 
@@ -1744,7 +1751,7 @@ main(int argc, char *argv[])
 		/* turn off options */
 		opts &= ~ (PF_OPT_DISABLE | PF_OPT_ENABLE);
 		clearopt = showopt = debugopt = NULL;
-#if defined(__FreeBSD__) && !defined(ENABLE_ALTQ)
+#if defined(__MidnightBSD__) && !defined(ENABLE_ALTQ)
 		altqsupport = 0;
 #else
 		altqsupport = 1;
