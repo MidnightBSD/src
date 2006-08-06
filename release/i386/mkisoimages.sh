@@ -7,7 +7,7 @@
 # $FreeBSD: src/release/i386/mkisoimages.sh,v 1.13 2005/01/30 21:10:51 kensmith Exp $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
-# for a FreeBSD release.  It is considered architecture dependent since each
+# for a MidnightBSD release.  It is considered architecture dependent since each
 # platform has a slightly unique way of making bootable CDs.  This script
 # is also allowed to generate any number of images since that is more of
 # publishing decision than anything else.
@@ -23,7 +23,7 @@
 # extra-bits-dir, if provided, contains additional files to be merged
 # into base-bits-dir as part of making the image.
 
-publisher="The FreeBSD Project.  http://www.freebsd.org/"
+publisher="The MidnightBSD Project.  http://www.midnightbsd.org/"
 
 if [ "x$1" = "x-b" ]; then
 	bootable="-b boot/cdboot -no-emul-boot"

@@ -14,7 +14,7 @@ alias ll="ls -l"
 alias m="more -e"
 
 echo '+---------------------------------------------------------------+'
-echo '| You are now running from FreeBSD "fixit" media.               |'
+echo '| You are now running from MidnightBSD "fixit" media.           |'
 echo '| ------------------------------------------------------------- |'
 echo "| When you're finished with this shell, please type exit.       |"
 echo '| The fixit media is mounted as /mnt2.                          |'

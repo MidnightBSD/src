@@ -18,11 +18,11 @@
 # Set these, release builder!
 #
 # Fixed version:
-#BUILDNAME=6.0-STABLE
+#BUILDNAME=0.1-STABLE
 #
 # Automatic SNAP versioning:
 DATE != date +%Y%m%d
-BASE = 6.0
+BASE = 0.1
 BUILDNAME?=${BASE}-${DATE}-SNAP
 #
 #CHROOTDIR=/junk/release
@@ -49,7 +49,7 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 #CVSPREFIX="/usr/bin/time"
 #
 # Where the CVS repository is
-#CVSROOT="/home/ncvs"
+#CVSROOT="/home/cvs"
 #
 # Non-zero if ${RELEASETAG} is in the form "RELENG_ver_RELEASE"; we
 # are building an official release.  Otherwise, we are building for
@@ -1021,20 +1021,20 @@ iso.1:
 	@echo "Creating ISO images..."
 .if defined(CD_BOOT)
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh ${BOOTABLE} \
-	    FreeBSD_bootonly \
+	    MidnightBSD_bootonly \
 	    ${CD}/${BUILDNAME}-${TARGET}-bootonly.iso ${CD_BOOT}
 .endif
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh ${BOOTABLE} \
-	    FreeBSD_Install \
+	    MidnightBSD_Install \
 	    ${CD}/${BUILDNAME}-${TARGET}-disc1.iso ${CD_DISC1} \
 	    ${CD_DISC1_PKGS}
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh \
-	    FreeBSD_Packages \
+	    MidnightBSD_Packages \
 	    ${CD}/${BUILDNAME}-${TARGET}-disc2.iso ${CD_DISC2} \
 	    ${CD_DISC2_PKGS}
 .if defined(SEPARATE_LIVEFS)
 	@sh ${.CURDIR}/${TARGET_ARCH}/mkisoimages.sh ${BOOTABLE} \
-	    FreeBSD_LiveFS \
+	    MidnightBSD_LiveFS \
 	    ${CD}/${BUILDNAME}-${TARGET}-livefs.iso ${CD_LIVEFS}
 .endif
 	@echo "Generating MD5 and SHA256 sums..."
