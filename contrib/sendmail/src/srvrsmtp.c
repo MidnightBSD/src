@@ -17,7 +17,7 @@
 # include <libmilter/mfdef.h>
 #endif /* MILTER */
 
-SM_RCSID("@(#)$Id: srvrsmtp.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
+SM_RCSID("@(#)$Id: srvrsmtp.c,v 1.1.1.4 2006-08-12 01:05:38 laffer1 Exp $")
 
 #include <sm/time.h>
 #include <sm/fdset.h>
@@ -851,8 +851,9 @@ smtp(nullserver, d_flags, e)
 		char state;
 		char *response;
 
-		response = milter_connect(peerhostname, RealHostAddr,
-					  e, &state);
+		q = macvalue(macid("{client_name}"), e);
+		SM_ASSERT(q != NULL);
+		response = milter_connect(q, RealHostAddr, e, &state);
 		switch (state)
 		{
 		  case SMFIR_REPLYCODE:	/* REPLYCODE shouldn't happen */
