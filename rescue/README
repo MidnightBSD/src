@@ -1,3 +1,5 @@
+$MidnightBSD$
+
 The /rescue build system here has three goals:
 
 1) Produce a reliable standalone set of /rescue tools.
@@ -41,4 +43,3 @@ To compile:
 Note that rebuilds don't always work correctly; if you run into
 trouble, try 'make clean' before recompiling.
 
-$FreeBSD: src/rescue/README,v 1.1 2003/06/29 18:35:36 gordon Exp $

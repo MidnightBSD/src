@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/rescue/librescue/Makefile,v 1.6 2004/11/13 20:40:29 bz Exp $
-#
+# $MidnightBSD$
 
 # Certain library entries have hard-coded references to
 # /bin, /sbin, etc, that require those entries to be
