@@ -1,4 +1,4 @@
-This is the FreeBSD DiskLabel Editor.
+This is the MidnightBSD DiskLabel Editor.
 
 NOTE: If you're entering this editor from the update procedure then
 you probably shouldn't (C)reate anything at all but rather use only
@@ -9,7 +9,7 @@ If you would like the label editor to do most of the following for
 you, simply type `A' for automatic partitioning of the disk.
 
 If you wish to create partitions manually you may do so by moving the
-highlighted selection bar with the arrow keys over the FreeBSD
+highlighted selection bar with the arrow keys over the MidnightBSD
 partition(s) displayed at the top of the screen.  Typing (C)reate
 while a partition with available free space is selected will allow you
 to create a BSD partition inside of it using some or all of its
@@ -67,11 +67,11 @@ expect a lot of mail or news and do not want to make /var its own
 partition.
 
 If you're new to this installation, you might also want to read the
-following explanation of how FreeBSD's new "slice" paradigm for
+following explanation of how MidnightBSD's new "slice" paradigm for
 looking at disk storage works:
 
 
-In FreeBSD's new system, a device name can be broken up into up to 3
+In MidnightBSD's new system, a device name can be broken up into up to 3
 parts.  Take a typical name like ``/dev/da0s1a'':
 
       The first three characters represent the drive name.  If we had
@@ -80,11 +80,11 @@ parts.  Take a typical name like ``/dev/da0s1a'':
 
       Next you have the "slice" (or "FDISK Partition") number,
       as seen in the Partition Editor.  Assuming that our da0
-      contained two slices, a FreeBSD slice and a DOS slice, that
+      contained two slices, a MidnightBSD slice and a DOS slice, that
       would give us /dev/da0s1 and /dev/da0s2 as device entries pointing
       to the entire slices.
 
-      Next, if a slice is a FreeBSD slice, you can have a number of
+      Next, if a slice is a MidnightBSD slice, you can have a number of
       (confusingly named) "partitions" inside of it.
 
       These partitions are where various filesystems or swap areas live,
@@ -98,14 +98,14 @@ parts.  Take a typical name like ``/dev/da0s1a'':
               da0s1e          /usr
 
 Once you understand all this, then the purpose of the label editor
-becomes fairly clear:  You're carving up the FreeBSD slices displayed
+becomes fairly clear:  You're carving up the MidnightBSD slices displayed
 at the top of the screen into smaller pieces, which are displayed in
-the middle of the screen, and then assigning FreeBSD file system names
+the middle of the screen, and then assigning MidnightBSD file system names
 (mount points) to them.
 
 You can also use the label editor to mount existing partitions/slices
 into your filesystem hierarchy, as is frequently done for DOS FAT
-slices.  For FreeBSD partitions, you can also toggle the "newfs" state
+slices.  For MidnightBSD partitions, you can also toggle the "newfs" state
 so that the partitions are either (re)created from scratch or simply
 checked and mounted (the contents are preserved).
 
@@ -126,22 +126,22 @@ with significant activity can temporarily overflow if the soft updates
 policy results in free'd blocks not being "garbage collected" as fast
 as they're being requested.
 
-The UNIX File System (UFS) on FreeBSD supports two different on-disk
+The UNIX File System (UFS) on MidnightBSD supports two different on-disk
 layouts: UFS1 and UFS2.  UFS1 was the default file system in use
-through FreeBSD 5.0-RELEASE; as of FreeBSD 5.1-RELEASE, the default
-is now UFS2, with the exception of the PC98 platform.  UFS2 provides
-sparse inode allocation (faster fsck), 64-bit storage pointers (larger
-maximum size), and native extended attributes (required for ACLs, MAC,
+through FreeBSD 5.0-RELEASE; as of FreeBSD 5.1-RELEASE and MidnightBSD,
+the default is now UFS2, with the exception fo the PC98 platform.
+UFS2 provides sparse inode allocation (faster fsck), 64-bit storage pointers 
+(larger maximum size), and native extended attributes (required for ACLs, MAC,
 and other advanced security and file system services).  The selection
 of UFS1 or UFS2 must be made when the file system is created--later
 conversion is not currently possible.  UFS2 is the recommended file
-system, but if disks are to be used on older FreeBSD systems, UFS1
+system, but if disks are to be used on older MidnightBSD systems, UFS1
 improves portability.  When dual-booting between FreeBSD 4.x or
-earlier and FreeBSD 5.x, UFS1 file systems will be accessible from
-both.  To toggle a file system to UFS1, press '1'.  To restore it to
+earlier and MidnightBSD or FreeBSD 5.x, UFS1 file systems will be accessible 
+from both.  To toggle a file system to UFS1, press '1'.  To restore it to
 UFS2, press '2'.
 
-WARNING: FreeBSD on i386 is currently unable to boot from root file
+WARNING: MidnightBSD on i386 is currently unable to boot from root file
 systems larger than 1.5TB.
 
 To add additional flags to the newfs command line for UFS file

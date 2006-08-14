@@ -17,7 +17,7 @@ Install menu or use the (W)rite option here!  You're working with what
 is essentially a copy of the disk label(s), both here and in the Label
 Editor.
 
-If you want to use the entire disk for FreeBSD, type `A'.  Slices will
+If you want to use the entire disk for MidnightBSD, type `A'.  Slices will
 be aligned to fictitious cylinder boundaries and space will be reserved
 in front of the FreeBSD slice for a [future] possible boot manager.
 

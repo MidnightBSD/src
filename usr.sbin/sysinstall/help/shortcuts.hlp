@@ -19,7 +19,7 @@ disk                    Which disk to operate on (ad0, da0, etc).
 domainname              Domain name
 editor                  Which screen editor to use
 ifconfig_<iface>        For each <iface> in network_devices
-ftpDirectory            Root of the FreeBSD distribution tree on FTP server
+ftpDirectory            Root of the MidnightBSD distribution tree on FTP server
 ftpOnError              Set to retry or abort
 ftpPass                 Which password to use when logging into FTP server
 ftp                     Which FTP site/dir to use (URL ftp://site/dir/..)
@@ -43,7 +43,7 @@ noConfirm               Don't ask for confirmation on non-fatal errors
 ntpDate                 Which ntp clock synchronization server to use
 pcnfsd                  Install the PCNFSD package 
 ports                   Path to the ports collection
-releaseName             Which FreeBSD release to install
+releaseName             Which MidnightBSD release to install
 rootSize                Size of the root partition to create for Auto
 routedflags             Which flags to pass to routed, if enabled
 serialSpeed             How fast to run a SLIP/PPP connection

@@ -14,7 +14,7 @@ item before leaving the menu.
 The current "canned" installations are provided:
 
 All:            The base distribution, man pages, dictionary files,
-                profiling libraries, the FreeBSD compatibility libraries,
+                profiling libraries, the MidnightBSD compatibility libraries,
                 the complete source tree, games and your choice of XFree86
                 distribution components.
 

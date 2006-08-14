@@ -119,7 +119,7 @@ Install Root:  Specify some directory other than / as your "root".
     This should be left as / unless you have a really good reason to
     change it.  One good reason might be if you were installing to a
     disk other than your own, as might happen if you needed to prepare a
-    disk for another machine which couldn't load FreeBSD directly
+    disk for another machine which couldn't load MidnightBSD directly
     for some reason.
 
     Note:  If you set this option, you will only be able to install
