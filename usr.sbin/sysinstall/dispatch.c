@@ -4,6 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.47.2.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995

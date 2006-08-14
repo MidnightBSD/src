@@ -1,6 +1,7 @@
 /*
  * Miscellaneous support routines..
- *
+ * 
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/misc.c,v 1.43 2003/01/06 17:11:46 obrien Exp $
  *
  * Copyright (c) 1995

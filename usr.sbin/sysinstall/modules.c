@@ -23,6 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/modules.c,v 1.7 2003/08/20 06:24:12 imp Exp $
  */
 

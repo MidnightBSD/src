@@ -213,7 +213,7 @@ DMenu MenuIndex = {
 #endif
       { " Disklabel",		"The disk Label editor",		NULL, diskLabelEditor },
       { " Dists, All",		"Root of the distribution tree.",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
-      { " Dists, Basic",		"Basic FreeBSD distribution menu.",	NULL, dmenuSubmenu, NULL, &MenuSubDistributions },
+      { " Dists, Basic",		"Basic MidnightBSD distribution menu.",	NULL, dmenuSubmenu, NULL, &MenuSubDistributions },
       { " Dists, Developer",	"Select developer's distribution.",	checkDistDeveloper, distSetDeveloper },
       { " Dists, Src",		"Src distribution menu.",		NULL, dmenuSubmenu, NULL, &MenuSrcDistributions },
       { " Dists, X Developer",	"Select X developer's distribution.",	checkDistXDeveloper, distSetXDeveloper },
@@ -295,7 +295,7 @@ DMenu MenuIndex = {
 DMenu MenuInitial = {
     DMENU_NORMAL_TYPE,
     "sysinstall Main Menu",				/* title */
-    "Welcome to the FreeBSD installation and configuration tool.  Please\n" /* prompt */
+    "Welcome to the MidnightBSD installation and configuration tool.  Please\n" /* prompt */
     "select one of the options below by using the arrow keys or typing the\n"
     "first character of the option name you're interested in.  Invoke an\n"
     "option with [SPACE] or [ENTER].  To exit, use [TAB] to move to Exit.", 
@@ -307,7 +307,7 @@ DMenu MenuInitial = {
       { "Standard",	"Begin a standard installation (recommended)",	NULL, installStandard },
       { "Express",	"Begin a quick installation (for experts)", NULL, installExpress },
       { " Custom",	"Begin a custom installation (for experts)",	NULL, dmenuSubmenu, NULL, &MenuInstallCustom },
-      { "Configure",	"Do post-install configuration of FreeBSD",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
+      { "Configure",	"Do post-install configuration of MidnightBSD",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
       { "Doc",	"Installation instructions, README, etc.",	NULL, dmenuSubmenu, NULL, &MenuDocumentation },
 #ifdef WITH_SYSCONS
       { "Keymap",	"Select keyboard type",				NULL, dmenuSubmenu, NULL, &MenuSysconsKeymap },
@@ -323,21 +323,21 @@ DMenu MenuInitial = {
 /* The main documentation menu */
 DMenu MenuDocumentation = {
     DMENU_NORMAL_TYPE,
-    "FreeBSD Documentation Menu",
+    "MidnightBSD Documentation Menu",
     "If you are at all unsure about the configuration of your hardware\n"
-    "or are looking to build a system specifically for FreeBSD, read the\n"
+    "or are looking to build a system specifically for MidnightBSD, read the\n"
     "Hardware guide!  New users should also read the Install document for\n"
-    "a step-by-step tutorial on installing FreeBSD.  For general information,\n"
+    "a step-by-step tutorial on installing MidnightBSD.  For general information,\n"
     "consult the README file.",
     "Confused?  Press F1 for help.",
     "usage",
     { { "X Exit",	"Exit this menu (returning to previous)",	NULL, dmenuExit },
-      { "1 README",	"A general description of FreeBSD.  Read this!", NULL, dmenuDisplayFile, NULL, "README" },
+      { "1 README",	"A general description of MidnightBSD.  Read this!", NULL, dmenuDisplayFile, NULL, "README" },
       { "2 Errata",	"Late-breaking, post-release news.", NULL, dmenuDisplayFile, NULL, "ERRATA" },
-      { "3 Hardware",	"The FreeBSD survival guide for PC hardware.",	NULL, dmenuDisplayFile,	NULL, "HARDWARE" },
-      { "4 Install",	"A step-by-step guide to installing FreeBSD.",	NULL, dmenuDisplayFile,	NULL, "INSTALL" },
-      { "5 Copyright",	"The FreeBSD Copyright notices.",		NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
-      { "6 Release"	,"The release notes for this version of FreeBSD.", NULL, dmenuDisplayFile, NULL, "RELNOTES" },
+      { "3 Hardware",	"The MidnightBSD survival guide for PC hardware.",	NULL, dmenuDisplayFile,	NULL, "HARDWARE" },
+      { "4 Install",	"A step-by-step guide to installing MidnightBSD.",	NULL, dmenuDisplayFile,	NULL, "INSTALL" },
+      { "5 Copyright",	"The MidnightBSD Copyright notices.",		NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
+      { "6 Release"	,"The release notes for this version of MidnightBSD.", NULL, dmenuDisplayFile, NULL, "RELNOTES" },
       { "7 Shortcuts",	"Creating shortcuts to sysinstall.",		NULL, dmenuDisplayFile, NULL, "shortcuts" },
       { "8 HTML Docs",	"Go to the HTML documentation menu (post-install).", NULL, docBrowser },
       { NULL } },
@@ -467,8 +467,8 @@ DMenu MenuMouse = {
 DMenu MenuMediaCDROM = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Choose a CD/DVD type",
-    "FreeBSD can be installed directly from a CD/DVD containing a valid\n"
-    "FreeBSD distribution.  If you are seeing this menu it is because\n"
+    "MidnightBSD can be installed directly from a CD/DVD containing a valid\n"
+    "MidnightBSD distribution.  If you are seeing this menu it is because\n"
     "more than one CD/DVD drive was found on your system.  Please select one\n"
     "of the following CD/DVD drives as your installation drive.",
     "Press F1 to read the installation guide",
@@ -489,13 +489,13 @@ DMenu MenuMediaFloppy = {
 DMenu MenuMediaDOS = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Choose a DOS partition",
-    "FreeBSD can be installed directly from a DOS partition\n"
+    "MidnightBSD can be installed directly from a DOS partition\n"
     "assuming, of course, that you have copied the relevant\n"
     "distributions into your DOS partition before starting this\n"
     "installation.  If this is not the case then you should reboot\n"
     "DOS at this time and copy the distributions you wish to install\n"
     "into a \"FREEBSD\" subdirectory on one of your DOS partitions.\n"
-    "Otherwise, please select the DOS partition containing the FreeBSD\n"
+    "Otherwise, please select the DOS partition containing the MidnightBSD\n"
     "distribution files.",
     "Press F1 to read the installation guide",
     "INSTALL",
@@ -504,351 +504,28 @@ DMenu MenuMediaDOS = {
 
 DMenu MenuMediaFTP = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "Please select a FreeBSD FTP distribution site",
+    "Please select a MidnightBSD FTP distribution site",
     "Please select the site closest to you or \"other\" if you'd like to\n"
     "specify a different choice.  Also note that not every site listed here\n"
     "carries more than the base distribution kits. Only Primary sites are\n"
     "guaranteed to carry the full range of possible distributions.",
     "Select a site that's close!",
     "INSTALL",
-    { { "Main Site",	"ftp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.freebsd.org" },
+    { { "Main Site",	"ftp.midnightbsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://ftp.midnightbsd.org" },
       { "URL", "Specify some other ftp site by URL", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=other" },
-      { "Snapshots Server Japan", "snapshots.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://snapshots.jp.freebsd.org" },
-      { "Snapshots Server Sweden", "snapshots.se.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://snapshots.se.freebsd.org" },
-
-      { "IPv6 Ireland", "ftp3.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.ie.freebsd.org" },
-      { " IPv6 Japan", "ftp2.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.jp.freebsd.org" },
-      { " IPv6 USA", "ftp4.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.us.freebsd.org" },
-
-      { "Primary",	"ftp1.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp1.freebsd.org" },
-      { " Primary #2",	"ftp2.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.freebsd.org" },
-      { " Primary #3",	"ftp3.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.freebsd.org" },
-      { " Primary #4",	"ftp4.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.freebsd.org" },
-      { " Primary #5",	"ftp5.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.freebsd.org" },
-      { " Primary #6",	"ftp6.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.freebsd.org" },
-      { " Primary #7",	"ftp7.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp7.freebsd.org" },
-      { " Primary #8",	"ftp8.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp8.freebsd.org" },
-      { " Primary #9",	"ftp9.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp9.freebsd.org" },
-      { " Primary #10",	"ftp10.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp10.freebsd.org" },
-      { " Primary #11",	"ftp11.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp11.freebsd.org" },
-      { " Primary #12",	"ftp12.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp12.freebsd.org" },
-      { " Primary #13",	"ftp13.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp13.freebsd.org" },
-      { " Primary #14",	"ftp14.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp14.freebsd.org" },
-
-      { "Argentina",	"ftp.ar.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ar.freebsd.org" },
-
-      { "Australia",	"ftp.au.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.au.freebsd.org" },
-      { " Australia #2","ftp2.au.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.au.freebsd.org" },
-      { " Australia #3","ftp3.au.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.au.freebsd.org" },
-
-      { "Austria","ftp.at.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.at.freebsd.org" },
-      { " Austria #2","ftp2.at.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.at.freebsd.org" },
-
-      { "Brazil",	"ftp.br.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.br.freebsd.org" },
-      { " Brazil #2",	"ftp2.br.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.br.freebsd.org" },
-      { " Brazil #3",	"ftp3.br.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.br.freebsd.org" },
-      { " Brazil #4",	"ftp4.br.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.br.freebsd.org" },
-      { " Brazil #5",	"ftp5.br.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.br.freebsd.org" },
-      { " Brazil #6",	"ftp6.br.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.br.freebsd.org" },
-      { " Brazil #7",	"ftp7.br.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp7.br.freebsd.org" },
-
-      { "Canada",	"ftp.ca.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ca.freebsd.org" },
-
-      { "China",	"ftp.cn.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.cn.freebsd.org" },
-      { " China #2",	"ftp2.cn.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.cn.freebsd.org" },
-
-      { "Croatia",	"ftp.hr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.hr.freebsd.org" },
-
-      { "Czech Republic", "ftp.cz.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.cz.freebsd.org" },
-
-      { "Denmark",	"ftp.dk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.dk.freebsd.org" },
-      { " Denmark #2",	"ftp2.dk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.dk.freebsd.org" },
-
-      { "Estonia",	"ftp.ee.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ee.freebsd.org" },
-
-      { "Finland",	"ftp.fi.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.fi.freebsd.org" },
-
-      { "France",	"ftp.fr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.fr.freebsd.org" },
-      { " France #2",	"ftp2.fr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.fr.freebsd.org" },
-      { " France #3",	"ftp3.fr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.fr.freebsd.org" },
-      { " France #5",	"ftp5.fr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.fr.freebsd.org" },
-      { " France #6",	"ftp6.fr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.fr.freebsd.org" },
-      { " France #8",	"ftp8.fr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp8.fr.freebsd.org" },
-
-      { "Germany",	"ftp.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.de.freebsd.org" },
-      { " Germany #2",	"ftp2.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.de.freebsd.org" },
-      { " Germany #3",	"ftp3.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.de.freebsd.org" },
-      { " Germany #4",	"ftp4.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.de.freebsd.org" },
-      { " Germany #5",	"ftp5.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.de.freebsd.org" },
-      { " Germany #6",	"ftp6.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.de.freebsd.org" },
-      { " Germany #7",	"ftp7.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp7.de.freebsd.org" },
-      { " Germany #8",	"ftp8.de.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp8.de.freebsd.org" },
-
-      { "Greece",	"ftp.gr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.gr.freebsd.org" },
-      { " Greece #2",	"ftp2.gr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.gr.freebsd.org" },
-
-      { "Hong Kong",	"ftp.hk.super.net", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.hk.super.net" },
-
-      { "Hungary",     "ftp.hu.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.hu.freebsd.org" },
-
-      { "Iceland",	"ftp.is.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.is.freebsd.org" },
-
-      { "Ireland",	"ftp.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ie.freebsd.org" },
-      { " Ireland #2",	"ftp2.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.ie.freebsd.org" },
-      { " Ireland #3",	"ftp3.ie.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.ie.freebsd.org" },
-
-      { "Italy",	"ftp.it.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.it.freebsd.org" },
-
-      { "Japan",	"ftp.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.jp.freebsd.org" },
-      { " Japan #2",	"ftp2.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.jp.freebsd.org" },
-      { " Japan #3",	"ftp3.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.jp.freebsd.org" },
-      { " Japan #4",	"ftp4.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.jp.freebsd.org" },
-      { " Japan #5",	"ftp5.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.jp.freebsd.org" },
-      { " Japan #6",	"ftp6.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.jp.freebsd.org" },
-      { " Japan #7",	"ftp7.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp7.jp.freebsd.org" },
-      { " Japan #8",	"ftp8.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp8.jp.freebsd.org" },
-      { " Japan #9",	"ftp9.jp.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp9.jp.freebsd.org" },
-
-      { "Korea",	"ftp.kr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.kr.freebsd.org" },
-      { " Korea #2",	"ftp2.kr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.kr.freebsd.org" },
-
-      { "Lithuania",	"ftp.lt.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.lt.freebsd.org" },
-
-      { "Netherlands",	"ftp.nl.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.nl.freebsd.org" },
-      { " Netherlands #2",	"ftp2.nl.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.nl.freebsd.org" },
-
-      { "Norway",	"ftp.no.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.no.freebsd.org" },
-      { " Norway #3",	"ftp3.no.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.no.freebsd.org" },
-
-      { "Poland",	"ftp.pl.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.pl.freebsd.org" },
-      { " Poland #2",	"ftp2.pl.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.pl.freebsd.org" },
-      { " Poland #5",	"ftp5.pl.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.pl.freebsd.org" },
-
-      { "Portugal",	"ftp.pt.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.pt.freebsd.org" },
-      { " Portugal #2",	"ftp2.pt.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.pt.freebsd.org" },
-      { " Portugal #4",	"ftp4.pt.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.pt.freebsd.org" },
-
-      { "Romania",	"ftp.ro.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ro.freebsd.org" },
-
-      { "Russia",	"ftp.ru.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ru.freebsd.org" },
-      { " Russia #2",	"ftp2.ru.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.ru.freebsd.org" },
-      { " Russia #3",	"ftp3.ru.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.ru.freebsd.org" },
-      { " Russia #4",	"ftp4.ru.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.ru.freebsd.org" },
-
-      { "Singapore",	"ftp.sg.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.sg.freebsd.org" },
-
-      { "Slovak Republic",	"ftp.sk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.sk.freebsd.org" },
-
-      { "Slovenia",	"ftp.si.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.si.freebsd.org" },
-      { " Slovenia #2",	"ftp2.si.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.si.freebsd.org" },
-
-      { "South Africa",	"ftp.za.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.za.freebsd.org" },
-      { " South Africa #2", "ftp2.za.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.za.freebsd.org" },
-      { " South Africa #3", "ftp3.za.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.za.freebsd.org" },
-      { " South Africa #4", "ftp4.za.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.za.freebsd.org" },
-
-      { "Spain",	"ftp.es.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.es.freebsd.org" },
-      { " Spain #2",	"ftp2.es.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.es.freebsd.org" },
-      { " Spain #3",	"ftp3.es.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.es.freebsd.org" },
-
-      { "Sweden",	"ftp.se.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.se.freebsd.org" },
-      { " Sweden #2",	"ftp2.se.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.se.freebsd.org" },
-      { " Sweden #3",	"ftp3.se.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.se.freebsd.org" },
-      { " Sweden #5",	"ftp5.se.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.se.freebsd.org" },
-
-      { "Switzerland",	"ftp.ch.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ch.freebsd.org" },
-      { " Switzerland #2",	"ftp2.ch.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.ch.freebsd.org" },
-
-      { "Taiwan",	"ftp.tw.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.tw.freebsd.org" },
-      { " Taiwan #2",	"ftp2.tw.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.tw.freebsd.org" },
-      { " Taiwan #3",	"ftp3.tw.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.tw.freebsd.org" },
-      { " Taiwan #4",   "ftp4.tw.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.tw.freebsd.org" },
-      { " Taiwan #6",   "ftp6.tw.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.tw.freebsd.org" },
-      { " Taiwan #11",   "ftp11.tw.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp11.tw.freebsd.org" },
-
-      { "Turkey",	"ftp.tr.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.tr.freebsd.org" },
-
-      { "UK",		"ftp.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.uk.freebsd.org" },
-      { " UK #2",	"ftp2.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.uk.freebsd.org" },
-      { " UK #3",	"ftp3.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.uk.freebsd.org" },
-      { " UK #4",	"ftp4.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.uk.freebsd.org" },
-      { " UK #5",	"ftp5.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.uk.freebsd.org" },
-      { " UK #6",	"ftp6.uk.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.uk.freebsd.org" },
-
-      { "Ukraine",	"ftp.ua.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp.ua.freebsd.org" },
-      { " Ukraine #2",	"ftp2.ua.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.ua.freebsd.org" },
-      { " Ukraine #5",	"ftp5.ua.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.ua.freebsd.org" },
-      { " Ukraine #6",	"ftp6.ua.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.ua.freebsd.org" },
-      { " Ukraine #7",	"ftp7.ua.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp7.ua.freebsd.org" },
-      { " Ukraine #8",	"ftp8.ua.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp8.ua.freebsd.org" },
-
-      { "USA #1",	"ftp1.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp1.us.freebsd.org" },
-      { " USA #2",	"ftp2.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp2.us.freebsd.org" },
-      { " USA #3",	"ftp3.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp3.us.freebsd.org" },
-      { " USA #4",	"ftp4.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp4.us.freebsd.org" },
-      { " USA #5",	"ftp5.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp5.us.freebsd.org" },
-      { " USA #6",	"ftp6.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp6.us.freebsd.org" },
-      { " USA #7",	"ftp7.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp7.us.freebsd.org" },
-      { " USA #8",	"ftp8.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp8.us.freebsd.org" },
-      { " USA #9",	"ftp9.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp9.us.freebsd.org" },
-      { " USA #10",	"ftp10.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp10.us.freebsd.org" },
-      { " USA #11",	"ftp11.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp11.us.freebsd.org" },
-      { " USA #12",	"ftp12.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp12.us.freebsd.org" },
-      { " USA #13",	"ftp13.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp13.us.freebsd.org" },
-      { " USA #14",	"ftp14.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp14.us.freebsd.org" },
-      { " USA #15",	"ftp15.us.freebsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://ftp15.us.freebsd.org" },
-
+      { "Primary",	"stargazer.midnightbsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://stargazer.midnightbsd.org" },
+      { " Primary #2",	"enterprise.midnightbsd.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://enterprise.midnightbsd.org" },
       { NULL } }
 };
 
 DMenu MenuMediaTape = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Choose a tape drive type",
-    "FreeBSD can be installed from tape drive, though this installation\n"
+    "MidnightBSD can be installed from tape drive, though this installation\n"
     "method requires a certain amount of temporary storage in addition\n"
     "to the space required by the distribution itself (tape drives make\n"
     "poor random-access devices, so we extract _everything_ on the tape\n"
@@ -868,7 +545,7 @@ DMenu MenuNetworkDevice = {
     "If you're using SLIP over a serial device then the expectation is\n"
     "that you have a HARDWIRED connection.\n\n"
     "You can also install over a parallel port using a special \"laplink\"\n"
-    "cable to another machine running FreeBSD.",
+    "cable to another machine running MidnightBSD.",
     "Press F1 to read network configuration manual",
     "network_device",
     { { NULL } },
@@ -888,14 +565,14 @@ DMenu MenuKLD = {
 DMenu MenuMedia = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Choose Installation Media",
-    "FreeBSD can be installed from a variety of different installation\n"
+    "MidnightBSD can be installed from a variety of different installation\n"
     "media, ranging from floppies to an Internet FTP server.  If you're\n"
-    "installing FreeBSD from a supported CD/DVD drive then this is generally\n"
+    "installing MidnightBSD from a supported CD/DVD drive then this is generally\n"
     "the best media to use if you have no overriding reason for using other\n"
     "media.",
     "Press F1 for more information on the various media types",
     "media",
-    { { "1 CD/DVD",		"Install from a FreeBSD CD/DVD",	NULL, mediaSetCDROM },
+    { { "1 CD/DVD",		"Install from a MidnightBSD CD/DVD",	NULL, mediaSetCDROM },
       { "2 FTP",		"Install from an FTP server",		NULL, mediaSetFTPActive },
       { "3 FTP Passive",	"Install from an FTP server through a firewall", NULL, mediaSetFTPPassive },
       { "4 HTTP",		"Install from an FTP server through a http proxy", NULL, mediaSetHTTP },
@@ -963,7 +640,7 @@ DMenu MenuSubDistributions = {
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_BASE },
       { " dict",	"Spelling checker dictionary files",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DICT },
-      { " doc",		"Miscellaneous FreeBSD online docs",
+      { " doc",		"Miscellaneous MidnightBSD online docs",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_DOC },
       { " games",	"Games (non-commercial)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_GAMES },
@@ -981,7 +658,7 @@ DMenu MenuSubDistributions = {
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_PROFLIBS },
       { " src",		"Sources for everything",
 	srcFlagCheck,	distSetSrc },
-      { " ports",	"The FreeBSD Ports collection",
+      { " ports",	"The MidnightBSD Ports collection",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_PORTS },
       { " local",	"Local additions collection",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &Dists, '[', 'X', ']', DIST_LOCAL},
@@ -993,7 +670,7 @@ DMenu MenuSubDistributions = {
 DMenu MenuSrcDistributions = {
     DMENU_CHECKLIST_TYPE | DMENU_SELECTION_RETURNS,
     "Select the sub-components of src you wish to install.",
-    "Please check off those portions of the FreeBSD source tree\n"
+    "Please check off those portions of the MidnightBSD source tree\n"
     "you wish to install.",
     NULL,
     NULL,
@@ -1035,7 +712,7 @@ DMenu MenuSrcDistributions = {
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_SSECURE },
       { " share",	"/usr/src/share (documents and shared files)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_SHARE },
-      { " sys",		"/usr/src/sys (FreeBSD kernel)",
+      { " sys",		"/usr/src/sys (MidnightBSD kernel)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_SYS },
       { " tools",	"/usr/src/tools (miscellaneous tools)",
 	dmenuFlagCheck,	dmenuSetFlag, NULL, &SrcDists, '[', 'X', ']', DIST_SRC_TOOLS },
@@ -1219,9 +896,9 @@ DMenu MenuHTMLDoc = {
     "Press F1 for more help on what you see here.",
     "html",
     { { "X Exit",	"Exit this menu (returning to previous)", NULL,	dmenuExit },
-      { "2 Handbook",	"The FreeBSD Handbook.",				NULL, docShowDocument },
+      { "2 Handbook",	"The MidnightBSD Handbook.",				NULL, docShowDocument },
       { "3 FAQ",	"The Frequently Asked Questions guide.",		NULL, docShowDocument },
-      { "4 Home",	"The Home Pages for the FreeBSD Project (requires net)", NULL, docShowDocument },
+      { "4 Home",	"The Home Pages for the MidnightBSD Project (requires net)", NULL, docShowDocument },
       { "5 Other",	"Enter a URL.",						NULL, docShowDocument },
       { NULL } },
 };
@@ -1232,7 +909,7 @@ DMenu MenuInstallCustom = {
     "Choose Custom Installation Options",
     "This is the custom installation menu. You may use this menu to specify\n"
     "details on the type of distribution you wish to have, where you wish\n"
-    "to install it from and how you wish to allocate disk storage to FreeBSD.",
+    "to install it from and how you wish to allocate disk storage to MidnightBSD.",
     "Press F1 to read the installation guide",
     "INSTALL",
     { { "X Exit",		"Exit this menu (returning to previous)", NULL,	dmenuExit },
@@ -1243,7 +920,7 @@ DMenu MenuInstallCustom = {
       { "5 Media",		"Choose the installation media type",	NULL, dmenuSubmenu, NULL, &MenuMedia },
       { "6 Commit",		"Perform any pending Partition/Label/Extract actions", NULL, installCustomCommit },
 #else
-      { "3 Partition",		"Allocate disk space for FreeBSD",	NULL, diskPartitionEditor },
+      { "3 Partition",		"Allocate disk space for MidnightBSD",	NULL, diskPartitionEditor },
       { "4 Label",		"Label allocated disk partitions",	NULL, diskLabelEditor },
       { "5 Distributions",	"Select distribution(s) to extract",	NULL, dmenuSubmenu, NULL, &MenuDistributions },
       { "6 Media",		"Choose the installation media type",	NULL, dmenuSubmenu, NULL, &MenuMedia },
@@ -1258,11 +935,11 @@ DMenu MenuInstallCustom = {
 DMenu MenuIPLType = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "overwrite me",		/* will be disk specific label */
-    "If you want a FreeBSD Boot Manager, select \"BootMgr\".  If you would\n"
+    "If you want a MidnightBSD Boot Manager, select \"BootMgr\".  If you would\n"
     "prefer your Boot Manager to remain untouched then select \"None\".\n\n",
     "Press F1 to read about drive setup",
     "drives",
-    { { "BootMgr",	"Install the FreeBSD Boot Manager",
+    { { "BootMgr",	"Install the MidnightBSD Boot Manager",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr },
       { "None",		"Leave the IPL untouched",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 1 },
@@ -1273,8 +950,8 @@ DMenu MenuIPLType = {
 DMenu MenuMBRType = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "overwrite me",		/* will be disk specific label */
-    "FreeBSD comes with a boot selector that allows you to easily\n"
-    "select between FreeBSD and any other operating systems on your machine\n"
+    "MidnightBSD comes with a boot selector that allows you to easily\n"
+    "select between MidnightBSD and any other operating systems on your machine\n"
     "at boot time.  If you have more than one drive and want to boot\n"
     "from the second one, the boot selector will also make it possible\n"
     "to do so (limitations in the PC BIOS usually prevent this otherwise).\n"
@@ -1284,7 +961,7 @@ DMenu MenuMBRType = {
     "  NOTE:  PC-DOS users will almost certainly require \"None\"!",
     "Press F1 to read about drive setup",
     "drives",
-    { { "BootMgr",	"Install the FreeBSD Boot Manager",
+    { { "BootMgr",	"Install the MidnightBSD Boot Manager",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr },
       { "Standard",	"Install a standard MBR (no boot manager)",
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 1 },
@@ -1298,8 +975,8 @@ DMenu MenuMBRType = {
 /* Final configuration menu */
 DMenu MenuConfigure = {
     DMENU_NORMAL_TYPE,
-    "FreeBSD Configuration Menu",	/* title */
-    "If you've already installed FreeBSD, you may use this menu to customize\n"
+    "MidnightBSD Configuration Menu",	/* title */
+    "If you've already installed MidnightBSD, you may use this menu to customize\n"
     "it somewhat to suit your particular configuration.  Most importantly,\n"
     "you can use the Packages utility to load extra \"3rd party\"\n"
     "software not provided in the base distributions.",
@@ -1309,7 +986,7 @@ DMenu MenuConfigure = {
 	NULL,	dmenuExit },
       { " Distributions", "Install additional distribution sets",
 	NULL, distExtractAll },
-      { " Packages",	"Install pre-packaged software for FreeBSD",
+      { " Packages",	"Install pre-packaged software for MidnightBSD",
 	NULL, configPackages },
       { " Root Password", "Set the system manager's password",
 	NULL,	dmenuSystemCommand, NULL, "passwd root" },
@@ -1418,7 +1095,7 @@ DMenu MenuNetworking = {
     "Network Services Menu",
     "You may have already configured one network device (and the other\n"
     "various hostname/gateway/name server parameters) in the process\n"
-    "of installing FreeBSD.  This menu allows you to configure other\n"
+    "of installing MidnightBSD.  This menu allows you to configure other\n"
     "aspects of your system's network configuration.",
     NULL,
     NULL,
@@ -1940,7 +1617,7 @@ DMenu MenuNTP = {
 DMenu MenuSyscons = {
     DMENU_NORMAL_TYPE,
     "System Console Configuration",
-    "The default system console driver for FreeBSD (syscons) has a\n"
+    "The default system console driver for MidnightBSD (syscons) has a\n"
     "number of configuration options which may be set according to\n"
     "your preference.\n\n"
     "When you are done setting configuration options, select Cancel.",
@@ -1966,7 +1643,7 @@ DMenu MenuSyscons = {
 DMenu MenuSysconsKeymap = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "System Console Keymap",
-    "The default system console driver for FreeBSD (syscons) defaults\n"
+    "The default system console driver for MidnightBSD (syscons) defaults\n"
     "to a standard \"PC-98x1\" keyboard map.  Users may wish to choose\n"
     "one of the other keymaps below.\n"
     "Note that sysinstall itself only uses the part of the keyboard map\n"
@@ -1982,7 +1659,7 @@ DMenu MenuSysconsKeymap = {
 DMenu MenuSysconsKeymap = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "System Console Keymap",
-    "The default system console driver for FreeBSD (syscons) defaults\n"
+    "The default system console driver for MidnightBSD (syscons) defaults\n"
     "to a standard \"American\" keyboard map.  Users in other countries\n"
     "(or with different keyboard preferences) may wish to choose one of\n"
     "the other keymaps below.\n"
@@ -2091,7 +1768,7 @@ DMenu MenuSysconsSaver = {
 	dmenuVarCheck, configSaver, NULL, "saver=logo" },
       { "7 Rain",	"Rain drops screen saver",
 	dmenuVarCheck, configSaver, NULL, "saver=rain" },
-      { "8 Snake",	"Draw a FreeBSD \"snake\" on your screen",
+      { "8 Snake",	"Draw a MidnightBSD \"snake\" on your screen",
 	dmenuVarCheck, configSaver, NULL, "saver=snake" },
       { "9 Star",	"A \"twinkling stars\" effect",
 	dmenuVarCheck, configSaver, NULL, "saver=star" },
@@ -2261,7 +1938,7 @@ DMenu MenuFixit = {
     "Please choose a fixit option",
     "There are three ways of going into \"fixit\" mode:\n"
     "- you can use the live filesystem CDROM/DVD, in which case there will be\n"
-    "  full access to the complete set of FreeBSD commands and utilities,\n"
+    "  full access to the complete set of MidnightBSD commands and utilities,\n"
     "- you can use the more limited (but perhaps customized) fixit floppy,\n"
     "- or you can start an Emergency Holographic Shell now, which is\n"
     "  limited to the subset of commands that is already available right now.",

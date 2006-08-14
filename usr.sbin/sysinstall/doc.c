@@ -31,6 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/doc.c,v 1.32 2004/01/02 09:19:13 obrien Exp $
+ * $MidnightBSD$
  */
 
 #include "sysinstall.h"
@@ -94,21 +95,21 @@ docShowDocument(dialogMenuItem *self)
 	return DITEM_FAILURE;
     }
     /* Default to Home */
-    where = strcpy(target, "http://www.freebsd.org");
+    where = strcpy(target, "http://www.midnightbsd.org");
     if (strstr(str, "Other")) {
-	where = msgGetInput("http://www.freebsd.org", "Please enter the URL of the location you wish to visit.");
+	where = msgGetInput("http://www.midnightbsd.org", "Please enter the URL of the location you wish to visit.");
 	if (where)
 	    strcpy(target, where);
     }
     else if (strstr(str, "FAQ")) {
 	where = strcpy(target, "/usr/share/doc/faq/index.html");
 	if (!file_readable(target))
-	    where = strcpy(target, "http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq");
+	    where = strcpy(target, "http://www.midnightbsd.org/doc/en_US.ISO8859-1/books/faq");
     }
     else if (strstr(str, "Handbook")) {
 	where = strcpy(target, "/usr/share/doc/handbook/index.html");
 	if (!file_readable(target))
-	    where = strcpy(target, "http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook");
+	    where = strcpy(target, "http://www.midnightbsd.org/doc/en_US.ISO8859-1/books/handbook");
     }
     if (where) {
 	sprintf(tmp, "%s %s", browser, target);

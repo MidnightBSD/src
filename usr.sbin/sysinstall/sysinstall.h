@@ -31,6 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE

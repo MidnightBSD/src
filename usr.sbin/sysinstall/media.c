@@ -3,7 +3,8 @@
  *
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
- *
+ * 
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/media.c,v 1.121.12.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -344,7 +345,7 @@ mediaSetFTP(dialogMenuItem *self)
 	return DITEM_FAILURE;
     else if (!strcmp(cp, "other")) {
 	variable_set2(VAR_FTP_PATH, "ftp://", 0);
-	cp = variable_get_value(VAR_FTP_PATH, "Please specify the URL of a FreeBSD distribution on a\n"
+	cp = variable_get_value(VAR_FTP_PATH, "Please specify the URL of a MidnightBSD distribution on a\n"
 				"remote ftp site.  This site must accept either anonymous\n"
 				"ftp or you should have set an ftp username and password\n"
 				"in the Options screen.\n\n"
@@ -528,7 +529,7 @@ mediaSetUFS(dialogMenuItem *self)
 
     mediaClose();
     cp = variable_get_value(VAR_UFS_PATH, "Enter a fully qualified pathname for the directory\n"
-			    "containing the FreeBSD distribution files:", 0);
+			   "containing the MidnightBSD distribution files:", 0);
     if (!cp)
 	return DITEM_FAILURE;
 
@@ -558,14 +559,14 @@ mediaSetNFS(dialogMenuItem *self)
 
     mediaClose();
     cp = variable_get_value(VAR_NFS_PATH, "Please enter the full NFS file specification for the remote\n"
-			    "host and directory containing the FreeBSD distribution files.\n"
-			    "This should be in the format:  hostname:/some/freebsd/dir", 0);
+			    "host and directory containing the MidnightBSD distribution files.\n"
+			    "This should be in the format:  hostname:/some/midnightbsd/dir", 0);
     if (!cp)
 	return DITEM_FAILURE;
     SAFE_STRCPY(hostname, cp);
     if (!(idx = index(hostname, ':'))) {
 	msgConfirm("Invalid NFS path specification.  Must be of the form:\n"
-		   "host:/full/pathname/to/FreeBSD/distdir");
+		   "host:/full/pathname/to/MidnightBSD/distdir");
 	return DITEM_FAILURE;
     }
     pathlen = strlen(hostname);
@@ -875,7 +876,7 @@ mediaGenericGet(char *base, const char *file)
     snprintf(buf, PATH_MAX, "%s/%s", base, file);
     if (file_readable(buf))
 	return fopen(buf, "r");
-    snprintf(buf, PATH_MAX, "%s/FreeBSD/%s", base, file);
+    snprintf(buf, PATH_MAX, "%s/MidnightBSD/%s", base, file);
     if (file_readable(buf))
 	return fopen(buf, "r");
     snprintf(buf, PATH_MAX, "%s/releases/%s", base, file);

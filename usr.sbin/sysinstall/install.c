@@ -4,6 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -343,17 +344,17 @@ installFixitCDROM(dialogMenuItem *self)
     while (1) {
 	if (need_eject)
 	    msgConfirm(
-	"Please insert a FreeBSD live filesystem CD/DVD and press return");
+	"Please insert a MidnightBSD live filesystem CD/DVD and press return");
 	if (DITEM_STATUS(mediaSetCDROM(NULL)) != DITEM_SUCCESS
 	    || !DEVICE_INIT(mediaDevice)) {
-	    /* If we can't initialize it, it's probably not a FreeBSD CDROM so punt on it */
+	    /* If we can't initialize it, it's probably not a MidnightBSD CDROM so punt on it */
 	    mediaClose();
 	    if (need_eject && msgYesNo("Unable to mount the disc. Do you want to try again?") != 0)
 		return DITEM_FAILURE;
 	} else if (!file_readable("/dist/rescue/ldconfig")) {
 		mediaClose();
 		if (need_eject &&
-		    msgYesNo("Unable to find a FreeBSD live filesystem. Do you want to try again?") != 0)
+		    msgYesNo("Unable to find a MidnightBSD live filesystem. Do you want to try again?") != 0)
 		    return DITEM_FAILURE;
 	} else
 	    break;
@@ -367,7 +368,7 @@ installFixitCDROM(dialogMenuItem *self)
      */
     if (symlink("/dist", "/mnt2")) {
 	msgConfirm("Unable to symlink /mnt2 to the disc mount point.  Please report this\n"
-		   "unexpected failure to freebsd-bugs@FreeBSD.org.");
+		   "unexpected failure to midnightbsd-bugs@MidnightBSD.org.");
 	return DITEM_FAILURE;
     }
 
@@ -411,7 +412,7 @@ installFixitCDROM(dialogMenuItem *self)
     fixit_common();
     mediaClose();
     if (need_eject)
-	msgConfirm("Please remove the FreeBSD fixit CDROM/DVD now.");
+	msgConfirm("Please remove the MidnightBSD fixit CDROM/DVD now.");
     return DITEM_SUCCESS;
 }
 
@@ -588,9 +589,9 @@ installStandard(dialogMenuItem *self)
 #ifdef WITH_SLICES
     msgConfirm("In the next menu, you will need to set up a DOS-style (\"fdisk\") partitioning\n"
 	       "scheme for your hard disk.  If you simply wish to devote all disk space\n"
-	       "to FreeBSD (overwriting anything else that might be on the disk(s) selected)\n"
+	       "to MidnightBSD (overwriting anything else that might be on the disk(s) selected)\n"
 	       "then use the (A)ll command to select the default partitioning scheme followed\n"
-	       "by a (Q)uit.  If you wish to allocate only free space to FreeBSD, move to a\n"
+	       "by a (Q)uit.  If you wish to allocate only free space to MidnightBSD, move to a\n"
 	       "partition marked \"unused\" and use the (C)reate command.");
 
 nodisks:
@@ -634,7 +635,7 @@ nodisks:
     }
     else {
 	dialog_clear();
-	msgConfirm("Congratulations!  You now have FreeBSD installed on your system.\n\n"
+	msgConfirm("Congratulations!  You now have MidnightBSD installed on your system.\n\n"
 		   "We will now move on to the final configuration questions.\n"
 		   "For any option you do not wish to configure, simply select\n"
 		   "No.\n\n"
@@ -717,7 +718,7 @@ nodisks:
     sync();
 
     dialog_clear_norefresh();
-    if (!msgYesNo("The FreeBSD package collection is a collection of thousands of ready-to-run\n"
+    if (!msgYesNo("The MidnightBSD package collection is a collection of thousands of ready-to-run\n"
 		  "applications, from text editors to games to WEB servers and more.  Would you\n"
 		  "like to browse the collection now?")) {
 	(void)configPackages(self);

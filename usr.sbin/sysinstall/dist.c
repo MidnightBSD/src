@@ -3,7 +3,8 @@
  *
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
- *
+ * 
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
  *
  * Copyright (c) 1995
@@ -289,16 +290,16 @@ static int
 distMaybeSetPorts(dialogMenuItem *self)
 {
     dialog_clear_norefresh();
-    if (!msgYesNo("Would you like to install the FreeBSD ports collection?\n\n"
+    if (!msgYesNo("Would you like to install the MidnightBSD ports collection?\n\n"
 		  "This will give you ready access to over 13,300 ported software packages,\n"
 		  "at a cost of around 440MB of disk space when \"clean\" and possibly\n"
 		  "much more than that when a lot of the distribution tarballs are loaded\n"
-		  "(unless you have the extra discs available from a FreeBSD CD/DVD distribution\n"
+		  "(unless you have the extra discs available from a MidnightBSD CD/DVD distribution\n"
 		  "and can mount them on /cdrom, in which case this is far less of a problem).\n\n"
 		  "The ports collection is a very valuable resource and well worth having\n"
 		  "on your /usr partition, so it is advisable to say Yes to this option.\n\n"
 		  "For more information on the ports collection & the latest ports, visit:\n"
-		  "    http://www.freebsd.org/ports\n"))
+		  "    http://www.midnightbsd.org/ports\n"))
 	Dists |= DIST_PORTS;
     else
 	Dists &= ~DIST_PORTS;

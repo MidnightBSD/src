@@ -10,6 +10,7 @@
  * software, nor does the author assume any responsibility for damages
  * incurred with its use.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/termcap.c,v 1.30 2001/09/22 18:07:47 murray Exp $
  */
 
@@ -43,11 +44,11 @@ prompt_term(char **termp, char **termcapp)
 	    printf("\nThese are the predefined terminal types available to\n");
 	    printf("sysinstall when running stand-alone.  Please choose the\n");
 	    printf("closest match for your particular terminal.\n\n");
-	    printf("1 ...................... Standard ANSI terminal.\n");
-	    printf("2 ...................... VT100 or compatible terminal.\n");
-	    printf("3 ...................... FreeBSD system console (color).\n");
-	    printf("4 ...................... FreeBSD system console (monochrome).\n\n");
-	    printf("5 ...................... xterm terminal emulator.\n\n");
+	    printf("1 .................. Standard ANSI terminal.\n");
+	    printf("2 .................. VT100 or compatible terminal.\n");
+	    printf("3 .................. MidnightBSD system console (color).\n");
+	    printf("4 .................. MidnightBSD system console (monochrome).\n\n");
+	    printf("5 .................. xterm terminal emulator.\n\n");
 	    printf("Your choice: (1-5) ");
 	    fflush(stdout);
 	    fgets(str, 80, stdin);

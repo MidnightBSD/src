@@ -4,6 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/label.c,v 1.148.8.2 2006/01/24 15:51:33 ceri Exp $
  *
  * Copyright (c) 1995
@@ -245,7 +246,7 @@ check_conflict(char *name)
     return FALSE;
 }
 
-/* How much space is in this FreeBSD slice? */
+/* How much space is in this MidnightBSD slice? */
 static daddr_t
 space_free(struct chunk *c)
 {
@@ -270,7 +271,7 @@ record_label_chunks(Device **devs, Device *dev)
     Disk *d;
 
     j = p = 0;
-    /* First buzz through and pick up the FreeBSD slices */
+    /* First buzz through and pick up the MidnightBSD slices */
     for (i = 0; devs[i]; i++) {
 	if ((dev && devs[i] != dev) || !devs[i]->enabled)
 	    continue;
@@ -301,7 +302,7 @@ record_label_chunks(Device **devs, Device *dev)
 	}
     }
 
-    /* Now run through again and get the FreeBSD partition entries */
+    /* Now run through again and get the MidnightBSD partition entries */
     for (i = 0; devs[i]; i++) {
 	if (!devs[i]->enabled)
 	    continue;
@@ -576,7 +577,7 @@ print_label_chunks(void)
     int  pslice_count, label_count, label_focus_found, pslice_focus_found;
 
     attrset(A_REVERSE);
-    mvaddstr(0, 25, "FreeBSD Disklabel Editor");
+    mvaddstr(0, 29, "MidnightBSD Disklabel Editor");
     attrset(A_NORMAL);
 
     /*** Count the number of parition slices ***/
@@ -998,7 +999,7 @@ diskLabel(Device *dev)
 	    }
 	    sz = space_free(label_chunk_info[here].c);
 	    if (sz <= FS_MIN_SIZE) {
-		msg = "Not enough space to create an additional FreeBSD partition";
+		msg = "Not enough space to create an additional MidnightBSD partition";
 		break;
 	    }
 	    else {
@@ -1285,7 +1286,7 @@ diskLabel(Device *dev)
 			   "sysinstall first.");
 	    }
 	    else if (!msgNoYes("WARNING:  This should only be used when modifying an EXISTING\n"
-			  "installation.  If you are installing FreeBSD for the first time\n"
+			  "installation.  If you are installing MidnightBSD for the first time\n"
 			  "then you should simply type Q when you're finished here and your\n"
 			  "changes will be committed in one batch automatically at the end of\n"
 			  "these questions.\n\n"

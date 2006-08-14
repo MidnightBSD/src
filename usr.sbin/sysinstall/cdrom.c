@@ -4,6 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.54 2005/03/02 22:27:21 jhb Exp $
  *
  * Copyright (c) 1995
@@ -90,7 +91,7 @@ mediaInitCDROM(Device *dev)
     args.flags = 0;
     if (mount("cd9660", mountpoint, MNT_RDONLY, (caddr_t) &args) == -1) {
 	if (errno == EINVAL) {
-	    msgConfirm("The disc in your drive looks more like an Audio disc than a FreeBSD release.");
+	    msgConfirm("The disc in your drive looks more like an Audio disc than a MidnightBSD release.");
 	    return FALSE;
 	}
 	if (errno == EBUSY) {
@@ -111,9 +112,9 @@ mediaInitCDROM(Device *dev)
     cdromMounted = TRUE;
 
     if (!file_readable(string_concat(mountpoint, "/cdrom.inf")) && !bogusCDOK) {
-	if (msgYesNo("Warning: The disc currently in the drive is either not a FreeBSD\n"
-		     "disc or it is an older (pre 2.1.5) FreeBSD CD which does not\n"
-		     "have a version number on it.  Do you wish to use this disc anyway?") != 0) {
+	if (msgYesNo("Warning: The disc currently in the drive is not a MidnightBSD\n"
+		     "disc."
+		     "\nDo you wish to use this disc anyway?") != 0) {
 	    if (!previouslyMounted)
 		unmount(mountpoint, MNT_FORCE);
 	    cdromMounted = FALSE;
@@ -129,7 +130,7 @@ mediaInitCDROM(Device *dev)
 	if (!(cd_attr = read_props(string_concat(mountpoint, "/cdrom.inf")))
 	    || !(cp = property_find(cd_attr, "CD_VERSION"))) {
 	    msgConfirm("Unable to find a %s/cdrom.inf file.\n"
-		       "Either this is not a FreeBSD disc, there is a problem with\n"
+		       "Either this is not a MidnightBSD disc, there is a problem with\n"
 		       "the CDROM driver or something is wrong with your hardware.\n"
 		       "Please fix this problem (check the console logs on VTY2) and\n"
 		       "try again.", mountpoint);
@@ -139,7 +140,7 @@ mediaInitCDROM(Device *dev)
 		variable_cmp(VAR_RELNAME, "any") &&
 		variable_cmp(cp, "any") &&
 		!bogusCDOK) {
-		msgConfirm("Warning: The version of the FreeBSD disc currently in the drive\n"
+		msgConfirm("Warning: The version of the MidnightBSD disc currently in the drive\n"
 			   "(%s) does not match the version of the boot floppy\n"
 			   "(%s).\n\n"
 			   "If this is intentional, to avoid this message in the future\n"
@@ -168,7 +169,7 @@ mediaInitCDROM(Device *dev)
 #else
 		  strcmp(cp, "x86")) {
 #endif
-		    msgConfirm("Fatal: The FreeBSD install CD/DVD currently in the drive\n"
+		    msgConfirm("Fatal: The MidnightBSD install CD/DVD currently in the drive\n"
 			   "is for the %s architecture, not the machine you're using.\n\n"
 
 			   "Please use the correct installation CD/DVD for your machine type.", cp);

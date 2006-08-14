@@ -4,6 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/disks.c,v 1.154.2.1 2006/01/31 22:07:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -65,7 +66,7 @@ enum size_units_t { UNIT_BLOCKS, UNIT_KILO, UNIT_MEG, UNIT_GIG, UNIT_SIZE };
 	"130 for a Linux swap partition.\n\n"
 #endif
 #define	NON_FREEBSD_NOTE						\
-	"Note:  If you choose a non-FreeBSD partition type, it will not\n" \
+	"Note:  If you choose a non-MidnightBSD partition type, it will not\n" \
 	"be formatted or otherwise prepared, it will simply reserve space\n" \
 	"for you to use another tool, such as DOS format, to later format\n" \
 	"and actually use the partition."
@@ -419,7 +420,7 @@ diskPartition(Device *dev)
 			      "so as to remain cooperative with any future possible\n"
 			      "operating systems on the drive(s)?\n"
 			      "(See also the section about ``dangerously dedicated''\n"
-			      "disks in the FreeBSD FAQ.)");
+			      "disks in the MidnightBSD FAQ.)");
 		if (rv == -1)
 		    rv = 0;
 	    }
@@ -439,16 +440,16 @@ diskPartition(Device *dev)
 		int subtype;
 		chunk_e partitiontype;
 #ifdef PC98
-		snprintf(name, sizeof (name), "%s", "FreeBSD");
+		snprintf(name, sizeof (name), "%s", "MidnightBSD");
 		val = msgGetInput(name,
-			"Please specify the name for new FreeBSD slice.");
+			"Please specify the name for new MidnightBSD slice.");
 		if (val)
 			strncpy(name, val, sizeof (name));
 #else
 		name[0] = '\0';
 #endif
 		snprintf(tmp, 20, "%jd", (intmax_t)chunk_info[current_chunk]->size);
-		val = msgGetInput(tmp, "Please specify the size for new FreeBSD slice in blocks\n"
+		val = msgGetInput(tmp, "Please specify the size for new MidnightBSD slice in blocks\n"
 				  "or append a trailing `M' for megabytes (e.g. 20M).");
 		if (val && (size = strtoimax(val, &cp, 0)) > 0) {
 		    if (*cp && toupper(*cp) == 'M')
@@ -457,7 +458,7 @@ diskPartition(Device *dev)
 			size *= ONE_GIG;
 		    sprintf(tmp, "%d", SUBTYPE_FREEBSD);
 		    val = msgGetInput(tmp, "Enter type of partition to create:\n\n"
-			"Pressing Enter will choose the default, a native FreeBSD\n"
+			"Pressing Enter will choose the default, a native MidnightBSD\n"
 			"slice (type %u).  "
 			OTHER_SLICE_VALUES
 			NON_FREEBSD_NOTE, SUBTYPE_FREEBSD);
@@ -506,7 +507,7 @@ diskPartition(Device *dev)
 		sprintf(tmp, "%d", chunk_info[current_chunk]->subtype);
 		val = msgGetInput(tmp, "New partition type:\n\n"
 		    "Pressing Enter will use the current type. To choose a native\n"
-		    "FreeBSD slice enter %u.  "
+		    "MidnightBSD slice enter %u.  "
 		    OTHER_SLICE_VALUES
 		    NON_FREEBSD_NOTE, SUBTYPE_FREEBSD);
 		if (val && (subtype = strtol(val, NULL, 0)) > 0) {
@@ -576,7 +577,7 @@ diskPartition(Device *dev)
 
 	case 'W':
 	    if (!msgNoYes("WARNING:  This should only be used when modifying an EXISTING\n"
-			       "installation.  If you are installing FreeBSD for the first time\n"
+			       "installation.  If you are installing MidnightBSD for the first time\n"
 			       "then you should simply type Q when you're finished here and your\n"
 			       "changes will be committed in one batch automatically at the end of\n"
 			       "these questions.  If you're adding a disk, you should NOT write\n"
@@ -589,13 +590,13 @@ diskPartition(Device *dev)
 		 * Don't trash the IPL if the first (and therefore only) chunk
 		 * is marked for a truly dedicated disk (i.e., the disklabel
 		 * starts at sector 0), even in cases where the user has
-		 * requested a FreeBSD Boot Manager -- both would be fatal in
+		 * requested a MidnightBSD Boot Manager -- both would be fatal in
 		 * this case.
 		 */
 		/*
 		 * Don't offer to update the IPL on this disk if the first
-		 * "real" chunk looks like a FreeBSD "all disk" partition,
-		 * or the disk is entirely FreeBSD.
+		 * "real" chunk looks like a MidnightBSD "all disk" partition,
+		 * or the disk is entirely MidnightBSD.
 		 */
 		if ((d->chunks->part->type != freebsd) ||
 		    (d->chunks->part->offset > 1))
@@ -618,8 +619,8 @@ diskPartition(Device *dev)
 		 */
 		/*
 		 * Don't offer to update the MBR on this disk if the first
-		 * "real" chunk looks like a FreeBSD "all disk" partition,
-		 * or the disk is entirely FreeBSD.
+		 * "real" chunk looks like a MidnightBSD "all disk" partition,
+		 * or the disk is entirely MidnightBSD.
 		 */
 		if ((d->chunks->part->type != freebsd) ||
 		    (d->chunks->part->offset > 1))
@@ -661,12 +662,12 @@ diskPartition(Device *dev)
 	     * Don't trash the IPL if the first (and therefore only) chunk
 	     * is marked for a truly dedicated disk (i.e., the disklabel
 	     * starts at sector 0), even in cases where the user has requested
-	     * a FreeBSD Boot Manager -- both would be fatal in this case.
+	     * a MidnightBSD Boot Manager -- both would be fatal in this case.
 	     */
 	    /*
 	     * Don't offer to update the IPL on this disk if the first "real"
-	     * chunk looks like a FreeBSD "all disk" partition, or the disk is
-	     * entirely FreeBSD. 
+	     * chunk looks like a MidnightBSD "all disk" partition, or the disk is
+	     * entirely MidnightBSD. 
 	     */
 	    if ((d->chunks->part->type != freebsd) ||
 		(d->chunks->part->offset > 1)) {
@@ -687,8 +688,8 @@ diskPartition(Device *dev)
 	     */
 	    /*
 	     * Don't offer to update the MBR on this disk if the first "real"
-	     * chunk looks like a FreeBSD "all disk" partition, or the disk is
-	     * entirely FreeBSD. 
+	     * chunk looks like a MidnightBSD "all disk" partition, or the disk is
+	     * entirely MidnightBSD. 
 	     */
 	    if ((d->chunks->part->type != freebsd) ||
 		(d->chunks->part->offset > 1)) {
@@ -945,13 +946,13 @@ diskPartitionNonInteractive(Device *dev)
 	}
 	else if (!strcmp(cp, "all")) {
 	    /* Do all disk space case */
-	    msgDebug("Warning:  Devoting all of disk %s to FreeBSD.\n", d->name);
+	    msgDebug("Warning:  Devoting all of disk %s to MidnightBSD.\n", d->name);
 
 	    All_FreeBSD(d, FALSE);
 	}
 	else if (!strcmp(cp, "exclusive")) {
 	    /* Do really-all-the-disk-space case */
-	    msgDebug("Warning:  Devoting all of disk %s to FreeBSD.\n", d->name);
+	    msgDebug("Warning:  Devoting all of disk %s to MidnightBSD.\n", d->name);
 
 	    All_FreeBSD(d, all_disk = TRUE);
 	}
@@ -978,13 +979,13 @@ diskPartitionNonInteractive(Device *dev)
 	    }
 	}
 	else if (!strcmp(cp, "existing")) {
-	    /* Do existing FreeBSD case */
+	    /* Do existing MidnightBSD case */
 	    for (i = 0; chunk_info[i]; i++) {
 		if (chunk_info[i]->type == freebsd)
 		    break;
 	    }
 	    if (!chunk_info[i]) {
-		msgConfirm("Unable to find any existing FreeBSD partitions on this disk!");
+		msgConfirm("Unable to find any existing MidnightBSD partitions on this disk!");
 		return;
 	    }
 	}

@@ -3,7 +3,8 @@
  *
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
- *
+ * 
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/command.c,v 1.20 2002/11/01 02:05:05 kuriyama Exp $
  *
  * Copyright (c) 1995

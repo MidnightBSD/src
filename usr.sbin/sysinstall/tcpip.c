@@ -1,4 +1,5 @@
 /*
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132.2.2 2006/02/12 15:23:50 delphij Exp $
  *
  * Copyright (c) 1995

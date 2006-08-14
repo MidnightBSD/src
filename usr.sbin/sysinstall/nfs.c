@@ -4,6 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/nfs.c,v 1.25 2003/10/19 13:37:12 des Exp $
  *
  * Copyright (c) 1995

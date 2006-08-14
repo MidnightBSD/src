@@ -3,7 +3,8 @@
  *
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
- *
+ * 
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -836,7 +837,7 @@ configInetd(dialogMenuItem *self)
         /* If inetd is enabled, we'll need an inetd.conf */
         variable_set2("inetd_enable", "YES", 1);
 	if (!msgYesNo("inetd(8) relies on its configuration file, /etc/inetd.conf, to determine\n"
-                   "which of its Internet services will be available.  The default FreeBSD\n"
+                   "which of its Internet services will be available.  The default MidnightBSD\n"
                    "inetd.conf(5) leaves all services disabled by default, so they must be\n"
                    "specifically enabled in the configuration file before they will\n"
                    "function, even once inetd(8) is enabled.  Note that services for\n"
@@ -972,7 +973,7 @@ configLoaderACPI(int disable)
     ldconf = fopen("/boot/loader.conf", "a");
     if (ldconf == NULL) {
 	msgConfirm("Unable to open /boot/loader.conf.  Please consult the\n"
-		  "FreeBSD Handbook for instructions on disabling ACPI");
+		  "MidnightBSD Handbook for instructions on disabling ACPI");
 	return DITEM_FAILURE;
     }
 

@@ -4,6 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
+ * $MidnightBSD$ 
  * $FreeBSD: src/usr.sbin/sysinstall/globals.c,v 1.27 2004/08/07 01:19:54 marcel Exp $
  *
  * Copyright (c) 1995

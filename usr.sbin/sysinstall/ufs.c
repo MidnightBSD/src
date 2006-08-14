@@ -4,6 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/ufs.c,v 1.15 1999/08/28 01:34:21 peter Exp $
  *
  * Copyright (c) 1995

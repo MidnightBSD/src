@@ -4,6 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/usr.sbin/sysinstall/tape.c,v 1.24 2002/11/01 02:05:05 kuriyama Exp $
  *
  * Copyright (c) 1995

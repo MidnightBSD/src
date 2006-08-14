@@ -1,4 +1,6 @@
-/* $FreeBSD: src/usr.sbin/sysinstall/dist.h,v 1.65 2005/06/16 18:16:13 ru Exp $  */
+/* $FreeBSD: src/usr.sbin/sysinstall/dist.h,v 1.65 2005/06/16 18:16:13 ru Exp $ 
+ * $MidnightBSD$
+ */
 
 #ifndef _DIST_H_INCLUDE
 #define _DIST_H_INCLUDE
