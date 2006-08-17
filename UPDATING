@@ -8,6 +8,10 @@ Items affecting the ports and packages system can be found in
 /usr/ports/UPDATING.  Please read that file before running
 portupgrade.
 
+20060817:
+	ksh has been added to the base system.  If you previously had
+	the port installed, it will be overwritten on the next buildworld.
+
 20060211:
 	An IPv6 support of ipfw was enabled by default.  If you don't
 	want to filter an IPv6 by ipfw, please add following line into
