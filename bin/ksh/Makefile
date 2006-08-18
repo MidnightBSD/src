@@ -1,4 +1,4 @@
-#	$MidnightBSD: src/bin/ksh/Makefile,v 1.2 2006/08/17 13:00:11 laffer1 Exp $
+#	$MidnightBSD: Makefile,v 1.3 2006/08/18 00:44:47 Archite Exp $
 #	$OpenBSD: Makefile,v 1.25 2005/10/06 06:39:35 otto Exp $
 
 PROG=	ksh
@@ -10,6 +10,7 @@ SRCS=	alloc.c c_ksh.c c_sh.c c_test.c c_ulimit.c edit.c emacs.c eval.c \
 
 DEFS=	-Wall -ansi -pedantic -std=c99
 CFLAGS+=${DEFS} -I. -I${.CURDIR}
+LDFLAGS+=-static
 WARNS?=	3
 NO_WERROR=yes
 MAN=	ksh.1 
