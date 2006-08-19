@@ -165,8 +165,8 @@
 # include <libutil.h>
 #endif
 
-RCSID("$Id: loginrec.c,v 1.1.1.2 2006-02-25 02:34:24 laffer1 Exp $");
-RCSID("$FreeBSD: src/crypto/openssh/loginrec.c,v 1.9.2.1 2005/09/11 16:50:34 des Exp $");
+RCSID("$Id: loginrec.c,v 1.2 2006-08-19 16:41:42 adam Exp $");
+RCSID("$FreeBSD: src/crypto/openssh/loginrec.c,v 1.13 2006/06/09 07:23:14 des Exp $");
 
 /**
  ** prototypes for helper functions in this file
@@ -1590,7 +1590,7 @@ lastlog_get_entry(struct logininfo *li)
 		return (0);
 	default:
 		error("%s: Error reading from %s: Expecting %d, got %d",
-		    __func__, LASTLOG_FILE, sizeof(last), ret);
+		    __func__, LASTLOG_FILE, (int)sizeof(last), ret);
 		return (0);
 	}
 
@@ -1614,7 +1614,7 @@ record_failed_login(const char *username, const char *hostname,
 	int fd;
 	struct utmp ut;
 	struct sockaddr_storage from;
-	size_t fromlen = sizeof(from);
+	socklen_t fromlen = sizeof(from);
 	struct sockaddr_in *a4;
 	struct sockaddr_in6 *a6;
 	time_t t;

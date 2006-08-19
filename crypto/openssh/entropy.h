@@ -22,12 +22,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $Id: entropy.h,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $ */
+/* $Id: entropy.h,v 1.2 2006-08-19 16:41:42 adam Exp $ */
 
 #ifndef _RANDOMS_H
 #define _RANDOMS_H
 
+#include "buffer.h"
+
 void seed_rng(void);
 void init_rng(void);
+
+void rexec_send_rng_seed(Buffer *);
+void rexec_recv_rng_seed(Buffer *);
 
 #endif /* _RANDOMS_H */

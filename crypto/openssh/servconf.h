@@ -1,5 +1,5 @@
-/*	$OpenBSD: servconf.h,v 1.71 2004/12/23 23:11:00 djm Exp $	*/
-/*	$FreeBSD: src/crypto/openssh/servconf.h,v 1.17 2005/06/05 15:46:07 des Exp $	*/
+/*	$OpenBSD: servconf.h,v 1.72 2005/12/06 22:38:27 reyk Exp $	*/
+/*	$FreeBSD: src/crypto/openssh/servconf.h,v 1.19 2006/03/22 20:41:37 des Exp $	*/
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -134,7 +134,10 @@ typedef struct {
 
 	char   *authorized_keys_file;	/* File containing public keys */
 	char   *authorized_keys_file2;
+
 	int	use_pam;		/* Enable auth via PAM */
+
+	int	permit_tun;
 }       ServerOptions;
 
 void	 initialize_server_options(ServerOptions *);

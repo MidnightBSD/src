@@ -26,7 +26,7 @@
 
 #include "includes.h"
 RCSID("$OpenBSD: monitor_wrap.c,v 1.40 2005/05/24 17:32:43 avsm Exp $");
-RCSID("$FreeBSD: src/crypto/openssh/monitor_wrap.c,v 1.10.2.1 2005/09/11 16:50:34 des Exp $");
+RCSID("$FreeBSD: src/crypto/openssh/monitor_wrap.c,v 1.12 2006/03/22 20:41:36 des Exp $");
 
 #include <openssl/bn.h>
 #include <openssl/dh.h>
@@ -73,7 +73,6 @@ extern struct monitor *pmonitor;
 extern Buffer input, output;
 extern Buffer loginmsg;
 extern ServerOptions options;
-extern Buffer loginmsg;
 
 int
 mm_is_monitor(void)

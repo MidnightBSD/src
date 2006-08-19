@@ -24,7 +24,7 @@
 
 #include "includes.h"
 RCSID("$OpenBSD: auth-chall.c,v 1.9 2003/11/03 09:03:37 djm Exp $");
-RCSID("$FreeBSD: src/crypto/openssh/auth-chall.c,v 1.9 2005/06/05 15:46:07 des Exp $");
+RCSID("$FreeBSD: src/crypto/openssh/auth-chall.c,v 1.10 2005/09/03 07:04:22 des Exp $");
 
 #include "auth.h"
 #include "log.h"

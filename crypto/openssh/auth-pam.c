@@ -47,8 +47,8 @@
 
 /* Based on $xFreeBSD: src/crypto/openssh/auth2-pam-freebsd.c,v 1.11 2003/03/31 13:48:18 des Exp $ */
 #include "includes.h"
-RCSID("$Id: auth-pam.c,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $");
-RCSID("$FreeBSD: src/crypto/openssh/auth-pam.c,v 1.16.2.1 2005/09/11 16:50:33 des Exp $");
+RCSID("$Id: auth-pam.c,v 1.2 2006-08-19 16:41:42 adam Exp $");
+RCSID("$FreeBSD: src/crypto/openssh/auth-pam.c,v 1.18 2006/03/22 20:41:36 des Exp $");
 
 #ifdef USE_PAM
 #if defined(HAVE_SECURITY_PAM_APPL_H)
@@ -717,8 +717,18 @@ sshpam_query(void *ctx, char **name, char **info,
 			plen++;
 			xfree(msg);
 			break;
-		case PAM_SUCCESS:
 		case PAM_AUTH_ERR:
+			debug3("PAM: PAM_AUTH_ERR");
+			if (**prompts != NULL && strlen(**prompts) != 0) {
+				*info = **prompts;
+				**prompts = NULL;
+				*num = 0;
+				**echo_on = 0;
+				ctxt->pam_done = -1;
+				return 0;
+			}
+			/* FALLTHROUGH */
+		case PAM_SUCCESS:
 			if (**prompts != NULL) {
 				/* drain any accumulated messages */
 				debug("PAM: %s", **prompts);
@@ -764,7 +774,7 @@ sshpam_respond(void *ctx, u_int num, char **resp)
 	Buffer buffer;
 	struct pam_ctxt *ctxt = ctx;
 
-	debug2("PAM: %s entering, %d responses", __func__, num);
+	debug2("PAM: %s entering, %u responses", __func__, num);
 	switch (ctxt->pam_done) {
 	case 1:
 		sshpam_authenticated = 1;
