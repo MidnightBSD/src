@@ -1,4 +1,4 @@
-/* $Id: openssl-compat.h,v 1.1.1.2 2006-02-25 02:34:26 laffer1 Exp $ */
+/* $Id: openssl-compat.h,v 1.2 2006-08-19 16:47:07 adam Exp $ */
 
 /*
  * Copyright (c) 2005 Darren Tucker <dtucker@zip.com.au>
@@ -24,7 +24,11 @@
 # define EVP_CIPHER_CTX_get_app_data(e)		((e)->app_data)
 #endif
 
-#if OPENSSL_VERSION_NUMBER < 0x00907000L
+#if (OPENSSL_VERSION_NUMBER < 0x00907000L) || defined(OPENSSL_LOBOTOMISED_AES)
+# define USE_BUILTIN_RIJNDAEL
+#endif
+
+#ifdef USE_BUILTIN_RIJNDAEL
 # define EVP_aes_128_cbc evp_rijndael
 # define EVP_aes_192_cbc evp_rijndael
 # define EVP_aes_256_cbc evp_rijndael
@@ -43,7 +47,12 @@ extern const EVP_CIPHER *evp_acss(void);
 #endif
 
 /*
- * insert comment here
+ * We overload some of the OpenSSL crypto functions with ssh_* equivalents
+ * which cater for older and/or less featureful OpenSSL version.
+ *
+ * In order for the compat library to call the real functions, it must
+ * define SSH_DONT_OVERLOAD_OPENSSL_FUNCS before including this file and
+ * implement the ssh_* equivalents.
  */
 #ifdef SSH_OLD_EVP
 

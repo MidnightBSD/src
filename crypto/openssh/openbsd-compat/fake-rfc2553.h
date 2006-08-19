@@ -1,5 +1,5 @@
-/* $Id: fake-rfc2553.h,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $ */
-/* $FreeBSD: src/crypto/openssh/openbsd-compat/fake-rfc2553.h,v 1.6.2.1 2005/09/11 16:50:37 des Exp $ */
+/* $Id: fake-rfc2553.h,v 1.2 2006-08-19 16:47:07 adam Exp $ */
+/* $FreeBSD: src/crypto/openssh/openbsd-compat/fake-rfc2553.h,v 1.7 2005/09/03 07:04:25 des Exp $ */
 
 /*
  * Copyright (C) 2000-2003 Damien Miller.  All rights reserved.

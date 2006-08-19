@@ -18,7 +18,7 @@
 #include "includes.h"
 #include "xmalloc.h"
 
-RCSID("$Id: bsd-misc.c,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $");
+RCSID("$Id: bsd-misc.c,v 1.2 2006-08-19 16:47:07 adam Exp $");
 
 #ifndef HAVE___PROGNAME
 char *__progname;
@@ -223,10 +223,7 @@ strdup(const char *str)
 	len = strlen(str) + 1;
 	cp = malloc(len);
 	if (cp != NULL)
-		if (strlcpy(cp, str, len) != len) {
-			free(cp);
-			return NULL;
-		}
-	return cp;
+		return(memcpy(cp, str, len));
+	return NULL;
 }
 #endif

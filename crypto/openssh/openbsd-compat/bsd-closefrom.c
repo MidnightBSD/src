@@ -46,7 +46,7 @@
 # define OPEN_MAX	256
 #endif
 
-RCSID("$Id: bsd-closefrom.c,v 1.1.1.2 2006-02-25 02:34:26 laffer1 Exp $");
+RCSID("$Id: bsd-closefrom.c,v 1.2 2006-08-19 16:47:07 adam Exp $");
 
 #ifndef lint
 static const char sudorcsid[] = "$Sudo: closefrom.c,v 1.6 2004/06/01 20:51:56 millert Exp $";
@@ -67,7 +67,7 @@ closefrom(int lowfd)
 
     /* Check for a /proc/$$/fd directory. */
     len = snprintf(fdpath, sizeof(fdpath), "/proc/%ld/fd", (long)getpid());
-    if (len != -1 && len <= sizeof(fdpath) && (dirp = opendir(fdpath))) {
+    if (len >= 0 && (u_int)len <= sizeof(fdpath) && (dirp = opendir(fdpath))) {
 	while ((dent = readdir(dirp)) != NULL) {
 	    fd = strtol(dent->d_name, &endp, 10);
 	    if (dent->d_name != endp && *endp == '\0' &&
