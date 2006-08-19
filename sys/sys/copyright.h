@@ -27,6 +27,10 @@
 
 
 /* Copyrights macros  */
+
+/* MidnightBSD */
+#define COPYRIGHT_MidnightBSD \
+	"Copyright (c) 2006 The MidnightBSD Project.\n"
   
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
@@ -44,5 +48,5 @@
 char copyright[] = COPYRIGHT_FreeBSD COPYRIGHT_PC98 COPYRIGHT_UCB;
 
 #else
-char copyright[] = COPYRIGHT_FreeBSD COPYRIGHT_UCB;
+char copyright[] = COPYRIGHT_MidnightBSD COPYRIGHT_FreeBSD COPYRIGHT_UCB;
 #endif
