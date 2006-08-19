@@ -783,7 +783,7 @@
 #define HAVE_STRTOLL 1
 
 /* Define to 1 if you have the `strtonum' function. */
-#define HAVE_STRTONUM 1
+/* #define HAVE_STRTONUM 1 */
 
 /* Define to 1 if you have the `strtoul' function. */
 #define HAVE_STRTOUL 1

@@ -57,7 +57,7 @@ RCSID("$FreeBSD: src/crypto/openssh/sshd.c,v 1.42 2006/03/22 20:41:37 des Exp $"
 #ifdef __FreeBSD__
 #include <resolv.h>
 #ifdef GSSAPI
-#include <gssapi/gssapi.h>
+#include <gssapi.h>
 #endif
 #endif
 
