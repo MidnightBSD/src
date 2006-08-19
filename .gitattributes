@@ -13189,6 +13189,7 @@ crypto/openssh/openbsd-compat/base64.h -text
 crypto/openssh/openbsd-compat/basename.c -text
 crypto/openssh/openbsd-compat/bindresvport.c -text
 crypto/openssh/openbsd-compat/bsd-arc4random.c -text
+crypto/openssh/openbsd-compat/bsd-asprintf.c -text
 crypto/openssh/openbsd-compat/bsd-closefrom.c -text
 crypto/openssh/openbsd-compat/bsd-cray.c -text
 crypto/openssh/openbsd-compat/bsd-cray.h -text
@@ -13226,6 +13227,8 @@ crypto/openssh/openbsd-compat/port-aix.c -text
 crypto/openssh/openbsd-compat/port-aix.h -text
 crypto/openssh/openbsd-compat/port-irix.c -text
 crypto/openssh/openbsd-compat/port-irix.h -text
+crypto/openssh/openbsd-compat/port-tun.c -text
+crypto/openssh/openbsd-compat/port-tun.h -text
 crypto/openssh/openbsd-compat/port-uw.c -text
 crypto/openssh/openbsd-compat/port-uw.h -text
 crypto/openssh/openbsd-compat/readpassphrase.c -text
