@@ -9068,11 +9068,6 @@ contrib/ngatm/sscop/common.c -text
 contrib/ngatm/sscop/common.h -text
 contrib/ngatm/sscop/sscop.1 -text
 contrib/ngatm/sscop/sscop_main.c -text
-contrib/ntp/ntpd/ntpsim.c -text
-contrib/ntp/ntpd/refclock_acts.c -text
-contrib/ntp/ntpd/refclock_msfees.c -text
-contrib/ntp/ntpd/refclock_mx4200.c -text
-contrib/ntp/scripts/monitoring/ntploopstat -text
 contrib/nvi/FAQ -text
 contrib/nvi/LAYOUT -text
 contrib/nvi/LICENSE -text
