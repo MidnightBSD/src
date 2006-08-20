@@ -1,4 +1,4 @@
-#	$MidnightBSD: Makefile,v 1.3 2006/08/18 00:44:47 Archite Exp $
+#	$MidnightBSD: src/bin/ksh/Makefile,v 1.4 2006/08/18 23:13:16 adam Exp $
 #	$OpenBSD: Makefile,v 1.25 2005/10/06 06:39:35 otto Exp $
 
 PROG=	ksh
@@ -30,3 +30,4 @@ check test:
 	    pdksh,sh,ksh,posix,posix-upu
 
 .include <bsd.prog.mk>
+
