@@ -9093,7 +9093,7 @@ contrib/ntp/ntpd.conf -text
 contrib/ntp/ntpd.conf.0 -text
 contrib/ntp/ntpd.conf.5 -text
 contrib/ntp/ntpd.h -text
-contrib/ntp/openbsd-compat/.cvsignore -text
+contrib/ntp/openbsd-compat/Makefile -text
 contrib/ntp/openbsd-compat/Makefile.in -text
 contrib/ntp/openbsd-compat/asprintf.c -text
 contrib/ntp/openbsd-compat/atomicio.c -text
