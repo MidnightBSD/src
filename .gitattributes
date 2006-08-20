@@ -9068,12 +9068,13 @@ contrib/ngatm/sscop/common.c -text
 contrib/ngatm/sscop/common.h -text
 contrib/ngatm/sscop/sscop.1 -text
 contrib/ngatm/sscop/sscop_main.c -text
-contrib/ntp/.cvsignore -text
 contrib/ntp/CREDITS -text
 contrib/ntp/LICENCE -text
 contrib/ntp/buffer.c -text
 contrib/ntp/client.c -text
 contrib/ntp/config.c -text
+contrib/ntp/config.h.in -text
+contrib/ntp/configure -text
 contrib/ntp/configure.ac -text
 contrib/ntp/contrib/redhat/ntpd -text
 contrib/ntp/contrib/redhat/openntpd.spec -text
@@ -9085,7 +9086,6 @@ contrib/ntp/mdoc2man.awk -text
 contrib/ntp/ntp.c -text
 contrib/ntp/ntp.h -text
 contrib/ntp/ntp_msg.c -text
-contrib/ntp/ntpd-vs-openbsd.diff -text
 contrib/ntp/ntpd.0 -text
 contrib/ntp/ntpd.8 -text
 contrib/ntp/ntpd.c -text
