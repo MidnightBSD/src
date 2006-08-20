@@ -9068,19 +9068,7 @@ contrib/ngatm/sscop/common.c -text
 contrib/ngatm/sscop/common.h -text
 contrib/ngatm/sscop/sscop.1 -text
 contrib/ngatm/sscop/sscop_main.c -text
-contrib/ntp/COPYRIGHT -text
-contrib/ntp/ChangeLog -text
-contrib/ntp/ChangeLog-4.1.0 -text
-contrib/ntp/FREEBSD-Xlist -text
-contrib/ntp/FREEBSD-upgrade -text
-contrib/ntp/INSTALL -text
-contrib/ntp/Makefile.am -text
-contrib/ntp/Makefile.in -text
-contrib/ntp/NEWS -text
 contrib/ntp/NOTES.y2kfixes -text
-contrib/ntp/README -text
-contrib/ntp/README.bk -text
-contrib/ntp/README.hackers -text
 contrib/ntp/README.patches -text
 contrib/ntp/README.refclocks -text
 contrib/ntp/README.versions -text
@@ -9688,7 +9676,6 @@ contrib/ntp/util/sht.c -text
 contrib/ntp/util/testrs6000.c -text
 contrib/ntp/util/tickadj.c -text
 contrib/ntp/util/timetrim.c -text
-contrib/ntp/version -text
 contrib/nvi/FAQ -text
 contrib/nvi/LAYOUT -text
 contrib/nvi/LICENSE -text
