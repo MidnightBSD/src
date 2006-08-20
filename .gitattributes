@@ -32551,17 +32551,6 @@ usr.sbin/nologin/Makefile -text
 usr.sbin/nologin/nologin.5 -text
 usr.sbin/nologin/nologin.8 -text
 usr.sbin/nologin/nologin.c -text
-usr.sbin/ntp/ntp-keygen/Makefile -text
-usr.sbin/ntp/ntpd/Makefile -text
-usr.sbin/ntp/ntpdate/Makefile -text
-usr.sbin/ntp/ntpdc/Makefile -text
-usr.sbin/ntp/ntpq/Makefile -text
-usr.sbin/ntp/ntptime/Makefile -text
-usr.sbin/ntp/ntptrace/Makefile -text
-usr.sbin/ntp/scripts/mkver -text
-usr.sbin/ntp/scripts/ntptrace -text
-usr.sbin/ntp/scripts/ntpver -text
-usr.sbin/ntp/sntp/Makefile -text
 usr.sbin/ofwdump/Makefile -text
 usr.sbin/ofwdump/ofw_util.c -text
 usr.sbin/ofwdump/ofw_util.h -text
