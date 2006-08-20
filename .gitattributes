@@ -9101,8 +9101,6 @@ contrib/ntp/html/hints/svr4_package -text
 contrib/ntp/html/hints/todo -text
 contrib/ntp/html/hints/vxworks.html -text
 contrib/ntp/html/hints/winnt.html -text
-contrib/ntp/html/icons/home.gif -text svneol=unset#unset
-contrib/ntp/html/icons/mail2.gif -text svneol=unset#unset
 contrib/ntp/html/scripts/footer.txt -text
 contrib/ntp/html/scripts/links10.txt -text
 contrib/ntp/html/scripts/links11.txt -text
