@@ -32551,8 +32551,6 @@ usr.sbin/nologin/Makefile -text
 usr.sbin/nologin/nologin.5 -text
 usr.sbin/nologin/nologin.8 -text
 usr.sbin/nologin/nologin.c -text
-usr.sbin/ntp/doc/Makefile -text
-usr.sbin/ntp/doc/ntp.conf.5 -text
 usr.sbin/ntp/doc/ntp.keys.5 -text
 usr.sbin/ntp/doc/ntpd.8 -text
 usr.sbin/ntp/doc/ntpdate.8 -text
