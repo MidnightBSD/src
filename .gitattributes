@@ -6505,6 +6505,11 @@ contrib/groff/src/preproc/soelim/Makefile.sub -text
 contrib/groff/src/preproc/soelim/TODO -text
 contrib/groff/src/preproc/soelim/soelim.cpp -text
 contrib/groff/src/preproc/soelim/soelim.man -text
+contrib/groff/src/preproc/tbl/Makefile.sub -text
+contrib/groff/src/preproc/tbl/main.cpp -text
+contrib/groff/src/preproc/tbl/table.cpp -text
+contrib/groff/src/preproc/tbl/table.h -text
+contrib/groff/src/preproc/tbl/tbl.man -text
 contrib/groff/src/roff/groff/Makefile.sub -text
 contrib/groff/src/roff/groff/groff.cpp -text
 contrib/groff/src/roff/groff/groff.man -text
