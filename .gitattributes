@@ -17264,6 +17264,8 @@ lib/libc/stdlib/strtoimax.c -text
 lib/libc/stdlib/strtol.3 -text
 lib/libc/stdlib/strtol.c -text
 lib/libc/stdlib/strtoll.c -text
+lib/libc/stdlib/strtonum.3 -text
+lib/libc/stdlib/strtonum.c -text
 lib/libc/stdlib/strtoq.c -text
 lib/libc/stdlib/strtoul.3 -text
 lib/libc/stdlib/strtoul.c -text
