@@ -14521,6 +14521,7 @@ etc/networks -text
 etc/newsyslog.conf -text
 etc/nls.alias -text
 etc/nsmb.conf -text
+etc/ntpd.conf -text
 etc/opieaccess -text
 etc/pam.d/Makefile -text
 etc/pam.d/README -text
