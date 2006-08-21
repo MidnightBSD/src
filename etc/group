@@ -25,5 +25,6 @@ uucp:*:66:
 dialer:*:68:
 network:*:69:
 www:*:80:
+_ntp:*:123:
 nogroup:*:65533:
 nobody:*:65534:
