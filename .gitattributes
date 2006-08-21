@@ -32056,6 +32056,7 @@ usr.sbin/nologin/Makefile -text
 usr.sbin/nologin/nologin.5 -text
 usr.sbin/nologin/nologin.8 -text
 usr.sbin/nologin/nologin.c -text
+usr.sbin/ntpd/Makefile -text
 usr.sbin/ofwdump/Makefile -text
 usr.sbin/ofwdump/ofw_util.c -text
 usr.sbin/ofwdump/ofw_util.h -text
