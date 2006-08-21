@@ -9474,7 +9474,7 @@ contrib/openntpd/ntpd.conf -text
 contrib/openntpd/ntpd.conf.0 -text
 contrib/openntpd/ntpd.conf.5 -text
 contrib/openntpd/ntpd.h -text
-contrib/openntpd/openbsd-compat/.cvsignore -text
+contrib/openntpd/openbsd-compat/Makefile -text
 contrib/openntpd/openbsd-compat/Makefile.in -text
 contrib/openntpd/openbsd-compat/asprintf.c -text
 contrib/openntpd/openbsd-compat/atomicio.c -text
