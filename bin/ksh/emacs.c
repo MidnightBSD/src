@@ -160,6 +160,7 @@ static const struct x_ftab x_ftab[] = {
 	{ x_del_fword,		"delete-word-forward",		XF_ARG },
 	{ x_del_line,		"kill-line",			0 },
 	{ x_draw_line,		"redraw",			0 },
+	{ x_clear_screen,	"clear-screen",			0 },
 	{ x_end_hist,		"end-of-history",		0 },
 	{ x_end_of_text,	"eot",				0 },
 	{ x_enumerate,		"list",				0 },
@@ -246,7 +247,7 @@ static	struct x_defbindings const x_defbindings[] = {
 	{ XFUNC_goto_hist,		1,      'g'  },
 	{ XFUNC_mv_end,			0, CTRL('E') },
 	{ XFUNC_mv_begin,		0, CTRL('A') },
-	{ XFUNC_draw_line,		0, CTRL('L') },
+	{ XFUNC_clear_screen,		0, CTRL('L') },
 	{ XFUNC_meta1,			0, CTRL('[') },
 	{ XFUNC_meta2,			0, CTRL('X') },
 	{ XFUNC_kill,			0, CTRL('K') },
@@ -986,6 +987,15 @@ x_draw_line(int c)
 	x_redraw(-1);
 	return KSTD;
 
+}
+
+static int
+x_clear_screen(int c)
+{
+	printf("\e[H\e[2J");
+	fflush(stdout);
+	x_redraw(0);
+	return KSTD;
 }
 
 /* Redraw (part of) the line.  If limit is < 0, the everything is redrawn
