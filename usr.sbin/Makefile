@@ -101,7 +101,7 @@ SUBDIR=	ac \
 	ngctl \
 	nghook \
 	nologin \
-	ntp \
+	ntpd \
 	${_ofwdump} \
 	${_pccard} \
 	pciconf \
