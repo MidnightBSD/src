@@ -32426,6 +32426,13 @@ usr.sbin/rarpd/rarpd.c -text
 usr.sbin/raycontrol/Makefile -text
 usr.sbin/raycontrol/raycontrol.8 -text
 usr.sbin/raycontrol/raycontrol.c -text
+usr.sbin/rdate/Makefile -text
+usr.sbin/rdate/ntp.c -text
+usr.sbin/rdate/ntpleaps.c -text
+usr.sbin/rdate/ntpleaps.h -text
+usr.sbin/rdate/rdate.8 -text
+usr.sbin/rdate/rdate.c -text
+usr.sbin/rdate/rfc868time.c -text
 usr.sbin/repquota/Makefile -text
 usr.sbin/repquota/repquota.8 -text
 usr.sbin/repquota/repquota.c -text
