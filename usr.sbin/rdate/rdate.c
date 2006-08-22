@@ -165,16 +165,14 @@ main(int argc, char **argv)
 
 		adjsec  = adjust.tv_sec + adjust.tv_usec / 1.0e6;
 
-		if (slidetime || verbose) {
-			if (ntp)
-				(void) fprintf(stdout,
-				   "%s: adjust local clock by %.6f seconds\n",
-				   __progname, adjsec);
-			else
-				(void) fprintf(stdout,
-				   "%s: adjust local clock by %ld seconds\n",
-				   __progname, adjust.tv_sec);
-		}
+		if (ntp)
+			(void) fprintf(stdout,
+			   "%s: adjust local clock by %.6f seconds\n",
+			   __progname, adjsec);
+		else
+			(void) fprintf(stdout,
+			   "%s: adjust local clock by %ld seconds\n",
+			   __progname, adjust.tv_sec);
 	}
 
 	return 0;
