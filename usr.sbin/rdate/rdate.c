@@ -1,3 +1,4 @@
+/* 	$MidnightBSD$ */
 /*	$OpenBSD: rdate.c,v 1.22 2004/02/18 20:10:53 jmc Exp $	*/
 /*	$NetBSD: rdate.c,v 1.4 1996/03/16 12:37:45 pk Exp $	*/
 
@@ -38,13 +39,6 @@
  *	Time is returned as the number of seconds since
  *	midnight January 1st 1900.
  */
-#ifndef lint
-#if 0
-from: static char rcsid[] = "$NetBSD: rdate.c,v 1.3 1996/02/22 06:59:18 thorpej Exp $";
-#elseif 0
-static const char rcsid[] = "$OpenBSD: rdate.c,v 1.22 2004/02/18 20:10:53 jmc Exp $";
-#endif
-#endif				/* lint */
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -71,7 +65,7 @@ usage(void)
 	(void) fprintf(stderr, "  -4: use IPv4 only\n");
 	(void) fprintf(stderr, "  -6: use IPv6 only\n");
 	(void) fprintf(stderr, "  -a: use adjtime instead of instant change\n");
-/*	(void) fprintf(stderr, "  -c: correct leap second count\n"); */
+	(void) fprintf(stderr, "  -c: correct leap second count\n"); 
 	(void) fprintf(stderr, "  -n: use SNTP instead of RFC868 time protocol\n");
 	(void) fprintf(stderr, "  -p: just print, don't set\n");
 	(void) fprintf(stderr, "  -s: just set, don't print\n");
@@ -90,7 +84,7 @@ main(int argc, char **argv)
 
 	struct timeval new, adjust;
 
-	while ((c = getopt(argc, argv, "46psanv")) != -1)
+	while ((c = getopt(argc, argv, "46psacnv")) != -1)
 		switch (c) {
 		case '4':
 			family = PF_INET;
@@ -116,11 +110,10 @@ main(int argc, char **argv)
 			ntp++;
 			break;
 
-/* XXX zoneinfo files are not generated for this yet.
 		case 'c':
 			corrleaps = 1;
 			break;
-*/
+
 		case 'v':
 			verbose++;
 			break;

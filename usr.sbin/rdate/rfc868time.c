@@ -1,5 +1,6 @@
 /*	$OpenBSD: rfc868time.c,v 1.6 2004/02/16 21:25:41 jakob Exp $	*/
 /*	$NetBSD: rdate.c,v 1.4 1996/03/16 12:37:45 pk Exp $	*/
+/* $MidnightBSD$ */
 
 /*
  * Copyright (c) 1994 Christos Zoulas

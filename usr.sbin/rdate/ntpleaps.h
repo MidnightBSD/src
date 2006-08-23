@@ -1,6 +1,7 @@
 /*	$OpenBSD: ntpleaps.h,v 1.3 2004/05/05 20:29:54 jakob Exp $	*/
+/* $MidnightBSD$ */
 
-/*
+/*-
  * Copyright (c) 2002 Thorsten Glaser. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

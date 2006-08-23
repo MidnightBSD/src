@@ -1,6 +1,7 @@
 /*	$OpenBSD: ntpleaps.c,v 1.8 2006/01/28 07:25:23 tedu Exp $	*/
+/* $MidnightBSD$ */
 
-/*
+/*-
  * Copyright (c) 2002 Thorsten Glaser. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,10 +31,6 @@
  */
 
 /* Leap second support for NTP clients (generic) */
-
-#if 0
-static const char RCSId[] = "$OpenBSD: ntpleaps.c,v 1.8 2006/01/28 07:25:23 tedu Exp $";
-#endif
 
 /*
  * I could include tzfile.h, but this would make the code unportable
