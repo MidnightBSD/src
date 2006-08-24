@@ -1524,6 +1524,7 @@ contrib/bind9/lib/dns/rdata/generic/proforma.c -text
 contrib/bind9/lib/dns/rdata/generic/proforma.h -text
 contrib/bind9/lib/dns/rdata/generic/ptr_12.c -text
 contrib/bind9/lib/dns/rdata/generic/ptr_12.h -text
+contrib/bind9/lib/dns/rdata/generic/rp_17.c -text
 contrib/bind9/lib/dns/rdata/generic/rp_17.h -text
 contrib/bind9/lib/dns/rdata/generic/rrsig_46.c -text
 contrib/bind9/lib/dns/rdata/generic/rrsig_46.h -text
