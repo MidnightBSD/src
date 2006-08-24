@@ -27,13 +27,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbdmux.c,v 1.1.1.2 2006-02-25 02:37:03 laffer1 Exp $
- * $FreeBSD: src/sys/dev/kbdmux/kbdmux.c,v 1.2.2.2 2006/01/22 14:54:24 yar Exp $
+ * $Id: kbdmux.c,v 1.2 2006-08-24 06:51:36 laffer1 Exp $
+ * $FreeBSD: /repoman/r/ncvs/src/sys/dev/kbdmux/kbdmux.c,v 1.2.2.5 2006/03/04 00:08:20 emax Exp $
  */
 
 #include "opt_kbd.h"
 
 #include <sys/param.h>
+#include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/consio.h>
 #include <sys/fcntl.h>
@@ -246,11 +247,20 @@ kbdmux_kbd_event(keyboard_t *kbd, int event, void *arg)
 
 		KBDMUX_LOCK(state);
 
-		/* read all chars from the keyboard */
+		/*
+		 * Read all chars from the keyboard
+		 *
+		 * Turns out that atkbd(4) check_char() method may return
+		 * "true" while read_char() method returns NOKEY. If this
+		 * happens we could stuck in the loop below. Avoid this
+		 * by breaking out of the loop if read_char() method returns
+		 * NOKEY.
+		 */
+
 		while (KBDMUX_CHECK_CHAR(kbd)) {
 			c = KBDMUX_READ_CHAR(kbd, 0);
 			if (c == NOKEY)
-				continue;
+				break;
 			if (c == ERRKEY)
 				continue; /* XXX ring bell */
 			if (!KBD_IS_BUSY(kbd))
@@ -359,6 +369,9 @@ kbdmux_configure(int flags)
 static int
 kbdmux_probe(int unit, void *arg, int flags)
 {
+	if (resource_disabled(KEYBOARD_NAME, unit))
+		return (ENXIO);
+
 	return (0);
 }
 
@@ -513,6 +526,10 @@ kbdmux_term(keyboard_t *kbd)
 	KBDMUX_LOCK_DESTROY(state);
 	bzero(state, sizeof(*state));
 	free(state, M_KBDMUX);
+
+	free(kbd->kb_keymap, M_KBDMUX);
+	free(kbd->kb_accentmap, M_KBDMUX);
+	free(kbd->kb_fkeytab, M_KBDMUX);
 	free(kbd, M_KBDMUX);
 
 	return (0);
@@ -1006,14 +1023,14 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 	case KDGKBMODE: /* get kyboard mode */
 		KBDMUX_LOCK(state);
-		*((int *) arg) = state->ks_mode;
+		*((intptr_t *) arg) = state->ks_mode;
 		KBDMUX_UNLOCK(state);
 		break;
 
 	case KDSKBMODE: /* set keyboard mode */
 		KBDMUX_LOCK(state);
 
-		switch (*((int *) arg)) {
+		switch (*((intptr_t *) arg)) {
 		case K_XLATE:
 			if (state->ks_mode != K_XLATE) {
 				/* make lock key state and LED state match */
@@ -1024,9 +1041,9 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 		case K_RAW:
 		case K_CODE:
-			if (state->ks_mode != *((int *) arg)) {
+			if (state->ks_mode != *((intptr_t *) arg)) {
 				kbdmux_clear_state_locked(state);
-				state->ks_mode = *((int *) arg);
+				state->ks_mode = *((intptr_t *) arg);
 			}
 			break;
 
@@ -1040,7 +1057,7 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 	case KDGETLED: /* get keyboard LED */
 		KBDMUX_LOCK(state);
-		*((int *) arg) = KBD_LED_VAL(kbd);
+		*((intptr_t *) arg) = KBD_LED_VAL(kbd);
 		KBDMUX_UNLOCK(state);
 		break;
 
@@ -1048,13 +1065,13 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 		KBDMUX_LOCK(state);
 
 		/* NOTE: lock key state in ks_state won't be changed */
-		if (*((int *) arg) & ~LOCK_MASK) {
+		if (*((intptr_t *) arg) & ~LOCK_MASK) {
 			KBDMUX_UNLOCK(state);
 
 			return (EINVAL);
 		}
 
-		KBD_LED_VAL(kbd) = *((int *) arg);
+		KBD_LED_VAL(kbd) = *((intptr_t *) arg);
 
 		/* KDSETLED on all slave keyboards */
 		SLIST_FOREACH(k, &state->ks_kbds, next)
@@ -1065,21 +1082,21 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 	case KDGKBSTATE: /* get lock key state */
 		KBDMUX_LOCK(state);
-		*((int *) arg) = state->ks_state & LOCK_MASK;
+		*((intptr_t *) arg) = state->ks_state & LOCK_MASK;
 		KBDMUX_UNLOCK(state);
 		break;
 
 	case KDSKBSTATE: /* set lock key state */
 		KBDMUX_LOCK(state);
 
-		if (*((int *) arg) & ~LOCK_MASK) {
+		if (*((intptr_t *) arg) & ~LOCK_MASK) {
 			KBDMUX_UNLOCK(state);
 
 			return (EINVAL);
 		}
 
 		state->ks_state &= ~LOCK_MASK;
-		state->ks_state |= *((int *) arg);
+		state->ks_state |= *((intptr_t *) arg);
 
 		/* KDSKBSTATE on all slave keyboards */
 		SLIST_FOREACH(k, &state->ks_kbds, next)
@@ -1099,17 +1116,17 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 
 			/* lookup delay */
 			for (i = sizeof(delays)/sizeof(delays[0]) - 1; i > 0; i --)
-				if (((int *) arg)[0] >= delays[i])
+				if (((intptr_t *) arg)[0] >= delays[i])
 					break;
 			mode = i << 5;
 
 			/* lookup rate */
 			for (i = sizeof(rates)/sizeof(rates[0]) - 1; i > 0; i --)
-				if (((int *) arg)[1] >= rates[i])
+				if (((intptr_t *) arg)[1] >= rates[i])
 					break;
 			mode |= i;
 		} else
-			mode = *((int *) arg);
+			mode = *((intptr_t *) arg);
 
 		if (mode & ~0x7f) {
 			KBDMUX_UNLOCK(state);
@@ -1128,8 +1145,8 @@ kbdmux_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 		break;
 
 	case PIO_KEYMAP:	/* set keyboard translation table */
-        case PIO_KEYMAPENT:	/* set keyboard translation table entry */
-        case PIO_DEADKEYMAP:	/* set accent key translation table */
+	case PIO_KEYMAPENT:	/* set keyboard translation table entry */
+	case PIO_DEADKEYMAP:	/* set accent key translation table */
 		KBDMUX_LOCK(state);
                 state->ks_accents = 0;
 

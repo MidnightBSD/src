@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/kbd/kbd.c,v 1.43.2.1 2005/07/20 18:56:20 emax Exp $");
+__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/kbd/kbd.c,v 1.43.2.2 2006/03/04 00:41:28 emax Exp $");
 
 #include "opt_kbd.h"
 
@@ -185,7 +185,11 @@ kbd_register(keyboard_t *kbd)
 {
 	const keyboard_driver_t **list;
 	const keyboard_driver_t *p;
+	keyboard_t *mux;
+	keyboard_info_t ki;
 	int index;
+
+	mux = kbd_get_keyboard(kbd_find_keyboard("kbdmux", -1));
 
 	for (index = 0; index < keyboards; ++index) {
 		if (keyboard[index] == NULL)
@@ -208,6 +212,16 @@ kbd_register(keyboard_t *kbd)
 		if (strcmp(p->name, kbd->kb_name) == 0) {
 			keyboard[index] = kbd;
 			kbdsw[index] = p->kbdsw;
+
+			if (mux != NULL) {
+				bzero(&ki, sizeof(ki));
+				strcpy(ki.kb_name, kbd->kb_name);
+				ki.kb_unit = kbd->kb_unit;
+
+				(*kbdsw[mux->kb_index]->ioctl)
+					(mux, KBADDKBD, (caddr_t) &ki);
+			}
+
 			return (index);
 		}
 	}
@@ -216,6 +230,16 @@ kbd_register(keyboard_t *kbd)
 		if (strcmp(p->name, kbd->kb_name) == 0) {
 			keyboard[index] = kbd;
 			kbdsw[index] = p->kbdsw;
+
+			if (mux != NULL) {
+				bzero(&ki, sizeof(ki));
+				strcpy(ki.kb_name, kbd->kb_name);
+				ki.kb_unit = kbd->kb_unit;
+
+				(*kbdsw[mux->kb_index]->ioctl)
+					(mux, KBADDKBD, (caddr_t) &ki);
+			}
+
 			return (index);
 		}
 	}

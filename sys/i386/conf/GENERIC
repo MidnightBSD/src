@@ -136,6 +136,7 @@ device		twe		# 3ware ATA RAID
 device		atkbdc		# AT keyboard controller
 device		atkbd		# AT keyboard
 device		psm		# PS/2 mouse
+device		kbdmux		# Keyboard multiplexer
 
 device		vga		# VGA video card driver
 
