@@ -23783,6 +23783,7 @@ sys/compat/svr4/svr4_signal.c -text
 sys/compat/svr4/svr4_signal.h -text
 sys/compat/svr4/svr4_socket.c -text
 sys/compat/svr4/svr4_socket.h -text
+sys/compat/svr4/svr4_sockio.c -text
 sys/compat/svr4/svr4_sockio.h -text
 sys/compat/svr4/svr4_sockmod.h -text
 sys/compat/svr4/svr4_stat.c -text
