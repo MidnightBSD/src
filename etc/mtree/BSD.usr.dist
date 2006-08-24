@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -1195,7 +1196,37 @@
             ..
             Pacific
             ..
-            SystemV
+            right
+                Africa
+                ..
+                America
+                    Argentina
+                    ..
+                    Indiana
+                    ..
+                    Kentucky
+                    ..
+                    North_Dakota
+                    ..
+                ..
+                Antarctica
+                ..
+                Arctic
+                ..
+                Asia
+                ..
+                Atlantic
+                ..
+                Australia
+                ..
+                Etc
+                ..
+                Europe
+                ..
+                Indian
+                ..
+                Pacific 
+                ..
             ..
         ..
     ..

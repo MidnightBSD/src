@@ -1,5 +1,5 @@
 /*	$OpenBSD: ntpleaps.c,v 1.8 2006/01/28 07:25:23 tedu Exp $	*/
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.sbin/rdate/ntpleaps.c,v 1.2 2006/08/23 17:39:39 laffer1 Exp $ */
 
 /*-
  * Copyright (c) 2002 Thorsten Glaser. All rights reserved.
@@ -123,7 +123,7 @@ ntpleaps_read(void)
 	u_int64_t s;
 	u_int64_t *l;
 
-	fd = open("/usr/share/zoneinfo/Etc/UTC", O_RDONLY | O_NDELAY);
+	fd = open("/usr/share/zoneinfo/right/Etc/UTC", O_RDONLY | O_NDELAY);
 	if (fd == -1)
 		return (-1);
 
