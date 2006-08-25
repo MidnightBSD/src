@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/mii.c,v 1.26 2005/06/11 00:20:38 brooks Exp $");
+__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/mii/mii.c,v 1.26.2.1 2006/03/17 20:17:43 glebius Exp $");
 
 /*
  * MII bus layer, glues MII-capable network interface drivers to sharable
@@ -240,9 +240,20 @@ static void
 miibus_statchg(device_t dev)
 {
 	device_t		parent;
+	struct mii_data		*mii;
+	struct ifnet		*ifp;
 
 	parent = device_get_parent(dev);
 	MIIBUS_STATCHG(parent);
+
+	mii = device_get_softc(dev);
+
+	/*
+	 * Note that each NIC's softc must start with an ifnet pointer.
+	 * XXX: EVIL HACK!
+	 */
+	ifp = *(struct ifnet **)device_get_softc(parent);
+	ifp->if_baudrate = ifmedia_baudrate(mii->mii_media_active);
 	return;
 }
 

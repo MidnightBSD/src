@@ -211,7 +211,7 @@ random_yarrow_deinit(void)
 	 * Command the hash/reseed thread to end and wait for it to finish
 	 */
 	random_kthread_control = -1;
-	tsleep((void *)&random_kthread_control, curthread->td_priority, "term",
+	tsleep((void *)&random_kthread_control, 0, "term",
 	    0);
 
 	/* Destroy the harvest fifos */
@@ -285,7 +285,7 @@ random_kthread(void *arg __unused)
 
 		/* Found nothing, so don't belabour the issue */
 		if (!active)
-			tsleep(&harvestfifo, curthread->td_priority, "-",
+			tsleep(&harvestfifo, 0, "-",
 			    hz / 10);
 
 	}

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2005 Joseph Koshy
+ * Copyright (c) 2003-2006 Joseph Koshy
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_mod.c,v 1.10.2.4 2005/08/26 19:49:32 jkoshy Exp $");
+__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/hwpmc/hwpmc_mod.c,v 1.10.2.7 2006/06/16 22:11:55 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/eventhandler.h>
@@ -644,15 +644,8 @@ pmc_select_cpu(int cpu)
 static void
 pmc_force_context_switch(void)
 {
-	u_char	curpri;
 
-	mtx_lock_spin(&sched_lock);
-	curpri = curthread->td_priority;
-	mtx_unlock_spin(&sched_lock);
-
-	(void) tsleep((void *) pmc_force_context_switch, curpri,
-	    "pmcctx", 1);
-
+	(void) tsleep((void *) pmc_force_context_switch, 0, "pmcctx", 1);
 }
 
 /*
@@ -1486,17 +1479,19 @@ pmc_hook_handler(struct thread *td, int function, void *arg)
 		}
 
 		/*
-		 * If this process is the target of a PMC, check if the new
-		 * credentials are compatible with the owner's permissions.
+		 * If the process being exec'ed is not the target of any
+		 * PMC, we are done.
 		 */
-
-		if ((pp = pmc_find_process_descriptor(p, 0)) == NULL)
+		if ((pp = pmc_find_process_descriptor(p, 0)) == NULL) {
+			if (freepath)
+				FREE(freepath, M_TEMP);
 			break;
+		}
 
 		/*
 		 * Log the exec event to all monitoring owners.  Skip
 		 * owners who have already recieved the event because
-		 * the have system sampling PMCs active.
+		 * they had system sampling PMCs active.
 		 */
 		for (ri = 0; ri < md->pmd_npmc; ri++)
 			if ((pm = pp->pp_pmcs[ri].pp_pmc) != NULL) {
@@ -2406,6 +2401,7 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 
 	case PMC_OP_CONFIGURELOG:
 	{
+		struct pmc *pm;
 		struct pmc_owner *po;
 		struct pmc_op_configurelog cl;
 		struct proc *p;
@@ -2434,8 +2430,13 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		else if (po->po_flags & PMC_PO_OWNS_LOGFILE) {
 			pmclog_process_closelog(po);
 			error = pmclog_flush(po);
-			if (error == 0)
+			if (error == 0) {
+				LIST_FOREACH(pm, &po->po_pmcs, pm_next)
+				    if (pm->pm_flags & PMC_F_NEEDS_LOGFILE &&
+					pm->pm_state == PMC_STATE_RUNNING)
+					    pmc_stop(pm);
 				error = pmclog_deconfigure_log(po);
+			}
 		} else
 			error = EINVAL;
 	}
@@ -3954,7 +3955,8 @@ pmc_initialize(void)
 	}
 
 	if (pmc_nsamples <= 0 || pmc_nsamples > 65535) {
-		(void) printf("hwpmc: tunable nsamples=%d out of range.\n", pmc_nsamples);
+		(void) printf("hwpmc: tunable nsamples=%d out of range.\n",
+		    pmc_nsamples);
 		pmc_nsamples = PMC_NSAMPLES;
 	}
 
@@ -3995,8 +3997,7 @@ pmc_initialize(void)
 		    M_WAITOK|M_ZERO);
 
 		sb->ps_read = sb->ps_write = sb->ps_samples;
-		sb->ps_fence = sb->ps_samples + pmc_nsamples
-;
+		sb->ps_fence = sb->ps_samples + pmc_nsamples;
 		KASSERT(pmc_pcpu[cpu] != NULL,
 		    ("[pmc,%d] cpu=%d Null per-cpu data", __LINE__, cpu));
 
@@ -4146,6 +4147,17 @@ pmc_cleanup(void)
 	    ("[pmc,%d] Global SS owner list not empty", __LINE__));
 	KASSERT(pmc_ss_count == 0,
 	    ("[pmc,%d] Global SS count not empty", __LINE__));
+
+	/* free the per-cpu sample buffers */
+	for (cpu = 0; cpu < mp_ncpus; cpu++) {
+		if (pmc_cpu_is_disabled(cpu))
+			continue;
+		KASSERT(pmc_pcpu[cpu]->pc_sb != NULL,
+		    ("[pmc,%d] Null cpu sample buffer cpu=%d", __LINE__,
+			cpu));
+		FREE(pmc_pcpu[cpu]->pc_sb, M_PMC);
+		pmc_pcpu[cpu]->pc_sb = NULL;
+	}
 
  	/* do processor dependent cleanup */
 	PMCDBG(MOD,INI,3, "%s", "md cleanup");
