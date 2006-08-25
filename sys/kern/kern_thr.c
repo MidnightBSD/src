@@ -289,6 +289,7 @@ thr_exit(struct thread *td, struct thr_exit_args *uap)
 	 * call exit() in the trampoline when it returns.
 	 */
 	if (p->p_numthreads != 1) {
+		thread_stopped(p);
 		thread_exit();
 		/* NOTREACHED */
 	}
@@ -369,7 +370,7 @@ thr_suspend(struct thread *td, struct thr_suspend_args *uap)
 	PROC_LOCK(td->td_proc);
 	if ((td->td_flags & TDF_THRWAKEUP) == 0)
 		error = msleep((void *)td, &td->td_proc->p_mtx,
-		    td->td_priority | PCATCH, "lthr", hz);
+		    PCATCH, "lthr", hz);
 	if (td->td_flags & TDF_THRWAKEUP) {
 		mtx_lock_spin(&sched_lock);
 		td->td_flags &= ~TDF_THRWAKEUP;

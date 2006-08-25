@@ -177,7 +177,7 @@ umtxq_busy(struct umtx_key *key)
 	while (umtxq_chains[chain].uc_flags & UCF_BUSY) {
 		umtxq_chains[chain].uc_flags |= UCF_WANT;
 		msleep(&umtxq_chains[chain], umtxq_mtx(chain),
-		       curthread->td_priority, "umtxq_busy", 0);
+		       0, "umtxq_busy", 0);
 	}
 	umtxq_chains[chain].uc_flags |= UCF_BUSY;
 }
@@ -521,7 +521,7 @@ _do_lock(struct thread *td, struct umtx *umtx, long id, int timo)
 		umtxq_lock(&uq->uq_key);
 		if (old == owner && (td->td_flags & TDF_UMTXQ)) {
 			error = umtxq_sleep(td, &uq->uq_key,
-				       td->td_priority | PCATCH,
+				       PCATCH,
 				       "umtx", timo);
 		}
 		umtxq_busy(&uq->uq_key);
@@ -643,7 +643,7 @@ do_wait(struct thread *td, struct umtx *umtx, long id, struct timespec *timeout)
 		umtxq_lock(&uq->uq_key);
 		if (td->td_flags & TDF_UMTXQ)
 			error = umtxq_sleep(td, &uq->uq_key,
-			       td->td_priority | PCATCH, "ucond", 0);
+			       PCATCH, "ucond", 0);
 		if (!(td->td_flags & TDF_UMTXQ))
 			error = 0;
 		else
@@ -657,7 +657,7 @@ do_wait(struct thread *td, struct umtx *umtx, long id, struct timespec *timeout)
 			umtxq_lock(&uq->uq_key);
 			if (td->td_flags & TDF_UMTXQ) {
 				error = umtxq_sleep(td, &uq->uq_key,
-					    td->td_priority | PCATCH,
+					    PCATCH,
 					    "ucond", tvtohz(&tv));
 			}
 			if (!(td->td_flags & TDF_UMTXQ)) {
