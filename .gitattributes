@@ -24573,6 +24573,9 @@ sys/dev/awi/awi.c -text
 sys/dev/awi/awireg.h -text
 sys/dev/awi/awivar.h -text
 sys/dev/awi/if_awi_pccard.c -text
+sys/dev/bce/if_bce.c -text
+sys/dev/bce/if_bcefw.h -text
+sys/dev/bce/if_bcereg.h -text
 sys/dev/bfe/if_bfe.c -text
 sys/dev/bfe/if_bfereg.h -text
 sys/dev/bge/if_bge.c -text
