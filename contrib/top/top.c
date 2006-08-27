@@ -13,7 +13,7 @@ char *copyright =
  *  Copyright (c) 1994, 1995, William LeFebvre, Argonne National Laboratory
  *  Copyright (c) 1996, William LeFebvre, Group sys Consulting
  *
- * $FreeBSD: src/contrib/top/top.c,v 1.17 2005/05/18 13:30:08 keramida Exp $
+ * $FreeBSD: src/contrib/top/top.c,v 1.19 2006/04/19 12:19:06 ru Exp $
  */
 
 /*
@@ -395,9 +395,10 @@ char *argv[];
 		break;
 
 	      default:
-		fprintf(stderr, "\
-Top version %s\n\
-Usage: %s [-CHISbinqut] [-d x] [-s x] [-o field] [-U username] [number]\n",
+		fprintf(stderr,
+"Top version %s\n"
+"Usage: %s [-bCHIinqStuv] [-d count] [-m io | cpu] [-o field] [-s time]\n"
+"       [-U username] [number]\n",
 			version_string(), myname);
 		exit(1);
 	    }

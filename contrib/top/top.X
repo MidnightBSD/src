@@ -1,6 +1,6 @@
 .\" NOTE:  changes to the manual page for "top" should be made in the
 .\"        file "top.X" and NOT in the file "top.1".
-.\" $FreeBSD: src/contrib/top/top.X,v 1.12 2005/03/13 13:37:02 brueffer Exp $
+.\" $FreeBSD: src/contrib/top/top.X,v 1.16 2006/05/16 15:27:43 keramida Exp $
 .nr N %topn%
 .nr D %delay%
 .TH TOP 1 Local
@@ -10,17 +10,17 @@ top \- display and update information about the top cpu processes
 .SH SYNOPSIS
 .B top
 [
-.B \-SbiInqutv
+.B \-bCHIinqStuv
 ] [
 .BI \-d count
 ] [
-.BI \-s time
+.BI \-m io | cpu
 ] [
 .BI \-o field
 ] [
-.BI \-U username
+.BI \-s time
 ] [
-.BI \-m io | cpu
+.BI \-U username
 ] [
 .I number
 ]
@@ -61,6 +61,18 @@ features.  If the output of
 is redirected to a file, it acts as if it were being run on a dumb
 terminal.
 .SH OPTIONS
+.TP
+.B \-C
+Toggle CPU display mode.
+By default top displays the weighted CPU percentage in the WCPU column
+(this is the same value that
+.IR ps (1)
+displays as CPU).
+Each time
+.B \-C
+flag is passed it toggles between \*(lqraw cpu\*(rq mode
+and \*(lqweighted cpu\*(rq mode, showing the \*(lqCPU\*(rq or
+the \*(lqWCPU\*(rq column respectively.
 .TP
 .B \-S
 Show system processes in the display.  Normally, system processes such as
@@ -249,7 +261,7 @@ to all users will be displayed.
 .TP
 .B o
 Change the order in which the display is sorted.  This command is not
-available on all systems.  The sort key names vary fron system to system
+available on all systems.  The sort key names vary from system to system
 but usually include:  \*(lqcpu\*(rq, \*(lqres\*(rq, \*(lqsize\*(rq,
 \*(lqtime\*(rq.  The default is cpu.
 .TP
@@ -299,8 +311,12 @@ NICE is the nice amount (in the range \-20 to 20),
 SIZE is the total size of the process (text, data, and stack),
 RES is the current amount of resident memory (both SIZE and RES are
 given in kilobytes),
-STATE is the current state (one of \*(lqsleep\*(rq, \*(lqWAIT\*(rq,
-\*(lqrun\*(rq, \*(lqidl\*(rq, \*(lqzomb\*(rq, or \*(lqstop\*(rq),
+STATE is the current state (one of \*(lqSTART\*(rq, \*(lqRUN\*(rq
+(shown as \*(lqCPUn\*(rq on SMP systems), \*(lqSLEEP\*(rq, \*(lqSTOP\*(rq,
+\*(lqZOMB\*(rq, \*(lqWAIT\*(rq, \*(lqLOCK\*(rq or the event on which the
+process waits),
+C is the processor number on which the process is executing
+(visible only on SMP systems),
 TIME is the number of system and user cpu seconds that the process has used,
 WCPU, when displayed, is the weighted cpu percentage (this is the same
 value that
