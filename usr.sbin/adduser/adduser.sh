@@ -283,6 +283,10 @@ add_user() {
 		err "There was an error adding user ($username)."
 		return 1
 	else
+		if [ -z "$Dflag" ]; then
+			chmod 700 $uhome
+		fi
+
 		info "Successfully added ($username) to the user database."
 		if [ "random" = "$passwdtype" ]; then
 			randompass="$_output"
