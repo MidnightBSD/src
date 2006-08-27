@@ -7,7 +7,7 @@ FILES1=		dot.cshrc dot.login dot.login_conf dot.mailrc dot.profile \
 FILES2=		dot.mail_aliases dot.rhosts 
 FILES1DIR=	/usr/share/skel
 FILES2DIR=	/usr/share/skel
-FILES1MODE=	0644
+FILES1MODE=	0600
 FILES2MODE=	0600
 NO_OBJ=
 
