@@ -126,6 +126,7 @@ SUBDIR=	ac \
 	quotaon \
 	rarpd \
 	raycontrol \
+	rdate \
 	repquota \
 	${_rip6query} \
 	rmt \
