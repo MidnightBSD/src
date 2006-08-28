@@ -2,7 +2,7 @@
 #
 # $NetBSD: sshd,v 1.18 2002/04/29 08:23:34 lukem Exp $
 # $FreeBSD: src/etc/rc.d/sshd,v 1.8.2.1 2005/12/16 01:42:54 dougb Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: sshd
 # REQUIRE: LOGIN cleanvar

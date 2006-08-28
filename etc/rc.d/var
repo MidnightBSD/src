@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/var,v 1.40 2005/03/02 16:41:35 brooks Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: var
 # REQUIRE: mountcritlocal

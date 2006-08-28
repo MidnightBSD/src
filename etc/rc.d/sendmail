@@ -2,7 +2,7 @@
 #
 # $NetBSD: sendmail,v 1.14 2002/02/12 01:26:36 lukem Exp $
 # $FreeBSD: src/etc/rc.d/sendmail,v 1.14.2.2 2005/12/16 01:42:54 dougb Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: mail
 # REQUIRE: LOGIN cleanvar

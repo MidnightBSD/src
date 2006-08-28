@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/sdpd,v 1.4.2.1 2005/11/23 18:03:33 emax Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: sdpd
 # REQUIRE: DAEMON
