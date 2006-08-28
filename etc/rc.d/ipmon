@@ -2,7 +2,7 @@
 #
 # $NetBSD: ipmon,v 1.9 2002/04/18 05:02:01 lukem Exp $
 # $FreeBSD: src/etc/rc.d/ipmon,v 1.13.2.1 2005/12/16 01:42:54 dougb Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: ipmon
 # REQUIRE: mountcritlocal hostname sysctl cleanvar ipfilter

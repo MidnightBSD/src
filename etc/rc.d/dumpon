@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/dumpon,v 1.9.2.2 2005/12/21 07:11:34 dougb Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: dumpon
 # BEFORE: disks savecore initrandom

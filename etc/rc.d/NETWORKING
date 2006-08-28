@@ -2,7 +2,7 @@
 #
 # $NetBSD: NETWORKING,v 1.2 2002/03/22 04:33:57 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/NETWORKING,v 1.9.2.2 2006/01/21 22:42:43 yar Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: NETWORKING NETWORK
 # REQUIRE: netif routing network_ipv6 isdnd ppp

@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/nfsserver,v 1.4 2004/10/07 13:55:26 mtm Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: nfsserver
 # REQUIRE: NETWORKING mountcritremote

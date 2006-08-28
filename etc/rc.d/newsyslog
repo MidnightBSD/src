@@ -2,7 +2,7 @@
 #
 # $NetBSD: newsyslog,v 1.5 2002/03/24 15:51:26 lukem Exp $
 # $FreeBSD: src/etc/rc.d/newsyslog,v 1.3.2.2 2006/01/17 06:46:54 dougb Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: newsyslog
 # REQUIRE: cleanvar mountcritremote

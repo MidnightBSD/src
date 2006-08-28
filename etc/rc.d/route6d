@@ -2,7 +2,7 @@
 #
 # $NetBSD: route6d,v 1.5 2002/03/22 04:34:00 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/route6d,v 1.9 2004/10/07 13:55:26 mtm Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: route6d
 # REQUIRE: network_ipv6

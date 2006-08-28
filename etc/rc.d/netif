@@ -23,7 +23,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/netif,v 1.14.2.2 2005/12/10 02:20:14 brooks Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: netif
 # REQUIRE: atm1 ipfilter mountcritlocal pccard serial sppp sysctl

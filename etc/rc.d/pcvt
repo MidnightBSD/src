@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/pcvt,v 1.5 2004/10/07 13:55:26 mtm Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: pcvt
 # REQUIRE: LOGIN

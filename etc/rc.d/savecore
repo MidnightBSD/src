@@ -2,7 +2,7 @@
 #
 # $NetBSD: savecore,v 1.5 2002/03/22 04:34:00 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/savecore,v 1.10 2004/10/24 13:04:09 des Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: savecore
 # REQUIRE: syslogd

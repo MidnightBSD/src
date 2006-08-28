@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/ramdisk-own,v 1.4 2004/11/16 04:14:28 wes Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: ramdisk-own
 # REQUIRE: ramdisk mountcritlocal

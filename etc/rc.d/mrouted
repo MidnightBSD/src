@@ -2,7 +2,7 @@
 #
 # $NetBSD: mrouted,v 1.6 2002/03/22 04:33:59 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/mrouted,v 1.9 2005/01/16 03:12:03 obrien Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: mrouted
 # REQUIRE: netif routing cleanvar

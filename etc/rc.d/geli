@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/geli,v 1.2.2.2 2005/12/15 23:32:35 pjd Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: disks
 # REQUIRE: initrandom

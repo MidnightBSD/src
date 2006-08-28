@@ -2,7 +2,7 @@
 #
 # $NetBSD: dhclient,v 1.8 2002/03/22 04:33:58 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/dhclient,v 1.20.2.1 2005/07/29 23:36:28 brooks Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: dhclient
 # KEYWORD: nojail nostart

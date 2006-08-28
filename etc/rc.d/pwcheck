@@ -2,7 +2,7 @@
 #
 # $NetBSD: pwcheck,v 1.4 2002/03/22 04:33:59 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/pwcheck,v 1.4 2004/10/07 13:55:26 mtm Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: pwcheck
 # REQUIRE: mountcritremote syslogd

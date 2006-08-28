@@ -4,7 +4,7 @@
 # domain.
 #
 # $FreeBSD: src/etc/rc.d/gbde,v 1.12.2.1 2005/08/16 08:39:36 pjd Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: disks
 # KEYWORD: nojail

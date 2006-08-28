@@ -2,7 +2,7 @@
 #
 # $NetBSD: lpd,v 1.5 2002/03/22 04:33:59 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/lpd,v 1.7 2005/03/02 02:46:47 brooks Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: lpd
 # REQUIRE: DAEMON

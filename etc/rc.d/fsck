@@ -2,7 +2,7 @@
 #
 # $NetBSD: fsck,v 1.2 2001/06/18 06:42:35 lukem Exp $
 # $FreeBSD: src/etc/rc.d/fsck,v 1.10 2004/10/07 13:55:25 mtm Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: fsck
 # REQUIRE: localswap

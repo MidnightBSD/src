@@ -24,7 +24,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/hostname,v 1.8 2004/10/07 13:55:25 mtm Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: hostname
 # REQUIRE: mountcritlocal
