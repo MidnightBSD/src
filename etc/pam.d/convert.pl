@@ -31,9 +31,9 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-#
+# 
+# $MidnightBSD$
 # $FreeBSD: src/etc/pam.d/convert.pl,v 1.6 2004/06/06 11:46:29 schweikh Exp $
-#
 
 use strict;
 use Fcntl;

@@ -1,6 +1,7 @@
-# /etc/crontab - root's crontab for FreeBSD
+# /etc/crontab - root's crontab for MidnightBSD
 #
 # $FreeBSD: src/etc/crontab,v 1.32 2002/11/22 16:13:39 tom Exp $
+# $MidnightBSD$
 #
 SHELL=/bin/sh
 PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin

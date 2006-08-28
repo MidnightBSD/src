@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/etc/login.access,v 1.4 2004/06/06 11:46:27 schweikh Exp $
 #
 # Login access control table.

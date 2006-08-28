@@ -1,4 +1,4 @@
-#
+# $MidnightBSD$
 # $FreeBSD: src/etc/mail/Makefile,v 1.36 2004/06/06 17:28:31 gshapiro Exp $
 #
 # This Makefile provides an easy way to generate the configuration

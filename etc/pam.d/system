@@ -1,4 +1,4 @@
-#
+# $MidnightBSD$
 # $FreeBSD: src/etc/pam.d/system,v 1.1 2003/06/14 12:35:05 des Exp $
 #
 # System-wide defaults
