@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/Makefile,v 1.2 2006/05/22 05:08:38 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -21,7 +21,7 @@
 # delete-old          - Delete obsolete files and directories interactively.
 # delete-old-libs     - Delete obsolete libraries interactively.
 #
-# This makefile is simple by design. The FreeBSD make automatically reads
+# This makefile is simple by design. The MidnightBSD make automatically reads
 # the /usr/share/mk/sys.mk unless the -m argument is specified on the
 # command line. By keeping this makefile simple, it doesn't matter too
 # much how different the installed mk files are from those in the source
