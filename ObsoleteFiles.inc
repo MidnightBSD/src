@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.3 2006/08/24 00:29:12 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,12 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20060827: more ntpd files
+OLD_FILES+=usr/sbin/sntp
+OLD_FILES+=usr/sbin/ntp-keygen
+OLD_FILES+=usr/sbin/ntpdc
+OLD_FILES+=usr/sbin/ntptime
+OLD_FILES+=usr/sbin/ntptrace
 # 20060823: ntpdate replaced with rdate
 OLD_FILES+=usr/sbin/ntpdate
 OLD_FILES+=usr/share/man/man8/ntpdate.8.gz
