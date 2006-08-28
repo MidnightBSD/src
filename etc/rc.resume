@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.resume,v 1.7 2003/12/30 17:30:39 njl Exp $
-#
+# $MidnightBSD$
 
 # sample run command file for APM Resume Event
 

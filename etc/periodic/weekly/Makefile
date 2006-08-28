@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/etc/periodic/weekly/Makefile,v 1.8 2002/07/18 12:33:01 ru Exp $
 
 FILES=	120.clean-kvmdb \

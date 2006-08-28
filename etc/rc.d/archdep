@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/archdep,v 1.7.2.2 2006/01/17 07:12:38 dougb Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: archdep
 # REQUIRE: LOGIN

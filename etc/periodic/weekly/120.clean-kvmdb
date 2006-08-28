@@ -1,5 +1,6 @@
 #!/bin/sh -
 #
+# $MidnightBSD$
 # $FreeBSD: src/etc/periodic/weekly/120.clean-kvmdb,v 1.6 2000/09/14 17:19:13 brian Exp $
 #
 

@@ -27,7 +27,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.sendmail,v 1.6 2003/10/19 00:31:50 gshapiro Exp $
-#
+# $MidnightBSD$
 
 # This script is used by /etc/rc at boot time to start sendmail.  It
 # is meant to be sendmail specific and not a generic script for all

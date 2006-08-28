@@ -2,7 +2,7 @@
 #
 # $NetBSD: LOGIN,v 1.7 2002/03/22 04:33:57 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/LOGIN,v 1.5 2004/10/07 13:55:25 mtm Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: LOGIN
 # REQUIRE: DAEMON

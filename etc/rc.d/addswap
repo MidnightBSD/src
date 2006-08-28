@@ -2,6 +2,7 @@
 #
 # Add additional swap files
 #
+# $MidnightBSD$
 # $FreeBSD: src/etc/rc.d/addswap,v 1.4.2.1 2006/01/20 14:24:34 matteo Exp $
 #
 

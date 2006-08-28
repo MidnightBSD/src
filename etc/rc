@@ -26,7 +26,7 @@
 #
 #	@(#)rc	5.27 (Berkeley) 6/5/91
 # $FreeBSD: src/etc/rc,v 1.336.2.2 2006/02/24 21:42:43 dougb Exp $
-#
+# $MidnightBSD$
 
 # System startup script run by init on autoboot
 # or after single-user.

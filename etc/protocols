@@ -1,6 +1,7 @@
 #
 # Internet protocols
 #
+# $MidnightBSD$
 # $FreeBSD: src/etc/protocols,v 1.20 2005/02/22 13:04:02 glebius Exp $
 #	from: @(#)protocols	5.1 (Berkeley) 4/17/89
 #

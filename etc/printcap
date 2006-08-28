@@ -1,6 +1,6 @@
 #	@(#)printcap	5.3 (Berkeley) 6/30/90
 # $FreeBSD: src/etc/printcap,v 1.14 2004/06/06 11:46:27 schweikh Exp $
-
+# $MidnightBSD$
 #
 # This enables a simple local "raw" printer, hooked up to the first
 # parallel port.  No kind of filtering is done, so everything you pass

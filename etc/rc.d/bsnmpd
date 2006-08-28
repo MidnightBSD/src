@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/bsnmpd,v 1.1 2005/04/17 10:47:58 glebius Exp $
-#
+# $MidnightBSD$
 
 # PROVIDE: bsnmpd
 # REQUIRE: NETWORKING syslogd
