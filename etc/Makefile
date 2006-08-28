@@ -1,5 +1,7 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
+
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
+# $MidnightBSD$
 
 .if !defined(NO_SENDMAIL)
 SUBDIR=	sendmail
@@ -11,7 +13,7 @@ BIN1=	amd.map apmd.conf auth.conf \
 	hosts hosts.allow hosts.equiv hosts.lpd \
 	inetd.conf login.access login.conf \
 	mac.conf motd netconfig network.subr networks newsyslog.conf \
-	portsnap.conf pf.conf pf.os phones profile protocols \
+	ntpd.conf portsnap.conf pf.conf pf.os phones profile protocols \
 	rc rc.bsdextended rc.firewall rc.firewall6 rc.initdiskless \
 	rc.sendmail rc.shutdown \
 	rc.subr remote rpc services shells \
