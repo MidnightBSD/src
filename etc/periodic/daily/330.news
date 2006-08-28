@@ -1,5 +1,6 @@
 #!/bin/sh
 #
+# $MidnightBSD$
 # $FreeBSD: src/etc/periodic/daily/330.news,v 1.4 2000/09/14 17:19:10 brian Exp $
 #
 # Expire news articles

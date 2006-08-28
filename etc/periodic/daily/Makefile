@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/etc/periodic/daily/Makefile,v 1.12 2003/10/27 20:14:53 jesper Exp $
 
 FILES=	100.clean-disks \
