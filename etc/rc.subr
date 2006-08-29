@@ -1,7 +1,7 @@
 # $NetBSD: rc.subr,v 1.60 2003/07/26 05:13:47 lukem Exp $
 # $FreeBSD: src/etc/rc.subr,v 1.34.2.9 2006/02/19 18:36:01 ceri Exp $
-# $MidnightBSD: src/etc/rc.subr,v 1.4 2006/08/28 02:13:43 laffer1 Exp $
-#
+# $MidnightBSD$
+# 
 # Copyright (c) 1997-2002 The NetBSD Foundation, Inc.
 # All rights reserved.
 #
@@ -50,12 +50,12 @@ _rc_subr_loaded="YES"
 
 SYSCTL="/sbin/sysctl"
 SYSCTL_N="${SYSCTL} -n"
-SYSCTL_W="${SYSCTL}"
 CMD_OSTYPE="${SYSCTL_N} kern.ostype"
 OSTYPE=`${CMD_OSTYPE}`
 ID="/usr/bin/id"
 IDCMD="if [ -x $ID ]; then $ID -un; fi"
 
+SYSCTL_W="${SYSCTL}"
 
 #
 #	functions
@@ -64,9 +64,8 @@ IDCMD="if [ -x $ID ]; then $ID -un; fi"
 #
 # set_rcvar base_var
 #	Set the variable name enabling a specific service.
-#	FreeBSD and MidnightBSD uses ${service}_enable, while NetBSD uses
+#	FreeBSD uses ${service}_enable, while NetBSD uses
 #	just the name of the service. For example:
-#   MidnightBSD: sendmail_enable="YES"
 #	FreeBSD: sendmail_enable="YES"
 #	NetBSD : sendmail="YES"
 #	$1 - if $name is not the base to work of off, specify
@@ -295,17 +294,12 @@ wait_for_pids()
 			break
 		fi
 		_list=$_nlist
-		if ! checkyesno rc_fancy; then
-			echo -n ${_prefix:-"Waiting for PIDS: "}$_list
-		fi
+		echo -n ${_prefix:-"Waiting for PIDS: "}$_list
 		_prefix=", "
 		sleep 2
 	done
 	if [ -n "$_prefix" ]; then
 		echo "."
-		if ! checkyesno rc_fancy; then
-			echo "."
-		fi
 	fi
 }
 
@@ -493,7 +487,7 @@ run_rc_command()
 	_pidcmd=
 	_procname=${procname:-${command}}
 
-	# setup pid check command
+					# setup pid check command
 	if [ -n "$_procname" ]; then
 		if [ -n "$pidfile" ]; then
 			_pidcmd='rc_pid=$(check_pidfile '"$pidfile $_procname $command_interpreter"')'
@@ -524,11 +518,11 @@ run_rc_command()
 		fi
 	fi
 
-	# if ${rcvar} is set, and $1 is not
-	# "rcvar", then run
-	#	checkyesno ${rcvar}
-	# and return if that failed
-	#
+					# if ${rcvar} is set, and $1 is not
+					# "rcvar", then run
+					#	checkyesno ${rcvar}
+					# and return if that failed
+					#
 	if [ -n "${rcvar}" -a "$rc_arg" != "rcvar" ]; then
 		if ! checkyesno ${rcvar}; then
 			return 0
@@ -542,21 +536,21 @@ run_rc_command()
 			continue
 		fi
 
-		# if there's a custom ${XXX_cmd},
-		# run that instead of the default
-		#
+					# if there's a custom ${XXX_cmd},
+					# run that instead of the default
+					#
 		eval _cmd=\$${rc_arg}_cmd _precmd=\$${rc_arg}_precmd \
 		    _postcmd=\$${rc_arg}_postcmd
 		if [ -n "$_cmd" ]; then
-			# if the precmd failed and force
-			# isn't set, exit
-			#
+					# if the precmd failed and force
+					# isn't set, exit
+					#
 			if [ -n "$_precmd" ]; then
 				debug "run_rc_command: evaluating ${_precmd}()."
 				eval $_precmd $rc_extra_args
 				_return=$?
 				[ $_return -ne 0 ] && [ -z "$rc_force" ] &&
-				    (echo_fancy $rc_fancy_msg_failed 1) && return 1
+				    return 1
 			fi
 
 			if [ -n "$_cmd" ]; then
@@ -564,7 +558,7 @@ run_rc_command()
 				eval $_cmd $rc_extra_args
 				_return=$?
 				[ $_return -ne 0 ] && [ -z "$rc_force" ] &&
-				    (echo_fancy $rc_fancy_msg_failed 1) && return 1
+				    return 1
 			fi
 
 			if [ -n "$_postcmd" ]; then
@@ -572,7 +566,6 @@ run_rc_command()
 				 eval $_postcmd $rc_extra_args
 				_return=$?
 			fi
-			echo_fancy $rc_fancy_msg_ok 0
 			return $_return
 		fi
 
@@ -588,10 +581,8 @@ run_rc_command()
 			;;
 
 		start)
-			echo -n "Starting ${name}"
 			if [ -z "$rc_fast" -a -n "$rc_pid" ]; then
-				echo_fancy $rc_fancy_msg_skip 1
-				echo 1>&2 "${name} already running? (pid=$rc_pid)."
+				echo "${name} already running? (pid=$rc_pid)."
 				return 1
 			fi
 
@@ -600,14 +591,13 @@ run_rc_command()
 				return 1
 			fi
 
-			# check for required variables,
-			# directories, and files
-			#
+					# check for required variables,
+					# directories, and files
+					#
 			for _f in $required_vars; do
 				if ! checkyesno $_f; then
 					warn "\$${_f} is not set."
 					if [ -z "$rc_force" ]; then
-						echo_fancy $rc_fancy_msg_error 1
 						return 1
 					fi
 				fi
@@ -616,7 +606,6 @@ run_rc_command()
 				if [ ! -d "${_f}/." ]; then
 					warn "${_f} is not a directory."
 					if [ -z "$rc_force" ]; then
-						echo_fancy $rc_fancy_msg_error 1
 						return 1
 					fi
 				fi
@@ -625,25 +614,25 @@ run_rc_command()
 				if [ ! -r "${_f}" ]; then
 					warn "${_f} is not readable."
 					if [ -z "$rc_force" ]; then
-						echo_fancy $rc_fancy_msg_error 1
 						return 1
 					fi
 				fi
 			done
 
-			# if the precmd failed and force
-			# isn't set, exit
-			#
+					# if the precmd failed and force
+					# isn't set, exit
+					#
 			if [ -n "${_precmd}" ]; then
 				debug "run_rc_command: evaluating ${_precmd}()."
 				eval $_precmd
 				_return=$?
 				[ $_return -ne 0 ] && [ -z "$rc_force" ] &&
-				    (echo_fancy $rc_fancy_msg_error 1) && return 1
+				    return 1
 			fi
 
-			# setup the command to run, and run it
-			#
+					# setup the command to run, and run it
+					#
+			echo "Starting ${name}."
 			if [ -n "$_chroot" ]; then
 				_doit="\
 ${_nice:+nice -n $_nice }\
@@ -659,81 +648,75 @@ $command $rc_flags $command_args"
 				fi
 			fi
 
-			# if the cmd failed and force
-			# isn't set, exit
-			#
+					# if the cmd failed and force
+					# isn't set, exit
+					#
 			debug "run_rc_command: _doit: $_doit"
 			eval $_doit
 			_return=$?
-			[ $_return -ne 0 ] && [ -z "$rc_force" ] && (echo_fancy $rc_fancy_msg_failed 1) && return 1
+			[ $_return -ne 0 ] && [ -z "$rc_force" ] && return 1
 
-			# finally, run postcmd
-			#
+					# finally, run postcmd
+					#
 			if [ -n "${_postcmd}" ]; then
 				debug "run_rc_command: evaluating ${_postcmd}()."
 				eval $_postcmd
 			fi
-			echo_fancy $rc_fancy_msg_ok 1
 			;;
 
 		stop)
-			echo -n "Stopping ${name}"
 			if [ -z "$rc_pid" ]; then
 				[ -n "$rc_fast" ] && return 0
 				if [ -n "$pidfile" ]; then
-					echo_fancy $rc_fancy_msg_skip 1
-					echo 1>&2 \
+					echo \
 				    "${name} not running? (check $pidfile)."
 				else
-					echo_fancy $rc_fancy_msg_skip 1
-					echo 1>&2 "${name} not running?"
+					echo "${name} not running?"
 				fi
 				return 1
 			fi
 
-			# if the precmd failed and force
-			# isn't set, exit
-			#
+					# if the precmd failed and force
+					# isn't set, exit
+					#
 			if [ -n "$_precmd" ]; then
 				eval $_precmd
 				_return=$?
 				[ $_return -ne 0 ] && [ -z "$rc_force" ] &&
-				    (echo_fancy $rc_fancy_msg_error 1) && return 1
+				    return 1
 			fi
 
-			# send the signal to stop
-			#
+					# send the signal to stop
+					#
+			echo "Stopping ${name}."
 			_doit="kill -${sig_stop:-TERM} $rc_pid"
 			if [ -n "$_user" ]; then
 				_doit="su -m $_user -c 'sh -c \"$_doit\"'"
 			fi
 
-			# if the stop cmd failed and force
-			# isn't set, exit
-			#
+					# if the stop cmd failed and force
+					# isn't set, exit
+					#
 			eval $_doit
 			_return=$?
-			[ $_return -ne 0 ] && [ -z "$rc_force" ] && (echo_fancy $rc_fancy_msg_failed 1) && return 1
+			[ $_return -ne 0 ] && [ -z "$rc_force" ] && return 1
 
-			# wait for the command to exit,
-			# and run postcmd.
+					# wait for the command to exit,
+					# and run postcmd.
 			wait_for_pids $rc_pid
 			if [ -n "$_postcmd" ]; then
 				eval $_postcmd
 				_return=$?
 			fi
-			echo_fancy $rc_fancy_msg_ok 1
 			;;
 
 		reload)
 			if [ -z "$rc_pid" ]; then
 				if [ -n "$pidfile" ]; then
-					echo_fancy $rc_fancy_msg_skipped 1
-					echo 1>&2 \
+					echo \
 				    "${name} not running? (check $pidfile)."
 				else
-					echo_fancy $rc_fancy_msg_skipped 1
-					echo 1>&2 "${name} not running?"
+					echo "${name} not running?"
 				fi
 				return 1
 			fi
@@ -742,7 +725,7 @@ $command $rc_flags $command_args"
 				eval $_precmd
 				_return=$?
 				[ $_return -ne 0 ] && [ -z "$rc_force" ] &&
-				    (echo_fancy $rc_fancy_msg_failed 1) && return 1
+				    return 1
 			fi
 			_doit="kill -${sig_reload:-HUP} $rc_pid"
 			if [ -n "$_user" ]; then
@@ -750,12 +733,11 @@ $command $rc_flags $command_args"
 			fi
 			eval $_doit
 			_return=$?
-			[ $_return -ne 0 ] && [ -z "$rc_force" ] && (echo_fancy $rc_fancy_msg_failed 1) && return 1
+			[ $_return -ne 0 ] && [ -z "$rc_force" ] && return 1
 			if [ -n "$_postcmd" ]; then
 				eval $_postcmd
 				_return=$?
 			fi
-			echo_fancy $rc_fancy_msg_ok 1
 			;;
 
 		restart)
@@ -765,9 +747,9 @@ $command $rc_flags $command_args"
 				[ $_return -ne 0 ] && [ -z "$rc_force" ] &&
 				    return 1
 			fi
-			# prevent restart being called more
-			# than once by any given script
-			#
+					# prevent restart being called more
+					# than once by any given script
+					#
 			if ${_rc_restart_done:-false}; then
 				return 0
 			fi
@@ -811,54 +793,6 @@ $command $rc_flags $command_args"
 	echo 1>&2 "$0: unknown directive '$rc_arg'."
 	rc_usage $_keywords
 	# not reached
-}
-
-# XXX laffer1
-echo_fancy() {
-	if checkyesno rc_fancy; then
-		local padding;
-		local do_msg_width;
-		columns=$rc_fancy_cols
-		label=$1
-		labelprefix=""
-		labelsuffix=""
-		labelprepad=""
-		labelpostpad=""
-		
-		do_msg_width=${#label}
-		if [ $rc_fancy_msg_width -gt ${#label} ]; then
-			spaceavail=$(($rc_fancy_msg_width - ${#label}))
-			labelprepad=$(($spaceavail / 2))
-			labelpostpad=$(($spaceavail - $labelprepad))
-			labelpostpad="\e[${labelpostpad}C"
-			labelprepad="\e[${labelprepad}C"
-			do_msg_width=$rc_fancy_msg_width
-		fi
-		padding="\e[$(($columns - $do_msg_width - 3))\'"
-		if checkyesno rc_fancy_color; then
-			labelsuffix="\e[0m"
-			case $label in
-			$rc_fancy_msg_ok)
-				labelprefix="\e[1;32;40m"
-				;;
-			$rc_fancy_msg_error|$rc_fancy_msg_failed)
-				labelprefix="\e[1;31;40m"
-				;;
-			$rc_fancy_msg_skip|$rc_fancy_msg_skipped)
-				labelprefix="\e[1;33;40m"
-				;;
-			esac
-		fi
-		if [ ${2:-0} ]; then
-			echo -e "\r${rc_arg} $name ${padding} [${labelprepad}${labelprefix}${label}${labelsuffix}${labelpostpad}]"
-		else
-			echo -e " ... ${padding} [${labelprepad}${labelprefix}${label}${labelsuffix}${labelpostpad}]"
-		fi
-	#else
-	#	if [ ${2:-0} ]; then
-	#		echo "."
-	#	fi
-	fi
 }
 
 #
@@ -934,8 +868,6 @@ load_rc_config()
 
 	# XXX - Deprecated variable name support
 	#
-	case ${OSTYPE} in
-	FreeBSD)
 		[ -n "$portmap_enable" ] && rpcbind_enable="$portmap_enable"
 		[ -n "$portmap_program" ] && rpcbind_program="$portmap_program"
 		[ -n "$portmap_flags" ] && rpcbind_flags="$portmap_flags"
@@ -945,8 +877,6 @@ load_rc_config()
 		[ -n "$xntpd_flags" ] && ntpd_flags="$xntpd_flags"
 		[ -n "$dhcp_program" ] && dhclient_program="$dhcp_program"
 		[ -n "$dhcp_flags" ] && dhclient_flags="$dhcp_flags"
-		;;
-	esac
 }
 
 #
