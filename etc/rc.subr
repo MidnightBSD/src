@@ -1,6 +1,6 @@
 # $NetBSD: rc.subr,v 1.60 2003/07/26 05:13:47 lukem Exp $
 # $FreeBSD: src/etc/rc.subr,v 1.34.2.9 2006/02/19 18:36:01 ceri Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.subr,v 1.4 2006/08/28 02:13:43 laffer1 Exp $
 #
 # Copyright (c) 1997-2002 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -50,22 +50,12 @@ _rc_subr_loaded="YES"
 
 SYSCTL="/sbin/sysctl"
 SYSCTL_N="${SYSCTL} -n"
+SYSCTL_W="${SYSCTL}"
 CMD_OSTYPE="${SYSCTL_N} kern.ostype"
 OSTYPE=`${CMD_OSTYPE}`
 ID="/usr/bin/id"
 IDCMD="if [ -x $ID ]; then $ID -un; fi"
 
-case ${OSTYPE} in
-MidnightBSD)
-	SYSCTL_W="${SYSCTL}"
-	;;
-FreeBSD)
-	SYSCTL_W="${SYSCTL}"
-	;;
-NetBSD)
-	SYSCTL_W="${SYSCTL} -w"
-	;;
-esac
 
 #
 #	functions
@@ -74,8 +64,9 @@ esac
 #
 # set_rcvar base_var
 #	Set the variable name enabling a specific service.
-#	FreeBSD uses ${service}_enable, while NetBSD uses
+#	FreeBSD and MidnightBSD uses ${service}_enable, while NetBSD uses
 #	just the name of the service. For example:
+#   MidnightBSD: sendmail_enable="YES"
 #	FreeBSD: sendmail_enable="YES"
 #	NetBSD : sendmail="YES"
 #	$1 - if $name is not the base to work of off, specify
@@ -89,20 +80,7 @@ set_rcvar()
 		base_var="$1"
 	fi
 
-	case ${OSTYPE} in
-	MidnightBSD)
-		echo ${base_var}_enable
-		;;
-	FreeBSD)
-		echo ${base_var}_enable
-		;;
-	NetBSD)
-		echo ${base_var}
-		;;
-	*)
-		echo 'XXX'
-		;;
-	esac
+	echo ${base_var}_enable
 }
 
 #
@@ -515,7 +493,7 @@ run_rc_command()
 	_pidcmd=
 	_procname=${procname:-${command}}
 
-					# setup pid check command
+	# setup pid check command
 	if [ -n "$_procname" ]; then
 		if [ -n "$pidfile" ]; then
 			_pidcmd='rc_pid=$(check_pidfile '"$pidfile $_procname $command_interpreter"')'
@@ -546,11 +524,11 @@ run_rc_command()
 		fi
 	fi
 
-					# if ${rcvar} is set, and $1 is not
-					# "rcvar", then run
-					#	checkyesno ${rcvar}
-					# and return if that failed
-					#
+	# if ${rcvar} is set, and $1 is not
+	# "rcvar", then run
+	#	checkyesno ${rcvar}
+	# and return if that failed
+	#
 	if [ -n "${rcvar}" -a "$rc_arg" != "rcvar" ]; then
 		if ! checkyesno ${rcvar}; then
 			return 0
@@ -564,15 +542,15 @@ run_rc_command()
 			continue
 		fi
 
-					# if there's a custom ${XXX_cmd},
-					# run that instead of the default
-					#
+		# if there's a custom ${XXX_cmd},
+		# run that instead of the default
+		#
 		eval _cmd=\$${rc_arg}_cmd _precmd=\$${rc_arg}_precmd \
 		    _postcmd=\$${rc_arg}_postcmd
 		if [ -n "$_cmd" ]; then
-					# if the precmd failed and force
-					# isn't set, exit
-					#
+			# if the precmd failed and force
+			# isn't set, exit
+			#
 			if [ -n "$_precmd" ]; then
 				debug "run_rc_command: evaluating ${_precmd}()."
 				eval $_precmd $rc_extra_args
@@ -622,9 +600,9 @@ run_rc_command()
 				return 1
 			fi
 
-					# check for required variables,
-					# directories, and files
-					#
+			# check for required variables,
+			# directories, and files
+			#
 			for _f in $required_vars; do
 				if ! checkyesno $_f; then
 					warn "\$${_f} is not set."
@@ -653,9 +631,9 @@ run_rc_command()
 				fi
 			done
 
-					# if the precmd failed and force
-					# isn't set, exit
-					#
+			# if the precmd failed and force
+			# isn't set, exit
+			#
 			if [ -n "${_precmd}" ]; then
 				debug "run_rc_command: evaluating ${_precmd}()."
 				eval $_precmd
@@ -664,8 +642,8 @@ run_rc_command()
 				    (echo_fancy $rc_fancy_msg_error 1) && return 1
 			fi
 
-					# setup the command to run, and run it
-					#
+			# setup the command to run, and run it
+			#
 			if [ -n "$_chroot" ]; then
 				_doit="\
 ${_nice:+nice -n $_nice }\
@@ -681,16 +659,16 @@ $command $rc_flags $command_args"
 				fi
 			fi
 
-					# if the cmd failed and force
-					# isn't set, exit
-					#
+			# if the cmd failed and force
+			# isn't set, exit
+			#
 			debug "run_rc_command: _doit: $_doit"
 			eval $_doit
 			_return=$?
 			[ $_return -ne 0 ] && [ -z "$rc_force" ] && (echo_fancy $rc_fancy_msg_failed 1) && return 1
 
-					# finally, run postcmd
-					#
+			# finally, run postcmd
+			#
 			if [ -n "${_postcmd}" ]; then
 				debug "run_rc_command: evaluating ${_postcmd}()."
 				eval $_postcmd
@@ -713,9 +691,9 @@ $command $rc_flags $command_args"
 				return 1
 			fi
 
-					# if the precmd failed and force
-					# isn't set, exit
-					#
+			# if the precmd failed and force
+			# isn't set, exit
+			#
 			if [ -n "$_precmd" ]; then
 				eval $_precmd
 				_return=$?
@@ -723,22 +701,22 @@ $command $rc_flags $command_args"
 				    (echo_fancy $rc_fancy_msg_error 1) && return 1
 			fi
 
-					# send the signal to stop
-					#
+			# send the signal to stop
+			#
 			_doit="kill -${sig_stop:-TERM} $rc_pid"
 			if [ -n "$_user" ]; then
 				_doit="su -m $_user -c 'sh -c \"$_doit\"'"
 			fi
 
-					# if the stop cmd failed and force
-					# isn't set, exit
-					#
+			# if the stop cmd failed and force
+			# isn't set, exit
+			#
 			eval $_doit
 			_return=$?
 			[ $_return -ne 0 ] && [ -z "$rc_force" ] && (echo_fancy $rc_fancy_msg_failed 1) && return 1
 
-					# wait for the command to exit,
-					# and run postcmd.
+			# wait for the command to exit,
+			# and run postcmd.
 			wait_for_pids $rc_pid
 			if [ -n "$_postcmd" ]; then
 				eval $_postcmd
@@ -787,9 +765,9 @@ $command $rc_flags $command_args"
 				[ $_return -ne 0 ] && [ -z "$rc_force" ] &&
 				    return 1
 			fi
-					# prevent restart being called more
-					# than once by any given script
-					#
+			# prevent restart being called more
+			# than once by any given script
+			#
 			if ${_rc_restart_done:-false}; then
 				return 0
 			fi
@@ -835,6 +813,7 @@ $command $rc_flags $command_args"
 	# not reached
 }
 
+# XXX laffer1
 echo_fancy() {
 	if checkyesno rc_fancy; then
 		local padding;
@@ -875,10 +854,10 @@ echo_fancy() {
 		else
 			echo -e " ... ${padding} [${labelprepad}${labelprefix}${label}${labelsuffix}${labelpostpad}]"
 		fi
-	else
-		if [ ${2:-0} ]; then
-			echo "."
-		fi
+	#else
+	#	if [ ${2:-0} ]; then
+	#		echo "."
+	#	fi
 	fi
 }
 
