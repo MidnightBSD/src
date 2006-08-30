@@ -194,7 +194,6 @@ fork1(td, flags, pages, procp)
 	struct proc **procp;
 {
 	struct proc *p1, *p2, *pptr;
-	uid_t uid;
 	struct proc *newproc;
 	int ok, trypid;
 	static int curfail, pidchecked = 0;
@@ -217,8 +216,17 @@ fork1(td, flags, pages, procp)
 	 * certain parts of a process from itself.
 	 */
 	if ((flags & RFPROC) == 0) {
-		vm_forkproc(td, NULL, NULL, flags);
+		if ((p1->p_flag & P_HADTHREADS) &&
+  	            (flags & (RFCFDG | RFFDG))) {
+  	        	PROC_LOCK(p1);
+			if (thread_single(SINGLE_BOUNDARY)) {
+				PROC_UNLOCK(p1);
+				return (ERESTART);
+			}
+			PROC_UNLOCK(p1);
+		}
 
+		vm_forkproc(td, NULL, NULL, flags);
 		/*
 		 * Close all file descriptors.
 		 */
@@ -234,6 +242,13 @@ fork1(td, flags, pages, procp)
 		 */
 		if (flags & RFFDG) 
 			fdunshare(p1, td);
+
+		if((p1->p_flag & P_HADTHREADS) &&
+		   (flags & (RFCFDG|RFFDG))) {
+			PROC_LOCK(p1);
+			thread_single_end();
+			PROC_UNLOCK(p1);
+		}
 		*procp = NULL;
 		return (0);
 	}
@@ -284,7 +299,6 @@ fork1(td, flags, pages, procp)
 	 * processes, maxproc is the limit.
 	 */
 	sx_xlock(&allproc_lock);
-	uid = td->td_ucred->cr_ruid;
 	if ((nprocs >= maxproc - 10 &&
 	    suser_cred(td->td_ucred, SUSER_RUID) != 0) ||
 	    nprocs >= maxproc) {
@@ -296,10 +310,15 @@ fork1(td, flags, pages, procp)
 	 * Increment the count of procs running with this uid. Don't allow
 	 * a nonprivileged user to exceed their current limit.
 	 */
-	PROC_LOCK(p1);
-	ok = chgproccnt(td->td_ucred->cr_ruidinfo, 1,
-		(uid != 0) ? lim_cur(p1, RLIMIT_NPROC) : 0);
-	PROC_UNLOCK(p1);
+	error = suser_cred(td->td_ucred, SUSER_RUID|SUSER_ALLOWJAIL);
+	if (error==0)
+		ok = chgproccnt(td->td_ucred->cr_ruidinfo, 1, 0);
+	else {
+		PROC_LOCK(p1);
+		ok = chgproccnt(td->td_ucred->cr_ruidinfo, 1,
+  	             lim_cur(p1, RLIMIT_NPROC));
+		PROC_UNLOCK(p1);
+	}
 	if (!ok) {
 		error = EAGAIN;
 		goto fail;
@@ -350,17 +369,16 @@ retry:
 		p2 = LIST_FIRST(&allproc);
 again:
 		for (; p2 != NULL; p2 = LIST_NEXT(p2, p_list)) {
-			PROC_LOCK(p2);
+
 			while (p2->p_pid == trypid ||
 			    (p2->p_pgrp != NULL &&
 			    (p2->p_pgrp->pg_id == trypid ||
 			    (p2->p_session != NULL &&
 			    p2->p_session->s_sid == trypid)))) {
 				trypid++;
-				if (trypid >= pidchecked) {
-					PROC_UNLOCK(p2);
+				if (trypid >= pidchecked) 
 					goto retry;
-				}
+				
 			}
 			if (p2->p_pid > trypid && pidchecked > p2->p_pid)
 				pidchecked = p2->p_pid;
@@ -373,7 +391,6 @@ again:
 				    pidchecked > p2->p_session->s_sid)
 					pidchecked = p2->p_session->s_sid;
 			}
-			PROC_UNLOCK(p2);
 		}
 		if (!doingzomb) {
 			doingzomb = 1;
@@ -725,7 +742,7 @@ fail:
 	sx_sunlock(&proctree_lock);
 	if (ppsratecheck(&lastfail, &curfail, 1))
 		printf("maxproc limit exceeded by uid %i, please see tuning(7) and login.conf(5).\n",
-			uid);
+			td->td_ucred->cr_ruid);
 	sx_xunlock(&allproc_lock);
 #ifdef MAC
 	mac_destroy_proc(newproc);
