@@ -3,7 +3,7 @@
 
 PROG=	login
 SRCS=	login.c login_fbtab.c
-CFLAGS+=-DLOGALL
+CFLAGS+=-DLOGALL -Wall -std=c99
 DPADD=	${LIBUTIL} ${LIBPAM}
 LDADD=	-lutil ${MINUSLPAM}
 MAN=	login.1 login.access.5
