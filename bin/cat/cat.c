@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/cat/cat.c,v 1.2 2006/06/26 15:12:15 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -69,6 +69,7 @@ __MBSDID("$MidnightBSD$");
 int bflag, eflag, nflag, sflag, tflag, vflag;
 int rval;
 const char *filename;
+const char *datefmt;
 
 static void usage(void);
 static void scanfiles(char *argv[], int cooked);
@@ -86,7 +87,7 @@ main(int argc, char *argv[])
 
 	setlocale(LC_CTYPE, "");
 
-	while ((ch = getopt(argc, argv, "benstuv")) != -1)
+	while ((ch = getopt(argc, argv, "benp:stuv")) != -1)
 		switch (ch) {
 		case 'b':
 			bflag = nflag = 1;	/* -b implies -n */
@@ -97,6 +98,9 @@ main(int argc, char *argv[])
 		case 'n':
 			nflag = 1;
 			break;
+		case 'p':
+			datefmt = optarg;
+			/* fall through */
 		case 's':
 			sflag = 1;
 			break;
@@ -127,7 +131,7 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: cat [-benstuv] [file ...]\n");
+	fprintf(stderr, "usage: cat [-benstuv] [-p datefmt] [file ...]\n");
 	exit(1);
 	/* NOTREACHED */
 }
@@ -146,7 +150,7 @@ scanfiles(char *argv[], int cooked)
 			filename = "stdin";
 			fd = STDIN_FILENO;
 		} else {
-			filename = path;
+		filename = path;
 			fd = open(path, O_RDONLY);
 #ifndef NO_UDOM_SUPPORT
 			if (fd < 0 && errno == EOPNOTSUPP)
@@ -179,6 +183,8 @@ static void
 cook_cat(FILE *fp)
 {
 	int ch, gobble, line, prev;
+	char datebuf[1024];
+	time_t now;
 
 	/* Reset EOF condition on stdin. */
 	if (fp == stdin && feof(stdin))
@@ -197,6 +203,14 @@ cook_cat(FILE *fp)
 			}
 			if (nflag && (!bflag || ch != '\n')) {
 				(void)fprintf(stdout, "%6d\t", ++line);
+				if (ferror(stdout))
+					break;
+			}
+			if (datefmt != NULL) {
+				time(&now);
+				strftime(datebuf, sizeof(datebuf), datefmt,
+					localtime(&now));
+				(void)fputs(datebuf, stdout);
 				if (ferror(stdout))
 					break;
 			}

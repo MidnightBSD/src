@@ -31,9 +31,9 @@
 .\"
 .\"     @(#)cat.1	8.3 (Berkeley) 5/2/95
 .\" $FreeBSD: src/bin/cat/cat.1,v 1.25 2005/01/16 16:41:55 ru Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/cat/cat.1,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
 .\"
-.Dd March 21, 2004
+.Dd September 8, 2006
 .Dt CAT 1
 .Os
 .Sh NAME
@@ -42,6 +42,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl benstuv
+.Op Fl p Ar date_fmt 
 .Op Ar
 .Sh DESCRIPTION
 The
@@ -85,6 +86,10 @@ Number the output lines, starting at 1.
 .It Fl s
 Squeeze multiple adjacent empty lines, causing the output to be
 single spaced.
+.It Fl p
+Prepends a date on each line of output, in the format date_fmt. Follows
+.Xr strftime 3
+date formatting rules.
 .It Fl t
 Display non-printing characters (see the
 .Fl v
@@ -153,6 +158,14 @@ would have already been read and printed by
 when it encountered the first
 .Ql \&-
 operand.
+.Pp
+The command:
+.Pp
+.Dl "cat -p %D file1"
+.Pp
+will print the contents of 
+.Ar file1
+with the current date prepended to each line.
 .Sh SEE ALSO
 .Xr head 1 ,
 .Xr more 1 ,
@@ -161,7 +174,8 @@ operand.
 .Xr tail 1 ,
 .Xr vis 1 ,
 .Xr zcat 1 ,
-.Xr setbuf 3
+.Xr setbuf 3 ,
+.Xr strftime 3
 .Rs
 .%A Rob Pike
 .%T "UNIX Style, or cat -v Considered Harmful"
@@ -176,7 +190,7 @@ utility is compliant with the
 specification.
 .Pp
 The flags
-.Op Fl benstv
+.Op Fl benstvp
 are extensions to the specification.
 .Sh HISTORY
 A
