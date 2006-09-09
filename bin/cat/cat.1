@@ -31,9 +31,9 @@
 .\"
 .\"     @(#)cat.1	8.3 (Berkeley) 5/2/95
 .\" $FreeBSD: src/bin/cat/cat.1,v 1.25 2005/01/16 16:41:55 ru Exp $
-.\" $MidnightBSD: src/bin/cat/cat.1,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
+.\" $MidnightBSD: src/bin/cat/cat.1,v 1.3 2006/09/08 14:04:24 laffer1 Exp $
 .\"
-.Dd September 8, 2006
+.Dd September 9, 2006
 .Dt CAT 1
 .Os
 .Sh NAME
@@ -42,7 +42,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl benstuv
-.Op Fl p Ar date_fmt 
+.Op Fl D Ar date_fmt 
 .Op Ar
 .Sh DESCRIPTION
 The
@@ -86,10 +86,13 @@ Number the output lines, starting at 1.
 .It Fl s
 Squeeze multiple adjacent empty lines, causing the output to be
 single spaced.
-.It Fl p
-Prepends a date on each line of output, in the format date_fmt. Follows
+.It Fl D
+Prepends a date and/or time on each line of output, in the format date_fmt at the time the line was read by the
+.Nm
+utility. Follows
 .Xr strftime 3
-date formatting rules.
+formatting rules. If a seperator is desired, it must be included using %t or
+including a space character.  Any text may be included in the format.
 .It Fl t
 Display non-printing characters (see the
 .Fl v
@@ -161,11 +164,11 @@ operand.
 .Pp
 The command:
 .Pp
-.Dl "cat -p %D file1"
+.Dl "cat -D '%F %T ' file1"
 .Pp
 will print the contents of 
 .Ar file1
-with the current date prepended to each line.
+with the current date prepended to each line in the form YYYY-MM-DD HH:MM:SS followed by a space. This is useful for timestamping output.
 .Sh SEE ALSO
 .Xr head 1 ,
 .Xr more 1 ,
