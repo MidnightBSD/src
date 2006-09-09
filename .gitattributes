@@ -22707,6 +22707,10 @@ share/zoneinfo/europe -text
 share/zoneinfo/factory -text
 share/zoneinfo/leapseconds -text
 share/zoneinfo/northamerica -text
+share/zoneinfo/pacificnew -text
+share/zoneinfo/solar87 -text
+share/zoneinfo/solar88 -text
+share/zoneinfo/solar89 -text
 share/zoneinfo/southamerica -text
 share/zoneinfo/systemv -text
 share/zoneinfo/yearistype.sh -text
