@@ -13,7 +13,6 @@
 name=ntpd
 rcvar=`set_rcvar`
 command="/usr/sbin/${name}"
-pidfile="/var/run/${name}.pid"
 start_precmd="ntpd_precmd"
 required_files="/etc/ntpd.conf"
 
