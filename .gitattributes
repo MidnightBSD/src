@@ -26864,6 +26864,7 @@ sys/modules/aue/Makefile -text
 sys/modules/auxio/Makefile -text
 sys/modules/awi/Makefile -text
 sys/modules/axe/Makefile -text
+sys/modules/bce/Makefile -text
 sys/modules/bfe/Makefile -text
 sys/modules/bge/Makefile -text
 sys/modules/bios/Makefile -text
