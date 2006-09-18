@@ -190,11 +190,11 @@ process(const char *cap, char *str, char **argv)
 	case 2:
 		if (*++argv == NULL || *argv[0] == '\0')
 			errx(2, errfew, 2, cap);
-		arg_cols = atoi(*argv);
+		arg_rows = atoi(*argv);
 
 		if (*++argv == NULL || *argv[0] == '\0')
 			errx(2, errfew, 2, cap);
-		arg_rows = atoi(*argv);
+		arg_cols = atoi(*argv);
 
 		(void) tputs(tgoto(str, arg_cols, arg_rows), arg_rows, outc);
 		break;
@@ -208,6 +208,7 @@ process(const char *cap, char *str, char **argv)
 static void
 usage(void)
 {
-	(void)fprintf(stderr, "usage: tput [-T term] attribute ...\n");
+	(void)fprintf(stderr, "usage: %s [-T term] attribute ...\n",
+		getprogname());
 	exit(2);
 }
