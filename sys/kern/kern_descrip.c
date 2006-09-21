@@ -2589,7 +2589,7 @@ static int
 badfo_kqfilter(struct file *fp, struct knote *kn)
 {
 
-	return (0);
+	return (EINVAL);
 }
 
 static int
