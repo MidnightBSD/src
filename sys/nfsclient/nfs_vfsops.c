@@ -823,6 +823,11 @@ mountnfs(struct nfs_args *argp, struct mount *mp, struct sockaddr *nam,
 		nmp->nm_wsize = NFS_WSIZE;
 		nmp->nm_rsize = NFS_RSIZE;
 	}
+        if ((desiredvnodes / 1000) == 0) {
+		printf("Increasing desiredvnodes from %i to 1000\n",
+		    desiredvnodes);
+		desiredvnodes = 1000;
+	}
 	nmp->nm_wcommitsize = hibufspace / (desiredvnodes / 1000);
 	nmp->nm_readdirsize = NFS_READDIRSIZE;
 	nmp->nm_numgrps = NFS_MAXGRPS;
