@@ -286,12 +286,12 @@ getpackagesite(void)
 	    >= sizeof(sitepath))
 	    return NULL;
     } else {
-	if (strlcat(sitepath, "ftp://ftp.freebsd.org", sizeof(sitepath))
+	if (strlcat(sitepath, "ftp://ftp.midnightbsd.org", sizeof(sitepath))
 	    >= sizeof(sitepath))
 	    return NULL;
     }
 
-    if (strlcat(sitepath, "/pub/FreeBSD/ports/", sizeof(sitepath))
+    if (strlcat(sitepath, "/pub/MidnightBSD/ports/", sizeof(sitepath))
 	>= sizeof(sitepath))
 	return NULL;
 
