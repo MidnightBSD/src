@@ -1194,7 +1194,7 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	    keyboard_t *newkbd;
 
 	    s = spltty();
-	    newkbd = kbd_get_keyboard(*(int *)data);
+	    newkbd = kbd_get_keyboard((int)*(intptr_t *)data);
 	    if (newkbd == NULL) {
 		splx(s);
 		return EINVAL;
