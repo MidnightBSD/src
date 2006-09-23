@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.2 2006/07/07 15:48:30 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -94,7 +94,7 @@ imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-static int	aflag = 0, cflag, hflag, iflag, nflag;
+static int	aflag = 0, cflag, hflag, kflag, iflag, nflag, Pflag;
 static struct	ufs_args mdev;
 
 int
@@ -124,6 +124,7 @@ main(int argc, char *argv[])
 		case 'b':
 				/* FALLTHROUGH */
 		case 'P':
+			Pflag++;
 			putenv("BLOCKSIZE=512");
 			hflag = 0;
 			break;
@@ -144,6 +145,7 @@ main(int argc, char *argv[])
 			iflag = 1;
 			break;
 		case 'k':
+			kflag++;
 			putenv("BLOCKSIZE=1k");
 			hflag = 0;
 			break;
@@ -172,6 +174,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	/*
+         * POSIX specifies that both -P and -k require 1k blocksize
+	 * when used together.
+         */
+	if(Pflag != 0 && kflag !=0)
+		putenv("BLOCKSIZE=1k");
 	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
 	bzero(&maxwidths, sizeof(maxwidths));
 	for (i = 0; i < mntsize; i++)
