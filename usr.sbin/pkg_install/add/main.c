@@ -55,31 +55,7 @@ struct {
 	int hiver;	/* Highest version number to match */
 	const char *directory;	/* Directory it lives in */
 } releases[] = {
-	{ 410000, 410000, "/packages-4.1-release" },
-	{ 420000, 420000, "/packages-4.2-release" },
-	{ 430000, 430000, "/packages-4.3-release" },
-	{ 440000, 440000, "/packages-4.4-release" },
-	{ 450000, 450000, "/packages-4.5-release" },
-	{ 460000, 460001, "/packages-4.6-release" },
-	{ 460002, 460099, "/packages-4.6.2-release" },
-	{ 470000, 470099, "/packages-4.7-release" },
-	{ 480000, 480099, "/packages-4.8-release" },
-	{ 490000, 490099, "/packages-4.9-release" },
-	{ 491000, 491099, "/packages-4.10-release" },
-	{ 492000, 492099, "/packages-4.11-release" },
-	{ 500000, 500099, "/packages-5.0-release" },
-	{ 501000, 501099, "/packages-5.1-release" },
-	{ 502000, 502009, "/packages-5.2-release" },
-	{ 502010, 502099, "/packages-5.2.1-release" },
-	{ 503000, 503099, "/packages-5.3-release" },
-	{ 504000, 504099, "/packages-5.4-release" },
-	{ 600000, 600099, "/packages-6.0-release" },
-	{ 300000, 399000, "/packages-3-stable" },
-	{ 400000, 499000, "/packages-4-stable" },
-	{ 502100, 502128, "/packages-5-current" },
-	{ 503100, 599000, "/packages-5-stable" },
-	{ 600100, 699000, "/packages-6-stable" },
-	{ 0, 9999999, "/packages-current" },
+	{ 0, 9999999, "/current" },
 	{ 0, 0, NULL }
 };
 
@@ -291,7 +267,7 @@ getpackagesite(void)
 	    return NULL;
     }
 
-    if (strlcat(sitepath, "/pub/MidnightBSD/ports/", sizeof(sitepath))
+    if (strlcat(sitepath, "/pub/MidnightBSD/mports/packages/", sizeof(sitepath))
 	>= sizeof(sitepath))
 	return NULL;
 
