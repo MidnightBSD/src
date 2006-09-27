@@ -1,0 +1,18 @@
+#
+# ALTQ -- Generic kernel configuration file for MidnightBSD/i386 ALTQ
+#	 Use this for systems with ALTQ support
+#
+# $MidnightBSD$
+
+include GENERIC
+
+ident		ALTQ-GENERIC
+
+# To make an ALTQ kernel, the next line is needed
+options ALTQ
+options ALTQ_CBQ
+options ALTQ_RED
+options ALTQ_RIO
+options ALTQ_HFSC
+options ALTQ_CDNR
+options ALTQ_PRIQ
