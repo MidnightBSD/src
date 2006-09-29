@@ -35,9 +35,9 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 # be copied; cvs update will be used instead.
 #EXTSRCDIR=/usr/src
 #
-# To use a checked-out ports collection directory instead of
+# To use a checked-out mports collection directory instead of
 # checking out from a local CVS repository, set this option.
-#EXTPORTSDIR=/usr/ports
+#EXTPORTSDIR=/usr/mports
 #
 # To add other options to the CVS subcommands (co,up), set
 #CVSCMDARGS="-D '01/01/2002 00:00:00 UTC'"
@@ -57,7 +57,7 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 .if defined(RELEASETAG)
 ISRELEASE!=	expr "${RELEASETAG}" : '^RELENG_.*_RELEASE$$' || true
 .if ${ISRELEASE} != 0
-# Convert "RELENG_ver_RELEASE" to "RELEASE_ver" for ports and doc trees.
+# Convert "RELENG_ver_RELEASE" to "RELEASE_ver" for mports and doc trees.
 AUXRELEASETAG!=	echo ${RELEASETAG} | sed -e 's/^RELENG_/RELEASE_/' -e 's/_RELEASE$$//'
 DOCRELEASETAG?=		${AUXRELEASETAG}
 PORTSRELEASETAG?=	${AUXRELEASETAG}
@@ -85,25 +85,25 @@ NATIVEMAKE=	${MAKE} TARGET_ARCH=${MACHINE_ARCH} TARGET=${MACHINE}
 # in the environment.
 RELEASESRCMODULE?=	src
 RELEASEDOCMODULE?=	doc
-RELEASEPORTSMODULE?=	ports
+RELEASEPORTSMODULE?=	mports
 
 # Uncomment this to disable the doc.1 target.  Docs normally require
-# the ports tree, so NOPORTS can be set together with NODOC in order
-# to have neither ports or docs.  If only NOPORTS is set to YES, but
+# the mports tree, so NOPORTS can be set together with NODOC in order
+# to have neither mports or docs.  If only NOPORTS is set to YES, but
 # docs are still desired, the DOMINIMALDOCPORTS logic below will only
-# install the ports that are minimally required for the docs.  This is
+# install the mports that are minimally required for the docs.  This is
 # intended as a compromise, less disk space is required than for using
-# the entire ports collection (and much less time due to the huge number
+# the entire mports collection (and much less time due to the huge number
 # of directories it would create), but still quite a bit as well as some
 # CPU cycles (some of the programs are C++, and things like ghostscript
-# belong to the required ports nevertheless).
+# belong to the required mports nevertheless).
 #
 # Setting this also disables building of release note documentation
 # (RELNOTESng).
 #NODOC=  YES
 #NOPORTS=  YES
 
-# When retrieving ports using the pkg_add -r method, set your proxies to these.
+# When retrieving mports using the pkg_add -r method, set your proxies to these.
 # src/release/${arch}/mkisoimages.sh can use these.
 #HTTP_PROXY?=	www.example.com
 #FTP_PROXY?=	ftp.example.com
@@ -121,10 +121,10 @@ RELEASEPORTSMODULE?=	ports
 # and other release documentation in a language other than English.
 RELNOTES_LANG?=	en_US.ISO8859-1
 
-# As an alternative to installing the entire ports collection (which
+# As an alternative to installing the entire mports collection (which
 # can take a huge amount of time, in particular on slower disks),
 # setting ${MINIMALDOCPORTS} allows to install and build just those
-# ports that are really required for getting the docs up & running.
+# mports that are really required for getting the docs up & running.
 .if defined(NOPORTS) && !defined(NODOC)
 DOMINIMALDOCPORTS=	YES
 .include "Makefile.inc.docports"
@@ -139,7 +139,7 @@ NOPORTSATALL=	YES
 .endif
 
 #
-# Doing 'make index' in /usr/ports requires Perl.
+# Doing 'make index' in /usr/mports requires Perl.
 MAKEINDEXPORTS=	lang/perl5.8
 # By default, documentation (Handbook, FAQ, etc.) is built for all
 # the languages.  To speed up building, set the DOC_LANG to just
@@ -152,7 +152,7 @@ DOCPORTS=	textproc/docproj
 # Respect DOCDISTFILES which is used before.
 RELEASEDISTFILES?=	${DOCDISTFILES}
 .else
-RELEASEDISTFILES?=	${.CURDIR}/../../ports/distfiles
+RELEASEDISTFILES?=	${.CURDIR}/../../mports/distfiles
 .endif
 # Set this to 1 if you want -P to be used for automatic keyboard detection
 # on the boot floppy.  WARNING: Breaks on some Athlon (K7) motherboards.
@@ -260,7 +260,7 @@ CD_LIVEFS=		${CD_DISC1}
 .endif
 _MK?=			${CHROOTDIR}/mk
 
-# Where the bootstrap ports (see DOCPORTS) get installed.
+# Where the bootstrap mports (see DOCPORTS) get installed.
 LOCALDIR=		/usr/local/bin
 
 .if ${TARGET} != ${MACHINE} && ${DISKLABEL} == "bsdlabel"
@@ -387,12 +387,12 @@ release rerelease:
 	cd ${CHROOTDIR} && env CHROOTDIR=${CHROOTDIR} BUILDNAME=${BUILDNAME} \
 	    RELEASETAG=${RELEASETAG} ${LOCAL_SCRIPT}
 .endif
-	rm -rf ${CHROOTDIR}/usr/ports
+	rm -rf ${CHROOTDIR}/usr/mports
 .if !defined(NOPORTSATALL)
 .if defined(EXTPORTSDIR)
-	cd ${CHROOTDIR}/usr && cp -R -H ${EXTPORTSDIR} ports
+	cd ${CHROOTDIR}/usr && cp -R -H ${EXTPORTSDIR} mports
 	# If there are distfiles downloaded removing them
-	rm -rf ports/distfiles/*
+	rm -rf mports/distfiles/*
 .else
 	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs -R ${CVSARGS} -d ${CVSROOT} \
 	    co ${CVSCMDARGS} ${CVS_PORTSARGS} ${RELEASEPORTSMODULE}
@@ -407,9 +407,9 @@ release rerelease:
 	    co ${CVSCMDARGS} ${CVS_DOCARGS} ${RELEASEDOCMODULE}
 .endif
 	if [ -d ${RELEASEDISTFILES}/ ]; then \
-		cp -rp ${RELEASEDISTFILES} ${CHROOTDIR}/usr/ports/distfiles; \
+		cp -rp ${RELEASEDISTFILES} ${CHROOTDIR}/usr/mports/distfiles; \
 	else \
-		mkdir -p ${CHROOTDIR}/usr/ports/distfiles; \
+		mkdir -p ${CHROOTDIR}/usr/mports/distfiles; \
 	fi
 .if !defined(NO_PREFETCHDISTFILES)
 	@cd ${.CURDIR} && ${MAKE} fetch-distfiles
@@ -427,7 +427,7 @@ release rerelease:
 .endif
 	rm -f ${CHROOTDIR}/tmp/.world_done 
 .if !defined(NOPORTS) && !defined(EXTPORTSDIR)
-	cd ${CHROOTDIR}/usr/ports && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
+	cd ${CHROOTDIR}/usr/mports && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d
 	rm -f ${CHROOTDIR}/tmp/.skip_ports_index
 .endif
@@ -510,11 +510,11 @@ release rerelease:
 	echo "	echo \">>> make index started on \`LC_ALL=C TZ=GMT date\`\"" >> ${_MK}
 	echo "	for i in ${MAKEINDEXPORTS}"	>> ${_MK}
 	echo "	do"			>> ${_MK}
-	echo "		cd /usr/ports/\$${i}"	>> ${_MK}
+	echo "		cd /usr/mports/\$${i}"	>> ${_MK}
 	echo "		env -i FTP_PASSIVE_MODE=$${FTP_PASSIVE_MODE:-no} PATH=$${PATH} \\" >> ${_MK}
 	echo "		make all install clean BATCH=yes FORCE_PKG_REGISTER=yes" >> ${_MK}
 	echo "	done"				>> ${_MK}
-	echo "	cd /usr/ports"			>> ${_MK}
+	echo "	cd /usr/mports"			>> ${_MK}
 	echo "	rm -f INDEX*"			>> ${_MK}
 	echo "	make index -DINDEX_PRISTINE"	>> ${_MK}
 	echo "	rm -f INDEX*.tmp"		>> ${_MK}
@@ -539,13 +539,13 @@ clean:
 
 fetch-distfiles:
 	@for i in ${MAKEINDEXPORTS}; do \
-		cd ${CHROOTDIR}/usr/ports/$$i && \
-			make PORTSDIR=${CHROOTDIR}/usr/ports BATCH=yes \
+		cd ${CHROOTDIR}/usr/mports/$$i && \
+			make PORTSDIR=${CHROOTDIR}/usr/mports BATCH=yes \
 			checksum-recursive ; \
 	done
 	@for i in ${DOCPORTS}; do \
-		cd ${CHROOTDIR}/usr/ports/$$i && \
-			make PORTSDIR=${CHROOTDIR}/usr/ports BATCH=yes \
+		cd ${CHROOTDIR}/usr/mports/$$i && \
+			make PORTSDIR=${CHROOTDIR}/usr/mports BATCH=yes \
 			WITHOUT_X11=yes JADETEX=no WITHOUT_PYTHON=yes \
 			checksum-recursive ; \
 	done
@@ -658,19 +658,19 @@ release.6:
 	done
 .if !defined(NOPORTS)
 	# XXX: Inline stripped version of doTARBALL
-	@rm -rf ${RD}/dists/ports/ports*
-	@mkdir -p ${RD}/dists/ports
-	@echo rolling ports/ports tarball
-	@tar --exclude CVS --exclude 'ports/distfiles/*' \
-	  -czf ${RD}/dists/ports/ports.tgz -C /usr ports
-	@cp ${.CURDIR}/scripts/ports-install.sh ${RD}/dists/ports/install.sh
-	@(cd ${RD}/dists/ports; \
+	@rm -rf ${RD}/dists/mports/ports*
+	@mkdir -p ${RD}/dists/mports
+	@echo rolling mports/ports tarball
+	@tar --exclude CVS --exclude 'mports/distfiles/*' \
+	  -czf ${RD}/dists/mports/ports.tgz -C /usr ports
+	@cp ${.CURDIR}/scripts/ports-install.sh ${RD}/dists/mports/install.sh
+	@(cd ${RD}/dists/mports; \
 	  rm -f CHECKSUM.MD5 CHECKSUM.SHA256; \
 	  md5 * > .CHECKSUM.MD5; \
 	  sha256 * > .CHECKSUM.SHA256; \
 	  mv .CHECKSUM.MD5 CHECKSUM.MD5; \
 	  mv .CHECKSUM.SHA256 CHECKSUM.SHA256)
-	@echo "ports distribution is finished."
+	@echo "mports distribution is finished."
 .endif
 	touch ${.TARGET}
 
@@ -1051,7 +1051,7 @@ iso.1:
 doc.1:
 	@echo "Making docs..."
 	@for i in ${DOCPORTS}; do \
-	    cd /usr/ports/$$i && \
+	    cd /usr/mports/$$i && \
 	    env -i FTP_PASSIVE_MODE=$${FTP_PASSIVE_MODE:-no} PATH=$${PATH} \
 		make all install clean BATCH=yes WITHOUT_X11=yes JADETEX=no \
 		WITHOUT_PYTHON=yes FORCE_PKG_REGISTER=yes; \
