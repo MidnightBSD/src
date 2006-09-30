@@ -24,7 +24,7 @@
 \ SUCH DAMAGE.
 \
 \ $FreeBSD: src/sys/boot/forth/beastie.4th,v 1.10.2.1 2005/10/30 14:37:02 scottl Exp $
-\ $MidnightBSD$
+\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.2 2006/07/26 00:16:40 laffer1 Exp $
 
 marker task-beastie.4th
 
@@ -41,7 +41,6 @@ variable promptwidth
 
 variable bootkey
 variable bootacpikey
-variable bootusbkey
 variable bootsafekey
 variable bootverbosekey
 variable bootsinglekey
@@ -176,10 +175,10 @@ at-xy ."         `--{__________) [0m"
 	46 4 print-logo
 	42 20 2 2 box
 	13 6 at-xy ." Welcome to MidnightBSD!"
-	printmenuitem ."  Boot MidnightBSD [default]" bootkey !
+	printmenuitem ."  Boot [default]" bootkey !
 	s" arch-i386" environment? if
 		drop
-		printmenuitem ."  Boot MidnightBSD with ACPI " bootacpikey !
+		printmenuitem ."  Boot with ACPI " bootacpikey !
 		acpienabled? if
 			." disabled"
 		else
@@ -188,16 +187,10 @@ at-xy ."         `--{__________) [0m"
 	else
 		-2 bootacpikey !
 	then
-	printmenuitem ."  Boot MidnightBSD in Safe Mode" bootsafekey !
-	printmenuitem ."  Boot MidnightBSD in single user mode" bootsinglekey !
-	printmenuitem ."  Boot MidnightBSD with verbose logging" bootverbosekey !
+	printmenuitem ."  Boot in Safe Mode" bootsafekey !
+	printmenuitem ."  Boot in single user mode" bootsinglekey !
+	printmenuitem ."  Boot with verbose logging" bootverbosekey !
 	printmenuitem ."  Escape to loader prompt" escapekey !
-	s" arch-i386" environment? if
-		drop
-		printmenuitem ."  Boot MidnightBSD with USB keyboard" bootusbkey !
-	else
-		-2 bootusbkey !
-	then
 	printmenuitem ."  Reboot" rebootkey !
 	menuX @ 20 at-xy
 	." Select option, [Enter] for default"
@@ -261,10 +254,6 @@ set-current
 				s" YES" s" acpi_load" setenv
 				s" 0" s" hint.acpi.0.disabled" setenv
 			then
-			0 boot
-		then
-		dup bootusbkey @ = if
-			s" 0x1" s" hint.atkbd.0.flags" setenv
 			0 boot
 		then
 		dup bootsafekey @ = if
