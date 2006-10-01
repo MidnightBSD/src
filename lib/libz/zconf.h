@@ -1,9 +1,9 @@
 /* zconf.h -- configuration of the zlib compression library
- * Copyright (C) 1995-2004 Jean-loup Gailly.
+ * Copyright (C) 1995-2005 Jean-loup Gailly.
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* @(#) $FreeBSD: src/lib/libz/zconf.h,v 1.9 2005/04/24 22:04:34 kientzle Exp $ */
+/* @(#) $Id: zconf.h,v 1.1.1.2 2006-10-01 23:49:06 laffer1 Exp $ */
 
 #ifndef ZCONF_H
 #define ZCONF_H
@@ -43,6 +43,10 @@
 #  define get_crc_table         z_get_crc_table
 #  define zError                z_zError
 
+#  define alloc_func            z_alloc_func
+#  define free_func             z_free_func
+#  define in_func               z_in_func
+#  define out_func              z_out_func
 #  define Byte                  z_Byte
 #  define uInt                  z_uInt
 #  define uLong                 z_uLong
@@ -64,8 +68,10 @@
 #if defined(_WINDOWS) && !defined(WINDOWS)
 #  define WINDOWS
 #endif
-#if (defined(_WIN32) || defined(__WIN32__)) && !defined(WIN32)
-#  define WIN32
+#if defined(_WIN32) || defined(_WIN32_WCE) || defined(__WIN32__)
+#  ifndef WIN32
+#    define WIN32
+#  endif
 #endif
 #if (defined(MSDOS) || defined(OS2) || defined(WINDOWS)) && !defined(WIN32)
 #  if !defined(__GNUC__) && !defined(__FLAT__) && !defined(__386__)
@@ -291,15 +297,6 @@ typedef uLong FAR uLongf;
 #  define SEEK_CUR        1       /* Seek from current position.  */
 #  define SEEK_END        2       /* Set file pointer to EOF plus "offset" */
 #endif
-
-/*
- * This is hard-configured for FreeBSD, since zlib doesn't actually support
- * using the system off_t for offsets unless off_t is no longer than long.
- * To minimize the diff, we just "undef z_off_t" rather than modifying
- * the following lines.
- */
-#undef z_off_t
-
 #ifndef z_off_t
 #  define z_off_t long
 #endif
