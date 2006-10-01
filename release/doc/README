@@ -1,6 +1,6 @@
 -*- text -*-
 RELNOTESng README
-Bruce A. Mah <bmah@freebsd.org>
+$MidnightBSD$
 $FreeBSD: src/release/doc/README,v 1.10 2002/03/06 07:59:18 bmah Exp $
 
 This is the top-level directory for RELNOTESng, a re-write of

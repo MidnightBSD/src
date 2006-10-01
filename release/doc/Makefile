@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/release/doc/Makefile,v 1.7 2004/08/06 08:41:22 simon Exp $
 #
 # The user can override the default language to build and install
