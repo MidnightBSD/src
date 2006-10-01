@@ -662,7 +662,7 @@ release.6:
 	@mkdir -p ${RD}/dists/mports
 	@echo rolling mports/ports tarball
 	@tar --exclude CVS --exclude 'mports/distfiles/*' \
-	  -czf ${RD}/dists/mports/ports.tgz -C /usr ports
+	  -czf ${RD}/dists/mports/mports.tgz -C /usr mports
 	@cp ${.CURDIR}/scripts/ports-install.sh ${RD}/dists/mports/install.sh
 	@(cd ${RD}/dists/mports; \
 	  rm -f CHECKSUM.MD5 CHECKSUM.SHA256; \
