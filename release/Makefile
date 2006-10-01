@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
