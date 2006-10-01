@@ -1,6 +1,7 @@
 #
-# PAE -- Generic kernel configuration file for FreeBSD/i386 PAE
+# PAE -- Generic kernel configuration file for MidnightBSD/i386 PAE
 #
+# $MidnightBSD$
 # $FreeBSD: src/sys/i386/conf/PAE,v 1.16.2.2 2005/11/08 22:28:37 scottl Exp $
 
 include GENERIC
