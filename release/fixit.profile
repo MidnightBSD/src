@@ -1,4 +1,5 @@
 :
+# $MidnightBSD$
 # $FreeBSD: src/release/fixit.profile,v 1.10 2004/09/02 13:40:34 keramida Exp $
 
 export BLOCKSIZE=K
