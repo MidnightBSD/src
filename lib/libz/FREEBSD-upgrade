@@ -1,6 +1,7 @@
+$MidnightBSD$
 $FreeBSD: src/lib/libz/FREEBSD-upgrade,v 1.1 2005/05/11 03:50:50 kientzle Exp $
 
-ZLib 1.2.2
+ZLib 1.2.3
 
 Original distribution from http://www.gzip.org/zlib/
 
@@ -10,6 +11,8 @@ Vendor files removed from distribution before import:
 	 Makefile.in	 msdos/		 zconf.in.h
 	 amiga/		 old/
 	 as400/		 projects/
+
+         examples/ 
 
 Vendor files imported:
 	 ChangeLog	 example.c	 minigzip.c
@@ -33,12 +36,12 @@ Added files (not from vendor):
 To Update:
   1) Unpack vendor sources into a clean directory.
   2) Delete unnecessary files.
-  3) Import onto the vendor branch.  The 1.2.2 import was done like this:
-   cvs -d <CVSROOT> import -ko -m "ZLib 1.2.2" src/lib/libz ZLIB v1_2_2
+  3) Import onto the vendor branch.  The 1.2.3 import was done like this:
+   cvs -d <CVSROOT> import -ko -m "ZLib 1.2.3" src/lib/libz ZLIB v1_2_3
   4) In a clean directory, check out a fresh copy of HEAD,
 	 merging in vendor changes since the last import.
    cvs -d <CVSROOT> co -jZLIB:yesterday -jZLIB src/lib/libz
   5) Resolve any conflicts and commit them.
   6) Update this file with any changes to the file list or update procedure.
 
-kientzle@FreeBSD.org
+luke@midnightbsd.org
