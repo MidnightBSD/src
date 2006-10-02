@@ -14,7 +14,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libz/minigzip.c,v 1.2 2006/10/02 00:16:53 laffer1 Exp $");
 
 #include <stdio.h>
 #include "zlib.h"
@@ -281,6 +281,7 @@ int main(argc, argv)
     int argc;
     char *argv[];
 {
+    int copyout = 0;
     int uncompr = 0;
     gzFile file;
     char *bname, outmode[20];
