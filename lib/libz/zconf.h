@@ -3,7 +3,7 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* @(#) $Id: zconf.h,v 1.1.1.2 2006-10-01 23:49:06 laffer1 Exp $ */
+/* @(#) $MidnightBSD$ */
 
 #ifndef ZCONF_H
 #define ZCONF_H
@@ -297,6 +297,13 @@ typedef uLong FAR uLongf;
 #  define SEEK_CUR        1       /* Seek from current position.  */
 #  define SEEK_END        2       /* Set file pointer to EOF plus "offset" */
 #endif
+
+/*
+ * This is hard-configured for MidnightBSD, since zlib doesn't support
+ * the system off_t for offsets unless_off_t is no longer than long.
+ */
+#undef z_off_t
+
 #ifndef z_off_t
 #  define z_off_t long
 #endif

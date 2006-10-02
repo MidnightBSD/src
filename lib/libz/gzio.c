@@ -5,7 +5,8 @@
  * Compile this file with -DNO_GZCOMPRESS to avoid the compression code.
  */
 
-/* @(#) $Id: gzio.c,v 1.1.1.2 2006-10-01 23:49:06 laffer1 Exp $ */
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 
@@ -223,7 +224,7 @@ gzFile ZEXPORT gzdopen (fd, mode)
     char name[46];      /* allow for up to 128-bit integers */
 
     if (fd < 0) return (gzFile)Z_NULL;
-    sprintf(name, "<fd:%d>", fd); /* for debugging */
+    snprintf(name, sizeof(name), "<fd:%d>", fd); /* for debugging */
 
     return gz_open (name, mode, fd);
 }
