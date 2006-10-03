@@ -1,4 +1,4 @@
-/* $Id: openssl-compat.c,v 1.1.1.2 2006-02-25 02:34:26 laffer1 Exp $ */
+/* $Id: openssl-compat.c,v 1.1.1.3 2006-10-03 02:03:03 raven Exp $ */
 
 /*
  * Copyright (c) 2005 Darren Tucker <dtucker@zip.com.au>
@@ -18,7 +18,11 @@
 
 #include "includes.h"
 
-#define SSH_DONT_REDEF_EVP
+#ifdef USE_OPENSSL_ENGINE
+# include <openssl/engine.h>
+#endif
+
+#define SSH_DONT_OVERLOAD_OPENSSL_FUNCS
 #include "openssl-compat.h"
 
 #ifdef SSH_OLD_EVP
@@ -42,5 +46,17 @@ ssh_EVP_CIPHER_CTX_cleanup(EVP_CIPHER_CTX *evp)
 {
 	EVP_CIPHER_CTX_cleanup(evp);
 	return 1;
+}
+#endif
+
+#ifdef	USE_OPENSSL_ENGINE
+void
+ssh_SSLeay_add_all_algorithms(void)
+{
+	SSLeay_add_all_algorithms();
+
+	/* Enable use of crypto hardware */
+	ENGINE_load_builtin_engines();
+	ENGINE_register_all_complete();
 }
 #endif

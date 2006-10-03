@@ -1,4 +1,4 @@
-/* $Id: audit.c,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $ */
+/* $Id: audit.c,v 1.1.1.3 2006-10-03 02:03:02 raven Exp $ */
 
 /*
  * Copyright (c) 2004, 2005 Darren Tucker.  All rights reserved.
@@ -26,10 +26,15 @@
 
 #include "includes.h"
 
+#include <stdarg.h>
+#include <string.h>
+
 #ifdef SSH_AUDIT_EVENTS
 
 #include "audit.h"
 #include "log.h"
+#include "key.h"
+#include "hostfile.h"
 #include "auth.h"
 
 /*

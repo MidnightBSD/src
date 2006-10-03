@@ -16,9 +16,12 @@
 
 #include "includes.h"
 
-RCSID("$Id: bsd-getpeereid.c,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $");
-
 #if !defined(HAVE_GETPEEREID)
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <unistd.h>
 
 #if defined(SO_PEERCRED)
 int

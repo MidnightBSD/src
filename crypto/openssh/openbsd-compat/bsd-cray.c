@@ -1,5 +1,5 @@
 /* 
- * $Id: bsd-cray.c,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $
+ * $Id: bsd-cray.c,v 1.1.1.3 2006-10-03 02:03:03 raven Exp $
  *
  * bsd-cray.c
  *
@@ -52,7 +52,10 @@
 #include <sys/secstat.h>
 #include <sys/stat.h>
 #include <sys/session.h>
+#include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <pwd.h>
 #include <fcntl.h>
 #include <errno.h>

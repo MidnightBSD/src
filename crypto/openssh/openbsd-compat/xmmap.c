@@ -23,21 +23,31 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $Id: xmmap.c,v 1.1.1.2 2006-02-25 02:34:25 laffer1 Exp $ */
+/* $Id: xmmap.c,v 1.1.1.3 2006-10-03 02:03:03 raven Exp $ */
 
 #include "includes.h"
 
+#include <sys/types.h>
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif
+#include <sys/stat.h>
+
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
+#include <errno.h>
+#include <stdarg.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "log.h"
 
 void *xmmap(size_t size)
 {
+#ifdef HAVE_MMAP
 	void *address;
 
-#ifdef HAVE_MMAP
 # ifdef MAP_ANON
 	address = mmap(NULL, size, PROT_WRITE|PROT_READ, MAP_ANON|MAP_SHARED,
 	    -1, (off_t)0);

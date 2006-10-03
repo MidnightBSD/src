@@ -23,11 +23,14 @@
  */
 
 #include "includes.h"
-RCSID("$Id: auth-shadow.c,v 1.1.1.2 2006-02-25 02:34:23 laffer1 Exp $");
 
 #if defined(USE_SHADOW) && defined(HAS_SHADOW_EXPIRE)
 #include <shadow.h>
+#include <stdarg.h>
+#include <string.h>
 
+#include "key.h"
+#include "hostfile.h"
 #include "auth.h"
 #include "buffer.h"
 #include "log.h"

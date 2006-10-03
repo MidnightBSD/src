@@ -12496,6 +12496,7 @@ crypto/openssh/README.dns -text
 crypto/openssh/README.platform -text
 crypto/openssh/README.privsep -text
 crypto/openssh/README.smartcard -text
+crypto/openssh/README.tun -text
 crypto/openssh/RFC.nroff -text
 crypto/openssh/TODO -text
 crypto/openssh/WARNING.RNG -text
@@ -12540,6 +12541,7 @@ crypto/openssh/authfile.c -text
 crypto/openssh/authfile.h -text
 crypto/openssh/bufaux.c -text
 crypto/openssh/bufaux.h -text
+crypto/openssh/bufbn.c -text
 crypto/openssh/buffer.c -text
 crypto/openssh/buffer.h -text
 crypto/openssh/buildpkg.sh.in -text
@@ -12611,6 +12613,7 @@ crypto/openssh/mac.c -text
 crypto/openssh/mac.h -text
 crypto/openssh/match.c -text
 crypto/openssh/match.h -text
+crypto/openssh/md-sha256.c -text
 crypto/openssh/md5crypt.c -text
 crypto/openssh/md5crypt.h -text
 crypto/openssh/mdoc2man.awk -text
@@ -12677,6 +12680,10 @@ crypto/openssh/openbsd-compat/port-aix.c -text
 crypto/openssh/openbsd-compat/port-aix.h -text
 crypto/openssh/openbsd-compat/port-irix.c -text
 crypto/openssh/openbsd-compat/port-irix.h -text
+crypto/openssh/openbsd-compat/port-linux.c -text
+crypto/openssh/openbsd-compat/port-linux.h -text
+crypto/openssh/openbsd-compat/port-solaris.c -text
+crypto/openssh/openbsd-compat/port-solaris.h -text
 crypto/openssh/openbsd-compat/port-tun.c -text
 crypto/openssh/openbsd-compat/port-tun.h -text
 crypto/openssh/openbsd-compat/port-uw.c -text
@@ -12684,9 +12691,16 @@ crypto/openssh/openbsd-compat/port-uw.h -text
 crypto/openssh/openbsd-compat/readpassphrase.c -text
 crypto/openssh/openbsd-compat/readpassphrase.h -text
 crypto/openssh/openbsd-compat/realpath.c -text
+crypto/openssh/openbsd-compat/regress/Makefile.in -text
+crypto/openssh/openbsd-compat/regress/closefromtest.c -text
+crypto/openssh/openbsd-compat/regress/snprintftest.c -text
+crypto/openssh/openbsd-compat/regress/strduptest.c -text
+crypto/openssh/openbsd-compat/regress/strtonumtest.c -text
 crypto/openssh/openbsd-compat/rresvport.c -text
 crypto/openssh/openbsd-compat/setenv.c -text
 crypto/openssh/openbsd-compat/setproctitle.c -text
+crypto/openssh/openbsd-compat/sha2.c -text
+crypto/openssh/openbsd-compat/sha2.h -text
 crypto/openssh/openbsd-compat/sigact.c -text
 crypto/openssh/openbsd-compat/sigact.h -text
 crypto/openssh/openbsd-compat/strlcat.c -text
@@ -12703,10 +12717,13 @@ crypto/openssh/openbsd-compat/vis.c -text
 crypto/openssh/openbsd-compat/vis.h -text
 crypto/openssh/openbsd-compat/xcrypt.c -text
 crypto/openssh/openbsd-compat/xmmap.c -text
+crypto/openssh/openssh.xml.in -text
 crypto/openssh/opensshd.init.in -text
 crypto/openssh/packet.c -text
 crypto/openssh/packet.h -text
 crypto/openssh/pathnames.h -text
+crypto/openssh/platform.c -text
+crypto/openssh/platform.h -text
 crypto/openssh/progressmeter.c -text
 crypto/openssh/progressmeter.h -text
 crypto/openssh/readconf.c -text
@@ -12722,6 +12739,8 @@ crypto/openssh/regress/banner.sh -text
 crypto/openssh/regress/broken-pipe.sh -text
 crypto/openssh/regress/brokenkeys.sh -text
 crypto/openssh/regress/bsd.regress.mk -text
+crypto/openssh/regress/cfgmatch.sh -text
+crypto/openssh/regress/cipher-speed.sh -text
 crypto/openssh/regress/connect-privsep.sh -text
 crypto/openssh/regress/connect.sh -text
 crypto/openssh/regress/copy.1 -text svneol=unset#unset
@@ -12731,6 +12750,7 @@ crypto/openssh/regress/dsa_ssh2.pub -text
 crypto/openssh/regress/dynamic-forward.sh -text
 crypto/openssh/regress/envpass.sh -text
 crypto/openssh/regress/exit-status.sh -text
+crypto/openssh/regress/forcecommand.sh -text
 crypto/openssh/regress/forwarding.sh -text
 crypto/openssh/regress/keygen-change.sh -text
 crypto/openssh/regress/keyscan.sh -text
