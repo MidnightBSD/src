@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.84.12.1 2005/12/03 14:36:26 philip Exp $
  *
  * Copyright (c) 1995
@@ -291,7 +291,7 @@ installUpgrade(dialogMenuItem *self)
 	}
 
 	msgNotify("chflags'ing old binaries - please wait.");
-	(void)vsystem("chflags -R noschg /bin /sbin /usr/sbin /usr/bin /usr/lib /usr/libexec /kernel*");
+	(void)vsystem("chflags -R noschg /bin /sbin /usr/sbin /usr/bin /usr/lib /usr/libexec /var/empty /kernel*");
 
 	if (file_readable("/kernel")) {
 	    msgNotify("Moving old kernel to /kernel.prev");
