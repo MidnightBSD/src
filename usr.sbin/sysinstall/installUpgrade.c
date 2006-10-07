@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.3 2006/10/07 16:22:27 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.84.12.1 2005/12/03 14:36:26 philip Exp $
  *
  * Copyright (c) 1995
@@ -291,11 +291,11 @@ installUpgrade(dialogMenuItem *self)
 	}
 
 	msgNotify("chflags'ing old binaries - please wait.");
-	(void)vsystem("chflags -R noschg /bin /sbin /usr/sbin /usr/bin /usr/lib /usr/libexec /var/empty /kernel*");
+	(void)vsystem("chflags -R noschg /bin /sbin /usr/sbin /usr/bin /usr/lib /usr/libexec /var/empty /boot/kernel*");
 
-	if (file_readable("/kernel")) {
-	    msgNotify("Moving old kernel to /kernel.prev");
-	    if (system("mv /kernel /kernel.prev")) {
+	if (directory_exists("/boot/kernel")) {
+	    msgNotify("Moving old kernel to /boot/kernel.prev");
+	    if (system("mv /boot/kernel /boot/kernel.prev")) {
 		if (!msgYesNo("Hmmm!  I couldn't move the old kernel over!  Do you want to\n"
 			      "treat this as a big problem and abort the upgrade?  Due to the\n"
 			      "way that this upgrade process works, you will have to reboot\n"
@@ -303,7 +303,7 @@ installUpgrade(dialogMenuItem *self)
 		    systemShutdown(1);
 	    }
 	    else 
-		msgConfirm("NOTICE: Your old kernel is in /kernel.prev should this upgrade\n"
+		msgConfirm("NOTICE: Your old kernel is in /boot/kernel.prev should this upgrade\n"
 			   "fail for any reason and you need to boot your old kernel");
 	}
     }
