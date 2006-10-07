@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.3 2006/10/07 16:22:27 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.4 2006/10/07 16:26:19 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.84.12.1 2005/12/03 14:36:26 philip Exp $
  *
  * Copyright (c) 1995
@@ -69,9 +69,9 @@ static HitList etc_files [] = {
    { JUST_COPY,		"csh.login",		TRUE, NULL },
    { JUST_COPY,		"csh.logout",		TRUE, NULL },
    { JUST_COPY,		"cvsupfile",		TRUE, NULL },
+   { JUST_COPY,		"devfs.conf",		TRUE, NULL },
    { JUST_COPY,		"dhclient.conf",	TRUE, NULL },
    { JUST_COPY,		"disktab",		TRUE, NULL },
-   { JUST_COPY,		"dm.conf",		TRUE, NULL },
    { JUST_COPY,		"dumpdates",		TRUE, NULL },
    { JUST_COPY,		"exports",		TRUE, NULL },
    { JUST_COPY,		"fbtab",		TRUE, NULL },
@@ -90,21 +90,27 @@ static HitList etc_files [] = {
    { JUST_COPY,		"login.conf",		TRUE, NULL },
    { JUST_COPY,		"mail",			TRUE, NULL },
    { JUST_COPY,		"mail.rc",		TRUE, NULL },
+   { JUST_COPY,		"mac.conf",		TRUE, NULL },
    { JUST_COPY,		"make.conf",		TRUE, NULL },
    { JUST_COPY,		"manpath.config",	TRUE, NULL },
    { JUST_COPY,		"master.passwd",	FALSE, NULL },
+   { JUST_COPY,		"mergemaster.rc",	TRUE, NULL },
    { JUST_COPY,		"motd",			TRUE, NULL },
    { JUST_COPY,		"namedb",		TRUE, NULL },
    { JUST_COPY,		"networks",		TRUE, NULL },
    { JUST_COPY,		"newsyslog.conf",	TRUE, NULL },
    { JUST_COPY,		"nsmb.conf",		TRUE, NULL },
    { JUST_COPY,		"nsswitch.conf",	TRUE, NULL },
+   { JUST_COPY,		"ntpd.conf",		TRUE, NULL },
    { JUST_COPY,		"pam.conf",		TRUE, NULL },
    { JUST_COPY,		"passwd",		TRUE, NULL },
    { JUST_COPY,		"periodic",		TRUE, NULL },
+   { JUST_COPY,		"pf.conf",		TRUE, NULL },
+   { JUST_COPY,		"portsnap.conf",	TRUE, NULL },
    { JUST_COPY,		"ppp",			TRUE, NULL },
    { JUST_COPY,		"printcap",		TRUE, NULL },
    { JUST_COPY,		"profile",		TRUE, NULL },
+   { JUST_COPY,		"protocols",		TRUE, NULL },
    { JUST_COPY,		"pwd.db",		TRUE, NULL },
    { JUST_COPY,		"rc.local",		TRUE, NULL },
    { JUST_COPY,		"rc.firewall",		TRUE, NULL },
@@ -117,12 +123,12 @@ static HitList etc_files [] = {
    { JUST_COPY,		"services",		TRUE, NULL },
    { JUST_COPY,		"shells",		TRUE, NULL },
    { JUST_COPY,		"skeykeys",		TRUE, NULL },
+   { JUST_COPY,		"snmpd.config",		TRUE, NULL },
    { JUST_COPY,		"spwd.db",		TRUE, NULL },
    { JUST_COPY,		"ssh",			TRUE, NULL },
    { JUST_COPY,		"sysctl.conf",		TRUE, NULL },
    { JUST_COPY,		"syslog.conf",		TRUE, NULL },
    { JUST_COPY,		"ttys",			TRUE, NULL },
-   { JUST_COPY,		"uucp",			TRUE, NULL },
    { 0 },
 };
 
