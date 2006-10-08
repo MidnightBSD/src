@@ -27,7 +27,7 @@
 # SUCH DAMAGE.
 #
 
-# $MidnightBSD$
+# $MidnightBSD: src/sys/boot/i386/cdboot/cdboot.s,v 1.2 2006/10/08 06:07:29 laffer1 Exp $
 # $FreeBSD: /repoman/r/ncvs/src/sys/boot/i386/cdboot/cdboot.s,v 1.13.12.1 2006/04/18 13:51:12 sobomax Exp $
 
 #
@@ -401,7 +401,7 @@ ff.nextblock:	subl $SECTOR_SIZE,rec_size	# Adjust size
 ff.checkname:	lea DIR_NAME(%bx),%di		# Address name in record
 		push %si			# Save
 		repe cmpsb			# Compare name
-		jcxz ff.match			# We have a winner!
+		je ff.match			# We have a winner!
 		pop %si				# Restore
 		jmp ff.nextrec			# Keep looking.
 ff.match:	add $2,%sp			# Discard saved %si
