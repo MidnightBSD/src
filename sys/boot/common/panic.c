@@ -39,6 +39,8 @@ __FBSDID("$FreeBSD: src/sys/boot/common/panic.c,v 1.7 2003/08/25 23:30:41 obrien
 #include <stand.h>
 #include <machine/stdarg.h>
 
+extern void exit(int) __dead2;
+
 void
 panic(const char *fmt,...)
 {
