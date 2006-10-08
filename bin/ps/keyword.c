@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)keyword.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/ps/keyword.c,v 1.72 2005/03/20 10:40:36 pjd Exp $");
+__FBSDID("$FreeBSD: /repoman/r/ncvs/src/bin/ps/keyword.c,v 1.72.2.3 2006/04/14 02:47:30 gad Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -295,8 +295,9 @@ parsefmt(const char *p, int user)
 static VAR *
 findvar(char *p, int user, char **header)
 {
+	size_t rflen;
 	VAR *v, key;
-	char *hp;
+	char *hp, *realfmt;
 
 	hp = strchr(p, '=');
 	if (hp)
@@ -306,11 +307,26 @@ findvar(char *p, int user, char **header)
 	v = bsearch(&key, var, sizeof(var)/sizeof(VAR) - 1, sizeof(VAR), vcmp);
 
 	if (v && v->alias) {
-		if (hp) {
-			warnx("%s: illegal keyword specification", p);
-			eval = 1;
+		/*
+		 * If the user specified an alternate-header for this
+		 * (aliased) format-name, then we need to copy that
+		 * alternate-header when making the recursive call to
+		 * process the alias.
+		 */
+		if (hp == NULL)
+			parsefmt(v->alias, user);
+		else {
+			/*
+			 * XXX - This processing will not be correct for
+			 * any alias which expands into a list of format
+			 * keywords.  Presently there are no aliases
+			 * which do that.
+			 */
+			rflen = strlen(v->alias) + strlen(hp) + 2;
+			realfmt = malloc(rflen);
+			snprintf(realfmt, rflen, "%s=%s", v->alias, hp);
+			parsefmt(realfmt, user);
 		}
-		parsefmt(v->alias, user);
 		return ((VAR *)NULL);
 	}
 	if (!v) {
