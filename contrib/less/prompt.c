@@ -307,7 +307,7 @@ protochar(c, where, iseditproto)
 		break;
 	case 'L':	/* Final line number */
 		len = ch_length();
-		if (len == NULL_POSITION ||`len == ch_zero() ||
+		if (len == NULL_POSITION || len == ch_zero() ||
 		    (linenum = find_linenum(len)) <= 0)
 			ap_quest();
 		else
