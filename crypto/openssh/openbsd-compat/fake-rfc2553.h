@@ -1,5 +1,5 @@
-/* $Id: fake-rfc2553.h,v 1.2 2006-08-19 16:47:07 adam Exp $ */
-/* $FreeBSD: src/crypto/openssh/openbsd-compat/fake-rfc2553.h,v 1.7 2005/09/03 07:04:25 des Exp $ */
+/* $Id: fake-rfc2553.h,v 1.3 2006-10-10 15:06:10 laffer1 Exp $ */
+/* $FreeBSD: src/crypto/openssh/openbsd-compat/fake-rfc2553.h,v 1.6.2.2 2006/10/06 14:07:21 des Exp $ */
 
 /*
  * Copyright (C) 2000-2003 Damien Miller.  All rights reserved.
@@ -42,7 +42,10 @@
 #define _FAKE_RFC2553_H
 
 #include "includes.h"
-#include "sys/types.h"
+#include <sys/types.h>
+#if defined(HAVE_NETDB_H)
+# include <netdb.h>
+#endif
 
 /*
  * First, socket and INET6 related definitions 
