@@ -1,4 +1,4 @@
-/* $Id: audit-bsm.c,v 1.1.1.3 2006-10-03 02:03:03 raven Exp $ */
+/* $Id: audit-bsm.c,v 1.1.1.4 2006-10-10 14:38:18 laffer1 Exp $ */
 
 /*
  * TODO
@@ -35,10 +35,12 @@
 /* #pragma ident	"@(#)bsmaudit.c	1.1	01/09/17 SMI" */
 
 #include "includes.h"
+__RCSID("$FreeBSD: src/crypto/openssh/audit-bsm.c,v 1.1.1.1.2.1 2006/10/06 14:07:11 des Exp $");
 #if defined(USE_BSM_AUDIT)
 
 #include <sys/types.h>
 
+#include <errno.h>
 #include <stdarg.h>
 #include <unistd.h>
 

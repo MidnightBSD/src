@@ -12837,6 +12837,7 @@ crypto/openssh/ssh1.h -text
 crypto/openssh/ssh2.h -text
 crypto/openssh/ssh_config -text
 crypto/openssh/ssh_config.5 -text
+crypto/openssh/ssh_namespace.h -text
 crypto/openssh/ssh_prng_cmds.in -text
 crypto/openssh/sshconnect.c -text
 crypto/openssh/sshconnect.h -text
