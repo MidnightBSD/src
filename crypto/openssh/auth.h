@@ -1,5 +1,5 @@
-/*	$OpenBSD: auth.h,v 1.51 2005/06/06 11:20:36 djm Exp $	*/
-/*	$FreeBSD: src/crypto/openssh/auth.h,v 1.16 2005/09/03 07:04:22 des Exp $	*/
+/* $OpenBSD: auth.h,v 1.58 2006/08/18 09:15:20 markus Exp $ */
+/* $FreeBSD: src/crypto/openssh/auth.h,v 1.15.2.3 2006/10/06 14:07:12 des Exp $ */
 
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
@@ -29,9 +29,8 @@
 #ifndef AUTH_H
 #define AUTH_H
 
-#include "key.h"
-#include "hostfile.h"
-#include "buffer.h"
+#include <signal.h>
+
 #include <openssl/rsa.h>
 
 #ifdef HAVE_LOGIN_CAP
@@ -49,7 +48,8 @@ typedef struct Authmethod Authmethod;
 typedef struct KbdintDevice KbdintDevice;
 
 struct Authctxt {
-	int		 success;
+	sig_atomic_t	 success;
+	int		 authenticated;	/* authenticated and alarms cancelled */
 	int		 postponed;	/* authentication needs another step */
 	int		 valid;		/* user exists and is allowed to login */
 	int		 attempt;

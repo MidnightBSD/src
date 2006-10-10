@@ -146,9 +146,28 @@
  */
 
 #include "includes.h"
+__RCSID("$FreeBSD: src/crypto/openssh/loginrec.c,v 1.9.2.2 2006/10/06 14:07:14 des Exp $");
 
-#include "ssh.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+
+#include <netinet/in.h>
+
+#include <errno.h>
+#include <fcntl.h>
+#ifdef HAVE_PATHS_H
+# include <paths.h>
+#endif
+#include <pwd.h>
+#include <stdarg.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "xmalloc.h"
+#include "key.h"
+#include "hostfile.h"
+#include "ssh.h"
 #include "loginrec.h"
 #include "log.h"
 #include "atomicio.h"
@@ -164,9 +183,6 @@
 #ifdef HAVE_LIBUTIL_H
 # include <libutil.h>
 #endif
-
-RCSID("$Id: loginrec.c,v 1.2 2006-08-19 16:41:42 adam Exp $");
-RCSID("$FreeBSD: src/crypto/openssh/loginrec.c,v 1.13 2006/06/09 07:23:14 des Exp $");
 
 /**
  ** prototypes for helper functions in this file
