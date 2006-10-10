@@ -1,5 +1,5 @@
-/* $Id: auth-pam.h,v 1.2 2006-08-19 16:41:42 adam Exp $ */
-/* $FreeBSD: src/crypto/openssh/auth-pam.h,v 1.12 2005/09/03 07:04:22 des Exp $ */
+/* $Id: auth-pam.h,v 1.3 2006-10-10 15:02:13 laffer1 Exp $ */
+/* $FreeBSD: src/crypto/openssh/auth-pam.h,v 1.11.2.1 2006/10/06 14:07:12 des Exp $ */
 
 /*
  * Copyright (c) 2000 Damien Miller.  All rights reserved.
