@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/secure/usr.bin/sftp/Makefile,v 1.12 2005/06/07 09:31:27 des Exp $
 
 PROG=	sftp
