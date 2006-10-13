@@ -73,13 +73,13 @@ static void bpack(int8_t *, int8_t *, int);
 /* global vars */
 MALLOC_DEFINE(M_ATA, "ata_generic", "ATA driver generic layer");
 int (*ata_raid_ioctl_func)(u_long cmd, caddr_t data) = NULL;
+struct intr_config_hook *ata_delayed_attach = NULL;
 devclass_t ata_devclass;
 uma_zone_t ata_request_zone;
 uma_zone_t ata_composite_zone;
 int ata_wc = 1;
 
 /* local vars */
-static struct intr_config_hook *ata_delayed_attach = NULL;
 static int ata_dma = 1;
 static int atapi_dma = 1;
 
@@ -250,7 +250,7 @@ ata_reinit(device_t dev)
 		      "WARNING - %s requeued due to channel reset",
 		      ata_cmd2str(request));
 	if (!(request->flags & (ATA_R_ATAPI | ATA_R_CONTROL)))
-	    printf(" LBA=%llu", (unsigned long long)request->u.ata.lba);
+	    printf(" LBA=%ju", request->u.ata.lba);
 	printf("\n");
 	request->flags |= ATA_R_REQUEUE;
 	ata_queue_request(request);
@@ -627,7 +627,8 @@ ata_getparam(struct ata_device *atadev, int init)
 
 	if (bootverbose)
 	    printf("ata%d-%s: pio=%s wdma=%s udma=%s cable=%s wire\n",
-		   ch->unit, atadev->unit == ATA_MASTER ? "master":"slave",
+                   device_get_unit(ch->dev),
+		   atadev->unit == ATA_MASTER ? "master":"slave",
 		   ata_mode2str(ata_pmode(atacap)),
 		   ata_mode2str(ata_wmode(atacap)),
 		   ata_mode2str(ata_umode(atacap)),
@@ -849,6 +850,9 @@ ata_mode2str(int mode)
     case ATA_UDMA6: return "UDMA133";
     case ATA_SA150: return "SATA150";
     case ATA_SA300: return "SATA300";
+    case ATA_USB: return "USB";
+    case ATA_USB1: return "USB1";
+    case ATA_USB2: return "USB2";
     default:
 	if (mode & ATA_DMA_MASK)
 	    return "BIOSDMA";
