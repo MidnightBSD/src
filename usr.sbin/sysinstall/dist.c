@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
  *
  * Copyright (c) 1995
@@ -86,7 +86,7 @@ static Distribution DistTable[] = {
     DTE_TARBALL("lib32",    &Dists, LIB32,    "/"),
 #endif
     DTE_SUBDIST("src",	    &Dists, SRC,      SrcDistTable),
-    DTE_TARBALL("ports",    &Dists, PORTS,    "/usr"),
+    DTE_TARBALL("mports",    &Dists, PORTS,    "/usr"),
     DTE_TARBALL("local",    &Dists, LOCAL,    "/"),
     DTE_SUBDIST("X.Org",    &Dists, XORG,     XOrgDistTable),
     { NULL },
