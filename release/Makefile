@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/release/Makefile,v 1.5 2006/10/01 21:47:25 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -197,17 +197,6 @@ BOOTINODE=		80000
 MFSSIZE=		4320
 MFSINODE=		8000
 MFSLABEL=		minimum3
-.elif ${TARGET_ARCH} == "alpha"
-MAKE_FLOPPIES=		true
-FLOPPYSIZE=		1440
-FLOPPYSPLITSIZE=	1392
-FLOPPYINODE=		40000
-FLOPPYLABEL=		fd1440
-BOOTINODE=		80000
-MFSSIZE=		4320
-MFSINODE=		8000
-MFSLABEL=		auto
-SPLIT_MFSROOT=
 .elif ${TARGET_ARCH} == "sparc64"
 DISKLABEL=		sunlabel
 MFSSIZE=		4096

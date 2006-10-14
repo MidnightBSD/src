@@ -19143,8 +19143,6 @@ libexec/ypxfr/ypxfr_misc.c -text
 libexec/ypxfr/ypxfrd_getmap.c -text
 release/Makefile -text
 release/Makefile.inc.docports -text
-release/alpha/boot_crunch.conf -text
-release/alpha/mkisoimages.sh -text
 release/amd64/boot_crunch.conf -text
 release/amd64/mkisoimages.sh -text
 release/doc/Makefile -text
