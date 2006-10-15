@@ -1,7 +1,18 @@
 Updating Information for MidnightBSD users
 
-Items affecting the ports and packages system can be found in
-/usr/ports/UPDATING. 
+Items affecting the mports and packages system can be found in
+/usr/mports/UPDATING. 
+
+20061014:
+	Workaround for em driver problem on shared IRQ.
+
+	Started removal of alpha support.
+
+20061013:
+	ATA driver was updated.  USB/USB1/USB2 types added.
+
+20061010: 
+	OpenSSH was updated to 4.4p1.  There hav20061010: 
 
 20060909:
 	OpenNTPD was added to MidnightBSD.  Run make delete-old to remove
@@ -47,7 +58,7 @@ Items affecting the ports and packages system can be found in
 	--------------------------------------------------------------
 	This assumes you are already running a 6.X system.  Replace
 	${arch} with the architecture of your machine (e.g. "i386",
-	"alpha", "amd64", "ia64", "pc98", "sparc64", etc).
+	"amd64", "ia64", "pc98", "sparc64", etc).
 
 	cd src/sys/${arch}/conf
 	config KERNEL_NAME_HERE
@@ -195,4 +206,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD$
+$MidnightBSD: src/UPDATING,v 1.3 2006/09/09 23:27:07 laffer1 Exp $
