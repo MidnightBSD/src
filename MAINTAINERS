@@ -1,5 +1,5 @@
 $FreeBSD: src/MAINTAINERS,v 1.121 2005/06/04 16:56:35 imp Exp $
-$MidnightBSD$
+$MidnightBSD: src/MAINTAINERS,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
 
 Please note that the content of this file is strictly advisory.
 No locks listed here are valid.  The only strict review requirements
@@ -21,111 +21,107 @@ It is not a registry of 'turf' or private property.
 
 subsystem	login	notes
 -----------------------------
-mergemaster	dougb	Prefers to pre-approve commits
-libc/posix1e	rwatson	Pre-commit review requested.
-POSIX.1e ACLs	rwatson	Pre-commit review requested.
-UFS EAs		rwatson	Pre-commit review requested.
-MAC Framework	rwatson	Pre-commit review requested.
-MAC Modules	rwatson	Pre-commit review requested.
-ATA/IDE		sos	Pre-commit review requested.
-ahc(4)		gibbs	Pre-commit review requested.
-ahd(4)		gibbs	Pre-commit review requested.
-NEWCARD		imp	Pre-commit review requested.
-OLDCARD		imp	Pre-commit review requested.
-pci bus		imp,jhb	Pre-commit review requested.
-telnet		markm	Heads-up appreciated. Try not to break it.
-secure/*	markm	Heads-up appreciated. Try not to break it.
-kerberos5	nectar  Pre-commit review requested.
-heimdal		nectar	Pre-commit review requested.
-cdboot		jhb	Pre-commit review requested.
-pxeboot		jhb	Pre-commit review requested.
-witness		jhb	Pre-commit review requested.
-twe		vkashyap	Pre-commit review requested
-twa		vkashyap	Pre-commit review requested
-aac		scottl	Pre-commit review requested
-udf		scottl	Pre-commit review requested.
-ips		scottl	Pre-commit review requested.
-iir		scottl	Pre-commit review requested.
-mlx		scottl	Pre-commit review requested.
-mly		scottl	Pre-commit review requested.
-maestro3	scottl	Pre-commit review requested.
-CAM		gibbs,
-		ken	Pre-commit review requested. send to scsi@freebsd.org
-devstat(9)	ken	Pre-commit review requested.
-camcontrol(8)	ken	Pre-commit review requested.
-libcam		ken	Pre-commit review requested.
-libdevstat	ken	Pre-commit review requested.
-iostat(8)	ken	Pre-commit review requested.
-cd(4)		ken	Pre-commit review requested.
-pass(4)		ken	Pre-commit review requested.
-ch(4)		ken	Pre-commit review requested.
-isp(4)		mjacob	Pre-commit review requested.
-mpt(4)		mjacob	Pre-commit review requested.
-em(4)		tackerman	Pre-commit review requested.
-tdfx(4)		cokane  Just keep me informed of changes, try not to break it.
-sendmail	gshapiro	Pre-commit review requested.
-etc/mail	gshapiro	Pre-commit review requested.
+mergemaster	laffer1	Prefers to pre-approve commits
+libc/posix1e	laffer1	Pre-commit review requested.
+POSIX.1e ACLs	laffer1	Pre-commit review requested.
+UFS EAs		laffer1	Pre-commit review requested.
+MAC Framework	laffer1	Pre-commit review requested.
+MAC Modules	laffer1	Pre-commit review requested.
+ATA/IDE		laffer1	Pre-commit review requested.
+ahc(4)		laffer1	Pre-commit review requested.
+ahd(4)		laffer1	Pre-commit review requested.
+NEWCARD		laffer1	Pre-commit review requested.
+OLDCARD		laffer1	Pre-commit review requested.
+pci bus		laffer1	Pre-commit review requested.
+telnet		archite	Heads-up appreciated. Try not to break it.
+secure/*	archite	Heads-up appreciated. Try not to break it.
+kerberos5	laffer1  Pre-commit review requested.
+heimdal		laffer1	Pre-commit review requested.
+cdboot		laffer1	Pre-commit review requested.
+pxeboot		laffer1	Pre-commit review requested.
+witness		laffer1	Pre-commit review requested.
+twe		laffer1	Pre-commit review requested
+twa		laffer1	Pre-commit review requested
+aac		laffer1	Pre-commit review requested
+udf		laffer1	Pre-commit review requested.
+ips		laffer1	Pre-commit review requested.
+iir		laffer1	Pre-commit review requested.
+mlx		laffer1	Pre-commit review requested.
+mly		laffer1	Pre-commit review requested.
+maestro3	laffer1	Pre-commit review requested.
+CAM		laffer1 Pre-commit review requested.
+devstat(9)	laffer1	Pre-commit review requested.
+camcontrol(8)	laffer1	Pre-commit review requested.
+libcam		laffer1	Pre-commit review requested.
+libdevstat	laffer1	Pre-commit review requested.
+iostat(8)	laffer1	Pre-commit review requested.
+cd(4)		laffer1	Pre-commit review requested.
+pass(4)		laffer1	Pre-commit review requested.
+ch(4)		laffer1	Pre-commit review requested.
+isp(4)		laffer1	Pre-commit review requested.
+mpt(4)		laffer1	Pre-commit review requested.
+em(4)		laffer1	Pre-commit review requested.
+tdfx(4)		laffer1 Just keep me informed of changes, try not to break it.
+sendmail	laffer1	Pre-commit review requested.
+etc/mail	laffer1	Pre-commit review requested.
 				Keep in sync with -STABLE.
-etc/sendmail	gshapiro	Pre-commit review requested.
+etc/sendmail	laffer1	Pre-commit review requested.
 				Keep in sync with -STABLE.
-dhcp		mbr	Needs to pre-approve commits to contrib/isc-dhcp, so
-			changes can be made to the isc.org CVS repository.
-libfetch	des	Advance notification requested.
-fetch		des	Advance notification requested.
-libpam		des	Pre-commit review requested.
-openssh		des	Pre-commit review requested.
-pseudofs	des	Advance notification requested.
-procfs		des	Advance notification requested.
-linprocfs	des	Advance notification requested.
-lpr		gad	Pre-commit review requested, particularly for
+dhcp		laffer1	Pre-commit review requested.
+libfetch	laffer1	Advance notification requested.
+fetch		laffer1	Advance notification requested.
+libpam		archite	Pre-commit review requested.
+openssh		archite	Pre-commit review requested.
+pseudofs	laffer1	Advance notification requested.
+procfs		laffer1	Advance notification requested.
+linprocfs	laffer1	Advance notification requested.
+lpr		laffer1	Pre-commit review requested, particularly for
 			lpd/recvjob.c and lpd/printjob.c.
-newsyslog(8)	gad	Heads-up appreciated.  I'm going thru the PR's for it.
-pkill		gad	Heads-up appreciated.
-ps		gad	I am working on a number of changes to this.  Would
-			like advance notice of major changes planned to it.
-cvs		peter	Heads-up appreciated, try not to break it.
-ncurses		peter	Heads-up appreciated, try not to break it.
-nvi		peter	Try not to break it.
-libz		peter	Try not to break it.
-pppd/chat	peter	Try not to break it.
-groff		ru	Recommends pre-commit review.
-share/mk	ru	This is a vital component of the build system, so I
+newsyslog(8)	laffer1	Heads-up appreciated.  I'm going thru the PR's for it.
+pkill		laffer1	Heads-up appreciated.
+ps		laffer1	Try not to break it.
+cvs		laffer1, archite	Heads-up appreciated, try not to break it.
+ncurses		laffer1	Heads-up appreciated, try not to break it.
+nvi		laffer1	Try not to break it.
+libz		laffer1	Try not to break it.
+pppd/chat	laffer1	Try not to break it.
+groff		laffer1	Recommends pre-commit review.
+share/mk	laffer1	This is a vital component of the build system, so I
 			offer a pre-commit review for anything non-trivial.
-ipfw		ipfw	Pre-commit review preferred. send to ipfw@freebsd.org
-drm		anholt	Just keep me informed of changes, try not to break it.
-libufs		jmallett	Willing to handle problems, help with work.
-fdc(4)		joerg	Just keep me informed of changes, try not to break it.
-sppp(4)		joerg	Just keep me informed of changes, try not to break it.
-libc		nectar	Opportuntity for pre-commit review appreciated for
+ipfw		laffer1	Pre-commit review preferred.
+drm		laffer1	Just keep me informed of changes, try not to break it.
+libufs		laffer1	Try not to break it.
+fdc(4)		laffer1	Just keep me informed of changes, try not to break it.
+sppp(4)		laffer1	Just keep me informed of changes, try not to break it.
+libc		laffer1	Opportuntity for pre-commit review appreciated for
 			nsdispatch(3) and its consumers.
-unifdef(1)	fanf	Pre-commit review requested.
-ntp         	roberto	Pre-commit review requested.
-inetd		dwmalone	Recommends pre-commit review.
-nwfs		bp	In case of functional changes pre-commit review
+unifdef(1)	laffer1	Pre-commit review requested.
+ntpd         	laffer1	Pre-commit review requested.
+inetd		laffer1	Recommends pre-commit review.
+nwfs		laffer1 In case of functional changes pre-commit review
 			requested.
-contrib/smbfs	bp	Open for in-tree committs. In case of functional
+contrib/smbfs	laffer1	Open for in-tree committs. In case of functional
 			changes pre-commit review requested.
-contrib/pf	mlaier	Pre-commit review requested.
-binutils	obrien	Insists on BU blocked from unapproved commits
-file		obrien	Insists to keep file blocked from other's unapproved
-			commits
-contrib/bzip2	obrien	Pre-commit review required.
-lukemftpd	obrien	Pre-commit review required.
-geom_concat	pjd	Pre-commit review preferred.
-geom_gate	pjd	Pre-commit review preferred.
-geom_label	pjd	Pre-commit review preferred.
-geom_mirror	pjd	Pre-commit review preferred.
-geom_nop	pjd	Pre-commit review preferred.
-geom_raid3	pjd	Pre-commit review preferred.
-geom_shsec	pjd	Pre-commit review preferred.
-geom_stripe	pjd	Pre-commit review preferred.
-sbin/geom	pjd	Pre-commit review preferred.
-nfs		alfred	Will be happy to review code, but not mandatory.
-rpc.lockd	alfred	Will be happy to review code, but not mandatory.
-truss		alfred	Will be happy to review code, but not mandatory.
-rpc		alfred	Pre-commit review requested.
-pkg_install	krion	Pre-commit review or approval from portmgr@ requested.
-linux emul	emulation	Please discuss changes here.
+contrib/pf	archite	Pre-commit review requested.
+binutils	laffer1	Pre-commit review requested.
+file		laffer1	Pre-commit review requested.
+contrib/bzip2	laffer1	Pre-commit review required.
+lukemftpd 	laffer1	Pre-commit review required.
+geom_concat	laffer1	Pre-commit review preferred.
+geom_gate	laffer1	Pre-commit review preferred.
+geom_label	laffer1	Pre-commit review preferred.
+geom_mirror	laffer1	Pre-commit review preferred.
+geom_nop	laffer1	Pre-commit review preferred.
+geom_raid3	laffer1	Pre-commit review preferred.
+geom_shsec	laffer1	Pre-commit review preferred.
+geom_stripe	laffer1	Pre-commit review preferred.
+sbin/geom	laffer1	Pre-commit review preferred.
+nfs		laffer1	Will be happy to review code, but not mandatory.
+rpc.lockd	laffer1	Will be happy to review code, but not mandatory.
+truss		laffer1	Will be happy to review code, but not mandatory.
+rpc		laffer1	Pre-commit review requested.
+pkg_install	wintellect,laffer1	Pre-commit review or approval from portmgr@ requested.
+linux emul	laffer1	Pre-commit review preferred.
 
 Following are the entries from the Makefiles, and a few other sources.
 Please remove stale entries from both their origin, and this file.
