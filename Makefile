@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile,v 1.2 2006/05/22 05:08:38 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.3 2006/08/28 02:52:35 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -266,7 +266,7 @@ universe_prologue:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> make universe started on ${STARTTIME}"
 	@echo "--------------------------------------------------------------"
-.for target in i386 i386:pc98 sparc64 alpha ia64 amd64
+.for target in i386 i386:pc98 sparc64 ia64 amd64
 .for arch in ${target:C/:.*$//}
 .for mach in ${target:C/^.*://}
 KERNCONFS!=	cd ${.CURDIR}/sys/${mach}/conf && \

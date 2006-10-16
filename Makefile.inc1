@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/Makefile.inc1,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_DYNAMICROOT do not link /bin and /sbin dynamically
@@ -903,10 +903,6 @@ _btxld=		usr.sbin/btxld
 .if (!defined(NO_RESCUE) || defined(RELEASEDIR)) && \
     ${TARGET_ARCH} != ${MACHINE_ARCH}
 _crunchide=	usr.sbin/crunch/crunchide
-.endif
-
-.if ${TARGET_ARCH} == "alpha" && ${TARGET_ARCH} != ${MACHINE_ARCH}
-_elf2exe=	usr.sbin/elf2exe
 .endif
 
 .if ${TARGET_ARCH} == "i386" && ${TARGET_ARCH} != ${MACHINE_ARCH} && \
