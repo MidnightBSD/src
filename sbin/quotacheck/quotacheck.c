@@ -192,6 +192,11 @@ main(argc, argv)
 			(void) addid((u_long)pw->pw_uid, USRQUOTA, pw->pw_name);
 		endpwent();
 	}
+	/* Setting maxrun (-1) makes no sense without the aflag, but
+	   it hasn't been an error since FreeBSD first added it 12 years
+	   ago, so just warn. */
+	if (maxrun > 0 && !aflag)
+		warnx("ignoring -l without -a.");
 	if (aflag)
 		exit(checkfstab(1, maxrun, needchk, chkquota));
 	if (setfsent() == 0)
@@ -217,7 +222,7 @@ void
 usage()
 {
 	(void)fprintf(stderr, "%s\n%s\n", 
-		"usage: quotacheck [-guv] -a",
+		"usage: quotacheck [-guv] [-l maxrun] -a",
 		"       quotacheck [-guv] filesystem ...");
 	exit(1);
 }
