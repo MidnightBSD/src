@@ -2,10 +2,10 @@
 #
 # $NetBSD: amd,v 1.10 2002/04/29 12:08:17 lukem Exp $
 # $FreeBSD: src/etc/rc.d/amd,v 1.15.2.1 2006/01/08 09:20:47 rse Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/amd,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 
 # PROVIDE: amd
-# REQUIRE: rpcbind ypbind nfsclient cleanvar
+# REQUIRE: rpcbind ypbind nfsclient cleanvar ldconfig
 # BEFORE: DAEMON
 # KEYWORD: nojail
 
