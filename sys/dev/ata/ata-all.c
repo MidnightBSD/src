@@ -279,8 +279,8 @@ ata_suspend(device_t dev)
     if (!dev || !(ch = device_get_softc(dev)))
 	return ENXIO;
 
-    /* wait for the channel to be IDLE before entering suspend mode */
-    while (1) {
+    /* wait for the channel to be IDLE or detached before suspending */
+    while (ch->r_irq) {
 	mtx_lock(&ch->state_mtx);
 	if (ch->state == ATA_IDLE) {
 	    ch->state = ATA_ACTIVE;
@@ -487,7 +487,11 @@ ata_device_ioctl(device_t dev, u_long cmd, caddr_t data)
 	if (ioc_request->flags & ATA_CMD_WRITE)
 	    request->flags |= ATA_R_WRITE;
 	ata_queue_request(request);
-	if (!(request->flags & ATA_R_ATAPI)) {
+	if (request->flags & ATA_R_ATAPI) {
+            bcopy(&request->u.atapi.sense, &ioc_request->u.atapi.sense,
+                sizeof(struct atapi_sense));
+        }
+        else {
 	    ioc_request->u.ata.command = request->u.ata.command;
 	    ioc_request->u.ata.feature = request->u.ata.feature;
 	    ioc_request->u.ata.lba = request->u.ata.lba;
@@ -637,7 +641,9 @@ ata_getparam(struct ata_device *atadev, int init)
 	if (init) {
 	    sprintf(buffer, "%.40s/%.8s", atacap->model, atacap->revision);
 	    device_set_desc_copy(atadev->dev, buffer);
-	    if (atadev->param.config & ATA_PROTO_ATAPI) {
+	    if ((atadev->param.config & ATA_PROTO_ATAPI) &&
+                (atadev->param.config != ATA_CFA_MAGIC1) &&
+                (atadev->param.config != ATA_CFA_MAGIC2)) {
 		if (atapi_dma && ch->dma &&
 		    (atadev->param.config & ATA_DRQ_MASK) != ATA_DRQ_INTR &&
 		    ata_umode(&atadev->param) >= ATA_UDMA2)
