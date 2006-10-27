@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ahb/ahb.c,v 1.34 2005/05/29 04:42:17 nyan Exp $
+ * $FreeBSD: src/sys/dev/ahb/ahb.c,v 1.34.2.1 2006/06/29 18:12:18 mjacob Exp $
  */
 
 #include <sys/param.h>
@@ -526,7 +526,7 @@ ahbxptattach(struct ahb_softc *ahb)
 	}
 
 	ahb->num_ecbs = MIN(ahb->num_ecbs,
-			    ahb->ha_inq_data->scsi_data.reserved[1]);
+			    ahb->ha_inq_data->scsi_data.spc2_flags);
 	printf("ahb%ld: %.8s %s SCSI Adapter, FW Rev. %.4s, ID=%d, %d ECBs\n",
 	       ahb->unit, ahb->ha_inq_data->scsi_data.product,
 	       (ahb->ha_inq_data->scsi_data.flags & 0x4) ? "Differential"
