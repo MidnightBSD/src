@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/vge/if_vge.c,v 1.14.2.6 2006/01/13 19:21:45 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/vge/if_vge.c,v 1.14.2.8 2006/09/05 07:06:15 mr Exp $");
 
 /*
  * VIA Networking Technologies VT612x PCI gigabit ethernet NIC driver.
@@ -2129,8 +2129,10 @@ vge_ifmedia_upd(ifp)
 	struct mii_data		*mii;
 
 	sc = ifp->if_softc;
+	VGE_LOCK(sc);
 	mii = device_get_softc(sc->vge_miibus);
 	mii_mediachg(mii);
+	VGE_UNLOCK(sc);
 
 	return (0);
 }
