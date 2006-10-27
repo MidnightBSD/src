@@ -105,18 +105,12 @@
 #include <sys/systm.h>
 #include <sys/endian.h>
 #include <sys/eventhandler.h>
-#if __FreeBSD_version < 500000  
-#include <sys/kernel.h>
-#include <sys/queue.h>
-#include <sys/malloc.h>
-#else
 #include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/condvar.h>
-#endif
 #include <sys/proc.h>
 #include <sys/bus.h>
 #include <sys/module.h>
@@ -124,20 +118,10 @@
 #include <machine/cpu.h>
 #include <machine/resource.h>
 
-#if __FreeBSD_version < 500000  
-#include <machine/bus.h>
-#include <machine/clock.h>
-#endif
-
 #include <sys/rman.h>
 
-#if __FreeBSD_version < 500000  
-#include <pci/pcireg.h>
-#include <pci/pcivar.h>
-#else
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
-#endif
 
 #include <machine/bus.h>
 #include "opt_ddb.h"

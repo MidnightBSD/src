@@ -104,9 +104,7 @@ __FBSDID("$FreeBSD: src/sys/dev/mpt/mpt_cam.c,v 1.1.2.6 2006/09/27 15:30:46 mjac
 #include "dev/mpt/mpilib/mpi_init.h"
 #include "dev/mpt/mpilib/mpi_targ.h"
 #include "dev/mpt/mpilib/mpi_fc.h"
-#if __FreeBSD_version >= 500000
 #include <sys/sysctl.h>
-#endif
 #include <sys/callout.h>
 #include <sys/kthread.h>
 
@@ -437,7 +435,6 @@ mpt_read_config_info_fc(struct mpt_softc *mpt)
 	    mpt->mpt_fcport_page0.WWPN.High,
 	    mpt->mpt_fcport_page0.WWPN.Low,
 	    mpt->mpt_fcport_speed);
-#if __FreeBSD_version >= 500000
 	{
 		struct sysctl_ctx_list *ctx = device_get_sysctl_ctx(mpt->dev);
 		struct sysctl_oid *tree = device_get_sysctl_tree(mpt->dev);
@@ -461,7 +458,6 @@ mpt_read_config_info_fc(struct mpt_softc *mpt)
 		       "World Wide Port Name");
 
 	}
-#endif
 	return (0);
 }
 
@@ -3478,28 +3474,7 @@ mpt_update_spi_config(struct mpt_softc *mpt, int tgt)
 static void
 mpt_calc_geometry(struct ccb_calc_geometry *ccg, int extended)
 {
-#if __FreeBSD_version >= 500000
 	cam_calc_geometry(ccg, extended);
-#else
-	uint32_t size_mb;
-	uint32_t secs_per_cylinder;
-
-	if (ccg->block_size == 0) {
-		ccg->ccb_h.status = CAM_REQ_INVALID;
-		return;
-	}
-	size_mb = ccg->volume_size / ((1024L * 1024L) / ccg->block_size);
-	if (size_mb > 1024 && extended) {
-		ccg->heads = 255;
-		ccg->secs_per_track = 63;
-	} else {
-		ccg->heads = 64;
-		ccg->secs_per_track = 32;
-	}
-	secs_per_cylinder = ccg->heads * ccg->secs_per_track;
-	ccg->cylinders = ccg->volume_size / secs_per_cylinder;
-	ccg->ccb_h.status = CAM_REQ_CMP;
-#endif
 }
 
 /****************************** Timeout Recovery ******************************/
@@ -3534,9 +3509,7 @@ mpt_recovery_thread(void *arg)
 {
 	struct mpt_softc *mpt;
 
-#if __FreeBSD_version >= 500000
 	mtx_lock(&Giant);
-#endif
 	mpt = (struct mpt_softc *)arg;
 	MPT_LOCK(mpt);
 	for (;;) {
@@ -3553,9 +3526,7 @@ mpt_recovery_thread(void *arg)
 	mpt->recovery_thread = NULL;
 	wakeup(&mpt->recovery_thread);
 	MPT_UNLOCK(mpt);
-#if __FreeBSD_version >= 500000
 	mtx_unlock(&Giant);
-#endif
 	kthread_exit(0);
 }
 
