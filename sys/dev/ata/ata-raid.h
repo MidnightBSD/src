@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-raid.h,v 1.34.2.3 2006/02/19 15:18:23 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/ata-raid.h,v 1.34.2.4 2006/09/30 14:51:49 sos Exp $
  */
 
 /* misc defines */
@@ -76,7 +76,7 @@ struct ar_softc {
 #define AR_F_SII_RAID           0x0800
 #define AR_F_SIS_RAID           0x1000
 #define AR_F_VIA_RAID           0x2000
-#define AR_F_FORMAT_MASK        0x1fff
+#define AR_F_FORMAT_MASK        0x3fff
 
     u_int               generation;
     u_int64_t           total_sectors;

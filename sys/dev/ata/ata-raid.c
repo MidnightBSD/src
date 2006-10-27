@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/ata/ata-raid.c,v 1.98.2.7 2006/03/10 12:30:08 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-raid.c,v 1.98.2.9 2006/09/02 17:01:32 sos Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -974,7 +974,7 @@ ata_raid_create(struct ata_ioc_raid_config *config)
 		 * metadata format from the disks (if we support it).
 		 */
 		printf("WARNING!! - not able to determine metadata format\n"
-		       "WARNING!! - Using MidnightBSD PseudoRAID metadata\n"
+		       "WARNING!! - Using FreeBSD PseudoRAID metadata\n"
 		       "If that is not what you want, use the BIOS to "
 		       "create the array\n");
 		ctlr = AR_F_FREEBSD_RAID;
@@ -4087,7 +4087,8 @@ ata_raid_subdisk_detach(device_t dev)
 	    ars->raid[volume]->disks[ars->disk_number[volume]].flags &= 
 		~(AR_DF_PRESENT | AR_DF_ONLINE);
 	    ars->raid[volume]->disks[ars->disk_number[volume]].dev = NULL;
-	    ata_raid_config_changed(ars->raid[volume], 1);
+	    if (mtx_initialized(&ars->raid[volume]->lock))
+		ata_raid_config_changed(ars->raid[volume], 1);
 	    ars->raid[volume] = NULL;
 	    ars->disk_number[volume] = -1;
 	}
@@ -4149,6 +4150,8 @@ ata_raid_module_event_handler(module_t mod, int what, void *arg)
 
 	    if (!rdp || !rdp->status)
 		continue;
+	    if (mtx_initialized(&rdp->lock))
+		mtx_destroy(&rdp->lock);
 	    if (rdp->disk)
 		disk_destroy(rdp->disk);
 	}

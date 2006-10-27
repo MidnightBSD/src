@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/ata/atapi-fd.c,v 1.102.2.2 2006/03/10 12:30:08 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/atapi-fd.c,v 1.102.2.4 2006/04/04 16:07:42 sos Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -317,7 +317,7 @@ afd_sense(device_t dev)
     while ((error = afd_test_ready(dev)) && timeout--) {
 	DELAY(100000);
     }
-    if (error == ENODEV)
+    if (error == EBUSY)
 	return 1;
 
     /* The IOMEGA Clik! doesn't support reading the cap page, fake it */
@@ -398,7 +398,7 @@ afd_describe(device_t dev)
     struct ata_channel *ch = device_get_softc(device_get_parent(dev));
     struct ata_device *atadev = device_get_softc(dev);
     struct afd_softc *fdp = device_get_ivars(dev);
-    char sizestring[16] = "";
+    char sizestring[16];
 
     if (fdp->mediasize > 1048576 * 5)
 	sprintf(sizestring, "%juMB", fdp->mediasize / 1048576);

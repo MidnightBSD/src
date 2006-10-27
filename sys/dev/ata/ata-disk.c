@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-disk.c,v 1.189.2.2 2006/01/25 08:13:44 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-disk.c,v 1.189.2.5 2006/09/30 14:51:49 sos Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -72,7 +72,7 @@ ad_probe(device_t dev)
 
     if (!(atadev->param.config & ATA_PROTO_ATAPI) ||
 	(atadev->param.config == ATA_CFA_MAGIC1) ||
-        (atadev->param.config == ATA_CFA_MAGIC2))
+	(atadev->param.config == ATA_CFA_MAGIC2))
 	return 0;
     else
 	return ENXIO;
@@ -98,7 +98,7 @@ ad_attach(device_t dev)
     device_set_ivars(dev, adp);
 
     if ((atadev->param.atavalid & ATA_FLAG_54_58) &&
-         atadev->param.current_heads && atadev->param.current_sectors) {
+	atadev->param.current_heads && atadev->param.current_sectors) {
 	adp->heads = atadev->param.current_heads;
 	adp->sectors = atadev->param.current_sectors;
 	adp->total_secs = (u_int32_t)atadev->param.current_size_1 |
@@ -299,11 +299,11 @@ ad_dump(void *arg, void *virtual, vm_offset_t physical,
     /* length zero is special and really means flush buffers to media */
     if (!length) {
         struct ata_device *atadev = device_get_softc(dp->d_drv1);
-        int error = 0;
-  	 
-        if (atadev->param.support.command2 & ATA_SUPPORT_FLUSHCACHE)
-            error = ata_controlcmd(dp->d_drv1, ATA_FLUSHCACHE, 0, 0, 0);
-        return error;
+	int error = 0;
+
+	if (atadev->param.support.command2 & ATA_SUPPORT_FLUSHCACHE)
+	    error = ata_controlcmd(dp->d_drv1, ATA_FLUSHCACHE, 0, 0, 0);
+	return error;
     }
 
     bzero(&bp, sizeof(struct bio));
@@ -382,10 +382,8 @@ ad_describe(device_t dev)
 		  ata_mode2str(atadev->mode));
     if (bootverbose) {
 	device_printf(dev, "%ju sectors [%juC/%dH/%dS] "
-		      "%d sectors/interrupt %d depth queue\n",
-		      adp->total_secs,
-		      adp->total_secs /
-					   (adp->heads * adp->sectors),
+		      "%d sectors/interrupt %d depth queue\n", adp->total_secs,
+		      adp->total_secs / (adp->heads * adp->sectors),
 		      adp->heads, adp->sectors, atadev->max_iosize / DEV_BSIZE,
 		      adp->num_tags + 1);
     }
