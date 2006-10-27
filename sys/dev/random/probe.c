@@ -24,9 +24,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
+ /*
+  * $FreeBSD: src/sys/dev/random/probe.c,v 1.4 2005/05/30 05:01:44 scottl Exp $
+  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/random/probe.c,v 1.4.2.1 2006/07/21 15:12:02 mr Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -39,8 +41,6 @@ __FBSDID("$FreeBSD: src/sys/dev/random/probe.c,v 1.4.2.1 2006/07/21 15:12:02 mr 
 #if defined(__i386__) && !defined(PC98)
 #include <machine/cpufunc.h>
 #include <machine/cputypes.h>
-#include <machine/md_var.h>
-#include <machine/specialreg.h>
 #endif
 
 #include <dev/random/randomdev.h>
@@ -50,14 +50,25 @@ __FBSDID("$FreeBSD: src/sys/dev/random/probe.c,v 1.4.2.1 2006/07/21 15:12:02 mr 
 void
 random_ident_hardware(struct random_systat *systat)
 {
+#if defined(__i386__) && !defined(PC98)
+	u_int regs[4];
+#endif
 
 	/* Set default to software */
 	*systat = random_yarrow;
 
 	/* Then go looking for hardware */
 #if defined(__i386__) && !defined(PC98)
-	if( via_feature_rng & VIA_HAS_RNG ) {
-		*systat = random_nehemiah;
+	if (cpu_class < CPUCLASS_586)
+		return;
+	do_cpuid(1, regs);
+	if ((regs[0] & 0xf) >= 3) {
+		do_cpuid(0xc0000000, regs);
+		if (regs[0] == 0xc0000001) {
+			do_cpuid(0xc0000001, regs);
+			if ((regs[3] & 0x0c) == 0x0c)
+				*systat = random_nehemiah;
+		}
 	}
 #endif
 }
