@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_axe.c,v 1.30.2.3 2005/10/09 03:59:36 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_axe.c,v 1.30.2.4 2006/03/17 21:30:56 glebius Exp $");
 
 /*
  * ASIX Electronics AX88172 USB 2.0 ethernet driver. Used in the
@@ -500,7 +500,6 @@ USB_ATTACH(axe)
 	ifp->if_start = axe_start;
 	ifp->if_watchdog = axe_watchdog;
 	ifp->if_init = axe_init;
-	ifp->if_baudrate = 10000000;
 	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
 
 	sc->axe_qdat.ifp = ifp;

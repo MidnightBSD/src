@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ukbd.c,v 1.52 2005/03/30 08:32:41 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ukbd.c,v 1.52.2.1 2006/03/01 02:34:16 emax Exp $");
 
 /*
  * HID spec: http://www.usb.org/developers/devclass_docs/HID1_11.pdf

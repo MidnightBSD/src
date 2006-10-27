@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_subr.c,v 1.76.2.2 2006/02/15 22:51:08 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_subr.c,v 1.76.2.3 2006/03/01 01:59:05 iedowse Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -514,6 +514,7 @@ usbd_fill_iface_data(usbd_device_handle dev, int ifaceidx, int altidx)
 			}
 		}
 		ifc->endpoints[endpt].refcnt = 0;
+		ifc->endpoints[endpt].savedtoggle = 0;
 		p += ed->bLength;
 	}
 #undef ed

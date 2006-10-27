@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.21.2.3 2005/10/09 03:56:37 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.21.2.4 2006/03/17 21:30:56 glebius Exp $");
 
 /*
  * RealTek RTL8150 USB to fast ethernet controller driver.
@@ -681,7 +681,6 @@ USB_ATTACH(rue)
 	ifp->if_start = rue_start;
 	ifp->if_watchdog = rue_watchdog;
 	ifp->if_init = rue_init;
-	ifp->if_baudrate = 10000000;
 	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
 
 	/* MII setup */

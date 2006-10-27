@@ -1,6 +1,6 @@
 /*	$NetBSD: if_udav.c,v 1.2 2003/09/04 15:17:38 tsutsui Exp $	*/
 /*	$nabe: if_udav.c,v 1.3 2003/08/21 16:57:19 nabe Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.14.2.3 2005/10/09 03:59:36 delphij Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.14.2.4 2006/03/17 21:30:56 glebius Exp $	*/
 /*-
  * Copyright (c) 2003
  *     Shingo WATANABE <nabe@nabechan.org>.  All rights reserved.
@@ -45,7 +45,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.14.2.3 2005/10/09 03:59:36 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_udav.c,v 1.14.2.4 2006/03/17 21:30:56 glebius Exp $");
 
 #include "opt_inet.h"
 #if defined(__NetBSD__)
@@ -415,7 +415,6 @@ USB_ATTACH(udav)
 	ifp->if_stop = udav_stop;
 #endif
 #if defined(__FreeBSD__)
-	ifp->if_baudrate = 10000000;
 	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
 #endif
 #if defined(__NetBSD__)
