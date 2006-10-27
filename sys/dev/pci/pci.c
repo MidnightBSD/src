@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pci/pci.c,v 1.292.2.7 2006/01/31 14:42:43 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pci/pci.c,v 1.292.2.9 2006/09/25 15:49:51 marcel Exp $");
 
 #include "opt_bus.h"
 
@@ -809,12 +809,12 @@ pci_add_map(device_t pcib, device_t bus, device_t dev,
 	 * isn't clear, we know we have a BAR that doesn't conform to the
 	 * spec, so ignore it.  Also, sanity check the size of the data
 	 * areas to the type of memory involved.  Memory must be at least
-	 * 32 bytes in size, while I/O ranges must be at least 4.
+	 * 16 bytes in size, while I/O ranges must be at least 4.
 	 */
 	if ((testval & 0x1) == 0x1 &&
 	    (testval & 0x2) != 0)
 		return (barlen);
-	if ((type == SYS_RES_MEMORY && ln2size < 5) ||
+	if ((type == SYS_RES_MEMORY && ln2size < 4) ||
 	    (type == SYS_RES_IOPORT && ln2size < 2))
 		return (barlen);
 
@@ -1363,7 +1363,7 @@ static struct
 	{PCIC_SATCOM,		PCIS_SATCOM_DATA,	"sat data"},
 	{PCIC_CRYPTO,		-1,			"encrypt/decrypt"},
 	{PCIC_CRYPTO,		PCIS_CRYPTO_NETCOMP,	"network/computer crypto"},
-	{PCIC_CRYPTO,		PCIS_CRYPTO_NETCOMP,	"entertainment crypto"},
+	{PCIC_CRYPTO,		PCIS_CRYPTO_ENTERTAIN,	"entertainment crypto"},
 	{PCIC_DASP,		-1,			"dasp"},
 	{PCIC_DASP,		PCIS_DASP_DPIO,		"DPIO module"},
 	{0, 0,		NULL}
