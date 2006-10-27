@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pass.c,v 1.43 2005/01/22 07:21:25 mjacob Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_pass.c,v 1.43.2.1 2006/08/17 19:55:35 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -361,7 +361,7 @@ passopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	 */
 	if ((flags & O_NONBLOCK) != 0) {
 		xpt_print_path(periph->path);
-		printf("can't do nonblocking accesss\n");
+		printf("can't do nonblocking access\n");
 		splx(s);
 		return(EINVAL);
 	}

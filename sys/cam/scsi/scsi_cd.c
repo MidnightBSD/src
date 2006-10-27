@@ -46,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_cd.c,v 1.93.2.1 2005/11/26 22:55:20 jdp Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_cd.c,v 1.93.2.3 2006/07/26 07:48:51 delphij Exp $");
 
 #include "opt_cd.h"
 
@@ -591,6 +591,7 @@ cdsysctlinit(void *context, int pending)
 
 	if (softc->sysctl_tree == NULL) {
 		printf("cdsysctlinit: unable to allocate sysctl tree\n");
+		mtx_unlock(&Giant);
 		return;
 	}
 
@@ -1669,7 +1670,7 @@ cddone(struct cam_periph *periph, union ccb *done_ccb)
 		if (softc->flags & CD_FLAG_CHANGER)
 			cdchangerschedule(softc);
 
-		biofinish(bp, softc->disk->d_devstat, 0);
+		biofinish(bp, NULL, 0);
 		break;
 	}
 	case CD_CCB_PROBE:

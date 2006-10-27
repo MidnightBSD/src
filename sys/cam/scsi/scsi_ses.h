@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/cam/scsi/scsi_ses.h,v 1.3 2005/01/05 22:34:35 imp Exp $ */
+/* $FreeBSD: src/sys/cam/scsi/scsi_ses.h,v 1.3.2.1 2006/03/09 21:43:10 mjacob Exp $ */
 /*-
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -29,7 +29,7 @@
  *
  */
 
-#define	SESIOC			(('s' - 040) << 8)
+#define	SESIOC			('s' - 040)
 #define	SESIOC_GETNOBJ		_IO(SESIOC, 1)
 #define	SESIOC_GETOBJMAP	_IO(SESIOC, 2)
 #define	SESIOC_GETENCSTAT	_IO(SESIOC, 3)

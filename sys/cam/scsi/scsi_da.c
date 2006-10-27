@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.180.2.4 2006/01/29 00:45:12 flz Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.180.2.8 2006/07/26 07:48:51 delphij Exp $");
 
 #include <sys/param.h>
 
@@ -421,10 +421,26 @@ static struct da_quirk_entry da_quirk_table[] =
 	},
 	{
 		/*
+		 * TOSHIBA TransMemory USB sticks
+		 * PR: kern/94660
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "TOSHIBA", "TransMemory",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
 		 * PNY USB Flash keys
 		 * PR: usb/75578, usb/72344, usb/65436 
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "*" , "USB DISK*",
+		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		/*
+		 * Genesys 6-in-1 Card Reader
+		 * PR: usb/94647
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Generic*", "STORAGE DEVICE*",
 		"*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
 	},
 };
@@ -985,6 +1001,7 @@ dasysctlinit(void *context, int pending)
 		CTLFLAG_RD, 0, tmpstr);
 	if (softc->sysctl_tree == NULL) {
 		printf("dasysctlinit: unable to allocate sysctl tree\n");
+		mtx_unlock(&Giant);
 		return;
 	}
 

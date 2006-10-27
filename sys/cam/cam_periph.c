@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/cam_periph.c,v 1.60 2005/07/01 15:21:29 avatar Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/cam_periph.c,v 1.60.2.1 2006/02/26 22:38:39 iedowse Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1656,6 +1656,8 @@ cam_periph_error(union ccb *ccb, cam_flags camflags,
 	case CAM_NO_HBA:
 	case CAM_PROVIDE_FAIL:
 	case CAM_REQ_TOO_BIG:
+	case CAM_LUN_INVALID:
+	case CAM_TID_INVALID:
 		error = EINVAL;
 		break;
 	case CAM_SCSI_BUS_RESET:
