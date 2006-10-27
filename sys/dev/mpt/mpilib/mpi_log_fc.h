@@ -1,8 +1,8 @@
-/* $FreeBSD: src/sys/dev/mpt/mpilib/fc_log.h,v 1.5 2005/07/10 15:05:39 scottl Exp $ */
+/* $FreeBSD: src/sys/dev/mpt/mpilib/mpi_log_fc.h,v 1.1.2.1 2006/06/08 17:47:35 mjacob Exp $ */
 /*-
  * Copyright (c) 2000-2005, LSI Logic Corporation and its contributors.
  * All rights reserved.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -29,15 +29,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF THE COPYRIGHT
  * OWNER OR CONTRIBUTOR IS ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *
  *  NAME:           fc_log.h
  *  SUMMARY:        MPI IocLogInfo definitions for the SYMFC9xx chips
  *  DESCRIPTION:    Contains the enumerated list of values that may be returned
  *                  in the IOCLogInfo field of a MPI Default Reply Message.
  *
  *  CREATION DATE:  6/02/2000
- *  ID:             $Id: fc_log.h,v 1.1.1.2 2006-02-25 02:36:49 laffer1 Exp $
+ *  ID:             $Id: mpi_log_fc.h,v 1.1 2006-10-27 15:44:29 laffer1 Exp $
  */
+
 
 /*
  * MpiIocLogInfo_t enum
