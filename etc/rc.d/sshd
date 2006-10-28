@@ -2,7 +2,7 @@
 #
 # $NetBSD: sshd,v 1.18 2002/04/29 08:23:34 lukem Exp $
 # $FreeBSD: src/etc/rc.d/sshd,v 1.8.2.1 2005/12/16 01:42:54 dougb Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/sshd,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: sshd
 # REQUIRE: LOGIN cleanvar
@@ -23,7 +23,7 @@ user_reseed()
 {
 	(
 	seeded=`sysctl -n kern.random.sys.seeded 2>/dev/null`
-	if [ "${seeded}" != "" ] ; then
+	if [ "x${seeded}" != "x" ] && [ ${seeded} -eq 0 ] ; then
 		warn "Setting entropy source to blocking mode."
 		echo "===================================================="
 		echo "Type a full screenful of random junk to unblock"
