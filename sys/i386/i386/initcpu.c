@@ -85,6 +85,7 @@ char	cpu_vendor[20] = "";	/* CPU Origin code */
 
 #ifdef CPU_ENABLE_SSE
 u_int	cpu_fxsr;		/* SSE enabled */
+u_int	cpu_mxcsr_mask;		/* valid bits in mxcsr */
 #endif
 
 #ifdef I486_CPU
