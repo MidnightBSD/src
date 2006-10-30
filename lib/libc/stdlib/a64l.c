@@ -16,7 +16,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/a64l.c,v 1.1.2.1 2006/01/27 05:17:25 trh
 #include <inttypes.h>
 
 #define	ADOT	46		/* ASCII '.' */
-#define	ASLASH	ADOT + 1	/* ASCII '/' */
+#define	ASLASH	47		/* ASCII '/' */
 #define	A0	48		/* ASCII '0' */
 #define	AA	65		/* ASCII 'A' */
 #define	Aa	97		/* ASCII 'a' */
