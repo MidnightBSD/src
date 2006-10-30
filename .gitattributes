@@ -17555,7 +17555,6 @@ lib/libc/yp/Makefile.inc -text
 lib/libc/yp/xdryp.c -text
 lib/libc/yp/yplib.c -text
 lib/libc_r/Makefile -text
-lib/libc_r/arch/alpha/_atomic_lock.S -text
 lib/libc_r/arch/amd64/_atomic_lock.S -text
 lib/libc_r/arch/i386/_atomic_lock.S -text
 lib/libc_r/arch/ia64/_atomic_lock.S -text
