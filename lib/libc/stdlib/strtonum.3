@@ -22,6 +22,7 @@
 .Nd "reliably convert string value to an integer"
 .Sh SYNOPSIS
 .Fd #include <stdlib.h>
+.Fd #include <limits.h>
 .Ft long long
 .Fo strtonum
 .Fa "const char *nptr"
@@ -137,8 +138,8 @@ The string did not consist solely of digit characters.
 .Xr strtoul 3
 .Sh STANDARDS
 .Fn strtonum
-is an
-.Ox
+is a
+.Bx
 extension.
 The existing alternatives, such as
 .Xr atoi 3
