@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_scatter.c,v 1.1.2.1 2005/12/14 00:52:58 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_scatter.c,v 1.1.2.2 2006/05/17 07:40:11 anholt Exp $");
 
 #include "dev/drm/drmP.h"
 
@@ -88,6 +88,7 @@ int drm_sg_alloc(DRM_IOCTL_ARGS)
 
 	DRM_DEBUG( "sg alloc handle  = %08lx\n", entry->handle );
 
+	entry->virtual = (void *)entry->handle;
 	request.handle = entry->handle;
 
 	DRM_COPY_TO_USER_IOCTL( (drm_scatter_gather_t *)data,

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drmP.h,v 1.13.2.2 2005/12/14 00:52:58 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drmP.h,v 1.13.2.3 2006/05/17 07:40:11 anholt Exp $");
 
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
@@ -220,8 +220,8 @@ typedef void			irqreturn_t;
 
 enum {
 	DRM_IS_NOT_AGP,
-	DRM_MIGHT_BE_AGP,
-	DRM_IS_AGP
+	DRM_IS_AGP,
+	DRM_MIGHT_BE_AGP
 };
 #define DRM_AGP_MEM		struct agp_memory_info
 

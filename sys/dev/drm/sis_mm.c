@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/sis_mm.c,v 1.7.2.1 2005/12/14 00:52:59 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/sis_mm.c,v 1.7.2.2 2006/05/17 07:40:11 anholt Exp $");
 
 #if defined(__linux__) && defined(CONFIG_FB_SIS)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
@@ -93,7 +93,7 @@ static int sis_fb_alloc(DRM_IOCTL_ARGS)
 {
 	drm_sis_mem_t fb;
 	struct sis_memreq req;
-	drm_sis_mem_t __user *argp = (void __user *)data;
+	drm_sis_mem_t __user *argp = (drm_sis_mem_t __user *)data;
 	int retval = 0;
 
 	DRM_COPY_FROM_USER_IOCTL(fb, argp, sizeof(fb));
@@ -183,7 +183,7 @@ static int sis_fb_alloc(DRM_IOCTL_ARGS)
 {
 	DRM_DEVICE;
 	drm_sis_private_t *dev_priv = dev->dev_private;
-	drm_sis_mem_t __user *argp = (void __user *)data;
+	drm_sis_mem_t __user *argp = (drm_sis_mem_t __user *)data;
 	drm_sis_mem_t fb;
 	PMemBlock block;
 	int retval = 0;

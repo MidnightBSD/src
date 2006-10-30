@@ -24736,6 +24736,8 @@ sys/dev/dpt/dpt_isa.c -text
 sys/dev/dpt/dpt_pci.c -text
 sys/dev/dpt/dpt_scsi.c -text
 sys/dev/drm/ati_pcigart.c -text
+sys/dev/drm/drm-preprocess.sh -text
+sys/dev/drm/drm-subprocess.pl -text
 sys/dev/drm/drm.h -text
 sys/dev/drm/drmP.h -text
 sys/dev/drm/drm_agpsupport.c -text

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/tdfx_drv.c,v 1.8.2.1 2005/12/14 00:52:59 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/tdfx_drv.c,v 1.8.2.2 2006/05/17 07:40:11 anholt Exp $");
 
 #include "dev/drm/tdfx_drv.h"
 #include "dev/drm/drmP.h"
@@ -93,7 +93,11 @@ static driver_t tdfx_driver = {
 };
 
 extern devclass_t drm_devclass;
+#if __FreeBSD_version >= 700010
+DRIVER_MODULE(tdfx, vgapci, tdfx_driver, drm_devclass, 0, 0);
+#else
 DRIVER_MODULE(tdfx, pci, tdfx_driver, drm_devclass, 0, 0);
+#endif
 MODULE_DEPEND(tdfx, drm, 1, 1, 1);
 
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

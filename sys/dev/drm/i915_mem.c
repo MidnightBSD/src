@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/i915_mem.c,v 1.1.2.1 2005/12/14 00:52:58 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/i915_mem.c,v 1.1.2.2 2006/05/17 07:40:11 anholt Exp $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -367,4 +367,34 @@ int i915_mem_init_heap(DRM_IOCTL_ARGS)
 	}
 
 	return init_heap(heap, initheap.start, initheap.size);
+}
+
+int i915_mem_destroy_heap( DRM_IOCTL_ARGS )
+{
+	DRM_DEVICE;
+	drm_i915_private_t *dev_priv = dev->dev_private;
+	drm_i915_mem_destroy_heap_t destroyheap;
+	struct mem_block **heap;
+
+	if ( !dev_priv ) {
+		DRM_ERROR( "%s called with no initialization\n", __FUNCTION__ );
+		return DRM_ERR(EINVAL);
+	}
+
+	DRM_COPY_FROM_USER_IOCTL( destroyheap, (drm_i915_mem_destroy_heap_t *)data,
+				  sizeof(destroyheap) );
+
+	heap = get_heap( dev_priv, destroyheap.region );
+	if (!heap) {
+		DRM_ERROR("get_heap failed");
+		return DRM_ERR(EFAULT);
+	}
+	
+	if (!*heap) {
+		DRM_ERROR("heap not initialized?");
+		return DRM_ERR(EFAULT);
+	}
+
+	i915_mem_takedown( heap );
+	return 0;
 }
