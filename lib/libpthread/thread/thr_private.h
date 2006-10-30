@@ -31,7 +31,7 @@
  *
  * Private thread definitions for the uthread kernel.
  *
- * $FreeBSD: src/lib/libpthread/thread/thr_private.h,v 1.123 2005/06/22 22:35:49 davidxu Exp $
+ * $FreeBSD: src/lib/libpthread/thread/thr_private.h,v 1.123.2.2 2006/06/23 10:51:35 maxim Exp $
  */
 
 #ifndef _THR_PRIVATE_H
@@ -82,6 +82,7 @@
 
 #define	DBG_MUTEX	0x0001
 #define	DBG_SIG		0x0002
+#define	DBG_INFO_DUMP	0x0004
 
 #ifdef _PTHREADS_INVARIANTS
 #define THR_ASSERT(cond, msg) do {	\
@@ -1277,5 +1278,12 @@ int 	__sys_poll(struct pollfd *, unsigned, int);
 #ifdef _SYS_MMAN_H_
 int	__sys_msync(void *, size_t, int);
 #endif
+
+static __inline int
+_thr_dump_enabled(void)
+{
+
+	return ((_thr_debug_flags & DBG_INFO_DUMP) != 0);
+}
 
 #endif  /* !_THR_PRIVATE_H */

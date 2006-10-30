@@ -32,6 +32,7 @@
  * $FreeBSD: src/lib/libpthread/thread/thr_symbols.c,v 1.1 2004/08/16 03:25:07 davidxu Exp $
  */
 
+#include <sys/types.h>
 #include <stddef.h>
 #include <pthread.h>
 #include <rtld.h>
@@ -58,3 +59,5 @@ int _thread_off_dtv = DTV_OFFSET;
 int _thread_off_state = offsetof(struct pthread, state);
 int _thread_state_running = PS_RUNNING;
 int _thread_state_zoombie = PS_DEAD;
+int _thread_off_sigmask = offsetof(struct pthread, sigmask);
+int _thread_off_sigpend = offsetof(struct pthread, sigpend);

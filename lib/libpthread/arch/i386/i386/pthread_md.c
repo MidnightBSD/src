@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libpthread/arch/i386/i386/pthread_md.c,v 1.7 2005/06/29 23:15:36 peter Exp $");
+__FBSDID("$FreeBSD: src/lib/libpthread/arch/i386/i386/pthread_md.c,v 1.7.2.1 2006/03/16 23:29:06 deischen Exp $");
 
 #include <sys/types.h>
 #include <machine/cpufunc.h>
@@ -75,7 +75,6 @@ _tcb_dtor(struct tcb *tcb)
 struct kcb *
 _kcb_ctor(struct kse *kse)
 {
-	void *base;
 	struct kcb *kcb;
 
 	kcb = malloc(sizeof(struct kcb));

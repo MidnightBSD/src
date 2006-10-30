@@ -29,13 +29,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libpthread/thread/thr_sigsuspend.c,v 1.26 2004/12/19 23:23:43 deischen Exp $
+ * $FreeBSD: src/lib/libpthread/thread/thr_sigsuspend.c,v 1.26.2.1 2006/03/16 23:29:08 deischen Exp $
  */
-#include <signal.h>
+
+#include <sys/types.h>
+#include <sys/signalvar.h>
 #include <errno.h>
 #include <pthread.h>
+#include <signal.h>
 #include <string.h>
-#include <sys/signalvar.h>
+
 #include "thr_private.h"
 
 __weak_reference(__sigsuspend, sigsuspend);

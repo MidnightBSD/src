@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libpthread/thread/thr_sig.c,v 1.83 2004/12/18 18:07:37 deischen Exp $
+ * $FreeBSD: src/lib/libpthread/thread/thr_sig.c,v 1.83.2.2 2006/06/23 10:51:35 maxim Exp $
  */
 #include <sys/param.h>
 #include <sys/types.h>
@@ -253,7 +253,7 @@ _thr_sig_dispatch(struct kse *curkse, int sig, siginfo_t *info)
 	DBG_MSG(">>> _thr_sig_dispatch(%d)\n", sig);
 
 	/* Check if the signal requires a dump of thread information: */
-	if (sig == SIGINFO) {
+	if (_thr_dump_enabled() && (sig == SIGINFO)) {
 		/* Dump thread information to file: */
 		_thread_dump_info();
 	}
@@ -347,7 +347,7 @@ _thr_sig_handler(int sig, siginfo_t *info, ucontext_t *ucp)
 	}
 
 	/* Check if the signal requires a dump of thread information: */
-	if (sig == SIGINFO) {
+	if (_thr_dump_enabled() && (sig == SIGINFO)) {
 		/* Dump thread information to file: */
 		_thread_dump_info();
 	}
@@ -521,7 +521,7 @@ handle_signal(struct pthread *curthread, struct sighandle_info *shi)
 	_kse_critical_leave(&curthread->tcb->tcb_tmbx);
 
 	/* Check if the signal requires a dump of thread information: */
-	if (shi->sig == SIGINFO) {
+	if (_thr_dump_enabled() && (shi->sig == SIGINFO)) {
 		/* Dump thread information to file: */
 		_thread_dump_info();
 	}
@@ -1200,21 +1200,24 @@ _thr_signal_init(void)
 			__sys_sigaction(i, &act, NULL);
 		}
 	}
-	/*
-	 * Install the signal handler for SIGINFO.  It isn't
-	 * really needed, but it is nice to have for debugging
-	 * purposes.
-	 */
-	_thread_sigact[SIGINFO - 1].sa_flags = SA_SIGINFO | SA_RESTART;
-	SIGEMPTYSET(act.sa_mask);
-	act.sa_flags = SA_SIGINFO | SA_RESTART;
-	act.sa_sigaction = (__siginfohandler_t *)&_thr_sig_handler;
-	if (__sys_sigaction(SIGINFO, &act, NULL) != 0) {
-		__sys_sigprocmask(SIG_SETMASK, &_thr_initial->sigmask, NULL);
+	if (_thr_dump_enabled()) {
 		/*
-		 * Abort this process if signal initialisation fails:
+		 * Install the signal handler for SIGINFO.  It isn't
+		 * really needed, but it is nice to have for debugging
+		 * purposes.
 		 */
-		PANIC("Cannot initialize signal handler");
+		_thread_sigact[SIGINFO - 1].sa_flags = SA_SIGINFO | SA_RESTART;
+		SIGEMPTYSET(act.sa_mask);
+		act.sa_flags = SA_SIGINFO | SA_RESTART;
+		act.sa_sigaction = (__siginfohandler_t *)&_thr_sig_handler;
+		if (__sys_sigaction(SIGINFO, &act, NULL) != 0) {
+			__sys_sigprocmask(SIG_SETMASK, &_thr_initial->sigmask,
+			    NULL);
+			/*
+			 * Abort this process if signal initialisation fails:
+			 */
+			PANIC("Cannot initialize signal handler");
+		}
 	}
 	__sys_sigprocmask(SIG_SETMASK, &_thr_initial->sigmask, NULL);
 	__sys_sigaltstack(NULL, &_thr_initial->sigstk);

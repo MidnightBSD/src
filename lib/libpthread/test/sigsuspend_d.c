@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libpthread/test/sigsuspend_d.c,v 1.2 2003/07/17 23:02:29 davidxu Exp $
+ * $FreeBSD: src/lib/libpthread/test/sigsuspend_d.c,v 1.2.10.1 2006/03/16 23:29:07 deischen Exp $
  */
 #include <stdlib.h>
 #include <unistd.h>
@@ -221,7 +221,7 @@ int main (int argc, char *argv[])
 		fprintf (stderr, "Unable to create thread, errno %d.\n", errno);
 		exit (1);
 	}
-#if defined(_LIBC_R)
+#if defined(_LIBC_R_)
 	pthread_set_name_np (suspender_tid, "sigsuspender");
 #endif
 

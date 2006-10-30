@@ -23,13 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libpthread/thread/thr_pspinlock.c,v 1.2 2003/11/04 19:56:12 deischen Exp $
+ * $FreeBSD: src/lib/libpthread/thread/thr_pspinlock.c,v 1.2.10.1 2006/03/16 23:29:08 deischen Exp $
  */
 
+#include <sys/types.h>
 #include <errno.h>
-#include <stdlib.h>
 #include <pthread.h>
-#include <atomic_ops.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "atomic_ops.h"
 #include "thr_private.h"
 
 #define SPIN_COUNT 10000

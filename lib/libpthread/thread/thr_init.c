@@ -435,6 +435,7 @@ init_private(void)
 			_thr_stack_default = THR_STACK32_DEFAULT;
 			_thr_stack_initial = THR_STACK32_INITIAL;
 		}
+		TAILQ_INIT(&_thr_atfork_list);
 		_pthread_attr_default.guardsize_attr = _thr_guard_default;
 		_pthread_attr_default.stacksize_attr = _thr_stack_default;
 		init_once = 1;	/* Don't do this again. */
@@ -453,7 +454,6 @@ init_private(void)
 	/* Initialize everything else. */
 	TAILQ_INIT(&_thread_list);
 	TAILQ_INIT(&_thread_gc_list);
-	TAILQ_INIT(&_thr_atfork_list);
 	_pthread_mutex_init(&_thr_atfork_mutex, NULL);
 
 	/*
@@ -487,6 +487,8 @@ init_private(void)
 	else if (getenv("LIBPTHREAD_PROCESS_SCOPE") != NULL)
 		_thread_scope_system = -1;
 #endif
+	if (getenv("LIBPTHREAD_DEBUG") != NULL)
+		_thr_debug_flags != DBG_INFO_DUMP;
 
 	/*
 	 * _thread_list_lock and _kse_count are initialized

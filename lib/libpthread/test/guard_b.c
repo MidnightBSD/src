@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libpthread/test/guard_b.c,v 1.2 2002/04/22 13:44:24 des Exp $
+ * $FreeBSD: src/lib/libpthread/test/guard_b.c,v 1.2.14.1 2006/03/16 23:29:07 deischen Exp $
  *
  * Test thread stack guard functionality.
  */
@@ -34,6 +34,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
@@ -69,9 +70,10 @@ recurse(void *args)
 	 * hand tweaking, so just print a warning rather than aborting.
 	 */
 	if (parms->top - (void *)&top != FRAME_SIZE * parms->cur) {
-		fprintf(stderr, "Stack size (%d) != expected (%d), frame %d\n",
-		    parms->top - (void *)&top, FRAME_SIZE * parms->cur,
-		    parms->cur);
+		fprintf(stderr,
+		    "Stack size (%ld) != expected (%ld), frame %ld\n",
+		    (long)parms->top - (long)&top,
+		    (long)(FRAME_SIZE * parms->cur), (long)parms->cur);
 	}
 
 	parms->cur++;

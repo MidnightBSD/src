@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libpthread/arch/amd64/amd64/context.S,v 1.7 2004/07/31 14:18:26 davidxu Exp $");
+__FBSDID("$FreeBSD: src/lib/libpthread/arch/amd64/amd64/context.S,v 1.7.8.1 2006/03/16 23:29:06 deischen Exp $");
 
 /*
  * The following notes ("cheat sheet") was provided by Peter Wemm.
@@ -162,11 +162,11 @@ ENTRY(_amd64_restore_context)
 	cmpq	$0, %rdi		/* check for null pointer */
 	jne	1f
 	movq	$-1, %rax
-	jmp	7f
+	jmp	2f
 1:	cmpq	$MC_SIZE, MC_LEN_OFFSET(%rdi)	/* is context valid? */
 	je	2f
 	movq	$-1, %rax		/* bzzzt, invalid context */
-	jmp	7f
+	ret
 2:	movq	MC_RCX(%rdi), %rcx
 	movq	MC_R8(%rdi), %r8
 	movq	MC_R9(%rdi), %r9
@@ -213,6 +213,5 @@ ENTRY(_amd64_restore_context)
 	popq	%rsi			/* restore rsi, rdx, and rdi */
 	popq	%rdx
 	popq	%rdi
-	leaq	(8 + REDZONE)(%rsp), %rsp
-	jmp	*-(8 + REDZONE)(%rsp)	/* jump to return address */
-7:	ret
+	ret	$REDZONE
+
