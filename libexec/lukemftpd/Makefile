@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/4/94
-# $FreeBSD: src/libexec/lukemftpd/Makefile,v 1.16 2004/12/21 12:49:23 ru Exp $
+# $FreeBSD: src/libexec/lukemftpd/Makefile,v 1.16.2.1 2006/09/07 20:02:23 obrien Exp $
 
 LUKEMFTPD=	${.CURDIR}/../../contrib/lukemftpd
 .PATH: ${LUKEMFTPD}/src ${LUKEMFTPD}/libnetbsd
@@ -11,6 +11,11 @@ SRCS=	cmds.c conf.c ftpd.c ftpcmd.y popen.c
 SRCS+=	strsuftoll.c
 
 WFORMAT= 0
+
+.if !defined(NO_INET6)
+CFLAGS+= -DINET6
+.endif
+
 CFLAGS+= -include nbsd2fbsd.h
 CFLAGS+= -I${.CURDIR} -I${LUKEMFTPD} -I${LUKEMFTPD}/src
 CFLAGS+= -I${.CURDIR}/../../lib/libc/stdtime

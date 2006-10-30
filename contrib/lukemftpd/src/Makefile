@@ -15,18 +15,18 @@ MLINKS=	ftpusers.5 ftpchroot.5
 SRCS+=	ls.c cmp.c print.c stat_flags.c util.c
 .PATH:	${NETBSDSRCDIR}/bin/ls
 
-.if (${USE_INET6} != "no")
+.if (!NO_INET6)
 CPPFLAGS+=-DINET6
 .endif
 
 WARNS=2
 
-.if (${USE_SKEY} != "no")
-CPPFLAGS+=-DSKEY
-DPADD+= ${LIBSKEY}
-LDADD+= -lskey
-.endif
-.if (${USE_PAM} != "no")
+#.if (${USE_SKEY} != "no")
+#CPPFLAGS+=-DSKEY
+#DPADD+= ${LIBSKEY}
+#LDADD+= -lskey
+#.endif
+.if (!NO_PAM)
 CPPFLAGS+=-DUSE_PAM
 DPADD+= ${LIBPAM} ${PAM_STATIC_DPADD}
 LDADD+= -lpam ${PAM_STATIC_LDADD}

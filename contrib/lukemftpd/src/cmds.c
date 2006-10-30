@@ -110,7 +110,7 @@ __RCSID("$NetBSD: cmds.c,v 1.24 2006/02/01 14:20:12 christos Exp $");
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tzfile.h>
+#include "../../../lib/libc/stdtime/tzfile.h"
 #include <unistd.h>
 #include <ctype.h>
 

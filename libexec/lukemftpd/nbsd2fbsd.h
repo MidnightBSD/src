@@ -1,4 +1,4 @@
-/* $FreeBSD: src/libexec/lukemftpd/nbsd2fbsd.h,v 1.4 2003/09/11 03:28:21 obrien Exp $ */
+/* $FreeBSD: src/libexec/lukemftpd/nbsd2fbsd.h,v 1.4.10.1 2006/09/07 20:02:23 obrien Exp $ */
 
 /* XXX: Depend on our system headers protecting against multiple includes. */
 #include <paths.h>
@@ -22,3 +22,14 @@ long long strsuftollx(const char *, const char *,
 #if __POSIX_VISIBLE >= 199506 || __XSI_VISIBLE >= 500
 #define	LOGIN_NAME_MAX	MAXLOGNAME	/* max login name length (incl. NUL) */
 #endif
+
+/* NetBSD pwd.h */
+#define	_PASSWORD_CHGNOW	-1	/* special day to force password
+					 * change at next login */
+
+/* Need this for some LOGIN_CAP functionality NetBSD has doesn't have
+   the infastructure for. */
+#define	notyet
+/* Need this for some USE_PAM functionality NetBSD has doesn't have
+   the infastructure for. */
+#define	notdef
