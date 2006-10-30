@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile,v 1.5.6.2 2006/01/25 13:22:59 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile,v 1.5.6.3 2006/03/31 12:43:39 glebius Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
@@ -6,16 +6,18 @@ CONTRIB= ${.CURDIR}/../../../../contrib/bsnmp
 .PATH: ${CONTRIB}/snmp_mibII
 
 MOD=	mibII
-SRCS=	mibII.c mibII_ifmib.c mibII_ip.c mibII_interfaces.c		\
-	mibII_ipaddr.c mibII_ifstack.c mibII_rcvaddr.c			\
-	mibII_nettomedia.c mibII_tcp.c mibII_udp.c mibII_route.c
+SRCS=	mibII.c mibII_begemot.c mibII_ifmib.c mibII_ifstack.c		\
+	mibII_interfaces.c mibII_ip.c mibII_ipaddr.c mibII_nettomedia.c	\
+	mibII_rcvaddr.c mibII_route.c mibII_tcp.c mibII_udp.c
 XSYM=	ipAddrTable ifTable ifRcvAddressEntry ifMIB ipMIB tcpMIB udpMIB	\
 	ipForward ifIndex linkDown linkUp
 MAN=	snmp_mibII.3
 
 CFLAGS+= -I${CONTRIB}/lib -I${CONTRIB}/snmpd
+CFLAGS+= -DHAVE_ERR_H -DHAVE_GETADDRINFO -DHAVE_STRLCPY -DHAVE_SYS_TREE_H
 
 DEFS=	${MOD}_tree.def
 INCS=	snmp_${MOD}.h
+BMIBS=	BEGEMOT-IP-MIB.txt BEGEMOT-MIB2-MIB.txt
 
 .include <bsd.snmpmod.mk>
