@@ -2935,6 +2935,7 @@ contrib/bsnmp/lib/support.h -text
 contrib/bsnmp/oid-list -text
 contrib/bsnmp/snmp_mibII/mibII.c -text
 contrib/bsnmp/snmp_mibII/mibII.h -text
+contrib/bsnmp/snmp_mibII/mibII_begemot.c -text
 contrib/bsnmp/snmp_mibII/mibII_ifmib.c -text
 contrib/bsnmp/snmp_mibII/mibII_ifstack.c -text
 contrib/bsnmp/snmp_mibII/mibII_interfaces.c -text
