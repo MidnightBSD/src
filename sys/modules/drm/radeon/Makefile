@@ -1,9 +1,13 @@
-# $FreeBSD: src/sys/modules/drm/radeon/Makefile,v 1.5.8.1 2005/08/04 17:31:01 anholt Exp $
+# $FreeBSD: src/sys/modules/drm/radeon/Makefile,v 1.5.8.2 2006/05/17 07:40:12 anholt Exp $
 
 .PATH:	${.CURDIR}/../../../dev/drm
 KMOD	= radeon
 SRCS	= r300_cmdbuf.c radeon_cp.c radeon_drv.c radeon_irq.c \
 	radeon_mem.c radeon_state.c
 SRCS	+=device_if.h bus_if.h pci_if.h opt_drm.h
+
+.if ${CC} != "icc"
+CFLAGS += --param large-function-growth=1000
+.endif
 
 .include <bsd.kmod.mk>
