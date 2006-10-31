@@ -23,8 +23,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man7/release.7,v 1.54.2.2 2006/01/22 16:33:46 yar Exp $
+.\" $MidnightBSD$
 .\"
-.Dd May 17, 2005
+.Dd October 31, 2006
 .Dt RELEASE 7
 .Os
 .Sh NAME
@@ -112,7 +113,7 @@ This is most often used to build custom boot floppies.
 Generates the portions of the disc 1 and disc 2 images related to packages.
 It uses the list of desired packages from the
 .Pa src/release/scripts/package-split.py
-script to pull packages out of a package build provided by the ports team
+script to pull packages out of a package build provided by the mports team
 and organize them appropriately.
 The resulting directory can then be passed to
 .Dq Li "make release"
@@ -291,7 +292,7 @@ For
 this will NOT be copied; cvs update will be used instead.
 .It Va EXTPORTSDIR
 The directory specified by this variable will be copied into
-.Pa ${CHROOTDIR}/usr/ports .
+.Pa ${CHROOTDIR}/usr/mports .
 For
 .Dq Li "rerelease" ,
 this will do NOTHING.
@@ -349,9 +350,9 @@ platforms supporting them).
 .It Va NOPORTS
 If defined, the Ports Collection will be omitted from the release.
 .It Va PORTSRELEASETAG
-The CVS tag to use when checking out the ports tree.
+The CVS tag to use when checking out the mports tree.
 Usually,
-the head of the ports tree is used by default.
+the head of the mports tree is used by default.
 If
 .Va RELEASETAG
 specifies a release tag,
@@ -368,7 +369,7 @@ is not set,
 the fetching is done after any distfiles are obtained via
 .Va RELEASEDISTFILES .
 .It Va RELEASEDISTFILES
-The directory where the distribution files for ports required by the
+The directory where the distribution files for mports required by the
 release build can be found.
 This may save a significant amount of time over downloading the
 distfiles through a slow link.
@@ -424,8 +425,8 @@ to execute up to four processes at a time.
 .Bl -tag -compact
 .It Pa /usr/doc/Makefile
 .It Pa /usr/doc/share/mk/doc.project.mk
-.It Pa /usr/ports/Mk/bsd.port.mk
-.It Pa /usr/ports/Mk/bsd.sites.mk
+.It Pa /usr/mports/Mk/bsd.port.mk
+.It Pa /usr/mports/Mk/bsd.sites.mk
 .It Pa /usr/share/examples/etc/make.conf
 .It Pa /usr/src/Makefile
 .It Pa /usr/src/Makefile.inc1

@@ -27,9 +27,9 @@
 .\"
 .\"	@(#)hier.7	8.1 (Berkeley) 6/5/93
 .\" $FreeBSD: src/share/man/man7/hier.7,v 1.115 2005/01/21 20:50:39 ru Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man7/hier.7,v 1.2 2006/10/08 04:52:18 laffer1 Exp $
 .\"
-.Dd January 15, 2005
+.Dd October 31, 2006
 .Dt HIER 7
 .Os
 .Sh NAME
@@ -438,20 +438,20 @@ see
 local executables, libraries, etc.
 Also used as the default destination for the
 .Fx
-ports framework.
+mports framework.
 Within local/, the general layout sketched out by
 .Nm
 for /usr
 should be used.
 Exceptions are the man directory (directly under local/
-rather than under local/share/), ports documentation (in share/doc/<port>/),
+rather than under local/share/), mports documentation (in share/doc/<port>/),
 and /usr/local/etc (mimics /etc).
 .It Pa obj/
 architecture-specific target tree produced by building the /usr/src tree
-.It Pa ports/
+.It Pa mports/
 The
 .Fx
-ports collection (optional).
+mports collection (optional).
 .It Pa sbin/
 system daemons & system utilities (executed by users)
 .It Pa share/
@@ -680,7 +680,7 @@ source code for files in /usr/sbin
 X11R6 distribution executables, libraries, etc (optional).
 .Bl -tag -width ".Pa include/" -compact
 .It Pa bin/
-X11R6 binaries (servers, utilities, local packages/ports).
+X11R6 binaries (servers, utilities, local packages/mports).
 .It Pa etc/
 X11R6 configuration files and scripts.
 .It Pa include/

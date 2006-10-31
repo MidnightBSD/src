@@ -24,8 +24,9 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man7/ports.7,v 1.50.2.2 2005/08/10 20:43:27 jcamou Exp $
+.\" $MidnightBSD$
 .\"
-.Dd February 8, 2005
+.Dd October 31, 2006
 .Dt PORTS 7
 .Os
 .Sh NAME
@@ -63,13 +64,13 @@ that are newer than the installed system; however it is important to
 install the appropriate
 .Dq "Upgrade Kit"
 from
-.Pa http://www.FreeBSD.org/ports/
+.Pa http://www.MidnightBSD.org/ports/
 first!
 The
-.Xr portcheckout 1 Pq Pa ports/devel/portcheckout
-script (also a port, of course!) will help to download new ports.
+.Xr portcheckout 1 Pq Pa mports/devel/portcheckout
+script (also a port, of course!) will help to download new mports.
 .Pp
-For more information about using ports, see
+For more information about using mports, see
 .Dq "Packages and Ports"
 in
 .%B "The FreeBSD Handbook" ,
@@ -152,7 +153,7 @@ Expand the distfile into a work directory.
 Apply any patches that are necessary for the port.
 .It Cm configure
 Configure the port.
-Some ports will ask you questions during this stage.
+Some mports will ask you questions during this stage.
 See
 .Va INTERACTIVE
 and
@@ -186,7 +187,7 @@ Remove
 .Va OPTIONS
 config for this port and all its dependencies.
 .It Cm config-conditional
-Skip the ports which have already had their
+Skip the mports which have already had their
 .Va OPTIONS
 configured.
 .It Cm fetch-list
@@ -225,7 +226,7 @@ when you should have used
 Remove an installed port from the system, similar to
 .Xr pkg_delete 1 .
 .It Cm deinstall-all
-Remove all installed ports with the same
+Remove all installed mports with the same
 .Va PKGORIGIN
 from the system.
 .It Cm package
@@ -251,7 +252,7 @@ but makes a package for each depending port as well.
 Create a port's
 .Pa README.html .
 This can be used from
-.Pa /usr/ports
+.Pa /usr/mports
 to create a browsable web of all ports on your system!
 .It Cm search
 Search the
@@ -279,29 +280,29 @@ variables, and their exclusion counterparts:
 etc.
 For example, one would type:
 .Pp
-.Dl "cd /usr/ports && make search name=query"
+.Dl "cd /usr/mports && make search name=query"
 .Pp
-to find all ports whose
+to find all mports whose
 name matches
 .Dq Li query .
-Results include the matching ports' path, comment, maintainer,
+Results include the matching mports' path, comment, maintainer,
 build dependencies, and run dependencies.
 .Bd -literal -offset indent
-cd /usr/ports && make search name=pear- \e
+cd /usr/mports && make search name=pear- \e
     xbdeps=apache
 .Ed
 .Pp
-To find all ports whose
+To find all mports whose
 names contain
 .Dq Li pear-
 and which do not have apache
 listed in build-time dependencies.
 .Bd -literal -offset indent
-cd /usr/ports && make search name=pear- \e
+cd /usr/mports && make search name=pear- \e
     xname='ht(tp|ml)'
 .Ed
 .Pp
-To find all ports whose names contain
+To find all mports whose names contain
 .Dq Li pear- ,
 but not
 .Dq Li html
@@ -311,7 +312,7 @@ or
 make search key=apache display=name,path,info keylim=1
 .Ed
 .Pp
-To find ports that contain
+To find mports that contain
 .Dq Li apache
 in either of the name, path, info
 fields, ignore the rest of the record.
@@ -321,7 +322,7 @@ Generate a one-line description of each port for use in the
 file.
 .It Cm index
 Create
-.Pa /usr/ports/INDEX ,
+.Pa /usr/mports/INDEX ,
 which is used by the
 .Cm pretty-print-*
 and
@@ -331,7 +332,7 @@ Running the
 .Cm index
 target will ensure your
 .Pa INDEX
-file is up to date with your ports tree.
+file is up to date with your mports tree.
 .It Cm fetchindex
 Fetch the
 .Pa INDEX
@@ -343,9 +344,9 @@ cluster.
 You can change all of these.
 .Bl -tag -width ".Va MASTER_SITES"
 .It Va PORTSDIR
-Location of the ports tree.
+Location of the mports tree.
 This is
-.Pa /usr/ports
+.Pa /usr/mports
 on
 .Fx
 and

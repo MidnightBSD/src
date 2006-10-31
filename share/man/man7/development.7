@@ -22,13 +22,14 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man7/development.7,v 1.14.2.2 2006/01/22 16:33:46 yar Exp $
+.\" $MidnightBSD$
 .\"
-.Dd December 21, 2002
+.Dd October 31, 2006
 .Dt DEVELOPMENT 7
 .Os
 .Sh NAME
 .Nm development
-.Nd "introduction to development with the FreeBSD codebase"
+.Nd "introduction to development with the MidnightBSD codebase"
 .Sh DESCRIPTION
 This manual page describes how an ordinary sysop,
 .Ux
@@ -61,7 +62,7 @@ unstable environment on your master server which could lead to a situation
 where you lose the environment and/or cannot recover from a mistake.
 .Pp
 Create a huge partition called
-.Pa /FreeBSD .
+.Pa /MidnightBSD .
 8-12GB is recommended.
 This partition will contain nearly all the development environment,
 including the CVS tree, broken-out source, and possibly even object files.
@@ -74,7 +75,7 @@ You have to make a choice in regards to
 You can put
 .Pa /usr/obj
 in
-.Pa /FreeBSD
+.Pa /MidnightBSD
 or you can make
 .Pa /usr/obj
 its own partition.
@@ -89,7 +90,7 @@ I recommend a
 partition of at least 5GB.
 .Pp
 On the master server, use
-.Xr cvsup 1 Pq Pa ports/net/cvsup
+.Xr cvsup 1 Pq Pa mports/net/cvsup
 to automatically pull down and maintain
 the
 .Fx
@@ -98,9 +99,9 @@ The first pull will take a long time,
 it is several gigabytes, but once you have it, the daily syncs will be quite
 small.
 .Bd -literal -offset 4n
-mkdir /FreeBSD/FreeBSD-CVS
-rm -rf /home/ncvs
-ln -s /FreeBSD/FreeBSD-CVS /home/ncvs
+mkdir /MidnightBSD/MidnightBSD-CVS
+rm -rf /home/cvs
+ln -s /MidnightBSD/MidnightBSD-CVS /home/cvs
 .Ed
 .Pp
 The
@@ -115,7 +116,7 @@ without modification by supplying appropriate arguments
 to
 .Xr cvsup 1 .
 .Bd -literal -offset 4n
-33 6 * * *      /usr/local/bin/cvsup -g -r 20 -L 2 -h cvsup.freebsd.org /usr/share/examples/cvsup/cvs-supfile
+33 6 * * *      /usr/local/bin/cvsup -g -r 20 -L 2 -h cvsup.midnightbsd.org /usr/share/examples/cvsup/cvs-supfile
 .Ed
 .Pp
 Run the
@@ -154,22 +155,22 @@ Now use
 to check out a -STABLE source tree and a -CURRENT source tree,
 as well as ports and docs, to create your initial source environment.
 Keeping the broken-out source and ports in
-.Pa /FreeBSD
+.Pa /MidnightBSD
 allows you to export
 it to other machines via read-only NFS.
 This also means you only need to edit/maintain files in one place and all
 your clients automatically pick up the changes.
 .Bd -literal -offset 4n
-mkdir /FreeBSD/FreeBSD-4.x
-mkdir /FreeBSD/FreeBSD-current
+mkdir /MidnightBSD/MidnightBSD-0.x
+mkdir /MidnightBSD/MIdnightBSD-current
 
-cd /FreeBSD/FreeBSD-4.x
-cvs -d /home/ncvs checkout -rRELENG_4 src
+cd /MidnightBSD/MidnightBSD-0.x
+cvs -d /home/cvs checkout -rRELENG_0 src
 
-cd /FreeBSD/FreeBSD-current
-cvs -d /home/ncvs checkout src
-cvs -d /home/ncvs checkout ports
-cvs -d /home/ncvs checkout doc
+cd /MidnightBSD/MidnightBSD-current
+cvs -d /home/cvs checkout src
+cvs -d /home/cvs checkout ports
+cvs -d /home/cvs checkout doc
 .Ed
 .Pp
 Now create a softlink for
@@ -192,8 +193,8 @@ run.
 .Bd -literal -offset 4n
 cd /usr
 rm -rf src src2
-ln -s /FreeBSD/FreeBSD-4.x/src src	(could be -CURRENT on a client)
-ln -s /FreeBSD/FreeBSD-current/src src2	(MASTER SERVER ONLY)
+ln -s /MidnightBSD/MidnightBSD-0.x/src src	(could be -CURRENT on a client)
+ln -s /MidnightBSD/MidnightBSD-current/src src2	(MASTER SERVER ONLY)
 .Ed
 .Pp
 Now you have to make a choice for
@@ -201,15 +202,15 @@ Now you have to make a choice for
 Well, hopefully you made it already and chose the partition method.
 If you
 chose poorly you probably intend to put it in
-.Pa /FreeBSD
+.Pa /MidnightBSD
 and, if so, this is
 what you want to do:
 .Bd -literal -offset 4n
 (ONLY IF YOU MADE A POOR CHOICE AND PUT /usr/obj in /FreeBSD!)
-mkdir /FreeBSD/obj
+mkdir /MidnightBSD/obj
 cd /usr
 rm -rf obj
-ln -s /FreeBSD/obj obj
+ln -s /MidnightBSD/obj obj
 .Ed
 .Pp
 Alternatively you may chose simply to leave
@@ -251,19 +252,19 @@ This is what you do:
 .Bd -literal -offset 4n
 (THESE COMMANDS ON THE MASTER SERVER AND ON ALL CLIENTS)
 cd /usr
-rm -rf ports
-ln -s /FreeBSD/FreeBSD-current/ports ports
+rm -rf mports
+ln -s /MidnightBSD/MidnightBSD-current/mports mports
 
-cd /usr/ports   			(this pushes into the softlink)
+cd /usr/mports   			(this pushes into the softlink)
 rm -rf distfiles			(ON MASTER SERVER ONLY)
-ln -s /usr/ports.distfiles distfiles	(ON MASTER SERVER ONLY)
+ln -s /usr/mports.distfiles distfiles	(ON MASTER SERVER ONLY)
 
-mkdir /usr/ports.distfiles
-mkdir /usr/ports.workdir
+mkdir /usr/mports.distfiles
+mkdir /usr/mports.workdir
 .Ed
 .Pp
 Since
-.Pa /usr/ports
+.Pa /usr/mports
 is softlinked into what will be read-only on all of your
 clients, you have to tell the ports system to use a different working
 directory to hold ports builds.
@@ -272,23 +273,23 @@ You want to add a line to your
 file on the master server
 and on all your clients:
 .Bd -literal -offset 4n
-WRKDIRPREFIX=/usr/ports.workdir
+WRKDIRPREFIX=/usr/mports.workdir
 .Ed
 .Pp
 You should try to make the directory you use for the ports working directory
 as well as the directory used to hold distfiles consistent across all of your
 machines.
 If there is not enough room in
-.Pa /usr/ports.distfiles
+.Pa /usr/mports.distfiles
 and
-.Pa /usr/ports.workdir
+.Pa /usr/mports.workdir
 I usually make those softlinks (since this is on
 .Pa /usr
 these are per-machine) to
 where the distfiles and working space really are.
 .Sh EXPORTING VIA NFS FROM THE MASTER SERVER
 The master server needs to export
-.Pa /FreeBSD
+.Pa /MidnightBSD
 and
 .Pa /usr/obj
 via NFS so all the
@@ -298,7 +299,7 @@ The environment I am describing in this manual page is designed primarily
 around read-only NFS exports.
 Your exports file on the master server should contain the following lines:
 .Bd -literal -offset 4n
-/FreeBSD -ro -alldirs -maproot=root: -network YOURLAN -mask YOURLANMASK
+/MidnightBSD -ro -alldirs -maproot=root: -network YOURLAN -mask YOURLANMASK
 /usr/obj -ro -alldirs -maproot=root: -network YOURLAN -mask YOURLANMASK
 .Ed
 .Pp
@@ -312,7 +313,7 @@ nfs_server_flags="-u -t -n 4"
 .Sh THE CLIENT ENVIRONMENT
 All of your client machines can import the development/build environment
 directory simply by NFS mounting
-.Pa /FreeBSD
+.Pa /MidnightBSD
 and
 .Pa /usr/obj
 from the master server.
@@ -320,7 +321,7 @@ A typical
 .Pa /etc/fstab
 entry on your client machines will be something like this:
 .Bd -literal -offset 4n
-masterserver:/FreeBSD     /FreeBSD        nfs     ro,bg    0       0
+masterserver:/MidnightBSD     /MidnightBSD        nfs     ro,bg    0       0
 masterserver:/usr/obj     /usr/obj        nfs     ro,bg    0       0
 .Ed
 .Pp
@@ -336,7 +337,7 @@ nfs_client_enable="YES"
 .Ed
 .Pp
 Each client should create softlinks for
-.Pa /usr/ports
+.Pa /usr/mports
 and
 .Pa /usr/src
 that point
@@ -344,11 +345,11 @@ into the NFS-mounted environment.
 If a particular client is running -CURRENT,
 .Pa /usr/src
 should be a softlink to
-.Pa /FreeBSD/FreeBSD-current/src .
+.Pa /MidnightBSD/MidnightBSD-current/src .
 If it is running -STABLE,
 .Pa /usr/src
 should be a softlink to
-.Pa /FreeBSD/FreeBSD-4.x/src .
+.Pa /MidnightBSD/MidnightBSD-0.x/src .
 I do not usually create a
 .Pa /usr/src2
 softlink on
@@ -358,24 +359,24 @@ human variety) on a client.
 .Bd -literal -offset 4n
 (ON EACH CLIENT)
 cd /usr
-rm -rf ports src
-ln -s /FreeBSD/FreeBSD-current/ports ports
-ln -s /FreeBSD/FreeBSD-XXX/src src
+rm -rf mports src
+ln -s /MidnightBSD/MidnightBSD-current/mports mports
+ln -s /MidnightBSD/MidnightBSD-XXX/src src
 .Ed
 .Pp
 Do not forget to create the working directories so you can build ports, as
 previously described.
 If these are not good locations, make them softlinks to the correct location.
 Remember that
-.Pa /usr/ports/distfiles
+.Pa /usr/mports/distfiles
 is exported by
 the master server and is therefore going to point to the same place
 (typically
-.Pa /usr/ports.distfiles )
+.Pa /usr/mports.distfiles )
 on every machine.
 .Bd -literal -offset 4n
-mkdir /usr/ports.distfiles
-mkdir /usr/ports.workdir
+mkdir /usr/mports.distfiles
+mkdir /usr/mports.workdir
 .Ed
 .Sh BUILDING KERNELS
 Here is how you build a -STABLE kernel (on your main development box).
@@ -453,7 +454,7 @@ make buildworld
 .Sh INSTALLING THE WORLD
 You can build on your main development server and install on clients.
 The main development server must export
-.Pa /FreeBSD
+.Pa /MidnightBSD
 and
 .Pa /usr/obj
 via read-only NFS to the clients.
@@ -523,15 +524,15 @@ You can then do builds to your heart's content!
 .Sh MAINTAINING A LOCAL BRANCH
 I have described how to maintain two versions of the source tree, a stable
 version in
-.Pa /FreeBSD/FreeBSD-4.x
+.Pa /MidnightBSD/MidnightBSD-0.x
 and a current version in
-.Pa /FreeBSD/FreeBSD-current .
+.Pa /MidnightBSD/MidnightBSD-current .
 There is absolutely nothing preventing you
 from breaking out other versions of the source tree
 into
-.Pa /FreeBSD/XXX .
+.Pa /MidnightBSD/XXX .
 In fact, my
-.Pa /FreeBSD
+.Pa /MidnightBSD
 partition also contains
 .Ox ,
 .Nx ,
@@ -588,7 +589,7 @@ Future commits to this branch will produce revisions 1.4.1000.1,
 .Pp
 To fork your local branch, do:
 .Bd -literal -offset 4n
-cvs rtag -r RELENG_4 -b LOCAL_RELENG_4 src
+cvs rtag -r RELENG_0 -b LOCAL_RELENG_4 src
 .Ed
 .Pp
 After this, you can check out a copy from your local repository using the
@@ -631,11 +632,11 @@ your source tree at any time without any network cost as follows:
 .Bd -literal -offset 4n
 (on the main development server)
 cd /usr/src
-cvs -d /home/ncvs update
+cvs -d /home/cvs update
 cd /usr/src2
-cvs -d /home/ncvs update
-cd /usr/ports
-cvs -d /home/ncvs update
+cvs -d /home/cvs update
+cd /usr/mports
+cvs -d /home/cvs update
 .Ed
 .Pp
 It is that simple, and since you are exporting the whole lot to your
@@ -662,7 +663,7 @@ command.
 Maintaining the CVS repository also gives you far more flexibility
 in regards to breaking out multiple versions of the source tree.
 It is a good idea to give your
-.Pa /FreeBSD
+.Pa /MidnightBSD
 partition a lot of space (I recommend
 8-12GB) precisely for that reason.
 If you can make it 15GB I would do it.

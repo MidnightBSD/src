@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
+# $MidnightBSD$
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -29,6 +30,7 @@ MAN=	aac.4 \
 	aue.4 \
 	awi.4 \
 	axe.4 \
+	bce.4 \
 	bfe.4 \
 	bge.4 \
 	bktr.4 \

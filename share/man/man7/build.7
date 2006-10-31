@@ -23,8 +23,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man7/build.7,v 1.30.2.2 2006/01/22 16:33:46 yar Exp $
+.\" $MidnightBSD$
 .\"
-.Dd January 07, 2006
+.Dd October 31, 2006
 .Dt BUILD 7
 .Os
 .Sh NAME
@@ -38,7 +39,7 @@ normally
 .Pa /usr/src ,
 .Pa /usr/doc ,
 and
-.Pa /usr/ports .
+.Pa /usr/mports .
 .Pa /usr/src
 contains the
 .Dq "base system"
@@ -47,7 +48,7 @@ the system to a useful state.
 .Pa /usr/doc
 contains the source for the system documentation, excluding the manual
 pages.
-.Pa /usr/ports
+.Pa /usr/mports
 is a tree that provides a consistent interface for building and
 installing third party applications.
 .Pp
@@ -134,7 +135,7 @@ should be set as with
 .Dq Li "make installworld" .
 .El
 .Pp
-For more information about the ports build process, see
+For more information about the mports build process, see
 .Xr ports 7 .
 .Sh ENVIRONMENT
 .Bl -tag -width ".Va TARGET_ARCH"
@@ -165,8 +166,8 @@ installed.
 .Bl -tag -width ".Pa /usr/share/examples/etc/make.conf" -compact
 .It Pa /usr/doc/Makefile
 .It Pa /usr/doc/share/mk/doc.project.mk
-.It Pa /usr/ports/Mk/bsd.port.mk
-.It Pa /usr/ports/Mk/bsd.sites.mk
+.It Pa /usr/mports/Mk/bsd.port.mk
+.It Pa /usr/mports/Mk/bsd.sites.mk
 .It Pa /usr/share/examples/etc/make.conf
 .It Pa /usr/src/Makefile
 .It Pa /usr/src/Makefile.inc1

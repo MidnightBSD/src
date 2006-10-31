@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/man/man1/Makefile,v 1.17 2004/01/20 10:27:22 ru Exp $
+# $MidnightBSD$
 
 MAN=	builtin.1 intro.1
 
