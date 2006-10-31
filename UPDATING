@@ -3,6 +3,17 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20061031:
+	Updated man pages in section 7.
+
+20061030:
+ 	Updated sys/dev/drm to support intel 915 and radeon 
+	r300 cards properly.  
+
+	Synced snmpd with FreeBSD-stable.
+
+	Fixed a bug in rm which could cause data loss.	
+
 20061027:
 	Added Intel ICH8 and nForce 5 support to ATA. cam, mpt,
 	random, kbdmux, atkbd, and usb were updated.  Changes
@@ -217,4 +228,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.4 2006/10/15 00:11:58 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.5 2006/10/28 06:15:57 laffer1 Exp $
