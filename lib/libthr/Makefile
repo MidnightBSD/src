@@ -7,6 +7,11 @@
 # To included legacy CSRG sccsid strings, add -DLIBC_SCCS and -DSYSLIBC_SCCS
 # (for system call stubs) to CFLAGS below.  -DSYSLIBC_SCCS affects just the
 # system call stubs.
+
+.if ${MACHINE_ARCH} == "sparc64"
+SHLIBDIR?=/lib
+.endif
+
 LIB=thr
 SHLIB_MAJOR= 2
 CFLAGS+=-DPTHREAD_KERNEL
@@ -27,12 +32,22 @@ MAN=	libthr.3
 
 # enable extra internal consistancy checks
 CFLAGS+=-D_PTHREADS_INVARIANTS -Wall
-CFLAGS+=-g
+#CFLAGS+=-g
 
 PRECIOUSLIB=
 
 .include "${.CURDIR}/arch/${MACHINE_ARCH}/Makefile.inc"
 .include "${.CURDIR}/sys/Makefile.inc"
 .include "${.CURDIR}/thread/Makefile.inc"
+
+.if ${MACHINE_ARCH} == "sparc64"
+SYMLINKS+=lib${LIB}.a ${LIBDIR}/libpthread.a
+.if !defined(NO_PIC)
+SYMLINKS+=lib${LIB}.so ${LIBDIR}/libpthread.so
+.endif
+.if NO_PROFILE
+SYMLINKS+=lib${LIB}_p.a ${LIBDIR}/libpthread_p.a
+.endif
+.endif
 
 .include <bsd.lib.mk>

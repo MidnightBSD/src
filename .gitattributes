@@ -18387,9 +18387,6 @@ lib/libtacplus/taclib_private.h -text
 lib/libtacplus/tacplus.conf.5 -text
 lib/libtelnet/Makefile -text
 lib/libthr/Makefile -text
-lib/libthr/arch/alpha/Makefile.inc -text
-lib/libthr/arch/alpha/alpha/pthread_md.c -text
-lib/libthr/arch/alpha/include/pthread_md.h -text
 lib/libthr/arch/amd64/Makefile.inc -text
 lib/libthr/arch/amd64/amd64/pthread_md.c -text
 lib/libthr/arch/amd64/include/pthread_md.h -text
