@@ -347,7 +347,7 @@ msdosfs_getattr(ap)
 		dos2unixtime(dep->de_CDate, dep->de_CTime, dep->de_CHun, &vap->va_birthtime);
 	} else {
 		vap->va_atime = vap->va_mtime;
-		vap->va_birthtime.tv_sec = 0;
+		vap->va_birthtime.tv_sec = -1;
 		vap->va_birthtime.tv_nsec = 0; 
 	}
 	vap->va_flags = 0;
