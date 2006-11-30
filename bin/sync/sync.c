@@ -26,6 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/* $FreeBSD: src/bin/sync/sync.c,v 1.16 2005/01/10 08:39:26 imp Exp $ */
 
 #if 0
 #ifndef lint
@@ -39,14 +40,16 @@ static char sccsid[] = "@(#)sync.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sync/sync.c,v 1.16 2005/01/10 08:39:26 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <stdlib.h>
 #include <unistd.h>
 
 int
-main(int argc __unused, char *argv[] __unused)
+main(int argc __unused, char *argv[])
 {
+	setprogname(argv[0]);
 	sync();
 	exit(0);
+	/* NOTREACHED */
 }
