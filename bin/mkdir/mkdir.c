@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)mkdir.c	8.2 (Berkeley) 1/25/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/mkdir/mkdir.c,v 1.2 2006/07/19 13:55:36 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -94,7 +94,7 @@ main(int argc, char *argv[])
 		omode = S_IRWXU | S_IRWXG | S_IRWXO;
 	} else {
 		if ((set = setmode(mode)) == NULL)
-			errx(1, "invalid file mode: %s", mode);
+			errx(1, "Cannot set file mode: `%s'", mode);
 		omode = getmode(set, S_IRWXU | S_IRWXG | S_IRWXO);
 		free(set);
 	}
