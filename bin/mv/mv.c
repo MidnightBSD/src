@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)mv.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/mv/mv.c,v 1.2 2006/07/19 13:56:55 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -122,7 +122,7 @@ main(int argc, char *argv[])
 	/* It's a directory, move each file into it. */
 	if (strlen(argv[argc - 1]) > sizeof(path) - 1)
 		errx(1, "%s: destination pathname too long", *argv);
-	(void)strcpy(path, argv[argc - 1]);
+	(void)strlcpy(path, argv[argc - 1], sizeof(path));
 	baselen = strlen(path);
 	endp = &path[baselen];
 	if (!baselen || *(endp - 1) != '/') {
