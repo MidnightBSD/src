@@ -578,7 +578,7 @@ rl_miibus_readreg(device_t dev, int phy, int reg)
 			rval = CSR_READ_1(sc, RL_MEDIASTAT);
 			return (rval);
 		default:
-			device_printf(sc->rl_ifp, "bad phy register\n");
+			device_printf(sc->rl_dev, "bad phy register\n");
 			return (0);
 		}
 		rval = CSR_READ_2(sc, rl8139_reg);
@@ -628,7 +628,7 @@ rl_miibus_writereg(device_t dev, int phy, int reg, int data)
 			return (0);
 			break;
 		default:
-			device_printf(sc->rl_ifp, "bad phy register\n");
+			device_printf(sc->rl_dev, "bad phy register\n");
 			return (0);
 		}
 		CSR_WRITE_2(sc, rl8139_reg, data);
@@ -718,7 +718,7 @@ rl_reset(struct rl_softc *sc)
 			break;
 	}
 	if (i == RL_TIMEOUT)
-		device_printf(sc->rl_ifp, "reset never completed!\n");
+		device_printf(sc->rl_dev, "reset never completed!\n");
 }
 
 /*
