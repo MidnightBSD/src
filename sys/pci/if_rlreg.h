@@ -681,6 +681,7 @@ struct rl_softc {
 	struct ifnet		*rl_ifp;	/* interface info */
 	bus_space_handle_t	rl_bhandle;	/* bus space handle */
 	bus_space_tag_t		rl_btag;	/* bus space tag */
+	device_t		rl_dev;
 	struct resource		*rl_res;
 	struct resource		*rl_irq;
 	void			*rl_intrhand;
