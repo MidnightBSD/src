@@ -975,7 +975,7 @@ rl_attach(device_t dev)
 	error = bus_setup_intr(dev, sc->rl_irq, INTR_TYPE_NET | INTR_MPSAFE,
 	    rl_intr, sc, &sc->rl_intrhand);
 	if (error) {
-		device_printf(ifp, "couldn't set up irq\n");
+		device_printf(sc->rl_dev, "couldn't set up irq\n");
 		ether_ifdetach(ifp);
 	}
 
