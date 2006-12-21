@@ -1084,6 +1084,7 @@ re_attach(dev)
 	int			error = 0, rid, i;
 
 	sc = device_get_softc(dev);
+	sc->rl_dev = dev;
 
 	mtx_init(&sc->rl_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
