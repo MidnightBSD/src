@@ -20929,15 +20929,10 @@ share/examples/bootforth/menu.4th -text
 share/examples/bootforth/menuconf.4th -text
 share/examples/bootforth/screen.4th -text
 share/examples/cvsup/README -text
-share/examples/cvsup/cvs-supfile -text
-share/examples/cvsup/doc-supfile -text
-share/examples/cvsup/gnats-supfile -text
-share/examples/cvsup/ports-supfile -text
+share/examples/cvsup/mports-supfile -text
 share/examples/cvsup/refuse -text
 share/examples/cvsup/refuse.README -text
-share/examples/cvsup/stable-supfile -text
 share/examples/cvsup/standard-supfile -text
-share/examples/cvsup/www-supfile -text
 share/examples/diskless/ME -text
 share/examples/diskless/README.BOOTP -text
 share/examples/diskless/README.TEMPLATING -text

@@ -1,4 +1,5 @@
 $FreeBSD: src/share/examples/cvsup/refuse.README,v 1.12 2005/03/15 12:21:44 maxim Exp $
+$MidnightBSD$
 
 This describes the "refuse" file found in this directory.  The
 explanation cannot be put inside the file itself because:
@@ -41,19 +42,19 @@ foreign-language documentation or ports, use the following patterns:
     doc/sr_*
     doc/tr_*
     doc/zh_*
-    ports/arabic
-    ports/chinese
-    ports/french
-    ports/german
-    ports/hebrew
-    ports/hungarian
-    ports/japanese
-    ports/korean
-    ports/polish
-    ports/portuguese
-    ports/russian
-    ports/ukrainian
-    ports/vietnamese
+    mports/arabic
+    mports/chinese
+    mports/french
+    mports/german
+    mports/hebrew
+    mports/hungarian
+    mports/japanese
+    mports/korean
+    mports/polish
+    mports/portuguese
+    mports/russian
+    mports/ukrainian
+    mports/vietnamese
 
 Use refuse files with care.  Some parts of the src distribution
 depend on files in completely different parts.
