@@ -3,6 +3,37 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20061226:
+	Setup /usr/share/examples/cvsup SUPfiles for the new
+	MidnightBSD CVSup server.  
+
+20061225:
+	Fixed a typo in src/lib/libc/sparc64/fpu/fpu_implode.c
+	that caused long double to long and long long 
+	conversion of negative numbers to always result in -1.
+
+20061221:
+	Fixed acpi_battery.c to not report an ERROR if no
+	batteries are present.
+
+	Performed some minor updates on the RL and RE NIC drivers.
+	RL should no longer panic when trying to print errors.
+
+	Corrected a bug with TTY.
+
+20061218:
+	Corrected a bug with libpthread where newly created suspended
+	threads don't get scheduled.
+
+20061206:
+	Fixed a typo with the firewire security patch.
+
+20061129:
+	Minor cleanups to utilities in bin.
+
+	Fixed msdos file system short file name behavior to match
+	FreeBSD.
+
 20061031:
 	Updated man pages in section 7.
 
@@ -228,4 +259,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.5 2006/10/28 06:15:57 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.6 2006/10/31 19:20:59 laffer1 Exp $
