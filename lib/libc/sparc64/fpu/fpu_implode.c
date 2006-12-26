@@ -277,7 +277,7 @@ __fpu_ftox(fe, fp, res)
 		if (i >= ((u_int64_t)0x8000000000000000LL + sign))
 			break;
 		if (sign)
-			i = -1;
+			i = -i;
 		res[1] = (int)i;
 		return (i >> 32);
 
