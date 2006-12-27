@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile,v 1.3 2006/08/28 02:52:35 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.4 2006/10/16 15:29:06 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -94,11 +94,11 @@ TGTS+=	${BITGTS}
 PATH=	/sbin:/bin:/usr/sbin:/usr/bin
 MAKEOBJDIRPREFIX?=	/usr/obj
 _MAKEOBJDIRPREFIX!= /usr/bin/env -i PATH=${PATH} ${MAKE} \
-    ${.MAKEFLAGS:MMAKEOBJDIRPREFIX=*} \
+    ${.MAKEFLAGS:MMAKEOBJDIRPREFIX=*} __MAKE_CONF=${_MAKE_CONF} \
     -f /dev/null -V MAKEOBJDIRPREFIX dummy
 .if !empty(_MAKEOBJDIRPREFIX)
 .error MAKEOBJDIRPREFIX can only be set in environment, not as a global\
-	(in /etc/make.conf) or command-line variable.
+	(in make.conf(5)) or command-line variable.
 .endif
 MAKEPATH=	${MAKEOBJDIRPREFIX}${.CURDIR}/make.${MACHINE}
 BINMAKE= \
@@ -270,7 +270,8 @@ universe_prologue:
 .for arch in ${target:C/:.*$//}
 .for mach in ${target:C/^.*://}
 KERNCONFS!=	cd ${.CURDIR}/sys/${mach}/conf && \
-		find [A-Z]*[A-Z] -type f -maxdepth 0
+		find [A-Z]*[A-Z] -type f -maxdepth 0 \
+		! -name DEFAULTS ! -name LINT
 KERNCONFS:=	${KERNCONFS:S/^NOTES$/LINT/}
 universe: universe_${mach}
 .ORDER: universe_prologue universe_${mach} universe_epilogue
