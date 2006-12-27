@@ -30107,6 +30107,9 @@ usr.bin/getconf/limits.gperf -text
 usr.bin/getconf/pathconf.gperf -text
 usr.bin/getconf/progenv.gperf -text
 usr.bin/getconf/sysconf.gperf -text
+usr.bin/getent/Makefile -text
+usr.bin/getent/getent.1 -text
+usr.bin/getent/getent.c -text
 usr.bin/getopt/Makefile -text
 usr.bin/getopt/README -text
 usr.bin/getopt/getopt.1 -text
