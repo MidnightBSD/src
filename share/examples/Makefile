@@ -1,4 +1,5 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
+# $MidnightBSD$
 #
 # Doing a make install builds /usr/share/examples
 
@@ -60,15 +61,10 @@ XFILES=	BSD_daemon/FreeBSD.pfa \
 	bootforth/menuconf.4th \
 	bootforth/screen.4th \
 	cvsup/README \
-	cvsup/cvs-supfile \
-	cvsup/doc-supfile \
-	cvsup/gnats-supfile \
-	cvsup/ports-supfile \
+	cvsup/mports-supfile \
 	cvsup/refuse \
 	cvsup/refuse.README \
-	cvsup/stable-supfile \
 	cvsup/standard-supfile \
-	cvsup/www-supfile \
 	diskless/ME \
 	diskless/README.BOOTP \
 	diskless/README.TEMPLATING \
