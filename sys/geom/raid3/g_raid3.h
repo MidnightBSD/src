@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/raid3/g_raid3.h,v 1.11.2.1 2005/08/05 19:43:29 pjd Exp $
+ * $FreeBSD: src/sys/geom/raid3/g_raid3.h,v 1.11.2.3 2006/05/10 07:15:37 pjd Exp $
  */
 
 #ifndef	_G_RAID3_H_
@@ -49,6 +49,7 @@
 #define	G_RAID3_DISK_FLAG_SYNCHRONIZING	0x0000000000000002ULL
 #define	G_RAID3_DISK_FLAG_FORCE_SYNC	0x0000000000000004ULL
 #define	G_RAID3_DISK_FLAG_HARDCODED	0x0000000000000008ULL
+#define	G_RAID3_DISK_FLAG_BROKEN	0x0000000000000010ULL
 #define	G_RAID3_DISK_FLAG_MASK		(G_RAID3_DISK_FLAG_DIRTY |	\
 					 G_RAID3_DISK_FLAG_SYNCHRONIZING | \
 					 G_RAID3_DISK_FLAG_FORCE_SYNC)
@@ -109,12 +110,13 @@ extern u_int g_raid3_debug;
  */
 struct g_raid3_disk_sync {
 	struct g_consumer *ds_consumer;	/* Consumer connected to our device. */
-	off_t		 ds_offset;	/* Offset of next request to send. */
-	off_t		 ds_offset_done; /* Offset of already synchronized
+	off_t		  ds_offset;	/* Offset of next request to send. */
+	off_t		  ds_offset_done; /* Offset of already synchronized
 					   region. */
-	off_t		 ds_resync;	/* Resynchronize from this offset. */
-	u_int		 ds_syncid;	/* Disk's synchronization ID. */
-	u_char		*ds_data;
+	off_t		  ds_resync;	/* Resynchronize from this offset. */
+	u_int		  ds_syncid;	/* Disk's synchronization ID. */
+	u_int		  ds_inflight;	/* Number of in-flight sync requests. */
+	struct bio	**ds_bios;	/* BIOs for synchronization I/O. */
 };
 
 /*
@@ -158,6 +160,7 @@ struct g_raid3_event {
 
 #define	G_RAID3_DEVICE_FLAG_DESTROY	0x0100000000000000ULL
 #define	G_RAID3_DEVICE_FLAG_WAIT	0x0200000000000000ULL
+#define	G_RAID3_DEVICE_FLAG_DESTROYING	0x0400000000000000ULL
 
 #define	G_RAID3_DEVICE_STATE_STARTING		0
 #define	G_RAID3_DEVICE_STATE_DEGRADED		1
@@ -167,6 +170,23 @@ struct g_raid3_event {
 #define	G_RAID3_BUMP_SYNCID	0x1
 /* Bump genid immediately. */
 #define	G_RAID3_BUMP_GENID	0x2
+
+enum g_raid3_zones {
+	G_RAID3_ZONE_64K,
+	G_RAID3_ZONE_16K,
+	G_RAID3_ZONE_4K,
+	G_RAID3_NUM_ZONES
+};
+
+static __inline enum g_raid3_zones
+g_raid3_zone(size_t nbytes) {
+	if (nbytes > 16384)
+		return (G_RAID3_ZONE_64K);
+	else if (nbytes > 4096)
+		return (G_RAID3_ZONE_16K);
+	else
+		return (G_RAID3_ZONE_4K);
+};
 
 struct g_raid3_softc {
 	u_int		sc_state;	/* Device state. */
@@ -179,24 +199,39 @@ struct g_raid3_softc {
 
 	uint32_t	sc_id;		/* Device unique ID. */
 
+	struct sx	 sc_lock;
 	struct bio_queue_head sc_queue;
 	struct mtx	 sc_queue_mtx;
 	struct proc	*sc_worker;
+	struct bio_queue_head sc_regular_delayed; /* Delayed I/O requests due
+						     collision with sync
+						     requests. */
+	struct bio_queue_head sc_inflight; /* In-flight regular write
+					      requests. */
+	struct bio_queue_head sc_sync_delayed; /* Delayed sync requests due
+						  collision with regular
+						  requests. */
 
 	struct g_raid3_disk *sc_disks;
 	u_int		sc_ndisks;	/* Number of disks. */
 	u_int		sc_round_robin;
 	struct g_raid3_disk *sc_syncdisk;
 
-	uma_zone_t	sc_zone_64k;
-	uma_zone_t	sc_zone_16k;
-	uma_zone_t	sc_zone_4k;
+	struct g_raid3_zone {
+		uma_zone_t	sz_zone;
+		size_t		sz_inuse;
+		size_t		sz_max;
+		u_int		sz_requested;
+		u_int		sz_failed;
+	} sc_zones[G_RAID3_NUM_ZONES];
 
 	u_int		sc_genid;	/* Generation ID. */
 	u_int		sc_syncid;	/* Synchronization ID. */
 	int		sc_bump_id;
 	struct g_raid3_device_sync sc_sync;
 	int		sc_idle;	/* DIRTY flags removed. */
+	time_t		sc_last_write;
+	u_int		sc_writes;
 
 	TAILQ_HEAD(, g_raid3_event) sc_events;
 	struct mtx	sc_events_mtx;
@@ -209,7 +244,10 @@ struct g_raid3_softc {
 
 const char *g_raid3_get_diskname(struct g_raid3_disk *disk);
 u_int g_raid3_ndisks(struct g_raid3_softc *sc, int state);
-int g_raid3_destroy(struct g_raid3_softc *sc, boolean_t force);
+#define	G_RAID3_DESTROY_SOFT	0
+#define	G_RAID3_DESTROY_DELAYED	1
+#define	G_RAID3_DESTROY_HARD	2
+int g_raid3_destroy(struct g_raid3_softc *sc, int how);
 int g_raid3_event_send(void *arg, int state, int flags);
 struct g_raid3_metadata;
 int g_raid3_add_disk(struct g_raid3_softc *sc, struct g_provider *pp,
@@ -354,7 +392,7 @@ static __inline int
 raid3_metadata_decode(const u_char *data, struct g_raid3_metadata *md)
 {
 	int error;
- 
+
 	bcopy(data, md->md_magic, 16);
 	md->md_version = le32dec(data + 16);
 	switch (md->md_version) {
