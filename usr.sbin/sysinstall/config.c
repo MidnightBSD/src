@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -238,10 +238,19 @@ configFstab(dialogMenuItem *self)
     /* Go for the burn */
     msgDebug("Generating /etc/fstab file\n");
     fprintf(fstab, "# Device\t\tMountpoint\tFStype\tOptions\t\tDump\tPass#\n");
-    for (i = 0; i < nchunks; i++)
-	fprintf(fstab, "/dev/%s\t\t%s\t\t%s\t%s\t\t%d\t%d\n", name_of(chunk_list[i]), mount_point(chunk_list[i]),
+    for (i = 0; i < nchunks; i++) {
+	if (c1->type == part && c1->subtype != FS_SWAP) {
+		fprintf(fstab, "/dev/%s\t\t%s\t\t%s\t%s\t\t%d\t%d\n", name_of(chunk_list[i]), mount_point(chunk_list[i]),
 		fstype(chunk_list[i]), fstype_short(chunk_list[i]), seq_num(chunk_list[i]), seq_num(chunk_list[i]));
-    
+	} else {
+		/* swap */
+		fprintf(fstab, "/dev/%s.bde\t\t%s\t\t%s\t%s\t\t%d\t%d\n",
+		   name_of(chunk_list[i]), mount_point(chunk_list[i]),
+		   fstype(chunk_list[i]), fstype_short(chunk_list[i]),
+		   seq_num(chunk_list[i]), seq_num(chunk_list[i]));
+	}
+    } 
+ 
     /* Now look for the CDROMs */
     devs = deviceFind(NULL, DEVICE_TYPE_CDROM);
     cnt = deviceCount(devs);
