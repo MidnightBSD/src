@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom.h,v 1.90 2004/12/21 18:32:46 pjd Exp $
+ * $FreeBSD: src/sys/geom/geom.h,v 1.90.2.3 2006/09/19 11:44:16 pjd Exp $
  */
 
 #ifndef _GEOM_GEOM_H_
@@ -261,6 +261,7 @@ int g_modevent(module_t, int, void *);
 
 /* geom_io.c */
 struct bio * g_clone_bio(struct bio *);
+struct bio * g_duplicate_bio(struct bio *);
 void g_destroy_bio(struct bio *);
 void g_io_deliver(struct bio *bp, int error);
 int g_io_getattr(const char *attr, struct g_consumer *cp, int *len, void *ptr);
@@ -274,6 +275,8 @@ void g_print_bio(struct bio *bp);
 /* geom_kern.c / geom_kernsim.c */
 
 #ifdef _KERNEL
+
+extern struct sx topology_lock;
 
 struct g_kerneldump {
 	off_t		offset;
@@ -296,13 +299,14 @@ g_free(void *ptr)
 {
 
 #ifdef DIAGNOSTIC
-	KASSERT(g_valid_obj(ptr) == 0,
-	    ("g_free(%p) of live object, type %d", ptr, g_valid_obj(ptr)));
+	if (sx_xlocked(&topology_lock)) {
+		KASSERT(g_valid_obj(ptr) == 0,
+		    ("g_free(%p) of live object, type %d", ptr,
+		    g_valid_obj(ptr)));
+	}
 #endif
 	free(ptr, M_GEOM);
 }
-
-extern struct sx topology_lock;
 
 #define g_topology_lock() 					\
 	do {							\
@@ -340,7 +344,7 @@ void gctl_set_param(struct gctl_req *req, const char *param, void const *ptr, in
 void *gctl_get_param(struct gctl_req *req, const char *param, int *len);
 char const *gctl_get_asciiparam(struct gctl_req *req, const char *param);
 void *gctl_get_paraml(struct gctl_req *req, const char *param, int len);
-int gctl_error(struct gctl_req *req, const char *fmt, ...);
+int gctl_error(struct gctl_req *req, const char *fmt, ...) __printflike(2, 3);
 struct g_class *gctl_get_class(struct gctl_req *req, char const *arg);
 struct g_geom *gctl_get_geom(struct gctl_req *req, struct g_class *mpr, char const *arg);
 struct g_provider *gctl_get_provider(struct gctl_req *req, char const *arg);
