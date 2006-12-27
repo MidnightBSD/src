@@ -2,10 +2,10 @@
 #
 # $NetBSD: rpcbind,v 1.6 2002/01/31 01:26:06 lukem Exp $
 # $FreeBSD: src/etc/rc.d/rpcbind,v 1.12 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/rpcbind,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: rpcbind
-# REQUIRE: NETWORKING ntpdate syslogd named
+# REQUIRE: NETWORKING rdate syslogd named
 
 . /etc/rc.subr
 

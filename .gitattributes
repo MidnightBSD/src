@@ -14781,6 +14781,7 @@ etc/rc.d/ramdisk-own -text
 etc/rc.d/random -text
 etc/rc.d/rarpd -text
 etc/rc.d/rcconf.sh -text
+etc/rc.d/rdate -text
 etc/rc.d/resolv -text
 etc/rc.d/root -text
 etc/rc.d/route6d -text
