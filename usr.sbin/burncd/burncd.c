@@ -188,6 +188,7 @@ main(int argc, char **argv)
 		if ((!strcasecmp(argv[arg], "erase") ||
 		     !strcasecmp(argv[arg], "blank")) && !test_write) {
 			int blank, pct, last = 0;
+			int sec = 0;
 
 			if (!strcasecmp(argv[arg], "erase"))
 				blank = CDR_B_ALL;
@@ -200,15 +201,19 @@ main(int argc, char **argv)
 			if (ioctl(fd, CDRIOCBLANK, &blank) < 0)
 				err(EX_IOERR, "ioctl(CDRIOCBLANK)");
 			while (1) {
+				int done = -1;
 				sleep(1);
+				sec++;
+				pct = 0;
 				if (ioctl(fd, CDRIOCGETPROGRESS, &pct) == -1)
-					err(EX_IOERR,"ioctl(CDRIOGETPROGRESS)");
-				if (pct > 0 && !quiet)
+					err(EX_IOERR,"ioctl(CDRIOGETPROGRESS)");				if (pct == 0)
+					done = ioctl(fd, CDIOCRESET, NULL);
+				if (!quiet)
 					fprintf(stderr,
-						"%sing CD - %d %% done     \r",
+						"%sing CD - %3dsec %d %% done %d    \r",
 						blank == CDR_B_ALL ?
-						"eras" : "blank", pct);
-				if (pct == 100 || (pct == 0 && last > 90))
+						"eras" : "blank", sec, pct, done);
+				if (pct == 100 || (pct == 0 && last > 90) || done == 0)
 					break;
 				last = pct;
 			}
