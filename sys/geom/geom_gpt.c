@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_gpt.c,v 1.32.2.1 2005/12/29 05:59:51 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_gpt.c,v 1.32.2.2 2006/06/11 20:02:58 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,7 +80,7 @@ is_gpt_hdr(struct gpt_hdr *hdr)
 static int
 is_pmbr(char *mbr)
 {
-	struct dos_partition *part;
+	uint8_t *typ;
 	int i;
 	uint16_t magic;
 
@@ -88,9 +88,10 @@ is_pmbr(char *mbr)
 	if (magic != DOSMAGIC)
 		return (0);
 
-	part = (struct dos_partition *)(uintptr_t)(mbr + DOSPARTOFF);
 	for (i = 0; i < 4; i++) {
-		if (part[i].dp_typ != 0 && part[i].dp_typ != DOSPTYP_PMBR)
+		typ = mbr + DOSPARTOFF + i * sizeof(struct dos_partition) +
+		    offsetof(struct dos_partition, dp_typ);
+		if (*typ != 0 && *typ != DOSPTYP_PMBR)
 			return (0);
 	}
 
