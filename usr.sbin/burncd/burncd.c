@@ -26,6 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/burncd/burncd.c,v 1.45 2005/05/13 20:06:44 ru Exp $
+ * $MidnightBSD$
  */
 
 #include <unistd.h>
