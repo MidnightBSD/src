@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.3 2006/10/16 15:29:06 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_DYNAMICROOT do not link /bin and /sbin dynamically
@@ -88,9 +88,9 @@ CLEANDIR=	cleandir
 .endif
 
 CVS?=		cvs
-CVSFLAGS?=	-r RELENG_6 -P -d -I!
-SUP?=		/usr/local/bin/cvsup
-SUPFLAGS?=	-g -L 2 -P -
+CVSFLAGS?=	-r . -P -d -I!
+SUP?=		/usr/bin/csup
+SUPFLAGS?=	-g -L 2 
 .if defined(SUPHOST)
 SUPFLAGS+=	-h ${SUPHOST}
 .endif
