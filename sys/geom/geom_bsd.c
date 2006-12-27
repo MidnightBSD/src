@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.73.2.1 2005/12/29 05:59:51 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.73.2.2 2006/03/23 22:40:28 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.73.2.1 2005/12/29 05:59:51 sobom
 #define	BSD_CLASS_NAME "BSD"
 
 #define ALPHA_LABEL_OFFSET	64
+#define HISTORIC_LABEL_OFFSET	512
 
 #define LABELSIZE (148 + 16 * MAXPARTITIONS)
 
@@ -535,6 +536,15 @@ g_bsd_taste(struct g_class *mp, struct g_provider *pp, int flags)
 
 		/* First look for a label at the start of the second sector. */
 		error = g_bsd_try(gp, gsp, cp, secsize, ms, secsize);
+
+		/*
+		 * If sector size is not 512 the label still can be at
+		 * offset 512, not at the start of the second sector. At least
+		 * it's true for labels created by the FreeBSD's bsdlabel(8).
+		 */
+		if (error && secsize != HISTORIC_LABEL_OFFSET)
+			error = g_bsd_try(gp, gsp, cp, secsize, ms,
+			    HISTORIC_LABEL_OFFSET);
 
 		/* Next, look for alpha labels */
 		if (error)
