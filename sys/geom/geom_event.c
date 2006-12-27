@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_event.c,v 1.53.2.1 2005/10/07 15:06:27 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_event.c,v 1.53.2.2 2006/09/19 11:07:59 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -183,7 +183,10 @@ one_event(void)
 	g_topology_lock();
 	for (;;) {
 		mtx_lock(&g_eventlock);
-		pp = TAILQ_FIRST(&g_doorstep);
+		TAILQ_FOREACH(pp, &g_doorstep, orphan) {
+			if (pp->nstart == pp->nend)
+				break;
+		}
 		if (pp != NULL) {
 			G_VALID_PROVIDER(pp);
 			TAILQ_REMOVE(&g_doorstep, pp, orphan);
