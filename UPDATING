@@ -5,7 +5,18 @@ Items affecting the mports and packages system can be found in
 
 20061226:
 	Setup /usr/share/examples/cvsup SUPfiles for the new
-	MidnightBSD CVSup server.  
+	MidnightBSD CVSup server. 
+
+	Fix a bug in burncd where it would continue forever while
+	erasing CDRW media.
+
+	Add csup to /usr/bin.  csup is a CVSup replacement written
+	in C. 
+
+	Fixed a bug with bsnmpd build from Oct 30.  
+
+	Corrected some race conditions and fixed a few bugs in
+	geom.  Imported changes from FreeBSD RELENG_6.
 
 20061225:
 	Fixed a typo in src/lib/libc/sparc64/fpu/fpu_implode.c
@@ -259,4 +270,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.6 2006/10/31 19:20:59 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.7 2006/12/26 22:38:02 laffer1 Exp $
