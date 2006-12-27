@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/Makefile,v 1.2 2006/12/27 01:30:02 laffer1 Exp $
 
 # XXX MISSING:		deroff diction graph learn plot
 #			spell spline struct xsend
@@ -252,6 +252,13 @@ _bluetooth=	bluetooth
 .if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
 _chkey=		chkey
 _newkey=	newkey
+.if ${MACHINE_ARCH} == "sparc64"
+.if !defined(NO_LIBTHR)
+_csup=		csup
+.endif
+.elif !defined(NO_LIBPTHREAD)
+_csup=		csup
+.endif
 .endif
 
 .if !defined(NO_NETCAT)
