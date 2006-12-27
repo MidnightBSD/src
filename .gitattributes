@@ -29978,6 +29978,7 @@ usr.bin/compress/zopen.h -text
 usr.bin/csplit/Makefile -text
 usr.bin/csplit/csplit.1 -text
 usr.bin/csplit/csplit.c -text
+usr.bin/csup/Makefile -text
 usr.bin/ctags/C.c -text
 usr.bin/ctags/Makefile -text
 usr.bin/ctags/ctags.1 -text
