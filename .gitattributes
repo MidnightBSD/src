@@ -2933,6 +2933,8 @@ contrib/bsnmp/lib/snmppriv.h -text
 contrib/bsnmp/lib/support.c -text
 contrib/bsnmp/lib/support.h -text
 contrib/bsnmp/oid-list -text
+contrib/bsnmp/snmp_mibII/BEGEMOT-IP-MIB.txt -text
+contrib/bsnmp/snmp_mibII/BEGEMOT-MIB2-MIB.txt -text
 contrib/bsnmp/snmp_mibII/mibII.c -text
 contrib/bsnmp/snmp_mibII/mibII.h -text
 contrib/bsnmp/snmp_mibII/mibII_begemot.c -text
