@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)reboot.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/reboot/reboot.c,v 1.24 2005/03/21 23:44:04 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/reboot/reboot.c,v 1.24.2.1 2006/08/25 12:55:50 bms Exp $");
 
 #include <sys/reboot.h>
 #include <sys/types.h>
@@ -151,12 +151,25 @@ main(int argc, char *argv[])
 	if (!nflag)
 		sync();
 
+	/*
+	 * Ignore signals that we can get as a result of killing
+	 * parents, group leaders, etc.
+	 */
+	(void)signal(SIGHUP,  SIG_IGN);
+	(void)signal(SIGINT,  SIG_IGN);
+	(void)signal(SIGQUIT, SIG_IGN);
+	(void)signal(SIGTERM, SIG_IGN);
+	(void)signal(SIGTSTP, SIG_IGN);
+
+	/*
+	 * If we're running in a pipeline, we don't want to die
+	 * after killing whatever we're writing to.
+	 */
+	(void)signal(SIGPIPE, SIG_IGN);
+
 	/* Just stop init -- if we fail, we'll restart it. */
 	if (kill(1, SIGTSTP) == -1)
 		err(1, "SIGTSTP init");
-
-	/* Ignore the SIGHUP we get when our parent shell dies. */
-	(void)signal(SIGHUP, SIG_IGN);
 
 	/* Send a SIGTERM first, a chance to save the buffers. */
 	if (kill(-1, SIGTERM) == -1 && errno != ESRCH)
