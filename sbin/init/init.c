@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)init.c	8.1 (Berkeley) 7/15/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/init/init.c,v 1.60.2.1 2005/10/04 17:28:59 rse Exp $";
+  "$FreeBSD: src/sbin/init/init.c,v 1.60.2.2 2006/07/08 15:34:27 kib Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -1066,6 +1066,7 @@ start_window_system(session_t *sp)
 	pid_t pid;
 	sigset_t mask;
 	char term[64], *env[2];
+	int status;
 
 	if ((pid = fork()) == -1) {
 		emergency("can't fork for window system on port %s: %m",
@@ -1073,9 +1074,20 @@ start_window_system(session_t *sp)
 		/* hope that getty fails and we can try again */
 		return;
 	}
-
 	if (pid)
+	{
+		waitpid(-1, &status, 0);
 		return;
+	}
+
+	/* reparent window process to the init to not make a zombie on exit */
+	if ((pid = fork()) == -1) {
+		emergency("can't fork for window system on port %s: %m",
+			sp->se_device);
+		_exit(1);
+	}
+	if (pid)
+		_exit(0);
 
 	sigemptyset(&mask);
 	sigprocmask(SIG_SETMASK, &mask, (sigset_t *) 0);
