@@ -30,10 +30,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)xargs.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/xargs/xargs.1,v 1.34.2.1 2005/12/21 12:16:39 des Exp $
+.\" $FreeBSD: src/usr.bin/xargs/xargs.1,v 1.34.2.1 2005/12/21 12:16:39 des Exp $.\" $MidnightBSD$
 .\" $xMach: xargs.1,v 1.2 2002/02/23 05:23:37 tim Exp $
 .\"
-.Dd August 2, 2004
+.Dd December 27, 2006
 .Dt XARGS 1
 .Os
 .Sh NAME
@@ -46,6 +46,7 @@
 .Oo
 .Fl I Ar replstr
 .Op Fl R Ar replacements
+.Op Fl S Ar replsize
 .Oc
 .Op Fl J Ar replstr
 .Op Fl L Ar number
@@ -110,12 +111,19 @@ flag is specified) arguments to
 .Ar utility
 with the entire line of input.
 The resulting arguments, after replacement is done, will not be allowed to grow
-beyond 255 bytes; this is implemented by concatenating as much of the argument
+beyond 
+.Ar replsize
+(or 255 if no 
+.Fl S
+flag is specified)
+bytes; this is implemented by concatenating as much of the argument
 containing
 .Ar replstr
 as possible, to the constructed arguments to
 .Ar utility ,
-up to 255 bytes.
+up to 
+.Ar replstr 
+bytes.
 The 255 byte limit does not apply to arguments to
 .Ar utility
 which do not contain
@@ -216,6 +224,13 @@ will do replacement in.
 If
 .Ar replacements
 is negative, the number of arguments in which to replace is unbounded.
+.lt Fl S Ar replsize
+Specify the amount of space (in bytes) that
+.Fl l
+can use for replacements.
+The default for 
+.Ar replsize
+is 255.
 .It Fl s Ar size
 Set the maximum number of bytes for the command line length provided to
 .Ar utility .
@@ -289,7 +304,7 @@ utility is expected to be
 .St -p1003.2
 compliant.
 The
-.Fl J , o , P
+.Fl J , o , P, S
 and
 .Fl R
 options are non-standard

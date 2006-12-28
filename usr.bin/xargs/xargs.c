@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)xargs.c	8.1 (Berkeley) 6/6/93";
 #endif
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/xargs/xargs.c,v 1.57.2.1 2005/12/21 12:15:52 des Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/xargs/xargs.c,v 1.5 2006/12/28 00:31:53 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -77,7 +77,7 @@ static char **av, **bxp, **ep, **endxp, **xp;
 static char *argp, *bbp, *ebp, *inpline, *p, *replstr;
 static const char *eofstr;
 static int count, insingle, indouble, oflag, pflag, tflag, Rflag, rval, zflag;
-static int cnt, Iflag, jfound, Lflag, wasquoted, xflag;
+static int cnt, Iflag, jfound, Lflag, Sflag, wasquoted, xflag;
 static int curprocs, maxprocs;
 
 static volatile int childerr;
@@ -121,7 +121,7 @@ main(int argc, char *argv[])
 		nline -= strlen(*ep++) + 1 + sizeof(*ep);
 	}
 	maxprocs = 1;
-	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:s:rtx")) != -1)
+	while ((ch = getopt(argc, argv, "0E:I:J:L:n:oP:pR:S:s:rtx")) != -1)
 		switch(ch) {
 		case 'E':
 			eofstr = optarg;
@@ -163,6 +163,11 @@ main(int argc, char *argv[])
 		case 'r':
 			/* GNU compatibility */
 			break;
+		case 'S':
+			Sflag = strtoul(optarg, &endptr, 10);
+			if (*endptr != '\0')
+				errx(1, "replsize must be a number");
+			break;
 		case 's':
 			nline = atoi(optarg);
 			break;
@@ -184,8 +189,12 @@ main(int argc, char *argv[])
 
 	if (!Iflag && Rflag)
 		usage();
+	if (!Iflag && Sflag)
+		usage();
 	if (Iflag && !Rflag)
 		Rflag = 5;
+	if (Iflag && !Sflag)
+		Sflag = 255;
 	if (xflag && !nflag)
 		usage();
 	if (Iflag || Lflag)
@@ -451,7 +460,7 @@ prerun(int argc, char *argv[])
 	while (--argc) {
 		*tmp = *avj++;
 		if (repls && strstr(*tmp, replstr) != NULL) {
-			strnsubst(tmp++, replstr, inpline, (size_t)255);
+			strnsubst(tmp++, replstr, inpline, (size_t)Sflag);
 			if (repls > 0)
 				repls--;
 		} else {
@@ -607,8 +616,8 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-"usage: xargs [-0opt] [-E eofstr] [-I replstr [-R replacements]] [-J replstr]\n"
-"             [-L number] [-n number [-x]] [-P maxprocs] [-s size]\n"
-"             [utility [argument ...]]\n");
+"usage: xargs [-0opt] [-E eofstr] [-I replstr [-R replacements]] [-S replsize]\n"
+"             [-J replstr] [-L number] [-n number [-x]] [-P maxprocs]\n"
+"             [-s size] [utility [argument ...]]\n");
 	exit(1);
 }
