@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -44,7 +40,8 @@ static char sccsid[] = "@(#)vmstat.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/vmstat/vmstat.c,v 1.86.2.3 2005/11/09 13:28:50 rwatson Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/vmstat/vmstat.c,v 1.86.2.4 2006/10/28 18:15:13 glebius Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -981,16 +978,16 @@ domemstat_zone(void)
 				    memstat_strerror(error));
 		}
 	}
-	printf("%-15s %-8s %-9s %-7s %-5s %-8s\n\n", "ITEM", "SIZE", "LIMIT",
-	    "USED", "FREE", "REQUESTS");
+	printf("%-20s %8s  %8s  %8s  %8s  %8s  %8s\n\n", "ITEM", "SIZE",
+	    "LIMIT", "USED", "FREE", "REQUESTS", "FAILURES");
 	for (mtp = memstat_mtl_first(mtlp); mtp != NULL;
 	    mtp = memstat_mtl_next(mtp)) {
 		strlcpy(name, memstat_get_name(mtp), MEMTYPE_MAXNAME);
 		strcat(name, ":");
-		printf("%-15s %4llu, %8llu, %7llu, %6llu, %8llu\n", name,
+		printf("%-20s %8llu, %8llu, %8llu, %8llu, %8llu, %8llu\n", name,
 		    memstat_get_size(mtp), memstat_get_countlimit(mtp),
 		    memstat_get_count(mtp), memstat_get_free(mtp),
-		    memstat_get_numallocs(mtp));
+		    memstat_get_numallocs(mtp), memstat_get_failures(mtp));
 	}
 	memstat_mtl_free(mtlp);
 	printf("\n");
