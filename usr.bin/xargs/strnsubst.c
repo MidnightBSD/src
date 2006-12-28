@@ -10,6 +10,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/xargs/strnsubst.c,v 1.7 2004/10/18 15:40:47 cperciva Exp $");
+__MBSDID("$MidnightBSD$);
 
 #include <err.h>
 #include <stdlib.h>
