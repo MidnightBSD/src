@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/mixer,v 1.5.2.1 2005/12/15 01:13:39 dougb Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/mixer,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: mixer
 # REQUIRE: cleanvar
@@ -34,6 +34,7 @@
 . /etc/rc.subr
 
 name="mixer"
+rcvar="mixer_enable"
 stop_cmd="mixer_stop"
 start_cmd="mixer_start"
 reload_cmd="mixer_start"
