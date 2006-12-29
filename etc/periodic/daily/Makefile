@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/periodic/daily/Makefile,v 1.2 2006/08/28 01:55:43 laffer1 Exp $
 # $FreeBSD: src/etc/periodic/daily/Makefile,v 1.12 2003/10/27 20:14:53 jesper Exp $
 
 FILES=	100.clean-disks \
@@ -13,6 +13,10 @@ FILES=	100.clean-disks \
 	310.accounting \
 	330.news \
 	400.status-disks \
+	406.status-gmirror \
+	407.status-graid3 \
+	408.status-gstripe \
+	409.status-gconcat \
 	420.status-network \
 	405.status-ata-raid \
 	430.status-rwho \
