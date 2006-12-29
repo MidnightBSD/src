@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/abi,v 1.4.2.1 2006/01/17 06:37:48 dougb Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/abi,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 
 # PROVIDE: abi
 # REQUIRE: LOGIN
@@ -11,8 +11,8 @@
 . /etc/rc.subr
 
 name="abi"
-start_precmd="${name}_prestart"
-start_cmd=":"
+start_cmd="${name}_start"
+stop_cmd=":"
 
 sysv_start()
 {
@@ -39,7 +39,7 @@ svr4_start()
 	kldload svr4 > /dev/null 2>&1
 }
 
-abi_prestart()
+abi_start()
 {
 	echo -n 'Additional ABI support:'
 
