@@ -23,6 +23,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.bin/login/login.h,v 1.4 2002/03/22 01:22:49 imp Exp $
+ * $MidnightBSD$
  */
 
 void	login_fbtab(char *, uid_t, gid_t);

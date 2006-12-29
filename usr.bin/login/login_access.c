@@ -16,6 +16,7 @@ static char sccsid[] = "%Z% %M% %I% %E% %U%";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/login/login_access.c,v 1.10 2002/03/22 01:22:49 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <ctype.h>

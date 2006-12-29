@@ -17,11 +17,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -46,6 +42,7 @@ static char sccsid[] = "@(#)login.c	8.4 (Berkeley) 4/2/94";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/login/login.c,v 1.99 2005/06/01 12:23:06 maxim Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * login [ name ]
@@ -474,7 +471,8 @@ main(int argc, char *argv[])
 	if (!pflag)
 		environ = envinit;
 	if (term != NULL)
-		setenv("TERM", term, 0);
+		if (setenv("TERM", term, 0) == -1)
+			err(1, "setenv: cannot set TERM=%s", term);
 
 	/*
 	 * PAM modules might add supplementary groups during pam_setcred().
@@ -545,16 +543,24 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	(void)setenv("SHELL", pwd->pw_shell, 1);
-	(void)setenv("HOME", pwd->pw_dir, 1);
+	if (setenv("SHELL", pwd->pw_shell, 1) == -1)
+		err(1, "setenv: cannot set SHELL=%s", pwd->pw_shell);
+	if (setenv("HOME", pwd->pw_dir, 1) == -1)
+		err(1, "setenv: cannot set HOME=%s", pwd->pw_dir);
 	/* Overwrite "term" from login.conf(5) for any known TERM */
-	if (term == NULL && (tp = stypeof(tty)) != NULL)
-		(void)setenv("TERM", tp, 1);
-	else
-		(void)setenv("TERM", TERM_UNKNOWN, 0);
-	(void)setenv("LOGNAME", username, 1);
-	(void)setenv("USER", username, 1);
-	(void)setenv("PATH", rootlogin ? _PATH_STDPATH : _PATH_DEFPATH, 0);
+	if (term == NULL && (tp = stypeof(tty)) != NULL) {
+		if (setenv("TERM", tp, 1) == -1)
+			err(1, "setenv: cannot set TERM=%s", stypeof(tty));
+	} else {
+		if (setenv("TERM", TERM_UNKNOWN, 0) == -1)
+			err(1, "setenv: cannot set TERM");
+	}
+	if (setenv("LOGNAME", username, 1) == -1)
+		err(1, "setenv: cannot set LOGNAME=%s", username);
+	if (setenv("USER", username, 1) == -1)
+		err(1, "setenv: cannot set USER=%s", username);
+	if (setenv("PATH", rootlogin ? _PATH_STDPATH : _PATH_DEFPATH, 0) == -1)
+		err(1, "setenv: cannot set PATH");
 
 	if (!quietlog) {
 		const char *cw;
