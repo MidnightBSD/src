@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/periodic/security/800.loginfail,v 1.2 2006/08/28 02:13:43 laffer1 Exp $
 # $FreeBSD: src/etc/periodic/security/800.loginfail,v 1.5 2003/01/05 21:32:50 se Exp $
 #
 
@@ -60,7 +60,7 @@ case "$daily_status_security_loginfail_enable" in
     [Yy][Ee][Ss])
 	echo ""
 	echo "${host} login failures:"
-	n=$(catmsgs | grep -ia "^$yesterday.*fail" |
+	n=$(catmsgs | egrep -ia "^$yesterday.*(fail|invalid|bad|illegal)" |
 	    tee /dev/stderr | wc -l)
 	[ $n -gt 0 ] && rc=1 || rc=0;;
     *)	rc=0;;
