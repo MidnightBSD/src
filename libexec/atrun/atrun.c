@@ -195,12 +195,12 @@ run_file(const char *filename, uid_t uid, gid_t gid)
     if ((lbuf.st_dev != buf.st_dev) || (lbuf.st_ino != buf.st_ino) ||
         (lbuf.st_uid != buf.st_uid) || (lbuf.st_gid != buf.st_gid) ||
         (lbuf.st_size!=buf.st_size)) {
-	syslog(LOG_ERR,"Somebody changed files from under us for job %s - "
+	syslog(LOG_ERR,"Someone changed files from under us for job %s - "
 	"aborting",filename);
 	exit(EXIT_FAILURE);
     }
     if (buf.st_nlink > 1) {
-	syslog(LOG_ERR,"Someboy is trying to run a linked script for job %s",
+	syslog(LOG_ERR,"Someone is trying to run a linked script for job %s",
 		filename);
 	exit(EXIT_FAILURE);
     }
