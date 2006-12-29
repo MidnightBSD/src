@@ -14660,7 +14660,6 @@ etc/periodic/security/800.loginfail -text
 etc/periodic/security/900.tcpwrap -text
 etc/periodic/security/Makefile -text
 etc/periodic/security/security.functions -text
-etc/periodic/weekly/120.clean-kvmdb -text
 etc/periodic/weekly/310.locate -text
 etc/periodic/weekly/320.whatis -text
 etc/periodic/weekly/330.catman -text
