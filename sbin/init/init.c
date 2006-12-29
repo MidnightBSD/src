@@ -55,6 +55,7 @@ static const char rcsid[] =
 #include <db.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <kenv.h>
 #include <libutil.h>
 #include <paths.h>
 #include <signal.h>
@@ -187,6 +188,8 @@ DB *session_db;
 int
 main(int argc, char *argv[])
 {
+	char init_chroot[PATH_MAX];
+	char icname[] = "init_chroot";
 	int c;
 	struct sigaction sa;
 	sigset_t mask;
@@ -238,6 +241,13 @@ invalid:
 	 * Does 'init' deserve its own facility number?
 	 */
 	openlog("init", LOG_CONS|LOG_ODELAY, LOG_AUTH);
+
+	if (kenv(KENV_GET, icname, init_chroot, sizeof(init_chroot)) > 0) {
+		if (chdir(init_chroot) != 0 || chroot(".") != 0)
+			warning("Can't chroot to %s: %m", init_chroot);
+		else
+			devfs++;
+	}
 
 	/*
 	 * Create an initial session.
