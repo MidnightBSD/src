@@ -2,7 +2,7 @@
 #
 # $NetBSD: moused,v 1.1 2001/10/29 23:25:01 augustss Exp $
 # $FreeBSD: src/etc/rc.d/moused,v 1.9 2005/01/16 03:12:03 obrien Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/moused,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: moused
 # REQUIRE: DAEMON cleanvar
@@ -23,8 +23,7 @@ load_rc_config $name
 # expected to be the mouse device.
 #
 if [ -n "$2" ]; then
-	checkyesno moused_nondefault_enable &&
-	    eval moused_$2_enable=\${moused_$2_enable-YES}
+	eval moused_$2_enable=\${moused_$2_enable-${moused_nondefault_enable}}
 	rcvar=`set_rcvar moused_$2`
 	pidfile="${_pidprefix}.$2.pid"
 	_pidarg="-I $pidfile"
