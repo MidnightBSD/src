@@ -57,7 +57,7 @@
  *		is created, otherwise 1.
  */
 #undef __FreeBSD_version
-#define __FreeBSD_version 600104	/* Master, propagated to newvers */
+#define __FreeBSD_version 600105	/* Master, propagated to newvers */
 
 #undef __MidnightBSD_version
 #define __MidnightBSD_version	001000
