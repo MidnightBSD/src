@@ -33,6 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/lib/libutil/libutil.h,v 1.40.8.1 2006/01/15 17:50:35 delphij Exp $
  */
 
@@ -65,6 +66,13 @@ struct winsize;
 struct utmp;
 struct in_addr;
 
+#if __BSD_VISIBLE || __POSIX_VISIBLE >= 200112 || __XSI_VISIBLE
+#ifndef _VA_LIST_DECLARED
+typedef	__va_list	va_list;
+#define	_VA_LIST_DECLARED
+#endif
+#endif
+
 __BEGIN_DECLS
 void	clean_environment(const char * const *_white,
 	    const char * const *_more_white);
@@ -94,6 +102,21 @@ int	realhostname(char *host, size_t hsize, const struct in_addr *ip);
 struct sockaddr;
 int	realhostname_sa(char *host, size_t hsize, struct sockaddr *addr,
 			     int addrlen);
+void		(*esetfunc(void (*)(int, const char *, ...)))
+    (int, const char *, ...);
+size_t 		estrlcpy(char *, const char *, size_t);
+size_t 		estrlcat(char *, const char *, size_t);
+char 		*estrdup(const char *);
+void 		*ecalloc(size_t, size_t);
+void 		*emalloc(size_t);
+void 		*erealloc(void *, size_t);
+struct __sFILE	*efopen(const char *, const char *);
+#ifdef __BSD_VISIBLE
+int	 	easprintf(char **, const char *, ...)
+    __printflike(2, 3);
+int		evasprintf(char **, const char *, __va_list)
+    __printflike(2, 0);
+#endif
 #ifdef _STDIO_H_	/* avoid adding new includes */
 char   *fparseln(FILE *, size_t *, size_t *, const char[3], int);
 #endif

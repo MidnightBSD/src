@@ -2,11 +2,11 @@
 #	$FreeBSD: src/lib/libutil/Makefile,v 1.56.8.2 2006/01/15 17:50:35 delphij Exp $
 
 LIB=	util
-SHLIB_MAJOR= 5
+SHLIB_MAJOR= 6
 SHLIBDIR?= /lib
 CFLAGS+=-DLIBC_SCCS -I${.CURDIR} -I${.CURDIR}/../libc/gen/
 CFLAGS+=-DINET6
-SRCS=	_secure_path.c auth.c fparseln.c humanize_number.c login.c \
+SRCS=	_secure_path.c auth.c efun.c fparseln.c humanize_number.c login.c \
 	login_auth.c login_cap.c login_class.c login_crypt.c login_ok.c \
 	login_times.c login_tty.c logout.c logwtmp.c \
 	pidfile.c property.c pty.c pw_util.c realhostname.c stub.c \
@@ -17,7 +17,7 @@ MAN+=	login.3 login_auth.3 login_tty.3 logout.3 logwtmp.3 pty.3 \
 	login_cap.3 login_class.3 login_times.3 login_ok.3 \
 	_secure_path.3 uucplock.3 property.3 auth.3 realhostname.3 \
 	realhostname_sa.3 trimdomain.3 fparseln.3 humanize_number.3 \
-	pidfile.3
+	pidfile.3 efun.3
 MAN+=	login.conf.5 auth.conf.5
 MLINKS+= property.3 properties_read.3  property.3 properties_free.3
 MLINKS+= property.3 property_find.3
@@ -44,5 +44,15 @@ MLINKS+=pidfile.3 pidfile_open.3 \
 	pidfile.3 pidfile_write.3 \
 	pidfile.3 pidfile_close.3 \
 	pidfile.3 pidfile_remove.3
+MLINKS+=efun.3 esetfunc.3 \
+	efun.3 estrlcpy.3 \
+	efun.3 estrlcat.3 \
+	efun.3 estrdup.3 \
+	efun.3 ecalloc.3 \
+	efun.3 emalloc.3 \
+	efun.3 erealloc.3 \
+	efun.3 easprintf.3 \
+	efun.3 efopen.3 \
+	efun.3 evasprintf.3
 
 .include <bsd.lib.mk>
