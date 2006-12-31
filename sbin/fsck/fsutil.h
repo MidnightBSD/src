@@ -39,9 +39,6 @@ const char *devcheck(const char *);
 const char *cdevname(void);
 void setcdevname(const char *, int);
 struct statfs *getmntpt(const char *);
-void *emalloc(size_t);
-void *erealloc(void *, size_t);
-char *estrdup(const char *);
 
 #define	CHECK_PREEN	0x0001
 #define	CHECK_VERBOSE	0x0002

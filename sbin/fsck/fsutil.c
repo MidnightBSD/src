@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: src/sbin/fsck/fsutil.c,v 1.8 2004/04/09 19:58:28 markm Exp $
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <libutil.h>
 #include "fsutil.h"
 
 static const char *dev = NULL;

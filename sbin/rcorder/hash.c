@@ -57,6 +57,8 @@ __RCSID("$NetBSD: hash.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $");
 #include <string.h>
 #include <unistd.h>
 
+#include <libutil.h>
+
 /* hash.c --
  *
  * 	This module contains routines to manipulate a hash table.
@@ -69,7 +71,6 @@ __RCSID("$NetBSD: hash.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $");
 #include "make.h"
 #endif /* ORDER */
 #include "hash.h"
-#include "ealloc.h"
 
 /*
  * Forward references to local procedures that are used before they're

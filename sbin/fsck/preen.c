@@ -52,6 +52,7 @@ __RCSID("$NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $");
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <libutil.h>
 
 #include "fsutil.h"
 

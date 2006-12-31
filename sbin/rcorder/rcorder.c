@@ -45,9 +45,8 @@ __FBSDID("$FreeBSD: src/sbin/rcorder/rcorder.c,v 1.1.1.2.14.1 2006/01/26 01:30:1
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <util.h>
+#include <libutil.h>
 
-#include "ealloc.h"
 #include "sprite.h"
 #include "hash.h"
 

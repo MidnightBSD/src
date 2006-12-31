@@ -60,6 +60,7 @@ __FBSDID("$FreeBSD: src/sbin/fsck/fsck.c,v 1.18 2005/02/10 09:19:29 ru Exp $");
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <libutil.h>
 
 #include "fsutil.h"
 
