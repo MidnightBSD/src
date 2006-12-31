@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.2 2006/08/24 00:18:42 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -60,6 +60,8 @@
             ..
         ..
         dict
+		special
+		..
         ..
         doc
             IPv6
