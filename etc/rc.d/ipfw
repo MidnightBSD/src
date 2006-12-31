@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/ipfw,v 1.10.2.1 2006/01/21 22:42:43 yar Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/ipfw,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: ipfw
 # REQUIRE: ppp
@@ -41,7 +41,7 @@ ipfw_start()
 		fi
 		. "${firewall_script}"
 		echo -n 'Firewall rules loaded'
-	elif [ "`ipfw l 65535`" = "65535 deny ip from any to any" ]; then
+	elif [ "`ipfw list 65535`" = "65535 deny ip from any to any" ]; then
 		echo 'Warning: kernel has firewall functionality, but' \
 		    ' firewall rules are not enabled.'
 		echo '           All ip services are disabled.'
