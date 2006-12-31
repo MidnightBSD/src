@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132.2.2 2006/02/12 15:23:50 delphij Exp $
  *
  * Copyright (c) 1995
@@ -495,7 +495,7 @@ tcpOpenDialog(Device *devp)
     dialog_clear_norefresh();
 
     /* Modify the help line for PLIP config */
-    if (!strncmp(devp->name, "lp", 2))
+    if (!strncmp(devp->name, "plip", 2))
 	layout[LAYOUT_EXTRAS].help = 
          "For PLIP configuration, you must enter the peer's IP address here.";
 
