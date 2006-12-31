@@ -11,6 +11,7 @@
 
 import os
 import sys
+import file
 
 try:
     arch = os.environ["PKG_ARCH"]
@@ -18,10 +19,10 @@ except:
     arch = os.uname()[4]
 print "Using arch %s" % (arch)
 
-if 'PKG_VERBOSE' in os.environ:
-    verbose = 1
-else:
-    verbose = 0
+#if os.environ["PKG_VERBOSE"] == 1:
+verbose = 1
+#else:
+#    verbose = 0
 
 # List of packages for disc1.  This just includes packages sysinstall can
 # install as a distribution

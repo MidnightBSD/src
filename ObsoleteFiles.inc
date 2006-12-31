@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.5 2006/10/31 19:20:59 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.6 2006/12/27 00:48:45 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -14,6 +14,13 @@
 #
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
+
+# 20061231: Remove portsnap
+OLD_FILES+=etc/portsnap.conf
+OLD_FILES+=usr/sbin/portsnap
+OLD_FILES+=usr/share/man/cat8/portsnap.8.gz
+OLD_FILES+=usr/share/man/man5/portsnap.conf.5.gz
+OLD_FILES+=usr/share/man/man8/portsnap.8.gz
 
 # 20061226: Remove FreeBSD CVSup files
 OLD_FILES+=usr/share/examples/cvsup/cvs-supfile
