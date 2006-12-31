@@ -30631,6 +30631,9 @@ usr.bin/sed/main.c -text
 usr.bin/sed/misc.c -text
 usr.bin/sed/process.c -text
 usr.bin/sed/sed.1 -text
+usr.bin/seq/Makefile -text
+usr.bin/seq/seq.1 -text
+usr.bin/seq/seq.c -text
 usr.bin/shar/Makefile -text
 usr.bin/shar/shar.1 -text
 usr.bin/shar/shar.sh -text
