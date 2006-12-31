@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.9.2.4 2006/01/22 13:16:13 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.9.2.8 2006/05/16 07:27:48 ps Exp $");
 
 #include "opt_mac.h"
 #include "opt_param.h"
@@ -74,20 +74,20 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.9.2.4 2006/01/22 13:16:13 glebi
  *  [ Cluster Zone  ]   [     Zone     ]   [ Mbuf Master Zone ]
  *        |                       \________         |
  *  [ Cluster Keg   ]                      \       /
- *        |    	                         [ Mbuf Keg   ] 
+ *        |    	                         [ Mbuf Keg   ]
  *  [ Cluster Slabs ]                         |
  *        |                              [ Mbuf Slabs ]
  *         \____________(VM)_________________/
  *
  *
- * Whenever a object is allocated with uma_zalloc() out of the
+ * Whenever an object is allocated with uma_zalloc() out of
  * one of the Zones its _ctor_ function is executed.  The same
- * for any deallocation through uma_zfree() the _dror_ function
+ * for any deallocation through uma_zfree() the _dtor_ function
  * is executed.
- * 
+ *
  * Caches are per-CPU and are filled from the Master Zone.
  *
- * Whenever a object is allocated from the underlying global
+ * Whenever an object is allocated from the underlying global
  * memory pool it gets pre-initialized with the _zinit_ functions.
  * When the Keg's are overfull objects get decomissioned with
  * _zfini_ functions and free'd back to the global memory pool.
@@ -95,7 +95,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.9.2.4 2006/01/22 13:16:13 glebi
  */
 
 int nmbclusters;		/* limits number of mbuf clusters */
-int nmbjumbo4;			/* limits number of 4k jumbo clusters */
+int nmbjumbop;			/* limits number of page size jumbo clusters */
 int nmbjumbo9;			/* limits number of 9k jumbo clusters */
 int nmbjumbo16;			/* limits number of 16k jumbo clusters */
 struct mbstat mbstat;
@@ -111,10 +111,28 @@ tunable_mbinit(void *dummy)
 SYSINIT(tunable_mbinit, SI_SUB_TUNABLES, SI_ORDER_ANY, tunable_mbinit, NULL);
 
 SYSCTL_DECL(_kern_ipc);
-SYSCTL_INT(_kern_ipc, OID_AUTO, nmbclusters, CTLFLAG_RW, &nmbclusters, 0,
+static int
+sysctl_nmbclusters(SYSCTL_HANDLER_ARGS)
+{
+	int error, newnmbclusters;
+
+	newnmbclusters = nmbclusters;
+	error = sysctl_handle_int(oidp, &newnmbclusters, sizeof(int), req); 
+	if (error == 0 && req->newptr) {
+		if (newnmbclusters > nmbclusters) {
+			nmbclusters = newnmbclusters;
+			uma_zone_set_max(zone_clust, nmbclusters);
+			EVENTHANDLER_INVOKE(nmbclusters_change);
+		} else
+			error = EINVAL;
+	}
+	return (error);
+}
+SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbclusters, CTLTYPE_INT|CTLFLAG_RW,
+    &nmbclusters, 0, sysctl_nmbclusters, "IU",
     "Maximum number of mbuf clusters allowed");
-SYSCTL_INT(_kern_ipc, OID_AUTO, nmbjumbo4, CTLFLAG_RW, &nmbjumbo4, 0,
-    "Maximum number of mbuf 4k jumbo clusters allowed");
+SYSCTL_INT(_kern_ipc, OID_AUTO, nmbjumbop, CTLFLAG_RW, &nmbjumbop, 0,
+    "Maximum number of mbuf page size jumbo clusters allowed");
 SYSCTL_INT(_kern_ipc, OID_AUTO, nmbjumbo9, CTLFLAG_RW, &nmbjumbo9, 0,
     "Maximum number of mbuf 9k jumbo clusters allowed");
 SYSCTL_INT(_kern_ipc, OID_AUTO, nmbjumbo16, CTLFLAG_RW, &nmbjumbo16, 0,
@@ -128,7 +146,7 @@ SYSCTL_STRUCT(_kern_ipc, OID_AUTO, mbstat, CTLFLAG_RD, &mbstat, mbstat,
 uma_zone_t	zone_mbuf;
 uma_zone_t	zone_clust;
 uma_zone_t	zone_pack;
-uma_zone_t	zone_jumbo4;
+uma_zone_t	zone_jumbop;
 uma_zone_t	zone_jumbo9;
 uma_zone_t	zone_jumbo16;
 
@@ -185,8 +203,8 @@ mbuf_init(void *dummy)
 	zone_pack = uma_zsecond_create(MBUF_PACKET_MEM_NAME, mb_ctor_pack,
 	    mb_dtor_pack, mb_zinit_pack, mb_zfini_pack, zone_mbuf);
 
-	/* Make jumbo frame zone too. 4k, 9k and 16k. */
-	zone_jumbo4 = uma_zcreate(MBUF_JUMBO4_MEM_NAME, MJUM4BYTES,
+	/* Make jumbo frame zone too. Page size, 9k and 16k. */
+	zone_jumbop = uma_zcreate(MBUF_JUMBOP_MEM_NAME, MJUMPAGESIZE,
 	    mb_ctor_clust, mb_dtor_clust,
 #ifdef INVARIANTS
 	    trash_init, trash_fini,
@@ -194,8 +212,8 @@ mbuf_init(void *dummy)
 	    NULL, NULL,
 #endif
 	    UMA_ALIGN_PTR, UMA_ZONE_REFCNT);
-	if (nmbjumbo4 > 0)
-		uma_zone_set_max(zone_jumbo4, nmbjumbo4);
+	if (nmbjumbop > 0)
+		uma_zone_set_max(zone_jumbop, nmbjumbop);
 
 	zone_jumbo9 = uma_zcreate(MBUF_JUMBO9_MEM_NAME, MJUM9BYTES,
 	    mb_ctor_clust, mb_dtor_clust,
@@ -277,7 +295,7 @@ mb_ctor_mbuf(void *mem, int size, void *arg, int how)
 
 	/*
 	 * The mbuf is initialized later.  The caller has the
-	 * responseability to setup any MAC labels too.
+	 * responsibility to set up any MAC labels too.
 	 */
 	if (type == MT_NOINIT)
 		return (0);
@@ -351,7 +369,7 @@ mb_dtor_pack(void *mem, int size, void *arg)
 }
 
 /*
- * The Cluster and Jumbo[9|16] zone constructor.
+ * The Cluster and Jumbo[PAGESIZE|9|16] zone constructor.
  *
  * Here the 'arg' pointer points to the Mbuf which we
  * are configuring cluster storage for.  If 'arg' is
@@ -373,9 +391,9 @@ mb_ctor_clust(void *mem, int size, void *arg, int how)
 		case MCLBYTES:
 			type = EXT_CLUSTER;
 			break;
-#if MJUM4BYTES != MCLBYTES
-		case MJUM4BYTES:
-			type = EXT_JUMBO4;
+#if MJUMPAGESIZE != MCLBYTES
+		case MJUMPAGESIZE:
+			type = EXT_JUMBOP;
 			break;
 #endif
 		case MJUM9BYTES:
@@ -423,8 +441,8 @@ mb_zinit_pack(void *mem, int size, int how)
 	struct mbuf *m;
 
 	m = (struct mbuf *)mem;
-	uma_zalloc_arg(zone_clust, m, how);
-	if (m->m_ext.ext_buf == NULL)
+	if (uma_zalloc_arg(zone_clust, m, how) == NULL ||
+	    m->m_ext.ext_buf == NULL)
 		return (ENOMEM);
 	m->m_ext.ext_type = EXT_PACKET;	/* Override. */
 #ifdef INVARIANTS

@@ -59,6 +59,9 @@
 #undef __FreeBSD_version
 #define __FreeBSD_version 600104	/* Master, propagated to newvers */
 
+#undef __MidnightBSD_version
+#define __MidnightBSD_version	001000
+
 #ifndef LOCORE
 #include <sys/types.h>
 #endif
@@ -145,7 +148,7 @@
 
 #define MCLBYTES	(1 << MCLSHIFT)	/* size of an mbuf cluster */
 
-#define	MJUM4BYTES	(4 * 1024)	/* jumbo cluster 4k */
+#define	MJUMPAGESIZE	PAGE_SIZE	/* jumbo cluster 4k */
 #define	MJUM9BYTES	(9 * 1024)	/* jumbo cluster 9k */
 #define	MJUM16BYTES	(16 * 1024)	/* jumbo cluster 16k */
 
