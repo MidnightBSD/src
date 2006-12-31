@@ -1,5 +1,6 @@
 #	@(#)README	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/dict/README,v 1.13 2003/01/24 20:51:03 wollman Exp $
+# $MidnightBSD$
 
 WEB ---- (introduction provided by jaw@riacs) -------------------------
 
@@ -37,3 +38,5 @@ A list of technical terms has been added in the file 'freebsd'.  This
 word list contains FreeBSD/Unix lexicon that is used by the system
 documentation.  It makes a great ispell(1) personal dictionary to
 supplement the standard English language dictionary.
+
+american, british, stop and special/math were added for spell(1)

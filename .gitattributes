@@ -20638,8 +20638,12 @@ share/colldef/uk_UA.ISO8859-5.src -text
 share/colldef/uk_UA.KOI8-U.src -text
 share/dict/Makefile -text
 share/dict/README -text
+share/dict/american -text
+share/dict/british -text
 share/dict/freebsd -text
 share/dict/propernames -text
+share/dict/special/math -text
+share/dict/stop -text
 share/dict/web2 -text
 share/dict/web2a -text
 share/doc/IPv6/IMPLEMENTATION -text
