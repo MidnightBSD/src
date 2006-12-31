@@ -28730,6 +28730,7 @@ sys/sys/firmware.h -text
 sys/sys/fnv_hash.h -text
 sys/sys/gmon.h -text
 sys/sys/gpt.h -text
+sys/sys/hash.h -text
 sys/sys/iconv.h -text
 sys/sys/imgact.h -text
 sys/sys/imgact_aout.h -text
