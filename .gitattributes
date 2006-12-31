@@ -10856,6 +10856,7 @@ contrib/tcsh/ma.setp.c -text
 contrib/tcsh/mi.termios.c -text
 contrib/tcsh/mi.varargs.h -text
 contrib/tcsh/mi.wait.h -text
+contrib/tcsh/nls/C/charset -text
 contrib/tcsh/nls/C/set1 -text
 contrib/tcsh/nls/C/set10 -text
 contrib/tcsh/nls/C/set11 -text
@@ -10887,6 +10888,7 @@ contrib/tcsh/nls/C/set7 -text
 contrib/tcsh/nls/C/set8 -text
 contrib/tcsh/nls/C/set9 -text
 contrib/tcsh/nls/Makefile -text
+contrib/tcsh/nls/et/charset -text
 contrib/tcsh/nls/et/set1 -text
 contrib/tcsh/nls/et/set10 -text
 contrib/tcsh/nls/et/set11 -text
@@ -10917,6 +10919,7 @@ contrib/tcsh/nls/et/set6 -text
 contrib/tcsh/nls/et/set7 -text
 contrib/tcsh/nls/et/set8 -text
 contrib/tcsh/nls/et/set9 -text
+contrib/tcsh/nls/finnish/charset -text
 contrib/tcsh/nls/finnish/set1 -text
 contrib/tcsh/nls/finnish/set10 -text
 contrib/tcsh/nls/finnish/set11 -text
@@ -10947,6 +10950,7 @@ contrib/tcsh/nls/finnish/set6 -text
 contrib/tcsh/nls/finnish/set7 -text
 contrib/tcsh/nls/finnish/set8 -text
 contrib/tcsh/nls/finnish/set9 -text
+contrib/tcsh/nls/french/charset -text
 contrib/tcsh/nls/french/set1 -text
 contrib/tcsh/nls/french/set10 -text
 contrib/tcsh/nls/french/set11 -text
@@ -10977,6 +10981,7 @@ contrib/tcsh/nls/french/set6 -text
 contrib/tcsh/nls/french/set7 -text
 contrib/tcsh/nls/french/set8 -text
 contrib/tcsh/nls/french/set9 -text
+contrib/tcsh/nls/german/charset -text
 contrib/tcsh/nls/german/set1 -text
 contrib/tcsh/nls/german/set10 -text
 contrib/tcsh/nls/german/set11 -text
@@ -11007,6 +11012,7 @@ contrib/tcsh/nls/german/set6 -text
 contrib/tcsh/nls/german/set7 -text
 contrib/tcsh/nls/german/set8 -text
 contrib/tcsh/nls/german/set9 -text
+contrib/tcsh/nls/greek/charset -text
 contrib/tcsh/nls/greek/set1 -text
 contrib/tcsh/nls/greek/set10 -text
 contrib/tcsh/nls/greek/set11 -text
@@ -11037,6 +11043,7 @@ contrib/tcsh/nls/greek/set6 -text
 contrib/tcsh/nls/greek/set7 -text
 contrib/tcsh/nls/greek/set8 -text
 contrib/tcsh/nls/greek/set9 -text
+contrib/tcsh/nls/italian/charset -text
 contrib/tcsh/nls/italian/set1 -text
 contrib/tcsh/nls/italian/set10 -text
 contrib/tcsh/nls/italian/set11 -text
@@ -11067,6 +11074,7 @@ contrib/tcsh/nls/italian/set6 -text
 contrib/tcsh/nls/italian/set7 -text
 contrib/tcsh/nls/italian/set8 -text
 contrib/tcsh/nls/italian/set9 -text
+contrib/tcsh/nls/ja/charset -text
 contrib/tcsh/nls/ja/set1 -text
 contrib/tcsh/nls/ja/set10 -text
 contrib/tcsh/nls/ja/set11 -text
@@ -11088,6 +11096,7 @@ contrib/tcsh/nls/ja/set6 -text
 contrib/tcsh/nls/ja/set7 -text
 contrib/tcsh/nls/ja/set8 -text
 contrib/tcsh/nls/pl/README -text
+contrib/tcsh/nls/pl/charset -text
 contrib/tcsh/nls/pl/set1 -text
 contrib/tcsh/nls/pl/set10 -text
 contrib/tcsh/nls/pl/set11 -text
@@ -11118,6 +11127,7 @@ contrib/tcsh/nls/pl/set6 -text
 contrib/tcsh/nls/pl/set7 -text
 contrib/tcsh/nls/pl/set8 -text
 contrib/tcsh/nls/pl/set9 -text
+contrib/tcsh/nls/russian/charset -text
 contrib/tcsh/nls/russian/set1 -text
 contrib/tcsh/nls/russian/set10 -text
 contrib/tcsh/nls/russian/set11 -text
@@ -11148,6 +11158,7 @@ contrib/tcsh/nls/russian/set6 -text
 contrib/tcsh/nls/russian/set7 -text
 contrib/tcsh/nls/russian/set8 -text
 contrib/tcsh/nls/russian/set9 -text
+contrib/tcsh/nls/spanish/charset -text
 contrib/tcsh/nls/spanish/set1 -text
 contrib/tcsh/nls/spanish/set10 -text
 contrib/tcsh/nls/spanish/set11 -text
@@ -11178,6 +11189,7 @@ contrib/tcsh/nls/spanish/set6 -text
 contrib/tcsh/nls/spanish/set7 -text
 contrib/tcsh/nls/spanish/set8 -text
 contrib/tcsh/nls/spanish/set9 -text
+contrib/tcsh/nls/ukrainian/charset -text
 contrib/tcsh/nls/ukrainian/set1 -text
 contrib/tcsh/nls/ukrainian/set10 -text
 contrib/tcsh/nls/ukrainian/set11 -text
