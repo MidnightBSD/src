@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 #	$FreeBSD: src/share/man/man5/Makefile,v 1.58.2.2 2005/12/05 18:54:45 emax Exp $
+# $MidnightBSD$
 
 #MISSING: dump.5 plot.5
 MAN=	acct.5 \
@@ -42,7 +43,6 @@ MAN=	acct.5 \
 	nsswitch.conf.5 \
 	passwd.5 \
 	pbm.5 \
-	portsnap.conf.5 \
 	periodic.conf.5 \
 	phones.5 \
 	procfs.5 \
