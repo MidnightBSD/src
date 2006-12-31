@@ -29999,6 +29999,10 @@ usr.bin/ctags/yacc.c -text
 usr.bin/cut/Makefile -text
 usr.bin/cut/cut.1 -text
 usr.bin/cut/cut.c -text
+usr.bin/deroff/Makefile -text
+usr.bin/deroff/TODO -text
+usr.bin/deroff/deroff.1 -text
+usr.bin/deroff/deroff.c -text
 usr.bin/dig/Makefile -text
 usr.bin/dirname/Makefile -text
 usr.bin/dirname/dirname.c -text
