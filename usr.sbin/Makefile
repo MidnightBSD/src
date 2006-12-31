@@ -111,7 +111,6 @@ SUBDIR=	ac \
 	pmccontrol \
 	pmcstat \
 	${_pnpinfo} \
-	portsnap \
 	powerd \
 	ppp \
 	${_pppctl} \

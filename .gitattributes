@@ -32328,15 +32328,6 @@ usr.sbin/pmcstat/pmcstat.c -text
 usr.sbin/pmcstat/pmcstat.h -text
 usr.sbin/pmcstat/pmcstat_log.c -text
 usr.sbin/pnpinfo/Makefile -text
-usr.sbin/portsnap/Makefile -text
-usr.sbin/portsnap/Makefile.inc -text
-usr.sbin/portsnap/make_index/Makefile -text
-usr.sbin/portsnap/make_index/make_index.c -text
-usr.sbin/portsnap/phttpget/Makefile -text
-usr.sbin/portsnap/phttpget/phttpget.c -text
-usr.sbin/portsnap/portsnap/Makefile -text
-usr.sbin/portsnap/portsnap/portsnap.8 -text
-usr.sbin/portsnap/portsnap/portsnap.sh -text
 usr.sbin/powerd/Makefile -text
 usr.sbin/powerd/powerd.8 -text
 usr.sbin/powerd/powerd.c -text
