@@ -20655,6 +20655,7 @@ share/dict/american -text
 share/dict/british -text
 share/dict/freebsd -text
 share/dict/propernames -text
+share/dict/special/Makefile -text
 share/dict/special/math -text
 share/dict/stop -text
 share/dict/web2 -text
