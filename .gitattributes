@@ -14688,7 +14688,6 @@ etc/periodic/weekly/Makefile -text
 etc/pf.conf -text
 etc/pf.os -text
 etc/phones -text
-etc/portsnap.conf -text
 etc/ppp/ppp.conf -text
 etc/printcap -text
 etc/profile -text
