@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/devices.c,v 1.160.2.1 2005/07/28 01:17:12 grehan Exp $
  *
  * Copyright (c) 1995
@@ -138,7 +138,7 @@ static struct _devname {
     { DEVICE_TYPE_NETWORK,	"xl",		"3COM 3c90x / 3c90xB PCI ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"cuad%d",	"%s on device %s (COM%d)",	28, 128, 1, 16			},
     { DEVICE_TYPE_NETWORK,	"fwe",		"FireWire Ethernet emulation"					},
-    { DEVICE_TYPE_NETWORK,	"lp",		"Parallel Port IP (PLIP) peer connection"			},
+    { DEVICE_TYPE_NETWORK,	"plip",		"Parallel Port IP (PLIP) peer connection"			},
     { DEVICE_TYPE_NETWORK,	"lo",		"Loop-back (local) network interface"				},
     { DEVICE_TYPE_NETWORK,	"disc",		"Software discard network interface"				},
     { 0 },
