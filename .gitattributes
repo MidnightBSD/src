@@ -18589,6 +18589,8 @@ lib/libutil/_secure_path.c -text
 lib/libutil/auth.3 -text
 lib/libutil/auth.c -text
 lib/libutil/auth.conf.5 -text
+lib/libutil/efun.3 -text
+lib/libutil/efun.c -text
 lib/libutil/fparseln.3 -text
 lib/libutil/fparseln.c -text
 lib/libutil/humanize_number.3 -text
