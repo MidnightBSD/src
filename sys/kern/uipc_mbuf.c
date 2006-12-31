@@ -257,7 +257,7 @@ mb_free_ext(struct mbuf *m)
 			m->m_ext.ext_buf = NULL;
 			break;
 		case EXT_JUMBOP:
-			uma_zfree(zone_jumbo4, m->m_ext.ext_buf);
+			uma_zfree(zone_jumbop, m->m_ext.ext_buf);
 			break;
 		case EXT_JUMBO9:
 			uma_zfree(zone_jumbo9, m->m_ext.ext_buf);
