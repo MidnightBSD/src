@@ -35,9 +35,9 @@
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man8/rc.subr.8,v 1.6.8.1 2006/01/22 13:19:13 yar Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man8/rc.subr.8,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 .\"
-.Dd October 26, 2005
+.Dd December 31, 2006
 .Dt RC.SUBR 8
 .Os
 .Sh NAME
@@ -450,6 +450,8 @@ Full path to the command.
 Not required if
 .Ar argument Ns Va _cmd
 is defined for each supported keyword.
+Can be overridden by
+.Va ${name}_program .
 .It Va command_args
 Optional arguments and/or shell directives for
 .Va command .
@@ -538,6 +540,19 @@ as.
 Only supported after
 .Pa /usr
 is mounted.
+.It Va ${name}_program
+Full path to the command.
+Overrides
+.Va command
+if both are set, but has no effect if
+.Va command
+is unset.
+As a rule,
+.Va command
+should be set in the script while
+.Va ${name}_program
+should be set in
+.Xr rc.conf 5 .
 .It Va ${name}_user
 User to run
 .Va command
