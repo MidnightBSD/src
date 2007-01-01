@@ -14,8 +14,8 @@
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
-
-/* $Id: query.c,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $MidnightBSD$ */
+/* $Id: query.c,v 1.2 2007-01-01 01:25:05 laffer1 Exp $ */
 
 #include <config.h>
 
