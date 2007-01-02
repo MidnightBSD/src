@@ -190,6 +190,7 @@ timeest(void)
 {
 	double percent;
 	time_t	tnow, tdone;
+	char *tdone_str;
 	int deltat, hours, mins;
 
 	(void)time(&tnow);
@@ -207,15 +208,17 @@ timeest(void)
 		hours = deltat / 3600;
 		mins = (deltat % 3600) / 60;
 
+		tdone_str = ctime(&tdone);
+		tdone_str[strlen(tdone_str) - 1] = '\0';
 		setproctitle(
 		    "%s: pass %d: %3.2f%% done, finished in %d:%02d at %s",
-		    disk, passno, percent, hours, mins, ctime(&tdone));
+		    disk, passno, percent, hours, mins, tdone_str);
 		if (tnow >= tschedule) {
 			tschedule = tnow + 300;
 			if (blockswritten < 500)
 				return;
-			msg("%3.2f%% done, finished in %d:%02d at %s", percent,
-			    hours, mins, ctime(&tdone));
+			msg("%3.2f%% done, finished in %d:%02d at %s\n", percent,
+			    hours, mins, tdone_str);
 		}
 	}
 }
