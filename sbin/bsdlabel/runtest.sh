@@ -1,9 +1,10 @@
 #!/bin/sh
 # $FreeBSD: src/sbin/bsdlabel/runtest.sh,v 1.5 2003/06/07 09:09:39 phk Exp $
+# $MidnightBSD$
 
 TMP=/tmp/$$.
 set -e
-for TEST in "i386 512" "i386 4096" "alpha 512"
+for TEST in "i386 512" "i386 4096"
 do
 	set $TEST
 	ARCH=$1
@@ -15,11 +16,7 @@ do
 	./bsdlabel -m ${ARCH} -r -w $MD auto
 
 	dd if=/dev/$MD of=${TMP}i0 count=1 bs=8k > /dev/null 2>&1
-	if [ "$ARCH" = "alpha" ] ; then
-		dd if=${TMP}i0 of=${TMP}b0 iseek=1 count=15 > /dev/null 2>&1
-	else
-		cp ${TMP}i0 ${TMP}b0
-	fi
+	cp ${TMP}i0 ${TMP}b0
 	./bsdlabel -m ${ARCH} $MD > ${TMP}l0
 
 	sed '

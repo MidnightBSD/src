@@ -28,6 +28,7 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
  * $FreeBSD: src/sbin/bsdlabel/pathnames.h,v 1.5 2004/04/09 19:58:25 markm Exp $
+ * $MidnightBSD$ 
  */
 
 #include <paths.h>
