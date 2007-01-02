@@ -30,8 +30,9 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/sbin/rcorder/rcorder.8,v 1.4 2004/07/02 18:37:52 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd July 17, 2000
+.Dd January 2, 2007
 .Dt RCORDER 8
 .Os
 .Sh NAME
@@ -41,6 +42,8 @@
 .Nm
 .Op Fl k Ar keep
 .Op Fl s Ar skip
+.Op Fl o Ar keyword
+.Op Fl p
 .Ar
 .Sh DESCRIPTION
 The
@@ -104,6 +107,11 @@ Add the specified keyword to the
 If any
 .Fl s
 option is given, files containing the matching keyword are not listed.
+.It Fl o
+Generate the dependancy list required to execute matching the keyword.
+.It Fl p
+Generates the PROVIDE keywords for the
+specified files.
 .El
 .Pp
 An example block follows:
@@ -159,6 +167,13 @@ The
 .Nm
 utility first appeared in
 .Nx 1.5 .
+.Pp
+The 
+.Fl o
+and
+.Fl p
+options were added from
+.Dx 1.0 .
 .Sh AUTHORS
 .An -nosplit
 Written by
