@@ -7,11 +7,13 @@ WARNS?=	1
 
 NO_SHARED?=YES
 
-DPADD=	${LIBL}
-LDADD=	-ll
+DPADD=	${LIBL} ${LIBUTIL}
+LDADD=	-ll -lutil
 
 YFLAGS+=-v
 CFLAGS+=-I. -I${.CURDIR}
+
+WARNS?=6
 
 CLEANFILES= y.output
 
