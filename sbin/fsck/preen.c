@@ -1,6 +1,3 @@
-/* $MidnightBSD$ */
-/*	$NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $	*/
-
 /*
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -29,17 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * @(#)preen.c     8.5 (Berkeley) 4/28/95
+ * $NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $
  * $FreeBSD: src/sbin/fsck/preen.c,v 1.28 2004/04/09 19:58:28 markm Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
-#ifndef lint
-#if 0
-static char sccsid[] = "@(#)preen.c	8.5 (Berkeley) 4/28/95";
-#else
-__RCSID("$NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $");
-#endif
-#endif /* not lint */
 
 #include <sys/param.h>
 #include <sys/stat.h>
