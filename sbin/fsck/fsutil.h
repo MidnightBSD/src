@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: fsutil.h,v 1.4 1998/07/26 20:02:36 mycroft Exp $	*/
 
 /*

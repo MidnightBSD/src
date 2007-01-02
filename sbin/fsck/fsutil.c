@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $	*/
 
 /*
@@ -34,6 +35,7 @@
 __RCSID("$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $");
 #endif /* not lint */
 __FBSDID("$FreeBSD: src/sbin/fsck/fsutil.c,v 1.8 2004/04/09 19:58:28 markm Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -156,7 +158,7 @@ getmntpt(const char *name)
 {
 	struct stat devstat, mntdevstat;
 	char device[sizeof(_PATH_DEV) - 1 + MNAMELEN];
-	char *devname;
+	char *devicename;
 	struct statfs *mntbuf, *statfsp;
 	int i, mntsize, isdev;
 
@@ -169,10 +171,10 @@ getmntpt(const char *name)
 	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
 	for (i = 0; i < mntsize; i++) {
 		statfsp = &mntbuf[i];
-		devname = statfsp->f_mntfromname;
-		if (*devname != '/') {
+		devicename = statfsp->f_mntfromname;
+		if (*devicename != '/') {
 			strcpy(device, _PATH_DEV);
-			strcat(device, devname);
+			strcat(device, devicename);
 			strcpy(statfsp->f_mntfromname, device);
 		}
 		if (isdev == 0) {
@@ -180,7 +182,7 @@ getmntpt(const char *name)
 				continue;
 			return (statfsp);
 		}
-		if (stat(devname, &mntdevstat) == 0 &&
+		if (stat(devicename, &mntdevstat) == 0 &&
 		    mntdevstat.st_rdev == devstat.st_rdev)
 			return (statfsp);
 	}

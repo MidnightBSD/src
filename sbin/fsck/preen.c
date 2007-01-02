@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: preen.c,v 1.18 1998/07/26 20:02:36 mycroft Exp $	*/
 
 /*
@@ -296,19 +297,19 @@ printpart(void)
 
 
 static void
-addpart(const char *type, const char *devname, const char *mntpt)
+addpart(const char *type, const char *devicename, const char *mntpt)
 {
-	struct diskentry *d = finddisk(devname);
+	struct diskentry *d = finddisk(devicename);
 	struct partentry *p;
 
 	TAILQ_FOREACH(p, &d->d_part, p_entries)
-		if (strcmp(p->p_devname, devname) == 0) {
-			warnx("%s in fstab more than once!\n", devname);
+		if (strcmp(p->p_devname, devicename) == 0) {
+			warnx("%s in fstab more than once!\n", devicename);
 			return;
 		}
 
 	p = emalloc(sizeof(*p));
-	p->p_devname = estrdup(devname);
+	p->p_devname = estrdup(devicename);
 	p->p_mntpt = estrdup(mntpt);
 	p->p_type = estrdup(type);
 

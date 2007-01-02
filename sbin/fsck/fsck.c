@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: fsck.c,v 1.21 1999/04/22 04:20:53 abs Exp $	*/
 
 /*
@@ -36,10 +37,12 @@
  * From: @(#)mount.c	8.19 (Berkeley) 4/19/94
  * From: $NetBSD: mount.c,v 1.24 1995/11/18 03:34:29 cgd Exp 
  * $NetBSD: fsck.c,v 1.21 1999/04/22 04:20:53 abs Exp $
+ * $FreeBSD: src/sbin/fsck/fsck.c,v 1.18 2005/02/10 09:19:29 ru Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck/fsck.c,v 1.18 2005/02/10 09:19:29 ru Exp $");
+
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -78,7 +81,7 @@ static char *options = NULL;
 static int flags = 0;
 static int forceflag = 0;
 
-static int checkfs(const char *, const char *, const char *, char *, pid_t *);
+static int checkfs(const char *, const char *, const char *, const char *, pid_t *);
 static int selected(const char *);
 static void addoption(char *);
 static const char *getoptions(const char *);
@@ -168,7 +171,7 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	if (argc == 0)
-		return checkfstab(flags, isok, checkfs);
+		return checkfstab(flags, isok, __DECONST(void *, checkfs));
 
 #define	BADTYPE(type)							\
 	(strcmp(type, FSTAB_RO) &&					\
@@ -176,7 +179,7 @@ main(int argc, char *argv[])
 
 
 	for (; argc--; argv++) {
-		const char *spec, *mntpt, *type, *cp;
+		const char *spec, *mntpt = NULL, *type, *cp;
 		char device[MAXPATHLEN];
 		struct statfs *mntp;
 
@@ -278,7 +281,7 @@ isok(struct fstab *fs)
 
 static int
 checkfs(const char *pvfstype, const char *spec, const char *mntpt,
-    char *auxopt, pid_t *pidp)
+    const char *auxopt, pid_t *pidp)
 {
 	const char **argv;
 	pid_t pid;
@@ -305,7 +308,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 	vfstype = strdup(pvfstype);
 	if (vfstype == NULL)
 		perror("strdup(pvfstype)"); 
-	for (i = 0; i < strlen(vfstype); i++) {
+	for (i = 0; i < (int) strlen(vfstype); i++) {
 		vfstype[i] = tolower(vfstype[i]);
 		if (vfstype[i] == ' ')
 			vfstype[i] = '_';
@@ -347,6 +350,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 		if (optbuf)
 			free(optbuf);
 		free(vfstype);
+		free(argv);
 		return (1);
 
 	case 0:					/* Child. */
@@ -354,7 +358,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 			_exit(0);
 
 		/* Go find an executable. */
-		execvP(execbase, _PATH_SYSPATH, (char * const *)argv);
+		execvP(execbase, _PATH_SYSPATH, __DECONST(char * const *, argv));
 		if (spec)
 			warn("exec %s for %s in %s", execbase, spec, _PATH_SYSPATH);
 		else
@@ -367,6 +371,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 			free(optbuf);
 
 		free(vfstype);
+		free(argv);
 
 		if (pidp) {
 			*pidp = pid;
@@ -491,7 +496,7 @@ catopt(char **sp, const char *o)
 
 
 static void
-mangle(char *options, int *argcp, const char ***argvp, int *maxargcp)
+mangle(char *opts, int *argcp, const char ***argvp, int *maxargcp)
 {
 	char *p, *s;
 	int argc, maxargc;
@@ -501,7 +506,7 @@ mangle(char *options, int *argcp, const char ***argvp, int *maxargcp)
 	argv = *argvp;
 	maxargc = *maxargcp;
 
-	for (s = options; (p = strsep(&s, ",")) != NULL;) {
+	for (s = opts; (p = strsep(&s, ",")) != NULL;) {
 		/* Always leave space for one more argument and the NULL. */
 		if (argc >= maxargc - 3) {
 			maxargc <<= 1;
@@ -528,7 +533,7 @@ mangle(char *options, int *argcp, const char ***argvp, int *maxargcp)
 }
 
 
-const static char *
+static const char *
 getfslab(const char *str)
 {
 	struct disklabel dl;
