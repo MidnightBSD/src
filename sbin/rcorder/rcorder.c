@@ -72,6 +72,8 @@ int debug = 0;
 #define KEYWORDS_STR	"# KEYWORDS:"
 #define KEYWORDS_LEN	(sizeof(KEYWORDS_STR) - 1)
 
+int provide;
+
 int exit_code;
 int file_count;
 char **file_list;
@@ -96,6 +98,7 @@ struct provnode {
 	flag		in_progress;
 	filenode	*fnode;
 	provnode	*next, *last;
+	char            *name;
 };
 
 struct f_provnode {
@@ -128,6 +131,7 @@ filenode fn_head_s, *fn_head;
 strnodelist *bl_list;
 strnodelist *keep_list;
 strnodelist *skip_list;
+strnodelist *onetime_list;
 
 void do_file __P((filenode *fnode));
 void strnode_add __P((strnodelist **, char *, filenode *));
@@ -158,7 +162,7 @@ main(argc, argv)
 {
 	int ch;
 
-	while ((ch = getopt(argc, argv, "dk:s:")) != -1)
+	while ((ch = getopt(argc, argv, "dpk:s:o:")) != -1)
 		switch (ch) {
 		case 'd':
 #ifdef DEBUG
@@ -172,6 +176,12 @@ main(argc, argv)
 			break;
 		case 's':
 			strnode_add(&skip_list, optarg, 0);
+			break;
+		case 'o':
+			strnode_add(&onetime_list, optarg, 0);
+			break;
+		case 'p':
+			provide = 1;
 			break;
 		default:
 			/* XXX should crunch it? */
@@ -352,6 +362,7 @@ add_provide(fnode, s)
 	pnode->fnode = fnode;
 	pnode->next = head->next;
 	pnode->last = head;
+	pnode->name = strdup(s);
 	head->next = pnode;
 	if (pnode->next != NULL)
 		pnode->next->last = pnode;
@@ -560,6 +571,7 @@ make_fake_provision(node)
 	pnode->fnode = node;
 	pnode->next = head->next;
 	pnode->last = head;
+	pnode->name = strdup(buffer);
 	head->next = pnode;
 	if (pnode->next != NULL)
 		pnode->next->last = pnode;
@@ -594,7 +606,7 @@ insert_before()
 		fake_prov_entry = make_fake_provision(bl_list->node);
 
 		entry = Hash_CreateEntry(provide_hash, bl_list->s, &new);
-		if (new == 1)
+		if (new == 1 && !provide)
 			warnx("file `%s' is before unknown provision `%s'", bl_list->node->filename, bl_list->s);
 
 		for (pnode = Hash_GetValue(entry); pnode; pnode = pnode->next) {
@@ -757,7 +769,7 @@ do_file(fnode)
 		satisfy_req(r, fnode->filename);
 		r = r->next;
 		if (was_set == 0)
-			free(r_tmp);		   
+			free(r_tmp); 
 	}
 	fnode->req_list = NULL;
 
@@ -797,7 +809,7 @@ do_file(fnode)
 
 	DPRINTF((stderr, "nuking %s\n", fnode->filename));
 	if (was_set == 0) {
-   		free(fnode->filename);
+   		free(fnode->filename); 
    		free(fnode);
 	}
 }
@@ -820,8 +832,39 @@ generate_ordering()
 	 * executed only once for every strongly connected set of
 	 * nodes.
 	 */
-	while (fn_head->next != NULL) {
-		DPRINTF((stderr, "generate on %s\n", fn_head->next->filename));
-		do_file(fn_head->next);
+	if (provide) {
+		/* List all keywords provided by the listed files */
+		filenode *file;
+		f_provnode *f_prov;
+  	 
+		for (file = fn_head->next; file; file = file->next) {
+			for (f_prov = file->prov_list; f_prov; f_prov = f_prov->next) {
+				if (strncmp(f_prov->pnode->name, "fake_", 5) != 0)
+					printf("%s\n", f_prov->pnode->name);
+			}
+		}
+	}else if (onetime_list) {
+		/* Only list dependancies required to start particular keywords. */
+		strnodelist *scan;
+		filenode *file;
+		f_provnode *f_prov;
+
+		for (scan = onetime_list; scan; scan = scan->next) {
+			for (file = fn_head->next; file; file = file->next) {
+				for (f_prov = file->prov_list; f_prov; f_prov = f_prov->next) {
+					if (strcmp(scan->s, f_prov->pnode->name) == 0) {
+						do_file(file);
+						break;
+					}
+				}
+				if (f_prov)
+					break;
+			}
+		}
+	} else {
+		while (fn_head->next != NULL) {
+			DPRINTF((stderr, "generate on %s\n", fn_head->next->filename));
+			do_file(fn_head->next);
+		}
 	}
 }
