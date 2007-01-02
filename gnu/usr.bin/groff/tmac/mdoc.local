@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.48.2.4 2006/01/12 15:44:42 ru Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.4 2007/01/02 20:04:03 laffer1 Exp $
 .\"
 .\"     %beginstrip%
 .
@@ -73,6 +73,8 @@
 .as doc-str-St--xns5.2d2.0      " (\*[Lq]\*[doc-Tn-font-size]XNS\*[doc-str-St]\^5.2D2.0\*[Rq])
 .ds doc-str-St--ieee1275-94     \*[doc-Tn-font-size]\%IEEE\*[doc-str-St] Std 1275-1994
 .as doc-str-St--ieee1275-94     " (\*[Lq]\*[doc-Tn-font-size]Open Firmware\*[doc-str-St]\*[Rq])
+.ds doc-str-St--susv3           Version\~3 of the Single \*[doc-Tn-font-size]UNIX\*[doc-str-St] Specification
+.as doc-str-St--susv3           " (\*[Lq]\*[doc-Tn-font-size]SUSv3\*[doc-str-St]\*[Rq])
 .\" These will be in next groff release (after 1.19.1).
 .ds doc-str-St--p1003.1-2004    \*[doc-Tn-font-size]\%IEEE\*[doc-str-St] Std 1003.1-2004
 .as doc-str-St--p1003.1-2004    " (\*[Lq]\)\*[Px]\*[doc-str-St].1\*[Rq])
