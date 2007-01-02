@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sbin/fsck/fsck.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $ */
 /*	$NetBSD: fsck.c,v 1.21 1999/04/22 04:20:53 abs Exp $	*/
 
 /*
@@ -42,7 +42,7 @@
 
 #include <sys/cdefs.h>
 
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/fsck/fsck.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -307,7 +307,7 @@ checkfs(const char *pvfstype, const char *spec, const char *mntpt,
 	 */
 	vfstype = strdup(pvfstype);
 	if (vfstype == NULL)
-		perror("strdup(pvfstype)"); 
+		xperror("strdup(pvfstype)"); 
 	for (i = 0; i < (int) strlen(vfstype); i++) {
 		vfstype[i] = tolower(vfstype[i]);
 		if (vfstype[i] == ' ')

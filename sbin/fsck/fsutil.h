@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sbin/fsck/fsutil.h,v 1.3 2007/01/02 06:37:58 laffer1 Exp $ */
 /*	$NetBSD: fsutil.h,v 1.4 1998/07/26 20:02:36 mycroft Exp $	*/
 
 /*
@@ -32,7 +32,7 @@
  * $FreeBSD: src/sbin/fsck/fsutil.h,v 1.8 2003/12/27 13:54:02 bde Exp $
  */
 
-void perror(const char *);
+void xperror(const char *);
 void pfatal(const char *, ...) __printflike(1, 2);
 void pwarn(const char *, ...) __printflike(1, 2);
 void panic(const char *, ...) __dead2 __printflike(1, 2);

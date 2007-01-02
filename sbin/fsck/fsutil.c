@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sbin/fsck/fsutil.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $ */
 /*	$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $	*/
 
 /*
@@ -35,7 +35,7 @@
 __RCSID("$NetBSD: fsutil.c,v 1.7 1998/07/30 17:41:03 thorpej Exp $");
 #endif /* not lint */
 __FBSDID("$FreeBSD: src/sbin/fsck/fsutil.c,v 1.8 2004/04/09 19:58:28 markm Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/fsck/fsutil.c,v 1.3 2007/01/02 06:37:58 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -112,7 +112,7 @@ pwarn(const char *fmt, ...)
 }
 
 void
-perror(const char *s)
+xperror(const char *s)
 {
 	pfatal("%s (%s)", s, strerror(errno));
 }
@@ -134,17 +134,17 @@ devcheck(const char *origname)
 	struct stat stslash, stchar;
 
 	if (stat("/", &stslash) < 0) {
-		perror("/");
+		xperror("/");
 		printf("Can't stat root\n");
 		return (origname);
 	}
 	if (stat(origname, &stchar) < 0) {
-		perror(origname);
+		xperror(origname);
 		printf("Can't stat %s\n", origname);
 		return (origname);
 	}
 	if (!S_ISCHR(stchar.st_mode)) {
-		perror(origname);
+		xperror(origname);
 		printf("%s is not a char device\n", origname);
 	}
 	return (origname);
