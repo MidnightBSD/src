@@ -52,6 +52,7 @@ __RCSID("$NetBSD: hash.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $");
 
 #include <sys/types.h>
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -65,7 +66,6 @@ __RCSID("$NetBSD: hash.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $");
  * 	table.  Hash tables grow automatically as the amount of
  * 	information increases.
  */
-#include "sprite.h"
 #ifndef ORDER
 #include "make.h"
 #endif /* ORDER */
@@ -224,7 +224,7 @@ Hash_FindEntry(Hash_Table *t, char *key)
  */
 
 Hash_Entry *
-Hash_CreateEntry(Hash_Table *t, char *key, Boolean *newPtr)
+Hash_CreateEntry(Hash_Table *t, char *key, bool *newPtr)
 {
 	Hash_Entry *e;
 	unsigned h;
@@ -243,7 +243,7 @@ Hash_CreateEntry(Hash_Table *t, char *key, Boolean *newPtr)
 	for (e = t->bucketPtr[h & t->mask]; e != NULL; e = e->next) {
 		if (e->namehash == h && strcmp(e->name, p) == 0) {
 			if (newPtr != NULL)
-				*newPtr = FALSE;
+				*newPtr = false;
 			return (e);
 		}
 	}
@@ -265,7 +265,7 @@ Hash_CreateEntry(Hash_Table *t, char *key, Boolean *newPtr)
 	t->numEntries++;
 
 	if (newPtr != NULL)
-		*newPtr = TRUE;
+		*newPtr = true;
 	return (e);
 }
 

@@ -20179,13 +20179,10 @@ sbin/quotacheck/preen.c -text
 sbin/quotacheck/quotacheck.8 -text
 sbin/quotacheck/quotacheck.c -text
 sbin/rcorder/Makefile -text
-sbin/rcorder/ealloc.c -text
-sbin/rcorder/ealloc.h -text
 sbin/rcorder/hash.c -text
 sbin/rcorder/hash.h -text
 sbin/rcorder/rcorder.8 -text
 sbin/rcorder/rcorder.c -text
-sbin/rcorder/sprite.h -text
 sbin/reboot/Makefile -text
 sbin/reboot/boot_i386.8 -text
 sbin/reboot/nextboot.8 -text

@@ -49,6 +49,8 @@
 #ifndef	_HASH
 #define	_HASH
 
+typedef void *ClientData;
+
 /*
  * The following defines one entry in the hash table.
  */
@@ -122,7 +124,7 @@ typedef struct Hash_Search {
 void Hash_InitTable(Hash_Table *, int);
 void Hash_DeleteTable(Hash_Table *);
 Hash_Entry *Hash_FindEntry(Hash_Table *, char *);
-Hash_Entry *Hash_CreateEntry(Hash_Table *, char *, Boolean *);
+Hash_Entry *Hash_CreateEntry(Hash_Table *, char *, bool *);
 void Hash_DeleteEntry(Hash_Table *, Hash_Entry *);
 Hash_Entry *Hash_EnumFirst(Hash_Table *, Hash_Search *);
 Hash_Entry *Hash_EnumNext(Hash_Search *);

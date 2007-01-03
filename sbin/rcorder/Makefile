@@ -10,6 +10,6 @@ DPADD=	${LIBUTIL}
 
 WARNS?=	6
 # XXX hack for make's hash.[ch]
-CFLAGS+= -DORDER  -I. 
+CFLAGS+= -DORDER  -I. -std=c99
 
 .include <bsd.prog.mk>

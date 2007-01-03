@@ -35,7 +35,7 @@
  */
 
 #include <sys/types.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/rcorder/rcorder.c,v 1.4 2007/01/03 02:24:29 laffer1 Exp $");
 
 #include <sys/stat.h>
 
@@ -45,8 +45,8 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 #include <unistd.h>
 #include <libutil.h>
+#include <stdbool.h>
 
-#include "sprite.h"
 #include "hash.h"
 
 #ifdef DEBUG
@@ -77,13 +77,6 @@ static int exit_code;
 static int file_count;
 static char **file_list;
 
-typedef int bool;
-#define TRUE 1
-#define FALSE 0
-typedef bool flag;
-#define SET TRUE
-#define RESET FALSE
-
 static Hash_Table provide_hash_s, *provide_hash;
 
 typedef struct provnode provnode;
@@ -93,8 +86,8 @@ typedef struct f_reqnode f_reqnode;
 typedef struct strnodelist strnodelist;
 
 struct provnode {
-	flag		head;
-	flag		in_progress;
+	bool		head;
+	bool		in_progress;
 	filenode	*fnode;
 	provnode	*next, *last;
 	char            *name;
@@ -118,7 +111,7 @@ struct strnodelist {
 
 struct filenode {
 	char		*filename;
-	flag		in_progress;
+	bool		in_progress;
 	filenode	*next, *last;
 	f_reqnode	*req_list;
 	f_provnode	*prov_list;
@@ -246,7 +239,7 @@ filenode_new(char *filename)
 	temp->req_list = NULL;
 	temp->prov_list = NULL;
 	temp->keyword_list = NULL;
-	temp->in_progress = RESET;
+	temp->in_progress = false;
 	/*
 	 * link the filenode into the list of filenodes.
 	 * note that the double linking means we can delete a
@@ -268,7 +261,7 @@ add_require(filenode *fnode, char *s)
 {
 	Hash_Entry *entry;
 	f_reqnode *rnode;
-	int new;
+	bool new;
 
 	entry = Hash_CreateEntry(provide_hash, s, &new);
 	if (new)
@@ -289,7 +282,7 @@ add_provide(filenode *fnode, char *s)
 	Hash_Entry *entry;
 	f_provnode *f_pnode;
 	provnode *pnode, *head;
-	int new;
+	bool new;
 
 	entry = Hash_CreateEntry(provide_hash, s, &new);
 	head = Hash_GetValue(entry);
@@ -297,8 +290,8 @@ add_provide(filenode *fnode, char *s)
 	/* create a head node if necessary. */
 	if (head == NULL) {
 		head = emalloc(sizeof(*head));
-		head->head = SET;
-		head->in_progress = RESET;
+		head->head = true;
+		head->in_progress = false;
 		head->fnode = NULL;
 		head->last = head->next = NULL;
 		Hash_SetValue(entry, head);
@@ -344,8 +337,8 @@ add_provide(filenode *fnode, char *s)
 #endif
 
 	pnode = emalloc(sizeof(*pnode));
-	pnode->head = RESET;
-	pnode->in_progress = RESET;
+	pnode->head = false;
+	pnode->in_progress = false;
 	pnode->fnode = fnode;
 	pnode->next = head->next;
 	pnode->last = head;
@@ -523,7 +516,7 @@ make_fake_provision(filenode *node)
 	f_provnode *f_pnode;
 	provnode *head, *pnode;
 	static	int i = 0;
-	int	new;
+	bool	new;
 	char buffer[30];
 
 	do {
@@ -531,15 +524,15 @@ make_fake_provision(filenode *node)
 		entry = Hash_CreateEntry(provide_hash, buffer, &new);
 	} while (new == 0);
 	head = emalloc(sizeof(*head));
-	head->head = SET;
-	head->in_progress = RESET;
+	head->head = true;
+	head->in_progress = false;
 	head->fnode = NULL;
 	head->last = head->next = NULL;
 	Hash_SetValue(entry, head);
 
 	pnode = emalloc(sizeof(*pnode));
-	pnode->head = RESET;
-	pnode->in_progress = RESET;
+	pnode->head = false;
+	pnode->in_progress = false;
 	pnode->fnode = node;
 	pnode->next = head->next;
 	pnode->last = head;
@@ -570,7 +563,7 @@ insert_before(void)
 	provnode *pnode;
 	f_reqnode *rnode;
 	strnodelist *bl;
-	int new;
+	bool new;
 	
 	while (bl_list != NULL) {
 		bl = bl_list->next;
@@ -650,14 +643,14 @@ satisfy_req(f_reqnode *rnode, char *filename)
 	 * if list is marked as in progress,
 	 *	print that there is a circular dependency on it and abort
 	 */
-	if (head->in_progress == SET) {
+	if (head->in_progress == true) {
 		warnx("Circular dependency on provision `%s' in file `%s'.",
 		    Hash_GetKey(entry), filename);
 		exit_code = 1;
 		return;
 	}
 
-	head->in_progress = SET;
+	head->in_progress = true;
 	
 	/*
 	 * while provision_list is not empty
@@ -716,7 +709,7 @@ do_file(filenode *fnode)
 	 * if fnode is marked as in progress,
 	 *	 print that fnode; is circularly depended upon and abort.
 	 */
-	if (fnode->in_progress == SET) {
+	if (fnode->in_progress == true) {
 		warnx("Circular dependency on file `%s'.",
 			fnode->filename);
 		was_set = exit_code = 1;
@@ -724,7 +717,7 @@ do_file(filenode *fnode)
 		was_set = 0;
 
 	/* mark fnode */
-	fnode->in_progress = SET;
+	fnode->in_progress = true;
 
 	/*
 	 * for each requirement of fnode -> r
