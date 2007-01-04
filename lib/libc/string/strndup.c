@@ -1,3 +1,5 @@
+/*	$NetBSD: strndup.c,v 1.1.2.1 2006/08/27 06:08:51 riz Exp $	*/
+
 /*
  * Copyright (c) 1988, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -10,11 +12,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,11 +29,15 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
-#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/string/strdup.c,v 1.4 2001/11/07 19:55:16 obrien Exp $");
+#if defined(LIBC_SCCS) && !defined(lint)
+#if 0
+static char sccsid[] = "@(#)strdup.c	8.1 (Berkeley) 6/4/93";
+#else
+__RCSID("$NetBSD: strndup.c,v 1.1.2.1 2006/08/27 06:08:51 riz Exp $");
+#endif
+#endif /* LIBC_SCCS and not lint */
+
 __MBSDID("$MidnightBSD$");
 
 #include <stddef.h>
@@ -43,15 +45,17 @@ __MBSDID("$MidnightBSD$");
 #include <string.h>
 
 char *
-strdup(str)
-	const char *str;
+strndup(const char *str, size_t n)
 {
 	size_t len;
 	char *copy;
 
-	len = strlen(str) + 1;
-	if ((copy = malloc(len)) == NULL)
+	len = strlen(str);
+	if (len > n)
+		len = n;
+	if (!(copy = malloc(len + 1)))
 		return (NULL);
-	memcpy(copy, str, len);
+	memcpy(copy, str, len + 1);
+	copy[len] = '\0';
 	return (copy);
 }
