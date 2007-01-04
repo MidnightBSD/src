@@ -94,7 +94,7 @@ void	 strmode(int, char *);
 char	*strncat(char * __restrict, const char * __restrict, size_t);
 int	 strncmp(const char *, const char *, size_t) __pure;
 #if __BSD_VISIBLE
-char	*strndup(const char *, size_t);
+char	*strndup(const char * __restrict, size_t);
 #endif
 char	*strncpy(char * __restrict, const char * __restrict, size_t);
 #if __BSD_VISIBLE
