@@ -27,7 +27,7 @@
     The &os; Project
     </corpauthor>
 
-    <pubdate>$FreeBSD: src/release/doc/en_US.ISO8859-1/errata/article.sgml,v 1.73.2.13 2006/02/05 20:41:34 bmah Exp $</pubdate>
+    <pubdate>$FreeBSD: src/release/doc/en_US.ISO8859-1/errata/article.sgml,v 1.73.2.15.2.1 2006/04/24 01:05:46 delphij Exp $</pubdate>
 
     <copyright>
       <year>2000</year>
@@ -118,6 +118,41 @@
 	</thead>
 
 	<tbody>
+	  <row>
+	    <entry><ulink url="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-06:14.fpu.asc"
+		>06:14.fpu</ulink></entry>
+	    <entry>19&nbsp;April&nbsp;2006</entry>
+	    <entry><para>FPU information disclosure</para></entry>
+	  </row>
+
+	  <row>
+	    <entry><ulink url="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-06:13.sendmail.asc"
+		>06:13.sendmail</ulink></entry>
+	    <entry>22&nbsp;March&nbsp;2006</entry>
+	    <entry><para>Race condition in sendmail</para></entry>
+	  </row>
+
+	  <row>
+	    <entry><ulink url="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-06:12.opie.asc"
+		>06:12.opie</ulink></entry>
+	    <entry>22&nbsp;March&nbsp;2006</entry>
+	    <entry><para>OPIE arbitrary password change</para></entry>
+	  </row>
+
+	  <row>
+	    <entry><ulink url="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-06:11.ipsec.asc"
+		>06:11.ipsec</ulink></entry>
+	    <entry>22&nbsp;March&nbsp;2006</entry>
+	    <entry><para>IPsec replay attack vulnerability</para></entry>
+	  </row>
+
+	  <row>
+	    <entry><ulink url="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-06:10.nfs.asc"
+		>06:10.nfs</ulink></entry>
+	    <entry>1&nbsp;March&nbsp;2006</entry>
+	    <entry><para>Remote denial of service in NFS server</para></entry>
+	  </row>
+
 	  <row>
 	    <entry><ulink url="ftp://ftp.FreeBSD.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-06:07.pf.asc"
 		>06:07.pf</ulink></entry>
