@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.6 2006/12/27 00:48:45 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.7 2006/12/31 22:34:27 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -280,7 +280,7 @@ OLD_FILES+=usr/share/man/man1/sasc.1.gz
 OLD_FILES+=usr/share/man/man1/sgsc.1.gz
 OLD_FILES+=usr/share/man/man4/i386/stl.4.gz
 OLD_FILES+=usr/share/man/man8/raidctl.8.gz
-.if ${TARGET_ARCH} != "alpha" && ${TARGET_ARCH} != "sparc64"
+.if ${TARGET_ARCH} != "sparc64"
 # 20040130: libkse renamed to libpthread
 OLD_FILES+=usr/lib/libkse.a
 OLD_FILES+=usr/lib/libkse.so
@@ -2789,7 +2789,7 @@ OLD_LIBS+=usr/lib/libpcap.so.2
 OLD_LIBS+=usr/lib/libisc.so.1
 # 200408XX
 OLD_LIBS+=usr/lib/snmp_netgraph.so.1
-.if ${TARGET_ARCH} != "alpha" && ${TARGET_ARCH} != "sparc64"
+.if ${TARGET_ARCH} != "sparc64"
 # 20040130: libkse renamed to libpthread
 OLD_LIBS+=usr/lib/libkse.so.1
 .endif
