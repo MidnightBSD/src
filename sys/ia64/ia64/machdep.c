@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/machdep.c,v 1.200.2.1 2005/09/13 21:07:14 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/ia64/ia64/machdep.c,v 1.200.2.3 2006/03/07 18:08:09 jhb Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -248,7 +248,7 @@ cpu_startup(dummy)
 #endif
 	printf("real memory  = %ld (%ld MB)\n", ia64_ptob(Maxmem),
 	    ia64_ptob(Maxmem) / 1048576);
-	realmem = ia64_ptob(Maxmem);
+	realmem = Maxmem;
 
 	/*
 	 * Display any holes after the first chunk of extended memory.
@@ -1100,6 +1100,7 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		r->rnat = (bspst > kstk && (bspst & 0x1ffL) < (kstk & 0x1ffL))
 		    ? *(uint64_t*)(kstk | 0x1f8L) : rnat;
 	} else {
+		PHOLD(td->td_proc);
 		iov.iov_base = (void*)(uintptr_t)kstk;
 		iov.iov_len = r->ndirty;
 		uio.uio_iov = &iov;
@@ -1117,6 +1118,7 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		 */
 		if (uio.uio_resid != 0 && error == 0)
 			error = ENOSPC;
+		PRELE(td->td_proc);
 	}
 
 	r->bspstore += r->ndirty;
