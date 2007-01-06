@@ -363,6 +363,9 @@ sc_attach_unit(int unit, int flags)
     }
 
     sc = sc_get_softc(unit, flags & SC_KERNEL_CONSOLE);
+    if ((sc->flags & SC_INIT_DONE) == 0) {
+        SC_VIDEO_LOCKINIT(sc);
+    }
     sc->config = flags;
     scp = sc_get_stat(sc->dev[0]);
     if (sc_console == NULL)	/* sc_console_unit < 0 */
@@ -1618,7 +1621,7 @@ sccnupdate(scr_stat *scp)
 {
     /* this is a cut-down version of scrn_timer()... */
 
-    if (scp->sc->font_loading_in_progress || scp->sc->videoio_in_progress)
+    if (scp->sc->font_loading_in_progress) 
 	return;
 
     if (debugger > 0 || panicstr || shutdown_in_progress) {
@@ -1668,7 +1671,7 @@ scrn_timer(void *arg)
 	return;
 
     /* don't do anything when we are performing some I/O operations */
-    if (sc->font_loading_in_progress || sc->videoio_in_progress) {
+    if (sc->font_loading_in_progress) {
 	if (again)
 	    timeout(scrn_timer, sc, hz / 10);
 	return;
@@ -1762,7 +1765,7 @@ scrn_update(scr_stat *scp, int show_cursor)
 
     /* assert(scp == scp->sc->cur_scp) */
 
-    ++scp->sc->videoio_in_progress;
+    SC_VIDEO_LOCK(scp->sc);
 
 #ifndef SC_NO_CUTPASTE
     /* remove the previous mouse pointer image if necessary */
@@ -1832,7 +1835,7 @@ scrn_update(scr_stat *scp, int show_cursor)
     if (!show_cursor) {
         scp->end = 0;
         scp->start = scp->xsize*scp->ysize - 1;
-	--scp->sc->videoio_in_progress;
+	SC_VIDEO_UNLOCK(scp->sc);
 	return;
     }
 
@@ -1871,7 +1874,7 @@ scrn_update(scr_stat *scp, int show_cursor)
     scp->end = 0;
     scp->start = scp->xsize*scp->ysize - 1;
 
-    --scp->sc->videoio_in_progress;
+    SC_VIDEO_UNLOCK(scp->sc);
 }
 
 #ifdef DEV_SPLASH
@@ -2134,7 +2137,7 @@ sc_switch_scr(sc_softc_t *sc, u_int next_scr)
 
     /* delay switch if the screen is blanked or being updated */
     if ((sc->flags & SC_SCRN_BLANKED) || sc->write_in_progress
-	|| sc->blink_in_progress || sc->videoio_in_progress) {
+	|| sc->blink_in_progress) {
 	sc->delayed_next_scr = next_scr + 1;
 	sc_touch_scrn_saver();
 	DPRINTF(5, ("switch delayed\n"));
@@ -2492,23 +2495,23 @@ void
 sc_draw_cursor_image(scr_stat *scp)
 {
     /* assert(scp == scp->sc->cur_scp); */
-    ++scp->sc->videoio_in_progress;
-    (*scp->rndr->draw_cursor)(scp, scp->cursor_pos,
+   SC_VIDEO_LOCK(scp->sc);
+   (*scp->rndr->draw_cursor)(scp, scp->cursor_pos,
 			      scp->curs_attr.flags & CONS_BLINK_CURSOR, TRUE,
 			      sc_inside_cutmark(scp, scp->cursor_pos));
     scp->cursor_oldpos = scp->cursor_pos;
-    --scp->sc->videoio_in_progress;
+    SC_VIDEO_UNLOCK(scp->sc);
 }
 
 void
 sc_remove_cursor_image(scr_stat *scp)
 {
     /* assert(scp == scp->sc->cur_scp); */
-    ++scp->sc->videoio_in_progress;
+    SC_VIDEO_LOCK(scp->sc);
     (*scp->rndr->draw_cursor)(scp, scp->cursor_oldpos,
 			      scp->curs_attr.flags & CONS_BLINK_CURSOR, FALSE,
 			      sc_inside_cutmark(scp, scp->cursor_oldpos));
-    --scp->sc->videoio_in_progress;
+    SC_VIDEO_UNLOCK(scp->sc);
 }
 
 static void
@@ -2539,10 +2542,10 @@ sc_set_cursor_image(scr_stat *scp)
     }
 
     /* assert(scp == scp->sc->cur_scp); */
-    ++scp->sc->videoio_in_progress;
+    SC_VIDEO_LOCK(scp->sc);
     (*scp->rndr->set_cursor)(scp, scp->curs_attr.base, scp->curs_attr.height,
 			     scp->curs_attr.flags & CONS_BLINK_CURSOR);
-    --scp->sc->videoio_in_progress;
+    SC_VIDEO_UNLOCK(scp->sc);
 }
 
 static void
@@ -3498,9 +3501,9 @@ set_mode(scr_stat *scp)
 void
 sc_set_border(scr_stat *scp, int color)
 {
-    ++scp->sc->videoio_in_progress;
+    SC_VIDEO_LOCK(scp->sc);
     (*scp->rndr->draw_border)(scp, color);
-    --scp->sc->videoio_in_progress;
+    SC_VIDEO_UNLOCK(scp->sc);
 }
 
 #ifndef SC_NO_FONT_LOADING

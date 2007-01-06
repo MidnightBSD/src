@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_witness.c,v 1.1.1.2 2006-02-25 02:37:17 laffer1 Exp $
- *	and BSDI $Id: subr_witness.c,v 1.1.1.2 2006-02-25 02:37:17 laffer1 Exp $
+ *	from BSDI $Id: subr_witness.c,v 1.2 2007-01-06 06:02:29 laffer1 Exp $
+ *	and BSDI $Id: subr_witness.c,v 1.2 2007-01-06 06:02:29 laffer1 Exp $
  */
 
 /*
@@ -381,6 +381,7 @@ static struct witness_order_list_entry order_lists[] = {
 	{ "td_contested", &lock_class_mtx_spin },
 	{ "callout", &lock_class_mtx_spin },
 	{ "entropy harvest mutex", &lock_class_mtx_spin },
+	{ "syscons video lock", &lock_class_mtx_spin },
 	/*
 	 * leaf locks
 	 */
