@@ -29732,6 +29732,11 @@ tools/tools/nanobsd/Files/root/updatep1 -text
 tools/tools/nanobsd/Files/root/updatep2 -text
 tools/tools/nanobsd/FlashDevice.sub -text
 tools/tools/nanobsd/nanobsd.sh -text
+tools/tools/ncpus/Makefile -text
+tools/tools/ncpus/acpi.c -text
+tools/tools/ncpus/acpidump.h -text
+tools/tools/ncpus/biosmptable.c -text
+tools/tools/ncpus/ncpus.c -text
 tools/tools/net80211/Makefile -text
 tools/tools/net80211/wlandebug/Makefile -text
 tools/tools/net80211/wlandebug/wlandebug.c -text
