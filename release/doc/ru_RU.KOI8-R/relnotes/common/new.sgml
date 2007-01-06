@@ -11,7 +11,7 @@
 
   <corpauthor>Проект &os;</corpauthor>
 
-  <pubdate>$FreeBSD: src/release/doc/ru_RU.KOI8-R/relnotes/common/new.sgml,v 1.21 2005/07/08 14:34:10 den Exp $</pubdate>
+  <pubdate>$FreeBSD: src/release/doc/ru_RU.KOI8-R/relnotes/common/new.sgml,v 1.21.2.1 2006/02/27 13:21:37 marck Exp $</pubdate>
 
   <copyright>
     <year>2000</year>
@@ -109,7 +109,7 @@
 
   <para>Обычно в информации о релизе последовательно включены
     последние сообщения безопасности, выпущенные после
-    &release.prev.historic;, информация о поддержке новых драйверов или
+    &release.prev;, информация о поддержке новых драйверов или
     оборудования, новых команд или параметров, информация о основных
     исправлениях ошибок, или обновлениях стороннего программного
     обеспечения.  В нем могут также перечисляться изменения важнейших
