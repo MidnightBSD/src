@@ -14540,7 +14540,6 @@ etc/devd.conf -text
 etc/devfs.conf -text
 etc/dhclient.conf -text
 etc/disktab -text
-etc/etc.alpha/ttys -text
 etc/etc.amd64/ttys -text
 etc/etc.arm/ttys -text
 etc/etc.i386/ttys -text
