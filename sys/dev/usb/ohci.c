@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ohci.c,v 1.154.2.2 2006/01/29 01:26:46 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ohci.c,v 1.154.2.3 2006/03/01 01:59:04 iedowse Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -2161,7 +2161,9 @@ ohci_open(usbd_pipe_handle pipe)
 			(dev->speed == USB_SPEED_LOW ? OHCI_ED_SPEED : 0) |
 			fmt |
 			OHCI_ED_SET_MAXP(UGETW(ed->wMaxPacketSize)));
-		sed->ed.ed_headp = sed->ed.ed_tailp = htole32(tdphys);
+		sed->ed.ed_headp = htole32(tdphys |
+		    (pipe->endpoint->savedtoggle ? OHCI_TOGGLECARRY : 0));
+		sed->ed.ed_tailp = htole32(tdphys);
 
 		switch (xfertype) {
 		case UE_CONTROL:
@@ -2247,6 +2249,8 @@ ohci_close_pipe(usbd_pipe_handle pipe, ohci_soft_ed_t *head)
 	/* Make sure the host controller is not touching this ED */
 	usb_delay_ms(&sc->sc_bus, 1);
 	splx(s);
+	pipe->endpoint->savedtoggle =
+	    (le32toh(sed->ed.ed_headp) & OHCI_TOGGLECARRY) ? 1 : 0;
 	ohci_free_sed(sc, opipe->sed);
 }
 
@@ -3050,7 +3054,7 @@ ohci_device_bulk_start(usbd_xfer_handle xfer)
 	splx(s);
 
 	if (sc->sc_bus.use_polling)
- 		ohci_waitintr(sc, xfer);
+		ohci_waitinitr(sc, xfer);
 
 	return (USBD_IN_PROGRESS);
 }

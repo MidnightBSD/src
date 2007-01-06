@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ehci.c,v 1.36.2.1 2006/01/26 01:43:13 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ehci.c,v 1.36.2.2 2006/03/01 01:59:04 iedowse Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1390,7 +1390,7 @@ ehci_open(usbd_pipe_handle pipe)
 	if (sc->sc_dying)
 		return (USBD_IOERROR);
 
-	epipe->nexttoggle = 0;
+	epipe->nexttoggle = pipe->endpoint->savedtoggle;
 
 	if (addr == sc->sc_addr) {
 		switch (ed->bEndpointAddress) {
@@ -2479,6 +2479,8 @@ ehci_close_pipe(usbd_pipe_handle pipe, ehci_soft_qh_t *head)
 	ehci_rem_qh(sc, sqh, head);
 	splx(s);
 	ehci_free_sqh(sc, epipe->sqh);
+
+	pipe->endpoint->savedtoggle = epipe->nexttoggle;
 }
 
 /*
