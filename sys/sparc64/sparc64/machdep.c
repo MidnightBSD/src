@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/machdep.c,v 1.125 2005/04/16 15:00:09 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/machdep.c,v 1.125.2.2 2006/03/31 23:40:05 marius Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -201,7 +201,7 @@ cpu_startup(void *arg)
 		physsz += sparc64_memreg[i].mr_size;
 	printf("real memory  = %lu (%lu MB)\n", physsz,
 	    physsz / (1024 * 1024));
-	realmem = (long)physsz;
+	realmem = (long)physsz / PAGE_SIZE;
 
 	vm_ksubmap_init(&kmi);
 
@@ -321,6 +321,11 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 			break;
 	}
 
+	/*
+	 * Initialize the tick counter.  Must be before the console is inited
+	 * in order to provide the low-level console drivers with a working
+	 * DELAY().
+	 */
 	OF_getprop(child, "clock-frequency", &clock, sizeof(clock));
 	tick_init(clock);
 
@@ -330,7 +335,7 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 	cninit();
 
 	/*
-	 * Panic is there is no metadata.  Most likely the kernel was booted
+	 * Panic if there is no metadata.  Most likely the kernel was booted
 	 * directly, instead of through loader(8).
 	 */
 	if (mdp == NULL || kmdp == NULL) {
