@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/atiixp.h,v 1.1.2.1 2005/12/30 19:55:53 netchild Exp $
+ * $FreeBSD: src/sys/dev/sound/pci/atiixp.h,v 1.1.2.2 2006/03/02 00:09:30 ariff Exp $
  */
 
 #ifndef _ATIIXP_H_
@@ -46,7 +46,7 @@
 #define ATI_IXP_DMA_CHSEGS_MIN	2
 #define ATI_IXP_DMA_CHSEGS_MAX	256
 
-#define ATI_IXP_DEFAULT_BUFSZ	(1 << 12)	/* 4096 */
+#define ATI_IXP_DEFAULT_BUFSZ	(1 << 13)	/* 8192 */
 
 #define ATI_VENDOR_ID		0x1002	/* ATI Technologies */
 #define ATI_IXP_200_ID		0x4341

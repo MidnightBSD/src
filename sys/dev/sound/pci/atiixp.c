@@ -30,12 +30,14 @@
  * Features
  *	* 16bit playback / recording
  *	* 32bit native playback - yay!
+ *	* 32bit native recording (seems broken on few hardwares)
  *
  * Issues / TODO:
  *	* SPDIF
  *	* Support for more than 2 channels.
  *	* VRA ? VRM ? DRA ?
- *	* 32bit native recording (seems broken, disabled)
+ *	* 32bit native recording seems broken on few hardwares, most
+ *	  probably because of incomplete VRA/DRA cleanup.
  *
  *
  * Thanks goes to:
@@ -61,14 +63,13 @@
 
 #include <dev/sound/pci/atiixp.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/atiixp.c,v 1.2.2.2 2006/01/29 02:33:17 ariff Exp $");
-
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/atiixp.c,v 1.2.2.4 2006/04/04 17:24:33 ariff Exp $");
 
 struct atiixp_dma_op {
-	uint32_t addr;
-	uint16_t status;
-	uint16_t size;
-	uint32_t next;
+	volatile uint32_t addr;
+	volatile uint16_t status;
+	volatile uint16_t size;
+	volatile uint32_t next;
 };
 
 struct atiixp_info;
@@ -124,9 +125,7 @@ struct atiixp_info {
 
 static uint32_t atiixp_fmt_32bit[] = {
 	AFMT_STEREO | AFMT_S16_LE,
-#ifdef AFMT_S32_LE
 	AFMT_STEREO | AFMT_S32_LE,
-#endif
 	0
 };
 
@@ -182,6 +181,7 @@ static void atiixp_intr(void *);
 static void atiixp_dma_cb(void *, bus_dma_segment_t *, int, int);
 static void atiixp_chip_pre_init(struct atiixp_info *);
 static void atiixp_chip_post_init(void *);
+static void atiixp_release_resource(struct atiixp_info *);
 static int  atiixp_pci_probe(device_t);
 static int  atiixp_pci_attach(device_t);
 static int  atiixp_pci_detach(device_t);
@@ -468,8 +468,7 @@ atiixp_chan_setformat(kobj_t obj, void *data, uint32_t format)
 	if (ch->dir == PCMDIR_REC) {
 		value = atiixp_rd(sc, ATI_REG_CMD);
 		value &= ~ATI_REG_CMD_INTERLEAVE_IN;
-		if (ch->caps_32bit == 0 ||
-				(format & (AFMT_8BIT|AFMT_16BIT)) != 0)
+		if ((format & AFMT_32BIT) == 0)
 			value |= ATI_REG_CMD_INTERLEAVE_IN;
 		atiixp_wr(sc, ATI_REG_CMD, value);
 	} else {
@@ -482,8 +481,7 @@ atiixp_chan_setformat(kobj_t obj, void *data, uint32_t format)
 		atiixp_wr(sc, ATI_REG_OUT_DMA_SLOT, value);
 		value = atiixp_rd(sc, ATI_REG_CMD);
 		value &= ~ATI_REG_CMD_INTERLEAVE_OUT;
-		if (ch->caps_32bit == 0 ||
-				(format & (AFMT_8BIT|AFMT_16BIT)) != 0)
+		if ((format & AFMT_32BIT) == 0)
 			value |= ATI_REG_CMD_INTERLEAVE_OUT;
 		atiixp_wr(sc, ATI_REG_CMD, value);
 		value = atiixp_rd(sc, ATI_REG_6CH_REORDER);
@@ -585,13 +583,36 @@ atiixp_chan_getptr(kobj_t obj, void *data)
 {
 	struct atiixp_chinfo *ch = data;
 	struct atiixp_info *sc = ch->parent;
-	uint32_t ptr;
+	uint32_t addr, align, retry, sz;
+	volatile uint32_t ptr;
+
+	addr = sndbuf_getbufaddr(ch->buffer);
+	align = (ch->fmt & AFMT_32BIT) ? 7 : 3;
+	retry = 100;
+	sz = sndbuf_getblksz(ch->buffer) * ch->dma_segs;
 
 	atiixp_lock(sc);
-	ptr = atiixp_rd(sc, ch->dma_dt_cur_bit);
+	do {
+		ptr = atiixp_rd(sc, ch->dma_dt_cur_bit);
+		if (ptr < addr)
+			continue;
+		ptr -= addr;
+		if (ptr < sz && !(ptr & align))
+			break;
+	} while (--retry);
 	atiixp_unlock(sc);
 
-	return ptr;
+#if 0
+	if (retry != 100) {
+		device_printf(sc->dev,
+		    "%saligned hwptr: dir=PCMDIR_%s ptr=%u fmt=0x%08x retry=%d\n",
+		    (ptr & align) ? "un" : "",
+		    (ch->dir == PCMDIR_PLAY) ? "PLAY" : "REC", ptr,
+		    ch->fmt, 100 - retry);
+	}
+#endif
+
+	return (retry > 0) ? ptr : 0;
 }
 
 static struct pcmchan_caps *
@@ -709,6 +730,7 @@ static void
 atiixp_chip_post_init(void *arg)
 {
 	struct atiixp_info *sc = (struct atiixp_info *)arg;
+	uint32_t subdev;
 	int i, timeout, found;
 	char status[SND_STATUSLEN];
 
@@ -720,12 +742,9 @@ atiixp_chip_post_init(void *arg)
 	}
 
 	/* wait for the interrupts to happen */
-	timeout = 100;		/* 100.000 usec -> 0.1 sec */
-
+	timeout = 100;
 	while (--timeout) {
-		atiixp_unlock(sc);
-		DELAY(1000);
-		atiixp_lock(sc);
+		msleep(sc, sc->lock, PWAIT, "ixpslp", 1);
 		if (sc->codec_not_ready_bits)
 			break;
 	}
@@ -737,7 +756,7 @@ atiixp_chip_post_init(void *arg)
 			"WARNING: timeout during codec detection; "
 			"codecs might be present but haven't interrupted\n");
 		atiixp_unlock(sc);
-		return;
+		goto postinitbad;
 	}
 
 	found = 0;
@@ -769,12 +788,21 @@ atiixp_chip_post_init(void *arg)
 	atiixp_unlock(sc);
 
 	if (found == 0)
-		return;
+		goto postinitbad;
 
 	/* create/init mixer */
 	sc->codec = AC97_CREATE(sc->dev, sc, atiixp_ac97);
 	if (sc->codec == NULL)
 		goto postinitbad;
+
+	subdev = (pci_get_subdevice(sc->dev) << 16) | pci_get_subvendor(sc->dev);
+	switch (subdev) {
+	case 0x2043161f:	/* Maxselect x710s - http://maxselect.ru/ */
+		ac97_setflags(sc->codec, ac97_getflags(sc->codec) | AC97_F_EAPD_INV);
+		break;
+	default:
+		break;
+	}
 
 	mixer_init(sc->dev, ac97_getmixerclass(), sc->codec);
 
@@ -799,23 +827,46 @@ atiixp_chip_post_init(void *arg)
 	return;
 
 postinitbad:
-	if (sc->codec)
+	atiixp_release_resource(sc);
+}
+
+static void
+atiixp_release_resource(struct atiixp_info *sc)
+{
+	if (sc == NULL)
+		return;
+	if (sc->codec) {
 		ac97_destroy(sc->codec);
-	if (sc->ih)
+		sc->codec = NULL;
+	}
+	if (sc->ih) {
 		bus_teardown_intr(sc->dev, sc->irq, sc->ih);
-	if (sc->reg)
+		sc->ih = 0;
+	}
+	if (sc->reg) {
 		bus_release_resource(sc->dev, sc->regtype, sc->regid, sc->reg);
-	if (sc->irq)
+		sc->reg = 0;
+	}
+	if (sc->irq) {
 		bus_release_resource(sc->dev, SYS_RES_IRQ, sc->irqid, sc->irq);
-	if (sc->parent_dmat)
+		sc->irq = 0;
+	}
+	if (sc->parent_dmat) {
 		bus_dma_tag_destroy(sc->parent_dmat);
-	if (sc->sgd_dmamap)
+		sc->parent_dmat = 0;
+	}
+	if (sc->sgd_dmamap) {
 		bus_dmamap_unload(sc->sgd_dmat, sc->sgd_dmamap);
-	if (sc->sgd_dmat)
+		sc->sgd_dmamap = 0;
+	}
+	if (sc->sgd_dmat) {
 		bus_dma_tag_destroy(sc->sgd_dmat);
-	if (sc->lock)
+		sc->sgd_dmat = 0;
+	}
+	if (sc->lock) {
 		snd_mtxfree(sc->lock);
-	free(sc, M_DEVBUF);
+		sc->lock = NULL;
+	}
 }
 
 static int
@@ -893,14 +944,25 @@ atiixp_pci_attach(device_t dev)
 			i = ATI_IXP_DMA_CHSEGS_MIN;
 		if (i > ATI_IXP_DMA_CHSEGS_MAX)
 			i = ATI_IXP_DMA_CHSEGS_MAX;
-		/* round the value */
-		sc->dma_segs = i & ~1;
+		sc->dma_segs = i;
 	}
+
+	/*
+	 * round the value to the nearest ^2
+	 */
+	i = 0;
+	while (sc->dma_segs >> i)
+		i++;
+	sc->dma_segs = 1 << (i - 1);
+	if (sc->dma_segs < ATI_IXP_DMA_CHSEGS_MIN)
+		sc->dma_segs = ATI_IXP_DMA_CHSEGS_MIN;
+	else if (sc->dma_segs > ATI_IXP_DMA_CHSEGS_MAX)
+		sc->dma_segs = ATI_IXP_DMA_CHSEGS_MAX;
 
 	/*
 	 * DMA tag for scatter-gather buffers and link pointers
 	 */
-	if (bus_dma_tag_create(/*parent*/NULL, /*alignment*/2, /*boundary*/0,
+	if (bus_dma_tag_create(/*parent*/NULL, /*alignment*/sc->bufsz, /*boundary*/0,
 		/*lowaddr*/BUS_SPACE_MAXADDR_32BIT,
 		/*highaddr*/BUS_SPACE_MAXADDR,
 		/*filter*/NULL, /*filterarg*/NULL,
@@ -948,24 +1010,7 @@ atiixp_pci_attach(device_t dev)
 	return 0;
 
 bad:
-	if (sc->codec)
-		ac97_destroy(sc->codec);
-	if (sc->ih)
-		bus_teardown_intr(dev, sc->irq, sc->ih);
-	if (sc->reg)
-		bus_release_resource(dev, sc->regtype, sc->regid, sc->reg);
-	if (sc->irq)
-		bus_release_resource(dev, SYS_RES_IRQ, sc->irqid, sc->irq);
-	if (sc->parent_dmat)
-		bus_dma_tag_destroy(sc->parent_dmat);
-	if (sc->sgd_dmamap)
-		bus_dmamap_unload(sc->sgd_dmat, sc->sgd_dmamap);
-	if (sc->sgd_dmat)
-		bus_dma_tag_destroy(sc->sgd_dmat);
-	if (sc->lock)
-		snd_mtxfree(sc->lock);
-	free(sc, M_DEVBUF);
-
+	atiixp_release_resource(sc);
 	return ENXIO;
 }
 
@@ -975,23 +1020,18 @@ atiixp_pci_detach(device_t dev)
 	int r;
 	struct atiixp_info *sc;
 
-	r = pcm_unregister(dev);
-	if (r)
-		return r;
-
 	sc = pcm_getdevinfo(dev);
-
-	atiixp_disable_interrupts(sc);
-
-	bus_teardown_intr(dev, sc->irq, sc->ih);
-	bus_release_resource(dev, sc->regtype, sc->regid, sc->reg);
-	bus_release_resource(dev, SYS_RES_IRQ, sc->irqid, sc->irq);
-	bus_dma_tag_destroy(sc->parent_dmat);
-	bus_dmamap_unload(sc->sgd_dmat, sc->sgd_dmamap);
-	bus_dma_tag_destroy(sc->sgd_dmat);
-	snd_mtxfree(sc->lock);
-	free(sc, M_DEVBUF);
-
+	if (sc != NULL) {
+		if (sc->codec != NULL) {
+			r = pcm_unregister(dev);
+			if (r)
+				return r;
+		}
+		sc->codec = NULL;
+		atiixp_disable_interrupts(sc);
+		atiixp_release_resource(sc);
+		free(sc, M_DEVBUF);
+	}
 	return 0;
 }
 
