@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_ethersubr.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_ethersubr.c,v 1.193.2.9 2006/01/26 23:16:24 oleg Exp $
+ * $FreeBSD: src/sys/net/if_ethersubr.c,v 1.193.2.10 2006/03/04 09:23:34 oleg Exp $
  */
 
 #include "opt_atalk.h"
@@ -450,6 +450,7 @@ ether_ipfw_chk(struct mbuf **m0, struct ifnet *dst,
 	args.rule = *rule;	/* matching rule to restart		*/
 	args.next_hop = NULL;	/* we do not support forward yet	*/
 	args.eh = &save_eh;	/* MAC header for bridged/MAC packets	*/
+	args.inp = NULL;	/* used by ipfw uid/gid/jail rules	*/
 	i = ip_fw_chk_ptr(&args);
 	m = args.m;
 	if (m != NULL) {

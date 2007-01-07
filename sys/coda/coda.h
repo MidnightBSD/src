@@ -27,7 +27,7 @@
  * Mellon the rights to redistribute these changes without encumbrance.
  * 
  * 	@(#) src/sys/coda/coda.h,v 1.1.1.1 1998/08/29 21:14:52 rvb Exp $ 
- * $FreeBSD: src/sys/coda/coda.h,v 1.13 2005/01/05 23:35:00 imp Exp $
+ * $FreeBSD: src/sys/coda/coda.h,v 1.13.2.1 2006/03/03 22:05:23 yar Exp $
  * 
  */
 
@@ -41,7 +41,12 @@
 #ifndef _CODA_HEADER_
 #define _CODA_HEADER_
 
-#include "opt_coda.h"	/* for COMPAT_CODA_5 option */
+#include "opt_coda.h"	/* for CODA_COMPAT_5 option */
+
+/* Avoid CODA_COMPAT_5 redefinition in coda5 module */
+#if defined (CODA5_MODULE) && !defined(CODA_COMPAT_5)
+#define CODA_COMPAT_5
+#endif
 
 /* Catch new _KERNEL defn for NetBSD */
 #ifdef __NetBSD__

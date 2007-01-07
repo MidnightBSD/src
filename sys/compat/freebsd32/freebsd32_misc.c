@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.38.2.6 2006/01/27 17:17:05 ambrisko Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.38.2.7 2006/03/06 10:56:43 ps Exp $");
 
 #include "opt_compat.h"
 
@@ -131,6 +131,8 @@ freebsd32_wait4(struct thread *td, struct freebsd32_wait4_args *uap)
 static void
 copy_statfs(struct statfs *in, struct statfs32 *out)
 {
+	
+	bzero(out, sizeof(*out));
 	CP(*in, *out, f_bsize);
 	CP(*in, *out, f_iosize);
 	CP(*in, *out, f_blocks);
@@ -145,14 +147,14 @@ copy_statfs(struct statfs *in, struct statfs32 *out)
 	CP(*in, *out, f_flags);
 	CP(*in, *out, f_syncwrites);
 	CP(*in, *out, f_asyncwrites);
-	bcopy(in->f_fstypename,
-	      out->f_fstypename, MFSNAMELEN);
-	bcopy(in->f_mntonname,
-	      out->f_mntonname, min(MNAMELEN, FREEBSD4_MNAMELEN));
+	strlcpy(out->f_fstypename,
+	      in->f_fstypename, MFSNAMELEN);
+	strlcpy(out->f_mntonname,
+	      in->f_mntonname, min(MNAMELEN, FREEBSD4_MNAMELEN));
 	CP(*in, *out, f_syncreads);
 	CP(*in, *out, f_asyncreads);
-	bcopy(in->f_mntfromname,
-	      out->f_mntfromname, min(MNAMELEN, FREEBSD4_MNAMELEN));
+	strlcpy(out->f_mntfromname,
+	      in->f_mntfromname, min(MNAMELEN, FREEBSD4_MNAMELEN));
 }
 #endif
 
