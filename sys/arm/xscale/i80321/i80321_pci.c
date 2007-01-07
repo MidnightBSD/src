@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/i80321_pci.c,v 1.4 2005/06/09 12:26:20 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/xscale/i80321/i80321_pci.c,v 1.4.2.1 2006/02/27 01:12:16 cognet Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -376,8 +376,10 @@ i80321_pci_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		rm = &sc->sc_io_rman;
 		bt = sc->sc_pciio;
 		bh = sc->sc_io;
-		start = start - 0x90000000 + sc->sc_io;
-		end = end - 0x90000000 + sc->sc_io;
+		if (start < sc->sc_io) {
+			start = start - 0x90000000 + sc->sc_io;
+			end = end - 0x90000000 + sc->sc_io;
+		}
 		break;
 	default:
 		return (NULL);

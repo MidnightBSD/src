@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/busdma_machdep.c,v 1.22 2005/06/24 23:57:27 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/busdma_machdep.c,v 1.22.2.1 2006/02/27 01:11:43 cognet Exp $");
 
 /*
  * MacPPC bus dma support routines
@@ -189,7 +189,8 @@ _busdma_alloc_dmamap(void)
 
 	mtx_lock(&busdma_mtx);
 	map = TAILQ_FIRST(&dmamap_freelist);
-	TAILQ_REMOVE(&dmamap_freelist, map, freelist);
+	if (map)
+		TAILQ_REMOVE(&dmamap_freelist, map, freelist);
 	mtx_unlock(&busdma_mtx);
 	if (!map) {
 		map = malloc(sizeof(*map), M_DEVBUF, M_NOWAIT);

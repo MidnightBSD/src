@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/mptable.h,v 1.222 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/mptable.h,v 1.222.2.1 2006/03/01 06:02:42 sam Exp $
  */
 
 #ifndef __MACHINE_MPTABLE_H__
@@ -139,7 +139,8 @@ typedef struct BASETABLE_ENTRY {
 	char    name[16];
 }       basetable_entry;
 
+#ifdef _KERNEL
 int	mptable_pci_probe_table(int bus);
 int	mptable_pci_route_interrupt(device_t pcib, device_t dev, int pin);
-
+#endif
 #endif /* !__MACHINE_MPTABLE_H__ */

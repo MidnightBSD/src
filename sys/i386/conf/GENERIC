@@ -15,7 +15,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD$
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.5 2006/10/01 22:12:20 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 machine		i386
@@ -138,11 +138,14 @@ device		psm		# PS/2 mouse
 device		kbdmux		# Keyboard multiplexer
 
 device		vga		# VGA video card driver
+options		VESA		# Support Higher Resolutions.
 
 device		splash		# Splash screen and screen saver support
 
 # syscons is the default console driver, resembling an SCO console
 device		sc
+options		SC_PIXEL_MODE	# Required for Higher Resolutions,
+				# combined with VESA above.
 
 # Enable this for the pcvt (VT220 compatible) console driver
 #device		vt
