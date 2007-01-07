@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hccontrol.h,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/hccontrol.h,v 1.4 2004/04/09 23:58:53 emax Exp $
+ * $Id: hccontrol.h,v 1.2 2007-01-07 04:42:41 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/hccontrol.h,v 1.4.8.3 2006/10/07 23:41:21 emax Exp $
  */
 
 #ifndef _HCCONTROL_H_
@@ -36,6 +36,8 @@
 #define	ERROR			1	/* could not execute command */
 #define	FAILED			2	/* error was reported */
 #define	USAGE			3	/* invalid parameters */
+
+#define	MAX_NODE_NUM		16	/* max number of nodes */
 
 struct hci_command {
 	char const		*command;
@@ -57,20 +59,21 @@ int                hci_simple_request  (int, int, char *, int *);
 int                hci_send            (int, char const *, int);
 int                hci_recv            (int, char *, int *);
 
-char const * const hci_link2str        (int);
-char const * const hci_pin2str         (int);
-char const * const hci_scan2str        (int);
-char const * const hci_encrypt2str     (int, int);
-char const * const hci_coding2str      (int);
-char const * const hci_vdata2str       (int);
-char const * const hci_hmode2str       (int, char *, int);
-char const * const hci_ver2str         (int);
-char const * const hci_manufacturer2str(int);
-char const * const hci_features2str    (uint8_t *, char *, int);
-char const * const hci_cc2str          (int);
-char const * const hci_con_state2str   (int);
-char const * const hci_status2str      (int);
-char const * const hci_bdaddr2str      (bdaddr_t const *);
+char const *	hci_link2str        (int);
+char const *	hci_pin2str         (int);
+char const *	hci_scan2str        (int);
+char const *	hci_encrypt2str     (int, int);
+char const *	hci_coding2str      (int);
+char const *	hci_vdata2str       (int);
+char const *	hci_hmode2str       (int, char *, int);
+char const *	hci_ver2str         (int);
+char const *	hci_lmpver2str      (int);
+char const *	hci_manufacturer2str(int);
+char const *	hci_features2str    (uint8_t *, char *, int);
+char const *	hci_cc2str          (int);
+char const *	hci_con_state2str   (int);
+char const *	hci_status2str      (int);
+char const *	hci_bdaddr2str      (bdaddr_t const *);
 
 #endif /* _HCCONTROL_H_ */
 

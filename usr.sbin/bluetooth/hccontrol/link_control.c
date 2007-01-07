@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: link_control.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/link_control.c,v 1.9 2005/01/04 20:13:48 emax Exp $
+ * $Id: link_control.c,v 1.2 2007-01-07 04:42:41 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/link_control.c,v 1.9.2.2 2006/10/07 23:41:21 emax Exp $
  */
 
 #include <bluetooth.h>
@@ -42,7 +42,7 @@ static int
 hci_inquiry(int s, int argc, char **argv)
 {
 	int			 n0, n1, n2, timo;
-	uint8_t			 b[512];
+	char			 b[512];
 	ng_hci_inquiry_cp	 cp;
 	ng_hci_event_pkt_t	*e = (ng_hci_event_pkt_t *) b;
 
@@ -729,7 +729,8 @@ again:
 
 		fprintf(stdout, "Connection handle: %d\n",
 			le16toh(ep->con_handle));
-		fprintf(stdout, "LMP version: %#02x\n", ep->lmp_version);
+		fprintf(stdout, "LMP version: %s [%#02x]\n",
+			hci_lmpver2str(ep->lmp_version), ep->lmp_version);
 		fprintf(stdout, "LMP sub-version: %#04x\n",
 			le16toh(ep->lmp_subversion));
 		fprintf(stdout, "Manufacturer: %s [%#04x]\n",

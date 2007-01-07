@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: util.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/util.c,v 1.5 2004/04/09 23:58:53 emax Exp $
+ * $Id: util.c,v 1.2 2007-01-07 04:42:41 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/util.c,v 1.5.8.2 2006/10/07 23:41:21 emax Exp $
  */
  
 #include <sys/param.h>
@@ -36,7 +36,7 @@
 
 #define SIZE(x) (sizeof((x))/sizeof((x)[0]))
 
-char const * const
+char const *
 hci_link2str(int link_type)
 {
 	static char const * const	t[] = {
@@ -47,7 +47,7 @@ hci_link2str(int link_type)
 	return (link_type >= SIZE(t)? "?" : t[link_type]);
 } /* hci_link2str */
 
-char const * const
+char const *
 hci_pin2str(int type)
 {
 	static char const * const	t[] = {
@@ -58,7 +58,7 @@ hci_pin2str(int type)
 	return (type >= SIZE(t)? "?" : t[type]);
 } /* hci_pin2str */
 
-char const * const
+char const *
 hci_scan2str(int scan)
 {
 	static char const * const	t[] = {
@@ -71,7 +71,7 @@ hci_scan2str(int scan)
 	return (scan >= SIZE(t)? "?" : t[scan]);
 } /* hci_scan2str */
 
-char const * const
+char const *
 hci_encrypt2str(int encrypt, int brief)
 {
 	static char const * const	t[] = {
@@ -92,7 +92,7 @@ hci_encrypt2str(int encrypt, int brief)
 	return (encrypt >= SIZE(t)? "?" : t[encrypt]);
 } /* hci_encrypt2str */
 
-char const * const
+char const *
 hci_coding2str(int coding)
 {
 	static char const * const	t[] = {
@@ -105,7 +105,7 @@ hci_coding2str(int coding)
 	return (coding >= SIZE(t)? "?" : t[coding]);
 } /* hci_coding2str */
 
-char const * const
+char const *
 hci_vdata2str(int data)
 {
 	static char const * const	t[] = {
@@ -118,7 +118,7 @@ hci_vdata2str(int data)
 	return (data >= SIZE(t)? "?" : t[data]);
 } /* hci_vdata2str */
 
-char const * const
+char const *
 hci_hmode2str(int mode, char *buffer, int size)
 {
 	static char const * const	t[] = {
@@ -144,22 +144,37 @@ hci_hmode2str(int mode, char *buffer, int size)
 	return (buffer);
 } /* hci_hmode2str */
 
-char const * const
+char const *
 hci_ver2str(int ver)
 {
 	static char const * const	t[] = {
-		/* 0x00 */ "v1.0B",
-		/* 0x01 */ "v1.1"
+		/* 0x00 */ "Bluetooth HCI Specification 1.0B",
+		/* 0x01 */ "Bluetooth HCI Specification 1.1",
+		/* 0x02 */ "Bluetooth HCI Specification 1.2",
+		/* 0x03 */ "Bluetooth HCI Specification 2.0"
 	};
 
 	return (ver >= SIZE(t)? "?" : t[ver]);
 } /* hci_ver2str */
 
-char const * const
+char const *
+hci_lmpver2str(int ver)
+{
+	static char const * const	t[] = {
+		/* 0x00 */ "Bluetooth LMP 1.0",
+		/* 0x01 */ "Bluetooth LMP 1.1",
+		/* 0x02 */ "Bluetooth LMP 1.2",
+		/* 0x03 */ "Bluetooth LMP 2.0"
+	};
+
+	return (ver >= SIZE(t)? "?" : t[ver]);
+} /* hci_lmpver2str */
+
+char const *
 hci_manufacturer2str(int m)
 {
 	static char const * const	t[] = {
-		/* 0000 */ "Ericsson Mobile Communications",
+		/* 0000 */ "Ericsson Technology Licensing",
 		/* 0001 */ "Nokia Mobile Phones",
 		/* 0002 */ "Intel Corp.",
 		/* 0003 */ "IBM Corp.",
@@ -177,7 +192,7 @@ hci_manufacturer2str(int m)
 		/* 0015 */ "Broadcom Corporation",
 		/* 0016 */ "Mitel Semiconductor",
 		/* 0017 */ "Widcomm, Inc.",
-		/* 0018 */ "Telencomm Inc.",
+		/* 0018 */ "Zeevo, Inc.",
 		/* 0019 */ "Atmel Corporation",
 		/* 0020 */ "Mitsubishi Electric Corporation",
 		/* 0021 */ "RTX Telecom A/S",
@@ -206,13 +221,30 @@ hci_manufacturer2str(int m)
 		/* 0044 */ "Macronix International Co. Ltd.",
 		/* 0045 */ "GCT Semiconductor",
 		/* 0046 */ "Norwood Systems",
-		/* 0047 */ "MewTel Technology Inc."
+		/* 0047 */ "MewTel Technology Inc.",
+		/* 0048 */ "ST Microelectronics",
+		/* 0049 */ "Synopsys",
+		/* 0050 */ "Red-M (Communications) Ltd",
+		/* 0051 */ "Commil Ltd",
+		/* 0052 */ "Computer Access Technology Corporation (CATC)",
+		/* 0053 */ "Eclipse (HQ Espana) S.L.",
+		/* 0054 */ "Renesas Technology Corp.",
+		/* 0055 */ "Mobilian Corporation",
+		/* 0056 */ "Terax",
+		/* 0057 */ "Integrated System Solution Corp.",
+		/* 0058 */ "Matsushita Electric Industrial Co., Ltd.",
+		/* 0059 */ "Gennum Corporation",
+		/* 0060 */ "Research In Motion",
+		/* 0061 */ "IPextreme, Inc.",
+		/* 0062 */ "Systems and Chips, Inc",
+		/* 0063 */ "Bluetooth SIG, Inc",
+		/* 0064 */ "Seiko Epson Corporation"
         };
 
 	return (m >= SIZE(t)? "?" : t[m]);
 } /* hci_manufacturer2str */
 
-char const * const 
+char const *
 hci_features2str(uint8_t *features, char *buffer, int size)
 {
 	static char const * const	t[][8] = {
@@ -275,7 +307,7 @@ done:
 	return (buffer);
 } /* hci_features2str */
 
-char const * const
+char const *
 hci_cc2str(int cc)
 {
 	static char const * const	t[] = {
@@ -286,7 +318,7 @@ hci_cc2str(int cc)
 	return (cc >= SIZE(t)? "?" : t[cc]);
 } /* hci_cc2str */
 
-char const * const
+char const *
 hci_con_state2str(int state)
 {
 	static char const * const	t[] = {
@@ -299,7 +331,7 @@ hci_con_state2str(int state)
 	return (state >= SIZE(t)? "UNKNOWN" : t[state]);
 } /* hci_con_state2str */
 
-char const * const
+char const *
 hci_status2str(int status)
 {
 	static char const * const       t[] = {
@@ -350,7 +382,7 @@ hci_status2str(int status)
 	return (status >= SIZE(t)? "Unknown error" : t[status]);
 } /* hci_status2str */
 
-char const * const
+char const *
 hci_bdaddr2str(bdaddr_t const *ba)
 {
 	extern int	 numeric_bdaddr;

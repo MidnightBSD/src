@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/wpa/wpa_supplicant/Packet32.c,v 1.2.2.1 2005/10/27 17:06:47 wpaul Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/wpa/wpa_supplicant/Packet32.c,v 1.2.2.1.2.1 2006/04/13 04:06:18 kensmith Exp $");
 
 /*
  * This file implements a small portion of the Winpcap API for the
@@ -246,15 +246,15 @@ PacketGetAdapterNames(namelist, len)
 	mib[5] = 0;             /* no flags */
 
 	if (sysctl (mib, 6, NULL, &needed, NULL, 0) < 0)
-		return(EIO);
+		return(FALSE);
 
 	buf = malloc (needed);
 	if (buf == NULL)
-		return(ENOMEM);
+		return(FALSE);
 
 	if (sysctl (mib, 6, buf, &needed, NULL, 0) < 0) {
 		free(buf);
-		return(EIO);
+		return(FALSE);
 	}
 
 	lim = buf + needed;
@@ -269,7 +269,7 @@ PacketGetAdapterNames(namelist, len)
 			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
-					return(ENOSPC);
+					return(FALSE);
 				}
 				strncpy(plist, sdl->sdl_data, sdl->sdl_nlen);
 				plist += (sdl->sdl_nlen + 1);
@@ -302,7 +302,7 @@ PacketGetAdapterNames(namelist, len)
 			if (strnstr(sdl->sdl_data, "ndis", sdl->sdl_nlen)) {
 				if ((spc + sdl->sdl_nlen) > *len) {
 					free(buf);
-					return(ENOSPC);
+					return(FALSE);
 				}
 				strncpy(plist, sdl->sdl_data, sdl->sdl_nlen);
 				plist += (sdl->sdl_nlen + 1);
@@ -317,7 +317,7 @@ PacketGetAdapterNames(namelist, len)
 
 	*len = spc + 1;
 
-	return(0);
+	return(TRUE);
 }
 
 void

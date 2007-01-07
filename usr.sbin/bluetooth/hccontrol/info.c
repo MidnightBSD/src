@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: info.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/info.c,v 1.3 2003/10/12 22:04:23 emax Exp $
+ * $Id: info.c,v 1.2 2007-01-07 04:42:41 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/info.c,v 1.3.10.1 2006/02/27 00:38:02 markus Exp $
  */
 
 #include <bluetooth.h>
@@ -59,7 +59,8 @@ hci_read_local_version_information(int s, int argc, char **argv)
 		hci_ver2str(rp.hci_version), rp.hci_version);
 	fprintf(stdout, "HCI revision: %#04x\n",
 		le16toh(rp.hci_revision));
-	fprintf(stdout, "LMP version: %#02x\n", rp.lmp_version);
+	fprintf(stdout, "LMP version: %s [%#02x]\n",
+		hci_lmpver2str(rp.lmp_version), rp.lmp_version);
 	fprintf(stdout, "LMP sub-version: %#04x\n", 
 		le16toh(rp.lmp_subversion));
 	fprintf(stdout, "Manufacturer: %s [%#04x]\n", 
