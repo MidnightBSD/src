@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_timer.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp_timer.h,v 1.27 2005/01/07 01:45:45 imp Exp $
+ * $FreeBSD: src/sys/netinet/tcp_timer.h,v 1.27.2.1 2006/03/01 21:13:29 andre Exp $
  */
 
 #ifndef _NETINET_TCP_TIMER_H_
@@ -85,6 +85,9 @@
 #define	TCPTV_KEEP_IDLE	(120*60*hz)		/* dflt time before probing */
 #define	TCPTV_KEEPINTVL	( 75*hz)		/* default probe interval */
 #define	TCPTV_KEEPCNT	8			/* max probes before drop */
+
+#define	TCPTV_INFLIGHT_RTTTHRESH (10*hz/1000)	/* below which inflight
+						   disengages, in msec */
 
 /*
  * Minimum retransmit timer is 3 ticks, for algorithmic stability.

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $FreeBSD: src/sys/netinet/tcp_var.h,v 1.126 2005/06/27 22:27:42 ps Exp $
+ * $FreeBSD: src/sys/netinet/tcp_var.h,v 1.126.2.1 2006/03/01 21:13:29 andre Exp $
  */
 
 #ifndef _NETINET_TCP_VAR_H_
@@ -199,6 +199,7 @@ struct tcpcb {
 	tcp_seq sack_newdata;		/* New data xmitted in this recovery
 					   episode starts at this seq number */
 	struct sackhint	sackhint;	/* SACK scoreboard hint */
+	int	t_rttlow;		/* smallest observerved RTT */
 };
 
 #define IN_FASTRECOVERY(tp)	(tp->t_flags & TF_FASTRECOVERY)

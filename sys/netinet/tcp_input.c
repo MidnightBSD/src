@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_input.c	8.12 (Berkeley) 5/24/95
- * $FreeBSD: src/sys/netinet/tcp_input.c,v 1.281.2.4 2006/01/31 16:09:34 andre Exp $
+ * $FreeBSD: src/sys/netinet/tcp_input.c,v 1.281.2.5 2006/03/01 21:13:29 andre Exp $
  */
 
 #include "opt_ipfw.h"		/* for ipfw_fwd		*/
@@ -1192,10 +1192,16 @@ after_listen:
 				 */
 				if ((to.to_flags & TOF_TS) != 0 &&
 				    to.to_tsecr) {
+					if (!tp->t_rttlow ||
+					    tp->t_rttlow > ticks - to.to_tsecr)
+						tp->t_rttlow = ticks - to.to_tsecr;
 					tcp_xmit_timer(tp,
 					    ticks - to.to_tsecr + 1);
 				} else if (tp->t_rtttime &&
 					    SEQ_GT(th->th_ack, tp->t_rtseq)) {
+					if (!tp->t_rttlow ||
+					    tp->t_rttlow > ticks - tp->t_rtttime)
+						tp->t_rttlow = ticks - tp->t_rtttime;
 					tcp_xmit_timer(tp,
 							ticks - tp->t_rtttime);
 				}
@@ -2076,8 +2082,12 @@ process_ACK:
 		 */
 		if ((to.to_flags & TOF_TS) != 0 &&
 		    to.to_tsecr) {
+			if (!tp->t_rttlow || tp->t_rttlow > ticks - to.to_tsecr)
+				tp->t_rttlow = ticks - to.to_tsecr;
 			tcp_xmit_timer(tp, ticks - to.to_tsecr + 1);
 		} else if (tp->t_rtttime && SEQ_GT(th->th_ack, tp->t_rtseq)) {
+			if (!tp->t_rttlow || tp->t_rttlow > ticks - tp->t_rtttime)
+				tp->t_rttlow = ticks - tp->t_rtttime;
 			tcp_xmit_timer(tp, ticks - tp->t_rtttime);
 		}
 		tcp_xmit_bandwidth_limit(tp, th->th_ack);
