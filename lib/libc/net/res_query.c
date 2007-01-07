@@ -70,10 +70,10 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static char rcsid[] = "$Id: res_query.c,v 1.1.1.2 2006-02-25 02:34:56 laffer1 Exp $";
+static char rcsid[] = "$Id: res_query.c,v 1.2 2007-01-07 23:37:16 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/res_query.c,v 1.30 2005/04/15 14:42:29 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/res_query.c,v 1.30.2.3 2006/03/29 03:35:59 ume Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -195,10 +195,13 @@ res_search(name, class, type, answer, anslen)
 	int anslen;		/* size of answer */
 {
 	const char *cp, * const *domain;
+	HEADER *hp = (HEADER *) answer;
 	char tmp[MAXDNAME];
 	u_int dots;
 	int trailing_dot, ret, saved_herrno;
-	int got_nodata = 0, got_servfail = 0, tried_as_is = 0;
+	int got_nodata = 0, got_servfail = 0, root_on_list = 0;
+	int tried_as_is = 0;
+	int searched = 0;
 
 	if ((_res.options & RES_INIT) == 0 && res_init() == -1) {
 		h_errno = NETDB_INTERNAL;
@@ -218,14 +221,30 @@ res_search(name, class, type, answer, anslen)
 		return (res_query(cp, class, type, answer, anslen));
 
 	/*
-	 * If there are dots in the name already, let's just give it a try
-	 * 'as is'.  The threshold can be set with the "ndots" option.
+	 * If there are enough dots in the name, let's just give it a
+	 * try 'as is'. The threshold can be set with the "ndots" option.
+	 * Also, query 'as is', if there is a trailing dot in the name.
 	 */
 	saved_herrno = -1;
-	if (dots >= _res.ndots) {
+	if (dots >= _res.ndots || trailing_dot) {
 		ret = res_querydomain(name, NULL, class, type, answer, anslen);
-		if (ret > 0)
+		if (ret > 0 || trailing_dot)
 			return (ret);
+		if (errno == ECONNREFUSED) {
+			h_errno = TRY_AGAIN;
+			return (-1);
+		}
+		switch (h_errno) {
+		case NO_DATA:
+		case HOST_NOT_FOUND:
+			break;
+		case TRY_AGAIN:
+			if (hp->rcode == SERVFAIL)
+				break;
+			/* FALLTHROUGH */
+		default:
+			return (-1);
+		}
 		saved_herrno = h_errno;
 		tried_as_is++;
 	}
@@ -243,6 +262,14 @@ res_search(name, class, type, answer, anslen)
 		for (domain = (const char * const *)_res.dnsrch;
 		     *domain && !done;
 		     domain++) {
+			searched = 1;
+
+			if (domain[0][0] == '\0' ||
+			    (domain[0][0] == '.' && domain[0][1] == '\0'))
+				root_on_list++;
+
+			if (root_on_list && tried_as_is)
+				continue;
 
 			ret = res_querydomain(name, *domain, class, type,
 					      answer, anslen);
@@ -282,10 +309,10 @@ res_search(name, class, type, answer, anslen)
 				 * ((HEADER *)answer)->rcode may not be set
 				 * to SERVFAIL in the case of a timeout.
 				 *
-				 * Either way we must terminate the search
-				 * and return TRY_AGAIN in order to avoid
-				 * non-deterministic return codes.  For
-				 * example, loaded name servers or races
+				 * Either way we must return TRY_AGAIN in
+				 * order to avoid non-deterministic
+				 * return codes.
+				 * For example, loaded name servers or races
 				 * against network startup/validation (dhcp,
 				 * ppp, etc) can cause the search to timeout
 				 * on one search element, e.g. 'fu.bar.com',
@@ -293,6 +320,10 @@ res_search(name, class, type, answer, anslen)
 				 * next search element, e.g. 'fu.'.
 				 */
 				++got_servfail;
+				if (hp->rcode == SERVFAIL) {
+					/* try next search element, if any */
+					break;
+				}
 				/* FALLTHROUGH */
 			default:
 				/* anything else implies that we're done */
@@ -307,12 +338,24 @@ res_search(name, class, type, answer, anslen)
 		}
 	}
 
+	switch (h_errno) {
+	case NO_DATA:
+	case HOST_NOT_FOUND:
+		break;
+	case TRY_AGAIN:
+		if (hp->rcode == SERVFAIL)
+			break;
+		/* FALLTHROUGH */
+	default:
+		goto giveup;
+	}
+
 	/*
-	 * If we have not already tried the name "as is", do that now.
-	 * note that we do this regardless of how many dots were in the
-	 * name or whether it ends with a dot unless NOTLDQUERY is set.
+	 * If the query has not already been tried as is then try it
+	 * unless RES_NOTLDQUERY is set and there were no dots.
 	 */
-	if (!tried_as_is && (dots || !(_res.options & RES_NOTLDQUERY))) {
+	if ((dots || !searched || !(_res.options & RES_NOTLDQUERY)) &&
+	    !(tried_as_is || root_on_list)) {
 		ret = res_querydomain(name, NULL, class, type, answer, anslen);
 		if (ret > 0)
 			return (ret);
@@ -325,6 +368,7 @@ res_search(name, class, type, answer, anslen)
 	 * else send back meaningless h_errno, that being the one from
 	 * the last DNSRCH we did.
 	 */
+giveup:
 	if (saved_herrno != -1)
 		h_errno = saved_herrno;
 	else if (got_nodata)

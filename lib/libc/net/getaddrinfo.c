@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/getaddrinfo.c,v 1.69.2.1 2005/07/22 20:17:30 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/getaddrinfo.c,v 1.69.2.4 2006/03/29 03:35:59 ume Exp $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -2348,9 +2348,9 @@ res_queryN(name, target)
 		}
 #endif
 
-		if (n < 0 || n > anslen)
+		if (n > anslen)
 			hp->rcode = FORMERR; /* XXX not very informative */
-		if (hp->rcode != NOERROR || ntohs(hp->ancount) == 0) {
+		if (n < 0 || hp->rcode != NOERROR || ntohs(hp->ancount) == 0) {
 			rcode = hp->rcode;	/* record most recent error */
 #ifdef DEBUG
 			if (_res.options & RES_DEBUG)
@@ -2405,7 +2405,9 @@ res_searchN(name, target)
 	HEADER *hp = (HEADER *)(void *)target->answer;	/*XXX*/
 	u_int dots;
 	int trailing_dot, ret, saved_herrno;
-	int got_nodata = 0, got_servfail = 0, tried_as_is = 0;
+	int got_nodata = 0, got_servfail = 0, root_on_list = 0;
+	int tried_as_is = 0;
+	int searched = 0;
 	char abuf[MAXDNAME];
 
 	if ((_res.options & RES_INIT) == 0 && res_init() == -1) {
@@ -2429,14 +2431,30 @@ res_searchN(name, target)
 		return (res_queryN(cp, target));
 
 	/*
-	 * If there are dots in the name already, let's just give it a try
-	 * 'as is'.  The threshold can be set with the "ndots" option.
+	 * If there are enough dots in the name, let's just give it a
+	 * try 'as is'. The threshold can be set with the "ndots" option.
+	 * Also, query 'as is', if there is a trailing dot in the name.
 	 */
 	saved_herrno = -1;
-	if (dots >= _res.ndots) {
+	if (dots >= _res.ndots || trailing_dot) {
 		ret = res_querydomainN(name, NULL, target);
-		if (ret > 0)
+		if (ret > 0 || trailing_dot)
 			return (ret);
+		if (errno == ECONNREFUSED) {
+			h_errno = TRY_AGAIN;
+			return (-1);
+		}
+		switch (h_errno) {
+		case NO_DATA:
+		case HOST_NOT_FOUND:
+			break;
+		case TRY_AGAIN:
+			if (hp->rcode == SERVFAIL)
+				break;
+			/* FALLTHROUGH */
+		default:
+			return (-1);
+		}
 		saved_herrno = h_errno;
 		tried_as_is++;
 	}
@@ -2454,6 +2472,14 @@ res_searchN(name, target)
 		for (domain = (const char * const *)_res.dnsrch;
 		   *domain && !done;
 		   domain++) {
+			searched = 1;
+
+			if (domain[0][0] == '\0' ||
+			    (domain[0][0] == '.' && domain[0][1] == '\0'))
+				root_on_list++;
+
+			if (root_on_list && tried_as_is)
+				continue;
 
 			ret = res_querydomainN(name, *domain, target);
 			if (ret > 0)
@@ -2485,9 +2511,9 @@ res_searchN(name, target)
 				/* keep trying */
 				break;
 			case TRY_AGAIN:
+				got_servfail++;
 				if (hp->rcode == SERVFAIL) {
 					/* try next search element, if any */
-					got_servfail++;
 					break;
 				}
 				/* FALLTHROUGH */
@@ -2504,12 +2530,24 @@ res_searchN(name, target)
 		}
 	}
 
+	switch (h_errno) {
+	case NO_DATA:
+	case HOST_NOT_FOUND:
+		break;
+	case TRY_AGAIN:
+		if (hp->rcode == SERVFAIL)
+			break;
+		/* FALLTHROUGH */
+	default:
+		goto giveup;
+	}
+
 	/*
-	 * if we have not already tried the name "as is", do that now.
-	 * note that we do this regardless of how many dots were in the
-	 * name or whether it ends with a dot.
+	 * If the query has not already been tried as is then try it
+	 * unless RES_NOTLDQUERY is set and there were no dots.
 	 */
-	if (!tried_as_is && (dots || !(_res.options & RES_NOTLDQUERY))) {
+	if ((dots || !searched || !(_res.options & RES_NOTLDQUERY)) &&
+	    !(tried_as_is || root_on_list)) {
 		ret = res_querydomainN(name, NULL, target);
 		if (ret > 0)
 			return (ret);
@@ -2523,6 +2561,7 @@ res_searchN(name, target)
 	 * else send back meaningless h_errno, that being the one from
 	 * the last DNSRCH we did.
 	 */
+giveup:
 	if (saved_herrno != -1)
 		h_errno = saved_herrno;
 	else if (got_nodata)
