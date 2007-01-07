@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_domain.c,v 1.44.2.1 2005/09/20 09:16:10 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_domain.c,v 1.44.2.2 2006/03/01 20:58:36 andre Exp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -149,6 +149,8 @@ net_init_domain(struct domain *dp)
 	 */
 	max_hdr = max_linkhdr + max_protohdr;
 	max_datalen = MHLEN - max_hdr;
+	if (max_datalen < 1)
+		panic("%s: max_datalen < 1", __func__);
 }
 
 /*
