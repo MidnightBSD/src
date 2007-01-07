@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/apicvar.h,v 1.13 2005/06/09 18:23:54 ups Exp $
+ * $FreeBSD: src/sys/i386/include/apicvar.h,v 1.13.2.2 2006/03/07 18:33:21 jhb Exp $
  */
 
 #ifndef _MACHINE_APICVAR_H_
@@ -172,13 +172,14 @@ inthand_t
 	IDTVEC(apic_isr4), IDTVEC(apic_isr5), IDTVEC(apic_isr6),
 	IDTVEC(apic_isr7), IDTVEC(spuriousint), IDTVEC(timerint);
 
-u_int	apic_irq_to_idt(u_int irq);
+u_int	apic_alloc_vector(u_int irq);
+void	apic_enable_vector(u_int vector);
+void	apic_free_vector(u_int vector, u_int irq);
 u_int	apic_idt_to_irq(u_int vector);
 void	apic_register_enumerator(struct apic_enumerator *enumerator);
 void	*ioapic_create(uintptr_t addr, int32_t id, int intbase);
 int	ioapic_disable_pin(void *cookie, u_int pin);
 int	ioapic_get_vector(void *cookie, u_int pin);
-int	ioapic_next_logical_cluster(void);
 void	ioapic_register(void *cookie);
 int	ioapic_remap_vector(void *cookie, u_int pin, int vector);
 int	ioapic_set_bus(void *cookie, u_int pin, int bus_type);
@@ -191,7 +192,6 @@ int	ioapic_set_smi(void *cookie, u_int pin);
 void	lapic_create(u_int apic_id, int boot_cpu);
 void	lapic_disable(void);
 void	lapic_dump(const char *str);
-void	lapic_enable_intr(u_int vector);
 void	lapic_eoi(void);
 int	lapic_id(void);
 void	lapic_init(uintptr_t addr);
