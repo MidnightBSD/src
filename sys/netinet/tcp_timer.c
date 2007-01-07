@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_timer.c	8.2 (Berkeley) 5/24/95
- * $FreeBSD: src/sys/netinet/tcp_timer.c,v 1.74.2.1 2005/08/20 13:34:13 rwatson Exp $
+ * $FreeBSD: src/sys/netinet/tcp_timer.c,v 1.74.2.2 2006/03/01 21:08:53 andre Exp $
  */
 
 #include "opt_inet6.h"
@@ -62,26 +62,6 @@
 #ifdef TCPDEBUG
 #include <netinet/tcp_debug.h>
 #endif
-
-static int
-sysctl_msec_to_ticks(SYSCTL_HANDLER_ARGS)
-{
-	int error, s, tt;
-
-	tt = *(int *)oidp->oid_arg1;
-	s = (int)((int64_t)tt * 1000 / hz);
-
-	error = sysctl_handle_int(oidp, &s, 0, req);
-	if (error || !req->newptr)
-		return (error);
-
-	tt = (int)((int64_t)s * hz / 1000);
-	if (tt < 1)
-		return (EINVAL);
-
-	*(int *)oidp->oid_arg1 = tt;
-	return (0);
-}
 
 int	tcp_keepinit;
 SYSCTL_PROC(_net_inet_tcp, TCPCTL_KEEPINIT, keepinit, CTLTYPE_INT|CTLFLAG_RW,

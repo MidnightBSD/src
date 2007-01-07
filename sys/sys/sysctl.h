@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sysctl.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/sysctl.h,v 1.138 2005/04/18 02:10:37 das Exp $
+ * $FreeBSD: src/sys/sys/sysctl.h,v 1.138.2.1 2006/03/01 21:08:53 andre Exp $
  */
 
 #ifndef _SYS_SYSCTL_H_
@@ -168,6 +168,7 @@ struct sysctl_oid {
 #define SYSCTL_OUT(r, p, l) (r->oldfunc)(r, p, l)
 
 int sysctl_handle_int(SYSCTL_HANDLER_ARGS);
+int sysctl_msec_to_ticks(SYSCTL_HANDLER_ARGS);
 int sysctl_handle_long(SYSCTL_HANDLER_ARGS);
 int sysctl_handle_intptr(SYSCTL_HANDLER_ARGS);
 int sysctl_handle_string(SYSCTL_HANDLER_ARGS);

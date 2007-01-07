@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.165.2.2 2006/01/28 00:31:56 truckman Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.165.2.3 2006/03/01 21:08:53 andre Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -821,6 +821,32 @@ sysctl_handle_int(SYSCTL_HANDLER_ARGS)
 		error = SYSCTL_IN(req, arg1, sizeof(int));
 	return (error);
 }
+
+
+/*
+ * Based on on sysctl_handle_int() convert milliseconds into ticks.
+ */
+
+int
+sysctl_msec_to_ticks(SYSCTL_HANDLER_ARGS)
+{
+	int error, s, tt;
+
+	tt = *(int *)oidp->oid_arg1;
+	s = (int)((int64_t)tt * 1000 / hz);
+
+	error = sysctl_handle_int(oidp, &s, 0, req);
+	if (error || !req->newptr)
+		return (error);
+
+	tt = (int)((int64_t)s * hz / 1000);
+	if (tt < 1)
+		return (EINVAL);
+
+	*(int *)oidp->oid_arg1 = tt;
+	return (0);
+}
+
 
 /*
  * Handle a long, signed or unsigned.  arg1 points to it.
