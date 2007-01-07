@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_input.c	8.2 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/netinet/ip_input.c,v 1.301.2.6 2006/02/13 23:46:31 rwatson Exp $
+ * $FreeBSD: src/sys/netinet/ip_input.c,v 1.301.2.7 2006/03/04 09:15:08 oleg Exp $
  */
 
 #include "opt_bootp.h"
@@ -1118,6 +1118,13 @@ found:
 		m->m_pkthdr.csum_data += q->m_pkthdr.csum_data;
 		m_cat(m, q);
 	}
+	/*
+	 * In order to do checksumming faster we do 'end-around carry' here
+	 * (and not in for{} loop), though it implies we are not going to
+	 * reassemble more than 64k fragments.
+	 */
+	m->m_pkthdr.csum_data =
+	    (m->m_pkthdr.csum_data & 0xffff) + (m->m_pkthdr.csum_data >> 16);
 #ifdef MAC
 	mac_create_datagram_from_ipq(fp, m);
 	mac_destroy_ipq(fp);
