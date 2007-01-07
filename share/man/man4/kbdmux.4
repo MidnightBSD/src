@@ -1,5 +1,5 @@
-.\" $Id: kbdmux.4,v 1.1.1.2 2006-02-25 02:35:44 laffer1 Exp $
-.\" $FreeBSD: src/share/man/man4/kbdmux.4,v 1.1.2.2 2005/08/06 14:41:55 markus Exp $
+.\" $Id: kbdmux.4,v 1.2 2007-01-07 22:50:58 laffer1 Exp $
+.\" $FreeBSD: src/share/man/man4/kbdmux.4,v 1.1.2.3 2006/03/04 00:08:20 emax Exp $
 .\"
 .Dd July 12, 2005
 .Os
@@ -9,6 +9,10 @@
 .Nd keyboard multiplexer
 .Sh SYNOPSIS
 .Cd device kbdmux
+.Pp
+In
+.Pa /boot/device.hints :
+.Cd hint.kbdmux.0.disabled="1"
 .Sh DESCRIPTION
 The
 .Nm
