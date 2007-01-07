@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: subr_witness.c,v 1.2 2007-01-06 06:02:29 laffer1 Exp $
- *	and BSDI $Id: subr_witness.c,v 1.2 2007-01-06 06:02:29 laffer1 Exp $
+ *	from BSDI $Id: subr_witness.c,v 1.3 2007-01-07 19:04:00 laffer1 Exp $
+ *	and BSDI $Id: subr_witness.c,v 1.3 2007-01-07 19:04:00 laffer1 Exp $
  */
 
 /*
@@ -374,7 +374,6 @@ static struct witness_order_list_entry order_lists[] = {
 	{ "ng_worklist", &lock_class_mtx_spin },
 	{ "taskqueue_fast", &lock_class_mtx_spin },
 	{ "intr table", &lock_class_mtx_spin },
-	{ "ithread table lock", &lock_class_mtx_spin },
 	{ "sleepq chain", &lock_class_mtx_spin },
 	{ "sched lock", &lock_class_mtx_spin },
 	{ "turnstile chain", &lock_class_mtx_spin },

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_kbd_sun.c,v 1.5 2005/06/04 21:54:31 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_kbd_sun.c,v 1.5.2.1 2006/03/10 19:37:32 jhb Exp $");
 
 #include "opt_kbd.h"
 
@@ -254,7 +254,7 @@ sunkbd_attach(struct uart_softc *sc)
 #endif
 		sunkbd_enable(&sunkbd_softc.sc_kbd);
 
-		swi_add(&tty_ithd, uart_driver_name, sunkbd_uart_intr,
+		swi_add(&tty_intr_event, uart_driver_name, sunkbd_uart_intr,
 		    &sunkbd_softc, SWI_TTY, INTR_TYPE_TTY, &sc->sc_softih);
 
 		sc->sc_opened = 1;

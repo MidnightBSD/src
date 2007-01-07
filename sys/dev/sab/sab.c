@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sab/sab.c,v 1.39 2005/06/04 20:29:28 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sab/sab.c,v 1.39.2.1 2006/03/10 19:37:32 jhb Exp $");
 
 /*
  * SAB82532 Dual UART driver
@@ -321,7 +321,7 @@ sab_attach(device_t dev)
 	for (i = 0; i < SAB_NCHAN; i++)
 		sc->sc_child[i] = device_get_softc(child[i]);
 
-	swi_add(&tty_ithd, "tty:sab", sab_softintr, sc, SWI_TTY,
+	swi_add(&tty_intr_event, "sab", sab_softintr, sc, SWI_TTY,
 	    INTR_TYPE_TTY, &sc->sc_softih);
 
 	if (sabtty_cons != NULL) {

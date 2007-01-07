@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/sio.c,v 1.234.2.1 2005/11/06 05:01:03 nyan Exp $
+ * $FreeBSD: src/sys/pc98/cbus/sio.c,v 1.234.2.2 2006/03/10 19:37:34 jhb Exp $
  *	from: @(#)com.c	7.5 (Berkeley) 5/16/91
  *	from: i386/isa sio.c,v 1.234
  */
@@ -1718,9 +1718,9 @@ determined_type: ;
 	printf("\n");
 
 	if (sio_fast_ih == NULL) {
-		swi_add(&tty_ithd, "sio", siopoll, NULL, SWI_TTY, 0,
+		swi_add(&tty_intr_event, "sio", siopoll, NULL, SWI_TTY, 0,
 		    &sio_fast_ih);
-		swi_add(&clk_ithd, "sio", siopoll, NULL, SWI_CLOCK, 0,
+		swi_add(&clk_intr_event, "sio", siopoll, NULL, SWI_CLOCK, 0,
 		    &sio_slow_ih);
 	}
 

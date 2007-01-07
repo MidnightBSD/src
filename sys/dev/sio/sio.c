@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.459 2005/05/29 04:42:25 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.459.2.1 2006/03/10 19:37:32 jhb Exp $");
 
 #include "opt_comconsole.h"
 #include "opt_compat.h"
@@ -1055,9 +1055,9 @@ determined_type: ;
 	printf("\n");
 
 	if (sio_fast_ih == NULL) {
-		swi_add(&tty_ithd, "sio", siopoll, NULL, SWI_TTY, 0,
+		swi_add(&tty_intr_event, "sio", siopoll, NULL, SWI_TTY, 0,
 		    &sio_fast_ih);
-		swi_add(&clk_ithd, "sio", siopoll, NULL, SWI_CLOCK, 0,
+		swi_add(&clk_intr_event, "sio", siopoll, NULL, SWI_CLOCK, 0,
 		    &sio_slow_ih);
 	}
 

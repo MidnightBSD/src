@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cy/cy.c,v 1.160 2004/10/05 07:42:19 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cy/cy.c,v 1.160.2.1 2006/03/10 19:37:31 jhb Exp $");
 
 #include "opt_compat.h"
 
@@ -428,9 +428,9 @@ cyattach_common(cy_addr cy_iobase, int cy_align)
 			splx(s);
 
 			if (cy_fast_ih == NULL) {
-				swi_add(&tty_ithd, "cy", cypoll, NULL, SWI_TTY, 0,
+				swi_add(&tty_intr_event, "cy", cypoll, NULL, SWI_TTY, 0,
 					&cy_fast_ih);
-				swi_add(&clk_ithd, "cy", cypoll, NULL, SWI_CLOCK, 0,
+				swi_add(&clk_intr_event, "cy", cypoll, NULL, SWI_CLOCK, 0,
 					&cy_slow_ih);
 			}
 			ttycreate(tp, NULL, 0, MINOR_CALLOUT, "c%r%r",

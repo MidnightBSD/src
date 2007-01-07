@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/isa/atpic.c,v 1.15.2.1 2005/12/13 16:47:33 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/isa/atpic.c,v 1.15.2.3 2006/03/10 19:37:31 jhb Exp $");
 
 #include "opt_auto_eoi.h"
 #include "opt_isa.h"
@@ -109,8 +109,8 @@ inthand_t
 #define	ATPIC(io, base, eoi, imenptr)					\
      	{ { atpic_enable_source, atpic_disable_source, (eoi),		\
 	    atpic_enable_intr, atpic_vector, atpic_source_pending, NULL, \
-	    atpic_resume, atpic_config_intr }, (io), (base),		\
-	    IDT_IO_INTS + (base), (imenptr) }
+	    atpic_resume, atpic_config_intr, atpic_assign_cpu }, (io),  \
+	    (base), IDT_IO_INTS + (base), (imenptr) }
 
 #define	INTSRC(irq)							\
 	{ { &atpics[(irq) / 8].at_pic }, IDTVEC(atpic_intr ## irq ),	\
@@ -143,6 +143,7 @@ static void atpic_resume(struct intsrc *isrc);
 static int atpic_source_pending(struct intsrc *isrc);
 static int atpic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
     enum intr_polarity pol);
+static void atpic_assign_cpu(struct intsrc *isrc, u_int apic_id);
 static void i8259_init(struct atpic *pic, int slave);
 
 static struct atpic atpics[] = {
@@ -354,6 +355,17 @@ atpic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
 }
 
 static void
+atpic_assign_cpu(struct intsrc *isrc, u_int apic_id)
+{
+
+	/*
+	 * 8259A's are only used in UP in which case all interrupts always
+	 * go to the sole CPU and this function shouldn't even be called.
+	 */
+	panic("%s: bad cookie", __func__);
+}
+
+static void
 i8259_init(struct atpic *pic, int slave)
 {
 	int imr_addr;
@@ -487,10 +499,10 @@ atpic_handle_intr(void *cookie, struct intrframe iframe)
 	isrc = &atintrs[vec].at_intsrc;
 
 	/*
-	 * If we don't have an ithread, see if this is a spurious
+	 * If we don't have an event, see if this is a spurious
 	 * interrupt.
 	 */
-	if (isrc->is_ithread == NULL && (vec == 7 || vec == 15)) {
+	if (isrc->is_event == NULL && (vec == 7 || vec == 15)) {
 		int port, isr;
 
 		/*

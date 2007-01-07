@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/zs/zs.c,v 1.30 2004/10/20 16:22:00 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/zs/zs.c,v 1.30.2.1 2006/03/10 19:37:32 jhb Exp $");
 /*-
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -183,7 +183,7 @@ zs_attach(device_t dev)
 	for (i = 0; i < ZS_NCHAN; i++)
 		sc->sc_child[i] = device_get_softc(child[i]);
 
-	swi_add(&tty_ithd, "tty:zs", zs_softintr, sc, SWI_TTY,
+	swi_add(&tty_intr_event, "zs", zs_softintr, sc, SWI_TTY,
 	    INTR_TYPE_TTY, &sc->sc_softih);
 
 	ZS_WRITE_REG(sc->sc_child[0], 2, sc->sc_child[0]->sc_creg[2]);

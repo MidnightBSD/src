@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_tty.c,v 1.22 2005/05/08 20:25:09 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_tty.c,v 1.22.2.1 2006/03/10 19:37:32 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -377,7 +377,7 @@ uart_tty_attach(struct uart_softc *sc)
 		ttyconsolemode(tp, 0);
 	}
 
-	swi_add(&tty_ithd, uart_driver_name, uart_tty_intr, sc, SWI_TTY,
+	swi_add(&tty_intr_event, uart_driver_name, uart_tty_intr, sc, SWI_TTY,
 	    INTR_TYPE_TTY, &sc->sc_softih);
 
 	ttycreate(tp, NULL, 0, MINOR_CALLOUT, "u%r", unit);
@@ -392,7 +392,7 @@ int uart_tty_detach(struct uart_softc *sc)
 	tp = sc->sc_u.u_tty.tp;
 	tp->t_pps = NULL;
 	ttygone(tp);
-	ithread_remove_handler(sc->sc_softih);
+	swi_remove(sc->sc_softih);
 	ttyfree(tp);
 
 	return (0);
