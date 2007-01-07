@@ -1,4 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
+# $MidnightBSD$
 
 # oldcard -- specialized use for debugging only.
 # owi -- totally unsupported for debugging only.
@@ -279,7 +280,8 @@ SUBDIR=	${_3dfx} \
 	wlan_wep \
 	wlan_xauth \
 	${_xe} \
-	xl
+	xl \
+	zlib
 
 .if ${MACHINE_ARCH} != "powerpc"
 _syscons=	syscons

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/if_ppp/Makefile,v 1.33.2.1 2006/02/10 00:38:02 yar Exp $
+# $FreeBSD: src/sys/modules/if_ppp/Makefile,v 1.33.2.2 2006/03/01 21:40:14 wkoszek Exp $
 
 .PATH:  ${.CURDIR}/../../net
 
@@ -16,7 +16,7 @@ PPP_IPX?=	0	# 0/1 - requires IPX to be configured in kernel
 SRCS+=	bsd_comp.c
 .endif
 .if ${PPP_DEFLATE} > 0
-SRCS+=	ppp_deflate.c zlib.c
+SRCS+=	ppp_deflate.c
 .endif
 
 .if !defined(KERNBUILDDIR)

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/crypto/Makefile,v 1.3 2005/03/11 17:24:46 ume Exp $
+# $FreeBSD: src/sys/modules/crypto/Makefile,v 1.3.2.1 2006/03/01 21:40:14 wkoszek Exp $
 
 .PATH:	${.CURDIR}/../../opencrypto
 .PATH:	${.CURDIR}/../../crypto
@@ -6,7 +6,6 @@
 .PATH:	${.CURDIR}/../../crypto/des
 .PATH:	${.CURDIR}/../../crypto/rijndael
 .PATH:	${.CURDIR}/../../crypto/sha2
-.PATH:	${.CURDIR}/../../net
 
 KMOD	= crypto
 SRCS	= crypto.c
@@ -15,7 +14,6 @@ SRCS	+= cast.c deflate.c rmd160.c rijndael-alg-fst.c rijndael-api.c
 SRCS	+= skipjack.c bf_enc.c bf_skey.c
 SRCS	+= des_ecb.c des_enc.c des_setkey.c
 SRCS	+= sha1.c sha2.c
-SRCS	+= zlib.c
 SRCS	+= opt_param.h
 
 .include <bsd.kmod.mk>

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.25.2.1 2005/08/19 12:04:19 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.25.2.2 2006/03/01 21:40:14 wkoszek Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -820,3 +820,4 @@ static moduledata_t cryptodev_mod = {
 MODULE_VERSION(cryptodev, 1);
 DECLARE_MODULE(cryptodev, cryptodev_mod, SI_SUB_PSEUDO, SI_ORDER_ANY);
 MODULE_DEPEND(cryptodev, crypto, 1, 1, 1);
+MODULE_DEPEND(cryptodev, zlib, 1, 1, 1);

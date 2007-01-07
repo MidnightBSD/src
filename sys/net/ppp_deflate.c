@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/net/ppp_deflate.c,v 1.21 2005/01/07 01:45:35 imp Exp $	*/
+/* $FreeBSD: src/sys/net/ppp_deflate.c,v 1.21.2.1 2006/03/01 21:40:14 wkoszek Exp $	*/
 
 /*-
  * ppp_deflate.c - interface the zlib procedures for Deflate compression
@@ -34,6 +34,7 @@
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
+#include <sys/module.h>
 #include <sys/mutex.h>
 
 #include <net/ppp_defs.h>
@@ -676,3 +677,4 @@ z_incomp(arg, mi)
     state->stats.unc_bytes += rlen;
     state->stats.unc_packets++;
 }
+MODULE_DEPEND(ppp_deflate, zlib, 1, 1, 1);
