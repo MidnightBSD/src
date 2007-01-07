@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_subr.c,v 1.7 2005/02/22 04:27:05 green Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_subr.c,v 1.7.2.1 2006/03/06 06:38:38 thompsa Exp $	*/
 /*	$KAME: altq_subr.c,v 1.21 2003/11/06 06:32:53 kjc Exp $	*/
 
 /*
@@ -918,7 +918,8 @@ init_machclk(void)
 #endif
 #ifdef __i386__
 	/* check if TSC is available */
-	if (machclk_usepcc == 1 && (cpu_feature & CPUID_TSC) == 0)
+	if (machclk_usepcc == 1 && ((cpu_feature & CPUID_TSC) == 0 ||
+	    tsc_is_broken))
 		machclk_usepcc = 0;
 #endif
 
