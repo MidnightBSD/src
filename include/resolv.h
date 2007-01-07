@@ -51,7 +51,7 @@
 /*
  *	@(#)resolv.h	8.1 (Berkeley) 6/2/93
  *	From Id: resolv.h,v 8.12 1998/04/28 19:36:46 halley Exp $
- * $FreeBSD: src/include/resolv.h,v 1.26 2004/09/09 17:39:47 yar Exp $
+ * $FreeBSD: src/include/resolv.h,v 1.26.2.1 2006/03/06 14:31:30 ume Exp $
  */
 
 #ifndef _RESOLV_H_
@@ -92,7 +92,7 @@
 #define	LOCALDOMAINPARTS	2	/* min levels in name that is "local" */
 
 #define	RES_TIMEOUT		5	/* min. seconds between retries */
-#define	RES_DFLRETRY		4	/* retries per each name server */
+#define	RES_DFLRETRY		2	/* retries per each name server */
 #define	MAXRESOLVSORT		10	/* number of net to sort on */
 #define	RES_MAXNDOTS		15	/* should reflect bit field size */
 #define	RES_MAXRETRANS		30	/* only for resolv.conf/RES_OPTIONS */
