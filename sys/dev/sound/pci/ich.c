@@ -32,7 +32,7 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/ich.c,v 1.53.2.3 2006/01/17 05:13:37 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/ich.c,v 1.53.2.6.2.1 2006/05/02 13:35:35 ariff Exp $");
 
 /* -------------------------------------------------------------------- */
 
@@ -63,6 +63,7 @@ SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pci/ich.c,v 1.53.2.3 2006/01/17 05
 #define NVIDIA_NFORCE3	0x00da
 #define NVIDIA_NFORCE3_250	0x00ea
 #define NVIDIA_NFORCE4	0x0059
+#define NVIDIA_NFORCE_410_MCP	0x026b
 #define AMD_768		0x7445
 #define AMD_8111	0x746d
 
@@ -111,6 +112,8 @@ static const struct ich_type {
 		"nVidia nForce3 250" },
 	{ NVIDIA_VENDORID,	NVIDIA_NFORCE4,	0,
 		"nVidia nForce4" },
+	{ NVIDIA_VENDORID,	NVIDIA_NFORCE_410_MCP,	0,
+		"nVidia nForce 410 MCP" },
 	{ AMD_VENDORID,		AMD_768,	0,
 		"AMD-768" },
 	{ AMD_VENDORID,		AMD_8111,	0,
@@ -677,7 +680,6 @@ static int
 ich_init(struct sc_info *sc)
 {
 	u_int32_t stat;
-	int sz;
 
 	ich_wr(sc, ICH_REG_GLOB_CNT, ICH_GLOB_CTL_COLD, 4);
 	DELAY(600000);
@@ -694,21 +696,16 @@ ich_init(struct sc_info *sc)
 		}
 	}
 
+#if 0
 	ich_wr(sc, ICH_REG_GLOB_CNT, ICH_GLOB_CTL_COLD | ICH_GLOB_CTL_PRES, 4);
+#else
+	ich_wr(sc, ICH_REG_GLOB_CNT, ICH_GLOB_CTL_COLD, 4);
+#endif
 
 	if (ich_resetchan(sc, 0) || ich_resetchan(sc, 1))
 		return ENXIO;
 	if (sc->hasmic && ich_resetchan(sc, 2))
 		return ENXIO;
-
-	if (bus_dmamem_alloc(sc->dmat, (void **)&sc->dtbl, BUS_DMA_NOWAIT, &sc->dtmap))
-		return ENOSPC;
-
-	sz = sizeof(struct ich_desc) * ICH_DTBL_LENGTH * 3;
-	if (bus_dmamap_load(sc->dmat, sc->dtmap, sc->dtbl, sz, ich_setmap, sc, 0)) {
-		bus_dmamem_free(sc->dmat, (void **)&sc->dtbl, sc->dtmap);
-		return ENOSPC;
-	}
 
 	return 0;
 }
@@ -828,6 +825,15 @@ ich_pci_attach(device_t dev)
 		goto bad;
 	}
 
+	if (bus_dmamem_alloc(sc->dmat, (void **)&sc->dtbl,
+		    BUS_DMA_NOWAIT, &sc->dtmap))
+		goto bad;
+
+	if (bus_dmamap_load(sc->dmat, sc->dtmap, sc->dtbl,
+		    sizeof(struct ich_desc) * ICH_DTBL_LENGTH * 3,
+		    ich_setmap, sc, 0))
+		goto bad;
+
 	sc->codec = AC97_CREATE(dev, sc, ich_ac97);
 	if (sc->codec == NULL)
 		goto bad;
@@ -839,8 +845,11 @@ ich_pci_attach(device_t dev)
 	switch (subdev) {
 	case 0x202f161f:	/* Gateway 7326GZ */
 	case 0x203a161f:	/* Gateway 4028GZ */
+	case 0x204c161f:	/* Kvazar-Micro Senator 3592XT */
 	case 0x8144104d:	/* Sony VAIO PCG-TR* */
 	case 0x8197104d:	/* Sony S1XP */
+	case 0x81c0104d:	/* Sony VAIO type T */
+	case 0x81c5104d:	/* Sony VAIO VGN B1VP/B1XP */
 		ac97_setflags(sc->codec, ac97_getflags(sc->codec) | AC97_F_EAPD_INV);
 		break;
 	default:
@@ -895,6 +904,10 @@ bad:
 	if (sc->nabmbar)
 		bus_release_resource(dev, sc->regtype,
 		    sc->nabmbarid, sc->nabmbar);
+	if (sc->dtmap)
+		bus_dmamap_unload(sc->dmat, sc->dtmap);
+	if (sc->dmat)
+		bus_dma_tag_destroy(sc->dmat);
 	if (sc->ich_lock)
 		snd_mtxfree(sc->ich_lock);
 	free(sc, M_DEVBUF);
@@ -916,6 +929,7 @@ ich_pci_detach(device_t dev)
 	bus_release_resource(dev, SYS_RES_IRQ, sc->irqid, sc->irq);
 	bus_release_resource(dev, sc->regtype, sc->nambarid, sc->nambar);
 	bus_release_resource(dev, sc->regtype, sc->nabmbarid, sc->nabmbar);
+	bus_dmamap_unload(sc->dmat, sc->dtmap);
 	bus_dma_tag_destroy(sc->dmat);
 	snd_mtxfree(sc->ich_lock);
 	free(sc, M_DEVBUF);
@@ -987,24 +1001,21 @@ ich_pci_resume(device_t dev)
 	}
 	/* Reinit mixer */
 	ich_pci_codec_reset(sc);
+	ICH_UNLOCK(sc);
 	ac97_setextmode(sc->codec, sc->hasvra | sc->hasvrm);
     	if (mixer_reinit(dev) == -1) {
 		device_printf(dev, "unable to reinitialize the mixer\n");
-		ICH_UNLOCK(sc);
 		return ENXIO;
 	}
 	/* Re-start DMA engines */
 	for (i = 0 ; i < 3; i++) {
 		struct sc_chinfo *ch = &sc->ch[i];
 		if (sc->ch[i].run_save) {
-			ICH_UNLOCK(sc);
 			ichchan_setblocksize(0, ch, ch->blksz);
 			ichchan_setspeed(0, ch, ch->spd);
 			ichchan_trigger(0, ch, PCMTRIG_START);
-			ICH_LOCK(sc);
 		}
 	}
-	ICH_UNLOCK(sc);
 	return 0;
 }
 
