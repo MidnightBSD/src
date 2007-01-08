@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/amr/amr_linux.c,v 1.1.2.1 2006/01/26 22:04:21 ambrisko Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/amr/amr_linux.c,v 1.1.2.2 2006/03/07 15:49:11 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -170,13 +170,15 @@ amr_linux_ioctl(d_thread_t *p, struct linux_ioctl_args *args)
 	devclass_t		devclass;
 	struct amr_softc	*sc;
 	struct amr_linux_ioctl	ali;
-	int			adapter;
+	int			adapter, error;
 
 	devclass = devclass_find("amr");
 	if (devclass == NULL)
 		return (ENOENT);
 
-	copyin((caddr_t)args->arg, &ali, sizeof(ali));
+	error = copyin((caddr_t)args->arg, &ali, sizeof(ali));
+	if (error)
+		return (error);
 	if (ali.ui.fcs.opcode == 0x82)
 		adapter = 0;
 	else
