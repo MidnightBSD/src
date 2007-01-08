@@ -1,21 +1,16 @@
-# $FreeBSD: src/sys/modules/pf/Makefile,v 1.7 2005/06/05 05:30:37 ru Exp $
+# $FreeBSD: src/sys/modules/pf/Makefile,v 1.7.2.2 2006/03/22 15:56:32 yar Exp $
 
 .PATH: ${.CURDIR}/../../contrib/pf/net
 .PATH: ${.CURDIR}/../../contrib/pf/netinet
-.PATH: ${.CURDIR}/../../netinet
 
 KMOD=	pf
 SRCS = 	pf.c pf_if.c pf_subr.c pf_osfp.c pf_ioctl.c pf_norm.c pf_table.c \
-	if_pflog.c \
 	in4_cksum.c \
 	opt_pf.h opt_inet.h opt_inet6.h opt_bpf.h
 
 CFLAGS+=  -I${.CURDIR}/../../contrib/pf
 
-opt_pf.h:
-	echo "#define DEV_PF 1" > opt_pf.h
-	echo "#define DEV_PFLOG 1" >> opt_pf.h
-
+.if !defined(KERNBUILDDIR)
 opt_inet.h:
 	echo "#define INET 1" > opt_inet.h
 
@@ -26,5 +21,6 @@ opt_inet6.h:
 
 opt_bpf.h:
 	echo "#define DEV_BPF 1" > opt_bpf.h
+.endif
 
 .include <bsd.kmod.mk>
