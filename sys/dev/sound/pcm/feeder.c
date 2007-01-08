@@ -28,7 +28,7 @@
 
 #include "feeder_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pcm/feeder.c,v 1.33.2.2 2006/01/29 02:27:28 ariff Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/pcm/feeder.c,v 1.33.2.3 2006/03/07 15:51:19 jhb Exp $");
 
 MALLOC_DEFINE(M_FEEDER, "feeder", "pcm feeder");
 
@@ -385,10 +385,8 @@ chn_fmtbest(u_int32_t fmt, u_int32_t *fmts)
 		}
 	} else if (best2 == 0)
 		return best1;
-	else if (best1 == 0)
+	else
 		return best2;
-
-	return best1;
 }
 
 u_int32_t
