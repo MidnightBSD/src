@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sys/modules/Makefile,v 1.3 2007/01/07 19:10:10 laffer1 Exp $
 
 # oldcard -- specialized use for debugging only.
 # owi -- totally unsupported for debugging only.
@@ -84,6 +84,7 @@ SUBDIR=	${_3dfx} \
 	fdescfs \
 	${_fe} \
 	firewire \
+	firmware \
 	fxp \
 	${_gem} \
 	geom \
