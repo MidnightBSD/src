@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/net/if_pflog.c,v 1.13.2.1 2005/08/25 05:01:03 rwatson Exp $	*/
+/*	$FreeBSD: src/sys/contrib/pf/net/if_pflog.c,v 1.13.2.2 2006/03/06 16:10:18 mlaier Exp $	*/
 /*	$OpenBSD: if_pflog.c,v 1.12 2004/05/19 17:50:51 dhartmei Exp $	*/
 
 /*
@@ -358,9 +358,15 @@ pflog_modevent(module_t mod, int type, void *data)
 	case MOD_LOAD:
 		LIST_INIT(&pflog_list);
 		if_clone_attach(&pflog_cloner);
+		PF_LOCK();
+		pflog_packet_ptr = pflog_packet;
+		PF_UNLOCK();
 		break;
 
 	case MOD_UNLOAD:
+		PF_LOCK();
+		pflog_packet_ptr = NULL;
+		PF_UNLOCK();
 		if_clone_detach(&pflog_cloner);
 		while (!LIST_EMPTY(&pflog_list))
 			pflog_clone_destroy(SCP2IFP(LIST_FIRST(&pflog_list)));
@@ -384,4 +390,5 @@ static moduledata_t pflog_mod = {
 
 DECLARE_MODULE(pflog, pflog_mod, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_ANY);
 MODULE_VERSION(pflog, PFLOG_MODVER);
+MODULE_DEPEND(pflog, pf, PF_MODVER, PF_MODVER, PF_MODVER);
 #endif /* __FreeBSD__ */

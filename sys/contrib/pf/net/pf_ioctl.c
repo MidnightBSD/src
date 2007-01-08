@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.20.2.1 2005/09/12 11:25:17 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/pf/net/pf_ioctl.c,v 1.20.2.2 2006/03/06 16:10:18 mlaier Exp $	*/
 /*	$OpenBSD: pf_ioctl.c,v 1.139 2005/03/03 07:13:39 dhartmei Exp $ */
 
 /*
@@ -91,6 +91,10 @@
 #if NPFSYNC > 0
 #include <net/if_pfsync.h>
 #endif /* NPFSYNC > 0 */
+
+#ifdef __FreeBSD__
+#include <net/if_pflog.h>
+#endif
 
 #ifdef INET6
 #include <netinet/ip6.h>
@@ -214,6 +218,7 @@ static struct cdevsw pf_cdevsw = {
 
 static volatile int pf_pfil_hooked = 0;
 struct mtx pf_task_mtx;
+pflog_packet_t *pflog_packet_ptr = NULL;
 
 void
 init_pf_mutex(void)

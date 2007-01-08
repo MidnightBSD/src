@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/pf/net/if_pflog.h,v 1.6 2005/06/10 16:49:03 brooks Exp $	*/
+/*	$FreeBSD: src/sys/contrib/pf/net/if_pflog.h,v 1.6.2.2 2006/03/22 15:18:04 yar Exp $	*/
 /* $OpenBSD: if_pflog.h,v 1.11 2004/05/19 17:50:51 dhartmei Exp $ */
 
 /*
@@ -70,10 +70,25 @@ struct old_pfloghdr {
 
 #ifdef _KERNEL
 
+#ifdef __FreeBSD__
+struct pf_rule;
+struct pf_ruleset;
+struct pfi_kif;
+
+typedef int pflog_packet_t(struct pfi_kif *, struct mbuf *, sa_family_t,
+    u_int8_t, u_int8_t, struct pf_rule *, struct pf_rule *,
+    struct pf_ruleset *);
+extern pflog_packet_t *pflog_packet_ptr;
+#define	PFLOG_PACKET(i,x,a,b,c,d,e,f,g) do {		\
+	if (pflog_packet_ptr != NULL)			\
+		pflog_packet_ptr(i,a,b,c,d,e,f,g);	\
+} while (0)
+#else
 #if NPFLOG > 0
 #define	PFLOG_PACKET(i,x,a,b,c,d,e,f,g) pflog_packet(i,a,b,c,d,e,f,g)
 #else
 #define	PFLOG_PACKET(i,x,a,b,c,d,e,f,g)	((void)0)
 #endif /* NPFLOG > 0 */
+#endif /* __FreeBSD__ */
 #endif /* _KERNEL */
 #endif /* _NET_IF_PFLOG_H_ */

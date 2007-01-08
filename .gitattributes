@@ -27250,6 +27250,7 @@ sys/modules/pcfclock/Makefile -text
 sys/modules/pcn/Makefile -text
 sys/modules/pecoff/Makefile -text
 sys/modules/pf/Makefile -text
+sys/modules/pflog/Makefile -text
 sys/modules/plip/Makefile -text
 sys/modules/pmc/Makefile -text
 sys/modules/portalfs/Makefile -text
