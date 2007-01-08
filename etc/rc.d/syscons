@@ -24,8 +24,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/rc.d/syscons,v 1.13 2004/10/07 13:55:26 mtm Exp $
+# $FreeBSD: src/etc/rc.d/syscons,v 1.13.2.2 2006/03/21 19:42:32 emax Exp $
 # $MidnightBSD$
+#
 
 # PROVIDE: syscons
 # REQUIRE: LOGIN usbd
@@ -34,6 +35,8 @@
 . /etc/rc.subr
 
 name="syscons"
+extra_commands="setkeyboard"
+setkeyboard_cmd="syscons_setkeyboard"
 start_precmd="syscons_precmd"
 start_cmd="syscons_start"
 
@@ -42,30 +45,9 @@ start_cmd="syscons_start"
 kbddev=/dev/ttyv0
 viddev=/dev/ttyv0
 
-syscons_precmd()
+# helper
+syscons_configure_keyboard()
 {
-	if [ ! -c $kbddev ]
-	then
-		return 1
-	fi
-	if [ -x /usr/sbin/ispcvt ] && /usr/sbin/ispcvt
-	then
-		return 1
-	fi
-	return 0
-}
-
-syscons_start()
-{
-	echo -n 'Configuring syscons:'
-
-	# keyboard
-	#
-	if [ -n "${keyboard}" ]; then
-		echo -n ' keyboard';	kbdcontrol < ${kbddev} \
-		    -k "${keyboard}" >/dev/null
-	fi
-
 	# keymap
 	#
 	case ${keymap} in
@@ -110,6 +92,60 @@ syscons_start()
 		done
 		;;
 	esac
+
+	# set this keyboard mode for all virtual terminals
+	#
+	if [ -n "${allscreens_kbdflags}" ]; then
+		echo -n ' allscreens_kbd'
+		for ttyv in /dev/ttyv*; do
+			kbdcontrol ${allscreens_kbdflags} < ${ttyv} > ${ttyv} 2>&1
+		done
+	fi
+}
+
+syscons_setkeyboard()
+{
+	kbd=$1
+                
+	if [ -z "${kbd}" ]; then
+		return 1
+	fi
+
+	# Check if the kbdmux(4) is the current active keyboard
+	kbdcontrol -i < ${kbddev} | grep kbdmux > /dev/null 2>&1
+	if [ $? != 0 ]; then
+		kbdcontrol -k ${kbd} < ${kbddev} > /dev/null 2>&1
+	fi
+
+	echo -n 'Configuring keyboard:'
+	syscons_configure_keyboard
+	echo '.'
+}
+
+syscons_precmd()
+{
+	if [ ! -c $kbddev ]
+	then
+		return 1
+	fi
+	if [ -x /usr/sbin/ispcvt ] && /usr/sbin/ispcvt
+	then
+		return 1
+	fi
+	return 0
+}
+
+syscons_start()
+{
+	echo -n 'Configuring syscons:'
+
+	# keyboard
+	#
+	if [ -n "${keyboard}" ]; then
+		echo -n ' keyboard';	syscons_setkeyboard ${keyboard}
+	fi
+
+	syscons_configure_keyboard
 
 	# cursor type
 	#
@@ -194,17 +230,9 @@ syscons_start()
 		done
 	fi
 
-	# set this keyboard mode for all virtual terminals
-	#
-	if [ -n "${allscreens_kbdflags}" ]; then
-		echo -n ' allscreens_kbd'
-		for ttyv in /dev/ttyv*; do
-			kbdcontrol ${allscreens_kbdflags} < ${ttyv} > ${ttyv} 2>&1
-		done
-	fi
-
 	echo '.'
 }
 
 load_rc_config $name
-run_rc_command "$1"
+run_rc_command $*
+
