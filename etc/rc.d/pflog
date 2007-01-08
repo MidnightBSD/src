@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/pflog,v 1.5.2.1 2006/01/22 13:40:47 yar Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/pflog,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
 
 # PROVIDE: pflog
 # REQUIRE: root mountcritlocal netif cleanvar
@@ -24,10 +24,10 @@ pflog_prestart()
 {
 	# load pflog kernel module if needed
 	if ! kldstat -q -m pflog; then
-		if kldload pf; then
-			info 'pf module loaded.'
+		if kldload pflog; then
+			info 'pflog module loaded.'
 		else
-			warn 'pf module failed to load.'
+			warn 'pflog module failed to load.'
 			return 1
 		fi
 	fi
