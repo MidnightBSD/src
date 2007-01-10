@@ -24,7 +24,7 @@
 #define _INST_VERSION_H_INCLUDE
 
 /* Where the ports lives by default */
-#define DEF_PORTS_DIR	"/usr/ports"
+#define DEF_PORTS_DIR	"/usr/mports"
 /* just in case we change the environment variable name */
 #define PORTSDIR	"PORTSDIR"
 /* macro to get name of directory where we put logging information */
