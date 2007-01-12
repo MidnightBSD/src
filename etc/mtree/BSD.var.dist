@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/mtree/BSD.var.dist,v 1.2 2006/08/28 01:35:55 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.var.dist,v 1.71.2.1 2005/08/15 20:24:07 cperciva Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -17,6 +17,10 @@
 /set uname=root
     ..
 /set mode=0750
+/set gname=audit
+    audit
+    ..
+/set gname=wheel
     backups
     ..
     crash
