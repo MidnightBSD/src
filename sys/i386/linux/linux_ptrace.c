@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/linux/linux_ptrace.c,v 1.16 2005/07/02 20:06:44 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/linux/linux_ptrace.c,v 1.16.2.1 2006/03/07 18:08:09 jhb Exp $");
 
 #include "opt_cpu.h"
 
@@ -354,6 +354,12 @@ linux_ptrace(struct thread *td, struct linux_ptrace_args *uap)
 		if ((p = pfind(uap->pid)) == NULL) {
 			error = ESRCH;
 			break;
+		}
+
+		/* Exiting processes can't be debugged. */
+		if ((p->p_flag & P_WEXIT) != 0) {
+			error = ESRCH;
+			goto fail;
 		}
 
 		if ((error = p_candebug(td, p)) != 0)

@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)proc.h	8.15 (Berkeley) 5/19/95
- * $FreeBSD: src/sys/sys/proc.h,v 1.432.2.2 2005/10/04 04:41:26 truckman Exp $
+ * $FreeBSD: src/sys/sys/proc.h,v 1.432.2.5 2006/03/10 19:37:35 jhb Exp $
  */
 
 #ifndef _SYS_PROC_H_
@@ -266,7 +266,7 @@ struct thread {
 	volatile u_char td_owepreempt;  /* (k*) Preempt on last critical_exit */
 	short		td_locks;	/* (k) DEBUG: lockmgr count of locks. */
 	struct turnstile *td_blocked;	/* (j) Lock process is blocked on. */
-	void		*td_ithd;	/* (b) Unused, kept for ABI compat. */
+	void		*td_ithd;	/* (n) Unused, kept to preserve ABI. */
 	const char	*td_lockname;	/* (j) Name of lock blocked on. */
 	LIST_HEAD(, turnstile) td_contested;	/* (q) Contested locks. */
 	struct lock_list_entry *td_sleeplocks; /* (k) Held sleep locks. */
@@ -333,7 +333,7 @@ struct thread {
 #define	TDF_TIMEOUT	0x00000010 /* Timing out during sleep. */
 #define	TDF_IDLETD	0x00000020 /* This is a per-CPU idle thread. */
 #define	TDF_SELECT	0x00000040 /* Selecting; wakeup/waiting danger. */
-#define	TDF_SLEEPABORT	0x00000080 /* sleepq_abort was called.  */
+#define	TDF_SLEEPABORT	0x00000080 /* sleepq_abort was called. */
 #define	TDF_TSNOBLOCK	0x00000100 /* Don't block on a turnstile due to race. */
 #define	TDF_UNUSED9	0x00000200 /* --available -- */
 #define	TDF_BOUNDARY	0x00000400 /* Thread suspended at user boundary */
@@ -369,7 +369,7 @@ struct thread {
 #define	TDP_SA		0x00000080 /* A scheduler activation based thread. */
 #define	TDP_NOSLEEPING	0x00000100 /* Thread is not allowed to sleep on a sq. */
 #define	TDP_OWEUPC	0x00000200 /* Call addupc() at next AST. */
-#define	TDP_ITHREAD	0x00000400 /* Thread is an interupt thread.  */
+#define	TDP_ITHREAD	0x00000400 /* Thread is an interrupt thread. */
 #define	TDP_CAN_UNBIND	0x00000800 /* Only temporarily bound. */
 #define	TDP_SCHED1	0x00001000 /* Reserved for scheduler private use */
 #define	TDP_SCHED2	0x00002000 /* Reserved for scheduler private use */
@@ -775,6 +775,8 @@ MALLOC_DECLARE(M_ZOMBIE);
 } while (0)
 #define	_PHOLD(p) do {							\
 	PROC_LOCK_ASSERT((p), MA_OWNED);				\
+	KASSERT(!((p)->p_flag & P_WEXIT) || (p) == curproc,		\
+	    ("PHOLD of exiting process"));				\
 	(p)->p_lock++;							\
 	if (((p)->p_sflag & PS_INMEM) == 0)				\
 		faultin((p));						\
@@ -788,6 +790,8 @@ MALLOC_DECLARE(M_ZOMBIE);
 #define	_PRELE(p) do {							\
 	PROC_LOCK_ASSERT((p), MA_OWNED);				\
 	(--(p)->p_lock);						\
+	if (((p)->p_flag & P_WEXIT) && (p)->p_lock == 0)		\
+		wakeup(&(p)->p_lock);					\
 } while (0)
 
 /* Check whether a thread is safe to be swapped out. */

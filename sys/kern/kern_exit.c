@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_exit.c,v 1.263.2.5 2005/12/10 20:14:42 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_exit.c,v 1.263.2.7 2006/03/18 23:36:21 davidxu Exp $");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
@@ -106,7 +106,6 @@ sys_exit(struct thread *td, struct sys_exit_args *uap)
 void
 exit1(struct thread *td, int rv)
 {
-	struct bintime new_switchtime;
 	struct proc *p, *nq, *q;
 	struct tty *tp;
 	struct vnode *ttyvp;
@@ -171,7 +170,29 @@ retry:
 		 */
 	}
 
+	/*
+	 * Wakeup anyone in procfs' PIOCWAIT.  They should have a hold
+	 * on our vmspace, so we should block below until they have
+	 * released their reference to us.  Note that if they have
+	 * requested S_EXIT stops we will block here until they ack
+	 * via PIOCCONT.
+	 */
+	_STOPEVENT(p, S_EXIT, rv);
+
+	/*
+	 * Note that we are exiting and do another wakeup of anyone in
+	 * PIOCWAIT in case they aren't listening for S_EXIT stops or
+	 * decided to wait again after we told them we are exiting.
+	 */
 	p->p_flag |= P_WEXIT;
+	wakeup(&p->p_stype);
+
+	/*
+	 * Wait for any processes that have a hold on our vmspace to
+	 * release their reference.
+	 */
+	while (p->p_lock > 0)
+		msleep(&p->p_lock, &p->p_mtx, PWAIT, "exithold", 0);
 	PROC_UNLOCK(p);
 
 	/* Are we a task leader? */
@@ -188,11 +209,6 @@ retry:
 			msleep(p, &ppeers_lock, PWAIT, "exit1", 0);
 		mtx_unlock(&ppeers_lock);
 	}
-
-	PROC_LOCK(p);
-	_STOPEVENT(p, S_EXIT, rv);
-	wakeup(&p->p_stype);	/* Wakeup anyone in procfs' PIOCWAIT */
-	PROC_UNLOCK(p);
 
 	/*
 	 * Check if any loadable modules need anything done at process exit.
@@ -435,7 +451,6 @@ retry:
 	p->p_xthread = td;
 	p->p_stats->p_ru.ru_nvcsw++;
 	*p->p_ru = p->p_stats->p_ru;
-	ruadd(p->p_ru, &p->p_rux, &p->p_stats->p_cru, &p->p_crux);
 
 	/*
 	 * Notify interested parties of our demise.
@@ -517,14 +532,6 @@ retry:
 	mtx_lock_spin(&sched_lock);
 	p->p_state = PRS_ZOMBIE;
 	PROC_UNLOCK(p->p_pptr);
-
-	/* Do the same timestamp bookkeeping that mi_switch() would do. */
-	binuptime(&new_switchtime);
-	bintime_add(&p->p_rux.rux_runtime, &new_switchtime);
-	bintime_sub(&p->p_rux.rux_runtime, PCPU_PTR(switchtime));
-	PCPU_SET(switchtime, new_switchtime);
-	PCPU_SET(switchticks, ticks);
-	cnt.v_swtch++;
 
 	sched_exit(p->p_pptr, td);
 

@@ -44,7 +44,7 @@
 
 #include "opt_compat.h"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/machdep.c,v 1.16 2005/04/04 21:53:52 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/machdep.c,v 1.16.2.1 2006/03/07 18:08:08 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -319,6 +319,8 @@ ptrace_read_int(struct thread *td, vm_offset_t addr, u_int32_t *v)
 {
 	struct iovec iov;
 	struct uio uio;
+
+	PROC_LOCK_ASSERT(td->td_proc, MA_NOTOWNED);
 	iov.iov_base = (caddr_t) v;
 	iov.iov_len = sizeof(u_int32_t);
 	uio.uio_iov = &iov;
@@ -336,6 +338,8 @@ ptrace_write_int(struct thread *td, vm_offset_t addr, u_int32_t v)
 {
 	struct iovec iov;
 	struct uio uio;
+
+	PROC_LOCK_ASSERT(td->td_proc, MA_NOTOWNED);
 	iov.iov_base = (caddr_t) &v;
 	iov.iov_len = sizeof(u_int32_t);
 	uio.uio_iov = &iov;
@@ -351,28 +355,38 @@ ptrace_write_int(struct thread *td, vm_offset_t addr, u_int32_t v)
 int
 ptrace_single_step(struct thread *td)
 {
+	struct proc *p;
 	int error;
 	
 	KASSERT(td->td_md.md_ptrace_instr == 0,
 	 ("Didn't clear single step"));
+	p = td->td_proc;
+	PROC_UNLOCK(p);
 	error = ptrace_read_int(td, td->td_frame->tf_pc + 4, 
 	    &td->td_md.md_ptrace_instr);
 	if (error)
-		return (error);
+		goto out;
 	error = ptrace_write_int(td, td->td_frame->tf_pc + 4,
 	    PTRACE_BREAKPOINT);
 	if (error)
 		td->td_md.md_ptrace_instr = 0;
 	td->td_md.md_ptrace_addr = td->td_frame->tf_pc + 4;
+out:
+	PROC_LOCK(p);
 	return (error);
 }
 
 int
 ptrace_clear_single_step(struct thread *td)
 {
+	struct proc *p;
+
 	if (td->td_md.md_ptrace_instr) {
+		p = td->td_proc;
+		PROC_UNLOCK(p);
 		ptrace_write_int(td, td->td_md.md_ptrace_addr,
 		    td->td_md.md_ptrace_instr);
+		PROC_LOCK(p);
 		td->td_md.md_ptrace_instr = 0;
 	}
 	return (0);
