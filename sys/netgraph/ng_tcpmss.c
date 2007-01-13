@@ -29,7 +29,7 @@
  * This software includes fragments of the following programs:
  *	tcpmssd		Ruslan Ermilov <ru@FreeBSD.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_tcpmss.c,v 1.2 2005/06/10 12:44:21 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_tcpmss.c,v 1.2.2.1 2006/03/18 22:00:37 glebius Exp $
  */
 
 /*
@@ -367,6 +367,8 @@ ng_tcpmss_disconnect(hook_p hook)
 		if (priv->outHook == hook)
 			priv->outHook = NULL;
 	}
+
+	FREE(NG_HOOK_PRIVATE(hook), M_NETGRAPH);
 
 	if (NG_NODE_NUMHOOKS(NG_HOOK_NODE(hook)) == 0)
 		ng_rmnode_self(NG_HOOK_NODE(hook));
