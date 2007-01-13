@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/intr_machdep.h,v 1.13 2003/07/16 00:08:43 jmg Exp $
+ * $FreeBSD: src/sys/sparc64/include/intr_machdep.h,v 1.13.10.1 2006/03/10 19:37:35 jhb Exp $
  */
 
 #ifndef	_MACHINE_INTR_MACHDEP_H_
@@ -67,7 +67,7 @@ struct intr_request {
 struct intr_vector {
 	iv_func_t *iv_func;
 	void	*iv_arg;
-	struct	ithd *iv_ithd;
+	struct	intr_event *iv_event;
 	u_int	iv_pri;
 	u_int	iv_vec;
 };
