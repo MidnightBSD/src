@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsubs.c,v 1.136 2005/03/28 18:51:58 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsubs.c,v 1.136.2.2 2006/04/04 15:29:51 cel Exp $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -830,8 +830,8 @@ nfs_namei(struct nameidata *ndp, fhandle_t *fhp, int len,
 			if (ndp->ni_pathlen > 1)
 				uma_zfree(namei_zone, cp);
 		badlink2:
-			vrele(ndp->ni_dvp);
 			vput(ndp->ni_vp);
+			vrele(ndp->ni_dvp);
 			break;
 		}
 		linklen = MAXPATHLEN - auio.uio_resid;
@@ -1396,6 +1396,7 @@ int
 nfsm_srvsattr_xx(struct vattr *a, struct mbuf **md, caddr_t *dpos)
 {
 	u_int32_t *tl;
+	int toclient = 0;
 
 	NFSD_LOCK_DONTCARE();
 
@@ -1444,9 +1445,11 @@ nfsm_srvsattr_xx(struct vattr *a, struct mbuf **md, caddr_t *dpos)
 		if (tl == NULL)
 			return EBADRPC;
 		fxdr_nfsv3time(tl, &(a)->va_atime);
+		toclient = 1;
 		break;
 	case NFSV3SATTRTIME_TOSERVER:
 		getnanotime(&(a)->va_atime);
+		a->va_vaflags |= VA_UTIMES_NULL;
 		break;
 	}
 	tl = nfsm_dissect_xx_nonblock(NFSX_UNSIGNED, md, dpos);
@@ -1458,9 +1461,12 @@ nfsm_srvsattr_xx(struct vattr *a, struct mbuf **md, caddr_t *dpos)
 		if (tl == NULL)
 			return EBADRPC;
 		fxdr_nfsv3time(tl, &(a)->va_mtime);
+		a->va_vaflags &= ~VA_UTIMES_NULL;
 		break;
 	case NFSV3SATTRTIME_TOSERVER:
 		getnanotime(&(a)->va_mtime);
+		if (toclient == 0)
+			a->va_vaflags |= VA_UTIMES_NULL;
 		break;
 	}
 	return 0;

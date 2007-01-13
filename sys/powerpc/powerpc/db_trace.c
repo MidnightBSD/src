@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/powerpc/powerpc/db_trace.c,v 1.9 2005/01/07 02:29:20 imp Exp $ */
+/*	$FreeBSD: src/sys/powerpc/powerpc/db_trace.c,v 1.9.2.1 2006/03/13 03:07:01 jeff Exp $ */
 /*	$NetBSD: db_trace.c,v 1.20 2002/05/13 20:30:09 matt Exp $	*/
 /*	$OpenBSD: db_trace.c,v 1.3 1997/03/21 02:10:48 niklas Exp $	*/
 
@@ -32,6 +32,7 @@
 #include <sys/systm.h>
 #include <sys/kdb.h>
 #include <sys/proc.h>
+#include <sys/stack.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -285,5 +286,27 @@ db_trace_thread(struct thread *td, int count)
 
 	ctx = kdb_thr_ctx(td);
 	return (db_backtrace(td, (db_addr_t)ctx->pcb_sp, count));
+}
+
+void
+stack_save(struct stack *st)
+{
+	vm_offset_t callpc;
+	db_addr_t stackframe;
+
+	stack_zero(st);
+	stackframe = (db_addr_t)__builtin_frame_address(1);
+	if (stackframe < PAGE_SIZE)
+		return;
+	while (1) {
+		stackframe = *(db_addr_t *)stackframe;
+		if (stackframe < PAGE_SIZE)
+			break;
+		callpc = *(vm_offset_t *)(stackframe + 4) - 4;
+		if ((callpc & 3) || (callpc < 0x100))
+			break;
+		if (stack_put(st, callpc) == -1)
+			break;
+	}
 }
 
