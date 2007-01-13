@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_node.c,v 1.76.2.1 2005/10/09 03:15:36 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_node.c,v 1.76.2.2 2006/03/12 21:50:02 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -222,6 +222,11 @@ nfs_reclaim(struct vop_reclaim_args *ap)
 	if (prtactive && vrefcnt(vp) != 0)
 		vprint("nfs_reclaim: pushing active", vp);
 
+	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
+
 	vfs_hash_remove(vp);
 
 	/*
@@ -244,6 +249,5 @@ nfs_reclaim(struct vop_reclaim_args *ap)
 	lockdestroy(&np->n_rslock);
 	uma_zfree(nfsnode_zone, vp->v_data);
 	vp->v_data = NULL;
-	vnode_destroy_vobject(vp);
 	return (0);
 }

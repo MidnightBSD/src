@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isofs/cd9660/cd9660_node.c,v 1.54 2005/03/14 13:22:41 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/isofs/cd9660/cd9660_node.c,v 1.54.2.1 2006/03/12 21:50:02 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,6 +98,10 @@ cd9660_reclaim(ap)
 	if (prtactive && vrefcnt(vp) != 0)
 		vprint("cd9660_reclaim: pushing active", vp);
 	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
+	/*
 	 * Remove the inode from its hash chain.
 	 */
 	vfs_hash_remove(vp);
@@ -109,7 +113,6 @@ cd9660_reclaim(ap)
 		vrele(ip->i_mnt->im_devvp);
 	FREE(vp->v_data, M_ISOFSNODE);
 	vp->v_data = NULL;
-	vnode_destroy_vobject(vp);
 	return (0);
 }
 
