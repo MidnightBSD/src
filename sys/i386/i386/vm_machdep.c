@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.259.2.2 2005/11/06 04:55:43 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.259.2.3 2006/03/13 02:46:55 davidxu Exp $");
 
 #include "opt_isa.h"
 #include "opt_npx.h"
@@ -459,7 +459,7 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	 */
 	td->td_frame->tf_ebp = 0; 
 	td->td_frame->tf_esp =
-	    (int)stack->ss_sp + stack->ss_size - 16;
+	    (((int)stack->ss_sp + stack->ss_size - 4) & ~0x0f) - 4;
 	td->td_frame->tf_eip = (int)entry;
 
 	/*
