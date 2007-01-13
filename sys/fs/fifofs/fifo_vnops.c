@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fifo_vnops.c	8.10 (Berkeley) 5/27/95
- * $FreeBSD: src/sys/fs/fifofs/fifo_vnops.c,v 1.113.2.17 2005/10/04 15:33:06 rwatson Exp $
+ * $FreeBSD: src/sys/fs/fifofs/fifo_vnops.c,v 1.113.2.19 2006/03/28 12:42:20 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -168,6 +168,7 @@ fifo_open(ap)
 		int  a_mode;
 		struct ucred *a_cred;
 		struct thread *a_td;
+		int a_fdidx;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
@@ -179,6 +180,8 @@ fifo_open(ap)
 	int error;
 
 	ASSERT_VOP_LOCKED(vp, "fifo_open");
+	if (ap->a_fdidx < 0)
+		return (EINVAL);
 	if ((fip = vp->v_fifoinfo) == NULL) {
 		MALLOC(fip, struct fifoinfo *, sizeof(*fip), M_VNODE, M_WAITOK);
 		error = socreate(AF_LOCAL, &rso, SOCK_STREAM, 0, cred, td);
