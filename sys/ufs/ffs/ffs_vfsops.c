@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vfsops.c,v 1.290.2.6 2006/01/14 01:18:03 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vfsops.c,v 1.290.2.9 2006/03/22 17:54:50 tegge Exp $");
 
 #include "opt_mac.h"
 #include "opt_quota.h"
@@ -70,7 +70,7 @@ __FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vfsops.c,v 1.290.2.6 2006/01/14 01:18:03
 
 static uma_zone_t uma_inode, uma_ufs1, uma_ufs2;
 
-static int	ffs_sbupdate(struct ufsmount *, int);
+static int	ffs_sbupdate(struct ufsmount *, int, int);
 static int	ffs_reload(struct mount *, struct thread *);
 static int	ffs_mountfs(struct vnode *, struct mount *, struct thread *);
 static void	ffs_oldfscompat_read(struct fs *, struct ufsmount *,
@@ -197,7 +197,7 @@ ffs_mount(struct mount *mp, struct thread *td)
 			}
 			if ((fs->fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0)
 				fs->fs_clean = 1;
-			if ((error = ffs_sbupdate(ump, MNT_WAIT)) != 0) {
+			if ((error = ffs_sbupdate(ump, MNT_WAIT, 0)) != 0) {
 				fs->fs_ronly = 0;
 				fs->fs_clean = 0;
 				vn_finished_write(mp);
@@ -264,7 +264,7 @@ ffs_mount(struct mount *mp, struct thread *td)
 			fs->fs_ronly = 0;
 			mp->mnt_flag &= ~MNT_RDONLY;
 			fs->fs_clean = 0;
-			if ((error = ffs_sbupdate(ump, MNT_WAIT)) != 0) {
+			if ((error = ffs_sbupdate(ump, MNT_WAIT, 0)) != 0) {
 				vn_finished_write(mp);
 				return (error);
 			}
@@ -764,7 +764,7 @@ ffs_mountfs(devvp, mp, td)
 			ffs_snapshot_mount(mp);
 		fs->fs_fmod = 1;
 		fs->fs_clean = 0;
-		(void) ffs_sbupdate(ump, MNT_WAIT);
+		(void) ffs_sbupdate(ump, MNT_WAIT, 0);
 	}
 	/*
 	 * Initialize filesystem stat information in mount struct.
@@ -946,7 +946,7 @@ ffs_unmount(mp, mntflags, td)
 	UFS_UNLOCK(ump);
 	if (fs->fs_ronly == 0) {
 		fs->fs_clean = fs->fs_flags & (FS_UNCLEAN|FS_NEEDSFSCK) ? 0 : 1;
-		error = ffs_sbupdate(ump, MNT_WAIT);
+		error = ffs_sbupdate(ump, MNT_WAIT, 0);
 		if (error) {
 			fs->fs_clean = 0;
 			return (error);
@@ -1002,6 +1002,7 @@ ffs_flushfiles(mp, flags, td)
 		if ((error = vflush(mp, 0, SKIPSYSTEM | flags, td)) != 0)
 			return (error);
 		ffs_snapshot_unmount(mp);
+		flags |= FORCECLOSE;
 		/*
 		 * Here we fall through to vflush again to ensure
 		 * that we have gotten rid of all the system vnodes.
@@ -1071,6 +1072,12 @@ ffs_sync(mp, waitfor, td)
 	struct ufsmount *ump = VFSTOUFS(mp);
 	struct fs *fs;
 	int error, count, wait, lockreq, allerror = 0;
+	int suspend;
+	int suspended;
+	int secondary_writes;
+	int secondary_accwrites;
+	int softdep_deps;
+	int softdep_accdeps;
 	struct bufobj *bo;
 
 	fs = ump->um_fs;
@@ -1082,7 +1089,13 @@ ffs_sync(mp, waitfor, td)
 	 * Write back each (modified) inode.
 	 */
 	wait = 0;
+	suspend = 0;
+	suspended = 0;
 	lockreq = LK_EXCLUSIVE | LK_NOWAIT;
+	if (waitfor == MNT_SUSPEND) {
+		suspend = 1;
+		waitfor = MNT_WAIT;
+	}
 	if (waitfor == MNT_WAIT) {
 		wait = 1;
 		lockreq = LK_EXCLUSIVE;
@@ -1090,6 +1103,15 @@ ffs_sync(mp, waitfor, td)
 	lockreq |= LK_INTERLOCK | LK_SLEEPFAIL;
 	MNT_ILOCK(mp);
 loop:
+	/* Grab snapshot of secondary write counts */
+	secondary_writes = mp->mnt_secondary_writes;
+	secondary_accwrites = mp->mnt_secondary_accwrites;
+
+	/* Grab snapshot of softdep dependency counts */
+	MNT_IUNLOCK(mp);
+	softdep_get_depcounts(mp, &softdep_deps, &softdep_accdeps);
+	MNT_ILOCK(mp);
+
 	MNT_VNODE_FOREACH(vp, mp, mvp) {
 		/*
 		 * Depend on the mntvnode_slock to keep things stable enough
@@ -1152,12 +1174,25 @@ loop:
 			MNT_ILOCK(mp);
 			goto loop;
 		}
+	} else if (suspend != 0) {
+		if (softdep_check_suspend(mp,
+					  devvp,
+					  softdep_deps,
+					  softdep_accdeps,
+					  secondary_writes,
+					  secondary_accwrites) != 0)
+			goto loop;	/* More work needed */
+		mtx_assert(MNT_MTX(mp), MA_OWNED);
+		mp->mnt_kern_flag |= MNTK_SUSPEND2 | MNTK_SUSPENDED;
+		MNT_IUNLOCK(mp);
+		suspended = 1;
 	} else
 		VI_UNLOCK(devvp);
 	/*
 	 * Write back modified superblock.
 	 */
-	if (fs->fs_fmod != 0 && (error = ffs_sbupdate(ump, waitfor)) != 0)
+	if (fs->fs_fmod != 0 &&
+	    (error = ffs_sbupdate(ump, waitfor, suspended)) != 0)
 		allerror = error;
 	return (allerror);
 }
@@ -1407,9 +1442,10 @@ ffs_uninit(vfsp)
  * Write a superblock and associated information back to disk.
  */
 static int
-ffs_sbupdate(mp, waitfor)
+ffs_sbupdate(mp, waitfor, suspended)
 	struct ufsmount *mp;
 	int waitfor;
+	int suspended;
 {
 	struct fs *fs = mp->um_fs;
 	struct buf *sbbp;
@@ -1440,6 +1476,8 @@ ffs_sbupdate(mp, waitfor)
 		    size, 0, 0, 0);
 		bcopy(space, bp->b_data, (u_int)size);
 		space = (char *)space + size;
+		if (suspended)
+			bp->b_flags |= B_VALIDSUSPWRT;
 		if (waitfor != MNT_WAIT)
 			bawrite(bp);
 		else if ((error = bwrite(bp)) != 0)
@@ -1471,6 +1509,8 @@ ffs_sbupdate(mp, waitfor)
 	fs->fs_time = time_second;
 	bcopy((caddr_t)fs, bp->b_data, (u_int)fs->fs_sbsize);
 	ffs_oldfscompat_write((struct fs *)bp->b_data, mp);
+	if (suspended)
+		bp->b_flags |= B_VALIDSUSPWRT;
 	if (waitfor != MNT_WAIT)
 		bawrite(bp);
 	else if ((error = bwrite(bp)) != 0)
@@ -1676,27 +1716,52 @@ ffs_geom_strategy(struct bufobj *bo, struct buf *bp)
 {
 	struct vnode *vp;
 	int error;
+	struct buf *tbp;
 
 	vp = bo->__bo_vnode;
 	if (bp->b_iocmd == BIO_WRITE) {
-#ifdef SOFTUPDATES
-		if (LIST_FIRST(&bp->b_dep) != NULL)
-			buf_start(bp);
-#endif
 		if ((bp->b_flags & B_VALIDSUSPWRT) == 0 &&
 		    bp->b_vp != NULL && bp->b_vp->v_mount != NULL &&
 		    (bp->b_vp->v_mount->mnt_kern_flag & MNTK_SUSPENDED) != 0)
 			panic("ffs_geom_strategy: bad I/O");
 		bp->b_flags &= ~B_VALIDSUSPWRT;
 		if ((vp->v_vflag & VV_COPYONWRITE) &&
-		    vp->v_rdev->si_snapdata != NULL &&
-		    (error = (ffs_copyonwrite)(vp, bp)) != 0 &&
-		    error != EOPNOTSUPP) {
-			bp->b_error = error;
-			bp->b_ioflags |= BIO_ERROR;
-			bufdone(bp);
-			return;
+		    vp->v_rdev->si_snapdata != NULL) {
+			if ((bp->b_flags & B_CLUSTER) != 0) {
+				TAILQ_FOREACH(tbp, &bp->b_cluster.cluster_head,
+					      b_cluster.cluster_entry) {
+					error = ffs_copyonwrite(vp, tbp);
+					if (error != 0 &&
+					    error != EOPNOTSUPP) {
+						bp->b_error = error;
+						bp->b_ioflags |= BIO_ERROR;
+						bufdone(bp);
+						return;
+					}
+				}
+			} else {
+				error = ffs_copyonwrite(vp, bp);
+				if (error != 0 && error != EOPNOTSUPP) {
+					bp->b_error = error;
+					bp->b_ioflags |= BIO_ERROR;
+					bufdone(bp);
+					return;
+				}
+			}
 		}
+#ifdef SOFTUPDATES
+		if ((bp->b_flags & B_CLUSTER) != 0) {
+			TAILQ_FOREACH(tbp, &bp->b_cluster.cluster_head,
+				      b_cluster.cluster_entry) {
+				if (LIST_FIRST(&tbp->b_dep) != NULL)
+					buf_start(tbp);
+			}
+		} else {
+			if (LIST_FIRST(&bp->b_dep) != NULL)
+				buf_start(bp);
+		}
+
+#endif
 	}
 	g_vfs_strategy(bo, bp);
 }

@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.132.2.3 2005/12/28 20:11:51 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.132.2.4 2006/03/13 03:07:32 jeff Exp $");
 
 #include "opt_quota.h"
 
@@ -1348,7 +1348,7 @@ ffs_fragextend(ip, cg, bprev, osize, nsize)
 	ACTIVECLEAR(fs, cg);
 	UFS_UNLOCK(ump);
 	if (DOINGSOFTDEP(ITOV(ip)))
-		softdep_setup_blkmapdep(bp, fs, bprev);
+		softdep_setup_blkmapdep(bp, UFSTOVFS(ump), bprev);
 	bdwrite(bp);
 	return (bprev);
 
@@ -1454,7 +1454,7 @@ ffs_alloccg(ip, cg, bpref, size)
 	ACTIVECLEAR(fs, cg);
 	UFS_UNLOCK(ump);
 	if (DOINGSOFTDEP(ITOV(ip)))
-		softdep_setup_blkmapdep(bp, fs, blkno);
+		softdep_setup_blkmapdep(bp, UFSTOVFS(ump), blkno);
 	bdwrite(bp);
 	return (blkno);
 
@@ -1523,7 +1523,7 @@ gotit:
 	/* XXX Fixme. */
 	UFS_UNLOCK(ump);
 	if (DOINGSOFTDEP(ITOV(ip)))
-		softdep_setup_blkmapdep(bp, fs, blkno);
+		softdep_setup_blkmapdep(bp, UFSTOVFS(ump), blkno);
 	UFS_LOCK(ump);
 	return (blkno);
 }

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/ufs/ffs/ffs_extern.h,v 1.69 2005/04/03 10:29:55 jeff Exp $
+ * $FreeBSD: src/sys/ufs/ffs/ffs_extern.h,v 1.69.2.1 2006/03/13 03:07:37 jeff Exp $
  */
 
 #ifndef _UFS_FFS_EXTERN_H
@@ -94,6 +94,10 @@ extern struct vop_vector ffs_fifoops2;
 /*
  * Soft update function prototypes.
  */
+
+int	softdep_check_suspend(struct mount *, struct vnode *,
+	  int, int, int, int);
+void	softdep_get_depcounts(struct mount *, int *, int *);
 void	softdep_initialize(void);
 void	softdep_uninitialize(void);
 int	softdep_mount(struct vnode *, struct mount *, struct fs *,
@@ -107,7 +111,7 @@ void	softdep_freefile(struct vnode *, ino_t, int);
 int	softdep_request_cleanup(struct fs *, struct vnode *);
 void	softdep_setup_freeblocks(struct inode *, off_t, int);
 void	softdep_setup_inomapdep(struct buf *, struct inode *, ino_t);
-void	softdep_setup_blkmapdep(struct buf *, struct fs *, ufs2_daddr_t);
+void	softdep_setup_blkmapdep(struct buf *, struct mount *, ufs2_daddr_t);
 void	softdep_setup_allocdirect(struct inode *, ufs_lbn_t, ufs2_daddr_t,
 	    ufs2_daddr_t, long, long, struct buf *);
 void	softdep_setup_allocext(struct inode *, ufs_lbn_t, ufs2_daddr_t,
@@ -118,9 +122,8 @@ void	softdep_setup_allocindir_page(struct inode *, ufs_lbn_t,
 	    struct buf *, int, ufs2_daddr_t, ufs2_daddr_t, struct buf *);
 void	softdep_fsync_mountdev(struct vnode *);
 int	softdep_sync_metadata(struct vnode *);
-/* XXX incorrectly moved to mount.h - should be indirect function */
-#if 0
-int	softdep_fsync(struct vnode *vp);
-#endif
+int     softdep_process_worklist(struct mount *, int);
+int     softdep_fsync(struct vnode *);
+int	softdep_waitidle(struct mount *);
 
 #endif /* !_UFS_FFS_EXTERN_H */

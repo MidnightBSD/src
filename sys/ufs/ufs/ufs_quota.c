@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_quota.c,v 1.74.2.1 2006/01/14 01:18:03 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_quota.c,v 1.74.2.2.2.1 2006/04/26 01:23:59 kris Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -429,8 +429,9 @@ quotaon(td, mp, type, fname)
 		quotaoff(td, mp, type);
 	ump->um_qflags[type] |= QTF_OPENING;
 	mp->mnt_flag |= MNT_QUOTA;
-	ASSERT_VOP_LOCKED(vp, "quotaon");
+	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
 	vp->v_vflag |= VV_SYSTEM;
+	VOP_UNLOCK(vp, 0, td);
 	*vpp = vp;
 	/*
 	 * Save the credential of the process that turned on quotas.
@@ -535,8 +536,9 @@ again:
 	}
 	MNT_IUNLOCK(mp);
 	dqflush(qvp);
-	ASSERT_VOP_LOCKED(qvp, "quotaoff");
+	vn_lock(qvp, LK_EXCLUSIVE | LK_RETRY, td);
 	qvp->v_vflag &= ~VV_SYSTEM;
+	VOP_UNLOCK(qvp, 0, td);
 	error = vn_close(qvp, FREAD|FWRITE, td->td_ucred, td);
 	ump->um_quotas[type] = NULLVP;
 	crfree(ump->um_cred[type]);
@@ -748,7 +750,7 @@ again:
 			MNT_ILOCK(mp);
 			continue;
 		}
-		error = vget(vp, LK_EXCLUSIVE | LK_NOWAIT | LK_INTERLOCK, td);
+		error = vget(vp, LK_EXCLUSIVE | LK_INTERLOCK, td);
 		if (error) {
 			MNT_ILOCK(mp);
 			if (error == ENOENT) {
@@ -978,14 +980,16 @@ dqsync(vp, dq)
 	struct iovec aiov;
 	struct uio auio;
 	int error;
+	struct mount *mp;
 
+	mp = NULL;
 	if (dq == NODQUOT)
 		panic("dqsync: dquot");
 	if ((dq->dq_flags & DQ_MOD) == 0)
 		return (0);
 	if ((dqvp = dq->dq_ump->um_quotas[dq->dq_type]) == NULLVP)
 		panic("dqsync: file");
-	(void) vn_write_suspend_wait(dqvp, NULL, V_WAIT);
+	(void) vn_start_secondary_write(dqvp, &mp, V_WAIT);
 	if (vp != dqvp)
 		vn_lock(dqvp, LK_EXCLUSIVE | LK_RETRY, td);
 	while (dq->dq_flags & DQ_LOCK) {
@@ -994,6 +998,7 @@ dqsync(vp, dq)
 		if ((dq->dq_flags & DQ_MOD) == 0) {
 			if (vp != dqvp)
 				VOP_UNLOCK(dqvp, 0, td);
+			vn_finished_secondary_write(mp);
 			return (0);
 		}
 	}
@@ -1015,6 +1020,7 @@ dqsync(vp, dq)
 	dq->dq_flags &= ~(DQ_MOD|DQ_LOCK|DQ_WANT);
 	if (vp != dqvp)
 		VOP_UNLOCK(dqvp, 0, td);
+	vn_finished_secondary_write(mp);
 	return (error);
 }
 

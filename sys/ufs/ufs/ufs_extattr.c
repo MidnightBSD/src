@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_extattr.c,v 1.81.2.2 2005/11/26 21:20:05 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_extattr.c,v 1.81.2.3 2006/03/13 03:08:08 jeff Exp $");
 
 #include "opt_ufs.h"
 
@@ -469,8 +469,8 @@ ufs_extattr_autostart(struct mount *mp, struct thread *td)
 	}
 	if (rvp == attr_dvp) {
 		/* Should never happen. */
-		vrele(attr_dvp);
 		vput(rvp);
+		vrele(attr_dvp);
 		return (EINVAL);
 	}
 	vrele(rvp);

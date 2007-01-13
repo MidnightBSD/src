@@ -24,12 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/ia64/ia64/db_trace.c,v 1.23 2005/04/16 05:38:59 marcel Exp $
+ *	$FreeBSD: src/sys/ia64/ia64/db_trace.c,v 1.23.2.1 2006/03/13 03:05:37 jeff Exp $
  */
 
 #include <sys/param.h>
 #include <sys/kdb.h>
 #include <sys/proc.h>
+#include <sys/stack.h>
 
 #include <machine/db_machdep.h>
 #include <machine/frame.h>
@@ -146,6 +147,18 @@ db_trace_thread(struct thread *td, int count)
 
 	ctx = kdb_thr_ctx(td);
 	return (db_backtrace(td, ctx, count));
+}
+
+void
+stack_save(struct stack *st)
+{
+
+	stack_zero(st);
+	/*
+	 * Nothing for now.
+	 * Is libuwx reentrant?
+	 * Can unw_create* sleep?
+	 */
 }
 
 int
