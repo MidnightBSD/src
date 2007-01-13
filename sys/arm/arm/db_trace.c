@@ -30,13 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/db_trace.c,v 1.10 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/db_trace.c,v 1.10.2.1 2006/03/13 03:03:55 jeff Exp $");
 #include <sys/param.h>
 #include <sys/systm.h>
 
 
 #include <sys/proc.h>
 #include <sys/kdb.h>
+#include <sys/stack.h>
 #include <machine/armreg.h>
 #include <machine/asm.h>
 #include <machine/cpufunc.h>
@@ -218,4 +219,22 @@ void
 db_trace_self(void)
 {
 	db_trace_thread(curthread, -1);
+}
+
+void
+stack_save(struct stack *st)
+{
+	vm_offset_t callpc;
+	u_int32_t *frame;
+
+	stack_zero(st);
+	frame = (u_int32_t *)__builtin_frame_address(0);
+	while (1) {
+		if (!INKERNEL(frame))
+			break;
+		callpc = frame[FR_SCP];
+		if (stack_put(st, callpc) == -1)
+			break;
+		frame = (u_int32_t *)(frame[FR_RFP]);
+	}
 }
