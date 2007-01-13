@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.66.2.1 2005/09/03 11:57:28 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.66.2.2 2006/03/13 03:03:51 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kdb.h>
 #include <sys/proc.h>
+#include <sys/stack.h>
 #include <sys/sysent.h>
 
 #include <machine/cpu.h>
@@ -178,7 +179,8 @@ db_ss(struct db_variable *vp, db_expr_t *valuep, int op)
 /*
  * Stack trace.
  */
-#define	INKERNEL(va)	(((vm_offset_t)(va)) >= USRSTACK)
+#define	INKERNEL(va) (((va) >= DMAP_MIN_ADDRESS && (va) < DMAP_MAX_ADDRESS) \
+	    || ((va) >= KERNBASE && (va) < VM_MAX_KERNEL_ADDRESS))
 
 struct amd64_frame {
 	struct amd64_frame	*f_frame;
@@ -493,6 +495,32 @@ db_trace_thread(struct thread *thr, int count)
 	ctx = kdb_thr_ctx(thr);
 	return (db_backtrace(thr, NULL, (struct amd64_frame *)ctx->pcb_rbp,
 		    ctx->pcb_rip, count));
+}
+
+void
+stack_save(struct stack *st)
+{
+	struct amd64_frame *frame;
+	vm_offset_t callpc;
+	register_t rbp;
+
+	stack_zero(st);
+	__asm __volatile("movq %%rbp,%0" : "=r" (rbp));
+	frame = (struct amd64_frame *)rbp;
+	while (1) {
+		if (!INKERNEL((long)frame))
+			break;
+		callpc = frame->f_retaddr;
+		if (!INKERNEL(callpc))
+			break;
+		if (stack_put(st, callpc) == -1)
+			break;
+		if (frame->f_frame <= frame ||
+		    (vm_offset_t)frame->f_frame >=
+		    (vm_offset_t)rbp + KSTACK_PAGES * PAGE_SIZE)
+			break;
+		frame = frame->f_frame;
+	}
 }
 
 int

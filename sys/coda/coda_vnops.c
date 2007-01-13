@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/coda/coda_vnops.c,v 1.66.2.1 2006/02/14 21:59:07 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/coda/coda_vnops.c,v 1.66.2.2 2006/03/13 03:04:00 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1289,21 +1289,18 @@ coda_rename(struct vop_rename_args *ap)
     /* XXX - do we need to call cache pureg on the moved vnode? */
     cache_purge(ap->a_fvp);
 
-    /* It seems to be incumbent on us to drop locks on all four vnodes */
-    /* From-vnodes are not locked, only ref'd.  To-vnodes are locked. */
-
-    vrele(ap->a_fvp);
+    /* Release parents first, then children. */
     vrele(odvp);
-
     if (ap->a_tvp) {
-	if (ap->a_tvp == ndvp) {
-	    vrele(ap->a_tvp);
-	} else {
-	    vput(ap->a_tvp);
-	}
-    }
+	if (ap->a_tvp == ndvp)
+	    vrele(ndvp);
+	else
+	    vput(ndvp);
+	vput(ap->a_tvp);
+    } else
+	vput(ndvp);
+    vrele(ap->a_fvp);
 
-    vput(ndvp);
     return(error);
 }
 

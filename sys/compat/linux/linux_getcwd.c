@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_getcwd.c,v 1.19 2005/07/09 12:34:49 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_getcwd.c,v 1.19.2.1 2006/03/13 03:04:04 jeff Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -327,11 +327,8 @@ linux_getcwd_common (lvp, rvp, bpp, bufp, limit, flags, td)
 	 */
 
 	error = vn_lock(lvp, LK_EXCLUSIVE | LK_RETRY, td);
-	if (error) {
-		vrele(lvp);
-		lvp = NULL;
-		goto out;
-	}
+	if (error != 0)
+		panic("vn_lock LK_RETRY returned error %d", error);
 	if (bufp)
 		bp = *bpp;
 	/*
@@ -383,11 +380,8 @@ linux_getcwd_common (lvp, rvp, bpp, bufp, limit, flags, td)
 			}
 			VREF(lvp);
 			error = vn_lock(lvp, LK_EXCLUSIVE | LK_RETRY, td);
-			if (error != 0) {
-				vrele(lvp);
-				lvp = NULL;
-				goto out;
-			}
+			if (error != 0)
+				panic("vn_lock LK_RETRY returned %d", error);
 		}
 		error = linux_getcwd_scandir(&lvp, &uvp, &bp, bufp, td);
 		if (error)
