@@ -32,7 +32,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libpam/modules/pam_login_access/pam_login_access.8,v 1.5 2004/07/02 23:52:17 ru Exp $
+.\" $FreeBSD: src/lib/libpam/modules/pam_login_access/pam_login_access.8,v 1.5.8.1 2006/03/09 22:18:07 yar Exp $
 .\"
 .Dd January 24, 2002
 .Dt PAM_LOGIN_ACCESS 8
@@ -67,7 +67,7 @@ returns success if and only the user is allowed to log in on the
 specified tty (in the case of a local login) or from the specified
 remote host (in the case of a remote login), according to the
 restrictions listed in
-.Pa /etc/login.access .
+.Xr login.access 5 .
 .Sh SEE ALSO
 .Xr login.access 5 ,
 .Xr pam.conf 5 ,

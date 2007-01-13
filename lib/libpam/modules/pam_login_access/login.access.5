@@ -1,7 +1,6 @@
 .\"
-.\" $FreeBSD: src/lib/libpam/modules/pam_login_access/login.access.5,v 1.13 2004/07/02 23:52:17 ru Exp $
+.\" $FreeBSD: src/lib/libpam/modules/pam_login_access/login.access.5,v 1.13.8.1 2006/03/09 22:18:07 yar Exp $
 .\"
-.\" this is comment
 .Dd April 30, 1994
 .Dt LOGIN.ACCESS 5
 .Os
@@ -49,13 +48,11 @@ listed: the program does not look at a user's primary group id value.
 .Sh FILES
 .Bl -tag -width /etc/login.access -compact
 .It Pa /etc/login.access
-The
-.Nm
-file resides in
-.Pa /etc .
+login access control table
 .El
 .Sh SEE ALSO
 .Xr login 1 ,
-.Xr pam 8
+.Xr pam 8 ,
+.Xr pam_login_access 8
 .Sh AUTHORS
 .An Guido van Rooij

@@ -28,13 +28,12 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/9/93
  * $FreeBSD: src/usr.bin/login/pathnames.h,v 1.5 2001/08/30 11:27:36 markm Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.bin/login/pathnames.h,v 1.2 2006/12/29 22:27:52 laffer1 Exp $
  */
 
 #include <paths.h>
 
 #define	_PATH_HUSHLOGIN		".hushlogin"
 #define	_PATH_MOTDFILE		"/etc/motd"
-#define _PATH_LOGACCESS		"/etc/login.access"
 #define _PATH_FBTAB		"/etc/fbtab"
 #define _PATH_LOGINDEVPERM	"/etc/logindevperm"
