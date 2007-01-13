@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile,v 1.3 2000/06/20 13:56:43 fvdl Exp $
-# $FreeBSD: src/usr.sbin/rpcbind/Makefile,v 1.5 2003/04/04 17:49:18 obrien Exp $
+# $FreeBSD: src/usr.sbin/rpcbind/Makefile,v 1.5.12.1 2006/03/15 07:44:28 matteo Exp $
 
 LIBCDIR=        ${.CURDIR}/../../lib/libc
 LIBCRPCDIR=     ${LIBCDIR}/rpc
@@ -13,7 +13,11 @@ SRCS=	check_bound.c rpcb_stat.c rpcb_svc_4.c rpcbind.c pmap_svc.c \
 	rpcb_svc.c rpcb_svc_com.c security.c warmstart.c util.c \
 	rpc_generic.c
 
-CFLAGS+= -I${LIBCRPCDIR} -I${LIBCINCLUDE} -DPORTMAP -DINET6 -DLIBWRAP
+CFLAGS+= -I${LIBCRPCDIR} -I${LIBCINCLUDE} -DPORTMAP -DLIBWRAP
+
+.if !defined(NO_INET6)
+CFLAGS+= -DINET6
+.endif
 
 DPADD=	${LIBWRAP} ${LIBUTIL}
 LDADD=	-lwrap -lutil
