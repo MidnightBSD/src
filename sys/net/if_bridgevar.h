@@ -67,7 +67,7 @@
  *
  * OpenBSD: if_bridge.h,v 1.14 2001/03/22 03:48:29 jason Exp
  *
- * $FreeBSD: src/sys/net/if_bridgevar.h,v 1.4.2.4 2006/01/18 20:49:21 thompsa Exp $
+ * $FreeBSD: src/sys/net/if_bridgevar.h,v 1.4.2.5 2006/03/09 08:21:19 thompsa Exp $
  */
 
 /*
@@ -301,6 +301,7 @@ struct bridge_softc {
 	LIST_HEAD(, bridge_rtnode) sc_rtlist;	/* list version of above */
 	uint32_t		sc_rthash_key;	/* key for hash */
 	LIST_HEAD(, bridge_iflist) sc_spanlist;	/* span ports list */
+	struct bridge_timer	sc_link_timer;
 };
 
 #define BRIDGE_LOCK_INIT(_sc)		do {			\
