@@ -28479,6 +28479,7 @@ sys/powerpc/psim/sio_iobus.c -text
 sys/rpc/rpcclnt.c -text
 sys/rpc/rpcclnt.h -text
 sys/rpc/rpcm_subs.h -text
+sys/security/audit/audit_syscalls.c -text
 sys/security/mac/mac_inet.c -text
 sys/security/mac/mac_internal.h -text
 sys/security/mac/mac_label.c -text
