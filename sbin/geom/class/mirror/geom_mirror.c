@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/mirror/geom_mirror.c,v 1.10.2.1 2006/01/17 09:28:56 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/mirror/geom_mirror.c,v 1.10.2.2 2006/03/20 15:48:55 pjd Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -280,7 +280,7 @@ mirror_clear(struct gctl_req *req)
 			continue;
 		}
 		if (verbose)
-			printf("Metadata cleared on %s.\n", name); 
+			printf("Metadata cleared on %s.\n", name);
 	}
 }
 
@@ -367,6 +367,6 @@ mirror_activate(struct gctl_req *req)
 			continue;
 		}
 		if (verbose)
-			printf("Provider %s activated.\n", path); 
+			printf("Provider %s activated.\n", path);
 	}
 }
