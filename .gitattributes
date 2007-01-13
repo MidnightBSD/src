@@ -21471,6 +21471,7 @@ share/man/man4/man4.i386/amdpm.4 -text
 share/man/man4/man4.i386/apm.4 -text
 share/man/man4/man4.i386/ar.4 -text
 share/man/man4/man4.i386/arl.4 -text
+share/man/man4/man4.i386/ce.4 -text
 share/man/man4/man4.i386/cp.4 -text
 share/man/man4/man4.i386/cs.4 -text
 share/man/man4/man4.i386/ct.4 -text
@@ -24699,6 +24700,12 @@ sys/dev/cardbus/cardbus_cis.h -text
 sys/dev/cardbus/cardbus_device.c -text
 sys/dev/cardbus/cardbusreg.h -text
 sys/dev/cardbus/cardbusvar.h -text
+sys/dev/ce/ceddk.c -text
+sys/dev/ce/ceddk.h -text
+sys/dev/ce/if_ce.c -text
+sys/dev/ce/ng_ce.h -text
+sys/dev/ce/tau32-ddk.c -text
+sys/dev/ce/tau32-ddk.h -text
 sys/dev/ciss/ciss.c -text
 sys/dev/ciss/cissio.h -text
 sys/dev/ciss/cissreg.h -text
@@ -26977,6 +26984,7 @@ sys/modules/cbb/Makefile -text
 sys/modules/cd9660/Makefile -text
 sys/modules/cd9660_iconv/Makefile -text
 sys/modules/cdce/Makefile -text
+sys/modules/ce/Makefile -text
 sys/modules/ciss/Makefile -text
 sys/modules/cm/Makefile -text
 sys/modules/coda/Makefile -text
