@@ -1,4 +1,4 @@
-$FreeBSD: src/sys/dev/usb/usbdevs,v 1.232.2.11 2006/01/29 14:16:36 damien Exp $
+$FreeBSD: src/sys/dev/usb/usbdevs,v 1.232.2.12 2006/03/18 20:30:25 flz Exp $
 /* $NetBSD: usbdevs,v 1.392 2004/12/29 08:38:44 imp Exp $ */
 
 /*-
@@ -899,6 +899,7 @@ product GENESYS GL650		0x0604	GL650 Hub
 product GENESYS GL641USB	0x0700	GL641USB CompactFlash Card Reader
 product GENESYS GL641USB2IDE_2	0x0701	GL641USB USB-IDE Bridge No 2
 product GENESYS GL641USB2IDE	0x0702	GL641USB USB-IDE Bridge
+product GENESYS GL641USB_2	0x0760	GL641USB 6-in-1 Card Reader
 
 /* GIGABYTE products */
 product GIGABYTE GNBR402W	0x8002	GN-BR402W
