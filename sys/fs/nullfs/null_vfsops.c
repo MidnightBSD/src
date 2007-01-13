@@ -32,7 +32,7 @@
  *	@(#)null_vfsops.c	8.2 (Berkeley) 1/21/94
  *
  * @(#)lofs_vfsops.c	1.2 (Berkeley) 6/18/92
- * $FreeBSD: src/sys/fs/nullfs/null_vfsops.c,v 1.72.2.2 2006/02/14 23:15:16 jhb Exp $
+ * $FreeBSD: src/sys/fs/nullfs/null_vfsops.c,v 1.72.2.3 2006/03/13 03:05:21 jeff Exp $
  */
 
 /*
@@ -112,7 +112,7 @@ nullfs_mount(struct mount *mp, struct thread *td)
 	/*
 	 * Find lower node
 	 */
-	NDINIT(ndp, LOOKUP, FOLLOW|WANTPARENT|LOCKLEAF,
+	NDINIT(ndp, LOOKUP, FOLLOW|LOCKLEAF,
 		UIO_SYSSPACE, target, td);
 	error = namei(ndp);
 	/*
@@ -129,9 +129,6 @@ nullfs_mount(struct mount *mp, struct thread *td)
 	 * Sanity check on lower vnode
 	 */
 	lowerrootvp = ndp->ni_vp;
-
-	vrele(ndp->ni_dvp);
-	ndp->ni_dvp = NULLVP;
 
 	/*
 	 * Check multi null mount to avoid `lock against myself' panic.
