@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/ifconfig.c,v 1.113.2.4 2006/02/09 10:48:43 yar Exp $";
+  "$FreeBSD: src/sbin/ifconfig/ifconfig.c,v 1.113.2.5 2006/03/18 21:59:22 glebius Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -812,7 +812,7 @@ rt_xaddrs(caddr_t cp, caddr_t cplim, struct rt_addrinfo *rtinfo)
 #define	IFFBITS \
 "\020\1UP\2BROADCAST\3DEBUG\4LOOPBACK\5POINTOPOINT\6SMART\7RUNNING" \
 "\10NOARP\11PROMISC\12ALLMULTI\13OACTIVE\14SIMPLEX\15LINK0\16LINK1\17LINK2" \
-"\20MULTICAST\21POLLING\22PPROMISC\23MONITOR\24STATICARP\25NEEDSGIANT"
+"\20MULTICAST\22PPROMISC\23MONITOR\24STATICARP\25NEEDSGIANT"
 
 #define	IFCAPBITS \
 "\020\1RXCSUM\2TXCSUM\3NETCONS\4VLAN_MTU\5VLAN_HWTAGGING\6JUMBO_MTU\7POLLING"
