@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vm_extern.h	8.2 (Berkeley) 1/12/94
- * $FreeBSD: src/sys/vm/vm_extern.h,v 1.76 2005/04/01 20:00:11 jhb Exp $
+ * $FreeBSD: src/sys/vm/vm_extern.h,v 1.76.2.1 2006/03/16 00:25:32 alc Exp $
  */
 
 #ifndef _VM_EXTERN_H_
@@ -86,6 +86,8 @@ void vsunlock(void *, size_t);
 void vm_object_print(/* db_expr_t */ long, boolean_t, /* db_expr_t */ long,
 			  char *);
 int vm_fault_quick(caddr_t v, int prot);
+struct sf_buf *vm_imgact_map_page(vm_object_t object, vm_ooffset_t offset);
+void vm_imgact_unmap_page(struct sf_buf *sf);
 void vm_thread_dispose(struct thread *td);
 void vm_thread_dispose_altkstack(struct thread *td);
 void vm_thread_new(struct thread *td, int pages);

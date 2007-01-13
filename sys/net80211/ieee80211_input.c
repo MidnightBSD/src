@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_input.c,v 1.62.2.9 2006/02/16 16:57:24 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_input.c,v 1.62.2.12 2006/03/14 23:24:02 sam Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -674,7 +674,7 @@ ieee80211_deliver_data(struct ieee80211com *ic,
 		struct mbuf *m1 = NULL;
 
 		if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
-			m1 = m_copypacket(m, M_DONTWAIT);
+			m1 = m_dup(m, M_DONTWAIT);
 			if (m1 == NULL)
 				ifp->if_oerrors++;
 			else
@@ -1711,6 +1711,56 @@ ieee80211_saveie(u_int8_t **iep, const u_int8_t *ie)
 	/* XXX note failure */
 }
 
+/* XXX find a better place for definition */
+struct l2_update_frame {
+	struct ether_header eh;
+	u_int8_t dsap;
+	u_int8_t ssap;
+	u_int8_t control;
+	u_int8_t xid[3];
+}  __packed;
+
+/*
+ * Deliver a TGf L2UF frame on behalf of a station.
+ * This primes any bridge when the station is roaming
+ * between ap's on the same wired network.
+ */
+static void
+ieee80211_deliver_l2uf(struct ieee80211_node *ni)
+{
+	struct ieee80211com *ic = ni->ni_ic;
+	struct ifnet *ifp = ic->ic_ifp;
+	struct mbuf *m;
+	struct l2_update_frame *l2uf;
+	struct ether_header *eh;
+	
+	m = m_gethdr(M_NOWAIT, MT_DATA);
+	if (m == NULL) {
+		IEEE80211_NOTE(ic, IEEE80211_MSG_ASSOC, ni,
+		    "%s", "no mbuf for l2uf frame");
+		ic->ic_stats.is_rx_nobuf++;	/* XXX not right */
+		return;
+	}
+	l2uf = mtod(m, struct l2_update_frame *);
+	eh = &l2uf->eh;
+	/* dst: Broadcast address */
+	IEEE80211_ADDR_COPY(eh->ether_dhost, ifp->if_broadcastaddr);
+	/* src: associated STA */
+	IEEE80211_ADDR_COPY(eh->ether_shost, ni->ni_macaddr);
+	eh->ether_type = htons(sizeof(*l2uf) - sizeof(*eh));
+	
+	l2uf->dsap = 0;
+	l2uf->ssap = 0;
+	l2uf->control = 0xf5;
+	l2uf->xid[0] = 0x81;
+	l2uf->xid[1] = 0x80;
+	l2uf->xid[2] = 0x00;
+	
+	m->m_pkthdr.len = m->m_len = sizeof(*l2uf);
+	m->m_pkthdr.rcvif = ifp;
+	ieee80211_deliver_data(ic, ni, m);
+}
+
 void
 ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 	struct ieee80211_node *ni,
@@ -1953,6 +2003,18 @@ ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 		 * If scanning, just pass information to the scan module.
 		 */
 		if (ic->ic_flags & IEEE80211_F_SCAN) {
+			if (ic->ic_flags_ext & IEEE80211_FEXT_PROBECHAN) {
+				/*
+				 * Actively scanning a channel marked passive;
+				 * send a probe request now that we know there
+				 * is 802.11 traffic present.
+				 *
+				 * XXX check if the beacon we recv'd gives
+				 * us what we need and suppress the probe req
+				 */
+				ieee80211_probe_curchan(ic, 1);
+				ic->ic_flags_ext &= ~IEEE80211_FEXT_PROBECHAN;
+			}
 			ieee80211_add_scan(ic, &scan, wh,
 				subtype, rssi, rstamp);
 			return;
@@ -2341,6 +2403,7 @@ ieee80211_recv_mgmt(struct ieee80211com *ic, struct mbuf *m0,
 			ni->ni_wme_ie = NULL;
 			ni->ni_flags &= ~IEEE80211_NODE_QOS;
 		}
+		ieee80211_deliver_l2uf(ni);
 		ieee80211_node_join(ic, ni, resp);
 		break;
 	}

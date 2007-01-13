@@ -29,7 +29,7 @@
 
 <sect1 id="support">
   <sect1info>
-    <pubdate>$FreeBSD: src/release/doc/en_US.ISO8859-1/hardware/common/dev.sgml,v 1.282.2.8 2006/02/11 18:54:19 marcel Exp $</pubdate>
+    <pubdate>$FreeBSD: src/release/doc/en_US.ISO8859-1/hardware/common/dev.sgml,v 1.282.2.9.2.2 2006/05/01 08:26:00 brueffer Exp $</pubdate>
   </sect1info>
 
   <title>Supported Devices</title>
@@ -115,6 +115,8 @@
 
     &hwlist.isp;
 
+    &hwlist.mfi;
+
     &hwlist.mlx;
 
       <note>
@@ -140,6 +142,8 @@
     &hwlist.nsp;
 
     &hwlist.pst;
+
+    &hwlist.rr232x;
 
     &hwlist.stg;
 
@@ -200,6 +204,8 @@
     &hwlist.aue;
 
     &hwlist.axe;
+
+    &hwlist.bce;
 
     <para arch="i386,amd64">Broadcom BCM4401 based Fast Ethernet adapters
       (&man.bfe.4; driver)</para>
@@ -355,6 +361,8 @@
 
   <sect2 id="misc-network">
     <title>Miscellaneous Networks</title>
+
+    &hwlist.ce;
 
     &hwlist.cx;
 

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_proto.c,v 1.17.2.7 2006/02/16 16:57:24 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_proto.c,v 1.17.2.9 2006/03/13 03:10:31 sam Exp $");
 
 /*
  * IEEE 802.11 protocol support.
@@ -739,7 +739,7 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 	 * legacy/non-QoS traffic.
 	 */
         if ((ic->ic_opmode == IEEE80211_M_HOSTAP &&
-	     (wme->wme_flags & WME_F_AGGRMODE) == 0) ||
+	     (wme->wme_flags & WME_F_AGGRMODE) != 0) ||
 	    (ic->ic_opmode == IEEE80211_M_STA &&
 	     (ic->ic_bss->ni_flags & IEEE80211_NODE_QOS) == 0) ||
 	    (ic->ic_flags & IEEE80211_F_WME) == 0) {
@@ -768,7 +768,7 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 	}
 	
 	if (ic->ic_opmode == IEEE80211_M_HOSTAP &&
-	    ic->ic_sta_assoc < 2 && (wme->wme_flags & WME_F_AGGRMODE) == 0) {
+	    ic->ic_sta_assoc < 2 && (wme->wme_flags & WME_F_AGGRMODE) != 0) {
         	static const u_int8_t logCwMin[IEEE80211_MODE_MAX] = {
               		3,	/* IEEE80211_MODE_AUTO */
               		3,	/* IEEE80211_MODE_11A */
@@ -978,19 +978,11 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 			break;
 		case IEEE80211_S_SCAN:
 			/*
-			 * Scan next. If doing an active scan and the
-			 * channel is not marked passive-only then send
-			 * a probe request.  Otherwise just listen for
-			 * beacons on the channel.
+			 * Scan next. If doing an active scan probe
+			 * for the requested ap (if any).
 			 */
-			if ((ic->ic_flags & IEEE80211_F_ASCAN) &&
-			    (ic->ic_curchan->ic_flags & IEEE80211_CHAN_PASSIVE) == 0) {
-				ieee80211_send_probereq(ni,
-					ic->ic_myaddr, ifp->if_broadcastaddr,
-					ifp->if_broadcastaddr,
-					ic->ic_des_essid, ic->ic_des_esslen,
-					ic->ic_opt_ie, ic->ic_opt_ie_len);
-			}
+			if (ic->ic_flags & IEEE80211_F_ASCAN)
+				ieee80211_probe_curchan(ic, 0);
 			break;
 		case IEEE80211_S_RUN:
 			/* beacon miss */

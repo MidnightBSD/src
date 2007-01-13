@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/release/doc/share/misc/dev.archlist.txt,v 1.62.2.8 2006/02/11 18:54:19 marcel Exp $
+# $FreeBSD: src/release/doc/share/misc/dev.archlist.txt,v 1.62.2.9.2.2 2006/05/01 08:26:00 brueffer Exp $
 #
 
 #
@@ -49,10 +49,12 @@ ath	i386
 aue	i386,pc98,ia64,amd64
 awi	i386,pc98,amd64
 axe	i386,pc98,amd64
+bce	i386,amd64
 bge	i386,pc98,ia64,amd64
 bktr	i386,pc98
 bt	i386,amd64
 ciss	i386,ia64,amd64
+ce	i386,pc98
 cm	i386
 cnw	i386,pc98,amd64
 cp	i386,pc98
@@ -81,6 +83,7 @@ ixgb	i386,amd64
 kue	i386,pc98,ia64,amd64
 lge	i386,pc98,amd64
 lnc	i386,pc98
+mfi	i386,alpha,ia64,amd64
 mlx	i386,alpha,ia64,amd64
 mly	i386,ia64,amd64
 my	i386,pc98
@@ -96,6 +99,7 @@ oltr	i386
 pcn	i386,pc98,alpha,ia64,amd64
 pst	i386
 rc	i386
+rr232x	i386,amd64
 rue	i386,pc98,amd64
 safe	i386,pc98,amd64
 sbp	i386,sparc64,ia64,amd64
