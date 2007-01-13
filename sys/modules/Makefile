@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.5 2007/01/08 00:16:53 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.6 2007/01/13 00:29:42 laffer1 Exp $
 
 # oldcard -- specialized use for debugging only.
 # owi -- totally unsupported for debugging only.
@@ -50,6 +50,7 @@ SUBDIR=	${_3dfx} \
 	cd9660 \
 	cd9660_iconv \
 	cdce \
+	${_ce} \
 	${_ciss} \
 	${_cm} \
 	coda \
@@ -332,6 +333,7 @@ _awi=		awi
 _bktr=		bktr
 _cardbus=	cardbus
 _cbb=		cbb
+_ce=		ce
 _coff=		coff
 _cp=		cp
 _cpufreq=	cpufreq

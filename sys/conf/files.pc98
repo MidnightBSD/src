@@ -3,7 +3,7 @@
 #
 # modified for PC-9801/PC-9821
 #
-# $FreeBSD: src/sys/conf/files.pc98,v 1.327.2.2 2005/11/16 10:50:11 ru Exp $
+# $FreeBSD: src/sys/conf/files.pc98,v 1.327.2.4 2006/04/05 15:44:10 hrs Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -83,7 +83,7 @@ bf_enc.o			optional ipsec ipsec_esp		\
 	compile-with	"${CC} -c -I$S/crypto/blowfish/arch/i386 ${ASM_CFLAGS} ${WERROR} ${.IMPSRC}"	\
 	no-implicit-rule
 crypto/des/arch/i386/des_enc.S	optional ipsec ipsec_esp
-crypto/des/arch/i386/des_enc.S	optional netsmbcrypto
+crypto/des/arch/i386/des_enc.S	optional netsmb
 bf_enc.o			optional crypto		\
 	dependency	"$S/crypto/blowfish/arch/i386/bf_enc.S $S/crypto/blowfish/arch/i386/bf_enc_586.S $S/crypto/blowfish/arch/i386/bf_enc_686.S"		\
 	compile-with	"${CC} -c -I$S/crypto/blowfish/arch/i386 ${ASM_CFLAGS} ${WERROR} ${.IMPSRC}"	\
@@ -94,6 +94,9 @@ crypto/des/des_setkey.c		optional crypto
 dev/aic/aic_cbus.c		optional aic isa
 dev/ar/if_ar.c			optional ar
 dev/ar/if_ar_pci.c		optional ar pci
+dev/ce/ceddk.c			optional ce
+dev/ce/if_ce.c			optional ce
+dev/ce/tau32-ddk.c		optional ce
 dev/cp/cpddk.c			optional cp
 dev/cp/if_cp.c			optional cp
 dev/ct/bshw_machdep.c		optional ct
