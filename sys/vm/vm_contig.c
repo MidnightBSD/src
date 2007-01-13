@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.43.2.1 2005/08/15 14:28:48 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.43.2.3.2.1 2006/04/25 15:29:50 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -91,6 +91,7 @@ vm_contig_launder_page(vm_page_t m)
 	vm_object_t object;
 	vm_page_t m_tmp;
 	struct vnode *vp;
+	struct mount *mp;
 
 	object = m->object;
 	if (!VM_OBJECT_TRYLOCK(object))
@@ -104,15 +105,23 @@ vm_contig_launder_page(vm_page_t m)
 	if (m->dirty == 0 && m->hold_count == 0)
 		pmap_remove_all(m);
 	if (m->dirty) {
+		if ((object->flags & OBJ_DEAD) != 0) {
+			VM_OBJECT_UNLOCK(object);
+			return (EAGAIN);
+		}
 		if (object->type == OBJT_VNODE) {
 			vm_page_unlock_queues();
 			vp = object->handle;
+			vm_object_reference_locked(object);
 			VM_OBJECT_UNLOCK(object);
+			(void) vn_start_write(vp, &mp, V_WAIT);
 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
 			VM_OBJECT_LOCK(object);
 			vm_object_page_clean(object, 0, 0, OBJPC_SYNC);
 			VM_OBJECT_UNLOCK(object);
 			VOP_UNLOCK(vp, 0, curthread);
+			vm_object_deallocate(object);
+			vn_finished_write(mp);
 			vm_page_lock_queues();
 			return (0);
 		} else if (object->type == OBJT_SWAP ||
@@ -398,7 +407,10 @@ vm_page_alloc_contig(vm_pindex_t npages, vm_paddr_t low, vm_paddr_t high,
 		panic("vm_page_alloc_contig: boundary must be a power of 2");
 
 	for (pass = 0; pass < 2; pass++) {
-		start = vm_page_array_size - npages + 1;
+		if (atop(high) < vm_page_array_size)
+			start = atop(high) - npages + 1;
+		else
+			start = vm_page_array_size - npages + 1;
 		vm_page_lock_queues();
 retry:
 		start--;

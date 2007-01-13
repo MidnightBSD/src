@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_object.c,v 1.349.2.2 2005/10/26 20:21:23 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_object.c,v 1.349.2.4 2006/03/13 03:08:21 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -351,19 +351,19 @@ void
 vm_object_reference(vm_object_t object)
 {
 	struct vnode *vp;
-	int flags;
 
 	if (object == NULL)
 		return;
 	VM_OBJECT_LOCK(object);
 	object->ref_count++;
 	if (object->type == OBJT_VNODE) {
+		int vfslocked;
+
 		vp = object->handle;
-		VI_LOCK(vp);
 		VM_OBJECT_UNLOCK(object);
-		for (flags = LK_INTERLOCK; vget(vp, flags, curthread);
-		     flags = 0)
-			printf("vm_object_reference: delay in vget\n");
+		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+		vget(vp, LK_RETRY, curthread);
+		VFS_UNLOCK_GIANT(vfslocked);
 	} else
 		VM_OBJECT_UNLOCK(object);
 }
@@ -981,6 +981,7 @@ vm_object_sync(vm_object_t object, vm_ooffset_t offset, vm_size_t size,
 {
 	vm_object_t backing_object;
 	struct vnode *vp;
+	struct mount *mp;
 	int flags;
 
 	if (object == NULL)
@@ -1011,6 +1012,7 @@ vm_object_sync(vm_object_t object, vm_ooffset_t offset, vm_size_t size,
 		int vfslocked;
 		vp = object->handle;
 		VM_OBJECT_UNLOCK(object);
+		(void) vn_start_write(vp, &mp, V_WAIT);
 		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
 		flags = (syncio || invalidate) ? OBJPC_SYNC : 0;
@@ -1023,6 +1025,7 @@ vm_object_sync(vm_object_t object, vm_ooffset_t offset, vm_size_t size,
 		VM_OBJECT_UNLOCK(object);
 		VOP_UNLOCK(vp, 0, curthread);
 		VFS_UNLOCK_GIANT(vfslocked);
+		vn_finished_write(mp);
 		VM_OBJECT_LOCK(object);
 	}
 	if ((object->type == OBJT_VNODE ||
@@ -1697,7 +1700,9 @@ vm_object_collapse(vm_object_t object)
 			 * If we do not entirely shadow the backing object,
 			 * there is nothing we can do so we give up.
 			 */
-			if (vm_object_backing_scan(object, OBSC_TEST_ALL_SHADOWED) == 0) {
+			if (object->resident_page_count != object->size &&
+			    vm_object_backing_scan(object,
+			    OBSC_TEST_ALL_SHADOWED) == 0) {
 				VM_OBJECT_UNLOCK(backing_object);
 				break;
 			}

@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_lookup.c,v 1.77.2.1 2005/10/19 20:29:08 truckman Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_lookup.c,v 1.77.2.2 2006/03/09 00:21:23 tegge Exp $");
 
 #include "opt_ffs_broken_fixme.h"
 #include "opt_ufs.h"
@@ -422,7 +422,6 @@ notfound:
 				enduseful = slotoffset + slotsize;
 		}
 		dp->i_endoff = roundup2(enduseful, DIRBLKSIZ);
-		dp->i_flag |= IN_CHANGE | IN_UPDATE;
 		/*
 		 * We return with the directory locked, so that
 		 * the parameters we set up above will still be

@@ -31,7 +31,7 @@
  *
  *	@(#)fdesc_vnops.c	8.9 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.99 2005/03/13 12:18:23 jeff Exp $
+ * $FreeBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.99.2.2 2006/03/22 17:39:27 tegge Exp $
  */
 
 /*
@@ -181,11 +181,9 @@ fdesc_lookup(ap)
 		goto bad;
 	}
 
-	VOP_UNLOCK(dvp, 0, td);
 	if (cnp->cn_namelen == 1 && *pname == '.') {
 		*vpp = dvp;
 		VREF(dvp);
-		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY, td);
 		return (0);
 	}
 
@@ -216,12 +214,12 @@ fdesc_lookup(ap)
 	if (error)
 		goto bad;
 	VTOFDESC(fvp)->fd_fd = fd;
-	vn_lock(fvp, LK_EXCLUSIVE | LK_RETRY, td);
+	if (fvp != dvp)
+		vn_lock(fvp, LK_EXCLUSIVE | LK_RETRY, td);
 	*vpp = fvp;
 	return (0);
 
 bad:
-	vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY, td);
 	*vpp = NULL;
 	return (error);
 }
@@ -391,12 +389,12 @@ fdesc_setattr(ap)
 		return (error);
 	}
 	vp = fp->f_vnode;
-	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, ap->a_td);
 	if ((error = vn_start_write(vp, &mp, V_WAIT | PCATCH)) == 0) {
+		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, ap->a_td);
 		error = VOP_SETATTR(vp, ap->a_vap, ap->a_cred, ap->a_td);
+		VOP_UNLOCK(vp, 0, ap->a_td);
 		vn_finished_write(mp);
 	}
-	VOP_UNLOCK(vp, 0, ap->a_td);
 	fdrop(fp, ap->a_td);
 	return (error);
 }

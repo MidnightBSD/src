@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_bio.c,v 1.491.2.5 2006/01/21 20:41:42 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_bio.c,v 1.491.2.7 2006/03/13 03:06:09 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1285,6 +1285,11 @@ brelse(struct buf *bp)
 			vfs_vmio_release(bp);
 		}
 
+	} else if ((bp->b_flags & (B_INVAL | B_RELBUF)) != 0) {
+		if (bp->b_bufsize != 0)
+			allocbuf(bp, 0);
+		if (bp->b_vp != NULL)
+			brelvp(bp);
 	}
 			
 	if (BUF_REFCNT(bp) > 1) {
@@ -3765,9 +3770,6 @@ DB_SHOW_COMMAND(buffer, db_show_buffer)
 	    "b_bufobj = (%p), b_data = %p, b_blkno = %jd\n",
 	    bp->b_error, bp->b_bufsize, bp->b_bcount, bp->b_resid,
 	    bp->b_bufobj, bp->b_data, (intmax_t)bp->b_blkno);
-	db_printf("lockstatus = %d, excl count = %d, excl owner %p\n",
-	    lockstatus(&bp->b_lock, NULL), bp->b_lock.lk_exclusivecount,
-	    bp->b_lock.lk_lockholder);
 	if (bp->b_npages) {
 		int i;
 		db_printf("b_npages = %d, pages(OBJ, IDX, PA): ", bp->b_npages);
@@ -3781,6 +3783,7 @@ DB_SHOW_COMMAND(buffer, db_show_buffer)
 		}
 		db_printf("\n");
 	}
+	lockmgr_printinfo(&bp->b_lock);
 }
 
 DB_SHOW_COMMAND(lockedbufs, lockedbufs)
