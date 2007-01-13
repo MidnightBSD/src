@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/jail,v 1.23.2.2 2005/08/16 08:43:06 pjd Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/jail,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: jail
 # REQUIRE: LOGIN cleanvar
@@ -247,5 +247,7 @@ cmd="$1"
 if [ $# -gt 0 ]; then
 	shift
 fi
-[ -n "$*" ] && jail_list="$*"
+if [ -n "$*" ]; then
+	jail_list="$*"
+fi
 run_rc_command "${cmd}"
