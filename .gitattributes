@@ -25677,6 +25677,7 @@ sys/dev/syscons/syscons.h -text
 sys/dev/syscons/sysmouse.c -text
 sys/dev/syscons/warp/warp_saver.c -text
 sys/dev/tdfx/tdfx_io.h -text
+sys/dev/tdfx/tdfx_linux.c -text
 sys/dev/tdfx/tdfx_linux.h -text
 sys/dev/tdfx/tdfx_pci.c -text
 sys/dev/tdfx/tdfx_pci.h -text
