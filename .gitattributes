@@ -32704,6 +32704,9 @@ usr.sbin/smbmsg/Makefile -text
 usr.sbin/smbmsg/pathnames.h -text
 usr.sbin/smbmsg/smbmsg.8 -text
 usr.sbin/smbmsg/smbmsg.c -text
+usr.sbin/snapinfo/Makefile -text
+usr.sbin/snapinfo/snapinfo.8 -text
+usr.sbin/snapinfo/snapinfo.c -text
 usr.sbin/spkrtest/Makefile -text
 usr.sbin/spkrtest/spkrtest.8 -text
 usr.sbin/spkrtest/spkrtest.sh -text
