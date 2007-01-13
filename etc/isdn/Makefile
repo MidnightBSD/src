@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/isdn/Makefile,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
 # $FreeBSD: src/etc/isdn/Makefile,v 1.13 2004/12/21 08:46:50 ru Exp $
 
 NO_OBJ=
@@ -9,7 +9,6 @@ SCRIPTS=	answer			\
 		tell			\
 		tell-record		\
 		unknown_incoming
-SCRIPTS_NAME_isdntel.sh= isdntel.sh
 
 FILES=		holidays.D		\
 		isdnd.rates.A		\
