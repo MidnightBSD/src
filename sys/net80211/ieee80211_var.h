@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_var.h,v 1.22.2.9 2006/02/16 16:57:24 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_var.h,v 1.22.2.11 2006/03/13 03:05:48 sam Exp $
  */
 #ifndef _NET80211_IEEE80211_VAR_H_
 #define _NET80211_IEEE80211_VAR_H_
@@ -72,6 +72,7 @@
 
 #define	IEEE80211_BMISS_MAX	2	/* maximum consecutive bmiss allowed */
 #define	IEEE80211_SWBMISS_THRESHOLD 50	/* s/w bmiss threshold (TU's) */
+#define	IEEE80211_HWBMISS_DEFAULT 7	/* h/w bmiss threshold (beacons) */
 
 #define	IEEE80211_PS_SLEEP	0x1	/* STA is in power saving mode */
 #define	IEEE80211_PS_MAX_QUEUE	50	/* maximum saved packets */
@@ -255,6 +256,7 @@ struct ieee80211com {
 #define	IEEE80211_FEXT_BGSCAN	0x00000008	/* STATUS: enable full bgscan completion */
 #define	IEEE80211_FEXT_ERPUPDATE 0x00000200	/* STATUS: update ERP element */
 #define	IEEE80211_FEXT_SWBMISS	0x00000400	/* CONF: do bmiss in s/w */
+#define	IEEE80211_FEXT_PROBECHAN 0x00020000	/* CONF: probe passive channel*/
 
 /* ic_caps */
 #define	IEEE80211_C_WEP		0x00000001	/* CAPABILITY: WEP available */

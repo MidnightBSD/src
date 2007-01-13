@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211.c,v 1.19.2.6 2006/01/29 07:33:27 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211.c,v 1.19.2.7 2006/03/11 19:25:23 sam Exp $");
 
 /*
  * IEEE 802.11 generic handler
@@ -188,14 +188,12 @@ ieee80211_ifattach(struct ieee80211com *ic)
 		ic->ic_flags |= IEEE80211_F_BURST;
 	(void) ieee80211_setmode(ic, ic->ic_curmode);
 
-	if (ic->ic_bintval == 0)
-		ic->ic_bintval = IEEE80211_BINTVAL_DEFAULT;
-	ic->ic_bmissthreshold = 7;		/* default 7 beacons */
+	ic->ic_bintval = IEEE80211_BINTVAL_DEFAULT;
+	ic->ic_bmissthreshold = IEEE80211_HWBMISS_DEFAULT;
 	ic->ic_dtim_period = IEEE80211_DTIM_DEFAULT;
 	IEEE80211_BEACON_LOCK_INIT(ic, "beacon");
 
-	if (ic->ic_lintval == 0)
-		ic->ic_lintval = ic->ic_bintval;
+	ic->ic_lintval = ic->ic_bintval;
 	ic->ic_txpowlimit = IEEE80211_TXPOWER_MAX;
 
 	ieee80211_node_attach(ic);
