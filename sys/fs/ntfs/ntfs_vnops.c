@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.55.2.1 2006/02/20 00:53:13 yar Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.55.2.2 2006/03/12 21:50:01 scottl Exp $
  *
  */
 
@@ -248,6 +248,11 @@ ntfs_reclaim(ap)
 	if (ntfs_prtactive && vrefcnt(vp) != 0)
 		vprint("ntfs_reclaim: pushing active", vp);
 
+	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
+
 	if ((error = ntfs_ntget(ip)) != 0)
 		return (error);
 	
@@ -255,7 +260,6 @@ ntfs_reclaim(ap)
 	ntfs_frele(fp);
 	ntfs_ntput(ip);
 	vp->v_data = NULL;
-	vnode_destroy_vobject(vp);
 
 	return (0);
 }

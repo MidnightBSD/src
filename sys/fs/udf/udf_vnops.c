@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/udf_vnops.c,v 1.58 2005/07/09 13:52:49 tanimura Exp $
+ * $FreeBSD: src/sys/fs/udf/udf_vnops.c,v 1.58.2.1 2006/03/12 21:50:02 scottl Exp $
  */
 
 /* udf_vnops.c */
@@ -965,6 +965,11 @@ udf_reclaim(struct vop_reclaim_args *a)
 	vp = a->a_vp;
 	unode = VTON(vp);
 
+	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
+
 	if (unode != NULL) {
 		vfs_hash_remove(vp);
 
@@ -973,7 +978,6 @@ udf_reclaim(struct vop_reclaim_args *a)
 		uma_zfree(udf_zone_node, unode);
 		vp->v_data = NULL;
 	}
-	vnode_destroy_vobject(vp);
 
 	return (0);
 }

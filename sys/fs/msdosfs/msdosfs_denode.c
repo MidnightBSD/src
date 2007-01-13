@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_denode.c,v 1.88.2.1 2005/10/09 03:33:52 delphij Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_denode.c,v 1.88.2.2 2006/03/12 21:50:01 scottl Exp $ */
 /*	$NetBSD: msdosfs_denode.c,v 1.28 1998/02/10 14:10:00 mrg Exp $	*/
 
 /*-
@@ -549,6 +549,10 @@ msdosfs_reclaim(ap)
 	if (prtactive && vrefcnt(vp) != 0)
 		vprint("msdosfs_reclaim(): pushing active", vp);
 	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
+	/*
 	 * Remove the denode from its hash chain.
 	 */
 	vfs_hash_remove(vp);
@@ -560,7 +564,6 @@ msdosfs_reclaim(ap)
 #endif
 	FREE(dep, M_MSDOSFSNODE);
 	vp->v_data = NULL;
-	vnode_destroy_vobject(vp);
 
 	return (0);
 }

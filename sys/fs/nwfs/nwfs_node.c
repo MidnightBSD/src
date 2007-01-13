@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_node.c,v 1.36 2005/03/13 12:18:24 jeff Exp $
+ * $FreeBSD: src/sys/fs/nwfs/nwfs_node.c,v 1.36.2.1 2006/03/12 21:50:01 scottl Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -255,6 +255,11 @@ nwfs_reclaim(ap)
 	struct thread *td = ap->a_td;
 	
 	NCPVNDEBUG("%s,%d\n", np->n_name, vrefcnt(vp));
+	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
+
 	if (np->n_flag & NREFPARENT) {
 		np->n_flag &= ~NREFPARENT;
 		if (nwfs_lookupnp(nmp, np->n_parent, td, &dnp) == 0) {
@@ -270,7 +275,6 @@ nwfs_reclaim(ap)
 		nmp->n_root = NULL;
 	}
 	vp->v_data = NULL;
-	vnode_destroy_vobject(vp);
 	FREE(np, M_NWNODE);
 	if (dvp) {
 		vrele(dvp);

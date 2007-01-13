@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_node.c,v 1.28 2005/03/13 12:18:24 jeff Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_node.c,v 1.28.2.1 2006/03/12 21:50:01 scottl Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -319,6 +319,10 @@ smbfs_reclaim(ap)
 	KASSERT((np->n_flag & NOPEN) == 0, ("file not closed before reclaim"));
 
 	smbfs_hash_lock(smp, td);
+	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
 
 	dvp = (np->n_parent && (np->n_flag & NREFPARENT)) ?
 	    np->n_parent : NULL;
@@ -330,7 +334,6 @@ smbfs_reclaim(ap)
 		smp->sm_root = NULL;
 	}
 	vp->v_data = NULL;
-	vnode_destroy_vobject(vp);
 	smbfs_hash_unlock(smp, td);
 	if (np->n_name)
 		smbfs_name_free(np->n_name);
