@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isofs/cd9660/cd9660_rrip.c,v 1.28 2004/07/03 16:56:45 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/isofs/cd9660/cd9660_rrip.c,v 1.28.8.1 2006/03/17 21:32:14 joerg Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -157,9 +157,7 @@ cd9660_rrip_slink(p,ana)
 
 		case ISO_SUSP_CFLAG_ROOT:
 			/* Inserting slash for ROOT */
-			/* start over from beginning(?) */
-			outbuf -= len;
-			len = 0;
+			/* Double slash, nothing really to do here. */
 			break;
 
 		case ISO_SUSP_CFLAG_VOLROOT:
