@@ -28852,6 +28852,7 @@ sys/sys/socket.h -text
 sys/sys/socketvar.h -text
 sys/sys/sockio.h -text
 sys/sys/soundcard.h -text
+sys/sys/stack.h -text
 sys/sys/stat.h -text
 sys/sys/statvfs.h -text
 sys/sys/stddef.h -text
