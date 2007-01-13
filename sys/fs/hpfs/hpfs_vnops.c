@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/hpfs/hpfs_vnops.c,v 1.66 2005/04/13 10:59:07 jeff Exp $
+ * $FreeBSD: src/sys/fs/hpfs/hpfs_vnops.c,v 1.66.2.1 2006/03/12 21:50:01 scottl Exp $
  */
 
 #include <sys/param.h>
@@ -600,12 +600,16 @@ hpfs_reclaim(ap)
 
 	dprintf(("hpfs_reclaim(0x%x0): \n", hp->h_no));
 
+	/*
+	 * Destroy the vm object and flush associated pages.
+	 */
+	vnode_destroy_vobject(vp);
+
 	vfs_hash_remove(vp);
 
 	mtx_destroy(&hp->h_interlock);
 
 	vp->v_data = NULL;
-	vnode_destroy_vobject(vp);
 
 	FREE(hp, M_HPFSNO);
 
