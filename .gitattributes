@@ -26890,6 +26890,7 @@ sys/libkern/ucmpdi2.c -text
 sys/libkern/udivdi3.c -text
 sys/libkern/umoddi3.c -text
 sys/modules/3dfx/Makefile -text
+sys/modules/3dfx_linux/Makefile -text
 sys/modules/Makefile -text
 sys/modules/Makefile.inc -text
 sys/modules/aac/Makefile -text

@@ -1,10 +1,11 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.4 2007/01/08 00:01:57 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.5 2007/01/08 00:16:53 laffer1 Exp $
 
 # oldcard -- specialized use for debugging only.
 # owi -- totally unsupported for debugging only.
 
 SUBDIR=	${_3dfx} \
+	${_3dfx_linux} \
 	${_aac} \
 	accf_data \
 	accf_http \
@@ -318,6 +319,7 @@ _pflog=		pflog
 # XXX some of these can move to the general case when de-i386'ed
 # XXX some of these can move now, but are untested on other architectures.
 _3dfx=		3dfx
+_3dfx_linux=	3dfx_linux
 _agp=		agp
 _aic=		aic
 _amd=		amd
