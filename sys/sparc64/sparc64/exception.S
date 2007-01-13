@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	BSDI $Id: exception.S,v 1.1.1.2 2006-02-25 02:37:48 laffer1 Exp $
+ *	BSDI $Id: exception.S,v 1.2 2007-01-13 17:37:21 laffer1 Exp $
  */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
@@ -54,7 +54,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/exception.S,v 1.70.2.1 2006/01/28 04:02:54 kris Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/exception.S,v 1.70.2.2.2.1 2006/04/25 19:37:03 marius Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -165,6 +165,10 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/exception.S,v 1.70.2.1 2006/01/28 04
 	ldx	[ASP_REG + 8], %g2 ; \
 	ldx	[ASP_REG + 0], %g1 ; \
 	inc	16, ASP_REG
+
+	.globl	tl_text_begin
+tl_text_begin:
+	nop
 
 ENTRY(tl1_kstack_fault)
 	rdpr	%tl, %g1
@@ -1818,6 +1822,10 @@ END(tl1_spill_topcb)
 	.endm
 
 	.sect	.trap
+	.globl	tl_trap_begin
+tl_trap_begin:
+	nop
+
 	.align	0x8000
 	.globl	tl0_base
 
@@ -2014,6 +2022,10 @@ tl1_breakpoint:
 	tl1_gen		T_RSTRWP_PHYS			! 0x302
 	tl1_gen		T_RSTRWP_VIRT			! 0x303
 	tl1_reserved	252				! 0x304-0x3ff
+
+	.globl	tl_trap_end
+tl_trap_end:
+	nop
 
 /*
  * User trap entry point.
@@ -2312,6 +2324,19 @@ ENTRY(tl0_intr)
 	stx	%i6, [%sp + SPOFF + CCFSZ + TF_O6]
 	stx	%i7, [%sp + SPOFF + CCFSZ + TF_O7]
 
+	call	critical_enter
+	 nop
+
+	SET(intr_handlers, %l1, %l0)
+	sllx	%l3, IH_SHIFT, %l1
+	ldx	[%l0 + %l1], %l1
+	KASSERT(%l1, "tl0_intr: ih null")
+	call	%l1
+	 add	%sp, CCFSZ + SPOFF, %o0
+
+	call	critical_exit
+	 nop
+
 	/* %l3 contains PIL */
 	SET(intrcnt, %l1, %l2)
 	prefetcha [%l2] ASI_N, 1
@@ -2324,22 +2349,9 @@ ENTRY(tl0_intr)
 	inc	%l1
 	stx	%l1, [%l0]
 
-	call	critical_enter
-	 nop
-
 	lduw	[PCPU(CNT) + V_INTR], %l0
 	inc	%l0
 	stw	%l0, [PCPU(CNT) + V_INTR]
-
-	SET(intr_handlers, %l1, %l0)
-	sllx	%l3, IH_SHIFT, %l1
-	ldx	[%l0 + %l1], %l1
-	KASSERT(%l1, "tl0_intr: ih null")
-	call	%l1
-	 add	%sp, CCFSZ + SPOFF, %o0
-
-	call	critical_exit
-	 nop
 
 	ba,a	%xcc, tl0_ret
 	 nop
@@ -2829,6 +2841,19 @@ ENTRY(tl1_intr)
 	mov	%l5, PCPU_REG
 	wrpr	%g0, PSTATE_KERNEL, %pstate
 
+	call	critical_enter
+	 nop
+
+	SET(intr_handlers, %l5, %l4)
+	sllx	%l7, IH_SHIFT, %l5
+	ldx	[%l4 + %l5], %l5
+	KASSERT(%l5, "tl1_intr: ih null")
+	call	%l5
+	 add	%sp, CCFSZ + SPOFF, %o0
+
+	call	critical_exit
+	 nop
+
 	/* %l7 contains PIL */
 	SET(intrcnt, %l5, %l4)
 	prefetcha [%l4] ASI_N, 1
@@ -2841,22 +2866,9 @@ ENTRY(tl1_intr)
 	inc	%l5
 	stx	%l5, [%l4]
 
-	call	critical_enter
-	 nop
-
 	lduw	[PCPU(CNT) + V_INTR], %l4
 	inc	%l4
 	stw	%l4, [PCPU(CNT) + V_INTR]
-
-	SET(intr_handlers, %l5, %l4)
-	sllx	%l7, IH_SHIFT, %l5
-	ldx	[%l4 + %l5], %l5
-	KASSERT(%l5, "tl1_intr: ih null")
-	call	%l5
-	 add	%sp, CCFSZ + SPOFF, %o0
-
-	call	critical_exit
-	 nop
 
 	ldx	[%sp + SPOFF + CCFSZ + TF_Y], %l4
 
@@ -2900,6 +2912,10 @@ ENTRY(tl1_intr)
 
 	retry
 END(tl1_intr)
+
+	.globl	tl_text_end
+tl_text_end:
+	nop
 
 /*
  * Freshly forked processes come here when switched to for the first time.
