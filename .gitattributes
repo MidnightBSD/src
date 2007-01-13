@@ -26780,6 +26780,7 @@ sys/kern/subr_sbuf.c -text
 sys/kern/subr_scanf.c -text
 sys/kern/subr_sleepqueue.c -text
 sys/kern/subr_smp.c -text
+sys/kern/subr_stack.c -text
 sys/kern/subr_taskqueue.c -text
 sys/kern/subr_trap.c -text
 sys/kern/subr_turnstile.c -text

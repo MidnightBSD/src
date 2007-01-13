@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_default.c,v 1.127.2.1 2006/01/14 01:18:02 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_default.c,v 1.127.2.2 2006/03/13 03:06:17 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -254,12 +254,7 @@ vop_stdlock(ap)
 {
 	struct vnode *vp = ap->a_vp;
 
-#ifndef	DEBUG_LOCKS
 	return (lockmgr(vp->v_vnlock, ap->a_flags, VI_MTX(vp), ap->a_td));
-#else
-	return (debuglockmgr(vp->v_vnlock, ap->a_flags, VI_MTX(vp),
-	    ap->a_td, "vop_stdlock", vp->filename, vp->line));
-#endif
 }
 
 /* See above. */

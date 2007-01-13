@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_ktrace.c,v 1.101.2.2 2006/02/14 00:02:01 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_ktrace.c,v 1.101.2.3 2006/03/13 03:05:47 jeff Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_mac.h"
@@ -44,6 +44,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_ktrace.c,v 1.101.2.2 2006/02/14 00:02:01 r
 #include <sys/mutex.h>
 #include <sys/mac.h>
 #include <sys/malloc.h>
+#include <sys/mount.h>
 #include <sys/namei.h>
 #include <sys/proc.h>
 #include <sys/unistd.h>
@@ -742,9 +743,11 @@ ktrops(td, p, ops, facs, vp)
 	mtx_unlock(&ktrace_mtx);
 	PROC_UNLOCK(p);
 	if (tracevp != NULL) {
-		mtx_lock(&Giant);
+		int vfslocked;
+
+		vfslocked = VFS_LOCK_GIANT(tracevp->v_mount);
 		vrele(tracevp);
-		mtx_unlock(&Giant);
+		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	if (tracecred != NULL)
 		crfree(tracecred);

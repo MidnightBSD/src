@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_cache.c,v 1.103 2005/06/17 01:05:13 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_cache.c,v 1.103.2.1 2006/03/13 03:06:14 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -824,7 +824,7 @@ vn_fullpath1(struct thread *td, struct vnode *vp, struct vnode *rdir,
 	}
 	while (vp != rdir && vp != rootvnode) {
 		if (vp->v_vflag & VV_ROOT) {
-			if (vp->v_mount == NULL) {	/* forced unmount */
+			if (vp->v_iflag & VI_DOOMED) {	/* forced unmount */
 				error = EBADF;
 				break;
 			}

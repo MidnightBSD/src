@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.174.2.2 2005/10/06 17:53:46 ups Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.174.2.3 2006/03/13 03:05:54 jeff Exp $");
 
 #include "opt_kdb.h"
 #include "opt_mac.h"
@@ -111,6 +111,7 @@ SYSCTL_NODE(_kern, OID_AUTO, shutdown, CTLFLAG_RW, 0, "Shutdown environment");
 const char *panicstr;
 
 int dumping;				/* system is dumping */
+int rebooting;				/* system is rebooting */
 static struct dumperinfo dumper;	/* our selected dumper */
 
 /* Context information for dump-debuggers. */
@@ -265,6 +266,8 @@ boot(int howto)
 	mtx_unlock_spin(&sched_lock);
 	KASSERT(PCPU_GET(cpuid) == 0, ("boot: not running on cpu 0"));
 #endif
+	/* We're in the process of rebooting. */
+	rebooting = 1;
 
 	/* collect extra flags that shutdown_nice might have set */
 	howto |= shutdown_howto;

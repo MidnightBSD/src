@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_cluster.c,v 1.166.2.2 2005/10/28 01:02:38 ups Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_cluster.c,v 1.166.2.3 2006/03/22 17:54:50 tegge Exp $");
 
 #include "opt_debug_cluster.h"
 
@@ -881,11 +881,6 @@ cluster_wbuild(vp, size, start_lbn, len)
 				bremfree(tbp);
 				tbp->b_flags &= ~B_DONE;
 			} /* end of code for non-first buffers only */
-			/* check for latent dependencies to be handled */
-			if ((LIST_FIRST(&tbp->b_dep)) != NULL) {
-				tbp->b_iocmd = BIO_WRITE;
-				buf_start(tbp);
-			}
 			/*
 			 * If the IO is via the VM then we do some
 			 * special VM hackery (yuck).  Since the buffer's

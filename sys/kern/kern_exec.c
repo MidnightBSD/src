@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.275.2.3 2005/12/26 13:47:19 dds Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_exec.c,v 1.275.2.4 2006/03/13 03:05:42 jeff Exp $");
 
 #include "opt_hwpmc_hooks.h"
 #include "opt_ktrace.h"
@@ -723,8 +723,13 @@ done1:
 	/*
 	 * Handle deferred decrement of ref counts.
 	 */
-	if (textvp != NULL)
+	if (textvp != NULL) {
+		int tvfslocked;
+
+		tvfslocked = VFS_LOCK_GIANT(textvp->v_mount);
 		vrele(textvp);
+		VFS_UNLOCK_GIANT(tvfslocked);
+	}
 	if (ndp->ni_vp && error != 0)
 		vrele(ndp->ni_vp);
 #ifdef KTRACE
