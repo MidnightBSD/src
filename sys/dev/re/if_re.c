@@ -1226,10 +1226,6 @@ re_attach(dev)
 #endif
 	ifp->if_watchdog = re_watchdog;
 	ifp->if_init = re_init;
-	if (sc->rl_type == RL_8169)
-		ifp->if_baudrate = 1000000000;
-	else
-		ifp->if_baudrate = 100000000;
 	IFQ_SET_MAXLEN(&ifp->if_snd,  RL_IFQ_MAXLEN);
 	ifp->if_snd.ifq_drv_maxlen = RL_IFQ_MAXLEN;
 	IFQ_SET_READY(&ifp->if_snd);
@@ -2333,7 +2329,10 @@ re_ioctl(ifp, command, data)
 		break;
 	case SIOCSIFCAP:
 	    {
-		int mask = ifr->ifr_reqcap ^ ifp->if_capenable;
+		int mask, reinit;
+
+		mask = ifr->ifr_reqcap ^ ifp->if_capenable;
+		reinit = 0;
 #ifdef DEVICE_POLLING
 		if (mask & IFCAP_POLLING) {
 			if (ifr->ifr_reqcap & IFCAP_POLLING) {
@@ -2357,16 +2356,19 @@ re_ioctl(ifp, command, data)
 		}
 #endif /* DEVICE_POLLING */
 		if (mask & IFCAP_HWCSUM) {
-			RL_LOCK(sc);
-			ifp->if_capenable |= ifr->ifr_reqcap & IFCAP_HWCSUM;
+			ifp->if_capenable ^= IFCAP_HWCSUM;
 			if (ifp->if_capenable & IFCAP_TXCSUM)
 				ifp->if_hwassist = RE_CSUM_FEATURES;
 			else
 				ifp->if_hwassist = 0;
-			if (ifp->if_drv_flags & IFF_DRV_RUNNING)
-				re_init_locked(sc);
-			RL_UNLOCK(sc);
+			reinit = 1;
 		}
+		if (mask & IFCAP_VLAN_HWTAGGING) {
+			ifp->if_capenable ^= IFCAP_VLAN_HWTAGGING;
+			reinit = 1;
+		}
+		if (reinit && ifp->if_drv_flags & IFF_DRV_RUNNING)
+			re_init(sc);
 	    }
 		break;
 	default:
