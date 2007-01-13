@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.45.2.1 2005/08/25 05:01:07 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.45.2.2 2006/03/10 19:37:31 jhb Exp $");
 
 #include <sys/param.h>
 
@@ -2546,7 +2546,7 @@ static int cx_modevent (module_t mod, int type, void *unused)
 		callout_init (&timeout_handle, cx_mpsafenet?CALLOUT_MPSAFE:0);
 		callout_reset (&timeout_handle, hz*5, cx_timeout, 0);
 		/* Software interrupt. */
-		swi_add(&tty_ithd, "cx", cx_softintr, NULL, SWI_TTY,
+		swi_add(&tty_intr_event, "cx", cx_softintr, NULL, SWI_TTY,
 		    (cx_mpsafenet?INTR_MPSAFE:0), &cx_fast_ih);
 		break;
 	case MOD_UNLOAD:
@@ -2559,7 +2559,7 @@ static int cx_modevent (module_t mod, int type, void *unused)
 		/* If we were wait it than it reasserted now, just stop it. */
 		if (!callout_drain (&timeout_handle))
 			callout_stop (&timeout_handle);
-		ithread_remove_handler (cx_fast_ih);
+		swi_remove (cx_fast_ih);
 		--load_count;
 		break;
 	case MOD_SHUTDOWN:
