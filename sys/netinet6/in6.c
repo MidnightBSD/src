@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6.c,v 1.51.2.7 2005/12/25 14:03:37 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6.c,v 1.51.2.8 2006/03/09 11:59:03 gnn Exp $	*/
 /*	$KAME: in6.c,v 1.259 2002/01/21 11:37:50 keiichi Exp $	*/
 
 /*-
@@ -568,7 +568,7 @@ in6_control(so, cmd, data, ifp, td)
 	case SIOCGIFSTAT_ICMP6:
 		if (ifp == NULL)
 			return EINVAL;
-		bzero(&ifr->ifr_ifru.ifru_stat,
+		bzero(&ifr->ifr_ifru.ifru_icmp6stat,
 		    sizeof(ifr->ifr_ifru.ifru_icmp6stat));
 		ifr->ifr_ifru.ifru_icmp6stat =
 		    *((struct in6_ifextra *)ifp->if_afdata[AF_INET6])->icmp6_ifstat;
