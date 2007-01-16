@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/shsec/geom_shsec.c,v 1.5.2.1 2006/01/17 09:28:57 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/shsec/geom_shsec.c,v 1.5.2.2 2006/04/05 22:20:43 pjd Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -53,10 +53,10 @@ static void shsec_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
 	{ "clear", G_FLAG_VERBOSE, shsec_main, G_NULL_OPTS,
-	    "clear [-v] prov ..."
+	    "[-v] prov ..."
 	},
 	{ "dump", 0, shsec_main, G_NULL_OPTS,
-	    "dump prov ..."
+	    "prov ..."
 	},
 	{ "label", G_FLAG_VERBOSE | G_FLAG_LOADKLD, shsec_main,
 	    {
@@ -211,15 +211,15 @@ shsec_clear(struct gctl_req *req)
 			continue;
 		}
 		if (verbose)
-			printf("Metadata cleared on %s.\n", name); 
+			printf("Metadata cleared on %s.\n", name);
 	}
 }
 
-static void 
+static void
 shsec_metadata_dump(const struct g_shsec_metadata *md)
 {
 
-	printf("         Magic string: %s\n", md->md_magic); 
+	printf("         Magic string: %s\n", md->md_magic);
 	printf("     Metadata version: %u\n", (u_int)md->md_version);
 	printf("          Device name: %s\n", md->md_name);
 	printf("            Device ID: %u\n", (u_int)md->md_id);

@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/nop/geom_nop.c,v 1.6.2.1 2006/01/17 09:11:30 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/nop/geom_nop.c,v 1.6.2.2 2006/04/05 22:20:43 pjd Exp $");
 
 #include <stdio.h>
 #include <stdint.h>
