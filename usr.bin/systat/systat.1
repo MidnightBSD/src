@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)systat.1	8.2 (Berkeley) 12/30/93
-.\" $FreeBSD: src/usr.bin/systat/systat.1,v 1.44.2.1 2005/08/18 15:01:25 keramida Exp $
+.\" $FreeBSD: src/usr.bin/systat/systat.1,v 1.44.2.2 2006/03/21 20:49:50 jmg Exp $
 .\"
 .Dd September 9, 1997
 .Dt SYSTAT 1
@@ -366,6 +366,7 @@ Below the paging statistics is a column of lines regarding the virtual
 memory system which list the average number of
 pages copied on write (`cow'),
 pages zero filled on demand (`zfod'),
+pages optimize zero filled on demand (`ozfod'),
 slow (on-the-fly) zero fills percentage (`%slo-z'),
 pages wired down (`wire'),
 active pages (`act'),

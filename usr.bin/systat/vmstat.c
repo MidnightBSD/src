@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/vmstat.c,v 1.60 2005/02/21 14:35:00 ps Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/systat/vmstat.c,v 1.60.2.1 2006/03/21 20:49:50 jmg Exp $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)vmstat.c	8.2 (Berkeley) 1/12/94";
@@ -359,7 +359,7 @@ labelkre()
 		 * room for extended VM stats
 		 */
 		mvprintw(VMSTATROW + 11, VMSTATCOL - 6, "zfod");
-		mvprintw(VMSTATROW + 12, VMSTATCOL - 6, "ofod");
+		mvprintw(VMSTATROW + 12, VMSTATCOL - 6, "ozfod");
 		mvprintw(VMSTATROW + 13, VMSTATCOL - 6, "%%slo-z");
 		mvprintw(VMSTATROW + 14, VMSTATCOL - 6, "tfree");
 		extended_vm_stats = 1;
