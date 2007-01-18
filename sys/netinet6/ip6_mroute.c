@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ip6_mroute.c,v 1.29.2.6 2005/12/25 12:44:12 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ip6_mroute.c,v 1.29.2.7.2.1 2006/04/20 16:05:17 suz Exp $	*/
 /*	$KAME: ip6_mroute.c,v 1.58 2001/12/18 02:36:31 itojun Exp $	*/
 
 /*-
@@ -484,8 +484,6 @@ ip6_mrouter_done()
 {
 	mifi_t mifi;
 	int i;
-	struct ifnet *ifp;
-	struct in6_ifreq ifr;
 	struct mf6c *rt;
 	struct rtdetq *rte;
 	int s;
@@ -511,11 +509,7 @@ ip6_mrouter_done()
 		for (mifi = 0; mifi < nummifs; mifi++) {
 			if (mif6table[mifi].m6_ifp &&
 			    !(mif6table[mifi].m6_flags & MIFF_REGISTER)) {
-				ifr.ifr_addr.sin6_family = AF_INET6;
-				ifr.ifr_addr.sin6_addr = in6addr_any;
-				ifp = mif6table[mifi].m6_ifp;
-				(*ifp->if_ioctl)(ifp, SIOCDELMULTI,
-						 (caddr_t)&ifr);
+				if_allmulti(mif6table[mifi].m6_ifp, 0);
 			}
 		}
 	}
@@ -982,6 +976,14 @@ socket_send(s, mm, src)
  * The packet is returned unscathed to the caller, unless it is
  * erroneous, in which case a non-zero return value tells the caller to
  * discard it.
+ *
+ * NOTE: this implementation assumes that m->m_pkthdr.rcvif is NULL iff
+ * this function is called in the originating context (i.e., not when
+ * forwarding a packet from other node).  ip6_output(), which is currently the
+ * only function that calls this function is called in the originating context,
+ * explicitly ensures this condition.  It is caller's responsibility to ensure
+ * that if this function is called from somewhere else in the originating
+ * context in the future.
  */
 
 int
