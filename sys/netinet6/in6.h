@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6.h,v 1.36.2.5 2005/12/25 14:03:37 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6.h,v 1.36.2.6 2006/03/22 06:32:54 suz Exp $	*/
 /*	$KAME: in6.h,v 1.89 2001/05/27 13:28:35 itojun Exp $	*/
 
 /*-
@@ -74,7 +74,7 @@
  * has the table of implementation/integration differences.
  */
 #define __KAME__
-#define __KAME_VERSION		"20010528/FreeBSD"
+#define __KAME_VERSION		"FreeBSD"
 
 /*
  * Local port number conventions:
