@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.5 2006/10/01 21:47:25 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.6 2006/10/14 23:52:44 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -1087,7 +1087,8 @@ doTARBALL:
 		    > ${RD}/dists/${TD}/$$tn.inf && \
 		if [ -f ${.CURDIR}/scripts/$${TD}-install.sh ]; then \
 			cp -p ${.CURDIR}/scripts/$${TD}-install.sh \
-			    ${RD}/dists/${TD}/install.sh; \
+			    ${RD}/dists/${TD}/install.sh && \
+			chmod +x ${RD}/dists/${TD}/install.sh; \
 		fi && \
 		if [ "${SD}" != "/usr/src" ]; then \
 			mtree -c -i -p ${SD}/${ARG} \
