@@ -18,7 +18,7 @@
 
 /* Written August 1992 by Mike Haertel. */
 
-/* $FreeBSD: src/gnu/usr.bin/grep/search.c,v 1.23.2.1 2005/10/27 16:26:27 jkim Exp $ */
+/* $FreeBSD: src/gnu/usr.bin/grep/search.c,v 1.23.2.2 2006/03/21 20:51:35 hrs Exp $ */
 
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE 1
@@ -524,11 +524,16 @@ EGexecute (char const *buf, size_t size, size_t *match_size, int exact)
 			if (mb_cur_max > 1)
 			  {
 			    const char *s;
-			    int mr;
+			    size_t mr;
 			    wchar_t pwc;
 
+			    /* Locate the start of the multibyte character
+			       before the match position (== beg + start).  */
 			    if (using_utf8)
 			      {
+				/* UTF-8 is a special case: scan backwards
+				   until we find a 7-bit character or a
+				   lead byte.  */
 				s = beg + start - 1;
 				while (s > buf
 				       && (unsigned char) *s >= 0x80
@@ -536,15 +541,40 @@ EGexecute (char const *buf, size_t size, size_t *match_size, int exact)
 				  --s;
 			      }
 			    else
-			      s = last_char;
-			    mr = mbtowc (&pwc, s, beg + start - s);
-			    if (mr <= 0)
+			      {
+				/* Scan forwards to find the start of the
+				   last complete character before the
+				   match position.  */
+				size_t bytes_left = start - 1;
+				s = beg;
+				while (bytes_left > 0)
+				  {
+				    mr = mbrlen (s, bytes_left, &mbs);
+				    if (mr == (size_t) -1 || mr == 0)
+				      {
+					memset (&mbs, '\0', sizeof (mbs));
+					s++;
+					bytes_left--;
+					continue;
+				      }
+				    if (mr == (size_t) -2)
+				      {
+					memset (&mbs, '\0', sizeof (mbs));
+					break;
+				      }
+				    s += mr;
+				    bytes_left -= mr;
+				  }
+			      }
+			    mr = mbrtowc (&pwc, s, beg + start - s, &mbs);
+			    if (mr == (size_t) -2 || mr == (size_t) -1 ||
+				mr == 0)
 			      {
 				memset (&mbs, '\0', sizeof (mbstate_t));
 				lword_match = 1;
 			      }
 			    else if (!(iswalnum (pwc) || pwc == L'_')
-				     && mr == (int) (beg + start - s))
+				     && mr == beg + start - s)
 			      lword_match = 1;
 			  }
 			else
