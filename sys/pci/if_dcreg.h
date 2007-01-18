@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/if_dcreg.h,v 1.44.2.1 2005/08/26 14:52:36 jhb Exp $
+ * $FreeBSD: src/sys/pci/if_dcreg.h,v 1.44.2.2 2006/03/21 21:10:58 jhb Exp $
  */
 
 /*
@@ -938,6 +938,16 @@ struct dc_softc {
  * Xircom device IDs.
  */
 #define	DC_DEVICEID_X3201	0x0003
+
+/*
+ * D-Link vendor ID
+ */
+#define	DC_VENDORID_DLINK	0x1186
+
+/*
+ * D-Link device IDs.
+ */
+#define	DC_DEVICEID_DRP32TXD	0x1561
 
 /*
  * Abocom vendor ID
