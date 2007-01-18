@@ -25,7 +25,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/contrib/netcat/nc.1,v 1.4 2005/06/27 07:07:55 ru Exp $
+.\" $FreeBSD: src/contrib/netcat/nc.1,v 1.4.2.1 2006/03/23 07:38:26 hrs Exp $
 .\"
 .Dd January 30, 2005
 .Dt NC 1
@@ -389,17 +389,17 @@ Open a UDP connection to port 53 of hostname:
 Open a TCP connection to port 42 of example.host using 10.1.2.3 as the
 IP for the local end of the connection:
 .Pp
-.Dl "nc -E example.host 42"
+.Dl $ nc -s 10.1.2.3 example.host 42
 .Pp
 Open a TCP connection to port 42 of example.host using IPsec ESP for
 incoming and outgoing traffic.
 .Pp
-.Dl "nc -e 'out ipsec esp/transport//require' example.host 42"
+.Dl $ nc -E example.host 42
 .Pp
 Open a TCP connection to port 42 of example.host using IPsec ESP for
 outgoing traffic only.
 .Pp
-.Dl $ nc -s 10.1.2.3 example.host 42
+.Dl $ nc -e 'out ipsec esp/transport//require' example.host 42
 .Pp
 Send UDP packets to ports 20-30 of example.host, and report which ones
 responded with an ICMP packet after three seconds:
