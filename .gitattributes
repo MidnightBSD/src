@@ -6719,6 +6719,7 @@ contrib/hostapd/common.c -text
 contrib/hostapd/common.h -text
 contrib/hostapd/config.c -text
 contrib/hostapd/config.h -text
+contrib/hostapd/config_types.h -text
 contrib/hostapd/crypto.c -text
 contrib/hostapd/crypto.h -text
 contrib/hostapd/ctrl_iface.c -text
@@ -6737,7 +6738,13 @@ contrib/hostapd/eap_i.h -text
 contrib/hostapd/eap_identity.c -text
 contrib/hostapd/eap_md5.c -text
 contrib/hostapd/eap_mschapv2.c -text
+contrib/hostapd/eap_pax.c -text
+contrib/hostapd/eap_pax_common.c -text
+contrib/hostapd/eap_pax_common.h -text
 contrib/hostapd/eap_peap.c -text
+contrib/hostapd/eap_psk.c -text
+contrib/hostapd/eap_psk_common.c -text
+contrib/hostapd/eap_psk_common.h -text
 contrib/hostapd/eap_sim.c -text
 contrib/hostapd/eap_sim_common.c -text
 contrib/hostapd/eap_sim_common.h -text
@@ -6754,6 +6761,7 @@ contrib/hostapd/eapol_sm.h -text
 contrib/hostapd/eloop.c -text
 contrib/hostapd/eloop.h -text
 contrib/hostapd/hostap_common.h -text
+contrib/hostapd/hostapd.8 -text
 contrib/hostapd/hostapd.accept -text
 contrib/hostapd/hostapd.c -text
 contrib/hostapd/hostapd.conf -text
@@ -6763,6 +6771,7 @@ contrib/hostapd/hostapd.h -text
 contrib/hostapd/hostapd.radius_clients -text
 contrib/hostapd/hostapd.sim_db -text
 contrib/hostapd/hostapd.wpa_psk -text
+contrib/hostapd/hostapd_cli.1 -text
 contrib/hostapd/hostapd_cli.c -text
 contrib/hostapd/hostapd_ctrl.c -text
 contrib/hostapd/hostapd_ctrl.h -text
@@ -6775,6 +6784,9 @@ contrib/hostapd/ieee802_11_auth.h -text
 contrib/hostapd/ieee802_1x.c -text
 contrib/hostapd/ieee802_1x.h -text
 contrib/hostapd/l2_packet.h -text
+contrib/hostapd/logwatch/README -text
+contrib/hostapd/logwatch/hostapd -text
+contrib/hostapd/logwatch/hostapd.conf -text
 contrib/hostapd/madwifi.conf -text
 contrib/hostapd/md5.c -text
 contrib/hostapd/md5.h -text
@@ -6799,6 +6811,8 @@ contrib/hostapd/version.h -text
 contrib/hostapd/wired.conf -text
 contrib/hostapd/wpa.c -text
 contrib/hostapd/wpa.h -text
+contrib/hostapd/wpa_ctrl.c -text
+contrib/hostapd/wpa_ctrl.h -text
 contrib/ipfilter/.cvsignore -text
 contrib/ipfilter/BNF -text
 contrib/ipfilter/BSD/.cvsignore -text
