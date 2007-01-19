@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/kern/kern_thread.c,v 1.216.2.2 2006/02/27 00:19:40 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_thread.c,v 1.216.2.2 2006/02/27 00:19:40 davidxu Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -479,7 +479,7 @@ thread_exit(void)
 	 */
 	sched_thread_exit(td);
 	
-	/* Do the same timestamp bookeeping that mi_switch() would do. */
+	/* Do the same timestamp bookkeeping that mi_switch() would do. */
 	binuptime(&new_switchtime);
 	bintime_add(&p->p_rux.rux_runtime, &new_switchtime);
 	bintime_sub(&p->p_rux.rux_runtime, PCPU_PTR(switchtime));
@@ -742,6 +742,8 @@ thread_single(int mode)
 	else
 		remaining = p->p_numthreads - p->p_suspcount;
 	while (remaining != 1) {
+		if (P_SHOULDSTOP(p) != P_STOPPED_SINGLE)
+			goto stopme;
 		FOREACH_THREAD_IN_PROC(p, td2) {
 			if (td2 == td)
 				continue;
@@ -797,10 +799,12 @@ thread_single(int mode)
 		if (remaining == 1)
 			break;
 
+stopme:
 		/*
 		 * Wake us up when everyone else has suspended.
 		 * In the mean time we suspend as well.
 		 */
+		thread_stopped(p);
 		thread_suspend_one(td);
 		PROC_UNLOCK(p);
 		mi_switch(SW_VOL, NULL);
