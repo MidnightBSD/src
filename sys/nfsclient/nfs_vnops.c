@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vnops.c,v 1.258.2.2 2006/02/20 00:53:14 yar Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_vnops.c,v 1.258.2.4.2.2 2006/04/18 14:15:50 jon Exp $");
 
 /*
  * vnode op calls for Sun NFS version 2 and 3
@@ -824,8 +824,10 @@ nfs_lookup(struct vop_lookup_args *ap)
 	nfsm_strtom(cnp->cn_nameptr, len, NFS_MAXNAMLEN);
 	nfsm_request(dvp, NFSPROC_LOOKUP, cnp->cn_thread, cnp->cn_cred);
 	if (error) {
-		nfsm_postop_attr(dvp, attrflag);
-		m_freem(mrep);
+		if (v3) {
+			nfsm_postop_attr(dvp, attrflag);
+			m_freem(mrep);
+		}
 		goto nfsmout;
 	}
 	nfsm_getfh(fhp, fhsize, v3);
@@ -2310,7 +2312,11 @@ nfs_readdirplusrpc(struct vnode *vp, struct uio *uiop, struct ucred *cred)
 			    /* Just skip over the file handle */
 			    tl = nfsm_dissect(u_int32_t *, NFSX_UNSIGNED);
 			    i = fxdr_unsigned(int, *tl);
-			    nfsm_adv(nfsm_rndup(i));
+			    if (i) {
+				tl = nfsm_dissect(u_int32_t *, NFSX_UNSIGNED);
+				fhsize = fxdr_unsigned(int, *tl);
+				nfsm_adv(nfsm_rndup(fhsize));
+			    }
 			}
 			if (newvp != NULLVP) {
 			    if (newvp == vp)
@@ -2562,7 +2568,6 @@ nfs_strategy(struct vop_strategy_args *ap)
 	struct buf *bp = ap->a_bp;
 	struct ucred *cr;
 	struct thread *td;
-	int error = 0;
 
 	KASSERT(!(bp->b_flags & B_DONE), ("nfs_strategy: buffer %p unexpectedly marked B_DONE", bp));
 	KASSERT(BUF_REFCNT(bp) > 0, ("nfs_strategy: buffer %p not locked", bp));
@@ -2583,9 +2588,9 @@ nfs_strategy(struct vop_strategy_args *ap)
 	 * otherwise just do it ourselves.
 	 */
 	if ((bp->b_flags & B_ASYNC) == 0 ||
-		nfs_asyncio(VFSTONFS(ap->a_vp->v_mount), bp, NOCRED, td))
-		error = nfs_doio(ap->a_vp, bp, cr, td);
-	return (error);
+	    nfs_asyncio(VFSTONFS(ap->a_vp->v_mount), bp, NOCRED, td))
+		(void)nfs_doio(ap->a_vp, bp, cr, td);
+	return (0);
 }
 
 /*
@@ -2630,7 +2635,7 @@ nfs_flush(struct vnode *vp, int waitfor, struct thread *td,
 		passone = 0;
 	/*
 	 * A b_flags == (B_DELWRI | B_NEEDCOMMIT) block has been written to the
-	 * server, but nas not been committed to stable storage on the server
+	 * server, but has not been committed to stable storage on the server
 	 * yet. On the first pass, the byte range is worked out and the commit
 	 * rpc is done. On the second pass, nfs_writebp() is called to do the
 	 * job.
