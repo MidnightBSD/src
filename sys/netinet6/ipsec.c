@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ipsec.c,v 1.42.2.1 2005/11/04 20:26:15 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ipsec.c,v 1.42.2.2 2006/04/01 15:16:14 rwatson Exp $	*/
 /*	$KAME: ipsec.c,v 1.207 2004/01/13 03:30:42 itojun Exp $	*/
 
 /*-
@@ -3469,15 +3469,6 @@ ipsec_copypkt(m)
 					MGETHDR(mnew, M_DONTWAIT, MT_HEADER);
 					if (mnew == NULL)
 						goto fail;
-					mnew->m_pkthdr = n->m_pkthdr;
-#if 0
-					/* XXX: convert to m_tag or delete? */
-					if (n->m_pkthdr.aux) {
-						mnew->m_pkthdr.aux =
-						    m_copym(n->m_pkthdr.aux,
-						    0, M_COPYALL, M_DONTWAIT);
-					}
-#endif
 					M_MOVE_PKTHDR(mnew, n);
 				}
 				else {
