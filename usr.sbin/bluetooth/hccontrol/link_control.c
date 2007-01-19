@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: link_control.c,v 1.2 2007-01-07 04:42:41 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/link_control.c,v 1.9.2.2 2006/10/07 23:41:21 emax Exp $
+ * $Id: link_control.c,v 1.3 2007-01-19 04:34:15 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/link_control.c,v 1.9.2.1 2006/02/27 00:38:02 markus Exp $
  */
 
 #include <bluetooth.h>
@@ -42,7 +42,7 @@ static int
 hci_inquiry(int s, int argc, char **argv)
 {
 	int			 n0, n1, n2, timo;
-	char			 b[512];
+	uint8_t			 b[512];
 	ng_hci_inquiry_cp	 cp;
 	ng_hci_event_pkt_t	*e = (ng_hci_event_pkt_t *) b;
 
