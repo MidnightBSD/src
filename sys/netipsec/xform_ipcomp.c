@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_ipcomp.c,v 1.8 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/xform_ipcomp.c,v 1.8.2.1 2006/03/23 23:24:33 sam Exp $	*/
 /* $OpenBSD: ip_ipcomp.c,v 1.1 2001/07/05 12:08:52 jjbg Exp $ */
 
 /*-
@@ -385,7 +385,7 @@ ipcomp_output(
 	/* Update the counters */
 	ipcompstat.ipcomps_obytes += m->m_pkthdr.len - skip;
 
-	m = m_clone(m);
+	m = m_unshare(m, M_NOWAIT);
 	if (m == NULL) {
 		ipcompstat.ipcomps_hdrops++;
 		DPRINTF(("%s: cannot clone mbuf chain, IPCA %s/%08lx\n",

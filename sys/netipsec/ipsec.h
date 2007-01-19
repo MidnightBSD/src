@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/ipsec.h,v 1.8 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipsec.h,v 1.8.2.1 2006/03/23 23:24:32 sam Exp $	*/
 /*	$KAME: ipsec.h,v 1.53 2001/11/20 08:32:38 itojun Exp $	*/
 
 /*-
@@ -410,7 +410,6 @@ extern struct mbuf *ipsec_copypkt __P((struct mbuf *));
 
 extern	void m_checkalignment(const char* where, struct mbuf *m0,
 		int off, int len);
-extern	struct mbuf *m_clone(struct mbuf *m0);
 extern	struct mbuf *m_makespace(struct mbuf *m0, int skip, int hlen, int *off);
 extern	caddr_t m_pad(struct mbuf *m, int n);
 extern	int m_striphdr(struct mbuf *m, int skip, int hlen);

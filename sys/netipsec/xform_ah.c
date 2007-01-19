@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_ah.c,v 1.7 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/xform_ah.c,v 1.7.2.1 2006/03/23 23:24:33 sam Exp $	*/
 /*	$OpenBSD: ip_ah.c,v 1.63 2001/06/26 06:18:58 angelos Exp $ */
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -942,7 +942,7 @@ ah_output(
 	/* Update the counters. */
 	ahstat.ahs_obytes += m->m_pkthdr.len - skip;
 
-	m = m_clone(m);
+	m = m_unshare(m, M_NOWAIT);
 	if (m == NULL) {
 		DPRINTF(("%s: cannot clone mbuf chain, SA %s/%08lx\n", __func__,
 		    ipsec_address(&sav->sah->saidx.dst),
