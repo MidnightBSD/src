@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_node.h,v 1.17.2.4 2006/02/12 19:00:39 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_node.h,v 1.17.2.5 2006/03/13 03:05:47 sam Exp $
  */
 #ifndef _NET80211_IEEE80211_NODE_H_
 #define _NET80211_IEEE80211_NODE_H_
@@ -188,6 +188,7 @@ void	ieee80211_node_unauthorize(struct ieee80211_node *);
 
 void	ieee80211_begin_scan(struct ieee80211com *, int);
 int	ieee80211_next_scan(struct ieee80211com *);
+void	ieee80211_probe_curchan(struct ieee80211com *, int);
 void	ieee80211_create_ibss(struct ieee80211com*, struct ieee80211_channel *);
 void	ieee80211_reset_bss(struct ieee80211com *);
 void	ieee80211_cancel_scan(struct ieee80211com *);
