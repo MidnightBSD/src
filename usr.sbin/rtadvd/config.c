@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.sbin/rtadvd/config.c,v 1.24.2.1 2005/11/05 10:50:09 suz Exp $	*/
+/*	$FreeBSD: src/usr.sbin/rtadvd/config.c,v 1.24.2.2 2006/03/24 14:53:53 suz Exp $	*/
 /*	$KAME: config.c,v 1.84 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -656,7 +656,7 @@ get_prefix(struct rainfo *rai)
 		memcpy(&pp->prefix, a, sizeof(*a));
 		p = (u_char *)&pp->prefix;
 		ep = (u_char *)(&pp->prefix + 1);
-		while (m < lim)
+		while (m < lim && p < ep)
 			*p++ &= *m++;
 		while (p < ep)
 			*p++ = 0x00;
