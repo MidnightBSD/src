@@ -33,16 +33,19 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: src/sys/modules/ath/Makefile,v 1.1 2003/06/23 17:02:43 sam Exp $
+# $FreeBSD: src/sys/modules/ath/Makefile,v 1.1.10.1 2006/04/04 23:55:33 sam Exp $
 #
 
 .PATH: ${.CURDIR}/../../dev/ath
 
 KMOD=	if_ath
 SRCS=	if_ath.c if_ath_pci.c
-SRCS+=	opt_bdg.h device_if.h bus_if.h pci_if.h opt_inet.h
+SRCS+=	device_if.h bus_if.h pci_if.h opt_inet.h opt_ath.h
 
 HAL=	${.CURDIR}/../../contrib/dev/ath
 CFLAGS+=  -I. -I${HAL}/freebsd -I${HAL}
+
+opt_ath.h:
+	echo > $@
 
 .include <bsd.kmod.mk>
