@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: /repoman/r/ncvs/src/sys/sys/mbuf.h,v 1.170.2.5 2006/03/01 20:51:49 andre Exp $
+ * $FreeBSD: src/sys/sys/mbuf.h,v 1.170.2.6 2006/03/23 23:24:32 sam Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -694,6 +694,7 @@ struct	mbuf	*m_pulldown(struct mbuf *, int, int, int *);
 struct	mbuf	*m_pullup(struct mbuf *, int);
 struct	mbuf	*m_split(struct mbuf *, int, int);
 struct	mbuf	*m_uiotombuf(struct uio *, int, int, int);
+struct	mbuf	*m_unshare(struct mbuf *, int how);
 
 /*-
  * Network packets may have annotations attached by affixing a list
