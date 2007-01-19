@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile,v 1.319.2.2 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile,v 1.5 2006/12/27 02:27:33 laffer1 Exp $
+# $MidnightBSD: src/Makefile,v 1.6 2007/01/07 23:54:06 laffer1 Exp $
 #
 # The user-driven targets are:
 #
@@ -94,8 +94,7 @@ TGTS+=	${BITGTS}
 PATH=	/sbin:/bin:/usr/sbin:/usr/bin
 MAKEOBJDIRPREFIX?=	/usr/obj
 _MAKEOBJDIRPREFIX!= /usr/bin/env -i PATH=${PATH} ${MAKE} \
-    ${.MAKEFLAGS:MMAKEOBJDIRPREFIX=*}
-__MAKE_CONF=${_MAKE_CONF} \
+    ${.MAKEFLAGS:MMAKEOBJDIRPREFIX=*} __MAKE_CONF=${__MAKE_CONF} \
     -f /dev/null -V MAKEOBJDIRPREFIX dummy
 .if !empty(_MAKEOBJDIRPREFIX)
 .error MAKEOBJDIRPREFIX can only be set in environment, not as a global\
