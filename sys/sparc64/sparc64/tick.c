@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tick.c,v 1.16 2005/04/16 14:57:38 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tick.c,v 1.16.2.1 2006/03/31 23:38:29 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -138,13 +138,6 @@ tick_init(u_long clock)
 	tick_freq = clock;
 	tick_MHz = clock / 1000000;
 	tick_increment = clock / hz;
-	/*
-	 * Avoid stopping of hardclock in terms of a lost tick interrupt
-	 * by ensuring that the tick period is at least TICK_GRACE ticks.
-	 */
-	if (tick_increment < TICK_GRACE)
-		panic("%s: HZ to high, decrease to at least %ld", __func__,
-		    clock / TICK_GRACE);
 
 	/*
 	 * UltraSparc II[e,i] based systems come up with the tick interrupt
@@ -161,6 +154,18 @@ void
 tick_start(void)
 {
 	u_long base, s;
+
+	/*
+	 * Avoid stopping of hardclock in terms of a lost tick interrupt
+	 * by ensuring that the tick period is at least TICK_GRACE ticks.
+	 * This check would be better placed in tick_init(), however we
+	 * have to call tick_init() before cninit() in order to provide
+	 * the low-level console drivers with a working DELAY() which in
+	 * turn means we cannot use panic() in tick_init().
+	 */
+	if (tick_increment < TICK_GRACE)
+		panic("%s: HZ too high, decrease to at least %ld", __func__,
+		    tick_freq / TICK_GRACE);
 
 	if (PCPU_GET(cpuid) == 0)
 		intr_setup(PIL_TICK, (ih_func_t *)tick_hardclock, -1, NULL,
