@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/ipx_ip.c,v 1.40 2005/06/10 16:49:22 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/netipx/ipx_ip.c,v 1.40.2.1 2006/03/29 12:42:43 rwatson Exp $");
 
 /*
  * Software interface driver for encapsulating IPX in IP.
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: src/sys/netipx/ipx_ip.c,v 1.40 2005/06/10 16:49:22 brooks Ex
 #endif
 
 #include <sys/param.h>
+#include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -73,6 +74,8 @@ __FBSDID("$FreeBSD: src/sys/netipx/ipx_ip.c,v 1.40 2005/06/10 16:49:22 brooks Ex
 #include <netipx/ipx_if.h>
 #include <netipx/ipx_ip.h>
 #include <netipx/ipx_var.h>
+
+NET_NEEDS_GIANT("ipx_ip");
 
 static struct	ifnet ipxipif;
 static int	ipxipif_units;
