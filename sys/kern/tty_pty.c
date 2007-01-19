@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_pty.c,v 1.137.2.1 2005/08/13 21:24:16 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_pty.c,v 1.137.2.2 2006/03/30 16:46:56 csjp Exp $");
 
 /*
  * Pseudo-teletype Driver
@@ -174,7 +174,7 @@ ptsopen(struct cdev *dev, int flag, int devtype, struct thread *td)
 		ttyinitmode(tp, 1, 0);
 	} else if (tp->t_state & TS_XCLUDE && suser(td))
 		return (EBUSY);
-	else if (pt->pt_prison != td->td_ucred->cr_prison)
+	else if (pt->pt_prison != td->td_ucred->cr_prison && suser(td))
 		return (EBUSY);
 	if (tp->t_oproc)			/* Ctrlr still around. */
 		(void)ttyld_modem(tp, 1);
