@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rtsold/if.c,v 1.14 2004/01/14 17:42:03 ume Exp $
+ * $FreeBSD: src/usr.sbin/rtsold/if.c,v 1.14.8.1 2006/03/29 21:06:50 suz Exp $
  */
 
 #include <sys/param.h>
@@ -277,8 +277,10 @@ if_nametosdl(char *name)
 		return(NULL);
 	}
 
-	if ((ret_sdl = malloc(sdl->sdl_len)) == NULL)
+	if ((ret_sdl = malloc(sdl->sdl_len)) == NULL) {
+		free(buf);
 		return(NULL);
+	}
 	memcpy((caddr_t)ret_sdl, (caddr_t)sdl, sdl->sdl_len);
 
 	free(buf);
