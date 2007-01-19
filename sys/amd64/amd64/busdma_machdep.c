@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.70 2005/03/12 07:05:59 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.70.2.3 2006/03/28 06:28:37 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.70 2005/03/12 07:05
 #include <machine/bus.h>
 #include <machine/md_var.h>
 
-#define MAX_BPAGES 512
+#define MAX_BPAGES 8192
 
 struct bounce_zone;
 
@@ -285,8 +285,10 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 
 		/* Must bounce */
 
-		if ((error = alloc_bounce_zone(newtag)) != 0)
+		if ((error = alloc_bounce_zone(newtag)) != 0) {
+			free(newtag, M_DEVBUF);
 			return (error);
+		}
 		bz = newtag->bounce_zone;
 
 		if (ptoa(bz->total_bpages) < maxsize) {
@@ -978,7 +980,7 @@ alloc_bounce_zone(bus_dma_tag_t dmat)
 	SYSCTL_ADD_INT(busdma_sysctl_tree(bz),
 	    SYSCTL_CHILDREN(busdma_sysctl_tree_top(bz)), OID_AUTO,
 	    "total_bpages", CTLFLAG_RD, &bz->total_bpages, 0,
-	    "Totoal bounce pages");
+	    "Total bounce pages");
 	SYSCTL_ADD_INT(busdma_sysctl_tree(bz),
 	    SYSCTL_CHILDREN(busdma_sysctl_tree_top(bz)), OID_AUTO,
 	    "free_bpages", CTLFLAG_RD, &bz->free_bpages, 0,
