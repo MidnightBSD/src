@@ -946,6 +946,7 @@ contrib/bind9/doc/arm/Bv9ARM.pdf -text
 contrib/bind9/doc/arm/Makefile.in -text
 contrib/bind9/doc/arm/README-SGML -text
 contrib/bind9/doc/arm/isc.color.gif -text svneol=unset#unset
+contrib/bind9/doc/arm/latex-fixup.pl -text
 contrib/bind9/doc/arm/nominum-docbook-html.dsl.in -text
 contrib/bind9/doc/arm/nominum-docbook-print.dsl.in -text
 contrib/bind9/doc/arm/validate.sh.in -text
@@ -1121,6 +1122,13 @@ contrib/bind9/doc/rfc/rfc4035.txt -text
 contrib/bind9/doc/rfc/rfc4074.txt -text
 contrib/bind9/doc/rfc/rfc4159.txt -text
 contrib/bind9/doc/rfc/rfc952.txt -text
+contrib/bind9/doc/xsl/Makefile.in -text
+contrib/bind9/doc/xsl/copyright.xsl -text
+contrib/bind9/doc/xsl/isc-docbook-chunk.xsl.in -text
+contrib/bind9/doc/xsl/isc-docbook-html.xsl.in -text
+contrib/bind9/doc/xsl/isc-docbook-latex.xsl.in -text
+contrib/bind9/doc/xsl/isc-manpage.xsl.in -text
+contrib/bind9/doc/xsl/pre-latex.xsl -text
 contrib/bind9/install-sh -text
 contrib/bind9/isc-config.sh.in -text
 contrib/bind9/lib/Makefile.in -text
@@ -1480,6 +1488,8 @@ contrib/bind9/lib/dns/rdata/generic/cert_37.c -text
 contrib/bind9/lib/dns/rdata/generic/cert_37.h -text
 contrib/bind9/lib/dns/rdata/generic/cname_5.c -text
 contrib/bind9/lib/dns/rdata/generic/cname_5.h -text
+contrib/bind9/lib/dns/rdata/generic/dlv_32769.c -text
+contrib/bind9/lib/dns/rdata/generic/dlv_32769.h -text
 contrib/bind9/lib/dns/rdata/generic/dlv_65323.c -text
 contrib/bind9/lib/dns/rdata/generic/dlv_65323.h -text
 contrib/bind9/lib/dns/rdata/generic/dname_39.c -text

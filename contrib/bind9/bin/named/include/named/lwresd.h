@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwresd.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: lwresd.h,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #ifndef NAMED_LWRESD_H
 #define NAMED_LWRESD_H 1
@@ -56,7 +56,7 @@ struct ns_lwreslistener {
  * Configure lwresd.
  */
 isc_result_t
-ns_lwresd_configure(isc_mem_t *mctx, cfg_obj_t *config);
+ns_lwresd_configure(isc_mem_t *mctx, const cfg_obj_t *config);
 
 isc_result_t
 ns_lwresd_parseeresolvconf(isc_mem_t *mctx, cfg_parser_t *pctx,
@@ -72,7 +72,8 @@ ns_lwresd_shutdown(void);
  * Manager functions
  */
 isc_result_t
-ns_lwdmanager_create(isc_mem_t *mctx, cfg_obj_t *lwres, ns_lwresd_t **lwresdp);
+ns_lwdmanager_create(isc_mem_t *mctx, const cfg_obj_t *lwres,
+		      ns_lwresd_t **lwresdp);
 
 void
 ns_lwdmanager_attach(ns_lwresd_t *source, ns_lwresd_t **targetp);

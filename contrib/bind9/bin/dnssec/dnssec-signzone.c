@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1999-2003  Internet Software Consortium.
  * Portions Copyright (C) 1995-2000 by Network Associates, Inc.
  *
@@ -16,7 +16,7 @@
  * IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssec-signzone.c,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
+/* $Id: dnssec-signzone.c,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -1291,10 +1291,6 @@ nsecify(void) {
 				dns_db_detachnode(gdb, &nextnode);
 				result = dns_dbiterator_next(dbiter);
 				continue;
-			}
-			if (result != ISC_R_SUCCESS) {
-				dns_db_detachnode(gdb, &nextnode);
-				break;
 			}
 			if (!dns_name_issubdomain(nextname, gorigin) ||
 			    (zonecut != NULL &&

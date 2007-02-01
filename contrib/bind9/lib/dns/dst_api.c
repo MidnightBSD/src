@@ -1,5 +1,5 @@
 /*
- * Portions Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Portions Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Portions Copyright (C) 1999-2003  Internet Software Consortium.
  * Portions Copyright (C) 1995-2000 by Network Associates, Inc.
  *
@@ -18,7 +18,7 @@
 
 /*
  * Principal Author: Brian Wellington
- * $Id: dst_api.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $
+ * $Id: dst_api.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $
  */
 
 #include <config.h>
@@ -1027,8 +1027,10 @@ write_public_key(const dst_key_t *key, int type, const char *directory) {
 	}
 
 	ret = dns_name_print(key->key_name, fp);
-	if (ret != ISC_R_SUCCESS)
+	if (ret != ISC_R_SUCCESS) {
+		fclose(fp);
 		return (ret);
+	}
 
 	fprintf(fp, " ");
 

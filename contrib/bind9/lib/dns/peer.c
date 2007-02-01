@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: peer.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
+/* $Id: peer.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -491,7 +491,9 @@ dns_peer_setkeybycharp(dns_peer_t *peer, const char *keyval) {
 }
 
 isc_result_t
-dns_peer_settransfersource(dns_peer_t *peer, isc_sockaddr_t *transfer_source) {
+dns_peer_settransfersource(dns_peer_t *peer,
+			   const isc_sockaddr_t *transfer_source)
+{
 	REQUIRE(DNS_PEER_VALID(peer));
 
 	if (peer->transfer_source != NULL) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nslookup.c,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
+/* $Id: nslookup.c,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -708,6 +708,7 @@ get_next_command(void) {
 	if (buf == NULL)
 		fatal("memory allocation failure");
 	fputs("> ", stderr);
+	fflush(stderr);
 	isc_app_block();
 	ptr = fgets(buf, COMMSIZE, stdin);
 	isc_app_unblock();

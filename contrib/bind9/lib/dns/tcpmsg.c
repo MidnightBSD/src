@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tcpmsg.c,v 1.1.1.2 2006-02-25 02:32:10 laffer1 Exp $ */
+/* $Id: tcpmsg.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -52,6 +52,7 @@ recv_length(isc_task_t *task, isc_event_t *ev_in) {
 	INSIST(VALID_TCPMSG(tcpmsg));
 
 	dev = &tcpmsg->event;
+	tcpmsg->address = ev->address;
 
 	if (ev->result != ISC_R_SUCCESS) {
 		tcpmsg->result = ev->result;
@@ -108,6 +109,7 @@ recv_message(isc_task_t *task, isc_event_t *ev_in) {
 	INSIST(VALID_TCPMSG(tcpmsg));
 
 	dev = &tcpmsg->event;
+	tcpmsg->address = ev->address;
 
 	if (ev->result != ISC_R_SUCCESS) {
 		tcpmsg->result = ev->result;
@@ -116,7 +118,6 @@ recv_message(isc_task_t *task, isc_event_t *ev_in) {
 
 	tcpmsg->result = ISC_R_SUCCESS;
 	isc_buffer_add(&tcpmsg->buffer, ev->n);
-	tcpmsg->address = ev->address;
 
 	XDEBUG(("Received %d bytes (of %d)\n", ev->n, tcpmsg->size));
 

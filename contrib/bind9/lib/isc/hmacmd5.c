@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hmacmd5.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: hmacmd5.c,v 1.1.1.3 2007-02-01 14:51:31 laffer1 Exp $ */
 
 /*
  * This code implements the HMAC-MD5 keyed hash algorithm
@@ -65,7 +65,6 @@ void
 isc_hmacmd5_invalidate(isc_hmacmd5_t *ctx) {
 	isc_md5_invalidate(&ctx->md5ctx);
 	memset(ctx->key, 0, sizeof(ctx->key));
-	memset(ctx, 0, sizeof(ctx));
 }
 
 /*

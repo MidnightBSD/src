@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: client.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: client.h,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #ifndef NAMED_CLIENT_H
 #define NAMED_CLIENT_H 1
@@ -196,6 +196,12 @@ ns_client_next(ns_client_t *client, isc_result_t result);
 /*
  * Finish processing the current client request,
  * return no response to the client.
+ */
+
+void
+ns_client_qnamereplace(ns_client_t *client, dns_name_t *name);
+/*%
+ * Replace the qname.
  */
 
 isc_boolean_t

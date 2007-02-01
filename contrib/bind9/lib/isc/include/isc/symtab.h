@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1996-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: symtab.h,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: symtab.h,v 1.1.1.3 2007-02-01 14:51:31 laffer1 Exp $ */
 
 #ifndef ISC_SYMTAB_H
 #define ISC_SYMTAB_H 1
@@ -88,6 +88,7 @@
 
 typedef union isc_symvalue {
 	void *				as_pointer;
+	const void *			as_cpointer;
 	int				as_integer;
 	unsigned int			as_uinteger;
 } isc_symvalue_t;

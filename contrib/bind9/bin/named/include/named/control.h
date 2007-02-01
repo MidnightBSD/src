@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2001-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: control.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: control.h,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #ifndef NAMED_CONTROL_H
 #define NAMED_CONTROL_H 1
@@ -67,7 +67,7 @@ ns_controls_destroy(ns_controls_t **ctrlsp);
  */
 
 isc_result_t
-ns_controls_configure(ns_controls_t *controls, cfg_obj_t *config,
+ns_controls_configure(ns_controls_t *controls, const cfg_obj_t *config,
 		      ns_aclconfctx_t *aclconfctx);
 /*
  * Configure zero or more command channels into 'controls'

@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: getprotoent_r.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: getprotoent_r.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <port_before.h>
@@ -109,6 +109,9 @@ setprotoent_r(int stay_open, PROTO_R_ENT_ARGS)
 setprotoent_r(int stay_open)
 #endif
 {
+#ifdef PROTO_R_ENT_UNUSED
+        PROTO_R_ENT_UNUSED;
+#endif
 	setprotoent(stay_open);
 #ifdef PROTO_R_SET_RESULT
 	return (PROTO_R_SET_RESULT);
@@ -122,6 +125,9 @@ endprotoent_r(PROTO_R_ENT_ARGS)
 endprotoent_r()
 #endif
 {
+#ifdef PROTO_R_ENT_UNUSED
+        PROTO_R_ENT_UNUSED;
+#endif
 	endprotoent();
 	PROTO_R_END_RESULT(PROTO_R_OK);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: types.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: types.h,v 1.1.1.3 2007-02-01 14:51:31 laffer1 Exp $ */
 
 #ifndef DNS_TYPES_H
 #define DNS_TYPES_H 1
@@ -294,6 +294,6 @@ typedef void
 (*dns_updatecallback_t)(void *, isc_result_t, dns_message_t *);
 
 typedef int 
-(*dns_rdatasetorderfunc_t)(dns_rdata_t *rdata, void *arg);
+(*dns_rdatasetorderfunc_t)(const dns_rdata_t *rdata, const void *arg);
 
 #endif /* DNS_TYPES_H */

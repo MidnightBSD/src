@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tkeyconf.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: tkeyconf.h,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #ifndef NS_TKEYCONF_H
 #define NS_TKEYCONF_H 1
@@ -28,8 +28,8 @@
 ISC_LANG_BEGINDECLS
 
 isc_result_t
-ns_tkeyctx_fromconfig(cfg_obj_t *options, isc_mem_t *mctx, isc_entropy_t *ectx,
-		      dns_tkeyctx_t **tctxp);
+ns_tkeyctx_fromconfig(const cfg_obj_t *options, isc_mem_t *mctx,
+		      isc_entropy_t *ectx, dns_tkeyctx_t **tctxp);
 /*
  * 	Create a TKEY context and configure it, including the default DH key
  *	and default domain, according to 'options'.

@@ -18,7 +18,7 @@
 /* eventlib_p.h - private interfaces for eventlib
  * vix 09sep95 [initial]
  *
- * $Id: eventlib_p.h,v 1.1.1.2 2006-02-25 02:32:08 laffer1 Exp $
+ * $Id: eventlib_p.h,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $
  */
 
 #ifndef _EVENTLIB_P_H
@@ -45,6 +45,8 @@
 #define	EV_MASK_ALL	(EV_READ | EV_WRITE | EV_EXCEPT)
 #define EV_ERR(e)		return (errno = (e), -1)
 #define OK(x)		if ((x) < 0) EV_ERR(errno); else (void)NULL
+#define OKFREE(x, y)	if ((x) < 0) { FREE((y)); EV_ERR(errno); } \
+			else (void)NULL
 
 #define	NEW(p)		if (((p) = memget(sizeof *(p))) != NULL) \
 				FILL(p); \

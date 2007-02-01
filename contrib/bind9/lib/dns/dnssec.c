@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: dnssec.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $
+ * $Id: dnssec.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $
  */
 
 
@@ -330,8 +330,7 @@ cleanup_array:
 cleanup_context:
 	dst_context_destroy(&ctx);
 cleanup_databuf:
-	if (databuf != NULL)
-		isc_buffer_free(&databuf);
+	isc_buffer_free(&databuf);
 cleanup_signature:
 	isc_mem_put(mctx, sig.signature, sig.siglen);
 

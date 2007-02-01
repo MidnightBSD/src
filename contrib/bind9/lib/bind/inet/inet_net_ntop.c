@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: inet_net_ntop.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_net_ntop.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $";
 #endif
 
 #include "port_before.h"
@@ -264,7 +264,7 @@ inet_net_ntop_ipv6(const u_char *src, int bits, char *dst, size_t size) {
 		}
 	}
 	/* Format CIDR /width. */
-	SPRINTF((cp, "/%u", bits));
+	sprintf(cp, "/%u", bits);
 	if (strlen(outbuf) + 1 > size)
 		goto emsgsize;
 	strcpy(dst, outbuf);

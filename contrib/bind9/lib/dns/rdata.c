@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdata.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
+/* $Id: rdata.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $ */
 
 #include <config.h>
 #include <ctype.h>
@@ -1266,7 +1266,7 @@ hexvalue(char value) {
 		return (-1);
 	if (isupper(c))
 		c = tolower(c);
-	if ((s = strchr(hexdigits, value)) == NULL)
+	if ((s = strchr(hexdigits, c)) == NULL)
 		return (-1);
 	return (s - hexdigits);
 }

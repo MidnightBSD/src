@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: keytable.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
+/* $Id: keytable.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -244,6 +244,13 @@ dns_keytable_findkeynode(dns_keytable_t *keytable, dns_name_t *name,
 
 	RWLOCK(&keytable->rwlock, isc_rwlocktype_read);
 
+	/*
+	 * Note we don't want the DNS_R_PARTIALMATCH from dns_rbt_findname()
+	 * as that indicates that 'name' was not found.
+	 *
+	 * DNS_R_PARTIALMATCH indicates that the name was found but we
+	 * didn't get a match on algorithm and key id arguments.
+	 */
 	knode = NULL;
 	data = NULL;
 	result = dns_rbt_findname(keytable->table, name, 0, NULL, &data);
@@ -261,7 +268,7 @@ dns_keytable_findkeynode(dns_keytable_t *keytable, dns_name_t *name,
 			UNLOCK(&keytable->lock);
 			*keynodep = knode;
 		} else
-			result = ISC_R_NOTFOUND;
+			result = DNS_R_PARTIALMATCH;
 	} else if (result == DNS_R_PARTIALMATCH)
 		result = ISC_R_NOTFOUND;
 

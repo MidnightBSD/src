@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsupdate.c,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: nsupdate.c,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -1343,8 +1343,10 @@ get_next_command(void) {
 	char *word;
 
 	ddebug("get_next_command()");
-	if (interactive)
+	if (interactive) {
 		fprintf(stdout, "> ");
+		fflush(stdout);
+	}
 	isc_app_block();
 	cmdline = fgets(cmdlinebuf, MAXCMD, input);
 	isc_app_unblock();
@@ -1665,7 +1667,7 @@ recvsoa(isc_task_t *task, isc_event_t *event) {
 		result = dns_request_createvia3(requestmgr, soaquery,
 						localaddr, addr, 0, NULL,
 						FIND_TIMEOUT * 20,
-						FIND_TIMEOUT * 20, 3,
+						FIND_TIMEOUT, 3,
 						global_task, recvsoa, reqinfo,
 						&request);
 		check_result(result, "dns_request_createvia");

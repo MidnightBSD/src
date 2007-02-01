@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: aclconf.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: aclconf.h,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #ifndef NS_ACLCONF_H
 #define NS_ACLCONF_H 1
@@ -49,8 +49,8 @@ ns_aclconfctx_destroy(ns_aclconfctx_t *ctx);
  */
 
 isc_result_t
-ns_acl_fromconfig(cfg_obj_t *caml,
-		  cfg_obj_t *cctx,
+ns_acl_fromconfig(const cfg_obj_t *caml,
+		  const cfg_obj_t *cctx,
 		  ns_aclconfctx_t *ctx,
 		  isc_mem_t *mctx,
 		  dns_acl_t **target);

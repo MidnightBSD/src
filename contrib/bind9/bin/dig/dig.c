@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dig.c,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
+/* $Id: dig.c,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
 
 #include <config.h>
 #include <stdlib.h>
@@ -1437,7 +1437,7 @@ parse_args(isc_boolean_t is_batchfile, isc_boolean_t config_only,
 			 * Anything which isn't an option
 			 */
 			if (open_type_class) {
-				if (strncmp(rv[0], "ixfr=", 5) == 0) {
+				if (strncasecmp(rv[0], "ixfr=", 5) == 0) {
 					rdtype = dns_rdatatype_ixfr;
 					result = ISC_R_SUCCESS;
 				} else {
