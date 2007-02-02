@@ -1,7 +1,5 @@
-/* $FreeBSD: src/lib/bind/dns/dns/rdatastruct.h,v 1.2 2005/03/17 08:39:12 dougb Exp $ */
-
 /*
- * Copyright (C) 2004-2005 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -41,7 +39,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 #ifndef DNS_RDATASTRUCT_H
 #define DNS_RDATASTRUCT_H 1
@@ -86,7 +84,7 @@ typedef struct dns_rdatacommon {
 #ifndef IN_1_A_1_H
 #define IN_1_A_1_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_in_a {
 	dns_rdatacommon_t	common;
@@ -114,7 +112,7 @@ typedef struct dns_rdata_in_a {
 #ifndef HS_4_A_1_H
 #define HS_4_A_1_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_hs_a {
 	dns_rdatacommon_t	common;
@@ -142,7 +140,7 @@ typedef struct dns_rdata_hs_a {
 #ifndef GENERIC_NS_2_H
 #define GENERIC_NS_2_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_ns {
 	dns_rdatacommon_t	common;
@@ -172,7 +170,7 @@ typedef struct dns_rdata_ns {
 #ifndef GENERIC_MD_3_H
 #define GENERIC_MD_3_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_md {
 	dns_rdatacommon_t	common;
@@ -202,7 +200,7 @@ typedef struct dns_rdata_md {
 #ifndef GENERIC_MF_4_H
 #define GENERIC_MF_4_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_mf {
 	dns_rdatacommon_t	common;
@@ -228,7 +226,7 @@ typedef struct dns_rdata_mf {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 #ifndef GENERIC_CNAME_5_H
 #define GENERIC_CNAME_5_H 1
@@ -260,7 +258,7 @@ typedef struct dns_rdata_cname {
 #ifndef GENERIC_SOA_6_H
 #define GENERIC_SOA_6_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_soa {
 	dns_rdatacommon_t	common;
@@ -296,7 +294,7 @@ typedef struct dns_rdata_soa {
 #ifndef GENERIC_MB_7_H
 #define GENERIC_MB_7_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_mb {
 	dns_rdatacommon_t	common;
@@ -325,7 +323,7 @@ typedef struct dns_rdata_mb {
 #ifndef GENERIC_MG_8_H
 #define GENERIC_MG_8_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_mg {
 	dns_rdatacommon_t	common;
@@ -354,7 +352,7 @@ typedef struct dns_rdata_mg {
 #ifndef GENERIC_MR_9_H
 #define GENERIC_MR_9_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_mr {
 	dns_rdatacommon_t	common;
@@ -383,7 +381,7 @@ typedef struct dns_rdata_mr {
 #ifndef GENERIC_NULL_10_H
 #define GENERIC_NULL_10_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_null {
 	dns_rdatacommon_t	common;
@@ -414,7 +412,7 @@ typedef struct dns_rdata_null {
 #ifndef IN_1_WKS_11_H
 #define IN_1_WKS_11_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef	struct dns_rdata_in_wks {
 	dns_rdatacommon_t	common;
@@ -446,7 +444,7 @@ typedef	struct dns_rdata_in_wks {
 #ifndef GENERIC_PTR_12_H
 #define GENERIC_PTR_12_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_ptr {
         dns_rdatacommon_t       common;
@@ -475,7 +473,7 @@ typedef struct dns_rdata_ptr {
 #ifndef GENERIC_HINFO_13_H
 #define GENERIC_HINFO_13_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_hinfo {
 	dns_rdatacommon_t	common;
@@ -507,7 +505,7 @@ typedef struct dns_rdata_hinfo {
 #ifndef GENERIC_MINFO_14_H
 #define GENERIC_MINFO_14_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_minfo {
 	dns_rdatacommon_t	common;
@@ -537,7 +535,7 @@ typedef struct dns_rdata_minfo {
 #ifndef GENERIC_MX_15_H
 #define GENERIC_MX_15_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_mx {
 	dns_rdatacommon_t	common;
@@ -567,7 +565,7 @@ typedef struct dns_rdata_mx {
 #ifndef GENERIC_TXT_16_H
 #define GENERIC_TXT_16_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_txt_string {
                 isc_uint8_t    length;
@@ -618,7 +616,7 @@ dns_rdata_txt_current(dns_rdata_txt_t *, dns_rdata_txt_string_t *);
 #ifndef GENERIC_RP_17_H
 #define GENERIC_RP_17_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1183 */
 
@@ -651,7 +649,7 @@ typedef struct dns_rdata_rp {
 #ifndef GENERIC_AFSDB_18_H
 #define GENERIC_AFSDB_18_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1183 */
 
@@ -684,7 +682,7 @@ typedef struct dns_rdata_afsdb {
 #ifndef GENERIC_X25_19_H
 #define GENERIC_X25_19_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1183 */
 
@@ -716,7 +714,7 @@ typedef struct dns_rdata_x25 {
 #ifndef GENERIC_ISDN_20_H
 #define GENERIC_ISDN_20_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1183 */
 
@@ -750,7 +748,7 @@ typedef struct dns_rdata_isdn {
 #ifndef GENERIC_RT_21_H
 #define GENERIC_RT_21_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1183 */
 
@@ -782,7 +780,7 @@ typedef struct dns_rdata_rt {
 #ifndef IN_1_NSAP_22_H
 #define IN_1_NSAP_22_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1706 */
 
@@ -814,7 +812,7 @@ typedef struct dns_rdata_in_nsap {
 #ifndef IN_1_NSAP_PTR_23_H
 #define IN_1_NSAP_PTR_23_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1348.  Obsoleted in RFC 1706 - use PTR instead. */
 
@@ -845,7 +843,7 @@ typedef struct dns_rdata_in_nsap_ptr {
 #ifndef GENERIC_SIG_24_H
 #define GENERIC_SIG_24_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2535 */
 
@@ -886,7 +884,7 @@ typedef struct dns_rdata_sig_t {
 #ifndef GENERIC_KEY_25_H
 #define GENERIC_KEY_25_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2535 */
 
@@ -922,7 +920,7 @@ typedef struct dns_rdata_key_t {
 #ifndef IN_1_PX_26_H
 #define IN_1_PX_26_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2163 */
 
@@ -955,7 +953,7 @@ typedef struct dns_rdata_in_px {
 #ifndef GENERIC_GPOS_27_H
 #define GENERIC_GPOS_27_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1712 */
 
@@ -991,7 +989,7 @@ typedef struct dns_rdata_gpos {
 #ifndef IN_1_AAAA_28_H
 #define IN_1_AAAA_28_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1886 */
 
@@ -1021,7 +1019,7 @@ typedef struct dns_rdata_in_aaaa {
 #ifndef GENERIC_LOC_29_H
 #define GENERIC_LOC_29_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 1876 */
 
@@ -1063,7 +1061,7 @@ typedef struct dns_rdata_loc {
 #ifndef GENERIC_NXT_30_H
 #define GENERIC_NXT_30_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2535 */
 
@@ -1096,7 +1094,7 @@ typedef struct dns_rdata_nxt {
 #ifndef IN_1_SRV_33_H
 #define IN_1_SRV_33_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* Reviewed: Fri Mar 17 13:01:00 PST 2000 by bwelling */
 
@@ -1132,7 +1130,7 @@ typedef struct dns_rdata_in_srv {
 #ifndef IN_1_NAPTR_35_H
 #define IN_1_NAPTR_35_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2915 */
 
@@ -1171,7 +1169,7 @@ typedef struct dns_rdata_in_naptr {
 #ifndef IN_1_KX_36_H
 #define IN_1_KX_36_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2230 */
 
@@ -1200,7 +1198,7 @@ typedef struct dns_rdata_in_kx {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2538 */
 #ifndef GENERIC_CERT_37_H
@@ -1237,7 +1235,7 @@ typedef struct dns_rdata_cert {
 #ifndef IN_1_A6_38_H
 #define IN_1_A6_38_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC2874 */
 
@@ -1270,7 +1268,7 @@ typedef struct dns_rdata_in_a6 {
 #ifndef GENERIC_DNAME_39_H
 #define GENERIC_DNAME_39_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC2672 */
 
@@ -1301,7 +1299,7 @@ typedef struct dns_rdata_dname {
 #ifndef GENERIC_OPT_41_H
 #define GENERIC_OPT_41_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2671 */
 
@@ -1355,7 +1353,7 @@ dns_rdata_opt_current(dns_rdata_opt_t *, dns_rdata_opt_opcode_t *);
 #ifndef IN_1_APL_42_H
 #define IN_1_APL_42_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_apl_ent {
 	isc_boolean_t	negative;
@@ -1407,7 +1405,7 @@ dns_rdata_apl_current(dns_rdata_in_apl_t *, dns_rdata_apl_ent_t *);
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* draft-ietf-dnsext-delegation-signer-05.txt */
 #ifndef GENERIC_DS_43_H
@@ -1441,7 +1439,7 @@ typedef struct dns_rdata_ds {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* draft-ietf-secsh-dns-05.txt */
 
@@ -1478,7 +1476,7 @@ typedef struct dns_rdata_sshfp {
 #ifndef GENERIC_DNSSIG_46_H
 #define GENERIC_DNSSIG_46_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2535 */
 typedef struct dns_rdata_rrsig {
@@ -1518,7 +1516,7 @@ typedef struct dns_rdata_rrsig {
 #ifndef GENERIC_NSEC_47_H
 #define GENERIC_NSEC_47_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* draft-ietf-dnsext-nsec-rdata-01.txt */
 
@@ -1551,7 +1549,7 @@ typedef struct dns_rdata_nsec {
 #ifndef GENERIC_DNSKEY_48_H
 #define GENERIC_DNSKEY_48_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2535 */
 
@@ -1587,7 +1585,7 @@ typedef struct dns_rdata_dnskey {
 #ifndef GENERIC_UNSPEC_103_H
 #define GENERIC_UNSPEC_103_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 typedef struct dns_rdata_unspec_t {
 	dns_rdatacommon_t	common;
@@ -1617,7 +1615,7 @@ typedef struct dns_rdata_unspec_t {
 #ifndef GENERIC_TKEY_249_H
 #define GENERIC_TKEY_249_H 1
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* draft-ietf-dnsind-tkey-00.txt */
 
@@ -1654,7 +1652,7 @@ typedef struct dns_rdata_tkey {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* RFC 2845 */
 
@@ -1677,6 +1675,39 @@ typedef struct dns_rdata_any_tsig {
 
 #endif /* ANY_255_TSIG_250_H */
 /*
+ * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH
+ * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+ * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
+
+/* draft-ietf-dnsext-delegation-signer-05.txt */
+#ifndef GENERIC_DLV_32769_H
+#define GENERIC_DLV_32769_H 1
+
+typedef struct dns_rdata_dlv {
+	dns_rdatacommon_t	common;
+	isc_mem_t		*mctx;
+	isc_uint16_t		key_tag;
+	isc_uint8_t		algorithm;
+	isc_uint8_t		digest_type;
+	isc_uint16_t		length;
+	unsigned char		*digest;
+} dns_rdata_dlv_t;
+
+#endif /* GENERIC_DLV_32769_H */
+/*
  * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1692,7 +1723,7 @@ typedef struct dns_rdata_any_tsig {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 /* draft-ietf-dnsext-delegation-signer-05.txt */
 #ifndef GENERIC_DLV_65323_H
@@ -1726,7 +1757,7 @@ typedef struct dns_rdata_dlv {
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatastruct.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: rdatastruct.h,v 1.2 2007-02-02 00:23:38 laffer1 Exp $ */
 
 ISC_LANG_ENDDECLS
 
