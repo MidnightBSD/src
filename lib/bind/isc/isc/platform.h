@@ -1,5 +1,3 @@
-/* $FreeBSD: src/lib/bind/isc/isc/platform.h,v 1.1.4.2 2006/01/14 10:13:49 dougb Exp $ */
-
 /*
  * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
@@ -17,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h,v 1.1.1.2 2006-02-25 02:34:48 laffer1 Exp $ */
+/* $Id: platform.h,v 1.2 2007-02-02 00:21:12 laffer1 Exp $ */
 
 #ifndef ISC_PLATFORM_H
 #define ISC_PLATFORM_H 1

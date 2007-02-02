@@ -1,5 +1,3 @@
-/* $FreeBSD: src/lib/bind/bind/port_before.h,v 1.1.4.1 2006/01/14 10:13:49 dougb Exp $ */
-
 #ifndef port_before_h
 #define port_before_h
 #include <config.h>
@@ -89,11 +87,13 @@ struct timezone;        /* silence warning */
 #define PROTO_R_END_RESULT(x) /*empty*/
 #define PROTO_R_END_RETURN void
 #undef PROTO_R_ENT_ARGS /*empty*/
+#undef PROTO_R_ENT_UNUSED
 #define PROTO_R_OK pptr
 #undef PROTO_R_SETANSWER
 #define PROTO_R_RETURN struct protoent *
 #undef PROTO_R_SET_RESULT
 #define PROTO_R_SET_RETURN void
+#undef PROTOENT_DATA
 
 
 
@@ -114,11 +114,13 @@ struct timezone;        /* silence warning */
 #define SERV_R_END_RESULT(x) /*empty*/
 #define SERV_R_END_RETURN void 
 #undef SERV_R_ENT_ARGS /*empty*/
+#undef SERV_R_ENT_UNUSED /*empty*/
 #define SERV_R_OK sptr
 #undef SERV_R_SETANSWER
 #define SERV_R_RETURN struct servent *
 #undef SERV_R_SET_RESULT
 #define SERV_R_SET_RETURN void
+
 
 
 #define DE_CONST(konst, var) \

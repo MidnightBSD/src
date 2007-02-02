@@ -1,5 +1,3 @@
-/* $FreeBSD: src/lib/bind/lwres/lwres/platform.h,v 1.1.4.1 2006/01/14 10:13:50 dougb Exp $ */
-
 /*
  * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
@@ -17,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h,v 1.1.1.2 2006-02-25 02:34:49 laffer1 Exp $ */
+/* $Id: platform.h,v 1.2 2007-02-02 00:21:12 laffer1 Exp $ */
 
 #ifndef LWRES_PLATFORM_H
 #define LWRES_PLATFORM_H 1
@@ -98,7 +96,7 @@
 /*! \brief
  * Define if this system needs strtoul.
  */
-#undef ISC_PLATFORM_NEEDSTRTOUL
+#undef LWRES_PLATFORM_NEEDSTRTOUL
 
 #ifndef LWRES_PLATFORM_USEDECLSPEC
 #define LIBLWRES_EXTERNAL_DATA

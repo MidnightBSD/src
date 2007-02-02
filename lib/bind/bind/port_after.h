@@ -1,5 +1,3 @@
-/* $FreeBSD: src/lib/bind/bind/port_after.h,v 1.1.4.1 2006/01/14 10:13:49 dougb Exp $ */
-
 #ifndef port_after_h
 #define port_after_h
 
@@ -7,12 +5,16 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/param.h>
+#include <sys/time.h>
 #if (!defined(BSD)) || (BSD < 199306)
 #include <sys/bitypes.h>
 #endif
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#endif /* HAVE_SYS_SELECT_H */
 
 #undef NEED_PSELECT
 #define HAVE_SA_LEN 1
