@@ -1490,8 +1490,6 @@ contrib/bind9/lib/dns/rdata/generic/cname_5.c -text
 contrib/bind9/lib/dns/rdata/generic/cname_5.h -text
 contrib/bind9/lib/dns/rdata/generic/dlv_32769.c -text
 contrib/bind9/lib/dns/rdata/generic/dlv_32769.h -text
-contrib/bind9/lib/dns/rdata/generic/dlv_65323.c -text
-contrib/bind9/lib/dns/rdata/generic/dlv_65323.h -text
 contrib/bind9/lib/dns/rdata/generic/dname_39.c -text
 contrib/bind9/lib/dns/rdata/generic/dname_39.h -text
 contrib/bind9/lib/dns/rdata/generic/dnskey_48.c -text
