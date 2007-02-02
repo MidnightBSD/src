@@ -78,7 +78,6 @@
 #include "rdata/generic/tkey_249.c"
 #include "rdata/any_255/tsig_250.c"
 #include "rdata/generic/dlv_32769.c"
-#include "rdata/generic/dlv_65323.c"
 
 
 
