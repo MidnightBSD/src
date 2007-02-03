@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.3 2006/12/27 03:55:06 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -239,7 +239,7 @@ configFstab(dialogMenuItem *self)
     msgDebug("Generating /etc/fstab file\n");
     fprintf(fstab, "# Device\t\tMountpoint\tFStype\tOptions\t\tDump\tPass#\n");
     for (i = 0; i < nchunks; i++) {
-	if (c1->type == part && c1->subtype != FS_SWAP) {
+	if (strncmp(fstype(chunk_list[i]), "swap", 4)) {
 		fprintf(fstab, "/dev/%s\t\t%s\t\t%s\t%s\t\t%d\t%d\n", name_of(chunk_list[i]), mount_point(chunk_list[i]),
 		fstype(chunk_list[i]), fstype_short(chunk_list[i]), seq_num(chunk_list[i]), seq_num(chunk_list[i]));
 	} else {
