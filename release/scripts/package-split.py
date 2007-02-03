@@ -11,7 +11,7 @@
 
 import os
 import sys
-import file
+#import file
 
 try:
     arch = os.environ["PKG_ARCH"]
@@ -119,7 +119,7 @@ def load_index(index):
         if name in deps:
             sys.stderr.write('%d: Duplicate package %s\n' % (line_num, name))
             sys.exit(1)
-        origin = fields[ORIGIN_COL].replace('/usr/ports/', '', 1)
+        origin = fields[ORIGIN_COL].replace('/usr/mports/', '', 1)
         if origin in pkgs:
             sys.stderr.write('%d: Duplicate port %s\n' % (line_num, origin))
             sys.exit(1)
