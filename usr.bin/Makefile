@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.6 2006/12/31 05:23:39 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.7 2006/12/31 07:08:37 laffer1 Exp $
 
 # XXX MISSING:		diction graph learn plot
 #			spline struct xsend
@@ -173,6 +173,7 @@ SUBDIR=	alias \
 	split \
 	stat \
 	su \
+	sudo \
 	systat \
 	tabs \
 	tail \
