@@ -1,5 +1,5 @@
 #	$OpenBSD: Makefile,v 1.2 2004/09/28 15:10:51 millert Exp $
-#       $MidnightBSD$
+#       $MidnightBSD: src/usr.bin/sudo/sudo/Makefile,v 1.1 2007/02/04 17:33:53 archite Exp $
 
 SUDO_DIR=       ${.CURDIR}/../../../contrib/sudo
 AUTH_DIR=	${SUDO_DIR}/auth
@@ -20,9 +20,5 @@ BINMODE=	4555
 BINDIR=	/usr/bin
 LINKS= 	${BINDIR}/sudo ${BINDIR}/sudoedit
 MLINKS=	sudo.8 sudoedit.8
-
-afterinstall:
-	cp -n ${SUDO_DIR}/sudoers /etc/sudoers
-	chmod 0440 /etc/sudoers
 
 .include <bsd.prog.mk>
