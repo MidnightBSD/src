@@ -28,7 +28,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/acpica/madt.c,v 1.19.2.1 2005/11/07 09:53:24 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/acpica/madt.c,v 1.19.2.2 2006/05/11 17:41:00 njl Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -219,11 +220,12 @@ madt_probe(void)
 	}
 
 	/*
-	 * For ACPI < 2.0, use the RSDT.  For ACPI >= 2.0, use the XSDT.
-	 * We map the XSDT and RSDT at page 1 in the crashdump area.
-	 * Page 0 is used to map in the headers of candidate ACPI tables.
+	 * For ACPI >= 2.0, use the XSDT if it is available.
+	 * Otherwise, use the RSDT.  We map the XSDT or RSDT at page 1
+	 * in the crashdump area.  Page 0 is used to map in the
+	 * headers of candidate ACPI tables.
 	 */
-	if (rsdp->Revision >= 2) {
+	if (rsdp->Revision >= 2 && rsdp->XsdtPhysicalAddress != 0) {
 		/*
 		 * AcpiOsGetRootPointer only verifies the checksum for
 		 * the version 1.0 portion of the RSDP.  Version 2.0 has
