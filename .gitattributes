@@ -30886,6 +30886,7 @@ usr.bin/su/Makefile -text
 usr.bin/su/su.1 -text
 usr.bin/su/su.c -text
 usr.bin/sudo/Makefile -text
+usr.bin/sudo/Makefile.inc -text
 usr.bin/sudo/lib/Makefile -text
 usr.bin/sudo/noexec/Makefile -text
 usr.bin/sudo/sudo/Makefile -text

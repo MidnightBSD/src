@@ -1,5 +1,5 @@
 #	$OpenBSD: Makefile,v 1.3 2005/06/21 02:11:43 brad Exp $
-#	$MidnightBSD$
+#	$MidnightBSD: src/usr.bin/sudo/lib/Makefile,v 1.1 2007/02/04 17:33:53 archite Exp $
 
 SUDO_DIR=	${.CURDIR}/../../../contrib/sudo
 .PATH:		${SUDO_DIR}
@@ -8,7 +8,7 @@ LIB=		sudo
 CFLAGS+=	-I. -I${SUDO_DIR}
 SRCS=		alloc.c defaults.c fileops.c find_path.c gettime.c goodpath.c \
 		lex.yy.c sudo.tab.c
-CLEANFILES=	lex.yy.c sudo.tab.c sudo.tab.h
+CLEANFILES+=	lex.yy.c sudo.tab.c sudo.tab.h
 NO_PROFILE= 	yes
 
 .if !defined(NO_PIC)
@@ -17,11 +17,9 @@ NO_PIC=	yes
 .endif
 
 sudo.tab.c sudo.tab.h: parse.yacc
-	rm -f sudo.tab.h sudo.tab.c
 	${YACC} -d -b sudo ${SUDO_DIR}/parse.yacc
 
 lex.yy.c: parse.lex sudo.tab.c sudo.tab.h
-	rm -f lex.yy.c
 	${LEX} ${SUDO_DIR}/parse.lex
 
 .include <bsd.lib.mk>

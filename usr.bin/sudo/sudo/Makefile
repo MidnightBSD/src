@@ -1,5 +1,5 @@
 #	$OpenBSD: Makefile,v 1.2 2004/09/28 15:10:51 millert Exp $
-#       $MidnightBSD: src/usr.bin/sudo/sudo/Makefile,v 1.2 2007/02/04 18:19:17 archite Exp $
+#       $MidnightBSD: src/usr.bin/sudo/sudo/Makefile,v 1.3 2007/02/06 22:41:32 archite Exp $
 
 SUDO_DIR=       ${.CURDIR}/../../../contrib/sudo
 AUTH_DIR=	${SUDO_DIR}/auth
@@ -12,7 +12,7 @@ SRCS=	check.c closefrom.c env.c getspwuid.c interfaces.c logging.c \
 	pam.c sudo_edit.c
 
 CFLAGS+=	-I${SUDO_DIR} -I${AUTH_DIR}
-LDADD+=         -lopie -lpam -lsudo -lutil
+LDADD+=         -lopie -lpam ${LIBSUDO} ${LIBUTIL}
 MAN=	sudo.8 sudoers.5
 
 BINMODE=	4555
