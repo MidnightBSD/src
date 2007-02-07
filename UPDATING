@@ -3,6 +3,13 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070206:
+	Imported OpenBSD's sudo into source. Please install
+	/usr/src/usr.bin/sudo/lib first before building.
+
+	Those who install from a snapshot after this date
+	will not be effected.
+
 20070119:
 	Added audit group.  Be sure to add audit to your /etc/group file
 	before installing world.
@@ -299,4 +306,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.9 2007/01/01 00:08:00 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.10 2007/01/19 14:45:44 laffer1 Exp $
