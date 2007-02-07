@@ -228,8 +228,8 @@ sonewconn(head, connstatus)
 	so->so_linger = head->so_linger;
 	so->so_state = head->so_state | SS_NOFDREF;
 	so->so_proto = head->so_proto;
-	so->so_timeo = head->so_timeo;
 	so->so_cred = crhold(head->so_cred);
+
 #ifdef MAC
 	SOCK_LOCK(head);
 	mac_create_socket_from_socket(head, so);
@@ -244,6 +244,12 @@ sonewconn(head, connstatus)
 		sodealloc(so);
 		return (NULL);
 	}
+	so->so_rcv.sb_lowat = head->so_rcv.sb_lowat;
+	so->so_snd.sb_lowat = head->so_snd.sb_lowat;
+	so->so_rcv.sb_timeo = head->so_rcv.sb_timeo;
+ 	so->so_snd.sb_timeo = head->so_snd.sb_timeo;
+	so->so_rcv.sb_flags |= head->so_rcv.sb_flags & SB_AUTOSIZE;
+	so->so_snd.sb_flags |= head->so_snd.sb_flags & SB_AUTOSIZE;
 	so->so_state |= connstatus;
 	ACCEPT_LOCK();
 	if (connstatus) {
@@ -841,70 +847,6 @@ sbappendrecord(sb, m0)
 
 	SOCKBUF_LOCK(sb);
 	sbappendrecord_locked(sb, m0);
-	SOCKBUF_UNLOCK(sb);
-}
-
-/*
- * As above except that OOB data
- * is inserted at the beginning of the sockbuf,
- * but after any other OOB data.
- */
-void
-sbinsertoob_locked(sb, m0)
-	register struct sockbuf *sb;
-	register struct mbuf *m0;
-{
-	register struct mbuf *m;
-	register struct mbuf **mp;
-
-	SOCKBUF_LOCK_ASSERT(sb);
-
-	if (m0 == 0)
-		return;
-	for (mp = &sb->sb_mb; *mp ; mp = &((*mp)->m_nextpkt)) {
-	    m = *mp;
-	    again:
-		switch (m->m_type) {
-
-		case MT_OOBDATA:
-			continue;		/* WANT next train */
-
-		case MT_CONTROL:
-			m = m->m_next;
-			if (m)
-				goto again;	/* inspect THIS train further */
-		}
-		break;
-	}
-	/*
-	 * Put the first mbuf on the queue.
-	 * Note this permits zero length records.
-	 */
-	sballoc(sb, m0);
-	m0->m_nextpkt = *mp;
-	*mp = m0;
-	m = m0->m_next;
-	m0->m_next = 0;
-	if (m && (m0->m_flags & M_EOR)) {
-		m0->m_flags &= ~M_EOR;
-		m->m_flags |= M_EOR;
-	}
-	sbcompress(sb, m, m0);
-}
-
-/*
- * As above except that OOB data
- * is inserted at the beginning of the sockbuf,
- * but after any other OOB data.
- */
-void
-sbinsertoob(sb, m0)
-	register struct sockbuf *sb;
-	register struct mbuf *m0;
-{
-
-	SOCKBUF_LOCK(sb);
-	sbinsertoob_locked(sb, m0);
 	SOCKBUF_UNLOCK(sb);
 }
 

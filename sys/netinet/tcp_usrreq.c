@@ -882,9 +882,13 @@ tcp_connect(tp, nam, td)
 	inp->inp_laddr = laddr;
 	in_pcbrehash(inp);
 
-	/* Compute window scaling to request.  */
+	/*
+	 * Compute window scaling to request:
+	 * Scale to fit into sweet spot.  See tcp_syncache.c.
+	 * XXX: This should be moved to tcp_output().
+	 */
 	while (tp->request_r_scale < TCP_MAX_WINSHIFT &&
-	    (TCP_MAXWIN << tp->request_r_scale) < so->so_rcv.sb_hiwat)
+	    (0x1 << tp->request_r_scale) < tcp_minmss)       /* XXX */
 		tp->request_r_scale++;
 
 	soisconnecting(so);
@@ -1191,6 +1195,8 @@ tcp_attach(so)
 		if (error)
 			return (error);
 	}
+	so->so_rcv.sb_flags |= SB_AUTOSIZE;
+	so->so_snd.sb_flags |= SB_AUTOSIZE;
 	error = in_pcballoc(so, &tcbinfo, "tcpinp");
 	if (error)
 		return (error);

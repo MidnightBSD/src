@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/atalk.c,v 1.24 2004/07/26 20:18:11 charn
 #include <errno.h>
 #include <nlist.h>
 #include <netdb.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "netstat.h"

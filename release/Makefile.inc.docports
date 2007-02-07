@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/release/Makefile.inc.docports,v 1.3 2006/10/01 21:47:25 laffer1 Exp $
 # $FreeBSD: src/release/Makefile.inc.docports,v 1.26 2004/09/01 14:36:48 ru Exp $
 #
 # List of (dependent) ports that are minimally required to be
@@ -40,8 +40,8 @@ MINIMALDOCPORTS+= \
 	mports/graphics/scr2png \
 	mports/graphics/tiff \
 	mports/print/freetype2 \
-	mports/print/ghostscript-gnu \
-	mports/print/ghostscript-gnu-nox11 \
+	mports/print/ghostscript-gpl \
+	mports/print/ghostscript-gpl-nox11 \
 	mports/print/gsfonts \
 	mports/textproc/docbook-410 \
 	mports/textproc/docbook-xml \

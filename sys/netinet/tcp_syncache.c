@@ -965,9 +965,15 @@ syncache_add(inc, to, th, sop, m)
 		if (to->to_flags & TOF_SCALE) {
 			int wscale = 0;
 
-			/* Compute proper scaling value from buffer space */
+			/*
+			 * Compute proper scaling value from buffer space:
+			 * Place window scale into sweet spot where it is
+			 * about one fourth of the MSS.  This allows us to
+			 * scale the receive buffer over a wide range while
+			 * not losing any efficiency or fine granularity.
+			 */
 			while (wscale < TCP_MAX_WINSHIFT &&
-			    (TCP_MAXWIN << wscale) < so->so_rcv.sb_hiwat)
+			    (0x1 << wscale) < tcp_minmss)
 				wscale++;
 			sc->sc_request_r_scale = wscale;
 			sc->sc_requested_s_scale = to->to_requested_s_scale;

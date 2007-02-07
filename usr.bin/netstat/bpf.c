@@ -39,6 +39,7 @@
 
 #include <err.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +83,7 @@ bpf_flags(struct xbpf_d *bd, char *flagbuf)
 }       
 
 void
-bpf_stats(char *interface)
+bpf_stats(char *ifname)
 {
 	struct xbpf_d *d, *bd;
 	char *pname, flagbuf[12];
@@ -110,7 +111,7 @@ bpf_stats(char *interface)
 	    "Pid", "Netif", "Flags", "Recv", "Drop", "Match", "Sblen",
 	    "Hblen", "Command");
 	for (d = &bd[0]; d < &bd[size / sizeof(*d)]; d++) {
-		if (interface && strcmp(interface, d->bd_ifname) != 0)
+		if (ifname && strcmp(ifname, d->bd_ifname) != 0)
 			continue;
 		bpf_flags(d, flagbuf);
 		pname = bpf_pidname(d->bd_pid);
