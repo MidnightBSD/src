@@ -18872,11 +18872,6 @@ lib/libz/zopen.c -text
 lib/libz/zutil.c -text
 lib/libz/zutil.h -text
 lib/msun/Makefile -text
-lib/msun/alpha/Makefile.inc -text
-lib/msun/alpha/fenv.c -text
-lib/msun/alpha/fenv.h -text
-lib/msun/alpha/s_copysign.S -text
-lib/msun/alpha/s_copysignf.S -text
 lib/msun/amd64/Makefile.inc -text
 lib/msun/amd64/e_sqrt.S -text
 lib/msun/amd64/e_sqrtf.S -text

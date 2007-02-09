@@ -23,6 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/lib/msun/sparc64/fenv.c,v 1.1 2004/06/06 10:05:57 das Exp $
  */
 

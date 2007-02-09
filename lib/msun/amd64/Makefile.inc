@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/msun/amd64/Makefile.inc,v 1.4 2005/04/16 21:12:55 das Exp $
 
 ARCH_SRCS = e_sqrt.S e_sqrtf.S s_llrint.S s_llrintf.S s_lrint.S s_lrintf.S \
