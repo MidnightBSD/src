@@ -28521,6 +28521,11 @@ sys/posix4/sched.h -text
 sys/posix4/semaphore.h -text
 sys/powerpc/compile/.cvsignore -text
 sys/powerpc/conf/.cvsignore -text
+sys/powerpc/conf/DEFAULTS -text
+sys/powerpc/conf/GENERIC -text
+sys/powerpc/conf/GENERIC.hints -text
+sys/powerpc/conf/Makefile -text
+sys/powerpc/conf/NOTES -text
 sys/powerpc/include/_bus.h -text
 sys/powerpc/include/_inttypes.h -text
 sys/powerpc/include/_limits.h -text
