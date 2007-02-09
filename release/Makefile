@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.6 2006/10/14 23:52:44 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.7 2007/01/18 03:28:28 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -19,7 +19,7 @@
 # Set these, release builder!
 #
 # Fixed version:
-#BUILDNAME=0.1-STABLE
+#BUILDNAME=0.1-RELEASE
 #
 # Automatic SNAP versioning:
 DATE != date +%Y%m%d
@@ -183,6 +183,7 @@ MNT=			/mnt
 .undef MAKE_FLOPPIES
 .if ${TARGET_ARCH} == "i386"
 MAKE_FLOPPIES=		true
+SPLIT_MFSROOT=
 .if ${TARGET} == "pc98"
 SMALLFLOPPYSIZE=	1200
 SMALLFLOPPYSPLITSIZE=	1152
