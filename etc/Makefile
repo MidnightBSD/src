@@ -1,7 +1,7 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.5 2006/12/31 22:29:36 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.6 2007/02/04 18:19:16 archite Exp $
 
 .if !defined(NO_SENDMAIL)
 SUBDIR=	sendmail
@@ -128,7 +128,7 @@ distribution:
 	    ${SSL} ${DESTDIR}/etc/ssl
 .endif
 	cd ${.CURDIR}; ${INSTALL} -o root -g wheel -m 440 \
-	    ${SUDO} $DESTDIR}/etc
+	    ${SUDO} ${DESTDIR}/etc
 .if !defined(NO_KERBEROS)
 	cd ${.CURDIR}/root; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
