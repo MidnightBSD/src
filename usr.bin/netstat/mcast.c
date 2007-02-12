@@ -27,6 +27,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/mcast.c,v 1.2 2004/07/26 20:18:11 charnier Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Print the system's current multicast group memberships.
@@ -54,6 +55,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/mcast.c,v 1.2 2004/07/26 20:18:11 charni
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 

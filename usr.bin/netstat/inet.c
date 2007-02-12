@@ -77,6 +77,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/inet.c,v 1.70 2005/04/12 08:47:04 ru Exp
 #include <errno.h>
 #include <libutil.h>
 #include <netdb.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

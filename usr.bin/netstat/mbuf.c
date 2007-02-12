@@ -41,6 +41,7 @@ static char sccsid[] = "@(#)mbuf.c	8.1 (Berkeley) 6/6/93";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.42.8.6 2006/03/01 20:54:21 andre Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -51,6 +52,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.42.8.6 2006/03/01 20:54:21 an
 #include <err.h>
 #include <kvm.h>
 #include <memstat.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -39,6 +39,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/mroute.c,v 1.22 2004/07/26 20:18:11 charnier Exp $");
+__MBSDID("$MidnightBSD$");
 
 /*
  * Print multicast routing structures and statistics.
@@ -62,6 +63,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/mroute.c,v 1.22 2004/07/26 20:18:11 char
 #include <netinet/ip_mroute.h>
 
 #include <err.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "netstat.h"

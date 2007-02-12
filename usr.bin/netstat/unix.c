@@ -58,6 +58,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/unix.c,v 1.18 2004/07/26 20:18:11 charni
 #include <errno.h>
 #include <err.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <kvm.h>

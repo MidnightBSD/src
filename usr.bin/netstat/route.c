@@ -63,6 +63,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/route.c,v 1.76 2005/05/13 16:31:10 ume E
 #include <arpa/inet.h>
 #include <libutil.h>
 #include <netdb.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -630,7 +631,9 @@ fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags)
 	    }
 	case AF_NETGRAPH:
 	    {
-		printf("%s", ((struct sockaddr_ng *)sa)->sg_data);
+		strlcpy(workbuf, ((struct sockaddr_ng *)sa)->sg_data,
+			sizeof(workbuf));
+		cp = workbuf;
 		break;
 	    }
 
@@ -940,8 +943,10 @@ routename6(struct sockaddr_in6 *sa6)
 	static char line[MAXHOSTNAMELEN];
 	int flag = 0;
 	/* use local variable for safety */
-	struct sockaddr_in6 sa6_local = {AF_INET6, sizeof(sa6_local),};
+	struct sockaddr_in6 sa6_local;
 
+	sa6_local.sin6_family = AF_INET6;
+	sa6_local.sin6_len = sizeof(sa6_local);
 	sa6_local.sin6_addr = sa6->sin6_addr;
 	sa6_local.sin6_scope_id = sa6->sin6_scope_id;
 

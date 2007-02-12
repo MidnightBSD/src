@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/netgraph.c,v 1.10 2004/07/26 20:18:11 ch
 
 #include <nlist.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -74,7 +75,8 @@ netgraphprotopr(u_long off, const char *name, int af1 __unused)
 		const char *const modname = "ng_socket.ko";
 /* XXX We should get "mpath" from "sysctl kern.module_path" */
 		const char *mpath[] = { "/", "/boot/", "/modules/", NULL };
-		struct nlist sym[] = { { "_ngsocklist" }, { NULL } };
+		struct nlist sym[] = { { .n_name = "_ngsocklist" },
+				 { .n_name = NULL } };
 		const char **pre;
 		struct kld_file_stat ks;
 		int fileid;

@@ -40,6 +40,7 @@ static char sccsid[] = "@(#)ns.c	8.1 (Berkeley) 6/6/93";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/ipx.c,v 1.23 2005/01/02 19:26:06 rwatson Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -65,6 +66,7 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/ipx.c,v 1.23 2005/01/02 19:26:06 rwatson
 
 #include <nlist.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "netstat.h"
@@ -338,7 +340,7 @@ ipx_erputil(int z, int c)
 }
 #endif /* IPXERRORMSGS */
 
-static struct sockaddr_ipx ssipx = {AF_IPX};
+static struct sockaddr_ipx ssipx = {.sipx_family = AF_IPX};
 
 static
 char *ipx_prpr(struct ipx_addr *x)
