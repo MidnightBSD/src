@@ -865,32 +865,7 @@ netname(u_long in, u_long mask)
 		strncpy(line, cp, sizeof(line) - 1);
 		line[sizeof(line) - 1] = '\0';
 	} else {
-		switch (dmask) {
-		case IN_CLASSA_NET:
-			if ((i & IN_CLASSA_HOST) == 0) {
-				sprintf(line, "%lu", C(i >> 24));
-				break;
-			}
-			/* FALLTHROUGH */
-		case IN_CLASSB_NET:
-			if ((i & IN_CLASSB_HOST) == 0) {
-				sprintf(line, "%lu.%lu",
-					C(i >> 24), C(i >> 16));
-				break;
-			}
-			/* FALLTHROUGH */
-		case IN_CLASSC_NET:
-			if ((i & IN_CLASSC_HOST) == 0) {
-				sprintf(line, "%lu.%lu.%lu",
-					C(i >> 24), C(i >> 16), C(i >> 8));
-				break;
-			}
-			/* FALLTHROUGH */
-		default:
-			sprintf(line, "%lu.%lu.%lu.%lu",
-				C(i >> 24), C(i >> 16), C(i >> 8), C(i));
-			break;
-		}
+		inet_ntop(AF_INET, (char *)&in, line, sizeof(line) - 1);
 	}
 	domask(line + strlen(line), i, mask);
 	return (line);
