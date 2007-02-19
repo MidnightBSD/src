@@ -28640,6 +28640,7 @@ sys/powerpc/powerpc/mp_machdep.c -text
 sys/powerpc/powerpc/nexus.c -text
 sys/powerpc/powerpc/ofw_machdep.c -text
 sys/powerpc/powerpc/ofwmagic.S -text
+sys/powerpc/powerpc/ofwreal.S -text
 sys/powerpc/powerpc/openpic.c -text
 sys/powerpc/powerpc/pic_if.m -text
 sys/powerpc/powerpc/pmap.c -text

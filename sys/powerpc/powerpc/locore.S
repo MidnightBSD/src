@@ -66,6 +66,7 @@
 #include <machine/spr.h>
 #include <machine/psl.h>
 #include <machine/asm.h>
+#include <machine/pte.h>
 
 /* Locate the per-CPU data structure */
 #define GET_CPUINFO(r)  \

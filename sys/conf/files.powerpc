@@ -48,6 +48,7 @@ powerpc/powerpc/machdep.c	standard
 powerpc/powerpc/nexus.c		standard
 powerpc/powerpc/ofwmagic.S	standard
 powerpc/powerpc/ofw_machdep.c	standard
+powerpc/powerpc/ofwreal.S	standard
 powerpc/powerpc/openpic.c	standard
 powerpc/powerpc/pic_if.m	standard
 powerpc/powerpc/pmap.c		standard

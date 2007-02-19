@@ -284,6 +284,292 @@ CNAME(alitrap):
 CNAME(alisize) = .-CNAME(alitrap)
 
 /*
+ * It's G2 specific. Instuction TLB miss.
+ */
+	.globl	CNAME(imisstrap),CNAME(imisssize)
+CNAME(imisstrap):
+/*
+ *    Instruction TLB miss flow
+ *    Entry:
+ *    Vec = 1000
+ *    srr0 -> address of instruction that missed
+ *    srr1 -> 0:3=cr0 4=lru way bit 16:31 = saved MSR
+ *    msr<tgpr> -> 1
+ *    iMiss -> ea that missed
+ *    iCmp -> the compare value for the va that missed
+ *    hash1 -> pointer to first hash pteg
+ *    hash2 -> pointer to second hash pteg
+ *    
+ *    Register usage:
+ *    r0 is saved counter
+ *    r1 is junk
+ *    r2 is pointer to pteg
+ *    r3 is current compare value
+ */
+
+	mfspr %r2, SPR_HASH1		/* get first pointer */
+	addi %r1, 0, 8			/* load 8 for counter */
+	mfctr %r0			/* save counter */
+	mfspr %r3, SPR_ICMP		/* get first compare value */
+	addi %r2, %r2, -8		/* pre dec the pointer */
+im0:
+	mtctr %r1			/* load counter */
+im1:
+	lwzu %r1, 8(%r2)		/* get next pte */
+	cmp 0, %r1, %r3			/* see if found pte */
+	bdnzf 2, im1			/* dec count br if cmp ne and if count not zero */
+	bne instrSecHash		/* if not found set up second hash or exit */
+	lwz %r1, +4(%r2)		/* load tlb entry lower-word */
+	andi. %r3, %r1, 8		/* check G bit */
+	bne doISIp			/* if guarded, take an ISI */
+	mtctr %r0			/* restore counter */
+	mfspr %r0, SPR_IMISS		/* get the miss address for the tlbli */
+	mfspr %r3, SPR_SRR1		/* get the saved cr0 bits */
+	mtcrf 0x80, %r3			/* restore CR0 */
+	mtspr SPR_RPA, %r1		/* set the pte */
+	ori %r1, %r1, 0x100		/* set reference bit */
+	srwi %r1, %r1, 8		/* get byte 7 of pte */
+	tlbli %r0 			/* load the itlb */
+	stb %r1, +6(%r2)		/* update page table */
+	rfi				/* return to executing program */
+/*
+ * register usage:
+ *  r0 is saved counter
+ *  r1 is junk
+ *  r2 is pointer to pteg
+ *  r3 is current compare value
+ */
+instrSecHash:
+	andi. %r1, %r3, 0x0040		/* see if we have done second hash */
+	bne doISI			/* if so, go to ISI interrupt */
+	mfspr %r2, SPR_HASH2		/* get the second pointer */
+	ori %r3, %r3, 0x0040		/* change the compare value */
+	addi %r1, %r0, 8		/* load 8 for counter */
+	addi %r2, %r2, -8		/* pre dec for update on load */
+	b im0				/* try second hash */
+/*
+ * entry Not Found: synthesize an ISI interrupt
+ * guarded memory protection violation: synthesize an ISI interrupt
+ * Entry:
+ * r0 is saved counter
+ * r1 is junk
+ * r2 is pointer to pteg
+ * r3 is current compare value
+ */
+ 
+doISIp:
+	mfspr %r3, SPR_SRR1		/* get srr1 */
+	andi. %r2, %r3, 0xffff		/* clean upper srr1 */
+	addis %r2, %r2, 0x0800		/* or in srr<4> = 1 to flag prot violation */
+	b isi1
+doISI:
+	mfspr %r3, SPR_SRR1		/* get srr1 */
+	andi. %r2, %r3, 0xffff		/* clean srr1 */
+	addis %r2, %r2, 0x4000		/* or in srr1<1> = 1 to flag pte not found */
+isi1: 
+	mtctr %r0			/* restore counter */
+	mtspr SPR_SRR1, %r2		/* set srr1 */
+	mfmsr %r0			/* get msr */
+	xoris %r0, %r0, 0x2		/* flip the msr<tgpr> bit */
+	mtcrf 0x80, %r3			/* restore CR0 */
+	mtmsr %r0			/* flip back to the native gprs */
+	ba 0x400			/* go to instr. access interrupt */
+
+CNAME(imisssize) = .-CNAME(imisstrap)
+
+/*
+ * It's G2 specific. Data load TLB miss.
+ */
+	.globl	CNAME(dlmisstrap),CNAME(dlmisssize)
+CNAME(dlmisstrap):
+/*
+ * Data TLB miss flow
+ * Entry:
+ * Vec = 1100
+ * srr0 -> address of instruction that caused data tlb miss
+ * srr1 -> 0:3=cr0 4=lru way bit 5=1 if store 16:31 = saved MSR
+ * msr<tgpr> -> 1
+ * dMiss -> ea that missed
+ * dCmp -> the compare value for the va that missed
+ * hash1 -> pointer to first hash pteg
+ * hash2 -> pointer to second hash pteg
+ *
+ * Register usage:
+ * r0 is saved counter
+ * r1 is junk
+ * r2 is pointer to pteg
+ * r3 is current compare value
+ */
+
+	mfspr %r2, SPR_HASH1		/* get first pointer */
+	addi %r1, 0, 8			/* load 8 for counter */
+	mfctr %r0			/* save counter */
+	mfspr %r3, SPR_DCMP		/* get first compare value */
+	addi %r2, %r2, -8		/* pre dec the pointer */
+dm0: 
+	mtctr %r1			/* load counter */
+dm1:	
+	lwzu %r1, 8(%r2)		/* get next pte */
+	cmp 0, 0, %r1, %r3		/* see if found pte */
+	bdnzf 2, dm1			/* dec count br if cmp ne and if count not zero */
+	bne dataSecHash			/* if not found set up second hash or exit */
+	lwz %r1, +4(%r2)		/* load tlb entry lower-word */
+	mtctr %r0			/* restore counter */
+	mfspr %r0, SPR_DMISS		/* get the miss address for the tlbld */
+	mfspr %r3, SPR_SRR1		/* get the saved cr0 bits */
+	mtcrf 0x80, %r3			/* restore CR0 */
+	mtspr SPR_RPA, %r1		/* set the pte */
+	ori %r1, %r1, 0x100		/* set reference bit */
+	srwi %r1, %r1, 8		/* get byte 7 of pte */
+	tlbld %r0			/* load the dtlb */
+	stb %r1, +6(%r2)		/* update page table */
+	rfi				/* return to executing program */
+/*
+ * Register usage:
+ * r0 is saved counter
+ * r1 is junk
+ * r2 is pointer to pteg
+ * r3 is current compare value
+ */
+ 
+dataSecHash:
+	andi. %r1, %r3, 0x0040		/* see if we have done second hash */
+	bne doDSI			/* if so, go to DSI interrupt */
+	mfspr %r2, SPR_HASH2		/* get the second pointer */
+	ori %r3, %r3, 0x0040		/* change the compare value */
+	addi %r1, 0, 8			/* load 8 for counter */
+	addi %r2, %r2, -8		/* pre dec for update on load */
+	b dm0				/* try second hash */
+
+CNAME(dlmisssize) = .-CNAME(dlmisstrap)
+
+/*
+ * It's G2 specific. Data store TLB miss.
+ */
+	.globl	CNAME(dsmisstrap),CNAME(dsmisssize)
+CNAME(dsmisstrap):
+
+/*
+ * Data TLB miss flow
+ * C=0 in dtlb and dtlb miss on store flow
+ * Entry:
+ * Vec = 1200
+ * srr0 -> address of store that caused the interrupt
+ * srr1 -> 0:3=cr0 4=lru way bit 5=1 16:31 = saved MSR
+ * msr<tgpr> -> 1
+ * dMiss -> ea that missed
+ * dCmp -> the compare value for the va that missed
+ * hash1 -> pointer to first hash pteg
+ * hash2 -> pointer to second hash pteg
+ *
+ * Register usage:
+ * r0 is saved counter
+ * r1 is junk
+ * r2 is pointer to pteg
+ * r3 is current compare value
+ */
+	mfspr %r2, SPR_HASH1		/* get first pointer */
+	addi %r1, 0, 8			/* load 8 for counter */
+	mfctr %r0			/* save counter */
+	mfspr %r3, SPR_DCMP		/* get first compare value */
+	addi %r2, %r2, -8		/* pre dec the pointer */
+ceq0:
+	mtctr %r1			/* load counter */
+ceq1:
+	lwzu %r1, 8(%r2)		/* get next pte */
+	cmp 0, 0, %r1, %r3		/* see if found pte */
+	bdnzf 2, ceq1			/* dec count br if cmp ne and if count not zero */
+	bne cEq0SecHash			/* if not found set up second hash or exit */
+	lwz %r1, +4(%r2)		/* load tlb entry lower-word */
+	andi. %r3, %r1, 0x80		/* check the C-bit */
+	beq cEq0ChkProt			/* if (C==0) go check protection modes */
+ceq2:
+	mtctr %r0			/* restore counter */
+	mfspr %r0, SPR_DMISS		/* get the miss address for the tlbld */
+	mfspr %r3, SPR_SRR1		/* get the saved cr0 bits */
+	mtcrf 0x80, %r3			/* restore CR0 */
+	mtspr SPR_RPA, %r1		/* set the pte */
+	tlbld %r0			/* load the dtlb */
+	rfi				/* return to executing program */
+/*
+ * Register usage:
+ * r0 is saved counter
+ * r1 is junk
+ * r2 is pointer to pteg
+ * r3 is current compare value
+*/
+
+cEq0SecHash:
+	andi. %r1, %r3, 0x0040		/* see if we have done second hash */
+	bne doDSI			/* if so, go to DSI interrupt */
+	mfspr %r2, SPR_HASH2		/* get the second pointer */
+	ori %r3, %r3, 0x0040		/* change the compare value */
+	addi %r1, 0, 8			/* load 8 for counter */
+	addi %r2, %r2, -8		/* pre dec for update on load */
+	b ceq0				/* try second hash */
+	
+/*
+ * entry found and PTE(c-bit==0):
+ * (check protection before setting PTE(c-bit)
+ * Register usage:
+ * r0 is saved counter
+ * r1 is PTE entry
+ * r2 is pointer to pteg
+ * r3 is trashed
+ */
+cEq0ChkProt:
+	rlwinm. %r3,%r1,30,0,1		/* test PP */
+	bge- chk0			/* if (PP == 00 or PP == 01) goto chk0: */
+	andi. %r3, %r1, 1		/* test PP[0] */
+	beq+ chk2			/* return if PP[0] == 0 */
+	b doDSIp			/* else DSIp */
+chk0:
+	mfspr %r3,SPR_SRR1		/* get old msr */
+	andis. %r3,%r3,0x0008		/* test the KEY bit (SRR1-bit 12) */
+	beq chk2			/* if (KEY==0) goto chk2: */
+	b doDSIp			/* else DSIp */
+chk2:
+	ori %r1, %r1, 0x180		/* set reference and change bit */
+	sth %r1, 6(%r2)			/* update page table */
+	b ceq2				/* and back we go */
+	
+/*
+ * entry Not Found: synthesize a DSI interrupt
+ * Entry:
+ * r0 is saved counter
+ * r1 is junk
+ * r2 is pointer to pteg
+ * r3 is current compare value
+ */
+doDSI:
+	mfspr %r3, SPR_SRR1		/* get srr1 */
+	rlwinm %r1,%r3,9,6,6		/* get srr1<flag> to bit 6 for load/store, zero rest */
+	addis %r1, %r1, 0x4000		/* or in dsisr<1> = 1 to flag pte not found */
+	b dsi1
+doDSIp:
+	mfspr %r3, SPR_SRR1		/* get srr1 */
+	rlwinm %r1,%r3,9,6,6		/* get srr1<flag> to bit 6 for load/store, zero	rest */
+	addis %r1, %r1, 0x0800		/* or in dsisr<4> = 1 to flag prot violation */
+dsi1:
+	mtctr %r0			/* restore counter */
+	andi. %r2, %r3, 0xffff		/* clear upper bits of srr1 */
+	mtspr SPR_SRR1, %r2		/* set srr1 */
+	mtspr SPR_DSISR, %r1		/* load the dsisr */
+	mfspr %r1, SPR_DMISS		/* get miss address */
+	rlwinm. %r2,%r2,0,31,31		/* test LE bit */
+	beq dsi2			/* if little endian then: */
+	xor %r1, %r1, 0x07		/* de-mung the data address */
+dsi2:
+	mtspr SPR_DAR, %r1		/* put in dar */
+	mfmsr %r0			/* get msr */
+	xoris %r0, %r0, 0x2		/* flip the msr<tgpr> bit */
+	mtcrf 0x80, %r3			/* restore CR0 */
+	mtmsr %r0			/* flip back to the native gprs */
+	ba 0x300			/* branch to DSI interrupt */
+
+CNAME(dsmisssize) = .-CNAME(dsmisstrap)
+
+/*
  * Similar to the above for DSI
  * Has to handle BAT spills
  * and standard pagetable spills
