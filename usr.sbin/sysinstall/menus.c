@@ -30,11 +30,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $FreeBSD: src/usr.sbin/sysinstall/menus.c,v 1.410.2.3 2006/02/13 21:02:35 ceri Exp $
  */
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/sysinstall/menus.c,v 1.410.2.3 2006/02/13 21:02:35 ceri Exp $";
+  "$MidnightBSD$";
 #endif
 
 #include "sysinstall.h"
@@ -152,7 +153,7 @@ checkDistXUser(dialogMenuItem *self)
 static int
 checkDistMinimum(dialogMenuItem *self)
 {
-    return Dists == (DIST_BASE);
+    return Dists == (DIST_BASE | DIST_KERNEL);
 }
 
 static int
