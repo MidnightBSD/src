@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/main.c,v 1.71 2003/08/20 06:27:21 imp Exp $
  *
  * Copyright (c) 1995
@@ -38,6 +38,7 @@
 #include "sysinstall.h"
 #include <sys/signal.h>
 #include <sys/fcntl.h>
+#include <sys/sysctl.h>
 
 const char *StartName;		/* Initial contents of argv[0] */
 
@@ -52,6 +53,7 @@ int
 main(int argc, char **argv)
 {
     int choice, scroll, curr, max, status;
+    char titlestr[80], *arch, *osrel, *ostype;
     
     /* Record name to be able to restart */
     StartName = argv[0];
@@ -165,13 +167,24 @@ main(int argc, char **argv)
 	systemShutdown(status);
     }
 
+    /* Add MidnightBSD version to menu */
+    arch = getsysctlbyname("hw.machine_arch");
+    osrel = getsysctlbyname("kern.osrelease");
+    ostype = getsysctlbyname("kern.ostype");
+    snprintf(titlestr, sizeof(titlestr), "%s/%s %s - %s", ostype, arch,
+             osrel, MenuInitial.title);
+    free(arch);
+    free(osrel);
+    free(ostype);
+    MenuInitial.title = titlestr;
+
     /* Begin user dialog at outer menu */
     dialog_clear();
     while (1) {
 	choice = scroll = curr = max = 0;
 	dmenuOpen(&MenuInitial, &choice, &scroll, &curr, &max, TRUE);
 	if (getpid() != 1
-#if defined(__alpha__) || defined(__sparc64__)
+#if defined(__sparc64__)
 	    || !msgNoYes("Are you sure you wish to exit?  The system will halt.")
 #else
 	    || !msgNoYes("Are you sure you wish to exit?  The system will reboot\n"

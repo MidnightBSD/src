@@ -1,7 +1,7 @@
 /*
  * Miscellaneous support routines..
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/misc.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/misc.c,v 1.43 2003/01/06 17:11:46 obrien Exp $
  *
  * Copyright (c) 1995
@@ -526,5 +526,29 @@ restorescr(WINDOW *w)
     touchwin(w);
     wrefresh(w);
     delwin(w);
+}
+
+/*
+ * Get a sysctl variable as a string or "<unknown>" if sysctl fails.
+ * Caller must free returned string.
+ */
+char *
+getsysctlbyname(const char *sysctlname)
+{
+    char *buf; 
+    size_t sz, buf_sz = 0;
+    const char unk_str[] = "<unknown>";
+
+    sysctlbyname(sysctlname, NULL, &buf_sz, NULL, 0);
+    buf_sz = MAX(sizeof(unk_str), buf_sz) + 1;
+    sz = buf_sz - 1;
+    buf = (char *)safe_malloc(buf_sz);
+
+    if (sysctlbyname(sysctlname, buf, &sz, NULL, 0) != -1)
+        buf[sz] = '\0';
+    else
+        strlcpy(buf, unk_str, buf_sz);
+
+    return buf;
 }
 
