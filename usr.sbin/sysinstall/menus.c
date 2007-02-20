@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD$";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.5 2007/02/20 02:03:21 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -153,7 +153,7 @@ checkDistXUser(dialogMenuItem *self)
 static int
 checkDistMinimum(dialogMenuItem *self)
 {
-    return Dists == (DIST_BASE | DIST_KERNEL);
+    return Dists == (DIST_BASE);
 }
 
 static int
