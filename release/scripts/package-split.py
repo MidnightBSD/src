@@ -33,7 +33,7 @@ def disc1_packages():
                  'x11/xorg-manpages',
                  'devel/imake-6'])
     if arch == 'i386':
-        pkgs.append('emulators/linux_base-8')
+        pkgs.append('emulators/linux_base-fc4')
     return pkgs
 
 # List of packages for disc2.  This includes packages that the X desktop
@@ -42,13 +42,10 @@ def disc1_packages():
 def disc2_packages():
             # X Desktops
     if arch == 'ia64':
-	pkgs = ['x11/gnome2-lite',
-		'x11/kde-lite']
+	pkgs = ['x11/kde-lite']
     else:
-	pkgs = ['x11/gnome2',
-		'x11/kde3']
-    pkgs.extend(['x11-wm/afterstep',
-            'x11-wm/windowmaker',
+	pkgs = ['x11/kde3']
+    pkgs.extend(['x11-wm/windowmaker',
             'x11-wm/fvwm2',
             # "Nice to have"
             'archivers/unzip',
@@ -61,14 +58,11 @@ def disc2_packages():
             'emulators/mtools',
             'graphics/png',
             'graphics/xv',
-            'irc/xchat2',
-            'mail/exim',
+            'irc/xchat',
             'mail/fetchmail',
             'mail/mutt',
             'mail/pine4',
             'mail/popd',
-            'mail/xfmail',
-            'mail/postfix',
             'net/cvsup',
             'net/cvsup-without-gui',
             'net/rsync',
@@ -83,14 +77,10 @@ def disc2_packages():
             'shells/bash2',
             'shells/pdksh',
             'shells/zsh',
-            'security/freebsd-update',
-            'security/sudo',
-            'sysutils/portupgrade',
+            'ports-mgmt/portupgrade',
             'www/links',
             'www/lynx',
-            'x11/rxvt',
-            # Formerly on disc3
-            'security/portaudit'])
+            'x11/rxvt'])
     if arch == 'i386':
         pkgs.extend(['comms/ltmdm',
                      'www/opera'])
