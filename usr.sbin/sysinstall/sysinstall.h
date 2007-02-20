@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -169,7 +169,7 @@
 #define VAR_NOVELL			"novell"
 #define	VAR_OSF1_ENABLE			"osf1_enable"
 #define	VAR_RPCBIND_ENABLE		"rpcbind_enable"
-#define VAR_NTPDATE_FLAGS		"ntpdate_flags"
+#define VAR_RDATE_FLAGS		"rdate_flags"
 #define VAR_PACKAGE			"package"
 #define VAR_PARTITION			"partition"
 #define VAR_PCNFSD			"pcnfsd"

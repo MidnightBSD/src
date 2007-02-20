@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.3 2006/12/27 03:55:06 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.4 2007/02/03 21:50:36 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -501,14 +501,14 @@ configNTP(dialogMenuItem *self)
 {
     int status;
 
-    status = variable_get_value(VAR_NTPDATE_FLAGS,
+    status = variable_get_value(VAR_RDATE_FLAGS,
 				"Enter the name of an NTP server", 1)
 	     ? DITEM_SUCCESS : DITEM_FAILURE;
     if (status == DITEM_SUCCESS) {
 	static char tmp[255];
 
-	snprintf(tmp, sizeof(tmp), "ntpdate_enable=YES,ntpdate_flags=%s",
-		 variable_get(VAR_NTPDATE_FLAGS));
+	snprintf(tmp, sizeof(tmp), "rdate_enable=YES,rpdate_flags=%s",
+		 variable_get(VAR_RDATE_FLAGS));
 	self->data = tmp;
 	dmenuSetVariables(self);
     }
