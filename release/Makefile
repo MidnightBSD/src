@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.7 2007/01/18 03:28:28 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.8 2007/02/09 20:24:21 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -923,9 +923,6 @@ cdrom.1:
 	# Break the link to device.hints so we can modify it
 	@rm -f ${CD_LIVEFS}/boot/device.hints
 	@cp ${RD}/trees/base/boot/device.hints ${CD_LIVEFS}/boot/device.hints
-.if ${TARGET} == "i386" || ${TARGET_ARCH} == "amd64"
-	@echo 'hint.atkbd.0.flags="0x1"' >> ${CD_LIVEFS}/boot/device.hints
-.endif
 .endif
 .endif
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_LIVEFS}/cdrom.inf
@@ -1233,9 +1230,6 @@ buildBootFloppy:
 	    ${BOOTDIR}/loader.rc ${IMAGEDIR}/boot
 .if exists(${HINTSFILE})
 	@cp ${HINTSFILE} ${IMAGEDIR}/boot/device.hints
-.if ${TARGET} == "i386" || ${TARGET_ARCH} == "amd64"
-	@echo 'hint.atkbd.0.flags="0x1"' >> ${IMAGEDIR}/boot/device.hints
-.endif
 	@gzip -9n ${IMAGEDIR}/boot/device.hints
 .endif
 	@gzip -9n ${IMAGEDIR}/boot/*.4th ${IMAGEDIR}/boot/loader.help \
