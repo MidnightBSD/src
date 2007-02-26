@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.sys.mk,v 1.37 2005/01/16 21:18:16 obrien Exp $
-# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.3 2007/02/26 00:08:07 laffer1 Exp $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -66,6 +66,10 @@ CWARNFLAGS	+=	-Werror
 .   endif
 .  endif
 . endif
+.endif
+
+.if defined(IGNORE_PRAGMA)
+CWARNFLAGS      +=      -Wno-unknown-pragmas
 .endif
 
 # Allow user-specified additional warning flags
