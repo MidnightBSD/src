@@ -33,6 +33,7 @@
 #include <sys/types.h>
 
 __FBSDID("$FreeBSD: src/usr.bin/whereis/whereis.c,v 1.15 2005/04/09 14:31:41 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/stat.h>
 #include <sys/sysctl.h>
