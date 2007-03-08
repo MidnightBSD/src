@@ -21709,6 +21709,7 @@ share/man/man4/man4.sparc64/snd_audiocs.4 -text
 share/man/man4/md.4 -text
 share/man/man4/mem.4 -text
 share/man/man4/meteor.4 -text
+share/man/man4/mfi.4 -text
 share/man/man4/miibus.4 -text
 share/man/man4/mlx.4 -text
 share/man/man4/mly.4 -text
