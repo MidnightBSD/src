@@ -15,7 +15,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.5 2006/10/01 22:12:20 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.6 2007/01/07 03:50:23 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 machine		i386
@@ -127,6 +127,7 @@ device		twa		# 3ware 9000 series PATA/SATA RAID
 device		aac		# Adaptec FSA RAID
 device		aacp		# SCSI passthrough for aac (requires CAM)
 device		ida		# Compaq Smart RAID
+device		mfi		# LSI MegaRAID SAS
 device		mlx		# Mylex DAC960 family
 device		pst		# Promise Supertrak SX6000
 device		twe		# 3ware ATA RAID
@@ -197,6 +198,7 @@ device		bge		# Broadcom BCM570xx Gigabit Ethernet
 device		dc		# DEC/Intel 21143 and various workalikes
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
 device		lge		# Level 1 LXT1001 gigabit Ethernet
+device		msk
 device		nge		# NatSemi DP83820 gigabit Ethernet
 device		nve		# nVidia nForce MCP on-board Ethernet Networking
 device		pcn		# AMD Am79C97x PCI 10/100(precedence over 'lnc')
