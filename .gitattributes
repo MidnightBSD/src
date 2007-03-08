@@ -25415,6 +25415,12 @@ sys/dev/mcd/mcdvar.h -text
 sys/dev/md/md.c -text
 sys/dev/mem/memdev.c -text
 sys/dev/mem/memutil.c -text
+sys/dev/mfi/mfi.c -text
+sys/dev/mfi/mfi_disk.c -text
+sys/dev/mfi/mfi_ioctl.h -text
+sys/dev/mfi/mfi_pci.c -text
+sys/dev/mfi/mfireg.h -text
+sys/dev/mfi/mfivar.h -text
 sys/dev/mii/acphy.c -text
 sys/dev/mii/acphyreg.h -text
 sys/dev/mii/amphy.c -text
@@ -27343,6 +27349,7 @@ sys/modules/mac_test/Makefile -text
 sys/modules/mcd/Makefile -text
 sys/modules/md/Makefile -text
 sys/modules/mem/Makefile -text
+sys/modules/mfi/Makefile -text
 sys/modules/mii/Makefile -text
 sys/modules/mlx/Makefile -text
 sys/modules/mly/Makefile -text

@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.6 2007/01/13 00:29:42 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.7 2007/01/13 14:37:42 laffer1 Exp $
 
 # oldcard -- specialized use for debugging only.
 # owi -- totally unsupported for debugging only.
@@ -155,6 +155,7 @@ SUBDIR=	${_3dfx} \
 	mcd \
 	md \
 	mem \
+	mfi \
 	mii \
 	mlx \
 	${_mly} \
@@ -162,6 +163,7 @@ SUBDIR=	${_3dfx} \
 	msdosfs \
 	msdosfs_iconv \
 	${_mse} \
+	msk \
 	my \
 	${_ncp} \
 	${_ncv} \
@@ -420,17 +422,6 @@ _canbus=	canbus
 _pmc=		pmc
 _snc=		snc
 .endif
-.endif
-
-.if ${MACHINE_ARCH} == "alpha"
-_agp=		agp
-_ahb=		ahb
-_ext2fs=	ext2fs
-_linprocfs=	linprocfs
-_linux=		linux
-_osf1=		osf1
-_sound=		sound
-_sppp=		sppp
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
