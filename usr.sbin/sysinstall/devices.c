@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.3 2006/12/31 20:59:20 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/devices.c,v 1.160.2.1 2005/07/28 01:17:12 grehan Exp $
  *
  * Copyright (c) 1995
@@ -82,6 +82,7 @@ static struct _devname {
     { DEVICE_TYPE_DISK, 	"twed%d",	"3ware ATA RAID array",	147, 65538, 8, 4			},
     { DEVICE_TYPE_DISK, 	"aacd%d",	"Adaptec FSA RAID array", 151, 65538, 8, 4			},
     { DEVICE_TYPE_DISK, 	"ipsd%d",	"IBM ServeRAID RAID array", 176, 65538, 8, 4			},
+    { DEVICE_TYPE_DISK,		"mfid%d",	"LSI MegaRAID SAS",	 254, 	65538,	8, 4			},
     { DEVICE_TYPE_FLOPPY,	"fd%d",		"floppy drive unit A",	9, 0, 64, 4				},
     { DEVICE_TYPE_NETWORK,	"an",		"Aironet 4500/4800 802.11 wireless adapter"			},
     { DEVICE_TYPE_NETWORK,	"aue",		"ADMtek USB ethernet adapter"					},
