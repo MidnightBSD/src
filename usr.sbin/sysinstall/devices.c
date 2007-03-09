@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.4 2007/03/09 14:18:36 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.5 2007/03/09 14:25:47 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/devices.c,v 1.160.2.1 2005/07/28 01:17:12 grehan Exp $
  *
  * Copyright (c) 1995
@@ -105,11 +105,12 @@ static struct _devname {
     { DEVICE_TYPE_NETWORK,	"em",		"Intel(R) PRO/1000 ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"ex",		"Intel EtherExpress Pro/10 ethernet card"			},
     { DEVICE_TYPE_NETWORK,	"fe",		"Fujitsu MB86960A/MB86965A ethernet card"			},
-    { DEVICE_TYPE_NETWORK,	"gem",		"Apple/Sun GMAC ethernet adapter"				},
+    { DEVICE_TYPE_NETWORK,	"gem",		"Apple or Sun ERI/GMAC ethernet adapter"			},
+    { DEVICE_TYPE_NETWORK,	"hme",		"Sun HME (Happy Meal Ethernet) ethernet adapter"		},
     { DEVICE_TYPE_NETWORK,	"ie",		"AT&T StarLAN 10 and EN100; 3Com 3C507; NI5210"			},
     { DEVICE_TYPE_NETWORK,	"ixgb",		"Intel(R) PRO/10Gb Ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"kue",		"Kawasaki LSI USB ethernet adapter"				},
-    { DEVICE_TYPE_NETWORK,	"le",		"DEC EtherWorks 2 or 3 ethernet card"				},
+    { DEVICE_TYPE_NETWORK,	"le",		"AMD Am7900 LANCE or Am79C9xx PCnet ethernet adapter"		},
     { DEVICE_TYPE_NETWORK,	"lnc",		"Lance/PCnet (Isolan/Novell NE2100/NE32-VL) ethernet"		},
     { DEVICE_TYPE_NETWORK,	"lge",		"Level 1 LXT1001 gigabit ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"nge",		"NatSemi PCI gigabit ethernet card"				},
