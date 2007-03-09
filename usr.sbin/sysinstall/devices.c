@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.3 2006/12/31 20:59:20 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.4 2007/03/09 14:18:36 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/devices.c,v 1.160.2.1 2005/07/28 01:17:12 grehan Exp $
  *
  * Copyright (c) 1995
@@ -85,10 +85,12 @@ static struct _devname {
     { DEVICE_TYPE_DISK,		"mfid%d",	"LSI MegaRAID SAS",	 254, 	65538,	8, 4			},
     { DEVICE_TYPE_FLOPPY,	"fd%d",		"floppy drive unit A",	9, 0, 64, 4				},
     { DEVICE_TYPE_NETWORK,	"an",		"Aironet 4500/4800 802.11 wireless adapter"			},
+    { DEVICE_TYPE_NETWORK,	"ath",		"Atheros IEEE 802.11 wireless adapter"				},
     { DEVICE_TYPE_NETWORK,	"aue",		"ADMtek USB ethernet adapter"					},
-    { DEVICE_TYPE_NETWORK,	"axe",		"ASIX Electronics USB ethernet adapter"					},
+    { DEVICE_TYPE_NETWORK,	"axe",		"ASIX Electronics USB ethernet adapter"				},
+    { DEVICE_TYPE_NETWORK,	"bce",		"Broadcom NetXtreme II Gigabit Ethernet card",			},
     { DEVICE_TYPE_NETWORK,	"bfe",		"Broadcom BCM440x PCI ethernet card"				},
-    { DEVICE_TYPE_NETWORK,	"bge",		"Broadcom BCM570x PCI gigabit ethernet card"				},
+    { DEVICE_TYPE_NETWORK,	"bge",		"Broadcom BCM570x PCI gigabit ethernet card"			},
     { DEVICE_TYPE_NETWORK,	"cue",		"CATC USB ethernet adapter"					},
     { DEVICE_TYPE_NETWORK,	"fpa",		"DEC DEFPA PCI FDDI card"					},
     { DEVICE_TYPE_NETWORK,	"sr",		"SDL T1/E1 sync serial PCI card"				},
@@ -105,12 +107,13 @@ static struct _devname {
     { DEVICE_TYPE_NETWORK,	"fe",		"Fujitsu MB86960A/MB86965A ethernet card"			},
     { DEVICE_TYPE_NETWORK,	"gem",		"Apple/Sun GMAC ethernet adapter"				},
     { DEVICE_TYPE_NETWORK,	"ie",		"AT&T StarLAN 10 and EN100; 3Com 3C507; NI5210"			},
-    { DEVICE_TYPE_NETWORK,	"ix",		"Intel Etherexpress ethernet card"				},
+    { DEVICE_TYPE_NETWORK,	"ixgb",		"Intel(R) PRO/10Gb Ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"kue",		"Kawasaki LSI USB ethernet adapter"				},
     { DEVICE_TYPE_NETWORK,	"le",		"DEC EtherWorks 2 or 3 ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"lnc",		"Lance/PCnet (Isolan/Novell NE2100/NE32-VL) ethernet"		},
     { DEVICE_TYPE_NETWORK,	"lge",		"Level 1 LXT1001 gigabit ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"nge",		"NatSemi PCI gigabit ethernet card"				},
+    { DEVICE_TYPE_NETWORK,	"nve",		"NVIDIA nForce MCP Ethernet"					},
     { DEVICE_TYPE_NETWORK,	"pcn",		"AMD Am79c79x PCI ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"ray",		"Raytheon Raylink 802.11 wireless adaptor"			},
     { DEVICE_TYPE_NETWORK,	"re",		"RealTek 8139C+/8169/8169S/8110S PCI ethernet card"				},
@@ -128,17 +131,18 @@ static struct _devname {
     { DEVICE_TYPE_NETWORK,	"txp",		"3Com 3cR990 ethernet card"					},
     { DEVICE_TYPE_NETWORK,	"ti",		"Alteon Networks PCI gigabit ethernet card"			},
     { DEVICE_TYPE_NETWORK,	"tl",		"Texas Instruments ThunderLAN PCI ethernet card"		},
-    { DEVICE_TYPE_NETWORK,	"vge",		"VIA VT612x PCI gigabit ethernet card"			},
+    { DEVICE_TYPE_NETWORK,	"vge",		"VIA VT612x PCI gigabit ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"vr",		"VIA VT3043/VT86C100A Rhine PCI ethernet card"			},
     { DEVICE_TYPE_NETWORK,	"vlan",		"IEEE 802.1Q VLAN network interface"				},
     { DEVICE_TYPE_NETWORK,	"vx",		"3COM 3c590 / 3c595 ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"wb",		"Winbond W89C840F PCI ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"wi",		"Lucent WaveLAN/IEEE 802.11 wireless adapter"			},
-    { DEVICE_TYPE_NETWORK,	"wx",		"Intel Gigabit Ethernet (82452) card"			},
+    { DEVICE_TYPE_NETWORK,	"wx",		"Intel Gigabit Ethernet (82452) card"				},
     { DEVICE_TYPE_NETWORK,	"xe",		"Xircom/Intel EtherExpress Pro100/16 ethernet card"		},
     { DEVICE_TYPE_NETWORK,	"xl",		"3COM 3c90x / 3c90xB PCI ethernet card"				},
     { DEVICE_TYPE_NETWORK,	"cuad%d",	"%s on device %s (COM%d)",	28, 128, 1, 16			},
     { DEVICE_TYPE_NETWORK,	"fwe",		"FireWire Ethernet emulation"					},
+    { DEVICE_TYPE_NETWORK,	"fwip",		"IP over FireWire"						},
     { DEVICE_TYPE_NETWORK,	"plip",		"Parallel Port IP (PLIP) peer connection"			},
     { DEVICE_TYPE_NETWORK,	"lo",		"Loop-back (local) network interface"				},
     { DEVICE_TYPE_NETWORK,	"disc",		"Software discard network interface"				},
