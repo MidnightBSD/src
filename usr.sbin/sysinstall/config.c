@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.4 2007/02/03 21:50:36 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.5 2007/02/20 01:41:33 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -537,7 +537,7 @@ configLinux(dialogMenuItem *self)
     variable_set2(VAR_LINUX_ENABLE, "YES", 1);
     Mkdir("/compat/linux");
     msgNotify("Installing Linux compatibility library...");
-    i = package_add("linux_base-8");
+    i = package_add("linux_base-fc");
     restorescr(w);
     return i;
 }
