@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.5 2007/02/20 01:41:33 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.6 2007/03/09 14:46:01 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -679,8 +679,8 @@ skip:
 	return DITEM_FAILURE;
     /* Add an entry for localhost */
     if (dp) {
-	fprintf(fp, "::1\t\t\tlocalhost.%s localhost\n", dp);
-	fprintf(fp, "127.0.0.1\t\tlocalhost.%s localhost\n", dp);
+	fprintf(fp, "::1\t\t\tlocalhost localhost.%s\n", dp);
+	fprintf(fp, "127.0.0.1\t\tlocalhost localhost.%s\n", dp);
     } else {
 	fprintf(fp, "::1\t\t\tlocalhost\n");
 	fprintf(fp, "127.0.0.1\t\tlocalhost\n");
