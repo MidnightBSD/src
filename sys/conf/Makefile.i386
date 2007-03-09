@@ -2,8 +2,9 @@
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
 # $FreeBSD: src/sys/conf/Makefile.i386,v 1.265.2.1 2005/10/28 19:04:03 jhb Exp $
+# $MidnightBSD$
 #
-# Makefile for FreeBSD
+# Makefile for MidnightBSD
 #
 # This makefile is constructed from a machine description:
 #	config machineid
