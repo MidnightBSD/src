@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.54 2005/03/02 22:27:21 jhb Exp $
  *
  * Copyright (c) 1995
@@ -81,6 +81,7 @@ mediaInitCDROM(Device *dev)
     char *cp = NULL;
     Boolean readInfo = TRUE;
     static Boolean bogusCDOK = FALSE;
+    int err;
 
     if (cdromMounted)
 	return TRUE;
@@ -89,7 +90,11 @@ mediaInitCDROM(Device *dev)
     bzero(&args, sizeof(args));
     args.fspec = dev->devname;
     args.flags = 0;
-    if (mount("cd9660", mountpoint, MNT_RDONLY, (caddr_t) &args) == -1) {
+    err = mount("cd9660", mountpoint, MNT_RDONLY, (caddr_t) &args);
+    /* If disc inserted too recently first access generates EIO, try again */
+    if (err == -1 && errno == EIO)
+        err = mount("cd9660", mountpoint, MNT_RDONLY, (caddr_t) &args);
+    if (err == -1) {
 	if (errno == EINVAL) {
 	    msgConfirm("The disc in your drive looks more like an Audio disc than a MidnightBSD release.");
 	    return FALSE;
