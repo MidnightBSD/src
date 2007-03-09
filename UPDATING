@@ -3,6 +3,10 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070308:
+	Added mfi which supports LSI Logic MegaRAID SAS devices including
+	the Dell perc5i.
+
 20070206:
 	Imported OpenBSD's sudo into source. Please install
 	/usr/src/usr.bin/sudo/lib first before building.
@@ -21,7 +25,11 @@ Items affecting the mports and packages system can be found in
 
 	wpa_supplicant was updated.
 
-	For stability and compatibility reasons, it was decided that MidnightBSD	sync with FreeBSD 6.1 Release.  Nearly every change between the original 	fork date of February 24, 2006 and the release of FreeBSD 6.1 in May 		2006 will be merged.  Beyond this, MidnightBSD will be a "real" fork and	will not sync every little change with FreeBSD.
+	For stability and compatibility reasons, it was decided that MidnightBSD
+	sync with FreeBSD 6.1 Release.  Nearly every change between the original
+	fork date of February 24, 2006 and the release of FreeBSD 6.1 in May
+	2006 will be merged.  Beyond this, MidnightBSD will be a "real" fork and
+	will not sync every little change with FreeBSD.
 
 20061231:
 	Updated COPYRIGHT for 2007.
@@ -306,4 +314,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.10 2007/01/19 14:45:44 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.11 2007/02/07 01:25:31 archite Exp $
