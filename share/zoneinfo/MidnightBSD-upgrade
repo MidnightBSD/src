@@ -1,0 +1,17 @@
+To update timezone information, perform the following steps.
+
+1. Download the new tzdata file from 
+   ftp://elsie.nci.nih.gov/pub/
+
+2. Verify the zones were not broken up into seperate files from the last import.
+
+3. Copy the files into src/share/zoneinfo/
+
+4. Test install.  If some of the country names have changed, you may need to import iso3166.tab.  iso3166.tab should not be placed in the zoneinfo directory, but instead in src/share/misc/iso3166.
+
+
+__
+
+Last updated with tzdata2007c
+
+$MidnightBSD$

@@ -22962,6 +22962,7 @@ share/timedef/zh_CN.eucCN.src -text
 share/timedef/zh_TW.Big5.src -text
 share/timedef/zh_TW.UTF-8.src -text
 share/zoneinfo/Makefile -text
+share/zoneinfo/MidnightBSD-upgrade -text
 share/zoneinfo/Theory -text
 share/zoneinfo/africa -text
 share/zoneinfo/antarctica -text
