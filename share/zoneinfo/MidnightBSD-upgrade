@@ -7,11 +7,17 @@ To update timezone information, perform the following steps.
 
 3. Copy the files into src/share/zoneinfo/
 
-4. Test install.  If some of the country names have changed, you may need to import iso3166.tab.  iso3166.tab should not be placed in the zoneinfo directory, but instead in src/share/misc/iso3166.
+4. Test install  and also run tzsetup
+
+5. If some of the country names have changed, you may need to update
+    src/share/misc/iso3166. That is a seperate process.
+ 
+6. iso3166.tab should not be placed in the zoneinfo directory.  It is
+   different than the file mentioned in step 5.
 
 
 __
 
 Last updated with tzdata2007c
 
-$MidnightBSD$
+$MidnightBSD: src/share/zoneinfo/MidnightBSD-upgrade,v 1.1 2007/03/10 16:58:29 laffer1 Exp $
