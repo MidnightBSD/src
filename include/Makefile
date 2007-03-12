@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
+# $MidnightBSD$
 #
 # Doing a "make install" builds /usr/include.
 
@@ -80,6 +81,8 @@ osreldate.h:	${.CURDIR}/../sys/conf/newvers.sh \
 	echo "#else" >> osreldate.h;				\
 	echo \#'undef __FreeBSD_version' >> osreldate.h;	\
 	echo \#'define __FreeBSD_version' $$RELDATE >> osreldate.h; \
+	echo \#'undef __MidnightBSD_version' >> osreldate.h;	\
+	echo \#'define __MidnightBSD_version' $$RELDATE >> osreldate.h; \
 	echo "#endif" >> osreldate.h
 
 .for i in ${LHDRS}
