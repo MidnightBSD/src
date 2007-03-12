@@ -22194,6 +22194,7 @@ share/man/man9/g_wither_geom.9 -text
 share/man/man9/get_cyclecount.9 -text
 share/man/man9/getnewvnode.9 -text
 share/man/man9/groupmember.9 -text
+share/man/man9/hash.9 -text
 share/man/man9/hashinit.9 -text
 share/man/man9/hexdump.9 -text
 share/man/man9/ieee80211.9 -text
