@@ -1,5 +1,5 @@
 /*	$NetBSD: uaudio.c,v 1.91 2004/11/05 17:46:14 kent Exp $	*/
-/*	$FreeBSD: src/sys/dev/sound/usb/uaudio.c,v 1.14.2.1 2005/12/30 19:55:54 netchild Exp $ */
+/*	$FreeBSD: src/sys/dev/sound/usb/uaudio.c,v 1.14.2.2 2006/04/04 17:34:10 ariff Exp $ */
 
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
@@ -4465,6 +4465,9 @@ uaudio_sndstat_prepare_pcm(struct sbuf *s, device_t dev, int verbose)
 		c = sce->channel;
 		sbuf_printf(s, "\n\t");
 
+		KASSERT(c->bufhard != NULL && c->bufsoft != NULL,
+			("hosed pcm channel setup"));
+
 		/* it would be better to indent child channels */
 		sbuf_printf(s, "%s[%s]: ", c->parentchannel? c->parentchannel->name : "", c->name);
 		sbuf_printf(s, "spd %d", c->speed);
@@ -4478,16 +4481,14 @@ uaudio_sndstat_prepare_pcm(struct sbuf *s, device_t dev, int verbose)
 			sbuf_printf(s, ", pid %d", c->pid);
 		sbuf_printf(s, "\n\t");
 
-		if (c->bufhard != NULL && c->bufsoft != NULL) {
-			sbuf_printf(s, "interrupts %d, ", c->interrupts);
-			if (c->direction == PCMDIR_REC)
-				sbuf_printf(s, "overruns %d, hfree %d, sfree %d",
-					c->xruns, sndbuf_getfree(c->bufhard), sndbuf_getfree(c->bufsoft));
-			else
-				sbuf_printf(s, "underruns %d, ready %d",
-					c->xruns, sndbuf_getready(c->bufsoft));
-			sbuf_printf(s, "\n\t");
-		}
+		sbuf_printf(s, "interrupts %d, ", c->interrupts);
+		if (c->direction == PCMDIR_REC)
+			sbuf_printf(s, "overruns %d, hfree %d, sfree %d",
+				c->xruns, sndbuf_getfree(c->bufhard), sndbuf_getfree(c->bufsoft));
+		else
+			sbuf_printf(s, "underruns %d, ready %d",
+				c->xruns, sndbuf_getready(c->bufsoft));
+		sbuf_printf(s, "\n\t");
 
 		sbuf_printf(s, "{%s}", (c->direction == PCMDIR_REC)? "hardware" : "userland");
 		sbuf_printf(s, " -> ");
