@@ -33,7 +33,7 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ad1816.c,v 1.37.2.1 2005/12/30 19:55:53 netchild Exp $");
+SND_DECLARE_FILE("$FreeBSD: src/sys/dev/sound/isa/ad1816.c,v 1.37.2.2 2006/04/04 17:23:24 ariff Exp $");
 
 struct ad1816_info;
 
@@ -579,6 +579,9 @@ ad1816_probe(device_t dev)
     	switch (logical_id) {
     	case 0x80719304: /* ADS7180 */
  		s = "AD1816";
+ 		break;
+    	case 0x50719304: /* ADS7150 */
+ 		s = "AD1815";
  		break;
     	}
 
