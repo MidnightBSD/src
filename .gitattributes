@@ -21152,12 +21152,6 @@ share/doc/usd/contents/Makefile -text
 share/doc/usd/contents/contents.ms -text
 share/doc/usd/title/Makefile -text
 share/doc/usd/title/Title -text
-share/examples/BSD_daemon/FreeBSD.pfa -text
-share/examples/BSD_daemon/README -text
-share/examples/BSD_daemon/beastie.eps -text
-share/examples/BSD_daemon/beastie.fig -text
-share/examples/BSD_daemon/eps.patch -text
-share/examples/BSD_daemon/poster.sh -text
 share/examples/FreeBSD_version/FreeBSD_version.c -text
 share/examples/FreeBSD_version/Makefile -text
 share/examples/FreeBSD_version/README -text

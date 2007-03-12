@@ -1,10 +1,9 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/examples/Makefile,v 1.2 2006/12/27 02:05:17 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
-LDIRS=	BSD_daemon \
-	FreeBSD_version \
+LDIRS=	FreeBSD_version \
 	IPv6 \
 	atm \
 	bootforth \
@@ -34,13 +33,7 @@ LDIRS=	BSD_daemon \
 	startslip \
 	sunrpc
 
-XFILES=	BSD_daemon/FreeBSD.pfa \
-	BSD_daemon/README \
-	BSD_daemon/beastie.eps \
-	BSD_daemon/beastie.fig \
-	BSD_daemon/eps.patch \
-	BSD_daemon/poster.sh \
-	FreeBSD_version/FreeBSD_version.c \
+XFILES=	FreeBSD_version/FreeBSD_version.c \
 	FreeBSD_version/Makefile \
 	FreeBSD_version/README \
 	IPv6/USAGE \
