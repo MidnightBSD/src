@@ -3,6 +3,10 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070312:
+	Synced several audio changes from FreeBSD 6.1. Removed the 
+	BSD Daemon files from src/share.  
+
 20070308:
 	Added mfi which supports LSI Logic MegaRAID SAS devices including
 	the Dell perc5i.
@@ -314,4 +318,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.11 2007/02/07 01:25:31 archite Exp $
+$MidnightBSD: src/UPDATING,v 1.12 2007/03/09 02:47:02 laffer1 Exp $
