@@ -12812,8 +12812,12 @@ crypto/openssh/compat.h -text
 crypto/openssh/compress.c -text
 crypto/openssh/compress.h -text
 crypto/openssh/config.guess -text
+crypto/openssh/config.h -text
+crypto/openssh/config.h.in -text
 crypto/openssh/config.sub -text
+crypto/openssh/configure -text
 crypto/openssh/configure.ac -text
+crypto/openssh/configure.lineno -text
 crypto/openssh/crc32.c -text
 crypto/openssh/crc32.h -text
 crypto/openssh/deattack.c -text
