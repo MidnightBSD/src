@@ -1,4 +1,4 @@
-/* $OpenBSD: sshd.c,v 1.347 2006/08/18 09:15:20 markus Exp $ */
+/* $OpenBSD: sshd.c,v 1.349 2007/02/21 11:00:05 dtucker Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -43,7 +43,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: src/crypto/openssh/sshd.c,v 1.39.2.3 2006/10/06 14:07:17 des Exp $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -79,15 +78,6 @@ __RCSID("$FreeBSD: src/crypto/openssh/sshd.c,v 1.39.2.3 2006/10/06 14:07:17 des 
 #ifdef HAVE_SECUREWARE
 #include <sys/security.h>
 #include <prot.h>
-#endif
-
-#ifdef __FreeBSD__
-#include <resolv.h>
-#if defined(GSSAPI) && defined(HAVE_GSSAPI_H)
-#include <gssapi.h>
-#elif defined(GSSAPI) && defined(HAVE_GSSAPI_GSSAPI_H)
-#include <gssapi/gssapi.h>
-#endif
 #endif
 
 #include "xmalloc.h"
@@ -315,6 +305,7 @@ sighup_restart(void)
 	logit("Received SIGHUP; restarting.");
 	close_listen_socks();
 	close_startup_pipes();
+	alarm(0);  /* alarm timer persists across exec */
 	execv(saved_argv[0], saved_argv);
 	logit("RESTART FAILED: av[0]='%.100s', error: %.100s.", saved_argv[0],
 	    strerror(errno));
@@ -1441,13 +1432,17 @@ main(int ac, char **av)
 
 	debug("sshd version %.100s", SSH_RELEASE);
 
-	/* Store privilege separation user for later use */
-	if ((privsep_pw = getpwnam(SSH_PRIVSEP_USER)) == NULL)
-		fatal("Privilege separation user %s does not exist",
-		    SSH_PRIVSEP_USER);
-	memset(privsep_pw->pw_passwd, 0, strlen(privsep_pw->pw_passwd));
-	privsep_pw->pw_passwd = "*";
-	privsep_pw = pwcopy(privsep_pw);
+	/* Store privilege separation user for later use if required. */
+	if ((privsep_pw = getpwnam(SSH_PRIVSEP_USER)) == NULL) {
+		if (use_privsep || options.kerberos_authentication)
+			fatal("Privilege separation user %s does not exist",
+			    SSH_PRIVSEP_USER);
+	} else {
+		memset(privsep_pw->pw_passwd, 0, strlen(privsep_pw->pw_passwd));
+		privsep_pw = pwcopy(privsep_pw);
+		xfree(privsep_pw->pw_passwd);
+		privsep_pw->pw_passwd = xstrdup("*");
+	}
 	endpwent();
 
 	/* load private host keys */
@@ -1707,29 +1702,6 @@ main(int ac, char **av)
 	signal(SIGQUIT, SIG_DFL);
 	signal(SIGCHLD, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
-
-#ifdef __FreeBSD__
-	/*
-	 * Initialize the resolver.  This may not happen automatically
-	 * before privsep chroot().                                   
-	 */
-	if ((_res.options & RES_INIT) == 0) {
-		debug("res_init()");         
-		res_init();         
-	}
-#ifdef GSSAPI
-	/*
-	 * Force GSS-API to parse its configuration and load any
-	 * mechanism plugins.
-	 */
-	{
-		gss_OID_set mechs;
-		OM_uint32 minor_status;
-		gss_indicate_mechs(&minor_status, &mechs);
-		gss_release_oid_set(&minor_status, &mechs);
-	}
-#endif
-#endif
 
 	/*
 	 * Register our connection.  This turns encryption off because we do
@@ -2042,10 +2014,10 @@ do_ssh1_kex(void)
 	 * key is in the highest bits.
 	 */
 	if (!rsafail) {
-		BN_mask_bits(session_key_int, sizeof(session_key) * 8);
+		(void) BN_mask_bits(session_key_int, sizeof(session_key) * 8);
 		len = BN_num_bytes(session_key_int);
 		if (len < 0 || (u_int)len > sizeof(session_key)) {
-			error("do_connection: bad session key len from %s: "
+			error("do_ssh1_kex: bad session key len from %s: "
 			    "session_key_int %d > sizeof(session_key) %lu",
 			    get_remote_ipaddr(), len, (u_long)sizeof(session_key));
 			rsafail++;

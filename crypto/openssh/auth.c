@@ -24,7 +24,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: src/crypto/openssh/auth.c,v 1.17.2.2 2006/10/06 14:07:12 des Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -501,7 +500,7 @@ getpwnamallow(const char *user)
 	if (!allowed_user(pw))
 		return (NULL);
 #ifdef HAVE_LOGIN_CAP
-	if ((lc = login_getpwclass(pw)) == NULL) {
+	if ((lc = login_getclass(pw->pw_class)) == NULL) {
 		debug("unable to get login class: %s", user);
 		return (NULL);
 	}
@@ -570,10 +569,8 @@ fakepw(void)
 	fake.pw_passwd =
 	    "$2a$06$r3.juUaHZDlIbQaO2dS9FuYxL1W9M81R1Tc92PoSNmzvpEqLkLGrK";
 	fake.pw_gecos = "NOUSER";
-	fake.pw_uid = (uid_t)-1;
-	fake.pw_gid = (gid_t)-1;
-	fake.pw_uid = privsep_pw->pw_uid;
-	fake.pw_gid = privsep_pw->pw_gid;
+	fake.pw_uid = privsep_pw == NULL ? (uid_t)-1 : privsep_pw->pw_uid;
+	fake.pw_gid = privsep_pw == NULL ? (gid_t)-1 : privsep_pw->pw_gid;
 #ifdef HAVE_PW_CLASS_IN_PASSWD
 	fake.pw_class = "";
 #endif

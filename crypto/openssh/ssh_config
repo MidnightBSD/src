@@ -1,6 +1,4 @@
-#	$OpenBSD: ssh_config,v 1.21 2005/12/06 22:38:27 reyk Exp $
-#	$FreeBSD: src/crypto/openssh/ssh_config,v 1.29 2006/03/22 20:41:37 des Exp $
-#	$MidnightBSD$
+#	$OpenBSD: ssh_config,v 1.22 2006/05/29 12:56:33 dtucker Exp $
 
 # This is the ssh client system-wide configuration file.  See
 # ssh_config(5) for more information.  This file provides defaults for
@@ -29,7 +27,7 @@
 #   GSSAPIAuthentication no
 #   GSSAPIDelegateCredentials no
 #   BatchMode no
-#   CheckHostIP no
+#   CheckHostIP yes
 #   AddressFamily any
 #   ConnectTimeout 0
 #   StrictHostKeyChecking ask
@@ -44,4 +42,3 @@
 #   Tunnel no
 #   TunnelDevice any:any
 #   PermitLocalCommand no
-#   VersionAddendum MidnightBSD-20061010

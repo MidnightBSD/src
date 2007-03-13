@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh.c,v 1.293 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: ssh.c,v 1.295 2007/01/03 03:01:40 stevesk Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -41,7 +41,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: src/crypto/openssh/ssh.c,v 1.28.2.2 2006/10/06 14:07:16 des Exp $");
 
 #include <sys/types.h>
 #ifdef HAVE_SYS_STAT_H
@@ -615,7 +614,7 @@ main(int ac, char **av)
 		if (!read_config_file(config, host, &options, 0))
 			fatal("Can't open user config file %.100s: "
 			    "%.100s", config, strerror(errno));
-	} else  {
+	} else {
 		snprintf(buf, sizeof buf, "%.100s/%.100s", pw->pw_dir,
 		    _PATH_SSH_USER_CONFFILE);
 		(void)read_config_file(buf, host, &options, 1);
@@ -640,23 +639,6 @@ main(int ac, char **av)
 
 	if (options.hostname != NULL)
 		host = options.hostname;
-
-	/* Find canonic host name. */
-	if (strchr(host, '.') == 0) {
-		struct addrinfo hints;
-		struct addrinfo *ai = NULL;
-		int errgai;
-		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = options.address_family;
-		hints.ai_flags = AI_CANONNAME;
-		hints.ai_socktype = SOCK_STREAM;
-		errgai = getaddrinfo(host, NULL, &hints, &ai);
-		if (errgai == 0) {
-			if (ai->ai_canonname != NULL)
-				host = xstrdup(ai->ai_canonname);
-			freeaddrinfo(ai);
-		}
-	}
 
 	/* force lowercase for hostkey matching */
 	if (options.host_key_alias != NULL) {

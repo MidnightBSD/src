@@ -1,4 +1,4 @@
-/* $Id: openssl-compat.h,v 1.2 2006-08-19 16:47:07 adam Exp $ */
+/* $Id: openssl-compat.h,v 1.3 2007-03-13 21:46:01 laffer1 Exp $ */
 
 /*
  * Copyright (c) 2005 Darren Tucker <dtucker@zip.com.au>
@@ -46,6 +46,11 @@ extern const EVP_CIPHER *evp_acss(void);
 # endif
 #endif
 
+/* OpenSSL 0.9.8e returns cipher key len not context key len */
+#if (OPENSSL_VERSION_NUMBER == 0x0090805fL)
+# define EVP_CIPHER_CTX_key_length(c) ((c)->key_len)
+#endif
+
 /*
  * We overload some of the OpenSSL crypto functions with ssh_* equivalents
  * which cater for older and/or less featureful OpenSSL version.
@@ -54,21 +59,27 @@ extern const EVP_CIPHER *evp_acss(void);
  * define SSH_DONT_OVERLOAD_OPENSSL_FUNCS before including this file and
  * implement the ssh_* equivalents.
  */
-#ifdef SSH_OLD_EVP
+#ifndef SSH_DONT_OVERLOAD_OPENSSL_FUNCS
 
-# ifndef SSH_DONT_REDEF_EVP
-
+# ifdef SSH_OLD_EVP
 #  ifdef EVP_Cipher
 #   undef EVP_Cipher
 #  endif
-
 #  define EVP_CipherInit(a,b,c,d,e)	ssh_EVP_CipherInit((a),(b),(c),(d),(e))
 #  define EVP_Cipher(a,b,c,d)		ssh_EVP_Cipher((a),(b),(c),(d))
 #  define EVP_CIPHER_CTX_cleanup(a)	ssh_EVP_CIPHER_CTX_cleanup((a))
-# endif
+# endif /* SSH_OLD_EVP */
+
+# ifdef USE_OPENSSL_ENGINE
+#  ifdef SSLeay_add_all_algorithms
+#   undef SSLeay_add_all_algorithms
+#  endif
+#  define SSLeay_add_all_algorithms()	ssh_SSLeay_add_all_algorithms()
+#endif
 
 int ssh_EVP_CipherInit(EVP_CIPHER_CTX *, const EVP_CIPHER *, unsigned char *,
     unsigned char *, int);
 int ssh_EVP_Cipher(EVP_CIPHER_CTX *, char *, char *, int);
 int ssh_EVP_CIPHER_CTX_cleanup(EVP_CIPHER_CTX *);
-#endif
+void ssh_SSLeay_add_all_algorithms(void);
+#endif	/* SSH_DONT_OVERLOAD_OPENSSL_FUNCS */

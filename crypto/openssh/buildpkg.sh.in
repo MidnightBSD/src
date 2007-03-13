@@ -24,6 +24,7 @@ PKGNAME=OpenSSH
 # revisions within the same version (REV=a)
 #REV=
 SYSVINIT_NAME=opensshd
+AWK=${AWK:="nawk"}
 MAKE=${MAKE:="make"}
 SSHDUID=67	# Default privsep uid
 SSHDGID=67	# Default privsep gid
@@ -47,7 +48,7 @@ PKG_REQUEST_LOCAL=../pkg-request.local
 #
 OPENSSHD=opensshd.init
 OPENSSH_MANIFEST=openssh.xml
-OPENSSH_FMRI=svc:/site/openssh:default
+OPENSSH_FMRI=svc:/site/${SYSVINIT_NAME}:default
 
 PATH_GROUPADD_PROG=@PATH_GROUPADD_PROG@
 PATH_USERADD_PROG=@PATH_USERADD_PROG@
@@ -154,15 +155,22 @@ ARCH=`uname -m`
 DEF_MSG="\n"
 OS_VER=`uname -v`
 SCRIPT_SHELL=/sbin/sh
+UNAME_R=`uname -r`
 UNAME_S=`uname -s`
 case ${UNAME_S} in
 	SunOS)	UNAME_S=Solaris
+		OS_VER=${UNAME_R}
 		ARCH=`uname -p`
 		RCS_D=yes
 		DEF_MSG="(default: n)"
 		;;
-	SCO_SV)	UNAME_S=OpenServer
+	SCO_SV)	case ${UNAME_R} in
+			3.2)	UNAME_S=OpenServer5
 		OS_VER=`uname -X | grep Release | sed -e 's/^Rel.*3.2v//'`
+				;;
+			5)	UNAME_S=OpenServer6
+				;;
+		esac
 		SCRIPT_SHELL=/bin/sh
 		RC1_D=no
 		DEF_MSG="(default: n)"
@@ -194,8 +202,9 @@ then
 	cp ${OPENSSHD} $FAKE_ROOT${TEST_DIR}/lib/svc/method/site/${SYSVINIT_NAME}
 	chmod 744 $FAKE_ROOT${TEST_DIR}/lib/svc/method/site/${SYSVINIT_NAME}
 
-	cp ${OPENSSH_MANIFEST} $FAKE_ROOT${TEST_DIR}/var/svc/manifest/site
-	chmod 644 $FAKE_ROOT${TEST_DIR}/var/svc/manifest/site/${OPENSSH_MANIFEST}
+	cat ${OPENSSH_MANIFEST} | sed "s|__SYSVINIT_NAME__|${SYSVINIT_NAME}|" \
+	    > $FAKE_ROOT${TEST_DIR}/var/svc/manifest/site/${SYSVINIT_NAME}.xml
+	chmod 644 $FAKE_ROOT${TEST_DIR}/var/svc/manifest/site/${SYSVINIT_NAME}.xml
 else
 	mkdir -p $FAKE_ROOT${TEST_DIR}/etc/init.d
 
@@ -326,9 +335,8 @@ then
 	then
 		svccfg delete -f $OPENSSH_FMRI
 	fi
-	# NOTE, if manifest enables sshd by default, this will actually
-	# start the daemon, which may not be what the user wants.
-	svccfg import ${TEST_DIR}/var/svc/manifest/site/$OPENSSH_MANIFEST
+	# NOTE, The manifest disables sshd by default.
+	svccfg import ${TEST_DIR}/var/svc/manifest/site/${SYSVINIT_NAME}.xml
 else
 	if [ "\${USE_SYM_LINKS}" = yes ]
 	then
@@ -420,8 +428,6 @@ if [ "\${POST_INS_START}" = "yes" ]
 then
 	if [ $DO_SMF -eq 1 ]
 	then
-		# See svccfg import note above.  The service may already
-		# be started.
 		svcadm enable $OPENSSH_FMRI
 	else
 		${TEST_DIR}/etc/init.d/${SYSVINIT_NAME} start
@@ -481,7 +487,7 @@ _EOF
 [ -x /usr/bin/ckyorn ]  ||  cat >> request << _EOF
 
 ckyorn() {
-# for some strange reason OpenServer has no ckyorn
+# for some strange reason OpenServer5 has no ckyorn
 # We build a striped down version here
 
 DEFAULT=n
@@ -536,7 +542,7 @@ PRE_INS_STOP=no
 POST_INS_START=no
 # determine if should restart the daemon
 if [ -s ${piddir}/sshd.pid  ] && \
-    /usr/bin/svcs $OPENSSH_FMRI 2>&1 | egrep "^online" > /dev/null 2>&1
+    /usr/bin/svcs -H $OPENSSH_FMRI 2>&1 | egrep "^online" > /dev/null 2>&1
 then
 	ans=\`ckyorn -d n \
 -p "Should the running sshd daemon be restarted? ${DEF_MSG}"\` || exit \$?
@@ -638,7 +644,7 @@ cat >mk-proto.awk << _EOF
 _EOF
 
 find . | egrep -v "prototype|pkginfo|mk-proto.awk" | sort | \
-	pkgproto $PROTO_ARGS | nawk -f mk-proto.awk > prototype
+	pkgproto $PROTO_ARGS | ${AWK} -f mk-proto.awk > prototype
 
 # /usr/local is a symlink on some systems
 [ "${USR_LOCAL_IS_SYMLINK}" = yes ]  &&  {

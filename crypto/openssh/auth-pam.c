@@ -45,9 +45,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* Based on $xFreeBSD: src/crypto/openssh/auth2-pam-freebsd.c,v 1.11 2003/03/31 13:48:18 des Exp $ */
+/* Based on $FreeBSD: src/crypto/openssh/auth2-pam-freebsd.c,v 1.11 2003/03/31 13:48:18 des Exp $ */
 #include "includes.h"
-__RCSID("$FreeBSD: src/crypto/openssh/auth-pam.c,v 1.16.2.2 2006/10/06 14:07:11 des Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

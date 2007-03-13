@@ -12737,13 +12737,9 @@ crypto/heimdal/tools/krb5-config.1 -text
 crypto/heimdal/tools/krb5-config.in -text
 crypto/openssh/CREDITS -text
 crypto/openssh/ChangeLog -text
-crypto/openssh/FREEBSD-Xlist -text
-crypto/openssh/FREEBSD-tricks -text
-crypto/openssh/FREEBSD-upgrade -text
 crypto/openssh/INSTALL -text
 crypto/openssh/LICENCE -text
 crypto/openssh/Makefile.in -text
-crypto/openssh/Makefile.inc -text
 crypto/openssh/OVERVIEW -text
 crypto/openssh/README -text
 crypto/openssh/README.dns -text
@@ -12754,7 +12750,6 @@ crypto/openssh/README.tun -text
 crypto/openssh/RFC.nroff -text
 crypto/openssh/TODO -text
 crypto/openssh/WARNING.RNG -text
-crypto/openssh/acconfig.h -text
 crypto/openssh/aclocal.m4 -text
 crypto/openssh/acss.c -text
 crypto/openssh/acss.h -text
@@ -12794,7 +12789,6 @@ crypto/openssh/authfd.h -text
 crypto/openssh/authfile.c -text
 crypto/openssh/authfile.h -text
 crypto/openssh/bufaux.c -text
-crypto/openssh/bufaux.h -text
 crypto/openssh/bufbn.c -text
 crypto/openssh/buffer.c -text
 crypto/openssh/buffer.h -text
@@ -12818,7 +12812,6 @@ crypto/openssh/compat.h -text
 crypto/openssh/compress.c -text
 crypto/openssh/compress.h -text
 crypto/openssh/config.guess -text
-crypto/openssh/config.h -text
 crypto/openssh/config.sub -text
 crypto/openssh/configure.ac -text
 crypto/openssh/crc32.c -text
@@ -12834,11 +12827,9 @@ crypto/openssh/dns.c -text
 crypto/openssh/dns.h -text
 crypto/openssh/entropy.c -text
 crypto/openssh/entropy.h -text
-crypto/openssh/envpass.sh -text
 crypto/openssh/fatal.c -text
 crypto/openssh/fixpaths -text
 crypto/openssh/fixprogs -text
-crypto/openssh/getput.h -text
 crypto/openssh/groupaccess.c -text
 crypto/openssh/groupaccess.h -text
 crypto/openssh/gss-genr.c -text
@@ -12913,7 +12904,6 @@ crypto/openssh/openbsd-compat/bsd-waitpid.c -text
 crypto/openssh/openbsd-compat/bsd-waitpid.h -text
 crypto/openssh/openbsd-compat/daemon.c -text
 crypto/openssh/openbsd-compat/dirname.c -text
-crypto/openssh/openbsd-compat/fake-queue.h -text
 crypto/openssh/openbsd-compat/fake-rfc2553.c -text
 crypto/openssh/openbsd-compat/fake-rfc2553.h -text
 crypto/openssh/openbsd-compat/getcwd.c -text
@@ -12966,7 +12956,6 @@ crypto/openssh/openbsd-compat/strtonum.c -text
 crypto/openssh/openbsd-compat/strtoul.c -text
 crypto/openssh/openbsd-compat/sys-queue.h -text
 crypto/openssh/openbsd-compat/sys-tree.h -text
-crypto/openssh/openbsd-compat/tree.h -text
 crypto/openssh/openbsd-compat/vis.c -text
 crypto/openssh/openbsd-compat/vis.h -text
 crypto/openssh/openbsd-compat/xcrypt.c -text
@@ -12997,8 +12986,6 @@ crypto/openssh/regress/cfgmatch.sh -text
 crypto/openssh/regress/cipher-speed.sh -text
 crypto/openssh/regress/connect-privsep.sh -text
 crypto/openssh/regress/connect.sh -text
-crypto/openssh/regress/copy.1 -text svneol=unset#unset
-crypto/openssh/regress/copy.2 -text svneol=unset#unset
 crypto/openssh/regress/dsa_ssh2.prv -text
 crypto/openssh/regress/dsa_ssh2.pub -text
 crypto/openssh/regress/dynamic-forward.sh -text
@@ -13091,7 +13078,6 @@ crypto/openssh/ssh1.h -text
 crypto/openssh/ssh2.h -text
 crypto/openssh/ssh_config -text
 crypto/openssh/ssh_config.5 -text
-crypto/openssh/ssh_namespace.h -text
 crypto/openssh/ssh_prng_cmds.in -text
 crypto/openssh/sshconnect.c -text
 crypto/openssh/sshconnect.h -text
@@ -13113,7 +13099,6 @@ crypto/openssh/uidswap.c -text
 crypto/openssh/uidswap.h -text
 crypto/openssh/uuencode.c -text
 crypto/openssh/uuencode.h -text
-crypto/openssh/version.c -text
 crypto/openssh/version.h -text
 crypto/openssh/xmalloc.c -text
 crypto/openssh/xmalloc.h -text

@@ -1,4 +1,4 @@
-/* $OpenBSD: session.c,v 1.219 2006/08/29 10:40:19 djm Exp $ */
+/* $OpenBSD: session.c,v 1.221 2007/01/21 01:41:54 stevesk Exp $ */
 /*
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
  *                    All rights reserved
@@ -34,7 +34,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: src/crypto/openssh/session.c,v 1.46.2.3 2006/10/06 14:07:15 des Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -777,24 +776,6 @@ do_motd(void)
 {
 	FILE *f;
 	char buf[256];
-#ifdef HAVE_LOGIN_CAP
-	const char *fname;
-#endif
-
-#ifdef HAVE_LOGIN_CAP
-	fname = login_getcapstr(lc, "copyright", NULL, NULL);
-	if (fname != NULL && (f = fopen(fname, "r")) != NULL) {
-		while (fgets(buf, sizeof(buf), f) != NULL)
-			fputs(buf, stdout);
-			fclose(f);
-	} else
-#endif /* HAVE_LOGIN_CAP */
-		(void)printf("%s\n\t%s %s\n",
-	"Copyright (c) 1980, 1983, 1986, 1988, 1990, 1991, 1993, 1994",
-	"The Regents of the University of California. ",
-	"All rights reserved.");
-
-	(void)printf("\n");
 
 	if (options.print_motd) {
 #ifdef HAVE_LOGIN_CAP
@@ -1023,9 +1004,6 @@ do_setup_env(Session *s, const char *shell)
 	struct passwd *pw = s->pw;
 #ifndef HAVE_LOGIN_CAP
 	char *path = NULL;
-#else
-	extern char **environ;
-	char **senv, **var;
 #endif
 
 	/* Initialize the environment. */
@@ -1047,9 +1025,6 @@ do_setup_env(Session *s, const char *shell)
 	}
 #endif
 
-	if (getenv("TZ"))
-		child_set_env(&env, &envsize, "TZ", getenv("TZ"));
-
 #ifdef GSSAPI
 	/* Allow any GSSAPI methods that we've used to alter
 	 * the childs environment as they see fit
@@ -1069,22 +1044,11 @@ do_setup_env(Session *s, const char *shell)
 		child_set_env(&env, &envsize, "LOGIN", pw->pw_name);
 #endif
 		child_set_env(&env, &envsize, "HOME", pw->pw_dir);
-		snprintf(buf, sizeof buf, "%.200s/%.50s",
-			 _PATH_MAILDIR, pw->pw_name);
-		child_set_env(&env, &envsize, "MAIL", buf);
 #ifdef HAVE_LOGIN_CAP
-		child_set_env(&env, &envsize, "PATH", _PATH_STDPATH);
-		child_set_env(&env, &envsize, "TERM", "su");
-		senv = environ;
-		environ = xmalloc(sizeof(char *));
-		*environ = NULL;
-		(void) setusercontext(lc, pw, pw->pw_uid,
-		    LOGIN_SETENV|LOGIN_SETPATH);
-		copy_environment(environ, &env, &envsize);
-		for (var = environ; *var != NULL; ++var)
-			xfree(*var);
-		xfree(environ);
-		environ = senv;
+		if (setusercontext(lc, pw, pw->pw_uid, LOGIN_SETPATH) < 0)
+			child_set_env(&env, &envsize, "PATH", _PATH_STDPATH);
+		else
+			child_set_env(&env, &envsize, "PATH", getenv("PATH"));
 #else /* HAVE_LOGIN_CAP */
 # ifndef HAVE_CYGWIN
 		/*
@@ -1105,9 +1069,15 @@ do_setup_env(Session *s, const char *shell)
 # endif /* HAVE_CYGWIN */
 #endif /* HAVE_LOGIN_CAP */
 
+		snprintf(buf, sizeof buf, "%.200s/%.50s",
+			 _PATH_MAILDIR, pw->pw_name);
+		child_set_env(&env, &envsize, "MAIL", buf);
+
 		/* Normal systems set SHELL by default. */
 		child_set_env(&env, &envsize, "SHELL", shell);
 	}
+	if (getenv("TZ"))
+		child_set_env(&env, &envsize, "TZ", getenv("TZ"));
 
 	/* Set custom environment options from RSA authentication. */
 	if (!options.use_login) {
@@ -1344,7 +1314,7 @@ do_setusercontext(struct passwd *pw)
 		}
 # endif /* USE_PAM */
 		if (setusercontext(lc, pw, pw->pw_uid,
-		    (LOGIN_SETALL & ~(LOGIN_SETENV|LOGIN_SETPATH))) < 0) {
+		    (LOGIN_SETALL & ~LOGIN_SETPATH)) < 0) {
 			perror("unable to set user context");
 			exit(1);
 		}
@@ -1502,9 +1472,6 @@ do_child(Session *s, const char *command)
 	char *argv[10];
 	const char *shell, *shell0, *hostname = NULL;
 	struct passwd *pw = s->pw;
-#ifdef HAVE_LOGIN_CAP
-	int lc_requirehome;
-#endif
 
 	/* remove hostkey from the child's memory */
 	destroy_sensitive_data();
@@ -1592,10 +1559,6 @@ do_child(Session *s, const char *command)
 	 */
 	environ = env;
 
-#ifdef HAVE_LOGIN_CAP
-	lc_requirehome = login_getcapbool(lc, "requirehome", 0);
-	login_close(lc);
-#endif
 #if defined(KRB5) && defined(USE_AFS)
 	/*
 	 * At this point, we check to see if AFS is active and if we have
@@ -1627,7 +1590,7 @@ do_child(Session *s, const char *command)
 		fprintf(stderr, "Could not chdir to home directory %s: %s\n",
 		    pw->pw_dir, strerror(errno));
 #ifdef HAVE_LOGIN_CAP
-		if (lc_requirehome)
+		if (login_getcapbool(lc, "requirehome", 0))
 			exit(1);
 #endif
 	}
@@ -2064,7 +2027,7 @@ session_input_channel_req(Channel *c, const char *rtype)
 		} else if (strcmp(rtype, "exec") == 0) {
 			success = session_exec_req(s);
 		} else if (strcmp(rtype, "pty-req") == 0) {
-			success =  session_pty_req(s);
+			success = session_pty_req(s);
 		} else if (strcmp(rtype, "x11-req") == 0) {
 			success = session_x11_req(s);
 		} else if (strcmp(rtype, "auth-agent-req@openssh.com") == 0) {
@@ -2189,7 +2152,7 @@ session_close_single_x11(int id, void *arg)
 
 	debug3("session_close_single_x11: channel %d", id);
 	channel_cancel_cleanup(id);
-	if ((s  = session_by_x11_channel(id)) == NULL)
+	if ((s = session_by_x11_channel(id)) == NULL)
 		fatal("session_close_single_x11: no x11 channel %d", id);
 	for (i = 0; s->x11_chanids[i] != -1; i++) {
 		debug("session_close_single_x11: session %d: "

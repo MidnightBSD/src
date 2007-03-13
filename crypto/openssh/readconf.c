@@ -1,4 +1,4 @@
-/* $OpenBSD: readconf.c,v 1.159 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: readconf.c,v 1.161 2007/01/21 01:45:35 stevesk Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -13,7 +13,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: src/crypto/openssh/readconf.c,v 1.25.2.2 2006/10/06 14:07:14 des Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -131,7 +130,6 @@ typedef enum {
 	oServerAliveInterval, oServerAliveCountMax, oIdentitiesOnly,
 	oSendEnv, oControlPath, oControlMaster, oHashKnownHosts,
 	oTunnel, oTunnelDevice, oLocalCommand, oPermitLocalCommand,
-	oVersionAddendum,
 	oDeprecated, oUnsupported
 } OpCodes;
 
@@ -228,7 +226,6 @@ static struct {
 	{ "tunneldevice", oTunnelDevice },
 	{ "localcommand", oLocalCommand },
 	{ "permitlocalcommand", oPermitLocalCommand },
-	{ "versionaddendum", oVersionAddendum },
 	{ NULL, oBadOption }
 };
 
@@ -367,7 +364,7 @@ parse_time:
 		if ((value = convtime(arg)) == -1)
 			fatal("%s line %d: invalid time value.",
 			    filename, linenum);
-		if (*intptr == -1)
+		if (*activep && *intptr == -1)
 			*intptr = value;
 		break;
 
@@ -548,7 +545,7 @@ parse_yesnoask:
 			if (*intptr >= SSH_MAX_IDENTITY_FILES)
 				fatal("%.200s line %d: Too many identity files specified (max %d).",
 				    filename, linenum, SSH_MAX_IDENTITY_FILES);
-			charptr =  &options->identity_files[*intptr];
+			charptr = &options->identity_files[*intptr];
 			*charptr = xstrdup(arg);
 			*intptr = *intptr + 1;
 		}
@@ -918,13 +915,6 @@ parse_int:
 		intptr = &options->permit_local_command;
 		goto parse_flag;
 
-	case oVersionAddendum:
-		ssh_version_set_addendum(strtok(s, "\n"));
-		do {
-			arg = strdelim(&s);
-		} while (arg != NULL && *arg != '\0');
-		break;
-
 	case oDeprecated:
 		debug("%s line %d: Deprecated option \"%s\"",
 		    filename, linenum, keyword);
@@ -1122,7 +1112,7 @@ fill_default_options(Options * options)
 	if (options->batch_mode == -1)
 		options->batch_mode = 0;
 	if (options->check_host_ip == -1)
-		options->check_host_ip = 0;
+		options->check_host_ip = 1;
 	if (options->strict_host_key_checking == -1)
 		options->strict_host_key_checking = 2;	/* 2 is default */
 	if (options->compression == -1)

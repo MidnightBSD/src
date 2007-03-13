@@ -1,4 +1,4 @@
-/* $OpenBSD: monitor.c,v 1.88 2006/08/12 20:46:46 miod Exp $ */
+/* $OpenBSD: monitor.c,v 1.90 2007/02/19 10:45:58 dtucker Exp $ */
 /*
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
  * Copyright 2002 Markus Friedl <markus@openbsd.org>
@@ -26,7 +26,6 @@
  */
 
 #include "includes.h"
-__RCSID("$FreeBSD: src/crypto/openssh/monitor.c,v 1.17.2.3 2006/10/06 14:07:14 des Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -47,15 +46,7 @@ __RCSID("$FreeBSD: src/crypto/openssh/monitor.c,v 1.17.2.3 2006/10/06 14:07:14 d
 #include <unistd.h>
 
 #ifdef SKEY
-#ifdef OPIE
-#include <opie.h>
-#define skey                    opie
-#define skeychallenge(k, u, c)  opiechallenge((k), (u), (c))
-#define skey_haskey(u)          opie_haskey((u))
-#define skey_passcheck(u, r)    opie_passverify((u), (r))
-#else
 #include <skey.h>
-#endif
 #endif
 
 #include <openssl/dh.h>
@@ -359,7 +350,7 @@ monitor_child_preauth(Authctxt *_authctxt, struct monitor *pmonitor)
 	/* The first few requests do not require asynchronous access */
 	while (!authenticated) {
 		auth_method = "unknown";
-		authenticated = monitor_read(pmonitor, mon_dispatch, &ent);
+		authenticated = (monitor_read(pmonitor, mon_dispatch, &ent) == 1);
 		if (authenticated) {
 			if (!(ent->flags & MON_AUTHDECIDE))
 				fatal("%s: unexpected authentication from %d",
@@ -651,6 +642,9 @@ mm_answer_pwnamallow(int sock, Buffer *m)
 #endif
 	buffer_put_cstring(m, pwent->pw_dir);
 	buffer_put_cstring(m, pwent->pw_shell);
+	buffer_put_string(m, &options, sizeof(options));
+	if (options.banner != NULL)
+		buffer_put_cstring(m, options.banner);
 
  out:
 	debug3("%s: sending MONITOR_ANS_PWNAM: %d", __func__, allowed);
@@ -1226,7 +1220,7 @@ mm_answer_keyverify(int sock, Buffer *m)
 
 	verified = key_verify(key, signature, signaturelen, data, datalen);
 	debug3("%s: key %p signature %s",
-	    __func__, key, verified ? "verified" : "unverified");
+	    __func__, key, (verified == 1) ? "verified" : "unverified");
 
 	key_free(key);
 	xfree(blob);
@@ -1241,7 +1235,7 @@ mm_answer_keyverify(int sock, Buffer *m)
 	buffer_put_int(m, verified);
 	mm_request_send(sock, MONITOR_ANS_KEYVERIFY, m);
 
-	return (verified);
+	return (verified == 1);
 }
 
 static void

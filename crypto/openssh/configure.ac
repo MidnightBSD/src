@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.3 2006-10-10 15:04:35 laffer1 Exp $
+# $Id: configure.ac,v 1.4 2007-03-13 21:46:01 laffer1 Exp $
 #
 # Copyright (c) 1999-2004 Damien Miller
 #
@@ -15,7 +15,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 AC_INIT(OpenSSH, Portable, openssh-unix-dev@mindrot.org)
-AC_REVISION($Revision: 1.3 $)
+AC_REVISION($Revision: 1.4 $)
 AC_CONFIG_SRCDIR([ssh.c])
 
 AC_CONFIG_HEADER(config.h)
@@ -360,7 +360,7 @@ int main(void) { exit(0); }
 	;;
 *-*-cygwin*)
 	check_for_libcrypt_later=1
-	LIBS="$LIBS /usr/lib/textmode.o"
+	LIBS="$LIBS /usr/lib/textreadmode.o"
 	AC_DEFINE(HAVE_CYGWIN, 1, [Define if you are on Cygwin])
 	AC_DEFINE(USE_PIPES, 1, [Use PIPES instead of a socketpair()])
 	AC_DEFINE(DISABLE_SHADOW, 1,
@@ -1075,41 +1075,6 @@ int main() { char *ff = skey_keyinfo(""); ff=""; exit(0); }
 					function takes 4 arguments (NetBSD)])],
 				[AC_MSG_RESULT(no)]
         		)
-		fi
-	]
-)
-
-# Check whether user wants OPIE support
-OPIE_MSG="no" 
-AC_ARG_WITH(opie,
-	[  --with-opie[[=PATH]]      Enable OPIE support
-                            (optionally in PATH)],
-	[
-		if test "x$withval" != "xno" ; then
-
-			if test "x$withval" != "xyes" ; then
-				CPPFLAGS="$CPPFLAGS -I${withval}/include"
-				LDFLAGS="$LDFLAGS -L${withval}/lib"
-			fi
-
-			AC_DEFINE(SKEY, 1, [Define if you want S/Key support])
-			AC_DEFINE(OPIE, 1, [Define if S/Key is actually OPIE])
-			LIBS="-lopie $LIBS"
-			OPIE_MSG="yes" 
-	
-			AC_MSG_CHECKING([for opie support])
-			AC_TRY_RUN(
-				[
-#include <sys/types.h>
-#include <stdio.h>
-#include <opie.h>
-int main() { char *ff = opie_keyinfo(""); ff=""; return 0; }
-				],
-				[AC_MSG_RESULT(yes)],
-				[
-					AC_MSG_RESULT(no)
-					AC_MSG_ERROR([** Incomplete or missing opie libraries.])
-				])
 		fi
 	]
 )
@@ -1892,6 +1857,14 @@ int main(void) {
 	]
 )
 
+AC_ARG_WITH(openssl-header-check,
+	[  --without-openssl-header-check Disable OpenSSL version consistency check],
+	[  if test "x$withval" = "xno" ; then
+		openssl_check_nonfatal=1
+	   fi
+	]
+)
+
 # Sanity check OpenSSL headers
 AC_MSG_CHECKING([whether OpenSSL's headers match the library])
 AC_RUN_IFELSE(
@@ -1905,9 +1878,18 @@ int main(void) { exit(SSLeay() == OPENSSL_VERSION_NUMBER ? 0 : 1); }
 	],
 	[
 		AC_MSG_RESULT(no)
-		AC_MSG_ERROR([Your OpenSSL headers do not match your library.
-Check config.log for details.
+		if test "x$openssl_check_nonfatal" = "x"; then
+			AC_MSG_ERROR([Your OpenSSL headers do not match your
+library. Check config.log for details.
+If you are sure your installation is consistent, you can disable the check
+by running "./configure --without-openssl-header-check".
+Also see contrib/findssl.sh for help identifying header/library mismatches.
+])
+		else
+			AC_MSG_WARN([Your OpenSSL headers do not match your
+library. Check config.log for details.
 Also see contrib/findssl.sh for help identifying header/library mismatches.])
+		fi
 	],
 	[
 		AC_MSG_WARN([cross compiling: not checking])
@@ -3035,11 +3017,7 @@ AC_CACHE_CHECK([whether getopt has optreset support],
 		ac_cv_have_getopt_optreset, [
 	AC_TRY_LINK(
 		[
-#if HAVE_GETOPT_H
 #include <getopt.h>
-#elif HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 		],
 		[ extern int optreset; optreset = 0; ],
 		[ ac_cv_have_getopt_optreset="yes" ],
@@ -3184,7 +3162,10 @@ AC_ARG_WITH(selinux,
 		    AC_MSG_ERROR(SELinux support requires selinux.h header))
 		AC_CHECK_LIB(selinux, setexeccon, [ LIBSELINUX="-lselinux" ],
 		    AC_MSG_ERROR(SELinux support requires libselinux library))
+		save_LIBS="$LIBS"
+		LIBS="$LIBS $LIBSELINUX"
 		AC_CHECK_FUNCS(getseuserbyname get_default_context_with_level)
+		LIBS="$save_LIBS"
 	fi ]
 )
 AC_SUBST(LIBSELINUX)
@@ -4004,7 +3985,6 @@ echo "                 KerberosV support: $KRB5_MSG"
 echo "                   SELinux support: $SELINUX_MSG"
 echo "                 Smartcard support: $SCARD_MSG"
 echo "                     S/KEY support: $SKEY_MSG"
-echo "                      OPIE support: $OPIE_MSG"
 echo "              TCP Wrappers support: $TCPW_MSG"
 echo "              MD5 password support: $MD5_MSG"
 echo "                   libedit support: $LIBEDIT_MSG"
