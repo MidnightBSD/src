@@ -10456,6 +10456,7 @@ contrib/sudo/auth/sia.c -text
 contrib/sudo/auth/sudo_auth.c -text
 contrib/sudo/auth/sudo_auth.h -text
 contrib/sudo/check.c -text
+contrib/sudo/closeform.c -text
 contrib/sudo/closefrom.c -text
 contrib/sudo/compat.h -text
 contrib/sudo/config.guess -text

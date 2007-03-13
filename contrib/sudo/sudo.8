@@ -149,7 +149,7 @@
 .\" ========================================================================
 .\"
 .IX Title "SUDO 8"
-.TH SUDO 8 "June 20, 2005" "1.6.8p9" "MAINTENANCE COMMANDS"
+.TH SUDO 8 "June 20, 2005" "1.6.8p12" "MAINTENANCE COMMANDS"
 .SH "NAME"
 sudo, sudoedit \- execute a command as another user
 .SH "SYNOPSIS"
@@ -320,7 +320,7 @@ actually run.
 .IP "\-k" 4
 .IX Item "-k"
 The \fB\-k\fR (\fIkill\fR) option to \fBsudo\fR invalidates the user's timestamp
-by setting the time on it to the epoch.  The next time \fBsudo\fR is
+by setting the time on it to the Epoch.  The next time \fBsudo\fR is
 run a password will be required.  This option does not require a password
 and was added to allow a user to revoke \fBsudo\fR permissions from a .logout
 file.
@@ -593,7 +593,7 @@ It is not meaningful to run the \f(CW\*(C`cd\*(C'\fR command directly via sudo, 
 \& $ sudo cd /usr/local/protected
 .Ve
 .PP
-since when whe command exits the parent process (your shell) will
+since when the command exits the parent process (your shell) will
 still be the same.  Please see the \s-1EXAMPLES\s0 section for more information.
 .PP
 If users have sudo \f(CW\*(C`ALL\*(C'\fR there is nothing to prevent them from
