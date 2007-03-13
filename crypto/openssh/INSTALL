@@ -70,8 +70,9 @@ http://sourceforge.net/projects/libedit/
 Autoconf:
 
 If you modify configure.ac or configure doesn't exist (eg if you checked
-the code out of CVS yourself) then you will need autoconf-2.60 to rebuild
-the automatically generated files by running "autoreconf".
+the code out of CVS yourself) then you will need autoconf-2.61 to rebuild
+the automatically generated files by running "autoreconf".  Earlier
+version may also work but this is not guaranteed.
 
 http://www.gnu.org/software/autoconf/
 
@@ -250,4 +251,4 @@ Please refer to the "reporting bugs" section of the webpage at
 http://www.openssh.com/
 
 
-$Id: INSTALL,v 1.1.1.3 2006-10-03 02:03:03 raven Exp $
+$Id: INSTALL,v 1.1.1.4 2007-03-13 21:36:54 laffer1 Exp $
