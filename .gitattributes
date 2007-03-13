@@ -12739,6 +12739,9 @@ crypto/openssh/CREDITS -text
 crypto/openssh/ChangeLog -text
 crypto/openssh/INSTALL -text
 crypto/openssh/LICENCE -text
+crypto/openssh/MIDNIGHTBSD-Xlist -text
+crypto/openssh/MIDNIGHTBSD-tricks -text
+crypto/openssh/MIDNIGHTBSD-upgrade -text
 crypto/openssh/Makefile.in -text
 crypto/openssh/OVERVIEW -text
 crypto/openssh/README -text
