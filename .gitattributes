@@ -21152,11 +21152,11 @@ share/doc/usd/contents/Makefile -text
 share/doc/usd/contents/contents.ms -text
 share/doc/usd/title/Makefile -text
 share/doc/usd/title/Title -text
-share/examples/FreeBSD_version/FreeBSD_version.c -text
-share/examples/FreeBSD_version/Makefile -text
-share/examples/FreeBSD_version/README -text
 share/examples/IPv6/USAGE -text
 share/examples/Makefile -text
+share/examples/MidnightBSD_version/Makefile -text
+share/examples/MidnightBSD_version/MidnightBSD_version.c -text
+share/examples/MidnightBSD_version/README -text
 share/examples/atm/NOTES -text
 share/examples/atm/README -text
 share/examples/atm/Startup -text

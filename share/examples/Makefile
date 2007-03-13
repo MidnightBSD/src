@@ -1,10 +1,10 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD: src/share/examples/Makefile,v 1.2 2006/12/27 02:05:17 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.3 2007/03/12 23:15:08 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
-LDIRS=	FreeBSD_version \
-	IPv6 \
+LDIRS=	IPv6 \
+	MidnightBSD_version \
 	atm \
 	bootforth \
 	cvsup \
@@ -33,10 +33,10 @@ LDIRS=	FreeBSD_version \
 	startslip \
 	sunrpc
 
-XFILES=	FreeBSD_version/FreeBSD_version.c \
-	FreeBSD_version/Makefile \
-	FreeBSD_version/README \
-	IPv6/USAGE \
+XFILES=	IPv6/USAGE \
+	MidnightBSD_version/MidnightBSD_version.c \
+	MidnightBSD_version/Makefile \
+	MidnightBSD_version/README \
 	atm/NOTES \
 	atm/README \
 	atm/Startup \
