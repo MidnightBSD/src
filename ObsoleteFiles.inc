@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.9 2007/03/13 00:42:43 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.10 2007/03/13 00:45:49 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -19,7 +19,7 @@
 OLD_FILES+=usr/share/examples/FreeBSD_version/FreeBSD_version.c
 OLD_FILES+=usr/share/examples/FreeBSD_version/README
 OLD_FILES+=usr/share/examples/FreeBSD_version/Makefile
-OLD_FILES+=usr/share/examples/BSD_daemon/FreeBSD.fpa
+OLD_FILES+=usr/share/examples/BSD_daemon/FreeBSD.pfa
 OLD_FILES+=usr/share/examples/BSD_daemon/README
 OLD_FILES+=usr/share/examples/BSD_daemon/beastie.fig
 OLD_FILES+=usr/share/examples/BSD_daemon/beastie.eps
