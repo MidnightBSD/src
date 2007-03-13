@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.7 2006/12/31 22:34:27 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.8 2007/01/06 05:00:07 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,16 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20070312: Remove BSD_daemon and FreeBSD_version
+OLD_FILES+=usr/share/examples/FreeBSD_version/FreeBSD_version.c
+OLD_FILES+=usr/share/examples/FreeBSD_version/README
+OLD_FILES+=usr/share/examples/FreeBSD_version/Makefile
+OLD_FILES+=usr/share/examples/BSD_daemon/FreeBSD.fpa
+OLD_FILES+=usr/share/examples/BSD_daemon/README
+OLD_FILES+=usr/share/examples/BSD_daemon/beastie.fig
+OLD_FILES+=usr/share/examples/BSD_daemon/beastie.eps
+OLD_FILES+=usr/share/examples/BSD_daemon/eps.patch
+OLD_FILES+=usr/share/examples/BSD_daemon/poster.sh
 # 20061231: Remove portsnap
 OLD_FILES+=etc/portsnap.conf
 OLD_FILES+=usr/sbin/portsnap
