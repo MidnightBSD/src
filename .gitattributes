@@ -13108,6 +13108,7 @@ crypto/openssh/uidswap.c -text
 crypto/openssh/uidswap.h -text
 crypto/openssh/uuencode.c -text
 crypto/openssh/uuencode.h -text
+crypto/openssh/version.c -text
 crypto/openssh/version.h -text
 crypto/openssh/xmalloc.c -text
 crypto/openssh/xmalloc.h -text
