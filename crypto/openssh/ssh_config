@@ -1,4 +1,5 @@
 #	$OpenBSD: ssh_config,v 1.22 2006/05/29 12:56:33 dtucker Exp $
+#	$MidnightBSD$
 
 # This is the ssh client system-wide configuration file.  See
 # ssh_config(5) for more information.  This file provides defaults for
@@ -42,3 +43,4 @@
 #   Tunnel no
 #   TunnelDevice any:any
 #   PermitLocalCommand no
+#   VersionAddendum MidnightBSD-20070313
