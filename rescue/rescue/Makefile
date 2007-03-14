@@ -1,4 +1,4 @@
-#$MidnightBSD$
+#$MidnightBSD: src/rescue/rescue/Makefile,v 1.2 2006/08/14 11:00:08 laffer1 Exp $
 #$FreeBSD: src/rescue/rescue/Makefile,v 1.45.2.1 2005/12/22 21:17:12 jhb Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
@@ -182,9 +182,8 @@ CRUNCH_BUILDOPTS_dhclient= -DRELEASE_CRUNCH -Dlint
 # Programs from stock /usr/bin
 # 
 CRUNCH_SRCDIRS+= usr.bin
-CRUNCH_SRCDIRS+= gnu/usr.bin
 
-CRUNCH_PROGS_gnu/usr.bin+= gzip
+CRUNCH_PROGS_usr.bin+= gzip
 CRUNCH_ALIAS_gzip= gunzip gzcat zcat
 
 CRUNCH_PROGS_usr.bin+= bzip2
