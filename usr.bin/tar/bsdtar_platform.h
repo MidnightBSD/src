@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -23,7 +22,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/tar/bsdtar_platform.h,v 1.15.2.1 2005/11/06 22:24:27 kientzle Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/usr.bin/tar/bsdtar_platform.h,v 1.15.2.4 2007/03/11 19:46:56 kientzle Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
 #define	BSDTAR_PLATFORM_H_INCLUDED
 
 #if HAVE_CONFIG_H
-#include "config.h"
+#include "../config.h"
 #else
 
 #ifdef __FreeBSD__
@@ -48,6 +48,7 @@
 #define	HAVE_ACL_GET_PERM 0
 #define	HAVE_ACL_GET_PERM_NP 1
 #define	HAVE_ACL_PERMSET_T 1
+#define	HAVE_ACL_USER 1
 #endif
 #define	HAVE_BZLIB_H 1
 #define	HAVE_CHFLAGS 1
@@ -112,8 +113,14 @@
 #define	__FBSDID(a)     /* null */
 #endif
 
-#ifndef HAVE_LIBARCHIVE
-#error Configuration error: did not find libarchive.
+#ifdef HAVE_LIBARCHIVE
+/* If we're using the platform libarchive, include system headers. */
+#include <archive.h>
+#include <archive_entry.h>
+#else
+/* Otherwise, include user headers. */
+#include "archive.h"
+#include "archive_entry.h"
 #endif
 
 /*
@@ -121,10 +128,14 @@
  * including some variant of the acl_get_perm() function (which was
  * omitted from the POSIX.1e draft)?
  */
-#if HAVE_SYS_ACL_H && HAVE_ACL_PERMSET_T
+#if HAVE_SYS_ACL_H && HAVE_ACL_PERMSET_T && HAVE_ACL_USER
 #if HAVE_ACL_GET_PERM || HAVE_ACL_GET_PERM_NP
 #define	HAVE_POSIX_ACL	1
 #endif
+#endif
+
+#ifdef HAVE_LIBACL
+#include <acl/libacl.h>
 #endif
 
 #if HAVE_ACL_GET_PERM

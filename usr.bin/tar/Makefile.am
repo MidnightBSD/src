@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/usr.bin/tar/Makefile.am,v 1.3 2005/04/24 05:53:37 kientzle Exp $
 
 # Process this file with automake to create Makefile.in

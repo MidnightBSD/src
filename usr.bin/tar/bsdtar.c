@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2005 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -25,12 +24,11 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.63.2.2 2005/11/06 22:27:21 kientzle Exp $");
+__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/usr.bin/tar/bsdtar.c,v 1.63.2.5 2007/01/27 06:48:39 kientzle Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <archive.h>
-#include <archive_entry.h>
 #include <errno.h>
 #include <fcntl.h>
 #ifdef HAVE_GETOPT_LONG
@@ -91,7 +89,7 @@ static void		 version(void);
  * non-option.  Otherwise, GNU getopt() permutes the arguments and
  * screws up -C processing.
  */
-static const char *tar_opts = "+Bb:C:cF:f:HhI:jkLlmnOoPprtT:UuvW:wX:xyZz";
+static const char *tar_opts = "+Bb:C:cf:HhI:jkLlmnOoPprtT:UuvW:wX:xyZz";
 
 /*
  * Most of these long options are deliberately not documented.  They
@@ -410,6 +408,7 @@ main(int argc, char **argv)
 		case 'p': /* GNU tar, star */
 			bsdtar->extract_flags |= ARCHIVE_EXTRACT_PERM;
 			bsdtar->extract_flags |= ARCHIVE_EXTRACT_ACL;
+			bsdtar->extract_flags |= ARCHIVE_EXTRACT_XATTR;
 			bsdtar->extract_flags |= ARCHIVE_EXTRACT_FFLAGS;
 			break;
 		case 'r': /* SUSv2 */
@@ -503,7 +502,7 @@ main(int argc, char **argv)
 
 	/* Check boolean options only permitted in certain modes. */
 	if (bsdtar->option_dont_traverse_mounts)
-		only_mode(bsdtar, "-X", "cru");
+		only_mode(bsdtar, "--one-file-system", "cru");
 	if (bsdtar->option_fast_read)
 		only_mode(bsdtar, "--fast-read", "xt");
 	if (bsdtar->option_honor_nodump)
@@ -533,6 +532,8 @@ main(int argc, char **argv)
 		only_mode(bsdtar, "-n", "cru");
 	if (bsdtar->option_stdout)
 		only_mode(bsdtar, "-O", "xt");
+	if (bsdtar->option_unlink_first)
+		only_mode(bsdtar, "-U", "x");
 	if (bsdtar->option_warn_links)
 		only_mode(bsdtar, "--check-links", "cr");
 
@@ -553,6 +554,8 @@ main(int argc, char **argv)
 		buff[1] = bsdtar->symlink_mode;
 		only_mode(bsdtar, buff, "cru");
 	}
+	if (bsdtar->strip_components != 0)
+		only_mode(bsdtar, "--strip-components", "xt");
 
 	bsdtar->argc -= optind;
 	bsdtar->argv += optind;
@@ -689,9 +692,7 @@ usage(struct bsdtar *bsdtar)
 static void
 version(void)
 {
-	printf("bsdtar %s, ", PACKAGE_VERSION);
-	printf("%s\n", archive_version());
-	printf("Copyright (C) 2003-2005 Tim Kientzle\n");
+	printf("bsdtar %s - %s\n", PACKAGE_VERSION, archive_version());
 	exit(1);
 }
 
@@ -757,8 +758,7 @@ long_help(struct bsdtar *bsdtar)
 		} else
 			putchar(*p);
 	}
-	fprintf(stdout, "\n%s %s\n", PACKAGE_NAME, PACKAGE_VERSION);
-	fprintf(stdout, "%s\n", archive_version());
+	version();
 }
 
 static int

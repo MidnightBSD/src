@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -25,14 +24,16 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/read.c,v 1.23 2005/04/17 17:20:54 kientzle Exp $");
+__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/usr.bin/tar/read.c,v 1.23.2.3 2007/01/27 06:48:39 kientzle Exp $");
 
+#ifdef MAJOR_IN_MKDEV
+#include <sys/mkdev.h>
+#endif
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
-#include <archive.h>
-#include <archive_entry.h>
 #include <errno.h>
 #include <grp.h>
 #include <limits.h>
@@ -279,7 +280,7 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 	if (!now)
 		time(&now);
 	bsdtar_strmode(entry, tmp);
-	fprintf(out, "%s %d ", tmp, st->st_nlink);
+	fprintf(out, "%s %d ", tmp, (int)(st->st_nlink));
 
 	/* Use uname if it's present, else uid. */
 	p = archive_entry_uname(entry);

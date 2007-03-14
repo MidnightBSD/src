@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -44,7 +43,8 @@
  * regular dir or via fchdir(2) for a symlink).
  */
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/tree.c,v 1.2 2005/05/08 06:25:15 kientzle Exp $");
+__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/usr.bin/tar/tree.c,v 1.2.2.2 2007/01/27 06:48:39 kientzle Exp $");
 
 #include <sys/stat.h>
 #include <dirent.h>
@@ -130,7 +130,7 @@ tree_dump(struct tree *t, FILE *out)
 	fprintf(out, "\tpwd: "); fflush(stdout); system("pwd");
 	fprintf(out, "\taccess: %s\n", t->basename);
 	fprintf(out, "\tstack:\n");
-	for(te = t->stack; te != NULL; te = te->next) {
+	for (te = t->stack; te != NULL; te = te->next) {
 		fprintf(out, "\t\tte->name: %s%s%s\n", te->name,
 		    te->flags & needsPreVisit ? "" : " *",
 		    t->current == te ? " (current)" : "");
@@ -311,13 +311,14 @@ tree_next(struct tree *t)
 				t->tree_errno = errno;
 				return (t->visit_type = TREE_ERROR_DIR);
 			}
+			t->depth++;
 			t->d = opendir(".");
 			if (t->d == NULL) {
+				tree_ascend(t); /* Undo "chdir" */
 				tree_pop(t);
 				t->tree_errno = errno;
 				return (t->visit_type = TREE_ERROR_DIR);
 			}
-			t->depth++;
 			t->flags &= ~hasLstat;
 			t->flags &= ~hasStat;
 			t->basename = ".";

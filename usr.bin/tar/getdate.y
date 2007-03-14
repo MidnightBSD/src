@@ -23,8 +23,11 @@
 /* SUPPRESS 287 on yaccpar_sccsid *//* Unused static variable */
 /* SUPPRESS 288 on yyerrlab *//* Label unused */
 
-#include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/getdate.y,v 1.4 2005/04/23 18:38:32 kientzle Exp $");
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/usr.bin/tar/getdate.y,v 1.4.2.2 2006/11/10 16:09:13 kientzle Exp $");
+#endif
 
 #include <ctype.h>
 #include <stdio.h>
@@ -268,11 +271,11 @@ relunit	: '-' tUNUMBER tSEC_UNIT {
 	}
 	| tUNUMBER tSEC_UNIT {
 		/* "1 day" */
-		yyRelSeconds += $1;
+		yyRelSeconds += $1 * $2;
 	}
 	| tSEC_UNIT {
 		/* "hour" */
-		yyRelSeconds++;
+		yyRelSeconds += $1;
 	}
 	| '-' tUNUMBER tMONTH_UNIT {
 		/* "-3 months" */
@@ -717,6 +720,7 @@ get_date(char *p)
 	time_t		nowtime;
 	long		tzone;
 
+	memset(&gmt, 0, sizeof(gmt));
 	yyInput = p;
 
 	(void)time (&nowtime);
