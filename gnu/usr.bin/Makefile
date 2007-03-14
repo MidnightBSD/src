@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
 
 SUBDIR= bc \
@@ -13,7 +14,6 @@ SUBDIR= bc \
 	${_gperf} \
 	grep \
 	${_groff} \
-	gzip \
 	man \
 	patch \
 	rcs \
