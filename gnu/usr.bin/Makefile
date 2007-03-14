@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.2 2007/03/14 23:33:37 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
 
 SUBDIR= bc \
@@ -18,7 +18,6 @@ SUBDIR= bc \
 	patch \
 	rcs \
 	sdiff \
-	send-pr \
 	sort \
 	texinfo
  
