@@ -1343,7 +1343,7 @@ after_listen:
 						    min(so->so_rcv.sb_hiwat +
 						    tcp_autorcvbuf_inc,
 						    tcp_autorcvbuf_max);
-#if 1
+#if 0
 			log(LOG_DEBUG, "%s: hiwat %i, ref_ts %i, ts %i, "
 			    "count %i, new %i, max %i\n",
 			    __func__, so->so_rcv.sb_hiwat, tp->rfbuf_ts,

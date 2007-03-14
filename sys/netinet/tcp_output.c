@@ -419,7 +419,7 @@ after_sack_rexmit:
 		    so->so_snd.sb_cc >= (so->so_snd.sb_hiwat / 8 * 7) &&
 		    so->so_snd.sb_cc < tcp_autosndbuf_max &&
 		    sendwin >= (so->so_snd.sb_cc - (tp->snd_nxt - tp->snd_una))) {
-#if 1
+#if 0
 			log(LOG_DEBUG, "%s: inc sockbuf, old %i, new %i, "
 			    "sb_cc %i, snd_wnd %i, sendwnd %i\n",
 			    __func__, so->so_snd.sb_hiwat,
