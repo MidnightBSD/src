@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2005 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -25,33 +24,58 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_extract.c,v 1.41.2.1 2005/09/21 03:12:45 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_extract.c,v 1.41.2.4 2007/03/06 08:03:17 kientzle Exp $");
 
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
 #ifdef HAVE_SYS_ACL_H
 #include <sys/acl.h>
+#endif
+#ifdef HAVE_ATTR_XATTR_H
+#include <attr/xattr.h>
 #endif
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
 
 #ifdef HAVE_EXT2FS_EXT2_FS_H
 #include <ext2fs/ext2_fs.h>	/* for Linux file flags */
 #endif
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+#ifdef HAVE_GRP_H
 #include <grp.h>
+#endif
 #ifdef HAVE_LINUX_EXT2_FS_H
 #include <linux/ext2_fs.h>	/* for Linux file flags */
 #endif
+#ifdef HAVE_LIMITS_H
 #include <limits.h>
+#endif
+#ifdef HAVE_PWD_H
 #include <pwd.h>
+#endif
 #include <stdio.h>
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "archive.h"
 #include "archive_string.h"
@@ -82,7 +106,8 @@ struct bucket {
 
 struct extract {
 	mode_t			 umask;
-	mode_t			 default_dir_mode;
+	mode_t			 default_dir_mode_initial;
+	mode_t			 default_dir_mode_final;
 	struct archive_string	 create_parent_dir;
 	struct fixup_entry	*fixup_list;
 	struct fixup_entry	*current_fixup;
@@ -105,9 +130,11 @@ struct extract {
  * Mode to use for newly-created dirs during extraction; the correct
  * mode will be set at the end of the extraction.
  */
-#define SECURE_DIR_MODE 0700
+#define MINIMUM_DIR_MODE 0700
+#define MAXIMUM_DIR_MODE 0775
 
-static void	archive_extract_cleanup(struct archive *);
+static int	archive_extract_cleanup(struct archive *);
+static int	create_extract(struct archive *a);
 static int	extract_block_device(struct archive *,
 		    struct archive_entry *, int);
 static int	extract_char_device(struct archive *,
@@ -134,6 +161,7 @@ static int	set_acl(struct archive *, int fd, struct archive_entry *,
 		    acl_type_t, int archive_entry_acl_type, const char *tn);
 #endif
 static int	set_acls(struct archive *, int fd, struct archive_entry *);
+static int	set_xattrs(struct archive *, int fd, struct archive_entry *);
 static int	set_fflags(struct archive *, int fd, const char *name, mode_t,
 		    unsigned long fflags_set, unsigned long fflags_clear);
 static int	set_ownership(struct archive *, int fd, struct archive_entry *,
@@ -165,17 +193,11 @@ archive_read_extract(struct archive *a, struct archive_entry *entry, int flags)
 	char *original_filename;
 
 	if (a->extract == NULL) {
-		a->extract = malloc(sizeof(*a->extract));
-		if (a->extract == NULL) {
-			archive_set_error(a, ENOMEM, "Can't extract");
-			return (ARCHIVE_FATAL);
-		}
-		a->cleanup_archive_extract = archive_extract_cleanup;
-		memset(a->extract, 0, sizeof(*a->extract));
+		ret = create_extract(a);
+		if (ret)
+			return (ret);
 	}
 	extract = a->extract;
-	umask(extract->umask = umask(0)); /* Read the current umask. */
-	extract->default_dir_mode = DEFAULT_DIR_MODE & ~extract->umask;
 	extract->pst = NULL;
 	extract->current_fixup = NULL;
 	restore_pwd = -1;
@@ -240,6 +262,7 @@ archive_read_extract(struct archive *a, struct archive_entry *entry, int flags)
 
 	if (stat(archive_entry_pathname(entry), &extract->st) == 0)
 		extract->pst = &extract->st;
+	extract->umask = umask(0); /* Set the umask to zero, record old one. */
 
 	if (extract->pst != NULL &&
 	    extract->pst->st_dev == a->skip_file_dev &&
@@ -274,6 +297,7 @@ archive_read_extract(struct archive *a, struct archive_entry *entry, int flags)
 		}
 	}
 
+	umask(extract->umask); /* Restore umask. */
 
 cleanup:
 #ifdef HAVE_FCHDIR
@@ -287,6 +311,35 @@ cleanup:
 #endif
 
 	return (ret);
+}
+
+
+static int
+create_extract(struct archive *a)
+{
+	struct extract *extract;
+
+	extract = (struct extract *)malloc(sizeof(*extract));
+	if (extract == NULL) {
+		archive_set_error(a, ENOMEM, "Can't extract");
+		return (ARCHIVE_FATAL);
+	}
+	a->cleanup_archive_extract = archive_extract_cleanup;
+	memset(extract, 0, sizeof(*extract));
+	umask(extract->umask = umask(0)); /* Read the current umask. */
+	/* Final permission for default dirs. */
+	extract->default_dir_mode_final
+	    = DEFAULT_DIR_MODE & ~extract->umask;
+	/* Temporary permission for default dirs during extract. */
+	extract->default_dir_mode_initial
+	    = extract->default_dir_mode_final;
+	extract->default_dir_mode_initial |= MINIMUM_DIR_MODE;
+	extract->default_dir_mode_initial &= MAXIMUM_DIR_MODE;
+	/* If the two permissions above are different, then
+	 * the "final" permissions will be applied in the
+	 * post-extract fixup pass. */
+	a->extract = extract;
+	return (ARCHIVE_OK);
 }
 
 /*
@@ -314,7 +367,7 @@ cleanup:
  * name from archive_read_finish) reduces static link pollution, since
  * applications that don't use this API won't get this file linked in.
  */
-static void
+static int
 archive_extract_cleanup(struct archive *a)
 {
 	struct fixup_entry *next, *p;
@@ -349,6 +402,7 @@ archive_extract_cleanup(struct archive *a)
 	archive_string_free(&extract->create_parent_dir);
 	free(a->extract);
 	a->extract = NULL;
+	return (ARCHIVE_OK);
 }
 
 /*
@@ -429,7 +483,7 @@ new_fixup(struct archive *a, const char *pathname)
 	struct fixup_entry *fe;
 
 	extract = a->extract;
-	fe = malloc(sizeof(struct fixup_entry));
+	fe = (struct fixup_entry *)malloc(sizeof(struct fixup_entry));
 	if (fe == NULL)
 		return (NULL);
 	fe->next = extract->fixup_list;
@@ -503,6 +557,7 @@ extract_dir(struct archive *a, struct archive_entry *entry, int flags)
 	struct extract *extract;
 	struct fixup_entry *fe;
 	char *path, *p;
+	mode_t restore_mode, final_mode;
 
 	extract = a->extract;
 	extract->pst = NULL; /* Invalidate cached stat data. */
@@ -549,7 +604,16 @@ extract_dir(struct archive *a, struct archive_entry *entry, int flags)
 		break;
 	}
 
-	if (mkdir(path, SECURE_DIR_MODE) == 0)
+	final_mode = archive_entry_mode(entry) &
+	    (S_ISUID | S_ISGID | S_ISVTX | S_IRWXU | S_IRWXG | S_IRWXO);
+	if ((flags & ARCHIVE_EXTRACT_PERM) == 0)
+		final_mode &= ~extract->umask;
+	/* Constrain the permissions in effect during the restore. */
+	restore_mode = final_mode;
+	restore_mode |= MINIMUM_DIR_MODE;
+	restore_mode &= MAXIMUM_DIR_MODE;
+
+	if (mkdir(path, restore_mode) == 0)
 		goto success;
 
 	if (extract->pst == NULL && stat(path, &extract->st) == 0)
@@ -570,27 +634,26 @@ extract_dir(struct archive *a, struct archive_entry *entry, int flags)
 	}
 
 	/* One final attempt to create the dir. */
-	if (mkdir(path, SECURE_DIR_MODE) != 0) {
+	if (mkdir(path, restore_mode) != 0) {
 		archive_set_error(a, errno, "Can't create directory");
 		return (ARCHIVE_WARN);
 	}
 
 success:
 	/* Add this dir to the fixup list. */
-	fe = current_fixup(a, path);
-	fe->fixup |= FIXUP_MODE;
-	fe->mode = archive_entry_mode(entry);
-	if ((flags & ARCHIVE_EXTRACT_PERM) == 0)
-		fe->mode &= ~extract->umask;
+	if (final_mode != restore_mode) {
+		fe = current_fixup(a, path);
+		fe->fixup |= FIXUP_MODE;
+		fe->mode = final_mode;
+	}
 	if (flags & ARCHIVE_EXTRACT_TIME) {
+		fe = current_fixup(a, path);
 		fe->fixup |= FIXUP_TIMES;
 		fe->mtime = archive_entry_mtime(entry);
 		fe->mtime_nanos = archive_entry_mtime_nsec(entry);
 		fe->atime = archive_entry_atime(entry);
 		fe->atime_nanos = archive_entry_atime_nsec(entry);
 	}
-	/* For now, set the mode to SECURE_DIR_MODE. */
-	archive_entry_set_mode(entry, SECURE_DIR_MODE);
 	return (restore_metadata(a, -1, entry, flags));
 }
 
@@ -651,12 +714,9 @@ create_parent_dir_mutable(struct archive *a, char *path, int flags)
 static int
 create_dir_mutable(struct archive *a, char *path, int flags)
 {
-	mode_t old_umask;
 	int r;
 
-	old_umask = umask(~SECURE_DIR_MODE);
 	r = create_dir_recursive(a, path, flags);
-	umask(old_umask);
 	return (r);
 }
 
@@ -730,10 +790,13 @@ create_dir_recursive(struct archive *a, char *path, int flags)
 			return (r);
 	}
 
-	if (mkdir(path, SECURE_DIR_MODE) == 0) {
-		le = new_fixup(a, path);
-		le->fixup |= FIXUP_MODE;
-		le->mode = extract->default_dir_mode;
+	if (mkdir(path, extract->default_dir_mode_initial) == 0) {
+		if (extract->default_dir_mode_initial
+		    != extract->default_dir_mode_final) {
+			le = new_fixup(a, path);
+			le->fixup |= FIXUP_MODE;
+			le->mode = extract->default_dir_mode_final;
+		}
 		return (ARCHIVE_OK);
 	}
 
@@ -1047,12 +1110,26 @@ set_perm(struct archive *a, int fd, struct archive_entry *entry,
 			mode &= ~ S_ISGID;
 	}
 
-	/*
-	 * Ensure we change permissions on the object we extracted,
-	 * and not any incidental symlink that might have gotten in
-	 * the way.
-	 */
-	if (!S_ISLNK(archive_entry_mode(entry))) {
+	if (S_ISLNK(archive_entry_mode(entry))) {
+#ifdef HAVE_LCHMOD
+		/*
+		 * If this is a symlink, use lchmod().  If the
+		 * platform doesn't support lchmod(), just skip it as
+		 * permissions on symlinks are actually ignored on
+		 * most platforms.
+		 */
+		if (lchmod(name, mode) != 0) {
+			archive_set_error(a, errno, "Can't set permissions");
+			return (ARCHIVE_WARN);
+		}
+#endif
+	} else if (!S_ISDIR(archive_entry_mode(entry))) {
+		/*
+		 * If it's not a symlink and not a dir, then use
+		 * fchmod() or chmod(), depending on whether we have
+		 * an fd.  Dirs get their perms set during the
+		 * post-extract fixup, which is handled elsewhere.
+		 */
 #ifdef HAVE_FCHMOD
 		if (fd >= 0) {
 			if (fchmod(fd, mode) != 0) {
@@ -1062,26 +1139,23 @@ set_perm(struct archive *a, int fd, struct archive_entry *entry,
 			}
 		} else
 #endif
-		if (chmod(name, mode) != 0) {
-			archive_set_error(a, errno, "Can't set permissions");
-			return (ARCHIVE_WARN);
-		}
-#ifdef HAVE_LCHMOD
-	} else {
-		/*
-		 * If lchmod() isn't supported, it's no big deal.
-		 * Permissions on symlinks are actually ignored on
-		 * most platforms.
-		 */
-		if (lchmod(name, mode) != 0) {
-			archive_set_error(a, errno, "Can't set permissions");
-			return (ARCHIVE_WARN);
-		}
-#endif
+			/* If this platform lacks fchmod(), then
+			 * we'll just use chmod(). */
+			if (chmod(name, mode) != 0) {
+				archive_set_error(a, errno,
+				    "Can't set permissions");
+				return (ARCHIVE_WARN);
+			}
 	}
 
 	if (flags & ARCHIVE_EXTRACT_ACL) {
 		r = set_acls(a, fd, entry);
+		if (r != ARCHIVE_OK)
+			return (r);
+	}
+
+	if (flags & ARCHIVE_EXTRACT_XATTR) {
+		r = set_xattrs(a, fd, entry);
 		if (r != ARCHIVE_OK)
 			return (r);
 	}
@@ -1201,7 +1275,7 @@ set_fflags(struct archive *a, int fd, const char *name, mode_t mode,
 	return (ARCHIVE_WARN);
 }
 
-#elif defined(__linux)
+#elif defined(__linux) && defined(EXT2_IOC_GETFLAGS) && defined(EXT2_IOC_SETFLAGS)
 
 /*
  * Linux has flags too, but uses ioctl() to access them instead of
@@ -1214,8 +1288,8 @@ set_fflags(struct archive *a, int fd, const char *name, mode_t mode,
 	struct extract *extract;
 	int		 ret;
 	int		 myfd = fd;
-	int		 err;
 	unsigned long newflags, oldflags;
+	unsigned long sf_mask = 0;
 
 	extract = a->extract;
 	if (set == 0  && clear == 0)
@@ -1231,10 +1305,18 @@ set_fflags(struct archive *a, int fd, const char *name, mode_t mode,
 		return (ARCHIVE_OK);
 
 	/*
-	 * Linux has no define for the flags that are only settable
-	 * by the root user...
+	 * Linux has no define for the flags that are only settable by
+	 * the root user.  This code may seem a little complex, but
+	 * there seem to be some Linux systems that lack these
+	 * defines. (?)  The code below degrades reasonably gracefully
+	 * if sf_mask is incomplete.
 	 */
-#define	SF_MASK                 (EXT2_IMMUTABLE_FL|EXT2_APPEND_FL)
+#ifdef EXT2_IMMUTABLE_FL
+	sf_mask |= EXT2_IMMUTABLE_FL;
+#endif
+#ifdef EXT2_APPEND_FL
+	sf_mask |= EXT2_APPEND_FL;
+#endif
 	/*
 	 * XXX As above, this would be way simpler if we didn't have
 	 * to read the current flags from disk. XXX
@@ -1250,8 +1332,8 @@ set_fflags(struct archive *a, int fd, const char *name, mode_t mode,
 	}
 	/* If we couldn't set all the flags, try again with a subset. */
 	if (ioctl(myfd, EXT2_IOC_GETFLAGS, &oldflags) >= 0) {
-		newflags &= ~SF_MASK;
-		oldflags &= SF_MASK;
+		newflags &= ~sf_mask;
+		oldflags &= sf_mask;
 		newflags |= oldflags;
 		if (ioctl(myfd, EXT2_IOC_SETFLAGS, &newflags) >= 0)
 			goto cleanup;
@@ -1322,7 +1404,7 @@ set_acls(struct archive *a, int fd, struct archive_entry *entry)
 
 static int
 set_acl(struct archive *a, int fd, struct archive_entry *entry,
-    acl_type_t acl_type, int ae_requested_type, const char *typename)
+    acl_type_t acl_type, int ae_requested_type, const char *tname)
 {
 	acl_t		 acl;
 	acl_entry_t	 acl_entry;
@@ -1389,14 +1471,15 @@ set_acl(struct archive *a, int fd, struct archive_entry *entry,
 	if (fd >= 0 && acl_type == ACL_TYPE_ACCESS && acl_set_fd(fd, acl) == 0)
 		ret = ARCHIVE_OK;
 	else
-#endif
+#else
 #if HAVE_ACL_SET_FD_NP
 	if (fd >= 0 && acl_set_fd_np(fd, acl, acl_type) == 0)
 		ret = ARCHIVE_OK;
 	else
 #endif
+#endif
 	if (acl_set_file(name, acl_type, acl) != 0) {
-		archive_set_error(a, errno, "Failed to set %s acl", typename);
+		archive_set_error(a, errno, "Failed to set %s acl", tname);
 		ret = ARCHIVE_WARN;
 	}
 	acl_free(acl);
@@ -1404,9 +1487,87 @@ set_acl(struct archive *a, int fd, struct archive_entry *entry,
 }
 #endif
 
+#if HAVE_LSETXATTR
 /*
- * The following routines do some basic caching of uname/gname lookups.
- * All such lookups go through these routines, including ACL conversions.
+ * Restore extended attributes -  Linux implementation
+ */
+static int
+set_xattrs(struct archive *a, int fd, struct archive_entry *entry)
+{
+	static int warning_done = 0;
+	int ret = ARCHIVE_OK;
+	int i = archive_entry_xattr_reset(entry);
+
+	while (i--) {
+		const char *name;
+		const void *value;
+		size_t size;
+		archive_entry_xattr_next(entry, &name, &value, &size);
+		if (name != NULL &&
+				strncmp(name, "xfsroot.", 8) != 0 &&
+				strncmp(name, "system.", 7) != 0) {
+			int e;
+#if HAVE_FSETXATTR
+			if (fd >= 0)
+				e = fsetxattr(fd, name, value, size, 0);
+			else
+#endif
+			{
+				e = lsetxattr(archive_entry_pathname(entry),
+				    name, value, size, 0);
+			}
+			if (e == -1) {
+				if (errno == ENOTSUP) {
+					if (!warning_done) {
+						warning_done = 1;
+						archive_set_error(a, errno,
+						    "Cannot restore extended "
+						    "attributes on this file "
+						    "system");
+					}
+				} else
+					archive_set_error(a, errno,
+					    "Failed to set extended attribute");
+				ret = ARCHIVE_WARN;
+			}
+		} else {
+			archive_set_error(a, ARCHIVE_ERRNO_FILE_FORMAT,
+			    "Invalid extended attribute encountered");
+			ret = ARCHIVE_WARN;
+		}
+	}
+	return (ret);
+}
+#else
+/*
+ * Restore extended attributes - stub implementation for unsupported systems
+ */
+static int
+set_xattrs(struct archive *a, int fd, struct archive_entry *entry)
+{
+	static int warning_done = 0;
+	(void)a; /* UNUSED */
+	(void)fd; /* UNUSED */
+
+	/* If there aren't any extended attributes, then it's okay not
+	 * to extract them, otherwise, issue a single warning. */
+	if (archive_entry_xattr_count(entry) != 0 && !warning_done) {
+		warning_done = 1;
+		archive_set_error(a, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "Cannot restore extended attributes on this system");
+		return (ARCHIVE_WARN);
+	}
+	/* Warning was already emitted; suppress further warnings. */
+	return (ARCHIVE_OK);
+}
+#endif
+
+/*
+ * The following routines do some basic caching of uname/gname
+ * lookups.  All such lookups go through these routines, including ACL
+ * conversions.  Even a small cache here provides an enormous speedup,
+ * especially on systems using NIS, LDAP, or a similar networked
+ * directory system.
  *
  * TODO: Provide an API for clients to override these routines.
  */
@@ -1485,17 +1646,17 @@ lookup_uid(struct archive *a, const char *uname, uid_t uid)
 static unsigned int
 hash(const char *p)
 {
-  /* A 32-bit version of Peter Weinberger's (PJW) hash algorithm,
-     as used by ELF for hashing function names. */
-  unsigned g,h = 0;
-  while(*p != '\0') {
-    h = ( h << 4 ) + *p++;
-    if (( g = h & 0xF0000000 )) {
-      h ^= g >> 24;
-      h &= 0x0FFFFFFF;
-    }
-  }
-  return h;
+	/* A 32-bit version of Peter Weinberger's (PJW) hash algorithm,
+	   as used by ELF for hashing function names. */
+	unsigned g, h = 0;
+	while (*p != '\0') {
+		h = ( h << 4 ) + *p++;
+		if (( g = h & 0xF0000000 )) {
+			h ^= g >> 24;
+			h &= 0x0FFFFFFF;
+		}
+	}
+	return h;
 }
 
 void

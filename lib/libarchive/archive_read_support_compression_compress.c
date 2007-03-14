@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -65,12 +64,20 @@
 
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_compression_compress.c,v 1.3 2004/10/17 23:40:10 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_compression_compress.c,v 1.3.2.3 2007/01/27 06:44:53 kientzle Exp $");
 
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "archive.h"
 #include "archive_private.h"
@@ -155,7 +162,7 @@ bid(const void *buff, size_t len)
 	if (len < 1)
 		return (0);
 
-	buffer = buff;
+	buffer = (const unsigned char *)buff;
 	bits_checked = 0;
 	if (buffer[0] != 037)	/* Verify first ID byte. */
 		return (0);
@@ -190,9 +197,10 @@ init(struct archive *a, const void *buff, size_t n)
 
 	a->compression_read_ahead = read_ahead;
 	a->compression_read_consume = read_consume;
+	a->compression_skip = NULL; /* not supported */
 	a->compression_finish = finish;
 
-	state = malloc(sizeof(*state));
+	state = (struct private_data *)malloc(sizeof(*state));
 	if (state == NULL) {
 		archive_set_error(a, ENOMEM,
 		    "Can't allocate data for %s decompression",
@@ -200,6 +208,7 @@ init(struct archive *a, const void *buff, size_t n)
 		return (ARCHIVE_FATAL);
 	}
 	memset(state, 0, sizeof(*state));
+	a->compression_data = state;
 
 	state->uncompressed_buffer_size = 64 * 1024;
 	state->uncompressed_buffer = malloc(state->uncompressed_buffer_size);
@@ -211,18 +220,25 @@ init(struct archive *a, const void *buff, size_t n)
 		goto fatal;
 	}
 
-	state->next_in = buff;
+	state->next_in = (const unsigned char *)buff;
 	state->avail_in = n;
-	state->read_next = state->next_out = state->uncompressed_buffer;
+	state->read_next = state->next_out = (unsigned char *)state->uncompressed_buffer;
 	state->avail_out = state->uncompressed_buffer_size;
 
 	code = getbits(a, state, 8);
-	if (code != 037)
+	if (code != 037) /* This should be impossible. */
 		goto fatal;
 
 	code = getbits(a, state, 8);
-	if (code != 0235)
+	if (code != 0235) {
+		/* This can happen if the library is receiving 1-byte
+		 * blocks and gzip and compress are both enabled.
+		 * You can't distinguish gzip and compress only from
+		 * the first byte. */
+		archive_set_error(a, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "Compress signature did not match.");
 		goto fatal;
+	}
 
 	code = getbits(a, state, 8);
 	state->maxcode_bits = code & 0x1f;
@@ -242,8 +258,6 @@ init(struct archive *a, const void *buff, size_t n)
 		state->suffix[code] = code;
 	}
 	next_code(a, state);
-	a->compression_data = state;
-
 	return (ARCHIVE_OK);
 
 fatal:
@@ -261,7 +275,7 @@ read_ahead(struct archive *a, const void **p, size_t min)
 	struct private_data *state;
 	int read_avail, was_avail, ret;
 
-	state = a->compression_data;
+	state = (struct private_data *)a->compression_data;
 	was_avail = -1;
 	if (!a->client_reader) {
 		archive_set_error(a, ARCHIVE_ERRNO_PROGRAMMER,
@@ -282,7 +296,7 @@ read_ahead(struct archive *a, const void **p, size_t min)
 	if (read_avail < (int)min) {
 		memmove(state->uncompressed_buffer, state->read_next,
 		    read_avail);
-		state->read_next = state->uncompressed_buffer;
+		state->read_next = (unsigned char *)state->uncompressed_buffer;
 		state->next_out = state->read_next + read_avail;
 		state->avail_out
 		    = state->uncompressed_buffer_size - read_avail;
@@ -315,7 +329,7 @@ read_consume(struct archive *a, size_t n)
 {
 	struct private_data *state;
 
-	state = a->compression_data;
+	state = (struct private_data *)a->compression_data;
 	a->file_position += n;
 	state->read_next += n;
 	if (state->read_next > state->next_out)
@@ -331,17 +345,19 @@ static int
 finish(struct archive *a)
 {
 	struct private_data *state;
-	int ret;
+	int ret = ARCHIVE_OK;
 
-	state = a->compression_data;
-	ret = ARCHIVE_OK;
+	state = (struct private_data *)a->compression_data;
 
-	free(state->uncompressed_buffer);
-	free(state);
+	if (state != NULL) {
+		if (state->uncompressed_buffer != NULL)
+			free(state->uncompressed_buffer);
+		free(state);
+	}
 
 	a->compression_data = NULL;
 	if (a->client_closer != NULL)
-		(a->client_closer)(a, a->client_data);
+		ret = (a->client_closer)(a, a->client_data);
 
 	return (ret);
 }

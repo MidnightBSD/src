@@ -16005,6 +16005,8 @@ lib/libarchive/archive_read_data_into_fd.c -text
 lib/libarchive/archive_read_extract.c -text
 lib/libarchive/archive_read_open_fd.c -text
 lib/libarchive/archive_read_open_file.c -text
+lib/libarchive/archive_read_open_filename.c -text
+lib/libarchive/archive_read_open_memory.c -text
 lib/libarchive/archive_read_support_compression_all.c -text
 lib/libarchive/archive_read_support_compression_bzip2.c -text
 lib/libarchive/archive_read_support_compression_compress.c -text
@@ -16012,6 +16014,7 @@ lib/libarchive/archive_read_support_compression_gzip.c -text
 lib/libarchive/archive_read_support_compression_none.c -text
 lib/libarchive/archive_read_support_format_all.c -text
 lib/libarchive/archive_read_support_format_cpio.c -text
+lib/libarchive/archive_read_support_format_empty.c -text
 lib/libarchive/archive_read_support_format_iso9660.c -text
 lib/libarchive/archive_read_support_format_tar.c -text
 lib/libarchive/archive_read_support_format_zip.c -text
@@ -16024,6 +16027,8 @@ lib/libarchive/archive_write.3 -text
 lib/libarchive/archive_write.c -text
 lib/libarchive/archive_write_open_fd.c -text
 lib/libarchive/archive_write_open_file.c -text
+lib/libarchive/archive_write_open_filename.c -text
+lib/libarchive/archive_write_open_memory.c -text
 lib/libarchive/archive_write_set_compression_bzip2.c -text
 lib/libarchive/archive_write_set_compression_gzip.c -text
 lib/libarchive/archive_write_set_compression_none.c -text
@@ -16033,6 +16038,7 @@ lib/libarchive/archive_write_set_format_cpio.c -text
 lib/libarchive/archive_write_set_format_pax.c -text
 lib/libarchive/archive_write_set_format_shar.c -text
 lib/libarchive/archive_write_set_format_ustar.c -text
+lib/libarchive/config_freebsd.h -text
 lib/libarchive/configure.ac.in -text
 lib/libarchive/libarchive-formats.5 -text
 lib/libarchive/libarchive.3 -text

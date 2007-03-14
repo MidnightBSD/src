@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -25,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_all.c,v 1.6 2005/01/25 06:07:28 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_all.c,v 1.6.2.2 2007/02/14 08:29:35 kientzle Exp $");
 
 #include "archive.h"
 
@@ -33,6 +32,7 @@ int
 archive_read_support_format_all(struct archive *a)
 {
 	archive_read_support_format_cpio(a);
+	archive_read_support_format_empty(a);
 	archive_read_support_format_iso9660(a);
 	archive_read_support_format_tar(a);
 	archive_read_support_format_zip(a);

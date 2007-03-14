@@ -24,13 +24,16 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_open_fd.c,v 1.4.2.1 2007/01/27 06:44:53 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_open_filename.c,v 1.19.2.1 2007/01/27 06:44:53 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
 #endif
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -44,9 +47,9 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_write_open_fd.c,v 1.4.2.1 2007/01
 
 #include "archive.h"
 
-struct write_fd_data {
-	off_t		offset;
+struct write_file_data {
 	int		fd;
+	char		filename[1];
 };
 
 static int	file_close(struct archive *, void *);
@@ -54,16 +57,32 @@ static int	file_open(struct archive *, void *);
 static ssize_t	file_write(struct archive *, void *, const void *buff, size_t);
 
 int
-archive_write_open_fd(struct archive *a, int fd)
+archive_write_open_file(struct archive *a, const char *filename)
 {
-	struct write_fd_data *mine;
+	return (archive_write_open_filename(a, filename));
+}
 
-	mine = (struct write_fd_data *)malloc(sizeof(*mine));
-	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+int
+archive_write_open_filename(struct archive *a, const char *filename)
+{
+	struct write_file_data *mine;
+
+	if (filename == NULL || filename[0] == '\0') {
+		mine = (struct write_file_data *)malloc(sizeof(*mine));
+		if (mine == NULL) {
+			archive_set_error(a, ENOMEM, "No memory");
+			return (ARCHIVE_FATAL);
+		}
+		mine->filename[0] = '\0'; /* Record that we're using stdout. */
+	} else {
+		mine = (struct write_file_data *)malloc(sizeof(*mine) + strlen(filename));
+		if (mine == NULL) {
+			archive_set_error(a, ENOMEM, "No memory");
+			return (ARCHIVE_FATAL);
+		}
+		strcpy(mine->filename, filename);
 	}
-	mine->fd = fd;
+	mine->fd = -1;
 	return (archive_write_open(a, mine,
 		    file_open, file_write, file_close));
 }
@@ -71,37 +90,59 @@ archive_write_open_fd(struct archive *a, int fd)
 static int
 file_open(struct archive *a, void *client_data)
 {
-	struct write_fd_data *mine;
+	int flags;
+	struct write_file_data *mine;
 	struct stat st;
 
-	mine = (struct write_fd_data *)client_data;
+	mine = (struct write_file_data *)client_data;
+	flags = O_WRONLY | O_CREAT | O_TRUNC;
+
+	/*
+	 * Open the file.
+	 */
+	if (mine->filename[0] != '\0') {
+		mine->fd = open(mine->filename, flags, 0666);
+		if (mine->fd < 0) {
+			archive_set_error(a, errno, "Failed to open '%s'",
+			    mine->filename);
+			return (ARCHIVE_FATAL);
+		}
+	} else {
+		/*
+		 * NULL filename is stdout.
+		 */
+		mine->fd = 1;
+		/* By default, pad archive when writing to stdout. */
+		if (archive_write_get_bytes_in_last_block(a) < 0)
+			archive_write_set_bytes_in_last_block(a, 0);
+	}
 
 	if (fstat(mine->fd, &st) != 0) {
-		archive_set_error(a, errno, "Couldn't stat fd %d", mine->fd);
-		return (ARCHIVE_FATAL);
+               archive_set_error(a, errno, "Couldn't stat '%s'",
+                   mine->filename);
+               return (ARCHIVE_FATAL);
 	}
 
 	/*
-	 * If this is a regular file, don't add it to itself.
+	 * Set up default last block handling.
+	 */
+	if (archive_write_get_bytes_in_last_block(a) < 0) {
+		if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ||
+		    S_ISFIFO(st.st_mode))
+			/* Pad last block when writing to device or FIFO. */
+			archive_write_set_bytes_in_last_block(a, 0);
+		else
+			/* Don't pad last block otherwise. */
+			archive_write_set_bytes_in_last_block(a, 1);
+	}
+
+	/*
+	 * If the output file is a regular file, don't add it to
+	 * itself.  If it's a device file, it's okay to add the device
+	 * entry to the output archive.
 	 */
 	if (S_ISREG(st.st_mode))
 		archive_write_set_skip_file(a, st.st_dev, st.st_ino);
-
-	/*
-	 * If client hasn't explicitly set the last block handling,
-	 * then set it here.
-	 */
-	if (archive_write_get_bytes_in_last_block(a) < 0) {
-		/* If the output is a block or character device, fifo,
-		 * or stdout, pad the last block, otherwise leave it
-		 * unpadded. */
-		if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode) ||
-		    S_ISFIFO(st.st_mode) || (mine->fd == 1))
-			/* Last block will be fully padded. */
-			archive_write_set_bytes_in_last_block(a, 0);
-		else
-			archive_write_set_bytes_in_last_block(a, 1);
-	}
 
 	return (ARCHIVE_OK);
 }
@@ -109,10 +150,10 @@ file_open(struct archive *a, void *client_data)
 static ssize_t
 file_write(struct archive *a, void *client_data, const void *buff, size_t length)
 {
-	struct write_fd_data	*mine;
+	struct write_file_data	*mine;
 	ssize_t	bytesWritten;
 
-	mine = (struct write_fd_data *)client_data;
+	mine = (struct write_file_data *)client_data;
 	bytesWritten = write(mine->fd, buff, length);
 	if (bytesWritten <= 0) {
 		archive_set_error(a, errno, "Write error");
@@ -124,9 +165,11 @@ file_write(struct archive *a, void *client_data, const void *buff, size_t length
 static int
 file_close(struct archive *a, void *client_data)
 {
-	struct write_fd_data	*mine = (struct write_fd_data *)client_data;
+	struct write_file_data	*mine = (struct write_file_data *)client_data;
 
 	(void)a; /* UNUSED */
+	if (mine->filename[0] != '\0')
+		close(mine->fd);
 	free(mine);
 	return (ARCHIVE_OK);
 }

@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -25,22 +24,62 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.29 2005/06/04 22:26:23 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.29.2.2 2007/01/27 06:44:52 kientzle Exp $");
 
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
+#ifdef MAJOR_IN_MKDEV
+#include <sys/mkdev.h>
+#else
+#ifdef MAJOR_IN_SYSMACROS
+#include <sys/sysmacros.h>
+#endif
+#endif
 #ifdef HAVE_EXT2FS_EXT2_FS_H
 #include <ext2fs/ext2_fs.h>	/* for Linux file flags */
 #endif
+#ifdef HAVE_LIMITS_H
 #include <limits.h>
+#endif
+#include <stddef.h>
 #include <stdio.h>
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
-#include <wchar.h>
+#endif
 
+/* Obtain suitable wide-character manipulation functions. */
+#ifdef HAVE_WCHAR_H
+#include <wchar.h>
+#else
+static size_t wcslen(const wchar_t *s)
+{
+	const wchar_t *p = s;
+	while (*p != L'\0')
+		++p;
+	return p - s;
+}
+static wchar_t * wcscpy(wchar_t *s1, const wchar_t *s2)
+{
+	wchar_t *dest = s1;
+	while ((*s1 = *s2) != L'\0')
+		++s1, ++s2;
+	return dest;
+}
+#define wmemcpy(a,b,i)  (wchar_t *)memcpy((a), (b), (i) * sizeof(wchar_t))
+/* Good enough for simple equality testing, but not for sorting. */
+#define wmemcmp(a,b,i)  memcmp((a), (b), (i) * sizeof(wchar_t))
+#endif
 
 #include "archive.h"
 #include "archive_entry.h"
+#include "archive_private.h"
 
 #undef max
 #define	max(a, b)	((a)>(b)?(a):(b))
@@ -65,6 +104,14 @@ struct ae_acl {
 	int	permset;		/* r/w/x bits */
 	int	id;			/* uid/gid for user/group */
 	struct aes name;		/* uname/gname */
+};
+
+struct ae_xattr {
+	struct ae_xattr *next;
+
+	char	*name;
+	void	*value;
+	size_t	size;
 };
 
 static void	aes_clean(struct aes *);
@@ -140,6 +187,9 @@ struct archive_entry {
 	struct ae_acl	*acl_p;
 	int		 acl_state;	/* See acl_next for details. */
 	wchar_t		*acl_text_w;
+
+	struct ae_xattr *xattr_head;
+	struct ae_xattr *xattr_p;
 };
 
 static void
@@ -163,12 +213,16 @@ aes_copy(struct aes *dest, struct aes *src)
 	if (src->aes_mbs != NULL) {
 		dest->aes_mbs_alloc = strdup(src->aes_mbs);
 		dest->aes_mbs = dest->aes_mbs_alloc;
+		if (dest->aes_mbs == NULL)
+			__archive_errx(1, "No memory for aes_copy()");
 	}
 
 	if (src->aes_wcs != NULL) {
-		dest->aes_wcs_alloc = malloc((wcslen(src->aes_wcs) + 1)
+		dest->aes_wcs_alloc = (wchar_t *)malloc((wcslen(src->aes_wcs) + 1)
 		    * sizeof(wchar_t));
 		dest->aes_wcs = dest->aes_wcs_alloc;
+		if (dest->aes_wcs == NULL)
+			__archive_errx(1, "No memory for aes_copy()");
 		wcscpy(dest->aes_wcs_alloc, src->aes_wcs);
 	}
 }
@@ -176,6 +230,8 @@ aes_copy(struct aes *dest, struct aes *src)
 static const char *
 aes_get_mbs(struct aes *aes)
 {
+	if (aes->aes_mbs == NULL && aes->aes_wcs == NULL)
+		return NULL;
 	if (aes->aes_mbs == NULL && aes->aes_wcs != NULL) {
 		/*
 		 * XXX Need to estimate the number of byte in the
@@ -184,8 +240,10 @@ aes_get_mbs(struct aes *aes)
 		 * be a better way... XXX
 		 */
 		int mbs_length = wcslen(aes->aes_wcs) * 3 + 64;
-		aes->aes_mbs_alloc = malloc(mbs_length);
+		aes->aes_mbs_alloc = (char *)malloc(mbs_length);
 		aes->aes_mbs = aes->aes_mbs_alloc;
+		if (aes->aes_mbs == NULL)
+			__archive_errx(1, "No memory for aes_get_mbs()");
 		wcstombs(aes->aes_mbs_alloc, aes->aes_wcs, mbs_length - 1);
 		aes->aes_mbs_alloc[mbs_length - 1] = 0;
 	}
@@ -195,6 +253,8 @@ aes_get_mbs(struct aes *aes)
 static const wchar_t *
 aes_get_wcs(struct aes *aes)
 {
+	if (aes->aes_wcs == NULL && aes->aes_mbs == NULL)
+		return NULL;
 	if (aes->aes_wcs == NULL && aes->aes_mbs != NULL) {
 		/*
 		 * No single byte will be more than one wide character,
@@ -202,8 +262,10 @@ aes_get_wcs(struct aes *aes)
 		 */
 		int wcs_length = strlen(aes->aes_mbs);
 		aes->aes_wcs_alloc
-		    = malloc((wcs_length + 1) * sizeof(wchar_t));
+		    = (wchar_t *)malloc((wcs_length + 1) * sizeof(wchar_t));
 		aes->aes_wcs = aes->aes_wcs_alloc;
+		if (aes->aes_wcs == NULL)
+			__archive_errx(1, "No memory for aes_get_wcs()");
 		mbstowcs(aes->aes_wcs_alloc, aes->aes_mbs, wcs_length);
 		aes->aes_wcs_alloc[wcs_length] = 0;
 	}
@@ -236,7 +298,9 @@ aes_copy_mbs(struct aes *aes, const char *mbs)
 		free(aes->aes_wcs_alloc);
 		aes->aes_wcs_alloc = NULL;
 	}
-	aes->aes_mbs_alloc = malloc((strlen(mbs) + 1) * sizeof(char));
+	aes->aes_mbs_alloc = (char *)malloc((strlen(mbs) + 1) * sizeof(char));
+	if (aes->aes_mbs_alloc == NULL)
+		__archive_errx(1, "No memory for aes_copy_mbs()");
 	strcpy(aes->aes_mbs_alloc, mbs);
 	aes->aes_mbs = aes->aes_mbs_alloc;
 	aes->aes_wcs = NULL;
@@ -271,7 +335,9 @@ aes_copy_wcs(struct aes *aes, const wchar_t *wcs)
 		aes->aes_wcs_alloc = NULL;
 	}
 	aes->aes_mbs = NULL;
-	aes->aes_wcs_alloc = malloc((wcslen(wcs) + 1) * sizeof(wchar_t));
+	aes->aes_wcs_alloc = (wchar_t *)malloc((wcslen(wcs) + 1) * sizeof(wchar_t));
+	if (aes->aes_wcs_alloc == NULL)
+		__archive_errx(1, "No memory for aes_copy_wcs()");
 	wcscpy(aes->aes_wcs_alloc, wcs);
 	aes->aes_wcs = aes->aes_wcs_alloc;
 }
@@ -286,6 +352,7 @@ archive_entry_clear(struct archive_entry *entry)
 	aes_clean(&entry->ae_symlink);
 	aes_clean(&entry->ae_uname);
 	archive_entry_acl_clear(entry);
+	archive_entry_xattr_clear(entry);
 	memset(entry, 0, sizeof(*entry));
 	return entry;
 }
@@ -296,8 +363,8 @@ archive_entry_clone(struct archive_entry *entry)
 	struct archive_entry *entry2;
 
 	/* Allocate new structure and copy over all of the fields. */
-	entry2 = malloc(sizeof(*entry2));
-	if(entry2 == NULL)
+	entry2 = (struct archive_entry *)malloc(sizeof(*entry2));
+	if (entry2 == NULL)
 		return (NULL);
 	memset(entry2, 0, sizeof(*entry2));
 	entry2->ae_stat = entry->ae_stat;
@@ -312,6 +379,7 @@ archive_entry_clone(struct archive_entry *entry)
 	aes_copy(&entry2->ae_uname, &entry->ae_uname);
 
 	/* XXX TODO: Copy ACL data over as well. XXX */
+	/* XXX TODO: Copy xattr data over as well. XXX */
 	return (entry2);
 }
 
@@ -327,8 +395,8 @@ archive_entry_new(void)
 {
 	struct archive_entry *entry;
 
-	entry = malloc(sizeof(*entry));
-	if(entry == NULL)
+	entry = (struct archive_entry *)malloc(sizeof(*entry));
+	if (entry == NULL)
 		return (NULL);
 	memset(entry, 0, sizeof(*entry));
 	return (entry);
@@ -422,10 +490,22 @@ archive_entry_gname(struct archive_entry *entry)
 	return (aes_get_mbs(&entry->ae_gname));
 }
 
+const wchar_t *
+archive_entry_gname_w(struct archive_entry *entry)
+{
+	return (aes_get_wcs(&entry->ae_gname));
+}
+
 const char *
 archive_entry_hardlink(struct archive_entry *entry)
 {
 	return (aes_get_mbs(&entry->ae_hardlink));
+}
+
+const wchar_t *
+archive_entry_hardlink_w(struct archive_entry *entry)
+{
+	return (aes_get_wcs(&entry->ae_hardlink));
 }
 
 ino_t
@@ -501,6 +581,12 @@ archive_entry_symlink(struct archive_entry *entry)
 	return (aes_get_mbs(&entry->ae_symlink));
 }
 
+const wchar_t *
+archive_entry_symlink_w(struct archive_entry *entry)
+{
+	return (aes_get_wcs(&entry->ae_symlink));
+}
+
 uid_t
 archive_entry_uid(struct archive_entry *entry)
 {
@@ -511,6 +597,12 @@ const char *
 archive_entry_uname(struct archive_entry *entry)
 {
 	return (aes_get_mbs(&entry->ae_uname));
+}
+
+const wchar_t *
+archive_entry_uname_w(struct archive_entry *entry)
+{
+	return (aes_get_wcs(&entry->ae_uname));
 }
 
 /*
@@ -818,7 +910,9 @@ acl_new_entry(struct archive_entry *entry,
 	}
 
 	/* Add a new entry to the list. */
-	ap = malloc(sizeof(*ap));
+	ap = (struct ae_acl *)malloc(sizeof(*ap));
+	if (ap == NULL)
+		return (NULL);
 	memset(ap, 0, sizeof(*ap));
 	ap->next = entry->acl_head;
 	entry->acl_head = ap;
@@ -982,7 +1076,7 @@ archive_entry_acl_text_w(struct archive_entry *entry, int flags)
 			length ++; /* colon */
 			length += 3; /* rwx */
 			length += 1; /* colon */
-			length += max(sizeof(uid_t),sizeof(gid_t)) * 3 + 1;
+			length += max(sizeof(uid_t), sizeof(gid_t)) * 3 + 1;
 			length ++; /* newline */
 		}
 		ap = ap->next;
@@ -998,7 +1092,9 @@ archive_entry_acl_text_w(struct archive_entry *entry, int flags)
 		return (NULL);
 
 	/* Now, allocate the string and actually populate it. */
-	wp = entry->acl_text_w = malloc(length * sizeof(wchar_t));
+	wp = entry->acl_text_w = (wchar_t *)malloc(length * sizeof(wchar_t));
+	if (wp == NULL)
+		__archive_errx(1, "No memory to generate the text version of the ACL");
 	count = 0;
 	if ((flags & ARCHIVE_ENTRY_ACL_TYPE_ACCESS) != 0) {
 		append_entry_w(&wp, NULL, ARCHIVE_ENTRY_ACL_USER_OBJ, NULL,
@@ -1251,7 +1347,9 @@ __archive_entry_acl_parse_w(struct archive_entry *entry,
 					free(namebuff);
 				namebuff_length = name_end - name_start + 256;
 				namebuff =
-				    malloc(namebuff_length * sizeof(wchar_t));
+				    (wchar_t *)malloc(namebuff_length * sizeof(wchar_t));
+				if (namebuff == NULL)
+					goto fail;
 			}
 			wmemcpy(namebuff, name_start, name_end - name_start);
 			namebuff[name_end - name_start] = L'\0';
@@ -1268,6 +1366,98 @@ fail:
 		free(namebuff);
 	return (ARCHIVE_WARN);
 }
+
+/*
+ * extended attribute handling
+ */
+
+void
+archive_entry_xattr_clear(struct archive_entry *entry)
+{
+	struct ae_xattr	*xp;
+
+	while (entry->xattr_head != NULL) {
+		xp = entry->xattr_head->next;
+		free(entry->xattr_head->name);
+		free(entry->xattr_head->value);
+		free(entry->xattr_head);
+		entry->xattr_head = xp;
+	}
+
+	entry->xattr_head = NULL;
+}
+
+void
+archive_entry_xattr_add_entry(struct archive_entry *entry,
+	const char *name, const void *value, size_t size)
+{
+	struct ae_xattr	*xp;
+
+	for (xp = entry->xattr_head; xp != NULL; xp = xp->next)
+		;
+
+	if ((xp = (struct ae_xattr *)malloc(sizeof(struct ae_xattr))) == NULL)
+		/* XXX Error XXX */
+		return;
+
+	xp->name = strdup(name);
+	if ((xp->value = malloc(size)) != NULL) {
+		memcpy(xp->value, value, size);
+		xp->size = size;
+	} else
+		xp->size = 0;
+
+	xp->next = entry->xattr_head;
+	entry->xattr_head = xp;
+}
+
+
+/*
+ * returns number of the extended attribute entries
+ */
+int
+archive_entry_xattr_count(struct archive_entry *entry)
+{
+	struct ae_xattr *xp;
+	int count = 0;
+
+	for (xp = entry->xattr_head; xp != NULL; xp = xp->next)
+		count++;
+
+	return count;
+}
+
+int
+archive_entry_xattr_reset(struct archive_entry * entry)
+{
+	entry->xattr_p = entry->xattr_head;
+
+	return archive_entry_xattr_count(entry);
+}
+
+int
+archive_entry_xattr_next(struct archive_entry * entry,
+	const char **name, const void **value, size_t *size)
+{
+	if (entry->xattr_p) {
+		*name = entry->xattr_p->name;
+		*value = entry->xattr_p->value;
+		*size = entry->xattr_p->size;
+
+		entry->xattr_p = entry->xattr_p->next;
+
+		return (ARCHIVE_OK);
+	} else {
+		*name = NULL;
+		*name = NULL;
+		*size = (size_t)0;
+		return (ARCHIVE_WARN);
+	}
+}
+
+/*
+ * end of xattr handling
+ */
 
 /*
  * Match "[:whitespace:]*(.*)[:whitespace:]*[:,\n]".  *wp is updated
@@ -1451,7 +1641,7 @@ ae_fflagstostr(unsigned long bitset, unsigned long bitclear)
 
 	if (length == 0)
 		return (NULL);
-	string = malloc(length);
+	string = (char *)malloc(length);
 	if (string == NULL)
 		return (NULL);
 

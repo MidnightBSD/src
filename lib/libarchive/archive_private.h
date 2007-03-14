@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -23,13 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive_private.h,v 1.18 2005/06/01 15:52:39 kientzle Exp $
+ * $FreeBSD: src/lib/libarchive/archive_private.h,v 1.18.2.4 2007/01/27 06:44:52 kientzle Exp $
  */
 
 #ifndef ARCHIVE_PRIVATE_H_INCLUDED
 #define	ARCHIVE_PRIVATE_H_INCLUDED
-
-#include <wchar.h>
 
 #include "archive.h"
 #include "archive_string.h"
@@ -41,7 +38,7 @@ struct archive {
 	/*
 	 * The magic/state values are used to sanity-check the
 	 * client's usage.  If an API function is called at a
-	 * rediculous time, or the client passes us an invalid
+	 * ridiculous time, or the client passes us an invalid
 	 * pointer, these values allow me to catch that.
 	 */
 	unsigned	  magic;
@@ -55,7 +52,7 @@ struct archive {
 	ino_t		  skip_file_ino;
 
 	/* Utility:  Pointer to a block of nulls. */
-	const char 		*nulls;
+	const unsigned char	*nulls;
 	size_t			 null_length;
 
 	/*
@@ -70,6 +67,7 @@ struct archive {
 	/* Callbacks to open/read/write/close archive stream. */
 	archive_open_callback	*client_opener;
 	archive_read_callback	*client_reader;
+	archive_skip_callback	*client_skipper;
 	archive_write_callback	*client_writer;
 	archive_close_callback	*client_closer;
 	void			*client_data;
@@ -134,6 +132,7 @@ struct archive {
 	ssize_t	(*compression_read_ahead)(struct archive *,
 		    const void **, size_t request);
 	ssize_t	(*compression_read_consume)(struct archive *, size_t);
+	off_t (*compression_skip)(struct archive *, off_t);
 
 	/*
 	 * Format detection is mostly the same as compression
@@ -159,7 +158,7 @@ struct archive {
 		int	(*read_data_skip)(struct archive *);
 		int	(*cleanup)(struct archive *);
 		void	 *format_data;	/* Format-specific data for readers. */
-	}	formats[4];
+	}	formats[8];
 	struct archive_format_descriptor	*format; /* Active format. */
 
 	/*
@@ -167,7 +166,7 @@ struct archive {
 	 * multiple format readers active at one time, so we need to
 	 * allow for multiple format readers to have their data
 	 * available.  The pformat_data slot here is the solution: on
-	 * read, it is gauranteed to always point to a void* variable
+	 * read, it is guaranteed to always point to a void* variable
 	 * that the format can use.
 	 */
 	void	**pformat_data;		/* Pointer to current format_data. */
@@ -182,7 +181,7 @@ struct archive {
 	int	(*format_finish_entry)(struct archive *);
 	int 	(*format_write_header)(struct archive *,
 		    struct archive_entry *);
-	int	(*format_write_data)(struct archive *,
+	ssize_t	(*format_write_data)(struct archive *,
 		    const void *buff, size_t);
 
 	/*
@@ -191,7 +190,7 @@ struct archive {
 	struct extract		 *extract;
 	void			(*extract_progress)(void *);
 	void			 *extract_progress_user_data;
-	void			(*cleanup_archive_extract)(struct archive *);
+	int			(*cleanup_archive_extract)(struct archive *);
 
 	int		  archive_error_number;
 	const char	 *error;

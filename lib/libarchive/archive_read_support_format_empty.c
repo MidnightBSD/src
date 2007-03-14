@@ -24,45 +24,67 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_by_name.c,v 1.3.8.1 2007/01/27 06:44:53 kientzle Exp $");
-
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
-#ifdef HAVE_ERRNO_H
-#include <errno.h>
-#endif
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_empty.c,v 1.1.2.1 2007/02/14 08:29:35 kientzle Exp $");
 
 #include "archive.h"
+#include "archive_entry.h"
 #include "archive_private.h"
 
-/* A table that maps names to functions. */
-static
-struct { const char *name; int (*setter)(struct archive *); } names[] =
-{
-	{ "cpio",	archive_write_set_format_cpio },
-	{ "pax",	archive_write_set_format_pax },
-	{ "posix",	archive_write_set_format_pax },
-	{ "shar",	archive_write_set_format_shar },
-	{ "shardump",	archive_write_set_format_shar_dump },
-	{ "ustar",	archive_write_set_format_ustar },
-	{ NULL,		NULL }
-};
-
+static int	archive_read_format_empty_bid(struct archive *);
+static int	archive_read_format_empty_read_data(struct archive *,
+		    const void **, size_t *, off_t *);
+static int	archive_read_format_empty_read_header(struct archive *,
+		    struct archive_entry *);
 int
-archive_write_set_format_by_name(struct archive *a, const char *name)
+archive_read_support_format_empty(struct archive *a)
 {
-	int i;
+	int r;
 
-	for (i = 0; names[i].name != NULL; i++) {
-		if (strcmp(name, names[i].name) == 0)
-			return ((names[i].setter)(a));
-	}
+	r = __archive_read_register_format(a,
+	    NULL,
+	    archive_read_format_empty_bid,
+	    archive_read_format_empty_read_header,
+	    archive_read_format_empty_read_data,
+	    NULL,
+	    NULL);
 
-	archive_set_error(a, EINVAL, "No such format '%s'", name);
-	return (ARCHIVE_FATAL);
+	return (r);
+}
+
+
+static int
+archive_read_format_empty_bid(struct archive *a)
+{
+	int bytes_read;
+	const void *h;
+
+	bytes_read = (a->compression_read_ahead)(a, &h, 1);
+	if (bytes_read > 0)
+		return (-1);
+	return (1);
+}
+
+static int
+archive_read_format_empty_read_header(struct archive *a,
+    struct archive_entry *entry)
+{
+	(void)a; /* UNUSED */
+	(void)entry; /* UNUSED */
+
+	a->archive_format = ARCHIVE_FORMAT_EMPTY;
+	a->archive_format_name = "Empty file";
+
+	return (ARCHIVE_EOF);
+}
+
+static int
+archive_read_format_empty_read_data(struct archive *a,
+    const void **buff, size_t *size, off_t *offset)
+{
+	(void)a; /* UNUSED */
+	(void)buff; /* UNUSED */
+	(void)size; /* UNUSED */
+	(void)offset; /* UNUSED */
+
+	return (ARCHIVE_EOF);
 }

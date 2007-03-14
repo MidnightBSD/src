@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -23,15 +22,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive_entry.h,v 1.16 2005/06/04 22:24:04 kientzle Exp $
+ * $FreeBSD: src/lib/libarchive/archive_entry.h,v 1.16.2.2 2007/01/27 06:44:52 kientzle Exp $
  */
 
 #ifndef ARCHIVE_ENTRY_H_INCLUDED
 #define	ARCHIVE_ENTRY_H_INCLUDED
 
+#include <stddef.h>  /* for wchar_t */
 #include <unistd.h>
-#include <wchar.h>
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,7 +78,9 @@ void			 archive_entry_fflags(struct archive_entry *,
 const char		*archive_entry_fflags_text(struct archive_entry *);
 gid_t			 archive_entry_gid(struct archive_entry *);
 const char		*archive_entry_gname(struct archive_entry *);
+const wchar_t		*archive_entry_gname_w(struct archive_entry *);
 const char		*archive_entry_hardlink(struct archive_entry *);
+const wchar_t		*archive_entry_hardlink_w(struct archive_entry *);
 ino_t			 archive_entry_ino(struct archive_entry *);
 mode_t			 archive_entry_mode(struct archive_entry *);
 time_t			 archive_entry_mtime(struct archive_entry *);
@@ -93,8 +93,10 @@ dev_t			 archive_entry_rdevminor(struct archive_entry *);
 int64_t			 archive_entry_size(struct archive_entry *);
 const struct stat	*archive_entry_stat(struct archive_entry *);
 const char		*archive_entry_symlink(struct archive_entry *);
+const wchar_t		*archive_entry_symlink_w(struct archive_entry *);
 uid_t			 archive_entry_uid(struct archive_entry *);
 const char		*archive_entry_uname(struct archive_entry *);
+const wchar_t		*archive_entry_uname_w(struct archive_entry *);
 
 /*
  * Set fields in an archive_entry.
@@ -225,5 +227,24 @@ int		 __archive_entry_acl_parse_w(struct archive_entry *,
 #ifdef __cplusplus
 }
 #endif
+
+/*
+ * extended attributes
+ */
+
+void	 archive_entry_xattr_clear(struct archive_entry *);
+void	 archive_entry_xattr_add_entry(struct archive_entry *,
+	     const char *name, const void *value, size_t size);
+
+/*
+ * To retrieve the xattr list, first "reset", then repeatedly ask for the
+ * "next" entry.
+ */
+
+int	archive_entry_xattr_count(struct archive_entry *);
+int	archive_entry_xattr_reset(struct archive_entry *);
+int	archive_entry_xattr_next(struct archive_entry *,
+	     const char **name, const void **value, size_t *);
+
 
 #endif /* !ARCHIVE_ENTRY_H_INCLUDED */

@@ -1,13 +1,12 @@
 /*-
- * Copyright (c) 2003-2004 Tim Kientzle
+ * Copyright (c) 2003-2007 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer
- *    in this position and unchanged.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -25,10 +24,17 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_data_into_fd.c,v 1.8 2005/06/01 15:52:39 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_data_into_fd.c,v 1.8.2.2 2007/01/27 06:44:52 kientzle Exp $");
 
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
+#ifdef HAVE_ERRNO_H
+#include <errno.h>
+#endif
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "archive.h"
 #include "archive_private.h"
@@ -44,8 +50,8 @@ archive_read_data_into_fd(struct archive *a, int fd)
 {
 	int r;
 	const void *buff;
-	ssize_t size, bytes_to_write;
-	ssize_t bytes_written, total_written;
+	size_t size;
+	ssize_t bytes_to_write, bytes_written, total_written;
 	off_t offset;
 	off_t output_offset;
 
@@ -56,6 +62,7 @@ archive_read_data_into_fd(struct archive *a, int fd)
 
 	while ((r = archive_read_data_block(a, &buff, &size, &offset)) ==
 	    ARCHIVE_OK) {
+		const char *p = buff;
 		if (offset > output_offset) {
 			lseek(fd, offset - output_offset, SEEK_CUR);
 			output_offset = offset;
@@ -64,11 +71,14 @@ archive_read_data_into_fd(struct archive *a, int fd)
 			bytes_to_write = size;
 			if (bytes_to_write > MAX_WRITE)
 				bytes_to_write = MAX_WRITE;
-			bytes_written = write(fd, buff, bytes_to_write);
-			if (bytes_written < 0)
+			bytes_written = write(fd, p, bytes_to_write);
+			if (bytes_written < 0) {
+				archive_set_error(a, errno, "Write error");
 				return (-1);
+			}
 			output_offset += bytes_written;
 			total_written += bytes_written;
+			p += bytes_written;
 			size -= bytes_written;
 			if (a->extract_progress != NULL)
 				(*a->extract_progress)(a->extract_progress_user_data);

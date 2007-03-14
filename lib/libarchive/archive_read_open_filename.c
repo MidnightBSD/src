@@ -24,13 +24,16 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_fd.c,v 1.3.8.3 2007/01/27 06:44:52 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_filename.c,v 1.18.2.1 2007/01/27 06:44:53 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
 #endif
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -44,10 +47,12 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_fd.c,v 1.3.8.3 2007/01/
 
 #include "archive.h"
 
-struct read_fd_data {
+struct read_file_data {
 	int	 fd;
 	size_t	 block_size;
 	void	*buffer;
+	mode_t	 st_mode;  /* Mode bits for opened file. */
+	char	 filename[1]; /* Must be last! */
 };
 
 static int	file_close(struct archive *, void *);
@@ -60,52 +65,91 @@ static off_t	file_skip(struct archive *, void *, off_t request);
 #endif
 
 int
-archive_read_open_fd(struct archive *a, int fd, size_t block_size)
+archive_read_open_file(struct archive *a, const char *filename,
+    size_t block_size)
 {
-	struct read_fd_data *mine;
+	return (archive_read_open_filename(a, filename, block_size));
+}
 
-	mine = (struct read_fd_data *)malloc(sizeof(*mine));
-	if (mine == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		return (ARCHIVE_FATAL);
+int
+archive_read_open_filename(struct archive *a, const char *filename,
+    size_t block_size)
+{
+	struct read_file_data *mine;
+
+	if (filename == NULL || filename[0] == '\0') {
+		mine = (struct read_file_data *)malloc(sizeof(*mine));
+		if (mine == NULL) {
+			archive_set_error(a, ENOMEM, "No memory");
+			return (ARCHIVE_FATAL);
+		}
+		mine->filename[0] = '\0';
+	} else {
+		mine = (struct read_file_data *)malloc(sizeof(*mine) + strlen(filename));
+		if (mine == NULL) {
+			archive_set_error(a, ENOMEM, "No memory");
+			return (ARCHIVE_FATAL);
+		}
+		strcpy(mine->filename, filename);
 	}
 	mine->block_size = block_size;
-	mine->buffer = malloc(mine->block_size);
-	if (mine->buffer == NULL) {
-		archive_set_error(a, ENOMEM, "No memory");
-		free(mine);
-		return (ARCHIVE_FATAL);
-	}
-	mine->fd = fd;
+	mine->buffer = NULL;
+	mine->fd = -1;
 	return (archive_read_open2(a, mine, file_open, file_read, file_skip, file_close));
 }
 
 static int
 file_open(struct archive *a, void *client_data)
 {
-	struct read_fd_data *mine = (struct read_fd_data *)client_data;
+	struct read_file_data *mine = (struct read_file_data *)client_data;
 	struct stat st;
 
-	if (fstat(mine->fd, &st) != 0) {
-		archive_set_error(a, errno, "Can't stat fd %d", mine->fd);
+	mine->buffer = malloc(mine->block_size);
+	if (mine->buffer == NULL) {
+		archive_set_error(a, ENOMEM, "No memory");
 		return (ARCHIVE_FATAL);
 	}
-
-	if (S_ISREG(st.st_mode))
-		archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
-	return (ARCHIVE_OK);
+	if (mine->filename[0] != '\0')
+		mine->fd = open(mine->filename, O_RDONLY);
+	else
+		mine->fd = 0; /* Fake "open" for stdin. */
+	if (mine->fd < 0) {
+		archive_set_error(a, errno, "Failed to open '%s'",
+		    mine->filename);
+		return (ARCHIVE_FATAL);
+	}
+	if (fstat(mine->fd, &st) == 0) {
+		/* If we're reading a file from disk, ensure that we don't
+		   overwrite it with an extracted file. */
+		if (S_ISREG(st.st_mode))
+			archive_read_extract_set_skip_file(a, st.st_dev, st.st_ino);
+		/* Remember mode so close can decide whether to flush. */
+		mine->st_mode = st.st_mode;
+	} else {
+		if (mine->filename[0] == '\0')
+			archive_set_error(a, errno, "Can't stat stdin");
+		else
+			archive_set_error(a, errno, "Can't stat '%s'",
+			    mine->filename);
+		return (ARCHIVE_FATAL);
+	}
+	return (0);
 }
 
 static ssize_t
 file_read(struct archive *a, void *client_data, const void **buff)
 {
-	struct read_fd_data *mine = (struct read_fd_data *)client_data;
+	struct read_file_data *mine = (struct read_file_data *)client_data;
 	ssize_t bytes_read;
 
 	*buff = mine->buffer;
 	bytes_read = read(mine->fd, mine->buffer, mine->block_size);
 	if (bytes_read < 0) {
-		archive_set_error(a, errno, "Error reading fd %d", mine->fd);
+		if (mine->filename[0] == '\0')
+			archive_set_error(a, errno, "Error reading stdin");
+		else
+			archive_set_error(a, errno, "Error reading '%s'",
+			    mine->filename);
 	}
 	return (bytes_read);
 }
@@ -118,7 +162,7 @@ static off_t
 file_skip(struct archive *a, void *client_data, off_t request)
 #endif
 {
-	struct read_fd_data *mine = (struct read_fd_data *)client_data;
+	struct read_file_data *mine = (struct read_file_data *)client_data;
 	off_t old_offset, new_offset;
 
 	/* Reduce request to the next smallest multiple of block_size */
@@ -146,7 +190,15 @@ file_skip(struct archive *a, void *client_data, off_t request)
 		 * likely caused by a programmer error (too large request)
 		 * or a corrupted archive file.
 		 */
-		archive_set_error(a, errno, "Error seeking");
+		if (mine->filename[0] == '\0')
+			/*
+			 * Should never get here, since lseek() on stdin ought
+			 * to return an ESPIPE error.
+			 */
+			archive_set_error(a, errno, "Error seeking in stdin");
+		else
+			archive_set_error(a, errno, "Error seeking in '%s'",
+			    mine->filename);
 		return (-1);
 	}
 	return (new_offset - old_offset);
@@ -155,9 +207,32 @@ file_skip(struct archive *a, void *client_data, off_t request)
 static int
 file_close(struct archive *a, void *client_data)
 {
-	struct read_fd_data *mine = (struct read_fd_data *)client_data;
+	struct read_file_data *mine = (struct read_file_data *)client_data;
 
 	(void)a; /* UNUSED */
+
+	/*
+	 * Sometimes, we should flush the input before closing.
+	 *   Regular files: faster to just close without flush.
+	 *   Devices: must not flush (user might need to
+	 *      read the "next" item on a non-rewind device).
+	 *   Pipes and sockets:  must flush (otherwise, the
+	 *      program feeding the pipe or socket may complain).
+	 * Here, I flush everything except for regular files and
+	 * device nodes.
+	 */
+	if (!S_ISREG(mine->st_mode)
+	    && !S_ISCHR(mine->st_mode)
+	    && !S_ISBLK(mine->st_mode)) {
+		ssize_t bytesRead;
+		do {
+			bytesRead = read(mine->fd, mine->buffer,
+			    mine->block_size);
+		} while (bytesRead > 0);
+	}
+	/* If a named file was opened, then it needs to be closed. */
+	if (mine->filename[0] != '\0')
+		close(mine->fd);
 	if (mine->buffer != NULL)
 		free(mine->buffer);
 	free(mine);
