@@ -60,7 +60,7 @@
 #define __FreeBSD_version 601000	/* Master, propagated to newvers */
 
 #undef __MidnightBSD_version
-#define __MidnightBSD_version	001001
+#define __MidnightBSD_version	001002
 
 #ifndef LOCORE
 #include <sys/types.h>
