@@ -266,8 +266,16 @@ USB_ATTACH(ums)
 		USB_ATTACH_ERROR_RETURN;
 	}
 
+	/* Apple's Mighty Mouse reports HUG_Z as horizontal scrolling and
+	   HUG_WHEEL as vertical scrolling. */
+	if (uaa->vendor == USB_VENDOR_APPLE &&
+	    uaa->product == USB_PRODUCT_APPLE_OPTICALM) {
+		hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP,
+			HUG_WHEEL), hid_input, &sc->sc_loc_z, &flags);
+		printf("mighty mouse\n");
+	}
 	/* try to guess the Z activator: first check Z, then WHEEL */
-	if (hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP, HUG_Z),
+	else if (hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP, HUG_Z),
 		       hid_input, &sc->sc_loc_z, &flags) ||
 	    hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP, HUG_WHEEL),
 		       hid_input, &sc->sc_loc_z, &flags) ||
