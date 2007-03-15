@@ -883,20 +883,20 @@ reply:
 		}
 	}
 
-/*	if (itaddr.s_addr == myaddr.s_addr &&
-  	             IN_LINKLOCAL(ntohl(itaddr.s_addr))) { */
+	if (itaddr.s_addr == myaddr.s_addr &&
+  	             IN_LINKLOCAL(ntohl(itaddr.s_addr))) { 
 		/* RFC 3927 link-local IPv4; always reply by broadcast. */
 #ifdef DEBUG_LINKLOCAL
 		printf("arp: sending reply for link-local addr %s\n",
 		inet_ntoa(itaddr));
 #endif
-/*
+
 		m->m_flags |= M_BCAST;
 		m->m_flags &= ~M_MCAST;
-	} else {  */
+	} else {
 		/* default behaviour; never reply by broadcast. */
 		m->m_flags &= ~(M_BCAST|M_MCAST);
-/*	} */
+	} 
 	(void)memcpy(ar_tpa(ah), ar_spa(ah), ah->ar_pln);
 	(void)memcpy(ar_spa(ah), &itaddr, ah->ar_pln);
 	ah->ar_op = htons(ARPOP_REPLY);
