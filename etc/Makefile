@@ -1,7 +1,7 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.6 2007/02/04 18:19:16 archite Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.7 2007/02/09 16:34:18 laffer1 Exp $
 
 .if !defined(NO_SENDMAIL)
 SUBDIR=	sendmail
@@ -109,7 +109,6 @@ distribution:
 	cd ${.CURDIR}/defaults; ${MAKE} install
 	cd ${.CURDIR}/periodic; ${MAKE} install
 	cd ${.CURDIR}/rc.d; ${MAKE} install
-	cd ${.CURDIR}/../gnu/usr.bin/send-pr; ${MAKE} etc-gnats-freefall
 	cd ${.CURDIR}/../share/termcap; ${MAKE} etc-termcap
 	cd ${.CURDIR}/../usr.sbin/rmt; ${MAKE} etc-rmt
 	cd ${.CURDIR}/pam.d; ${MAKE} install
