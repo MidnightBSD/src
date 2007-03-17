@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/release/scripts/doc-make.sh,v 1.3 2002/04/23 22:16:40 obrien Exp $
-#
+# $MidnightBSD$
 
 # Create the doc dist.
 if [ -d ${RD}/trees/base/usr/share/doc ]; then

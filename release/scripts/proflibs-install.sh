@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/release/scripts/proflibs-install.sh,v 1.4 2001/04/08 23:09:21 obrien Exp $
-#
+# $MidnightBSD$
 
 if [ "`id -u`" != "0" ]; then
 	echo "Sorry, this must be done as root."

@@ -7,6 +7,7 @@
 #
 # Usage: package-split.py <INDEX> <master INDEX>
 #
+# $MidnightBSD$
 # $FreeBSD: src/release/scripts/package-split.py,v 1.6.2.4 2005/12/07 22:27:49 obrien Exp $
 
 import os
@@ -63,19 +64,16 @@ def disc2_packages():
             'mail/mutt',
             'mail/pine4',
             'mail/popd',
-            'net/cvsup',
-            'net/cvsup-without-gui',
             'net/rsync',
-            'net/samba',
+            'net/samba3',
             'news/slrn',
             'news/tin',
             'print/a2ps-letter',
             'print/apsfilter',
-            'print/ghostscript-gnu-nox11',
             'print/gv',
             'print/psutils-letter',
+	    'print/ghostscript-gpl-nox11',
             'shells/bash2',
-            'shells/pdksh',
             'shells/zsh',
             'ports-mgmt/portupgrade',
             'www/links',

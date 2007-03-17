@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/release/scripts/base-install.sh,v 1.6 2002/04/30 09:57:21 ru Exp $
-#
+# $MidnightBSD$
 
 if [ "`id -u`" != "0" ]; then
 	echo "Sorry, this must be done as root."

@@ -26,6 +26,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/release/scripts/mkpkgindex.sh,v 1.2 2004/01/02 22:58:29 obrien Exp $
+# $MidnightBSD$
 
 # Creates an INDEX file suitable for an ISO distribution image from a master
 # INDEX file.  The generated INDEX file contains only the packages in the
