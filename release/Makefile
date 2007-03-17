@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.10 2007/03/17 16:43:15 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.11 2007/03/17 16:46:51 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -210,9 +210,16 @@ MFSINODE=		8192
 MFSLABEL=		auto
 SEPARATE_LIVEFS=
 .elif ${TARGET_ARCH} == "amd64"
+MAKE_FLOPPIES=          true
+FLOPPYSIZE=             1440
+FLOPPYSPLITSIZE=        1392
+FLOPPYINODE=            40000
+FLOPPYLABEL=            fd1440
+BOOTINODE=              80000
 MFSSIZE=		4096
 MFSINODE=		8192
 MFSLABEL=		auto
+SPLIT_MFSROOT=
 .elif ${TARGET_ARCH} == "powerpc"
 DISKLABEL=		""
 MFSSIZE=		4096
