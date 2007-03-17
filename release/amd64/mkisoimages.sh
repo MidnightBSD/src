@@ -4,11 +4,11 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
-# $MidnightBSD$
+# $MidnightBSD: src/release/amd64/mkisoimages.sh,v 1.2 2007/03/17 16:00:12 laffer1 Exp $
 # $FreeBSD: src/release/amd64/mkisoimages.sh,v 1.11 2005/01/30 21:10:51 kensmith Exp $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
-# for a FreeBSD release.  It is considered architecture dependent since each
+# for a MidnightBSD release.  It is considered architecture dependent since each
 # platform has a slightly unique way of making bootable CDs.  This script
 # is also allowed to generate any number of images since that is more of
 # publishing decision than anything else.
