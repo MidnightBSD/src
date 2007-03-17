@@ -4,10 +4,11 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
+# $MidnightBSD$
 # $FreeBSD: src/release/ia64/mkisoimages.sh,v 1.11 2005/01/30 21:10:52 kensmith Exp $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
-# for a FreeBSD release.  It is considered architecture dependent since each
+# for a MidnightBSD release.  It is considered architecture dependent since each
 # platform has a slightly unique way of making bootable CDs.  This script
 # is also allowed to generate any number of images since that is more of
 # publishing decision than anything else.
@@ -43,7 +44,7 @@ BASE=$1; shift
 
 MKISOFS=mkisofs
 MKISOFS_PKG=cdrtools
-MKISOFS_PORT=/usr/ports/sysutils/${MKISOFS_PKG}
+MKISOFS_PORT=/usr/mports/sysutils/${MKISOFS_PKG}
 
 if ! which ${MKISOFS} > /dev/null; then
     echo -n "${MKISOFS}(8) does not exist: "
@@ -89,7 +90,7 @@ else
     BOOTOPTS=""
 fi
 
-publisher="The FreeBSD Project.  http://www.freebsd.org/"
+publisher="The MidnightBSD Project.  http://www.midnightbsd.org/"
 
 $MKISOFS $BOOTOPTS -r -J -V $LABEL -publisher "$publisher" -o $NAME $BASE $*
 rm -f $BASE/$EFIPART
