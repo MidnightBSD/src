@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.8 2007/02/09 20:24:21 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.9 2007/02/26 00:27:52 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -68,7 +68,7 @@ PORTSRELEASETAG?=	${AUXRELEASETAG}
 # If you want to pass flags to the world build such as -j X, use
 # WORLD_FLAGS.  Similarly, you can specify make flags for kernel
 # builds via KERNEL_FLAGS.
-#WORLD_FLAGS=-j4
+#WORLD_FLAGS=-j8
 #KERNEL_FLAGS=-j4
 
 TARGET_ARCH?=	${MACHINE_ARCH}
@@ -111,7 +111,7 @@ RELEASEPORTSMODULE?=	mports
 
 # When creating ISO images, point ${CD_PACKAGE_TREE} to a directory containing
 # the package split by an earlier invocation of the 'package-split' target.
-#CD_PACKAGE_TREE=	/path/to/pkg
+#CD_PACKAGE_TREE=	/usr/split
 
 # Extra source tarballs; each argument is a pair of source dir and
 # distribution name.  The dist name should not exceed 7 characters
@@ -408,7 +408,7 @@ release rerelease:
 .endif
 .endif
 .if make(rerelease)
-.if !defined(RELEASENOUPDATE)
+.if !defined(RELEASENOUPDATE) && !defined(EXTSRCDIR)
 .if !defined(RELEASETAG)
 	cd ${CHROOTDIR}/usr/src && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d -A
@@ -649,9 +649,9 @@ release.6:
 	done
 .if !defined(NOPORTS)
 	# XXX: Inline stripped version of doTARBALL
-	@rm -rf ${RD}/dists/mports/ports*
+	@rm -rf ${RD}/dists/mports/mports*
 	@mkdir -p ${RD}/dists/mports
-	@echo rolling mports/ports tarball
+	@echo rolling mports/mports tarball
 	@tar --exclude CVS --exclude 'mports/distfiles/*' \
 	  -czf ${RD}/dists/mports/mports.tgz -C /usr mports
 	@cp ${.CURDIR}/scripts/ports-install.sh ${RD}/dists/mports/install.sh
@@ -1077,7 +1077,7 @@ doTARBALL:
 	@rm -rf ${RD}/dists/${TD}/${TN}*
 	@mkdir -p ${RD}/dists/${TD}
 	@( cd ${SD} && \
-		tn=`echo ${TN} | tr 'A-Z' 'a-z' | cut -c1-8` && \
+		tn=`echo ${TN} | tr 'A-Z' 'a-z' && \
 		echo rolling ${TD}/$$tn tarball &&\
 		tar --exclude CVS --exclude obj --exclude BOOTMFS -cf - ${ARG} | \
 		${ZIPNSPLIT} ${RD}/dists/${TD}/$$tn. && \
@@ -1250,8 +1250,10 @@ buildBootFloppy:
 .if defined(SPLIT_MFSROOT)
 	@echo 'mfsroot_after="read -p \"Insert boot floppy and press Enter\""' >> ${IMAGEDIR}/boot/loader.conf
 .endif
-.if ${TARGET_ARCH} == "i386" && ${AUTO_KEYBOARD_DETECT}
+.if ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
+.if ${AUTO_KEYBOARD_DETECT}
 	@echo "-P" >> ${IMAGEDIR}/boot.config
+.endif
 .endif
 	@rm -f ${IMAGEFILE}
 	@cp ${KERNFILE} ${MFSROOTFILE} ${IMAGEDIR}
