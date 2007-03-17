@@ -1,4 +1,5 @@
-# $FreeBSD: src/sys/modules/sound/sound/Makefile,v 1.16.2.1 2005/12/30 19:55:55 netchild Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/modules/sound/sound/Makefile,v 1.16.2.2 2006/09/13 08:40:21 des Exp $
 
 .PATH: ${.CURDIR}/../../../dev/sound/pcm
 .PATH: ${.CURDIR}/../../../dev/sound/isa
@@ -18,7 +19,7 @@ EXPORT_SYMS=	YES	# XXX evaluate
 # existing one from KERNBUILDDIR which possibly has DEV_ISA defined so
 # sound.ko is always built without isadma support.
 opt_isa.h:
-	touch ${.TARGET}
+:> ${.TARGET}
 .else
 SRCS+=	sndbuf_dma.c
 

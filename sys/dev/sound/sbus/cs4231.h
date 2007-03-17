@@ -1,86 +1,87 @@
+/*	$MidnightBSD$	*/
 /*	$FreeBSD: src/sys/dev/sound/sbus/cs4231.h,v 1.2 2005/01/06 01:43:22 imp Exp $	*/
 /*-
- * Copyright (c) 1996 The NetBSD Foundation, Inc.
- * All rights reserved.
- *
- * This code is derived from software contributed to The NetBSD Foundation
- * by Ken Hornstein and John Kohl.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by the NetBSD 
- *	  Foundation, Inc. and its contributors.
- * 4. Neither the name of The NetBSD Foundation nor the names of its 
- *    contributors may be used to endorse or promote products derived 
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+* Copyright (c) 1996 The NetBSD Foundation, Inc.
+* All rights reserved.
+*
+* This code is derived from software contributed to The NetBSD Foundation
+* by Ken Hornstein and John Kohl.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+* 3. All advertising materials mentioning features or use of this software
+*    must display the following acknowledgement:
+*        This product includes software developed by the NetBSD 
+*	  Foundation, Inc. and its contributors.
+* 4. Neither the name of The NetBSD Foundation nor the names of its 
+*    contributors may be used to endorse or promote products derived 
+*    from this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+* ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+* TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+* PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
+*/
 
 /**
- * Register defs for Crystal Semiconductor CS4231 Audio Codec/mixer
- * chip, used on Gravis UltraSound MAX cards.
- *
- * Block diagram:
- *             +----------------------------------------------------+
- *             |						    |
- *             |   +----------------------------------------------+ |
- *	       |   |mixed in       +-+  		          | |
- *	       |   +------------>--| |  		          | |
- *             | mic in            | |			          | |
- *   Mic --+-->| --------- GAIN ->-| |			          | |
- *         |   | AUX 1 in          |M|				  | |
- *   GF1 --)-->| -------------+-->-|U|				  | |
- *	   |   | Line in      |	   |X|---- GAIN ----------+	  | |
- *  Line --)-->| ---------+---)-->-| |			  |	  | |
- *	   |   |	  |   |    | |			  |	  | |
- *	   |   |	  |   |    +-+		         ADC 	  | |
- *	   |   |	  |   |      		          | 	  | |
- *	   |   |	  |   |				  |	  | |
- *	   |   |	  |   +--- L/M --\		  |	  | | AMP-->
- *	   |   |	  |   	   	  \		  |	  | |  |
- *	   |   |	  |   	   	   \	          |	  | |  |
- *	   |   |	  +---- L/M -------O-->--+--------)-------+-|--+-> line
- *	   |   |   mono in	       	  /|     |        |	    |
- *	   +---|-->------------ L/M -----/ |     |        |	    |
- *	       |   AUX 2 in		   |     |        |	    |
- *  CD --------|-->------------ L/M -------+    L/M       |	    |
- *	       |				 |        v	    |
- *	       |				 |        |	    |
- *	       |				DAC       |	    |
- *	       |				 |        |	    |
- *             +----------------------------------------------------+
- *	       					 |        |
- *						 |        |
- *						 v        v
- *     	       	       	       	       	       	  Pc BUS (DISK) ???
- *
- * Documentation for this chip can be found at:
- *	http://www.cirrus.com/products/overviews/cs4231.html
- */
+* Register defs for Crystal Semiconductor CS4231 Audio Codec/mixer
+* chip, used on Gravis UltraSound MAX cards.
+*
+* Block diagram:
+*             +----------------------------------------------------+
+*             |						    |
+*             |   +----------------------------------------------+ |
+*	       |   |mixed in       +-+  		          | |
+*	       |   +------------>--| |  		          | |
+*             | mic in            | |			          | |
+*   Mic --+-->| --------- GAIN ->-| |			          | |
+*         |   | AUX 1 in          |M|				  | |
+*   GF1 --)-->| -------------+-->-|U|				  | |
+*	   |   | Line in      |	   |X|---- GAIN ----------+	  | |
+*  Line --)-->| ---------+---)-->-| |			  |	  | |
+*	   |   |	  |   |    | |			  |	  | |
+*	   |   |	  |   |    +-+		         ADC 	  | |
+*	   |   |	  |   |      		          | 	  | |
+*	   |   |	  |   |				  |	  | |
+*	   |   |	  |   +--- L/M --		  |	  | | AMP-->
+*	   |   |	  |   	   	  		  |	  | |  |
+*	   |   |	  |   	   	   	          |	  | |  |
+*	   |   |	  +---- L/M -------O-->--+--------)-------+-|--+-> line
+*	   |   |   mono in	       	  /|     |        |	    |
+*	   +---|-->------------ L/M -----/ |     |        |	    |
+*	       |   AUX 2 in		   |     |        |	    |
+*  CD --------|-->------------ L/M -------+    L/M       |	    |
+*	       |				 |        v	    |
+*	       |				 |        |	    |
+*	       |				DAC       |	    |
+*	       |				 |        |	    |
+*             +----------------------------------------------------+
+*	       					 |        |
+*						 |        |
+*						 v        v
+*     	       	       	       	       	       	  Pc BUS (DISK) ???
+*
+* Documentation for this chip can be found at:
+*	http://www.cirrus.com/products/overviews/cs4231.html
+*/
 
 /*
- * This file was merged from two header files.(ad1848reg.h and cs4231reg.h)
- * And the suffix AD1848 and SP was changed to CS4231 and CS respectively.
- */
+* This file was merged from two header files.(ad1848reg.h and cs4231reg.h)
+* And the suffix AD1848 and SP was changed to CS4231 and CS respectively.
+*/
 /* CS4231 direct registers */
 #define CS4231_IADDR		0x00
 #define CS4231_IDATA		0x01
@@ -156,7 +157,7 @@
 #define ADC_INPUT_GAIN_ENABLE	0x20
 
 /* Aux input control - registers I2 (channel 1,left); I3 (channel 1,right)
-				 I4 (channel 2,left); I5 (channel 2,right) */
+I4 (channel 2,left); I5 (channel 2,right) */
 #define AUX_INPUT_ATTEN_BITS	0x1f
 #define AUX_INPUT_ATTEN_MASK	0xe0
 #define AUX_INPUT_MUTE		0x80

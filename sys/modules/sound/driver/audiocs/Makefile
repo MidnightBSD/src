@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/modules/sound/driver/audiocs/Makefile,v 1.1 2004/10/25 10:29:57 yongari Exp $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/sbus

@@ -1,11 +1,12 @@
 /*-
- * (C) 1997 Luigi Rizzo (luigi@iet.unipi.it)
- *
- * This file contains information and macro definitions for
- * the ad1816 chip
- *
- * $FreeBSD: src/sys/dev/sound/isa/ad1816.h,v 1.2 2005/01/06 01:43:17 imp Exp $
- */
+* (C) 1997 Luigi Rizzo (luigi@iet.unipi.it)
+*
+* This file contains information and macro definitions for
+* the ad1816 chip
+*
+* $MidnightBSD$
+* $FreeBSD: src/sys/dev/sound/isa/ad1816.h,v 1.2 2005/01/06 01:43:17 imp Exp $
+*/
 
 /* AD1816 register macros */
 
@@ -21,15 +22,15 @@
 #endif
 
 /* values for playback/capture config:
-   bits: 0   enable/disable
-         1   pio/dma
-         2   stereo/mono
-         3   companded/linearPCM
-         4-5 format : 00 8bit  linear (uncomp)
-                      00 8bit  mulaw  (comp)
-                      01 16bit le     (uncomp)
-                      01 8bit  alaw   (comp)
-                      11 16bit be     (uncomp)
+bits: 0   enable/disable
+1   pio/dma
+2   stereo/mono
+3   companded/linearPCM
+4-5 format : 00 8bit  linear (uncomp)
+00 8bit  mulaw  (comp)
+01 16bit le     (uncomp)
+01 8bit  alaw   (comp)
+11 16bit be     (uncomp)
 */
 
 #define AD1816_PLAY	8 	/* playback config     		*/
@@ -62,10 +63,7 @@
 #define	AD1816_S16BE	0x30	/* 16 bit linear big endian	*/
 #define	AD1816_FORMASK  0x38	/* format mask			*/
 
-#define AD1816_REC_DEVICES	\
-    (SOUND_MASK_LINE | SOUND_MASK_MIC | SOUND_MASK_CD)
+#define AD1816_REC_DEVICES	    (SOUND_MASK_LINE | SOUND_MASK_MIC | SOUND_MASK_CD)
 
-#define AD1816_MIXER_DEVICES	\
-    (SOUND_MASK_VOLUME | SOUND_MASK_PCM | SOUND_MASK_SYNTH | \
-     SOUND_MASK_LINE   | SOUND_MASK_MIC | SOUND_MASK_CD | SOUND_MASK_IGAIN)
+#define AD1816_MIXER_DEVICES	    (SOUND_MASK_VOLUME | SOUND_MASK_PCM | SOUND_MASK_SYNTH |      SOUND_MASK_LINE   | SOUND_MASK_MIC | SOUND_MASK_CD | SOUND_MASK_IGAIN)
 

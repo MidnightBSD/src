@@ -1,25 +1,26 @@
 /*-
- * This supports the ENSONIQ AudioPCI board based on the ES1370.
- *
- * Copyright (c) 1998 Joachim Kuebart <joki@kuebart.stuttgart.netsurf.de>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice immediately at the beginning of the file, without modification,
- *    this list of conditions, and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Absolutely no warranty of function or purpose is made by the author
- *    Joachim Kuebart.
- * 4. Modifications may be freely made to this file if the above conditions
- *    are met.
- *
- * $FreeBSD: src/sys/dev/sound/pci/es137x.h,v 1.5.2.1 2005/12/30 19:55:53 netchild Exp $
- */
+* This supports the ENSONIQ AudioPCI board based on the ES1370.
+*
+* Copyright (c) 1998 Joachim Kuebart <joki@kuebart.stuttgart.netsurf.de>
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+* 1. Redistributions of source code must retain the above copyright
+*    notice immediately at the beginning of the file, without modification,
+*    this list of conditions, and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+* 3. Absolutely no warranty of function or purpose is made by the author
+*    Joachim Kuebart.
+* 4. Modifications may be freely made to this file if the above conditions
+*    are met.
+*
+* $MidnightBSD$
+* $FreeBSD: src/sys/dev/sound/pci/es137x.h,v 1.5.2.1 2005/12/30 19:55:53 netchild Exp $
+*/
 
 #ifndef _ES1370_REG_H
 #define _ES1370_REG_H
@@ -51,19 +52,19 @@
 #define CTRL_ADC_STOP   0x80000000	/* 1 = ADC stopped */
 #define CTRL_XCTL1      0x40000000	/* SERR pin if enabled */
 #define CTRL_OPEN       0x20000000	/* no function, can be read and
-					 * written */
+* written */
 #define CTRL_PCLKDIV    0x1fff0000	/* ADC/DAC2 clock divider */
 #define CTRL_SH_PCLKDIV 16
 #define CTRL_MSFMTSEL   0x00008000	/* MPEG serial data fmt: 0 = Sony, 1
-					 * = I2S */
+* = I2S */
 #define CTRL_M_SBB      0x00004000	/* DAC2 clock: 0 = PCLKDIV, 1 = MPEG */
 #define CTRL_WTSRSEL    0x00003000	/* DAC1 clock freq: 0=5512, 1=11025,
-					 * 2=22050, 3=44100 */
+* 2=22050, 3=44100 */
 #define CTRL_SH_WTSRSEL 12
 #define CTRL_DAC_SYNC   0x00000800	/* 1 = DAC2 runs off DAC1 clock */
 #define CTRL_CCB_INTRM  0x00000400	/* 1 = CCB "voice" ints enabled */
 #define CTRL_M_CB       0x00000200	/* recording source: 0 = ADC, 1 =
-					 * MPEG */
+* MPEG */
 #define CTRL_XCTL0      0x00000100	/* 0 = Line in, 1 = Line out */
 #define CTRL_BREQ       0x00000080	/* 1 = test mode (internal mem test) */
 #define CTRL_DAC1_EN    0x00000040	/* enable DAC1 */
@@ -71,7 +72,7 @@
 #define CTRL_ADC_EN     0x00000010	/* enable ADC */
 #define CTRL_UART_EN    0x00000008	/* enable MIDI uart */
 #define CTRL_JYSTK_EN   0x00000004	/* enable Joystick port (presumably
-					 * at address 0x200) */
+* at address 0x200) */
 #define CTRL_CDC_EN     0x00000002	/* enable serial (CODEC) interface */
 #define CTRL_SERR_DIS   0x00000001	/* 1 = disable PCI SERR signal */
 
@@ -88,9 +89,9 @@
 #define SCTRL_P2INTEN     0x00000200	/* enable interrupt */
 #define SCTRL_P1INTEN     0x00000100	/* enable interrupt */
 #define SCTRL_P1SCTRLD    0x00000080	/* reload sample count register for
-					 * DAC1 */
+* DAC1 */
 #define SCTRL_P2DACSEN    0x00000040	/* 1 = DAC2 play back last sample
-					 * when disabled */
+* when disabled */
 #define SCTRL_R1SEB       0x00000020	/* 1 = 16bit */
 #define SCTRL_R1SMB       0x00000010	/* 1 = stereo */
 #define SCTRL_R1FMT       0x00000030	/* format mask */
@@ -106,11 +107,11 @@
 
 #define STAT_INTR       0x80000000	/* wired or of all interrupt bits */
 #define STAT_CSTAT      0x00000400	/* 1 = codec busy or codec write in
-					 * progress */
+* progress */
 #define STAT_CBUSY      0x00000200	/* 1 = codec busy */
 #define STAT_CWRIP      0x00000100	/* 1 = codec write in progress */
 #define STAT_VC         0x00000060	/* CCB int source, 0=DAC1, 1=DAC2,
-					 * 2=ADC, 3=undef */
+* 2=ADC, 3=undef */
 #define STAT_SH_VC      5
 #define STAT_MCCB       0x00000010	/* CCB int pending */
 #define STAT_UART       0x00000008	/* UART int pending */
@@ -167,8 +168,8 @@
 #define ES1371_SRC_RAM_DATAI(i) (((i)>>0)&0xffff)	/* current value of the sample rate converter */
 
 /*
- * S/PDIF specific
- */
+* S/PDIF specific
+*/
 
 /* Use ES1370_REG_CONTROL */
 #define RECEN_B			0x08000000	/* Used to control mixing of analog with digital data */
@@ -178,8 +179,8 @@
 #define TEST_SPDIF		0x00020000	/* Used to put the S/PDIF module in "test mode" */
 
 /*
- *  Sample rate converter addresses
- */
+*  Sample rate converter addresses
+*/
 
 #define ES_SMPREG_DAC1		0x70
 #define ES_SMPREG_DAC2		0x74

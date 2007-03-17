@@ -25,6 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $MidnightBSD$
 # $FreeBSD: src/sys/dev/sound/pcm/channel_if.m,v 1.5 2005/01/06 01:43:20 imp Exp $
 #
 
@@ -34,38 +35,32 @@ INTERFACE channel;
 
 CODE {
 
-	static int
-	channel_nosetdir(kobj_t obj, void *data, int dir)
+	static int channel_nosetdir(kobj_t obj, void *data, int dir)
 	{
 		return 0;
 	}
 
-	static int
-	channel_noreset(kobj_t obj, void *data)
+	static int channel_noreset(kobj_t obj, void *data)
 	{
 		return 0;
 	}
 
-	static int
-	channel_noresetdone(kobj_t obj, void *data)
+	static int channel_noresetdone(kobj_t obj, void *data)
 	{
 		return 0;
 	}
 
-	static int
-	channel_nofree(kobj_t obj, void *data)
+	static int channel_nofree(kobj_t obj, void *data)
 	{
 		return 1;
 	}
 
-	static u_int32_t
-	channel_nogetptr(kobj_t obj, void *data)
+	static u_int32_t channel_nogetptr(kobj_t obj, void *data)
 	{
 		return 0;
 	}
 
-	static int
-	channel_nonotify(kobj_t obj, void *data, u_int32_t changed)
+	static int channel_nonotify(kobj_t obj, void *data, u_int32_t changed)
 	{
 		return 0;
 	}
@@ -73,70 +68,70 @@ CODE {
 };
 
 METHOD void* init {
-	kobj_t obj;
-	void *devinfo;
-	struct snd_dbuf *b;
-	struct pcm_channel *c;
-	int dir;
+kobj_t obj;
+void *devinfo;
+struct snd_dbuf *b;
+struct pcm_channel *c;
+int dir;
 };
 
 METHOD int free {
-	kobj_t obj;
-	void *data;
+kobj_t obj;
+void *data;
 } DEFAULT channel_nofree;
 
 METHOD int reset {
-	kobj_t obj;
-	void *data;
+kobj_t obj;
+void *data;
 } DEFAULT channel_noreset;
 
 METHOD int resetdone {
-	kobj_t obj;
-	void *data;
+kobj_t obj;
+void *data;
 } DEFAULT channel_noresetdone;
 
 METHOD int setdir {
-	kobj_t obj;
-	void *data;
-	int dir;
+kobj_t obj;
+void *data;
+int dir;
 } DEFAULT channel_nosetdir;
 
 METHOD u_int32_t setformat {
-	kobj_t obj;
-	void *data;
-	u_int32_t format;
+kobj_t obj;
+void *data;
+u_int32_t format;
 };
 
 METHOD u_int32_t setspeed {
-	kobj_t obj;
-	void *data;
-	u_int32_t speed;
+kobj_t obj;
+void *data;
+u_int32_t speed;
 };
 
 METHOD u_int32_t setblocksize {
-	kobj_t obj;
-	void *data;
-	u_int32_t blocksize;
+kobj_t obj;
+void *data;
+u_int32_t blocksize;
 };
 
 METHOD int trigger {
-	kobj_t obj;
-	void *data;
-	int go;
+kobj_t obj;
+void *data;
+int go;
 };
 
 METHOD u_int32_t getptr {
-	kobj_t obj;
-	void *data;
+kobj_t obj;
+void *data;
 } DEFAULT channel_nogetptr;
 
 METHOD struct pcmchan_caps* getcaps {
-	kobj_t obj;
-	void *data;
+kobj_t obj;
+void *data;
 };
 
 METHOD int notify {
-	kobj_t obj;
-	void *data;
-	u_int32_t changed;
+kobj_t obj;
+void *data;
+u_int32_t changed;
 } DEFAULT channel_nonotify;

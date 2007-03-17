@@ -1,35 +1,36 @@
 /*-
- * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
- * Copyright by Hannu Savolainen 1995
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/sound/pcm/sound.h,v 1.63.2.2 2006/04/04 17:43:48 ariff Exp $
- */
+* Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
+* Copyright by Hannu Savolainen 1995
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*
+* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+* SUCH DAMAGE.
+*
+* $MidnightBSD$
+* $FreeBSD: src/sys/dev/sound/pcm/sound.h,v 1.63.2.2 2006/04/04 17:43:48 ariff Exp $
+*/
 
 /*
- * first, include kernel header files.
- */
+* first, include kernel header files.
+*/
 
 #ifndef _OS_H_
 #define _OS_H_
@@ -115,12 +116,12 @@ minor = (unit << 20) + (dev << 16) + channel
 currently minor = (channel << 16) + (unit << 4) + dev
 
 nomenclature:
-	/dev/pcmX/dsp.(0..255)
-	/dev/pcmX/dspW
-	/dev/pcmX/audio
-	/dev/pcmX/status
-	/dev/pcmX/mixer
-	[etc.]
+/dev/pcmX/dsp.(0..255)
+/dev/pcmX/dspW
+/dev/pcmX/audio
+/dev/pcmX/status
+/dev/pcmX/mixer
+[etc.]
 */
 
 #define PCMMAXCHAN		0xff
@@ -130,12 +131,11 @@ nomenclature:
 #define PCMCHAN(x)		((PCMMINOR(x) >> 16) & PCMMAXCHAN)
 #define PCMUNIT(x)		((PCMMINOR(x) >> 4) & PCMMAXUNIT)
 #define PCMDEV(x)		(PCMMINOR(x) & PCMMAXDEV)
-#define PCMMKMINOR(u, d, c)	((((c) & PCMMAXCHAN) << 16) | \
-				(((u) & PCMMAXUNIT) << 4) | ((d) & PCMMAXDEV))
+#define PCMMKMINOR(u, d, c)	((((c) & PCMMAXCHAN) << 16) | 				(((u) & PCMMAXUNIT) << 4) | ((d) & PCMMAXDEV))
 
 #define SD_F_SIMPLEX		0x00000001
 #define SD_F_AUTOVCHAN		0x00000002
-#define SD_F_SOFTVOL		0x00000004
+#define SD_F_SOFTPCMVOL		0x00000004
 #define SD_F_PRIO_RD		0x10000000
 #define SD_F_PRIO_WR		0x20000000
 #define SD_F_PRIO_SET		(SD_F_PRIO_RD | SD_F_PRIO_WR)
@@ -143,8 +143,7 @@ nomenclature:
 #define SD_F_TRANSIENT		0xf0000000
 
 /* many variables should be reduced to a range. Here define a macro */
-#define RANGE(var, low, high) (var) = \
-	(((var)<(low))? (low) : ((var)>(high))? (high) : (var))
+#define RANGE(var, low, high) (var) = 	(((var)<(low))? (low) : ((var)>(high))? (high) : (var))
 #define DSP_BUFFSIZE (8192)
 
 /* make figuring out what a format is easier. got AFMT_STEREO already */
@@ -152,10 +151,8 @@ nomenclature:
 #define AFMT_24BIT (AFMT_S24_LE | AFMT_S24_BE | AFMT_U24_LE | AFMT_U24_BE)
 #define AFMT_16BIT (AFMT_S16_LE | AFMT_S16_BE | AFMT_U16_LE | AFMT_U16_BE)
 #define AFMT_8BIT (AFMT_MU_LAW | AFMT_A_LAW | AFMT_U8 | AFMT_S8)
-#define AFMT_SIGNED (AFMT_S32_LE | AFMT_S32_BE | AFMT_S24_LE | AFMT_S24_BE | \
-			AFMT_S16_LE | AFMT_S16_BE | AFMT_S8)
-#define AFMT_BIGENDIAN (AFMT_S32_BE | AFMT_U32_BE | AFMT_S24_BE | AFMT_U24_BE | \
-			AFMT_S16_BE | AFMT_U16_BE)
+#define AFMT_SIGNED (AFMT_S32_LE | AFMT_S32_BE | AFMT_S24_LE | AFMT_S24_BE | 			AFMT_S16_LE | AFMT_S16_BE | AFMT_S8)
+#define AFMT_BIGENDIAN (AFMT_S32_BE | AFMT_U32_BE | AFMT_S24_BE | AFMT_U24_BE | 			AFMT_S16_BE | AFMT_U16_BE)
 
 struct pcm_channel *fkchan_setup(device_t dev);
 int fkchan_kill(struct pcm_channel *c);
@@ -164,13 +161,13 @@ int fkchan_kill(struct pcm_channel *c);
 #define	SND_MAXVCHANS	PCMMAXCHAN
 
 /*
- * Minor numbers for the sound driver.
- *
- * Unfortunately Creative called the codec chip of SB as a DSP. For this
- * reason the /dev/dsp is reserved for digitized audio use. There is a
- * device for true DSP processors but it will be called something else.
- * In v3.0 it's /dev/sndproc but this could be a temporary solution.
- */
+* Minor numbers for the sound driver.
+*
+* Unfortunately Creative called the codec chip of SB as a DSP. For this
+* reason the /dev/dsp is reserved for digitized audio use. There is a
+* device for true DSP processors but it will be called something else.
+* In v3.0 it's /dev/sndproc but this could be a temporary solution.
+*/
 
 #define SND_DEV_CTL	0	/* Control port /dev/mixer */
 #define SND_DEV_SEQ	1	/* Sequencer /dev/sequencer */
@@ -179,7 +176,7 @@ int fkchan_kill(struct pcm_channel *c);
 #define SND_DEV_AUDIO	4	/* Sparc compatible /dev/audio */
 #define SND_DEV_DSP16	5	/* Like /dev/dsp but 16 bits/sample */
 #define SND_DEV_STATUS	6	/* /dev/sndstat */
-				/* #7 not in use now. */
+/* #7 not in use now. */
 #define SND_DEV_SEQ2	8	/* /dev/sequencer, level 2 interface */
 #define SND_DEV_SNDPROC 9	/* /dev/sndproc for programmable devices */
 #define SND_DEV_PSS	SND_DEV_SNDPROC /* ? */
@@ -196,10 +193,10 @@ extern int snd_unit;
 extern devclass_t pcm_devclass;
 
 /*
- * some macros for debugging purposes
- * DDB/DEB to enable/disable debugging stuff
- * BVDDB   to enable debugging when bootverbose
- */
+* some macros for debugging purposes
+* DDB/DEB to enable/disable debugging stuff
+* BVDDB   to enable debugging when bootverbose
+*/
 #define BVDDB(x) if (bootverbose) x
 
 #ifndef DEB
@@ -233,7 +230,7 @@ void *pcm_getdevinfo(device_t dev);
 
 
 int snd_setup_intr(device_t dev, struct resource *res, int flags,
-		   driver_intr_t hand, void *param, void **cookiep);
+driver_intr_t hand, void *param, void **cookiep);
 
 void *snd_mtxcreate(const char *desc, const char *type);
 void snd_mtxfree(void *m);
@@ -251,16 +248,11 @@ int sndstat_registerfile(char *str);
 int sndstat_unregister(device_t dev);
 int sndstat_unregisterfile(char *str);
 
-#define SND_DECLARE_FILE(version) \
-	_SND_DECLARE_FILE(__LINE__, version)
+#define SND_DECLARE_FILE(version) 	_SND_DECLARE_FILE(__LINE__, version)
 
-#define _SND_DECLARE_FILE(uniq, version) \
-	__SND_DECLARE_FILE(uniq, version)
+#define _SND_DECLARE_FILE(uniq, version) 	__SND_DECLARE_FILE(uniq, version)
 
-#define __SND_DECLARE_FILE(uniq, version) \
-	static char sndstat_vinfo[] = version; \
-	SYSINIT(sdf_ ## uniq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sndstat_registerfile, sndstat_vinfo); \
-	SYSUNINIT(sdf_ ## uniq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sndstat_unregisterfile, sndstat_vinfo);
+#define __SND_DECLARE_FILE(uniq, version) 	static char sndstat_vinfo[] = version; 	SYSINIT(sdf_ ## uniq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sndstat_registerfile, sndstat_vinfo); 	SYSUNINIT(sdf_ ## uniq, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sndstat_unregisterfile, sndstat_vinfo);
 
 /* usage of flags in device config entry (config file) */
 #define DV_F_DRQ_MASK	0x00000007	/* mask for secondary drq */
@@ -273,35 +265,35 @@ int sndstat_unregisterfile(char *str);
 #define	PCM_DEBUG_MTX
 
 /*
- * this is rather kludgey- we need to duplicate these struct def'ns from sound.c
- * so that the macro versions of pcm_{,un}lock can dereference them.
- * we also have to do this now makedev() has gone away.
- */
+* this is rather kludgey- we need to duplicate these struct def'ns from sound.c
+* so that the macro versions of pcm_{,un}lock can dereference them.
+* we also have to do this now makedev() has gone away.
+*/
 
 struct snddev_channel {
-	SLIST_ENTRY(snddev_channel) link;
-	struct pcm_channel *channel;
-	int chan_num;
-	struct cdev *dsp_devt;
-	struct cdev *dspW_devt;
-	struct cdev *audio_devt;
-	struct cdev *dspr_devt;
+SLIST_ENTRY(snddev_channel) link;
+struct pcm_channel *channel;
+int chan_num;
+struct cdev *dsp_devt;
+struct cdev *dspW_devt;
+struct cdev *audio_devt;
+struct cdev *dspr_devt;
 };
 
 struct snddev_info {
-	SLIST_HEAD(, snddev_channel) channels;
-	struct pcm_channel *fakechan;
-	unsigned devcount, playcount, reccount, vchancount;
-	unsigned flags;
-	int inprog;
-	unsigned int bufsz;
-	void *devinfo;
-	device_t dev;
-	char status[SND_STATUSLEN];
-	struct sysctl_ctx_list sysctl_tree;
-	struct sysctl_oid *sysctl_tree_top;
-	struct mtx *lock;
-	struct cdev *mixer_dev;
+SLIST_HEAD(, snddev_channel) channels;
+struct pcm_channel *fakechan;
+unsigned devcount, playcount, reccount, vchancount;
+unsigned flags;
+int inprog;
+unsigned int bufsz;
+void *devinfo;
+device_t dev;
+char status[SND_STATUSLEN];
+struct sysctl_ctx_list sysctl_tree;
+struct sysctl_oid *sysctl_tree_top;
+struct mtx *lock;
+struct cdev *mixer_dev;
 
 };
 

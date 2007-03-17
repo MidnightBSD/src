@@ -1,30 +1,31 @@
 /*-
- * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/sound/pcm/buffer.h,v 1.10 2005/01/06 01:43:20 imp Exp $
- */
+* Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*
+* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+* SUCH DAMAGE.
+*
+* $MidnightBSD$
+* $FreeBSD: src/sys/dev/sound/pcm/buffer.h,v 1.10.2.1 2007/02/04 06:17:48 ariff Exp $
+*/
 
 #define SND_DMA(b) (sndbuf_getflags((b)) & SNDBUF_F_DMA)
 #define SNDBUF_LOCKASSERT(b)
@@ -32,29 +33,30 @@
 #define	SNDBUF_F_DMA		0x00000001
 #define	SNDBUF_F_XRUN		0x00000002
 #define	SNDBUF_F_RUNNING	0x00000004
+#define	SNDBUF_F_MANAGED	0x00000008
 
 #define SNDBUF_NAMELEN	48
 
 struct snd_dbuf {
-	device_t dev;
-	u_int8_t *buf, *tmpbuf;
-	unsigned int bufsize, maxsize;
-	volatile int dl; /* transfer size */
-	volatile int rp; /* pointers to the ready area */
-	volatile int rl; /* length of ready area */
-	volatile int hp;
-	volatile u_int32_t total, prev_total;
-	int dmachan, dir;       /* dma channel */
-	u_int32_t fmt, spd, bps;
-	unsigned int blksz, blkcnt;
-	int xrun;
-	u_int32_t flags;
-	bus_dmamap_t dmamap;
-	bus_dma_tag_t dmatag;
-	u_int32_t buf_addr;
-	struct selinfo sel;
-	struct pcm_channel *channel;
-	char name[SNDBUF_NAMELEN];
+device_t dev;
+u_int8_t *buf, *tmpbuf;
+unsigned int bufsize, maxsize;
+volatile int dl; /* transfer size */
+volatile int rp; /* pointers to the ready area */
+volatile int rl; /* length of ready area */
+volatile int hp;
+volatile u_int32_t total, prev_total;
+int dmachan, dir;       /* dma channel */
+u_int32_t fmt, spd, bps;
+unsigned int blksz, blkcnt;
+int xrun;
+u_int32_t flags;
+bus_dmamap_t dmamap;
+bus_dma_tag_t dmatag;
+u_int32_t buf_addr;
+struct selinfo sel;
+struct pcm_channel *channel;
+char name[SNDBUF_NAMELEN];
 };
 
 struct snd_dbuf *sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel);

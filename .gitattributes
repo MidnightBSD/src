@@ -25703,6 +25703,11 @@ sys/dev/sound/pci/emu10k1.c -text
 sys/dev/sound/pci/es137x.c -text
 sys/dev/sound/pci/es137x.h -text
 sys/dev/sound/pci/fm801.c -text
+sys/dev/sound/pci/hda/hda_reg.h -text
+sys/dev/sound/pci/hda/hdac.c -text
+sys/dev/sound/pci/hda/hdac.h -text
+sys/dev/sound/pci/hda/hdac_private.h -text
+sys/dev/sound/pci/hda/hdac_reg.h -text
 sys/dev/sound/pci/ich.c -text
 sys/dev/sound/pci/ich.h -text
 sys/dev/sound/pci/maestro.c -text
@@ -27445,6 +27450,7 @@ sys/modules/sound/driver/emu10k1/Makefile -text
 sys/modules/sound/driver/es137x/Makefile -text
 sys/modules/sound/driver/ess/Makefile -text
 sys/modules/sound/driver/fm801/Makefile -text
+sys/modules/sound/driver/hda/Makefile -text
 sys/modules/sound/driver/ich/Makefile -text
 sys/modules/sound/driver/maestro/Makefile -text
 sys/modules/sound/driver/maestro3/Makefile -text

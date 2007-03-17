@@ -1,69 +1,70 @@
 /*-
- * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/sound/pcm/channel.h,v 1.31.2.1 2005/12/30 19:55:54 netchild Exp $
- */
+* Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*
+* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+* SUCH DAMAGE.
+*
+* $MidnightBSD$
+* $FreeBSD: src/sys/dev/sound/pcm/channel.h,v 1.31.2.1 2005/12/30 19:55:54 netchild Exp $
+*/
 
 struct pcmchan_children {
-	SLIST_ENTRY(pcmchan_children) link;
-	struct pcm_channel *channel;
+SLIST_ENTRY(pcmchan_children) link;
+struct pcm_channel *channel;
 };
 
 struct pcmchan_caps {
-	u_int32_t minspeed, maxspeed;
-	u_int32_t *fmtlist;
-	u_int32_t caps;
+u_int32_t minspeed, maxspeed;
+u_int32_t *fmtlist;
+u_int32_t caps;
 };
 
 #define	CHN_NAMELEN	32
 struct pcm_channel {
-	kobj_t methods;
+kobj_t methods;
 
-	int num;
-	pid_t pid;
-	int refcount;
-	struct pcm_feeder *feeder;
-	u_int32_t align;
+int num;
+pid_t pid;
+int refcount;
+struct pcm_feeder *feeder;
+u_int32_t align;
 
-	int volume;
-	u_int32_t speed;
-	u_int32_t format;
-	u_int32_t flags;
-	u_int32_t feederflags;
-	u_int32_t blocks;
+int volume;
+u_int32_t speed;
+u_int32_t format;
+u_int32_t flags;
+u_int32_t feederflags;
+u_int32_t blocks;
 
-	int direction;
-	unsigned int interrupts, xruns;
-	struct snd_dbuf *bufhard, *bufsoft;
-	struct snddev_info *parentsnddev;
-	struct pcm_channel *parentchannel;
-	void *devinfo;
-	device_t dev;
-	char name[CHN_NAMELEN];
-	struct mtx *lock;
-	SLIST_HEAD(, pcmchan_children) children;
+int direction;
+unsigned int interrupts, xruns;
+struct snd_dbuf *bufhard, *bufsoft;
+struct snddev_info *parentsnddev;
+struct pcm_channel *parentchannel;
+void *devinfo;
+device_t dev;
+char name[CHN_NAMELEN];
+struct mtx *lock;
+SLIST_HEAD(, pcmchan_children) children;
 };
 
 #include "channel_if.h"
@@ -141,9 +142,8 @@ int fmtvalid(u_int32_t fmt, u_int32_t *fmtlist);
 
 #define	CHN_F_VIRTUAL		0x10000000  /* not backed by hardware */
 
-#define CHN_F_RESET		(CHN_F_BUSY | CHN_F_DEAD | \
-					CHN_F_HAS_VCHAN | CHN_F_VIRTUAL)
-					
+#define CHN_F_RESET		(CHN_F_BUSY | CHN_F_DEAD | 					CHN_F_HAS_VCHAN | CHN_F_VIRTUAL)
+
 
 #define CHN_N_RATE		0x00000001
 #define CHN_N_FORMAT		0x00000002
@@ -152,10 +152,10 @@ int fmtvalid(u_int32_t fmt, u_int32_t *fmtlist);
 #define CHN_N_TRIGGER		0x00000010
 
 /*
- * This should be large enough to hold all pcm data between
- * tsleeps in chn_{read,write} at the highest sample rate.
- * (which is usually 48kHz * 16bit * stereo = 192000 bytes/sec)
- */
+* This should be large enough to hold all pcm data between
+* tsleeps in chn_{read,write} at the highest sample rate.
+* (which is usually 48kHz * 16bit * stereo = 192000 bytes/sec)
+*/
 #define CHN_2NDBUFBLKSIZE	(2 * 1024)
 /* The total number of blocks per secondary bufhard. */
 #define CHN_2NDBUFBLKNUM	(32)
