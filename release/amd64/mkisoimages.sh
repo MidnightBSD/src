@@ -4,6 +4,7 @@
 # Author: Jordan K Hubbard
 # Date:   22 June 2001
 #
+# $MidnightBSD$
 # $FreeBSD: src/release/amd64/mkisoimages.sh,v 1.11 2005/01/30 21:10:51 kensmith Exp $
 #
 # This script is used by release/Makefile to build the (optional) ISO images
@@ -23,7 +24,7 @@
 # extra-bits-dir, if provided, contains additional files to be merged
 # into base-bits-dir as part of making the image.
 
-publisher="The FreeBSD Project.  http://www.freebsd.org/"
+publisher="The MidnightBSD Project.  http://www.midnightbsd.org/"
 if [ "x$1" = "x-b" ]; then
 	# This is highly x86-centric and will be used directly below.
 	bootable="-b boot/cdboot -no-emul-boot"
@@ -40,8 +41,8 @@ fi
 type mkisofs 2>&1 | grep " is " >/dev/null
 if [ $? -ne 0 ]; then
 	echo The cdrtools port is not installed.  Trying to get it now.
-	if [ -f /usr/ports/sysutils/cdrtools/Makefile ]; then
-		cd /usr/ports/sysutils/cdrtools && make install BATCH=yes && make clean
+	if [ -f /usr/mports/sysutils/cdrtools/Makefile ]; then
+		cd /usr/mports/sysutils/cdrtools && make install BATCH=yes && make clean
 	else
 		if ! pkg_add -r cdrtools; then
 			echo "Could not get it via pkg_add - please go install this"
