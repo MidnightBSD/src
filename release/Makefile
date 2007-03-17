@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.9 2007/02/26 00:27:52 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.10 2007/03/17 16:43:15 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -629,7 +629,7 @@ release.5:
 	# Remove all the directories we don't need.
 	-cd ${RD}/trees && \
 		(find ${OTHER_DISTS} -path '*/var/empty' | xargs chflags noschg; \
-		find ${OTHER_DISTS} -depth -type d -print | xargs rmdir)
+		find ${OTHER_DISTS} -depth -type d -empty -print | xargs rmdir)
 	touch ${.TARGET}
 
 #
