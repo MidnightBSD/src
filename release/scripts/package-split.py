@@ -7,7 +7,7 @@
 #
 # Usage: package-split.py <INDEX> <master INDEX>
 #
-# $MidnightBSD$
+# $MidnightBSD: src/release/scripts/package-split.py,v 1.6 2007/03/17 16:44:45 laffer1 Exp $
 # $FreeBSD: src/release/scripts/package-split.py,v 1.6.2.4 2005/12/07 22:27:49 obrien Exp $
 
 import os
@@ -47,7 +47,6 @@ def disc2_packages():
     else:
 	pkgs = ['x11/kde3']
     pkgs.extend(['x11-wm/windowmaker',
-            'x11-wm/fvwm2',
             # "Nice to have"
             'archivers/unzip',
             'astro/xearth',                 
