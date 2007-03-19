@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.11 2007/03/17 16:46:51 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.12 2007/03/17 16:48:59 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -1084,7 +1084,7 @@ doTARBALL:
 	@rm -rf ${RD}/dists/${TD}/${TN}*
 	@mkdir -p ${RD}/dists/${TD}
 	@( cd ${SD} && \
-		tn=`echo ${TN} | tr 'A-Z' 'a-z' && \
+		tn=`echo ${TN} | tr 'A-Z' 'a-z'` && \
 		echo rolling ${TD}/$$tn tarball &&\
 		tar --exclude CVS --exclude obj --exclude BOOTMFS -cf - ${ARG} | \
 		${ZIPNSPLIT} ${RD}/dists/${TD}/$$tn. && \
