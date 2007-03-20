@@ -262,6 +262,11 @@ printf("have sockaddr storage");
 			return (-1);
 		}
 
+		if ((data.status & STATUS_ALARM) == STATUS_ALARM) {
+			warnx("Ignoring NTP server wtih alarm flag set");
+			return (-1);
+		}
+
 		if (*error <= minerr)
 			break;
 	}
