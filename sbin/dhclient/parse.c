@@ -129,8 +129,10 @@ parse_string(FILE *cfile)
 		error("no memory for string %s.", val);
 	strlcpy(s, val, strlen(val) + 1);
 
-	if (!parse_semi(cfile))
+	if (!parse_semi(cfile)) {
+		free(s);
 		return (NULL);
+	}
 	return (s);
 }
 
