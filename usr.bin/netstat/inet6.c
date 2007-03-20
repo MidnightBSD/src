@@ -1044,9 +1044,9 @@ rip6_stats(u_long off __unused, const char *name, int af1 __unused)
 	p(rip6s_badsum, "\t%ju message%s with bad checksum\n");
 	p(rip6s_nosock, "\t%ju message%s dropped due to no socket\n");
 	p(rip6s_nosockmcast,
-	    "\t%llu multicast message%s dropped due to no socket\n");
+	    "\t%ju multicast message%s dropped due to no socket\n");
 	p(rip6s_fullsock,
-	    "\t%llu message%s dropped due to full socket buffers\n");
+	    "\t%ju message%s dropped due to full socket buffers\n");
 	delivered = rip6stat.rip6s_ipackets -
 		    rip6stat.rip6s_badsum -
 		    rip6stat.rip6s_nosock -

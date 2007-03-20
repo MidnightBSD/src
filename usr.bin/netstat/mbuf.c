@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)mbuf.c	8.1 (Berkeley) 6/6/93";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.42.8.6 2006/03/01 20:54:21 andre Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/netstat/mbuf.c,v 1.3 2007/02/12 18:49:10 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
@@ -196,36 +196,36 @@ mbpr(void *kvmd, u_long mbaddr)
 	jumbo16_failures = memstat_get_failures(mtp);
 	jumbo16_size = memstat_get_size(mtp);
 
-	printf("%llu/%llu/%llu mbufs in use (current/cache/total)\n",
+	printf("%ju/%ju/%ju mbufs in use (current/cache/total)\n",
 	    mbuf_count + packet_count, mbuf_free + packet_free,
 	    mbuf_count + packet_count + mbuf_free + packet_free);
 
-	printf("%llu/%llu/%llu/%llu mbuf clusters in use "
+	printf("%ju/%ju/%ju/%ju mbuf clusters in use "
 	    "(current/cache/total/max)\n",
 	    cluster_count - packet_free, cluster_free + packet_free,
 	    cluster_count + cluster_free, cluster_limit);
 
-	printf("%llu/%llu mbuf+clusters out of packet secondary zone in use "
+	printf("%ju/%ju mbuf+clusters out of packet secondary zone in use "
 	    "(current/cache)\n",
 	    packet_count, packet_free);
 
-	printf("%llu/%llu/%llu/%llu %lluk (page size) jumbo clusters in use "
+	printf("%ju/%ju/%ju/%ju %juk (page size) jumbo clusters in use "
 	    "(current/cache/total/max)\n",
 	    jumbop_count, jumbop_free, jumbop_count + jumbop_free,
 	    jumbop_limit, jumbop_size / 1024);
 
-	printf("%llu/%llu/%llu/%llu 9k jumbo clusters in use "
+	printf("%ju/%ju/%ju/%ju 9k jumbo clusters in use "
 	    "(current/cache/total/max)\n",
 	    jumbo9_count, jumbo9_free, jumbo9_count + jumbo9_free,
 	    jumbo9_limit);
 
-	printf("%llu/%llu/%llu/%llu 16k jumbo clusters in use "
+	printf("%ju/%ju/%ju/%ju 16k jumbo clusters in use "
 	    "(current/cache/total/max)\n",
 	    jumbo16_count, jumbo16_free, jumbo16_count + jumbo16_free,
 	    jumbo16_limit);
 
 #if 0
-	printf("%llu mbuf tags in use\n", tag_count);
+	printf("%ju mbuf tags in use\n", tag_count);
 #endif
 
 	/*-
@@ -273,16 +273,16 @@ mbpr(void *kvmd, u_long mbaddr)
 	 */
 	bytes_total = bytes_inuse + bytes_incache;
 
-	printf("%lluK/%lluK/%lluK bytes allocated to network "
+	printf("%juK/%juK/%juK bytes allocated to network "
 	    "(current/cache/total)\n", bytes_inuse / 1024,
 	    bytes_incache / 1024, bytes_total / 1024);
 
-	printf("%llu/%llu/%llu requests for mbufs denied (mbufs/clusters/"
+	printf("%ju/%ju/%ju requests for mbufs denied (mbufs/clusters/"
 	    "mbuf+clusters)\n", mbuf_failures, cluster_failures,
 	    packet_failures);
 
-	printf("%llu/%llu/%llu requests for jumbo clusters denied "
-	    "(%lluk/9k/16k)\n", jumbop_failures, jumbo9_failures,
+	printf("%ju/%ju/%ju requests for jumbo clusters denied "
+	    "(%juk/9k/16k)\n", jumbop_failures, jumbo9_failures,
 	    jumbo16_failures, jumbop_size / 1024);
 
 	if (live) {
