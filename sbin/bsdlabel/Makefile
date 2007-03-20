@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/17/94
 # $FreeBSD: src/sbin/bsdlabel/Makefile,v 1.19 2004/01/11 09:11:10 nyan Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sbin/bsdlabel/Makefile,v 1.3 2007/01/02 07:15:33 laffer1 Exp $
 
 .PATH: ${.CURDIR}/../../sys/geom
 
@@ -17,8 +17,6 @@ MLINKS=	bsdlabel.8 disklabel.8
 
 DPADD=	${LIBGEOM}
 LDADD=	-lgeom
-
-WARNS?=	6
 
 .include <bsd.prog.mk>
 
