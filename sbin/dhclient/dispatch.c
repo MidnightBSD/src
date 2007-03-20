@@ -295,7 +295,7 @@ interface_status(struct interface_info *ifinfo)
 	memset(&ifr, 0, sizeof(ifr));
 	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(ifsock, SIOCGIFFLAGS, &ifr) < 0) {
-		syslog(LOG_ERR, "ioctl(SIOCGIFFLAGS) on %s: %m", ifname);
+		warning("ioctl(SIOCGIFFLAGS) on %s: %m", ifname);
 		goto inactive;
 	}
 
@@ -313,7 +313,7 @@ interface_status(struct interface_info *ifinfo)
 	strlcpy(ifmr.ifm_name, ifname, sizeof(ifmr.ifm_name));
 	if (ioctl(ifsock, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0) {
 		if (errno != EINVAL) {
-			syslog(LOG_DEBUG, "ioctl(SIOCGIFMEDIA) on %s: %m",
+			debug("ioctl(SIOCGIFMEDIA) on %s: %m",
 			    ifname);
 
 			ifinfo->noifmedia = 1;
@@ -479,7 +479,7 @@ interface_link_status(char *ifname)
 	if (ioctl(sock, SIOCGIFMEDIA, (caddr_t)&ifmr) == -1) {
 		/* EINVAL -> link state unknown. treat as active */
 		if (errno != EINVAL)
-			syslog(LOG_DEBUG, "ioctl(SIOCGIFMEDIA) on %s: %m",
+			debug("ioctl(SIOCGIFMEDIA) on %s: %m",
 			    ifname);
 		close(sock);
 		return (1);
