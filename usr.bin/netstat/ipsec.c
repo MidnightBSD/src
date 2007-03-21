@@ -97,7 +97,7 @@ static char sccsid[] = "@(#)inet.c	8.5 (Berkeley) 5/24/95";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/ipsec.c,v 1.12.8.1 2006/01/05 03:47:24 kbyanc Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/netstat/ipsec.c,v 1.2 2007/02/12 18:49:10 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/netstat/ipsec.c,v 1.3 2007/03/20 21:24:40 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -206,10 +206,10 @@ ipsec_hist(const u_quad_t *hist, size_t histmax, const struct val2str *name,
 				break;
 		}
 		if (p && p->str) {
-			printf("\t\t%s: %ju\n", p->str, (unsigned long long)hist[proto]);
+			printf("\t\t%s: %ju\n", p->str, (uintmax_t)hist[proto]);
 		} else {
 			printf("\t\t#%ld: %ju\n", (long)proto,
-			    (unsigned long long)hist[proto]);
+			    (uintmax_t)hist[proto]);
 		}
 	}
 }
@@ -218,9 +218,9 @@ static void
 print_ipsecstats(const struct ipsecstat *ipsecstat)
 {
 #define	p(f, m) if (ipsecstat->f || sflag <= 1) \
-    printf(m, (unsigned long long)ipsecstat->f, plural(ipsecstat->f))
+    printf(m, (uintmax_t)ipsecstat->f, plural(ipsecstat->f))
 #define	pes(f, m) if (ipsecstat->f || sflag <= 1) \
-    printf(m, (unsigned long long)ipsecstat->f, plurales(ipsecstat->f))
+    printf(m, (uintmax_t)ipsecstat->f, plurales(ipsecstat->f))
 #define hist(f, n, t) \
     ipsec_hist((f), sizeof(f)/sizeof(f[0]), (n), (t));
 
@@ -354,7 +354,7 @@ print_ahstats(const struct ahstat *ahstat)
 #define	p32(f, m) if (ahstat->f || sflag <= 1) \
     printf("\t%u" m, (unsigned int)ahstat->f, plural(ahstat->f))
 #define	p64(f, m) if (ahstat->f || sflag <= 1) \
-    printf("\t%ju" m, (unsigned long long)ahstat->f, plural(ahstat->f))
+    printf("\t%ju" m, (uintmax_t)ahstat->f, plural(ahstat->f))
 #define hist(f, n, t) \
     ipsec_hist_new((f), sizeof(f)/sizeof(f[0]), (n), (t));
 
@@ -403,7 +403,7 @@ print_espstats(const struct espstat *espstat)
 #define	p32(f, m) if (espstat->f || sflag <= 1) \
     printf("\t%u" m, (unsigned int)espstat->f, plural(espstat->f))
 #define	p64(f, m) if (espstat->f || sflag <= 1) \
-    printf("\t%ju" m, (unsigned long long)espstat->f, plural(espstat->f))
+    printf("\t%ju" m, (uintmax_t)espstat->f, plural(espstat->f))
 #define hist(f, n, t) \
     ipsec_hist_new((f), sizeof(f)/sizeof(f[0]), (n), (t));
 
@@ -453,7 +453,7 @@ print_ipcompstats(const struct ipcompstat *ipcompstat)
 #define	p32(f, m) if (ipcompstat->f || sflag <= 1) \
     printf("\t%u" m, (unsigned int)ipcompstat->f, plural(ipcompstat->f))
 #define	p64(f, m) if (ipcompstat->f || sflag <= 1) \
-    printf("\t%ju" m, (unsigned long long)ipcompstat->f, plural(ipcompstat->f))
+    printf("\t%ju" m, (uintmax_t)ipcompstat->f, plural(ipcompstat->f))
 #define hist(f, n, t) \
     ipsec_hist_new((f), sizeof(f)/sizeof(f[0]), (n), (t));
 

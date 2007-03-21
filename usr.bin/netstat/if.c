@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)if.c	8.3 (Berkeley) 4/28/95";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/if.c,v 1.58.8.5 2005/11/16 08:27:46 ru Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/netstat/if.c,v 1.2 2007/02/07 15:50:03 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/netstat/if.c,v 1.3 2007/03/20 21:24:40 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/protosw.h>
@@ -142,9 +142,9 @@ pfsync_stats(u_long off __unused, const char *name, int af1 __unused)
 	printf("%s:\n", name);
 
 #define p(f, m) if (pfsyncstat.f || sflag <= 1) \
-	printf(m, (unsigned long long)pfsyncstat.f, plural(pfsyncstat.f))
+	printf(m, (uintmax_t)pfsyncstat.f, plural(pfsyncstat.f))
 #define p2(f, m) if (pfsyncstat.f || sflag <= 1) \
-	printf(m, (unsigned long long)pfsyncstat.f)
+	printf(m, (uintmax_t)pfsyncstat.f)
 
 	p(pfsyncs_ipackets, "\t%ju packet%s received (IPv4)\n");
 	p(pfsyncs_ipackets6, "\t%ju packet%s received (IPv6)\n");

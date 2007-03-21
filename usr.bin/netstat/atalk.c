@@ -75,12 +75,12 @@ static	int first = 1;
 static const char *
 at_pr_net(struct sockaddr_at *sat, int numeric)
 {
-static	char mybuf[50];
+	static	char mybuf[50];
 
-	if (!numeric) {
+	if (numeric == 0) {
 		switch(sat->sat_addr.s_net) {
 		case 0xffff:
-			return "????";
+			return("????");
 		case ATADDR_ANYNET:
 			return("*");
 		}
@@ -92,7 +92,7 @@ static	char mybuf[50];
 static const char *
 at_pr_host(struct sockaddr_at *sat, int numeric)
 {
-static	char mybuf[50];
+	static	char mybuf[50];
 
 	if (!numeric) {
 		switch(sat->sat_addr.s_node) {

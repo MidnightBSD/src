@@ -1053,7 +1053,7 @@ rip6_stats(u_long off __unused, const char *name, int af1 __unused)
 		    rip6stat.rip6s_nosockmcast -
 		    rip6stat.rip6s_fullsock;
 	if (delivered || sflag <= 1)
-		printf("\t%ju delivered\n", (unsigned long long)delivered);
+		printf("\t%ju delivered\n", (uintmax_t)delivered);
 	p(rip6s_opackets, "\t%ju datagram%s output\n");
 #undef p
 }

@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1983, 1988, 1993
  *	Regents of the University of California.  All rights reserved.
  *
@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -45,7 +41,7 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 3/1/94";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/netstat/main.c,v 1.72.2.6 2006/01/05 03:47:24 kbyanc Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/netstat/main.c,v 1.2 2007/02/12 18:49:10 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -69,6 +65,7 @@ __MBSDID("$MidnightBSD$");
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "netstat.h"
 
 static struct nlist nl[] = {
@@ -456,7 +453,7 @@ main(int argc, char *argv[])
 	 * guys can't print interesting stuff from kernel memory.
 	 */
 	if (nlistf != NULL || memf != NULL)
-		setgid(getgid());
+		(void)setgid(getgid());
 
 	if (Bflag) {
 		bpf_stats(interface);

@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1992, 1993
  *	Regents of the University of California.  All rights reserved.
  *
@@ -10,11 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ * 3. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,6 +28,7 @@
  *
  *	@(#)netstat.h	8.2 (Berkeley) 1/4/94
  * $FreeBSD: src/usr.bin/netstat/netstat.h,v 1.41.2.5 2006/01/05 03:47:24 kbyanc Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>
