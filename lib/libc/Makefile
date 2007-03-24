@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 2/3/94
 # $FreeBSD: src/lib/libc/Makefile,v 1.56 2005/01/15 05:23:56 das Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libc/Makefile,v 1.2 2007/01/04 06:22:04 laffer1 Exp $
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -37,6 +37,7 @@ NOASM=
 .include "${.CURDIR}/gmon/Makefile.inc"
 .endif
 .include "${.CURDIR}/locale/Makefile.inc"
+.include "${.CURDIR}/ohash/Makefile.inc"
 .include "${.CURDIR}/net/Makefile.inc"
 .include "${.CURDIR}/nls/Makefile.inc"
 .include "${.CURDIR}/posix1e/Makefile.inc"
