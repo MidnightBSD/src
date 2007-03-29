@@ -1,10 +1,10 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/modules/cpufreq/Makefile,v 1.8 2005/04/19 16:38:24 njl Exp $
 
 .PATH:	${.CURDIR}/../../dev/cpufreq		\
 	${.CURDIR}/../../${MACHINE_ARCH}/cpufreq
 
 KMOD=	cpufreq
-WARNS?=	2
 SRCS=	ichss.c
 SRCS+=	bus_if.h cpufreq_if.h device_if.h pci_if.h
 
