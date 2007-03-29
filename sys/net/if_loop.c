@@ -87,7 +87,7 @@
 #elif defined(LARGE_LOMTU)
 #define LOMTU	131072
 #else
-#define LOMTU	16384
+#define LOMTU	32768
 #endif
 
 #define LONAME	"lo"
