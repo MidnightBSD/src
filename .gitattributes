@@ -14751,6 +14751,7 @@ etc/isdn/record -text
 etc/isdn/tell -text
 etc/isdn/tell-record -text
 etc/isdn/unknown_incoming -text
+etc/ksh.kshrc -text
 etc/login.access -text
 etc/login.conf -text
 etc/mac.conf -text
