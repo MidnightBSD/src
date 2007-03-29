@@ -1,13 +1,23 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/skel/dot.profile,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
-# see also sh(1), environ(7).
+# see also sh(1), ksh(1), environ(7).
 #
 
 # remove /usr/games and /usr/X11R6/bin if you want
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/games:/usr/local/sbin:/usr/local/bin:/usr/X11R6/bin:$HOME/bin; export PATH
+
+# A righteous umask
+umask 22
+
+# set a few alias
+alias h="fc -l"
+alias j="jobs -l"
+alias la="ls -a"
+alias lf="ls -FA"
+alias ll="ls -lA"
 
 # Setting TERM is normally done through /etc/ttys.  Do only override
 # if you're sure that you'll never log in via telnet or xterm or a
@@ -18,8 +28,13 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/games:/usr/local/sbin:/usr/local/bin:/us
 BLOCKSIZE=K;	export BLOCKSIZE
 EDITOR=vi;   	export EDITOR
 PAGER=more;  	export PAGER
+VISUAL=emacs;	export VISUAL
 
 # set ENV to a file invoked each time sh is started for interactive use.
-ENV=$HOME/.shrc; export ENV
+if [ $SHELL = "/bin/ksh" ]; then
+	ENV=$HOME/.kshrc; export ENV
+elif [ $SHELL = "/bin/sh" ]; then
+	ENV=$HOME/.shrc; export ENV
+fi
 
 [ -x /usr/games/fortune ] && /usr/games/fortune freebsd-tips
