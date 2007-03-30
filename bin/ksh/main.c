@@ -241,7 +241,7 @@ main(int argc, char *argv[])
 
 	ksheuid = geteuid();
 	init_username();
-	safe_prompt = ksheuid ? "> " : "# ";
+	safe_prompt = ksheuid ? "$ " : "# ";
 	{
 		struct tbl *vp = global("PS1");
 
