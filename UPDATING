@@ -11,6 +11,8 @@ Items affecting the mports and packages system can be found in
 
 	cd /usr/src/lib/libc && make obj && make && make install
 	cd /usr/src/gnu/usr.bin/cc && make obj && make && make install
+	cd /usr/lib/libpthread && make obj && make && make install
+	cd /usr/lib/libthr && make obj && make && make install
 	buildworld and kernel
 
 	It is adviced that any mports which were installed and/or built
@@ -349,4 +351,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.15 2007/03/15 00:08:27 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.16 2007/04/02 00:48:02 archite Exp $
