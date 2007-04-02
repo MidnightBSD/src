@@ -48,6 +48,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include "intl.h"
 #include "tm_p.h"
 #include "target.h"
+#include "protector.h"
 
 /* Decide whether a function's arguments should be processed
    from first to last or from last to first.
@@ -1060,7 +1061,11 @@ can_move_by_pieces (unsigned HOST_WIDE_INT len,
 
    If ENDP is 0 return to, if ENDP is 1 return memory at the end ala
    mempcpy, and if ENDP is 2 return memory the end minus one byte ala
-   stpcpy.  */
+   stpcpy.
+
+   When the stack protector is used at the reverse move, it starts the move
+   instruction from the address within the region of a variable.
+   So it eliminates the first address decrement instruction.  */
 
 rtx
 move_by_pieces (rtx to, rtx from, unsigned HOST_WIDE_INT len,
@@ -1123,6 +1128,8 @@ move_by_pieces (rtx to, rtx from, unsigned HOST_WIDE_INT len,
 
       if (USE_LOAD_PRE_DECREMENT (mode) && data.reverse && ! data.autinc_from)
 	{
+	  if (flag_propolice_protection)
+	    len = len - GET_MODE_SIZE (mode);
 	  data.from_addr = copy_addr_to_reg (plus_constant (from_addr, len));
 	  data.autinc_from = 1;
 	  data.explicit_inc_from = -1;
@@ -1137,6 +1144,8 @@ move_by_pieces (rtx to, rtx from, unsigned HOST_WIDE_INT len,
 	data.from_addr = copy_addr_to_reg (from_addr);
       if (USE_STORE_PRE_DECREMENT (mode) && data.reverse && ! data.autinc_to)
 	{
+	  if (flag_propolice_protection)
+	    len = len - GET_MODE_SIZE (mode);
 	  data.to_addr = copy_addr_to_reg (plus_constant (to_addr, len));
 	  data.autinc_to = 1;
 	  data.explicit_inc_to = -1;
@@ -1280,11 +1289,15 @@ move_by_pieces_1 (rtx (*genfun) (rtx, ...), enum machine_mode mode,
 	from1 = adjust_address (data->from, mode, data->offset);
 
       if (HAVE_PRE_DECREMENT && data->explicit_inc_to < 0)
-	emit_insn (gen_add2_insn (data->to_addr,
-				  GEN_INT (-(HOST_WIDE_INT)size)));
+	/* The stack protector skips the first address decrement instruction
+	   at the reverse move.  */
+	if (!flag_propolice_protection || data->explicit_inc_to < -1)
+	  emit_insn (gen_add2_insn (data->to_addr,
+				    GEN_INT (-(HOST_WIDE_INT)size)));
       if (HAVE_PRE_DECREMENT && data->explicit_inc_from < 0)
-	emit_insn (gen_add2_insn (data->from_addr,
-				  GEN_INT (-(HOST_WIDE_INT)size)));
+	if (!flag_propolice_protection || data->explicit_inc_from < -1)
+	  emit_insn (gen_add2_insn (data->from_addr,
+				    GEN_INT (-(HOST_WIDE_INT)size)));
 
       if (data->to)
 	emit_insn ((*genfun) (to1, from1));
@@ -2475,7 +2488,12 @@ store_by_pieces_1 (struct store_by_pieces *data ATTRIBUTE_UNUSED,
 
       if (USE_STORE_PRE_DECREMENT (mode) && data->reverse && ! data->autinc_to)
 	{
-	  data->to_addr = copy_addr_to_reg (plus_constant (to_addr, data->len));
+	  int len = data->len;
+	  /* The stack protector starts the store instruction from
+	     the address within the region of a variable.  */
+	  if (flag_propolice_protection)
+	    len -= GET_MODE_SIZE (mode);
+	  data->to_addr = copy_addr_to_reg (plus_constant (to_addr, len));
 	  data->autinc_to = 1;
 	  data->explicit_inc_to = -1;
 	}
@@ -2544,8 +2562,11 @@ store_by_pieces_2 (rtx (*genfun) (rtx, ...), enum machine_mode mode,
 	to1 = adjust_address (data->to, mode, data->offset);
 
       if (HAVE_PRE_DECREMENT && data->explicit_inc_to < 0)
-	emit_insn (gen_add2_insn (data->to_addr,
-				  GEN_INT (-(HOST_WIDE_INT) size)));
+	/* The stack protector skips the first address decrement instruction
+	   at the reverse store.  */
+	if (!flag_propolice_protection || data->explicit_inc_to < -1)
+	  emit_insn (gen_add2_insn (data->to_addr,
+				    GEN_INT (-(HOST_WIDE_INT) size)));
 
       cst = (*data->constfun) (data->constfundata, data->offset, mode);
       emit_insn ((*genfun) (to1, cst));
@@ -5701,7 +5722,9 @@ force_operand (rtx value, rtx target)
 	  && GET_CODE (XEXP (value, 0)) == PLUS
 	  && GET_CODE (XEXP (XEXP (value, 0), 0)) == REG
 	  && REGNO (XEXP (XEXP (value, 0), 0)) >= FIRST_VIRTUAL_REGISTER
-	  && REGNO (XEXP (XEXP (value, 0), 0)) <= LAST_VIRTUAL_REGISTER)
+	  && REGNO (XEXP (XEXP (value, 0), 0)) <= LAST_VIRTUAL_REGISTER
+	  && (!flag_propolice_protection
+	      || XEXP (XEXP (value, 0), 0) != virtual_stack_vars_rtx))
 	{
 	  rtx temp = expand_simple_binop (GET_MODE (value), code,
 					  XEXP (XEXP (value, 0), 0), op2,

@@ -81,6 +81,7 @@ Software Foundation, 59 Temple Place - Suite 330, Boston, MA
 #include "coverage.h"
 #include "value-prof.h"
 #include "alloc-pool.h"
+#include "protector.h"
 
 #if defined (DWARF2_UNWIND_INFO) || defined (DWARF2_DEBUGGING_INFO)
 #include "dwarf2out.h"
@@ -984,6 +985,15 @@ int align_functions_log;
    minimum function alignment.  Zero means no alignment is forced.  */
 int force_align_functions_log;
 
+#if defined(STACK_PROTECTOR) && defined(STACK_GROWS_DOWNWARD)
+/* Nonzero means use propolice as a stack protection method */
+int flag_propolice_protection = 1;
+int flag_stack_protection = 0;
+#else
+int flag_propolice_protection = 0;
+int flag_stack_protection = 0;
+#endif
+
 typedef struct
 {
   const char *const string;
@@ -1160,7 +1170,9 @@ static const lang_independent_options f_options[] =
   {"mem-report", &mem_report, 1 },
   { "trapv", &flag_trapv, 1 },
   { "wrapv", &flag_wrapv, 1 },
-  { "new-ra", &flag_new_regalloc, 1 }
+  { "new-ra", &flag_new_regalloc, 1 },
+  {"stack-protector", &flag_propolice_protection, 1 },
+  {"stack-protector-all", &flag_stack_protection, 1 }
 };
 
 /* Here is a table, controlled by the tm.h file, listing each -m switch
@@ -3169,6 +3181,11 @@ rest_of_compilation (tree decl)
   remove_unnecessary_notes ();
   reorder_blocks ();
 
+  /* In propolice-protection mode, we will change the variables in the
+     stack to be able to detect buffer overflows.  */
+  if (flag_propolice_protection)
+    prepare_stack_protection (DECL_INLINE (decl));
+
   ggc_collect ();
 
   /* Initialize some variables used by the optimizers.  */
@@ -4491,6 +4508,12 @@ process_options (void)
     /* The presence of IEEE signaling NaNs, implies all math can trap.  */
     if (flag_signaling_nans)
       flag_trapping_math = 1;
+
+  /* This combination makes optimized frame addressings and causes
+    a internal compilation error at prepare_stack_protection.
+    so don't allow it.  */
+  if (flag_stack_protection && !flag_propolice_protection)
+    flag_propolice_protection = TRUE;
 }
 
 /* Initialize the compiler back end.  */

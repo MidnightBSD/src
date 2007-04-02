@@ -22,7 +22,7 @@ SRCS+=	alias.c bb-reorder.c bitmap.c builtins.c caller-save.c calls.c \
 	dwarf2asm.c dwarf2out.c emit-rtl.c except.c explow.c \
 	expmed.c expr.c final.c flow.c fold-const.c function.c gcse.c \
 	genrtl.c ggc-common.c global.c graph.c gtype-desc.c \
-	haifa-sched.c hooks.c ifcvt.c  \
+	haifa-sched.c hooks.c ifcvt.c  protector.c \
 	integrate.c intl.c jump.c  langhooks.c lcm.c lists.c local-alloc.c \
 	loop.c optabs.c options.c opts.c params.c postreload.c predict.c \
 	print-rtl.c print-tree.c value-prof.c \
@@ -77,7 +77,7 @@ insn-$F.c: ${.OBJDIR}/../cc_tools/gen$F
 .endfor
 
 CFLAGS+=	-DHAVE_CONFIG_H
-CFLAGS+=	-DTARGET_NAME=\"${target}\" -DIN_GCC
+CFLAGS+=	-DSTACK_PROTECTOR -DTARGET_NAME=\"${target}\" -DIN_GCC
 
 # c-pch.o needs extra defines. Replicate the rule here rather than
 # pollute compiler command line for all other files.

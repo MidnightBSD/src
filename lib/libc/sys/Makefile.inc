@@ -23,6 +23,8 @@ SRCS+=	ftruncate.c lseek.c mmap.c pread.c pwrite.c truncate.c __error.c
 # Add machine dependent asm sources:
 SRCS+=${MDASM}
 
+# Add stack protector handler
+SRCS+=	stack_protector.c
 # Look though the complete list of syscalls (MIASM) for names that are
 # not defined with machine dependent implementations (MDASM) and are
 # not declared for no generation of default code (NOASM).  Add each

@@ -4706,6 +4706,8 @@ contrib/gcc/pretty-print.h -text
 contrib/gcc/print-rtl.c -text
 contrib/gcc/print-tree.c -text
 contrib/gcc/profile.c -text
+contrib/gcc/protector.c -text
+contrib/gcc/protector.h -text
 contrib/gcc/protoize.c -text
 contrib/gcc/ra-build.c -text
 contrib/gcc/ra-colorize.c -text
@@ -17731,6 +17733,7 @@ lib/libc/sys/sigsuspend.2 -text
 lib/libc/sys/sigwait.2 -text
 lib/libc/sys/socket.2 -text
 lib/libc/sys/socketpair.2 -text
+lib/libc/sys/stack_protector.c -text
 lib/libc/sys/stat.2 -text
 lib/libc/sys/statfs.2 -text
 lib/libc/sys/swapon.2 -text
@@ -27028,6 +27031,7 @@ sys/libkern/random.c -text
 sys/libkern/rindex.c -text
 sys/libkern/scanc.c -text
 sys/libkern/skpc.c -text
+sys/libkern/stack_protector.c -text
 sys/libkern/strcasecmp.c -text
 sys/libkern/strcat.c -text
 sys/libkern/strcmp.c -text
