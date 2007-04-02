@@ -2,7 +2,7 @@
 #
 # $NetBSD: isdnd,v 1.9 2002/04/10 23:37:13 martin Exp $
 # $FreeBSD: src/etc/rc.d/isdnd,v 1.20 2005/01/16 03:12:03 obrien Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/isdnd,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 #
 # Mostly based on original script (/etc/rc.isdn) written by  Hellmuth Michaelis
 #
@@ -16,6 +16,7 @@
 name="isdnd"
 rcvar=`set_rcvar isdn`
 pidfile="/var/run/${name}.pid"
+command="/usr/sbin/isdnd"
 start_cmd="isdnd_start"
 
 isdnd_start()
