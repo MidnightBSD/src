@@ -195,7 +195,7 @@ main(int argc, char *argv[])
 	gethostname(hostname, sizeof(hostname) - 1);
 	hostname[sizeof(hostname) - 1] = '\0';
 	if (hostname[0] == '\0')
-		strcpy(hostname, "Amnesiac");
+		strcpy(hostname, "RedShirt");
 
 	/*
 	 * Limit running time to deal with broken or dead lines.
