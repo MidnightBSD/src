@@ -27,7 +27,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(list)
-static char rcsid[] = "$MidnightBSD$";
+static char rcsid[] = "$MidnightBSD: src/lib/libc/sys/stack_protector.c,v 1.2 2007/04/03 18:01:25 laffer1 Exp $";
 #endif
 
 #include <sys/param.h>
@@ -36,6 +36,7 @@ static char rcsid[] = "$MidnightBSD$";
 #include <signal.h>
 #include <strings.h>
 #include <syslog.h>
+#include <unistd.h>
 
 long __guard[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static void __guard_setup(void) __attribute__ ((constructor));
