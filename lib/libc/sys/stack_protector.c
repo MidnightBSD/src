@@ -23,14 +23,18 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
+ * $OpenBSD: stack_protector.c,v 1.3 2002/12/10 08:53:42 etoh Exp $
  */
 
 #if defined(LIBC_SCCS) && !defined(list)
-static char rcsid[] = "$OpenBSD: stack_protector.c,v 1.3 2002/12/10 08:53:42 etoh Exp $";
+static char rcsid[] = "$MidnightBSD$";
 #endif
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <strings.h>
 #include <syslog.h>
 
 long __guard[8] = {0, 0, 0, 0, 0, 0, 0, 0};
