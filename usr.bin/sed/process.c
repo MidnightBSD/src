@@ -30,9 +30,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/* $FreeBSD: /home/ncvs/src/usr.bin/sed/process.c,v 1.44 2007/04/02 08:14:45 yar Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/sed/process.c,v 1.39 2005/04/09 14:31:41 stefanf Exp $");
+__MBSDID("$MidnightBSD$");
 
 #ifndef lint
 static const char sccsid[] = "@(#)process.c	8.6 (Berkeley) 4/20/94";
@@ -128,7 +129,7 @@ redirect:
 			case 'c':
 				pd = 1;
 				psl = 0;
-				if (cp->a2 == NULL || lastaddr)
+				if (cp->a2 == NULL || lastaddr || lastline())
 					(void)fprintf(outfile, "%s", cp->t);
 				break;
 			case 'd':
@@ -188,8 +189,7 @@ redirect:
 			case 'P':
 				if (pd)
 					break;
-				if (psl != 0 &&
-				    (p = memchr(ps, '\n', psl)) != NULL) {
+				if ((p = memchr(ps, '\n', psl)) != NULL) {
 					oldpsl = psl;
 					psl = p - ps;
 				}
@@ -265,9 +265,9 @@ new:		if (!nflag && !pd)
  * TRUE if the address passed matches the current program state
  * (lastline, linenumber, ps).
  */
-#define	MATCH(a)						\
-	(a)->type == AT_RE ? regexec_e((a)->u.r, ps, 0, 1, psl) :	\
-	    (a)->type == AT_LINE ? linenum == (a)->u.l : lastline()
+#define	MATCH(a)							\
+	((a)->type == AT_RE ? regexec_e((a)->u.r, ps, 0, 1, psl) :	\
+	    (a)->type == AT_LINE ? linenum == (a)->u.l : lastline())
 
 /*
  * Return TRUE if the command applies to the current line.  Sets the inrange
@@ -286,8 +286,17 @@ applies(struct s_command *cp)
 			if (MATCH(cp->a2)) {
 				cp->inrange = 0;
 				lastaddr = 1;
-			}
-			r = 1;
+				r = 1;
+			} else if (cp->a2->type == AT_LINE &&
+				   linenum > cp->a2->u.l) {
+				/*
+				 * We missed the 2nd address due to a branch,
+				 * so just close the range and return false.
+				 */
+				cp->inrange = 0;
+				r = 0;
+			} else
+				r = 1;
 		} else if (MATCH(cp->a1)) {
 			/*
 			 * If the second address is a number less than or
@@ -667,9 +676,9 @@ regsub(SPACE *sp, char *string, char *src)
 }
 
 /*
- * aspace --
- *	Append the source space to the destination space, allocating new
- *	space as necessary.
+ * cspace --
+ *	Concatenate space: append the source space to the destination space,
+ *	allocating new space as necessary.
  */
 void
 cspace(SPACE *sp, const char *p, size_t len, enum e_spflag spflag)
