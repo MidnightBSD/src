@@ -46,11 +46,12 @@ ssize_t
 __read(int fd, void *buf, size_t nbytes)
 {
 	struct pthread *curthread = _get_curthread();
-	ssize_t	ret;
+	ssize_t	ret = -1;
 
-	_thr_cancel_enter(curthread);
-	ret = __sys_read(fd, buf, nbytes);
-	_thr_cancel_leave(curthread, 1);
-
+	if (curthread != NULL) {
+		_thr_cancel_enter(curthread);
+		ret = __sys_read(fd, buf, nbytes);
+		_thr_cancel_leave(curthread, 1);
+	}
 	return ret;
 }

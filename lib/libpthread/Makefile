@@ -28,6 +28,9 @@ CFLAGS+=-fno-builtin
 CFLAGS+=-D_LOCK_DEBUG
 #CFLAGS+= -g
 
+# disable pro police
+CFLAGS+= -fno-stack-protector-all
+
 # Uncomment this if you want to build a 1:1 threading mode library
 # however it is no longer strictly conformed to POSIX
 # CFLAGS+=-DSYSTEM_SCOPE_ONLY

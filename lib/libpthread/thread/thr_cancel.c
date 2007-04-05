@@ -265,6 +265,8 @@ _pthread_testcancel(void)
 void
 _thr_cancel_enter(struct pthread *thread)
 {
+	if (thread == NULL)
+		return;
 	/* Look for a cancellation before we block: */
 	THR_THREAD_LOCK(thread, thread);
 	testcancel(thread);
@@ -275,6 +277,8 @@ _thr_cancel_enter(struct pthread *thread)
 void
 _thr_cancel_leave(struct pthread *thread, int check)
 {
+	if (thread == NULL)
+		return;
 	THR_THREAD_LOCK(thread, thread);
 	thread->cancelflags &= ~THR_AT_CANCEL_POINT;
 	/* Look for a cancellation after we unblock: */
