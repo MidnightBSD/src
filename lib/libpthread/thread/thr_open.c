@@ -45,14 +45,11 @@ __weak_reference(__open, open);
 int
 __open(const char *path, int flags,...)
 {
-	struct pthread *curthread;
+	struct pthread *curthread = _get_curthread();
 	int	ret;
 	int	mode = 0;
 	va_list	ap;
 
-	if (_thr_initial == NULL)
-		_libpthread_init(NULL);
-	curthread = _get_curthread();
 	_thr_cancel_enter(curthread);
 	
 	/* Check if the file is being created: */

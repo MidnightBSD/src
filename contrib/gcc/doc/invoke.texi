@@ -227,7 +227,7 @@ in the following sections.
 -Wno-multichar  -Wnonnull  -Wpacked  -Wpadded @gol
 -Wparentheses  -Wpointer-arith  -Wredundant-decls @gol
 -Wreturn-type  -Wsequence-point  -Wshadow @gol
--Wsign-compare  -Wstack-protector  -Wstrict-aliasing @gol
+-Wsign-compare  -Wstrict-aliasing @gol
 -Wswitch  -Wswitch-default  -Wswitch-enum @gol
 -Wsystem-headers  -Wtrigraphs  -Wundef  -Wuninitialized @gol
 -Wunknown-pragmas  -Wunreachable-code @gol
@@ -675,7 +675,6 @@ in the following sections.
 -fshort-double  -fshort-wchar @gol
 -fverbose-asm  -fpack-struct  -fstack-check @gol
 -fstack-limit-register=@var{reg}  -fstack-limit-symbol=@var{sym} @gol
--fstack-protector  -fstack-protector-all @gol
 -fargument-alias  -fargument-noalias @gol
 -fargument-noalias-global  -fleading-underscore @gol
 -ftls-model=@var{model} @gol
@@ -2986,10 +2985,6 @@ merely indicates that GCC's optimizers were unable to handle the code
 effectively.  Often, the problem is that your code is too big or too
 complex; GCC will refuse to optimize programs when the optimization
 itself is likely to take inordinate amounts of time.
-
-@item -Wstack-protector
-@opindex Wstack-protector
-Warn when not issuing stack smashing protection for some reason.
 
 @item -Werror
 @opindex Werror
@@ -11235,24 +11230,6 @@ and grows downwards, you can use the flags
 @option{-fstack-limit-symbol=__stack_limit} and
 @option{-Wl,--defsym,__stack_limit=0x7ffe0000} to enforce a stack limit
 of 128KB@.  Note that this may only work with the GNU linker.
-
-@item -fstack-protector
-@item -fstack-protector-all
-@opindex fstack-protector
-@opindex fstack-protector-all
-@opindex fno-stack-protector
-Generate code to protect an application from a stack smashing
-attack. The features are (1) the insertion of random value next to the
-frame pointer to detect the integrity of the stack, (2) the reordering
-of local variables to place buffers after pointers to avoid the
-corruption of pointers that could be used to further corrupt arbitrary
-memory locations, (3) the copying of pointers in function arguments to
-an area preceding local variable buffers to prevent the corruption of
-pointers that could be used to further corrupt arbitrary memory
-locations, and the (4) omission of instrumentation code from some
-functions to decrease the performance overhead.  If the integrity
-would be broken, the program is aborted.  If stack-protector-all is
-specified, instrumentation codes are generated at every functions.
 
 @cindex aliasing of parameters
 @cindex parameters, aliased

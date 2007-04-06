@@ -678,27 +678,6 @@ expand_binop (enum machine_mode mode, optab binoptab, rtx op0, rtx op1,
   if (target)
     target = protect_from_queue (target, 1);
 
-  /* Keep the frame and offset pattern at the use of stack protection.  */
-  if (flag_propolice_protection
-      && binoptab->code == PLUS
-      && op0 == virtual_stack_vars_rtx
-      && GET_CODE(op1) == CONST_INT)
-    {
-      int icode = (int) binoptab->handlers[(int) mode].insn_code;
-      if (target)
-	temp = target;
-      else
-	temp = gen_reg_rtx (mode);
-
-      if (! (*insn_data[icode].operand[0].predicate) (temp, mode)
-	  || GET_CODE (temp) != REG)
-	temp = gen_reg_rtx (mode);
-
-      emit_insn (gen_rtx_SET (VOIDmode, temp,
-			      gen_rtx_PLUS (GET_MODE (op0), op0, op1)));
-      return temp;
-    }
-
   if (flag_force_mem)
     {
       /* Load duplicate non-volatile operands once.  */

@@ -408,12 +408,6 @@ c_cpp_builtins (cpp_reader *pfile)
   if (c_dialect_objc () && flag_next_runtime)
     cpp_define (pfile, "__NEXT_RUNTIME__");
 
-  /* Make the choice of the stack protector runtime visible to source code.  */
-  if (flag_propolice_protection)
-    cpp_define (pfile, "__SSP__=1");
-  if (flag_stack_protection)
-    cpp_define (pfile, "__SSP_ALL__=2");
-
   /* A straightforward target hook doesn't work, because of problems
      linking that hook's body when part of non-C front ends.  */
 # define preprocessing_asm_p() (cpp_get_options (pfile)->lang == CLK_ASM)

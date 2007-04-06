@@ -186,10 +186,6 @@ extern bool warn_deprecated_decl;
 
 extern bool warn_strict_aliasing;
 
-/* Warn when not issuing stack smashing protection for some reason.  */
-
-extern bool warn_stack_protector;
-
 /* Nonzero if generating code to do profiling.  */
 
 extern int profile_flag;
@@ -774,13 +770,5 @@ extern int flag_abi_version;
    and the rounding mode is important.  */
 #define HONOR_SIGN_DEPENDENT_ROUNDING(MODE) \
   (MODE_HAS_SIGN_DEPENDENT_ROUNDING (MODE) && flag_rounding_math)
-
-/* Nonzero means use propolice as a stack protection method.  */
-
-extern int flag_propolice_protection;
-
-/* Nonzero means use a stack protection method for every function.  */
-
-extern int flag_stack_protection;
 
 #endif /* ! GCC_FLAGS_H */

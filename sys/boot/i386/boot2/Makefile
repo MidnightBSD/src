@@ -38,13 +38,6 @@ CFLAGS=	-Os \
 	-Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
 	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings
 
-# check if the stack protector is enabled or not. set "y y" if enabled
-PPENABLE!= echo 'f(){char b[9];}'| ${CC} -S -xc - -o -| sed -n /__guard/s/.*/y/p
-# disables stack protector instruments
-.if ${PPENABLE} == "y y"
-DEBUG_FLAGS+= -fno-stack-protector
-.endif
-
 LDFLAGS=-static -N --gc-sections
 
 # Pick up ../Makefile.inc early.

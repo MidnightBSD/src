@@ -3,6 +3,17 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070406:
+	Back out propolice.  propolice caused several problems
+	with our threading libraries libthr and libpthread.  
+	curthread was often NULL after the patch and many
+	multithreaded applications would crash.  We plan to 
+	work on either bringing in gcc 4.1 or developing a new
+	patch which also corrects our threading issues later.
+
+	It is more important to have a stable system for our
+	mport work and other projects at this time.
+
 20070401:
 	Importing propolice into MidnightBSD. Propolice is going to
 	provide us with much greater security and stability in the
@@ -351,4 +362,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.17 2007/04/02 20:21:15 archite Exp $
+$MidnightBSD: src/UPDATING,v 1.18 2007/04/03 17:48:34 laffer1 Exp $

@@ -6525,14 +6525,6 @@ general_induction_var (const struct loop *loop, rtx x, rtx *src_reg,
   if (GET_CODE (*mult_val) == USE)
     *mult_val = XEXP (*mult_val, 0);
 
-#ifndef FRAME_GROWS_DOWNWARD
-  if (flag_propolice_protection
-      && GET_CODE (*add_val) == PLUS
-      && (XEXP (*add_val, 0) == frame_pointer_rtx
-	  || XEXP (*add_val, 1) == frame_pointer_rtx))
-    return 0;
-#endif
-
   if (is_addr)
     *pbenefit += address_cost (orig_x, addr_mode) - reg_address_cost;
   else

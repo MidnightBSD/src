@@ -174,12 +174,6 @@ GCC_3.0 {
   _Unwind_SjLj_RaiseException
   _Unwind_SjLj_ForcedUnwind
   _Unwind_SjLj_Resume
-
-%if !defined(_LIBC_PROVIDES_SSP_)
-  # stack smash handler symbols
-  __guard
-  __stack_smash_handler
-%endif
 }
 
 %inherit GCC_3.3 GCC_3.0
