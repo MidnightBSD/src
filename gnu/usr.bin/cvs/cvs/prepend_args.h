@@ -17,6 +17,7 @@
    02111-1307, USA.  */
 
 /* $FreeBSD: src/gnu/usr.bin/cvs/cvs/prepend_args.h,v 1.2 2002/09/02 06:09:03 peter Exp $ */
+/* $MidnightBSD$ */
 
 /* This code, taken from GNU Grep, originally used the "PARAM" macro, as the
    current GNU coding standards requires.  Older GNU code used the "PROTO"

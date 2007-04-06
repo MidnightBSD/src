@@ -1,4 +1,5 @@
 # $FreeBSD: src/gnu/usr.bin/cvs/cvsbug/Makefile,v 1.23 2005/06/03 15:08:30 imp Exp $
+# $MidnightBSD$
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -14,7 +15,7 @@ CLEANFILES+=    cvsbug
 cvsbug: cvsbug.in
 	version=`sed < ${CVSDIR}/configure \
 	    -e '/^[     ]*VERSION=/!d' -e 's/.*=["'\'']\{0,1\}\([^"'\'']*\)["'\'']\{0,1\}/\1/' -e q`; \
-	sed -e "s,@VERSION@,$${version}-FreeBSD,g" \
+	sed -e "s,@VERSION@,$${version}-MidnightBSD,g" \
 	    -e "s,@MKTEMP@,/usr/bin/mktemp,g" \
 	    -e "s,@PACKAGE_BUGREPORT@,bug-cvs@gnu.org,g" \
 	    -e "s,@SENDMAIL@,/usr/sbin/sendmail,g" \

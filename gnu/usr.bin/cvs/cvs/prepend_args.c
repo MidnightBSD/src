@@ -17,7 +17,7 @@
    02111-1307, USA.  */
 
 /* $FreeBSD: src/gnu/usr.bin/cvs/cvs/prepend_args.c,v 1.3 2002/09/02 06:09:03 peter Exp $ */
-
+/* $MidnightBSD$ */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>

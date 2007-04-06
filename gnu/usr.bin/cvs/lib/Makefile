@@ -1,4 +1,5 @@
 # $FreeBSD: src/gnu/usr.bin/cvs/lib/Makefile,v 1.28 2005/06/03 15:08:30 imp Exp $
+# $MidnightBSD$ 
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -28,7 +29,7 @@ SRCS=	config.h argmatch.c getdate.y getline.c \
 config.h: config.h.proto
 	version=`sed < ${CVSDIR}/configure \
 	    -e '/^[     ]*VERSION=/!d' -e 's/.*=["'\'']\{0,1\}\([^"'\'']*\)["'\'']\{0,1\}/\1/' -e q`; \
-	sed -e "s,@VERSION@,$${version}-FreeBSD,g" \
+	sed -e "s,@VERSION@,$${version}-MidnightBSD,g" \
 	    -e "s,@UMASK_DFLT@,${CVS_UMASK_DFLT},g" \
 	    -e "s,@TMPDIR_DFLT@,${CVS_TMPDIR_DFLT},g" \
 	    -e "s,@CVS_ADMIN_GROUP@,${CVS_ADMIN_GROUP},g" \
