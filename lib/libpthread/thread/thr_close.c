@@ -45,13 +45,11 @@ int
 __close(int fd)
 {
 	struct pthread	*curthread = _get_curthread();
-	int	ret = -1;
+	int	ret;
 
-	if (curthread != NULL) {
-		_thr_cancel_enter(curthread);
-		ret = __sys_close(fd);
-		_thr_cancel_leave(curthread, 1);
-	}
+	_thr_cancel_enter(curthread);
+	ret = __sys_close(fd);
+	_thr_cancel_leave(curthread, 1);
 	
 	return (ret);
 }
