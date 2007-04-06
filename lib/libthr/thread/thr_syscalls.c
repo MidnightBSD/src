@@ -147,7 +147,7 @@ __close(int fd)
 	oldcancel = _thr_cancel_enter(curthread);
 	ret = __sys_close(fd);
 	_thr_cancel_leave(curthread, oldcancel);
-	
+
 	return (ret);
 }
 
