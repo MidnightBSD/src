@@ -14,6 +14,23 @@ Items affecting the mports and packages system can be found in
 	It is more important to have a stable system for our
 	mport work and other projects at this time.
 
+	This is not a clean removal.  It is recommended that you
+	have a recently SNAP CD handy.  You can either reinstall
+	or perform a make buildworld and make buildkernel and 
+	make installkernel.  Reboot on the cd and copy the contents
+	of /bin, /sbin, /lib, /libexec, and /usr/bin, /usr/sbin,
+	/usr/lib, and /usr/libexec to the respective directories on
+	your disk.  Then you should be able to boot into single user
+	mode and run make installworld.  You will need to run
+	chflags noschg on some of the files if you can't overwrite
+	them. 
+
+	You will get __guard missing errors since we had to remove
+	this from libc.
+
+	You will need to rebuild any ports built while propolice was
+	installed.
+
 20070401:
 	Importing propolice into MidnightBSD. Propolice is going to
 	provide us with much greater security and stability in the
@@ -362,4 +379,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.18 2007/04/03 17:48:34 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.19 2007/04/06 20:37:49 laffer1 Exp $
