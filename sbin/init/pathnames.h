@@ -31,11 +31,10 @@
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
  * $FreeBSD: src/sbin/init/pathnames.h,v 1.3 2004/04/09 19:58:30 markm Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/sbin/init/pathnames.h,v 1.2 2006/12/29 21:00:15 laffer1 Exp $
  */
 
 #include <paths.h>
 
-#define	_PATH_SLOGGER	"/sbin/session_logger"
 #define	_PATH_RUNCOM	"/etc/rc"
 #define _PATH_RUNDOWN   "/etc/rc.shutdown"
