@@ -22387,6 +22387,7 @@ share/mk/bsd.man.mk -text
 share/mk/bsd.nls.mk -text
 share/mk/bsd.obj.mk -text
 share/mk/bsd.own.mk -text
+share/mk/bsd.patch.mk -text
 share/mk/bsd.pkg.mk -text
 share/mk/bsd.port.mk -text
 share/mk/bsd.port.post.mk -text
