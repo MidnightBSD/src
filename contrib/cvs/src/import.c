@@ -14,8 +14,6 @@
  *	VendorReleTag	Tag for this particular release
  *
  * Additional arguments specify more Vendor Release Tags.
- *
- * $FreeBSD: src/contrib/cvs/src/import.c,v 1.12 2004/04/15 01:17:27 peter Exp $
  */
 
 #include "cvs.h"
@@ -214,11 +212,21 @@ import (argc, argv)
      * support branching to a single level, so the specified vendor branch
      * must only have two dots in it (like "1.1.1").
      */
-    for (cp = vbranch; *cp != '\0'; cp++)
-	if (!isdigit ((unsigned char) *cp) && *cp != '.')
-	    error (1, 0, "%s is not a numeric branch", vbranch);
-    if (numdots (vbranch) != 2)
-	error (1, 0, "Only branches with two dots are supported: %s", vbranch);
+    {
+	regex_t pat;
+	assert (!regcomp (&pat, "^[1-9][0-9]*\\.[1-9][0-9]*\\.[1-9][0-9]*$",
+			  REG_EXTENDED));
+	if (regexec (&pat, vbranch, 0, NULL, 0))
+	{
+	    error (1, 0,
+"Only numeric branch specifications with two dots are\n"
+"supported by import, not `%s'.  For example: `1.1.1'.",
+		   vbranch);
+	}
+	regfree (&pat);
+    }
+
+    /* Set vhead to the branch's parent.  */
     vhead = xstrdup (vbranch);
     cp = strrchr (vhead, '.');
     *cp = '\0';
@@ -750,7 +758,7 @@ add_rev (message, rcs, vfile, vers)
     tocvsPath = wrap_tocvs_process_file (vfile);
 
     status = RCS_checkin (rcs, tocvsPath == NULL ? vfile : tocvsPath,
-			  message, vbranch,
+			  message, vbranch, 0,
 			  (RCS_FLAGS_QUIET | RCS_FLAGS_KEEPFILE
 			   | (use_file_modtime ? RCS_FLAGS_MODTIME : 0)));
     ierrno = errno;

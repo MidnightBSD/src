@@ -3193,6 +3193,7 @@ contrib/cvs/diff/analyze.c -text
 contrib/cvs/diff/cmpbuf.c -text
 contrib/cvs/diff/cmpbuf.h -text
 contrib/cvs/diff/context.c -text
+contrib/cvs/diff/diagmeet.note -text
 contrib/cvs/diff/diff.c -text
 contrib/cvs/diff/diff.h -text
 contrib/cvs/diff/diff3.c -text
@@ -3219,6 +3220,7 @@ contrib/cvs/doc/cvs.texinfo -text
 contrib/cvs/doc/cvsclient.texi -text
 contrib/cvs/doc/mdate-sh -text
 contrib/cvs/doc/mkman.in -text
+contrib/cvs/doc/mkman.pl -text
 contrib/cvs/doc/stamp-1 -text
 contrib/cvs/doc/stamp-vti -text
 contrib/cvs/doc/version-client.texi -text
@@ -3361,6 +3363,7 @@ contrib/cvs/tools/ChangeLog -text
 contrib/cvs/tools/Makefile.am -text
 contrib/cvs/tools/Makefile.in -text
 contrib/cvs/tools/README -text
+contrib/cvs/typescript -text
 contrib/diff/COPYING -text
 contrib/diff/ChangeLog -text
 contrib/diff/FREEBSD-upgrade -text

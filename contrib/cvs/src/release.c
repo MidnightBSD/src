@@ -124,8 +124,12 @@ release (argc, argv)
                         + 1 + 3 + 3 + 16 + 1);
     sprintf (update_cmd, "%s %s%s-n -q -d %s update",
              program_path,
+#if defined (CLIENT_SUPPORT) || defined (SERVER_SUPPORT)
              cvsauthenticate ? "-a " : "",
              cvsencrypt ? "-x " : "",
+#else
+	     "", "",
+#endif
              current_parsed_root->original);
 
 #ifdef CLIENT_SUPPORT

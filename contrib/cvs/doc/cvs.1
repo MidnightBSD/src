@@ -653,8 +653,8 @@ does not contain the specified tag.
 \fBNote: this is not the same as the overall \fBcvs -r\fB option,
 which you can specify to the left of a \fBcvs\fB command!\fR
 .SP
-\fB-r\fR is available with the \fBcheckout\fR, \fBcommit\fR,
-\fBdiff\fR, \fBhistory\fR, \fBexport\fR, \fBrdiff\fR,
+\fB-r\fR is available with the \fBannotate\fR, \fBcheckout\fR,
+\fBcommit\fR, \fBdiff\fR, \fBhistory\fR, \fBexport\fR, \fBrdiff\fR, 
 \fBrtag\fR, and \fBupdate\fR commands.
 .SP
 .IP "" 0
@@ -2807,8 +2807,10 @@ At least three arguments are required.
 \fIrepository\fR is needed to identify the collection
 of source.  \fIvendortag\fR is a tag for the entire
 branch (e.g., for 1.1.1).  You must also specify at
-least one \fIreleasetag\fR to identify the files at
-the leaves created each time you execute \fBimport\fR.
+least one \fIreleasetag\fR to uniquely identify the files at
+the leaves created each time you execute \fBimport\fR.  The
+\fIreleasetag\fR should be new, not previously existing in the
+repository file, and uniquely identify the imported release,
 .SP
 Note that \fBimport\fR does \fInot\fR change the
 directory in which you invoke it.  In particular, it

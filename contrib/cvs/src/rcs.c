@@ -6,8 +6,6 @@
  * 
  * The routines contained in this file do all the rcs file parsing and
  * manipulation
- *
- * $FreeBSD: src/contrib/cvs/src/rcs.c,v 1.28 2005/04/22 17:58:25 simon Exp $
  */
 
 #include <assert.h>
@@ -26,7 +24,6 @@
 # endif
 #endif
 
-int datesep = '/';
 int preserve_perms = 0;
 
 /* The RCS -k options, and a set of enums that must match the array.
@@ -136,8 +133,6 @@ static char *rcs_lockfilename PROTO ((const char *));
    the function call when the first characters are different.  It
    evaluates its arguments multiple times.  */
 #define STREQ(a, b) (*(char *)(a) == *(char *)(b) && strcmp ((a), (b)) == 0)
-
-static char * getfullCVSname PROTO ((char *, char **));
 
 /*
  * We don't want to use isspace() from the C library because:
@@ -2507,25 +2502,13 @@ RCS_magicrev (rcs, rev)
     char *rev;
 {
     int rev_num;
-    char *xrev, *test_branch, *local_branch_num;
+    char *xrev, *test_branch;
 
     xrev = xmalloc (strlen (rev) + 14); /* enough for .0.number */
     check_rev = xrev;
 
-    local_branch_num = getenv("CVS_LOCAL_BRANCH_NUM");
-    if (local_branch_num)
-    {
-      rev_num = atoi(local_branch_num);
-      if (rev_num < 2)
-	rev_num = 2;
-      else
-	rev_num &= ~1;
-    }
-    else
-      rev_num = 2;
-
     /* only look at even numbered branches */
-    for ( ; ; rev_num += 2)
+    for (rev_num = 2; ; rev_num += 2)
     {
 	/* see if the physical branch exists */
 	(void) sprintf (xrev, "%s.%d", rev, rev_num);
@@ -3041,7 +3024,8 @@ RCS_getdate (rcs, date, force_tag_match)
     if (retval != NULL)
 	return (retval);
 
-    if (vers && (!force_tag_match || RCS_datecmp (vers->date, date) <= 0))
+    if (!force_tag_match ||
+	(vers != NULL && RCS_datecmp (vers->date, date) <= 0))
 	return xstrdup (vers->version);
     else
 	return NULL;
@@ -3292,7 +3276,7 @@ translate_symtag (rcs, tag)
     if (rcs->symbols_data != NULL)
     {
 	size_t len;
-	char *cp;
+	char *cp, *last;
 
 	/* Look through the RCS symbols information.  This is like
            do_symbols, but we don't add the information to a list.  In
@@ -3301,8 +3285,16 @@ translate_symtag (rcs, tag)
 
 	len = strlen (tag);
 	cp = rcs->symbols_data;
+	/* Keeping track of LAST below isn't strictly necessary, now that tags
+	 * should be parsed for validity before they are accepted, but tags
+	 * with spaces used to cause the code below to loop indefintely, so
+	 * I have corrected for that.  Now, in the event that I missed
+	 * something, the server cannot be hung.  -DRP
+	 */
+	last = NULL;
 	while ((cp = strchr (cp, tag[0])) != NULL)
 	{
+	    if (cp == last) break;
 	    if ((cp == rcs->symbols_data || whitespace (cp[-1]))
 		&& strncmp (cp, tag, len) == 0
 		&& cp[len] == ':')
@@ -3325,6 +3317,7 @@ translate_symtag (rcs, tag)
 		++cp;
 	    if (*cp == '\0')
 		break;
+	    last = cp;
 	}
     }
 
@@ -3497,31 +3490,27 @@ struct rcs_keyword
 {
     const char *string;
     size_t len;
-    int expandit;
 };
 #define KEYWORD_INIT(s) (s), sizeof (s) - 1
-static struct rcs_keyword keywords[] =
+static const struct rcs_keyword keywords[] =
 {
-    { KEYWORD_INIT ("Author"), 1 },
-    { KEYWORD_INIT ("Date"), 1 },
-    { KEYWORD_INIT ("CVSHeader"), 1 },
-    { KEYWORD_INIT ("Header"), 1 },
-    { KEYWORD_INIT ("Id"), 1 },
-    { KEYWORD_INIT ("Locker"), 1 },
-    { KEYWORD_INIT ("Log"), 1 },
-    { KEYWORD_INIT ("Name"), 1 },
-    { KEYWORD_INIT ("RCSfile"), 1 },
-    { KEYWORD_INIT ("Revision"), 1 },
-    { KEYWORD_INIT ("Source"), 1 },
-    { KEYWORD_INIT ("State"), 1 },
-    { NULL, 0, 0 },
-    { NULL, 0, 0 }
+    { KEYWORD_INIT ("Author") },
+    { KEYWORD_INIT ("Date") },
+    { KEYWORD_INIT ("Header") },
+    { KEYWORD_INIT ("Id") },
+    { KEYWORD_INIT ("Locker") },
+    { KEYWORD_INIT ("Log") },
+    { KEYWORD_INIT ("Name") },
+    { KEYWORD_INIT ("RCSfile") },
+    { KEYWORD_INIT ("Revision") },
+    { KEYWORD_INIT ("Source") },
+    { KEYWORD_INIT ("State") },
+    { NULL, 0 }
 };
 enum keyword
 {
     KEYWORD_AUTHOR = 0,
     KEYWORD_DATE,
-    KEYWORD_CVSHEADER,
     KEYWORD_HEADER,
     KEYWORD_ID,
     KEYWORD_LOCKER,
@@ -3530,10 +3519,8 @@ enum keyword
     KEYWORD_RCSFILE,
     KEYWORD_REVISION,
     KEYWORD_SOURCE,
-    KEYWORD_STATE,
-    KEYWORD_LOCALID
+    KEYWORD_STATE
 };
-enum keyword keyword_local = KEYWORD_ID;
 
 /* Convert an RCS date string into a readable string.  This is like
    the RCS date2str function.  */
@@ -3549,8 +3536,8 @@ printable_date (rcs_date)
 		   &sec);
     if (year < 1900)
 	year += 1900;
-    sprintf (buf, "%04d%c%02d%c%02d %02d:%02d:%02d",
-	     year, datesep, mon, datesep, mday, hour, min, sec);
+    sprintf (buf, "%04d/%02d/%02d %02d:%02d:%02d", year, mon, mday,
+	     hour, min, sec);
     return xstrdup (buf);
 }
 
@@ -3711,8 +3698,7 @@ expand_keywords (rcs, ver, name, log, loglen, expand, buf, len, retbuf, retlen)
 	slen = s - srch;
 	for (keyword = keywords; keyword->string != NULL; keyword++)
 	{
-	    if (keyword->expandit
-		&& keyword->len == slen
+	    if (keyword->len == slen
 		&& strncmp (keyword->string, srch, slen) == 0)
 	    {
 		break;
@@ -3759,25 +3745,15 @@ expand_keywords (rcs, ver, name, log, loglen, expand, buf, len, retbuf, retlen)
 		free_value = 1;
 		break;
 
-	    case KEYWORD_CVSHEADER:
 	    case KEYWORD_HEADER:
 	    case KEYWORD_ID:
-	    case KEYWORD_LOCALID:
 		{
 		    const char *path;
 		    int free_path;
 		    char *date;
-		    char *old_path;
 
-		    old_path = NULL;
-		    if (kw == KEYWORD_HEADER ||
-			    (kw == KEYWORD_LOCALID &&
-			     keyword_local == KEYWORD_HEADER))
+		    if (kw == KEYWORD_HEADER)
 			path = rcs->path;
-		    else if (kw == KEYWORD_CVSHEADER ||
-			     (kw == KEYWORD_LOCALID &&
-			      keyword_local == KEYWORD_CVSHEADER))
-			path = getfullCVSname(rcs->path, &old_path);
 		    else
 			path = last_component (rcs->path);
 		    path = escape_keyword_value (path, &free_path);
@@ -3800,8 +3776,6 @@ expand_keywords (rcs, ver, name, log, loglen, expand, buf, len, retbuf, retlen)
 			 * and we can discard the const.
 			 */
 			free ((char *)path);
-		    if (old_path)
-			free (old_path);
 		    free (date);
 		    free_value = 1;
 		}
@@ -4138,7 +4112,7 @@ RCS_checkout (rcs, workfile, rev, nametag, options, sout, pfn, callerdat)
     size_t len;
     int free_value = 0;
     char *log = NULL;
-    size_t loglen = 0;
+    size_t loglen;
     Node *vp = NULL;
 #ifdef PRESERVE_PERMISSIONS_SUPPORT
     uid_t rcs_owner = (uid_t) -1;
@@ -4171,7 +4145,11 @@ RCS_checkout (rcs, workfile, rev, nametag, options, sout, pfn, callerdat)
 
     assert (rev == NULL || isdigit ((unsigned char) *rev));
 
-    if (noexec && workfile != NULL)
+    if (noexec
+#ifdef SERVER_SUPPORT
+	&& !server_active
+#endif
+	&& workfile != NULL)
 	return 0;
 
     assert (sout == RUN_TTY || workfile == NULL);
@@ -4981,11 +4959,12 @@ RCS_addbranch (rcs, branch)
    or zero for success.  */
 
 int
-RCS_checkin (rcs, workfile_in, message, rev, flags)
+RCS_checkin (rcs, workfile_in, message, rev, citime, flags)
     RCSNode *rcs;
     const char *workfile_in;
     const char *message;
     const char *rev;
+    time_t citime;
     int flags;
 {
     RCSVers *delta, *commitpt;
@@ -5048,6 +5027,8 @@ RCS_checkin (rcs, workfile_in, message, rev, flags)
 	}
 	modtime = ws.st_mtime;
     }
+    else if (flags & RCS_FLAGS_USETIME)
+	modtime = citime;
     else
 	(void) time (&modtime);
     ftm = gmtime (&modtime);
@@ -7456,7 +7437,7 @@ RCS_deltas (rcs, fp, rcsbuf, version, op, text, len, log, loglen)
 
 		for (ln = 0; ln < headlines.nlines; ++ln)
 		{
-		    char *buf;
+		    char buf[80];
 		    /* Period which separates year from month in date.  */
 		    char *ym;
 		    /* Period which separates month from day in date.  */
@@ -7467,12 +7448,10 @@ RCS_deltas (rcs, fp, rcsbuf, version, op, text, len, log, loglen)
 		    if (prvers == NULL)
 			prvers = vers;
 
-		    buf = xmalloc (strlen (prvers->version) + 24);
 		    sprintf (buf, "%-12s (%-8.8s ",
 			     prvers->version,
 			     prvers->author);
 		    cvs_output (buf, 0);
-		    free (buf);
 
 		    /* Now output the date.  */
 		    ym = strchr (prvers->date, '.');
@@ -8656,106 +8635,4 @@ make_file_label (path, rev, rcs)
 	(void) sprintf (label, "-L%s\t%s", path, datebuf);
     }
     return label;
-}
-
-void
-RCS_setlocalid (arg)
-    const char *arg;
-{
-    char *copy, *next, *key;
-
-    copy = xstrdup(arg);
-    next = copy;
-    key = strtok(next, "=");
-
-    keywords[KEYWORD_LOCALID].string = xstrdup(key);
-    keywords[KEYWORD_LOCALID].len = strlen(key);
-    keywords[KEYWORD_LOCALID].expandit = 1;
-
-    /* options? */
-    while (key = strtok(NULL, ",")) {
-	if (!strcmp(key, keywords[KEYWORD_ID].string))
-	    keyword_local = KEYWORD_ID;
-	else if (!strcmp(key, keywords[KEYWORD_HEADER].string))
-	    keyword_local = KEYWORD_HEADER;
-	else if (!strcmp(key, keywords[KEYWORD_CVSHEADER].string))
-	    keyword_local = KEYWORD_CVSHEADER;
-	else
-	    error(1, 0, "Unknown LocalId mode: %s", key);
-    }
-    free(copy);
-}
-
-void
-RCS_setincexc (arg)
-    const char *arg;
-{
-    char *key;
-    char *copy, *next;
-    int include = 0;
-    struct rcs_keyword *keyword;
-
-    copy = xstrdup(arg);
-    next = copy;
-    switch (*next++) {
-	case 'e':
-	    include = 0;
-	    break;
-	case 'i':
-	    include = 1;
-	    break;
-	default:
-	    free(copy);
-	    return;
-    }
-
-    if (include)
-	for (keyword = keywords; keyword->string != NULL; keyword++)
-	{
-	    keyword->expandit = 0;
-	}
-
-    key = strtok(next, ",");
-    while (key) {
-	for (keyword = keywords; keyword->string != NULL; keyword++) {
-	    if (strcmp (keyword->string, key) == 0)
-		keyword->expandit = include;
-	}
-	key = strtok(NULL, ",");
-    }
-    free(copy);
-    return;
-}
-
-#define ATTIC "/" CVSATTIC
-static char *
-getfullCVSname(CVSname, pathstore)
-    char *CVSname, **pathstore;
-{
-    if (current_parsed_root->directory) {
-	int rootlen;
-	char *c = NULL;
-	int alen = sizeof(ATTIC) - 1;
-
-	*pathstore = xstrdup(CVSname);
-	if ((c = strrchr(*pathstore, '/')) != NULL) {
-	    if (c - *pathstore >= alen) {
-		if (!strncmp(c - alen, ATTIC, alen)) {
-		    while (*c != '\0') {
-			*(c - alen) = *c;
-			c++;
-		    }
-		    *(c - alen) = '\0';
-		}
-	    }
-	}
-
-	rootlen = strlen(current_parsed_root->directory);
-	if (!strncmp(*pathstore, current_parsed_root->directory, rootlen) &&
-	    (*pathstore)[rootlen] == '/')
-	    CVSname = (*pathstore + rootlen + 1);
-	else
-	    CVSname = (*pathstore);
-    }
-    return CVSname;
 }

@@ -273,7 +273,7 @@ sub change_summary {
         }
 
         $diff = "\n\n";
-        $vhost = @path[0];
+        $vhost = $path[0];
         if ($CVSWEB_PORT eq "80") {
           $cvsweb_base = "$CVSWEB_SCHEME://$vhost.$CVSWEB_DOMAIN/$CVSWEB_URI";
         }
@@ -457,7 +457,7 @@ sub mail_notification
 
     my $subj = &derive_subject_from_changes_file ();
 
-    if ($EMULATE_LOCAL_MAIL_USER NE "") {
+    if ($EMULATE_LOCAL_MAIL_USER ne "") {
         $MAIL_FROM = "$cvs_user\@$EMULATE_LOCAL_MAIL_USER";
     }
 
@@ -536,7 +536,6 @@ $state = $STATE_NONE;
 $cvs_user = $ENV{'USER'} || getlogin || (getpwuid($<))[0] || sprintf("uid#%d",$<);
 @files = process_argv(@ARGV);
 @path = split('/', $files[0]);
-$repository = $path[0];
 if ($#path == 0) {
     $dir = ".";
 } else {

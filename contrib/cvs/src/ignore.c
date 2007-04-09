@@ -331,7 +331,7 @@ ignore_directory (name)
     i = dir_ign_current;
     while (i--)
     {
-	if (strncmp (name, dir_ign_list[i], strlen (dir_ign_list[i])) == 0)
+	if (strncmp (name, dir_ign_list[i], strlen (dir_ign_list[i])+1) == 0)
 	    return 1;
     }
 

@@ -469,7 +469,25 @@ same name already exists in the repository.");
 			    char *prev = previous_rev (vers->srcfile,
 			                               vers->vn_rcs);
 			    int status;
-			    assert (prev != NULL);
+			    if (prev == NULL)
+			    {
+				/* There is no previous revision.  Either:
+				 *
+				 *  * Revision 1.1 was dead, as when a file was
+				 *    inititially added on a branch, 
+				 *
+				 * or
+				 *
+				 *  * All previous revisions have been deleted.
+				 *    For instance, via `admin -o'.
+				 */
+				if (!really_quiet)
+				    error (0, 0,
+"File `%s' has no previous revision to resurrect.",
+			                   finfo.fullname);
+				free (prev);
+				goto skip_this_file;
+			    }
 			    if (!quiet)
 				error (0, 0,
 "Resurrecting file `%s' from revision %s.",
@@ -665,6 +683,8 @@ cannot resurrect %s; RCS file removed by second party", finfo.fullname);
 		server_checked_in (finfo.file, finfo.update_dir, repository);
 #endif
 	}
+
+skip_this_file:
 	free (repository);
 	Entries_Close (entries);
 

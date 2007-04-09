@@ -4,8 +4,6 @@
  * 
  * You may distribute under the terms of the GNU General Public License as
  * specified in the README file that comes with the CVS source distribution.
- *
- * $FreeBSD: src/contrib/cvs/src/logmsg.c,v 1.12 2004/04/15 01:17:27 peter Exp $
  */
 
 #include <assert.h>
@@ -228,8 +226,6 @@ do_editor (dir, messagep, repository, changes)
 	    (*messagep)[strlen (*messagep) - 1] != '\n')
 	    (void) fprintf (fp, "\n");
     }
-    else
-	(void) fprintf (fp, "\n");
 
     if (repository != NULL)
 	/* tack templates on if necessary */

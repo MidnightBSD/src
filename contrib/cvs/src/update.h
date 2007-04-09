@@ -10,14 +10,10 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.  */
 
-/*
- * $FreeBSD: src/contrib/cvs/src/update.h,v 1.3 2004/04/15 01:17:28 peter Exp $
- */
-
 int do_update PROTO((int argc, char *argv[], char *xoptions, char *xtag,
 	       char *xdate, int xforce, int local, int xbuild,
 	       int xaflag, int xprune, int xpipeout, int which,
 	       char *xjoin_rev1, char *xjoin_rev2, char *preload_update_dir,
-	       int xpull_template, char *repository));
+	       int xdotemplate, char *repository));
 int joining PROTO((void));
 extern int isemptydir PROTO ((const char *dir, int might_not_exist));

@@ -40,3 +40,12 @@ typedef struct cvsroot_s {
     unsigned char isremote;	/* Nonzero if we are doing remote access. */
 #endif /* CLIENT_SUPPORT */
 } cvsroot_t;
+
+cvsroot_t *Name_Root PROTO((const char *dir, const char *update_dir));
+void free_cvsroot_t PROTO((cvsroot_t *root_in));
+cvsroot_t *parse_cvsroot PROTO((const char *root));
+cvsroot_t *local_cvsroot PROTO((const char *dir));
+void Create_Root PROTO((const char *dir, const char *rootdir));
+void root_allow_add PROTO ((char *));
+void root_allow_free PROTO ((void));
+int root_allow_ok PROTO ((char *));

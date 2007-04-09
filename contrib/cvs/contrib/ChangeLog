@@ -1,8 +1,13 @@
+2004-08-30  Derek Price  <derek@ximbiot.com>
+
+	* log_accum.in: Changes to supress warnings under Perl 5.8.5.
+	(Patch from Jeroen Ruigrok/asmodai <asmodai@wxs.nl>.)
+
 2004-01-30  Derek Price  <derek@ximbiot.com>
 
 	Close issue #155.
 	* log_accum.in: Remove unused variables.
-	(Patch from (Ville Skyttä <scop@cvshome.org>.)
+	(Patch from Ville Skyttä <scop@cvshome.org>.)
 
 2003-10-14  Derek Price  <derek@ximbiot.com>
 

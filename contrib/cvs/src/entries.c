@@ -11,9 +11,6 @@
  * the Entries file.
  */
 
-/*
- * $FreeBSD: src/contrib/cvs/src/entries.c,v 1.4 2004/04/15 01:41:05 peter Exp $
- */
 #include "cvs.h"
 #include "getline.h"
 
@@ -636,72 +633,6 @@ AddEntryNode (list, entdata)
     /* put the node into the list */
     addnode (list, p);
     return (p);
-}
-
-static char *root_template;
-
-static int
-get_root_template(const char *repository, const char *path)
-{
-    if (root_template) {
-	if (strcmp(path, root_template) == 0)
-	    return(0);
-	free(root_template);
-    }
-    if ((root_template = strdup(path)) == NULL)
-	return(-1);
-    return(0);
-}
-
-/*
- * Write out/Clear the CVS/Template file.
- */
-void
-WriteTemplate (dir, update_dir)
-    const char *dir;
-    const char *update_dir;
-{
-    char *tmp = NULL;
-    struct stat st1;
-    struct stat st2;
-
-    if (Parse_Info(CVSROOTADM_RCSINFO, "cvs", get_root_template, 1) < 0)
-	return;
-
-    if (asprintf(&tmp, "%s/%s", dir, CVSADM_TEMPLATE) < 0)
-	error (1, errno, "out of memory");
-
-    if (stat(root_template, &st1) == 0) {
-	if (stat(tmp, &st2) < 0 || st1.st_mtime != st2.st_mtime) {
-	    FILE *fi;
-	    FILE *fo;
-
-	    if ((fi = open_file(root_template, "r")) != NULL) {
-		if ((fo = open_file(tmp, "w")) != NULL) {
-		    int n;
-		    char buf[256];
-
-		    while ((n = fread(buf, 1, sizeof(buf), fi)) > 0)
-			fwrite(buf, 1, n, fo);
-		    fflush(fo);
-		    if (ferror(fi) || ferror(fo)) {
-			fclose(fo);
-			remove(tmp);
-			error (1, errno, "error copying Template");
-		    } else {
-			struct timeval times[2];
-			fclose(fo);
-			times[0].tv_sec = st1.st_mtime;
-			times[0].tv_usec = 0;
-			times[1] = times[0];
-			utimes(tmp, times);
-		    }
-		} 
-		fclose(fi);
-	    }
-	}
-    }
-    free(tmp);
 }
 
 /*

@@ -8,8 +8,6 @@
  * Set Lock
  * 
  * Lock file support for CVS.
- *
- * $FreeBSD: src/contrib/cvs/src/lock.c,v 1.13 2004/04/15 01:17:27 peter Exp $
  */
 
 /* The node Concurrency in doc/cvs.texinfo has a brief introduction to
@@ -409,7 +407,7 @@ Reader_Lock (xrepository)
 	(void) fprintf (stderr, "%s-> Reader_Lock(%s)\n", CLIENT_SERVER_STR,
                         xrepository);
 
-    if (noexec || readonlyfs)
+    if (noexec)
 	return 0;
 
     /* we only do one directory at a time for read locks! */
@@ -485,11 +483,6 @@ Writer_Lock (list)
 
     if (noexec)
 	return 0;
-
-    if (readonlyfs) {
-	error (0, 0, "write lock failed - read-only repository");
-	return (1);
-    }
 
     /* We only know how to do one list at a time */
     if (locklist != (List *) NULL)

@@ -60,7 +60,7 @@ Checkin (type, finfo, rev, tag, options, message)
      */
     assert (finfo->rcs != NULL);
 
-    switch (RCS_checkin (finfo->rcs, finfo->file, message, rev,
+    switch (RCS_checkin (finfo->rcs, finfo->file, message, rev, 0,
                          RCS_FLAGS_KEEPFILE))
     {
 	case 0:			/* everything normal */

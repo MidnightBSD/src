@@ -9,7 +9,6 @@
 /*
  * basic information used in all source files
  *
- * $FreeBSD: src/contrib/cvs/src/cvs.h,v 1.20 2004/06/10 19:12:50 peter Exp $
  */
 
 
@@ -195,7 +194,6 @@ extern int errno;
 #define CVSROOTADM_WRITERS	"writers"
 #define CVSROOTADM_PASSWD	"passwd"
 #define CVSROOTADM_CONFIG	"config"
-#define CVSROOTADM_OPTIONS	"options"
 
 #define CVSNULLREPOS		"Emptydir"	/* an empty directory */
 
@@ -265,8 +263,6 @@ extern int errno;
 #define	CVSREAD_ENV	"CVSREAD"	/* make files read-only */
 #define	CVSREAD_DFLT	0		/* writable files by default */
 
-#define	CVSREADONLYFS_ENV "CVSREADONLYFS" /* repository is read-only */
-
 #define	TMPDIR_ENV	"TMPDIR"	/* Temporary directory */
 
 #define	EDITOR1_ENV	"CVSEDITOR"	/* which editor to use */
@@ -274,7 +270,10 @@ extern int errno;
 #define	EDITOR3_ENV	"EDITOR"	/* which editor to use */
 
 #define	CVSROOT_ENV	"CVSROOT"	/* source directory root */
-#define	CVSROOT_DFLT	NULL		/* No dflt; must set for checkout */
+/* Define CVSROOT_DFLT to a fallback value for CVSROOT.
+ *
+#undef	CVSROOT_DFL
+ */
 
 #define	IGNORE_ENV	"CVSIGNORE"	/* More files to ignore */
 #define WRAPPER_ENV     "CVSWRAPPERS"   /* name of the wrapper file */
@@ -376,7 +375,6 @@ extern int really_quiet, quiet;
 extern int use_editor;
 extern int cvswrite;
 extern mode_t cvsumask;
-extern char *RCS_citag;
 
 
 
@@ -395,9 +393,7 @@ extern int safe_location PROTO ((char *));
 
 extern int trace;		/* Show all commands */
 extern int noexec;		/* Don't modify disk anywhere */
-extern int readonlyfs;		/* fail on all write locks; succeed all read locks */
 extern int logoff;		/* Don't write history entry */
-extern int require_real_user;	/* skip CVSROOT/passwd, /etc/passwd users only*/
 
 extern int top_level_admin;
 
@@ -426,6 +422,7 @@ int RCS_merge PROTO((RCSNode *, const char *, const char *, const char *,
 #define RCS_FLAGS_QUIET 4
 #define RCS_FLAGS_MODTIME 8
 #define RCS_FLAGS_KEEPFILE 16
+#define RCS_FLAGS_USETIME 32
 
 extern int RCS_exec_rcsdiff PROTO ((RCSNode *rcsfile,
 				    const char *opts, const char *options,
@@ -457,15 +454,6 @@ void tm_to_internet PROTO ((char *, const struct tm *));
 char *Name_Repository PROTO((const char *dir, const char *update_dir));
 const char *Short_Repository PROTO((const char *repository));
 void Sanitize_Repository_Name PROTO((char *repository));
-
-char *Name_Root PROTO((char *dir, char *update_dir));
-void free_cvsroot_t PROTO((cvsroot_t *root_in));
-cvsroot_t *parse_cvsroot PROTO((const char *root));
-cvsroot_t *local_cvsroot PROTO((const char *dir));
-void Create_Root PROTO((const char *dir, const char *rootdir));
-void root_allow_add PROTO ((char *));
-void root_allow_free PROTO ((void));
-int root_allow_ok PROTO ((char *));
 
 char *previous_rev PROTO ((RCSNode *rcs, const char *rev));
 char *gca PROTO ((const char *rev1, const char *rev2));
@@ -505,7 +493,6 @@ char *get_homedir PROTO ((void));
 char *strcat_filename_onto_homedir PROTO ((const char *, const char *));
 char *cvs_temp_name PROTO ((void));
 FILE *cvs_temp_file PROTO ((char **filename));
-void parseopts PROTO ((const char *root));
 
 int numdots PROTO((const char *s));
 char *increment_revnum PROTO ((const char *));
@@ -584,7 +571,6 @@ void ParseTag PROTO((char **tagp, char **datep, int *nonbranchp));
 void WriteTag PROTO ((const char *dir, const char *tag, const char *date,
                       int nonbranch, const char *update_dir,
                       const char *repository));
-void WriteTemplate PROTO ((const char *dir, const char *update_dir));
 void cat_module PROTO((int status));
 void check_entries PROTO((char *dir));
 void close_module PROTO((DBM * db));

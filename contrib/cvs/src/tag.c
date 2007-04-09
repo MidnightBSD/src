@@ -10,8 +10,6 @@
  * Add or delete a symbolic name to an RCS file, or a collection of RCS files.
  * Tag uses the checked out revision in the current directory, rtag uses
  * the modules database, if necessary.
- *
- * $FreeBSD: src/contrib/cvs/src/tag.c,v 1.2 2004/08/05 17:47:35 des Exp $
  */
 
 #include "cvs.h"
@@ -1201,8 +1199,10 @@ Numeric tag %s contains characters other than digits and '.'", name);
 	|| strcmp (name, TAG_HEAD) == 0)
 	return;
 
-    if (readonlyfs)
-	return;
+    /* Verify that the tag is valid syntactically.  Some later code once made
+     * assumptions about this.
+     */
+    RCS_check_tag (name);
 
     /* FIXME: This routine doesn't seem to do any locking whatsoever
        (and it is called from places which don't have locks in place).

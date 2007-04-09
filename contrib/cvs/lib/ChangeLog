@@ -1,3 +1,14 @@
+2004-10-05  Derek Price  <derek@ximbiot.com>
+
+	* regex.c: Back out my change from 2004-04-07 as possibly suppressing
+	useful warnings.
+
+2004-10-05  Mark D. Baushke  <mdb@cvshome.org>
+
+	* regex.c (re_comp): Cast gettext return value to char * to
+	avoid warning in !ENABLE_NLS case. Patch imported from GNULIB.
+	(Problem report from Martin Neitzel <neitzel@sco.gaertner.de>.)
+
 2004-05-28  Derek Price  <derek@ximbiot.com>
 
 	* xsize.h: New file from GNULIB.

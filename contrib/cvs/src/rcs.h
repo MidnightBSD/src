@@ -6,8 +6,6 @@
  * specified in the README file that comes with the CVS source distribution.
  * 
  * RCS source control definitions needed by rcs.c and friends
- *
- * $FreeBSD: src/contrib/cvs/src/rcs.h,v 1.11 2004/07/06 08:10:38 des Exp $
  */
 
 /* Strings which indicate a conflict if they occur at the start of a line.  */
@@ -226,7 +224,8 @@ void RCS_setexpand PROTO ((RCSNode *, const char *));
 int RCS_checkout PROTO ((RCSNode *, const char *, const char *, const char *,
                          const char *, const char *, RCSCHECKOUTPROC, void *));
 int RCS_checkin PROTO ((RCSNode *rcs, const char *workfile,
-                        const char *message, const char *rev, int flags));
+                        const char *message, const char *rev, time_t citime,
+			int flags));
 int RCS_cmp_file PROTO((RCSNode *, const char *, char **, const char *,
                         const char *, const char *));
 int RCS_settag PROTO ((RCSNode *, const char *, const char *));
@@ -246,11 +245,8 @@ int rcs_change_text PROTO ((const char *, char *, size_t, const char *,
 void RCS_deltas PROTO ((RCSNode *, FILE *, struct rcsbuffer *, const char *,
 			enum rcs_delta_op, char **, size_t *,
 			char **, size_t *));
-void RCS_setincexc PROTO ((const char *arg));
-void RCS_setlocalid PROTO ((const char *arg));
 char *make_file_label PROTO ((const char *, const char *, RCSNode *));
 
-extern int datesep;
 extern int preserve_perms;
 
 /* From import.c.  */

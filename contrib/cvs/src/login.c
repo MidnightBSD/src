@@ -5,8 +5,6 @@
  * specified in the README file that comes with CVS.
  * 
  * Allow user to log in for an authenticating server.
- *
- * $FreeBSD: src/contrib/cvs/src/login.c,v 1.9 2005/04/22 17:58:25 simon Exp $
  */
 
 #include "cvs.h"
@@ -116,7 +114,7 @@ password_entry_parseline (cvsroot_canonical, warn, linenumber, linebuf)
 
 	if (isspace(*(linebuf + 1)))
 	    /* special case since strtoul ignores leading white space */
-	    q = linebuf + 1;
+	    entry_version = 0;
 	else
 	    entry_version = strtoul (linebuf + 1, &q, 10);
 

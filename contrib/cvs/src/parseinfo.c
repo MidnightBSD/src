@@ -4,8 +4,6 @@
  * 
  * You may distribute under the terms of the GNU General Public License as
  * specified in the README file that comes with the CVS source distribution.
- *
- * $FreeBSD: src/contrib/cvs/src/parseinfo.c,v 1.3 2004/04/15 01:17:27 peter Exp $
  */
 
 #include "cvs.h"
@@ -351,25 +349,6 @@ parse_config (cvsroot)
 		error (0, 0, "unrecognized value '%s' for SystemAuth", p);
 		goto error_return;
 	    }
-	}
-	else if (strcmp (line, "tag") == 0) {
-		RCS_setlocalid(p);
-	}
-	else if (strcmp (line, "umask") == 0) {
-	    cvsumask = (mode_t)(strtol(p, NULL, 8) & 0777);
-	}
-        else if (strcmp (line, "dlimit") == 0) {
-#ifdef BSD
-#include <sys/resource.h>
-	    struct rlimit rl;
-
-	    if (getrlimit(RLIMIT_DATA, &rl) != -1) {
-		rl.rlim_cur = atoi(p);
-		rl.rlim_cur *= 1024;
-
-		(void) setrlimit(RLIMIT_DATA, &rl);
-	    }
-#endif /* BSD */
 	}
 	else if (strcmp (line, "PreservePermissions") == 0)
 	{
