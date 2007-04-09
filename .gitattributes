@@ -3139,10 +3139,10 @@ contrib/cvs/ChangeLog -text
 contrib/cvs/ChangeLog.zoo -text
 contrib/cvs/DEVEL-CVS -text
 contrib/cvs/FAQ -text
-contrib/cvs/FREEBSD-Xlist -text
-contrib/cvs/FREEBSD-upgrade -text
 contrib/cvs/HACKING -text
 contrib/cvs/INSTALL -text
+contrib/cvs/MIDNIGHTBSD-Xlist -text
+contrib/cvs/MIDNIGHTBSD-upgrade -text
 contrib/cvs/MINOR-BUGS -text
 contrib/cvs/Makefile.am -text
 contrib/cvs/Makefile.in -text
