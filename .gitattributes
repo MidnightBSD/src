@@ -3363,7 +3363,6 @@ contrib/cvs/tools/ChangeLog -text
 contrib/cvs/tools/Makefile.am -text
 contrib/cvs/tools/Makefile.in -text
 contrib/cvs/tools/README -text
-contrib/cvs/typescript -text
 contrib/diff/COPYING -text
 contrib/diff/ChangeLog -text
 contrib/diff/FREEBSD-upgrade -text
