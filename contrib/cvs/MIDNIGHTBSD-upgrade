@@ -1,11 +1,15 @@
-$MidnightBSD$
+$MidnightBSD: src/contrib/cvs/MIDNIGHTBSD-upgrade,v 1.1 2007/04/09 22:38:40 laffer1 Exp $
 
 This directory contains the virgin CVS source on the vendor branch.  Do
 not under any circumstances commit new versions onto the mainline, new
 versions or official-patch versions must be imported.
 
 To prepare a new cvs dist for import, extract it into a fresh directory;
-then delete the files and directories listed in FREEBSD-Xlist.
+then delete the files and directories listed in MIDNIGHTBSD-Xlist.
+
+Delete trash:
+$ sh -c 'while read glob ; do rm -rvf $glob ; done' \
+  </usr/src/contrib/cvs/MIDNIGHTBSD-Xlist
 
 CVS is imported from its top level directory something like this:
   cvs -n import src/contrib/cvs CVSHOME v<version>
