@@ -453,8 +453,12 @@ delete_package(Boolean ign_err, Boolean nukedirs, Package *pkg)
 
 	case PLIST_FILE:
 	    last_file = p->name;
-	    sprintf(tmp, "%s/%s", Where, p->name);
-	    if (isdir(tmp) && fexists(tmp) && !issymlink(tmp)) {
+	    
+	    if (snprintf(tmp, FILENAME_MAX, "%s/%s", Where, p->name) >= FILENAME_MAX) {
+	        warnx("Filename too long: %s", p->name);
+	        fail = FAIL;
+	    } 
+	    else if (isdir(tmp) && fexists(tmp) && !issymlink(tmp)) {
 		warnx("cannot delete specified file '%s' - it is a directory!\n"
 	   "this packing list is incorrect - ignoring delete request", tmp);
 	    }
@@ -509,8 +513,11 @@ delete_package(Boolean ign_err, Boolean nukedirs, Package *pkg)
 	    break;
 
 	case PLIST_DIR_RM:
-	    sprintf(tmp, "%s/%s", Where, p->name);
-	    if (!isdir(tmp) && fexists(tmp)) {
+	    if (snprintf(tmp, FILENAME_MAX, "%s/%s", Where, p->name) >= FILENAME_MAX) {
+	        warnx("Filename too long: %s", p->name);
+	        fail = FAIL;
+            }
+            else if (!isdir(tmp) && fexists(tmp)) {
 		warnx("cannot delete specified directory '%s' - it is a file!\n"
 	"this packing list is incorrect - ignoring delete request", tmp);
 	    }
