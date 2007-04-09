@@ -1,5 +1,5 @@
 # $FreeBSD: src/gnu/usr.bin/cvs/cvs/Makefile,v 1.50 2005/06/03 15:08:30 imp Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/cvs/cvs/Makefile,v 1.2 2007/04/06 17:59:29 laffer1 Exp $
 
 .include "${.CURDIR}/../Makefile.inc"
 
@@ -16,7 +16,7 @@ SRCS=	add.c admin.c annotate.c buffer.c \
 	commit.c create_adm.c cvsrc.c diff.c edit.c entries.c error.c \
 	expand_path.c fileattr.c filesubr.c find_names.c \
 	hardlink.c hash.c history.c \
-	ignore.c import.c lock.c log.c login.c logmsg.c main.c mkmodules.c \
+	ignore.c import.c lock.c log.c login.c logmsg.c main.c md5.c mkmodules.c \
 	modules.c myndbm.c no_diff.c parseinfo.c patch.c prepend_args.c \
 	rcs.c rcscmds.c \
 	recurse.c release.c remove.c repos.c root.c run.c scramble.c \
