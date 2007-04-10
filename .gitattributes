@@ -3166,6 +3166,7 @@ contrib/cvs/contrib/clmerge.in -text
 contrib/cvs/contrib/cln_hist.in -text
 contrib/cvs/contrib/commit_prep.in -text
 contrib/cvs/contrib/cvs2vendor.sh -text
+contrib/cvs/contrib/cvs_acls.html -text
 contrib/cvs/contrib/cvs_acls.in -text
 contrib/cvs/contrib/cvscheck.man -text
 contrib/cvs/contrib/cvscheck.sh -text
@@ -3213,10 +3214,13 @@ contrib/cvs/doc/Makefile.am -text
 contrib/cvs/doc/Makefile.in -text
 contrib/cvs/doc/RCSFILES -text
 contrib/cvs/doc/cvs-paper.ms -text
+contrib/cvs/doc/cvs-paper.pdf -text svneol=unset#unset
 contrib/cvs/doc/cvs.1 -text
 contrib/cvs/doc/cvs.man.footer -text
 contrib/cvs/doc/cvs.man.header -text
+contrib/cvs/doc/cvs.pdf -text svneol=unset#unset
 contrib/cvs/doc/cvs.texinfo -text
+contrib/cvs/doc/cvsclient.pdf -text svneol=unset#unset
 contrib/cvs/doc/cvsclient.texi -text
 contrib/cvs/doc/mdate-sh -text
 contrib/cvs/doc/mkman.in -text
@@ -3260,6 +3264,7 @@ contrib/cvs/lib/stripslash.c -text
 contrib/cvs/lib/strstr.c -text
 contrib/cvs/lib/strtoul.c -text
 contrib/cvs/lib/system.h -text
+contrib/cvs/lib/test-getdate.sh -text
 contrib/cvs/lib/valloc.c -text
 contrib/cvs/lib/wait.h -text
 contrib/cvs/lib/waitpid.c -text
@@ -3363,6 +3368,7 @@ contrib/cvs/tools/ChangeLog -text
 contrib/cvs/tools/Makefile.am -text
 contrib/cvs/tools/Makefile.in -text
 contrib/cvs/tools/README -text
+contrib/cvs/ylwrap -text
 contrib/diff/COPYING -text
 contrib/diff/ChangeLog -text
 contrib/diff/FREEBSD-upgrade -text
