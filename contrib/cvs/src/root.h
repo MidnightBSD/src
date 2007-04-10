@@ -1,7 +1,11 @@
 /*
- * Copyright (c) 2001, Derek Price and others
- * Copyright (c) 1992, Brian Berliner and Jeff Polk
- * Copyright (c) 1989-1992, Brian Berliner
+ * Copyright (C) 1986-2005 The Free Software Foundation, Inc.
+ *
+ * Portions Copyright (C) 1998-2005 Derek Price, Ximbiot <http://ximbiot.com>,
+ *                                  and others.
+ *
+ * Portions Copyright (C) 1992, Brian Berliner and Jeff Polk
+ * Portions Copyright (C) 1989-1992, Brian Berliner
  *
  * You may distribute under the terms of the GNU General Public License as
  * specified in the README file that comes with the CVS kit.
@@ -18,6 +22,7 @@ typedef enum {
     kserver_method,
     gserver_method,
     ext_method,
+    extssh_method,
     fork_method
 } CVSmethod;
 extern const char method_names[][16];	/* change this in root.c if you change
@@ -27,6 +32,7 @@ typedef struct cvsroot_s {
     char *original;		/* The complete source CVSroot string. */
     CVSmethod method;		/* One of the enum values above. */
     char *directory;		/* The directory name. */
+    unsigned char isremote;	/* Nonzero if we are doing remote access. */
 #ifdef CLIENT_SUPPORT
     char *username;		/* The username or NULL if method == local. */
     char *password;		/* The password or NULL if method == local. */
@@ -37,7 +43,6 @@ typedef struct cvsroot_s {
 				 * used.
 				 */
     int proxy_port;		/* The port of the proxy or zero, as above. */
-    unsigned char isremote;	/* Nonzero if we are doing remote access. */
 #endif /* CLIENT_SUPPORT */
 } cvsroot_t;
 

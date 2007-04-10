@@ -1,16 +1,5 @@
 The "TODO" file!                              -*-Indented-Text-*-
 
-22. Catch signals for cleanup when "add"ing files.
-
-30. Add "rdiff" & "rtag" program options to the modules database.  These
-    commands seem hard to use since these commands deal directly with the
-    RCS ,v files.  (perhaps should think a little harder about what this is
-    trying to accomplish and what the best way is -kingdon, Jul 1997).
-
-31. Think hard about ^C recovery.
-    One particular issue: RCS removes the ,foo.c, file on ^C and CVS
-    doesn't.
-
 38. Think hard about using RCS state information to allow one to checkin
     a new vendor release without having it be accessed until it has been
     integrated into the local changes.
@@ -869,3 +858,8 @@ wait interval.
 
 230.  Support for options like compression as part of the CVSROOT might be
 nice.  This should be fairly easy to implement now using the method options.
+
+234.  Noop commands should be logged in the history file.  Information can
+still be obtained with noop commands, for instance via `cvs -n up -p', and
+paranoid admins might appreciate this.  Similarly, perhaps diff operations
+should be logged.

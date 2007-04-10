@@ -1,5 +1,17 @@
 #! /bin/sh
 
+# Copyright (C) 1995-2005 The Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
 # RCS to ChangeLog generator
 
 # Generate a change log prefix from RCS files (perhaps in the CVS repository)
@@ -29,7 +41,7 @@ Options:
 
 Report bugs to <bug-gnu-emacs@gnu.org>.'
 
-Id='$Id: rcs2log.sh,v 1.1.1.2 2006-02-25 02:32:31 laffer1 Exp $'
+Id='$Id: rcs2log.sh,v 1.1.1.3 2007-04-10 00:00:25 laffer1 Exp $'
 
 # Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2001, 2003
 #  Free Software Foundation, Inc.

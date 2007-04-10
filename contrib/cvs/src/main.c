@@ -1,9 +1,14 @@
 /*
- *    Copyright (c) 1992, Brian Berliner and Jeff Polk
- *    Copyright (c) 1989-1992, Brian Berliner
+ * Copyright (C) 1986-2006 The Free Software Foundation, Inc.
  *
- *    You may distribute under the terms of the GNU General Public License
- *    as specified in the README file that comes with the CVS source distribution.
+ * Portions Copyright (C) 1998-2006 Derek Price, Ximbiot <http://ximbiot.com>,
+ *                                  and others.
+ *
+ * Portions Copyright (C) 1992, Brian Berliner and Jeff Polk
+ * Portions Copyright (C) 1989-1992, Brian Berliner
+ *
+ * You may distribute under the terms of the GNU General Public License
+ * as specified in the README file that comes with the CVS source distribution.
  *
  * This is the main C driver for the CVS system.
  *
@@ -42,6 +47,12 @@ int quiet = 0;
 int trace = 0;
 int noexec = 0;
 int logoff = 0;
+
+/*
+ * Zero if compression isn't supported or requested; non-zero to indicate
+ * a compression level to request from gzip.
+ */
+int gzip_level;
 
 /* Set if we should be writing CVSADM directories at top level.  At
    least for now we'll make the default be off (the CVS 1.9, not CVS
@@ -178,8 +189,7 @@ static const char *const usg[] =
        version control means.  */
 
     "For CVS updates and additional information, see\n",
-    "    the CVS home page at http://www.cvshome.org/ or\n",
-    "    Pascal Molli's CVS site at http://www.loria.fr/~molli/cvs-index.html\n",
+    "    the CVS home page at http://cvs.nongnu.org/\n",
     NULL,
 };
 
@@ -528,8 +538,12 @@ main (argc, argv)
 		version (0, (char **) NULL);    
 		(void) fputs ("\n", stdout);
 		(void) fputs ("\
-Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
-                        Jeff Polk, and other authors\n", stdout);
+Copyright (C) 2006 Free Software Foundation, Inc.\n\
+\n\
+Senior active maintainers include Larry Jones, Derek R. Price,\n\
+and Mark D. Baushke.  Please see the AUTHORS and README files from the CVS\n\
+distribution kit for a complete list of contributors and copyrights.\n",
+		              stdout);
 		(void) fputs ("\n", stdout);
 		(void) fputs ("CVS may be copied only under the terms of the GNU General Public License,\n", stdout);
 		(void) fputs ("a copy of which can be found with the CVS distribution kit.\n", stdout);
@@ -537,6 +551,12 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 
 		(void) fputs ("Specify the --help option for further information about CVS\n", stdout);
 
+#ifdef SYSTEM_CLEANUP
+		/* Hook for OS-specific behavior, for example socket subsystems
+		 * on NT and OS2 or dealing with windows and arguments on Mac.
+		 */
+		SYSTEM_CLEANUP ();
+#endif
 		exit (0);
 		break;
 	    case 'b':
@@ -547,11 +567,13 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 		   either new or old CVS.  */
 		break;
 	    case 'T':
+		if (free_Tmpdir) free (Tmpdir);
 		Tmpdir = xstrdup (optarg);
 		free_Tmpdir = 1;
 		tmpdir_update_env = 1;	/* need to update environment */
 		break;
 	    case 'e':
+		if (free_Editor) free (Editor);
 		Editor = xstrdup (optarg);
 		free_Editor = 1;
 		break;
@@ -567,12 +589,10 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 		use_cvsrc = 0; /* unnecessary, since we've done it above */
 		break;
 	    case 'z':
-#ifdef CLIENT_SUPPORT
 		gzip_level = strtol (optarg, &end, 10);
 		if (*end != '\0' || gzip_level < 0 || gzip_level > 9)
 		  error (1, 0,
 			 "gzip compression level must be between 0 and 9");
-#endif /* CLIENT_SUPPORT */
 		/* If no CLIENT_SUPPORT, we just silently ignore the gzip
 		 * level, so that users can have it in their .cvsrc and not
 		 * cause any trouble.
@@ -696,21 +716,18 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 	    cvs_cmd_name = "server";
 	}
 # endif /* AUTH_SERVER_SUPPORT || HAVE_GSSAPI */
+#endif /* SERVER_SUPPORT */
 
 	server_active = strcmp (cvs_cmd_name, "server") == 0;
-
-#endif /* SERVER_SUPPORT */
 
 	/* This is only used for writing into the history file.  For
 	   remote connections, it might be nice to have hostname
 	   and/or remote path, on the other hand I'm not sure whether
 	   it is worth the trouble.  */
 
-#ifdef SERVER_SUPPORT
 	if (server_active)
 	    CurDir = xstrdup ("<remote>");
 	else
-#endif
 	{
 	    CurDir = xgetwd ();
             if (CurDir == NULL)
@@ -718,7 +735,10 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 	}
 
 	if (Tmpdir == NULL || Tmpdir[0] == '\0')
+	{
+	    if (free_Tmpdir) free (Tmpdir);
 	    Tmpdir = "/tmp";
+	}
 
 #ifdef HAVE_PUTENV
 	if (tmpdir_update_env)
@@ -766,13 +786,11 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 	if (use_cvsrc)
 	    read_cvsrc (&argc, &argv, cvs_cmd_name);
 
-#ifdef SERVER_SUPPORT
 	/* Fiddling with CVSROOT doesn't make sense if we're running
 	 * in server mode, since the client will send the repository
 	 * directory after the connection is made.
 	 */
 	if (!server_active)
-#endif
 	{
 	    /* First check if a root was set via the command line.  */
 	    if (CVSroot_cmdline)
@@ -859,20 +877,14 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 	   once).  To get out of the loop, we perform a "break" at the
 	   end of things.  */
 
-	while (
-#ifdef SERVER_SUPPORT
-	       server_active ||
-#endif
-	       walklist (root_directories, set_root_directory, NULL)
-	       )
+	while (server_active ||
+	       walklist (root_directories, set_root_directory, NULL))
 	{
-#ifdef SERVER_SUPPORT
 	    /* Fiddling with CVSROOT doesn't make sense if we're running
 	       in server mode, since the client will send the repository
 	       directory after the connection is made. */
 
 	    if (!server_active)
-#endif
 	    {
 		/* Now we're 100% sure that we have a valid CVSROOT
 		   variable.  Parse it to see if we're supposed to do
@@ -885,9 +897,7 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 		/*
 		 * Check to see if the repository exists.
 		 */
-#ifdef CLIENT_SUPPORT
 		if (!current_parsed_root->isremote)
-#endif	/* CLIENT_SUPPORT */
 		{
 		    char *path;
 		    int save_errno;
@@ -913,7 +923,6 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 		{
 		    static char *prev;
 		    char *env;
-		    size_t dummy;
 
 		    env = xmalloc (strlen (CVSROOT_ENV)
 				   + strlen (current_parsed_root->original)
@@ -937,14 +946,7 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 	       predetermine whether CVSROOT/config overrides things from
 	       read_cvsrc and other such places or vice versa.  That sort
 	       of thing probably needs more thought.  */
-	    if (1
-#ifdef SERVER_SUPPORT
-		&& !server_active
-#endif
-#ifdef CLIENT_SUPPORT
-		&& !current_parsed_root->isremote
-#endif
-		)
+	    if (!server_active && !current_parsed_root->isremote)
 	    {
 		/* If there was an error parsing the config file, parse_config
 		   already printed an error.  We keep going.  Why?  Because
@@ -974,9 +976,7 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
                active, our list will be empty -- don't try and
                remove it from the list. */
 
-#ifdef SERVER_SUPPORT
 	    if (!server_active)
-#endif /* SERVER_SUPPORT */
 	    {
 		Node *n = findnode (root_directories,
 				    current_parsed_root->original);
@@ -987,13 +987,11 @@ Copyright (c) 1989-2004 Brian Berliner, david d `zoo' zuhn, \n\
 		current_parsed_root = NULL;
 	    }
 
-#ifdef SERVER_SUPPORT
 	    if (server_active)
 	    {
 		server_active = 0;
 		break;
 	    }
-#endif
 	} /* end of loop for cvsroot values */
 
 	dellist (&root_directories);

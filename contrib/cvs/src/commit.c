@@ -1,6 +1,11 @@
 /*
- * Copyright (c) 1992, Brian Berliner and Jeff Polk
- * Copyright (c) 1989-1992, Brian Berliner
+ * Copyright (C) 1986-2005 The Free Software Foundation, Inc.
+ *
+ * Portions Copyright (C) 1998-2005 Derek Price, Ximbiot <http://ximbiot.com>,
+ *                                  and others.
+ *
+ * Portions Copyright (C) 1992, Brian Berliner and Jeff Polk
+ * Portions Copyright (C) 1989-1992, Brian Berliner
  *
  * You may distribute under the terms of the GNU General Public License as
  * specified in the README file that comes with the CVS source distribution.
@@ -383,12 +388,8 @@ commit (argc, argv)
     /* FIXME: Shouldn't this check be much more closely related to the
        readonly user stuff (CVSROOT/readers, &c).  That is, why should
        root be able to "cvs init", "cvs import", &c, but not "cvs ci"?  */
-    if (geteuid () == (uid_t) 0
-#  ifdef CLIENT_SUPPORT
-	/* Who we are on the client side doesn't affect logging.  */
-	&& !current_parsed_root->isremote
-#  endif
-	)
+    /* Who we are on the client side doesn't affect logging.  */
+    if (geteuid () == (uid_t) 0 && !current_parsed_root->isremote)
     {
 	struct passwd *pw;
 
@@ -411,6 +412,7 @@ commit (argc, argv)
 		/* Silently ignore -n for compatibility with old
 		 * clients.
 		 */
+		if (!server_active) error(0, 0, "the `-n' option is obsolete");
 		break;
 #endif /* SERVER_SUPPORT */
 	    case 'm':
@@ -641,7 +643,8 @@ commit (argc, argv)
 
 	    fp = cvs_temp_file (&fname);
 	    if (fp == NULL)
-		error (1, 0, "cannot create temporary file %s", fname);
+		error (1, 0, "cannot create temporary file %s",
+		       fname ? fname : "(null)");
 	    if (fwrite (saved_message, 1, strlen (saved_message), fp)
 		!= strlen (saved_message))
 		error (1, errno, "cannot write temporary file %s", fname);
@@ -712,10 +715,8 @@ commit (argc, argv)
     Lock_Cleanup ();
     dellist (&mulist);
 
-#ifdef SERVER_SUPPORT
     if (server_active)
 	return err;
-#endif
 
     /* see if we need to sleep before returning to avoid time-stamp races */
     if (last_register_time)
@@ -870,11 +871,11 @@ check_fileproc (callerdat, finfo)
 	case T_CHECKOUT:
 	case T_PATCH:
 	case T_NEEDS_MERGE:
-	case T_CONFLICT:
 	case T_REMOVE_ENTRY:
 	    error (0, 0, "Up-to-date check failed for `%s'", finfo->fullname);
 	    freevers_ts (&vers);
 	    return 1;
+	case T_CONFLICT:
 	case T_MODIFIED:
 	case T_ADDED:
 	case T_REMOVED:
@@ -912,40 +913,30 @@ check_fileproc (callerdat, finfo)
 		    return 1;
 		}
 	    }
-	    if (status == T_MODIFIED && !force_ci && vers->ts_conflict)
+	    if (status == T_CONFLICT && !force_ci)
 	    {
-		/*
-		 * We found a "conflict" marker.
-		 *
-		 * If the timestamp on the file is the same as the
-		 * timestamp stored in the Entries file, we block the commit.
-		 */
-		if ( file_has_conflict ( finfo, vers->ts_conflict ) )
-		{
-		    error (0, 0,
-			  "file `%s' had a conflict and has not been modified",
-			   finfo->fullname);
-		    freevers_ts (&vers);
-		    return 1;
-		}
-
-		if (file_has_markers (finfo))
-		{
-		    /* Make this a warning, not an error, because we have
-		       no way of knowing whether the "conflict indicators"
-		       are really from a conflict or whether they are part
-		       of the document itself (cvs.texinfo and sanity.sh in
-		       CVS itself, for example, tend to want to have strings
-		       like ">>>>>>>" at the start of a line).  Making people
-		       kludge this the way they need to kludge keyword
-		       expansion seems undesirable.  And it is worse than
-		       keyword expansion, because there is no -ko
-		       analogue.  */
-		    error (0, 0,
-			   "\
+		error (0, 0,
+		      "file `%s' had a conflict and has not been modified",
+		       finfo->fullname);
+		freevers_ts (&vers);
+		return 1;
+	    }
+	    if (status == T_MODIFIED && !force_ci && file_has_markers (finfo))
+	    {
+		/* Make this a warning, not an error, because we have
+		   no way of knowing whether the "conflict indicators"
+		   are really from a conflict or whether they are part
+		   of the document itself (cvs.texinfo and sanity.sh in
+		   CVS itself, for example, tend to want to have strings
+		   like ">>>>>>>" at the start of a line).  Making people
+		   kludge this the way they need to kludge keyword
+		   expansion seems undesirable.  And it is worse than
+		   keyword expansion, because there is no -ko
+		   analogue.  */
+		error (0, 0,
+		       "\
 warning: file `%s' seems to still contain conflict indicators",
-			   finfo->fullname);
-		}
+		       finfo->fullname);
 	    }
 
 	    if (status == T_REMOVED)
@@ -1284,11 +1275,7 @@ commit_fileproc (callerdat, finfo)
     if (!got_message)
     {
 	got_message = 1;
-	if (
-#ifdef SERVER_SUPPORT
-	    !server_active &&
-#endif
-	    use_editor)
+	if (!server_active && use_editor)
 	    do_editor (finfo->update_dir, &saved_message,
 		       finfo->repository, ulist);
 	do_verify (&saved_message, finfo->repository);
@@ -1474,6 +1461,8 @@ commit_filesdoneproc (callerdat, err, repository, update_dir, entries)
     Node *p;
     List *ulist;
 
+    assert (repository);
+
     p = findnode (mulist, update_dir);
     if (p == NULL)
 	return err;
@@ -1564,11 +1553,7 @@ commit_direntproc (callerdat, dir, repos, update_dir, entries)
     /* get commit message */
     real_repos = Name_Repository (dir, update_dir);
     got_message = 1;
-    if (
-#ifdef SERVER_SUPPORT
-        !server_active &&
-#endif
-        use_editor)
+    if (!server_active && use_editor)
 	do_editor (update_dir, &saved_message, real_repos, ulist);
     do_verify (&saved_message, real_repos);
     free (real_repos);
@@ -1759,11 +1744,15 @@ remove_file (finfo, tag, message)
 	if (!quiet)
 	    error (0, retcode == -1 ? errno : 0,
 		   "failed to commit dead revision for `%s'", finfo->fullname);
+	if (prev_rev != NULL)
+	    free (prev_rev);
 	return 1;
     }
     /* At this point, the file has been committed as removed.  We should
        probably tell the history file about it  */
-    history_write ('R', NULL, finfo->rcs->head, finfo->file, finfo->repository);
+    corev = rev ? RCS_getbranch (finfo->rcs, rev, 1) : RCS_head (finfo->rcs);
+    history_write ('R', NULL, corev, finfo->file, finfo->repository);
+    free (corev);
 
     if (rev != NULL)
 	free (rev);
@@ -2085,7 +2074,8 @@ checkaddfile (file, repository, tag, options, rcsnode)
 	/* and lock it */
 	if (lock_RCS (file, rcs, rev, repository))
 	{
-	    error (0, 0, "cannot lock `%s'.", rcs->path);
+	    error (0, 0, "cannot lock revision %s in `%s'.",
+		   rev ? rev : tag ? tag : "HEAD", rcs->path);
 	    if (rev != NULL)
 		free (rev);
 	    goto out;
@@ -2130,6 +2120,7 @@ checkaddfile (file, repository, tag, options, rcsnode)
 	    {
 		error (retcode == -1 ? 1 : 0, retcode == -1 ? errno : 0,
 		       "could not create initial dead revision %s", rcs->path);
+		free (fname);
 		goto out;
 	    }
 
@@ -2142,7 +2133,7 @@ checkaddfile (file, repository, tag, options, rcsnode)
 	    rcs = RCS_parse (file, repository);
 	    if (rcs == NULL)
 	    {
-		error (0, 0, "could not read %s", rcs->path);
+		error (0, 0, "could not read %s in %s", file, repository);
 		goto out;
 	    }
 	    *rcsnode = rcs;
@@ -2150,7 +2141,8 @@ checkaddfile (file, repository, tag, options, rcsnode)
 	    /* and lock it once again. */
 	    if (lock_RCS (file, rcs, NULL, repository))
 	    {
-		error (0, 0, "cannot lock `%s'.", rcs->path);
+		error (0, 0, "cannot lock initial revision in `%s'.",
+		       rcs->path);
 		goto out;
 	    }
 	}
@@ -2172,6 +2164,9 @@ checkaddfile (file, repository, tag, options, rcsnode)
 	    fixbranch (rcs, sbranch);
 
 	    head = RCS_getversion (rcs, NULL, NULL, 0, (int *) NULL);
+	    if (!head)
+		error (1, 0, "No head revision in archive file `%s'.",
+		       rcs->path);
 	    magicrev = RCS_magicrev (rcs, head);
 
 	    /* If this is not a new branch, then we will want a dead
@@ -2260,7 +2255,7 @@ checkaddfile (file, repository, tag, options, rcsnode)
 	    /* lock the branch. (stubbed branches need not be locked.)  */
 	    if (lock_RCS (file, rcs, NULL, repository))
 	    {
-		error (0, 0, "cannot lock `%s'.", rcs->path);
+		error (0, 0, "cannot lock head revision in `%s'.", rcs->path);
 		goto out;
 	    }
 	}
