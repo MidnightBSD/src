@@ -531,9 +531,20 @@ should appear at the end of the package list.
 If more than one
 .Cm @dirrm
 directives are used, the directories are removed in the order specified.
-The
+If the
 .Pa name
-directory will not be removed unless it is empty.
+directory is non-empty, an error will be raised.
+.It Cm @dirrmtry Ar name
+Attempt to delete 
+.Pa name 
+at deinstallation time.  If 
+.Pa name
+is non-empty, this command will silently fail. 
+This directive
+should appear at the end of the package list.
+If more than one
+.Cm @dirrm
+directives are used, the directories are removed in the order specified.
 .It Cm @mtree Ar name
 Declare
 .Pa name

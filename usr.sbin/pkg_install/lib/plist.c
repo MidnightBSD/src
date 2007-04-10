@@ -249,6 +249,8 @@ plist_cmd(const char *s, char **arg)
 	return PLIST_MTREE;
     else if (!strcmp(cmd, "dirrm"))
 	return PLIST_DIR_RM;
+    else if (!strcmp(cmd, "dirrmtry"))
+        return PLIST_DIR_RM_TRY;
     else if (!strcmp(cmd, "option"))
 	return PLIST_OPTION;
     else
@@ -383,7 +385,9 @@ write_plist(Package *pkg, FILE *fp)
 	case PLIST_DIR_RM:
 	    fprintf(fp, "%cdirrm %s\n", CMD_CHAR, plist->name);
 	    break;
-
+        case PLIST_DIR_RM_TRY:
+            fprintf(fp, "%cdirrmtry %s\n", CMD_CHAR, plist->name);
+            break;
 	case PLIST_OPTION:
 	    fprintf(fp, "%coption %s\n", CMD_CHAR, plist->name);
 	    break;
@@ -511,7 +515,7 @@ delete_package(Boolean ign_err, Boolean nukedirs, Package *pkg)
 		}
 	    }
 	    break;
-
+        
 	case PLIST_DIR_RM:
 	    if (snprintf(tmp, FILENAME_MAX, "%s/%s", Where, p->name) >= FILENAME_MAX) {
 	        warnx("Filename too long: %s", p->name);
@@ -531,7 +535,24 @@ delete_package(Boolean ign_err, Boolean nukedirs, Package *pkg)
 	    }
 	    last_file = p->name;
 	    break;
-
+        case PLIST_DIR_RM_TRY:
+            if (snprintf(tmp, FILENAME_MAX, "%s/%s", Where, p->name) >= FILENAME_MAX) {
+	        warnx("Filename too long: %s", p->name);
+	        fail = FAIL;
+            }
+            else if (!isdir(tmp) && fexists(tmp)) {
+		warnx("cannot delete specified directory '%s' - it is a file!\n"
+	"this packing list is incorrect - ignoring delete request", tmp);
+	    }
+	    else {
+		if (Verbose)
+		    printf("Delete directory %s\n", tmp);
+		if (!Fake && delete_hierarchy(tmp, ign_err, FALSE)) {
+		    /* we don't care if we fail */
+		}
+	    }
+	    last_file = p->name;
+	    break;
 	default:
 	    break;
 	}
