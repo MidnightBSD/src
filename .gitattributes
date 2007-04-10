@@ -15663,7 +15663,6 @@ gnu/usr.bin/cvs/contrib/easy-import.pl -text
 gnu/usr.bin/cvs/cvs/Makefile -text
 gnu/usr.bin/cvs/cvs/prepend_args.c -text
 gnu/usr.bin/cvs/cvs/prepend_args.h -text
-gnu/usr.bin/cvs/cvsbug/Makefile -text
 gnu/usr.bin/cvs/doc/Makefile -text
 gnu/usr.bin/cvs/lib/Makefile -text
 gnu/usr.bin/cvs/lib/config.h.proto -text
