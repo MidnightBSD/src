@@ -23,13 +23,13 @@
 #include "cvs.h"
 
 #ifdef CLIENT_SUPPORT
-static int remove_force_fileproc PROTO ((void *callerdat,
-					 struct file_info *finfo));
+static int remove_force_fileproc (void *callerdat,
+					 struct file_info *finfo);
 #endif
-static int remove_fileproc PROTO ((void *callerdat, struct file_info *finfo));
-static Dtype remove_dirproc PROTO ((void *callerdat, const char *dir,
-				    const char *repos, const char *update_dir,
-				    List *entries));
+static int remove_fileproc (void *callerdat, struct file_info *finfo);
+static Dtype remove_dirproc (void *callerdat, const char *dir,
+                             const char *repos, const char *update_dir,
+                             List *entries);
 
 static int force;
 static int local;
@@ -47,9 +47,7 @@ static const char *const remove_usage[] =
 };
 
 int
-cvsremove (argc, argv)
-    int argc;
-    char **argv;
+cvsremove (int argc, char **argv)
 {
     int c, err;
 
@@ -92,11 +90,9 @@ cvsremove (argc, argv)
 	{
 	    if (!noexec)
 	    {
-		start_recursion (remove_force_fileproc, (FILESDONEPROC) NULL,
-				 (DIRENTPROC) NULL, (DIRLEAVEPROC) NULL,
-				 (void *) NULL, argc, argv, local, W_LOCAL,
-				 0, CVS_LOCK_NONE, (char *) NULL, 0,
-				 (char *) NULL);
+		start_recursion (remove_force_fileproc, NULL, NULL, NULL,
+				 NULL, argc, argv, local, W_LOCAL,
+				 0, CVS_LOCK_NONE, NULL, 0, NULL);
 	    }
 	    /* else FIXME should probably act as if the file doesn't exist
 	       in doing the following checks.  */
@@ -117,14 +113,12 @@ cvsremove (argc, argv)
 #endif
 
     /* start the recursion processor */
-    err = start_recursion (remove_fileproc, (FILESDONEPROC) NULL,
-                           remove_dirproc, (DIRLEAVEPROC) NULL, NULL,
-			   argc, argv,
-                           local, W_LOCAL, 0, CVS_LOCK_READ, (char *) NULL, 1,
-			   (char *) NULL);
+    err = start_recursion (remove_fileproc, NULL, remove_dirproc, NULL,
+			   NULL, argc, argv, local, W_LOCAL, 0,
+			   CVS_LOCK_READ, NULL, 1, NULL);
 
     if (removed_files && !really_quiet)
-	error (0, 0, "use '%s commit' to remove %s permanently", program_name,
+	error (0, 0, "use `%s commit' to remove %s permanently", program_name,
 	       (removed_files == 1) ? "this file" : "these files");
 
     if (existing_files)
@@ -146,9 +140,7 @@ cvsremove (argc, argv)
 
 /*ARGSUSED*/
 static int
-remove_force_fileproc (callerdat, finfo)
-     void *callerdat;
-     struct file_info *finfo;
+remove_force_fileproc (void *callerdat, struct file_info *finfo)
 {
     if (CVS_UNLINK (finfo->file) < 0 && ! existence_error (errno))
 	error (0, errno, "unable to remove %s", finfo->fullname);
@@ -162,9 +154,7 @@ remove_force_fileproc (callerdat, finfo)
  */
 /* ARGSUSED */
 static int
-remove_fileproc (callerdat, finfo)
-    void *callerdat;
-    struct file_info *finfo;
+remove_fileproc (void *callerdat, struct file_info *finfo)
 {
     Vers_TS *vers;
 
@@ -204,11 +194,7 @@ remove_fileproc (callerdat, finfo)
 	 * remove the ,t file for it and scratch it from the
 	 * entries file.  */
 	Scratch_Entry (finfo->entries, finfo->file);
-	fname = xmalloc (strlen (finfo->file)
-			 + sizeof (CVSADM)
-			 + sizeof (CVSEXT_LOG)
-			 + 10);
-	(void) sprintf (fname, "%s/%s%s", CVSADM, finfo->file, CVSEXT_LOG);
+	fname = Xasprintf ("%s/%s%s", CVSADM, finfo->file, CVSEXT_LOG);
 	if (unlink_file (fname) < 0
 	    && !existence_error (errno))
 	    error (0, errno, "cannot remove %s", CVSEXT_LOG);
@@ -256,11 +242,9 @@ cannot remove file `%s' which has a sticky date of `%s'",
 	char *fname;
 
 	/* Re-register it with a negative version number.  */
-	fname = xmalloc (strlen (vers->vn_user) + 5);
-	(void) strcpy (fname, "-");
-	(void) strcat (fname, vers->vn_user);
-	Register (finfo->entries, finfo->file, fname, vers->ts_rcs, vers->options,
-		  vers->tag, vers->date, vers->ts_conflict);
+	fname = Xasprintf ("-%s", vers->vn_user);
+	Register (finfo->entries, finfo->file, fname, vers->ts_rcs,
+		  vers->options, vers->tag, vers->date, vers->ts_conflict);
 	if (!quiet)
 	    error (0, 0, "scheduling `%s' for removal", finfo->fullname);
 	removed_files++;
@@ -276,17 +260,15 @@ cannot remove file `%s' which has a sticky date of `%s'",
     return (0);
 }
 
+
+
 /*
  * Print a warm fuzzy message
  */
 /* ARGSUSED */
 static Dtype
-remove_dirproc (callerdat, dir, repos, update_dir, entries)
-    void *callerdat;
-    const char *dir;
-    const char *repos;
-    const char *update_dir;
-    List *entries;
+remove_dirproc (void *callerdat, const char *dir, const char *repos,
+                const char *update_dir, List *entries)
 {
     if (!quiet)
 	error (0, 0, "Removing %s", update_dir);

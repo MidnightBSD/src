@@ -36,7 +36,7 @@ struct node
     struct node *hashprev;
     char *key;
     void *data;
-    void (*delproc) ();
+    void (*delproc) (struct node *);
 };
 typedef struct node Node;
 
@@ -48,17 +48,19 @@ struct list
 };
 typedef struct list List;
 
-List *getlist PROTO((void));
-Node *findnode PROTO((List * list, const char *key));
-Node *findnode_fn PROTO((List * list, const char *key));
-Node *getnode PROTO((void));
-int insert_before PROTO((List * list, Node * marker, Node * p));
-int addnode PROTO((List * list, Node * p));
-int addnode_at_front PROTO((List * list, Node * p));
-int walklist PROTO((List * list, int (*)(Node *n, void *closure), void *closure));
-int list_isempty PROTO ((List *list));
-void dellist PROTO((List ** listp));
-void delnode PROTO((Node * p));
-void freenode PROTO((Node * p));
-void sortlist PROTO((List * list, int (*)(const Node *, const Node *)));
-int fsortcmp PROTO((const Node * p, const Node * q));
+List *getlist (void);
+Node *findnode (List *list, const char *key);
+Node *findnode_fn (List *list, const char *key);
+Node *getnode (void);
+int insert_before (List *list, Node *marker, Node *p);
+int addnode (List *list, Node *p);
+int addnode_at_front (List *list, Node *p);
+int walklist (List *list, int (*)(Node *n, void *closure), void *closure);
+int list_isempty (List *list);
+void removenode (Node *p);
+void mergelists (List *dest, List **src);
+void dellist (List **listp);
+void delnode (Node *p);
+void freenode (Node *p);
+void sortlist (List *list, int (*)(const Node *, const Node *));
+int fsortcmp (const Node *p, const Node *q);

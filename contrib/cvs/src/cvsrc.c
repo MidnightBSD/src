@@ -26,16 +26,11 @@ char cvsrc[] = CVSRC_FILENAME;
 
 #define	GROW	10
 
-extern char *strtok ();
-
 /* Read cvsrc, processing options matching CMDNAME ("cvs" for global
    options, and update *ARGC and *ARGV accordingly.  */
 
 void
-read_cvsrc (argc, argv, cmdname)
-    int *argc;
-    char ***argv;
-    const char *cmdname;
+read_cvsrc (int *argc, char ***argv, const char *cmdname)
 {
     char *homedir;
     char *homeinit;
@@ -93,7 +88,7 @@ read_cvsrc (argc, argv, cmdname)
     line = NULL;
     line_chars_allocated = 0;
     command_len = strlen (cmdname);
-    cvsrcfile = open_file (homeinit, "r");
+    cvsrcfile = xfopen (homeinit, "r");
     while ((line_length = getline (&line, &line_chars_allocated, cvsrcfile))
 	   >= 0)
     {
@@ -119,22 +114,22 @@ read_cvsrc (argc, argv, cmdname)
 
     new_argc = 1;
     max_new_argv = (*argc) + GROW;
-    new_argv = (char **) xmalloc (max_new_argv * sizeof (char*));
+    new_argv = xnmalloc (max_new_argv, sizeof (char *));
     new_argv[0] = xstrdup ((*argv)[0]);
 
     if (found)
     {
 	/* skip over command in the options line */
-	for (optstart = strtok (line + command_len, "\t \n\r");
+	for (optstart = strtok (line + command_len, "\t \n");
 	     optstart;
-	     optstart = strtok (NULL, "\t \n\r"))
+	     optstart = strtok (NULL, "\t \n"))
 	{
 	    new_argv [new_argc++] = xstrdup (optstart);
 	  
 	    if (new_argc >= max_new_argv)
 	    {
 		max_new_argv += GROW;
-		new_argv = (char **) xrealloc (new_argv, max_new_argv * sizeof (char*));
+		new_argv = xnrealloc (new_argv, max_new_argv, sizeof (char *));
 	    }
 	}
     }
@@ -147,12 +142,10 @@ read_cvsrc (argc, argv, cmdname)
     if (new_argc + *argc > max_new_argv)
     {
 	max_new_argv = new_argc + *argc;
-	new_argv = (char **) xrealloc (new_argv, max_new_argv * sizeof (char*));
+	new_argv = xnrealloc (new_argv, max_new_argv, sizeof (char *));
     }
-    for (i=1; i < *argc; i++)
-    {
+    for (i = 1; i < *argc; i++)
 	new_argv [new_argc++] = xstrdup ((*argv)[i]);
-    }
 
     if (old_argv != NULL)
     {

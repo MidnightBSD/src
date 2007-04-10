@@ -49,11 +49,11 @@ typedef struct
 #define  DBM_INSERT  0
 #define  DBM_REPLACE 1
 
-DBM *mydbm_open PROTO((char *file, int flags, int mode));
-void mydbm_close PROTO((DBM * db));
-datum mydbm_fetch PROTO((DBM * db, datum key));
-datum mydbm_firstkey PROTO((DBM * db));
-datum mydbm_nextkey PROTO((DBM * db));
-extern int mydbm_store PROTO ((DBM *, datum, datum, int));
+DBM *mydbm_open (char *file, int flags, int mode);
+void mydbm_close (DBM * db);
+datum mydbm_fetch (DBM * db, datum key);
+datum mydbm_firstkey (DBM * db);
+datum mydbm_nextkey (DBM * db);
+extern int mydbm_store (DBM *, datum, datum, int);
 
 #endif				/* MY_NDBM */

@@ -17,32 +17,37 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+SUBDIRS = pam
+
 contribdir = $(pkgdatadir)/contrib
 
 contrib_SCRIPTS = \
-	check_cvs \
 	clmerge \
 	cln_hist \
 	commit_prep \
 	cvs2vendor \
 	cvs_acls \
-	cvscheck \
 	debug_check_log \
 	log \
 	log_accum \
 	mfpipe \
+	newcvsroot \
 	pvcs2rcs \
 	rcs-to-cvs \
 	rcs2log \
 	rcslock \
-	sccs2rcs
+	sandbox_status \
+	sccs2rcs \
+	validate_repo
 
 contrib_DATA = \
 	README \
-	intro.doc
+	intro.doc \
+	rcs-5.7-commitid.patch
 
 contrib_MANS = \
-	cvscheck.man
+	rcs2log.1 \
+	sandbox_status.man
 
 bin_LINKS = \
 	rcs2log
@@ -52,18 +57,20 @@ EXTRA_DIST = \
 	$(contrib_DATA) \
 	$(contrib_MANS) \
 	cvs2vendor.sh \
-	cvscheck.sh \
+	sandbox_status.sh \
 	cvshelp.man \
 	cvs_acls.html \
 	debug_check_log.sh \
 	descend.sh \
 	descend.man \
 	dirfns.shar \
+	newcvsroot.sh \
+	rcs-5.7-commitid.patch \
 	rcs-to-cvs.sh \
 	rcs2log.sh \
 	rcs2sccs.sh
 
-CLEANFILES = $(bin_SCRIPTS) $(contrib_SCRIPTS)
+CLEANFILES = $(bin_LINKS) $(contrib_SCRIPTS)
 
 # we'd rather have a link here rather than two copies of a script
 install-data-local:

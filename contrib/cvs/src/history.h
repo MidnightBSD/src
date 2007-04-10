@@ -12,4 +12,7 @@
  * with other portions of CVS.
  */
 
+#ifndef HISTORY_H
+# define HISTORY_H
 #define ALL_HISTORY_REC_TYPES "TOEFWUPCGMAR"
+#endif /* HISTORY_H */

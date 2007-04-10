@@ -24,14 +24,8 @@ Grubbs.  It was out of date and not being maintained, but it had a
 certain following and in 1997 Pascal Molli decided to start
 maintaining it with the FAQ-O-Matic package which allows any
 contributor with a web browser to help maintain it.  The following
-text is (mostly automatically) extracted from the FAQ-O-Matic.  The
-odds are good that the file that you are currently reading is out of
-date with respect to the online FAQ-O-Matic, which is part of Pascal
-Molli's CVS web site at http://www.loria.fr/~molli/cvs-index.html
-(currently under "Documentation").  The online version is also
-somewhat better in terms of things like tables of contents (at least
-until someone can write some code to extract data from a FAQ-O-Matic
-and insert things like tables of contents).
+text is (mostly automatically) extracted from the FAQ-O-Matic.
+In 2004, Dr. Pascal Molli's FAQ-O-Matic was decommissioned.
 
 The answers which are dated "6/13/1997" below are really from the 1995
 FAQ, for the most part.  Many of them are out of date.  The current FAQ may
@@ -80,8 +74,7 @@ fancy formatting. This is meant to be bandwidth-light and dumb-browser-friendly
 .
 
 3. If you feel there's a place for a _new category, or a reorganization of
-existing questions_, don't hesitate to mail me (molli@loria.fr).
-Category changes need to be done from my end.
+existing questions_, send e-mail to bug-cvs@nongnu.org.
 
 4. Please _leave an email address_ at the bottom of your submission so that oth
 ers
@@ -103,10 +96,10 @@ don't overdo it. :v)
           
     2. Adding a new category ? 
     
-just send me a mail at
-molli@loria.fr
+try to get bug-cvs@nongnu.org to help you.
 
-          Last modified: _6/13/1997_
+
+          Last modified: _12/09/2004_
           
   Category: /Advanced_Topics_/
   
@@ -1542,7 +1535,7 @@ You can branch a branch.
      You need some helper tools besides CVS such as "RCS" and a good set
    of "diff" and "diff3" programs. See 1B.4 for suggestions.
    
-     Read the README, INSTALL and ChangeLog files to see what you are
+     Read the README, INSTALL-CVS and ChangeLog files to see what you are
    getting into.
    
      Though you can probably muddle along without it, you should appoint
@@ -1557,7 +1550,7 @@ You can branch a branch.
    
     2. How do I configure the CVS programs? 
     
-     You should certainly start by reading the README file, the INSTALL
+     You should certainly start by reading the README file, the INSTALL-CVS
    files and possibly the ChangeLogs in each directory, the Makefile.in
    files and the "cvsinit.sh" program.
    
@@ -1570,7 +1563,7 @@ You can branch a branch.
    
    It writes into /tmp/cvs-sanity by default.
    
-     Finish reading the INSTALL file and test out the system.
+     Finish reading the INSTALL-CVS file and test out the system.
    
    Last modified: _6/13/1997_
    

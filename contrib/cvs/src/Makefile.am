@@ -18,13 +18,8 @@
 
 SHELL = /bin/sh
 
-# $(includeopt) is CVS specific and set by configure
-# FIXME - This includes line is dependant on its order.  This means there is
-# some namespace hackery going on that maybe shouldn't be.  Long term fix is to
-# try and remove naming ocnflicts and fix Automake to allow particular includes
-# to be attached only to particular object files.  Short term fix is either or.
-##INCLUDES = -I. -I.. -I$(srcdir) -I$(top_srcdir)/lib
-INCLUDES = -I$(top_srcdir)/lib -I$(top_srcdir)/diff -I$(top_srcdir)/zlib $(includeopt)
+AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_builddir)/lib \
+              -I$(top_srcdir)/diff $(ZLIB_CPPFLAGS)
 
 bin_PROGRAMS = cvs
 bin_SCRIPTS = cvsbug
@@ -41,10 +36,12 @@ cvs_SOURCES = \
 	client.c \
 	commit.c \
 	create_adm.c \
-	cvsrc.c diff.c \
+	cvsrc.c \
+	diff.c \
 	edit.c \
 	entries.c \
 	error.c \
+	exithandle.c \
 	expand_path.c \
 	fileattr.c \
 	filesubr.c \
@@ -56,14 +53,17 @@ cvs_SOURCES = \
 	import.c \
 	lock.c \
 	log.c \
+	log-buffer.c log-buffer.h \
 	login.c \
 	logmsg.c \
+	ls.c \
 	main.c \
 	mkmodules.c \
 	modules.c \
+	ms-buffer.c ms-buffer.h \
 	myndbm.c \
 	no_diff.c \
-	parseinfo.c \
+	parseinfo.c parseinfo.h \
 	patch.c \
 	rcs.c \
 	rcscmds.c \
@@ -72,12 +72,13 @@ cvs_SOURCES = \
 	remove.c \
 	repos.c \
 	root.c \
+	rsh-client.c rsh-client.h \
 	run.c \
 	scramble.c \
 	server.c \
-	stack.c \
+	stack.c stack.h \
 	status.c \
-	subr.c \
+	subr.c subr.h \
 	tag.c \
 	update.c \
 	version.c \
@@ -89,7 +90,6 @@ cvs_SOURCES = \
 	client.h \
 	cvs.h \
 	edit.h \
-	error.h \
 	fileattr.h \
 	hardlink.h \
 	hash.h \
@@ -98,18 +98,24 @@ cvs_SOURCES = \
 	rcs.h \
 	root.h \
 	server.h \
-	stack.h \
 	update.h \
 	watch.h
 
-cvs_LDADD = \
+EXTRA_cvs_SOURCES = gssapi-client.c gssapi-client.h \
+                    kerberos4-client.c kerberos4-client.h \
+		    socket-client.c socket-client.h
+
+cvs_DEPENDENCIES = $(cvs_client_objects) \
 	../diff/libdiff.a \
 	../lib/libcvs.a \
-	../zlib/libz.a
-
-# extra clean targets
-# wish this could be distclean-hdr-local but it's not part of automake
-DISTCLEANFILES = check.log check.plog
+	$(ZLIB_LIBS)
+cvs_LDADD = $(cvs_client_objects) \
+	../diff/libdiff.a \
+	../lib/libcvs.a \
+	$(ZLIB_LIBS) \
+	$(LIB_CLOCK_GETTIME) \
+	$(LIB_NANOSLEEP) \
+	$(LIBINTL)
 
 # General
 EXTRA_DIST = \
@@ -121,15 +127,23 @@ EXTRA_DIST = \
 	build_src.com \
 	sanity.sh
 
-check-local: localcheck remotecheck
+check-local: localcheck remotecheck proxycheck
 
 .PHONY: localcheck
-localcheck:
+localcheck: sanity.config.sh
 	$(SHELL) $(srcdir)/sanity.sh `pwd`/cvs$(EXEEXT)
 
 .PHONY: remotecheck
-remotecheck: all
+remotecheck: all sanity.config.sh
 	$(SHELL) $(srcdir)/sanity.sh -r `pwd`/cvs$(EXEEXT)
+
+.PHONY: proxycheck
+proxycheck: all sanity.config.sh
+	$(SHELL) $(srcdir)/sanity.sh -p `pwd`/cvs$(EXEEXT)
+
+# Our distclean targets
+distclean-local:
+	rm -f check.log check.plog check.plog~
 
 ## MAINTAINER Targets
 

@@ -48,9 +48,7 @@ static const char *const version_usage[] =
  * command).
  */
 int
-version (argc, argv)
-    int argc;
-    char **argv;
+version (int argc, char **argv)
 {
     int err = 0;
 

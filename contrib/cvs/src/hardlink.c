@@ -39,6 +39,17 @@
 /* TODO: change this to something with a marginal degree of
    efficiency, like maybe a hash table.  Yeah. */
 
+
+
+static void
+delhardlist (Node *p)
+{
+    if (p->data)
+	dellist ((List **)&p->data);
+}
+
+
+
 List *hardlist;		/* Record hardlink information for working files */
 char *working_dir;	/* The top-level working directory, used for
 			   constructing full pathnames. */
@@ -48,10 +59,10 @@ char *working_dir;	/* The top-level working directory, used for
    inode, and then looking up FILE in that list.  If the file doesn't
    seem to exist, return NULL. */
 Node *
-lookup_file_by_inode (filepath)
-    const char *filepath;
+lookup_file_by_inode (const char *filepath)
 {
-    char *inodestr, *file;
+    char *inodestr;
+    const char *file;
     struct stat sb;
     Node *hp, *p;
 
@@ -60,12 +71,8 @@ lookup_file_by_inode (filepath)
     if (file)
 	++file;
     else
-	file = (char *) filepath;
+	file = filepath;
 
-    /* inodestr contains the hexadecimal representation of an
-       inode, so it requires two bytes of text to represent
-       each byte of the inode number. */
-    inodestr = (char *) xmalloc (2*sizeof(ino_t) + 1);
     if (stat (file, &sb) < 0)
     {
 	if (existence_error (errno))
@@ -79,7 +86,9 @@ lookup_file_by_inode (filepath)
 	error (1, errno, "cannot stat %s", file);
     }
 
-    sprintf (inodestr, "%lx", (unsigned long) sb.st_ino);
+    /* inodestr contains the hexadecimal representation of an
+       inode. */
+    inodestr = Xasprintf ("%lx", (unsigned long) sb.st_ino);
 
     /* Find out if this inode is already in the hardlist, adding
        a new entry to the list if not. */
@@ -89,8 +98,8 @@ lookup_file_by_inode (filepath)
 	hp = getnode ();
 	hp->type = NT_UNKNOWN;
 	hp->key = inodestr;
-	hp->data = getlist();
-	hp->delproc = dellist;
+	hp->data = getlist ();
+	hp->delproc = delhardlist;
 	(void) addnode (hardlist, hp);
     }
     else
@@ -101,7 +110,7 @@ lookup_file_by_inode (filepath)
     p = findnode (hp->data, filepath);
     if (p == NULL)
     {
-	p = getnode();
+	p = getnode ();
 	p->type = NT_UNKNOWN;
 	p->key = xstrdup (filepath);
 	p->data = NULL;
@@ -114,8 +123,7 @@ lookup_file_by_inode (filepath)
 /* After a file has been checked out, add a node for it to the hardlist
    (if necessary) and mark it as checked out. */
 void
-update_hardlink_info (file)
-    const char *file;
+update_hardlink_info (const char *file)
 {
     char *path;
     Node *n;
@@ -129,9 +137,8 @@ update_hardlink_info (file)
     {
 	/* file is a relative pathname; assume it's from the current
 	   working directory. */
-	char *dir = xgetwd();
-	path = xmalloc (strlen(dir) + strlen(file) + 2);
-	sprintf (path, "%s/%s", dir, file);
+	char *dir = xgetcwd ();
+	path = Xasprintf ("%s/%s", dir, file);
 	free (dir);
     }
 
@@ -159,8 +166,7 @@ update_hardlink_info (file)
    to sometimes allocate a new list (getlist() call below) and sometimes
    return an existing list (where we return n->data).  */
 List *
-list_linked_files_on_disk (file)
-    char *file;
+list_linked_files_on_disk (char *file)
 {
     char *inodestr, *path;
     struct stat sb;
@@ -170,16 +176,15 @@ list_linked_files_on_disk (file)
        would permit us to know anything about the file's hardlinks
        (cvs update, cvs commit, etc).  Return an empty list. */
     if (hardlist == NULL)
-	return getlist();
+	return getlist ();
 
     /* Get the full pathname of file (assuming the working directory) */
     if (file[0] == '/')
 	path = xstrdup (file);
     else
     {
-	char *dir = xgetwd();
-	path = (char *) xmalloc (strlen(dir) + strlen(file) + 2);
-	sprintf (path, "%s/%s", dir, file);
+	char *dir = xgetcwd ();
+	path = Xasprintf ("%s/%s", dir, file);
 	free (dir);
     }
 
@@ -192,10 +197,8 @@ list_linked_files_on_disk (file)
     if (stat (path, &sb) < 0)
 	error (1, errno, "cannot stat %s", file);
     /* inodestr contains the hexadecimal representation of an
-       inode, so it requires two bytes of text to represent
-       each byte of the inode number. */
-    inodestr = (char *) xmalloc (2*sizeof(ino_t) + 1);
-    sprintf (inodestr, "%lx", (unsigned long) sb.st_ino);
+       inode. */
+    inodestr = Xasprintf ("%lx", (unsigned long) sb.st_ino);
 
     /* Make sure the files linked to this inode are sorted. */
     n = findnode (hardlist, inodestr);
@@ -217,9 +220,7 @@ list_linked_files_on_disk (file)
    function (along with most functions in this file) must be fixed. */
 						      
 int
-compare_linkage_lists (links1, links2)
-    List *links1;
-    List *links2;
+compare_linkage_lists (List *links1, List *links2)
 {
     Node *n1, *n2;
     char *p1, *p2;
@@ -264,13 +265,11 @@ compare_linkage_lists (links1, links2)
    is not currently used. */
 
 int
-find_checkedout_proc (node, data)
-    Node *node;
-    void *data;
+find_checkedout_proc (Node *node, void *data)
 {
-    Node **uptodate = (Node **) data;
+    Node **uptodate = data;
     Node *link;
-    char *dir = xgetwd();
+    char *dir = xgetcwd ();
     char *path;
     struct hardlink_info *hlinfo;
 
@@ -280,9 +279,7 @@ find_checkedout_proc (node, data)
 
     /* Look at this file in the hardlist and see whether the checked_out
        field is 1, meaning that it has been checked out during this CVS run. */
-    path = (char *)
-	xmalloc (strlen (dir) + strlen (node->key) + 2);
-    sprintf (path, "%s/%s", dir, node->key);
+    path = Xasprintf ("%s/%s", dir, node->key);
     link = lookup_file_by_inode (path);
     free (path);
     free (dir);

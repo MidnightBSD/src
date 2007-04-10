@@ -30,10 +30,10 @@ CVS by Per Cederqvist et al, or cvs.texinfo--see below for details).
 If you are thinking of submitting changes to CVS, see the
 file HACKING.
 
-Please consult the INSTALL file for information on tested
+Please consult the INSTALL-CVS file for information on tested
 configurations.  If you have a comment about an already tested
 configuration, or have tried CVS on a new configuration, please let us
-know as described in INSTALL.  Free software only works if we all help
+know as described in INSTALL-CVS.  Free software only works if we all help
 out.
 
 Finally, we cannot guarantee that this release will not completely wipe out
@@ -75,27 +75,14 @@ compatibility problems with CVS 1.5 or later.
 
 -------------------------------------------------------------------------------
 
-Verifying the Integrity of Downloads:
-
-The official CVS source and binary releases are signed by the CVS maintainer
-who generated them.  This does not imply any sort of warranty, but it does mean
-that you can verify that the file you downloaded did, in fact, come from a CVS
-maintainer.
-
-The OpenPGP keys of the CVS maintainers who have submitted them are in the KEYS
-file of the CVS distribution and are also available from many OpenPGP key
-servers.  It is recommended that you verify the key fingerprints against an
-external source, however you obtain the key.
-
--------------------------------------------------------------------------------
-
 Installation:
 
-Please read the INSTALL file for installation instructions.  Brief summary:
+Please read the INSTALL-CVS file for installation instructions.  The brief
+summary is:
 
 	$ ./configure
 	$ make
-	(run the regression tests if desired)
+	(run the regression tests, if desired, via `make check')
 	$ make install
 	(create a repository if you don't already have one)
 

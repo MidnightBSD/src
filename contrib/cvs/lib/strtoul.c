@@ -1,100 +1,20 @@
-/*
- * strtol : convert a string to long.
- *
- * Andy Wilson, 2-Oct-89.
- */
+/* Copyright (C) 1991, 1997 Free Software Foundation, Inc.
+   This file is part of the GNU C Library.
 
-#include <errno.h>
-#include <ctype.h>
-#include <stdio.h>
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2, or (at your option)
+   any later version.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-#ifndef ULONG_MAX
-#define	ULONG_MAX	((unsigned long)(~0L))		/* 0xFFFFFFFF */
-#endif
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
-extern int errno;
+#define	UNSIGNED	1
 
-unsigned long
-strtoul(s, ptr, base)
-     const char *s; char **ptr; int base;
-{
-  unsigned long total = 0;
-  unsigned digit;
-  const char *start=s;
-  int did_conversion=0;
-  int overflow = 0;
-  int negate = 0;
-  unsigned long maxdiv, maxrem;
-
-  if (s==NULL)
-    {
-      errno = ERANGE;
-      if (!ptr)
-	*ptr = (char *)start;
-      return 0L;
-    }
-
-  while (isspace(*s))
-    s++;
-  if (*s == '+')
-    s++;
-  else if (*s == '-')
-    s++, negate = 1;
-  if (base==0 || base==16) /*  the 'base==16' is for handling 0x */
-    {
-      int tmp;
-
-      /*
-       * try to infer base from the string
-       */
-      if (*s != '0')
-        tmp = 10;	/* doesn't start with 0 - assume decimal */
-      else if (s[1] == 'X' || s[1] == 'x')
-	tmp = 16, s += 2; /* starts with 0x or 0X - hence hex */
-      else
-	tmp = 8;	/* starts with 0 - hence octal */
-      if (base==0)
-	base = (int)tmp;
-    }
-
-  maxdiv = ULONG_MAX / base;
-  maxrem = ULONG_MAX % base;
-
-  while ((digit = *s) != '\0')
-    {
-      if (digit >= '0' && digit < ('0'+base))
-	digit -= '0';
-      else
-	if (base > 10)
-	  {
-	    if (digit >= 'a' && digit < ('a'+(base-10)))
-	      digit = digit - 'a' + 10;
-	    else if (digit >= 'A' && digit < ('A'+(base-10)))
-	      digit = digit - 'A' + 10;
-	    else
-	      break;
-	  }
-	else
-	  break;
-      did_conversion = 1;
-      if (total > maxdiv
-	  || (total == maxdiv && digit > maxrem))
-	overflow = 1;
-      total = (total * base) + digit;
-      s++;
-    }
-  if (overflow)
-    {
-      errno = ERANGE;
-      if (ptr != NULL)
-	*ptr = (char *)s;
-      return (ULONG_MAX);
-    }
-  if (ptr != NULL)
-    *ptr = (char *) ((did_conversion) ? (char *)s : (char *)start);
-  return negate ? -total : total;
-}
+#include "strtol.c"
