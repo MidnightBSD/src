@@ -3427,7 +3427,6 @@ contrib/cvs/lib/unistd--.h -text
 contrib/cvs/lib/unistd-safer.h -text
 contrib/cvs/lib/unlocked-io.h -text
 contrib/cvs/lib/unsetenv.c -text
-contrib/cvs/lib/valloc.c -text
 contrib/cvs/lib/vasnprintf.c -text
 contrib/cvs/lib/vasnprintf.h -text
 contrib/cvs/lib/vasprintf.c -text
