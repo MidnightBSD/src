@@ -3321,8 +3321,9 @@ contrib/cvs/lib/getaddrinfo.c -text
 contrib/cvs/lib/getaddrinfo.h -text
 contrib/cvs/lib/getcwd.c -text
 contrib/cvs/lib/getcwd.h -text
+contrib/cvs/lib/getdate.c -text
 contrib/cvs/lib/getdate.h -text
-contrib/cvs/lib/getdate.y -text
+contrib/cvs/lib/getdate.tab.c -text
 contrib/cvs/lib/getdelim.c -text
 contrib/cvs/lib/getdelim.h -text
 contrib/cvs/lib/gethostname.c -text

@@ -33,7 +33,6 @@
 #include "error.h"
 #include "exitfail.h"
 #include "quotearg.h"
-#include "__fpending.h"
 
 #if USE_UNLOCKED_IO
 # include "unlocked-io.h"
@@ -74,7 +73,6 @@ void
 close_stdout (void)
 {
   bool prev_fail = ferror (stdout);
-  bool none_pending = (0 == __fpending (stdout));
   bool fclose_fail = fclose (stdout);
 
   if (prev_fail || fclose_fail)
@@ -88,7 +86,7 @@ close_stdout (void)
 	 program like cp is invoked like this `cp a b >&-' (i.e., with
 	 stdout closed) and doesn't generate any output (hence no previous
 	 error and nothing to be flushed).  */
-      if (e == EBADF && !prev_fail && none_pending)
+      if (e == EBADF && !prev_fail)
 	return;
 
       write_error = _("write error");
