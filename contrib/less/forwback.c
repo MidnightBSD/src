@@ -1,6 +1,5 @@
-/* $FreeBSD: src/contrib/less/forwback.c,v 1.4 2004/04/17 07:24:09 tjr Exp $ */
 /*
- * Copyright (C) 1984-2002  Mark Nudelman
+ * Copyright (C) 1984-2005  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -28,7 +27,6 @@ extern int top_scroll;
 extern int quiet;
 extern int sc_width, sc_height;
 extern int quit_at_eof;
-extern int more_mode;
 extern int plusoption;
 extern int forw_scroll;
 extern int back_scroll;
@@ -126,13 +124,6 @@ forw(n, pos, force, only_last, nblank)
 
 	if (!do_repaint)
 	{
-		/*
-		 * Forget any current line shift we might have
-		 * (from the last line of the previous screenful).
-		 */
-		extern int cshift;
-		cshift = 0;
-
 		if (top_scroll && n >= sc_height - 1 && pos != ch_length())
 		{
 			/*
@@ -144,12 +135,9 @@ forw(n, pos, force, only_last, nblank)
 			pos_clear();
 			add_forw_pos(pos);
 			force = 1;
-			if (more_mode == 0)
-			{
-				if (top_scroll == OPT_ONPLUS || first_time)
-					clear();
-				home();
-			}
+			if (top_scroll == OPT_ONPLUS || (first_time && top_scroll != OPT_ON))
+				clear();
+			home();
 		} else
 		{
 			clear_bot();
@@ -233,8 +221,7 @@ forw(n, pos, force, only_last, nblank)
 		 * start the display after the beginning of the file,
 		 * and it is not appropriate to squish in that case.
 		 */
-		if ((first_time || more_mode) &&
-		    pos == NULL_POSITION && !top_scroll && 
+		if (first_time && pos == NULL_POSITION && !top_scroll && 
 #if TAGS
 		    tagoption == NULL &&
 #endif
@@ -246,7 +233,7 @@ forw(n, pos, force, only_last, nblank)
 		if (top_scroll == OPT_ON)
 			clear_eol();
 		put_line();
-		if (clear_bg && final_attr != AT_NORMAL)
+		if (clear_bg && apply_at_specials(final_attr) != AT_NORMAL)
 		{
 			/*
 			 * Writing the last character on the last line

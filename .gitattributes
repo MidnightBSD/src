@@ -7741,6 +7741,7 @@ contrib/less/README -text
 contrib/less/brac.c -text
 contrib/less/ch.c -text
 contrib/less/charset.c -text
+contrib/less/charset.h -text
 contrib/less/cmd.h -text
 contrib/less/cmdbuf.c -text
 contrib/less/command.c -text
@@ -7766,6 +7767,8 @@ contrib/less/less.hlp -text
 contrib/less/less.man -text
 contrib/less/less.nro -text
 contrib/less/lessecho.c -text
+contrib/less/lessecho.man -text
+contrib/less/lessecho.nro -text
 contrib/less/lesskey.c -text
 contrib/less/lesskey.h -text
 contrib/less/lesskey.man -text

@@ -1,6 +1,5 @@
-/* $FreeBSD: src/contrib/less/main.c,v 1.4 2004/04/17 07:24:09 tjr Exp $ */
 /*
- * Copyright (C) 1984-2002  Mark Nudelman
+ * Copyright (C) 1984-2004  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -33,7 +32,6 @@ public char *	progname;
 public int	quitting;
 public int	secure;
 public int	dohelp;
-public int	more_mode = 0;
 
 #if LOGFILE
 public int	logfile = -1;
@@ -70,7 +68,6 @@ main(argc, argv)
 {
 	IFILE ifile;
 	char *s;
-	extern char *__progname;
 
 #ifdef __EMX__
 	_response(&argc, &argv);
@@ -111,26 +108,15 @@ main(argc, argv)
 	 * Process command line arguments and LESS environment arguments.
 	 * Command line arguments override environment arguments.
 	 */
-	if (strcmp(__progname, "more") == 0)
-		more_mode = 1;
-
 	is_tty = isatty(1);
 	get_term();
 	init_cmds();
 	init_prompt();
 	init_charset();
 	init_line();
+	init_cmdhist();
 	init_option();
-	
-	if (more_mode) {
-		scan_option("-E");
-		scan_option("-m");
-		scan_option("-G");
-		scan_option("-f");
-		s = lgetenv("MORE");
-	} else {
-		s = lgetenv("LESS");
-	}
+	s = lgetenv("LESS");
 	if (s != NULL)
 		scan_option(save(s));
 
@@ -229,7 +215,7 @@ main(argc, argv)
 		quit(QUIT_OK);
 	}
 
-	if (missing_cap && !know_dumb && !more_mode)
+	if (missing_cap && !know_dumb)
 		error("WARNING: terminal is not fully functional", NULL_PARG);
 	init_mark();
 	open_getchr();
@@ -350,14 +336,14 @@ sprefix(ps, s, uppercase)
 		c = *ps;
 		if (uppercase)
 		{
-			if (len == 0 && SIMPLE_IS_LOWER(c))
+			if (len == 0 && ASCII_IS_LOWER(c))
 				return (-1);
-			if (SIMPLE_IS_UPPER(c))
-				c = SIMPLE_TO_LOWER(c);
+			if (ASCII_IS_UPPER(c))
+				c = ASCII_TO_LOWER(c);
 		}
 		sc = *s;
-		if (len > 0 && SIMPLE_IS_UPPER(sc))
-			sc = SIMPLE_TO_LOWER(sc);
+		if (len > 0 && ASCII_IS_UPPER(sc))
+			sc = ASCII_TO_LOWER(sc);
 		if (c != sc)
 			break;
 		len++;
@@ -384,6 +370,7 @@ quit(status)
 		save_status = status;
 	quitting = 1;
 	edit((char*)NULL);
+	save_cmdhist();
 	if (any_display && is_tty)
 		clear_bot();
 	deinit();

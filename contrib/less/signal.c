@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2002  Mark Nudelman
+ * Copyright (C) 1984-2004  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -8,7 +8,6 @@
  * contact the author, see the README file.
  */
 
-/* $FreeBSD: src/contrib/less/signal.c,v 1.3 2004/04/17 07:24:09 tjr Exp $ */
 
 /*
  * Routines dealing with signals.
@@ -34,7 +33,7 @@ extern int lnloop;
 extern int linenums;
 extern int wscroll;
 extern int reading;
-extern int more_mode;
+extern int quit_on_intr;
 
 /*
  * Interrupt signal handler.
@@ -58,8 +57,6 @@ u_interrupt(type)
 	if (kbhit())
 		getkey();
 #endif
-	if (more_mode)
-		quit(0);
 	if (reading)
 		intread();
 }
@@ -251,6 +248,8 @@ psignals()
 #endif
 	if (tsignals & S_INTERRUPT)
 	{
+		if (quit_on_intr)
+			quit(QUIT_OK);
 		bell();
 		/*
 		 * {{ You may wish to replace the bell() with 
