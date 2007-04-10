@@ -1,4 +1,4 @@
-$MidnightBSD: src/contrib/cvs/MIDNIGHTBSD-upgrade,v 1.1 2007/04/09 22:38:40 laffer1 Exp $
+$MidnightBSD: src/contrib/cvs/MIDNIGHTBSD-upgrade,v 1.2 2007/04/09 22:57:54 laffer1 Exp $
 
 This directory contains the virgin CVS source on the vendor branch.  Do
 not under any circumstances commit new versions onto the mainline, new
@@ -6,6 +6,9 @@ versions or official-patch versions must be imported.
 
 To prepare a new cvs dist for import, extract it into a fresh directory;
 then delete the files and directories listed in MIDNIGHTBSD-Xlist.
+
+You will need to generage getdate.c from getdate.y which requires
+bison 1.875 at the time of writing.  
 
 Delete trash:
 $ sh -c 'while read glob ; do rm -rvf $glob ; done' \
@@ -28,11 +31,4 @@ that are suitable for public consumption should be submitted for inclusion
 in future releases.
 
 Current local changes:
-  - CVS_LOCAL_BRANCH_NUM environment variable support for choosing the
-    magic branch number.  (for CVSup local-commit support)
-  - CVSREADONLYFS environment variable and global option -R to enable
-    no-locking readonly mode (eg: cvs repo is a cdrom or mirror)
-  - the verify message script can edit the submitted log message.
-  - CVSROOT/options file
-  - Variable keyword expansion controls including custom keywords.
-  - $ CVSHeader$ keyword - like Header, but with $CVSROOT stripped off.
+    Current patches from DragonFly to add CVSROOT/options and a few other things.
