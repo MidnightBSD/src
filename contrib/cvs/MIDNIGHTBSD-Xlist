@@ -1,4 +1,4 @@
-$MidnightBSD$
+$MidnightBSD: src/contrib/cvs/MIDNIGHTBSD-Xlist,v 1.1 2007/04/09 22:38:40 laffer1 Exp $
 
 */*.com
 */*.dep
@@ -14,7 +14,9 @@ doc/*.info*
 doc/*.ps
 doc/texinfo.tex
 emx
-lib/getdate.c
+lib/__fpending.h
+lib/__fpending.c
+lib/getdate.y
 os2
 vms
 windows-NT
