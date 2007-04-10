@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.wait.h,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.wait.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
 /*
  * tc.wait.h: <sys/wait.h> for machines that don't have it or have it and
  *	      is incorrect.

@@ -1,10 +1,10 @@
-/* $Header: /home/cvs/src/contrib/tcsh/mi.termios.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/mi.termios.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
 /* termios.c - fake termios interface using sgtty interface 
  * 	       by Magnus Doell and Bruce Evans.
  *
  */
 #include "sh.h"
-RCSID("$Id: mi.termios.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $")
+RCSID("$tcsh: mi.termios.c,v 1.5 2006/03/02 18:46:44 christos Exp $")
 
 #if defined(_MINIX) && !defined(_MINIX_VMD)
 

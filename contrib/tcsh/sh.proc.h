@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/sh.proc.h,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/sh.proc.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
 /*
  * sh.proc.h: Process data structures and variables
  */
@@ -116,7 +116,6 @@ struct process {
 #define	AREASON		0200
 
 EXTERN struct process proclist IZERO_STRUCT;/* list head of all processes */
-EXTERN int    pnoprocesses IZERO;	/* pchild found nothing to wait for */
 
 EXTERN struct process *pholdjob IZERO;	/* one level stack of current jobs */
 
@@ -125,9 +124,5 @@ EXTERN struct process *pcurrent IZERO;	/* current job in table */
 EXTERN struct process *pprevious IZERO;	/* previous job in table */
 
 EXTERN int   pmaxindex IZERO;		/* current maximum job index */
-
-#ifndef BSDTIMES
-EXTERN int    timesdone;	/* shtimes buffer full ? */
-#endif /* BSDTIMES */
 
 #endif /* _h_sh_proc */

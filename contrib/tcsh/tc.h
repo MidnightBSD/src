@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.h,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.h,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
 /*
  * tc.h: Tcsh includes
  */
@@ -41,11 +41,40 @@
 #include "tc.sig.h"
 #include "tc.decls.h"
 
-extern int tlength;
+extern size_t tlength;
 
 #define FMT_PROMPT	0
 #define FMT_WHO		1
 #define FMT_HISTORY	2
 #define FMT_SCHED	3
+
+struct strbuf {
+    char *s;
+    size_t len;			/* Valid characters */
+    size_t size;		/* Allocated characters */
+};
+
+struct Strbuf {
+    Char *s;
+    size_t len;			/* Valid characters */
+    size_t size;		/* Allocated characters */
+};
+
+/* We don't have explicit initializers for variables with static storage
+   duration, so these values should be equivalent to default initialization. */
+#define strbuf_INIT { NULL, 0, 0 }
+#define Strbuf_INIT { NULL, 0, 0 }
+extern const struct strbuf strbuf_init;
+extern const struct Strbuf Strbuf_init;
+
+/* A string vector in progress */
+struct blk_buf
+{
+    Char **vec;
+    size_t len;			/* Valid strings */
+    size_t size;		/* Allocated space for string pointers */
+};
+
+#define BLK_BUF_INIT { NULL, 0, 0 }
 
 #endif /* _h_tc */

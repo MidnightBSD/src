@@ -1,4 +1,4 @@
-/* $Header: /home/cvs/src/contrib/tcsh/tc.vers.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $ */
+/* $Header: /home/cvs/src/contrib/tcsh/tc.vers.c,v 1.1.1.3 2007-04-10 21:07:41 laffer1 Exp $ */
 /*
  * tc.vers.c: Version dependent stuff
  */
@@ -33,7 +33,7 @@
 #include "sh.h"
 #include "tw.h"
 
-RCSID("$Id: tc.vers.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $")
+RCSID("$tcsh: tc.vers.c,v 3.54 2006/03/02 18:46:45 christos Exp $")
 
 #include "patchlevel.h"
 
@@ -43,7 +43,7 @@ RCSID("$Id: tc.vers.c,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $")
  *	options that might affect the user.
  */
 void
-fix_version()
+fix_version(void)
 {
 #ifdef WIDE_STRINGS
 # define SSSTR "wide"
@@ -146,10 +146,10 @@ fix_version()
 #ifndef LOCALSTR
 # define LOCALSTR ""
 #endif /* LOCALSTR */
-    char    version[BUFSIZE];
-    Char    *machtype = tgetenv(STRMACHTYPE);
-    Char    *vendor   = tgetenv(STRVENDOR);
-    Char    *ostype   = tgetenv(STROSTYPE);
+    char    *version;
+    const Char *machtype = tgetenv(STRMACHTYPE);
+    const Char *vendor   = tgetenv(STRVENDOR);
+    const Char *ostype   = tgetenv(STROSTYPE);
 
     if (vendor == NULL)
 	vendor = STRunknown;
@@ -159,14 +159,17 @@ fix_version()
 	ostype = STRunknown;
 
 
-    (void) xsnprintf(version, sizeof(version),
+    version = xasprintf(
 "tcsh %d.%.2d.%.2d (%s) %s (%S-%S-%S) options %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 	     REV, VERS, PATCHLEVEL, ORIGIN, DATE, machtype, vendor, ostype,
 	     SSSTR, NLSSTR, LFSTR, DLSTR, VISTR, DTRSTR, BYESTR,
 	     ALSTR, KANSTR, SMSTR, HBSTR, NGSTR, RHSTR, AFSSTR, NDSTR,
 	     COLORSTR, DSPMSTR, CCATSTR, FILECSTR, LOCALSTR);
-    set(STRversion, SAVE(version), VAR_READWRITE);
-    (void) xsnprintf(version, sizeof(version), "%d.%.2d.%.2d",
-		     REV, VERS, PATCHLEVEL);
-    set(STRtcsh, SAVE(version), VAR_READWRITE);
+    cleanup_push(version, xfree);
+    setcopy(STRversion, str2short(version), VAR_READWRITE);
+    cleanup_until(version);
+    version = xasprintf("%d.%.2d.%.2d", REV, VERS, PATCHLEVEL);
+    cleanup_push(version, xfree);
+    setcopy(STRtcsh, str2short(version), VAR_READWRITE);
+    cleanup_until(version);
 }

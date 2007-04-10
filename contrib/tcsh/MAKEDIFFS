@@ -2,7 +2,7 @@
 #
 # MAKEDIFFS.sh: Make context diffs for the csh sources
 #
-# $Id: MAKEDIFFS,v 1.1.1.2 2006-02-25 02:34:05 laffer1 Exp $
+# $tcsh: MAKEDIFFS,v 3.1 2006/03/02 18:46:44 christos Exp $
 XINUDIR=/usr/share/src/mtXinu/bin/csh
 BSDDIR=/usr/share/src/mtXinu/BSD/bin/csh
 TAHOEDIR=/usr/share/src/mtXinu/TAHOE/bin/csh

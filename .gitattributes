@@ -11250,6 +11250,7 @@ contrib/tcpdump/token.h -text
 contrib/tcpdump/udp.h -text
 contrib/tcpdump/util.c -text
 contrib/tcpdump/vfprintf.c -text
+contrib/tcsh/Copyright -text
 contrib/tcsh/FAQ -text
 contrib/tcsh/FREEBSD-Xlist -text
 contrib/tcsh/FREEBSD-upgrade -text
@@ -11717,6 +11718,19 @@ contrib/tcsh/tc.who.c -text
 contrib/tcsh/tcsh.man -text
 contrib/tcsh/tcsh.man2html -text
 contrib/tcsh/termcap.vms -text
+contrib/tcsh/tests/aliases.at -text
+contrib/tcsh/tests/arguments.at -text
+contrib/tcsh/tests/commands.at -text
+contrib/tcsh/tests/expr.at -text
+contrib/tcsh/tests/lexical.at -text
+contrib/tcsh/tests/mb-eucjp.at -text
+contrib/tcsh/tests/mb-utf8.at -text
+contrib/tcsh/tests/noexec.at -text
+contrib/tcsh/tests/sh.dol.at -text
+contrib/tcsh/tests/subst.at -text
+contrib/tcsh/tests/syntax.at -text
+contrib/tcsh/tests/testsuite.at -text
+contrib/tcsh/tests/variables.at -text
 contrib/tcsh/tw.color.c -text
 contrib/tcsh/tw.comp.c -text
 contrib/tcsh/tw.decls.h -text
