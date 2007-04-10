@@ -3,6 +3,15 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070410:
+	cvs was updated to 1.12.13.  cvsbug was removed.
+	cvs now behaves similarly to DragonFly's cvs with
+	most of their local changes.  
+
+20070409:
+	RELENG_0_1 was created. More aggresive changes will
+	continue here.
+
 20070406:
 	Back out propolice.  propolice caused several problems
 	with our threading libraries libthr and libpthread.  
@@ -379,4 +388,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.19 2007/04/06 20:37:49 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.20 2007/04/07 01:21:34 laffer1 Exp $
