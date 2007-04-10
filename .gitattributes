@@ -3336,7 +3336,6 @@ contrib/cvs/lib/getndelim2.h -text
 contrib/cvs/lib/getnline.c -text
 contrib/cvs/lib/getnline.h -text
 contrib/cvs/lib/getopt.c -text
-contrib/cvs/lib/getopt.h -text
 contrib/cvs/lib/getopt1.c -text
 contrib/cvs/lib/getopt_.h -text
 contrib/cvs/lib/getopt_int.h -text
