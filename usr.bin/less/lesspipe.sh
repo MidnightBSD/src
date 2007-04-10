@@ -1,7 +1,6 @@
 #! /bin/sh
-# ex:ts=8
-
-# $FreeBSD: src/usr.bin/less/lesspipe.sh,v 1.2 2005/05/17 11:08:11 des Exp $
+# $FreeBSD: /repoman/r/ncvs/src/usr.bin/less/lesspipe.sh,v 1.2.2.1 2006/09/03 16:09:50 delphij Exp $
+# $MidnightBSD$
 
 case "$1" in
 	*.Z)
@@ -12,8 +11,5 @@ case "$1" in
 		;;
 	*.bz2)
 		exec bzip2 -d -c $1	2>/dev/null
-		;;
-	*)
-		exec cat $1		2>/dev/null
 		;;
 esac
