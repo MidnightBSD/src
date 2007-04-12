@@ -1,4 +1,5 @@
 # $FreeBSD: src/usr.bin/bzip2/doc/Makefile,v 1.3 2005/05/31 22:16:49 obrien Exp $
+# $MidnightBSD$
 
 .PATH: ${.CURDIR}/../../../contrib/bzip2
 
