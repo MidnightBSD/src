@@ -15840,6 +15840,7 @@ gnu/usr.bin/cc/gcov/Makefile -text
 gnu/usr.bin/cc/include/Makefile -text
 gnu/usr.bin/cc/protoize/Makefile -text
 gnu/usr.bin/cpio/Makefile -text
+gnu/usr.bin/cpio/config.h -text
 gnu/usr.bin/cpio/doc/Makefile -text
 gnu/usr.bin/cpio/fnmatch.h -text
 gnu/usr.bin/cvs/Makefile -text
