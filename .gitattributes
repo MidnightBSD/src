@@ -3170,6 +3170,10 @@ contrib/cpio/lib/printf-args.c -text
 contrib/cpio/lib/printf-args.h -text
 contrib/cpio/lib/printf-parse.c -text
 contrib/cpio/lib/printf-parse.h -text
+contrib/cpio/lib/quote.c -text
+contrib/cpio/lib/quote.h -text
+contrib/cpio/lib/quotearg.c -text
+contrib/cpio/lib/quotearg.h -text
 contrib/cpio/lib/rmt.h -text
 contrib/cpio/lib/rtapelib.c -text
 contrib/cpio/lib/safe-read.c -text
@@ -3188,9 +3192,11 @@ contrib/cpio/lib/stdint_.h -text
 contrib/cpio/lib/stpcpy.c -text
 contrib/cpio/lib/stpcpy.h -text
 contrib/cpio/lib/strcase.h -text
+contrib/cpio/lib/strcasecmp.c -text
 contrib/cpio/lib/strchrnul.c -text
 contrib/cpio/lib/strchrnul.h -text
 contrib/cpio/lib/stripslash.c -text
+contrib/cpio/lib/strncasecmp.c -text
 contrib/cpio/lib/strndup.c -text
 contrib/cpio/lib/strndup.h -text
 contrib/cpio/lib/strnlen.c -text
