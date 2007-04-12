@@ -2987,9 +2987,9 @@ contrib/bsnmp/snmpd/trans_udp.h -text
 contrib/bsnmp/snmpd/trap.c -text
 contrib/bsnmp/snmpd/tree.def -text
 contrib/bzip2/CHANGES -text
-contrib/bzip2/FREEBSD-Xlist -text
-contrib/bzip2/FREEBSD-upgrade -text
 contrib/bzip2/LICENSE -text
+contrib/bzip2/MIDNIGHTBSD-Xlist -text
+contrib/bzip2/MIDNIGHTBSD-upgrade -text
 contrib/bzip2/Makefile -text
 contrib/bzip2/Makefile-libbz2_so -text
 contrib/bzip2/README -text
