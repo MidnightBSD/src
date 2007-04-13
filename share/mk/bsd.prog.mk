@@ -1,10 +1,15 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 
 .include <bsd.init.mk>
 
 .SUFFIXES: .out .o .c .cc .cpp .cxx .C .m .y .l .ln .s .S .asm
+
+# some ports make a custom makefile with this, we want to work correctly with fake.
+.if defined (TRUE_PREFIX)
+PREFIX=${TRUE_PREFIX}
+.endif
 
 # XXX The use of COPTS in modern makefiles is discouraged.
 .if defined(COPTS)
