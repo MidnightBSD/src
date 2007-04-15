@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.3 2007/03/29 20:03:05 archite Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
@@ -35,6 +35,11 @@ if [ $SHELL = "/bin/ksh" ]; then
 	ENV=$HOME/.kshrc; export ENV
 elif [ $SHELL = "/bin/sh" ]; then
 	ENV=$HOME/.shrc; export ENV
+fi
+
+# Source GNUstep so we can use openapp and friends.
+if [ -x /usr/local/GNUstep/System/Makefiles/GNUstep.sh ]; then
+	. /usr/local/GNUstep/System/Makefiles/GNUstep.sh
 fi
 
 [ -x /usr/games/fortune ] && /usr/games/fortune freebsd-tips
