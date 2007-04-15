@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.cshrc,v 1.13 2001/01/10 17:35:28 archie Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/skel/dot.cshrc,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
@@ -32,4 +32,8 @@ if ($?prompt) then
 		bindkey -k up history-search-backward
 		bindkey -k down history-search-forward
 	endif
+	if ( -x /usr/local/GNUstep/System/Makefiles/GNUstep.csh ) then
+		source /usr/local/GNUstep/System/Makefiles/GNUstep.csh
+	endif
+
 endif
