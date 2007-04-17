@@ -2883,6 +2883,8 @@ ata_nvidia_ident(device_t dev)
      { ATA_NFORCE_MCP55,    0, AMDNVIDIA, NVIDIA,  ATA_UDMA6, "nForce MCP55" },
      { ATA_NFORCE_MCP55_S1, 0, 0,         NV4|NVQ, ATA_SA300, "nForce MCP55" },
      { ATA_NFORCE_MCP55_S2, 0, 0,         NV4|NVQ, ATA_SA300, "nForce MCP55" },
+     { ATA_NFORCE_MCP61,    0, AMDNVIDIA, NVIDIA,  ATA_UDMA6, "nForce MCP61" },
+     { ATA_NFORCE_MCP61_S1, 0, 0,         NV4|NVQ, ATA_SA300, "nForce MCP61" },
      { 0, 0, 0, 0, 0, 0}} ;
     char buffer[64] ;
 
