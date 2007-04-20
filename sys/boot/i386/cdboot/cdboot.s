@@ -27,7 +27,7 @@
 # SUCH DAMAGE.
 #
 
-# $MidnightBSD: src/sys/boot/i386/cdboot/cdboot.s,v 1.2 2006/10/08 06:07:29 laffer1 Exp $
+# $MidnightBSD: src/sys/boot/i386/cdboot/cdboot.s,v 1.3 2006/10/08 06:08:55 laffer1 Exp $
 # $FreeBSD: /repoman/r/ncvs/src/sys/boot/i386/cdboot/cdboot.s,v 1.13.12.1 2006/04/18 13:51:12 sobomax Exp $
 
 #
@@ -473,7 +473,7 @@ putc:		mov $0x7,%bx			# attribute for output
 twiddle:	push %ax			# Save
 		push %bx			# Save
 		mov twiddle_index,%al		# Load index
-		mov twiddle_chars,%bx		# Address table
+		mov $twiddle_chars,%bx		# Address table
 		inc %al				# Next
 		and $3,%al			#  char
 		mov %al,twiddle_index		# Save index for next call
