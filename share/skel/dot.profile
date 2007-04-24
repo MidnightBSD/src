@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.3 2007/03/29 20:03:05 archite Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.4 2007/04/15 06:05:06 laffer1 Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
@@ -40,6 +40,9 @@ fi
 # Source GNUstep so we can use openapp and friends.
 if [ -x /usr/local/GNUstep/System/Makefiles/GNUstep.sh ]; then
 	. /usr/local/GNUstep/System/Makefiles/GNUstep.sh
+fi
+if [ -x /usr/local/GNUstep/System/Library/Makefiles/GNUstep.sh ]; then
+	. /usr/local/GNUstep/System/Library/Makefiles/GNUstep.sh
 fi
 
 [ -x /usr/games/fortune ] && /usr/games/fortune freebsd-tips

@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.cshrc,v 1.13 2001/01/10 17:35:28 archie Exp $
-# $MidnightBSD: src/share/skel/dot.cshrc,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.cshrc,v 1.3 2007/04/15 05:55:55 laffer1 Exp $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
@@ -35,5 +35,7 @@ if ($?prompt) then
 	if ( -x /usr/local/GNUstep/System/Makefiles/GNUstep.csh ) then
 		source /usr/local/GNUstep/System/Makefiles/GNUstep.csh
 	endif
-
+	if ( -x /usr/local/GNUstep/System/Library/Makefiles/GNUstep.csh ) then
+		source /usr/local/GNUstep/System/Library/Makefiles/GNUstep.csh
+	endif
 endif
