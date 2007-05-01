@@ -197,7 +197,7 @@ process_copy_pass ()
 	      if (close (out_file_des) < 0)
 		close_error (output_name.ds_string);
 
-	      set_copypass_perms (input_name.ds_string, &in_file_stat);
+	      set_copypass_perms (output_name.ds_string, &in_file_stat);
 
 	      if (reset_time_flag)
                 {
