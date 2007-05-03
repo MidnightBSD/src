@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/share/examples/cvsup/mports-supfile,v 1.1 2006/12/26 22:26:03 laffer1 Exp $
 #
 # This file contains all of the "CVSup collections" that make up the
 # MidnightBSD ports collection.
@@ -61,5 +61,5 @@
 *default compress
 
 ## Ports Collection.
-mports
+mports-all
 
