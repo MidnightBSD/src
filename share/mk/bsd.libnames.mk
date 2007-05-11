@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -123,6 +123,7 @@ LIBRPCSVC?=	${DESTDIR}${LIBDIR}/librpcsvc.a
 LIBSBUF?=	${DESTDIR}${LIBDIR}/libsbuf.a
 LIBSDP?=	${DESTDIR}${LIBDIR}/libsdp.a
 LIBSMB?=	${DESTDIR}${LIBDIR}/libsmb.a
+LIBSQLITE3?=	${DESTDIR}${LIBDIR}/libsqlite3.a
 LIBSSH?=	${DESTDIR}${LIBDIR}/libssh.a
 LIBSSL?=	${DESTDIR}${LIBDIR}/libssl.a
 LIBSTAND?=	${DESTDIR}${LIBDIR}/libstand.a
