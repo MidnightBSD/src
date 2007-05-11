@@ -27,4 +27,6 @@ tclsh, I had 8.4 on my box):
 
 5) Delete everything but sqlite3.c, sqlite3.h, sqlite3.1 and shell.c
 
+6) Imported with:
 
+cvs import -m "import sqlite 3.3.17 (very trimmed)" src/contrib/sqlite3 SQLite v3_3_17
