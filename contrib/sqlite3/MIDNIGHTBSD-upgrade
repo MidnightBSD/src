@@ -1,0 +1,30 @@
+sqlite 3.3.17 - A simple, high-performance, self-contained, public domain,
+SQL database.
+
+Originals can be found at http://www.sqlite.org/
+
+1) Apply the following change to Makefile.in (you can use another version of
+tclsh, I had 8.4 on my box):
+
+--- Makefile.in.orig	Thu May 10 03:13:25 2007
++++ Makefile.in	Thu May 10 03:14:07 2007
+@@ -304,7 +304,7 @@
+ 	cp parse.c opcodes.c keywordhash.h tsrc
+ 
+ sqlite3.c:	target_source $(TOP)/tool/mksqlite3c.tcl
+-	tclsh $(TOP)/tool/mksqlite3c.tcl
++	tclsh8.4 $(TOP)/tool/mksqlite3c.tcl
+ 
+ # Rules to build the LEMON compiler generator
+ #
+
+
+2) ./configure --build=i386-mbsd-freebsd6.0 --prefix=/usr
+
+3) Run 'make sqlite3.c' to generate sqlite3.c
+
+4) move src/shell.c to the current directory.
+
+5) Delete everything but sqlite3.c, sqlite3.h, sqlite3.1 and shell.c
+
+
