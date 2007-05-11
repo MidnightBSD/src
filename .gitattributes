@@ -19048,6 +19048,7 @@ lib/libsm/Makefile -text
 lib/libsmb/Makefile -text
 lib/libsmdb/Makefile -text
 lib/libsmutil/Makefile -text
+lib/libsqlite3/Makefile -text
 lib/libstand/Makefile -text
 lib/libstand/__main.c -text
 lib/libstand/alpha/_setjmp.S -text
