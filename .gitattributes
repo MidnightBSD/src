@@ -31397,6 +31397,7 @@ usr.bin/spell/spellprog/spellprog.c -text
 usr.bin/split/Makefile -text
 usr.bin/split/split.1 -text
 usr.bin/split/split.c -text
+usr.bin/sqlite3/Makefile -text
 usr.bin/stat/Makefile -text
 usr.bin/stat/stat.1 -text
 usr.bin/stat/stat.c -text
