@@ -23744,7 +23744,6 @@ sys/amd64/conf/GENERIC -text
 sys/amd64/conf/GENERIC.hints -text
 sys/amd64/conf/Makefile -text
 sys/amd64/conf/NOTES -text
-sys/amd64/conf/SMP -text
 sys/amd64/ia32/ia32_exception.S -text
 sys/amd64/ia32/ia32_reg.c -text
 sys/amd64/ia32/ia32_signal.c -text
