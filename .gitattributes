@@ -31358,6 +31358,13 @@ usr.bin/rwho/rwho.c -text
 usr.bin/script/Makefile -text
 usr.bin/script/script.1 -text
 usr.bin/script/script.c -text
+usr.bin/sdiff/Makefile -text
+usr.bin/sdiff/common.c -text
+usr.bin/sdiff/common.h -text
+usr.bin/sdiff/edit.c -text
+usr.bin/sdiff/extern.h -text
+usr.bin/sdiff/sdiff.1 -text
+usr.bin/sdiff/sdiff.c -text
 usr.bin/sed/Makefile -text
 usr.bin/sed/POSIX -text
 usr.bin/sed/TEST/hanoi.sed -text
