@@ -1,6 +1,6 @@
 # $NetBSD: Makefile,v 1.16 2001/01/14 15:37:22 minoura Exp $
 # $FreeBSD: src/etc/rc.d/Makefile,v 1.53.2.8 2006/02/12 22:13:15 flz Exp $
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.3 2006/08/28 02:13:44 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.4 2006/12/31 22:17:42 laffer1 Exp $ 
 
 FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
@@ -33,7 +33,7 @@ FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	ramdisk ramdisk-own random rarpd rdate resolv root \
 	route6d routed routing rpcbind rtadvd rwho \
 	savecore sdpd securelevel sendmail \
-	serial sppp swap1 \
+	serial sound sppp swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
 	ugidfw usbd \

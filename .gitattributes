@@ -15519,6 +15519,7 @@ etc/rc.d/sdpd -text
 etc/rc.d/securelevel -text
 etc/rc.d/sendmail -text
 etc/rc.d/serial -text
+etc/rc.d/sound -text
 etc/rc.d/sppp -text
 etc/rc.d/sshd -text
 etc/rc.d/swap1 -text
