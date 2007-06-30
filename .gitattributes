@@ -23155,6 +23155,8 @@ share/skel/dot.shrc -text
 share/snmp/Makefile -text
 share/snmp/mibs/FREEBSD-MIB.txt -text
 share/snmp/mibs/Makefile -text
+share/sound/Makefile -text
+share/sound/snd_card_ids.txt -text
 share/syscons/Makefile -text
 share/syscons/fonts/INDEX.fonts -text
 share/syscons/fonts/Makefile -text
