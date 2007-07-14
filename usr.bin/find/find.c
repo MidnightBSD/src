@@ -183,7 +183,7 @@ find_execute(PLAN *plan, char *paths[])
 
 	tree = fts_open(paths, ftsoptions, (issort ? find_compare : NULL));
 	if (tree == NULL)
-		err(1, "ftsopen");
+		err(1, "fts_open");
 
 	for (rval = 0; (entry = fts_read(tree)) != NULL;) {
 		if (maxdepth != -1 && entry->fts_level >= maxdepth) {
