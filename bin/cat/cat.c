@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cat/cat.c,v 1.3 2006/09/08 14:04:24 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/cat/cat.c,v 1.4 2006/09/09 13:48:40 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -271,7 +271,7 @@ raw_cat(int rfd)
 	wfd = fileno(stdout);
 	if (buf == NULL) {
 		if (fstat(wfd, &sbuf))
-			err(1, "%s", filename);
+			err(1, "stdout");
 		bsize = MAX(sbuf.st_blksize, 1024);
 		if ((buf = malloc(bsize)) == NULL)
 			err(1, "buffer");
