@@ -79,7 +79,7 @@ int
 main(int argc, char *argv[])
 {
 	enum { NEWSH, LOADENTRY, EDITENTRY, NEWPW, NEWEXP } op;
-	struct passwd lpw, *old_pw, *pw;
+	struct passwd lpw, *old_pw = NULL, *pw = NULL;
 	int ch, pfd, tfd;
 	const char *password;
 	char *arg = NULL;
