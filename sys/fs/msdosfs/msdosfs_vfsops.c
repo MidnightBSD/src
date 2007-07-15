@@ -764,8 +764,10 @@ msdosfs_unmount(mp, mntflags, td)
 	/* If the volume was mounted read/write, mark it clean now. */
 	if ((pmp->pm_flags & MSDOSFSMNT_RONLY) == 0) {
 		error = markvoldirty(pmp, 0);
-		if (error && (flags & FORCECLOSE) == 0)
+		if (error && (flags & FORCECLOSE) == 0 && (error & ENXIO) == 0)
 			return (error);
+		if (error & ENXIO)
+			error = 0;
 	}
 #ifdef MSDOSFS_DEBUG
 	{
