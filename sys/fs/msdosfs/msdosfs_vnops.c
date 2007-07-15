@@ -1836,7 +1836,8 @@ msdosfs_print(ap)
 
 	printf("\tstartcluster %lu, dircluster %lu, diroffset %lu, ",
 	       dep->de_StartCluster, dep->de_dirclust, dep->de_diroffset);
-	printf("on dev %s\n", devtoname(dep->de_dev));
+	if (dep->de_dev != NULL) 
+		printf("on dev %s\n", devtoname(dep->de_dev));
 	return (0);
 }
 
