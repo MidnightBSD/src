@@ -1111,6 +1111,10 @@ dounmount(mp, flags, td)
 	    (flags & MNT_FORCE)) {
 		error = VFS_UNMOUNT(mp, flags, td);
 	}
+	if (error & ENXIO) {
+		printf("dounmount: error=%d\n", error);
+		error = VFS_UNMOUNT(mp, 0, td);
+	}
 	vn_finished_write(mp);
 	if (error) {
 		/* Undo cdir/rdir and rootvnode changes made above. */
