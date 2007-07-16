@@ -98,6 +98,8 @@ tape_empty_output_buffer (int out_des)
   output_size = 0;
 }
 
+static int sparse_write (int fildes, char *buf, unsigned int nbyte);
+
 /* Write `output_size' bytes of `output_buffer' to file
    descriptor OUT_DES and reset `output_size' and `out_buff'.
    If `swapping_halfwords' or `swapping_bytes' is set,
@@ -384,10 +386,10 @@ tape_buffered_peek (char *peek_buf, int in_des, int num_bytes)
 /* Skip the next NUM_BYTES bytes of file descriptor IN_DES.  */
 
 void
-tape_toss_input (int in_des, long num_bytes)
+tape_toss_input (int in_des, off_t num_bytes)
 {
-  register long bytes_left = num_bytes;	/* Bytes needing to be copied.  */
-  register long space_left;	/* Bytes to copy from input buffer.  */
+  off_t bytes_left = num_bytes;	/* Bytes needing to be copied.  */
+  off_t space_left;	/* Bytes to copy from input buffer.  */
 
   while (bytes_left > 0)
     {
@@ -566,7 +568,7 @@ copy_files_disk_to_disk (int in_des, int out_des, off_t num_bytes,
 
 void
 warn_if_file_changed (char *file_name, unsigned long old_file_size,
-		      unsigned long old_file_mtime)
+		      off_t old_file_mtime)
 {
   struct stat new_file_stat;
   if ((*xstat) (file_name, &new_file_stat) < 0)
@@ -578,8 +580,11 @@ warn_if_file_changed (char *file_name, unsigned long old_file_size,
   /* Only check growth, shrinkage detected in copy_files_disk_to_{disk,tape}()
    */
   if (new_file_stat.st_size > old_file_size)
-    error (0, 0, _("File %s grew, %ld new bytes not copied"),
-	   file_name, (long)(new_file_stat.st_size - old_file_size));
+    error (0, 0,
+	   ngettext ("File %s grew, %"PRIuMAX" new byte not copied",
+		     "File %s grew, %"PRIuMAX" new bytes not copied",
+		     (long)(new_file_stat.st_size - old_file_size)),
+	   file_name, (uintmax_t) (new_file_stat.st_size - old_file_size));
 
   else if (new_file_stat.st_mtime != old_file_mtime)
     error (0, 0, _("File %s was modified while being copied"), file_name);
@@ -1085,9 +1090,6 @@ islastparentcdf (char *path)
 
 #define DISKBLOCKSIZE	(512)
 
-enum sparse_write_states { begin, in_zeros, not_in_zeros };
-
-
 static int
 buf_all_zeros (char *buf, int bufsize)
 {
@@ -1105,7 +1107,7 @@ int delayed_seek_count = 0;
 /* Write NBYTE bytes from BUF to remote tape connection FILDES.
    Return the number of bytes written on success, -1 on error.  */
 
-int
+static int
 sparse_write (int fildes, char *buf, unsigned int nbyte)
 {
   int complete_block_count;
@@ -1116,7 +1118,7 @@ sparse_write (int fildes, char *buf, unsigned int nbyte)
   int lseek_rc;
   int write_rc;
   int i;
-  enum sparse_write_states state;
+  enum { begin, in_zeros, not_in_zeros } state;
 
   complete_block_count = nbyte / DISKBLOCKSIZE;
   leftover_bytes_count = nbyte % DISKBLOCKSIZE;
@@ -1146,6 +1148,7 @@ sparse_write (int fildes, char *buf, unsigned int nbyte)
 	      }
 	    buf += DISKBLOCKSIZE;
 	    break;
+	    
 	  case in_zeros :
 	    if (buf_all_zeros (buf, DISKBLOCKSIZE))
 	      {
@@ -1160,6 +1163,7 @@ sparse_write (int fildes, char *buf, unsigned int nbyte)
 	      }
 	    buf += DISKBLOCKSIZE;
 	    break;
+	    
 	  case not_in_zeros :
 	    if (buf_all_zeros (buf, DISKBLOCKSIZE))
 	      {
@@ -1182,6 +1186,7 @@ sparse_write (int fildes, char *buf, unsigned int nbyte)
       case in_zeros :
 	delayed_seek_count = seek_count;
 	break;
+	
       case not_in_zeros :
 	write_rc = write (fildes, cur_write_start, write_count);
 	delayed_seek_count = 0;
@@ -1199,6 +1204,9 @@ sparse_write (int fildes, char *buf, unsigned int nbyte)
     }
   return nbyte;
 }
+
+#define CPIO_UID(uid) (set_owner_flag ? set_owner : (uid))
+#define CPIO_GID(gid) (set_group_flag ? set_group : (gid))
 
 void
 stat_to_cpio (struct cpio_file_stat *hdr, struct stat *st)
@@ -1239,8 +1247,8 @@ stat_to_cpio (struct cpio_file_stat *hdr, struct stat *st)
   else if (S_ISNWK (st->st_mode))
     hdr->c_mode |= CP_IFNWK;
 #endif
-  hdr->c_uid = st->st_uid;
-  hdr->c_gid = st->st_gid;
+  hdr->c_uid = CPIO_UID (st->st_uid);
+  hdr->c_gid = CPIO_GID (st->st_gid);
   hdr->c_nlink = st->st_nlink;
   hdr->c_rdev_maj = major (st->st_rdev);
   hdr->c_rdev_min = minor (st->st_rdev);
@@ -1250,18 +1258,41 @@ stat_to_cpio (struct cpio_file_stat *hdr, struct stat *st)
   hdr->c_tar_linkname = NULL;
 }
 
+#ifndef HAVE_FCHOWN
+# define fchown(fd, uid, gid) (-1)
+#endif
+
+int
+fchown_or_chown (int fd, const char *name, uid_t uid, uid_t gid)
+{
+  if (HAVE_FCHOWN && fd != -1)
+    return fchown (fd, uid, gid);
+  else
+    return chown (name, uid, gid);
+}
+
+int
+fchmod_or_chmod (int fd, const char *name, mode_t mode)
+{
+  if (HAVE_FCHMOD && fd != -1)
+    return fchmod (fd, mode);
+  else
+    return chmod(name, mode);
+}
+
 void
-set_perms (struct cpio_file_stat *header)
+set_perms (int fd, struct cpio_file_stat *header)
 {
   if (!no_chown_flag)
     {
-      uid_t uid = set_owner_flag ? set_owner : header->c_uid;
-      gid_t gid = set_group_flag ? set_group : header->c_gid; 
-      if ((chown (header->c_name, uid, gid) < 0) && errno != EPERM)
+      uid_t uid = CPIO_UID (header->c_uid);
+      gid_t gid = CPIO_GID (header->c_gid); 
+      if ((fchown_or_chown (fd, header->c_name, uid, gid) < 0)
+	  && errno != EPERM)
 	chown_error_details (header->c_name, uid, gid);
     }
   /* chown may have turned off some permissions we wanted. */
-  if (chmod (header->c_name, header->c_mode) < 0)
+  if (fchmod_or_chmod (fd, header->c_name, header->c_mode) < 0)
     chmod_error_details (header->c_name, header->c_mode);
 #ifdef HPUX_CDF
   if ((header->c_mode & CP_IFMT) && cdf_flag)
@@ -1270,11 +1301,12 @@ set_perms (struct cpio_file_stat *header)
     file_hdr->c_name [cdf_char] = '+';
 #endif
   if (retain_time_flag)
-    set_file_times (header->c_name, header->c_mtime, header->c_mtime);
+    set_file_times (fd, header->c_name, header->c_mtime, header->c_mtime);
 }
 
 void
-set_file_times (const char *name, unsigned long atime, unsigned long mtime)
+set_file_times (int fd,
+		const char *name, unsigned long atime, unsigned long mtime)
 {
   struct timespec ts[2];
   
@@ -1283,9 +1315,9 @@ set_file_times (const char *name, unsigned long atime, unsigned long mtime)
   ts[0].tv_sec = atime;
   ts[1].tv_sec = mtime;
 
-  /* Silently ignore EROFS because reading the file won't have upset its timestamp
-     if it's on a read-only filesystem. */
-  if (utimens (name, ts) < 0 && errno != EROFS)
+  /* Silently ignore EROFS because reading the file won't have upset its 
+     timestamp if it's on a read-only filesystem. */
+  if (gl_futimens (fd, name, ts) < 0 && errno != EROFS)
     utime_error (name);
 }
 

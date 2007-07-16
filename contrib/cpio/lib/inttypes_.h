@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 Free Software Foundation, Inc.
+/* Copyright (C) 2006-2007 Free Software Foundation, Inc.
    Written by Paul Eggert, Bruno Haible, Derek Price.
    This file is part of gnulib.
 
@@ -16,22 +16,27 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
 
+/*
+ * ISO C 99 <inttypes.h> for platforms that lack it.
+ * <http://www.opengroup.org/susv3xbd/inttypes.h.html>
+ */
+
 /* Include the original <inttypes.h> if it exists, and if this file
    has not been included yet or if this file includes gnulib stdint.h
-   which in turn includes this file.  */
+   which in turn includes this file.
+   The include_next requires a split double-inclusion guard.  */
 #if ! defined INTTYPES_H || defined _GL_JUST_INCLUDE_ABSOLUTE_INTTYPES_H
 # if @HAVE_INTTYPES_H@
-#  include @ABSOLUTE_INTTYPES_H@
+#  if @HAVE_INCLUDE_NEXT@
+#   include_next <inttypes.h>
+#  else
+#   include @ABSOLUTE_INTTYPES_H@
+#  endif
 # endif
 #endif
 
 #if ! defined INTTYPES_H && ! defined _GL_JUST_INCLUDE_ABSOLUTE_INTTYPES_H
 #define INTTYPES_H
-
-/*
- * ISO C 99 <inttypes.h> for platforms that lack it.
- * <http://www.opengroup.org/susv3xbd/inttypes.h.html>
- */
 
 /* Include <stdint.h> or the gnulib replacement.  */
 #include <stdint.h>
@@ -42,9 +47,19 @@
 # error "This file assumes that 'int' has exactly 32 bits. Please report your platform and compiler to <bug-gnulib@gnu.org>."
 #endif
 
+/* The definition of GL_LINK_WARNING is copied here.  */
+
 /* 7.8.1 Macros for format specifiers */
 
 #if ! defined __cplusplus || defined __STDC_FORMAT_MACROS
+
+# if defined _TNS_R_TARGET
+   /* Tandem NonStop R series and compatible platforms released before
+      July 2005 support %Ld but not %lld.  */
+#  define _LONG_LONG_FORMAT_PREFIX "L"
+# else
+#  define _LONG_LONG_FORMAT_PREFIX "ll"
+# endif
 
 # if !defined PRId8 || @PRI_MACROS_BROKEN@
 #  undef PRId8
@@ -160,7 +175,7 @@
 #  elif defined _MSC_VER || defined __MINGW32__
 #   define _PRI64_PREFIX "I64"
 #  elif @HAVE_LONG_LONG_INT@ && LONG_MAX >> 30 == 1
-#   define _PRI64_PREFIX "ll"
+#   define _PRI64_PREFIX _LONG_LONG_FORMAT_PREFIX
 #  endif
 #  if !defined PRId64 || @PRI_MACROS_BROKEN@
 #   undef PRId64
@@ -172,12 +187,12 @@
 #  endif
 # endif
 # ifdef UINT64_MAX
-#  if INT64_MAX == LONG_MAX
+#  if UINT64_MAX == ULONG_MAX
 #   define _PRIu64_PREFIX "l"
 #  elif defined _MSC_VER || defined __MINGW32__
 #   define _PRIu64_PREFIX "I64"
-#  elif @HAVE_LONG_LONG_INT@ && LONG_MAX >> 30 == 1
-#   define _PRIu64_PREFIX "ll"
+#  elif @HAVE_UNSIGNED_LONG_LONG_INT@ && ULONG_MAX >> 31 == 1
+#   define _PRIu64_PREFIX _LONG_LONG_FORMAT_PREFIX
 #  endif
 #  if !defined PRIo64 || @PRI_MACROS_BROKEN@
 #   undef PRIo64
@@ -653,7 +668,7 @@
 #  elif defined _MSC_VER || defined __MINGW32__
 #   define _SCN64_PREFIX "I64"
 #  elif @HAVE_LONG_LONG_INT@ && LONG_MAX >> 30 == 1
-#   define _SCN64_PREFIX "ll"
+#   define _SCN64_PREFIX _LONG_LONG_FORMAT_PREFIX
 #  endif
 #  if !defined SCNd64 || @PRI_MACROS_BROKEN@
 #   undef SCNd64
@@ -665,12 +680,12 @@
 #  endif
 # endif
 # ifdef UINT64_MAX
-#  if INT64_MAX == LONG_MAX
+#  if UINT64_MAX == ULONG_MAX
 #   define _SCNu64_PREFIX "l"
 #  elif defined _MSC_VER || defined __MINGW32__
 #   define _SCNu64_PREFIX "I64"
-#  elif @HAVE_LONG_LONG_INT@ && LONG_MAX >> 30 == 1
-#   define _SCNu64_PREFIX "ll"
+#  elif @HAVE_UNSIGNED_LONG_LONG_INT@ && ULONG_MAX >> 31 == 1
+#   define _SCNu64_PREFIX _LONG_LONG_FORMAT_PREFIX
 #  endif
 #  if !defined SCNo64 || @PRI_MACROS_BROKEN@
 #   undef SCNo64
@@ -1026,20 +1041,53 @@
 extern "C" {
 #endif
 
-#if !@HAVE_DECL_IMAXABS@
+#if @GNULIB_IMAXABS@
+# if !@HAVE_DECL_IMAXABS@
 extern intmax_t imaxabs (intmax_t);
+# endif
+#elif defined GNULIB_POSIXCHECK
+# undef imaxabs
+# define imaxabs(a) \
+    (GL_LINK_WARNING ("imaxabs is unportable - " \
+                      "use gnulib module imaxabs for portability"), \
+     imaxabs (a))
 #endif
 
-#if !@HAVE_DECL_IMAXDIV@
+#if @GNULIB_IMAXDIV@
+# if !@HAVE_DECL_IMAXDIV@
 typedef struct { intmax_t quot; intmax_t rem; } imaxdiv_t;
 extern imaxdiv_t imaxdiv (intmax_t, intmax_t);
+# endif
+#elif defined GNULIB_POSIXCHECK
+# undef imaxdiv
+# define imaxdiv(a,b) \
+    (GL_LINK_WARNING ("imaxdiv is unportable - " \
+                      "use gnulib module imaxdiv for portability"), \
+     imaxdiv (a, b))
 #endif
 
-#if !@HAVE_DECL_STRTOIMAX@
+#if @GNULIB_STRTOIMAX@
+# if !@HAVE_DECL_STRTOIMAX@
 extern intmax_t strtoimax (const char *, char **, int);
+# endif
+#elif defined GNULIB_POSIXCHECK
+# undef strtoimax
+# define strtoimax(p,e,b) \
+    (GL_LINK_WARNING ("strtoimax is unportable - " \
+                      "use gnulib module strtoimax for portability"), \
+     strtoimax (p, e, b))
 #endif
-#if !@HAVE_DECL_STRTOUMAX@
+
+#if @GNULIB_STRTOUMAX@
+# if !@HAVE_DECL_STRTOUMAX@
 extern uintmax_t strtoumax (const char *, char **, int);
+# endif
+#elif defined GNULIB_POSIXCHECK
+# undef strtoumax
+# define strtoumax(p,e,b) \
+    (GL_LINK_WARNING ("strtoumax is unportable - " \
+                      "use gnulib module strtoumax for portability"), \
+     strtoumax (p, e, b))
 #endif
 
 /* Don't bother defining or declaring wcstoimax and wcstoumax, since

@@ -26,6 +26,7 @@
 
 #include "dirname.h" /* solely for definition of IS_ABSOLUTE_FILE_NAME */
 #include "fcntl--.h"
+#include "lchown.h"
 #include "lstat.h"
 #include "openat-priv.h"
 #include "save-cwd.h"
@@ -85,14 +86,23 @@ openat_permissive (int fd, char const *file, int flags, mode_t mode,
     return open (file, flags, mode);
 
   {
-    char *proc_file;
-    BUILD_PROC_NAME (proc_file, fd, file);
-    err = open (proc_file, flags, mode);
-    /* If the syscall succeeds, or if it fails with an unexpected
-       errno value, then return right away.  Otherwise, fall through
-       and resort to using save_cwd/restore_cwd.  */
-    if (0 <= err || ! EXPECTED_ERRNO (errno))
-      return err;
+    char buf[OPENAT_BUFFER_SIZE];
+    char *proc_file = openat_proc_name (buf, fd, file);
+    if (proc_file)
+      {
+	int open_result = open (proc_file, flags, mode);
+	int open_errno = errno;
+	if (proc_file != buf)
+	  free (proc_file);
+	/* If the syscall succeeds, or if it fails with an unexpected
+	   errno value, then return right away.  Otherwise, fall through
+	   and resort to using save_cwd/restore_cwd.  */
+	if (0 <= open_result || ! EXPECTED_ERRNO (open_errno))
+	  {
+	    errno = open_errno;
+	    return open_result;
+	  }
+      }
   }
 
   save_ok = (save_cwd (&saved_cwd) == 0);
@@ -128,19 +138,23 @@ openat_permissive (int fd, char const *file, int flags, mode_t mode,
 bool
 openat_needs_fchdir (void)
 {
-  int fd2;
+  bool needs_fchdir = true;
   int fd = open ("/", O_RDONLY);
-  char *proc_file;
 
-  if (fd < 0)
-    return true;
-  BUILD_PROC_NAME (proc_file, fd, ".");
-  fd2 = open (proc_file, O_RDONLY);
-  close (fd);
-  if (0 <= fd2)
-    close (fd2);
+  if (0 <= fd)
+    {
+      char buf[OPENAT_BUFFER_SIZE];
+      char *proc_file = openat_proc_name (buf, fd, ".");
+      if (proc_file)
+	{
+	  needs_fchdir = false;
+	  if (proc_file != buf)
+	    free (proc_file);
+	}
+      close (fd);
+    }
 
-  return fd2 < 0;
+  return needs_fchdir;
 }
 
 #if !HAVE_FDOPENDIR
@@ -164,10 +178,18 @@ fdopendir (int fd)
   int saved_errno;
   DIR *dir;
 
-  char *proc_file;
-  BUILD_PROC_NAME (proc_file, fd, ".");
-  dir = opendir (proc_file);
-  saved_errno = errno;
+  char buf[OPENAT_BUFFER_SIZE];
+  char *proc_file = openat_proc_name (buf, fd, ".");
+  if (proc_file)
+    {
+      dir = opendir (proc_file);
+      saved_errno = errno;
+    }
+  else
+    {
+      dir = NULL;
+      saved_errno = EOPNOTSUPP;
+    }
 
   /* If the syscall fails with an expected errno value, resort to
      save_cwd/restore_cwd.  */
@@ -195,6 +217,8 @@ fdopendir (int fd)
 
   if (dir)
     close (fd);
+  if (proc_file != buf)
+    free (proc_file);
   errno = saved_errno;
   return dir;
 }
@@ -244,19 +268,3 @@ fdopendir (int fd)
 #undef AT_FUNC_USE_F1_COND
 #undef AT_FUNC_POST_FILE_PARAM_DECLS
 #undef AT_FUNC_POST_FILE_ARGS
-
-/* Replacement for Solaris' function by the same name.
-   Invoke chown or lchown on file, FILE, using OWNER and GROUP, in the
-   directory open on descriptor FD.  If FLAG is AT_SYMLINK_NOFOLLOW, then
-   use lchown, otherwise, use chown.  If possible, do it without changing
-   the working directory.  Otherwise, resort to using save_cwd/fchdir,
-   then mkdir/restore_cwd.  If either the save_cwd or the restore_cwd
-   fails, then give a diagnostic and exit nonzero.  */
-
-#define AT_FUNC_NAME fchownat
-#define AT_FUNC_F1 lchown
-#define AT_FUNC_F2 chown
-#define AT_FUNC_USE_F1_COND flag == AT_SYMLINK_NOFOLLOW
-#define AT_FUNC_POST_FILE_PARAM_DECLS , uid_t owner, gid_t group, int flag
-#define AT_FUNC_POST_FILE_ARGS        , owner, group
-#include "at-func.c"

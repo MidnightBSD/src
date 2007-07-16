@@ -32,7 +32,7 @@
 #include <sys/stat.h>
 
 #ifdef HAVE_LOCALE_H
-#  include <locale.h>
+# include <locale.h>
 #endif
 
 #include "filetypes.h"
@@ -40,7 +40,7 @@
 #include "dstring.h"
 #include "extern.h"
 #include <rmt.h>
-#include <localedir.h>
+#include <rmt-command.h>
 
 enum cpio_options {
   NO_ABSOLUTE_FILENAMES_OPTION=256,
@@ -667,7 +667,6 @@ process_args (int argc, char *argv[])
       CHECK_USAGE(retain_time_flag, "--preserve-modification-time",
 		  "--create");
       CHECK_USAGE(no_chown_flag, "--no-preserve-owner", "--create");
-      CHECK_USAGE(set_owner_flag||set_group_flag, "--owner", "--create");
       CHECK_USAGE(swap_bytes_flag, "--swap-bytes (--swap)", "--create");
       CHECK_USAGE(swap_halfwords_flag, "--swap-halfwords (--swap)",
 		  "--create");
@@ -691,8 +690,10 @@ process_args (int argc, char *argv[])
   else
     {
       /* Copy pass.  */
-      if (index != argc - 1)
+      if (index < argc - 1)
 	error (PAXEXIT_FAILURE, 0, _("Too many arguments"));
+      else if (index > argc - 1)
+	error (PAXEXIT_FAILURE, 0, _("Not enough arguments"));
 
       if (archive_format != arf_unknown)
 	error (PAXEXIT_FAILURE, 0, 

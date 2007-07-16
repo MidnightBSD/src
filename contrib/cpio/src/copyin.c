@@ -185,8 +185,8 @@ list_file(struct cpio_file_stat* file_hdr, int in_file_des)
 }
 
 static int
-try_existing_file(struct cpio_file_stat* file_hdr, int in_file_des,
-		  int *existing_dir)
+try_existing_file (struct cpio_file_stat* file_hdr, int in_file_des,
+		   int *existing_dir)
 {
   struct stat file_stat;
 
@@ -387,10 +387,11 @@ create_final_defers ()
 	  continue;
 	}
 
+      set_perms (out_file_des, &d->header);
+
       if (close (out_file_des) < 0)
 	close_error (d->header.c_name);
 
-      set_perms (&d->header);
     }
 }
 
@@ -443,7 +444,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 	    {
 	      tape_toss_input (in_file_des, file_hdr->c_filesize);
 	      tape_skip_padding (in_file_des, file_hdr->c_filesize);
-	  return;
+	      return;
 	    }
 	}
       else if (file_hdr->c_nlink > 1
@@ -540,6 +541,9 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
       write (out_file_des, "", 1);
       delayed_seek_count = 0;
     }
+
+  set_perms (out_file_des, file_hdr);
+
   if (close (out_file_des) < 0)
     close_error (file_hdr->c_name);
 
@@ -549,8 +553,6 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 	error (0, 0, _("%s: checksum error (0x%lx, should be 0x%lx)"),
 	       file_hdr->c_name, crc, file_hdr->c_chksum);
     }
-
-  set_perms (file_hdr);
 
   tape_skip_padding (in_file_des, file_hdr->c_filesize);
   if (file_hdr->c_nlink > 1
@@ -565,7 +567,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 }
 
 static void
-copyin_directory(struct cpio_file_stat* file_hdr, int existing_dir)
+copyin_directory (struct cpio_file_stat *file_hdr, int existing_dir)
 {
   int res;			/* Result of various function calls.  */
 #ifdef HPUX_CDF
@@ -643,11 +645,11 @@ copyin_directory(struct cpio_file_stat* file_hdr, int existing_dir)
 	}
     }
 
-  set_perms (file_hdr); 
+  set_perms (-1, file_hdr); 
 }
 
 static void
-copyin_device(struct cpio_file_stat* file_hdr)
+copyin_device (struct cpio_file_stat* file_hdr)
 {
   int res;			/* Result of various function calls.  */
 
@@ -715,7 +717,8 @@ copyin_device(struct cpio_file_stat* file_hdr)
   if (chmod (file_hdr->c_name, file_hdr->c_mode) < 0)
     chmod_error_details (file_hdr->c_name, file_hdr->c_mode);
   if (retain_time_flag)
-    set_file_times (file_hdr->c_name, file_hdr->c_mtime, file_hdr->c_mtime);
+    set_file_times (-1, file_hdr->c_name, file_hdr->c_mtime,
+		    file_hdr->c_mtime);
 }
 
 static void
@@ -778,11 +781,11 @@ copyin_file (struct cpio_file_stat* file_hdr, int in_file_des)
   switch (file_hdr->c_mode & CP_IFMT)
     {
     case CP_IFREG:
-      copyin_regular_file(file_hdr, in_file_des);
+      copyin_regular_file (file_hdr, in_file_des);
       break;
 
     case CP_IFDIR:
-      copyin_directory(file_hdr, existing_dir);
+      copyin_directory (file_hdr, existing_dir);
       break;
 
     case CP_IFCHR:
@@ -793,12 +796,12 @@ copyin_file (struct cpio_file_stat* file_hdr, int in_file_des)
 #ifdef CP_IFIFO
     case CP_IFIFO:
 #endif
-      copyin_device(file_hdr);
+      copyin_device (file_hdr);
       break;
 
 #ifdef CP_IFLNK
     case CP_IFLNK:
-      copyin_link(file_hdr, in_file_des);
+      copyin_link (file_hdr, in_file_des);
       break;
 #endif
 
@@ -854,7 +857,7 @@ long_format (struct cpio_file_stat *file_hdr, char *link_name)
     printf ("%3lu, %3lu ", file_hdr->c_rdev_maj,
 	    file_hdr->c_rdev_min);
   else
-    printf ("%8lu ", file_hdr->c_filesize);
+    printf ("%8"PRIuMAX" ", (uintmax_t) file_hdr->c_filesize);
 
   printf ("%s ", tbuf + 4);
 
@@ -978,7 +981,9 @@ from_ascii (char const *where, size_t digs, unsigned logbase)
       if (buf == end)
 	return 0;
     }
-  
+
+  if (buf == end || *buf == 0)
+    return 0;
   while (1)
     {
       unsigned d;

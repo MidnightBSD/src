@@ -60,7 +60,7 @@
 #endif
 
 #include <rmt.h>
-#include <localedir.h>
+#include <rmt-command.h>
 
 /* Exit status if exec errors.  */
 #define EXIT_ON_EXEC_ERROR 128

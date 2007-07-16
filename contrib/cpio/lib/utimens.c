@@ -1,6 +1,7 @@
 /* Set file access and modification times.
 
-   Copyright (C) 2003, 2004, 2005, 2006 Free Software Foundation, Inc.
+   Copyright (C) 2003, 2004, 2005, 2006, 2007 Free Software
+   Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -26,6 +27,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #if HAVE_UTIME_H
@@ -73,9 +75,26 @@ struct utimbuf
    Return 0 on success, -1 (setting errno) on failure.  */
 
 int
-futimens (int fd ATTRIBUTE_UNUSED,
-	  char const *file, struct timespec const timespec[2])
+gl_futimens (int fd ATTRIBUTE_UNUSED,
+	     char const *file, struct timespec const timespec[2])
 {
+  /* Some Linux-based NFS clients are buggy, and mishandle time stamps
+     of files in NFS file systems in some cases.  We have no
+     configure-time test for this, but please see
+     <http://bugs.gentoo.org/show_bug.cgi?id=132673> for references to
+     some of the problems with Linux 2.6.16.  If this affects you,
+     compile with -DHAVE_BUGGY_NFS_TIME_STAMPS; this is reported to
+     help in some cases, albeit at a cost in performance.  But you
+     really should upgrade your kernel to a fixed version, since the
+     problem affects many applications.  */
+
+#if HAVE_BUGGY_NFS_TIME_STAMPS
+  if (fd < 0)
+    sync ();
+  else
+    fsync (fd);
+#endif
+
   /* There's currently no interface to set file timestamps with
      nanosecond resolution, so do the best we can, discarding any
      fractional part of the timestamp.  */
@@ -166,5 +185,5 @@ futimens (int fd ATTRIBUTE_UNUSED,
 int
 utimens (char const *file, struct timespec const timespec[2])
 {
-  return futimens (-1, file, timespec);
+  return gl_futimens (-1, file, timespec);
 }

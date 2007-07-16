@@ -24,6 +24,18 @@
 /* Get declarations of GNU message catalog functions.  */
 # include <libintl.h>
 
+/* You can set the DEFAULT_TEXT_DOMAIN macro to specify the domain used by
+   the gettext() and ngettext() macros.  This is an alternative to calling
+   textdomain(), and is useful for libraries.  */
+# ifdef DEFAULT_TEXT_DOMAIN
+#  undef gettext
+#  define gettext(Msgid) \
+     dgettext (DEFAULT_TEXT_DOMAIN, Msgid)
+#  undef ngettext
+#  define ngettext(Msgid1, Msgid2, N) \
+     dngettext (DEFAULT_TEXT_DOMAIN, Msgid1, Msgid2, N)
+# endif
+
 #else
 
 /* Solaris /usr/include/locale.h includes /usr/include/libintl.h, which
@@ -52,17 +64,22 @@
    On pre-ANSI systems without 'const', the config.h file is supposed to
    contain "#define const".  */
 # define gettext(Msgid) ((const char *) (Msgid))
-# define dgettext(Domainname, Msgid) ((const char *) (Msgid))
-# define dcgettext(Domainname, Msgid, Category) ((const char *) (Msgid))
+# define dgettext(Domainname, Msgid) ((void) (Domainname), gettext (Msgid))
+# define dcgettext(Domainname, Msgid, Category) \
+    ((void) (Category), dgettext (Domainname, Msgid))
 # define ngettext(Msgid1, Msgid2, N) \
-    ((N) == 1 ? (const char *) (Msgid1) : (const char *) (Msgid2))
+    ((N) == 1 \
+     ? ((void) (Msgid2), (const char *) (Msgid1)) \
+     : ((void) (Msgid1), (const char *) (Msgid2)))
 # define dngettext(Domainname, Msgid1, Msgid2, N) \
-    ((N) == 1 ? (const char *) (Msgid1) : (const char *) (Msgid2))
+    ((void) (Domainname), ngettext (Msgid1, Msgid2, N))
 # define dcngettext(Domainname, Msgid1, Msgid2, N, Category) \
-    ((N) == 1 ? (const char *) (Msgid1) : (const char *) (Msgid2))
+    ((void) (Category), dngettext(Domainname, Msgid1, Msgid2, N))
 # define textdomain(Domainname) ((const char *) (Domainname))
-# define bindtextdomain(Domainname, Dirname) ((const char *) (Dirname))
-# define bind_textdomain_codeset(Domainname, Codeset) ((const char *) (Codeset))
+# define bindtextdomain(Domainname, Dirname) \
+    ((void) (Domainname), (const char *) (Dirname))
+# define bind_textdomain_codeset(Domainname, Codeset) \
+    ((void) (Domainname), (const char *) (Codeset))
 
 #endif
 
@@ -82,14 +99,24 @@
    MSGID.  MSGCTXT and MSGID must be string literals.  MSGCTXT should be
    short and rarely need to change.
    The letter 'p' stands for 'particular' or 'special'.  */
-#define pgettext(Msgctxt, Msgid) \
-  pgettext_aux (NULL, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, LC_MESSAGES)
+#ifdef DEFAULT_TEXT_DOMAIN
+# define pgettext(Msgctxt, Msgid) \
+   pgettext_aux (DEFAULT_TEXT_DOMAIN, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, LC_MESSAGES)
+#else
+# define pgettext(Msgctxt, Msgid) \
+   pgettext_aux (NULL, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, LC_MESSAGES)
+#endif
 #define dpgettext(Domainname, Msgctxt, Msgid) \
   pgettext_aux (Domainname, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, LC_MESSAGES)
 #define dcpgettext(Domainname, Msgctxt, Msgid, Category) \
   pgettext_aux (Domainname, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, Category)
-#define npgettext(Msgctxt, Msgid, MsgidPlural, N) \
-  npgettext_aux (NULL, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, MsgidPlural, N, LC_MESSAGES)
+#ifdef DEFAULT_TEXT_DOMAIN
+# define npgettext(Msgctxt, Msgid, MsgidPlural, N) \
+   npgettext_aux (DEFAULT_TEXT_DOMAIN, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, MsgidPlural, N, LC_MESSAGES)
+#else
+# define npgettext(Msgctxt, Msgid, MsgidPlural, N) \
+   npgettext_aux (NULL, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, MsgidPlural, N, LC_MESSAGES)
+#endif
 #define dnpgettext(Domainname, Msgctxt, Msgid, MsgidPlural, N) \
   npgettext_aux (Domainname, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, MsgidPlural, N, LC_MESSAGES)
 #define dcnpgettext(Domainname, Msgctxt, Msgid, MsgidPlural, N, Category) \
@@ -142,7 +169,8 @@ npgettext_aux (const char *domain,
 #include <string.h>
 
 #define _LIBGETTEXT_HAVE_VARIABLE_SIZE_ARRAYS \
-  (__GNUC__ >= 3 || defined __cplusplus)
+  (((__GNUC__ >= 3 || __GNUG__ >= 2) && !__STRICT_ANSI__) \
+   /* || __STDC_VERSION__ >= 199901L */ )
 
 #if !_LIBGETTEXT_HAVE_VARIABLE_SIZE_ARRAYS
 #include <stdlib.h>

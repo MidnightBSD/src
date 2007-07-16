@@ -16,6 +16,10 @@
    Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02110-1301 USA.  */
 
+#include "paxlib.h"
+#include "quotearg.h"
+#include "quote.h"
+
 enum archive_format
 {
   arf_unknown, arf_binary, arf_oldascii, arf_newascii, arf_crcascii,
@@ -162,12 +166,12 @@ void swahw_array (char *ptr, int count);
 void tape_buffered_write (char *in_buf, int out_des, off_t num_bytes);
 void tape_buffered_read (char *in_buf, int in_des, off_t num_bytes);
 int tape_buffered_peek (char *peek_buf, int in_des, int num_bytes);
-void tape_toss_input (int in_des, long num_bytes);
+void tape_toss_input (int in_des, off_t num_bytes);
 void copy_files_tape_to_disk (int in_des, int out_des, off_t num_bytes);
 void copy_files_disk_to_tape (int in_des, int out_des, off_t num_bytes, char *filename);
 void copy_files_disk_to_disk (int in_des, int out_des, off_t num_bytes, char *filename);
 void warn_if_file_changed (char *file_name, unsigned long old_file_size,
-                           unsigned long old_file_mtime);
+                           off_t old_file_mtime);
 void create_all_directories (char *name);
 void prepare_append (int out_file_des);
 char *find_inode_file (unsigned long node_num,
@@ -199,8 +203,9 @@ void write_nuls_to_file (off_t num_bytes, int out_des,
 # define UMASKED_SYMLINK(name1,name2,mode)    umasked_symlink(name1,name2,mode)
 #endif /* SYMLINK_USES_UMASK */
 
-void set_perms (struct cpio_file_stat *header);
-void set_file_times (const char *name, unsigned long atime, unsigned long mtime);
+void set_perms (int fd, struct cpio_file_stat *header);
+void set_file_times (int fd, const char *name, unsigned long atime,
+		     unsigned long mtime);
 void stat_to_cpio (struct cpio_file_stat *hdr, struct stat *st);
 void cpio_safer_name_suffix (char *name, bool link_target,
 			     bool absolute_names, bool strip_leading_dots);

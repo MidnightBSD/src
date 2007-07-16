@@ -238,10 +238,11 @@ writeout_defered_file (struct cpio_file_stat *header, int out_file_des)
 
   tape_pad_output (out_file_des, file_hdr.c_filesize);
 
-  if (close (in_file_des) < 0)
-   close_error (header->c_name);
   if (reset_time_flag)
-    set_file_times (file_hdr.c_name, file_hdr.c_mtime, file_hdr.c_mtime);
+    set_file_times (in_file_des, file_hdr.c_name, file_hdr.c_mtime,
+		    file_hdr.c_mtime);
+  if (close (in_file_des) < 0)
+    close_error (header->c_name);
 }
 
 /* When writing newc and crc format archives we defer multiply linked
@@ -508,7 +509,7 @@ write_out_binary_header (dev_t rdev,
   short_hdr.c_filesizes[0] = file_hdr->c_filesize >> 16;
   short_hdr.c_filesizes[1] = file_hdr->c_filesize & 0xFFFF;
 
-  if ((short_hdr.c_filesizes[0] << 16) + short_hdr.c_filesizes[1]
+  if (((off_t)short_hdr.c_filesizes[0] << 16) + short_hdr.c_filesizes[1]
        != file_hdr->c_filesize)
     {
       field_width_error (file_hdr->c_name, _("file size"));
@@ -579,6 +580,14 @@ write_out_header (struct cpio_file_stat *file_hdr, int out_des)
     }
 }
 
+static void
+assign_string (char **pvar, char *value)
+{
+  char *p = xrealloc (*pvar, strlen (value) + 1);
+  strcpy (p, value);
+  *pvar = p;
+}
+
 /* Read a list of file names from the standard input
    and write a cpio collection on the standard output.
    The format of the header depends on the compatibility (-c) flag.  */
@@ -592,6 +601,7 @@ process_copy_out ()
   struct cpio_file_stat file_hdr; /* Output header information.  */
   int in_file_des;		/* Source file descriptor.  */
   int out_file_des;		/* Output file descriptor.  */
+  char *orig_file_name = NULL;
 
   /* Initialize the copy out.  */
   ds_init (&input_name, 128);
@@ -637,8 +647,6 @@ process_copy_out ()
 	stat_error (input_name.ds_string);
       else
 	{
-	  char *orig_file_name;
-	  
 	  /* Set values in output header.  */
 	  stat_to_cpio (&file_hdr, &file_stat);
 	  
@@ -657,7 +665,7 @@ process_copy_out ()
 		}
 	    }
 	  
-	  orig_file_name = strdup (input_name.ds_string);
+	  assign_string (&orig_file_name, input_name.ds_string);
 	  cpio_safer_name_suffix (input_name.ds_string, false,
 				  !no_abs_paths_flag, true);
 #ifndef HPUX_CDF
@@ -741,11 +749,12 @@ process_copy_out ()
 
 	      tape_pad_output (out_file_des, file_hdr.c_filesize);
 
+	      if (reset_time_flag)
+                set_file_times (in_file_des,
+				orig_file_name,
+                                file_stat.st_atime, file_stat.st_mtime);
 	      if (close (in_file_des) < 0)
 		close_error (orig_file_name);
-	      if (reset_time_flag)
-                set_file_times (orig_file_name,
-                                file_stat.st_atime, file_stat.st_mtime);
 	      break;
 
 	    case CP_IFDIR:
@@ -806,6 +815,7 @@ process_copy_out ()
 		    free (link_name);
 		    continue;
 		  }
+		link_name[link_size] = 0;
 		cpio_safer_name_suffix (link_name, false,
 					!no_abs_paths_flag, true);
 		link_size = strlen (link_name);
@@ -845,10 +855,11 @@ process_copy_out ()
 	    fprintf (stderr, "%s\n", orig_file_name);
 	  if (dot_flag)
 	    fputc ('.', stderr);
-	  free (orig_file_name);
 	}
     }
 
+  free (orig_file_name);
+  
   writeout_final_defers(out_file_des);
   /* The collection is complete; append the trailer.  */
   file_hdr.c_ino = 0;

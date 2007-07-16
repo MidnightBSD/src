@@ -1,7 +1,7 @@
 %{
 /* Parse a string into an internal time stamp.
 
-   Copyright (C) 1999, 2000, 2002, 2003, 2004, 2005, 2006 Free Software
+   Copyright (C) 1999, 2000, 2002, 2003, 2004, 2005, 2006, 2007 Free Software
    Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 #include <config.h>
 
 #include "getdate.h"
+#include "timespec.h"
 
 /* There's no need to extend the stack, so there's no need to involve
    alloca.  */
@@ -195,7 +196,7 @@ typedef struct
 
 union YYSTYPE;
 static int yylex (union YYSTYPE *, parser_control *);
-static int yyerror (parser_control *, char *);
+static int yyerror (parser_control const *, char const *);
 static long int time_zone_hhmm (textint, long int);
 
 %}
@@ -1106,7 +1107,8 @@ yylex (YYSTYPE *lvalp, parser_control *pc)
 
 /* Do nothing if the parser reports an error.  */
 static int
-yyerror (parser_control *pc ATTRIBUTE_UNUSED, char *s ATTRIBUTE_UNUSED)
+yyerror (parser_control const *pc ATTRIBUTE_UNUSED,
+	 char const *s ATTRIBUTE_UNUSED)
 {
   return 0;
 }

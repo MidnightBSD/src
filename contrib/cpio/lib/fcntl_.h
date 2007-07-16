@@ -1,6 +1,6 @@
 /* Like <fcntl.h>, but with non-working flags defined to 0.
 
-   Copyright (C) 2006 Free Software Foundation, Inc.
+   Copyright (C) 2006-2007 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,12 +19,38 @@
 /* written by Paul Eggert */
 
 #ifndef _GL_FCNTL_H
-#define _GL_FCNTL_H
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include @ABSOLUTE_FCNTL_H@
+/* The include_next requires a split double-inclusion guard.  */
+#if @HAVE_INCLUDE_NEXT@
+# include_next <fcntl.h>
+#else
+# include @ABSOLUTE_FCNTL_H@
+#endif
+
+#ifndef _GL_FCNTL_H
+#define _GL_FCNTL_H
+
+
+/* Declare overridden functions.  */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef FCHDIR_REPLACEMENT
+# define open rpl_open
+extern int open (const char *, int, ...);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+
+/* Fix up the O_* macros.  */
 
 #if !defined O_DIRECT && defined O_DIRECTIO
 /* Tru64 spells it `O_DIRECTIO'.  */
@@ -59,9 +85,6 @@
 # define O_NOCTTY 0
 #endif
 
-#ifdef O_NOFOLLOW_IS_INEFFECTIVE
-# undef O_NOFOLLOW
-#endif
 #ifndef O_NOFOLLOW
 # define O_NOFOLLOW 0
 #endif
@@ -97,4 +120,6 @@
 # define O_TEXT 0
 #endif
 
-#endif
+
+#endif /* _GL_FCNTL_H */
+#endif /* _GL_FCNTL_H */

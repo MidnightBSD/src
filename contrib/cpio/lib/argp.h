@@ -1,5 +1,5 @@
 /* Hierarchial argument parsing, layered over getopt.
-   Copyright (C) 1995-1999,2003-2006 Free Software Foundation, Inc.
+   Copyright (C) 1995-1999,2003-2007 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
 
@@ -49,10 +49,12 @@
 #endif
 
 /* GCC 2.95 and later have "__restrict"; C99 compilers have
-   "restrict", and "configure" may have defined "restrict".  */
+   "restrict", and "configure" may have defined "restrict".
+   Other compilers use __restrict, __restrict__, and _Restrict, and
+   'configure' might #define 'restrict' to those words.  */
 #ifndef __restrict
 # if ! (2 < __GNUC__ || (2 == __GNUC__ && 95 <= __GNUC_MINOR__))
-#  if defined restrict || 199901L <= __STDC_VERSION__
+#  if 199901L <= __STDC_VERSION__
 #   define __restrict restrict
 #  else
 #   define __restrict
@@ -413,11 +415,11 @@ struct argp_state
    returned.  This function may also call exit unless the ARGP_NO_HELP flag
    is set.  INPUT is a pointer to a value to be passed in to the parser.  */
 extern error_t argp_parse (const struct argp *__restrict __argp,
-			   int __argc, char **__restrict __argv,
+			   int /*argc*/, char **__restrict /*argv*/,
 			   unsigned __flags, int *__restrict __arg_index,
 			   void *__restrict __input);
 extern error_t __argp_parse (const struct argp *__restrict __argp,
-			     int __argc, char **__restrict __argv,
+			     int /*argc*/, char **__restrict /*argv*/,
 			     unsigned __flags, int *__restrict __arg_index,
 			     void *__restrict __input);
 
@@ -582,7 +584,7 @@ extern void *__argp_input (const struct argp *__restrict __argp,
 # endif
 
 ARGP_EI void
-__NTH (__argp_usage (const struct argp_state *__state))
+__argp_usage (const struct argp_state *__state)
 {
   __argp_state_help (__state, stderr, ARGP_HELP_STD_USAGE);
 }

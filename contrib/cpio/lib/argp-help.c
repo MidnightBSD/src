@@ -1,5 +1,5 @@
 /* Hierarchial argument parsing help output
-   Copyright (C) 1995-2003, 2004, 2005 Free Software Foundation, Inc.
+   Copyright (C) 1995-2005, 2007 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
 
@@ -162,7 +162,7 @@ fill_in_uparams (const struct argp_state *state)
   const char *var = getenv ("ARGP_HELP_FMT");
   struct uparams new_params = uparams;
   
-#define SKIPWS(p) do { while (isspace (*p)) p++; } while (0);
+#define SKIPWS(p) do { while (isspace ((unsigned char) *p)) p++; } while (0);
 
   if (var)
     {
@@ -171,14 +171,14 @@ fill_in_uparams (const struct argp_state *state)
 	{
 	  SKIPWS (var);
 	  
-	  if (isalpha (*var))
+	  if (isalpha ((unsigned char) *var))
 	    {
 	      size_t var_len;
 	      const struct uparam_name *un;
 	      int unspec = 0, val = 0;
 	      const char *arg = var;
 
-	      while (isalnum (*arg) || *arg == '-' || *arg == '_')
+	      while (isalnum ((unsigned char) *arg) || *arg == '-' || *arg == '_')
 		arg++;
 	      var_len = arg - var;
 	      
@@ -203,10 +203,10 @@ fill_in_uparams (const struct argp_state *state)
 		  else
 		    val = 1;
 		}
-	      else if (isdigit (*arg))
+	      else if (isdigit ((unsigned char) *arg))
 		{
 		  val = atoi (arg);
-		  while (isdigit (*arg))
+		  while (isdigit ((unsigned char) *arg))
 		    arg++;
 		  SKIPWS (arg);
 		}
@@ -375,6 +375,9 @@ struct hol_entry
 
   /* The argp from which this option came.  */
   const struct argp *argp;
+
+  /* Position in the array */
+  unsigned ord;
 };
 
 /* A cluster of entries to reflect the argp tree structure.  */
@@ -673,10 +676,12 @@ static int
 hol_cluster_cmp (const struct hol_cluster *cl1, const struct hol_cluster *cl2)
 {
   /* If one cluster is deeper than the other, use its ancestor at the same
-     level, so that finding the common ancestor is straightforward.  */
-  while (cl1->depth < cl2->depth)
+     level, so that finding the common ancestor is straightforward.
+     
+     clN->depth > 0 means that clN->parent != NULL (see hol_add_cluster) */
+  while (cl1->depth > cl2->depth)
     cl1 = cl1->parent;
-  while (cl2->depth < cl1->depth)
+  while (cl2->depth > cl1->depth)
     cl2 = cl2->parent;
 
   /* Now reduce both clusters to their ancestors at the point where both have
@@ -720,16 +725,18 @@ canon_doc_option (const char **name)
   else
     {
       /* Skip initial whitespace.  */
-      while (isspace (**name))
+      while (isspace ((unsigned char) **name))
 	(*name)++;
       /* Decide whether this looks like an option (leading `-') or not.  */
       non_opt = (**name != '-');
       /* Skip until part of name used for sorting.  */
-      while (**name && !isalnum (**name))
+      while (**name && !isalnum ((unsigned char) **name))
 	(*name)++;
     }
   return non_opt;
 }
+
+#define HOL_ENTRY_PTRCMP(a,b) ((a)->ord < (b)->ord ? -1 : 1)
 
 /* Order ENTRY1 & ENTRY2 by the order which they should appear in a help
    listing.  */
@@ -740,6 +747,7 @@ hol_entry_cmp (const struct hol_entry *entry1,
   /* The group numbers by which the entries should be ordered; if either is
      in a cluster, then this is just the group within the cluster.  */
   int group1 = entry1->group, group2 = entry2->group;
+  int rc;
 
   if (entry1->cluster != entry2->cluster)
     {
@@ -756,7 +764,8 @@ hol_entry_cmp (const struct hol_entry *entry1,
 	return group_cmp (hol_cluster_base (entry1->cluster)->group, group2, 1);
       else
 	/* Both entries are in clusters, we can just compare the clusters.  */
-	return hol_cluster_cmp (entry1->cluster, entry2->cluster);
+	return (rc = hol_cluster_cmp (entry1->cluster, entry2->cluster)) ?
+	        rc : HOL_ENTRY_PTRCMP(entry1, entry2);
     }
   else if (group1 == group2)
     /* The entries are both in the same cluster and group, so compare them
@@ -780,7 +789,8 @@ hol_entry_cmp (const struct hol_entry *entry1,
 	return doc1 - doc2;
       else if (!short1 && !short2 && long1 && long2)
 	/* Only long options.  */
-	return __strcasecmp (long1, long2);
+	return (rc = __strcasecmp (long1, long2)) ?
+                 rc : HOL_ENTRY_PTRCMP(entry1, entry2);
       else
 	/* Compare short/short, long/short, short/long, using the first
 	   character of long options.  Entries without *any* valid
@@ -797,13 +807,15 @@ hol_entry_cmp (const struct hol_entry *entry1,
 #endif
 	  /* Compare ignoring case, except when the options are both the
 	     same letter, in which case lower-case always comes first.  */
-	  return lower_cmp ? lower_cmp : first2 - first1;
+	  return lower_cmp ? lower_cmp : 
+                    (rc = first2 - first1) ?
+	             rc : HOL_ENTRY_PTRCMP(entry1, entry2);
 	}
     }
   else
     /* Within the same cluster, but not the same group, so just compare
        groups.  */
-    return group_cmp (group1, group2, 0);
+    return group_cmp (group1, group2, HOL_ENTRY_PTRCMP(entry1, entry2));
 }
 
 /* Version of hol_entry_cmp with correct signature for qsort.  */
@@ -820,8 +832,14 @@ static void
 hol_sort (struct hol *hol)
 {
   if (hol->num_entries > 0)
-    qsort (hol->entries, hol->num_entries, sizeof (struct hol_entry),
-	   hol_entry_qcmp);
+    {
+      unsigned i;
+      struct hol_entry *e;
+      for (i = 0, e = hol->entries; i < hol->num_entries; i++, e++)
+	e->ord = i;
+      qsort (hol->entries, hol->num_entries, sizeof (struct hol_entry),
+	     hol_entry_qcmp);
+    }
 }
 
 /* Append MORE to HOL, destroying MORE in the process.  Options in HOL shadow

@@ -24,46 +24,11 @@
    come together again in the future.  */
 
 #include <system.h>
-
-#ifdef __GNUC__
-#define alloca __builtin_alloca
-#else
-#ifdef HAVE_ALLOCA_H
-#include <alloca.h>
-#else
-#ifdef _AIX
- #pragma alloca
-#else
-char *alloca ();
-#endif
-#endif
-#endif
+#include <paxlib.h>
 
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#if !defined(S_ISDIR) && defined(S_IFDIR)
-#define	S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
-#endif
-
-#include <errno.h>
-#ifdef STDC_HEADERS
-#include <stdlib.h>
-#else
-extern int errno;
-#endif
-
-#if defined(STDC_HEADERS) || defined(HAVE_STRING_H)
-#include <string.h>
-#ifndef index
-#define index strchr
-#endif
-#else
-#include <strings.h>
-#endif
 
 /* Ensure that the directory ARGPATH exists.
    Remove any trailing slashes from ARGPATH before calling this function.
