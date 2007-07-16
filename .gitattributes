@@ -3044,7 +3044,6 @@ contrib/cpio/ABOUT-NLS -text
 contrib/cpio/AUTHORS -text
 contrib/cpio/COPYING -text
 contrib/cpio/ChangeLog -text
-contrib/cpio/FREEBSD-upgrade -text
 contrib/cpio/INSTALL -text
 contrib/cpio/MIDNIGHTBSD-upgrade -text
 contrib/cpio/Makefile -text
