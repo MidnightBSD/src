@@ -26,6 +26,7 @@
 #include "cpiohdr.h"
 #include "dstring.h"
 #include "extern.h"
+#include "paxlib.h"
 
 #ifndef HAVE_LCHOWN
 # define lchown chown
@@ -34,12 +35,12 @@
 
 /* A wrapper around set_perms using another set of arguments */
 static void
-set_copypass_perms (const char *name, struct stat *st)
+set_copypass_perms (int fd, const char *name, struct stat *st)
 {
   struct cpio_file_stat header;
   header.c_name = name;
   stat_to_cpio (&header, st);
-  set_perms (&header);
+  set_perms (fd, &header);
 }
 
 /* Copy files listed on the standard input into directory `directory_name'.
@@ -192,22 +193,28 @@ process_copy_pass ()
 		  write (out_file_des, "", 1);
 		  delayed_seek_count = 0;
 		}
-	      if (close (in_file_des) < 0)
-		close_error (input_name.ds_string);
-	      if (close (out_file_des) < 0)
-		close_error (output_name.ds_string);
 
-	      set_copypass_perms (output_name.ds_string, &in_file_stat);
+	      set_copypass_perms (out_file_des,
+				  output_name.ds_string, &in_file_stat);
 
 	      if (reset_time_flag)
                 {
-                  set_file_times (input_name.ds_string,
+                  set_file_times (in_file_des,
+				  input_name.ds_string,
                                   in_file_stat.st_atime,
                                   in_file_stat.st_mtime);
-                  set_file_times (output_name.ds_string,
+                  set_file_times (out_file_des,
+				  output_name.ds_string,
                                   in_file_stat.st_atime,
                                   in_file_stat.st_mtime);
 	        } 
+
+	      if (close (in_file_des) < 0)
+		close_error (input_name.ds_string);
+
+	      if (close (out_file_des) < 0)
+		close_error (output_name.ds_string);
+
 	      warn_if_file_changed(input_name.ds_string, in_file_stat.st_size,
                                    in_file_stat.st_mtime);
 	    }
@@ -257,7 +264,7 @@ process_copy_pass ()
 		  continue;
 		}
 	    }
-	  set_copypass_perms (output_name.ds_string, &in_file_stat);
+	  set_copypass_perms (-1, output_name.ds_string, &in_file_stat);
 	}
       else if (S_ISCHR (in_file_stat.st_mode) ||
 	       S_ISBLK (in_file_stat.st_mode) ||
@@ -296,7 +303,7 @@ process_copy_pass ()
 		  mknod_error (output_name.ds_string);
 		  continue;
 		}
-	      set_copypass_perms (output_name.ds_string, &in_file_stat);
+	      set_copypass_perms (-1, output_name.ds_string, &in_file_stat);
 	    }
 	}
 
@@ -327,7 +334,7 @@ process_copy_pass ()
 	    }
 	  if (res < 0)
 	    {
-	      symlink_error (output_name.ds_string);
+	      symlink_error (output_name.ds_string, link_name);
 	      free (link_name);
 	      continue;
 	    }
