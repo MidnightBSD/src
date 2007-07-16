@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/cpio/Makefile,v 1.2 2007/04/12 03:46:39 laffer1 Exp $
 
 CPIODIR= ${.CURDIR}/../../../contrib/cpio
 .PATH: ${CPIODIR}/lib ${CPIODIR}/src ${CPIODIR}/doc
@@ -40,7 +40,6 @@ SRCS=   copyin.c \
 	getopt.c \
 	getopt1.c \
 	hash.c \
-	mbchar.c \
 	mempcpy.c \
 	open-safer.c \
 	paxconvert.c \
@@ -55,8 +54,6 @@ SRCS=   copyin.c \
 	safe-write.c \
 	setenv.c \
 	stpcpy.c \
-	strcasecmp.c \
-	strncasecmp.c \
 	strchrnul.c \
 	stripslash.c \
 	strndup.c \

@@ -19,6 +19,8 @@ Street, Fifth Floor, Boston, MA 02110-1301 USA.  */
 
 #define	_FNMATCH_H	1
 
+#include <fnmatch.h>
+
 #ifdef	__cplusplus
 extern "C" {
 #endif

@@ -1,14 +1,50 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define this to an absolute name of <dirent.h>. */
+/* #undef ABSOLUTE_DIRENT_H */
+
 /* Define this to an absolute name of <fcntl.h>. */
 #define ABSOLUTE_FCNTL_H "///usr/include/fcntl.h"
+
+/* Define this to an absolute name of <float.h>. */
+/* #undef ABSOLUTE_FLOAT_H */
 
 /* Define this to an absolute name of <inttypes.h>. */
 #define ABSOLUTE_INTTYPES_H "///usr/include/inttypes.h"
 
 /* Define this to an absolute name of <stdint.h>. */
 #define ABSOLUTE_STDINT_H "///usr/include/stdint.h"
+
+/* Define this to an absolute name of <stdio.h>. */
+#define ABSOLUTE_STDIO_H "///usr/include/stdio.h"
+
+/* Define this to an absolute name of <stdlib.h>. */
+#define ABSOLUTE_STDLIB_H "///usr/include/stdlib.h"
+
+/* Define this to an absolute name of <string.h>. */
+#define ABSOLUTE_STRING_H "///usr/include/string.h"
+
+/* Define this to an absolute name of <sysexits.h>. */
+#define ABSOLUTE_SYSEXITS_H "///usr/include/sysexits.h"
+
+/* Define this to an absolute name of <sys/stat.h>. */
+#define ABSOLUTE_SYS_STAT_H "///usr/include/sys/stat.h"
+
+/* Define this to an absolute name of <sys/time.h>. */
+#define ABSOLUTE_SYS_TIME_H "///usr/include/sys/time.h"
+
+/* Define this to an absolute name of <time.h>. */
+#define ABSOLUTE_TIME_H "///usr/include/time.h"
+
+/* Define this to an absolute name of <unistd.h>. */
+#define ABSOLUTE_UNISTD_H "///usr/include/unistd.h"
+
+/* Define this to an absolute name of <wchar.h>. */
+/* #undef ABSOLUTE_WCHAR_H */
+
+/* Define this to an absolute name of <wctype.h>. */
+#define ABSOLUTE_WCTYPE_H "///usr/include/wctype.h"
 
 /* Define to the number of bits in type 'ptrdiff_t'. */
 /* #undef BITSIZEOF_PTRDIFF_T */
@@ -42,11 +78,20 @@
 /* Define full file name of rmt program. */
 /* #undef DEFAULT_RMT_COMMAND */
 
-/* Define to 1 if // is a file system root distinct from /. */
-#define DOUBLE_SLASH_IS_DISTINCT_ROOT 0
+/* the name of the file descriptor member of DIR */
+/* #undef DIR_FD_MEMBER_NAME */
 
-/* Define if there is a member named d_ino in the struct describing directory
-   headers. */
+#ifdef DIR_FD_MEMBER_NAME
+# define DIR_TO_FD(Dir_p) ((Dir_p)->DIR_FD_MEMBER_NAME)
+#else
+# define DIR_TO_FD(Dir_p) -1
+#endif
+
+
+/* Define to 1 if // is a file system root distinct from /. */
+/* #undef DOUBLE_SLASH_IS_DISTINCT_ROOT */
+
+/* Define if struct dirent has a member d_ino that actually works. */
 #define D_INO_IN_DIRENT 1
 
 /* Define to 1 if translation of program messages to the user's native
@@ -55,6 +100,9 @@
 
 /* Define as good substitute value for EOVERFLOW. */
 /* #undef EOVERFLOW */
+
+/* Define if gnulib's fchdir() replacement is used. */
+/* #undef FCHDIR_REPLACEMENT */
 
 /* Define on systems for which file names may have a so-called `drive letter'
    prefix, define this to compute the length of that prefix, including the
@@ -69,6 +117,15 @@
    followed by a file name component separator. */
 #define FILE_SYSTEM_DRIVE_PREFIX_CAN_BE_RELATIVE 0
 
+/* Define if gettimeofday clobbers the localtime buffer. */
+/* #undef GETTIMEOFDAY_CLOBBERS_LOCALTIME */
+
+/* Define to 1 when using the gnulib module close-stream. */
+#define GNULIB_CLOSE_STREAM 1
+
+/* Define to 1 when using the gnulib module fcntl-safer. */
+#define GNULIB_FCNTL_SAFER 1
+
 /* Define to 1 to add extern declaration of program_invocation_name to argp.h
    */
 #define GNULIB_PROGRAM_INVOCATION_NAME 1
@@ -80,21 +137,19 @@
 /* Define to 1 if you have the `alarm' function. */
 #define HAVE_ALARM 1
 
-/* Define to 1 if you have `alloca', as a function or macro. */
+/* Define to 1 if you have 'alloca' after including <alloca.h>, a header that
+   may be supplied by this distribution. */
 #define HAVE_ALLOCA 1
 
-/* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
-   */
+/* Define HAVE_ALLOCA_H for backward compatibility with older code that
+   includes <alloca.h> only if HAVE_ALLOCA_H is defined. */
 #define HAVE_ALLOCA_H 1
-
-/* Define to 1 if you have the `bcopy' function. */
-#define HAVE_BCOPY 1
-
-/* Define to 1 if you have the <bp-sym.h> header file. */
-/* #undef HAVE_BP_SYM_H */
 
 /* Define to 1 if you have the `btowc' function. */
 #define HAVE_BTOWC 1
+
+/* Define to 1 if you have the `canonicalize_file_name' function. */
+/* #undef HAVE_CANONICALIZE_FILE_NAME */
 
 /* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
@@ -114,7 +169,7 @@
 #define HAVE_CLOCK_SETTIME 1
 
 /* Define if you have compound literals. */
-#define HAVE_COMPOUND_LITERALS 1
+/* #undef HAVE_COMPOUND_LITERALS */
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
@@ -124,9 +179,17 @@
    */
 #define HAVE_DECL_ATOI 1
 
+/* Define to 1 if you have the declaration of `canonicalize_file_name', and to
+   0 if you don't. */
+#define HAVE_DECL_CANONICALIZE_FILE_NAME 0
+
 /* Define to 1 if you have the declaration of `clearerr_unlocked', and to 0 if
    you don't. */
 #define HAVE_DECL_CLEARERR_UNLOCKED 1
+
+/* Define to 1 if you have the declaration of `dirfd', and to 0 if you don't.
+   */
+#define HAVE_DECL_DIRFD 1
 
 /* Define to 1 if you have the declaration of `errno', and to 0 if you don't.
    */
@@ -208,13 +271,17 @@
    don't. */
 #define HAVE_DECL_ISBLANK 1
 
+/* Define to 1 if you have the declaration of `lchown', and to 0 if you don't.
+   */
+#define HAVE_DECL_LCHOWN 1
+
 /* Define to 1 if you have the declaration of `memrchr', and to 0 if you
    don't. */
 #define HAVE_DECL_MEMRCHR 0
 
-/* Define to 1 if you have the declaration of `nanosleep', and to 0 if you
-   don't. */
-#define HAVE_DECL_NANOSLEEP 1
+/* Define to 1 if you have the declaration of `mkdir', and to 0 if you don't.
+   */
+#define HAVE_DECL_MKDIR 1
 
 /* Define if program_invocation_name is declared */
 /* #undef HAVE_DECL_PROGRAM_INVOCATION_NAME */
@@ -242,6 +309,10 @@
    don't. */
 #define HAVE_DECL_STRERROR_R 1
 
+/* Define to 1 if you have the declaration of `strncasecmp', and to 0 if you
+   don't. */
+#define HAVE_DECL_STRNCASECMP 1
+
 /* Define to 1 if you have the declaration of `strndup', and to 0 if you
    don't. */
 #define HAVE_DECL_STRNDUP 1
@@ -258,14 +329,6 @@
    don't. */
 #define HAVE_DECL_STRTOUMAX 1
 
-/* Define to 1 if you have the declaration of `sys_errlist', and to 0 if you
-   don't. */
-#define HAVE_DECL_SYS_ERRLIST 1
-
-/* Define to 1 if you have the declaration of `sys_nerr', and to 0 if you
-   don't. */
-#define HAVE_DECL_SYS_NERR 1
-
 /* Define to 1 if you have the declaration of `tzname', and to 0 if you don't.
    */
 /* #undef HAVE_DECL_TZNAME */
@@ -274,32 +337,33 @@
    don't. */
 #define HAVE_DECL_VSNPRINTF 1
 
-/* Define to 1 if you have the declaration of `wcwidth', and to 0 if you
-   don't. */
-#define HAVE_DECL_WCWIDTH 1
-
 /* Define to 1 if you have the declaration of `__fpending', and to 0 if you
    don't. */
 #define HAVE_DECL___FPENDING 0
 
-/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
-   */
+/* Define to 1 if you have the <dirent.h> header file. */
 #define HAVE_DIRENT_H 1
 
-/* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
-/* #undef HAVE_DOPRNT */
+/* Define to 1 if you have the `dirfd' function. */
+/* #undef HAVE_DIRFD */
 
-/* Define to 1 if you have the `endgrent' function. */
-#define HAVE_ENDGRENT 1
-
-/* Define to 1 if you have the `endpwent' function. */
-#define HAVE_ENDPWENT 1
+/* Define to 1 if you have the `dup2' function. */
+#define HAVE_DUP2 1
 
 /* Define if you have the declaration of environ. */
 /* #undef HAVE_ENVIRON_DECL */
 
 /* Define to 1 if you have the `fchdir' function. */
 #define HAVE_FCHDIR 1
+
+/* Define to 1 if you have the `fchmod' function. */
+#define HAVE_FCHMOD 1
+
+/* Define to 1 if you have the `fchmodat' function. */
+/* #undef HAVE_FCHMODAT */
+
+/* Define to 1 if you have the `fchown' function. */
+#define HAVE_FCHOWN 1
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
@@ -309,6 +373,9 @@
 
 /* Define to 1 if you have the <features.h> header file. */
 /* #undef HAVE_FEATURES_H */
+
+/* Define to 1 if you have the <float.h> header file. */
+#define HAVE_FLOAT_H 1
 
 /* Define to 1 if you have the `flockfile' function. */
 #define HAVE_FLOCKFILE 1
@@ -322,11 +389,14 @@
 /* Define to 1 if you have the `futimesat' function. */
 /* #undef HAVE_FUTIMESAT */
 
+/* Define to 1 if you have the `getcwd' function. */
+#define HAVE_GETCWD 1
+
 /* Define to 1 if you have the <getopt.h> header file. */
 #define HAVE_GETOPT_H 1
 
 /* Define to 1 if you have the `getopt_long_only' function. */
-/* #undef HAVE_GETOPT_LONG_ONLY */
+#define HAVE_GETOPT_LONG_ONLY 1
 
 /* Define to 1 if you have the `getpagesize' function. */
 #define HAVE_GETPAGESIZE 1
@@ -337,8 +407,13 @@
 /* Define to 1 if you have the `gettimeofday' function. */
 #define HAVE_GETTIMEOFDAY 1
 
-/* Define if you have the iconv() function. */
+/* Define if you have the iconv() function and it works. */
 /* #undef HAVE_ICONV */
+
+/* Define to 1 if the compiler supports one of the keywords 'inline',
+   '__inline__', '__inline' and effectively inlines functions marked as such.
+   */
+#define HAVE_INLINE 1
 
 /* Define if you have the 'intmax_t' type in <stdint.h> or <inttypes.h>. */
 #define HAVE_INTMAX_T 1
@@ -350,11 +425,14 @@
    declares uintmax_t. */
 #define HAVE_INTTYPES_H_WITH_UINTMAX 1
 
+/* Define to 1 if you have the <io.h> header file. */
+/* #undef HAVE_IO_H */
+
 /* Define to 1 if you have the `iswcntrl' function. */
 #define HAVE_ISWCNTRL 1
 
-/* Define to 1 if you have the `iswprint' function. */
-#define HAVE_ISWPRINT 1
+/* Define to 1 if you have the `iswctype' function. */
+#define HAVE_ISWCTYPE 1
 
 /* Define to 1 if you have the `lchmod' function. */
 #define HAVE_LCHMOD 1
@@ -370,9 +448,6 @@
 
 /* Define to 1 if you have the <locale.h> header file. */
 #define HAVE_LOCALE_H 1
-
-/* Define if you have the 'long double' type. */
-#define HAVE_LONG_DOUBLE 1
 
 /* Define if you have the 'long long' type. */
 #define HAVE_LONG_LONG 1
@@ -399,9 +474,6 @@
 /* Define to 1 if <wchar.h> declares mbstate_t. */
 #define HAVE_MBSTATE_T 1
 
-/* Define to 1 if you have the `memchr' function. */
-#define HAVE_MEMCHR 1
-
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
@@ -411,14 +483,8 @@
 /* Define to 1 if you have the `memrchr' function. */
 /* #undef HAVE_MEMRCHR */
 
-/* Define to 1 if <limits.h> defines the MIN and MAX macros. */
-/* #undef HAVE_MINMAX_IN_LIMITS_H */
-
-/* Define to 1 if <sys/param.h> defines the MIN and MAX macros. */
-#define HAVE_MINMAX_IN_SYS_PARAM_H 1
-
-/* Define to 1 if you have the `mkdir' function. */
-#define HAVE_MKDIR 1
+/* Define to 1 if you have the `mkdirat' function. */
+/* #undef HAVE_MKDIRAT */
 
 /* Define to 1 if you have the `mkfifo' function. */
 #define HAVE_MKFIFO 1
@@ -459,6 +525,9 @@
 /* Define to 1 if the system has the type `ptrdiff_t'. */
 #define HAVE_PTRDIFF_T 1
 
+/* Define to 1 if you have the `readlink' function. */
+#define HAVE_READLINK 1
+
 /* Define to 1 if you have the <search.h> header file. */
 /* #undef HAVE_SEARCH_H */
 
@@ -480,6 +549,9 @@
 /* Define to 1 if 'wint_t' is a signed integer type. */
 /* #undef HAVE_SIGNED_WINT_T */
 
+/* Define to 1 if you have the `sleep' function. */
+#define HAVE_SLEEP 1
+
 /* Define to 1 if you have the `snprintf' function. */
 #define HAVE_SNPRINTF 1
 
@@ -496,11 +568,17 @@
 /* Define to 1 if you have the <stdio_ext.h> header file. */
 /* #undef HAVE_STDIO_EXT_H */
 
+/* Define to 1 if you have the <stdio.h> header file. */
+#define HAVE_STDIO_H 1
+
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
 
 /* Define to 1 if you have the `stpcpy' function. */
 #define HAVE_STPCPY 1
+
+/* Define to 1 if you have the `strcasecmp' function. */
+#define HAVE_STRCASECMP 1
 
 /* Define to 1 if you have the `strchrnul' function. */
 /* #undef HAVE_STRCHRNUL */
@@ -534,9 +612,6 @@
 
 /* Define to 1 if `st_blocks' is member of `struct stat'. */
 #define HAVE_STRUCT_STAT_ST_BLOCKS 1
-
-/* Define if struct timespec is declared in <time.h>. */
-#define HAVE_STRUCT_TIMESPEC 1
 
 /* Define to 1 if `tm_zone' is member of `struct tm'. */
 #define HAVE_STRUCT_TM_TM_ZONE 1
@@ -600,6 +675,9 @@
 /* Define to 1 if you have the <sys/tape.h> header file. */
 /* #undef HAVE_SYS_TAPE_H */
 
+/* Define to 1 if you have the <sys/timeb.h> header file. */
+/* #undef HAVE_SYS_TIMEB_H */
+
 /* Define to 1 if you have the <sys/time.h> header file. */
 #define HAVE_SYS_TIME_H 1
 
@@ -612,9 +690,8 @@
 /* Define to 1 if you have the <sys/wait.h> header file. */
 #define HAVE_SYS_WAIT_H 1
 
-/* Define to 1 if localtime_r, etc. have the type signatures that POSIX
-   requires. */
-#define HAVE_TIME_R_POSIX 1
+/* Define to 1 if you have the <time.h> header file. */
+#define HAVE_TIME_H 1
 
 /* Define if struct tm has the tm_gmtoff member. */
 #define HAVE_TM_GMTOFF 1
@@ -636,6 +713,9 @@
 /* Define to 1 if you have the `unsetenv' function. */
 #define HAVE_UNSETENV 1
 
+/* Define to 1 if the system has the type `unsigned long long int'. */
+#define HAVE_UNSIGNED_LONG_LONG_INT 1
+
 /* Define to 1 if you have the <utime.h> header file. */
 #define HAVE_UTIME_H 1
 
@@ -644,9 +724,6 @@
 
 /* Define to 1 if you have the `vasnprintf' function. */
 /* #undef HAVE_VASNPRINTF */
-
-/* Define to 1 if you have the `vprintf' function. */
-#define HAVE_VPRINTF 1
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #define HAVE_VSNPRINTF 1
@@ -663,9 +740,6 @@
 /* Define to 1 if you have the <wctype.h> header file. */
 #define HAVE_WCTYPE_H 1
 
-/* Define to 1 if you have the `wcwidth' function. */
-#define HAVE_WCWIDTH 1
-
 /* Define if you have the 'wint_t' type. */
 #define HAVE_WINT_T 1
 
@@ -678,11 +752,20 @@
 /* Define to 1 if you have the `wmempcpy' function. */
 /* #undef HAVE_WMEMPCPY */
 
+/* Define to 1 if O_NOATIME works. */
+#define HAVE_WORKING_O_NOATIME 0
+
+/* Define to 1 if O_NOFOLLOW works. */
+#define HAVE_WORKING_O_NOFOLLOW 1
+
 /* Define if utimes works properly. */
 #define HAVE_WORKING_UTIMES 1
 
 /* Define to 1 if the system has the type `_Bool'. */
 #define HAVE__BOOL 1
+
+/* Define to 1 if you have the `_ftime' function. */
+/* #undef HAVE__FTIME */
 
 /* Define to 1 if you have the `__fpending' function. */
 /* #undef HAVE___FPENDING */
@@ -711,9 +794,6 @@
 /* Define to mt_model (v.g., for DG/UX), else to mt_type. */
 #define MTIO_CHECK_FIELD mt_type
 
-/* Define to 1 if O_NOFOLLOW is ineffective. */
-/* #undef O_NOFOLLOW_IS_INEFFECTIVE */
-
 /* Name of package */
 #define PACKAGE "cpio"
 
@@ -724,13 +804,13 @@
 #define PACKAGE_NAME "GNU cpio"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GNU cpio 2.7"
+#define PACKAGE_STRING "GNU cpio 2.8"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "cpio"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.7"
+#define PACKAGE_VERSION "2.8"
 
 /* the number of pending output bytes on stream `fp' */
 #define PENDING_OUTPUT_N_BYTES fp->_p - fp->_bf._base
@@ -744,6 +824,9 @@
 /* Define to l, ll, u, ul, ull, etc., as suitable for constants of type
    'ptrdiff_t'. */
 /* #undef PTRDIFF_T_SUFFIX */
+
+/* Define if vasnprintf exists but is overridden by gnulib. */
+/* #undef REPLACE_VASNPRINTF */
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
@@ -789,7 +872,7 @@
 #define USE_UNLOCKED_IO 1
 
 /* Version number of package */
-#define VERSION "2.7"
+#define VERSION "2.8"
 
 /* Define if unsetenv() returns void, not int. */
 #define VOID_UNSETENV 1
@@ -837,18 +920,28 @@
 #ifndef _POSIX_PTHREAD_SEMANTICS
 # define _POSIX_PTHREAD_SEMANTICS 1
 #endif
+#ifndef _TANDEM_SOURCE
+# define _TANDEM_SOURCE 1
+#endif
+
+/* Define to rpl_ if the getopt replacement functions and variables should be
+   used. */
+#define __GETOPT_PREFIX rpl_
+
+/* Define to rpl_ if the openat replacement function should be used. */
+#define __OPENAT_PREFIX rpl_
 
 /* Define like PROTOTYPES; this can be used by system headers. */
 #define __PROTOTYPES 1
 
-/* Define to rpl_chown if the replacement function should be used. */
-/* #undef chown */
-
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
 
-/* Define to rpl_gettimeofday if the replacement function should be used. */
-/* #undef gettimeofday */
+/* Define to rpl_fchownat if the replacement function should be used. */
+#define fchownat rpl_fchownat
+
+/* Define to a replacement function name for fnmatch(). */
+/*#define fnmatch gnu_fnmatch */
 
 /* Define to `int' if <sys/types.h> does not define. */
 /* #undef gid_t */
@@ -878,26 +971,23 @@
 /* #undef mbstate_t */
 
 /* Define to rpl_mktime if the replacement function should be used. */
-#define mktime rpl_mktime
+/* #undef mktime */
 
 /* Define to `long int' if <sys/types.h> does not define. */
 /* #undef off_t */
 
+/* Define to a replacement function name for realpath(). */
+#define realpath rpl_realpath
+
 /* Define to equivalent of C99 restrict keyword, or to nothing if this is not
    supported. Do not define if restrict is supported directly. */
-#define restrict __restrict
-
-/* Define to empty if the C compiler doesn't support this keyword. */
-/* #undef signed */
+/* #undef restrict */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
 
 /* Define as a signed type of the same size as size_t. */
 /* #undef ssize_t */
-
-/* Define to rpl_strndup if the replacement function should be used, */
-/* #undef strndup */
 
 /* Define to rpl_strnlen if the replacement function should be used. */
 #define strnlen rpl_strnlen
