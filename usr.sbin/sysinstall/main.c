@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.3 2007/02/20 02:43:34 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/main.c,v 1.71 2003/08/20 06:27:21 imp Exp $
  *
  * Copyright (c) 1995
@@ -76,7 +76,7 @@ main(int argc, char **argv)
 	/* XXX */
 	char *p = getenv("TERM");
 	if (p && strcmp(p, "cons25") == 0)
-	    putenv("TERM=cons25w");
+	    setenv("TERM", "cons25w", 1);
     }
 #endif
 
