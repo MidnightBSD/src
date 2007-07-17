@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/label.c,v 1.148.8.2 2006/01/24 15:51:33 ceri Exp $
  *
  * Copyright (c) 1995
@@ -62,13 +62,13 @@
 /*
  * Minimum partition sizes
  */
-#if defined(__alpha__) || defined(__ia64__) || defined(__sparc64__) || defined(__amd64__)
+#if defined(__ia64__) || defined(__sparc64__) || defined(__amd64__)
 #define ROOT_MIN_SIZE			128
 #else
 #define ROOT_MIN_SIZE			118
 #endif
 #define SWAP_MIN_SIZE			32
-#define USR_MIN_SIZE			128
+#define USR_MIN_SIZE			160
 #define VAR_MIN_SIZE			20
 #define TMP_MIN_SIZE			20
 #define HOME_MIN_SIZE			20
@@ -1524,6 +1524,7 @@ try_auto_label(Device **devs, Device *dev, int perc, int *req)
     if (UsrChunk == NULL && !variable_get(VAR_NO_USR)) {
 	sz = requested_part_size(VAR_USR_SIZE, USR_NOMINAL_SIZE, USR_DEFAULT_SIZE, perc);
 #if AUTO_HOME == 0
+	if (sz < space_free(label_chunk_info[here].c))
 	    sz = space_free(label_chunk_info[here].c);
 #endif
 	if (sz) {
