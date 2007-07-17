@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.3 2007/07/17 12:57:25 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/label.c,v 1.148.8.2 2006/01/24 15:51:33 ceri Exp $
  *
  * Copyright (c) 1995
@@ -838,7 +838,6 @@ print_command_summary(void)
 static void
 clear_wins(void)
 {
-    extern void print_label_chunks();
     clear();
     print_label_chunks();
 }
