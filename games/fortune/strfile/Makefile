@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/games/fortune/strfile/Makefile,v 1.7 2005/02/23 20:42:47 ru Exp $
+# $MidnightBSD$
 
 PROG=	strfile
 MAN=	strfile.8

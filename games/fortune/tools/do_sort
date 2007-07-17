@@ -2,6 +2,7 @@
 #
 #	@(#)do_sort	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/games/fortune/tools/do_sort,v 1.2 2005/02/03 00:18:06 ru Exp $
+# $MidnightBSD$
 #
 # an aggressive little script for sorting the fortune files
 # depends on octal 02 and 03 not being anywhere in the files.

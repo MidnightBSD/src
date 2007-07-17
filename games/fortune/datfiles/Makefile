@@ -1,9 +1,9 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/19/94
 # $FreeBSD: src/games/fortune/datfiles/Makefile,v 1.33 2005/02/03 00:20:36 ru Exp $
+# $MidnightBSD$
 
 FILES=	fortunes freebsd-tips murphy startrek zippy
-BLDS=	fortunes.dat murphy.dat startrek.dat zippy.dat \
-	fortunes-o fortunes-o.dat freebsd-tips.dat
+BLDS=	fortunes.dat murphy.dat startrek.dat zippy.dat 	fortunes-o fortunes-o.dat freebsd-tips.dat
 
 # Pass all new entries by ${MAINTAINER} to preserve some semblance of
 # humor in the fortune files.  What's funny to you on 6 beers may not
@@ -28,15 +28,13 @@ FILESDIR=	${SHAREDIR}/games/fortune
 
 .for f in fortunes fortunes2-o freebsd-tips gerrold.limerick limerick murphy murphy-o startrek zippy
 $f.dat: $f
-	PATH=$$PATH:/usr/games:${.OBJDIR}/../strfile \
-	    strfile -Cs ${.ALLSRC} ${.TARGET}
+PATH=$$PATH:/usr/games:${.OBJDIR}/../strfile 	    strfile -Cs ${.ALLSRC} ${.TARGET}
 .endfor
 
 fortunes-o.dat: fortunes-o
-	PATH=$$PATH:/usr/games:${.OBJDIR}/../strfile \
-	    strfile -Csx ${.ALLSRC} ${.TARGET}
+PATH=$$PATH:/usr/games:${.OBJDIR}/../strfile 	    strfile -Csx ${.ALLSRC} ${.TARGET}
 
 fortunes-o: fortunes-o.${TYPE}
-	LC_ALL=C tr a-zA-Z n-za-mN-ZA-M < ${.ALLSRC} > ${.TARGET}
+LC_ALL=C tr a-zA-Z n-za-mN-ZA-M < ${.ALLSRC} > ${.TARGET}
 
 .include <bsd.prog.mk>

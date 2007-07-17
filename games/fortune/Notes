@@ -1,5 +1,6 @@
 #	@(#)Notes	8.1 (Berkeley) 5/31/93
-#	$FreeBSD: src/games/fortune/Notes,v 1.3 2003/02/16 18:38:12 schweikh Exp $
+# $FreeBSD: src/games/fortune/Notes,v 1.3 2003/02/16 18:38:12 schweikh Exp $
+# $MidnightBSD$
 
 Warning:
 	The fortunes contained in the fortune database have been collected

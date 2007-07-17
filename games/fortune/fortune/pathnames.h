@@ -31,6 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 5/31/93
+ * $MidnightBSD$
  */
 
 #define	FORTDIR		"/usr/share/games/fortune"

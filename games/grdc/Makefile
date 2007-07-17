@@ -1,4 +1,5 @@
 # $FreeBSD: src/games/grdc/Makefile,v 1.8 2001/09/25 13:45:46 ru Exp $
+# $MidnightBSD$
 
 PROG=   grdc
 WARNS?=	2
