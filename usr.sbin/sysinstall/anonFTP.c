@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.3 2007/07/17 12:35:09 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.35.2.1 2006/01/20 13:00:32 ceri Exp $
  *
  * Copyright (c) 1995
@@ -149,7 +149,7 @@ createFtpUser(void)
     else if (!getgrgid(gid)) {
 	/* group does not exist, create it by number */
 	
-	tptr = msgGetInput("14", "What group name to use for gid %d ?", gid);
+	tptr = msgGetInput("ftp", "What group name to use for gid %d ?", gid);
 	if (tptr && *tptr) {
 	    SAFE_STRCPY(tconf.group, tptr);
 	    if ((tgrp = getgrnam(tconf.group))) {
