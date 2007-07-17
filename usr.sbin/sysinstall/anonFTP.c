@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.35.2.1 2006/01/20 13:00:32 ceri Exp $
  *
  * Copyright (c) 1995
@@ -50,8 +50,8 @@
 /* These change if we want to use different defaults */
 
 #define FTP_UID		14
-#define FTP_GID		5
-#define FTP_GROUP	"operator"
+#define FTP_GID		14
+#define FTP_GROUP	"ftp"
 #define FTP_UPLOAD	"incoming"
 #define FTP_COMMENT	"Anonymous FTP Admin"
 #define FTP_HOMEDIR	"/var/ftp"
