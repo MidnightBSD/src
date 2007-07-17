@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.4 2006/10/07 16:26:19 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.5 2006/10/07 16:33:20 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.84.12.1 2005/12/03 14:36:26 philip Exp $
  *
  * Copyright (c) 1995
@@ -353,7 +353,7 @@ media:
     }
 
     if (extractingBin)
-	vsystem("disklabel -B `awk '$2~/\\/$/ {print substr($1, 6, 3)}' /etc/fstab`");
+	vsystem("disklabel -B `awk '$2~/\\/$/ {print substr($1, 6, 5)}' /etc/fstab`");
     msgNotify("First stage of upgrade completed successfully!\n\n"
 	       "Next comes stage 2, where we attempt to resurrect your /etc\n"
 	       "directory!");
