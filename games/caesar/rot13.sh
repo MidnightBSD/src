@@ -32,6 +32,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)rot13.sh	8.1 (Berkeley) 5/31/93
+# $MidnightBSD$
 #
 
 exec /usr/games/caesar 13 "$@"
