@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/doc.c,v 1.32 2004/01/02 09:19:13 obrien Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/doc.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  */
 
 #include "sysinstall.h"
@@ -104,12 +104,12 @@ docShowDocument(dialogMenuItem *self)
     else if (strstr(str, "FAQ")) {
 	where = strcpy(target, "/usr/share/doc/faq/index.html");
 	if (!file_readable(target))
-	    where = strcpy(target, "http://www.midnightbsd.org/doc/en_US.ISO8859-1/books/faq");
+	    where = strcpy(target, "http://www.midnightbsd.org/docs/faq");
     }
     else if (strstr(str, "Handbook")) {
 	where = strcpy(target, "/usr/share/doc/handbook/index.html");
 	if (!file_readable(target))
-	    where = strcpy(target, "http://www.midnightbsd.org/doc/en_US.ISO8859-1/books/handbook");
+	    where = strcpy(target, "http://www.midnightbsd.org/docs");
     }
     if (where) {
 	sprintf(tmp, "%s %s", browser, target);
