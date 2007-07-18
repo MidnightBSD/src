@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* tar.c - read in write tar headers for cpio
    Copyright (C) 1992, 2001, 2004, 2006 Free Software Foundation, Inc.
 
@@ -401,6 +402,20 @@ read_in_tar_header (struct cpio_file_stat *file_hdr, int in_des)
 	    file_hdr->c_mode |= CP_IFDIR;
 	  else
 	    file_hdr->c_mode |= CP_IFREG;
+	  break;
+	case 'x': case 'g':
+	  /* ignore pax 'x' and 'g' extension entries. */
+	  /* skip body of this entry. */
+	  while (file_hdr->c_filesize > 0) {
+	    tape_buffered_read(((char*) &tar_rec), in_des,
+	      TARRECORDSIZE);
+	    if (file_hdr->c_filesize > TARRECORDSIZE)
+	      file_hdr->c_filesize -= TARRECORDSIZE;
+	    else
+	      file_hdr->c_filesize = 0;
+	  }
+          /* Read next header and return that instead */
+	  read_in_tar_header(file_hdr, in_des);
 	  break;
 	}
       break;
