@@ -36,12 +36,12 @@ divert(-1)
 #
 #  This is the prototype for a "null client" -- that is, a client that
 #  does nothing except forward all mail to a mail hub, plus an extra
-#  line to make the email all appear as coming from "FreeBSD.org".
+#  line to make the email all appear as coming from "MidnightBSD.org".
 #
 
 divert(0)dnl
-VERSIONID(`$FreeBSD: src/etc/sendmail/freefall.mc,v 1.20 2005/06/14 02:25:17 gshapiro Exp $')
+VERSIONID(`$MidnightBSD$')
 
 OSTYPE(freebsd6)
 FEATURE(nullclient, hub.$m)
-MASQUERADE_AS(FreeBSD.org)
+MASQUERADE_AS(MidnightBSD.org)
