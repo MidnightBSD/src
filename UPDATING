@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070716:
+	Update GNU cpio to 2.8. 
+
 20070410:
 	cvs was updated to 1.12.13.  cvsbug was removed.
 	cvs now behaves similarly to DragonFly's cvs with
@@ -388,4 +391,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.20 2007/04/07 01:21:34 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.21 2007/04/10 05:50:39 laffer1 Exp $
