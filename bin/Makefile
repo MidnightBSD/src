@@ -1,12 +1,13 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.3 2006/09/04 21:00:53 archite Exp $
 
 SUBDIR= cat \
 	chflags \
 	chio \
 	chmod \
 	cp \
+	cpdup \
 	${_csh} \
 	date \
 	dd \
