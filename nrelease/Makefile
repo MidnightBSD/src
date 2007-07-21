@@ -1,8 +1,9 @@
-# $MidnightBSD$
+# $MidnightBSD: src/nrelease/Makefile,v 1.1 2007/07/20 20:02:28 laffer1 Exp $
 # $DragonFly: src/nrelease/Makefile,v 1.1 2003/12/01 09:59:43 dillon Exp $
 #
 ISODIR ?= /usr/release
-ISOFILE ?= ${ISODIR}/mbsd.iso
+ISONAME ?= mbsd.iso
+ISOFILE ?= ${ISODIR}/${ISONAME}
 ISOROOT = ${ISODIR}/root
 OBJSYS= ${.OBJDIR}/../sys
 KERNCONF ?= GENERIC
@@ -45,6 +46,8 @@ buildiso:
 mkiso:
 	( cd ${ISOROOT}; mkisofs -b boot/cdboot -no-emul-boot \
 		-R -J -V MidnightBSD -o ${ISOFILE} . )
+	( cd ${ISODIR}; md5 ${ISONAME} > ${ISONAME}.CHECKSUM.MD5 )
+	( cd ${ISODIR}; sha256 ${ISONAME} > ${ISONAME}.CHECKSUM.SHA256 )
 
 clean:
 	if [ -d ${ISOROOT} ]; then chflags -R noschg ${ISOROOT}; fi
