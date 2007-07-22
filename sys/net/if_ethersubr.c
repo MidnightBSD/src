@@ -28,6 +28,7 @@
  *
  *	@(#)if_ethersubr.c	8.1 (Berkeley) 6/10/93
  * $FreeBSD: src/sys/net/if_ethersubr.c,v 1.193.2.10 2006/03/04 09:23:34 oleg Exp $
+ * $MidnightBSD$
  */
 
 #include "opt_atalk.h"
@@ -98,6 +99,7 @@ int (*ef_outputp)(struct ifnet *ifp, struct mbuf **mp,
 extern u_char	at_org_code[3];
 extern u_char	aarp_org_code[3];
 #endif /* NETATALK */
+static int mtu_is_mru = 0;
 
 /* netgraph node hooks for ng_ether(4) */
 void	(*ng_ether_input_p)(struct ifnet *ifp, struct mbuf **mp);
@@ -536,16 +538,18 @@ ether_input(struct ifnet *ifp, struct mbuf *m)
 	}
 	eh = mtod(m, struct ether_header *);
 	etype = ntohs(eh->ether_type);
-	if (m->m_pkthdr.len >
-	    ETHER_MAX_FRAME(ifp, etype, m->m_flags & M_HASFCS)) {
-		if_printf(ifp, "discard oversize frame "
-				"(ether type %x flags %x len %u > max %lu)\n",
-				etype, m->m_flags, m->m_pkthdr.len,
-				ETHER_MAX_FRAME(ifp, etype,
+	if (mtu_is_mru) {
+		if (m->m_pkthdr.len >
+			ETHER_MAX_FRAME(ifp, etype, m->m_flags & M_HASFCS)) {
+				if_printf(ifp, "discard oversize frame "
+					"(ether type %x flags %x len %u > max %lu(\n",
+					etype, m->m_flags, m->m_pkthdr.len,
+					ETHER_MAX_FRAME(ifp, etype,
 						m->m_flags & M_HASFCS));
-		ifp->if_ierrors++;
-		m_freem(m);
-		return;
+			ifp->if_ierrors++;
+			m_freem(m);
+			return;
+		}
 	}
 	if (m->m_pkthdr.rcvif == NULL) {
 		if_printf(ifp, "discard frame w/o interface pointer\n");
@@ -931,6 +935,8 @@ ether_ifdetach(struct ifnet *ifp)
 
 SYSCTL_DECL(_net_link);
 SYSCTL_NODE(_net_link, IFT_ETHER, ether, CTLFLAG_RW, 0, "Ethernet");
+SYSCTL_INT(_net_link_ether, OID_AUTO, MTUisMRU, CTLFLAG_RW,
+	    &mtu_is_mru,0,"Allow MTU to limit recieved packet size");
 #if defined(INET) || defined(INET6)
 SYSCTL_INT(_net_link_ether, OID_AUTO, ipfw, CTLFLAG_RW,
 	    &ether_ipfw,0,"Pass ether pkts through firewall");
