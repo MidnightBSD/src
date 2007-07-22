@@ -12,6 +12,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/bin/pax/getoldopt.c,v 1.5 2005/01/10 08:39:24 imp Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
