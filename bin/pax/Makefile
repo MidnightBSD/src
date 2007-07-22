@@ -1,6 +1,6 @@
 #       @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/pax/Makefile,v 1.12 2004/05/14 13:31:19 cognet Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/bin/pax/Makefile,v 1.2 2006/07/26 12:35:19 laffer1 Exp $
 #
 # To install on versions prior to BSD 4.4 the following may have to be
 # defined with CFLAGS +=
@@ -33,6 +33,10 @@ SRCS=	ar_io.c ar_subs.c buf_subs.c cache.c cpio.c file_subs.c ftree.c \
 #XXX NOTYET
 #MAN=	pax.1 tar.1 cpio.1
 #LINKS=	${BINDIR}/pax ${BINDIR}/tar ${BINDIR}/pax ${BINDIR}/cpio
+
+MAN=	pax.1 cpio.1
+LINKS= ${BINDIR}/pax ${BINDIR}/cpio
+SYMLINKS+=${BINDIR}/cpio /usr/bin/cpio
 
 .if ${MACHINE_ARCH} == "arm"
 WARNS?=	3
