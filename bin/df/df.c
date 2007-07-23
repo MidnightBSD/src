@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.2 2006/07/07 15:48:30 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.3 2006/09/23 02:56:53 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -114,7 +114,7 @@ main(int argc, char *argv[])
 
 	memset(&totalbuf, 0, sizeof(totalbuf));
 	totalbuf.f_bsize = DEV_BSIZE;
-	strncpy(totalbuf.f_mntfromname, "total", MNAMELEN);
+	strlcpy(totalbuf.f_mntfromname, "total", MNAMELEN);
 	vfslist = NULL;
 	while ((ch = getopt(argc, argv, "abcgHhiklmnPt:")) != -1)
 		switch (ch) {
@@ -561,7 +561,7 @@ makenetvfslist(void)
 
 	*str = 'n'; *(str + 1) = 'o';
 	for (i = 0, strptr = str + 2; i < cnt; i++, strptr++) {
-		strncpy(strptr, listptr[i], 32);
+		strlcpy(strptr, listptr[i], 32);
 		strptr += strlen(listptr[i]);
 		*strptr = ',';
 		free(listptr[i]);
