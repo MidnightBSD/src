@@ -1,5 +1,6 @@
 #!/bin/sh
 #
+# $MidnightBSD$
 # $FreeBSD: src/release/scripts/catpages-make.sh,v 1.7 2002/05/25 17:31:27 ru Exp $
 #
 

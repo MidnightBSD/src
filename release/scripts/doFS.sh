@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/release/scripts/doFS.sh,v 1.60 2004/08/25 01:39:52 kensmith Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/release/scripts/doFS.sh,v 1.2 2007/03/17 16:44:45 laffer1 Exp $
 #
 
 set -ex
@@ -113,7 +113,7 @@ case `uname -r` in
 esac
 
 if [ -d ${FSPROTO} ]; then
-	(set -e && cd ${FSPROTO} && find . -print | cpio -dump ${MNT})
+	(set -e && cd ${FSPROTO} && pax -rw . ${MNT})
 else
 	cp -p ${FSPROTO} ${MNT}
 fi
