@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.7 2007/07/23 12:42:30 alex Exp $");
+__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.8 2007/07/23 12:49:56 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -94,7 +94,7 @@ imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-static int	aflag = 0, cflag, hflag, kflag, iflag, kflag, lflag = 0, nflag, Pflag;
+static int	aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Pflag;
 static struct	ufs_args mdev;
 
 int
