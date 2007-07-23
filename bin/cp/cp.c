@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)cp.c	8.2 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cp/cp.c,v 1.2 2006/07/07 13:46:33 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/cp/cp.c,v 1.3 2006/08/27 18:49:41 laffer1 Exp $");
 
 /*
  * Cp copies source files to target files.
@@ -490,6 +490,7 @@ copy(char *argv[], enum op type, int fts_options)
 	}
 	if (errno)
 		err(1, "fts_read");
+	fts_close(ftsp);
 	return (rval);
 }
 
