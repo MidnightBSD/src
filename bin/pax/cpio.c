@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)cpio.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/pax/cpio.c,v 1.2 2006/07/26 12:35:19 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/pax/cpio.c,v 1.3 2007/07/23 22:45:27 alex Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -990,7 +990,7 @@ bcpio_endrd(void)
  * bcpio_wr()
  *	copy the data in the ARCHD to buffer in old binary cpio format
  *	There is a real chance of field overflow with this critter. So we
- *	always check the conversion is ok. nobody in his their right mind
+ *	always check the conversion is ok. nobody in their right mind
  *	should write an achive in this format...
  * Return
  *      0 if file has data to be written after the header, 1 if file has NO
