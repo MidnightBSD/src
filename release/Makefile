@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.12 2007/03/17 16:48:59 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.13 2007/03/19 00:55:13 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -23,7 +23,7 @@
 #
 # Automatic SNAP versioning:
 DATE != date +%Y%m%d
-BASE = 0.1
+BASE = 0.2
 BUILDNAME?=${BASE}-${DATE}-SNAP
 #
 #CHROOTDIR=/junk/release
@@ -373,7 +373,7 @@ release rerelease:
 	    cp -R -H ${EXTSRCDIR} src
 .else
 	cd ${CHROOTDIR}/usr && \
-	    ${CVSPREFIX} cvs -R ${CVSARGS} -d ${CVSROOT} \
+	    ${CVSPREFIX} cvs ${CVSARGS} -d ${CVSROOT} \
 	    co ${CVSCMDARGS} ${CVS_SRCARGS} ${RELEASESRCMODULE}
 .endif
 .if defined(LOCAL_PATCHES) && !empty(LOCAL_PATCHES)
@@ -388,26 +388,26 @@ release rerelease:
 	rm -rf ${CHROOTDIR}/usr/mports
 .if !defined(NOPORTSATALL)
 .if defined(EXTPORTSDIR)
-	cd ${CHROOTDIR}/usr && cp -R -H ${EXTPORTSDIR} mports
+	cd ${CHROOTDIR}/usr && cp -H ${EXTPORTSDIR} mports
 	# If there are distfiles downloaded removing them
-	rm -rf mports/distfiles/*
+	rm -rf mports/Distfiles/*
 .else
-	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs -R ${CVSARGS} -d ${CVSROOT} \
+	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs ${CVSARGS} -d ${CVSROOT} \
 	    co ${CVSCMDARGS} ${CVS_PORTSARGS} ${RELEASEPORTSMODULE}
 .endif
 .endif
 .if !defined(NODOC)
 	rm -rf ${CHROOTDIR}/usr/doc
 .if defined(EXTDOCDIR)
-	cd ${CHROOTDIR}/usr && cp -R -H ${EXTDOCDIR} doc
+	cd ${CHROOTDIR}/usr && cp -H ${EXTDOCDIR} doc
 .else
-	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs -R ${CVSARGS} -d ${CVSROOT} \
+	cd ${CHROOTDIR}/usr && ${CVSPREFIX} cvs ${CVSARGS} -d ${CVSROOT} \
 	    co ${CVSCMDARGS} ${CVS_DOCARGS} ${RELEASEDOCMODULE}
 .endif
 	if [ -d ${RELEASEDISTFILES}/ ]; then \
-		cp -rp ${RELEASEDISTFILES} ${CHROOTDIR}/usr/mports/distfiles; \
+		cp -rp ${RELEASEDISTFILES} ${CHROOTDIR}/usr/mports/Distfiles; \
 	else \
-		mkdir -p ${CHROOTDIR}/usr/mports/distfiles; \
+		mkdir -p ${CHROOTDIR}/usr/mports/Distfiles; \
 	fi
 .if !defined(NO_PREFETCHDISTFILES)
 	@cd ${.CURDIR} && ${MAKE} fetch-distfiles
@@ -417,26 +417,26 @@ release rerelease:
 .if make(rerelease)
 .if !defined(RELEASENOUPDATE) && !defined(EXTSRCDIR)
 .if !defined(RELEASETAG)
-	cd ${CHROOTDIR}/usr/src && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
+	cd ${CHROOTDIR}/usr/src && ${CVSPREFIX} cvs ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d -A
 .else
-	cd ${CHROOTDIR}/usr/src && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
+	cd ${CHROOTDIR}/usr/src && ${CVSPREFIX} cvs ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d -r ${RELEASETAG}
 .endif
 	rm -f ${CHROOTDIR}/tmp/.world_done 
 .if !defined(NOPORTS) && !defined(EXTPORTSDIR)
-	cd ${CHROOTDIR}/usr/mports && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
+	cd ${CHROOTDIR}/usr/mports && ${CVSPREFIX} cvs ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d
 	rm -f ${CHROOTDIR}/tmp/.skip_ports_index
 .endif
 .if defined(DOMINIMALDOCPORTS) && ${DOMINIMALDOCPORTS} == "YES"
 	for i in ${MINIMALDOCPORTS}; do \
-	    ( cd ${CHROOTDIR}/usr/$$i && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
+	    ( cd ${CHROOTDIR}/usr/$$i && ${CVSPREFIX} cvs ${CVSARGS} -q \
 		update ${CVSCMDARGS} -P -d ) ; \
 	done
 .endif
 .if !defined(NODOC)
-	cd ${CHROOTDIR}/usr/doc && ${CVSPREFIX} cvs -R ${CVSARGS} -q \
+	cd ${CHROOTDIR}/usr/doc && ${CVSPREFIX} cvs ${CVSARGS} -q \
 	    update ${CVSCMDARGS} -P -d
 .endif
 .endif
@@ -659,7 +659,7 @@ release.6:
 	@rm -rf ${RD}/dists/mports/mports*
 	@mkdir -p ${RD}/dists/mports
 	@echo rolling mports/mports tarball
-	@tar --exclude CVS --exclude 'mports/distfiles/*' \
+	@tar --exclude CVS --exclude 'mports/Distfiles/*' \
 	  -czf ${RD}/dists/mports/mports.tgz -C /usr mports
 	@cp ${.CURDIR}/scripts/ports-install.sh ${RD}/dists/mports/install.sh
 	@(cd ${RD}/dists/mports; \
@@ -723,6 +723,7 @@ release.8:
 		ln -sf /stand $$dir; \
 	  done )
 	cp ${RD}/trees/base/sbin/dhclient-script ${RD}/mfsfd/stand
+	cp ${RD}/trees/base/usr/bin/tar ${RD}/mfsfd/stand
 .if ${TARGET} == "pc98"
 	cp ${.CURDIR}/../etc/defaults/pccard.conf \
 	    ${RD}/mfsfd/etc/defaults/pccard.conf
@@ -883,7 +884,7 @@ ftp.1:
 .if defined(MAKE_FLOPPIES)
 	@cd ${RD} && find floppies -print | cpio -dumpl ${FD}
 .endif
-	@cd ${RD}/dists && find . -print | cpio -dumpl ${FD}
+	@cd ${RD}/dists && pax -rw . ${FD}
 .if !defined(NODOC)
 	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
 		cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
@@ -911,11 +912,13 @@ cdrom.1:
 	@for i in ${DISTRIBUTIONS} ; \
 	do \
 		if [ -d ${RD}/trees/$${i} ] ; then \
+			@echo $${i} ; \
 			chflags -R noschg ${RD}/trees/$${i} || true ; \
 			( cd ${RD}/trees/$${i} && \
-			    find . -depth -print | cpio -dumpl ${CD_LIVEFS} ) ; \
+			    cpdup -o . ${CD_LIVEFS} -vv ) ; \
 		fi \
 	done
+	@echo "Done with Distributions."
 	@rm -f ${CD_LIVEFS}/.profile
 	@cp ${.CURDIR}/fixit.profile ${CD_LIVEFS}/.profile
 	@ln -sf /rescue ${CD_LIVEFS}/stand
@@ -942,7 +945,7 @@ cdrom.2:
 .if defined(MAKE_FLOPPIES)
 	@cd ${RD} && find floppies -print | cpio -dumpl ${CD_DISC1}
 .endif
-	@cd ${RD}/dists && find . -print | cpio -dumpl ${CD_DISC1}/${BUILDNAME}
+	@cd ${RD}/dists && pax -rw . ${CD_DISC1}/${BUILDNAME}
 .if !defined(NODOC)
 	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
 	  cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
