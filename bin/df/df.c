@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.5 2007/07/23 12:34:12 alex Exp $");
+__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.6 2007/07/23 12:39:39 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -386,7 +386,7 @@ fsbtoblk(int64_t num, uint64_t fsbs, u_long bs)
 static void
 prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 {
-	static u_long blocksize;
+	static long blocksize;
 	static int headerlen, timesthrough = 0;
 	static const char *header;
 	int64_t used, availblks, inodes;
@@ -463,7 +463,7 @@ addstat(struct statfs *totalfsp, struct statfs *statfsp)
 static void
 update_maxwidths(struct maxwidths *mwp, const struct statfs *sfsp)
 {
-	static u_long blocksize = 0;
+	static long blocksize = 0;
 	int dummy;
 
 	if (blocksize == 0)
