@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.14 2007/07/23 07:22:01 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.15 2007/07/23 10:23:19 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -914,10 +914,9 @@ cdrom.1:
 		if [ -d ${RD}/trees/$${i} ] ; then \
 			chflags -R noschg ${RD}/trees/$${i} || true ; \
 			( cd ${RD}/trees/$${i} && \
-			    cpdup -o . ${CD_LIVEFS} -vv ) ; \
+			     find . -depth -print | cpio -dumpl ${CD_LIVEFS} ) ; \
 		fi \
 	done
-	@echo "Done with Distributions."
 	@rm -f ${CD_LIVEFS}/.profile
 	@cp ${.CURDIR}/fixit.profile ${CD_LIVEFS}/.profile
 	@ln -sf /rescue ${CD_LIVEFS}/stand
