@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)hostname.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.2 2006/07/19 13:43:39 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.3 2007/07/23 13:02:06 alex Exp $");
 
 #include <sys/param.h>
 
@@ -96,6 +96,6 @@ void
 usage(void)
 {
 
-	(void)fprintf(stderr, "usage: hostname [-s] [name-of-host]\n");
+	(void)fprintf(stderr, "usage: hostname [-fs] [name-of-host]\n");
 	exit(1);
 }
