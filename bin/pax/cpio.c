@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)cpio.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/pax/cpio.c,v 1.2 2006/07/26 12:35:19 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -168,7 +168,7 @@ cpio_endwr(void)
 	last.nlen = sizeof(TRAILER) - 1;
 	last.type = PAX_REG;
 	last.sb.st_nlink = 1;
-	(void)strcpy(last.name, TRAILER);
+	(void)strlcpy(last.name, TRAILER,sizeof(last.name));
 	return((*frmt->wr)(&last));
 }
 
