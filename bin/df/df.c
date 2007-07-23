@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.6 2007/07/23 12:39:39 alex Exp $");
+__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.7 2007/07/23 12:42:30 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -127,14 +127,14 @@ main(int argc, char *argv[])
 			if(kflag)
 				break;
 			Pflag++;
-			putenv("BLOCKSIZE=512");
+			putenv(strdup("BLOCKSIZE=512"));
 			hflag = 0;
 			break;
 		case 'c':
 			cflag = 1;
 			break;
 		case 'g':
-			putenv("BLOCKSIZE=1g");
+			putenv(strdup("BLOCKSIZE=1g"));
 			hflag = 0;
 			break;
 		case 'H':
@@ -148,7 +148,7 @@ main(int argc, char *argv[])
 			break;
 		case 'k':
 			kflag++;
-			putenv("BLOCKSIZE=1024");
+			putenv(strdup("BLOCKSIZE=1024"));
 			hflag = 0;
 			break;
 		case 'l':
@@ -158,7 +158,7 @@ main(int argc, char *argv[])
 			lflag = 1;
 			break;
 		case 'm':
-			putenv("BLOCKSIZE=1m");
+			putenv(strdup("BLOCKSIZE=1m"));
 			hflag = 0;
 			break;
 		case 'n':
