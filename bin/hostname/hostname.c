@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)hostname.c	8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/hostname/hostname.c,v 1.2 2006/07/19 13:43:39 laffer1 Exp $");
 
 #include <sys/param.h>
 
@@ -59,8 +59,10 @@ main(int argc, char *argv[])
 	char *p, hostname[MAXHOSTNAMELEN];
 
 	sflag = 0;
-	while ((ch = getopt(argc, argv, "s")) != -1)
+	while ((ch = getopt(argc, argv, "fs")) != -1)
 		switch (ch) {
+		case 'f':
+			break;
 		case 's':
 			sflag = 1;
 			break;
