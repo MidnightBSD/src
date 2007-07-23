@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.3 2006/09/23 02:56:53 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.4 2007/07/23 12:27:22 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -94,7 +94,7 @@ imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-static int	aflag = 0, cflag, hflag, kflag, iflag, nflag, Pflag;
+static int	aflag = 0, cflag, hflag, kflag, iflag, kflag, nflag, Pflag;
 static struct	ufs_args mdev;
 
 int
@@ -124,6 +124,8 @@ main(int argc, char *argv[])
 		case 'b':
 				/* FALLTHROUGH */
 		case 'P':
+			if(kflag)
+				break;
 			Pflag++;
 			putenv("BLOCKSIZE=512");
 			hflag = 0;
@@ -146,7 +148,7 @@ main(int argc, char *argv[])
 			break;
 		case 'k':
 			kflag++;
-			putenv("BLOCKSIZE=1k");
+			putenv("BLOCKSIZE=1024");
 			hflag = 0;
 			break;
 		case 'l':
