@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.4 2007/07/23 12:27:22 alex Exp $");
+__MBSDID("$MidnightBSD: src/bin/df/df.c,v 1.5 2007/07/23 12:34:12 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -94,7 +94,7 @@ imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-static int	aflag = 0, cflag, hflag, kflag, iflag, kflag, nflag, Pflag;
+static int	aflag = 0, cflag, hflag, kflag, iflag, kflag, lflag = 0, nflag, Pflag;
 static struct	ufs_args mdev;
 
 int
@@ -155,6 +155,7 @@ main(int argc, char *argv[])
 			if (vfslist != NULL)
 				errx(1, "-l and -t are mutually exclusive.");
 			vfslist = makevfslist(makenetvfslist());
+			lflag = 1;
 			break;
 		case 'm':
 			putenv("BLOCKSIZE=1m");
@@ -164,6 +165,8 @@ main(int argc, char *argv[])
 			nflag = 1;
 			break;
 		case 't':
+			if(lflag)
+				errx(1, "-l and -t are mutually exclusive.");
 			if (vfslist != NULL)
 				errx(1, "only one -t option may be specified");
 			fstype = optarg;
