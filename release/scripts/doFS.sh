@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/release/scripts/doFS.sh,v 1.60 2004/08/25 01:39:52 kensmith Exp $
-# $MidnightBSD: src/release/scripts/doFS.sh,v 1.3 2007/07/23 10:25:47 laffer1 Exp $
+# $MidnightBSD: src/release/scripts/doFS.sh,v 1.4 2007/07/24 21:49:44 laffer1 Exp $
 #
 
 set -ex
@@ -98,7 +98,7 @@ fi
 dofs_md
 
 if [ -d ${FSPROTO} ]; then
-	(set -e && cd ${FSPROTO} && pax -rw . ${MNT})
+	(set -e && cd ${FSPROTO} && pax -rw -k -p e -t -u . ${MNT})
 else
 	cp -p ${FSPROTO} ${MNT}
 fi
