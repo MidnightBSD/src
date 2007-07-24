@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/release/scripts/doFS.sh,v 1.60 2004/08/25 01:39:52 kensmith Exp $
-# $MidnightBSD: src/release/scripts/doFS.sh,v 1.2 2007/03/17 16:44:45 laffer1 Exp $
+# $MidnightBSD: src/release/scripts/doFS.sh,v 1.3 2007/07/23 10:25:47 laffer1 Exp $
 #
 
 set -ex
@@ -90,27 +90,12 @@ dd of=${FSIMG} if=/dev/zero count=${FSSIZE} bs=1k 2>/dev/null
 # so we have to specifically specify -r when we don't have -B.
 # bsdlabel fails otherwise.
 #
-case `uname -r` in
-4.*)
-	if [ -f "${RD}/trees/base/boot/boot1" ]; then
-		BOOT="-B -b ${RD}/trees/base/boot/boot1"
-		if [ -f "${RD}/trees/base/boot/boot2" ]; then
-			BOOT="${BOOT} -s ${RD}/trees/base/boot/boot2"
-		fi
-	else
-		BOOT="-r"
-	fi
-	dofs_vn
-	;;
-*)
-	if [ -f "${RD}/trees/base/boot/boot" ]; then
-		BOOT="-B -b ${RD}/trees/base/boot/boot"
-	else
-		BOOT="-r"
-	fi
-	dofs_md
-	;;
-esac
+if [ -f "${RD}/trees/base/boot/boot" ]; then
+	BOOT="-B -b ${RD}/trees/base/boot/boot"
+else
+	BOOT="-r"
+fi
+dofs_md
 
 if [ -d ${FSPROTO} ]; then
 	(set -e && cd ${FSPROTO} && pax -rw . ${MNT})
