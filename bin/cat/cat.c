@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cat/cat.c,v 1.5 2007/07/14 15:51:00 alex Exp $");
+__MBSDID("$MidnightBSD: src/bin/cat/cat.c,v 1.6 2007/07/25 06:38:46 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -119,10 +119,7 @@ main(int argc, char *argv[])
 			vflag = 1;
 			break;
 		default:
-			fprintf(stderr, 
-				"usage: cat [-benstuv] [-] [file ...]\n");
-			exit(1);
-			/* NOTREACHED */
+			usage();
 		}
 	argv += optind;
 
