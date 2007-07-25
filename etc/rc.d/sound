@@ -3,6 +3,7 @@
 # Copyright 2002-2005 G.U.F.I. All rights reserved.
 # Copyright 2006 Timothy Redaelli
 #
+# Copyright 2007 Lucas Holt
 # Copyright (c) 2005-2007 FreeSBIE Project
 # All rights reserved.
 #
@@ -27,12 +28,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $Id: sound,v 1.1 2007-06-30 01:04:41 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/sound,v 1.1 2007/06/30 01:04:41 laffer1 Exp $
+# $Id: sound,v 1.2 2007-07-25 14:25:36 laffer1 Exp $
 #
 # Detect the audio card and load the appropriate driver
 #
-# PROVIDE: sound_detect
+# PROVIDE: sound
+# KEYWORD: nojail
  	
 . /etc/rc.subr
 
@@ -42,16 +44,17 @@ stop_cmd=":"
 
 do_sound_detect()
 {
-CARD_FILE=/usr/share/sound/snd_card_ids.txt
-pciconf -lv | awk -F '[ =]' '/^none/{print $6}' | while read i
-do
-   SND_DRIVER=`fgrep $i $CARD_FILE | cut -d: -f 1`
-   if [ "$SND_DRIVER" ]; then
-      echo -n "Loading $SND_DRIVER.ko... "
-      /sbin/kldload /boot/kernel/$SND_DRIVER.ko
-      echo "[OK]";
-   fi
-done
+	CARD_FILE=/usr/share/sound/snd_card_ids.txt
+	if [ -f $CARD_FILE ]; then
+		pciconf -lv | awk -F '[ =]' '/^none/{print $6}' | while read i
+		do
+			SND_DRIVER=`fgrep $i $CARD_FILE | cut -d: -f 1`
+			if [ "$SND_DRIVER" ]; then
+         			echo -n "Loading $SND_DRIVER.ko... "
+         			/sbin/kldload /boot/kernel/$SND_DRIVER.ko
+      			fi
+		done
+	fi	
 }
 
 load_rc_config $name
