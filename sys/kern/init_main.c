@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/kern/init_main.c,v 1.2 2006/08/29 16:34:08 laffer1 Exp $");
 
 #include "opt_init_path.h"
 #include "opt_mac.h"
@@ -89,7 +89,7 @@ void mi_startup(void);				/* Should be elsewhere */
 static struct session session0;
 static struct pgrp pgrp0;
 struct	proc proc0;
-struct	thread thread0;
+struct	thread thread0 __aligned(8);
 struct	ksegrp ksegrp0;
 struct	vmspace vmspace0;
 struct	proc *initproc;
