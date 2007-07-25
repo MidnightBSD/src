@@ -1,5 +1,5 @@
 $FreeBSD: src/MAINTAINERS,v 1.121 2005/06/04 16:56:35 imp Exp $
-$MidnightBSD: src/MAINTAINERS,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
+$MidnightBSD: src/MAINTAINERS,v 1.3 2006/10/15 00:06:35 laffer1 Exp $
 
 Please note that the content of this file is strictly advisory.
 No locks listed here are valid.  The only strict review requirements
@@ -103,7 +103,7 @@ nwfs		laffer1 In case of functional changes pre-commit review
 contrib/smbfs	laffer1	Open for in-tree committs. In case of functional
 			changes pre-commit review requested.
 contrib/pf	archite	Pre-commit review requested.
-binutils	laffer1	Pre-commit review requested.
+binutils	alex	Pre-commit review requested.
 file		laffer1	Pre-commit review requested.
 contrib/bzip2	laffer1	Pre-commit review required.
 lukemftpd 	laffer1	Pre-commit review required.
