@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/boot/Makefile,v 1.26 2004/12/21 12:32:13 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sys/boot/Makefile,v 1.2 2006/06/26 15:12:15 laffer1 Exp $
 
 .if !defined(NO_FORTH)
 # Build the add-in FORTH interpreter.
@@ -18,11 +18,5 @@ SUBDIR+=		ofw
 
 # Pick the machine-dependent subdir based on the target architecture.
 SUBDIR+=		${MACHINE:S/amd64/i386/}
-
-# Build ARC / AlphaBIOS executable on the Alpha
-# (this is a WIP (work in progress)).
-#.if ${MACHINE_ARCH} == "alpha"
-#SUBDIR+=		arc
-#.endif
 
 .include <bsd.subdir.mk>

@@ -1,30 +1,10 @@
 $FreeBSD: src/sys/boot/README,v 1.4 2005/01/05 22:16:10 imp Exp $
-$MidnightBSD$
+$MidnightBSD: src/sys/boot/README,v 1.2 2006/07/26 12:35:19 laffer1 Exp $
 
        README file, for the boot config file setup.  This is meant
        to explain how to manage the loader configuration process.
        The boot and loading process is either defined, or being
        defined in boot(8) and loader(8).
-
-       The ongoing development of the FreeBSD bootloader, and its
-       rapid deployment while still in the development phase, has
-       resulted in a large number of installations with outdated
-       configurations.  Those installations actively tracking the
-       FreeBSD development should also ensure that their bootloader
-       configurations are updated.  If you see files discussed here
-       that your system doesn't yet have, add them yourself.
-
-       This is an effort to give the currently correct method for
-       setting up your boot process.  It includes information on
-       setting up screen savers and plug and play information, and
-       also on recording any changes you make in your kernel
-       configuration.  This file is temporary, because as I noted,
-       the process is still undergoing development, and will still
-       change.  Man pages are coming out, but they're still going
-       to be somewhat fragile for a while.  If you note anything in
-       here that's broken, it would be a good idea to report it to
-       the FreeBSD-current list, or to Daniel C. Sobral
-       <dcs@FreeBSD.org> or Mike Smith <msmith@FreeBSD.org>.
 
        After the first two stages in the booting process (described
        in boot(8)), the last stage of the booting process, called
@@ -149,7 +129,7 @@ $MidnightBSD$
 
           o From loader, you can use the command "more" to read the
             contents of /boot/loader.rc, if you wish. This is not
-            FreeBSD's more. It is one of loader's builtin commands.
+            BSD's more. It is one of loader's builtin commands.
             Useful if you can't quite recall what you have there.
             :-) Of course, you can use this command to read
             anything else you want.
