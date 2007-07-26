@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/boot/i386/pxeldr/Makefile,v 1.16 2004/04/27 19:45:16 ru Exp $
 
 # Pick up ../Makefile.inc early.
