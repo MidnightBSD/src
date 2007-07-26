@@ -1,6 +1,5 @@
 * text=auto !eol
 /COPYRIGHT -text
-/LOCKS -text
 /MAINTAINERS -text
 /Makefile -text
 /Makefile.inc1 -text
