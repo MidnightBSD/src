@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile.inc.docports,v 1.3 2006/10/01 21:47:25 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile.inc.docports,v 1.4 2007/02/07 15:50:03 laffer1 Exp $
 # $FreeBSD: src/release/Makefile.inc.docports,v 1.26 2004/09/01 14:36:48 ru Exp $
 #
 # List of (dependent) ports that are minimally required to be
@@ -29,9 +29,8 @@ MINIMALDOCPORTS+= \
 	mports/converters/libiconv \
 	mports/devel/gettext \
 	mports/devel/gmake \
-	mports/devel/libtool13 \
 	mports/devel/libtool15 \
-	mports/devel/pkgconfig \
+	mports/devel/pkg-config \
 	mports/graphics/gd \
 	mports/graphics/jbigkit \
 	mports/graphics/jpeg \
