@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/libobjc/Makefile,v 1.26.2.2 2005/08/19 02:49:54 cperciva Exp $
 
 OBJCDIR=${.CURDIR}/../../../contrib/libobjc

@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/libgcc_r/Makefile,v 1.5 2000/11/01 01:18:27 jdp Exp $
 
 LIB=	gcc_r

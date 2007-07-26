@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/libreadline/Makefile.inc,v 1.11.2.1 2005/07/22 17:29:02 kensmith Exp $
 
 SHLIB_MAJOR=6

@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/libiberty/Makefile,v 1.4 2002/05/13 10:53:23 ru Exp $
 
 SRCDIR=	${.CURDIR}/../../../contrib/binutils/libiberty

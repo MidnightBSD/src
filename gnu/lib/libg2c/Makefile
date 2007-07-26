@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/gnu/lib/libg2c/Makefile,v 1.15.2.1 2005/07/22 17:29:01 kensmith Exp $
 
 SRCDIR=	${.CURDIR}/../../../contrib/libf2c
