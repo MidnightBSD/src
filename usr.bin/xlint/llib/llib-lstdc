@@ -1,4 +1,5 @@
 /*	$NetBSD: llib-lstdc,v 1.2 1995/07/03 21:25:11 cgd Exp $	*/
+/* $MidnightBSD$ */
 
 /*
  * Copyright (c) 1994, 1995 Jochen Pohl

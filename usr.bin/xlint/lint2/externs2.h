@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: externs2.h,v 1.7 2001/05/28 12:40:38 lukem Exp $ */
 
 /*

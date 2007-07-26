@@ -1,5 +1,5 @@
 #!/bin/sh
-#	$NetBSD$
+# $MidnightBSD$
 #
 # Copyright (c) 2000 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -37,7 +37,7 @@
 
 
 cat << \__EOF
-.\"	$NetBSD$
+.\" $MidnightBSD$
 .\"
 .\" Copyright (c) 2000 The NetBSD Foundation, Inc.
 .\" All rights reserved.

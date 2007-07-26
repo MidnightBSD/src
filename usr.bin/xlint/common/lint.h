@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: lint.h,v 1.5 2002/03/07 18:29:56 tv Exp $	*/
 
 /*

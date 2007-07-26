@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: xlint.c,v 1.27 2002/01/31 19:09:33 tv Exp $ */
 
 /*

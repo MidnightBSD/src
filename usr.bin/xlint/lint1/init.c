@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: init.c,v 1.9 2001/09/18 18:15:54 wiz Exp $	*/
 
 /*

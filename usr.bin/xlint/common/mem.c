@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: mem.c,v 1.2 2002/01/21 19:49:51 tv Exp $	*/
 
 /*

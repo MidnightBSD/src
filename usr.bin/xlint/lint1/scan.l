@@ -1,4 +1,5 @@
 %{
+/* $MidnightBSD$ */
 /* $NetBSD: scan.l,v 1.26 2002/01/31 22:30:21 tv Exp $ */
 
 /*

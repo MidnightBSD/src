@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: param.h,v 1.2 2002/02/05 03:04:26 thorpej Exp $	*/
 
 /*

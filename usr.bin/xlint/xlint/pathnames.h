@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: pathnames.h,v 1.3 1999/04/22 04:40:58 mrg Exp $	*/
 
 /*

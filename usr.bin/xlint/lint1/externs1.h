@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: externs1.h,v 1.13 2002/01/18 21:01:39 thorpej Exp $	*/
 
 /*

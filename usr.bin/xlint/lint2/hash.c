@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: hash.c,v 1.7 2002/01/21 19:49:52 tv Exp $	*/
 
 /*

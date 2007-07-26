@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: func.c,v 1.16 2002/01/03 04:25:15 thorpej Exp $	*/
 
 /*

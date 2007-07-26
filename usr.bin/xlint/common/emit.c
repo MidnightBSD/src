@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: emit.c,v 1.2 2002/01/21 19:49:51 tv Exp $	*/
 
 /*
@@ -32,9 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-#if defined(__RCSID) && !defined(lint)
-__RCSID("$NetBSD: emit.c,v 1.2 2002/01/21 19:49:51 tv Exp $");
-#endif
 
 #include <ctype.h>
 #include <stdio.h>

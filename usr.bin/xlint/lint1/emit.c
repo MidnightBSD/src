@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: emit.c,v 1.2 1995/07/03 21:24:00 cgd Exp $	*/
 
 /*

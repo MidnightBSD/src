@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: decl.c,v 1.29 2002/01/18 21:01:39 thorpej Exp $ */
 
 /*

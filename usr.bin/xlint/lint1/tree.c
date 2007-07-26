@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tree.c,v 1.24 2002/01/31 22:30:20 tv Exp $	*/
 
 /*

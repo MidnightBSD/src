@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: chk.c,v 1.15 2002/01/21 19:49:52 tv Exp $ */
 
 /*

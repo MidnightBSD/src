@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: err.c,v 1.17 2002/01/31 19:36:54 tv Exp $	*/
 
 /*
