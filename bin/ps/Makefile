@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/bin/ps/Makefile,v 1.27 2005/01/27 13:42:40 delphij Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 

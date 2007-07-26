@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*

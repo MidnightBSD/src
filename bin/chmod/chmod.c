@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -39,7 +40,6 @@ static char sccsid[] = "@(#)chmod.c	8.8 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$"); 
 
 #include <sys/types.h>
 #include <sys/stat.h>

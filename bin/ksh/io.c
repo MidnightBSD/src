@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
 
 /*

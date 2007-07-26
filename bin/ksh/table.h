@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: table.h,v 1.7 2005/12/11 20:31:21 otto Exp $	*/
 
 /* $From: table.h,v 1.3 1994/05/31 13:34:34 michael Exp $ */

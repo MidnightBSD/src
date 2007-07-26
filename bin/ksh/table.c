@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: table.c,v 1.12 2005/12/11 20:31:21 otto Exp $	*/
 
 /*

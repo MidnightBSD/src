@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: config.h,v 1.13 2004/12/18 22:42:26 millert Exp $	*/
 
 /* config.h.  NOT generated automatically. */

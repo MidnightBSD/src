@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: exec.c,v 1.46 2006/04/10 14:38:59 jaredy Exp $	*/
 
 /*

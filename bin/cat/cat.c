@@ -28,8 +28,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
-
-$FreeBSD: src/bin/cat/cat.c,v 1.32 2005/01/10 08:39:20 imp Exp $
+ *
+ * $MidnightBSD$
+ * $FreeBSD: src/bin/cat/cat.c,v 1.32 2005/01/10 08:39:20 imp Exp $
  */
 
 #if 0
@@ -46,7 +47,6 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cat/cat.c,v 1.6 2007/07/25 06:38:46 alex Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>

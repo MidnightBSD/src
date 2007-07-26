@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: c_test.c,v 1.17 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*

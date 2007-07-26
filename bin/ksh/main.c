@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: main.c,v 1.41 2006/04/10 14:38:59 jaredy Exp $	*/
 
 /*

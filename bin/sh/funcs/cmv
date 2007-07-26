@@ -33,6 +33,7 @@
 #
 #	@(#)cmv	8.2 (Berkeley) 5/4/95
 # $FreeBSD: src/bin/sh/funcs/cmv,v 1.8 2005/01/10 08:39:26 imp Exp $
+# $MidnightBSD$
 
 # Conditional move--don't replace an existing file.
 

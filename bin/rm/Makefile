@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/rm/Makefile,v 1.18 2005/01/27 14:52:45 delphij Exp $
+# $MidnightBSD$
 
 PROG=	rm
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: trap.c,v 1.22 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*

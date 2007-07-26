@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: history.c,v 1.35 2006/05/29 18:22:24 otto Exp $	*/
 
 /*

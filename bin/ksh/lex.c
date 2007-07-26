@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: lex.c,v 1.42 2006/07/10 17:12:41 beck Exp $	*/
 
 /*

@@ -28,6 +28,7 @@
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/2/94
  * $FreeBSD: src/bin/ps/extern.h,v 1.37 2004/06/23 23:48:09 gad Exp $
+ * $MidnightBSD$
  */
 
 struct kinfo;

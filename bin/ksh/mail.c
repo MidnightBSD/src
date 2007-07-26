@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: mail.c,v 1.15 2005/03/30 17:16:37 deraadt Exp $	*/
 
 /*

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 
 /* Various types of operations.  Keeping things grouped nicely

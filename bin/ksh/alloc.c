@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: alloc.c,v 1.7 2004/02/19 18:51:17 deraadt Exp $	*/
 /*
  * Copyright (c) 2002 Marc Espie.

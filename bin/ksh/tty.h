@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
 /*

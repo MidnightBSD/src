@@ -1,3 +1,5 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: src/bin/test/test.c,v 1.53 2005/01/10 08:39:26 imp Exp $ */ 
 /*	$NetBSD: test.c,v 1.21 1999/04/05 09:48:38 kleink Exp $	*/
 
 /*-
@@ -11,7 +13,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/test/test.c,v 1.53 2005/01/10 08:39:26 imp Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>

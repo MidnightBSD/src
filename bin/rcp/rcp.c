@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1983, 1990, 1992, 1993
  *	The Regents of the University of California.  All rights reserved.

@@ -33,6 +33,7 @@
 #
 #	@(#)kill	8.2 (Berkeley) 5/4/95
 # $FreeBSD: src/bin/sh/funcs/kill,v 1.8 2005/01/10 08:39:26 imp Exp $
+# $MidnightBSD$
 
 # Convert job names to process ids and then run /bin/kill.
 

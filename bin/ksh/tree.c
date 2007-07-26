@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tree.c,v 1.18 2006/04/10 14:38:59 jaredy Exp $	*/
 
 /*

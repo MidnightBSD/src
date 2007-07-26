@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
 #include "sh.h"

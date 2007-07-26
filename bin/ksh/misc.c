@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: misc.c,v 1.30 2006/03/12 00:26:58 deraadt Exp $	*/
 
 /*

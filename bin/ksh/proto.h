@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: proto.h,v 1.30 2006/03/17 16:30:13 millert Exp $	*/
 
 /*

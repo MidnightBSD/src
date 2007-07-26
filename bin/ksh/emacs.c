@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: emacs.c,v 1.40 2006/07/10 17:12:41 beck Exp $	*/
 
 /*

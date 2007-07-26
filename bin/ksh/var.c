@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: var.c,v 1.30 2006/05/21 18:40:39 otto Exp $	*/
 
 #include "sh.h"

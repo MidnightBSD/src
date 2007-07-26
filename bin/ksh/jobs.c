@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: jobs.c,v 1.35 2006/02/06 16:47:07 jmc Exp $	*/
 
 /*

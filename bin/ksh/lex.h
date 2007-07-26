@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: lex.h,v 1.11 2006/05/29 18:22:24 otto Exp $	*/
 
 /*

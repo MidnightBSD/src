@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/bin/setfacl/Makefile,v 1.8 2004/06/13 19:22:53 obrien Exp $
 
 PROG=	setfacl

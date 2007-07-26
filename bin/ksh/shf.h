@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: shf.h,v 1.6 2005/12/11 18:53:51 deraadt Exp $	*/
 
 #ifndef SHF_H

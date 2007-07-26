@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
 
 #include "sh.h"

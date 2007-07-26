@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: mknod.c,v 1.1 2005/10/06 06:39:36 otto Exp $	*/
 /*	$NetBSD: mknod.c,v 1.8 1995/08/11 00:08:18 jtc Exp $	*/
 

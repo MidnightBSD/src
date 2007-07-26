@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
 
 /*

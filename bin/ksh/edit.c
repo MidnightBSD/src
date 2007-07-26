@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: edit.c,v 1.31 2005/12/11 20:31:21 otto Exp $	*/
 
 /*

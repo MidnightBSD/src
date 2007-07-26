@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: c_ksh.c,v 1.29 2006/03/12 00:26:58 deraadt Exp $	*/
 
 /*

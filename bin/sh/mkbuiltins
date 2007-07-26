@@ -33,6 +33,7 @@
 #
 #	@(#)mkbuiltins	8.2 (Berkeley) 5/4/95
 # $FreeBSD: src/bin/sh/mkbuiltins,v 1.14.2.1 2005/11/06 20:39:48 stefanf Exp $
+# $MidnightBSD$
 
 temp=`/usr/bin/mktemp -t ka`
 havejobs=0

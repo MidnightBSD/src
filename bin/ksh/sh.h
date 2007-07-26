@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: sh.h,v 1.29 2005/12/11 18:53:51 deraadt Exp $	*/
 
 /*
