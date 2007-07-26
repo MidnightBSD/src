@@ -27297,10 +27297,6 @@ sys/kern/vfs_subr.c -text
 sys/kern/vfs_syscalls.c -text
 sys/kern/vfs_vnops.c -text
 sys/kern/vnode_if.src -text
-sys/libkern/alpha/bswap16.S -text
-sys/libkern/alpha/bswap32.S -text
-sys/libkern/alpha/byte_swap_2.S -text
-sys/libkern/alpha/byte_swap_4.S -text
 sys/libkern/arc4random.c -text
 sys/libkern/arm/divsi3.S -text
 sys/libkern/arm/ffs.S -text
