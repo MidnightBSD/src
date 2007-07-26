@@ -153,6 +153,10 @@ atkbdc_configure(void)
 	bus_space_tag_t tag;
 	bus_space_handle_t h0;
 	bus_space_handle_t h1;
+#if defined(__i386__)
+	volatile int i;
+	register_t flags;
+#endif
 #ifdef __sparc64__
 	char name[32];
 	phandle_t chosen, node;
@@ -219,6 +223,18 @@ atkbdc_configure(void)
 	h1 = (bus_space_handle_t)port1;
 #endif
 #endif
+
+#if defined(__i386__)
+	flags = intr_disable();
+	for (i = 0; i != 65535; i++) {
+		if ((bus_space_read_1(tag, h1, 0) & 0x2) == 0)
+			break;
+	}
+	intr_restore(flags);
+	if (i == 65535)
+		return ENXIO;
+#endif
+
 	return atkbdc_setup(atkbdc_softc[0], tag, h0, h1);
 }
 
@@ -835,6 +851,7 @@ empty_both_buffers(KBDC p, int wait)
 {
     int t;
     int f;
+    int waited = 0;
 #if KBDIO_DEBUG >= 2
     int c1 = 0;
     int c2 = 0;
@@ -855,6 +872,10 @@ empty_both_buffers(KBDC p, int wait)
 	} else {
 	    t -= delta;
 	}
+
+	waited += (delta * 1000);
+	if (waited == (delta * 1000000))
+	    return;
 	DELAY(delta*1000);
     }
 #if KBDIO_DEBUG >= 2
