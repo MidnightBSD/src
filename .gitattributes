@@ -23998,8 +23998,6 @@ sys/boot/efi/libefi/libefi.c -text
 sys/boot/efi/libefi/module.c -text
 sys/boot/efi/libefi/time.c -text
 sys/boot/ficl/Makefile -text
-sys/boot/ficl/alpha/sysdep.c -text
-sys/boot/ficl/alpha/sysdep.h -text
 sys/boot/ficl/dict.c -text
 sys/boot/ficl/ficl.c -text
 sys/boot/ficl/ficl.h -text
