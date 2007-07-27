@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/media.c,v 1.121.12.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -664,9 +664,11 @@ mediaExtractDistBegin(char *dir, int *fd, int *zpid, int *cpid)
 	    dup2(1, 2);
 	}
 	if (strlen(cpioVerbosity()))
-	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "-C", 
+                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
 	else
-	    i = execl(cpio, cpio, "-idum", "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", "-C", 
+                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
 	if (isDebug())
 	    msgDebug("%s command returns %d status\n", cpio, i);
 	exit(i);
@@ -753,9 +755,11 @@ mediaExtractDist(char *dir, char *dist, FILE *fp)
 	    dup2(1, 2);
 	}
 	if (strlen(cpioVerbosity()))
-	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "-C", 
+                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
 	else
-	    i = execl(cpio, cpio, "-idum", "--block-size", mediaTapeBlocksize(), (char *)0);
+	    i = execl(cpio, cpio, "-idum", "-C", 
+                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
 	if (isDebug())
 	    msgDebug("%s command returns %d status\n", cpio, i);
 	exit(i);
@@ -889,3 +893,14 @@ mediaGenericGet(char *base, const char *file)
     return fopen(buf, "r");
 }
 
+char *
+mediaBufferSize(char *size)
+{
+    long mediasize;
+    char *ret;
+
+    mediasize = strtol(size, (char **)NULL, 10);
+    mediasize *= 512; /* Convert this to --blocksize */
+    asprintf(&ret, "%d", mediasize);
+    return ret;
+}

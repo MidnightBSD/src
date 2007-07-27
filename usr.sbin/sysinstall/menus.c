@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.5 2007/02/20 02:03:21 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.6 2007/02/20 02:45:04 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -1081,10 +1081,6 @@ DMenu MenuStartup = {
 	dmenuVarCheck, dmenuToggleVariable, NULL, "ibcs2_enable=YES" },
       { " SVR4",	"This host wants to be able to run SVR4 binaries.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "svr4_enable=YES" },
-#endif
-#ifdef __alpha__
-      { " OSF/1",	"This host wants to be able to run DEC OSF/1 binaries.",
-	dmenuVarCheck, configOSF1, NULL, VAR_OSF1_ENABLE "=YES" },
 #endif
       { " quotas",	"This host wishes to check quotas on startup.",
 	dmenuVarCheck, dmenuToggleVariable, NULL, "check_quotas=YES" },

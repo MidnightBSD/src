@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.8,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+.\" $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.8,v 1.3 2007/02/20 01:41:33 laffer1 Exp $
 .\" $FreeBSD: src/usr.sbin/sysinstall/sysinstall.8,v 1.69.2.2 2006/01/31 22:03:18 jkim Exp $
 .\"
 .Dd June 14, 2005
@@ -40,15 +40,15 @@
 The
 .Nm
 utility is used for installing and configuring
-.Fx
+.Mx
 systems.
 It is the first utility invoked by the
-.Fx
+.Mx
 installation boot
 floppy and is also available as
 .Pa /usr/sbin/sysinstall
 on newly installed
-.Fx
+.Mx
 systems for use in later configuring the system.
 .Pp
 The
@@ -72,13 +72,13 @@ of the
 .Xr libdisk 3
 library) and install distributions or packages onto new and
 existing
-.Fx
+.Mx
 systems.
 It also contains some extra intelligence
 for running as a replacement for
 .Xr init 8
 when it is invoked by the
-.Fx
+.Mx
 installation boot procedure.
 It
 assumes very little in the way of additional utility support and
@@ -256,15 +256,15 @@ change to geometry.
 Set to disk partitioning type or size, its value being
 .Ar free
 in order to use only remaining free space for
-.Fx ,
+.Mx ,
 .Ar all
 to use the entire disk for
-.Fx
+.Mx
 but maintain a proper partition
 table,
 .Ar existing
 to use an existing
-.Fx
+.Mx
 partition (first found),
 .Ar exclusive
 to use the disk in
@@ -274,7 +274,7 @@ mode or, finally,
 to allocate
 .Ar somenumber
 blocks of available free space to a new
-.Fx
+.Mx
 partition.
 Default: Interactive mode.
 .It bootManager
@@ -305,7 +305,7 @@ None
 Invokes the disk label editor.
 This is a bit trickier from a script
 since you need to essentially label everything inside each
-.Fx
+.Mx
 (type 0xA5) partition created by the
 .Ar diskPartitionEditor
 function, and that requires knowing a few rules about how things are
@@ -317,12 +317,12 @@ what the slice names will be, then and only then hardwiring them into
 the script.
 .Pp
 For example, let's say you have a SCSI disk on which you have created a new
-.Fx
+.Mx
 partition in slice 2 (your DOS partition residing in slice 1).
 The slice name would be
 .Ar da0s2
 for the whole
-.Fx
+.Mx
 partition
 .Ar ( da0s1
 being your DOS primary
@@ -330,7 +330,7 @@ partition).
 Now let's further assume that you have 500MB in this
 partition and you want to sub-partition that space into root, swap,
 var and usr file systems for
-.Fx .
+.Mx .
 Your invocation of the
 .Ar diskLabelEditor
 function might involve setting the following variables:
@@ -642,7 +642,7 @@ If a media device is open, close it.
 None
 .It mediaSetCDROM
 Select a
-.Fx
+.Mx
 CDROM as the installation media.
 .Pp
 .Sy Variables :
@@ -690,7 +690,7 @@ The IP address for the selected host interface (non-optional).
 The netmask for the selected host interface (non-optional).
 .It _ftpPath
 The fully qualified URL of the FTP site containing the
-.Fx
+.Mx
 distribution you are interested in, e.g.\&
 .Ar ftp://ftp.MidnightBSD.org/pub/MidnightBSD/ .
 .El
@@ -731,7 +731,7 @@ the installation media.
 .Bl -tag -width indent
 .It ufs
 full /path to directory containing the
-.Fx
+.Mx
 distribution you are
 interested in.
 .El
@@ -762,7 +762,7 @@ The netmask for the selected host interface (non-optional).
 .It nfs
 full hostname:/path specification for directory containing
 the
-.Fx
+.Mx
 distribution you are interested in.
 .El
 .It mediaSetFTPUserPass
@@ -856,7 +856,7 @@ Currently, only the following properties are recognized.
 .Bl -tag -width ".Va CD_MACHINE_ARCH"
 .It Va CD_VERSION
 This property should be set to the
-.Fx
+.Mx
 version on the current
 media volume.
 For example,
@@ -865,7 +865,7 @@ For example,
 This property should be set to the architecture of the contents on
 this volume.
 This property is normally only used with
-.Fx
+.Mx
 products that contain
 CDs for different architectures, to provide better error messages if
 users try to install Alpha packages on an i386 machine.
@@ -873,7 +873,7 @@ For example,
 .Dq Li "CD_MACHINE_ARCH = alpha" .
 .It Va CD_VOLUME
 In a multi-volume collection (such as the
-.Fx
+.Mx
 4-CD set), the
 .Pa ports/INDEX
 file on each disc should contain the full package index for the set.
@@ -899,7 +899,7 @@ package.
 .El
 .Pp
 For information about building a full release of
-.Fx ,
+.Mx ,
 please see
 .Xr release 7 .
 .Sh FILES

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.3 2007/02/20 01:41:33 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.4 2007/02/20 02:43:34 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -53,7 +53,7 @@
 
 /*** Defines ***/
 
-#if defined(__i386__) || defined(__alpha__) || defined(__amd64__)
+#if defined(__i386__) || defined(__amd64__)
 #define	WITH_SYSCONS
 #define	WITH_MICE
 #endif
@@ -62,7 +62,7 @@
 #define	WITH_SLICES
 #endif
 
-#if defined(__i386__) || defined(__alpha__)
+#if defined(__i386__)
 #define	WITH_LINUX
 #endif
 
@@ -520,9 +520,6 @@ extern int	configSaverTimeout(dialogMenuItem *self);
 extern int	configLinux(dialogMenuItem *self);
 #endif
 extern int	configNTP(dialogMenuItem *self);
-#ifdef __alpha__
-extern int	configOSF1(dialogMenuItem *self);
-#endif
 extern int	configUsers(dialogMenuItem *self);
 extern int	configRouter(dialogMenuItem *self);
 extern int	configPCNFSD(dialogMenuItem *self);
@@ -703,6 +700,7 @@ extern u_char		default_scrnmap[];
 
 /* media.c */
 extern char	*cpioVerbosity(void);
+extern char	*mediaBufferSize(char *size);
 extern int	mediaOpen(void);
 extern void	mediaClose(void);
 extern int	mediaTimeout(void);

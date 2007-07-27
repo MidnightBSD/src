@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.3 2007/07/17 12:57:25 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/label.c,v 1.4 2007/07/17 12:58:36 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/label.c,v 1.148.8.2 2006/01/24 15:51:33 ceri Exp $
  *
  * Copyright (c) 1995
@@ -1094,27 +1094,6 @@ diskLabel(Device *dev)
 		    clear_wins();
 		    break;
 		}
-
-#ifdef __alpha__
-		/*
-		 * SRM requires that the root partition is at the
-		 * begining of the disk and cannot boot otherwise. 
-		 * Warn Alpha users if they are about to shoot themselves in
-		 * the foot in this way.
-		 *
-		 * Since partitions may not start precisely at offset 0 we
-		 * check for a "close to 0" instead. :-(
-		 */
-		if ((flags & CHUNK_IS_ROOT) && (tmp->offset > 1024)) {
-		    msgConfirm("Your root partition `a' does not seem to be the first\n"
-			       "partition.  The Alpha's firmware can only boot from the\n"
-			       "first partition.  So it is unlikely that your current\n"
-			       "disk layout will be bootable boot after installation.\n"
-			       "\n"
-			       "Please allocate the root partition before allocating\n"
-			       "any others.\n");
-		}
-#endif	/* alpha */
 
 		tmp->private_data = p;
 		tmp->private_free = safe_free;

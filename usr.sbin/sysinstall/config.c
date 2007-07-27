@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.6 2007/03/09 14:46:01 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.7 2007/03/09 14:48:48 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -540,17 +540,6 @@ configLinux(dialogMenuItem *self)
     i = package_add("linux_base-fc");
     restorescr(w);
     return i;
-}
-#endif
-
-#ifdef __alpha__
-int
-configOSF1(dialogMenuItem *self)
-{
-
-    variable_set2(VAR_OSF1_ENABLE, "YES", 1);
-    Mkdir("/compat/osf1");
-    return DITEM_SUCCESS;
 }
 #endif
 

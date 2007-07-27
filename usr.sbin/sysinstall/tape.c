@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/tape.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/tape.c,v 1.24 2002/11/01 02:05:05 kuriyama Exp $
  *
  * Copyright (c) 1995
@@ -83,9 +83,11 @@ mediaGetTape(Device *dev, char *file, Boolean probe)
 	/* We know the tape is already in the drive, so go for it */
 	msgNotify("First extracting distributions from %s...", dev->description);
 	if (!strcmp(dev->name, "rft0"))
-	    i = vsystem("ft | cpio -idum %s --block-size %s", cpioVerbosity(), mediaTapeBlocksize());
+	    i = vsystem("ft | cpio -idum %s -C %s", cpioVerbosity(), 
+                mediaBufferSize(mediaTapeBlocksize()));
 	else
-	    i = vsystem("cpio -idum %s --block-size %s -I %s", cpioVerbosity(), mediaTapeBlocksize(), dev->devname);
+	    i = vsystem("cpio -idum %s -C %s -I %s", cpioVerbosity(), 
+                mediaBufferSize(mediaTapeBlocksize()), dev->devname);
 	if (!i) {
 	    tapeInitted = TRUE;
 	    msgDebug("Tape initialized successfully.\n");

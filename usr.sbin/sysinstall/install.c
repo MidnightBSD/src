@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -368,7 +368,7 @@ installFixitCDROM(dialogMenuItem *self)
      */
     if (symlink("/dist", "/mnt2")) {
 	msgConfirm("Unable to symlink /mnt2 to the disc mount point.  Please report this\n"
-		   "unexpected failure to midnightbsd-bugs@MidnightBSD.org.");
+		   "unexpected failure to luke@MidnightBSD.org.");
 	return DITEM_FAILURE;
     }
 
@@ -690,12 +690,6 @@ nodisks:
     dialog_clear_norefresh();
     if (!msgYesNo("Would you like to enable Linux binary compatibility?"))
 	(void)configLinux(self);
-#endif
-
-#ifdef __alpha__
-    dialog_clear_norefresh();
-    if (!msgYesNo("Would you like to enable OSF/1 binary compatibility?"))
-	(void)configOSF1(self);
 #endif
 
 #ifdef WITH_MICE

@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.3 2007/03/09 14:43:11 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/cdrom.c,v 1.54 2005/03/02 22:27:21 jhb Exp $
  *
  * Copyright (c) 1995
@@ -165,11 +165,7 @@ mediaInitCDROM(Device *dev)
 	    }
 	    if ((cp = property_find(cd_attr, "CD_MACHINE_ARCH")) != NULL) {
 		if (strcmp(cp, "any") &&
-#ifdef __alpha__
-		  strcmp(cp, "alpha")) {
-#elif defined(PC98)
-		  strcmp(cp, "pc98")) {
-#elif defined(__sparc64__)
+#if defined(__sparc64__)
 		  strcmp(cp, "sparc64")) {
 #else
 		  strcmp(cp, "x86")) {

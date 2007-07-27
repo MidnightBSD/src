@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/system.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/system.c,v 1.124.2.1 2005/08/17 13:32:29 kensmith Exp $
  *
  * Jordan Hubbard
@@ -188,10 +188,6 @@ systemInitialize(int argc, char **argv)
 	setenv("PATH", "/stand:/bin:/sbin:/usr/sbin:/usr/bin:/mnt/bin:/mnt/sbin:/mnt/usr/sbin:/mnt/usr/bin:/usr/X11R6/bin", 1);
 	setbuf(stdin, 0);
 	setbuf(stderr, 0);
-#ifdef __alpha__
-	i = 0;
-	sysctlbyname("machdep.unaligned_print", NULL, 0, &i, sizeof(i));
-#endif
 #if 0
 	signal(SIGCHLD, reap_children);
 #endif
@@ -259,7 +255,7 @@ systemShutdown(int status)
     if (RunningAsInit) {
 	/* Put the console back */
 	ioctl(0, VT_ACTIVATE, 2);
-#if defined(__alpha__) || defined(__sparc64__)
+#if defined(__sparc64__)
 	reboot(RB_HALT);
 #else
 	reboot(0);
