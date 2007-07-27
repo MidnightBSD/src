@@ -20495,7 +20495,6 @@ release/scripts/tar.sh -text
 release/scripts/xperimnt-install.sh -text
 release/sparc64/boot_crunch.conf -text
 release/sparc64/mkisoimages.sh -text
-release/texts/README -text
 rescue/Makefile -text
 rescue/README -text
 rescue/librescue/Makefile -text

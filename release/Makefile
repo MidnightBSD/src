@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.15 2007/07/23 10:23:19 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.16 2007/07/23 20:55:49 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -184,12 +184,6 @@ MNT=			/mnt
 .if ${TARGET_ARCH} == "i386"
 MAKE_FLOPPIES=		true
 SPLIT_MFSROOT=
-.if ${TARGET} == "pc98"
-SMALLFLOPPYSIZE=	1200
-SMALLFLOPPYSPLITSIZE=	1152
-SMALLFLOPPYLABEL=	fd1200
-SPLIT_MFSROOT=
-.endif
 FLOPPYSIZE=		1440
 FLOPPYSPLITSIZE=	1392
 FLOPPYINODE=		40000
@@ -246,9 +240,7 @@ RD=			${_R}/stage
 RND=			${RD}/release.doc
 FD=			${_R}/ftp
 CD=			${_R}/cdrom
-.if ${TARGET} != "pc98"
 CD_BOOT=		${CD}/bootonly
-.endif
 CD_DISC1=		${CD}/disc1
 CD_DISC2=		${CD}/disc2
 .if defined(SEPARATE_LIVEFS)
@@ -270,9 +262,6 @@ DOFS_SH=	${.CURDIR}/scripts/doFS.sh ${DISKLABEL} ""
 CRUNCH_TARGETS=	boot
 .if ${TARGET_ARCH} == "i386"
 CRUNCH_TARGETS+=fixit
-.if ${TARGET} == "pc98"
-CRUNCH_TARGETS+=fixit-small
-.endif
 .endif
 
 .if defined(MAKE_FLOPPIES)
@@ -288,11 +277,7 @@ EXTRAS+= cdrom.1 cdrom.2 cdrom.3
 .if defined(MAKE_ISOS)
 EXTRAS+= iso.1
 .endif
-.if ${TARGET} == "pc98"
-BOOTABLE=
-.else
 BOOTABLE="-b"
-.endif
 .endif
 
 .if !defined(NODOC)
@@ -723,11 +708,7 @@ release.8:
 		ln -sf /stand $$dir; \
 	  done )
 	cp ${RD}/trees/base/sbin/dhclient-script ${RD}/mfsfd/stand
-	cp ${RD}/trees/base/usr/bin/tar ${RD}/mfsfd/stand
-.if ${TARGET} == "pc98"
-	cp ${.CURDIR}/../etc/defaults/pccard.conf \
-	    ${RD}/mfsfd/etc/defaults/pccard.conf
-.endif
+#	cp ${RD}/trees/base/usr/bin/tar ${RD}/mfsfd/stand
 	cp ${.CURDIR}/../etc/usbd.conf ${RD}/mfsfd/etc/usbd.conf
 	cp ${.CURDIR}/../etc/master.passwd ${RD}/mfsfd/etc/master.passwd
 	cp ${RD}/trees/base/etc/*pwd.db ${RD}/mfsfd/etc/
@@ -884,7 +865,7 @@ ftp.1:
 .if defined(MAKE_FLOPPIES)
 	@cd ${RD} && find floppies -print | cpio -dumpl ${FD}
 .endif
-	@cd ${RD}/dists && pax -rw . ${FD}
+	@cd ${RD}/dists && pax -rw -k -p e -t -u . ${FD}
 .if !defined(NODOC)
 	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
 		cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
@@ -914,13 +895,12 @@ cdrom.1:
 		if [ -d ${RD}/trees/$${i} ] ; then \
 			chflags -R noschg ${RD}/trees/$${i} || true ; \
 			( cd ${RD}/trees/$${i} && \
-			     find . -depth -print | cpio -dumpl ${CD_LIVEFS} ) ; \
+			     pax -rw -k -p e -t -u . ${CD_LIVEFS} ) ; \
 		fi \
 	done
 	@rm -f ${CD_LIVEFS}/.profile
 	@cp ${.CURDIR}/fixit.profile ${CD_LIVEFS}/.profile
 	@ln -sf /rescue ${CD_LIVEFS}/stand
-.if ${TARGET} != "pc98"
 	@echo "Setting up CDROM boot area"
 	@rm -f ${CD_LIVEFS}/boot/loader.conf
 	@cp ${RD}/mfsroot/mfsroot.gz ${CD_LIVEFS}/boot/mfsroot.gz
@@ -932,7 +912,6 @@ cdrom.1:
 	@rm -f ${CD_LIVEFS}/boot/device.hints
 	@cp ${RD}/trees/base/boot/device.hints ${CD_LIVEFS}/boot/device.hints
 .endif
-.endif
 	@echo "CD_VERSION = ${BUILDNAME}" > ${CD_LIVEFS}/cdrom.inf
 	touch ${.TARGET}
 
@@ -943,7 +922,7 @@ cdrom.2:
 .if defined(MAKE_FLOPPIES)
 	@cd ${RD} && find floppies -print | cpio -dumpl ${CD_DISC1}
 .endif
-	@cd ${RD}/dists && pax -rw . ${CD_DISC1}/${BUILDNAME}
+	@cd ${RD}/dists && pax -rw -k -t -u . ${CD_DISC1}/${BUILDNAME}
 .if !defined(NODOC)
 	@for i in ${DIST_DOCS_ARCH_INDEP}; do \
 	  cp ${RND}/${RELNOTES_LANG}/$$i/article.txt \
