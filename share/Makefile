@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/Makefile,v 1.33 2005/04/13 10:02:58 phk Exp $
+# $MidnightBSD$
 
 # Do not include `info' in the SUBDIR list, it is handled separately.
 
@@ -19,6 +20,7 @@ SUBDIR=	colldef \
 	${_sendmail} \
 	skel \
 	snmp \
+	sound \
 	syscons \
 	tabset \
 	termcap \
