@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * FreeBSD install - a package for the installation and maintainance
  * of non-core utilities.
