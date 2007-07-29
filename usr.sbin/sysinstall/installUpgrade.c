@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.5 2006/10/07 16:33:20 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.6 2007/07/17 13:08:07 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/installUpgrade.c,v 1.84.12.1 2005/12/03 14:36:26 philip Exp $
  *
  * Copyright (c) 1995
@@ -288,12 +288,12 @@ installUpgrade(dialogMenuItem *self)
 
 	if (saved_etc[0]) {
 	    msgNotify("Preserving /etc directory..");
-	    if (vsystem("tar -cBpf - -C /etc . | tar --unlink -xBpf - -C %s", saved_etc))
+	    if (vsystem("tar -cpf - -C /etc . | tar -xpf - -C %s", saved_etc))
 		if (msgYesNo("Unable to backup your /etc into %s.\n"
 			     "Do you want to continue anyway?", saved_etc) != 0)
 		    return DITEM_FAILURE;
 	    msgNotify("Preserving /root directory..");
-	    vsystem("tar -cBpf - -C / root | tar --unlink -xBpf - -C %s", saved_etc);
+	    vsystem("tar -cpf - -C / root | tar -xpf - -C %s", saved_etc);
 	}
 
 	msgNotify("chflags'ing old binaries - please wait.");
@@ -498,7 +498,7 @@ installUpgradeNonInteractive(dialogMenuItem *self)
     }
 
     msgNotify("First stage of upgrade completed successfully.");
-    if (vsystem("tar -cpBf - -C %s . | tar --unlink -xpBf - -C /etc", saved_etc)) {
+    if (vsystem("tar -cpf - -C %s . | tar -xpf - -C /etc", saved_etc)) {
 	msgNotify("Unable to resurrect your old /etc!");
 	return DITEM_FAILURE;
     }

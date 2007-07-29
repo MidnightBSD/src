@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.3 2007/07/27 21:32:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/media.c,v 1.121.12.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -112,14 +112,12 @@ kickstart_dns(void)
 }
 
 char *
-cpioVerbosity()
+cpioVerbosity(void)
 {
     char *cp = variable_get(VAR_CPIO_VERBOSITY);
 
     if (cp && !strcmp(cp, "high"))
 	return "-v";
-    else if (cp && !strcmp(cp, "medium"))
-	return "-V";
     return "";
 }
 
