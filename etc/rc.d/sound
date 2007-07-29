@@ -28,8 +28,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.d/sound,v 1.1 2007/06/30 01:04:41 laffer1 Exp $
-# $Id: sound,v 1.2 2007-07-25 14:25:36 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/sound,v 1.2 2007/07/25 14:25:36 laffer1 Exp $
+# $Id: sound,v 1.3 2007-07-29 21:20:15 laffer1 Exp $
 #
 # Detect the audio card and load the appropriate driver
 #
@@ -50,7 +50,7 @@ do_sound_detect()
 		do
 			SND_DRIVER=`fgrep $i $CARD_FILE | cut -d: -f 1`
 			if [ "$SND_DRIVER" ]; then
-         			echo -n "Loading $SND_DRIVER.ko... "
+         			echo "Starting $SND_DRIVER.ko... "
          			/sbin/kldload /boot/kernel/$SND_DRIVER.ko
       			fi
 		done
