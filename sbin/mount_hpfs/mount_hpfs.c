@@ -28,6 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/sbin/mount_hpfs/mount_hpfs.c,v 1.6 2005/06/10 09:51:41 delphij Exp $
  */
 
@@ -35,7 +36,7 @@
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
-#include <fs/hpfs/hpfsmount.h>
+#include <sys/fs/hpfs/hpfsmount.h>
 #include <ctype.h>
 #include <err.h>
 #include <grp.h>
@@ -60,9 +61,7 @@ static void	usage(void) __dead2;
 static void	load_u2wtable(struct hpfs_args *, char *);
 
 int
-main(argc, argv)
-	int argc;
-	char **argv;
+main(int argc, char **argv)
 {
 	struct hpfs_args args;
 	struct stat sb;
@@ -150,8 +149,7 @@ main(argc, argv)
 }
 
 gid_t
-a_gid(s)
-	char *s;
+a_gid(char *s)
 {
 	struct group *gr;
 	char *gname;
@@ -170,8 +168,7 @@ a_gid(s)
 }
 
 uid_t
-a_uid(s)
-	char *s;
+a_uid(char *s)
 {
 	struct passwd *pw;
 	char *uname;
@@ -190,8 +187,7 @@ a_uid(s)
 }
 
 mode_t
-a_mask(s)
-	char *s;
+a_mask(char *s)
 {
 	int done, rv=0;
 	char *ep;
@@ -207,16 +203,14 @@ a_mask(s)
 }
 
 void
-usage()
+usage(void)
 {
 	fprintf(stderr, "usage: mount_hpfs [-u user] [-g group] [-m mask] bdev dir\n");
 	exit(EX_USAGE);
 }
 
 void
-load_u2wtable (pargs, name)
-	struct hpfs_args *pargs;
-	char *name;
+load_u2wtable (struct hpfs_args *pargs, char *name)
 {
 	FILE *f;
 	int i, code;
