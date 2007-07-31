@@ -26439,10 +26439,6 @@ sys/fs/udf/udf_iconv.c -text
 sys/fs/udf/udf_mount.h -text
 sys/fs/udf/udf_vfsops.c -text
 sys/fs/udf/udf_vnops.c -text
-sys/fs/umapfs/umap.h -text
-sys/fs/umapfs/umap_subr.c -text
-sys/fs/umapfs/umap_vfsops.c -text
-sys/fs/umapfs/umap_vnops.c -text
 sys/fs/unionfs/union.h -text
 sys/fs/unionfs/union_subr.c -text
 sys/fs/unionfs/union_vfsops.c -text
