@@ -20853,9 +20853,6 @@ sbin/mount/mount.c -text
 sbin/mount/mount_ufs.c -text
 sbin/mount/pathnames.h -text
 sbin/mount/vfslist.c -text
-sbin/mount_autofs/Makefile -text
-sbin/mount_autofs/mount_autofs.8 -text
-sbin/mount_autofs/mount_autofs.c -text
 sbin/mount_cd9660/Makefile -text
 sbin/mount_cd9660/mount_cd9660.8 -text
 sbin/mount_cd9660/mount_cd9660.c -text
