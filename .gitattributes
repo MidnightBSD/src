@@ -27844,7 +27844,6 @@ sys/modules/ugen/Makefile -text
 sys/modules/uhid/Makefile -text
 sys/modules/ukbd/Makefile -text
 sys/modules/ulpt/Makefile -text
-sys/modules/umapfs/Makefile -text
 sys/modules/umass/Makefile -text
 sys/modules/umct/Makefile -text
 sys/modules/umodem/Makefile -text
