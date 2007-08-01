@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/include/Makefile,v 1.2 2007/03/12 23:32:12 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -41,8 +41,7 @@ LSUBDIRS=	cam/scsi \
 	dev/ic dev/iicbus ${_dev_ieee488} dev/ofw \
 	dev/pbio dev/ppbus dev/smbus dev/speaker dev/usb dev/wi dev/utopia \
 	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/ntfs fs/nullfs \
-	fs/nwfs fs/portalfs fs/procfs fs/smbfs fs/udf fs/umapfs \
-	fs/unionfs \
+	fs/nwfs fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
 	geom/concat geom/eli geom/gate geom/label geom/mirror geom/nop \
 	geom/raid3 geom/shsec geom/stripe \
 	isofs/cd9660 \
