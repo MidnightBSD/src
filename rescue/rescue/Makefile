@@ -1,4 +1,4 @@
-#$MidnightBSD: src/rescue/rescue/Makefile,v 1.2 2006/08/14 11:00:08 laffer1 Exp $
+#$MidnightBSD: src/rescue/rescue/Makefile,v 1.3 2007/03/14 23:33:20 laffer1 Exp $
 #$FreeBSD: src/rescue/rescue/Makefile,v 1.45.2.1 2005/12/22 21:17:12 jhb Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
@@ -110,7 +110,7 @@ CRUNCH_PROGS_sbin= atacontrol badsect bsdlabel		\
 	kldconfig kldload kldstat kldunload ldconfig 			\
 	md5 mdconfig mdmfs mknod mount mount_cd9660 mount_ext2fs	\
 	mount_msdosfs mount_nfs mount_ntfs mount_nullfs			\
-	mount_std mount_udf mount_umapfs mount_unionfs newfs		\
+	mount_std mount_udf mount_unionfs newfs		\
 	newfs_msdos nos-tun ping reboot			\
 	restore rcorder route routed rtquery rtsol savecore 		\
 	slattach spppcontrol startslip swapon sysctl tunefs umount 
