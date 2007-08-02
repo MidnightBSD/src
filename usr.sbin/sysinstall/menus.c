@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.6 2007/02/20 02:45:04 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.7 2007/07/27 21:32:46 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -223,14 +223,8 @@ DMenu MenuIndex = {
       { " Dists, X User",	"Select average X user distribution.",	checkDistXUser, distSetXUser },
       { " Distributions, Adding", "Installing additional distribution sets", NULL, distExtractAll },
       { " Distributions, X.Org","X.Org distribution menu.",		NULL, distSetXOrg },
-      { " Documentation",	"Installation instructions, README, etc.", NULL, dmenuSubmenu, NULL, &MenuDocumentation },
-      { " Doc, README",		"The distribution README file.",	NULL, dmenuDisplayFile, NULL, "README" },
-      { " Doc, Errata",		"The distribution errata.",	NULL, dmenuDisplayFile, NULL, "ERRATA" },
-      { " Doc, Hardware",	"The distribution hardware guide.",	NULL, dmenuDisplayFile,	NULL, "HARDWARE" },
-      { " Doc, Install",		"The distribution installation guide.",	NULL, dmenuDisplayFile,	NULL, "INSTALL" },
+      { " Documentation",	"Copyright, Shortcuts", NULL, dmenuSubmenu, NULL, &MenuDocumentation },
       { " Doc, Copyright",	"The distribution copyright notices.",	NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
-      { " Doc, Release",		"The distribution release notes.",	NULL, dmenuDisplayFile, NULL, "RELNOTES" },
-      { " Doc, HTML",		"The HTML documentation menu.",		NULL, docBrowser },
       { " Dump Vars",		"(debugging) dump out internal variables.", NULL, dump_variables },
       { " Emergency shell",	"Start an Emergency Holographic shell.",	NULL, installFixitHoloShell },
 #ifdef WITH_SLICES
@@ -309,7 +303,7 @@ DMenu MenuInitial = {
       { "Express",	"Begin a quick installation (for experts)", NULL, installExpress },
       { " Custom",	"Begin a custom installation (for experts)",	NULL, dmenuSubmenu, NULL, &MenuInstallCustom },
       { "Configure",	"Do post-install configuration of MidnightBSD",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
-      { "Doc",	"Installation instructions, README, etc.",	NULL, dmenuSubmenu, NULL, &MenuDocumentation },
+      { "Doc",	"Copyright, Shortcut, etc.",	NULL, dmenuSubmenu, NULL, &MenuDocumentation },
 #ifdef WITH_SYSCONS
       { "Keymap",	"Select keyboard type",				NULL, dmenuSubmenu, NULL, &MenuSysconsKeymap },
 #endif
@@ -326,21 +320,14 @@ DMenu MenuDocumentation = {
     DMENU_NORMAL_TYPE,
     "MidnightBSD Documentation Menu",
     "If you are at all unsure about the configuration of your hardware\n"
-    "or are looking to build a system specifically for MidnightBSD, read the\n"
-    "Hardware guide!  New users should also read the Install document for\n"
-    "a step-by-step tutorial on installing MidnightBSD.  For general information,\n"
-    "consult the README file.",
+    "or are looking to build a system specifically for MidnightBSD, view the\n"
+    "MidnightBSD.org website!  New users should also read the Install document for\n"
+    "a step-by-step tutorial on installing MidnightBSD.\n",
     "Confused?  Press F1 for help.",
     "usage",
     { { "X Exit",	"Exit this menu (returning to previous)",	NULL, dmenuExit },
-      { "1 README",	"A general description of MidnightBSD.  Read this!", NULL, dmenuDisplayFile, NULL, "README" },
-      { "2 Errata",	"Late-breaking, post-release news.", NULL, dmenuDisplayFile, NULL, "ERRATA" },
-      { "3 Hardware",	"The MidnightBSD survival guide for PC hardware.",	NULL, dmenuDisplayFile,	NULL, "HARDWARE" },
-      { "4 Install",	"A step-by-step guide to installing MidnightBSD.",	NULL, dmenuDisplayFile,	NULL, "INSTALL" },
-      { "5 Copyright",	"The MidnightBSD Copyright notices.",		NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
-      { "6 Release"	,"The release notes for this version of MidnightBSD.", NULL, dmenuDisplayFile, NULL, "RELNOTES" },
-      { "7 Shortcuts",	"Creating shortcuts to sysinstall.",		NULL, dmenuDisplayFile, NULL, "shortcuts" },
-      { "8 HTML Docs",	"Go to the HTML documentation menu (post-install).", NULL, docBrowser },
+      { "1 Copyright",	"The MidnightBSD Copyright notices.",		NULL, dmenuDisplayFile,	NULL, "COPYRIGHT" },
+      { "2 Shortcuts",	"Creating shortcuts to sysinstall.",		NULL, dmenuDisplayFile, NULL, "shortcuts" },
       { NULL } },
 };
 
