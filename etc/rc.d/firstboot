@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/firstboot,v 1.1 2007/08/06 00:23:51 laffer1 Exp $
 
 # PROVIDE: firstboot
 # REQUIRE: NETWORKING cleanvar
@@ -11,19 +11,20 @@
 name="firstboot"
 rcvar=
 start_cmd="firstboot_start"
-required_files="/etc/reconfig"
 
 firstboot_start()
 {
 	local lsuffix
 	local red
 	local yellow
+	local receipt
 
 	lsuffix="\e[0m"
 	red="\e[1;31;40m"
 	yellow="\e[1;33;40m"
+	receipt="/etc/fbreceipt"
 
-	if [ -f /etc/reconfig ]; then
+	if [ ! -f ${receipt} ]; then
 		echo -e "\r${red}MidnightBSD FirstBoot Configuration${lsuffix}"
 
 		echo "This utility requires an active Internet connection."
@@ -37,9 +38,9 @@ firstboot_start()
 			/usr/sbin/pkg_add -r windowmaker
 			echo -e "\r${yellow}Done.${lsuffix}"
 		else
-			echo "To run this utility again, touch /etc/reconfig and restart."
+			echo "To run this utility again, rm ${receipt} and restart."
 		fi
-		rm -f /etc/reconfig
+		touch ${receipt}
 	fi
 }
 
