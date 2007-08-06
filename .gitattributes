@@ -20889,12 +20889,6 @@ sbin/mount_udf/mount_udf.8 -text
 sbin/mount_udf/mount_udf.c -text
 sbin/mount_ufs/Makefile -text
 sbin/mount_ufs/mount_ufs.c -text
-sbin/mount_umapfs/Makefile -text
-sbin/mount_umapfs/mount_umapfs.8 -text
-sbin/mount_umapfs/mount_umapfs.c -text
-sbin/mount_umapfs/sample.group.mapfile -text
-sbin/mount_umapfs/sample.user.mapfile -text
-sbin/mount_umapfs/umap_manual -text
 sbin/mount_unionfs/Makefile -text
 sbin/mount_unionfs/mount_unionfs.8 -text
 sbin/mount_unionfs/mount_unionfs.c -text
