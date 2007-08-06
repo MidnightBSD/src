@@ -1,6 +1,6 @@
 # $NetBSD: Makefile,v 1.16 2001/01/14 15:37:22 minoura Exp $
 # $FreeBSD: src/etc/rc.d/Makefile,v 1.53.2.8 2006/02/12 22:13:15 flz Exp $
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.4 2006/12/31 22:17:42 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.5 2007/06/30 01:05:42 laffer1 Exp $ 
 
 FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
@@ -10,7 +10,7 @@ FILES=	DAEMON LOGIN NETWORKING SERVERS \
 	devd devfs dhclient \
 	dmesg dumpon \
 	early.sh encswap \
-	fsck ftpd \
+	firstboot fsck ftpd \
 	gbde geli geli2 \
 	hcsecd \
 	hostapd hostname \

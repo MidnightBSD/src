@@ -15605,6 +15605,7 @@ etc/rc.d/dmesg -text
 etc/rc.d/dumpon -text
 etc/rc.d/early.sh -text
 etc/rc.d/encswap -text
+etc/rc.d/firstboot -text
 etc/rc.d/fsck -text
 etc/rc.d/ftpd -text
 etc/rc.d/gbde -text
