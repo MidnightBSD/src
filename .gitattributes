@@ -21749,9 +21749,6 @@ share/examples/atm/cpcs-design.txt -text
 share/examples/atm/fore-microcode.txt -text
 share/examples/atm/sscf-design.txt -text
 share/examples/atm/sscop-design.txt -text
-share/examples/autofs/driver/Makefile -text
-share/examples/autofs/driver/autodriver.c -text
-share/examples/autofs/driver/autotab -text
 share/examples/bootforth/README -text
 share/examples/bootforth/boot.4th -text
 share/examples/bootforth/frames.4th -text
