@@ -36,11 +36,12 @@
 *	@(#)strfile.h	8.1 (Berkeley) 5/31/93
 */
 /* $FreeBSD: src/games/fortune/strfile/strfile.h,v 1.4 2005/02/17 18:06:37 ru Exp $ */
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/games/fortune/strfile/strfile.h,v 1.2 2007/07/17 10:10:13 laffer1 Exp $ */
 
 #include <sys/types.h>
 
-#define	STR_ENDSTRING(line,tbl) 	(((unsigned char)(line)[0]) == (tbl).str_delim && (line)[1] == 'n')
+#define	STR_ENDSTRING(line,tbl) \
+	(((unsigned char)(line)[0]) == (tbl).str_delim && (line)[1] == '\n')
 
 typedef struct {				/* information table */
 #define	VERSION		1
