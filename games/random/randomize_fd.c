@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/games/random/randomize_fd.c,v 1.3 2007/08/08 02:20:32 laffer1 Exp $
  * $FreeBSD: src/games/random/randomize_fd.c,v 1.2 2003/02/15 10:26:10 seanc Exp $
  */
 
