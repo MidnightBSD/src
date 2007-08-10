@@ -26,7 +26,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/pkg_install/lib/global.c,v 1.10 2004/10/18 05:3
 
 /* These are global for all utils */
 Boolean	Quiet		= FALSE;
-Boolean	Verbose		= FALSE;
 Boolean	Fake		= FALSE;
 Boolean	Force		= FALSE;
 int AutoAnswer		= FALSE;
+int Verbose		= 0; /* variable levels of verbosity */
