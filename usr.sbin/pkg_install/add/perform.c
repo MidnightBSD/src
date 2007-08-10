@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.sbin/pkg_install/add/perform.c,v 1.2 2007/07/28 01:27:45 laffer1 Exp $ */
 /*
  * FreeBSD install - a package for the installation and maintainance
  * of non-core utilities.
@@ -246,9 +246,9 @@ pkg_do(char *pkg)
      */
     if ((isinstalledpkg(Plist.name) > 0 ||
          matchbyorigin(Plist.origin, NULL) != NULL) && !Force) {
-	warnx("package '%s' or its older version already installed",
-	      Plist.name);
-	code = 1;
+	warnx("package '%s' or its older version already installed%s",
+	      Plist.name, FailOnAlreadyInstalled ? "" : " (ignored)");
+	code = FailOnAlreadyInstalled != FALSE;
 	goto success;	/* close enough for government work */
     }
 

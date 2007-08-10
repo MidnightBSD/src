@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.sbin/pkg_install/add/main.c,v 1.4 2007/07/28 01:27:45 laffer1 Exp $ */
 /*
  *
  * FreeBSD install - a package for the installation and maintainance
@@ -28,7 +28,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/pkg_install/add/main.c,v 1.61.2.4 2006/01/16 19
 #include "lib.h"
 #include "add.h"
 
-static char Options[] = "hvIRfnrp:P:SMt:C:K";
+static char Options[] = "hvIRfFnrp:P:SMt:C:K";
 
 char	*Prefix		= NULL;
 Boolean	PrefixRecursive	= FALSE;
@@ -37,6 +37,7 @@ Boolean	NoInstall	= FALSE;
 Boolean	NoRecord	= FALSE;
 Boolean Remote		= FALSE;
 Boolean KeepPackage	= FALSE;
+Boolean FailOnAlreadyInstalled	= TRUE;
 
 char	*Mode		= NULL;
 char	*Owner		= NULL;
@@ -61,7 +62,7 @@ struct {
 static char *getpackagesite(void);
 int getosreldate(void);
 
-static void usage __P((void));
+static void usage(void);
 
 int
 main(int argc, char **argv)
@@ -104,6 +105,10 @@ main(int argc, char **argv)
 
 	case 'f':
 	    Force = TRUE;
+	    break;
+
+	case 'F':
+	    FailOnAlreadyInstalled = FALSE;
 	    break;
 
 	case 'K':

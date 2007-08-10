@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.sbin/pkg_install/add/add.h,v 1.2 2007/07/28 01:27:45 laffer1 Exp $ */
 /* $FreeBSD: src/usr.sbin/pkg_install/add/add.h,v 1.11.8.2 2006/01/16 19:48:17 flz Exp $ */
 
 /*
@@ -30,6 +30,7 @@ extern char	*Prefix;
 extern Boolean	PrefixRecursive;
 extern Boolean	NoInstall;
 extern Boolean	NoRecord;
+extern Boolean	FailOnAlreadyInstalled;
 extern Boolean	KeepPackage;
 extern char	*Mode;
 extern char	*Owner;
