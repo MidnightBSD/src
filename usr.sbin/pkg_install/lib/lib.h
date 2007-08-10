@@ -222,7 +222,7 @@ int		version_cmp(const char *, const char *);
 
 /* Externs */
 extern Boolean	Quiet;
-extern Boolean	Verbose;
+extern int	Verbose;
 extern Boolean	Fake;
 extern Boolean  Force;
 extern int	AutoAnswer;
