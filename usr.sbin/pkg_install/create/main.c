@@ -41,9 +41,9 @@ char	PlayPen[FILENAME_MAX];
 int	Dereference	= FALSE;
 int	PlistOnly	= FALSE;
 int	Recursive	= FALSE;
-enum zipper	Zipper	= GZIP;
+enum zipper	Zipper	= BZIP2;
 
-static void usage __P((void));
+static void usage(void);
 
 int
 main(int argc, char **argv)
