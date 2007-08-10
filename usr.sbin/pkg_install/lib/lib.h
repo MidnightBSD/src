@@ -1,4 +1,4 @@
-/* $FreeBSD: src/usr.sbin/pkg_install/lib/lib.h,v 1.56.2.1 2006/01/16 19:48:17 flz Exp $ */
+/* $FreeBSD: src/usr.sbin/pkg_install/lib/lib.h,v 1.60 2007/03/28 05:33:52 njl Exp $ */
 
 /*
  * FreeBSD install - a package for the installation and maintainance
@@ -77,13 +77,7 @@
 #define DISPLAY_FNAME		"+DISPLAY"
 #define MTREE_FNAME		"+MTREE_DIRS"
 
-#if defined(__FreeBSD_version) && __FreeBSD_version >= 600000
 #define INDEX_FNAME		"INDEX-6"
-#elif defined(__FreeBSD_version) && __FreeBSD_version >= 500036
-#define INDEX_FNAME		"INDEX-5"
-#else
-#define INDEX_FNAME		"INDEX"
-#endif
 
 #define CMD_CHAR		'@'	/* prefix for extended PLIST cmd */
 
@@ -94,7 +88,7 @@
  * Version of the package tools - increase only when some
  * functionality used by bsd.port.mk is changed, added or removed
  */
-#define PKG_INSTALL_VERSION	20040629
+#define PKG_INSTALL_VERSION	20070809
 
 #define PKG_WRAPCONF_FNAME	"/var/db/pkg_install.conf"
 #define main(argc, argv)	real_main(argc, argv)
@@ -168,7 +162,7 @@ Boolean		fexists(const char *);
 Boolean		isdir(const char *);
 Boolean		isemptydir(const char *fname);
 Boolean		isemptyfile(const char *fname);
-Boolean         isfile(const char *);
+Boolean		isfile(const char *);
 Boolean		isempty(const char *);
 Boolean		issymlink(const char *);
 Boolean		isURL(const char *);
