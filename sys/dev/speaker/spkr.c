@@ -5,7 +5,7 @@
  * modified for FreeBSD by Andrew A. Chernov <ache@astral.msk.su>
  * modified for PC98 by Kakefuda
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/dev/speaker/spkr.c,v 1.2 2007/08/12 03:04:39 laffer1 Exp $
  * $FreeBSD: src/sys/dev/speaker/spkr.c,v 1.70.2.1 2005/11/16 10:50:11 ru Exp $
  */
 
@@ -56,11 +56,7 @@ static MALLOC_DEFINE(M_SPKR, "spkr", "Speaker buffer");
  * used to generate clicks (a square wave) of whatever frequency is desired.
  */
 
-#ifdef PC98
-#define	SPKR_DESC	"PC98 speaker"
-#else
 #define	SPKR_DESC	"PC speaker"
-#endif
 
 #define SPKRPRI PSOCK
 static char endtone, endrest;
@@ -73,8 +69,7 @@ static void playstring(char *cp, size_t slen);
 
 /* emit tone of frequency thz for given number of centisecs */
 static void
-tone(thz, centisecs)
-	unsigned int thz, centisecs;
+tone(unsigned int thz, unsigned int centisecs)
 {
     unsigned int divisor;
     int sps, timo;
@@ -85,7 +80,7 @@ tone(thz, centisecs)
     divisor = timer_freq / thz;
 
 #ifdef DEBUG
-    (void) printf("tone: thz=%d centisecs=%d\n", thz, centisecs);
+    printf("tone: thz=%d centisecs=%d\n", thz, centisecs);
 #endif /* DEBUG */
 
     /* set timer to generate clicks at given frequency in Hertz */
@@ -120,8 +115,7 @@ tone(thz, centisecs)
 
 /* rest for given number of centisecs */
 static void
-rest(centisecs)
-	int	centisecs;
+rest(int centisecs)
 {
     int timo;
 
@@ -131,7 +125,7 @@ rest(centisecs)
      * waited out.
      */
 #ifdef DEBUG
-    (void) printf("rest: %d\n", centisecs);
+    printf("rest: %d\n", centisecs);
 #endif /* DEBUG */
     timo = centisecs * hz / 100;
     if (timo > 0)
@@ -212,10 +206,9 @@ playinit()
 
 /* play tone of proper duration for current rhythm signature */
 static void
-playtone(pitch, value, sustain)
-	int	pitch, value, sustain;
+playtone(int pitch, int value, int sustain)
 {
-    register int	sound, silence, snum = 1, sdenom = 1;
+    int	sound, silence, snum = 1, sdenom = 1;
 
     /* this weirdness avoids floating-point arithmetic */
     for (; sustain; sustain--)
@@ -237,7 +230,7 @@ playtone(pitch, value, sustain)
 	silence = whole * (FILLTIME-fill) * snum / (FILLTIME * value * sdenom);
 
 #ifdef DEBUG
-	(void) printf("playtone: pitch %d for %d ticks, rest for %d ticks\n",
+	printf("playtone: pitch %d for %d ticks, rest for %d ticks\n",
 			pitch, sound, silence);
 #endif /* DEBUG */
 
@@ -249,9 +242,7 @@ playtone(pitch, value, sustain)
 
 /* interpret and play an item from a notation string */
 static void
-playstring(cp, slen)
-	char	*cp;
-	size_t	slen;
+playstring(char *cp, size_t slen)
 {
     int		pitch, oldfill, lastpitch = OCTAVE_NOTES * DFLT_OCTAVE;
 
@@ -263,7 +254,7 @@ playstring(cp, slen)
 	register char	c = toupper(*cp);
 
 #ifdef DEBUG
-	(void) printf("playstring: %c (%x)\n", c, c);
+	printf("playstring: %c (%x)\n", c, c);
 #endif /* DEBUG */
 
 	switch (c)
@@ -449,14 +440,10 @@ static int spkr_active = FALSE; /* exclusion flag */
 static char *spkr_inbuf;  /* incoming buf */
 
 static int
-spkropen(dev, flags, fmt, td)
-	struct cdev *dev;
-	int		flags;
-	int		fmt;
-	struct thread	*td;
+spkropen(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 #ifdef DEBUG
-    (void) printf("spkropen: entering with dev = %s\n", devtoname(dev));
+    printf("spkropen: entering with dev = %s\n", devtoname(dev));
 #endif /* DEBUG */
 
     if (minor(dev) != 0)
@@ -466,7 +453,7 @@ spkropen(dev, flags, fmt, td)
     else
     {
 #ifdef DEBUG
-	(void) printf("spkropen: about to perform play initialization\n");
+	printf("spkropen: about to perform play initialization\n");
 #endif /* DEBUG */
 	playinit();
 	spkr_inbuf = malloc(DEV_BSIZE, M_SPKR, M_WAITOK);
@@ -476,10 +463,7 @@ spkropen(dev, flags, fmt, td)
 }
 
 static int
-spkrwrite(dev, uio, ioflag)
-	struct cdev *dev;
-	struct uio	*uio;
-	int		ioflag;
+spkrwrite(struct cdev *dev, struct uio *uio, int ioflag)
 {
 #ifdef DEBUG
     printf("spkrwrite: entering with dev = %s, count = %d\n",
@@ -508,14 +492,10 @@ spkrwrite(dev, uio, ioflag)
 }
 
 static int
-spkrclose(dev, flags, fmt, td)
-	struct cdev *dev;
-	int		flags;
-	int		fmt;
-	struct thread	*td;
+spkrclose(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 #ifdef DEBUG
-    (void) printf("spkrclose: entering with dev = %s\n", devtoname(dev));
+    printf("spkrclose: entering with dev = %s\n", devtoname(dev));
 #endif /* DEBUG */
 
     if (minor(dev) != 0)
@@ -531,15 +511,11 @@ spkrclose(dev, flags, fmt, td)
 }
 
 static int
-spkrioctl(dev, cmd, cmdarg, flags, td)
-	struct cdev *dev;
-	unsigned long	cmd;
-	caddr_t		cmdarg;
-	int		flags;
-	struct thread	*td;
+spkrioctl(struct cdev *dev, unsigned long cmd, caddr_t cmdarg, 
+	int flags, struct thread *td)
 {
 #ifdef DEBUG
-    (void) printf("spkrioctl: entering with dev = %s, cmd = %lx\n",
+    printf("spkrioctl: entering with dev = %s, cmd = %lx\n",
     	devtoname(dev), cmd);
 #endif /* DEBUG */
 
@@ -582,9 +558,7 @@ spkrioctl(dev, cmd, cmdarg, flags, td)
  * AT tone generator.
  */
 static struct isa_pnp_id speaker_ids[] = {
-#ifndef PC98
 	{ 0x0008d041 /* PNP0800 */, SPKR_DESC },
-#endif
 	{ 0 }
 };
 
@@ -617,7 +591,6 @@ speaker_probe(device_t dev)
 static int
 speaker_attach(device_t dev)
 {
-
 	if (speaker_dev) {
 		device_printf(dev, "Already attached!\n");
 		return (ENXIO);
@@ -655,8 +628,6 @@ static driver_t speaker_driver = {
 static devclass_t speaker_devclass;
 
 DRIVER_MODULE(speaker, isa, speaker_driver, speaker_devclass, 0, 0);
-#ifndef PC98
 DRIVER_MODULE(speaker, acpi, speaker_driver, speaker_devclass, 0, 0);
-#endif
 
 /* spkr.c ends here */
