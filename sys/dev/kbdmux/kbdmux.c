@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbdmux.c,v 1.3 2006-10-27 15:32:37 laffer1 Exp $
+ * $Id: kbdmux.c,v 1.4 2007-08-12 02:47:58 laffer1 Exp $
  * $FreeBSD: src/sys/dev/kbdmux/kbdmux.c,v 1.2.2.7 2006/09/27 15:32:04 ru Exp $
  */
 
@@ -784,6 +784,9 @@ next_code:
 			break;
 		case 0x63:	/* wake key */
 			keycode = 0x6f;
+			break;
+		case 0x64:	/* [JP106USB] backslash, underscore */
+			keycode = 0x73;
 			break;
 		default:	/* ignore everything else */
 			goto next_code;
