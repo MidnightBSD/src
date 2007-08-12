@@ -109,7 +109,7 @@ random_yarrow_init_alg(struct sysctl_ctx_list *clist, struct sysctl_oid *in_o)
 	/* Yarrow parameters. Do not adjust these unless you have
 	 * have a very good clue about what they do!
 	 */
-	SYSCTL_ADD_NODE(clist,
+	random_yarrow_o = SYSCTL_ADD_NODE(clist,
 		SYSCTL_CHILDREN(in_o),
 		OID_AUTO, "yarrow", CTLFLAG_RW, 0,
 		"Yarrow Parameters");
