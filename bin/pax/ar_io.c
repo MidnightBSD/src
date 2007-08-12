@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)ar_io.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/pax/ar_io.c,v 1.2 2006/07/26 12:35:19 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -1230,7 +1230,7 @@ ar_next(void)
 		 */
 		if (ar_open(buf) >= 0) {
 			if (freeit) {
-				(void)free((char *)(uintptr_t)arcname);
+				free((char *)(uintptr_t)arcname);
 				freeit = 0;
 			}
 			if ((arcname = strdup(buf)) == NULL) {
