@@ -3,6 +3,10 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070814:
+	Removed GNU tar source.  We've been using BSD tar 
+	for awhile.
+
 20070806:
 	Finished removing umapfs and autofs from the tree.
 
@@ -402,4 +406,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.23 2007/07/19 15:22:57 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.24 2007/08/06 04:45:21 laffer1 Exp $
