@@ -16359,11 +16359,6 @@ gnu/usr.bin/sort/alloca.h -text
 gnu/usr.bin/sort/config.h -text
 gnu/usr.bin/sort/localedir.h -text
 gnu/usr.bin/sort/unlocked-io.h -text
-gnu/usr.bin/tar/Makefile -text
-gnu/usr.bin/tar/config.h -text
-gnu/usr.bin/tar/doc/Makefile -text
-gnu/usr.bin/tar/localedir.h -text
-gnu/usr.bin/tar/tar.1 -text
 gnu/usr.bin/texinfo/Makefile -text
 gnu/usr.bin/texinfo/Makefile.inc -text
 gnu/usr.bin/texinfo/doc/Makefile -text
