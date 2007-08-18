@@ -382,6 +382,7 @@ bin/ls/util.c -text
 bin/mkdir/Makefile -text
 bin/mkdir/mkdir.1 -text
 bin/mkdir/mkdir.c -text
+bin/mksh/Makefile -text
 bin/mv/Makefile -text
 bin/mv/mv.1 -text
 bin/mv/mv.c -text
