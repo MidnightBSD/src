@@ -1,11 +1,10 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/pam.d/sshd,v 1.2 2006/08/28 01:35:55 laffer1 Exp $
 # $FreeBSD: src/etc/pam.d/sshd,v 1.15 2003/04/30 21:57:54 markm Exp $
 #
 # PAM configuration for the "sshd" service
 #
 
 # auth
-auth		required	pam_nologin.so		no_warn
 auth		sufficient	pam_opie.so		no_warn no_fake_prompts
 auth		requisite	pam_opieaccess.so	no_warn allow_local
 #auth		sufficient	pam_krb5.so		no_warn try_first_pass
@@ -13,6 +12,7 @@ auth		requisite	pam_opieaccess.so	no_warn allow_local
 auth		required	pam_unix.so		no_warn try_first_pass
 
 # account
+account		required	pam_nologin.so
 #account 	required	pam_krb5.so
 account		required	pam_login_access.so
 account		required	pam_unix.so
