@@ -22,13 +22,14 @@
 /* this came out of the ftpd sources; it's been modified to avoid the
  * globbing stuff since we don't need it.  also execvp instead of execv.
  */
+/* $FreeBSD: src/usr.sbin/cron/cron/popen.c,v 1.12 2002/02/06 02:00:07 bbraun Exp $ */
 
 #ifndef lint
 #if 0
 static char sccsid[] = "@(#)popen.c	5.7 (Berkeley) 2/14/89";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/cron/popen.c,v 1.12 2002/02/06 02:00:07 bbraun Exp $";
+  "$MidnightBSD$";
 #endif /* not lint */
 
 #include "cron.h"
@@ -173,14 +174,19 @@ cron_popen(program, type, e)
 				(void) endpwent();
 # endif
 				/* set our directory, uid and gid.  Set gid first,
-				 * since once we set uid, we've lost root privledges.
+				 * since once we set uid, we've lost root privileges.
 				 */
-				setgid(e->gid);
+				if (setgid(e->gid) != 0)
+					_exit(ERROR_EXIT);
 # if defined(BSD)
-				initgroups(usernm, e->gid);
+				if (initgroups(usernm, e->gid) != 0)
+					_exit(ERROR_EXIT);
 # endif
-				setlogin(usernm);
-				setuid(e->uid);         /* we aren't root after this..*/
+				if (setlogin(usernm) != 0)
+					_exit(ERROR_EXIT);
+				if (setuid(e->uid) != 0)
+					_exit(ERROR_EXIT);
+				/* we aren't root after this..*/
 #if defined(LOGIN_CAP)
 			}
 			if (lc != NULL)

@@ -14,10 +14,11 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
+/* $FreeBSD: src/usr.sbin/cron/cron/database.c,v 1.8 1999/08/28 01:15:50 peter Exp $ */
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/cron/database.c,v 1.8 1999/08/28 01:15:50 peter Exp $";
+  "$MidnightBSD$";
 #endif
 
 /* vix 26jan87 [RCS has the log]
@@ -87,7 +88,7 @@ load_database(old_db)
 	new_db.head = new_db.tail = NULL;
 
 	if (syscron_stat.st_mtime) {
-		process_crontab("root", "*system*",
+		process_crontab("root", SYS_NAME,
 				SYSCRONTAB, &syscron_stat,
 				&new_db, old_db);
 	}
@@ -205,7 +206,7 @@ process_crontab(uname, fname, tabname, statbuf, new_db, old_db)
 	int		crontab_fd = OK - 1;
 	user		*u;
 
-	if (strcmp(fname, "*system*") && !(pw = getpwnam(uname))) {
+	if (strcmp(fname, SYS_NAME) && !(pw = getpwnam(uname))) {
 		/* file doesn't have a user in passwd file.
 		 */
 		log_it(fname, getpid(), "ORPHAN", "no passwd entry");

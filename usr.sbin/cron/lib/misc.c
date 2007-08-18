@@ -1,3 +1,5 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: src/usr.sbin/cron/lib/misc.c,v 1.12.2.1 2006/01/15 17:50:36 delphij Exp $ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -14,11 +16,6 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
-
-#if !defined(lint) && !defined(LINT)
-static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/lib/misc.c,v 1.12.2.1 2006/01/15 17:50:36 delphij Exp $";
-#endif
 
 /* vix 26jan87 [RCS has the rest of the log]
  * vix 30dec86 [written]

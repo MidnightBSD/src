@@ -14,10 +14,10 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
-
+/* $FreeBSD: src/usr.sbin/cron/cron/do_command.c,v 1.22.8.1 2006/01/15 17:50:36 delphij Exp $ */
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/cron/do_command.c,v 1.22.8.1 2006/01/15 17:50:36 delphij Exp $";
+  "$MidnightBSD$";
 #endif
 
 
@@ -31,6 +31,10 @@ static const char rcsid[] =
 #endif
 #if defined(LOGIN_CAP)
 # include <login_cap.h>
+#endif
+#ifdef PAM
+# include <security/pam_appl.h>
+# include <security/openpam.h>
 #endif
 
 
@@ -97,6 +101,48 @@ child_process(e, u)
 	 */
 	usernm = env_get("LOGNAME", e->envp);
 	mailto = env_get("MAILTO", e->envp);
+
+#ifdef PAM
+	/* use PAM to see if the user's account is available,
+	 * i.e., not locked or expired or whatever.  skip this
+	 * for system tasks from /etc/crontab -- they can run
+	 * as any user.
+	 */
+	if (strcmp(u->name, SYS_NAME)) {	/* not equal */
+		pam_handle_t *pamh = NULL;
+		int pam_err;
+		struct pam_conv pamc = {
+			.conv = openpam_nullconv,
+			.appdata_ptr = NULL
+		};
+
+		Debug(DPROC, ("[%d] checking account with PAM\n", getpid()))
+
+		/* u->name keeps crontab owner name while LOGNAME is the name
+		 * of user to run command on behalf of.  they should be the
+		 * same for a task from a per-user crontab.
+		 */
+		if (strcmp(u->name, usernm)) {
+			log_it(usernm, getpid(), "username ambiguity", u->name);
+			exit(ERROR_EXIT);
+		}
+
+		pam_err = pam_start("cron", usernm, &pamc, &pamh);
+		if (pam_err != PAM_SUCCESS) {
+			log_it("CRON", getpid(), "error", "can't start PAM");
+			exit(ERROR_EXIT);
+		}
+
+		pam_err = pam_acct_mgmt(pamh, PAM_SILENT);
+		/* Expired password shouldn't prevent the job from running. */
+		if (pam_err != PAM_SUCCESS && pam_err != PAM_NEW_AUTHTOK_REQD) {
+			log_it(usernm, getpid(), "USER", "account unavailable");
+			exit(ERROR_EXIT);
+		}
+
+		pam_end(pamh, pam_err);
+	}
+#endif
 
 #ifdef USE_SIGCHLD
 	/* our parent is watching for our death by catching SIGCHLD.  we
@@ -243,14 +289,31 @@ child_process(e, u)
 			(void) endpwent();
 # endif
 			/* set our directory, uid and gid.  Set gid first,
-			 * since once we set uid, we've lost root privledges.
+			 * since once we set uid, we've lost root privileges.
 			 */
-			setgid(e->gid);
+			if (setgid(e->gid) != 0) {
+				log_it(usernm, getpid(),
+				    "error", "setgid failed");
+				exit(ERROR_EXIT);
+			}
 # if defined(BSD)
-			initgroups(usernm, e->gid);
+			if (initgroups(usernm, e->gid) != 0) {
+				log_it(usernm, getpid(),
+				    "error", "initgroups failed");
+				exit(ERROR_EXIT);
+			}
 # endif
-			setlogin(usernm);
-			setuid(e->uid);		/* we aren't root after this..*/
+			if (setlogin(usernm) != 0) {
+				log_it(usernm, getpid(),
+				    "error", "setlogin failed");
+				exit(ERROR_EXIT);
+			}
+			if (setuid(e->uid) != 0) {
+				log_it(usernm, getpid(),
+				    "error", "setuid failed");
+				exit(ERROR_EXIT);
+			}
+			/* we aren't root after this..*/
 #if defined(LOGIN_CAP)
 		}
 		if (lc != NULL)

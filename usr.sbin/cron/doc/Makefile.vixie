@@ -17,6 +17,7 @@
 
 # Makefile for vixie's cron
 #
+# $MidnightBSD$
 # $FreeBSD: src/usr.sbin/cron/doc/Makefile.vixie,v 1.5 1999/08/28 01:15:53 peter Exp $
 #
 # vix 03mar88 [moved to RCS, rest of log is in there]

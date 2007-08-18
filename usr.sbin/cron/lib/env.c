@@ -1,3 +1,5 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: src/usr.sbin/cron/lib/env.c,v 1.12 2003/02/10 11:20:58 thomas Exp $ */
 /* Copyright 1988,1990,1993,1994 by Paul Vixie
  * All rights reserved
  *
@@ -14,12 +16,6 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  */
-
-#if !defined(lint) && !defined(LINT)
-static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/lib/env.c,v 1.12 2003/02/10 11:20:58 thomas Exp $";
-#endif
-
 
 #include "cron.h"
 
