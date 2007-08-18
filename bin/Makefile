@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.3 2006/09/04 21:00:53 archite Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.4 2007/07/19 09:36:39 laffer1 Exp $
 
 SUBDIR= cat \
 	chflags \
@@ -20,10 +20,10 @@ SUBDIR= cat \
 	hostname \
 	kenv \
 	kill \
-	ksh \
 	ln \
 	ls \
 	mkdir \
+	mksh \
 	mv \
 	pax \
 	ps \
