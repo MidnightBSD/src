@@ -14,11 +14,12 @@
  * I'll try to keep a version up to date.  I can be reached as follows:
  * Paul Vixie          <paul@vix.com>          uunet!decwrl!vixie!paul
  * From Id: crontab.c,v 2.13 1994/01/17 03:20:37 vixie Exp
+ * $FreeBSD: src/usr.sbin/cron/crontab/crontab.c,v 1.22 2004/09/14 19:01:19 dds Exp $
  */
 
 #if !defined(lint) && !defined(LINT)
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/cron/crontab/crontab.c,v 1.22 2004/09/14 19:01:19 dds Exp $";
+  "$MidnightBSD$";
 #endif
 
 /* crontab - install and manage per-user crontab files
