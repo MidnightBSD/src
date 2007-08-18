@@ -15445,6 +15445,7 @@ etc/opieaccess -text
 etc/pam.d/Makefile -text
 etc/pam.d/README -text
 etc/pam.d/convert.pl -text
+etc/pam.d/cron -text
 etc/pam.d/ftpd -text
 etc/pam.d/gdm -text
 etc/pam.d/imap -text
