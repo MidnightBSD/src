@@ -1,13 +1,13 @@
 #	$OpenBSD: Makefile,v 1.3 2005/06/21 02:11:43 brad Exp $
-#	$MidnightBSD: src/usr.bin/sudo/lib/Makefile,v 1.1 2007/02/04 17:33:53 archite Exp $
+#	$MidnightBSD: src/usr.bin/sudo/lib/Makefile,v 1.2 2007/02/07 02:52:23 laffer1 Exp $
 
 SUDO_DIR=	${.CURDIR}/../../../contrib/sudo
 .PATH:		${SUDO_DIR}
 
 LIB=		sudo
 CFLAGS+=	-I. -I${SUDO_DIR}
-SRCS=		alloc.c defaults.c fileops.c find_path.c gettime.c goodpath.c \
-		lex.yy.c sudo.tab.c
+SRCS=		alloc.c closefrom.c defaults.c fileops.c find_path.c gettime.c \
+		goodpath.c lex.yy.c sudo.tab.c
 CLEANFILES+=	lex.yy.c sudo.tab.c sudo.tab.h
 NO_PROFILE= 	yes
 
