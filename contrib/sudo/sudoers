@@ -1,3 +1,5 @@
+# $OpenBSD: sudoers,v 1.12 2007/08/09 16:12:08 ajacoutot Exp $
+#
 # sudoers file.
 #
 # This file MUST be edited with the 'visudo' command as root.
@@ -12,17 +14,22 @@
 # Cmnd alias specification
 
 # Defaults specification
+Defaults env_keep +="DESTDIR FETCH_CMD FLAVOR FTPMODE MAKE MULTI_PACKAGES OKAY_FILES PKG_DBDIR PKG_DESTDIR PKG_CACHE PKG_PATH PKG_TMPDIR PORTSDIR RELEASEDIR SUBPACKAGE"
+
+# Uncomment to preserve the environment for users in group wheel
+#Defaults:%wheel !env_reset
 
 # Runas alias specification
 
 # User privilege specification
-root	ALL=(ALL) ALL
+root	ALL=(ALL) SETENV: ALL
 
 # Uncomment to allow people in group wheel to run all commands
-# %wheel	ALL=(ALL)	ALL
+# and set environment variables.
+# %wheel	ALL=(ALL) SETENV: ALL
 
 # Same thing without a password
-# %wheel	ALL=(ALL)	NOPASSWD: ALL
+# %wheel	ALL=(ALL) NOPASSWD: SETENV: ALL
 
 # Samples
 # %users  ALL=/sbin/mount /cdrom,/sbin/umount /cdrom

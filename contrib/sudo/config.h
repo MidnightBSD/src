@@ -635,4 +635,6 @@
 #define SUDOERS_GID 0
 #define SUDOERS_MODE 0440
 
+#define HAVE_EXTENDED_GLOB 1
+
 #endif /* _SUDO_CONFIG_H */

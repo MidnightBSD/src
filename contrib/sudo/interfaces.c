@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 1998-2003 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1996, 1998-2005 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,7 +27,7 @@ struct mbuf;
 struct rtentry;
 #endif
 
-#include "config.h"
+#include <config.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -65,6 +65,7 @@ struct rtentry;
 # include "emul/err.h"
 #endif /* HAVE_ERR_H */
 #include <netdb.h>
+#include <errno.h>
 #ifdef _ISC
 # include <sys/stream.h>
 # include <sys/sioctl.h>
@@ -88,7 +89,7 @@ struct rtentry;
 #include "interfaces.h"
 
 #ifndef lint
-static const char rcsid[] = "$Sudo: interfaces.c,v 1.72 2004/02/13 21:36:43 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: interfaces.c,v 1.72.2.6 2007/08/14 15:19:25 millert Exp $";
 #endif /* lint */
 
 
@@ -102,8 +103,10 @@ void
 load_interfaces()
 {
     struct ifaddrs *ifa, *ifaddrs;
-    /* XXX - sockaddr_in6 sin6; */
     struct sockaddr_in *sin;
+#ifdef AF_INET6
+    struct sockaddr_in6 *sin6;
+#endif
     int i;
 
     if (getifaddrs(&ifaddrs))
@@ -117,8 +120,10 @@ load_interfaces()
 	    continue;
 
 	switch(ifa->ifa_addr->sa_family) {
-	    /* XXX - AF_INET6 */
 	    case AF_INET:
+#ifdef AF_INET6
+	    case AF_INET6:
+#endif
 		num_interfaces++;
 		break;
 	}
@@ -136,7 +141,6 @@ load_interfaces()
 		continue;
 
 	switch(ifa->ifa_addr->sa_family) {
-	    /* XXX - AF_INET6 */
 	    case AF_INET:
 		sin = (struct sockaddr_in *)ifa->ifa_addr;
 		memcpy(&interfaces[i].addr, &sin->sin_addr,
@@ -144,14 +148,27 @@ load_interfaces()
 		sin = (struct sockaddr_in *)ifa->ifa_netmask;
 		memcpy(&interfaces[i].netmask, &sin->sin_addr,
 		    sizeof(struct in_addr));
+		interfaces[i].family = AF_INET;
 		i++;
 		break;
+#ifdef AF_INET6
+	    case AF_INET6:
+		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		memcpy(&interfaces[i].addr, &sin6->sin6_addr,
+		    sizeof(struct in6_addr));
+		sin6 = (struct sockaddr_in6 *)ifa->ifa_netmask;
+		memcpy(&interfaces[i].netmask, &sin6->sin6_addr,
+		    sizeof(struct in6_addr));
+		interfaces[i].family = AF_INET6;
+		i++;
+		break;
+#endif /* AF_INET6 */
 	}
     }
 #ifdef HAVE_FREEIFADDRS
     freeifaddrs(ifaddrs);
 #else
-    free(ifaddrs);
+    efree(ifaddrs);
 #endif
 }
 
@@ -187,14 +204,14 @@ load_interfaces()
 	ifconf->ifc_len = len - sizeof(struct ifconf);
 	ifconf->ifc_buf = (caddr_t) (ifconf_buf + sizeof(struct ifconf));
 
-	/* Networking may not be installed in kernel... */
 #ifdef _ISC
 	STRSET(SIOCGIFCONF, (caddr_t) ifconf, len);
 	if (ioctl(sock, I_STR, (caddr_t) &strioctl) < 0) {
 #else
-	if (ioctl(sock, SIOCGIFCONF, (caddr_t) ifconf) < 0) {
+	/* Note that some kernels return EINVAL if the buffer is too small */
+	if (ioctl(sock, SIOCGIFCONF, (caddr_t) ifconf) < 0 && errno != EINVAL) {
 #endif /* _ISC */
-	    free(ifconf_buf);
+	    efree(ifconf_buf);
 	    (void) close(sock);
 	    return;
 	}
@@ -244,7 +261,7 @@ load_interfaces()
 		continue;
 
 	sin = (struct sockaddr_in *) &ifr->ifr_addr;
-	interfaces[num_interfaces].addr.s_addr = sin->sin_addr.s_addr;
+	interfaces[num_interfaces].addr.ip4.s_addr = sin->sin_addr.s_addr;
 
 	/* Stash the name of the interface we saved. */
 	previfname = ifr->ifr_name;
@@ -261,20 +278,21 @@ load_interfaces()
 #endif /* _ISC */
 	    sin = (struct sockaddr_in *) &ifr_tmp.ifr_addr;
 
-	    interfaces[num_interfaces].netmask.s_addr = sin->sin_addr.s_addr;
+	    interfaces[num_interfaces].netmask.ip4.s_addr = sin->sin_addr.s_addr;
 	} else {
 #else
 	{
 #endif /* SIOCGIFNETMASK */
-	    if (IN_CLASSC(interfaces[num_interfaces].addr.s_addr))
-		interfaces[num_interfaces].netmask.s_addr = htonl(IN_CLASSC_NET);
-	    else if (IN_CLASSB(interfaces[num_interfaces].addr.s_addr))
-		interfaces[num_interfaces].netmask.s_addr = htonl(IN_CLASSB_NET);
+	    if (IN_CLASSC(interfaces[num_interfaces].addr.ip4.s_addr))
+		interfaces[num_interfaces].netmask.ip4.s_addr = htonl(IN_CLASSC_NET);
+	    else if (IN_CLASSB(interfaces[num_interfaces].addr.ip4.s_addr))
+		interfaces[num_interfaces].netmask.ip4.s_addr = htonl(IN_CLASSB_NET);
 	    else
-		interfaces[num_interfaces].netmask.s_addr = htonl(IN_CLASSA_NET);
+		interfaces[num_interfaces].netmask.ip4.s_addr = htonl(IN_CLASSA_NET);
 	}
 
 	/* Only now can we be sure it was a good/interesting interface. */
+	interfaces[num_interfaces].family = AF_INET;
 	num_interfaces++;
     }
 
@@ -284,9 +302,9 @@ load_interfaces()
 	    interfaces = (struct interface *) erealloc3(interfaces,
 		num_interfaces, sizeof(struct interface));
 	else
-	    free(interfaces);
+	    efree(interfaces);
     }
-    free(ifconf_buf);
+    efree(ifconf_buf);
     (void) close(sock);
 }
 
@@ -307,9 +325,26 @@ void
 dump_interfaces()
 {
     int i;
+#ifdef AF_INET6
+    char addrbuf[INET6_ADDRSTRLEN], maskbuf[INET6_ADDRSTRLEN];
+#endif
 
     puts("Local IP address and netmask pairs:");
-    for (i = 0; i < num_interfaces; i++)
-	printf("\t%s / 0x%x\n", inet_ntoa(interfaces[i].addr),
-	    (unsigned int)ntohl(interfaces[i].netmask.s_addr));
+    for (i = 0; i < num_interfaces; i++) {
+	switch(interfaces[i].family) {
+	    case AF_INET:
+		printf("\t%s / ", inet_ntoa(interfaces[i].addr.ip4));
+		puts(inet_ntoa(interfaces[i].netmask.ip4));
+		break;
+#ifdef AF_INET6
+	    case AF_INET6:
+		inet_ntop(AF_INET6, &interfaces[i].addr.ip6,
+		    addrbuf, sizeof(addrbuf));
+		inet_ntop(AF_INET6, &interfaces[i].netmask.ip6,
+		    maskbuf, sizeof(maskbuf));
+		printf("\t%s / %s\n", addrbuf, maskbuf);
+		break;
+#endif /* AF_INET6 */
+	}
+    }
 }

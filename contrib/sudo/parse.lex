@@ -1,6 +1,7 @@
 %{
 /*
- * Copyright (c) 1996, 1998-2004 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1996, 1998-2004, 2007
+ *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +23,7 @@
  * Materiel Command, USAF, under agreement number F39502-99-1-0512.
  */
 
-#include "config.h"
+#include <config.h>
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -54,7 +55,7 @@
 #include <sudo.tab.h>
 
 #ifndef lint
-static const char rcsid[] = "$Sudo: parse.lex,v 1.132 2004/05/17 20:51:13 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: parse.lex,v 1.132.2.4 2007/08/13 16:30:02 millert Exp $";
 #endif /* lint */
 
 #undef yywrap		/* guard against a yywrap macro */
@@ -82,8 +83,11 @@ extern void yyerror		__P((char *));
 #endif
 %}
 
+HEXDIGIT		[0-9A-Fa-f]{1,4}
 OCTET			(1?[0-9]{1,2})|(2[0-4][0-9])|(25[0-5])
 DOTTEDQUAD		{OCTET}(\.{OCTET}){3}
+IPV6ADDR		\:\:|({HEXDIGIT}\:){7}{HEXDIGIT}|({HEXDIGIT}\:){5}{HEXDIGIT}\:{DOTTEDQUAD}|({HEXDIGIT}\:){1,7}\:|({HEXDIGIT}\:){1,6}(\:{HEXDIGIT}){1}|({HEXDIGIT}\:){1,5}(\:{HEXDIGIT}){2}|({HEXDIGIT}\:){1,2}\:{DOTTEDQUAD}|({HEXDIGIT}\:){1,4}(\:{HEXDIGIT}){3}|({HEXDIGIT}\:){1,4}(\:{HEXDIGIT}){1}\:{DOTTEDQUAD}|({HEXDIGIT}\:){1,3}(\:{HEXDIGIT}){4}|({HEXDIGIT}\:){1,3}(\:{HEXDIGIT}){2}\:{DOTTEDQUAD}|({HEXDIGIT}\:){1,2}(\:{HEXDIGIT}){5}|({HEXDIGIT}\:){1,2}(\:{HEXDIGIT}){3}\:{DOTTEDQUAD}|({HEXDIGIT}\:){1}(\:{HEXDIGIT}){6}|({HEXDIGIT}\:){1}(\:{HEXDIGIT}){4}\:{DOTTEDQUAD}|\:(\:{HEXDIGIT}){1,7}|\:(\:{HEXDIGIT}){1,5}\:{DOTTEDQUAD}
+
 HOSTNAME		[[:alnum:]_-]+
 WORD			([^#>@!=:,\(\) \t\n\\]|\\[^\n])+
 ENVAR			([^#!=, \t\n\\]|\\[^\n])([^#=, \t\n\\]|\\[^\n])*
@@ -228,6 +232,16 @@ EXEC[[:blank:]]*:	{
 			    	return(EXEC);
 			}
 
+SETENV[[:blank:]]*:	{
+			    	LEXTRACE("SETENV ");
+			    	return(SETENV);
+			}
+
+NOSETENV[[:blank:]]*:	{
+			    	LEXTRACE("NOSETENV ");
+			    	return(NOSETENV);
+			}
+
 \+{WORD}		{
 			    /* netgroup */
 			    fill(yytext, yyleng);
@@ -253,6 +267,18 @@ EXEC[[:blank:]]*:	{
 			    LEXTRACE("NTWKADDR ");
 			    return(NTWKADDR);
 			}
+
+{IPV6ADDR}(\/{IPV6ADDR})? {
+			    fill(yytext, yyleng);
+			    LEXTRACE("NTWKADDR ");
+			    return(NTWKADDR);
+			}
+
+{IPV6ADDR}\/([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]) {
+			    fill(yytext, yyleng);
+ 			    LEXTRACE("NTWKADDR ");
+ 			    return(NTWKADDR);
+ 			}
 
 <INITIAL>\(		{
 				BEGIN GOTRUNAS;
@@ -433,8 +459,7 @@ fill_args(s, len, addspace)
 	    (char *) realloc(yylval.command.args, arg_size) :
 	    (char *) malloc(arg_size);
 	if (p == NULL) {
-	    if (yylval.command.args != NULL)
-		free(yylval.command.args);
+	    efree(yylval.command.args);
 	    yyerror("unable to allocate memory");
 	    return;
 	} else
