@@ -15788,8 +15788,6 @@ gnu/lib/libstdc++/doc/Makefile -text
 gnu/lib/libsupc++/Makefile -text
 gnu/usr.bin/Makefile -text
 gnu/usr.bin/Makefile.inc -text
-gnu/usr.bin/bc/Makefile -text
-gnu/usr.bin/bc/config.h -text
 gnu/usr.bin/binutils/Makefile -text
 gnu/usr.bin/binutils/Makefile.inc -text
 gnu/usr.bin/binutils/Makefile.inc0 -text
@@ -15919,8 +15917,6 @@ gnu/usr.bin/cvs/doc/Makefile -text
 gnu/usr.bin/cvs/lib/Makefile -text
 gnu/usr.bin/cvs/lib/config.h.proto -text
 gnu/usr.bin/cvs/libdiff/Makefile -text
-gnu/usr.bin/dc/Makefile -text
-gnu/usr.bin/dc/doc/Makefile -text
 gnu/usr.bin/dialog/COPYING -text
 gnu/usr.bin/dialog/Makefile -text
 gnu/usr.bin/dialog/README -text

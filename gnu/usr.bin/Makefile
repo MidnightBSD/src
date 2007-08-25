@@ -1,11 +1,9 @@
-# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.4 2007/06/24 04:49:21 laffer1 Exp $
+# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.5 2007/07/22 09:41:35 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
 
-SUBDIR= bc \
-	${_binutils} \
+SUBDIR= ${_binutils} \
 	${_cc} \
 	${_cvs} \
-	dc \
 	dialog \
 	diff \
 	diff3 \
