@@ -3,6 +3,17 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070831:
+	Added dot.mkshrc file to support the recent change to 
+	mksh from OpenBSD's ksh derived from pdksh.  
+
+	Added new firewall configuration.  ipfw is enabled by default
+	with a "desktop" configuration.  Consult /etc/rc.firewall
+	or ipfw show to see the ruleset used.  You can disable
+	ipfw by setting firewall_enable="NO" in /etc/rc.conf This
+	change only effects IPv4.  IPv6 does not have a firewall
+	enabled by default.
+
 20070814:
 	Removed GNU tar source.  We've been using BSD tar 
 	for awhile.
@@ -406,4 +417,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.24 2007/08/06 04:45:21 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.25 2007/08/14 04:28:13 laffer1 Exp $
