@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.firewall,v 1.2 2006/08/28 02:13:43 laffer1 Exp $
 # $FreeBSD: src/etc/rc.firewall,v 1.47.10.1 2005/11/19 06:06:59 ume Exp $
 #
 
@@ -44,6 +44,7 @@ fi
 ############
 # Define the firewall type in /etc/rc.conf.  Valid values are:
 #   open     - will allow anyone in
+#   desktop  - will try to protect a simple desktop
 #   client   - will try to protect just this machine
 #   simple   - will try to protect a whole network
 #   closed   - totally disables IP services except via lo0 interface
@@ -118,7 +119,7 @@ ${fwcmd} -f flush
 # different place to not interfere with address-checking rules.
 #
 case ${firewall_type} in
-[Oo][Pp][Ee][Nn]|[Cc][Ll][Ii][Ee][Nn][Tt])
+[Oo][Pp][Ee][Nn]|[Cc][Ll][Ii][Ee][Nn][Tt]|[Dd][Ee][Ss][Kk][Tt][Oo][Pp])
 	case ${natd_enable} in
 	[Yy][Ee][Ss])
 		if [ -n "${natd_interface}" ]; then
@@ -143,6 +144,18 @@ case ${firewall_type} in
 [Oo][Pp][Ee][Nn])
 	setup_loopback
 	${fwcmd} add 65000 pass all from any to any
+	;;
+
+[Dd][Ee][Ss][Kk][Tt][Oo][Pp])
+	setup_loopback
+	${fwcmd} add deny ip from 224.0.0.0/3 to any in
+	${fwcmd} add deny tcp from any to 224.0.0.0/3 in
+	${fwcmd} add allow tcp from any to any out
+	${fwcmd} add allow tcp from any to any established
+	${fwcmd} add allow tcp from any to any frag
+	${fwcmd} add 65000 deny tcp from any to any
+	${fwcmd} add 65100 deny icmp from any to me in icmptypes 8
+	${fwcmd} add 65200 allow all from any to any
 	;;
 
 [Cc][Ll][Ii][Ee][Nn][Tt])
