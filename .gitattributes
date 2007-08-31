@@ -23109,6 +23109,7 @@ share/skel/dot.login -text
 share/skel/dot.login_conf -text
 share/skel/dot.mail_aliases -text
 share/skel/dot.mailrc -text
+share/skel/dot.mkshrc -text
 share/skel/dot.profile -text
 share/skel/dot.rhosts -text
 share/skel/dot.shrc -text
