@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD: src/etc/rc.firewall,v 1.2 2006/08/28 02:13:43 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.firewall,v 1.3 2007/08/31 02:12:37 laffer1 Exp $
 # $FreeBSD: src/etc/rc.firewall,v 1.47.10.1 2005/11/19 06:06:59 ume Exp $
 #
 
@@ -153,11 +153,16 @@ case ${firewall_type} in
 	${fwcmd} add allow tcp from any to any out
 	${fwcmd} add allow tcp from any to any established
 	${fwcmd} add allow tcp from any to any frag
+	case ${sshd_enable} in
+	[Yy][Ee][Ss])
+		${fwcmd} add pass tcp from any to me 22 setup
+		;;
+	esac
 	${fwcmd} add 65000 deny tcp from any to any
 	${fwcmd} add 65100 deny icmp from any to me in icmptypes 8
 	${fwcmd} add 65200 allow all from any to any
 	;;
-
+	
 [Cc][Ll][Ii][Ee][Nn][Tt])
 	############
 	# This is a prototype setup that will protect your system somewhat
