@@ -1,4 +1,4 @@
-#$MidnightBSD: src/rescue/rescue/Makefile,v 1.3 2007/03/14 23:33:20 laffer1 Exp $
+#$MidnightBSD: src/rescue/rescue/Makefile,v 1.4 2007/08/01 15:33:52 laffer1 Exp $
 #$FreeBSD: src/rescue/rescue/Makefile,v 1.45.2.1 2005/12/22 21:17:12 jhb Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
@@ -153,10 +153,6 @@ CRUNCH_PROGS_sbin+= mca gpt fdisk
 CRUNCH_PROGS_sbin+= sunlabel
 .endif
 
-.if ${MACHINE_ARCH} == "alpha"
-CRUNCH_ALIAS_bsdlabel= disklabel
-.endif
-
 .if ${MACHINE_ARCH} == "amd64"
 CRUNCH_PROGS_sbin+= fdisk
 CRUNCH_ALIAS_bsdlabel= disklabel
@@ -204,7 +200,7 @@ CRUNCH_ALIAS_id= groups whoami
 # 
 CRUNCH_SRCDIRS+= usr.sbin
 
-CRUNCH_PROGS_usr.sbin+= chroot
+CRUNCH_PROGS_usr.sbin+= chown chroot
 
 ##################################################################
 #  The following is pretty nearly a generic crunchgen-handling makefile
