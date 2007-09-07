@@ -699,7 +699,10 @@ acd_geom_access(struct g_provider *pp, int dr, int dw, int de)
 	request->dev = dev;
 	bcopy(ccb, request->u.atapi.ccb, 16);
 	request->flags = ATA_R_ATAPI;
+	/* rgb - up timeout to 10 
 	request->timeout = 5;
+	*/
+	request->timeout = 10;
 	ata_queue_request(request);
 	if (!request->error &&
 	    (request->u.atapi.sense.key == 2 ||
@@ -1234,7 +1237,10 @@ acd_get_progress(device_t dev, int *finished)
     request->flags = ATA_R_ATAPI | ATA_R_READ;
     request->timeout = 30;
     ata_queue_request(request);
+/*  rgb - fix for pr 109270 from Martin Birgmeier
     if (!request->error && request->u.atapi.sense.error & ATA_SENSE_VALID)
+*/
+    if (!request->error && request->u.atapi.sense.specific & ATA_SENSE_SPEC_VALID)
 	*finished = ((request->u.atapi.sense.specific2 |
 		     (request->u.atapi.sense.specific1<<8))*100)/65535;
     else

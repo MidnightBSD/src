@@ -68,6 +68,8 @@ static void ata_ahci_reset(device_t dev);
 static void ata_ahci_dmasetprd(void *xsc, bus_dma_segment_t *segs, int nsegs, int error);
 static void ata_ahci_dmainit(device_t dev);
 static int ata_ahci_setup_fis(u_int8_t *fis, struct ata_request *request);
+/* rgb add engine restart */
+static void ata_ahci_restart_engine(device_t dev);
 static int ata_acard_chipinit(device_t dev);
 static int ata_acard_allocate(device_t dev);
 static int ata_acard_status(device_t dev);
@@ -455,7 +457,7 @@ ata_ahci_allocate(device_t dev)
 
     /* setup legacy cruft we need */
     ch->r_io[ATA_CYL_LSB].res = ctlr->r_res2;
-    ch->r_io[ATA_CYL_LSB].offset = ATA_AHCI_P_SIG + 1 + offset;
+    ch->r_io[ATA_CYL_LSB].offset = ATA_AHCI_P_SIG + 2 + offset;
     ch->r_io[ATA_CYL_MSB].res = ctlr->r_res2;
     ch->r_io[ATA_CYL_MSB].offset = ATA_AHCI_P_SIG + 3 + offset;
     ch->r_io[ATA_STATUS].res = ctlr->r_res2;
@@ -496,7 +498,14 @@ ata_ahci_allocate(device_t dev)
 	      ATA_AHCI_P_IX_PS | ATA_AHCI_P_IX_DHR));
 
     /* start operations on this channel */
-    ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset,
+    /* rgb - add ATAPI cmd */
+    if (ch->devices & ATA_ATAPI_MASTER)
+      ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset,
+             (ATA_AHCI_P_CMD_ACTIVE | ATA_AHCI_P_CMD_FRE |
+              ATA_AHCI_P_CMD_ATAPI |
+              ATA_AHCI_P_CMD_POD | ATA_AHCI_P_CMD_SUD | ATA_AHCI_P_CMD_ST));
+    else
+      ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset,
 	     (ATA_AHCI_P_CMD_ACTIVE | ATA_AHCI_P_CMD_FRE |
 	      ATA_AHCI_P_CMD_POD | ATA_AHCI_P_CMD_SUD | ATA_AHCI_P_CMD_ST));
     return 0;
@@ -509,6 +518,9 @@ ata_ahci_status(device_t dev)
     struct ata_channel *ch = device_get_softc(dev);
     struct ata_connect_task *tp;
     u_int32_t action, istatus, sstatus, error, issued;
+    /* rgb - add tfd_data */
+    u_int32_t tf_data;
+    /* end rgb additions */
     int offset = (ch->unit << 7);
     int tag = 0;
 
@@ -561,8 +573,24 @@ ata_ahci_status(device_t dev)
 	}
 
 	/* do we have any device action ? */
-	if (!(issued & (1 << tag)))
+	if (!(issued & (1 << tag))) 
 	    return 1;
+
+	/* rgb - check for error - This is necessary for atapi
+		code to work, and it seems to also prevent
+		occasional disk timeouts that sometimes cause
+		boot to fail
+        */
+         tf_data = ATA_INL(ctlr->r_res2, ATA_AHCI_P_TFD + offset);
+         if (tf_data & ATA_S_ERROR) {
+		if ((tf_data & ATA_S_BUSY) || (tf_data & ATA_S_DRQ))
+	        	return 0;   /* for now, let timeout do reset */
+		else {
+			/* restart engine to clear ATA_AHCI_P_CI */
+			ata_ahci_restart_engine(ch->dev);
+	 	        return 1;
+		}
+         }
     }
     return 0;
 }
@@ -581,6 +609,14 @@ ata_ahci_begin_transaction(struct ata_request *request)
     /* get a piece of the workspace for this request */
     ctp = (struct ata_ahci_cmd_tab *)
 	  (ch->dma->work + ATA_AHCI_CT_OFFSET + (ATA_AHCI_CT_SIZE * tag));
+
+    /* rgb - if ATAPI request moves data, make it dma */
+    if (request->flags & ATA_R_ATAPI) {
+	if (request->bytecount && !(request->flags & ATA_R_READ))
+		request->flags |= ATA_R_WRITE;
+	if (request->flags & (ATA_R_READ | ATA_R_WRITE))
+		request->flags |= ATA_R_DMA;
+    }
 
     /* setup the FIS for this request */ /* XXX SOS ATAPI missing still */
     if (!(fis_size = ata_ahci_setup_fis(&ctp->cfis[0], request))) {
@@ -607,16 +643,45 @@ ata_ahci_begin_transaction(struct ata_request *request)
     clp->prd_length = entries;
     clp->cmd_flags = (request->flags & ATA_R_WRITE ? (1<<6) : 0) |
 		     (request->flags & ATA_R_ATAPI ? (1<<5) : 0) |
+/*  rgb - set prefetch flag if ATAPI */
+		     (request->flags & ATA_R_ATAPI ? (1<<7) : 0) |
 		     (fis_size / sizeof(u_int32_t));
     clp->bytecount = 0;
     clp->cmd_table_phys = htole64(ch->dma->work_bus + ATA_AHCI_CT_OFFSET +
 				  (ATA_AHCI_CT_SIZE * tag));
+    /* rgb - add atapi request */
+    if (request->flags & ATA_R_ATAPI) {
+          bzero(ctp->acmd, 32);
+          bcopy(request->u.atapi.ccb, ctp->acmd, 16);
+    }
 
     /* clear eventual ACTIVE bit */
     ATA_IDX_OUTL(ch, ATA_SACTIVE, ATA_IDX_INL(ch, ATA_SACTIVE) & (1 << tag));
 
     /* issue the command */
     ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CI + (ch->unit << 7), (1 << tag));
+
+    /* rgb - handle ATA_DEVICE_RESET requests */
+    if (!(request->flags & ATA_R_ATAPI)) {
+	if (request->u.ata.command == ATA_DEVICE_RESET) {
+		u_int32_t tf_data;
+		int timeout = 1000000;
+		do {
+  		   DELAY(10);
+		   tf_data = ATA_INL(ctlr->r_res2, ATA_AHCI_P_TFD + (ch->unit << 7));
+		} while (tf_data & ATA_S_BUSY && timeout--);
+		request->status = tf_data;
+		if (timeout <= 0) {
+		    device_printf(request->dev, "ATA_DEVICE_RESET timeout\n");
+		    /* should probably do softreset */
+		}
+		if (request->status & ATA_S_ERROR) {
+			request->error = tf_data >> 8;
+			ata_ahci_restart_engine(ch->dev);
+		}
+		return ATA_OP_FINISHED;
+	}
+    }
 
     /* start the timeout */
     callout_reset(&request->callout, request->timeout * hz,
@@ -655,6 +720,36 @@ ata_ahci_end_transaction(struct ata_request *request)
 
     return ATA_OP_FINISHED;
 }
+
+/* rgb add ahci_restart_engine */
+static void
+ata_ahci_restart_engine(device_t dev)
+{
+    struct ata_pci_controller *ctlr = device_get_softc(device_get_parent(dev));
+    struct ata_channel *ch = device_get_softc(dev);
+    int tmp, offset = (ch->unit <<7); 
+    int timeout = 0;
+
+    /*  stop engine  */
+    tmp = ATA_INL(ctlr->r_res2, ATA_AHCI_P_CMD + offset);
+    tmp &= ~ATA_AHCI_P_CMD_ST;
+    ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset, tmp);
+	    do {
+		DELAY (1000);
+		if (timeout++ >500) {
+		    device_printf(ch->dev, "stopping AHCI engine failed\n");
+		    break;
+		}
+	    }
+            while (ATA_INL(ctlr->r_res2, ATA_AHCI_P_CMD + offset) &
+			ATA_AHCI_P_CMD_CR);
+
+    /*  restart engine  */
+    tmp = ATA_INL(ctlr->r_res2, ATA_AHCI_P_CMD + offset);
+    tmp |= ATA_AHCI_P_CMD_ST;
+    ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset, tmp);
+}
+ 
 
 static void
 ata_ahci_reset(device_t dev)
@@ -704,7 +799,14 @@ ata_ahci_reset(device_t dev)
 	     ATA_INL(ctlr->r_res2, ATA_AHCI_P_IS + offset));
 
     /* start operations on this channel */
-    ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset,
+    /* rgb - add ATAPI cmd */
+    if (ch->devices & ATA_ATAPI_MASTER)
+      ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset,
+	     (ATA_AHCI_P_CMD_ACTIVE | ATA_AHCI_P_CMD_FRE |
+	      ATA_AHCI_P_CMD_ATAPI |
+	      ATA_AHCI_P_CMD_POD | ATA_AHCI_P_CMD_SUD | ATA_AHCI_P_CMD_ST));
+    else
+      ATA_OUTL(ctlr->r_res2, ATA_AHCI_P_CMD + offset,
 	     (ATA_AHCI_P_CMD_ACTIVE | ATA_AHCI_P_CMD_FRE |
 	      ATA_AHCI_P_CMD_POD | ATA_AHCI_P_CMD_SUD | ATA_AHCI_P_CMD_ST));
 }
@@ -749,6 +851,11 @@ ata_ahci_setup_fis(u_int8_t *fis, struct ata_request *request)
 
     fis[idx++] = 0x27;  /* host to device */
     fis[idx++] = 0x80;  /* command FIS (note PM goes here) */
+
+    /* rgb - add atapi request */
+    switch (request->flags & ATA_R_ATAPI) {
+
+    default:
     fis[idx++] = request->u.ata.command;
     fis[idx++] = request->u.ata.feature;
 
@@ -775,6 +882,40 @@ ata_ahci_setup_fis(u_int8_t *fis, struct ata_request *request)
     fis[idx++] = 0x00;
     fis[idx++] = 0x00;
     fis[idx++] = 0x00;
+    break;
+
+    case ATA_R_ATAPI:
+    fis[idx++] = ATA_PACKET_CMD;
+    if (request->flags & ATA_R_DMA) {
+	fis[idx++] = ATA_F_DMA;
+	fis[idx++] = 0x00;
+	fis[idx++] = 0x00;
+	fis[idx++] = 0x00;
+    }
+    else {
+	fis[idx++] = 0x00;
+	fis[idx++] = 0x00;
+	fis[idx++] = request->transfersize;
+	fis[idx++] = request->transfersize >> 8;
+    }
+    fis[idx++] = atadev->unit;
+
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = ATA_A_4BIT;
+
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    fis[idx++] = 0x00;
+    break;
+    } 
+
     return idx;
 }
 
