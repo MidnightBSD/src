@@ -41,7 +41,8 @@ static char sccsid[] = "@(#)option.c	8.2 (Berkeley) 4/16/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/find/option.c,v 1.23 2004/07/29 03:29:44 tjr Exp $");
+/* $FreeBSD: src/usr.bin/find/option.c,v 1.25 2006/04/05 23:06:11 ceri Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -62,6 +63,9 @@ static OPTION const options[] = {
 	{ "!",		c_simple,	f_not,		0 },
 	{ "(",		c_simple,	f_openparen,	0 },
 	{ ")",		c_simple,	f_closeparen,	0 },
+	{ "-Bmin",	c_Xmin,		f_Xmin,		F_TIME_B },
+	{ "-Bnewer",	c_newer,	f_newer,	F_TIME_B },
+	{ "-Btime",	c_Xtime,	f_Xtime,	F_TIME_B },
 	{ "-a",		c_and,		NULL,		0 },
 	{ "-acl",	c_acl,		f_acl,		0 },
 	{ "-amin",	c_Xmin,		f_Xmin,		F_TIME_A },
@@ -94,14 +98,22 @@ static OPTION const options[] = {
 	{ "-mtime",	c_Xtime,	f_Xtime,	0 },
 	{ "-name",	c_name,		f_name,		0 },
 	{ "-newer",	c_newer,	f_newer,	0 },
+	{ "-newerBB",	c_newer,	f_newer,	F_TIME_B | F_TIME2_B },
+	{ "-newerBa",	c_newer,	f_newer,	F_TIME_B | F_TIME2_A },
+	{ "-newerBc",	c_newer,	f_newer,	F_TIME_B | F_TIME2_C },
+	{ "-newerBm",	c_newer,	f_newer,	F_TIME_B },
+	{ "-newerBt",	c_newer,	f_newer,	F_TIME_B | F_TIME2_T },
+	{ "-neweraB",	c_newer,	f_newer,	F_TIME_A | F_TIME2_B },
 	{ "-neweraa",	c_newer,	f_newer,	F_TIME_A | F_TIME2_A },
 	{ "-newerac",	c_newer,	f_newer,	F_TIME_A | F_TIME2_C },
 	{ "-neweram",	c_newer,	f_newer,	F_TIME_A },
 	{ "-newerat",	c_newer,	f_newer,	F_TIME_A | F_TIME2_T },
+	{ "-newercB",	c_newer,	f_newer,	F_TIME_C | F_TIME2_B },
 	{ "-newerca",	c_newer,	f_newer,	F_TIME_C | F_TIME2_A },
 	{ "-newercc",	c_newer,	f_newer,	F_TIME_C | F_TIME2_C },
 	{ "-newercm",	c_newer,	f_newer,	F_TIME_C },
 	{ "-newerct",	c_newer,	f_newer,	F_TIME_C | F_TIME2_T },
+	{ "-newermB",	c_newer,	f_newer,	F_TIME2_B },
 	{ "-newerma",	c_newer,	f_newer,	F_TIME2_A },
 	{ "-newermc",	c_newer,	f_newer,	F_TIME2_C },
 	{ "-newermm",	c_newer,	f_newer,	0 },

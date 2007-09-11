@@ -33,9 +33,10 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)find.1	8.7 (Berkeley) 5/9/95
-.\" $FreeBSD: src/usr.bin/find/find.1,v 1.73 2005/06/14 11:50:51 ru Exp $
+.\" $FreeBSD: src/usr.bin/find/find.1,v 1.82 2007/02/28 10:19:25 ru Exp $
+.\" $MidnightBSD$
 .\"
-.Dd April 2, 2005
+.Dd September 11, 2007
 .Dt FIND 1
 .Os
 .Sh NAME
@@ -46,6 +47,12 @@
 .Op Fl H | Fl L | Fl P
 .Op Fl EXdsx
 .Op Fl f Ar pathname
+.Ar pathname ...
+.Ar expression
+.Nm
+.Op Fl H | Fl L | Fl P
+.Op Fl EXdsx
+.Fl f Ar pathname
 .Op Ar pathname ...
 .Ar expression
 .Sh DESCRIPTION
@@ -69,7 +76,7 @@ Interpret regular expressions followed by
 .Ic -regex
 and
 .Ic -iregex
-options as extended (modern) regular expressions rather than basic
+primaries as extended (modern) regular expressions rather than basic
 regular expressions (BRE's).
 The
 .Xr re_format 7
@@ -138,7 +145,9 @@ This option is equivalent to the
 .Ic -depth
 primary of
 .St -p1003.1-2001 .
+The
 .Fl d
+option
 can be useful when
 .Nm
 is used with
@@ -174,8 +183,37 @@ primary.
 .El
 .Sh PRIMARIES
 .Bl -tag -width indent
+.It Ic -Bmin Ar n
+True if the difference between the time of a file's inode creation
+and the time
+.Nm
+was started, rounded up to the next full minute, is
+.Ar n
+minutes.
+.It Ic -Bnewer Ar file
+Same as
+.Ic -newerBm .
+.It Ic -Btime Ar n Ns Op Cm smhdw
+If no units are specified, this primary evaluates to
+true if the difference between the time of a file's inode creation
+and the time
+.Nm
+was started, rounded up to the next full 24-hour period, is
+.Ar n
+24-hour periods.
+.Pp
+If units are specified, this primary evaluates to
+true if the difference between the time of a file's inode creation
+and the time
+.Nm
+was started is exactly
+.Ar n
+units.
+Please refer to the
+.Ic -atime
+primary description for information on supported time units.
 .It Ic -acl
-May be used in conjunction with other options to locate
+May be used in conjunction with other primaries to locate
 files with extended ACLs.
 See
 .Xr acl 3
@@ -430,7 +468,7 @@ displayed preceded by
 .Dq Li -> .
 The format is identical to that produced by
 .Bk -words
-.Nm ls Fl dgils .
+.Dq Nm ls Fl dgils .
 .Ek
 .It Ic -maxdepth Ar n
 Always true; descend at most
@@ -440,7 +478,7 @@ If any
 .Ic -maxdepth
 primary is specified, it applies to the entire expression even if it would
 not normally be evaluated.
-.Ic -maxdepth Li 0
+.Dq Ic -maxdepth Li 0
 limits the whole search to the command line arguments.
 .It Ic -mindepth Ar n
 Always true; do not apply any tests or actions at levels less than
@@ -449,7 +487,7 @@ If any
 .Ic -mindepth
 primary is specified, it applies to the entire expression even if it would
 not normally be evaluated.
-.Ic -mindepth Li 1
+.Dq Ic -mindepth Li 1
 processes all but the command line arguments.
 .It Ic -mmin Ar n
 True if the difference between the file last modification time and the time
@@ -496,17 +534,21 @@ True if the current file has a more recent last modification time than
 .Ar file .
 .It Ic -newer Ns Ar X Ns Ar Y Ar file
 True if the current file has a more recent last access time
-.Ar ( X Ns = Ns Cm a ) ,
+.Pq Ar X Ns = Ns Cm a ,
+inode creation time
+.Pq Ar X Ns = Ns Cm B ,
 change time
-.Ar ( X Ns = Ns Cm c ) ,
+.Pq Ar X Ns = Ns Cm c ,
 or modification time
-.Ar ( X Ns = Ns Cm m )
+.Pq Ar X Ns = Ns Cm m
 than the last access time
-.Ar ( Y Ns = Ns Cm a ) ,
+.Pq Ar Y Ns = Ns Cm a ,
+inode creation time
+.Pq Ar Y Ns = Ns Cm B ,
 change time
-.Ar ( Y Ns = Ns Cm c ) ,
+.Pq Ar Y Ns = Ns Cm c ,
 or modification time
-.Ar ( Y Ns = Ns Cm m )
+.Pq Ar Y Ns = Ns Cm m
 of
 .Ar file .
 In addition, if
@@ -622,7 +664,8 @@ is specified, the given expression shall be effectively replaced by
 .It Ic -print0
 This primary always evaluates to true.
 It prints the pathname of the current file to standard output, followed by an
-.Tn ASCII NUL
+.Tn ASCII
+.Dv NUL
 character (character code 0).
 .It Ic -prune
 This primary always evaluates to true.
@@ -648,7 +691,7 @@ but not
 .Dq Li xyzzy
 or
 .Dq Li /foo/ .
-.It Ic -size Ar n Ns Op Cm c
+.It Ic -size Ar n Ns Op Cm ckMGTP
 True if the file's size, rounded up, in 512-byte blocks is
 .Ar n .
 If
@@ -659,6 +702,24 @@ then the primary is true if the
 file's size is
 .Ar n
 bytes (characters).
+Similarly if
+.Ar n
+is followed by a scale indicator then the file's size is compared to
+.Ar n
+scaled as:
+.Pp
+.Bl -tag -width indent -compact
+.It Cm k
+kilobytes (1024 bytes)
+.It Cm M
+megabytes (1024 kilobytes)
+.It Cm G
+gigabytes (1024 megabytes)
+.It Cm T
+terabytes (1024 gigabytes)
+.It Cm P
+petabytes (1024 terabytes)
+.El
 .It Ic -type Ar t
 True if the file is of the specified type.
 Possible file types are as follows:
@@ -704,7 +765,7 @@ and neither means
 The primaries may be combined using the following operators.
 The operators are listed in order of decreasing precedence.
 .Pp
-.Bl -tag -width "( expression )" -compact
+.Bl -tag -width indent -compact
 .It Cm \&( Ar expression Cm \&)
 This evaluates to true if the parenthesized expression evaluates to
 true.
@@ -828,14 +889,16 @@ utility syntax is a superset of the syntax specified by the
 standard.
 .Pp
 All the single character options except
-.Ic -H
+.Fl H
 and
-.Ic -L
-as well as the
-.Ic -iname , -inum , -iregex , -print0 , -delete , -ls ,
-and
-.Ic -regex
-primaries are extensions to
+.Fl L
+as well as
+.Ic -amin , -anewer , -cmin , -cnewer , -delete , -empty , -fstype ,
+.Ic -iname , -inum , -iregex , -ls , -maxdepth , -mindepth , -mmin ,
+.Ic -path , -print0 , -regex
+and all of the
+.Ic -B*
+birthtime related primaries are extensions to
 .St -p1003.1-2001 .
 .Pp
 Historically, the

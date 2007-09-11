@@ -13,7 +13,8 @@
 /* SUPPRESS 288 on yyerrlab *//* Label unused */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/find/getdate.y,v 1.3 2003/06/14 13:00:21 markm Exp $");
+/* $FreeBSD: src/usr.bin/find/getdate.y,v 1.4 2005/08/25 13:44:02 roberto Exp $" */
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <ctype.h>
@@ -857,6 +858,7 @@ get_date(char *p, struct timeb *now)
     time_t		tod;
     time_t nowtime;
 
+    bzero (&gmt, sizeof(struct tm));
     yyInput = p;
     if (now == NULL) {
 	struct tm *gmt_ptr;

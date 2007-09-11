@@ -31,7 +31,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.3 (Berkeley) 4/16/94
- *	$FreeBSD: src/usr.bin/find/extern.h,v 1.22 2004/07/29 03:29:44 tjr Exp $
+ *	$FreeBSD: src/usr.bin/find/extern.h,v 1.23 2006/05/14 20:23:00 krion Exp $
+ *	$MidnightBSD$
  */
 
 #include <sys/cdefs.h>
@@ -49,6 +50,7 @@ struct stat;
 void	 printlong(char *, char *, struct stat *);
 int	 queryuser(char **);
 OPTION	*lookup_option(const char *);
+void	 finish_execplus(void);
 
 creat_f	c_Xmin;
 creat_f	c_Xtime;

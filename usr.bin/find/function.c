@@ -41,7 +41,8 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/find/function.c,v 1.53 2005/01/25 14:07:25 ssouhlal Exp $");
+/* $FreeBSD: src/usr.bin/find/function.c,v 1.58 2006/05/27 18:27:41 krion Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -75,6 +76,8 @@ static long long find_parsetime(PLAN *, const char *, char *);
 static char *nextarg(OPTION *, char ***);
 
 extern char **environ;
+
+static PLAN *lastexecplus = NULL;
 
 #define	COMPARE(a, b) do {						\
 	switch (plan->flags & F_ELG_MASK) {				\
@@ -136,7 +139,7 @@ find_parsenum(PLAN *plan, const char *option, char *vp, char *endch)
 	value = strtoq(str, &endchar, 10);
 	if (value == 0 && endchar == str)
 		errx(1, "%s: %s: illegal numeric value", option, vp);
-	if (endchar[0] && (endch == NULL || endchar[0] != *endch))
+	if (endchar[0] && endch == NULL)
 		errx(1, "%s: %s: illegal trailing character", option, vp);
 	if (endch)
 		*endch = endchar[0];
@@ -234,10 +237,10 @@ nextarg(OPTION *option, char ***argvp)
 } /* nextarg() */
 
 /*
- * The value of n for the inode times (atime, ctime, and mtime) is a range,
- * i.e. n matches from (n - 1) to n 24 hour periods.  This interacts with
- * -n, such that "-mtime -1" would be less than 0 days, which isn't what the
- * user wanted.  Correct so that -1 is "less than 1".
+ * The value of n for the inode times (atime, birthtime, ctime, mtime) is a
+ * range, i.e. n matches from (n - 1) to n 24 hour periods.  This interacts
+ * with -n, such that "-mtime -1" would be less than 0 days, which isn't what
+ * the user wanted.  Correct so that -1 is "less than 1".
  */
 #define	TIME_CORRECT(p) \
 	if (((p)->flags & F_ELG_MASK) == F_LESSTHAN) \
@@ -248,6 +251,7 @@ nextarg(OPTION *option, char ***argvp)
  *
  *    True if the difference between the
  *		file access time (-amin)
+ *		file birth time (-Bmin)
  *		last change of file status information (-cmin)
  *		file modification time (-mmin)
  *    and the current time is n min periods.
@@ -260,6 +264,9 @@ f_Xmin(PLAN *plan, FTSENT *entry)
 		    60 - 1) / 60, plan->t_data);
 	} else if (plan->flags & F_TIME_A) {
 		COMPARE((now - entry->fts_statp->st_atime +
+		    60 - 1) / 60, plan->t_data);
+	} else if (plan->flags & F_TIME_B) {
+		COMPARE((now - entry->fts_statp->st_birthtime +
 		    60 - 1) / 60, plan->t_data);
 	} else {
 		COMPARE((now - entry->fts_statp->st_mtime +
@@ -287,6 +294,7 @@ c_Xmin(OPTION *option, char ***argvp)
  *
  *	True if the difference between the
  *		file access time (-atime)
+ *		file birth time (-Btime)
  *		last change of file status information (-ctime)
  *		file modification time (-mtime)
  *	and the current time is n 24 hour periods.
@@ -299,6 +307,8 @@ f_Xtime(PLAN *plan, FTSENT *entry)
 
 	if (plan->flags & F_TIME_A)
 		xtime = entry->fts_statp->st_atime;
+	else if (plan->flags & F_TIME_B)
+		xtime = entry->fts_statp->st_birthtime;
 	else if (plan->flags & F_TIME_C)
 		xtime = entry->fts_statp->st_ctime;
 	else
@@ -704,6 +714,8 @@ c_exec(OPTION *option, char ***argvp)
 		new->e_psizemax = argmax;
 		new->e_pbsize = 0;
 		cnt += new->e_pnummax + 1;
+		new->e_next = lastexecplus;
+		lastexecplus = new;
 	}
 	if ((new->e_argv = malloc(cnt * sizeof(char *))) == NULL)
 		err(1, NULL);
@@ -745,6 +757,19 @@ c_exec(OPTION *option, char ***argvp)
 
 done:	*argvp = argv + 1;
 	return new;
+}
+
+/* Finish any pending -exec ... {} + functions. */
+void
+finish_execplus()
+{
+	PLAN *p;
+
+	p = lastexecplus;
+	while (p != NULL) {
+		(p->execute)(p, NULL);
+		p = p->e_next;
+	}
 }
 
 int
@@ -818,7 +843,7 @@ f_fstype(PLAN *plan, FTSENT *entry)
 	static int first = 1;
 	struct statfs sb;
 	static int val_type, val_flags;
-	char *p, save[2];
+	char *p, save[2] = {0,0};
 
 	if ((plan->flags & F_MTMASK) == F_MTUNKNOWN)
 		return 0;
@@ -928,7 +953,7 @@ c_fstype(OPTION *option, char ***argvp)
 int
 f_group(PLAN *plan, FTSENT *entry)
 {
-	return entry->fts_statp->st_gid == plan->g_data;
+	COMPARE(entry->fts_statp->st_gid, plan->g_data);
 }
 
 PLAN *
@@ -942,15 +967,19 @@ c_group(OPTION *option, char ***argvp)
 	gname = nextarg(option, argvp);
 	ftsoptions &= ~FTS_NOSTAT;
 
+	new = palloc(option);
 	g = getgrnam(gname);
 	if (g == NULL) {
+		char* cp = gname;
+		if( gname[0] == '-' || gname[0] == '+' )
+			gname++;
 		gid = atoi(gname);
 		if (gid == 0 && gname[0] != '0')
 			errx(1, "%s: %s: no such group", option->name, gname);
+		gid = find_parsenum(new, option->name, cp, NULL);
 	} else
 		gid = g->gr_gid;
 
-	new = palloc(option);
 	new->g_data = gid;
 	return new;
 }
@@ -1065,6 +1094,8 @@ f_newer(PLAN *plan, FTSENT *entry)
 		return entry->fts_statp->st_ctime > plan->t_data;
 	else if (plan->flags & F_TIME_A)
 		return entry->fts_statp->st_atime > plan->t_data;
+	else if (plan->flags & F_TIME_B)
+		return entry->fts_statp->st_birthtime > plan->t_data;
 	else
 		return entry->fts_statp->st_mtime > plan->t_data;
 }
@@ -1336,7 +1367,8 @@ c_simple(OPTION *option, char ***argvp __unused)
  *
  *	True if the file size in bytes, divided by an implementation defined
  *	value and rounded up to the next integer, is n.  If n is followed by
- *	a c, the size is in bytes.
+ *      one of c k M G T P, the size is in bytes, kilobytes,
+ *      megabytes, gigabytes, terabytes or petabytes respectively.
  */
 #define	FIND_SIZE	512
 static int divsize = 1;
@@ -1357,6 +1389,7 @@ c_size(OPTION *option, char ***argvp)
 	char *size_str;
 	PLAN *new;
 	char endch;
+	off_t scale;
 
 	size_str = nextarg(option, argvp);
 	ftsoptions &= ~FTS_NOSTAT;
@@ -1364,8 +1397,38 @@ c_size(OPTION *option, char ***argvp)
 	new = palloc(option);
 	endch = 'c';
 	new->o_data = find_parsenum(new, option->name, size_str, &endch);
-	if (endch == 'c')
+	if (endch != '\0') {
 		divsize = 0;
+
+		switch (endch) {
+		case 'c':                       /* characters */
+			scale = 0x1LL;
+			break;
+		case 'k':                       /* kilobytes 1<<10 */
+			scale = 0x400LL;
+			break;
+		case 'M':                       /* megabytes 1<<20 */
+			scale = 0x100000LL;
+			break;
+		case 'G':                       /* gigabytes 1<<30 */
+			scale = 0x40000000LL;
+			break;
+		case 'T':                       /* terabytes 1<<40 */
+			scale = 0x1000000000LL;
+			break;
+		case 'P':                       /* petabytes 1<<50 */
+			scale = 0x4000000000000LL;
+			break;
+		default:
+			errx(1, "%s: %s: illegal trailing character",
+				option->name, size_str);
+			break;
+		}
+		if (new->o_data > QUAD_MAX / scale)
+			errx(1, "%s: %s: value too large",
+				option->name, size_str);
+		new->o_data *= scale;
+	}
 	return new;
 }
 
@@ -1439,7 +1502,7 @@ c_type(OPTION *option, char ***argvp)
 int
 f_user(PLAN *plan, FTSENT *entry)
 {
-	return entry->fts_statp->st_uid == plan->u_data;
+	COMPARE(entry->fts_statp->st_uid, plan->u_data);
 }
 
 PLAN *
@@ -1453,15 +1516,19 @@ c_user(OPTION *option, char ***argvp)
 	username = nextarg(option, argvp);
 	ftsoptions &= ~FTS_NOSTAT;
 
+	new = palloc(option);
 	p = getpwnam(username);
 	if (p == NULL) {
+		char* cp = username;
+		if( username[0] == '-' || username[0] == '+' )
+			username++;
 		uid = atoi(username);
 		if (uid == 0 && username[0] != '0')
 			errx(1, "%s: %s: no such user", option->name, username);
+		uid = find_parsenum(new, option->name, cp, NULL);
 	} else
 		uid = p->pw_uid;
 
-	new = palloc(option);
 	new->u_data = uid;
 	return new;
 }

@@ -34,7 +34,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)find.h	8.1 (Berkeley) 6/6/93
- *	$FreeBSD: src/usr.bin/find/find.h,v 1.17 2004/05/28 17:17:15 eik Exp $
+ *	$FreeBSD: src/usr.bin/find/find.h,v 1.19 2006/05/14 20:23:01 krion Exp $
+ *	$MidnightBSD$
  */
 
 #include <regex.h>
@@ -72,6 +73,8 @@ typedef	struct _plandata *creat_f(struct _option *, char ***);
 #define	F_IGNCASE	0x00010000	/* iname ipath iregex */
 #define	F_EXACTTIME	F_IGNCASE	/* -[acm]time units syntax */
 #define F_EXECPLUS	0x00020000	/* -exec ... {} + */
+#define	F_TIME_B	0x00040000	/* one of -Btime, -Bnewer, -newerB* */
+#define	F_TIME2_B	0x00080000	/* one of -newer?B */
 
 /* node definition */
 typedef struct _plandata {
@@ -103,6 +106,7 @@ typedef struct _plandata {
 			int _e_psize;		/* number of bytes of args. */
 			int _e_pbsize;		/* base num. of bytes of args */
 			int _e_psizemax;	/* max num. of bytes of args */
+			struct _plandata *_e_next;/* next F_EXECPLUS in tree */
 		} ex;
 		char *_a_data[2];		/* array of char pointers */
 		char *_c_data;			/* char pointer */
@@ -133,6 +137,7 @@ typedef struct _plandata {
 #define e_psize p_un.ex._e_psize
 #define e_pbsize p_un.ex._e_pbsize
 #define e_psizemax p_un.ex._e_psizemax
+#define e_next p_un.ex._e_next
 
 typedef struct _option {
 	const char *name;		/* option name */
