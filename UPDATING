@@ -3,6 +3,12 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20070911:
+	Updated mksh to version R31b.
+
+	Fixed stderr output in libpthread.  Previously it was
+	written to stdout.
+
 20070831:
 	Added dot.mkshrc file to support the recent change to 
 	mksh from OpenBSD's ksh derived from pdksh.  
@@ -417,4 +423,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.25 2007/08/14 04:28:13 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.26 2007/08/31 05:47:34 laffer1 Exp $
