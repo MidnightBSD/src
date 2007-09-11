@@ -1,7 +1,7 @@
-.\" $MirOS: src/bin/mksh/mksh.1,v 1.92 2007/07/26 13:32:16 tg Exp $
+.\" $MirOS: src/bin/mksh/mksh.1,v 1.100 2007/09/09 19:18:59 tg Exp $
 .\" $OpenBSD: ksh.1,v 1.120 2007/05/31 20:47:44 otto Exp $
 .\"
-.Dd July 26, 2007
+.Dd September 9, 2007
 .Dt MKSH 1
 .Os MirBSD
 .Sh NAME
@@ -1589,17 +1589,11 @@ if the shell doesn't know where it is.
 .It Ev RANDOM
 Every time
 .Ev RANDOM
-is referenced, it is assigned a pseudo-random number first.
-By default,
-.Xr arc4random 3
-is used to produce unsigned 15\-bit values (0\-32767)
-whose quality depends on the operating environment.
-If
-.Ev RANDOM
-is assigned a value, it is used as the seed to
-.Xr srand 3
-and subsequent references yield a semi-predictable sequence from
-.Xr rand 3 .
+is referenced, it is assigned a 15-bit pseudo-random number, i.e. between
+0 and 32767, first.
+See the description of
+.Ic set -o Ic arc4random
+below for details.
 .It Ev REPLY
 Default parameter for the
 .Ic read
@@ -2385,6 +2379,9 @@ The following describes the special and regular built-in commands:
 .Pp
 .Bl -tag -width Ds -compact
 .It Ic \&. Ar file Op Ar arg ...
+This is called the
+.Dq dot
+command.
 Execute the commands in
 .Ar file
 in the current environment.
@@ -3186,6 +3183,17 @@ option is used, in which case
 commands defining all read-only parameters, including their values, are
 printed.
 .Pp
+.It Ic rename Ar from to
+Renames the file
+.Ar from
+to
+.Ar to .
+Both must be complete pathnames and on the same device.
+This builtin is intended for emergency situations where
+.Pa /bin/mv
+becomes unusable, and directly calls
+.Xr rename 2 .
+.Pp
 .It Ic return Op Ar status
 Returns from a function or
 .Ic .\&
@@ -3344,6 +3352,18 @@ during file name generation.
 Print commands and parameter assignments when they are executed, preceded by
 the value of
 .Ev PS4 .
+.It Ic arc4random
+Use
+.Xr arc4random 3
+high-quality random numbers for the value of
+.Ev RANDOM
+if set (to either 1 or 2), or a semi-predictable sequence from
+.Xr rand 3
+if unset.
+Setting this flag will change its value to 1; the default value is 2,
+which means it automatically switches to 0 if
+.Ev RANDOM
+is written to.
 .It Ic bgnice
 Background jobs are run with lower priority.
 .It Ic braceexpand
@@ -3480,6 +3500,21 @@ etc. are renamed to
 etc.
 .Ar number
 defaults to 1.
+.Pp
+.It Ic source Ar file Op Ar arg ...
+Like
+.Ic \&. Po Do dot Dc Pc ,
+except that the current working directory is appended to the
+.Ev PATH
+in GNU
+.Nm bash
+and
+.Nm mksh .
+In
+.Nm ksh93
+and
+.Nm mksh ,
+this is implemented as a shell alias instead of a builtin.
 .Pp
 .It Ic test Ar expression
 .It Ic \&[ Ar expression Ic \&]
@@ -4103,8 +4138,6 @@ the default
 .Pc
 or functions
 .Pq Fl f .
-The exit status is non-zero if any of the parameters were already unset, zero
-otherwise.
 .Pp
 .It Ic wait Op Ar job ...
 Wait for the specified job(s) to finish.
@@ -4430,6 +4463,10 @@ Moves the cursor to the beginning of the edited input line.
 Uppercase the first character in the next
 .Ar n
 words, leaving the cursor past the end of the last word.
+.It clear-screen: ^[^L
+Prints a compile-time configurable sequence to clear the screen and home
+the cursor, redraws the entire prompt and the currently edited input line.
+The default sequence works for almost all standard terminals.
 .It comment: ^[#
 If the current line does not begin with a comment character, one is added at
 the beginning of the line and the line is entered (as if return had been
@@ -4526,7 +4563,7 @@ Acts as
 .Ic eot
 if alone on a line; otherwise acts as
 .Ic delete-char-forward .
-.It error:
+.It error: (not bound)
 Error (ring the bell).
 .It exchange-point-and-mark: ^X^X
 Places the cursor where the mark is and sets the mark to where the cursor was.
@@ -5255,6 +5292,7 @@ Privileged shell profile.
 .Xr mkfifo 2 ,
 .Xr open 2 ,
 .Xr pipe 2 ,
+.Xr rename 2 ,
 .Xr wait 2 ,
 .Xr arc4random 3 ,
 .Xr getopt 3 ,
@@ -5342,7 +5380,7 @@ and many other persons, and is currently maintained by
 .An Thorsten Glaser Aq tg@mirbsd.de .
 .Sh BUGS
 This document attempts to describe
-.Nm mksh R30
+.Nm mksh R31b
 and up,
 compiled without any options impacting functionality, such as
 .Dv MKSH_SMALL ,

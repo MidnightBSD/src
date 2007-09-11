@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MirOS: src/bin/mksh/Build.sh,v 1.245 2007/07/24 21:54:46 tg Exp $
+# $MirOS: src/bin/mksh/Build.sh,v 1.261 2007/09/10 20:16:47 tg Exp $
 #-
 # Environment used: CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF TARGET_OS
 # CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NEED_MKNOD MKSH_NOPWNAM
@@ -79,7 +79,7 @@ ac_testinit() {
 	if ac_cache $1; then
 		test x"$2" = x"!" && shift
 		test x"$2" = x"" || shift
-		fd=$3
+		fd=${3-$f}
 		ac_testdone
 		return 1
 	fi
@@ -94,8 +94,7 @@ ac_testinit() {
 		eval ft=\$HAVE_`upper $2`
 		shift
 	fi
-	fd=$3
-	test x"$fd" = x"" && fd=$f
+	fd=${3-$f}
 	if test $fc = "$ft"; then
 		fv=$2
 		fx=' (implied)'
@@ -167,8 +166,14 @@ ac_flags() {
 	test 11 = $fa$fv || CFLAGS=$save_CFLAGS
 }
 
-# ac_header header [prereq ...]
+# ac_header [!] header [prereq ...]
 ac_header() {
+	if test x"$1" = x"!"; then
+		na=1
+		shift
+	else
+		na=0
+	fi
 	hf=$1; shift
 	hv=`echo "$hf" | tr -d '\012\015' | tr -c $alll$allu$alln $alls`
 	for i
@@ -177,8 +182,9 @@ ac_header() {
 	done
 	echo "#include <$hf>" >>x
 	echo 'int main(void) { return (0); }' >>x
-	ac_test "$hv" "" "<$hf>" <x
+	ac_testn "$hv" "" "<$hf>" <x
 	rm -f x
+	test $na = 1 || ac_cppflags
 }
 
 addsrcs() {
@@ -195,7 +201,7 @@ if test -d mksh || test -d mksh.exe; then
 	exit 1
 fi
 rm -f a.exe a.out *core crypt.exp lft mksh mksh.cat1 mksh.exe no *.o \
-    scn.c signames.inc test.sh x
+    scn.c signames.inc stdint.h test.sh x
 
 : ${CC=cc} ${NROFF=nroff}
 curdir=`pwd` srcdir=`dirname "$0"` check_categories=pdksh
@@ -281,6 +287,8 @@ Linux)
 	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 	: ${HAVE_REVOKE=0}
 	;;
+MidnightBSD)
+	;;
 Minix)
 	CPPFLAGS="$CPPFLAGS -D_MINIX -D_POSIX_SOURCE"
 	warn=' and will currently not work'
@@ -293,27 +301,17 @@ NetBSD)
 	;;
 OpenBSD)
 	;;
+OSF1)
+	HAVE_SIG_T=0; CPPFLAGS="$CPPFLAGS -Dsig_t=nosig_t"
+	warn=' and is still experimental'
+	;;
 Plan9)
 	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_LIMITS_EXTENSION"
 	CPPFLAGS="$CPPFLAGS -D_BSD_EXTENSION -D_SUSV2_SOURCE -D__Plan9__"
 	warn=' and will currently not work'
 	;;
 PW32*)
-	cat >stdint.h <<-'EOF'
-		typedef signed char int8_t;
-		typedef signed short int16_t;
-		typedef signed int int32_t;
-		typedef signed long long int64_t;
-		typedef unsigned char uint8_t;
-		typedef unsigned short uint16_t;
-		typedef unsigned int uint32_t;
-		typedef unsigned long long uint64_t;
-		typedef unsigned char u_char;
-		typedef unsigned int u_int;
-		typedef unsigned long u_long;
-	EOF
-	HAVE_SIG_T=0
-	CPPFLAGS="$CPPFLAGS -Dsig_t=nosig_t"
+	HAVE_SIG_T=0; CPPFLAGS="$CPPFLAGS -Dsig_t=nosig_t"
 	warn=' and will currently not work'
 	# missing: killpg() getrlimit()
 	;;
@@ -351,6 +349,7 @@ $e $bi$me: Scanning for functions... please ignore any errors.$ao
 # notes:
 # – ICC defines __GNUC__ too
 # – GCC defines __hpux too
+CPP="$CC -E"
 $e ... which compiler we seem to use
 cat >scn.c <<-'EOF'
 	#if defined(__ICC) || defined(__INTEL_COMPILER)
@@ -365,6 +364,10 @@ cat >scn.c <<-'EOF'
 	ct=dmc
 	#elif defined(_MSC_VER)
 	ct=msc
+	#elif defined(__TenDRA__)
+	ct=tendra
+	#elif defined(__TINYC__)
+	ct=tcc
 	#elif defined(__GNUC__)
 	ct=gcc
 	#elif defined(__hpux)
@@ -374,12 +377,12 @@ cat >scn.c <<-'EOF'
 	#endif
 EOF
 ct=unknown
-eval 'v "$CC -E scn.c | grep ct= | tr -d \\\\015 >x" 2>&'$h | sed 's/^/] /'
+eval 'v "$CPP scn.c | grep ct= | tr -d \\\\015 >x" 2>&'$h | sed 's/^/] /'
 test $h = 1 && sed 's/^/[ /' x
 eval `cat x`
 rm -f x
 case $ct in
-bcc|dmc|gcc|hpcc|icc|msc|sunpro|xlc) ;;
+bcc|dmc|gcc|hpcc|icc|msc|sunpro|tcc|tendra|xlc) ;;
 *) ct=unknown ;;
 esac
 $e "$bi==> which compiler we seem to use...$ao $ui$ct$ao"
@@ -402,6 +405,18 @@ NOWARN=
 DOWARN=
 ac_flags 0 compiler_works '' 'if the compiler works'
 test 1 = $HAVE_CAN_COMPILER_WORKS || exit 1
+HAVE_COMPILER_KNOWN=0
+test $ct = unknown || HAVE_COMPILER_KNOWN=1
+ac_testn couldbe_tcc '!' compiler_known 0 'if this could be tcc' <<-EOF
+	#ifndef __TINYC__
+	#error No, cannot be tcc.
+	#endif
+	int main(void) { return (0); }
+EOF
+if test $HAVE_COULDBE_TCC = 1; then
+	ct=tcc
+	CPP='cpp -D__TINYC__'
+fi
 ac_testn compiler_fails '' 'if the compiler does not fail correctly' <<-EOF
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 EOF
@@ -447,6 +462,8 @@ elif test $ct = bcc; then
 elif test $ct = xlc; then
 	save_NOWARN=-qflag=i:e
 	DOWARN=-qflag=i:i
+elif test $ct = tendra; then
+	save_NOWARN=-w
 else
 	test x"$save_NOWARN" = x"" && save_NOWARN=-Wno-error
 	ac_flags 0 wnoerror "$save_NOWARN"
@@ -478,6 +495,8 @@ elif test $ct = hpcc; then
 elif test $ct = xlc; then
 	ac_flags 1 othree "-O3 -qstrict"
 	test 1 = $HAVE_CAN_OTHREE || ac_flags 1 otwo -O2
+elif test $ct = tcc || test $ct = tendra; then
+	: no special optimisation
 else
 	ac_flags 1 otwo -O2
 	test 1 = $HAVE_CAN_OTWO || ac_flags 1 optimise -O
@@ -485,6 +504,7 @@ fi
 # other flags: just add them if they are supported
 i=0
 if test $ct = gcc; then
+	NOWARN=$DOWARN		# scan for flags with -Werror
 	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
 	ac_flags 1 fstackprotectorall -fstack-protector-all
 	ac_flags 1 fwrapv -fwrapv
@@ -524,6 +544,12 @@ elif test $ct = xlc; then
 	ac_flags 1 rtchkc -qextchk
 	ac_flags 1 wformat "-qformat=all -qformat=nozln"
 	#ac_flags 1 wp64 -qwarn64	# too verbose for now
+elif test $ct = tendra; then
+	ac_flags 0 ysystem -Ysystem
+	test $HAVE_CAN_YSYSTEM = 1 && CPPFLAGS="-Ysystem $CPPFLAGS"
+	ac_flags 1 extansi -Xa
+elif test $ct = tcc; then
+	ac_flags 1 boundschk -b
 fi
 # flags common to a subset of compilers
 if test 1 = $i; then
@@ -532,6 +558,7 @@ if test 1 = $i; then
 	    ac_flags 1 stdc99 -std=c99 'for support of ISO C99'
 	ac_flags 1 wall -Wall
 fi
+NOWARN=$save_NOWARN	# gcc runs with -Werror until here
 ac_test expstmt '' "if the compiler supports statements as expressions" <<-'EOF'
 	#define ksh_isspace(c)	({					\
 		unsigned ksh_isspace_c = (c);				\
@@ -592,13 +619,6 @@ ac_testn mksh_defutf8 '' "if we assume UTF-8 is enabled" <<-'EOF'
 	int main(void) { return (0); }
 EOF
 
-ac_testn mksh_need_mknod '!' mksh_full 1 'if we still want c_mknod()' <<-'EOF'
-	#ifndef MKSH_NEED_MKNOD
-	#error Nope, the user really wants it teensy.
-	#endif
-	int main(void) { return (0); }
-EOF
-
 if test 0 = $HAVE_MKSH_FULL; then
 	if test $ct = xlc; then
 		ac_flags 1 fnoinline -qnoinline
@@ -622,10 +642,43 @@ ac_header libgen.h
 ac_header libutil.h
 ac_header paths.h
 ac_header stdbool.h
-ac_header stdint.h stdarg.h
+ac_header '!' stdint.h stdarg.h
 ac_header grp.h sys/types.h
 ac_header ulimit.h
 ac_header values.h
+
+ac_testn can_inttypes '!' stdint_h 1 "if we have standard integer types" <<-'EOF'
+	#include <sys/types.h>
+	int main(int ac, char **av) { uint32_t x = (uint32_t)**av;
+		return (x == (u_int32_t)ac);
+	}
+EOF
+if test 0 = $HAVE_CAN_INTTYPES; then
+	ac_testn can_inttypes2 '' "if we have u_char, u_int, u_long" <<-'EOF'
+		#include <sys/types.h>
+		int main(int ac, char **av) { u_int x = (u_int)**av;
+			return (x == (u_int)(u_long)(u_char)ac);
+		}
+	EOF
+	cat >stdint.h <<-'EOF'
+		typedef signed char int8_t;
+		typedef signed short int16_t;
+		typedef signed int int32_t;
+		typedef signed long long int64_t;
+		typedef unsigned char uint8_t;
+		typedef unsigned short uint16_t;
+		typedef unsigned int uint32_t;
+		typedef unsigned long long uint64_t;
+		typedef unsigned int u_int32_t;
+	EOF
+	test 1 = $HAVE_CAN_INTTYPES2 || cat >>stdint.h <<-'EOF'
+		typedef unsigned char u_char;
+		typedef unsigned int u_int;
+		typedef unsigned long u_long;
+	EOF
+	HAVE_STDINT_H=1
+fi
+ac_cppflags STDINT_H
 
 #
 # Environment: definitions
@@ -738,9 +791,13 @@ if test $HAVE_ARC4RANDOM = 0 && test -f "$srcdir/arc4random.c"; then
 fi
 ac_cppflags ARC4RANDOM
 
-ac_test arc4random_push arc4random 0 <<-'EOF'
-	extern void arc4random_push(int);
-	int main(void) { arc4random_push(1); return (0); }
+ac_test arc4random_pushb arc4random 0 <<-'EOF'
+	#include <sys/types.h>
+	#if HAVE_STDINT_H
+	#include <stdint.h>
+	#endif
+	extern uint32_t arc4random_pushb(void *, size_t);
+	int main(int ac, char *av[]) { return (arc4random_pushb(*av, ac)); }
 EOF
 
 ac_test flock_ex '' 'flock and mmap' <<-'EOF'
@@ -765,6 +822,19 @@ ac_test langinfo_codeset setlocale_ctype 0 'nl_langinfo(CODESET)' <<-'EOF'
 	int main(void) { return ((ptrdiff_t)(void *)nl_langinfo(CODESET)); }
 EOF
 
+ac_test mknod '' 'if we use mknod(), makedev() and friends' <<-'EOF'
+	#define MKSH_INCLUDES_ONLY
+	#include "sh.h"
+	#if defined(MKSH_SMALL) && !defined(MKSH_NEED_MKNOD)
+	#error We do not want to include the mknod builtin.
+	#endif
+	int main(int ac, char *av[]) {
+		dev_t dv;
+		dv = makedev(ac, 1);
+		return (mknod(av[0], 0, dv) ? (int)major(dv) : (int)minor(dv));
+	}
+EOF
+
 ac_test revoke mksh_full 0 <<-'EOF'
 	#if HAVE_LIBUTIL_H
 	#include <libutil.h>
@@ -773,7 +843,7 @@ ac_test revoke mksh_full 0 <<-'EOF'
 	int main(int ac, char *av[]) { return (ac + revoke(av[0])); }
 EOF
 
-ac_test setmode mksh_need_mknod 1 <<-'EOF'
+ac_test setmode mknod 1 <<-'EOF'
 	#if defined(__MSVCRT__) || defined(__CYGWIN__)
 	#error Win32 setmode() is different from what we need
 	#endif
@@ -818,11 +888,11 @@ ac_test '!' arc4random_decl arc4random 1 'if arc4random() does not need to be de
 	long arc4random(void);		/* this clashes if defined before */
 	int main(void) { return (arc4random()); }
 EOF
-ac_test '!' arc4random_push_decl arc4random_push 1 'if arc4random_push() does not need to be declared' <<-'EOF'
+ac_test '!' arc4random_pushb_decl arc4random_pushb 1 'if arc4random_pushb() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
-	void arc4random_push(long);	/* this clashes if defined before */
-	int main(void) { arc4random_push(1); return (0); }
+	int arc4random_pushb(char, int); /* this clashes if defined before */
+	int main(int ac, char *av[]) { return (arc4random_pushb(**av, ac)); }
 EOF
 ac_test sys_siglist_decl sys_siglist 1 'if sys_siglist[] does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
@@ -845,7 +915,7 @@ ac_cppflags
 test 0 = $HAVE_SYS_SIGNAME && if ac_testinit cpp_dd '' \
     'checking if the C Preprocessor supports -dD'; then
 	echo '#define foo bar' >scn.c
-	eval 'v "$CC -dD -E scn.c >x" 2>&'$h | sed 's/^/] /'
+	eval 'v "$CPP -dD scn.c >x" 2>&'$h | sed 's/^/] /'
 	grep '#define foo bar' x >/dev/null 2>&1 && fv=1
 	rm -f scn.c x
 	ac_testdone
@@ -877,7 +947,7 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 		#endif
 		mksh_cfg: NSIG
 	EOF
-	NSIG=`vq "$CC $CPPFLAGS -E scn.c" | grep mksh_cfg: | \
+	NSIG=`vq "$CPP $CPPFLAGS scn.c" | grep mksh_cfg: | \
 	    sed 's/^mksh_cfg:[	 ]*\([0-9x ()+-]*\).*$/\1/'`
 	case $NSIG in
 	*[\ \(\)+-]*) NSIG=`awk "BEGIN { print $NSIG }"` ;;
@@ -888,13 +958,13 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 	signames="$signames KILL PIPE PROF PWR QUIT SAK SEGV STOP SYS TERM"
 	signames="$signames TRAP TSTP TTIN TTOU URG USR1 USR2 WINCH XCPU XFSZ"
 	test 1 = $HAVE_CPP_DD && test $NSIG -gt 1 && signames="$signames "`vq \
-	    "$CC $CPPFLAGS -dD -E scn.c" | grep '[	 ]SIG[A-Z0-9]*[	 ]' | \
+	    "$CPP $CPPFLAGS -dD scn.c" | grep '[	 ]SIG[A-Z0-9]*[	 ]' | \
 	    sed 's/^\(.*[	 ]SIG\)\([A-Z0-9]*\)\([	 ].*\)$/\2/' | sort`
 	test $NSIG -gt 1 || signames=
 	for name in $signames; do
 		echo '#include <signal.h>' >scn.c
 		echo mksh_cfg: SIG$name >>scn.c
-		vq "$CC $CPPFLAGS -E scn.c" | grep mksh_cfg: | \
+		vq "$CPP $CPPFLAGS scn.c" | grep mksh_cfg: | \
 		    sed 's/^mksh_cfg:[	 ]*\([0-9x]*\).*$/\1:'$name/
 	done | grep -v '^:' | while IFS=: read nr name; do
 		nr=`printf %d "$nr" 2>/dev/null`

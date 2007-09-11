@@ -1,4 +1,4 @@
-/*	$OpenBSD: misc.c,v 1.30 2006/03/12 00:26:58 deraadt Exp $	*/
+/*	$OpenBSD: misc.c,v 1.32 2007/08/02 11:05:54 fgsch Exp $	*/
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
 #include "sh.h"
@@ -6,7 +6,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.64 2007/07/26 13:23:51 tg Exp $\t"
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.66 2007/09/09 18:06:41 tg Exp $\t"
 	MKSH_SH_H_ID);
 
 #undef USE_CHVT
@@ -104,6 +104,9 @@ const struct shoption options[] = {
 	 * entries MUST match the order of sh_flag F* enumerations in sh.h.
 	 */
 	{ "allexport",	'a',		OF_ANY },
+#if HAVE_ARC4RANDOM
+	{ "arc4random",	  0,		OF_ANY },
+#endif
 	{ "braceexpand",  0,		OF_ANY }, /* non-standard */
 	{ "bgnice",	  0,		OF_ANY },
 	{ NULL,		'c',	    OF_CMDLINE },
@@ -232,7 +235,7 @@ change_flag(enum sh_flag f,
 	char oldval;
 
 	oldval = Flag(f);
-	Flag(f) = newval;
+	Flag(f) = newval ? 1 : 0;	/* needed for tristates */
 	if (f == FMONITOR) {
 		if (what != OF_CMDLINE && newval != oldval)
 			j_change();

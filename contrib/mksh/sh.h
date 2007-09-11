@@ -8,8 +8,8 @@
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
-#define MKSH_SH_H_ID "$MirOS: src/bin/mksh/sh.h,v 1.165 2007/07/26 13:23:52 tg Exp $"
-#define MKSH_VERSION "R30 2007/07/26"
+#define MKSH_SH_H_ID "$MirOS: src/bin/mksh/sh.h,v 1.175 2007/09/09 18:06:41 tg Exp $"
+#define MKSH_VERSION "R31 2007/09/09"
 
 #if HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -192,10 +192,12 @@ typedef int bool;
 
 #if !HAVE_ARC4RANDOM_DECL
 extern u_int32_t arc4random(void);
+extern void arc4random_addrandom(unsigned char *, int)
+    __bound_att__((bounded (string, 1, 2)));
 #endif
 
-#if !HAVE_ARC4RANDOM_PUSH_DECL
-extern void arc4random_push(int);
+#if !HAVE_ARC4RANDOM_PUSHB_DECL
+extern uint32_t arc4random_pushb(void *, size_t);
 #endif
 
 #if !HAVE_SETMODE
@@ -393,6 +395,9 @@ extern const struct shoption options[];
  */
 enum sh_flag {
 	FEXPORT = 0,	/* -a: export all */
+#if HAVE_ARC4RANDOM
+	FARC4RANDOM,	/* use 0:rand(3) 1:arc4random(3) 2:switch on write */
+#endif
 	FBRACEEXPAND,	/* enable {} globbing */
 	FBGNICE,	/* bgnice */
 	FCOMMAND,	/* -c: (invocation) execute specified command */
@@ -431,12 +436,14 @@ enum sh_flag {
 	FNFLAGS		/* (place holder: how many flags are there) */
 };
 
-#define Flag(f)	(shell_flags[(int) (f)])
+#define Flag(f)	(shell_flags[(int)(f)])
 
 EXTERN char shell_flags[FNFLAGS];
 
 /* null value for variable; comparision pointer for unset */
-EXTERN char	null[] I__("");
+EXTERN char null[] I__("");
+/* helpers for string pooling */
+EXTERN const char T_synerr[] I__("syntax error");
 
 enum temp_type {
 	TT_HEREDOC_EXP,	/* expanded heredoc */
@@ -815,7 +822,7 @@ struct builtin {
 	int (*func)(const char **);
 };
 
-extern const struct builtin shbuiltins [], kshbuiltins [];
+extern const struct builtin mkshbuiltins[];
 
 /* var spec values */
 #define V_NONE		0
@@ -1268,6 +1275,10 @@ void timex_hook(struct op *, char ** volatile *);
 int c_exec(const char **);
 int c_builtin(const char **);
 int c_test(const char **);
+#if HAVE_MKNOD
+int c_mknod(const char **);
+#endif
+int c_rename(const char **);
 /* histrap.c */
 void init_histvec(void);
 void hist_init(Source *);
@@ -1413,7 +1424,8 @@ void print_columns(struct shf *, int,
     char *(*)(const void *, int, char *, int),
     const void *, int, int prefcol);
 void strip_nuls(char *, int);
-int blocking_read(int, char *, int);
+int blocking_read(int, char *, int)
+    __bound_att__((bounded (buffer, 2, 3)));
 int reset_nonblock(int);
 char *ksh_get_wd(size_t *);
 int make_path(const char *, const char *, char **, XString *, int *);
@@ -1478,7 +1490,7 @@ const char *skip_wdvarname(const char *, int);
 int is_wdvarname(const char *, int);
 int is_wdvarassign(const char *);
 char **makenv(void);
-void change_random(void);
+void change_random(uint64_t);
 int array_ref_len(const char *);
 char *arrayname(const char *);
 void set_array(const char *, int, const char **);

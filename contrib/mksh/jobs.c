@@ -1,8 +1,8 @@
-/*	$OpenBSD: jobs.c,v 1.35 2006/02/06 16:47:07 jmc Exp $	*/
+/*	$OpenBSD: jobs.c,v 1.36 2007/09/06 19:57:47 otto Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.25 2007/07/22 13:34:50 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.28 2007/09/09 19:12:10 tg Exp $");
 
 /* Order important! */
 #define PRUNNING	0
@@ -214,11 +214,14 @@ j_change(void)
 	int i;
 
 	if (Flag(FMONITOR)) {
+		bool use_tty = Flag(FTALKING);
+
 		/* Don't call tcgetattr() 'til we own the tty process group */
-		tty_init(false);
+		if (use_tty)
+			tty_init(false);
 
 		/* no controlling tty, no SIGT* */
-		ttypgrp_ok = tty_fd >= 0 && tty_devtty;
+		ttypgrp_ok = use_tty && tty_fd >= 0 && tty_devtty;
 
 		if (ttypgrp_ok && (our_pgrp = getpgrp()) < 0) {
 			warningf(false, "j_init: getpgrp() failed: %s",
@@ -264,7 +267,7 @@ j_change(void)
 				our_pgrp = kshpid;
 			}
 		}
-		if (!ttypgrp_ok)
+		if (use_tty && !ttypgrp_ok)
 			warningf(false, "warning: won't have full job control");
 		if (tty_fd >= 0)
 			tcgetattr(tty_fd, &tty_state);
@@ -369,6 +372,9 @@ exchild(struct op *t, int flags,
 	else
 		p->pid = i;
 
+	/* Ensure next child gets a (slightly) different $RANDOM sequence */
+	change_random((p->pid << 1) | (ischild ? 1 : 0));
+
 	/* job control set up */
 	if (Flag(FMONITOR) && !(flags&XXCOM)) {
 		int	dotty = 0;
@@ -405,7 +411,7 @@ exchild(struct op *t, int flags,
 				    SS_RESTORE_DFL|SS_FORCE);
 		}
 		if (Flag(FBGNICE) && (flags & XBGND))
-			nice(4);
+			i = nice(4);
 		if ((flags & XBGND) && !Flag(FMONITOR)) {
 			setsig(&sigtraps[SIGINT], SIG_IGN,
 			    SS_RESTORE_IGN|SS_FORCE);
@@ -437,8 +443,6 @@ exchild(struct op *t, int flags,
 	}
 
 	/* shell (parent) stuff */
-	/* Ensure next child gets a (slightly) different $RANDOM sequence */
-	change_random();
 	if (!(flags & XPIPEO)) {	/* last process in a job */
 		j_startjob(j);
 		if (flags & XCOPROC) {

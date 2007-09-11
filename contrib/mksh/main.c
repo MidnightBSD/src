@@ -13,7 +13,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.84 2007/07/22 13:34:51 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.87 2007/08/19 22:06:26 tg Exp $");
 
 extern char **environ;
 
@@ -49,6 +49,7 @@ static const char *initcoms_korn[] = {
 	"history=fc -l",
 	"nohup=nohup ",
 	"r=fc -e -",
+	"source=PATH=$PATH:. command .",
 	"login=exec login",
 	NULL,
 	 /* this is what at&t ksh seems to track, with the addition of emacs */
@@ -124,10 +125,8 @@ main(int argc, const char *argv[])
 
 	/* define built-in commands */
 	ktinit(&builtins, APERM, 64); /* must be 2^n (currently 40 builtins) */
-	for (i = 0; shbuiltins[i].name != NULL; i++)
-		builtin(shbuiltins[i].name, shbuiltins[i].func);
-	for (i = 0; kshbuiltins[i].name != NULL; i++)
-		builtin(kshbuiltins[i].name, kshbuiltins[i].func);
+	for (i = 0; mkshbuiltins[i].name != NULL; i++)
+		builtin(mkshbuiltins[i].name, mkshbuiltins[i].func);
 
 	init_histvec();
 
@@ -222,8 +221,9 @@ main(int argc, const char *argv[])
 			setstr(pwd_v, current_wd, KSH_RETURN_ERROR);
 	}
 	ppid = getppid();
-#if !HAVE_ARC4RANDOM
-	srand(((long)kshname) ^ ((long)time(NULL) * kshpid * ppid));
+	change_random(((u_long)kshname) ^ ((u_long)time(NULL) * kshpid * ppid));
+#if HAVE_ARC4RANDOM
+	Flag(FARC4RANDOM) = 2;	/* use arc4random(3) until $RANDOM is written */
 #endif
 	setint(global("PPID"), (long)ppid);
 

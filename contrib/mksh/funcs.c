@@ -1,11 +1,130 @@
-/*	$OpenBSD: c_ksh.c,v 1.29 2006/03/12 00:26:58 deraadt Exp $	*/
-/*	$OpenBSD: c_sh.c,v 1.35 2006/04/10 14:38:59 jaredy Exp $	*/
+/*	$OpenBSD: c_ksh.c,v 1.30 2007/08/02 10:50:25 fgsch Exp $	*/
+/*	$OpenBSD: c_sh.c,v 1.37 2007/09/03 13:54:23 otto Exp $	*/
 /*	$OpenBSD: c_test.c,v 1.17 2005/03/30 17:16:37 deraadt Exp $	*/
 /*	$OpenBSD: c_ulimit.c,v 1.16 2006/11/20 21:53:39 miod Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.60 2007/07/22 14:01:48 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.65 2007/09/09 18:06:40 tg Exp $");
+
+/* A leading = means assignments before command are kept;
+ * a leading * means a POSIX special builtin;
+ * a leading + means a POSIX regular builtin
+ * (* and + should not be combined).
+ */
+const struct builtin mkshbuiltins[] = {
+	{"*=.", c_dot},
+	{"*=:", c_label},
+	{"[", c_test},
+	{"*=break", c_brkcont},
+	{"=builtin", c_builtin},
+	{"*=continue", c_brkcont},
+	{"*=eval", c_eval},
+	{"*=exec", c_exec},
+	{"*=exit", c_exitreturn},
+	{"+false", c_label},
+	{"*=return", c_exitreturn},
+	{"*=set", c_set},
+	{"*=shift", c_shift},
+	{"=times", c_times},
+	{"*=trap", c_trap},
+	{"+=wait", c_wait},
+	{"+read", c_read},
+	{"test", c_test},
+	{"+true", c_label},
+	{"ulimit", c_ulimit},
+	{"+umask", c_umask},
+	{"*=unset", c_unset},
+	{"+alias", c_alias},	/* no =: at&t manual wrong */
+	{"+cd", c_cd},
+	{"+command", c_command},
+	{"echo", c_print},
+	{"*=export", c_typeset},
+	{"+fc", c_fc},
+	{"+getopts", c_getopts},
+	{"+jobs", c_jobs},
+	{"+kill", c_kill},
+	{"let", c_let},
+	{"print", c_print},
+	{"pwd", c_pwd},
+	{"*=readonly", c_typeset},
+	{"=typeset", c_typeset},
+	{"+unalias", c_unalias},
+	{"whence", c_whence},
+	{"+bg", c_fgbg},
+	{"+fg", c_fgbg},
+	{"bind", c_bind},
+#if HAVE_MKNOD
+	{"mknod", c_mknod},
+#endif
+	{"rename", c_rename},
+	{NULL, (int (*)(const char **))NULL}
+};
+
+struct kill_info {
+	int num_width;
+	int name_width;
+};
+
+static const struct t_op {
+	char	op_text[4];
+	Test_op	op_num;
+} u_ops[] = {
+	{"-a",	TO_FILAXST },
+	{"-b",	TO_FILBDEV },
+	{"-c",	TO_FILCDEV },
+	{"-d",	TO_FILID },
+	{"-e",	TO_FILEXST },
+	{"-f",	TO_FILREG },
+	{"-G",	TO_FILGID },
+	{"-g",	TO_FILSETG },
+	{"-h",	TO_FILSYM },
+	{"-H",	TO_FILCDF },
+	{"-k",	TO_FILSTCK },
+	{"-L",	TO_FILSYM },
+	{"-n",	TO_STNZE },
+	{"-O",	TO_FILUID },
+	{"-o",	TO_OPTION },
+	{"-p",	TO_FILFIFO },
+	{"-r",	TO_FILRD },
+	{"-s",	TO_FILGZ },
+	{"-S",	TO_FILSOCK },
+	{"-t",	TO_FILTT },
+	{"-u",	TO_FILSETU },
+	{"-w",	TO_FILWR },
+	{"-x",	TO_FILEX },
+	{"-z",	TO_STZER },
+	{"",	TO_NONOP }
+};
+static const struct t_op b_ops[] = {
+	{"=",	TO_STEQL },
+	{"==",	TO_STEQL },
+	{"!=",	TO_STNEQ },
+	{"<",	TO_STLT },
+	{">",	TO_STGT },
+	{"-eq",	TO_INTEQ },
+	{"-ne",	TO_INTNE },
+	{"-gt",	TO_INTGT },
+	{"-ge",	TO_INTGE },
+	{"-lt",	TO_INTLT },
+	{"-le",	TO_INTLE },
+	{"-ef",	TO_FILEQ },
+	{"-nt",	TO_FILNT },
+	{"-ot",	TO_FILOT },
+	{"",	TO_NONOP }
+};
+
+static int test_eaccess(const char *, int);
+static int test_oexpr(Test_env *, int);
+static int test_aexpr(Test_env *, int);
+static int test_nexpr(Test_env *, int);
+static int test_primary(Test_env *, int);
+static int ptest_isa(Test_env *, Test_meta);
+static const char *ptest_getopnd(Test_env *, Test_op, int);
+static void ptest_error(Test_env *, int, const char *);
+static char *kill_fmt_entry(const void *, int, char *, int);
+static void p_time(struct shf *, int, struct timeval *, int,
+    const char *, const char *);
 
 int
 c_cd(const char **wp)
@@ -162,6 +281,7 @@ c_pwd(const char **wp)
 	int optc;
 	int physical = Flag(FPHYSICAL);
 	char *p;
+	bool p_ = false;
 
 	while ((optc = ksh_getopt(wp, &builtin_opt, "LP")) != -1)
 		switch (optc) {
@@ -184,11 +304,16 @@ c_pwd(const char **wp)
 	    NULL;
 	if (p && access(p, R_OK) < 0)
 		p = NULL;
-	if (!p && !(p = ksh_get_wd(NULL))) {
-		bi_errorf("can't get current directory - %s", strerror(errno));
-		return 1;
+	if (!p) {
+		if (!(p = ksh_get_wd(NULL))) {
+			bi_errorf("can't get current directory - %s",
+			    strerror(errno));
+			return 1;
+		}
+		p_ = true;
 	}
 	shprintf("%s\n", p);
+	afreechv(p_, p);
 	return 0;
 }
 
@@ -1079,12 +1204,6 @@ c_fgbg(const char **wp)
 	return bg ? 0 : rv;
 }
 
-struct kill_info {
-	int num_width;
-	int name_width;
-};
-static char *kill_fmt_entry(const void *, int, char *, int);
-
 /* format a single kill item */
 static char *
 kill_fmt_entry(const void *arg, int i, char *buf, int buflen)
@@ -1098,7 +1217,6 @@ kill_fmt_entry(const void *arg, int i, char *buf, int buflen)
 	    sigtraps[i].mess);
 	return buf;
 }
-
 
 int
 c_kill(const char **wp)
@@ -1347,37 +1465,6 @@ c_bind(const char **wp)
 
 	return rv;
 }
-
-/* A leading = means assignments before command are kept;
- * a leading * means a POSIX special builtin;
- * a leading + means a POSIX regular builtin
- * (* and + should not be combined).
- */
-const struct builtin kshbuiltins [] = {
-	{"+alias", c_alias},	/* no =: at&t manual wrong */
-	{"+cd", c_cd},
-	{"+command", c_command},
-	{"echo", c_print},
-	{"*=export", c_typeset},
-	{"+fc", c_fc},
-	{"+getopts", c_getopts},
-	{"+jobs", c_jobs},
-	{"+kill", c_kill},
-	{"let", c_let},
-	{"print", c_print},
-	{"pwd", c_pwd},
-	{"*=readonly", c_typeset},
-	{"=typeset", c_typeset},
-	{"+unalias", c_unalias},
-	{"whence", c_whence},
-	{"+bg", c_fgbg},
-	{"+fg", c_fgbg},
-	{"bind", c_bind},
-	{NULL, (int (*)(const char **))NULL}
-};
-
-static void p_time(struct shf *, int, struct timeval *, int,
-    const char *, const char *);
 
 /* :, false and true */
 int
@@ -1829,6 +1916,7 @@ c_eval(const char **wp)
 	rv = shell(s, false);
 	Flag(FERREXIT) = savef;
 	source = saves;
+	afree(s, ATEMP);
 	return (rv);
 }
 
@@ -2009,37 +2097,33 @@ int
 c_unset(const char **wp)
 {
 	const char *id;
-	int optc, unset_var = 1;
-	int ret = 0;
+	int optc;
+	bool unset_var = true;
 
 	while ((optc = ksh_getopt(wp, &builtin_opt, "fv")) != -1)
 		switch (optc) {
 		case 'f':
-			unset_var = 0;
+			unset_var = false;
 			break;
 		case 'v':
-			unset_var = 1;
+			unset_var = true;
 			break;
 		case '?':
-			return 1;
+			return (1);
 		}
 	wp += builtin_opt.optind;
 	for (; (id = *wp) != NULL; wp++)
 		if (unset_var) {	/* unset variable */
 			struct tbl *vp = global(id);
 
-			if (!(vp->flag & ISSET))
-			    ret = 1;
 			if ((vp->flag&RDONLY)) {
 				bi_errorf("%s is read only", vp->name);
-				return 1;
+				return (1);
 			}
 			unset(vp, vstrchr(id, '[') ? 1 : 0);
-		} else {		/* unset function */
-			if (define(id, (struct op *) NULL))
-				ret = 1;
-		}
-	return ret;
+		} else			/* unset function */
+			define(id, NULL);
+	return (0);
 }
 
 static void
@@ -2203,8 +2287,8 @@ c_exec(const char **wp __unused)
 	return 0;
 }
 
-#if !defined(MKSH_SMALL) || defined(MKSH_NEED_MKNOD)
-static int
+#if HAVE_MKNOD
+int
 c_mknod(const char **wp)
 {
 	int argc, optc, rv = 0;
@@ -2296,40 +2380,6 @@ c_builtin(const char **wp __unused)
 	return 0;
 }
 
-/* A leading = means assignments before command are kept;
- * a leading * means a POSIX special builtin;
- * a leading + means a POSIX regular builtin
- * (* and + should not be combined).
- */
-const struct builtin shbuiltins [] = {
-	{"*=.", c_dot},
-	{"*=:", c_label},
-	{"[", c_test},
-	{"*=break", c_brkcont},
-	{"=builtin", c_builtin},
-	{"*=continue", c_brkcont},
-	{"*=eval", c_eval},
-	{"*=exec", c_exec},
-	{"*=exit", c_exitreturn},
-	{"+false", c_label},
-	{"*=return", c_exitreturn},
-	{"*=set", c_set},
-	{"*=shift", c_shift},
-	{"=times", c_times},
-	{"*=trap", c_trap},
-	{"+=wait", c_wait},
-	{"+read", c_read},
-	{"test", c_test},
-	{"+true", c_label},
-	{"ulimit", c_ulimit},
-	{"+umask", c_umask},
-	{"*=unset", c_unset},
-#if !defined(MKSH_SMALL) || defined(MKSH_NEED_MKNOD)
-	{"mknod", c_mknod},
-#endif
-	{NULL, (int (*)(const char **))NULL}
-};
-
 /* test(1) accepts the following grammar:
 	oexpr	::= aexpr | aexpr "-o" oexpr ;
 	aexpr	::= nexpr | nexpr "-a" aexpr ;
@@ -2352,64 +2402,6 @@ const struct builtin shbuiltins [] = {
 */
 
 #define T_ERR_EXIT	2	/* POSIX says > 1 for errors */
-
-struct t_op {
-	char	op_text[4];
-	Test_op	op_num;
-};
-static const struct t_op u_ops [] = {
-	{"-a",	TO_FILAXST },
-	{"-b",	TO_FILBDEV },
-	{"-c",	TO_FILCDEV },
-	{"-d",	TO_FILID },
-	{"-e",	TO_FILEXST },
-	{"-f",	TO_FILREG },
-	{"-G",	TO_FILGID },
-	{"-g",	TO_FILSETG },
-	{"-h",	TO_FILSYM },
-	{"-H",	TO_FILCDF },
-	{"-k",	TO_FILSTCK },
-	{"-L",	TO_FILSYM },
-	{"-n",	TO_STNZE },
-	{"-O",	TO_FILUID },
-	{"-o",	TO_OPTION },
-	{"-p",	TO_FILFIFO },
-	{"-r",	TO_FILRD },
-	{"-s",	TO_FILGZ },
-	{"-S",	TO_FILSOCK },
-	{"-t",	TO_FILTT },
-	{"-u",	TO_FILSETU },
-	{"-w",	TO_FILWR },
-	{"-x",	TO_FILEX },
-	{"-z",	TO_STZER },
-	{"",	TO_NONOP }
-};
-static const struct t_op b_ops [] = {
-	{"=",	TO_STEQL },
-	{"==",	TO_STEQL },
-	{"!=",	TO_STNEQ },
-	{"<",	TO_STLT },
-	{">",	TO_STGT },
-	{"-eq",	TO_INTEQ },
-	{"-ne",	TO_INTNE },
-	{"-gt",	TO_INTGT },
-	{"-ge",	TO_INTGE },
-	{"-lt",	TO_INTLT },
-	{"-le",	TO_INTLE },
-	{"-ef",	TO_FILEQ },
-	{"-nt",	TO_FILNT },
-	{"-ot",	TO_FILOT },
-	{"",	TO_NONOP }
-};
-
-static int	test_eaccess(const char *, int);
-static int	test_oexpr(Test_env *, int);
-static int	test_aexpr(Test_env *, int);
-static int	test_nexpr(Test_env *, int);
-static int	test_primary(Test_env *, int);
-static int	ptest_isa(Test_env *, Test_meta);
-static const char *ptest_getopnd(Test_env *, Test_op, int);
-static void	ptest_error(Test_env *, int, const char *);
 
 int
 c_test(const char **wp)
@@ -2904,7 +2896,7 @@ c_ulimit(const char **wp)
 		{ NULL, 0, 0, 0, 0, 0 }
 	};
 	static char	opts[3 + NELEM(limits)];
-	rlim_t		val = 0;
+	rlim_t		val = (rlim_t)0;
 	int		how = SOFT | HARD;
 	const struct limits	*l;
 	int		set, all = 0;
@@ -2952,7 +2944,7 @@ c_ulimit(const char **wp)
 			return 1;
 		}
 		if (strcmp(wp[0], "unlimited") == 0)
-			val = RLIM_INFINITY;
+			val = (rlim_t)RLIM_INFINITY;
 		else {
 			long rval;
 
@@ -2969,7 +2961,7 @@ c_ulimit(const char **wp)
 				bi_errorf("invalid limit: %s", wp[0]);
 				return 1;
 			}
-			val = (rlim_t)rval * l->factor;
+			val = (rlim_t)((rlim_t)rval * l->factor);
 		}
 	}
 	if (all) {
@@ -2994,8 +2986,8 @@ c_ulimit(const char **wp)
 			if (val == (rlim_t)RLIM_INFINITY)
 				shprintf("unlimited\n");
 			else {
-				val /= l->factor;
-				shprintf("%ld\n", (long) val);
+				val = (rlim_t)(val / l->factor);
+				shprintf("%ld\n", (long)val);
 			}
 		}
 		return 0;
@@ -3027,9 +3019,28 @@ c_ulimit(const char **wp)
 		if (val == (rlim_t)RLIM_INFINITY)
 			shprintf("unlimited\n");
 		else {
-			val /= l->factor;
-			shprintf("%ld\n", (long) val);
+			val = (rlim_t)(val / l->factor);
+			shprintf("%ld\n", (long)val);
 		}
 	}
 	return (0);
+}
+
+int
+c_rename(const char **wp)
+{
+	int rv = 1;
+
+	if (wp == NULL /* argv */ ||
+	    wp[0] == NULL /* name of builtin */ ||
+	    wp[1] == NULL /* first argument */ ||
+	    wp[2] == NULL /* second argument */ ||
+	    wp[3] != NULL /* no further args please */)
+		bi_errorf(T_synerr);
+	else if ((rv = rename(wp[1], wp[2])) != 0) {
+		rv = errno;
+		bi_errorf("failed: %s", strerror(rv));
+	}
+
+	return (rv);
 }

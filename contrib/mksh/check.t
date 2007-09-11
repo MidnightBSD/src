@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.131 2007/07/26 13:23:51 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.138 2007/09/09 18:06:38 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -7,7 +7,7 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R30 2007/07/26
+	@(#)MIRBSD KSH R31 2007/09/09
 description:
 	Check version of shell.
 category: pdksh
@@ -226,7 +226,7 @@ expected-stdout:
 	hi \
 	there
 ---
-name: blsk-nl-ign-4
+name: bksl-nl-ign-4
 description:
 	Check interaction of aliases, single quotes and here-documents
 	with backslash-newline
@@ -250,7 +250,7 @@ expected-stdout:
 	more\
 	stuff$a
 ---
-name: blsk-nl-ign-5
+name: bksl-nl-ign-5
 description:
 	Check what happens with backslash at end of input
 	(the old bourne shell trashes them; so do we)
@@ -449,7 +449,7 @@ expected-stdout:
 	0
 	hi
 ---
-name: blsk-nl-9
+name: bksl-nl-9
 description:
 	Check that \ at the end of an alias is collapsed when followed
 	by a newline
@@ -461,7 +461,7 @@ stdin:
 expected-stdout:
 	hiecho there
 ---
-name: blsk-nl-10
+name: bksl-nl-10
 description:
 	Check that \newline in a keyword is collapsed
 stdin:
@@ -475,7 +475,7 @@ expected-stdout:
 #
 # Places \newline should be collapsed (ksh extensions)
 #
-name: blsk-nl-ksh-1
+name: bksl-nl-ksh-1
 description:
 	Check that \newline is collapsed in extended globbing
 	(ksh93 fails this)
@@ -492,7 +492,7 @@ stdin:
 expected-stdout:
 	ok
 ---
-name: blsk-nl-ksh-2
+name: bksl-nl-ksh-2
 description:
 	Check that \newline is collapsed in ((...)) expressions
 	(ksh93 fails this)
@@ -4002,6 +4002,7 @@ expected-stdout:
 	login='exec login'
 	nohup='nohup '
 	r='fc -e -'
+	source='PATH=$PATH:. command .'
 	stop='kill -STOP'
 	suspend='kill -STOP $$'
 	type='whence -v'
