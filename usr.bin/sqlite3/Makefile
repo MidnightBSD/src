@@ -7,8 +7,5 @@ PROG=		sqlite3
 
 SRCS=		shell.c
 		
-DPADD=		${LIBPTHREAD} ${LIBSQLITE}
-LDADD=		-lpthread -lsqlite3
-
 
 .include <bsd.prog.mk>
