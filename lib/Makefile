@@ -19,7 +19,7 @@
 # libtacplus must be built before libpam.
 # libutil must be built before libpam.
 # libypclnt must be built before libpam.
-#
+# libpthread must be built before libsqlite3
 # Otherwise, the SUBDIR list should be in alphabetical order.
 
 SUBDIR=	${_csu} libcom_err libcrypt libkvm msun libmd libncurses \
@@ -33,7 +33,8 @@ SUBDIR=	${_csu} libcom_err libcrypt libkvm msun libmd libncurses \
 	${_libncp} ${_libngatm} libopie libpam libpanel libpcap \
 	libpmc ${_libpthread} ${_libsdp} ${_libsm} ${_libsmb} ${_libsmdb} \
 	${_libsmutil} libstand libtelnet ${_libthr} ${_libthread_db} libufs \
-	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz ${_bind}
+	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz ${_bind} \
+	libsqlite3
 
 .if exists(${.CURDIR}/csu/${MACHINE_ARCH}-elf)
 _csu=csu/${MACHINE_ARCH}-elf
@@ -68,13 +69,7 @@ _libvgl=	libvgl
 _libc_r=	libc_r
 .endif
 
-.if ${MACHINE_ARCH} != "arm"
-_libdisk=	libdisk
-.endif
 
-.if ${MACHINE_ARCH} == "alpha"
-_libio=		libio
-.endif
 
 .if !defined(NO_SENDMAIL)
 _libmilter=	libmilter
@@ -100,9 +95,6 @@ _libpthread=	libpthread
 _libthr= libthr
 .endif
 
-.if ${MACHINE_ARCH} != "arm" && ${MACHINE_ARCH} != "powerpc"
-_libthread_db= libthread_db
-.endif
 
 .if !defined(NO_USB)
 _libusbhid=	libusbhid
