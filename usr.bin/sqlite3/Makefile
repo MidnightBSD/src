@@ -1,7 +1,10 @@
-# $FreeBSD: src/usr.bin/telnet/Makefile,v 1.28 2005/06/10 06:12:51 des Exp $
+# $MidnigtBSD: src/usr.bin/telnet/Makefile,v 1.28 2005/06/10 06:12:51 des Exp $
 
 SQLITEDIR=	${.CURDIR}/../../contrib/sqlite3
 .PATH:		${SQLITEDIR}
+
+DPADD=		${LIBSQLITE3}
+LDADD=		-lsqlite3
 
 PROG=		sqlite3
 
