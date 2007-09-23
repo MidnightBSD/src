@@ -18754,6 +18754,12 @@ lib/libmp/Makefile -text
 lib/libmp/libmp.3 -text
 lib/libmp/mp.h -text
 lib/libmp/mpasbn.c -text
+lib/libmport/Makefile -text
+lib/libmport/create_pkg.c -text
+lib/libmport/db_schema.c -text
+lib/libmport/error.c -text
+lib/libmport/plist.c -text
+lib/libmport/util.c -text
 lib/libncp/CREDITS -text
 lib/libncp/Makefile -text
 lib/libncp/ipx.c -text
