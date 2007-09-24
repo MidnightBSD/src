@@ -8,12 +8,8 @@ SQLITEDIR=	${.CURDIR}/../../contrib/sqlite3
 LIB=		sqlite3
 SHLIB_MAJOR=	1
 
-DPADD=		${LIBPTHREAD}
-LDADD=		-lpthread
-
-
 SRCS=		sqlite3.c
-CFLAGS+=	-I${SQLITEDIR}
+CFLAGS+=	-I${SQLITEDIR} -DTHREADSAFE=0
 
 WARNS?=		0
 
