@@ -3,6 +3,10 @@
 LIB=		mport
 SRCS=		plist.c	create_pkg.c db_schema.c util.c error.c
 
+INCS=		mport.h
+
+
+CFLAGS+=	-I${.CURDIR}
 WARNS?=	3
 WFORMAT?=	1
 SHLIB_MAJOR=	1

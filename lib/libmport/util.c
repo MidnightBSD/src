@@ -23,16 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
  */
 
 
-
-#include <sqlite3.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_new_packagemeta() 
@@ -59,3 +63,42 @@ void mport_free_packagemeta(mportPackageMeta *pack)
   free(pack->req_script);
   free(pack);
 }
+
+
+int mport_copy_file(const char *fromname, const char *toname)
+{
+  int to;
+  int from;
+  int len;
+  char buf[8192];
+  
+  
+  if ((from = open(fromname, O_RDONLY)) == -1) {
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+  
+  if ((to = open(toname, O_WRONLY | O_CREAT)) == -1) {
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+  
+  len = read(from, buf, sizeof(buf));
+  
+  while (len > 0) {
+    write(to, buf, len);
+    len = read(from, buf, sizeof(buf));
+  }
+  
+  close(from);
+  close(to);
+  
+  return MPORT_OK;
+}
+
+int mport_file_exists(const char *file) 
+{
+  struct stat st;
+  
+  return (lstat(file, &st) == 0);
+}
+  
+

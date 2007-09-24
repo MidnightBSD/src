@@ -18758,6 +18758,7 @@ lib/libmport/Makefile -text
 lib/libmport/create_pkg.c -text
 lib/libmport/db_schema.c -text
 lib/libmport/error.c -text
+lib/libmport/mport.h -text
 lib/libmport/plist.c -text
 lib/libmport/util.c -text
 lib/libncp/CREDITS -text

@@ -23,13 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
 #include <sys/time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,16 +41,19 @@
 #include <sqlite3.h>
 #include <errno.h>
 #include <md5.h>
-#include "mport.h"
+#include <archive.h>
+#include <archive_entry.h>
+#include <mport.h>
 
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
 
 #define PACKAGE_DB_FILENAME "+CONTENTS.db"
 
 static int create_package_db(sqlite3 **);
 static int create_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
 static int create_meta(sqlite3 *, mportPackageMeta *);
-static int tar_files(mportPlist *, mportPackageMeta *);
+static int copy_metafiles(mportPackageMeta *);
+static int archive_files(mportPlist *, mportPackageMeta *);
 static int clean_up(const char *);
 
 int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
@@ -76,7 +83,10 @@ int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
   if (sqlite3_close(db) != SQLITE_OK)
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     
-  if ((ret = tar_files(plist, pack)) != MPORT_OK)
+  if ((ret = copy_metafiles(pack)) != MPORT_OK) 
+    return ret;
+    
+  if ((ret = archive_files(plist, pack)) != MPORT_OK)
     return ret;
     
   if ((ret = clean_up(tmpdir)) != MPORT_OK)
@@ -204,9 +214,129 @@ static int create_meta(sqlite3 *db, mportPackageMeta *pack)
   return MPORT_OK;
 }
 
-static int tar_files(mportPlist *plist, mportPackageMeta *pack)
-{
+/* this is just to save a lot of typing.  It will only work in the
+   copy_metafiles() function.
+ */ 
+#define COPY_PKG_METAFILE(field, tofile) \
+  if (pack->field != NULL && mport_file_exists(pack->field)) { \
+    if ((ret = mport_copy_file(pack->field, #tofile)) != MPORT_OK) { \
+      return ret; \
+    } \
+  } \
 
+
+static int copy_metafiles(mportPackageMeta *pack) 
+{
+  int ret;
+  
+  COPY_PKG_METAFILE(mtree, +MTREE);
+  COPY_PKG_METAFILE(pkginstall, +INSTALL);
+  COPY_PKG_METAFILE(pkgdeinstall, +DEINSTALL);
+  COPY_PKG_METAFILE(pkgmessage, +MESSAGE);
+  
+  return ret;
+}
+
+
+static int archive_files(mportPlist *plist, mportPackageMeta *pack)
+{
+  struct archive *a;
+  struct archive_entry *entry;
+  struct stat st;
+  DIR *dir;
+  struct dirent *diren;
+  mportPlistEntry *e;
+  char filename[FILENAME_MAX];
+  char buff[8192];
+  char *cwd;
+  int len;
+  int fd;
+   
+  cwd = pack->prefix; 
+    
+  a = archive_write_new();
+  archive_write_set_compression_bzip2(a);
+  archive_write_set_format_pax(a);
+  
+  if (archive_write_open_filename(a, pack->pkg_filename) != ARCHIVE_OK) {
+    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a)); 
+  }
+  
+  /* First step - add the files in the tmpdir to the archive. */    
+  if ((dir = opendir(".")) == NULL) {
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+  
+  while ((diren = readdir(dir)) != NULL) {
+    if (strcmp(diren->d_name, ".") == 0 || strcmp(diren->d_name, "..") == 0) 
+      continue;
+    
+    if (lstat(diren->d_name, &st) != 0) {
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    }
+    
+    entry = archive_entry_new();
+    archive_entry_copy_stat(entry, &st);
+    archive_entry_set_pathname(entry, diren->d_name);
+    archive_write_header(a, entry);
+    if ((fd = open(diren->d_name, O_RDONLY)) == -1) {
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    }
+    
+    len = read(fd, buff, sizeof(buff));
+    while (len > 0) {
+      archive_write_data(a, buff, len);
+      len = read(fd, buff, sizeof(buff));
+    }
+    
+    archive_entry_free(entry);
+    close(fd);
+  }
+  
+  closedir(dir);
+  
+  /* second step - all the files in the plist */  
+  STAILQ_FOREACH(e, plist, next) {
+    if (e->type == PLIST_CWD) {
+      if (e->data == NULL) {
+        cwd = pack->prefix;
+      } else {
+        cwd = e->data;
+      }
+    }
+    
+    if (e->type != PLIST_FILE) {
+      continue;
+    }
+    
+    snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
+    
+    fprintf(stderr, "statting: %s\n", filename);
+
+    
+    if (lstat(filename, &st) != 0) {
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    }
+    
+    entry = archive_entry_new();
+    archive_entry_copy_stat(entry, &st);
+    archive_entry_set_pathname(entry, e->data);
+    archive_write_header(a, entry);
+    if ((fd = open(filename, O_RDONLY)) == -1) {
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    }
+    
+    len = read(fd, buff, sizeof(buff));
+    while (len > 0) {
+      archive_write_data(a, buff, len);
+      len = read(fd, buff, sizeof(buff));
+    }
+    
+    archive_entry_free(entry);
+    close(fd);
+  }
+  
+  archive_write_finish(a);
 }
 
 static int clean_up(const char *tmpdir)
