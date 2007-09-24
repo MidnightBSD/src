@@ -1,4 +1,4 @@
-/* $MidnightBSD$
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.1 2007/09/24 06:01:46 ctriv Exp $
  *
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
@@ -31,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.1 2007/09/24 06:01:46 ctriv Exp $");
 
 
 
@@ -124,5 +124,6 @@ int mport_set_errx(int , const char *, ...);
 
 int mport_copy_file(const char *, const char *);
 int mport_file_exists(const char *);
+void mport_parselist(char *, char ***);
 
 #endif

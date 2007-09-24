@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $
  */
 
 
@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_new_packagemeta() 
@@ -64,7 +64,11 @@ void mport_free_packagemeta(mportPackageMeta *pack)
   free(pack);
 }
 
-
+/*
+ *Copy fromname to toname 
+ *
+ * XXX: This is needs some work.  perms?
+ */
 int mport_copy_file(const char *fromname, const char *toname)
 {
   int to;
@@ -94,6 +98,9 @@ int mport_copy_file(const char *fromname, const char *toname)
   return MPORT_OK;
 }
 
+/*
+ * Quick test to see if a file exists.
+ */
 int mport_file_exists(const char *file) 
 {
   struct stat st;
@@ -101,4 +108,55 @@ int mport_file_exists(const char *file)
   return (lstat(file, &st) == 0);
 }
   
+
+
+/*
+ * mport_parselist(input, string_array_pointer)
+ *
+ * hacks input into sub strings by whitespace.  Allocates a chunk or memory
+ * for a array of those strings, and sets the pointer you pass to refernce
+ * that memory
+ *
+ * char input[] = "foo bar baz"
+ * char **list;
+ * 
+ * mport_parselist(input, &list);
+ * list = {"foo", "bar", "baz"};
+ */
+void mport_parselist(char *opt, char ***list) 
+{
+  int len;
+  char *input;
+  char *field;
+
+  input = (char *)malloc(strlen(opt));
+  strlcpy(input, opt, strlen(opt));
+  
+  /* first we need to get the length of the depends list */
+  for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
+    if (*field != '\0')
+      len++;
+  }    
+
+  *list = (char **)malloc((len + 1) * sizeof(char *));
+
+  if (len == 0) {
+    **list = NULL;
+    return;
+  }
+
+  /* dereference once so we don't loose our minds. */
+  char **vec = *list;
+  
+  while ((field = strsep(&input, " \t\n")) != NULL) {
+    if (*field == '\0')
+      continue;
+
+    *vec = field;
+    vec++;
+  }
+
+  *vec = NULL;
+}
+
 

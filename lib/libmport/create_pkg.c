@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $
  */
 
 
@@ -45,13 +45,15 @@
 #include <archive_entry.h>
 #include <mport.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $");
 
 #define PACKAGE_DB_FILENAME "+CONTENTS.db"
 
 static int create_package_db(sqlite3 **);
 static int create_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
 static int create_meta(sqlite3 *, mportPackageMeta *);
+static int insert_depends(sqlite3 *, mportPackageMeta *);
+static int insert_conflicts(sqlite3 *, mportPackageMeta *);
 static int copy_metafiles(mportPackageMeta *);
 static int archive_files(mportPlist *, mportPackageMeta *);
 static int clean_up(const char *);
@@ -178,6 +180,7 @@ static int create_meta(sqlite3 *db, mportPackageMeta *pack)
   sqlite3_stmt *stmnt;
   const char *rest  = 0;
   struct timespec now;
+  int ret;
   
   char sql[]  = "INSERT INTO package (pkg, version, lang, date) VALUES (?,?,?,?)";
   
@@ -211,8 +214,79 @@ static int create_meta(sqlite3 *db, mportPackageMeta *pack)
   
   sqlite3_finalize(stmnt);  
   
+  /* insert depends and conflicts */
+  if ((ret = insert_depends(db, pack)) != MPORT_OK)
+    return ret;  
+  if ((ret = insert_conflicts(db, pack)) != MPORT_OK)
+    return ret;
+  
   return MPORT_OK;
 }
+
+
+static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack) 
+{
+  sqlite3_stmt *stmnt;
+  char sql[]  = "INSERT INTO depends (pkg, depend) VALUES (?,?)";
+  char **conflict  = pack->conflicts;
+  const char *rest = 0;
+  
+  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
+
+  while (*conflict != NULL) {
+    if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    if (sqlite3_bind_text(stmnt, 2, *conflict, -1, SQLITE_STATIC) != SQLITE_OK) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    if (sqlite3_step(stmnt) != SQLITE_DONE) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    sqlite3_reset(stmnt);
+    conflict++;
+  }
+  
+  sqlite3_finalize(stmnt);
+  
+  return MPORT_OK;
+}
+    
+  
+
+static int insert_depends(sqlite3 *db, mportPackageMeta *pack) 
+{
+  sqlite3_stmt *stmnt;
+  char sql[]  = "INSERT INTO depends (pkg, depend) VALUES (?,?)";
+  char **depend    = pack->depends;
+  const char *rest = 0;
+  
+  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
+  
+  while (*depend != NULL) {
+    if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    if (sqlite3_bind_text(stmnt, 2, *depend, -1, SQLITE_STATIC) != SQLITE_OK) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    if (sqlite3_step(stmnt) != SQLITE_DONE) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    sqlite3_reset(stmnt);
+    depend++;
+  }
+    
+  sqlite3_finalize(stmnt);
+  
+  return MPORT_OK;
+}
+
+
 
 /* this is just to save a lot of typing.  It will only work in the
    copy_metafiles() function.
@@ -310,9 +384,6 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack)
     }
     
     snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
-    
-    fprintf(stderr, "statting: %s\n", filename);
-
     
     if (lstat(filename, &st) != 0) {
       RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
