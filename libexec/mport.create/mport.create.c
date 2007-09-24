@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.1 2007/09/23 22:32:13 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.1 2007/09/23 22:32:13 ctriv Exp $");
 
 
 #include <stdlib.h>
@@ -42,7 +42,6 @@ __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/
 
 #define STRING_EQ(s1, s2) (strcmp((s1), (s2)) == 0)
 
-static void parselist(char *, char ***);
 static void usage(void);
 
 int main(int argc, char *argv[]) 
@@ -89,7 +88,7 @@ int main(int argc, char *argv[])
         pack->prefix = optarg;
         break;
       case 'D':
-        parselist(optarg, &(pack->depends));
+        mport_parselist(optarg, &(pack->depends));
         break;
       case 'M':
         pack->mtree = optarg;
@@ -98,7 +97,7 @@ int main(int argc, char *argv[])
         pack->origin = optarg;
         break;
       case 'C':
-        parselist(optarg, &(pack->conflicts));
+        mport_parselist(optarg, &(pack->conflicts));
         break;
       case 'i':
         pack->pkginstall = optarg;
@@ -128,47 +127,8 @@ int main(int argc, char *argv[])
   
   return 0;
 }
-
-static void parselist(char *opt, char ***list) 
-{
-  int len;
-  char *input;
-  char *field;
-
-  input = (char *)malloc(strlen(opt));
-  strlcpy(input, opt, strlen(opt));
   
-  /* first we need to get the length of the depends list */
-  for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
-    if (*field != '\0')
-      len++;
-  }    
 
-  if (len == 0) {
-    *list = NULL;
-    return;
-  }
-
-  fprintf(stderr, "List len: %i\n", len);
-
-  *list = (char **)malloc((len + 1) * sizeof(char *));
-
-  /* dereference once so we don't loose our minds. */
-  char **vec = *list;
-  
-  fprintf(stderr, "Parsing '%s'\n", input);
-  while ((field = strsep(&input, " \t\n")) != NULL) {
-    if (*field == '\0')
-      continue;
-
-    *vec = field;
-    fprintf(stderr, "List pos: %p\n", vec);
-    vec++;
-  }
-  
-  vec = NULL;
-}
-  
 static void usage() 
 {
   fprintf(stderr, "Coming soon: usage!\n");
