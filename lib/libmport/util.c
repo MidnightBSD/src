@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.3 2007/09/24 16:49:59 ctriv Exp $
  */
 
 
@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.3 2007/09/24 16:49:59 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_new_packagemeta() 
@@ -63,6 +63,26 @@ void mport_free_packagemeta(mportPackageMeta *pack)
   free(pack->req_script);
   free(pack);
 }
+
+
+/* deletes the entire directory tree at name.
+ * think rm -r filename
+ */
+int mport_rmtree(const char *filename) 
+{
+  char *cmnd;
+  int ret;
+  
+  asprintf(&cmnd, "/bin/rm -r %s", filename);
+
+  if ((ret = system(cmnd)) != 0) {
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+  
+  free(cmnd); 
+  return MPORT_OK;
+}
+
 
 /*
  *Copy fromname to toname 

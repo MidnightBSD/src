@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.3 2007/09/24 16:49:59 ctriv Exp $
  */
 
 
@@ -45,7 +45,7 @@
 #include <archive_entry.h>
 #include <mport.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.3 2007/09/24 16:49:59 ctriv Exp $");
 
 #define PACKAGE_DB_FILENAME "+CONTENTS.db"
 
@@ -213,13 +213,13 @@ static int create_meta(sqlite3 *db, mportPackageMeta *pack)
   }
   
   sqlite3_finalize(stmnt);  
-  
+
   /* insert depends and conflicts */
   if ((ret = insert_depends(db, pack)) != MPORT_OK)
     return ret;  
   if ((ret = insert_conflicts(db, pack)) != MPORT_OK)
     return ret;
-  
+    
   return MPORT_OK;
 }
 
@@ -230,6 +230,10 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
   char sql[]  = "INSERT INTO depends (pkg, depend) VALUES (?,?)";
   char **conflict  = pack->conflicts;
   const char *rest = 0;
+  
+  /* we're done if there are no conflicts to record. */
+  if (conflict == NULL) 
+    return MPORT_OK;
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -262,6 +266,10 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
   char sql[]  = "INSERT INTO depends (pkg, depend) VALUES (?,?)";
   char **depend    = pack->depends;
   const char *rest = 0;
+  
+  /* we're done if there are no deps to record. */
+  if (depend == NULL) 
+    return MPORT_OK;
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -410,7 +418,19 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack)
   archive_write_finish(a);
 }
 
+#ifdef DEBUG
+
 static int clean_up(const char *tmpdir)
 {
+  /* do nothing */
 }
+
+#else
+
+static int clean_up(const char *tmpdir) 
+{
+  return mport_rmtree(tmpdir);
+}
+
+#endif
 

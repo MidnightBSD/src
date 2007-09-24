@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/error.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $
  */
 
 
@@ -32,7 +32,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.2 2007/09/24 06:01:46 ctriv Exp $");
 
 static int err;
 static char err_msg[256];
@@ -83,11 +83,16 @@ int mport_set_errx(int code, const char *fmt, ...)
 {
     va_list args;
     char *err;
+    int ret;
 
     va_start(args, fmt);
     if (vasprintf(&err, fmt, args) == -1) {
 	fprintf(stderr, "fatal error: mport_set_errx can't format the string.\n");
 	exit(255);
     }
-    return mport_set_err(code, err);
+    ret = mport_set_err(code, err);
+    
+    free(err);
+    
+    return ret;
 }
