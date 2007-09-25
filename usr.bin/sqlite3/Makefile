@@ -3,8 +3,10 @@
 SQLITEDIR=	${.CURDIR}/../../contrib/sqlite3
 .PATH:		${SQLITEDIR}
 
-DPADD=		${LIBSQLITE3}
-LDADD=		-lsqlite3
+CFLAGS+=	-DHAVE_READLINE=1
+
+DPADD=		${LIBSQLITE3} ${LIBREADLINE}
+LDADD=		-lsqlite3 -lreadline
 
 PROG=		sqlite3
 
