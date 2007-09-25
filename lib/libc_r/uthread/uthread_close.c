@@ -63,8 +63,7 @@ _close(int fd)
 	 * Lock the file descriptor while the file is closed and get
 	 * the file descriptor status:
 	 */
-	else if (((ret = _FD_LOCK(fd, FD_RDWR, NULL)) == 0) &&
-	    ((ret = __sys_fstat(fd, &sb)) == 0)) {
+	else if ((ret = _FD_LOCK(fd, FD_RDWR, NULL)) == 0) {
 		/*
 		 * Check if the file should be left as blocking.
 		 *
@@ -85,7 +84,8 @@ _close(int fd)
 		 * using, which would then cause any reads to block
 		 * indefinitely.
 		 */
-		if ((S_ISREG(sb.st_mode) || S_ISCHR(sb.st_mode))
+		if (__sys_fstat(fd, &sb) == 0 &&
+		    (S_ISREG(sb.st_mode) || S_ISCHR(sb.st_mode))
 		    && (_thread_fd_getflags(fd) & O_NONBLOCK) == 0) {
 			/* Get the current flags: */
 			flags = __sys_fcntl(fd, F_GETFL, NULL);
