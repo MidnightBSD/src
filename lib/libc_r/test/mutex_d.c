@@ -29,6 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/lib/libc_r/test/mutex_d.c,v 1.4 2003/06/04 20:38:54 marcel Exp $
  */
 #include <stdlib.h>

@@ -2,6 +2,7 @@
  *
  * Back end C programs can be anything compilable.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/lib/libc_r/test/hello_b.c,v 1.1 2000/04/24 21:07:37 jasone Exp $
  *
  ****************************************************************************/

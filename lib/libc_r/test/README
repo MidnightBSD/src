@@ -1,3 +1,4 @@
+$MidnightBSD$
 $FreeBSD: src/lib/libc_r/test/README,v 1.1 2000/04/24 21:07:36 jasone Exp $
 
 This test suite is meant to test general functionality of pthreads, as well as

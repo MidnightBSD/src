@@ -27,6 +27,7 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+# $MidnightBSD$
 # $FreeBSD: src/lib/libc_r/test/guard_s.pl,v 1.1 2001/07/20 04:23:10 jasone Exp $
 #
 # Test thread stack guard functionality.  The C test program needs to be driven
