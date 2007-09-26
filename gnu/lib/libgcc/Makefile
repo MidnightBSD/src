@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.2 2007/07/26 20:27:46 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libgcc/Makefile,v 1.54 2004/12/21 09:33:45 ru Exp $
 
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
@@ -7,9 +7,13 @@ GCCDIR=	${.CURDIR}/../../../contrib/gcc
 .PATH: ${GCCDIR}/config/${GCC_CPU} ${GCCDIR}
 
 # allow to be overridden for the a.out case
-.if !defined(LIB) || ${LIB} != "gcc_r"
+#.if !defined(LIB) || ${LIB} != "gcc_r"
+#LIB=	gcc
+#.endif
+
 LIB=	gcc
-.endif
+SHLIB_NAME=	libgcc_s.so.1
+SHLIBDIR?=	/lib
 
 #SHLIB_MAJOR=	1
 
