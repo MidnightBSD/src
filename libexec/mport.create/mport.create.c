@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.1 2007/09/23 22:32:13 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.2 2007/09/24 16:49:06 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.1 2007/09/23 22:32:13 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.2 2007/09/24 16:49:06 ctriv Exp $");
 
 
 #include <stdlib.h>
@@ -43,12 +43,14 @@ __MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.1 2007/09/23
 #define STRING_EQ(s1, s2) (strcmp((s1), (s2)) == 0)
 
 static void usage(void);
+static void check_for_required_args(mportPackageMeta *);
 
 int main(int argc, char *argv[]) 
 {
   int ch;
+  int plist_seen = 0;
   mportPackageMeta *pack = mport_new_packagemeta();
-  mportPlist *plist = mport_new_plist();
+  mportPlist *plist      = mport_new_plist();
   FILE *fp;
     
   while ((ch = getopt(argc, argv, "o:n:v:c:l:s:d:p:P:D:M:O:C:i:j:m:r:")) != -1) {
@@ -79,9 +81,11 @@ int main(int argc, char *argv[])
           err(1, "%s", optarg);
         }
         if (mport_parse_plist_file(fp, plist) != 0) {
-          fprintf(stderr, "Could not parse plist file '%s'.\n", optarg);
+          warnx("Could not parse plist file '%s'.\n", optarg);
           exit(1);
         }
+        
+        plist_seen++;
         
         break;
       case 'P':
@@ -108,29 +112,62 @@ int main(int argc, char *argv[])
       case 'm':
         pack->pkgmessage = optarg;
         break;
-      case 'r':
-        pack->req_script = optarg;
-        break;
+      case '?':
       default:
         usage();
         break; 
     }
   } 
+
+  check_for_required_args(pack);  
   
-  
-  // XXX Check that we have all the required args.
-  
+  if (plist_seen == 0) {
+    warnx("Required arg missing: plist");
+    usage();
+  }
+
   if (mport_create_pkg(plist, pack) != MPORT_OK) {
-    fprintf(stderr, "mport.create: error: %s\n", mport_err_string());
+    warnx("%s", mport_err_string());
     return 1;
   }
   
   return 0;
 }
+
+
+#define CHECK_ARG(field, errmsg) \
+  if (pack->field == NULL) { \
+    warnx("Required arg missing: %s", #errmsg); \
+    usage(); \
+  }
   
+static void check_for_required_args(mportPackageMeta *pack)
+{
+  CHECK_ARG(name, "package name")
+  CHECK_ARG(version, "package version");
+  CHECK_ARG(pkg_filename, "package filename");
+  CHECK_ARG(sourcedir, "source dir");
+  CHECK_ARG(prefix, "prefix");
+}
+    
 
 static void usage() 
 {
-  fprintf(stderr, "Coming soon: usage!\n");
+  fprintf(stderr, "\nmport.create <options>\n");
+  fprintf(stderr, "Options:\n");
+  fprintf(stderr, "\t-n <package name>\n");
+  fprintf(stderr, "\t-v <package version>\n");
+  fprintf(stderr, "\t-o <package filename>\n");
+  fprintf(stderr, "\t-s <source dir (usually the fake destdir)>\n");
+  fprintf(stderr, "\t-p <plist filename>\n");
+  fprintf(stderr, "\t-P <prefix>\n");
+  fprintf(stderr, "\t-c <comment (short description)>\n");
+  fprintf(stderr, "\t-l <package lang>\n");
+  fprintf(stderr, "\t-D <package depends>\n");
+  fprintf(stderr, "\t-C <package conflicts>\n");
+  fprintf(stderr, "\t-d <pkg-descr file>\n");
+  fprintf(stderr, "\t-i <pkg-install script>\n");
+  fprintf(stderr, "\t-j <pkg-deinstall script>\n");
+  
   exit(1);
 }
