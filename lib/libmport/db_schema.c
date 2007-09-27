@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libmport/db_schema.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
  */
 
 
@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/db_schema.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
 
 static void run_sql(sqlite3 *db, const char *sql);
 
@@ -40,8 +40,8 @@ void mport_generate_package_schema(sqlite3 *db)
 {
   run_sql(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text)");
   run_sql(db, "CREATE TABLE package  (pkg text NOT NULL, version text NOT NULL, lang text, options text, date int NOT NULL)");
-  run_sql(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict text NOT NULL)");
-  run_sql(db, "CREATE TABLE depends   (pkg text NOT NULL, depend text NOT NULL)");
+  run_sql(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
+  run_sql(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text NOT NULL, depend_port text NOT NULL)");
 }
 
 static void run_sql(sqlite3 *db, const char *sql)
