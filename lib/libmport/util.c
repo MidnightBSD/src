@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.3 2007/09/24 16:49:59 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.4 2007/09/24 20:58:00 ctriv Exp $
  */
 
 
@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.3 2007/09/24 16:49:59 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.4 2007/09/24 20:58:00 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_new_packagemeta() 
@@ -149,8 +149,8 @@ void mport_parselist(char *opt, char ***list)
   char *input;
   char *field;
 
-  input = (char *)malloc(strlen(opt));
-  strlcpy(input, opt, strlen(opt));
+  input = (char *)malloc(strlen(opt) + 1);
+  strlcpy(input, opt, strlen(opt) + 1);
   
   /* first we need to get the length of the depends list */
   for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
