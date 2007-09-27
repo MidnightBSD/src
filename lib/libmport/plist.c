@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
  */
 
 
@@ -34,7 +34,7 @@
 #include <string.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
 
 #define CMND_MAGIC_COOKIE '@'
 #define STRING_EQ(r,l) (strcmp((r),(l)) == 0)
@@ -83,8 +83,7 @@ int mport_parse_plist_file(FILE *fp, mportPlist *list)
          wack the last char in the string. */
       length++;
       if ((line = realloc(line, length)) == NULL) {
-        /* warn: out of mem */
-        return 1;
+        return MPORT_ERR_NO_MEM;
       }
     }
     
@@ -99,8 +98,7 @@ int mport_parse_plist_file(FILE *fp, mportPlist *list)
     mportPlistEntry *entry = (mportPlistEntry *)malloc(sizeof(mportPlistEntry));
     
     if (entry == NULL) {
-      // warn: out of mem!
-      return 1;
+      return MPORT_ERR_NO_MEM;
     }
        
     if (*line == CMND_MAGIC_COOKIE) {
@@ -108,8 +106,7 @@ int mport_parse_plist_file(FILE *fp, mportPlist *list)
       char *cmnd = strsep(&line, " \t");
       
       if (cmnd == NULL) {
-        // warn: malformed plist
-        return 1;
+        return MPORT_ERR_MALFORMED_PLIST;
       }   
 
       entry->type = parse_command(cmnd);      
@@ -134,8 +131,7 @@ int mport_parse_plist_file(FILE *fp, mportPlist *list)
       
       entry->data = (char  *)malloc(strlen(line) + 1);
       if (entry->data == NULL) {
-        /* warn: out of mem */
-        return 1;
+        return MPORT_ERR_NO_MEM;
       }
       
       strlcpy(entry->data, line, (strlen(line) + 1));
@@ -144,7 +140,7 @@ int mport_parse_plist_file(FILE *fp, mportPlist *list)
     STAILQ_INSERT_TAIL(list, entry, next);
   }
 
-  return 0;  
+  return MPORT_OK;  
 }
 
      
