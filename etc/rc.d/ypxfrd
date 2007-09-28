@@ -1,11 +1,12 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/ypxfrd,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/ypxfrd,v 1.6 2004/10/07 13:55:26 mtm Exp $
 #
 
 # PROVIDE: ypxfrd
 # REQUIRE: rpcbind
+# KEYWORD: shutdown
 
 . /etc/rc.subr
 

@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# $NetBSD: yppasswdd,v 1.6 2002/03/22 04:34:01 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/yppasswdd,v 1.10 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/yppasswdd,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: yppasswdd
 # REQUIRE: ypserv ypbind
 # BEFORE:  LOGIN
+# KEYWORD: shutdown
 
 . /etc/rc.subr
 

@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/var,v 1.40 2005/03/02 16:41:35 brooks Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/var,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: var
 # REQUIRE: mountcritlocal
@@ -33,6 +33,7 @@
 . /etc/rc.subr
 
 name="var"
+stop_cmd=':'
 
 load_rc_config $name
 

@@ -1,11 +1,12 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/ypset,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/ypset,v 1.6 2004/10/07 13:55:26 mtm Exp $
 #
 
 # PROVIDE: ypset
 # REQUIRE: ypbind
+# KEYWORD: shutdown
 
 . /etc/rc.subr
 

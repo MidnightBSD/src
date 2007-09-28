@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/tmp,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/tmp,v 1.35.2.1 2005/12/15 01:10:10 dougb Exp $
 #
 
@@ -34,6 +34,7 @@
 . /etc/rc.subr
 
 name="tmp"
+stop_cmd=':'
 
 load_rc_config $name
 

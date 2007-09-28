@@ -1,14 +1,13 @@
 #!/bin/sh
 #
-# $NetBSD: sendmail,v 1.14 2002/02/12 01:26:36 lukem Exp $
 # $FreeBSD: src/etc/rc.d/sendmail,v 1.14.2.2 2005/12/16 01:42:54 dougb Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/sendmail,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: mail
 # REQUIRE: LOGIN cleanvar
 #	we make mail start late, so that things like .forward's are not
 #	processed until the system is fully operational
-
+# KEYWORD: shutdown
 # XXX - Get together with sendmail mantainer to figure out how to
 #	better handle SENDMAIL_ENABLE and 3rd party MTAs.
 #

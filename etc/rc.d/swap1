@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# $NetBSD: swap1,v 1.8 2002/03/24 15:52:41 lukem Exp $
 # $FreeBSD: src/etc/rc.d/swap1,v 1.9 2004/11/05 12:38:27 pjd Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/swap1,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: localswap
 # REQUIRE: disks

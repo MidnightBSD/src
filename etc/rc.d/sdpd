@@ -1,12 +1,12 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/sdpd,v 1.4.2.1 2005/11/23 18:03:33 emax Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/sdpd,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: sdpd
 # REQUIRE: DAEMON
 # BEFORE: LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 

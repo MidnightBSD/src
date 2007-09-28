@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# $NetBSD: rwho,v 1.5 2002/03/22 04:34:00 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/rwho,v 1.4 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/rwho,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: rwho
 # REQUIRE: DAEMON
 # BEFORE:  LOGIN
+# KEYWORD: shutdown
 
 . /etc/rc.subr
 

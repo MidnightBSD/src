@@ -1,13 +1,12 @@
 #!/bin/sh
 #
-# $NetBSD: rtadvd,v 1.5 2002/03/22 04:34:00 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/rtadvd,v 1.10 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/rtadvd,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 
 # PROVIDE: rtadvd
 # REQUIRE: DAEMON
 # BEFORE:  LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 

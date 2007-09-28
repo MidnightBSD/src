@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/ugidfw,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/ugidfw,v 1.3.2.1 2005/11/04 18:18:20 maxim Exp $
 
 # PROVIDE: ugidfw
 # REQUIRE:
 # BEFORE: LOGIN
-# KEYWORD: nojail
+# KEYWORD: nojail shutdown
 
 . /etc/rc.subr
 
