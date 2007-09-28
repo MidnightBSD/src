@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.4 2007/09/24 20:58:00 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.5 2007/09/27 03:24:38 ctriv Exp $
  */
 
 
@@ -36,12 +36,14 @@
 #include <unistd.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.4 2007/09/24 20:58:00 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.5 2007/09/27 03:24:38 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_new_packagemeta() 
 {
-  return (mportPackageMeta *)malloc(sizeof(mportPackageMeta));
+  /* we use calloc so any pointers that aren't set are NULL.
+     (calloc zero's out the memory region. */
+  return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
 }
 
 void mport_free_packagemeta(mportPackageMeta *pack)
@@ -60,7 +62,6 @@ void mport_free_packagemeta(mportPackageMeta *pack)
   free(pack->pkginstall);
   free(pack->pkgdeinstall);
   free(pack->pkgmessage);
-  free(pack->req_script);
   free(pack);
 }
 
@@ -70,53 +71,21 @@ void mport_free_packagemeta(mportPackageMeta *pack)
  */
 int mport_rmtree(const char *filename) 
 {
-  char *cmnd;
-  int ret;
-  
-  asprintf(&cmnd, "/bin/rm -r %s", filename);
+  return mport_xsystem("/bin/rm -r %s", filename);
+}  
 
-  if ((ret = system(cmnd)) != 0) {
-    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-  }
-  
-  free(cmnd); 
-  return MPORT_OK;
-}
+
 
 
 /*
- *Copy fromname to toname 
+ * Copy fromname to toname 
  *
- * XXX: This is needs some work.  perms?
  */
 int mport_copy_file(const char *fromname, const char *toname)
 {
-  int to;
-  int from;
-  int len;
-  char buf[8192];
-  
-  
-  if ((from = open(fromname, O_RDONLY)) == -1) {
-    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-  }
-  
-  if ((to = open(toname, O_WRONLY | O_CREAT)) == -1) {
-    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-  }
-  
-  len = read(from, buf, sizeof(buf));
-  
-  while (len > 0) {
-    write(to, buf, len);
-    len = read(from, buf, sizeof(buf));
-  }
-  
-  close(from);
-  close(to);
-  
-  return MPORT_OK;
+  return mport_xsystem("/bin/cp %s %s", fromname, toname);
 }
+
 
 /*
  * Quick test to see if a file exists.
@@ -128,6 +97,33 @@ int mport_file_exists(const char *file)
   return (lstat(file, &st) == 0);
 }
   
+
+/* mport_xsystem(char *fmt, ...)
+ * 
+ * Our own version on system that takes a format string and a list 
+ * of values.  The fmt works exactly like the stdio output formats.
+ */
+int mport_xsystem(const char *fmt, ...) 
+{
+  va_list args;
+  char *cmnd;
+  int ret;
+  
+  va_start(args, fmt);
+  if (vasprintf(&cmnd, fmt, args) == -1) {
+    /* XXX How will the caller know this is no mem, and not a failed exec? */
+    return MPORT_ERR_NO_MEM;
+  }
+  
+  ret = system(cmnd);
+  
+  free(cmnd);
+  va_end(args);
+  
+  return ret;
+}
+  
+
 
 
 /*

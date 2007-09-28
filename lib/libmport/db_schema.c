@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db_schema.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/db_schema.c,v 1.2 2007/09/27 03:25:16 ctriv Exp $
  */
 
 
@@ -32,23 +32,29 @@
 #include <stdlib.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/db_schema.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/db_schema.c,v 1.2 2007/09/27 03:25:16 ctriv Exp $");
 
-static void run_sql(sqlite3 *db, const char *sql);
+static int run_sql(sqlite3 *db, const char *sql);
 
-void mport_generate_package_schema(sqlite3 *db) 
+int mport_generate_stub_schema(sqlite3 *db) 
 {
-  run_sql(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text)");
-  run_sql(db, "CREATE TABLE package  (pkg text NOT NULL, version text NOT NULL, lang text, options text, date int NOT NULL)");
-  run_sql(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
-  run_sql(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text NOT NULL, depend_port text NOT NULL)");
+  if (run_sql(db, "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text)") != SQLITE_OK)
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  if (run_sql(db, "CREATE TABLE package  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL)") != SQLITE_OK)
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  if (run_sql(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)") != SQLITE_OK)
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  if (run_sql(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text NOT NULL, depend_port text NOT NULL)") != SQLITE_OK)
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));    
+    
+  return MPORT_OK;  
 }
 
-static void run_sql(sqlite3 *db, const char *sql)
+static int run_sql(sqlite3 *db, const char *sql)
 {
   char *error = 0;
   
-  sqlite3_exec(
+  return sqlite3_exec(
     db,
     sql,
     NULL,

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.2 2007/09/24 16:49:59 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.3 2007/09/24 20:58:00 ctriv Exp $
  *
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
@@ -31,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.2 2007/09/24 16:49:59 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.3 2007/09/24 20:58:00 ctriv Exp $");
 
 
 
@@ -86,7 +86,6 @@ typedef struct {
   char *pkginstall;
   char *pkgdeinstall;
   char *pkgmessage;
-  char *req_script;
 } mportPackageMeta;  
 
 mportPackageMeta * mport_new_packagemeta(void);
@@ -98,8 +97,8 @@ int mport_create_pkg(mportPlist *, mportPackageMeta *);
 #include <sqlite3.h>
 
 /* schema */
-void mport_generate_plist_schema(sqlite3 *);
-void mport_generate_package_schema(sqlite3 *);
+int mport_generate_plist_schema(sqlite3 *);
+int mport_generate_stub_schema(sqlite3 *);
 
 /* Errors */
 
@@ -119,12 +118,14 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_ARCHIVE		7
 
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
+#define SET_ERROR(code,msg) mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
 
 /* Utils */
 
 int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_file_exists(const char *);
+int mport_xsystem(const char *, ...);
 void mport_parselist(char *, char ***);
 
 #endif

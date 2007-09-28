@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.4 2007/09/24 20:58:00 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.5 2007/09/27 03:27:18 ctriv Exp $
  */
 
 
@@ -45,7 +45,7 @@
 #include <archive_entry.h>
 #include <mport.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.4 2007/09/24 20:58:00 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.5 2007/09/27 03:27:18 ctriv Exp $");
 
 #define PACKAGE_DB_FILENAME "+CONTENTS.db"
 
@@ -64,37 +64,41 @@ int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
   char dirtmpl[] = "/tmp/mport.XXXXXXXX"; 
   char *tmpdir   = mkdtemp(dirtmpl);
   
-  int ret = 0;
+  int ret;
   sqlite3 *db;
   
-  if (tmpdir == NULL) 
-    RETURN_ERROR(MPORT_ERR_FILEIO, strerror(errno));
-    
-  if (chdir(tmpdir) != 0) 
-    RETURN_ERROR(MPORT_ERR_FILEIO, strerror(errno));
+  if (tmpdir == NULL) {
+    SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
+    goto CLEANUP;
+  }
+  if (chdir(tmpdir) != 0)  {
+    SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
+    goto CLEANUP;
+  }
 
   if ((ret = create_package_db(&db)) != MPORT_OK)
-    return ret;
+    goto CLEANUP;
     
   if ((ret = create_plist(db, plist, pack)) != MPORT_OK)
-    return ret;
+    goto CLEANUP;
   
   if ((ret = create_meta(db, pack)) != MPORT_OK)
-    return ret;
+    goto CLEANUP;
     
-  if (sqlite3_close(db) != SQLITE_OK)
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  if (sqlite3_close(db) != SQLITE_OK) {
+    SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    goto CLEANUP;
+  }
     
   if ((ret = copy_metafiles(pack)) != MPORT_OK) 
-    return ret;
+    goto CLEANUP;
     
   if ((ret = archive_files(plist, pack)) != MPORT_OK)
-    return ret;
-    
-  if ((ret = clean_up(tmpdir)) != MPORT_OK)
-    return ret;
+    goto CLEANUP;
   
-  return MPORT_OK;    
+  CLEANUP:  
+    clean_up(tmpdir);
+    return ret;
 }
 
 
@@ -106,9 +110,7 @@ static int create_package_db(sqlite3 **db)
   }
   
   /* create tables */
-  mport_generate_package_schema(*db);
-  
-  return MPORT_OK;
+  return mport_generate_stub_schema(*db);
 }
 
 static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
@@ -121,7 +123,7 @@ static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
   char md5[33];
   char file[FILENAME_MAX];
   char cwd[FILENAME_MAX];
-  
+
   strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
   strlcat(cwd, pack->prefix, FILENAME_MAX);
   
@@ -132,8 +134,11 @@ static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
   STAILQ_FOREACH(e, plist, next) {
     if (e->type == PLIST_CWD) {
       strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
-      if (e->data != NULL) 
+      if (e->data == NULL) {
+        strlcat(cwd, pack->prefix, FILENAME_MAX);
+      } else {
         strlcat(cwd, e->data, FILENAME_MAX);
+      }
     }
     
     if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
@@ -182,29 +187,31 @@ static int create_meta(sqlite3 *db, mportPackageMeta *pack)
   struct timespec now;
   int ret;
   
-  char sql[]  = "INSERT INTO package (pkg, version, lang, date) VALUES (?,?,?,?)";
+  char sql[]  = "INSERT INTO package (pkg, version, origin, lang, prefix, date) VALUES (?,?,?,?,?,?)";
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
-
   if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
-  
   if (sqlite3_bind_text(stmnt, 2, pack->version, -1, SQLITE_STATIC) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
-  
-  if (sqlite3_bind_text(stmnt, 3, pack->lang, -1, SQLITE_STATIC) != SQLITE_OK) {
+  if (sqlite3_bind_text(stmnt, 3, pack->origin, -1, SQLITE_STATIC) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
-  
+  if (sqlite3_bind_text(stmnt, 4, pack->lang, -1, SQLITE_STATIC) != SQLITE_OK) {
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
+  if (sqlite3_bind_text(stmnt, 5, pack->prefix, -1, SQLITE_STATIC) != SQLITE_OK) {
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
   if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
     RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
   }
   
-  if (sqlite3_bind_int(stmnt, 4, now.tv_sec) != SQLITE_OK) {
+  if (sqlite3_bind_int(stmnt, 6, now.tv_sec) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
     

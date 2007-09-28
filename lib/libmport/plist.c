@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.2 2007/09/27 03:26:38 ctriv Exp $
  */
 
 
@@ -34,7 +34,7 @@
 #include <string.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.1 2007/09/23 22:30:52 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.2 2007/09/27 03:26:38 ctriv Exp $");
 
 #define CMND_MAGIC_COOKIE '@'
 #define STRING_EQ(r,l) (strcmp((r),(l)) == 0)
@@ -143,7 +143,7 @@ int mport_parse_plist_file(FILE *fp, mportPlist *list)
   return MPORT_OK;  
 }
 
-     
+
     
 static mportPlistEntryType parse_command(const char *s) 
 {
