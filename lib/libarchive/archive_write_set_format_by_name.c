@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_by_name.c,v 1.3.8.1 2007/01/27 06:44:53 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_by_name.c,v 1.7 2007/06/22 05:47:00 kientzle Exp $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -44,7 +44,13 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_by_name.c,v 1.3.
 static
 struct { const char *name; int (*setter)(struct archive *); } names[] =
 {
+	{ "arbsd",	archive_write_set_format_ar_bsd },
+	{ "ar",		archive_write_set_format_ar_bsd },
+	{ "argnu",	archive_write_set_format_ar_svr4 },
+	{ "arsvr4",	archive_write_set_format_ar_svr4 },
 	{ "cpio",	archive_write_set_format_cpio },
+	{ "newc",	archive_write_set_format_cpio_newc },
+	{ "odc",	archive_write_set_format_cpio },
 	{ "pax",	archive_write_set_format_pax },
 	{ "posix",	archive_write_set_format_pax },
 	{ "shar",	archive_write_set_format_shar },

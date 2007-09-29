@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_memory.c,v 1.3.2.1 2007/01/27 06:44:53 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_open_memory.c,v 1.6 2007/07/06 15:51:59 kientzle Exp $");
 
 #include <errno.h>
 #include <stdlib.h>
@@ -134,7 +134,7 @@ memory_read_skip(struct archive *a, void *client_data, off_t skip)
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
 
 	(void)a; /* UNUSED */
-	if (mine->buffer + skip > mine->end)
+	if ((off_t)skip > (off_t)(mine->end - mine->buffer))
 		skip = mine->end - mine->buffer;
 	/* Round down to block size. */
 	skip /= mine->read_size;

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive_string.h,v 1.6.2.1 2007/01/27 06:44:53 kientzle Exp $
+ * $FreeBSD: src/lib/libarchive/archive_string.h,v 1.9 2007/05/29 01:00:19 kientzle Exp $
  *
  */
 
@@ -73,6 +73,12 @@ __archive_strappend_int(struct archive_string *as, int d, int base);
 /* Basic append operation. */
 struct archive_string *
 __archive_string_append(struct archive_string *as, const char *p, size_t s);
+
+/* Copy one archive_string to another */
+void
+__archive_string_copy(struct archive_string *dest, struct archive_string *src);
+#define archive_string_copy(dest, src) \
+	__archive_string_copy(dest, src)
 
 /* Ensure that the underlying buffer is at least as large as the request. */
 struct archive_string *
