@@ -31146,6 +31146,7 @@ usr.bin/tar/bsdtar.1 -text
 usr.bin/tar/bsdtar.c -text
 usr.bin/tar/bsdtar.h -text
 usr.bin/tar/bsdtar_platform.h -text
+usr.bin/tar/config_midnightbsd.h -text
 usr.bin/tar/configure.ac.in -text
 usr.bin/tar/getdate.y -text
 usr.bin/tar/matching.c -text

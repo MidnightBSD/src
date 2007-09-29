@@ -24,33 +24,55 @@
  */
 
 #include "bsdtar_platform.h"
-__MBSDID("$MidnightBSD$");
-__FBSDID("$FreeBSD: src/usr.bin/tar/read.c,v 1.23.2.3 2007/01/27 06:48:39 kientzle Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/tar/read.c,v 1.34 2007/07/20 01:24:49 kientzle Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/tar/write.c,v 1.2 2007/03/14 02:45:08 laffer1 Exp $");
 
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
 #ifdef MAJOR_IN_MKDEV
 #include <sys/mkdev.h>
+#elif defined(MAJOR_IN_SYSMACROS)
+#include <sys/sysmacros.h>
 #endif
+#ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#include <sys/types.h>
+#endif
 
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_GRP_H
 #include <grp.h>
+#endif
+#ifdef HAVE_LIMITS_H
 #include <limits.h>
+#endif
+#ifdef HAVE_PWD_H
 #include <pwd.h>
+#endif
 #include <stdio.h>
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "bsdtar.h"
 
-static void	cleanup_security(struct bsdtar *);
 static void	list_item_verbose(struct bsdtar *, FILE *,
 		    struct archive_entry *);
 static void	read_archive(struct bsdtar *bsdtar, char mode);
-static int	security_problem(struct bsdtar *, struct archive_entry *);
 
 void
 tar_mode_t(struct bsdtar *bsdtar)
@@ -85,7 +107,10 @@ read_archive(struct bsdtar *bsdtar, char mode)
 		include_from_file(bsdtar, bsdtar->names_from_file);
 
 	a = archive_read_new();
-	archive_read_support_compression_all(a);
+	if (bsdtar->compress_program != NULL)
+		archive_read_support_compression_program(a, bsdtar->compress_program);
+	else
+		archive_read_support_compression_all(a);
 	archive_read_support_format_all(a);
 	if (archive_read_open_file(a, bsdtar->filename,
 	    bsdtar->bytes_per_block != 0 ? bsdtar->bytes_per_block :
@@ -103,19 +128,17 @@ read_archive(struct bsdtar *bsdtar, char mode)
 		r = archive_read_next_header(a, &entry);
 		if (r == ARCHIVE_EOF)
 			break;
-		if (r == ARCHIVE_WARN)
+		if (r < ARCHIVE_OK)
 			bsdtar_warnc(bsdtar, 0, "%s", archive_error_string(a));
-		if (r == ARCHIVE_FATAL) {
+		if (r <= ARCHIVE_WARN)
 			bsdtar->return_value = 1;
-			bsdtar_warnc(bsdtar, 0, "%s", archive_error_string(a));
-			break;
-		}
 		if (r == ARCHIVE_RETRY) {
 			/* Retryable error: try again */
-			bsdtar_warnc(bsdtar, 0, "%s", archive_error_string(a));
 			bsdtar_warnc(bsdtar, 0, "Retrying...");
 			continue;
 		}
+		if (r == ARCHIVE_FATAL)
+			break;
 
 		/*
 		 * Exclude entries that are too old.
@@ -187,19 +210,11 @@ read_archive(struct bsdtar *bsdtar, char mode)
 				fprintf(out, "\n");
 				bsdtar_warnc(bsdtar, 0, "%s",
 				    archive_error_string(a));
+				bsdtar->return_value = 1;
 				break;
 			}
 			fprintf(out, "\n");
 		} else {
-			/*
-			 * Skip security problems before prompting.
-			 * Otherwise, the user may be confused that a
-			 * file they wanted to extract was
-			 * subsequently skipped.
-			 */
-			if (security_problem(bsdtar, entry))
-				continue;
-
 			if (bsdtar->option_interactive &&
 			    !yes("extract '%s'", archive_entry_pathname(entry)))
 				continue;
@@ -213,11 +228,12 @@ read_archive(struct bsdtar *bsdtar, char mode)
 				    archive_entry_pathname(entry));
 				fflush(stderr);
 			}
-			if (bsdtar->option_stdout) {
-				/* TODO: Catch/recover any errors here. */
-				archive_read_data_into_fd(a, 1);
-			} else if (archive_read_extract(a, entry,
-				       bsdtar->extract_flags)) {
+			if (bsdtar->option_stdout)
+				r = archive_read_data_into_fd(a, 1);
+			else
+				r = archive_read_extract(a, entry,
+				    bsdtar->extract_flags);
+			if (r != ARCHIVE_OK) {
 				if (!bsdtar->verbose)
 					safe_fprintf(stderr, "%s",
 					    archive_entry_pathname(entry));
@@ -225,14 +241,12 @@ read_archive(struct bsdtar *bsdtar, char mode)
 				    archive_error_string(a));
 				if (!bsdtar->verbose)
 					fprintf(stderr, "\n");
-				/*
-				 * TODO: Decide how to handle
-				 * extraction error... <sigh>
-				 */
 				bsdtar->return_value = 1;
 			}
 			if (bsdtar->verbose)
 				fprintf(stderr, "\n");
+			if (r == ARCHIVE_FATAL)
+				break;
 		}
 	}
 
@@ -241,7 +255,6 @@ read_archive(struct bsdtar *bsdtar, char mode)
 		    archive_format_name(a), archive_compression_name(a));
 
 	archive_read_finish(a);
-	cleanup_security(bsdtar);
 }
 
 
@@ -285,7 +298,7 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 	/* Use uname if it's present, else uid. */
 	p = archive_entry_uname(entry);
 	if ((p == NULL) || (*p == '\0')) {
-		sprintf(tmp, "%d ", st->st_uid);
+		sprintf(tmp, "%lu ", (unsigned long)st->st_uid);
 		p = tmp;
 	}
 	w = strlen(p);
@@ -299,7 +312,7 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 		fprintf(out, "%s", p);
 		w = strlen(p);
 	} else {
-		sprintf(tmp, "%d", st->st_gid);
+		sprintf(tmp, "%lu", (unsigned long)st->st_gid);
 		w = strlen(tmp);
 		fprintf(out, "%s", tmp);
 	}
@@ -310,9 +323,9 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 	 * If gs_width is too small, grow it.
 	 */
 	if (S_ISCHR(st->st_mode) || S_ISBLK(st->st_mode)) {
-		sprintf(tmp, "%d,%u",
-		    major(st->st_rdev),
-		    (unsigned)minor(st->st_rdev)); /* ls(1) also casts here. */
+		sprintf(tmp, "%lu,%lu",
+		    (unsigned long)major(st->st_rdev),
+		    (unsigned long)minor(st->st_rdev)); /* ls(1) also casts here. */
 	} else {
 		/*
 		 * Note the use of platform-dependent macros to format
@@ -342,129 +355,4 @@ list_item_verbose(struct bsdtar *bsdtar, FILE *out, struct archive_entry *entry)
 		    archive_entry_hardlink(entry));
 	else if (S_ISLNK(st->st_mode)) /* Symbolic link */
 		safe_fprintf(out, " -> %s", archive_entry_symlink(entry));
-}
-
-/*
- * Structure for storing path of last successful security check.
- */
-struct security {
-	char	*path;
-	size_t	 path_size;
-};
-
-/*
- * Check for a variety of security issues.  Fix what we can here,
- * generate warnings as appropriate, return non-zero to prevent
- * this entry from being extracted.
- */
-static int
-security_problem(struct bsdtar *bsdtar, struct archive_entry *entry)
-{
-	struct stat st;
-	const char *name, *pn;
-	char *p;
-	int r;
-
-	/* -P option forces us to just accept all pathnames as-is. */
-	if (bsdtar->option_absolute_paths)
-		return (0);
-
-	name = archive_entry_pathname(entry);
-
-	/* Reject any archive entry with '..' as a path element. */
-	pn = name;
-	while (pn != NULL && pn[0] != '\0') {
-		if (pn[0] == '.' && pn[1] == '.' &&
-		    (pn[2] == '\0' || pn[2] == '/')) {
-			bsdtar_warnc(bsdtar, 0,
-			    "Skipping pathname containing ..");
-			bsdtar->return_value = 1;
-			return (1);
-		}
-		pn = strchr(pn, '/');
-		if (pn != NULL)
-			pn++;
-	}
-
-	/*
-	 * Gaurd against symlink tricks.  Reject any archive entry whose
-	 * destination would be altered by a symlink.
-	 */
-	/* XXX TODO: Make this faster by comparing current path to
-	 * prefix of last successful check to avoid duplicate lstat()
-	 * calls. XXX */
-	pn = name;
-	if (bsdtar->security == NULL) {
-		bsdtar->security = malloc(sizeof(*bsdtar->security));
-		if (bsdtar->security == NULL)
-			bsdtar_errc(bsdtar, 1, errno, "No Memory");
-		bsdtar->security->path_size = MAXPATHLEN + 1;
-		bsdtar->security->path = malloc(bsdtar->security->path_size);
-		if (bsdtar->security->path == NULL)
-			bsdtar_errc(bsdtar, 1, errno, "No Memory");
-	}
-	if (strlen(name) >= bsdtar->security->path_size) {
-		free(bsdtar->security->path);
-		while (strlen(name) >= bsdtar->security->path_size)
-			bsdtar->security->path_size *= 2;
-		bsdtar->security->path = malloc(bsdtar->security->path_size);
-		if (bsdtar->security->path == NULL)
-			bsdtar_errc(bsdtar, 1, errno, "No Memory");
-	}
-	p = bsdtar->security->path;
-	while (pn != NULL && pn[0] != '\0') {
-		*p++ = *pn++;
-		while (*pn != '\0' && *pn != '/')
-			*p++ = *pn++;
-		p[0] = '\0';
-		r = lstat(bsdtar->security->path, &st);
-		if (r != 0) {
-			if (errno == ENOENT)
-				break;
-		} else if (S_ISLNK(st.st_mode)) {
-			if (pn[0] == '\0') {
-				/*
-				 * Last element is symlink; remove it
-				 * so we can overwrite it with the
-				 * item being extracted.
-				 */
-				if (!S_ISLNK(archive_entry_mode(entry))) {
-					/*
-					 * Warn only if the symlink is being
-					 * replaced with a non-symlink.
-					 */
-					bsdtar_warnc(bsdtar, 0,
-					    "Removing symlink %s",
-					    bsdtar->security->path);
-				}
-				if (unlink(bsdtar->security->path))
-					bsdtar_errc(bsdtar, 1, errno,
-					    "Unlink failed");
-				/* Symlink gone.  No more problem! */
-				return (0);
-			} else if (bsdtar->option_unlink_first) {
-				/* User asked us to remove problems. */
-				if (unlink(bsdtar->security->path))
-					bsdtar_errc(bsdtar, 1, errno,
-					    "Unlink failed");
-			} else {
-				bsdtar_warnc(bsdtar, 0,
-				    "Cannot extract %s through symlink %s",
-				    name, bsdtar->security->path);
-				bsdtar->return_value = 1;
-				return (1);
-			}
-		}
-	}
-
-	return (0);
-}
-
-static void
-cleanup_security(struct bsdtar *bsdtar)
-{
-	if (bsdtar->security != NULL) {
-		free(bsdtar->security->path);
-		free(bsdtar->security);
-	}
 }

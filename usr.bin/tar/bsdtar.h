@@ -22,8 +22,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ * $FreeBSD: src/usr.bin/tar/bsdtar.h,v 1.28 2007/05/29 05:39:10 kientzle Exp $
  * $MidnightBSD$
- * $FreeBSD: src/usr.bin/tar/bsdtar.h,v 1.23.2.3 2007/01/27 06:48:39 kientzle Exp $
  */
 
 #include "bsdtar_platform.h"
@@ -56,6 +56,7 @@ struct bsdtar {
 	char		  mode; /* Program mode: 'c', 't', 'r', 'u', 'x' */
 	char		  symlink_mode; /* H or L, per BSD conventions */
 	char		  create_compression; /* j, y, or z */
+	const char	 *compress_program;
 	char		  option_absolute_paths; /* -P */
 	char		  option_dont_traverse_mounts; /* --one-file-system */
 	char		  option_fast_read; /* --fast-read */
@@ -109,6 +110,7 @@ int	exclude_from_file(struct bsdtar *, const char *pathname);
 int	excluded(struct bsdtar *, const char *pathname);
 int	include(struct bsdtar *, const char *pattern);
 int	include_from_file(struct bsdtar *, const char *pathname);
+int	pathcmp(const char *a, const char *b);
 int	process_lines(struct bsdtar *bsdtar, const char *pathname,
 	    int (*process)(struct bsdtar *, const char *));
 void	safe_fprintf(FILE *, const char *fmt, ...);

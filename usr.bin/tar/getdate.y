@@ -8,6 +8,7 @@
  * (eliminate some state variables and post-processing).  Among other
  * things, these changes eliminated two shift/reduce conflicts.  (Went
  * from 10 to 8.)
+ * All of Tim Kientzle's changes to this file are public domain.
  */
 
 /*
@@ -25,8 +26,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-__FBSDID("$FreeBSD: src/usr.bin/tar/getdate.y,v 1.4.2.2 2006/11/10 16:09:13 kientzle Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/tar/getdate.y,v 1.9 2007/07/20 01:27:50 kientzle Exp $");
 #endif
 
 #include <ctype.h>
@@ -611,7 +611,7 @@ yylex(void)
 	char	buff[64];
 
 	for ( ; ; ) {
-		while (isspace(*yyInput))
+		while (isspace((unsigned char)*yyInput))
 			yyInput++;
 
 		/* Skip parenthesized comments. */
@@ -638,11 +638,11 @@ yylex(void)
 
 			/* Force to lowercase and strip '.' characters. */
 			while (*src != '\0'
-			    && (isalnum(*src) || *src == '.')
+			    && (isalnum((unsigned char)*src) || *src == '.')
 			    && i < sizeof(buff)-1) {
 				if (*src != '.') {
-					if (isupper(*src))
-						buff[i++] = tolower(*src);
+					if (isupper((unsigned char)*src))
+						buff[i++] = tolower((unsigned char)*src);
 					else
 						buff[i++] = *src;
 				}
@@ -676,8 +676,8 @@ yylex(void)
 		 * Because '-' and '+' have other special meanings, I
 		 * don't deal with signed numbers here.
 		 */
-		if (isdigit(c = *yyInput)) {
-			for (yylval.Number = 0; isdigit(c = *yyInput++); )
+		if (isdigit((unsigned char)(c = *yyInput))) {
+			for (yylval.Number = 0; isdigit((unsigned char)(c = *yyInput++)); )
 				yylval.Number = 10 * yylval.Number + c - '0';
 			yyInput--;
 			return (tUNUMBER);

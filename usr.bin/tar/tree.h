@@ -22,8 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: src/usr.bin/tar/tree.h,v 1.2.2.1 2007/01/27 06:48:39 kientzle Exp $
+ * $FreeBSD: src/usr.bin/tar/tree.h,v 1.3 2007/01/09 08:12:17 kientzle Exp $
  */
 
 /*-

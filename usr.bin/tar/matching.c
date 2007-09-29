@@ -24,12 +24,18 @@
  */
 
 #include "bsdtar_platform.h"
-__MBSDID("$MidnightBSD$");
-__FBSDID("$FreeBSD: src/usr.bin/tar/matching.c,v 1.9.2.1 2007/01/27 06:48:39 kientzle Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/tar/matching.c,v 1.11 2007/03/11 10:36:42 kientzle Exp $");
+__MBSDID("$MidnightBSD: src/usr.bin/tar/write.c,v 1.2 2007/03/14 02:45:08 laffer1 Exp $");
 
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
 #include <string.h>
+#endif
 
 #include "bsdtar.h"
 
