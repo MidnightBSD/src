@@ -31151,6 +31151,14 @@ usr.bin/tar/configure.ac.in -text
 usr.bin/tar/getdate.y -text
 usr.bin/tar/matching.c -text
 usr.bin/tar/read.c -text
+usr.bin/tar/test/config.sh -text
+usr.bin/tar/test/test-acl.sh -text
+usr.bin/tar/test/test-basic.sh -text
+usr.bin/tar/test/test-deep-dir.sh -text
+usr.bin/tar/test/test-flags.sh -text
+usr.bin/tar/test/test-nodump.sh -text
+usr.bin/tar/test/test-overwrite.sh -text
+usr.bin/tar/test/test-utf8.sh -text
 usr.bin/tar/tree.c -text
 usr.bin/tar/tree.h -text
 usr.bin/tar/util.c -text
