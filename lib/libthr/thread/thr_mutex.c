@@ -628,11 +628,14 @@ mutex_lock_common(struct pthread *curthread, pthread_mutex_t *m,
 
 				/* Unlock the mutex structure: */
 				THR_LOCK_RELEASE(curthread, &(*m)->m_lock);
-
-				clock_gettime(CLOCK_REALTIME, &ts);
-				TIMESPEC_SUB(&ts2, abstime, &ts);
-				ret = _thr_umtx_wait(&curthread->cycle, cycle,
-					 &ts2);
+				if (abstime != NULL) {
+					clock_gettime(CLOCK_REALTIME, &ts);
+					TIMESPEC_SUB(&ts2, abstime, &ts);
+					ret = _thr_umtx_wait(&curthread->cycle,
+						cycle, &ts2);
+				} else
+					ret = _thr_umtx_wait(&curthread->cycle,
+						cycle, NULL);
 				if (ret == EINTR)
 					ret = 0;
 
@@ -711,11 +714,14 @@ mutex_lock_common(struct pthread *curthread, pthread_mutex_t *m,
 
 				/* Unlock the mutex structure: */
 				THR_LOCK_RELEASE(curthread, &(*m)->m_lock);
-
-				clock_gettime(CLOCK_REALTIME, &ts);
-				TIMESPEC_SUB(&ts2, abstime, &ts);
-				ret = _thr_umtx_wait(&curthread->cycle, cycle,
-					&ts2);
+				if (abstime != NULL) {
+					clock_gettime(CLOCK_REALTIME, &ts);
+					TIMESPEC_SUB(&ts2, abstime, &ts);
+					ret = _thr_umtx_wait(&curthread->cycle,
+						cycle, &ts2);
+				} else
+					ret = _thr_umtx_wait(&curthread->cycle,
+						cycle, NULL);
 				if (ret == EINTR)
 					ret = 0;
 
