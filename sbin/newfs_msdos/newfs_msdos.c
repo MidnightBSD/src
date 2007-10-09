@@ -30,6 +30,10 @@ static const char rcsid[] =
   "$FreeBSD: src/sbin/newfs_msdos/newfs_msdos.c,v 1.21 2005/01/17 14:14:00 delphij Exp $";
 #endif /* not lint */
 
+#include <ctype.h>
+
+__MBSDID("$MidnightBSD$");
+
 #include <sys/param.h>
 #include <sys/fdcio.h>
 #include <sys/disk.h>
@@ -38,7 +42,6 @@ static const char rcsid[] =
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -55,6 +58,7 @@ static const char rcsid[] =
 
 #define DOSMAGIC  0xaa55	/* DOS magic number */
 #define MINBPS	  128		/* minimum bytes per sector */
+#define MAXBPS    4096		/* maximum bytes per sector */
 #define MAXSPC	  128		/* maximum sectors per cluster */
 #define MAXNFT	  16		/* maximum number of FATs */
 #define DEFBLK	  4096		/* default block size */
@@ -67,6 +71,16 @@ static const char rcsid[] =
 #define MAXCLS12  0xfed 	/* maximum FAT12 clusters */
 #define MAXCLS16  0xfff5	/* maximum FAT16 clusters */
 #define MAXCLS32  0xffffff5	/* maximum FAT32 clusters */
+
+/*
+ * The size of our in-memory I/O buffer.  This is the size of the writes we
+ * do to the device (except perhaps a few odd sectors at the end).
+ *
+ * This must be a multiple of the sector size.  Larger is generally faster,
+ * but some old devices have bugs if you ask them to do more than 128KB
+ * per I/O.
+ */
+#define IO_BUFFER_SIZE (128*1024)
 
 #define mincls(fat)  ((fat) == 12 ? MINCLS12 :	\
 		      (fat) == 16 ? MINCLS16 :	\
@@ -247,7 +261,8 @@ main(int argc, char *argv[])
     struct bsxbpb *bsxbpb;
     struct bsx *bsx;
     struct de *de;
-    u_int8_t *img;
+    u_int8_t *io_buffer;    /* The buffer for sectors being constructed/written */
+    u_int8_t *img;         /* Current sector within io_buffer */
     const char *fname, *dtype, *bname;
     ssize_t n;
     time_t now;
@@ -377,7 +392,10 @@ main(int argc, char *argv[])
 	errx(1, "bytes/sector (%u) is not a power of 2", bpb.bps);
     if (bpb.bps < MINBPS)
 	errx(1, "bytes/sector (%u) is too small; minimum is %u",
-	     bpb.bps, MINBPS);
+	    bpb.bps, MINBPS);
+    if (bpb.bps > MAXBPS)
+	errx(1, "bytes/sector (%u) is too large; maximum is %u",
+	    bpb.bps, MAXBPS);
     if (!(fat = opt_F)) {
 	if (opt_f)
 	    fat = 12;
@@ -552,8 +570,9 @@ main(int argc, char *argv[])
 	gettimeofday(&tv, NULL);
 	now = tv.tv_sec;
 	tm = localtime(&now);
-	if (!(img = malloc(bpb.bps)))
+	if (!(io_buffer = malloc(IO_BUFFER_SIZE)))
 	    err(1, NULL);
+	img = io_buffer;
 	dir = bpb.res + (bpb.spf ? bpb.spf : bpb.bspf) * bpb.nft;
 	for (lsn = 0; lsn < dir + (fat == 32 ? bpb.spc : rds); lsn++) {
 	    x = lsn;
@@ -653,9 +672,21 @@ main(int argc, char *argv[])
 		    (u_int)tm->tm_mday;
 		mk2(de->date, x);
 	    }
-	    if ((n = write(fd, img, bpb.bps)) == -1)
-		err(1, "%s", fname);
-	    if ((unsigned)n != bpb.bps)
+	    img += bpb.bps;
+	    if (img >= (io_buffer + IO_BUFFER_SIZE)) {
+		/* We filled the I/O buffer, so write it out now */
+		if ((n = write(fd, io_buffer, IO_BUFFER_SIZE)) == -1)
+	  	    err(1, "%s", fname);
+		if (n != IO_BUFFER_SIZE)
+		    errx(1, "%s: can't write sector %u", fname, lsn);
+		img = io_buffer;
+           }
+       }
+       if (img != io_buffer) {
+	    /* The I/O buffer was partially full; write it out before exit */
+	    if ((n = write(fd, io_buffer, img-io_buffer)) == -1)
+                err(1, "%s", fname);
+	    if ((unsigned)n != (img-io_buffer))
 		errx(1, "%s: can't write sector %u", fname, lsn);
 	}
     }
