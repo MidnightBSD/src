@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/mtree/BSD.local.dist,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.local.dist,v 1.117.2.1 2006/01/17 06:53:17 dougb Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -476,11 +476,11 @@
                 LC_MESSAGES
                 ..
             ..
-            sr@Latn
+            sq
                 LC_MESSAGES
                 ..
             ..
-            sq
+            sr@Latn
                 LC_MESSAGES
                 ..
             ..
