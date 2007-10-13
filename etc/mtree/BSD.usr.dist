@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.4 2007/03/13 00:35:42 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.5 2007/06/30 01:04:15 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -654,8 +654,6 @@
             cat3
             ..
             cat4
-                alpha
-                ..
                 amd64
                 ..
                 i386
@@ -670,8 +668,6 @@
             cat7
             ..
             cat8
-                alpha
-                ..
                 amd64
                 ..
                 i386
@@ -691,8 +687,6 @@
                 cat3
                 ..
                 cat4
-                    alpha
-                    ..
                     amd64
                     ..
                     i386
@@ -707,8 +701,6 @@
                 cat7
                 ..
                 cat8
-                    alpha
-                    ..
                     amd64
                     ..
                     i386
@@ -767,8 +759,6 @@
             man3
             ..
             man4
-                alpha
-                ..
                 amd64
                 ..
                 i386
@@ -783,8 +773,6 @@
             man7
             ..
             man8
-                alpha
-                ..
                 amd64
                 ..
                 i386
