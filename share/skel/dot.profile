@@ -1,13 +1,13 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.4 2007/04/15 06:05:06 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.5 2007/04/24 18:45:52 ctriv Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
 # see also sh(1), ksh(1), environ(7).
 #
 
-# remove /usr/games and /usr/X11R6/bin if you want
-PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/games:/usr/local/sbin:/usr/local/bin:/usr/X11R6/bin:$HOME/bin; export PATH
+# remove /usr/games if you want
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/games:/usr/local/sbin:/usr/local/bin:$HOME/bin; export PATH
 
 # A righteous umask
 umask 22

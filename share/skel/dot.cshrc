@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.cshrc,v 1.13 2001/01/10 17:35:28 archie Exp $
-# $MidnightBSD: src/share/skel/dot.cshrc,v 1.3 2007/04/15 05:55:55 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.cshrc,v 1.4 2007/04/24 18:45:52 ctriv Exp $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
@@ -15,7 +15,7 @@ alias ll	ls -lA
 # A righteous umask
 umask 22
 
-set path = (/sbin /bin /usr/sbin /usr/bin /usr/games /usr/local/sbin /usr/local/bin /usr/X11R6/bin $HOME/bin)
+set path = (/sbin /bin /usr/sbin /usr/bin /usr/games /usr/local/sbin /usr/local/bin $HOME/bin)
 
 setenv	EDITOR	vi
 setenv	PAGER	more
