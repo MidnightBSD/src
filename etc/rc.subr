@@ -1,6 +1,6 @@
 # $NetBSD: rc.subr,v 1.66 2006/04/01 10:05:50 he Exp $
 # $FreeBSD: /repoman/r/ncvs/src/etc/rc.subr,v 1.34.2.15 2006/08/24 10:32:40 yar Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.subr,v 1.7 2006/08/29 14:24:41 laffer1 Exp $
 #
 # Copyright (c) 1997-2002 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -883,18 +883,6 @@ load_rc_config()
 		debug "Sourcing /etc/rc.conf.d/${_name}"
 		. /etc/rc.conf.d/"$_name"
 	fi
-
-	# XXX - Deprecated variable name support
-	#
-		[ -n "$portmap_enable" ] && rpcbind_enable="$portmap_enable"
-		[ -n "$portmap_program" ] && rpcbind_program="$portmap_program"
-		[ -n "$portmap_flags" ] && rpcbind_flags="$portmap_flags"
-		[ -n "$single_mountd_enable" ] && mountd_enable="$single_mountd_enable"
-		[ -n "$xntpd_enable" ] && ntpd_enable="$xntpd_enable"
-		[ -n "$xntpd_program" ] && ntpd_program="$xntpd_program"
-		[ -n "$xntpd_flags" ] && ntpd_flags="$xntpd_flags"
-		[ -n "$dhcp_program" ] && dhclient_program="$dhcp_program"
-		[ -n "$dhcp_flags" ] && dhclient_flags="$dhcp_flags"
 }
   
 #
