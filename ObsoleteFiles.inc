@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.12 2007/03/15 00:06:42 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.13 2007/04/10 05:47:19 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,8 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20071014: Remove early.sh
+OLD_FILES+=/etc/rc.d/early.sh
 # 20070410: Remove cvsbug from cvs installation
 OLD_FILES+=/usr/bin/cvsbug
 OLD_FILES+=/usr/share/man/man8/cvsbug.8.gz
