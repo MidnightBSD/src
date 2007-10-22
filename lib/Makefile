@@ -1,10 +1,12 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
+# $MidnightBSD$
 
 # To satisfy shared library or ELF linkage when only the libraries being
 # built are visible:
 #
 # csu must be built before all shared libaries for ELF.
+# libc must be built before all other shared libraries.
 # libcom_err must be built before libkrb5 and libpam.
 # libcrypt must be built before libkrb5 and libpam.
 # libkvm must be built before libdevstat.
@@ -20,12 +22,13 @@
 # libutil must be built before libpam.
 # libypclnt must be built before libpam.
 # libpthread must be built before libsqlite3
+# libbz2 must be built before libarchive
 # Otherwise, the SUBDIR list should be in alphabetical order.
 
-SUBDIR=	${_csu} libcom_err libcrypt libkvm msun libmd libncurses \
+SUBDIR=	${_csu} libc ${_libc_r} libcom_err libcrypt libkvm msun libmd libncurses \
 	libnetgraph libradius librpcsvc libsbuf libtacplus libutil \
-	${_libypclnt} libalias libarchive ${_libatm} \
-	libbegemot ${_libbluetooth} libbsnmp libbz2 libc ${_libc_r} \
+	${_libypclnt} libalias libbz2 libarchive ${_libatm} \
+	libbegemot ${_libbluetooth} libbsnmp \
 	libcalendar libcam libcompat libdevinfo libdevstat ${_libdisk} \
 	libedit libexpat libfetch libform libftpio libgeom ${_libgpib} \
 	${_libio} libipsec \
