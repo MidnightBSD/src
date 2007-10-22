@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/csu/Makefile,v 1.2 2007/07/26 20:27:46 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/csu/Makefile,v 1.24 2004/09/10 06:48:04 ru Exp $
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
@@ -31,7 +31,7 @@ CFLAGS+=	-include osreldate.h
 TGTOBJS=	crtsavres.o
 SRCS+=		crtsavres.asm
 .endif
-.if ${MACHINE_ARCH} == "alpha" || ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_ARCH} == "sparc64"
 TGTOBJS=	crtfastmath.o
 SRCS+=		crtfastmath.c
 .endif
