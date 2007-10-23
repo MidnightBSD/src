@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/Makefile,v 1.3 2007/10/22 04:12:39 laffer1 Exp $
 
 # To satisfy shared library or ELF linkage when only the libraries being
 # built are visible:
@@ -72,7 +72,11 @@ _libvgl=	libvgl
 _libc_r=	libc_r
 .endif
 
+.if ${MACHINE_ARCH} != "arm"
+_libdisk=	libdisk
+.endif
 
+_libio=	libio
 
 .if !defined(NO_SENDMAIL)
 _libmilter=	libmilter
@@ -98,6 +102,9 @@ _libpthread=	libpthread
 _libthr= libthr
 .endif
 
+.if ${MACHINE_ARCH} != "arm" && ${MACHINE_ARCH} != "powerpc"
+_libthread_db= libthread_db
+.endif
 
 .if !defined(NO_USB)
 _libusbhid=	libusbhid
