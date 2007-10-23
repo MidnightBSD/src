@@ -1,9 +1,8 @@
 #!/bin/sh
-# $MirOS: src/bin/mksh/Build.sh,v 1.261 2007/09/10 20:16:47 tg Exp $
+# $MirOS: src/bin/mksh/Build.sh,v 1.271 2007/10/14 13:31:01 tg Exp $
 #-
 # Environment used: CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF TARGET_OS
-# CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NEED_MKNOD MKSH_NOPWNAM
-#			MKSH_NOVI
+# CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NOPWNAM MKSH_NOVI
 
 v() {
 	$e "$*"
@@ -38,6 +37,7 @@ ao=
 fx=
 me=`basename "$0"`
 orig_CFLAGS=$CFLAGS
+NEED_ARC4RANDOM=0
 
 if test -t 1; then
 	bi='[1m'
@@ -120,9 +120,9 @@ ac_testn() {
 	test x"$tcfn" = x"no" && test -f a.out && tcfn=a.out
 	test x"$tcfn" = x"no" && test -f a.exe && tcfn=a.exe
 	if test -f $tcfn; then
-		test $fr = 1 || fv=1
+		test 1 = $fr || fv=1
 	else
-		test $fr = 0 || fv=1
+		test 0 = $fr || fv=1
 	fi
 	rm -f scn.c scn.o $tcfn
 	ac_testdone
@@ -155,7 +155,7 @@ ac_flags() {
 	test x"$ft" = x"" && ft="if $f can be used"
 	save_CFLAGS=$CFLAGS
 	CFLAGS="$CFLAGS $f"
-	if test $hf = 1; then
+	if test 1 = $hf; then
 		ac_testn can_$vn '' "$ft"
 	else
 		ac_testn can_$vn '' "$ft" <<-'EOF'
@@ -184,7 +184,7 @@ ac_header() {
 	echo 'int main(void) { return (0); }' >>x
 	ac_testn "$hv" "" "<$hf>" <x
 	rm -f x
-	test $na = 1 || ac_cppflags
+	test 1 = $na || ac_cppflags
 }
 
 addsrcs() {
@@ -210,10 +210,14 @@ e=echo
 h=1
 r=0
 eq=0
+pm=0
 
 for i
 do
 	case $i in
+	-j)
+		pm=1
+		;;
 	-Q)
 		eq=1
 		;;
@@ -234,7 +238,7 @@ done
 SRCS="alloc.c edit.c eval.c exec.c expr.c funcs.c histrap.c"
 SRCS="$SRCS jobs.c lex.c main.c misc.c shf.c syn.c tree.c var.c"
 
-test $r = 0 && echo | $NROFF -v 2>&1 | grep GNU >/dev/null 2>&1 && \
+test 0 = $r && echo | $NROFF -v 2>&1 | grep GNU >/dev/null 2>&1 && \
     NROFF="$NROFF -c"
 if test x"$srcdir" = x"."; then
 	CPPFLAGS="-I. $CPPFLAGS"
@@ -307,7 +311,7 @@ OSF1)
 	;;
 Plan9)
 	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_LIMITS_EXTENSION"
-	CPPFLAGS="$CPPFLAGS -D_BSD_EXTENSION -D_SUSV2_SOURCE -D__Plan9__"
+	CPPFLAGS="$CPPFLAGS -D_BSD_EXTENSION -D_SUSV2_SOURCE"
 	warn=' and will currently not work'
 	;;
 PW32*)
@@ -364,6 +368,8 @@ cat >scn.c <<-'EOF'
 	ct=dmc
 	#elif defined(_MSC_VER)
 	ct=msc
+	#elif defined(__PCC__)
+	ct=pcc
 	#elif defined(__TenDRA__)
 	ct=tendra
 	#elif defined(__TINYC__)
@@ -378,11 +384,11 @@ cat >scn.c <<-'EOF'
 EOF
 ct=unknown
 eval 'v "$CPP scn.c | grep ct= | tr -d \\\\015 >x" 2>&'$h | sed 's/^/] /'
-test $h = 1 && sed 's/^/[ /' x
+test 1 = $h && sed 's/^/[ /' x
 eval `cat x`
 rm -f x
 case $ct in
-bcc|dmc|gcc|hpcc|icc|msc|sunpro|tcc|tendra|xlc) ;;
+bcc|dmc|gcc|hpcc|icc|msc|pcc|sunpro|tcc|tendra|xlc) ;;
 *) ct=unknown ;;
 esac
 $e "$bi==> which compiler we seem to use...$ao $ui$ct$ao"
@@ -413,32 +419,32 @@ ac_testn couldbe_tcc '!' compiler_known 0 'if this could be tcc' <<-EOF
 	#endif
 	int main(void) { return (0); }
 EOF
-if test $HAVE_COULDBE_TCC = 1; then
+if test 1 = $HAVE_COULDBE_TCC; then
 	ct=tcc
 	CPP='cpp -D__TINYC__'
 fi
 ac_testn compiler_fails '' 'if the compiler does not fail correctly' <<-EOF
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 EOF
-if test $HAVE_COMPILER_FAILS = 1; then
+if test 1 = $HAVE_COMPILER_FAILS; then
 	save_CFLAGS=$CFLAGS
 	if test $ct = dmc; then
 		CFLAGS="$CFLAGS ${ccpl}/DELEXECUTABLE"
 		ac_testn can_delexe compiler_fails 0 'for the /DELEXECUTABLE linker option' <<-EOF
 			int main(void) { return (0); }
 		EOF
-		test $HAVE_CAN_DELEXE = 1 || CFLAGS=$save_CFLAGS
+		test 1 = $HAVE_CAN_DELEXE || CFLAGS=$save_CFLAGS
 	else
 		CFLAGS="$CFLAGS ${ccpl}+k"
 		ac_testn can_plusk compiler_fails 0 'for the +k linker option' <<-EOF
 			int main(void) { return (0); }
 		EOF
-		test $HAVE_CAN_PLUSK = 1 || CFLAGS=$save_CFLAGS
+		test 1 = $HAVE_CAN_PLUSK || CFLAGS=$save_CFLAGS
 	fi
 	ac_testn compiler_still_fails '' 'if the compiler still does not fail correctly' <<-EOF
 		int main(void) { return (thiswillneverbedefinedIhope()); }
 	EOF
-	test $HAVE_COMPILER_STILL_FAILS = 1 && exit 1
+	test 1 = $HAVE_COMPILER_STILL_FAILS && exit 1
 fi
 
 if test $ct = sunpro; then
@@ -546,7 +552,7 @@ elif test $ct = xlc; then
 	#ac_flags 1 wp64 -qwarn64	# too verbose for now
 elif test $ct = tendra; then
 	ac_flags 0 ysystem -Ysystem
-	test $HAVE_CAN_YSYSTEM = 1 && CPPFLAGS="-Ysystem $CPPFLAGS"
+	test 1 = $HAVE_CAN_YSYSTEM && CPPFLAGS="-Ysystem $CPPFLAGS"
 	ac_flags 1 extansi -Xa
 elif test $ct = tcc; then
 	ac_flags 1 boundschk -b
@@ -626,7 +632,7 @@ if test 0 = $HAVE_MKSH_FULL; then
 		ac_flags 1 fnoinline -fno-inline
 	fi
 
-	: ${HAVE_SETLOCALE_CTYPE=0}
+	: ${HAVE_MKNOD=0} ${HAVE_SETLOCALE_CTYPE=0}
 	check_categories=$check_categories,smksh
 	test 0 = $HAVE_MKSH_DEFUTF8 || check_categories=$check_categories,dutf
 fi
@@ -642,42 +648,49 @@ ac_header libgen.h
 ac_header libutil.h
 ac_header paths.h
 ac_header stdbool.h
-ac_header '!' stdint.h stdarg.h
 ac_header grp.h sys/types.h
 ac_header ulimit.h
 ac_header values.h
 
-ac_testn can_inttypes '!' stdint_h 1 "if we have standard integer types" <<-'EOF'
+ac_header '!' stdint.h stdarg.h
+ac_testn can_inttyp32 '!' stdint_h 1 "if we have standard 32-bit integer types" <<-'EOF'
 	#include <sys/types.h>
-	int main(int ac, char **av) { uint32_t x = (uint32_t)**av;
-		return (x == (u_int32_t)ac);
+	int main(int ac, char **av) { return ((uint32_t)*av + (int32_t)ac); }
+EOF
+ac_testn can_inttyb32 '!' can_inttyp32 1 "if we have UCB 32-bit integer types" <<-'EOF'
+	#include <sys/types.h>
+	int main(int ac, char **av) { return ((u_int32_t)*av + (int32_t)ac); }
+EOF
+ac_testn can_inttyp64 '!' stdint_h 1 "if we have standard 64-bit integer types" <<-'EOF'
+	#include <sys/types.h>
+	int main(void) { return ((int)(uint64_t)0); }
+EOF
+ac_testn can_inttyb64 '!' can_inttyp64 1 "if we have UCB 64-bit integer types" <<-'EOF'
+	#include <sys/types.h>
+	int main(void) { return ((int)(u_int64_t)0); }
+EOF
+ac_testn can_uinttypes '!' stdint_h 1 "if we have u_char, u_int, u_long" <<-'EOF'
+	#include <sys/types.h>
+	int main(int ac, char **av) { u_int x = (u_int)**av;
+		return (x == (u_int)(u_long)(u_char)ac);
 	}
 EOF
-if test 0 = $HAVE_CAN_INTTYPES; then
-	ac_testn can_inttypes2 '' "if we have u_char, u_int, u_long" <<-'EOF'
-		#include <sys/types.h>
-		int main(int ac, char **av) { u_int x = (u_int)**av;
-			return (x == (u_int)(u_long)(u_char)ac);
-		}
-	EOF
-	cat >stdint.h <<-'EOF'
-		typedef signed char int8_t;
-		typedef signed short int16_t;
-		typedef signed int int32_t;
-		typedef signed long long int64_t;
-		typedef unsigned char uint8_t;
-		typedef unsigned short uint16_t;
-		typedef unsigned int uint32_t;
-		typedef unsigned long long uint64_t;
-		typedef unsigned int u_int32_t;
-	EOF
-	test 1 = $HAVE_CAN_INTTYPES2 || cat >>stdint.h <<-'EOF'
-		typedef unsigned char u_char;
-		typedef unsigned int u_int;
-		typedef unsigned long u_long;
-	EOF
-	HAVE_STDINT_H=1
-fi
+case $HAVE_CAN_INTTYP32$HAVE_CAN_INTTYB32 in
+01)	HAVE_U_INT32_T=1
+	echo 'typedef u_int32_t uint32_t;' >>stdint.h ;;
+00)	echo 'typedef signed int int32_t;' >>stdint.h
+	echo 'typedef unsigned int uint32_t;' >>stdint.h ;;
+esac
+case $HAVE_CAN_INTTYP64$HAVE_CAN_INTTYB64 in
+01)	echo 'typedef u_int64_t uint64_t;' >>stdint.h ;;
+00)	echo 'typedef unsigned long long uint64_t;' >>stdint.h ;;
+esac
+test 1 = $HAVE_CAN_UINTTYPES || cat >>stdint.h <<-'EOF'
+	typedef unsigned char u_char;
+	typedef unsigned int u_int;
+	typedef unsigned long u_long;
+EOF
+test -f stdint.h && HAVE_STDINT_H=1
 ac_cppflags STDINT_H
 
 #
@@ -742,6 +755,15 @@ fi
 
 ac_cppflags SIG_T
 
+ac_testn u_int32_t <<-'EOF'
+	#include <sys/types.h>
+	#if HAVE_STDINT_H
+	#include <stdint.h>
+	#endif
+	int main(void) { return ((int)(u_int32_t)0); }
+EOF
+test 1 = $HAVE_U_INT32_T || CPPFLAGS="$CPPFLAGS -Du_int32_t=uint32_t"
+
 #
 # Environment: signals
 #
@@ -782,12 +804,15 @@ ac_testn arc4random <<-'EOF'
 	int main(void) { return (arc4random()); }
 EOF
 
-if test $HAVE_ARC4RANDOM = 0 && test -f "$srcdir/arc4random.c"; then
+save_LIBS=$LIBS
+if test 0 = $HAVE_ARC4RANDOM && test -f "$srcdir/arc4random.c"; then
 	ac_header sys/sysctl.h
 	addsrcs HAVE_ARC4RANDOM arc4random.c
 	HAVE_ARC4RANDOM=1
-	HAVE_ARC4RANDOM_DECL=0
-	HAVE_ARC4RANDOM_PUSH=0
+	# ensure isolation of source directory from build directory
+	test -f arc4random.c || cp "$srcdir/arc4random.c" .
+	NEED_ARC4RANDOM=1
+	LIBS="$LIBS arc4random.c"
 fi
 ac_cppflags ARC4RANDOM
 
@@ -799,6 +824,7 @@ ac_test arc4random_pushb arc4random 0 <<-'EOF'
 	extern uint32_t arc4random_pushb(void *, size_t);
 	int main(int ac, char *av[]) { return (arc4random_pushb(*av, ac)); }
 EOF
+LIBS=$save_LIBS
 
 ac_test flock_ex '' 'flock and mmap' <<-'EOF'
 	#include <sys/types.h>
@@ -825,9 +851,6 @@ EOF
 ac_test mknod '' 'if we use mknod(), makedev() and friends' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
-	#if defined(MKSH_SMALL) && !defined(MKSH_NEED_MKNOD)
-	#error We do not want to include the mknod builtin.
-	#endif
 	int main(int ac, char *av[]) {
 		dev_t dv;
 		dv = makedev(ac, 1);
@@ -882,6 +905,8 @@ EOF
 #
 # check headers for declarations
 #
+save_LIBS=$LIBS
+test 1 = $NEED_ARC4RANDOM && LIBS="$LIBS arc4random.c"
 ac_test '!' arc4random_decl arc4random 1 'if arc4random() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -894,6 +919,7 @@ ac_test '!' arc4random_pushb_decl arc4random_pushb 1 'if arc4random_pushb() does
 	int arc4random_pushb(char, int); /* this clashes if defined before */
 	int main(int ac, char *av[]) { return (arc4random_pushb(**av, ac)); }
 EOF
+LIBS=$save_LIBS
 ac_test sys_siglist_decl sys_siglist 1 'if sys_siglist[] does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -953,7 +979,7 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 	*[\ \(\)+-]*) NSIG=`awk "BEGIN { print $NSIG }"` ;;
 	esac
 	NSIG=`printf %d "$NSIG" 2>/dev/null`
-	test $h = 1 && printf "NSIG=$NSIG ... "
+	test 1 = $h && printf "NSIG=$NSIG ... "
 	signames="ABRT ALRM BUS CHLD CLD CONT EMT FPE HUP ILL INFO INT IO IOT"
 	signames="$signames KILL PIPE PROF PWR QUIT SAK SEGV STOP SYS TERM"
 	signames="$signames TRAP TSTP TTIN TTOU URG USR1 USR2 WINCH XCPU XFSZ"
@@ -973,7 +999,7 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 		*:$nr:*) ;;
 		*)	echo "		{ $nr, \"$name\" },"
 			sigseen=$sigseen$nr:
-			test $h = 1 && printf "$name=$nr " >&2
+			test 1 = $h && printf "$name=$nr " >&2
 			;;
 		esac
 	done 2>&1 >signames.inc
@@ -1001,24 +1027,32 @@ for file in $SRCS; do
 	echo "$CC $CFLAGS $CPPFLAGS -c $file || exit 1" >>Rebuild.sh
 done
 echo "$CC $CFLAGS $LDFLAGS -o mksh $objs $LIBS" >>Rebuild.sh
-test $ct = msc || echo 'test $? = 0 || exit 1' >>Rebuild.sh
+test $ct = msc || echo 'test 0 = $? || exit 1' >>Rebuild.sh
 echo 'result=mksh; test -f mksh.exe && result=mksh.exe' >>Rebuild.sh
 echo 'test -f $result || exit 1; size $result' >>Rebuild.sh
-for file in $SRCS; do
-	test -f $file || file=$srcdir/$file
-	v "$CC $CFLAGS $CPPFLAGS -c $file" || exit 1
-done
+if test 1 = $pm; then
+	for file in $SRCS; do
+		test -f $file || file=$srcdir/$file
+		v "$CC $CFLAGS $CPPFLAGS -c $file" &
+	done
+	wait
+else
+	for file in $SRCS; do
+		test -f $file || file=$srcdir/$file
+		v "$CC $CFLAGS $CPPFLAGS -c $file" || exit 1
+	done
+fi
 v "$CC $CFLAGS $LDFLAGS -o mksh $objs $LIBS"
-rv=$?; test $ct = msc -o $rv = 0 || exit 1
+rv=$?; test $ct = msc || test 0 = $rv || exit 1
 result=mksh
 test -f mksh.exe && result=mksh.exe
 test -f $result || exit 1
-test $r = 1 || v "$NROFF -mdoc <'$srcdir/mksh.1' >mksh.cat1" || \
+test 1 = $r || v "$NROFF -mdoc <'$srcdir/mksh.1' >mksh.cat1" || \
     rm -f mksh.cat1
-test $eq = 0 && test $h = 1 && v size $result
+test 0 = $eq && test 1 = $h && v size $result
 i=install
 test -f /usr/ucb/$i && i=/usr/ucb/$i
-test $eq = 1 && e=:
+test 1 = $eq && e=:
 $e
 $e Installing the shell:
 $e "# $i -c -s -o root -g bin -m 555 mksh /bin/mksh"
@@ -1035,3 +1069,4 @@ $e "# $i -c -o root -g bin -m 444 mksh.1 /usr/share/man/man1/mksh.1"
 $e
 $e Run the regression test suite: ./test.sh
 $e Please also read the sample file dot.mkshrc and the fine manual.
+exit 0
