@@ -16470,10 +16470,6 @@ lib/bind/isccfg/Makefile -text
 lib/bind/lwres/Makefile -text
 lib/bind/lwres/lwres/netdb.h -text
 lib/bind/lwres/lwres/platform.h -text
-lib/csu/alpha/Makefile -text
-lib/csu/alpha/crt1.c -text
-lib/csu/alpha/crti.S -text
-lib/csu/alpha/crtn.S -text
 lib/csu/amd64/Makefile -text
 lib/csu/amd64/crt1.c -text
 lib/csu/amd64/crti.S -text
