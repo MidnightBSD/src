@@ -18716,12 +18716,6 @@ lib/libgeom/libgeom.h -text
 lib/libgpib/Makefile -text
 lib/libgpib/gpib.h -text
 lib/libgpib/ibfoo.c -text
-lib/libio/Makefile -text
-lib/libio/alpha_sethae.c -text
-lib/libio/bwx.c -text
-lib/libio/io.c -text
-lib/libio/io.h -text
-lib/libio/swiz.c -text
 lib/libipsec/Makefile -text
 lib/libipsec/ipsec_dump_policy.c -text
 lib/libipsec/ipsec_get_policylen.c -text

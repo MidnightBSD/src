@@ -1,9 +1,9 @@
 # $FreeBSD: src/lib/libarchive/Makefile,v 1.77 2007/07/15 19:10:34 kientzle Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libarchive/Makefile,v 1.3 2007/09/29 22:13:40 ctriv Exp $
 
 LIB=	archive
-DPADD=	${LIBBZ2} ${LIBZ}
-LDADD=	-lbz2 -lz
+#DPADD=	${LIBBZ2} ${LIBZ}
+#LDADD=	-lbz2 -lz
 
 # The libarchive version stamp.
 # Version is three numbers:
