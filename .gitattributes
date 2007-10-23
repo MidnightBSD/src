@@ -9666,9 +9666,10 @@ contrib/ncurses/test/tracemunch -text
 contrib/ncurses/test/view.c -text
 contrib/ncurses/test/worm.c -text
 contrib/ncurses/test/xmas.c -text
-contrib/netcat/FREEBSD-Xlist -text
-contrib/netcat/FREEBSD-upgrade -text
+contrib/netcat/MIDNIGHTBSD-Xlist -text
+contrib/netcat/MIDNIGHTBSD-upgrade -text
 contrib/netcat/atomicio.c -text
+contrib/netcat/atomicio.h -text
 contrib/netcat/nc.1 -text
 contrib/netcat/netcat.c -text
 contrib/netcat/socks.c -text

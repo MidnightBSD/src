@@ -1,7 +1,10 @@
-$FreeBSD: src/contrib/netcat/FREEBSD-upgrade,v 1.1 2005/02/06 15:26:44 delphij Exp $
+$MidnightBSD$
+
+These are the original FreeBSD import instructions.  We currently
+don't have a vendor branch for this.
 
 1. Export from OpenBSD's nc(1) into an empty directory (say "v-nc").
-2. while read pattern; do rm ${pattern} ; done < FREEBSD-Xlist
+2. while read pattern; do rm ${pattern} ; done < MIDNIGHTBSD-Xlist
 3. Checkout our contrib/netcat to another directory (say "f-nc"),
    with -rOPENBSD, and usr.bin/nc to its ../../
 4. copy the files from v-nc to f-nc
@@ -14,4 +17,3 @@ $FreeBSD: src/contrib/netcat/FREEBSD-upgrade,v 1.1 2005/02/06 15:26:44 delphij E
 	cvs import src/contrib/netcat OPENBSD OPENBSD_<date>
 9. Resolve the conflicits with the patchset obtained in step 6.
 
-delphij@FreeBSD.org - 06 Feb 2005
