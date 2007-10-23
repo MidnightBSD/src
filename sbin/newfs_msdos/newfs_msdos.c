@@ -32,7 +32,7 @@ static const char rcsid[] =
 
 #include <ctype.h>
 
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sbin/newfs_msdos/newfs_msdos.c,v 1.2 2007/10/09 02:15:42 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/fdcio.h>
@@ -686,7 +686,7 @@ main(int argc, char *argv[])
 	    /* The I/O buffer was partially full; write it out before exit */
 	    if ((n = write(fd, io_buffer, img-io_buffer)) == -1)
                 err(1, "%s", fname);
-	    if ((unsigned)n != (img-io_buffer))
+	    if (n < 0 || n != (img-io_buffer))
 		errx(1, "%s: can't write sector %u", fname, lsn);
 	}
     }
