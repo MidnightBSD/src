@@ -2,10 +2,10 @@
 #
 # $NetBSD: bootconf.sh,v 1.5 2002/03/25 03:22:10 wiz Exp $
 # $FreeBSD: src/etc/rc.d/bootconf.sh,v 1.4 2002/10/12 10:31:31 schweikh Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/bootconf.sh,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 
 # PROVIDE: bootconf
-# REQUIRE: mountcritlocal
+# REQUIRE: FILESYSTEMS
 
 bootconf_start()
 {

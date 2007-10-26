@@ -25,10 +25,10 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/geli2,v 1.1.2.1 2005/08/16 09:20:32 pjd Exp $
-# $MidnightBSD$ 
+# $MidnightBSD: src/etc/rc.d/geli2,v 1.2 2006/08/28 02:47:45 laffer1 Exp $ 
 
 # PROVIDE: geli2
-# REQUIRE: mountcritlocal
+# REQUIRE: FILESYSTEMS
 # KEYWORD: nojail
 
 . /etc/rc.subr

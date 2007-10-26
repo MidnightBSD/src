@@ -1,10 +1,10 @@
 # $NetBSD: Makefile,v 1.16 2001/01/14 15:37:22 minoura Exp $
 # $FreeBSD: src/etc/rc.d/Makefile,v 1.53.2.8 2006/02/12 22:13:15 flz Exp $
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.6 2007/08/06 00:23:51 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.7 2007/10/14 19:15:48 laffer1 Exp $ 
 
-FILES=	DAEMON LOGIN NETWORKING SERVERS \
+FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
-	apm apmd archdep atm1 atm2 atm3 \
+	apm apmd archdep atm1 atm2 atm3 auto_linklocal \
 	bgfsck bluetooth bootparams bsnmpd \
 	ccd cleanvar cleartmp cron \
 	devd devfs dhclient \

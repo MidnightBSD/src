@@ -1,11 +1,11 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/adjkerntz,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/adjkerntz,v 1.5 2004/10/07 13:55:25 mtm Exp $
 #
 
 # PROVIDE: adjkerntz
-# REQUIRE: mountcritlocal random
+# REQUIRE: FILESYSTEMS random
 # BEFORE: netif
 # KEYWORD: nojail
 

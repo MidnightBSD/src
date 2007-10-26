@@ -2,10 +2,10 @@
 #
 # $NetBSD: ipfilter,v 1.10 2001/02/28 17:03:50 lukem Exp $
 # $FreeBSD: src/etc/rc.d/ipfilter,v 1.24 2005/07/07 05:59:44 jkim Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/ipfilter,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: ipfilter
-# REQUIRE: root mountcritlocal
+# REQUIRE: FILESYSTEMS
 # BEFORE:  netif
 # KEYWORD: nojail
 
