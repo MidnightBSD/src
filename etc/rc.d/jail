@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/jail,v 1.23.2.2 2005/08/16 08:43:06 pjd Exp $
-# $MidnightBSD: src/etc/rc.d/jail,v 1.3 2007/01/13 14:50:21 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/jail,v 1.4 2007/01/24 00:59:09 laffer1 Exp $
 
 # PROVIDE: jail
 # REQUIRE: LOGIN cleanvar
@@ -228,7 +228,7 @@ jail_mount_fstab()
 			warn "${_mountpt} has symlink as parent - not mounting from ${jail_fstab}"
 			return
 		fi
-	done <${_fstab}
+	done <${jail_fstab}
 	mount -a -F "${jail_fstab}"
 }
 
