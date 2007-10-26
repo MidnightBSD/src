@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/syscons,v 1.13.2.2 2006/03/21 19:42:32 emax Exp $
-# $MidnightBSD: src/etc/rc.d/syscons,v 1.3 2007/01/08 00:30:12 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/syscons,v 1.4 2007/10/26 15:27:08 laffer1 Exp $
 #
 
 # PROVIDE: syscons
@@ -214,7 +214,7 @@ syscons_start()
 		;;
 	*)
 		echo -n ' screensaver'
-		for i in `kldstat | awk '$5 ~ "^splash_.*$" { print $5 }'`; do
+		for i in `kldstat | awk '$5 ~ "_saver\.ko$" { print $5 }'`; do
 			kldunload ${i}
 		done
 		kldstat -v | grep -q _saver || kldload ${saver}_saver
