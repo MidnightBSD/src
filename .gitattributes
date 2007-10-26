@@ -15455,6 +15455,7 @@ etc/protocols -text
 etc/rc -text
 etc/rc.bsdextended -text
 etc/rc.d/DAEMON -text
+etc/rc.d/FILESYSTEMS -text
 etc/rc.d/LOGIN -text
 etc/rc.d/Makefile -text
 etc/rc.d/NETWORKING -text
