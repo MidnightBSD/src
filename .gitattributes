@@ -15470,6 +15470,7 @@ etc/rc.d/archdep -text
 etc/rc.d/atm1 -text
 etc/rc.d/atm2 -text
 etc/rc.d/atm3 -text
+etc/rc.d/auto_linklocal -text
 etc/rc.d/bgfsck -text
 etc/rc.d/bluetooth -text
 etc/rc.d/bootconf.sh -text
