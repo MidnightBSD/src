@@ -24,11 +24,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/resolv,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/resolv,v 1.35.2.1 2005/12/21 07:11:34 dougb Exp $
 #
 
 # PROVIDE: resolv
+# REQUIRE: netif
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -42,15 +43,15 @@ load_rc_config $name
 #
 if [ ! -e /etc/resolv.conf -a \
     -n "`/bin/kenv dhcp.domain-name-servers 2> /dev/null`" ]; then
-	/bin/cat /dev/null > /etc/resolv.conf
+	> /etc/resolv.conf
 
 	if [ -n "`/bin/kenv dhcp.domain-name 2> /dev/null`" ]; then
 		echo domain `/bin/kenv dhcp.domain-name` > /etc/resolv.conf
 	fi
 
-        set -- `/bin/kenv dhcp.domain-name-servers`
-        for ns in `IFS=','; echo $*`; do
-                echo nameserver $ns >> /etc/resolv.conf;
-        done
+	set -- `/bin/kenv dhcp.domain-name-servers`
+	for ns in `IFS=','; echo $*`; do
+		echo nameserver $ns >> /etc/resolv.conf;
+	done
 fi
 
