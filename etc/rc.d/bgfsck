@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/bgfsck,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/bgfsck,v 1.6.2.1 2005/12/15 16:46:02 obrien Exp $
 #
 
@@ -17,11 +17,23 @@ stop_cmd=":"
 
 bgfsck_start ()
 {
+	if [ -z "${rc_force}" ]; then
+		background_fsck_delay=${background_fsck_delay:=0}
+	else
+		background_fsck_delay=0
+	fi
+	if [ ${background_fsck_delay} -lt 0 ]; then
+		echo "Background file system checks delayed indefinitly"
+		return 0
+	fi
+
 	bgfsck_msg='Starting background file system checks'
-	if [ ${background_fsck_delay:=0} -gt 0 ]; then
+	if [ "${background_fsck_delay}" -gt 0 ]; then
 		bgfsck_msg="${bgfsck_msg} in ${background_fsck_delay} seconds"
 	fi
-	echo "${bgfsck_msg}."
+	if [ -z "${rc_force}" ]; then
+		echo "${bgfsck_msg}."
+	fi
 
 	(sleep ${background_fsck_delay}; nice -4 fsck -B -p) 2>&1 | \
 	    logger -p daemon.notice -t fsck &
