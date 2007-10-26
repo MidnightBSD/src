@@ -2,10 +2,10 @@
 #
 # $NetBSD: ipmon,v 1.9 2002/04/18 05:02:01 lukem Exp $
 # $FreeBSD: src/etc/rc.d/ipmon,v 1.13.2.1 2005/12/16 01:42:54 dougb Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/ipmon,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: ipmon
-# REQUIRE: mountcritlocal hostname sysctl cleanvar ipfilter
+# REQUIRE: FILESYSTEMS hostname sysctl cleanvar ipfilter
 # BEFORE:  SERVERS
 # KEYWORD: nojail
 

@@ -1,11 +1,11 @@
 #!/bin/sh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/pfsync,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/pfsync,v 1.1.2.1 2005/10/08 03:32:54 yar Exp $
 #
 
 # PROVIDE: pfsync
-# REQUIRE: root mountcritlocal netif
+# REQUIRE: FILESYSTEMS netif
 # KEYWORD: nojail
 
 . /etc/rc.subr

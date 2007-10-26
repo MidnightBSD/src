@@ -5,12 +5,12 @@
 #
 # Arguments: 0x00 (AC offline, economy) or 0x01 (AC online, performance)
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/power_profile,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/power_profile,v 1.7.2.1 2005/12/15 16:47:06 obrien Exp $
 #
 
 # PROVIDE: power_profile
-# REQUIRE: mountcritlocal syslogd
+# REQUIRE: FILESYSTEMS syslogd
 # KEYWORD: nojail nostart
 
 . /etc/rc.subr

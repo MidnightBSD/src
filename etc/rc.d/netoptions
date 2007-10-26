@@ -1,10 +1,10 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/netoptions,v 1.141 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/netoptions,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
 
 # PROVIDE: netoptions
-# REQUIRE: localpkg
+# REQUIRE: FILESYSTEMS
 # BEFORE:  securelevel
 # KEYWORD: nojail
 
