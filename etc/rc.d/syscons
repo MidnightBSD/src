@@ -25,7 +25,7 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/syscons,v 1.13.2.2 2006/03/21 19:42:32 emax Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/syscons,v 1.3 2007/01/08 00:30:12 laffer1 Exp $
 #
 
 # PROVIDE: syscons
@@ -113,7 +113,7 @@ syscons_setkeyboard()
 
 	# Check if the kbdmux(4) is the current active keyboard
 	kbdcontrol -i < ${kbddev} | grep kbdmux > /dev/null 2>&1
-	if [ $? != 0 ]; then
+	if [ $? -ne 0 ]; then
 		kbdcontrol -k ${kbd} < ${kbddev} > /dev/null 2>&1
 	fi
 
