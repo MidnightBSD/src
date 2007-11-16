@@ -102,6 +102,10 @@ struct ata_connect_task {
 #define ATA_ATI_IXP300_S1       0x436e1002
 #define ATA_ATI_IXP400_S1       0x43791002
 #define ATA_ATI_IXP400_S2       0x437a1002
+#define ATA_ATI_IXP600_S1       0x43801002
+#define ATA_ATI_IXP600          0x438c1002
+#define ATA_ATI_IXP700_S1       0x43901002
+#define ATA_ATI_IXP700          0x439c1002
 
 #define ATA_CENATEK_ID          0x16ca
 #define ATA_CENATEK_ROCKET      0x000116ca
@@ -421,6 +425,7 @@ struct ata_connect_task {
 #define VIABUG          0x0200
 #define VIABAR          0x0400
 #define VIAAHCI         0x0800
+#define ATISINGLE       0x1000
 
 
 /* global prototypes ata-pci.c */

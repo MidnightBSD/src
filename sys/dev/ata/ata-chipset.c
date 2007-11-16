@@ -1383,12 +1383,16 @@ ata_ati_ident(device_t dev)
     struct ata_pci_controller *ctlr = device_get_softc(dev);
     struct ata_chip_id *idx;
     static struct ata_chip_id ids[] =
-    {{ ATA_ATI_IXP200,    0x00, 0,        0, ATA_UDMA5, "IXP200" },
-     { ATA_ATI_IXP300,    0x00, 0,        0, ATA_UDMA6, "IXP300" },
-     { ATA_ATI_IXP400,    0x00, 0,        0, ATA_UDMA6, "IXP400" },
-     { ATA_ATI_IXP300_S1, 0x00, SIIMEMIO, 0, ATA_SA150, "IXP300" },
-     { ATA_ATI_IXP400_S1, 0x00, SIIMEMIO, 0, ATA_SA150, "IXP400" },
-     { ATA_ATI_IXP400_S2, 0x00, SIIMEMIO, 0, ATA_SA150, "IXP400" },
+    {{ ATA_ATI_IXP200,    0x00, 0,        0,         ATA_UDMA5, "IXP200" },
+     { ATA_ATI_IXP300,    0x00, 0,        0,         ATA_UDMA6, "IXP300" },
+     { ATA_ATI_IXP400,    0x00, 0,        0,         ATA_UDMA6, "IXP400" },
+     { ATA_ATI_IXP600,    0x00, 0,        ATISINGLE, ATA_UDMA6, "IXP600" },
+     { ATA_ATI_IXP700,    0x00, 0,        ATISINGLE, ATA_UDMA6, "IXP700" },
+     { ATA_ATI_IXP300_S1, 0x00, SIIMEMIO, 0,         ATA_SA150, "IXP300" },
+     { ATA_ATI_IXP400_S1, 0x00, SIIMEMIO, 0,         ATA_SA150, "IXP400" },
+     { ATA_ATI_IXP400_S2, 0x00, SIIMEMIO, 0,         ATA_SA150, "IXP400" },
+     { ATA_ATI_IXP600_S1, 0x00, 0,        AHCI,      ATA_SA300, "IXP600" },
+     { ATA_ATI_IXP700_S1, 0x00, 0,        AHCI,      ATA_SA300, "IXP700" },
      { 0, 0, 0, 0, 0, 0}};
     char buffer[64];
 
@@ -1415,6 +1419,18 @@ ata_ati_chipinit(device_t dev)
 
     if (ata_setup_interrupt(dev))
 	return ENXIO;
+
+    if (ctlr->chip->cfg2 & AHCI) {
+       ctlr->r_rid2 = PCIR_BAR(5);
+       ctlr->r_type2 = SYS_RES_MEMORY;
+       if ((ctlr->r_res2 = bus_alloc_resource_any(dev, ctlr->r_type2,
+                                                       &ctlr->r_rid2,
+                                                       RF_ACTIVE)))
+          return ata_ahci_chipinit(dev);
+    }
+
+    if (ctlr->chip->cfg2 & ATISINGLE)
+       ctlr->channels = 1;
 
     ctlr->setmode = ata_ati_setmode;
     return 0;
