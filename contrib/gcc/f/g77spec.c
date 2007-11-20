@@ -1,5 +1,5 @@
 /* Specific flags and argument handling of the Fortran front-end.
-   Copyright (C) 1997, 1999, 2000, 2001, 2002, 2003, 2004
+   Copyright (C) 1997, 1999, 2000, 2001, 2002, 2003, 2004, 2006
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -19,7 +19,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-/* $FreeBSD: src/contrib/gcc/f/g77spec.c,v 1.4 2004/07/28 05:08:31 kan Exp $ */
+/* $FreeBSD: src/contrib/gcc/f/g77spec.c,v 1.4.8.1 2006/09/07 03:52:58 obrien Exp $ */
 
 /* This file contains a filter for the main `gcc' driver, which is
    replicated for the `g77' driver by adding this filter.  The purpose
@@ -370,7 +370,7 @@ lang_specific_driver (int *in_argc, const char *const **in_argv,
 
 	case OPTION_version:
 	  printf ("GNU Fortran (GCC) %s\n", version_string);
-	  printf ("Copyright %s 2004 Free Software Foundation, Inc.\n",
+	  printf ("Copyright %s 2006 Free Software Foundation, Inc.\n",
 		  _("(C)"));
 	  printf ("\n");
 	  printf (_("\

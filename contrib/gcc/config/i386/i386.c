@@ -20,7 +20,7 @@ the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
 
-/* $FreeBSD: src/contrib/gcc/config/i386/i386.c,v 1.22 2005/06/03 04:02:20 kan Exp $ */
+/* $FreeBSD: src/contrib/gcc/config/i386/i386.c,v 1.22.2.1 2006/09/07 03:52:54 obrien Exp $ */
 
 
 #include "config.h"
@@ -4903,7 +4903,7 @@ output_set_got (rtx dest)
   if (!flag_pic || TARGET_DEEP_BRANCH_PREDICTION)
     output_asm_insn ("add{l}\t{%1, %0|%0, %1}", xops);
   else if (!TARGET_MACHO)
-    output_asm_insn ("add{l}\t{%1+[.-%a2], %0|%0, %a1+(.-%a2)}", xops);
+    output_asm_insn ("add{l}\t{%1+[.-%a2], %0|%0, %1+(.-%a2)}", xops);
 
   return "";
 }
@@ -13961,6 +13961,7 @@ ix86_expand_unop_builtin (enum insn_code icode, tree arglist,
 
   if (! target
       || GET_MODE (target) != tmode
+      || (do_load && GET_CODE (target) == MEM)
       || ! (*insn_data[icode].operand[0].predicate) (target, tmode))
     target = gen_reg_rtx (tmode);
   if (do_load)

@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/contrib/gcc/version.c,v 1.12 2005/06/03 03:52:25 kan Exp $ */
+/* $FreeBSD: src/contrib/gcc/version.c,v 1.12.2.1 2006/09/07 03:52:52 obrien Exp $ */
 #include "version.h"
 
 /* This is the string reported as the version number by all components
@@ -7,7 +6,7 @@
    please modify this string to indicate that, e.g. by putting your
    organization's name in parentheses at the end of the string.  */
 
-const char version_string[] = "3.4.4 [MidnightBSD] 20050518";
+const char version_string[] = "3.4.6 [MidnightBSD] 20060305";
 
 /* This is the location of the online document giving instructions for
    reporting bugs.  If you distribute a modified version of GCC,

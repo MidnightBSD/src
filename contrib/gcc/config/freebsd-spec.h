@@ -18,7 +18,7 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 59 Temple Place - Suite 330,
 Boston, MA 02111-1307, USA.  */
 
-/* $FreeBSD: src/contrib/gcc/config/freebsd-spec.h,v 1.19 2005/06/03 04:02:20 kan Exp $ */
+/* $FreeBSD: src/contrib/gcc/config/freebsd-spec.h,v 1.19.2.1 2006/07/11 19:13:04 obrien Exp $ */
 
 /* Common FreeBSD configuration. 
    All FreeBSD architectures should include this file, which will specify
@@ -53,16 +53,7 @@ Boston, MA 02111-1307, USA.  */
 #define FBSD_TARGET_OS_CPP_BUILTINS()					\
   do									\
     {									\
-	if (FBSD_MAJOR == 6)						\
-	  builtin_define ("__FreeBSD__=6");			       	\
-	else if (FBSD_MAJOR == 5)	       				\
-	  builtin_define ("__FreeBSD__=5");			       	\
-	else if (FBSD_MAJOR == 4)			       		\
-	  builtin_define ("__FreeBSD__=4");			       	\
-	else if (FBSD_MAJOR == 3)	       				\
-	  builtin_define ("__FreeBSD__=3");			       	\
-	else								\
-	  builtin_define ("__FreeBSD__");			       	\
+	builtin_define_with_int_value ("__FreeBSD__", FBSD_MAJOR);	\
 	builtin_define_std ("unix");					\
 	builtin_define ("__KPRINTF_ATTRIBUTE__");		       	\
 	builtin_assert ("system=unix");					\
@@ -79,7 +70,7 @@ Boston, MA 02111-1307, USA.  */
 #ifdef FREEBSD_NATIVE
 #define FBSD_NATIVE_TARGET_OS_CPP_BUILTINS()				\
   do {									\
-	builtin_define_std ("__FreeBSD_cc_version=600001");		\
+	builtin_define_with_int_value ("__FreeBSD_cc_version", FBSD_CC_VER); \
   } while (0)
 #else
 #define FBSD_NATIVE_TARGET_OS_CPP_BUILTINS()				\
