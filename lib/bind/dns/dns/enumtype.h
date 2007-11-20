@@ -1,5 +1,7 @@
+/* $FreeBSD: src/lib/bind/dns/dns/enumtype.h,v 1.2.8.1 2006/12/13 09:52:30 dougb Exp $ */
+
 /*
- * Copyright (C) 2004-2007 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -74,7 +76,6 @@ enum {
 	dns_rdatatype_tkey = 249,
 	dns_rdatatype_tsig = 250,
 	dns_rdatatype_dlv = 32769,
-	dns_rdatatype_dlv = 65323,
 	dns_rdatatype_ixfr = 251,
 	dns_rdatatype_axfr = 252,
 	dns_rdatatype_mailb = 253,
@@ -129,7 +130,6 @@ enum {
 #define dns_rdatatype_unspec	((dns_rdatatype_t)dns_rdatatype_unspec)
 #define dns_rdatatype_tkey	((dns_rdatatype_t)dns_rdatatype_tkey)
 #define dns_rdatatype_tsig	((dns_rdatatype_t)dns_rdatatype_tsig)
-#define dns_rdatatype_dlv	((dns_rdatatype_t)dns_rdatatype_dlv)
 #define dns_rdatatype_dlv	((dns_rdatatype_t)dns_rdatatype_dlv)
 #define dns_rdatatype_ixfr	((dns_rdatatype_t)dns_rdatatype_ixfr)
 #define dns_rdatatype_axfr	((dns_rdatatype_t)dns_rdatatype_axfr)
