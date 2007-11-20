@@ -4431,6 +4431,8 @@ contrib/gcc/config/frv/ulltof.c -text
 contrib/gcc/config/frv/umodi.c -text
 contrib/gcc/config/gnu.h -text
 contrib/gcc/config/gofast.h -text
+contrib/gcc/config/host-linux.c -text
+contrib/gcc/config/host-solaris.c -text
 contrib/gcc/config/i386/athlon.md -text
 contrib/gcc/config/i386/att.h -text
 contrib/gcc/config/i386/beos-elf.h -text
@@ -4767,6 +4769,8 @@ contrib/gcc/config/vxlib.c -text
 contrib/gcc/config/vxworks.h -text
 contrib/gcc/config/windiss.h -text
 contrib/gcc/config/x-interix -text
+contrib/gcc/config/x-linux -text
+contrib/gcc/config/x-solaris -text
 contrib/gcc/configure -text
 contrib/gcc/configure.ac -text
 contrib/gcc/conflict.c -text
