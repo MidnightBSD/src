@@ -1,14 +1,16 @@
-# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.3 2007/09/26 20:29:18 ctriv Exp $
-# $FreeBSD: src/gnu/lib/libgcc/Makefile,v 1.54 2004/12/21 09:33:45 ru Exp $
+# $FreeBSD: src/gnu/lib/libgcc/Makefile,v 1.54.2.1 2006/10/05 19:46:06 obrien Exp $
 
 .include "${.CURDIR}/../../usr.bin/cc/Makefile.tgt"
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 .PATH: ${GCCDIR}/config/${GCC_CPU} ${GCCDIR}
 
+# allow to be overridden for the a.out case
+.if !defined(LIB) || ${LIB} != "gcc_r"
 LIB=	gcc
-#SHLIB_NAME=	libgcc_s.so.1
-#SHLIBDIR?=	/lib
+.endif
+
+#SHLIB_MAJOR=	1
 
 # We need to install libgcc_pic.a as well, for use by shared libs.
 INSTALL_PIC_ARCHIVE=
@@ -86,12 +88,19 @@ LIB2ADDEH = unwind-dw2.c unwind-dw2-fde.c unwind-sjlj.c gthr-gnat.c unwind-c.c
 #	When upgrading GCC, get the following defintions from config/<cpu>/t-*
 #
 
+.if ${TARGET_ARCH} == "alpha"
+#	from config/alpha/t-alpha
+LIB2FUNCS_EXTRA = qrnnd.asm
+.endif
+
 .if ${TARGET_ARCH} == "arm"
 #	from config/arm/t-strongarm-elf
 CFLAGS+=	-Dinhibit_libc -fno-inline
 LIB1ASMSRC =	lib1funcs.asm
-LIB1ASMFUNCS =	_udivsi3 _divsi3 _umodsi3 _modsi3 _dvmd_tls _bb_init_func
-OBJS+=	dp-bit.o fp-bit.o
+LIB1ASMFUNCS =	_dvmd_tls _bb_init_func 
+#LIB1ASMFUNCS+=	_fixunsdfsi _addsubsf3 _addsubdf3 \
+#		_truncdfsf2 _fixdfsi _extendsfdf2 _fixsfsi _cmpdf2 _cmpsf2 \
+#		_muldivdf3 _muldivsf3
 # We want fine grained libraries, so use the new code to build the
 # floating point emulation libraries.
 XXX fix this: NEED_FP_EMULATION set to "yes" with different rules per platform
@@ -161,7 +170,7 @@ ASM_S=		${LIB1ASMFUNCS:S/$/.So/}
 
 SYMS=		${LIB2FUNCS}		\
 		${LIB2_DIVMOD_FUNCS}
-.if ${TARGET_ARCH} == "arm" || ${TARGET_ARCH} == "powerpc" || ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_ARCH} == "powerpc" || ${TARGET_ARCH} == "sparc64"
 SYMS+=		${FPBIT_FUNCS} ${DPBIT_FUNCS}
 .endif
 SYMS_ST=	${LIB2FUNCS_ST}		\

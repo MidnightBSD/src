@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/cc/cc_int/Makefile,v 1.45 2004/10/24 15:32:27 ru Exp $
+# $FreeBSD: src/gnu/usr.bin/cc/cc_int/Makefile,v 1.45.2.1 2006/09/29 01:50:03 obrien Exp $
 
 .include "../Makefile.inc"
 
@@ -78,6 +78,10 @@ insn-$F.c: ${.OBJDIR}/../cc_tools/gen$F
 
 CFLAGS+=	-DHAVE_CONFIG_H
 CFLAGS+=	-DTARGET_NAME=\"${target}\" -DIN_GCC
+
+.if ${TARGET_ARCH} == "arm" && defined(TARGET_BIG_ENDIAN)
+CFLAGS += -DTARGET_ENDIAN_DEFAULT=ARM_FLAG_BIG_END
+.endif
 
 # c-pch.o needs extra defines. Replicate the rule here rather than
 # pollute compiler command line for all other files.

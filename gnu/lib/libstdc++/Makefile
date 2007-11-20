@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/gnu/lib/libstdc++/Makefile,v 1.55.2.1 2005/07/22 17:29:02 kensmith Exp $
+# $FreeBSD: src/gnu/lib/libstdc++/Makefile,v 1.55.2.3 2006/10/05 20:57:06 obrien Exp $
 
 GCCDIR=	${.CURDIR}/../../../contrib/gcc
 SRCDIR=	${.CURDIR}/../../../contrib/libstdc++
@@ -13,6 +12,9 @@ LIB=		stdc++
 SHLIB_MAJOR=	5
 
 CFLAGS+=	-DIN_GLIBCPP_V3 -DHAVE_CONFIG_H
+.if ${MACHINE_ARCH} == "arm"
+CFLAGS+=	-D_GLIBCXX_SJLJ_EXCEPTIONS=1
+.endif
 CFLAGS+=	-I${.CURDIR} -I${SUPDIR} -I${GCCDIR} -I${SRCDIR}/include
 CFLAGS+=	-frandom-seed=RepeatabilityConsideredGood
 CXXFLAGS+=	-fno-implicit-templates -ffunction-sections -fdata-sections \
@@ -123,7 +125,7 @@ BKWHDRS=	complex.h iomanip.h istream.h ostream.h stream.h streambuf.h \
 BKWHDRS:=	${BKWHDRS:S;^;${SRCDIR}/include/backward/;}
 BKWHDRSDIR=	${CXXINCLUDEDIR}/backward
 
-EXTHDRS=	algorithm bitmap_allocator.h debug_allocator.h demangle.h \
+EXTHDRS=	algorithm bitmap_allocator.h debug_allocator.h \
 		enc_filebuf.h stdio_filebuf.h stdio_sync_filebuf.h functional \
 		hash_map hash_set iterator malloc_allocator.h memory \
 		mt_allocator.h new_allocator.h numeric pod_char_traits.h \

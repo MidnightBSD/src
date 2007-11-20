@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.81 2005/06/03 04:21:04 kan Exp $
+# $FreeBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.81.2.2 2006/09/29 01:56:01 obrien Exp $
 
 #
 # This could probably be merged with ../cc_int/Makefile, but bsd.lib.mk
@@ -47,7 +47,6 @@ OPTION_FILES=${GCCDIR}/f/lang.opt ${GCCDIR}/c.opt ${GCCDIR}/common.opt
 .ORDER: options.h options.c
 options.h options.c: opts.sh ${OPTION_FILES}
 	/bin/sh ${GCCDIR}/opts.sh mv options.c options.h ${OPTION_FILES}
-	
 
 GENSRCS+=	options.c options.h
 CLEANFILES+=	options.c options.h
@@ -152,7 +151,7 @@ tm-preds.h: genpreds
 GENSRCS+=	tm-preds.h
 
 #-----------------------------------------------------------------------
-# Gengtype 
+# Gengtype
 
 gengtype-lex.c : gengtype-lex.l
 	${LEX} -t  ${.ALLSRC} | \
@@ -214,7 +213,9 @@ CLEANFILES+=	fini
 .if ${TARGET_ARCH} == "amd64"
 TARGET_INC=	i386/biarch64.h
 .endif
+.if ${TARGET_ARCH} != "arm"
 TARGET_INC+=	${GCC_CPU}/${GCC_CPU}.h
+.endif
 .if ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
 TARGET_INC+=	${GCC_CPU}/unix.h
 TARGET_INC+=	${GCC_CPU}/att.h
@@ -233,6 +234,14 @@ TARGET_INC+=	${GCC_CPU}/elf.h
 .if exists(${GCCDIR}/config/${GCC_CPU}/sysv4.h)
 TARGET_INC+=	${GCC_CPU}/sysv4.h
 .endif
+.endif
+.if ${TARGET_ARCH} == "arm"
+TARGET_INC+=	${GCC_CPU}/elf.h
+TARGET_INC+=	${GCC_CPU}/aout.h
+TARGET_INC+=	${GCC_CPU}/${GCC_CPU}.h
+. if defined(TARGET_BIG_ENDIAN)
+CFLAGS+= -DTARGET_ENDIAN_DEFAULT=ARM_FLAG_BIG_END
+. endif
 .endif
 TARGET_INC+=	${GCC_CPU}/freebsd.h
 .if ${TARGET_ARCH} == "amd64"
@@ -498,7 +507,7 @@ genconditions.o: insn-modes.h genrtl.h
 gencodes.o: insn-modes.h genrtl.h
 genconfig.o: insn-modes.h genrtl.h
 print-rtl.o: insn-modes.h genrtl.h tm-preds.h tree-check.h
-read-rtl.o: insn-modes.h genrtl.h 
+read-rtl.o: insn-modes.h genrtl.h
 genattr.o: insn-modes.h genrtl.h
 genemit.o: insn-modes.h genrtl.h
 genflags.o: insn-modes.h genrtl.h

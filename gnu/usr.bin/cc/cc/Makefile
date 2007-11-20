@@ -1,9 +1,9 @@
-# $FreeBSD: src/gnu/usr.bin/cc/cc/Makefile,v 1.31 2004/12/21 09:59:41 ru Exp $
+# $FreeBSD: src/gnu/usr.bin/cc/cc/Makefile,v 1.31.2.1 2006/09/25 06:19:41 ru Exp $
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"
 
-.PATH: ${GCCDIR}
+.PATH: ${GCCDIR} ${GCCDIR}/doc
 
 PROG=	cc
 MAN=	gcc.1

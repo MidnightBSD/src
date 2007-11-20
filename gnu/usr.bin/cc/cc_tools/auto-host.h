@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/usr.bin/cc/cc_tools/auto-host.h,v 1.18 2004/07/28 05:27:20 kan Exp $ */
+/* $FreeBSD: src/gnu/usr.bin/cc/cc_tools/auto-host.h,v 1.18.8.1 2006/09/29 01:54:09 obrien Exp $ */
 
 #ifndef __FreeBSD_version
 #include <sys/param.h>
@@ -523,7 +523,7 @@
 /* The number of bytes in type int */
 #define SIZEOF_INT 4
 
-#if defined(__i386__) || defined(__powerpc__) || defined(__strongarm__)
+#if defined(__i386__) || defined(__powerpc__) || defined(__arm__)
 /* The number of bytes in type long */
 # define SIZEOF_LONG SIZEOF_INT
 #elif defined(__alpha__) || defined(__sparc64__) || defined(__ia64__) || defined(__amd64__)
