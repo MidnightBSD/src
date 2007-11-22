@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.5 2007/09/27 03:27:18 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $
  */
 
 
@@ -43,11 +43,10 @@
 #include <md5.h>
 #include <archive.h>
 #include <archive_entry.h>
-#include <mport.h>
+#include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.5 2007/09/27 03:27:18 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $");
 
-#define PACKAGE_DB_FILENAME "+CONTENTS.db"
 
 static int create_package_db(sqlite3 **);
 static int create_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
@@ -58,15 +57,16 @@ static int copy_metafiles(mportPackageMeta *);
 static int archive_files(mportPlist *, mportPackageMeta *);
 static int clean_up(const char *);
 
+
 int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
 {
-  /* create a temp dir to hold our meta files. */
-  char dirtmpl[] = "/tmp/mport.XXXXXXXX"; 
-  char *tmpdir   = mkdtemp(dirtmpl);
   
   int ret;
   sqlite3 *db;
-  
+
+  char dirtmpl[] = "/tmp/mport.XXXXXXXX"; 
+  char *tmpdir = mkdtemp(dirtmpl);
+
   if (tmpdir == NULL) {
     SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
     goto CLEANUP;
@@ -104,7 +104,7 @@ int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
 
 static int create_package_db(sqlite3 **db) 
 {
-  if (sqlite3_open(PACKAGE_DB_FILENAME, db) != 0) {
+  if (sqlite3_open(MPORT_STUB_DB_FILE, db) != SQLITE_OK) {
     sqlite3_close(*db);
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
   }
@@ -337,7 +337,7 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
  */ 
 #define COPY_PKG_METAFILE(field, tofile) \
   if (pack->field != NULL && mport_file_exists(pack->field)) { \
-    if ((ret = mport_copy_file(pack->field, #tofile)) != MPORT_OK) { \
+    if ((ret = mport_copy_file(pack->field, tofile)) != MPORT_OK) { \
       return ret; \
     } \
   } \
@@ -346,11 +346,11 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 static int copy_metafiles(mportPackageMeta *pack) 
 {
   int ret;
-  
-  COPY_PKG_METAFILE(mtree, +MTREE);
-  COPY_PKG_METAFILE(pkginstall, +INSTALL);
-  COPY_PKG_METAFILE(pkgdeinstall, +DEINSTALL);
-  COPY_PKG_METAFILE(pkgmessage, +MESSAGE);
+
+  COPY_PKG_METAFILE(mtree, MPORT_MTREE_FILE);
+  COPY_PKG_METAFILE(pkginstall, MPORT_INSTALL_FILE);
+  COPY_PKG_METAFILE(pkgdeinstall, MPORT_DEINSTALL_FILE);
+  COPY_PKG_METAFILE(pkgmessage, MPORT_MESSAGE_FILE);
   
   return ret;
 }

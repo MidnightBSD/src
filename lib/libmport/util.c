@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.5 2007/09/27 03:24:38 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $
  */
 
 
@@ -34,9 +34,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <libgen.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.5 2007/09/27 03:24:38 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_new_packagemeta() 
@@ -96,7 +97,7 @@ int mport_file_exists(const char *file)
   
   return (lstat(file, &st) == 0);
 }
-  
+
 
 /* mport_xsystem(char *fmt, ...)
  * 
@@ -175,4 +176,73 @@ void mport_parselist(char *opt, char ***list)
   *vec = NULL;
 }
 
+/*
+ * mport_run_plist_exec(fmt, cwd, last_file)
+ * 
+ * handles a @exec or a @unexec directive in a plist.  This function
+ * does the substitions and then runs the command.
+ *
+ * Substitutions:
+ * %F	The last filename extracted (last_file argument)
+ * %D	The current working directory (cwd)
+ * %B	Return the directory part ("dirname") of %D/%F
+ * %f	Return the filename part of ("basename") %D/%F
+ */
+int mport_run_plist_exec(const char *fmt, const char *cwd, const char *last_file) 
+{
+  size_t l;
+  size_t max = FILENAME_MAX * 2;
+  char cmnd[max];
+  char *pos = cmnd;
+  char *name;
+  
+  while (*fmt && max > 0) {
+    if (*fmt == '%') {
+      fmt++;
+      switch (*fmt) {
+        case 'F':
+          strlcpy(pos, last_file, max);
+          l = strlen(last_file);
+          pos += l;
+          max -= l;
+          break;
+        case 'D':
+          strlcpy(pos, cwd, max);
+          l = strlen(cwd);
+          pos += l;
+          max -= l;
+          break;
+        case 'B':
+          name = dirname(last_file);
+          strlcpy(pos, name, max);
+          l = strlen(name);
+          pos += l;
+          max -= l;
+          break;
+        case 'f':
+          name = basename(last_file);
+          strlcpy(pos, name, max);
+          l = strlen(name);
+          pos += l;
+          pos -= l;
+          break;
+        default:
+          *pos = *fmt;
+          max--;
+          pos++;
+      }
+      fmt++;
+    } else {
+      *pos = *fmt;
+      pos++;
+      fmt++;
+      max--;
+    }
+  }
+  
+  *pos = '\0';
+  
+  /* cmnd now hold the expaded command, now execute it*/
+  return mport_xsystem(cmnd);
+}          
 
