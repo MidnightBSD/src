@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20071120:
+	Update system compiler to gcc 3.4.6.
+
 20070911:
 	Updated mksh to version R31b.
 
@@ -423,4 +426,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.26 2007/08/31 05:47:34 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.27 2007/09/11 22:08:22 laffer1 Exp $
