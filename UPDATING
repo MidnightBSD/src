@@ -3,8 +3,14 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20071123:
+	Update sendmail to 8.14.2
+
 20071120:
 	Update system compiler to gcc 3.4.6.
+
+20071023:
+	Updated mksh to R31d.
 
 20070911:
 	Updated mksh to version R31b.
@@ -426,4 +432,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.27 2007/09/11 22:08:22 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.28 2007/11/23 21:58:39 laffer1 Exp $
