@@ -6,7 +6,7 @@
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- *	$Id: errstring.h,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $
+ *	$Id: errstring.h,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $
  */
 
 /*
@@ -15,6 +15,10 @@
 
 #ifndef SM_ERRSTRING_H
 # define SM_ERRSTRING_H
+
+#if defined(__QNX__)
+# define E_PSEUDOBASE	512
+#endif /* defined(__QNX__) */
 
 #include <errno.h>
 #if NEEDINTERRNO

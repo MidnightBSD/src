@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2001-2003, 2005 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2001-2003, 2005-2007 Sendmail, Inc. and its suppliers.
  *      All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
  * forth in the LICENSE file which can be found at the top level of
  * the sendmail distribution.
  *
- *	$Id: ldap.h,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $
+ *	$Id: ldap.h,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $
  */
 
 #ifndef	SM_LDAP_H
@@ -17,7 +17,7 @@
 
 /*
 **  NOTE: These should be changed from LDAPMAP_* to SM_LDAP_*
-**        in the next major release (8.13) of sendmail.
+**	in the next major release (8.x+1) of sendmail.
 */
 
 # ifndef LDAPMAP_MAX_ATTR
@@ -31,6 +31,13 @@
 # endif /* ! LDAPMAP_MAX_PASSWD */
 
 # if LDAPMAP
+
+/* maximum number of arguments in a map lookup, see sendmail.h: MAX_MAP_ARGS */
+#  define SM_LDAP_ARGS		10
+
+/* error codes from sm_ldap_search*() */
+#  define SM_LDAP_ERR		(-1)	/* generic error: ldap_search(3) */
+#  define SM_LDAP_ERR_ARG_MISS	(-2)	/* an argument is missing */
 
 /* Attribute types */
 #  define SM_LDAP_ATTR_NONE		(-1)
@@ -75,6 +82,7 @@ struct sm_ldap_struct
 	int		ldap_attr_type[LDAPMAP_MAX_ATTR + 1];
 	char		*ldap_attr_needobjclass[LDAPMAP_MAX_ATTR + 1];
 	bool		ldap_attrsonly;
+	bool		ldap_multi_args;
 
 	/* args for ldap_result */
 	struct timeval	ldap_timeout;
@@ -82,6 +90,10 @@ struct sm_ldap_struct
 
 	/* ldapmap_lookup options */
 	char		ldap_attrsep;
+
+# if _FFR_LDAP_NETWORK_TIMEOUT
+	struct timeval	ldap_networktmo;
+# endif /* _FFR_LDAP_NETWORK_TIMEOUT */
 
 	/* Linked list of maps sharing the same LDAP binding */
 	void		*ldap_next;
@@ -91,18 +103,18 @@ typedef struct sm_ldap_struct		SM_LDAP_STRUCT;
 
 struct sm_ldap_recurse_entry
 {
-	char *lr_search;
-	int lr_type;
-	LDAPURLDesc *lr_ludp;
-	char **lr_attrs;
-	bool lr_done;
+	char		*lr_search;
+	int		lr_type;
+	LDAPURLDesc	*lr_ludp;
+	char		**lr_attrs;
+	bool		lr_done;
 };
 
 struct sm_ldap_recurse_list
 {
-	int lr_size;
-	int lr_cnt;
-	struct sm_ldap_recurse_entry **lr_data;
+	int				lrl_size;
+	int				lrl_cnt;
+	struct sm_ldap_recurse_entry	**lrl_data;
 };
 
 typedef struct sm_ldap_recurse_entry	SM_LDAP_RECURSE_ENTRY;
@@ -112,6 +124,7 @@ typedef struct sm_ldap_recurse_list	SM_LDAP_RECURSE_LIST;
 extern void	sm_ldap_clear __P((SM_LDAP_STRUCT *));
 extern bool	sm_ldap_start __P((char *, SM_LDAP_STRUCT *));
 extern int	sm_ldap_search __P((SM_LDAP_STRUCT *, char *));
+extern int	sm_ldap_search_m __P((SM_LDAP_STRUCT *, char **));
 extern int	sm_ldap_results __P((SM_LDAP_STRUCT *, int, int, int,
 				     SM_RPOOL_T *, char **, int *, int *,
 				     SM_LDAP_RECURSE_LIST *));

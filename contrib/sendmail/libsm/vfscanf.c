@@ -13,7 +13,7 @@
  */
 
 #include <sm/gen.h>
-SM_IDSTR(id, "@(#)$Id: vfscanf.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: vfscanf.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -122,7 +122,9 @@ sm_vfscanf(fp, timeout, fmt0, ap)
 	int nassigned;		/* number of fields assigned */
 	int nread;		/* number of characters consumed from fp */
 	int base;		/* base argument to strtoll/strtoull */
-	ULONGLONG_T (*ccfn)();	/* conversion function (strtoll/strtoull) */
+
+	/* conversion function (strtoll/strtoull) */
+	ULONGLONG_T (*ccfn) __P((const char *, char **, int));
 	char ccltab[256];	/* character class table for %[...] */
 	char buf[BUF];		/* buffer for numeric conversions */
 	SM_EVENT *evt = NULL;

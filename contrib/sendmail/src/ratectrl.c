@@ -45,7 +45,7 @@
  */
 
 #include <sendmail.h>
-SM_RCSID("@(#)$Id: ratectrl.c,v 1.1.1.3 2006-08-04 02:03:04 laffer1 Exp $")
+SM_RCSID("@(#)$Id: ratectrl.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
 
 /*
 **  stuff included - given some warnings (inet_ntoa)
@@ -245,7 +245,7 @@ client_rate(now, saddr, update)
 
 	if (!CHashAryOK)
 	{
-		memset(CHashAry, 0, sizeof (CHashAry));
+		memset(CHashAry, 0, sizeof(CHashAry));
 		CHashAryOK = true;
 	}
 
@@ -386,7 +386,7 @@ client_rate(now, saddr, update)
 #endif /* NETINET6 */
 #if 1
 			memset(chBest->ch_Times, '\0',
-			       sizeof (chBest->ch_Times));
+			       sizeof(chBest->ch_Times));
 #endif /* 1 */
 		}
 

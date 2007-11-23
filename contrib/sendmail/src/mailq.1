@@ -1,4 +1,4 @@
-.\" Copyright (c) 1998-2000, 2002 Sendmail, Inc. and its suppliers.
+.\" Copyright (c) 1998-2000, 2002, 2007 Sendmail, Inc. and its suppliers.
 .\"	 All rights reserved.
 .\" Copyright (c) 1983, 1997 Eric P. Allman.  All rights reserved.
 .\" Copyright (c) 1985, 1990, 1993
@@ -9,9 +9,9 @@
 .\" the sendmail distribution.
 .\"
 .\"
-.\"     $Id: mailq.1,v 1.1.1.2 2006-02-25 02:33:59 laffer1 Exp $
+.\"     $Id: mailq.1,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $
 .\"
-.TH MAILQ 1 "$Date: 2006-02-25 02:33:59 $"
+.TH MAILQ 1 "$Date: 2007-11-23 22:10:30 $"
 .SH NAME
 mailq
 \- print the mail queue
@@ -103,6 +103,25 @@ on behalf of this message
 and the name of the alias this command expanded from, if any.
 Moreover, status messages for each recipient are printed
 if available.
+.PP
+Several sendmail.cf options influence the behavior of the
+.B mailq
+utility:
+The number of items printed per queue group is restricted by
+.B MaxQueueRunSize
+if that value is set.
+The status character
+.B *
+is not printed for some values of
+.B QueueSortOrder,
+e.g.,
+filename,
+random,
+modification, and
+none,
+unless a
+.B -q
+option is used to limit the processed jobs.
 .PP
 The
 .B mailq

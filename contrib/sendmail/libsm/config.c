@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2003 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 2000-2003, 2007 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: config.c,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $")
+SM_RCSID("@(#)$Id: config.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
 
 #include <stdlib.h>
 #include <sm/heap.h>
@@ -247,5 +247,14 @@ char *SmCompileOptions[] =
 #if SM_VA_STD
 	"SM_VA_STD",
 #endif /* SM_VA_STD */
+#if USEKSTAT
+	"USEKSTAT",
+#endif /* USEKSTAT */
+#if USEPROCMEMINFO
+	"USEPROCMEMINFO",
+#endif /* USEPROCMEMINFO */
+#if USESWAPCTL
+	"USESWAPCTL",
+#endif /* USESWAPCTL */
 	NULL
 };

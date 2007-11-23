@@ -1,7 +1,8 @@
-dnl $Id: Makefile.m4,v 1.1.1.2 2006-02-25 02:33:58 laffer1 Exp $
+dnl $Id: Makefile.m4,v 1.1.1.3 2007-11-23 22:10:29 laffer1 Exp $
 include(confBUILDTOOLSDIR`/M4/switch.m4')
 
 define(`confREQUIRE_LIBSM', `true')
+define(`confREQUIRE_SM_OS_H', `true')
 bldPRODUCT_START(`executable', `sendmail')
 define(`bldBIN_TYPE', `G')
 define(`bldINSTALL_DIR', `')
@@ -9,6 +10,7 @@ define(`bldSOURCES', `main.c alias.c arpadate.c bf.c collect.c conf.c control.c 
 PREPENDDEF(`confENVDEF', `confMAPDEF')
 bldPUSH_SMLIB(`sm')
 bldPUSH_SMLIB(`smutil')
+
 
 dnl hack: /etc/mail is not defined as "location of .cf" in the build system
 define(`bldTARGET_INST_DEP', ifdef(`confINST_DEP', `confINST_DEP',

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 1999-2003 Sendmail, Inc. and its suppliers.
+ *  Copyright (c) 1999-2003, 2006, 2007 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -9,7 +9,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: main.c,v 1.1.1.2 2006-02-25 02:33:56 laffer1 Exp $")
+SM_RCSID("@(#)$Id: main.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
 
 #define _DEFINE	1
 #include "libmilter.h"
@@ -52,7 +52,10 @@ smfi_register(smfilter)
 	(void) sm_strlcpy(smfi->xxfi_name, smfilter.xxfi_name, len);
 
 	/* compare milter version with hard coded version */
-	if (smfi->xxfi_version != SMFI_VERSION)
+	if (smfi->xxfi_version != SMFI_VERSION &&
+	    smfi->xxfi_version != 2 &&
+	    smfi->xxfi_version != 3 &&
+	    smfi->xxfi_version != 4)
 	{
 		/* hard failure for now! */
 		smi_log(SMI_LOG_ERR,
@@ -232,7 +235,7 @@ smfi_main()
 			smfi->xxfi_name);
 		return MI_FAILURE;
 	}
-	r = MI_SUCCESS;
+	r = MI_MONITOR_INIT();
 
 	/* Startup the listener */
 	if (mi_listener(conn, dbg, smfi, timeout, backlog) != MI_SUCCESS)

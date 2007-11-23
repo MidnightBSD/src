@@ -46,7 +46,7 @@
 # if NAMED_BIND
 #  include "sm_resolve.h"
 
-SM_RCSID("$Id: sm_resolve.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $")
+SM_RCSID("$Id: sm_resolve.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
 
 static struct stot
 {
@@ -168,6 +168,7 @@ parse_dns_reply(data, len)
 	int len;
 {
 	unsigned char *p;
+	ushort ans_cnt, ui;
 	int status;
 	size_t l;
 	char host[MAXHOSTNAMELEN];
@@ -184,7 +185,7 @@ parse_dns_reply(data, len)
 	/* doesn't work on Crays? */
 	memcpy(&r->dns_r_h, p, sizeof(r->dns_r_h));
 	p += sizeof(r->dns_r_h);
-	status = dn_expand(data, data + len, p, host, sizeof host);
+	status = dn_expand(data, data + len, p, host, sizeof(host));
 	if (status < 0)
 	{
 		dns_free_data(r);
@@ -196,20 +197,25 @@ parse_dns_reply(data, len)
 		dns_free_data(r);
 		return NULL;
 	}
+
+	ans_cnt = ntohs((ushort) r->dns_r_h.ancount);
+
 	p += status;
 	GETSHORT(r->dns_r_q.dns_q_type, p);
 	GETSHORT(r->dns_r_q.dns_q_class, p);
 	rr = &r->dns_r_head;
-	while (p < data + len)
+	ui = 0;
+	while (p < data + len && ui < ans_cnt)
 	{
 		int type, class, ttl, size, txtlen;
 
-		status = dn_expand(data, data + len, p, host, sizeof host);
+		status = dn_expand(data, data + len, p, host, sizeof(host));
 		if (status < 0)
 		{
 			dns_free_data(r);
 			return NULL;
 		}
+		++ui;
 		p += status;
 		GETSHORT(type, p);
 		GETSHORT(class, p);
@@ -252,7 +258,7 @@ parse_dns_reply(data, len)
 		  case T_CNAME:
 		  case T_PTR:
 			status = dn_expand(data, data + len, p, host,
-					   sizeof host);
+					   sizeof(host));
 			if (status < 0)
 			{
 				dns_free_data(r);
@@ -269,7 +275,7 @@ parse_dns_reply(data, len)
 		  case T_MX:
 		  case T_AFSDB:
 			status = dn_expand(data, data + len, p + 2, host,
-					   sizeof host);
+					   sizeof(host));
 			if (status < 0)
 			{
 				dns_free_data(r);
@@ -290,7 +296,7 @@ parse_dns_reply(data, len)
 
 		  case T_SRV:
 			status = dn_expand(data, data + len, p + 6, host,
-					   sizeof host);
+					   sizeof(host));
 			if (status < 0)
 			{
 				dns_free_data(r);
@@ -409,7 +415,7 @@ dns_lookup_int(domain, rr_class, rr_type, retrans, retry)
 	}
 	errno = 0;
 	SM_SET_H_ERRNO(0);
-	len = res_search(domain, rr_class, rr_type, reply, sizeof reply);
+	len = res_search(domain, rr_class, rr_type, reply, sizeof(reply));
 	if (tTd(8, 16))
 	{
 		_res.options = old_options;

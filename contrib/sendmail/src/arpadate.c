@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: arpadate.c,v 1.1.1.2 2006-02-25 02:33:58 laffer1 Exp $")
+SM_RCSID("@(#)$Id: arpadate.c,v 1.1.1.3 2007-11-23 22:10:29 laffer1 Exp $")
 
 /*
 **  ARPADATE -- Create date in ARPANET format
@@ -192,7 +192,7 @@ arpadate(ud)
 		{
 			*q++ = ' ';
 			*q++ = '(';
-			while (*tz != '\0' && q < &b[sizeof b - 3])
+			while (*tz != '\0' && q < &b[sizeof(b) - 3])
 				*q++ = *tz++;
 			*q++ = ')';
 		}

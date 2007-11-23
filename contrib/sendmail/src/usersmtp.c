@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.3 2006-08-04 02:03:05 laffer1 Exp $")
+SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
 
 #include <sysexits.h>
 
@@ -541,6 +541,10 @@ static sasl_callback_t callbacks[] =
 **
 **	Side Effects:
 **		checks/sets sasl_clt_init.
+**
+**	Note:
+**	Callbacks are ignored if sasl_client_init() has
+**	been called before (by a library such as libnss_ldap)
 */
 
 static bool sasl_clt_init = false;
@@ -789,7 +793,7 @@ readauth(filename, safe, sai, rpool)
 
 	lc = 0;
 	while (lc <= SASL_MECHLIST &&
-		sm_io_fgets(f, SM_TIME_DEFAULT, buf, sizeof buf) != NULL)
+		sm_io_fgets(f, SM_TIME_DEFAULT, buf, sizeof(buf)) != NULL)
 	{
 		if (buf[0] != '#')
 		{
@@ -1578,9 +1582,15 @@ attemptauth(m, mci, e, sai)
 
 	/* make a new client sasl connection */
 # if SASL >= 20000
+	/*
+	**  We provide the callbacks again because global callbacks in
+	**  sasl_client_init() are ignored if SASL has been initialized
+	**  before, for example, by a library such as libnss-ldap.
+	*/
+
 	saslresult = sasl_client_new(bitnset(M_LMTP, m->m_flags) ? "lmtp"
 								 : "smtp",
-				     CurHostName, NULL, NULL, NULL, 0,
+				     CurHostName, NULL, NULL, callbacks, 0,
 				     &mci->mci_conn);
 # else /* SASL >= 20000 */
 	saslresult = sasl_client_new(bitnset(M_LMTP, m->m_flags) ? "lmtp"
@@ -1591,7 +1601,7 @@ attemptauth(m, mci, e, sai)
 		return EX_TEMPFAIL;
 
 	/* set properties */
-	(void) memset(&ssp, '\0', sizeof ssp);
+	(void) memset(&ssp, '\0', sizeof(ssp));
 
 	/* XXX should these be options settable via .cf ? */
 	{
@@ -1650,7 +1660,7 @@ attemptauth(m, mci, e, sai)
 			break;
 		}
 		if (iptostring(&CurHostAddr, addrsize,
-			       remoteip, sizeof remoteip))
+			       remoteip, sizeof(remoteip)))
 		{
 			if (sasl_setprop(mci->mci_conn, SASL_IPREMOTEPORT,
 					 remoteip) != SASL_OK)
@@ -1662,7 +1672,7 @@ attemptauth(m, mci, e, sai)
 				(struct sockaddr *) &saddr_l, &addrsize) == 0)
 		{
 			if (iptostring(&saddr_l, addrsize,
-				       localip, sizeof localip))
+				       localip, sizeof(localip)))
 			{
 				if (sasl_setprop(mci->mci_conn,
 						 SASL_IPLOCALPORT,
@@ -2011,7 +2021,7 @@ smtpmailfrom(m, mci, e)
 	/* set up appropriate options to include */
 	if (bitset(MCIF_SIZE, mci->mci_flags) && e->e_msgsize > 0)
 	{
-		(void) sm_snprintf(optbuf, sizeof optbuf, " SIZE=%ld",
+		(void) sm_snprintf(optbuf, sizeof(optbuf), " SIZE=%ld",
 			e->e_msgsize);
 		bufp = &optbuf[strlen(optbuf)];
 	}
@@ -2138,7 +2148,7 @@ smtpmailfrom(m, mci, e)
 	    !bitnset(M_NO_NULL_FROM, m->m_flags))
 		buf[0] = '\0';
 	else
-		expand("\201g", buf, sizeof buf, e);
+		expand("\201g", buf, sizeof(buf), e);
 	if (buf[0] == '<')
 	{
 		/* strip off <angle brackets> (put back on below) */
@@ -2296,7 +2306,7 @@ smtprcpt(to, m, mci, e, ctladdr, xstart)
 
 	/*
 	**  Warning: in the following it is assumed that the free space
-	**  in bufp is sizeof optbuf
+	**  in bufp is sizeof(optbuf)
 	*/
 
 	if (bitset(MCIF_DSN, mci->mci_flags))
@@ -2320,30 +2330,30 @@ smtprcpt(to, m, mci, e, ctladdr, xstart)
 		{
 			bool firstone = true;
 
-			(void) sm_strlcat(bufp, " NOTIFY=", sizeof optbuf);
+			(void) sm_strlcat(bufp, " NOTIFY=", sizeof(optbuf));
 			if (bitset(QPINGONSUCCESS, to->q_flags))
 			{
-				(void) sm_strlcat(bufp, "SUCCESS", sizeof optbuf);
+				(void) sm_strlcat(bufp, "SUCCESS", sizeof(optbuf));
 				firstone = false;
 			}
 			if (bitset(QPINGONFAILURE, to->q_flags))
 			{
 				if (!firstone)
 					(void) sm_strlcat(bufp, ",",
-						       sizeof optbuf);
-				(void) sm_strlcat(bufp, "FAILURE", sizeof optbuf);
+						       sizeof(optbuf));
+				(void) sm_strlcat(bufp, "FAILURE", sizeof(optbuf));
 				firstone = false;
 			}
 			if (bitset(QPINGONDELAY, to->q_flags))
 			{
 				if (!firstone)
 					(void) sm_strlcat(bufp, ",",
-						       sizeof optbuf);
-				(void) sm_strlcat(bufp, "DELAY", sizeof optbuf);
+						       sizeof(optbuf));
+				(void) sm_strlcat(bufp, "DELAY", sizeof(optbuf));
 				firstone = false;
 			}
 			if (firstone)
-				(void) sm_strlcat(bufp, "NEVER", sizeof optbuf);
+				(void) sm_strlcat(bufp, "NEVER", sizeof(optbuf));
 			bufp += strlen(bufp);
 		}
 
@@ -2693,8 +2703,9 @@ smtpdata(m, mci, e, ctladdr, xstart)
 	}
 
 	/* terminate the message */
-	if (sm_io_fprintf(mci->mci_out, SM_TIME_DEFAULT, ".%s", m->m_eol) ==
-								SM_IO_EOF)
+	if (sm_io_fprintf(mci->mci_out, SM_TIME_DEFAULT, "%s.%s",
+			bitset(MCIF_INLONGLINE, mci->mci_flags) ? m->m_eol : "",
+			m->m_eol) == SM_IO_EOF)
 		goto writeerr;
 	if (TrafficLogFile != NULL)
 		(void) sm_io_fprintf(TrafficLogFile, SM_TIME_DEFAULT,
@@ -3122,7 +3133,7 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 			if (errno == 0)
 			{
 				(void) sm_snprintf(SmtpReplyBuffer,
-						   sizeof SmtpReplyBuffer,
+						   sizeof(SmtpReplyBuffer),
 						   "421 4.4.1 Connection reset by %s",
 						   CURHOSTNAME);
 #ifdef ECONNRESET
@@ -3242,7 +3253,7 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 
 	/* save temporary failure messages for posterity */
 	if (SmtpReplyBuffer[0] == '4')
-		(void) sm_strlcpy(SmtpError, SmtpReplyBuffer, sizeof SmtpError);
+		(void) sm_strlcpy(SmtpError, SmtpReplyBuffer, sizeof(SmtpError));
 
 	/* reply code 421 is "Service Shutting Down" */
 	if (r == SMTPCLOSING && mci->mci_state != MCIS_SSD &&
@@ -3285,7 +3296,7 @@ smtpmessage(f, m, mci, va_alist)
 	SM_VA_LOCAL_DECL
 
 	SM_VA_START(ap, mci);
-	(void) sm_vsnprintf(SmtpMsgBuffer, sizeof SmtpMsgBuffer, f, ap);
+	(void) sm_vsnprintf(SmtpMsgBuffer, sizeof(SmtpMsgBuffer), f, ap);
 	SM_VA_END(ap);
 
 	if (tTd(18, 1) || Verbose)
