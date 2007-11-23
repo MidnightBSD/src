@@ -10369,10 +10369,10 @@ contrib/pnpinfo/pnpinfo.c -text
 contrib/pnpinfo/pnpinfo.h -text
 contrib/sendmail/CACerts -text
 contrib/sendmail/FAQ -text
-contrib/sendmail/FREEBSD-upgrade -text
 contrib/sendmail/INSTALL -text
 contrib/sendmail/KNOWNBUGS -text
 contrib/sendmail/LICENSE -text
+contrib/sendmail/MIDNIGHTBSD-upgrade -text
 contrib/sendmail/Makefile -text
 contrib/sendmail/PGPKEYS -text
 contrib/sendmail/README -text

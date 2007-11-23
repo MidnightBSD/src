@@ -1,6 +1,6 @@
-$FreeBSD: src/contrib/sendmail/FREEBSD-upgrade,v 1.28 2005/06/07 04:22:21 gshapiro Exp $
+$MidnightBSD$
 
-sendmail 8.13.8
+sendmail 8.14.2
 	originals can be found at: ftp://ftp.sendmail.org/pub/sendmail/
 
 For the import of sendmail, the following files were removed:
@@ -21,8 +21,8 @@ The following directories were renamed:
 
 Imported using:
 
-	cvs import -m 'Import sendmail 8.13.8' \
-		src/contrib/sendmail SENDMAIL v8_13_8
+	cvs import -m 'Import sendmail 8.14.2' \
+		src/contrib/sendmail SENDMAIL v8_14_2
 
 
 To make local changes to sendmail, simply patch and commit to the main
@@ -33,14 +33,13 @@ All local changes should be submitted to the Sendmail Consortium
 <sendmail@sendmail.org> for inclusion in the next vendor release.
 
 The following files make up the sendmail build/install/runtime
-infrastructure in FreeBSD:
+infrastructure in MidnightBSD:
 
 	Makefile.inc1
 	bin/Makefile
 	bin/rmail/Makefile
 	contrib/sendmail/
 	etc/Makefile
-	etc/defaults/make.conf (RELENG_4)
 	etc/defaults/periodic.conf
 	etc/defaults/rc.conf
 	etc/mail/Makefile
@@ -92,5 +91,4 @@ infrastructure in FreeBSD:
 	usr.sbin/sendmail/Makefile
 	usr.sbin/mailwrapper/Makefile
 
-gshapiro@FreeBSD.org
-6-June-2005
+November 23, 2007
