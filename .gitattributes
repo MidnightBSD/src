@@ -18828,6 +18828,7 @@ lib/libmport/install_pkg.c -text
 lib/libmport/mport.h -text
 lib/libmport/plist.c -text
 lib/libmport/util.c -text
+lib/libmport/version_cmp.c -text
 lib/libncp/CREDITS -text
 lib/libncp/Makefile -text
 lib/libncp/ipx.c -text

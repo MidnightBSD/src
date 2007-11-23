@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.4 2007/09/28 03:01:31 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.5 2007/11/22 08:00:32 ctriv Exp $
  *
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
@@ -31,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.4 2007/09/28 03:01:31 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.5 2007/11/22 08:00:32 ctriv Exp $");
 
 
 
@@ -116,6 +116,10 @@ int mport_db_do(sqlite3 *, const char *, ...);
 int mport_inst_init(sqlite3 **);
 
 
+/* version comparing */
+int mport_version_cmp(const char *, const char *);
+
+
 /* Errors */
 int mport_err_code(void);
 char * mport_err_string(void);
@@ -132,6 +136,11 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_SYSCALL_FAILED	6
 #define MPORT_ERR_ARCHIVE		7
 #define MPORT_ERR_INTERNAL		8
+#define MPORT_ERR_ALREADY_INSTALLED	9
+#define MPORT_ERR_CONFLICTS		10
+#define MPORT_ERR_MISSING_DEPEND	11
+#define MPORT_ERR_MALFORMED_VERSION	12
+
 
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
 #define SET_ERROR(code,msg) mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
