@@ -897,6 +897,7 @@ retry:
 	while (wpipe->pipe_state & PIPE_DIRECTW) {
 		if (wpipe->pipe_state & PIPE_WANTR) {
 			wpipe->pipe_state &= ~PIPE_WANTR;
+			pipeselwakeup(wpipe);
 			wakeup(wpipe);
 		}
 		wpipe->pipe_state |= PIPE_WANTW;
@@ -912,6 +913,7 @@ retry:
 	if (wpipe->pipe_buffer.cnt > 0) {
 		if (wpipe->pipe_state & PIPE_WANTR) {
 			wpipe->pipe_state &= ~PIPE_WANTR;
+			pipeselwakeup(wpipe);
 			wakeup(wpipe);
 		}
 		wpipe->pipe_state |= PIPE_WANTW;
@@ -1096,6 +1098,7 @@ pipe_write(fp, uio, active_cred, flags, td)
 		if (wpipe->pipe_state & PIPE_DIRECTW) {
 			if (wpipe->pipe_state & PIPE_WANTR) {
 				wpipe->pipe_state &= ~PIPE_WANTR;
+				pipeselwakeup(wpipe);
 				wakeup(wpipe);
 			}
 			pipeunlock(wpipe);
