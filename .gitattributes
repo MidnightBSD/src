@@ -19906,6 +19906,8 @@ libexec/mport.create/Makefile -text
 libexec/mport.create/mport.create.c -text
 libexec/mport.install/Makefile -text
 libexec/mport.install/mport.install.c -text
+libexec/mport.version_cmp/Makefile -text
+libexec/mport.version_cmp/mport.version_cmp.c -text
 libexec/pppoed/Makefile -text
 libexec/pppoed/pppoed.8 -text
 libexec/pppoed/pppoed.c -text
