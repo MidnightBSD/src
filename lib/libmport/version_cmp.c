@@ -23,14 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.1 2007/11/23 05:57:43 ctriv Exp $
  */
 
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/version_cmp.c,v 1.1 2007/11/23 05:57:43 ctriv Exp $");
 
 struct version {
   char *version;
@@ -40,6 +41,7 @@ struct version {
 
 static void parse_version(const char *, struct version *);
 static int cmp_versions(char *, char *);
+static int cmp_ints(int, int);
 
 int mport_version_cmp(const char *astr, const char *bstr)
 {
@@ -52,9 +54,11 @@ int mport_version_cmp(const char *astr, const char *bstr)
 
   /* remember that a.version/b.version are useless after calling
      cmp_versions (but astr and bstr are unchanged.) */
-  result =  (a.epoch < b.epoch) 
-         || cmp_versions(a.version, b.version) 
-         || (a.revision < b.revision);
+  if ((result = cmp_ints(a.epoch, b.epoch)) == 0) {
+    if ((result = cmp_versions(a.version, b.version)) == 0) {
+      result = cmp_ints(a.revision, b.revision);
+    }
+  }
   
   free(a.version);
   free(b.version);
@@ -88,43 +92,55 @@ static void parse_version(const char *in, struct version *v)
   v->version = s;
 }
 
-static int cmp_versions(char *a, char *b)
+static int cmp_ints(int a, int b) 
 {
-  char *a_dot, *b_dot;
-  int a_sub, b_sub;
-  
-  while (1) {
-    a_dot = index(a, '.');
-    b_dot = index(b, '.');
+  if (a == b)
+    return 0;
+  if (a < b)
+    return -1;
     
-    if (a_dot == NULL && b_dot == NULL) {
-      a_sub = (int)strtol(a, NULL, 10);
-      b_sub = (int)strtol(b, NULL, 10);
-      
-      return a_sub < b_sub;
-    } else if (a_dot == NULL) {
-      /* b has more sub versions, must be more recent */
-      return -1;
-    } else if (b_dot == NULL) {
-      /* a has more sub versions, must be more recent */
-      return 1;
-    } else {
-       *a_dot = *b_dot = '\0';
-    
-      a_sub = (int)strtol(a, NULL, 10);
-      b_sub = (int)strtol(b, NULL, 10);
-    
-      if (a_sub != b_sub) {
-        return a_sub < b_sub;
-      }
-    
-      /* this pair of sub versions matched.  Go to the next pair. */
-      a = a_dot + 1;
-      b = b_dot + 1;
-    }
-  }
-  
-  /* not reached */
-  return 0;
+  return 1;
 }
 
+static int cmp_versions(char *a, char *b)
+{
+  int a_sub, b_sub, result;
+
+  while (*a || *b) {
+    if (*a) {
+      while (*a == '.' || *a == '+') 
+        a++;
+        
+      if (isdigit(*a)) {
+        a_sub  = (int)strtol(a, &a, 10);
+      } else {
+        a_sub  = (int)*a;
+        a++;
+      }
+    } else {
+      a_sub = 0;
+    }
+    
+    if (*b) {
+      while (*b == '.' || *b == '+')
+        b++;
+        
+      if (isdigit(*b)) { 
+        b_sub = (int)strtol(b, &b, 10);
+      } else {
+        b_sub = (int)*b;
+        b++;
+      }
+    } else {
+      b_sub = 0;
+    }
+
+    result = cmp_ints(a_sub, b_sub);
+    
+    if (result != 0) 
+      break;
+  }
+    
+  
+  return result;
+}    

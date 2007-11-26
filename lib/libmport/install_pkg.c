@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install_pkg.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/install_pkg.c,v 1.2 2007/11/23 05:57:43 ctriv Exp $
  */
 
 
@@ -31,12 +31,13 @@
 #include "mport.h"
 #include <sys/cdefs.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <archive.h>
 #include <archive_entry.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.2 2007/11/23 05:57:43 ctriv Exp $");
 
 static int do_pre_install(sqlite3 *, mportPackageMeta *, const char *);
 static int do_actual_install(struct archive *, struct archive_entry *, sqlite3 *, mportPackageMeta *, const char *);
@@ -98,14 +99,16 @@ int mport_install_pkg(const char *filename, const char *prefix)
   /* get the meta object from the stub database */  
   if ((ret = mport_get_meta_from_db(db, &pack)) != MPORT_OK)
     return ret;
+
+  if (prefix != NULL) {
+    free(pack->prefix);
+    pack->prefix = strdup(prefix);
+  }
   
-  if (prefix != NULL)
-    pack->prefix = (char *)prefix;
-    
   /* check if this is installed already, depends, and conflicts */
   if ((ret = check_preconditions(db, pack)) != MPORT_OK)
     return ret;
- 
+
   /* Run mtree.  Run pkg-install. Etc... */
   if ((ret = do_pre_install(db, pack, tmpdir)) != MPORT_OK)
     return ret;
@@ -157,18 +160,19 @@ static int do_actual_install(
   char *data, *cwd;
   char file[FILENAME_MAX];
   sqlite3_stmt *assets;
+
   
-  if (mport_db_do(db, "START TRANSACTION") != MPORT_OK) 
+  if (mport_db_do(db, "BEGIN TRANSACTION") != MPORT_OK) 
     goto ERROR;
 
   /* Insert the package meta row into the packages table  - XXX Does not honor pack->prefix! */  
-  if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options) != MPORT_OK)
+  if ((ret = mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options)) != MPORT_OK)
     goto ERROR;
   /* Insert the assets into the master table */
-  if (mport_db_do(db, "INSERT INTO assets (pkg, type, data, checksum) SELECT (pkg,type,data,checksum) FROM stub.assets") != MPORT_OK)
+  if ((ret = mport_db_do(db, "INSERT INTO assets (pkg, type, data, checksum) SELECT pkg,type,data,checksum FROM stub.assets")) != MPORT_OK)
     goto ERROR;  
   /* Insert the depends into the master table */
-  if (mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT (pkg, depend_pkgname, depend_pkgversion, depend_port) FROM stub.depends") != MPORT_OK) 
+  if ((ret = mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends")) != MPORT_OK) 
     goto ERROR;
   
   if ((ret = sqlite3_prepare_v2(db, "SELECT type,data FROM stub.assets", -1, &assets, &err)) != SQLITE_OK) {
@@ -220,7 +224,7 @@ static int do_actual_install(
         break;
     }
   }
-  
+
   sqlite3_finalize(assets);
   
   if (mport_db_do(db, "COMMIT TRANSACTION") != MPORT_OK) 
@@ -249,15 +253,16 @@ static int check_preconditions(sqlite3 *db, mportPackageMeta *pack)
   const char *inst_version;
 
   ret = MPORT_OK;
-  
+
   /* check if the package is already installed */
   if (sqlite3_prepare_v2(db, "SELECT version FROM packages WHERE pkg=?", -1, &lookup, NULL) != SQLITE_OK) 
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  
+
   if (sqlite3_bind_text(lookup, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
     ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     goto DONE;
   }
+    
   sret = sqlite3_step(lookup);
   
   switch (sret) {
@@ -276,6 +281,7 @@ static int check_preconditions(sqlite3 *db, mportPackageMeta *pack)
       goto DONE;
   }
   sqlite3_finalize(lookup);
+
   
   /* Check for conflicts */
   if (sqlite3_prepare_v2(db, "SELECT conflict_pkg, conflict_version FROM stub.conflicts", -1, &stmt, NULL) != SQLITE_OK) {
@@ -322,7 +328,7 @@ static int check_preconditions(sqlite3 *db, mportPackageMeta *pack)
   }
   
   /* check for depends */
-  if (sqlite3_prepare_v2(db, "SELECT depend_pkgname, depend_pkgersion FROM stub.depends", -1, &stmt, NULL) != SQLITE_OK) {
+  if (sqlite3_prepare_v2(db, "SELECT depend_pkgname, depend_pkgversion FROM stub.depends", -1, &stmt, NULL) != SQLITE_OK) {
     ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     goto DONE;
   }
@@ -352,12 +358,19 @@ static int check_preconditions(sqlite3 *db, mportPackageMeta *pack)
           goto DONE;
         }
       } else if (lret == SQLITE_DONE) {
-        /* No more depends to check. */
-        break;
+        /* this depend isn't installed. */
+        ret = mport_set_errx(MPORT_ERR_MISSING_DEPEND, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
+        goto DONE;
       } else {
         ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto DONE;
       }
+    } else if (sret == SQLITE_DONE) {
+      /* No more depends to check. */
+      break;
+    } else {
+      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      goto DONE;
     }
   }        
   

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db_schema.c,v 1.3 2007/09/28 03:01:31 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/db_stub.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
  */
 
 
@@ -33,14 +33,14 @@
 #include <string.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/db_schema.c,v 1.3 2007/09/28 03:01:31 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/db_stub.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
 
 int mport_attach_stub_db(sqlite3 *db, const char *dir)
 {
   char *file;
   asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
   
-  if (mport_db_do(db, "ATTACH %s AS stub", file) != MPORT_OK) { 
+  if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) { 
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
   
@@ -51,28 +51,30 @@ int mport_attach_stub_db(sqlite3 *db, const char *dir)
 
 int mport_get_meta_from_db(sqlite3 *db, mportPackageMeta **ref)
 {
-  mportPackageMeta *pack = *ref;
   sqlite3_stmt *stmt;
   const char *tmp = 0;
+  mportPackageMeta *pack;
   
-  pack = mport_new_packagemeta();
+  *ref = mport_new_packagemeta();
+  
+  pack = *ref;
   
   if (pack == NULL) 
     return MPORT_ERR_NO_MEM;
     
-  if (sqlite3_prepare_v2(db, "SELECT (pkg, version, origin, lang, prefix) FROM stub.package", -1, &stmt, &tmp) != SQLITE_OK)
+  if (sqlite3_prepare_v2(db, "SELECT pkg, version, origin, lang, prefix FROM stub.package", -1, &stmt, &tmp) != SQLITE_OK)
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     
-  if (sqlite3_step(stmt) != SQLITE_DONE) 
+  if (sqlite3_step(stmt) != SQLITE_ROW) 
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   
   /* Copy pkg to pack->name */
   if ((tmp = sqlite3_column_text(stmt, 0)) == NULL) 
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  
+
   if ((pack->name = strdup(tmp)) == NULL)
     return MPORT_ERR_NO_MEM;
-  
+
   /* Copy version to pack->version */
   if ((tmp = sqlite3_column_text(stmt, 1)) == NULL) 
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -88,14 +90,14 @@ int mport_get_meta_from_db(sqlite3 *db, mportPackageMeta **ref)
     return MPORT_ERR_NO_MEM;
 
   /* Copy lang to pack->lang */
-  if ((tmp = sqlite3_column_text(stmt, 4)) == NULL) 
+  if ((tmp = sqlite3_column_text(stmt, 3)) == NULL) 
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   
   if ((pack->lang = strdup(tmp)) == NULL)
     return MPORT_ERR_NO_MEM;
 
   /* Copy prefix to pack->prefix */
-  if ((tmp = sqlite3_column_text(stmt, 5)) == NULL) 
+  if ((tmp = sqlite3_column_text(stmt, 4)) == NULL) 
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   
   if ((pack->prefix = strdup(tmp)) == NULL)
