@@ -1,7 +1,8 @@
-# $MidnightBSD: src/lib/libmport/Makefile,v 1.3 2007/11/22 08:00:32 ctriv Exp $
+# $MidnightBSD: src/lib/libmport/Makefile,v 1.4 2007/11/23 05:57:43 ctriv Exp $
 
 LIB=		mport
-SRCS=		plist.c	create_pkg.c db_schema.c db_stub.c db_util.c util.c error.c install_pkg.c inst_init.c version_cmp.c
+SRCS=		archive.c plist.c create_pkg.c db.c util.c error.c \
+		install_pkg.c inst_init.c version_cmp.c
 
 INCS=		mport.h
 

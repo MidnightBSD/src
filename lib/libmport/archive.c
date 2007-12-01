@@ -23,45 +23,52 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db_util.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
  */
 
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <sys/stat.h>
 #include <string.h>
+#include <errno.h>
+#include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <archive.h>
+#include <archive_entry.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/db_util.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
 
-/* mport_db_do(sqlite3 *db, const char *sql, ...)
- * 
- * A wrapper for doing executing a single sql query.  Takes a sqlite3 struct
- * pointer, a format string and a list of args.  See the documentation for 
- * sqlite3_vmprintf() for format information.
- */
-int mport_db_do(sqlite3 *db, const char *fmt, ...) 
+
+int mport_add_file_to_archive(struct archive *a, const char *filename, const char *path) 
 {
-  va_list args;
-  char *sql;
+  struct archive_entry *entry;
+  struct stat st;
+  int fd, len;
+  char buff[1024*8];
   
-  va_start(args, fmt);
-  
-  if ((sql = sqlite3_vmprintf(fmt, args)) == NULL) {
-    return MPORT_ERR_NO_MEM;
+  if (lstat(filename, &st) != 0) {
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
   }
+  
+  entry = archive_entry_new();
+  archive_entry_copy_stat(entry, &st);
+  archive_entry_set_pathname(entry, path);
+  archive_write_header(a, entry);
+  
+  if ((fd = open(filename, O_RDONLY)) == -1) {
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+    
+  len = read(fd, buff, sizeof(buff));
+  while (len > 0) {
+    archive_write_data(a, buff, len);
+    len = read(fd, buff, sizeof(buff));
+  }
+    
+  archive_entry_free(entry);
+  close(fd);
 
-  if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
-    sqlite3_free(sql);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
-  
-  sqlite3_free(sql);
-  
-  return MPORT_OK;
+  return MPORT_OK;  
 }
-  
-
-
 

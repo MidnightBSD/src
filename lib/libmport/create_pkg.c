@@ -23,38 +23,35 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
 #include <sys/time.h>
-#include <sys/stat.h>
 #include <sys/types.h>
-#include <dirent.h>
-#include <fcntl.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sqlite3.h>
-#include <errno.h>
 #include <md5.h>
 #include <archive.h>
 #include <archive_entry.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $");
 
 
 static int create_package_db(sqlite3 **);
-static int create_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
-static int create_meta(sqlite3 *, mportPackageMeta *);
+static int insert_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
+static int insert_meta(sqlite3 *, mportPackageMeta *);
 static int insert_depends(sqlite3 *, mportPackageMeta *);
 static int insert_conflicts(sqlite3 *, mportPackageMeta *);
-static int copy_metafiles(mportPackageMeta *);
-static int archive_files(mportPlist *, mportPackageMeta *);
+static int archive_files(mportPlist *, mportPackageMeta *, const char *);
+static int archive_metafiles(struct archive *, mportPackageMeta *);
+static int archive_plistfiles(struct archive *, mportPackageMeta *, mportPlist *);
 static int clean_up(const char *);
 
 
@@ -68,32 +65,29 @@ int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
   char *tmpdir = mkdtemp(dirtmpl);
 
   if (tmpdir == NULL) {
-    SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
+    ret = SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
     goto CLEANUP;
   }
   if (chdir(tmpdir) != 0)  {
-    SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
+    ret = SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
     goto CLEANUP;
   }
 
   if ((ret = create_package_db(&db)) != MPORT_OK)
     goto CLEANUP;
     
-  if ((ret = create_plist(db, plist, pack)) != MPORT_OK)
+  if ((ret = insert_plist(db, plist, pack)) != MPORT_OK)
     goto CLEANUP;
   
-  if ((ret = create_meta(db, pack)) != MPORT_OK)
+  if ((ret = insert_meta(db, pack)) != MPORT_OK)
     goto CLEANUP;
     
   if (sqlite3_close(db) != SQLITE_OK) {
-    SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     goto CLEANUP;
   }
     
-  if ((ret = copy_metafiles(pack)) != MPORT_OK) 
-    goto CLEANUP;
-    
-  if ((ret = archive_files(plist, pack)) != MPORT_OK)
+  if ((ret = archive_files(plist, pack, tmpdir)) != MPORT_OK)
     goto CLEANUP;
   
   CLEANUP:  
@@ -113,12 +107,10 @@ static int create_package_db(sqlite3 **db)
   return mport_generate_stub_schema(*db);
 }
 
-static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
+static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
 {
   mportPlistEntry *e;
   sqlite3_stmt *stmnt;
-  const char *rest  = 0;
-  int ret;
   char sql[]  = "INSERT INTO assets (pkg, type, data, checksum) VALUES (?,?,?,?)";
   char md5[33];
   char file[FILENAME_MAX];
@@ -127,9 +119,8 @@ static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
   strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
   strlcat(cwd, pack->prefix, FILENAME_MAX);
   
-  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
+  if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
   
   STAILQ_FOREACH(e, plist, next) {
     if (e->type == PLIST_CWD) {
@@ -152,11 +143,11 @@ static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
     }
     
     if (e->type == PLIST_FILE) {
-      snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
+      (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       
       if (MD5File(file, md5) == NULL) {
         char *error;
-        asprintf(&error, "File not found: %s", file);
+        (void)asprintf(&error, "File not found: %s", file);
         RETURN_ERROR(MPORT_ERR_FILE_NOT_FOUND, error);
       }
       
@@ -168,7 +159,7 @@ static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
         RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
       }
     }
-    if ((ret = sqlite3_step(stmnt)) != SQLITE_DONE) {
+    if (sqlite3_step(stmnt) != SQLITE_DONE) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
         
@@ -180,14 +171,14 @@ static int create_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
   return MPORT_OK;
 }     
 
-static int create_meta(sqlite3 *db, mportPackageMeta *pack)
+static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
 {
   sqlite3_stmt *stmnt;
   const char *rest  = 0;
   struct timespec now;
   int ret;
   
-  char sql[]  = "INSERT INTO package (pkg, version, origin, lang, prefix, date) VALUES (?,?,?,?,?,?)";
+  char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, date) VALUES (?,?,?,?,?,?)";
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -332,46 +323,11 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 
 
 
-/* this is just to save a lot of typing.  It will only work in the
-   copy_metafiles() function.
- */ 
-#define COPY_PKG_METAFILE(field, tofile) \
-  if (pack->field != NULL && mport_file_exists(pack->field)) { \
-    if ((ret = mport_copy_file(pack->field, tofile)) != MPORT_OK) { \
-      return ret; \
-    } \
-  } \
-
-
-static int copy_metafiles(mportPackageMeta *pack) 
-{
-  int ret;
-
-  COPY_PKG_METAFILE(mtree, MPORT_MTREE_FILE);
-  COPY_PKG_METAFILE(pkginstall, MPORT_INSTALL_FILE);
-  COPY_PKG_METAFILE(pkgdeinstall, MPORT_DEINSTALL_FILE);
-  COPY_PKG_METAFILE(pkgmessage, MPORT_MESSAGE_FILE);
-  
-  return ret;
-}
-
-
-static int archive_files(mportPlist *plist, mportPackageMeta *pack)
+static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *tmpdir)
 {
   struct archive *a;
-  struct archive_entry *entry;
-  struct stat st;
-  DIR *dir;
-  struct dirent *diren;
-  mportPlistEntry *e;
   char filename[FILENAME_MAX];
-  char buff[8192];
-  char *cwd;
-  int len;
-  int fd;
-   
-  cwd = pack->prefix; 
-    
+
   a = archive_write_new();
   archive_write_set_compression_bzip2(a);
   archive_write_set_format_pax(a);
@@ -380,40 +336,64 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack)
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a)); 
   }
   
-  /* First step - add the files in the tmpdir to the archive. */    
-  if ((dir = opendir(".")) == NULL) {
-    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  /* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */        
+  (void)snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
+  if (mport_add_file_to_archive(a, filename, MPORT_STUB_DB_FILE)) 
+    RETURN_CURRENT_ERROR;
+    
+  /* second step - the meta files */
+  if (archive_metafiles(a, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  /* last step - the real files from the plist */
+  if (archive_plistfiles(a, pack, plist) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  archive_write_finish(a);
+  
+  return MPORT_OK;    
+}
+
+
+static int archive_metafiles(struct archive *a, mportPackageMeta *pack)
+{
+  char filename[FILENAME_MAX], dir[FILENAME_MAX];
+  
+  (void)snprintf(dir, FILENAME_MAX, "%s/%s-%s", MPORT_STUB_INFRA_DIR, pack->name, pack->version);
+
+  if (pack->mtree != NULL && mport_file_exists(pack->mtree)) {
+    (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MTREE_FILE);
+    if (mport_add_file_to_archive(a, pack->mtree, filename) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
   }
   
-  while ((diren = readdir(dir)) != NULL) {
-    if (strcmp(diren->d_name, ".") == 0 || strcmp(diren->d_name, "..") == 0) 
-      continue;
-    
-    if (lstat(diren->d_name, &st) != 0) {
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-    }
-    
-    entry = archive_entry_new();
-    archive_entry_copy_stat(entry, &st);
-    archive_entry_set_pathname(entry, diren->d_name);
-    archive_write_header(a, entry);
-    if ((fd = open(diren->d_name, O_RDONLY)) == -1) {
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-    }
-    
-    len = read(fd, buff, sizeof(buff));
-    while (len > 0) {
-      archive_write_data(a, buff, len);
-      len = read(fd, buff, sizeof(buff));
-    }
-    
-    archive_entry_free(entry);
-    close(fd);
+  if (pack->pkginstall != NULL && mport_file_exists(pack->pkginstall)) {
+    (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_INSTALL_FILE);
+    if (mport_add_file_to_archive(a, pack->pkginstall, filename) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
   }
   
-  closedir(dir);
+  if (pack->pkgdeinstall != NULL && mport_file_exists(pack->pkgdeinstall)) {
+    (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_DEINSTALL_FILE);
+    if (mport_add_file_to_archive(a, pack->pkgdeinstall, filename) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+  }
   
-  /* second step - all the files in the plist */  
+  if (pack->pkgmessage != NULL && mport_file_exists(pack->pkgmessage)) {
+    (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MESSAGE_FILE);
+    if (mport_add_file_to_archive(a, pack->pkgmessage, filename) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+  }
+  
+  return MPORT_OK;
+}
+
+static int archive_plistfiles(struct archive *a, mportPackageMeta *pack, mportPlist *plist)
+{
+  mportPlistEntry *e;
+  char filename[FILENAME_MAX];
+  char *cwd = pack->prefix;
+  
   STAILQ_FOREACH(e, plist, next) {
     if (e->type == PLIST_CWD) {
       if (e->data == NULL) {
@@ -427,31 +407,13 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack)
       continue;
     }
     
-    snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
+    (void)snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
     
-    if (lstat(filename, &st) != 0) {
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-    }
-    
-    entry = archive_entry_new();
-    archive_entry_copy_stat(entry, &st);
-    archive_entry_set_pathname(entry, e->data);
-    archive_write_header(a, entry);
-    if ((fd = open(filename, O_RDONLY)) == -1) {
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-    }
-    
-    len = read(fd, buff, sizeof(buff));
-    while (len > 0) {
-      archive_write_data(a, buff, len);
-      len = read(fd, buff, sizeof(buff));
-    }
-    
-    archive_entry_free(entry);
-    close(fd);
-  }
-  
-  archive_write_finish(a);
+    if (mport_add_file_to_archive(a, filename, e->data) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+  }    
+ 
+  return MPORT_OK;
 }
 
 #ifdef DEBUG

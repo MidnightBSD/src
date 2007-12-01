@@ -18839,10 +18839,9 @@ lib/libmp/libmp.3 -text
 lib/libmp/mp.h -text
 lib/libmp/mpasbn.c -text
 lib/libmport/Makefile -text
+lib/libmport/archive.c -text
 lib/libmport/create_pkg.c -text
-lib/libmport/db_schema.c -text
-lib/libmport/db_stub.c -text
-lib/libmport/db_util.c -text
+lib/libmport/db.c -text
 lib/libmport/error.c -text
 lib/libmport/inst_init.c -text
 lib/libmport/install_pkg.c -text

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $
  */
 
 
@@ -37,7 +37,7 @@
 #include <libgen.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.6 2007/09/28 03:01:31 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_new_packagemeta() 
@@ -76,8 +76,6 @@ int mport_rmtree(const char *filename)
 }  
 
 
-
-
 /*
  * Copy fromname to toname 
  *
@@ -87,6 +85,22 @@ int mport_copy_file(const char *fromname, const char *toname)
   return mport_xsystem("/bin/cp %s %s", fromname, toname);
 }
 
+
+
+/* 
+ * create a directory with mode 755.  Do not fail if the
+ * directory exists already.
+ */
+int mport_mkdir(const char *dir) 
+{
+  if (mkdir(dir, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) != 0) {
+    if (errno != EEXIST) 
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+  
+  return MPORT_OK;
+}
+  
 
 /*
  * Quick test to see if a file exists.

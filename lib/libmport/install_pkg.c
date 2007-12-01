@@ -23,13 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install_pkg.c,v 1.2 2007/11/23 05:57:43 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/install_pkg.c,v 1.3 2007/11/26 21:41:56 ctriv Exp $
  */
 
 
 
 #include "mport.h"
 #include <sys/cdefs.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +38,7 @@
 #include <archive.h>
 #include <archive_entry.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.2 2007/11/23 05:57:43 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.3 2007/11/26 21:41:56 ctriv Exp $");
 
 static int do_pre_install(sqlite3 *, mportPackageMeta *, const char *);
 static int do_actual_install(struct archive *, struct archive_entry *, sqlite3 *, mportPackageMeta *, const char *);
@@ -60,12 +61,12 @@ int mport_install_pkg(const char *filename, const char *prefix)
   char filepath[FILENAME_MAX];
   const char *file;
   sqlite3 *db;
+  mportPackageMeta **packs;
   mportPackageMeta *pack;
-  int ret = MPORT_OK;
   
   /* initialize our local mport instance */
-  if ((ret = mport_inst_init(&db)) != MPORT_OK) 
-    return ret;
+  if (mport_inst_init(&db) != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
 
   /* extract the meta-files into the a temp dir */  
   char dirtmpl[] = "/tmp/mport.XXXXXXXX"; 
@@ -93,38 +94,42 @@ int mport_install_pkg(const char *filename, const char *prefix)
   }
   
   /* Attach the stub db */
-  if ((ret = mport_attach_stub_db(db, tmpdir)) != MPORT_OK) 
-    return ret;
+  if (mport_attach_stub_db(db, tmpdir) != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
 
-  /* get the meta object from the stub database */  
-  if ((ret = mport_get_meta_from_db(db, &pack)) != MPORT_OK)
-    return ret;
+  /* get the meta objects from the stub database */  
+  if (mport_get_meta_from_stub(db, &packs) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
 
-  if (prefix != NULL) {
-    free(pack->prefix);
-    pack->prefix = strdup(prefix);
-  }
-  
-  /* check if this is installed already, depends, and conflicts */
-  if ((ret = check_preconditions(db, pack)) != MPORT_OK)
-    return ret;
+  for (;*packs; packs++) {
+    pack  = *packs;    
 
-  /* Run mtree.  Run pkg-install. Etc... */
-  if ((ret = do_pre_install(db, pack, tmpdir)) != MPORT_OK)
-    return ret;
+    if (prefix != NULL) {
+      free(pack->prefix);
+      pack->prefix = strdup(prefix);
+    }
+    
+    /* check if this is installed already, depends, and conflicts */
+    if (check_preconditions(db, pack) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
 
-  if ((ret = do_actual_install(a, entry, db, pack, tmpdir)) != MPORT_OK)
-    return ret;
+    /* Run mtree.  Run pkg-install. Etc... */
+    if (do_pre_install(db, pack, tmpdir) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+
+    if (do_actual_install(a, entry, db, pack, tmpdir) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+    
+    archive_read_finish(a);
+    
+    if (do_post_install(db, pack, tmpdir) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+  } 
   
-  archive_read_finish(a);
+  if (clean_up(tmpdir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
   
-  if ((ret = do_post_install(db, pack, tmpdir)) != MPORT_OK)
-    return ret;
- 
-  if ((ret = clean_up(tmpdir)) != MPORT_OK)
-    return ret;
-  
-  return ret;
+  return MPORT_OK;
 }
 
 /* This does everything that has to happen before we start installing files.
@@ -154,7 +159,6 @@ static int do_actual_install(
       const char *tmpdir
     )
 {
-  const char *err;
   int ret;
   mportPlistEntryType type;
   char *data, *cwd;
@@ -169,13 +173,13 @@ static int do_actual_install(
   if ((ret = mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options)) != MPORT_OK)
     goto ERROR;
   /* Insert the assets into the master table */
-  if ((ret = mport_db_do(db, "INSERT INTO assets (pkg, type, data, checksum) SELECT pkg,type,data,checksum FROM stub.assets")) != MPORT_OK)
+  if ((ret = mport_db_do(db, "INSERT INTO assets (pkg, type, data, checksum) SELECT pkg,type,data,checksum FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK)
     goto ERROR;  
   /* Insert the depends into the master table */
-  if ((ret = mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends")) != MPORT_OK) 
+  if ((ret = mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q", pack->name)) != MPORT_OK) 
     goto ERROR;
   
-  if ((ret = sqlite3_prepare_v2(db, "SELECT type,data FROM stub.assets", -1, &assets, &err)) != SQLITE_OK) {
+  if ((ret = mport_db_prepare(db, &assets, "SELECT type,data FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK) {
     mport_set_err(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     goto ERROR;
   }
@@ -203,13 +207,13 @@ static int do_actual_install(
          * in the archive was read in the loop in mport_install_pkg.  we
          * use the current entry and then update it. */
         if (entry == NULL) {
-          mport_set_err(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
+          ret = SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
           goto ERROR; 
         } 
-        snprintf(file, FILENAME_MAX, "%s/%s", cwd, data);
+        (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, data);
         archive_entry_set_pathname(entry, file);
         if ((ret = archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM)) != ARCHIVE_OK) {
-          mport_set_err(MPORT_ERR_ARCHIVE, archive_error_string(a));
+          ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
           goto ERROR;
         }
         /* we only look for fatal, because EOF is only an error if we come
@@ -239,6 +243,19 @@ static int do_actual_install(
 
 static int do_post_install(sqlite3 *db, mportPackageMeta *pack, const char *tmpdir)
 {
+  char to[FILENAME_MAX], from[FILENAME_MAX];
+  (void)snprintf(from, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);
+  
+  if (mport_file_exists(from)) {
+    (void)snprintf(to, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);
+    
+    if (mport_mkdir(dirname(to)) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+  
+    if (mport_copy_file(from, to) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+  }
+  
   return run_pkg_install(tmpdir, pack, "POST-INSTALL");
 }
 
@@ -385,7 +402,7 @@ static int run_mtree(const char *tmpdir, mportPackageMeta *pack)
   char file[FILENAME_MAX];
   int ret;
   
-  snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_MTREE_FILE);
+  (void)snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_MTREE_FILE);
   
   if (mport_file_exists(file)) {
     if ((ret = mport_xsystem("%s -U -f %s -d -e -p %s >/dev/null", MPORT_MTREE_BIN, file, pack->prefix)) != 0) 
@@ -395,12 +412,13 @@ static int run_mtree(const char *tmpdir, mportPackageMeta *pack)
   return MPORT_OK;
 }
 
+
 static int run_pkg_install(const char *tmpdir, mportPackageMeta *pack, const char *mode)
 {
   char file[FILENAME_MAX];
   int ret;
   
-  snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_INSTALL_FILE);    
+  snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
   if (mport_file_exists(file)) {
     if ((ret = mport_xsystem("PKG_PREFIX=%s %s %s %s", pack->prefix, MPORT_SH_BIN, file, mode)) != 0)
       return mport_set_errx(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i" MPORT_INSTALL_FILE, mode, ret);
@@ -412,8 +430,11 @@ static int run_pkg_install(const char *tmpdir, mportPackageMeta *pack, const cha
 
 static int clean_up(const char *tmpdir) 
 {
-  // return mport_rmtree(tmpdir);
+#ifdef DEBUG
   return MPORT_OK;
+#else
+  return mport_rmtree(tmpdir);
+#endif
 }
 
 

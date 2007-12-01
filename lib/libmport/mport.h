@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.5 2007/11/22 08:00:32 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.6 2007/11/23 05:57:43 ctriv Exp $
  *
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
@@ -31,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.5 2007/11/22 08:00:32 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.6 2007/11/23 05:57:43 ctriv Exp $");
 
 
 
@@ -90,7 +90,7 @@ typedef struct {
 
 mportPackageMeta * mport_new_packagemeta(void);
 void mport_free_packagemeta(mportPackageMeta *);
-
+void mport_free_packagemeta_vec(mportPackageMeta **);
 
 /* Package creation */
 int mport_create_pkg(mportPlist *, mportPackageMeta *);
@@ -108,9 +108,10 @@ int mport_generate_stub_schema(sqlite3 *);
 
 /* Various database convience functions */
 int mport_attach_stub_db(sqlite3 *, const char *);
-int mport_get_meta_from_db(sqlite3 *, mportPackageMeta **);
+int mport_get_meta_from_stub(sqlite3 *, mportPackageMeta ***);
+int mport_get_meta_from_master(sqlite3 *, mportPackageMeta**, const char *);
 int mport_db_do(sqlite3 *, const char *, ...);
-
+int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 
 /* instance init */
 int mport_inst_init(sqlite3 **);
@@ -142,6 +143,7 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_MALFORMED_VERSION	12
 
 
+#define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
 #define SET_ERROR(code,msg) mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
 
@@ -149,22 +151,30 @@ int mport_set_errx(int , const char *, ...);
 /* Utils */
 int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
+int mport_mkdir(const char *);
 int mport_file_exists(const char *);
 int mport_xsystem(const char *, ...);
 void mport_parselist(char *, char ***);
 int mport_run_plist_exec(const char *, const char *, const char *);
 
-/* Meta files */
+
+/* archive helpers */
+#include <archive.h>
+int mport_add_file_to_archive(struct archive *, const char *, const char *);
+
+/* Infrastructure files */
 #define MPORT_STUB_DB_FILE 	"+CONTENTS.db"
-#define MPORT_MTREE_FILE   	"+MTREE"
-#define MPORT_INSTALL_FILE 	"+INSTALL"
-#define MPORT_DEINSTALL_FILE	"+DEINSTALL"
-#define MPORT_MESSAGE_FILE	"+MESSAGE"
+#define MPORT_STUB_INFRA_DIR	"+INFRASTRUCTURE"
+#define MPORT_MTREE_FILE   	"mtree"
+#define MPORT_INSTALL_FILE 	"pkg-install"
+#define MPORT_DEINSTALL_FILE	"pkg-deinstall"
+#define MPORT_MESSAGE_FILE	"pkg-message"
 
 
 /* Instance files */
 #define MPORT_INST_DIR 		"/var/db/mport"
 #define MPORT_MASTER_DB_FILE	"/var/db/mport/master.db"
+#define MPORT_INST_INFRA_DIR	"/var/db/mport/infrastructure"
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"
