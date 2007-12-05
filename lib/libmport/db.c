@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db_schema.c,v 1.4 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/db.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $
  */
 
 
@@ -35,10 +35,29 @@
 #include <string.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/db_schema.c,v 1.4 2007/11/22 08:00:32 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $");
 
 
 static int populate_meta_from_stmt(mportPackageMeta *, sqlite3 *, sqlite3_stmt *);
+
+
+/* mport_db_open_master(sqlite3 **)
+ * 
+ * Open the master database file, or create the file if it doesn't exist.
+ * Note that this function will not create the schema for you, if you need
+ * to create the schema use mport_inst_init() instead.
+ */
+int mport_db_open_master(sqlite3 **db)
+{
+  if (sqlite3_open(MPORT_MASTER_DB_FILE, db) != 0) {
+    sqlite3_close(*db);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+  }
+  
+  return MPORT_OK;
+}
+
+
 
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
@@ -185,7 +204,8 @@ int mport_get_meta_from_stub(sqlite3 *db, mportPackageMeta ***ref)
 int mport_get_meta_from_master(sqlite3 *db, mportPackageMeta **pack, const char *name)
 {
   sqlite3_stmt *stmt;
-
+  int ret;
+  
   if (mport_db_prepare(db, &stmt, "SELECT pkg, version, lang, prefix FROM packages WHERE pkg=%Q", name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
@@ -194,7 +214,10 @@ int mport_get_meta_from_master(sqlite3 *db, mportPackageMeta **pack, const char 
       *pack = mport_new_packagemeta();
       if (*pack == NULL)
         return MPORT_ERR_NO_MEM;
-      return populate_meta_from_stmt(*pack, db, stmt);
+      
+      ret = populate_meta_from_stmt(*pack, db, stmt);
+      sqlite3_finalize(stmt);
+      return ret;
       break;
     case SQLITE_DONE:
       *pack = NULL;

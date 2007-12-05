@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install_pkg.c,v 1.3 2007/11/26 21:41:56 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/install_pkg.c,v 1.4 2007/12/01 06:21:37 ctriv Exp $
  */
 
 
@@ -38,7 +38,7 @@
 #include <archive.h>
 #include <archive_entry.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.3 2007/11/26 21:41:56 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.4 2007/12/01 06:21:37 ctriv Exp $");
 
 static int do_pre_install(sqlite3 *, mportPackageMeta *, const char *);
 static int do_actual_install(struct archive *, struct archive_entry *, sqlite3 *, mportPackageMeta *, const char *);
@@ -126,6 +126,8 @@ int mport_install_pkg(const char *filename, const char *prefix)
       RETURN_CURRENT_ERROR;
   } 
   
+  // XXX mport_free_packagemeta_vec()
+  
   if (clean_up(tmpdir) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
@@ -169,7 +171,7 @@ static int do_actual_install(
   if (mport_db_do(db, "BEGIN TRANSACTION") != MPORT_OK) 
     goto ERROR;
 
-  /* Insert the package meta row into the packages table  - XXX Does not honor pack->prefix! */  
+  /* Insert the package meta row into the packages table */  
   if ((ret = mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options)) != MPORT_OK)
     goto ERROR;
   /* Insert the assets into the master table */
@@ -219,7 +221,7 @@ static int do_actual_install(
         /* we only look for fatal, because EOF is only an error if we come
         back around. */
         if (archive_read_next_header(a, &entry) == ARCHIVE_FATAL) {
-          mport_set_err(MPORT_ERR_ARCHIVE, archive_error_string(a));
+          ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
           goto ERROR;
         }
         break;
@@ -406,7 +408,7 @@ static int run_mtree(const char *tmpdir, mportPackageMeta *pack)
   
   if (mport_file_exists(file)) {
     if ((ret = mport_xsystem("%s -U -f %s -d -e -p %s >/dev/null", MPORT_MTREE_BIN, file, pack->prefix)) != 0) 
-      return mport_set_errx(MPORT_ERR_SYSCALL_FAILED, "%s returned non-zero: %i", MPORT_MTREE_BIN, ret);
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s returned non-zero: %i", MPORT_MTREE_BIN, ret);
   }
   
   return MPORT_OK;
@@ -418,10 +420,10 @@ static int run_pkg_install(const char *tmpdir, mportPackageMeta *pack, const cha
   char file[FILENAME_MAX];
   int ret;
   
-  snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
+  (void)snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
   if (mport_file_exists(file)) {
     if ((ret = mport_xsystem("PKG_PREFIX=%s %s %s %s", pack->prefix, MPORT_SH_BIN, file, mode)) != 0)
-      return mport_set_errx(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i" MPORT_INSTALL_FILE, mode, ret);
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i" MPORT_INSTALL_FILE, mode, ret);
   }
   
   return MPORT_OK;

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.2 2007/12/01 06:21:37 ctriv Exp $
  */
 
 
@@ -35,7 +35,7 @@
 #include <sqlite3.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.2 2007/12/01 06:21:37 ctriv Exp $");
 
 
 static int create_master_db(sqlite3 **);
@@ -55,11 +55,9 @@ int mport_inst_init(sqlite3 **db)
   
 static int create_master_db(sqlite3 **db) 
 {
-  if (sqlite3_open(MPORT_MASTER_DB_FILE, db) != 0) {
-    sqlite3_close(*db);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
-  }
-  
+  if (mport_db_open_master(db) != MPORT_OK)
+    RETURN_CURRENT_ERROR;  
+
   /* create tables */
   return mport_generate_master_schema(*db);
 }
