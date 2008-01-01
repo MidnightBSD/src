@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/copyright.h,v 1.4 2007/04/10 06:11:10 laffer1 Exp $
  * $FreeBSD: src/sys/sys/copyright.h,v 1.19.2.1 2006/02/08 09:11:58 ru Exp $
  */
 
@@ -31,7 +31,7 @@
 
 /* MidnightBSD */
 #define COPYRIGHT_MidnightBSD \
-	"Copyright (c) 2006-2007 The MidnightBSD Project.\n"
+	"Copyright (c) 2006-2008 The MidnightBSD Project.\n"
   
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
@@ -41,13 +41,4 @@
 #define COPYRIGHT_UCB \
 	"Copyright (c) 1979, 1980, 1983, 1986, 1988, 1989, 1991, 1992, 1993, 1994\n\tThe Regents of the University of California. All rights reserved.\n"
 
-/* a port of FreeBSD to the NEC PC98, Japan */
-#define COPYRIGHT_PC98 \
-	"Copyright (c) 1994-2006 FreeBSD(98) porting team.\nCopyright (c) 1992  A.Kojima F.Ukai M.Ishii (KMC).\n"
-
-#if defined(PC98)
-char copyright[] = COPYRIGHT_FreeBSD COPYRIGHT_PC98 COPYRIGHT_UCB;
-
-#else
 char copyright[] = COPYRIGHT_MidnightBSD COPYRIGHT_FreeBSD COPYRIGHT_UCB;
-#endif
