@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/db.c,v 1.2 2007/12/05 17:02:15 ctriv Exp $
  */
 
 
@@ -35,30 +35,11 @@
 #include <string.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.2 2007/12/05 17:02:15 ctriv Exp $");
 
 
 static int populate_meta_from_stmt(mportPackageMeta *, sqlite3 *, sqlite3_stmt *);
-
-
-/* mport_db_open_master(sqlite3 **)
- * 
- * Open the master database file, or create the file if it doesn't exist.
- * Note that this function will not create the schema for you, if you need
- * to create the schema use mport_inst_init() instead.
- */
-int mport_db_open_master(sqlite3 **db)
-{
-  if (sqlite3_open(MPORT_MASTER_DB_FILE, db) != 0) {
-    sqlite3_close(*db);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
-  }
-  
-  return MPORT_OK;
-}
-
-
-
+static int populate_vec_from_stmt(mportPackageMeta ***, int, sqlite3 *, sqlite3_stmt *);
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  * 
@@ -107,8 +88,9 @@ int mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
   }
   
   if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
+    SET_ERRORX(MPORT_ERR_SQLITE, "sql error preparing '%s': %s", sql, sqlite3_errmsg(db));
     sqlite3_free(sql);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    RETURN_CURRENT_ERROR;
   }
   
   sqlite3_free(sql);
@@ -131,13 +113,30 @@ int mport_attach_stub_db(sqlite3 *db, const char *dir)
   asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
   
   if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) { 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    free(file);
+    RETURN_CURRENT_ERROR;
   }
   
   free(file);
   
   return MPORT_OK;
 }
+
+
+/* mport_detach_stub_db(sqlite *db) 
+ *
+ * The inverse of mport_attach_stub_db().
+ *
+ * Returns MPORT_OK on success.
+ */
+int mport_detach_stub_db(sqlite3 *db)
+{
+  if (mport_db_do(db, "DETACH stub") != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
+  
+  return MPORT_OK;
+}
+
 
 
 /* mport_get_meta_from_stub(sqlite *db, mportPackageMeta ***pack)
@@ -149,30 +148,109 @@ int mport_attach_stub_db(sqlite3 *db, const char *dir)
 int mport_get_meta_from_stub(sqlite3 *db, mportPackageMeta ***ref)
 {
   sqlite3_stmt *stmt;
-  int len;
-  mportPackageMeta **vec;
+  int len, ret;
   
   if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM stub.packages") != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
   
   len = sqlite3_column_int(stmt, 0);
   sqlite3_finalize(stmt);
-  
-  vec = (mportPackageMeta**)malloc((1+len) * sizeof(mportPackageMeta *));
-  *ref = vec;
-  
-  if (vec == NULL) 
-    return MPORT_ERR_NO_MEM;
+
+  if (len == 0) {
+    /* a stub should have packages! */
+    RETURN_ERROR(MPORT_ERR_INTERNAL, "stub database contains no packages.");
+  }
     
   if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix FROM stub.packages") != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  while (*vec != NULL) { 
+  ret = populate_vec_from_stmt(ref, len, db, stmt);
+  
+  sqlite3_finalize(stmt);
+  
+  return ret;
+}
+
+
+/* mport_get_meta_from_master(mportInstance *mport, mportPacakgeMeta ***pack, const char *where, ...)
+ *
+ * Allocate and populate the package meta for the given package from the
+ * master database.
+ * 
+ * 'where' and the vargs are used to be build a where clause.  For example to search by
+ * name:
+ * 
+ * mport_get_meta_from_master(mport, &packvec, "pkg=%Q", name);
+ *
+ * or by origin
+ *
+ * mport_get_meta_from_master(mport, &packvec, "origin=%Q", origin);
+ *
+ * pack is set to NULL and MPORT_OK is returned if no packages where found.
+ */
+int mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
+{
+  va_list args;
+  sqlite3_stmt *stmt;
+  int ret, len;
+  char *where;
+  sqlite3 *db = mport->db;
+  
+  va_start(args, fmt);
+  
+  if ((where = sqlite3_vmprintf(fmt, args)) == NULL) {
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Could not build where clause");
+  }
+  
+  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
+
+    
+  len = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+
+  if (len == 0) {
+    sqlite3_free(where);
+    *ref = NULL;
+    return MPORT_OK;
+  }
+
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix FROM packages WHERE %s", where) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+    
+  ret = populate_vec_from_stmt(ref, len, db, stmt);
+
+  sqlite3_free(where);  
+  sqlite3_finalize(stmt);
+  
+  return ret;
+}
+  
+
+static int populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_stmt *stmt)
+{ 
+  mportPackageMeta **vec;
+  int done = 0;
+  vec  = (mportPackageMeta**)malloc((1+len) * sizeof(mportPackageMeta *));
+  *ref = vec;
+
+  while (!done) { 
     switch (sqlite3_step(stmt)) {
       case SQLITE_ROW:
-        *vec = mport_new_packagemeta();
+        *vec = mport_packagemeta_new();
         if (*vec == NULL)
-          return MPORT_ERR_NO_MEM;
+          RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate meta."); 
         if (populate_meta_from_stmt(*vec, db, stmt) != MPORT_OK)
           RETURN_CURRENT_ERROR;
         vec++;
@@ -180,60 +258,17 @@ int mport_get_meta_from_stub(sqlite3 *db, mportPackageMeta ***ref)
       case SQLITE_DONE:
         /* set the last cell in the array to null */
         *vec = NULL;
+        done++;
         break;
       default:
-        sqlite3_finalize(stmt);
         RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         break; /* not reached */
     }
   }
   
-  sqlite3_finalize(stmt);
-  
+  /* not reached */
   return MPORT_OK;
 }
-
-
-/* mport_get_meta_from_master(sqlite3 *db, mportPacakgeMeta **pack, const char *name)
- *
- * Allocate and populate the package meta for the given package from the
- * master database.
- * 
- * pack is set to NULL if package 'name' is not installed
- */
-int mport_get_meta_from_master(sqlite3 *db, mportPackageMeta **pack, const char *name)
-{
-  sqlite3_stmt *stmt;
-  int ret;
-  
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, lang, prefix FROM packages WHERE pkg=%Q", name) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  switch (sqlite3_step(stmt)) {
-    case SQLITE_ROW:
-      *pack = mport_new_packagemeta();
-      if (*pack == NULL)
-        return MPORT_ERR_NO_MEM;
-      
-      ret = populate_meta_from_stmt(*pack, db, stmt);
-      sqlite3_finalize(stmt);
-      return ret;
-      break;
-    case SQLITE_DONE:
-      *pack = NULL;
-      sqlite3_finalize(stmt);
-      return MPORT_OK;
-      break;
-    default:
-      sqlite3_finalize(stmt);
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-      break;
-  }
-  
-  /* no reached */
-  return MPORT_OK;
-}
-  
  
  
 static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt) 

@@ -23,12 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <errno.h>
@@ -41,21 +42,21 @@
 #include <archive_entry.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $");
 
 
-static int create_package_db(sqlite3 **);
+static int create_stub_db(sqlite3 **);
 static int insert_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
 static int insert_meta(sqlite3 *, mportPackageMeta *);
 static int insert_depends(sqlite3 *, mportPackageMeta *);
 static int insert_conflicts(sqlite3 *, mportPackageMeta *);
 static int archive_files(mportPlist *, mportPackageMeta *, const char *);
-static int archive_metafiles(struct archive *, mportPackageMeta *);
-static int archive_plistfiles(struct archive *, mportPackageMeta *, mportPlist *);
+static int archive_metafiles(mportBundle *, mportPackageMeta *);
+static int archive_plistfiles(mportBundle *, mportPackageMeta *, mportPlist *);
 static int clean_up(const char *);
 
 
-int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
+int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
 {
   
   int ret;
@@ -73,7 +74,7 @@ int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
     goto CLEANUP;
   }
 
-  if ((ret = create_package_db(&db)) != MPORT_OK)
+  if ((ret = create_stub_db(&db)) != MPORT_OK)
     goto CLEANUP;
     
   if ((ret = insert_plist(db, plist, pack)) != MPORT_OK)
@@ -96,7 +97,7 @@ int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
 }
 
 
-static int create_package_db(sqlite3 **db) 
+static int create_stub_db(sqlite3 **db) 
 {
   if (sqlite3_open(MPORT_STUB_DB_FILE, db) != SQLITE_OK) {
     sqlite3_close(*db);
@@ -115,6 +116,7 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
   char md5[33];
   char file[FILENAME_MAX];
   char cwd[FILENAME_MAX];
+  struct stat st;
 
   strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
   strlcat(cwd, pack->prefix, FILENAME_MAX);
@@ -145,20 +147,25 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
     if (e->type == PLIST_FILE) {
       (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       
-      if (MD5File(file, md5) == NULL) {
-        char *error;
-        (void)asprintf(&error, "File not found: %s", file);
-        RETURN_ERROR(MPORT_ERR_FILE_NOT_FOUND, error);
-      }
+      if (lstat(file, &st) != 0) 
+        RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "Couln't stat %s: %s", file, strerror(errno));
       
-      if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK) {
-        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      if (S_ISREG(st.st_mode)) {
+
+        if (MD5File(file, md5) == NULL) 
+          RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
+      
+        if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK) 
+          RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      } else {
+        sqlite3_bind_null(stmnt, 4);
       }
     } else {
       if (sqlite3_bind_null(stmnt, 4) != SQLITE_OK) {
         RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
       }
     }
+    
     if (sqlite3_step(stmnt) != SQLITE_DONE) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
@@ -225,19 +232,16 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
 static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack) 
 {
   sqlite3_stmt *stmnt;
-  char sql[]  = "INSERT INTO conflicts (pkg, conflict_pkg, conflict_version) VALUES (?,?,?)";
   char **conflict  = pack->conflicts;
   char *version;
-  const char *rest = 0;
   
   /* we're done if there are no conflicts to record. */
   if (conflict == NULL) 
     return MPORT_OK;
-  
-  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
 
+  if (mport_db_prepare(db, &stmnt, "INSERT INTO conflicts (pkg, conflict_pkg, conflict_version) VALUES (?,?,?)") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
   /* we have a conflict like apache-1.4.  We want to do a m/(.*)-(.*)/ */
   while (*conflict != NULL) {
     version = rindex(*conflict, '-');
@@ -270,21 +274,17 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
 static int insert_depends(sqlite3 *db, mportPackageMeta *pack) 
 {
   sqlite3_stmt *stmnt;
-  char sql[]  = "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)";
   char **depend    = pack->depends;
   char *pkgversion;
   char *port;
-  const char *rest = 0;
   
   /* we're done if there are no deps to record. */
   if (depend == NULL) 
     return MPORT_OK;
-  
-  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
-  
-  
+
+  if (mport_db_prepare(db, &stmnt, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
   /* depends look like this.  break'em up into port, pkgversion and pkgname
    * perl-5.8.8_1:lang/perl5.8
    */
@@ -292,11 +292,17 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
     port = rindex(*depend, ':');
     *port = '\0';
     port++;
+
+    if (*port == 0)
+      RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend: %s", *depend);
     
     pkgversion = rindex(*depend, '-');
     *pkgversion = '\0';
     pkgversion++;
     
+    if (*pkgversion == 0)
+      RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend: %s", *depend);
+      
     if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
@@ -325,37 +331,34 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 
 static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *tmpdir)
 {
-  struct archive *a;
+  mportBundle *bundle;
   char filename[FILENAME_MAX];
+  
+  bundle = mport_bundle_new();
+  
+  if (mport_bundle_init(bundle, pack->pkg_filename) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
 
-  a = archive_write_new();
-  archive_write_set_compression_bzip2(a);
-  archive_write_set_format_pax(a);
-  
-  if (archive_write_open_filename(a, pack->pkg_filename) != ARCHIVE_OK) {
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a)); 
-  }
-  
   /* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */        
   (void)snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
-  if (mport_add_file_to_archive(a, filename, MPORT_STUB_DB_FILE)) 
+  if (mport_bundle_add_file(bundle, filename, MPORT_STUB_DB_FILE)) 
     RETURN_CURRENT_ERROR;
     
   /* second step - the meta files */
-  if (archive_metafiles(a, pack) != MPORT_OK)
+  if (archive_metafiles(bundle, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   /* last step - the real files from the plist */
-  if (archive_plistfiles(a, pack, plist) != MPORT_OK)
+  if (archive_plistfiles(bundle, pack, plist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
-  archive_write_finish(a);
+  mport_bundle_finish(bundle);
   
   return MPORT_OK;    
 }
 
 
-static int archive_metafiles(struct archive *a, mportPackageMeta *pack)
+static int archive_metafiles(mportBundle *bundle, mportPackageMeta *pack)
 {
   char filename[FILENAME_MAX], dir[FILENAME_MAX];
   
@@ -363,45 +366,40 @@ static int archive_metafiles(struct archive *a, mportPackageMeta *pack)
 
   if (pack->mtree != NULL && mport_file_exists(pack->mtree)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MTREE_FILE);
-    if (mport_add_file_to_archive(a, pack->mtree, filename) != MPORT_OK)
+    if (mport_bundle_add_file(bundle, pack->mtree, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkginstall != NULL && mport_file_exists(pack->pkginstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_INSTALL_FILE);
-    if (mport_add_file_to_archive(a, pack->pkginstall, filename) != MPORT_OK)
+    if (mport_bundle_add_file(bundle, pack->pkginstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkgdeinstall != NULL && mport_file_exists(pack->pkgdeinstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_DEINSTALL_FILE);
-    if (mport_add_file_to_archive(a, pack->pkgdeinstall, filename) != MPORT_OK)
+    if (mport_bundle_add_file(bundle, pack->pkgdeinstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkgmessage != NULL && mport_file_exists(pack->pkgmessage)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MESSAGE_FILE);
-    if (mport_add_file_to_archive(a, pack->pkgmessage, filename) != MPORT_OK)
+    if (mport_bundle_add_file(bundle, pack->pkgmessage, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   return MPORT_OK;
 }
 
-static int archive_plistfiles(struct archive *a, mportPackageMeta *pack, mportPlist *plist)
+static int archive_plistfiles(mportBundle *bundle, mportPackageMeta *pack, mportPlist *plist)
 {
   mportPlistEntry *e;
   char filename[FILENAME_MAX];
   char *cwd = pack->prefix;
   
   STAILQ_FOREACH(e, plist, next) {
-    if (e->type == PLIST_CWD) {
-      if (e->data == NULL) {
-        cwd = pack->prefix;
-      } else {
-        cwd = e->data;
-      }
-    }
+    if (e->type == PLIST_CWD) 
+      cwd = e->data == NULL ? pack->prefix : e->data;
     
     if (e->type != PLIST_FILE) {
       continue;
@@ -409,7 +407,7 @@ static int archive_plistfiles(struct archive *a, mportPackageMeta *pack, mportPl
     
     (void)snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
     
-    if (mport_add_file_to_archive(a, filename, e->data) != MPORT_OK)
+    if (mport_bundle_add_file(bundle, filename, e->data) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }    
  

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.4 2007/09/28 03:01:31 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/error.c,v 1.5 2007/11/22 08:00:32 ctriv Exp $
  */
 
 
@@ -32,7 +32,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.4 2007/09/28 03:01:31 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.5 2007/11/22 08:00:32 ctriv Exp $");
 
 static int err;
 static char err_msg[256];
@@ -46,7 +46,15 @@ static char *mport_err_defaults[] = {
   "SQLite error.",
   "File not found."
   "System call failed.",
-  "libarchive error."
+  "libarchive error.",
+  "Package already installed.",
+  "Package conflicts with priviously installed package.",
+  "A depend is missing.",
+  "Malformed version.",
+  "Malformed depend.",
+  "No such package.",
+  "Checksum mismatch.",
+  "Packages depend on this package."
 };
   
 

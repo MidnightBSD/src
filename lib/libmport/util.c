@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $
  */
 
 
@@ -37,33 +37,47 @@
 #include <libgen.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.7 2007/11/22 08:00:32 ctriv Exp $");
-
 /* Package meta-data creation and destruction */
-mportPackageMeta* mport_new_packagemeta() 
+mportPackageMeta* mport_packagemeta_new() 
 {
   /* we use calloc so any pointers that aren't set are NULL.
      (calloc zero's out the memory region. */
   return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
 }
 
-void mport_free_packagemeta(mportPackageMeta *pack)
+void mport_packagemeta_free(mportPackageMeta *pack)
 {
   free(pack->pkg_filename);
   free(pack->comment);
   free(pack->sourcedir);
   free(pack->desc);
   free(pack->prefix);
-  free(*(pack->depends));
   free(pack->depends);
   free(pack->mtree);
   free(pack->origin);
-  free(*(pack->conflicts));
   free(pack->conflicts);
   free(pack->pkginstall);
   free(pack->pkgdeinstall);
   free(pack->pkgmessage);
+  
+  if (pack->conflicts != NULL)
+    free(*(pack->conflicts));
+  
+  if (pack->depends != NULL)
+    free(*(pack->depends));
+
   free(pack);
+}
+
+/* free a vector of mportPackageMeta pointers */
+void mport_packagemeta_vec_free(mportPackageMeta **vec)
+{
+  int i;
+  for (i=0; *(vec + i) != NULL; i++) {
+    mport_packagemeta_free(*(vec + i));
+  }
+  
+  free(vec);
 }
 
 
@@ -72,7 +86,7 @@ void mport_free_packagemeta(mportPackageMeta *pack)
  */
 int mport_rmtree(const char *filename) 
 {
-  return mport_xsystem("/bin/rm -r %s", filename);
+  return mport_xsystem(NULL, "/bin/rm -r %s", filename);
 }  
 
 
@@ -82,7 +96,7 @@ int mport_rmtree(const char *filename)
  */
 int mport_copy_file(const char *fromname, const char *toname)
 {
-  return mport_xsystem("/bin/cp %s %s", fromname, toname);
+  return mport_xsystem(NULL, "/bin/cp %s %s", fromname, toname);
 }
 
 
@@ -100,8 +114,27 @@ int mport_mkdir(const char *dir)
   
   return MPORT_OK;
 }
-  
 
+
+/*
+ * mport_rmdir(dir, ignore_nonempty)
+ *
+ * delete the given directory.  If ignore_nonempty is non-zero, then
+ * we return OK even if we couldn't delete the dir because it wasn't empty or
+ * didn't exist.
+ */
+int mport_rmdir(const char *dir, int ignore_nonempty)
+{
+  if (rmdir(dir) != 0) {
+    if (ignore_nonempty && (errno == ENOTEMPTY || errno == ENOENT)) {
+      return MPORT_OK;
+    } else {
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    }
+  } 
+  
+  return MPORT_OK;
+}
 /*
  * Quick test to see if a file exists.
  */
@@ -113,23 +146,36 @@ int mport_file_exists(const char *file)
 }
 
 
-/* mport_xsystem(char *fmt, ...)
+/* mport_xsystem(mportInstance *mport, char *fmt, ...)
  * 
  * Our own version on system that takes a format string and a list 
  * of values.  The fmt works exactly like the stdio output formats.
+ * 
+ * If mport is non-NULL and has a root set, your command will run 
+ * chroot'ed into mport->root.
  */
-int mport_xsystem(const char *fmt, ...) 
+int mport_xsystem(mportInstance *mport, const char *fmt, ...) 
 {
   va_list args;
   char *cmnd;
   int ret;
   
   va_start(args, fmt);
+  
   if (vasprintf(&cmnd, fmt, args) == -1) {
     /* XXX How will the caller know this is no mem, and not a failed exec? */
     return MPORT_ERR_NO_MEM;
   }
+ 
+  if (mport != NULL && *(mport->root) != '\0') {
+    char *chroot_cmd;
+    if (asprintf(&chroot_cmd, "%s %s %s", MPORT_CHROOT_BIN, mport->root, cmnd) == -1)
+      return MPORT_ERR_NO_MEM;
   
+    free(cmnd);
+    cmnd = chroot_cmd;
+  }
+    
   ret = system(cmnd);
   
   free(cmnd);
@@ -202,11 +248,12 @@ void mport_parselist(char *opt, char ***list)
  * %B	Return the directory part ("dirname") of %D/%F
  * %f	Return the filename part of ("basename") %D/%F
  */
-int mport_run_plist_exec(const char *fmt, const char *cwd, const char *last_file) 
+int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
 {
   size_t l;
   size_t max = FILENAME_MAX * 2;
   char cmnd[max];
+  char fqfile[FILENAME_MAX];
   char *pos = cmnd;
   char *name;
   
@@ -215,30 +262,31 @@ int mport_run_plist_exec(const char *fmt, const char *cwd, const char *last_file
       fmt++;
       switch (*fmt) {
         case 'F':
-          strlcpy(pos, last_file, max);
+          (void)strlcpy(pos, last_file, max);
           l = strlen(last_file);
           pos += l;
           max -= l;
           break;
         case 'D':
-          strlcpy(pos, cwd, max);
+          (void)strlcpy(pos, cwd, max);
           l = strlen(cwd);
           pos += l;
           max -= l;
           break;
         case 'B':
-          name = dirname(last_file);
-          strlcpy(pos, name, max);
+          (void)snprintf(fqfile, sizeof(fqfile), "%s/%s", cwd, last_file);
+          name = dirname(fqfile);
+          (void)strlcpy(pos, name, max);
           l = strlen(name);
           pos += l;
           max -= l;
           break;
         case 'f':
           name = basename(last_file);
-          strlcpy(pos, name, max);
+          (void)strlcpy(pos, name, max);
           l = strlen(name);
           pos += l;
-          pos -= l;
+          max -= l;
           break;
         default:
           *pos = *fmt;
@@ -257,6 +305,6 @@ int mport_run_plist_exec(const char *fmt, const char *cwd, const char *last_file
   *pos = '\0';
   
   /* cmnd now hold the expaded command, now execute it*/
-  return mport_xsystem(cmnd);
+  return mport_xsystem(mport, cmnd);
 }          
 

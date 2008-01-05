@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.7 2007/12/01 06:21:37 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv Exp $
  *
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
@@ -31,14 +31,58 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.7 2007/12/01 06:21:37 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv Exp $");
 
 
-
-/* plist stuff */
-
+#include <archive.h>
+#include <sqlite3.h>
 #include <sys/queue.h>
 #include <stdio.h>
+
+typedef void (*mport_msg_cb)(const char *);
+typedef void (*mport_progress_init_cb)(void);
+typedef void (*mport_progress_step_cb)(int, int, const char *);
+typedef void (*mport_progress_free_cb)(void);
+typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
+
+/* Mport Instance (an installed copy of the mport system) */
+typedef struct {
+  sqlite3 *db;
+  char *root;
+  mport_msg_cb msg_cb;
+  mport_progress_init_cb progress_init_cb;
+  mport_progress_step_cb progress_step_cb;
+  mport_progress_free_cb progress_free_cb;
+  mport_confirm_cb confirm_cb;
+} mportInstance;
+
+mportInstance * mport_instance_new(void);
+int mport_instance_init(mportInstance *, const char *);
+int mport_instance_free(mportInstance *);
+
+void mport_set_msg_cb(mportInstance *, mport_msg_cb);
+void mport_set_progress_init_cb(mportInstance *, mport_progress_init_cb);
+void mport_set_progress_step_cb(mportInstance *, mport_progress_step_cb);
+void mport_set_progress_free_cb(mportInstance *, mport_progress_free_cb);
+void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
+
+void mport_default_msg_cb(const char *);
+int mport_default_confirm_cb(const char *, const char *, const char *, int);
+void mport_default_progress_init_cb(void);
+void mport_default_progress_step_cb(int, int, const char *);
+void mport_default_progress_free_cb(void);
+
+
+/* Mport Bundle (a file containing packages) */
+typedef struct {
+  struct archive *archive;
+  char *filename;
+} mportBundle;
+
+mportBundle* mport_bundle_new(void);
+int mport_bundle_init(mportBundle *, const char *);
+int mport_bundle_finish(mportBundle *);
+int mport_bundle_add_file(mportBundle *, const char *, const char *);
 
 
 /* For now this is just the FreeBSD list, this will change soon. */
@@ -63,9 +107,9 @@ STAILQ_HEAD(_Plist, _PlistEntry);
 typedef struct _Plist mportPlist;
 typedef struct _PlistEntry mportPlistEntry;
 
-mportPlist* mport_new_plist(void);
-void mport_free_plist(mportPlist *);
-int mport_parse_plist_file(FILE *, mportPlist *);
+mportPlist* mport_plist_new(void);
+void mport_plist_free(mportPlist *);
+int mport_plist_parsefile(FILE *, mportPlist *);
 
 /* Package Meta-data structure */
 
@@ -88,34 +132,35 @@ typedef struct {
   char *pkgmessage;
 } mportPackageMeta;  
 
-mportPackageMeta * mport_new_packagemeta(void);
-void mport_free_packagemeta(mportPackageMeta *);
-void mport_free_packagemeta_vec(mportPackageMeta **);
+mportPackageMeta * mport_packagemeta_new(void);
+void mport_packagemeta_free(mportPackageMeta *);
+void mport_packagemeta_vec_free(mportPackageMeta **);
+
 
 /* Package creation */
-int mport_create_pkg(mportPlist *, mportPackageMeta *);
-
+int mport_create_primative(mportPlist *, mportPackageMeta *);
 
 /* Package installation */
-int mport_install_pkg(const char *, const char *);
+int mport_install_primative(mportInstance *, const char *, const char *);
 
+/* Package deletion */
+int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
 
-#include <sqlite3.h>
+/* precondition checking */
+int mport_check_update_preconditions(mportInstance *, mportPackageMeta *);
+int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
 int mport_generate_stub_schema(sqlite3 *);
 
 /* Various database convience functions */
-int mport_db_open_master(sqlite3 **);
 int mport_attach_stub_db(sqlite3 *, const char *);
+int mport_detach_stub_db(sqlite3 *);
 int mport_get_meta_from_stub(sqlite3 *, mportPackageMeta ***);
-int mport_get_meta_from_master(sqlite3 *, mportPackageMeta**, const char *);
+int mport_get_meta_from_master(mportInstance *, mportPackageMeta ***, const char *, ...);
 int mport_db_do(sqlite3 *, const char *, ...);
 int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
-
-/* instance init */
-int mport_inst_init(sqlite3 **);
 
 
 /* version comparing */
@@ -142,7 +187,10 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_CONFLICTS		10
 #define MPORT_ERR_MISSING_DEPEND	11
 #define MPORT_ERR_MALFORMED_VERSION	12
-#define MPORT_ERR_NO_SUCH_PKG		13
+#define MPORT_ERR_MALFORMED_DEPEND	13
+#define MPORT_ERR_NO_SUCH_PKG		14
+#define MPORT_ERR_CHECKSUM_MISMATCH	15
+#define MPORT_ERR_UPWARDS_DEPENDS	16
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
@@ -155,15 +203,13 @@ int mport_set_errx(int , const char *, ...);
 int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
+int mport_rmdir(const char *, int);
 int mport_file_exists(const char *);
-int mport_xsystem(const char *, ...);
+int mport_xsystem(mportInstance *mport, const char *, ...);
 void mport_parselist(char *, char ***);
-int mport_run_plist_exec(const char *, const char *, const char *);
+int mport_run_plist_exec(mportInstance *mport, const char *, const char *, const char *);
 
 
-/* archive helpers */
-#include <archive.h>
-int mport_add_file_to_archive(struct archive *, const char *, const char *);
 
 /* Infrastructure files */
 #define MPORT_STUB_DB_FILE 	"+CONTENTS.db"
@@ -182,5 +228,7 @@ int mport_add_file_to_archive(struct archive *, const char *, const char *);
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"
 #define MPORT_SH_BIN		"/bin/sh"
+#define MPORT_CHROOT_BIN	"/usr/sbin/chroot"
 
 #endif /* ! defined _MPORT_H */
+
