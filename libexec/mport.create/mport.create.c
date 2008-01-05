@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.2 2007/09/24 16:49:06 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.3 2007/09/27 23:09:12 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.2 2007/09/24 16:49:06 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.3 2007/09/27 23:09:12 ctriv Exp $");
 
 
 #include <stdlib.h>
@@ -49,8 +49,8 @@ int main(int argc, char *argv[])
 {
   int ch;
   int plist_seen = 0;
-  mportPackageMeta *pack = mport_new_packagemeta();
-  mportPlist *plist      = mport_new_plist();
+  mportPackageMeta *pack = mport_packagemeta_new();
+  mportPlist *plist      = mport_plist_new();
   FILE *fp;
     
   while ((ch = getopt(argc, argv, "o:n:v:c:l:s:d:p:P:D:M:O:C:i:j:m:r:")) != -1) {
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
         if ((fp = fopen(optarg, "r")) == NULL) {
           err(1, "%s", optarg);
         }
-        if (mport_parse_plist_file(fp, plist) != 0) {
+        if (mport_plist_parsefile(fp, plist) != 0) {
           warnx("Could not parse plist file '%s'.\n", optarg);
           exit(1);
         }
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     usage();
   }
 
-  if (mport_create_pkg(plist, pack) != MPORT_OK) {
+  if (mport_create_primative(plist, pack) != MPORT_OK) {
     warnx("%s", mport_err_string());
     return 1;
   }
@@ -148,6 +148,7 @@ static void check_for_required_args(mportPackageMeta *pack)
   CHECK_ARG(pkg_filename, "package filename");
   CHECK_ARG(sourcedir, "source dir");
   CHECK_ARG(prefix, "prefix");
+  CHECK_ARG(origin, "origin");
 }
     
 
@@ -161,6 +162,7 @@ static void usage()
   fprintf(stderr, "\t-s <source dir (usually the fake destdir)>\n");
   fprintf(stderr, "\t-p <plist filename>\n");
   fprintf(stderr, "\t-P <prefix>\n");
+  fprintf(stderr, "\t-O <origin>\n");
   fprintf(stderr, "\t-c <comment (short description)>\n");
   fprintf(stderr, "\t-l <package lang>\n");
   fprintf(stderr, "\t-D <package depends>\n");
@@ -168,6 +170,7 @@ static void usage()
   fprintf(stderr, "\t-d <pkg-descr file>\n");
   fprintf(stderr, "\t-i <pkg-install script>\n");
   fprintf(stderr, "\t-j <pkg-deinstall script>\n");
-  
+  fprintf(stderr, "\t-m <pkg-message file>\n");
+  fprintf(stderr, "\t-M <mtree file>\n");  
   exit(1);
 }

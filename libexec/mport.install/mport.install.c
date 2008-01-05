@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
 {
   int ch, i;
   char *prefix = NULL;
+  mportInstance *mport;
     
   while ((ch = getopt(argc, argv, "p:")) != -1) {
     switch (ch) {
@@ -61,14 +62,22 @@ int main(int argc, char *argv[])
 
   argc -= optind;
   argv += optind;
+
+  mport = mport_instance_new();
+  
+  if (mport_instance_init(mport, NULL) != MPORT_OK) {
+    warnx("%s", mport_err_string());
+    exit(1);
+  }
   
   for (i=0; i<argc; i++) {
-//    printf("filename: %s\n", argv[i]);
-    if (mport_install_pkg(argv[i], prefix) != MPORT_OK) {
+    if (mport_install_primative(mport, argv[i], prefix) != MPORT_OK) {
       warnx("%s", mport_err_string());
       exit(1);
     }
   }
+ 
+  mport_instance_free(mport); 
   
   return 0;
 }
