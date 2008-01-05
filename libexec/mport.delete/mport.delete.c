@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.3 2007/09/27 23:09:12 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.1 2008/01/05 22:21:12 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.create/mport.create.c,v 1.3 2007/09/27 23:09:12 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.1 2008/01/05 22:21:12 ctriv Exp $");
 
 
 #include <stdlib.h>
@@ -86,6 +86,11 @@ int main(int argc, char *argv[])
   if (mport_get_meta_from_master(mport, &packs, where, arg) != MPORT_OK) {
     warnx("%s", mport_err_string());
     exit(1);
+  }
+  
+  if (packs == NULL) {
+    warnx("No packages installed matching '%s'", arg);
+    exit(3);
   }
   
   while (*packs != NULL) {
