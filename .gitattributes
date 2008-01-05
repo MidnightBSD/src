@@ -19906,6 +19906,8 @@ libexec/mknetid/netid.5 -text
 libexec/mknetid/parse_group.c -text
 libexec/mport.create/Makefile -text
 libexec/mport.create/mport.create.c -text
+libexec/mport.delete/Makefile -text
+libexec/mport.delete/mport.delete.c -text
 libexec/mport.install/Makefile -text
 libexec/mport.install/mport.install.c -text
 libexec/mport.version_cmp/Makefile -text
