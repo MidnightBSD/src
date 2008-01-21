@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.4 2007/02/20 02:43:34 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.5 2007/07/27 21:32:46 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -461,16 +461,9 @@ extern DMenu		MenuDistributions;	/* Distribution menu				*/
 extern DMenu		MenuDiskDevices;	/* Disk type devices				*/
 extern DMenu		MenuSubDistributions;	/* Custom distribution menu			*/
 extern DMenu		MenuSrcDistributions;	/* Source distribution menu			*/
-extern DMenu		MenuXOrg;		/* X.Org main menu				*/
-extern DMenu		MenuXOrgSelect;		/* X.Org distribution selection menu		*/
-extern DMenu		MenuXOrgSelectCore;	/* X.Org core distribution menu			*/
-extern DMenu		MenuXOrgSelectServer;	/* X.Org server distribution menu		*/
-extern DMenu		MenuXOrgSelectFonts;	/* X.Org font selection menu			*/
-extern DMenu		MenuXDesktops;		/* X Desktops menu				*/
 extern DMenu		MenuHTMLDoc;		/* HTML Documentation menu			*/
 extern DMenu		MenuUsermgmt;		/* User management menu				*/
 extern DMenu		MenuFixit;		/* Fixit floppy/CDROM/shell menu		*/
-extern DMenu		MenuXOrgConfig;		/* Select X.Org configuration tool		*/
 extern int              FixItMode;              /* FixItMode starts shell onc urrent device (ie Serial port) */
 extern const char *	StartName;		/* Which name we were started as */
 
@@ -592,7 +585,6 @@ extern int	distSetXUser(dialogMenuItem *self);
 extern int	distSetMinimum(dialogMenuItem *self);
 extern int	distSetEverything(dialogMenuItem *self);
 extern int	distSetSrc(dialogMenuItem *self);
-extern int	distSetXOrg(dialogMenuItem *self);
 extern int	distExtractAll(dialogMenuItem *self);
 
 /* dmenu.c */

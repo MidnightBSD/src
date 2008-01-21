@@ -1,6 +1,6 @@
 /* $FreeBSD: src/usr.sbin/sysinstall/dist.h,v 1.65 2005/06/16 18:16:13 ru Exp $ 
- * $MidnightBSD$
- */
+ * $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+/* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/usr.sbin/sysinstall/dist.h,v 1.67.2.4.2.1 2008/01/14 19:28:43 kensmith Exp $  */
 
 #ifndef _DIST_H_INCLUDE
 #define _DIST_H_INCLUDE
@@ -44,39 +44,9 @@
 #define DIST_SRC_SSECURE	0x20000
 #define DIST_SRC_SKERBEROS5	0x40000
 #define DIST_SRC_RESCUE		0x80000
-#define DIST_SRC_ALL		0xFFFFF
-
-/* Subtypes for X.Org packages */
-#define	DIST_XORG_CLIENTS	0x000001
-#define	DIST_XORG_LIB		0x000002
-#define DIST_XORG_MAN		0x000004
-#define DIST_XORG_DOC		0x000008
-#define DIST_XORG_IMAKE		0x000010
-
-#define	DIST_XORG_SERVER	0x000100
-#define	DIST_XORG_NESTSERVER	0x000200
-#define	DIST_XORG_PRINTSERVER	0x000400
-#define	DIST_XORG_VFBSERVER	0x000800
-
-#define	DIST_XORG_FONTS_MISC	0x010000
-#define DIST_XORG_FONTS_75	0x020000
-#define DIST_XORG_FONTS_100	0x040000
-#define DIST_XORG_FONTS_CYR	0x080000
-#define DIST_XORG_FONTS_T1	0x100000
-#define DIST_XORG_FONTS_TT	0x200000
-#define DIST_XORG_FONTSERVER	0x400000
-
-#define	DIST_XORG_MISC_ALL	0x00001f
-#define	DIST_XORG_SERVER_ALL	0x000f00
-#define DIST_XORG_FONTS_ALL	0x7f0000
-#define DIST_XORG_ALL		\
-	(DIST_XORG_MISC_ALL | DIST_XORG_SERVER_ALL | DIST_XORG_FONTS_ALL)
-
+#define DIST_SRC_ALL		0x3FFFF
+#define DIST_XORG_ALL		0xFFFFF
 /* Canned distribution sets */
-
-#define _DIST_XORG_FONTS_BASE \
-	(DIST_XORG_FONTS_MISC | DIST_XORG_FONTS_75 | DIST_XORG_FONTS_100 | \
-	 DIST_XORG_FONTS_TT)
 
 #define _DIST_USER \
 	( DIST_BASE | DIST_DOC | DIST_MANPAGES | DIST_DICT )
