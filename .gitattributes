@@ -24012,6 +24012,7 @@ sys/boot/forth/loader.rc -text
 sys/boot/forth/pnp.4th -text
 sys/boot/forth/screen.4th -text
 sys/boot/forth/support.4th -text
+sys/boot/forth/vm.4th -text
 sys/boot/i386/Makefile -text
 sys/boot/i386/Makefile.inc -text
 sys/boot/i386/boot0/Makefile -text

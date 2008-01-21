@@ -4,6 +4,10 @@
 \ Includes additional commands
 include /boot/loader.4th
 
+\ Virtual machine detection
+include /boot/vm.4th
+setup-vm
+
 \ Reads and processes loader.conf variables
 start
 
