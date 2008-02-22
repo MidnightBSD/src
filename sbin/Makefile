@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.156.2.1 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sbin/Makefile,v 1.3 2007/08/06 04:32:20 laffer1 Exp $
 # XXX MISSING:		icheck ncheck
 
 SUBDIR=	adjkerntz \
@@ -53,7 +53,6 @@ SUBDIR=	adjkerntz \
 	mount \
 	mount_cd9660 \
 	mount_ext2fs \
-	mount_hpfs \
 	mount_msdosfs \
 	mount_nfs \
 	mount_nfs4 \
