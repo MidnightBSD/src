@@ -26320,15 +26320,6 @@ sys/fs/fdescfs/fdesc_vfsops.c -text
 sys/fs/fdescfs/fdesc_vnops.c -text
 sys/fs/fifofs/fifo.h -text
 sys/fs/fifofs/fifo_vnops.c -text
-sys/fs/hpfs/hpfs.h -text
-sys/fs/hpfs/hpfs_alsubr.c -text
-sys/fs/hpfs/hpfs_ioctl.h -text
-sys/fs/hpfs/hpfs_lookup.c -text
-sys/fs/hpfs/hpfs_subr.c -text
-sys/fs/hpfs/hpfs_subr.h -text
-sys/fs/hpfs/hpfs_vfsops.c -text
-sys/fs/hpfs/hpfs_vnops.c -text
-sys/fs/hpfs/hpfsmount.h -text
 sys/fs/msdosfs/bootsect.h -text
 sys/fs/msdosfs/bpb.h -text
 sys/fs/msdosfs/denode.h -text
