@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.156.2.1 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/sbin/Makefile,v 1.3 2007/08/06 04:32:20 laffer1 Exp $
+# $MidnightBSD: src/sbin/Makefile,v 1.4 2008/02/22 02:53:02 laffer1 Exp $
 # XXX MISSING:		icheck ncheck
 
 SUBDIR=	adjkerntz \
@@ -21,7 +21,6 @@ SUBDIR=	adjkerntz \
 	dumpfs \
 	dumpon \
 	${_fdisk} \
-	${_fdisk_pc98} \
 	ffsinfo \
 	fsck \
 	fsck_ffs \
