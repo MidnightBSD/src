@@ -27509,7 +27509,6 @@ sys/modules/hfa/pci/Makefile -text
 sys/modules/hfa/sbus/Makefile -text
 sys/modules/hifn/Makefile -text
 sys/modules/hme/Makefile -text
-sys/modules/hpfs/Makefile -text
 sys/modules/hptmv/Makefile -text
 sys/modules/hwpmc/Makefile -text
 sys/modules/i2c/Makefile -text
