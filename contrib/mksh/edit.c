@@ -5,7 +5,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.115 2007/10/14 13:43:41 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.117 2007/10/25 15:23:08 tg Exp $");
 
 /* tty driver characters we are interested in */
 typedef struct {
@@ -26,8 +26,7 @@ X_chars edchars;
 #define XCF_COMMAND_FILE (XCF_COMMAND|XCF_FILE)
 
 static int x_getc(void);
-static void x_flush(void);
-static void x_putc(int);
+static void x_putcf(int);
 static bool x_mode(bool);
 static int x_do_comment(char *, int, int *);
 static void x_print_expansions(int, char *const *, int);
@@ -42,6 +41,9 @@ static void x_init_prompt(void);
 #ifndef MKSH_NOVI
 static int x_vi(char *, size_t);
 #endif
+
+#define x_flush()	shf_flush(shl_out)
+#define x_putc(c)	shf_putc((c), shl_out)
 
 #ifdef TIOCGWINSZ
 static void chkwinsz(void);
@@ -141,13 +143,7 @@ x_getc(void)
 }
 
 static void
-x_flush(void)
-{
-	shf_flush(shl_out);
-}
-
-static void
-x_putc(int c)
+x_putcf(int c)
 {
 	shf_putc(c, shl_out);
 }
@@ -443,8 +439,8 @@ x_command_glob(int flags, const char *str, int slen, char ***wordsp)
 	return nwords;
 }
 
-#define IS_WORDC(c)	!( ctype(c, C_LEX1) || (c) == '\'' || (c) == '"' || \
-			    (c) == '`' || (c) == '=' || (c) == ':' )
+#define IS_WORDC(c)	(!ctype(c, C_LEX1) && (c) != '\'' && (c) != '"' && \
+			    (c) != '`' && (c) != '=' && (c) != ':')
 
 static int
 x_locate_word(const char *buf, int buflen, int pos, int *startp,
@@ -766,20 +762,21 @@ static void utf_ptradj(char *, char **);
 /* UTF-8 hack: high-level functions */
 
 #if HAVE_EXPSTMT
-#define utf_backch(c)	(!Flag(FUTFHACK) ? (c) - 1 : ({	\
-	u_char *utf_backch_cp = (u_char *)(c);		\
-	--utf_backch_cp;				\
-	while ((*utf_backch_cp >= 0x80) &&		\
-	    (*utf_backch_cp < 0xC0))			\
-		--utf_backch_cp;			\
-	(__typeof__ (c))utf_backch_cp;			\
+#define utf_backch(c)	(!Flag(FUTFHACK) ? (c) - 1 : ({		\
+	unsigned char *utf_backch_cp = (unsigned char *)(c);	\
+	--utf_backch_cp;					\
+	while ((*utf_backch_cp >= 0x80) &&			\
+	    (*utf_backch_cp < 0xC0))				\
+		--utf_backch_cp;				\
+	(__typeof__ (c))utf_backch_cp;				\
 }))
 #else
-#define utf_backch(c)	(!Flag(FUTFHACK) ? (c) - 1 : 	\
-	    (c) + (ptrdiff_t)(utf_backch_((u_char *)c) - ((u_char *)(c))))
-static u_char *utf_backch_(u_char *);
-static u_char *
-utf_backch_(u_char *utf_backch_cp)
+#define utf_backch(c)	(!Flag(FUTFHACK) ? (c) - 1 : 		\
+	    (c) + (ptrdiff_t)(utf_backch_((unsigned char *)c) - \
+	    ((unsigned char *)(c))))
+static unsigned char *utf_backch_(unsigned char *);
+static unsigned char *
+utf_backch_(unsigned char *utf_backch_cp)
 {
 	--utf_backch_cp;
 	while ((*utf_backch_cp >= 0x80) && (*utf_backch_cp < 0xC0))
@@ -1089,8 +1086,8 @@ static int	xlp_valid;
 static char	**x_histp;	/* history position */
 static int	x_nextcmd;	/* for newline-and-next */
 static char	*xmp;		/* mark pointer */
-static u_char	x_last_command;
-static u_char	(*x_tab)[X_TABSZ];	/* key definition */
+static unsigned char x_last_command;
+static unsigned char (*x_tab)[X_TABSZ];	/* key definition */
 static char	*(*x_atab)[X_TABSZ];	/* macro definitions */
 static unsigned char	x_bound[(X_TABSZ * X_NTABS + 7) / 8];
 #define	KILLSIZE	20
@@ -1459,7 +1456,7 @@ static int
 x_emacs(char *buf, size_t len)
 {
 	int c, i;
-	u_char f;
+	unsigned char f;
 
 	xbp = xbuf = buf; xend = buf + len;
 	xlp = xcp = xep = buf;
@@ -1866,7 +1863,7 @@ x_size2(char *cp, char **dcp)
 	if (c == '\t')
 		return 4;	/* Kludge, tabs are always four spaces. */
 	if (c < ' ' || c == 0x7f)
-		return 2;	/* control u_char */
+		return 2;	/* control unsigned char */
 	return 1;
 }
 
@@ -2109,7 +2106,7 @@ x_search_hist(int c)
 	int offset = -1;	/* offset of match in xbuf, else -1 */
 	char pat[256 + 1];	/* pattern buffer */
 	char *p = pat;
-	u_char f;
+	unsigned char f;
 
 	*p = '\0';
 	while (1) {
@@ -2573,7 +2570,7 @@ x_bind(const char *a1, const char *a2,
     int macro,			/* bind -m */
     int list)			/* bind -l */
 {
-	u_char f;
+	unsigned char f;
 	int prefix, key;
 	char *sp = NULL;
 	char *m1, *m2;
@@ -2605,7 +2602,7 @@ x_bind(const char *a1, const char *a2,
 	m2 = m1 = x_mapin(a1, ATEMP);
 	prefix = key = 0;
 	for (;; m1++) {
-		key = (u_char)*m1;
+		key = (unsigned char)*m1;
 		f = x_tab[prefix][key] & 0x7F;
 		if (f == XFUNC_meta1)
 			prefix = 1;
@@ -2671,7 +2668,7 @@ x_init_emacs(void)
 	ainit(AEDIT);
 	x_nextcmd = -1;
 
-	x_tab = (u_char (*)[X_TABSZ])alloc(sizeofN(*x_tab, X_NTABS), AEDIT);
+	x_tab = (unsigned char (*)[X_TABSZ])alloc(sizeofN(*x_tab, X_NTABS), AEDIT);
 	for (j = 0; j < X_TABSZ; j++)
 		x_tab[0][j] = XFUNC_insert;
 	for (i = 1; i < X_NTABS; i++)
@@ -2925,7 +2922,7 @@ x_e_getc(void)
 		c = unget_char;
 		unget_char = -1;
 	} else if (macroptr) {
-		c = (u_char)*macroptr++;
+		c = (unsigned char)*macroptr++;
 		if (!*macroptr)
 			macroptr = NULL;
 	} else
@@ -2988,7 +2985,7 @@ x_e_putc3(const char **cp)
 
 			width = utf_widthadj(*cp, (const char **)&cp2);
 			while (*cp < cp2)
-				x_putc(*(*cp)++);
+				x_putcf(*(*cp)++);
 		} else {
 			(*cp)++;
 			x_putc(c);
@@ -5193,7 +5190,7 @@ ed_mov_opt(int col, char *wb)
 			pprompt(prompt, prompt_trunc);
 			cur_col = pwidth;
 			while (cur_col++ < col)
-				x_putc(*wb++);
+				x_putcf(*wb++);
 		} else {
 			while (cur_col-- > col)
 				x_putc('\b');
@@ -5201,7 +5198,7 @@ ed_mov_opt(int col, char *wb)
 	} else {
 		wb = &wb[cur_col - pwidth];
 		while (cur_col++ < col)
-			x_putc(*wb++);
+			x_putcf(*wb++);
 	}
 	cur_col = col;
 }

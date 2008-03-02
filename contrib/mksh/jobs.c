@@ -2,7 +2,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.28 2007/09/09 19:12:10 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.32 2007/10/25 15:23:09 tg Exp $");
 
 /* Order important! */
 #define PRUNNING	0
@@ -293,8 +293,7 @@ j_change(void)
 
 /* execute tree in child subprocess */
 int
-exchild(struct op *t, int flags,
-    int close_fd)	/* used if XPCLOSE or XCCLOSE */
+exchild(struct op *t, int flags, /* used if XPCLOSE or XCCLOSE */ int close_fd)
 {
 	static Proc	*last_proc;	/* for pipelines */
 
@@ -373,7 +372,7 @@ exchild(struct op *t, int flags,
 		p->pid = i;
 
 	/* Ensure next child gets a (slightly) different $RANDOM sequence */
-	change_random((p->pid << 1) | (ischild ? 1 : 0));
+	change_random(((unsigned long)p->pid << 1) | (ischild ? 1 : 0));
 
 	/* job control set up */
 	if (Flag(FMONITOR) && !(flags&XXCOM)) {
@@ -433,8 +432,10 @@ exchild(struct op *t, int flags,
 		tty_close();
 		cleartraps();
 		execute(t, (flags & XERROK) | XEXEC); /* no return */
-		internal_warningf("exchild: execute() returned");
 #ifndef MKSH_SMALL
+		if (t->type == TPIPE)
+			unwind(LLEAVE);
+		internal_warningf("exchild: execute() returned");
 		fptreef(shl_out, 2, "exchild: tried to execute {\n%T\n}\n", t);
 		shf_flush(shl_out);
 #endif

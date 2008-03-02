@@ -13,7 +13,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.87 2007/08/19 22:06:26 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.92 2008/03/01 13:57:36 tg Exp $");
 
 extern char **environ;
 
@@ -35,10 +35,6 @@ static const char *initcoms[] = {
 	"typeset", "-i", "PPID", "OPTIND=1", NULL,
 	"eval", "typeset -i RANDOM SECONDS=\"${SECONDS-0}\" TMOUT=\"${TMOUT-0}\"", NULL,
 	"alias", "integer=typeset -i", "local=typeset", NULL,
-	NULL
-};
-
-static const char *initcoms_korn[] = {
 	"alias",
 	"hash=alias -t",	/* not "alias -t --": hash -r needs to work */
 	"type=whence -v",
@@ -68,7 +64,7 @@ main(int argc, const char *argv[])
 	Source *s;
 	struct block *l;
 	int restricted, errexit;
-	const char **wp, *cc;
+	const char **wp;
 	struct env env;
 	pid_t ppid;
 	struct tbl *vp;
@@ -157,15 +153,6 @@ main(int argc, const char *argv[])
 	/* setstr can't fail here */
 	setstr(vp, def_path, KSH_RETURN_ERROR);
 
-	/* Set FPOSIX if we're called as -sh or /bin/sh or so */
-	cc = kshname;
-	i = 0; argi = 0;
-	while (cc[i] != '\0')
-		if ((cc[i++] | 2) == '/')
-			argi = i;
-	if (((cc[argi] | 0x20) == 's') && ((cc[argi + 1] | 0x20) == 'h'))
-		Flag(FPOSIX) = 1;
-
 	/* Turn on nohup by default for now - will change to off
 	 * by default once people are aware of its existence
 	 * (at&t ksh does not have a nohup option - it always sends
@@ -221,7 +208,8 @@ main(int argc, const char *argv[])
 			setstr(pwd_v, current_wd, KSH_RETURN_ERROR);
 	}
 	ppid = getppid();
-	change_random(((u_long)kshname) ^ ((u_long)time(NULL) * kshpid * ppid));
+	change_random(((unsigned long)kshname) ^
+	    ((unsigned long)time(NULL) * kshpid * ppid));
 #if HAVE_ARC4RANDOM
 	Flag(FARC4RANDOM) = 2;	/* use arc4random(3) until $RANDOM is written */
 #endif
@@ -254,13 +242,6 @@ main(int argc, const char *argv[])
 	argi = parse_args(argv, OF_CMDLINE, NULL);
 	if (argi < 0)
 		exit(1);
-
-	if (!Flag(FPOSIX))
-		for (wp = initcoms_korn; *wp != NULL; wp++) {
-			shcomexec(wp);
-			while (*wp != NULL)
-				wp++;
-		}
 
 	if (Flag(FCOMMAND)) {
 		s = pushs(SSTRING, ATEMP);
@@ -309,12 +290,14 @@ main(int argc, const char *argv[])
 		    (stristr((x), "UTF-8") || stristr((x), "utf8")))
 		/* Check if we're in a UTF-8 locale */
 		if (!Flag(FUTFHACK)) {
-			cc = setlocale(LC_CTYPE, "");
+			const char *cp;
+
+			cp = setlocale(LC_CTYPE, "");
 #if HAVE_LANGINFO_CODESET
-			if (!isuc(cc))
-				cc = nl_langinfo(CODESET);
+			if (!isuc(cp))
+				cp = nl_langinfo(CODESET);
 #endif
-			Flag(FUTFHACK) = isuc(cc);
+			Flag(FUTFHACK) = isuc(cp);
 		}
 #undef isuc
 #endif
@@ -713,11 +696,9 @@ reclaim(void)
 static void
 remove_temps(struct temp *tp)
 {
-
 	for (; tp != NULL; tp = tp->next)
-		if (tp->pid == procpid) {
+		if (tp->pid == procpid)
 			unlink(tp->name);
-		}
 }
 
 /* Initialise tty_fd.  Used for saving/reseting tty modes upon
@@ -1266,12 +1247,6 @@ ktenter(struct table *tp, const char *n, unsigned int h)
 	tp->nfree--;
 	*pp = p;
 	return p;
-}
-
-void
-ktdelete(struct tbl *p)
-{
-	p->flag = 0;
 }
 
 void

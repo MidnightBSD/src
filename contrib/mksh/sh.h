@@ -8,8 +8,8 @@
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
-#define MKSH_SH_H_ID "$MirOS: src/bin/mksh/sh.h,v 1.177 2007/10/14 13:43:41 tg Exp $"
-#define MKSH_VERSION "R31 2007/10/14"
+#define MKSH_SH_H_ID "$MirOS: src/bin/mksh/sh.h,v 1.192 2008/03/01 21:10:26 tg Exp $"
+#define MKSH_VERSION "R33 2008/03/01"
 
 #if HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -333,14 +333,14 @@ EXTERN Area aperm;		/* permanent object space */
  * parsing & execution environment
  */
 EXTERN struct env {
-	short type;		/* environment type - see below */
-	short flags;		/* EF_* */
 	Area area;		/* temporary allocation area */
 	struct block *loc;	/* local variables and functions */
 	short *savefd;		/* original redirected fds */
 	struct env *oenv;	/* link to previous environment */
-	sigjmp_buf jbuf;	/* long jump back to env creator */
 	struct temp *temps;	/* temp files */
+	sigjmp_buf jbuf;	/* long jump back to env creator */
+	short type;		/* environment type - see below */
+	short flags;		/* EF_* */
 } *e;
 
 /* struct env.type values */
@@ -686,8 +686,8 @@ extern struct shf shf_iob[];
 
 struct table {
 	Area *areap;		/* area to allocate entries */
-	short size, nfree;	/* hash size (always 2^^n), free entries */
 	struct tbl **tbls;	/* hashed table items */
+	short size, nfree;	/* hash size (always 2^^n), free entries */
 };
 
 struct tbl {			/* table item */
@@ -701,7 +701,7 @@ struct tbl {			/* table item */
 		int (*f)(const char **);/* int function */
 		struct op *t;		/* "function" tree */
 	} val;			/* value */
-	int index;		/* index for an array */
+	uint32_t index;		/* index for an array */
 	union {
 		int field;	/* field with for -L/-R/-Z */
 		int errno_;	/* CEXEC/CTALIAS */
@@ -857,11 +857,6 @@ EXTERN int current_lineno;	/* LINENO value */
  * Description of a command or an operation on commands.
  */
 struct op {
-	short type;			/* operation type, see below */
-	union { /* WARNING: newtp(), tcopy() use evalflags = 0 to clear union */
-		short evalflags;	/* TCOM: arg expansion eval() flags */
-		short ksh_func;		/* TFUNC: function x (vs x()) */
-	} u;
 	const char **args;		/* arguments to a command */
 	char **vars;			/* variable assignments */
 	struct ioword **ioact;		/* IO actions (eg, < > >>) */
@@ -872,6 +867,11 @@ struct op {
 					 * time hook for TCOM.
 					 */
 	int lineno;			/* TCOM/TFUNC: LINENO for this */
+	short type;			/* operation type, see below */
+	union { /* WARNING: newtp(), tcopy() use evalflags = 0 to clear union */
+		short evalflags;	/* TCOM: arg expansion eval() flags */
+		short ksh_func;		/* TFUNC: function x (vs x()) */
+	} u;
 };
 
 /* Tree.type values */
@@ -1109,25 +1109,6 @@ struct source {
 #define SF_ALIASEND	BIT(2)	/* faking space at end of alias */
 #define SF_TTY		BIT(3)	/* type == SSTDIN & it is a tty */
 #define SF_FIRST	BIT(4)	/* initial state (to ignore UTF-8 BOM) */
-
-/*
- * states while lexing word
- */
-#define SBASE		0	/* outside any lexical constructs */
-#define SWORD		1	/* implicit quoting for substitute() */
-#define SLETPAREN	2	/* inside (( )), implicit quoting */
-#define SSQUOTE		3	/* inside '' */
-#define SDQUOTE		4	/* inside "" */
-#define SBRACE		5	/* inside ${} */
-#define SCSPAREN	6	/* inside $() */
-#define SBQUOTE		7	/* inside `` */
-#define SASPAREN	8	/* inside $(( )) */
-#define SHEREDELIM	9	/* parsing <<,<<- delimiter */
-#define SHEREDQUOTE	10	/* parsing " in <<,<<- delimiter */
-#define SPATTERN	11	/* parsing *(...|...) pattern (*+?@!) */
-#define STBRACE		12	/* parsing ${..[#%]..} */
-#define SLETARRAY	13	/* inside =( ), just copy */
-#define SADELIM		14	/* like SBASE, looking for delimiter */
 
 typedef union {
 	int i;
@@ -1394,7 +1375,7 @@ unsigned int hash(const char *);
 void ktinit(struct table *, Area *, int);
 struct tbl *ktsearch(struct table *, const char *, unsigned int);
 struct tbl *ktenter(struct table *, const char *, unsigned int);
-void ktdelete(struct tbl *);
+#define ktdelete(p)	do { p->flag = 0; } while (0)
 void ktwalk(struct tstate *, struct table *);
 struct tbl *ktnext(struct tstate *);
 struct tbl **ktsort(struct table *);
@@ -1413,7 +1394,7 @@ void change_flag(enum sh_flag, int, char);
 int parse_args(const char **, int, int *);
 int getn(const char *, int *);
 int bi_getn(const char *, int *);
-int gmatchx(const char *, const char *, int);
+int gmatchx(const char *, const char *, bool);
 int has_globbing(const char *, const char *);
 const unsigned char *pat_scan(const unsigned char *, const unsigned char *, int);
 int xstrcmp(const void *, const void *);
@@ -1469,7 +1450,7 @@ char *snptreef(char *, int, const char *, ...);
 struct op *tcopy(struct op *, Area *);
 char *wdcopy(const char *, Area *);
 const char *wdscan(const char *, int);
-char *wdstrip(const char *);
+char *wdstrip(const char *, bool, bool);
 void tfree(struct op *, Area *);
 /* var.c */
 void newblock(void);
@@ -1490,7 +1471,7 @@ const char *skip_wdvarname(const char *, int);
 int is_wdvarname(const char *, int);
 int is_wdvarassign(const char *);
 char **makenv(void);
-void change_random(uint64_t);
+void change_random(unsigned long);
 int array_ref_len(const char *);
 char *arrayname(const char *);
 void set_array(const char *, int, const char **);

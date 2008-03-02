@@ -1,5 +1,5 @@
 #!/bin/sh
-# $MirOS: src/bin/mksh/Build.sh,v 1.271 2007/10/14 13:31:01 tg Exp $
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.279 2008/03/01 15:07:50 tg Rel $'
 #-
 # Environment used: CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF TARGET_OS
 # CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NOPWNAM MKSH_NOVI
@@ -37,7 +37,6 @@ ao=
 fx=
 me=`basename "$0"`
 orig_CFLAGS=$CFLAGS
-NEED_ARC4RANDOM=0
 
 if test -t 1; then
 	bi='[1m'
@@ -342,6 +341,11 @@ if test -n "$warn"; then
 fi
 
 
+# this aids me in tracing FTBFSen without access to the buildd
+dstversion=`sed -n '/define MKSH_VERSION/s/^.*"\(.*\)".*$/\1/p' $srcdir/sh.h`
+$e "Hello from$ao $bi$srcversion$ao"
+$e "$bi$me: Building the MirBSD Korn Shell$ao $ui$dstversion$ao"
+
 #
 # Begin of mirtoconf checks
 #
@@ -354,7 +358,7 @@ $e $bi$me: Scanning for functions... please ignore any errors.$ao
 # – ICC defines __GNUC__ too
 # – GCC defines __hpux too
 CPP="$CC -E"
-$e ... which compiler we seem to use
+$e ... which compiler seems to be used
 cat >scn.c <<-'EOF'
 	#if defined(__ICC) || defined(__INTEL_COMPILER)
 	ct=icc
@@ -391,7 +395,7 @@ case $ct in
 bcc|dmc|gcc|hpcc|icc|msc|pcc|sunpro|tcc|tendra|xlc) ;;
 *) ct=unknown ;;
 esac
-$e "$bi==> which compiler we seem to use...$ao $ui$ct$ao"
+$e "$bi==> which compiler seems to be used...$ao $ui$ct$ao"
 rm -f scn.c scn.o
 
 case $TARGET_OS in
@@ -530,13 +534,13 @@ elif test $ct = dmc; then
 	ac_flags 1 decl "${ccpc}-r" 'for strict prototype checks'
 	ac_flags 1 schk "${ccpc}-s" 'for stack overflow checking'
 elif test $ct = bcc; then
-	ac_flags 1 strpool "${ccpc}-d" 'if we can enable string pooling'
+	ac_flags 1 strpool "${ccpc}-d" 'if string pooling can be enabled'
 elif test $ct = msc; then
-	ac_flags 1 strpool "${ccpc}/GF" 'if we can enable string pooling'
+	ac_flags 1 strpool "${ccpc}/GF" 'if string pooling can be enabled'
 	cat >x <<-'EOF'
 		int main(void) { char test[64] = ""; return (*test); }
 	EOF
-	ac_flags - 1 stackon "${ccpc}/GZ" 'if we can enable stack checks' <x
+	ac_flags - 1 stackon "${ccpc}/GZ" 'if stack checks can be enabled' <x
 	ac_flags - 1 stckall "${ccpc}/Ge" 'stack checks for all functions' <x
 	ac_flags - 1 secuchk "${ccpc}/GS" 'for compiler security checks' <x
 	rm -f x
@@ -580,7 +584,7 @@ NOWARN=$DOWARN
 #
 # Compiler: check for stuff that only generates warnings
 #
-ac_test attribute '' 'if we have __attribute__((...)) at all' <<-'EOF'
+ac_test attribute '' 'for basic __attribute__((...)) support' <<-'EOF'
 	#include <stdlib.h>
 	#undef __attribute__
 	void fnord(void) __attribute__((noreturn));
@@ -611,16 +615,16 @@ NOWARN=$save_NOWARN
 #
 # mksh: flavours (full/small mksh, omit certain stuff)
 #
-ac_testn mksh_full '' "if we're building a full-featured mksh" <<-'EOF'
+ac_testn mksh_full '' "if a full-featured mksh is requested" <<-'EOF'
 	#ifdef MKSH_SMALL
 	#error Nope, MKSH_SMALL is defined.
 	#endif
 	int main(void) { return (0); }
 EOF
 
-ac_testn mksh_defutf8 '' "if we assume UTF-8 is enabled" <<-'EOF'
+ac_testn mksh_defutf8 '' "if to assume UTF-8 is enabled" <<-'EOF'
 	#ifndef MKSH_ASSUME_UTF8
-	#error Nope, we shall check with setlocale() and nl_langinfo(CODESET)
+	#error Nope, check with setlocale() and nl_langinfo(CODESET)
 	#endif
 	int main(void) { return (0); }
 EOF
@@ -653,43 +657,20 @@ ac_header ulimit.h
 ac_header values.h
 
 ac_header '!' stdint.h stdarg.h
-ac_testn can_inttyp32 '!' stdint_h 1 "if we have standard 32-bit integer types" <<-'EOF'
+ac_testn can_inttypes '!' stdint_h 1 "for standard 32-bit integer types" <<-'EOF'
 	#include <sys/types.h>
 	int main(int ac, char **av) { return ((uint32_t)*av + (int32_t)ac); }
 EOF
-ac_testn can_inttyb32 '!' can_inttyp32 1 "if we have UCB 32-bit integer types" <<-'EOF'
+ac_testn can_ucbints '!' can_inttypes 1 "for UCB 32-bit integer types" <<-'EOF'
 	#include <sys/types.h>
 	int main(int ac, char **av) { return ((u_int32_t)*av + (int32_t)ac); }
 EOF
-ac_testn can_inttyp64 '!' stdint_h 1 "if we have standard 64-bit integer types" <<-'EOF'
-	#include <sys/types.h>
-	int main(void) { return ((int)(uint64_t)0); }
-EOF
-ac_testn can_inttyb64 '!' can_inttyp64 1 "if we have UCB 64-bit integer types" <<-'EOF'
-	#include <sys/types.h>
-	int main(void) { return ((int)(u_int64_t)0); }
-EOF
-ac_testn can_uinttypes '!' stdint_h 1 "if we have u_char, u_int, u_long" <<-'EOF'
-	#include <sys/types.h>
-	int main(int ac, char **av) { u_int x = (u_int)**av;
-		return (x == (u_int)(u_long)(u_char)ac);
-	}
-EOF
-case $HAVE_CAN_INTTYP32$HAVE_CAN_INTTYB32 in
+case $HAVE_CAN_INTTYPES$HAVE_CAN_UCBINTS in
 01)	HAVE_U_INT32_T=1
 	echo 'typedef u_int32_t uint32_t;' >>stdint.h ;;
 00)	echo 'typedef signed int int32_t;' >>stdint.h
 	echo 'typedef unsigned int uint32_t;' >>stdint.h ;;
 esac
-case $HAVE_CAN_INTTYP64$HAVE_CAN_INTTYB64 in
-01)	echo 'typedef u_int64_t uint64_t;' >>stdint.h ;;
-00)	echo 'typedef unsigned long long uint64_t;' >>stdint.h ;;
-esac
-test 1 = $HAVE_CAN_UINTTYPES || cat >>stdint.h <<-'EOF'
-	typedef unsigned char u_char;
-	typedef unsigned int u_int;
-	typedef unsigned long u_long;
-EOF
 test -f stdint.h && HAVE_STDINT_H=1
 ac_cppflags STDINT_H
 
@@ -704,7 +685,7 @@ cat >lft.c <<-'EOF'
 	    LARGE_OFF_T % 2147483647 == 1) ? 1 : -1];
 	int main(void) { return (0); }
 EOF
-ac_testn can_lfs '' "if we support large files" <lft.c
+ac_testn can_lfs '' "for large file support" <lft.c
 save_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$CPPFLAGS -D_FILE_OFFSET_BITS=64"
 ac_testn can_lfs_sus '!' can_lfs 0 "... with -D_FILE_OFFSET_BITS=64" <lft.c
@@ -811,7 +792,6 @@ if test 0 = $HAVE_ARC4RANDOM && test -f "$srcdir/arc4random.c"; then
 	HAVE_ARC4RANDOM=1
 	# ensure isolation of source directory from build directory
 	test -f arc4random.c || cp "$srcdir/arc4random.c" .
-	NEED_ARC4RANDOM=1
 	LIBS="$LIBS arc4random.c"
 fi
 ac_cppflags ARC4RANDOM
@@ -848,7 +828,7 @@ ac_test langinfo_codeset setlocale_ctype 0 'nl_langinfo(CODESET)' <<-'EOF'
 	int main(void) { return ((ptrdiff_t)(void *)nl_langinfo(CODESET)); }
 EOF
 
-ac_test mknod '' 'if we use mknod(), makedev() and friends' <<-'EOF'
+ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	int main(int ac, char *av[]) {
@@ -868,7 +848,7 @@ EOF
 
 ac_test setmode mknod 1 <<-'EOF'
 	#if defined(__MSVCRT__) || defined(__CYGWIN__)
-	#error Win32 setmode() is different from what we need
+	#error Win32 setmode() is different from what is needed
 	#endif
 	#include <unistd.h>
 	int main(int ac, char *av[]) { return (getmode(setmode(av[0]), ac)); }
@@ -905,8 +885,8 @@ EOF
 #
 # check headers for declarations
 #
-save_LIBS=$LIBS
-test 1 = $NEED_ARC4RANDOM && LIBS="$LIBS arc4random.c"
+save_CC=$CC
+CC="$CC -c -o $tcfn"
 ac_test '!' arc4random_decl arc4random 1 'if arc4random() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -919,12 +899,12 @@ ac_test '!' arc4random_pushb_decl arc4random_pushb 1 'if arc4random_pushb() does
 	int arc4random_pushb(char, int); /* this clashes if defined before */
 	int main(int ac, char *av[]) { return (arc4random_pushb(**av, ac)); }
 EOF
-LIBS=$save_LIBS
 ac_test sys_siglist_decl sys_siglist 1 'if sys_siglist[] does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
 	int main(void) { return (sys_siglist[0][0]); }
 EOF
+CC=$save_CC
 
 #
 # other checks
@@ -1017,6 +997,10 @@ case $curdir in
 *)	echo "#!$curdir/mksh" >test.sh ;;
 esac
 echo "export PATH='$PATH'" >>test.sh
+echo "print Testing mksh for conformance:" >>test.sh
+echo "fgrep -e MirOS: -e MIRBSD '$srcdir/check.t'" >>test.sh
+echo 'print "This shell is actually:\n\t$KSH_VERSION"' >>test.sh
+echo "print 'test.sh built for mksh $dstversion'" >>test.sh
 echo "exec perl '$srcdir/check.pl' -s '$srcdir/check.t'" \
     "-p '$curdir/mksh' -C $check_categories \$*$tsts" >>test.sh
 chmod 755 test.sh

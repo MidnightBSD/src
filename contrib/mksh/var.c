@@ -1,8 +1,8 @@
-/*	$OpenBSD: var.c,v 1.33 2007/08/02 11:05:54 fgsch Exp $	*/
+/*	$OpenBSD: var.c,v 1.34 2007/10/15 02:16:35 deraadt Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/var.c,v 1.45 2007/09/09 18:06:42 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var.c,v 1.51 2008/02/24 15:20:52 tg Exp $");
 
 /*
  * Variables
@@ -22,9 +22,10 @@ static void	unspecial(const char *);
 static void	getspec(struct tbl *);
 static void	setspec(struct tbl *);
 static void	unsetspec(struct tbl *);
-static struct tbl *arraysearch(struct tbl *, int);
+static struct tbl *arraysearch(struct tbl *, uint32_t);
+static const char *array_index_calc(const char *, bool *, uint32_t *);
 static int rnd_get(void);
-static void rnd_set(long);
+static void rnd_set(unsigned long);
 
 /*
  * create a new block for function calls and simple commands
@@ -116,7 +117,7 @@ initvar(void)
  * the basename of the array.
  */
 static const char *
-array_index_calc(const char *n, bool *arrayp, int *valp)
+array_index_calc(const char *n, bool *arrayp, uint32_t *valp)
 {
 	const char *p;
 	int len;
@@ -134,9 +135,7 @@ array_index_calc(const char *n, bool *arrayp, int *valp)
 		afree(tmp, ATEMP);
 		n = str_nsave(n, p - n, ATEMP);
 		evaluate(sub, &rval, KSH_UNWIND_ERROR, true);
-		if (rval < 0 || rval > 2147483647)
-			errorf("%s: subscript %ld out of range", n, rval);
-		*valp = rval;
+		*valp = (uint32_t)rval;
 		afree(sub, ATEMP);
 	}
 	return n;
@@ -151,9 +150,9 @@ global(const char *n)
 	struct block *l = e->loc;
 	struct tbl *vp;
 	int c;
-	unsigned h;
-	bool	 array;
-	int	 val;
+	unsigned int h;
+	bool array;
+	uint32_t val;
 
 	/* Check to see if this is an array */
 	n = array_index_calc(n, &array, &val);
@@ -232,9 +231,9 @@ local(const char *n, bool copy)
 {
 	struct block *l = e->loc;
 	struct tbl *vp;
-	unsigned h;
-	bool	 array;
-	int	 val;
+	unsigned int h;
+	bool array;
+	uint32_t val;
 
 	/* Check to see if this is an array */
 	n = array_index_calc(n, &array, &val);
@@ -831,7 +830,7 @@ makenv(void)
 			    (vp->flag&(ISSET|EXPORT)) == (ISSET|EXPORT)) {
 				struct block *l2;
 				struct tbl *vp2;
-				unsigned h = hash(vp->name);
+				unsigned int h = hash(vp->name);
 
 				/* unexport any redefined instances */
 				for (l2 = l->next; l2 != NULL; l2 = l2->next) {
@@ -860,7 +859,7 @@ makenv(void)
  * and writes to $RANDOM a cheap operation.
  */
 #if HAVE_ARC4RANDOM
-static uint64_t rnd_cache = 0;
+static uint32_t rnd_cache[2];
 static char rnd_lastflag = 2;
 #endif
 
@@ -877,19 +876,20 @@ rnd_get(void)
 			srand(arc4random() & 0x7FFF);
 		} else if (rnd_lastflag == 0) {
 			/* transition from 0: addrandom */
-			rnd_cache ^= rand();
+			rnd_cache[0] ^= rand();
+			rnd_cache[1] ^= rand();
 		}
 		rnd_lastflag = Flag(FARC4RANDOM);
 	}
 	if (Flag(FARC4RANDOM)) {
-		if (rnd_cache)
+		if (rnd_cache[0] || rnd_cache[1])
 #if HAVE_ARC4RANDOM_PUSHB
-			rv = arc4random_pushb(&rnd_cache, sizeof (rnd_cache));
+			rv = arc4random_pushb(rnd_cache, sizeof (rnd_cache));
 #else
-			arc4random_addrandom((void *)&rnd_cache,
+			arc4random_addrandom((void *)rnd_cache,
 			    sizeof (rnd_cache));
 #endif
-		rnd_cache = 0;
+		rnd_cache[0] = rnd_cache[1] = 0;
 		return ((
 #if HAVE_ARC4RANDOM_PUSHB
 		    rv ? rv :
@@ -901,10 +901,11 @@ rnd_get(void)
 }
 
 static void
-rnd_set(long newval)
+rnd_set(unsigned long newval)
 {
 #if HAVE_ARC4RANDOM
-	rnd_cache ^= (((uint64_t)newval) << 15) | rand();
+	rnd_cache[0] ^= (newval << 15) | rand();
+	rnd_cache[1] ^= newval >> 17;
 	if (Flag(FARC4RANDOM) == 1)
 		return;
 	if (Flag(FARC4RANDOM) == 2)
@@ -921,16 +922,14 @@ rnd_set(long newval)
  * if the parent doesn't use $RANDOM.
  */
 void
-change_random(uint64_t newval)
+change_random(unsigned long newval)
 {
 	int rval = 0;
 
-	newval &= 0x00001FFFFFFFFFFF;
-	newval |= (uint64_t)rand() << 45;
-
 #if HAVE_ARC4RANDOM
 	if (Flag(FARC4RANDOM)) {
-		rnd_cache ^= newval;
+		rnd_cache[0] ^= (newval << 15) | rand();
+		rnd_cache[1] ^= newval >> 17;
 		return;
 	}
 #endif
@@ -939,9 +938,7 @@ change_random(uint64_t newval)
 	newval >>= 15;
 	rval += newval & 0x7FFF;
 	newval >>= 15;
-	rval += newval & 0x7FFF;
-	newval >>= 15;
-	rval += newval;
+	rval += newval + rand();
 	rval = (rval & 0x7FFF) ^ (rval >> 15);
 
 	srand(rval);
@@ -1142,7 +1139,7 @@ unsetspec(struct tbl *vp)
  * vp, indexed by val.
  */
 static struct tbl *
-arraysearch(struct tbl *vp, int val)
+arraysearch(struct tbl *vp, uint32_t val)
 {
 	struct tbl *prev, *curr, *new;
 	size_t namelen = strlen(vp->name) + 1;
@@ -1219,7 +1216,7 @@ void
 set_array(const char *var, int reset, const char **vals)
 {
 	struct tbl *vp, *vq;
-	int i;
+	uint32_t i;
 
 	/* to get local array, use "typeset foo; set -A foo" */
 	vp = global(var);

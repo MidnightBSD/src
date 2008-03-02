@@ -6,7 +6,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.66 2007/09/09 18:06:41 tg Exp $\t"
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.68 2008/02/27 01:00:09 tg Exp $\t"
 	MKSH_SH_H_ID);
 
 #undef USE_CHVT
@@ -38,12 +38,12 @@ setctypes(const char *s, int t)
 	unsigned i;
 
 	if (t & C_IFS) {
-		for (i = 0; i < UCHAR_MAX+1; i++)
+		for (i = 0; i < UCHAR_MAX + 1; i++)
 			chtypes[i] &= ~C_IFS;
 		chtypes[0] |= C_IFS; /* include \0 in C_IFS */
 	}
 	while (*s != 0)
-		chtypes[(unsigned char) *s++] |= t;
+		chtypes[(unsigned char)*s++] |= t;
 }
 
 void
@@ -481,11 +481,11 @@ getn(const char *s, int *ai)
 int
 bi_getn(const char *as, int *ai)
 {
-	int rv = getn(as, ai);
+	int rv;
 
-	if (!rv)
+	if (!(rv = getn(as, ai)))
 		bi_errorf("%s: bad number", as);
-	return rv;
+	return (rv);
 }
 
 /* -------- gmatch.c -------- */
@@ -499,7 +499,7 @@ bi_getn(const char *as, int *ai)
  */
 
 int
-gmatchx(const char *s, const char *p, int isfile)
+gmatchx(const char *s, const char *p, bool isfile)
 {
 	const char *se, *pe;
 

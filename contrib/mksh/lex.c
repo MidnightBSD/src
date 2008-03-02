@@ -2,7 +2,27 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.47 2007/08/19 23:12:22 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.54 2008/03/01 21:10:25 tg Exp $");
+
+/*
+ * states while lexing word
+ */
+#define SBASE		0	/* outside any lexical constructs */
+#define SWORD		1	/* implicit quoting for substitute() */
+#define SLETPAREN	2	/* inside (( )), implicit quoting */
+#define SSQUOTE		3	/* inside '' */
+#define SDQUOTE		4	/* inside "" */
+#define SBRACE		5	/* inside ${} */
+#define SCSPAREN	6	/* inside $() */
+#define SBQUOTE		7	/* inside `` */
+#define SASPAREN	8	/* inside $(( )) */
+#define SHEREDELIM	9	/* parsing <<,<<- delimiter */
+#define SHEREDQUOTE	10	/* parsing " in <<,<<- delimiter */
+#define SPATTERN	11	/* parsing *(...|...) pattern (*+?@!) */
+#define STBRACE		12	/* parsing ${..[#%]..} */
+#define SLETARRAY	13	/* inside =( ), just copy */
+#define SADELIM		14	/* like SBASE, looking for delimiter */
+#define SHERESTRING	15	/* parsing <<< string */
 
 /* Structure to keep track of the lexing state and the various pieces of info
  * needed for each particular state. */
@@ -71,7 +91,7 @@ static int	getsc_bn(void);
 static char	*get_brace_var(XString *, char *);
 static int	arraysub(char **);
 static const char *ungetsc(int);
-static void	gethere(void);
+static void	gethere(bool);
 static Lex_state *push_state_(State_info *, Lex_state *);
 static Lex_state *pop_state_(State_info *, Lex_state *);
 
@@ -91,7 +111,7 @@ static int ignore_backslash_newline;
 #ifdef MKSH_SMALL
 #define STATE_BSIZE	32
 #else
-#define STATE_BSIZE	64
+#define STATE_BSIZE	48
 #endif
 
 #define PUSH_STATE(s)	do { \
@@ -124,6 +144,7 @@ yylex(int cf)
 	char *wp;		/* output word pointer */
 	char *sp, *dp;
 	int c2;
+	bool last_terminal_was_bracket;
 
  Again:
 	states[0].ls_state = -1;
@@ -166,9 +187,21 @@ yylex(int cf)
 	/* Initial state: one of SBASE SHEREDELIM SWORD SASPAREN */
 	statep->ls_state = state;
 
+	/* check for here string */
+	if (state == SHEREDELIM) {
+		c = getsc();
+		if (c == '<') {
+			state = SHERESTRING;
+			goto accept_nonword;
+		}
+		ungetsc(c);
+	}
+
 	/* collect non-special or quoted characters to form word */
 	while (!((c = getsc()) == 0 ||
-	    ((state == SBASE || state == SHEREDELIM) && ctype(c, C_LEX1)))) {
+	    ((state == SBASE || state == SHEREDELIM || state == SHERESTRING) &&
+	    ctype(c, C_LEX1)))) {
+ accept_nonword:
 		Xcheck(ws, wp);
 		switch (state) {
 		case SADELIM:
@@ -178,40 +211,11 @@ yylex(int cf)
 				statep->ls_sadelim.nparen--;
 			else if (statep->ls_sadelim.nparen == 0 &&
 			    (c == /*{*/ '}' || c == statep->ls_sadelim.delimiter)) {
-#ifdef notyet
-				if (statep->ls_sadelim.style == SADELIM_MAKE &&
-				    statep->ls_sadelim.num == 1) {
-					if (c == /*{*/'}')
-						yyerror("%s: expected '%c' %s\n",
-						    T_synerr,
-						    statep->ls_sadelim.delimiter,
-					/*{*/	    "before '}'");
-					else {
-						*wp++ = ADELIM;
-						*wp++ = c;	/* .delimiter */
-						while ((c = getsc()) != /*{*/ '}') {
-							if (!c) {
-								yyerror("%s: expected '%c' %s\n",
-								    T_synerr,
-							/*{*/	    '}', "at end of input");
-							} else if (strchr(sadelim_flags[statep->ls_sadelim.flags], c)) {
-								*wp++ = CHAR;
-								*wp++ = c;
-							} else {
-								char Ttmp[15] = "instead of ' '";
-
-								Ttmp[12] = c;
-								yyerror("%s: expected '%c' %s\n",
-								    T_synerr,
-							/*{*/	    '}', Ttmp);
-							}
-						}
-					}
-				}
-#endif /* SADELIM_MAKE */
 				*wp++ = ADELIM;
 				*wp++ = c;
 				if (c == /*{*/ '}' || --statep->ls_sadelim.num == 0)
+					POP_STATE();
+				if (c == /*{*/ '}')
 					POP_STATE();
 				break;
 			}
@@ -336,6 +340,7 @@ yylex(int cf)
 							*wp++ = '0';
 							*wp++ = ADELIM;
 							*wp++ = ':';
+							PUSH_STATE(SBRACE);
 							PUSH_STATE(SADELIM);
 							statep->ls_sadelim.style = SADELIM_BASH;
 							statep->ls_sadelim.delimiter = ':';
@@ -351,6 +356,7 @@ yylex(int cf)
 								*wp++ = ' ';
 							}
 							ungetsc(c);
+							PUSH_STATE(SBRACE);
 							PUSH_STATE(SADELIM);
 							statep->ls_sadelim.style = SADELIM_BASH;
 							statep->ls_sadelim.delimiter = ':';
@@ -358,11 +364,25 @@ yylex(int cf)
 							statep->ls_sadelim.nparen = 0;
 							break;
 						}
+					} else if (c == '/') {
+						*wp++ = CHAR, *wp++ = c;
+						if ((c = getsc()) == '/') {
+							*wp++ = ADELIM;
+							*wp++ = c;
+						} else
+							ungetsc(c);
+						PUSH_STATE(SBRACE);
+						PUSH_STATE(SADELIM);
+						statep->ls_sadelim.style = SADELIM_BASH;
+						statep->ls_sadelim.delimiter = '/';
+						statep->ls_sadelim.num = 1;
+						statep->ls_sadelim.nparen = 0;
+						break;
 					}
 					/* If this is a trim operation,
 					 * treat (,|,) specially in STBRACE.
 					 */
-					if (c == '#' || c == '%') {
+					if (ctype(c, C_SUBOP2)) {
 						ungetsc(c);
 						PUSH_STATE(STBRACE);
 					} else {
@@ -643,6 +663,31 @@ yylex(int cf)
 			*wp++ = CHAR, *wp++ = c;
 			break;
 
+		case SHERESTRING:	/* <<< delimiter */
+			if (c == '\\') {
+				c = getsc();
+				if (c) { /* trailing \ is lost */
+					*wp++ = QCHAR;
+					*wp++ = c;
+				}
+				/* invoke quoting mode */
+				Xstring(ws, wp)[0] = QCHAR;
+			} else if (c == '\'') {
+				PUSH_STATE(SSQUOTE);
+				*wp++ = OQUOTE;
+				ignore_backslash_newline++;
+				/* invoke quoting mode */
+				Xstring(ws, wp)[0] = QCHAR;
+			} else if (c == '"') {
+				state = statep->ls_state = SHEREDQUOTE;
+				*wp++ = OQUOTE;
+				/* just don't IFS split; no quoting mode */
+			} else {
+				*wp++ = CHAR;
+				*wp++ = c;
+			}
+			break;
+
 		case SHEREDELIM:	/* <<,<<- delimiter */
 			/* XXX chuck this state (and the next) - use
 			 * the existing states ($ and \`..` should be
@@ -674,7 +719,10 @@ yylex(int cf)
 		case SHEREDQUOTE:	/* " in <<,<<- delimiter */
 			if (c == '"') {
 				*wp++ = CQUOTE;
-				state = statep->ls_state = SHEREDELIM;
+				state = statep->ls_state =
+				    /* dp[1] == '<' means here string */
+				    Xstring(ws, wp)[1] == '<' ?
+				    SHERESTRING : SHEREDELIM;
 			} else {
 				if (c == '\\') {
 					switch (c = getsc()) {
@@ -719,7 +767,7 @@ yylex(int cf)
 		yyerror("%s: ')' missing\n", T_synerr);
 
 	/* This done to avoid tests for SHEREDELIM wherever SBASE tested */
-	if (state == SHEREDELIM)
+	if (state == SHEREDELIM || state == SHERESTRING)
 		state = SBASE;
 
 	dp = Xstring(ws, wp);
@@ -781,10 +829,12 @@ yylex(int cf)
 			else
 				ungetsc(c2);
 		} else if (c == '\n') {
-			gethere();
+			gethere(false);
 			if (cf & CONTIN)
 				goto Again;
-		}
+		} else if (c == '\0')
+			/* need here strings at EOF */
+			gethere(true);
 		return (c);
 	}
 
@@ -793,11 +843,24 @@ yylex(int cf)
 	if (state == SWORD || state == SLETPAREN ||
 	    state == SLETARRAY)	/* ONEWORD? */
 		return LWORD;
+
+	last_terminal_was_bracket = c == '(';
 	ungetsc(c);		/* unget terminator */
 
 	/* copy word to unprefixed string ident */
-	for (sp = yylval.cp, dp = ident; dp < ident+IDENT && (c = *sp++) == CHAR; )
-		*dp++ = *sp++;
+	sp = yylval.cp;
+	dp = ident;
+	if ((cf & HEREDELIM) && (sp[1] == '<'))
+		while (dp < ident+IDENT)
+			if ((c = *sp++) == CHAR)
+				*dp++ = *sp++;
+			else if ((c == OQUOTE) || (c == CQUOTE))
+				;
+			else
+				break;
+	else
+		while (dp < ident+IDENT && (c = *sp++) == CHAR)
+			*dp++ = *sp++;
 	/* Make sure the ident array stays '\0' padded */
 	memset(dp, 0, (ident+IDENT) - dp + 1);
 	if (c != EOS)
@@ -815,19 +878,24 @@ yylex(int cf)
 		}
 		if ((cf & ALIAS) && (p = ktsearch(&aliases, ident, h)) &&
 		    (p->flag & ISSET)) {
-			Source *s;
+			if (last_terminal_was_bracket)
+				/* prefer functions over aliases */
+				ktdelete(p);
+			else {
+				Source *s;
 
-			for (s = source; s->type == SALIAS; s = s->next)
-				if (s->u.tblp == p)
-					return LWORD;
-			/* push alias expansion */
-			s = pushs(SALIAS, source->areap);
-			s->start = s->str = p->val.s;
-			s->u.tblp = p;
-			s->next = source;
-			source = s;
-			afree(yylval.cp, ATEMP);
-			goto Again;
+				for (s = source; s->type == SALIAS; s = s->next)
+					if (s->u.tblp == p)
+						return LWORD;
+				/* push alias expansion */
+				s = pushs(SALIAS, source->areap);
+				s->start = s->str = p->val.s;
+				s->u.tblp = p;
+				s->next = source;
+				source = s;
+				afree(yylval.cp, ATEMP);
+				goto Again;
+			}
 		}
 	}
 
@@ -835,12 +903,16 @@ yylex(int cf)
 }
 
 static void
-gethere(void)
+gethere(bool iseof)
 {
 	struct ioword **p;
 
 	for (p = heres; p < herep; p++)
-		readhere(*p);
+		if (iseof && (*p)->delim[1] != '<')
+			/* only here strings at EOF */
+			return;
+		else
+			readhere(*p);
 	herep = heres;
 }
 
@@ -858,6 +930,15 @@ readhere(struct ioword *iop)
 	XString xs;
 	char *xp;
 	int xpos;
+
+	if (iop->delim[1] == '<') {
+		/* process the here string */
+		xp = iop->heredoc = evalstr(iop->delim, DOBLANK);
+		c = strlen(xp) - 1;
+		memmove(xp, xp + 1, c);
+		xp[c] = '\n';
+		return;
+	}
 
 	eof = evalstr(iop->delim, 0);
 

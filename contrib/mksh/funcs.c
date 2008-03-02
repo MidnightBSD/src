@@ -5,7 +5,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.65 2007/09/09 18:06:40 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.69 2008/02/24 15:57:20 tg Exp $");
 
 /* A leading = means assignments before command are kept;
  * a leading * means a POSIX special builtin;
@@ -447,6 +447,57 @@ c_print(const char **wp)
 							c = c*8 + *s++ - '0';
 						else
 							break;
+					}
+					break;
+				case 'x':
+					/* Look for a hexadecimal number of
+					 * up to 2 digits, write raw octet.
+					 */
+					c = 0;
+					for (i = 0; i < 2; i++) {
+						c <<= 4;
+						if (*s >= '0' && *s <= '9')
+							c += *s++ - '0';
+						else if (*s >= 'A' && *s <= 'F')
+							c += *s++ - 'A' + 10;
+						else if (*s >= 'a' && *s <= 'f')
+							c += *s++ - 'a' + 10;
+						else {
+							c >>= 4;
+							break;
+						}
+					}
+					break;
+				case 'u':
+					/* Look for a hexadecimal number of
+					 * up to 4 digits, write Unicode.
+					 */
+					c = 0;
+					for (i = 0; i < 4; i++) {
+						c <<= 4;
+						if (*s >= '0' && *s <= '9')
+							c += *s++ - '0';
+						else if (*s >= 'A' && *s <= 'F')
+							c += *s++ - 'A' + 10;
+						else if (*s >= 'a' && *s <= 'f')
+							c += *s++ - 'a' + 10;
+						else {
+							c >>= 4;
+							break;
+						}
+					}
+					if (c < 0x80)
+						/* Xput below writes ASCII */;
+					else if (c < 0x0800) {
+						Xput(xs, xp, (c >> 6) | 0xC0);
+						c = 0x80 | (c & 0x3F);
+						/* leave 2nd octet to below */
+					} else {
+						Xput(xs, xp, (c >> 12) | 0xE0);
+						Xput(xs, xp,
+						    ((c >> 6) & 0x3F) | 0x80);
+						c = 0x80 | (c & 0x3F);
+						/* leave 3rd octet to below */
 					}
 					break;
 				case '\0': s--; c = '\\'; break;
@@ -901,8 +952,9 @@ c_typeset(const char **wp)
 						if (pflag)
 							shprintf("typeset ");
 						if ((vp->flag&ARRAY) && any_set)
-							shprintf("%s[%d]",
-							    vp->name, vp->index);
+							shprintf("%s[%lu]",
+							    vp->name,
+							    (unsigned long)vp->index);
 						else
 							shprintf("%s", vp->name);
 						if (thing == '-' && (vp->flag&ISSET)) {
@@ -1628,7 +1680,7 @@ c_umask(const char **wp)
 		}
 		umask(new_umask);
 	}
-	return 0;
+	return (0);
 }
 
 int
@@ -1642,14 +1694,16 @@ c_dot(const char **wp)
 	int err;
 
 	if (ksh_getopt(wp, &builtin_opt, null) == '?')
-		return 1;
+		return (1);
 
-	if ((cp = wp[builtin_opt.optind]) == NULL)
-		return 0;
+	if ((cp = wp[builtin_opt.optind]) == NULL) {
+		bi_errorf("missing argument");
+		return (1);
+	}
 	file = search(cp, path, R_OK, &err);
 	if (file == NULL) {
 		bi_errorf("%s: %s", cp, err ? strerror(err) : "not found");
-		return 1;
+		return (1);
 	}
 
 	/* Set positional parameters? */
@@ -1665,9 +1719,9 @@ c_dot(const char **wp)
 	i = include(file, argc, argv, 0);
 	if (i < 0) { /* should not happen */
 		bi_errorf("%s: %s", cp, strerror(errno));
-		return 1;
+		return (1);
 	}
-	return i;
+	return (i);
 }
 
 int

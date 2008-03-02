@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.140 2007/10/14 13:43:40 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.157 2008/03/01 22:58:22 tg Rel $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -7,7 +7,7 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R31 2007/10/14
+	@(#)MIRBSD KSH R33 2008/03/01
 description:
 	Check version of shell.
 category: pdksh
@@ -964,7 +964,7 @@ expected-stdout:
 ---
 name: eglob-trim-1
 description:
-	Eglobing in trim expressions...
+	Eglobbing in trim expressions...
 	(at&t ksh fails this - docs say # matches shortest string, ## matches
 	longest...)
 stdin:
@@ -981,7 +981,7 @@ expected-stdout:
 ---
 name: eglob-trim-2
 description:
-	Check eglobing works in trims...
+	Check eglobbing works in trims...
 stdin:
 	x=abcdef
 	echo 1: ${x#*(a|b)cd}
@@ -993,6 +993,204 @@ expected-stdout:
 	2: ef
 	3: abcdef
 	4: cdef
+---
+name: eglob-substrpl-1
+description:
+	Check eglobbing works in substs... and they work at all
+stdin:
+	[[ -n $BASH_VERSION ]] && shopt -s extglob
+	x=1222321_ab/cde_b/c_1221
+	y=xyz
+	echo 1: ${x/2}
+	echo 2: ${x//2}
+	echo 3: ${x/+(2)}
+	echo 4: ${x//+(2)}
+	echo 5: ${x/2/4}
+	echo 6: ${x//2/4}
+	echo 7: ${x/+(2)/4}
+	echo 8: ${x//+(2)/4}
+	echo 9: ${x/b/c/e/f}
+	echo 10: ${x/b\/c/e/f}
+	echo 11: ${x/b\/c/e\/f}
+	echo 12: ${x/b\/c/e\\/f}
+	echo 13: ${x/b\\/c/e\\/f}
+	echo 14: ${x//b/c/e/f}
+	echo 15: ${x//b\/c/e/f}
+	echo 16: ${x//b\/c/e\/f}
+	echo 17: ${x//b\/c/e\\/f}
+	echo 18: ${x//b\\/c/e\\/f}
+	echo 19: ${x/b\/*\/c/x}
+	echo 20: ${x/\//.}
+	echo 21: ${x//\//.}
+	echo 22: ${x///.}
+	echo 23: ${x//#1/9}
+	echo 24: ${x//%1/9}
+	echo 25: ${x//\%1/9}
+	echo 26: ${x//\\%1/9}
+	echo 27: ${x//\a/9}
+	echo 28: ${x//\\a/9}
+	echo 29: ${x/2/$y}
+expected-stdout:
+	1: 122321_ab/cde_b/c_1221
+	2: 131_ab/cde_b/c_11
+	3: 1321_ab/cde_b/c_1221
+	4: 131_ab/cde_b/c_11
+	5: 1422321_ab/cde_b/c_1221
+	6: 1444341_ab/cde_b/c_1441
+	7: 14321_ab/cde_b/c_1221
+	8: 14341_ab/cde_b/c_141
+	9: 1222321_ac/e/f/cde_b/c_1221
+	10: 1222321_ae/fde_b/c_1221
+	11: 1222321_ae/fde_b/c_1221
+	12: 1222321_ae\/fde_b/c_1221
+	13: 1222321_ab/cde_b/c_1221
+	14: 1222321_ac/e/f/cde_c/e/f/c_1221
+	15: 1222321_ae/fde_e/f_1221
+	16: 1222321_ae/fde_e/f_1221
+	17: 1222321_ae\/fde_e\/f_1221
+	18: 1222321_ab/cde_b/c_1221
+	19: 1222321_ax_1221
+	20: 1222321_ab.cde_b/c_1221
+	21: 1222321_ab.cde_b.c_1221
+	22: 1222321_ab/cde_b/c_1221
+	23: 9222321_ab/cde_b/c_1221
+	24: 1222321_ab/cde_b/c_1229
+	25: 1222321_ab/cde_b/c_1229
+	26: 1222321_ab/cde_b/c_1221
+	27: 1222321_9b/cde_b/c_1221
+	28: 1222321_9b/cde_b/c_1221
+	29: 1xyz22321_ab/cde_b/c_1221
+---
+name: eglob-substrpl-2
+description:
+	Check anchored substring replacement works, corner cases
+stdin:
+	foo=123
+	echo 1: ${foo/#/x}
+	echo 2: ${foo/%/x}
+	echo 3: ${foo/#/}
+	echo 4: ${foo/#}
+	echo 5: ${foo/%/}
+	echo 6: ${foo/%}
+expected-stdout:
+	1: x123
+	2: 123x
+	3: 123
+	4: 123
+	5: 123
+	6: 123
+---
+name: eglob-substrpl-3a
+description:
+	Check substring replacement works with variables and slashes, too
+stdin:
+	pfx=/home/user
+	wd=/home/user/tmp
+	echo ${wd/#$pfx/~}
+	echo ${wd/#\$pfx/~}
+	echo ${wd/#"$pfx"/~}
+	echo ${wd/#'$pfx'/~}
+	echo ${wd/#"\$pfx"/~}
+	echo ${wd/#'\$pfx'/~}
+expected-stdout:
+	~/tmp
+	/home/user/tmp
+	~/tmp
+	/home/user/tmp
+	/home/user/tmp
+	/home/user/tmp
+---
+name: eglob-substrpl-3b
+description:
+	More of this, bash fails it
+stdin:
+	pfx=/home/user
+	wd=/home/user/tmp
+	echo ${wd/#$(echo /home/user)/~}
+	echo ${wd/#"$(echo /home/user)"/~}
+	echo ${wd/#'$(echo /home/user)'/~}
+expected-stdout:
+	~/tmp
+	~/tmp
+	/home/user/tmp
+---
+name: eglob-substrpl-3c
+description:
+	Even more weird cases
+stdin:
+	pfx=/home/user
+	wd='$pfx/tmp'
+	echo 1: ${wd/#$pfx/~}
+	echo 2: ${wd/#\$pfx/~}
+	echo 3: ${wd/#"$pfx"/~}
+	echo 4: ${wd/#'$pfx'/~}
+	echo 5: ${wd/#"\$pfx"/~}
+	echo 6: ${wd/#'\$pfx'/~}
+	ts='a/ba/b$tp$tp_a/b$tp_*(a/b)_*($tp)'
+	tp=a/b
+	tr=c/d
+	[[ -n $BASH_VERSION ]] && shopt -s extglob
+	echo 7: ${ts/a\/b/$tr}
+	echo 8: ${ts/a\/b/\$tr}
+	echo 9: ${ts/$tp/$tr}
+	echo 10: ${ts/\$tp/$tr}
+	echo 11: ${ts/\\$tp/$tr}
+	echo 12: ${ts/$tp/c/d}
+	echo 13: ${ts/$tp/c\/d}
+	echo 14: ${ts/$tp/c\\/d}
+	echo 15: ${ts/+(a\/b)/$tr}
+	echo 16: ${ts/+(a\/b)/\$tr}
+	echo 17: ${ts/+($tp)/$tr}
+	echo 18: ${ts/+($tp)/c/d}
+	echo 19: ${ts/+($tp)/c\/d}
+	echo 25: ${ts//a\/b/$tr}
+	echo 26: ${ts//a\/b/\$tr}
+	echo 27: ${ts//$tp/$tr}
+	echo 28: ${ts//$tp/c/d}
+	echo 29: ${ts//$tp/c\/d}
+	echo 30: ${ts//+(a\/b)/$tr}
+	echo 31: ${ts//+(a\/b)/\$tr}
+	echo 32: ${ts//+($tp)/$tr}
+	echo 33: ${ts//+($tp)/c/d}
+	echo 34: ${ts//+($tp)/c\/d}
+	tp="+($tp)"
+	echo 40: ${ts/$tp/$tr}
+	echo 41: ${ts//$tp/$tr}
+expected-stdout:
+	1: $pfx/tmp
+	2: ~/tmp
+	3: $pfx/tmp
+	4: ~/tmp
+	5: ~/tmp
+	6: ~/tmp
+	7: c/da/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	8: $tra/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	9: c/da/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	10: a/ba/bc/d$tp_a/b$tp_*(a/b)_*($tp)
+	11: c/da/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	12: c/da/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	13: c/da/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	14: c\/da/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	15: c/d$tp$tp_a/b$tp_*(a/b)_*($tp)
+	16: $tr$tp$tp_a/b$tp_*(a/b)_*($tp)
+	17: c/d$tp$tp_a/b$tp_*(a/b)_*($tp)
+	18: c/d$tp$tp_a/b$tp_*(a/b)_*($tp)
+	19: c/d$tp$tp_a/b$tp_*(a/b)_*($tp)
+	25: c/dc/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	26: $tr$tr$tp$tp_$tr$tp_*($tr)_*($tp)
+	27: c/dc/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	28: c/dc/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	29: c/dc/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	30: c/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	31: $tr$tp$tp_$tr$tp_*($tr)_*($tp)
+	32: c/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	33: c/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	34: c/d$tp$tp_c/d$tp_*(c/d)_*($tp)
+	40: a/ba/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+	41: a/ba/b$tp$tp_a/b$tp_*(a/b)_*($tp)
+#	This is what GNU bash does:
+#	40: c/d$tp$tp_a/b$tp_*(a/b)_*($tp)
+#	41: c/d$tp$tp_c/d$tp_*(c/d)_*($tp)
 ---
 name: glob-bad-1
 description:
@@ -1222,6 +1420,51 @@ expected-stdout:
 	hb
 	h\b
 	done
+---
+name: heredoc-9a
+description:
+	Check that here strings work.
+stdin:
+	bar="bar
+		baz"
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<foo
+	$0 -c "tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<foo"
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<"$bar"
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<'$bar'
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<\$bar
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<-foo
+expected-stdout:
+	sbb
+	sbb
+	one
+		onm
+	$one
+	$one
+	-sbb
+---
+name: heredoc-9b
+description:
+	Check that a corner case of here strings works like bash
+stdin:
+	fnord=42
+	bar="bar
+		 \$fnord baz"
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<$bar
+expected-stdout:
+	one $sabeq onm
+category: bash
+---
+name: heredoc-9c
+description:
+	Check that a corner case of here strings works like ksh93, zsh
+stdin:
+	fnord=42
+	bar="bar
+		 \$fnord baz"
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<<$bar
+expected-stdout:
+	one
+		 $sabeq onm
 ---
 name: heredoc-quoting-unsubst
 description:
@@ -3186,7 +3429,7 @@ expected-stdout:
 ---
 name: regression-52
 description:
-	Check that globing works in pipelined commands
+	Check that globbing works in pipelined commands
 file-setup: file 644 "env"
 	PS1=P
 file-setup: file 644 "abc"
@@ -3851,7 +4094,7 @@ expected-stdout:
 	posix
 	brex
 ---
-name: pipeline-subshell-1
+name: pipeline-1
 description:
 	pdksh bug: last command of a pipeline is executed in a
 	subshell - make sure it still is, scripts depend on it
@@ -3876,6 +4119,18 @@ expected-stdout:
 	a*
 	*
 	abcx abcy
+---
+name: pipeline-2
+description:
+	check that co-processes work with TCOMs, TPIPEs and TPARENs
+stdin:
+	"$0" -c 'i=100; print hi |& while read -p line; do print "$((i++)) $line"; done'
+	"$0" -c 'i=200; print hi | cat |& while read -p line; do print "$((i++)) $line"; done'
+	"$0" -c 'i=300; (print hi | cat) |& while read -p line; do print "$((i++)) $line"; done'
+expected-stdout:
+	100 hi
+	200 hi
+	300 hi
 ---
 name: persist-history-1
 description:
@@ -4007,10 +4262,11 @@ expected-stdout:
 	suspend='kill -STOP $$'
 	type='whence -v'
 ---
-name: aliases-2
+name: aliases-2a
 description:
 	Check if “set -o posix” disables built-in aliases (except a few)
-category: pdksh
+#category: pdksh
+category: disabled
 arguments: !-o!posix!
 stdin:
 	alias
@@ -4019,10 +4275,11 @@ expected-stdout:
 	integer='typeset -i'
 	local=typeset
 ---
-name: aliases-3
+name: aliases-3a
 description:
 	Check if running as sh disables built-in aliases (except a few)
-category: pdksh
+#category: pdksh
+category: disabled
 arguments: !-o!posix!
 stdin:
 	cp "$0" sh
@@ -4031,6 +4288,53 @@ stdin:
 expected-stdout:
 	integer='typeset -i'
 	local=typeset
+---
+name: aliases-2b
+description:
+	Check if “set -o posix” does not influence built-in aliases
+category: pdksh
+arguments: !-o!posix!
+stdin:
+	alias
+	typeset -f
+expected-stdout:
+	autoload='typeset -fu'
+	functions='typeset -f'
+	hash='alias -t'
+	history='fc -l'
+	integer='typeset -i'
+	local=typeset
+	login='exec login'
+	nohup='nohup '
+	r='fc -e -'
+	source='PATH=$PATH:. command .'
+	stop='kill -STOP'
+	suspend='kill -STOP $$'
+	type='whence -v'
+---
+name: aliases-3b
+description:
+	Check if running as sh does not influence built-in aliases
+category: pdksh
+arguments: !-o!posix!
+stdin:
+	cp "$0" sh
+	./sh -c 'alias; typeset -f'
+	rm -f sh
+expected-stdout:
+	autoload='typeset -fu'
+	functions='typeset -f'
+	hash='alias -t'
+	history='fc -l'
+	integer='typeset -i'
+	local=typeset
+	login='exec login'
+	nohup='nohup '
+	r='fc -e -'
+	source='PATH=$PATH:. command .'
+	stop='kill -STOP'
+	suspend='kill -STOP $$'
+	type='whence -v'
 ---
 name: arrays-1
 description:
@@ -4051,6 +4355,20 @@ stdin:
 	echo "${#foo[*]}|${foo[0]}|${foo[1]}|${foo[2]}|${foo[3]}|${foo[4]}|"
 expected-stdout:
 	5|a|$v|c d|$v|b|
+---
+name: arrays-3
+description:
+	Check if array bounds are uint32_t
+stdin:
+	set -A foo a b c
+	foo[4097]=d
+	foo[2147483637]=e
+	print ${foo[*]}
+	foo[-1]=f
+	print ${foo[4294967295]} g ${foo[*]}
+expected-stdout:
+	a b c d e
+	f g a b c d e f
 ---
 name: varexpand-substr-1
 description:
@@ -4124,4 +4442,45 @@ stdin:
 	print a ${x:(y == 1 ? 2 : 3):4} a
 expected-stdout:
 	a defg a
+---
+name: print-funny-chars
+description:
+	Check print builtin's capability to output designated characters
+stdin:
+	print '<\0144\0344\xDB\u00DB\u20AC\uDB\x40>'
+expected-stdout:
+	<d��Û€Û@>
+---
+name: dot-needs-argument
+description:
+	check Debian #415167 solution: '.' without arguments should fail
+stdin:
+	"$0" -c .
+	"$0" -c source
+expected-exit: e != 0
+expected-stderr-pattern:
+	/\.: missing argument.*\n.*\.: missing argument/
+---
+name: alias-function-no-conflict
+description:
+	make aliases not conflict with functions
+	note: for ksh-like functions, the order of preference is
+	different; bash outputs baz instead of bar in line 2 below
+stdin:
+	alias foo='echo bar'
+	foo() {
+		echo baz
+	}
+	alias korn='echo bar'
+	function korn {
+		echo baz
+	}
+	foo
+	korn
+	unset -f foo
+	foo 2>&- || echo rab
+expected-stdout:
+	baz
+	bar
+	rab
 ---

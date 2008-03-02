@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.pl,v 1.11 2007/07/01 18:00:00 tg Exp $
+# $MirOS: src/bin/mksh/check.pl,v 1.14 2008/02/29 12:48:09 tg Exp $
 # $OpenBSD: th,v 1.12 2005/05/28 04:53:47 millert Exp $
 #-
 # Example test:
@@ -52,7 +52,8 @@
 #					missing, NAME is removed from the
 #					environment.  Programs are run with
 #					the following minimal environment:
-#					    USER, LOGNAME, HOME, PATH, SHELL
+#					    USER, LOGNAME, HOME,
+#					    LD_LIBRARY_PATH, PATH, SHELL
 #					(values taken from the environment of
 #					the test harness).
 #					ENV is set to /nonexistant.
@@ -146,6 +147,7 @@ Usage: $prog [-s test-set] [-C category] [-p prog] [-v] [-e e=v] name ...
 	-v	Verbose mode: print reason test failed.
 	-e e=v	Set the environment variable e to v for all tests
 		(if no =v is given, the current value is used)
+		Only one -e option can be given at the moment, sadly.
 	name	specifies the name of the test(s) to run; if none are
 		specified, all tests are run.
 EOF
@@ -252,7 +254,7 @@ $ENV{$k} = $v while ($k,$v) = each %new_env;
 
 die "$prog: couldn't make directory $tempdir - $!\n" if !mkdir($tempdir, 0777);
 
-chop($pwd = `pwd 2> /dev/null`);
+chop($pwd = `pwd 2>/dev/null`);
 die "$prog: couldn't get current working directory\n" if $pwd eq '';
 die "$prog: couldn't cd to $pwd - $!\n" if !chdir($pwd);
 

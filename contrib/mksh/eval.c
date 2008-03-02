@@ -2,7 +2,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.35 2007/09/09 18:06:39 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.45 2008/03/01 22:49:37 tg Exp $");
 
 #ifdef MKSH_SMALL
 #define MKSH_NOPWNAM
@@ -338,11 +338,11 @@ expand(const char *cp,	/* input word */
 							end[-2] = EOS;
 							sp += end - beg - 1;
 						}
-						evaluate(substitute(stg = wdstrip(beg), 0),
+						evaluate(substitute(stg = wdstrip(beg, false, false), 0),
 						    &from, KSH_UNWIND_ERROR, true);
 						afree(stg, ATEMP);
 						if (end) {
-							evaluate(stg = wdstrip(mid),
+							evaluate(stg = wdstrip(mid, false, false),
 							    &num, KSH_UNWIND_ERROR, true);
 							afree(stg, ATEMP);
 						}
@@ -358,6 +358,139 @@ expand(const char *cp,	/* input word */
 						if (num < 0 || num > flen)
 							num = flen;
 						x.str = str_nsave(beg, num, ATEMP);
+						goto do_CSUBST;
+					}
+					case '/': {
+						char *s, *p, *d, *sbeg, *end;
+						char *pat, *rrep;
+						char *tpat0, *tpat1, *tpat2;
+
+						/* ! DOBLANK,DOBRACE_,DOTILDE */
+						f = DOPAT | (f&DONTRUNCOMMAND) |
+						    DOTEMP_;
+						quote = 0;
+
+						s = wdcopy(sp, ATEMP);
+						p = s + (wdscan(sp, ADELIM) - sp);
+						d = s + (wdscan(sp, CSUBST) - sp);
+#if 0
+						fprintf(stderr,
+						    "D: s=%p 〈%s〉\n"
+						    "   p=%p 〈%s〉\n"
+						    "   d=%p 〈%s〉\n",
+						    s, wdstrip(s, true, false),
+						    p, wdstrip(p, true, false),
+						    d, wdstrip(d, true, false));
+						fflush(stderr);
+#endif
+						if (p >= d)
+							goto unwind_substsyn;
+						p[-2] = EOS;
+						if (p[-1] == /*{*/'}')
+							d = NULL;
+						else
+							d[-2] = EOS;
+						sp += (d ? d : p) - s - 1;
+						tpat0 = wdstrip(s, true, true);
+						pat = substitute(tpat0, 0);
+						if (d) {
+							d = wdstrip(p, true, false);
+							rrep = substitute(d, 0);
+							afree(d, ATEMP);
+						} else
+							rrep = null;
+						afree(s, ATEMP);
+						s = d = pat;
+						while (*s)
+							if (*s != '\\' ||
+							    s[1] == '%' ||
+							    s[1] == '#' ||
+							    s[1] == '\0' ||
+				/* XXX really? */	    s[1] == '\\' ||
+							    s[1] == '/')
+								*d++ = *s++;
+							else
+								s++;
+						*d = '\0';
+#if 0
+						fprintf(stderr,
+						    "D: 〔%s｜%s〕→〔%s〕\n",
+						    tpat0, pat, rrep);
+						fflush(stderr);
+#endif
+						afree(tpat0, ATEMP);
+
+						/* reject empty pattern */
+						if (!*pat || gmatchx("", pat, false))
+							goto no_repl;
+
+						/* prepare string on which to work */
+						sbeg = s = str_save(str_val(st->var), ATEMP);
+
+						/* first see if we have any match at all */
+						tpat0 = pat;
+						if (*pat == '#') {
+							/* anchor at the beginning */
+							tpat1 = shf_smprintf("%s%c*", ++tpat0, MAGIC);
+							tpat2 = tpat1;
+						} else if (*pat == '%') {
+							/* anchor at the end */
+							tpat1 = shf_smprintf("%c*%s", MAGIC, ++tpat0);
+							tpat2 = tpat0;
+						} else {
+							/* float */
+							tpat1 = shf_smprintf("%c*%s%c*", MAGIC, pat, MAGIC);
+							tpat2 = tpat1 + 2;
+						}
+ again_repl:
+#if 0
+						fprintf(stderr,
+						    "D: 「%s」 ← 〔%s｜%s〕\n",
+						    s, tpat0, rrep);
+						fflush(stderr);
+#endif
+						/* this would not be necessary if gmatchx would return
+						 * the start and end values of a match found, like re*
+						 */
+						if (!gmatchx(sbeg, tpat1, false))
+							goto end_repl;
+						end = strnul(s);
+						/* now anchor the beginning of the match */
+						if (*pat != '#')
+							while (sbeg <= end) {
+								if (gmatchx(sbeg, tpat2, false))
+									break;
+								else
+									sbeg++;
+							}
+						/* now anchor the end of the match */
+						p = end;
+						if (*pat != '%')
+							while (p >= sbeg) {
+								bool gotmatch;
+
+								c = *p; *p = '\0';
+								gotmatch = gmatchx(sbeg, tpat0, false);
+								*p = c;
+								if (gotmatch)
+									break;
+								p--;
+							}
+						end = str_nsave(s, sbeg - s, ATEMP);
+						d = shf_smprintf("%s%s%s", end, rrep, p);
+						afree(end, ATEMP);
+						sbeg = d + (sbeg - s) + strlen(rrep);
+						afree(s, ATEMP);
+						s = d;
+						if (stype & 0x80)
+							goto again_repl;
+ end_repl:
+						afree(tpat1, ATEMP);
+						x.str = s;
+ no_repl:
+						afree(pat, ATEMP);
+						if (rrep != null)
+							afree(rrep, ATEMP);
 						goto do_CSUBST;
 					}
 					case '#':
@@ -474,6 +607,7 @@ expand(const char *cp,	/* input word */
 					    (debunk(s, s, strlen(s) + 1), s));
 				    }
 				case '0':
+				case '/':
 					dp = Xrestpos(ds, dp, st->base);
 					type = XSUB;
 					if (f&DOBLANK)
@@ -799,7 +933,14 @@ varsub(Expand *xp, const char *sp, const char *word,
 		stype = 0x80;
 		c = word[slen + 0] == CHAR ? word[slen + 1] : 0;
 	}
-	if (stype == 0x80 && (c == ' ' || c == '0')) {
+	if (!stype && c == '/') {
+		slen += 2;
+		stype = c;
+		if (word[slen] == ADELIM) {
+			slen += 2;
+			stype |= 0x80;
+		}
+	} else if (stype == 0x80 && (c == ' ' || c == '0')) {
 		stype |= '0';
 	} else if (ctype(c, C_SUBOP1)) {
 		slen += 2;
@@ -879,7 +1020,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 
 	c = stype&0x7f;
 	/* test the compiler's code generator */
-	if (ctype(c, C_SUBOP2) || stype == (0x80 | '0') ||
+	if (ctype(c, C_SUBOP2) || stype == (0x80 | '0') || c == '/' ||
 	    (((stype&0x80) ? *xp->str=='\0' : xp->str==null) ? /* undef? */
 	    c == '=' || c == '-' || c == '?' : c == '+'))
 		state = XBASE;	/* expand word instead of variable value */
@@ -951,7 +1092,7 @@ trimsub(char *str, char *pat, int how)
 	char *end = strnul(str);
 	char *p, c;
 
-	switch (how&0xff) {	/* UCHAR_MAX maybe? */
+	switch (how & 0xFF) {
 	case '#':		/* shortest at beginning */
 		for (p = str; p <= end; p++) {
 			c = *p; *p = '\0';
@@ -962,7 +1103,7 @@ trimsub(char *str, char *pat, int how)
 			*p = c;
 		}
 		break;
-	case '#'|0x80:	/* longest match at beginning */
+	case '#'|0x80:		/* longest match at beginning */
 		for (p = end; p >= str; p--) {
 			c = *p; *p = '\0';
 			if (gmatchx(str, pat, false)) {
@@ -978,7 +1119,7 @@ trimsub(char *str, char *pat, int how)
 				return str_nsave(str, p - str, ATEMP);
 		}
 		break;
-	case '%'|0x80:	/* longest match at end */
+	case '%'|0x80:		/* longest match at end */
 		for (p = str; p <= end; p++) {
 			if (gmatchx(p, pat, false))
 				return str_nsave(str, p - str, ATEMP);
@@ -1243,9 +1384,7 @@ tilde(char *cp)
 		dp = homedir(cp);
 #endif
 	/* If HOME, PWD or OLDPWD are not set, don't expand ~ */
-	if (dp == null)
-		dp = NULL;
-	return dp;
+	return (dp == null ? NULL : dp);
 }
 
 #ifndef MKSH_NOPWNAM
