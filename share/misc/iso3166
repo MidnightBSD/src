@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/misc/iso3166,v 1.13 2004/06/14 02:38:55 wollman Exp $
+# $MidnightBSD$
 #
 # ISO 3166 country codes
 # This includes many places that are not legally independent countries,
@@ -199,8 +199,10 @@ RE	REU	638	Reunion
 RO	ROU	642	Romania
 RU	RUS	643	Russian Federation
 RW	RWA	646	Rwanda
+BL	BLM	652	Saint Barthelemy
 KN	KNA	659	Saint Kitts and Nevis
 LC	LCA	662	Saint Lucia
+MF	MAF	663	Saint Martin (French part)
 VC	VCT	670	Saint Vincent and the Grenadines
 WS	WSM	882	Samoa
 SM	SMR	674	San Marino
@@ -425,11 +427,11 @@ ZW	ZWE	716	Zimbabwe
 #   change to Republic of Angola
 #
 # Newsletter III-53, 1993-07-12
-#   Madagascar, changing information not included in this file. Official
+#   Madagascar, changing information not included in this file. Official 
 #   name change to Republic of Madagascar
 #
 # Newsletter III-54, 1993-07-23
-#   South Georgia and the South Sandwich Islands, previously covered by
+#   South Georgia and the South Sandwich Islands, previously covered by 
 #   Falkland Islands
 #
 # Newsletter III-55, 1993-07-16
@@ -441,11 +443,11 @@ ZW	ZWE	716	Zimbabwe
 #
 # Newsletter III-57, 1993-07-16
 #   Macedonia, the former Yugolslav Republic of,
-#   Previously covered by the entry YU
+#   Previously covered by the entry YU  
 #
 # Newsletter III-58, 1993-07-16
 #   Afghanistan, changing information not included in this file
-#   Official name change to Islamic State of Afghanistan
+#   Official name change to Islamic State of Afghanistan  
 #
 # Newsletter III-32, 1993-07-25 ammendment
 #   Kyrgyzstan, changing information not included in this file. Offical name
@@ -461,7 +463,7 @@ ZW	ZWE	716	Zimbabwe
 #
 # Thu Feb 10 1994
 # At this point the fourth edition of ISO 3166 appears. It can *now* be
-# ordered from national standards institutions. The RIPE NCC will continue
+# ordered from national standards institutions. The RIPE NCC will continue 
 # tracking changes.
 #
 # [deletia]
@@ -507,9 +509,12 @@ ZW	ZWE	716	Zimbabwe
 #  Name changes not relevant to this file.
 #
 # Newsletter V-11 2006-03-29
-# GUERNSEY (GG), ISLE OF MAN (IM), and JERSEY (JE) added as new entries.
-# These territories were previously included as part of the UNITED
-# KINGDOM (GB).
+#  GUERNSEY (GG), ISLE OF MAN (IM), and JERSEY (JE) added as new entries.
+#  These territories were previously included as a part of the UNITED
+#  KINGDOM (GB).
 #
 # Newsletter V-12 2006-09-26
 #  Removed SERBIA AND MONTENEGRO (CS).  Added SERBIA (RS) and MONTENEGRO (ME).
+#
+# Newsletter VI-1 2007-09-21
+#  Added SAINT BARTHELEMY (BL) and SAINT MARTIN (MF).
