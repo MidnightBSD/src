@@ -27,6 +27,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: src/tools/tools/tinderbox/tinderbox.pl,v 1.42 2005/04/30 18:22:12 des Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/tinderbox.pl,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
 #
 
 use 5.006_001;
@@ -254,7 +255,7 @@ sub timeout() {
 
 sub usage() {
 
-    print(STDERR "This is the FreeBSD tinderbox script, version $VERSION.
+    print(STDERR "This is the BSD tinderbox script, version $VERSION.
 $COPYRIGHT
 
 Usage:
@@ -284,7 +285,6 @@ Commands:
   lint                          Build the LINT kernel
   release                       Build a full release (run as root!)
 
-Report bugs to <des\@freebsd.org>.
 ");
     exit(1);
 }
@@ -306,7 +306,7 @@ MAIN:{
     chomp($machine);
     $branch = "CURRENT";
     $jobs = 0;
-    $repository = "/home/ncvs";
+    $repository = "/home/cvs";
     $sandbox = "/tmp/tinderbox";
     $timeout = 0;
 

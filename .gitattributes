@@ -30070,14 +30070,7 @@ tools/tools/tinderbox/Makefile -text
 tools/tools/tinderbox/etc/Makefile -text
 tools/tools/tinderbox/etc/current.rc -text
 tools/tools/tinderbox/etc/default.rc -text
-tools/tools/tinderbox/etc/releng_4.rc -text
-tools/tools/tinderbox/etc/releng_5.rc -text
-tools/tools/tinderbox/etc/stable.rc -text
 tools/tools/tinderbox/etc/update_current.rc -text
-tools/tools/tinderbox/etc/update_releng_4.rc -text
-tools/tools/tinderbox/etc/update_releng_5.rc -text
-tools/tools/tinderbox/etc/update_stable.rc -text
-tools/tools/tinderbox/powerpc.diff -text
 tools/tools/tinderbox/tbmaster.1 -text
 tools/tools/tinderbox/tbmaster.pl -text
 tools/tools/tinderbox/tinderbox.1 -text

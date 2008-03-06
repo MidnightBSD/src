@@ -1,11 +1,12 @@
 #
 # CURRENT tinderbox setup
 #
+# $MidnightBSD: src/tools/tools/tinderbox/etc/current.rc,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
 # $FreeBSD: src/tools/tools/tinderbox/etc/current.rc,v 1.8 2004/03/16 00:24:54 des Exp $
 #
 
 branches	= CURRENT
-platforms	= alpha, amd64, i386/i386, i386/pc98, ia64, powerpc, sparc64
+platforms	= amd64, i386/i386, sparc64
 cflags		= -O2 -pipe
 coptflags	= %%CFLAGS%%
-recipient	= %%SENDER%%,<current@freebsd.org>,<%%arch%%@freebsd.org>
+recipient	= %%SENDER%%,<luke@midnightbsd.org>

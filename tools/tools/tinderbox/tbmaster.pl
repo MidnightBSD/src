@@ -27,6 +27,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: src/tools/tools/tinderbox/tbmaster.pl,v 1.53 2005/03/03 07:18:01 des Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/tbmaster.pl,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
 #
 
 use 5.006_001;
@@ -393,7 +394,7 @@ sub open_locked($;$$) {
 ###
 sub usage() {
 
-    print(STDERR "This is the FreeBSD tinderbox manager, version $VERSION.
+    print(STDERR "This is the BSD tinderbox manager, version $VERSION.
 $COPYRIGHT
 
 Usage:
@@ -407,7 +408,6 @@ Parameters:
   -e, --etcdir=DIR              Configuration directory
   -l, --lockfile=FILE           Lock file name
 
-Report bugs to <des\@freebsd.org>.
 ");
     print(STDERR "usage: tbmaster\n");
     exit(1);

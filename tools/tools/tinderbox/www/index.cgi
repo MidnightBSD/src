@@ -27,6 +27,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: src/tools/tools/tinderbox/www/index.cgi,v 1.25 2005/02/07 07:55:00 des Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/www/index.cgi,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
 #
 
 use 5.006_001;
@@ -169,14 +170,14 @@ MAIN:{
      'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
 <html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
   <head>
-    <title>FreeBSD tinderbox logs</title>
+    <title>BSD tinderbox logs</title>
     <meta name='robots' content='nofollow' />
     <meta http-equiv='refresh' content='600' />
     <link rel='stylesheet' type='text/css' media='screen' href='tb.css' />
     <link rel='shortcut icon' type='image/png' href='daemon.png' />
   </head>
   <body>
-    <!-- h1>FreeBSD tinderbox logs</h1 -->
+    <!-- h1>BSD tinderbox logs</h1 -->
 
     <table border='1' cellpadding='3'>
 ";

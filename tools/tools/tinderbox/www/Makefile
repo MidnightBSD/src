@@ -1,3 +1,4 @@
+# $MidnightBSD: src/tools/tools/tinderbox/www/Makefile,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
 # $FreeBSD: src/tools/tools/tinderbox/www/Makefile,v 1.6 2004/01/25 19:11:43 des Exp $
 
 CGI		 = index.cgi
