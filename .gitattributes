@@ -30078,11 +30078,8 @@ tools/tools/tinderbox/tbmaster.pl -text
 tools/tools/tinderbox/tinderbox.1 -text
 tools/tools/tinderbox/tinderbox.pl -text
 tools/tools/tinderbox/www/Makefile -text
-tools/tools/tinderbox/www/daemon.png.uu -text
 tools/tools/tinderbox/www/index.cgi -text
 tools/tools/tinderbox/www/tb.css -text
-tools/tools/tinderbox/www/valid-css.png.uu -text
-tools/tools/tinderbox/www/valid-xhtml10.png.uu -text
 tools/tools/upgrade/doupgrade.sh -text
 tools/tools/upgrade/getosreldate.sh -text
 tools/tools/upgrade/move_aout_libs.sh -text

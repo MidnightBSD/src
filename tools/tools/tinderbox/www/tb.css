@@ -1,35 +1,76 @@
 /*
- * $FreeBSD: src/tools/tools/tinderbox/www/tb.css,v 1.5 2003/11/12 08:30:51 des Exp $
+ * $MidnightBSD$
+ * $FreeBSD: projects/tinderbox/www/tb.css,v 1.7 2007/05/01 10:13:11 des Exp $
  */
 
-BODY, H1, H2, H3, H4, H5, H6, LI {
-    font-family: Helvetica, sans-serif;
+body {
+    font-family: sans-serif;
     font-style: normal;
     background-color: white;
     color: navy;
 }
 
-A:link {
-    background-color: white;
+a:link {
     color: blue;
 }
 
-A:visited {
-    background-color: white;
+a:visited {
     color: gray;
 }
 
-A:active {
-    background-color: white;
+a:active {
     color: red;
+}
+
+a:hover {
+    color: blue;
 }
 
 .tiny {
     font-size: x-small;
 }
 
-.update {
+table {
+    border-collapse: collapse;
+    border: none;
+}
+
+tr {
+    border: none;
+}
+
+td, th {
+    width: 14ex;
+    text-align: center;
+    vertical-align: middle;
+    padding: 3pt;
+    margin: 0;
+    border: none;
+}
+
+th {
+    background-color: #eeeeff;
+    margin: 0;
+}
+
+td.result {
+}
+
+td.noresult {
+}
+
+.footer {
+    background-color: #eeeeff;
     font-style: italic;
+    font-size: small;
+}
+
+.footer-left {
+    float: left;
+}
+
+.footer-right {
+    float: right;
 }
 
 .ok-0	{ background-color: white; color: #007700; }
@@ -53,13 +94,3 @@ A:active {
 .fail-7	{ background-color: white; color: #ff7777; }
 .fail-8	{ background-color: white; color: #ff8888; }
 .fail-9	{ background-color: white; color: #ff9999; }
-
-TD, TH {
-    width: 16ex;
-    text-align: center;
-    vertical-align: middle;
-}
-
-IMG {
-    border: none;
-}
