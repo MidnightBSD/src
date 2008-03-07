@@ -1,6 +1,6 @@
 #!/usr/bin/perl -Tw
 #-
-# Copyright (c) 2003 Dag-Erling Coïdan Smørgrav
+# Copyright (c) 2003-2008 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -12,8 +12,6 @@
 # 2. Redistributions in binary form must reproduce the above copyright
 #    notice, this list of conditions and the following disclaimer in the
 #    documentation and/or other materials provided with the distribution.
-# 3. The name of the author may not be used to endorse or promote products
-#    derived from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 # IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -27,7 +25,7 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # $FreeBSD: src/tools/tools/tinderbox/tinderbox.pl,v 1.42 2005/04/30 18:22:12 des Exp $
-# $MidnightBSD: src/tools/tools/tinderbox/tinderbox.pl,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/tinderbox.pl,v 1.2 2008/03/06 20:23:45 laffer1 Exp $
 #
 
 use 5.006_001;
@@ -37,13 +35,14 @@ use POSIX;
 use Getopt::Long;
 
 my $VERSION	= "2.3";
-my $COPYRIGHT	= "Copyright (c) 2003 Dag-Erling Smørgrav. " .
+my $COPYRIGHT	= "Copyright (c) 2003-2008 Dag-Erling CoÃ¯dan SmÃ¸rgrav. " .
 		  "All rights reserved.";
 
 my $arch;			# Target architecture
-my $branch;			# CVS branch to checkou
+my $branch;			# CVS branch to check out
 my $cvsup;			# Name of CVSup server
 my $date;			# Date of sources to check out
+my $destdir;			# Destination directory
 my $jobs;			# Number of paralell jobs
 my $hostname;			# Name of the host running the tinderbox
 my $logfile;			# Path to log file
@@ -66,10 +65,31 @@ my %cmds = (
     'update'	=> 0,
     'patch'	=> 0,
     'world'	=> 0,
-    'generic'	=> 0,
     'lint'	=> 0,
     'release'	=> 0,
 );
+my %kernels;
+
+my $starttime;
+
+my @cvsupcmds = (
+    '/usr/bin/csup',
+    '/usr/local/bin/csup',
+    '/usr/local/bin/cvsup'
+);
+
+BEGIN {
+    ($starttime) = POSIX::times();
+}
+
+END {
+    my ($endtime, $user, $system, $cuser, $csystem) = POSIX::times();
+    $user += $cuser;
+    $system += $csystem;
+    my $ticks = POSIX::sysconf(&POSIX::_SC_CLK_TCK);
+    printf(STDERR "TB --- %.2f user %.2f system %.2f real\n",
+	   $user / $ticks, $system / $ticks, ($endtime - $starttime) / $ticks);
+}
 
 sub message(@) {
 
@@ -219,18 +239,21 @@ sub spawn($@) {
     return 1;
 }
 
-sub make($) {
+sub make($@) {
     my $target = shift;
+    my %env = @_;
 
+    my @args = map({ "$_=$env{$_}" } keys(%env));
     return spawn('/usr/bin/make',
 	($jobs > 1) ? "-j$jobs" : "-B",
-	$target);
+	$target, @args);
 }
 
 sub logstage($) {
     my $msg = shift;
 
     chomp($msg);
+    $0 = "tinderbox: [$branch $arch/$machine] $msg";
     print(STDERR strftime("TB --- %Y-%m-%d %H:%M:%S - $msg\n", localtime()));
 }
 
@@ -268,6 +291,7 @@ Parameters:
   -a, --arch=ARCH               Target architecture (e.g. i386)
   -b, --branch=BRANCH           CVS branch to check out
   -d, --date=DATE               Date of sources to check out
+  -D, --destdir=DIR             Destination directory when installing
   -j, --jobs=NUM                Maximum number of paralell jobs
   -h, --hostname=NAME           Name of the host running the tinderbox
   -l, --logfile=FILE            Path to log file
@@ -281,8 +305,9 @@ Commands:
   update                        Update the source tree
   patch                         Patch the source tree
   world                         Build the world
-  generic                       Build the GENERIC kernel
+  kernel:KERNCONF               Build the KERNCONF kernel
   lint                          Build the LINT kernel
+  install                       Install world and all kernels
   release                       Build a full release (run as root!)
 
 ");
@@ -298,13 +323,9 @@ MAIN:{
     tzset();
 
     # Set defaults
-    $arch = `/usr/bin/uname -p`;
-    chomp($arch);
     $hostname = `/usr/bin/uname -n`;
     chomp($hostname);
-    $machine = `/usr/bin/uname -m`;
-    chomp($machine);
-    $branch = "CURRENT";
+    $branch = "HEAD";
     $jobs = 0;
     $repository = "/home/cvs";
     $sandbox = "/tmp/tinderbox";
@@ -317,6 +338,7 @@ MAIN:{
 	"b|branch=s"		=> \$branch,
 	"c|cvsup=s"		=> \$cvsup,
 	"d|date=s"		=> \$date,
+	"D|destdir=s"		=> \$destdir,
 	"j|jobs=i"		=> \$jobs,
 	"l|logfile=s"		=> \$logfile,
 	"h|hostname=s"		=> \$hostname,
@@ -337,7 +359,15 @@ MAIN:{
     if ($branch !~ m|^(\w+)$|) {
 	error("invalid source branch");
     }
-    $branch = $1;
+    $branch = ($1 eq 'CURRENT') ? 'HEAD' : $1;
+    if (!defined($arch)) {
+	$arch = `/usr/bin/uname -p`;
+	chomp($arch);
+	if (!defined($machine)) {
+	    $machine = `/usr/bin/uname -m`;
+	    chomp($machine);
+	}
+    }
     if ($arch !~ m|^(\w+)$|) {
 	error("invalid target architecture");
     }
@@ -351,12 +381,29 @@ MAIN:{
     $machine = $1;
     if (defined($date)) {
 	if ($date eq 'today') {
-	    $date = strftime("%Y-%m-%d", localtime());
-	} elsif ($date !~ m/^(\d{4}-\d{2}-\d{2})$/) {
-	    error("invalid checkout date");
+	    $date = strftime("%Y.%m.%d.00.00.00", localtime());
+	} elsif ($date =~ m/^(\d{4}).(\d{2}).(\d{2}).(\d{2}).(\d{2}).(\d{2})$/) {
+	    $date = "$1.$2.$3.$4.$5.$6";
+	} elsif ($date =~ m/^(\d{4}).(\d{2}).(\d{2}).(\d{2}).(\d{2})$/) {
+	    $date = "$1.$2.$3.$4.$5.00";
+	} elsif ($date =~ m/^(\d{4}).(\d{2}).(\d{2}).(\d{2})$/) {
+	    $date = "$1.$2.$3.$4.00.00";
+	} elsif ($date =~ m/^(\d{4}).(\d{2}).(\d{2})$/) {
+	    $date = "$1.$2.$3.00.00.00";
+	} elsif ($date =~ m/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/) {
+	    $date = "$1.$2.$3.$4.$5.$6";
+	} elsif ($date =~ m/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/) {
+	    $date = "$1.$2.$3.$4.$5.00";
+	} elsif ($date =~ m/^(\d{4})-(\d{2})-(\d{2}) (\d{2})$/) {
+	    $date = "$1.$2.$3.$4.00.00";
+	} elsif ($date =~ m/^(\d{4})-(\d{2})-(\d{2})$/) {
+	    $date = "$1.$2.$3.00.00.00";
 	} else {
-	    $date = $1;
+	    error("invalid checkout date");
 	}
+    }
+    if (!defined($destdir)) {
+	$destdir = "$sandbox/inst";
     }
 
     if (!@ARGV) {
@@ -373,6 +420,16 @@ MAIN:{
     foreach my $cmd (@ARGV) {
 	if ($cmd =~ m/^([0-9A-Z_]+)=(.*)\s*$/) {
 	    $userenv{$1} = $2;
+	    next;
+	}
+	if ($cmd =~ m/^kernel:(\w+)$/) {
+	    $kernels{$1} = 1;
+	    next;
+	}
+	# backward compatibility
+	# note that LINT is special, GENERIC is not
+	if ($cmd eq 'generic') {
+	    $kernels{'GENERIC'} = 1;
 	    next;
 	}
 	if (!exists($cmds{$cmd})) {
@@ -446,12 +503,11 @@ MAIN:{
 	    local *SUPFILE;
 	    open(SUPFILE, ">", "$sandbox/supfile")
 		or error("$sandbox/supfile: $!");
-	    print(SUPFILE "*default host=$cvsup\n");
 	    print(SUPFILE "*default base=$sandbox\n");
 	    print(SUPFILE "*default prefix=$sandbox\n");
 	    print(SUPFILE "*default delete use-rel-suffix\n");
 	    print(SUPFILE "src-all release=cvs");
-	    if ($branch eq 'CURRENT') {
+	    if ($branch eq 'HEAD') {
 		print(SUPFILE " tag=.");
 	    } else {
 		print(SUPFILE " tag=$branch");
@@ -461,12 +517,16 @@ MAIN:{
 	    print(SUPFILE "\n");
 	    close(SUPFILE);
 	    my @cvsupargs = (
-		"-1",
+		"-r 3",
 		"-g",
-		"-L", ($verbose ? 2 : 1),
+		"-L", ($verbose ? 1 : 0),
+		"-h",
+		split(' ', $cvsup),
 		"$sandbox/supfile"
 	    );
-	    spawn('/usr/local/bin/cvsup', @cvsupargs)
+	    my $cvsupcmd = [grep({ -x } @cvsupcmds)]->[0]
+		or error("unable to locate cvsup / csup binary");
+	    spawn($cvsupcmd, @cvsupargs)
 		or error("unable to cvsup the source tree");
 	} else {
 	    logstage("checking out the source tree");
@@ -482,7 +542,7 @@ MAIN:{
 	    } else {
 		push(@cvsargs, "checkout", "-P");
 	    };
-	    push(@cvsargs, ($branch eq 'CURRENT') ? "-A" : "-r$branch")
+	    push(@cvsargs, ($branch eq 'HEAD') ? "-A" : "-r$branch")
 		if defined($branch);
 	    push(@cvsargs, "-D$date")
 		if defined($date);
@@ -507,7 +567,7 @@ MAIN:{
 	if (-f $patch) {
 	    logstage("patching the sources");
 	    cd("$sandbox/src");
-	    spawn('/usr/bin/patch', "-f", "-s", "-i$patch")
+	    spawn('/usr/bin/patch', "-f", "-E", "-p0", "-s", "-i$patch")
 		or error("failed to apply patch to source tree");
 	} else {
 	    warning("$patch does not exist");
@@ -527,7 +587,7 @@ MAIN:{
     );
 
     # Kernel-specific variables
-    if ($cmds{'generic'} || $cmds{'lint'} || $cmds{'release'}) {
+    if (%kernels || $cmds{'lint'} || $cmds{'release'}) {
 	# None at the moment
     }
 
@@ -536,7 +596,7 @@ MAIN:{
 	$ENV{'CHROOTDIR'} = "$sandbox/root";
 	$ENV{'CVSROOT'} = $repository;
 	$ENV{'RELEASETAG'} = $branch
-	    if $branch ne 'CURRENT';
+	    if $branch ne 'HEAD';
 	$ENV{'CVSCMDARGS'} = "-D$date"
 	    if defined($date);
 	$ENV{'WORLD_FLAGS'} = $ENV{'KERNEL_FLAGS'} =
@@ -565,7 +625,7 @@ MAIN:{
     if (!exists($ENV{'CFLAGS'})) {
 	$ENV{'CFLAGS'} = "-O -pipe";
     }
-    if ($cmds{'generic'} || $cmds{'lint'} || $cmds{'release'}) {
+    if (%kernels || $cmds{'lint'} || $cmds{'release'}) {
 	if (!exists($ENV{'COPTFLAGS'})) {
 	    $ENV{'COPTFLAGS'} = "-O -pipe";
 	}
@@ -584,19 +644,11 @@ MAIN:{
 	cd("$sandbox/src");
 	make('buildworld')
 	    or error("failed to build world");
-    } elsif ($cmds{'generic'} || $cmds{'lint'}) {
+    } elsif (%kernels || $cmds{'lint'}) {
 	logstage("building kernel toolchain (CFLAGS=$ENV{'CFLAGS'})");
 	cd("$sandbox/src");
 	make('kernel-toolchain')
 	    or error("failed to build kernel toolchain");
-    }
-
-    # Build GENERIC if requested
-    if ($cmds{'generic'}) {
-	logstage("building generic kernel (COPTFLAGS=$ENV{'COPTFLAGS'})");
-	cd("$sandbox/src");
-	spawn('/usr/bin/make', 'buildkernel', 'KERNCONF=GENERIC')
-	    or error("failed to build generic kernel");
     }
 
     # Build LINT if requested
@@ -615,8 +667,39 @@ MAIN:{
     if ($cmds{'lint'}) {
 	logstage("building LINT kernel (COPTFLAGS=$ENV{'COPTFLAGS'})");
 	cd("$sandbox/src");
-	spawn('/usr/bin/make', 'buildkernel', 'KERNCONF=LINT')
+	make('buildkernel', 'KERNCONF' => 'LINT')
 	    or error("failed to build lint kernel");
+    }
+
+    # Build additional kernels
+    foreach my $kernel (sort(keys(%kernels))) {
+	if (! -f "$sandbox/src/sys/$machine/conf/$kernel") {
+	    warning("no kernel config for $kernel");
+	    next;
+	}
+	logstage("building $kernel kernel (COPTFLAGS=$ENV{'COPTFLAGS'})");
+	cd("$sandbox/src");
+	make('buildkernel', 'KERNCONF' => $kernel)
+	    or error("failed to build $kernel kernel");
+    }
+
+    # Install world and kernel if requested
+    if ($cmds{'install'}) {
+	make_dir($destdir)
+	    or error("$destdir: $!");
+	cd("$sandbox/src");
+	make('installworld', 'DESTDIR' => $destdir)
+	    or error("failed to install world");
+	foreach my $kernel (sort(keys(%kernels))) {
+	    if (! -f "$sandbox/src/sys/$machine/conf/$kernel") {
+		warning("no kernel config for $kernel");
+		next;
+	    }
+	    make('installkernel',
+		 'KERNCONF' => $kernel,
+		 'KODIR' => "/boot/$kernel",
+		 'DESTDIR' => $destdir);
+	}
     }
 
     # Build a release if requested
