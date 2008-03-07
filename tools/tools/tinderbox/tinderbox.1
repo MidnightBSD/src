@@ -1,5 +1,5 @@
 .\"-
-.\" Copyright (c) 2003 Dag-Erling Coïdan Smørgrav
+.\" Copyright (c) 2003-2008 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -10,8 +10,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. The name of the author may not be used to endorse or promote products
-.\"    derived from this software without specific prior written permission.
 .\"
 .\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 .\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -25,9 +23,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/tools/tools/tinderbox/tinderbox.1,v 1.12 2004/06/21 14:49:22 des Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: projects/tinderbox/tinderbox.1,v 1.18 2008/01/26 19:34:31 des Exp $
 .\"
-.Dd June 21, 2004
+.Dd April 10, 2007
 .Dt TINDERBOX 1
 .Os
 .Sh NAME
@@ -64,7 +63,7 @@ The default is to use
 .Fl A
 instead, to get the head.
 Specifying
-.Va CURRENT
+.Va HEAD
 as the argument to
 .Fl -branch
 is equivalent to leaving it unspecified.
@@ -77,6 +76,14 @@ command is specified.
 The default is to use
 .Xr cvs 1
 instead.
+.It Fl D Ar DIR , Fl -destdir Ns = Ns Ar DIR
+The directory (aka
+.Dv DESTDIR )
+in which the results of the build will be installed if the
+.Cm install
+command is specified.
+The default is
+.Pa $SANDBOX/inst .
 .It Fl d Ar DATE , Fl -date Ns = Ns Ar DATE
 The date to specify to
 .Xr cvs 1
@@ -111,7 +118,9 @@ The default is to redirect all output to
 Specifies the target machine.
 The default value is whatever the host system's
 .Xr uname 1
-reports.
+reports, unless a target architecture was specified with the
+.It Fl a
+option, in which case the target machine is set to the same value.
 .It Fl p Ar PATCH , Fl -patch Ns = Ns Ar PATCH
 The file name of a patch to apply to the source tree before building
 if the
@@ -172,13 +181,11 @@ If the specified patch file does not exist, the
 command will fail gracefully.
 .It Cm world
 Build the world.
-.It Cm generic
-Build a GENERIC kernel.
 .It Cm lint
 Build a LINT kernel if available.
 In
 .Fx
-5, the
+5 and newer, the
 .Pa LINT
 configuration file will first be generated from the corresponding
 .Pa NOTES
@@ -190,6 +197,24 @@ nor
 exist in the kernel configuration directory, the
 .Cm lint
 command will fail gracefully.
+.It Cm kernel: Ns Ar CONF
+Build the
+.Ar CONF
+kernel.
+If a file named
+.Ar CONF
+does not exist in the kernel configuration directory, this command
+will fail gracefully.
+.It Cm generic
+Equivalent to
+.Cm kernel: Ns Ar GENERIC ,
+for backward compatibility.
+.It Cm install
+Install the result of the build into
+.Pa ${DESTDIR} .
+Each kernel that was built will be installed into a subdirectory of
+.Pa ${DESTDIR}/boot
+named after the corresponding kernel configuration file.
 .It Cm release
 Build a release by following the procedure described in
 .Xr release 7 .
