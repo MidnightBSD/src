@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $MidnightBSD$
+# $MidnightBSD: src/tools/tools/tinderbox/www/index.cgi,v 1.3 2008/03/07 04:40:14 laffer1 Exp $
 # $FreeBSD: projects/tinderbox/www/index.cgi,v 1.32 2008/02/10 17:04:26 des Exp $
 #
 
@@ -148,16 +148,16 @@ MAIN:{
     $| = 1;
     if ($ENV{'GATEWAY_INTERFACE'}) {
 	print "Content-Type: text/html; charset=utf-8\n\n";
-	$realthing = ($ENV{'SERVER_NAME'} eq 'tinderbox.freebsd.org');
+	$realthing = ($ENV{'SERVER_NAME'} eq 'tinderbox.midnightbsd.org');
     } else {
 	my $host = hostname();
-	$realthing = ($host eq 'dma.des.no');
+	$realthing = ($host eq 'defiant.midnightbsd.org');
     }
 
     if ($realthing) {
-	$greeting = "<a href='http://tinderbox.freebsd.org/'>tinderbox.freebsd.org</a>";
+	$greeting = "<a href='http://tinderbox.midnightbsd.org/'>tinderbox.midnightbsd.org</a>";
     } else {
-	$greeting = "For official Tinderbox logs, see <a href='http://tinderbox.freebsd.org/'>here</a>";
+	$greeting = "For official Tinderbox logs, see <a href='http://tinderbox.midnightbsd.org/'>here</a>";
     }
 
     local *DIR;
@@ -211,14 +211,6 @@ MAIN:{
         </td>
       </tr>
     </table>
-    <!-- p>
-      <a href='http://validator.w3.org/check/referer'><img
-          src='valid-xhtml10.png'
-          alt='Valid XHTML 1.0!' height='31' width='88' /></a>
-      <a href='http://jigsaw.w3.org/css-validator/check/referer'><img
-          src='valid-css.png'
-          alt='Valid CSS!' height='31' width='88' /></a>
-    </p -->
   </body>
 </html>
 ";
