@@ -1,7 +1,7 @@
 #
 # Tinderbox defaults
 #
-# $MidnightBSD: src/tools/tools/tinderbox/etc/default.rc,v 1.1.1.1.2.1 2008/03/04 03:06:59 laffer1 Exp $
+# $MidnightBSD: src/tools/tools/tinderbox/etc/default.rc,v 1.2 2008/03/06 20:23:45 laffer1 Exp $
 # $FreeBSD: src/tools/tools/tinderbox/etc/default.rc,v 1.9 2005/04/30 18:26:05 des Exp $
 #
 
@@ -13,10 +13,11 @@ logdir		= %%HOME%%/logs
 
 # Tinderbox options
 options		= --verbose
-targets		= cleanobj, update, world, generic, lint
+targets		= cleanobj, update, world, lint, kernel:GENERIC, cleanobj
 #timeout 	= 7200
 
 # Reporting
 sender		= MidnightBSD Tinderbox <tinderbox@midnightbsd.org>
 recipient	= %%SENDER%%
 subject		= [%%COMMENT%%] failure on %%arch%%/%%machine%%
+urlbase		= http://tinderbox.midnightbsd.org/
