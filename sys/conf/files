@@ -976,11 +976,6 @@ fs/devfs/devfs_vnops.c		standard
 fs/fdescfs/fdesc_vfsops.c	optional fdescfs
 fs/fdescfs/fdesc_vnops.c	optional fdescfs
 fs/fifofs/fifo_vnops.c		standard
-fs/hpfs/hpfs_alsubr.c		optional hpfs
-fs/hpfs/hpfs_lookup.c		optional hpfs
-fs/hpfs/hpfs_subr.c		optional hpfs
-fs/hpfs/hpfs_vfsops.c		optional hpfs
-fs/hpfs/hpfs_vnops.c		optional hpfs
 fs/msdosfs/msdosfs_conv.c	optional msdosfs
 fs/msdosfs/msdosfs_denode.c	optional msdosfs
 fs/msdosfs/msdosfs_fat.c	optional msdosfs

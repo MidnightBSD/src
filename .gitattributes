@@ -24318,7 +24318,6 @@ sys/compat/svr4/svr4_utsname.h -text
 sys/compat/svr4/svr4_wait.h -text
 sys/compat/svr4/syscalls.conf -text
 sys/compat/svr4/syscalls.master -text
-sys/conf/Makefile.alpha -text
 sys/conf/Makefile.amd64 -text
 sys/conf/Makefile.arm -text
 sys/conf/Makefile.i386 -text
@@ -24329,12 +24328,10 @@ sys/conf/Makefile.sparc64 -text
 sys/conf/NOTES -text
 sys/conf/defines -text
 sys/conf/files -text
-sys/conf/files.alpha -text
 sys/conf/files.amd64 -text
 sys/conf/files.arm -text
 sys/conf/files.i386 -text
 sys/conf/files.ia64 -text
-sys/conf/files.pc98 -text
 sys/conf/files.powerpc -text
 sys/conf/files.sparc64 -text
 sys/conf/kern.mk -text
@@ -24342,7 +24339,6 @@ sys/conf/kern.post.mk -text
 sys/conf/kern.pre.mk -text
 sys/conf/kmod.mk -text
 sys/conf/kmod_syms.awk -text
-sys/conf/ldscript.alpha -text
 sys/conf/ldscript.amd64 -text
 sys/conf/ldscript.arm -text
 sys/conf/ldscript.i386 -text
@@ -24353,12 +24349,10 @@ sys/conf/makeLINT.mk -text
 sys/conf/makeLINT.sed -text
 sys/conf/newvers.sh -text
 sys/conf/options -text
-sys/conf/options.alpha -text
 sys/conf/options.amd64 -text
 sys/conf/options.arm -text
 sys/conf/options.i386 -text
 sys/conf/options.ia64 -text
-sys/conf/options.pc98 -text
 sys/conf/options.powerpc -text
 sys/conf/options.sparc64 -text
 sys/conf/systags.sh -text
