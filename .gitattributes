@@ -24322,8 +24322,6 @@ sys/conf/Makefile.amd64 -text
 sys/conf/Makefile.arm -text
 sys/conf/Makefile.i386 -text
 sys/conf/Makefile.ia64 -text
-sys/conf/Makefile.pc98 -text
-sys/conf/Makefile.powerpc -text
 sys/conf/Makefile.sparc64 -text
 sys/conf/NOTES -text
 sys/conf/defines -text
@@ -24332,7 +24330,6 @@ sys/conf/files.amd64 -text
 sys/conf/files.arm -text
 sys/conf/files.i386 -text
 sys/conf/files.ia64 -text
-sys/conf/files.powerpc -text
 sys/conf/files.sparc64 -text
 sys/conf/kern.mk -text
 sys/conf/kern.post.mk -text
@@ -24343,7 +24340,6 @@ sys/conf/ldscript.amd64 -text
 sys/conf/ldscript.arm -text
 sys/conf/ldscript.i386 -text
 sys/conf/ldscript.ia64 -text
-sys/conf/ldscript.powerpc -text
 sys/conf/ldscript.sparc64 -text
 sys/conf/makeLINT.mk -text
 sys/conf/makeLINT.sed -text
@@ -24353,7 +24349,6 @@ sys/conf/options.amd64 -text
 sys/conf/options.arm -text
 sys/conf/options.i386 -text
 sys/conf/options.ia64 -text
-sys/conf/options.powerpc -text
 sys/conf/options.sparc64 -text
 sys/conf/systags.sh -text
 sys/contrib/altq/altq/altq.h -text
