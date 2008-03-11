@@ -1132,7 +1132,10 @@ command_Expand_Interpret(char *buff, int nb, char *argv[MAXARGS], int offset)
 {
   char buff2[LINE_LEN-offset];
 
-  InterpretArg(buff, buff2);
+  if (InterpretArg(buff, buff2, sizeof buff2) == NULL) {
+    log_Printf(LogWARN, "Failed to expand command '%s': too long for the destination buffer\n", buff);
+    return -1;
+  }
   strncpy(buff, buff2, LINE_LEN - offset - 1);
   buff[LINE_LEN - offset - 1] = '\0';
 
