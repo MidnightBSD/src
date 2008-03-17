@@ -3,6 +3,79 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080316:
+	FIx a problem with gif0 tunnels and neighbors with IPV6.
+
+20080312:
+	Add lndir from X.org.  This aides in the porting of MirPorts.
+
+	New OS versions were added to the mapage code (groff)
+
+20080310:
+	Correct a buffer overflow in ppp.
+
+20080308:
+	Remove /usr/X11R6 from manpath config.
+
+20080307:
+	Atheros driver no longer has several options set
+	which corrects building in tinderbox on all three platforms.
+
+	Added a new macro to sx.h which returns true if the current
+	thread holds an exclusive lock on a specifix sx.
+
+	Removed OS/2's HPFS file system.   It's not maintained and
+	I don't know anyone using OS/2 or ecomstation these days.
+	My copy is in the closet collecting dust.
+
+20080306:
+	Synced tinderbox with FreeBSD.  Modified it for MidnightBSD.
+	Developers can now use it to check src builds.
+
+20080303:
+	Add mksh to /etc/shells, made some adjustments to options
+	for mksh builds per suggestion upstream.
+
+	USB HID table updated with modern hardware list.
+
+	Updated BSD family true (we're not in there yet)
+
+	iso3166 file updated and import of tzdata2007k for 
+	new time zones.
+
+	Updated mksh to latest version R33.
+
+20080228:
+	Remplaced the random IP id generation code with a new
+	version by Amit Klein.
+
+20080221:
+	Sendfile write only permissions fix.
+
+	Removed some HPFS and PC98 code.
+
+	iso639 file sycned with DragonFly.
+
+20080128:
+	Changed NTP configuration so that ips aren't cached
+	so multiple servers are used.
+
+	Fix an issue with fork() in libpthread.
+
+20080121:
+	Add virtualization detection to set the HZ rate
+	according to a VM present.  VMWare and Parallels
+	should work better like this.
+
+	Change to full x11 install in sysinstall.  Add
+	xorg 7 support.
+
+20080115:
+	Fix the handling of PTY's.  CVE-2008-0216
+
+20080105:
+	mport delete code added, USE_MPORT_TOOLS knob aded.
+
 20080101:
 	Happy New Year
 
@@ -435,4 +508,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.29 2007/11/23 22:26:26 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.30 2008/01/01 07:09:50 laffer1 Exp $
