@@ -15630,6 +15630,7 @@ etc/remote -text
 etc/root/dot.cshrc -text
 etc/root/dot.k5login -text
 etc/root/dot.login -text
+etc/root/dot.mkshrc -text
 etc/root/dot.profile -text
 etc/rpc -text
 etc/sendmail/Makefile -text
