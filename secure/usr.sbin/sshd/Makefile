@@ -30,6 +30,14 @@ LDADD+=	 -lgssapi -lkrb5 -lasn1 -lcom_err -lroken
 .endif
 
 .if defined(X11BASE)
+# Recommended /etc/make.conf setting is X11BASE=${LOCALBASE} for x.org
+# we need to provide the default for users with old make.conf
+# settings.
+LOCALBASE?=     /usr/local
+  	 
+# Users may override either LOCALBASE or X11BASE to move the location
+# of xauth
+X11BASE?=       ${LOCALBASE}
 CFLAGS+= -DXAUTH_PATH=\"${X11BASE}/bin/xauth\"
 .endif
 
