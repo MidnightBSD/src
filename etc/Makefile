@@ -1,7 +1,7 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.10 2008/03/02 19:15:46 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.11 2008/03/22 06:01:05 laffer1 Exp $
 
 .if !defined(NO_SENDMAIL)
 SUBDIR=	sendmail
@@ -139,7 +139,7 @@ distribution:
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 		dot.login ${DESTDIR}/root/.login; \
             ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
-                dot.mkshrc ${DESTDIR}/root/.mkshrc;
+                dot.mkshrc ${DESTDIR}/root/.mkshrc; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 		dot.profile ${DESTDIR}/root/.profile; \
 	    rm -f ${DESTDIR}/.cshrc ${DESTDIR}/.profile ${DESTDIR}/.mkshrc; \
