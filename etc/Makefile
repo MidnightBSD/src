@@ -1,7 +1,7 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.9 2007/03/29 20:05:06 archite Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.10 2008/03/02 19:15:46 laffer1 Exp $
 
 .if !defined(NO_SENDMAIL)
 SUBDIR=	sendmail
@@ -138,11 +138,14 @@ distribution:
 		dot.cshrc ${DESTDIR}/root/.cshrc; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 		dot.login ${DESTDIR}/root/.login; \
+            ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
+                dot.mkshrc ${DESTDIR}/root/.mkshrc;
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 		dot.profile ${DESTDIR}/root/.profile; \
-	    rm -f ${DESTDIR}/.cshrc ${DESTDIR}/.profile; \
+	    rm -f ${DESTDIR}/.cshrc ${DESTDIR}/.profile ${DESTDIR}/.mkshrc; \
 	    ln ${DESTDIR}/root/.cshrc ${DESTDIR}/.cshrc; \
-	    ln ${DESTDIR}/root/.profile ${DESTDIR}/.profile
+	    ln ${DESTDIR}/root/.profile ${DESTDIR}/.profile; \
+            ln ${DESTDIR}/root/.mkshrc ${DESTDIR}/.mkshrc
 	cd ${.CURDIR}/mtree; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 	    ${MTREE} ${DESTDIR}/etc/mtree
 .if !defined(NO_BIND)
