@@ -1,4 +1,4 @@
-# $MidnightBSD$ 
+# $MidnightBSD: src/etc/etc.i386/ttys,v 1.2 2006/08/28 01:35:54 laffer1 Exp $ 
 # $FreeBSD: src/etc/etc.i386/ttys,v 1.10 2003/10/24 15:44:08 simokawa Exp $
 #	@(#)ttys	5.1 (Berkeley) 4/17/89
 #
@@ -41,7 +41,7 @@ ttyv4	"/usr/libexec/getty Pc"		cons25	on  secure
 ttyv5	"/usr/libexec/getty Pc"		cons25	on  secure
 ttyv6	"/usr/libexec/getty Pc"		cons25	on  secure
 ttyv7	"/usr/libexec/getty Pc"		cons25	on  secure
-ttyv8	"/usr/X11R6/bin/xdm -nodaemon"	xterm	off secure
+ttyv8	"/usr/local/bin/xdm -nodaemon"	xterm	off secure
 # Serial terminals
 # The 'dialup' keyword identifies dialin lines to login, fingerd etc.
 ttyd0	"/usr/libexec/getty std.9600"	dialup	off secure
