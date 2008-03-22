@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/secure/usr.bin/ssh/Makefile,v 1.3 2006/10/10 18:52:37 laffer1 Exp $
 # $FreeBSD: src/secure/usr.bin/ssh/Makefile,v 1.31 2005/06/07 09:31:27 des Exp $
 #
 
@@ -21,8 +21,17 @@ DPADD+=	 ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
 LDADD+=	 -lgssapi -lkrb5 -lasn1 -lcom_err -lmd -lroken
 .endif
 
-.if defined(X11BASE)
-CFLAGS+= -DXAUTH_PATH=\"${X11BASE}/bin/xauth\"
+if defined(X11BASE) || defined(LOCALBASE)
+# Recommended /etc/make.conf setting is X11BASE=${LOCALBASE} for x.org
+# 7.x upgrade on <= 6.2, but LOCALBASE has moved out of scope of src/
+# so we need to provide the default for users with old make.conf
+# settings.
+LOCALBASE?=     /usr/local
+  	 
+# Users may override either LOCALBASE or X11BASE to move the location
+# of xauth
+X11BASE?=       ${LOCALBASE}
+CFLAGS+= -DXAUTH_PATH=\"${LOCALBASE}/bin/xauth\"
 .endif
 
 DPADD+=	${LIBCRYPT} ${LIBCRYPTO}
