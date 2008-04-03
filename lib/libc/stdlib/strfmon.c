@@ -223,6 +223,8 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 				goto format_error;
 		}
 
+		if (currency_symbol)
+			free(currency_symbol);
 		if (flags & USE_INTL_CURRENCY) {
 			currency_symbol = strdup(lc->int_curr_symbol);
 			if (currency_symbol != NULL)
