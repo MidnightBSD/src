@@ -1,4 +1,4 @@
-/*	$NetBSD: strfmon.c,v 1.6 2008/03/27 21:50:30 christos Exp $	*/
+/*-
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
  *
