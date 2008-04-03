@@ -1,4 +1,4 @@
-/*	strfmon.c,v 1.4 2006/03/19 01:50:49 christos Exp	*/
+/*	$NetBSD: strfmon.c,v 1.6 2008/03/27 21:50:30 christos Exp $	*/
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
  *
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/strfmon.c,v 1.14 2003/03/20 08:18:55 ach
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 /* internal flags */
 #define	NEED_GROUPING		0x01	/* print digits grouped (default) */
@@ -63,15 +64,12 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/strfmon.c,v 1.14 2003/03/20 08:18:55 ach
 } while (0)
 
 #define GET_NUMBER(VAR)	do {					\
-	int ovar;						\
-	ovar = VAR = 0;						\
+	VAR = 0;						\
 	while (isdigit((unsigned char)*fmt)) {			\
 		VAR *= 10;					\
 		VAR += *fmt - '0';				\
-		if (ovar > VAR)					\
+		if (VAR > 0x00ffffff)				\
 			goto e2big_error;			\
-		else						\
-			ovar = VAR;				\
 		fmt++;						\
 	}							\
 } while (0)
@@ -188,11 +186,13 @@ strfmon(char * __restrict s, size_t maxsize, const char * __restrict format,
 
 		/* field Width */
 		if (isdigit((unsigned char)*fmt)) {
+			ptrdiff_t d = dst - s;
 			GET_NUMBER(width);
 			/* Do we have enough space to put number with
 			 * required width ?
 			 */
-			if (dst + width >= s + maxsize)
+
+			if (d + width >= maxsize)
 				goto e2big_error;
 		}
 
