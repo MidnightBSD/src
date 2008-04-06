@@ -1,4 +1,4 @@
-/* $Id: openssl-compat.c,v 1.1.1.3 2006-10-03 02:03:03 raven Exp $ */
+/* $Id: openssl-compat.c,v 1.1.1.4 2008-04-06 04:40:38 laffer1 Exp $ */
 
 /*
  * Copyright (c) 2005 Darren Tucker <dtucker@zip.com.au>

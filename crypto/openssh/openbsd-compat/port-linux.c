@@ -1,4 +1,4 @@
-/* $Id: port-linux.c,v 1.1.1.1 2006-10-03 02:03:03 raven Exp $ */
+/* $Id: port-linux.c,v 1.1.1.2 2008-04-06 04:40:38 laffer1 Exp $ */
 
 /*
  * Copyright (c) 2005 Daniel Walsh <dwalsh@redhat.com>
@@ -36,7 +36,7 @@
 #include <selinux/get_context_list.h>
 
 /* Wrapper around is_selinux_enabled() to log its return value once only */
-static int
+int
 ssh_selinux_enabled(void)
 {
 	static int enabled = -1;
@@ -79,6 +79,7 @@ ssh_selinux_getctxbyname(char *pwname)
 		case 0:
 			error("%s: Failed to get default SELinux security "
 			    "context for %s", __func__, pwname);
+			break;
 		default:
 			fatal("%s: Failed to get default SELinux security "
 			    "context for %s (in enforcing mode)",
@@ -115,6 +116,7 @@ ssh_selinux_setup_exec_context(char *pwname)
 		case 0:
 			error("%s: Failed to set SELinux execution "
 			    "context for %s", __func__, pwname);
+			break;
 		default:
 			fatal("%s: Failed to set SELinux execution context "
 			    "for %s (in enforcing mode)", __func__, pwname);

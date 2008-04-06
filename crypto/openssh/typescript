@@ -1,0 +1,84 @@
+Script started on Sun Apr  6 00:37:52 2008
+defiant# ls
+CREDITS			crc32.c			readpass.c
+ChangeLog		crc32.h			regress
+INSTALL			deattack.c		rijndael.c
+LICENCE			deattack.h		rijndael.h
+Makefile.in		defines.h		rsa.c
+OVERVIEW		dh.c			rsa.h
+README			dh.h			scard
+README.dns		dispatch.c		scard-opensc.c
+README.platform		dispatch.h		scard.c
+README.privsep		dns.c			scard.h
+README.smartcard	dns.h			scp.1
+README.tun		entropy.c		scp.c
+RFC.nroff		entropy.h		servconf.c
+TODO			fatal.c			servconf.h
+WARNING.RNG		fixpaths		serverloop.c
+aclocal.m4		fixprogs		serverloop.h
+acss.c			groupaccess.c		session.c
+acss.h			groupaccess.h		session.h
+atomicio.c		gss-genr.c		sftp-client.c
+atomicio.h		gss-serv-krb5.c		sftp-client.h
+audit-bsm.c		gss-serv.c		sftp-common.c
+audit.c			hostfile.c		sftp-common.h
+audit.h			hostfile.h		sftp-glob.c
+auth-bsdauth.c		includes.h		sftp-server-main.c
+auth-chall.c		install-sh		sftp-server.8
+auth-krb5.c		kex.c			sftp-server.c
+auth-options.c		kex.h			sftp.1
+auth-options.h		kexdh.c			sftp.c
+auth-pam.c		kexdhc.c		sftp.h
+auth-pam.h		kexdhs.c		ssh-add.1
+auth-passwd.c		kexgex.c		ssh-add.c
+auth-rh-rsa.c		kexgexc.c		ssh-agent.1
+auth-rhosts.c		kexgexs.c		ssh-agent.c
+auth-rsa.c		key.c			ssh-dss.c
+auth-shadow.c		key.h			ssh-gss.h
+auth-sia.c		log.c			ssh-keygen.1
+auth-sia.h		log.h			ssh-keygen.c
+auth-skey.c		loginrec.c		ssh-keyscan.1
+auth.c			loginrec.h		ssh-keyscan.c
+auth.h			logintest.c		ssh-keysign.8
+auth1.c			mac.c			ssh-keysign.c
+auth2-chall.c		mac.h			ssh-rand-helper.8
+auth2-gss.c		match.c			ssh-rand-helper.c
+auth2-hostbased.c	match.h			ssh-rsa.c
+auth2-kbdint.c		md-sha256.c		ssh.1
+auth2-none.c		md5crypt.c		ssh.c
+auth2-passwd.c		md5crypt.h		ssh.h
+auth2-pubkey.c		mdoc2man.awk		ssh1.h
+auth2.c			misc.c			ssh2.h
+authfd.c		misc.h			ssh_config
+authfd.h		mkinstalldirs		ssh_config.5
+authfile.c		moduli			ssh_prng_cmds.in
+authfile.h		moduli.c		sshconnect.c
+bufaux.c		monitor.c		sshconnect.h
+bufbn.c			monitor.h		sshconnect1.c
+buffer.c		monitor_fdpass.c	sshconnect2.c
+buffer.h		monitor_fdpass.h	sshd.8
+buildpkg.sh.in		monitor_mm.c		sshd.c
+canohost.c		monitor_mm.h		sshd_config
+canohost.h		monitor_wrap.c		sshd_config.5
+channels.c		monitor_wrap.h		sshlogin.c
+channels.h		msg.c			sshlogin.h
+cipher-3des1.c		msg.h			sshpty.c
+cipher-acss.c		myproposal.h		sshpty.h
+cipher-aes.c		nchan.c			sshtty.c
+cipher-bf1.c		nchan.ms		survey.sh.in
+cipher-ctr.c		nchan2.ms		ttymodes.c
+cipher.c		openbsd-compat		ttymodes.h
+cipher.h		openssh.xml.in		typescript
+cleanup.c		opensshd.init.in	uidswap.c
+clientloop.c		packet.c		uidswap.h
+clientloop.h		packet.h		umac.c
+compat.c		pathnames.h		umac.h
+compat.h		platform.c		uuencode.c
+compress.c		platform.h		uuencode.h
+compress.h		progressmeter.c		version.h
+config.guess		progressmeter.h		xmalloc.c
+config.sub		readconf.c		xmalloc.h
+configure.ac		readconf.h
+defiant# cvs imprt [K[K[Ko[Kport src/crypto/openssh OPENSSH OpenSSH_4_0[K9p1
+laffer1@stargazer's password: 
+(B)0[1;24r[m[4l[?1h=[H[2JCVS: ----------------------------------------------------------------------[1BCVS: Enter Log.  Lines beginning with `CVS:' are removed automatically[1BCVS:[1BCVS: ----------------------------------------------------------------------[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[1B~[H[23B/tmp/cvsdxqWgb: unmodified: line 1[H[23B[K[H[1;23r[1;1HM[1;24r[2;1H[22BCopying file for recovery...[K[2;1H[AImport virgin OpenSSH 4.9p1[23B:wq

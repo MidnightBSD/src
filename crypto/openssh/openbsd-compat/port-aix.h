@@ -1,9 +1,9 @@
-/* $Id: port-aix.h,v 1.1.1.3 2006-10-03 02:03:03 raven Exp $ */
+/* $Id: port-aix.h,v 1.1.1.4 2008-04-06 04:40:38 laffer1 Exp $ */
 
 /*
  *
  * Copyright (c) 2001 Gert Doering.  All rights reserved.
- * Copyright (c) 2004, 2005 Darren Tucker.  All rights reserved.
+ * Copyright (c) 2004,2005,2006 Darren Tucker.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -101,6 +101,16 @@ void aix_remove_embedded_newlines(char *);
 int sshaix_getnameinfo(const struct sockaddr *, size_t, char *, size_t,
     char *, size_t, int);
 # define getnameinfo(a,b,c,d,e,f,g) (sshaix_getnameinfo(a,b,c,d,e,f,g))
+#endif
+
+/*
+ * We use getgrset in preference to multiple getgrent calls for efficiency
+ * plus it supports NIS and LDAP groups.
+ */
+#if !defined(HAVE_GETGROUPLIST) && defined(HAVE_GETGRSET)
+# define HAVE_GETGROUPLIST
+# define USE_GETGRSET
+int getgrouplist(const char *, gid_t, gid_t *, int *);
 #endif
 
 #endif /* _AIX */

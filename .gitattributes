@@ -13510,6 +13510,8 @@ crypto/openssh/openbsd-compat/bsd-misc.h -text
 crypto/openssh/openbsd-compat/bsd-nextstep.c -text
 crypto/openssh/openbsd-compat/bsd-nextstep.h -text
 crypto/openssh/openbsd-compat/bsd-openpty.c -text
+crypto/openssh/openbsd-compat/bsd-poll.c -text
+crypto/openssh/openbsd-compat/bsd-poll.h -text
 crypto/openssh/openbsd-compat/bsd-snprintf.c -text
 crypto/openssh/openbsd-compat/bsd-waitpid.c -text
 crypto/openssh/openbsd-compat/bsd-waitpid.h -text
@@ -13606,11 +13608,15 @@ crypto/openssh/regress/forcecommand.sh -text
 crypto/openssh/regress/forwarding.sh -text
 crypto/openssh/regress/keygen-change.sh -text
 crypto/openssh/regress/keyscan.sh -text
+crypto/openssh/regress/localcommand.sh -text
 crypto/openssh/regress/login-timeout.sh -text
 crypto/openssh/regress/multiplex.sh -text
 crypto/openssh/regress/proto-mismatch.sh -text
 crypto/openssh/regress/proto-version.sh -text
 crypto/openssh/regress/proxy-connect.sh -text
+crypto/openssh/regress/putty-ciphers.sh -text
+crypto/openssh/regress/putty-kex.sh -text
+crypto/openssh/regress/putty-transfer.sh -text
 crypto/openssh/regress/reconfigure.sh -text
 crypto/openssh/regress/reexec.sh -text
 crypto/openssh/regress/rekey.sh -text
@@ -13629,6 +13635,7 @@ crypto/openssh/regress/ssh-com-client.sh -text
 crypto/openssh/regress/ssh-com-keygen.sh -text
 crypto/openssh/regress/ssh-com-sftp.sh -text
 crypto/openssh/regress/ssh-com.sh -text
+crypto/openssh/regress/ssh2putty.sh -text
 crypto/openssh/regress/sshd-log-wrapper.sh -text
 crypto/openssh/regress/stderr-after-eof.sh -text
 crypto/openssh/regress/stderr-data.sh -text
@@ -13662,6 +13669,7 @@ crypto/openssh/sftp-client.h -text
 crypto/openssh/sftp-common.c -text
 crypto/openssh/sftp-common.h -text
 crypto/openssh/sftp-glob.c -text
+crypto/openssh/sftp-server-main.c -text
 crypto/openssh/sftp-server.8 -text
 crypto/openssh/sftp-server.c -text
 crypto/openssh/sftp.1 -text
@@ -13707,8 +13715,11 @@ crypto/openssh/sshtty.c -text
 crypto/openssh/survey.sh.in -text
 crypto/openssh/ttymodes.c -text
 crypto/openssh/ttymodes.h -text
+crypto/openssh/typescript -text
 crypto/openssh/uidswap.c -text
 crypto/openssh/uidswap.h -text
+crypto/openssh/umac.c -text
+crypto/openssh/umac.h -text
 crypto/openssh/uuencode.c -text
 crypto/openssh/uuencode.h -text
 crypto/openssh/version.c -text
