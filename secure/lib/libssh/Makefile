@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.5 2008/04/06 06:04:54 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.6 2008/04/06 06:24:01 laffer1 Exp $
 # $FreeBSD: src/secure/lib/libssh/Makefile,v 1.34.2.2 2005/09/11 16:50:33 des Exp $
 
 LIB=	ssh
@@ -18,7 +18,7 @@ SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 # compiled directly into sshd instead.
 
 # Portability layer
-SRCS+=	bsd-closefrom.c bsd-misc.c getrrsetbyname.c \
+SRCS+=	bsd-closefrom.c bsd-misc.c getrrsetbyname.c openssl-compat.c \
 	port-tun.c vis.c xcrypt.c xmmap.c
 # MidnightBSD additions
 SRCS+=	version.c
