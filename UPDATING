@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080406:
+	Import OpenSSH 4.9p1
+
 20080322:
 	The default umask was changed to 022.
 	
@@ -515,4 +518,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.31 2008/03/17 00:19:08 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.32 2008/03/22 06:21:11 laffer1 Exp $
