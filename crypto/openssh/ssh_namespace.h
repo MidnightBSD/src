@@ -375,3 +375,9 @@
 #define error 					ssh_error
 #define logit 					ssh_logit
 #define verbose 				ssh_verbose
+#define mac_clear ssh_mac_clear
+#define mac_setup ssh_mac_setup
+#define umac_delete ssh_umac_delete
+#define umac_final ssh_umac_final
+#define umac_new ssh_umac_new
+#define umac_update ssh_umac_update
