@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/secure/usr.sbin/sshd/Makefile,v 1.44 2005/06/07 09:31:28 des Exp $
 #
 
@@ -12,7 +13,7 @@ SRCS=	sshd.c auth-rhosts.c auth-passwd.c auth-rsa.c auth-rh-rsa.c \
 	auth-krb5.c \
 	auth2-gss.c gss-serv.c gss-serv-krb5.c \
 	loginrec.c auth-pam.c auth-shadow.c auth-sia.c md5crypt.c \
-	audit.c audit-bsm.c platform.c \
+	audit.c audit-bsm.c platform.c sftp-server.c sftp-common.c \
 	gss-genr.c
 
 # gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
