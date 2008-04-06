@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.5 2008/04/06 06:04:54 laffer1 Exp $
 # $FreeBSD: src/secure/lib/libssh/Makefile,v 1.34.2.2 2005/09/11 16:50:33 des Exp $
 
 LIB=	ssh
@@ -12,14 +12,14 @@ SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
 	monitor_fdpass.c rijndael.c ssh-dss.c ssh-rsa.c dh.c kexdh.c \
 	kexgex.c kexdhc.c kexgexc.c scard.c msg.c progressmeter.c dns.c \
-	entropy.c scard-opensc.c gss-genr.o umac.o
+	entropy.c scard-opensc.c umac.c
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.
 
 # Portability layer
 SRCS+=	bsd-closefrom.c bsd-misc.c getrrsetbyname.c \
-	port-tun.c strtonum.c vis.c xcrypt.c xmmap.c
+	port-tun.c vis.c xcrypt.c xmmap.c
 # MidnightBSD additions
 SRCS+=	version.c
 
