@@ -1,4 +1,4 @@
-/* $OpenBSD: channels.c,v 1.268 2007/01/03 03:01:40 stevesk Exp $ */
+/* $OpenBSD: channels.c,v 1.272 2008/01/19 23:02:40 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -1446,14 +1446,13 @@ static int
 channel_handle_rfd(Channel *c, fd_set *readset, fd_set *writeset)
 {
 	char buf[CHAN_RBUF];
-	int len;
+	int len, force;
 
-	if (c->rfd != -1 &&
-	    (c->detach_close || FD_ISSET(c->rfd, readset))) {
+	force = c->isatty && c->detach_close && c->istate != CHAN_INPUT_CLOSED;
+	if (c->rfd != -1 && (force || FD_ISSET(c->rfd, readset))) {
 		errno = 0;
 		len = read(c->rfd, buf, sizeof(buf));
-		if (len < 0 && (errno == EINTR ||
-		    (errno == EAGAIN && !(c->isatty && c->detach_close))))
+		if (len < 0 && (errno == EINTR || (errno == EAGAIN && !force)))
 			return 1;
 #ifndef PTY_ZEROREAD
 		if (len <= 0) {
@@ -1658,7 +1657,9 @@ channel_check_window(Channel *c)
 {
 	if (c->type == SSH_CHANNEL_OPEN &&
 	    !(c->flags & (CHAN_CLOSE_SENT|CHAN_CLOSE_RCVD)) &&
-	    c->local_window < c->local_window_max/2 &&
+	    ((c->local_window_max - c->local_window >
+	    c->local_maxpacket*3) ||
+	    c->local_window < c->local_window_max/2) &&
 	    c->local_consumed > 0) {
 		packet_start(SSH2_MSG_CHANNEL_WINDOW_ADJUST);
 		packet_put_int(c->remote_id);
@@ -2384,7 +2385,7 @@ channel_setup_fwd_listener(int type, const char *listen_addr, u_short listen_por
 			wildcard = 1;
 	} else if (gateway_ports || is_client) {
 		if (((datafellows & SSH_OLD_FORWARD_ADDR) &&
-		    strcmp(listen_addr, "0.0.0.0") == 0) ||
+		    strcmp(listen_addr, "0.0.0.0") == 0 && is_client == 0) ||
 		    *listen_addr == '\0' || strcmp(listen_addr, "*") == 0 ||
 		    (!is_client && gateway_ports == 1))
 			wildcard = 1;
@@ -2408,10 +2409,11 @@ channel_setup_fwd_listener(int type, const char *listen_addr, u_short listen_por
 		if (addr == NULL) {
 			/* This really shouldn't happen */
 			packet_disconnect("getaddrinfo: fatal error: %s",
-			    gai_strerror(r));
+			    ssh_gai_strerror(r));
 		} else {
 			error("channel_setup_fwd_listener: "
-			    "getaddrinfo(%.64s): %s", addr, gai_strerror(r));
+			    "getaddrinfo(%.64s): %s", addr,
+			    ssh_gai_strerror(r));
 		}
 		return 0;
 	}
@@ -2731,7 +2733,7 @@ connect_to(const char *host, u_short port)
 	snprintf(strport, sizeof strport, "%d", port);
 	if ((gaierr = getaddrinfo(host, strport, &hints, &aitop)) != 0) {
 		error("connect_to %.100s: unknown host (%s)", host,
-		    gai_strerror(gaierr));
+		    ssh_gai_strerror(gaierr));
 		return -1;
 	}
 	for (ai = aitop; ai; ai = ai->ai_next) {
@@ -2873,7 +2875,7 @@ x11_create_display_inet(int x11_display_offset, int x11_use_localhost,
 		hints.ai_socktype = SOCK_STREAM;
 		snprintf(strport, sizeof strport, "%d", port);
 		if ((gaierr = getaddrinfo(NULL, strport, &hints, &aitop)) != 0) {
-			error("getaddrinfo: %.100s", gai_strerror(gaierr));
+			error("getaddrinfo: %.100s", ssh_gai_strerror(gaierr));
 			return -1;
 		}
 		for (ai = aitop; ai; ai = ai->ai_next) {
@@ -3046,7 +3048,8 @@ x11_connect_display(void)
 	hints.ai_socktype = SOCK_STREAM;
 	snprintf(strport, sizeof strport, "%u", 6000 + display_number);
 	if ((gaierr = getaddrinfo(buf, strport, &hints, &aitop)) != 0) {
-		error("%.100s: unknown host. (%s)", buf, gai_strerror(gaierr));
+		error("%.100s: unknown host. (%s)", buf,
+		ssh_gai_strerror(gaierr));
 		return -1;
 	}
 	for (ai = aitop; ai; ai = ai->ai_next) {

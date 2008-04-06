@@ -1,4 +1,4 @@
-/* $OpenBSD: auth2.c,v 1.114 2007/03/01 10:28:02 dtucker Exp $ */
+/* $OpenBSD: auth2.c,v 1.116 2007/09/29 00:25:51 dtucker Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  *
@@ -87,7 +87,6 @@ static void input_userauth_request(int, u_int32_t, void *);
 /* helper */
 static Authmethod *authmethod_lookup(const char *);
 static char *authmethods_get(void);
-int user_key_allowed(struct passwd *, Key *);
 
 /*
  * loop until authctxt->success == TRUE
@@ -280,8 +279,6 @@ userauth_finish(Authctxt *authctxt, int authenticated, char *method)
 		xfree(methods);
 	}
 }
-
-#define	DELIM	","
 
 static char *
 authmethods_get(void)

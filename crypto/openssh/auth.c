@@ -1,4 +1,4 @@
-/* $OpenBSD: auth.c,v 1.75 2006/08/03 03:34:41 deraadt Exp $ */
+/* $OpenBSD: auth.c,v 1.78 2007/09/21 08:15:29 djm Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  *
@@ -115,11 +115,11 @@ allowed_user(struct passwd * pw)
 	/* grab passwd field for locked account check */
 #ifdef USE_SHADOW
 	if (spw != NULL)
-#if defined(HAVE_LIBIAF)  &&  !defined(BROKEN_LIBIAF)
+#ifdef USE_LIBIAF
 		passwd = get_iaf_password(pw);
 #else
 		passwd = spw->sp_pwdp;
-#endif /* HAVE_LIBIAF  && !BROKEN_LIBIAF */
+#endif /* USE_LIBIAF */
 #else
 	passwd = pw->pw_passwd;
 #endif
@@ -141,9 +141,9 @@ allowed_user(struct passwd * pw)
 		if (strstr(passwd, LOCKED_PASSWD_SUBSTR))
 			locked = 1;
 #endif
-#if defined(HAVE_LIBIAF)  &&  !defined(BROKEN_LIBIAF)
+#ifdef USE_LIBIAF
 		free(passwd);
-#endif /* HAVE_LIBIAF  && !BROKEN_LIBIAF */
+#endif /* USE_LIBIAF */
 		if (locked) {
 			logit("User %.100s not allowed because account is locked",
 			    pw->pw_name);

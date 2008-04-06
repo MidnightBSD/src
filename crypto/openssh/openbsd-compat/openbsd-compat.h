@@ -1,4 +1,4 @@
-/* $Id: openbsd-compat.h,v 1.3 2006-10-04 01:34:54 laffer1 Exp $ */
+/* $Id: openbsd-compat.h,v 1.4 2008-04-06 04:50:38 laffer1 Exp $ */
 
 /*
  * Copyright (c) 1999-2003 Damien Miller.  All rights reserved.
@@ -140,6 +140,7 @@ int writev(int, struct iovec *, int);
 /* Home grown routines */
 #include "bsd-misc.h"
 #include "bsd-waitpid.h"
+#include "bsd-poll.h"
 
 #ifndef HAVE_GETPEEREID
 int getpeereid(int , uid_t *, gid_t *);

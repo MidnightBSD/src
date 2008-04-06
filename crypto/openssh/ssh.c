@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh.c,v 1.295 2007/01/03 03:01:40 stevesk Exp $ */
+/* $OpenBSD: ssh.c,v 1.309 2008/01/19 20:51:26 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -72,6 +72,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include "openbsd-compat/openssl-compat.h"
 
 #include "xmalloc.h"
 #include "ssh.h"
@@ -185,7 +186,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-"usage: ssh [-1246AaCfgkMNnqsTtVvXxY] [-b bind_address] [-c cipher_spec]\n"
+"usage: ssh [-1246AaCfgKkMNnqsTtVvXxY] [-b bind_address] [-c cipher_spec]\n"
 "           [-D [bind_address:]port] [-e escape_char] [-F configfile]\n"
 "           [-i identity_file] [-L [bind_address:]port:host:hostport]\n"
 "           [-l login_name] [-m mac_spec] [-O ctl_cmd] [-o option] [-p port]\n"
@@ -210,7 +211,7 @@ main(int ac, char **av)
 	char *p, *cp, *line, buf[256];
 	struct stat st;
 	struct passwd *pw;
-	int dummy;
+	int dummy, timeout_ms;
 	extern int optind, optreset;
 	extern char *optarg;
 	struct servent *sp;
@@ -272,7 +273,7 @@ main(int ac, char **av)
 
  again:
 	while ((opt = getopt(ac, av,
-	    "1246ab:c:e:fgi:kl:m:no:p:qstvxACD:F:I:L:MNO:PR:S:TVw:XY")) != -1) {
+	    "1246ab:c:e:fgi:kl:m:no:p:qstvxACD:F:I:KL:MNO:PR:S:TVw:XY")) != -1) {
 		switch (opt) {
 		case '1':
 			options.protocol = SSH_PROTO_1;
@@ -325,6 +326,10 @@ main(int ac, char **av)
 			break;
 		case 'k':
 			options.gss_deleg_creds = 0;
+			break;
+		case 'K':
+			options.gss_authentication = 1;
+			options.gss_deleg_creds = 1;
 			break;
 		case 'i':
 			if (stat(optarg, &st) < 0) {
@@ -654,11 +659,15 @@ main(int ac, char **av)
 	}
 
 	if (options.proxy_command != NULL &&
-	    strcmp(options.proxy_command, "none") == 0)
+	    strcmp(options.proxy_command, "none") == 0) {
+		xfree(options.proxy_command);
 		options.proxy_command = NULL;
+	}
 	if (options.control_path != NULL &&
-	    strcmp(options.control_path, "none") == 0)
+	    strcmp(options.control_path, "none") == 0) {
+		xfree(options.control_path);
 		options.control_path = NULL;
+	}
 
 	if (options.control_path != NULL) {
 		char thishost[NI_MAXHOST];
@@ -668,6 +677,7 @@ main(int ac, char **av)
 		snprintf(buf, sizeof(buf), "%d", options.port);
 		cp = tilde_expand_filename(options.control_path,
 		    original_real_uid);
+		xfree(options.control_path);
 		options.control_path = percent_expand(cp, "p", buf, "h", host,
 		    "r", options.user, "l", thishost, (char *)NULL);
 		xfree(cp);
@@ -677,9 +687,12 @@ main(int ac, char **av)
 	if (options.control_path != NULL)
 		control_client(options.control_path);
 
+	timeout_ms = options.connection_timeout * 1000;
+
 	/* Open a connection to the remote host. */
 	if (ssh_connect(host, &hostaddr, options.port,
-	    options.address_family, options.connection_attempts,
+	    options.address_family, options.connection_attempts, &timeout_ms,
+	    options.tcp_keep_alive, 
 #ifdef HAVE_CYGWIN
 	    options.use_privileged_port,
 #else
@@ -687,6 +700,9 @@ main(int ac, char **av)
 #endif
 	    options.proxy_command) != 0)
 		exit(255);
+
+	if (timeout_ms > 0)
+		debug3("timeout: %d ms remain after connect", timeout_ms);
 
 	/*
 	 * If we successfully made the connection, load the host private key
@@ -763,7 +779,8 @@ main(int ac, char **av)
 	signal(SIGPIPE, SIG_IGN); /* ignore SIGPIPE early */
 
 	/* Log into the remote system.  This never returns if the login fails. */
-	ssh_login(&sensitive_data, host, (struct sockaddr *)&hostaddr, pw);
+	ssh_login(&sensitive_data, host, (struct sockaddr *)&hostaddr,
+	    pw, timeout_ms);
 
 	/* We no longer need the private host keys.  Clear them now. */
 	if (sensitive_data.nkeys != 0) {
@@ -853,6 +870,17 @@ ssh_init_forwarding(void)
 				    "forwarding.");
 		}
 	}
+
+	/* Initiate tunnel forwarding. */
+	if (options.tun_open != SSH_TUNMODE_NO) {
+		if (client_request_tun_fwd(options.tun_open,
+		    options.tun_local, options.tun_remote) == -1) {
+			if (options.exit_on_forward_failure)
+				fatal("Could not request tunnel forwarding.");
+			else
+				error("Could not request tunnel forwarding.");
+		}
+	}			
 }
 
 static void
@@ -974,6 +1002,11 @@ ssh_session(void)
 
 	/* Initiate port forwardings. */
 	ssh_init_forwarding();
+
+	/* Execute a local command */
+	if (options.local_command != NULL &&
+	    options.permit_local_command)
+		ssh_local_cmd(options.local_command);
 
 	/* If requested, let ssh continue in the background. */
 	if (fork_after_authentication_flag)
@@ -1115,33 +1148,6 @@ ssh_session2_setup(int id, void *arg)
 		packet_send();
 	}
 
-	if (options.tun_open != SSH_TUNMODE_NO) {
-		Channel *c;
-		int fd;
-
-		debug("Requesting tun.");
-		if ((fd = tun_open(options.tun_local,
-		    options.tun_open)) >= 0) {
-			c = channel_new("tun", SSH_CHANNEL_OPENING, fd, fd, -1,
-			    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT,
-			    0, "tun", 1);
-			c->datagram = 1;
-#if defined(SSH_TUN_FILTER)
-			if (options.tun_open == SSH_TUNMODE_POINTOPOINT)
-				channel_register_filter(c->self, sys_tun_infilter,
-				    sys_tun_outfilter);
-#endif
-			packet_start(SSH2_MSG_CHANNEL_OPEN);
-			packet_put_cstring("tun@openssh.com");
-			packet_put_int(c->self);
-			packet_put_int(c->local_window_max);
-			packet_put_int(c->local_maxpacket);
-			packet_put_int(options.tun_open);
-			packet_put_int(options.tun_remote);
-			packet_send();
-		}
-	}
-
 	client_session2_setup(id, tty_flag, subsystem_flag, getenv("TERM"),
 	    NULL, fileno(stdin), &command, environ, &ssh_subsystem_reply);
 
@@ -1201,7 +1207,6 @@ ssh_session2(void)
 
 	/* XXX should be pre-session */
 	ssh_init_forwarding();
-	ssh_control_listener();
 
 	if (!no_shell_flag || (datafellows & SSH_BUG_DUMMYCHAN))
 		id = ssh_session2_open();
@@ -1210,6 +1215,9 @@ ssh_session2(void)
 	if (options.local_command != NULL &&
 	    options.permit_local_command)
 		ssh_local_cmd(options.local_command);
+
+	/* Start listening for multiplex clients */
+	ssh_control_listener();
 
 	/* If requested, let ssh continue in the background. */
 	if (fork_after_authentication_flag)
@@ -1224,6 +1232,7 @@ static void
 load_public_identity_files(void)
 {
 	char *filename, *cp, thishost[NI_MAXHOST];
+	char *pwdir = NULL, *pwname = NULL;
 	int i = 0;
 	Key *public;
 	struct passwd *pw;
@@ -1252,14 +1261,16 @@ load_public_identity_files(void)
 #endif /* SMARTCARD */
 	if ((pw = getpwuid(original_real_uid)) == NULL)
 		fatal("load_public_identity_files: getpwuid failed");
+	pwname = xstrdup(pw->pw_name);
+	pwdir = xstrdup(pw->pw_dir);
 	if (gethostname(thishost, sizeof(thishost)) == -1)
 		fatal("load_public_identity_files: gethostname: %s",
 		    strerror(errno));
 	for (; i < options.num_identity_files; i++) {
 		cp = tilde_expand_filename(options.identity_files[i],
 		    original_real_uid);
-		filename = percent_expand(cp, "d", pw->pw_dir,
-		    "u", pw->pw_name, "l", thishost, "h", host,
+		filename = percent_expand(cp, "d", pwdir,
+		    "u", pwname, "l", thishost, "h", host,
 		    "r", options.user, (char *)NULL);
 		xfree(cp);
 		public = key_load_public(filename, NULL);
@@ -1269,6 +1280,10 @@ load_public_identity_files(void)
 		options.identity_files[i] = filename;
 		options.identity_keys[i] = public;
 	}
+	bzero(pwname, strlen(pwname));
+	xfree(pwname);
+	bzero(pwdir, strlen(pwdir));
+	xfree(pwdir);
 }
 
 static void
@@ -1280,8 +1295,12 @@ control_client_sighandler(int signo)
 static void
 control_client_sigrelay(int signo)
 {
+	int save_errno = errno;
+
 	if (control_server_pid > 1)
 		kill(control_server_pid, signo);
+
+	errno = save_errno;
 }
 
 static int
@@ -1307,7 +1326,7 @@ static void
 control_client(const char *path)
 {
 	struct sockaddr_un addr;
-	int i, r, fd, sock, exitval, num_env, addr_len;
+	int i, r, fd, sock, exitval[2], num_env, addr_len;
 	Buffer m;
 	char *term;
 	extern char **environ;
@@ -1375,6 +1394,8 @@ control_client(const char *path)
 	if (options.forward_agent)
 		flags |= SSHMUX_FLAG_AGENT_FWD;
 
+	signal(SIGPIPE, SIG_IGN);
+
 	buffer_init(&m);
 
 	/* Send our command to server */
@@ -1436,9 +1457,10 @@ control_client(const char *path)
 	if (ssh_msg_send(sock, SSHMUX_VER, &m) == -1)
 		fatal("%s: msg_send", __func__);
 
-	mm_send_fd(sock, STDIN_FILENO);
-	mm_send_fd(sock, STDOUT_FILENO);
-	mm_send_fd(sock, STDERR_FILENO);
+	if (mm_send_fd(sock, STDIN_FILENO) == -1 ||
+	    mm_send_fd(sock, STDOUT_FILENO) == -1 ||
+	    mm_send_fd(sock, STDERR_FILENO) == -1)
+		fatal("%s: send fds failed", __func__);
 
 	/* Wait for reply, so master has a chance to gather ttymodes */
 	buffer_clear(&m);
@@ -1456,29 +1478,44 @@ control_client(const char *path)
 	if (tty_flag)
 		enter_raw_mode();
 
-	/* Stick around until the controlee closes the client_fd */
-	exitval = 0;
-	for (;!control_client_terminate;) {
-		r = read(sock, &exitval, sizeof(exitval));
+	/*
+	 * Stick around until the controlee closes the client_fd.
+	 * Before it does, it is expected to write this process' exit
+	 * value (one int). This process must read the value and wait for
+	 * the closure of the client_fd; if this one closes early, the 
+	 * multiplex master will terminate early too (possibly losing data).
+	 */
+	exitval[0] = 0;
+	for (i = 0; !control_client_terminate && i < (int)sizeof(exitval);) {
+		r = read(sock, (char *)exitval + i, sizeof(exitval) - i);
 		if (r == 0) {
 			debug2("Received EOF from master");
 			break;
 		}
-		if (r > 0)
-			debug2("Received exit status from master %d", exitval);
-		if (r == -1 && errno != EINTR)
+		if (r == -1) {
+			if (errno == EINTR)
+				continue;
 			fatal("%s: read %s", __func__, strerror(errno));
+		}
+		i += r;
 	}
 
-	if (control_client_terminate)
-		debug2("Exiting on signal %d", control_client_terminate);
-
 	close(sock);
-
 	leave_raw_mode();
+	if (i > (int)sizeof(int))
+		fatal("%s: master returned too much data (%d > %lu)",
+		    __func__, i, sizeof(int));
+	if (control_client_terminate) {
+		debug2("Exiting on signal %d", control_client_terminate);
+		exitval[0] = 255;
+	} else if (i < (int)sizeof(int)) {
+		debug2("Control master terminated unexpectedly");
+		exitval[0] = 255;
+	} else
+		debug2("Received exit status from master %d", exitval[0]);
 
 	if (tty_flag && options.log_level != SYSLOG_LEVEL_QUIET)
-		fprintf(stderr, "Connection to master closed.\r\n");
+		fprintf(stderr, "Shared connection to %s closed.\r\n", host);
 
-	exit(exitval);
+	exit(exitval[0]);
 }

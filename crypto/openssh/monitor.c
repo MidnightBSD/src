@@ -1,4 +1,4 @@
-/* $OpenBSD: monitor.c,v 1.90 2007/02/19 10:45:58 dtucker Exp $ */
+/* $OpenBSD: monitor.c,v 1.94 2007/10/29 04:08:08 dtucker Exp $ */
 /*
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
  * Copyright 2002 Markus Friedl <markus@openbsd.org>
@@ -409,6 +409,7 @@ monitor_child_postauth(struct monitor *pmonitor)
 	monitor_set_child_handler(pmonitor->m_pid);
 	signal(SIGHUP, &monitor_child_handler);
 	signal(SIGTERM, &monitor_child_handler);
+	signal(SIGINT, &monitor_child_handler);
 
 	if (compat20) {
 		mon_dispatch = mon_dispatch_postauth20;
@@ -642,11 +643,11 @@ mm_answer_pwnamallow(int sock, Buffer *m)
 #endif
 	buffer_put_cstring(m, pwent->pw_dir);
 	buffer_put_cstring(m, pwent->pw_shell);
+
+ out:
 	buffer_put_string(m, &options, sizeof(options));
 	if (options.banner != NULL)
 		buffer_put_cstring(m, options.banner);
-
- out:
 	debug3("%s: sending MONITOR_ANS_PWNAM: %d", __func__, allowed);
 	mm_request_send(sock, MONITOR_ANS_PWNAM, m);
 
@@ -1313,8 +1314,9 @@ mm_answer_pty(int sock, Buffer *m)
 
 	mm_request_send(sock, MONITOR_ANS_PTY, m);
 
-	mm_send_fd(sock, s->ptyfd);
-	mm_send_fd(sock, s->ttyfd);
+	if (mm_send_fd(sock, s->ptyfd) == -1 ||
+	    mm_send_fd(sock, s->ttyfd) == -1)
+		fatal("%s: send fds failed", __func__);
 
 	/* make sure nothing uses fd 0 */
 	if ((fd0 = open(_PATH_DEVNULL, O_RDONLY)) < 0)
@@ -1544,6 +1546,11 @@ mm_answer_term(int sock, Buffer *req)
 
 	/* The child is terminating */
 	session_destroy_all(&mm_session_close);
+
+#ifdef USE_PAM
+	if (options.use_pam)
+		sshpam_cleanup();
+#endif
 
 	while (waitpid(pmonitor->m_pid, &status, 0) == -1)
 		if (errno != EINTR)

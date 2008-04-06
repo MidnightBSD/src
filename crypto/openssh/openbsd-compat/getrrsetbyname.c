@@ -1,4 +1,4 @@
-/* $OpenBSD: getrrsetbyname.c,v 1.10 2005/03/30 02:58:28 tedu Exp $ */
+/* $OpenBSD: getrrsetbyname.c,v 1.11 2007/10/11 18:36:41 jakob Exp $ */
 
 /*
  * Copyright (c) 2001 Jakob Schlyter. All rights reserved.
@@ -67,13 +67,9 @@ extern int h_errno;
 #endif
 #define _THREAD_PRIVATE(a,b,c) (c)
 
-/* to avoid conflicts where a platform already has _res */
-#ifdef _res
-# undef _res
-#endif
-#define _res	_compat_res
-
+#ifndef HAVE__RES_EXTERN
 struct __res_state _res;
+#endif
 
 /* Necessary functions and macros */
 
@@ -292,7 +288,7 @@ getrrsetbyname(const char *hostname, unsigned int rdclass,
 	rrset->rri_nrdatas = count_dns_rr(response->answer, rrset->rri_rdclass,
 	    rrset->rri_rdtype);
 	rrset->rri_nsigs = count_dns_rr(response->answer, rrset->rri_rdclass,
-	    T_SIG);
+	    T_RRSIG);
 
 	/* allocate memory for answers */
 	rrset->rri_rdatas = calloc(rrset->rri_nrdatas,
@@ -322,7 +318,7 @@ getrrsetbyname(const char *hostname, unsigned int rdclass,
 			rdata = &rrset->rri_rdatas[index_ans++];
 
 		if (rr->class == rrset->rri_rdclass &&
-		    rr->type  == T_SIG)
+		    rr->type  == T_RRSIG)
 			rdata = &rrset->rri_sigs[index_sig++];
 
 		if (rdata) {

@@ -25,7 +25,7 @@
 #ifndef _DEFINES_H
 #define _DEFINES_H
 
-/* $Id: defines.h,v 1.3 2006-10-10 15:04:35 laffer1 Exp $ */
+/* $Id: defines.h,v 1.4 2008-04-06 04:50:38 laffer1 Exp $ */
 
 
 /* Constants */
@@ -68,7 +68,7 @@ enum
 # endif
 #endif
 
-#ifndef MAXSYMLINKS
+#if defined(HAVE_DECL_MAXSYMLINKS) && HAVE_DECL_MAXSYMLINKS == 0
 # define MAXSYMLINKS 5
 #endif
 
@@ -321,12 +321,6 @@ struct winsize {
 #ifndef _PATH_BSHELL
 # define _PATH_BSHELL "/bin/sh"
 #endif
-#ifndef _PATH_CSHELL
-# define _PATH_CSHELL "/bin/csh"
-#endif
-#ifndef _PATH_SHELLS
-# define _PATH_SHELLS "/etc/shells"
-#endif
 
 #ifdef USER_PATH
 # ifdef _PATH_STDPATH
@@ -449,6 +443,10 @@ struct winsize {
 # define __bounded__(x, y, z)
 #endif
 
+#if !defined(HAVE_ATTRIBUTE__NONNULL__) && !defined(__nonnull__)
+# define __nonnull__(x)
+#endif
+
 /* *-*-nto-qnx doesn't define this macro in the system headers */
 #ifdef MISSING_HOWMANY
 # define howmany(x,y)	(((x)+((y)-1))/(y))
@@ -487,7 +485,7 @@ struct winsize {
 	 (struct cmsghdr *)NULL)
 #endif /* CMSG_FIRSTHDR */
 
-#ifndef offsetof
+#if defined(HAVE_DECL_OFFSETOF) && HAVE_DECL_OFFSETOF == 0
 # define offsetof(type, member) ((size_t) &((type *)0)->member)
 #endif
 
@@ -542,6 +540,10 @@ struct winsize {
 # undef HAVE_UPDWTMPX
 #endif
 
+#if defined(BROKEN_SHADOW_EXPIRE) && defined(HAS_SHADOW_EXPIRE)
+# undef HAS_SHADOW_EXPIRE
+#endif
+
 #if defined(HAVE_OPENLOG_R) && defined(SYSLOG_DATA_INIT) && \
     defined(SYSLOG_R_SAFE_IN_SIGHAND)
 # define DO_LOG_SAFE_IN_SIGHAND
@@ -563,11 +565,6 @@ struct winsize {
 #ifdef USE_BSM_AUDIT
 # define SSH_AUDIT_EVENTS
 # define CUSTOM_SSH_AUDIT_EVENTS
-#endif
-
-/* OPENSSL_free() is Free() in versions before OpenSSL 0.9.6 */
-#if !defined(OPENSSL_VERSION_NUMBER) || (OPENSSL_VERSION_NUMBER < 0x0090600f)
-# define OPENSSL_free(x) Free(x)
 #endif
 
 #if !defined(HAVE___func__) && defined(HAVE___FUNCTION__)
@@ -696,8 +693,11 @@ struct winsize {
 # define CUSTOM_SYS_AUTH_PASSWD 1
 #endif
 
-#ifdef HAVE_LIBIAF
+#if defined(HAVE_LIBIAF) && defined(HAVE_SET_ID)
 # define CUSTOM_SYS_AUTH_PASSWD 1
+#endif
+#if defined(HAVE_LIBIAF) && defined(HAVE_SET_ID) && !defined(BROKEN_LIBIAF)
+# define USE_LIBIAF
 #endif
 
 /* HP-UX 11.11 */

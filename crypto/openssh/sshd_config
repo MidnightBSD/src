@@ -1,5 +1,5 @@
-#	$OpenBSD: sshd_config,v 1.74 2006/07/19 13:07:10 dtucker Exp $
-# $MidnightBSD$
+# 	$MidnightBSD: src/crypto/openssh/sshd_config,v 1.6 2007/10/27 05:22:07 laffer1 Exp $
+#	$OpenBSD: sshd_config,v 1.77 2008/02/08 23:24:07 djm Exp $
 
 # This is the sshd server system-wide configuration file.  See
 # sshd_config(5) for more information.
@@ -12,10 +12,14 @@
 # default value.
 
 #Port 22
-#Protocol 2,1
 #AddressFamily any
 #ListenAddress 0.0.0.0
 #ListenAddress ::
+
+# Disable legacy (protocol version 1) support in the server for new
+# installations. In future the default will change to require explicit
+# activation of protocol 1
+Protocol 2
 
 # HostKey for protocol version 1
 #HostKey /etc/ssh/ssh_host_key
@@ -99,9 +103,10 @@ PermitRootLogin no
 #PidFile /var/run/sshd.pid
 #MaxStartups 10
 #PermitTunnel no
+#ChrootDirectory none
 
 # no default banner path
-#Banner /some/path
+#Banner none
 
 # override default of no subsystems
 Subsystem	sftp	/usr/libexec/sftp-server

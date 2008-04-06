@@ -1,4 +1,4 @@
-/* $OpenBSD: packet.c,v 1.145 2006/09/19 21:14:08 markus Exp $ */
+/* $OpenBSD: packet.c,v 1.151 2008/02/22 20:44:02 dtucker Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -135,6 +135,8 @@ static int server_side = 0;
 
 /* Set to true if we are authenticated. */
 static int after_authentication = 0;
+
+int keep_alive_timeouts = 0;
 
 /* Session key information for Encryption and MAC */
 Newkeys *newkeys[MODE_MAX];
@@ -629,7 +631,7 @@ set_newkeys(int mode)
 		enc  = &newkeys[mode]->enc;
 		mac  = &newkeys[mode]->mac;
 		comp = &newkeys[mode]->comp;
-		memset(mac->key, 0, mac->key_len);
+		mac_clear(mac);
 		xfree(enc->name);
 		xfree(enc->iv);
 		xfree(enc->key);
@@ -644,14 +646,15 @@ set_newkeys(int mode)
 	enc  = &newkeys[mode]->enc;
 	mac  = &newkeys[mode]->mac;
 	comp = &newkeys[mode]->comp;
-	if (mac->md != NULL)
+	if (mac_init(mac) == 0)
 		mac->enabled = 1;
 	DBG(debug("cipher_init_context: %d", mode));
 	cipher_init(cc, enc->cipher, enc->key, enc->key_len,
 	    enc->iv, enc->block_size, crypt_type);
 	/* Deleting the keys does not gain extra security */
 	/* memset(enc->iv,  0, enc->block_size);
-	   memset(enc->key, 0, enc->key_len); */
+	   memset(enc->key, 0, enc->key_len);
+	   memset(mac->key, 0, mac->key_len); */
 	if ((comp->type == COMP_ZLIB ||
 	    (comp->type == COMP_DELAYED && after_authentication)) &&
 	    comp->enabled == 0) {
@@ -1191,10 +1194,12 @@ packet_read_poll_seqnr(u_int32_t *seqnr_p)
 	for (;;) {
 		if (compat20) {
 			type = packet_read_poll2(seqnr_p);
+			keep_alive_timeouts = 0;
 			if (type)
 				DBG(debug("received packet type %d", type));
 			switch (type) {
 			case SSH2_MSG_IGNORE:
+				debug3("Received SSH2_MSG_IGNORE");
 				break;
 			case SSH2_MSG_DEBUG:
 				packet_get_char();
@@ -1235,7 +1240,6 @@ packet_read_poll_seqnr(u_int32_t *seqnr_p)
 				logit("Received disconnect from %s: %.400s",
 				    get_remote_ipaddr(), msg);
 				cleanup_exit(255);
-				xfree(msg);
 				break;
 			default:
 				if (type)

@@ -1,4 +1,4 @@
-/* $OpenBSD: clientloop.c,v 1.178 2007/02/20 10:25:14 djm Exp $ */
+/* $OpenBSD: clientloop.c,v 1.188 2008/02/22 20:44:02 dtucker Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -157,7 +157,6 @@ static int connection_in;	/* Connection to server (input). */
 static int connection_out;	/* Connection to server (output). */
 static int need_rekeying;	/* Set to non-zero if rekeying is requested. */
 static int session_closed = 0;	/* In SSH2: login session closed. */
-static int server_alive_timeouts = 0;
 
 static void client_init_dispatch(void);
 int	session_ident = -1;
@@ -290,19 +289,29 @@ client_x11_get_proto(const char *display, const char *xauth_path,
 					generated = 1;
 			}
 		}
-		snprintf(cmd, sizeof(cmd),
-		    "%s %s%s list %s 2>" _PATH_DEVNULL,
-		    xauth_path,
-		    generated ? "-f " : "" ,
-		    generated ? xauthfile : "",
-		    display);
-		debug2("x11_get_proto: %s", cmd);
-		f = popen(cmd, "r");
-		if (f && fgets(line, sizeof(line), f) &&
-		    sscanf(line, "%*s %511s %511s", proto, data) == 2)
-			got_data = 1;
-		if (f)
-			pclose(f);
+
+		/*
+		 * When in untrusted mode, we read the cookie only if it was
+		 * successfully generated as an untrusted one in the step
+		 * above.
+		 */
+		if (trusted || generated) {
+			snprintf(cmd, sizeof(cmd),
+			    "%s %s%s list %s 2>" _PATH_DEVNULL,
+			    xauth_path,
+			    generated ? "-f " : "" ,
+			    generated ? xauthfile : "",
+			    display);
+			debug2("x11_get_proto: %s", cmd);
+			f = popen(cmd, "r");
+			if (f && fgets(line, sizeof(line), f) &&
+			    sscanf(line, "%*s %511s %511s", proto, data) == 2)
+				got_data = 1;
+			if (f)
+				pclose(f);
+		} else
+			error("Warning: untrusted X11 forwarding setup failed: "
+			    "xauth key data not generated");
 	}
 
 	if (do_unlink) {
@@ -457,14 +466,14 @@ client_check_window_change(void)
 static void
 client_global_request_reply(int type, u_int32_t seq, void *ctxt)
 {
-	server_alive_timeouts = 0;
+	keep_alive_timeouts = 0;
 	client_global_request_reply_fwd(type, seq, ctxt);
 }
 
 static void
 server_alive_check(void)
 {
-	if (++server_alive_timeouts > options.server_alive_count_max) {
+	if (++keep_alive_timeouts > options.server_alive_count_max) {
 		logit("Timeout, server not responding.");
 		cleanup_exit(255);
 	}
@@ -712,7 +721,7 @@ client_process_control(fd_set *readset)
 	struct sockaddr_storage addr;
 	struct confirm_ctx *cctx;
 	char *cmd;
-	u_int i, len, env_len, command, flags;
+	u_int i, j, len, env_len, command, flags;
 	uid_t euid;
 	gid_t egid;
 
@@ -860,9 +869,23 @@ client_process_control(fd_set *readset)
 	xfree(cmd);
 
 	/* Gather fds from client */
-	new_fd[0] = mm_receive_fd(client_fd);
-	new_fd[1] = mm_receive_fd(client_fd);
-	new_fd[2] = mm_receive_fd(client_fd);
+	for(i = 0; i < 3; i++) {
+		if ((new_fd[i] = mm_receive_fd(client_fd)) == -1) {
+			error("%s: failed to receive fd %d from slave",
+			    __func__, i);
+			for (j = 0; j < i; j++)
+				close(new_fd[j]);
+			for (j = 0; j < env_len; j++)
+				xfree(cctx->env[j]);
+			if (env_len > 0)
+				xfree(cctx->env);
+			xfree(cctx->term);
+			buffer_free(&cctx->cmd);
+			close(client_fd);
+			xfree(cctx);
+			return;
+		}
+	}
 
 	debug2("%s: got fds stdin %d, stdout %d, stderr %d", __func__,
 	    new_fd[0], new_fd[1], new_fd[2]);
@@ -930,12 +953,15 @@ process_cmdline(void)
 	u_short cancel_port;
 	Forward fwd;
 
+	bzero(&fwd, sizeof(fwd));
+	fwd.listen_host = fwd.connect_host = NULL;
+
 	leave_raw_mode();
 	handler = signal(SIGINT, SIG_IGN);
 	cmd = s = read_passphrase("\r\nssh> ", RP_ECHO);
 	if (s == NULL)
 		goto out;
-	while (*s && isspace(*s))
+	while (isspace(*s))
 		s++;
 	if (*s == '-')
 		s++;	/* Skip cmdline '-', if any */
@@ -982,9 +1008,8 @@ process_cmdline(void)
 		goto out;
 	}
 
-	s++;
-	while (*s && isspace(*s))
-		s++;
+	while (isspace(*++s))
+		;
 
 	if (delete) {
 		cancel_port = 0;
@@ -1030,6 +1055,10 @@ out:
 	enter_raw_mode();
 	if (cmd)
 		xfree(cmd);
+	if (fwd.listen_host != NULL)
+		xfree(fwd.listen_host);
+	if (fwd.connect_host != NULL)
+		xfree(fwd.connect_host);
 }
 
 /* process the characters one by one */
@@ -1710,7 +1739,7 @@ client_request_forwarded_tcpip(const char *request_type, int rchan)
 	}
 	c = channel_new("forwarded-tcpip",
 	    SSH_CHANNEL_CONNECTING, sock, sock, -1,
-	    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_WINDOW_DEFAULT, 0,
+	    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT, 0,
 	    originator_address, 1);
 	xfree(originator_address);
 	xfree(listen_address);
@@ -1768,10 +1797,54 @@ client_request_agent(const char *request_type, int rchan)
 		return NULL;
 	c = channel_new("authentication agent connection",
 	    SSH_CHANNEL_OPEN, sock, sock, -1,
-	    CHAN_X11_WINDOW_DEFAULT, CHAN_TCP_WINDOW_DEFAULT, 0,
+	    CHAN_X11_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT, 0,
 	    "authentication agent connection", 1);
 	c->force_drain = 1;
 	return c;
+}
+
+int
+client_request_tun_fwd(int tun_mode, int local_tun, int remote_tun)
+{
+	Channel *c;
+	int fd;
+
+	if (tun_mode == SSH_TUNMODE_NO)
+		return 0;
+
+	if (!compat20) {
+		error("Tunnel forwarding is not support for protocol 1");
+		return -1;
+	}
+
+	debug("Requesting tun unit %d in mode %d", local_tun, tun_mode);
+
+	/* Open local tunnel device */
+	if ((fd = tun_open(local_tun, tun_mode)) == -1) {
+		error("Tunnel device open failed.");
+		return -1;
+	}
+
+	c = channel_new("tun", SSH_CHANNEL_OPENING, fd, fd, -1,
+	    CHAN_TCP_WINDOW_DEFAULT, CHAN_TCP_PACKET_DEFAULT, 0, "tun", 1);
+	c->datagram = 1;
+
+#if defined(SSH_TUN_FILTER)
+	if (options.tun_open == SSH_TUNMODE_POINTOPOINT)
+		channel_register_filter(c->self, sys_tun_infilter,
+		    sys_tun_outfilter);
+#endif
+
+	packet_start(SSH2_MSG_CHANNEL_OPEN);
+	packet_put_cstring("tun@openssh.com");
+	packet_put_int(c->self);
+	packet_put_int(c->local_window_max);
+	packet_put_int(c->local_maxpacket);
+	packet_put_int(tun_mode);
+	packet_put_int(remote_tun);
+	packet_send();
+
+	return 0;
 }
 
 /* XXXX move to generic input handler */
