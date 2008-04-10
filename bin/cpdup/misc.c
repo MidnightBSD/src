@@ -1,8 +1,8 @@
 /*
  * MISC.C
  *
- * $MidnightBSD$
- * $DragonFly: src/bin/cpdup/misc.c,v 1.8 2006/09/16 18:18:05 dillon Exp $
+ * $MIdnightBSD$
+ * $DragonFly: src/bin/cpdup/misc.c,v 1.11 2008/04/10 22:09:08 dillon Exp $
  */
 
 #include "cpdup.h"
@@ -97,6 +97,9 @@ fatal(const char *ctl, ...)
 	     "    -I          display performance summary\n"
 	     "    -f          force update even if files look the same\n"
 	     "    -i0         do NOT confirm when removing something\n"
+	     "    -l          force line-buffered stdout/stderr\n"
+	     "    -pN         N parallel transactions for for remote\n"
+	     "                source or destination\n"
 	     "    -s0         disable safeties - allow files to overwrite directories\n"
 	     "    -q          quiet operation\n"
 	     "    -o          do not remove any files, just overwrite/add\n"
@@ -108,10 +111,14 @@ fatal(const char *ctl, ...)
 	     "                copying if the compare fails\n"
 	     "    -M file     -m+specify MD5 checkfile, else .MD5_CHECKSUMS\n"
 	     "                copy if md5 check fails\n"
+	     "    -H path     hardlink from path to target instead of copying\n"
+	     "                source to target, if source matches path.\n"
+	     "	  -V          verify file contents even if they appear\n"
+	     "                to be the same.\n"
 #endif
 	     "    -x          use .cpignore as exclusion file\n"
 	     "    -X file     specify exclusion file\n"
-	     " Version 1.07 by Matt Dillon and Dima Ruban\n"
+	     " Version 1.09 by Matt Dillon and Dima Ruban\n"
 	);
 	exit(0);
     } else {
