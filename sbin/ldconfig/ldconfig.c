@@ -451,7 +451,7 @@ buildhints()
 			}
 			if (j == hdr.hh_nbucket) {
 				warnx("bummer!");
-				return -1;
+				goto out;
 			}
 			while (bp->hi_next != -1)
 				bp = &blist[bp->hi_next];
@@ -486,43 +486,48 @@ buildhints()
 	umask(0);	/* Create with exact permissions */
 	if ((fd = mkstemp(tmpfilename)) == -1) {
 		warn("%s", tmpfilename);
-		return -1;
+		goto out;
 	}
 	fchmod(fd, 0444);
 
 	if (write(fd, &hdr, sizeof(struct hints_header)) !=
 						sizeof(struct hints_header)) {
 		warn("%s", hints_file);
-		return -1;
+		goto out;
 	}
 	if (write(fd, blist, hdr.hh_nbucket * sizeof(*blist)) !=
 				(ssize_t)(hdr.hh_nbucket * sizeof(*blist))) {
 		warn("%s", hints_file);
-		return -1;
+		goto out;
 	}
 	if (write(fd, strtab, strtab_sz) != strtab_sz) {
 		warn("%s", hints_file);
-		return -1;
+		goto out;
 	}
 	if (close(fd) != 0) {
 		warn("%s", hints_file);
-		return -1;
+		goto out;
 	}
 
 	/* Install it */
 	if (unlink(hints_file) != 0 && errno != ENOENT) {
 		warn("%s", hints_file);
-		return -1;
+		goto out;
 	}
 
 	if (rename(tmpfilename, hints_file) != 0) {
 		warn("%s", hints_file);
-		return -1;
+		goto out;
 	}
 
 	free(blist);
 	free(strtab);
 	return 0;
+
+out:
+	free(blist);
+	free(strtab);
+	return -1;
 }
 
 static int
