@@ -1,6 +1,6 @@
 # $NetBSD: rc.subr,v 1.66 2006/04/01 10:05:50 he Exp $
 # $FreeBSD: /repoman/r/ncvs/src/etc/rc.subr,v 1.34.2.15 2006/08/24 10:32:40 yar Exp $
-# $MidnightBSD: src/etc/rc.subr,v 1.7 2006/08/29 14:24:41 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.subr,v 1.8 2007/10/14 19:10:59 laffer1 Exp $
 #
 # Copyright (c) 1997-2002 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -247,6 +247,11 @@ _find_processes()
 		read _interp < $_procname	# read interpreter name
 		_interp=${_interp#\#!}		# strip #!
 		set -- $_interp
+		case $1 in
+		*/bin/env)
+			shift			#drop env to get real name
+			;;
+		esac
 		if [ $_interpreter != $1 ]; then
 			warn "\$command_interpreter $_interpreter != $1"
 		fi
