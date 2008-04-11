@@ -520,6 +520,8 @@ buildhints()
 		return -1;
 	}
 
+	free(blist);
+	free(strtab);
 	return 0;
 }
 
