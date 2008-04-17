@@ -1,3 +1,4 @@
+/* $FreeBSD: src/contrib/less/forwback.c,v 1.4.8.2 2007/07/03 05:12:41 delphij Exp $ */
 /*
  * Copyright (C) 1984-2007  Mark Nudelman
  *
@@ -27,6 +28,7 @@ extern int sigs;
 extern int top_scroll;
 extern int quiet;
 extern int sc_width, sc_height;
+extern int less_is_more;
 extern int plusoption;
 extern int forw_scroll;
 extern int back_scroll;
@@ -136,8 +138,10 @@ forw(n, pos, force, only_last, nblank)
 			pos_clear();
 			add_forw_pos(pos);
 			force = 1;
-			clear();
-			home();
+			if (less_is_more == 0) {
+				clear();
+				home();
+			}
 		}
 
 		if (pos != position(BOTTOM_PLUS_ONE) || empty_screen())
@@ -217,7 +221,8 @@ forw(n, pos, force, only_last, nblank)
 		 * start the display after the beginning of the file,
 		 * and it is not appropriate to squish in that case.
 		 */
-		if (first_time && pos == NULL_POSITION && !top_scroll && 
+		if ((first_time || less_is_more) &&
+		    pos == NULL_POSITION && !top_scroll && 
 #if TAGS
 		    tagoption == NULL &&
 #endif

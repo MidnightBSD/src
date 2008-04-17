@@ -8,6 +8,7 @@
  * contact the author, see the README file.
  */
 
+/* $FreeBSD: src/contrib/less/signal.c,v 1.3.8.3 2007/10/11 18:51:44 delphij Exp $ */
 
 /*
  * Routines dealing with signals.
@@ -34,6 +35,7 @@ extern int linenums;
 extern int wscroll;
 extern int reading;
 extern int quit_on_intr;
+extern int less_is_more;
 extern long jump_sline_fraction;
 
 /*
@@ -58,6 +60,8 @@ u_interrupt(type)
 	if (kbhit())
 		getkey();
 #endif
+	if (less_is_more)
+		quit(0);
 	if (reading)
 		intread();
 }

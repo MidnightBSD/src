@@ -1,3 +1,4 @@
+/* $FreeBSD: src/contrib/less/command.c,v 1.5.8.2.2.1 2007/12/04 22:41:44 delphij Exp $ */
 /*
  * Copyright (C) 1984-2007  Mark Nudelman
  *
@@ -37,6 +38,7 @@ extern int ignore_eoi;
 extern int secure;
 extern int hshift;
 extern int show_attn;
+extern int less_is_more;
 extern char *every_first_cmd;
 extern char *curr_altfilename;
 extern char version[];
@@ -484,12 +486,16 @@ mca_char(c)
 		flag = 0;
 		switch (c)
 		{
-		case CONTROL('E'): /* ignore END of file */
 		case '*':
+			if (less_is_more)
+				break;
+		case CONTROL('E'): /* ignore END of file */
 			flag = SRCH_PAST_EOF;
 			break;
-		case CONTROL('F'): /* FIRST file */
 		case '@':
+			if (less_is_more)
+				break;
+		case CONTROL('F'): /* FIRST file */
 			flag = SRCH_FIRST_FILE;
 			break;
 		case CONTROL('K'): /* KEEP position */

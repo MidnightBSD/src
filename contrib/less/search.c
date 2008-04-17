@@ -1,3 +1,4 @@
+/* $FreeBSD: src/contrib/less/search.c,v 1.5.8.3.2.1 2007/12/04 22:41:44 delphij Exp $ */
 /*
  * Copyright (C) 1984-2007  Mark Nudelman
  *
@@ -23,7 +24,7 @@
 #if HAVE_POSIX_REGCOMP
 #include <regex.h>
 #ifdef REG_EXTENDED
-#define	REGCOMP_FLAG	REG_EXTENDED
+#define	REGCOMP_FLAG	(less_is_more ? 0 : REG_EXTENDED)
 #else
 #define	REGCOMP_FLAG	0
 #endif
@@ -53,6 +54,7 @@ extern int linenums;
 extern int sc_height;
 extern int jump_sline;
 extern int bs_mode;
+extern int less_is_more;
 extern int ctldisp;
 extern int status_col;
 extern void * constant ml_search;

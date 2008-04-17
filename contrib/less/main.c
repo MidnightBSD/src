@@ -1,3 +1,4 @@
+/* $FreeBSD: src/contrib/less/main.c,v 1.4.8.3 2007/09/05 15:47:07 delphij Exp $ */
 /*
  * Copyright (C) 1984-2007  Mark Nudelman
  *
@@ -58,6 +59,7 @@ static char consoleTitle[256];
 extern int	missing_cap;
 extern int	know_dumb;
 extern int	quit_if_one_screen;
+extern int	no_init;
 extern int	pr_type;
 
 
@@ -71,6 +73,7 @@ main(argc, argv)
 {
 	IFILE ifile;
 	char *s;
+	extern char *__progname;
 
 #ifdef __EMX__
 	_response(&argc, &argv);
@@ -133,11 +136,15 @@ main(argc, argv)
 
 	init_prompt();
 
+	if (less_is_more)
+		scan_option("-fG");
+
 	s = lgetenv(less_is_more ? "MORE" : "LESS");
 	if (s != NULL)
 		scan_option(save(s));
 
-#define	isoptstring(s)	(((s)[0] == '-' || (s)[0] == '+') && (s)[1] != '\0')
+#define	isoptstring(s)	less_is_more   ? (((s)[0] == '-') && (s)[1] != '\0') : \
+			(((s)[0] == '-' || (s)[0] == '+') && (s)[1] != '\0')
 	while (argc > 0 && (isoptstring(*argv) || isoptpending()))
 	{
 		s = *argv++;
@@ -158,6 +165,8 @@ main(argc, argv)
 		quit(QUIT_OK);
 	}
 
+	if (less_is_more)
+		no_init = TRUE;
 	if (less_is_more && get_quit_at_eof())
 		quit_if_one_screen = TRUE;
 
@@ -235,7 +244,7 @@ main(argc, argv)
 		quit(QUIT_OK);
 	}
 
-	if (missing_cap && !know_dumb)
+	if (missing_cap && !know_dumb && !less_is_more)
 		error("WARNING: terminal is not fully functional", NULL_PARG);
 	init_mark();
 	open_getchr();
