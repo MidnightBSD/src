@@ -14,6 +14,7 @@
 	public void remove_top ();
 	public void win32_scroll_up ();
 	public void lower_left ();
+	public void line_left ();
 	public void check_winch ();
 	public void goto_line ();
 	public void vbell ();
@@ -55,6 +56,7 @@
 	public int utf_len ();
 	public int is_utf8_well_formed ();
 	public LWCHAR get_wchar ();
+	public void put_wchar ();
 	public LWCHAR step_char ();
 	public int is_composing_char ();
 	public int is_ubin_char ();
@@ -70,6 +72,7 @@
 	public int cmd_char ();
 	public LINENUM cmd_int ();
 	public char * get_cmdbuf ();
+	public char * cmd_lastpattern ();
 	public void init_cmdhist ();
 	public void save_cmdhist ();
 	public int in_mca ();
@@ -101,6 +104,7 @@
 	public IFILE save_curr_ifile ();
 	public void unsave_ifile ();
 	public void reedit_ifile ();
+	public void reopen_curr_ifile ();
 	public int edit_stdin ();
 	public void cat_file ();
 	public void use_logfile ();
@@ -118,6 +122,7 @@
 	public char * bad_file ();
 	public POSITION filesize ();
 	public char * shell_coption ();
+	public void squish_check ();
 	public void forw ();
 	public void back ();
 	public void forward ();
@@ -181,6 +186,8 @@
 	public void opt_o ();
 	public void opt__O ();
 	public void opt_l ();
+	public void opt_j ();
+	public void calc_jump_sline ();
 	public void opt_k ();
 	public void opt_t ();
 	public void opt__T ();
@@ -201,6 +208,8 @@
 	public int isoptpending ();
 	public void nopendopt ();
 	public int getnum ();
+	public long getfraction ();
+	public int get_quit_at_eof ();
 	public void init_option ();
 	public struct loption * findopt ();
 	public struct loption * findopt_name ();
