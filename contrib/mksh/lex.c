@@ -2,7 +2,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.54 2008/03/01 21:10:25 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.57 2008/03/28 13:46:53 tg Exp $");
 
 /*
  * states while lexing word
@@ -851,13 +851,12 @@ yylex(int cf)
 	sp = yylval.cp;
 	dp = ident;
 	if ((cf & HEREDELIM) && (sp[1] == '<'))
-		while (dp < ident+IDENT)
+		while (dp < ident+IDENT) {
 			if ((c = *sp++) == CHAR)
 				*dp++ = *sp++;
-			else if ((c == OQUOTE) || (c == CQUOTE))
-				;
-			else
+			else if ((c != OQUOTE) && (c != CQUOTE))
 				break;
+		}
 	else
 		while (dp < ident+IDENT && (c = *sp++) == CHAR)
 			*dp++ = *sp++;
@@ -1013,7 +1012,7 @@ pushs(int type, Area *areap)
 {
 	Source *s;
 
-	s = (Source *) alloc(sizeof(Source), areap);
+	s = (Source *)alloc(sizeof(Source), areap);
 	s->type = type;
 	s->str = null;
 	s->start = NULL;
@@ -1023,10 +1022,9 @@ pushs(int type, Area *areap)
 	s->flags = 0;
 	s->next = NULL;
 	s->areap = areap;
-	if (type == SFILE || type == SSTDIN) {
-		char *dummy;
-		Xinit(s->xs, dummy, 256, s->areap);
-	} else
+	if (type == SFILE || type == SSTDIN)
+		XinitN(s->xs, 256, s->areap);
+	else
 		memset(&s->xs, 0, sizeof(s->xs));
 	return s;
 }
