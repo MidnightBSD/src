@@ -1,7 +1,5 @@
-/* $FreeBSD: src/lib/bind/dns/dns/enumclass.h,v 1.2.8.1 2006/12/13 09:52:30 dougb Exp $ */
-
 /*
- * Copyright (C) 2004-2006 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -24,6 +22,8 @@
  ***************
  ***************/
 
+/*! \file */
+
 #ifndef DNS_ENUMCLASS_H
 #define DNS_ENUMCLASS_H 1
 
@@ -33,10 +33,6 @@ enum {
 				((dns_rdataclass_t)dns_rdataclass_reserved0)
 	dns_rdataclass_in = 1,
 #define dns_rdataclass_in	((dns_rdataclass_t)dns_rdataclass_in)
-	dns_rdataclass_ch = 3,
-#define dns_rdataclass_ch	((dns_rdataclass_t)dns_rdataclass_ch)
-	dns_rdataclass_chaos = 3,
-#define dns_rdataclass_chaos	((dns_rdataclass_t)dns_rdataclass_chaos)
 	dns_rdataclass_hs = 4,
 #define dns_rdataclass_hs	((dns_rdataclass_t)dns_rdataclass_hs)
 	dns_rdataclass_none = 254,

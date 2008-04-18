@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -21,6 +21,8 @@
  ***************   DO NOT EDIT!
  ***************
  ***************/
+
+/*! \file */
 
 #ifndef DNS_CODE_H
 #define DNS_CODE_H 1
@@ -71,9 +73,11 @@
 #include "rdata/in_1/apl_42.c"
 #include "rdata/generic/ds_43.c"
 #include "rdata/generic/sshfp_44.c"
+#include "rdata/generic/ipseckey_45.c"
 #include "rdata/generic/rrsig_46.c"
 #include "rdata/generic/nsec_47.c"
 #include "rdata/generic/dnskey_48.c"
+#include "rdata/generic/spf_99.c"
 #include "rdata/generic/unspec_103.c"
 #include "rdata/generic/tkey_249.c"
 #include "rdata/any_255/tsig_250.c"
@@ -168,9 +172,11 @@
 		break; \
 	case 43: result = fromtext_ds(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 44: result = fromtext_sshfp(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 45: result = fromtext_ipseckey(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 46: result = fromtext_rrsig(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 47: result = fromtext_nsec(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 48: result = fromtext_dnskey(rdclass, type, lexer, origin, options, target, callbacks); break; \
+	case 99: result = fromtext_spf(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 103: result = fromtext_unspec(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 249: result = fromtext_tkey(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	case 250: switch (rdclass) { \
@@ -179,7 +185,6 @@
 		} \
 		break; \
 	case 32769: result = fromtext_dlv(rdclass, type, lexer, origin, options, target, callbacks); break; \
-	case 65323: result = fromtext_dlv(rdclass, type, lexer, origin, options, target, callbacks); break; \
 	default: result = DNS_R_UNKNOWN; break; \
 	}
 
@@ -270,9 +275,11 @@
 		break; \
 	case 43: result = totext_ds(rdata, tctx, target); break; \
 	case 44: result = totext_sshfp(rdata, tctx, target); break; \
+	case 45: result = totext_ipseckey(rdata, tctx, target); break; \
 	case 46: result = totext_rrsig(rdata, tctx, target); break; \
 	case 47: result = totext_nsec(rdata, tctx, target); break; \
 	case 48: result = totext_dnskey(rdata, tctx, target); break; \
+	case 99: result = totext_spf(rdata, tctx, target); break; \
 	case 103: result = totext_unspec(rdata, tctx, target); break; \
 	case 249: result = totext_tkey(rdata, tctx, target); break; \
 	case 250: switch (rdata->rdclass) { \
@@ -281,7 +288,6 @@
 		} \
 		break; \
 	case 32769: result = totext_dlv(rdata, tctx, target); break; \
-	case 65323: result = totext_dlv(rdata, tctx, target); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -372,9 +378,11 @@
 		break; \
 	case 43: result = fromwire_ds(rdclass, type, source, dctx, options, target); break; \
 	case 44: result = fromwire_sshfp(rdclass, type, source, dctx, options, target); break; \
+	case 45: result = fromwire_ipseckey(rdclass, type, source, dctx, options, target); break; \
 	case 46: result = fromwire_rrsig(rdclass, type, source, dctx, options, target); break; \
 	case 47: result = fromwire_nsec(rdclass, type, source, dctx, options, target); break; \
 	case 48: result = fromwire_dnskey(rdclass, type, source, dctx, options, target); break; \
+	case 99: result = fromwire_spf(rdclass, type, source, dctx, options, target); break; \
 	case 103: result = fromwire_unspec(rdclass, type, source, dctx, options, target); break; \
 	case 249: result = fromwire_tkey(rdclass, type, source, dctx, options, target); break; \
 	case 250: switch (rdclass) { \
@@ -383,7 +391,6 @@
 		} \
 		break; \
 	case 32769: result = fromwire_dlv(rdclass, type, source, dctx, options, target); break; \
-	case 65323: result = fromwire_dlv(rdclass, type, source, dctx, options, target); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -474,9 +481,11 @@
 		break; \
 	case 43: result = towire_ds(rdata, cctx, target); break; \
 	case 44: result = towire_sshfp(rdata, cctx, target); break; \
+	case 45: result = towire_ipseckey(rdata, cctx, target); break; \
 	case 46: result = towire_rrsig(rdata, cctx, target); break; \
 	case 47: result = towire_nsec(rdata, cctx, target); break; \
 	case 48: result = towire_dnskey(rdata, cctx, target); break; \
+	case 99: result = towire_spf(rdata, cctx, target); break; \
 	case 103: result = towire_unspec(rdata, cctx, target); break; \
 	case 249: result = towire_tkey(rdata, cctx, target); break; \
 	case 250: switch (rdata->rdclass) { \
@@ -485,7 +494,6 @@
 		} \
 		break; \
 	case 32769: result = towire_dlv(rdata, cctx, target); break; \
-	case 65323: result = towire_dlv(rdata, cctx, target); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -576,9 +584,11 @@
 		break; \
 	case 43: result = compare_ds(rdata1, rdata2); break; \
 	case 44: result = compare_sshfp(rdata1, rdata2); break; \
+	case 45: result = compare_ipseckey(rdata1, rdata2); break; \
 	case 46: result = compare_rrsig(rdata1, rdata2); break; \
 	case 47: result = compare_nsec(rdata1, rdata2); break; \
 	case 48: result = compare_dnskey(rdata1, rdata2); break; \
+	case 99: result = compare_spf(rdata1, rdata2); break; \
 	case 103: result = compare_unspec(rdata1, rdata2); break; \
 	case 249: result = compare_tkey(rdata1, rdata2); break; \
 	case 250: switch (rdata1->rdclass) { \
@@ -587,7 +597,6 @@
 		} \
 		break; \
 	case 32769: result = compare_dlv(rdata1, rdata2); break; \
-	case 65323: result = compare_dlv(rdata1, rdata2); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -678,9 +687,11 @@
 		break; \
 	case 43: result = fromstruct_ds(rdclass, type, source, target); break; \
 	case 44: result = fromstruct_sshfp(rdclass, type, source, target); break; \
+	case 45: result = fromstruct_ipseckey(rdclass, type, source, target); break; \
 	case 46: result = fromstruct_rrsig(rdclass, type, source, target); break; \
 	case 47: result = fromstruct_nsec(rdclass, type, source, target); break; \
 	case 48: result = fromstruct_dnskey(rdclass, type, source, target); break; \
+	case 99: result = fromstruct_spf(rdclass, type, source, target); break; \
 	case 103: result = fromstruct_unspec(rdclass, type, source, target); break; \
 	case 249: result = fromstruct_tkey(rdclass, type, source, target); break; \
 	case 250: switch (rdclass) { \
@@ -689,7 +700,6 @@
 		} \
 		break; \
 	case 32769: result = fromstruct_dlv(rdclass, type, source, target); break; \
-	case 65323: result = fromstruct_dlv(rdclass, type, source, target); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -780,9 +790,11 @@
 		break; \
 	case 43: result = tostruct_ds(rdata, target, mctx); break; \
 	case 44: result = tostruct_sshfp(rdata, target, mctx); break; \
+	case 45: result = tostruct_ipseckey(rdata, target, mctx); break; \
 	case 46: result = tostruct_rrsig(rdata, target, mctx); break; \
 	case 47: result = tostruct_nsec(rdata, target, mctx); break; \
 	case 48: result = tostruct_dnskey(rdata, target, mctx); break; \
+	case 99: result = tostruct_spf(rdata, target, mctx); break; \
 	case 103: result = tostruct_unspec(rdata, target, mctx); break; \
 	case 249: result = tostruct_tkey(rdata, target, mctx); break; \
 	case 250: switch (rdata->rdclass) { \
@@ -791,7 +803,6 @@
 		} \
 		break; \
 	case 32769: result = tostruct_dlv(rdata, target, mctx); break; \
-	case 65323: result = tostruct_dlv(rdata, target, mctx); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -882,9 +893,11 @@
 		break; \
 	case 43: freestruct_ds(source); break; \
 	case 44: freestruct_sshfp(source); break; \
+	case 45: freestruct_ipseckey(source); break; \
 	case 46: freestruct_rrsig(source); break; \
 	case 47: freestruct_nsec(source); break; \
 	case 48: freestruct_dnskey(source); break; \
+	case 99: freestruct_spf(source); break; \
 	case 103: freestruct_unspec(source); break; \
 	case 249: freestruct_tkey(source); break; \
 	case 250: switch (common->rdclass) { \
@@ -893,7 +906,6 @@
 		} \
 		break; \
 	case 32769: freestruct_dlv(source); break; \
-	case 65323: freestruct_dlv(source); break; \
 	default: break; \
 	}
 
@@ -984,9 +996,11 @@
 		break; \
 	case 43: result = additionaldata_ds(rdata, add, arg); break; \
 	case 44: result = additionaldata_sshfp(rdata, add, arg); break; \
+	case 45: result = additionaldata_ipseckey(rdata, add, arg); break; \
 	case 46: result = additionaldata_rrsig(rdata, add, arg); break; \
 	case 47: result = additionaldata_nsec(rdata, add, arg); break; \
 	case 48: result = additionaldata_dnskey(rdata, add, arg); break; \
+	case 99: result = additionaldata_spf(rdata, add, arg); break; \
 	case 103: result = additionaldata_unspec(rdata, add, arg); break; \
 	case 249: result = additionaldata_tkey(rdata, add, arg); break; \
 	case 250: switch (rdata->rdclass) { \
@@ -995,7 +1009,6 @@
 		} \
 		break; \
 	case 32769: result = additionaldata_dlv(rdata, add, arg); break; \
-	case 65323: result = additionaldata_dlv(rdata, add, arg); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -1086,9 +1099,11 @@
 		break; \
 	case 43: result = digest_ds(rdata, digest, arg); break; \
 	case 44: result = digest_sshfp(rdata, digest, arg); break; \
+	case 45: result = digest_ipseckey(rdata, digest, arg); break; \
 	case 46: result = digest_rrsig(rdata, digest, arg); break; \
 	case 47: result = digest_nsec(rdata, digest, arg); break; \
 	case 48: result = digest_dnskey(rdata, digest, arg); break; \
+	case 99: result = digest_spf(rdata, digest, arg); break; \
 	case 103: result = digest_unspec(rdata, digest, arg); break; \
 	case 249: result = digest_tkey(rdata, digest, arg); break; \
 	case 250: switch (rdata->rdclass) { \
@@ -1097,7 +1112,6 @@
 		} \
 		break; \
 	case 32769: result = digest_dlv(rdata, digest, arg); break; \
-	case 65323: result = digest_dlv(rdata, digest, arg); break; \
 	default: use_default = ISC_TRUE; break; \
 	}
 
@@ -1188,9 +1202,11 @@
 		break; \
 	case 43: result = checkowner_ds(name, rdclass, type, wildcard); break; \
 	case 44: result = checkowner_sshfp(name, rdclass, type, wildcard); break; \
+	case 45: result = checkowner_ipseckey(name, rdclass, type, wildcard); break; \
 	case 46: result = checkowner_rrsig(name, rdclass, type, wildcard); break; \
 	case 47: result = checkowner_nsec(name, rdclass, type, wildcard); break; \
 	case 48: result = checkowner_dnskey(name, rdclass, type, wildcard); break; \
+	case 99: result = checkowner_spf(name, rdclass, type, wildcard); break; \
 	case 103: result = checkowner_unspec(name, rdclass, type, wildcard); break; \
 	case 249: result = checkowner_tkey(name, rdclass, type, wildcard); break; \
 	case 250: switch (rdclass) { \
@@ -1199,7 +1215,6 @@
 		} \
 		break; \
 	case 32769: result = checkowner_dlv(name, rdclass, type, wildcard); break; \
-	case 65323: result = checkowner_dlv(name, rdclass, type, wildcard); break; \
 	default: result = ISC_TRUE; break; \
 	}
 
@@ -1290,9 +1305,11 @@
 		break; \
 	case 43: result = checknames_ds(rdata, owner, bad); break; \
 	case 44: result = checknames_sshfp(rdata, owner, bad); break; \
+	case 45: result = checknames_ipseckey(rdata, owner, bad); break; \
 	case 46: result = checknames_rrsig(rdata, owner, bad); break; \
 	case 47: result = checknames_nsec(rdata, owner, bad); break; \
 	case 48: result = checknames_dnskey(rdata, owner, bad); break; \
+	case 99: result = checknames_spf(rdata, owner, bad); break; \
 	case 103: result = checknames_unspec(rdata, owner, bad); break; \
 	case 249: result = checknames_tkey(rdata, owner, bad); break; \
 	case 250: switch (rdata->rdclass) { \
@@ -1301,7 +1318,6 @@
 		} \
 		break; \
 	case 32769: result = checknames_dlv(rdata, owner, bad); break; \
-	case 65323: result = checknames_dlv(rdata, owner, bad); break; \
 	default: result = ISC_TRUE; break; \
 	}
 #define RDATATYPE_COMPARE(_s, _d, _tn, _n, _tp) \
@@ -1391,7 +1407,6 @@
 		case 122: \
 			RDATATYPE_COMPARE("sig", 24, _typename, _length, _typep); \
 			RDATATYPE_COMPARE("dlv", 32769, _typename, _length, _typep); \
-			RDATATYPE_COMPARE("dlv", 65323, _typename, _length, _typep); \
 			break; \
 		case 254: \
 			RDATATYPE_COMPARE("key", 25, _typename, _length, _typep); \
@@ -1442,6 +1457,9 @@
 		case 128: \
 			RDATATYPE_COMPARE("sshfp", 44, _typename, _length, _typep); \
 			break; \
+		case 105: \
+			RDATATYPE_COMPARE("ipseckey", 45, _typename, _length, _typep); \
+			break; \
 		case 225: \
 			RDATATYPE_COMPARE("rrsig", 46, _typename, _length, _typep); \
 			break; \
@@ -1450,6 +1468,9 @@
 			break; \
 		case 26: \
 			RDATATYPE_COMPARE("dnskey", 48, _typename, _length, _typep); \
+			break; \
+		case 4: \
+			RDATATYPE_COMPARE("spf", 99, _typename, _length, _typep); \
 			break; \
 		case 230: \
 			RDATATYPE_COMPARE("uinfo", 100, _typename, _length, _typep); \
@@ -1528,9 +1549,11 @@
 	case 42: return (RRTYPE_APL_ATTRIBUTES); \
 	case 43: return (RRTYPE_DS_ATTRIBUTES); \
 	case 44: return (RRTYPE_SSHFP_ATTRIBUTES); \
+	case 45: return (RRTYPE_IPSECKEY_ATTRIBUTES); \
 	case 46: return (RRTYPE_RRSIG_ATTRIBUTES); \
 	case 47: return (RRTYPE_NSEC_ATTRIBUTES); \
 	case 48: return (RRTYPE_DNSKEY_ATTRIBUTES); \
+	case 99: return (RRTYPE_SPF_ATTRIBUTES); \
 	case 100: return (DNS_RDATATYPEATTR_RESERVED); \
 	case 101: return (DNS_RDATATYPEATTR_RESERVED); \
 	case 102: return (DNS_RDATATYPEATTR_RESERVED); \
@@ -1543,7 +1566,6 @@
 	case 254: return (DNS_RDATATYPEATTR_META | DNS_RDATATYPEATTR_QUESTIONONLY); \
 	case 255: return (DNS_RDATATYPEATTR_META | DNS_RDATATYPEATTR_QUESTIONONLY); \
 	case 32769: return (RRTYPE_DLV_ATTRIBUTES); \
-	case 65323: return (RRTYPE_DLV_ATTRIBUTES); \
 	}
 #define RDATATYPE_TOTEXT_SW \
 	switch (type) { \
@@ -1591,9 +1613,11 @@
 	case 42: return (str_totext("APL", target)); \
 	case 43: return (str_totext("DS", target)); \
 	case 44: return (str_totext("SSHFP", target)); \
+	case 45: return (str_totext("IPSECKEY", target)); \
 	case 46: return (str_totext("RRSIG", target)); \
 	case 47: return (str_totext("NSEC", target)); \
 	case 48: return (str_totext("DNSKEY", target)); \
+	case 99: return (str_totext("SPF", target)); \
 	case 100: return (str_totext("UINFO", target)); \
 	case 101: return (str_totext("UID", target)); \
 	case 102: return (str_totext("GID", target)); \
@@ -1606,6 +1630,5 @@
 	case 254: return (str_totext("MAILA", target)); \
 	case 255: return (str_totext("ANY", target)); \
 	case 32769: return (str_totext("DLV", target)); \
-	case 65323: return (str_totext("DLV", target)); \
 	}
 #endif /* DNS_CODE_H */
