@@ -13,6 +13,7 @@ LIB=		bind9
 SRCS=		check.c getaddresses.c version.c
 
 CFLAGS+=	-I${SRCDIR}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
 .if defined(WITH_BIND_LIBS)
 INCS=		${SRCDIR}/include/bind9/check.h \
