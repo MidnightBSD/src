@@ -1707,8 +1707,11 @@ contrib/bind9/lib/isc/unix/strerror.c -text
 contrib/bind9/lib/isc/unix/syslog.c -text
 contrib/bind9/lib/isc/unix/time.c -text
 contrib/bind9/lib/isc/version.c -text
+contrib/bind9/lib/isc/x86_32/Makefile -text
 contrib/bind9/lib/isc/x86_32/Makefile.in -text
+contrib/bind9/lib/isc/x86_32/include/Makefile -text
 contrib/bind9/lib/isc/x86_32/include/Makefile.in -text
+contrib/bind9/lib/isc/x86_32/include/isc/Makefile -text
 contrib/bind9/lib/isc/x86_32/include/isc/Makefile.in -text
 contrib/bind9/lib/isc/x86_32/include/isc/atomic.h -text
 contrib/bind9/lib/isc/x86_64/Makefile.in -text
