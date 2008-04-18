@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: netdb.h,v 1.1.1.2 2006-02-25 02:32:13 laffer1 Exp $ */
+/* $Id: netdb.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #ifndef ISC_NETDB_H
 #define ISC_NETDB_H 1
@@ -24,25 +24,26 @@
  ***** Module Info
  *****/
 
-/*
+/*! \file
+ * \brief
  * Portable netdb.h support.
  *
  * This module is responsible for defining the get<x>by<y> APIs.
  *
  * MP:
- *	No impact.
+ *\li	No impact.
  *
  * Reliability:
- *	No anticipated impact.
+ *\li	No anticipated impact.
  *
  * Resources:
- *	N/A.
+ *\li	N/A.
  *
  * Security:
- *	No anticipated impact.
+ *\li	No anticipated impact.
  *
  * Standards:
- *	BSD API
+ *\li	BSD API
  */
 
 /***

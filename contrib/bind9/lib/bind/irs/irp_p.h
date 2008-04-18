@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: irp_p.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
+ * $Id: irp_p.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 #ifndef _IRP_P_H_INCLUDED
@@ -26,9 +26,8 @@
 
 struct irp_p {
 	char inbuffer[1024];
-	int inlast; /* index of one past the last char in buffer */
-	int incurr; /* index of the next char to be read from buffer */
-
+	int inlast; /*%< index of one past the last char in buffer */
+	int incurr; /*%< index of the next char to be read from buffer */
 	int fdCxn;
 };
 
@@ -57,3 +56,5 @@ int irs_irp_get_full_response(struct irp_p *pvt, int *code,
 extern int irp_log_errors;
 
 #endif
+
+/*! \file */

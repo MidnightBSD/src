@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
- * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stat.h,v 1.1.1.2 2006-02-25 02:32:13 laffer1 Exp $ */
+/* $Id: stat.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #ifndef ISC_STAT_H
 #define ISC_STAT_H 1

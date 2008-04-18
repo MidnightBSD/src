@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: gen_ho.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $";
+static const char rcsid[] = "$Id: gen_ho.c,v 1.1.1.4 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /* Imports */
@@ -348,7 +348,7 @@ ho_addrinfo(struct irs_ho *this, const char *name, const struct addrinfo *pai)
 		ho = rule->inst->ho;
 		RES_SET_H_ERRNO(pvt->res, NETDB_INTERNAL);
 		errno = 0;
-		if (ho->addrinfo == NULL) /* for safety */
+		if (ho->addrinfo == NULL) /*%< for safety */
 			continue;
 		rval = (*ho->addrinfo)(ho, name, pai);
 		if (rval != NULL)
@@ -387,3 +387,5 @@ init(struct irs_ho *this) {
 
         return (0);
 }
+
+/*! \file */

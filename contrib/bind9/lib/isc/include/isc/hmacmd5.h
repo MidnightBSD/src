@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,11 +15,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: hmacmd5.h,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: hmacmd5.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
-/*
- * This is the header file for the HMAC-MD5 keyed hash algorithm
- * described in RFC 2104.
+/*! \file
+ * \brief This is the header file for the HMAC-MD5 keyed hash algorithm
+ * described in RFC2104.
  */
 
 #ifndef ISC_HMACMD5_H
@@ -54,6 +54,9 @@ isc_hmacmd5_sign(isc_hmacmd5_t *ctx, unsigned char *digest);
 
 isc_boolean_t
 isc_hmacmd5_verify(isc_hmacmd5_t *ctx, unsigned char *digest);
+
+isc_boolean_t
+isc_hmacmd5_verify2(isc_hmacmd5_t *ctx, unsigned char *digest, size_t len);
 
 ISC_LANG_ENDDECLS
 

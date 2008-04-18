@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: notify.h,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: notify.h,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
 
 #ifndef NAMED_NOTIFY_H
 #define NAMED_NOTIFY_H 1
@@ -27,8 +27,9 @@
  ***	Module Info
  ***/
 
-/*
- *	RFC 1996
+/*! \file
+ * \brief
+ *	RFC1996
  *	A Mechanism for Prompt Notification of Zone Changes (DNS NOTIFY)
  */
 
@@ -39,7 +40,7 @@
 void
 ns_notify_start(ns_client_t *client);
 
-/*
+/*%<
  *	Examines the incoming message to determine apporiate zone.
  *	Returns FORMERR if there is not exactly one question.
  *	Returns REFUSED if we do not serve the listed zone.
@@ -47,7 +48,7 @@ ns_notify_start(ns_client_t *client);
  *	and returns the return status.
  *
  * Requires
- *	client to be valid.
+ *\li	client to be valid.
  */
 
 #endif /* NAMED_NOTIFY_H */

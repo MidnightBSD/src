@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,16 +15,18 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: logconf.h,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
+/* $Id: logconf.h,v 1.1.1.4 2008-04-18 18:31:31 laffer1 Exp $ */
 
 #ifndef NAMED_LOGCONF_H
 #define NAMED_LOGCONF_H 1
+
+/*! \file */
 
 #include <isc/log.h>
 
 isc_result_t
 ns_log_configure(isc_logconfig_t *logconf, const cfg_obj_t *logstmt);
-/*
+/*%<
  * Set up the logging configuration in '*logconf' according to
  * the named.conf data in 'logstmt'.
  */

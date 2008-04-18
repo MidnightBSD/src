@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,13 +15,13 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnskey_48.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: dnskey_48.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 /*
  * Reviewed: Wed Mar 15 16:47:10 PST 2000 by halley.
  */
 
-/* RFC 2535 */
+/* RFC2535 */
 
 #ifndef RDATA_GENERIC_DNSKEY_48_C
 #define RDATA_GENERIC_DNSKEY_48_C

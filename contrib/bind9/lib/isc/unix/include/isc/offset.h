@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,12 +15,13 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: offset.h,v 1.1.1.2 2006-02-25 02:32:13 laffer1 Exp $ */
+/* $Id: offset.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #ifndef ISC_OFFSET_H
 #define ISC_OFFSET_H 1
 
-/*
+/*! \file
+ * \brief
  * File offsets are operating-system dependent.
  */
 #include <limits.h>             /* Required for CHAR_BIT. */
@@ -28,7 +29,7 @@
 
 typedef off_t isc_offset_t;
 
-/*
+/*%
  * POSIX says "Additionally, blkcnt_t and off_t are extended signed integral
  * types", so the maximum value is all 1s except for the high bit.
  * This definition is more complex than it really needs to be because it was

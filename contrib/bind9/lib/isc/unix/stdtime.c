@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stdtime.c,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: stdtime.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 

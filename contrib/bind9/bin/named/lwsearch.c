@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwsearch.c,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: lwsearch.c,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -38,6 +40,7 @@
 isc_result_t
 ns_lwsearchlist_create(isc_mem_t *mctx, ns_lwsearchlist_t **listp) {
 	ns_lwsearchlist_t *list;
+	isc_result_t result;
 
 	REQUIRE(mctx != NULL);
 	REQUIRE(listp != NULL && *listp == NULL);
@@ -46,7 +49,11 @@ ns_lwsearchlist_create(isc_mem_t *mctx, ns_lwsearchlist_t **listp) {
 	if (list == NULL)
 		return (ISC_R_NOMEMORY);
 	
-	RUNTIME_CHECK(isc_mutex_init(&list->lock) == ISC_R_SUCCESS);
+	result = isc_mutex_init(&list->lock);
+	if (result != ISC_R_SUCCESS) {
+		isc_mem_put(mctx, list, sizeof(ns_lwsearchlist_t));
+		return (result);
+	}
 	list->mctx = NULL;
 	isc_mem_attach(mctx, &list->mctx);
 	list->refs = 1;

@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ptr_12.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: ptr_12.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 /* Reviewed: Thu Mar 16 14:05:12 PST 2000 by explorer */
 

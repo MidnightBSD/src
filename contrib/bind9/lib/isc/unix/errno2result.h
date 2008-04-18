@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,10 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: errno2result.h,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: errno2result.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #ifndef UNIX_ERRNO2RESULT_H
 #define UNIX_ERRNO2RESULT_H 1
+
+/*! \file */
 
 /* XXXDCL this should be moved to lib/isc/include/isc/errno2result.h. */
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: fixedname.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: fixedname.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 #ifndef DNS_FIXEDNAME_H
 #define DNS_FIXEDNAME_H 1
@@ -24,28 +24,31 @@
  ***** Module Info
  *****/
 
-/*
+/*! \file
+ * \brief
  * Fixed-size Names
  *
  * dns_fixedname_t is a convenience type containing a name, an offsets table,
  * and a dedicated buffer big enough for the longest possible name.
  *
  * MP:
- *	The caller must ensure any required synchronization.
+ *\li	The caller must ensure any required synchronization.
  *
  * Reliability:
- *	No anticipated impact.
+ *\li	No anticipated impact.
  *
  * Resources:
- *	Per dns_fixedname_t:
+ *\li	Per dns_fixedname_t:
+ *\code
  *		sizeof(dns_name_t) + sizeof(dns_offsets_t) +
  *		sizeof(isc_buffer_t) + 255 bytes + structure padding
+ *\endcode
  *
  * Security:
- *	No anticipated impact.
+ *\li	No anticipated impact.
  *
  * Standards:
- *	None.
+ *\li	None.
  */
 
 /*****

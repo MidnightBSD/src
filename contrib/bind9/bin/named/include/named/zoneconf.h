@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,25 +15,26 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: zoneconf.h,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
+/* $Id: zoneconf.h,v 1.1.1.4 2008-04-18 18:31:31 laffer1 Exp $ */
 
 #ifndef NS_ZONECONF_H
 #define NS_ZONECONF_H 1
 
+/*! \file */
+
 #include <isc/lang.h>
 #include <isc/types.h>
 
+#include <isccfg/aclconf.h>
 #include <isccfg/cfg.h>
-
-#include <named/aclconf.h>
 
 ISC_LANG_BEGINDECLS
 
 isc_result_t
 ns_zone_configure(const cfg_obj_t *config, const cfg_obj_t *vconfig,
-		  const cfg_obj_t *zconfig, ns_aclconfctx_t *ac,
+		  const cfg_obj_t *zconfig, cfg_aclconfctx_t *ac,
 		  dns_zone_t *zone);
-/*
+/*%<
  * Configure or reconfigure a zone according to the named.conf
  * data in 'cctx' and 'czone'.
  *
@@ -41,16 +42,16 @@ ns_zone_configure(const cfg_obj_t *config, const cfg_obj_t *vconfig,
  * at zone creation time.
  *
  * Require:
- *	'lctx' to be initialized or NULL.
- *	'cctx' to be initialized or NULL.
- *	'ac' to point to an initialized ns_aclconfctx_t.
- *	'czone' to be initialized.
- *	'zone' to be initialized.
+ * \li	'lctx' to be initialized or NULL.
+ * \li	'cctx' to be initialized or NULL.
+ * \li	'ac' to point to an initialized ns_aclconfctx_t.
+ * \li	'czone' to be initialized.
+ * \li	'zone' to be initialized.
  */
 
 isc_boolean_t
 ns_zone_reusable(dns_zone_t *zone, const cfg_obj_t *zconfig);
-/*
+/*%<
  * If 'zone' can be safely reconfigured according to the configuration
  * data in 'zconfig', return ISC_TRUE.  If the configuration data is so
  * different from the current zone state that the zone needs to be destroyed

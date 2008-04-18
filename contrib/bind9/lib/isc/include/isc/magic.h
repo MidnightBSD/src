@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,20 +15,21 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: magic.h,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: magic.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #ifndef ISC_MAGIC_H
 #define ISC_MAGIC_H 1
+
+/*! \file */
 
 typedef struct {
 	unsigned int magic;
 } isc__magic_t;
 
 
-/*
+/*%
  * To use this macro the magic number MUST be the first thing in the
  * structure, and MUST be of type "unsigned int".
- *
  * The intent of this is to allow magic numbers to be checked even though
  * the object is otherwise opaque.
  */

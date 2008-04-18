@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: request.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $ */
+/* $Id: request.c,v 1.1.1.4 2008-04-18 18:31:33 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -91,10 +93,10 @@ struct dns_request {
 
 #define DNS_REQUEST_F_CONNECTING 0x0001
 #define DNS_REQUEST_F_SENDING 0x0002
-#define DNS_REQUEST_F_CANCELED 0x0004	/* ctlevent received, or otherwise
+#define DNS_REQUEST_F_CANCELED 0x0004	/*%< ctlevent received, or otherwise
 					   synchronously canceled */
-#define DNS_REQUEST_F_TIMEDOUT 0x0008	/* cancelled due to a timeout */
-#define DNS_REQUEST_F_TCP 0x0010	/* This request used TCP */
+#define DNS_REQUEST_F_TIMEDOUT 0x0008	/*%< cancelled due to a timeout */
+#define DNS_REQUEST_F_TCP 0x0010	/*%< This request used TCP */
 #define DNS_REQUEST_CANCELED(r) \
 	(((r)->flags & DNS_REQUEST_F_CANCELED) != 0)
 #define DNS_REQUEST_CONNECTING(r) \

@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: getpwent_r.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: getpwent_r.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <port_before.h>
@@ -121,7 +121,7 @@ getpwuid_r(uid_t uid,  struct passwd *pwptr, char *buf, int buflen) {
 }
 #endif
 
-/*
+/*%
  *	These assume a single context is in operation per thread.
  *	If this is not the case we will need to call irs directly
  *	rather than through the base functions.
@@ -273,3 +273,4 @@ copy_passwd(struct passwd *pw, struct passwd *pwptr, char *buf, int buflen) {
 	static int getpwent_r_unknown_system = 0;
 #endif /* PASS_R_RETURN */
 #endif /* !def(_REENTRANT) || !def(DO_PTHREADS) || !def(WANT_IRS_PW) */
+/*! \file */

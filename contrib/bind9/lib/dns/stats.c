@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: stats.c,v 1.1.1.2 2006-02-25 02:32:10 laffer1 Exp $ */
+/* $Id: stats.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -30,7 +32,9 @@ LIBDNS_EXTERNAL_DATA const char *dns_statscounter_names[DNS_STATS_NCOUNTERS] =
 	"nxrrset",
 	"nxdomain",
 	"recursion",
-	"failure"
+	"failure",
+	"duplicate",
+	"dropped"
 	};
 
 isc_result_t

@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: inet_pton.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_pton.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include "port_before.h"
@@ -30,7 +30,7 @@ static const char rcsid[] = "$Id: inet_pton.c,v 1.1.1.2 2006-02-25 02:32:07 laff
 #include <errno.h>
 #include "port_after.h"
 
-/*
+/*%
  * WARNING: Don't even consider trying to compile this on a system where
  * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
  */
@@ -188,7 +188,7 @@ inet_pton6(src, dst)
 		    inet_pton4(curtok, tp) > 0) {
 			tp += NS_INADDRSZ;
 			seen_xdigits = 0;
-			break;	/* '\0' was seen by inet_pton4(). */
+			break;	/*%< '\\0' was seen by inet_pton4(). */
 		}
 		return (0);
 	}
@@ -219,3 +219,5 @@ inet_pton6(src, dst)
 	memcpy(dst, tmp, NS_IN6ADDRSZ);
 	return (1);
 }
+
+/*! \file */

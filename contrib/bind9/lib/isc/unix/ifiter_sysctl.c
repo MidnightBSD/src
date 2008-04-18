@@ -15,9 +15,10 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ifiter_sysctl.c,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: ifiter_sysctl.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
-/*
+/*! \file
+ * \brief
  * Obtain the list of network interfaces using sysctl.
  * See TCP/IP Illustrated Volume 2, sections 19.8, 19.14,
  * and 19.16.

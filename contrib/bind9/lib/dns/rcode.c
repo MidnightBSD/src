@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rcode.c,v 1.1.1.2 2006-02-25 02:32:10 laffer1 Exp $ */
+/* $Id: rcode.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 #include <config.h>
 #include <ctype.h>
@@ -76,6 +76,7 @@
 	{ dns_tsigerror_badmode, "BADMODE", 0}, \
 	{ dns_tsigerror_badname, "BADNAME", 0}, \
 	{ dns_tsigerror_badalg, "BADALG", 0}, \
+	{ dns_tsigerror_badtrunc, "BADTRUNC", 0}, \
 	{ 0, NULL, 0 }
 
 /* RFC2538 section 2.1 */

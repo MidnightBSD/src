@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: gssapi_link.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $
+ * $Id: gssapi_link.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 #ifdef GSSAPI
@@ -194,17 +194,17 @@ static dst_func_t gssapi_functions = {
 	gssapi_adddata,
 	gssapi_sign,
 	gssapi_verify,
-	NULL, /* computesecret */
+	NULL, /*%< computesecret */
 	gssapi_compare,
-	NULL, /* paramcompare */
+	NULL, /*%< paramcompare */
 	gssapi_generate,
 	gssapi_isprivate,
 	gssapi_destroy,
-	NULL, /* todns */
-	NULL, /* fromdns */
-	NULL, /* tofile */
-	NULL, /* parse */
-	NULL, /* cleanup */
+	NULL, /*%< todns */
+	NULL, /*%< fromdns */
+	NULL, /*%< tofile */
+	NULL, /*%< parse */
+	NULL, /*%< cleanup */
 };
 
 isc_result_t
@@ -218,3 +218,5 @@ dst__gssapi_init(dst_func_t **funcp) {
 #else
 int  gssapi_link_unneeded = 1;
 #endif
+
+/*! \file */

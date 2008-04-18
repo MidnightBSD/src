@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,21 +15,27 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lib.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: lib.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 #ifndef DNS_LIB_H
 #define DNS_LIB_H 1
+
+/*! \file */
 
 #include <isc/types.h>
 #include <isc/lang.h>
 
 ISC_LANG_BEGINDECLS
 
+/*%
+ * Tuning: external query load in packets per seconds.
+ */
+LIBDNS_EXTERNAL_DATA extern unsigned int dns_pps;
 LIBDNS_EXTERNAL_DATA extern isc_msgcat_t *dns_msgcat;
 
 void
 dns_lib_initmsgcat(void);
-/*
+/*%<
  * Initialize the DNS library's message catalog, dns_msgcat, if it
  * has not already been initialized.
  */

@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: nis.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: nis.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif
 
 /* Imports */
@@ -152,3 +152,5 @@ nis_close(struct irs_acc *this) {
 }
 
 #endif /*WANT_IRS_NIS*/
+
+/*! \file */

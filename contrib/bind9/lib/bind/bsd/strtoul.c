@@ -1,6 +1,6 @@
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)strtoul.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: strtoul.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: strtoul.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -52,7 +52,7 @@ static const char rcsid[] = "$Id: strtoul.c,v 1.1.1.2 2006-02-25 02:32:07 laffer
 int __strtoul_unneeded__;
 #else
 
-/*
+/*%
  * Convert a string to an unsigned long integer.
  *
  * Ignores `locale' stuff.  Assumes that the upper and lower case
@@ -115,3 +115,5 @@ strtoul(const char *nptr, char **endptr, int base) {
 }
 
 #endif /*NEED_STRTOUL*/
+
+/*! \file */

@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: irs_p.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
+ * $Id: irs_p.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 #ifndef _IRS_P_H_INCLUDED
@@ -47,3 +47,5 @@ extern struct irs_ng *	irs_nul_ng(struct irs_acc *);
 extern struct servent * irs_lclsv_fnxt(struct lcl_sv *);
 
 #endif
+
+/*! \file */

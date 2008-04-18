@@ -1,6 +1,6 @@
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "strsep.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: strsep.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: strsep.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -46,7 +46,7 @@ static const char rcsid[] = "$Id: strsep.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1
 int __strsep_unneeded__;
 #else
 
-/*
+/*%
  * Get next token from string *stringp, where tokens are possibly-empty
  * strings separated by characters from delim.  
  *
@@ -84,3 +84,5 @@ strsep(char **stringp, const char *delim) {
 }
 
 #endif /*NEED_STRSEP*/
+
+/*! \file */

@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: pathnames.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
+ * $Id: pathnames.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 #ifndef _PATH_IRS_CONF
@@ -48,3 +48,5 @@
 #ifndef _PATH_HESIOD_CONF
 #define _PATH_HESIOD_CONF "/etc/hesiod.conf"
 #endif
+
+/*! \file */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: interfaceiter.c,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: interfaceiter.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -51,9 +53,9 @@
 
 /* Common utility functions */
 
-/*
+/*%
  * Extract the network address part from a "struct sockaddr".
- *
+ * \brief
  * The address family is given explicitly
  * instead of using src->sa_family, because the latter does not work
  * for copying a network mask obtained by SIOCGIFNETMASK (it does

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,13 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: tsig_250.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
-
-/* RFC 2845 */
+/* $Id: tsig_250.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 #ifndef ANY_255_TSIG_250_H
 #define ANY_255_TSIG_250_H 1
 
+/*% RFC2845 */
 typedef struct dns_rdata_any_tsig {
 	dns_rdatacommon_t	common;
 	isc_mem_t *		mctx;

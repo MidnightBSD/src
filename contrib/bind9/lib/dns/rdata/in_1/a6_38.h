@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -18,9 +18,10 @@
 #ifndef IN_1_A6_38_H
 #define IN_1_A6_38_H 1
 
-/* $Id: a6_38.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: a6_38.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
-/* RFC2874 */
+/*! 
+ *  \brief Per RFC2874 */
 
 typedef struct dns_rdata_in_a6 {
         dns_rdatacommon_t	common;

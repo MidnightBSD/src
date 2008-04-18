@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,12 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: cert_37.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: cert_37.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
-/* RFC 2538 */
 #ifndef GENERIC_CERT_37_H
 #define GENERIC_CERT_37_H 1
 
+/*% RFC2538 */
 typedef struct dns_rdata_cert {
 	dns_rdatacommon_t	common;
 	isc_mem_t		*mctx;

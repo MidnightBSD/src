@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nslookup.c,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
+/* $Id: nslookup.c,v 1.1.1.4 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -50,7 +50,8 @@ static isc_boolean_t short_form = ISC_TRUE,
 	comments = ISC_TRUE, section_question = ISC_TRUE,
 	section_answer = ISC_TRUE, section_authority = ISC_TRUE,
 	section_additional = ISC_TRUE, recurse = ISC_TRUE,
-	aaonly = ISC_FALSE;
+	aaonly = ISC_FALSE, nofail = ISC_TRUE;
+
 static isc_boolean_t in_use = ISC_FALSE;
 static char defclass[MXRD] = "IN";
 static char deftype[MXRD] = "A";
@@ -409,8 +410,9 @@ printmessage(dig_query_t *query, dns_message_t *msg, isc_boolean_t headers) {
 		char nametext[DNS_NAME_FORMATSIZE];
 		dns_name_format(query->lookup->name,
 				nametext, sizeof(nametext));
-		printf("** server can't find %s: %s\n", nametext,
-		       rcodetext[msg->rcode]);
+		printf("** server can't find %s: %s\n",
+		       (msg->rcode != dns_rcode_nxdomain) ? nametext :
+		       query->lookup->textname, rcodetext[msg->rcode]);
 		debug("returning with rcode == 0");
 		return (ISC_R_SUCCESS);
 	}
@@ -619,8 +621,10 @@ setoption(char *opt) {
 		tcpmode = ISC_FALSE;
  	} else if (strncasecmp(opt, "deb", 3) == 0) {
 		short_form = ISC_FALSE;
+		showsearch = ISC_TRUE;
 	} else if (strncasecmp(opt, "nodeb", 5) == 0) {
 		short_form = ISC_TRUE;
+		showsearch = ISC_FALSE;
  	} else if (strncasecmp(opt, "d2", 2) == 0) {
 		debugging = ISC_TRUE;
 	} else if (strncasecmp(opt, "nod2", 4) == 0) {
@@ -631,6 +635,10 @@ setoption(char *opt) {
 		usesearch = ISC_FALSE;
 	} else if (strncasecmp(opt, "sil", 3) == 0) {
 		/* deprecation_msg = ISC_FALSE; */
+	} else if (strncasecmp(opt, "fail", 3) == 0) {
+		nofail=ISC_FALSE;
+	} else if (strncasecmp(opt, "nofail", 3) == 0) {
+		nofail=ISC_TRUE;
 	} else {
 		printf("*** Invalid option: %s\n", opt);	
 	}
@@ -689,6 +697,8 @@ addlookup(char *opt) {
 	lookup->section_authority = section_authority;
 	lookup->section_additional = section_additional;
 	lookup->new_search = ISC_TRUE;
+	if (nofail)
+		lookup->servfail_stops = ISC_FALSE;
 	ISC_LIST_INIT(lookup->q);
 	ISC_LINK_INIT(lookup, link);
 	ISC_LIST_APPEND(lookup_list, lookup, link);
@@ -728,6 +738,7 @@ get_next_command(void) {
 		 (strcasecmp(ptr, "lserver") == 0)) {
 		isc_app_block();
 		set_nameserver(arg);
+		check_ra = ISC_FALSE;
 		isc_app_unblock();
 		show_settings(ISC_TRUE, ISC_TRUE);
 	} else if (strcasecmp(ptr, "exit") == 0) {
@@ -766,9 +777,10 @@ parse_args(int argc, char **argv) {
 				have_lookup = ISC_TRUE;
 				in_use = ISC_TRUE;
 				addlookup(argv[0]);
-			}
-			else
+			} else {
 				set_nameserver(argv[0]);
+				check_ra = ISC_FALSE;
+			}
 		}
 	}
 }
@@ -843,6 +855,8 @@ main(int argc, char **argv) {
 	ISC_LIST_INIT(lookup_list);
 	ISC_LIST_INIT(server_list);
 	ISC_LIST_INIT(search_list);
+
+	check_ra = ISC_TRUE;
 
 	result = isc_app_start();
 	check_result(result, "isc_app_start");

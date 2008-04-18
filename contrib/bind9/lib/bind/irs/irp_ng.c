@@ -16,7 +16,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: irp_ng.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: irp_ng.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif
 
 /* Imports */
@@ -62,13 +62,7 @@ static void		ng_minimize(struct irs_ng *);
 
 /* Public */
 
-
-
-/*
- * struct irs_ng * irs_irp_ng(struct irs_acc *this)
- *
- * Notes:
- *
+/*%
  *	Intialize the irp netgroup module.
  *
  */
@@ -155,15 +149,7 @@ ng_rewind(struct irs_ng *this, const char *group) {
 	return;
 }
 
-
-
-
 /*
- * int ng_next(struct irs_ng *this, const char **host, const char **user,
- *	       const char **domain)
- *
- * Notes:
- *
  *	Get the next netgroup item from the cache.
  *
  */
@@ -205,14 +191,7 @@ ng_next(struct irs_ng *this, const char **host, const char **user,
 	return (rval);
 }
 
-
-
 /*
- * int ng_test(struct irs_ng *this, const char *name, const char *host,
- *		const char *user, const char *domain)
- *
- * Notes:
- *
  *	Search for a match in a netgroup.
  *
  */
@@ -239,13 +218,13 @@ ng_test(struct irs_ng *this, const char *name,
 	}
 
 	if (irs_irp_send_command(pvt->girpdata, "innetgr %s", body) == 0) {
-		memput(body, bodylen);
-
 		code = irs_irp_read_response(pvt->girpdata, text, sizeof text);
 		if (code == IRPD_GETNETGR_MATCHES) {
 			rval = 1;
 		}
 	}
+
+	memput(body, bodylen);
 
 	return (rval);
 }
@@ -270,3 +249,5 @@ ng_minimize(struct irs_ng *this) {
 
 /* Private */
 
+
+/*! \file */

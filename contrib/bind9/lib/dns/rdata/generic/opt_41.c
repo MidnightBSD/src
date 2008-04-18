@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,11 +15,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: opt_41.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: opt_41.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 /* Reviewed: Thu Mar 16 14:06:44 PST 2000 by gson */
 
-/* RFC 2671 */
+/* RFC2671 */
 
 #ifndef RDATA_GENERIC_OPT_41_C
 #define RDATA_GENERIC_OPT_41_C

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -18,9 +18,10 @@
 #ifndef GENERIC_DNSSIG_46_H
 #define GENERIC_DNSSIG_46_H 1
 
-/* $Id: rrsig_46.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: rrsig_46.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
-/* RFC 2535 */
+/*!
+ *  \brief Per RFC2535 */
 typedef struct dns_rdata_rrsig {
 	dns_rdatacommon_t	common;
 	isc_mem_t *		mctx;

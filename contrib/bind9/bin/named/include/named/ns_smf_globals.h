@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ns_smf_globals.h,v 1.1.1.1 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: ns_smf_globals.h,v 1.1.1.2 2008-04-18 18:31:31 laffer1 Exp $ */
 
 #ifndef NS_SMF_GLOBALS_H
 #define NS_SMF_GLOBALS_H 1

@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: getnetent_r.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: getnetent_r.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <port_before.h>
@@ -83,7 +83,7 @@ getnetbyaddr_r(GETNETBYADDR_ADDR_T addr, int type, struct netent *nptr, NET_R_AR
 #endif
 }
 
-/*
+/*%
  *	These assume a single context is in operation per thread.
  *	If this is not the case we will need to call irs directly
  *	rather than through the base functions.
@@ -151,7 +151,7 @@ copy_netent(struct netent *ne, struct netent *nptr, NET_R_COPY_ARGS) {
 	int numptr, len;
 
 	/* Find out the amount of space required to store the answer. */
-	numptr = 1; /* NULL ptr */
+	numptr = 1; /*%< NULL ptr */
 	len = (char *)ALIGN(buf) - buf;
 	for (i = 0; ne->n_aliases[i]; i++, numptr++) {
 		len += strlen(ne->n_aliases[i]) + 1;
@@ -231,3 +231,4 @@ copy_netent(struct netent *ne, struct netent *nptr, NET_R_COPY_ARGS) {
 	static int getnetent_r_unknown_system = 0;
 #endif /* NET_R_RETURN */
 #endif /* !defined(_REENTRANT) || !defined(DO_PTHREADS) */
+/*! \file */

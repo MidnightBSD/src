@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001, 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lwdgrbn.c,v 1.1.1.3 2007-02-01 14:51:27 laffer1 Exp $ */
+/* $Id: lwdgrbn.c,v 1.1.1.4 2008-04-18 18:31:31 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -183,8 +185,6 @@ iterate_node(lwres_grbnresponse_t *grbn, dns_db_t *db, dns_dbnode_t *node,
 		isc_mem_put(mctx, oldlens, oldsize * sizeof(*oldlens));
 	if (newrdatas != NULL)
 		isc_mem_put(mctx, newrdatas, used * sizeof(*oldrdatas));
-	if (newlens != NULL)
-		isc_mem_put(mctx, newlens, used * sizeof(*oldlens));
 	return (result);
 }
 

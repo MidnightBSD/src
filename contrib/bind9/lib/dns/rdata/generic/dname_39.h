@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -18,9 +18,10 @@
 #ifndef GENERIC_DNAME_39_H
 #define GENERIC_DNAME_39_H 1
 
-/* $Id: dname_39.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: dname_39.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
-/* RFC2672 */
+/*! 
+ *  \brief per RFC2672 */
 
 typedef struct dns_rdata_dname {
 	dns_rdatacommon_t	common;

@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: ctl_clnt.c,v 1.1.1.2 2006-02-25 02:32:08 laffer1 Exp $";
+static const char rcsid[] = "$Id: ctl_clnt.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* not lint */
 
 /*
@@ -114,6 +114,19 @@ static void		touch_timer(struct ctl_cctx *);
 static void		timer(evContext, void *,
 			      struct timespec, struct timespec);
 
+#ifndef HAVE_MEMCHR
+static void *
+memchr(const void *b, int c, size_t len) {
+	const unsigned char *p = b;
+	size_t i;
+
+	for (i = 0; i < len; i++, p++)
+		if (*p == (unsigned char)c)
+			return ((void *)p); 
+	return (NULL);
+}
+#endif
+
 /* Private data. */
 
 static const char * const state_names[] = {
@@ -122,7 +135,7 @@ static const char * const state_names[] = {
 
 /* Public. */
 
-/*
+/*%
  * void
  * ctl_client()
  *	create, condition, and connect to a listener on the control port.
@@ -198,7 +211,7 @@ ctl_client(evContext lev, const struct sockaddr *cap, size_t cap_len,
 	return (ctx);
 }
 
-/*
+/*%
  * void
  * ctl_endclient(ctx)
  *	close a client and release all of its resources.
@@ -210,7 +223,7 @@ ctl_endclient(struct ctl_cctx *ctx) {
 	memput(ctx, sizeof *ctx);
 }
 
-/*
+/*%
  * int
  * ctl_command(ctx, cmd, len, donefunc, uap)
  *	Queue a transaction, which will begin with sending cmd
@@ -600,3 +613,5 @@ timer(evContext ev, void *uap, struct timespec due, struct timespec itv) {
 		       ctx->timeout.tv_sec, state_names[ctx->state]);
 	error(ctx);
 }
+
+/*! \file */

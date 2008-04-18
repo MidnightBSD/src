@@ -16,7 +16,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: gen_gr.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: gen_gr.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif
 
 /* Imports */
@@ -61,7 +61,7 @@ struct pvt {
 	 * we keep one buffer and resize it as needed.
 	 */
 	struct group		group;
-	size_t			nmemb;    /* Malloc'd max index of gr_mem[]. */
+	size_t			nmemb;    /*%< Malloc'd max index of gr_mem[]. */
 	char *			membuf;
 	size_t			membufsize;
 	struct __res_state *	res;
@@ -490,3 +490,4 @@ newgid(int ngroups, gid_t *groups, gid_t group) {
 }
 
 #endif /* WANT_IRS_GR */
+/*! \file */

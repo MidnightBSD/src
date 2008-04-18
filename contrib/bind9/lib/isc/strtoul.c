@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -48,11 +48,12 @@
  * SUCH DAMAGE.
  */
 
+/*! \file */
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)strtoul.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 
-/* $Id: strtoul.c,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: strtoul.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -63,7 +64,7 @@ static char sccsid[] = "@(#)strtoul.c	8.1 (Berkeley) 6/4/93";
 #include <isc/stdlib.h>
 #include <isc/util.h>
 
-/*
+/*!
  * Convert a string to an unsigned long integer.
  *
  * Ignores `locale' stuff.  Assumes that the upper and lower case

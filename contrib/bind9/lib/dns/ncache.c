@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: ncache.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
+/* $Id: ncache.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -184,7 +186,7 @@ dns_ncache_add(dns_message_t *message, dns_db_t *cache, dns_dbnode_t *node,
 		 *
 		 * We trust that the caller wants negative caching, so this
 		 * means we have a "type 3 nxdomain" or "type 3 nodata"
-		 * response (see RFC 2308 for details).
+		 * response (see RFC2308 for details).
 		 *
 		 * We will now build a suitable negative cache rdataset that
 		 * will cause zero bytes to be emitted when converted to
@@ -208,7 +210,7 @@ dns_ncache_add(dns_message_t *message, dns_db_t *cache, dns_dbnode_t *node,
 		isc_buffer_putuint16(&buffer, 0);
 		isc_buffer_putuint16(&buffer, 0);
 		/*
-		 * RFC 2308, section 5, says that negative answers without
+		 * RFC2308, section 5, says that negative answers without
 		 * SOAs should not be cached.
 		 */
 		ttl = 0;
@@ -472,6 +474,9 @@ static dns_rdatasetmethods_t rdataset_methods = {
 	rdataset_current,
 	rdataset_clone,
 	rdataset_count,
+	NULL,
+	NULL,
+	NULL,
 	NULL,
 	NULL
 };

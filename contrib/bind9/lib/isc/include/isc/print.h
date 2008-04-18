@@ -15,10 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: print.h,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: print.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
 
 #ifndef ISC_PRINT_H
 #define ISC_PRINT_H 1
+
+/*! \file */
 
 /***
  *** Imports
@@ -28,7 +30,7 @@
 #include <isc/lang.h>
 #include <isc/platform.h>
 
-/*
+/*!
  * This block allows lib/isc/print.c to be cleanly compiled even if
  * the platform does not need it.  The standard Makefile will still
  * not compile print.c or archive print.o, so this is just to make test

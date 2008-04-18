@@ -3,7 +3,7 @@
  * vix 22jan93 [revisited; uses RCS, ANSI, POSIX; has bug fixes]
  * vix 27jun86 [broken out of tree.c]
  *
- * $Id: tree.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
+ * $Id: tree.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 
@@ -19,7 +19,7 @@
 # endif
 #endif
 
-/*
+/*%
  * tree_t is our package-specific anonymous pointer.
  */
 #if defined(__STDC__) || defined(__GNUC__)
@@ -28,7 +28,7 @@ typedef	void *tree_t;
 typedef	char *tree_t;
 #endif
 
-/*
+/*%
  * Do not taint namespace
  */
 #define	tree_add	__tree_add
@@ -56,3 +56,4 @@ void	tree_mung	__P((tree **, void (*)()));
 
 
 #endif	/* _TREE_H_INCLUDED */
+/*! \file */

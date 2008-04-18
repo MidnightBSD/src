@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.1.1.4 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include "port_before.h"
@@ -98,7 +98,7 @@ static const char rcsid[] = "$Id: res_init.c,v 1.1.1.3 2007-02-01 14:51:30 laffe
 
 #include "res_private.h"
 
-/* Options.  Should all be left alone. */
+/*% Options.  Should all be left alone. */
 #define RESOLVSORT
 #define DEBUG
 
@@ -114,7 +114,7 @@ static const char sort_mask[] = "/&";
 static u_int32_t net_mask __P((struct in_addr));
 #endif
 
-#if !defined(isascii)	/* XXX - could be a function */
+#if !defined(isascii)	/*%< XXX - could be a function */
 # define isascii(c) (!(c & 0200))
 #endif
 
@@ -122,7 +122,7 @@ static u_int32_t net_mask __P((struct in_addr));
  * Resolver state default settings.
  */
 
-/*
+/*%
  * Set up default settings.  If the configuration file exist, the values
  * there will have precedence.  Otherwise, the server address is set to
  * INADDR_ANY and the default domain name comes from the gethostname().
@@ -150,14 +150,14 @@ res_ninit(res_state statp) {
 	return (__res_vinit(statp, 0));
 }
 
-/* This function has to be reachable by res_data.c but not publically. */
+/*% This function has to be reachable by res_data.c but not publically. */
 int
 __res_vinit(res_state statp, int preinit) {
 	register FILE *fp;
 	register char *cp, **pp;
 	register int n;
 	char buf[BUFSIZ];
-	int nserv = 0;    /* number of nameserver records read from file */
+	int nserv = 0;    /*%< number of nameserver records read from file */
 	int haveenv = 0;
 	int havesearch = 0;
 #ifdef RESOLVSORT
@@ -166,7 +166,9 @@ __res_vinit(res_state statp, int preinit) {
 #endif
 	int dots;
 	union res_sockaddr_union u[2];
+	int maxns = MAXNS;
 
+	RES_SET_H_ERRNO(statp, 0);
 	if (statp->_u._ext.ext != NULL)
 		res_ndestroy(statp);
 
@@ -216,8 +218,22 @@ __res_vinit(res_state statp, int preinit) {
 		statp->_u._ext.ext->nsaddrs[0].sin = statp->nsaddr;
 		strcpy(statp->_u._ext.ext->nsuffix, "ip6.arpa");
 		strcpy(statp->_u._ext.ext->nsuffix2, "ip6.int");
-	} else
-		return (-1);
+	} else {
+		/*
+		 * Historically res_init() rarely, if at all, failed.
+		 * Examples and applications exist which do not check
+		 * our return code.  Furthermore several applications
+		 * simply call us to get the systems domainname.  So
+		 * rather then immediately fail here we store the
+		 * failure, which is returned later, in h_errno.  And
+		 * prevent the collection of 'nameserver' information
+		 * by setting maxns to 0.  Thus applications that fail
+		 * to check our return code wont be able to make
+		 * queries anyhow.
+		 */
+		RES_SET_H_ERRNO(statp, NETDB_INTERNAL);
+		maxns = 0;
+	}
 #ifdef RESOLVSORT
 	statp->nsort = 0;
 #endif
@@ -238,9 +254,9 @@ __res_vinit(res_state statp, int preinit) {
 				buf[0] = '.';
 			cp = strchr(buf, '.');
 			cp = (cp == NULL) ? buf : (cp + 1);
-			if (strlen(cp) >= sizeof(statp->defdname))
-				goto freedata; 
-			strcpy(statp->defdname, cp);
+			strncpy(statp->defdname, cp,
+				sizeof(statp->defdname) - 1);
+			statp->defdname[sizeof(statp->defdname) - 1] = '\0';
 		}
 	}
 #endif	/* SOLARIS2 */
@@ -262,7 +278,7 @@ __res_vinit(res_state statp, int preinit) {
 		pp = statp->dnsrch;
 		*pp++ = cp;
 		for (n = 0; *cp && pp < statp->dnsrch + MAXDNSRCH; cp++) {
-			if (*cp == '\n')	/* silly backwards compat */
+			if (*cp == '\n')	/*%< silly backwards compat */
 				break;
 			else if (*cp == ' ' || *cp == '\t') {
 				*cp = 0;
@@ -294,7 +310,7 @@ __res_vinit(res_state statp, int preinit) {
 			continue;
 		/* read default domain name */
 		if (MATCH(buf, "domain")) {
-		    if (haveenv)	/* skip if have from environ */
+		    if (haveenv)	/*%< skip if have from environ */
 			    continue;
 		    cp = buf + sizeof("domain") - 1;
 		    while (*cp == ' ' || *cp == '\t')
@@ -310,7 +326,7 @@ __res_vinit(res_state statp, int preinit) {
 		}
 		/* set search list */
 		if (MATCH(buf, "search")) {
-		    if (haveenv)	/* skip if have from environ */
+		    if (haveenv)	/*%< skip if have from environ */
 			    continue;
 		    cp = buf + sizeof("search") - 1;
 		    while (*cp == ' ' || *cp == '\t')
@@ -346,7 +362,7 @@ __res_vinit(res_state statp, int preinit) {
 		    continue;
 		}
 		/* read nameservers to query */
-		if (MATCH(buf, "nameserver") && nserv < MAXNS) {
+		if (MATCH(buf, "nameserver") && nserv < maxns) {
 		    struct addrinfo hints, *ai;
 		    char sbuf[NI_MAXSERV];
 		    const size_t minsiz =
@@ -464,7 +480,7 @@ __res_vinit(res_state statp, int preinit) {
 		while (pp < statp->dnsrch + MAXDFLSRCH) {
 			if (dots < LOCALDOMAINPARTS)
 				break;
-			cp = strchr(cp, '.') + 1;    /* we know there is one */
+			cp = strchr(cp, '.') + 1;    /*%< we know there is one */
 			*pp++ = cp;
 			dots--;
 		}
@@ -482,16 +498,7 @@ __res_vinit(res_state statp, int preinit) {
 	if ((cp = getenv("RES_OPTIONS")) != NULL)
 		res_setoptions(statp, cp, "env");
 	statp->options |= RES_INIT;
-	return (0);
-
-#ifdef	SOLARIS2
- freedata:
-	if (statp->_u._ext.ext != NULL) {
-		free(statp->_u._ext.ext);
-		statp->_u._ext.ext = NULL;
-	}
-	return (-1);
-#endif
+	return (statp->res_h_errno);
 }
 
 static void
@@ -626,7 +633,7 @@ res_setoptions(res_state statp, const char *options, const char *source)
 #ifdef RESOLVSORT
 /* XXX - should really support CIDR which means explicit masks always. */
 static u_int32_t
-net_mask(in)		/* XXX - should really use system's version of this */
+net_mask(in)		/*!< XXX - should really use system's version of this  */
 	struct in_addr in;
 {
 	register u_int32_t i = ntohl(in.s_addr);
@@ -647,7 +654,7 @@ res_randomid(void) {
 	return (0xffff & (now.tv_sec ^ now.tv_usec ^ getpid()));
 }
 
-/*
+/*%
  * This routine is for closing the socket if a virtual circuit is used and
  * the program wants to close it.  This provides support for endhostent()
  * which expects to close the socket.
@@ -790,3 +797,5 @@ res_getservers(res_state statp, union res_sockaddr_union *set, int cnt) {
 	}
 	return (statp->nscount);
 }
+
+/*! \file */

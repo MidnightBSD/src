@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1997-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -16,7 +16,9 @@
  */
 
 /*
- * $Id: assertions.h,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $
+ * $Id: assertions.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $
+ */
+/*! \file assertions.h
  */
 
 #ifndef ISC_ASSERTIONS_H
@@ -27,6 +29,7 @@
 
 ISC_LANG_BEGINDECLS
 
+/*% isc assertion type */
 typedef enum {
 	isc_assertiontype_require,
 	isc_assertiontype_ensure,

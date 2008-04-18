@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dnssectool.h,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
+/* $Id: dnssectool.h,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
 
 #ifndef DNSSECTOOL_H
 #define DNSSECTOOL_H 1

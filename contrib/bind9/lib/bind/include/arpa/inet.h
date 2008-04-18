@@ -53,9 +53,9 @@
  * --Copyright--
  */
 
-/*
+/*%
  *	@(#)inet.h	8.1 (Berkeley) 6/2/93
- *	$Id: inet.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
+ *	$Id: inet.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 #ifndef _INET_H_
@@ -122,3 +122,5 @@ __END_DECLS
 #endif
 
 #endif /* !_INET_H_ */
+
+/*! \file */

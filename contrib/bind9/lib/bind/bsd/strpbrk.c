@@ -1,6 +1,6 @@
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)strpbrk.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: strpbrk.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: strpbrk.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -49,7 +49,7 @@ static const char rcsid[] = "$Id: strpbrk.c,v 1.1.1.2 2006-02-25 02:32:07 laffer
 int __strpbrk_unneeded__;
 #else
 
-/*
+/*%
  * Find the first occurrence in s1 of a character in s2 (excluding NUL).
  */
 char *
@@ -66,3 +66,5 @@ strpbrk(const char *s1, const char *s2) {
 }
 
 #endif /*NEED_STRPBRK*/
+
+/*! \file */

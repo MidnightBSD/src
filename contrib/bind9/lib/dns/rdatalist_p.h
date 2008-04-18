@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,10 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: rdatalist_p.h,v 1.1.1.2 2006-02-25 02:32:10 laffer1 Exp $ */
+/* $Id: rdatalist_p.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 #ifndef DNS_RDATALIST_P_H
 #define DNS_RDATALIST_P_H
+
+/*! \file */
 
 #include <isc/result.h>
 #include <dns/types.h>

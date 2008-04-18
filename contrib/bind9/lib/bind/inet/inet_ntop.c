@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: inet_ntop.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_ntop.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include "port_before.h"
@@ -41,7 +41,7 @@ static const char rcsid[] = "$Id: inet_ntop.c,v 1.1.1.2 2006-02-25 02:32:07 laff
 # define SPRINTF(x) ((size_t)sprintf x)
 #endif
 
-/*
+/*%
  * WARNING: Don't even consider trying to compile this on a system where
  * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
  */
@@ -203,3 +203,5 @@ inet_ntop6(src, dst, size)
 	strcpy(dst, tmp);
 	return (dst);
 }
+
+/*! \file */

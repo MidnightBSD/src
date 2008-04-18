@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: log.c,v 1.1.1.2 2006-02-25 02:32:03 laffer1 Exp $ */
+/* $Id: log.c,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -29,9 +31,10 @@
 #define ISC_FACILITY LOG_DAEMON
 #endif
 
-/*
+/*%
  * When adding a new category, be sure to add the appropriate
- * #define to <named/log.h>.
+ * #define to <named/log.h> and to update the list in
+ * bin/check/check-tool.c.
  */
 static isc_logcategory_t categories[] = {
 	{ "",		 		0 },
@@ -44,7 +47,7 @@ static isc_logcategory_t categories[] = {
 	{ NULL, 			0 }
 };
 
-/*
+/*%
  * When adding a new module, be sure to add the appropriate
  * #define to <dns/log.h>.
  */
@@ -78,6 +81,9 @@ ns_log_init(isc_boolean_t safe) {
 	if (result != ISC_R_SUCCESS)
 		return (result);
 
+	/*
+	 * named-checktool.c:setup_logging() needs to be kept in sync.
+	 */
 	isc_log_registercategories(ns_g_lctx, ns_g_categories);
 	isc_log_registermodules(ns_g_lctx, ns_g_modules);
 	isc_log_setcontext(ns_g_lctx);

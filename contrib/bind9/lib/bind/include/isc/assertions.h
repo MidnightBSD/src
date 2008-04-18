@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: assertions.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
+ * $Id: assertions.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 #ifndef ASSERTIONS_H
@@ -118,5 +118,5 @@ const char *assertion_type_to_text(assertion_type type);
 #define INVARIANT(cond)		((void) (cond))
 #define INVARIANT_ERR(cond)	((void) (cond))
 #endif /* CHECK_INVARIANT */
-
 #endif /* ASSERTIONS_H */
+/*! \file */

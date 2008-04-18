@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: portlist.c,v 1.1.1.3 2007-02-01 14:51:30 laffer1 Exp $ */
+/* $Id: portlist.c,v 1.1.1.4 2008-04-18 18:31:33 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -81,12 +83,14 @@ dns_portlist_create(isc_mem_t *mctx, dns_portlist_t **portlistp) {
         result = isc_mutex_init(&portlist->lock);
 	if (result != ISC_R_SUCCESS) {
 		isc_mem_put(mctx, portlist, sizeof(*portlist));
-		UNEXPECTED_ERROR(__FILE__, __LINE__,
-				 "isc_mutex_init() failed: %s",
-				 isc_result_totext(result));
-		return (ISC_R_UNEXPECTED);
+		return (result);
 	}
-	isc_refcount_init(&portlist->refcount, 1);
+	result = isc_refcount_init(&portlist->refcount, 1);
+	if (result != ISC_R_SUCCESS) {
+		DESTROYLOCK(&portlist->lock);
+		isc_mem_put(mctx, portlist, sizeof(*portlist));
+		return (result);
+	}
 	portlist->list = NULL;
 	portlist->allocated = 0;
 	portlist->active = 0;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,10 +15,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: result.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: result.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 #ifndef DNS_RESULT_H
 #define DNS_RESULT_H 1
+
+/*! \file */
 
 #include <isc/lang.h>
 #include <isc/resultclass.h>
@@ -143,8 +145,10 @@
 #define DNS_R_UNKNOWNCOMMAND		(ISC_RESULTCLASS_DNS + 99)
 #define DNS_R_MUSTBESECURE		(ISC_RESULTCLASS_DNS + 100)
 #define DNS_R_COVERINGNSEC		(ISC_RESULTCLASS_DNS + 101)
+#define DNS_R_MXISADDRESS		(ISC_RESULTCLASS_DNS + 102)
+#define DNS_R_DUPLICATE			(ISC_RESULTCLASS_DNS + 103)
 
-#define DNS_R_NRESULTS			102	/* Number of results */
+#define DNS_R_NRESULTS			104	/*%< Number of results */
 
 /*
  * DNS wire format rcodes.
@@ -165,7 +169,7 @@
 #define DNS_R_NOTZONE			(ISC_RESULTCLASS_DNSRCODE + 10)
 #define DNS_R_BADVERS			(ISC_RESULTCLASS_DNSRCODE + 16)
 
-#define DNS_R_NRCODERESULTS		17	/* Number of rcode results */
+#define DNS_R_NRCODERESULTS		17	/*%< Number of rcode results */
 
 #define DNS_RESULT_ISRCODE(result) \
 	(ISC_RESULTCLASS_INCLASS(ISC_RESULTCLASS_DNSRCODE, (result)))

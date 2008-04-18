@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,10 +15,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/* */
 #ifndef GENERIC_UNSPEC_103_H
 #define GENERIC_UNSPEC_103_H 1
 
-/* $Id: unspec_103.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: unspec_103.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 typedef struct dns_rdata_unspec_t {
 	dns_rdatacommon_t	common;

@@ -33,7 +33,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)inet_ntoa.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: inet_ntoa.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_ntoa.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include "port_before.h"
@@ -48,7 +48,7 @@ static const char rcsid[] = "$Id: inet_ntoa.c,v 1.1.1.2 2006-02-25 02:32:07 laff
 
 #include "port_after.h"
 
-/*
+/*%
  * Convert network-format internet address
  * to base 256 d.d.d.d representation.
  */
@@ -60,3 +60,5 @@ inet_ntoa(struct in_addr in) {
 	(void) inet_ntop(AF_INET, &in, ret, sizeof ret);
 	return (ret);
 }
+
+/*! \file */

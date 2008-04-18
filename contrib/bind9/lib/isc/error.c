@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: error.c,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: error.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -25,14 +27,17 @@
 #include <isc/error.h>
 #include <isc/msgs.h>
 
+/*% Default unexpected callback. */
 static void
 default_unexpected_callback(const char *, int, const char *, va_list)
      ISC_FORMAT_PRINTF(3, 0);
 
+/*% Default fatal callback. */
 static void
 default_fatal_callback(const char *, int, const char *, va_list)
      ISC_FORMAT_PRINTF(3, 0);
 
+/*% unexpected_callback */
 static isc_errorcallback_t unexpected_callback = default_unexpected_callback;
 static isc_errorcallback_t fatal_callback = default_fatal_callback;
 

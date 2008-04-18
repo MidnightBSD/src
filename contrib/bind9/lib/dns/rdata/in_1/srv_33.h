@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -18,11 +18,12 @@
 #ifndef IN_1_SRV_33_H
 #define IN_1_SRV_33_H 1
 
-/* $Id: srv_33.h,v 1.1.1.2 2006-02-25 02:32:11 laffer1 Exp $ */
+/* $Id: srv_33.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
 /* Reviewed: Fri Mar 17 13:01:00 PST 2000 by bwelling */
 
-/* RFC 2782 */
+/*! 
+ *  \brief Per RFC2782 */
 
 typedef struct dns_rdata_in_srv {
 	dns_rdatacommon_t	common;

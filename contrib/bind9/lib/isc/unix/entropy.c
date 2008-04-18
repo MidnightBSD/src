@@ -15,10 +15,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: entropy.c,v 1.1.1.3 2007-02-01 14:51:31 laffer1 Exp $ */
+/* $Id: entropy.c,v 1.1.1.4 2008-04-18 18:31:32 laffer1 Exp $ */
 
-/*
- * This is the system depenedent part of the ISC entropy API.
+/* \file unix/entropy.c
+ * \brief
+ * This is the system dependent part of the ISC entropy API.
  */
 
 #include <config.h>
@@ -41,7 +42,7 @@
 
 #include "errno2result.h"
 
-/*
+/*%
  * There is only one variable in the entropy data structures that is not
  * system independent, but pulling the structure that uses it into this file
  * ultimately means pulling several other independent structures here also to
@@ -486,8 +487,6 @@ isc_entropy_createfilesource(isc_entropy_t *ent, const char *fname) {
 
 	LOCK(&ent->lock);
 
-	source = NULL;
-
 	if (stat(fname, &_stat) < 0) {
 		ret = isc__errno2result(errno);
 		goto errout;
@@ -589,9 +588,6 @@ isc_entropy_createfilesource(isc_entropy_t *ent, const char *fname) {
 	(void)close(fd);
 
  errout:
-	if (source != NULL)
-		isc_mem_put(ent->mctx, source, sizeof(isc_entropysource_t));
-
 	UNLOCK(&ent->lock);
 
 	return (ret);

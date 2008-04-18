@@ -15,12 +15,13 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*
+/*! \file 
+ * \brief
  * This file is primarily maintained by <tytso@mit.edu> and <ghudson@mit.edu>.
  */
 
 /*
- * $Id: hesiod.h,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $
+ * $Id: hesiod.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
  */
 
 #ifndef _HESIOD_H_INCLUDED

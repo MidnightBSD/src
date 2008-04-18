@@ -15,7 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: forward.c,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
+/* $Id: forward.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -62,13 +64,8 @@ dns_fwdtable_create(isc_mem_t *mctx, dns_fwdtable_t **fwdtablep) {
 		goto cleanup_fwdtable;
 
 	result = isc_rwlock_init(&fwdtable->rwlock, 0, 0);
-	if (result != ISC_R_SUCCESS) {
-		UNEXPECTED_ERROR(__FILE__, __LINE__,
-				 "isc_rwlock_init() failed: %s",
-				 isc_result_totext(result));
-		result = ISC_R_UNEXPECTED;
+	if (result != ISC_R_SUCCESS)
 		goto cleanup_rbt;
-	}
 
 	fwdtable->mctx = NULL;
 	isc_mem_attach(mctx, &fwdtable->mctx);

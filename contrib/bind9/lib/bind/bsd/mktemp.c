@@ -1,6 +1,6 @@
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)mktemp.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: mktemp.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: mktemp.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -96,7 +96,7 @@ gettemp(char *path, int *doopen) {
 	u_int pid;
 
 	pid = getpid();
-	for (trv = path; *trv; ++trv);		/* extra X's get set to 0's */
+	for (trv = path; *trv; ++trv);		/*%< extra X's get set to 0's */
 	while (*--trv == 'X') {
 		*trv = (pid % 10) + '0';
 		pid /= 10;
@@ -152,3 +152,5 @@ gettemp(char *path, int *doopen) {
 }
 
 #endif /*NEED_MKTEMP*/
+
+/*! \file */

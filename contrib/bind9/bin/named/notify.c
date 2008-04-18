@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: notify.c,v 1.1.1.2 2006-02-25 02:32:04 laffer1 Exp $ */
+/* $Id: notify.c,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -32,8 +32,9 @@
 #include <named/log.h>
 #include <named/notify.h>
 
-/*
- * This module implements notify as in RFC 1996.
+/*! \file
+ * \brief
+ * This module implements notify as in RFC1996.
  */
 
 static void

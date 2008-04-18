@@ -16,7 +16,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static const char rcsid[] = "$Id: inet_neta.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: inet_neta.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif
 
 #include "port_before.h"
@@ -38,7 +38,7 @@ static const char rcsid[] = "$Id: inet_neta.c,v 1.1.1.2 2006-02-25 02:32:07 laff
 # define SPRINTF(x) ((size_t)sprintf x)
 #endif
 
-/*
+/*%
  * char *
  * inet_neta(src, dst, size)
  *	format a u_long network number into presentation format.
@@ -85,3 +85,5 @@ inet_neta(src, dst, size)
 	errno = EMSGSIZE;
 	return (NULL);
 }
+
+/*! \file */

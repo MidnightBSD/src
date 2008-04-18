@@ -16,7 +16,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: gen_sv.c,v 1.1.1.2 2006-02-25 02:32:07 laffer1 Exp $";
+static const char rcsid[] = "$Id: gen_sv.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif
 
 /* Imports */
@@ -225,3 +225,5 @@ sv_res_set(struct irs_sv *this, struct __res_state *res,
 			(*sv->res_set)(sv, pvt->res, NULL);
 	}
 }
+
+/*! \file */

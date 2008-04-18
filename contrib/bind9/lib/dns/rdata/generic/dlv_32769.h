@@ -14,7 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: dlv_32769.h,v 1.1.1.1 2007-02-01 14:51:31 laffer1 Exp $ */
+/* $Id: dlv_32769.h,v 1.1.1.2 2008-04-18 18:31:33 laffer1 Exp $ */
 
 /* draft-ietf-dnsext-delegation-signer-05.txt */
 #ifndef GENERIC_DLV_32769_H

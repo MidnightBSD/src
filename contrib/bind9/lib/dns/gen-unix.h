@@ -15,9 +15,10 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: gen-unix.h,v 1.1.1.2 2006-02-25 02:32:09 laffer1 Exp $ */
+/* $Id: gen-unix.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
 
-/*
+/*! \file
+ * \brief
  * This file is responsible for defining two operations that are not
  * directly portable between Unix-like systems and Windows NT, option
  * parsing and directory scanning.  It is here because it was decided

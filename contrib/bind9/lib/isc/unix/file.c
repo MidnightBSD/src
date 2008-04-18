@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000-2002  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -48,7 +48,9 @@
  * SUCH DAMAGE.
  */
 
-/* $Id: file.c,v 1.1.1.2 2006-02-25 02:32:12 laffer1 Exp $ */
+/* $Id: file.c,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+
+/*! \file */
 
 #include <config.h>
 
@@ -154,7 +156,7 @@ isc_file_settime(const char *file, isc_time_t *time) {
 }
 
 #undef TEMPLATE
-#define TEMPLATE "tmp-XXXXXXXXXX" /* 14 characters. */
+#define TEMPLATE "tmp-XXXXXXXXXX" /*%< 14 characters. */
 
 isc_result_t
 isc_file_mktemplate(const char *path, char *buf, size_t buflen) {

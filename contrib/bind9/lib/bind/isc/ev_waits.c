@@ -20,7 +20,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: ev_waits.c,v 1.1.1.2 2006-02-25 02:32:08 laffer1 Exp $";
+static const char rcsid[] = "$Id: ev_waits.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
 #endif
 
 #include "port_before.h"
@@ -44,7 +44,7 @@ static evWaitList *	evGetWaitList(evContext_p *, const void *, int);
 
 /* Public. */
 
-/*
+/*%
  * Enter a new wait function on the queue.
  */
 int
@@ -72,7 +72,7 @@ evWaitFor(evContext opaqueCtx, const void *tag,
 	return (0);
 }
 
-/*
+/*%
  * Mark runnable all waiting functions having a certain tag.
  */
 int
@@ -99,7 +99,7 @@ evDo(evContext opaqueCtx, const void *tag) {
 	return (0);
 }
 
-/*
+/*%
  * Remove a waiting (or ready to run) function from the queue.
  */
 int
@@ -243,3 +243,5 @@ evGetWaitList(evContext_p *ctx, const void *tag, int should_create) {
 		this = evNewWaitList(ctx);
 	return (this);
 }
+
+/*! \file */
