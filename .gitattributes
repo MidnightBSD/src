@@ -13715,7 +13715,6 @@ crypto/openssh/sshtty.c -text
 crypto/openssh/survey.sh.in -text
 crypto/openssh/ttymodes.c -text
 crypto/openssh/ttymodes.h -text
-crypto/openssh/typescript -text
 crypto/openssh/uidswap.c -text
 crypto/openssh/uidswap.h -text
 crypto/openssh/umac.c -text
