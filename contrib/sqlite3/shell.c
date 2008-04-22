@@ -12,7 +12,7 @@
 ** This file contains code to implement the "sqlite" command line
 ** utility for accessing SQLite databases.
 **
-** $Id: shell.c,v 1.1.1.3 2007-12-19 20:39:58 ctriv Exp $
+** $Id: shell.c,v 1.1.1.4 2008-04-22 03:39:53 ctriv Exp $
 */
 #include <stdlib.h>
 #include <string.h>
@@ -336,9 +336,9 @@ struct callback_data {
 #define MODE_Insert   5  /* Generate SQL "insert" statements */
 #define MODE_Tcl      6  /* Generate ANSI-C or TCL quoted elements */
 #define MODE_Csv      7  /* Quote strings, numbers are plain */
-#define MODE_NUM_OF   8  /* The number of modes (not a mode itself) */
+#define MODE_Explain  8  /* Like MODE_Column, but do not truncate data */
 
-static const char *modeDescr[MODE_NUM_OF] = {
+static const char *modeDescr[] = {
   "line",
   "column",
   "list",
@@ -347,6 +347,7 @@ static const char *modeDescr[MODE_NUM_OF] = {
   "insert",
   "tcl",
   "csv",
+  "explain",
 };
 
 /*
@@ -469,8 +470,11 @@ static void output_csv(struct callback_data *p, const char *z, int bSep){
     fprintf(out,"%s",p->nullvalue);
   }else{
     int i;
+    int nSep = strlen(p->separator);
     for(i=0; z[i]; i++){
-      if( needCsvQuote[((unsigned char*)z)[i]] ){
+      if( needCsvQuote[((unsigned char*)z)[i]] 
+         || (z[i]==p->separator[0] && 
+             (nSep==1 || memcmp(z, p->separator, nSep)==0)) ){
         i = 0;
         break;
       }
@@ -487,7 +491,7 @@ static void output_csv(struct callback_data *p, const char *z, int bSep){
     }
   }
   if( bSep ){
-    fprintf(p->out, p->separator);
+    fprintf(p->out, "%s", p->separator);
   }
 }
 
@@ -523,14 +527,15 @@ static int callback(void *pArg, int nArg, char **azArg, char **azCol){
       }
       break;
     }
+    case MODE_Explain:
     case MODE_Column: {
       if( p->cnt++==0 ){
         for(i=0; i<nArg; i++){
           int w, n;
           if( i<ArraySize(p->colWidth) ){
-             w = p->colWidth[i];
+            w = p->colWidth[i];
           }else{
-             w = 0;
+            w = 0;
           }
           if( w<=0 ){
             w = strlen(azCol[i] ? azCol[i] : "");
@@ -566,6 +571,9 @@ static int callback(void *pArg, int nArg, char **azArg, char **azCol){
            w = p->actualWidth[i];
         }else{
            w = 10;
+        }
+        if( p->mode==MODE_Explain && azArg[i] && strlen(azArg[i])>w ){
+          w = strlen(azArg[i]);
         }
         fprintf(p->out,"%-*.*s%s",w,w,
             azArg[i] ? azArg[i] : p->nullvalue, i==nArg-1 ? "\n": "  ");
@@ -1142,14 +1150,17 @@ static int do_meta_command(char *zLine, struct callback_data *p){
       ** did an .explain followed by a .width, .mode or .header
       ** command.
       */
-      p->mode = MODE_Column;
+      p->mode = MODE_Explain;
       p->showHeader = 1;
       memset(p->colWidth,0,ArraySize(p->colWidth));
-      p->colWidth[0] = 4;
-      p->colWidth[1] = 14;
-      p->colWidth[2] = 10;
-      p->colWidth[3] = 10;
-      p->colWidth[4] = 33;
+      p->colWidth[0] = 4;                  /* addr */
+      p->colWidth[1] = 13;                 /* opcode */
+      p->colWidth[2] = 4;                  /* P1 */
+      p->colWidth[3] = 4;                  /* P2 */
+      p->colWidth[4] = 4;                  /* P3 */
+      p->colWidth[5] = 13;                 /* P4 */
+      p->colWidth[6] = 2;                  /* P5 */
+      p->colWidth[7] = 13;                  /* Comment */
     }else if (p->explainPrev.valid) {
       p->explainPrev.valid = 0;
       p->mode = p->explainPrev.mode;
@@ -1300,21 +1311,21 @@ static int do_meta_command(char *zLine, struct callback_data *p){
 
 #ifdef SQLITE_ENABLE_IOTRACE
   if( c=='i' && strncmp(azArg[0], "iotrace", n)==0 ){
-    extern void (*sqlite3_io_trace)(const char*, ...);
+    extern void (*sqlite3IoTrace)(const char*, ...);
     if( iotrace && iotrace!=stdout ) fclose(iotrace);
     iotrace = 0;
     if( nArg<2 ){
-      sqlite3_io_trace = 0;
+      sqlite3IoTrace = 0;
     }else if( strcmp(azArg[1], "-")==0 ){
-      sqlite3_io_trace = iotracePrintf;
+      sqlite3IoTrace = iotracePrintf;
       iotrace = stdout;
     }else{
       iotrace = fopen(azArg[1], "w");
       if( iotrace==0 ){
         fprintf(stderr, "cannot open \"%s\"\n", azArg[1]);
-        sqlite3_io_trace = 0;
+        sqlite3IoTrace = 0;
       }else{
-        sqlite3_io_trace = iotracePrintf;
+        sqlite3IoTrace = iotracePrintf;
       }
     }
   }else
@@ -1933,7 +1944,11 @@ int main(int argc, char **argv){
     }
   }
   if( i<argc ){
+#ifdef OS_OS2
+    data.zDbFilename = (const char *)convertCpPathToUtf8( argv[i++] );
+#else
     data.zDbFilename = argv[i++];
+#endif
   }else{
 #ifndef SQLITE_OMIT_MEMORYDB
     data.zDbFilename = ":memory:";
