@@ -19993,6 +19993,8 @@ libexec/mknetid/mknetid.8 -text
 libexec/mknetid/mknetid.c -text
 libexec/mknetid/netid.5 -text
 libexec/mknetid/parse_group.c -text
+libexec/mport.check-fake/Makefile -text
+libexec/mport.check-fake/mport.check-fake.c -text
 libexec/mport.create/Makefile -text
 libexec/mport.create/mport.create.c -text
 libexec/mport.delete/Makefile -text
