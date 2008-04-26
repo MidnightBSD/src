@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.5 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/error.c,v 1.6 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -32,7 +32,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/error.c,v 1.5 2007/11/22 08:00:32 ctriv Exp $");
 
 static int err;
 static char err_msg[256];
@@ -63,19 +62,9 @@ int mport_err_code()
   return err;
 }
 
-char * mport_err_string()
+const char * mport_err_string()
 {
-  size_t len = strlen(err_msg);
-  char *copy = (char *)malloc(len + 1);
-  
-  if (copy == NULL) {
-    fprintf(stderr, "Fatal error: unable to allocate memory for error string: %s\n", err_msg);
-    exit(255);
-  }
-
-  strlcpy(copy, err_msg, len + 1);
-  
-  return copy;
+  return err_msg;
 }
 
 int mport_set_err(int code, const char *msg) 

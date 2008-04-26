@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.9 2008/01/05 22:18:20 ctriv Exp $
  *
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
@@ -31,7 +31,7 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.9 2008/01/05 22:18:20 ctriv Exp $");
 
 
 #include <archive.h>
@@ -66,6 +66,8 @@ void mport_set_progress_step_cb(mportInstance *, mport_progress_step_cb);
 void mport_set_progress_free_cb(mportInstance *, mport_progress_free_cb);
 void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
 
+void mport_call_msg_cb(mportInstance *, const char *, ...);
+
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
 void mport_default_progress_init_cb(void);
@@ -73,10 +75,12 @@ void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 
 
+
 /* Mport Bundle (a file containing packages) */
 typedef struct {
   struct archive *archive;
   char *filename;
+  struct links_table *links;
 } mportBundle;
 
 mportBundle* mport_bundle_new(void);
@@ -165,11 +169,11 @@ int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);
-
+void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
 
 /* Errors */
 int mport_err_code(void);
-char * mport_err_string(void);
+const char * mport_err_string(void);
 
 int mport_set_err(int, const char *);
 int mport_set_errx(int , const char *, ...);
@@ -204,6 +208,7 @@ int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_rmdir(const char *, int);
+int mport_chdir(mportInstance *, const char *);
 int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
 void mport_parselist(char *, char ***);

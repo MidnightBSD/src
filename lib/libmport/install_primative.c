@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/install_pkg.c,v 1.4 2007/12/01 06:21:37 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/install_primative.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -157,16 +157,18 @@ static int do_actual_install(
       const char *tmpdir
     )
 {
-  int ret, file_total;
+  int file_total, ret;
   int file_count = 0;
   mportPlistEntryType type;
-  char *data; 
-  char file[FILENAME_MAX], last[FILENAME_MAX], cwd[FILENAME_MAX];
-  sqlite3_stmt *assets, *count;
+  char *data, *checksum, *orig_cwd; 
+  char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
+  sqlite3_stmt *assets, *count, *insert;
   sqlite3 *db;
   
- 
   db = mport->db;
+
+  /* sadly, we can't just use abs pathnames, because it will break hardlinks */
+  orig_cwd = getcwd(NULL, 0);
 
   /* get the file count for the progress meter */
   if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE type=%i", PLIST_FILE) != MPORT_OK)
@@ -185,34 +187,52 @@ static int do_actual_install(
   
   (mport->progress_init_cb)();
   
-  if (mport_db_do(db, "BEGIN TRANSACTION") != MPORT_OK) 
+
+  /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
+  /* Note that this will be marked as dirty by default */  
+  if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options) != MPORT_OK)
     goto ERROR;
 
-  /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */  
-  if ((ret = mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options)) != MPORT_OK)
-    goto ERROR;
-  /* Insert the assets into the master table */
-  if ((ret = mport_db_do(db, "INSERT INTO assets (pkg, type, data, checksum) SELECT pkg,type,data,checksum FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK)
+  /* Insert the assets into the master table (We do this one by one because we want to insert file 
+   * assets as absolute paths. */
+  if (mport_db_prepare(db, &insert, "INSERT INTO assets (pkg, type, data, checksum) values (%Q,?,?,?)", pack->name) != MPORT_OK)
     goto ERROR;  
   /* Insert the depends into the master table */
-  if ((ret = mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q", pack->name)) != MPORT_OK) 
+  if (mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
   
-  if ((ret = mport_db_prepare(db, &assets, "SELECT type,data FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK) 
+  if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
 
   (void)strlcpy(cwd, pack->prefix, sizeof(cwd));
+  
+  if (mport_chdir(mport, cwd) != MPORT_OK)
+    goto ERROR;
 
-  while ((ret = sqlite3_step(assets)) == SQLITE_ROW) {
-    type = (mportPlistEntryType)sqlite3_column_int(assets, 0);
-    data = (char *)sqlite3_column_text(assets, 1);
-      
+  while (1) {
+    ret = sqlite3_step(assets);
+    
+    if (ret == SQLITE_DONE) 
+      break;
+    
+    if (ret != SQLITE_ROW) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      goto ERROR;
+    }
+    
+    type     = (mportPlistEntryType)sqlite3_column_int(assets, 0);
+    data     = (char *)sqlite3_column_text(assets, 1);
+    checksum = (char *)sqlite3_column_text(assets, 2);  
+    
     switch (type) {
       case PLIST_CWD:      
         (void)strlcpy(cwd, data == NULL ? pack->prefix : data, sizeof(cwd));
+        if (mport_chdir(mport, cwd) != MPORT_OK)
+          goto ERROR;
+          
         break;
       case PLIST_EXEC:
-        if ((ret = mport_run_plist_exec(mport, data, cwd, last)) != MPORT_OK)
+        if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK)
           goto ERROR;
         break;
       case PLIST_FILE:
@@ -220,17 +240,16 @@ static int do_actual_install(
          * in the archive was read in the loop in mport_install_pkg.  we
          * use the current entry and then update it. */
         if (entry == NULL) {
-          ret = SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
+          SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
           goto ERROR; 
         } 
         
-        (void)strlcpy(last, data, sizeof(last));
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
 
         archive_entry_set_pathname(entry, file);
 
-        if ((ret = archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS)) != ARCHIVE_OK) {
-          ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+        if (archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) {
+          SET_ERRORX(MPORT_ERR_ARCHIVE, "Error extracting %s", archive_error_string(a));
           goto ERROR;
         }
         
@@ -239,7 +258,7 @@ static int do_actual_install(
         /* we only look for fatal, because EOF is only an error if we come
         back around. */
         if (archive_read_next_header(a, &entry) == ARCHIVE_FATAL) {
-          ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+          SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
           goto ERROR;
         }
         break;
@@ -247,21 +266,64 @@ static int do_actual_install(
         /* do nothing */
         break;
     }
+    
+    /* insert this assest into the master database */
+    if (sqlite3_bind_int(insert, 1, (int)type) != SQLITE_OK) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));    
+      goto ERROR;
+    }
+    if (type == PLIST_FILE) {
+      /* don't put the root in the database! */
+      if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+      if (sqlite3_bind_text(insert, 3, checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+    } else if (type == PLIST_DIRRM || type == PLIST_DIRRMTRY) {
+      (void)snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
+      if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+    } else {  
+      if (sqlite3_bind_text(insert, 2, data, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+      
+      if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+    }
+     
+    if (sqlite3_step(insert) != SQLITE_DONE) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      goto ERROR;
+    }
+                        
+    sqlite3_reset(insert);
   }
 
-  sqlite3_finalize(assets);
+  sqlite3_finalize(assets); 
+  sqlite3_finalize(insert);
   
-  if (mport_db_do(db, "COMMIT TRANSACTION") != MPORT_OK) 
+  if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
     
   (mport->progress_free_cb)();
-  
+  (void)mport_chdir(NULL, orig_cwd);
+  free(orig_cwd);
   return MPORT_OK;
   
   ERROR:
     (mport->progress_free_cb)();
+    free(orig_cwd);
     rollback();
-    return ret;
+    RETURN_CURRENT_ERROR;
 }           
 
 static int do_post_install(mportInstance *mport, mportPackageMeta *pack, const char *tmpdir)
@@ -312,8 +374,11 @@ static int run_pkg_install(mportInstance *mport, const char *tmpdir, mportPackag
   (void)snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
  
   if (mport_file_exists(file)) {
-   if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s %s", pack->prefix, MPORT_SH_BIN, file, pack->name, mode)) != 0)
-     RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
+    if (chmod(file, 755) != 0)
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "chmod(%s, 755): %s", file, strerror(errno));
+      
+    if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pack->prefix, file, pack->name, mode)) != 0)
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
   }
   
  return MPORT_OK;
@@ -337,7 +402,7 @@ static int display_pkg_msg(mportInstance *mport, mportPackageMeta *pack, const c
   if ((file = fopen(filename, "r")) == NULL) 
     RETURN_ERRORX(MPORT_ERR_FILEIO, "Couldn't open %s: %s", filename, strerror(errno));
   
-  if ((buf = (char *)malloc(st.st_size * sizeof(char))) == NULL)
+  if ((buf = (char *)malloc((st.st_size + 1) * sizeof(char))) == NULL)
     return MPORT_ERR_NO_MEM;
 
   
@@ -346,7 +411,9 @@ static int display_pkg_msg(mportInstance *mport, mportPackageMeta *pack, const c
     RETURN_ERRORX(MPORT_ERR_FILEIO, "Read error: %s", strerror(errno));
   }
   
-  (mport->msg_cb)(buf);
+  buf[st.st_size] = 0;
+  
+  mport_call_msg_cb(mport, buf);
   
   free(buf);
   

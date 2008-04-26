@@ -23,15 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.1 2007/11/23 05:57:43 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.2 2007/11/26 21:41:56 ctriv Exp $
  */
 
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <assert.h>
 #include "mport.h"
-
-__MBSDID("$MidnightBSD: src/lib/libmport/version_cmp.c,v 1.1 2007/11/23 05:57:43 ctriv Exp $");
 
 struct version {
   char *version;
@@ -65,6 +64,24 @@ int mport_version_cmp(const char *astr, const char *bstr)
   
   return result;
 }
+
+void mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+  char *a, *b;
+
+  assert(argc == 2);
+  
+  a = strdup(sqlite3_value_text(argv[0]));
+  b = strdup(sqlite3_value_text(argv[1]));
+  
+  assert(a != NULL);
+  assert(b != NULL);
+  
+  sqlite3_result_int(context, mport_version_cmp(a, b));
+  
+  free(a);
+  free(b);
+}  
 
 static void parse_version(const char *in, struct version *v) 
 {

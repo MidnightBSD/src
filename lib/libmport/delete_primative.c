@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -37,7 +37,6 @@
 #include <stdlib.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
 
 
 
@@ -49,16 +48,37 @@ static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
 {
   sqlite3_stmt *stmt;
-  int ret;
+  int ret, current, total;
   mportPlistEntryType type;
   char *data, *checksum, *cwd;
   struct stat st;
-  char md5[33], file[FILENAME_MAX];
+  char md5[33];
   
   if (force == 0) {
     if (check_for_upwards_depends(mport, pack) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
+
+  /* get the file count for the progress meter */
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE type=%i AND pkg=%Q", PLIST_FILE, pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      total   = sqlite3_column_int(stmt, 0) + 2;
+      current = 0;
+      sqlite3_finalize(stmt);
+      break;
+    default:
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+  }
+  
+  (mport->progress_init_cb)();
+
+  if (mport_db_do(mport->db, "UPDATE packages SET status='dirty' WHERE pkg=%Q", pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
 
   if (run_pkg_deinstall(mport, pack, "DEINSTALL") != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -84,56 +104,48 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     type     = (mportPlistEntryType)sqlite3_column_int(stmt, 0);
     data     = (char *)sqlite3_column_text(stmt, 1);
     checksum = (char *)sqlite3_column_text(stmt, 2);
+
+    char file[FILENAME_MAX];
+    /* XXX TMP */
+    if (*data == '/') {
+      snprintf(file, sizeof(file), "%s%s", mport->root, data);
+    } else {
+      snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
+    }
+
     
     switch (type) {
-      case PLIST_CWD:
-        cwd = data == NULL ? pack->prefix : data;
-        break;
       case PLIST_FILE:
-        (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
+        (mport->progress_step_cb)(++current, total, file);
         
+      
         if (lstat(file, &st) != 0) {
-          char *msg;
-          (void)asprintf(&msg, "Can't stat %s: %s", file, strerror(errno));
-          (mport->msg_cb)(msg);
-          free(msg);
+          mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
           break; /* next asset */
         } 
         
         
         if (S_ISREG(st.st_mode)) {
-          if (MD5File(file, md5) == NULL) {
-            sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
-          }
+          if (MD5File(file, md5) == NULL) 
+            mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
           
-          if (strcmp(md5, checksum) != 0) {
-            char *msg;
-            (void)asprintf(&msg, "Checksum mismatch: %s", file);
-            (mport->msg_cb)(msg);
-            free(msg);
-          }
+          if (strcmp(md5, checksum) != 0) 
+            mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
         }
         
-        if (unlink(file) != 0) {
-          sqlite3_finalize(stmt);
-          RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-        }
+        if (unlink(file) != 0) 
+          mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
 
         break;
       case PLIST_UNEXEC:
         if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK) {
-          sqlite3_finalize(stmt);
-          RETURN_CURRENT_ERROR;
+          mport_call_msg_cb(mport, "Could not execute %s: %s", data, mport_err_string());
         }
         break;
       case PLIST_DIRRM:
       case PLIST_DIRRMTRY:
-        (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
-        
         if (mport_rmdir(file, type == PLIST_DIRRMTRY ? 1 : 0) != MPORT_OK) {
-          sqlite3_finalize(stmt);
-          RETURN_CURRENT_ERROR;
+          mport_call_msg_cb(mport, "Could not remove directory '%s': %s", file, mport_err_string());
         }
         
         break;
@@ -147,6 +159,9 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   
   if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
     RETURN_CURRENT_ERROR;
+  
+  if (mport_db_do(mport->db, "BEGIN TRANSACTION") != MPORT_OK)
+    RETURN_CURRENT_ERROR; 
     
   if (mport_db_do(mport->db, "DELETE FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -159,9 +174,23 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     
   if (delete_pkg_infra(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  if (mport_db_do(mport->db, "COMMIT TRANSACTION") != MPORT_OK)
+    RETURN_CURRENT_ERROR; 
   
-  return MPORT_OK;
-    
+  (mport->progress_step_cb)(++current, total, "DB Updated");
+
+  
+  /* clean up the master database file, we don't want to frag it */
+  if (mport_db_do(mport->db, "VACUUM") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  (mport->progress_step_cb)(++current, total, "DB Defragged");
+
+  
+  (mport->progress_free_cb)();
+  
+  return MPORT_OK;  
 } 
   
 
@@ -173,7 +202,10 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
   (void)snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);    
 
   if (mport_file_exists(file)) {
-    if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s %s", pack->prefix, MPORT_SH_BIN, file, pack->name, mode)) != 0)
+    if (chmod(file, 755) != 0)
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "chmod(%s, 755): %s", file, strerror(errno));
+      
+    if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pack->prefix, file, pack->name, mode)) != 0)
       RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
   }
   

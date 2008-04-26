@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/create_pkg.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/create_primative.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -41,8 +41,6 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include "mport.h"
-
-__MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $");
 
 
 static int create_stub_db(sqlite3 **);
@@ -73,16 +71,16 @@ int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
     ret = SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
     goto CLEANUP;
   }
-
+  
   if ((ret = create_stub_db(&db)) != MPORT_OK)
     goto CLEANUP;
-    
+
   if ((ret = insert_plist(db, plist, pack)) != MPORT_OK)
     goto CLEANUP;
-  
+
   if ((ret = insert_meta(db, pack)) != MPORT_OK)
     goto CLEANUP;
-    
+  
   if (sqlite3_close(db) != SQLITE_OK) {
     ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     goto CLEANUP;
@@ -222,9 +220,10 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
   /* insert depends and conflicts */
   if ((ret = insert_depends(db, pack)) != MPORT_OK)
     return ret;  
+    
   if ((ret = insert_conflicts(db, pack)) != MPORT_OK)
     return ret;
-    
+  
   return MPORT_OK;
 }
 
@@ -245,8 +244,6 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
   /* we have a conflict like apache-1.4.  We want to do a m/(.*)-(.*)/ */
   while (*conflict != NULL) {
     version = rindex(*conflict, '-');
-    *version = '\0';
-    version++;
     
     if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -254,8 +251,16 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
     if (sqlite3_bind_text(stmnt, 2, *conflict, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
-    if (sqlite3_bind_text(stmnt, 3, version, -1, SQLITE_STATIC) != SQLITE_OK) {
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    if (version != NULL) {
+      *version = '\0';
+      version++;
+      if (sqlite3_bind_text(stmnt, 3, version, -1, SQLITE_STATIC) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
+    } else {
+      if (sqlite3_bind_text(stmnt, 3, "*", -1, SQLITE_STATIC) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
     }
     if (sqlite3_step(stmnt) != SQLITE_DONE) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -286,35 +291,41 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
     RETURN_CURRENT_ERROR;
     
   /* depends look like this.  break'em up into port, pkgversion and pkgname
-   * perl-5.8.8_1:lang/perl5.8
+   * perl:lang/perl5.8:>=5.8.3
    */
   while (*depend != NULL) {
-    port = rindex(*depend, ':');
+    port = index(*depend, ':');
     *port = '\0';
     port++;
 
     if (*port == 0)
       RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend: %s", *depend);
-    
-    pkgversion = rindex(*depend, '-');
-    *pkgversion = '\0';
-    pkgversion++;
-    
-    if (*pkgversion == 0)
-      RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend: %s", *depend);
-      
+
     if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
     if (sqlite3_bind_text(stmnt, 2, *depend, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
-    if (sqlite3_bind_text(stmnt, 3, pkgversion, -1, SQLITE_STATIC) != SQLITE_OK) {
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    
+    pkgversion = index(port, ':');
+    
+    if (pkgversion != NULL) {
+      *pkgversion = '\0';
+      pkgversion++;
+      if (sqlite3_bind_text(stmnt, 3, pkgversion, -1, SQLITE_STATIC) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
+    } else {
+      if (sqlite3_bind_null(stmnt, 3) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
     }
+    
     if (sqlite3_bind_text(stmnt, 4, port, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
+    
     if (sqlite3_step(stmnt) != SQLITE_DONE) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
@@ -323,6 +334,9 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
   }
     
   sqlite3_finalize(stmnt);
+
+  if (mport_db_do(db, "INSERT INTO exdepends SELECT * FROM depends") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
   
   return MPORT_OK;
 }

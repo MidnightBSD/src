@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/default_cbs.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -86,6 +86,9 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   int width, bar_width, bar_on, bar_off;
   double percent;
   char *bar;
+
+  if (current > total)
+    current = total;
 
   if ((tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0)) {
     /* not a terminal or couldn't get terminal width*/

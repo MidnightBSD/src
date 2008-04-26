@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.9 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -80,6 +80,31 @@ void mport_packagemeta_vec_free(mportPackageMeta **vec)
   free(vec);
 }
 
+/* a wrapper around chdir, to work with our error system */
+int mport_chdir(mportInstance *mport, const char *dir)
+{
+  if (mport != NULL) {
+    char *finaldir;
+  
+    asprintf(&finaldir, "%s%s", mport->root, dir);
+  
+    if (finaldir == NULL)
+      RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't building root'ed dir");
+    
+    if (chdir(finaldir) != 0) {
+      free(finaldir);
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't chdir to %s: %s", finaldir, strerror(errno));
+    }
+  
+    free(finaldir);
+  } else {
+    if (chdir(dir) != 0) 
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't chdir to %s: %s", dir, strerror(errno));
+  }
+  
+  return MPORT_OK;
+}    
+
 
 /* deletes the entire directory tree at name.
  * think rm -r filename
@@ -109,7 +134,7 @@ int mport_mkdir(const char *dir)
 {
   if (mkdir(dir, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) != 0) {
     if (errno != EEXIST) 
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't mkdir %s: %s", dir, strerror(errno));
   }
   
   return MPORT_OK;
@@ -129,12 +154,14 @@ int mport_rmdir(const char *dir, int ignore_nonempty)
     if (ignore_nonempty && (errno == ENOTEMPTY || errno == ENOENT)) {
       return MPORT_OK;
     } else {
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't rmdir %s: %s", dir, strerror(errno));
     }
   } 
   
   return MPORT_OK;
 }
+
+
 /*
  * Quick test to see if a file exists.
  */
@@ -164,13 +191,15 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   
   if (vasprintf(&cmnd, fmt, args) == -1) {
     /* XXX How will the caller know this is no mem, and not a failed exec? */
-    return MPORT_ERR_NO_MEM;
+    va_end(args);
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate xsystem cmnd string.");
   }
- 
+  va_end(args);
+  
   if (mport != NULL && *(mport->root) != '\0') {
     char *chroot_cmd;
     if (asprintf(&chroot_cmd, "%s %s %s", MPORT_CHROOT_BIN, mport->root, cmnd) == -1)
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate xsystem chroot string.");
   
     free(cmnd);
     cmnd = chroot_cmd;
@@ -179,7 +208,6 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   ret = system(cmnd);
   
   free(cmnd);
-  va_end(args);
   
   return ret;
 }
@@ -240,7 +268,8 @@ void mport_parselist(char *opt, char ***list)
  * mport_run_plist_exec(fmt, cwd, last_file)
  * 
  * handles a @exec or a @unexec directive in a plist.  This function
- * does the substitions and then runs the command.
+ * does the substitions and then runs the command.  last_file is 
+ * absolute path.
  *
  * Substitutions:
  * %F	The last filename extracted (last_file argument)
@@ -253,17 +282,17 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
   size_t l;
   size_t max = FILENAME_MAX * 2;
   char cmnd[max];
-  char fqfile[FILENAME_MAX];
   char *pos = cmnd;
   char *name;
-  
+
   while (*fmt && max > 0) {
     if (*fmt == '%') {
       fmt++;
       switch (*fmt) {
         case 'F':
-          (void)strlcpy(pos, last_file, max);
-          l = strlen(last_file);
+          /* last_file is absolute, so we skip the cwd at the begining */
+          (void)strlcpy(pos, last_file + strlen(cwd) + 1, max);
+          l = strlen(last_file + strlen(cwd) + 1);
           pos += l;
           max -= l;
           break;
@@ -274,8 +303,7 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
           max -= l;
           break;
         case 'B':
-          (void)snprintf(fqfile, sizeof(fqfile), "%s/%s", cwd, last_file);
-          name = dirname(fqfile);
+          name = dirname(last_file);
           (void)strlcpy(pos, name, max);
           l = strlen(name);
           pos += l;
@@ -303,7 +331,7 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
   }
   
   *pos = '\0';
-  
+
   /* cmnd now hold the expaded command, now execute it*/
   return mport_xsystem(mport, cmnd);
 }          

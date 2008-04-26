@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db.c,v 1.2 2007/12/05 17:02:15 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/db.c,v 1.3 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -34,8 +34,6 @@
 #include <unistd.h>
 #include <string.h>
 #include "mport.h"
-
-__MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.2 2007/12/05 17:02:15 ctriv Exp $");
 
 
 static int populate_meta_from_stmt(mportPackageMeta *, sqlite3 *, sqlite3_stmt *);
@@ -54,9 +52,13 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
   
   va_start(args, fmt);
   
-  if ((sql = sqlite3_vmprintf(fmt, args)) == NULL) {
-    return MPORT_ERR_NO_MEM;
-  }
+  sql = sqlite3_vmprintf(fmt, args);
+  
+  va_end(args);
+  
+  if (sql == NULL)
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate memory for sql statement");
+  
 
   if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
     sqlite3_free(sql);
@@ -82,10 +84,11 @@ int mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
   char *sql;
   
   va_start(args, fmt);
+  sql = sqlite3_vmprintf(fmt, args);
+  va_end(args);
   
-  if ((sql = sqlite3_vmprintf(fmt, args)) == NULL) {
-    return MPORT_ERR_NO_MEM;
-  }
+  if (sql == NULL)
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate memory for sql statement");
   
   if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
     SET_ERRORX(MPORT_ERR_SQLITE, "sql error preparing '%s': %s", sql, sqlite3_errmsg(db));
@@ -202,10 +205,12 @@ int mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, co
   sqlite3 *db = mport->db;
   
   va_start(args, fmt);
-  
-  if ((where = sqlite3_vmprintf(fmt, args)) == NULL) {
+  where = sqlite3_vmprintf(fmt, args);
+  va_end(args);
+    
+  if (where == NULL) 
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Could not build where clause");
-  }
+  
   
   if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -318,7 +323,7 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 
 #define RUN_SQL(db, sql) \
   if (mport_db_do(db, sql) != MPORT_OK) \
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db))
+    RETURN_CURRENT_ERROR
 
 
 int mport_generate_stub_schema(sqlite3 *db) 
@@ -326,19 +331,22 @@ int mport_generate_stub_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE TABLE assets    (pkg text not NULL, type int NOT NULL, data text, checksum text)");
   RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
-  RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text NOT NULL, depend_port text NOT NULL)");
-    
+  RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
+  RUN_SQL(db, "CREATE TABLE exdepends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)"); 
+
   return MPORT_OK;  
 }
 
 int mport_generate_master_schema(sqlite3 *db) 
 {
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int)");
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int, status text default 'dirty')");
   RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text NOT NULL, depend_port text NOT NULL)");
+
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_pkg ON depends (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_dependpkgname ON depends (depend_pkgname)");
+
   RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_data ON assets (data)");

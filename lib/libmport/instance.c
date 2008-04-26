@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/instance.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -33,9 +33,8 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "mport.h"
-
-__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $");
 
 
 /* allocate mem for a mportInstance */
@@ -74,12 +73,18 @@ int mport_instance_init(mportInstance *mport, const char *root)
   }
   
   
+  if (sqlite3_create_function(mport->db, "mport_version_cmp", 2, SQLITE_ANY, NULL, &mport_version_cmp_sqlite, NULL, NULL) != SQLITE_OK) {
+    sqlite3_close(mport->db);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+  }
+  
   /* set the default UI callbacks */
   mport->msg_cb           = &mport_default_msg_cb;
   mport->progress_init_cb = &mport_default_progress_init_cb;
   mport->progress_step_cb = &mport_default_progress_step_cb;
   mport->progress_free_cb = &mport_default_progress_free_cb;
   mport->confirm_cb       = &mport_default_confirm_cb;
+  
   
 
   /* create tables */
@@ -114,6 +119,25 @@ void mport_set_confirm_cb(mportInstance *mport, mport_confirm_cb cb)
   mport->confirm_cb = cb;
 }
 
+
+/* callers for the callbacks (only for msg at the moment) */
+void mport_call_msg_cb(mportInstance *mport, const char *fmt, ...)
+{
+  va_list args;
+  char *msg;
+  
+  va_start(args, fmt);
+  (void)vasprintf(&msg, fmt, args);
+  va_end(args);
+  
+  if (msg == NULL) 
+    return; /* No message for you! */
+
+  (mport->msg_cb)(msg);
+  
+  free(msg);
+}
+  
 
 int mport_instance_free(mportInstance *mport) 
 {
