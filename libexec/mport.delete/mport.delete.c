@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.1 2008/01/05 22:21:12 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.1 2008/01/05 22:21:12 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $");
 
 
 #include <stdlib.h>
@@ -49,6 +49,9 @@ int main(int argc, char *argv[])
   mportPackageMeta **packs;
   const char *arg, *where = NULL;
   force = 0;
+
+  if (argc == 1)
+    usage();
     
   while ((ch = getopt(argc, argv, "fo:n:")) != -1) {
     switch (ch) {
