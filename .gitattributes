@@ -20001,6 +20001,8 @@ libexec/mport.delete/Makefile -text
 libexec/mport.delete/mport.delete.c -text
 libexec/mport.install/Makefile -text
 libexec/mport.install/mport.install.c -text
+libexec/mport.query/Makefile -text
+libexec/mport.query/mport.query.c -text
 libexec/mport.version_cmp/Makefile -text
 libexec/mport.version_cmp/mport.version_cmp.c -text
 libexec/pppoed/Makefile -text
