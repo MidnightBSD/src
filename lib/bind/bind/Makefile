@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/bind/bind/Makefile,v 1.4 2008/04/19 01:06:51 laffer1 Exp $
 # $FreeBSD: src/lib/bind/bind/Makefile,v 1.4.4.1 2005/11/16 07:59:49 ru Exp $
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
@@ -58,10 +58,11 @@ SRCS+=		ns_date.c ns_name.c ns_netint.c \
 		ns_sign.c ns_ttl.c ns_verify.c
 
 .PATH:		${SRCDIR}/resolv
-SRCS+=		herror.c mtctxres.c res_comp.c res_data.c \
-		res_debug.c res_findzonecut.c res_init.c \
-		res_mkquery.c res_mkupdate.c res_query.c \
-		res_send.c res_sendsigned.c res_update.c
+SRCS+=		herror.c mtctxres.c res_comp.c \
+		res_data.c res_debug.c res_findzonecut.c \
+		res_init.c res_mkquery.c res_mkupdate.c \
+		res_query.c res_send.c res_sendsigned.c \
+		res_update.c
 
 DPADD=		${PTHREAD_DPADD}
 LDADD=		${PTHREAD_LDADD}
