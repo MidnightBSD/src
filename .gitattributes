@@ -15471,9 +15471,10 @@ etc/mtree/BSD.x11.dist -text
 etc/mtree/Makefile -text
 etc/mtree/README -text
 etc/namedb/Makefile -text
-etc/namedb/PROTO.localhost-v6.rev -text
-etc/namedb/PROTO.localhost.rev -text
-etc/namedb/make-localhost -text
+etc/namedb/master/Makefile -text
+etc/namedb/master/empty.db -text
+etc/namedb/master/localhost-forward.db -text
+etc/namedb/master/localhost-reverse.db -text
 etc/namedb/named.conf -text
 etc/namedb/named.root -text
 etc/netconfig -text
