@@ -37,7 +37,6 @@ LIBS="
 	kerberos5/lib
 	secure/lib
 	usr.bin/lex/lib
-	usr.sbin/pcvt/keycap
 "				# where to scan for libraries
 
 # This sed(1) filter is used to convert -lfoo to path/to/libfoo.
@@ -66,7 +65,7 @@ genlibdepends()
 			libdir=$(dirname ${makefile})
 			deps=$(
 				cd ${libdir}
-				make -V LDADD
+				make -m ${USRSRC}/share/mk -V LDADD
 			)
 			if [ "${deps}" ]; then
 				echo ${libdir}"${FS}"$(
