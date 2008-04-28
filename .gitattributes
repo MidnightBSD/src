@@ -26854,16 +26854,6 @@ sys/i386/isa/isa_dma.c -text
 sys/i386/isa/nmi.c -text
 sys/i386/isa/npx.c -text
 sys/i386/isa/pcf.c -text
-sys/i386/isa/pcvt/pcvt_conf.h -text
-sys/i386/isa/pcvt/pcvt_drv.c -text
-sys/i386/isa/pcvt/pcvt_ext.c -text
-sys/i386/isa/pcvt/pcvt_hdr.h -text
-sys/i386/isa/pcvt/pcvt_kbd.c -text
-sys/i386/isa/pcvt/pcvt_kbd.h -text
-sys/i386/isa/pcvt/pcvt_out.c -text
-sys/i386/isa/pcvt/pcvt_sup.c -text
-sys/i386/isa/pcvt/pcvt_tbl.h -text
-sys/i386/isa/pcvt/pcvt_vtf.c -text
 sys/i386/isa/pmtimer.c -text
 sys/i386/isa/prof_machdep.c -text
 sys/i386/isa/spic.c -text
