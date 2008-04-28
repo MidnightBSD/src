@@ -22,10 +22,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.\" $FreeBSD: src/usr.sbin/periodic/periodic.8,v 1.30 2005/01/18 20:02:40 ru Exp $
+.\" $MIdnightBSD$
+.\" $FreeBSD: src/usr.sbin/periodic/periodic.8,v 1.33 2007/09/07 21:54:45 gabor Exp $
 .\"
-.Dd September 7, 2007
+.Dd April 27, 2008
 .Os
 .Dt PERIODIC 8
 .Sh NAME
@@ -49,7 +49,7 @@ Perform the standard daily periodic executable run.
 This usually occurs early in the morning (local time).
 .It Pa weekly
 Perform the standard weekly periodic executable run.
-This usually occurs on Saturday mornings.
+This usually occurs very early on Saturday mornings.
 .It Pa monthly
 Perform the standard monthly periodic executable run.
 This usually occurs on the first day of the month.
@@ -136,6 +136,11 @@ value does not begin with a
 .Ql /
 and is not empty, it is assumed to contain a list of email addresses, and
 the output is mailed to them.
+If
+.Ao Ar basedir Ac Ns Va _show_empty_output
+is set to
+.Dq Li NO ,
+then no mail will be sent if the output was empty.
 .Pp
 If
 .Ao Ar basedir Ac Ns Va _output
@@ -199,7 +204,7 @@ system registry will typically have a
 .Va local_periodic
 variable reading:
 .Pp
-.Dl local_periodic="/usr/local/etc/periodic /usr/X11R6/etc/periodic"
+.Dl local_periodic="/usr/local/etc/periodic"
 .Pp
 To log
 .Nm
