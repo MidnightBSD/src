@@ -24,7 +24,8 @@
 #
 #	Email: Mike Makonnen <mtm@FreeBSD.Org>
 #
-# $FreeBSD: src/usr.sbin/adduser/rmuser.sh,v 1.9 2005/05/24 04:50:07 adamw Exp $
+# $MidnightBSD$
+# $FreeBSD: src/usr.sbin/adduser/rmuser.sh,v 1.9.10.1 2007/10/19 07:46:33 mtm Exp $
 #
 
 ATJOBDIR="/var/at/jobs"
@@ -86,10 +87,10 @@ rm_mail() {
 		    echo -n " mailspool"
 		rm ${MAILSPOOL}/$login
 	fi
-	if [ -f ${MAILSPOOL}/${login}.pop ]; then
-		verbose && echo -n " ${MAILSPOOL}/${login}.pop" ||
+	if [ -f ${MAILSPOOL}/.${login}.pop ]; then
+		verbose && echo -n " ${MAILSPOOL}/.${login}.pop" ||
 		    echo -n " pop3"
-		rm ${MAILSPOOL}/${login}.pop
+		rm ${MAILSPOOL}/.${login}.pop
 	fi
 	verbose && echo '.'
 }

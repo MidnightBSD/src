@@ -24,7 +24,8 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/adduser/rmuser.8,v 1.23 2004/06/08 14:52:55 csjp Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: src/usr.sbin/adduser/rmuser.8,v 1.25 2006/12/05 23:20:14 ceri Exp $
 .\"
 .Dd May 10, 2002
 .Dt RMUSER 8
@@ -129,7 +130,7 @@ Anything following a hash mark
 including the hash mark itself, is considered a comment and will not
 be processed.
 If the file is owned by anyone other than a user with
-UID 0, or is writeable by anyone other than the owner,
+UID 0, or is writable by anyone other than the owner,
 .Nm
 will refuse to continue.
 .It Fl y
@@ -146,7 +147,7 @@ arguments.
 .It Fl v
 Enable verbose mode.
 Normally,
-the output inlcudes one line per removed user;
+the output includes one line per removed user;
 however,
 with this option
 .Nm
