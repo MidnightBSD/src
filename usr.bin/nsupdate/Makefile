@@ -1,4 +1,5 @@
-# $FreeBSD: src/usr.bin/nsupdate/Makefile,v 1.4.2.1 2005/07/30 07:56:27 des Exp $
+# $MidnightBSD$
+# $FreeBSD: src/usr.bin/nsupdate/Makefile,v 1.7 2007/06/02 23:19:57 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -13,12 +14,14 @@ PROG=		nsupdate
 SRCS+=		nsupdate.c
 
 CFLAGS+=	-I${SRCDIR}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
-DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD}
-LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD}
+DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
+LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
 MAN=		nsupdate.8
 
-MANFILTER=	sed -e "s@/etc/named\.conf@/etc/namedb/named.conf@g"
+MANFILTER=	sed -e "s@/etc/named\.conf@/etc/namedb/named.conf@g" \
+		-e "s@^\.HP [0-9]* @@"
 
 .include <bsd.prog.mk>
