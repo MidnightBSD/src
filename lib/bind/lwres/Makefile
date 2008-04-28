@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/bind/lwres/Makefile,v 1.7.2.1 2005/11/16 07:59:50 ru Exp $
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
@@ -23,6 +24,10 @@ SRCS+=		context.c gai_strerror.c getaddrinfo.c gethost.c \
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include
 CFLAGS+=	-I${.CURDIR}
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+
+DPADD=		${PTHREAD_DPADD}
+LDADD=		${PTHREAD_LDADD}
 
 .if defined(WITH_BIND_LIBS)
 MAN=		lwres.3 lwres_buffer.3 lwres_config.3 lwres_context.3 \
