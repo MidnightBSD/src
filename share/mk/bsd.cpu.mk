@@ -1,6 +1,6 @@
-# $FreeBSD: src/share/mk/bsd.cpu.mk,v 1.48 2005/05/24 21:24:40 cognet Exp $
-# $MidnightBSD: src/share/mk/bsd.cpu.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
-#
+# $MidnightBSD$
+# $FreeBSD: src/share/mk/bsd.cpu.mk,v 1.62.2.1 2007/10/19 17:08:38 cognet Exp $
+
 # Set default CPU compile flags and baseline CPUTYPE for each arch.  The
 # compile flags must support the minimum CPU type for each architecture but
 # may tune support for more advanced processors.
@@ -24,6 +24,8 @@ MACHINE_CPU = arm
 
 . if ${MACHINE_ARCH} == "i386"
 .  if ${CPUTYPE} == "nocona"
+CPUTYPE = prescott
+.  elif ${CPUTYPE} == "core" || ${CPUTYPE} == "core2"
 CPUTYPE = prescott
 .  elif ${CPUTYPE} == "p4"
 CPUTYPE = pentium4
@@ -50,7 +52,7 @@ CPUTYPE = athlon-mp
 CPUTYPE = athlon
 .  endif
 . elif ${MACHINE_ARCH} == "amd64"
-.  if ${CPUTYPE} == "prescott"
+.  if ${CPUTYPE} == "prescott" || ${CPUTYPE} == "core2"
 CPUTYPE = nocona
 .  endif
 . endif
@@ -59,7 +61,7 @@ CPUTYPE = nocona
 # Logic to set up correct gcc optimization flag.  This must be included
 # after /etc/make.conf so it can react to the local value of CPUTYPE
 # defined therein.  Consult:
-#	http://gcc.gnu.org/onlinedocs/gcc/DEC-Alpha-Options.html
+#	http://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
 #	http://gcc.gnu.org/onlinedocs/gcc/IA-64-Options.html
 #	http://gcc.gnu.org/onlinedocs/gcc/RS-6000-and-PowerPC-Options.html
 #	http://gcc.gnu.org/onlinedocs/gcc/SPARC-Options.html
@@ -128,6 +130,12 @@ MACHINE_CPU = 3dnow mmx k6 k5 i586 i486 i386
 MACHINE_CPU = mmx k6 k5 i586 i486 i386
 .  elif ${CPUTYPE} == "k5"
 MACHINE_CPU = k5 i586 i486 i386
+.  elif ${CPUTYPE} == "c3"
+MACHINE_CPU = 3dnow mmx i586 i486 i386
+.  elif ${CPUTYPE} == "c3-2"
+MACHINE_CPU = sse mmx i586 i486 i386
+.  elif ${CPUTYPE} == "prescott"
+MACHINE_CPU = sse3 sse2 sse i686 mmx i586 i486 i386
 .  elif ${CPUTYPE} == "pentium4" || ${CPUTYPE} == "pentium4m" || ${CPUTYPE} == "pentium-m"
 MACHINE_CPU = sse2 sse i686 mmx i586 i486 i386
 .  elif ${CPUTYPE} == "pentium3" || ${CPUTYPE} == "pentium3m"
@@ -157,6 +165,12 @@ MACHINE_CPU += amd64 sse2 sse mmx
 MACHINE_CPU = itanium
 .  endif
 . endif
+.endif
+
+.if ${MACHINE_ARCH} == "arm" && defined(TARGET_BIG_ENDIAN)
+CFLAGS += -mbig-endian
+LDFLAGS += -mbig-endian
+LD += -EB
 .endif
 
 # NB: COPTFLAGS is handled in /usr/src/sys/conf/kern.pre.mk
