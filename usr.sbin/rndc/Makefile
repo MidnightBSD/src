@@ -1,4 +1,5 @@
-# $FreeBSD: src/usr.sbin/rndc/Makefile,v 1.5.2.1 2005/07/30 07:56:28 des Exp $
+# $MidnightBSD$
+# $FreeBSD: src/usr.sbin/rndc/Makefile,v 1.7 2007/06/02 23:19:58 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -17,8 +18,8 @@ SRCS+=		rndc.c util.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
 
-DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD}
-LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD}
+DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
+LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
 MAN=		rndc.8 rndc.conf.5
 
