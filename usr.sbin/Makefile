@@ -103,7 +103,7 @@ SUBDIR=	ac \
 	nologin \
 	ntpd \
 	${_ofwdump} \
-	${_pccard} \
+	pccard \
 	pciconf \
 	${_pcvt} \
 	periodic \
@@ -275,7 +275,6 @@ _mount_nwfs=	mount_nwfs
 _mount_smbfs=	mount_smbfs
 _mptable=	mptable
 _ndiscvt=	ndiscvt
-_pccard=	pccard
 _pnpinfo=	pnpinfo
 .if !defined(NO_LIBPTHREAD)
 _pppctl=	pppctl
@@ -291,16 +290,6 @@ _arlcontrol=	arlcontrol
 _boot0cfg=	boot0cfg
 _pcvt=		pcvt
 _wlconfig=	wlconfig
-.elif ${MACHINE} == "pc98"
-_boot98cfg=	boot98cfg
-.endif
-.endif
-
-.if ${MACHINE_ARCH} == "alpha"
-_elf2exe=	elf2exe
-_pnpinfo=	pnpinfo
-.if !defined(NO_LIBC_R)
-_pppctl=	pppctl
 .endif
 .endif
 
