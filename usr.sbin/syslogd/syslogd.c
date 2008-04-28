@@ -40,7 +40,8 @@ static char sccsid[] = "@(#)syslogd.c	8.3 (Berkeley) 4/4/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/syslogd/syslogd.c,v 1.144.2.2 2006/01/15 17:50:37 delphij Exp $");
+/* $FreeBSD: src/usr.sbin/syslogd/syslogd.c,v 1.152 2006/09/29 17:36:38 ru Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /*
  *  syslogd -- log system messages
@@ -286,6 +287,7 @@ static int	family = PF_INET; /* protocol family (IPv4 only) */
 static int	send_to_all;	/* send message to all IPv4/IPv6 addresses */
 static int	use_bootfile;	/* log entire bootfile for every kern msg */
 static int	no_compress;	/* don't compress messages (1=pipes, 2=all) */
+static int	logflags = O_WRONLY|O_APPEND; /* flags used to open log files */
 
 static char	bootfile[MAXLINE+1]; /* booted kernel file */
 
@@ -350,7 +352,7 @@ main(int argc, char *argv[])
 	socklen_t len;
 
 	bindhostname = NULL;
-	while ((ch = getopt(argc, argv, "46Aa:b:cdf:kl:m:nop:P:sS:uv")) != -1)
+	while ((ch = getopt(argc, argv, "46Aa:b:cCdf:kl:m:nop:P:sS:uv")) != -1)
 		switch (ch) {
 		case '4':
 			family = PF_INET;
@@ -372,6 +374,9 @@ main(int argc, char *argv[])
 			break;
 		case 'c':
 			no_compress++;
+			break;
+		case 'C':
+			logflags |= O_CREAT;
 			break;
 		case 'd':		/* debug */
 			Debug++;
@@ -689,9 +694,9 @@ usage(void)
 {
 
 	fprintf(stderr, "%s\n%s\n%s\n%s\n",
-		"usage: syslogd [-46Acdknosuv] [-a allowed_peer]",
-		"               [-b bind address] [-f config_file]",
-		"               [-l log_socket] [-m mark_interval]",
+		"usage: syslogd [-46ACcdknosuv] [-a allowed_peer]",
+		"               [-b bind_address] [-f config_file]",
+		"               [-l [mode:]path] [-m mark_interval]",
 		"               [-P pid_file] [-p log_socket]");
 	exit(1);
 }
@@ -837,7 +842,8 @@ static time_t	now;
  * based on the specification.
  */
 static int
-skip_message(const char *name, const char *spec, int checkcase) {
+skip_message(const char *name, const char *spec, int checkcase)
+{
 	const char *s;
 	char prev, next;
 	int exclude = 0;
@@ -1149,12 +1155,19 @@ fprintlog(struct filed *f, int flags, const char *msg)
 	f->f_time = now;
 
 	switch (f->f_type) {
+		int port;
 	case F_UNUSED:
 		dprintf("\n");
 		break;
 
 	case F_FORW:
-		dprintf(" %s\n", f->f_un.f_forw.f_hname);
+		port = (int)ntohs(((struct sockaddr_in *)
+			    (f->f_un.f_forw.f_addr->ai_addr))->sin_port);
+		if (port != 514) {
+			dprintf(" %s:%d\n", f->f_un.f_forw.f_hname, port);
+		} else {
+			dprintf(" %s\n", f->f_un.f_forw.f_hname);
+		}
 		/* check for local vs remote messages */
 		if (strcasecmp(f->f_prevhost, LocalHostName))
 			l = snprintf(line, sizeof line - 1,
@@ -1222,11 +1235,18 @@ fprintlog(struct filed *f, int flags, const char *msg)
 		v->iov_base = lf;
 		v->iov_len = 1;
 		if (writev(f->f_file, iov, 7) < 0) {
-			int e = errno;
-			(void)close(f->f_file);
-			f->f_type = F_UNUSED;
-			errno = e;
-			logerror(f->f_un.f_fname);
+			/*
+			 * If writev(2) fails for potentially transient errors
+			 * like the * filesystem being full, ignore it.
+			 * Otherwise remove * this logfile from the list.
+			 */
+			if (errno != ENOSPC) {
+				int e = errno;
+				(void)close(f->f_file);
+				f->f_type = F_UNUSED;
+				errno = e;
+				logerror(f->f_un.f_fname);
+			}
 		} else if ((flags & SYNC_FILE) && (f->f_flags & FFLAG_SYNC)) {
 			f->f_flags |= FFLAG_NEEDSYNC;
 			needdofsync = 1;
@@ -1646,6 +1666,7 @@ init(int signo)
 	Initialized = 1;
 
 	if (Debug) {
+		int port;
 		for (f = Files; f; f = f->f_next) {
 			for (i = 0; i <= LOG_NFACILITIES; i++)
 				if (f->f_pmask[i] == INTERNAL_NOPRI)
@@ -1664,7 +1685,14 @@ init(int signo)
 				break;
 
 			case F_FORW:
-				printf("%s", f->f_un.f_forw.f_hname);
+				port = (int)ntohs(((struct sockaddr_in *)
+				    (f->f_un.f_forw.f_addr->ai_addr))->sin_port);
+				if (port != 514) {
+					printf("%s:%d",
+						f->f_un.f_forw.f_hname, port);
+				} else {
+					printf("%s", f->f_un.f_forw.f_hname);
+				}
 				break;
 
 			case F_PIPE:
@@ -1869,13 +1897,32 @@ cfline(const char *line, struct filed *f, const char *prog, const char *host)
 
 	switch (*p) {
 	case '@':
-		(void)strlcpy(f->f_un.f_forw.f_hname, ++p,
-			sizeof(f->f_un.f_forw.f_hname));
+		{
+			char *tp;
+			/*
+			 * scan forward to see if there is a port defined.
+			 * so we can't use strlcpy..
+			 */
+			i = sizeof(f->f_un.f_forw.f_hname);
+			tp = f->f_un.f_forw.f_hname;
+			p++;
+
+			while (*p && (*p != ':') && (i-- > 0)) {
+				*tp++ = *p++;
+			}
+			*tp = '\0';
+		}
+		/* See if we copied a domain and have a port */
+		if (*p == ':')
+			p++;
+		else
+			p = NULL;
+		
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_family = family;
 		hints.ai_socktype = SOCK_DGRAM;
-		error = getaddrinfo(f->f_un.f_forw.f_hname, "syslog", &hints,
-				    &res);
+		error = getaddrinfo(f->f_un.f_forw.f_hname,
+				p ? p: "syslog", &hints, &res); 
 		if (error) {
 			logerror(gai_strerror(error));
 			break;
@@ -1885,7 +1932,7 @@ cfline(const char *line, struct filed *f, const char *prog, const char *host)
 		break;
 
 	case '/':
-		if ((f->f_file = open(p, O_WRONLY|O_APPEND, 0)) < 0) {
+		if ((f->f_file = open(p, logflags, 0600)) < 0) {
 			f->f_type = F_UNUSED;
 			logerror(p);
 			break;
