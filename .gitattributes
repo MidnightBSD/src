@@ -26805,7 +26805,6 @@ sys/i386/include/pcb.h -text
 sys/i386/include/pcb_ext.h -text
 sys/i386/include/pci_cfgreg.h -text
 sys/i386/include/pcpu.h -text
-sys/i386/include/pcvt_ioctl.h -text
 sys/i386/include/pecoff_machdep.h -text
 sys/i386/include/perfmon.h -text
 sys/i386/include/pmap.h -text
