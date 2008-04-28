@@ -17,7 +17,6 @@ SUBDIR=	ac \
 	${_authpf} \
 	${_bluetooth} \
 	${_boot0cfg} \
-	${_boot98cfg} \
 	bootparamd \
 	bsnmpd \
 	${_btxld} \
