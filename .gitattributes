@@ -1511,6 +1511,7 @@ contrib/bind9/lib/isc/alpha/include/Makefile.in -text
 contrib/bind9/lib/isc/alpha/include/isc/Makefile.in -text
 contrib/bind9/lib/isc/alpha/include/isc/atomic.h -text
 contrib/bind9/lib/isc/api -text
+contrib/bind9/lib/isc/arm/include/isc/atomic.h -text
 contrib/bind9/lib/isc/assertions.c -text
 contrib/bind9/lib/isc/base64.c -text
 contrib/bind9/lib/isc/bitstring.c -text
