@@ -18985,12 +18985,6 @@ lib/libpmc/pmclog.3 -text
 lib/libpmc/pmclog.c -text
 lib/libpmc/pmclog.h -text
 lib/libpthread/Makefile -text
-lib/libpthread/arch/alpha/Makefile.inc -text
-lib/libpthread/arch/alpha/alpha/context.S -text
-lib/libpthread/arch/alpha/alpha/enter_uts.S -text
-lib/libpthread/arch/alpha/alpha/pthread_md.c -text
-lib/libpthread/arch/alpha/include/atomic_ops.h -text
-lib/libpthread/arch/alpha/include/pthread_md.h -text
 lib/libpthread/arch/amd64/Makefile.inc -text
 lib/libpthread/arch/amd64/amd64/context.S -text
 lib/libpthread/arch/amd64/amd64/enter_uts.S -text
@@ -19014,14 +19008,6 @@ lib/libpthread/arch/ia64/ia64/enter_uts.S -text
 lib/libpthread/arch/ia64/ia64/pthread_md.c -text
 lib/libpthread/arch/ia64/include/atomic_ops.h -text
 lib/libpthread/arch/ia64/include/pthread_md.h -text
-lib/libpthread/arch/powerpc/Makefile.inc -text
-lib/libpthread/arch/powerpc/include/atomic_ops.h -text
-lib/libpthread/arch/powerpc/include/pthread_md.h -text
-lib/libpthread/arch/powerpc/powerpc/assym.c -text
-lib/libpthread/arch/powerpc/powerpc/assym.s -text
-lib/libpthread/arch/powerpc/powerpc/context.S -text
-lib/libpthread/arch/powerpc/powerpc/enter_uts.S -text
-lib/libpthread/arch/powerpc/powerpc/pthread_md.c -text
 lib/libpthread/arch/sparc64/Makefile.inc -text
 lib/libpthread/arch/sparc64/include/atomic_ops.h -text
 lib/libpthread/arch/sparc64/include/pthread_md.h -text

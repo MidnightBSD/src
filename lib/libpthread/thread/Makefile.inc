@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libpthread/thread/Makefile.inc,v 1.49.2.1 2005/12/15 07:22:24 davidxu Exp $
 
 # thr sources
