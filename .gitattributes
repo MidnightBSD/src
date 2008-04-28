@@ -15656,7 +15656,6 @@ etc/rc.d/nsswitch -text
 etc/rc.d/ntpd -text
 etc/rc.d/othermta -text
 etc/rc.d/pccard -text
-etc/rc.d/pcvt -text
 etc/rc.d/pf -text
 etc/rc.d/pflog -text
 etc/rc.d/pfsync -text
@@ -22433,7 +22432,6 @@ share/man/man4/pci.4 -text
 share/man/man4/pcic.4 -text
 share/man/man4/pcm.4 -text
 share/man/man4/pcn.4 -text
-share/man/man4/pcvt.4 -text
 share/man/man4/pim.4 -text
 share/man/man4/polling.4 -text
 share/man/man4/ppbus.4 -text
