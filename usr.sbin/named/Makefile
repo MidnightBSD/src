@@ -1,4 +1,5 @@
-# $FreeBSD: src/usr.sbin/named/Makefile,v 1.40.2.1 2005/07/30 07:56:27 des Exp $
+# $MidnightBSD$
+# $FreeBSD: src/usr.sbin/named/Makefile,v 1.43 2007/06/02 23:19:58 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../contrib/bind9
 LIB_BIND_REL=	../../lib/bind
@@ -13,7 +14,7 @@ PROG=		named
 SRCS+=		os.c
 
 .PATH: ${SRCDIR}
-SRCS+=		aclconf.c builtin.c client.c config.c control.c \
+SRCS+=		builtin.c client.c config.c control.c \
 		controlconf.c interfacemgr.c \
 		listenlist.c log.c logconf.c main.c notify.c \
 		query.c server.c sortlist.c \
@@ -23,12 +24,13 @@ SRCS+=		aclconf.c builtin.c client.c config.c control.c \
 		lwdgnba.c lwdgrbn.c lwdnoop.c lwsearch.c
 
 CFLAGS+=	-I${SRCDIR}/unix/include -I${SRCDIR}/include -I${LIB_BIND_DIR}
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
 # Remove the date stamp to make it more obvious when real changes happen
 CFLAGS+=	-U__DATE__
 
-DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD}
-LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD}
+DPADD+=		${BIND_DPADD} ${CRYPTO_DPADD} ${PTHREAD_DPADD}
+LDADD+=		${BIND_LDADD} ${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
 MAN=		named.8 lwresd.8 named.conf.5
 
