@@ -37,7 +37,7 @@ SRCS+=		acache.c acl.c adb.c byaddr.c \
 
 CFLAGS+=	-I${SRCDIR}/include/dst -I${SRCDIR}/include -I${SRCDIR}
 CFLAGS+=	-I${.CURDIR}
-CFLAGS+=	-l${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 
 DPADD=		${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD=		${CRYPTO_LDADD} ${PTHREAD_LDADD}

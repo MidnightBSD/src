@@ -1,5 +1,8 @@
+/* $MidnightBSD$ */
+/* $FreeBSD: src/lib/bind/dns/code.h,v 1.5 2007/06/02 23:24:13 dougb Exp $ */
+
 /*
- * Copyright (C) 2004-2008 Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007 Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2003 Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -33,6 +36,7 @@
 #include <dns/name.h>
 
 #include "rdata/in_1/a_1.c"
+#include "rdata/ch_3/a_1.c"
 #include "rdata/hs_4/a_1.c"
 #include "rdata/generic/ns_2.c"
 #include "rdata/generic/md_3.c"
@@ -89,6 +93,7 @@
 	switch (type) { \
 	case 1: switch (rdclass) { \
 		case 1: result = fromtext_in_a(rdclass, type, lexer, origin, options, target, callbacks); break; \
+		case 3: result = fromtext_ch_a(rdclass, type, lexer, origin, options, target, callbacks); break; \
 		case 4: result = fromtext_hs_a(rdclass, type, lexer, origin, options, target, callbacks); break; \
 		default: result = DNS_R_UNKNOWN; break; \
 		} \
@@ -192,6 +197,7 @@
 	switch (rdata->type) { \
 	case 1: switch (rdata->rdclass) { \
 		case 1: result = totext_in_a(rdata, tctx, target); break; \
+		case 3: result = totext_ch_a(rdata, tctx, target); break; \
 		case 4: result = totext_hs_a(rdata, tctx, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -295,6 +301,7 @@
 	switch (type) { \
 	case 1: switch (rdclass) { \
 		case 1: result = fromwire_in_a(rdclass, type, source, dctx, options, target); break; \
+		case 3: result = fromwire_ch_a(rdclass, type, source, dctx, options, target); break; \
 		case 4: result = fromwire_hs_a(rdclass, type, source, dctx, options, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -398,6 +405,7 @@
 	switch (rdata->type) { \
 	case 1: switch (rdata->rdclass) { \
 		case 1: result = towire_in_a(rdata, cctx, target); break; \
+		case 3: result = towire_ch_a(rdata, cctx, target); break; \
 		case 4: result = towire_hs_a(rdata, cctx, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -501,6 +509,7 @@
 	switch (rdata1->type) { \
 	case 1: switch (rdata1->rdclass) { \
 		case 1: result = compare_in_a(rdata1, rdata2); break; \
+		case 3: result = compare_ch_a(rdata1, rdata2); break; \
 		case 4: result = compare_hs_a(rdata1, rdata2); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -604,6 +613,7 @@
 	switch (type) { \
 	case 1: switch (rdclass) { \
 		case 1: result = fromstruct_in_a(rdclass, type, source, target); break; \
+		case 3: result = fromstruct_ch_a(rdclass, type, source, target); break; \
 		case 4: result = fromstruct_hs_a(rdclass, type, source, target); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -707,6 +717,7 @@
 	switch (rdata->type) { \
 	case 1: switch (rdata->rdclass) { \
 		case 1: result = tostruct_in_a(rdata, target, mctx); break; \
+		case 3: result = tostruct_ch_a(rdata, target, mctx); break; \
 		case 4: result = tostruct_hs_a(rdata, target, mctx); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -810,6 +821,7 @@
 	switch (common->rdtype) { \
 	case 1: switch (common->rdclass) { \
 		case 1: freestruct_in_a(source); break; \
+		case 3: freestruct_ch_a(source); break; \
 		case 4: freestruct_hs_a(source); break; \
 		default: break; \
 		} \
@@ -913,6 +925,7 @@
 	switch (rdata->type) { \
 	case 1: switch (rdata->rdclass) { \
 		case 1: result = additionaldata_in_a(rdata, add, arg); break; \
+		case 3: result = additionaldata_ch_a(rdata, add, arg); break; \
 		case 4: result = additionaldata_hs_a(rdata, add, arg); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -1016,6 +1029,7 @@
 	switch (rdata->type) { \
 	case 1: switch (rdata->rdclass) { \
 		case 1: result = digest_in_a(rdata, digest, arg); break; \
+		case 3: result = digest_ch_a(rdata, digest, arg); break; \
 		case 4: result = digest_hs_a(rdata, digest, arg); break; \
 		default: use_default = ISC_TRUE; break; \
 		} \
@@ -1119,6 +1133,7 @@
 	switch (type) { \
 	case 1: switch (rdclass) { \
 		case 1: result = checkowner_in_a(name, rdclass, type, wildcard); break; \
+		case 3: result = checkowner_ch_a(name, rdclass, type, wildcard); break; \
 		case 4: result = checkowner_hs_a(name, rdclass, type, wildcard); break; \
 		default: result = ISC_TRUE; break; \
 		} \
@@ -1222,6 +1237,7 @@
 	switch (rdata->type) { \
 	case 1: switch (rdata->rdclass) { \
 		case 1: result = checknames_in_a(rdata, owner, bad); break; \
+		case 3: result = checknames_ch_a(rdata, owner, bad); break; \
 		case 4: result = checknames_hs_a(rdata, owner, bad); break; \
 		default: result = ISC_TRUE; break; \
 		} \
