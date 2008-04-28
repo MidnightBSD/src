@@ -33358,9 +33358,6 @@ usr.sbin/watchdogd/Makefile -text
 usr.sbin/watchdogd/watchdog.8 -text
 usr.sbin/watchdogd/watchdogd.8 -text
 usr.sbin/watchdogd/watchdogd.c -text
-usr.sbin/wicontrol/Makefile -text
-usr.sbin/wicontrol/wicontrol.8 -text
-usr.sbin/wicontrol/wicontrol.c -text
 usr.sbin/wlconfig/Makefile -text
 usr.sbin/wlconfig/wlconfig.8 -text
 usr.sbin/wlconfig/wlconfig.c -text

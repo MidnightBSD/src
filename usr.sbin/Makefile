@@ -174,7 +174,6 @@ SUBDIR=	ac \
 	vnconfig \
 	watch \
 	watchdogd \
-	wicontrol \
 	${_wlconfig} \
 	wpa \
 	${_ypbind} \
