@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/bind/bind9/Makefile,v 1.4.4.1 2005/11/16 07:59:49 ru Exp $
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9

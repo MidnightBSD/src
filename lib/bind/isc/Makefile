@@ -1,4 +1,5 @@
-# $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/lib/bind/isc/Makefile,v 1.8 2007/06/02 23:19:56 dougb Exp $
+# $MidnightBSD$
+# $FreeBSD: src/lib/bind/isc/Makefile,v 1.8 2007/06/02 23:19:56 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
