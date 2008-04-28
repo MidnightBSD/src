@@ -1,4 +1,5 @@
-# $FreeBSD: src/lib/bind/isccfg/Makefile,v 1.4.4.1 2005/11/16 07:59:50 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/lib/bind/isccfg/Makefile,v 1.7 2007/06/02 23:19:56 dougb Exp $
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -10,12 +11,17 @@ SRCDIR=		${BIND_DIR}/lib/isccfg
 LIB=		isccfg
 
 .PATH:		${SRCDIR}
-SRCS=		log.c namedconf.c parser.c version.c
+SRCS=		aclconf.c log.c namedconf.c parser.c version.c
 
 CFLAGS+=	-I${SRCDIR}/include -I${.CURDIR}
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+      
+DPADD=		${PTHREAD_DPADD}
+LDADD=		${PTHREAD_LDADD}
 
 .if defined(WITH_BIND_LIBS)
-INCS=		${SRCDIR}/include/isccfg/cfg.h \
+INCS=		${SRCDIR}/include/isccfg/aclconf.h \
+		${SRCDIR}/include/isccfg/cfg.h \
 		${SRCDIR}/include/isccfg/grammar.h \
 		${SRCDIR}/include/isccfg/log.h \
 		${SRCDIR}/include/isccfg/namedconf.h \
