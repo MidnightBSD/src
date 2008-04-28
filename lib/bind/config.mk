@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/bind/config.mk,v 1.14.2.1 2005/07/30 07:56:25 des Exp $
 
 # BIND version number
