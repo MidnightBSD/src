@@ -8,6 +8,7 @@ CFLAGS+=	-DVERSION='"${BIND_VERSION}"'
 .endif
 
 CFLAGS+=	-DHAVE_CONFIG_H
+CFLAGS+=	-D_REENTRANT -D_THREAD_SAFE
 
 # Get version numbers (for libraries)
 .if defined(SRCDIR) && exists(${SRCDIR}/api)
@@ -60,6 +61,12 @@ CFLAGS+=	-DRNDC_KEYFILE='"${SYSCONFDIR}/rndc.key"'
 CFLAGS+=	-I${LIB_BIND_DIR}
 .endif
 
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+ISC_ATOMIC_ARCH=	x86_32
+.else
+ISC_ATOMIC_ARCH=	${MACHINE_ARCH}
+.endif
+
 # Link against BIND libraries
 .if !defined(WITH_BIND_LIBS)
 LIBBIND9=	${LIB_BIND_REL}/bind9/libbind9.a
@@ -74,7 +81,7 @@ LIBISCCFG=	${LIB_BIND_REL}/isccfg/libisccfg.a
 CFLAGS+=	-I${BIND_DIR}/lib/isccfg/include
 LIBISC=		${LIB_BIND_REL}/isc/libisc.a
 CFLAGS+=	-I${BIND_DIR}/lib/isc/unix/include \
-		-I${BIND_DIR}/lib/isc/nothreads/include \
+		-I${BIND_DIR}/lib/isc/pthreads/include \
 		-I${BIND_DIR}/lib/isc/include \
 		-I${LIB_BIND_DIR}/isc
 LIBLWRES=	${LIB_BIND_REL}/lwres/liblwres.a
@@ -95,3 +102,6 @@ BIND_LDADD=	${BIND_DPADD}
 CRYPTO_DPADD=	${LIBCRYPTO}
 CRYPTO_LDADD=	-lcrypto
 .endif
+
+PTHREAD_DPADD=	${LIBPTHREAD}
+PTHREAD_LDADD=	-lpthread
