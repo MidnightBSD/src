@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/bind/isccc/Makefile,v 1.4.4.1 2005/11/16 07:59:50 ru Exp $
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
@@ -15,6 +16,10 @@ SRCS=		alist.c base64.c cc.c ccmsg.c \
 		result.c sexpr.c symtab.c version.c
 
 CFLAGS+=	-I${SRCDIR}/include
+CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
+
+DPADD=		${PTHREAD_DPADD}
+LDADD=		${PTHREAD_LDADD}
 
 .if defined(WITH_BIND_LIBS)
 INCS=		${SRCDIR}/include/isccc/alist.h \
