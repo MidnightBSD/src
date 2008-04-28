@@ -104,7 +104,6 @@ SUBDIR=	ac \
 	${_ofwdump} \
 	pccard \
 	pciconf \
-	${_pcvt} \
 	periodic \
 	pkg_install \
 	pmccontrol \
@@ -287,7 +286,6 @@ _acpi=		acpi
 .endif
 _arlcontrol=	arlcontrol
 _boot0cfg=	boot0cfg
-_pcvt=		pcvt
 _wlconfig=	wlconfig
 .endif
 .endif
