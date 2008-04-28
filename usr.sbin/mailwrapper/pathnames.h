@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/usr.sbin/mailwrapper/pathnames.h,v 1.3 2000/01/10 03:20:13 imp Exp $ */
 
 /*

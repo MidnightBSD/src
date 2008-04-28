@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/usr.sbin/mailwrapper/Makefile,v 1.13 2004/10/18 17:20:29 ru Exp $
 
 .if !defined(NO_MAILWRAPPER)
