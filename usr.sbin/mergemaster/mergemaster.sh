@@ -1,14 +1,14 @@
 #!/bin/sh
 
 # mergemaster
-#
+
 # Compare files created by /usr/src/etc/Makefile (or the directory
 # the user specifies) with the currently installed copies.
-#
+
 # Copyright 1998-2004 Douglas Barton
 # DougB@FreeBSD.org
-#
-# $FreeBSD: src/usr.sbin/mergemaster/mergemaster.sh,v 1.51.8.2 2006/02/13 23:47:48 rwatson Exp $
+
+# $FreeBSD: src/usr.sbin/mergemaster/mergemaster.sh,v 1.54.4.1 2007/12/24 06:33:22 dougb Exp $
 # $MidnightBSD$
 
 PATH=/bin:/usr/bin:/usr/sbin
@@ -36,6 +36,7 @@ display_usage () {
   echo "  -w N  Specify a screen width in columns to sdiff"
   echo "  -A architecture  Alternative architecture name to pass to make"
   echo '  -D /path/directory  Specify the destination directory to install files to'
+  echo "  -U Attempt to auto upgrade files that have not been user modified."
   echo ''
 }
 
@@ -113,6 +114,24 @@ diff_loop () {
   while [ "${HANDLE_COMPFILE}" = "v" -o "${HANDLE_COMPFILE}" = "V" -o \
     "${HANDLE_COMPFILE}" = "NOT V" ]; do
     if [ -f "${DESTDIR}${COMPFILE#.}" -a -f "${COMPFILE}" ]; then
+      if [ -n "${AUTO_UPGRADE}" ]; then
+        if echo "${CHANGED}" | grep -qsv ${DESTDIR}${COMPFILE#.}; then
+          echo ''
+          echo "  *** ${COMPFILE} has not been user modified."
+          echo ''
+
+          if mm_install "${COMPFILE}"; then
+            echo "   *** ${COMPFILE} upgraded successfully"
+            echo ''
+            # Make the list print one file per line
+            AUTO_UPGRADED_FILES="${AUTO_UPGRADED_FILES}      ${DESTDIR}${COMPFILE#.}
+"
+          else
+          echo "   *** Problem upgrading ${COMPFILE}, it will remain to merge by hand"
+          fi
+          return
+        fi
+      fi
       if [ "${HANDLE_COMPFILE}" = "v" -o "${HANDLE_COMPFILE}" = "V" ]; then
 	echo ''
 	echo '   ======================================================================   '
@@ -226,6 +245,10 @@ press_to_continue () {
 #
 TEMPROOT='/var/tmp/temproot'
 
+# Assign the location of the mtree database
+#
+MTREEDB='/var/db/mergemaster.mtree'
+
 # Read /etc/mergemaster.rc first so the one in $HOME can override
 #
 if [ -r /etc/mergemaster.rc ]; then
@@ -240,10 +263,13 @@ fi
 
 # Check the command line options
 #
-while getopts ":ascrvhipCPm:t:du:w:D:A:" COMMAND_LINE_ARGUMENT ; do
+while getopts ":ascrvhipCPm:t:du:w:D:A:U" COMMAND_LINE_ARGUMENT ; do
   case "${COMMAND_LINE_ARGUMENT}" in
   A)
     ARCHSTRING='MACHINE_ARCH='${OPTARG}
+    ;;
+  U)
+    AUTO_UPGRADE=yes
     ;;
   s)
     STRICT=yes
@@ -311,6 +337,12 @@ done
 # Don't force the user to set this in the mergemaster rc file
 if [ -n "${PRESERVE_FILES}" -a -z "${PRESERVE_FILES_DIR}" ]; then
   PRESERVE_FILES_DIR=/var/tmp/mergemaster/preserved-files-`date +%y%m%d-%H%M%S`
+fi
+
+# Check the for the mtree database in DESTDIR.
+if [ ! -f ${DESTDIR}${MTREEDB} ]; then
+  echo "*** Unable to find mtree database. Skipping auto-upgrade."
+  unset AUTO_UPGRADE
 fi
 
 echo ''
@@ -382,6 +414,19 @@ DIFF_FLAG=${DIFF_FLAG:--u}
 # Assign the source directory
 #
 SOURCEDIR=${SOURCEDIR:-/usr/src/etc}
+
+# Check DESTDIR against the mergemaster mtree database to see what
+# files the user changed from the reference files.
+#
+CHANGED=
+if [ -n "${AUTO_UPGRADE}" -a -f "${DESTDIR}${MTREEDB}" ]; then
+	for file in `mtree -eq -f ${DESTDIR}${MTREEDB} -p ${DESTDIR}/ \
+		2>/dev/null | awk '($2 == "changed") {print $1}'`; do
+		if [ -f "${DESTDIR}/$file" ]; then
+			CHANGED="${CHANGED} ${DESTDIR}/$file"
+		fi
+	done
+fi
 
 # Check the width of the user's terminal
 #
@@ -577,6 +622,18 @@ rm -f ${TEMPROOT}/etc/*.db ${TEMPROOT}/etc/passwd
 
 # We only need to compare things like freebsd.cf once
 find ${TEMPROOT}/usr/obj -type f -delete 2>/dev/null
+
+# Delete 0 length files to make the mtree database as small as possible.
+find ${TEMPROOT} -type f -size 0 -delete 2>/dev/null
+
+# Build the mtree database in a temporary location.
+# TODO: Possibly use mktemp instead for security reasons?
+case "${PRE_WORLD}" in
+'') mtree -ci -p ${TEMPROOT} -k size,md5digest > ${DESTDIR}${MTREEDB}.new 2>/dev/null
+    ;;
+*) # We don't want to mess with the mtree database on a pre-world run.
+   ;;
+esac
 
 # Get ready to start comparing files
 
@@ -782,6 +839,13 @@ mm_install () {
   return $?
 }
 
+if [ ! -d "${TEMPROOT}" ]; then
+	echo "*** FATAL ERROR: The temproot directory (${TEMPROOT})"
+	echo '                 has disappeared!'
+	echo ''
+	exit 1
+fi
+
 echo ''
 echo "*** Beginning comparison"
 echo ''
@@ -922,6 +986,12 @@ done # This is for the do way up there at the beginning of the comparison
 
 echo ''
 echo "*** Comparison complete"
+
+if [ -f "${DESTDIR}${MTREEDB}.new" ]; then
+  echo "*** Saving mtree database for future upgrades"
+  mv -f ${DESTDIR}${MTREEDB}.new ${DESTDIR}${MTREEDB} 2>/dev/null
+fi
+
 echo ''
 
 TEST_FOR_FILES=`find ${TEMPROOT} -type f -size +0 2>/dev/null`
@@ -969,6 +1039,28 @@ case "${AUTO_INSTALLED_FILES}" in
     echo '*** You chose the automatic install option for files that did not'
     echo '    exist on your system.  The following were installed for you:'
     echo "${AUTO_INSTALLED_FILES}"
+    ;;
+  esac
+  ;;
+esac
+
+case "${AUTO_UPGRADED_FILES}" in
+'') ;;
+*)
+  case "${AUTO_RUN}" in
+  '')
+    (
+      echo ''
+      echo '*** You chose the automatic upgrade option for files that you did'
+      echo '    not alter on your system.  The following were upgraded for you:'
+      echo "${AUTO_UPGRADED_FILES}"
+    ) | ${PAGER}
+    ;;
+  *)
+    echo ''
+    echo '*** You chose the automatic upgrade option for files that you did'
+    echo '    not alter on your system.  The following were upgraded for you:'
+    echo "${AUTO_UPGRADED_FILES}"
     ;;
   esac
   ;;
