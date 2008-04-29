@@ -21,9 +21,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
+.\" $MidnightBSD$
 .\" $FreeBSD: src/share/man/man5/config.5,v 1.6 2005/02/10 14:26:21 des Exp $
 .\"
-.Dd May 13, 2004
+.Dd April 28, 2008
 .Dt CONFIG 5
 .Os
 .Sh NAME
@@ -31,7 +32,7 @@
 .Nd kernel configuration file format
 .Sh DESCRIPTION
 A kernel configuration file specifies the configuration of a
-.Fx
+.Mx
 kernel.
 It is processed by
 .Xr config 8
@@ -163,19 +164,10 @@ Legal values for
 .Ar arch
 include:
 .Pp
-.Bl -tag -width ".Cm powerpc" -compact
-.It Cm alpha
-The DEC Alpha architecture.
 .It Cm amd64
 The AMD x86-64 architecture.
 .It Cm i386
 The Intel x86 based PC architecture.
-.It Cm ia64
-The Intel IA64 architecture.
-.It Cm pc98
-The PC98 architecture.
-.It Cm powerpc
-The IBM PowerPC architecture.
 .It Cm sparc64
 The Sun Sparc64 architecture.
 .El
