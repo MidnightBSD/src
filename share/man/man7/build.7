@@ -23,9 +23,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man7/build.7,v 1.30.2.2 2006/01/22 16:33:46 yar Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man7/build.7,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 .\"
-.Dd October 31, 2006
+.Dd April 28, 2008
 .Dt BUILD 7
 .Os
 .Sh NAME
@@ -151,10 +151,6 @@ This is analogous to the
 .Dq Nm uname Fl m
 output.
 This is necessary to cross-build some target architectures.
-For example, cross-building for PC98 machines requires
-.Va TARGET_ARCH Ns = Ns Li i386
-and
-.Va TARGET Ns = Ns Li pc98 .
 .It Va NO_WERROR
 If defined, warnings will not cause the build to halt, even if the
 makefile says otherwise.
@@ -182,11 +178,11 @@ section in
 .Pa src/UPDATING .
 .Pp
 The following sequence of commands can be used to cross-build the
-system for the Alpha architecture on an i386 host:
+system for the Sparc64 architecture on an i386 host:
 .Bd -literal -offset indent
 cd /usr/src
-make TARGET_ARCH=alpha buildworld
-make TARGET_ARCH=alpha DESTDIR=/clients/axp installworld
+make TARGET_ARCH=sparc64 buildworld
+make TARGET_ARCH=sparc64 DESTDIR=/clients/axp installworld
 .Ed
 .Sh SEE ALSO
 .Xr cc 1 ,
