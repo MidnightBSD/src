@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.6 2006/12/27 04:04:06 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.7 2007/01/19 02:22:33 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_DYNAMICROOT do not link /bin and /sbin dynamically
@@ -501,7 +501,7 @@ installcheck_DESTDIR:
 # Checks to be sure system is ready for installworld
 #
 CHECK_UIDS=
-CHECK_GIDS=	audit	
+CHECK_GIDS=	audit
 .if !defined(NO_SENDMAIL)
 CHECK_UIDS+=	smmsp
 CHECK_GIDS+=	smmsp
@@ -974,9 +974,10 @@ _prebuild_libs+=	kerberos5/lib/libroken
 _generic_libs+=	kerberos5/lib
 .endif
 
-_prebuild_libs+= lib/libcom_err lib/libcrypt lib/libexpat \
+_prebuild_libs+= lib/libbz2 lib/libcom_err lib/libcrypt lib/libexpat \
 		lib/libkvm lib/libmd \
-		lib/libncurses lib/libnetgraph lib/libopie lib/libpam \
+		lib/libncurses \
+		lib/libnetgraph lib/libopie lib/libpam \
 		lib/libradius \
 		lib/libsbuf lib/libtacplus lib/libutil \
 		lib/libz lib/msun
@@ -992,10 +993,11 @@ lib/libradius__L: secure/lib/libssl__L
 secure/lib/libssl__L: secure/lib/libcrypto__L
 .if !defined(NO_OPENSSH)
 _prebuild_libs+=	secure/lib/libssh
-secure/lib/libssh__L: lib/libz__L secure/lib/libcrypto__L lib/libcrypt__L
+secure/lib/libssh__L: lib/libz__L secure/lib/libcrypto__L lib/libcrypt__L \
+    lib/libmd__L
 .if !defined(NO_KERBEROS)
 secure/lib/libssh__L: kerberos5/lib/libgssapi__L kerberos5/lib/libkrb5__L \
-    kerberos5/lib/libasn1__L lib/libcom_err__L lib/libmd__L \
+    kerberos5/lib/libasn1__L lib/libcom_err__L \
     kerberos5/lib/libroken__L
 .endif
 .endif
@@ -1020,8 +1022,9 @@ _generic_libs+=	usr.sbin/pcvt/keycap
 .for _lib in ${_startup_libs} ${_prebuild_libs:Nlib/libpam} ${_generic_libs}
 ${_lib}__L: .PHONY
 .if exists(${.CURDIR}/${_lib})
-	${_+_}@${ECHODIR} "===> ${_lib} (depend,all,install)"; \
+	${_+_}@${ECHODIR} "===> ${_lib} (obj,depend,all,install)"; \
 		cd ${.CURDIR}/${_lib}; \
+		${MAKE} DIRPRFX=${_lib}/ obj; \
 		${MAKE} DIRPRFX=${_lib}/ depend; \
 		${MAKE} DIRPRFX=${_lib}/ all; \
 		${MAKE} DIRPRFX=${_lib}/ install
@@ -1032,8 +1035,9 @@ ${_lib}__L: .PHONY
 # static PAM library, and dynamic PAM library before dynamic PAM
 # modules.
 lib/libpam__L: .PHONY
-	${_+_}@${ECHODIR} "===> lib/libpam (depend,all,install)"; \
+	${_+_}@${ECHODIR} "===> lib/libpam (obj,depend,all,install)"; \
 		cd ${.CURDIR}/lib/libpam; \
+		${MAKE} DIRPRFX=lib/libpam/ obj; \
 		${MAKE} DIRPRFX=lib/libpam/ depend; \
 		${MAKE} DIRPRFX=lib/libpam/ -D_NO_LIBPAM_SO_YET all; \
 		${MAKE} DIRPRFX=lib/libpam/ -D_NO_LIBPAM_SO_YET install
