@@ -22,9 +22,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
+.\" $MidnightBSD$
 .\" $FreeBSD: src/share/man/man5/rc.conf.5,v 1.256.2.20.2.1 2006/05/05 09:58:12 flz Exp $
 .\"
-.Dd May 5, 2006
+.Dd April 28, 2008
 .Dt RC.CONF 5
 .Os
 .Sh NAME
@@ -2774,39 +2775,12 @@ Set to
 to enable system accounting through the
 .Xr accton 8
 facility.
-.It Va ibcs2_enable
-.Pq Vt bool
-Set to
-.Dq Li YES
-to enable iBCS2 (SCO) binary emulation at system initial boot
-time.
-.It Va ibcs2_loaders
-.Pq Vt str
-If not set to
-.Dq Li NO
-and if
-.Va ibcs2_enable
-is set to
-.Dq Li YES ,
-this specifies a list of additional iBCS2 loaders to enable.
 .It Va linux_enable
 .Pq Vt bool
 Set to
 .Dq Li YES
 to enable Linux/ELF binary emulation at system initial
 boot time.
-.It Va osf1_enable
-.Pq Vt bool
-Set to
-.Dq Li YES
-to enable OSF/1 (Digital UNIX) binary emulation at system
-initial boot time.
-(alpha)
-.It Va svr4_enable
-.Pq Vt bool
-If set to
-.Dq Li YES ,
-enable SysVR4 emulation at boot time.
 .It Va sysvipc_enable
 .Pq Vt bool
 If set to
@@ -3219,12 +3193,6 @@ to be used within a jail.
 If set to
 .Dq Li YES ,
 allow applications within a jail to use System V IPC.
-.It Va unaligned_print
-.Pq Vt bool
-If set to
-.Dq Li NO ,
-unaligned access warnings will not be printed.
-(alpha)
 .\" ----- ISDN settings ---------------------------------
 .It Va isdn_enable
 .Pq Vt bool
