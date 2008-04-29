@@ -22176,9 +22176,6 @@ share/man/man4/mac_portacl.4 -text
 share/man/man4/mac_seeotheruids.4 -text
 share/man/man4/mac_stub.4 -text
 share/man/man4/mac_test.4 -text
-share/man/man4/man4.alpha/Makefile -text
-share/man/man4/man4.alpha/linux.4 -text
-share/man/man4/man4.alpha/osf1.4 -text
 share/man/man4/man4.i386/CPU_ELAN.4 -text
 share/man/man4/man4.i386/Makefile -text
 share/man/man4/man4.i386/acpi_asus.4 -text
