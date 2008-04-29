@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.7 2007/01/19 02:22:33 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.8 2008/04/29 00:23:55 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_DYNAMICROOT do not link /bin and /sbin dynamically
@@ -306,8 +306,7 @@ _worldtmp:
 .endfor
 .for _dir in \
     lib usr/bin usr/include usr/lib/compat/aout usr/libdata/ldscripts \
-    usr/libexec usr/sbin usr/share/misc \
-    usr/share/snmp/defs usr/share/snmp/mibs
+    usr/libexec usr/sbin usr/share/misc
 	mkdir -p ${WORLDTMP}/${_dir}
 .endfor
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
@@ -391,9 +390,8 @@ build32:
 	@echo ">>> stage 5.1: building 32 bit shim libraries"
 	@echo "--------------------------------------------------------------"
 .for _dir in \
-    lib lib32 usr/bin usr/include usr/lib32 usr/libdata/ldscripts \
-    usr/libexec usr/sbin usr/share/misc \
-    usr/share/snmp/defs usr/share/snmp/mibs
+    lib32 usr/include usr/lib32 \
+    usr/share/misc
 	mkdir -p ${LIB32TMP}/${_dir}
 .endfor
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
@@ -422,7 +420,7 @@ build32:
 	    ${LIB32MAKE} DESTDIR=${LIB32TMP} ${_t}
 .endif
 .endfor
-.for _dir in usr.sbin/pcvt/keycap usr.bin/lex/lib
+.for _dir in usr.bin/lex/lib
 	cd ${.CURDIR}/${_dir}; \
 	    ${LIB32MAKE} DESTDIR=${LIB32TMP} obj
 .endfor
@@ -978,7 +976,7 @@ _prebuild_libs+= lib/libbz2 lib/libcom_err lib/libcrypt lib/libexpat \
 		lib/libkvm lib/libmd \
 		lib/libncurses \
 		lib/libnetgraph lib/libopie lib/libpam \
-		lib/libradius \
+		lib/libpthread lib/libthr lib/libradius \
 		lib/libsbuf lib/libtacplus lib/libutil \
 		lib/libz lib/msun
 
@@ -1014,10 +1012,6 @@ _prebuild_libs+=	lib/libypclnt
 .endif
 
 _generic_libs+=	usr.bin/lex/lib
-
-.if ${MACHINE} == "i386"
-_generic_libs+=	usr.sbin/pcvt/keycap
-.endif
 
 .for _lib in ${_startup_libs} ${_prebuild_libs:Nlib/libpam} ${_generic_libs}
 ${_lib}__L: .PHONY
