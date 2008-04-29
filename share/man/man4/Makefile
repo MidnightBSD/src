@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.3 2007/03/08 19:04:43 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -238,7 +238,6 @@ MAN=	aac.4 \
 	pcic.4 \
 	pcm.4 \
 	pcn.4 \
-	pcvt.4 \
 	pim.4 \
 	polling.4 \
 	ppbus.4 \
@@ -450,7 +449,6 @@ MLINKS+=pccbb.4 cbb.4
 MLINKS+=pcm.4 snd.4 \
 	pcm.4 sound.4
 MLINKS+=pcn.4 if_pcn.4
-MLINKS+=pcvt.4 vt.4
 MLINKS+=ppp.4 if_ppp.4
 MLINKS+=ral.4 if_ral.4
 MLINKS+=re.4 if_re.4
