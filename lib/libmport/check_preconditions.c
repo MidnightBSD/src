@@ -111,7 +111,7 @@ static int check_conflicts(sqlite3 *db, mportPackageMeta *pack)
   int ret;
   const char *inst_name, *inst_version;
   
-  if (mport_db_prepare(db, &stmt, "SELECT packages.pkg, packages.version FROM stub.conflicts LEFT JOIN packages ON packages.pkg GLOB stub.conflicts.conflict_pkg AND packages.version GLOB stub.conflicts.conflict_version WHERE sub.conflicts.pkg=%Q AND packages.pkg IS NOT NULL", pack->name) != MPORT_OK) 
+  if (mport_db_prepare(db, &stmt, "SELECT packages.pkg, packages.version FROM stub.conflicts LEFT JOIN packages ON packages.pkg GLOB stub.conflicts.conflict_pkg AND packages.version GLOB stub.conflicts.conflict_version WHERE stub.conflicts.pkg=%Q AND packages.pkg IS NOT NULL", pack->name) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
   
   while (1) {
