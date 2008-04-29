@@ -21,14 +21,15 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
+.\" $MIdnightBSD$
 .\" $FreeBSD: src/share/man/man4/smp.4,v 1.21 2004/12/18 01:13:37 jkoshy Exp $
 .\"
-.Dd December 17, 2004
+.Dd April 28, 2008
 .Dt SMP 4
 .Os
 .Sh NAME
 .Nm SMP
-.Nd description of the FreeBSD Symmetric Multi-Processor kernel
+.Nd description of the MidnightBSD Symmetric Multi-Processor kernel
 .Sh SYNOPSIS
 .Cd options SMP
 .Sh DESCRIPTION
@@ -38,8 +39,8 @@ kernel implements symmetric multi-processor support.
 .Sh COMPATIBILITY
 Support for multi-processor systems is present for all Tier-1
 architectures on
-.Fx .
-Currently, this includes alpha, amd64, i386, ia64, and sparc64.
+.Mx .
+Currently, this includes amd64, i386, and sparc64.
 Support is enabled using
 .Cd options SMP .
 It is permissible to use the SMP kernel configuration on non-SMP equipped
@@ -74,7 +75,9 @@ supports hyperthreading on Intel CPU's on the i386 platform.
 Since using logical CPUs can cause performance penalties under certain loads,
 the logical CPUs can be disabled by setting the
 .Va machdep.hlt_logical_cpus
-sysctl to one.
+sysctl to one. There are also security implications to running
+hyperthreading; it is possible to access shared information in
+the CPU cache although not easy to exploit.
 .Sh SEE ALSO
 .Xr mptable 1 ,
 .Xr sysctl 8 ,
@@ -105,5 +108,9 @@ in
 .Pp
 .Fx 5.0
 also introduced support for SMP on the alpha, ia64, and sparc64 architectures.
+.Mx 0.2
+removed support for the alpha.
+
 .Sh AUTHORS
 .An Steve Passe Aq fsmp@FreeBSD.org
+.Ah Lucas Holt Aq luke@midnightbsd.org
