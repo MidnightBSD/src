@@ -3,6 +3,23 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080429:
+	Import bind 9.4.2 with threading
+
+	libpthread (KSE) and libthr are built earlier
+	
+	pcvt(4) removed!
+
+	Alias added for core2 cpus.
+
+	Alpha and PC98 only utilities removed from usr/sbin
+
+	syslogd, adduser, rmuser, mergemaster and mailwrapper have been
+	improved.  See the man pages for info.
+
+	periodic scripts will not send emails with empty message bodies.
+	See mailwrapper fix.
+
 20080410:
 	Sync cpdup with DragonFly.  Add parallel transaction support and
 	-l flag to line-buffer stdout and stderr.
@@ -523,4 +540,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.33 2008/04/06 06:49:18 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.34 2008/04/10 23:50:42 laffer1 Exp $
