@@ -53,12 +53,14 @@ Boston, MA 02111-1307, USA.  */
 #define FBSD_TARGET_OS_CPP_BUILTINS()					\
   do									\
     {									\
+	builtin_define_with_int_value ("__MidnightBSD__", 0);	\
 	builtin_define_with_int_value ("__FreeBSD__", FBSD_MAJOR);	\
 	builtin_define_std ("unix");					\
 	builtin_define ("__KPRINTF_ATTRIBUTE__");		       	\
 	builtin_assert ("system=unix");					\
 	builtin_assert ("system=bsd");					\
 	builtin_assert ("system=FreeBSD");				\
+	builtin_assert ("system=MidnightBSD");				\
 	FBSD_NATIVE_TARGET_OS_CPP_BUILTINS();				\
 	FBSD_TARGET_CPU_CPP_BUILTINS();					\
     }									\
@@ -144,28 +146,11 @@ is built with the --enable-threads configure-time option.}		\
     %{pg:  -lc_p}							\
   }"
 #else
-#include <sys/param.h>
-#if __FreeBSD_version < 500016
-#define FBSD_LIB_SPEC "							\
-  %{!shared:								\
-    %{!pg:								\
-      %{!pthread:-lc}							\
-      %{pthread:-lc_r}}							\
-    %{pg:								\
-      %{!pthread:-lc_p}							\
-      %{pthread:-lc_r_p}}						\
-  }"
-#else
 #define FBSD_LIB_SPEC "							\
   %{!shared:								\
     %{!pg: %{pthread:-lpthread} -lc}					\
     %{pg:  %{pthread:-lpthread_p} -lc_p}				\
   }"
 #endif
-#endif
 
-#if FBSD_MAJOR < 5
-#define FBSD_DYNAMIC_LINKER "/usr/libexec/ld-elf.so.1"
-#else
 #define FBSD_DYNAMIC_LINKER "/libexec/ld-elf.so.1"
-#endif
