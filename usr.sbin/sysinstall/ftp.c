@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.3 2008/05/02 05:29:06 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/ftp.c,v 1.45 2002/10/14 13:06:13 nyan Exp $
  *
  * Copyright (c) 1995
@@ -118,14 +118,14 @@ try:
     if (variable_get(VAR_FTP_PASS))
 	SAFE_STRCPY(password, variable_get(VAR_FTP_PASS));
     else if (RunningAsInit)
-	sprintf(password, "installer@%s", variable_get(VAR_HOSTNAME));
+	snprintf(password, sizeof(password), "installer@%s", variable_get(VAR_HOSTNAME));
     else {
 	struct passwd *pw;
 	char *user;
 
 	pw = getpwuid(getuid());
 	user = pw ? pw->pw_name : "ftp";
-	sprintf(password, "%s@%s", user, variable_get(VAR_HOSTNAME));
+	snprintf(password, sizeof(password), "%s@%s", user, variable_get(VAR_HOSTNAME));
     }
     af = variable_cmp(VAR_IPV6_ENABLE, "YES") ? AF_INET : AF_UNSPEC;
     msgNotify("Logging in to %s@%s..", login_name, hostname);
@@ -246,17 +246,17 @@ mediaGetFTP(Device *dev, char *file, Boolean probe)
 	    /* Try some alternatives */
 	    switch (nretries++) {
 	    case 1:
-		sprintf(buf, "releases/%s", file);
+		snprintf(buf, sizeof(buf), "releases/%s", file);
 		try = buf;
 		break;
 
 	    case 2:
-		sprintf(buf, "%s/%s", variable_get(VAR_RELNAME), file);
+		snprintf(buf, sizeof(buf), "%s/%s", variable_get(VAR_RELNAME), file);
 		try = buf;
 		break;
 
 	    case 3:
-		sprintf(buf, "%s/releases/%s", variable_get(VAR_RELNAME), file);
+		snprintf(buf, sizeof(buf), "%s/releases/%s", variable_get(VAR_RELNAME), file);
 		try = buf;
 		break;
 

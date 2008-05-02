@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.5 2007/03/09 14:25:47 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.6 2007/03/09 14:37:41 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/devices.c,v 1.160.2.1 2005/07/28 01:17:12 grehan Exp $
  *
  * Copyright (c) 1995
@@ -428,12 +428,12 @@ skipif:
 		    cp = device_names[i].description;
 		    /* Serial devices get a slip and ppp device each, if supported */
 		    newdesc = safe_malloc(strlen(cp) + 40);
-		    sprintf(newdesc, cp, "SLIP interface", try, j + 1);
+		    snprintf(newdesc, sizeof(newdesc), cp, "SLIP interface", try, j + 1);
 		    deviceRegister("sl0", newdesc, strdup(try), DEVICE_TYPE_NETWORK, TRUE, mediaInitNetwork,
 				   NULL, mediaShutdownNetwork, NULL);
 		    msgDebug("Add mapping for %s to sl0\n", try);
 		    newdesc = safe_malloc(strlen(cp) + 50);
-		    sprintf(newdesc, cp, "PPP interface", try, j + 1);
+		    snprintf(newdesc, sizeof(newdesc), cp, "PPP interface", try, j + 1);
 		    deviceRegister("ppp0", newdesc, strdup(try), DEVICE_TYPE_NETWORK, TRUE, mediaInitNetwork,
 				   NULL, mediaShutdownNetwork, NULL);
 		    if (isDebug())

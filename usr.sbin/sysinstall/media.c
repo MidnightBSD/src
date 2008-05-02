@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.3 2007/07/27 21:32:46 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.4 2007/07/29 15:03:12 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/media.c,v 1.121.12.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -533,9 +533,9 @@ mediaSetUFS(dialogMenuItem *self)
 
     /* If they gave us a CDROM or something, try and pick a better name */
     if (statfs(cp, &st))
-	strcpy(ufsDevice.name, "ufs");
+	strlcpy(ufsDevice.name, "ufs", sizeof(ufsDevice.name));
     else
-	strcpy(ufsDevice.name, st.f_fstypename);
+	strlcpy(ufsDevice.name, st.f_fstypename, sizeof(ufsDevice.name));
 
     ufsDevice.type = DEVICE_TYPE_UFS;
     ufsDevice.init = dummyInit;

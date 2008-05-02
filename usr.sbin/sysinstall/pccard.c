@@ -1,7 +1,7 @@
 /*
  * PC Card support for sysinstall
  *
- * $MidnightBSD$ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/pccard.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/pccard.c,v 1.19 2003/08/20 06:27:21 imp Exp $
  *
  * Copyright (c) 1997-1999
@@ -189,7 +189,7 @@ pccardInitialize(void)
 	return;
     }
 
-    sprintf(card_device, CARD_DEVICE, 0);
+    snprintf(card_device, sizeof(card_device), CARD_DEVICE, 0);
 
     if ((fd = open(card_device, O_RDWR)) < 0) {
 	msgDebug("Can't open PC Card controller %s.\n", card_device);
@@ -237,8 +237,8 @@ pccardInitialize(void)
     if (CardIrq) {
         for (i = 0; i < IRQ_COUNT; i++) {
             if ((CardIrq & IrqTable[i].my_bit) != 0) {
-                sprintf(temp, "%s %s", card_irq, IrqTable[i].my_flag);
-                strcpy(card_irq, temp);
+                snprintf(temp, sizeof(temp), "%s %s", card_irq, IrqTable[i].my_flag);
+                strlcpy(card_irq, temp, sizeof(card_irq));
             }
         } 
     }
@@ -279,9 +279,9 @@ pccardInitialize(void)
 
     }
 
-    strcpy(pccardd_cmd, "/stand/pccardd ");
-    strcat(pccardd_cmd, card_irq);
-    strcat(pccardd_cmd, " -z");
+    strlcpy(pccardd_cmd, "/stand/pccardd ", pccardd_cmd);
+    strlcat(pccardd_cmd, card_irq, pccardd_cmd);
+    strlcat(pccardd_cmd, " -z", pccardd_cmd);
 
     variable_set2("pccardd_flags", card_irq, 1);
     variable_set2("pccard_enable", "YES", 1);

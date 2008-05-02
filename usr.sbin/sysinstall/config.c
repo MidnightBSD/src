@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.8 2007/07/27 21:32:46 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.9 2008/05/02 05:30:54 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -255,7 +255,7 @@ configFstab(dialogMenuItem *self)
     for (i = 0; i < cnt; i++) {
 	char cdname[10];
 	
-	sprintf(cdname, "/cdrom%s", i ? itoa(i) : "");
+	snprintf(cdname, sizeof(cdname), "/cdrom%s", i ? itoa(i) : "");
 	if (Mkdir(cdname))
 	    msgConfirm("Unable to make mount point for: %s", cdname);
 	else
@@ -838,7 +838,7 @@ configInetd(dialogMenuItem *self)
 		   "IPv6 must be separately enabled from IPv4 services.\n\n"
                    "Select [Yes] now to invoke an editor on /etc/inetd.conf, or [No] to\n"
                    "use the current settings.\n")) {
-            sprintf(cmd, "%s /etc/inetd.conf", variable_get(VAR_EDITOR));
+            snprintf(cmd, sizeof(cmd), "%s /etc/inetd.conf", variable_get(VAR_EDITOR));
             dialog_clear();
             systemExecute(cmd);
 	}
@@ -877,7 +877,7 @@ configNFSServer(dialogMenuItem *self)
 	    vsystem("echo '# You should replace these lines with your actual exported filesystems.' >> /etc/exports");
 	    vsystem("echo \"# Note that BSD's export syntax is 'host-centric' vs. Sun's 'FS-centric' one.\" >> /etc/exports");
 	    vsystem("echo >> /etc/exports");
-	    sprintf(cmd, "%s /etc/exports", variable_get(VAR_EDITOR));
+	    snprintf(cmd, sizeof(cmd), "%s /etc/exports", variable_get(VAR_EDITOR));
 	    dialog_clear();
 	    systemExecute(cmd);
 	}
@@ -933,7 +933,7 @@ configEtcTtys(dialogMenuItem *self)
 		 "To load /etc/ttys in the editor, select [Yes], otherwise, [No].")) {
     } else {
 	configTtys();
-	sprintf(cmd, "%s /etc/ttys", variable_get(VAR_EDITOR));
+	snprintf(cmd, sizeof(cmd), "%s /etc/ttys", variable_get(VAR_EDITOR));
 	dialog_clear();
 	systemExecute(cmd);
     }

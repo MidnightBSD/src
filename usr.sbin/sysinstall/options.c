@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/options.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/options.c,v 1.81 2003/10/19 13:37:12 des Exp $
  *
  * Copyright (c) 1995
@@ -178,7 +178,7 @@ value_of(Option opt)
 	return (char *)opt.data;
 
     case OPT_IS_INT:
-	sprintf(ival, "%lu", (long)opt.data);
+	snprintf(ival, sizeof(ival), "%lu", (long)opt.data);
 	return ival;
 
     case OPT_IS_FUNC:

@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.4 2008/05/02 05:30:54 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.5 2008/05/02 05:51:25 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -943,7 +943,7 @@ installFilesystems(dialogMenuItem *self)
     command_clear();
     if (SwapChunk && RunningAsInit) {
 	/* As the very first thing, try to get ourselves some swap space */
-	sprintf(dname, "/dev/%s", SwapChunk->name);
+	snprintf(dname, sizeof(dname), "/dev/%s", SwapChunk->name);
 	if (!Fake && !file_readable(dname)) {
 	    msgConfirm("Unable to find device node for %s in /dev!\n"
 		       "The creation of filesystems will be aborted.", dname);
@@ -965,7 +965,7 @@ installFilesystems(dialogMenuItem *self)
 
     if (RootChunk && RunningAsInit) {
 	/* Next, create and/or mount the root device */
-	sprintf(dname, "/dev/%s", RootChunk->name);
+	snprintf(dname, sizeof(dname), "/dev/%s", RootChunk->name);
 	if (!Fake && !file_readable(dname)) {
 	    msgConfirm("Unable to make device node for %s in /dev!\n"
 		       "The creation of filesystems will be aborted.", dname);
@@ -1014,7 +1014,7 @@ installFilesystems(dialogMenuItem *self)
 	}
 
 	/* Switch to block device */
-	sprintf(dname, "/dev/%s", RootChunk->name);
+	snprintf(dname, sizeof(dname), "/dev/%s", RootChunk->name);
 	if (Mount("/mnt", dname)) {
 	    msgConfirm("Unable to mount the root file system on %s!  Giving up.", dname);
 	    return DITEM_FAILURE | DITEM_RESTORE;
@@ -1070,7 +1070,7 @@ installFilesystems(dialogMenuItem *self)
 			if (c2 == RootChunk)
 			    continue;
 
-			sprintf(dname, "%s/dev/%s",
+			snprintf(dname, sizeof(dname), "%s/dev/%s",
 			    RunningAsInit ? "/mnt" : "", c2->name);
 
 			if (tmp->do_newfs && (!upgrade ||
@@ -1095,7 +1095,7 @@ installFilesystems(dialogMenuItem *self)
 
 			if (c2 == SwapChunk)
 			    continue;
-			sprintf(fname, "%s/dev/%s", RunningAsInit ? "/mnt" : "", c2->name);
+			snprintf(fname, sizeof(fname), "%s/dev/%s", RunningAsInit ? "/mnt" : "", c2->name);
 			i = (Fake || swapon(fname));
 			if (!i) {
 			    dialog_clear_norefresh();
@@ -1111,7 +1111,8 @@ installFilesystems(dialogMenuItem *self)
 		(root->do_newfs || upgrade)) {
 		char name[FILENAME_MAX];
 
-		sprintf(name, "%s/%s", RunningAsInit ? "/mnt" : "", ((PartInfo *)c1->private_data)->mountpoint);
+		snprintf(name, sizeof(name), "%s/%s", RunningAsInit ? "/mnt" : "", 
+		    ((PartInfo *)c1->private_data)->mountpoint);
 		Mkdir(name);
 	    }
 #if defined(__ia64__)
@@ -1120,7 +1121,7 @@ installFilesystems(dialogMenuItem *self)
 		PartInfo *pi = (PartInfo *)c1->private_data;
 		char *p;
 
-		sprintf(dname, "%s/dev/%s", RunningAsInit ? "/mnt" : "",
+		snprintf(dname, sizeof(dname), "%s/dev/%s", RunningAsInit ? "/mnt" : "",
 		    c1->name);
 
 		if (pi->do_newfs && (!upgrade ||

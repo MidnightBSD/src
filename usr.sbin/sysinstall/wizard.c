@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/wizard.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/wizard.c,v 1.23 2004/08/02 23:18:48 marcel Exp $
  *
  */
@@ -35,8 +35,8 @@ Scan_Disk(Disk *d)
     u_long l;
     int i,j,fd;
 
-    strcpy(device,"/dev/");
-    strcat(device,d->name);
+    strlcpy(device,"/dev/", sizeof(device));
+    strlcat(device,d->name, sizeof(device));
 
     fd = open(device,O_RDWR);
     if (fd < 0) {
@@ -73,7 +73,7 @@ slice_wizard(Disk *d)
     int ncmd,i;
 
     systemSuspendDialog();
-    sprintf(myprompt,"%s> ", d->name);
+    snprintf(myprompt, sizeof(myprompt), "%s> ", d->name);
     while(1) {
 	printf("--==##==--\n");
 	Debug_Disk(d);
@@ -128,19 +128,6 @@ slice_wizard(Disk *d)
 	    free(cp);
 	    continue;
 	}
-#ifdef PC98
-	if (!strcasecmp(*cmds,"create") && ncmd == 7) {
-	    printf("Create=%d\n",
-		   Create_Chunk(d,
-				strtol(cmds[1],0,0),
-				strtol(cmds[2],0,0),
-				strtol(cmds[3],0,0),
-				strtol(cmds[4],0,0),
-				strtol(cmds[5],0,0),
-				cmds[6]));
-	    continue;
-	}
-#else
 	if (!strcasecmp(*cmds,"create") && ncmd == 6) {
 	    printf("Create=%d\n",
 		   Create_Chunk(d,
@@ -151,7 +138,6 @@ slice_wizard(Disk *d)
 				strtol(cmds[5],0,0), ""));
 	    continue;
 	}
-#endif
 	if (!strcasecmp(*cmds,"read")) {
 	    db = d;
 	    if (ncmd > 1)
@@ -183,11 +169,7 @@ slice_wizard(Disk *d)
 	printf("dedicate\t\t");
 	printf("bios cyl hd sect\n");
 	printf("collapse [pointer]\t\t");
-#ifdef PC98
-	printf("create offset size enum subtype flags name\n");
-#else
 	printf("create offset size enum subtype flags\n");
-#endif
 	printf("subtype(part): swap=1, ffs=7\t\t");
 	printf("delete pointer\n");
 	printf("list\t\t");

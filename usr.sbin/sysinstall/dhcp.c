@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/dhcp.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dhcp.c,v 1.5 2004/03/11 11:58:15 bde Exp $
  *
  * Copyright (c) 1999
@@ -126,25 +126,25 @@ dhcpParseLeases(char *file, char *hostname, char *domain, char *nameserver,
 		}
 	    }
 	    else
-		strcpy(optbuf, tempbuf);
+		strlcpy(optbuf, tempbuf, sizeof(optbuf));
 
 	    if (!strcasecmp("host-name", optname)) {
-		strcpy(hostname, optbuf);
+		strlcpy(hostname, optbuf, sizeof(hostname));
 	    } else if (!strcasecmp("domain-name", optname)) {
-		strcpy(domain, optbuf);
+		strlcpy(domain, optbuf, sizeof(domain));
 	    } else if (!strcasecmp("fixed-address", optname)) {
-		strcpy(ipaddr, optbuf);
+		strlcpy(ipaddr, optbuf, sizeof(ipaddr));
 	    } else if (!strcasecmp("routers", optname)) {
 		if((tptr = (char *)strchr(optbuf, ',')))
 		    *tptr = '\0';
-		strcpy(gateway, optbuf);
+		strlcpy(gateway, optbuf, sizeof(gateway));
 	    } else if (!strcasecmp("subnet-mask", optname)) {
-		strcpy(netmask, optbuf);
+		strlcpy(netmask, optbuf, sizeof(netmask));
 	    } else if (!strcasecmp("domain-name-servers", optname)) {
 		/* <jkh> ...one value per property */
 		if((tptr = (char *)strchr(optbuf, ',')))
 		    *tptr = '\0';
-		strcpy(nameserver, optbuf);
+		strlcpy(nameserver, optbuf, sizeof(nameserver));
 	    }
 	    if (endedflag) {
 		state = P_STMT;

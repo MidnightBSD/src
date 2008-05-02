@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.3 2008/05/02 05:29:06 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/disks.c,v 1.154.2.1 2006/01/31 22:07:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -217,7 +217,7 @@ getBootMgr(char *dname, u_char **bootipl, size_t *bootipl_size,
     cp = variable_get(VAR_BOOTMGR);
     if (!cp) {
 	/* Figure out what kind of IPL the user wants */
-	sprintf(str, "Install Boot Manager for drive %s?", dname);
+	snprintf(str, sizeof(str), "Install Boot Manager for drive %s?", dname);
 	MenuIPLType.title = str;
 	i = dmenuOpenSimple(&MenuIPLType, FALSE);
     } else {
@@ -260,7 +260,7 @@ getBootMgr(char *dname, u_char **bootCode, size_t *bootCodeSize)
     cp = variable_get(VAR_BOOTMGR);
     if (!cp) {
 	/* Figure out what kind of MBR the user wants */
-	sprintf(str, "Install Boot Manager for drive %s?", dname);
+	snprintf(str, sizeof(str), "Install Boot Manager for drive %s?", dname);
 	MenuMBRType.title = str;
 	i = dmenuOpenSimple(&MenuMBRType, FALSE);
     }
@@ -456,7 +456,7 @@ diskPartition(Device *dev)
 			size *= ONE_MEG;
 		    else if (*cp && toupper(*cp) == 'G')
 			size *= ONE_GIG;
-		    sprintf(tmp, "%d", SUBTYPE_FREEBSD);
+		    snprintf(tmp, sizeof(tmp), "%d", SUBTYPE_FREEBSD);
 		    val = msgGetInput(tmp, "Enter type of partition to create:\n\n"
 			"Pressing Enter will choose the default, a native MidnightBSD\n"
 			"slice (type %u).  "
@@ -500,7 +500,7 @@ diskPartition(Device *dev)
 		int subtype;
 		chunk_e partitiontype;
 
-		sprintf(tmp, "%d", chunk_info[current_chunk]->subtype);
+		snprintf(tmp, sizeof(tmp), "%d", chunk_info[current_chunk]->subtype);
 		val = msgGetInput(tmp, "New partition type:\n\n"
 		    "Pressing Enter will use the current type. To choose a native\n"
 		    "MidnightBSD slice enter %u.  "

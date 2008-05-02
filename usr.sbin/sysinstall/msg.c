@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/msg.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/msg.c,v 1.59 2001/09/11 20:42:07 jkh Exp $
  *
  * Copyright (c) 1995
@@ -111,7 +111,7 @@ msgWarn(char *fmt, ...)
     int attrs;
 
     errstr = (char *)alloca(FILENAME_MAX);
-    strcpy(errstr, "Warning: ");
+    strlcpy(errstr, "Warning: ", sizeof(errstr));
     va_start(args, fmt);
     vsnprintf((char *)(errstr + strlen(errstr)), FILENAME_MAX, fmt, args);
     va_end(args);
@@ -134,7 +134,7 @@ msgError(char *fmt, ...)
     int attrs;
 
     errstr = (char *)alloca(FILENAME_MAX);
-    strcpy(errstr, "Error: ");
+    strlcpy(errstr, "Error: ", sizeof(errstr));
     va_start(args, fmt);
     vsnprintf((char *)(errstr + strlen(errstr)), FILENAME_MAX, fmt, args);
     va_end(args);
@@ -157,7 +157,7 @@ msgFatal(char *fmt, ...)
     int attrs;
 
     errstr = (char *)alloca(FILENAME_MAX);
-    strcpy(errstr, "Fatal Error: ");
+    strlcpy(errstr, "Fatal Error: ", sizeof(errstr));
     va_start(args, fmt);
     vsnprintf((char *)(errstr + strlen(errstr)), FILENAME_MAX, fmt, args);
     va_end(args);
@@ -313,7 +313,7 @@ msgDebug(char *fmt, ...)
     if (DebugFD == -1)
 	return;
     dbg = (char *)alloca(FILENAME_MAX);
-    strcpy(dbg, "DEBUG: ");
+    strlcpy(dbg, "DEBUG: ", sizeof(dbg));
     va_start(args, fmt);
     vsnprintf((char *)(dbg + strlen(dbg)), FILENAME_MAX, fmt, args);
     va_end(args);

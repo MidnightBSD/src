@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/network.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/network.c,v 1.51.14.1 2006/02/12 15:23:50 delphij Exp $
  *
  * Copyright (c) 1995
@@ -240,7 +240,7 @@ startPPP(Device *devp)
     if (devp->private && ((DevInfo *)devp->private)->ipaddr[0])
 	SAFE_STRCPY(myaddr, ((DevInfo *)devp->private)->ipaddr);
     else
-	strcpy(myaddr, "0");
+	strlcpy(myaddr, "0", sizeof(myaddr));
 
     if (!Fake)
 	fp = fopen("/etc/ppp/ppp.linkup", "w");

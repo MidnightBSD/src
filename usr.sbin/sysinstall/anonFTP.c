@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.3 2007/07/17 12:35:09 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.4 2007/07/17 12:36:14 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.35.2.1 2006/01/20 13:00:32 ceri Exp $
  *
  * Copyright (c) 1995
@@ -169,7 +169,8 @@ createFtpUser(void)
 	return DITEM_SUCCESS; 	/* succeeds if already exists */
     }
     
-    sprintf(pwline, "%s:*:%s:%d::0:0:%s:%s:/nonexistent\n", FTP_NAME, tconf.uid, gid, tconf.comment, tconf.homedir);
+    snprintf(pwline, sizeof(pwline), "%s:*:%s:%d::0:0:%s:%s:/nonexistent\n", 
+        FTP_NAME, tconf.uid, gid, tconf.comment, tconf.homedir);
     
     fptr = fopen(_PATH_MASTERPASSWD,"a");
     if (! fptr) {
@@ -208,7 +209,7 @@ anonftpOpenDialog(void)
 	     ANONFTP_DIALOG_HEIGHT - 11, ANONFTP_DIALOG_WIDTH - 17,
 	     dialog_attr, border_attr);
     wattrset(ds_win, dialog_attr);
-    sprintf(title, " Path Configuration ");
+    snprintf(title, sizeof(title), " Path Configuration ");
     mvwaddstr(ds_win, ANONFTP_DIALOG_Y + 7, ANONFTP_DIALOG_X + 22, title);
     
     /** Initialize the config Data Structure **/
@@ -218,7 +219,7 @@ anonftpOpenDialog(void)
     SAFE_STRCPY(tconf.upload, FTP_UPLOAD);
     SAFE_STRCPY(tconf.comment, FTP_COMMENT);
     SAFE_STRCPY(tconf.homedir, FTP_HOMEDIR);
-    sprintf(tconf.uid, "%d", FTP_UID);
+    snprintf(tconf.uid, sizeof(tconf.uid), "%d", FTP_UID);
     
     /* Some more initialisation before we go into the main input loop */
     obj = initLayoutDialog(ds_win, layout, ANONFTP_DIALOG_X, ANONFTP_DIALOG_Y, &max);
@@ -267,7 +268,7 @@ configAnonFTP(dialogMenuItem *self __unused)
     
     /*** Use defaults for any invalid values ***/
     if (atoi(tconf.uid) <= 0)
-	sprintf(tconf.uid, "%d", FTP_UID);
+	snprintf(tconf.uid, sizeof(tconf.uid), "%d", FTP_UID);
     
     if (!tconf.group[0])
 	SAFE_STRCPY(tconf.group, FTP_GROUP);
@@ -311,7 +312,7 @@ configAnonFTP(dialogMenuItem *self __unused)
 	if (!msgYesNo("Create a welcome message file for anonymous FTP users?")) {
 	    char cmd[256];
 	    vsystem("echo Your welcome message here. > %s/etc/%s", tconf.homedir, MOTD_FILE);
-	    sprintf(cmd, "%s %s/etc/%s", variable_get(VAR_EDITOR), tconf.homedir, MOTD_FILE);
+	    snprintf(cmd, sizeof(cmd), "%s %s/etc/%s", variable_get(VAR_EDITOR), tconf.homedir, MOTD_FILE);
 	    if (!systemExecute(cmd))
 		i = DITEM_SUCCESS;
 	    else

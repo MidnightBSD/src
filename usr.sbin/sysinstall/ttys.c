@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/ttys.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/ttys.c,v 1.4 2001/09/22 23:17:37 murray Exp $
  *
  * Copyright (c) 2001
@@ -64,7 +64,7 @@ configTtys(void)
 		   strerror(errno));
 	return;
     }
-    strcpy(templ, _PATH_TTYS _X_EXTENSION);
+    strlcpy(templ, _PATH_TTYS _X_EXTENSION, sizeof(templ));
     if ((t = mkstemp(templ)) < 0) {
 	msgConfirm("Can't create %s: %s", templ, strerror(errno));
 	(void)fclose(fp);

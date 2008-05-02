@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/modules.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/modules.c,v 1.7 2003/08/20 06:24:12 imp Exp $
  */
 
@@ -64,10 +64,10 @@ moduleInitialize(void)
 	while ((dp = readdir(dirp))) {
 	    if (dp->d_namlen < (sizeof(".ko") - 1)) continue;
 	    if (strcmp(dp->d_name + dp->d_namlen - (sizeof(".ko") - 1), ".ko") == 0) {
-		strcpy(module, MODULESDIR);
-		strcat(module, "/");
-		strcat(module, dp->d_name);
-		strcpy(desc, module);
+		strlcpy(module, MODULESDIR, sizeof(module));
+		strlcat(module, "/", sizeof(module));
+		strlcat(module, dp->d_name, sizeof(module));
+		strlcpy(desc, module, sizeof(desc));
 		len = strlen(desc);
 		strcpy(desc + (len - (sizeof(".ko") - 1)), ".dsc");
 		fd = open(module, O_RDONLY);
