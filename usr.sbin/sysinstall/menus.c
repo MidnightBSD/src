@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.8 2007/08/02 02:30:22 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.9 2008/01/21 16:06:30 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -1422,23 +1422,6 @@ DMenu MenuSyscons = {
       { NULL } },
 };
 
-#ifdef PC98
-DMenu MenuSysconsKeymap = {
-    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "System Console Keymap",
-    "The default system console driver for MidnightBSD (syscons) defaults\n"
-    "to a standard \"PC-98x1\" keyboard map.  Users may wish to choose\n"
-    "one of the other keymaps below.\n"
-    "Note that sysinstall itself only uses the part of the keyboard map\n"
-    "which is required to generate the ANSI character subset, but your\n"
-    "choice of keymap will also be saved for later (fuller) use.",
-    "Choose a keyboard map",
-    NULL,
-    { { "Japanese PC-98x1",		"Japanese PC-98x1 keymap",  dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=jp.pc98" },
-      { " Japanese PC-98x1 (ISO)",	"Japanese PC-98x1 (ISO) keymap",  dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=jp.pc98.iso" },
-      { NULL } },
-};
-#else
 DMenu MenuSysconsKeymap = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "System Console Keymap",
@@ -1512,7 +1495,6 @@ DMenu MenuSysconsKeymap = {
       { " USA UNIX",	"US traditional UNIX-workstation",	dmenuVarCheck, dmenuSetKmapVariable, NULL, "keymap=us.unix" },
       { NULL } },
 };
-#endif /* PC98 */
 
 DMenu MenuSysconsKeyrate = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,

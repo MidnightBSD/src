@@ -15,9 +15,6 @@ SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	variable.c ${_wizard} keymap.h
 
 CFLAGS+= -DUSE_GZIP=1
-.if ${MACHINE} == "pc98"
-CFLAGS+= -DPC98
-.endif
 CFLAGS+= -I${.CURDIR}/../../gnu/lib/libdialog -I.
 
 DPADD=	${LIBDIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
@@ -70,9 +67,6 @@ build-tools:	rtermcap
 rtermcap:	rtermcap.c
 	${CC} -o ${.TARGET} ${.ALLSRC} -ltermcap
 
-.if ${MACHINE} == "pc98"
-KEYMAPS= jp.pc98 jp.pc98.iso
-.else
 KEYMAPS= be.iso bg.bds.ctrlcaps bg.phonetic.ctrlcaps br275.iso \
 	ce.iso2 cs.latin2.qwertz danish.iso el.iso07 \
 	estonian.cp850 estonian.iso estonian.iso15 finnish.iso fr.iso \
@@ -82,7 +76,6 @@ KEYMAPS= be.iso bg.bds.ctrlcaps bg.phonetic.ctrlcaps br275.iso \
 	swissfrench.iso \
 	swissgerman.iso ua.koi8-u ua.koi8-u.shift.alt uk.iso us.dvorak \
 	us.iso us.pc-ctrl us.unix
-.endif
 
 keymap.h:
 	rm -f keymap.tmp

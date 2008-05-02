@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/disks.c,v 1.154.2.1 2006/01/31 22:07:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -470,11 +470,7 @@ diskPartition(Device *dev)
 			else if (subtype == SUBTYPE_EFI)
 			    partitiontype = efi;
 			else
-#ifdef PC98
-			    partitiontype = pc98;
-#else
 			    partitiontype = mbr;
-#endif
 			Create_Chunk(d, chunk_info[current_chunk]->offset, size, partitiontype, subtype,
 				     (chunk_info[current_chunk]->flags & CHUNK_ALIGN), name);
 			variable_set2(DISK_PARTITIONED, "yes", 0);
@@ -518,11 +514,7 @@ diskPartition(Device *dev)
 		    else if (subtype == SUBTYPE_EFI)
 			partitiontype = efi;
 		    else
-#ifdef PC98
-			partitiontype = pc98;
-#else
 			partitiontype = mbr;
-#endif
 		    chunk_info[current_chunk]->type = partitiontype;
 		    chunk_info[current_chunk]->subtype = subtype;
 		}

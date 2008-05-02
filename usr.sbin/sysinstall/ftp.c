@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/ftp.c,v 1.45 2002/10/14 13:06:13 nyan Exp $
  *
  * Copyright (c) 1995
@@ -50,15 +50,9 @@ static FILE *OpenConn;
 int FtpPort;
 
 /* List of sub directories to look for under a given FTP server. */
-#ifdef PC98
-const char *ftp_dirs[] = { ".", "releases/pc98", "snapshots/pc98",
-    "pub/MidnightBSD", "pub/MidnightBSD/releases/pc98",
-    "pub/MidnightBSD/snapshots/pc98", NULL };
-#else
 const char *ftp_dirs[] = { ".", "releases/"MACHINE, "snapshots/"MACHINE,
     "pub/MidnightBSD", "pub/MidnightBSD/releases/"MACHINE,
     "pub/MidnightBSD/snapshots/"MACHINE, NULL };
-#endif
 
 /* Brings up attached network device, if any - takes FTP device as arg */
 static Boolean
