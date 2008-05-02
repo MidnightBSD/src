@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.3 2006/10/14 23:42:41 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.4 2008/01/21 16:06:30 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
  *
  * Copyright (c) 1995
@@ -268,15 +268,15 @@ distMaybeSetPorts(dialogMenuItem *self)
 {
     dialog_clear_norefresh();
     if (!msgYesNo("Would you like to install the MidnightBSD ports collection?\n\n"
-		  "This will give you ready access to over 13,300 ported software packages,\n"
-		  "at a cost of around 440MB of disk space when \"clean\" and possibly\n"
+		  "This will give you ready access to over 2,000 ported software packages,\n"
+		  "at a cost of around 100MB of disk space when \"clean\" and possibly\n"
 		  "much more than that when a lot of the distribution tarballs are loaded\n"
 		  "(unless you have the extra discs available from a MidnightBSD CD/DVD distribution\n"
 		  "and can mount them on /cdrom, in which case this is far less of a problem).\n\n"
 		  "The ports collection is a very valuable resource and well worth having\n"
 		  "on your /usr partition, so it is advisable to say Yes to this option.\n\n"
 		  "For more information on the ports collection & the latest ports, visit:\n"
-		  "    http://www.midnightbsd.org/ports\n"))
+		  "    http://www.midnightbsd.org/mports\n"))
 	Dists |= DIST_PORTS;
     else
 	Dists &= ~DIST_PORTS;
@@ -365,16 +365,18 @@ int
 distUnsetCustom(dialogMenuItem *self)
 {
     char *cp, *cp2, *tmp;
+    size_t tmplen;
 
     if (!(tmp = variable_get(VAR_DISTS))) {
 	msgDebug("distUnsetCustom() called without %s variable set.\n", VAR_DISTS);
 	return DITEM_FAILURE;
     }
 
-    cp = alloca(strlen(tmp) + 1);
+    tmplen = strlen(tmp);
+    cp = alloca(tmplen + 1);
     if (!cp)
-	msgFatal("Couldn't alloca() %d bytes!\n", (int)(strlen(tmp) + 1));
-    strcpy(cp, tmp);
+	msgFatal("Couldn't alloca() %d bytes!\n", (int)(tmplen + 1));
+    strlcpy(cp, tmp, tmplen + 1);
     while (cp) {
 	if ((cp2 = index(cp, ' ')) != NULL)
 	    *(cp2++) = '\0';
