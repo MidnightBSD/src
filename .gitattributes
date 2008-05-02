@@ -33024,7 +33024,6 @@ usr.sbin/sysinstall/help/media.hlp -text
 usr.sbin/sysinstall/help/network_device.hlp -text
 usr.sbin/sysinstall/help/options.hlp -text
 usr.sbin/sysinstall/help/partition.hlp -text
-usr.sbin/sysinstall/help/register.hlp -text
 usr.sbin/sysinstall/help/securelevel.hlp -text
 usr.sbin/sysinstall/help/shortcuts.hlp -text
 usr.sbin/sysinstall/help/slice.hlp -text
