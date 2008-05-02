@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/install.c,v 1.3 2007/07/27 21:32:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/install.c,v 1.363.2.1 2006/01/06 20:10:41 ceri Exp $
  *
  * Copyright (c) 1995
@@ -107,13 +107,8 @@ checkLabels(Boolean whinge)
 	for (c1 = disk->chunks->part; c1; c1 = c1->next) {
 #ifdef __ia64__
 	    c2 = c1;
-#elif defined(__powerpc__)
-	    if (c1->type == apple) {
-		for (c2 = c1->part; c2; c2 = c2->next) {
-#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
-#endif
 
 		    pi = (PartInfo *)c2->private_data;
 		    if (c2->type == part && c2->subtype != FS_SWAP && pi != NULL) {
@@ -200,13 +195,8 @@ checkLabels(Boolean whinge)
 
 #ifdef __ia64__
 	    c2 = c1;
-#elif defined(__powerpc__)
-	    if (c1->type == apple) {
-		for (c2 = c1->part; c2; c2 = c2->next) {
-#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
-#endif
 		    if (c2->type == part && c2->subtype == FS_SWAP && !SwapChunk) {
 			SwapChunk = c2;
 			if (isDebug())
@@ -1066,13 +1056,8 @@ installFilesystems(dialogMenuItem *self)
 	if (c1->type == part) {
 		c2 = c1;
 		{
-#elif defined(__powerpc__)
-	    if (c1->type == apple) {
-		for (c2 = c1->part; c2; c2 = c2->next) {
-#else
 	    if (c1->type == freebsd) {
 		for (c2 = c1->part; c2; c2 = c2->next) {
-#endif
 		    if (c2->type == part && c2->subtype != FS_SWAP && c2->private_data) {
 			PartInfo *tmp = (PartInfo *)c2->private_data;
 

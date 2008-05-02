@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.7 2007/03/09 14:48:48 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.8 2007/07/27 21:32:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -208,11 +208,7 @@ configFstab(dialogMenuItem *self)
 	if (!disk->chunks)
 	    msgFatal("No chunk list found for %s!", disk->name);
 	for (c1 = disk->chunks->part; c1; c1 = c1->next) {
-#ifdef __powerpc__
-	    if (c1->type == apple) {
-#else
 	    if (c1->type == freebsd) {
-#endif
 		for (c2 = c1->part; c2; c2 = c2->next) {
 		    if (c2->type == part && (c2->subtype == FS_SWAP || c2->private_data))
 			chunk_list[nchunks++] = c2;
