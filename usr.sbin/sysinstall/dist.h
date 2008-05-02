@@ -1,5 +1,4 @@
-/* $FreeBSD: src/usr.sbin/sysinstall/dist.h,v 1.65 2005/06/16 18:16:13 ru Exp $ 
- * $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+/* $MidnightBSD: src/usr.sbin/sysinstall/dist.h,v 1.3 2008/01/21 16:06:30 laffer1 Exp $ */
 /* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/usr.sbin/sysinstall/dist.h,v 1.67.2.4.2.1 2008/01/14 19:28:43 kensmith Exp $  */
 
 #ifndef _DIST_H_INCLUDE

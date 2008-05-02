@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.9 2008/01/21 16:06:30 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.10 2008/05/02 05:29:06 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -119,17 +119,6 @@ static int
 srcFlagCheck(dialogMenuItem *item)
 {
     return SrcDists;
-}
-
-static int
-x11FlagCheck(dialogMenuItem *item)
-{
-    if (XOrgDists != 0)
-	Dists |= DIST_XORG;
-    else
-	Dists &= ~DIST_XORG;
-
-    return Dists & DIST_XORG;
 }
 
 static int

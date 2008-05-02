@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.4 2007/07/29 15:03:12 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.5 2008/05/02 06:41:00 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/media.c,v 1.121.12.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -899,6 +899,6 @@ mediaBufferSize(char *size)
 
     mediasize = strtol(size, (char **)NULL, 10);
     mediasize *= 512; /* Convert this to --blocksize */
-    asprintf(&ret, "%d", mediasize);
+    asprintf(&ret, "%ld", mediasize);
     return ret;
 }

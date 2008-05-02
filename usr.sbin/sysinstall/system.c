@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/system.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/system.c,v 1.3 2007/07/27 21:32:46 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/system.c,v 1.124.2.1 2005/08/17 13:32:29 kensmith Exp $
  *
  * Jordan Hubbard
@@ -96,19 +96,6 @@ handle_intr(int sig)
     restorescr(save);
 }
 
-/*
- * Harvest children if we are init.
- */
-static void
-reap_children(int sig)
-{
-    int errbak = errno;
-
-    while (waitpid(-1, NULL, WNOHANG) > 0)
-	;
-    errno = errbak;
-}
-
 /* Expand a file into a convenient location, nuking it each time */
 static char *
 expand(char *fname)
@@ -188,9 +175,6 @@ systemInitialize(int argc, char **argv)
 	setenv("PATH", "/stand:/bin:/sbin:/usr/sbin:/usr/bin:/mnt/bin:/mnt/sbin:/mnt/usr/sbin:/mnt/usr/bin:/usr/X11R6/bin", 1);
 	setbuf(stdin, 0);
 	setbuf(stderr, 0);
-#if 0
-	signal(SIGCHLD, reap_children);
-#endif
 	memset(&ufs_args, 0, sizeof(ufs_args));
 	mount("ufs", "/", MNT_UPDATE, &ufs_args);
     }

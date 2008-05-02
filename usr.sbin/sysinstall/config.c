@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.9 2008/05/02 05:30:54 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.10 2008/05/02 06:41:00 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -594,43 +594,6 @@ configSecurity(dialogMenuItem *self)
     dmenuOpenSimple(&MenuSecurity, FALSE);
     restorescr(w);
     return DITEM_SUCCESS;
-}
-
-static void
-write_root_xprofile(char *str)
-{
-    FILE *fp;
-    int len;
-    char **cp;
-    static char *flist[] = { /* take care of both xdm and startx */
-	"/root/.xinitrc",
-	"/root/.xsession",
-	"/usr/share/skel/dot.xinitrc",
-	"/usr/share/skel/dot.xsession",
-	NULL,
-    };
-
-    len = strlen(str);
-    for (cp = flist; *cp; cp++) {
-	fp = fopen(*cp, "w");
-	if (fp) {
-	    fwrite(str, 1, len, fp);
-	    fchmod(fileno(fp), 0755);
-	    fclose(fp);
-	}
-    }
-}
-
-static int
-gotit(char *fname)
-{
-    char tmp[FILENAME_MAX];
-
-    snprintf(tmp, sizeof tmp, "/usr/X11R6/bin/%s", fname);
-    if (file_executable(tmp))
-	return TRUE;
-    snprintf(tmp, sizeof tmp, "/usr/local/bin/%s", fname);
-    return file_executable(tmp);
 }
 
 int

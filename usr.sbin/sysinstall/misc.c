@@ -1,7 +1,7 @@
 /*
  * Miscellaneous support routines..
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/misc.c,v 1.3 2007/02/20 02:43:34 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/misc.c,v 1.4 2008/05/02 06:41:00 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/misc.c,v 1.43 2003/01/06 17:11:46 obrien Exp $
  *
  * Copyright (c) 1995
@@ -39,6 +39,7 @@
 #include <sys/errno.h>
 #include <sys/file.h>
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #include <dirent.h>
 #include <sys/wait.h>
 #include <sys/param.h>
