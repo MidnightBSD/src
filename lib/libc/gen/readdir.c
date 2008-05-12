@@ -47,8 +47,9 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/readdir.c,v 1.11 2002/02/26 21:39:32 alfred
  * get next entry in a directory.
  */
 struct dirent *
-_readdir_unlocked(dirp)
+_readdir_unlocked(dirp, skip)
 	DIR *dirp;
+	int skip;
 {
 	struct dirent *dp;
 
@@ -71,7 +72,7 @@ _readdir_unlocked(dirp)
 		    dp->d_reclen > dirp->dd_len + 1 - dirp->dd_loc)
 			return (NULL);
 		dirp->dd_loc += dp->d_reclen;
-		if (dp->d_ino == 0)
+		if (dp->d_ino == 0 && skip)
 			continue;
 		if (dp->d_type == DT_WHT && (dirp->dd_flags & DTF_HIDEW))
 			continue;
@@ -87,11 +88,11 @@ readdir(dirp)
 
 	if (__isthreaded) {
 		_pthread_mutex_lock((pthread_mutex_t *)&dirp->dd_lock);
-		dp = _readdir_unlocked(dirp);
+		dp = _readdir_unlocked(dirp, 1);
 		_pthread_mutex_unlock((pthread_mutex_t *)&dirp->dd_lock);
 	}
 	else
-		dp = _readdir_unlocked(dirp);
+		dp = _readdir_unlocked(dirp, 1);
 	return (dp);
 }
 
@@ -108,11 +109,11 @@ readdir_r(dirp, entry, result)
 	errno = 0;
 	if (__isthreaded) {
 		_pthread_mutex_lock((pthread_mutex_t *)&dirp->dd_lock);
-		if ((dp = _readdir_unlocked(dirp)) != NULL)
+		if ((dp = _readdir_unlocked(dirp, 1)) != NULL)
 			memcpy(entry, dp, _GENERIC_DIRSIZ(dp));
 		_pthread_mutex_unlock((pthread_mutex_t *)&dirp->dd_lock);
 	}
-	else if ((dp = _readdir_unlocked(dirp)) != NULL)
+	else if ((dp = _readdir_unlocked(dirp, 1)) != NULL)
 		memcpy(entry, dp, _GENERIC_DIRSIZ(dp));
 
 	if (errno != 0) {
