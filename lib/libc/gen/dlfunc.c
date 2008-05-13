@@ -3,6 +3,7 @@
  * Garrett A. Wollman, 2002-05-28.
  *
  * $FreeBSD: src/lib/libc/gen/dlfunc.c,v 1.3 2002/09/11 05:05:48 mike Exp $
+ * $MidnightBSD$
  */
 
 #include <dlfcn.h>

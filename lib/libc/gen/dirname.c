@@ -25,13 +25,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if 0
-#ifndef lint
-static char rcsid[] = "$OpenBSD: dirname.c,v 1.4 1999/05/30 17:10:30 espie Exp $";
-#endif /* not lint */
-#endif
+/* static char rcsid[] = "$OpenBSD: dirname.c,v 1.4 1999/05/30 17:10:30 espie Exp $"; */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/dirname.c,v 1.7 2002/12/30 01:41:14 marcel Exp $");
+/*__FBSDID("$FreeBSD: src/lib/libc/gen/dirname.c,v 1.7 2002/12/30 01:41:14 marcel Exp $"); */
+__MBSDID("$MidnightBSD$");
 
 #include <errno.h>
 #include <libgen.h>
@@ -40,8 +37,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/dirname.c,v 1.7 2002/12/30 01:41:14 marcel 
 #include <sys/param.h>
 
 char *
-dirname(path)
-	const char *path;
+dirname(const char *path)
 {
 	static char *bname = NULL;
 	const char *endp;

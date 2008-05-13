@@ -34,12 +34,10 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
 /* from static char sccsid[] = "@(#)crypt.c	5.11 (Berkeley) 6/25/91"; */
-#endif /* LIBC_SCCS and not lint */
-
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/crypt.c,v 1.8 2002/10/18 16:24:20 markm Exp $");
+/* __FBSDID("$FreeBSD: src/lib/libc/gen/crypt.c,v 1.8 2002/10/18 16:24:20 markm Exp $"); */
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 #include <string.h>

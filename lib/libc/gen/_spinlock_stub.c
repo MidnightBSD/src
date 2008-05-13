@@ -31,7 +31,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/_spinlock_stub.c,v 1.8 2003/03/26 04:02:24 jeff Exp $");
+/*__FBSDID("$FreeBSD: src/lib/libc/gen/_spinlock_stub.c,v 1.8 2003/03/26 04:02:24 jeff Exp $");*/
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 

@@ -25,8 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/_thread_init.c,v 1.5 2002/02/01 00:57:29 obrien Exp $");
-
+/*__FBSDID("$FreeBSD: src/lib/libc/gen/_thread_init.c,v 1.5 2002/02/01 00:57:29 obrien Exp $");*/
+__MBSDID("$MidnightBSD");
 #include <sys/types.h>
 
 __weak_reference(_thread_init_stub, _thread_init);

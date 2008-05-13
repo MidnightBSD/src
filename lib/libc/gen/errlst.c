@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,11 +27,10 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)errlst.c	8.2 (Berkeley) 11/16/93";
-#endif /* LIBC_SCCS and not lint */
+/*static char sccsid[] = "@(#)errlst.c	8.2 (Berkeley) 11/16/93";*/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/errlst.c,v 1.8 2005/04/02 12:33:28 das Exp $");
+/*__FBSDID("$FreeBSD: src/lib/libc/gen/errlst.c,v 1.8 2005/04/02 12:33:28 das Exp $");*/
+__MBSDID("$MidnightBSD$");
 
 #include <stdio.h>
 

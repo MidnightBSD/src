@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,11 +27,10 @@
  * SUCH DAMAGE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)exec.c	8.1 (Berkeley) 6/4/93";
-#endif /* LIBC_SCCS and not lint */
+/* static char sccsid[] = "@(#)exec.c	8.1 (Berkeley) 6/4/93"; */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/exec.c,v 1.22 2003/07/01 12:30:03 bde Exp $");
+/*__FBSDID("$FreeBSD: src/lib/libc/gen/exec.c,v 1.22 2003/07/01 12:30:03 bde Exp $");*/
+__MBSDID("$MidnightBSD$");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -133,9 +128,7 @@ execlp(const char *name, const char *arg, ...)
 }
 
 int
-execv(name, argv)
-	const char *name;
-	char * const *argv;
+execv(const char *name, char * const *argv)
 {
 	(void)_execve(name, argv, environ);
 	return (-1);
@@ -154,10 +147,7 @@ execvp(const char *name, char * const *argv)
 }
 
 int
-execvP(name, path, argv)
-	const char *name;
-	const char *path;
-	char * const *argv;
+execvP(const char *name, const char *path, char * const *argv)
 {
 	char **memp;
 	int cnt, lp, ln;
