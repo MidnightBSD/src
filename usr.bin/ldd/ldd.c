@@ -29,7 +29,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ldd/ldd.c,v 1.33 2002/10/19 10:18:29 sobomax Exp $");
+/* $FreeBSD: src/usr.bin/ldd/ldd.c,v 1.33 2002/10/19 10:18:29 sobomax Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/wait.h>
 

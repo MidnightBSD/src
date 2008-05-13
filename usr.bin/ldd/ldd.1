@@ -1,4 +1,5 @@
-.\" $FreeBSD: src/usr.bin/ldd/ldd.1,v 1.23 2002/12/30 21:18:11 schweikh Exp $
+.\" $FreeBSD: src/usr.bin/ldd/ldd.1,v 1.23.12.1 2007/05/19 11:14:56 pav Exp $
+.\" $MidnightBSD$
 .\"
 .Dd October 22, 1993
 .Dt LDD 1
@@ -32,9 +33,16 @@ The argument is a format string passed to
 and allows customization of
 .Nm Ns 's
 output.
+If one is given, it sets
+.Ev LD_TRACE_LOADED_OBJECTS_FMT1 .
+If two are given, they set
+.Ev LD_TRACE_LOADED_OBJECTS_FMT1
+and
+.Ev LD_TRACE_LOADED_OBJECTS_FMT2 ,
+respectively.
 See
 .Xr rtld 1
-for a list of recognized conversion characters.
+for details, including a list of recognized conversion characters.
 .Pp
 The
 .Fl a
