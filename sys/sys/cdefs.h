@@ -31,7 +31,7 @@
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
  * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $
- * $MidnightBSD: src/sys/sys/cdefs.h,v 1.2 2006/06/26 15:12:15 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/cdefs.h,v 1.3 2006/07/26 12:45:59 laffer1 Exp $
  */
 
 #ifndef	_SYS_CDEFS_H_
@@ -141,7 +141,7 @@
 #define	__const		const		/* define reserved names to standard */
 #define	__signed	signed
 #define	__volatile	volatile
-#if defined(__cplusplus)
+#if defined(__cplusplus) || defined(__PCC__)
 #define	__inline	inline		/* convert to C++ keyword */
 #else
 #if !(defined(__CC_SUPPORTS___INLINE))
@@ -221,6 +221,11 @@
 #define __packed	__attribute__((__packed__))
 #define __aligned(x)	__attribute__((__aligned__(x)))
 #define __section(x)	__attribute__((__section__(x)))
+#endif
+#if defined(__PCC__)
+#define __packed	/* not yet */
+#define __aligned(x)	/* not yet */
+#define __section(x)	/* not yet */
 #endif
 #endif
 
@@ -382,7 +387,7 @@
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.2 2006/06/26 15:12:15 laffer1 Exp $");
+ *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.3 2006/07/26 12:45:59 laffer1 Exp $");
  */
 #ifndef	__MBSDID
 #if !defined(lint) && !defined(STRIP_MBSDID)
