@@ -30744,6 +30744,7 @@ usr.bin/pcc/ccom/Makefile.inc -text
 usr.bin/pcc/ccom/ccom.1 -text
 usr.bin/pcc/ccom/cgram.y -text
 usr.bin/pcc/ccom/gcc_compat.c -text
+usr.bin/pcc/ccom/i386/Makefile -text
 usr.bin/pcc/ccom/init.c -text
 usr.bin/pcc/ccom/inline.c -text
 usr.bin/pcc/ccom/main.c -text
@@ -30751,6 +30752,7 @@ usr.bin/pcc/ccom/optim.c -text
 usr.bin/pcc/ccom/pass1.h -text
 usr.bin/pcc/ccom/pftn.c -text
 usr.bin/pcc/ccom/scan.l -text
+usr.bin/pcc/ccom/sparc64/Makefile -text
 usr.bin/pcc/ccom/stabs.c -text
 usr.bin/pcc/ccom/symtabs.c -text
 usr.bin/pcc/ccom/trees.c -text
