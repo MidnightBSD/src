@@ -131,7 +131,7 @@
 #define PCC_MAJOR 0
 #define PCC_MINOR 9
 #define PCC_MINORMINOR 8
-#define VERSSTR "pcc 0.9.8 for i386-unknown-midnightbsd0.1, laffer1@m5.midnightbsd.org Wed Sep 26 15:13:33 EDT 2007"
+#define VERSSTR "pcc 0.9.8 for i386-unknown-midnightbsd0.2, laffer1@m5.midnightbsd.org Wed Sep 26 15:13:33 EDT 2007"
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */

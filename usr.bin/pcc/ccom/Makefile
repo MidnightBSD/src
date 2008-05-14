@@ -1,5 +1,5 @@
 # $MidnightBSD$
 
-SUBDIR=	cc cpp ccom
+SUBDIR+=	${MACHINE_ARCH}
 
 .include <bsd.subdir.mk>
