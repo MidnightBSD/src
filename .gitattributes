@@ -30740,6 +30740,7 @@ usr.bin/pcc/cc/cc.1 -text
 usr.bin/pcc/cc/cc.c -text
 usr.bin/pcc/ccconfig.h -text
 usr.bin/pcc/ccom/Makefile -text
+usr.bin/pcc/ccom/Makefile.inc -text
 usr.bin/pcc/ccom/ccom.1 -text
 usr.bin/pcc/ccom/cgram.y -text
 usr.bin/pcc/ccom/gcc_compat.c -text
