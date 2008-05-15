@@ -30730,12 +30730,6 @@ usr.bin/pathchk/pathchk.1 -text
 usr.bin/pathchk/pathchk.c -text
 usr.bin/pcc/Makefile -text
 usr.bin/pcc/Makefile.inc -text
-usr.bin/pcc/arch/x86/code.c -text
-usr.bin/pcc/arch/x86/local.c -text
-usr.bin/pcc/arch/x86/local2.c -text
-usr.bin/pcc/arch/x86/macdefs.h -text
-usr.bin/pcc/arch/x86/order.c -text
-usr.bin/pcc/arch/x86/table.c -text
 usr.bin/pcc/cc/Makefile -text
 usr.bin/pcc/cc/cc.1 -text
 usr.bin/pcc/cc/cc.c -text
@@ -30768,6 +30762,12 @@ usr.bin/pcc/cpp/token.c -text
 usr.bin/pcc/f77/Makefile -text
 usr.bin/pcc/f77/f77/Makefile -text
 usr.bin/pcc/f77/fcom/Makefile -text
+usr.bin/pcc/i386/code.c -text
+usr.bin/pcc/i386/local.c -text
+usr.bin/pcc/i386/local2.c -text
+usr.bin/pcc/i386/macdefs.h -text
+usr.bin/pcc/i386/order.c -text
+usr.bin/pcc/i386/table.c -text
 usr.bin/pcc/mip/common.c -text
 usr.bin/pcc/mip/compat.c -text
 usr.bin/pcc/mip/manifest.h -text
