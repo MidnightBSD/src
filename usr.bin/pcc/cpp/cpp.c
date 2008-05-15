@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.1 2008-05-14 04:25:57 laffer1 Exp $	*/
+/*	$Id: cpp.c,v 1.2 2008-05-15 04:53:33 laffer1 Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -66,7 +66,7 @@
  * from V7 cpp, and at last ansi/c99 support.
  */
 
-#include "../../config.h"
+#include "../config.h"
 
 #include <sys/wait.h>
 
