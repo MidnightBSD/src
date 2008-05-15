@@ -1,16 +1,17 @@
-# $MidnightBSD: src/usr.bin/pcc/cc/Makefile,v 1.2 2008/05/14 04:25:56 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/cc/Makefile,v 1.3 2008/05/15 04:53:32 laffer1 Exp $
 
-PROG=	cc
-PREFIX=	/usr/local
-BINDIR=	${PREFIX}/bin
-MANDIR=	${PREFIX}/man/man
+PROG=	pcc
+SRCS=	cc.c
 TARGOS=	midnightbsd
 TARGMACH=	${MACHINE_ARCH}
 
-CFLAGS+=	-DLIBEXECDIR=\"${PREFIX}\"
+CFLAGS+=	-DLIBEXECDIR=\"${libexecdir}\"
 CFLAGS+=	-I${.CURDIR}/..
 CFLAGS+=	-Dmach_${TARGMACH} -Dos_${TARGOS}
 
-MLINKS+=	cc.1 pcc.1
+BINDIR=	/usr/bin
+#MAN=	cc.1
+NO_MAN=	
+#MLINKS+=	cc.1 pcc.1
 
 .include <bsd.prog.mk>

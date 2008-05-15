@@ -30729,6 +30729,7 @@ usr.bin/pathchk/Makefile -text
 usr.bin/pathchk/pathchk.1 -text
 usr.bin/pathchk/pathchk.c -text
 usr.bin/pcc/Makefile -text
+usr.bin/pcc/Makefile.inc -text
 usr.bin/pcc/arch/x86/code.c -text
 usr.bin/pcc/arch/x86/local.c -text
 usr.bin/pcc/arch/x86/local2.c -text

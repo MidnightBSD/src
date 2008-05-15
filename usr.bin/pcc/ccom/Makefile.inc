@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/pcc/ccom/Makefile.inc,v 1.1 2008/05/14 04:26:47 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/ccom/Makefile.inc,v 1.2 2008/05/15 04:53:32 laffer1 Exp $
 #	$OpenBSD: Makefile.inc,v 1.3 2007/10/15 01:05:25 deraadt Exp $
 #
 # Makefile for the ccom part of pcc.
@@ -6,16 +6,13 @@
 
 PROG=   	ccom_${TARGMACH}
 MAN=		ccom.1
-
-PREFIX=		/usr/local
-BINDIR=		${PREFIX}/libexec
-MANDIR=		${PREFIX}/man/man
+BINDIR=		${libexecdir}
 TARGOS=		midnightbsd
 CLEANFILES=	external.h external.c mkext
 
 CFLAGS+=	-DPCC_DEBUG -DGCC_COMPAT
 CFLAGS+=	-Wall -Wmissing-prototypes -Wstrict-prototypes -Werror
-CFLAGS+=	-DLIBEXECDIR=\"${PREFIX}/libexec\"
+CFLAGS+=	-DLIBEXECDIR=\"${libexecdir}\"
 CFLAGS+=	-I. -I${.CURDIR}/.. -I${.CURDIR} -I${.CURDIR}/../../mip
 CFLAGS+=	-I${.CURDIR}/../../${TARGMACH}
 CFLAGS+=	-I${.CURDIR}/../..
@@ -47,3 +44,7 @@ pftn.o: cgram.c
 
 cleandepend:
 	rm -f .depend ${.CURDIR}/tags cgram.h
+
+.if exists(${.CURDIR}/../../Makefile.inc)
+.include "${.CURDIR}/../../Makefile.inc"
+.endif
