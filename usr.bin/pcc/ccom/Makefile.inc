@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/pcc/ccom/Makefile.inc,v 1.2 2008/05/15 04:53:32 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/ccom/Makefile.inc,v 1.3 2008/05/15 05:38:35 laffer1 Exp $
 #	$OpenBSD: Makefile.inc,v 1.3 2007/10/15 01:05:25 deraadt Exp $
 #
 # Makefile for the ccom part of pcc.
@@ -6,6 +6,7 @@
 
 PROG=   	ccom_${TARGMACH}
 MAN=		ccom.1
+MANDIR=		/usr/local/man/man
 BINDIR=		${libexecdir}
 TARGOS=		midnightbsd
 CLEANFILES=	external.h external.c mkext
