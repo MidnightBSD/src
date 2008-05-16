@@ -13772,6 +13772,8 @@ crypto/openssh/ssh-keysign.c -text
 crypto/openssh/ssh-rand-helper.8 -text
 crypto/openssh/ssh-rand-helper.c -text
 crypto/openssh/ssh-rsa.c -text
+crypto/openssh/ssh-vulnkey.1 -text
+crypto/openssh/ssh-vulnkey.c -text
 crypto/openssh/ssh.1 -text
 crypto/openssh/ssh.c -text
 crypto/openssh/ssh.h -text
