@@ -21317,6 +21317,7 @@ secure/usr.bin/ssh-add/Makefile -text
 secure/usr.bin/ssh-agent/Makefile -text
 secure/usr.bin/ssh-keygen/Makefile -text
 secure/usr.bin/ssh-keyscan/Makefile -text
+secure/usr.bin/ssh-vulnkey/Makefile -text
 secure/usr.bin/ssh/Makefile -text
 secure/usr.sbin/Makefile -text
 secure/usr.sbin/Makefile.inc -text
