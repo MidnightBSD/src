@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/netinet/tcp_syncache.c,v 1.4 2008/05/16 23:39:44 laffer1 Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -1346,6 +1346,7 @@ syncookie_generate(struct syncache *sc, u_int32_t *flowid)
 	MD5Final((u_char *)&md5_buffer, &syn_ctx);
 	data ^= (md5_buffer[0] & ~SYNCOOKIE_WNDMASK);
 	*flowid = md5_buffer[1];
+	tcpstat.tcps_sc_sendcookie++;
 	return (data);
 }
 
