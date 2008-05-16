@@ -31,6 +31,9 @@
  * $FreeBSD: src/sys/netinet/tcp_syncache.c,v 1.74.2.5 2006/02/16 01:06:22 qingli Exp $
  */
 
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
+
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
