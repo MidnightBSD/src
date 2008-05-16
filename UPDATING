@@ -3,6 +3,24 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080516:
+	ssh-vulnkey allows you to look for vulnerable ssh keys that
+	were generated on Debian and Ubuntu hosts over the last
+	few years.  sshd can block offending keys with a configuration
+	option.
+
+	The elf note on binaries is now set to MidnightBSD.
+
+20080514:
+	Fixed a number of problems with pcc.  It is not yet connected
+	to the build, but usable on i386 hosts.  You may use it 
+	by make; make install in /usr/src/usr.bin/pcc.  It will
+	install in /usr/local as some of the files conflict with
+	GCC versions. __MidnightBSD__ is defined in PCC as well.
+
+	System headers were fixed to allow pcc to compile many binaries
+	on MidnightBSD.  bin/cp will work now for instance.
+
 20080430:
 	__MidnightBSD__ is now defined via gcc.  This can be tested
 	to determine we're running on MidnightBSD in the preprocessor.
@@ -544,4 +562,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.35 2008/04/30 19:35:38 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.36 2008/05/01 04:46:25 laffer1 Exp $
