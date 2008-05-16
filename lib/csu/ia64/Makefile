@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/csu/ia64/Makefile,v 1.12 2003/07/13 23:11:37 marcel Exp $
 
 .PATH: ${.CURDIR}/../common

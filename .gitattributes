@@ -16607,10 +16607,6 @@ lib/csu/ia64/Makefile -text
 lib/csu/ia64/crt1.S -text
 lib/csu/ia64/crti.S -text
 lib/csu/ia64/crtn.S -text
-lib/csu/powerpc/Makefile -text
-lib/csu/powerpc/crt1.c -text
-lib/csu/powerpc/crti.S -text
-lib/csu/powerpc/crtn.S -text
 lib/csu/sparc64/Makefile -text
 lib/csu/sparc64/crt1.c -text
 lib/csu/sparc64/crti.S -text

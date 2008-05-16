@@ -1,4 +1,5 @@
 /*-
+ * Copyright 2008 Lucas Holt
  * Copyright 2000 David E. O'Brien, John D. Polstra.
  * All rights reserved.
  *
@@ -24,11 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/csu/common/crtbrand.c,v 1.4 2003/10/17 15:43:13 peter Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 
-#define ABI_VENDOR	"FreeBSD"
+#define ABI_VENDOR	"MidnightBSD"
 #define ABI_SECTION	".note.ABI-tag"
 #define ABI_NOTETYPE	1
 
@@ -48,5 +49,5 @@ static const struct {
     sizeof(int32_t),
     ABI_NOTETYPE,
     ABI_VENDOR,
-    __FreeBSD_version
+    __MidnightBSD_version
 };
