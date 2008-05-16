@@ -13430,6 +13430,7 @@ crypto/openssh/Makefile.in -text
 crypto/openssh/Makefile.inc -text
 crypto/openssh/OVERVIEW -text
 crypto/openssh/README -text
+crypto/openssh/README.compromised-keys -text
 crypto/openssh/README.dns -text
 crypto/openssh/README.platform -text
 crypto/openssh/README.privsep -text
