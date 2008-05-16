@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netinet/tcp_syncache.c,v 1.5 2008/05/16 23:42:20 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/netinet/tcp_syncache.c,v 1.6 2008/05/16 23:49:41 laffer1 Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -1278,8 +1278,6 @@ static struct {
 
 static int tcp_msstab[] = { 0, 536, 1460, 8960 };
 
-static MD5_CTX syn_ctx;
-
 #define MD5Add(v)	MD5Update(&syn_ctx, (u_char *)&v, sizeof(v))
 
 struct md5_add {
@@ -1309,6 +1307,7 @@ syncookie_generate(struct syncache *sc, u_int32_t *flowid)
 	u_int32_t data;
 	int idx, i;
 	struct md5_add add;
+	MD5_CTX syn_ctx;
 
 	/* NB: single threaded; could add INP_INFO_WLOCK_ASSERT(&tcbinfo) */
 
@@ -1361,6 +1360,7 @@ syncookie_lookup(inc, th, so)
 	u_int32_t data;
 	int wnd, idx;
 	struct md5_add add;
+	MD5_CTX syn_ctx;
 
 	/* NB: single threaded; could add INP_INFO_WLOCK_ASSERT(&tcbinfo) */
 
