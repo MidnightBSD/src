@@ -1,7 +1,7 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.12 2008/03/22 22:26:44 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.13 2008/04/29 03:21:31 laffer1 Exp $
 
 .if !defined(NO_SENDMAIL)
 SUBDIR=	sendmail
@@ -27,11 +27,6 @@ BIN1+=	printcap
 .endif
 
 .if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
-.if !defined(NO_OPENSSH)
-SSH=	${.CURDIR}/../crypto/openssh/ssh_config \
-	${.CURDIR}/../crypto/openssh/sshd_config \
-	${.CURDIR}/../crypto/openssh/moduli
-.endif
 SSL=	${.CURDIR}/../crypto/openssl/apps/openssl.cnf
 .endif
 
@@ -126,8 +121,7 @@ distribution:
 .endif
 .if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
 .if !defined(NO_OPENSSH)
-	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
-	    ${SSH} ${DESTDIR}/etc/ssh
+	cd ${.CURDIR}/ssh; ${MAKE} install
 .endif
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${SSL} ${DESTDIR}/etc/ssl
