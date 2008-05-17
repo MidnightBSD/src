@@ -30,6 +30,9 @@
  * $FreeBSD: src/sys/netinet/tcp_usrreq.c,v 1.124.2.2 2005/11/04 20:26:14 ume Exp $
  */
 
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
+
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_tcpdebug.h"
