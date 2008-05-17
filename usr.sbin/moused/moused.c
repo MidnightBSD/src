@@ -29,6 +29,7 @@
  ** OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  ** EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **
+ ** $FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.6 2007/09/21 17:25:02 obrien Exp $
  **/
 
 /**
@@ -45,12 +46,10 @@
  **/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 philip Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/consio.h>
-#include <sys/linker.h>
-#include <sys/module.h>
 #include <sys/mouse.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -66,12 +65,14 @@ __FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 
 #include <setjmp.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <termios.h>
 #include <unistd.h>
+#include <math.h>
 
 #define MAX_CLICKTHRESHOLD	2000	/* 2 seconds */
 #define MAX_BUTTON2TIMEOUT	2000	/* 2 seconds */
@@ -101,6 +102,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 
 #define NoPnP		0x0010
 #define VirtualScroll	0x0020
 #define HVirtualScroll	0x0040
+#define ExponentialAcc	0x0080
 
 #define ID_NONE		0
 #define ID_PORT		1
@@ -109,32 +111,48 @@ __FBSDID("$FreeBSD: src/usr.sbin/moused/moused.c,v 1.70.2.3 2006/01/30 00:32:40 
 #define ID_MODEL	8
 #define ID_ALL		(ID_PORT | ID_IF | ID_TYPE | ID_MODEL)
 
-#define debug(fmt, args...) do {				\
+/* Operations on timespecs */
+#define	tsclr(tvp)	((tvp)->tv_sec = (tvp)->tv_nsec = 0)
+#define	tscmp(tvp, uvp, cmp)						\
+	(((tvp)->tv_sec == (uvp)->tv_sec) ?				\
+	    ((tvp)->tv_nsec cmp (uvp)->tv_nsec) :			\
+	    ((tvp)->tv_sec cmp (uvp)->tv_sec))
+#define	tssub(tvp, uvp, vvp)						\
+	do {								\
+		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;		\
+		(vvp)->tv_nsec = (tvp)->tv_nsec - (uvp)->tv_nsec;	\
+		if ((vvp)->tv_nsec < 0) {				\
+			(vvp)->tv_sec--;				\
+			(vvp)->tv_nsec += 1000000000;			\
+		}							\
+	} while (0)
+
+#define debug(...) do {						\
 	if (debug && nodaemon)					\
-		warnx(fmt, ##args);				\
+		warnx(__VA_ARGS__);				\
 } while (0)
 
-#define logerr(e, fmt, args...) do {				\
-	log_or_warn(LOG_DAEMON | LOG_ERR, errno, fmt, ##args);	\
+#define logerr(e, ...) do {					\
+	log_or_warn(LOG_DAEMON | LOG_ERR, errno, __VA_ARGS__);	\
 	exit(e);						\
 } while (0)
 
-#define logerrx(e, fmt, args...) do {				\
-	log_or_warn(LOG_DAEMON | LOG_ERR, 0, fmt, ##args);	\
+#define logerrx(e, ...) do {					\
+	log_or_warn(LOG_DAEMON | LOG_ERR, 0, __VA_ARGS__);	\
 	exit(e);						\
 } while (0)
 
-#define logwarn(fmt, args...)					\
-	log_or_warn(LOG_DAEMON | LOG_WARNING, errno, fmt, ##args)
+#define logwarn(...)						\
+	log_or_warn(LOG_DAEMON | LOG_WARNING, errno, __VA_ARGS__)
 
-#define logwarnx(fmt, args...)					\
-	log_or_warn(LOG_DAEMON | LOG_WARNING, 0, fmt, ##args)
+#define logwarnx(...)						\
+	log_or_warn(LOG_DAEMON | LOG_WARNING, 0, __VA_ARGS__)
 
 /* structures */
 
 /* symbol table entry */
 typedef struct {
-    char *name;
+    const char *name;
     int val;
     int val2;
 } symtab_t;
@@ -142,9 +160,9 @@ typedef struct {
 /* serial PnP ID string */
 typedef struct {
     int revision;	/* PnP revision, 100 for 1.00 */
-    char *eisaid;	/* EISA ID including mfr ID and product ID */
+    const char *eisaid;	/* EISA ID including mfr ID and product ID */
     char *serial;	/* serial No, optional */
-    char *class;	/* device class, optional */
+    const char *class;	/* device class, optional */
     char *compat;	/* list of compatible drivers, optional */
     char *description;	/* product description, optional */
     int neisaid;	/* length of the above fields... */
@@ -162,7 +180,7 @@ int	background = FALSE;
 int	paused = FALSE;
 int	identify = ID_NONE;
 int	extioctl = FALSE;
-char	*pidfile = "/var/run/moused.pid";
+const char *pidfile = "/var/run/moused.pid";
 struct pidfh *pfh;
 
 #define SCROLL_NOTSCROLLING	0
@@ -177,17 +195,17 @@ static int	hscroll_movement;
 
 /* interface (the table must be ordered by MOUSE_IF_XXX in mouse.h) */
 static symtab_t rifs[] = {
-    { "serial",		MOUSE_IF_SERIAL },
-    { "bus",		MOUSE_IF_BUS },
-    { "inport",		MOUSE_IF_INPORT },
-    { "ps/2",		MOUSE_IF_PS2 },
-    { "sysmouse",	MOUSE_IF_SYSMOUSE },
-    { "usb",		MOUSE_IF_USB },
-    { NULL,		MOUSE_IF_UNKNOWN },
+    { "serial",		MOUSE_IF_SERIAL,	0 },
+    { "bus",		MOUSE_IF_BUS,		0 },
+    { "inport",		MOUSE_IF_INPORT,	0 },
+    { "ps/2",		MOUSE_IF_PS2,		0 },
+    { "sysmouse",	MOUSE_IF_SYSMOUSE,	0 },
+    { "usb",		MOUSE_IF_USB,		0 },
+    { NULL,		MOUSE_IF_UNKNOWN,	0 },
 };
 
 /* types (the table must be ordered by MOUSE_PROTO_XXX in mouse.h) */
-static char *rnames[] = {
+static const char *rnames[] = {
     "microsoft",
     "mousesystems",
     "logitech",
@@ -214,21 +232,21 @@ static char *rnames[] = {
 
 /* models */
 static symtab_t	rmodels[] = {
-    { "NetScroll",		MOUSE_MODEL_NETSCROLL },
-    { "NetMouse/NetScroll Optical", MOUSE_MODEL_NET },
-    { "GlidePoint",		MOUSE_MODEL_GLIDEPOINT },
-    { "ThinkingMouse",		MOUSE_MODEL_THINK },
-    { "IntelliMouse",		MOUSE_MODEL_INTELLI },
-    { "EasyScroll/SmartScroll",	MOUSE_MODEL_EASYSCROLL },
-    { "MouseMan+",		MOUSE_MODEL_MOUSEMANPLUS },
-    { "Kidspad",		MOUSE_MODEL_KIDSPAD },
-    { "VersaPad",		MOUSE_MODEL_VERSAPAD },
-    { "IntelliMouse Explorer",	MOUSE_MODEL_EXPLORER },
-    { "4D Mouse",		MOUSE_MODEL_4D },
-    { "4D+ Mouse",		MOUSE_MODEL_4DPLUS },
-    { "Synaptics Touchpad",	MOUSE_MODEL_SYNAPTICS },
-    { "generic",		MOUSE_MODEL_GENERIC },
-    { NULL,			MOUSE_MODEL_UNKNOWN },
+    { "NetScroll",		MOUSE_MODEL_NETSCROLL,		0 },
+    { "NetMouse/NetScroll Optical", MOUSE_MODEL_NET,		0 },
+    { "GlidePoint",		MOUSE_MODEL_GLIDEPOINT,		0 },
+    { "ThinkingMouse",		MOUSE_MODEL_THINK,		0 },
+    { "IntelliMouse",		MOUSE_MODEL_INTELLI,		0 },
+    { "EasyScroll/SmartScroll",	MOUSE_MODEL_EASYSCROLL,		0 },
+    { "MouseMan+",		MOUSE_MODEL_MOUSEMANPLUS,	0 },
+    { "Kidspad",		MOUSE_MODEL_KIDSPAD,		0 },
+    { "VersaPad",		MOUSE_MODEL_VERSAPAD,		0 },
+    { "IntelliMouse Explorer",	MOUSE_MODEL_EXPLORER,		0 },
+    { "4D Mouse",		MOUSE_MODEL_4D,			0 },
+    { "4D+ Mouse",		MOUSE_MODEL_4DPLUS,		0 },
+    { "Synaptics Touchpad",	MOUSE_MODEL_SYNAPTICS,		0 },
+    { "generic",		MOUSE_MODEL_GENERIC,		0 },
+    { NULL,			MOUSE_MODEL_UNKNOWN,		0 },
 };
 
 /* PnP EISA/product IDs */
@@ -378,7 +396,7 @@ static unsigned short rodentcflags[] =
 
 static struct rodentparam {
     int flags;
-    char *portname;		/* /dev/XXX */
+    const char *portname;	/* /dev/XXX */
     int rtype;			/* MOUSE_PROTO_XXX */
     int level;			/* operation level: 0 or greater */
     int baudrate;
@@ -396,6 +414,10 @@ static struct rodentparam {
     mousemode_t mode;		/* protocol information */
     float accelx;		/* Acceleration in the X axis */
     float accely;		/* Acceleration in the Y axis */
+    float expoaccel;		/* Exponential acceleration */
+    float expoffset;		/* Movement offset for exponential accel. */
+    float remainx;		/* Remainder on X and Y axis, respectively... */
+    float remainy;		/*    ... to compensate for rounding errors. */
     int scrollthreshold;	/* Movement distance before virtual scrolling */
 } rodent = {
     .flags = 0,
@@ -415,15 +437,19 @@ static struct rodentparam {
     .button2timeout = DFLT_BUTTON2TIMEOUT,
     .accelx = 1.0,
     .accely = 1.0,
+    .expoaccel = 1.0,
+    .expoffset = 1.0,
+    .remainx = 0.0,
+    .remainy = 0.0,
     .scrollthreshold = DFLT_SCROLLTHRESHOLD,
 };
 
 /* button status */
 struct button_state {
     int count;		/* 0: up, 1: single click, 2: double click,... */
-    struct timeval tv;	/* timestamp on the last button event */
+    struct timespec ts;	/* timestamp on the last button event */
 };
-static struct button_state	bstate[MOUSE_MAXBUTTON]; /* button state */
+static struct button_state	bstate[MOUSE_MAXBUTTON];	/* button state */
 static struct button_state	*mstate[MOUSE_MAXBUTTON];/* mapped button st.*/
 static struct button_state	zstate[4];		 /* Z/W axis state */
 
@@ -472,28 +498,33 @@ static struct {
     { { S0, S9, S9, S3, S9 }, 0, ~(MOUSE_BUTTON1DOWN | MOUSE_BUTTON3DOWN), FALSE },
 };
 static int		mouse_button_state;
-static struct timeval	mouse_button_state_tv;
+static struct timespec	mouse_button_state_ts;
 static int		mouse_move_delayed;
 
 static jmp_buf env;
 
-static int		drift_distance = 4;   /* max steps X+Y */
-static int		drift_time = 500;   /* in 0.5 sec */
-static struct timeval	drift_time_tv;
-static struct timeval	drift_2time_tv;   /* 2*drift_time */
-static int		drift_after = 4000;   /* 4 sec */
-static struct timeval	drift_after_tv;
+struct drift_xy {
+    int x;
+    int y;
+};
+static int		drift_distance = 4;	/* max steps X+Y */
+static int		drift_time = 500;	/* in 0.5 sec */
+static struct timespec	drift_time_ts;
+static struct timespec	drift_2time_ts;		/* 2*drift_time */
+static int		drift_after = 4000;	/* 4 sec */
+static struct timespec	drift_after_ts;
 static int		drift_terminate = FALSE;
-static struct timeval	drift_current_tv;
-static struct timeval	drift_tmp;
-static struct timeval	drift_last_activity = {0,0};
-static struct drift_xy {
-	int x; int y; }	drift_last = {0,0};   /* steps in last drift_time */
-static struct timeval	drift_since = {0,0};
-static struct drift_xy  drift_previous={0,0}; /* steps in previous drift_time */
+static struct timespec	drift_current_ts;
+static struct timespec	drift_tmp;
+static struct timespec	drift_last_activity = {0, 0};
+static struct timespec	drift_since = {0, 0};
+static struct drift_xy	drift_last = {0, 0};	/* steps in last drift_time */
+static struct drift_xy  drift_previous = {0, 0};	/* steps in prev. drift_time */
 
 /* function prototypes */
 
+static void	linacc(int, int, int*, int*);
+static void	expoacc(int, int, int*, int*);
 static void	moused(void);
 static void	hup(int sig);
 static void	cleanup(int sig);
@@ -503,9 +534,9 @@ static void	log_or_warn(int log_pri, int errnum, const char *fmt, ...)
 		    __printflike(3, 4);
 
 static int	r_identify(void);
-static char	*r_if(int type);
-static char	*r_name(int type);
-static char	*r_model(int model);
+static const char *r_if(int type);
+static const char *r_name(int type);
+static const char *r_model(int model);
 static void	r_init(void);
 static int	r_protocol(u_char b, mousestatus_t *act);
 static int	r_statetrans(mousestatus_t *a1, mousestatus_t *a2, int trans);
@@ -522,10 +553,10 @@ static int	pnpgets(char *buf);
 static int	pnpparse(pnpid_t *id, char *buf, int len);
 static symtab_t	*pnpproto(pnpid_t *id);
 
-static symtab_t	*gettoken(symtab_t *tab, char *s, int len);
-static char	*gettokenname(symtab_t *tab, int val);
+static symtab_t	*gettoken(symtab_t *tab, const char *s, int len);
+static const char *gettokenname(symtab_t *tab, int val);
 
-static void	mremote_serversetup();
+static void	mremote_serversetup(void);
 static void	mremote_clientchg(int add);
 
 static int	kidspad(u_char rxc, mousestatus_t *act);
@@ -539,12 +570,12 @@ main(int argc, char *argv[])
     int c;
     int	i;
     int	j;
-    int retry;
+    static int retry;
 
     for (i = 0; i < MOUSE_MAXBUTTON; ++i)
 	mstate[i] = &bstate[i];
 
-    while ((c = getopt(argc, argv, "3C:DE:F:HI:PRS:T:VU:a:cdfhi:l:m:p:r:st:w:z:")) != -1)
+    while ((c = getopt(argc, argv, "3A:C:DE:F:HI:PRS:T:VU:a:cdfhi:l:m:p:r:st:w:z:")) != -1)
 	switch(c) {
 
 	case '3':
@@ -563,12 +594,25 @@ main(int argc, char *argv[])
 	case 'a':
 	    i = sscanf(optarg, "%f,%f", &rodent.accelx, &rodent.accely);
 	    if (i == 0) {
-		warnx("invalid acceleration argument '%s'", optarg);
+		warnx("invalid linear acceleration argument '%s'", optarg);
 		usage();
 	    }
 
 	    if (i == 1)
 		rodent.accely = rodent.accelx;
+
+	    break;
+
+	case 'A':
+	    rodent.flags |= ExponentialAcc;
+	    i = sscanf(optarg, "%f,%f", &rodent.expoaccel, &rodent.expoffset);
+	    if (i == 0) {
+		warnx("invalid exponential acceleration argument '%s'", optarg);
+		usage();
+	    }
+
+	    if (i == 1)
+		rodent.expoffset = 1.0;
 
 	    break;
 
@@ -712,7 +756,7 @@ main(int argc, char *argv[])
 	case 'H':
 	    rodent.flags |= HVirtualScroll;
 	    break;
-		 
+		
 	case 'I':
 	    pidfile = optarg;
 	    break;
@@ -744,12 +788,12 @@ main(int argc, char *argv[])
 	    }
 	    debug("terminate drift: distance %d, time %d, after %d",
 		drift_distance, drift_time, drift_after);
-	    drift_time_tv.tv_sec = drift_time/1000;
-	    drift_time_tv.tv_usec = (drift_time%1000)*1000;
- 	    drift_2time_tv.tv_sec = (drift_time*=2)/1000;
-	    drift_2time_tv.tv_usec = (drift_time%1000)*1000;
-	    drift_after_tv.tv_sec = drift_after/1000;
-	    drift_after_tv.tv_usec = (drift_after%1000)*1000;
+	    drift_time_ts.tv_sec = drift_time / 1000;
+	    drift_time_ts.tv_nsec = (drift_time % 1000) * 1000000;
+ 	    drift_2time_ts.tv_sec = (drift_time *= 2) / 1000;
+	    drift_2time_ts.tv_nsec = (drift_time % 1000) * 1000000;
+	    drift_after_ts.tv_sec = drift_after / 1000;
+	    drift_after_ts.tv_nsec = (drift_after % 1000) * 1000000;
 	    break;
 
 	case 't':
@@ -759,17 +803,18 @@ main(int argc, char *argv[])
 		rodent.level = -1;
 		break;
 	    }
-	    for (i = 0; rnames[i]; i++)
+	    for (i = 0; rnames[i] != NULL; i++)
 		if (strcmp(optarg, rnames[i]) == 0) {
 		    rodent.rtype = i;
 		    rodent.flags |= NoPnP;
 		    rodent.level = (i == MOUSE_PROTO_SYSMOUSE) ? 1 : 0;
 		    break;
 		}
-	    if (rnames[i])
-		break;
-	    warnx("no such mouse type `%s'", optarg);
-	    usage();
+	    if (rnames[i] == NULL) {
+		warnx("no such mouse type `%s'", optarg);
+		usage();
+	    }
+	    break;
 
 	case 'V':
 	    rodent.flags |= VirtualScroll;
@@ -901,38 +946,68 @@ main(int argc, char *argv[])
 static int
 usbmodule(void)
 {
-    struct kld_file_stat fstat;
-    struct module_stat mstat;
-    int fileid, modid;
-    int loaded;
+    return (kld_isloaded("uhub/ums") || kld_load("ums") != -1);
+}
 
-    for (loaded = 0, fileid = kldnext(0); !loaded && fileid > 0;
-	 fileid = kldnext(fileid)) {
-	fstat.version = sizeof(fstat);
-	if (kldstat(fileid, &fstat) < 0)
-	    continue;
-	if (strncmp(fstat.name, "uhub/ums", 8) == 0) {
-	    loaded = 1;
-	    break;
-	}
-	for (modid = kldfirstmod(fileid); modid > 0;
-	     modid = modfnext(modid)) {
-	    mstat.version = sizeof(mstat);
-	    if (modstat(modid, &mstat) < 0)
-		continue;
-	    if (strncmp(mstat.name, "uhub/ums", 8) == 0) {
-		loaded = 1;
-		break;
-	    }
-	}
+/*
+ * Function to calculate linear acceleration.
+ *
+ * If there are any rounding errors, the remainder
+ * is stored in the remainx and remainy variables
+ * and taken into account upon the next movement.
+ */
+
+static void
+linacc(int dx, int dy, int *movex, int *movey)
+{
+    float fdx, fdy;
+
+    if (dx == 0 && dy == 0) {
+	*movex = *movey = 0;
+	return;
     }
-    if (!loaded) {
-	if (kldload("ums") != -1)
-	    return 1;
-	if (errno != EEXIST)
-	    logerr(1, "unable to load USB mouse driver");
+    fdx = dx * rodent.accelx + rodent.remainx;
+    fdy = dy * rodent.accely + rodent.remainy;
+    *movex = lround(fdx);
+    *movey = lround(fdy);
+    rodent.remainx = fdx - *movex;
+    rodent.remainy = fdy - *movey;
+}
+
+/*
+ * Function to calculate exponential acceleration.
+ * (Also includes linear acceleration if enabled.)
+ *
+ * In order to give a smoother behaviour, we record the four
+ * most recent non-zero movements and use their average value
+ * to calculate the acceleration.
+ */
+
+static void
+expoacc(int dx, int dy, int *movex, int *movey)
+{
+    static float lastlength[3] = {0.0, 0.0, 0.0};
+    float fdx, fdy, length, lbase, accel;
+
+    if (dx == 0 && dy == 0) {
+	*movex = *movey = 0;
+	return;
     }
-    return 0;
+    fdx = dx * rodent.accelx;
+    fdy = dy * rodent.accely;
+    length = sqrtf((fdx * fdx) + (fdy * fdy));		/* Pythagoras */
+    length = (length + lastlength[0] + lastlength[1] + lastlength[2]) / 4;
+    lbase = length / rodent.expoffset;
+    accel = powf(lbase, rodent.expoaccel) / lbase;
+    fdx = fdx * accel + rodent.remainx;
+    fdy = fdy * accel + rodent.remainy;
+    *movex = lroundf(fdx);
+    *movey = lroundf(fdy);
+    rodent.remainx = fdx - *movex;
+    rodent.remainy = fdy - *movey;
+    lastlength[2] = lastlength[1];
+    lastlength[1] = lastlength[0];
+    lastlength[0] = length;	/* Insert new average, not original length! */
 }
 
 static void
@@ -977,15 +1052,15 @@ moused(void)
     bzero(&action2, sizeof(action2));
     bzero(&mouse, sizeof(mouse));
     mouse_button_state = S0;
-    gettimeofday(&mouse_button_state_tv, NULL);
+    clock_gettime(CLOCK_MONOTONIC, &mouse_button_state_ts);
     mouse_move_delayed = 0;
     for (i = 0; i < MOUSE_MAXBUTTON; ++i) {
 	bstate[i].count = 0;
-	bstate[i].tv = mouse_button_state_tv;
+	bstate[i].ts = mouse_button_state_ts;
     }
-    for (i = 0; i < sizeof(zstate)/sizeof(zstate[0]); ++i) {
+    for (i = 0; i < (int)(sizeof(zstate) / sizeof(zstate[0])); ++i) {
 	zstate[i].count = 0;
-	zstate[i].tv = mouse_button_state_tv;
+	zstate[i].ts = mouse_button_state_ts;
     }
 
     /* choose which ioctl command to use */
@@ -1056,8 +1131,8 @@ moused(void)
 			  action.flags, action.button, action.obutton);
 
 		    /* This isn't a middle button down... move along... */
-		    if (scroll_state == SCROLL_SCROLLING) { 
-			/* 
+		    if (scroll_state == SCROLL_SCROLLING) {
+			/*
 			 * We were scrolling, someone let go of button 2.
 			 * Now turn autoscroll off.
 			 */
@@ -1081,7 +1156,7 @@ moused(void)
 			newaction.obutton = newaction.button;
 			newaction.button = action0.button;
 			r_click(&newaction);
-		    } 
+		    }
 		}
 	    }
 
@@ -1103,7 +1178,7 @@ moused(void)
 		action2.button, action2.dx, action2.dy, action2.dz);
 
 	    if ((rodent.flags & VirtualScroll) || (rodent.flags & HVirtualScroll)) {
-		/* 
+		/*
 		 * If *only* the middle button is pressed AND we are moving
 		 * the stick/trackpoint/nipple, scroll!
 		 */
@@ -1117,12 +1192,12 @@ moused(void)
 				 scroll_movement += action2.dy;
 				 debug("SCROLL: %d", scroll_movement);
 
-			    if (scroll_movement < -rodent.scrollthreshold) { 
+			    if (scroll_movement < -rodent.scrollthreshold) {
 				/* Scroll down */
 				action2.dz = -1;
 				scroll_movement = 0;
 			    }
-			    else if (scroll_movement > rodent.scrollthreshold) { 
+			    else if (scroll_movement > rodent.scrollthreshold) {
 				/* Scroll up */
 				action2.dz = 1;
 				scroll_movement = 0;
@@ -1148,25 +1223,25 @@ moused(void)
 	    }
 
 	    if (drift_terminate) {
-		if (flags != MOUSE_POSCHANGED || action.dz || action2.dz)
-		    drift_last_activity = drift_current_tv;
+		if ((flags & MOUSE_POSCHANGED) == 0 || action.dz || action2.dz)
+		    drift_last_activity = drift_current_ts;
 		else {
 		    /* X or/and Y movement only - possibly drift */
-		    timersub(&drift_current_tv,&drift_last_activity,&drift_tmp);
-		    if (timercmp(&drift_tmp, &drift_after_tv, >)) {
-			timersub(&drift_current_tv, &drift_since, &drift_tmp);
-			if (timercmp(&drift_tmp, &drift_time_tv, <)) {
+		    tssub(&drift_current_ts, &drift_last_activity, &drift_tmp);
+		    if (tscmp(&drift_tmp, &drift_after_ts, >)) {
+			tssub(&drift_current_ts, &drift_since, &drift_tmp);
+			if (tscmp(&drift_tmp, &drift_time_ts, <)) {
 			    drift_last.x += action2.dx;
 			    drift_last.y += action2.dy;
 			} else {
 			    /* discard old accumulated steps (drift) */
-			    if (timercmp(&drift_tmp, &drift_2time_tv, >))
+			    if (tscmp(&drift_tmp, &drift_2time_ts, >))
 				drift_previous.x = drift_previous.y = 0;
 			    else
 				drift_previous = drift_last;
 			    drift_last.x = action2.dx;
 			    drift_last.y = action2.dy;
-			    drift_since = drift_current_tv;
+			    drift_since = drift_current_ts;
 			}
 			if (abs(drift_last.x) + abs(drift_last.y)
 			  > drift_distance) {
@@ -1174,10 +1249,10 @@ moused(void)
 			    action2.dx = drift_previous.x + drift_last.x;
 			    action2.dy = drift_previous.y + drift_last.y;
 			    /* and reset accumulators */
-			    timerclear(&drift_since);
+			    tsclr(&drift_since);
 			    drift_last.x = drift_last.y = 0;
 			    /* drift_previous will be cleared at next movement*/
-			    drift_last_activity = drift_current_tv;
+			    drift_last_activity = drift_current_ts;
 			} else {
 			    continue;   /* don't pass current movement to
 					 * console driver */
@@ -1188,14 +1263,20 @@ moused(void)
 
 	    if (extioctl) {
 		/* Defer clicks until we aren't VirtualScroll'ing. */
-		if (scroll_state == SCROLL_NOTSCROLLING) 
+		if (scroll_state == SCROLL_NOTSCROLLING)
 		    r_click(&action2);
 
 		if (action2.flags & MOUSE_POSCHANGED) {
 		    mouse.operation = MOUSE_MOTION_EVENT;
 		    mouse.u.data.buttons = action2.button;
-		    mouse.u.data.x = action2.dx * rodent.accelx;
-		    mouse.u.data.y = action2.dy * rodent.accely;
+		    if (rodent.flags & ExponentialAcc) {
+			expoacc(action2.dx, action2.dy,
+			    &mouse.u.data.x, &mouse.u.data.y);
+		    }
+		    else {
+			linacc(action2.dx, action2.dy,
+			    &mouse.u.data.x, &mouse.u.data.y);
+		    }
 		    mouse.u.data.z = action2.dz;
 		    if (debug < 2)
 			if (!paused)
@@ -1204,8 +1285,14 @@ moused(void)
 	    } else {
 		mouse.operation = MOUSE_ACTION;
 		mouse.u.data.buttons = action2.button;
-		mouse.u.data.x = action2.dx * rodent.accelx;
-		mouse.u.data.y = action2.dy * rodent.accely;
+		if (rodent.flags & ExponentialAcc) {
+		    expoacc(action2.dx, action2.dy,
+			&mouse.u.data.x, &mouse.u.data.y);
+		}
+		else {
+		    linacc(action2.dx, action2.dy,
+			&mouse.u.data.x, &mouse.u.data.y);
+		}
 		mouse.u.data.z = action2.dz;
 		if (debug < 2)
 		    if (!paused)
@@ -1241,13 +1328,13 @@ moused(void)
 }
 
 static void
-hup(int sig)
+hup(__unused int sig)
 {
     longjmp(env, 1);
 }
 
 static void
-cleanup(int sig)
+cleanup(__unused int sig)
 {
     if (rodent.rtype == MOUSE_PROTO_X10MOUSEREM)
 	unlink(_PATH_MOUSEREMOTE);
@@ -1255,7 +1342,7 @@ cleanup(int sig)
 }
 
 static void
-pause_mouse(int sig)
+pause_mouse(__unused int sig)
 {
     paused = !paused;
 }
@@ -1409,10 +1496,10 @@ r_identify(void)
     rodent.mode.accelfactor = 0;
     rodent.mode.level = 0;
     if (ioctl(rodent.mfd, MOUSE_GETMODE, &rodent.mode) == 0) {
-	if ((rodent.mode.protocol == MOUSE_PROTO_UNKNOWN)
-	    || (rodent.mode.protocol >= sizeof(proto)/sizeof(proto[0]))) {
+	if (rodent.mode.protocol == MOUSE_PROTO_UNKNOWN ||
+	    rodent.mode.protocol >= (int)(sizeof(proto) / sizeof(proto[0]))) {
 	    logwarnx("unknown mouse protocol (%d)", rodent.mode.protocol);
-	    return MOUSE_PROTO_UNKNOWN;
+	    return (MOUSE_PROTO_UNKNOWN);
 	} else {
 	    /* INPORT and BUS are the same... */
 	    if (rodent.mode.protocol == MOUSE_PROTO_INPORT)
@@ -1436,9 +1523,9 @@ r_identify(void)
     if (rodent.mode.protocol == MOUSE_PROTO_UNKNOWN) {
 
 	if (rodent.flags & NoPnP)
-	    return rodent.rtype;
+	    return (rodent.rtype);
 	if (((len = pnpgets(pnpbuf)) <= 0) || !pnpparse(&pnpid, pnpbuf, len))
-	    return rodent.rtype;
+	    return (rodent.rtype);
 
 	debug("PnP serial mouse: '%*.*s' '%*.*s' '%*.*s'",
 	    pnpid.neisaid, pnpid.neisaid, pnpid.eisaid,
@@ -1475,33 +1562,31 @@ r_identify(void)
 	cur_proto[0], cur_proto[1], cur_proto[2], cur_proto[3],
 	cur_proto[4], cur_proto[5], cur_proto[6]);
 
-    return rodent.rtype;
+    return (rodent.rtype);
 }
 
-static char *
+static const char *
 r_if(int iftype)
 {
-    char *s;
 
-    s = gettokenname(rifs, iftype);
-    return (s == NULL) ? "unknown" : s;
+    return (gettokenname(rifs, iftype));
 }
 
-static char *
+static const char *
 r_name(int type)
 {
-    return ((type == MOUSE_PROTO_UNKNOWN)
-	|| (type > sizeof(rnames)/sizeof(rnames[0]) - 1))
-	? "unknown" : rnames[type];
+    const char *unknown = "unknown";
+
+    return (type == MOUSE_PROTO_UNKNOWN ||
+	type >= (int)(sizeof(rnames) / sizeof(rnames[0])) ?
+	unknown : rnames[type]);
 }
 
-static char *
+static const char *
 r_model(int model)
 {
-    char *s;
 
-    s = gettokenname(rmodels, model);
-    return (s == NULL) ? "unknown" : s;
+    return (gettokenname(rmodels, model));
 }
 
 static void
@@ -1509,7 +1594,7 @@ r_init(void)
 {
     unsigned char buf[16];	/* scrach buffer */
     fd_set fds;
-    char *s;
+    const char *s;
     char c;
     int i;
 
@@ -1811,9 +1896,9 @@ r_protocol(u_char rBuf, mousestatus_t *act)
 
     debug("received char 0x%x",(int)rBuf);
     if (rodent.rtype == MOUSE_PROTO_KIDSPAD)
-	return kidspad(rBuf, act) ;
+	return (kidspad(rBuf, act));
     if (rodent.rtype == MOUSE_PROTO_GTCO_DIGIPAD)
-	return gtco_digipad(rBuf, act);
+	return (gtco_digipad(rBuf, act));
 
     /*
      * Hack for resyncing: We check here for a package that is:
@@ -1844,7 +1929,7 @@ r_protocol(u_char rBuf, mousestatus_t *act)
     }
 
     if (pBufP == 0 && (rBuf & cur_proto[0]) != cur_proto[1])
-	return 0;
+	return (0);
 
     /* is there an extra data byte? */
     if (pBufP >= cur_proto[4] && (rBuf & cur_proto[0]) != cur_proto[1])
@@ -1885,7 +1970,7 @@ r_protocol(u_char rBuf, mousestatus_t *act)
 
 	if ((rBuf & cur_proto[5]) != cur_proto[6]) {
 	    pBufP = 0;
-	    return 0;
+	    return (0);
 	}
 
 	switch (rodent.rtype) {
@@ -1943,14 +2028,14 @@ r_protocol(u_char rBuf, mousestatus_t *act)
 	act->flags = ((act->dx || act->dy || act->dz) ? MOUSE_POSCHANGED : 0)
 	    | (act->obutton ^ act->button);
 	pBufP = 0;
-	return act->flags;
+	return (act->flags);
     }
 
     if (pBufP >= cur_proto[4])
 	pBufP = 0;
     pBuf[pBufP++] = rBuf;
     if (pBufP != cur_proto[4])
-	return 0;
+	return (0);
 
     /*
      * assembly full package
@@ -1985,7 +2070,7 @@ r_protocol(u_char rBuf, mousestatus_t *act)
 						  (pBuf[1] & 0x3F));
 		write(rodent.mremcfd, &key, 1);
 	    }
-	    return 0;
+	    return (0);
 	}
 
 	act->dx = (signed char)(((pBuf[0] & 0x03) << 6) | (pBuf[1] & 0x3F));
@@ -2248,7 +2333,7 @@ r_protocol(u_char rBuf, mousestatus_t *act)
 	break;
 
     default:
-	return 0;
+	return (0);
     }
     /*
      * We don't reset pBufP here yet, as there may be an additional data
@@ -2259,7 +2344,7 @@ r_protocol(u_char rBuf, mousestatus_t *act)
     act->flags = ((act->dx || act->dy || act->dz) ? MOUSE_POSCHANGED : 0)
 	| (act->obutton ^ act->button);
 
-    return act->flags;
+    return (act->flags);
 }
 
 static int
@@ -2301,7 +2386,7 @@ r_statetrans(mousestatus_t *a1, mousestatus_t *a2, int trans)
 	if (mouse_button_state != states[mouse_button_state].s[trans])
 		changed = TRUE;
 	if (changed)
-		gettimeofday(&mouse_button_state_tv, NULL);
+		clock_gettime(CLOCK_MONOTONIC, &mouse_button_state_ts);
 	mouse_button_state = states[mouse_button_state].s[trans];
 	a2->button &=
 	    ~(MOUSE_BUTTON1DOWN | MOUSE_BUTTON2DOWN | MOUSE_BUTTON3DOWN);
@@ -2315,7 +2400,7 @@ r_statetrans(mousestatus_t *a1, mousestatus_t *a2, int trans)
 	}
 	a2->flags = flags;
     }
-    return changed;
+    return (changed);
 }
 
 /* phisical to logical button mapping */
@@ -2335,7 +2420,7 @@ skipspace(char *s)
 {
     while(isspace(*s))
 	++s;
-    return s;
+    return (s);
 }
 
 static int
@@ -2352,7 +2437,7 @@ r_installmap(char *arg)
 	    ++arg;
 	arg = skipspace(arg);
 	if ((arg <= s) || (*arg != '='))
-	    return FALSE;
+	    return (FALSE);
 	lbutton = atoi(s);
 
 	arg = skipspace(++arg);
@@ -2360,18 +2445,18 @@ r_installmap(char *arg)
 	while (isdigit(*arg))
 	    ++arg;
 	if ((arg <= s) || (!isspace(*arg) && (*arg != '\0')))
-	    return FALSE;
+	    return (FALSE);
 	pbutton = atoi(s);
 
 	if ((lbutton <= 0) || (lbutton > MOUSE_MAXBUTTON))
-	    return FALSE;
+	    return (FALSE);
 	if ((pbutton <= 0) || (pbutton > MOUSE_MAXBUTTON))
-	    return FALSE;
+	    return (FALSE);
 	p2l[pbutton - 1] = 1 << (lbutton - 1);
 	mstate[lbutton - 1] = &bstate[pbutton - 1];
     }
 
-    return TRUE;
+    return (TRUE);
 }
 
 static void
@@ -2443,10 +2528,10 @@ r_map(mousestatus_t *act1, mousestatus_t *act2)
 static void
 r_timestamp(mousestatus_t *act)
 {
-    struct timeval tv;
-    struct timeval tv1;
-    struct timeval tv2;
-    struct timeval tv3;
+    struct timespec ts;
+    struct timespec ts1;
+    struct timespec ts2;
+    struct timespec ts3;
     int button;
     int mask;
     int i;
@@ -2457,43 +2542,43 @@ r_timestamp(mousestatus_t *act)
 	return;
 #endif
 
-    gettimeofday(&tv1, NULL);
-    drift_current_tv = tv1;
+    clock_gettime(CLOCK_MONOTONIC, &ts1);
+    drift_current_ts = ts1;
 
     /* double click threshold */
-    tv2.tv_sec = rodent.clickthreshold/1000;
-    tv2.tv_usec = (rodent.clickthreshold%1000)*1000;
-    timersub(&tv1, &tv2, &tv);
-    debug("tv:  %ld %ld", tv.tv_sec, tv.tv_usec);
+    ts2.tv_sec = rodent.clickthreshold / 1000;
+    ts2.tv_nsec = (rodent.clickthreshold % 1000) * 1000000;
+    tssub(&ts1, &ts2, &ts);
+    debug("ts:  %jd %ld", (intmax_t)ts.tv_sec, ts.tv_nsec);
 
     /* 3 button emulation timeout */
-    tv2.tv_sec = rodent.button2timeout/1000;
-    tv2.tv_usec = (rodent.button2timeout%1000)*1000;
-    timersub(&tv1, &tv2, &tv3);
+    ts2.tv_sec = rodent.button2timeout / 1000;
+    ts2.tv_nsec = (rodent.button2timeout % 1000) * 1000000;
+    tssub(&ts1, &ts2, &ts3);
 
     button = MOUSE_BUTTON1DOWN;
     for (i = 0; (i < MOUSE_MAXBUTTON) && (mask != 0); ++i) {
 	if (mask & 1) {
 	    if (act->button & button) {
 		/* the button is down */
-		debug("  :  %ld %ld",
-		    bstate[i].tv.tv_sec, bstate[i].tv.tv_usec);
-		if (timercmp(&tv, &bstate[i].tv, >)) {
+		debug("  :  %jd %ld",
+		    (intmax_t)bstate[i].ts.tv_sec, bstate[i].ts.tv_nsec);
+		if (tscmp(&ts, &bstate[i].ts, >)) {
 		    bstate[i].count = 1;
 		} else {
 		    ++bstate[i].count;
 		}
-		bstate[i].tv = tv1;
+		bstate[i].ts = ts1;
 	    } else {
 		/* the button is up */
-		bstate[i].tv = tv1;
+		bstate[i].ts = ts1;
 	    }
 	} else {
 	    if (act->button & button) {
 		/* the button has been down */
-		if (timercmp(&tv3, &bstate[i].tv, >)) {
+		if (tscmp(&ts3, &bstate[i].ts, >)) {
 		    bstate[i].count = 1;
-		    bstate[i].tv = tv1;
+		    bstate[i].ts = ts1;
 		    act->flags |= button;
 		    debug("button %d timeout", i + 1);
 		}
@@ -2509,17 +2594,17 @@ r_timestamp(mousestatus_t *act)
 static int
 r_timeout(void)
 {
-    struct timeval tv;
-    struct timeval tv1;
-    struct timeval tv2;
+    struct timespec ts;
+    struct timespec ts1;
+    struct timespec ts2;
 
     if (states[mouse_button_state].timeout)
-	return TRUE;
-    gettimeofday(&tv1, NULL);
-    tv2.tv_sec = rodent.button2timeout/1000;
-    tv2.tv_usec = (rodent.button2timeout%1000)*1000;
-    timersub(&tv1, &tv2, &tv);
-    return timercmp(&tv, &mouse_button_state_tv, >);
+	return (TRUE);
+    clock_gettime(CLOCK_MONOTONIC, &ts1);
+    ts2.tv_sec = rodent.button2timeout / 1000;
+    ts2.tv_nsec = (rodent.button2timeout % 1000) * 1000000;
+    tssub(&ts1, &ts2, &ts);
+    return (tscmp(&ts, &mouse_button_state_ts, >));
 }
 
 static void
@@ -2588,7 +2673,7 @@ static void
 setmousespeed(int old, int new, unsigned cflag)
 {
 	struct termios tty;
-	char *c;
+	const char *c;
 
 	if (tcgetattr(rodent.mfd, &tty) < 0)
 	{
@@ -2721,7 +2806,7 @@ pnpwakeup1(void)
     ioctl(rodent.mfd, TIOCMGET, &i);
     debug("modem status 0%o", i);
     if ((i & TIOCM_DSR) == 0)
-	return FALSE;
+	return (FALSE);
 
     /* port setup, 1st phase (2.1.3) */
     setmousespeed(1200, 1200, (CS7 | CREAD | CLOCAL | HUPCL));
@@ -2745,7 +2830,7 @@ pnpwakeup1(void)
     timeout.tv_usec = 240000;
     if (select(FD_SETSIZE, &fds, NULL, NULL, &timeout) > 0) {
 	debug("pnpwakeup1(): valid response in first phase.");
-	return TRUE;
+	return (TRUE);
     }
 
     /* port setup, 2nd phase (2.1.5) */
@@ -2766,10 +2851,10 @@ pnpwakeup1(void)
     timeout.tv_usec = 240000;
     if (select(FD_SETSIZE, &fds, NULL, NULL, &timeout) > 0) {
 	debug("pnpwakeup1(): valid response in second phase.");
-	return TRUE;
+	return (TRUE);
     }
 
-    return FALSE;
+    return (FALSE);
 }
 
 static int
@@ -2805,10 +2890,10 @@ pnpwakeup2(void)
     timeout.tv_usec = 240000;
     if (select(FD_SETSIZE, &fds, NULL, NULL, &timeout) > 0) {
 	debug("pnpwakeup2(): valid response.");
-	return TRUE;
+	return (TRUE);
     }
 
-    return FALSE;
+    return (FALSE);
 }
 
 static int
@@ -2829,7 +2914,7 @@ pnpgets(char *buf)
 	 */
 	i = TIOCM_DTR | TIOCM_RTS;		/* DTR = 1, RTS = 1 */
 	ioctl(rodent.mfd, TIOCMBIS, &i);
-	return 0;
+	return (0);
     }
 
     /* collect PnP COM device ID (2.1.7) */
@@ -2876,7 +2961,7 @@ pnpgets(char *buf)
     debug("len:%d, '%-*.*s'", i, i, i, buf);
 
     if (buf[i - 1] == c)
-	return i;		/* a valid PnP string */
+	return (i);		/* a valid PnP string */
 
     /*
      * According to PnP spec, we should set DTR = 1 and RTS = 0 while
@@ -2913,7 +2998,7 @@ pnpparse(pnpid_t *id, char *buf, int len)
 	/* non-PnP mice */
 	switch(buf[0]) {
 	default:
-	    return FALSE;
+	    return (FALSE);
 	case 'M': /* Microsoft */
 	    id->eisaid = "PNP0F01";
 	    break;
@@ -2925,7 +3010,7 @@ pnpparse(pnpid_t *id, char *buf, int len)
 	id->class = "MOUSE";
 	id->nclass = strlen(id->class);
 	debug("non-PnP mouse '%c'", buf[0]);
-	return TRUE;
+	return (TRUE);
     }
 
     /* PnP mice */
@@ -3024,12 +3109,12 @@ pnpparse(pnpid_t *id, char *buf, int len)
 	     * spec regarding checksum... XXX
 	     */
 	    logwarnx("PnP checksum error", 0);
-	    return FALSE;
+	    return (FALSE);
 #endif
 	}
     }
 
-    return TRUE;
+    return (TRUE);
 }
 
 static symtab_t *
@@ -3042,12 +3127,12 @@ pnpproto(pnpid_t *id)
 	if (strncmp(id->class, "MOUSE", id->nclass) != 0 &&
 	    strncmp(id->class, "TABLET", id->nclass) != 0)
 	    /* this is not a mouse! */
-	    return NULL;
+	    return (NULL);
 
     if (id->neisaid > 0) {
 	t = gettoken(pnpprod, id->eisaid, id->neisaid);
 	if (t->val != MOUSE_PROTO_UNKNOWN)
-	    return t;
+	    return (t);
     }
 
     /*
@@ -3055,7 +3140,7 @@ pnpproto(pnpid_t *id)
      * ID separated by ','.
      */
     if (id->ncompat <= 0)
-	return NULL;
+	return (NULL);
     for (i = 0; i < id->ncompat; ++i) {
 	for (j = i; id->compat[i] != ','; ++i)
 	    if (i >= id->ncompat)
@@ -3063,17 +3148,17 @@ pnpproto(pnpid_t *id)
 	if (i > j) {
 	    t = gettoken(pnpprod, id->compat + j, i - j);
 	    if (t->val != MOUSE_PROTO_UNKNOWN)
-		return t;
+		return (t);
 	}
     }
 
-    return NULL;
+    return (NULL);
 }
 
 /* name/val mapping */
 
 static symtab_t *
-gettoken(symtab_t *tab, char *s, int len)
+gettoken(symtab_t *tab, const char *s, int len)
 {
     int i;
 
@@ -3081,19 +3166,20 @@ gettoken(symtab_t *tab, char *s, int len)
 	if (strncmp(tab[i].name, s, len) == 0)
 	    break;
     }
-    return &tab[i];
+    return (&tab[i]);
 }
 
-static char *
+static const char *
 gettokenname(symtab_t *tab, int val)
 {
+    static const char unknown[] = "unknown";
     int i;
 
     for (i = 0; tab[i].name != NULL; ++i) {
 	if (tab[i].val == val)
-	    return tab[i].name;
+	    return (tab[i].name);
     }
-    return NULL;
+    return (unknown);
 }
 
 
@@ -3121,145 +3207,153 @@ we store the last coordinates sent when the pen went out of the tablet,
 
 typedef enum {
     S_IDLE, S_PROXY, S_FIRST, S_DOWN, S_UP
-} k_status ;
+} k_status;
 
 static int
 kidspad(u_char rxc, mousestatus_t *act)
 {
     static int buf[5];
-    static int buflen = 0, b_prev = 0 , x_prev = -1, y_prev = -1 ;
-    static k_status status = S_IDLE ;
-    static struct timeval old, now ;
+    static int buflen = 0, b_prev = 0 , x_prev = -1, y_prev = -1;
+    static k_status status = S_IDLE;
+    static struct timespec old, now;
 
-    int x, y ;
+    int x, y;
 
     if (buflen > 0 && (rxc & 0x80)) {
 	fprintf(stderr, "invalid code %d 0x%x\n", buflen, rxc);
-	buflen = 0 ;
+	buflen = 0;
     }
     if (buflen == 0 && (rxc & 0xb8) != 0xb8) {
 	fprintf(stderr, "invalid code 0 0x%x\n", rxc);
-	return 0 ; /* invalid code, no action */
+	return (0);	/* invalid code, no action */
     }
-    buf[buflen++] = rxc ;
+    buf[buflen++] = rxc;
     if (buflen < 5)
-	return 0 ;
+	return (0);
 
-    buflen = 0 ; /* for next time... */
+    buflen = 0;	/* for next time... */
 
-    x = buf[1]+128*(buf[2] - 7) ;
-    if (x < 0) x = 0 ;
-    y = 28*128 - (buf[3] + 128* (buf[4] - 7)) ;
-    if (y < 0) y = 0 ;
+    x = buf[1]+128*(buf[2] - 7);
+    if (x < 0) x = 0;
+    y = 28*128 - (buf[3] + 128* (buf[4] - 7));
+    if (y < 0) y = 0;
 
-    x /= 8 ;
-    y /= 8 ;
+    x /= 8;
+    y /= 8;
 
-    act->flags = 0 ;
-    act->obutton = act->button ;
-    act->dx = act->dy = act->dz = 0 ;
-    gettimeofday(&now, NULL);
+    act->flags = 0;
+    act->obutton = act->button;
+    act->dx = act->dy = act->dz = 0;
+    clock_gettime(CLOCK_MONOTONIC, &now);
     if (buf[0] & 0x40) /* pen went out of reach */
-	status = S_IDLE ;
+	status = S_IDLE;
     else if (status == S_IDLE) { /* pen is newly near the tablet */
-	act->flags |= MOUSE_POSCHANGED ; /* force update */
-	status = S_PROXY ;
-	x_prev = x ;
-	y_prev = y ;
+	act->flags |= MOUSE_POSCHANGED;	/* force update */
+	status = S_PROXY;
+	x_prev = x;
+	y_prev = y;
     }
-    old = now ;
-    act->dx = x - x_prev ;
-    act->dy = y - y_prev ;
+    old = now;
+    act->dx = x - x_prev;
+    act->dy = y - y_prev;
     if (act->dx || act->dy)
-	act->flags |= MOUSE_POSCHANGED ;
-    x_prev = x ;
-    y_prev = y ;
+	act->flags |= MOUSE_POSCHANGED;
+    x_prev = x;
+    y_prev = y;
     if (b_prev != 0 && b_prev != buf[0]) { /* possibly record button change */
-	act->button = 0 ;
+	act->button = 0;
 	if (buf[0] & 0x01) /* tip pressed */
-	    act->button |= MOUSE_BUTTON1DOWN ;
+	    act->button |= MOUSE_BUTTON1DOWN;
 	if (buf[0] & 0x02) /* button pressed */
-	    act->button |= MOUSE_BUTTON2DOWN ;
-	act->flags |= MOUSE_BUTTONSCHANGED ;
+	    act->button |= MOUSE_BUTTON2DOWN;
+	act->flags |= MOUSE_BUTTONSCHANGED;
     }
-    b_prev = buf[0] ;
-    return act->flags ;
+    b_prev = buf[0];
+    return (act->flags);
 }
 
 static int
 gtco_digipad (u_char rxc, mousestatus_t *act)
 {
 	static u_char buf[5];
- 	static int buflen = 0, b_prev = 0 , x_prev = -1, y_prev = -1 ;
-	static k_status status = S_IDLE ;
-        int x, y;
+ 	static int buflen = 0, b_prev = 0 , x_prev = -1, y_prev = -1;
+	static k_status status = S_IDLE;
+	int x, y;
 
 #define	GTCO_HEADER	0x80
 #define	GTCO_PROXIMITY	0x40
 #define	GTCO_START	(GTCO_HEADER|GTCO_PROXIMITY)
 #define	GTCO_BUTTONMASK	0x3c
 
-    
+
 	if (buflen > 0 && ((rxc & GTCO_HEADER) != GTCO_HEADER)) {
 		fprintf(stderr, "invalid code %d 0x%x\n", buflen, rxc);
-		buflen = 0 ;
+		buflen = 0;
 	}
 	if (buflen == 0 && (rxc & GTCO_START) != GTCO_START) {
 		fprintf(stderr, "invalid code 0 0x%x\n", rxc);
-		return 0 ; /* invalid code, no action */
+		return (0);	/* invalid code, no action */
 	}
 
-	buf[buflen++] = rxc ;
+	buf[buflen++] = rxc;
 	if (buflen < 5)
-		return 0 ;
+		return (0);
 
-	buflen = 0 ; /* for next time... */
+	buflen = 0;	/* for next time... */
 
 	x = ((buf[2] & ~GTCO_START) << 6 | (buf[1] & ~GTCO_START));
 	y = 4768 - ((buf[4] & ~GTCO_START) << 6 | (buf[3] & ~GTCO_START));
 
 	x /= 2.5;
 	y /= 2.5;
-    
-	act->flags = 0 ;
-	act->obutton = act->button ;
-	act->dx = act->dy = act->dz = 0 ;
-    
+
+	act->flags = 0;
+	act->obutton = act->button;
+	act->dx = act->dy = act->dz = 0;
+
 	if ((buf[0] & 0x40) == 0) /* pen went out of reach */
-		status = S_IDLE ;
+		status = S_IDLE;
 	else if (status == S_IDLE) { /* pen is newly near the tablet */
-		act->flags |= MOUSE_POSCHANGED ; /* force update */
-		status = S_PROXY ;
-		x_prev = x ;
-		y_prev = y ;
+		act->flags |= MOUSE_POSCHANGED;	/* force update */
+		status = S_PROXY;
+		x_prev = x;
+		y_prev = y;
 	}
 
-	act->dx = x - x_prev ;
-	act->dy = y - y_prev ;
+	act->dx = x - x_prev;
+	act->dy = y - y_prev;
 	if (act->dx || act->dy)
-		act->flags |= MOUSE_POSCHANGED ;
-	x_prev = x ;
-	y_prev = y ;
-    
+		act->flags |= MOUSE_POSCHANGED;
+	x_prev = x;
+	y_prev = y;
+
 	/* possibly record button change */
-	if (b_prev != 0 && b_prev != buf[0]) { 
-		act->button = 0 ;
-		if (buf[0] & 0x04) /* tip pressed/yellow */
-			act->button |= MOUSE_BUTTON1DOWN ;
-		if (buf[0] & 0x08) /* grey/white */
-			act->button |= MOUSE_BUTTON2DOWN ;
-		if (buf[0] & 0x10) /* black/green */
-			act->button |= MOUSE_BUTTON3DOWN ;
-		if (buf[0] & 0x20) /* tip+grey/blue */
-			act->button |= MOUSE_BUTTON4DOWN ;
-		act->flags |= MOUSE_BUTTONSCHANGED ;
+	if (b_prev != 0 && b_prev != buf[0]) {
+		act->button = 0;
+		if (buf[0] & 0x04) {
+			/* tip pressed/yellow */
+			act->button |= MOUSE_BUTTON1DOWN;
+		}
+		if (buf[0] & 0x08) {
+			/* grey/white */
+			act->button |= MOUSE_BUTTON2DOWN;
+		}
+		if (buf[0] & 0x10) {
+			/* black/green */
+			act->button |= MOUSE_BUTTON3DOWN;
+		}
+		if (buf[0] & 0x20) {
+			/* tip+grey/blue */
+			act->button |= MOUSE_BUTTON4DOWN;
+		}
+		act->flags |= MOUSE_BUTTONSCHANGED;
 	}
-	b_prev = buf[0] ;
-	return act->flags ;
+	b_prev = buf[0];
+	return (act->flags);
 }
 
 static void
-mremote_serversetup()
+mremote_serversetup(void)
 {
     struct sockaddr_un ad;
 
@@ -3288,7 +3382,8 @@ static void
 mremote_clientchg(int add)
 {
     struct sockaddr_un ad;
-    int ad_len, fd;
+    socklen_t ad_len;
+    int fd;
 
     if (rodent.rtype != MOUSE_PROTO_X10MOUSEREM)
 	return;
