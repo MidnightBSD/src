@@ -39,7 +39,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/identcpu.c,v 1.145.2.2 2006/02/23 15:03:42 dwmalone Exp $");
+/*$FreeBSD: src/sys/i386/i386/identcpu.c,v 1.145.2.2 2006/02/23 15:03:42 dwmalone Exp $ */
+__MBSDID("$MIdnightBSD$");
 
 #include "opt_cpu.h"
 
@@ -611,18 +612,18 @@ printcpuinfo(void)
 #if defined(I586_CPU)
 	case CPUCLASS_586:
 		hw_clockrate = (tsc_freq + 5000) / 1000000;
-		printf("%jd.%02d-MHz ",
-		       (intmax_t)(tsc_freq + 4999) / 1000000,
-		       (u_int)((tsc_freq + 4999) / 10000) % 100);
+		printf("%lld.%02lld-MHz ",
+		       (tsc_freq + 4999LL) / 1000000LL,
+		       ((tsc_freq + 4999LL) / 10000LL) % 100LL);
 		printf("586");
 		break;
 #endif
 #if defined(I686_CPU)
 	case CPUCLASS_686:
 		hw_clockrate = (tsc_freq + 5000) / 1000000;
-		printf("%jd.%02d-MHz ",
-		       (intmax_t)(tsc_freq + 4999) / 1000000,
-		       (u_int)((tsc_freq + 4999) / 10000) % 100);
+		printf("%lld.%02lld-MHz ",
+		       (tsc_freq + 4999LL) / 1000000LL,
+		       ((tsc_freq + 4999LL) / 10000LL) % 100LL);
 		printf("686");
 		break;
 #endif
