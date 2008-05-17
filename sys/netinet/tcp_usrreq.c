@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/sys/netinet/tcp_usrreq.c,v 1.4 2008/05/17 15:44:43 laffer1 Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -83,7 +83,9 @@ __MBSDID("$MidnightBSD$");
 /*
  * TCP protocol interface to socket abstraction.
  */
+#ifdef TCPDEBUG
 extern	char *tcpstates[];	/* XXX ??? */
+#endif
 
 static int	tcp_attach(struct socket *);
 static int	tcp_connect(struct tcpcb *, struct sockaddr *,
@@ -118,11 +120,8 @@ tcp_usr_attach(struct socket *so, int proto, struct thread *td)
 {
 	int error;
 	struct inpcb *inp;
-	struct tcpcb *tp = 0;
-	TCPDEBUG0;
 
 	INP_INFO_WLOCK(&tcbinfo);
-	TCPDEBUG1();
 	inp = sotoinpcb(so);
 	if (inp) {
 		error = EISCONN;
@@ -139,7 +138,6 @@ tcp_usr_attach(struct socket *so, int proto, struct thread *td)
 	inp = sotoinpcb(so);
 	tp = intotcpcb(inp);
 out:
-	TCPDEBUG2(PRU_ATTACH);
 	INP_INFO_WUNLOCK(&tcbinfo);
 	return error;
 }
@@ -852,10 +850,7 @@ struct pr_usrreqs tcp6_usrreqs = {
  * Initialize connection parameters and enter SYN-SENT state.
  */
 static int
-tcp_connect(tp, nam, td)
-	register struct tcpcb *tp;
-	struct sockaddr *nam;
-	struct thread *td;
+tcp_connect(struct tcpcb *tp, struct sockaddr *nam, struct thread *td)
 {
 	struct inpcb *inp = tp->t_inpcb, *oinp;
 	struct socket *so = inp->inp_socket;
@@ -907,10 +902,7 @@ tcp_connect(tp, nam, td)
 
 #ifdef INET6
 static int
-tcp6_connect(tp, nam, td)
-	register struct tcpcb *tp;
-	struct sockaddr *nam;
-	struct thread *td;
+tcp6_connect(struct tcpcb *tp, struct sockaddr *nam, struct thread *td)
 {
 	struct inpcb *inp = tp->t_inpcb, *oinp;
 	struct socket *so = inp->inp_socket;
@@ -977,9 +969,7 @@ tcp6_connect(tp, nam, td)
  * from Linux.
  */
 static void
-tcp_fill_info(tp, ti)
-	struct tcpcb *tp;
-	struct tcp_info *ti;
+tcp_fill_info(struct tcpcb *tp, struct tcp_info *ti)
 {
 
 	INP_LOCK_ASSERT(tp->t_inpcb);
@@ -1017,9 +1007,7 @@ tcp_fill_info(tp, ti)
  * the inpcb lock.
  */
 int
-tcp_ctloutput(so, sopt)
-	struct socket *so;
-	struct sockopt *sopt;
+tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 {
 	int	error, opt, optval;
 	struct	inpcb *inp;
@@ -1181,10 +1169,9 @@ SYSCTL_INT(_net_inet_tcp, TCPCTL_RECVSPACE, recvspace, CTLFLAG_RW,
  * bufer space, and entering LISTEN state if to accept connections.
  */
 static int
-tcp_attach(so)
-	struct socket *so;
+tcp_attach(struct socket *so)
 {
-	register struct tcpcb *tp;
+	struct tcpcb *tp;
 	struct inpcb *inp;
 	int error;
 #ifdef INET6
@@ -1241,8 +1228,7 @@ tcp_attach(so)
  * send segment to peer (with FIN).
  */
 static struct tcpcb *
-tcp_disconnect(tp)
-	register struct tcpcb *tp;
+tcp_disconnect(struct tcpcb *tp)
 {
 	struct inpcb *inp = tp->t_inpcb;
 	struct socket *so = inp->inp_socket;
@@ -1275,15 +1261,13 @@ tcp_disconnect(tp)
  * We can let the user exit from the close as soon as the FIN is acked.
  */
 static struct tcpcb *
-tcp_usrclosed(tp)
-	register struct tcpcb *tp;
+tcp_usrclosed(struct tcpcb *tp)
 {
 
 	INP_INFO_WLOCK_ASSERT(&tcbinfo);
 	INP_LOCK_ASSERT(tp->t_inpcb);
 
 	switch (tp->t_state) {
-
 	case TCPS_CLOSED:
 	case TCPS_LISTEN:
 		tp->t_state = TCPS_CLOSED;
@@ -1303,9 +1287,9 @@ tcp_usrclosed(tp)
 		tp->t_state = TCPS_LAST_ACK;
 		break;
 	}
-	if (tp && tp->t_state >= TCPS_FIN_WAIT_2) {
+	if (tp->t_state >= TCPS_FIN_WAIT_2) {
 		soisdisconnected(tp->t_inpcb->inp_socket);
-		/* To prevent the connection hanging in FIN_WAIT_2 forever. */
+		/* Prevent the connection hanging in FIN_WAIT_2 forever. */
 		if (tp->t_state == TCPS_FIN_WAIT_2)
 			callout_reset(tp->tt_2msl, tcp_maxidle,
 				      tcp_timer_2msl, tp);
