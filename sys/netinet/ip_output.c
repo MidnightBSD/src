@@ -1176,6 +1176,9 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 		return (EINVAL);
 	}
 
+	if (inp == NULL)
+		return (EINVAL);
+
 	switch (sopt->sopt_dir) {
 	case SOPT_SET:
 		switch (sopt->sopt_name) {
