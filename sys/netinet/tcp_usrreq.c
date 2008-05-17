@@ -888,7 +888,7 @@ tcp_connect(tp, nam, td)
 	 * XXX: This should be moved to tcp_output().
 	 */
 	while (tp->request_r_scale < TCP_MAX_WINSHIFT &&
-	    (0x1 << tp->request_r_scale) < tcp_minmss)       /* XXX */
+	    (TCP_MAXWIN << tp->request_r_scale) < sb_max)       /* XXX */
 		tp->request_r_scale++;
 
 	soisconnecting(so);
