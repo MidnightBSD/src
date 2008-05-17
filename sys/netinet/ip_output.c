@@ -1148,14 +1148,28 @@ ip_optcopy(ip, jp)
 
 /*
  * IP socket option processing.
+ *
+ * There are two versions of this call in order to work around a race
+ * condition in TCP in FreeBSD 6.x.  In the TCP implementation, so->so_pcb
+ * can become NULL if the pcb or pcbinfo lock isn't held.  However, when
+ * entering ip_ctloutput(), neither lock is held, and finding the pointer to
+ * either lock requires follow so->so_pcb, which may be NULL.
+ * ip_ctloutput_pcbinfo() accepts the pcbinfo pointer so that the lock can be
+ * safely acquired.  This is not required in FreeBSD 7.x because the
+ * invariants on so->so_pcb are much stronger, so it cannot become NULL
+ * while the socket is in use.
  */
 int
-ip_ctloutput(so, sopt)
+ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 	struct socket *so;
 	struct sockopt *sopt;
+	struct inpcbinfo *pcbinfo;
 {
 	struct	inpcb *inp = sotoinpcb(so);
 	int	error, optval;
+
+	if (pcbinfo == NULL)
+		pcbinfo = inp->inp_pcbinfo;
 
 	error = optval = 0;
 	if (sopt->sopt_level != IPPROTO_IP) {
@@ -1183,6 +1197,10 @@ ip_ctloutput(so, sopt)
 			m->m_len = sopt->sopt_valsize;
 			error = sooptcopyin(sopt, mtod(m, char *), m->m_len,
 					    m->m_len);
+			if (error) {
+				m_free(m);
+				break;
+			}
 			INP_LOCK(inp);
 			error = ip_pcbopts(inp, sopt->sopt_name, m);
 			INP_UNLOCK(inp);
@@ -1261,6 +1279,7 @@ ip_ctloutput(so, sopt)
 				OPTSET(INP_DONTFRAG);
 				break;
 			}
+			INP_UNLOCK(inp);
 			break;
 #undef OPTSET
 
@@ -1453,6 +1472,15 @@ ip_ctloutput(so, sopt)
 		break;
 	}
 	return (error);
+}
+
+int
+ip_ctloutput(so, sopt)
+	struct socket *so;
+	struct sockopt *sopt;
+{
+
+	return (ip_ctloutput_pcbinfo(so, sopt, NULL));
 }
 
 /*
