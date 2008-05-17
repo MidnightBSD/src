@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libutil/libutil.h,v 1.2 2006/12/31 09:59:48 laffer1 Exp $
  * $FreeBSD: src/lib/libutil/libutil.h,v 1.40.8.1 2006/01/15 17:50:35 delphij Exp $
  */
 
@@ -102,6 +102,10 @@ int	realhostname(char *host, size_t hsize, const struct in_addr *ip);
 struct sockaddr;
 int	realhostname_sa(char *host, size_t hsize, struct sockaddr *addr,
 			     int addrlen);
+
+int	kld_isloaded(const char *name);
+int	kld_load(const char *name);
+
 void		(*esetfunc(void (*)(int, const char *, ...)))
     (int, const char *, ...);
 size_t 		estrlcpy(char *, const char *, size_t);

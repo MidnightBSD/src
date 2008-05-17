@@ -19408,6 +19408,8 @@ lib/libutil/fparseln.3 -text
 lib/libutil/fparseln.c -text
 lib/libutil/humanize_number.3 -text
 lib/libutil/humanize_number.c -text
+lib/libutil/kld.3 -text
+lib/libutil/kld.c -text
 lib/libutil/libutil.h -text
 lib/libutil/login.3 -text
 lib/libutil/login.c -text
