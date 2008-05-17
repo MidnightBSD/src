@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)specialreg.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/include/specialreg.h,v 1.27 2004/04/07 20:46:05 imp Exp $
+ * $FreeBSD: src/sys/i386/include/specialreg.h,v 1.27.8.2 2006/07/21 15:12:03 mr Exp $
  */
 
 #ifndef _MACHINE_SPECIALREG_H_
@@ -108,12 +108,34 @@
 #define	CPUID_PBE	0x80000000
 
 /*
+ * Important bits in the AMD extended cpuid flags
+ */
+#define AMDID_SYSCALL	0x00000800
+#define AMDID_MP	0x00080000
+#define AMDID_NX	0x00100000
+#define AMDID_EXT_MMX	0x00400000
+#define AMDID_FFXSR	0x01000000
+#define AMDID_RDTSCP	0x08000000
+#define AMDID_LM	0x20000000
+#define AMDID_EXT_3DNOW	0x40000000
+#define AMDID_3DNOW	0x80000000
+
+#define AMDID2_LAHF	0x00000001
+#define AMDID2_CMP	0x00000002
+#define AMDID2_CR8	0x00000010
+
+/*
  * CPUID instruction 1 ebx info
  */
 #define	CPUID_BRAND_INDEX	0x000000ff
 #define	CPUID_CLFUSH_SIZE	0x0000ff00
 #define	CPUID_HTT_CORES		0x00ff0000
 #define	CPUID_LOCAL_APIC_ID	0xff000000
+
+/*
+ * AMD extended function 8000_0008h ecx info
+ */
+#define AMDID_CMP_CORES		0x000000ff
 
 /*
  * Model-specific registers for the i386 family
@@ -371,6 +393,41 @@
 #define	AMD_WT_ALLOC_PRE	0x20000	/* programmable range enable */
 #define	AMD_WT_ALLOC_FRE	0x10000	/* fixed (A0000-FFFFF) range enable */
 
+/* VIA ACE crypto featureset: for via_feature_rng */
+#define	VIA_HAS_RNG		1	/* cpu has RNG */
+
+/* VIA ACE crypto featureset: for via_has_xcrypt */
+#define VIA_HAS_AES		1	/* cpu has AES */
+#define VIA_HAS_SHA		2	/* cpu has SHA1 & SHA256 */
+#define VIA_HAS_MM		4	/* cpu has RSA instructions */
+#define VIA_HAS_AESCTR		8	/* cpu has AES-CTR instructions */
+
+/* Centaur Extended Feature flags */
+#define VIA_CPUID_HAS_RNG	0x000004
+#define VIA_CPUID_DO_RNG	0x000008
+#define VIA_CPUID_HAS_ACE	0x000040
+#define VIA_CPUID_DO_ACE	0x000080
+#define VIA_CPUID_HAS_ACE2	0x000100
+#define VIA_CPUID_DO_ACE2	0x000200
+#define VIA_CPUID_HAS_PHE	0x000400
+#define VIA_CPUID_DO_PHE	0x000800
+#define VIA_CPUID_HAS_PMM	0x001000
+#define VIA_CPUID_DO_PMM	0x002000
+
+/* VIA ACE xcrypt-* instruction context control options */
+#define VIA_CRYPT_CWLO_ROUND_M		0x0000000f
+#define VIA_CRYPT_CWLO_ALG_M		0x00000070
+#define VIA_CRYPT_CWLO_ALG_AES		0x00000000
+#define VIA_CRYPT_CWLO_KEYGEN_M		0x00000080
+#define VIA_CRYPT_CWLO_KEYGEN_HW	0x00000000
+#define VIA_CRYPT_CWLO_KEYGEN_SW	0x00000080
+#define VIA_CRYPT_CWLO_NORMAL		0x00000000
+#define VIA_CRYPT_CWLO_INTERMEDIATE	0x00000100
+#define VIA_CRYPT_CWLO_ENCRYPT		0x00000000
+#define VIA_CRYPT_CWLO_DECRYPT		0x00000200
+#define VIA_CRYPT_CWLO_KEY128		0x0000000a	/* 128bit, 10 rds */
+#define VIA_CRYPT_CWLO_KEY192		0x0000040c	/* 192bit, 12 rds */
+#define VIA_CRYPT_CWLO_KEY256		0x0000080e	/* 256bit, 15 rds */
 
 #ifndef LOCORE
 static __inline u_char

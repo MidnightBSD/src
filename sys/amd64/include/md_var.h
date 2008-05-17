@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/md_var.h,v 1.75 2004/06/10 20:30:55 jhb Exp $
+ * $FreeBSD: src/sys/amd64/include/md_var.h,v 1.75.8.3 2006/07/24 23:28:08 peter Exp $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -43,14 +43,19 @@ extern	u_int	cpu_exthigh;
 extern	u_int	cpu_feature;
 extern	u_int	cpu_feature2;
 extern	u_int	amd_feature;
+extern	u_int	amd_feature2;
 extern	u_int	cpu_fxsr;
 extern	u_int	cpu_high;
 extern	u_int	cpu_id;
+extern	u_int	cpu_mxcsr_mask;
 extern	u_int	cpu_procinfo;
+extern	u_int	cpu_procinfo2;
 extern	char	cpu_vendor[];
 extern	char	kstack[];
 extern	char	sigcode[];
 extern	int	szsigcode;
+extern	uint64_t *vm_page_dump;
+extern	int	vm_page_dump_size;
 
 extern	struct pcpu __pcpu[];
 
@@ -59,11 +64,14 @@ struct	thread;
 struct	reg;
 struct	fpreg;
 struct  dbreg;
+struct	dumperinfo;
 
 void	busdma_swi(void);
 void	cpu_setregs(void);
 void	doreti_iret(void) __asm(__STRING(doreti_iret));
 void	doreti_iret_fault(void) __asm(__STRING(doreti_iret_fault));
+void	dump_add_page(vm_paddr_t);
+void	dump_drop_page(vm_paddr_t);
 void	initializecpu(void);
 void	fillw(int /*u_short*/ pat, void *base, size_t cnt);
 void	fpstate_drop(struct thread *td);
@@ -73,5 +81,6 @@ void	pagecopy(void *from, void *to);
 void	pagezero(void *addr);
 void	setidt(int idx, alias_for_inthand_t *func, int typ, int dpl, int ist);
 int	user_dbreg_trap(void);
+void	minidumpsys(struct dumperinfo *);
 
 #endif /* !_MACHINE_MD_VAR_H_ */

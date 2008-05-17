@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netinet/tcp_syncache.c,v 1.6 2008/05/16 23:49:41 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/netinet/tcp_syncache.c,v 1.7 2008/05/16 23:51:00 laffer1 Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -734,11 +734,7 @@ abort2:
  * the SYN-RECEIVED state.
  */
 int
-syncache_expand(inc, th, sop, m)
-	struct in_conninfo *inc;
-	struct tcphdr *th;
-	struct socket **sop;
-	struct mbuf *m;
+syncache_expand(struct in_conninfo *inc, struct tcphdr *th, struct socket **sop, struct mbuf *m)
 {
 	struct syncache *sc;
 	struct syncache_head *sch;

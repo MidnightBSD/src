@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/md_var.h,v 1.72 2005/06/30 06:44:34 peter Exp $
+ * $FreeBSD: src/sys/i386/include/md_var.h,v 1.72.2.4 2006/07/24 23:28:09 peter Exp $
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -48,11 +48,15 @@ extern	u_int	cpu_exthigh;
 extern	u_int	cpu_feature;
 extern	u_int	cpu_feature2;
 extern	u_int	amd_feature;
+extern	u_int	amd_feature2;
+extern	u_int	via_feature_rng;
+extern	u_int	via_feature_xcrypt;
 extern	u_int	cpu_fxsr;
 extern	u_int	cpu_high;
 extern	u_int	cpu_id;
 extern	u_int	cpu_mxcsr_mask;
 extern	u_int	cpu_procinfo;
+extern	u_int	cpu_procinfo2;
 extern	char	cpu_vendor[];
 extern	u_int	cyrix_did;
 extern	char	kstack[];
@@ -64,12 +68,15 @@ extern	int	szfreebsd4_sigcode;
 #ifdef COMPAT_43
 extern	int	szosigcode;
 #endif
+extern	uint32_t *vm_page_dump;
+extern	int	vm_page_dump_size;
 
 typedef void alias_for_inthand_t(u_int cs, u_int ef, u_int esp, u_int ss);
 struct	thread;
 struct	reg;
 struct	fpreg;
 struct  dbreg;
+struct	dumperinfo;
 
 void	bcopyb(const void *from, void *to, size_t len);
 void	busdma_swi(void);
@@ -83,6 +90,8 @@ void	doreti_popl_es(void) __asm(__STRING(doreti_popl_es));
 void	doreti_popl_es_fault(void) __asm(__STRING(doreti_popl_es_fault));
 void	doreti_popl_fs(void) __asm(__STRING(doreti_popl_fs));
 void	doreti_popl_fs_fault(void) __asm(__STRING(doreti_popl_fs_fault));
+void	dump_add_page(vm_paddr_t);
+void	dump_drop_page(vm_paddr_t);
 void	enable_sse(void);
 void	fillw(int /*u_short*/ pat, void *base, size_t cnt);
 void	i486_bzero(void *buf, size_t len);
@@ -98,5 +107,6 @@ int	isa_nmi(int cd);
 vm_paddr_t kvtop(void *addr);
 void	setidt(int idx, alias_for_inthand_t *func, int typ, int dpl, int selec);
 int     user_dbreg_trap(void);
+void	minidumpsys(struct dumperinfo *);
 
 #endif /* !_MACHINE_MD_VAR_H_ */
