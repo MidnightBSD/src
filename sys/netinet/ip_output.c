@@ -168,7 +168,7 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro,
 	 * will wrap around in less than 10 seconds at 100 Mbit/s on a
 	 * medium with MTU 1500.  See Steven M. Bellovin, "A Technique
 	 * for Counting NATted Hosts", Proc. IMW'02, available at
-	 * <http://www.research.att.com/~smb/papers/fnat.pdf>.
+	 * <http://www.cs.columbia.edu/~smb/papers/fnat.pdf>.
 	 */
 	if ((flags & (IP_FORWARDING|IP_RAWOUTPUT)) == 0) {
 		ip->ip_v = IPVERSION;
@@ -1204,6 +1204,11 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 				m_free(m);
 				break;
 			}
+			if (so->so_pcb == NULL) {
+				m_free(m);
+				error = EINVAL;
+				break;
+			}
 			INP_LOCK(inp);
 			error = ip_pcbopts(inp, sopt->sopt_name, m);
 			INP_UNLOCK(inp);
@@ -1225,7 +1230,10 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 					    sizeof optval);
 			if (error)
 				break;
-
+			if (so->so_pcb == NULL) {
+				 error = EINVAL;
+				 break;
+			}
 			switch (sopt->sopt_name) {
 			case IP_TOS:
 				inp->inp_ip_tos = optval;
@@ -1300,7 +1308,10 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 					    sizeof optval);
 			if (error)
 				break;
-
+			if (so->so_pcb == NULL) {
+				error = EINVAL;
+				break;
+			}
 			INP_LOCK(inp);
 			switch (optval) {
 			case IP_PORTRANGE_DEFAULT:
@@ -1343,6 +1354,11 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 			req = mtod(m, caddr_t);
 			len = m->m_len;
 			optname = sopt->sopt_name;
+			 if (so->so_pcb == NULL) {
+				m_free(m);
+				error = EINVAL;
+				break;
+			}
 			error = ipsec4_set_policy(inp, optname, req, len, priv);
 			m_freem(m);
 			break;
