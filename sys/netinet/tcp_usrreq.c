@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netinet/tcp_usrreq.c,v 1.4 2008/05/17 15:44:43 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/netinet/tcp_usrreq.c,v 1.5 2008/05/17 16:00:54 laffer1 Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -1030,7 +1030,7 @@ tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 			error = ip6_ctloutput(so, sopt);
 		else
 #endif /* INET6 */
-		error = ip_ctloutput(so, sopt);
+		error = ip_ctloutput_pcbinfo(so, sopt, &tcbinfo);
 		return (error);
 	}
 	tp = intotcpcb(inp);
