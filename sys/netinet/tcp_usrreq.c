@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/netinet/tcp_usrreq.c,v 1.5 2008/05/17 16:00:54 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/netinet/tcp_usrreq.c,v 1.6 2008/05/18 17:12:11 laffer1 Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -120,6 +120,7 @@ tcp_usr_attach(struct socket *so, int proto, struct thread *td)
 {
 	int error;
 	struct inpcb *inp;
+	struct tcpcb *tp = 0;
 
 	INP_INFO_WLOCK(&tcbinfo);
 	inp = sotoinpcb(so);
