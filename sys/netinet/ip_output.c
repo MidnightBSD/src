@@ -1204,11 +1204,14 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 				m_free(m);
 				break;
 			}
+			INP_INFO_WLOCK(pcbinfo);
 			if (so->so_pcb == NULL) {
+				INP_INFO_WUNLOCK(pcbinfo);
 				m_free(m);
 				error = EINVAL;
 				break;
 			}
+			INP_INFO_WUNLOCK(pcbinfo);
 			INP_LOCK(inp);
 			error = ip_pcbopts(inp, sopt->sopt_name, m);
 			INP_UNLOCK(inp);
@@ -1230,10 +1233,14 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 					    sizeof optval);
 			if (error)
 				break;
+			INP_INFO_WLOCK(pcbinfo);
 			if (so->so_pcb == NULL) {
+				INP_INFO_WUNLOCK(pcbinfo);
 				 error = EINVAL;
 				 break;
 			}
+			INP_INFO_WUNLOCK(pcbinfo);
+			INP_LOCK(inp);
 			switch (sopt->sopt_name) {
 			case IP_TOS:
 				inp->inp_ip_tos = optval;
@@ -1308,10 +1315,13 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 					    sizeof optval);
 			if (error)
 				break;
+			INP_INFO_WLOCK(pcbinfo);
 			if (so->so_pcb == NULL) {
+				INP_INFO_WUNLOCK(pcbinfo);
 				error = EINVAL;
 				break;
 			}
+			INP_INFO_WUNLOCK(pcbinfo);
 			INP_LOCK(inp);
 			switch (optval) {
 			case IP_PORTRANGE_DEFAULT:
@@ -1494,11 +1504,8 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 }
 
 int
-ip_ctloutput(so, sopt)
-	struct socket *so;
-	struct sockopt *sopt;
+ip_ctloutput(struct socket *so, struct sockopt *sopt)
 {
-
 	return (ip_ctloutput_pcbinfo(so, sopt, NULL));
 }
 
