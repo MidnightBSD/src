@@ -28,14 +28,12 @@
  *
  *	@(#)queue.h	8.5 (Berkeley) 8/20/94
  * $FreeBSD: src/contrib/csup/queue.h,v 1.1.1.2.2.1 2006/05/15 13:40:40 mux Exp $
- *
- * $FreeBSD: src/contrib/csup/queue.h,v 1.1.1.2.2.1 2006/05/15 13:40:40 mux Exp $
  */
 
 #ifndef _QUEUE_H_
 #define	_QUEUE_H_
 
-#undef __ofsetof
+#undef __offsetof
 #define	__offsetof(type, field)	((size_t)(&((type *)0)->field))
 
 /*
