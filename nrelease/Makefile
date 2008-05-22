@@ -42,6 +42,14 @@ buildiso:
 	mtree -deU -f ${.CURDIR}/../etc/mtree/BSD.var.dist -p ${ISOROOT}/var
 	cp /usr/local/bin/mkisofs ${ISOROOT}/usr/local/bin
 	cp /usr/local/man/man8/mkisofs.8.gz ${ISOROOT}/usr/local/man/man8
+	( cd ${ISOROOT}; tar czf var.tgz var )
+	( cd ${ISOROOT}; tar czf root.tgz root )
+	( cd ${ISOROOT}; tar czf ule.tgz usr/local/etc )
+	chflags -R noschg ${ISOROOT}/var
+	rm -rf ${ISOROOT}/var ${ISOROOT}/root ${ISOROOT}/usr/local/etc
+	mkdir ${ISOROOT}/var ${ISOROOT}/root ${ISOROOT}/usr/local/etc
+	# we don't want to offer an install option for X11, etc.
+	rm ${ISOROOT}/etc/rc.d/firstboot
 
 mkiso:
 	( cd ${ISOROOT}; mkisofs -b boot/cdboot -no-emul-boot \
