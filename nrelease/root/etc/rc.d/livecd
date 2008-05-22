@@ -1,4 +1,4 @@
-# $MidnightBSD: src/nrelease/root/etc/rc.d/livecd,v 1.1 2008/05/22 20:35:43 laffer1 Exp $
+# $MidnightBSD: src/nrelease/root/etc/rc.d/livecd,v 1.2 2008/05/22 20:38:15 laffer1 Exp $
 
 # PROVIDE: livecd
 # REQUIRE: mountcritremote
@@ -6,7 +6,7 @@
 ./etc/rc.subr
 
 name="livecd"
-stop_cmd=":"
+stop_cmd=`:`
 
 # Extract the contents of /var, /root, and /usr/local/etc
 # to memory disks.
