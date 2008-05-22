@@ -1,4 +1,4 @@
-# $MidnightBSD: src/nrelease/Makefile,v 1.2 2007/07/21 11:02:32 laffer1 Exp $
+# $MidnightBSD: src/nrelease/Makefile,v 1.4 2008/05/22 20:27:34 laffer1 Exp $
 # $DragonFly: src/nrelease/Makefile,v 1.1 2003/12/01 09:59:43 dillon Exp $
 #
 ISODIR ?= /usr/release
@@ -42,6 +42,10 @@ buildiso:
 	mtree -deU -f ${.CURDIR}/../etc/mtree/BSD.var.dist -p ${ISOROOT}/var
 	cp /usr/local/bin/mkisofs ${ISOROOT}/usr/local/bin
 	cp /usr/local/man/man8/mkisofs.8.gz ${ISOROOT}/usr/local/man/man8
+	# Remove /var/empty
+	chflags -R noschg ${ISOROOT}/var/empty
+	rm ${ISOROOT/var/empty
+	# tar up /var, /root, and /usr/local/etc for md
 	( cd ${ISOROOT}; tar czf var.tgz var )
 	( cd ${ISOROOT}; tar czf root.tgz root )
 	( cd ${ISOROOT}; tar czf ule.tgz usr/local/etc )
