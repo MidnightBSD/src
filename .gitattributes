@@ -20045,6 +20045,7 @@ nrelease/root/etc/disklabel.ad0s1 -text
 nrelease/root/etc/fstab -text
 nrelease/root/etc/fstab.example -text
 nrelease/root/etc/rc.conf -text
+nrelease/root/etc/rc.d/livecd -text
 nrelease/root/index.html -text
 nrelease/root/mbsd.ico -text
 release/Makefile -text

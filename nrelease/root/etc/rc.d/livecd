@@ -1,0 +1,15 @@
+# $MidnightBSD$
+
+# PROVIDE: livecd
+# REQUIRE: mountcritremote
+
+./etc/rc.subr
+
+name="livecd"
+stop_cmd=":"
+
+# Extract the contents of /var, /root, and /usr/local/etc
+# to memory disks.
+tar xzf /root.tgz
+tar xzf /var.tgz
+tar xzf /ule.tgz
