@@ -1,10 +1,10 @@
-# $MidnightBSD: src/nrelease/Makefile,v 1.1 2007/07/20 20:02:28 laffer1 Exp $
+# $MidnightBSD: src/nrelease/Makefile,v 1.2 2007/07/21 11:02:32 laffer1 Exp $
 # $DragonFly: src/nrelease/Makefile,v 1.1 2003/12/01 09:59:43 dillon Exp $
 #
 ISODIR ?= /usr/release
 ISONAME ?= mbsd.iso
 ISOFILE ?= ${ISODIR}/${ISONAME}
-ISOROOT = ${ISODIR}/root
+ISOROOT ?= ${ISODIR}/root
 OBJSYS= ${.OBJDIR}/../sys
 KERNCONF ?= GENERIC
 
