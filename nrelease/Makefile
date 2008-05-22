@@ -1,4 +1,4 @@
-# $MidnightBSD: src/nrelease/Makefile,v 1.5 2008/05/22 20:47:40 laffer1 Exp $
+# $MidnightBSD: src/nrelease/Makefile,v 1.6 2008/05/22 21:31:07 laffer1 Exp $
 # $DragonFly: src/nrelease/Makefile,v 1.1 2003/12/01 09:59:43 dillon Exp $
 #
 ISODIR ?= /usr/release
@@ -44,7 +44,7 @@ buildiso:
 	cp /usr/local/man/man8/mkisofs.8.gz ${ISOROOT}/usr/local/man/man8
 	# Remove /var/empty
 	chflags -R noschg ${ISOROOT}/var/empty
-	rm ${ISOROOT}/var/empty
+	rm -rf ${ISOROOT}/var/empty
 	# tar up /var, /root, and /usr/local/etc for md
 	( cd ${ISOROOT}; tar czf var.tgz var )
 	( cd ${ISOROOT}; tar czf root.tgz root )
