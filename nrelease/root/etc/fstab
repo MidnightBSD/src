@@ -1,10 +1,10 @@
-# $MidnightBSD$
+# $MidnightBSD: src/nrelease/root/etc/fstab,v 1.2 2008/05/22 20:35:43 laffer1 Exp $
 #
 # Device		Mountpoint	FStype	Options		Dump	Pass#
 /dev/acd0a		/		cd9660	ro,noauto	0	0
-md			/var		mfs	rw,-s32m	2	0
-md			/tmp		mfs	rw,-s32m	2	0
+md			/var		mfs	rw,-s32m,noatime	2	0
+md			/tmp		mfs	rw,-s32m,noatime	2	0
 #md			/etc		mfs	rw,-s8192	2	0
-md			/usr/local/etc	mfs	rw,-s16m	0	0
-md			/root		mfs	rw,-s5m		0	0
+md			/usr/local/etc	mfs	rw,-s16m,noatime	0	0
+md			/root		mfs	rw,-s5m,noatime		0	0
 proc			/proc		procfs	rw		0	0
