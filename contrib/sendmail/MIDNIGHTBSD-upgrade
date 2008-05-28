@@ -1,6 +1,6 @@
-$MidnightBSD$
+$MidnightBSD: src/contrib/sendmail/MIDNIGHTBSD-upgrade,v 1.1 2007/11/23 22:25:08 laffer1 Exp $
 
-sendmail 8.14.2
+sendmail 8.14.3
 	originals can be found at: ftp://ftp.sendmail.org/pub/sendmail/
 
 For the import of sendmail, the following files were removed:
