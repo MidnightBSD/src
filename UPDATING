@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080528:
+	Sendmail 8.14.3
+
 20080516:
 	ssh-vulnkey allows you to look for vulnerable ssh keys that
 	were generated on Debian and Ubuntu hosts over the last
@@ -562,4 +565,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.36 2008/05/01 04:46:25 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.37 2008/05/16 22:38:32 laffer1 Exp $
