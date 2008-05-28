@@ -16,7 +16,7 @@
 #####
 #####		SENDMAIL CONFIGURATION FILE
 #####
-##### built by ca@wiz.smi.sendmail.com on Fri May 2 20:39:00 PDT 2008
+##### built by ca@wiz.smi.sendmail.com on Fri May 2 20:38:59 PDT 2008
 ##### in /extra/home/ca/sm-8.14.3/OpenSource/sendmail-8.14.3/cf/cf
 ##### using ../ as configuration include directory
 #####
@@ -27,15 +27,21 @@
 ######################################################################
 ######################################################################
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
+
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
 
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
 
 # level 10 config file format
 V10/Berkeley
@@ -58,6 +64,8 @@ V10/Berkeley
 #D{sendmailMTACluster}$m
 
 Cwlocalhost
+# file containing names of hosts for which we receive email
+Fw/etc/mail/local-host-names
 
 # my official domain name
 # ... define this only if sendmail cannot automatically determine your domain
@@ -103,6 +111,7 @@ Kdequote dequote
 # class M: domains that should be converted to $M
 # class N: domains that should not be converted to $M
 #CL root
+C{E}root
 
 
 
@@ -110,11 +119,10 @@ Kdequote dequote
 DnMAILER-DAEMON
 
 
-D{MTAHost}[127.0.0.1]
-
+CPREDIRECT
 
 # Configuration version number
-DZ8.14.3/Submit
+DZ8.14.3
 
 
 ###############
@@ -131,7 +139,7 @@ O SevenBitInput=False
 O AliasWait=10
 
 # location of alias file
-#O AliasFile=/etc/mail/aliases
+O AliasFile=/etc/mail/aliases
 
 # minimum number of free blocks on filesystem
 O MinFreeBlocks=100
@@ -149,7 +157,7 @@ O HoldExpensive=False
 #O CheckpointInterval=10
 
 # default delivery mode
-O DeliveryMode=i
+O DeliveryMode=background
 
 # error message header/file
 #O ErrorHeader=/etc/mail/error-header
@@ -161,7 +169,7 @@ O DeliveryMode=i
 #O SaveFromLine=False
 
 # queue file mode (qf files)
-O QueueFileMode=0660
+#O QueueFileMode=0600
 
 # temporary file mode
 O TempFileMode=0600
@@ -185,7 +193,7 @@ O HelpFile=/etc/mail/helpfile
 O SendMimeErrors=True
 
 # Forward file search path
-O ForwardPath
+O ForwardPath=$z/.forward.$w+$h:$z/.forward+$h:$z/.forward.$w:$z/.forward
 
 # open connection cache size
 O ConnectionCacheSize=2
@@ -215,8 +223,8 @@ O CheckAliases=False
 O OldStyleHeaders=True
 
 # SMTP daemon options
-
-O DaemonPortOptions=Name=NoMTA, Addr=127.0.0.1, M=E
+O DaemonPortOptions=Name=MTA
+O DaemonPortOptions=Port=587, Name=MSA, M=E
 
 # SMTP client options
 #O ClientPortOptions=Family=inet, Address=0.0.0.0
@@ -225,10 +233,10 @@ O DaemonPortOptions=Name=NoMTA, Addr=127.0.0.1, M=E
 #O DirectSubmissionModifiers
 
 # Use as mail submission program? See sendmail/SECURITY
-O UseMSP=True
+#O UseMSP
 
 # privacy flags
-O PrivacyOptions=goaway,noetrn,restrictqrun
+O PrivacyOptions=authwarnings
 
 # who (if anyone) should get extra copies of error messages
 #O PostmasterCopy=Postmaster
@@ -258,7 +266,7 @@ O PrivacyOptions=goaway,noetrn,restrictqrun
 #O FastSplit=1
 
 # queue directory
-O QueueDirectory=/var/spool/clientmqueue
+O QueueDirectory=/var/spool/mqueue
 
 # key for shared memory; 0 to turn off, -1 to auto-select
 #O SharedMemoryKey=0
@@ -315,13 +323,13 @@ O Timeout.queuewarn=4h
 O SuperSafe=True
 
 # status file
-O StatusFile=/var/spool/clientmqueue/sm-client.st
+O StatusFile=/var/log/sendmail.st
 
 # time zone handling:
 #  if undefined, use system default
 #  if defined but null, use TZ envariable passed in
 #  if defined and non-null, use that info
-O TimeZoneSpec=
+#O TimeZoneSpec=
 
 # default UID (can be username or userid:groupid)
 #O DefaultUser=mailnull
@@ -414,7 +422,7 @@ O UnixFromLine=From $g $d
 O OperatorChars=.:%@!^/[]+
 
 # shall I avoid calling initgroups(3) because of high NIS costs?
-O DontInitGroups=True
+#O DontInitGroups=False
 
 # are group-writable :include: and .forward files (un)trustworthy?
 # True (the default) means they are not trustworthy.
@@ -431,7 +439,7 @@ O DontInitGroups=True
 #O DeadLetterDrop=/var/tmp/dead.letter
 
 # what user id do we assume for the majority of the processing?
-O RunAsUser=smmsp
+#O RunAsUser=sendmail
 
 # maximum number of recipients per SMTP envelope
 #O MaxRecipientsPerMessage=0
@@ -441,7 +449,7 @@ O RunAsUser=smmsp
 #O BadRcptThrottle=0
 
 # shall we get local names from our installed interfaces?
-O DontProbeInterfaces=True
+#O DontProbeInterfaces=False
 
 # Return-Receipt-To: header implies DSN request
 #O RrtImpliesDsn=False
@@ -450,7 +458,7 @@ O DontProbeInterfaces=True
 #O ConnectOnlyTo=0.0.0.0
 
 # Trusted user for file ownership and starting the daemon
-O TrustedUser=smmsp
+#O TrustedUser=root
 
 # Control socket for daemon management
 #O ControlSocketName=/var/spool/mqueue/.control
@@ -459,13 +467,13 @@ O TrustedUser=smmsp
 #O MaxMimeHeaderLength=0/0
 
 # Maximum length of the sum of all headers
-#O MaxHeadersLength=32768
+O MaxHeadersLength=32768
 
 # Maximum depth of alias recursion
 #O MaxAliasRecursion=10
 
 # location of pid file
-O PidFile=/var/spool/clientmqueue/sm-client.pid
+#O PidFile=/var/run/sendmail.pid
 
 # Prefix string for the process title shown on 'ps' listings
 #O ProcessTitlePrefix=prefix
@@ -636,10 +644,6 @@ R$- ! $+		$@ $>Canonify2 $2 < @ $1 .UUCP >	resolve uucp names
 R$+ . $- ! $+		$@ $>Canonify2 $3 < @ $1 . $2 >		domain uucps
 R$+ ! $+		$@ $>Canonify2 $2 < @ $1 .UUCP >	uucp subdomains
 
-# convert node::user addresses into a domain-based address
-R$- :: $+		$@ $>Canonify2 $2 < @ $1 .DECNET >	resolve DECnet names
-R$- . $- :: $+		$@ $>Canonify2 $3 < @ $1.$2 .DECNET >	numeric DECnet addr
-
 # if we have % signs, take the rightmost one
 R$* % $*		$1 @ $2				First make them all @s.
 R$* @ $* @ $*		$1 % $2 @ $3			Undo all but the last.
@@ -712,8 +716,6 @@ R@ $*			$@ @ $1				... and exit
 # UUCP must always be presented in old form
 R$+ @ $- . UUCP		$2!$1				u@h.UUCP => h!u
 
-# put DECnet back in :: form
-R$+ @ $+ . DECNET	$2 :: $1			u@h.DECNET => h::u
 # delete duplicate local names
 R$+ % $=w @ $=w		$1 @ $2				u%host@host => u@host
 
@@ -920,6 +922,12 @@ R$* < @ *LOCAL* > $*	$: $1 < @ $j . > $2
 ###################################################################
 
 SParseLocal=98
+
+# addresses sent to foo@host.REDIRECT will give a 551 error code
+R$* < @ $+ .REDIRECT. >		$: $1 < @ $2 . REDIRECT . > < ${opMode} >
+R$* < @ $+ .REDIRECT. > <i>	$: $1 < @ $2 . REDIRECT. >
+R$* < @ $+ .REDIRECT. > < $- >	$#error $@ 5.1.1 $: "551 User has moved; please try " <$1@$2>
+
 
 
 
@@ -1264,15 +1272,6 @@ Sauthinfo
 
 
 
-
-
-
-SLocal_localaddr
-R$+			$: $>ParseRecipient $1
-R$* < @ $+ > $*		$#relay $@ ${MTAHost} $: $1 < @ $2 > $3
-# DECnet
-R$+ :: $+		$#relay $@ ${MTAHost} $: $1 :: $2
-R$*			$#relay $@ ${MTAHost} $: $1 < @ $j >
 #
 ######################################################################
 ######################################################################
@@ -1296,7 +1295,7 @@ R$*			$#relay $@ ${MTAHost} $: $1 < @ $j >
 ###   Local and Program Mailer specification   ###
 ##################################################
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
 
 #
 #  Envelope sender rewriting
@@ -1337,18 +1336,18 @@ R$* < @ *LOCAL* > $*	$: $1 < @ $j . > $2
 #
 SAddDomain
 
-Mlocal,		P=[IPC], F=lmDFMuXkw5, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL,
-		T=DNS/RFC822/SMTP,
-		A=TCP $h
-Mprog,		P=[IPC], F=lmDFMuXk5, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL, D=$z:/,
+Mlocal,		P=/usr/libexec/mail.local, F=lsDFMAw5:/|@qPrmn9, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL,
+		T=DNS/RFC822/X-Unix,
+		A=mail -d $u
+Mprog,		P=/bin/sh, F=lsDFMoqeu9, S=EnvFromL/HdrFromL, R=EnvToL/HdrToL, D=$z:/,
 		T=X-Unix/X-Unix/X-Unix,
-		A=TCP $h
+		A=sh -c $u
 
 #####################################
 ###   SMTP Mailer specification   ###
 #####################################
 
-#####  $Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $  #####
+#####  $Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $  #####
 
 #
 #  common sender and masquerading recipient rewriting
@@ -1420,27 +1419,30 @@ SMasqRelay
 R$+			$: $>MasqSMTP $1
 R$+			$: $>MasqHdr $1
 
-Msmtp,		P=[IPC], F=mDFMuXk5, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
+Msmtp,		P=[IPC], F=mDFMuX, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
 		T=DNS/RFC822/SMTP,
 		A=TCP $h
-Mesmtp,		P=[IPC], F=mDFMuXak5, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
+Mesmtp,		P=[IPC], F=mDFMuXa, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
 		T=DNS/RFC822/SMTP,
 		A=TCP $h
-Msmtp8,		P=[IPC], F=mDFMuX8k5, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
+Msmtp8,		P=[IPC], F=mDFMuX8, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
 		T=DNS/RFC822/SMTP,
 		A=TCP $h
-Mdsmtp,		P=[IPC], F=mDFMuXa%k5, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
+Mdsmtp,		P=[IPC], F=mDFMuXa%, S=EnvFromSMTP/HdrFromSMTP, R=EnvToSMTP, E=\r\n, L=990,
 		T=DNS/RFC822/SMTP,
 		A=TCP $h
-Mrelay,		P=[IPC], F=mDFMuXa8k, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=2040,
+Mrelay,		P=[IPC], F=mDFMuXa8, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=2040,
 		T=DNS/RFC822/SMTP,
 		A=TCP $h
 
-### submit.mc ###
+### generic-bsd4.4.mc ###
 # divert(-1)
 # #
-# # Copyright (c) 2001-2003 Sendmail, Inc. and its suppliers.
+# # Copyright (c) 1998, 1999 Sendmail, Inc. and its suppliers.
 # #	All rights reserved.
+# # Copyright (c) 1983 Eric P. Allman.  All rights reserved.
+# # Copyright (c) 1988, 1993
+# #	The Regents of the University of California.  All rights reserved.
 # #
 # # By using this file, you agree to the terms and conditions set
 # # forth in the LICENSE file which can be found at the top level of
@@ -1449,17 +1451,16 @@ Mrelay,		P=[IPC], F=mDFMuXa8k, S=EnvFromSMTP/HdrFromSMTP, R=MasqSMTP, E=\r\n, L=
 # #
 # 
 # #
-# #  This is the prototype file for a set-group-ID sm-msp sendmail that
-# #  acts as a initial mail submission program.
+# #  This is a generic configuration file for 4.4 BSD-based systems,
+# #  including 4.4-Lite, BSDi, NetBSD, and FreeBSD.
+# #  It has support for local and SMTP mail only.  If you want to
+# #  customize it, copy it to a name appropriate for your environment
+# #  and do the modifications there.
 # #
 # 
 # divert(0)dnl
-# VERSIONID(`$Id: submit.cf,v 1.1.1.6 2008-05-28 21:04:00 laffer1 Exp $')
-# define(`confCF_VERSION', `Submit')dnl
-# define(`__OSTYPE__',`')dnl dirty hack to keep proto.m4 from complaining
-# define(`_USE_DECNET_SYNTAX_', `1')dnl support DECnet
-# define(`confTIME_ZONE', `USE_TZ')dnl
-# define(`confDONT_INIT_GROUPS', `True')dnl
-# dnl
-# dnl If you use IPv6 only, change [127.0.0.1] to [IPv6:::1]
-# FEATURE(`msp', `[127.0.0.1]')dnl
+# VERSIONID(`$Id: generic-bsd4.4.cf,v 1.1.1.1 2008-05-28 21:04:00 laffer1 Exp $')
+# OSTYPE(bsd4.4)dnl
+# DOMAIN(generic)dnl
+# MAILER(local)dnl
+# MAILER(smtp)dnl

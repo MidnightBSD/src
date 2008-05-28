@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2006 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2006, 2008 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -14,7 +14,7 @@
 #include <sendmail.h>
 #include <sm/sendmail.h>
 
-SM_RCSID("@(#)$Id: readcf.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: readcf.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
 
 #if NETINET || NETINET6
 # include <arpa/inet.h>
@@ -2249,6 +2249,12 @@ static struct optioninfo
 # define O_ADDR_TYPE_MODES	0xe0
 	{ "AddrTypeModes",	O_ADDR_TYPE_MODES,	OI_NONE },
 #endif /* _FFR_ADDR_TYPE_MODES */
+#if _FFR_BADRCPT_SHUTDOWN
+# define O_RCPTSHUTD	0xe1
+	{ "BadRcptShutdown",		O_RCPTSHUTD,	OI_SAFE },
+# define O_RCPTSHUTDG	0xe2
+	{ "BadRcptShutdownGood",	O_RCPTSHUTDG,	OI_SAFE	},
+#endif /* _FFR_BADRCPT_SHUTDOWN */
 
 	{ NULL,				'\0',		OI_NONE	}
 };
@@ -3816,6 +3822,16 @@ setoption(opt, val, safe, sticky, e)
 		AddrTypeModes = atobool(val);
 		break;
 #endif /* _FFR_ADDR_TYPE_MODES */
+
+#if _FFR_BADRCPT_SHUTDOWN
+	  case O_RCPTSHUTD:
+		BadRcptShutdown = atoi(val);
+		break;
+
+	  case O_RCPTSHUTDG:
+		BadRcptShutdownGood = atoi(val);
+		break;
+#endif /* _FFR_BADRCPT_SHUTDOWN */
 
 	  default:
 		if (tTd(37, 1))

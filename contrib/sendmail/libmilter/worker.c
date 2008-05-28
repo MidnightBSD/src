@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2003-2004, 2006 Sendmail, Inc. and its suppliers.
+ *  Copyright (c) 2003-2004, 2007 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  *
  * By using this file, you agree to the terms and conditions set
@@ -11,7 +11,7 @@
  */
 
 #include <sm/gen.h>
-SM_RCSID("@(#)$Id: worker.c,v 1.1.1.1 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: worker.c,v 1.1.1.2 2008-05-28 21:04:01 laffer1 Exp $")
 
 #include "libmilter.h"
 
@@ -262,8 +262,6 @@ mi_pool_controller_init()
 			sm_errstring(r));
 		return MI_FAILURE;
 	}
-
-	POOL_LEV_DPRINTF(4, ("PIPE r=[%d] w=[%d]", RD_PIPE, WR_PIPE));
 
 	(void) smutex_init(&Tskmgr.tm_w_mutex);
 	(void) scond_init(&Tskmgr.tm_w_cond);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2002, 2004 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2002, 2004, 2008 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1992 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1992, 1993
@@ -20,7 +20,7 @@ SM_IDSTR(copyright,
      Copyright (c) 1992, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n")
 
-SM_IDSTR(id, "@(#)$Id: makemap.c,v 1.1.1.3 2007-11-23 22:10:30 laffer1 Exp $")
+SM_IDSTR(id, "@(#)$Id: makemap.c,v 1.1.1.4 2008-05-28 21:04:00 laffer1 Exp $")
 
 
 #include <sys/types.h>
@@ -378,9 +378,10 @@ main(argc, argv)
 				break;
 
 			(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
-					     "%.*s\t%.*s\n",
+					     "%.*s%c%.*s\n",
 					     (int) db_key.size,
 					     (char *) db_key.data,
+					     (sep != '\0') ? sep : '\t',
 					     (int) db_val.size,
 					     (char *)db_val.data);
 

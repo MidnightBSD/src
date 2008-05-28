@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: mci.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: mci.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
 
 #if NETINET || NETINET6
 # include <arpa/inet.h>
@@ -1143,16 +1143,27 @@ mci_traverse_persistent(action, pathname)
 					pathname, sm_errstring(errno));
 			return -1;
 		}
-		len = sizeof(newpath) - MAXNAMLEN - 3;
+
+		/*
+		**  Reserve space for trailing '/', at least one
+		**  character, and '\0'
+		*/
+
+		len = sizeof(newpath) - 3;
 		if (sm_strlcpy(newpath, pathname, len) >= len)
 		{
+			int save_errno = errno;
+
 			if (tTd(56, 2))
 				sm_dprintf("mci_traverse: path \"%s\" too long",
 					pathname);
+			(void) closedir(d);
+			errno = save_errno;
 			return -1;
 		}
 		newptr = newpath + strlen(newpath);
 		*newptr++ = '/';
+		len = sizeof(newpath) - (newptr - newpath);
 
 		/*
 		**  repeat until no file has been removed
@@ -1169,9 +1180,17 @@ mci_traverse_persistent(action, pathname)
 				if (e->d_name[0] == '.')
 					continue;
 
-				(void) sm_strlcpy(newptr, e->d_name,
-					       sizeof(newpath) -
-					       (newptr - newpath));
+				if (sm_strlcpy(newptr, e->d_name, len) >= len)
+				{
+					/* Skip truncated copies */
+					if (tTd(56, 4))
+					{
+						*newptr = '\0';
+						sm_dprintf("mci_traverse: path \"%s%s\" too long",
+							   newpath, e->d_name);
+					}
+					continue;
+				}
 
 				if (StopRequest)
 					stop_sendmail();

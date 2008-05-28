@@ -45,7 +45,7 @@
  */
 
 #include <sendmail.h>
-SM_RCSID("@(#)$Id: ratectrl.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: ratectrl.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
 
 /*
 **  stuff included - given some warnings (inet_ntoa)
@@ -114,7 +114,7 @@ connection_rate_check(hostaddr, e)
 	/* update server connection rate */
 	totalrate = total_rate(now, e == NULL);
 #if RATECTL_DEBUG
-	sm_syslog(LOG_INFO, NOQID, "global connection rate: %d", globalRate);
+	sm_syslog(LOG_INFO, NOQID, "global connection rate: %d", totalrate);
 #endif /* RATECTL_DEBUG */
 
 	/* update client connection rate */

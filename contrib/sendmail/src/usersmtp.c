@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2006 Sendmail, Inc. and its suppliers.
+ * Copyright (c) 1998-2006, 2008 Sendmail, Inc. and its suppliers.
  *	All rights reserved.
  * Copyright (c) 1983, 1995-1997 Eric P. Allman.  All rights reserved.
  * Copyright (c) 1988, 1993
@@ -13,7 +13,7 @@
 
 #include <sendmail.h>
 
-SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.4 2007-11-23 22:10:30 laffer1 Exp $")
+SM_RCSID("@(#)$Id: usersmtp.c,v 1.1.1.5 2008-05-28 21:04:01 laffer1 Exp $")
 
 #include <sysexits.h>
 
@@ -3077,6 +3077,7 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype)
 	*/
 
 	bufp = SmtpReplyBuffer;
+	set_tls_rd_tmo(timeout);
 	for (;;)
 	{
 		register char *p;
