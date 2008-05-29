@@ -364,7 +364,11 @@ new_part(PartType type, char *mpoint, Boolean newfs)
 	pi->newfs_data.newfs_ufs.acls = FALSE;
 	pi->newfs_data.newfs_ufs.multilabel = FALSE;
 	pi->newfs_data.newfs_ufs.softupdates = strcmp(mpoint, "/");
+#ifdef PC98
+	pi->newfs_data.newfs_ufs.ufs1 = TRUE;
+#else
 	pi->newfs_data.newfs_ufs.ufs1 = FALSE;
+#endif
     }
 
     return pi;
@@ -489,7 +493,7 @@ getNewfsCmd(PartInfo *p)
 	snprintf(buffer, NEWFS_CMD_ARGS_MAX, "%s", NEWFS_MSDOS_CMD);
 	break;
     case NEWFS_CUSTOM:
-	strlcpy(buffer, p->newfs_data.newfs_custom.command, sizeof(buffer));
+	strcpy(buffer, p->newfs_data.newfs_custom.command);
 	break;
     }
 
@@ -704,14 +708,14 @@ print_label_chunks(void)
 
 	    /* Now display the newfs field */
 	    if (label_chunk_info[i].type == PART_FAT)
-		strlcpy(newfs, "DOS", sizeof(newfs));
+		strcpy(newfs, "DOS");
 #if defined(__ia64__)
 	    else if (label_chunk_info[i].type == PART_EFI) {
-		strlcpy(newfs, "EFI", sizeof(newfs));
+		strcpy(newfs, "EFI");
 		if (label_chunk_info[i].c->private_data) {
-		    strlcat(newfs, "  ", sizeof(newfs));
+		    strcat(newfs, "  ");
 		    PartInfo *pi = (PartInfo *)label_chunk_info[i].c->private_data;
-		    strlcat(newfs, pi->do_newfs ? " Y" : " N", sizeof(newfs));
+		    strcat(newfs, pi->do_newfs ? " Y" : " N");
 		}
 	    }
 #endif
@@ -720,30 +724,30 @@ print_label_chunks(void)
 
 		switch (pi->newfs_type) {
 		case NEWFS_UFS:
-			strlcpy(newfs, NEWFS_UFS_STRING, sizeof(newfs));
+			strcpy(newfs, NEWFS_UFS_STRING);
 			if (pi->newfs_data.newfs_ufs.ufs1)
-				strlcat(newfs, "1", sizeof(newfs));
+				strcat(newfs, "1");
 			else
-				strlcat(newfs, "2", sizeof(newfs));
+				strcat(newfs, "2");
 			if (pi->newfs_data.newfs_ufs.softupdates)
-				strlcat(newfs, "+S", sizeof(newfs));
+				strcat(newfs, "+S");
 			else
-				strlcat(newfs, "  ", sizeof(newfs));
+				strcat(newfs, "  ");
 
 			break;
 		case NEWFS_MSDOS:
-			strlcpy(newfs, "FAT", sizeof(newfs));
+			strcpy(newfs, "FAT");
 			break;
 		case NEWFS_CUSTOM:
-			strlcpy(newfs, "CUST", sizeof(newfs));
+			strcpy(newfs, "CUST");
 			break;
 		}
-		strlcat(newfs, pi->do_newfs ? " Y" : " N ", sizeof(newfs));
+		strcat(newfs, pi->do_newfs ? " Y" : " N ");
 	    }
 	    else if (label_chunk_info[i].type == PART_SWAP)
-		strlcpy(newfs, "SWAP", sizeof(newfs));
+		strcpy(newfs, "SWAP");
 	    else
-		strlcpy(newfs, "*", sizeof(newfs));
+		strcpy(newfs, "*");
 	    for (j = 0; j < MAX_MOUNT_NAME && mountpoint[j]; j++)
 		onestr[PART_MOUNT_COL + j] = mountpoint[j];
 	    if (label_chunk_info[i].c->size == 0)
@@ -766,7 +770,7 @@ print_label_chunks(void)
 
             /*** lazy man's way of expensively padding this string ***/
             while (strlen(onestr) < 37)
-                strlcat(onestr, " ", sizeof(newfs));
+                strcat(onestr, " ");
 
 	    mvwaddstr(ChunkWin, prow, pcol, onestr);
 	    wattrset(ChunkWin, A_NORMAL);
@@ -983,7 +987,7 @@ diskLabel(Device *dev)
 		char osize[80];
 		u_long flags = 0;
 
-		snprintf(osize, sizeof(osize), "%jd", (intmax_t)sz);
+		sprintf(osize, "%jd", (intmax_t)sz);
 		val = msgGetInput(osize,
 				  "Please specify the partition size in blocks or append a trailing G for\n"
 #ifdef __ia64__
@@ -1129,7 +1133,7 @@ diskLabel(Device *dev)
 			    !strcmp(p->mountpoint, "/usr") ||
 			    !strcmp(p->mountpoint, "/var"))) {
 			msgConfirm("%s is an invalid mount point for a DOS partition!", p->mountpoint);
-			strlcpy(p->mountpoint, "/bogus", sizeof(p->mountpoint));
+			strcpy(p->mountpoint, "/bogus");
 		    }
 		}
 		if (variable_cmp(DISK_LABELLED, "written"))
@@ -1288,7 +1292,7 @@ diskLabel(Device *dev)
 
 	default:
 	    beep();
-	    snprintf(_msg, sizeof(_msg), "Invalid key %d - Type F1 or ? for help", key);
+	    sprintf(_msg, "Invalid key %d - Type F1 or ? for help", key);
 	    msg = _msg;
 	    break;
 	}
@@ -1595,7 +1599,7 @@ diskLabelNonInteractive(Device *dev)
 		    flags = 0;
 		    if (!strcmp(typ, "swap")) {
 			type = PART_SWAP;
-			strlcpy(mpoint, "SWAP", sizeof(mpoint));
+			strcpy(mpoint, "SWAP");
 		    } else {
 			type = PART_FILESYSTEM;
 			if (!strcmp(mpoint, "/"))
@@ -1638,7 +1642,7 @@ diskLabelNonInteractive(Device *dev)
 		if (c1->private_data) {
 		    p = c1->private_data;
 		    p->do_newfs = newfs;
-		    strlcpy(p->mountpoint, mpoint, sizeof(p->mountpoint));
+		    strcpy(p->mountpoint, mpoint);
 		}
 		else {
 		    c1->private_data = new_part(PART_FILESYSTEM, mpoint, newfs);

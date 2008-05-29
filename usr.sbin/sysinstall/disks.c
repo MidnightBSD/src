@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.3 2008/05/02 05:29:06 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/disks.c,v 1.4 2008/05/02 06:41:00 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/disks.c,v 1.154.2.1 2006/01/31 22:07:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -46,25 +46,14 @@
 #ifdef WITH_SLICES
 enum size_units_t { UNIT_BLOCKS, UNIT_KILO, UNIT_MEG, UNIT_GIG, UNIT_SIZE };
 
-#ifdef PC98
-#define	SUBTYPE_FREEBSD		50324
-#define	SUBTYPE_FAT		37218
-#else
 #define	SUBTYPE_FREEBSD		165
 #define	SUBTYPE_FAT		6
-#endif
 #define	SUBTYPE_EFI		239
 
-#ifdef PC98
-#define	OTHER_SLICE_VALUES						\
-	"Other popular values are 37218 for a\n"			\
-	"DOS FAT partition.\n\n"
-#else
 #define	OTHER_SLICE_VALUES						\
 	"Other popular values are 6 for a\n"				\
 	"DOS FAT partition, 131 for a Linux ext2fs partition, or\n"	\
 	"130 for a Linux swap partition.\n\n"
-#endif
 #define	NON_FREEBSD_NOTE						\
 	"Note:  If you choose a non-MidnightBSD partition type, it will not\n" \
 	"be formatted or otherwise prepared, it will simply reserve space\n" \
@@ -120,11 +109,7 @@ print_chunks(Disk *d, int u)
     Total = 0;
     for (i = 0; chunk_info[i]; i++)
 	Total += chunk_info[i]->size;
-#ifdef PC98
-    if (d->bios_cyl >= 65536 || d->bios_hd > 256 || d->bios_sect >= 256) {
-#else
     if (d->bios_cyl > 65536 || d->bios_hd > 256 || d->bios_sect >= 64) {
-#endif
 	if (!variable_get(VAR_NONINTERACTIVE)) {
 	    dialog_clear_norefresh();
 	    msgConfirm("WARNING:  A geometry of %lu/%lu/%lu for %s is incorrect.  Using\n"
@@ -200,53 +185,6 @@ print_command_summary()
     move(0, 0);
 }
 
-#ifdef PC98
-static void
-getBootMgr(char *dname, u_char **bootipl, size_t *bootipl_size,
-	   u_char **bootmenu, size_t *bootmenu_size)
-{
-    static u_char *boot0;
-    static size_t boot0_size;
-    static u_char *boot05;
-    static size_t boot05_size;
-
-    char str[80];
-    char *cp;
-    int i = 0;
-
-    cp = variable_get(VAR_BOOTMGR);
-    if (!cp) {
-	/* Figure out what kind of IPL the user wants */
-	snprintf(str, sizeof(str), "Install Boot Manager for drive %s?", dname);
-	MenuIPLType.title = str;
-	i = dmenuOpenSimple(&MenuIPLType, FALSE);
-    } else {
-	if (!strncmp(cp, "boot", 4))
-	    BootMgr = 0;
-	else
-	    BootMgr = 1;
-    }
-    if (cp || i) {
-	switch (BootMgr) {
-	case 0:
-	    if (!boot0) boot0 = bootalloc("boot0", &boot0_size);
-	    *bootipl = boot0;
-	    *bootipl_size = boot0_size;
-	    if (!boot05) boot05 = bootalloc("boot0.5", &boot05_size);
-	    *bootmenu = boot05;
-	    *bootmenu_size = boot05_size;
-	    return;
-	case 1:
-	default:
-	    break;
-	}
-    }
-    *bootipl = NULL;
-    *bootipl_size = 0;
-    *bootmenu = NULL;
-    *bootmenu_size = 0;
-}
-#else
 static void
 getBootMgr(char *dname, u_char **bootCode, size_t *bootCodeSize)
 {
@@ -293,7 +231,6 @@ getBootMgr(char *dname, u_char **bootCode, size_t *bootCodeSize)
     *bootCode = NULL;
     *bootCodeSize = 0;
 }
-#endif
 #endif /* WITH_SLICES */
 
 int
@@ -324,15 +261,8 @@ diskPartition(Device *dev)
     int i;
     Boolean chunking;
     char *msg = NULL;
-#ifdef PC98
-    u_char *bootipl;
-    size_t bootipl_size;
-    u_char *bootmenu;
-    size_t bootmenu_size;
-#else
     u_char *mbrContents;
     size_t mbrSize;
-#endif
     WINDOW *w = savescr();
     Disk *d = (Disk *)dev->private;
     int size_unit;
@@ -439,15 +369,7 @@ diskPartition(Device *dev)
 		daddr_t size;
 		int subtype;
 		chunk_e partitiontype;
-#ifdef PC98
-		snprintf(name, sizeof (name), "%s", "MidnightBSD");
-		val = msgGetInput(name,
-			"Please specify the name for new MidnightBSD slice.");
-		if (val)
-			strncpy(name, val, sizeof (name));
-#else
 		name[0] = '\0';
-#endif
 		snprintf(tmp, 20, "%jd", (intmax_t)chunk_info[current_chunk]->size);
 		val = msgGetInput(tmp, "Please specify the size for new MidnightBSD slice in blocks\n"
 				  "or append a trailing `M' for megabytes (e.g. 20M).");
@@ -496,7 +418,7 @@ diskPartition(Device *dev)
 	    if (chunk_info[current_chunk]->type == unused)
 		msg = "Slice is currently unused (use create instead)";
 	    else {
-		char *val, tmp[20];
+		char *val, tmp[24];
 		int subtype;
 		chunk_e partitiontype;
 
@@ -577,31 +499,6 @@ diskPartition(Device *dev)
 			       "Are you absolutely sure you want to do this now?")) {
 		variable_set2(DISK_PARTITIONED, "yes", 0);
 
-#ifdef PC98
-		/*
-		 * Don't trash the IPL if the first (and therefore only) chunk
-		 * is marked for a truly dedicated disk (i.e., the disklabel
-		 * starts at sector 0), even in cases where the user has
-		 * requested a MidnightBSD Boot Manager -- both would be fatal in
-		 * this case.
-		 */
-		/*
-		 * Don't offer to update the IPL on this disk if the first
-		 * "real" chunk looks like a MidnightBSD "all disk" partition,
-		 * or the disk is entirely MidnightBSD.
-		 */
-		if ((d->chunks->part->type != freebsd) ||
-		    (d->chunks->part->offset > 1))
-		    getBootMgr(d->name, &bootipl, &bootipl_size,
-			       &bootmenu, &bootmenu_size);
-		else {
-		    bootipl = NULL;
-		    bootipl_size = 0;
-		    bootmenu = NULL;
-		    bootmenu_size = 0;
-		}
-		Set_Boot_Mgr(d, bootipl, bootipl_size, bootmenu, bootmenu_size);
-#else
 		/*
 		 * Don't trash the MBR if the first (and therefore only) chunk
 		 * is marked for a truly dedicated disk (i.e., the disklabel
@@ -622,7 +519,6 @@ diskPartition(Device *dev)
 		    mbrSize = 0;
 		}
 		Set_Boot_Mgr(d, mbrContents, mbrSize);
-#endif
 
 		if (DITEM_STATUS(diskPartitionWrite(NULL)) != DITEM_SUCCESS)
 		    msgConfirm("Disk partition write returned an error status!");
@@ -649,29 +545,6 @@ diskPartition(Device *dev)
 	case '\033':	/* ESC */
 	case 'Q':
 	    chunking = FALSE;
-#ifdef PC98
-	    /*
-	     * Don't trash the IPL if the first (and therefore only) chunk
-	     * is marked for a truly dedicated disk (i.e., the disklabel
-	     * starts at sector 0), even in cases where the user has requested
-	     * a MidnightBSD Boot Manager -- both would be fatal in this case.
-	     */
-	    /*
-	     * Don't offer to update the IPL on this disk if the first "real"
-	     * chunk looks like a MidnightBSD "all disk" partition, or the disk is
-	     * entirely MidnightBSD. 
-	     */
-	    if ((d->chunks->part->type != freebsd) ||
-		(d->chunks->part->offset > 1)) {
-		if (variable_cmp(DISK_PARTITIONED, "written")) {
-		    getBootMgr(d->name, &bootipl, &bootipl_size,
-			&bootmenu, &bootmenu_size);
-		    if (bootipl != NULL && bootmenu != NULL)
-			Set_Boot_Mgr(d, bootipl, bootipl_size,
-			    bootmenu, bootmenu_size);
-		}
-	    }
-#else
 	    /*
 	     * Don't trash the MBR if the first (and therefore only) chunk
 	     * is marked for a truly dedicated disk (i.e., the disklabel
@@ -691,7 +564,6 @@ diskPartition(Device *dev)
 			Set_Boot_Mgr(d, mbrContents, mbrSize);
 		}
 	    }
-#endif
 	    break;
 
 	case 'Z':
@@ -896,15 +768,8 @@ diskPartitionNonInteractive(Device *dev)
     char *cp;
     int i, all_disk = 0;
     daddr_t sz;
-#ifdef PC98
-    u_char *bootipl;
-    size_t bootipl_size;
-    u_char *bootmenu;
-    size_t bootmenu_size;
-#else
     u_char *mbrContents;
     size_t mbrSize;
-#endif
     Disk *d = (Disk *)dev->private;
 
     record_chunks(d);
@@ -986,14 +851,8 @@ diskPartitionNonInteractive(Device *dev)
 	    return;
 	}
 	if (!all_disk) {
-#ifdef PC98
-	    getBootMgr(d->name, &bootipl, &bootipl_size,
-		       &bootmenu, &bootmenu_size);
-	    Set_Boot_Mgr(d, bootipl, bootipl_size, bootmenu, bootmenu_size);
-#else
 	    getBootMgr(d->name, &mbrContents, &mbrSize);
 	    Set_Boot_Mgr(d, mbrContents, mbrSize);
-#endif
 	}
 	variable_set2(DISK_PARTITIONED, "yes", 0);
     }
