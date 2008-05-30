@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.10 2008/05/02 05:29:06 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.11 2008/05/02 07:18:57 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -440,10 +440,12 @@ DMenu MenuMediaFTP = {
 	VAR_FTP_PATH "=ftp://ftp.midnightbsd.org" },
       { "URL", "Specify some other ftp site by URL", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=other" },
-      { "Primary",	"stargazer.midnightbsd.org", NULL, dmenuSetVariable, NULL,
+      { "Primary",	"ftp1.midnightbsd.org", NULL, dmenuSetVariable, NULL,
 	VAR_FTP_PATH "=ftp://stargazer.midnightbsd.org" },
-      { " Primary #2",	"enterprise.midnightbsd.org", NULL, dmenuSetVariable, NULL,
-	VAR_FTP_PATH "=ftp://enterprise.midnightbsd.org" },
+      { "Mirror #2",	"mirrors.isc.org", NULL, dmenuSetVariable, NULL,
+	VAR_FTP_PATH "=ftp://mirrors.isc.org" },
+      { "Mirror #3", "ftp.allbsd.org", NULL, dmenuSetVariable, NULL,
+        VAR_FTP_PATH "=ftp.allbsd.org" },
       { NULL } }
 };
 
