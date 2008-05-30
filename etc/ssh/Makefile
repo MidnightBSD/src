@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/isdn/Makefile,v 1.3 2007/01/13 14:47:01 laffer1 Exp $
+# $MidnightBSD: src/etc/ssh/Makefile,v 1.1 2008/05/16 21:40:36 laffer1 Exp $
 
 NO_OBJ=	
 
@@ -16,15 +16,15 @@ CLEANFILES+= short.${bl:T}
 FILESNAME_short.${bl:T}=	${bl:T}
 
 short.${bl:T}: ${bl}
-	@printf "# After these initial comments, all the lines in this file must be\n" > ${.TARGET}
-	@printf "# exactly the same length, and must be in sorted order. Each line must\n" >> ${.TARGET}
-	@printf "# consist of the lower-case key fingerprint (ssh-keygen -l -f\n" >> ${.TARGET}
-	@printf "# /path/to/key), without colons, and with the first 12 characters\n" >> ${.TARGET}
-	@printf "# removed (that is, the lower 80 bits of the fingerprint). Unless these\n" >> ${.TARGET}
-	@printf "# rules are followed, the blacklist will not work properly. See\n" >> ${.TARGET}
-	@printf "# ssh-vulnkey(1).\n" >> ${.TARGET}
-	@printf "#\n" >> ${.TARGET}
-	@printf "# Copyright: (C) 2008 Canonical, Ltd., License: GPL-3.\n" >> ${.TARGET}
+	@/usr/bin/printf "# After these initial comments, all the lines in this file must be\n" > ${.TARGET}
+	@/usr/bin/printf "# exactly the same length, and must be in sorted order. Each line must\n" >> ${.TARGET}
+	@/usr/bin/printf "# consist of the lower-case key fingerprint (ssh-keygen -l -f\n" >> ${.TARGET}
+	@/usr/bin/printf "# /path/to/key), without colons, and with the first 12 characters\n" >> ${.TARGET}
+	@/usr/bin/printf "# removed (that is, the lower 80 bits of the fingerprint). Unless these\n" >> ${.TARGET}
+	@/usr/bin/printf "# rules are followed, the blacklist will not work properly. See\n" >> ${.TARGET}
+	@/usr/bin/printf "# ssh-vulnkey(1).\n" >> ${.TARGET}
+	@/usr/bin/printf "#\n" >> ${.TARGET}
+	@/usr/bin/printf "# Copyright: (C) 2008 Canonical, Ltd., License: GPL-3.\n" >> ${.TARGET}
 	sed -ne '/^#/!q;p;' ${.ALLSRC} >> ${.TARGET}
 
 	grep -v '^#' ${.ALLSRC} | cut -d ' ' -f 2 | cut -b13- | sort >> ${.TARGET}
