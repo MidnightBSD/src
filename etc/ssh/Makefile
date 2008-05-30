@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/ssh/Makefile,v 1.1 2008/05/16 21:40:36 laffer1 Exp $
+# $MidnightBSD: src/etc/ssh/Makefile,v 1.2 2008/05/30 20:28:33 laffer1 Exp $
 
 NO_OBJ=	
 
@@ -27,7 +27,7 @@ short.${bl:T}: ${bl}
 	@/usr/bin/printf "# Copyright: (C) 2008 Canonical, Ltd., License: GPL-3.\n" >> ${.TARGET}
 	sed -ne '/^#/!q;p;' ${.ALLSRC} >> ${.TARGET}
 
-	grep -v '^#' ${.ALLSRC} | cut -d ' ' -f 2 | cut -b13- | sort >> ${.TARGET}
+	grep -v '^#' ${.ALLSRC} | /usr/bin/cut -d ' ' -f 2 | /usr/bin/cut -b13- | /usr/bin/sort >> ${.TARGET}
 .endfor
 
 .include <bsd.prog.mk>
