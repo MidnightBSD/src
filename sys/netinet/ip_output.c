@@ -28,6 +28,7 @@
  *
  *	@(#)ip_output.c	8.3 (Berkeley) 1/21/94
  * $FreeBSD: src/sys/netinet/ip_output.c,v 1.242.2.8 2006/01/31 16:06:05 andre Exp $
+ * $MidnightBSD$
  */
 
 #include "opt_ipfw.h"
@@ -1211,8 +1212,8 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 				error = EINVAL;
 				break;
 			}
-			INP_INFO_WUNLOCK(pcbinfo);
 			INP_LOCK(inp);
+			INP_INFO_WUNLOCK(pcbinfo);
 			error = ip_pcbopts(inp, sopt->sopt_name, m);
 			INP_UNLOCK(inp);
 			return (error);
@@ -1239,8 +1240,8 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 				 error = EINVAL;
 				 break;
 			}
-			INP_INFO_WUNLOCK(pcbinfo);
 			INP_LOCK(inp);
+			INP_INFO_WUNLOCK(pcbinfo);
 			switch (sopt->sopt_name) {
 			case IP_TOS:
 				inp->inp_ip_tos = optval;
@@ -1315,14 +1316,15 @@ ip_ctloutput_pcbinfo(so, sopt, pcbinfo)
 					    sizeof optval);
 			if (error)
 				break;
+
 			INP_INFO_WLOCK(pcbinfo);
 			if (so->so_pcb == NULL) {
 				INP_INFO_WUNLOCK(pcbinfo);
 				error = EINVAL;
 				break;
 			}
-			INP_INFO_WUNLOCK(pcbinfo);
 			INP_LOCK(inp);
+			INP_INFO_WUNLOCK(pcbinfo);
 			switch (optval) {
 			case IP_PORTRANGE_DEFAULT:
 				inp->inp_flags &= ~(INP_LOWPORT);
