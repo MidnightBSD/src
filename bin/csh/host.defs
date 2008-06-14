@@ -1,6 +1,6 @@
 newcode	:
-/* $Header: /home/cvs/src/bin/csh/Attic/host.defs,v 1.3 2007-04-10 21:30:11 laffer1 Exp $ */
-/* $MidnightBSD$
+/* $Header: /home/cvs/src/bin/csh/Attic/host.defs,v 1.4 2008-06-14 21:14:37 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/csh/host.defs,v 1.3 2007/04/10 21:30:11 laffer1 Exp $
  * 
  * host.defs: Hosttype/Machtype etc.
  */
@@ -507,17 +507,6 @@ machtype: defined(mips)					: "mips"
 machtype: defined(pc532)				: "pc532"
 machtype: defined(vax)					: "vax"
 machtype: defined(alpha)				: "alpha"
-enddef	:
-
-
-newdef	: defined(__FreeBSD__) 
-comment	: FreeBSD
-vendor	: defined(__alpha)				: "digital"
-vendor	: defined(M_intel)				: "intel"
-hosttype:						: "FreeBSD"
-ostype	:						: "FreeBSD"
-machtype: defined(__alpha)				: "alpha"
-machtype: defined(M_i386)				: "i386"
 enddef	:
 
 
