@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.2 2008-05-15 04:53:33 laffer1 Exp $	*/
+/*	$Id: cpp.c,v 1.3 2008-06-25 19:49:04 laffer1 Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -219,7 +219,7 @@ main(int argc, char **argv)
 			break;
 #endif
 		case 'v':
-			printf("cpp: %s\n", VERSSTR);
+			printf("pcpp: %s\n", VERSSTR);
 			break;
 		case 'd':
 			if (optarg[0] == 'M') {

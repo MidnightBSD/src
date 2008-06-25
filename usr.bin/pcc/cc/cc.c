@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.1 2008-05-14 04:25:56 laffer1 Exp $	*/
+/*	$Id: cc.c,v 1.2 2008-06-25 19:49:02 laffer1 Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -122,8 +122,8 @@ int	nostdinc, nostdlib;
 int	onlyas;
 int	pthreads;
 
-char	*pass0 = LIBEXECDIR "/ccom";
-char	*passp = LIBEXECDIR "/cpp";
+char	*pass0 = LIBEXECDIR "/pccom";
+char	*passp = LIBEXECDIR "/pcpp";
 char	*Bflag;
 char *cppadd[] = CPPADD;
 char *dynlinker[] = DYNLINKER;
@@ -420,7 +420,7 @@ main(int argc, char *argv[])
 		 */
 	com:
 		na = 0;
-		av[na++]= "ccom";
+		av[na++]= "pccom";
 		if (vflag)
 			av[na++] = "-v";
 		if (gflag)

@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.1 2008-05-14 04:25:57 laffer1 Exp $	*/
+/*	$Id: main.c,v 1.2 2008-06-25 19:49:03 laffer1 Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -220,7 +220,7 @@ main(int argc, char *argv[])
 				usage();
 			break;
 		case 'v':
-			printf("ccom: %s\n", VERSSTR);
+			printf("pccom: %s\n", VERSSTR);
 			break;
 
 		case '?':

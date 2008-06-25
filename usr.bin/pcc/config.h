@@ -49,9 +49,11 @@
 
 /* Define to 1 if you have the `strchr' function. */
 /* #undef HAVE_STRCHR */
+#define HAVE_STRCHR 1
 
 /* Define to 1 if you have the `strdup' function. */
 /* #undef HAVE_STRDUP */
+#define HAVE_STRDUP 1
 
 /* Define to 1 if you have the <strings.h> header file. */
 #define HAVE_STRINGS_H 1
@@ -61,9 +63,11 @@
 
 /* Define to 1 if you have the `strrchr' function. */
 /* #undef HAVE_STRRCHR */
+#define HAVE_STRRCHR 1
 
 /* Define to 1 if you have the `strtol' function. */
 /* #undef HAVE_STRTOL */
+#define HAVE_STRTOL 1
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
@@ -79,12 +83,14 @@
 
 /* Define to 1 if you have the `vfork' function. */
 /* #undef HAVE_VFORK */
+#define HAVE_VFORK 1
 
 /* Define to 1 if you have the <vfork.h> header file. */
 /* #undef HAVE_VFORK_H */
 
 /* Define to 1 if you have the `vprintf' function. */
 /* #undef HAVE_VPRINTF */
+#define HAVE_VPRINTF 1
 
 /* Define to 1 if `fork' works. */
 /* #undef HAVE_WORKING_FORK */
