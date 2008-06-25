@@ -15,7 +15,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.9 2007/06/01 03:19:47 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.10 2008/04/28 05:24:13 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 machine		i386
@@ -46,6 +46,7 @@ options 	CD9660			# ISO 9660 Filesystem
 options 	PROCFS			# Process filesystem (requires PSEUDOFS)
 options 	PSEUDOFS		# Pseudo-filesystem framework
 options 	GEOM_GPT		# GUID Partition Tables.
+options	GEOM_LABEL		# Support for labels with ISO, UFS
 options 	COMPAT_43		# Compatible with BSD 4.3 [KEEP THIS!]
 options 	COMPAT_FREEBSD4		# Compatible with FreeBSD4
 options 	COMPAT_FREEBSD5		# Compatible with FreeBSD5
@@ -65,6 +66,9 @@ options		SMP			# Support Multicore and Multiproccesor
 					# systems.
 
 device		apic			# I/O APIC
+
+# CPU frequency control
+device		cpufreq
 
 # Bus support.
 device		eisa
