@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/pcc/cc/Makefile,v 1.5 2008/05/15 05:55:30 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/cc/Makefile,v 1.6 2008/06/25 19:49:02 laffer1 Exp $
 
 PROG=	pcc
 SRCS=	cc.c
@@ -9,8 +9,8 @@ CFLAGS+=	-DLIBEXECDIR=\"${libexecdir}\"
 CFLAGS+=	-I${.CURDIR}/..
 CFLAGS+=	-Dmach_${TARGMACH} -Dos_${TARGOS}
 
-BINDIR=	/usr/local/bin
-MANDIR= /usr/local/man/man
+BINDIR=	/usr/bin
+#MANDIR= /usr/local/man/man
 #MAN=	cc.1
 NO_MAN=	
 #MLINKS+=	cc.1 pcc.1
