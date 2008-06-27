@@ -12,6 +12,8 @@ Items affecting the mports and packages system can be found in
 
 	pcc connected to the build on i386. (alternative compiler)
 
+	ath added to GENERIC.  (Atheros wireless NICs) on amd64/i386
+
 20080528:
 	Sendmail 8.14.3
 
@@ -574,4 +576,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.38 2008/05/28 22:02:57 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.39 2008/06/27 16:16:44 laffer1 Exp $
