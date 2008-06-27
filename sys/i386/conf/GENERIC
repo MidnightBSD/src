@@ -15,7 +15,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.10.2.2 2008/06/27 07:29:58 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.12 2008/06/27 16:25:01 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 machine		i386
@@ -233,6 +233,9 @@ device		wlan_wep	# 802.11 WEP support
 device		wlan_ccmp	# 802.11 CCMP support
 device		wlan_tkip	# 802.11 TKIP support
 device		an		# Aironet 4500/4800 802.11 wireless NICs.
+device		ath		# Atheros AR5210, AR5211, and AR5212
+device		ath_hal		# Atheros Hardwar Abstraction Layer
+device		ath_rate_sample # Atheros rate sampling.
 device		awi		# BayStack 660 and others
 device		ral		# Ralink Technology RT2500 wireless NICs.
 device		wi		# WaveLAN/Intersil/Symbol 802.11 wireless NICs.
