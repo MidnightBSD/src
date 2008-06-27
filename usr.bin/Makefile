@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.12 2007/09/25 04:46:33 ctriv Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.13.2.2 2008/06/27 16:08:39 laffer1 Exp $
 
 # XXX MISSING:		diction graph learn plot
 #			spline struct xsend
@@ -149,6 +149,7 @@ SUBDIR=	alias \
 	passwd \
 	paste \
 	pathchk \
+	${_pcc} \
 	pkill \
 	pr \
 	printenv \
@@ -197,7 +198,7 @@ SUBDIR=	alias \
 	tr \
 	true \
 	truncate \
-	${_truss} \
+	truss \
 	tset \
 	tsort \
 	tty \
@@ -239,11 +240,6 @@ SUBDIR=	alias \
 	${_ypcat} \
 	${_ypmatch} \
 	${_ypwhich}
-
-.if ${MACHINE_ARCH} != "arm" && \
-    ${MACHINE_ARCH} != "powerpc"
-_truss=		truss
-.endif
 
 .if !defined(NO_ATM)
 _atm=		atm
@@ -294,9 +290,7 @@ _vacation=	vacation
 .if !defined(NO_TOOLCHAIN)
 _c89=		c89
 _c99=		c99
-.if ${MACHINE_ARCH} != "powerpc"
 _gprof=		gprof
-.endif
 _lex=		lex
 _xlint=		xlint
 _yacc=		yacc
@@ -310,11 +304,8 @@ _usbhidctl=	usbhidctl
 .if ${MACHINE_ARCH} == "i386"
 _ncplist=	ncplist
 _ncplogin=	ncplogin
+_pcc=		pcc
 _smbutil=	smbutil
-.endif
-
-.if ${MACHINE_ARCH} == "alpha"
-_uac=		uac
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
