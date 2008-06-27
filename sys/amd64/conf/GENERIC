@@ -11,7 +11,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first
 # in NOTES.
 #
-# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.4 2007/06/01 03:22:37 laffer1 Exp $
+# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.5 2008/06/25 20:17:29 laffer1 Exp $
 # $FreeBSD: src/sys/amd64/conf/GENERIC,v 1.439.2.7 2005/10/28 19:21:27 jhb Exp $
 
 machine		amd64
@@ -42,7 +42,7 @@ options 	CD9660			# ISO 9660 Filesystem
 options 	PROCFS			# Process filesystem (requires PSEUDOFS)
 options 	PSEUDOFS		# Pseudo-filesystem framework
 options 	GEOM_GPT		# GUID Partition Tables.
-options	GEOM_LABEL		# Support for labels with ISO, UFS
+options 	GEOM_LABEL		# Support for labels with ISO, UFS
 options 	COMPAT_43		# Needed by COMPAT_LINUX32
 options 	COMPAT_IA32		# Compatible with i386 binaries
 options 	COMPAT_FREEBSD4		# Compatible with FreeBSD4
@@ -55,10 +55,6 @@ options 	SYSVMSG			# SYSV-style message queues
 options 	SYSVSEM			# SYSV-style semaphores
 options 	_KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
 options 	KBD_INSTALL_CDEV	# install a CDEV entry in /dev
-options 	AHC_REG_PRETTY_PRINT	# Print register bitfields in debug
-					# output.  Adds ~128k to driver.
-options 	AHD_REG_PRETTY_PRINT	# Print register bitfields in debug
-					# output.  Adds ~215k to driver.
 options 	ADAPTIVE_GIANT		# Giant mutex is adaptive.
 options		SMP			# Support multicore and multiprocessor
 					# systems.
@@ -90,7 +86,11 @@ options 	ATA_STATIC_ID	# Static device numbering
 
 # SCSI Controllers
 device		ahc		# AHA2940 and onboard AIC7xxx devices
+#options	AHC_REG_PRETTY_PRINT	# Print register bitfields in debug
+					# output.  Adds ~128k to driver.
 device		ahd		# AHA39320/29320 and onboard AIC79xx devices
+#options	AHD_REG_PRETTY_PRINT	# Print register bitfields in debug
+					# output.  Adds ~215k to driver.
 device		amd		# AMD 53C974 (Tekram DC-390(T))
 device		isp		# Qlogic family
 #device 	ispfw		# Firmware for QLogic HBAs- normally a module
@@ -218,6 +218,9 @@ device		xe		# Xircom pccard Ethernet
 
 # Wireless NIC cards
 device		wlan		# 802.11 support
+device		wlan_wep	# 802.11 WEP support
+device		wlan_ccmp	# 802.11 CCMP support
+device		wlan_tkip	# 802.11 TKIP support
 device		an		# Aironet 4500/4800 802.11 wireless NICs.
 device		awi		# BayStack 660 and others
 device		ral		# Ralink Technology RT2500 wireless NICs.
@@ -234,6 +237,7 @@ device		pty		# Pseudo-ttys (telnet etc)
 device		md		# Memory "disks"
 device		gif		# IPv6 and IPv4 tunneling
 device		faith		# IPv6-to-IPv4 relaying (translation)
+device		firmware	# firmware assist module
 
 # The `bpf' device enables the Berkeley Packet Filter.
 # Be aware of the administrative consequences of enabling this!
