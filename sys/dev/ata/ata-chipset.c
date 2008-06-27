@@ -1850,6 +1850,7 @@ ata_intel_ident(device_t dev)
      { ATA_I82801HB_AH6, 0, AHCI, 0x00, ATA_SA300, "ICH8" },
      { ATA_I82801HBM_S1, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
      { ATA_I82801HBM_S2, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
+     { ATA_I82801HBM_S3, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
      { ATA_I31244,       0,    0, 0x00, ATA_SA150, "31244" },
      { 0, 0, 0, 0, 0, 0}};
     char buffer[64]; 
