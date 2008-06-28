@@ -3945,7 +3945,7 @@ ata_raid_init_request(struct ar_softc *rdp, struct bio *bio)
 	printf("FAILURE - out of memory in ata_raid_init_request\n");
 	return NULL;
     }
-    request->timeout = 5;
+    request->timeout = 10;
     request->retries = 2;
     request->callback = ata_raid_done;
     request->driver = rdp;
