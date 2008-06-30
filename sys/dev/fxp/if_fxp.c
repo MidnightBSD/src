@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fxp/if_fxp.c,v 1.240.2.7 2005/12/16 03:23:57 mux Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fxp/if_fxp.c,v 1.240.2.12 2007/04/11 17:13:16 remko Exp $");
 
 /*
  * Intel EtherExpress Pro/100B PCI Fast Ethernet driver
@@ -176,9 +176,12 @@ static struct fxp_ident fxp_ident_table[] = {
     { 0x1051,	-1,	"Intel 82562ET (ICH5/ICH5R) Pro/100 VE Ethernet" },
     { 0x1059,	-1,	"Intel 82551QM Pro/100 M Mobile Connection" },
     { 0x1064,	-1,	"Intel 82562EZ (ICH6)" },
+    { 0x1065,	-1,	"Intel 82562ET/EZ/GT/GZ PRO/100 VE Ethernet" },
     { 0x1068,	-1,	"Intel 82801FBM (ICH6-M) Pro/100 VE Ethernet" },
     { 0x1069,	-1,	"Intel 82562EM/EX/GX Pro/100 Ethernet" },
-    { 0x1092, 	-1,	"Intel Pro/100 VE Network Connection" },
+    { 0x1091,	-1,	"Intel 82562GX Pro/100 Ethernet" },
+    { 0x1092,	-1,	"Intel Pro/100 VE Network Connection" },
+    { 0x1093,	-1,	"Intel Pro/100 VM Network Connection" },
     { 0x1094,	-1,	"Intel Pro/100 946GZ (ICH7) Network Connection" },
     { 0x1209,	-1,	"Intel 82559ER Embedded 10/100 Ethernet" },
     { 0x1229,	0x01,	"Intel 82557 Pro/100 Ethernet" },
