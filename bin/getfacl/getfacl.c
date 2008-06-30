@@ -32,7 +32,7 @@
 /* $FreeBSD: src/bin/getfacl/getfacl.c,v 1.10 2005/02/09 17:37:37 ru Exp $ */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/getfacl/getfacl.c,v 1.2 2006/07/19 13:41:34 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/getfacl/getfacl.c,v 1.3 2006/08/04 17:10:41 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -41,6 +41,8 @@ __MBSDID("$MidnightBSD: src/bin/getfacl/getfacl.c,v 1.2 2006/07/19 13:41:34 laff
 
 #include <err.h>
 #include <errno.h>
+#include <grp.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +54,33 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "getfacl [-dh] [file ...]\n");
+	fprintf(stderr, "getfacl [-dhq] [file ...]\n");
+}
+
+static char *
+getuname(uid_t uid)
+{
+	struct passwd *pw;
+	static char uids[10];
+
+	if ((pw = getpwuid(uid)) == NULL) {
+		(void)snprintf(uids, sizeof(uids), "%u", uid);
+		return (uids);
+	} else
+		return (pw->pw_name);
+}
+
+static char *
+getgname(gid_t gid)
+{
+	struct group *gr;
+	static char gids[10];
+
+	if ((gr = getgrgid(gid)) == NULL) {
+		(void)snprintf(gids, sizeof(gids), "%u", gid);
+		return (gids);
+	} else
+		return (gr->gr_name);
 }
 
 /*
@@ -147,7 +175,7 @@ acl_from_stat(struct stat sb)
 }
 
 static int
-print_acl(char *path, acl_type_t type, int hflag)
+print_acl(char *path, acl_type_t type, int hflag, int qflag)
 {
 	struct stat	sb;
 	acl_t	acl;
@@ -168,7 +196,9 @@ print_acl(char *path, acl_type_t type, int hflag)
 	else
 		more_than_one++;
 
-	printf("#file:%s\n#owner:%d\n#group:%d\n", path, sb.st_uid, sb.st_gid);
+	if (!qflag)
+		printf("# file: %s\n# owner: %s\n# group: %s\n", path,
+		    getuname(sb.st_uid), getgname(sb.st_gid));
 
 	if (hflag)
 		acl = acl_get_link_np(path, type);
@@ -204,7 +234,7 @@ print_acl(char *path, acl_type_t type, int hflag)
 }
 
 static int
-print_acl_from_stdin(acl_type_t type, int hflag)
+print_acl_from_stdin(acl_type_t type, int hflag, int qflag)
 {
 	char	*p, pathname[PATH_MAX];
 	int	carried_error = 0;
@@ -212,7 +242,7 @@ print_acl_from_stdin(acl_type_t type, int hflag)
 	while (fgets(pathname, (int)sizeof(pathname), stdin)) {
 		if ((p = strchr(pathname, '\n')) != NULL)
 			*p = '\0';
-		if (print_acl(pathname, type, hflag) == -1) {
+		if (print_acl(pathname, type, hflag, qflag) == -1) {
 			carried_error = -1;
 		}
 	}
@@ -226,16 +256,20 @@ main(int argc, char *argv[])
 	acl_type_t	type = ACL_TYPE_ACCESS;
 	int	carried_error = 0;
 	int	ch, error, i;
-	int	hflag;
+	int	hflag, qflag;
 
 	hflag = 0;
-	while ((ch = getopt(argc, argv, "dh")) != -1)
+	qflag = 0;
+	while ((ch = getopt(argc, argv, "dhq")) != -1)
 		switch(ch) {
 		case 'd':
 			type = ACL_TYPE_DEFAULT;
 			break;
 		case 'h':
 			hflag = 1;
+			break;
+		case 'q':
+			qflag = 1;
 			break;
 		default:
 			usage();
@@ -245,17 +279,17 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	if (argc == 0) {
-		error = print_acl_from_stdin(type, hflag);
+		error = print_acl_from_stdin(type, hflag, qflag);
 		return(error ? 1 : 0);
 	}
 
 	for (i = 0; i < argc; i++) {
 		if (!strcmp(argv[i], "-")) {
-			error = print_acl_from_stdin(type, hflag);
+			error = print_acl_from_stdin(type, hflag, qflag);
 			if (error == -1)
 				carried_error = -1;
 		} else {
-			error = print_acl(argv[i], type, hflag);
+			error = print_acl(argv[i], type, hflag, qflag);
 			if (error == -1)
 				carried_error = -1;
 		}
