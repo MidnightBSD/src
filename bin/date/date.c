@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)date.c	8.2 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/date/date.c,v 1.2 2006/07/07 13:54:43 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -187,8 +187,10 @@ setthetime(const char *fmt, const char *p, int jflag, int nflag)
 	const char *dot, *t;
 	int century;
 
+	lt = localtime(&tval);
+	lt->tm_isdst = -1;		/* divine correct DST */
+
 	if (fmt != NULL) {
-		lt = localtime(&tval);
 		t = strptime(p, fmt, lt);
 		if (t == NULL) {
 			fprintf(stderr, "Failed conversion of ``%s''"
@@ -208,8 +210,6 @@ setthetime(const char *fmt, const char *p, int jflag, int nflag)
 			}
 			badformat();
 		}
-
-		lt = localtime(&tval);
 
 		if (dot != NULL) {			/* .ss */
 			dot++; /* *dot++ = '\0'; */
@@ -264,9 +264,6 @@ setthetime(const char *fmt, const char *p, int jflag, int nflag)
 			badformat();
 		}
 	}
-
-	/* Let mktime() decide whether summer time is in effect. */
-	lt->tm_isdst = -1;
 
 	/* convert broken-down time to GMT clock time */
 	if ((tval = mktime(lt)) == -1)
