@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/parser.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)parser.c	8.7 (Berkeley) 5/16/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/parser.c,v 1.52.2.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/parser.c,v 1.52.2.3 2006/11/22 00:26:06 stefanf Exp $");
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -953,6 +953,7 @@ readtoken1(int firstc, char const *syntax, char *eofmark, int striptabs)
 					USTPUTC('\\', out);
 					pungetc();
 				} else if (c == '\n') {
+					plinno++;
 					if (doprompt)
 						setprompt(2);
 					else
@@ -1228,12 +1229,17 @@ parsesub: {
 				c = pgetc();
 			}
 		} else {
-			if (! is_special(c))
-badsub:				synerror("Bad substitution");
-			USTPUTC(c, out);
-			c = pgetc();
+			if (! is_special(c)) {
+				subtype = VSERROR;
+				if (c == '}')
+					pungetc();
+				else
+					USTPUTC(c, out);
+			} else {
+				USTPUTC(c, out);
+				c = pgetc();
+			}
 		}
-		STPUTC('=', out);
 		flags = 0;
 		if (subtype == 0) {
 			switch (c) {
@@ -1243,9 +1249,13 @@ badsub:				synerror("Bad substitution");
 				/*FALLTHROUGH*/
 			default:
 				p = strchr(types, c);
-				if (p == NULL)
-					goto badsub;
-				subtype = p - types + VSNORMAL;
+				if (p == NULL) {
+					if (flags == VSNUL)
+						STPUTC(':', out);
+					STPUTC(c, out);
+					subtype = VSERROR;
+				} else
+					subtype = p - types + VSNORMAL;
 				break;
 			case '%':
 			case '#':
@@ -1261,9 +1271,10 @@ badsub:				synerror("Bad substitution");
 					break;
 				}
 			}
-		} else {
+		} else if (subtype != VSERROR) {
 			pungetc();
 		}
+		STPUTC('=', out);
 		if (subtype != VSLENGTH && (dblquote || arinest))
 			flags |= VSQUOTE;
 		*(stackblock() + typeloc) = subtype | flags;

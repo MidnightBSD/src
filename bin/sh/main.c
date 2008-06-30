@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/main.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.26 2004/04/06 20:06:51 markm Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/main.c,v 1.26.8.2 2006/11/22 00:23:09 stefanf Exp $");
 
 #include <stdio.h>
 #include <signal.h>
@@ -210,7 +210,7 @@ cmdloop(int top)
 		inter = 0;
 		if (iflag && top) {
 			inter++;
-			showjobs(1, 0, 0);
+			showjobs(1, SHOWJOBS_DEFAULT);
 			chkmail(0);
 			flushout(&output);
 		}
@@ -315,19 +315,21 @@ int
 dotcmd(int argc, char **argv)
 {
 	struct strlist *sp;
+	char *fullname;
+
+	if (argc < 2)
+		error("missing filename");
+
 	exitstatus = 0;
 
 	for (sp = cmdenviron; sp ; sp = sp->next)
 		setvareq(savestr(sp->text), VSTRFIXED|VTEXTFIXED);
 
-	if (argc >= 2) {		/* That's what SVR2 does */
-		char *fullname = find_dot_file(argv[1]);
-
-		setinputfile(fullname, 1);
-		commandname = fullname;
-		cmdloop(0);
-		popfile();
-	}
+	fullname = find_dot_file(argv[1]);
+	setinputfile(fullname, 1);
+	commandname = fullname;
+	cmdloop(0);
+	popfile();
 	return exitstatus;
 }
 

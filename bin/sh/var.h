@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/var.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)var.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/var.h,v 1.12 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/var.h,v 1.12.8.1 2006/11/22 00:11:11 stefanf Exp $
  */
 
 /*
@@ -75,6 +75,7 @@ extern struct var vpath;
 extern struct var vppid;
 extern struct var vps1;
 extern struct var vps2;
+extern struct var vps4;
 #ifndef NO_HISTORY
 extern struct var vhistsize;
 #endif
@@ -92,6 +93,7 @@ extern struct var vhistsize;
 #define pathval()	(vpath.text + 5)
 #define ps1val()	(vps1.text + 4)
 #define ps2val()	(vps2.text + 4)
+#define ps4val()	(vps4.text + 4)
 #define optindval()	(voptind.text + 7)
 #ifndef NO_HISTORY
 #define histsizeval()	(vhistsize.text + 9)

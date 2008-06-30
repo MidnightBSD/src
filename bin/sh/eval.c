@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/eval.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)eval.c	8.9 (Berkeley) 6/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/eval.c,v 1.42.8.2 2005/12/26 15:43:54 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/eval.c,v 1.42.8.6 2007/10/26 10:23:27 stefanf Exp $");
 
 #include <paths.h>
 #include <signal.h>
@@ -368,6 +368,7 @@ evalcase(union node *n, int flags)
 	setstackmark(&smark);
 	arglist.lastp = &arglist.list;
 	oexitstatus = exitstatus;
+	exitstatus = 0;
 	expandarg(n->ncase.expr, &arglist, EXP_TILDE);
 	for (cp = n->ncase.cases ; cp && evalskip == 0 ; cp = cp->nclist.next) {
 		for (patp = cp->nclist.pattern ; patp ; patp = patp->narg.next) {
@@ -644,14 +645,19 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 
 	/* Print the command if xflag is set. */
 	if (xflag) {
-		outc('+', &errout);
+		char sep = 0;
+		out2str(ps4val());
 		for (sp = varlist.list ; sp ; sp = sp->next) {
-			outc(' ', &errout);
+			if (sep != 0)
+				outc(' ', &errout);
 			out2str(sp->text);
+			sep = ' ';
 		}
 		for (sp = arglist.list ; sp ; sp = sp->next) {
-			outc(' ', &errout);
+			if (sep != 0)
+				outc(' ', &errout);
 			out2str(sp->text);
+			sep = ' ';
 		}
 		outc('\n', &errout);
 		flushout(&errout);
@@ -659,8 +665,10 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 
 	/* Now locate the command. */
 	if (argc == 0) {
+		/* Variable assignment(s) without command */
 		cmdentry.cmdtype = CMDBUILTIN;
 		cmdentry.u.index = BLTINCMD;
+		cmdentry.special = 1;
 	} else {
 		static const char PATH[] = "PATH=";
 		char *path = pathval();
@@ -706,7 +714,8 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 				argv++;
 				if (--argc == 0)
 					break;
-				if ((cmdentry.u.index = find_builtin(*argv)) < 0) {
+				if ((cmdentry.u.index = find_builtin(*argv,
+				    &cmdentry.special)) < 0) {
 					outfmt(&errout, "%s: not found\n", *argv);
 					exitstatus = 127;
 					flushout(&errout);
@@ -813,7 +822,6 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 			memout.bufsize = 64;
 			mode |= REDIR_BACKQ;
 		}
-		redirect(cmd->ncmd.redirect, mode);
 		savecmdname = commandname;
 		cmdenviron = varlist.list;
 		e = -1;
@@ -824,6 +832,9 @@ evalcommand(union node *cmd, int flags, struct backcmd *backcmd)
 		}
 		savehandler = handler;
 		handler = &jmploc;
+		redirect(cmd->ncmd.redirect, mode);
+		if (cmdentry.special)
+			listsetvar(cmdenviron);
 		commandname = argv[0];
 		argptr = argv + 1;
 		optptr = NULL;			/* initialize nextopt */
@@ -843,14 +854,7 @@ cmddone:
 		handler = savehandler;
 		if (e != -1) {
 			if ((e != EXERROR && e != EXEXEC)
-			   || cmdentry.u.index == BLTINCMD
-			   || cmdentry.u.index == DOTCMD
-			   || cmdentry.u.index == EVALCMD
-#ifndef NO_HISTORY
-			   || cmdentry.u.index == HISTCMD
-#endif
-			   || cmdentry.u.index == EXECCMD
-			   || cmdentry.u.index == COMMANDCMD)
+			    || cmdentry.special)
 				exraise(e);
 			FORCEINTON;
 		}
@@ -912,7 +916,7 @@ prehash(union node *n)
 {
 	struct cmdentry entry;
 
-	if (n->type == NCMD && n->ncmd.args)
+	if (n && n->type == NCMD && n->ncmd.args)
 		if (goodname(n->ncmd.args->narg.text))
 			find_command(n->ncmd.args->narg.text, &entry, 0,
 				     pathval());
@@ -926,14 +930,12 @@ prehash(union node *n)
  */
 
 /*
- * No command given, or a bltin command with no arguments.  Set the
- * specified variables.
+ * No command given, or a bltin command with no arguments.
  */
 
 int
 bltincmd(int argc __unused, char **argv __unused)
 {
-	listsetvar(cmdenviron);
 	/*
 	 * Preserve exitstatus of a previous possible redirection
 	 * as POSIX mandates

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/parser.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)parser.h	8.3 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/parser.h,v 1.10 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/parser.h,v 1.10.8.1 2006/11/22 00:26:06 stefanf Exp $
  */
 
 /* control characters in argument strings */
@@ -61,6 +61,7 @@
 #define VSTRIMRIGHT	0x8		/* ${var%pattern} */
 #define VSTRIMRIGHTMAX 	0x9		/* ${var%%pattern} */
 #define VSLENGTH	0xa		/* ${#var} */
+#define VSERROR		0xb		/* Syntax error, issue when expanded */
 
 
 /*

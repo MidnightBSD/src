@@ -31,9 +31,9 @@
 .\"
 .\"	from: @(#)sh.1	8.6 (Berkeley) 5/4/95
 .\" $FreeBSD: src/bin/sh/sh.1,v 1.102.2.2 2005/12/26 15:43:54 stefanf Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/sh/sh.1,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
 .\"
-.Dd December 8, 2005
+.Dd June 29, 2008
 .Dt SH 1
 .Os
 .Sh NAME
@@ -306,8 +306,9 @@ as it is read.
 Useful for debugging.
 .It Fl x Li xtrace
 Write each command
-(preceded by
-.Dq Li "+ " )
+(preceded by the value of the 
+.Ev PS4
+variable)
 to standard error before it is executed.
 Useful for debugging.
 .El
@@ -363,6 +364,13 @@ The following is a list of valid operators:
 .It Li <& Ta Li >& Ta Li <<- Ta Li >|
 .El
 .El
+.Pp
+The character
+.Ql #
+introduces a comment if used at the beginning of a word.
+The word starting with
+.Ql #
+and the rest of the line are ignored.
 .Ss Quoting
 Quoting is used to remove the special meaning of certain characters
 or words to the shell, such as operators, whitespace, keywords,
@@ -854,6 +862,10 @@ described later),
 separated by
 .Dq Li \&|
 characters.
+The exit code of the
+.Ic case
+command is the exit code of the last command executed in the list or
+zero if no patterns were matched.
 .Ss Grouping Commands Together
 Commands may be grouped by writing either
 .Bd -literal -offset indent
@@ -1354,9 +1366,8 @@ This section lists the commands which
 are built-in because they need to perform some operation
 that cannot be performed by a separate process.
 In addition to
-these, a built-in version of the
-.Xr test 1
-command is provided for efficiency.
+these, built-in versions of essential utilities
+are provided for efficiency.
 .Bl -tag -width indent
 .It Ic \&:
 A null command that returns a 0 (true) exit value.
@@ -1378,6 +1389,9 @@ for the file.
 If it is not found in the
 .Ev PATH ,
 it is sought in the current working directory.
+.It Ic \&[
+A built-in equivalent of
+.Xr test 1 .
 .It Ic alias Oo Ar name Ns Oo = Ns Ar string Oc ... Oc
 If
 .Ar name Ns = Ns Ar string
@@ -1612,6 +1626,8 @@ If the
 option is specified, the exported variables are printed as
 .Dq Ic export Ar name Ns = Ns Ar value
 lines, suitable for re-input to the shell.
+.It Ic false
+A null command that returns a non-zero (false) exit value.
 .It Ic fc Oo Fl e Ar editor Oc Op Ar first Op Ar last
 .It Ic fc Fl l Oo Fl nr Oc Op Ar first Op Ar last
 .It Ic fc Fl s Oo Ar old Ns = Ns Ar new Oc Op Ar first
@@ -1766,7 +1782,7 @@ Print the process id's of the processes in the specified
 If the
 .Ar job
 argument is omitted, use the current job.
-.It Ic jobs Oo Fl ls Oc Op Ar job ...
+.It Ic jobs Oo Fl lps Oc Op Ar job ...
 Print information about the specified jobs, or all jobs if no
 .Ar job
 argument is given.
@@ -1776,8 +1792,13 @@ If the
 .Fl l
 option is specified, the PID of each job is also printed.
 If the
+.Fl p
+option is specified, only the process IDs for the process group leaders
+are printed, one per line.
+If the
 .Fl s
-option is specified, only the PIDs of the jobs are printed, one per line.
+option is specified, only the PIDs of the job commands are printed, one per
+line.
 .It Ic local Oo Ar variable ... Oc Op Fl
 See the
 .Sx Functions
@@ -1952,6 +1973,9 @@ A shift sets the value of $1 to the value of $2,
 the value of $2 to the value of $3, and so on,
 decreasing the value of $# by one.
 If there are zero positional parameters, shifting does not do anything.
+.It Ic test
+A built-in equivalent of
+.Xr test 1 .
 .It Ic times
 Print the amount of time spent executing the shell and its children.
 The first output line shows the user and system times for the shell
@@ -1989,6 +2013,8 @@ Option
 causes the
 .Ic trap
 command to display a list of valid signal names.
+.It Ic true
+A null command that returns a 0 (true) exit value.
 .It Ic type Op Ar name ...
 Interpret each
 .Ar name
@@ -2191,6 +2217,12 @@ unless you are the superuser, in which case it defaults to
 .It Ev PS2
 The secondary prompt string, which defaults to
 .Dq Li "> " .
+.It Ev PS4
+The prefix for the trace output (if
+.Fl x
+is active).
+The default is
+.Dq Li "+ " .
 .It Ev TERM
 The default terminal setting for the shell.
 This is inherited by children of the shell, and is used in the history
@@ -2222,8 +2254,23 @@ will return the argument.
 .Sh HISTORY
 A
 .Nm
-command appeared in
+command, the Thompson shell, appeared in
 .At v1 .
+It was superseded in
+.At v7
+by the Bourne shell, which inherited the name
+.Nm .
+.Pp
+This version of
+.Nm
+was rewritten in 1989 under the
+.Bx
+license after the Bourne shell from
+.At V.4 .
+.Sh AUTHORS
+This version of
+.Nm
+was originally written by Kenneth Almquist.
 .Sh BUGS
 The
 .Nm

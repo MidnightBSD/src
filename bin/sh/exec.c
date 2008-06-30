@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/exec.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)exec.c	8.4 (Berkeley) 6/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/exec.c,v 1.25.2.1 2005/11/06 20:39:47 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/exec.c,v 1.25.2.3 2007/02/04 10:42:30 stefanf Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -85,6 +85,7 @@ __FBSDID("$FreeBSD: src/bin/sh/exec.c,v 1.25.2.1 2005/11/06 20:39:47 stefanf Exp
 struct tblentry {
 	struct tblentry *next;	/* next entry in hash chain */
 	union param param;	/* definition of builtin function */
+	int special;		/* flag for special builtin commands */
 	short cmdtype;		/* index identifying command */
 	char rehash;		/* if set, cd done since entry created */
 	char cmdname[ARB];	/* name of command */
@@ -318,6 +319,7 @@ find_command(char *name, struct cmdentry *entry, int printerr, char *path)
 	struct stat statb;
 	int e;
 	int i;
+	int spec;
 
 	/* If name contains a slash, don't use the hash table */
 	if (strchr(name, '/') != NULL) {
@@ -331,11 +333,12 @@ find_command(char *name, struct cmdentry *entry, int printerr, char *path)
 		goto success;
 
 	/* If %builtin not in path, check for builtin next */
-	if (builtinloc < 0 && (i = find_builtin(name)) >= 0) {
+	if (builtinloc < 0 && (i = find_builtin(name, &spec)) >= 0) {
 		INTOFF;
 		cmdp = cmdlookup(name, 1);
 		cmdp->cmdtype = CMDBUILTIN;
 		cmdp->param.index = i;
+		cmdp->special = spec;
 		INTON;
 		goto success;
 	}
@@ -357,12 +360,13 @@ loop:
 		index++;
 		if (pathopt) {
 			if (prefix("builtin", pathopt)) {
-				if ((i = find_builtin(name)) < 0)
+				if ((i = find_builtin(name, &spec)) < 0)
 					goto loop;
 				INTOFF;
 				cmdp = cmdlookup(name, 1);
 				cmdp->cmdtype = CMDBUILTIN;
 				cmdp->param.index = i;
+				cmdp->special = spec;
 				INTON;
 				goto success;
 			} else if (prefix("func", pathopt)) {
@@ -431,6 +435,7 @@ success:
 	cmdp->rehash = 0;
 	entry->cmdtype = cmdp->cmdtype;
 	entry->u = cmdp->param;
+	entry->special = cmdp->special;
 }
 
 
@@ -440,13 +445,15 @@ success:
  */
 
 int
-find_builtin(char *name)
+find_builtin(char *name, int *special)
 {
 	const struct builtincmd *bp;
 
 	for (bp = builtincmd ; bp->name ; bp++) {
-		if (*bp->name == *name && equal(bp->name, name))
+		if (*bp->name == *name && equal(bp->name, name)) {
+			*special = bp->special;
 			return bp->code;
+		}
 	}
 	return -1;
 }
@@ -774,14 +781,17 @@ typecmd_impl(int argc, char **argv, int cmd)
 						" a tracked alias for" : "",
 					    name);
 			} else {
-				if (access(argv[i], X_OK) == 0) {
+				if (eaccess(argv[i], X_OK) == 0) {
 					if (cmd == TYPECMD_SMALLV)
 						out1fmt("%s\n", argv[i]);
 					else
 						out1fmt(" is %s\n", argv[i]);
+				} else {
+					if (cmd != TYPECMD_SMALLV)
+						out1fmt(": %s\n",
+						    strerror(errno));
+					error |= 127;
 				}
-				else
-					out1fmt(": %s\n", strerror(errno));
 			}
 			break;
 		}

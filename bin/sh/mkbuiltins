@@ -33,7 +33,7 @@
 #
 #	@(#)mkbuiltins	8.2 (Berkeley) 5/4/95
 # $FreeBSD: src/bin/sh/mkbuiltins,v 1.14.2.1 2005/11/06 20:39:48 stefanf Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/bin/sh/mkbuiltins,v 1.2 2007/07/26 20:13:01 laffer1 Exp $
 
 temp=`/usr/bin/mktemp -t ka`
 havejobs=0
@@ -67,9 +67,14 @@ echo '};
 
 const struct builtincmd builtincmd[] = {'
 awk '{	for (i = 2 ; i <= NF ; i++) {
-		printf "\t{ \"%s\", %d },\n",  $i, NR-1
+		if ($i == "-s") {
+			spc = 1;
+		} else {
+			printf "\t{ \"%s\", %d, %d },\n",  $i, NR-1, spc
+			spc = 0;
+		}
 	}}' $temp
-echo '	{ NULL, 0 }
+echo '	{ NULL, 0, 0 }
 };'
 
 exec > ${objdir}/builtins.h
@@ -86,6 +91,7 @@ echo '
 struct builtincmd {
       char *name;
       int code;
+      int special;
 };
 
 extern int (*const builtinfunc[])(int, char **);

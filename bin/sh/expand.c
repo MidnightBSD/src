@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/expand.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)expand.c	8.5 (Berkeley) 5/15/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.47.2.1 2005/11/06 20:39:47 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.47.2.3 2006/11/22 00:28:04 stefanf Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -99,7 +99,7 @@ STATIC void expbackq(union node *, int, int);
 STATIC int subevalvar(char *, char *, int, int, int, int);
 STATIC char *evalvar(char *, int);
 STATIC int varisset(char *, int);
-STATIC void varvalue(char *, int, int);
+STATIC void varvalue(char *, int, int, int);
 STATIC void recordregion(int, int, int);
 STATIC void removerecordregions(int); 
 STATIC void ifsbreakup(char *, struct arglist *);
@@ -634,7 +634,7 @@ evalvar(char *p, int flag)
 	int easy;
 	int quotes = flag & (EXP_FULL | EXP_CASE | EXP_REDIR);
 
-	varflags = *p++;
+	varflags = (unsigned char)*p++;
 	subtype = varflags & VSTYPE;
 	var = p;
 	special = 0;
@@ -670,7 +670,7 @@ again: /* jump here after setting a variable with ${var=text} */
 	if (set && subtype != VSPLUS) {
 		/* insert the value of the variable */
 		if (special) {
-			varvalue(var, varflags & VSQUOTE, flag & EXP_FULL);
+			varvalue(var, varflags & VSQUOTE, subtype, flag);
 			if (subtype == VSLENGTH) {
 				varlen = expdest - stackblock() - startloc;
 				STADJUST(-varlen, expdest);
@@ -764,6 +764,11 @@ record:
 			goto record;
 		break;
 
+	case VSERROR:
+		c = p - var - 1;
+		error("${%.*s%s}: Bad substitution", c, var,
+		    (c > 0 && *p != CTLENDVAR) ? "..." : "");
+
 	default:
 		abort();
 	}
@@ -837,7 +842,7 @@ varisset(char *name, int nulok)
  */
 
 STATIC void
-varvalue(char *name, int quoted, int allow_split)
+varvalue(char *name, int quoted, int subtype, int flag)
 {
 	int num;
 	char *p;
@@ -849,7 +854,7 @@ varvalue(char *name, int quoted, int allow_split)
 
 #define STRTODEST(p) \
 	do {\
-	if (allow_split) { \
+	if (flag & (EXP_FULL | EXP_CASE) && subtype != VSLENGTH) { \
 		syntax = quoted? DQSYNTAX : BASESYNTAX; \
 		while (*p) { \
 			if (syntax[(int)*p] == CCTL) \
@@ -884,7 +889,7 @@ numvar:
 		}
 		break;
 	case '@':
-		if (allow_split && quoted) {
+		if (flag & EXP_FULL && quoted) {
 			for (ap = shellparam.p ; (p = *ap++) != NULL ; ) {
 				STRTODEST(p);
 				if (*ap)

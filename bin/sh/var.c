@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/var.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)var.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/var.c,v 1.27.2.1 2005/11/06 20:39:48 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/var.c,v 1.27.2.3 2006/11/22 00:11:11 stefanf Exp $");
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -89,6 +89,7 @@ struct var vpath;
 struct var vppid;
 struct var vps1;
 struct var vps2;
+struct var vps4;
 struct var vvers;
 STATIC struct var voptind;
 
@@ -111,6 +112,8 @@ STATIC const struct varinit varinit[] = {
 	 * vps1 depends on uid
 	 */
 	{ &vps2,	VSTRFIXED|VTEXTFIXED,		"PS2=> ",
+	  NULL },
+	{ &vps4,	VSTRFIXED|VTEXTFIXED,		"PS4=+ ",
 	  NULL },
 	{ &voptind,	VSTRFIXED|VTEXTFIXED,		"OPTIND=1",
 	  getoptsreset },
@@ -480,6 +483,21 @@ shprocvar(void)
 }
 
 
+static int
+var_compare(const void *a, const void *b)
+{
+	const char *const *sa, *const *sb;
+
+	sa = a;
+	sb = b;
+	/*
+	 * This compares two var=value strings which creates a different
+	 * order from what you would probably expect.  POSIX is somewhat
+	 * ambiguous on what should be sorted exactly.
+	 */
+	return strcoll(*sa, *sb);
+}
+
 
 /*
  * Command to list all variables which are set.  Currently this command
@@ -493,18 +511,41 @@ showvarscmd(int argc __unused, char **argv __unused)
 	struct var **vpp;
 	struct var *vp;
 	const char *s;
+	const char **vars;
+	int i, n;
 
-	for (vpp = vartab ; vpp < vartab + VTABSIZE ; vpp++) {
-		for (vp = *vpp ; vp ; vp = vp->next) {
-			if (vp->flags & VUNSET)
-				continue;
-			for (s = vp->text; *s != '='; s++)
-				out1c(*s);
-			out1c('=');
-			out1qstr(s + 1);
-			out1c('\n');
+	/*
+	 * POSIX requires us to sort the variables.
+	 */
+	n = 0;
+	for (vpp = vartab; vpp < vartab + VTABSIZE; vpp++) {
+		for (vp = *vpp; vp; vp = vp->next) {
+			if (!(vp->flags & VUNSET))
+				n++;
 		}
 	}
+
+	INTON;
+	vars = ckmalloc(n * sizeof(*vars));
+	i = 0;
+	for (vpp = vartab; vpp < vartab + VTABSIZE; vpp++) {
+		for (vp = *vpp; vp; vp = vp->next) {
+			if (!(vp->flags & VUNSET))
+				vars[i++] = vp->text;
+		}
+	}
+
+	qsort(vars, n, sizeof(*vars), var_compare);
+	for (i = 0; i < n; i++) {
+		for (s = vars[i]; *s != '='; s++)
+			out1c(*s);
+		out1c('=');
+		out1qstr(s + 1);
+		out1c('\n');
+	}
+	ckfree(vars);
+	INTOFF;
+
 	return 0;
 }
 

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/exec.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)exec.h	8.3 (Berkeley) 6/8/95
- * $FreeBSD: src/bin/sh/exec.h,v 1.12.8.1 2005/11/06 20:39:47 stefanf Exp $
+ * $FreeBSD: src/bin/sh/exec.h,v 1.12.8.2 2006/06/03 15:38:07 stefanf Exp $
  */
 
 /* values of cmdtype */
@@ -53,6 +53,7 @@ struct cmdentry {
 		int index;
 		union node *func;
 	} u;
+	int special;
 };
 
 
@@ -63,7 +64,7 @@ void shellexec(char **, char **, char *, int);
 char *padvance(char **, char *);
 int hashcmd(int, char **);
 void find_command(char *, struct cmdentry *, int, char *);
-int find_builtin(char *);
+int find_builtin(char *, int *);
 void hashcd(void);
 void changepath(const char *);
 void deletefuncs(void);
