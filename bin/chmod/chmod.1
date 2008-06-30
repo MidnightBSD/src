@@ -31,7 +31,7 @@
 .\"
 .\"	@(#)chmod.1	8.4 (Berkeley) 3/31/94
 .\" $FreeBSD: src/bin/chmod/chmod.1,v 1.39 2005/02/13 23:45:45 ru Exp $
-.\" $MidnightBSD: src/bin/chmod/chmod.1,v 1.2 2006/07/07 13:46:10 laffer1 Exp $
+.\" $MidnightBSD: src/bin/chmod/chmod.1,v 1.3 2008/06/30 01:30:53 laffer1 Exp $
 .\"
 .Dd June 29, 2008
 .Dt CHMOD 1
@@ -264,6 +264,8 @@ Then, if no value is supplied for
 each permission bit specified in
 .Ar perm ,
 for which the corresponding bit in the file mode creation mask
+(see
+.Xr umask 2 )
 is clear, is set.
 Otherwise, the mode bits represented by the specified
 .Ar who
