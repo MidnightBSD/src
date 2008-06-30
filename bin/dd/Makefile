@@ -1,8 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/dd/Makefile,v 1.18 2004/04/09 07:13:27 njl Exp $
-# $MidnightBSD$
-
-MAINTAINER=	green@FreeBSD.org
+# $MidnightBSD: src/bin/dd/Makefile,v 1.2 2006/07/07 15:47:03 laffer1 Exp $
 
 PROG=	dd
 SRCS=	args.c conv.c conv_tab.c dd.c misc.c position.c
