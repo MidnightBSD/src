@@ -35,7 +35,7 @@ static const char copyright[] =
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/bin/ed/main.c,v 1.2 2006/07/19 13:39:36 laffer1 Exp $");
 
 /*
  * CREDITS
@@ -292,7 +292,7 @@ extract_addr_range(void)
 		errmsg = "invalid address";			\
 		return ERR;					\
 	}							\
-} while (0);
+} while (0)
 
 /*  next_addr: return the next line address in the command buffer */
 long
