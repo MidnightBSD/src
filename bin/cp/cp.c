@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)cp.c	8.2 (Berkeley) 4/1/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cp/cp.c,v 1.3 2006/08/27 18:49:41 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/cp/cp.c,v 1.4 2007/07/23 12:12:50 alex Exp $");
 
 /*
  * Cp copies source files to target files.
@@ -104,7 +104,7 @@ main(int argc, char *argv[])
 	char *target;
 
 	Hflag = Lflag = Pflag = 0;
-	while ((ch = getopt(argc, argv, "HLPRfinprvla")) != -1)
+	while ((ch = getopt(argc, argv, "HLPRfafilnprv")) != -1)
 		switch (ch) {
 		case 'H':
 			Hflag = 1;
@@ -137,7 +137,8 @@ main(int argc, char *argv[])
 			pflag = 1;
 			break;
 		case 'r':
-			rflag = 1;
+			rflag = Lflag = 1;
+			Hflag = Pflag = 0;
 			break;
 		case 'v':
 			vflag = 1;
@@ -162,16 +163,10 @@ main(int argc, char *argv[])
 		usage();
 
 	fts_options = FTS_NOCHDIR | FTS_PHYSICAL;
-	if (rflag) {
-		if (Rflag)
-			errx(1,
-		    "the -R and -r options may not be specified together.");
-		if (Hflag || Lflag || Pflag)
-			errx(1,
-	"the -H, -L, and -P options may not be specified with the -r option.");
-		fts_options &= ~FTS_PHYSICAL;
-		fts_options |= FTS_LOGICAL;
-	}
+	if (Rflag && rflag)
+		errx(1, "the -R and -r options may not be specified together.");
+	if (rflag)
+		Rflag = 1;
 	if (Rflag) {
 		if (Hflag)
 			fts_options |= FTS_COMFOLLOW;
@@ -223,10 +218,8 @@ main(int argc, char *argv[])
 		/*
 		 * Case (1).  Target is not a directory.
 		 */
-		if (argc > 1) {
-			usage();
-			exit(1);
-		}
+		if (argc > 1)
+			errx(1, "%s is not a directory", to.p_path);
 		/*
 		 * Need to detect the case:
 		 *	cp -R dir foo
@@ -235,12 +228,12 @@ main(int argc, char *argv[])
 		 * the initial mkdir().
 		 */
 		if (r == -1) {
-			if (rflag || (Rflag && (Lflag || Hflag)))
+			if (Rflag && (Lflag || Hflag))
 				stat(*argv, &tmp_stat);
 			else
 				lstat(*argv, &tmp_stat);
 
-			if (S_ISDIR(tmp_stat.st_mode) && (Rflag || rflag))
+			if (S_ISDIR(tmp_stat.st_mode) && Rflag)
 				type = DIR_TO_DNE;
 			else
 				type = FILE_TO_FILE;
@@ -428,7 +421,7 @@ copy(char *argv[], enum op type, int fts_options)
 			}
 			break;
 		case S_IFDIR:
-			if (!Rflag && !rflag) {
+			if (!Rflag) {
 				warnx("%s is a directory (not copied).",
 				    curr->fts_path);
 				(void)fts_set(ftsp, curr, FTS_SKIP);

@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)utils.c	8.3 (Berkeley) 4/1/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/bin/cp/utils.c,v 1.2 2006/07/07 13:46:33 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/bin/cp/utils.c,v 1.3 2006/08/27 18:49:41 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/acl.h>
@@ -56,7 +56,8 @@ __MBSDID("$MidnightBSD: src/bin/cp/utils.c,v 1.2 2006/07/07 13:46:33 laffer1 Exp
 #include <unistd.h>
 
 #include "extern.h"
-#define	cp_pct(x,y)	(int)(100.0 * (double)(x) / (double)(y))
+
+#define	cp_pct(x,y)	 ((y == 0) ? 0 : (int)(100.0 * (x) / (y)))
 
 int
 copy_file(const FTSENT *entp, int dne)
@@ -66,7 +67,7 @@ copy_file(const FTSENT *entp, int dne)
 	int ch, checkch, from_fd = 0, rcount, rval, to_fd = 0;
 	ssize_t wcount;
 	size_t wresid;
-	size_t wtotal;
+	off_t wtotal;
 	char *bufp;
 #ifdef VM_AND_BUFFER_CACHE_SYNCHRONIZED
 	char *p;
@@ -151,6 +152,8 @@ copy_file(const FTSENT *entp, int dne)
 				for (bufp = p, wresid = fs->st_size; ;
 			    	bufp += wcount, wresid -= (size_t)wcount) {
 					wcount = write(to_fd, bufp, wresid);
+					if (wcount <= 0)
+						break;
 					wtotal += wcount;
 					if (info) {
 						info = 0;
@@ -160,7 +163,7 @@ copy_file(const FTSENT *entp, int dne)
 							cp_pct(wtotal, fs->st_size));
 
 					}
-					if (wcount >= (ssize_t)wresid || wcount <= 0)
+					if (wcount >= (ssize_t)wresid)
 						break;
 				}
 				if (wcount != (ssize_t)wresid) {
@@ -181,6 +184,8 @@ copy_file(const FTSENT *entp, int dne)
 				for (bufp = buf, wresid = rcount; ;
 			    	bufp += wcount, wresid -= wcount) {
 					wcount = write(to_fd, bufp, wresid);
+					if (wcount <= 0)
+						break;
 					wtotal += wcount;
 					if (info) {
 						info = 0;
@@ -190,7 +195,7 @@ copy_file(const FTSENT *entp, int dne)
 							cp_pct(wtotal, fs->st_size));
 
 					}
-					if (wcount >= (ssize_t)wresid || wcount <= 0)
+					if (wcount >= (ssize_t)wresid)
 						break;
 				}
 				if (wcount != (ssize_t)wresid) {
@@ -428,8 +433,8 @@ usage(void)
 {
 
 	(void)fprintf(stderr, "%s\n%s\n",
-"usage: cp [-R [-H | -L | -P]] [-f | -i | -n] [-aplv] source_file target_file",
-"       cp [-R [-H | -L | -P]] [-f | -i | -n] [-aplv] source_file ... "
+"usage: cp [-R [-H | -L | -P]] [-f | -i | -n] [-alpv] source_file target_file",
+"       cp [-R [-H | -L | -P]] [-f | -i | -n] [-alpv] source_file ... "
 "target_directory");
 	exit(EX_USAGE);
 }
