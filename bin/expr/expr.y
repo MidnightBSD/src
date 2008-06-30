@@ -6,7 +6,7 @@
  * Largely rewritten by J.T. Conklin (jtc@wimsey.com)
  *
  * $FreeBSD: src/bin/expr/expr.y,v 1.24 2005/01/10 08:39:22 imp Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/bin/expr/expr.y,v 1.2 2006/07/19 13:39:52 laffer1 Exp $
  */
 
 #include <sys/types.h>
@@ -540,7 +540,7 @@ chk_times(intmax_t a, intmax_t b, intmax_t r)
 	/* special case: first operand is 0, no overflow possible */
 	if (a == 0)
 		return 0;
-	/* cerify that result of division matches second operand */
+	/* verify that result of division matches second operand */
 	if (r / a != b)
 		return 1;
 	return 0;
@@ -638,7 +638,7 @@ op_colon(struct val *a, struct val *b)
 	int eval;
 	struct val *v;
 
-	/* coerce to both arguments to strings */
+	/* coerce both arguments to strings */
 	to_string(a);
 	to_string(b);
 
