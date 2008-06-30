@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/shell.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -31,8 +31,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)shell.h	8.2 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/shell.h,v 1.17 2004/04/06 20:06:51 markm Exp $
+ * $FreeBSD: src/bin/sh/shell.h,v 1.18 2008/04/27 20:46:45 stefanf Exp $
  */
+
+#ifndef SHELL_H_
+#define SHELL_H_
+
+#include <inttypes.h>
 
 /*
  * The follow should be set to reflect the type of system you have:
@@ -51,10 +56,10 @@
 /*
  * Type of used arithmetics. SUSv3 requires us to have at least signed long.
  */
-typedef long arith_t;
-#define	ARITH_FORMAT_STR  "%ld"
-#define	atoarith_t(arg)  strtol(arg, NULL, 0)
-#define	strtoarith_t(nptr, endptr, base)  strtol(nptr, endptr, base)
+typedef intmax_t arith_t;
+#define	ARITH_FORMAT_STR  "%" PRIdMAX
+#define	atoarith_t(arg)  strtoimax(arg, NULL, 0)
+#define	strtoarith_t(nptr, endptr, base)  strtoimax(nptr, endptr, base)
 
 typedef void *pointer;
 #define STATIC  static
@@ -69,3 +74,5 @@ extern char nullstr[1];		/* null string */
 #else
 #define TRACE(param)
 #endif
+
+#endif /* !SHELL_H_ */

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/arith.h,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1995
  *      The Regents of the University of California.  All rights reserved.
@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)arith.h	1.1 (Berkeley) 5/4/95
- * $FreeBSD: src/bin/sh/arith.h,v 1.9.8.1 2005/11/06 20:39:47 stefanf Exp $
+ * $FreeBSD: src/bin/sh/arith.h,v 1.9.8.3 2008/04/27 20:43:26 stefanf Exp $
  */
 
 extern char *arith_buf, *arith_startbuf;

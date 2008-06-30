@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/cd.c,v 1.3 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/cd.c,v 1.4 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)cd.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/cd.c,v 1.34.8.1 2006/06/28 21:14:23 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/cd.c,v 1.34.8.2 2008/04/20 18:08:12 stefanf Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -69,7 +69,9 @@ STATIC int cdlogical(char *);
 STATIC int cdphysical(char *);
 STATIC int docd(char *, int, int);
 STATIC char *getcomponent(void);
-STATIC int updatepwd(char *);
+STATIC char *findcwd(char *);
+STATIC void updatepwd(char *);
+STATIC char *getpwd2(char *, size_t);
 
 STATIC char *curdir = NULL;	/* current working directory */
 STATIC char *prevdir;		/* previous working directory */
@@ -202,10 +204,11 @@ cdlogical(char *dest)
 	}
 
 	INTOFF;
-	if (updatepwd(badstat ? NULL : dest) < 0 || chdir(curdir) < 0) {
+	if ((p = findcwd(badstat ? NULL : dest)) == NULL || chdir(p) < 0) {
 		INTON;
 		return (-1);
 	}
+	updatepwd(p);
 	INTON;
 	return (0);
 }
@@ -213,12 +216,14 @@ cdlogical(char *dest)
 STATIC int
 cdphysical(char *dest)
 {
+	char *p;
 
 	INTOFF;
-	if (chdir(dest) < 0 || updatepwd(NULL) < 0) {
+	if (chdir(dest) < 0 || (p = findcwd(NULL)) == NULL) {
 		INTON;
 		return (-1);
 	}
+	updatepwd(p);
 	INTON;
 	return (0);
 }
@@ -248,18 +253,11 @@ getcomponent(void)
 }
 
 
-/*
- * Update curdir (the name of the current directory) in response to a
- * cd command.  We also call hashcd to let the routines in exec.c know
- * that the current directory has changed.
- */
-STATIC int
-updatepwd(char *dir)
+STATIC char *
+findcwd(char *dir)
 {
 	char *new;
 	char *p;
-
-	hashcd();				/* update command hash table */
 
 	/*
 	 * If our argument is NULL, we don't know the current directory
@@ -267,19 +265,8 @@ updatepwd(char *dir)
 	 * we couldn't stat().
 	 */
 	if (dir == NULL || curdir == NULL)  {
-		if (prevdir)
-			ckfree(prevdir);
-		INTOFF;
-		prevdir = curdir;
-		curdir = NULL;
-		if (getpwd() == NULL) {
-			INTON;
-			return (-1);
-		}
-		setvar("PWD", curdir, VEXPORT);
-		setvar("OLDPWD", prevdir, VEXPORT);
-		INTON;
-		return (0);
+		p = stalloc(PATH_MAX);
+		return getpwd2(p, PATH_MAX);
 	}
 	cdcomppath = stalloc(strlen(dir) + 1);
 	scopy(dir, cdcomppath);
@@ -303,16 +290,25 @@ updatepwd(char *dir)
 	if (new == stackblock())
 		STPUTC('/', new);
 	STACKSTRNUL(new);
-	INTOFF;
+	return stackblock();
+}
+
+/*
+ * Update curdir (the name of the current directory) in response to a
+ * cd command.  We also call hashcd to let the routines in exec.c know
+ * that the current directory has changed.
+ */
+STATIC void
+updatepwd(char *dir)
+{
+	hashcd();				/* update command hash table */
+
 	if (prevdir)
 		ckfree(prevdir);
 	prevdir = curdir;
-	curdir = savestr(stackblock());
+	curdir = savestr(dir);
 	setvar("PWD", curdir, VEXPORT);
 	setvar("OLDPWD", prevdir, VEXPORT);
-	INTON;
-
-	return (0);
 }
 
 int
@@ -356,17 +352,31 @@ pwdcmd(int argc, char **argv)
 }
 
 /*
- * Find out what the current directory is. If we already know the current
- * directory, this routine returns immediately.
+ * Get the current directory and cache the result in curdir.
  */
 char *
 getpwd(void)
 {
 	char buf[PATH_MAX];
+	char *p;
 
 	if (curdir)
 		return curdir;
-	if (getcwd(buf, sizeof(buf)) == NULL) {
+
+	p = getpwd2(buf, sizeof(buf));
+	if (p != NULL)
+		curdir = savestr(p);
+
+	return curdir;
+}
+
+/*
+ * Return the current directory.
+ */
+STATIC char *
+getpwd2(char *buf, size_t size)
+{
+	if (getcwd(buf, size) == NULL) {
 		char *pwd = getenv("PWD");
 		struct stat stdot, stpwd;
 
@@ -374,12 +384,9 @@ getpwd(void)
 		    stat(pwd, &stpwd) != -1 &&
 		    stdot.st_dev == stpwd.st_dev &&
 		    stdot.st_ino == stpwd.st_ino) {
-			curdir = savestr(pwd);
-			return curdir;
+			return pwd;
 		}
 		return NULL;
 	}
-	curdir = savestr(buf);
-
-	return curdir;
+	return buf;
 }

@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/expand.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/expand.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)expand.c	8.5 (Berkeley) 5/15/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.47.2.3 2006/11/22 00:28:04 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/expand.c,v 1.47.2.5 2008/04/27 20:43:26 stefanf Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>

@@ -1,5 +1,5 @@
 %{
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/arith.y,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 
 /*-
  * Copyright (c) 1993
@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)arith.y	8.3 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.19.8.1 2005/11/06 20:39:47 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/arith.y,v 1.19.8.3 2008/04/27 20:43:26 stefanf Exp $");
 
 #include <limits.h>
 #include <stdio.h>

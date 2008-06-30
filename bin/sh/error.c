@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/bin/sh/error.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)error.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/error.c,v 1.25 2004/04/06 20:06:51 markm Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/error.c,v 1.26 2006/02/04 14:37:50 schweikh Exp $");
 
 /*
  * Errors and exceptions.
@@ -119,7 +119,7 @@ onint(void)
 	 * This doesn't seem to be needed, since main() emits a newline.
 	 */
 #if 0
-	if (tcgetpgrp(0) == getpid())	
+	if (tcgetpgrp(0) == getpid())
 		write(STDERR_FILENO, "\n", 1);
 #endif
 	if (rootshell && iflag)

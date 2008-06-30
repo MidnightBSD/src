@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/bin/sh/options.c,v 1.2 2007/07/26 20:13:01 laffer1 Exp $ */
+/* $MidnightBSD: src/bin/sh/options.c,v 1.3 2008/06/30 00:40:10 laffer1 Exp $ */
 /*-
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)options.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/bin/sh/options.c,v 1.23.2.2 2006/06/03 15:38:07 stefanf Exp $");
+__FBSDID("$FreeBSD: src/bin/sh/options.c,v 1.23.2.3 2008/04/20 18:08:46 stefanf Exp $");
 
 #include <signal.h>
 #include <unistd.h>
@@ -384,7 +384,7 @@ shiftcmd(int argc, char **argv)
 	}
 	ap2 = shellparam.p;
 	while ((*ap2++ = *ap1++) != NULL);
-	shellparam.optnext = NULL;
+	shellparam.reset = 1;
 	INTON;
 	return 0;
 }
@@ -406,6 +406,7 @@ setcmd(int argc, char **argv)
 	if (*argptr != NULL) {
 		setparam(argptr);
 	}
+	shellparam.reset = 1;
 	INTON;
 	return 0;
 }
@@ -415,7 +416,6 @@ void
 getoptsreset(const char *value)
 {
 	if (number(value) == 1) {
-		shellparam.optnext = NULL;
 		shellparam.reset = 1;
 	}
 }
