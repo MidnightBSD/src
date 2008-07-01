@@ -25745,6 +25745,8 @@ sys/dev/mse/mse.c -text
 sys/dev/mse/mse_cbus.c -text
 sys/dev/mse/mse_isa.c -text
 sys/dev/mse/msevar.h -text
+sys/dev/msk/if_msk.c -text
+sys/dev/msk/if_mskreg.h -text
 sys/dev/my/if_my.c -text
 sys/dev/my/if_myreg.h -text
 sys/dev/ncv/ncr53c500.c -text
