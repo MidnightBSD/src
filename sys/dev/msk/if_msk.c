@@ -2,8 +2,8 @@
  *
  * Name   : sky2.c
  * Project: Gigabit Ethernet Driver for FreeBSD 5.x/6.x
- * Version: $Revision: 1.2 $
- * Date   : $Date: 2008-07-01 00:53:50 $
+ * Version: $Revision: 1.3 $
+ * Date   : $Date: 2008-07-01 07:12:41 $
  * Purpose: Main driver source file
  *
  *****************************************************************************/
@@ -100,7 +100,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/sys/dev/msk/if_msk.c,v 1.11.2.8.2.1 2007/12/08 12:19:13 remko Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/msk/if_msk.c,v 1.1.2.1 2008/07/01 00:37:39 laffer1 Exp $");
+__MBSDID("$MidnightBSD: src/sys/dev/msk/if_msk.c,v 1.2 2008/07/01 00:53:50 laffer1 Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -219,6 +219,8 @@ static struct msk_product {
 	    "Marvell Yukon 88E8055 Gigabit Ethernet" },
 	{ VENDORID_MARVELL, DEVICEID_MRVL_4364,
 	    "Marvell Yukon 88E8056 Gigabit Ethernet" },
+	{ VENDORID_MARVELL, DEVICEID_MRVL_436A,
+	    "Marvell Yukon 88E8058 Gigabit Ethernet" },
 	{ VENDORID_DLINK, DEVICEID_DLINK_DGE550SX,
 	    "D-Link 550SX Gigabit Ethernet" },
 	{ VENDORID_DLINK, DEVICEID_DLINK_DGE560T,

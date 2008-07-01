@@ -2,8 +2,8 @@
  *
  * Name:	skgehw.h
  * Project:	Gigabit Ethernet Adapters, Common Modules
- * Version:	$Revision: 1.2 $
- * Date:	$Date: 2008-07-01 00:53:50 $
+ * Version:	$Revision: 1.3 $
+ * Date:	$Date: 2008-07-01 07:12:41 $
  * Purpose:	Defines and Macros for the Gigabit Ethernet Adapter Product Family
  *
  ******************************************************************************/
@@ -93,7 +93,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $MidnightBSD: src/sys/dev/msk/if_mskreg.h,v 1.1.2.1 2008/07/01 00:37:39 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/msk/if_mskreg.h,v 1.2 2008/07/01 00:53:50 laffer1 Exp $ */
 /*$FreeBSD: src/sys/dev/msk/if_mskreg.h,v 1.3.2.4.2.1 2007/12/08 12:19:13 remko Exp $*/
 
 /*
@@ -137,6 +137,7 @@
 #define DEVICEID_MRVL_4362	0x4362
 #define DEVICEID_MRVL_4363	0x4363
 #define DEVICEID_MRVL_4364	0x4364
+#define DEVICEID_MRVL_436A	0x436A
 
 /*
  * D-Link gigabit ethernet device ID
