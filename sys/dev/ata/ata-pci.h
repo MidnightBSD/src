@@ -81,6 +81,7 @@ struct ata_connect_task {
 #define ATA_ATP865R             0x00091191
 
 #define ATA_AMD_ID              0x1022
+#define ATA_AMD5536             0x209a1022
 #define ATA_AMD755              0x74011022
 #define ATA_AMD756              0x74091022
 #define ATA_AMD766              0x74111022
@@ -171,7 +172,13 @@ struct ata_connect_task {
 #define ATA_I82801HB_S2         0x28258086
 #define ATA_I82801HBM_S3        0x28298086
 #define ATA_I82801HBM_S2        0x282a8086
-#define ATA_I82801HBM_S1	0x28288086
+#define ATA_I82801HBM_S1        0x28288086
+#define ATA_I82801HBM           0x28508086
+#define ATA_I82801IB_S1         0x29208086
+#define ATA_I82801IB_AH2        0x29218086
+#define ATA_I82801IB_AH6        0x29228086
+#define ATA_I82801IB_AH4        0x29238086
+#define ATA_I82801IB_S2         0x29268086
 #define ATA_I31244              0x32008086
 
 #define ATA_ITE_ID              0x1283
@@ -226,6 +233,12 @@ struct ata_connect_task {
 #define ATA_NFORCE_MCP55_S2     0x037f10de
 #define ATA_NFORCE_MCP61        0x03ec10de 
 #define ATA_NFORCE_MCP61_S1     0x03f610de 
+#define ATA_NFORCE_MCP61_S2     0x03f610de
+#define ATA_NFORCE_MCP61_S3     0x03f710de
+#define ATA_NFORCE_MCP65        0x044810de
+#define ATA_NFORCE_MCP67        0x056010de
+#define ATA_NFORCE_MCP73        0x056c10de
+#define ATA_NFORCE_MCP77        0x075910de
 
 #define ATA_PROMISE_ID          0x105a
 #define ATA_PDC20246            0x4d33105a

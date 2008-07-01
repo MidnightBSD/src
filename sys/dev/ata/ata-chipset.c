@@ -1341,6 +1341,7 @@ ata_amd_ident(device_t dev)
      { ATA_AMD766,  0x00, AMDNVIDIA, AMDCABLE|AMDBUG, ATA_UDMA5, "766" },
      { ATA_AMD768,  0x00, AMDNVIDIA, AMDCABLE,        ATA_UDMA5, "768" },
      { ATA_AMD8111, 0x00, AMDNVIDIA, AMDCABLE,        ATA_UDMA6, "8111" },
+     { ATA_AMD5536, 0x00, AMDNVIDIA, 0x00,            ATA_UDMA5, "CS5536" },
      { 0, 0, 0, 0, 0, 0}};
     char buffer[64]; 
 
@@ -1848,9 +1849,15 @@ ata_intel_ident(device_t dev)
      { ATA_I82801HB_R1,  0, AHCI, 0x00, ATA_SA300, "ICH8" },
      { ATA_I82801HB_AH4, 0, AHCI, 0x00, ATA_SA300, "ICH8" },
      { ATA_I82801HB_AH6, 0, AHCI, 0x00, ATA_SA300, "ICH8" },
+     { ATA_I82801HBM,    0,    0, 0x00, ATA_UDMA5, "ICH8M" },
      { ATA_I82801HBM_S1, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
      { ATA_I82801HBM_S2, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
      { ATA_I82801HBM_S3, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
+     { ATA_I82801IB_S1,  0, AHCI, 0x00, ATA_SA300, "ICH9" },
+     { ATA_I82801IB_S2,  0, AHCI, 0x00, ATA_SA300, "ICH9" },
+     { ATA_I82801IB_AH2, 0, AHCI, 0x00, ATA_SA300, "ICH9" },
+     { ATA_I82801IB_AH4, 0, AHCI, 0x00, ATA_SA300, "ICH9" },
+     { ATA_I82801IB_AH6, 0, AHCI, 0x00, ATA_SA300, "ICH9" },
      { ATA_I31244,       0,    0, 0x00, ATA_SA150, "31244" },
      { 0, 0, 0, 0, 0, 0}};
     char buffer[64]; 
@@ -3043,6 +3050,12 @@ ata_nvidia_ident(device_t dev)
      { ATA_NFORCE_MCP55_S2, 0, 0,         NV4|NVQ, ATA_SA300, "nForce MCP55" },
      { ATA_NFORCE_MCP61,    0, AMDNVIDIA, NVIDIA,  ATA_UDMA6, "nForce MCP61" },
      { ATA_NFORCE_MCP61_S1, 0, 0,         NV4|NVQ, ATA_SA300, "nForce MCP61" },
+     { ATA_NFORCE_MCP61_S2, 0, 0,         NV4|NVQ, ATA_SA300, "nForce MCP61" },
+     { ATA_NFORCE_MCP61_S3, 0, 0,         NV4|NVQ, ATA_SA300, "nForce MCP61" },
+     { ATA_NFORCE_MCP65,    0, AMDNVIDIA, NVIDIA,  ATA_UDMA6, "nForce MCP65" },
+     { ATA_NFORCE_MCP67,    0, AMDNVIDIA, NVIDIA,  ATA_UDMA6, "nForce MCP67" },
+     { ATA_NFORCE_MCP73,    0, AMDNVIDIA, NVIDIA,  ATA_UDMA6, "nForce MCP73" },
+     { ATA_NFORCE_MCP77,    0, AMDNVIDIA, NVIDIA,  ATA_UDMA6, "nForce MCP77" },
      { 0, 0, 0, 0, 0, 0}} ;
     char buffer[64] ;
 
