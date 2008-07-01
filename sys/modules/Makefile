@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.10 2007/07/31 04:31:26 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.11.2.1 2008/07/01 00:36:30 laffer1 Exp $
 
 # oldcard -- specialized use for debugging only.
 # owi -- totally unsupported for debugging only.
@@ -163,6 +163,7 @@ SUBDIR=	${_3dfx} \
 	msdosfs \
 	msdosfs_iconv \
 	${_mse} \
+	msk \
 	my \
 	${_ncp} \
 	${_ncv} \

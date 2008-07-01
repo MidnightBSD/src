@@ -27570,6 +27570,7 @@ sys/modules/mpt/Makefile -text
 sys/modules/msdosfs/Makefile -text
 sys/modules/msdosfs_iconv/Makefile -text
 sys/modules/mse/Makefile -text
+sys/modules/msk/Makefile -text
 sys/modules/my/Makefile -text
 sys/modules/ncp/Makefile -text
 sys/modules/ncv/Makefile -text
