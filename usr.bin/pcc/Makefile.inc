@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/pcc/Makefile.inc,v 1.2 2008/05/15 05:55:30 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/Makefile.inc,v 1.3 2008/06/25 19:49:00 laffer1 Exp $
 
-libexecdir= ${DESTDIR}/usr/libexec
-includedir= ${DESTDIR}/usr/include
+libexecdir= /usr/libexec
+includedir= /usr/include

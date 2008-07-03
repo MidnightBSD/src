@@ -1,6 +1,5 @@
-#	$Id: Makefile,v 1.1 2007-09-28 13:47:20 laffer1 Exp $
-#
-# Makefile.in for top-level of pcc.
+#	$Id: Makefile,v 1.2 2008-07-03 23:57:48 laffer1 Exp $
+# $MidnightBSD$
 #
 
 
