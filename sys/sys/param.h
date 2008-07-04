@@ -33,7 +33,7 @@
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
  * $FreeBSD: src/sys/sys/param.h,v 1.244.2.8 2006/01/18 13:24:24 andre Exp $
- * $MidnightBSD: src/sys/sys/param.h,v 1.8 2008/05/16 22:32:35 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/param.h,v 1.9 2008/06/15 01:46:38 laffer1 Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -61,7 +61,7 @@
 #define __FreeBSD_version 601000	/* Master, propagated to newvers */
 
 #undef __MidnightBSD_version
-#define __MidnightBSD_version	002100
+#define __MidnightBSD_version	002101
 
 #ifndef LOCORE
 #include <sys/types.h>
