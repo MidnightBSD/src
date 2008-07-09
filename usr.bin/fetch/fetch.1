@@ -27,7 +27,8 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.bin/fetch/fetch.1,v 1.66 2005/02/13 22:25:21 ru Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: src/usr.bin/fetch/fetch.1,v 1.68 2007/12/28 19:47:37 des Exp $
 .\"
 .Dd March 11, 2003
 .Dt FETCH 1
@@ -212,27 +213,37 @@ message.
 .Sh ENVIRONMENT
 .Bl -tag -width HTTP_TIMEOUT
 .It Ev FTP_TIMEOUT
-maximum time, in seconds, to wait before aborting an FTP connection.
+Maximum time, in seconds, to wait before aborting an FTP connection.
 .It Ev HTTP_TIMEOUT
-maximum time, in seconds, to wait before aborting an HTTP connection.
+Maximum time, in seconds, to wait before aborting an HTTP connection.
 .El
 .Pp
-All environment variables mentioned in the documentation for the
+See
 .Xr fetch 3
-library are supported.
-A number of these are quite important to the proper operation of
-.Nm ;
-you are strongly encouraged to read
-.Xr fetch 3
-as well.
+for a description of additional environment variables, including
+.Ev FETCH_BIND_ADDRESS ,
+.Ev FTP_LOGIN ,
+.Ev FTP_PASSIVE_MODE ,
+.Ev FTP_PASSWORD ,
+.Ev FTP_PROXY ,
+.Ev ftp_proxy ,
+.Ev HTTP_AUTH ,
+.Ev HTTP_PROXY ,
+.Ev http_proxy ,
+.Ev HTTP_PROXY_AUTH ,
+.Ev HTTP_REFERER ,
+.Ev HTTP_USER_AGENT ,
+.Ev NETRC ,
+.Ev NO_PROXY and
+.Ev no_proxy .
 .Sh EXIT STATUS
 The
 .Nm
 command returns zero on success, or one on failure.
 If multiple URLs are listed on the command line,
 .Nm
-will attempt to retrieve them each of them in turn, and return zero
-only if they were all successfully retrieved.
+will attempt to retrieve each one of them in turn, and will return
+zero only if they were all successfully retrieved.
 .Sh SEE ALSO
 .Xr fetch 3
 .Sh HISTORY

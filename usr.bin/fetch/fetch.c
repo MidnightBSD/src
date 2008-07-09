@@ -24,10 +24,12 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: src/usr.bin/fetch/fetch.c,v 1.78 2006/11/10 22:05:41 des Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/fetch/fetch.c,v 1.75.2.1 2006/01/13 09:07:49 des Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -569,6 +571,8 @@ fetch(char *URL, const char *path)
 			if (tmppath != NULL) {
 				mkstemps(tmppath, strlen(slash) + 1);
 				of = fopen(tmppath, "w");
+				chown(tmppath, sb.st_uid, sb.st_gid);
+				chmod(tmppath, sb.st_mode & ALLPERMS);
 			}
 		}
 		if (of == NULL)
