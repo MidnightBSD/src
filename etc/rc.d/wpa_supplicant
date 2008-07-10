@@ -1,6 +1,6 @@
 #!/bin/sh
 # 
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/wpa_supplicant,v 1.2 2006/08/28 02:28:59 laffer1 Exp $
 # $FreeBSD: src/etc/rc.d/wpa_supplicant,v 1.1.2.1 2005/10/27 17:06:45 wpaul Exp $
 #
 
@@ -32,8 +32,8 @@ esac
 
 load_rc_config $name
 
-pid_file="/var/run/${name}/${ifn}.pid"
-command_args="-B -q -i $ifn -c $conf_file -D $driver -P $pid_file"
+pidfile="/var/run/${name}/${ifn}.pid"
+command_args="-B -q -i $ifn -c $conf_file -D $driver -P $pidfile"
 required_files=$conf_file
 
 run_rc_command "$1"
