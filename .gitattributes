@@ -20057,6 +20057,7 @@ nrelease/root/etc/fstab.example -text
 nrelease/root/etc/hosts -text
 nrelease/root/etc/rc.conf -text
 nrelease/root/etc/rc.d/livecd -text
+nrelease/root/etc/resolv.conf -text
 nrelease/root/index.html -text
 nrelease/root/mbsd.ico -text
 release/Makefile -text
