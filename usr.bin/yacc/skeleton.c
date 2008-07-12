@@ -60,6 +60,7 @@ __FBSDID("$FreeBSD: src/usr.bin/yacc/skeleton.c,v 1.37 2003/02/12 18:03:55 david
 const char *banner[] =
 {
     "#include <stdlib.h>",
+    "#include <string.h>",
     "#ifndef lint",
     "#ifdef __unused",
     "__unused",
@@ -331,6 +332,10 @@ const char *body[] =
     "                YYPREFIX, yystate, yyn, yyrule[yyn]);",
     "#endif",
     "    yym = yylen[yyn];",
+    "    if (yym)",
+    "        yyval = yyvsp[1-yym];",
+    "    else",
+    "        memset(&yyval, 0, sizeof yyval);",
     "    yyval = yyvsp[1-yym];",
     "    switch (yyn)",
     "    {",
