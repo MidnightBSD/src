@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/lib/libfetch/http.c,v 1.2 2008/07/09 18:57:21 laffer1 Exp $");
 
 /*
  * The following copyright applies to the base64 code:
@@ -918,7 +918,7 @@ http_request(struct url *URL, const char *op, struct url_stat *us,
 		if ((p = getenv("HTTP_USER_AGENT")) != NULL && *p != '\0')
 			http_cmd(conn, "User-Agent: %s", p);
 		else
-			http_cmd(conn, "User-Agent: %s " _LIBFETCH_VER, getprogname());
+			http_cmd(conn, "User-Agent: %s (MidnightBSD) " _LIBFETCH_VER, getprogname());
 		if (url->offset > 0)
 			http_cmd(conn, "Range: bytes=%lld-", (long long)url->offset);
 		http_cmd(conn, "Connection: close");
