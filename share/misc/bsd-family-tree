@@ -200,32 +200,39 @@ FreeBSD 5.2           |      |                 |                       |
  |     |     |        |   NetBSD 3.0           |                       |
  |     |     |        |      | |  |            |                DragonFly 1.4.0
  |     |     |        |      | |  |        OpenBSD 3.9                 |
- |  FreeBSD  |        |      | |  |            |                       |
- |    6.1    |        |      | |  |            |                       |
- |     |  FreeBSD 5.5 |      | |  |            |                       |
- |     |              |      | | NetBSD 3.0.1  |                DragonFly 1.6.0
- |     |              |      | |  |            |                       |
- |     |              |      | |  |        OpenBSD 4.0                 |
- |     |              |      | | NetBSD 3.0.2  |                       |
- |     |              |      | NetBSD 3.1      |                       |
- | FreeBSD 6.2        |      |                 |                       |
- |     |              |      |                 |                DragonFly 1.8.0
- |     |              |      |             OpenBSD 4.1                 |
- |     |              |      |                 |                DragonFly 1.10.0
- |     |           Mac OS X  |                 |                       |
- |     |             10.5    |                 |                       |
- |     |              |      |             OpenBSD 4.2                 |
- |     |              |   NetBSD 4.0           |                       |
- | FreeBSD 6.3        |      |                 |                       |
- |                    |      |                 |                       |
- *--FreeBSD           |      |                 |                DragonFly 1.12.0
- |    7.0             |      |                 |                       |
- |     |              |      |                 |                       |
- |     V              |      |                 |                       |
- |                    |      |                 |                       |
-FreeBSD 8 -current    |  NetBSD -current  OpenBSD -current             |
- |                    |      |                 |                       |
- v                    v      v                 v                       v
+ |     \____________________________________________________________________________.
+ |     |     |        |      | |  |            |                       |             \
+ |     |     |        |      | |  |            |                       |             |
+ |     |     |        |      | |  |            |                       |             |
+ |  FreeBSD  |        |      | |  |            |                       |             |
+ |    6.1    |        |      | |  |            |                       |             |
+ |     |  FreeBSD 5.5 |      | |  |            |                       |             |
+ |     |              |      | | NetBSD 3.0.1  |                DragonFly 1.6.0      |
+ |     |              |      | |  |            |                       |             |
+ |     |              |      | |  |        OpenBSD 4.0                 |             |
+ |     |              |      | | NetBSD 3.0.2  |                       |             |
+ |     |              |      | NetBSD 3.1      |                       |             |
+ | FreeBSD 6.2        |      |                 |                       |          MidnightBSD 0.1
+ |     |              |      |                 |                DragonFly 1.8.0      |
+ |     |              |      |             OpenBSD 4.1                 |          MidnightBSD 0.1.1
+ |     |              |      |                 |                DragonFly 1.10.0    |
+ |     |           Mac OS X  |                 |                       |            |
+ |     |             10.5    |                 |                       |            |
+ |     |              |      |             OpenBSD 4.2                 |            |
+ |     |              |   NetBSD 4.0           |                       |            |
+ | FreeBSD 6.3        |      |                 |                       |            |
+ |                    |      |                 |                       |            |
+ *--FreeBSD           |      |                 |                DragonFly 1.12.0    |
+ |    7.0             |      |                 |                       |            |
+ |     |              |      |             OpenBSD 4.3                 |            |
+ |     V              |      |                 |                       |            |
+ |                    |      |                 |                       |            |
+ |                    |      |                 |                DragonFly 2.0       |
+ |                    |      |                 |                       |            |
+ |                    |      |                 |                       |            |
+FreeBSD 8 -current    |  NetBSD -current  OpenBSD -current             |         MidnightBSD -current
+ |                    |      |                 |                       |            |
+ v                    v      v                 v                       v            v
 
 Time
 ----------------
@@ -248,6 +255,7 @@ was the announcement in Usenet or if it was available as tape.
 [KSJ] Michael J. Karels, Carl F. Smith, and William F. Jolitz.
 	Changes in the Kernel in 2.9BSD. Second Berkeley Software
 	Distribution UNIX Version 2.9, July, 1983.
+[MBD] MidnightBSD Project, The.
 [NBD] NetBSD Project, The.
 [OBD] OpenBSD Project, The.
 [QCU] Salus, Peter H. A quarter century of UNIX.
@@ -478,12 +486,15 @@ FreeBSD 6.2		2007-01-15 [FBD]
 DragonFly 1.8.0		2007-01-30 [DFB]
 OpenBSD 4.1		2007-05-01 [OBD]
 DragonFly 1.10.0	2007-08-06 [DFB]
+MidnightBSD 0.1		2007-08-06 [MBD]
 Mac OS X 10.5		2007-10-26 [APL]
 OpenBSD 4.2		2007-11-01 [OBD]
+MidnightBSD 0.1.1	2007-08-06 [MBD]
 NetBSD 4.0		2007-12-19 [NBD]
 FreeBSD 6.3		2008-01-18 [FBD]
 DragonFly 1.12.0	2008-02-26 [DFB]
 FreeBSD 7.0		2008-02-27 [FBD]
+DragonFly 2.0.0		2008-07-21 [DFB]
 
 Bibliography
 ------------------------
@@ -544,5 +555,5 @@ Steven M. Schultz for providing 2.8BSD, 2.10BSD, 2.11BSD manual pages.
 Copyright (c) 1997-2007 Wolfram Schneider <wosch@FreeBSD.ORG>
 URL: http://cvsweb.freebsd.org/src/share/misc/bsd-family-tree
 
-$MidnightBSD$
+$FreeBSD: src/share/misc/bsd-family-tree,v 1.121 2008/07/23 14:25:39 maxim Exp $
 $FreeBSD: src/share/misc/bsd-family-tree,v 1.119 2008/02/28 06:54:24 maxim Exp $
