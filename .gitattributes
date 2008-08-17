@@ -311,6 +311,9 @@ bin/mksh/Makefile -text
 bin/mv/Makefile -text
 bin/mv/mv.1 -text
 bin/mv/mv.c -text
+bin/notty/Makefile -text
+bin/notty/notty.1 -text
+bin/notty/notty.c -text
 bin/pax/Makefile -text
 bin/pax/ar_io.c -text
 bin/pax/ar_subs.c -text
