@@ -304,6 +304,12 @@ bin/ls/ls.c -text
 bin/ls/ls.h -text
 bin/ls/print.c -text
 bin/ls/util.c -text
+bin/mined/LICENSE -text
+bin/mined/Makefile -text
+bin/mined/mined.1 -text
+bin/mined/mined.h -text
+bin/mined/mined1.c -text
+bin/mined/mined2.c -text
 bin/mkdir/Makefile -text
 bin/mkdir/mkdir.1 -text
 bin/mkdir/mkdir.c -text

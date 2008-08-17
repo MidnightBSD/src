@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.5 2007/08/18 05:44:20 laffer1 Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.6 2008/08/17 03:13:54 laffer1 Exp $
 
 SUBDIR= cat \
 	chflags \
@@ -22,6 +22,7 @@ SUBDIR= cat \
 	kill \
 	ln \
 	ls \
+	mined \
 	mkdir \
 	mksh \
 	mv \
