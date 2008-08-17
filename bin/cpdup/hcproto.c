@@ -3,7 +3,7 @@
  *
  * This module implements a simple remote control protocol
  *
- * $DragonFly: src/bin/cpdup/hcproto.c,v 1.2 2008/04/10 22:09:08 dillon Exp $
+ * $DragonFly: src/bin/cpdup/hcproto.c,v 1.6 2008/04/16 17:38:19 dillon Exp $
  */
 
 #include "cpdup.h"
@@ -29,6 +29,7 @@ static int rc_rmdir(hctransaction_t trans, struct HCHead *);
 static int rc_chown(hctransaction_t trans, struct HCHead *);
 static int rc_lchown(hctransaction_t trans, struct HCHead *);
 static int rc_chmod(hctransaction_t trans, struct HCHead *);
+static int rc_mknod(hctransaction_t trans, struct HCHead *);
 static int rc_link(hctransaction_t trans, struct HCHead *);
 #ifdef _ST_FLAGS_PRESENT_
 static int rc_chflags(hctransaction_t trans, struct HCHead *);
@@ -56,6 +57,7 @@ struct HCDesc HCDispatchTable[] = {
     { HC_CHOWN,		rc_chown },
     { HC_LCHOWN,	rc_lchown },
     { HC_CHMOD,		rc_chmod },
+    { HC_MKNOD,		rc_mknod },
     { HC_LINK,		rc_link },
 #ifdef _ST_FLAGS_PRESENT_
     { HC_CHFLAGS,	rc_chflags },
@@ -70,8 +72,10 @@ struct HCDesc HCDispatchTable[] = {
 int
 hc_connect(struct HostConf *hc)
 {
-    if (hcc_connect(hc) < 0)
+    if (hcc_connect(hc) < 0) {
+	fprintf(stderr, "Unable to connect to %s\n", hc->host);
 	return(-1);
+    }
     return(hc_hello(hc));
 }
 
@@ -103,9 +107,12 @@ hc_hello(struct HostConf *hc)
 
     trans = hcc_start_command(hc, HC_HELLO);
     hcc_leaf_string(trans, LC_HELLOSTR, hostbuf);
-    hcc_leaf_int32(trans, LC_VERSION, 1);
-    if ((head = hcc_finish_command(trans)) == NULL)
+    hcc_leaf_int32(trans, LC_VERSION, HCPROTO_VERSION);
+    if ((head = hcc_finish_command(trans)) == NULL) {
+	fprintf(stderr, "Connected to %s but remote failed to complete hello\n",
+		hc->host);
 	return(-1);
+    }
 
     if (head->error) {
 	fprintf(stderr, "Connected to %s but remote returned error %d\n",
@@ -125,6 +132,11 @@ hc_hello(struct HostConf *hc)
 	    break;
 	}
     }
+    if (hc->version < HCPROTO_VERSION_COMPAT) {
+	fprintf(stderr, "Remote cpdup at %s has an incompatible version\n",
+		hc->host);
+	error = -1;
+    }
     if (error < 0)
 	fprintf(stderr, "Handshake failed with %s\n", hc->host);
     return (error);
@@ -142,7 +154,7 @@ rc_hello(hctransaction_t trans, struct HCHead *head __unused)
 	hostbuf[0] = '?';
 
     hcc_leaf_string(trans, LC_HELLOSTR, hostbuf);
-    hcc_leaf_int32(trans, LC_VERSION, 1);
+    hcc_leaf_int32(trans, LC_VERSION, HCPROTO_VERSION);
     return(0);
 }
 
@@ -492,6 +504,8 @@ rc_closedir(hctransaction_t trans, struct HCHead *head)
 	switch(item->leafid) {
 	case LC_DESCRIPTOR:
 	    dir = hcc_get_descriptor(trans->hc, HCC_INT32(item), HC_DESC_DIR);
+	    if (dir != NULL)
+		    hcc_set_descriptor(trans->hc, HCC_INT32(item), NULL, HC_DESC_DIR);
 	    break;
 	}
     }
@@ -660,6 +674,22 @@ rc_close(hctransaction_t trans, struct HCHead *head)
     return(close(fd));
 }
 
+static int
+getiolimit(void)
+{
+#if USE_PTHREADS
+    if (CurParallel < 2)
+	return(32768);
+    if (CurParallel < 4)
+	return(16384);
+    if (CurParallel < 8)
+	return(8192);
+    return(4096);
+#else
+    return(32768);
+#endif
+}
+
 /*
  * READ
  */
@@ -679,7 +709,8 @@ hc_read(struct HostConf *hc, int fd, void *buf, size_t bytes)
     if (fdp) {
 	r = 0;
 	while (bytes) {
-	    int n = (bytes > 32768) ? 32768 : bytes;
+	    size_t limit = getiolimit();
+	    int n = (bytes > limit) ? limit : bytes;
 	    int x = 0;
 
 	    trans = hcc_start_command(hc, HC_READ);
@@ -762,7 +793,8 @@ hc_write(struct HostConf *hc, int fd, const void *buf, size_t bytes)
     if (fdp) {
 	r = 0;
 	while (bytes) {
-	    int n = (bytes > 32768) ? 32768 : bytes;
+	    size_t limit = getiolimit();
+	    int n = (bytes > limit) ? limit : bytes;
 	    int x = 0;
 
 	    trans = hcc_start_command(hc, HC_WRITE);
@@ -1087,6 +1119,55 @@ rc_chmod(hctransaction_t trans __unused, struct HCHead *head)
     if (path == NULL)
 	return(-1);
     return(chmod(path, mode));
+}
+
+/*
+ * MKNOD
+ */
+int
+hc_mknod(struct HostConf *hc, const char *path, mode_t mode, dev_t rdev)
+{
+    hctransaction_t trans;
+    struct HCHead *head;
+
+    if (hc == NULL || hc->host == NULL)
+	return(mknod(path, mode, rdev));
+
+    trans = hcc_start_command(hc, HC_MKNOD);
+    hcc_leaf_string(trans, LC_PATH1, path);
+    hcc_leaf_int32(trans, LC_MODE, mode);
+    hcc_leaf_int32(trans, LC_RDEV, rdev);
+    if ((head = hcc_finish_command(trans)) == NULL)
+	return(-1);
+    if (head->error)
+	return(-1);
+    return(0);
+}
+
+static int
+rc_mknod(hctransaction_t trans __unused, struct HCHead *head)
+{
+    struct HCLeaf *item;
+    const char *path = NULL;
+    mode_t mode = 0666;
+    dev_t rdev = 0;
+
+    for (item = hcc_firstitem(head); item; item = hcc_nextitem(head, item)) {
+	switch(item->leafid) {
+	case LC_PATH1:
+	    path = HCC_STRING(item);
+	    break;
+	case LC_MODE:
+	    mode = HCC_INT32(item);
+	    break;
+	case LC_RDEV:
+	    rdev = HCC_INT32(item);
+	    break;
+	}
+    }
+    if (path == NULL)
+	return(-1);
+    return(mknod(path, mode, rdev));
 }
 
 /*

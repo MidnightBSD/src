@@ -2,9 +2,9 @@
 .\"    use and distribute based on the DragonFly copyright.  Supplied as-is,
 .\"    USE WITH EXTREME CAUTION.
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/bin/cpdup/cpdup.1,v 1.2 2008/04/10 23:45:51 laffer1 Exp $
 .\" $DragonFly: src/bin/cpdup/cpdup.1,v 1.28 2008/04/10 22:09:08 dillon Exp $
-.Dd March 22, 2008
+.Dd August 16, 2008
 .Dt CPDUP 1
 .Os
 .Sh NAME
@@ -12,6 +12,7 @@
 .Nd mirror filesystems
 .Sh SYNOPSIS
 .Nm
+.Op Fl C
 .Op Fl v[vv..]
 .Op Fl u
 .Op Fl I
@@ -19,7 +20,8 @@
 .Op Fl s0
 .Op Fl i0
 .Op Fl j0
-.Op Fl p<num>
+.Op Fl l
+.Op Fl p Ar number
 .Op Fl q
 .Op Fl o
 .Op Fl m
@@ -64,6 +66,10 @@ refuses to replace a destination directory with a file.
 .Pp
 The following options are available:
 .Bl -tag -width flag
+.It Fl C
+If the source or target is a remote host request that the
+.Xr ssh 1
+session be compressed.
 .It Fl v[vv]
 Set verboseness.  By default
 .Nm
@@ -102,8 +108,10 @@ Do not request confirmation when removing something.
 Do not try to recreate CHR or BLK devices.
 .It Fl l
 Line buffer verbose output.
-.It Fl p<number>
-Use threaded transactions with up to the specified number of threads.
+.It Fl p Ar number
+Use threaded transactions with up to the specified
+.Ar number
+of threads.
 This typically improves operation when a remote host specification is
 given.
 .It Fl q

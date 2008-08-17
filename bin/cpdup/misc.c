@@ -85,6 +85,68 @@ fextract(FILE *fi, int n, int *pc, int skip)
     return(s);
 }
 
+#ifdef DEBUG_MALLOC
+
+#undef malloc
+#undef free
+
+struct malloc_info {
+	struct malloc_info *next;
+	struct malloc_info *prev;
+	const char *file;
+	int magic;
+	int line;
+};
+
+struct malloc_info DummyInfo = { &DummyInfo, &DummyInfo, NULL, 0, 0 };
+struct malloc_info *InfoList = &DummyInfo;
+
+void *
+debug_malloc(size_t bytes, const char *file, int line)
+{
+	struct malloc_info *info = malloc(sizeof(*info) + bytes);
+
+	info->magic = 0x5513A4C2;
+	info->file = file;
+	info->line = line;
+
+	info->next = InfoList;
+	info->prev = InfoList->prev;
+	info->next->prev = info;
+	info->prev->next = info;
+	return(info + 1);
+}
+
+void
+debug_free(void *ptr)
+{
+	struct malloc_info *info = (struct malloc_info *)ptr - 1;
+	struct malloc_info *scan;
+	static int report;
+
+	for (scan = DummyInfo.next; scan != &DummyInfo; scan = scan->next) {
+		if (info == scan) {
+			assert(info->magic == 0x5513A4C2);
+			info->magic = 0;
+			info->next->prev = info->prev;
+			info->prev->next = info->next;
+			free(info);
+			break;
+		}
+	}
+	if (scan == &DummyInfo)
+		free(ptr);
+
+	if ((++report & 65535) == 0) {
+		printf("--- report\n");
+		for (scan = DummyInfo.next; scan != &DummyInfo; scan = scan->next) {
+			printf("%-15s %d\n", scan->file, scan->line);
+		}
+	}
+}
+
+#endif
+
 void
 fatal(const char *ctl, ...)
 {
@@ -92,7 +154,8 @@ fatal(const char *ctl, ...)
 
     if (ctl == NULL) {
 	puts("cpdup [<options>] src [dest]");
-	puts("    -v[vv]      verbose level (-vv is typical)\n"
+	puts("    -C          request compressed ssh link if remote operation\n"
+	     "    -v[vv]      verbose level (-vv is typical)\n"
 	     "    -u          use unbuffered output for -v[vv]\n"
 	     "    -I          display performance summary\n"
 	     "    -f          force update even if files look the same\n"
@@ -118,7 +181,7 @@ fatal(const char *ctl, ...)
 #endif
 	     "    -x          use .cpignore as exclusion file\n"
 	     "    -X file     specify exclusion file\n"
-	     " Version 1.09 by Matt Dillon and Dima Ruban\n"
+	     " Version 1.11 by Matt Dillon and Dima Ruban\n"
 	);
 	exit(0);
     } else {

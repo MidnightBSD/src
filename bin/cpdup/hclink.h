@@ -22,9 +22,11 @@ typedef struct HCTransaction {
     struct HostConf *hc;
     u_int16_t	id;		/* assigned transaction id */
     int		windex;		/* output buffer index */
-    enum { HCT_IDLE, HCT_SENT, HCT_REPLIED } state;
+    enum { HCT_IDLE, HCT_SENT, HCT_REPLIED, HCT_DONE } state;
 #if USE_PTHREADS
     pthread_t	tid;
+    pthread_cond_t cond;
+    int		waiting;
 #endif
     char	rbuf[65536];	/* input buffer */
     char	wbuf[65536];	/* output buffer */
@@ -44,8 +46,9 @@ struct HostConf {
     int		version;	/* cpdup protocol version */
     struct HCHostDesc *hostdescs;
 #if USE_PTHREADS
-    pthread_mutex_t read_mutex;
+    pthread_mutex_t hct_mutex[HCTHASH_SIZE];
     hctransaction_t hct_hash[HCTHASH_SIZE];
+    pthread_t	reader_thread;
 #else
     struct HCTransaction trans;
 #endif
@@ -113,6 +116,7 @@ struct HCLeaf *hcc_firstitem(struct HCHead *head);
 struct HCLeaf *hcc_nextitem(struct HCHead *head, struct HCLeaf *item);
 
 void hcc_debug_dump(struct HCHead *head);
+void hcc_free_trans(struct HostConf *hc);
 
 #endif
 
