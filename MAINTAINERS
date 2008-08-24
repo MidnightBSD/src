@@ -1,10 +1,4 @@
-$FreeBSD: src/MAINTAINERS,v 1.121 2005/06/04 16:56:35 imp Exp $
-$MidnightBSD: src/MAINTAINERS,v 1.4 2007/07/25 07:03:16 alex Exp $
-
-Please note that the content of this file is strictly advisory.
-No locks listed here are valid.  The only strict review requirements
-are granted by core.  These are documented in src/LOCKS and enforced
-by CVSROOT/approvers.
+$MidnightBSD: src/MAINTAINERS,v 1.5 2008/03/22 06:25:19 laffer1 Exp $
 
 The source tree is a community effort.  However, some folks go to the
 trouble of looking after particular areas of the tree.  In return for
@@ -132,18 +126,3 @@ stating your preferences here instead.
 List below generated with:
 $ cd /usr/src; find */* -type f|xargs egrep 'MAINTAINER[ <tab>]*='
 
-bin/dd/Makefile:MAINTAINER=	green@FreeBSD.org
-games/fortune/datfiles/Makefile:MAINTAINER=	jkh
-gnu/usr.bin/man/apropos/Makefile:MAINTAINER= wosch
-sbin/dhclient/Makefile.inc:MAINTAINER=     mbr
-sys/compat/svr4/Makefile:MAINTAINER=	newton@freebsd.org
-sys/dev/asr/MAINTAINER:MAINTAINER = obrien@freebsd, scott_long@btc.adaptec.com, mark_salyzyn@adaptec.com
-sys/dev/bktr/CHANGELOG.TXT: * MAINTAINER = Roger Hardiman <roger@freebsd.org>
-sys/modules/3dfx/Makefile:MAINTAINER=	cokane@FreeBSD.org
-sys/modules/bktr/bktr_mem/Makefile:MAINTAINER=	roger@freebsd.org
-sys/modules/streams/Makefile:MAINTAINER=	newton@atdot.dotat.org
-sys/modules/svr4/Makefile:MAINTAINER=	newton@FreeBSD.org
-sys/modules/urio/Makefile:MAINTAINER=	Iwasa Kazmi <kzmi@ca2.so-net.ne.jp>
-tools/tools/sysdoc/Makefile:MAINTAINER=	trhodes@FreeBSD.org
-usr.bin/locate/Makefile:MAINTAINER= wosch
-usr.sbin/zic/Makefile:MAINTAINER=	wollman@FreeBSD.org
