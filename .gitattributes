@@ -16122,7 +16122,7 @@ gnu/usr.bin/diff/context.c.diff -text
 gnu/usr.bin/diff/diff.c.diff -text
 gnu/usr.bin/diff/doc/Makefile -text
 gnu/usr.bin/diff3/Makefile -text
-gnu/usr.bin/diff3/diff3.1 -text
+gnu/usr.bin/diff3/diff3.c.diff -text
 gnu/usr.bin/gdb/Makefile -text
 gnu/usr.bin/gdb/Makefile.inc -text
 gnu/usr.bin/gdb/arch/alpha/Makefile -text
