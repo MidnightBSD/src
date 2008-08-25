@@ -1,0 +1,9 @@
+# $MidnightBSD$
+Import of GNU diff 2.8.7
+
+Original source available as ftp://alpha.gnu.org/pub/gnu/diffutils/diffutils-2.8.7.tar.gz
+
+cvs import -m "Virgin import of
+ diffutils 2.8.7 (trimmed)" src/contrib/diff FSF diffutils_v2_8_7
+
+Removed files are listed in MIDNIGHTBSD-Xlist.
