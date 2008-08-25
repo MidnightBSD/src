@@ -16411,7 +16411,6 @@ gnu/usr.bin/rcs/rlog/Makefile -text
 gnu/usr.bin/rcs/rlog/rlog.1 -text
 gnu/usr.bin/rcs/rlog/rlog.c -text
 gnu/usr.bin/sdiff/Makefile -text
-gnu/usr.bin/sdiff/sdiff.1 -text
 gnu/usr.bin/sort/Makefile -text
 gnu/usr.bin/sort/alloca.h -text
 gnu/usr.bin/sort/config.h -text
