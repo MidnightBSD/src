@@ -16118,7 +16118,8 @@ gnu/usr.bin/dialog/TESTS/yesno -text
 gnu/usr.bin/dialog/dialog.1 -text
 gnu/usr.bin/dialog/dialog.c -text
 gnu/usr.bin/diff/Makefile -text
-gnu/usr.bin/diff/diff.1 -text
+gnu/usr.bin/diff/context.c.diff -text
+gnu/usr.bin/diff/diff.c.diff -text
 gnu/usr.bin/diff/doc/Makefile -text
 gnu/usr.bin/diff3/Makefile -text
 gnu/usr.bin/diff3/diff3.1 -text
