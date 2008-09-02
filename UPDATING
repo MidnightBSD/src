@@ -3,6 +3,17 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080801:
+	Import OpenBSM 1.0
+
+	Modify src/release to create 3 isos instead of 2 for packages.
+
+	etc/rc.d/firstboot now enables kdm, gnustep + slim and bsdstats.
+
+	Many ia64, alpha, powerpc items were removed. 
+
+	The recent diffutils 2.8.7 import was fixed.
+
 20080703:
 	pcc was not installed properly when setting DESTDIR for live cds, 
 	or posibly jails. 
@@ -580,4 +591,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.40 2008/06/27 16:34:34 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.41 2008/07/03 23:59:13 laffer1 Exp $
