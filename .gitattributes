@@ -30903,6 +30903,10 @@ usr.bin/printenv/printenv.c -text
 usr.bin/printf/Makefile -text
 usr.bin/printf/printf.1 -text
 usr.bin/printf/printf.c -text
+usr.bin/progress/Makefile -text
+usr.bin/progress/progress.1 -text
+usr.bin/progress/progress.c -text
+usr.bin/progress/strsuftoll.c -text
 usr.bin/quota/Makefile -text
 usr.bin/quota/quota.1 -text
 usr.bin/quota/quota.c -text
