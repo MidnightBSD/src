@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.3 2008/05/02 05:29:06 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.4.2.1 2008/08/30 16:15:42 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/ftp.c,v 1.45 2002/10/14 13:06:13 nyan Exp $
  *
  * Copyright (c) 1995
@@ -118,7 +118,7 @@ try:
     if (variable_get(VAR_FTP_PASS))
 	SAFE_STRCPY(password, variable_get(VAR_FTP_PASS));
     else if (RunningAsInit)
-	snprintf(password, sizeof(password), "installer@%s", variable_get(VAR_HOSTNAME));
+	sprintf(password, "installer@%s", variable_get(VAR_HOSTNAME));
     else {
 	struct passwd *pw;
 	char *user;
@@ -246,17 +246,17 @@ mediaGetFTP(Device *dev, char *file, Boolean probe)
 	    /* Try some alternatives */
 	    switch (nretries++) {
 	    case 1:
-		snprintf(buf, sizeof(buf), "releases/%s", file);
+		sprintf(buf, "releases/%s", file);
 		try = buf;
 		break;
 
 	    case 2:
-		snprintf(buf, sizeof(buf), "%s/%s", variable_get(VAR_RELNAME), file);
+		sprintf(buf, "%s/%s", variable_get(VAR_RELNAME), file);
 		try = buf;
 		break;
 
 	    case 3:
-		snprintf(buf, sizeof(buf), "%s/releases/%s", variable_get(VAR_RELNAME), file);
+		sprintf(buf, "%s/releases/%s", variable_get(VAR_RELNAME), file);
 		try = buf;
 		break;
 

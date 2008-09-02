@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/doc.c,v 1.32 2004/01/02 09:19:13 obrien Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/doc.c,v 1.3 2007/07/17 13:21:16 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/doc.c,v 1.4.2.1 2008/08/30 16:15:42 laffer1 Exp $
  */
 
 #include "sysinstall.h"
@@ -99,7 +99,7 @@ docShowDocument(dialogMenuItem *self)
     if (strstr(str, "Other")) {
 	where = msgGetInput("http://www.midnightbsd.org", "Please enter the URL of the location you wish to visit.");
 	if (where)
-	    strlcpy(target, where, sizeof(target));
+	    strcpy(target, where);
     }
     else if (strstr(str, "FAQ")) {
 	where = strcpy(target, "/usr/share/doc/faq/index.html");
@@ -112,7 +112,7 @@ docShowDocument(dialogMenuItem *self)
 	    where = strcpy(target, "http://www.midnightbsd.org/docs");
     }
     if (where) {
-	snprintf(tmp, sizeof(tmp), "%s %s", browser, target);
+	sprintf(tmp, "%s %s", browser, target);
 	systemExecute(tmp);
 	return DITEM_SUCCESS;
     }

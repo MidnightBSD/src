@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/wizard.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/wizard.c,v 1.3.2.1 2008/08/30 16:15:42 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/wizard.c,v 1.23 2004/08/02 23:18:48 marcel Exp $
  *
  */
@@ -35,8 +35,8 @@ Scan_Disk(Disk *d)
     u_long l;
     int i,j,fd;
 
-    strlcpy(device,"/dev/", sizeof(device));
-    strlcat(device,d->name, sizeof(device));
+    strcpy(device,"/dev/");
+    strcat(device,d->name);
 
     fd = open(device,O_RDWR);
     if (fd < 0) {
@@ -73,7 +73,7 @@ slice_wizard(Disk *d)
     int ncmd,i;
 
     systemSuspendDialog();
-    snprintf(myprompt, sizeof(myprompt), "%s> ", d->name);
+    sprintf(myprompt, "%s> ", d->name);
     while(1) {
 	printf("--==##==--\n");
 	Debug_Disk(d);

@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/tape.c,v 1.3 2007/07/27 21:32:46 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/tape.c,v 1.4.2.1 2008/08/30 16:15:42 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/tape.c,v 1.24 2002/11/01 02:05:05 kuriyama Exp $
  *
  * Copyright (c) 1995
@@ -101,13 +101,13 @@ mediaGetTape(Device *dev, char *file, Boolean probe)
 	restorescr(w);
     }
 
-    snprintf(buf, sizeof(buf), "%s/%s", (char *)dev->private, file);
+    sprintf(buf, "%s/%s", (char *)dev->private, file);
     if (isDebug())
 	msgDebug("Request for %s from tape (looking in %s)\n", file, buf);
     if (file_readable(buf))
 	fp = fopen(buf, "r");
     else {
-	snprintf(buf, sizeof(buf), "%s/releases/%s", (char *)dev->private, file);
+	sprintf(buf, "%s/releases/%s", (char *)dev->private, file);
 	fp = fopen(buf, "r");
     }
     /* Nuke the files behind us to save space */

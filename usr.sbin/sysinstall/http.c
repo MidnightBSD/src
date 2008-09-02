@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/http.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/http.c,v 1.3.2.1 2008/08/30 16:15:42 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/http.c,v 1.7 2002/11/01 02:05:05 kuriyama Exp $
  */
 
@@ -88,7 +88,7 @@ checkAccess(Boolean proxyCheckOnly)
     }
 
     msgNotify("Checking access to\n %s", variable_get(VAR_HTTP_PATH));
-    snprintf(req, sizeof(req), "GET %s/ HTTP/1.0\r\n\r\n", variable_get(VAR_HTTP_PATH));
+    sprintf(req, "GET %s/ HTTP/1.0\r\n\r\n", variable_get(VAR_HTTP_PATH));
     write(s,req,strlen(req));
 /*
  *  scan the headers of the response
@@ -161,7 +161,7 @@ again:
 
     if (strcmp(rel, "__RELEASE") && strcmp(rel, "any"))  {
         for (fdir = 0; ftp_dirs[fdir]; fdir++) {
-            snprintf(req, sizeof(req), "%s/%s/%s", variable_get(VAR_FTP_PATH),
+            sprintf(req, "%s/%s/%s", variable_get(VAR_FTP_PATH),
                 ftp_dirs[fdir], rel);
             variable_set2(VAR_HTTP_PATH, req, 0);
             if (checkAccess(FALSE)) {
@@ -220,7 +220,7 @@ mediaGetHTTP(Device *dev, char *file, Boolean probe)
 	return NULL;
     }
 						   
-    snprintf(req, sizeof(req), "GET %s/%s%s HTTP/1.0\r\n\r\n",
+    sprintf(req, "GET %s/%s%s HTTP/1.0\r\n\r\n",
 	    variable_get(VAR_HTTP_PATH), file, variable_get(VAR_HTTP_FTP_MODE));
 
     if (isDebug()) {

@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.3 2006/12/31 20:59:58 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.4.2.1 2008/08/30 16:15:42 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132.2.2 2006/02/12 15:23:50 delphij Exp $
  *
  * Copyright (c) 1995
@@ -515,7 +515,7 @@ tcpOpenDialog(Device *devp)
     draw_box(ds_win, TCP_DIALOG_Y + 9, TCP_DIALOG_X + 8, TCP_DIALOG_HEIGHT - 13, TCP_DIALOG_WIDTH - 17,
 	     dialog_attr, border_attr);
     wattrset(ds_win, dialog_attr);
-    snprintf(title, sizeof(title), " Configuration for Interface %s ", devp->name);
+    sprintf(title, " Configuration for Interface %s ", devp->name);
     mvwaddstr(ds_win, TCP_DIALOG_Y + 9, TCP_DIALOG_X + 14, title);
 
     /* Some more initialisation before we go into the main input loop */
@@ -531,13 +531,13 @@ reenter:
 	     * class A/B network).
 	     */
 	    if (!netmask[0]) {
-		strlcpy(netmask, "255.255.255.0", sizeof(netmask));
+		strcpy(netmask, "255.255.255.0");
 		RefreshStringObj(layout[LAYOUT_NETMASK].obj);
 		++filled;
 	    }
 	    if (!index(hostname, '.') && domainname[0]) {
-		strlcat(hostname, ".", sizeof(hostname));
-		strlcat(hostname, domainname, sizeof(hostname));
+		strcat(hostname, ".");
+		strcat(hostname, domainname);
 		RefreshStringObj(layout[LAYOUT_HOSTNAME].obj);
 		++filled;
 	    }
@@ -596,14 +596,14 @@ netconfig:
 	if (use_dhcp || ipaddr[0])
 	    ipv4_enable = TRUE;
 	if (ipv4_enable) {
-	    snprintf(ifn, sizeof(ifn), "%s%s", VAR_IFCONFIG, devp->name);
+	    sprintf(ifn, "%s%s", VAR_IFCONFIG, devp->name);
 	    if (use_dhcp) {
 		if (strlen(extras) > 0)
-		    snprintf(temp, sizeof(temp), "DHCP %s", extras);
+		    sprintf(temp, "DHCP %s", extras);
 		else
-		    snprintf(temp, sizeof(temp), "DHCP");
+		    sprintf(temp, "DHCP");
 	    } else
-		snprintf(temp, sizeof(temp), "inet %s %s netmask %s",
+		sprintf(temp, "inet %s %s netmask %s",
 			ipaddr, extras, netmask);
 	    variable_set2(ifn, temp, 1);
 	}

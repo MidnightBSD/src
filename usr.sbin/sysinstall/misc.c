@@ -1,7 +1,7 @@
 /*
  * Miscellaneous support routines..
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/misc.c,v 1.4 2008/05/02 06:41:00 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/misc.c,v 1.5.2.1 2008/08/30 16:15:42 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/misc.c,v 1.43 2003/01/06 17:11:46 obrien Exp $
  *
  * Copyright (c) 1995
@@ -329,8 +329,8 @@ Mount(char *mountp, void *dev)
 	return DITEM_SUCCESS;
 
     if (*((char *)dev) != '/') {
-    	snprintf(device, sizeof(device), "%s/dev/%s", RunningAsInit ? "/mnt" : "", (char *)dev);
-	snprintf(mountpoint, sizeof(mountpoint), "%s%s", RunningAsInit ? "/mnt" : "", mountp);
+    	sprintf(device, "%s/dev/%s", RunningAsInit ? "/mnt" : "", (char *)dev);
+	sprintf(mountpoint, "%s%s", RunningAsInit ? "/mnt" : "", mountp);
     }
     else {
 	strcpy(device, dev);
@@ -365,12 +365,12 @@ Mount_msdosfs(char *mountp, void *dev)
 	return DITEM_SUCCESS;
 
     if (*((char *)dev) != '/') {
-    	snprintf(device, sizeof(device), "%s/dev/%s", RunningAsInit ? "/mnt" : "", (char *)dev);
-	snprintf(mountpoint, sizeof(mountpoint), "%s%s", RunningAsInit ? "/mnt" : "", mountp);
+    	sprintf(device, "%s/dev/%s", RunningAsInit ? "/mnt" : "", (char *)dev);
+	sprintf(mountpoint, "%s%s", RunningAsInit ? "/mnt" : "", mountp);
     }
     else {
-	strlcpy(device, dev, sizeof(device));
-	strlcpy(mountpoint, mountp, sizeof(mountpoint));
+	strcpy(device, dev);
+	strcpy(mountpoint, mountp);
     }
 
     if (Mkdir(mountpoint)) {

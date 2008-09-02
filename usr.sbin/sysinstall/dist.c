@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.5 2008/05/02 05:51:25 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/dist.c,v 1.6.2.1 2008/07/22 00:18:47 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dist.c,v 1.239.2.1 2005/08/30 20:01:32 murray Exp $
  *
  * Copyright (c) 1995
@@ -348,7 +348,7 @@ distSetCustom(dialogMenuItem *self)
     cp = alloca(strlen(tmp) + 1);
     if (!cp)
 	msgFatal("Couldn't alloca() %d bytes!\n", (int)(strlen(tmp) + 1));
-    strlcpy(cp, tmp, sizeof(cp));
+    strcpy(cp, tmp);
     while (cp) {
 	if ((cp2 = index(cp, ' ')) != NULL)
 	    *(cp2++) = '\0';
@@ -721,7 +721,7 @@ printSelected(char *buf, int selected, Distribution *me, int *col)
 	*col += strlen(me[i].my_name);
 	if (*col > 50) {
 	    *col = 0;
-	    strlcat(buf, "\n", sizeof(buf));
+	    strcat(buf, "\n");
 	}
 	sprintf(&buf[strlen(buf)], " %s", me[i].my_name);
 

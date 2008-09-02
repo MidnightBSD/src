@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.10 2008/05/02 06:41:00 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.11.2.1 2008/08/30 16:15:42 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -255,7 +255,7 @@ configFstab(dialogMenuItem *self)
     for (i = 0; i < cnt; i++) {
 	char cdname[10];
 	
-	snprintf(cdname, sizeof(cdname), "/cdrom%s", i ? itoa(i) : "");
+	sprintf(cdname, "/cdrom%s", i ? itoa(i) : "");
 	if (Mkdir(cdname))
 	    msgConfirm("Unable to make mount point for: %s", cdname);
 	else
@@ -503,7 +503,7 @@ configNTP(dialogMenuItem *self)
     if (status == DITEM_SUCCESS) {
 	static char tmp[255];
 
-	snprintf(tmp, sizeof(tmp), "rdate_enable=YES,rpdate_flags=%s",
+	sprintf(tmp, "rdate_enable=YES,rpdate_flags=%s",
 		 variable_get(VAR_RDATE_FLAGS));
 	self->data = tmp;
 	dmenuSetVariables(self);
@@ -801,7 +801,7 @@ configInetd(dialogMenuItem *self)
 		   "IPv6 must be separately enabled from IPv4 services.\n\n"
                    "Select [Yes] now to invoke an editor on /etc/inetd.conf, or [No] to\n"
                    "use the current settings.\n")) {
-            snprintf(cmd, sizeof(cmd), "%s /etc/inetd.conf", variable_get(VAR_EDITOR));
+            sprintf(cmd, "%s /etc/inetd.conf", variable_get(VAR_EDITOR));
             dialog_clear();
             systemExecute(cmd);
 	}
@@ -840,7 +840,7 @@ configNFSServer(dialogMenuItem *self)
 	    vsystem("echo '# You should replace these lines with your actual exported filesystems.' >> /etc/exports");
 	    vsystem("echo \"# Note that BSD's export syntax is 'host-centric' vs. Sun's 'FS-centric' one.\" >> /etc/exports");
 	    vsystem("echo >> /etc/exports");
-	    snprintf(cmd, sizeof(cmd), "%s /etc/exports", variable_get(VAR_EDITOR));
+	    sprintf(cmd, "%s /etc/exports", variable_get(VAR_EDITOR));
 	    dialog_clear();
 	    systemExecute(cmd);
 	}
@@ -896,7 +896,7 @@ configEtcTtys(dialogMenuItem *self)
 		 "To load /etc/ttys in the editor, select [Yes], otherwise, [No].")) {
     } else {
 	configTtys();
-	snprintf(cmd, sizeof(cmd), "%s /etc/ttys", variable_get(VAR_EDITOR));
+	sprintf(cmd, "%s /etc/ttys", variable_get(VAR_EDITOR));
 	dialog_clear();
 	systemExecute(cmd);
     }
