@@ -10144,6 +10144,7 @@ contrib/one-true-awk/run.c -text
 contrib/one-true-awk/tran.c -text
 contrib/openbsm/HISTORY -text
 contrib/openbsm/LICENSE -text
+contrib/openbsm/MIDNIGHTBSD-upgrade -text
 contrib/openbsm/Makefile.am -text
 contrib/openbsm/Makefile.in -text
 contrib/openbsm/README -text
