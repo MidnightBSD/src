@@ -7,7 +7,7 @@
 #
 # Usage: package-split.py <INDEX> <master INDEX>
 #
-# $MidnightBSD: src/release/scripts/package-split.py,v 1.6 2007/03/17 16:44:45 laffer1 Exp $
+# $MidnightBSD: src/release/scripts/package-split.py,v 1.7.4.2 2008/08/29 15:46:56 laffer1 Exp $
 # $FreeBSD: src/release/scripts/package-split.py,v 1.6.2.4 2005/12/07 22:27:49 obrien Exp $
 
 import os
@@ -28,11 +28,13 @@ verbose = 1
 # List of packages for disc1.  This just includes packages sysinstall can
 # install as a distribution
 def disc1_packages():
-    # 5.x only
     pkgs = ['lang/perl5.8']
     pkgs.extend(['x11/xorg',
-                 'x11/xorg-manpages',
-                 'devel/imake-6'])
+                 'x11-drivers/xorg-drivers',
+                 'x11-fonts/xorg-fonts',
+                 'x11-servers/xorg-nestserver',
+                 'x11-servers/xorg-vfbserver',
+                 'devel/imake'])
     if arch == 'i386':
         pkgs.append('emulators/linux_base-fc4')
     return pkgs
@@ -42,44 +44,91 @@ def disc1_packages():
 # For architectures that use a separate livefs, this is actually disc3.
 def disc2_packages():
             # X Desktops
-    if arch == 'ia64':
-	pkgs = ['x11/kde-lite']
-    else:
-	pkgs = ['x11/kde3']
-    pkgs.extend(['x11-wm/windowmaker',
-            # "Nice to have"
+            # add gnome2 lite and gnustep later
+    pkgs = ['x11/kde3',
+            'editors/koffice-kde3',
+            'databases/mysql50-server',
+            'databases/mysql50-client',
+            'editors/abiword',
+            'editors/gedit',
+            'x11/gdm',
+            'audio/gnustep-cdplayer',
+            'devel/gnustep',
+            'devel/gnustep-make',
+            'devel/gorm',
+            'devel/projectcenter.app',
+            'devel/projectmanager',
+            'editors/codeeditor',
+            'editors/textedit.app',
+            'ftp/gnustep-ftp',
+            'lang/gnustep-base',
+            'misc/gnustep-examples',
+            'multimedia/gnustep-mplayer',
+            'www/gnustep-ticker',
+            'x11/etoile',
+            'x11-toolkits/gnustep-art',
+            'x11-toolkits/gnustep-back',
+            'x11-toolkits/gnustep-cairo',
+            'x11-toolkits/gnustep-gui']
+            
+    return pkgs
+
+def disc3_packages():
+    pkgs = ['x11-wm/afterstep',
+            'x11-wm/windowmaker',
             'archivers/unzip',
-            'astro/xearth',                 
+            'astro/xearth',
+            'deskutils/gtkjj',
+            'deskutils/jjclient',
             'devel/gmake',
             'editors/emacs',
+            'editors/joe',
+            'editors/jupp',
+            'editors/nano',
             'editors/vim',
-            'editors/vim-lite',
             'editors/xemacs',
             'emulators/mtools',
+            'games/tuxracer',
+            'games/vitetris',
+            'graphics/gimp-app',
+            'graphics/gimp-print',
             'graphics/png',
             'graphics/xv',
+            'irc/irssi',
             'irc/xchat',
+            'lang/php5',
             'mail/fetchmail',
             'mail/mutt',
-            'mail/pine4',
+            'mail/alpine',
             'mail/popd',
+            'misc/compat5x',
             'net/rsync',
             'net/samba3',
             'news/slrn',
             'news/tin',
+            'ports-mgmt/portupgrade',
             'print/a2ps-letter',
             'print/apsfilter',
             'print/gv',
             'print/psutils-letter',
 	    'print/ghostscript-gpl-nox11',
-            'shells/bash2',
+            'print/teTeX',
+            'shells/bash',
             'shells/zsh',
-            'ports-mgmt/portupgrade',
+            'www/apache22',
+            'www/aria2',
+            'www/epiphany-webkit',
             'www/links',
             'www/lynx',
-            'x11/rxvt'])
+            'www/midori',
+            'www/webkit-gtk2',
+            'x11/windowmaker-desktop',
+            'x11/rxvt']
     if arch == 'i386':
-        pkgs.extend(['comms/ltmdm',
+        pkgs.extend(['emulators/wine',
+                     'java/jamvm',
+                     'java/kaffe',
+                     'misc/compat4x',
                      'www/opera'])
     return pkgs
 
@@ -87,7 +136,8 @@ def disc2_packages():
 def desired_packages():
     disc1 = disc1_packages()
     disc2 = disc2_packages()
-    return [disc1, disc2]
+    disc3 = disc3_packages()
+    return [disc1, disc2, disc3]
 
 # Suck the entire INDEX file into a two different dictionaries.  The first
 # dictionary maps port names (origins) to package names.  The second
