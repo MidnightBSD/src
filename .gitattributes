@@ -10142,6 +10142,7 @@ contrib/one-true-awk/proctab.c -text
 contrib/one-true-awk/proto.h -text
 contrib/one-true-awk/run.c -text
 contrib/one-true-awk/tran.c -text
+contrib/openbsm/HISTORY -text
 contrib/openntpd/CREDITS -text
 contrib/openntpd/ChangeLog -text
 contrib/openntpd/INSTALL -text
