@@ -515,7 +515,7 @@
 /* #undef const */
 
 /* Define to a replacement function name for fnmatch(). */
-#define fnmatch gnu_fnmatch
+/* #define fnmatch gnu_fnmatch */
 
 /* Define to rpl_gettimeofday if the replacement function should be used. */
 /* #undef gettimeofday */
