@@ -20529,8 +20529,6 @@ release/fixit.services -text
 release/i386/boot_crunch.conf -text
 release/i386/fixit_crunch.conf -text
 release/i386/mkisoimages.sh -text
-release/ia64/boot_crunch.conf -text
-release/ia64/mkisoimages.sh -text
 release/picobsd/tinyware/simple_httpd/Makefile -text
 release/picobsd/tinyware/simple_httpd/README -text
 release/picobsd/tinyware/simple_httpd/simple_httpd.c -text
@@ -20539,10 +20537,6 @@ release/picobsd/tinyware/view/README -text
 release/picobsd/tinyware/view/fbsd.png -text svneol=unset#unset
 release/picobsd/tinyware/view/picobsd.vu -text
 release/picobsd/tinyware/view/view.c -text
-release/powerpc/boot.tbxi -text
-release/powerpc/boot_crunch.conf -text
-release/powerpc/hfs.map -text
-release/powerpc/mkisoimages.sh -text
 release/scripts/base-install.sh -text
 release/scripts/catpages-install.sh -text
 release/scripts/catpages-make.sh -text

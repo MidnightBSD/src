@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.16 2007/07/23 20:55:49 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.17 2007/07/27 02:54:40 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -19,16 +19,16 @@
 # Set these, release builder!
 #
 # Fixed version:
-#BUILDNAME=0.1-RELEASE
+#BUILDNAME=0.3-RELEASE
 #
 # Automatic SNAP versioning:
 DATE != date +%Y%m%d
-BASE = 0.2
+BASE = 0.3
 BUILDNAME?=${BASE}-${DATE}-SNAP
 #
 #CHROOTDIR=/junk/release
 # If this is a -stable snapshot, then set
-#RELEASETAG=RELENG_4
+#RELEASETAG=RELENG_0
 #
 # To test a release with a source tree containing patches and
 # other work. This tree will get copied instead of getting the
@@ -153,7 +153,7 @@ DOCPORTS=	textproc/docproj
 # Respect DOCDISTFILES which is used before.
 RELEASEDISTFILES?=	${DOCDISTFILES}
 .else
-RELEASEDISTFILES?=	${.CURDIR}/../../mports/distfiles
+RELEASEDISTFILES?=	${.CURDIR}/../../mports/Distfiles
 .endif
 # Set this to 1 if you want -P to be used for automatic keyboard detection
 # on the boot floppy.  WARNING: Breaks on some Athlon (K7) motherboards.
@@ -198,11 +198,6 @@ MFSSIZE=		4096
 MFSINODE=		8192
 MFSLABEL=		auto
 MINIROOT=
-.elif ${TARGET_ARCH} == "ia64"
-MFSSIZE=		8192
-MFSINODE=		8192
-MFSLABEL=		auto
-SEPARATE_LIVEFS=
 .elif ${TARGET_ARCH} == "amd64"
 MAKE_FLOPPIES=          true
 FLOPPYSIZE=             1440
@@ -214,12 +209,6 @@ MFSSIZE=		4096
 MFSINODE=		8192
 MFSLABEL=		auto
 SPLIT_MFSROOT=
-.elif ${TARGET_ARCH} == "powerpc"
-DISKLABEL=		""
-MFSSIZE=		4096
-MFSINODE=		8192
-MFSLABEL=		auto
-SEPARATE_LIVEFS=
 .endif
 .if defined(NO_FLOPPIES)
 .undef MAKE_FLOPPIES
