@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.14 2008/06/27 16:11:59 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.15 2008/08/17 03:56:12 laffer1 Exp $
 
 # XXX MISSING:		diction graph learn plot
 #			spline struct xsend
@@ -155,6 +155,7 @@ SUBDIR=	alias \
 	pr \
 	printenv \
 	printf \
+	progress \
 	quota \
 	renice \
 	rev \
