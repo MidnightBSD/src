@@ -10143,6 +10143,164 @@ contrib/one-true-awk/proto.h -text
 contrib/one-true-awk/run.c -text
 contrib/one-true-awk/tran.c -text
 contrib/openbsm/HISTORY -text
+contrib/openbsm/LICENSE -text
+contrib/openbsm/Makefile.am -text
+contrib/openbsm/Makefile.in -text
+contrib/openbsm/README -text
+contrib/openbsm/TODO -text
+contrib/openbsm/VERSION -text
+contrib/openbsm/aclocal.m4 -text
+contrib/openbsm/autogen.sh -text
+contrib/openbsm/bin/Makefile.am -text
+contrib/openbsm/bin/Makefile.in -text
+contrib/openbsm/bin/audit/Makefile.am -text
+contrib/openbsm/bin/audit/Makefile.in -text
+contrib/openbsm/bin/audit/audit.8 -text
+contrib/openbsm/bin/audit/audit.c -text
+contrib/openbsm/bin/auditd/Makefile.am -text
+contrib/openbsm/bin/auditd/Makefile.in -text
+contrib/openbsm/bin/auditd/audit_warn.c -text
+contrib/openbsm/bin/auditd/auditd.8 -text
+contrib/openbsm/bin/auditd/auditd.c -text
+contrib/openbsm/bin/auditd/auditd.h -text
+contrib/openbsm/bin/auditfilterd/Makefile.am -text
+contrib/openbsm/bin/auditfilterd/Makefile.in -text
+contrib/openbsm/bin/auditfilterd/auditfilterd.8 -text
+contrib/openbsm/bin/auditfilterd/auditfilterd.c -text
+contrib/openbsm/bin/auditfilterd/auditfilterd.h -text
+contrib/openbsm/bin/auditfilterd/auditfilterd_conf.c -text
+contrib/openbsm/bin/auditreduce/Makefile.am -text
+contrib/openbsm/bin/auditreduce/Makefile.in -text
+contrib/openbsm/bin/auditreduce/auditreduce.1 -text
+contrib/openbsm/bin/auditreduce/auditreduce.c -text
+contrib/openbsm/bin/auditreduce/auditreduce.h -text
+contrib/openbsm/bin/praudit/Makefile.am -text
+contrib/openbsm/bin/praudit/Makefile.in -text
+contrib/openbsm/bin/praudit/praudit.1 -text
+contrib/openbsm/bin/praudit/praudit.c -text
+contrib/openbsm/bsm/Makefile.am -text
+contrib/openbsm/bsm/Makefile.in -text
+contrib/openbsm/bsm/audit_filter.h -text
+contrib/openbsm/bsm/audit_uevents.h -text
+contrib/openbsm/bsm/libbsm.h -text
+contrib/openbsm/compat/clock_gettime.h -text
+contrib/openbsm/compat/endian.h -text
+contrib/openbsm/compat/queue.h -text
+contrib/openbsm/compat/strlcat.h -text
+contrib/openbsm/config/config.guess -text
+contrib/openbsm/config/config.h -text
+contrib/openbsm/config/config.h.in -text
+contrib/openbsm/config/config.sub -text
+contrib/openbsm/config/depcomp -text
+contrib/openbsm/config/install-sh -text
+contrib/openbsm/config/ltmain.sh -text
+contrib/openbsm/config/missing -text
+contrib/openbsm/configure -text
+contrib/openbsm/configure.ac -text
+contrib/openbsm/etc/audit_class -text
+contrib/openbsm/etc/audit_control -text
+contrib/openbsm/etc/audit_event -text
+contrib/openbsm/etc/audit_filter -text
+contrib/openbsm/etc/audit_user -text
+contrib/openbsm/etc/audit_warn -text
+contrib/openbsm/libbsm/Makefile.am -text
+contrib/openbsm/libbsm/Makefile.in -text
+contrib/openbsm/libbsm/au_class.3 -text
+contrib/openbsm/libbsm/au_control.3 -text
+contrib/openbsm/libbsm/au_event.3 -text
+contrib/openbsm/libbsm/au_free_token.3 -text
+contrib/openbsm/libbsm/au_io.3 -text
+contrib/openbsm/libbsm/au_mask.3 -text
+contrib/openbsm/libbsm/au_open.3 -text
+contrib/openbsm/libbsm/au_token.3 -text
+contrib/openbsm/libbsm/au_user.3 -text
+contrib/openbsm/libbsm/audit_submit.3 -text
+contrib/openbsm/libbsm/bsm_audit.c -text
+contrib/openbsm/libbsm/bsm_class.c -text
+contrib/openbsm/libbsm/bsm_control.c -text
+contrib/openbsm/libbsm/bsm_event.c -text
+contrib/openbsm/libbsm/bsm_flags.c -text
+contrib/openbsm/libbsm/bsm_io.c -text
+contrib/openbsm/libbsm/bsm_mask.c -text
+contrib/openbsm/libbsm/bsm_notify.c -text
+contrib/openbsm/libbsm/bsm_token.c -text
+contrib/openbsm/libbsm/bsm_user.c -text
+contrib/openbsm/libbsm/bsm_wrappers.c -text
+contrib/openbsm/libbsm/libbsm.3 -text
+contrib/openbsm/man/Makefile.am -text
+contrib/openbsm/man/Makefile.in -text
+contrib/openbsm/man/audit.2 -text
+contrib/openbsm/man/audit.log.5 -text
+contrib/openbsm/man/audit_class.5 -text
+contrib/openbsm/man/audit_control.5 -text
+contrib/openbsm/man/audit_event.5 -text
+contrib/openbsm/man/audit_user.5 -text
+contrib/openbsm/man/audit_warn.5 -text
+contrib/openbsm/man/auditctl.2 -text
+contrib/openbsm/man/auditon.2 -text
+contrib/openbsm/man/getaudit.2 -text
+contrib/openbsm/man/getauid.2 -text
+contrib/openbsm/man/setaudit.2 -text
+contrib/openbsm/man/setauid.2 -text
+contrib/openbsm/modules/Makefile.am -text
+contrib/openbsm/modules/Makefile.in -text
+contrib/openbsm/modules/auditfilter_noop/Makefile.am -text
+contrib/openbsm/modules/auditfilter_noop/Makefile.in -text
+contrib/openbsm/modules/auditfilter_noop/auditfilter_noop.c -text
+contrib/openbsm/test/Makefile.am -text
+contrib/openbsm/test/Makefile.in -text
+contrib/openbsm/test/bsm/Makefile.am -text
+contrib/openbsm/test/bsm/Makefile.in -text
+contrib/openbsm/test/bsm/generate.c -text
+contrib/openbsm/test/reference/arg32_record -text svneol=unset#unset
+contrib/openbsm/test/reference/arg32_token -text svneol=unset#unset
+contrib/openbsm/test/reference/data_record -text svneol=unset#unset
+contrib/openbsm/test/reference/data_token -text svneol=unset#unset
+contrib/openbsm/test/reference/file_record -text svneol=unset#unset
+contrib/openbsm/test/reference/file_token -text svneol=unset#unset
+contrib/openbsm/test/reference/header32_token -text svneol=unset#unset
+contrib/openbsm/test/reference/in_addr_record -text svneol=unset#unset
+contrib/openbsm/test/reference/in_addr_token -text
+contrib/openbsm/test/reference/ip_record -text svneol=unset#unset
+contrib/openbsm/test/reference/ip_token -text svneol=unset#unset
+contrib/openbsm/test/reference/ipc_record -text svneol=unset#unset
+contrib/openbsm/test/reference/ipc_token -text
+contrib/openbsm/test/reference/iport_record -text svneol=unset#unset
+contrib/openbsm/test/reference/iport_token -text svneol=unset#unset
+contrib/openbsm/test/reference/opaque_record -text svneol=unset#unset
+contrib/openbsm/test/reference/opaque_token -text svneol=unset#unset
+contrib/openbsm/test/reference/path_record -text svneol=unset#unset
+contrib/openbsm/test/reference/path_token -text svneol=unset#unset
+contrib/openbsm/test/reference/process32_record -text svneol=unset#unset
+contrib/openbsm/test/reference/process32_token -text svneol=unset#unset
+contrib/openbsm/test/reference/process32ex_record-IPv4 -text svneol=unset#unset
+contrib/openbsm/test/reference/process32ex_record-IPv6 -text svneol=unset#unset
+contrib/openbsm/test/reference/process32ex_token-IPv4 -text svneol=unset#unset
+contrib/openbsm/test/reference/process32ex_token-IPv6 -text svneol=unset#unset
+contrib/openbsm/test/reference/process64_record -text svneol=unset#unset
+contrib/openbsm/test/reference/process64_token -text svneol=unset#unset
+contrib/openbsm/test/reference/process64ex_record-IPv4 -text svneol=unset#unset
+contrib/openbsm/test/reference/process64ex_record-IPv6 -text svneol=unset#unset
+contrib/openbsm/test/reference/process64ex_token-IPv4 -text svneol=unset#unset
+contrib/openbsm/test/reference/process64ex_token-IPv6 -text svneol=unset#unset
+contrib/openbsm/test/reference/return32_record -text svneol=unset#unset
+contrib/openbsm/test/reference/return32_token -text
+contrib/openbsm/test/reference/seq_record -text svneol=unset#unset
+contrib/openbsm/test/reference/seq_token -text
+contrib/openbsm/test/reference/subject32_record -text svneol=unset#unset
+contrib/openbsm/test/reference/subject32_token -text svneol=unset#unset
+contrib/openbsm/test/reference/subject32ex_record -text svneol=unset#unset
+contrib/openbsm/test/reference/subject32ex_token-IPv4 -text svneol=unset#unset
+contrib/openbsm/test/reference/subject32ex_token-IPv6 -text svneol=unset#unset
+contrib/openbsm/test/reference/text_record -text svneol=unset#unset
+contrib/openbsm/test/reference/text_token -text svneol=unset#unset
+contrib/openbsm/test/reference/trailer_token -text
+contrib/openbsm/test/reference/zonename_record -text svneol=unset#unset
+contrib/openbsm/test/reference/zonename_token -text svneol=unset#unset
+contrib/openbsm/test/samples/execve-long-args.trail -text svneol=unset#unset
+contrib/openbsm/tools/Makefile.am -text
+contrib/openbsm/tools/Makefile.in -text
+contrib/openbsm/tools/audump.c -text
 contrib/openntpd/CREDITS -text
 contrib/openntpd/ChangeLog -text
 contrib/openntpd/INSTALL -text
