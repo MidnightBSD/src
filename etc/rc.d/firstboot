@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/firstboot,v 1.1 2007/08/06 00:23:51 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/firstboot,v 1.2.2.2 2008/08/30 20:00:56 laffer1 Exp $
 
 # PROVIDE: firstboot
 # REQUIRE: NETWORKING cleanvar
@@ -26,16 +26,34 @@ firstboot_start()
 
 	if [ ! -f ${receipt} ]; then
 		echo -e "\r${red}MidnightBSD FirstBoot Configuration${lsuffix}"
-
 		echo "This utility requires an active Internet connection."
-		echo -e "\r${yellow}Do you wish to install a graphical environment? (yes or no)${lsuffix}"
+
+		echo -e "\r${yellow}Would you like to report your install via bsdstats? (yes or no)${lsuffix}"
+		read installbstat
+		if [ ${installbstat} = "yes" ]; then
+			if [ ! -f /usr/local/etc/rc.d/bsdstats.sh ]; then
+				/usr/sbin/pkg_add -r bsdstats
+			fi
+			echo "bsdstats_enable=\"YES\"" >> /etc/rc.conf
+		fi
+
+		echo -e "\r${yellow}Do you wish to enable a graphical environment? (yes or no)${lsuffix}"
 		read installgui
 
 		if [ ${installgui} = "yes" ]; then
 			echo -e "\r${red}Installing Graphical User Interface${lsuffix}"
-			/usr/sbin/pkg_add -r gnustep
-			/usr/sbin/pkg_add -r slim
-			/usr/sbin/pkg_add -r windowmaker
+#			KDE CASE
+			if [ -f /usr/local/bin/kdm ]; then
+				echo "KDE detected"
+				echo "ttyv8 \"/usr/local/bin/kdm -nodaemon\" xterm on secure" >> /etc/ttys
+			else
+#			GNUSTEP/WindowMaker/Slim
+				/usr/sbin/pkg_add -r gnustep
+				/usr/sbin/pkg_add -r slim
+				/usr/sbin/pkg_add -r windowmaker
+				echo "slim_enable=\"YES\"" >> /etc/rc.conf
+			fi
+			echo "Please restart to enable graphical login."
 			echo -e "\r${yellow}Done.${lsuffix}"
 		else
 			echo "To run this utility again, rm ${receipt} and restart."
