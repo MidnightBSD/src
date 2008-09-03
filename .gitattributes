@@ -23080,8 +23080,10 @@ share/mk/bsd.port.subdir.mk -text
 share/mk/bsd.prog.mk -text
 share/mk/bsd.snmpmod.mk -text
 share/mk/bsd.subdir.mk -text
+share/mk/bsd.symver.mk -text
 share/mk/bsd.sys.mk -text
 share/mk/sys.mk -text
+share/mk/version_gen.awk -text
 share/mklocale/Makefile -text
 share/mklocale/README.locale_name -text
 share/mklocale/UTF-8.src -text

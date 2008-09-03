@@ -1,5 +1,5 @@
-# $FreeBSD: src/share/mk/bsd.own.mk,v 1.43 2005/04/11 07:13:29 harti Exp $
 # $MidnightBSD$
+# $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
 # group, mode, and directories. Defaults are in brackets.
@@ -105,6 +105,13 @@
 .if !target(__<bsd.own.mk>__)
 __<bsd.own.mk>__:
 
+.if !defined(_WITHOUT_SRCCONF)
+SRCCONF?=	/etc/src.conf
+.if exists(${SRCCONF})
+.include "${SRCCONF}"
+.endif
+.endif
+
 # Binaries
 BINOWN?=	root
 BINGRP?=	wheel
@@ -156,6 +163,8 @@ NLSOWN?=	${SHAREOWN}
 NLSGRP?=	${SHAREGRP}
 NLSMODE?=	${NOBINMODE}
 
+DEFAULT_THREAD_LIB?=	libthr
+
 INCLUDEDIR?=	/usr/include
 
 # Common variables
@@ -165,5 +174,330 @@ STRIP?=		-s
 
 COMPRESS_CMD?=	gzip -cn
 COMPRESS_EXT?=	.gz
+
+.if !defined(_WITHOUT_SRCCONF)
+#
+# Define MK_* variables (which are either "yes" or "no") for users
+# to set via WITH_*/WITHOUT_* in /etc/src.conf and override in the
+# make(1) environment.
+# These should be tested with `== "no"' or `!= "no"' in makefiles.
+# The NO_* variables should only be set by makefiles.
+#
+
+#
+# Supported NO_* options (if defined, MK_* will be forced to "no",
+# regardless of user's setting).
+#
+.for var in \
+    INSTALLLIB \
+    MAN \
+    PROFILE
+.if defined(NO_${var})
+WITHOUT_${var}=
+.endif
+.endfor
+
+#
+# Compat NO_* options (same as above, except their use is deprecated).
+#
+.if !defined(BURN_BRIDGES)
+.for var in \
+    ACPI \
+    ATM \
+    AUDIT \
+    AUTHPF \
+    BIND \
+    BIND_DNSSEC \
+    BIND_ETC \
+    BIND_LIBS_LWRES \
+    BIND_MTREE \
+    BIND_NAMED \
+    BIND_UTILS \
+    BLUETOOTH \
+    BOOT \
+    CALENDAR \
+    CPP \
+    CRYPT \
+    CVS \
+    CXX \
+    DICT \
+    DYNAMICROOT \
+    EXAMPLES \
+    FORTH \
+    FP_LIBC \
+    GAMES \
+    GCOV \
+    GDB \
+    GNU \
+    GPIB \
+    GROFF \
+    HTML \
+    I4B \
+    INET6 \
+    INFO \
+    IPFILTER \
+    IPX \
+    KERBEROS \
+    LIB32 \
+    LIBPTHREAD \
+    LIBTHR \
+    LOCALES \
+    LPR \
+    MAILWRAPPER \
+    NETCAT \
+    NIS \
+    NLS \
+    NLS_CATALOGS \
+    NS_CACHING \
+    OBJC \
+    OPENSSH \
+    OPENSSL \
+    PAM \
+    PF \
+    RCMDS \
+    RCS \
+    RESCUE \
+    SENDMAIL \
+    SETUID_LOGIN \
+    SHAREDOCS \
+    SYSCONS \
+    TCSH \
+    TOOLCHAIN \
+    USB \
+    WPA_SUPPLICANT_EAPOL
+.if defined(NO_${var})
+#.warning NO_${var} is deprecated in favour of WITHOUT_${var}=
+WITHOUT_${var}=
+.endif
+.endfor
+.endif # !defined(BURN_BRIDGES)
+
+#
+# Older-style variables that enabled behaviour when set.
+#
+.if defined(YES_HESIOD)
+WITH_HESIOD=
+.endif
+.if defined(MAKE_IDEA)
+WITH_IDEA=
+.endif
+
+#
+# MK_* options which default to "yes".
+#
+.for var in \
+    ACPI \
+    ASSERT_DEBUG \
+    ATM \
+    AUDIT \
+    AUTHPF \
+    BIND \
+    BIND_DNSSEC \
+    BIND_ETC \
+    BIND_LIBS_LWRES \
+    BIND_MTREE \
+    BIND_NAMED \
+    BIND_UTILS \
+    BLUETOOTH \
+    BOOT \
+    BZIP2 \
+    CALENDAR \
+    CDDL \
+    CPP \
+    CRYPT \
+    CVS \
+    CXX \
+    DICT \
+    DYNAMICROOT \
+    EXAMPLES \
+    FORTH \
+    FP_LIBC \
+    GAMES \
+    GCOV \
+    GDB \
+    GNU \
+    GPIB \
+    GROFF \
+    HTML \
+    I4B \
+    INET6 \
+    INFO \
+    INSTALLLIB \
+    IPFILTER \
+    IPX \
+    KERBEROS \
+    KVM \
+    LIB32 \
+    LIBPTHREAD \
+    LIBKSE \
+    LIBTHR \
+    LOCALES \
+    LPR \
+    MAILWRAPPER \
+    MAN \
+    NCP \
+    NETCAT \
+    NIS \
+    NLS \
+    NLS_CATALOGS \
+    NS_CACHING \
+    OBJC \
+    OPENSSH \
+    OPENSSL \
+    PAM \
+    PF \
+    PROFILE \
+    RCMDS \
+    RCS \
+    RESCUE \
+    SENDMAIL \
+    SETUID_LOGIN \
+    SHAREDOCS \
+    SSP \
+    SYMVER \
+    SYSCONS \
+    TCSH \
+    TOOLCHAIN \
+    USB \
+    WPA_SUPPLICANT_EAPOL \
+    ZONEINFO \
+    ZFS
+.if defined(WITH_${var}) && defined(WITHOUT_${var})
+.error WITH_${var} and WITHOUT_${var} can't both be set.
+.endif
+.if defined(MK_${var})
+.error MK_${var} can't be set by a user.
+.endif
+.if defined(WITHOUT_${var})
+MK_${var}:=	no
+.else
+MK_${var}:=	yes
+.endif
+.endfor
+
+#
+# MK_* options which default to "no".
+#
+.for var in \
+    BIND_LIBS \
+    HESIOD \
+    IDEA
+.if defined(WITH_${var}) && defined(WITHOUT_${var})
+.error WITH_${var} and WITHOUT_${var} can't both be set.
+.endif
+.if defined(MK_${var})
+.error MK_${var} can't be set by a user.
+.endif
+.if defined(WITH_${var})
+MK_${var}:=	yes
+.else
+MK_${var}:=	no
+.endif
+.endfor
+
+#
+# Force some options off if their dependencies are off.
+# Order is somewhat important.
+#
+.if ${MK_LIBPTHREAD} == "no"
+MK_LIBKSE:=	no
+MK_LIBTHR:=	no
+.endif
+
+.if ${MK_LIBKSE} == "no" && ${MK_LIBTHR} == "no"
+MK_BIND:=	no
+.endif
+
+.if ${MK_BIND} == "no"
+MK_BIND_DNSSEC:= no
+MK_BIND_ETC:=	no
+MK_BIND_LIBS:=	no
+MK_BIND_LIBS_LWRES:= no
+MK_BIND_MTREE:=	no
+MK_BIND_NAMED:=	no
+MK_BIND_UTILS:=	no
+.endif
+
+.if ${MK_BIND_MTREE} == "no"
+MK_BIND_ETC:=	no
+.endif
+
+.if ${MK_CDDL} == "no"
+MK_ZFS:=	no
+.endif
+
+.if ${MK_CRYPT} == "no"
+MK_OPENSSL:=	no
+MK_OPENSSH:=	no
+MK_KERBEROS:=	no
+.endif
+
+.if ${MK_IPX} == "no"
+MK_NCP:=	no
+.endif
+
+.if ${MK_OPENSSL} == "no"
+MK_OPENSSH:=	no
+MK_KERBEROS:=	no
+.endif
+
+.if ${MK_PF} == "no"
+MK_AUTHPF:=	no
+.endif
+
+.if ${MK_TOOLCHAIN} == "no"
+MK_GDB:=	no
+.endif
+
+#
+# Set defaults for the MK_*_SUPPORT variables.
+#
+
+#
+# MK_*_SUPPORT options which default to "yes" unless their corresponding
+# MK_* variable is set to "no".
+#
+.for var in \
+    BZIP2 \
+    GNU \
+    INET6 \
+    IPX \
+    KERBEROS \
+    KVM \
+    PAM
+.if defined(WITH_${var}_SUPPORT) && defined(WITHOUT_${var}_SUPPORT)
+.error WITH_${var}_SUPPORT and WITHOUT_${var}_SUPPORT can't both be set.
+.endif
+.if defined(MK_${var}_SUPPORT)
+.error MK_${var}_SUPPORT can't be set by a user.
+.endif
+.if defined(WITHOUT_${var}_SUPPORT) || ${MK_${var}} == "no"
+MK_${var}_SUPPORT:= no
+.else
+MK_${var}_SUPPORT:= yes
+.endif
+.endfor
+
+#
+# MK_* options whose default value depends on another option.
+#
+.for vv in \
+    GSSAPI/KERBEROS
+.if defined(WITH_${vv:H}) && defined(WITHOUT_${vv:H})
+.error WITH_${vv:H} and WITHOUT_${vv:H} can't both be set.
+.endif
+.if defined(MK_${vv:H})
+.error MK_${vv:H} can't be set by a user.
+.endif
+.if defined(WITH_${vv:H})
+MK_${vv:H}:=	yes
+.elif defined(WITHOUT_${vv:H})
+MK_${vv:H}:=	no
+.else
+MK_${vv:H}:=	${MK_${vv:T}}
+.endif
+.endfor
+
+.endif # !_WITHOUT_SRCCONF
 
 .endif	# !target(__<bsd.own.mk>__)
