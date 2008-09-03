@@ -28,6 +28,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit.h#40
  * $FreeBSD: src/sys/bsm/audit.h,v 1.9.2.1 2007/11/04 12:50:40 rwatson Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _BSM_AUDIT_H

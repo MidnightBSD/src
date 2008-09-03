@@ -28,6 +28,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_kevents.h#34
  * $FreeBSD: src/sys/bsm/audit_kevents.h,v 1.12 2007/07/22 12:28:12 rwatson Exp $
+ * $MidnightBSD$
  */
 
 #ifndef _BSM_AUDIT_KEVENTS_H_
