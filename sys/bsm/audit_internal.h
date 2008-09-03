@@ -32,7 +32,6 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit_internal.h#18
  * $FreeBSD: src/sys/bsm/audit_internal.h,v 1.8 2007/07/22 12:28:12 rwatson Exp $
- * $MidnightBSD$
  */
 
 #ifndef _AUDIT_INTERNAL_H
