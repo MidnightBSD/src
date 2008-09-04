@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: if_nve.c,v 1.1.1.2 2006-02-25 02:36:50 laffer1 Exp $
+ * $Id: if_nve.c,v 1.2 2008-09-04 02:55:23 laffer1 Exp $
  */
 
 /*
@@ -521,7 +521,9 @@ nve_attach(device_t dev)
 	ifp->if_init = nve_init;
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_baudrate = IF_Mbps(100);
-	ifp->if_snd.ifq_maxlen = TX_RING_SIZE - 1;
+	IFQ_SET_MAXLEN(&ifp->if_snd, TX_RING_SIZE - 1);
+	ifp->if_snd.ifq_drv_maxlen = TX_RING_SIZE - 1;
+	IFQ_SET_READY(&ifp->if_snd);
 	ifp->if_capabilities |= IFCAP_VLAN_MTU;
 
 	/* Attach to OS's managers. */
@@ -861,11 +863,22 @@ nve_ifstart_locked(struct ifnet *ifp)
 		buf = &desc->buf;
 
 		/* Get next packet to send. */
-		IF_DEQUEUE(&ifp->if_snd, m0);
+		IFQ_DRV_DEQUEUE(&ifp->if_snd, m0);
 
 		/* If nothing to send, return. */
 		if (m0 == NULL)
 			return;
+
+		/*
+		 * On nForce4, the chip doesn't interrupt on transmit,
+		 * so try to flush transmitted packets from the queue
+		 * if it's getting large (see note in nve_watchdog).
+		 */
+		if (sc->pending_txs > TX_RING_SIZE/2) {
+			sc->hwapi->pfnDisableInterrupts(sc->hwapi->pADCX);
+			sc->hwapi->pfnHandleInterrupt(sc->hwapi->pADCX);
+			sc->hwapi->pfnEnableInterrupts(sc->hwapi->pADCX);
+		}
 
 		/* Map MBUF for DMA access */
 		error = bus_dmamap_load_mbuf(sc->mtag, buf->map, m0,
@@ -929,7 +942,7 @@ nve_ifstart_locked(struct ifnet *ifp)
 			    "nve_ifstart: transmit queue is full\n");
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 			bus_dmamap_unload(sc->mtag, buf->map);
-			IF_PREPEND(&ifp->if_snd, buf->mbuf);
+			IFQ_DRV_PREPEND(&ifp->if_snd, buf->mbuf);
 			buf->mbuf = NULL;
 			return;
 
@@ -1270,10 +1283,31 @@ static void
 nve_watchdog(struct ifnet *ifp)
 {
 	struct nve_softc *sc = ifp->if_softc;
+	int pending_txs_start;
+
+	NVE_LOCK(sc);
+
+	/*
+	 * The nvidia driver blob defers tx completion notifications.
+	 * Thus, sometimes the watchdog timer will go off when the
+	 * tx engine is fine, but the tx completions are just deferred.
+	 * Try kicking the driver blob to clear out any pending tx
+	 * completions.  If that clears up any of the pending tx
+	 * operations, then just return without printing the warning
+	 * message or resetting the adapter, as we can then conclude
+	 * the chip hasn't actually crashed (it's still sending packets).
+	 */
+	pending_txs_start = sc->pending_txs;
+	sc->hwapi->pfnDisableInterrupts(sc->hwapi->pADCX);
+	sc->hwapi->pfnHandleInterrupt(sc->hwapi->pADCX);
+	sc->hwapi->pfnEnableInterrupts(sc->hwapi->pADCX);
+	if (sc->pending_txs < pending_txs_start) {
+		NVE_UNLOCK(sc);
+		return;
+	}
 
 	device_printf(sc->dev, "device timeout (%d)\n", sc->pending_txs);
 
-	NVE_LOCK(sc);
 	sc->tx_errors++;
 
 	nve_stop(sc);
