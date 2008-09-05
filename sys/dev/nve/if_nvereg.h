@@ -24,8 +24,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $Id: if_nvereg.h,v 1.1.1.2 2006-02-25 02:36:50 laffer1 Exp $
- * $FreeBSD: src/sys/dev/nve/if_nvereg.h,v 1.3.2.1 2005/12/12 19:40:04 jhb Exp $
+ * $Id: if_nvereg.h,v 1.2 2008-09-05 19:02:59 laffer1 Exp $
+ * $FreeBSD: src/sys/dev/nve/if_nvereg.h,v 1.3.2.2.2.1 2006/12/07 22:28:52 jhb Exp $
  */
  
 #ifndef _IF_NVEREG_H_
@@ -46,12 +46,14 @@
 #define	NFORCE_MCPNET9_DEVICEID 0x0057
 #define	NFORCE_MCPNET10_DEVICEID 0x0037
 #define	NFORCE_MCPNET11_DEVICEID 0x0038 
+#define	NFORCE_MCPNET12_DEVICEID 0x0268
+#define	NFORCE_MCPNET13_DEVICEID 0x0269
 
 #define	NV_RID		0x10
 
 #define	TX_RING_SIZE	64
 #define	RX_RING_SIZE	64
-#define	NV_MAX_FRAGS	63
+#define	NV_MAX_FRAGS	32	// match adapter.h:ADAPTER_WRITE_DATA.sElement[]
 
 #define	FCS_LEN 4
 
@@ -104,7 +106,7 @@ struct nve_tx_desc {
 	struct nve_map_buffer buf;
 	u_int16_t buflength;
 	u_int32_t numfrags;
-	bus_dma_segment_t frags[NV_MAX_FRAGS + 1];
+	bus_dma_segment_t frags[NV_MAX_FRAGS];
 };
 
 struct nve_softc {

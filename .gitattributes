@@ -24732,6 +24732,7 @@ sys/contrib/dev/nve/basetype.h -text
 sys/contrib/dev/nve/drvinfo.h -text
 sys/contrib/dev/nve/i386/nvenetlib.README -text
 sys/contrib/dev/nve/i386/nvenetlib.o.bz2.uu -text
+sys/contrib/dev/nve/nvenet_version.h -text
 sys/contrib/dev/nve/os.h -text
 sys/contrib/dev/nve/phy.h -text
 sys/contrib/dev/oltr/COPYRIGHT -text

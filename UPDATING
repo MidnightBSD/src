@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080905:
+	update nve(4) to support new hardware.
+
 20080801:
 	Import OpenBSM 1.0
 
@@ -591,4 +594,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.41 2008/07/03 23:59:13 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.42 2008/09/02 02:02:36 laffer1 Exp $
