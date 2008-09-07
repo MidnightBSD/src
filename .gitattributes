@@ -15522,9 +15522,7 @@ etc/devfs.conf -text
 etc/dhclient.conf -text
 etc/disktab -text
 etc/etc.amd64/ttys -text
-etc/etc.arm/ttys -text
 etc/etc.i386/ttys -text
-etc/etc.ia64/ttys -text
 etc/etc.sparc64/ttys -text
 etc/fbtab -text
 etc/ftpusers -text
