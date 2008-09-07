@@ -13,7 +13,7 @@
 # references must include a dollar sign '$' in front of the
 # name to be expanded properly.
 #
-# $MidnightBSD: src/etc/defaults/devfs.rules,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
+# $MidnightBSD: src/etc/defaults/devfs.rules,v 1.3 2006/08/29 14:40:51 laffer1 Exp $
 # $FreeBSD: src/etc/defaults/devfs.rules,v 1.3 2004/01/22 20:53:15 cperciva Exp $
 #
 
@@ -65,3 +65,17 @@ add path stderr unhide
 add include $devfsrules_hide_all
 add include $devfsrules_unhide_basic
 add include $devfsrules_unhide_login
+
+# Devices end users like to access.
+[devfsrules_common=7]
+add path 'ad*' mode 666 group operator
+add path 'acd*' mode 666 group operator
+add path 'cd*' mode 666 group operator
+add path 'pass*' mode 666 group operator
+add path 'xpt*' mode 666 group operator
+add path 'ugen*' mode 666 group operator
+add path 'usb*' mode 666 group operator
+add path 'lpt*' mode 666 group cups
+add path 'ulpt*' mode 666 group cups
+add path 'unlpt*' mode 666 group cups
+add path 'fd*' mode 666 group operator
