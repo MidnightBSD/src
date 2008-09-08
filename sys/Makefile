@@ -1,11 +1,9 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/Makefile,v 1.3 2007/08/06 04:46:04 laffer1 Exp $
 # $FreeBSD: src/sys/Makefile,v 1.33 2005/03/08 00:09:41 grog Exp $
 
 # The boot loader
 .if !defined(NO_BOOT)
-.if ${MACHINE_ARCH} != "arm"
 SUBDIR=	boot
-.endif
 .endif
 
 # Directories to include in cscope name file and TAGS.
