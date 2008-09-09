@@ -20130,6 +20130,7 @@ libexec/ypxfr/ypxfr_main.c -text
 libexec/ypxfr/ypxfr_misc.c -text
 libexec/ypxfr/ypxfrd_getmap.c -text
 nrelease/Makefile -text
+nrelease/install-iso2img.sh -text
 nrelease/root/autorun.bat -text
 nrelease/root/autorun.inf -text
 nrelease/root/autorun.pif -text
