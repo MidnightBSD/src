@@ -64,7 +64,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_pager.c,v 1.105.2.1 2005/08/15 14:04:47 kan Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_pager.c,v 1.108 2007/08/05 21:04:32 alc Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -82,7 +82,7 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_pager.c,v 1.105.2.1 2005/08/15 14:04:47 kan Ex
 #include <vm/vm_pager.h>
 #include <vm/vm_extern.h>
 
-MALLOC_DEFINE(M_VMPGDATA, "VM pgdata", "XXX: VM pager private data");
+MALLOC_DEFINE(M_VMPGDATA, "vm_pgdata", "XXX: VM pager private data");
 
 int cluster_pbuf_freecnt = -1;	/* unlimited to begin with */
 
@@ -261,17 +261,29 @@ vm_pager_deallocate(object)
  * vm_pager_has_page() - inline, see vm/vm_pager.h
  */
 
+/*
+ * Search the specified pager object list for an object with the
+ * specified handle.  If an object with the specified handle is found,
+ * increase its reference count and return it.  Otherwise, return NULL.
+ *
+ * The pager object list must be locked.
+ */
 vm_object_t
-vm_pager_object_lookup(pg_list, handle)
-	struct pagerlst *pg_list;
-	void *handle;
+vm_pager_object_lookup(struct pagerlst *pg_list, void *handle)
 {
 	vm_object_t object;
 
-	TAILQ_FOREACH(object, pg_list, pager_object_list)
-		if (object->handle == handle)
-			return (object);
-	return (NULL);
+	TAILQ_FOREACH(object, pg_list, pager_object_list) {
+		VM_OBJECT_LOCK(object);
+		if (object->handle == handle &&
+		    (object->flags & OBJ_DEAD) == 0) {
+			vm_object_reference_locked(object);
+			VM_OBJECT_UNLOCK(object);
+			break;
+		}
+		VM_OBJECT_UNLOCK(object);
+	}
+	return (object);
 }
 
 /*

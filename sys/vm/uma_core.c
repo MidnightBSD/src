@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 2002, 2003, 2004, 2005 Jeffrey Roberson <jeff@FreeBSD.org>
  * Copyright (c) 2004, 2005 Bosko Milekic <bmilekic@FreeBSD.org>
- * Copyright (c) 2004-2005 Robert N. M. Watson
+ * Copyright (c) 2004-2006 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/uma_core.c,v 1.119.2.15 2006/02/14 03:37:58 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/uma_core.c,v 1.147.2.1 2007/10/18 18:45:17 jhb Exp $");
 
 /* I should really use ktr.. */
 /*
@@ -110,6 +110,9 @@ static uma_zone_t slabrefzone;	/* With refcounters (for UMA_ZONE_REFCNT) */
  * prior to malloc coming up.
  */
 static uma_zone_t hashzone;
+
+/* The boot-time adjusted value for cache line alignment. */
+static int uma_align_cache = 16 - 1;
 
 static MALLOC_DEFINE(M_UMAHASH, "UMAHash", "UMA Hash Buckets");
 
@@ -238,27 +241,21 @@ static void bucket_zone_drain(void);
 static int uma_zalloc_bucket(uma_zone_t zone, int flags);
 static uma_slab_t uma_zone_slab(uma_zone_t zone, int flags);
 static void *uma_slab_alloc(uma_zone_t zone, uma_slab_t slab);
-static void zone_drain(uma_zone_t);
 static uma_zone_t uma_kcreate(uma_zone_t zone, size_t size, uma_init uminit,
     uma_fini fini, int align, u_int32_t flags);
 
 void uma_print_zone(uma_zone_t);
 void uma_print_stats(void);
-static int sysctl_vm_zone(SYSCTL_HANDLER_ARGS);
 static int sysctl_vm_zone_count(SYSCTL_HANDLER_ARGS);
 static int sysctl_vm_zone_stats(SYSCTL_HANDLER_ARGS);
 
 #ifdef WITNESS
 static int nosleepwithlocks = 1;
-SYSCTL_INT(_debug, OID_AUTO, nosleepwithlocks, CTLFLAG_RW, &nosleepwithlocks,
-    0, "Convert M_WAITOK to M_NOWAIT to avoid lock-held-across-sleep paths");
 #else
 static int nosleepwithlocks = 0;
+#endif
 SYSCTL_INT(_debug, OID_AUTO, nosleepwithlocks, CTLFLAG_RW, &nosleepwithlocks,
     0, "Convert M_WAITOK to M_NOWAIT to avoid lock-held-across-sleep paths");
-#endif
-SYSCTL_OID(_vm, OID_AUTO, zone, CTLTYPE_STRING|CTLFLAG_RD,
-    NULL, 0, sysctl_vm_zone, "A", "Zone Info");
 SYSINIT(uma_startup3, SI_SUB_VM_CONF, SI_ORDER_SECOND, uma_startup3, NULL);
 
 SYSCTL_PROC(_vm, OID_AUTO, zone_count, CTLFLAG_RD|CTLTYPE_INT,
@@ -685,7 +682,7 @@ bucket_cache_drain(uma_zone_t zone)
  * Returns:
  *	Nothing.
  */
-static void
+void
 zone_drain(uma_zone_t zone)
 {
 	struct slabhead freeslabs = { 0 };
@@ -1713,10 +1710,19 @@ uma_kcreate(uma_zone_t zone, size_t size, uma_init uminit, uma_fini fini,
 	args.size = size;
 	args.uminit = uminit;
 	args.fini = fini;
-	args.align = align;
+	args.align = (align == UMA_ALIGN_CACHE) ? uma_align_cache : align;
 	args.flags = flags;
 	args.zone = zone;
 	return (uma_zalloc_internal(kegs, &args, M_WAITOK));
+}
+
+/* See uma.h */
+void
+uma_set_align(int align)
+{
+
+	if (align != UMA_ALIGN_CACHE)
+		uma_align_cache = align;
 }
 
 /* See uma.h */
@@ -1777,7 +1783,6 @@ uma_zalloc_arg(uma_zone_t zone, void *udata, int flags)
 	uma_cache_t cache;
 	uma_bucket_t bucket;
 	int cpu;
-	int badness;
 
 	/* This is the fast path allocation */
 #ifdef UMA_DEBUG_ALLOC_1
@@ -1786,29 +1791,9 @@ uma_zalloc_arg(uma_zone_t zone, void *udata, int flags)
 	CTR3(KTR_UMA, "uma_zalloc_arg thread %x zone %s flags %d", curthread,
 	    zone->uz_name, flags);
 
-	if (!(flags & M_NOWAIT)) {
-		KASSERT(curthread->td_intr_nesting_level == 0,
-		   ("malloc(M_WAITOK) in interrupt context"));
-		if (nosleepwithlocks) {
-#ifdef WITNESS
-			badness = WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK,
-			    NULL,
-			    "malloc(M_WAITOK) of \"%s\", forcing M_NOWAIT",
-			    zone->uz_name);
-#else
-			badness = 1;
-#endif
-		} else {
-			badness = 0;
-#ifdef WITNESS
-			WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL,
-			    "malloc(M_WAITOK) of \"%s\"", zone->uz_name);
-#endif
-		}
-		if (badness) {
-			flags &= ~M_WAITOK;
-			flags |= M_NOWAIT;
-		}
+	if (flags & M_WAITOK) {
+		WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL,
+		    "uma_zalloc_arg: zone \"%s\"", zone->uz_name);
 	}
 
 	/*
@@ -1981,7 +1966,7 @@ uma_zone_slab(uma_zone_t zone, int flags)
 	 * caller can't handle that. 
 	 */
 	if (keg->uk_flags & UMA_ZFLAG_INTERNAL && keg->uk_recurse != 0)
-		if ((zone != slabzone) && (zone != slabrefzone))
+		if (zone != slabzone && zone != slabrefzone && zone != zones)
 			return (NULL);
 
 	slab = NULL;
@@ -2417,8 +2402,7 @@ zfree_start:
 	 * If nothing else caught this, we'll just do an internal free.
 	 */
 zfree_internal:
-	uma_zfree_internal(zone, item, udata, SKIP_DTOR, ZFREE_STATFAIL |
-	    ZFREE_STATFREE);
+	uma_zfree_internal(zone, item, udata, SKIP_DTOR, ZFREE_STATFREE);
 
 	return;
 }
@@ -2502,8 +2486,13 @@ uma_zfree_internal(uma_zone_t zone, void *item, void *udata,
 		if (keg->uk_pages < keg->uk_maxpages)
 			keg->uk_flags &= ~UMA_ZFLAG_FULL;
 
-		/* We can handle one more allocation */
-		wakeup_one(keg);
+		/* 
+		 * We can handle one more allocation. Since we're clearing ZFLAG_FULL,
+		 * wake up all procs blocked on pages. This should be uncommon, so 
+		 * keeping this simple for now (rather than adding count of blocked 
+		 * threads etc).
+		 */
+		wakeup(keg);
 	}
 
 	ZONE_UNLOCK(zone);
@@ -2689,6 +2678,24 @@ uma_reclaim(void)
 	bucket_zone_drain();
 }
 
+/* See uma.h */
+int
+uma_zone_exhausted(uma_zone_t zone)
+{
+	int full;
+
+	ZONE_LOCK(zone);
+	full = (zone->uz_keg->uk_flags & UMA_ZFLAG_FULL);
+	ZONE_UNLOCK(zone);
+	return (full);	
+}
+
+int
+uma_zone_exhausted_nolock(uma_zone_t zone)
+{
+	return (zone->uz_keg->uk_flags & UMA_ZFLAG_FULL);
+}
+
 void *
 uma_large_malloc(int size, int wait)
 {
@@ -2776,6 +2783,7 @@ uma_print_zone(uma_zone_t zone)
 	}
 }
 
+#ifdef DDB
 /*
  * Generate statistics across both the zone and its per-cpu cache's.  Return
  * desired statistics if the pointer is non-NULL for that statistic.
@@ -2817,83 +2825,7 @@ uma_zone_sumstat(uma_zone_t z, int *cachefreep, u_int64_t *allocsp,
 	if (freesp != NULL)
 		*freesp = frees;
 }
-
-/*
- * Sysctl handler for vm.zone
- *
- * stolen from vm_zone.c
- */
-static int
-sysctl_vm_zone(SYSCTL_HANDLER_ARGS)
-{
-	int error, len, cnt;
-	const int linesize = 128;	/* conservative */
-	int totalfree;
-	char *tmpbuf, *offset;
-	uma_zone_t z;
-	uma_keg_t zk;
-	char *p;
-	int cachefree;
-	uma_bucket_t bucket;
-	u_int64_t allocs, frees;
-
-	cnt = 0;
-	mtx_lock(&uma_mtx);
-	LIST_FOREACH(zk, &uma_kegs, uk_link) {
-		LIST_FOREACH(z, &zk->uk_zones, uz_link)
-			cnt++;
-	}
-	mtx_unlock(&uma_mtx);
-	MALLOC(tmpbuf, char *, (cnt == 0 ? 1 : cnt) * linesize,
-			M_TEMP, M_WAITOK);
-	len = snprintf(tmpbuf, linesize,
-	    "\nITEM            SIZE     LIMIT     USED    FREE  REQUESTS\n\n");
-	if (cnt == 0)
-		tmpbuf[len - 1] = '\0';
-	error = SYSCTL_OUT(req, tmpbuf, cnt == 0 ? len-1 : len);
-	if (error || cnt == 0)
-		goto out;
-	offset = tmpbuf;
-	mtx_lock(&uma_mtx);
-	LIST_FOREACH(zk, &uma_kegs, uk_link) {
-	  LIST_FOREACH(z, &zk->uk_zones, uz_link) {
-		if (cnt == 0)	/* list may have changed size */
-			break;
-		ZONE_LOCK(z);
-		cachefree = 0;
-		if (!(zk->uk_flags & UMA_ZFLAG_INTERNAL)) {
-			uma_zone_sumstat(z, &cachefree, &allocs, &frees);
-		} else {
-			allocs = z->uz_allocs;
-			frees = z->uz_frees;
-		}
-
-		LIST_FOREACH(bucket, &z->uz_full_bucket, ub_link) {
-			cachefree += bucket->ub_cnt;
-		}
-		totalfree = zk->uk_free + cachefree;
-		len = snprintf(offset, linesize,
-		    "%-12.12s  %6.6u, %8.8u, %6.6u, %6.6u, %8.8llu\n",
-		    z->uz_name, zk->uk_size,
-		    zk->uk_maxpages * zk->uk_ipers,
-		    (zk->uk_ipers * (zk->uk_pages / zk->uk_ppera)) - totalfree,
-		    totalfree,
-		    (unsigned long long)allocs);
-		ZONE_UNLOCK(z);
-		for (p = offset + 12; p > offset && *p == ' '; --p)
-			/* nothing */ ;
-		p[1] = ':';
-		cnt--;
-		offset += len;
-	  }
-	}
-	mtx_unlock(&uma_mtx);
-	*offset++ = '\0';
-	error = SYSCTL_OUT(req, tmpbuf, offset - tmpbuf);
-out:
-	FREE(tmpbuf, M_TEMP);
-	return (error);
-}
+#endif /* DDB */
 
 static int
 sysctl_vm_zone_count(SYSCTL_HANDLER_ARGS)
@@ -3055,8 +2987,8 @@ DB_SHOW_COMMAND(uma, db_show_uma)
 	uma_zone_t z;
 	int cachefree;
 
-	db_printf("%18s %12s %12s %12s %8s\n", "Zone", "Allocs", "Frees",
-	    "Used", "Cache");
+	db_printf("%18s %8s %8s %8s %12s\n", "Zone", "Size", "Used", "Free",
+	    "Requests");
 	LIST_FOREACH(kz, &uma_kegs, uk_link) {
 		LIST_FOREACH(z, &kz->uk_zones, uz_link) {
 			if (kz->uk_flags & UMA_ZFLAG_INTERNAL) {
@@ -3071,8 +3003,10 @@ DB_SHOW_COMMAND(uma, db_show_uma)
 				cachefree += kz->uk_free;
 			LIST_FOREACH(bucket, &z->uz_full_bucket, ub_link)
 				cachefree += bucket->ub_cnt;
-			db_printf("%18s %12ju %12ju %12ju %8d\n", z->uz_name,
-			    allocs, frees, allocs - frees, cachefree);
+			db_printf("%18s %8ju %8jd %8d %12ju\n", z->uz_name,
+			    (uintmax_t)kz->uk_size,
+			    (intmax_t)(allocs - frees), cachefree,
+			    (uintmax_t)allocs);
 		}
 	}
 }

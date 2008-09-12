@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_page.h,v 1.136.2.1 2005/08/15 09:02:01 rwatson Exp $
+ * $FreeBSD: src/sys/vm/vm_page.h,v 1.152 2007/09/27 04:21:59 alc Exp $
  */
 
 /*
@@ -66,10 +66,6 @@
 
 #ifndef	_VM_PAGE_
 #define	_VM_PAGE_
-
-#if !defined(KLD_MODULE) && !defined(LIBMEMSTAT)
-#include "opt_vmpage.h"
-#endif
 
 #include <vm/pmap.h>
 
@@ -114,12 +110,15 @@ struct vm_page {
 	vm_pindex_t pindex;		/* offset into object (O,P) */
 	vm_paddr_t phys_addr;		/* physical address of page */
 	struct md_page md;		/* machine dependant stuff */
-	u_short	queue;			/* page queue index */
-	u_short	flags,			/* see below */
-		pc;			/* page color */
+	uint8_t	queue;			/* page queue index */
+	int8_t segind;  
+	u_short	flags;			/* see below */
+	uint8_t	order;			/* index of the buddy queue */
+	uint8_t pool;
 	u_short wire_count;		/* wired down maps refs (P) */
 	u_int cow;			/* page cow mapping count */
 	short hold_count;		/* page hold count */
+	u_short oflags;			/* page flags (O) */
 	u_char	act_count;		/* page usage count */
 	u_char	busy;			/* page busy count (O) */
 	/* NOTE that these must support one bit per DEV_BSIZE in a page!!! */
@@ -139,6 +138,18 @@ struct vm_page {
 #endif
 };
 
+/*
+ * Page flags stored in oflags:
+ *
+ * Access to these page flags is synchronized by the lock on the object
+ * containing the page (O).
+ */
+#define	VPO_BUSY	0x0001	/* page is in transit */
+#define	VPO_WANTED	0x0002	/* someone is waiting for page */
+#define	VPO_CLEANCHK	0x0100	/* page will be checked for cleaning */
+#define	VPO_SWAPINPROG	0x0200	/* swap I/O in progress on page */
+#define	VPO_NOSYNC	0x0400	/* do not collect for syncer */
+
 /* Make sure that u_long is at least 64 bits when PAGE_SIZE is 32K. */
 #if PAGE_SIZE == 32768
 #ifdef CTASSERT
@@ -146,81 +157,32 @@ CTASSERT(sizeof(u_long) >= 8);
 #endif
 #endif
 
-#if !defined(KLD_MODULE)
-/*
- * Page coloring parameters
- */
+#define PQ_NONE		0
+#define	PQ_INACTIVE	1
+#define	PQ_ACTIVE	2
+#define	PQ_HOLD		3
+#define	PQ_COUNT	4
+#define	PQ_MAXCOUNT	4
 
-/* Backward compatibility for existing PQ_*CACHE config options. */
-#if !defined(PQ_CACHESIZE)
-#if defined(PQ_HUGECACHE)
-#define PQ_CACHESIZE 1024
-#elif defined(PQ_LARGECACHE)
-#define PQ_CACHESIZE 512
-#elif defined(PQ_MEDIUMCACHE)
-#define PQ_CACHESIZE 256
-#elif defined(PQ_NORMALCACHE)
-#define PQ_CACHESIZE 64
-#elif defined(PQ_NOOPT)
-#define PQ_CACHESIZE 0
-#else
-#define PQ_CACHESIZE 128
-#endif
-#endif			/* !defined(PQ_CACHESIZE) */
+/* Returns the real queue a page is on. */
+#define VM_PAGE_GETQUEUE(m)	((m)->queue)
 
-#if PQ_CACHESIZE >= 1024
-#define PQ_PRIME1 31	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_PRIME2 23	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_L2_SIZE 256	/* A number of colors opt for 1M cache */
+/* Returns the well known queue a page is on. */
+#define VM_PAGE_GETKNOWNQUEUE2(m)	VM_PAGE_GETQUEUE(m)
 
-#elif PQ_CACHESIZE >= 512
-#define PQ_PRIME1 31	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_PRIME2 23	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_L2_SIZE 128	/* A number of colors opt for 512K cache */
+/* Returns true if the page is in the named well known queue. */
+#define VM_PAGE_INQUEUE2(m, q)	(VM_PAGE_GETKNOWNQUEUE2(m) == (q))
 
-#elif PQ_CACHESIZE >= 256
-#define PQ_PRIME1 13	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_PRIME2 7	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_L2_SIZE 64	/* A number of colors opt for 256K cache */
-
-#elif PQ_CACHESIZE >= 128
-#define PQ_PRIME1 9	/* Produces a good PQ_L2_SIZE/3 + PQ_PRIME1 */
-#define PQ_PRIME2 5	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_L2_SIZE 32	/* A number of colors opt for 128k cache */
-
-#elif PQ_CACHESIZE >= 64
-#define PQ_PRIME1 5	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_PRIME2 3	/* Prime number somewhat less than PQ_L2_SIZE */
-#define PQ_L2_SIZE 16	/* A reasonable number of colors (opt for 64K cache) */
-
-#else
-#define PQ_PRIME1 1	/* Disable page coloring. */
-#define PQ_PRIME2 1
-#define PQ_L2_SIZE 1
-
-#endif
-
-#define PQ_L2_MASK (PQ_L2_SIZE - 1)
-
-/* PQ_CACHE and PQ_FREE represent PQ_L2_SIZE consecutive queues. */
-#define PQ_NONE 0
-#define PQ_FREE	1
-#define PQ_INACTIVE (1 + 1*PQ_L2_SIZE)
-#define PQ_ACTIVE (2 + 1*PQ_L2_SIZE)
-#define PQ_CACHE (3 + 1*PQ_L2_SIZE)
-#define PQ_HOLD  (3 + 2*PQ_L2_SIZE)
-#define PQ_COUNT (4 + 2*PQ_L2_SIZE)
+/* Sets the queue a page is on. */
+#define VM_PAGE_SETQUEUE2(m, q)	(VM_PAGE_GETQUEUE(m) = (q))
 
 struct vpgqueues {
 	struct pglist pl;
 	int	*cnt;
-	int	lcnt;
 };
 
-extern struct vpgqueues vm_page_queues[PQ_COUNT];
+extern struct vpgqueues vm_page_queues[PQ_MAXCOUNT];
 extern struct mtx vm_page_queue_free_mtx;
-
-#endif			/* !defined(KLD_MODULE) */
 
 /*
  * These are the flags defined for vm_page.
@@ -232,16 +194,13 @@ extern struct mtx vm_page_queue_free_mtx;
  *	 pte mappings, nor can they be removed from their objects via 
  *	 the object, and such pages are also not on any PQ queue.
  */
-#define	PG_BUSY		0x0001		/* page is in transit (O) */
-#define	PG_WANTED	0x0002		/* someone is waiting for page (O) */
+#define	PG_CACHED	0x0001		/* page is cached */
+#define	PG_FREE		0x0002		/* page is free */
 #define PG_WINATCFLS	0x0004		/* flush dirty page on inactive q */
 #define	PG_FICTITIOUS	0x0008		/* physical page doesn't exist (O) */
 #define	PG_WRITEABLE	0x0010		/* page is mapped writeable */
 #define	PG_ZERO		0x0040		/* page is zeroed */
 #define PG_REFERENCED	0x0080		/* page has been referenced */
-#define PG_CLEANCHK	0x0100		/* page will be checked for cleaning */
-#define PG_SWAPINPROG	0x0200		/* swap I/O in progress on page	     */
-#define PG_NOSYNC	0x0400		/* do not collect for syncer */
 #define PG_UNMANAGED	0x0800		/* No PV management for page */
 #define PG_MARKER	0x1000		/* special queue marker page */
 #define	PG_SLAB		0x2000		/* object pointer is actually a slab */
@@ -255,18 +214,24 @@ extern struct mtx vm_page_queue_free_mtx;
 #define ACT_MAX			64
 
 #ifdef _KERNEL
+
+#include <vm/vm_param.h>
+
 /*
- * Each pageable resident page falls into one of four lists:
+ * Each pageable resident page falls into one of five lists:
  *
  *	free
  *		Available for allocation now.
  *
- * The following are all LRU sorted:
- *
  *	cache
- *		Almost available for allocation. Still in an
- *		object, but clean and immediately freeable at
- *		non-interrupt times.
+ *		Almost available for allocation. Still associated with
+ *		an object, but clean and immediately freeable.
+ *
+ *	hold
+ *		Will become free after a pending I/O operation
+ *		completes.
+ *
+ * The following lists are LRU sorted:
  *
  *	inactive
  *		Low activity, candidates for reclamation.
@@ -277,9 +242,6 @@ extern struct mtx vm_page_queue_free_mtx;
  *		Pages that are "active" i.e. they have been
  *		recently referenced.
  *
- *	zero
- *		Pages that are really free and have been pre-zeroed
- *
  */
 
 extern int vm_page_zero_count;
@@ -288,10 +250,25 @@ extern vm_page_t vm_page_array;		/* First resident page in table */
 extern int vm_page_array_size;		/* number of vm_page_t's */
 extern long first_page;			/* first physical page number */
 
+#define	VM_PAGE_IS_FREE(m)	(((m)->flags & PG_FREE) != 0)
+
 #define VM_PAGE_TO_PHYS(entry)	((entry)->phys_addr)
 
-#define PHYS_TO_VM_PAGE(pa) \
-		(&vm_page_array[atop(pa) - first_page ])
+vm_page_t vm_phys_paddr_to_vm_page(vm_paddr_t pa);
+
+static __inline vm_page_t PHYS_TO_VM_PAGE(vm_paddr_t pa);
+
+static __inline vm_page_t
+PHYS_TO_VM_PAGE(vm_paddr_t pa)
+{
+#ifdef VM_PHYSSEG_SPARSE
+	return (vm_phys_paddr_to_vm_page(pa));
+#elif defined(VM_PHYSSEG_DENSE)
+	return (&vm_page_array[atop(pa) - first_page]);
+#else
+#error "Either VM_PHYSSEG_DENSE or VM_PHYSSEG_SPARSE must be defined."
+#endif
+}
 
 extern struct mtx vm_page_queue_mtx;
 #define vm_page_lock_queues()   mtx_lock(&vm_page_queue_mtx)
@@ -318,6 +295,8 @@ extern struct mtx vm_page_queue_mtx;
 #define	VM_ALLOC_RETRY		0x0080	/* vm_page_grab() only */
 #define	VM_ALLOC_NOOBJ		0x0100	/* No associated object */
 #define	VM_ALLOC_NOBUSY		0x0200	/* Do not busy the page */
+#define	VM_ALLOC_IFCACHED	0x0400	/* Fail if the page is not cached */
+#define	VM_ALLOC_IFNOTCACHED	0x0800	/* Fail if the page is cached */
 
 void vm_page_flag_set(vm_page_t m, unsigned short bits);
 void vm_page_flag_clear(vm_page_t m, unsigned short bits);
@@ -329,25 +308,21 @@ void vm_page_hold(vm_page_t mem);
 void vm_page_unhold(vm_page_t mem);
 void vm_page_free(vm_page_t m);
 void vm_page_free_zero(vm_page_t m);
-int vm_page_sleep_if_busy(vm_page_t m, int also_m_busy, const char *msg);
 void vm_page_dirty(vm_page_t m);
 void vm_page_wakeup(vm_page_t m);
 
 void vm_pageq_init(void);
-vm_page_t vm_pageq_add_new_page(vm_paddr_t pa);
 void vm_pageq_enqueue(int queue, vm_page_t m);
-void vm_pageq_remove_nowakeup(vm_page_t m);
 void vm_pageq_remove(vm_page_t m);
-vm_page_t vm_pageq_find(int basequeue, int index, boolean_t prefer_zero);
 void vm_pageq_requeue(vm_page_t m);
 
 void vm_page_activate (vm_page_t);
 vm_page_t vm_page_alloc (vm_object_t, vm_pindex_t, int);
-vm_page_t vm_page_alloc_contig (vm_pindex_t, vm_paddr_t, vm_paddr_t,
-	    vm_offset_t, vm_offset_t);
-void vm_page_release_contig (vm_page_t, vm_pindex_t);
 vm_page_t vm_page_grab (vm_object_t, vm_pindex_t, int);
 void vm_page_cache (register vm_page_t);
+void vm_page_cache_free(vm_object_t, vm_pindex_t, vm_pindex_t);
+void vm_page_cache_remove(vm_page_t);
+void vm_page_cache_transfer(vm_object_t, vm_pindex_t, vm_object_t);
 int vm_page_try_to_cache (vm_page_t);
 int vm_page_try_to_free (vm_page_t);
 void vm_page_dontneed (register vm_page_t);
@@ -356,10 +331,9 @@ void vm_page_insert (vm_page_t, vm_object_t, vm_pindex_t);
 vm_page_t vm_page_lookup (vm_object_t, vm_pindex_t);
 void vm_page_remove (vm_page_t);
 void vm_page_rename (vm_page_t, vm_object_t, vm_pindex_t);
-vm_page_t vm_page_select_cache(int);
+void vm_page_sleep(vm_page_t m, const char *msg);
 vm_page_t vm_page_splay(vm_pindex_t, vm_page_t);
 vm_offset_t vm_page_startup(vm_offset_t vaddr);
-void vm_page_unmanage (vm_page_t);
 void vm_page_unwire (vm_page_t, int);
 void vm_page_wire (vm_page_t);
 void vm_page_set_validclean (vm_page_t, int, int);
@@ -374,6 +348,27 @@ void vm_page_zero_idle_wakeup(void);
 void vm_page_cowfault (vm_page_t);
 void vm_page_cowsetup (vm_page_t);
 void vm_page_cowclear (vm_page_t);
+
+/*
+ *	vm_page_sleep_if_busy:
+ *
+ *	Sleep and release the page queues lock if VPO_BUSY is set or,
+ *	if also_m_busy is TRUE, busy is non-zero.  Returns TRUE if the
+ *	thread slept and the page queues lock was released.
+ *	Otherwise, retains the page queues lock and returns FALSE.
+ *
+ *	The object containing the given page must be locked.
+ */
+static __inline int
+vm_page_sleep_if_busy(vm_page_t m, int also_m_busy, const char *msg)
+{
+
+	if ((m->oflags & VPO_BUSY) || (also_m_busy && m->busy)) {
+		vm_page_sleep(m, msg);
+		return (TRUE);
+	}
+	return (FALSE);
+}
 
 /*
  *	vm_page_undirty:

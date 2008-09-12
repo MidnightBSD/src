@@ -60,12 +60,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.43.2.3.2.1 2006/04/25 15:29:50 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.63 2007/09/25 06:25:06 alc Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
+#include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/kernel.h>
@@ -83,6 +84,7 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_contig.c,v 1.43.2.3.2.1 2006/04/25 15:29:50 sc
 #include <vm/vm_page.h>
 #include <vm/vm_pageout.h>
 #include <vm/vm_pager.h>
+#include <vm/vm_phys.h>
 #include <vm/vm_extern.h>
 
 static int
@@ -92,6 +94,7 @@ vm_contig_launder_page(vm_page_t m)
 	vm_page_t m_tmp;
 	struct vnode *vp;
 	struct mount *mp;
+	int vfslocked;
 
 	object = m->object;
 	if (!VM_OBJECT_TRYLOCK(object))
@@ -115,11 +118,13 @@ vm_contig_launder_page(vm_page_t m)
 			vm_object_reference_locked(object);
 			VM_OBJECT_UNLOCK(object);
 			(void) vn_start_write(vp, &mp, V_WAIT);
+			vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
 			VM_OBJECT_LOCK(object);
 			vm_object_page_clean(object, 0, 0, OBJPC_SYNC);
 			VM_OBJECT_UNLOCK(object);
 			VOP_UNLOCK(vp, 0, curthread);
+			VFS_UNLOCK_GIANT(vfslocked);
 			vm_object_deallocate(object);
 			vn_finished_write(mp);
 			vm_page_lock_queues();
@@ -150,7 +155,7 @@ vm_contig_launder(int queue)
 		if ((m->flags & PG_MARKER) != 0)
 			continue;
 
-		KASSERT(m->queue == queue,
+		KASSERT(VM_PAGE_INQUEUE2(m, queue),
 		    ("vm_contig_launder: page %p's queue is not %d", m, queue));
 		error = vm_contig_launder_page(m);
 		if (error == 0)
@@ -159,191 +164,6 @@ vm_contig_launder(int queue)
 			return (FALSE);
 	}
 	return (FALSE);
-}
-
-/*
- * This interface is for merging with malloc() someday.
- * Even if we never implement compaction so that contiguous allocation
- * works after initialization time, malloc()'s data structures are good
- * for statistics and for allocations of less than a page.
- */
-static void *
-contigmalloc1(
-	unsigned long size,	/* should be size_t here and for malloc() */
-	struct malloc_type *type,
-	int flags,
-	vm_paddr_t low,
-	vm_paddr_t high,
-	unsigned long alignment,
-	unsigned long boundary,
-	vm_map_t map)
-{
-	int i, start;
-	vm_paddr_t phys;
-	vm_object_t object;
-	vm_offset_t addr, tmp_addr;
-	int pass, pqtype;
-	int inactl, actl, inactmax, actmax;
-	vm_page_t pga = vm_page_array;
-
-	size = round_page(size);
-	if (size == 0)
-		panic("contigmalloc1: size must not be 0");
-	if ((alignment & (alignment - 1)) != 0)
-		panic("contigmalloc1: alignment must be a power of 2");
-	if ((boundary & (boundary - 1)) != 0)
-		panic("contigmalloc1: boundary must be a power of 2");
-
-	start = 0;
-	for (pass = 2; pass >= 0; pass--) {
-		vm_page_lock_queues();
-again0:
-		mtx_lock_spin(&vm_page_queue_free_mtx);
-again:
-		/*
-		 * Find first page in array that is free, within range,
-		 * aligned, and such that the boundary won't be crossed.
-		 */
-		for (i = start; i < cnt.v_page_count; i++) {
-			phys = VM_PAGE_TO_PHYS(&pga[i]);
-			pqtype = pga[i].queue - pga[i].pc;
-			if (((pqtype == PQ_FREE) || (pqtype == PQ_CACHE)) &&
-			    (phys >= low) && (phys < high) &&
-			    ((phys & (alignment - 1)) == 0) &&
-			    (((phys ^ (phys + size - 1)) & ~(boundary - 1)) == 0))
-				break;
-		}
-
-		/*
-		 * If the above failed or we will exceed the upper bound, fail.
-		 */
-		if ((i == cnt.v_page_count) ||
-			((VM_PAGE_TO_PHYS(&pga[i]) + size) > high)) {
-			mtx_unlock_spin(&vm_page_queue_free_mtx);
-			/*
-			 * Instead of racing to empty the inactive/active
-			 * queues, give up, even with more left to free,
-			 * if we try more than the initial amount of pages.
-			 *
-			 * There's no point attempting this on the last pass.
-			 */
-			if (pass > 0) {
-				inactl = actl = 0;
-				inactmax = vm_page_queues[PQ_INACTIVE].lcnt;
-				actmax = vm_page_queues[PQ_ACTIVE].lcnt;
-again1:
-				if (inactl < inactmax &&
-				    vm_contig_launder(PQ_INACTIVE)) {
-					inactl++;
-					goto again1;
-				}
-				if (actl < actmax &&
-				    vm_contig_launder(PQ_ACTIVE)) {
-					actl++;
-					goto again1;
-				}
-			}
-			vm_page_unlock_queues();
-			continue;
-		}
-		start = i;
-
-		/*
-		 * Check successive pages for contiguous and free.
-		 */
-		for (i = start + 1; i < (start + size / PAGE_SIZE); i++) {
-			pqtype = pga[i].queue - pga[i].pc;
-			if ((VM_PAGE_TO_PHYS(&pga[i]) !=
-			    (VM_PAGE_TO_PHYS(&pga[i - 1]) + PAGE_SIZE)) ||
-			    ((pqtype != PQ_FREE) && (pqtype != PQ_CACHE))) {
-				start++;
-				goto again;
-			}
-		}
-		mtx_unlock_spin(&vm_page_queue_free_mtx);
-		for (i = start; i < (start + size / PAGE_SIZE); i++) {
-			vm_page_t m = &pga[i];
-
-			if ((m->queue - m->pc) == PQ_CACHE) {
-				if (m->hold_count != 0) {
-					start++;
-					goto again0;
-				}
-				object = m->object;
-				if (!VM_OBJECT_TRYLOCK(object)) {
-					start++;
-					goto again0;
-				}
-				if ((m->flags & PG_BUSY) || m->busy != 0) {
-					VM_OBJECT_UNLOCK(object);
-					start++;
-					goto again0;
-				}
-				vm_page_free(m);
-				VM_OBJECT_UNLOCK(object);
-			}
-		}
-		mtx_lock_spin(&vm_page_queue_free_mtx);
-		for (i = start; i < (start + size / PAGE_SIZE); i++) {
-			pqtype = pga[i].queue - pga[i].pc;
-			if (pqtype != PQ_FREE) {
-				start++;
-				goto again;
-			}
-		}
-		for (i = start; i < (start + size / PAGE_SIZE); i++) {
-			vm_page_t m = &pga[i];
-			vm_pageq_remove_nowakeup(m);
-			m->valid = VM_PAGE_BITS_ALL;
-			if (m->flags & PG_ZERO)
-				vm_page_zero_count--;
-			/* Don't clear the PG_ZERO flag, we'll need it later. */
-			m->flags = PG_UNMANAGED | (m->flags & PG_ZERO);
-			KASSERT(m->dirty == 0,
-			    ("contigmalloc1: page %p was dirty", m));
-			m->wire_count = 0;
-			m->busy = 0;
-		}
-		mtx_unlock_spin(&vm_page_queue_free_mtx);
-		vm_page_unlock_queues();
-		/*
-		 * We've found a contiguous chunk that meets are requirements.
-		 * Allocate kernel VM, unfree and assign the physical pages to
-		 * it and return kernel VM pointer.
-		 */
-		vm_map_lock(map);
-		if (vm_map_findspace(map, vm_map_min(map), size, &addr) !=
-		    KERN_SUCCESS) {
-			/*
-			 * XXX We almost never run out of kernel virtual
-			 * space, so we don't make the allocated memory
-			 * above available.
-			 */
-			vm_map_unlock(map);
-			return (NULL);
-		}
-		vm_object_reference(kernel_object);
-		vm_map_insert(map, kernel_object, addr - VM_MIN_KERNEL_ADDRESS,
-		    addr, addr + size, VM_PROT_ALL, VM_PROT_ALL, 0);
-		vm_map_unlock(map);
-
-		tmp_addr = addr;
-		VM_OBJECT_LOCK(kernel_object);
-		for (i = start; i < (start + size / PAGE_SIZE); i++) {
-			vm_page_t m = &pga[i];
-			vm_page_insert(m, kernel_object,
-				OFF_TO_IDX(tmp_addr - VM_MIN_KERNEL_ADDRESS));
-			if ((flags & M_ZERO) && !(m->flags & PG_ZERO))
-				pmap_zero_page(m);
-			tmp_addr += PAGE_SIZE;
-		}
-		VM_OBJECT_UNLOCK(kernel_object);
-		vm_map_wire(map, addr, addr + size,
-		    VM_MAP_WIRE_SYSTEM|VM_MAP_WIRE_NOHOLES);
-
-		return ((void *)addr);
-	}
-	return (NULL);
 }
 
 static void
@@ -355,168 +175,12 @@ vm_page_release_contigl(vm_page_t m, vm_pindex_t count)
 	}
 }
 
-void
+static void
 vm_page_release_contig(vm_page_t m, vm_pindex_t count)
 {
 	vm_page_lock_queues();
 	vm_page_release_contigl(m, count);
 	vm_page_unlock_queues();
-}
-
-static int
-vm_contig_unqueue_free(vm_page_t m)
-{
-	int error = 0;
-
-	mtx_lock_spin(&vm_page_queue_free_mtx);
-	if ((m->queue - m->pc) == PQ_FREE)
-		vm_pageq_remove_nowakeup(m);
-	else
-		error = EAGAIN;
-	mtx_unlock_spin(&vm_page_queue_free_mtx);
-	if (error)
-		return (error);
-	m->valid = VM_PAGE_BITS_ALL;
-	if (m->flags & PG_ZERO)
-		vm_page_zero_count--;
-	/* Don't clear the PG_ZERO flag; we'll need it later. */
-	m->flags = PG_UNMANAGED | (m->flags & PG_ZERO);
-	KASSERT(m->dirty == 0,
-	    ("contigmalloc2: page %p was dirty", m));
-	m->wire_count = 0;
-	m->busy = 0;
-	return (error);
-}
-
-vm_page_t
-vm_page_alloc_contig(vm_pindex_t npages, vm_paddr_t low, vm_paddr_t high,
-	    vm_offset_t alignment, vm_offset_t boundary)
-{
-	vm_object_t object;
-	vm_offset_t size;
-	vm_paddr_t phys;
-	vm_page_t pga = vm_page_array;
-	int i, pass, pqtype, start;
-
-	size = npages << PAGE_SHIFT;
-	if (size == 0)
-		panic("vm_page_alloc_contig: size must not be 0");
-	if ((alignment & (alignment - 1)) != 0)
-		panic("vm_page_alloc_contig: alignment must be a power of 2");
-	if ((boundary & (boundary - 1)) != 0)
-		panic("vm_page_alloc_contig: boundary must be a power of 2");
-
-	for (pass = 0; pass < 2; pass++) {
-		if (atop(high) < vm_page_array_size)
-			start = atop(high) - npages + 1;
-		else
-			start = vm_page_array_size - npages + 1;
-		vm_page_lock_queues();
-retry:
-		start--;
-		/*
-		 * Find last page in array that is free, within range,
-		 * aligned, and such that the boundary won't be crossed.
-		 */
-		for (i = start; i >= 0; i--) {
-			phys = VM_PAGE_TO_PHYS(&pga[i]);
-			pqtype = pga[i].queue - pga[i].pc;
-			if (pass == 0) {
-				if (pqtype != PQ_FREE && pqtype != PQ_CACHE)
-					continue;
-			} else if (pqtype != PQ_FREE && pqtype != PQ_CACHE &&
-				    pga[i].queue != PQ_ACTIVE &&
-				    pga[i].queue != PQ_INACTIVE)
-				continue;
-			if (phys >= low && phys + size <= high &&
-			    ((phys & (alignment - 1)) == 0) &&
-			    ((phys ^ (phys + size - 1)) & ~(boundary - 1)) == 0)
-				break;
-		}
-		/* There are no candidates at all. */
-		if (i == -1) {
-			vm_page_unlock_queues();
-			continue;
-		}
-		start = i;
-		/*
-		 * Check successive pages for contiguous and free.
-		 */
-		for (i = start + npages - 1; i > start; i--) {
-			pqtype = pga[i].queue - pga[i].pc;
-			if (VM_PAGE_TO_PHYS(&pga[i]) !=
-			    VM_PAGE_TO_PHYS(&pga[i - 1]) + PAGE_SIZE) {
-				start = i - npages + 1;
-				goto retry;
-			}
-			if (pass == 0) {
-				if (pqtype != PQ_FREE && pqtype != PQ_CACHE) {
-					start = i - npages + 1;
-					goto retry;
-				}
-			} else if (pqtype != PQ_FREE && pqtype != PQ_CACHE &&
-				    pga[i].queue != PQ_ACTIVE &&
-				    pga[i].queue != PQ_INACTIVE) {
-				start = i - npages + 1;
-				goto retry;
-			}
-		}
-		for (i = start + npages - 1; i >= start; i--) {
-			vm_page_t m = &pga[i];
-
-retry_page:
-			pqtype = m->queue - m->pc;
-			if (pass != 0 && pqtype != PQ_FREE &&
-			    pqtype != PQ_CACHE) {
-				switch (m->queue) {
-				case PQ_ACTIVE:
-				case PQ_INACTIVE:
-					if (vm_contig_launder_page(m) != 0)
-						goto cleanup_freed;
-					pqtype = m->queue - m->pc;
-					if (pqtype == PQ_FREE ||
-					    pqtype == PQ_CACHE)
-						break;
-				default:
-cleanup_freed:
-					vm_page_release_contigl(&pga[i + 1],
-					    start + npages - 1 - i);
-					start = i - npages + 1;
-					goto retry;
-				}
-			}
-			if (pqtype == PQ_CACHE) {
-				if (m->hold_count != 0) {
-					start = i - npages + 1;
-					goto retry;
-				}
-				object = m->object;
-				if (!VM_OBJECT_TRYLOCK(object)) {
-					start = i - npages + 1;
-					goto retry;
-				}
-				if ((m->flags & PG_BUSY) || m->busy != 0) {
-					VM_OBJECT_UNLOCK(object);
-					start = i - npages + 1;
-					goto retry;
-				}
-				vm_page_free(m);
-				VM_OBJECT_UNLOCK(object);
-			}
-			/*
-			 * There is no good API for freeing a page
-			 * directly to PQ_NONE on our behalf, so spin.
-			 */
-			if (vm_contig_unqueue_free(m) != 0)
-				goto retry_page;
-		}
-		vm_page_unlock_queues();
-		/*
-		 * We've found a contiguous chunk that meets are requirements.
-		 */
-		return (&pga[start]);
-	}
-	return (NULL);
 }
 
 static void *
@@ -546,7 +210,7 @@ contigmalloc2(vm_page_t m, vm_pindex_t npages, int flags)
 	for (i = 0; i < npages; i++) {
 		vm_page_insert(&m[i], object,
 		    OFF_TO_IDX(tmp_addr - VM_MIN_KERNEL_ADDRESS));
-		if ((flags & M_ZERO) && !(m->flags & PG_ZERO))
+		if ((flags & M_ZERO) && !(m[i].flags & PG_ZERO))
 			pmap_zero_page(&m[i]);
 		tmp_addr += PAGE_SIZE;
 	}
@@ -555,11 +219,6 @@ contigmalloc2(vm_page_t m, vm_pindex_t npages, int flags)
 	    VM_MAP_WIRE_SYSTEM | VM_MAP_WIRE_NOHOLES);
 	return ((void *)addr);
 }
-
-static int vm_old_contigmalloc = 0;
-SYSCTL_INT(_vm, OID_AUTO, old_contigmalloc,
-    CTLFLAG_RW, &vm_old_contigmalloc, 0, "Use the old contigmalloc algorithm");
-TUNABLE_INT("vm.old_contigmalloc", &vm_old_contigmalloc);
 
 void *
 contigmalloc(
@@ -573,26 +232,41 @@ contigmalloc(
 {
 	void * ret;
 	vm_page_t pages;
-	vm_pindex_t npgs;
+	unsigned long npgs;
+	int actl, actmax, inactl, inactmax, tries;
 
 	npgs = round_page(size) >> PAGE_SHIFT;
-	mtx_lock(&Giant);
-	if (vm_old_contigmalloc) {
-		ret = contigmalloc1(size, type, flags, low, high, alignment,
-		    boundary, kernel_map);
-	} else {
-		pages = vm_page_alloc_contig(npgs, low, high,
-		    alignment, boundary);
-		if (pages == NULL) {
-			ret = NULL;
-		} else {
-			ret = contigmalloc2(pages, npgs, flags);
-			if (ret == NULL)
-				vm_page_release_contig(pages, npgs);
+	tries = 0;
+retry:
+	pages = vm_phys_alloc_contig(npgs, low, high, alignment, boundary);
+	if (pages == NULL) {
+		if (tries < ((flags & M_NOWAIT) != 0 ? 1 : 3)) {
+			vm_page_lock_queues();
+			inactl = 0;
+			inactmax = tries < 1 ? 0 : cnt.v_inactive_count;
+			actl = 0;
+			actmax = tries < 2 ? 0 : cnt.v_active_count;
+again:
+			if (inactl < inactmax &&
+			    vm_contig_launder(PQ_INACTIVE)) {
+				inactl++;
+				goto again;
+			}
+			if (actl < actmax &&
+			    vm_contig_launder(PQ_ACTIVE)) {
+				actl++;
+				goto again;
+			}
+			vm_page_unlock_queues();
+			tries++;
+			goto retry;
 		}
-		
+		ret = NULL;
+	} else {
+		ret = contigmalloc2(pages, npgs, flags);
+		if (ret == NULL)
+			vm_page_release_contig(pages, npgs);
 	}
-	mtx_unlock(&Giant);
 	malloc_type_allocated(type, ret == NULL ? 0 : npgs << PAGE_SHIFT);
 	return (ret);
 }

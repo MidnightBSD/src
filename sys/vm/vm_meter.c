@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_meter.c,v 1.85 2005/05/08 23:56:16 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_meter.c,v 1.96 2007/07/27 20:01:21 alc Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,18 +51,6 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_meter.c,v 1.85 2005/05/08 23:56:16 marcel Exp 
 #include <vm/vm_map.h>
 #include <vm/vm_object.h>
 #include <sys/sysctl.h>
-
-/*
- * Virtual memory MPSAFE temporary workarounds.
- */
-#if !defined(__arm__) && !defined(__powerpc__)
-int debug_mpsafevm = 1;
-#else
-int debug_mpsafevm;
-#endif
-TUNABLE_INT("debug.mpsafevm", &debug_mpsafevm);
-SYSCTL_INT(_debug, OID_AUTO, mpsafevm, CTLFLAG_RD, &debug_mpsafevm, 0,
-    "Enable/disable MPSAFE virtual memory support");
 
 struct vmmeter cnt;
 
@@ -109,15 +97,15 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 {
 /* XXXKSE almost completely broken */
 	struct proc *p;
-	struct vmtotal total, *totalp;
+	struct vmtotal total;
 	vm_map_entry_t entry;
 	vm_object_t object;
 	vm_map_t map;
 	int paging;
 	struct thread *td;
+	struct vmspace *vm;
 
-	totalp = &total;
-	bzero(totalp, sizeof *totalp);
+	bzero(&total, sizeof(total));
 	/*
 	 * Mark all objects as inactive.
 	 */
@@ -143,49 +131,58 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 	FOREACH_PROC_IN_SYSTEM(p) {
 		if (p->p_flag & P_SYSTEM)
 			continue;
-		mtx_lock_spin(&sched_lock);
+		PROC_SLOCK(p);
 		switch (p->p_state) {
 		case PRS_NEW:
-			mtx_unlock_spin(&sched_lock);
+			PROC_SUNLOCK(p);
 			continue;
 			break;
 		default:
 			FOREACH_THREAD_IN_PROC(p, td) {
 				/* Need new statistics  XXX */
+				thread_lock(td);
 				switch (td->td_state) {
 				case TDS_INHIBITED:
+					/*
+					 * XXX stats no longer synchronized.
+					 */
 					if (TD_ON_LOCK(td) ||
 					    (td->td_inhibitors ==
 					    TDI_SWAPPED)) {
-						totalp->t_sw++;
+						total.t_sw++;
 					} else if (TD_IS_SLEEPING(td) ||
 					   TD_AWAITING_INTR(td) ||
 					   TD_IS_SUSPENDED(td)) {
 						if (td->td_priority <= PZERO)
-							totalp->t_dw++;
+							total.t_dw++;
 						else
-							totalp->t_sl++;
+							total.t_sl++;
 					}
 					break;
 
 				case TDS_CAN_RUN:
-					totalp->t_sw++;
+					total.t_sw++;
 					break;
 				case TDS_RUNQ:
 				case TDS_RUNNING:
-					totalp->t_rq++;
+					total.t_rq++;
+					thread_unlock(td);
 					continue;
 				default:
 					break;
 				}
+				thread_unlock(td);
 			}
 		}
-		mtx_unlock_spin(&sched_lock);
+		PROC_SUNLOCK(p);
 		/*
 		 * Note active objects.
 		 */
 		paging = 0;
-		map = &p->p_vmspace->vm_map;
+		vm = vmspace_acquire_ref(p);
+		if (vm == NULL)
+			continue;
+		map = &vm->vm_map;
 		vm_map_lock_read(map);
 		for (entry = map->header.next;
 		    entry != &map->header; entry = entry->next) {
@@ -198,8 +195,9 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 			VM_OBJECT_UNLOCK(object);
 		}
 		vm_map_unlock_read(map);
+		vmspace_free(vm);
 		if (paging)
-			totalp->t_pw++;
+			total.t_pw++;
 	}
 	sx_sunlock(&allproc_lock);
 	/*
@@ -219,25 +217,32 @@ vmtotal(SYSCTL_HANDLER_ARGS)
 			 */
 			continue;
 		}
-		totalp->t_vm += object->size;
-		totalp->t_rm += object->resident_page_count;
+		if (object->ref_count == 0) {
+			/*
+			 * Also skip unreferenced objects, including
+			 * vnodes representing mounted file systems.
+			 */
+			continue;
+		}
+		total.t_vm += object->size;
+		total.t_rm += object->resident_page_count;
 		if (object->flags & OBJ_ACTIVE) {
-			totalp->t_avm += object->size;
-			totalp->t_arm += object->resident_page_count;
+			total.t_avm += object->size;
+			total.t_arm += object->resident_page_count;
 		}
 		if (object->shadow_count > 1) {
 			/* shared object */
-			totalp->t_vmshr += object->size;
-			totalp->t_rmshr += object->resident_page_count;
+			total.t_vmshr += object->size;
+			total.t_rmshr += object->resident_page_count;
 			if (object->flags & OBJ_ACTIVE) {
-				totalp->t_avmshr += object->size;
-				totalp->t_armshr += object->resident_page_count;
+				total.t_avmshr += object->size;
+				total.t_armshr += object->resident_page_count;
 			}
 		}
 	}
 	mtx_unlock(&vm_object_list_mtx);
-	totalp->t_free = cnt.v_free_count + cnt.v_cache_count;
-	return (sysctl_handle_opaque(oidp, totalp, sizeof total, req));
+	total.t_free = cnt.v_free_count + cnt.v_cache_count;
+	return (sysctl_handle_opaque(oidp, &total, sizeof(total), req));
 }
 
 /*
@@ -324,6 +329,8 @@ SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pdwakeups, CTLTYPE_UINT|CTLFLAG_RD,
 	&cnt.v_pdwakeups, 0, vcnt, "IU", "Pagedaemon wakeups");
 SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pdpages, CTLTYPE_UINT|CTLFLAG_RD,
 	&cnt.v_pdpages, 0, vcnt, "IU", "Pagedaemon page scans");
+SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_tcached, CTLTYPE_UINT|CTLFLAG_RD,
+	&cnt.v_tcached, 0, vcnt, "IU", "Total pages cached");
 SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_dfree, CTLTYPE_UINT|CTLFLAG_RD,
 	&cnt.v_dfree, 0, vcnt, "IU", "");
 SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_pfree, CTLTYPE_UINT|CTLFLAG_RD,
@@ -379,13 +386,3 @@ SYSCTL_PROC(_vm_stats_vm, OID_AUTO, v_kthreadpages, CTLTYPE_UINT|CTLFLAG_RD,
 
 SYSCTL_INT(_vm_stats_misc, OID_AUTO,
 	zero_page_count, CTLFLAG_RD, &vm_page_zero_count, 0, "");
-#if 0
-SYSCTL_INT(_vm_stats_misc, OID_AUTO,
-	page_mask, CTLFLAG_RD, &page_mask, 0, "");
-SYSCTL_INT(_vm_stats_misc, OID_AUTO,
-	page_shift, CTLFLAG_RD, &page_shift, 0, "");
-SYSCTL_INT(_vm_stats_misc, OID_AUTO,
-	first_page, CTLFLAG_RD, &first_page, 0, "");
-SYSCTL_INT(_vm_stats_misc, OID_AUTO,
-	last_page, CTLFLAG_RD, &last_page, 0, "");
-#endif

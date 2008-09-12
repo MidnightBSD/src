@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/phys_pager.c,v 1.23 2005/01/07 02:29:26 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/phys_pager.c,v 1.28.2.1 2007/11/10 11:21:17 remko Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,9 +42,7 @@ __FBSDID("$FreeBSD: src/sys/vm/phys_pager.c,v 1.23 2005/01/07 02:29:26 imp Exp $
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
-/* prevent concurrant creation races */
-static int phys_pager_alloc_lock;
-/* list of device pager objects */
+/* list of phys pager objects */
 static struct pagerlst phys_pager_object_list;
 /* protect access to phys_pager_object_list */
 static struct mtx phys_pager_mtx;
@@ -64,7 +62,7 @@ static vm_object_t
 phys_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 		 vm_ooffset_t foff)
 {
-	vm_object_t object;
+	vm_object_t object, object1;
 	vm_pindex_t pindex;
 
 	/*
@@ -76,42 +74,41 @@ phys_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 	pindex = OFF_TO_IDX(foff + PAGE_MASK + size);
 
 	if (handle != NULL) {
-		mtx_lock(&Giant);
-		/*
-		 * Lock to prevent object creation race condition.
-		 */
-		while (phys_pager_alloc_lock) {
-			phys_pager_alloc_lock = -1;
-			tsleep(&phys_pager_alloc_lock, PVM, "swpalc", 0);
-		}
-		phys_pager_alloc_lock = 1;
-
+		mtx_lock(&phys_pager_mtx);
 		/*
 		 * Look up pager, creating as necessary.
 		 */
+		object1 = NULL;
 		object = vm_pager_object_lookup(&phys_pager_object_list, handle);
 		if (object == NULL) {
 			/*
 			 * Allocate object and associate it with the pager.
 			 */
-			object = vm_object_allocate(OBJT_PHYS, pindex);
-			object->handle = handle;
-			mtx_lock(&phys_pager_mtx);
-			TAILQ_INSERT_TAIL(&phys_pager_object_list, object,
-			    pager_object_list);
 			mtx_unlock(&phys_pager_mtx);
+			object1 = vm_object_allocate(OBJT_PHYS, pindex);
+			mtx_lock(&phys_pager_mtx);
+			object = vm_pager_object_lookup(&phys_pager_object_list,
+			    handle);
+			if (object != NULL) {
+				/*
+				 * We raced with other thread while
+				 * allocating object.
+				 */
+				if (pindex > object->size)
+					object->size = pindex;
+			} else {
+				object = object1;
+				object1 = NULL;
+				object->handle = handle;
+				TAILQ_INSERT_TAIL(&phys_pager_object_list, object,
+				    pager_object_list);
+			}
 		} else {
-			/*
-			 * Gain a reference to the object.
-			 */
-			vm_object_reference(object);
 			if (pindex > object->size)
 				object->size = pindex;
 		}
-		if (phys_pager_alloc_lock == -1)
-			wakeup(&phys_pager_alloc_lock);
-		phys_pager_alloc_lock = 0;
-		mtx_unlock(&Giant);
+		mtx_unlock(&phys_pager_mtx);
+		vm_object_deallocate(object1);
 	} else {
 		object = vm_object_allocate(OBJT_PHYS, pindex);
 	}
@@ -127,9 +124,11 @@ phys_pager_dealloc(vm_object_t object)
 {
 
 	if (object->handle != NULL) {
+		VM_OBJECT_UNLOCK(object);
 		mtx_lock(&phys_pager_mtx);
 		TAILQ_REMOVE(&phys_pager_object_list, object, pager_object_list);
 		mtx_unlock(&phys_pager_mtx);
+		VM_OBJECT_LOCK(object);
 	}
 }
 
@@ -150,19 +149,13 @@ phys_pager_getpages(vm_object_t object, vm_page_t *m, int count, int reqpage)
 		}
 		KASSERT(m[i]->valid == VM_PAGE_BITS_ALL,
 		    ("phys_pager_getpages: partially valid page %p", m[i]));
-	}
-	vm_page_lock_queues();
-	for (i = 0; i < count; i++) {
-		/* Switch off pv_entries */
-		vm_page_unmanage(m[i]);
 		m[i]->dirty = 0;
 		/* The requested page must remain busy, the others not. */
 		if (reqpage != i) {
-			vm_page_flag_clear(m[i], PG_BUSY);
+			m[i]->oflags &= ~VPO_BUSY;
 			m[i]->busy = 0;
 		}
 	}
-	vm_page_unlock_queues();
 	return (VM_PAGER_OK);
 }
 

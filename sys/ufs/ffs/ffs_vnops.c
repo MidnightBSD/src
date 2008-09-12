@@ -62,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.157.2.1 2005/10/29 06:43:55 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.173 2007/07/13 18:51:08 rodrigc Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -74,6 +74,7 @@ __FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.157.2.1 2005/10/29 06:43:55 
 #include <sys/limits.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
 #include <sys/signalvar.h>
@@ -103,7 +104,7 @@ __FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.157.2.1 2005/10/29 06:43:55 
 extern int	ffs_rawread(struct vnode *vp, struct uio *uio, int *workdone);
 #endif
 static vop_fsync_t	ffs_fsync;
-static vop_lock_t	ffs_lock;
+static vop_lock1_t	ffs_lock;
 static vop_getpages_t	ffs_getpages;
 static vop_read_t	ffs_read;
 static vop_write_t	ffs_write;
@@ -117,6 +118,7 @@ static vop_getextattr_t	ffs_getextattr;
 static vop_listextattr_t	ffs_listextattr;
 static vop_openextattr_t	ffs_openextattr;
 static vop_setextattr_t	ffs_setextattr;
+static vop_vptofh_t	ffs_vptofh;
 
 
 /* Global vfs data structures for ufs. */
@@ -124,16 +126,18 @@ struct vop_vector ffs_vnodeops1 = {
 	.vop_default =		&ufs_vnodeops,
 	.vop_fsync =		ffs_fsync,
 	.vop_getpages =		ffs_getpages,
-	.vop_lock =		ffs_lock,
+	.vop_lock1 =		ffs_lock,
 	.vop_read =		ffs_read,
 	.vop_reallocblks =	ffs_reallocblks,
 	.vop_write =		ffs_write,
+	.vop_vptofh =		ffs_vptofh,
 };
 
 struct vop_vector ffs_fifoops1 = {
 	.vop_default =		&ufs_fifoops,
 	.vop_fsync =		ffs_fsync,
 	.vop_reallocblks =	ffs_reallocblks, /* XXX: really ??? */
+	.vop_vptofh =		ffs_vptofh,
 };
 
 /* Global vfs data structures for ufs. */
@@ -141,7 +145,7 @@ struct vop_vector ffs_vnodeops2 = {
 	.vop_default =		&ufs_vnodeops,
 	.vop_fsync =		ffs_fsync,
 	.vop_getpages =		ffs_getpages,
-	.vop_lock =		ffs_lock,
+	.vop_lock1 =		ffs_lock,
 	.vop_read =		ffs_read,
 	.vop_reallocblks =	ffs_reallocblks,
 	.vop_write =		ffs_write,
@@ -151,12 +155,13 @@ struct vop_vector ffs_vnodeops2 = {
 	.vop_listextattr =	ffs_listextattr,
 	.vop_openextattr =	ffs_openextattr,
 	.vop_setextattr =	ffs_setextattr,
+	.vop_vptofh =		ffs_vptofh,
 };
 
 struct vop_vector ffs_fifoops2 = {
 	.vop_default =		&ufs_fifoops,
 	.vop_fsync =		ffs_fsync,
-	.vop_lock =		ffs_lock,
+	.vop_lock1 =		ffs_lock,
 	.vop_reallocblks =	ffs_reallocblks,
 	.vop_strategy =		ffsext_strategy,
 	.vop_closeextattr =	ffs_closeextattr,
@@ -165,6 +170,7 @@ struct vop_vector ffs_fifoops2 = {
 	.vop_listextattr =	ffs_listextattr,
 	.vop_openextattr =	ffs_openextattr,
 	.vop_setextattr =	ffs_setextattr,
+	.vop_vptofh =		ffs_vptofh,
 };
 
 /*
@@ -226,7 +232,7 @@ loop:
 		if (BUF_LOCK(bp, LK_EXCLUSIVE | LK_NOWAIT, NULL))
 			continue;
 		VI_UNLOCK(vp);
-		if (!wait && LIST_FIRST(&bp->b_dep) != NULL &&
+		if (!wait && !LIST_EMPTY(&bp->b_dep) &&
 		    (bp->b_flags & B_DEFERRED) == 0 &&
 		    buf_countdeps(bp, 0)) {
 			bp->b_flags |= B_DEFERRED;
@@ -332,13 +338,62 @@ loop:
 
 static int
 ffs_lock(ap)
-	struct vop_lock_args /* {
+	struct vop_lock1_args /* {
 		struct vnode *a_vp;
 		int a_flags;
 		struct thread *a_td;
+		char *file;
+		int line;
 	} */ *ap;
 {
-	return (VOP_LOCK_APV(&ufs_vnodeops, ap));
+#ifndef NO_FFS_SNAPSHOT
+	struct vnode *vp;
+	int flags;
+	struct lock *lkp;
+	int result;
+	
+	switch (ap->a_flags & LK_TYPE_MASK) {
+	case LK_SHARED:
+	case LK_UPGRADE:
+	case LK_EXCLUSIVE:
+		vp = ap->a_vp;
+		flags = ap->a_flags;
+		for (;;) {
+			/*
+			 * vnode interlock must be held to ensure that
+			 * the possibly external lock isn't freed,
+			 * e.g. when mutating from snapshot file vnode
+			 * to regular file vnode.
+			 */
+			if ((flags & LK_INTERLOCK) == 0) {
+				VI_LOCK(vp);
+				flags |= LK_INTERLOCK;
+			}
+			lkp = vp->v_vnlock;
+			result = _lockmgr(lkp, flags, VI_MTX(vp), ap->a_td, ap->a_file, ap->a_line);
+			if (lkp == vp->v_vnlock || result != 0)
+				break;
+			/*
+			 * Apparent success, except that the vnode
+			 * mutated between snapshot file vnode and
+			 * regular file vnode while this process
+			 * slept.  The lock currently held is not the
+			 * right lock.  Release it, and try to get the
+			 * new lock.
+			 */
+			(void) _lockmgr(lkp, LK_RELEASE, VI_MTX(vp), ap->a_td, ap->a_file, ap->a_line);
+			if ((flags & LK_TYPE_MASK) == LK_UPGRADE)
+				flags = (flags & ~LK_TYPE_MASK) | LK_EXCLUSIVE;
+			flags &= ~LK_INTERLOCK;
+		}
+		break;
+	default:
+		result = VOP_LOCK1_APV(&ufs_vnodeops, ap);
+	}
+	return (result);
+#else
+	return (VOP_LOCK1_APV(&ufs_vnodeops, ap));
+#endif
 }
 
 /*
@@ -510,7 +565,7 @@ ffs_read(ap)
 			break;
 
 		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_FIRST(&bp->b_dep) == NULL)) {
+		   (LIST_EMPTY(&bp->b_dep))) {
 			/*
 			 * If there are no dependencies, and it's VMIO,
 			 * then we don't need the buf, mark it available
@@ -537,7 +592,7 @@ ffs_read(ap)
 	 */
 	if (bp != NULL) {
 		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_FIRST(&bp->b_dep) == NULL)) {
+		   (LIST_EMPTY(&bp->b_dep))) {
 			bp->b_flags |= B_RELBUF;
 			brelse(bp);
 		} else {
@@ -546,8 +601,11 @@ ffs_read(ap)
 	}
 
 	if ((error == 0 || uio->uio_resid != orig_resid) &&
-	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0)
+	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0) {
+		VI_LOCK(vp);
 		ip->i_flag |= IN_ACCESS;
+		VI_UNLOCK(vp);
+	}
 	return (error);
 }
 
@@ -689,7 +747,7 @@ ffs_write(ap)
 		error =
 		    uiomove((char *)bp->b_data + blkoffset, (int)xfersize, uio);
 		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_FIRST(&bp->b_dep) == NULL)) {
+		   (LIST_EMPTY(&bp->b_dep))) {
 			bp->b_flags |= B_RELBUF;
 		}
 
@@ -730,10 +788,12 @@ ffs_write(ap)
 	 * we clear the setuid and setgid bits as a precaution against
 	 * tampering.
 	 */
-	if (resid > uio->uio_resid && ap->a_cred && 
-	    suser_cred(ap->a_cred, SUSER_ALLOWJAIL)) {
-		ip->i_mode &= ~(ISUID | ISGID);
-		DIP_SET(ip, i_mode, ip->i_mode);
+	if ((ip->i_mode & (ISUID | ISGID)) && resid > uio->uio_resid &&
+	    ap->a_cred) {
+		if (priv_check_cred(ap->a_cred, PRIV_VFS_RETAINSUGID, 0)) {
+			ip->i_mode &= ~(ISUID | ISGID);
+			DIP_SET(ip, i_mode, ip->i_mode);
+		}
 	}
 	if (error) {
 		if (ioflag & IO_UNIT) {
@@ -906,7 +966,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 			break;
 
 		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_FIRST(&bp->b_dep) == NULL)) {
+		   (LIST_EMPTY(&bp->b_dep))) {
 			/*
 			 * If there are no dependencies, and it's VMIO,
 			 * then we don't need the buf, mark it available
@@ -933,7 +993,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 	 */
 	if (bp != NULL) {
 		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_FIRST(&bp->b_dep) == NULL)) {
+		   (LIST_EMPTY(&bp->b_dep))) {
 			bp->b_flags |= B_RELBUF;
 			brelse(bp);
 		} else {
@@ -942,8 +1002,11 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 	}
 
 	if ((error == 0 || uio->uio_resid != orig_resid) &&
-	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0)
+	    (vp->v_mount->mnt_flag & MNT_NOATIME) == 0) {
+		VI_LOCK(vp);
 		ip->i_flag |= IN_ACCESS;
+		VI_UNLOCK(vp);
+	}
 	return (error);
 }
 
@@ -964,6 +1027,9 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 	ip = VTOI(vp);
 	fs = ip->i_fs;
 	dp = ip->i_din2;
+
+	KASSERT(!(ip->i_flag & IN_SPACECOUNTED), ("inode %u: inode is dead",
+	    ip->i_number));
 
 #ifdef DIAGNOSTIC
 	if (uio->uio_rw != UIO_WRITE || fs->fs_magic != FS_UFS2_MAGIC)
@@ -1024,7 +1090,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 		error =
 		    uiomove((char *)bp->b_data + blkoffset, (int)xfersize, uio);
 		if ((ioflag & (IO_VMIO|IO_DIRECT)) &&
-		   (LIST_FIRST(&bp->b_dep) == NULL)) {
+		   (LIST_EMPTY(&bp->b_dep))) {
 			bp->b_flags |= B_RELBUF;
 		}
 
@@ -1053,10 +1119,11 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 	 * we clear the setuid and setgid bits as a precaution against
 	 * tampering.
 	 */
-	if (resid > uio->uio_resid && ucred && 
-	    suser_cred(ucred, SUSER_ALLOWJAIL)) {
-		ip->i_mode &= ~(ISUID | ISGID);
-		dp->di_mode = ip->i_mode;
+	if ((ip->i_mode & (ISUID | ISGID)) && resid > uio->uio_resid && ucred) {
+		if (priv_check_cred(ucred, PRIV_VFS_RETAINSUGID, 0)) {
+			ip->i_mode &= ~(ISUID | ISGID);
+			dp->di_mode = ip->i_mode;
+		}
 	}
 	if (error) {
 		if (ioflag & IO_UNIT) {
@@ -1125,14 +1192,18 @@ ffs_rdextattr(u_char **p, struct vnode *vp, struct thread *td, int extra)
 {
 	struct inode *ip;
 	struct ufs2_dinode *dp;
+	struct fs *fs;
 	struct uio luio;
 	struct iovec liovec;
 	int easize, error;
 	u_char *eae;
 
 	ip = VTOI(vp);
+	fs = ip->i_fs;
 	dp = ip->i_din2;
 	easize = dp->di_extsize;
+	if ((uoff_t)easize + extra > NXADDR * fs->fs_bsize)
+		return (EFBIG);
 
 	eae = malloc(easize + extra, M_TEMP, M_WAITOK);
 
@@ -1296,6 +1367,9 @@ struct vop_closeextattr_args {
 	if (ap->a_vp->v_type == VCHR)
 		return (EOPNOTSUPP);
 
+	if (ap->a_commit && (ap->a_vp->v_mount->mnt_flag & MNT_RDONLY))
+		return (EROFS);
+
 	return (ffs_close_ea(ap->a_vp, ap->a_commit, ap->a_cred, ap->a_td));
 }
 
@@ -1329,6 +1403,9 @@ vop_deleteextattr {
 
 	if (strlen(ap->a_name) == 0)
 		return (EINVAL);
+
+	if (ap->a_vp->v_mount->mnt_flag & MNT_RDONLY)
+		return (EROFS);
 
 	error = extattr_check_cred(ap->a_vp, ap->a_attrnamespace,
 	    ap->a_cred, ap->a_td, IWRITE);
@@ -1551,6 +1628,9 @@ vop_setextattr {
 	if (ap->a_uio == NULL)
 		return (EOPNOTSUPP);
 
+	if (ap->a_vp->v_mount->mnt_flag & MNT_RDONLY)
+		return (EROFS);
+
 	error = extattr_check_cred(ap->a_vp, ap->a_attrnamespace,
 	    ap->a_cred, ap->a_td, IWRITE);
 	if (error) {
@@ -1632,4 +1712,27 @@ vop_setextattr {
 	if (stand_alone)
 		error = ffs_close_ea(ap->a_vp, 1, ap->a_cred, ap->a_td);
 	return(error);
+}
+
+/*
+ * Vnode pointer to File handle
+ */
+static int
+ffs_vptofh(struct vop_vptofh_args *ap)
+/*
+vop_vptofh {
+	IN struct vnode *a_vp;
+	IN struct fid *a_fhp;
+};
+*/
+{
+	struct inode *ip;
+	struct ufid *ufhp;
+
+	ip = VTOI(ap->a_vp);
+	ufhp = (struct ufid *)ap->a_fhp;
+	ufhp->ufid_len = sizeof(struct ufid);
+	ufhp->ufid_ino = ip->i_number;
+	ufhp->ufid_gen = ip->i_gen;
+	return (0);
 }

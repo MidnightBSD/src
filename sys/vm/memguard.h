@@ -23,9 +23,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/vm/memguard.h,v 1.2 2005/02/16 21:45:59 bmilekic Exp $
+ * $FreeBSD: src/sys/vm/memguard.h,v 1.3 2005/12/30 11:45:07 pjd Exp $
  */
+
+extern u_int vm_memguard_divisor;
 
 void	memguard_init(vm_map_t parent_map, unsigned long size);
 void 	*memguard_alloc(unsigned long size, int flags);
 void	memguard_free(void *addr);
+int	memguard_cmp(struct malloc_type *mtp);

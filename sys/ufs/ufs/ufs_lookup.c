@@ -35,10 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_lookup.c,v 1.77.2.2 2006/03/09 00:21:23 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_lookup.c,v 1.83 2007/03/14 08:50:27 kib Exp $");
 
 #include "opt_ffs_broken_fixme.h"
 #include "opt_ufs.h"
+#include "opt_quota.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -593,10 +594,12 @@ ufs_dirbad(ip, offset, how)
 	struct mount *mp;
 
 	mp = ITOV(ip)->v_mount;
-	(void)printf("%s: bad dir ino %lu at offset %ld: %s\n",
-	    mp->mnt_stat.f_mntonname, (u_long)ip->i_number, (long)offset, how);
 	if ((mp->mnt_flag & MNT_RDONLY) == 0)
-		panic("ufs_dirbad: bad dir");
+		panic("ufs_dirbad: %s: bad dir ino %lu at offset %ld: %s",
+		    mp->mnt_stat.f_mntonname, (u_long)ip->i_number, (long)offset, how);
+	else
+		(void)printf("%s: bad dir ino %lu at offset %ld: %s\n",
+		    mp->mnt_stat.f_mntonname, (u_long)ip->i_number, (long)offset, how);
 }
 
 /*
@@ -700,7 +703,7 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp)
 	struct buf *bp;
 	u_int dsize;
 	struct direct *ep, *nep;
-	int error, ret, blkoff, loc, spacefree, flags;
+	int error, ret, blkoff, loc, spacefree, flags, namlen;
 	char *dirbuf;
 
 	td = curthread;	/* XXX */
@@ -721,6 +724,13 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp)
 		flags = BA_CLRBUF;
 		if (!DOINGSOFTDEP(dvp) && !DOINGASYNC(dvp))
 			flags |= IO_SYNC;
+#ifdef QUOTA
+		if ((error = getinoquota(dp)) != 0) {
+			if (DOINGSOFTDEP(dvp) && newdirbp != NULL)
+				bdwrite(newdirbp);
+			return (error);
+		}
+#endif
 		if ((error = UFS_BALLOC(dvp, (off_t)dp->i_offset, DIRBLKSIZ,
 		    cr, flags, &bp)) != 0) {
 			if (DOINGSOFTDEP(dvp) && newdirbp != NULL)
@@ -875,8 +885,16 @@ ufs_direnter(dvp, tvp, dirp, cnp, newdirbp)
 	 * Update the pointer fields in the previous entry (if any),
 	 * copy in the new entry, and write out the block.
 	 */
+#	if (BYTE_ORDER == LITTLE_ENDIAN)
+		if (OFSFMT(dvp))
+			namlen = ep->d_type;
+		else
+			namlen = ep->d_namlen;
+#	else
+		namlen = ep->d_namlen;
+#	endif
 	if (ep->d_ino == 0 ||
-	    (ep->d_ino == WINO &&
+	    (ep->d_ino == WINO && namlen == dirp->d_namlen &&
 	     bcmp(ep->d_name, dirp->d_name, dirp->d_namlen) == 0)) {
 		if (spacefree + dsize < newentrysize)
 			panic("ufs_direnter: compact1");

@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.271.2.4 2006/03/22 17:46:50 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291 2007/06/12 00:12:01 rwatson Exp $");
 
 #include "opt_mac.h"
 #include "opt_quota.h"
@@ -53,16 +53,19 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.271.2.4 2006/03/22 17:46:50 
 #include <sys/bio.h>
 #include <sys/buf.h>
 #include <sys/mount.h>
+#include <sys/priv.h>
+#include <sys/refcount.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
 #include <sys/dirent.h>
 #include <sys/lockf.h>
 #include <sys/conf.h>
 #include <sys/acl.h>
-#include <sys/mac.h>
 #include <sys/jail.h>
 
 #include <machine/mutex.h>
+
+#include <security/mac/mac_framework.h>
 
 #include <sys/file.h>		/* XXX */
 
@@ -80,6 +83,9 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.271.2.4 2006/03/22 17:46:50 
 #include <ufs/ufs/ufs_extern.h>
 #ifdef UFS_DIRHASH
 #include <ufs/ufs/dirhash.h>
+#endif
+#ifdef UFS_GJOURNAL
+#include <ufs/ufs/gjournal.h>
 #endif
 
 #include <ufs/ffs/ffs_extern.h>
@@ -121,37 +127,54 @@ static struct odirtemplate omastertemplate = {
 	0, DIRBLKSIZ - 12, 2, ".."
 };
 
-void
-ufs_itimes(vp)
-	struct vnode *vp;
+static void
+ufs_itimes_locked(struct vnode *vp)
 {
 	struct inode *ip;
 	struct timespec ts;
 
+	ASSERT_VI_LOCKED(vp, __func__);
+
 	ip = VTOI(vp);
+	if ((vp->v_mount->mnt_flag & MNT_RDONLY) != 0)
+		goto out;
 	if ((ip->i_flag & (IN_ACCESS | IN_CHANGE | IN_UPDATE)) == 0)
 		return;
+
 	if ((vp->v_type == VBLK || vp->v_type == VCHR) && !DOINGSOFTDEP(vp))
 		ip->i_flag |= IN_LAZYMOD;
-	else
+	else if (((vp->v_mount->mnt_kern_flag &
+		    (MNTK_SUSPENDED | MNTK_SUSPEND)) == 0) ||
+		    (ip->i_flag & (IN_CHANGE | IN_UPDATE)))
 		ip->i_flag |= IN_MODIFIED;
-	if ((vp->v_mount->mnt_flag & MNT_RDONLY) == 0) {
-		vfs_timestamp(&ts);
-		if (ip->i_flag & IN_ACCESS) {
-			DIP_SET(ip, i_atime, ts.tv_sec);
-			DIP_SET(ip, i_atimensec, ts.tv_nsec);
-		}
-		if (ip->i_flag & IN_UPDATE) {
-			DIP_SET(ip, i_mtime, ts.tv_sec);
-			DIP_SET(ip, i_mtimensec, ts.tv_nsec);
-			ip->i_modrev++;
-		}
-		if (ip->i_flag & IN_CHANGE) {
-			DIP_SET(ip, i_ctime, ts.tv_sec);
-			DIP_SET(ip, i_ctimensec, ts.tv_nsec);
-		}
+	else if (ip->i_flag & IN_ACCESS)
+		ip->i_flag |= IN_LAZYACCESS;
+	vfs_timestamp(&ts);
+	if (ip->i_flag & IN_ACCESS) {
+		DIP_SET(ip, i_atime, ts.tv_sec);
+		DIP_SET(ip, i_atimensec, ts.tv_nsec);
 	}
+	if (ip->i_flag & IN_UPDATE) {
+		DIP_SET(ip, i_mtime, ts.tv_sec);
+		DIP_SET(ip, i_mtimensec, ts.tv_nsec);
+		ip->i_modrev++;
+	}
+	if (ip->i_flag & IN_CHANGE) {
+		DIP_SET(ip, i_ctime, ts.tv_sec);
+		DIP_SET(ip, i_ctimensec, ts.tv_nsec);
+	}
+
+ out:
 	ip->i_flag &= ~(IN_ACCESS | IN_CHANGE | IN_UPDATE);
+}
+
+void
+ufs_itimes(struct vnode *vp)
+{
+
+	VI_LOCK(vp);
+	ufs_itimes_locked(vp);
+	VI_UNLOCK(vp);
 }
 
 /*
@@ -245,7 +268,7 @@ ufs_open(struct vop_open_args *ap)
 	if ((ip->i_flags & APPEND) &&
 	    (ap->a_mode & (FWRITE | O_APPEND)) == FWRITE)
 		return (EPERM);
-	vnode_create_vobject_off(vp, DIP(ip, i_size), ap->a_td);
+	vnode_create_vobject(vp, DIP(ip, i_size), ap->a_td);
 	return (0);
 }
 
@@ -265,10 +288,12 @@ ufs_close(ap)
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
+	int usecount;
 
 	VI_LOCK(vp);
-	if (vp->v_usecount > 1)
-		ufs_itimes(vp);
+	usecount = vp->v_usecount;
+	if (usecount > 1)
+		ufs_itimes_locked(vp);
 	VI_UNLOCK(vp);
 	return (0);
 }
@@ -302,10 +327,6 @@ ufs_access(ap)
 		case VREG:
 			if (vp->v_mount->mnt_flag & MNT_RDONLY)
 				return (EROFS);
-#ifdef QUOTA
-			if ((error = getinoquota(ip)) != 0)
-				return (error);
-#endif
 			break;
 		default:
 			break;
@@ -364,7 +385,16 @@ ufs_getattr(ap)
 	struct inode *ip = VTOI(vp);
 	struct vattr *vap = ap->a_vap;
 
-	ufs_itimes(vp);
+	VI_LOCK(vp);
+	ufs_itimes_locked(vp);
+	if (ip->i_ump->um_fstype == UFS1) {
+		vap->va_atime.tv_sec = ip->i_din1->di_atime;
+		vap->va_atime.tv_nsec = ip->i_din1->di_atimensec;
+	} else {
+		vap->va_atime.tv_sec = ip->i_din2->di_atime;
+		vap->va_atime.tv_nsec = ip->i_din2->di_atimensec;
+	}
+	VI_UNLOCK(vp);
 	/*
 	 * Copy from inode table
 	 */
@@ -377,8 +407,6 @@ ufs_getattr(ap)
 	if (ip->i_ump->um_fstype == UFS1) {
 		vap->va_rdev = ip->i_din1->di_rdev;
 		vap->va_size = ip->i_din1->di_size;
-		vap->va_atime.tv_sec = ip->i_din1->di_atime;
-		vap->va_atime.tv_nsec = ip->i_din1->di_atimensec;
 		vap->va_mtime.tv_sec = ip->i_din1->di_mtime;
 		vap->va_mtime.tv_nsec = ip->i_din1->di_mtimensec;
 		vap->va_ctime.tv_sec = ip->i_din1->di_ctime;
@@ -389,8 +417,6 @@ ufs_getattr(ap)
 	} else {
 		vap->va_rdev = ip->i_din2->di_rdev;
 		vap->va_size = ip->i_din2->di_size;
-		vap->va_atime.tv_sec = ip->i_din2->di_atime;
-		vap->va_atime.tv_nsec = ip->i_din2->di_atimensec;
 		vap->va_mtime.tv_sec = ip->i_din2->di_mtime;
 		vap->va_mtime.tv_nsec = ip->i_din2->di_mtimensec;
 		vap->va_ctime.tv_sec = ip->i_din2->di_ctime;
@@ -465,8 +491,7 @@ ufs_setattr(ap)
 		 * is non-zero; otherwise, they behave like unprivileged
 		 * processes.
 		 */
-		if (!suser_cred(cred,
-		    jail_chflags_allowed ? SUSER_ALLOWJAIL : 0)) {
+		if (!priv_check_cred(cred, PRIV_VFS_SYSFLAGS, 0)) {
 			if (ip->i_flags
 			    & (SF_NOUNLINK | SF_IMMUTABLE | SF_APPEND)) {
 				error = securelevel_gt(cred, 0);
@@ -508,22 +533,35 @@ ufs_setattr(ap)
 	}
 	if (vap->va_size != VNOVAL) {
 		/*
-		 * Disallow write attempts on read-only filesystems;
-		 * unless the file is a socket, fifo, or a block or
-		 * character device resident on the filesystem.
+		 * XXX most of the following special cases should be in
+		 * callers instead of in N filesystems.  The VDIR check
+		 * mostly already is.
 		 */
 		switch (vp->v_type) {
 		case VDIR:
 			return (EISDIR);
 		case VLNK:
 		case VREG:
+			/*
+			 * Truncation should have an effect in these cases.
+			 * Disallow it if the filesystem is read-only or
+			 * the file is being snapshotted.
+			 */
 			if (vp->v_mount->mnt_flag & MNT_RDONLY)
 				return (EROFS);
 			if ((ip->i_flags & SF_SNAPSHOT) != 0)
 				return (EPERM);
 			break;
 		default:
-			break;
+			/*
+			 * According to POSIX, the result is unspecified
+			 * for file types other than regular files,
+			 * directories and shared memory objects.  We
+			 * don't support shared memory objects in the file
+			 * system, and have dubious support for truncating
+			 * symlinks.  Just ignore the request in other cases.
+			 */
+			return (0);
 		}
 		if ((error = UFS_TRUNCATE(vp, vap->va_size, IO_NORMAL,
 		    cred, td)) != 0)
@@ -543,10 +581,19 @@ ufs_setattr(ap)
 		 * super-user.
 		 * If times is non-NULL, ... The caller must be the owner of
 		 * the file or be the super-user.
+		 *
+		 * Possibly for historical reasons, try to use VADMIN in
+		 * preference to VWRITE for a NULL timestamp.  This means we
+		 * will return EACCES in preference to EPERM if neither
+		 * check succeeds.
 		 */
-		if ((error = VOP_ACCESS(vp, VADMIN, cred, td)) &&
-		    ((vap->va_vaflags & VA_UTIMES_NULL) == 0 ||
-		    (error = VOP_ACCESS(vp, VWRITE, cred, td))))
+		if (vap->va_vaflags & VA_UTIMES_NULL) {
+			error = VOP_ACCESS(vp, VADMIN, cred, td);
+			if (error)
+				error = VOP_ACCESS(vp, VWRITE, cred, td);
+		} else
+			error = VOP_ACCESS(vp, VADMIN, cred, td);
+		if (error)
 			return (error);
 		if (vap->va_atime.tv_sec != VNOVAL)
 			ip->i_flag |= IN_ACCESS;
@@ -612,11 +659,11 @@ ufs_chmod(vp, mode, cred, td)
 	 * jail(8).
 	 */
 	if (vp->v_type != VDIR && (mode & S_ISTXT)) {
-		if (suser_cred(cred, SUSER_ALLOWJAIL))
+		if (priv_check_cred(cred, PRIV_VFS_STICKYFILE, 0))
 			return (EFTYPE);
 	}
 	if (!groupmember(ip->i_gid, cred) && (mode & ISGID)) {
-		error = suser_cred(cred, SUSER_ALLOWJAIL);
+		error = priv_check_cred(cred, PRIV_VFS_SETGID, 0);
 		if (error)
 			return (error);
 	}
@@ -653,19 +700,19 @@ ufs_chown(vp, uid, gid, cred, td)
 	if (gid == (gid_t)VNOVAL)
 		gid = ip->i_gid;
 	/*
-	 * To modify the ownership of a file, must possess VADMIN
-	 * for that file.
+	 * To modify the ownership of a file, must possess VADMIN for that
+	 * file.
 	 */
 	if ((error = VOP_ACCESS(vp, VADMIN, cred, td)))
 		return (error);
 	/*
-	 * To change the owner of a file, or change the group of a file
-	 * to a group of which we are not a member, the caller must
-	 * have privilege.
+	 * To change the owner of a file, or change the group of a file to a
+	 * group of which we are not a member, the caller must have
+	 * privilege.
 	 */
 	if ((uid != ip->i_uid || 
 	    (gid != ip->i_gid && !groupmember(gid, cred))) &&
-	    (error = suser_cred(cred, SUSER_ALLOWJAIL)))
+	    (error = priv_check_cred(cred, PRIV_VFS_CHOWN, 0)))
 		return (error);
 	ogid = ip->i_gid;
 	ouid = ip->i_uid;
@@ -736,9 +783,11 @@ good:
 		panic("ufs_chown: lost quota");
 #endif /* QUOTA */
 	ip->i_flag |= IN_CHANGE;
-	if (suser_cred(cred, SUSER_ALLOWJAIL) && (ouid != uid || ogid != gid)) {
-		ip->i_mode &= ~(ISUID | ISGID);
-		DIP_SET(ip, i_mode, ip->i_mode);
+	if ((ip->i_mode & (ISUID | ISGID)) && (ouid != uid || ogid != gid)) {
+		if (priv_check_cred(cred, PRIV_VFS_RETAINSUGID, 0)) {
+			ip->i_mode &= ~(ISUID | ISGID);
+			DIP_SET(ip, i_mode, ip->i_mode);
+		}
 	}
 	return (0);
 }
@@ -764,6 +813,9 @@ ufs_remove(ap)
 		error = EPERM;
 		goto out;
 	}
+#ifdef UFS_GJOURNAL
+	ufs_gjournal_orphan(vp);
+#endif
 	error = ufs_dirremove(dvp, ip, ap->a_cnp->cn_flags, 0);
 	if (ip->i_nlink <= 0)
 		vp->v_vflag |= VV_NOSYNC;
@@ -1047,7 +1099,7 @@ abortit:
 	/*
 	 * If ".." must be changed (ie the directory gets a new
 	 * parent) then the source directory must not be in the
-	 * directory heirarchy above the target, as this would
+	 * directory hierarchy above the target, as this would
 	 * orphan everything below the source directory. Also
 	 * the user must have write permission in the source so
 	 * as to be able to change "..". We must repeat the call
@@ -1200,7 +1252,7 @@ abortit:
 			DIP_SET(xp, i_nlink, xp->i_nlink);
 			xp->i_flag |= IN_CHANGE;
 			ioflag = IO_NORMAL;
-			if (DOINGASYNC(tvp))
+			if (!DOINGASYNC(tvp))
 				ioflag |= IO_SYNC;
 			if ((error = UFS_TRUNCATE(tvp, (off_t)0, ioflag,
 			    tcnp->cn_cred, tcnp->cn_thread)) != 0)
@@ -1380,7 +1432,7 @@ ufs_mkdir(ap)
 				 * XXX This seems to never be accessed out of
 				 * our context so a stack variable is ok.
 				 */
-				ucred.cr_ref = 1;
+				refcount_init(&ucred.cr_ref, 1);
 				ucred.cr_uid = ip->i_uid;
 				ucred.cr_ngroups = 1;
 				ucred.cr_groups[0] = dp->i_gid;
@@ -1670,6 +1722,9 @@ ufs_rmdir(ap)
 		error = EINVAL;
 		goto out;
 	}
+#ifdef UFS_GJOURNAL
+	ufs_gjournal_orphan(vp);
+#endif
 	/*
 	 * Delete reference to directory before purging
 	 * inode.  If we crash in between, the directory
@@ -1707,7 +1762,7 @@ ufs_rmdir(ap)
 		DIP_SET(ip, i_nlink, ip->i_nlink);
 		ip->i_flag |= IN_CHANGE;
 		ioflag = IO_NORMAL;
-		if (DOINGASYNC(vp))
+		if (!DOINGASYNC(vp))
 			ioflag |= IO_SYNC;
 		error = UFS_TRUNCATE(vp, (off_t)0, ioflag, cnp->cn_cred,
 		    cnp->cn_thread);
@@ -1776,7 +1831,7 @@ ufs_readdir(ap)
 		struct uio *a_uio;
 		struct ucred *a_cred;
 		int *a_eofflag;
-		int *ncookies;
+		int *a_ncookies;
 		u_long **a_cookies;
 	} */ *ap;
 {
@@ -1978,10 +2033,12 @@ ufsfifo_close(ap)
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
+	int usecount;
 
 	VI_LOCK(vp);
-	if (vp->v_usecount > 1)
-		ufs_itimes(vp);
+	usecount = vp->v_usecount;
+	if (usecount > 1)
+		ufs_itimes_locked(vp);
 	VI_UNLOCK(vp);
 	return (fifo_specops.vop_close(ap));
 }
@@ -2211,7 +2268,7 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 			 * XXX This seems to never be accessed out of our
 			 * context so a stack variable is ok.
 			 */
-			ucred.cr_ref = 1;
+			refcount_init(&ucred.cr_ref, 1);
 			ucred.cr_uid = ip->i_uid;
 			ucred.cr_ngroups = 1;
 			ucred.cr_groups[0] = pdir->i_gid;
@@ -2307,7 +2364,7 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 	if (DOINGSOFTDEP(tvp))
 		softdep_change_linkcnt(ip);
 	if ((ip->i_mode & ISGID) && !groupmember(ip->i_gid, cnp->cn_cred) &&
-	    suser_cred(cnp->cn_cred, SUSER_ALLOWJAIL)) {
+	    priv_check_cred(cnp->cn_cred, PRIV_VFS_SETGID, 0)) {
 		ip->i_mode &= ~ISGID;
 		DIP_SET(ip, i_mode, ip->i_mode);
 	}

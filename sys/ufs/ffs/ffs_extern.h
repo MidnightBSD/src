@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_extern.h	8.6 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/ufs/ffs/ffs_extern.h,v 1.69.2.1 2006/03/13 03:07:37 jeff Exp $
+ * $FreeBSD: src/sys/ufs/ffs/ffs_extern.h,v 1.74 2007/02/17 08:25:43 mckusick Exp $
  */
 
 #ifndef _UFS_FFS_EXTERN_H
@@ -61,6 +61,7 @@ ufs2_daddr_t ffs_blkpref_ufs1(struct inode *, ufs_lbn_t, int, ufs1_daddr_t *);
 ufs2_daddr_t ffs_blkpref_ufs2(struct inode *, ufs_lbn_t, int, ufs2_daddr_t *);
 int	ffs_checkfreefile(struct fs *, struct vnode *, ino_t);
 void	ffs_clrblock(struct fs *, u_char *, ufs1_daddr_t);
+void	ffs_bdflush(struct bufobj *, struct buf *);
 int	ffs_copyonwrite(struct vnode *, struct buf *);
 int	ffs_flushfiles(struct mount *, int, struct thread *);
 void	ffs_fragacct(struct fs *, int, int32_t [], int);
@@ -72,6 +73,7 @@ int	ffs_mountroot(void);
 int	ffs_reallocblks(struct vop_reallocblks_args *);
 int	ffs_realloccg(struct inode *, ufs2_daddr_t, ufs2_daddr_t,
 	    ufs2_daddr_t, int, int, struct ucred *, struct buf **);
+int	ffs_sbupdate(struct ufsmount *, int, int);
 void	ffs_setblock(struct fs *, u_char *, ufs1_daddr_t);
 int	ffs_snapblkfree(struct fs *, struct vnode *, ufs2_daddr_t, long, ino_t);
 void	ffs_snapremove(struct vnode *vp);

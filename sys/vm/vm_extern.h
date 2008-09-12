@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)vm_extern.h	8.2 (Berkeley) 1/12/94
- * $FreeBSD: src/sys/vm/vm_extern.h,v 1.76.2.1 2006/03/16 00:25:32 alc Exp $
+ * $FreeBSD: src/sys/vm/vm_extern.h,v 1.78.4.1 2008/01/19 18:15:07 kib Exp $
  */
 
 #ifndef _VM_EXTERN_H_
@@ -70,14 +70,16 @@ int vm_fault(vm_map_t, vm_offset_t, vm_prot_t, int);
 void vm_fault_copy_entry(vm_map_t, vm_map_t, vm_map_entry_t, vm_map_entry_t);
 void vm_fault_unwire(vm_map_t, vm_offset_t, vm_offset_t, boolean_t);
 int vm_fault_wire(vm_map_t, vm_offset_t, vm_offset_t, boolean_t, boolean_t);
-void vm_forkproc(struct thread *, struct proc *, struct thread *, int);
+int vm_forkproc(struct thread *, struct proc *, struct thread *, struct vmspace *, int);
 void vm_waitproc(struct proc *);
 int vm_mmap(vm_map_t, vm_offset_t *, vm_size_t, vm_prot_t, vm_prot_t, int, objtype_t, void *, vm_ooffset_t);
 void vm_set_page_size(void);
 struct vmspace *vmspace_alloc(vm_offset_t, vm_offset_t);
 struct vmspace *vmspace_fork(struct vmspace *);
-void vmspace_exec(struct proc *, vm_offset_t, vm_offset_t);
-void vmspace_unshare(struct proc *);
+int vmspace_exec(struct proc *, vm_offset_t, vm_offset_t);
+int vmspace_unshare(struct proc *);
+void vmspace_exit(struct thread *);
+struct vmspace *vmspace_acquire_ref(struct proc *);
 void vmspace_free(struct vmspace *);
 void vmspace_exitfree(struct proc *);
 void vnode_pager_setsize(struct vnode *, vm_ooffset_t);
@@ -90,8 +92,8 @@ struct sf_buf *vm_imgact_map_page(vm_object_t object, vm_ooffset_t offset);
 void vm_imgact_unmap_page(struct sf_buf *sf);
 void vm_thread_dispose(struct thread *td);
 void vm_thread_dispose_altkstack(struct thread *td);
-void vm_thread_new(struct thread *td, int pages);
-void vm_thread_new_altkstack(struct thread *td, int pages);
+int vm_thread_new(struct thread *td, int pages);
+int vm_thread_new_altkstack(struct thread *td, int pages);
 void vm_thread_swapin(struct thread *td);
 void vm_thread_swapout(struct thread *td);
 #endif				/* _KERNEL */

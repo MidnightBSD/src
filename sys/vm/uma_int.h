@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/vm/uma_int.h,v 1.31.2.6 2005/08/15 09:01:11 rwatson Exp $
+ * $FreeBSD: src/sys/vm/uma_int.h,v 1.38 2007/05/09 22:53:34 rwatson Exp $
  *
  */
 
@@ -75,13 +75,13 @@
  * pair, as well as with its own set of small per-CPU caches, layered above
  * the Zone's general Bucket cache.
  *
- * The PCPU caches are protected by their own locks, while the Zones backed
- * by the same Keg all share a common Keg lock (to coalesce contention on
- * the backing slabs).  The backing Keg typically only serves one Zone but
- * in the case of multiple Zones, one of the Zones is considered the
- * Master Zone and all Zone-related stats from the Keg are done in the
- * Master Zone.  For an example of a Multi-Zone setup, refer to the
- * Mbuf allocation code.
+ * The PCPU caches are protected by critical sections, and may be accessed
+ * safely only from their associated CPU, while the Zones backed by the same
+ * Keg all share a common Keg lock (to coalesce contention on the backing
+ * slabs).  The backing Keg typically only serves one Zone but in the case of
+ * multiple Zones, one of the Zones is considered the Master Zone and all
+ * Zone-related stats from the Keg are done in the Master Zone.  For an
+ * example of a Multi-Zone setup, refer to the Mbuf allocation code.
  */
 
 /*

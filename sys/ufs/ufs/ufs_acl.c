@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1999-2001, 2003 Robert N. M. Watson
+ * Copyright (c) 1999-2003 Robert N. M. Watson
  * All rights reserved.
  *
  * This software was developed by Robert Watson for the TrustedBSD Project.
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_acl.c,v 1.20 2004/08/15 06:24:42 jmg Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_acl.c,v 1.21 2007/01/08 17:55:32 rwatson Exp $");
 
 #include "opt_ufs.h"
 #include "opt_quota.h"

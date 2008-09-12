@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/vm/uma.h,v 1.22.2.6 2005/11/13 08:44:24 alc Exp $
+ * $FreeBSD: src/sys/vm/uma.h,v 1.31 2007/02/11 20:13:52 rwatson Exp $
  *
  */
 
@@ -47,6 +47,8 @@
 struct uma_zone;
 /* Opaque type used as a handle to the zone */
 typedef struct uma_zone * uma_zone_t;
+
+void zone_drain(uma_zone_t);
 
 /* 
  * Item constructor
@@ -234,7 +236,7 @@ uma_zone_t uma_zsecond_create(char *name, uma_ctor ctor, uma_dtor dtor,
 #define UMA_ALIGN_INT	(sizeof(int) - 1)	/* "" int */
 #define UMA_ALIGN_SHORT	(sizeof(short) - 1)	/* "" short */
 #define UMA_ALIGN_CHAR	(sizeof(char) - 1)	/* "" char */
-#define UMA_ALIGN_CACHE	(16 - 1)		/* Cache line size align */
+#define UMA_ALIGN_CACHE	(0 - 1)			/* Cache line size align */
 
 /*
  * Destroys an empty uma zone.  If the zone is not empty uma complains loudly.
@@ -386,6 +388,18 @@ void uma_startup2(void);
 void uma_reclaim(void);
 
 /*
+ * Sets the alignment mask to be used for all zones requesting cache
+ * alignment.  Should be called by MD boot code prior to starting VM/UMA.
+ *
+ * Arguments:
+ *	align The alignment mask
+ *
+ * Returns:
+ *	Nothing
+ */
+void uma_set_align(int align);
+
+/*
  * Switches the backing object of a zone
  *
  * Arguments:
@@ -507,6 +521,18 @@ void uma_prealloc(uma_zone_t zone, int itemcnt);
  * 	A pointer to a u_int32_t reference counter.
  */
 u_int32_t *uma_find_refcnt(uma_zone_t zone, void *item);
+
+/*
+ * Used to determine if a fixed-size zone is exhausted.
+ *
+ * Arguments:
+ *	zone    The zone to check
+ *
+ * Returns:
+ * 	Non-zero if zone is exhausted.
+ */
+int uma_zone_exhausted(uma_zone_t zone);
+int uma_zone_exhausted_nolock(uma_zone_t zone);
 
 /*
  * Exported statistics structures to be used by user space monitoring tools.

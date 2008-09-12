@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_kern.h,v 1.28 2005/01/07 02:29:27 imp Exp $
+ * $FreeBSD: src/sys/vm/vm_kern.h,v 1.29 2006/11/20 16:23:34 ru Exp $
  */
 
 #ifndef _VM_VM_KERN_H_
@@ -67,7 +67,6 @@
 extern vm_map_t buffer_map;
 extern vm_map_t kernel_map;
 extern vm_map_t kmem_map;
-extern vm_map_t clean_map;
 extern vm_map_t exec_map;
 extern vm_map_t pipe_map;
 extern u_int vm_kmem_size;

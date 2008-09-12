@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_bmap.c,v 1.64.2.1 2005/11/26 21:19:20 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_bmap.c,v 1.66 2007/06/01 01:12:45 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -226,7 +226,7 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 			vfs_busy_pages(bp, 0);
 			bp->b_iooffset = dbtob(bp->b_blkno);
 			bstrategy(bp);
-			curproc->p_stats->p_ru.ru_inblock++;	/* XXX */
+			curthread->td_ru.ru_inblock++;
 			error = bufwait(bp);
 			if (error) {
 				brelse(bp);

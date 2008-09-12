@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_inode.c,v 1.106 2005/04/05 08:49:41 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_inode.c,v 1.108 2007/06/01 01:12:45 jeff Exp $");
 
 #include "opt_quota.h"
 
@@ -66,9 +66,11 @@ static int ffs_indirtrunc(struct inode *, ufs2_daddr_t, ufs2_daddr_t,
  * IN_ACCESS, IN_UPDATE, and IN_CHANGE flags respectively.  Write the inode
  * to disk if the IN_MODIFIED flag is set (it may be set initially, or by
  * the timestamp update).  The IN_LAZYMOD flag is set to force a write
- * later if not now.  If we write now, then clear both IN_MODIFIED and
- * IN_LAZYMOD to reflect the presumably successful write, and if waitfor is
- * set, then wait for the write to complete.
+ * later if not now.  The IN_LAZYACCESS is set instead of IN_MODIFIED if the fs
+ * is currently being suspended (or is suspended) and vnode has been accessed.
+ * If we write now, then clear IN_MODIFIED, IN_LAZYACCESS and IN_LAZYMOD to
+ * reflect the presumably successful write, and if waitfor is set, then wait
+ * for the write to complete.
  */
 int
 ffs_update(vp, waitfor)
@@ -80,12 +82,12 @@ ffs_update(vp, waitfor)
 	struct inode *ip;
 	int error;
 
-	ASSERT_VOP_LOCKED(vp, "ffs_update");
+	ASSERT_VOP_ELOCKED(vp, "ffs_update");
 	ufs_itimes(vp);
 	ip = VTOI(vp);
 	if ((ip->i_flag & IN_MODIFIED) == 0 && waitfor == 0)
 		return (0);
-	ip->i_flag &= ~(IN_LAZYMOD | IN_MODIFIED);
+	ip->i_flag &= ~(IN_LAZYACCESS | IN_LAZYMOD | IN_MODIFIED);
 	fs = ip->i_fs;
 	if (fs->fs_ronly)
 		return (0);
@@ -557,7 +559,7 @@ ffs_indirtrunc(ip, lbn, dbn, lastbn, level, countp)
 	vp = ITOV(ip);
 	bp = getblk(vp, lbn, (int)fs->fs_bsize, 0, 0, 0);
 	if ((bp->b_flags & B_CACHE) == 0) {
-		curproc->p_stats->p_ru.ru_inblock++;	/* pay for read */
+		curthread->td_ru.ru_inblock++;	/* pay for read */
 		bp->b_iocmd = BIO_READ;
 		bp->b_flags &= ~B_INVAL;
 		bp->b_ioflags &= ~BIO_ERROR;

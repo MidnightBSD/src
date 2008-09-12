@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_inode.c,v 1.63.2.2 2006/03/13 03:08:12 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_inode.c,v 1.69 2007/06/22 13:22:37 kib Exp $");
 
 #include "opt_quota.h"
 #include "opt_ufs.h"
@@ -56,6 +56,9 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_inode.c,v 1.63.2.2 2006/03/13 03:08:12 j
 #ifdef UFS_DIRHASH
 #include <ufs/ufs/dir.h>
 #include <ufs/ufs/dirhash.h>
+#endif
+#ifdef UFS_GJOURNAL
+#include <ufs/ufs/gjournal.h>
 #endif
 
 /*
@@ -83,9 +86,12 @@ ufs_inactive(ap)
 	 */
 	if (ip->i_mode == 0)
 		goto out;
-	if (ip->i_effnlink == 0 && DOINGSOFTDEP(vp))
-		softdep_releasefile(ip);
-	if (ip->i_nlink <= 0 && (vp->v_mount->mnt_flag & MNT_RDONLY) == 0) {
+#ifdef UFS_GJOURNAL
+	ufs_gjournal_close(vp);
+#endif
+	if ((ip->i_effnlink == 0 && DOINGSOFTDEP(vp)) ||
+	    (ip->i_nlink <= 0 &&
+	     (vp->v_mount->mnt_flag & MNT_RDONLY) == 0)) {
 	loop:
 		if (vn_start_secondary_write(vp, &mp, V_NOWAIT) != 0) {
 			/* Cannot delete file while file system is suspended */
@@ -112,6 +118,10 @@ ufs_inactive(ap)
 				return (0);
 			}
 		}
+	}
+	if (ip->i_effnlink == 0 && DOINGSOFTDEP(vp))
+		softdep_releasefile(ip);
+	if (ip->i_nlink <= 0 && (vp->v_mount->mnt_flag & MNT_RDONLY) == 0) {
 #ifdef QUOTA
 		if (!getinoquota(ip))
 			(void)chkiq(ip, -1, NOCRED, FORCE);
@@ -184,10 +194,9 @@ ufs_reclaim(ap)
 	 * Destroy the vm object and flush associated pages.
 	 */
 	vnode_destroy_vobject(vp);
-	if (ip->i_flag & IN_LAZYMOD) {
+	if (ip->i_flag & IN_LAZYMOD)
 		ip->i_flag |= IN_MODIFIED;
-		UFS_UPDATE(vp, 0);
-	}
+	UFS_UPDATE(vp, 0);
 	/*
 	 * Remove the inode from its hash chain.
 	 */

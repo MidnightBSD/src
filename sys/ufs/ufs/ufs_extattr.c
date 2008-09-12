@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_extattr.c,v 1.81.2.3 2006/03/13 03:08:08 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_extattr.c,v 1.86 2007/06/01 14:33:11 kib Exp $");
 
 #include "opt_ufs.h"
 
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_extattr.c,v 1.81.2.3 2006/03/13 03:08:08
 #include <sys/namei.h>
 #include <sys/malloc.h>
 #include <sys/fcntl.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/vnode.h>
 #include <sys/mount.h>
@@ -320,7 +321,7 @@ ufs_extattr_enable_with_open(struct ufsmount *ump, struct vnode *vp,
 {
 	int error;
 
-	error = VOP_OPEN(vp, FREAD|FWRITE, td->td_ucred, td, -1);
+	error = VOP_OPEN(vp, FREAD|FWRITE, td->td_ucred, td, NULL);
 	if (error) {
 		printf("ufs_extattr_enable_with_open.VOP_OPEN(): failed "
 		    "with %d\n", error);
@@ -699,7 +700,8 @@ ufs_extattrctl(struct mount *mp, int cmd, struct vnode *filename_vp,
 	 * Processes with privilege, but in jail, are not allowed to
 	 * configure extended attributes.
 	 */
-	if ((error = suser(td))) {
+	error = priv_check(td, PRIV_UFS_EXTATTRCTL);
+	if (error) {
 		if (filename_vp != NULL)
 			VOP_UNLOCK(filename_vp, 0, td);
 		return (error);

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)quota.h	8.3 (Berkeley) 8/19/94
- * $FreeBSD: src/sys/ufs/ufs/quota.h,v 1.27 2005/01/07 02:29:26 imp Exp $
+ * $FreeBSD: src/sys/ufs/ufs/quota.h,v 1.30 2007/03/14 08:54:07 kib Exp $
  */
 
 #ifndef _UFS_UFS_QUOTA_H_
@@ -113,15 +113,18 @@ struct dqblk {
  * filesystem. There is one allocated for each quota that exists on any
  * filesystem for the current user or group. A cache is kept of recently
  * used entries.
+ * (h) protected by dqhlock
  */
 struct dquot {
-	LIST_ENTRY(dquot) dq_hash;	/* hash list */
-	TAILQ_ENTRY(dquot) dq_freelist;	/* free list */
+	LIST_ENTRY(dquot) dq_hash;	/* (h) hash list */
+	TAILQ_ENTRY(dquot) dq_freelist;	/* (h) free list */
+	struct mtx dq_lock;		/* lock for concurrency */
 	u_int16_t dq_flags;		/* flags, see below */
 	u_int16_t dq_type;		/* quota type of this dquot */
-	u_int32_t dq_cnt;		/* count of active references */
+	u_int32_t dq_cnt;		/* (h) count of active references */
 	u_int32_t dq_id;		/* identifier this applies to */
-	struct	ufsmount *dq_ump;	/* filesystem that this is taken from */
+	struct	ufsmount *dq_ump;	/* (h) filesystem that this is
+					   taken from */
 	struct	dqblk dq_dqb;		/* actual usage & quotas */
 };
 /*
@@ -167,6 +170,23 @@ struct dquot {
 #define	DQREF(dq)	(dq)->dq_cnt++
 #endif
 
+#define	DQI_LOCK(dq)	mtx_lock(&(dq)->dq_lock)
+#define	DQI_UNLOCK(dq)	mtx_unlock(&(dq)->dq_lock)
+
+#define	DQI_WAIT(dq, prio, msg) do {		\
+	while ((dq)->dq_flags & DQ_LOCK) {	\
+		(dq)->dq_flags |= DQ_WANT;	\
+		(void) msleep((dq),		\
+		    &(dq)->dq_lock, (prio), (msg), 0); \
+	}					\
+} while (0)
+
+#define	DQI_WAKEUP(dq) do {			\
+	if ((dq)->dq_flags & DQ_WANT)		\
+		wakeup((dq));			\
+	(dq)->dq_flags &= ~(DQ_WANT|DQ_LOCK);	\
+} while (0)
+
 struct inode;
 struct mount;
 struct thread;
@@ -174,17 +194,17 @@ struct ucred;
 struct vnode;
 
 int	chkdq(struct inode *, int64_t, struct ucred *, int);
-int	chkiq(struct inode *, ino_t, struct ucred *, int);
+int	chkiq(struct inode *, int, struct ucred *, int);
 void	dqinit(void);
 void	dqrele(struct vnode *, struct dquot *);
 void	dquninit(void);
 int	getinoquota(struct inode *);
-int	getquota(struct thread *, struct mount *, u_long, int, caddr_t);
+int	getquota(struct thread *, struct mount *, u_long, int, void *);
 int	qsync(struct mount *mp);
 int	quotaoff(struct thread *td, struct mount *, int);
-int	quotaon(struct thread *td, struct mount *, int, caddr_t);
-int	setquota(struct thread *, struct mount *, u_long, int, caddr_t);
-int	setuse(struct thread *, struct mount *, u_long, int, caddr_t);
+int	quotaon(struct thread *td, struct mount *, int, void *);
+int	setquota(struct thread *, struct mount *, u_long, int, void *);
+int	setuse(struct thread *, struct mount *, u_long, int, void *);
 vfs_quotactl_t ufs_quotactl;
 
 #else /* !_KERNEL */

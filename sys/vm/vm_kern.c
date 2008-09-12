@@ -63,11 +63,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_kern.c,v 1.122 2005/01/07 02:29:27 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_kern.c,v 1.128.4.1 2008/01/17 14:57:50 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>		/* for ticks and hz */
+#include <sys/eventhandler.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
@@ -81,6 +82,7 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_kern.c,v 1.122 2005/01/07 02:29:27 imp Exp $")
 #include <vm/vm_page.h>
 #include <vm/vm_pageout.h>
 #include <vm/vm_extern.h>
+#include <vm/uma.h>
 
 vm_map_t kernel_map=0;
 vm_map_t kmem_map=0;
@@ -175,9 +177,8 @@ kmem_alloc(map, size)
 		mem = vm_page_grab(kernel_object, OFF_TO_IDX(offset + i),
 		    VM_ALLOC_NOBUSY | VM_ALLOC_ZERO | VM_ALLOC_RETRY);
 		mem->valid = VM_PAGE_BITS_ALL;
-		vm_page_lock_queues();
-		vm_page_unmanage(mem);
-		vm_page_unlock_queues();
+		KASSERT((mem->flags & PG_UNMANAGED) != 0,
+		    ("kmem_alloc: page %p is managed", mem));
 	}
 	VM_OBJECT_UNLOCK(kernel_object);
 
@@ -295,10 +296,25 @@ kmem_malloc(map, size, flags)
 	vm_map_lock(map);
 	if (vm_map_findspace(map, vm_map_min(map), size, &addr)) {
 		vm_map_unlock(map);
-		if ((flags & M_NOWAIT) == 0)
-			panic("kmem_malloc(%ld): kmem_map too small: %ld total allocated",
-				(long)size, (long)map->size);
-		return (0);
+                if ((flags & M_NOWAIT) == 0) {
+			for (i = 0; i < 8; i++) {
+				EVENTHANDLER_INVOKE(vm_lowmem, 0);
+				uma_reclaim();
+				vm_map_lock(map);
+				if (vm_map_findspace(map, vm_map_min(map),
+				    size, &addr) == 0) {
+					break;
+				}
+				vm_map_unlock(map);
+				tsleep(&i, 0, "nokva", (hz / 4) * (i + 1));
+			}
+			if (i == 8) {
+				panic("kmem_malloc(%ld): kmem_map too small: %ld total allocated",
+				    (long)size, (long)map->size);
+			}
+		} else {
+			return (0);
+		}
 	}
 	offset = addr - VM_MIN_KERNEL_ADDRESS;
 	vm_object_reference(kmem_object);
@@ -364,9 +380,8 @@ retry:
 		if (flags & M_ZERO && (m->flags & PG_ZERO) == 0)
 			pmap_zero_page(m);
 		m->valid = VM_PAGE_BITS_ALL;
-		vm_page_lock_queues();
-		vm_page_unmanage(m);
-		vm_page_unlock_queues();
+		KASSERT((m->flags & PG_UNMANAGED) != 0,
+		    ("kmem_malloc: page %p is managed", m));
 	}
 	VM_OBJECT_UNLOCK(kmem_object);
 
@@ -390,9 +405,7 @@ retry:
 	vm_map_simplify_entry(map, entry);
 
 	/*
-	 * Loop thru pages, entering them in the pmap. (We cannot add them to
-	 * the wired count without wrapping the vm_page_queue_lock in
-	 * splimp...)
+	 * Loop thru pages, entering them in the pmap.
 	 */
 	VM_OBJECT_LOCK(kmem_object);
 	for (i = 0; i < size; i += PAGE_SIZE) {
@@ -401,10 +414,7 @@ retry:
 		 * Because this is kernel_pmap, this call will not block.
 		 */
 		pmap_enter(kernel_pmap, addr + i, m, VM_PROT_ALL, 1);
-		vm_page_lock_queues();
-		vm_page_flag_set(m, PG_WRITEABLE | PG_REFERENCED);
 		vm_page_wakeup(m);
-		vm_page_unlock_queues();
 	}
 	VM_OBJECT_UNLOCK(kmem_object);
 	vm_map_unlock(map);
@@ -492,7 +502,8 @@ kmem_init(start, end)
 	/* N.B.: cannot use kgdb to debug, starting with this assignment ... */
 	kernel_map = m;
 	(void) vm_map_insert(m, NULL, (vm_ooffset_t) 0,
-	    VM_MIN_KERNEL_ADDRESS, start, VM_PROT_ALL, VM_PROT_ALL, 0);
+	    VM_MIN_KERNEL_ADDRESS, start, VM_PROT_ALL, VM_PROT_ALL,
+	    MAP_NOFAULT);
 	/* ... and ending with the completion of the above `insert' */
 	vm_map_unlock(m);
 }

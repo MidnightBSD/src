@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/vm/vm_zeroidle.c,v 1.34.2.2 2006/06/16 22:11:55 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_zeroidle.c,v 1.49 2007/07/14 19:00:44 alc Exp $");
 
 #include <opt_sched.h>
 
@@ -51,22 +51,13 @@ __FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/vm/vm_zeroidle.c,v 1.34.2.2 2006/06/
 
 #include <vm/vm.h>
 #include <vm/vm_page.h>
+#include <vm/vm_phys.h>
 
-SYSCTL_DECL(_vm_stats_misc);
-
-static int cnt_prezero;
-SYSCTL_INT(_vm_stats_misc, OID_AUTO, cnt_prezero, CTLFLAG_RD,
-    &cnt_prezero, 0, "");
-
-static int idlezero_enable_default = 1;
+static int idlezero_enable_default = 0;
 TUNABLE_INT("vm.idlezero_enable", &idlezero_enable_default);
 /* Defer setting the enable flag until the kthread is running. */
 static int idlezero_enable = 0;
 SYSCTL_INT(_vm, OID_AUTO, idlezero_enable, CTLFLAG_RW, &idlezero_enable, 0, "");
-
-static int idlezero_maxrun = 16;
-SYSCTL_INT(_vm, OID_AUTO, idlezero_maxrun, CTLFLAG_RW, &idlezero_maxrun, 0, "");
-TUNABLE_INT("vm.idlezero_maxrun", &idlezero_maxrun);
 
 /*
  * Implement the pre-zeroed page mechanism.
@@ -99,30 +90,16 @@ vm_page_zero_check(void)
 	return (1);
 }
 
-static int
+static void
 vm_page_zero_idle(void)
 {
-	static int free_rover;
-	vm_page_t m;
 
-	mtx_lock_spin(&vm_page_queue_free_mtx);
+	mtx_assert(&vm_page_queue_free_mtx, MA_OWNED);
 	zero_state = 0;
-	m = vm_pageq_find(PQ_FREE, free_rover, FALSE);
-	if (m != NULL && (m->flags & PG_ZERO) == 0) {
-		vm_pageq_remove_nowakeup(m);
-		mtx_unlock_spin(&vm_page_queue_free_mtx);
-		pmap_zero_page_idle(m);
-		mtx_lock_spin(&vm_page_queue_free_mtx);
-		m->flags |= PG_ZERO;
-		vm_pageq_enqueue(PQ_FREE + m->pc, m);
-		++vm_page_zero_count;
-		++cnt_prezero;
+	if (vm_phys_zero_pages_idle()) {
 		if (vm_page_zero_count >= ZIDLE_HI(cnt.v_free_count))
 			zero_state = 1;
 	}
-	free_rover = (free_rover + PQ_PRIME2) & PQ_L2_MASK;
-	mtx_unlock_spin(&vm_page_queue_free_mtx);
-	return (1);
 }
 
 /* Called by vm_page_free to hint that a new page is available. */
@@ -130,7 +107,7 @@ void
 vm_page_zero_idle_wakeup(void)
 {
 
-	mtx_assert(&vm_page_queue_mtx, MA_OWNED);
+	mtx_assert(&vm_page_queue_free_mtx, MA_OWNED);
 	if (wakeup_needed && vm_page_zero_check()) {
 		wakeup_needed = FALSE;
 		wakeup(&zero_state);
@@ -143,21 +120,21 @@ vm_pagezero(void __unused *arg)
 
 	idlezero_enable = idlezero_enable_default;
 
+	mtx_lock(&vm_page_queue_free_mtx);
 	for (;;) {
 		if (vm_page_zero_check()) {
 			vm_page_zero_idle();
 #ifndef PREEMPTION
 			if (sched_runnable()) {
-				mtx_lock_spin(&sched_lock);
+				thread_lock(curthread);
 				mi_switch(SW_VOL, NULL);
-				mtx_unlock_spin(&sched_lock);
+				thread_unlock(curthread);
 			}
 #endif
 		} else {
-			vm_page_lock_queues();
 			wakeup_needed = TRUE;
-			msleep(&zero_state, &vm_page_queue_mtx,
-			    PDROP, "pgzero", hz * 300);
+			msleep(&zero_state, &vm_page_queue_free_mtx, 0,
+			    "pgzero", hz * 300);
 		}
 	}
 }
@@ -180,11 +157,11 @@ pagezero_start(void __unused *arg)
 	PROC_LOCK(pagezero_proc);
 	pagezero_proc->p_flag |= P_NOLOAD;
 	PROC_UNLOCK(pagezero_proc);
-	mtx_lock_spin(&sched_lock);
 	td = FIRST_THREAD_IN_PROC(pagezero_proc);
-	sched_class(td->td_ksegrp, PRI_IDLE);
+	thread_lock(td);
+	sched_class(td, PRI_IDLE);
 	sched_prio(td, PRI_MAX_IDLE);
-	setrunqueue(td, SRQ_BORING);
-	mtx_unlock_spin(&sched_lock);
+	sched_add(td, SRQ_BORING);
+	thread_unlock(td);
 }
 SYSINIT(pagezero, SI_SUB_KTHREAD_VM, SI_ORDER_ANY, pagezero_start, NULL)

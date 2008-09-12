@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_rawread.c,v 1.25.2.2 2006/03/09 00:18:45 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_rawread.c,v 1.29 2007/02/04 23:42:02 tegge Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -129,8 +129,16 @@ ffs_rawread_sync(struct vnode *vp, struct thread *td)
 			upgraded = 0;
 			
 		
-		/* Attempt to msync mmap() regions to clean dirty mmap */ 
 		VI_LOCK(vp);
+		/* Check if vnode was reclaimed while unlocked. */
+		if ((vp->v_iflag & VI_DOOMED) != 0) {
+			VI_UNLOCK(vp);
+			if (upgraded != 0)
+				VOP_LOCK(vp, LK_DOWNGRADE, td);
+			vn_finished_write(mp);
+			return (EIO);
+		}
+		/* Attempt to msync mmap() regions to clean dirty mmap */ 
 		if ((vp->v_iflag & VI_OBJDIRTY) != 0) {
 			VI_UNLOCK(vp);
 			if (vp->v_object != NULL) {
@@ -150,6 +158,7 @@ ffs_rawread_sync(struct vnode *vp, struct thread *td)
 			VI_UNLOCK(vp);
 			if (upgraded != 0)
 				VOP_LOCK(vp, LK_DOWNGRADE, td);
+			vn_finished_write(mp);
 			return (error);
 		}
 		/* Flush dirty buffers */
@@ -159,6 +168,7 @@ ffs_rawread_sync(struct vnode *vp, struct thread *td)
 			if ((error = ffs_syncvnode(vp, MNT_WAIT)) != 0) {
 				if (upgraded != 0)
 					VOP_LOCK(vp, LK_DOWNGRADE, td);
+				vn_finished_write(mp);
 				return (error);
 			}
 			VI_LOCK(vp);
@@ -300,7 +310,7 @@ ffs_rawread_main(struct vnode *vp,
 			/* XXX: Leave some bufs for swap */
 			bp = getpbuf(&ffsrawbufcnt);
 			sa = bp->b_data;
-			bp->b_vp = vp; 
+			pbgetvp(vp, bp);
 			error = ffs_rawread_readahead(vp, udata, offset,
 						     resid, td, bp, sa);
 			if (error != 0)
@@ -314,7 +324,7 @@ ffs_rawread_main(struct vnode *vp,
 					nbp = NULL;
 				if (nbp != NULL) {
 					nsa = nbp->b_data;
-					nbp->b_vp = vp;
+					pbgetvp(vp, nbp);
 					
 					nerror = ffs_rawread_readahead(vp, 
 								       udata +
@@ -327,6 +337,7 @@ ffs_rawread_main(struct vnode *vp,
 								       nbp,
 								       nsa);
 					if (nerror) {
+						pbrelvp(nbp);
 						relpbuf(nbp, &ffsrawbufcnt);
 						nbp = NULL;
 					}
@@ -375,6 +386,7 @@ ffs_rawread_main(struct vnode *vp,
 			nsa = tsa;
 			
 			if (resid <= bp->b_bufsize) { /* No more readaheads */
+				pbrelvp(nbp);
 				relpbuf(nbp, &ffsrawbufcnt);
 				nbp = NULL;
 			} else { /* Setup next readahead */
@@ -389,6 +401,7 @@ ffs_rawread_main(struct vnode *vp,
 							       nbp,
 							       nsa);
 				if (nerror != 0) {
+					pbrelvp(nbp);
 					relpbuf(nbp, &ffsrawbufcnt);
 					nbp = NULL;
 				}
@@ -403,13 +416,16 @@ ffs_rawread_main(struct vnode *vp,
 		}
 	}
 	
-	if (bp != NULL)
+	if (bp != NULL) {
+		pbrelvp(bp);
 		relpbuf(bp, &ffsrawbufcnt);
+	}
 	if (nbp != NULL) {			/* Run down readahead buffer */
 		spl = splbio();
 		bwait(nbp, PRIBIO, "rawrd");
 		splx(spl);
 		vunmapbuf(nbp);
+		pbrelvp(nbp);
 		relpbuf(nbp, &ffsrawbufcnt);
 	}
 	

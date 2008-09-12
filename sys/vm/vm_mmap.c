@@ -41,9 +41,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.200.2.2 2005/12/26 13:47:20 dds Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.213 2007/08/20 12:05:45 kib Exp $");
 
 #include "opt_compat.h"
+#include "opt_hwpmc_hooks.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -53,19 +54,21 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.200.2.2 2005/12/26 13:47:20 dds Exp
 #include <sys/mutex.h>
 #include <sys/sysproto.h>
 #include <sys/filedesc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
 #include <sys/vnode.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
-#include <sys/mac.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/conf.h>
 #include <sys/stat.h>
 #include <sys/vmmeter.h>
 #include <sys/sysctl.h>
+
+#include <security/mac/mac_framework.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -78,6 +81,10 @@ __FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.200.2.2 2005/12/26 13:47:20 dds Exp
 #include <vm/vm_extern.h>
 #include <vm/vm_page.h>
 #include <vm/vm_kern.h>
+
+#ifdef HWPMC_HOOKS
+#include <sys/pmckern.h>
+#endif
 
 #ifndef _SYS_SYSPROTO_H_
 struct sbrk_args {
@@ -201,6 +208,9 @@ mmap(td, uap)
 	struct thread *td;
 	struct mmap_args *uap;
 {
+#ifdef HWPMC_HOOKS
+	struct pmckern_map_in pkm;
+#endif
 	struct file *fp;
 	struct vnode *vp;
 	vm_offset_t addr;
@@ -297,7 +307,7 @@ mmap(td, uap)
 		if ((error = fget(td, uap->fd, &fp)) != 0)
 			goto done;
 		if (fp->f_type != DTYPE_VNODE) {
-			error = EINVAL;
+			error = ENODEV;
 			goto done;
 		}
 		/*
@@ -364,6 +374,15 @@ mmap(td, uap)
 
 	error = vm_mmap(&vms->vm_map, &addr, size, prot, maxprot,
 	    flags, handle_type, handle, pos);
+#ifdef HWPMC_HOOKS
+	/* inform hwpmc(4) if an executable is being mapped */
+	if (error == 0 && handle_type == OBJT_VNODE &&
+	    (prot & PROT_EXEC)) {
+		pkm.pm_file = handle;
+		pkm.pm_address = (uintptr_t) addr;
+		PMC_CALL_HOOK(td, PMC_FN_MMAP, (void *) &pkm);
+	}
+#endif
 	if (error == 0)
 		td->td_retval[0] = (register_t) (addr + pageoff);
 done:
@@ -371,6 +390,20 @@ done:
 		fdrop(fp, td);
 
 	return (error);
+}
+
+int
+freebsd6_mmap(struct thread *td, struct freebsd6_mmap_args *uap)
+{
+	struct mmap_args oargs;
+
+	oargs.addr = uap->addr;
+	oargs.len = uap->len;
+	oargs.prot = uap->prot;
+	oargs.flags = uap->flags;
+	oargs.fd = uap->fd;
+	oargs.pos = uap->pos;
+	return (mmap(td, &oargs));
 }
 
 #ifdef COMPAT_43
@@ -495,6 +528,10 @@ munmap(td, uap)
 	struct thread *td;
 	struct munmap_args *uap;
 {
+#ifdef HWPMC_HOOKS
+	struct pmckern_map_out pkm;
+	vm_map_entry_t entry;
+#endif
 	vm_offset_t addr;
 	vm_size_t size, pageoff;
 	vm_map_t map;
@@ -525,6 +562,26 @@ munmap(td, uap)
 		vm_map_unlock(map);
 		return (EINVAL);
 	}
+#ifdef HWPMC_HOOKS
+	/*
+	 * Inform hwpmc if the address range being unmapped contains
+	 * an executable region.
+	 */
+	if (vm_map_lookup_entry(map, addr, &entry)) {
+		for (;
+		     entry != &map->header && entry->start < addr + size;
+		     entry = entry->next) {
+			if (vm_map_check_protection(map, entry->start,
+				entry->end, VM_PROT_EXECUTE) == TRUE) {
+				pkm.pm_address = (uintptr_t) addr;
+				pkm.pm_size = (size_t) size;
+				PMC_CALL_HOOK(td, PMC_FN_MUNMAP,
+				    (void *) &pkm);
+				break;
+			}
+		}
+	}
+#endif
 	/* returns nothing but KERN_SUCCESS anyway */
 	vm_map_delete(map, addr, addr + size);
 	vm_map_unlock(map);
@@ -642,7 +699,7 @@ madvise(td, uap)
 	 * "immortal."
 	 */
 	if (uap->behav == MADV_PROTECT) {
-		error = suser(td);
+		error = priv_check(td, PRIV_VM_MADV_PROTECT);
 		if (error == 0) {
 			p = td->td_proc;
 			PROC_LOCK(p);
@@ -716,7 +773,7 @@ mincore(td, uap)
 	end = addr + (vm_size_t)round_page(uap->len);
 	map = &td->td_proc->p_vmspace->vm_map;
 	if (end > vm_map_max(map) || end < addr)
-		return (EINVAL);
+		return (ENOMEM);
 
 	/*
 	 * Address of byte vector
@@ -729,8 +786,10 @@ mincore(td, uap)
 RestartScan:
 	timestamp = map->timestamp;
 
-	if (!vm_map_lookup_entry(map, addr, &entry))
-		entry = entry->next;
+	if (!vm_map_lookup_entry(map, addr, &entry)) {
+		vm_map_unlock_read(map);
+		return (ENOMEM);
+	}
 
 	/*
 	 * Do this on a map entry basis so that if the pages are not
@@ -741,6 +800,16 @@ RestartScan:
 	for (current = entry;
 	    (current != &map->header) && (current->start < end);
 	    current = current->next) {
+
+		/*
+		 * check for contiguity
+		 */
+		if (current->end < end &&
+		    (entry->next == &map->header ||
+		     current->next->start > current->end)) {
+			vm_map_unlock_read(map);
+			return (ENOMEM);
+		}
 
 		/*
 		 * ignore submaps (for now) or null objects
@@ -897,7 +966,7 @@ mlock(td, uap)
 	vm_size_t npages, size;
 	int error;
 
-	error = suser(td);
+	error = priv_check(td, PRIV_VM_MLOCK);
 	if (error)
 		return (error);
 	addr = (vm_offset_t)uap->addr;
@@ -962,7 +1031,7 @@ mlockall(td, uap)
 	}
 	PROC_UNLOCK(td->td_proc);
 #else
-	error = suser(td);
+	error = priv_check(td, PRIV_VM_MLOCK);
 	if (error)
 		return (error);
 #endif
@@ -1007,7 +1076,7 @@ munlockall(td, uap)
 	int error;
 
 	map = &td->td_proc->p_vmspace->vm_map;
-	error = suser(td);
+	error = priv_check(td, PRIV_VM_MUNLOCK);
 	if (error)
 		return (error);
 
@@ -1041,7 +1110,7 @@ munlock(td, uap)
 	vm_size_t size;
 	int error;
 
-	error = suser(td);
+	error = priv_check(td, PRIV_VM_MUNLOCK);
 	if (error)
 		return (error);
 	addr = (vm_offset_t)uap->addr;
@@ -1236,7 +1305,7 @@ vm_mmap(vm_map_t map, vm_offset_t *addr, vm_size_t size, vm_prot_t prot,
 	vm_ooffset_t foff)
 {
 	boolean_t fitit;
-	vm_object_t object;
+	vm_object_t object = NULL;
 	int rv = KERN_SUCCESS;
 	int docow, error;
 	struct thread *td = curthread;
@@ -1272,7 +1341,6 @@ vm_mmap(vm_map_t map, vm_offset_t *addr, vm_size_t size, vm_prot_t prot,
 		if (*addr != trunc_page(*addr))
 			return (EINVAL);
 		fitit = FALSE;
-		(void) vm_map_remove(map, *addr, *addr + size);
 	}
 	/*
 	 * Lookup/allocate object.
@@ -1294,6 +1362,7 @@ vm_mmap(vm_map_t map, vm_offset_t *addr, vm_size_t size, vm_prot_t prot,
 		/* FALLTHROUGH */
 	default:
 		error = EINVAL;
+		break;
 	}
 	if (error)
 		return (error);
@@ -1330,8 +1399,11 @@ vm_mmap(vm_map_t map, vm_offset_t *addr, vm_size_t size, vm_prot_t prot,
 	if (flags & MAP_STACK)
 		rv = vm_map_stack(map, *addr, size, prot, maxprot,
 		    docow | MAP_STACK_GROWS_DOWN);
+	else if (fitit)
+		rv = vm_map_find(map, object, foff, addr, size, TRUE,
+				 prot, maxprot, docow);
 	else
-		rv = vm_map_find(map, object, foff, addr, size, fitit,
+		rv = vm_map_fixed(map, object, foff, addr, size,
 				 prot, maxprot, docow);
 
 	if (rv != KERN_SUCCESS) {

@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_param.h,v 1.21 2005/01/07 02:29:27 imp Exp $
+ * $FreeBSD: src/sys/vm/vm_param.h,v 1.22 2007/04/19 04:52:47 alc Exp $
  */
 
 /*
@@ -79,8 +79,8 @@
 #define VM_V_FREE_TARGET	4	/* cnt.v_free_target */
 #define VM_V_FREE_RESERVED	5	/* cnt.v_free_reserved */
 #define VM_V_INACTIVE_TARGET	6	/* cnt.v_inactive_target */
-#define VM_V_CACHE_MIN		7	/* cnt.v_cache_max */
-#define VM_V_CACHE_MAX		8	/* cnt.v_cache_min */
+#define	VM_V_CACHE_MIN		7	/* cnt.v_cache_min */
+#define	VM_V_CACHE_MAX		8	/* cnt.v_cache_max */
 #define VM_V_PAGEOUT_FREE_MIN	9	/* cnt.v_pageout_free_min */
 #define	VM_PAGEOUT_ALGORITHM	10	/* pageout algorithm */
 #define VM_SWAPPING_ENABLED	11	/* swapping enabled */

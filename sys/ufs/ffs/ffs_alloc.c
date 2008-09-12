@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.132.2.4 2006/03/13 03:07:32 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.147 2007/09/10 14:12:29 bz Exp $");
 
 #include "opt_quota.h"
 
@@ -71,6 +71,7 @@ __FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_alloc.c,v 1.132.2.4 2006/03/13 03:07:32 
 #include <sys/conf.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/vnode.h>
 #include <sys/mount.h>
@@ -121,7 +122,7 @@ static int	ffs_reallocblks_ufs2(struct vop_reallocblks_args *);
  *   3) allocate a block in the same cylinder group.
  *   4) quadradically rehash into other cylinder groups, until an
  *      available block is located.
- * If no block preference is given the following heirarchy is used
+ * If no block preference is given the following hierarchy is used
  * to allocate a block:
  *   1) allocate a block in the cylinder group that contains the
  *      inode for the file.
@@ -142,6 +143,7 @@ ffs_alloc(ip, lbn, bpref, size, cred, bnp)
 	int cg, reclaimed;
 	static struct timeval lastfail;
 	static int curfail;
+	int64_t delta;
 #ifdef QUOTA
 	int error;
 #endif
@@ -171,7 +173,7 @@ retry:
 #endif
 	if (size == fs->fs_bsize && fs->fs_cstotal.cs_nbfree == 0)
 		goto nospace;
-	if (suser_cred(cred, SUSER_ALLOWJAIL) &&
+	if (priv_check_cred(cred, PRIV_VFS_BLOCKRESERVE, 0) &&
 	    freespace(fs, fs->fs_minfree) - numfrags(fs, size) < 0)
 		goto nospace;
 	if (bpref >= fs->fs_size)
@@ -182,11 +184,18 @@ retry:
 		cg = dtog(fs, bpref);
 	bno = ffs_hashalloc(ip, cg, bpref, size, ffs_alloccg);
 	if (bno > 0) {
-		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) + btodb(size));
+		delta = btodb(size);
+		if (ip->i_flag & IN_SPACECOUNTED) {
+			UFS_LOCK(ump);
+			fs->fs_pendingblocks += delta;
+			UFS_UNLOCK(ump);
+		}
+		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) + delta);
 		ip->i_flag |= IN_CHANGE | IN_UPDATE;
 		*bnp = bno;
 		return (0);
 	}
+nospace:
 #ifdef QUOTA
 	UFS_UNLOCK(ump);
 	/*
@@ -195,7 +204,6 @@ retry:
 	(void) chkdq(ip, -btodb(size), cred, FORCE);
 	UFS_LOCK(ump);
 #endif
-nospace:
 	if (fs->fs_pendingblocks > 0 && reclaimed == 0) {
 		reclaimed = 1;
 		softdep_request_cleanup(fs, ITOV(ip));
@@ -236,6 +244,7 @@ ffs_realloccg(ip, lbprev, bprev, bpref, osize, nsize, cred, bpp)
 	ufs2_daddr_t bno;
 	static struct timeval lastfail;
 	static int curfail;
+	int64_t delta;
 
 	*bpp = 0;
 	vp = ITOV(ip);
@@ -259,7 +268,7 @@ ffs_realloccg(ip, lbprev, bprev, bpref, osize, nsize, cred, bpp)
 #endif /* DIAGNOSTIC */
 	reclaimed = 0;
 retry:
-	if (suser_cred(cred, SUSER_ALLOWJAIL) &&
+	if (priv_check_cred(cred, PRIV_VFS_BLOCKRESERVE, 0) &&
 	    freespace(fs, fs->fs_minfree) -  numfrags(fs, nsize - osize) < 0) {
 		goto nospace;
 	}
@@ -301,7 +310,13 @@ retry:
 	if (bno) {
 		if (bp->b_blkno != fsbtodb(fs, bno))
 			panic("ffs_realloccg: bad blockno");
-		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) + btodb(nsize - osize));
+		delta = btodb(nsize - osize);
+		if (ip->i_flag & IN_SPACECOUNTED) {
+			UFS_LOCK(ump);
+			fs->fs_pendingblocks += delta;
+			UFS_UNLOCK(ump);
+		}
+		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) + delta);
 		ip->i_flag |= IN_CHANGE | IN_UPDATE;
 		allocbuf(bp, nsize);
 		bp->b_flags |= B_DONE;
@@ -370,7 +385,13 @@ retry:
 			ffs_blkfree(ump, fs, ip->i_devvp,
 			    bno + numfrags(fs, nsize),
 			    (long)(request - nsize), ip->i_number);
-		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) + btodb(nsize - osize));
+		delta = btodb(nsize - osize);
+		if (ip->i_flag & IN_SPACECOUNTED) {
+			UFS_LOCK(ump);
+			fs->fs_pendingblocks += delta;
+			UFS_UNLOCK(ump);
+		}
+		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) + delta);
 		ip->i_flag |= IN_CHANGE | IN_UPDATE;
 		allocbuf(bp, nsize);
 		bp->b_flags |= B_DONE;
@@ -879,7 +900,7 @@ fail:
  *   2) allocate an inode in the same cylinder group.
  *   3) quadradically rehash into other cylinder groups, until an
  *      available inode is located.
- * If no inode preference is given the following heirarchy is used
+ * If no inode preference is given the following hierarchy is used
  * to allocate an inode:
  *   1) allocate an inode in cylinder group 0.
  *   2) quadradically rehash into other cylinder groups, until an
@@ -1052,7 +1073,10 @@ ffs_dirpref(pip)
 	curdirsize = avgndir ? (cgsize - avgbfree * fs->fs_bsize) / avgndir : 0;
 	if (dirsize < curdirsize)
 		dirsize = curdirsize;
-	maxcontigdirs = min((avgbfree * fs->fs_bsize) / dirsize, 255);
+	if (dirsize <= 0)
+		maxcontigdirs = 0;		/* dirsize overflowed */
+	else
+		maxcontigdirs = min((avgbfree * fs->fs_bsize) / dirsize, 255);
 	if (fs->fs_avgfpdir > 0)
 		maxcontigdirs = min(maxcontigdirs,
 				    fs->fs_ipg / fs->fs_avgfpdir);
@@ -2131,13 +2155,13 @@ ffs_mapsearch(fs, cgp, bpref, allocsiz)
 	blksfree = cg_blksfree(cgp);
 	len = howmany(fs->fs_fpg, NBBY) - start;
 	loc = scanc((u_int)len, (u_char *)&blksfree[start],
-		(u_char *)fragtbl[fs->fs_frag],
+		fragtbl[fs->fs_frag],
 		(u_char)(1 << (allocsiz - 1 + (fs->fs_frag % NBBY))));
 	if (loc == 0) {
 		len = start + 1;
 		start = 0;
 		loc = scanc((u_int)len, (u_char *)&blksfree[0],
-			(u_char *)fragtbl[fs->fs_frag],
+			fragtbl[fs->fs_frag],
 			(u_char)(1 << (allocsiz - 1 + (fs->fs_frag % NBBY))));
 		if (loc == 0) {
 			printf("start = %d, len = %d, fs = %s\n",
@@ -2430,6 +2454,11 @@ sysctl_ffs_fsck(SYSCTL_HANDLER_ARGS)
 		if ((error = ffs_vget(mp, (ino_t)cmd.value, LK_EXCLUSIVE, &vp)))
 			break;
 		ip = VTOI(vp);
+		if (ip->i_flag & IN_SPACECOUNTED) {
+			UFS_LOCK(ump);
+			fs->fs_pendingblocks += cmd.size;
+			UFS_UNLOCK(ump);
+		}
 		DIP_SET(ip, i_blocks, DIP(ip, i_blocks) + cmd.size);
 		ip->i_flag |= IN_CHANGE;
 		vput(vp);

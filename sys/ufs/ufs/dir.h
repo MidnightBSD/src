@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dir.h	8.2 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/ufs/ufs/dir.h,v 1.11 2005/01/07 02:29:26 imp Exp $
+ * $FreeBSD: src/sys/ufs/ufs/dir.h,v 1.12 2007/07/02 01:31:43 peter Exp $
  */
 
 #ifndef _UFS_UFS_DIR_H_
@@ -110,7 +110,7 @@ struct	direct {
  * 
  */
 #define	DIRECTSIZ(namlen)						\
-	(((int)&((struct direct *)0)->d_name +				\
+	(((uintptr_t)&((struct direct *)0)->d_name +			\
 	  ((namlen)+1)*sizeof(((struct direct *)0)->d_name[0]) + 3) & ~3)
 #if (BYTE_ORDER == LITTLE_ENDIAN)
 #define DIRSIZ(oldfmt, dp) \

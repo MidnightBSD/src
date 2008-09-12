@@ -28849,7 +28849,6 @@ sys/tools/pccarddevs2h.awk -text
 sys/tools/usbdevs2h.awk -text
 sys/tools/vnode_if.awk -text
 sys/ufs/ffs/README.snapshot -text
-sys/ufs/ffs/README.softupdates -text
 sys/ufs/ffs/ffs_alloc.c -text
 sys/ufs/ffs/ffs_balloc.c -text
 sys/ufs/ffs/ffs_extern.h -text
@@ -28870,6 +28869,7 @@ sys/ufs/ufs/dinode.h -text
 sys/ufs/ufs/dir.h -text
 sys/ufs/ufs/dirhash.h -text
 sys/ufs/ufs/extattr.h -text
+sys/ufs/ufs/gjournal.h -text
 sys/ufs/ufs/inode.h -text
 sys/ufs/ufs/quota.h -text
 sys/ufs/ufs/ufs_acl.c -text
@@ -28877,6 +28877,7 @@ sys/ufs/ufs/ufs_bmap.c -text
 sys/ufs/ufs/ufs_dirhash.c -text
 sys/ufs/ufs/ufs_extattr.c -text
 sys/ufs/ufs/ufs_extern.h -text
+sys/ufs/ufs/ufs_gjournal.c -text
 sys/ufs/ufs/ufs_inode.c -text
 sys/ufs/ufs/ufs_lookup.c -text
 sys/ufs/ufs/ufs_quota.c -text
@@ -28889,6 +28890,8 @@ sys/vm/memguard.c -text
 sys/vm/memguard.h -text
 sys/vm/phys_pager.c -text
 sys/vm/pmap.h -text
+sys/vm/redzone.c -text
+sys/vm/redzone.h -text
 sys/vm/swap_pager.c -text
 sys/vm/swap_pager.h -text
 sys/vm/uma.h -text
@@ -28918,6 +28921,8 @@ sys/vm/vm_pageq.c -text
 sys/vm/vm_pager.c -text
 sys/vm/vm_pager.h -text
 sys/vm/vm_param.h -text
+sys/vm/vm_phys.c -text
+sys/vm/vm_phys.h -text
 sys/vm/vm_unix.c -text
 sys/vm/vm_zeroidle.c -text
 sys/vm/vnode_pager.c -text

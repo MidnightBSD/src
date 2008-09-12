@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_fault.c,v 1.205.2.4 2006/03/08 23:53:39 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_fault.c,v 1.237 2007/10/08 20:09:53 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -130,17 +130,17 @@ struct faultstate {
 	struct vnode *vp;
 };
 
-static __inline void
+static inline void
 release_page(struct faultstate *fs)
 {
-	vm_page_lock_queues();
 	vm_page_wakeup(fs->m);
+	vm_page_lock_queues();
 	vm_page_deactivate(fs->m);
 	vm_page_unlock_queues();
 	fs->m = NULL;
 }
 
-static __inline void
+static inline void
 unlock_map(struct faultstate *fs)
 {
 	if (fs->lookup_still_valid) {
@@ -152,7 +152,6 @@ unlock_map(struct faultstate *fs)
 static void
 unlock_and_deallocate(struct faultstate *fs)
 {
-	boolean_t firstobjneedgiant;
 
 	vm_object_pip_wakeup(fs->object);
 	VM_OBJECT_UNLOCK(fs->object);
@@ -165,7 +164,6 @@ unlock_and_deallocate(struct faultstate *fs)
 		VM_OBJECT_UNLOCK(fs->first_object);
 		fs->first_m = NULL;
 	}
-	firstobjneedgiant = (fs->first_object->flags & OBJ_NEEDGIANT) != 0;
 	vm_object_deallocate(fs->first_object);
 	unlock_map(fs);	
 	if (fs->vp != NULL) { 
@@ -176,8 +174,6 @@ unlock_and_deallocate(struct faultstate *fs)
 		fs->vp = NULL;
 		VFS_UNLOCK_GIANT(vfslocked);
 	}
-	if (firstobjneedgiant)
-		VM_UNLOCK_GIANT();
 }
 
 /*
@@ -223,7 +219,7 @@ vm_fault(vm_map_t map, vm_offset_t vaddr, vm_prot_t fault_type,
 
 	hardfault = 0;
 	growstack = TRUE;
-	atomic_add_int(&cnt.v_vm_faults, 1);
+	PCPU_INC(cnt.v_vm_faults);
 
 RetryFault:;
 
@@ -302,7 +298,7 @@ RetryFault:;
 	KASSERT((fs.first_object->flags & OBJ_NEEDGIANT) == 0 ||
 	    !fs.map->system_map,
 	    ("vm_fault: Object requiring giant mapped by system map"));
-	if (fs.first_object->flags & OBJ_NEEDGIANT && debug_mpsafevm)
+	if (fs.first_object->flags & OBJ_NEEDGIANT)
 		mtx_unlock(&Giant);
 	vm_object_pip_add(fs.first_object, 1);
 
@@ -332,8 +328,6 @@ RetryFault:;
 		 */
 		fs.m = vm_page_lookup(fs.object, fs.pindex);
 		if (fs.m != NULL) {
-			int queue;
-
 			/* 
 			 * check for page-based copy on write.
 			 * We check fs.object == fs.first_object so
@@ -355,7 +349,7 @@ RetryFault:;
 
 			/*
 			 * Wait/Retry if the page is busy.  We have to do this
-			 * if the page is busy via either PG_BUSY or 
+			 * if the page is busy via either VPO_BUSY or 
 			 * vm_page_t->busy because the vm_pager may be using
 			 * vm_page_t->busy for pageouts ( and even pageins if
 			 * it is the vnode pager ), and we could end up trying
@@ -369,7 +363,7 @@ RetryFault:;
 			 * around with a vm_page_t->busy page except, perhaps,
 			 * to pmap it.
 			 */
-			if ((fs.m->flags & PG_BUSY) || fs.m->busy) {
+			if ((fs.m->oflags & VPO_BUSY) || fs.m->busy) {
 				vm_page_unlock_queues();
 				VM_OBJECT_UNLOCK(fs.object);
 				if (fs.object != fs.first_object) {
@@ -393,30 +387,17 @@ RetryFault:;
 				VM_OBJECT_LOCK(fs.object);
 				if (fs.m == vm_page_lookup(fs.object,
 				    fs.pindex)) {
-					vm_page_lock_queues();
-					if (!vm_page_sleep_if_busy(fs.m, TRUE,
-					    "vmpfw"))
-						vm_page_unlock_queues();
+					vm_page_sleep_if_busy(fs.m, TRUE,
+					    "vmpfw");
 				}
 				vm_object_pip_wakeup(fs.object);
 				VM_OBJECT_UNLOCK(fs.object);
-				atomic_add_int(&cnt.v_intrans, 1);
-				if (fs.first_object->flags & OBJ_NEEDGIANT)
-					VM_UNLOCK_GIANT();
+				PCPU_INC(cnt.v_intrans);
 				vm_object_deallocate(fs.first_object);
 				goto RetryFault;
 			}
-			queue = fs.m->queue;
-
-			vm_pageq_remove_nowakeup(fs.m);
-
-			if ((queue - fs.m->pc) == PQ_CACHE && vm_page_count_severe()) {
-				vm_page_activate(fs.m);
-				vm_page_unlock_queues();
-				unlock_and_deallocate(&fs);
-				VM_WAITPFAULT;
-				goto RetryFault;
-			}
+			vm_pageq_remove(fs.m);
+			vm_page_unlock_queues();
 
 			/*
 			 * Mark page busy for other processes, and the 
@@ -425,7 +406,6 @@ RetryFault:;
 			 * found the page ).
 			 */
 			vm_page_busy(fs.m);
-			vm_page_unlock_queues();
 			if (((fs.m->valid & VM_PAGE_BITS_ALL) != VM_PAGE_BITS_ALL) &&
 				fs.m->object != kernel_object && fs.m->object != kmem_object) {
 				goto readrest;
@@ -456,7 +436,8 @@ RetryFault:;
 				unlock_and_deallocate(&fs);
 				VM_WAITPFAULT;
 				goto RetryFault;
-			}
+			} else if ((fs.m->valid & VM_PAGE_BITS_ALL) == VM_PAGE_BITS_ALL)
+				break;
 		}
 
 readrest:
@@ -471,7 +452,7 @@ readrest:
 		 */
 		if (TRYPAGER) {
 			int rv;
-			int reqpage;
+			int reqpage = 0;
 			int ahead, behind;
 			u_char behavior = vm_map_entry_behavior(fs.entry);
 
@@ -517,7 +498,8 @@ readrest:
 					if (mt == NULL || (mt->valid != VM_PAGE_BITS_ALL))
 						break;
 					if (mt->busy ||
-						(mt->flags & (PG_BUSY | PG_FICTITIOUS | PG_UNMANAGED)) ||
+					    (mt->oflags & VPO_BUSY) ||
+					    (mt->flags & (PG_FICTITIOUS | PG_UNMANAGED)) ||
 						mt->hold_count ||
 						mt->wire_count) 
 						continue;
@@ -546,7 +528,7 @@ readrest:
 			 * return value is the index into the marray for the
 			 * vm_page_t passed to the routine.
 			 *
-			 * fs.m plus the additional pages are PG_BUSY'd.
+			 * fs.m plus the additional pages are VPO_BUSY'd.
 			 *
 			 * XXX vm_fault_additional_pages() can block
 			 * without releasing the map lock.
@@ -566,7 +548,7 @@ readrest:
 			/*
 			 * Call the pager to retrieve the data, if any, after
 			 * releasing the lock on the map.  We hold a ref on
-			 * fs.object and the pages are PG_BUSY'd.
+			 * fs.object and the pages are VPO_BUSY'd.
 			 */
 			unlock_map(&fs);
 
@@ -674,9 +656,9 @@ readrest:
 			if ((fs.m->flags & PG_ZERO) == 0) {
 				pmap_zero_page(fs.m);
 			} else {
-				atomic_add_int(&cnt.v_ozfod, 1);
+				PCPU_INC(cnt.v_ozfod);
 			}
-			atomic_add_int(&cnt.v_zfod, 1);
+			PCPU_INC(cnt.v_zfod);
 			fs.m->valid = VM_PAGE_BITS_ALL;
 			break;	/* break to PAGE HAS BEEN FOUND */
 		} else {
@@ -691,7 +673,7 @@ readrest:
 		}
 	}
 
-	KASSERT((fs.m->flags & PG_BUSY) != 0,
+	KASSERT((fs.m->oflags & VPO_BUSY) != 0,
 	    ("vm_fault: not busy after main loop"));
 
 	/*
@@ -747,7 +729,6 @@ readrest:
 				/*
 				 * get rid of the unnecessary page
 				 */
-				pmap_remove_all(fs.first_m);
 				vm_page_free(fs.first_m);
 				/*
 				 * grab the page and put it into the 
@@ -755,11 +736,11 @@ readrest:
 				 * automatically made dirty.
 				 */
 				vm_page_rename(fs.m, fs.first_object, fs.first_pindex);
-				vm_page_busy(fs.m);
 				vm_page_unlock_queues();
+				vm_page_busy(fs.m);
 				fs.first_m = fs.m;
 				fs.m = NULL;
-				atomic_add_int(&cnt.v_cow_optim, 1);
+				PCPU_INC(cnt.v_cow_optim);
 			} else {
 				/*
 				 * Oh, well, lets copy it.
@@ -787,7 +768,7 @@ readrest:
 			fs.m = fs.first_m;
 			if (!is_first_object_locked)
 				VM_OBJECT_LOCK(fs.object);
-			atomic_add_int(&cnt.v_cow_faults, 1);
+			PCPU_INC(cnt.v_cow_faults);
 		} else {
 			prot &= ~VM_PROT_WRITE;
 		}
@@ -813,7 +794,7 @@ readrest:
 			    &fs.entry, &retry_object, &retry_pindex, &retry_prot, &wired);
 
 			/*
-			 * If we don't need the page any longer, put it on the active
+			 * If we don't need the page any longer, put it on the inactive
 			 * list (the easiest thing to do here).  If no one needs it,
 			 * pageout will grab it eventually.
 			 */
@@ -848,16 +829,14 @@ readrest:
 		}
 	}
 	if (prot & VM_PROT_WRITE) {
-		vm_page_lock_queues();
-		vm_page_flag_set(fs.m, PG_WRITEABLE);
-		vm_object_set_writeable_dirty(fs.m->object);
+		vm_object_set_writeable_dirty(fs.object);
 
 		/*
 		 * If the fault is a write, we know that this page is being
 		 * written NOW so dirty it explicitly to save on 
 		 * pmap_is_modified() calls later.
 		 *
-		 * If this is a NOSYNC mmap we do not want to set PG_NOSYNC
+		 * If this is a NOSYNC mmap we do not want to set VPO_NOSYNC
 		 * if the page is already dirty to prevent data written with
 		 * the expectation of being synced from not being synced.
 		 * Likewise if this entry does not request NOSYNC then make
@@ -869,11 +848,10 @@ readrest:
 		 */
 		if (fs.entry->eflags & MAP_ENTRY_NOSYNC) {
 			if (fs.m->dirty == 0)
-				vm_page_flag_set(fs.m, PG_NOSYNC);
+				fs.m->oflags |= VPO_NOSYNC;
 		} else {
-			vm_page_flag_clear(fs.m, PG_NOSYNC);
+			fs.m->oflags &= ~VPO_NOSYNC;
 		}
-		vm_page_unlock_queues();
 		if (fault_flags & VM_FAULT_DIRTY) {
 			vm_page_dirty(fs.m);
 			vm_pager_page_unswapped(fs.m);
@@ -883,7 +861,7 @@ readrest:
 	/*
 	 * Page had better still be busy
 	 */
-	KASSERT(fs.m->flags & PG_BUSY,
+	KASSERT(fs.m->oflags & VPO_BUSY,
 		("vm_fault: page %p not busy!", fs.m));
 	/*
 	 * Sanity check: page must be completely valid or it is not fit to
@@ -921,22 +899,17 @@ readrest:
 	} else {
 		vm_page_activate(fs.m);
 	}
-	vm_page_wakeup(fs.m);
 	vm_page_unlock_queues();
+	vm_page_wakeup(fs.m);
 
 	/*
 	 * Unlock everything, and return
 	 */
 	unlock_and_deallocate(&fs);
-	PROC_LOCK(curproc);
-	if ((curproc->p_sflag & PS_INMEM) && curproc->p_stats) {
-		if (hardfault) {
-			curproc->p_stats->p_ru.ru_majflt++;
-		} else {
-			curproc->p_stats->p_ru.ru_minflt++;
-		}
-	}
-	PROC_UNLOCK(curproc);
+	if (hardfault)
+		curthread->td_ru.ru_majflt++;
+	else
+		curthread->td_ru.ru_minflt++;
 
 	return (KERN_SUCCESS);
 }
@@ -953,7 +926,7 @@ vm_fault_prefault(pmap_t pmap, vm_offset_t addra, vm_map_entry_t entry)
 	int i;
 	vm_offset_t addr, starta;
 	vm_pindex_t pindex;
-	vm_page_t m, mpte;
+	vm_page_t m;
 	vm_object_t object;
 
 	if (pmap != vmspace_pmap(curthread->td_proc->p_vmspace))
@@ -968,7 +941,6 @@ vm_fault_prefault(pmap_t pmap, vm_offset_t addra, vm_map_entry_t entry)
 		starta = 0;
 	}
 
-	mpte = NULL;
 	for (i = 0; i < PAGEORDER_SIZE; i++) {
 		vm_object_t backing_object, lobject;
 
@@ -1004,13 +976,10 @@ vm_fault_prefault(pmap_t pmap, vm_offset_t addra, vm_map_entry_t entry)
 		}
 		if (((m->valid & VM_PAGE_BITS_ALL) == VM_PAGE_BITS_ALL) &&
 			(m->busy == 0) &&
-		    (m->flags & (PG_BUSY | PG_FICTITIOUS)) == 0) {
+		    (m->flags & PG_FICTITIOUS) == 0) {
 
 			vm_page_lock_queues();
-			if ((m->queue - m->pc) == PQ_CACHE)
-				vm_page_deactivate(m);
-			mpte = pmap_enter_quick(pmap, addr, m,
-			    entry->protection, mpte);
+			pmap_enter_quick(pmap, addr, m, entry->protection);
 			vm_page_unlock_queues();
 		}
 		VM_OBJECT_UNLOCK(lobject);
@@ -1198,17 +1167,15 @@ vm_fault_copy_entry(dst_map, src_map, dst_entry, src_entry)
 		 * Enter it in the pmap...
 		 */
 		pmap_enter(dst_map->pmap, vaddr, dst_m, prot, FALSE);
-		VM_OBJECT_LOCK(dst_object);
-		vm_page_lock_queues();
-		if ((prot & VM_PROT_WRITE) != 0)
-			vm_page_flag_set(dst_m, PG_WRITEABLE);
 
 		/*
 		 * Mark it no longer busy, and put it on the active list.
 		 */
+		VM_OBJECT_LOCK(dst_object);
+		vm_page_lock_queues();
 		vm_page_activate(dst_m);
-		vm_page_wakeup(dst_m);
 		vm_page_unlock_queues();
+		vm_page_wakeup(dst_m);
 	}
 	VM_OBJECT_UNLOCK(dst_object);
 }
@@ -1248,15 +1215,7 @@ vm_fault_additional_pages(m, rbehind, rahead, marray, reqpage)
 
 	object = m->object;
 	pindex = m->pindex;
-
-	/*
-	 * we don't fault-ahead for device pager
-	 */
-	if (object->type == OBJT_DEVICE) {
-		*reqpage = 0;
-		marray[0] = m;
-		return 1;
-	}
+	cbehind = cahead = 0;
 
 	/*
 	 * if the requested page is not available, then give up now
@@ -1280,17 +1239,6 @@ vm_fault_additional_pages(m, rbehind, rahead, marray, reqpage)
 	}
 
 	/*
-	 * try to do any readahead that we might have free pages for.
-	 */
-	if ((rahead + rbehind) >
-		((cnt.v_free_count + cnt.v_cache_count) - cnt.v_free_reserved)) {
-		pagedaemon_wakeup();
-		marray[0] = m;
-		*reqpage = 0;
-		return 1;
-	}
-
-	/*
 	 * scan backward for the read behind pages -- in memory 
 	 */
 	if (pindex > 0) {
@@ -1301,30 +1249,29 @@ vm_fault_additional_pages(m, rbehind, rahead, marray, reqpage)
 			startpindex = pindex - rbehind;
 		}
 
-		for (tpindex = pindex - 1; tpindex >= startpindex; tpindex -= 1) {
-			if (vm_page_lookup(object, tpindex)) {
-				startpindex = tpindex + 1;
-				break;
-			}
-			if (tpindex == 0)
-				break;
-		}
+		if ((rtm = TAILQ_PREV(m, pglist, listq)) != NULL &&
+		    rtm->pindex >= startpindex)
+			startpindex = rtm->pindex + 1;
 
-		for (i = 0, tpindex = startpindex; tpindex < pindex; i++, tpindex++) {
+		/* tpindex is unsigned; beware of numeric underflow. */
+		for (i = 0, tpindex = pindex - 1; tpindex >= startpindex &&
+		    tpindex < pindex; i++, tpindex--) {
 
-			rtm = vm_page_alloc(object, tpindex, VM_ALLOC_NORMAL);
+			rtm = vm_page_alloc(object, tpindex, VM_ALLOC_NORMAL |
+			    VM_ALLOC_IFNOTCACHED);
 			if (rtm == NULL) {
-				vm_page_lock_queues();
+				/*
+				 * Shift the allocated pages to the
+				 * beginning of the array.
+				 */
 				for (j = 0; j < i; j++) {
-					vm_page_free(marray[j]);
+					marray[j] = marray[j + tpindex + 1 -
+					    startpindex];
 				}
-				vm_page_unlock_queues();
-				marray[0] = m;
-				*reqpage = 0;
-				return 1;
+				break;
 			}
 
-			marray[i] = rtm;
+			marray[tpindex - startpindex] = rtm;
 		}
 	} else {
 		startpindex = 0;
@@ -1342,16 +1289,15 @@ vm_fault_additional_pages(m, rbehind, rahead, marray, reqpage)
 	 * scan forward for the read ahead pages
 	 */
 	endpindex = tpindex + rahead;
+	if ((rtm = TAILQ_NEXT(m, listq)) != NULL && rtm->pindex < endpindex)
+		endpindex = rtm->pindex;
 	if (endpindex > object->size)
 		endpindex = object->size;
 
 	for (; tpindex < endpindex; i++, tpindex++) {
 
-		if (vm_page_lookup(object, tpindex)) {
-			break;
-		}
-
-		rtm = vm_page_alloc(object, tpindex, VM_ALLOC_NORMAL);
+		rtm = vm_page_alloc(object, tpindex, VM_ALLOC_NORMAL |
+		    VM_ALLOC_IFNOTCACHED);
 		if (rtm == NULL) {
 			break;
 		}
@@ -1359,6 +1305,6 @@ vm_fault_additional_pages(m, rbehind, rahead, marray, reqpage)
 		marray[i] = rtm;
 	}
 
-	/* return number of bytes of pages */
+	/* return number of pages */
 	return i;
 }
