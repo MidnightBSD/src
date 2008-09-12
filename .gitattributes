@@ -28841,6 +28841,7 @@ sys/sys/wait.h -text
 sys/sys/watchdog.h -text
 sys/sys/xrpuio.h -text
 sys/tools/acpi_quirks2h.awk -text
+sys/tools/bus_macro.sh -text
 sys/tools/emu10k1-mkalsa.sh -text
 sys/tools/fw_stub.awk -text
 sys/tools/makeobjops.awk -text

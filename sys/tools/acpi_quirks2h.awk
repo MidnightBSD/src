@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 #
-# $FreeBSD: src/sys/tools/acpi_quirks2h.awk,v 1.3 2005/01/07 02:29:25 imp Exp $
+# $FreeBSD: src/sys/tools/acpi_quirks2h.awk,v 1.4 2007/03/22 18:16:43 jkim Exp $
 
 #-
 # Copyright (c) 2004 Mark Santcroos <marks@ripe.net>
@@ -78,7 +78,7 @@ $1 == "oem:" {
 	M = match (REMAINDER, /\"[^\"]*\"/);
 	OEM_TABLE_ID = substr(REMAINDER, M, RLENGTH);
 
-	printf("\t{ ACPI_TABLE_%s, OEM, {%s}, {%s} },\n",
+	printf("\t{ \"%s\", OEM, {%s}, {%s} },\n",
 	    TABLE, OEM_ID, OEM_TABLE_ID) > OUTPUT;
 }
 
@@ -92,7 +92,7 @@ $1 == "creator:" {
 	M = match ($0, /\"[^\"]*\"/);
 	CREATOR = substr($0, M, RLENGTH);
 
-	printf("\t{ ACPI_TABLE_%s, CREATOR, {%s} },\n",
+	printf("\t{ \"%s\", CREATOR, {%s} },\n",
 	    TABLE, CREATOR) > OUTPUT;
 }
 
@@ -107,7 +107,7 @@ $1 == "oem_rev:" {
 	# Parse operand
 	OPERAND = trans_sign(SIGN);
 
-	printf("\t{ ACPI_TABLE_%s, OEM_REV, {.op = %s}, {.rev = %s} },\n",
+	printf("\t{ \"%s\", OEM_REV, {.op = %s}, {.rev = %s} },\n",
 	    TABLE, OPERAND, VALUE) > OUTPUT;
 }
 
@@ -122,7 +122,7 @@ $1 == "creator_rev:" {
 	# Parse operand
 	OPERAND = trans_sign(SIGN);
 
-	printf("\t{ ACPI_TABLE_%s, CREATOR_REV, {.op = %s}, {.rev = %s} },\n",
+	printf("\t{ \"%s\", CREATOR_REV, {.op = %s}, {.rev = %s} },\n",
 	    TABLE, OPERAND, VALUE) > OUTPUT;
 }
 
@@ -130,7 +130,7 @@ $1 == "creator_rev:" {
 # QUIRKS field: This is the last line of every entry
 #
 $1 == "quirks:" {
-	printf("\t{ ACPI_TABLE_END }\n};\n\n") > OUTPUT;
+	printf("\t{ \"\" }\n};\n\n") > OUTPUT;
 
 	QUIRKS = $0;
 	sub(/^quirks:[ ]*/ , "", QUIRKS);

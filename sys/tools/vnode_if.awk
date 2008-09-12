@@ -30,12 +30,13 @@
 
 #
 #	@(#)vnode_if.sh	8.1 (Berkeley) 6/10/93
-# $FreeBSD: src/sys/tools/vnode_if.awk,v 1.50 2005/06/09 20:20:30 ssouhlal Exp $
+# $FreeBSD: src/sys/tools/vnode_if.awk,v 1.55 2006/05/30 21:13:28 dds Exp $
 #
 # Script to produce VFS front-end sugar.
 #
-# usage: vnode_if.awk <srcfile> [-c | -h]
+# usage: vnode_if.awk <srcfile> [-c | -h | -p | -q]
 #	(where <srcfile> is currently /sys/kern/vnode_if.src)
+#	The source file must have a .src extension
 #
 
 function usage()
@@ -46,6 +47,7 @@ function usage()
 
 function die(msg, what)
 {
+	printf srcfile "(" fnr "): " > "/dev/stderr";
 	printf msg "\n", what > "/dev/stderr";
 	exit 1;
 }
@@ -146,7 +148,7 @@ common_head = \
     " * This file is produced automatically.\n" \
     " * Do not modify anything in here by hand.\n" \
     " *\n" \
-    " * Created from $FreeBSD: src/sys/tools/vnode_if.awk,v 1.50 2005/06/09 20:20:30 ssouhlal Exp $\n" \
+    " * Created from $FreeBSD: src/sys/tools/vnode_if.awk,v 1.55 2006/05/30 21:13:28 dds Exp $\n" \
     " */\n" \
     "\n";
 
@@ -178,35 +180,38 @@ if (cfile) {
 	    "struct vnodeop_desc vop_default_desc = {\n" \
 	    "	\"default\",\n" \
 	    "	0,\n" \
-	    "	(void *)(uintptr_t)vop_panic,\n" \
+	    "	(vop_bypass_t *)vop_panic,\n" \
 	    "	NULL,\n" \
 	    "	VDESC_NO_OFFSET,\n" \
 	    "	VDESC_NO_OFFSET,\n" \
 	    "	VDESC_NO_OFFSET,\n" \
 	    "	VDESC_NO_OFFSET,\n" \
-	    "	NULL,\n" \
 	    "};\n");
 }
 
 while ((getline < srcfile) > 0) {
+	fnr++;
 	if (NF == 0)
 		continue;
-	if ($1 ~ /^#%/) {
-		if (NF != 6  ||  $1 != "#%"  || \
-		    $2 !~ /^[a-z]+$/  ||  $3 !~ /^[a-z]+$/  || \
-		    $4 !~ /^.$/  ||  $5 !~ /^.$/  ||  $6 !~ /^.$/)
+	if ($1 ~ /^%%/) {
+		if (NF != 6 ||
+		    $2 !~ /^[a-z]+$/  ||  $3 !~ /^[a-z]+$/  ||
+		    $4 !~ /^.$/  ||  $5 !~ /^.$/  ||  $6 !~ /^.$/) {
+			die("Invalid %s construction", "%%");
 			continue;
+		}
 		lockdata["vop_" $2, $3, "Entry"] = $4;
 		lockdata["vop_" $2, $3, "OK"]    = $5;
 		lockdata["vop_" $2, $3, "Error"] = $6;			
 		continue;
 	}
 
-	if ($1 ~ /^#!/) {
-		if (NF != 4 || $1 != "#!")
+	if ($1 ~ /^%!/) {
+		if (NF != 4 ||
+		    ($3 != "pre" && $3 != "post")) {
+			die("Invalid %s construction", "%!");
 			continue;
-		if ($3 != "pre" && $3 != "post")
-			continue;
+		}
 		lockdata["vop_" $2, $3] = $4;
 		continue;
 	}
@@ -225,6 +230,7 @@ while ((getline < srcfile) > 0) {
 			die("Unable to read through the arguments for \"%s\"",
 			    name);
 		}
+		fnr++;
 		if ($1 ~ /^\};/)
 			break;
 
@@ -401,7 +407,7 @@ while ((getline < srcfile) > 0) {
 		printc("\t" releflags vppwillrele ",");
 
 		# function to call
-		printc("\t(void*)(uintptr_t)" uname "_AP,");
+		printc("\t(vop_bypass_t *)" uname "_AP,");
 		# vp offsets
 		printc("\t" name "_vp_offsets,");
 		# vpp (if any)
@@ -413,7 +419,7 @@ while ((getline < srcfile) > 0) {
 		# componentname
 		printc("\t" find_arg_with_type("struct componentname *") ",");
 		# transport layer information
-		printc("\tNULL,\n};\n");
+		printc("};\n");
 	}
 }
  

@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/tools/fw_stub.awk,v 1.2.2.1 2006/02/23 02:13:32 mlaier Exp $
+# $FreeBSD: src/sys/tools/fw_stub.awk,v 1.6 2007/03/02 11:42:53 flz Exp $
 
 #
 # Script to generate module .c file from a list of firmware images
@@ -33,7 +33,7 @@
 
 function usage ()
 {
-	print "usage: fw_stub <firmware:name>* [-m modname] [-c outfile]";
+	print "usage: fw_stub <firmware:name>* [-l name] [-m modname] [-c outfile]";
 	exit 1;
 }
 
@@ -84,6 +84,17 @@ for (i = 1; i < ARGC; i++) {
 					else
 						usage();
 				}
+			} else if (o == "l") {
+				if (length(ARGV[i]) > j) {
+					opt_l = substr(ARGV[i], j + 1);
+					break;
+				}
+				else {
+					if (++i < ARGC)
+						opt_l = ARGV[i];
+					else
+						usage();
+				}
 			} else
 				usage();
 		}
@@ -93,7 +104,7 @@ for (i = 1; i < ARGC; i++) {
 		if (length(curr[2]) > 0)
 			shortnames[num_files] = curr[2];
 		else
-			shortnames[num_files] = curr[2];
+			shortnames[num_files] = curr[1];
 		if (length(curr[3]) > 0)
 			versions[num_files] = int(curr[3]);
 		else
@@ -113,7 +124,12 @@ printc("#include <sys/param.h>\
 #include <sys/kernel.h>\
 #include <sys/module.h>\
 #include <sys/linker.h>\
-#include <sys/firmware.h>\n");
+#include <sys/firmware.h>\
+#include <sys/systm.h>\n");
+
+if (opt_l) {
+	printc("static long " opt_l "_license_ack = 0;");
+}
 
 for (file_i = 0; file_i < num_files; file_i++) {
 	symb = filenames[file_i];
@@ -125,9 +141,20 @@ for (file_i = 0; file_i < num_files; file_i++) {
 printc("\nstatic int\n"\
 opt_m "_fw_modevent(module_t mod, int type, void *unused)\
 {\
-	struct firmware *fp;\
+	const struct firmware *fp, *parent;\
+	int error;\
 	switch (type) {\
-	case MOD_LOAD:");
+	case MOD_LOAD:\n");
+
+if (opt_l) {
+		printc("\
+		TUNABLE_LONG_FETCH(\"legal." opt_l ".license_ack\", &" opt_l "_license_ack);\
+		if (!" opt_l "_license_ack) {\
+			printf(\"" opt_m ": You need to read the LICENSE file in /usr/share/doc/legal/" opt_l "/.\\n\");\
+			printf(\"" opt_m ": If you agree with the license, set legal." opt_l ".license_ack=1 in /boot/loader.conf.\\n\");\
+			return(EPERM);\
+		}\n");
+}
 
 for (file_i = 0; file_i < num_files; file_i++) {
 	short = shortnames[file_i];
@@ -136,11 +163,7 @@ for (file_i = 0; file_i < num_files; file_i++) {
 	# '-', '.' and '/' are converted to '_' by ld/objcopy
 	gsub(/-|\.|\//, "_", symb);
 
-	if (file_i == 0)
-		reg = "\t\tfp = ";
-	else
-		reg = "\t\t(void)";
-
+	reg = "\t\tfp = ";
 	reg = reg "firmware_register(\"" short "\", _binary_" symb "_start , ";
 	reg = reg "(size_t)(_binary_" symb "_end - _binary_" symb "_start), ";
 	reg = reg version ", ";
@@ -148,21 +171,37 @@ for (file_i = 0; file_i < num_files; file_i++) {
 	if (file_i == 0)
 		reg = reg "NULL);";
 	else
-		reg = reg "fp);";
+		reg = reg "parent);";
 
 	printc(reg);
+
+	printc("\t\tif (fp == NULL)");
+	printc("\t\t\tgoto fail_" file_i ";");
+	if (file_i == 0)
+		printc("\t\tparent = fp;");
 }
 
-printc("\t\treturn (0);\
-	case MOD_UNLOAD:");
+printc("\t\treturn (0);");
+
+for (file_i = num_files - 1; file_i > 0; file_i--) {
+	printc("fail_" file_i ":")
+	printc("\t\t(void)firmware_unregister(\"" shortnames[file_i - 1] "\");");
+}
+
+printc("\tfail_0:");
+printc("\t\treturn (ENXIO);");
+
+printc("\tcase MOD_UNLOAD:");
 
 for (file_i = 1; file_i < num_files; file_i++) {
-	printc("\t\tfirmware_unregister(\"" shortnames[file_i] "\");");
+	printc("\t\terror = firmware_unregister(\"" shortnames[file_i] "\");");
+	printc("\t\tif (error)");
+	printc("\t\t\treturn (error);");
 }
 
-printc("\t\tfirmware_unregister(\"" shortnames[0] "\");");
+printc("\t\terror = firmware_unregister(\"" shortnames[0] "\");");
 
-printc("\t\treturn (0);\
+printc("\t\treturn (error);\
 	}\
 	return (EINVAL);\
 }\
