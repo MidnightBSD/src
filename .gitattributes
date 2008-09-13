@@ -28678,6 +28678,7 @@ sys/sys/pmclog.h -text
 sys/sys/poll.h -text
 sys/sys/power.h -text
 sys/sys/priority.h -text
+sys/sys/priv.h -text
 sys/sys/proc.h -text
 sys/sys/procfs.h -text
 sys/sys/protosw.h -text
