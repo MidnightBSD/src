@@ -28035,6 +28035,7 @@ sys/netinet6/esp_rijndael.c -text
 sys/netinet6/esp_rijndael.h -text
 sys/netinet6/frag6.c -text
 sys/netinet6/icmp6.c -text
+sys/netinet6/icmp6.c.orig -text
 sys/netinet6/icmp6.h -text
 sys/netinet6/in6.c -text
 sys/netinet6/in6.h -text
@@ -28056,6 +28057,8 @@ sys/netinet6/ip6_fw.c -text
 sys/netinet6/ip6_fw.h -text
 sys/netinet6/ip6_id.c -text
 sys/netinet6/ip6_input.c -text
+sys/netinet6/ip6_ipsec.c -text
+sys/netinet6/ip6_ipsec.h -text
 sys/netinet6/ip6_mroute.c -text
 sys/netinet6/ip6_mroute.h -text
 sys/netinet6/ip6_output.c -text
@@ -28082,6 +28085,8 @@ sys/netinet6/raw_ip6.h -text
 sys/netinet6/route6.c -text
 sys/netinet6/scope6.c -text
 sys/netinet6/scope6_var.h -text
+sys/netinet6/sctp6_usrreq.c -text
+sys/netinet6/sctp6_var.h -text
 sys/netinet6/tcp6_var.h -text
 sys/netinet6/udp6_output.c -text
 sys/netinet6/udp6_usrreq.c -text
