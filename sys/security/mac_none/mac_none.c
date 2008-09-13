@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1999-2002 Robert N. M. Watson
+ * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2003 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_none/mac_none.c,v 1.31.8.1 2005/09/26 14:36:53 phk Exp $
+ * $FreeBSD: src/sys/security/mac_none/mac_none.c,v 1.36 2007/02/23 11:21:26 rwatson Exp $
  */
 
 /*
@@ -42,48 +42,11 @@
  * on, try mac_stub.
  */
 
-#include <sys/types.h>
 #include <sys/param.h>
-#include <sys/acl.h>
-#include <sys/conf.h>
-#include <sys/extattr.h>
 #include <sys/kernel.h>
-#include <sys/mac.h>
-#include <sys/mount.h>
-#include <sys/proc.h>
-#include <sys/systm.h>
-#include <sys/sysproto.h>
-#include <sys/sysent.h>
-#include <sys/vnode.h>
-#include <sys/file.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
-#include <sys/pipe.h>
-#include <sys/sx.h>
-#include <sys/sysctl.h>
+#include <sys/module.h>
 
-#include <fs/devfs/devfs.h>
-
-#include <net/bpfdesc.h>
-#include <net/if.h>
-#include <net/if_types.h>
-#include <net/if_var.h>
-
-#include <netinet/in.h>
-#include <netinet/ip_var.h>
-
-#include <vm/vm.h>
-
-#include <sys/mac_policy.h>
-
-SYSCTL_DECL(_security_mac);
-
-SYSCTL_NODE(_security_mac, OID_AUTO, none, CTLFLAG_RW, 0,
-    "TrustedBSD mac_none policy controls");
-
-static int	mac_none_enabled = 1;
-SYSCTL_INT(_security_mac_none, OID_AUTO, enabled, CTLFLAG_RW,
-    &mac_none_enabled, 0, "Enforce none policy");
+#include <security/mac/mac_policy.h>
 
 static struct mac_policy_ops mac_none_ops =
 {

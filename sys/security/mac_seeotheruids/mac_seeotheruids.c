@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1999-2002 Robert N. M. Watson
+ * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2002 Networks Associates Technology, Inc.
  * All rights reserved.
  *
@@ -31,39 +31,26 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_seeotheruids/mac_seeotheruids.c,v 1.7 2005/01/03 12:08:18 rwatson Exp $
+ * $FreeBSD: src/sys/security/mac_seeotheruids/mac_seeotheruids.c,v 1.15 2007/06/12 00:12:01 rwatson Exp $
  */
 
 /*
  * Developed by the TrustedBSD Project.
+ *
  * Prevent processes owned by a particular uid from seeing various transient
  * kernel objects associated with other uids.
  */
 
-#include <sys/types.h>
 #include <sys/param.h>
-#include <sys/conf.h>
 #include <sys/kernel.h>
-#include <sys/mac.h>
-#include <sys/mount.h>
+#include <sys/module.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
-#include <sys/sysproto.h>
-#include <sys/sysent.h>
-#include <sys/vnode.h>
-#include <sys/file.h>
-#include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 
-#include <net/bpfdesc.h>
-#include <net/if.h>
-#include <net/if_types.h>
-#include <net/if_var.h>
-
-#include <vm/vm.h>
-
-#include <sys/mac_policy.h>
+#include <security/mac/mac_policy.h>
 
 SYSCTL_DECL(_security_mac);
 
@@ -84,6 +71,14 @@ SYSCTL_INT(_security_mac_seeotheruids, OID_AUTO, primarygroup_enabled,
     "with the same real primary group id");
 
 /*
+ * Exception: allow the root user to be aware of other credentials by virtue
+ * of privilege.
+ */
+static int	suser_privileged = 1;
+SYSCTL_INT(_security_mac_seeotheruids, OID_AUTO, suser_privileged,
+    CTLFLAG_RW, &suser_privileged, 0, "Make an exception for superuser");
+
+/*
  * Exception: allow processes with a specific gid to be exempt from the
  * policy.  One sysctl enables this functionality; the other sets the
  * exempt gid.
@@ -98,66 +93,69 @@ SYSCTL_INT(_security_mac_seeotheruids, OID_AUTO, specificgid, CTLFLAG_RW,
     &specificgid, 0, "Specific gid to be exempt from seeotheruids policy");
 
 static int
-mac_seeotheruids_check(struct ucred *u1, struct ucred *u2)
+mac_seeotheruids_check(struct ucred *cr1, struct ucred *cr2)
 {
 
 	if (!mac_seeotheruids_enabled)
 		return (0);
 
 	if (primarygroup_enabled) {
-		if (u1->cr_rgid == u2->cr_rgid)
+		if (cr1->cr_rgid == cr2->cr_rgid)
 			return (0);
 	}
 
 	if (specificgid_enabled) {
-		if (u1->cr_rgid == specificgid || groupmember(specificgid, u1))
+		if (cr1->cr_rgid == specificgid ||
+		    groupmember(specificgid, cr1))
 			return (0);
 	}
 
-	if (u1->cr_ruid == u2->cr_ruid)
+	if (cr1->cr_ruid == cr2->cr_ruid)
 		return (0);
 
-	if (suser_cred(u1, 0) == 0)
-		return (0);
+	if (suser_privileged) {
+		if (priv_check_cred(cr1, PRIV_SEEOTHERUIDS, 0) == 0)
+			return (0);
+	}
 
 	return (ESRCH);
 }
 
 static int
-mac_seeotheruids_check_cred_visible(struct ucred *u1, struct ucred *u2)
+mac_seeotheruids_check_cred_visible(struct ucred *cr1, struct ucred *cr2)
 {
 
-	return (mac_seeotheruids_check(u1, u2));
+	return (mac_seeotheruids_check(cr1, cr2));
 }
 
 static int
-mac_seeotheruids_check_proc_signal(struct ucred *cred, struct proc *proc,
+mac_seeotheruids_check_proc_signal(struct ucred *cred, struct proc *p,
     int signum)
 {
 
-	return (mac_seeotheruids_check(cred, proc->p_ucred));
+	return (mac_seeotheruids_check(cred, p->p_ucred));
 }
 
 static int
-mac_seeotheruids_check_proc_sched(struct ucred *cred, struct proc *proc)
+mac_seeotheruids_check_proc_sched(struct ucred *cred, struct proc *p)
 {
 
-	return (mac_seeotheruids_check(cred, proc->p_ucred));
+	return (mac_seeotheruids_check(cred, p->p_ucred));
 }
 
 static int
-mac_seeotheruids_check_proc_debug(struct ucred *cred, struct proc *proc)
+mac_seeotheruids_check_proc_debug(struct ucred *cred, struct proc *p)
 {
 
-	return (mac_seeotheruids_check(cred, proc->p_ucred));
+	return (mac_seeotheruids_check(cred, p->p_ucred));
 }
 
 static int
-mac_seeotheruids_check_socket_visible(struct ucred *cred, struct socket *socket,
-    struct label *socketlabel)
+mac_seeotheruids_check_socket_visible(struct ucred *cred, struct socket *so,
+    struct label *solabel)
 {
 
-	return (mac_seeotheruids_check(cred, socket->so_cred));
+	return (mac_seeotheruids_check(cred, so->so_cred));
 }
 
 static struct mac_policy_ops mac_seeotheruids_ops =

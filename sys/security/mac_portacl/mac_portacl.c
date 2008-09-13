@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_portacl/mac_portacl.c,v 1.7 2004/12/08 11:46:44 rwatson Exp $
+ * $FreeBSD: src/sys/security/mac_portacl/mac_portacl.c,v 1.15 2007/06/12 00:12:00 rwatson Exp $
  */
 
 /*
@@ -55,24 +55,18 @@
  * because the kernel only knows about uids and gids.
  */
 
-#include <sys/types.h>
 #include <sys/param.h>
-#include <sys/conf.h>
 #include <sys/domain.h>
 #include <sys/kernel.h>
-#include <sys/libkern.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
-#include <sys/mount.h>
+#include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/queue.h>
 #include <sys/systm.h>
-#include <sys/sysproto.h>
-#include <sys/sysent.h>
-#include <sys/file.h>
 #include <sys/sbuf.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -81,9 +75,7 @@
 #include <netinet/in.h>
 #include <netinet/in_pcb.h>
 
-#include <vm/vm.h>
-
-#include <sys/mac_policy.h>
+#include <security/mac/mac_policy.h>
 
 SYSCTL_DECL(_security_mac);
 
@@ -113,7 +105,7 @@ SYSCTL_INT(_security_mac_portacl, OID_AUTO, port_high, CTLFLAG_RW,
     &mac_portacl_port_high, 0, "Highest port to enforce for");
 TUNABLE_INT("security.mac.portacl.port_high", &mac_portacl_port_high);
 
-MALLOC_DEFINE(M_PORTACL, "portacl rule", "Rules for mac_portacl");
+MALLOC_DEFINE(M_PORTACL, "mac_portacl_rule", "Rules for mac_portacl");
 
 #define	MAC_RULE_STRING_LEN	1024
 
@@ -427,7 +419,7 @@ rules_check(struct ucred *cred, int family, int type, u_int16_t port)
 	mtx_unlock(&rule_mtx);
 
 	if (error != 0 && mac_portacl_suser_exempt != 0)
-		error = suser_cred(cred, 0);
+		error = priv_check_cred(cred, PRIV_NETINET_RESERVEDPORT, 0);
 
 	return (error);
 }
@@ -439,7 +431,7 @@ rules_check(struct ucred *cred, int family, int type, u_int16_t port)
  */
 static int
 check_socket_bind(struct ucred *cred, struct socket *so,
-    struct label *socketlabel, struct sockaddr *sockaddr)
+    struct label *solabel, struct sockaddr *sa)
 {
 	struct sockaddr_in *sin;
 	struct inpcb *inp;
@@ -461,13 +453,12 @@ check_socket_bind(struct ucred *cred, struct socket *so,
 		return (0);
 
 	/* Reject addresses we don't understand; fail closed. */
-	if (sockaddr->sa_family != AF_INET &&
-	    sockaddr->sa_family != AF_INET6)
+	if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
 		return (EINVAL);
 
 	family = so->so_proto->pr_domain->dom_family;
 	type = so->so_type;
-	sin = (struct sockaddr_in *) sockaddr;
+	sin = (struct sockaddr_in *) sa;
 	port = ntohs(sin->sin_port);
 
 	/*

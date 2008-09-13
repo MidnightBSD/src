@@ -1,7 +1,7 @@
 /*-
- * Copyright (c) 2005 Tom Rhodes
- * Copyright (c) 1999-2002 Robert N. M. Watson
+ * Copyright (c) 1999-2002, 2007 Robert N. M. Watson
  * Copyright (c) 2001-2005 Networks Associates Technology, Inc.
+ * Copyright (c) 2005 Tom Rhodes
  * All rights reserved.
  *
  * This software was developed by Robert Watson for the TrustedBSD Project.
@@ -33,45 +33,32 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_bsdextended/mac_bsdextended.c,v 1.25.2.2 2006/01/24 04:11:45 csjp Exp $
+ * $FreeBSD: src/sys/security/mac_bsdextended/mac_bsdextended.c,v 1.39 2007/09/10 00:00:17 rwatson Exp $
  */
 
 /*
  * Developed by the TrustedBSD Project.
- * "BSD Extended" MAC policy, allowing the administrator to impose
- * mandatory rules regarding users and some system objects.
+ *
+ * "BSD Extended" MAC policy, allowing the administrator to impose mandatory
+ * firewall-like rules regarding users and file system objects.
  */
 
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/acl.h>
-#include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/jail.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
+#include <sys/module.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
-#include <sys/proc.h>
+#include <sys/priv.h>
 #include <sys/systm.h>
-#include <sys/sysproto.h>
-#include <sys/sysent.h>
 #include <sys/vnode.h>
-#include <sys/file.h>
-#include <sys/socket.h>
-#include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/syslog.h>
 
-#include <net/bpfdesc.h>
-#include <net/if.h>
-#include <net/if_types.h>
-#include <net/if_var.h>
-
-#include <vm/vm.h>
-
-#include <sys/mac_policy.h>
-
+#include <security/mac/mac_policy.h>
 #include <security/mac_bsdextended/mac_bsdextended.h>
 
 static struct mtx mac_bsdextended_mtx;
@@ -92,44 +79,51 @@ MALLOC_DEFINE(M_MACBSDEXTENDED, "mac_bsdextended", "BSD Extended MAC rule");
 static struct mac_bsdextended_rule *rules[MAC_BSDEXTENDED_MAXRULES];
 static int rule_count = 0;
 static int rule_slots = 0;
+static int rule_version = MB_VERSION;
 
 SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, rule_count, CTLFLAG_RD,
     &rule_count, 0, "Number of defined rules\n");
 SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, rule_slots, CTLFLAG_RD,
     &rule_slots, 0, "Number of used rule slots\n");
+SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, rule_version, CTLFLAG_RD,
+    &rule_version, 0, "Version number for API\n");
 
 /*
- * This is just used for logging purposes, eventually we would like
- * to log much more then failed requests.
+ * This is just used for logging purposes, eventually we would like to log
+ * much more then failed requests.
  */
 static int mac_bsdextended_logging;
 SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, logging, CTLFLAG_RW,
     &mac_bsdextended_logging, 0, "Log failed authorization requests");
 
 /*
- * This tunable is here for compatibility.  It will allow the user
- * to switch between the new mode (first rule matches) and the old
- * functionality (all rules match).
+ * This tunable is here for compatibility.  It will allow the user to switch
+ * between the new mode (first rule matches) and the old functionality (all
+ * rules match).
  */
 static int
 mac_bsdextended_firstmatch_enabled;
 SYSCTL_INT(_security_mac_bsdextended, OID_AUTO, firstmatch_enabled,
-	CTLFLAG_RW, &mac_bsdextended_firstmatch_enabled, 1,
-	"Disable/enable match first rule functionality");
+    CTLFLAG_RW, &mac_bsdextended_firstmatch_enabled, 1,
+    "Disable/enable match first rule functionality");
 
 static int
 mac_bsdextended_rule_valid(struct mac_bsdextended_rule *rule)
 {
 
-	if ((rule->mbr_subject.mbi_flags | MBI_BITS) != MBI_BITS)
+	if ((rule->mbr_subject.mbs_flags | MBS_ALL_FLAGS) != MBS_ALL_FLAGS)
 		return (EINVAL);
-
-	if ((rule->mbr_object.mbi_flags | MBI_BITS) != MBI_BITS)
+	if ((rule->mbr_subject.mbs_neg | MBS_ALL_FLAGS) != MBS_ALL_FLAGS)
 		return (EINVAL);
-
+	if ((rule->mbr_object.mbo_flags | MBO_ALL_FLAGS) != MBO_ALL_FLAGS)
+		return (EINVAL);
+	if ((rule->mbr_object.mbo_neg | MBO_ALL_FLAGS) != MBO_ALL_FLAGS)
+		return (EINVAL);
+	if ((rule->mbr_object.mbo_neg | MBO_TYPE_DEFINED) &&
+	    (rule->mbr_object.mbo_type | MBO_ALL_TYPE) != MBO_ALL_TYPE)
+		return (EINVAL);
 	if ((rule->mbr_mode | MBI_ALLPERM) != MBI_ALLPERM)
 		return (EINVAL);
-
 	return (0);
 }
 
@@ -143,12 +137,8 @@ sysctl_rule(SYSCTL_HANDLER_ARGS)
 	error = 0;
 	name = (int *)arg1;
 	namelen = arg2;
-
-	/* printf("bsdextended sysctl handler (namelen %d)\n", namelen); */
-
 	if (namelen != 1)
 		return (EINVAL);
-
 	index = name[0];
         if (index >= MAC_BSDEXTENDED_MAXRULES)
 		return (ENOENT);
@@ -163,7 +153,6 @@ sysctl_rule(SYSCTL_HANDLER_ARGS)
 	}
 
 	mtx_lock(&mac_bsdextended_mtx);
-
 	if (req->oldptr) {
 		if (index < 0 || index > rule_slots + 1) {
 			error = ENOENT;
@@ -175,9 +164,7 @@ sysctl_rule(SYSCTL_HANDLER_ARGS)
 		}
 		temprule = *rules[index];
 	}
-
 	if (req->newptr && req->newlen == 0) {
-		/* printf("deletion\n"); */
 		KASSERT(ruleptr == NULL, ("sysctl_rule: ruleptr != NULL"));
 		ruleptr = rules[index];
 		if (ruleptr == NULL) {
@@ -190,84 +177,93 @@ sysctl_rule(SYSCTL_HANDLER_ARGS)
 		error = mac_bsdextended_rule_valid(&temprule);
 		if (error)
 			goto out;
-
 		if (rules[index] == NULL) {
-			/* printf("addition\n"); */
 			*ruleptr = temprule;
 			rules[index] = ruleptr;
 			ruleptr = NULL;
 			if (index + 1 > rule_slots)
 				rule_slots = index + 1;
 			rule_count++;
-		} else {
-			/* printf("replacement\n"); */
+		} else
 			*rules[index] = temprule;
-		}
 	}
-
 out:
 	mtx_unlock(&mac_bsdextended_mtx);
 	if (ruleptr != NULL)
 		FREE(ruleptr, M_MACBSDEXTENDED);
 	if (req->oldptr && error == 0)
 		error = SYSCTL_OUT(req, &temprule, sizeof(temprule));
-
 	return (error);
 }
 
-SYSCTL_NODE(_security_mac_bsdextended, OID_AUTO, rules,
-    CTLFLAG_RW, sysctl_rule, "BSD extended MAC rules");
+SYSCTL_NODE(_security_mac_bsdextended, OID_AUTO, rules, CTLFLAG_RW,
+    sysctl_rule, "BSD extended MAC rules");
 
 static void
 mac_bsdextended_init(struct mac_policy_conf *mpc)
 {
 
-	/* Initialize ruleset lock. */
 	mtx_init(&mac_bsdextended_mtx, "mac_bsdextended lock", NULL, MTX_DEF);
-
-	/* Register dynamic sysctl's for rules. */
 }
 
 static void
 mac_bsdextended_destroy(struct mac_policy_conf *mpc)
 {
 
-	/* Destroy ruleset lock. */
 	mtx_destroy(&mac_bsdextended_mtx);
-
-	/* Tear down sysctls. */
 }
 
 static int
 mac_bsdextended_rulecheck(struct mac_bsdextended_rule *rule,
-    struct ucred *cred, uid_t object_uid, gid_t object_gid, int acc_mode)
+    struct ucred *cred, struct vnode *vp, struct vattr *vap, int acc_mode)
 {
 	int match;
+	int i;
 
 	/*
 	 * Is there a subject match?
 	 */
 	mtx_assert(&mac_bsdextended_mtx, MA_OWNED);
-	if (rule->mbr_subject.mbi_flags & MBI_UID_DEFINED) {
-		match =  (rule->mbr_subject.mbi_uid == cred->cr_uid ||
-		    rule->mbr_subject.mbi_uid == cred->cr_ruid ||
-		    rule->mbr_subject.mbi_uid == cred->cr_svuid);
-
-		if (rule->mbr_subject.mbi_flags & MBI_NEGATED)
+	if (rule->mbr_subject.mbs_flags & MBS_UID_DEFINED) {
+		match =  ((cred->cr_uid <= rule->mbr_subject.mbs_uid_max &&
+		    cred->cr_uid >= rule->mbr_subject.mbs_uid_min) ||
+		    (cred->cr_ruid <= rule->mbr_subject.mbs_uid_max &&
+		    cred->cr_ruid >= rule->mbr_subject.mbs_uid_min) ||
+		    (cred->cr_svuid <= rule->mbr_subject.mbs_uid_max &&
+		    cred->cr_svuid >= rule->mbr_subject.mbs_uid_min));
+		if (rule->mbr_subject.mbs_neg & MBS_UID_DEFINED)
 			match = !match;
-
 		if (!match)
 			return (0);
 	}
 
-	if (rule->mbr_subject.mbi_flags & MBI_GID_DEFINED) {
-		match = (groupmember(rule->mbr_subject.mbi_gid, cred) ||
-		    rule->mbr_subject.mbi_gid == cred->cr_rgid ||
-		    rule->mbr_subject.mbi_gid == cred->cr_svgid);
-
-		if (rule->mbr_subject.mbi_flags & MBI_NEGATED)
+	if (rule->mbr_subject.mbs_flags & MBS_GID_DEFINED) {
+		match = ((cred->cr_rgid <= rule->mbr_subject.mbs_gid_max &&
+		    cred->cr_rgid >= rule->mbr_subject.mbs_gid_min) ||
+		    (cred->cr_svgid <= rule->mbr_subject.mbs_gid_max &&
+		    cred->cr_svgid >= rule->mbr_subject.mbs_gid_min));
+		if (!match) {
+			for (i = 0; i < cred->cr_ngroups; i++) {
+				if (cred->cr_groups[i]
+				    <= rule->mbr_subject.mbs_gid_max &&
+				    cred->cr_groups[i]
+				    >= rule->mbr_subject.mbs_gid_min) {
+					match = 1;
+					break;
+				}
+			}
+		}
+		if (rule->mbr_subject.mbs_neg & MBS_GID_DEFINED)
 			match = !match;
+		if (!match)
+			return (0);
+	}
 
+	if (rule->mbr_subject.mbs_flags & MBS_PRISON_DEFINED) {
+		match = (cred->cr_prison != NULL &&
+		    cred->cr_prison->pr_id == rule->mbr_subject.mbs_prison);
+		if (rule->mbr_subject.mbs_neg & MBS_PRISON_DEFINED)
+			match = !match;
 		if (!match)
 			return (0);
 	}
@@ -275,22 +271,98 @@ mac_bsdextended_rulecheck(struct mac_bsdextended_rule *rule,
 	/*
 	 * Is there an object match?
 	 */
-	if (rule->mbr_object.mbi_flags & MBI_UID_DEFINED) {
-		match = (rule->mbr_object.mbi_uid == object_uid);
-
-		if (rule->mbr_object.mbi_flags & MBI_NEGATED)
+	if (rule->mbr_object.mbo_flags & MBO_UID_DEFINED) {
+		match = (vap->va_uid <= rule->mbr_object.mbo_uid_max &&
+		    vap->va_uid >= rule->mbr_object.mbo_uid_min);
+		if (rule->mbr_object.mbo_neg & MBO_UID_DEFINED)
 			match = !match;
-
 		if (!match)
 			return (0);
 	}
 
-	if (rule->mbr_object.mbi_flags & MBI_GID_DEFINED) {
-		match = (rule->mbr_object.mbi_gid == object_gid);
-
-		if (rule->mbr_object.mbi_flags & MBI_NEGATED)
+	if (rule->mbr_object.mbo_flags & MBO_GID_DEFINED) {
+		match = (vap->va_gid <= rule->mbr_object.mbo_gid_max &&
+		    vap->va_gid >= rule->mbr_object.mbo_gid_min);
+		if (rule->mbr_object.mbo_neg & MBO_GID_DEFINED)
 			match = !match;
+		if (!match)
+			return (0);
+	}
 
+	if (rule->mbr_object.mbo_flags & MBO_FSID_DEFINED) {
+		match = (bcmp(&(vp->v_mount->mnt_stat.f_fsid),
+		    &(rule->mbr_object.mbo_fsid),
+		    sizeof(rule->mbr_object.mbo_fsid)) == 0);
+		if (rule->mbr_object.mbo_neg & MBO_FSID_DEFINED)
+			match = !match;
+		if (!match)
+			return (0);
+	}
+
+	if (rule->mbr_object.mbo_flags & MBO_SUID) {
+		match = (vap->va_mode & VSUID);
+		if (rule->mbr_object.mbo_neg & MBO_SUID)
+			match = !match;
+		if (!match)
+			return (0);
+	}
+
+	if (rule->mbr_object.mbo_flags & MBO_SGID) {
+		match = (vap->va_mode & VSGID);
+		if (rule->mbr_object.mbo_neg & MBO_SGID)
+			match = !match;
+		if (!match)
+			return (0);
+	}
+
+	if (rule->mbr_object.mbo_flags & MBO_UID_SUBJECT) {
+		match = (vap->va_uid == cred->cr_uid ||
+		    vap->va_uid == cred->cr_ruid ||
+		    vap->va_uid == cred->cr_svuid);
+		if (rule->mbr_object.mbo_neg & MBO_UID_SUBJECT)
+			match = !match;
+		if (!match)
+			return (0);
+	}
+
+	if (rule->mbr_object.mbo_flags & MBO_GID_SUBJECT) {
+		match = (groupmember(vap->va_gid, cred) ||
+		    vap->va_gid == cred->cr_rgid ||
+		    vap->va_gid == cred->cr_svgid);
+		if (rule->mbr_object.mbo_neg & MBO_GID_SUBJECT)
+			match = !match;
+		if (!match)
+			return (0);
+	}
+
+	if (rule->mbr_object.mbo_flags & MBO_TYPE_DEFINED) {
+		switch (vap->va_type) {
+		case VREG:
+			match = (rule->mbr_object.mbo_type & MBO_TYPE_REG);
+			break;
+		case VDIR:
+			match = (rule->mbr_object.mbo_type & MBO_TYPE_DIR);
+			break;
+		case VBLK:
+			match = (rule->mbr_object.mbo_type & MBO_TYPE_BLK);
+			break;
+		case VCHR:
+			match = (rule->mbr_object.mbo_type & MBO_TYPE_CHR);
+			break;
+		case VLNK:
+			match = (rule->mbr_object.mbo_type & MBO_TYPE_LNK);
+			break;
+		case VSOCK:
+			match = (rule->mbr_object.mbo_type & MBO_TYPE_SOCK);
+			break;
+		case VFIFO:
+			match = (rule->mbr_object.mbo_type & MBO_TYPE_FIFO);
+			break;
+		default:
+			match = 0;
+		}
+		if (rule->mbr_object.mbo_neg & MBO_TYPE_DEFINED)
+			match = !match;
 		if (!match)
 			return (0);
 	}
@@ -302,8 +374,9 @@ mac_bsdextended_rulecheck(struct mac_bsdextended_rule *rule,
 		if (mac_bsdextended_logging)
 			log(LOG_AUTHPRIV, "mac_bsdextended: %d:%d request %d"
 			    " on %d:%d failed. \n", cred->cr_ruid,
-			    cred->cr_rgid, acc_mode, object_uid, object_gid);
-		return (EACCES); /* Matching rule denies access */
+			    cred->cr_rgid, acc_mode, vap->va_uid,
+			    vap->va_gid);
+		return (EACCES);
 	}
 
 	/*
@@ -313,34 +386,34 @@ mac_bsdextended_rulecheck(struct mac_bsdextended_rule *rule,
 	if (mac_bsdextended_firstmatch_enabled)
 		return (EJUSTRETURN);
 	else
-		return(0);
+		return (0);
 }
 
 static int
-mac_bsdextended_check(struct ucred *cred, uid_t object_uid, gid_t object_gid,
+mac_bsdextended_check(struct ucred *cred, struct vnode *vp, struct vattr *vap,
     int acc_mode)
 {
 	int error, i;
 
+	/*
+	 * XXXRW: More specific privilege selection needed.
+	 */
 	if (suser_cred(cred, 0) == 0)
 		return (0);
 
+	/*
+	 * Since we do not separately handle append, map append to write.
+	 */
+	if (acc_mode & MBI_APPEND) {
+		acc_mode &= ~MBI_APPEND;
+		acc_mode |= MBI_WRITE;
+	}
 	mtx_lock(&mac_bsdextended_mtx);
 	for (i = 0; i < rule_slots; i++) {
 		if (rules[i] == NULL)
 			continue;
-
-		/*
-		 * Since we do not separately handle append, map append to
-		 * write.
-		 */
-		if (acc_mode & MBI_APPEND) {
-			acc_mode &= ~MBI_APPEND;
-			acc_mode |= MBI_WRITE;
-		}
-
-		error = mac_bsdextended_rulecheck(rules[i], cred, object_uid,
-		    object_gid, acc_mode);
+		error = mac_bsdextended_rulecheck(rules[i], cred,
+		    vp, vap, acc_mode);
 		if (error == EJUSTRETURN)
 			break;
 		if (error) {
@@ -353,225 +426,137 @@ mac_bsdextended_check(struct ucred *cred, uid_t object_uid, gid_t object_gid,
 }
 
 static int
-mac_bsdextended_check_system_swapon(struct ucred *cred, struct vnode *vp,
-    struct label *label)
+mac_bsdextended_check_vp(struct ucred *cred, struct vnode *vp, int acc_mode)
 {
-	struct vattr vap;
 	int error;
+	struct vattr vap;
 
 	if (!mac_bsdextended_enabled)
 		return (0);
-
 	error = VOP_GETATTR(vp, &vap, cred, curthread);
 	if (error)
 		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE));
+	return (mac_bsdextended_check(cred, vp, &vap, acc_mode));
+}
+
+static int
+mac_bsdextended_check_system_acct(struct ucred *cred, struct vnode *vp,
+    struct label *vplabel)
+{
+
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
+}
+
+static int
+mac_bsdextended_check_system_auditctl(struct ucred *cred, struct vnode *vp,
+    struct label *vplabel)
+{
+
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
+}
+
+static int
+mac_bsdextended_check_system_swapoff(struct ucred *cred, struct vnode *vp,
+    struct label *vplabel)
+{
+
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
+}
+
+static int
+mac_bsdextended_check_system_swapon(struct ucred *cred, struct vnode *vp,
+    struct label *vplabel)
+{
+
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
 }
 
 static int
 mac_bsdextended_check_vnode_access(struct ucred *cred, struct vnode *vp,
-    struct label *label, int acc_mode)
+    struct label *vplabel, int acc_mode)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid, acc_mode));
+	return (mac_bsdextended_check_vp(cred, vp, acc_mode));
 }
 
 static int
 mac_bsdextended_check_vnode_chdir(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel)
+    struct label *dvplabel)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_EXEC));
+	return (mac_bsdextended_check_vp(cred, dvp, MBI_EXEC));
 }
 
 static int
 mac_bsdextended_check_vnode_chroot(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel)
+    struct label *dvplabel)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_EXEC));
+	return (mac_bsdextended_check_vp(cred, dvp, MBI_EXEC));
 }
 
 static int
 mac_bsdextended_check_create_vnode(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel, struct componentname *cnp, struct vattr *vap)
+    struct label *dvplabel, struct componentname *cnp, struct vattr *vap)
 {
-	struct vattr dvap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &dvap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, dvap.va_uid, dvap.va_gid,
-	    MBI_WRITE));
-}
-
-static int
-mac_bsdextended_check_vnode_delete(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel, struct vnode *vp, struct label *label,
-    struct componentname *cnp)
-{
-	struct vattr vap;
-	int error;
-
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	error = mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE);
-	if (error)
-		return (error);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE));
+	return (mac_bsdextended_check_vp(cred, dvp, MBI_WRITE));
 }
 
 static int
 mac_bsdextended_check_vnode_deleteacl(struct ucred *cred, struct vnode *vp,
-    struct label *label, acl_type_t type)
+    struct label *vplabel, acl_type_t type)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_ADMIN));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_ADMIN));
 }
 
 static int
-mac_bsdextended_check_vnode_deleteextattr(struct ucred *cred, struct vnode *vp,
-    struct label *label, int attrnamespace, const char *name)
+mac_bsdextended_check_vnode_deleteextattr(struct ucred *cred,
+    struct vnode *vp, struct label *vplabel, int attrnamespace,
+    const char *name)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
 }
 
 static int
 mac_bsdextended_check_vnode_exec(struct ucred *cred, struct vnode *vp,
-    struct label *label, struct image_params *imgp,
+    struct label *vplabel, struct image_params *imgp,
     struct label *execlabel)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_READ|MBI_EXEC));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_READ|MBI_EXEC));
 }
 
 static int
 mac_bsdextended_check_vnode_getacl(struct ucred *cred, struct vnode *vp,
-    struct label *label, acl_type_t type)
+    struct label *vplabel, acl_type_t type)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_STAT));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_STAT));
 }
 
 static int
 mac_bsdextended_check_vnode_getextattr(struct ucred *cred, struct vnode *vp,
-    struct label *label, int attrnamespace, const char *name, struct uio *uio)
+    struct label *vplabel, int attrnamespace, const char *name,
+    struct uio *uio)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_READ));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_READ));
 }
 
 static int
 mac_bsdextended_check_vnode_link(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel, struct vnode *vp, struct label *label,
+    struct label *dvplabel, struct vnode *vp, struct label *label,
     struct componentname *cnp)
 {
-	struct vattr vap;
 	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
+	error = mac_bsdextended_check_vp(cred, dvp, MBI_WRITE);
 	if (error)
 		return (error);
-	error = mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE);
-	if (error)
-		return (error);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	error = mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE);
+	error = mac_bsdextended_check_vp(cred, vp, MBI_WRITE);
 	if (error)
 		return (error);
 	return (0);
@@ -579,291 +564,162 @@ mac_bsdextended_check_vnode_link(struct ucred *cred, struct vnode *dvp,
 
 static int
 mac_bsdextended_check_vnode_listextattr(struct ucred *cred, struct vnode *vp,
-    struct label *label, int attrnamespace)
+    struct label *vplabel, int attrnamespace)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_READ));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_READ));
 }
 
 static int
 mac_bsdextended_check_vnode_lookup(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel, struct componentname *cnp)
+    struct label *dvplabel, struct componentname *cnp)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_EXEC));
+	return (mac_bsdextended_check_vp(cred, dvp, MBI_EXEC));
 }
 
 static int
 mac_bsdextended_check_vnode_open(struct ucred *cred, struct vnode *vp,
-    struct label *filelabel, int acc_mode)
+    struct label *vplabel, int acc_mode)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid, acc_mode));
+	return (mac_bsdextended_check_vp(cred, vp, acc_mode));
 }
 
 static int
 mac_bsdextended_check_vnode_readdir(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel)
+    struct label *dvplabel)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_READ));
+	return (mac_bsdextended_check_vp(cred, dvp, MBI_READ));
 }
 
 static int
 mac_bsdextended_check_vnode_readdlink(struct ucred *cred, struct vnode *vp,
-    struct label *label)
+    struct label *vplabel)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_READ));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_READ));
 }
 
 static int
 mac_bsdextended_check_vnode_rename_from(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel, struct vnode *vp, struct label *label,
+    struct label *dvplabel, struct vnode *vp, struct label *vplabel,
     struct componentname *cnp)
 {
-	struct vattr vap;
 	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
+	error = mac_bsdextended_check_vp(cred, dvp, MBI_WRITE);
 	if (error)
 		return (error);
-	error = mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE);
-	if (error)
-		return (error);
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	error = mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE);
-
-	return (error);
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
 }
 
 static int
 mac_bsdextended_check_vnode_rename_to(struct ucred *cred, struct vnode *dvp,
-    struct label *dlabel, struct vnode *vp, struct label *label, int samedir,
-    struct componentname *cnp)
+    struct label *dvplabel, struct vnode *vp, struct label *vplabel,
+    int samedir, struct componentname *cnp)
 {
-	struct vattr vap;
 	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(dvp, &vap, cred, curthread);
+	error = mac_bsdextended_check_vp(cred, dvp, MBI_WRITE);
 	if (error)
 		return (error);
-	error = mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE);
-	if (error)
-		return (error);
-
-	if (vp != NULL) {
-		error = VOP_GETATTR(vp, &vap, cred, curthread);
-		if (error)
-			return (error);
-		error = mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-		    MBI_WRITE);
-	}
-
+	if (vp != NULL)
+		error = mac_bsdextended_check_vp(cred, vp, MBI_WRITE);
 	return (error);
 }
 
 static int
 mac_bsdextended_check_vnode_revoke(struct ucred *cred, struct vnode *vp,
-    struct label *label)
+    struct label *vplabel)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_ADMIN));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_ADMIN));
 }
 
 static int
 mac_bsdextended_check_setacl_vnode(struct ucred *cred, struct vnode *vp,
-    struct label *label, acl_type_t type, struct acl *acl)
+    struct label *vplabel, acl_type_t type, struct acl *acl)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_ADMIN));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_ADMIN));
 }
 
 static int
 mac_bsdextended_check_vnode_setextattr(struct ucred *cred, struct vnode *vp,
-    struct label *label, int attrnamespace, const char *name, struct uio *uio)
+    struct label *vplabel, int attrnamespace, const char *name,
+    struct uio *uio)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_WRITE));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
 }
 
 static int
 mac_bsdextended_check_vnode_setflags(struct ucred *cred, struct vnode *vp,
-    struct label *label, u_long flags)
+    struct label *vplabel, u_long flags)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_ADMIN));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_ADMIN));
 }
 
 static int
 mac_bsdextended_check_vnode_setmode(struct ucred *cred, struct vnode *vp,
-    struct label *label, mode_t mode)
+    struct label *vplabel, mode_t mode)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_ADMIN));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_ADMIN));
 }
 
 static int
 mac_bsdextended_check_vnode_setowner(struct ucred *cred, struct vnode *vp,
-    struct label *label, uid_t uid, gid_t gid)
+    struct label *vplabel, uid_t uid, gid_t gid)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	   MBI_ADMIN));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_ADMIN));
 }
 
 static int
 mac_bsdextended_check_vnode_setutimes(struct ucred *cred, struct vnode *vp,
-    struct label *label, struct timespec atime, struct timespec utime)
+    struct label *vplabel, struct timespec atime, struct timespec utime)
 {
-	struct vattr vap;
-	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, cred, curthread);
-	if (error)
-		return (error);
-	return (mac_bsdextended_check(cred, vap.va_uid, vap.va_gid,
-	    MBI_ADMIN));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_ADMIN));
 }
 
 static int
 mac_bsdextended_check_vnode_stat(struct ucred *active_cred,
-    struct ucred *file_cred, struct vnode *vp, struct label *label)
+    struct ucred *file_cred, struct vnode *vp, struct label *vplabel)
 {
-	struct vattr vap;
+
+	return (mac_bsdextended_check_vp(active_cred, vp, MBI_STAT));
+}
+
+static int
+mac_bsdextended_check_vnode_unlink(struct ucred *cred, struct vnode *dvp,
+    struct label *dvplabel, struct vnode *vp, struct label *vplabel,
+    struct componentname *cnp)
+{
 	int error;
 
-	if (!mac_bsdextended_enabled)
-		return (0);
-
-	error = VOP_GETATTR(vp, &vap, active_cred, curthread);
+	error = mac_bsdextended_check_vp(cred, dvp, MBI_WRITE);
 	if (error)
 		return (error);
-	return (mac_bsdextended_check(active_cred, vap.va_uid, vap.va_gid,
-	    MBI_STAT));
+	return (mac_bsdextended_check_vp(cred, vp, MBI_WRITE));
 }
 
 static struct mac_policy_ops mac_bsdextended_ops =
 {
 	.mpo_destroy = mac_bsdextended_destroy,
 	.mpo_init = mac_bsdextended_init,
+	.mpo_check_system_acct = mac_bsdextended_check_system_acct,
+	.mpo_check_system_auditctl = mac_bsdextended_check_system_auditctl,
+	.mpo_check_system_swapoff = mac_bsdextended_check_system_swapoff,
 	.mpo_check_system_swapon = mac_bsdextended_check_system_swapon,
 	.mpo_check_vnode_access = mac_bsdextended_check_vnode_access,
 	.mpo_check_vnode_chdir = mac_bsdextended_check_vnode_chdir,
 	.mpo_check_vnode_chroot = mac_bsdextended_check_vnode_chroot,
 	.mpo_check_vnode_create = mac_bsdextended_check_create_vnode,
-	.mpo_check_vnode_delete = mac_bsdextended_check_vnode_delete,
 	.mpo_check_vnode_deleteacl = mac_bsdextended_check_vnode_deleteacl,
 	.mpo_check_vnode_deleteextattr = mac_bsdextended_check_vnode_deleteextattr,
 	.mpo_check_vnode_exec = mac_bsdextended_check_vnode_exec,
@@ -885,6 +741,7 @@ static struct mac_policy_ops mac_bsdextended_ops =
 	.mpo_check_vnode_setowner = mac_bsdextended_check_vnode_setowner,
 	.mpo_check_vnode_setutimes = mac_bsdextended_check_vnode_setutimes,
 	.mpo_check_vnode_stat = mac_bsdextended_check_vnode_stat,
+	.mpo_check_vnode_unlink = mac_bsdextended_check_vnode_unlink,
 };
 
 MAC_POLICY_SET(&mac_bsdextended_ops, mac_bsdextended,
