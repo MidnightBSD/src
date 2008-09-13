@@ -33,7 +33,7 @@
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
  * $FreeBSD: src/sys/sys/param.h,v 1.244.2.8 2006/01/18 13:24:24 andre Exp $
- * $MidnightBSD: src/sys/sys/param.h,v 1.9 2008/06/15 01:46:38 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/param.h,v 1.10 2008/07/04 00:07:14 laffer1 Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -58,7 +58,7 @@
  *		is created, otherwise 1.
  */
 #undef __FreeBSD_version
-#define __FreeBSD_version 601000	/* Master, propagated to newvers */
+#define __FreeBSD_version 700055	/* Master, propagated to newvers */
 
 #undef __MidnightBSD_version
 #define __MidnightBSD_version	002101
@@ -89,16 +89,12 @@
 
 /* More types and definitions used throughout the kernel. */
 #ifdef _KERNEL
-#if 0
-#if (defined(BURN_BRIDGES) || __FreeBSD_version >= 600000) \
-	&& defined(OBSOLETE_IN_6)
-#error "This file contains obsolete code to be removed in 6.0-current"
-#endif
-#endif
 #include <sys/cdefs.h>
 #include <sys/errno.h>
+#ifndef LOCORE
 #include <sys/time.h>
 #include <sys/priority.h>
+#endif
 
 #define	FALSE	0
 #define	TRUE	1
@@ -246,10 +242,12 @@
 #define MAXSYMLINKS	32
 
 /* Bit map related macros. */
-#define	setbit(a,i)	((a)[(i)/NBBY] |= 1<<((i)%NBBY))
-#define	clrbit(a,i)	((a)[(i)/NBBY] &= ~(1<<((i)%NBBY)))
-#define	isset(a,i)	((a)[(i)/NBBY] & (1<<((i)%NBBY)))
-#define	isclr(a,i)	(((a)[(i)/NBBY] & (1<<((i)%NBBY))) == 0)
+#define	setbit(a,i)	(((unsigned char *)(a))[(i)/NBBY] |= 1<<((i)%NBBY))
+#define	clrbit(a,i)	(((unsigned char *)(a))[(i)/NBBY] &= ~(1<<((i)%NBBY)))
+#define	isset(a,i)							\
+	(((const unsigned char *)(a))[(i)/NBBY] & (1<<((i)%NBBY)))
+#define	isclr(a,i)							\
+	((((const unsigned char *)(a))[(i)/NBBY] & (1<<((i)%NBBY))) == 0)
 
 /* Macros for counting and rounding. */
 #ifndef howmany
@@ -268,6 +266,7 @@
 /*
  * Basic byte order function prototypes for non-inline functions.
  */
+#ifndef LOCORE
 #ifndef _BYTEORDER_PROTOTYPED
 #define	_BYTEORDER_PROTOTYPED
 __BEGIN_DECLS
@@ -276,6 +275,7 @@ __uint16_t	 htons(__uint16_t);
 __uint32_t	 ntohl(__uint32_t);
 __uint16_t	 ntohs(__uint16_t);
 __END_DECLS
+#endif
 #endif
 
 #ifndef lint
@@ -288,28 +288,6 @@ __END_DECLS
 #endif /* !_BYTEORDER_FUNC_DEFINED */
 #endif /* lint */
 #endif /* _KERNEL */
-
-/*
- * Constants for setting the parameters of the kernel memory allocator.
- *
- * 2 ** MINBUCKET is the smallest unit of memory that will be
- * allocated. It must be at least large enough to hold a pointer.
- *
- * Units of memory less or equal to MAXALLOCSAVE will permanently
- * allocate physical memory; requests for these size pieces of
- * memory are quite fast. Allocations greater than MAXALLOCSAVE must
- * always allocate and free physical memory; requests for these
- * size allocations should be done infrequently as they will be slow.
- *
- * Constraints: PAGE_SIZE <= MAXALLOCSAVE <= 2 ** (MINBUCKET + 14), and
- * MAXALLOCSIZE must be a power of two.
- */
-#if defined(__alpha__) || defined(__ia64__) || defined(__sparc64__)
-#define MINBUCKET	5		/* 5 => min allocation of 32 bytes */
-#else
-#define MINBUCKET	4		/* 4 => min allocation of 16 bytes */
-#endif
-#define MAXALLOCSAVE	(2 * PAGE_SIZE)
 
 /*
  * Scale factor for scaled integers used to count %cpu time and load avgs.
@@ -330,5 +308,21 @@ __END_DECLS
  
 #define ctodb(db)			/* calculates pages to devblks */ \
 	((db) << (PAGE_SHIFT - DEV_BSHIFT))
+
+/*
+ * Solaris compatibility definitions.
+ */
+#ifdef _SOLARIS_C_SOURCE
+#define	PAGESIZE	PAGE_SIZE
+
+/*
+ * The OpenSolaris version is set according to the version last imported
+ * from http://dlc.sun.com/osol/on/downloads/current/. In FreeBSD header
+ * files it can be used to determine the level of compatibility that the
+ * FreeBSD headers provide to OpenSolaris code. Perhaps one day there
+ * will be a really, really Single Unix Specification.
+ */
+#define __OpenSolaris_version 20060731
+#endif
 
 #endif	/* _SYS_PARAM_H_ */

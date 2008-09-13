@@ -1,11 +1,15 @@
 /*-
- * Copyright (c) 2002, 2003 Networks Associates Technology, Inc.
+ * Copyright (c) 2002-2003 Networks Associates Technology, Inc.
+ * Copyright (c) 2007 Robert N. M. Watson
  * All rights reserved.
  *
  * This software was developed for the FreeBSD Project in part by Network
  * Associates Laboratories, the Security Research Division of Network
  * Associates, Inc. under DARPA/SPAWAR contract N66001-01-C-8035 ("CBOSS"),
  * as part of the DARPA CHATS research program.
+ *
+ * Portions of this software were developed by Robert Watson for the
+ * TrustedBSD Project.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +33,18 @@
  * SUCH DAMAGE.
  */
 
+/*
+ * MAC Framework entry points relating to overall operation of system,
+ * including global services such as the kernel environment and loadable
+ * modules.
+ *
+ * System checks often align with existing privilege checks, but provide
+ * additional security context that may be relevant to policies, such as the
+ * specific object being operated on.
+ */
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_system.c,v 1.105 2005/06/10 04:44:38 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/security/mac/mac_system.c,v 1.112 2007/04/22 19:55:56 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -40,32 +54,18 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_system.c,v 1.105 2005/06/10 04:44:3
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/mac.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
 #include <sys/sysctl.h>
 
-#include <sys/mac_policy.h>
-
+#include <security/mac/mac_framework.h>
 #include <security/mac/mac_internal.h>
-
-static int	mac_enforce_kld = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_kld, CTLFLAG_RW,
-    &mac_enforce_kld, 0, "Enforce MAC policy on kld operations");
-TUNABLE_INT("security.mac.enforce_kld", &mac_enforce_kld);
-
-static int	mac_enforce_system = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_system, CTLFLAG_RW,
-    &mac_enforce_system, 0, "Enforce MAC policy on system operations");
-TUNABLE_INT("security.mac.enforce_system", &mac_enforce_system);
+#include <security/mac/mac_policy.h>
 
 int
 mac_check_kenv_dump(struct ucred *cred)
 {
 	int error;
-
-	if (!mac_enforce_system)
-		return (0);
 
 	MAC_CHECK(check_kenv_dump, cred);
 
@@ -77,9 +77,6 @@ mac_check_kenv_get(struct ucred *cred, char *name)
 {
 	int error;
 
-	if (!mac_enforce_system)
-		return (0);
-
 	MAC_CHECK(check_kenv_get, cred, name);
 
 	return (error);
@@ -90,9 +87,6 @@ mac_check_kenv_set(struct ucred *cred, char *name, char *value)
 {
 	int error;
 
-	if (!mac_enforce_system)
-		return (0);
-
 	MAC_CHECK(check_kenv_set, cred, name, value);
 
 	return (error);
@@ -102,9 +96,6 @@ int
 mac_check_kenv_unset(struct ucred *cred, char *name)
 {
 	int error;
-
-	if (!mac_enforce_system)
-		return (0);
 
 	MAC_CHECK(check_kenv_unset, cred, name);
 
@@ -118,9 +109,6 @@ mac_check_kld_load(struct ucred *cred, struct vnode *vp)
 
 	ASSERT_VOP_LOCKED(vp, "mac_check_kld_load");
 
-	if (!mac_enforce_kld)
-		return (0);
-
 	MAC_CHECK(check_kld_load, cred, vp, vp->v_label);
 
 	return (error);
@@ -131,36 +119,8 @@ mac_check_kld_stat(struct ucred *cred)
 {
 	int error;
 
-	if (!mac_enforce_kld)
-		return (0);
-
 	MAC_CHECK(check_kld_stat, cred);
 
-	return (error);
-}
-
-int
-mac_check_kld_unload(struct ucred *cred)
-{
-	int error;
-
-	if (!mac_enforce_kld)
-		return (0);
-
-	MAC_CHECK(check_kld_unload, cred);
-
-	return (error);
-}
-
-int
-mac_check_sysarch_ioperm(struct ucred *cred)
-{
-	int error;
-
-	if (!mac_enforce_system)
-		return (0);
-
-	MAC_CHECK(check_sysarch_ioperm, cred);
 	return (error);
 }
 
@@ -173,24 +133,8 @@ mac_check_system_acct(struct ucred *cred, struct vnode *vp)
 		ASSERT_VOP_LOCKED(vp, "mac_check_system_acct");
 	}
 
-	if (!mac_enforce_system)
-		return (0);
-
 	MAC_CHECK(check_system_acct, cred, vp,
 	    vp != NULL ? vp->v_label : NULL);
-
-	return (error);
-}
-
-int
-mac_check_system_nfsd(struct ucred *cred)
-{
-	int error;
-
-	if (!mac_enforce_system)
-		return (0);
-
-	MAC_CHECK(check_system_nfsd, cred);
 
 	return (error);
 }
@@ -200,23 +144,7 @@ mac_check_system_reboot(struct ucred *cred, int howto)
 {
 	int error;
 
-	if (!mac_enforce_system)
-		return (0);
-
 	MAC_CHECK(check_system_reboot, cred, howto);
-
-	return (error);
-}
-
-int
-mac_check_system_settime(struct ucred *cred)
-{
-	int error;
-
-	if (!mac_enforce_system)
-		return (0);
-
-	MAC_CHECK(check_system_settime, cred);
 
 	return (error);
 }
@@ -227,9 +155,6 @@ mac_check_system_swapon(struct ucred *cred, struct vnode *vp)
 	int error;
 
 	ASSERT_VOP_LOCKED(vp, "mac_check_system_swapon");
-
-	if (!mac_enforce_system)
-		return (0);
 
 	MAC_CHECK(check_system_swapon, cred, vp, vp->v_label);
 	return (error);
@@ -242,16 +167,13 @@ mac_check_system_swapoff(struct ucred *cred, struct vnode *vp)
 
 	ASSERT_VOP_LOCKED(vp, "mac_check_system_swapoff");
 
-	if (!mac_enforce_system)
-		return (0);
-
 	MAC_CHECK(check_system_swapoff, cred, vp, vp->v_label);
 	return (error);
 }
 
 int
-mac_check_system_sysctl(struct ucred *cred, struct sysctl_oid *oidp, void *arg1,
-    int arg2, struct sysctl_req *req)
+mac_check_system_sysctl(struct ucred *cred, struct sysctl_oid *oidp,
+    void *arg1, int arg2, struct sysctl_req *req)
 {
 	int error;
 
@@ -259,9 +181,6 @@ mac_check_system_sysctl(struct ucred *cred, struct sysctl_oid *oidp, void *arg1,
 	 * XXXMAC: We would very much like to assert the SYSCTL_LOCK here,
 	 * but since it's not exported from kern_sysctl.c, we can't.
 	 */
-	if (!mac_enforce_system)
-		return (0);
-
 	MAC_CHECK(check_system_sysctl, cred, oidp, arg1, arg2, req);
 
 	return (error);

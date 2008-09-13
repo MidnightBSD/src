@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002, 2003 Networks Associates Technology, Inc.
+ * Copyright (c) 2002-2003 Networks Associates Technology, Inc.
  * All rights reserved.
  *
  * This software was developed for the FreeBSD Project in part by Network
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_pipe.c,v 1.106 2004/05/30 20:27:19 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/security/mac/mac_pipe.c,v 1.112 2007/04/22 19:55:56 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -40,27 +40,15 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_pipe.c,v 1.106 2004/05/30 20:27:19 
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
-#include <sys/mac.h>
 #include <sys/sbuf.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
 #include <sys/pipe.h>
 #include <sys/sysctl.h>
 
-#include <sys/mac_policy.h>
-
+#include <security/mac/mac_framework.h>
 #include <security/mac/mac_internal.h>
-
-static int	mac_enforce_pipe = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_pipe, CTLFLAG_RW,
-    &mac_enforce_pipe, 0, "Enforce MAC policy on pipe operations");
-TUNABLE_INT("security.mac.enforce_pipe", &mac_enforce_pipe);
-
-#ifdef MAC_DEBUG
-static unsigned int nmacpipes;
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, pipes, CTLFLAG_RD,
-    &nmacpipes, 0, "number of pipes in use");
-#endif
+#include <security/mac/mac_policy.h>
 
 struct label *
 mac_pipe_label_alloc(void)
@@ -69,7 +57,6 @@ mac_pipe_label_alloc(void)
 
 	label = mac_labelzone_alloc(M_WAITOK);
 	MAC_PERFORM(init_pipe_label, label);
-	MAC_DEBUG_COUNTER_INC(&nmacpipes);
 	return (label);
 }
 
@@ -86,7 +73,6 @@ mac_pipe_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_pipe_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmacpipes);
 }
 
 void
@@ -148,9 +134,6 @@ mac_check_pipe_ioctl(struct ucred *cred, struct pipepair *pp,
 
 	mtx_assert(&pp->pp_mtx, MA_OWNED);
 
-	if (!mac_enforce_pipe)
-		return (0);
-
 	MAC_CHECK(check_pipe_ioctl, cred, pp, pp->pp_label, cmd, data);
 
 	return (error);
@@ -163,9 +146,6 @@ mac_check_pipe_poll(struct ucred *cred, struct pipepair *pp)
 
 	mtx_assert(&pp->pp_mtx, MA_OWNED);
 
-	if (!mac_enforce_pipe)
-		return (0);
-
 	MAC_CHECK(check_pipe_poll, cred, pp, pp->pp_label);
 
 	return (error);
@@ -177,9 +157,6 @@ mac_check_pipe_read(struct ucred *cred, struct pipepair *pp)
 	int error;
 
 	mtx_assert(&pp->pp_mtx, MA_OWNED);
-
-	if (!mac_enforce_pipe)
-		return (0);
 
 	MAC_CHECK(check_pipe_read, cred, pp, pp->pp_label);
 
@@ -194,9 +171,6 @@ mac_check_pipe_relabel(struct ucred *cred, struct pipepair *pp,
 
 	mtx_assert(&pp->pp_mtx, MA_OWNED);
 
-	if (!mac_enforce_pipe)
-		return (0);
-
 	MAC_CHECK(check_pipe_relabel, cred, pp, pp->pp_label, newlabel);
 
 	return (error);
@@ -209,9 +183,6 @@ mac_check_pipe_stat(struct ucred *cred, struct pipepair *pp)
 
 	mtx_assert(&pp->pp_mtx, MA_OWNED);
 
-	if (!mac_enforce_pipe)
-		return (0);
-
 	MAC_CHECK(check_pipe_stat, cred, pp, pp->pp_label);
 
 	return (error);
@@ -223,9 +194,6 @@ mac_check_pipe_write(struct ucred *cred, struct pipepair *pp)
 	int error;
 
 	mtx_assert(&pp->pp_mtx, MA_OWNED);
-
-	if (!mac_enforce_pipe)
-		return (0);
 
 	MAC_CHECK(check_pipe_write, cred, pp, pp->pp_label);
 

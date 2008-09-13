@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_shm.c,v 1.1 2004/11/17 13:14:24 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_shm.c,v 1.7 2007/02/06 10:59:21 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -39,7 +39,6 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_shm.c,v 1.1 2004/11/17 13:14:2
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
-#include <sys/mac.h>
 #include <sys/sbuf.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
@@ -49,21 +48,9 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_shm.c,v 1.1 2004/11/17 13:14:2
 #include <sys/sysctl.h>
 #include <sys/shm.h>
 
-#include <sys/mac_policy.h>
-
+#include <security/mac/mac_framework.h>
 #include <security/mac/mac_internal.h>
-
-static int	mac_enforce_sysv_shm = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_sysv_shm, CTLFLAG_RW,
-    &mac_enforce_sysv_shm, 0,
-    "Enforce MAC policy on System V IPC shared memory");
-TUNABLE_INT("security.mac.enforce_sysv", &mac_enforce_sysv_shm);
-
-#ifdef MAC_DEBUG
-static unsigned int nmacipcshms;
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, ipc_shms, CTLFLAG_RD,
-    &nmacipcshms, 0, "number of sysv ipc shm identifiers inuse");
-#endif
+#include <security/mac/mac_policy.h>
 
 static struct label *
 mac_sysv_shm_label_alloc(void)
@@ -72,7 +59,6 @@ mac_sysv_shm_label_alloc(void)
 
 	label = mac_labelzone_alloc(M_WAITOK);
 	MAC_PERFORM(init_sysv_shm_label, label);
-	MAC_DEBUG_COUNTER_INC(&nmacipcshms);
 	return (label);
 }
 
@@ -89,7 +75,6 @@ mac_sysv_shm_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_sysv_shm_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmacipcshms);
 }
 
 void
@@ -120,13 +105,10 @@ mac_check_sysv_shmat(struct ucred *cred, struct shmid_kernel *shmsegptr,
 {
 	int error;
 
-	if (!mac_enforce_sysv_shm)
-		return (0);
-
 	MAC_CHECK(check_sysv_shmat, cred, shmsegptr, shmsegptr->label,
 	    shmflg);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -135,13 +117,10 @@ mac_check_sysv_shmctl(struct ucred *cred, struct shmid_kernel *shmsegptr,
 {
 	int error;
 
-	if (!mac_enforce_sysv_shm)
-		return (0);
-
 	MAC_CHECK(check_sysv_shmctl, cred, shmsegptr, shmsegptr->label,
 	    cmd);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -149,12 +128,9 @@ mac_check_sysv_shmdt(struct ucred *cred, struct shmid_kernel *shmsegptr)
 {
 	int error;
 
-	if (!mac_enforce_sysv_shm)
-		return (0);
-
 	MAC_CHECK(check_sysv_shmdt, cred, shmsegptr, shmsegptr->label);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -163,11 +139,8 @@ mac_check_sysv_shmget(struct ucred *cred, struct shmid_kernel *shmsegptr,
 {
 	int error;
 
-	if (!mac_enforce_sysv_shm)
-		return (0);
-
 	MAC_CHECK(check_sysv_shmget, cred, shmsegptr, shmsegptr->label,
 	    shmflg);
 
-	return(error);
+	return (error);
 }

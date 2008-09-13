@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_inet.c,v 1.1 2004/02/26 03:51:04 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/security/mac/mac_inet.c,v 1.11 2007/04/22 19:55:55 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_inet.c,v 1.1 2004/02/26 03:51:04 rw
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
-#include <sys/mac.h>
 #include <sys/sbuf.h>
 #include <sys/systm.h>
 #include <sys/mount.h>
@@ -55,8 +54,6 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_inet.c,v 1.1 2004/02/26 03:51:04 rw
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 
-#include <sys/mac_policy.h>
-
 #include <net/if.h>
 #include <net/if_var.h>
 
@@ -64,16 +61,9 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_inet.c,v 1.1 2004/02/26 03:51:04 rw
 #include <netinet/in_pcb.h>
 #include <netinet/ip_var.h>
 
+#include <security/mac/mac_framework.h>
 #include <security/mac/mac_internal.h>
-
-#ifdef MAC_DEBUG
-static unsigned int nmacinpcbs, nmacipqs;
-
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, inpcbs, CTLFLAG_RD,
-    &nmacinpcbs, 0, "number of inpcbs in use");
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, ipqs, CTLFLAG_RD,
-    &nmacipqs, 0, "number of ipqs in use");
-#endif
+#include <security/mac/mac_policy.h>
 
 static struct label *
 mac_inpcb_label_alloc(int flag)
@@ -90,7 +80,6 @@ mac_inpcb_label_alloc(int flag)
 		mac_labelzone_free(label);
 		return (NULL);
 	}
-	MAC_DEBUG_COUNTER_INC(&nmacinpcbs);
 	return (label);
 }
 
@@ -120,7 +109,6 @@ mac_ipq_label_alloc(int flag)
 		mac_labelzone_free(label);
 		return (NULL);
 	}
-	MAC_DEBUG_COUNTER_INC(&nmacipqs);
 	return (label);
 }
 
@@ -140,7 +128,6 @@ mac_inpcb_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_inpcb_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmacinpcbs);
 }
 
 void
@@ -157,7 +144,6 @@ mac_ipq_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_ipq_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmacipqs);
 }
 
 void
@@ -177,36 +163,34 @@ mac_create_inpcb_from_socket(struct socket *so, struct inpcb *inp)
 }
 
 void
-mac_create_datagram_from_ipq(struct ipq *ipq, struct mbuf *datagram)
+mac_create_datagram_from_ipq(struct ipq *ipq, struct mbuf *m)
 {
 	struct label *label;
 
-	label = mac_mbuf_to_label(datagram);
+	label = mac_mbuf_to_label(m);
 
-	MAC_PERFORM(create_datagram_from_ipq, ipq, ipq->ipq_label,
-	    datagram, label);
+	MAC_PERFORM(create_datagram_from_ipq, ipq, ipq->ipq_label, m, label);
 }
 
 void
-mac_create_fragment(struct mbuf *datagram, struct mbuf *fragment)
+mac_create_fragment(struct mbuf *m, struct mbuf *frag)
 {
-	struct label *datagramlabel, *fragmentlabel;
+	struct label *mlabel, *fraglabel;
 
-	datagramlabel = mac_mbuf_to_label(datagram);
-	fragmentlabel = mac_mbuf_to_label(fragment);
+	mlabel = mac_mbuf_to_label(m);
+	fraglabel = mac_mbuf_to_label(frag);
 
-	MAC_PERFORM(create_fragment, datagram, datagramlabel, fragment,
-	    fragmentlabel);
+	MAC_PERFORM(create_fragment, m, mlabel, frag, fraglabel);
 }
 
 void
-mac_create_ipq(struct mbuf *fragment, struct ipq *ipq)
+mac_create_ipq(struct mbuf *m, struct ipq *ipq)
 {
 	struct label *label;
 
-	label = mac_mbuf_to_label(fragment);
+	label = mac_mbuf_to_label(m);
 
-	MAC_PERFORM(create_ipq, fragment, label, ipq, ipq->ipq_label);
+	MAC_PERFORM(create_ipq, m, label, ipq, ipq->ipq_label);
 }
 
 void
@@ -221,16 +205,15 @@ mac_create_mbuf_from_inpcb(struct inpcb *inp, struct mbuf *m)
 }
 
 int
-mac_fragment_match(struct mbuf *fragment, struct ipq *ipq)
+mac_fragment_match(struct mbuf *m, struct ipq *ipq)
 {
 	struct label *label;
 	int result;
 
-	label = mac_mbuf_to_label(fragment);
+	label = mac_mbuf_to_label(m);
 
 	result = 1;
-	MAC_BOOLEAN(fragment_match, &&, fragment, label, ipq,
-	    ipq->ipq_label);
+	MAC_BOOLEAN(fragment_match, &&, m, label, ipq, ipq->ipq_label);
 
 	return (result);
 }
@@ -244,6 +227,7 @@ mac_reflect_mbuf_icmp(struct mbuf *m)
 
 	MAC_PERFORM(reflect_mbuf_icmp, m, label);
 }
+
 void
 mac_reflect_mbuf_tcp(struct mbuf *m)
 {
@@ -255,13 +239,13 @@ mac_reflect_mbuf_tcp(struct mbuf *m)
 }
 
 void
-mac_update_ipq(struct mbuf *fragment, struct ipq *ipq)
+mac_update_ipq(struct mbuf *m, struct ipq *ipq)
 {
 	struct label *label;
 
-	label = mac_mbuf_to_label(fragment);
+	label = mac_mbuf_to_label(m);
 
-	MAC_PERFORM(update_ipq, fragment, label, ipq, ipq->ipq_label);
+	MAC_PERFORM(update_ipq, m, label, ipq, ipq->ipq_label);
 }
 
 int
@@ -271,9 +255,6 @@ mac_check_inpcb_deliver(struct inpcb *inp, struct mbuf *m)
 	int error;
 
 	M_ASSERTPKTHDR(m);
-
-	if (!mac_enforce_socket)
-		return (0);
 
 	label = mac_mbuf_to_label(m);
 
@@ -286,7 +267,71 @@ void
 mac_inpcb_sosetlabel(struct socket *so, struct inpcb *inp)
 {
 
-	/* XXX: assert socket lock. */
 	INP_LOCK_ASSERT(inp);
+	SOCK_LOCK_ASSERT(so);
 	MAC_PERFORM(inpcb_sosetlabel, so, so->so_label, inp, inp->inp_label);
+}
+
+void
+mac_create_mbuf_from_firewall(struct mbuf *m)
+{
+	struct label *label;
+
+	M_ASSERTPKTHDR(m);
+	label = mac_mbuf_to_label(m);
+	MAC_PERFORM(create_mbuf_from_firewall, m, label);
+}
+
+/*
+ * These functions really should be referencing the syncache structure
+ * instead of the label.  However, due to some of the complexities associated
+ * with exposing this syncache structure we operate directly on it's label
+ * pointer.  This should be OK since we aren't making any access control
+ * decisions within this code directly, we are merely allocating and copying
+ * label storage so we can properly initialize mbuf labels for any packets
+ * the syncache code might create.
+ */
+void
+mac_destroy_syncache(struct label **label)
+{
+
+	MAC_PERFORM(destroy_syncache_label, *label);
+	mac_labelzone_free(*label);
+	*label = NULL;
+}
+
+int
+mac_init_syncache(struct label **label)
+{
+	int error;
+
+	*label = mac_labelzone_alloc(M_NOWAIT);
+	if (*label == NULL)
+		return (ENOMEM);
+	/*
+	 * Since we are holding the inpcb locks the policy can not allocate
+	 * policy specific label storage using M_WAITOK.  So we need to do a
+	 * MAC_CHECK instead of the typical MAC_PERFORM so we can propagate
+	 * allocation failures back to the syncache code.
+	 */
+	MAC_CHECK(init_syncache_label, *label, M_NOWAIT);
+	return (error);
+}
+
+void
+mac_init_syncache_from_inpcb(struct label *label, struct inpcb *inp)
+{
+
+	INP_LOCK_ASSERT(inp);
+	MAC_PERFORM(init_syncache_from_inpcb, label, inp);
+}
+
+void
+mac_create_mbuf_from_syncache(struct label *sc_label, struct mbuf *m)
+{
+	struct label *mlabel;
+
+	M_ASSERTPKTHDR(m);
+	mlabel = mac_mbuf_to_label(m);
+	MAC_PERFORM(create_mbuf_from_syncache, sc_label, m, mlabel);
 }

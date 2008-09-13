@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_process.c,v 1.108.2.2 2006/03/09 00:18:45 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/security/mac/mac_process.c,v 1.118 2007/04/22 19:55:56 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -62,19 +62,9 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_process.c,v 1.108.2.2 2006/03/09 00
 #include <vm/vm_map.h>
 #include <vm/vm_object.h>
 
-#include <sys/mac_policy.h>
-
+#include <security/mac/mac_framework.h>
 #include <security/mac/mac_internal.h>
-
-int	mac_enforce_process = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_process, CTLFLAG_RW,
-    &mac_enforce_process, 0, "Enforce MAC policy on inter-process operations");
-TUNABLE_INT("security.mac.enforce_process", &mac_enforce_process);
-
-int	mac_enforce_vm = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_vm, CTLFLAG_RW,
-    &mac_enforce_vm, 0, "Enforce MAC policy on vm operations");
-TUNABLE_INT("security.mac.enforce_vm", &mac_enforce_vm);
+#include <security/mac/mac_policy.h>
 
 static int	mac_mmap_revocation = 1;
 SYSCTL_INT(_security_mac, OID_AUTO, mmap_revocation, CTLFLAG_RW,
@@ -86,19 +76,6 @@ SYSCTL_INT(_security_mac, OID_AUTO, mmap_revocation_via_cow, CTLFLAG_RW,
     &mac_mmap_revocation_via_cow, 0, "Revoke mmap access to files via "
     "copy-on-write semantics, or by removing all write access");
 
-static int	mac_enforce_suid = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_suid, CTLFLAG_RW,
-    &mac_enforce_suid, 0, "Enforce MAC policy on suid/sgid operations");
-TUNABLE_INT("security.mac.enforce_suid", &mac_enforce_suid);
-
-#ifdef MAC_DEBUG
-static unsigned int nmaccreds, nmacprocs;
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, creds, CTLFLAG_RD,
-    &nmaccreds, 0, "number of ucreds in use");
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, procs, CTLFLAG_RD,
-    &nmacprocs, 0, "number of procs in use");
-#endif
-
 static void	mac_cred_mmapped_drop_perms_recurse(struct thread *td,
 		    struct ucred *cred, struct vm_map *map);
 
@@ -109,7 +86,6 @@ mac_cred_label_alloc(void)
 
 	label = mac_labelzone_alloc(M_WAITOK);
 	MAC_PERFORM(init_cred_label, label);
-	MAC_DEBUG_COUNTER_INC(&nmaccreds);
 	return (label);
 }
 
@@ -127,7 +103,6 @@ mac_proc_label_alloc(void)
 
 	label = mac_labelzone_alloc(M_WAITOK);
 	MAC_PERFORM(init_proc_label, label);
-	MAC_DEBUG_COUNTER_INC(&nmacprocs);
 	return (label);
 }
 
@@ -144,7 +119,6 @@ mac_cred_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_cred_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmaccreds);
 }
 
 void
@@ -161,7 +135,6 @@ mac_proc_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_proc_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmacprocs);
 }
 
 void
@@ -194,8 +167,8 @@ mac_internalize_cred_label(struct label *label, char *string)
 }
 
 /*
- * Initialize MAC label for the first kernel process, from which other
- * kernel processes and threads are spawned.
+ * Initialize MAC label for the first kernel process, from which other kernel
+ * processes and threads are spawned.
  */
 void
 mac_create_proc0(struct ucred *cred)
@@ -224,8 +197,8 @@ mac_thread_userret(struct thread *td)
 
 /*
  * When a new process is created, its label must be initialized.  Generally,
- * this involves inheritence from the parent process, modulo possible
- * deltas.  This function allows that processing to take place.
+ * this involves inheritence from the parent process, modulo possible deltas.
+ * This function allows that processing to take place.
  */
 void
 mac_copy_cred(struct ucred *src, struct ucred *dest)
@@ -282,9 +255,9 @@ mac_execve_exit(struct image_params *imgp)
 
 /*
  * When relabeling a process, call out to the policies for the maximum
- * permission allowed for each object type we know about in its
- * memory space, and revoke access (in the least surprising ways we
- * know) when necessary.  The process lock is not held here.
+ * permission allowed for each object type we know about in its memory space,
+ * and revoke access (in the least surprising ways we know) when necessary.
+ * The process lock is not held here.
  */
 void
 mac_cred_mmapped_drop_perms(struct thread *td, struct ucred *cred)
@@ -364,9 +337,9 @@ mac_cred_mmapped_drop_perms_recurse(struct thread *td, struct ucred *cred,
 		}
 		VM_OBJECT_UNLOCK(object);
 		/*
-		 * At the moment, vm_maps and objects aren't considered
-		 * by the MAC system, so only things with backing by a
-		 * normal object (read: vnodes) are checked.
+		 * At the moment, vm_maps and objects aren't considered by
+		 * the MAC system, so only things with backing by a normal
+		 * object (read: vnodes) are checked.
 		 */
 		if (object->type != OBJT_VNODE)
 			continue;
@@ -377,8 +350,8 @@ mac_cred_mmapped_drop_perms_recurse(struct thread *td, struct ucred *cred,
 		mac_check_vnode_mmap_downgrade(cred, vp, &result);
 		VOP_UNLOCK(vp, 0, td);
 		/*
-		 * Find out what maximum protection we may be allowing
-		 * now but a policy needs to get removed.
+		 * Find out what maximum protection we may be allowing now
+		 * but a policy needs to get removed.
 		 */
 		revokeperms = vme->max_protection & ~result;
 		if (!revokeperms) {
@@ -394,9 +367,8 @@ mac_cred_mmapped_drop_perms_recurse(struct thread *td, struct ucred *cred,
 		/*
 		 * This is the really simple case: if a map has more
 		 * max_protection than is allowed, but it's not being
-		 * actually used (that is, the current protection is
-		 * still allowed), we can just wipe it out and do
-		 * nothing more.
+		 * actually used (that is, the current protection is still
+		 * allowed), we can just wipe it out and do nothing more.
 		 */
 		if ((vme->protection & revokeperms) == 0) {
 			vme->max_protection -= revokeperms;
@@ -474,205 +446,168 @@ mac_check_cred_relabel(struct ucred *cred, struct label *newlabel)
 }
 
 int
-mac_check_cred_visible(struct ucred *u1, struct ucred *u2)
+mac_check_cred_visible(struct ucred *cr1, struct ucred *cr2)
 {
 	int error;
 
-	if (!mac_enforce_process)
-		return (0);
-
-	MAC_CHECK(check_cred_visible, u1, u2);
+	MAC_CHECK(check_cred_visible, cr1, cr2);
 
 	return (error);
 }
 
 int
-mac_check_proc_debug(struct ucred *cred, struct proc *proc)
+mac_check_proc_debug(struct ucred *cred, struct proc *p)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
-	if (!mac_enforce_process)
-		return (0);
-
-	MAC_CHECK(check_proc_debug, cred, proc);
+	MAC_CHECK(check_proc_debug, cred, p);
 
 	return (error);
 }
 
 int
-mac_check_proc_sched(struct ucred *cred, struct proc *proc)
+mac_check_proc_sched(struct ucred *cred, struct proc *p)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
-	if (!mac_enforce_process)
-		return (0);
-
-	MAC_CHECK(check_proc_sched, cred, proc);
+	MAC_CHECK(check_proc_sched, cred, p);
 
 	return (error);
 }
 
 int
-mac_check_proc_signal(struct ucred *cred, struct proc *proc, int signum)
+mac_check_proc_signal(struct ucred *cred, struct proc *p, int signum)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
-	if (!mac_enforce_process)
-		return (0);
-
-	MAC_CHECK(check_proc_signal, cred, proc, signum);
+	MAC_CHECK(check_proc_signal, cred, p, signum);
 
 	return (error);
 }
 
 int
-mac_check_proc_setuid(struct proc *proc, struct ucred *cred, uid_t uid)
+mac_check_proc_setuid(struct proc *p, struct ucred *cred, uid_t uid)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_setuid, cred, uid);
 	return (error);
 }
 
 int
-mac_check_proc_seteuid(struct proc *proc, struct ucred *cred, uid_t euid)
+mac_check_proc_seteuid(struct proc *p, struct ucred *cred, uid_t euid)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_seteuid, cred, euid);
 	return (error);
 }
 
 int
-mac_check_proc_setgid(struct proc *proc, struct ucred *cred, gid_t gid)
+mac_check_proc_setgid(struct proc *p, struct ucred *cred, gid_t gid)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_setgid, cred, gid);
+
 	return (error);
 }
 
 int
-mac_check_proc_setegid(struct proc *proc, struct ucred *cred, gid_t egid)
+mac_check_proc_setegid(struct proc *p, struct ucred *cred, gid_t egid)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_setegid, cred, egid);
+
 	return (error);
 }
 
 int
-mac_check_proc_setgroups(struct proc *proc, struct ucred *cred,
-	int ngroups, gid_t *gidset)
+mac_check_proc_setgroups(struct proc *p, struct ucred *cred, int ngroups,
+    gid_t *gidset)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_setgroups, cred, ngroups, gidset);
 	return (error);
 }
 
 int
-mac_check_proc_setreuid(struct proc *proc, struct ucred *cred, uid_t ruid,
-	uid_t euid)
+mac_check_proc_setreuid(struct proc *p, struct ucred *cred, uid_t ruid,
+    uid_t euid)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_setreuid, cred, ruid, euid);
+
 	return (error);
 }
 
 int
 mac_check_proc_setregid(struct proc *proc, struct ucred *cred, gid_t rgid,
-	gid_t egid)
+    gid_t egid)
 {
 	int error;
 
 	PROC_LOCK_ASSERT(proc, MA_OWNED);
 
-	if (!mac_enforce_suid)
-		return (0);
-
 	MAC_CHECK(check_proc_setregid, cred, rgid, egid);
+
 	return (error);
 }
 
 int
-mac_check_proc_setresuid(struct proc *proc, struct ucred *cred, uid_t ruid,
-	uid_t euid, uid_t suid)
+mac_check_proc_setresuid(struct proc *p, struct ucred *cred, uid_t ruid,
+    uid_t euid, uid_t suid)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_setresuid, cred, ruid, euid, suid);
 	return (error);
 }
 
 int
-mac_check_proc_setresgid(struct proc *proc, struct ucred *cred, gid_t rgid,
-	gid_t egid, gid_t sgid)
+mac_check_proc_setresgid(struct proc *p, struct ucred *cred, gid_t rgid,
+    gid_t egid, gid_t sgid)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
-
-	if (!mac_enforce_suid)
-		return (0);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	MAC_CHECK(check_proc_setresgid, cred, rgid, egid, sgid);
+
 	return (error);
 }
 
 int
-mac_check_proc_wait(struct ucred *cred, struct proc *proc)
+mac_check_proc_wait(struct ucred *cred, struct proc *p)
 {
 	int error;
 
-	PROC_LOCK_ASSERT(proc, MA_OWNED);
+	PROC_LOCK_ASSERT(p, MA_OWNED);
 
-	if (!mac_enforce_process)
-		return (0);
-
-	MAC_CHECK(check_proc_wait, cred, proc);
+	MAC_CHECK(check_proc_wait, cred, p);
 
 	return (error);
 }

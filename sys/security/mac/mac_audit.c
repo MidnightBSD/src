@@ -1,6 +1,10 @@
 /*-
- * Copyright (c) 2003-2005 SPARTA, Inc.
- * All rights reserved.
+ * Copyright (c) 1999-2002 Robert N. M. Watson
+ * Copyright (c) 2001 Ilmar S. Habibulin
+ * Copyright (c) 2001-2004 Networks Associates Technology, Inc.
+ *
+ * This software was developed by Robert Watson and Ilmar Habibulin for the
+ * TrustedBSD Project.
  *
  * This software was developed for the FreeBSD Project in part by Network
  * Associates Laboratories, the Security Research Division of Network
@@ -27,122 +31,81 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * $FreeBSD: src/sys/security/mac/mac_audit.c,v 1.2 2007/06/26 14:14:01 rwatson Exp $
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_posix_sem.c,v 1.9.2.2 2007/12/21 14:32:04 rwatson Exp $");
-
-#include "opt_mac.h"
-#include "opt_posix.h"
-
 #include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/ksem.h>
-#include <sys/malloc.h>
 #include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/sysctl.h>
+#include <sys/vnode.h>
+
+#include <security/audit/audit.h>
 
 #include <security/mac/mac_framework.h>
 #include <security/mac/mac_internal.h>
 #include <security/mac/mac_policy.h>
 
-static struct label *
-mac_posix_sem_label_alloc(void)
-{
-	struct label *label;
-
-	label = mac_labelzone_alloc(M_WAITOK);
-	MAC_PERFORM(init_posix_sem_label, label);
-	return (label);
-}
-
-void
-mac_init_posix_sem(struct ksem *ks)
-{
-
-	ks->ks_label = mac_posix_sem_label_alloc();
-}
-
-static void
-mac_posix_sem_label_free(struct label *label)
-{
-
-	MAC_PERFORM(destroy_posix_sem_label, label);
-	mac_labelzone_free(label);
-}
-
-void
-mac_destroy_posix_sem(struct ksem *ks)
-{
-
-	mac_posix_sem_label_free(ks->ks_label);
-	ks->ks_label = NULL;
-}
-
-void
-mac_create_posix_sem(struct ucred *cred, struct ksem *ks)
-{
-
-	MAC_PERFORM(create_posix_sem, cred, ks, ks->ks_label);
-}
-
 int
-mac_check_posix_sem_destroy(struct ucred *cred, struct ksem *ks)
+mac_check_proc_setaudit(struct ucred *cred, struct auditinfo *ai)
 {
 	int error;
 
-	MAC_CHECK(check_posix_sem_destroy, cred, ks, ks->ks_label);
+	MAC_CHECK(check_proc_setaudit, cred, ai);
 
 	return (error);
 }
 
 int
-mac_check_posix_sem_open(struct ucred *cred, struct ksem *ks)
+mac_check_proc_setaudit_addr(struct ucred *cred, struct auditinfo_addr *aia)
 {
 	int error;
 
-	MAC_CHECK(check_posix_sem_open, cred, ks, ks->ks_label);
+	MAC_CHECK(check_proc_setaudit_addr, cred, aia);
 
 	return (error);
 }
 
 int
-mac_check_posix_sem_getvalue(struct ucred *cred, struct ksem *ks)
+mac_check_proc_setauid(struct ucred *cred, uid_t auid)
 {
 	int error;
 
-	MAC_CHECK(check_posix_sem_getvalue, cred, ks, ks->ks_label);
+	MAC_CHECK(check_proc_setauid, cred, auid);
 
 	return (error);
 }
 
 int
-mac_check_posix_sem_post(struct ucred *cred, struct ksem *ks)
+mac_check_system_audit(struct ucred *cred, void *record, int length)
 {
 	int error;
 
-	MAC_CHECK(check_posix_sem_post, cred, ks, ks->ks_label);
+	MAC_CHECK(check_system_audit, cred, record, length);
 
 	return (error);
 }
 
 int
-mac_check_posix_sem_unlink(struct ucred *cred, struct ksem *ks)
+mac_check_system_auditctl(struct ucred *cred, struct vnode *vp)
 {
 	int error;
+	struct label *vl;
 
-	MAC_CHECK(check_posix_sem_unlink, cred, ks, ks->ks_label);
+	ASSERT_VOP_LOCKED(vp, "mac_check_system_auditctl");
+
+	vl = (vp != NULL) ? vp->v_label : NULL;
+
+	MAC_CHECK(check_system_auditctl, cred, vp, vl);
 
 	return (error);
 }
 
 int
-mac_check_posix_sem_wait(struct ucred *cred, struct ksem *ks)
+mac_check_system_auditon(struct ucred *cred, int cmd)
 {
 	int error;
 
-	MAC_CHECK(check_posix_sem_wait, cred, ks, ks->ks_label);
+	MAC_CHECK(check_system_auditon, cred, cmd);
 
 	return (error);
 }

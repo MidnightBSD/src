@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_msg.c,v 1.2 2005/02/24 16:08:41 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_msg.c,v 1.9 2007/02/06 10:59:21 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -39,7 +39,6 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_msg.c,v 1.2 2005/02/24 16:08:4
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
-#include <sys/mac.h>
 #include <sys/sbuf.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
@@ -49,23 +48,9 @@ __FBSDID("$FreeBSD: src/sys/security/mac/mac_sysv_msg.c,v 1.2 2005/02/24 16:08:4
 #include <sys/sysctl.h>
 #include <sys/msg.h>
 
-#include <sys/mac_policy.h>
-
+#include <security/mac/mac_framework.h>
 #include <security/mac/mac_internal.h>
-
-static int	mac_enforce_sysv_msg = 1;
-SYSCTL_INT(_security_mac, OID_AUTO, enforce_sysv_msg, CTLFLAG_RW,
-    &mac_enforce_sysv_msg, 0,
-    "Enforce MAC policy on System V IPC Message Queues");
-TUNABLE_INT("security.mac.enforce_sysv_msg", &mac_enforce_sysv_msg);
-
-#ifdef MAC_DEBUG
-static unsigned int nmacipcmsgs, nmacipcmsqs;
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, ipc_msgs, CTLFLAG_RD,
-    &nmacipcmsgs, 0, "number of sysv ipc messages inuse");
-SYSCTL_UINT(_security_mac_debug_counters, OID_AUTO, ipc_msqs, CTLFLAG_RD,
-    &nmacipcmsqs, 0, "number of sysv ipc message queue identifiers inuse");
-#endif
+#include <security/mac/mac_policy.h>
 
 static struct label *
 mac_sysv_msgmsg_label_alloc(void)
@@ -74,7 +59,6 @@ mac_sysv_msgmsg_label_alloc(void)
 
 	label = mac_labelzone_alloc(M_WAITOK);
 	MAC_PERFORM(init_sysv_msgmsg_label, label);
-	MAC_DEBUG_COUNTER_INC(&nmacipcmsgs);
 	return (label);
 }
 
@@ -92,7 +76,6 @@ mac_sysv_msgqueue_label_alloc(void)
 
 	label = mac_labelzone_alloc(M_WAITOK);
 	MAC_PERFORM(init_sysv_msgqueue_label, label);
-	MAC_DEBUG_COUNTER_INC(&nmacipcmsqs);
 	return (label);
 }
 
@@ -109,7 +92,6 @@ mac_sysv_msgmsg_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_sysv_msgmsg_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmacipcmsgs);
 }
 
 void
@@ -126,7 +108,6 @@ mac_sysv_msgqueue_label_free(struct label *label)
 
 	MAC_PERFORM(destroy_sysv_msgqueue_label, label);
 	mac_labelzone_free(label);
-	MAC_DEBUG_COUNTER_DEC(&nmacipcmsqs);
 }
 
 void
@@ -138,18 +119,18 @@ mac_destroy_sysv_msgqueue(struct msqid_kernel *msqkptr)
 }
 
 void
-mac_create_sysv_msgmsg(struct ucred *cred, struct msqid_kernel *msqkptr, 
+mac_create_sysv_msgmsg(struct ucred *cred, struct msqid_kernel *msqkptr,
     struct msg *msgptr)
 {
-				
-	MAC_PERFORM(create_sysv_msgmsg, cred, msqkptr, msqkptr->label, 
+
+	MAC_PERFORM(create_sysv_msgmsg, cred, msqkptr, msqkptr->label,
 		msgptr, msgptr->label);
 }
 
 void
 mac_create_sysv_msgqueue(struct ucred *cred, struct msqid_kernel *msqkptr)
 {
-				
+
 	MAC_PERFORM(create_sysv_msgqueue, cred, msqkptr, msqkptr->label);
 }
 
@@ -163,7 +144,7 @@ mac_cleanup_sysv_msgmsg(struct msg *msgptr)
 void
 mac_cleanup_sysv_msgqueue(struct msqid_kernel *msqkptr)
 {
-				
+
 	MAC_PERFORM(cleanup_sysv_msgqueue, msqkptr->label);
 }
 
@@ -173,13 +154,10 @@ mac_check_sysv_msgmsq(struct ucred *cred, struct msg *msgptr,
 {
 	int error;
 
-	if (!mac_enforce_sysv_msg)
-		return (0);
-
 	MAC_CHECK(check_sysv_msgmsq, cred,  msgptr, msgptr->label, msqkptr,
 	    msqkptr->label);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -187,12 +165,9 @@ mac_check_sysv_msgrcv(struct ucred *cred, struct msg *msgptr)
 {
 	int error;
 
-	if (!mac_enforce_sysv_msg)
-		return (0);
-
 	MAC_CHECK(check_sysv_msgrcv, cred, msgptr, msgptr->label);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -200,12 +175,9 @@ mac_check_sysv_msgrmid(struct ucred *cred, struct msg *msgptr)
 {
 	int error;
 
-	if (!mac_enforce_sysv_msg)
-		return (0);
-
 	MAC_CHECK(check_sysv_msgrmid, cred,  msgptr, msgptr->label);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -213,12 +185,9 @@ mac_check_sysv_msqget(struct ucred *cred, struct msqid_kernel *msqkptr)
 {
 	int error;
 
-	if (!mac_enforce_sysv_msg)
-		return (0);
-
 	MAC_CHECK(check_sysv_msqget, cred, msqkptr, msqkptr->label);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -226,12 +195,9 @@ mac_check_sysv_msqsnd(struct ucred *cred, struct msqid_kernel *msqkptr)
 {
 	int error;
 
-	if (!mac_enforce_sysv_msg)
-		return (0);
-
 	MAC_CHECK(check_sysv_msqsnd, cred, msqkptr, msqkptr->label);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -239,12 +205,9 @@ mac_check_sysv_msqrcv(struct ucred *cred, struct msqid_kernel *msqkptr)
 {
 	int error;
 
-	if (!mac_enforce_sysv_msg)
-		return (0);
-
 	MAC_CHECK(check_sysv_msqrcv, cred, msqkptr, msqkptr->label);
 
-	return(error);
+	return (error);
 }
 
 int
@@ -253,10 +216,7 @@ mac_check_sysv_msqctl(struct ucred *cred, struct msqid_kernel *msqkptr,
 {
 	int error;
 
-	if (!mac_enforce_sysv_msg)
-		return (0);
-
 	MAC_CHECK(check_sysv_msqctl, cred, msqkptr, msqkptr->label, cmd);
 
-	return(error);
+	return (error);
 }
