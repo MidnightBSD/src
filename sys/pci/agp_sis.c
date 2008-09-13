@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp_sis.c,v 1.18 2005/02/24 21:32:55 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp_sis.c,v 1.20.2.1 2007/11/08 20:29:53 jhb Exp $");
 
 #include "opt_bus.h"
 
@@ -103,8 +103,6 @@ agp_sis_match(device_t dev)
 		return ("SiS 745 host to AGP bridge");
 	case 0x07461039:
 		return ("SiS 746 host to AGP bridge");
-	case 0x07601039:
-		return ("SiS 760 host to AGP bridge");
 	};
 
 	return NULL;
@@ -119,7 +117,6 @@ agp_sis_probe(device_t dev)
 		return (ENXIO);
 	desc = agp_sis_match(dev);
 	if (desc) {
-		device_verbose(dev);
 		device_set_desc(dev, desc);
 		return BUS_PROBE_DEFAULT;
 	}
@@ -176,11 +173,8 @@ static int
 agp_sis_detach(device_t dev)
 {
 	struct agp_sis_softc *sc = device_get_softc(dev);
-	int error;
 
-	error = agp_generic_detach(dev);
-	if (error)
-		return error;
+	agp_free_cdev(dev);
 
 	/* Disable the aperture.. */
 	pci_write_config(dev, AGP_SIS_WINCTRL,
@@ -193,6 +187,7 @@ agp_sis_detach(device_t dev)
 	AGP_SET_APERTURE(dev, sc->initial_aperture);
 
 	agp_free_gatt(sc->gatt);
+	agp_free_res(dev);
 	return 0;
 }
 
@@ -293,6 +288,6 @@ static driver_t agp_sis_driver = {
 
 static devclass_t agp_devclass;
 
-DRIVER_MODULE(agp_sis, pci, agp_sis_driver, agp_devclass, 0, 0);
+DRIVER_MODULE(agp_sis, hostb, agp_sis_driver, agp_devclass, 0, 0);
 MODULE_DEPEND(agp_sis, agp, 1, 1, 1);
 MODULE_DEPEND(agp_sis, pci, 1, 1, 1);

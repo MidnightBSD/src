@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_ste.c,v 1.84.2.6 2005/10/09 04:11:19 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_ste.c,v 1.99 2007/06/15 21:45:41 thompsa Exp $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -70,7 +70,7 @@ __FBSDID("$FreeBSD: src/sys/pci/if_ste.c,v 1.84.2.6 2005/10/09 04:11:19 delphij 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 #define STE_USEIOSPACE
@@ -85,7 +85,8 @@ MODULE_DEPEND(ste, miibus, 1, 1, 1);
  * Various supported device vendors/types and their names.
  */
 static struct ste_type ste_devs[] = {
-	{ ST_VENDORID, ST_DEVICEID_ST201, "Sundance ST201 10/100BaseTX" },
+	{ ST_VENDORID, ST_DEVICEID_ST201_1, "Sundance ST201 10/100BaseTX" },
+	{ ST_VENDORID, ST_DEVICEID_ST201_2, "Sundance ST201 10/100BaseTX" },
 	{ DL_VENDORID, DL_DEVICEID_DL10050, "D-Link DL10050 10/100BaseTX" },
 	{ 0, 0, NULL }
 };
@@ -504,7 +505,7 @@ ste_wait(sc)
 	}
 
 	if (i == STE_TIMEOUT)
-		if_printf(sc->ste_ifp, "command never completed!\n");
+		device_printf(sc->ste_dev, "command never completed!\n");
 
 	return;
 }
@@ -529,7 +530,7 @@ ste_eeprom_wait(sc)
 	}
 
 	if (i == 100) {
-		if_printf(sc->ste_ifp, "eeprom failed to come ready\n");
+		device_printf(sc->ste_dev, "eeprom failed to come ready\n");
 		return(1);
 	}
 
@@ -812,7 +813,7 @@ ste_rxeof(sc)
 		 * If not, something truly strange has happened.
 		 */
 		if (!(rxstat & STE_RXSTAT_DMADONE)) {
-			if_printf(ifp,
+			device_printf(sc->ste_dev,
 			    "bad receive status -- packet dropped\n");
 			ifp->if_ierrors++;
 			cur_rx->ste_ptr->ste_status = 0;
@@ -866,7 +867,8 @@ ste_txeoc(sc)
 		    txstat & STE_TXSTATUS_EXCESSCOLLS ||
 		    txstat & STE_TXSTATUS_RECLAIMERR) {
 			ifp->if_oerrors++;
-			if_printf(ifp, "transmission error: %x\n", txstat);
+			device_printf(sc->ste_dev,
+			    "transmission error: %x\n", txstat);
 
 			ste_reset(sc);
 			ste_init_locked(sc);
@@ -874,7 +876,8 @@ ste_txeoc(sc)
 			if (txstat & STE_TXSTATUS_UNDERRUN &&
 			    sc->ste_tx_thresh < STE_PACKET_SIZE) {
 				sc->ste_tx_thresh += STE_MIN_FRAMELEN;
-				if_printf(ifp, "tx underrun, increasing tx"
+				device_printf(sc->ste_dev,
+				    "tx underrun, increasing tx"
 				    " start threshold to %d bytes\n",
 				    sc->ste_tx_thresh);
 			}
@@ -1111,7 +1114,7 @@ ste_attach(dev)
 
 	/* Hook interrupt last to avoid having to lock softc */
 	error = bus_setup_intr(dev, sc->ste_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    ste_intr, sc, &sc->ste_intrhand);
+	    NULL, ste_intr, sc, &sc->ste_intrhand);
 
 	if (error) {
 		device_printf(dev, "couldn't set up irq\n");
@@ -1157,8 +1160,6 @@ ste_detach(dev)
 		callout_drain(&sc->ste_stat_callout);
 		ether_ifdetach(ifp);
 	}
-	if (ifp)
-		if_free(ifp);
 	if (sc->ste_miibus)
 		device_delete_child(dev, sc->ste_miibus);
 	bus_generic_detach(dev);
@@ -1169,6 +1170,9 @@ ste_detach(dev)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->ste_irq);
 	if (sc->ste_res)
 		bus_release_resource(dev, STE_RES, STE_RID, sc->ste_res);
+
+	if (ifp)
+		if_free(ifp);
 
 	if (sc->ste_ldata) {
 		contigfree(sc->ste_ldata, sizeof(struct ste_list_data),
@@ -1302,13 +1306,15 @@ ste_init_locked(sc)
 	ste_stop(sc);
 
 	/* Init our MAC address */
-	for (i = 0; i < ETHER_ADDR_LEN; i++) {
-		CSR_WRITE_1(sc, STE_PAR0 + i, IFP2ENADDR(sc->ste_ifp)[i]);
+	for (i = 0; i < ETHER_ADDR_LEN; i += 2) {
+		CSR_WRITE_2(sc, STE_PAR0 + i,
+		    ((IF_LLADDR(sc->ste_ifp)[i] & 0xff) |
+		     IF_LLADDR(sc->ste_ifp)[i + 1] << 8));
 	}
 
 	/* Init RX list */
 	if (ste_init_rx_list(sc) == ENOBUFS) {
-		if_printf(ifp,
+		device_printf(sc->ste_dev,
 		    "initialization failed: no memory for RX buffers\n");
 		ste_stop(sc);
 		return;
@@ -1468,7 +1474,7 @@ ste_reset(sc)
 	}
 
 	if (i == STE_TIMEOUT)
-		if_printf(sc->ste_ifp, "global reset never completed\n");
+		device_printf(sc->ste_dev, "global reset never completed\n");
 
 	return;
 }

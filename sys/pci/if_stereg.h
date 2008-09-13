@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/if_stereg.h,v 1.18.2.2 2005/09/15 19:16:29 jhb Exp $
+ * $FreeBSD: src/sys/pci/if_stereg.h,v 1.22 2007/03/10 03:10:34 yongari Exp $
  */
 
 /*
@@ -37,7 +37,8 @@
  * ST201 chip.
  */
 #define ST_VENDORID		0x13F0
-#define ST_DEVICEID_ST201	0x0201
+#define ST_DEVICEID_ST201_1	0x0200
+#define ST_DEVICEID_ST201_2	0x0201
 
 /*
  * D-Link PCI device/vendor ID for the DL10050[AB] chip
@@ -547,8 +548,3 @@ struct ste_mii_frame {
 #define STE_MII_READOP		0x02
 #define STE_MII_WRITEOP		0x01
 #define STE_MII_TURNAROUND	0x02
-
-#ifdef __alpha__
-#undef vtophys
-#define vtophys(va)		alpha_XXX_dmamap((vm_offset_t)va)
-#endif

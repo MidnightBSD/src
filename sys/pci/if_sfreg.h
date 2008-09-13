@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/if_sfreg.h,v 1.14.2.1 2005/08/26 14:50:16 jhb Exp $
+ * $FreeBSD: src/sys/pci/if_sfreg.h,v 1.19 2006/09/15 11:01:23 ru Exp $
  */
 
 /*
@@ -1032,6 +1032,7 @@ struct sf_list_data {
 
 struct sf_softc {
 	struct ifnet		*sf_ifp;	/* interface info */
+	device_t		sf_dev;		/* device info */
 	bus_space_handle_t	sf_bhandle;	/* bus space handle */
 	bus_space_tag_t		sf_btag;	/* bus space tag */
 	void			*sf_intrhand;	/* interrupt handler cookie */
@@ -1056,8 +1057,3 @@ struct sf_softc {
 #define	SF_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->sf_mtx, MA_OWNED)
 
 #define SF_TIMEOUT	1000
-
-#ifdef __alpha__
-#undef vtophys
-#define vtophys(va)		alpha_XXX_dmamap((vm_offset_t)va)
-#endif

@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/if_tlreg.h,v 1.21.2.1 2005/09/26 19:36:38 jhb Exp $
+ * $FreeBSD: src/sys/pci/if_tlreg.h,v 1.25 2006/09/15 11:01:23 ru Exp $
  */
 
 
@@ -110,6 +110,7 @@ struct tl_chain_data {
 
 struct tl_softc {
 	struct ifnet		*tl_ifp;
+	device_t		tl_dev;
 	struct ifmedia		ifmedia;	/* media info */
 	bus_space_handle_t	tl_bhandle;
 	bus_space_tag_t		tl_btag;
@@ -589,8 +590,3 @@ struct tl_stats {
  */
 #define EEPROM_CTL_READ			0xA1	/* 0101 0001 */
 #define EEPROM_CTL_WRITE		0xA0	/* 0101 0000 */
-
-#ifdef __alpha__
-#undef vtophys
-#define vtophys(va)		alpha_XXX_dmamap((vm_offset_t)va)
-#endif

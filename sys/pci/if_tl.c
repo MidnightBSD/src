@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_tl.c,v 1.99.2.4 2005/10/09 04:11:19 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_tl.c,v 1.111 2007/05/09 09:02:11 yar Exp $");
 
 /*
  * Texas Instruments ThunderLAN driver for FreeBSD 2.2.6 and 3.x.
@@ -221,7 +221,7 @@ MODULE_DEPEND(tl, pci, 1, 1, 1);
 MODULE_DEPEND(tl, ether, 1, 1, 1);
 MODULE_DEPEND(tl, miibus, 1, 1, 1);
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 /*
@@ -526,7 +526,7 @@ static u_int8_t tl_eeprom_getbyte(sc, addr, dest)
 {
 	register int		i;
 	u_int8_t		byte = 0;
-	struct ifnet		*ifp = sc->tl_ifp;
+	device_t		tl_dev = sc->tl_dev;
 
 	tl_dio_write8(sc, TL_NETSIO, 0);
 
@@ -536,7 +536,7 @@ static u_int8_t tl_eeprom_getbyte(sc, addr, dest)
 	 * Send write control code to EEPROM.
 	 */
 	if (tl_eeprom_putbyte(sc, EEPROM_CTL_WRITE)) {
-		if_printf(ifp, "failed to send write command, status: %x\n",
+		device_printf(tl_dev, "failed to send write command, status: %x\n",
 		    tl_dio_read8(sc, TL_NETSIO));
 		return(1);
 	}
@@ -545,7 +545,7 @@ static u_int8_t tl_eeprom_getbyte(sc, addr, dest)
 	 * Send address of byte we want to read.
 	 */
 	if (tl_eeprom_putbyte(sc, addr)) {
-		if_printf(ifp, "failed to send address, status: %x\n",
+		device_printf(tl_dev, "failed to send address, status: %x\n",
 		    tl_dio_read8(sc, TL_NETSIO));
 		return(1);
 	}
@@ -556,7 +556,7 @@ static u_int8_t tl_eeprom_getbyte(sc, addr, dest)
 	 * Send read control code to EEPROM.
 	 */
 	if (tl_eeprom_putbyte(sc, EEPROM_CTL_READ)) {
-		if_printf(ifp, "failed to send write command, status: %x\n",
+		device_printf(tl_dev, "failed to send write command, status: %x\n",
 		    tl_dio_read8(sc, TL_NETSIO));
 		return(1);
 	}
@@ -1115,6 +1115,7 @@ tl_attach(dev)
 	vid = pci_get_vendor(dev);
 	did = pci_get_device(dev);
 	sc = device_get_softc(dev);
+	sc->tl_dev = dev;
 	unit = device_get_unit(dev);
 
 	t = tl_devs;
@@ -1266,6 +1267,8 @@ tl_attach(dev)
 	ifp->if_init = tl_init;
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_snd.ifq_maxlen = TL_TX_LIST_CNT - 1;
+	ifp->if_capabilities |= IFCAP_VLAN_MTU;
+	ifp->if_capenable |= IFCAP_VLAN_MTU;
 	callout_init_mtx(&sc->tl_stat_callout, &sc->tl_mtx, 0);
 
 	/* Reset the adapter again. */
@@ -1302,7 +1305,7 @@ tl_attach(dev)
 
 	/* Hook interrupt last to avoid having to lock softc */
 	error = bus_setup_intr(dev, sc->tl_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    tl_intr, sc, &sc->tl_intrhand);
+	    NULL, tl_intr, sc, &sc->tl_intrhand);
 
 	if (error) {
 		device_printf(dev, "couldn't set up irq\n");
@@ -1343,8 +1346,6 @@ tl_detach(dev)
 		callout_drain(&sc->tl_stat_callout);
 		ether_ifdetach(ifp);
 	}
-	if (ifp)
-		if_free(ifp);
 	if (sc->tl_miibus)
 		device_delete_child(dev, sc->tl_miibus);
 	bus_generic_detach(dev);
@@ -1360,6 +1361,9 @@ tl_detach(dev)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->tl_irq);
 	if (sc->tl_res)
 		bus_release_resource(dev, TL_RES, TL_RID, sc->tl_res);
+
+	if (ifp)
+		if_free(ifp);
 
 	mtx_destroy(&sc->tl_mtx);
 
@@ -1439,10 +1443,6 @@ tl_newbuf(sc, c)
 	m_new = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR);
 	if (m_new == NULL)
 		return(ENOBUFS);
-
-#ifdef __alpha__
-	m_new->m_data += 2;
-#endif
 
 	c->tl_mbuf = m_new;
 	c->tl_next = NULL;
@@ -1524,7 +1524,7 @@ tl_intvec_rxeof(xsc, type)
 		 */
 		eh = mtod(m, struct ether_header *);
 		/*if (ifp->if_flags & IFF_PROMISC && */
-		if (!bcmp(eh->ether_shost, IFP2ENADDR(sc->tl_ifp),
+		if (!bcmp(eh->ether_shost, IF_LLADDR(sc->tl_ifp),
 		 					ETHER_ADDR_LEN)) {
 				m_freem(m);
 				continue;
@@ -1672,7 +1672,7 @@ tl_intvec_adchk(xsc, type)
 	sc = xsc;
 
 	if (type)
-		if_printf(sc->tl_ifp, "adapter check: %x\n",
+		device_printf(sc->tl_dev, "adapter check: %x\n",
 			(unsigned int)CSR_READ_4(sc, TL_CH_PARM));
 
 	tl_softreset(sc, 1);
@@ -1696,7 +1696,7 @@ tl_intvec_netsts(xsc, type)
 	netsts = tl_dio_read16(sc, TL_NETSTS);
 	tl_dio_write16(sc, TL_NETSTS, netsts);
 
-	if_printf(sc->tl_ifp, "network status: %x\n", netsts);
+	device_printf(sc->tl_dev, "network status: %x\n", netsts);
 
 	return(1);
 }
@@ -1727,7 +1727,7 @@ tl_intr(xsc)
 	switch(ints) {
 	case (TL_INTR_INVALID):
 #ifdef DIAGNOSTIC
-		if_printf(ifp, "got an invalid interrupt!\n");
+		device_printf(sc->tl_dev, "got an invalid interrupt!\n");
 #endif
 		/* Re-enable interrupts but don't ack this one. */
 		CMD_PUT(sc, type);
@@ -1747,7 +1747,7 @@ tl_intr(xsc)
 		r = tl_intvec_rxeof((void *)sc, type);
 		break;
 	case (TL_INTR_DUMMY):
-		if_printf(ifp, "got a dummy interrupt\n");
+		device_printf(sc->tl_dev, "got a dummy interrupt\n");
 		r = 1;
 		break;
 	case (TL_INTR_ADCHK):
@@ -1760,7 +1760,7 @@ tl_intr(xsc)
 		r = tl_intvec_rxeoc((void *)sc, type);
 		break;
 	default:
-		if_printf(ifp, "bogus interrupt type\n");
+		device_printf(sc->tl_dev, "bogus interrupt type\n");
 		break;
 	}
 
@@ -1816,7 +1816,7 @@ tl_stats_update(xsc)
 		if (tx_thresh != TL_AC_TXTHRESH_WHOLEPKT) {
 			tx_thresh >>= 4;
 			tx_thresh++;
-			if_printf(ifp, "tx underrun -- increasing "
+			device_printf(sc->tl_dev, "tx underrun -- increasing "
 			    "tx threshold to %d bytes\n",
 			    (64 * (tx_thresh * 4)));
 			tl_dio_clrbit(sc, TL_ACOMMIT, TL_AC_TXTHRESH);
@@ -2090,14 +2090,14 @@ tl_init_locked(sc)
 	tl_dio_write16(sc, TL_MAXRX, MCLBYTES);
 
 	/* Init our MAC address */
-	tl_setfilt(sc, (caddr_t)&IFP2ENADDR(sc->tl_ifp), 0);
+	tl_setfilt(sc, IF_LLADDR(sc->tl_ifp), 0);
 
 	/* Init multicast filter, if needed. */
 	tl_setmulti(sc);
 
 	/* Init circular RX list. */
 	if (tl_list_rx_init(sc) == ENOBUFS) {
-		if_printf(ifp,
+		device_printf(sc->tl_dev,
 		    "initialization failed: no memory for rx buffers\n");
 		tl_stop(sc);
 		return;

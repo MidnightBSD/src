@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/if_wbreg.h,v 1.12.2.2 2005/11/15 19:59:04 jhb Exp $
+ * $FreeBSD: src/sys/pci/if_wbreg.h,v 1.17 2006/09/15 11:01:23 ru Exp $
  */
 
 /*
@@ -363,6 +363,7 @@ struct wb_mii_frame {
 
 struct wb_softc {
 	struct ifnet		*wb_ifp;	/* interface info */
+	device_t		wb_dev;
 	device_t		wb_miibus;
 	bus_space_handle_t	wb_bhandle;
 	bus_space_tag_t		wb_btag;
@@ -461,8 +462,3 @@ struct wb_softc {
 #define WB_PSTATE_D3		0x0003
 #define WB_PME_EN		0x0010
 #define WB_PME_STATUS		0x8000
-
-#ifdef __alpha__
-#undef vtophys
-#define vtophys(va)		alpha_XXX_dmamap((vm_offset_t)va)
-#endif

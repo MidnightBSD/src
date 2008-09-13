@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp_ali.c,v 1.17 2005/02/27 13:05:34 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp_ali.c,v 1.18.2.1 2007/11/08 20:29:53 jhb Exp $");
 
 #include "opt_bus.h"
 
@@ -85,7 +85,6 @@ agp_ali_probe(device_t dev)
 		return (ENXIO);
 	desc = agp_ali_match(dev);
 	if (desc) {
-		device_verbose(dev);
 		device_set_desc(dev, desc);
 		return BUS_PROBE_DEFAULT;
 	}
@@ -142,12 +141,9 @@ static int
 agp_ali_detach(device_t dev)
 {
 	struct agp_ali_softc *sc = device_get_softc(dev);
-	int error;
 	u_int32_t attbase;
 
-	error = agp_generic_detach(dev);
-	if (error)
-		return error;
+	agp_free_cdev(dev);
 
 	/* Disable the TLB.. */
 	pci_write_config(dev, AGP_ALI_TLBCTRL, 0x90, 1);
@@ -158,6 +154,7 @@ agp_ali_detach(device_t dev)
 	pci_write_config(dev, AGP_ALI_ATTBASE, attbase & 0xfff, 4);
 
 	agp_free_gatt(sc->gatt);
+	agp_free_res(dev);
 	return 0;
 }
 
@@ -271,6 +268,6 @@ static driver_t agp_ali_driver = {
 
 static devclass_t agp_devclass;
 
-DRIVER_MODULE(agp_ali, pci, agp_ali_driver, agp_devclass, 0, 0);
+DRIVER_MODULE(agp_ali, hostb, agp_ali_driver, agp_devclass, 0, 0);
 MODULE_DEPEND(agp_ali, agp, 1, 1, 1);
 MODULE_DEPEND(agp_ali, pci, 1, 1, 1);

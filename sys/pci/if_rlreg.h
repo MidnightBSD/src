@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/if_rlreg.h,v 1.51.2.3 2005/11/06 16:00:54 jhb Exp $
+ * $FreeBSD: src/sys/pci/if_rlreg.h,v 1.67.2.2 2007/12/15 02:57:18 yongari Exp $
  */
 
 /*
@@ -145,10 +145,18 @@
 #define RL_LOOPTEST_ON		0x00020000
 #define RL_LOOPTEST_ON_CPLUS	0x00060000
 
+/* Known revision codes. */
+
 #define RL_HWREV_8169		0x00000000
-#define RL_HWREV_8169S		0x04000000
-#define RL_HWREV_8169SB		0x10000000
 #define RL_HWREV_8110S		0x00800000
+#define RL_HWREV_8169S		0x04000000
+#define RL_HWREV_8169_8110SB	0x10000000
+#define RL_HWREV_8169_8110SC	0x18000000
+#define RL_HWREV_8168_SPIN1	0x30000000
+#define RL_HWREV_8100E		0x30800000
+#define RL_HWREV_8101E		0x34000000
+#define RL_HWREV_8168_SPIN2	0x38000000
+#define RL_HWREV_8168_SPIN3	0x38400000
 #define RL_HWREV_8139		0x60000000
 #define RL_HWREV_8139A		0x70000000
 #define RL_HWREV_8139AG		0x70800000
@@ -206,10 +214,17 @@
 	RL_ISR_RX_OVERRUN|RL_ISR_PKT_UNDERRUN|RL_ISR_FIFO_OFLOW|	\
 	RL_ISR_PCS_TIMEOUT|RL_ISR_SYSTEM_ERR)
 
+#ifdef RE_TX_MODERATION
 #define RL_INTRS_CPLUS	\
 	(RL_ISR_RX_OK|RL_ISR_RX_ERR|RL_ISR_TX_ERR|			\
 	RL_ISR_RX_OVERRUN|RL_ISR_PKT_UNDERRUN|RL_ISR_FIFO_OFLOW|	\
 	RL_ISR_PCS_TIMEOUT|RL_ISR_SYSTEM_ERR|RL_ISR_TIMEOUT_EXPIRED)
+#else
+#define RL_INTRS_CPLUS	\
+	(RL_ISR_RX_OK|RL_ISR_RX_ERR|RL_ISR_TX_ERR|RL_ISR_TX_OK|		\
+	RL_ISR_RX_OVERRUN|RL_ISR_PKT_UNDERRUN|RL_ISR_FIFO_OFLOW|	\
+	RL_ISR_PCS_TIMEOUT|RL_ISR_SYSTEM_ERR|RL_ISR_TIMEOUT_EXPIRED)
+#endif
 
 /*
  * Media status register. (8139 only)
@@ -298,6 +313,17 @@
 #define RL_EEMODE_WRITECFG	(0x80|0x40)
 
 /* 9346 EEPROM commands */
+#define RL_9346_ADDR_LEN	6	/* 93C46 1K: 128x16 */
+#define RL_9356_ADDR_LEN	8	/* 93C56 2K: 256x16 */
+
+#define RL_9346_WRITE          0x5
+#define RL_9346_READ           0x6
+#define RL_9346_ERASE          0x7
+#define RL_9346_EWEN           0x4
+#define RL_9346_EWEN_ADDR      0x30
+#define RL_9456_EWDS           0x4
+#define RL_9346_EWDS_ADDR      0x00
+
 #define RL_EECMD_WRITE		0x140
 #define RL_EECMD_READ_6BIT	0x180
 #define RL_EECMD_READ_8BIT	0x600
@@ -518,6 +544,7 @@ struct rl_desc {
 #define RL_TDESC_CMD_UDPCSUM	0x00020000	/* UDP checksum enable */
 #define RL_TDESC_CMD_IPCSUM	0x00040000	/* IP header checksum enable */
 #define RL_TDESC_CMD_MSSVAL	0x07FF0000	/* Large send MSS value */
+#define RL_TDESC_CMD_MSSVAL_SHIFT	16	/* Large send MSS value shift */
 #define RL_TDESC_CMD_LGSEND	0x08000000	/* TCP large send enb */
 #define RL_TDESC_CMD_EOF	0x10000000	/* end of frame marker */
 #define RL_TDESC_CMD_SOF	0x20000000	/* start of frame marker */
@@ -614,12 +641,14 @@ struct rl_stats {
  * due to the 8139C+.  We need to put the number of descriptors in the ring
  * structure and use that value instead.
  */
-#if !defined(__i386__) && !defined(__amd64__)
+#ifndef	__NO_STRICT_ALIGNMENT
 #define RE_FIXUP_RX	1
 #endif
 
 #define RL_TX_DESC_CNT		64
+#define RL_TX_DESC_THLD		4
 #define RL_RX_DESC_CNT		RL_TX_DESC_CNT
+
 #define RL_RX_LIST_SZ		(RL_RX_DESC_CNT * sizeof(struct rl_desc))
 #define RL_TX_LIST_SZ		(RL_TX_DESC_CNT * sizeof(struct rl_desc))
 #define RL_RING_ALIGN		256
@@ -636,6 +665,8 @@ struct rl_stats {
 #define RE_RX_DESC_BUFLEN	MCLBYTES
 #endif
 
+#define	RL_MSI_MESSAGES	2
+
 #define RL_ADDR_LO(y)		((uint64_t) (y) & 0xFFFFFFFF)
 #define RL_ADDR_HI(y)		((uint64_t) (y) >> 32)
 
@@ -646,7 +677,6 @@ struct rl_stats {
 struct rl_softc;
 
 struct rl_dmaload_arg {
-	struct rl_softc		*sc;
 	int			rl_idx;
 	int			rl_maxsegs;
 	uint32_t		rl_flags;
@@ -655,7 +685,7 @@ struct rl_dmaload_arg {
 
 struct rl_list_data {
 	struct mbuf		*rl_tx_mbuf[RL_TX_DESC_CNT];
-	struct mbuf		*rl_rx_mbuf[RL_TX_DESC_CNT];
+	struct mbuf		*rl_rx_mbuf[RL_RX_DESC_CNT];
 	int			rl_tx_prodidx;
 	int			rl_rx_prodidx;
 	int			rl_tx_considx;
@@ -683,28 +713,39 @@ struct rl_softc {
 	bus_space_tag_t		rl_btag;	/* bus space tag */
 	device_t		rl_dev;
 	struct resource		*rl_res;
-	struct resource		*rl_irq;
-	void			*rl_intrhand;
+	struct resource		*rl_irq[RL_MSI_MESSAGES];
+	void			*rl_intrhand[RL_MSI_MESSAGES];
 	device_t		rl_miibus;
 	bus_dma_tag_t		rl_parent_tag;
 	bus_dma_tag_t		rl_tag;
 	uint8_t			rl_type;
 	int			rl_eecmd_read;
+	int			rl_eewidth;
 	uint8_t			rl_stats_no_timeout;
 	int			rl_txthresh;
 	struct rl_chain_data	rl_cdata;
 	struct rl_list_data	rl_ldata;
 	struct callout		rl_stat_callout;
+	int			rl_watchdog_timer;
 	struct mtx		rl_mtx;
 	struct mbuf		*rl_head;
 	struct mbuf		*rl_tail;
 	uint32_t		rl_hwrev;
 	uint32_t		rl_rxlenmask;
 	int			rl_testmode;
+	int			rl_if_flags;
 	int			suspended;	/* 0 = normal  1 = suspended */
 #ifdef DEVICE_POLLING
 	int			rxcycles;
 #endif
+
+	struct task		rl_txtask;
+	struct task		rl_inttask;
+
+	struct mtx		rl_intlock;
+	int			rl_txstart;
+	int			rl_link;
+	int			rl_msi;
 };
 
 #define	RL_LOCK(_sc)		mtx_lock(&(_sc)->rl_mtx)
@@ -730,6 +771,24 @@ struct rl_softc {
 #define CSR_READ_1(sc, reg)		\
 	bus_space_read_1(sc->rl_btag, sc->rl_bhandle, reg)
 
+#define CSR_SETBIT_1(sc, offset, val)		\
+	CSR_WRITE_1(sc, offset, CSR_READ_1(sc, offset) | (val))
+
+#define CSR_CLRBIT_1(sc, offset, val)		\
+	CSR_WRITE_1(sc, offset, CSR_READ_1(sc, offset) & ~(val))
+
+#define CSR_SETBIT_2(sc, offset, val)		\
+	CSR_WRITE_2(sc, offset, CSR_READ_2(sc, offset) | (val))
+
+#define CSR_CLRBIT_2(sc, offset, val)		\
+	CSR_WRITE_2(sc, offset, CSR_READ_2(sc, offset) & ~(val))
+
+#define CSR_SETBIT_4(sc, offset, val)		\
+	CSR_WRITE_4(sc, offset, CSR_READ_4(sc, offset) | (val))
+
+#define CSR_CLRBIT_4(sc, offset, val)		\
+	CSR_WRITE_4(sc, offset, CSR_READ_4(sc, offset) & ~(val))
+
 #define RL_TIMEOUT		1000
 
 /*
@@ -743,8 +802,11 @@ struct rl_softc {
  * RealTek chip device IDs.
  */
 #define	RT_DEVICEID_8129			0x8129
+#define RT_DEVICEID_8101E			0x8136
 #define	RT_DEVICEID_8138			0x8138
 #define	RT_DEVICEID_8139			0x8139
+#define RT_DEVICEID_8169SC			0x8167
+#define RT_DEVICEID_8168			0x8168
 #define RT_DEVICEID_8169			0x8169
 #define RT_DEVICEID_8100			0x8100
 
@@ -856,6 +918,11 @@ struct rl_softc {
 #define PLANEX_VENDORID				0x14ea
 
 /*
+ * Planex FNW-3603-TX device ID
+ */
+#define PLANEX_DEVICEID_FNW3603TX		0xab06
+
+/*
  * Planex FNW-3800-TX device ID
  */
 #define PLANEX_DEVICEID_FNW3800TX		0xab07
@@ -884,6 +951,14 @@ struct rl_softc {
  * Edimax EP-4103DL cardbus device ID
  */
 #define EDIMAX_DEVICEID_EP4103DL		0xAB06
+
+/* US Robotics vendor ID */
+
+#define USR_VENDORID		0x16EC
+
+/* US Robotics 997902 device ID */
+
+#define USR_DEVICEID_997902	0x0116
 
 /*
  * PCI low memory base and low I/O base register, and

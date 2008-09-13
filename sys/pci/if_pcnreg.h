@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pci/if_pcnreg.h,v 1.11.2.1 2005/08/26 14:33:05 jhb Exp $
+ * $FreeBSD: src/sys/pci/if_pcnreg.h,v 1.15 2006/11/28 01:33:17 marius Exp $
  */
 
 /*
@@ -206,7 +206,7 @@
 #define PCN_MODE_RXNOBROAD	0x4000
 #define PCN_MODE_PROMISC	0x8000
 
-/* Settings for PCN_MODE_PORTSEL when ASEL (BCR2[1] is 0 */
+/* Settings for PCN_MODE_PORTSEL when ASEL (BCR2[1]) is 0 */
 #define PCN_PORT_AUI		0x0000
 #define PCN_PORT_10BASET	0x0080
 #define PCN_PORT_GPSI		0x0100
@@ -218,12 +218,6 @@
 /* CSR88-89: Chip ID masks */
 #define AMD_MASK  0x003
 #define PART_MASK 0xffff
-#define Am79C960  0x0003
-#define Am79C961  0x2260
-#define Am79C961A 0x2261
-#define Am79C965  0x2430
-#define Am79C970  0x0242
-#define Am79C970A 0x2621
 #define Am79C971  0x2623
 #define Am79C972  0x2624
 #define Am79C973  0x2625
@@ -345,7 +339,11 @@
  * MII address register (BCR33)
  */
 #define PCN_MIIADDR_REGAD	0x001F
-#define PCN_MIIADDR_PHYADD	0x03E0
+#define PCN_MIIADDR_PHYAD	0x03E0
+
+/* addresses of internal PHYs */
+#define PCN_PHYAD_100BTX	30
+#define PCN_PHYAD_10BT		31
 
 /*
  * MII data register (BCR34)
@@ -447,7 +445,7 @@ struct pcn_ring_data {
 struct pcn_type {
 	u_int16_t		pcn_vid;
 	u_int16_t		pcn_did;
-	char			*pcn_name;
+	const char		*pcn_name;
 };
 
 struct pcn_softc {
@@ -458,9 +456,9 @@ struct pcn_softc {
 	struct resource		*pcn_irq;
 	void			*pcn_intrhand;
 	device_t		pcn_miibus;
-	u_int8_t		pcn_unit;
 	u_int8_t		pcn_link;
-	u_int8_t		pcn_phyaddr;
+	int8_t			pcn_extphyaddr;
+	int8_t			pcn_inst_10bt;
 	int			pcn_if_flags;
 	int			pcn_type;
 	struct pcn_list_data	*pcn_ldata;
@@ -487,7 +485,6 @@ struct pcn_softc {
 
 #define CSR_READ_2(sc, reg)		\
 	bus_space_read_2(sc->pcn_btag, sc->pcn_bhandle, reg)
-
 
 #define PCN_TIMEOUT		1000
 #define ETHER_ALIGN		2
@@ -531,8 +528,3 @@ struct pcn_softc {
 #define PCN_PSTATE_D3		0x0003
 #define PCN_PME_EN		0x0010
 #define PCN_PME_STATUS		0x8000
-
-#ifdef __alpha__
-#undef vtophys
-#define vtophys(va)		alpha_XXX_dmamap((vm_offset_t)va)
-#endif

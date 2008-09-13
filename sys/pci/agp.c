@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp.c,v 1.46.2.1 2005/12/28 16:52:45 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp.c,v 1.56.2.1 2007/11/08 20:29:53 jhb Exp $");
 
 #include "opt_bus.h"
 
@@ -90,44 +90,17 @@ agp_flush_cache()
 #if defined(__i386__) || defined(__amd64__)
 	wbinvd();
 #endif
-#ifdef __alpha__
-	/* FIXME: This is most likely not correct as it doesn't flush CPU 
-	 * write caches, but we don't have a facility to do that and 
-	 * this is all linux does, too */
-	alpha_mb();
-#endif
 }
 
 u_int8_t
 agp_find_caps(device_t dev)
 {
-	u_int32_t status;
-	u_int8_t ptr, next;
+	int capreg;
 
-	/*
-	 * Check the CAP_LIST bit of the PCI status register first.
-	 */
-	status = pci_read_config(dev, PCIR_STATUS, 2);
-	if (!(status & 0x10))
-		return 0;
 
-	/*
-	 * Traverse the capabilities list.
-	 */
-	for (ptr = pci_read_config(dev, AGP_CAPPTR, 1);
-	     ptr != 0;
-	     ptr = next) {
-		u_int32_t capid = pci_read_config(dev, ptr, 4);
-		next = AGP_CAPID_GET_NEXT_PTR(capid);
-
-		/*
-		 * If this capability entry ID is 2, then we are done.
-		 */
-		if (AGP_CAPID_GET_CAP_ID(capid) == 2)
-			return ptr;
-	}
-
-	return 0;
+	if (pci_find_extcap(dev, PCIY_AGP, &capreg) != 0)
+		capreg = 0;
+	return (capreg);
 }
 
 /*
@@ -207,7 +180,7 @@ agp_free_gatt(struct agp_gatt *gatt)
 	free(gatt, M_AGP);
 }
 
-static int agp_max[][2] = {
+static u_int agp_max[][2] = {
 	{0,	0},
 	{32,	4},
 	{64,	28},
@@ -220,18 +193,36 @@ static int agp_max[][2] = {
 };
 #define agp_max_size	(sizeof(agp_max) / sizeof(agp_max[0]))
 
+/**
+ * Sets the PCI resource which represents the AGP aperture.
+ *
+ * If not called, the default AGP aperture resource of AGP_APBASE will
+ * be used.  Must be called before agp_generic_attach().
+ */
+void
+agp_set_aperture_resource(device_t dev, int rid)
+{
+	struct agp_softc *sc = device_get_softc(dev);
+
+	sc->as_aperture_rid = rid;
+}
+
 int
 agp_generic_attach(device_t dev)
 {
 	struct agp_softc *sc = device_get_softc(dev);
-	int rid, memsize, i;
+	int i;
+	u_int memsize;
 
 	/*
-	 * Find and map the aperture.
+	 * Find and map the aperture, RF_SHAREABLE for DRM but not RF_ACTIVE
+	 * because the kernel doesn't need to map it.
 	 */
-	rid = AGP_APBASE;
-	sc->as_aperture = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
-						 RF_ACTIVE);
+	if (sc->as_aperture_rid == 0)
+		sc->as_aperture_rid = AGP_APBASE;
+
+	sc->as_aperture = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
+	    &sc->as_aperture_rid, RF_SHAREABLE);
 	if (!sc->as_aperture)
 		return ENOMEM;
 
@@ -270,16 +261,60 @@ agp_generic_attach(device_t dev)
 	return 0;
 }
 
-int
-agp_generic_detach(device_t dev)
+void
+agp_free_cdev(device_t dev)
 {
 	struct agp_softc *sc = device_get_softc(dev);
 
 	destroy_dev(sc->as_devnode);
-	bus_release_resource(dev, SYS_RES_MEMORY, AGP_APBASE, sc->as_aperture);
+}
+
+void
+agp_free_res(device_t dev)
+{
+	struct agp_softc *sc = device_get_softc(dev);
+
+	bus_release_resource(dev, SYS_RES_MEMORY, sc->as_aperture_rid,
+	    sc->as_aperture);
 	mtx_destroy(&sc->as_lock);
 	agp_flush_cache();
+}
+
+int
+agp_generic_detach(device_t dev)
+{
+
+	agp_free_cdev(dev);
+	agp_free_res(dev);
 	return 0;
+}
+
+/**
+ * Default AGP aperture size detection which simply returns the size of
+ * the aperture's PCI resource.
+ */
+int
+agp_generic_get_aperture(device_t dev)
+{
+	struct agp_softc *sc = device_get_softc(dev);
+
+	return rman_get_size(sc->as_aperture);
+}
+
+/**
+ * Default AGP aperture size setting function, which simply doesn't allow
+ * changes to resource size.
+ */
+int
+agp_generic_set_aperture(device_t dev, u_int32_t aperture)
+{
+	u_int32_t current_aperture;
+
+	current_aperture = AGP_GET_APERTURE(dev);
+	if (current_aperture != aperture)
+		return EINVAL;
+	else
+		return 0;
 }
 
 /*
@@ -340,12 +375,14 @@ agp_v3_enable(device_t dev, device_t mdev, u_int32_t mode)
 	pci_write_config(dev, agp_find_caps(dev) + AGP_COMMAND, 0, 4);
 
 	/* Construct the new mode word and tell the hardware */
+	command = 0;
 	command = AGP_MODE_SET_RQ(0, rq);
 	command = AGP_MODE_SET_ARQSZ(command, arqsz);
 	command = AGP_MODE_SET_CAL(command, cal);
 	command = AGP_MODE_SET_SBA(command, sba);
 	command = AGP_MODE_SET_FW(command, fw);
 	command = AGP_MODE_SET_RATE(command, rate);
+	command = AGP_MODE_SET_MODE_3(command, 1);
 	command = AGP_MODE_SET_AGP(command, 1);
 	pci_write_config(dev, agp_find_caps(dev) + AGP_COMMAND, command, 4);
 	pci_write_config(mdev, agp_find_caps(mdev) + AGP_COMMAND, command, 4);
@@ -394,6 +431,7 @@ agp_v2_enable(device_t dev, device_t mdev, u_int32_t mode)
 		device_printf(dev, "Setting AGP v2 mode %d\n", rate);
 
 	/* Construct the new mode word and tell the hardware */
+	command = 0;
 	command = AGP_MODE_SET_RQ(0, rq);
 	command = AGP_MODE_SET_SBA(command, sba);
 	command = AGP_MODE_SET_FW(command, fw);
@@ -427,7 +465,9 @@ agp_generic_enable(device_t dev, u_int32_t mode)
 	 * but should work fine for a classic single AGP slot system
 	 * with AGP v3.
 	 */
-	if (AGP_MODE_GET_MODE_3(tstatus) && AGP_MODE_GET_MODE_3(mstatus))
+	if (AGP_MODE_GET_MODE_3(mode) &&
+	    AGP_MODE_GET_MODE_3(tstatus) &&
+	    AGP_MODE_GET_MODE_3(mstatus))
 		return (agp_v3_enable(dev, mdev, mode));
 	else
 		return (agp_v2_enable(dev, mdev, mode));	    
@@ -529,10 +569,6 @@ agp_generic_bind_memory(device_t dev, struct agp_memory *mem,
 	/*
 	 * Bind the individual pages and flush the chipset's
 	 * TLB.
-	 *
-	 * XXX Presumably, this needs to be the pci address on alpha
-	 * (i.e. use alpha_XXX_dmamap()). I don't have access to any
-	 * alpha AGP hardware to check.
 	 */
 	VM_OBJECT_LOCK(mem->am_obj);
 	for (i = 0; i < mem->am_size; i += PAGE_SIZE) {
@@ -555,17 +591,13 @@ agp_generic_bind_memory(device_t dev, struct agp_memory *mem,
 				 * Bail out. Reverse all the mappings
 				 * and unwire the pages.
 				 */
-				vm_page_lock_queues();
 				vm_page_wakeup(m);
-				vm_page_unlock_queues();
 				for (k = 0; k < i + j; k += AGP_PAGE_SIZE)
 					AGP_UNBIND_PAGE(dev, offset + k);
 				goto bad;
 			}
 		}
-		vm_page_lock_queues();
 		vm_page_wakeup(m);
-		vm_page_unlock_queues();
 	}
 	VM_OBJECT_UNLOCK(mem->am_obj);
 
@@ -852,9 +884,22 @@ agp_mmap(struct cdev *kdev, vm_offset_t offset, vm_paddr_t *paddr, int prot)
 device_t
 agp_find_device()
 {
+	device_t *children, child;
+	int i, count;
+
 	if (!agp_devclass)
-		return 0;
-	return devclass_get_device(agp_devclass, 0);
+		return NULL;
+	if (devclass_get_devices(agp_devclass, &children, &count) != 0)
+		return NULL;
+	child = NULL;
+	for (i = 0; i < count; i++) {
+		if (device_is_attached(children[i])) {
+			child = children[i];
+			break;
+		}
+	}
+	free(children, M_TEMP);
+	return child;
 }
 
 enum agp_acquire_state
@@ -873,7 +918,6 @@ agp_get_info(device_t dev, struct agp_info *info)
 		pci_read_config(dev, agp_find_caps(dev) + AGP_STATUS, 4);
 	info->ai_aperture_base = rman_get_start(sc->as_aperture);
 	info->ai_aperture_size = rman_get_size(sc->as_aperture);
-	info->ai_aperture_va = (vm_offset_t) rman_get_virtual(sc->as_aperture);
 	info->ai_memory_allowed = sc->as_maxmem;
 	info->ai_memory_used = sc->as_allocated;
 }

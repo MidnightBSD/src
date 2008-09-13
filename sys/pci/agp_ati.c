@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp_ati.c,v 1.1.2.1 2005/11/14 21:14:14 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp_ati.c,v 1.3.2.1 2007/11/08 20:29:53 jhb Exp $");
 
 #include "opt_bus.h"
 
@@ -89,6 +89,8 @@ agp_ati_match(device_t dev)
 		return ("ATI RS100 AGP bridge");
 	case 0xcab21002:
 		return ("ATI RS200 AGP bridge");
+	case 0xcbb21002:
+		return ("ATI RS200M AGP bridge");
 	case 0xcab31002:
 		return ("ATI RS250 AGP bridge");
 	case 0x58301002:
@@ -111,7 +113,6 @@ agp_ati_probe(device_t dev)
 
 	desc = agp_ati_match(dev);
 	if (desc) {
-		device_verbose(dev);
 		device_set_desc(dev, desc);
 		return 0;
 	}
@@ -182,7 +183,8 @@ agp_ati_attach(device_t dev)
 
 	switch (pci_get_devid(dev)) {
 	case 0xcab01002: /* ATI RS100 AGP bridge */
-	case 0xcab21002: /*ATI RS200 AGP bridge  */
+	case 0xcab21002: /* ATI RS200 AGP bridge */
+	case 0xcbb21002: /* ATI RS200M AGP bridge */
 	case 0xcab31002: /* ATI RS250 AGP bridge */
 		sc->is_rs300 = 0;
 		apsize_reg = ATI_RS100_APSIZE;
@@ -246,17 +248,14 @@ static int
 agp_ati_detach(device_t dev)
 {
 	struct agp_ati_softc *sc = device_get_softc(dev);
-	int error;
 	u_int32_t apsize_reg, temp;
+
+	agp_free_cdev(dev);
 
 	if (sc->is_rs300)
 		apsize_reg = ATI_RS300_APSIZE;
 	else
 		apsize_reg = ATI_RS100_APSIZE;
-
-	error = agp_generic_detach(dev);
-	if (error)
-		return error;
 
 	/* Clear the GATT base */
 	WRITE4(ATI_GART_BASE, 0);
@@ -271,6 +270,7 @@ agp_ati_detach(device_t dev)
 	free(sc->ag_virtual, M_AGP);
 
 	bus_release_resource(dev, SYS_RES_MEMORY, ATI_GART_MMADDR, sc->regs);
+	agp_free_res(dev);
 
 	return 0;
 }
@@ -381,6 +381,6 @@ static driver_t agp_ati_driver = {
 
 static devclass_t agp_devclass;
 
-DRIVER_MODULE(agp_ati, pci, agp_ati_driver, agp_devclass, 0, 0);
+DRIVER_MODULE(agp_ati, hostb, agp_ati_driver, agp_devclass, 0, 0);
 MODULE_DEPEND(agp_ati, agp, 1, 1, 1);
 MODULE_DEPEND(agp_ati, pci, 1, 1, 1);

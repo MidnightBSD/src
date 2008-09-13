@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_mn.c,v 1.48 2005/06/10 16:49:22 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_mn.c,v 1.49 2007/02/23 19:41:34 imp Exp $");
 
 /*
  * Stuff to describe the MUNIC32X and FALC54 chips.
@@ -1377,7 +1377,7 @@ mn_attach (device_t self)
 		return(ENXIO);
 	}
 
-	error = bus_setup_intr(self, sc->irq, INTR_TYPE_NET, mn_intr, sc, &sc->intrhand);
+	error = bus_setup_intr(self, sc->irq, INTR_TYPE_NET, NULL, mn_intr, sc, &sc->intrhand);
 
 	if (error) {
 		printf("couldn't set up irq\n");

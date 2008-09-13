@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/agp_amd.c,v 1.22 2005/02/24 21:32:55 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/agp_amd.c,v 1.23.2.1 2007/11/08 20:29:53 jhb Exp $");
 
 #include "opt_bus.h"
 
@@ -207,7 +207,6 @@ agp_amd_probe(device_t dev)
 		return (ENXIO);
 	desc = agp_amd_match(dev);
 	if (desc) {
-		device_verbose(dev);
 		device_set_desc(dev, desc);
 		return BUS_PROBE_DEFAULT;
 	}
@@ -278,11 +277,8 @@ static int
 agp_amd_detach(device_t dev)
 {
 	struct agp_amd_softc *sc = device_get_softc(dev);
-	int error;
 
-	error = agp_generic_detach(dev);
-	if (error)
-		return error;
+	agp_free_cdev(dev);
 
 	/* Disable the TLB.. */
 	WRITE2(AGP_AMD751_STATUS,
@@ -298,6 +294,7 @@ agp_amd_detach(device_t dev)
 	AGP_SET_APERTURE(dev, sc->initial_aperture);
 
 	agp_amd_free_gatt(sc->gatt);
+	agp_free_res(dev);
 
 	bus_release_resource(dev, SYS_RES_MEMORY,
 			     AGP_AMD751_REGISTERS, sc->regs);
@@ -415,6 +412,6 @@ static driver_t agp_amd_driver = {
 
 static devclass_t agp_devclass;
 
-DRIVER_MODULE(agp_amd, pci, agp_amd_driver, agp_devclass, 0, 0);
+DRIVER_MODULE(agp_amd, hostb, agp_amd_driver, agp_devclass, 0, 0);
 MODULE_DEPEND(agp_amd, agp, 1, 1, 1);
 MODULE_DEPEND(agp_amd, pci, 1, 1, 1);

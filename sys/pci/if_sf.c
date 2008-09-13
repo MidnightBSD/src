@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_sf.c,v 1.82.2.5 2005/10/09 04:11:19 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_sf.c,v 1.95 2007/02/23 12:19:03 piso Exp $");
 
 /*
  * Adaptec AIC-6915 "Starfire" PCI fast ethernet driver for FreeBSD.
@@ -111,7 +111,7 @@ __FBSDID("$FreeBSD: src/sys/pci/if_sf.c,v 1.82.2.5 2005/10/09 04:11:19 delphij E
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 #include <dev/pci/pcireg.h>
@@ -616,7 +616,7 @@ sf_reset(sc)
 	}
 
 	if (i == SF_TIMEOUT)
-		if_printf(sc->sf_ifp, "reset never completed!\n");
+		device_printf(sc->sf_dev, "reset never completed!\n");
 
 	/* Wait a little while for the chip to get its brains in order. */
 	DELAY(1000);
@@ -690,6 +690,7 @@ sf_attach(dev)
 	u_char			eaddr[6];
 
 	sc = device_get_softc(dev);
+	sc->sf_dev = dev;
 
 	mtx_init(&sc->sf_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
@@ -783,7 +784,7 @@ sf_attach(dev)
 
 	/* Hook interrupt last to avoid having to lock softc */
 	error = bus_setup_intr(dev, sc->sf_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    sf_intr, sc, &sc->sf_intrhand);
+	    NULL, sf_intr, sc, &sc->sf_intrhand);
 
 	if (error) {
 		device_printf(dev, "couldn't set up irq\n");
@@ -829,8 +830,6 @@ sf_detach(dev)
 		callout_drain(&sc->sf_stat_callout);
 		ether_ifdetach(ifp);
 	}
-	if (ifp)
-		if_free(ifp);
 	if (sc->sf_miibus)
 		device_delete_child(dev, sc->sf_miibus);
 	bus_generic_detach(dev);
@@ -841,6 +840,9 @@ sf_detach(dev)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->sf_irq);
 	if (sc->sf_res)
 		bus_release_resource(dev, SF_RES, SF_RID, sc->sf_res);
+
+	if (ifp)
+		if_free(ifp);
 
 	if (sc->sf_ldata)
 		contigfree(sc->sf_ldata, sizeof(struct sf_list_data), M_DEVBUF);
@@ -1080,7 +1082,7 @@ sf_txthresh_adjust(sc)
 		txfctl &= ~SF_TXFRMCTL_TXTHRESH;
 		txfctl |= txthresh;
 #ifdef DIAGNOSTIC
-		if_printf(sc->sf_ifp, "tx underrun, increasing "
+		device_printf(sc->sf_dev, "tx underrun, increasing "
 		    "tx threshold to %d bytes\n",
 		    txthresh * 4);
 #endif
@@ -1237,12 +1239,12 @@ sf_init_locked(sc)
 		    (i + sizeof(u_int32_t)), 0);
 
 	/* Init our MAC address */
-	csr_write_4(sc, SF_PAR0, *(u_int32_t *)(&IFP2ENADDR(sc->sf_ifp)[0]));
-	csr_write_4(sc, SF_PAR1, *(u_int32_t *)(&IFP2ENADDR(sc->sf_ifp)[4]));
-	sf_setperf(sc, 0, (caddr_t)&IFP2ENADDR(sc->sf_ifp));
+	csr_write_4(sc, SF_PAR0, *(u_int32_t *)(&IF_LLADDR(sc->sf_ifp)[0]));
+	csr_write_4(sc, SF_PAR1, *(u_int32_t *)(&IF_LLADDR(sc->sf_ifp)[4]));
+	sf_setperf(sc, 0, IF_LLADDR(sc->sf_ifp));
 
 	if (sf_init_rx_ring(sc) == ENOBUFS) {
-		if_printf(sc->sf_ifp,
+		device_printf(sc->sf_dev,
 		    "initialization failed: no memory for rx buffers\n");
 		return;
 	}

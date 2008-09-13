@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/pci/agppriv.h,v 1.5 2004/06/16 09:47:20 phk Exp $
+ *	$FreeBSD: src/sys/pci/agppriv.h,v 1.6.2.1 2007/11/08 20:29:53 jhb Exp $
  */
 
 #ifndef _PCI_AGPPRIV_H_
@@ -69,6 +69,7 @@ struct agp_memory {
  */
 struct agp_softc {
 	struct resource	        *as_aperture;	/* location of aperture */
+	int			as_aperture_rid;
 	u_int32_t		as_maxmem;	/* allocation upper bound */
 	u_int32_t		as_allocated;	/* amount allocated */
 	enum agp_acquire_state	as_state;
@@ -88,9 +89,15 @@ struct agp_gatt {
 void			agp_flush_cache(void);
 u_int8_t		agp_find_caps(device_t dev);
 struct agp_gatt	       *agp_alloc_gatt(device_t dev);
+void			agp_set_aperture_resource(device_t dev, int rid);
+void			agp_free_cdev(device_t dev);
 void		        agp_free_gatt(struct agp_gatt *gatt);
+void			agp_free_res(device_t dev);
 int			agp_generic_attach(device_t dev);
 int			agp_generic_detach(device_t dev);
+int			agp_generic_get_aperture(device_t dev);
+int			agp_generic_set_aperture(device_t dev,
+						 u_int32_t aperture);
 int			agp_generic_enable(device_t dev, u_int32_t mode);
 struct agp_memory      *agp_generic_alloc_memory(device_t dev, int type,
 						 vm_size_t size);

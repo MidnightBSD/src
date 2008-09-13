@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_pcn.c,v 1.69.2.4 2005/10/09 04:11:19 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_pcn.c,v 1.83 2007/02/23 12:19:03 piso Exp $");
 
 /*
  * AMD Am79c972 fast ethernet PCI NIC driver. Datasheets are available
@@ -91,28 +91,22 @@ MODULE_DEPEND(pcn, pci, 1, 1, 1);
 MODULE_DEPEND(pcn, ether, 1, 1, 1);
 MODULE_DEPEND(pcn, miibus, 1, 1, 1);
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 /*
  * Various supported device vendors/types and their names.
  */
-static struct pcn_type pcn_devs[] = {
+static const struct pcn_type pcn_devs[] = {
 	{ PCN_VENDORID, PCN_DEVICEID_PCNET, "AMD PCnet/PCI 10/100BaseTX" },
 	{ PCN_VENDORID, PCN_DEVICEID_HOME, "AMD PCnet/Home HomePNA" },
 	{ 0, 0, NULL }
 };
 
-static struct pcn_chipid {
+static const struct pcn_chipid {
 	u_int32_t	id;
-	char *		name;
+	const char	*name;
 } pcn_chipid[] = {
-	{ Am79C960,	"Am79C960" },
-	{ Am79C961,	"Am79C961" },
-	{ Am79C961A,	"Am79C961A" },
-	{ Am79C965,	"Am79C965" },
-	{ Am79C970,	"Am79C970" },
-	{ Am79C970A,	"Am79C970A" },
 	{ Am79C971,	"Am79C971" },
 	{ Am79C972,	"Am79C972" },
 	{ Am79C973,	"Am79C973" },
@@ -122,8 +116,9 @@ static struct pcn_chipid {
 	{ 0, NULL },
 };
 
-static char * pcn_chipid_name(u_int32_t);
+static const char *pcn_chipid_name(u_int32_t);
 static u_int32_t pcn_chip_id(device_t);
+static const struct pcn_type *pcn_match(u_int16_t, u_int16_t);
 
 static u_int32_t pcn_csr_read(struct pcn_softc *, int);
 static u_int16_t pcn_csr_read16(struct pcn_softc *, int);
@@ -281,7 +276,27 @@ pcn_miibus_readreg(dev, phy, reg)
 
 	sc = device_get_softc(dev);
 
-	if (sc->pcn_phyaddr && phy > sc->pcn_phyaddr)
+	/*
+	 * At least Am79C971 with DP83840A wedge when isolating the
+	 * external PHY so we can't allow multiple external PHYs.
+	 * There are cards that use Am79C971 with both the internal
+	 * and an external PHY though.
+	 * For internal PHYs it doesn't really matter whether we can
+	 * isolate the remaining internal and the external ones in
+	 * the PHY drivers as the internal PHYs have to be enabled
+	 * individually in PCN_BCR_PHYSEL, PCN_CSR_MODE, etc.
+	 * With Am79C97{3,5,8} we don't support switching beetween
+	 * the internal and external PHYs, yet, so we can't allow
+	 * multiple PHYs with these either.
+	 * Am79C97{2,6} actually only support external PHYs (not
+	 * connectable internal ones respond at the usual addresses,
+	 * which don't hurt if we let them show up on the bus) and
+	 * isolating them works.
+	 */
+	if (((sc->pcn_type == Am79C971 && phy != PCN_PHYAD_10BT) ||
+	    sc->pcn_type == Am79C973 || sc->pcn_type == Am79C975 ||
+	    sc->pcn_type == Am79C978) && sc->pcn_extphyaddr != -1 &&
+	    phy != sc->pcn_extphyaddr)
 		return(0);
 
 	pcn_bcr_write(sc, PCN_BCR_MIIADDR, reg | (phy << 5));
@@ -289,7 +304,10 @@ pcn_miibus_readreg(dev, phy, reg)
 	if (val == 0xFFFF)
 		return(0);
 
-	sc->pcn_phyaddr = phy;
+	if (((sc->pcn_type == Am79C971 && phy != PCN_PHYAD_10BT) ||
+	    sc->pcn_type == Am79C973 || sc->pcn_type == Am79C975 ||
+	    sc->pcn_type == Am79C978) && sc->pcn_extphyaddr == -1)
+		sc->pcn_extphyaddr = phy;
 
 	return(val);
 }
@@ -397,11 +415,12 @@ pcn_reset(sc)
         return;
 }
 
-static char *
-pcn_chipid_name	(u_int32_t id)
+static const char *
+pcn_chipid_name(u_int32_t id)
 {
-	struct pcn_chipid *p = pcn_chipid;
+	const struct pcn_chipid *p;
 
+	p = pcn_chipid;
 	while (p->name) {
 		if (id == p->id)
 			return (p->name);
@@ -411,7 +430,7 @@ pcn_chipid_name	(u_int32_t id)
 }
 
 static u_int32_t
-pcn_chip_id (device_t dev)
+pcn_chip_id(device_t dev)
 {
 	struct pcn_softc	*sc;
 	u_int32_t		chip_id;
@@ -419,14 +438,14 @@ pcn_chip_id (device_t dev)
 	sc = device_get_softc(dev);
 	/*
 	 * Note: we can *NOT* put the chip into
-	 * 32-bit mode yet. The lnc driver will only
+	 * 32-bit mode yet. The le(4) driver will only
 	 * work in 16-bit mode, and once the chip
 	 * goes into 32-bit mode, the only way to
 	 * get it out again is with a hardware reset.
 	 * So if pcn_probe() is called before the
-	 * lnc driver's probe routine, the chip will
-	 * be locked into 32-bit operation and the lnc
-	 * driver will be unable to attach to it.
+	 * le(4) driver's probe routine, the chip will
+	 * be locked into 32-bit operation and the
+	 * le(4) driver will be unable to attach to it.
 	 * Note II: if the chip happens to already
 	 * be in 32-bit mode, we still need to check
 	 * the chip ID, but first we have to detect
@@ -463,13 +482,13 @@ pcn_chip_id (device_t dev)
 	return (chip_id);
 }
 
-static struct pcn_type *
-pcn_match (u_int16_t vid, u_int16_t did)
+static const struct pcn_type *
+pcn_match(u_int16_t vid, u_int16_t did)
 {
-	struct pcn_type		*t;
-	t = pcn_devs;
+	const struct pcn_type	*t;
 
-	while(t->pcn_name != NULL) {
+	t = pcn_devs;
+	while (t->pcn_name != NULL) {
 		if ((vid == t->pcn_vid) && (did == t->pcn_did))
 			return (t);
 		t++;
@@ -485,7 +504,7 @@ static int
 pcn_probe(dev)
 	device_t		dev;
 {
-	struct pcn_type		*t;
+	const struct pcn_type	*t;
 	struct pcn_softc	*sc;
 	int			rid;
 	u_int32_t		chip_id;
@@ -536,11 +555,12 @@ pcn_attach(dev)
 {
 	u_int32_t		eaddr[2];
 	struct pcn_softc	*sc;
+	struct mii_data		*mii;
+	struct mii_softc	*miisc;
 	struct ifnet		*ifp;
-	int			unit, error = 0, rid;
+	int			error = 0, rid;
 
 	sc = device_get_softc(dev);
-	unit = device_get_unit(dev);
 
 	/* Initialize our mutex. */
 	mtx_init(&sc->pcn_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
@@ -559,7 +579,7 @@ pcn_attach(dev)
 	sc->pcn_res = bus_alloc_resource_any(dev, PCN_RES, &rid, RF_ACTIVE);
 
 	if (sc->pcn_res == NULL) {
-		printf("pcn%d: couldn't map ports/memory\n", unit);
+		device_printf(dev, "couldn't map ports/memory\n");
 		error = ENXIO;
 		goto fail;
 	}
@@ -573,7 +593,7 @@ pcn_attach(dev)
 	    RF_SHAREABLE | RF_ACTIVE);
 
 	if (sc->pcn_irq == NULL) {
-		printf("pcn%d: couldn't map interrupt\n", unit);
+		device_printf(dev, "couldn't map interrupt\n");
 		error = ENXIO;
 		goto fail;
 	}
@@ -587,14 +607,13 @@ pcn_attach(dev)
 	eaddr[0] = CSR_READ_4(sc, PCN_IO32_APROM00);
 	eaddr[1] = CSR_READ_4(sc, PCN_IO32_APROM01);
 
-	sc->pcn_unit = unit;
 	callout_init_mtx(&sc->pcn_stat_callout, &sc->pcn_mtx, 0);
 
 	sc->pcn_ldata = contigmalloc(sizeof(struct pcn_list_data), M_DEVBUF,
 	    M_NOWAIT, 0, 0xffffffff, PAGE_SIZE, 0);
 
 	if (sc->pcn_ldata == NULL) {
-		printf("pcn%d: no memory for list buffers!\n", unit);
+		device_printf(dev, "no memory for list buffers!\n");
 		error = ENXIO;
 		goto fail;
 	}
@@ -602,13 +621,12 @@ pcn_attach(dev)
 
 	ifp = sc->pcn_ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
-		printf("pcn%d: can not if_alloc()\n", unit);
+		device_printf(dev, "can not if_alloc()\n");
 		error = ENOSPC;
 		goto fail;
 	}
 	ifp->if_softc = sc;
 	if_initname(ifp, device_get_name(dev), device_get_unit(dev));
-	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_ioctl = pcn_ioctl;
 	ifp->if_start = pcn_start;
@@ -619,11 +637,30 @@ pcn_attach(dev)
 	/*
 	 * Do MII setup.
 	 */
+	sc->pcn_extphyaddr = -1;
 	if (mii_phy_probe(dev, &sc->pcn_miibus,
 	    pcn_ifmedia_upd, pcn_ifmedia_sts)) {
-		printf("pcn%d: MII without any PHY!\n", sc->pcn_unit);
+		device_printf(dev, "MII without any PHY!\n");
 		error = ENXIO;
 		goto fail;
+	}
+	/*
+	 * Record the media instances of internal PHYs, which map the
+	 * built-in interfaces to the MII, so we can set the active
+	 * PHY/port based on the currently selected media.
+	 */
+	sc->pcn_inst_10bt = -1;
+	mii = device_get_softc(sc->pcn_miibus);
+	LIST_FOREACH(miisc, &mii->mii_phys, mii_list) {
+		switch (miisc->mii_phy) {
+		case PCN_PHYAD_10BT:
+			sc->pcn_inst_10bt = miisc->mii_inst;
+			break;
+		/*
+		 * XXX deal with the Am79C97{3,5} internal 100baseT
+		 * and the Am79C978 internal HomePNA PHYs.
+		 */
+		}
 	}
 
 	/*
@@ -633,10 +670,10 @@ pcn_attach(dev)
 
 	/* Hook interrupt last to avoid having to lock softc */
 	error = bus_setup_intr(dev, sc->pcn_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    pcn_intr, sc, &sc->pcn_intrhand);
+	    NULL, pcn_intr, sc, &sc->pcn_intrhand);
 
 	if (error) {
-		printf("pcn%d: couldn't set up irq\n", unit);
+		device_printf(dev, "couldn't set up irq\n");
 		ether_ifdetach(ifp);
 		goto fail;
 	}
@@ -676,8 +713,6 @@ pcn_detach(dev)
 		callout_drain(&sc->pcn_stat_callout);
 		ether_ifdetach(ifp);
 	}
-	if (ifp)
-		if_free(ifp);
 	if (sc->pcn_miibus)
 		device_delete_child(dev, sc->pcn_miibus);
 	bus_generic_detach(dev);
@@ -688,6 +723,9 @@ pcn_detach(dev)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->pcn_irq);
 	if (sc->pcn_res)
 		bus_release_resource(dev, PCN_RES, PCN_RID, sc->pcn_res);
+
+	if (ifp)
+		if_free(ifp);
 
 	if (sc->pcn_ldata) {
 		contigfree(sc->pcn_ldata, sizeof(struct pcn_list_data),
@@ -1156,6 +1194,7 @@ pcn_init_locked(sc)
 {
 	struct ifnet		*ifp = sc->pcn_ifp;
 	struct mii_data		*mii = NULL;
+	struct ifmedia_entry	*ife;
 
 	PCN_LOCK_ASSERT(sc);
 
@@ -1166,19 +1205,20 @@ pcn_init_locked(sc)
 	pcn_reset(sc);
 
 	mii = device_get_softc(sc->pcn_miibus);
+	ife = mii->mii_media.ifm_cur;
 
 	/* Set MAC address */
 	pcn_csr_write(sc, PCN_CSR_PAR0,
-	    ((u_int16_t *)IFP2ENADDR(sc->pcn_ifp))[0]);
+	    ((u_int16_t *)IF_LLADDR(sc->pcn_ifp))[0]);
 	pcn_csr_write(sc, PCN_CSR_PAR1,
-	    ((u_int16_t *)IFP2ENADDR(sc->pcn_ifp))[1]);
+	    ((u_int16_t *)IF_LLADDR(sc->pcn_ifp))[1]);
 	pcn_csr_write(sc, PCN_CSR_PAR2,
-	    ((u_int16_t *)IFP2ENADDR(sc->pcn_ifp))[2]);
+	    ((u_int16_t *)IF_LLADDR(sc->pcn_ifp))[2]);
 
 	/* Init circular RX list. */
 	if (pcn_list_rx_init(sc) == ENOBUFS) {
-		printf("pcn%d: initialization failed: no "
-		    "memory for rx buffers\n", sc->pcn_unit);
+		if_printf(ifp, "initialization failed: no "
+		    "memory for rx buffers\n");
 		pcn_stop(sc);
 		return;
 	}
@@ -1188,8 +1228,19 @@ pcn_init_locked(sc)
 	 */
 	pcn_list_tx_init(sc);
 
-	/* Set up the mode register. */
-	pcn_csr_write(sc, PCN_CSR_MODE, PCN_PORT_MII);
+	/* Clear PCN_MISC_ASEL so we can set the port via PCN_CSR_MODE. */
+	PCN_BCR_CLRBIT(sc, PCN_BCR_MISCCFG, PCN_MISC_ASEL);
+
+	/*
+	 * Set up the port based on the currently selected media.
+	 * For Am79C978 we've to unconditionally set PCN_PORT_MII and
+	 * set the PHY in PCN_BCR_PHYSEL instead.
+	 */
+	if (sc->pcn_type != Am79C978 &&
+	    IFM_INST(ife->ifm_media) == sc->pcn_inst_10bt)
+		pcn_csr_write(sc, PCN_CSR_MODE, PCN_PORT_10BASET);
+	else
+		pcn_csr_write(sc, PCN_CSR_MODE, PCN_PORT_MII);
 
 	/* Set up RX filter. */
 	pcn_setfilt(ifp);
@@ -1239,6 +1290,7 @@ pcn_init_locked(sc)
 	PCN_BCR_SETBIT(sc, PCN_BCR_MIICTL, PCN_MIICTL_DANAS);
 
 	if (sc->pcn_type == Am79C978)
+		/* XXX support other PHYs? */
 		pcn_bcr_write(sc, PCN_BCR_PHYSEL,
 		    PCN_PHYSEL_PCNET|PCN_PHY_HOMEPNA);
 
@@ -1263,19 +1315,26 @@ pcn_ifmedia_upd(ifp)
 	struct ifnet		*ifp;
 {
 	struct pcn_softc	*sc;
-	struct mii_data		*mii;
 
 	sc = ifp->if_softc;
-	mii = device_get_softc(sc->pcn_miibus);
 
 	PCN_LOCK(sc);
+
+	/*
+	 * At least Am79C971 with DP83840A can wedge when switching
+	 * from the internal 10baseT PHY to the external PHY without
+	 * issuing pcn_reset(). For setting the port in PCN_CSR_MODE
+	 * the PCnet chip has to be powered down or stopped anyway
+	 * and although documented otherwise it doesn't take effect
+	 * until the next initialization.
+	 */
 	sc->pcn_link = 0;
-	if (mii->mii_instance) {
-		struct mii_softc        *miisc;
-		LIST_FOREACH(miisc, &mii->mii_phys, mii_list)
-			mii_phy_reset(miisc);
-	}
-	mii_mediachg(mii);
+	pcn_stop(sc);
+	pcn_reset(sc);
+	pcn_init_locked(sc);
+	if (ifp->if_snd.ifq_head != NULL)
+		pcn_start_locked(ifp);
+
 	PCN_UNLOCK(sc);
 
 	return(0);
@@ -1380,7 +1439,7 @@ pcn_watchdog(ifp)
 	PCN_LOCK(sc);
 
 	ifp->if_oerrors++;
-	printf("pcn%d: watchdog timeout\n", sc->pcn_unit);
+	if_printf(ifp, "watchdog timeout\n");
 
 	pcn_stop(sc);
 	pcn_reset(sc);

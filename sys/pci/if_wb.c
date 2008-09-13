@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_wb.c,v 1.79.2.5 2005/11/15 19:59:04 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_wb.c,v 1.92 2007/02/23 12:19:03 piso Exp $");
 
 /*
  * Winbond fast ethernet PCI NIC driver
@@ -83,8 +83,6 @@ __FBSDID("$FreeBSD: src/sys/pci/if_wb.c,v 1.79.2.5 2005/11/15 19:59:04 jhb Exp $
  * three of my test boards seems fine.
  */
 
-#include "opt_bdg.h"
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
@@ -117,7 +115,7 @@ __FBSDID("$FreeBSD: src/sys/pci/if_wb.c,v 1.79.2.5 2005/11/15 19:59:04 jhb Exp $
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 #define WB_USEIOSPACE
@@ -657,7 +655,7 @@ wb_setcfg(sc, media)
 		}
 
 		if (i == WB_TIMEOUT)
-			if_printf(sc->wb_ifp,
+			device_printf(sc->wb_dev,
 			    "failed to force tx and rx to idle state\n");
 	}
 
@@ -698,7 +696,7 @@ wb_reset(sc)
 			break;
 	}
 	if (i == WB_TIMEOUT)
-		if_printf(sc->wb_ifp, "reset never completed!\n");
+		device_printf(sc->wb_dev, "reset never completed!\n");
 
 	/* Wait a little while for the chip to get its brains in order. */
 	DELAY(1000);
@@ -786,6 +784,7 @@ wb_attach(dev)
 	int			error = 0, rid;
 
 	sc = device_get_softc(dev);
+	sc->wb_dev = dev;
 
 	mtx_init(&sc->wb_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
@@ -873,7 +872,7 @@ wb_attach(dev)
 
 	/* Hook interrupt last to avoid having to lock softc */
 	error = bus_setup_intr(dev, sc->wb_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    wb_intr, sc, &sc->wb_intrhand);
+	    NULL, wb_intr, sc, &sc->wb_intrhand);
 
 	if (error) {
 		device_printf(dev, "couldn't set up irq\n");
@@ -917,8 +916,6 @@ wb_detach(dev)
 		callout_drain(&sc->wb_stat_callout);
 		ether_ifdetach(ifp);
 	}
-	if (ifp)
-		if_free(ifp);
 	if (sc->wb_miibus)
 		device_delete_child(dev, sc->wb_miibus);
 	bus_generic_detach(dev);
@@ -929,6 +926,9 @@ wb_detach(dev)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->wb_irq);
 	if (sc->wb_res)
 		bus_release_resource(dev, WB_RES, WB_RID, sc->wb_res);
+
+	if (ifp)
+		if_free(ifp);
 
 	if (sc->wb_ldata) {
 		contigfree(sc->wb_ldata, sizeof(struct wb_list_data) + 8,
@@ -1088,8 +1088,9 @@ wb_rxeof(sc)
 		    !(rxstat & WB_RXSTAT_RXCMP)) {
 			ifp->if_ierrors++;
 			wb_newbuf(sc, cur_rx, m);
-			if_printf(ifp, "receiver babbling: possible chip "
-				"bug, forcing reset\n");
+			device_printf(sc->wb_dev,
+			    "receiver babbling: possible chip bug,"
+			    " forcing reset\n");
 			wb_fixmedia(sc);
 			wb_reset(sc);
 			wb_init_locked(sc);
@@ -1598,12 +1599,12 @@ wb_init_locked(sc)
 
 	/* Init our MAC address */
 	for (i = 0; i < ETHER_ADDR_LEN; i++) {
-		CSR_WRITE_1(sc, WB_NODE0 + i, IFP2ENADDR(sc->wb_ifp)[i]);
+		CSR_WRITE_1(sc, WB_NODE0 + i, IF_LLADDR(sc->wb_ifp)[i]);
 	}
 
 	/* Init circular RX list. */
 	if (wb_list_rx_init(sc) == ENOBUFS) {
-		if_printf(ifp,
+		device_printf(sc->wb_dev,
 		    "initialization failed: no memory for rx buffers\n");
 		wb_stop(sc);
 		return;
