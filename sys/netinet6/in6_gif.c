@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_gif.c,v 1.22.2.2 2006/01/31 15:56:47 glebius Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_gif.c,v 1.29 2007/07/05 16:29:39 delphij Exp $	*/
 /*	$KAME: in6_gif.c,v 1.49 2001/05/14 14:02:17 itojun Exp $	*/
 
 /*-
@@ -68,8 +68,6 @@
 
 #include <net/if_gif.h>
 
-#include <net/net_osdep.h>
-
 static int gif_validate6(const struct ip6_hdr *, struct gif_softc *,
 			 struct ifnet *);
 
@@ -83,10 +81,9 @@ struct ip6protosw in6_gif_protosw =
 };
 
 int
-in6_gif_output(ifp, family, m)
-	struct ifnet *ifp;
-	int family; /* family of the packet to be encapsulate. */
-	struct mbuf *m;
+in6_gif_output(struct ifnet *ifp,
+    int family,			/* family of the packet to be encapsulate */
+    struct mbuf *m)
 {
 	struct gif_softc *sc = ifp->if_softc;
 	struct sockaddr_in6 *dst = (struct sockaddr_in6 *)&sc->gif_ro6.ro_dst;
@@ -139,16 +136,16 @@ in6_gif_output(ifp, family, m)
 	    }
 #endif
 	case AF_LINK:
- 		proto = IPPROTO_ETHERIP;
- 		eiphdr.eip_ver = ETHERIP_VERSION & ETHERIP_VER_VERS_MASK;
- 		eiphdr.eip_pad = 0;
- 		/* prepend Ethernet-in-IP header */
- 		M_PREPEND(m, sizeof(struct etherip_header), M_DONTWAIT);
- 		if (m && m->m_len < sizeof(struct etherip_header))
- 			m = m_pullup(m, sizeof(struct etherip_header));
- 		if (m == NULL)
- 			return ENOBUFS;
- 		bcopy(&eiphdr, mtod(m, struct etherip_header *),
+		proto = IPPROTO_ETHERIP;
+		eiphdr.eip_ver = ETHERIP_VERSION & ETHERIP_VER_VERS_MASK;
+		eiphdr.eip_pad = 0;
+		/* prepend Ethernet-in-IP header */
+		M_PREPEND(m, sizeof(struct etherip_header), M_DONTWAIT);
+		if (m && m->m_len < sizeof(struct etherip_header))
+			m = m_pullup(m, sizeof(struct etherip_header));
+		if (m == NULL)
+			return ENOBUFS;
+		bcopy(&eiphdr, mtod(m, struct etherip_header *),
 		    sizeof(struct etherip_header));
 		break;
 
@@ -245,9 +242,7 @@ in6_gif_output(ifp, family, m)
 }
 
 int
-in6_gif_input(mp, offp, proto)
-	struct mbuf **mp;
-	int *offp, proto;
+in6_gif_input(struct mbuf **mp, int *offp, int proto)
 {
 	struct mbuf *m = *mp;
 	struct ifnet *gifp = NULL;
@@ -318,9 +313,9 @@ in6_gif_input(mp, offp, proto)
 		break;
 	    }
 #endif
- 	case IPPROTO_ETHERIP:
- 		af = AF_LINK;
- 		break;	
+	case IPPROTO_ETHERIP:
+		af = AF_LINK;
+		break;
 
 	default:
 		ip6stat.ip6s_nogif++;
@@ -336,10 +331,8 @@ in6_gif_input(mp, offp, proto)
  * validate outer address.
  */
 static int
-gif_validate6(ip6, sc, ifp)
-	const struct ip6_hdr *ip6;
-	struct gif_softc *sc;
-	struct ifnet *ifp;
+gif_validate6(const struct ip6_hdr *ip6, struct gif_softc *sc,
+    struct ifnet *ifp)
 {
 	struct sockaddr_in6 *src, *dst;
 
@@ -371,9 +364,10 @@ gif_validate6(ip6, sc, ifp)
 		rt = rtalloc1((struct sockaddr *)&sin6, 0, 0UL);
 		if (!rt || rt->rt_ifp != ifp) {
 #if 0
+			char ip6buf[INET6_ADDRSTRLEN];
 			log(LOG_WARNING, "%s: packet from %s dropped "
 			    "due to ingress filter\n", if_name(GIF2IFP(sc)),
-			    ip6_sprintf(&sin6.sin6_addr));
+			    ip6_sprintf(ip6buf, &sin6.sin6_addr));
 #endif
 			if (rt)
 				rtfree(rt);
@@ -391,11 +385,7 @@ gif_validate6(ip6, sc, ifp)
  * sanity check for arg should have been done in the caller.
  */
 int
-gif_encapcheck6(m, off, proto, arg)
-	const struct mbuf *m;
-	int off;
-	int proto;
-	void *arg;
+gif_encapcheck6(const struct mbuf *m, int off, int proto, void *arg)
 {
 	struct ip6_hdr ip6;
 	struct gif_softc *sc;
@@ -412,19 +402,17 @@ gif_encapcheck6(m, off, proto, arg)
 }
 
 int
-in6_gif_attach(sc)
-	struct gif_softc *sc;
+in6_gif_attach(struct gif_softc *sc)
 {
 	sc->encap_cookie6 = encap_attach_func(AF_INET6, -1, gif_encapcheck,
-	    (struct protosw *)&in6_gif_protosw, sc);
+	    (void *)&in6_gif_protosw, sc);
 	if (sc->encap_cookie6 == NULL)
 		return EEXIST;
 	return 0;
 }
 
 int
-in6_gif_detach(sc)
-	struct gif_softc *sc;
+in6_gif_detach(struct gif_softc *sc)
 {
 	int error;
 

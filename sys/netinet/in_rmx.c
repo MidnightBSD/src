@@ -25,8 +25,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/netinet/in_rmx.c,v 1.53 2005/01/07 01:45:44 imp Exp $
  */
 
 /*
@@ -41,6 +39,9 @@
  *     a large quantity of stale routing data is not kept in kernel memory
  *     indefinitely.  See in_rtqtimo() below for the exact mechanism.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/in_rmx.c,v 1.57 2007/10/07 20:44:22 silby Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,7 +67,7 @@ extern int	in_inithead(void **head, int off);
  */
 static struct radix_node *
 in_addroute(void *v_arg, void *n_arg, struct radix_node_head *head,
-	    struct radix_node *treenodes)
+    struct radix_node *treenodes)
 {
 	struct rtentry *rt = (struct rtentry *)treenodes;
 	struct sockaddr_in *sin = (struct sockaddr_in *)rt_key(rt);
@@ -190,7 +191,7 @@ in_clsroute(struct radix_node *rn, struct radix_node_head *head)
 	 */
 	if (rtq_reallyold != 0) {
 		rt->rt_flags |= RTPRF_OURS;
-		rt->rt_rmx.rmx_expire = time_second + rtq_reallyold;
+		rt->rt_rmx.rmx_expire = time_uptime + rtq_reallyold;
 	} else {
 		rtexpunge(rt);
 	}
@@ -220,7 +221,7 @@ in_rtqkill(struct radix_node *rn, void *rock)
 	if (rt->rt_flags & RTPRF_OURS) {
 		ap->found++;
 
-		if (ap->draining || rt->rt_rmx.rmx_expire <= time_second) {
+		if (ap->draining || rt->rt_rmx.rmx_expire <= time_uptime) {
 			if (rt->rt_refcnt > 0)
 				panic("rtqkill route really not free");
 
@@ -235,10 +236,10 @@ in_rtqkill(struct radix_node *rn, void *rock)
 			}
 		} else {
 			if (ap->updating &&
-			    (rt->rt_rmx.rmx_expire - time_second >
+			    (rt->rt_rmx.rmx_expire - time_uptime >
 			     rtq_reallyold)) {
 				rt->rt_rmx.rmx_expire =
-				    time_second + rtq_reallyold;
+				    time_uptime + rtq_reallyold;
 			}
 			ap->nextstop = lmin(ap->nextstop,
 					    rt->rt_rmx.rmx_expire);
@@ -262,7 +263,7 @@ in_rtqtimo(void *rock)
 
 	arg.found = arg.killed = 0;
 	arg.rnh = rnh;
-	arg.nextstop = time_second + rtq_timeout;
+	arg.nextstop = time_uptime + rtq_timeout;
 	arg.draining = arg.updating = 0;
 	RADIX_NODE_HEAD_LOCK(rnh);
 	rnh->rnh_walktree(rnh, in_rtqkill, &arg);
@@ -277,14 +278,14 @@ in_rtqtimo(void *rock)
 	 * hard.
 	 */
 	if ((arg.found - arg.killed > rtq_toomany) &&
-	    (time_second - last_adjusted_timeout >= rtq_timeout) &&
+	    (time_uptime - last_adjusted_timeout >= rtq_timeout) &&
 	    rtq_reallyold > rtq_minreallyold) {
 		rtq_reallyold = 2 * rtq_reallyold / 3;
 		if (rtq_reallyold < rtq_minreallyold) {
 			rtq_reallyold = rtq_minreallyold;
 		}
 
-		last_adjusted_timeout = time_second;
+		last_adjusted_timeout = time_uptime;
 #ifdef DIAGNOSTIC
 		log(LOG_DEBUG, "in_rtqtimo: adjusted rtq_reallyold to %d\n",
 		    rtq_reallyold);
@@ -297,7 +298,7 @@ in_rtqtimo(void *rock)
 	}
 
 	atv.tv_usec = 0;
-	atv.tv_sec = arg.nextstop - time_second;
+	atv.tv_sec = arg.nextstop - time_uptime;
 	callout_reset(&rtq_timer, tvtohz(&atv), in_rtqtimo, rock);
 }
 

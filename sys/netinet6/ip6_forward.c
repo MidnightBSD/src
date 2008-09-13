@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ip6_forward.c,v 1.28.2.2 2005/11/04 20:26:15 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ip6_forward.c,v 1.40 2007/07/05 16:29:40 delphij Exp $	*/
 /*	$KAME: ip6_forward.c,v 1.69 2001/05/17 03:48:30 itojun Exp $	*/
 
 /*-
@@ -30,7 +30,6 @@
  * SUCH DAMAGE.
  */
 
-#include "opt_ip6fw.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
@@ -67,23 +66,10 @@
 #include <netinet/in_pcb.h>
 
 #ifdef IPSEC
-#include <netinet6/ipsec.h>
-#ifdef INET6
-#include <netinet6/ipsec6.h>
-#endif
-#include <netkey/key.h>
-#endif /* IPSEC */
-
-#ifdef FAST_IPSEC
 #include <netipsec/ipsec.h>
 #include <netipsec/ipsec6.h>
 #include <netipsec/key.h>
-#define	IPSEC
-#endif /* FAST_IPSEC */
-
-#include <netinet6/ip6_fw.h>
-
-#include <net/net_osdep.h>
+#endif /* IPSEC */
 
 #include <netinet6/ip6protosw.h>
 
@@ -101,11 +87,8 @@ struct	route_in6 ip6_forward_rt;
  * protocol deal with that.
  *
  */
-
 void
-ip6_forward(m, srcrt)
-	struct mbuf *m;
-	int srcrt;
+ip6_forward(struct mbuf *m, int srcrt)
 {
 	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
 	struct sockaddr_in6 *dst = NULL;
@@ -119,6 +102,9 @@ ip6_forward(m, srcrt)
 	struct secpolicy *sp = NULL;
 	int ipsecrt = 0;
 #endif
+	char ip6bufs[INET6_ADDRSTRLEN], ip6bufd[INET6_ADDRSTRLEN];
+
+	GIANT_REQUIRED; /* XXX bz: ip6_forward_rt */
 
 #ifdef IPSEC
 	/*
@@ -129,9 +115,7 @@ ip6_forward(m, srcrt)
 	 * before forwarding packet actually.
 	 */
 	if (ipsec6_in_reject(m, NULL)) {
-#if !defined(FAST_IPSEC)
 		ipsec6stat.in_polvio++;
-#endif
 		m_freem(m);
 		return;
 	}
@@ -153,8 +137,8 @@ ip6_forward(m, srcrt)
 			log(LOG_DEBUG,
 			    "cannot forward "
 			    "from %s to %s nxt %d received on %s\n",
-			    ip6_sprintf(&ip6->ip6_src),
-			    ip6_sprintf(&ip6->ip6_dst),
+			    ip6_sprintf(ip6bufs, &ip6->ip6_src),
+			    ip6_sprintf(ip6bufd, &ip6->ip6_dst),
 			    ip6->ip6_nxt,
 			    if_name(m->m_pkthdr.rcvif));
 		}
@@ -190,7 +174,7 @@ ip6_forward(m, srcrt)
 
 #ifdef IPSEC
 	/* get a security policy for this packet */
-	sp = ipsec6_getpolicybyaddr(m, IPSEC_DIR_OUTBOUND,
+	sp = ipsec_getpolicybyaddr(m, IPSEC_DIR_OUTBOUND,
 	    IP_FORWARDING, &error);
 	if (sp == NULL) {
 		ipsec6stat.out_inval++;
@@ -216,7 +200,7 @@ ip6_forward(m, srcrt)
 		 */
 		ipsec6stat.out_polvio++;
 		ip6stat.ip6s_cantforward++;
-		key_freesp(sp);
+		KEY_FREESP(&sp);
 		if (mcopy) {
 #if 0
 			/* XXX: what icmp ? */
@@ -230,7 +214,7 @@ ip6_forward(m, srcrt)
 	case IPSEC_POLICY_BYPASS:
 	case IPSEC_POLICY_NONE:
 		/* no need to do IPsec. */
-		key_freesp(sp);
+		KEY_FREESP(&sp);
 		goto skip_ipsec;
 
 	case IPSEC_POLICY_IPSEC:
@@ -238,7 +222,7 @@ ip6_forward(m, srcrt)
 			/* XXX should be panic ? */
 			printf("ip6_forward: No IPsec request specified.\n");
 			ip6stat.ip6s_cantforward++;
-			key_freesp(sp);
+			KEY_FREESP(&sp);
 			if (mcopy) {
 #if 0
 				/* XXX: what icmp ? */
@@ -256,7 +240,7 @@ ip6_forward(m, srcrt)
 	default:
 		/* should be panic ?? */
 		printf("ip6_forward: Invalid policy found. %d\n", sp->policy);
-		key_freesp(sp);
+		KEY_FREESP(&sp);
 		goto skip_ipsec;
 	}
 
@@ -303,7 +287,7 @@ ip6_forward(m, srcrt)
 	error = ipsec6_output_tunnel(&state, sp, 0);
 
 	m = state.m;
-	key_freesp(sp);
+	KEY_FREESP(&sp);
 
 	if (error) {
 		/* mbuf is already reclaimed in ipsec6_output_tunnel. */
@@ -331,9 +315,18 @@ ip6_forward(m, srcrt)
 		}
 		m_freem(m);
 		return;
+	} else {
+		/*
+		 * In the FAST IPSec case we have already
+		 * re-injected the packet and it has been freed
+		 * by the ipsec_done() function.  So, just clean
+		 * up after ourselves.
+		 */
+		m = NULL;
+		goto freecopy;
 	}
 
-	if (ip6 != mtod(m, struct ip6_hdr *)) {
+	if ((m != NULL) && (ip6 != mtod(m, struct ip6_hdr *)) ){
 		/*
 		 * now tunnel mode headers are added.  we are originating
 		 * packet instead of forwarding the packet.
@@ -392,7 +385,7 @@ ip6_forward(m, srcrt)
 		dst->sin6_family = AF_INET6;
 		dst->sin6_addr = ip6->ip6_dst;
 
-  		rtalloc((struct route *)&ip6_forward_rt);
+		rtalloc((struct route *)&ip6_forward_rt);
 		if (ip6_forward_rt.ro_rt == 0) {
 			ip6stat.ip6s_noroute++;
 			in6_ifstat_inc(m->m_pkthdr.rcvif, ifs6_in_noroute);
@@ -446,8 +439,8 @@ ip6_forward(m, srcrt)
 			log(LOG_DEBUG,
 			    "cannot forward "
 			    "src %s, dst %s, nxt %d, rcvif %s, outif %s\n",
-			    ip6_sprintf(&ip6->ip6_src),
-			    ip6_sprintf(&ip6->ip6_dst),
+			    ip6_sprintf(ip6bufs, &ip6->ip6_src),
+			    ip6_sprintf(ip6bufd, &ip6->ip6_dst),
 			    ip6->ip6_nxt,
 			    if_name(m->m_pkthdr.rcvif), if_name(rt->rt_ifp));
 		}
@@ -483,7 +476,7 @@ ip6_forward(m, srcrt)
 			struct secpolicy *sp;
 			int ipsecerror;
 			size_t ipsechdrsiz;
-#endif
+#endif /* IPSEC */
 
 			mtu = IN6_LINKMTU(rt->rt_ifp);
 #ifdef IPSEC
@@ -494,7 +487,7 @@ ip6_forward(m, srcrt)
 			 * case, as we have the outgoing interface for
 			 * encapsulated packet as "rt->rt_ifp".
 			 */
-			sp = ipsec6_getpolicybyaddr(mcopy, IPSEC_DIR_OUTBOUND,
+			sp = ipsec_getpolicybyaddr(mcopy, IPSEC_DIR_OUTBOUND,
 				IP_FORWARDING, &ipsecerror);
 			if (sp) {
 				ipsechdrsiz = ipsec6_hdrsiz(mcopy,
@@ -509,7 +502,7 @@ ip6_forward(m, srcrt)
 			 */
 			if (mtu < IPV6_MMTU)
 				mtu = IPV6_MMTU;
-#endif
+#endif /* IPSEC */
 			icmp6_error(mcopy, ICMP6_PACKET_TOO_BIG, 0, mtu);
 		}
 		m_freem(m);
@@ -528,10 +521,10 @@ ip6_forward(m, srcrt)
 	 * Also, don't send redirect if forwarding using a route
 	 * modified by a redirect.
 	 */
-	if (rt->rt_ifp == m->m_pkthdr.rcvif && !srcrt &&
+	if (ip6_sendredirects && rt->rt_ifp == m->m_pkthdr.rcvif && !srcrt &&
 #ifdef IPSEC
 	    !ipsecrt &&
-#endif
+#endif /* IPSEC */
 	    (rt->rt_flags & (RTF_DYNAMIC|RTF_MODIFIED)) == 0) {
 		if ((rt->rt_ifp->if_flags & IFF_POINTOPOINT) != 0) {
 			/*
@@ -550,20 +543,6 @@ ip6_forward(m, srcrt)
 			return;
 		}
 		type = ND_REDIRECT;
-	}
-
-	/*
-	 * Check with the firewall...
-	 */
-	if (ip6_fw_enable && ip6_fw_chk_ptr) {
-		u_short port = 0;
-		/* If ipfw says divert, we have to just drop packet */
-		if ((*ip6_fw_chk_ptr)(&ip6, rt->rt_ifp, &port, &m)) {
-			m_freem(m);
-			goto freecopy;
-		}
-		if (!m)
-			goto freecopy;
 	}
 
 	/*
@@ -592,8 +571,8 @@ ip6_forward(m, srcrt)
 		{
 			printf("ip6_forward: outgoing interface is loopback. "
 			       "src %s, dst %s, nxt %d, rcvif %s, outif %s\n",
-			       ip6_sprintf(&ip6->ip6_src),
-			       ip6_sprintf(&ip6->ip6_dst),
+			       ip6_sprintf(ip6bufs, &ip6->ip6_src),
+			       ip6_sprintf(ip6bufd, &ip6->ip6_dst),
 			       ip6->ip6_nxt, if_name(m->m_pkthdr.rcvif),
 			       if_name(rt->rt_ifp));
 		}
@@ -611,7 +590,7 @@ ip6_forward(m, srcrt)
 	in6_clearscope(&ip6->ip6_dst);
 
 	/* Jump over all PFIL processing if hooks are not active. */
-	if (inet6_pfil_hook.ph_busy_count == -1)
+	if (!PFIL_HOOKED(&inet6_pfil_hook))
 		goto pass;
 
 	/* Run through list of hooks for output packets. */

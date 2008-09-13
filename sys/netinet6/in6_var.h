@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_var.h,v 1.21.2.6 2005/12/25 14:03:37 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_var.h,v 1.31 2007/06/02 08:02:36 jinmei Exp $	*/
 /*	$KAME: in6_var.h,v 1.56 2001/03/29 05:34:31 itojun Exp $	*/
 
 /*-
@@ -115,6 +115,9 @@ struct	in6_ifaddr {
 
 	/* back pointer to the ND prefix (for autoconfigured addresses only) */
 	struct nd_prefix *ia6_ndpr;
+
+	/* multicast addresses joined from the kernel */
+	LIST_HEAD(, in6_multi_mship) ia6_memberships;
 };
 
 /* control structure to manage address selection policy */
@@ -493,9 +496,7 @@ MALLOC_DECLARE(M_IP6MADDR);
 /* struct in6_ifaddr *ia; */				\
 do {									\
 	struct ifaddr *ifa;						\
-	for (ifa = (ifp)->if_addrlist.tqh_first; ifa; ifa = ifa->ifa_list.tqe_next) {	\
-		if (!ifa->ifa_addr)					\
-			continue;					\
+	TAILQ_FOREACH(ifa, &(ifp)->if_addrlist, ifa_list) {		\
 		if (ifa->ifa_addr->sa_family == AF_INET6)		\
 			break;						\
 	}								\
@@ -577,14 +578,14 @@ do { \
 /* struct in6_multi *in6m; */						\
 do { \
 	if (((in6m) = (step).i_in6m) != NULL) \
-		(step).i_in6m = (step).i_in6m->in6m_entry.le_next; \
+		(step).i_in6m = LIST_NEXT((step).i_in6m, in6m_entry); \
 } while(0)
 
 #define IN6_FIRST_MULTI(step, in6m)		\
 /* struct in6_multistep step; */		\
 /* struct in6_multi *in6m */			\
 do { \
-	(step).i_in6m = in6_multihead.lh_first; \
+	(step).i_in6m = LIST_FIRST(&in6_multihead); \
 		IN6_NEXT_MULTI((step), (in6m)); \
 } while(0)
 
@@ -610,7 +611,7 @@ void	in6_restoremkludge __P((struct in6_ifaddr *, struct ifnet *));
 void	in6_purgemkludge __P((struct ifnet *));
 struct in6_ifaddr *in6ifa_ifpforlinklocal __P((struct ifnet *, int));
 struct in6_ifaddr *in6ifa_ifpwithaddr __P((struct ifnet *, struct in6_addr *));
-char	*ip6_sprintf __P((const struct in6_addr *));
+char	*ip6_sprintf __P((char *, const struct in6_addr *));
 int	in6_addr2zoneid __P((struct ifnet *, struct in6_addr *, u_int32_t *));
 int	in6_matchlen __P((struct in6_addr *, struct in6_addr *));
 int	in6_are_prefix_equal __P((struct in6_addr *, struct in6_addr *, int));

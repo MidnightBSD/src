@@ -27,15 +27,16 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_icmp.c	8.2 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/netinet/ip_icmp.c,v 1.101.2.2 2006/02/16 17:50:57 andre Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/ip_icmp.c,v 1.118 2007/10/07 20:44:23 silby Exp $");
 
 #include "opt_ipsec.h"
 #include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/mac.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
@@ -54,23 +55,20 @@
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/ip_var.h>
+#include <netinet/ip_options.h>
 #include <netinet/tcp.h>
 #include <netinet/tcp_var.h>
 #include <netinet/tcpip.h>
 #include <netinet/icmp_var.h>
 
 #ifdef IPSEC
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#endif
-
-#ifdef FAST_IPSEC
 #include <netipsec/ipsec.h>
 #include <netipsec/key.h>
-#define	IPSEC
 #endif
 
 #include <machine/in_cksum.h>
+
+#include <security/mac/mac_framework.h>
 
 /*
  * ICMP routines: error generation, receive packet processing, and
@@ -92,19 +90,19 @@ SYSCTL_UINT(_net_inet_icmp, OID_AUTO, maskfake, CTLFLAG_RW,
 
 static int	drop_redirect = 0;
 SYSCTL_INT(_net_inet_icmp, OID_AUTO, drop_redirect, CTLFLAG_RW,
-	&drop_redirect, 0, "");
+	&drop_redirect, 0, "Ignore ICMP redirects");
 
 static int	log_redirect = 0;
 SYSCTL_INT(_net_inet_icmp, OID_AUTO, log_redirect, CTLFLAG_RW,
-	&log_redirect, 0, "");
+	&log_redirect, 0, "Log ICMP redirects to the console");
 
 static int      icmplim = 200;
 SYSCTL_INT(_net_inet_icmp, ICMPCTL_ICMPLIM, icmplim, CTLFLAG_RW,
-	&icmplim, 0, "");
+	&icmplim, 0, "Maximum number of ICMP responses per second");
 
 static int	icmplim_output = 1;
 SYSCTL_INT(_net_inet_icmp, OID_AUTO, icmplim_output, CTLFLAG_RW,
-	&icmplim_output, 0, "");
+	&icmplim_output, 0, "Enable rate limiting of ICMP responses");
 
 static char	reply_src[IFNAMSIZ];
 SYSCTL_STRING(_net_inet_icmp, OID_AUTO, reply_src, CTLFLAG_RW,
@@ -143,11 +141,7 @@ extern	struct protosw inetsw[];
  * in response to bad packet ip.
  */
 void
-icmp_error(n, type, code, dest, mtu)
-	struct mbuf *n;
-	int type, code;
-	n_long dest;
-	int mtu;
+icmp_error(struct mbuf *n, int type, int code, n_long dest, int mtu)
 {
 	register struct ip *oip = mtod(n, struct ip *), *nip;
 	register unsigned oiphlen = oip->ip_hl << 2;
@@ -291,9 +285,7 @@ freeit:
  * Process a received ICMP message.
  */
 void
-icmp_input(m, off)
-	struct mbuf *m;
-	int off;
+icmp_input(struct mbuf *m, int off)
 {
 	struct icmp *icp;
 	struct in_ifaddr *ia;
@@ -620,8 +612,7 @@ freeit:
  * Reflect the ip packet back to the source
  */
 static void
-icmp_reflect(m)
-	struct mbuf *m;
+icmp_reflect(struct mbuf *m)
 {
 	struct ip *ip = mtod(m, struct ip *);
 	struct ifaddr *ifa;
@@ -725,7 +716,7 @@ match:
 		 */
 		cp = (u_char *) (ip + 1);
 		if ((opts = ip_srcroute(m)) == 0 &&
-		    (opts = m_gethdr(M_DONTWAIT, MT_HEADER))) {
+		    (opts = m_gethdr(M_DONTWAIT, MT_DATA))) {
 			opts->m_len = sizeof(struct in_addr);
 			mtod(opts, struct in_addr *)->s_addr = 0;
 		}
@@ -800,9 +791,7 @@ done:
  * after supplying a checksum.
  */
 static void
-icmp_send(m, opts)
-	register struct mbuf *m;
-	struct mbuf *opts;
+icmp_send(struct mbuf *m, struct mbuf *opts)
 {
 	register struct ip *ip = mtod(m, struct ip *);
 	register int hlen;
@@ -829,7 +818,7 @@ icmp_send(m, opts)
 }
 
 n_time
-iptime()
+iptime(void)
 {
 	struct timeval atv;
 	u_long t;
@@ -845,9 +834,7 @@ iptime()
  * is returned; otherwise, a smaller value is returned.
  */
 int
-ip_next_mtu(mtu, dir)
-	int mtu;
-	int dir;
+ip_next_mtu(int mtu, int dir)
 {
 	static int mtutab[] = {
 		65535, 32000, 17914, 8166, 4352, 2002, 1492, 1280, 1006, 508,
@@ -903,7 +890,8 @@ badport_bandlim(int which)
 		{ "icmp ping response" },
 		{ "icmp tstamp response" },
 		{ "closed port RST response" },
-		{ "open port RST response" }
+		{ "open port RST response" },
+		{ "icmp6 unreach response" }
 	};
 
 	/*

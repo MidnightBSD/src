@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_pcb.h,v 1.16 2005/01/07 02:30:34 imp Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_pcb.h,v 1.19 2007/05/11 10:20:50 rwatson Exp $	*/
 /*	$KAME: in6_pcb.h,v 1.13 2001/02/06 09:16:53 itojun Exp $	*/
 
 /*-
@@ -70,12 +70,13 @@
 #define	sin6tosa(sin6)	((struct sockaddr *)(sin6))
 #define	ifatoia6(ifa)	((struct in6_ifaddr *)(ifa))
 
-void	in6_pcbpurgeif0 __P((struct in6pcb *, struct ifnet *));
+void	in6_pcbpurgeif0 __P((struct inpcbinfo *, struct ifnet *));
 void	in6_losing __P((struct inpcb *));
 int	in6_pcbbind __P((struct inpcb *, struct sockaddr *, struct ucred *));
 int	in6_pcbconnect __P((struct inpcb *, struct sockaddr *, struct ucred *));
 void	in6_pcbdetach __P((struct inpcb *));
 void	in6_pcbdisconnect __P((struct inpcb *));
+void	in6_pcbfree __P((struct inpcb *));
 int	in6_pcbladdr __P((struct inpcb *, struct sockaddr *,
 			  struct in6_addr **));
 struct	inpcb *
@@ -94,8 +95,8 @@ struct sockaddr *
 	in6_sockaddr __P((in_port_t port, struct in6_addr *addr_p));
 struct sockaddr *
 	in6_v4mapsin6_sockaddr __P((in_port_t port, struct in_addr *addr_p));
-int	in6_setpeeraddr __P((struct socket *so, struct sockaddr **nam));
-int	in6_setsockaddr __P((struct socket *so, struct sockaddr **nam));
+int	in6_getpeeraddr __P((struct socket *so, struct sockaddr **nam));
+int	in6_getsockaddr __P((struct socket *so, struct sockaddr **nam));
 int	in6_mapped_sockaddr __P((struct socket *so, struct sockaddr **nam));
 int	in6_mapped_peeraddr __P((struct socket *so, struct sockaddr **nam));
 int	in6_selecthlim __P((struct in6pcb *, struct ifnet *));

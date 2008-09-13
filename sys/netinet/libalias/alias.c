@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias.c,v 1.53 2005/06/27 22:21:42 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias.c,v 1.58 2006/12/15 12:50:06 piso Exp $");
 
 /*
     Alias.c provides supervisory control for the functions of the
@@ -113,9 +113,16 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias.c,v 1.53 2005/06/27 22:21:42 
 
 #ifdef _KERNEL
 #include <sys/param.h>
+#include <sys/systm.h>
+#include <sys/mbuf.h>
 #else
 #include <sys/types.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
+#include <dlfcn.h>
+#include <errno.h>
+#include <string.h>
 #endif
 
 #include <netinet/in_systm.h>
@@ -128,21 +135,13 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias.c,v 1.53 2005/06/27 22:21:42 
 #ifdef _KERNEL
 #include <netinet/libalias/alias.h>
 #include <netinet/libalias/alias_local.h>
+#include <netinet/libalias/alias_mod.h>
 #else
+#include <err.h>
 #include "alias.h"
 #include "alias_local.h"
+#include "alias_mod.h"
 #endif
-
-#define NETBIOS_NS_PORT_NUMBER 137
-#define NETBIOS_DGM_PORT_NUMBER 138
-#define FTP_CONTROL_PORT_NUMBER 21
-#define IRC_CONTROL_PORT_NUMBER_1 6667
-#define IRC_CONTROL_PORT_NUMBER_2 6668
-#define CUSEEME_PORT_NUMBER 7648
-#define RTSP_CONTROL_PORT_NUMBER_1 554
-#define RTSP_CONTROL_PORT_NUMBER_2 7070
-#define TFTP_PORT_NUMBER 69
-#define PPTP_CONTROL_PORT_NUMBER 1723
 
 static __inline int
 twowords(void *p)
@@ -284,6 +283,8 @@ static int	TcpAliasOut(struct libalias *, struct ip *, int, int create);
 static int
 IcmpAliasIn1(struct libalias *la, struct ip *pip)
 {
+
+	LIBALIAS_LOCK_ASSERT(la);
 /*
     De-alias incoming echo and timestamp replies.
     Alias incoming echo and timestamp requests.
@@ -327,6 +328,8 @@ IcmpAliasIn1(struct libalias *la, struct ip *pip)
 static int
 IcmpAliasIn2(struct libalias *la, struct ip *pip)
 {
+
+	LIBALIAS_LOCK_ASSERT(la);
 /*
     Alias incoming ICMP error messages containing
     IP header and first 64 bits of datagram.
@@ -430,6 +433,7 @@ IcmpAliasIn(struct libalias *la, struct ip *pip)
 	int iresult;
 	struct icmp *ic;
 
+	LIBALIAS_LOCK_ASSERT(la);
 /* Return if proxy-only mode is enabled */
 	if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY)
 		return (PKT_ALIAS_OK);
@@ -469,6 +473,7 @@ IcmpAliasOut1(struct libalias *la, struct ip *pip, int create)
 	struct alias_link *lnk;
 	struct icmp *ic;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	ic = (struct icmp *)ip_next(pip);
 
 /* Save overwritten data for when echo packet returns */
@@ -516,6 +521,7 @@ IcmpAliasOut2(struct libalias *la, struct ip *pip)
 	struct tcphdr *tc;
 	struct alias_link *lnk;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	ic = (struct icmp *)ip_next(pip);
 	ip = &ic->icmp_ip;
 
@@ -609,6 +615,7 @@ IcmpAliasOut(struct libalias *la, struct ip *pip, int create)
 	int iresult;
 	struct icmp *ic;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	(void)create;
 
 /* Return if proxy-only mode is enabled */
@@ -651,6 +658,7 @@ ProtoAliasIn(struct libalias *la, struct ip *pip)
 */
 	struct alias_link *lnk;
 
+	LIBALIAS_LOCK_ASSERT(la);
 /* Return if proxy-only mode is enabled */
 	if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY)
 		return (PKT_ALIAS_OK);
@@ -682,6 +690,7 @@ ProtoAliasOut(struct libalias *la, struct ip *pip, int create)
 */
 	struct alias_link *lnk;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	(void)create;
 
 /* Return if proxy-only mode is enabled */
@@ -711,6 +720,7 @@ UdpAliasIn(struct libalias *la, struct ip *pip)
 	struct udphdr *ud;
 	struct alias_link *lnk;
 
+	LIBALIAS_LOCK_ASSERT(la);
 /* Return if proxy-only mode is enabled */
 	if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY)
 		return (PKT_ALIAS_OK);
@@ -725,24 +735,24 @@ UdpAliasIn(struct libalias *la, struct ip *pip)
 		struct in_addr original_address;
 		u_short alias_port;
 		int accumulate;
-		int r = 0;
+		int r = 0, error;
+		struct alias_data ad = {
+			.lnk = lnk, 
+			.oaddr = &original_address, 
+			.aaddr = &alias_address,
+			.aport = &alias_port,
+			.sport = &ud->uh_sport,
+			.dport = &ud->uh_dport,
+			.maxpktsize = 0
+		};
 
 		alias_address = GetAliasAddress(lnk);
 		original_address = GetOriginalAddress(lnk);
 		alias_port = ud->uh_dport;
 		ud->uh_dport = GetOriginalPort(lnk);
 
-/* Special processing for IP encoding protocols */
-		if (ntohs(ud->uh_dport) == CUSEEME_PORT_NUMBER)
-			AliasHandleCUSeeMeIn(la, pip, original_address);
-/* If NETBIOS Datagram, It should be alias address in UDP Data, too */
-		else if (ntohs(ud->uh_dport) == NETBIOS_DGM_PORT_NUMBER
-		    || ntohs(ud->uh_sport) == NETBIOS_DGM_PORT_NUMBER)
-			r = AliasHandleUdpNbt(la, pip, lnk, &original_address, ud->uh_dport);
-		else if (ntohs(ud->uh_dport) == NETBIOS_NS_PORT_NUMBER
-		    || ntohs(ud->uh_sport) == NETBIOS_NS_PORT_NUMBER)
-			r = AliasHandleUdpNbtNS(la, pip, lnk, &alias_address, &alias_port,
-			    &original_address, &ud->uh_dport);
+		/* Walk out chain. */		
+		error = find_handler(IN, UDP, la, pip, &ad);
 
 /* If UDP checksum is not zero, then adjust since destination port */
 /* is being unaliased and destination address is being altered.    */
@@ -774,7 +784,9 @@ UdpAliasOut(struct libalias *la, struct ip *pip, int create)
 {
 	struct udphdr *ud;
 	struct alias_link *lnk;
+	int error;
 
+	LIBALIAS_LOCK_ASSERT(la);
 /* Return if proxy-only mode is enabled */
 	if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY)
 		return (PKT_ALIAS_OK);
@@ -787,29 +799,21 @@ UdpAliasOut(struct libalias *la, struct ip *pip, int create)
 	if (lnk != NULL) {
 		u_short alias_port;
 		struct in_addr alias_address;
+		struct alias_data ad = {
+			.lnk = lnk, 
+			.oaddr = NULL,
+			.aaddr = &alias_address,
+			.aport = &alias_port,
+			.sport = &ud->uh_sport,
+			.dport = &ud->uh_dport,
+			.maxpktsize = 0
+		};
 
 		alias_address = GetAliasAddress(lnk);
 		alias_port = GetAliasPort(lnk);
 
-/* Special processing for IP encoding protocols */
-		if (ntohs(ud->uh_dport) == CUSEEME_PORT_NUMBER)
-			AliasHandleCUSeeMeOut(la, pip, lnk);
-/* If NETBIOS Datagram, It should be alias address in UDP Data, too */
-		else if (ntohs(ud->uh_dport) == NETBIOS_DGM_PORT_NUMBER
-		    || ntohs(ud->uh_sport) == NETBIOS_DGM_PORT_NUMBER)
-			AliasHandleUdpNbt(la, pip, lnk, &alias_address, alias_port);
-		else if (ntohs(ud->uh_dport) == NETBIOS_NS_PORT_NUMBER
-		    || ntohs(ud->uh_sport) == NETBIOS_NS_PORT_NUMBER)
-			AliasHandleUdpNbtNS(la, pip, lnk, &pip->ip_src, &ud->uh_sport,
-			    &alias_address, &alias_port);
-/*
- * We don't know in advance what TID the TFTP server will choose,
- * so we create a wilcard link (destination port is unspecified)
- * that will match any TID from a given destination.
- */
-		else if (ntohs(ud->uh_dport) == TFTP_PORT_NUMBER)
-			FindRtspOut(la, pip->ip_src, pip->ip_dst,
-			    ud->uh_sport, alias_port, IPPROTO_UDP);
+		/* Walk out chain. */		
+		error = find_handler(OUT, UDP, la, pip, &ad);
 
 /* If UDP checksum is not zero, adjust since source port is */
 /* being aliased and source address is being altered        */
@@ -843,6 +847,7 @@ TcpAliasIn(struct libalias *la, struct ip *pip)
 	struct tcphdr *tc;
 	struct alias_link *lnk;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	tc = (struct tcphdr *)ip_next(pip);
 
 	lnk = FindUdpTcpIn(la, pip->ip_src, pip->ip_dst,
@@ -855,15 +860,26 @@ TcpAliasIn(struct libalias *la, struct ip *pip)
 		struct in_addr proxy_address;
 		u_short alias_port;
 		u_short proxy_port;
-		int accumulate;
+		int accumulate, error;
 
-/* Special processing for IP encoding protocols */
-		if (ntohs(tc->th_dport) == PPTP_CONTROL_PORT_NUMBER
-		    || ntohs(tc->th_sport) == PPTP_CONTROL_PORT_NUMBER)
-			AliasHandlePptpIn(la, pip, lnk);
-		else if (la->skinnyPort != 0 && (ntohs(tc->th_dport) == la->skinnyPort
-		    || ntohs(tc->th_sport) == la->skinnyPort))
-			AliasHandleSkinny(la, pip, lnk);
+		/* 
+		 * The init of MANY vars is a bit below, but aliashandlepptpin 
+		 * seems to need the destination port that came within the
+		 * packet and not the original one looks below [*].
+		 */
+
+		struct alias_data ad = {
+			.lnk = lnk, 
+			.oaddr = NULL,
+			.aaddr = NULL,
+			.aport = NULL,
+			.sport = &tc->th_sport,
+			.dport = &tc->th_dport,
+			.maxpktsize = 0
+		};
+
+		/* Walk out chain. */		
+		error = find_handler(IN, TCP, la, pip, &ad);
 
 		alias_address = GetAliasAddress(lnk);
 		original_address = GetOriginalAddress(lnk);
@@ -871,6 +887,28 @@ TcpAliasIn(struct libalias *la, struct ip *pip)
 		alias_port = tc->th_dport;
 		tc->th_dport = GetOriginalPort(lnk);
 		proxy_port = GetProxyPort(lnk);
+
+		/* 
+		 * Look above, if anyone is going to add find_handler AFTER 
+		 * this aliashandlepptpin/point, please redo alias_data too.
+		 * Uncommenting the piece here below should be enough.
+		 */
+#if 0
+				 struct alias_data ad = {
+					.lnk = lnk,
+					.oaddr = &original_address,
+					.aaddr = &alias_address,
+					.aport = &alias_port,
+					.sport = &ud->uh_sport,
+					.dport = &ud->uh_dport,
+					.maxpktsize = 0
+				};
+		
+				/* Walk out chain. */
+				error = find_handler(la, pip, &ad);
+				if (error == EHDNOF)
+					printf("Protocol handler not found\n");
+#endif
 
 /* Adjust TCP checksum since destination port is being unaliased */
 /* and destination port is being altered.                        */
@@ -926,7 +964,7 @@ TcpAliasIn(struct libalias *la, struct ip *pip)
 static int
 TcpAliasOut(struct libalias *la, struct ip *pip, int maxpacketsize, int create)
 {
-	int proxy_type;
+	int proxy_type, error;
 	u_short dest_port;
 	u_short proxy_server_port;
 	struct in_addr dest_address;
@@ -934,6 +972,7 @@ TcpAliasOut(struct libalias *la, struct ip *pip, int maxpacketsize, int create)
 	struct tcphdr *tc;
 	struct alias_link *lnk;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	tc = (struct tcphdr *)ip_next(pip);
 
 	if (create)
@@ -973,6 +1012,15 @@ TcpAliasOut(struct libalias *la, struct ip *pip, int maxpacketsize, int create)
 		u_short alias_port;
 		struct in_addr alias_address;
 		int accumulate;
+		struct alias_data ad = {
+			.lnk = lnk, 
+			.oaddr = NULL,
+			.aaddr = &alias_address,
+			.aport = &alias_port,
+			.sport = &tc->th_sport,
+			.dport = &tc->th_dport,
+			.maxpktsize = maxpacketsize
+		};
 
 /* Save original destination address, if this is a proxy packet.
    Also modify packet to include destination encoding.  This may
@@ -989,25 +1037,9 @@ TcpAliasOut(struct libalias *la, struct ip *pip, int maxpacketsize, int create)
 
 /* Monitor TCP connection state */
 		TcpMonitorOut(pip, lnk);
-
-/* Special processing for IP encoding protocols */
-		if (ntohs(tc->th_dport) == FTP_CONTROL_PORT_NUMBER
-		    || ntohs(tc->th_sport) == FTP_CONTROL_PORT_NUMBER)
-			AliasHandleFtpOut(la, pip, lnk, maxpacketsize);
-		else if (ntohs(tc->th_dport) == IRC_CONTROL_PORT_NUMBER_1
-		    || ntohs(tc->th_dport) == IRC_CONTROL_PORT_NUMBER_2)
-			AliasHandleIrcOut(la, pip, lnk, maxpacketsize);
-		else if (ntohs(tc->th_dport) == RTSP_CONTROL_PORT_NUMBER_1
-			    || ntohs(tc->th_sport) == RTSP_CONTROL_PORT_NUMBER_1
-			    || ntohs(tc->th_dport) == RTSP_CONTROL_PORT_NUMBER_2
-		    || ntohs(tc->th_sport) == RTSP_CONTROL_PORT_NUMBER_2)
-			AliasHandleRtspOut(la, pip, lnk, maxpacketsize);
-		else if (ntohs(tc->th_dport) == PPTP_CONTROL_PORT_NUMBER
-		    || ntohs(tc->th_sport) == PPTP_CONTROL_PORT_NUMBER)
-			AliasHandlePptpOut(la, pip, lnk);
-		else if (la->skinnyPort != 0 && (ntohs(tc->th_sport) == la->skinnyPort
-		    || ntohs(tc->th_dport) == la->skinnyPort))
-			AliasHandleSkinny(la, pip, lnk);
+		
+		/* Walk out chain. */		
+		error = find_handler(OUT, TCP, la, pip, &ad);
 
 /* Adjust TCP checksum since source port is being aliased */
 /* and source address is being altered                    */
@@ -1067,6 +1099,7 @@ FragmentIn(struct libalias *la, struct ip *pip)
 {
 	struct alias_link *lnk;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	lnk = FindFragmentIn2(la, pip->ip_src, pip->ip_dst, pip->ip_id);
 	if (lnk != NULL) {
 		struct in_addr original_address;
@@ -1087,6 +1120,7 @@ FragmentOut(struct libalias *la, struct ip *pip)
 {
 	struct in_addr alias_address;
 
+	LIBALIAS_LOCK_ASSERT(la);
 	alias_address = FindAliasAddress(la, pip->ip_src);
 	DifferentialChecksum(&pip->ip_sum,
 	    &alias_address, &pip->ip_src, 2);
@@ -1120,6 +1154,7 @@ LibAliasSaveFragment(struct libalias *la, char *ptr)
 	struct alias_link *lnk;
 	struct ip *pip;
 
+	LIBALIAS_LOCK(la);
 	pip = (struct ip *)ptr;
 	lnk = AddFragmentPtrLink(la, pip->ip_src, pip->ip_id);
 	iresult = PKT_ALIAS_ERROR;
@@ -1127,6 +1162,7 @@ LibAliasSaveFragment(struct libalias *la, char *ptr)
 		SetFragmentPtr(lnk, ptr);
 		iresult = PKT_ALIAS_OK;
 	}
+	LIBALIAS_UNLOCK(la);
 	return (iresult);
 }
 
@@ -1138,17 +1174,18 @@ LibAliasGetFragment(struct libalias *la, char *ptr)
 	char *fptr;
 	struct ip *pip;
 
+	LIBALIAS_LOCK(la);
 	pip = (struct ip *)ptr;
 	lnk = FindFragmentPtr(la, pip->ip_src, pip->ip_id);
 	if (lnk != NULL) {
 		GetFragmentPtr(lnk, &fptr);
 		SetFragmentPtr(lnk, NULL);
 		SetExpire(lnk, 0);	/* Deletes link */
+	} else		
+		fptr = NULL;
 
-		return (fptr);
-	} else {
-		return (NULL);
-	}
+	LIBALIAS_UNLOCK(la);
+	return (fptr);
 }
 
 
@@ -1163,6 +1200,7 @@ LibAliasFragmentIn(struct libalias *la, char *ptr,	/* Points to correctly
 	struct ip *pip;
 	struct ip *fpip;
 
+	LIBALIAS_LOCK(la);
 	(void)la;
 	pip = (struct ip *)ptr;
 	fpip = (struct ip *)ptr_fragment;
@@ -1170,11 +1208,30 @@ LibAliasFragmentIn(struct libalias *la, char *ptr,	/* Points to correctly
 	DifferentialChecksum(&fpip->ip_sum,
 	    &pip->ip_dst, &fpip->ip_dst, 2);
 	fpip->ip_dst = pip->ip_dst;
+	LIBALIAS_UNLOCK(la);
 }
 
+/* Local prototypes */
+static int
+LibAliasOutLocked(struct libalias *la, char *ptr,
+		  int maxpacketsize, int create);
+static int
+LibAliasInLocked(struct libalias *la, char *ptr,
+		  int maxpacketsize);
 
 int
 LibAliasIn(struct libalias *la, char *ptr, int maxpacketsize)
+{
+	int res;
+
+	LIBALIAS_LOCK(la);
+	res = LibAliasInLocked(la, ptr, maxpacketsize);
+	LIBALIAS_UNLOCK(la);
+	return (res);
+}
+
+static int
+LibAliasInLocked(struct libalias *la, char *ptr, int maxpacketsize)
 {
 	struct in_addr alias_addr;
 	struct ip *pip;
@@ -1182,9 +1239,9 @@ LibAliasIn(struct libalias *la, char *ptr, int maxpacketsize)
 
 	if (la->packetAliasMode & PKT_ALIAS_REVERSE) {
 		la->packetAliasMode &= ~PKT_ALIAS_REVERSE;
-		iresult = LibAliasOut(la, ptr, maxpacketsize);
+		iresult = LibAliasOutLocked(la, ptr, maxpacketsize, 1);
 		la->packetAliasMode |= PKT_ALIAS_REVERSE;
-		return (iresult);
+		goto getout;
 	}
 	HouseKeeping(la);
 	ClearCheckNewLink(la);
@@ -1193,8 +1250,10 @@ LibAliasIn(struct libalias *la, char *ptr, int maxpacketsize)
 
 	/* Defense against mangled packets */
 	if (ntohs(pip->ip_len) > maxpacketsize
-	    || (pip->ip_hl << 2) > maxpacketsize)
-		return (PKT_ALIAS_IGNORED);
+	    || (pip->ip_hl << 2) > maxpacketsize) {
+		iresult = PKT_ALIAS_IGNORED; 
+		goto getout;
+	}
 
 	iresult = PKT_ALIAS_IGNORED;
 	if ((ntohs(pip->ip_off) & IP_OFFMASK) == 0) {
@@ -1208,13 +1267,26 @@ LibAliasIn(struct libalias *la, char *ptr, int maxpacketsize)
 		case IPPROTO_TCP:
 			iresult = TcpAliasIn(la, pip);
 			break;
-		case IPPROTO_GRE:
-			if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY ||
-			    AliasHandlePptpGreIn(la, pip) == 0)
+ 		case IPPROTO_GRE: {
+			int error;
+			struct alias_data ad = {
+				.lnk = NULL, 
+				.oaddr = NULL, 
+				.aaddr = NULL,
+				.aport = NULL,
+				.sport = NULL,
+				.dport = NULL,
+				.maxpktsize = 0                  
+			};
+			
+			/* Walk out chain. */		
+			error = find_handler(IN, IP, la, pip, &ad);
+			if (error ==  0)
 				iresult = PKT_ALIAS_OK;
 			else
 				iresult = ProtoAliasIn(la, pip);
-			break;
+		}
+ 			break; 
 		default:
 			iresult = ProtoAliasIn(la, pip);
 			break;
@@ -1235,6 +1307,7 @@ LibAliasIn(struct libalias *la, char *ptr, int maxpacketsize)
 		iresult = FragmentIn(la, pip);
 	}
 
+getout:
 	return (iresult);
 }
 
@@ -1255,19 +1328,32 @@ LibAliasIn(struct libalias *la, char *ptr, int maxpacketsize)
 #define UNREG_ADDR_C_UPPER 0xc0a8ffff
 
 int
-LibAliasOut(struct libalias *la, char *ptr,	/* valid IP packet */
-    int maxpacketsize		/* How much the packet data may grow (FTP
-				 * and IRC inline changes) */
-)
+LibAliasOut(struct libalias *la, char *ptr, int maxpacketsize)
 {
-	return (LibAliasOutTry(la, ptr, maxpacketsize, 1));
+	int res;
+
+	LIBALIAS_LOCK(la);
+	res = LibAliasOutLocked(la, ptr, maxpacketsize, 1);
+	LIBALIAS_UNLOCK(la);
+	return (res);
 }
 
 int
-LibAliasOutTry(struct libalias *la, char *ptr,	/* valid IP packet */
+LibAliasOutTry(struct libalias *la, char *ptr, int maxpacketsize, int create)
+{
+	int res;
+
+	LIBALIAS_LOCK(la);
+	res = LibAliasOutLocked(la, ptr, maxpacketsize, create);
+	LIBALIAS_UNLOCK(la);
+	return (res);
+}
+
+static int
+LibAliasOutLocked(struct libalias *la, char *ptr,	/* valid IP packet */
     int maxpacketsize,		/* How much the packet data may grow (FTP
 				 * and IRC inline changes) */
-    int create			/* Create new entries ? */
+    int create                  /* Create new entries ? */
 )
 {
 	int iresult;
@@ -1276,9 +1362,9 @@ LibAliasOutTry(struct libalias *la, char *ptr,	/* valid IP packet */
 
 	if (la->packetAliasMode & PKT_ALIAS_REVERSE) {
 		la->packetAliasMode &= ~PKT_ALIAS_REVERSE;
-		iresult = LibAliasIn(la, ptr, maxpacketsize);
+		iresult = LibAliasInLocked(la, ptr, maxpacketsize);
 		la->packetAliasMode |= PKT_ALIAS_REVERSE;
-		return (iresult);
+		goto getout;
 	}
 	HouseKeeping(la);
 	ClearCheckNewLink(la);
@@ -1286,8 +1372,10 @@ LibAliasOutTry(struct libalias *la, char *ptr,	/* valid IP packet */
 
 	/* Defense against mangled packets */
 	if (ntohs(pip->ip_len) > maxpacketsize
-	    || (pip->ip_hl << 2) > maxpacketsize)
-		return (PKT_ALIAS_IGNORED);
+	    || (pip->ip_hl << 2) > maxpacketsize) {
+		iresult = PKT_ALIAS_IGNORED;
+		goto getout;
+	}
 
 	addr_save = GetDefaultAliasAddress(la);
 	if (la->packetAliasMode & PKT_ALIAS_UNREGISTERED_ONLY) {
@@ -1321,12 +1409,25 @@ LibAliasOutTry(struct libalias *la, char *ptr,	/* valid IP packet */
 			case IPPROTO_TCP:
 			iresult = TcpAliasOut(la, pip, maxpacketsize, create);
 			break;
-		case IPPROTO_GRE:
-			if (AliasHandlePptpGreOut(la, pip) == 0)
-				iresult = PKT_ALIAS_OK;
-			else
-				iresult = ProtoAliasOut(la, pip, create);
-			break;
+ 		case IPPROTO_GRE: {
+			int error;
+			struct alias_data ad = {
+				.lnk = NULL, 
+				.oaddr = NULL, 
+				.aaddr = NULL,
+				.aport = NULL,
+				.sport = NULL,
+				.dport = NULL,
+				.maxpktsize = 0                  
+			};
+			/* Walk out chain. */		
+			error = find_handler(OUT, IP, la, pip, &ad);
+			if (error == 0)
+ 				iresult = PKT_ALIAS_OK;
+ 			else
+ 				iresult = ProtoAliasOut(la, pip, create);
+		}
+ 			break;
 		default:
 			iresult = ProtoAliasOut(la, pip, create);
 			break;
@@ -1336,6 +1437,7 @@ LibAliasOutTry(struct libalias *la, char *ptr,	/* valid IP packet */
 	}
 
 	SetDefaultAliasAddress(la, addr_save);
+getout:
 	return (iresult);
 }
 
@@ -1351,12 +1453,13 @@ LibAliasUnaliasOut(struct libalias *la, char *ptr,	/* valid IP packet */
 	struct alias_link *lnk;
 	int iresult = PKT_ALIAS_IGNORED;
 
+	LIBALIAS_LOCK(la);
 	pip = (struct ip *)ptr;
 
 	/* Defense against mangled packets */
 	if (ntohs(pip->ip_len) > maxpacketsize
 	    || (pip->ip_hl << 2) > maxpacketsize)
-		return (iresult);
+		goto getout;
 
 	ud = (struct udphdr *)ip_next(pip);
 	tc = (struct tcphdr *)ip_next(pip);
@@ -1440,6 +1543,140 @@ LibAliasUnaliasOut(struct libalias *la, char *ptr,	/* valid IP packet */
 			iresult = PKT_ALIAS_OK;
 		}
 	}
+getout:
+	LIBALIAS_UNLOCK(la);
 	return (iresult);
 
 }
+
+#ifndef _KERNEL
+
+int
+LibAliasRefreshModules(void)
+{
+	char buf[256], conf[] = "/etc/libalias.conf";
+	FILE *fd;
+	int i, len;
+
+	fd = fopen(conf, "r");
+	if (fd == NULL)
+		err(1, "fopen(%s)", conf);
+
+	LibAliasUnLoadAllModule();
+
+	for (;;) {
+		fgets(buf, 256, fd);
+		if feof(fd) 
+		        break;
+		len = strlen(buf);
+		if (len > 1) {
+			for (i = 0; i < len; i++)
+				if (!isspace(buf[i]))
+					break;
+			if (buf[i] == '#')
+				continue;
+			buf[len - 1] = '\0';
+			printf("Loading %s\n", buf);
+			LibAliasLoadModule(buf);
+		}
+	}
+	return (0);
+}
+
+int
+LibAliasLoadModule(char *path)
+{
+	struct dll *t;
+	void *handle;
+	struct proto_handler *m;
+        const char *error;
+	moduledata_t *p;
+
+        handle = dlopen (path, RTLD_LAZY);
+        if (!handle) {
+		fprintf(stderr, "%s\n", dlerror());
+		return (EINVAL);
+        }
+
+	p = dlsym(handle, "alias_mod");
+        if ((error = dlerror()) != NULL)  {
+		fprintf(stderr, "%s\n", dlerror());
+		return (EINVAL);
+        }
+
+	t = malloc(sizeof(struct dll));
+	if (t == NULL)
+		return (ENOMEM);
+	strncpy(t->name, p->name, DLL_LEN);
+	t->handle = handle;
+	if (attach_dll(t) == EEXIST) {
+		free(t);
+		fprintf(stderr, "dll conflict\n");
+		return (EEXIST);
+	}
+
+        m = dlsym(t->handle, "handlers");
+        if ((error = dlerror()) != NULL)  {
+		fprintf(stderr, "%s\n", error);
+		return (EINVAL);
+	}
+
+	LibAliasAttachHandlers(m);
+	return (0);
+}
+
+int
+LibAliasUnLoadAllModule(void)
+{
+	struct dll *t;
+	struct proto_handler *p;
+
+	/* Unload all modules then reload everything. */
+	while ((p = first_handler()) != NULL) {	
+		detach_handler(p);
+	}
+	while ((t = walk_dll_chain()) != NULL) {	
+		dlclose(t->handle);
+		free(t);
+	}
+	return (1);
+}
+
+#endif
+
+#ifdef _KERNEL
+/*
+ * m_megapullup() - this function is a big hack.
+ * Thankfully, it's only used in ng_nat and ipfw+nat.
+ *
+ * It allocates an mbuf with cluster and copies the whole chain into cluster,
+ * so that it is all contiguous and the whole packet can be accessed via a
+ * plain (char *) pointer.  This is required, because libalias doesn't know
+ * how to handle mbuf chains.
+ *
+ * On success, m_megapullup returns an mbuf with cluster containing the input
+ * packet, on failure NULL.  In both cases, the input packet is consumed.
+ */
+struct mbuf *
+m_megapullup(struct mbuf *m, int len) {
+	struct mbuf *mcl;
+	caddr_t cp;
+	
+	if (len > MCLBYTES)
+		goto bad;
+	
+	if ((mcl = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR)) == NULL)
+		goto bad;
+ 
+	cp = mtod(mcl, caddr_t);
+	m_copydata(m, 0, len, cp);
+	m_move_pkthdr(mcl, m);
+	mcl->m_len = mcl->m_pkthdr.len;
+	m_freem(m);
+ 
+	return (mcl);
+bad:
+	m_freem(m);
+	return (NULL);
+}
+#endif

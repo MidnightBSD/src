@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_irc.c,v 1.21 2005/06/27 07:36:02 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_irc.c,v 1.23 2007/04/04 03:16:59 kan Exp $");
 
 /* Alias_irc.c intercepts packages contain IRC CTCP commands, and
 	changes DCC commands to export a port on the aliasing host instead
@@ -50,12 +50,14 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_irc.c,v 1.21 2005/06/27 07:36
 /* Includes */
 #ifdef _KERNEL
 #include <sys/param.h>
-#include <sys/libkern.h>
 #include <sys/ctype.h>
 #include <sys/limits.h>
+#include <sys/systm.h>
+#include <sys/kernel.h>
+#include <sys/module.h>
 #else
+#include <errno.h>
 #include <sys/types.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -69,15 +71,89 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_irc.c,v 1.21 2005/06/27 07:36
 #ifdef _KERNEL
 #include <netinet/libalias/alias.h>
 #include <netinet/libalias/alias_local.h>
+#include <netinet/libalias/alias_mod.h>
 #else
 #include "alias_local.h"
+#include "alias_mod.h"
 #endif
+
+#define IRC_CONTROL_PORT_NUMBER_1 6667
+#define IRC_CONTROL_PORT_NUMBER_2 6668
 
 /* Local defines */
 #define DBprintf(a)
 
+static void
+AliasHandleIrcOut(struct libalias *, struct ip *, struct alias_link *,	
+		  int maxpacketsize);
 
-void
+static int 
+fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+
+	if (ah->dport == NULL || ah->dport == NULL || ah->lnk == NULL || 
+	    ah->maxpktsize == 0)
+		return (-1);
+	if (ntohs(*ah->dport) == IRC_CONTROL_PORT_NUMBER_1
+	    || ntohs(*ah->dport) == IRC_CONTROL_PORT_NUMBER_2)
+		return (0);
+	return (-1);
+}
+
+static int 
+protohandler(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+	
+	AliasHandleIrcOut(la, pip, ah->lnk, ah->maxpktsize);
+	return (0);
+}
+
+struct proto_handler handlers[] = {
+	{ 
+	  .pri = 90, 
+	  .dir = OUT, 
+	  .proto = TCP, 
+	  .fingerprint = &fingerprint, 
+	  .protohandler = &protohandler
+	}, 
+	{ EOH }
+};
+
+static int
+mod_handler(module_t mod, int type, void *data)
+{
+	int error;
+
+	switch (type) {
+	case MOD_LOAD:
+		error = 0;
+		LibAliasAttachHandlers(handlers);
+		break;
+	case MOD_UNLOAD:
+		error = 0;
+		LibAliasDetachHandlers(handlers);
+		break;
+	default:
+		error = EINVAL;
+	}
+	return (error);
+}
+
+#ifdef _KERNEL
+static 
+#endif
+moduledata_t alias_mod = {
+       "alias_irc", mod_handler, NULL
+};
+
+/* Kernel module definition. */
+#ifdef	_KERNEL
+DECLARE_MODULE(alias_irc, alias_mod, SI_SUB_DRIVERS, SI_ORDER_SECOND);
+MODULE_VERSION(alias_irc, 1);
+MODULE_DEPEND(alias_irc, libalias, 1, 1, 1);
+#endif
+
+static void
 AliasHandleIrcOut(struct libalias *la,
     struct ip *pip,		/* IP packet to examine */
     struct alias_link *lnk,	/* Which link are we on? */

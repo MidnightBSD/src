@@ -25,9 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/netinet/ip_divert.c,v 1.113.2.1 2005/11/16 10:31:22 ru Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/ip_divert.c,v 1.130 2007/10/07 20:44:22 silby Exp $");
 
 #if !defined(KLD_MODULE)
 #include "opt_inet.h"
@@ -45,10 +46,10 @@
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
-#include <sys/mac.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
 #include <sys/kernel.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/signalvar.h>
@@ -61,6 +62,7 @@
 #include <vm/uma.h>
 
 #include <net/if.h>
+#include <net/netisr.h> 
 #include <net/route.h>
 
 #include <netinet/in.h>
@@ -71,6 +73,8 @@
 #include <netinet/ip_divert.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_fw.h>
+
+#include <security/mac/mac_framework.h>
 
 /*
  * Divert sockets
@@ -116,22 +120,51 @@ static u_long	div_recvspace = DIVRCVQ;	/* XXX sysctl ? */
 /*
  * Initialize divert connection block queue.
  */
+static void
+div_zone_change(void *tag)
+{
+
+	uma_zone_set_max(divcbinfo.ipi_zone, maxsockets);
+}
+
+static int
+div_inpcb_init(void *mem, int size, int flags)
+{
+	struct inpcb *inp = mem;
+
+	INP_LOCK_INIT(inp, "inp", "divinp");
+	return (0);
+}
+
+static void
+div_inpcb_fini(void *mem, int size)
+{
+	struct inpcb *inp = mem;
+
+	INP_LOCK_DESTROY(inp);
+}
+
 void
 div_init(void)
 {
+
 	INP_INFO_LOCK_INIT(&divcbinfo, "div");
 	LIST_INIT(&divcb);
-	divcbinfo.listhead = &divcb;
+	divcbinfo.ipi_listhead = &divcb;
 	/*
 	 * XXX We don't use the hash list for divert IP, but it's easier
 	 * to allocate a one entry hash list than it is to check all
 	 * over the place for hashbase == NULL.
 	 */
-	divcbinfo.hashbase = hashinit(1, M_PCB, &divcbinfo.hashmask);
-	divcbinfo.porthashbase = hashinit(1, M_PCB, &divcbinfo.porthashmask);
+	divcbinfo.ipi_hashbase = hashinit(1, M_PCB, &divcbinfo.ipi_hashmask);
+	divcbinfo.ipi_porthashbase = hashinit(1, M_PCB,
+	    &divcbinfo.ipi_porthashmask);
 	divcbinfo.ipi_zone = uma_zcreate("divcb", sizeof(struct inpcb),
-	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, UMA_ZONE_NOFREE);
+	    NULL, NULL, div_inpcb_init, div_inpcb_fini, UMA_ALIGN_PTR,
+	    UMA_ZONE_NOFREE);
 	uma_zone_set_max(divcbinfo.ipi_zone, maxsockets);
+	EVENTHANDLER_REGISTER(maxsockets_change, div_zone_change,
+		NULL, EVENTHANDLER_PRI_ANY);
 }
 
 /*
@@ -197,8 +230,6 @@ divert_packet(struct mbuf *m, int incoming)
 
 		/* Find IP address for receive interface */
 		TAILQ_FOREACH(ifa, &m->m_pkthdr.rcvif->if_addrhead, ifa_link) {
-			if (ifa->ifa_addr == NULL)
-				continue;
 			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
 			divsrc.sin_addr =
@@ -270,12 +301,13 @@ divert_packet(struct mbuf *m, int incoming)
  * the interface with that address.
  */
 static int
-div_output(struct socket *so, struct mbuf *m,
-	struct sockaddr_in *sin, struct mbuf *control)
+div_output(struct socket *so, struct mbuf *m, struct sockaddr_in *sin,
+    struct mbuf *control)
 {
 	struct m_tag *mtag;
 	struct divert_tag *dt;
 	int error = 0;
+	struct mbuf *options;
 
 	/*
 	 * An mbuf may hasn't come from userland, but we pretend
@@ -332,6 +364,8 @@ div_output(struct socket *so, struct mbuf *m,
 		if (((ip->ip_hl != (sizeof (*ip) >> 2)) && inp->inp_options) ||
 		     ((u_short)ntohs(ip->ip_len) > m->m_pkthdr.len)) {
 			error = EINVAL;
+			INP_UNLOCK(inp);
+			INP_INFO_WUNLOCK(&divcbinfo);
 			m_freem(m);
 		} else {
 			/* Convert fields to host order for ip_output() */
@@ -344,15 +378,46 @@ div_output(struct socket *so, struct mbuf *m,
 #ifdef MAC
 			mac_create_mbuf_from_inpcb(inp, m);
 #endif
-			error = ip_output(m,
-				    inp->inp_options, NULL,
-				    ((so->so_options & SO_DONTROUTE) ?
-				    IP_ROUTETOIF : 0) |
-				    IP_ALLOWBROADCAST | IP_RAWOUTPUT,
-				    inp->inp_moptions, NULL);
+			/*
+			 * Get ready to inject the packet into ip_output().
+			 * Just in case socket options were specified on the
+			 * divert socket, we duplicate them.  This is done
+			 * to avoid having to hold the PCB locks over the call
+			 * to ip_output(), as doing this results in a number of
+			 * lock ordering complexities.
+			 *
+			 * Note that we set the multicast options argument for
+			 * ip_output() to NULL since it should be invariant that
+			 * they are not present.
+			 */
+			KASSERT(inp->inp_moptions == NULL,
+			    ("multicast options set on a divert socket"));
+			options = NULL;
+			/*
+			 * XXXCSJP: It is unclear to me whether or not it makes
+			 * sense for divert sockets to have options.  However,
+			 * for now we will duplicate them with the INP locks
+			 * held so we can use them in ip_output() without
+			 * requring a reference to the pcb.
+			 */
+			if (inp->inp_options != NULL) {
+				options = m_dup(inp->inp_options, M_DONTWAIT);
+				if (options == NULL)
+					error = ENOBUFS;
+			}
+			INP_UNLOCK(inp);
+			INP_INFO_WUNLOCK(&divcbinfo);
+			if (error == ENOBUFS) {
+				m_freem(m);
+				return (error);
+			}
+			error = ip_output(m, options, NULL,
+			    ((so->so_options & SO_DONTROUTE) ?
+			    IP_ROUTETOIF : 0) | IP_ALLOWBROADCAST |
+			    IP_RAWOUTPUT, NULL, NULL);
+			if (options != NULL)
+				m_freem(options);
 		}
-		INP_UNLOCK(inp);
-		INP_INFO_WUNLOCK(&divcbinfo);
 	} else {
 		dt->info |= IP_FW_DIVERT_LOOPBACK_FLAG;
 		if (m->m_pkthdr.rcvif == NULL) {
@@ -377,8 +442,8 @@ div_output(struct socket *so, struct mbuf *m,
 		mac_create_mbuf_from_socket(so, m);
 		SOCK_UNLOCK(so);
 #endif
-		/* Send packet to input processing */
-		ip_input(m);
+		/* Send packet to input processing via netisr */
+		netisr_queue(NETISR_IP, m);
 	}
 
 	return error;
@@ -394,28 +459,23 @@ div_attach(struct socket *so, int proto, struct thread *td)
 	struct inpcb *inp;
 	int error;
 
-	INP_INFO_WLOCK(&divcbinfo);
 	inp  = sotoinpcb(so);
-	if (inp != 0) {
-		INP_INFO_WUNLOCK(&divcbinfo);
-		return EINVAL;
-	}
-	if (td && (error = suser(td)) != 0) {
-		INP_INFO_WUNLOCK(&divcbinfo);
-		return error;
+	KASSERT(inp == NULL, ("div_attach: inp != NULL"));
+	if (td != NULL) {
+		error = priv_check(td, PRIV_NETINET_DIVERT);
+		if (error)
+			return (error);
 	}
 	error = soreserve(so, div_sendspace, div_recvspace);
-	if (error) {
-		INP_INFO_WUNLOCK(&divcbinfo);
+	if (error)
 		return error;
-	}
-	error = in_pcballoc(so, &divcbinfo, "divinp");
+	INP_INFO_WLOCK(&divcbinfo);
+	error = in_pcballoc(so, &divcbinfo);
 	if (error) {
 		INP_INFO_WUNLOCK(&divcbinfo);
 		return error;
 	}
 	inp = (struct inpcb *)so->so_pcb;
-	INP_LOCK(inp);
 	INP_INFO_WUNLOCK(&divcbinfo);
 	inp->inp_ip_p = proto;
 	inp->inp_vflag |= INP_IPV4;
@@ -424,21 +484,18 @@ div_attach(struct socket *so, int proto, struct thread *td)
 	return 0;
 }
 
-static int
+static void
 div_detach(struct socket *so)
 {
 	struct inpcb *inp;
 
-	INP_INFO_WLOCK(&divcbinfo);
 	inp = sotoinpcb(so);
-	if (inp == 0) {
-		INP_INFO_WUNLOCK(&divcbinfo);
-		return EINVAL;
-	}
+	KASSERT(inp != NULL, ("div_detach: inp == NULL"));
+	INP_INFO_WLOCK(&divcbinfo);
 	INP_LOCK(inp);
 	in_pcbdetach(inp);
+	in_pcbfree(inp);
 	INP_INFO_WUNLOCK(&divcbinfo);
-	return 0;
 }
 
 static int
@@ -447,12 +504,8 @@ div_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 	struct inpcb *inp;
 	int error;
 
-	INP_INFO_WLOCK(&divcbinfo);
 	inp = sotoinpcb(so);
-	if (inp == 0) {
-		INP_INFO_WUNLOCK(&divcbinfo);
-		return EINVAL;
-	}
+	KASSERT(inp != NULL, ("div_bind: inp == NULL"));
 	/* in_pcbbind assumes that nam is a sockaddr_in
 	 * and in_pcbbind requires a valid address. Since divert
 	 * sockets don't we need to make sure the address is
@@ -461,13 +514,12 @@ div_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 	 * and should probably have its own family.
 	 */
 	if (nam->sa_family != AF_INET)
-		error = EAFNOSUPPORT;
-	else {
-		((struct sockaddr_in *)nam)->sin_addr.s_addr = INADDR_ANY;
-		INP_LOCK(inp);
-		error = in_pcbbind(inp, nam, td->td_ucred);
-		INP_UNLOCK(inp);
-	}
+		return EAFNOSUPPORT;
+	((struct sockaddr_in *)nam)->sin_addr.s_addr = INADDR_ANY;
+	INP_INFO_WLOCK(&divcbinfo);
+	INP_LOCK(inp);
+	error = in_pcbbind(inp, nam, td->td_ucred);
+	INP_UNLOCK(inp);
 	INP_INFO_WUNLOCK(&divcbinfo);
 	return error;
 }
@@ -477,14 +529,9 @@ div_shutdown(struct socket *so)
 {
 	struct inpcb *inp;
 
-	INP_INFO_RLOCK(&divcbinfo);
 	inp = sotoinpcb(so);
-	if (inp == 0) {
-		INP_INFO_RUNLOCK(&divcbinfo);
-		return EINVAL;
-	}
+	KASSERT(inp != NULL, ("div_shutdown: inp == NULL"));
 	INP_LOCK(inp);
-	INP_INFO_RUNLOCK(&divcbinfo);
 	socantsendmore(so);
 	INP_UNLOCK(inp);
 	return 0;
@@ -492,7 +539,7 @@ div_shutdown(struct socket *so)
 
 static int
 div_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
-	 struct mbuf *control, struct thread *td)
+    struct mbuf *control, struct thread *td)
 {
 	/* Packet must have a header (but that's about it) */
 	if (m->m_len < sizeof (struct ip) &&
@@ -566,7 +613,7 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 		return ENOMEM;
 	
 	INP_INFO_RLOCK(&divcbinfo);
-	for (inp = LIST_FIRST(divcbinfo.listhead), i = 0; inp && i < n;
+	for (inp = LIST_FIRST(divcbinfo.ipi_listhead), i = 0; inp && i < n;
 	     inp = LIST_NEXT(inp, inp_list)) {
 		INP_LOCK(inp);
 		if (inp->inp_gencnt <= gencnt &&
@@ -580,6 +627,7 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	error = 0;
 	for (i = 0; i < n; i++) {
 		inp = inp_list[i];
+		INP_LOCK(inp);
 		if (inp->inp_gencnt <= gencnt) {
 			struct xinpcb xi;
 			bzero(&xi, sizeof(xi));
@@ -588,8 +636,10 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 			bcopy(inp, &xi.xi_inp, sizeof *inp);
 			if (inp->inp_socket)
 				sotoxsocket(inp->inp_socket, &xi.xi_socket);
+			INP_UNLOCK(inp);
 			error = SYSCTL_OUT(req, &xi, sizeof xi);
-		}
+		} else
+			INP_UNLOCK(inp);
 	}
 	if (!error) {
 		/*
@@ -610,26 +660,6 @@ div_pcblist(SYSCTL_HANDLER_ARGS)
 	return error;
 }
 
-/*
- * This is the wrapper function for in_setsockaddr.  We just pass down
- * the pcbinfo for in_setpeeraddr to lock.
- */
-static int
-div_sockaddr(struct socket *so, struct sockaddr **nam)
-{
-	return (in_setsockaddr(so, nam, &divcbinfo));
-}
-
-/*
- * This is the wrapper function for in_setpeeraddr. We just pass down
- * the pcbinfo for in_setpeeraddr to lock.
- */
-static int
-div_peeraddr(struct socket *so, struct sockaddr **nam)
-{
-	return (in_setpeeraddr(so, nam, &divcbinfo));
-}
-
 #ifdef SYSCTL_NODE
 SYSCTL_NODE(_net_inet, IPPROTO_DIVERT, divert, CTLFLAG_RW, 0, "IPDIVERT");
 SYSCTL_PROC(_net_inet_divert, OID_AUTO, pcblist, CTLFLAG_RD, 0, 0,
@@ -641,10 +671,10 @@ struct pr_usrreqs div_usrreqs = {
 	.pru_bind =		div_bind,
 	.pru_control =		in_control,
 	.pru_detach =		div_detach,
-	.pru_peeraddr =		div_peeraddr,
+	.pru_peeraddr =		in_getpeeraddr,
 	.pru_send =		div_send,
 	.pru_shutdown =		div_shutdown,
-	.pru_sockaddr =		div_sockaddr,
+	.pru_sockaddr =		in_getsockaddr,
 	.pru_sosetlabel =	in_pcbsosetlabel
 };
 

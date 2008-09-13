@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet6/raw_ip6.c,v 1.50.2.7 2005/12/26 00:59:12 suz Exp $
+ * $FreeBSD: src/sys/netinet6/raw_ip6.c,v 1.73 2007/07/05 16:29:40 delphij Exp $
  */
 
 /*-
@@ -68,13 +68,13 @@
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/sx.h>
-#include <sys/systm.h>
 #include <sys/syslog.h>
 
 #include <net/if.h>
@@ -96,14 +96,9 @@
 #include <netinet6/scope6_var.h>
 
 #ifdef IPSEC
-#include <netinet6/ipsec.h>
-#include <netinet6/ipsec6.h>
-#endif /*IPSEC*/
-
-#ifdef FAST_IPSEC
 #include <netipsec/ipsec.h>
 #include <netipsec/ipsec6.h>
-#endif /* FAST_IPSEC */
+#endif /* IPSEC */
 
 #include <machine/stdarg.h>
 
@@ -122,14 +117,22 @@ extern u_long	rip_recvspace;
 struct rip6stat rip6stat;
 
 /*
+ * Hooks for multicast forwarding.
+ */
+struct socket *ip6_mrouter = NULL;
+int (*ip6_mrouter_set)(struct socket *, struct sockopt *);
+int (*ip6_mrouter_get)(struct socket *, struct sockopt *);
+int (*ip6_mrouter_done)(void);
+int (*ip6_mforward)(struct ip6_hdr *, struct ifnet *, struct mbuf *);
+int (*mrt6_ioctl)(int, caddr_t);
+
+/*
  * Setup generic address and protocol structures
  * for raw_input routine, then pass them along with
  * mbuf chain.
  */
 int
-rip6_input(mp, offp, proto)
-	struct	mbuf **mp;
-	int	*offp, proto;
+rip6_input(struct mbuf **mp, int *offp, int proto)
 {
 	struct mbuf *m = *mp;
 	register struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
@@ -176,18 +179,16 @@ docontinue:
 		if (last) {
 			struct mbuf *n = m_copy(m, 0, (int)M_COPYALL);
 
-#if defined(IPSEC) || defined(FAST_IPSEC)
+#ifdef IPSEC
 			/*
 			 * Check AH/ESP integrity.
 			 */
 			if (n && ipsec6_in_reject(n, last)) {
 				m_freem(n);
-#ifdef IPSEC
 				ipsec6stat.in_polvio++;
-#endif /*IPSEC*/
 				/* do not inject data into pcb */
 			} else
-#endif /*IPSEC || FAST_IPSEC*/
+#endif /* IPSEC */
 			if (n) {
 				if (last->in6p_flags & IN6P_CONTROLOPTS ||
 				    last->in6p_socket->so_options & SO_TIMESTAMP)
@@ -209,20 +210,18 @@ docontinue:
 		}
 		last = in6p;
 	}
-#if defined(IPSEC) || defined(FAST_IPSEC)
+#ifdef IPSEC
 	/*
 	 * Check AH/ESP integrity.
 	 */
 	if (last && ipsec6_in_reject(m, last)) {
 		m_freem(m);
-#ifdef IPSEC
 		ipsec6stat.in_polvio++;
-#endif /*IPSEC*/
 		ip6stat.ip6s_delivered--;
 		/* do not inject data into pcb */
 		INP_UNLOCK(last);
 	} else
-#endif /*IPSEC || FAST_IPSEC*/
+#endif /* IPSEC */
 	if (last) {
 		if (last->in6p_flags & IN6P_CONTROLOPTS ||
 		    last->in6p_socket->so_options & SO_TIMESTAMP)
@@ -257,10 +256,7 @@ docontinue:
 }
 
 void
-rip6_ctlinput(cmd, sa, d)
-	int cmd;
-	struct sockaddr *sa;
-	void *d;
+rip6_ctlinput(int cmd, struct sockaddr *sa, void *d)
 {
 	struct ip6_hdr *ip6;
 	struct mbuf *m;
@@ -342,7 +338,7 @@ rip6_output(m, va_alist)
 	INP_LOCK(in6p);
 
 	priv = 0;
-	if (so->so_cred->cr_uid == 0)
+	if (suser_cred(so->so_cred, 0) == 0)
 		priv = 1;
 	dst = &dstsock->sin6_addr;
 	if (control) {
@@ -480,9 +476,7 @@ rip6_output(m, va_alist)
  * Raw IPv6 socket option processing.
  */
 int
-rip6_ctloutput(so, sopt)
-	struct socket *so;
-	struct sockopt *sopt;
+rip6_ctloutput(struct socket *so, struct sockopt *sopt)
 {
 	int error;
 
@@ -507,7 +501,8 @@ rip6_ctloutput(so, sopt)
 		case MRT6_ADD_MFC:
 		case MRT6_DEL_MFC:
 		case MRT6_PIM:
-			error = ip6_mrouter_get(so, sopt);
+			error = ip6_mrouter_get ?  ip6_mrouter_get(so, sopt) :
+			    EOPNOTSUPP;
 			break;
 		case IPV6_CHECKSUM:
 			error = ip6_raw_ctloutput(so, sopt);
@@ -527,7 +522,8 @@ rip6_ctloutput(so, sopt)
 		case MRT6_ADD_MFC:
 		case MRT6_DEL_MFC:
 		case MRT6_PIM:
-			error = ip6_mrouter_set(so, sopt);
+			error = ip6_mrouter_set ?  ip6_mrouter_set(so, sopt) :
+			    EOPNOTSUPP;
 			break;
 		case IPV6_CHECKSUM:
 			error = ip6_raw_ctloutput(so, sopt);
@@ -547,39 +543,27 @@ rip6_attach(struct socket *so, int proto, struct thread *td)
 {
 	struct inpcb *inp;
 	struct icmp6_filter *filter;
-	int error, s;
+	int error;
 
-	INP_INFO_WLOCK(&ripcbinfo);
 	inp = sotoinpcb(so);
-	if (inp) {
-		INP_INFO_WUNLOCK(&ripcbinfo);
-		panic("rip6_attach");
-	}
-	if (td && (error = suser(td)) != 0) {
-		INP_INFO_WUNLOCK(&ripcbinfo);
+	KASSERT(inp == NULL, ("rip6_attach: inp != NULL"));
+	if (td && (error = suser(td)) != 0)
 		return error;
-	}
 	error = soreserve(so, rip_sendspace, rip_recvspace);
-	if (error) {
-		INP_INFO_WUNLOCK(&ripcbinfo);
+	if (error)
 		return error;
-	}
 	MALLOC(filter, struct icmp6_filter *,
 	       sizeof(struct icmp6_filter), M_PCB, M_NOWAIT);
-	if (filter == NULL) {
-		INP_INFO_WUNLOCK(&ripcbinfo);
+	if (filter == NULL)
 		return ENOMEM;
-	}
-	s = splnet();
-	error = in_pcballoc(so, &ripcbinfo, "raw6inp");
-	splx(s);
+	INP_INFO_WLOCK(&ripcbinfo);
+	error = in_pcballoc(so, &ripcbinfo);
 	if (error) {
 		INP_INFO_WUNLOCK(&ripcbinfo);
 		FREE(filter, M_PCB);
 		return error;
 	}
 	inp = (struct inpcb *)so->so_pcb;
-	INP_LOCK(inp);
 	INP_INFO_WUNLOCK(&ripcbinfo);
 	inp->inp_vflag |= INP_IPV6;
 	inp->in6p_ip6_nxt = (long)proto;
@@ -591,35 +575,49 @@ rip6_attach(struct socket *so, int proto, struct thread *td)
 	return 0;
 }
 
-static int
+static void
 rip6_detach(struct socket *so)
 {
 	struct inpcb *inp;
 
-	INP_INFO_WLOCK(&ripcbinfo);
 	inp = sotoinpcb(so);
-	if (inp == 0) {
-		INP_INFO_WUNLOCK(&ripcbinfo);
-		panic("rip6_detach");
-	}
-	/* xxx: RSVP */
-	if (so == ip6_mrouter)
+	KASSERT(inp != NULL, ("rip6_detach: inp == NULL"));
+
+	if (so == ip6_mrouter && ip6_mrouter_done)
 		ip6_mrouter_done();
+	/* xxx: RSVP */
+	INP_INFO_WLOCK(&ripcbinfo);
+	INP_LOCK(inp);
 	if (inp->in6p_icmp6filt) {
 		FREE(inp->in6p_icmp6filt, M_PCB);
 		inp->in6p_icmp6filt = NULL;
 	}
-	INP_LOCK(inp);
 	in6_pcbdetach(inp);
+	in6_pcbfree(inp);
 	INP_INFO_WUNLOCK(&ripcbinfo);
-	return 0;
 }
 
-static int
+/* XXXRW: This can't ever be called. */
+static void
 rip6_abort(struct socket *so)
 {
+	struct inpcb *inp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("rip6_abort: inp == NULL"));
+
 	soisdisconnected(so);
-	return rip6_detach(so);
+}
+
+static void
+rip6_close(struct socket *so)
+{
+	struct inpcb *inp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("rip6_close: inp == NULL"));
+
+	soisdisconnected(so);
 }
 
 static int
@@ -630,7 +628,8 @@ rip6_disconnect(struct socket *so)
 	if ((so->so_state & SS_ISCONNECTED) == 0)
 		return ENOTCONN;
 	inp->in6p_faddr = in6addr_any;
-	return rip6_abort(so);
+	rip6_abort(so);
+	return (0);
 }
 
 static int
@@ -641,6 +640,7 @@ rip6_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 	struct ifaddr *ia = NULL;
 	int error = 0;
 
+	KASSERT(inp != NULL, ("rip6_bind: inp == NULL"));
 	if (nam->sa_len != sizeof(*addr))
 		return EINVAL;
 	if (TAILQ_EMPTY(&ifnet) || addr->sin6_family != AF_INET6)
@@ -674,6 +674,7 @@ rip6_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 	struct ifnet *ifp = NULL;
 	int error = 0, scope_ambiguous = 0;
 
+	KASSERT(inp != NULL, ("rip6_connect: inp == NULL"));
 	if (nam->sa_len != sizeof(*addr))
 		return EINVAL;
 	if (TAILQ_EMPTY(&ifnet))
@@ -726,10 +727,9 @@ rip6_shutdown(struct socket *so)
 {
 	struct inpcb *inp;
 
-	INP_INFO_RLOCK(&ripcbinfo);
 	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("rip6_shutdown: inp == NULL"));
 	INP_LOCK(inp);
-	INP_INFO_RUNLOCK(&ripcbinfo);
 	socantsendmore(so);
 	INP_UNLOCK(inp);
 	return 0;
@@ -737,13 +737,14 @@ rip6_shutdown(struct socket *so)
 
 static int
 rip6_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
-	 struct mbuf *control, struct thread *td)
+    struct mbuf *control, struct thread *td)
 {
 	struct inpcb *inp = sotoinpcb(so);
 	struct sockaddr_in6 tmp;
 	struct sockaddr_in6 *dst;
 	int ret;
 
+	KASSERT(inp != NULL, ("rip6_send: inp == NULL"));
 	INP_INFO_WLOCK(&ripcbinfo);
 	/* always copy sockaddr to avoid overwrites */
 	/* Unlocked read. */
@@ -802,8 +803,9 @@ struct pr_usrreqs rip6_usrreqs = {
 	.pru_control =		in6_control,
 	.pru_detach =		rip6_detach,
 	.pru_disconnect =	rip6_disconnect,
-	.pru_peeraddr =		in6_setpeeraddr,
+	.pru_peeraddr =		in6_getpeeraddr,
 	.pru_send =		rip6_send,
 	.pru_shutdown =		rip6_shutdown,
-	.pru_sockaddr =		in6_setsockaddr,
+	.pru_sockaddr =		in6_getsockaddr,
+	.pru_close =		rip6_close,
 };

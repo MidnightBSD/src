@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_util.c,v 1.18 2005/06/27 07:36:02 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_util.c,v 1.20 2006/12/15 12:50:06 piso Exp $");
 
 
 /*
@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_util.c,v 1.18 2005/06/27 07:3
 
 #ifdef _KERNEL
 #include <sys/param.h>
+#include <sys/proc.h>
 #else
 #include <sys/types.h>
 #include <stdio.h>
@@ -75,6 +76,7 @@ LibAliasInternetChecksum(struct libalias *la __unused, u_short * ptr,
 {
 	int sum, oddbyte;
 
+	LIBALIAS_LOCK(la);
 	sum = 0;
 	while (nbytes > 1) {
 		sum += *ptr++;
@@ -88,6 +90,7 @@ LibAliasInternetChecksum(struct libalias *la __unused, u_short * ptr,
 	}
 	sum = (sum >> 16) + (sum & 0xffff);
 	sum += (sum >> 16);
+	LIBALIAS_UNLOCK(la);
 	return (~sum);
 }
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_cksum.c,v 1.10.2.1 2005/11/04 20:26:15 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_cksum.c,v 1.16 2007/07/05 16:23:47 delphij Exp $	*/
 /*	$KAME: in6_cksum.c,v 1.10 2000/12/03 00:53:59 itojun Exp $	*/
 
 /*-
@@ -68,8 +68,6 @@
 #include <netinet/ip6.h>
 #include <netinet6/scope6_var.h>
 
-#include <net/net_osdep.h>
-
 /*
  * Checksum routine for Internet Protocol family headers (Portable Version).
  *
@@ -86,12 +84,8 @@
  * len is a total length of a transport segment.
  * (e.g. TCP header + TCP payload)
  */
-
 int
-in6_cksum(m, nxt, off, len)
-	struct mbuf *m;
-	u_int8_t nxt;
-	u_int32_t off, len;
+in6_cksum(struct mbuf *m, u_int8_t nxt, u_int32_t off, u_int32_t len)
 {
 	u_int16_t *w;
 	int sum = 0;
@@ -105,7 +99,7 @@ in6_cksum(m, nxt, off, len)
 			u_int32_t	ph_len;
 			u_int8_t	ph_zero[3];
 			u_int8_t	ph_nxt;
-		} ph __packed;
+		} __packed ph;
 	} uph;
 	union {
 		u_int8_t	c[2];
@@ -156,7 +150,7 @@ in6_cksum(m, nxt, off, len)
 	/*
 	 * Secondly calculate a summary of the first mbuf excluding offset.
 	 */
-	while (m != NULL && off > 0) {
+	while (off > 0) {
 		if (m->m_len <= off)
 			off -= m->m_len;
 		else

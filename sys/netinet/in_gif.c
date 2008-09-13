@@ -1,4 +1,3 @@
-/*	$FreeBSD: src/sys/netinet/in_gif.c,v 1.31.2.3 2006/01/31 15:56:46 glebius Exp $	*/
 /*	$KAME: in_gif.c,v 1.54 2001/05/14 14:02:16 itojun Exp $	*/
 
 /*-
@@ -29,6 +28,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/in_gif.c,v 1.38 2007/10/07 20:44:22 silby Exp $");
 
 #include "opt_mrouting.h"
 #include "opt_inet.h"
@@ -68,8 +70,6 @@
 
 #include <net/if_gif.h>	
 
-#include <net/net_osdep.h>
-
 static int gif_validate4(const struct ip *, struct gif_softc *,
 	struct ifnet *);
 
@@ -90,10 +90,7 @@ SYSCTL_INT(_net_inet_ip, IPCTL_GIF_TTL, gifttl, CTLFLAG_RW,
 	&ip_gif_ttl,	0, "");
 
 int
-in_gif_output(ifp, family, m)
-	struct ifnet	*ifp;
-	int		family;
-	struct mbuf	*m;
+in_gif_output(struct ifnet *ifp, int family, struct mbuf *m)
 {
 	struct gif_softc *sc = ifp->if_softc;
 	struct sockaddr_in *dst = (struct sockaddr_in *)&sc->gif_ro.ro_dst;
@@ -240,9 +237,7 @@ in_gif_output(ifp, family, m)
 }
 
 void
-in_gif_input(m, off)
-	struct mbuf *m;
-	int off;
+in_gif_input(struct mbuf *m, int off)
 {
 	struct ifnet *gifp = NULL;
 	struct gif_softc *sc;
@@ -336,10 +331,7 @@ in_gif_input(m, off)
  * validate outer address.
  */
 static int
-gif_validate4(ip, sc, ifp)
-	const struct ip *ip;
-	struct gif_softc *sc;
-	struct ifnet *ifp;
+gif_validate4(const struct ip *ip, struct gif_softc *sc, struct ifnet *ifp)
 {
 	struct sockaddr_in *src, *dst;
 	struct in_ifaddr *ia4;
@@ -384,10 +376,10 @@ gif_validate4(ip, sc, ifp)
 			    (u_int32_t)ntohl(sin.sin_addr.s_addr));
 #endif
 			if (rt)
-				rtfree(rt);
+				RTFREE_LOCKED(rt);
 			return 0;
 		}
-		rtfree(rt);
+		RTFREE_LOCKED(rt);
 	}
 
 	return 32 * 2;
@@ -398,11 +390,7 @@ gif_validate4(ip, sc, ifp)
  * matched the physical addr family.  see gif_encapcheck().
  */
 int
-gif_encapcheck4(m, off, proto, arg)
-	const struct mbuf *m;
-	int off;
-	int proto;
-	void *arg;
+gif_encapcheck4(const struct mbuf *m, int off, int proto, void *arg)
 {
 	struct ip ip;
 	struct gif_softc *sc;
@@ -419,8 +407,7 @@ gif_encapcheck4(m, off, proto, arg)
 }
 
 int
-in_gif_attach(sc)
-	struct gif_softc *sc;
+in_gif_attach(struct gif_softc *sc)
 {
 	sc->encap_cookie4 = encap_attach_func(AF_INET, -1, gif_encapcheck,
 	    &in_gif_protosw, sc);
@@ -430,8 +417,7 @@ in_gif_attach(sc)
 }
 
 int
-in_gif_detach(sc)
-	struct gif_softc *sc;
+in_gif_detach(struct gif_softc *sc)
 {
 	int error;
 

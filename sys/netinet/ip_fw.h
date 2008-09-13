@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/ip_fw.h,v 1.100.2.3 2006/02/17 16:46:47 ru Exp $
+ * $FreeBSD: src/sys/netinet/ip_fw.h,v 1.110.4.1 2008/01/28 17:44:30 rwatson Exp $
  */
 
 #ifndef _IPFW2_H
@@ -124,6 +124,7 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 	O_TEE,			/* arg1=port number		*/
 	O_FORWARD_IP,		/* fwd sockaddr			*/
 	O_FORWARD_MAC,		/* fwd mac			*/
+	O_NAT,                  /* nope                         */
 
 	/*
 	 * More opcodes.
@@ -157,6 +158,9 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 
 	O_UNREACH6,		/* arg1=icmpv6 code arg (deny)  */
 
+	O_TAG,   		/* arg1=tag number */
+	O_TAGGED,		/* arg1=tag number */
+
 	O_LAST_OPCODE		/* not an opcode!		*/
 };
 
@@ -170,6 +174,8 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 #define EXT_AH		0x8
 #define EXT_ESP		0x10
 #define EXT_DSTOPTS	0x20
+#define EXT_RTHDR0		0x40
+#define EXT_RTHDR2		0x80
 
 /*
  * Template for instructions.
@@ -214,6 +220,8 @@ typedef struct	_ipfw_insn {	/* template for instructions */
  * a given type.
  */
 #define	F_INSN_SIZE(t)	((sizeof (t))/sizeof(u_int32_t))
+
+#define MTAG_IPFW	1148380143	/* IPFW-tagged cookie */
 
 /*
  * This is used to store an array of 16-bit entries (ports etc.)
@@ -271,19 +279,6 @@ typedef struct	_ipfw_insn_if {
 } ipfw_insn_if;
 
 /*
- * This is used for pipe and queue actions, which need to store
- * a single pointer (which can have different size on different
- * architectures.
- * Note that, because of previous instructions, pipe_ptr might
- * be unaligned in the overall structure, so it needs to be
- * manipulated with care.
- */
-typedef struct	_ipfw_insn_pipe {
-	ipfw_insn	o;
-	void		*pipe_ptr;	/* XXX */
-} ipfw_insn_pipe;
-
-/*
  * This is used for storing an altq queue id number.
  */
 typedef struct _ipfw_insn_altq {
@@ -314,6 +309,75 @@ typedef struct  _ipfw_insn_log {
 	u_int32_t max_log;	/* how many do we log -- 0 = all */
 	u_int32_t log_left;	/* how many left to log 	*/
 } ipfw_insn_log;
+
+/*
+ * Data structures required by both ipfw(8) and ipfw(4) but not part of the
+ * management API are protcted by IPFW_INTERNAL.
+ */
+#ifdef IPFW_INTERNAL
+/* Server pool support (LSNAT). */
+struct cfg_spool {
+	LIST_ENTRY(cfg_spool)   _next;          /* chain of spool instances */
+	struct in_addr          addr;
+	u_short                 port;
+};
+#endif
+
+/* Redirect modes id. */
+#define REDIR_ADDR      0x01
+#define REDIR_PORT      0x02
+#define REDIR_PROTO     0x04
+
+#ifdef IPFW_INTERNAL
+/* Nat redirect configuration. */
+struct cfg_redir {
+	LIST_ENTRY(cfg_redir)   _next;          /* chain of redir instances */
+	u_int16_t               mode;           /* type of redirect mode */
+	struct in_addr	        laddr;          /* local ip address */
+	struct in_addr	        paddr;          /* public ip address */
+	struct in_addr	        raddr;          /* remote ip address */
+	u_short                 lport;          /* local port */
+	u_short                 pport;          /* public port */
+	u_short                 rport;          /* remote port  */
+	u_short                 pport_cnt;      /* number of public ports */
+	u_short                 rport_cnt;      /* number of remote ports */
+	int                     proto;          /* protocol: tcp/udp */
+	struct alias_link       **alink;	
+	/* num of entry in spool chain */
+	u_int16_t               spool_cnt;      
+	/* chain of spool instances */
+	LIST_HEAD(spool_chain, cfg_spool) spool_chain;
+};
+#endif
+
+#define NAT_BUF_LEN     1024
+
+#ifdef IPFW_INTERNAL
+/* Nat configuration data struct. */
+struct cfg_nat {
+	/* chain of nat instances */
+	LIST_ENTRY(cfg_nat)     _next;
+	int                     id;                     /* nat id */
+	struct in_addr          ip;                     /* nat ip address */
+	char                    if_name[IF_NAMESIZE];   /* interface name */
+	int                     mode;                   /* aliasing mode */
+	struct libalias	        *lib;                   /* libalias instance */
+	/* number of entry in spool chain */
+	int                     redir_cnt;              
+	/* chain of redir instances */
+	LIST_HEAD(redir_chain, cfg_redir) redir_chain;  
+};
+#endif
+
+#define SOF_NAT         sizeof(struct cfg_nat)
+#define SOF_REDIR       sizeof(struct cfg_redir)
+#define SOF_SPOOL       sizeof(struct cfg_spool)
+
+/* Nat command. */
+typedef struct	_ipfw_insn_nat {
+ 	ipfw_insn	o;
+ 	struct cfg_nat *nat;	
+} ipfw_insn_nat;
 
 /* Apply ipv6 mask on ipv6 addr */
 #define APPLY_MASK(addr,mask)                          \
@@ -359,6 +423,7 @@ typedef struct _ipfw_insn_icmp6 {
  *  + if a rule has a "log" option, then the first action
  *	(at ACTION_PTR(r)) MUST be O_LOG
  *  + if a rule has an "altq" option, it comes after "log"
+ *  + if a rule has an O_TAG option, it comes after "log" and "altq"
  *
  * NOTE: we use a simple linked list of rules because we never need
  * 	to delete a rule without scanning the list. We do not use
@@ -490,6 +555,7 @@ enum {
 	IP_FW_DUMMYNET,
 	IP_FW_NETGRAPH,
 	IP_FW_NGTEE,
+	IP_FW_NAT,
 };
 
 /* flags for divert mtag */
@@ -528,6 +594,7 @@ struct ip_fw_args {
 	struct inpcb	*inp;
 
 	struct _ip6dn_args	dummypar; /* dummynet->ip6_output */
+	struct sockaddr_in hopstore;	/* store here if cannot use a pointer */
 };
 
 /*
@@ -546,12 +613,13 @@ int ipfw_chk(struct ip_fw_args *);
 int ipfw_init(void);
 void ipfw_destroy(void);
 
-void flush_pipe_ptrs(struct dn_flow_set *match); /* used by dummynet */
-
 typedef int ip_fw_ctl_t(struct sockopt *);
 extern ip_fw_ctl_t *ip_fw_ctl_ptr;
 extern int fw_one_pass;
 extern int fw_enable;
+#ifdef INET6
+extern int fw6_enable;
+#endif
 
 /* For kernel ipfw_ether and ipfw_bridge. */
 typedef	int ip_fw_chk_t(struct ip_fw_args *args);

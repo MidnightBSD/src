@@ -25,8 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/netinet/ip_fastfwd.c,v 1.28.2.2 2005/08/29 17:52:53 andre Exp $
  */
 
 /*
@@ -75,6 +73,9 @@
  * is being followed here.
  */
 
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/ip_fastfwd.c,v 1.41 2007/10/07 20:44:23 silby Exp $");
+
 #include "opt_ipfw.h"
 #include "opt_ipstealth.h"
 
@@ -100,6 +101,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
+#include <netinet/ip_options.h>
 
 #include <machine/in_cksum.h>
 
@@ -150,7 +152,7 @@ ip_findroute(struct route *ro, struct in_addr dest, struct mbuf *m)
  * otherwise 0 is returned and the packet should be delivered
  * to ip_input for full processing.
  */
-int
+struct mbuf *
 ip_fastforward(struct mbuf *m)
 {
 	struct ip *ip;
@@ -170,7 +172,7 @@ ip_fastforward(struct mbuf *m)
 	 * Are we active and forwarding packets?
 	 */
 	if (!ipfastforward_active || !ipforwarding)
-		return 0;
+		return m;
 
 	M_ASSERTVALID(m);
 	M_ASSERTPKTHDR(m);
@@ -195,7 +197,7 @@ ip_fastforward(struct mbuf *m)
 	if (m->m_len < sizeof (struct ip) &&
 	   (m = m_pullup(m, sizeof (struct ip))) == NULL) {
 		ipstat.ips_toosmall++;
-		return 1;	/* mbuf already free'd */
+		return NULL;	/* mbuf already free'd */
 	}
 
 	ip = mtod(m, struct ip *);
@@ -217,9 +219,9 @@ ip_fastforward(struct mbuf *m)
 		goto drop;
 	}
 	if (hlen > m->m_len) {
-		if ((m = m_pullup(m, hlen)) == 0) {
+		if ((m = m_pullup(m, hlen)) == NULL) {
 			ipstat.ips_badhlen++;
-			return 1;
+			return NULL;	/* mbuf already free'd */
 		}
 		ip = mtod(m, struct ip *);
 	}
@@ -280,7 +282,7 @@ ip_fastforward(struct mbuf *m)
 	 * Is packet dropped by traffic conditioner?
 	 */
 	if (altq_input != NULL && (*altq_input)(m, AF_INET) == 0)
-		return 1;
+		goto drop;
 #endif
 
 	/*
@@ -292,11 +294,11 @@ ip_fastforward(struct mbuf *m)
 	 */
 	if (ip->ip_hl != (sizeof(struct ip) >> 2)) {
 		if (ip_doopts == 1)
-			return 0;
+			return m;
 		else if (ip_doopts == 2) {
 			icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_FILTER_PROHIB,
 				0, 0);
-			return 1;
+			return NULL;	/* mbuf already free'd */
 		}
 		/* else ignore IP options and continue */
 	}
@@ -317,15 +319,17 @@ ip_fastforward(struct mbuf *m)
 	    ntohl(ip->ip_dst.s_addr) == (u_long)INADDR_BROADCAST ||
 	    IN_MULTICAST(ntohl(ip->ip_src.s_addr)) ||
 	    IN_MULTICAST(ntohl(ip->ip_dst.s_addr)) ||
+	    IN_LINKLOCAL(ntohl(ip->ip_src.s_addr)) ||
+	    IN_LINKLOCAL(ntohl(ip->ip_dst.s_addr)) ||
 	    ip->ip_src.s_addr == INADDR_ANY ||
 	    ip->ip_dst.s_addr == INADDR_ANY )
-		return 0;
+		return m;
 
 	/*
 	 * Is it for a local address on this host?
 	 */
 	if (in_localip(ip->ip_dst))
-		return 0;
+		return m;
 
 	ipstat.ips_total++;
 
@@ -344,12 +348,12 @@ ip_fastforward(struct mbuf *m)
 	/*
 	 * Run through list of ipfilter hooks for input packets
 	 */
-	if (inet_pfil_hook.ph_busy_count == -1)
+	if (!PFIL_HOOKED(&inet_pfil_hook))
 		goto passin;
 
 	if (pfil_run_hooks(&inet_pfil_hook, &m, m->m_pkthdr.rcvif, PFIL_IN, NULL) ||
 	    m == NULL)
-		return 1;
+		goto drop;
 
 	M_ASSERTVALID(m);
 	M_ASSERTPKTHDR(m);
@@ -392,7 +396,7 @@ passin:
 #endif
 	if (ip->ip_ttl <= IPTTLDEC) {
 		icmp_error(m, ICMP_TIMXCEED, ICMP_TIMXCEED_INTRANS, 0, 0);
-		return 1;
+		return NULL;	/* mbuf already free'd */
 	}
 
 	/*
@@ -413,13 +417,15 @@ passin:
 	 * Find route to destination.
 	 */
 	if ((dst = ip_findroute(&ro, dest, m)) == NULL)
-		return 1;	/* icmp unreach already sent */
+		return NULL;	/* icmp unreach already sent */
 	ifp = ro.ro_rt->rt_ifp;
 
 	/*
-	 * Immediately drop blackholed traffic.
+	 * Immediately drop blackholed traffic, and directed broadcasts
+	 * for either the all-ones or all-zero subnet addresses on
+	 * locally attached networks.
 	 */
-	if (ro.ro_rt->rt_flags & RTF_BLACKHOLE)
+	if ((ro.ro_rt->rt_flags & (RTF_BLACKHOLE|RTF_BROADCAST)) != 0)
 		goto drop;
 
 	/*
@@ -429,11 +435,11 @@ passin:
 	/*
 	 * Run through list of hooks for output packets.
 	 */
-	if (inet_pfil_hook.ph_busy_count == -1)
+	if (!PFIL_HOOKED(&inet_pfil_hook))
 		goto passout;
 
 	if (pfil_run_hooks(&inet_pfil_hook, &m, ifp, PFIL_OUT, NULL) || m == NULL) {
-		goto consumed;
+		goto drop;
 	}
 
 	M_ASSERTVALID(m);
@@ -468,21 +474,21 @@ forwardlocal:
 			m->m_flags |= M_FASTFWD_OURS;
 			if (ro.ro_rt)
 				RTFREE(ro.ro_rt);
-			return 0;
+			return m;
 		}
 		/*
 		 * Redo route lookup with new destination address
 		 */
 #ifdef IPFIREWALL_FORWARD
 		if (fwd_tag) {
-			if (!in_localip(ip->ip_src) && !in_localaddr(ip->ip_dst))
-				dest.s_addr = ((struct sockaddr_in *)(fwd_tag+1))->sin_addr.s_addr;
+			dest.s_addr = ((struct sockaddr_in *)
+				    (fwd_tag + 1))->sin_addr.s_addr;
 			m_tag_delete(m, fwd_tag);
 		}
 #endif /* IPFIREWALL_FORWARD */
 		RTFREE(ro.ro_rt);
 		if ((dst = ip_findroute(&ro, dest, m)) == NULL)
-			return 1;	/* icmp unreach already sent */
+			return NULL;	/* icmp unreach already sent */
 		ifp = ro.ro_rt->rt_ifp;
 	}
 
@@ -495,7 +501,8 @@ passout:
 	 * Check if route is dampned (when ARP is unable to resolve)
 	 */
 	if ((ro.ro_rt->rt_flags & RTF_REJECT) &&
-	    ro.ro_rt->rt_rmx.rmx_expire >= time_second) {
+	    (ro.ro_rt->rt_rmx.rmx_expire == 0 ||
+	    time_uptime < ro.ro_rt->rt_rmx.rmx_expire)) {
 		icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_HOST, 0, 0);
 		goto consumed;
 	}
@@ -596,11 +603,11 @@ passout:
 	}
 consumed:
 	RTFREE(ro.ro_rt);
-	return 1;
+	return NULL;
 drop:
 	if (m)
 		m_freem(m);
 	if (ro.ro_rt)
 		RTFREE(ro.ro_rt);
-	return 1;
+	return NULL;
 }

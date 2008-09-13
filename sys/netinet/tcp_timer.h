@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_timer.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp_timer.h,v 1.27.2.1 2006/03/01 21:13:29 andre Exp $
+ * $FreeBSD: src/sys/netinet/tcp_timer.h,v 1.39 2007/09/24 05:26:24 silby Exp $
  */
 
 #ifndef _NETINET_TCP_TIMER_H_
@@ -89,6 +89,8 @@
 #define	TCPTV_INFLIGHT_RTTTHRESH (10*hz/1000)	/* below which inflight
 						   disengages, in msec */
 
+#define TCPTV_FINWAIT2_TIMEOUT (60*hz)         /* FIN_WAIT_2 timeout if no receiver */
+
 /*
  * Minimum retransmit timer is 3 ticks, for algorithmic stability.
  * TCPT_RANGESET() will add another TCPTV_CPU_VAR to deal with
@@ -109,7 +111,7 @@
  * The prior minimum of 1*hz (1 second) badly breaks throughput on any
  * networks faster then a modem that has minor (e.g. 1%) packet loss.
  */
-#define	TCPTV_MIN	( 3 )			/* minimum allowable value */
+#define	TCPTV_MIN	( hz/33 )		/* minimum allowable value */
 #define TCPTV_CPU_VAR	( hz/5 )		/* cpu variance allowed (200ms) */
 #define	TCPTV_REXMTMAX	( 64*hz)		/* max allowable REXMT value */
 
@@ -133,11 +135,25 @@ static const char *tcptimers[] =
 	(tv) = (value) + tcp_rexmit_slop; \
 	if ((u_long)(tv) < (u_long)(tvmin)) \
 		(tv) = (tvmin); \
-	else if ((u_long)(tv) > (u_long)(tvmax)) \
+	if ((u_long)(tv) > (u_long)(tvmax)) \
 		(tv) = (tvmax); \
 } while(0)
 
 #ifdef _KERNEL
+
+struct tcp_timer {
+	struct	callout tt_rexmt;	/* retransmit timer */
+	struct	callout tt_persist;	/* retransmit persistence */
+	struct	callout tt_keep;	/* keepalive */
+	struct	callout tt_2msl;	/* 2*msl TIME_WAIT timer */
+	struct	callout tt_delack;	/* delayed ACK timer */
+};
+#define TT_DELACK	0x01
+#define TT_REXMT	0x02
+#define TT_PERSIST	0x04
+#define TT_KEEP		0x08
+#define TT_2MSL		0x10
+
 extern int tcp_keepinit;		/* time to establish connection */
 extern int tcp_keepidle;		/* time before keepalive probes begin */
 extern int tcp_keepintvl;		/* time between keepalive probes */
@@ -150,14 +166,13 @@ extern int tcp_msl;
 extern int tcp_ttl;			/* time to live for TCP segs */
 extern int tcp_backoff[];
 
-struct tcptw;
+extern int tcp_finwait2_timeout;
+extern int tcp_fast_finwait2_recycle;
 
 void	tcp_timer_init(void);
 void	tcp_timer_2msl(void *xtp);
 struct tcptw *
-	tcp_timer_2msl_tw(int _reuse);		/* XXX temporary */
-void	tcp_timer_2msl_reset(struct tcptw *_tw, int _timeo);
-void	tcp_timer_2msl_stop(struct tcptw *_tw);
+	tcp_tw_2msl_scan(int _reuse);		/* XXX temporary */
 void	tcp_timer_keep(void *xtp);
 void	tcp_timer_persist(void *xtp);
 void	tcp_timer_rexmt(void *xtp);

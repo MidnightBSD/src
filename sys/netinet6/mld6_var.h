@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/mld6_var.h,v 1.6.2.1 2005/12/25 14:03:38 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/mld6_var.h,v 1.7 2005/10/21 16:23:00 suz Exp $	*/
 /*	$KAME: mld6_var.h,v 1.4 2000/03/25 07:23:54 sumikawa Exp $	*/
 
 /*-

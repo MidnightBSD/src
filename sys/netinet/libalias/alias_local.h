@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/libalias/alias_local.h,v 1.32 2005/06/27 07:36:02 glebius Exp $
+ * $FreeBSD: src/sys/netinet/libalias/alias_local.h,v 1.34 2006/12/15 12:50:06 piso Exp $
  */
 
 /*
@@ -46,18 +46,16 @@
 #ifndef _ALIAS_LOCAL_H_
 #define	_ALIAS_LOCAL_H_
 
-#include <sys/queue.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
 
-/* Use kernel allocator. */
-#if defined(_KERNEL) && defined(_SYS_MALLOC_H_)
-MALLOC_DECLARE(M_ALIAS);
-#define	malloc(x)	malloc(x, M_ALIAS, M_NOWAIT|M_ZERO)
-#define	calloc(x, n)	malloc(x*n)
-#define	free(x)		free(x, M_ALIAS)
-#endif
+#ifdef _KERNEL
+#include <sys/malloc.h>
+#include <sys/param.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 
 /* XXX: LibAliasSetTarget() uses this constant. */
-#ifdef _KERNEL
 #define	INADDR_NONE	0xffffffff
 #endif
 
@@ -116,10 +114,14 @@ struct libalias {
 
 	int		deleteAllLinks;	/* If equal to zero, DeleteLink()  */
 	/* will not remove permanent links */
-#ifndef	NO_LOGGING
-	FILE           *monitorFile;	/* File descriptor for link        */
+	
+	/* log descriptor        */ 
+#ifdef  _KERNEL
+	char           *logDesc;        
+#else 
+	FILE           *logDesc;	
 #endif
-	/* statistics monitoring file      */
+	/* statistics monitoring */
 
 	int		newDefaultLink;	/* Indicates if a new aliasing     */
 	/* link has been created after a   */
@@ -147,10 +149,30 @@ struct libalias {
 
 	struct in_addr	true_addr;	/* in network byte order. */
 	u_short		true_port;	/* in host byte order. */
-
+#ifdef  _KERNEL
+	/* 
+	 * avoid races in libalias: every public function has to use it.
+	 */
+	struct mtx mutex;
+#endif
 };
 
 /* Macros */
+
+#ifdef _KERNEL
+#define LIBALIAS_LOCK_INIT(l) \
+        mtx_init(&l->mutex, "per-instance libalias mutex", NULL, MTX_DEF)
+#define LIBALIAS_LOCK_ASSERT(l) mtx_assert(&l->mutex, MA_OWNED)
+#define LIBALIAS_LOCK(l) mtx_lock(&l->mutex)
+#define LIBALIAS_UNLOCK(l) mtx_unlock(&l->mutex)
+#define LIBALIAS_LOCK_DESTROY(l)	mtx_destroy(&l->mutex)
+#else
+#define LIBALIAS_LOCK_INIT(l)
+#define LIBALIAS_LOCK_ASSERT(l)
+#define LIBALIAS_LOCK(l)
+#define LIBALIAS_UNLOCK(l)
+#define LIBALIAS_LOCK_DESTROY(l)
+#endif
 
 /*
  * The following macro is used to update an
@@ -296,43 +318,6 @@ void		HouseKeeping(struct libalias *);
 /* Tcp specfic routines */
 /* lint -save -library Suppress flexelint warnings */
 
-/* FTP routines */
-void
-AliasHandleFtpOut(struct libalias *la, struct ip *_pip, struct alias_link *_lnk,
-    int _maxpacketsize);
-
-/* IRC routines */
-void
-AliasHandleIrcOut(struct libalias *la, struct ip *_pip, struct alias_link *_lnk,
-    int _maxsize);
-
-/* RTSP routines */
-void
-AliasHandleRtspOut(struct libalias *la, struct ip *_pip, struct alias_link *_lnk,
-    int _maxpacketsize);
-
-/* PPTP routines */
-void		AliasHandlePptpOut(struct libalias *la, struct ip *_pip, struct alias_link *_lnk);
-void		AliasHandlePptpIn(struct libalias *la, struct ip *_pip, struct alias_link *_lnk);
-int		AliasHandlePptpGreOut(struct libalias *la, struct ip *_pip);
-int		AliasHandlePptpGreIn(struct libalias *la, struct ip *_pip);
-
-/* NetBIOS routines */
-int
-AliasHandleUdpNbt(struct libalias *la, struct ip *_pip, struct alias_link *_lnk,
-    struct in_addr *_alias_address, u_short _alias_port);
-int
-AliasHandleUdpNbtNS(struct libalias *la, struct ip *_pip, struct alias_link *_lnk,
-    struct in_addr *_alias_address, u_short * _alias_port,
-    struct in_addr *_original_address, u_short * _original_port);
-
-/* CUSeeMe routines */
-void		AliasHandleCUSeeMeOut(struct libalias *la, struct ip *_pip, struct alias_link *_lnk);
-void		AliasHandleCUSeeMeIn(struct libalias *la, struct ip *_pip, struct in_addr _original_addr);
-
-/* Skinny routines */
-void		AliasHandleSkinny(struct libalias *la, struct ip *_pip, struct alias_link *_lnk);
-
 /* Transparent proxy routines */
 int
 ProxyCheck(struct libalias *la, struct ip *_pip, struct in_addr *_proxy_server_addr,
@@ -372,7 +357,5 @@ udp_next(struct udphdr *udphdr)
 	return ((void *)(udphdr + 1));
 }
 #endif
-
-/*lint -restore */
 
 #endif				/* !_ALIAS_LOCAL_H_ */

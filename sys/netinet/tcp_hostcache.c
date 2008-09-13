@@ -25,45 +25,45 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/netinet/tcp_hostcache.c,v 1.10 2005/01/07 01:45:45 imp Exp $
  */
 
 /*
- * The tcp_hostcache moves the tcp specific cached metrics from the routing
- * table into a dedicated structure indexed by the remote IP address. It
- * keeps information on the measured tcp parameters of past tcp sessions
- * to have better initial start values for following connections from the
- * same source. Depending on the network parameters (delay, bandwidth, max
- * MTU, congestion window) between local and remote site this can lead to
- * significant speedups for new tcp connections after the first one.
+ * The tcp_hostcache moves the tcp-specific cached metrics from the routing
+ * table to a dedicated structure indexed by the remote IP address.  It keeps
+ * information on the measured TCP parameters of past TCP sessions to allow
+ * better initial start values to be used with later connections to/from the
+ * same source.  Depending on the network parameters (delay, bandwidth, max
+ * MTU, congestion window) between local and remote sites, this can lead to
+ * significant speed-ups for new TCP connections after the first one.
  *
- * Due to this new tcp_hostcache all tcp specific metrics information in
- * the routing table has been removed. The INPCB no longer keeps a pointer
- * to the routing entry and protocol initiated route cloning has been
- * removed as well. With these changes the routing table has gone back
- * to being more lightwight and only carries information related to packet
- * forwarding.
+ * Due to the tcp_hostcache, all TCP-specific metrics information in the
+ * routing table has been removed.  The inpcb no longer keeps a pointer to
+ * the routing entry, and protocol-initiated route cloning has been removed
+ * as well.  With these changes, the routing table has gone back to being
+ * more lightwight and only carries information related to packet forwarding.
  *
- * Tcp_hostcache is designed for multiple concurrent access in SMP
- * environments and high contention. All bucket rows have their own
- * lock and thus multiple lookups and modifies can be done at the same
- * time as long as they are in different bucket rows. If a request for
- * insertion of a new record can't be satisfied it simply returns an
- * empty structure. Nobody and nothing shall ever point directly to
- * any entry in tcp_hostcache. All communication is done in an object
- * oriented way and only funtions of tcp_hostcache will manipulate hostcache
- * entries. Otherwise we are unable to achieve good behaviour in concurrent
- * access situations. Since tcp_hostcache is only caching information there
- * are no fatal consequences if we either can't satisfy any particular request
- * or have to drop/overwrite an existing entry because of bucket limit
- * memory constrains.
+ * tcp_hostcache is designed for multiple concurrent access in SMP
+ * environments and high contention.  All bucket rows have their own lock and
+ * thus multiple lookups and modifies can be done at the same time as long as
+ * they are in different bucket rows.  If a request for insertion of a new
+ * record can't be satisfied, it simply returns an empty structure.  Nobody
+ * and nothing outside of tcp_hostcache.c will ever point directly to any
+ * entry in the tcp_hostcache.  All communication is done in an
+ * object-oriented way and only functions of tcp_hostcache will manipulate
+ * hostcache entries.  Otherwise, we are unable to achieve good behaviour in
+ * concurrent access situations.  Since tcp_hostcache is only caching
+ * information, there are no fatal consequences if we either can't satisfy
+ * any particular request or have to drop/overwrite an existing entry because
+ * of bucket limit memory constrains.
  */
 
 /*
  * Many thanks to jlemon for basic structure of tcp_syncache which is being
  * followed here.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/tcp_hostcache.c,v 1.17 2007/10/07 20:44:23 silby Exp $");
 
 #include "opt_inet6.h"
 
@@ -112,7 +112,7 @@ struct hc_metrics {
 	struct	hc_head *rmx_head; /* head of bucket tail queue */
 	struct	in_addr ip4;	/* IP address */
 	struct	in6_addr ip6;	/* IP6 address */
-	/* endpoint specific values for tcp */
+	/* endpoint specific values for TCP */
 	u_long	rmx_mtu;	/* MTU for this path */
 	u_long	rmx_ssthresh;	/* outbound gateway buffer limit */
 	u_long	rmx_rtt;	/* estimated round trip time */
@@ -121,7 +121,7 @@ struct hc_metrics {
 	u_long	rmx_cwnd;	/* congestion window */
 	u_long	rmx_sendpipe;	/* outbound delay-bandwidth product */
 	u_long	rmx_recvpipe;	/* inbound delay-bandwidth product */
-	/* tcp hostcache internal data */
+	/* TCP hostcache internal data */
 	int	rmx_expire;	/* lifetime for object */
 	u_long	rmx_hits;	/* number of hits */
 	u_long	rmx_updates;	/* number of updates */
@@ -142,6 +142,7 @@ struct tcp_hostcache {
 	u_int	cache_count;
 	u_int	cache_limit;
 	int	expire;
+	int	prune;
 	int	purgeall;
 };
 static struct tcp_hostcache tcp_hostcache;
@@ -156,26 +157,29 @@ static void tcp_hc_purge(void *);
 SYSCTL_NODE(_net_inet_tcp, OID_AUTO, hostcache, CTLFLAG_RW, 0, "TCP Host cache");
 
 SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, cachelimit, CTLFLAG_RDTUN,
-     &tcp_hostcache.cache_limit, 0, "Overall entry limit for hostcache");
+    &tcp_hostcache.cache_limit, 0, "Overall entry limit for hostcache");
 
 SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, hashsize, CTLFLAG_RDTUN,
-     &tcp_hostcache.hashsize, 0, "Size of TCP hostcache hashtable");
+    &tcp_hostcache.hashsize, 0, "Size of TCP hostcache hashtable");
 
 SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, bucketlimit, CTLFLAG_RDTUN,
-     &tcp_hostcache.bucket_limit, 0, "Per-bucket hash limit for hostcache");
+    &tcp_hostcache.bucket_limit, 0, "Per-bucket hash limit for hostcache");
 
 SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, count, CTLFLAG_RD,
-     &tcp_hostcache.cache_count, 0, "Current number of entries in hostcache");
+    &tcp_hostcache.cache_count, 0, "Current number of entries in hostcache");
 
 SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, expire, CTLFLAG_RW,
-     &tcp_hostcache.expire, 0, "Expire time of TCP hostcache entries");
+    &tcp_hostcache.expire, 0, "Expire time of TCP hostcache entries");
+
+SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, prune, CTLFLAG_RW,
+     &tcp_hostcache.prune, 0, "Time between purge runs");
 
 SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, purge, CTLFLAG_RW,
-     &tcp_hostcache.purgeall, 0, "Expire all entires on next purge run");
+    &tcp_hostcache.purgeall, 0, "Expire all entires on next purge run");
 
 SYSCTL_PROC(_net_inet_tcp_hostcache, OID_AUTO, list,
-	CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP, 0, 0,
-	sysctl_tcp_hc_list, "A", "List of all hostcache entries");
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP, 0, 0,
+    sysctl_tcp_hc_list, "A", "List of all hostcache entries");
 
 
 static MALLOC_DEFINE(M_HOSTCACHE, "hostcache", "TCP hostcache");
@@ -201,7 +205,7 @@ tcp_hc_init(void)
 	int i;
 
 	/*
-	 * Initialize hostcache structures
+	 * Initialize hostcache structures.
 	 */
 	tcp_hostcache.cache_count = 0;
 	tcp_hostcache.hashsize = TCP_HOSTCACHE_HASHSIZE;
@@ -209,6 +213,7 @@ tcp_hc_init(void)
 	tcp_hostcache.cache_limit =
 	    tcp_hostcache.hashsize * tcp_hostcache.bucket_limit;
 	tcp_hostcache.expire = TCP_HOSTCACHE_EXPIRE;
+	tcp_hostcache.prune = TCP_HOSTCACHE_PRUNE;
 
 	TUNABLE_INT_FETCH("net.inet.tcp.hostcache.hashsize",
 	    &tcp_hostcache.hashsize);
@@ -218,19 +223,19 @@ tcp_hc_init(void)
 	    &tcp_hostcache.bucket_limit);
 	if (!powerof2(tcp_hostcache.hashsize)) {
 		printf("WARNING: hostcache hash size is not a power of 2.\n");
-		tcp_hostcache.hashsize = 512;	/* safe default */
+		tcp_hostcache.hashsize = TCP_HOSTCACHE_HASHSIZE; /* default */
 	}
 	tcp_hostcache.hashmask = tcp_hostcache.hashsize - 1;
 
 	/*
-	 * Allocate the hash table
+	 * Allocate the hash table.
 	 */
 	tcp_hostcache.hashbase = (struct hc_head *)
 	    malloc(tcp_hostcache.hashsize * sizeof(struct hc_head),
 		   M_HOSTCACHE, M_WAITOK | M_ZERO);
 
 	/*
-	 * Initialize the hash buckets
+	 * Initialize the hash buckets.
 	 */
 	for (i = 0; i < tcp_hostcache.hashsize; i++) {
 		TAILQ_INIT(&tcp_hostcache.hashbase[i].hch_bucket);
@@ -250,11 +255,11 @@ tcp_hc_init(void)
 	 * Set up periodic cache cleanup.
 	 */
 	callout_init(&tcp_hc_callout, CALLOUT_MPSAFE);
-	callout_reset(&tcp_hc_callout, TCP_HOSTCACHE_PRUNE * hz, tcp_hc_purge, 0);
+	callout_reset(&tcp_hc_callout, tcp_hostcache.prune * hz, tcp_hc_purge, 0);
 }
 
 /*
- * Internal function: lookup an entry in the hostcache or return NULL.
+ * Internal function: look up an entry in the hostcache or return NULL.
  *
  * If an entry has been returned, the caller becomes responsible for
  * unlocking the bucket row after he is done reading/modifying the entry.
@@ -279,14 +284,14 @@ tcp_hc_lookup(struct in_conninfo *inc)
 	hc_head = &tcp_hostcache.hashbase[hash];
 
 	/*
-	 * aquire lock for this bucket row
-	 * we release the lock if we don't find an entry,
-	 * otherwise the caller has to unlock after he is done
+	 * Acquire lock for this bucket row; we release the lock if we don't
+	 * find an entry, otherwise the caller has to unlock after he is
+	 * done.
 	 */
 	THC_LOCK(&hc_head->hch_mtx);
 
 	/*
-	 * circle through entries in bucket row looking for a match
+	 * Iterate through entries in bucket row looking for a match.
 	 */
 	TAILQ_FOREACH(hc_entry, &hc_head->hch_bucket, rmx_q) {
 		if (inc->inc_isipv6) {
@@ -301,15 +306,15 @@ tcp_hc_lookup(struct in_conninfo *inc)
 	}
 
 	/*
-	 * We were unsuccessful and didn't find anything
+	 * We were unsuccessful and didn't find anything.
 	 */
 	THC_UNLOCK(&hc_head->hch_mtx);
 	return NULL;
 }
 
 /*
- * Internal function: insert an entry into the hostcache or return NULL
- * if unable to allocate a new one.
+ * Internal function: insert an entry into the hostcache or return NULL if
+ * unable to allocate a new one.
  *
  * If an entry has been returned, the caller becomes responsible for
  * unlocking the bucket row after he is done reading/modifying the entry.
@@ -324,7 +329,7 @@ tcp_hc_insert(struct in_conninfo *inc)
 	KASSERT(inc != NULL, ("tcp_hc_insert with NULL in_conninfo pointer"));
 
 	/*
-	 * Hash the foreign ip address
+	 * Hash the foreign ip address.
 	 */
 	if (inc->inc_isipv6)
 		hash = HOSTCACHE_HASH6(&inc->inc6_faddr);
@@ -334,25 +339,31 @@ tcp_hc_insert(struct in_conninfo *inc)
 	hc_head = &tcp_hostcache.hashbase[hash];
 
 	/*
-	 * aquire lock for this bucket row
-	 * we release the lock if we don't find an entry,
-	 * otherwise the caller has to unlock after he is done
+	 * Acquire lock for this bucket row; we release the lock if we don't
+	 * find an entry, otherwise the caller has to unlock after he is
+	 * done.
 	 */
 	THC_LOCK(&hc_head->hch_mtx);
 
 	/*
-	 * If the bucket limit is reached reuse the least used element
+	 * If the bucket limit is reached, reuse the least-used element.
 	 */
 	if (hc_head->hch_length >= tcp_hostcache.bucket_limit ||
 	    tcp_hostcache.cache_count >= tcp_hostcache.cache_limit) {
 		hc_entry = TAILQ_LAST(&hc_head->hch_bucket, hc_qhead);
 		/*
 		 * At first we were dropping the last element, just to
-		 * reaquire it in the next two lines again which ain't
-		 * very efficient. Instead just reuse the least used element.
-		 * Maybe we drop something that is still "in-use" but we can
-		 * be "lossy".
+		 * reacquire it in the next two lines again, which isn't very
+		 * efficient.  Instead just reuse the least used element.
+		 * We may drop something that is still "in-use" but we can be
+		 * "lossy".
+		 * Just give up if this bucket row is empty and we don't have
+		 * anything to replace.
 		 */
+		if (hc_entry == NULL) {
+			THC_UNLOCK(&hc_head->hch_mtx);
+			return NULL;
+		}
 		TAILQ_REMOVE(&hc_head->hch_bucket, hc_entry, rmx_q);
 		tcp_hostcache.hashbase[hash].hch_length--;
 		tcp_hostcache.cache_count--;
@@ -362,7 +373,7 @@ tcp_hc_insert(struct in_conninfo *inc)
 #endif
 	} else {
 		/*
-		 * Allocate a new entry, or balk if not possible
+		 * Allocate a new entry, or balk if not possible.
 		 */
 		hc_entry = uma_zalloc(tcp_hostcache.zone, M_NOWAIT);
 		if (hc_entry == NULL) {
@@ -372,7 +383,7 @@ tcp_hc_insert(struct in_conninfo *inc)
 	}
 
 	/*
-	 * Initialize basic information of hostcache entry
+	 * Initialize basic information of hostcache entry.
 	 */
 	bzero(hc_entry, sizeof(*hc_entry));
 	if (inc->inc_isipv6)
@@ -383,7 +394,7 @@ tcp_hc_insert(struct in_conninfo *inc)
 	hc_entry->rmx_expire = tcp_hostcache.expire;
 
 	/*
-	 * Put it upfront
+	 * Put it upfront.
 	 */
 	TAILQ_INSERT_HEAD(&hc_head->hch_bucket, hc_entry, rmx_q);
 	tcp_hostcache.hashbase[hash].hch_length++;
@@ -394,9 +405,9 @@ tcp_hc_insert(struct in_conninfo *inc)
 }
 
 /*
- * External function: lookup an entry in the hostcache and fill out the
- * supplied tcp metrics structure.  Fills in null when no entry was found
- * or a value is not set.
+ * External function: look up an entry in the hostcache and fill out the
+ * supplied TCP metrics structure.  Fills in NULL when no entry was found or
+ * a value is not set.
  */
 void
 tcp_hc_get(struct in_conninfo *inc, struct hc_metrics_lite *hc_metrics_lite)
@@ -404,12 +415,12 @@ tcp_hc_get(struct in_conninfo *inc, struct hc_metrics_lite *hc_metrics_lite)
 	struct hc_metrics *hc_entry;
 
 	/*
-	 * Find the right bucket
+	 * Find the right bucket.
 	 */
 	hc_entry = tcp_hc_lookup(inc);
 
 	/*
-	 * If we don't have an existing object
+	 * If we don't have an existing object.
 	 */
 	if (hc_entry == NULL) {
 		bzero(hc_metrics_lite, sizeof(*hc_metrics_lite));
@@ -428,14 +439,14 @@ tcp_hc_get(struct in_conninfo *inc, struct hc_metrics_lite *hc_metrics_lite)
 	hc_metrics_lite->rmx_recvpipe = hc_entry->rmx_recvpipe;
 
 	/*
-	 * unlock bucket row
+	 * Unlock bucket row.
 	 */
 	THC_UNLOCK(&hc_entry->rmx_head->hch_mtx);
 }
 
 /*
- * External function: lookup an entry in the hostcache and return the
- * discovered path mtu.  Returns null if no entry is found or value is not
+ * External function: look up an entry in the hostcache and return the
+ * discovered path MTU.  Returns NULL if no entry is found or value is not
  * set.
  */
 u_long
@@ -457,7 +468,7 @@ tcp_hc_getmtu(struct in_conninfo *inc)
 }
 
 /*
- * External function: update the mtu value of an entry in the hostcache.
+ * External function: update the MTU value of an entry in the hostcache.
  * Creates a new entry if none was found.
  */
 void
@@ -466,12 +477,12 @@ tcp_hc_updatemtu(struct in_conninfo *inc, u_long mtu)
 	struct hc_metrics *hc_entry;
 
 	/*
-	 * Find the right bucket
+	 * Find the right bucket.
 	 */
 	hc_entry = tcp_hc_lookup(inc);
 
 	/*
-	 * If we don't have an existing object try to insert a new one
+	 * If we don't have an existing object, try to insert a new one.
 	 */
 	if (hc_entry == NULL) {
 		hc_entry = tcp_hc_insert(inc);
@@ -484,19 +495,19 @@ tcp_hc_updatemtu(struct in_conninfo *inc, u_long mtu)
 	hc_entry->rmx_mtu = mtu;
 
 	/*
-	 * put it upfront so we find it faster next time
+	 * Put it upfront so we find it faster next time.
 	 */
 	TAILQ_REMOVE(&hc_entry->rmx_head->hch_bucket, hc_entry, rmx_q);
 	TAILQ_INSERT_HEAD(&hc_entry->rmx_head->hch_bucket, hc_entry, rmx_q);
 
 	/*
-	 * unlock bucket row
+	 * Unlock bucket row.
 	 */
 	THC_UNLOCK(&hc_entry->rmx_head->hch_mtx);
 }
 
 /*
- * External function: update the tcp metrics of an entry in the hostcache.
+ * External function: update the TCP metrics of an entry in the hostcache.
  * Creates a new entry if none was found.
  */
 void
@@ -587,6 +598,9 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 	char *p, *buf;
 	int len, i, error;
 	struct hc_metrics *hc_entry;
+#ifdef INET6
+	char ip6buf[INET6_ADDRSTRLEN];
+#endif
 
 	bufsize = linesize * (tcp_hostcache.cache_count + 1);
 
@@ -607,7 +621,7 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 			    "%4lu %4lu %4i\n",
 			    hc_entry->ip4.s_addr ? inet_ntoa(hc_entry->ip4) :
 #ifdef INET6
-				ip6_sprintf(&hc_entry->ip6),
+				ip6_sprintf(ip6buf, &hc_entry->ip6),
 #else
 				"IPv6?",
 #endif
@@ -635,8 +649,8 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 }
 
 /*
- * Expire and purge (old|all) entries in the tcp_hostcache.  Runs periodically
- * from the callout.
+ * Expire and purge (old|all) entries in the tcp_hostcache.  Runs
+ * periodically from the callout.
  */
 static void
 tcp_hc_purge(void *arg)
@@ -661,9 +675,9 @@ tcp_hc_purge(void *arg)
 				tcp_hostcache.hashbase[i].hch_length--;
 				tcp_hostcache.cache_count--;
 			} else
-				hc_entry->rmx_expire -= TCP_HOSTCACHE_PRUNE;
+				hc_entry->rmx_expire -= tcp_hostcache.prune;
 		}
 		THC_UNLOCK(&tcp_hostcache.hashbase[i].hch_mtx);
 	}
-	callout_reset(&tcp_hc_callout, TCP_HOSTCACHE_PRUNE * hz, tcp_hc_purge, 0);
+	callout_reset(&tcp_hc_callout, tcp_hostcache.prune * hz, tcp_hc_purge, 0);
 }

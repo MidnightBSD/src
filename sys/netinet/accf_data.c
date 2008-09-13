@@ -22,9 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- *	$FreeBSD: src/sys/netinet/accf_data.c,v 1.10 2004/05/30 20:23:30 phk Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/accf_data.c,v 1.11 2007/10/07 20:44:22 silby Exp $");
 
 #define ACCEPT_FILTER_MOD
 

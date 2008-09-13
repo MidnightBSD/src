@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ip6_var.h,v 1.30.2.6 2005/12/25 14:03:38 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ip6_var.h,v 1.39 2007/07/05 16:29:40 delphij Exp $	*/
 /*	$KAME: ip6_var.h,v 1.62 2001/05/03 14:51:48 itojun Exp $	*/
 
 /*-
@@ -69,16 +69,13 @@
  * being reassembled is attached to one of these structures.
  */
 struct	ip6q {
-	u_int32_t	ip6q_head;
-	u_int16_t	ip6q_len;
-	u_int8_t	ip6q_nxt;	/* ip6f_nxt in first fragment */
-	u_int8_t	ip6q_hlim;
 	struct ip6asfrag *ip6q_down;
 	struct ip6asfrag *ip6q_up;
 	u_int32_t	ip6q_ident;
-	u_int8_t	ip6q_arrive;
+	u_int8_t	ip6q_nxt;
+	u_int8_t	ip6q_ecn;
 	u_int8_t	ip6q_ttl;
-	struct in6_addr	ip6q_src, ip6q_dst;
+	struct in6_addr ip6q_src, ip6q_dst;
 	struct ip6q	*ip6q_next;
 	struct ip6q	*ip6q_prev;
 	int		ip6q_unfrglen;	/* len of unfragmentable part */
@@ -89,11 +86,6 @@ struct	ip6q {
 };
 
 struct	ip6asfrag {
-	u_int32_t	ip6af_head;
-	u_int16_t	ip6af_len;
-	u_int8_t	ip6af_nxt;
-	u_int8_t	ip6af_hlim;
-	/* must not override the above members during reassembling */
 	struct ip6asfrag *ip6af_down;
 	struct ip6asfrag *ip6af_up;
 	struct mbuf	*ip6af_m;
@@ -298,7 +290,7 @@ extern int	ip6_rr_prune;		/* router renumbering prefix
 extern int	ip6_mcast_pmtu;		/* enable pMTU discovery for multicast? */
 extern int	ip6_v6only;
 
-extern struct socket *ip6_mrouter; 	/* multicast routing daemon */
+extern struct socket *ip6_mrouter;	/* multicast routing daemon */
 extern int	ip6_sendredirects;	/* send IP redirects when forwarding? */
 extern int	ip6_maxfragpackets; /* Maximum packets in reassembly queue */
 extern int	ip6_maxfrags;	/* Maximum fragments in reassembly queue */
@@ -353,7 +345,9 @@ struct ip6aux *ip6_addaux __P((struct mbuf *));
 struct ip6aux *ip6_findaux __P((struct mbuf *));
 void	ip6_delaux __P((struct mbuf *));
 
-int	ip6_mforward __P((struct ip6_hdr *, struct ifnet *, struct mbuf *));
+extern int	(*ip6_mforward)(struct ip6_hdr *, struct ifnet *,
+    struct mbuf *);
+
 int	ip6_process_hopopts __P((struct mbuf *, u_int8_t *, int, u_int32_t *,
 				 u_int32_t *));
 void	ip6_savecontrol __P((struct inpcb *, struct mbuf *, struct mbuf **));

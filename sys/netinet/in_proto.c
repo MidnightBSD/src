@@ -27,8 +27,10 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_proto.c	8.2 (Berkeley) 2/9/95
- * $FreeBSD: src/sys/netinet/in_proto.c,v 1.77.2.3 2006/01/03 08:15:32 thompsa Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/in_proto.c,v 1.87 2007/10/07 20:44:22 silby Exp $");
 
 #include "opt_ipx.h"
 #include "opt_mrouting.h"
@@ -36,6 +38,7 @@
 #include "opt_inet6.h"
 #include "opt_pf.h"
 #include "opt_carp.h"
+#include "opt_sctp.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,9 +58,6 @@
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/igmp_var.h>
-#ifdef PIM
-#include <netinet/pim_var.h>
-#endif
 #include <netinet/tcp.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
@@ -69,22 +69,18 @@
  * TCP/IP protocol family: IP, ICMP, UDP, TCP.
  */
 
+static struct pr_usrreqs nousrreqs;
+
 #ifdef IPSEC
-#include <netinet6/ipsec.h>
-#include <netinet6/ah.h>
-#ifdef IPSEC_ESP
-#include <netinet6/esp.h>
-#endif
-#include <netinet6/ipcomp.h>
+#include <netipsec/ipsec.h>
 #endif /* IPSEC */
 
-#ifdef FAST_IPSEC
-#include <netipsec/ipsec.h>
-#endif /* FAST_IPSEC */
-
-#ifdef IPXIP
-#include <netipx/ipx_ip.h>
-#endif
+#ifdef SCTP
+#include <netinet/in_pcb.h>
+#include <netinet/sctp_pcb.h>
+#include <netinet/sctp.h>
+#include <netinet/sctp_var.h>
+#endif /* SCTP */
 
 #ifdef DEV_PFSYNC
 #include <net/pfvar.h>
@@ -139,6 +135,43 @@ struct protosw inetsw[] = {
 	.pr_drain =		tcp_drain,
 	.pr_usrreqs =		&tcp_usrreqs
 },
+#ifdef SCTP
+{ 
+	.pr_type = 	SOCK_DGRAM,
+	.pr_domain =  	&inetdomain,
+        .pr_protocol = 	IPPROTO_SCTP,
+        .pr_flags = 	PR_WANTRCVD,
+        .pr_input = 	sctp_input,
+        .pr_ctlinput =  sctp_ctlinput,	
+        .pr_ctloutput = sctp_ctloutput,
+        .pr_init = 	sctp_init,	
+        .pr_drain = 	sctp_drain,
+        .pr_usrreqs = 	&sctp_usrreqs
+},
+{
+	.pr_type = 	SOCK_SEQPACKET,
+	.pr_domain =  	&inetdomain,
+        .pr_protocol = 	IPPROTO_SCTP,
+        .pr_flags = 	PR_WANTRCVD,
+        .pr_input = 	sctp_input,
+        .pr_ctlinput =  sctp_ctlinput,	
+        .pr_ctloutput = sctp_ctloutput,
+        .pr_drain = 	sctp_drain,
+        .pr_usrreqs = 	&sctp_usrreqs
+},
+
+{ 
+	.pr_type = 	SOCK_STREAM,
+	.pr_domain =  	&inetdomain,
+        .pr_protocol = 	IPPROTO_SCTP,
+        .pr_flags = 	PR_WANTRCVD,
+        .pr_input = 	sctp_input,
+        .pr_ctlinput =  sctp_ctlinput,	
+        .pr_ctloutput = sctp_ctloutput,
+        .pr_drain = 	sctp_drain,
+        .pr_usrreqs = 	&sctp_usrreqs
+},
+#endif /* SCTP */
 {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inetdomain,
@@ -186,34 +219,6 @@ struct protosw inetsw[] = {
 	.pr_protocol =		IPPROTO_AH,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
 	.pr_input =		ah4_input,
-	.pr_usrreqs =		&nousrreqs
-},
-#ifdef IPSEC_ESP
-{
-	.pr_type =		SOCK_RAW,
-	.pr_domain =		&inetdomain,
-	.pr_protocol =		IPPROTO_ESP,
-	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		esp4_input,
-	.pr_usrreqs =		&nousrreqs
-},
-#endif
-{
-	.pr_type =		SOCK_RAW,
-	.pr_domain =		&inetdomain,
-	.pr_protocol =		IPPROTO_IPCOMP,
-	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		ipcomp4_input,
-	.pr_usrreqs =		&nousrreqs
-},
-#endif /* IPSEC */
-#ifdef FAST_IPSEC
-{
-	.pr_type =		SOCK_RAW,
-	.pr_domain =		&inetdomain,
-	.pr_protocol =		IPPROTO_AH,
-	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		ah4_input,
 	.pr_ctlinput =		ah4_ctlinput,
 	.pr_usrreqs =		&nousrreqs
 },
@@ -234,7 +239,7 @@ struct protosw inetsw[] = {
 	.pr_input =		ipcomp4_input,
 	.pr_usrreqs =		&nousrreqs
 },
-#endif /* FAST_IPSEC */
+#endif /* IPSEC */
 {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inetdomain,
@@ -287,28 +292,15 @@ struct protosw inetsw[] = {
 	.pr_usrreqs =		&rip_usrreqs
 },
 #endif
-#ifdef IPXIP
-{
-	.pr_type =		SOCK_RAW,
-	.pr_domain =		&inetdomain,
-	.pr_protocol =		IPPROTO_IDP,
-	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
-	.pr_input =		ipxip_input,
-	.pr_ctlinput =		ipxip_ctlinput,
-	.pr_usrreqs =		&rip_usrreqs
-},
-#endif
-#ifdef PIM
 {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inetdomain,
 	.pr_protocol =		IPPROTO_PIM,
 	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
-	.pr_input =		pim_input,
+	.pr_input =		encap4_input,
 	.pr_ctloutput =		rip_ctloutput,
 	.pr_usrreqs =		&rip_usrreqs
 },
-#endif	/* PIM */
 #ifdef DEV_PFSYNC
 {
 	.pr_type =		SOCK_RAW,
@@ -374,23 +366,19 @@ SYSCTL_NODE(_net_inet, IPPROTO_IP,	ip,	CTLFLAG_RW, 0,	"IP");
 SYSCTL_NODE(_net_inet, IPPROTO_ICMP,	icmp,	CTLFLAG_RW, 0,	"ICMP");
 SYSCTL_NODE(_net_inet, IPPROTO_UDP,	udp,	CTLFLAG_RW, 0,	"UDP");
 SYSCTL_NODE(_net_inet, IPPROTO_TCP,	tcp,	CTLFLAG_RW, 0,	"TCP");
+#ifdef SCTP
+SYSCTL_NODE(_net_inet, IPPROTO_SCTP,	sctp,	CTLFLAG_RW, 0,	"SCTP");
+#endif
 SYSCTL_NODE(_net_inet, IPPROTO_IGMP,	igmp,	CTLFLAG_RW, 0,	"IGMP");
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 /* XXX no protocol # to use, pick something "reserved" */
 SYSCTL_NODE(_net_inet, 253,		ipsec,	CTLFLAG_RW, 0,	"IPSEC");
 SYSCTL_NODE(_net_inet, IPPROTO_AH,	ah,	CTLFLAG_RW, 0,	"AH");
 SYSCTL_NODE(_net_inet, IPPROTO_ESP,	esp,	CTLFLAG_RW, 0,	"ESP");
 SYSCTL_NODE(_net_inet, IPPROTO_IPCOMP,	ipcomp,	CTLFLAG_RW, 0,	"IPCOMP");
 SYSCTL_NODE(_net_inet, IPPROTO_IPIP,	ipip,	CTLFLAG_RW, 0,	"IPIP");
-#else
-#ifdef IPSEC
-SYSCTL_NODE(_net_inet, IPPROTO_AH,	ipsec,	CTLFLAG_RW, 0,	"IPSEC");
 #endif /* IPSEC */
-#endif /* !FAST_IPSEC */
 SYSCTL_NODE(_net_inet, IPPROTO_RAW,	raw,	CTLFLAG_RW, 0,	"RAW");
-#ifdef PIM
-SYSCTL_NODE(_net_inet, IPPROTO_PIM,	pim,	CTLFLAG_RW, 0,	"PIM");
-#endif
 #ifdef DEV_PFSYNC
 SYSCTL_NODE(_net_inet, IPPROTO_PFSYNC,	pfsync,	CTLFLAG_RW, 0,	"PFSYNC");
 #endif

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_mroute.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/ip_mroute.h,v 1.24.2.1 2006/02/03 15:51:17 ru Exp $
+ * $FreeBSD: src/sys/netinet/ip_mroute.h,v 1.31 2007/02/08 23:05:08 bms Exp $
  */
 
 #ifndef _NETINET_IP_MROUTE_H_
@@ -102,8 +102,8 @@ struct vifctl {
 	struct	in_addr vifc_rmt_addr;	/* remote address (tunnels only) */
 };
 
-#define	VIFF_TUNNEL	0x1		/* vif represents a tunnel end-point */
-#define VIFF_SRCRT	0x2		/* tunnel uses IP source routing */
+#define	VIFF_TUNNEL	0x1		/* no-op; retained for old source */
+#define VIFF_SRCRT	0x2		/* no-op; retained for old source */
 #define VIFF_REGISTER	0x4		/* used for PIM Register encap/decap */
 
 /*
@@ -211,7 +211,7 @@ struct bw_upcall {
 struct mrtstat {
     u_long	mrts_mfc_lookups;	/* # forw. cache hash table hits   */
     u_long	mrts_mfc_misses;	/* # forw. cache hash table misses */
-    u_long	mrts_upcalls;		/* # calls to mrouted              */
+    u_long	mrts_upcalls;		/* # calls to multicast routing daemon */
     u_long	mrts_no_route;		/* no route for packet's origin    */
     u_long	mrts_bad_tunnel;	/* malformed tunnel options        */
     u_long	mrts_cant_tunnel;	/* no room for tunnel options      */
@@ -253,8 +253,8 @@ struct sioc_vif_req {
 struct vif {
     u_char		v_flags;	/* VIFF_ flags defined above         */
     u_char		v_threshold;	/* min ttl required to forward on vif*/
-    u_int		v_rate_limit;	/* max rate			     */
-    struct tbf	       *v_tbf;		/* token bucket structure at intf.   */
+    u_int		v_rate_limit;	/* ignored; kept for compatibility */
+    struct tbf         *v_tbf;		/* ignored; kept for compatibility */
     struct in_addr	v_lcl_addr;	/* local interface address           */
     struct in_addr	v_rmt_addr;	/* remote address (tunnels only)     */
     struct ifnet       *v_ifp;		/* pointer to interface              */
@@ -262,7 +262,7 @@ struct vif {
     u_long		v_pkt_out;	/* # pkts out on interface           */
     u_long		v_bytes_in;	/* # bytes in on interface	     */
     u_long		v_bytes_out;	/* # bytes out on interface	     */
-    struct route	v_route;	/* cached route if this is a tunnel */
+    struct route	v_route;	/* cached route */
     u_int		v_rsvp_on;	/* RSVP listening on this vif */
     struct socket      *v_rsvpd;	/* RSVP daemon socket */
 };
@@ -325,25 +325,6 @@ struct rtdetq {
 #endif
 
 #define MAX_UPQ	4		/* max. no of pkts in upcall Q */
-
-/*
- * Token Bucket filter code
- */
-#define MAX_BKT_SIZE    10000             /* 10K bytes size		*/
-#define MAXQSIZE        10                /* max # of pkts in queue	*/
-
-/*
- * the token bucket filter at each vif
- */
-struct tbf
-{
-    struct timeval tbf_last_pkt_t; /* arr. time of last pkt	*/
-    u_long tbf_n_tok;		/* no of tokens in bucket	*/
-    u_long tbf_q_len;		/* length of queue at this vif	*/
-    u_long tbf_max_q_len;	/* max. queue length		*/
-    struct mbuf *tbf_q;		/* Packet queue			*/
-    struct mbuf *tbf_t;		/* tail-insertion pointer	*/
-};
 
 /*
  * Structure for measuring the bandwidth and sending an upcall if the

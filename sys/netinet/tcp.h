@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp.h,v 1.31.2.1 2005/10/09 03:22:51 delphij Exp $
+ * $FreeBSD: src/sys/netinet/tcp.h,v 1.40 2007/05/25 21:28:49 andre Exp $
  */
 
 #ifndef _NETINET_TCP_H_
@@ -68,7 +68,8 @@ struct tcphdr {
 #define	TH_URG	0x20
 #define	TH_ECE	0x40
 #define	TH_CWR	0x80
-#define	TH_FLAGS	(TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+#define	TH_FLAGS	(TH_FIN|TH_SYN|TH_RST|TH_PUSH|TH_ACK|TH_URG|TH_ECE|TH_CWR)
+#define	PRINT_TH_FLAGS	"\20\1FIN\2SYN\3RST\4PUSH\5ACK\6URG\7ECE\10CWR"
 
 	u_short	th_win;			/* window */
 	u_short	th_sum;			/* checksum */
@@ -76,30 +77,24 @@ struct tcphdr {
 };
 
 #define	TCPOPT_EOL		0
+#define	   TCPOLEN_EOL			1
 #define	TCPOPT_NOP		1
+#define	   TCPOLEN_NOP			1
 #define	TCPOPT_MAXSEG		2
 #define    TCPOLEN_MAXSEG		4
 #define TCPOPT_WINDOW		3
 #define    TCPOLEN_WINDOW		3
-#define TCPOPT_SACK_PERMITTED	4		/* Experimental */
+#define TCPOPT_SACK_PERMITTED	4
 #define    TCPOLEN_SACK_PERMITTED	2
-#define TCPOPT_SACK		5		/* Experimental */
+#define TCPOPT_SACK		5
+#define	   TCPOLEN_SACKHDR		2
 #define    TCPOLEN_SACK			8	/* 2*sizeof(tcp_seq) */
 #define TCPOPT_TIMESTAMP	8
 #define    TCPOLEN_TIMESTAMP		10
 #define    TCPOLEN_TSTAMP_APPA		(TCPOLEN_TIMESTAMP+2) /* appendix A */
-#define    TCPOPT_TSTAMP_HDR		\
-    (TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_TIMESTAMP<<8|TCPOLEN_TIMESTAMP)
-
-#define	MAX_TCPOPTLEN		40	/* Absolute maximum TCP options len */
-
-#define	TCPOPT_SIGNATURE		19	/* Keyed MD5: RFC 2385 */
+#define	TCPOPT_SIGNATURE	19		/* Keyed MD5: RFC 2385 */
 #define	   TCPOLEN_SIGNATURE		18
 
-/* Option definitions */
-#define TCPOPT_SACK_PERMIT_HDR	\
-(TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_SACK_PERMITTED<<8|TCPOLEN_SACK_PERMITTED)
-#define	TCPOPT_SACK_HDR		(TCPOPT_NOP<<24|TCPOPT_NOP<<16|TCPOPT_SACK<<8)
 /* Miscellaneous constants */
 #define	MAX_SACK_BLKS	6	/* Max # SACK blocks stored at receiver side */
 #define	TCP_MAX_SACK	4	/* MAX # SACKs sent in any segment */
@@ -121,14 +116,6 @@ struct tcphdr {
  * Setting this to "0" disables the minmss check.
  */
 #define	TCP_MINMSS 216
-/*
- * TCP_MINMSSOVERLOAD is defined to be 1000 which should cover any type
- * of interactive TCP session.
- * See tcp_subr.c tcp_minmssoverload SYSCTL declaration and tcp_input.c
- * for more comments.
- * Setting this to "0" disables the minmssoverload check.
- */
-#define	TCP_MINMSSOVERLOAD 0	/* XXX: Disabled until refined */
 
 /*
  * Default maximum segment size for TCP6.
@@ -208,8 +195,8 @@ struct tcp_info {
 	/* Metrics; variable units. */
 	u_int32_t	__tcpi_pmtu;
 	u_int32_t	__tcpi_rcv_ssthresh;
-	u_int32_t	__tcpi_rtt;
-	u_int32_t	__tcpi_rttvar;
+	u_int32_t	tcpi_rtt;		/* Smoothed RTT in usecs. */
+	u_int32_t	tcpi_rttvar;		/* RTT variance in usecs. */
 	u_int32_t	tcpi_snd_ssthresh;	/* Slow start threshold. */
 	u_int32_t	tcpi_snd_cwnd;		/* Send congestion window. */
 	u_int32_t	__tcpi_advmss;

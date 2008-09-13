@@ -1,5 +1,4 @@
 /*	$NetBSD: ip_gre.c,v 1.29 2003/09/05 23:02:43 itojun Exp $ */
-/*	 $FreeBSD: src/sys/netinet/ip_gre.c,v 1.19.2.2 2006/01/27 21:50:10 bz Exp $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -44,6 +43,9 @@
  * output half is in net/if_gre.[ch]
  * This currently handles IPPROTO_GRE, IPPROTO_MOBILE
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/ip_gre.c,v 1.25 2007/10/07 20:44:23 silby Exp $");
 
 #include "opt_inet.h"
 #include "opt_atalk.h"
@@ -95,7 +97,7 @@ void gre_inet_ntoa(struct in_addr in);	/* XXX */
 
 static struct gre_softc *gre_lookup(struct mbuf *, u_int8_t);
 
-static int	gre_input2(struct mbuf *, int, u_char);
+static struct mbuf *gre_input2(struct mbuf *, int, u_char);
 
 /*
  * De-encapsulate a packet and feed it back through ip input (this
@@ -106,29 +108,27 @@ static int	gre_input2(struct mbuf *, int, u_char);
 void
 gre_input(struct mbuf *m, int off)
 {
-	int ret, proto;
+	int proto;
 
 	proto = (mtod(m, struct ip *))->ip_p;
 
-	ret = gre_input2(m, off, proto);
+	m = gre_input2(m, off, proto);
+
 	/*
-	 * ret == 0 : packet not processed, meaning that
-	 * no matching tunnel that is up is found.
-	 * we inject it to raw ip socket to see if anyone picks it up.
+	 * If no matching tunnel that is up is found. We inject
+	 * the mbuf to raw ip socket to see if anyone picks it up.
 	 */
-	if (ret == 0)
+	if (m != NULL)
 		rip_input(m, off);
 }
 
 /*
- * decapsulate.
- * Does the real work and is called from gre_input() (above)
- * returns 0 if packet is not yet processed
- * and 1 if it needs no further processing
- * proto is the protocol number of the "calling" foo_input()
- * routine.
+ * Decapsulate. Does the real work and is called from gre_input()
+ * (above). Returns an mbuf back if packet is not yet processed,
+ * and NULL if it needs no further processing. proto is the protocol
+ * number of the "calling" foo_input() routine.
  */
-static int
+static struct mbuf *
 gre_input2(struct mbuf *m ,int hlen, u_char proto)
 {
 	struct greip *gip;
@@ -139,13 +139,13 @@ gre_input2(struct mbuf *m ,int hlen, u_char proto)
 
 	if ((sc = gre_lookup(m, proto)) == NULL) {
 		/* No matching tunnel or tunnel is down. */
-		return (0);
+		return (m);
 	}
 
 	if (m->m_len < sizeof(*gip)) {
 		m = m_pullup(m, sizeof(*gip));
 		if (m == NULL)
-			return (ENOBUFS);
+			return (NULL);
 	}
 	gip = mtod(m, struct greip *);
 
@@ -164,7 +164,7 @@ gre_input2(struct mbuf *m ,int hlen, u_char proto)
 			hlen += 4;
 		/* We don't support routing fields (variable length) */
 		if (flags & GRE_RP)
-			return (0);
+			return (m);
 		if (flags & GRE_KP)
 			hlen += 4;
 		if (flags & GRE_SP)
@@ -191,23 +191,24 @@ gre_input2(struct mbuf *m ,int hlen, u_char proto)
 			af = AF_APPLETALK;
 			break;
 #endif
-		default:	   /* others not yet supported */
-			return (0);
+		default:
+			/* Others not yet supported. */
+			return (m);
 		}
 		break;
 	default:
-		/* others not yet supported */
-		return (0);
+		/* Others not yet supported. */
+		return (m);
 	}
 
 	if (hlen > m->m_pkthdr.len) {
 		m_freem(m);
-		return (EINVAL);
+		return (NULL);
 	}
 	/* Unlike NetBSD, in FreeBSD m_adj() adjusts m->m_pkthdr.len as well */
 	m_adj(m, hlen);
 
-	if (GRE2IFP(sc)->if_bpf) {
+	if (bpf_peers_present(GRE2IFP(sc)->if_bpf)) {
 		bpf_mtap2(GRE2IFP(sc)->if_bpf, &af, sizeof(af), m);
 	}
 
@@ -215,7 +216,8 @@ gre_input2(struct mbuf *m ,int hlen, u_char proto)
 
 	netisr_dispatch(isr, m);
 
-	return (1);	/* packet is done, no further processing needed */
+	/* Packet is done, no further processing needed. */
+	return (NULL);
 }
 
 /*
@@ -289,7 +291,7 @@ gre_mobile_input(struct mbuf *m, int hlen)
 	ip->ip_sum = 0;
 	ip->ip_sum = in_cksum(m, (ip->ip_hl << 2));
 
-	if (GRE2IFP(sc)->if_bpf) {
+	if (bpf_peers_present(GRE2IFP(sc)->if_bpf)) {
 		u_int32_t af = AF_INET;
 		bpf_mtap2(GRE2IFP(sc)->if_bpf, &af, sizeof(af), m);
 	}
@@ -310,9 +312,7 @@ gre_mobile_input(struct mbuf *m, int hlen)
  * in_gre.c during destroy.
  */
 static struct gre_softc *
-gre_lookup(m, proto)
-	struct mbuf *m;
-	u_int8_t proto;
+gre_lookup(struct mbuf *m, u_int8_t proto)
 {
 	struct ip *ip = mtod(m, struct ip *);
 	struct gre_softc *sc;

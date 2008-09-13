@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_rmx.c,v 1.14 2005/01/07 02:30:34 imp Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_rmx.c,v 1.18 2007/07/05 16:29:39 delphij Exp $	*/
 /*	$KAME: in6_rmx.c,v 1.11 2001/07/26 06:53:16 jinmei Exp $	*/
 
 /*-
@@ -110,7 +110,7 @@ extern int	in6_inithead __P((void **head, int off));
  */
 static struct radix_node *
 in6_addroute(void *v_arg, void *n_arg, struct radix_node_head *head,
-	    struct radix_node *treenodes)
+    struct radix_node *treenodes)
 {
 	struct rtentry *rt = (struct rtentry *)treenodes;
 	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)rt_key(rt);
@@ -259,7 +259,7 @@ in6_clsroute(struct radix_node *rn, struct radix_node_head *head)
 	 */
 	if (rtq_reallyold != 0) {
 		rt->rt_flags |= RTPRF_OURS;
-		rt->rt_rmx.rmx_expire = time_second + rtq_reallyold;
+		rt->rt_rmx.rmx_expire = time_uptime + rtq_reallyold;
 	} else {
 		rtexpunge(rt);
 	}
@@ -290,7 +290,7 @@ in6_rtqkill(struct radix_node *rn, void *rock)
 	if (rt->rt_flags & RTPRF_OURS) {
 		ap->found++;
 
-		if (ap->draining || rt->rt_rmx.rmx_expire <= time_second) {
+		if (ap->draining || rt->rt_rmx.rmx_expire <= time_uptime) {
 			if (rt->rt_refcnt > 0)
 				panic("rtqkill route really not free");
 
@@ -305,9 +305,9 @@ in6_rtqkill(struct radix_node *rn, void *rock)
 			}
 		} else {
 			if (ap->updating
-			   && (rt->rt_rmx.rmx_expire - time_second
+			   && (rt->rt_rmx.rmx_expire - time_uptime
 			       > rtq_reallyold)) {
-				rt->rt_rmx.rmx_expire = time_second
+				rt->rt_rmx.rmx_expire = time_uptime
 					+ rtq_reallyold;
 			}
 			ap->nextstop = lmin(ap->nextstop,
@@ -332,7 +332,7 @@ in6_rtqtimo(void *rock)
 
 	arg.found = arg.killed = 0;
 	arg.rnh = rnh;
-	arg.nextstop = time_second + rtq_timeout;
+	arg.nextstop = time_uptime + rtq_timeout;
 	arg.draining = arg.updating = 0;
 	RADIX_NODE_HEAD_LOCK(rnh);
 	rnh->rnh_walktree(rnh, in6_rtqkill, &arg);
@@ -347,14 +347,14 @@ in6_rtqtimo(void *rock)
 	 * hard.
 	 */
 	if ((arg.found - arg.killed > rtq_toomany)
-	   && (time_second - last_adjusted_timeout >= rtq_timeout)
+	   && (time_uptime - last_adjusted_timeout >= rtq_timeout)
 	   && rtq_reallyold > rtq_minreallyold) {
 		rtq_reallyold = 2*rtq_reallyold / 3;
 		if (rtq_reallyold < rtq_minreallyold) {
 			rtq_reallyold = rtq_minreallyold;
 		}
 
-		last_adjusted_timeout = time_second;
+		last_adjusted_timeout = time_uptime;
 #ifdef DIAGNOSTIC
 		log(LOG_DEBUG, "in6_rtqtimo: adjusted rtq_reallyold to %d",
 		    rtq_reallyold);
@@ -367,7 +367,7 @@ in6_rtqtimo(void *rock)
 	}
 
 	atv.tv_usec = 0;
-	atv.tv_sec = arg.nextstop - time_second;
+	atv.tv_sec = arg.nextstop - time_uptime;
 	callout_reset(&rtq_timer, tvtohz(&atv), in6_rtqtimo, rock);
 }
 
@@ -391,7 +391,7 @@ in6_mtuexpire(struct radix_node *rn, void *rock)
 		panic("rt == NULL in in6_mtuexpire");
 
 	if (rt->rt_rmx.rmx_expire && !(rt->rt_flags & RTF_PROBEMTU)) {
-		if (rt->rt_rmx.rmx_expire <= time_second) {
+		if (rt->rt_rmx.rmx_expire <= time_uptime) {
 			rt->rt_flags |= RTF_PROBEMTU;
 		} else {
 			ap->nextstop = lmin(ap->nextstop,
@@ -412,23 +412,24 @@ in6_mtutimo(void *rock)
 	struct timeval atv;
 
 	arg.rnh = rnh;
-	arg.nextstop = time_second + MTUTIMO_DEFAULT;
+	arg.nextstop = time_uptime + MTUTIMO_DEFAULT;
 	RADIX_NODE_HEAD_LOCK(rnh);
 	rnh->rnh_walktree(rnh, in6_mtuexpire, &arg);
 	RADIX_NODE_HEAD_UNLOCK(rnh);
 
 	atv.tv_usec = 0;
-	atv.tv_sec = arg.nextstop - time_second;
+	atv.tv_sec = arg.nextstop - time_uptime;
 	if (atv.tv_sec < 0) {
 		printf("invalid mtu expiration time on routing table\n");
-		arg.nextstop = 30;	/* last resort */
+		arg.nextstop = time_uptime + 30;	/* last resort */
+		atv.tv_sec = 30;
 	}
 	callout_reset(&rtq_mtutimer, tvtohz(&atv), in6_mtutimo, rock);
 }
 
 #if 0
 void
-in6_rtqdrain()
+in6_rtqdrain(void)
 {
 	struct radix_node_head *rnh = rt_tables[AF_INET6];
 	struct rtqk_arg arg;

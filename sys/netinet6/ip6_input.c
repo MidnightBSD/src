@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ip6_input.c,v 1.81.2.4 2006/01/31 16:36:11 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ip6_input.c,v 1.95 2007/07/05 16:29:40 delphij Exp $	*/
 /*	$KAME: ip6_input.c,v 1.259 2002/01/21 04:58:09 jinmei Exp $	*/
 
 /*-
@@ -61,7 +61,6 @@
  *	@(#)ip_input.c	8.2 (Berkeley) 1/4/94
  */
 
-#include "opt_ip6fw.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
@@ -103,23 +102,12 @@
 #include <netinet6/nd6.h>
 
 #ifdef IPSEC
-#include <netinet6/ipsec.h>
-#ifdef INET6
-#include <netinet6/ipsec6.h>
-#endif
-#endif
-
-#ifdef FAST_IPSEC
 #include <netipsec/ipsec.h>
+#include <netinet6/ip6_ipsec.h>
 #include <netipsec/ipsec6.h>
-#define	IPSEC
-#endif /* FAST_IPSEC */
-
-#include <netinet6/ip6_fw.h>
+#endif /* IPSEC */
 
 #include <netinet6/ip6protosw.h>
-
-#include <net/net_osdep.h>
 
 extern struct domain inet6domain;
 
@@ -138,11 +126,6 @@ int ip6_ours_check_algorithm;
 
 struct pfil_head inet6_pfil_hook;
 
-/* firewall hooks */
-ip6_fw_chk_t *ip6_fw_chk_ptr;
-ip6_fw_ctl_t *ip6_fw_ctl_ptr;
-int ip6_fw_enable = 1;
-
 struct ip6stat ip6stat;
 
 static void ip6_init2 __P((void *));
@@ -157,7 +140,7 @@ static struct mbuf *ip6_pullexthdr __P((struct mbuf *, size_t, int));
  * All protocols not implemented in kernel go to raw IP6 protocol handler.
  */
 void
-ip6_init()
+ip6_init(void)
 {
 	struct ip6protosw *pr;
 	int i;
@@ -204,8 +187,7 @@ ip6_init()
 }
 
 static void
-ip6_init2(dummy)
-	void *dummy;
+ip6_init2(void *dummy)
 {
 
 	/* nd6_timer_init */
@@ -227,8 +209,7 @@ SYSINIT(netinet6init2, SI_SUB_PROTO_DOMAIN, SI_ORDER_MIDDLE, ip6_init2, NULL);
 extern struct	route_in6 ip6_forward_rt;
 
 void
-ip6_input(m)
-	struct mbuf *m;
+ip6_input(struct mbuf *m)
 {
 	struct ip6_hdr *ip6;
 	int off = sizeof(struct ip6_hdr), nest;
@@ -240,16 +221,18 @@ ip6_input(m)
 	int srcrt = 0;
 
 	GIANT_REQUIRED;			/* XXX for now */
+
 #ifdef IPSEC
 	/*
 	 * should the inner packet be considered authentic?
 	 * see comment in ah4_input().
+	 * NB: m cannot be NULL when passed to the input routine
 	 */
-	if (m) {
-		m->m_flags &= ~M_AUTHIPHDR;
-		m->m_flags &= ~M_AUTHIPDGM;
-	}
-#endif
+
+	m->m_flags &= ~M_AUTHIPHDR;
+	m->m_flags &= ~M_AUTHIPDGM;
+
+#endif /* IPSEC */
 
 	/*
 	 * make sure we don't have onion peering information into m_tag.
@@ -414,7 +397,7 @@ ip6_input(m)
 	odst = ip6->ip6_dst;
 
 	/* Jump over all PFIL processing if hooks are not active. */
-	if (inet6_pfil_hook.ph_busy_count == -1)
+	if (!PFIL_HOOKED(&inet6_pfil_hook))
 		goto passin;
 
 	if (pfil_run_hooks(&inet6_pfil_hook, &m, m->m_pkthdr.rcvif, PFIL_IN, NULL))
@@ -425,21 +408,6 @@ ip6_input(m)
 	srcrt = !IN6_ARE_ADDR_EQUAL(&odst, &ip6->ip6_dst);
 
 passin:
-	/*
-	 * Check with the firewall...
-	 */
-	if (ip6_fw_enable && ip6_fw_chk_ptr) {
-		u_short port = 0;
-		/* If ipfw says divert, we have to just drop packet */
-		/* use port as a dummy argument */
-		if ((*ip6_fw_chk_ptr)(&ip6, NULL, &port, &m)) {
-			m_freem(m);
-			m = NULL;
-		}
-		if (!m)
-			return;
-	}
-
 	/*
 	 * Disambiguate address scope zones (if there is ambiguity).
 	 * We first make sure that the original source or destination address
@@ -464,7 +432,7 @@ passin:
 	 * Multicast check
 	 */
 	if (IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
-	  	struct in6_multi *in6m = 0;
+		struct in6_multi *in6m = 0;
 
 		in6_ifstat_inc(m->m_pkthdr.rcvif, ifs6_in_mcast);
 		/*
@@ -573,11 +541,13 @@ passin:
 			ia6->ia_ifa.if_ibytes += m->m_pkthdr.len;
 			goto hbhcheck;
 		} else {
+			char ip6bufs[INET6_ADDRSTRLEN];
+			char ip6bufd[INET6_ADDRSTRLEN];
 			/* address is not ready, so discard the packet. */
 			nd6log((LOG_INFO,
 			    "ip6_input: packet to an unready address %s->%s\n",
-			    ip6_sprintf(&ip6->ip6_src),
-			    ip6_sprintf(&ip6->ip6_dst)));
+			    ip6_sprintf(ip6bufs, &ip6->ip6_src),
+			    ip6_sprintf(ip6bufd, &ip6->ip6_dst)));
 
 			goto bad;
 		}
@@ -680,11 +650,25 @@ passin:
 		nxt = hbh->ip6h_nxt;
 
 		/*
-		 * accept the packet if a router alert option is included
-		 * and we act as an IPv6 router.
+		 * If we are acting as a router and the packet contains a
+		 * router alert option, see if we know the option value.
+		 * Currently, we only support the option value for MLD, in which
+		 * case we should pass the packet to the multicast routing
+		 * daemon.
 		 */
-		if (rtalert != ~0 && ip6_forwarding)
-			ours = 1;
+		if (rtalert != ~0 && ip6_forwarding) {
+			switch (rtalert) {
+			case IP6OPT_RTALERT_MLD:
+				ours = 1;
+				break;
+			default:
+				/*
+				 * RFC2711 requires unrecognized values must be
+				 * silently ignored.
+				 */
+				break;
+			}
+		}
 	} else
 		nxt = ip6->ip6_nxt;
 
@@ -719,7 +703,8 @@ passin:
 		 * ip6_mforward() returns a non-zero value, the packet
 		 * must be discarded, else it may be accepted below.
 		 */
-		if (ip6_mrouter && ip6_mforward(ip6, m->m_pkthdr.rcvif, m)) {
+		if (ip6_mrouter && ip6_mforward &&
+		    ip6_mforward(ip6, m->m_pkthdr.rcvif, m)) {
 			ip6stat.ip6s_cantforward++;
 			m_freem(m);
 			return;
@@ -780,12 +765,9 @@ passin:
 		 * note that we do not visit this with protocols with pcb layer
 		 * code - like udp/tcp/raw ip.
 		 */
-		if ((inet6sw[ip6_protox[nxt]].pr_flags & PR_LASTHDR) != 0 &&
-		    ipsec6_in_reject(m, NULL)) {
-			ipsec6stat.in_polvio++;
+		if (ip6_ipsec_input(m, nxt))
 			goto bad;
-		}
-#endif
+#endif /* IPSEC */
 		nxt = (*inet6sw[ip6_protox[nxt]].pr_input)(&m, &off, nxt);
 	}
 	return;
@@ -798,9 +780,7 @@ passin:
  * XXX backward compatibility wrapper
  */
 static struct ip6aux *
-ip6_setdstifaddr(m, ia6)
-	struct mbuf *m;
-	struct in6_ifaddr *ia6;
+ip6_setdstifaddr(struct mbuf *m, struct in6_ifaddr *ia6)
 {
 	struct ip6aux *ip6a;
 
@@ -811,8 +791,7 @@ ip6_setdstifaddr(m, ia6)
 }
 
 struct in6_ifaddr *
-ip6_getdstifaddr(m)
-	struct mbuf *m;
+ip6_getdstifaddr(struct mbuf *m)
 {
 	struct ip6aux *ip6a;
 
@@ -826,13 +805,12 @@ ip6_getdstifaddr(m)
 /*
  * Hop-by-Hop options header processing. If a valid jumbo payload option is
  * included, the real payload length will be stored in plenp.
+ *
+ * rtalertp - XXX: should be stored more smart way
  */
 static int
-ip6_hopopts_input(plenp, rtalertp, mp, offp)
-	u_int32_t *plenp;
-	u_int32_t *rtalertp;	/* XXX: should be stored more smart way */
-	struct mbuf **mp;
-	int *offp;
+ip6_hopopts_input(u_int32_t *plenp, u_int32_t *rtalertp,
+    struct mbuf **mp, int *offp)
 {
 	struct mbuf *m = *mp;
 	int off = *offp, hbhlen;
@@ -886,12 +864,8 @@ ip6_hopopts_input(plenp, rtalertp, mp, offp)
  * opthead + hbhlen is located in continuous memory region.
  */
 int
-ip6_process_hopopts(m, opthead, hbhlen, rtalertp, plenp)
-	struct mbuf *m;
-	u_int8_t *opthead;
-	int hbhlen;
-	u_int32_t *rtalertp;
-	u_int32_t *plenp;
+ip6_process_hopopts(struct mbuf *m, u_int8_t *opthead, int hbhlen,
+    u_int32_t *rtalertp, u_int32_t *plenp)
 {
 	struct ip6_hdr *ip6;
 	int optlen = 0;
@@ -1023,10 +997,7 @@ ip6_process_hopopts(m, opthead, hbhlen, rtalertp, plenp)
  * is not continuous in order to return an ICMPv6 error.
  */
 int
-ip6_unknown_opt(optp, m, off)
-	u_int8_t *optp;
-	struct mbuf *m;
-	int off;
+ip6_unknown_opt(u_int8_t *optp, struct mbuf *m, int off)
 {
 	struct ip6_hdr *ip6;
 
@@ -1067,9 +1038,7 @@ ip6_unknown_opt(optp, m, off)
  * very first mbuf on the mbuf chain.
  */
 void
-ip6_savecontrol(in6p, m, mp)
-	struct inpcb *in6p;
-	struct mbuf *m, **mp;
+ip6_savecontrol(struct inpcb *in6p, struct mbuf *m, struct mbuf **mp)
 {
 #define IS2292(x, y)	((in6p->in6p_flags & IN6P_RFC2292) ? (x) : (y))
 	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
@@ -1273,7 +1242,7 @@ ip6_savecontrol(in6p, m, mp)
 
 			default:
 				/*
-			 	 * other cases have been filtered in the above.
+				 * other cases have been filtered in the above.
 				 * none will visit this case.  here we supply
 				 * the code just in case (nxt overwritten or
 				 * other cases).
@@ -1302,10 +1271,7 @@ ip6_savecontrol(in6p, m, mp)
 }
 
 void
-ip6_notify_pmtu(in6p, dst, mtu)
-	struct inpcb *in6p;
-	struct sockaddr_in6 *dst;
-	u_int32_t *mtu;
+ip6_notify_pmtu(struct inpcb *in6p, struct sockaddr_in6 *dst, u_int32_t *mtu)
 {
 	struct socket *so;
 	struct mbuf *m_mtu;
@@ -1347,10 +1313,7 @@ ip6_notify_pmtu(in6p, dst, mtu)
  * contains the result, or NULL on error.
  */
 static struct mbuf *
-ip6_pullexthdr(m, off, nxt)
-	struct mbuf *m;
-	size_t off;
-	int nxt;
+ip6_pullexthdr(struct mbuf *m, size_t off, int nxt)
 {
 	struct ip6_ext ip6e;
 	size_t elen;
@@ -1410,9 +1373,7 @@ ip6_pullexthdr(m, off, nxt)
  * we develop `neater' mechanism to process extension headers.
  */
 char *
-ip6_get_prevhdr(m, off)
-	struct mbuf *m;
-	int off;
+ip6_get_prevhdr(struct mbuf *m, int off)
 {
 	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
 
@@ -1451,11 +1412,7 @@ ip6_get_prevhdr(m, off)
  * get next header offset.  m will be retained.
  */
 int
-ip6_nexthdr(m, off, proto, nxtp)
-	struct mbuf *m;
-	int off;
-	int proto;
-	int *nxtp;
+ip6_nexthdr(struct mbuf *m, int off, int proto, int *nxtp)
 {
 	struct ip6_hdr ip6;
 	struct ip6_ext ip6e;
@@ -1530,11 +1487,7 @@ ip6_nexthdr(m, off, proto, nxtp)
  * get offset for the last header in the chain.  m will be kept untainted.
  */
 int
-ip6_lasthdr(m, off, proto, nxtp)
-	struct mbuf *m;
-	int off;
-	int proto;
-	int *nxtp;
+ip6_lasthdr(struct mbuf *m, int off, int proto, int *nxtp)
 {
 	int newoff;
 	int nxt;
@@ -1558,8 +1511,7 @@ ip6_lasthdr(m, off, proto, nxtp)
 }
 
 struct ip6aux *
-ip6_addaux(m)
-	struct mbuf *m;
+ip6_addaux(struct mbuf *m)
 {
 	struct m_tag *mtag;
 
@@ -1576,8 +1528,7 @@ ip6_addaux(m)
 }
 
 struct ip6aux *
-ip6_findaux(m)
-	struct mbuf *m;
+ip6_findaux(struct mbuf *m)
 {
 	struct m_tag *mtag;
 
@@ -1586,8 +1537,7 @@ ip6_findaux(m)
 }
 
 void
-ip6_delaux(m)
-	struct mbuf *m;
+ip6_delaux(struct mbuf *m)
 {
 	struct m_tag *mtag;
 

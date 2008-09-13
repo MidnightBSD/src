@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/mld6.c,v 1.19.2.6 2006/03/11 10:36:23 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/mld6.c,v 1.31 2007/07/05 16:29:40 delphij Exp $	*/
 /*	$KAME: mld6.c,v 1.27 2001/04/04 05:17:30 itojun Exp $	*/
 
 /*-
@@ -89,8 +89,6 @@
 #include <netinet/icmp6.h>
 #include <netinet6/mld6_var.h>
 
-#include <net/net_osdep.h>
-
 /*
  * Protocol constants
  */
@@ -112,7 +110,7 @@ static void mld_timeo(struct in6_multi *);
 static u_long mld_timerresid(struct in6_multi *);
 
 void
-mld6_init()
+mld6_init(void)
 {
 	static u_int8_t hbh_buf[8];
 	struct ip6_hbh *hbh = (struct ip6_hbh *)hbh_buf;
@@ -133,8 +131,7 @@ mld6_init()
 }
 
 static void
-mld_starttimer(in6m)
-	struct in6_multi *in6m;
+mld_starttimer(struct in6_multi *in6m)
 {
 	struct timeval now;
 
@@ -153,8 +150,7 @@ mld_starttimer(in6m)
 }
 
 static void
-mld_stoptimer(in6m)
-	struct in6_multi *in6m;
+mld_stoptimer(struct in6_multi *in6m)
 {
 	if (in6m->in6m_timer == IN6M_TIMER_UNDEF)
 		return;
@@ -164,8 +160,7 @@ mld_stoptimer(in6m)
 }
 
 static void
-mld_timeo(in6m)
-	struct in6_multi *in6m;
+mld_timeo(struct in6_multi *in6m)
 {
 	int s = splnet();
 
@@ -186,8 +181,7 @@ mld_timeo(in6m)
 }
 
 static u_long
-mld_timerresid(in6m)
-	struct in6_multi *in6m;
+mld_timerresid(struct in6_multi *in6m)
 {
 	struct timeval now, diff;
 
@@ -211,8 +205,7 @@ mld_timerresid(in6m)
 }
 
 void
-mld6_start_listening(in6m)
-	struct in6_multi *in6m;
+mld6_start_listening(struct in6_multi *in6m)
 {
 	struct in6_addr all_in6;
 	int s = splnet();
@@ -247,8 +240,7 @@ mld6_start_listening(in6m)
 }
 
 void
-mld6_stop_listening(in6m)
-	struct in6_multi *in6m;
+mld6_stop_listening(struct in6_multi *in6m)
 {
 	struct in6_addr allnode, allrouter;
 
@@ -271,9 +263,7 @@ mld6_stop_listening(in6m)
 }
 
 void
-mld6_input(m, off)
-	struct mbuf *m;
-	int off;
+mld6_input(struct mbuf *m, int off)
 {
 	struct ip6_hdr *ip6 = mtod(m, struct ip6_hdr *);
 	struct mld_hdr *mldh;
@@ -298,10 +288,11 @@ mld6_input(m, off)
 	/* source address validation */
 	ip6 = mtod(m, struct ip6_hdr *); /* in case mpullup */
 	if (!IN6_IS_ADDR_LINKLOCAL(&ip6->ip6_src)) {
+		char ip6bufs[INET6_ADDRSTRLEN], ip6bufg[INET6_ADDRSTRLEN];
 		log(LOG_ERR,
 		    "mld6_input: src %s is not link-local (grp=%s)\n",
-		    ip6_sprintf(&ip6->ip6_src),
-		    ip6_sprintf(&mldh->mld_addr));
+		    ip6_sprintf(ip6bufs, &ip6->ip6_src),
+		    ip6_sprintf(ip6bufg, &mldh->mld_addr));
 		/*
 		 * spec (RFC2710) does not explicitly
 		 * specify to discard the packet from a non link-local
@@ -327,7 +318,7 @@ mld6_input(m, off)
 	 *
 	 * In Non-Listener state, we simply don't have a membership record.
 	 * In Delaying Listener state, our timer is running (in6m->in6m_timer)
-	 * In Idle Listener state, our timer is not running 
+	 * In Idle Listener state, our timer is not running
 	 * (in6m->in6m_timer==IN6M_TIMER_UNDEF)
 	 *
 	 * The flag is in6m->in6m_state, it is set to MLD_OTHERLISTENER if
@@ -442,10 +433,7 @@ mld6_input(m, off)
 }
 
 static void
-mld6_sendpkt(in6m, type, dst)
-	struct in6_multi *in6m;
-	int type;
-	const struct in6_addr *dst;
+mld6_sendpkt(struct in6_multi *in6m, int type, const struct in6_addr *dst)
 {
 	struct mbuf *mh, *md;
 	struct mld_hdr *mldh;
@@ -544,108 +532,117 @@ mld6_sendpkt(in6m, type, dst)
  * Add source addresses to the list also, if upstream router is MLDv2 capable
  * and the number of source is not 0.
  */
-struct	in6_multi *
-in6_addmulti(maddr6, ifp, errorp, delay)
-	struct in6_addr *maddr6;
-	struct ifnet *ifp;
-	int *errorp, delay;
+struct in6_multi *
+in6_addmulti(struct in6_addr *maddr6, struct ifnet *ifp,
+    int *errorp, int delay)
 {
 	struct in6_multi *in6m;
-	struct ifmultiaddr *ifma;
-	struct sockaddr_in6 sa6;
-	int	s = splnet();
 
 	*errorp = 0;
+	in6m = NULL;
 
-	/*
-	 * Call generic routine to add membership or increment
-	 * refcount.  It wants addresses in the form of a sockaddr,
-	 * so we build one here (being careful to zero the unused bytes).
-	 */
-	bzero(&sa6, sizeof(sa6));
-	sa6.sin6_family = AF_INET6;
-	sa6.sin6_len = sizeof(struct sockaddr_in6);
-	sa6.sin6_addr = *maddr6;
-	*errorp = if_addmulti(ifp, (struct sockaddr *)&sa6, &ifma);
-	if (*errorp) {
-		splx(s);
-		return 0;
-	}
+	IFF_LOCKGIANT(ifp);
+	/*IN6_MULTI_LOCK();*/
 
-	/*
-	 * If ifma->ifma_protospec is null, then if_addmulti() created
-	 * a new record.  Otherwise, we are done.
-	 */
-	if (ifma->ifma_protospec != NULL) {
-		splx(s);
-		return ifma->ifma_protospec;
-	}
+	IN6_LOOKUP_MULTI(*maddr6, ifp, in6m);
+	if (in6m != NULL) {
+		/*
+		 * If we already joined this group, just bump the
+		 * refcount and return it.
+		 */
+		KASSERT(in6m->in6m_refcount >= 1,
+		    ("%s: bad refcount %d", __func__, in6m->in6m_refcount));
+		++in6m->in6m_refcount;
+	} else do {
+		struct in6_multi *nin6m;
+		struct ifmultiaddr *ifma;
+		struct sockaddr_in6 sa6;
 
-	/* XXX - if_addmulti uses M_WAITOK.  Can this really be called
-	   at interrupt time?  If so, need to fix if_addmulti. XXX */
-	in6m = (struct in6_multi *)malloc(sizeof(*in6m), M_IP6MADDR, M_NOWAIT);
-	if (in6m == NULL) {
-		splx(s);
-		return (NULL);
-	}
+		bzero(&sa6, sizeof(sa6));
+		sa6.sin6_family = AF_INET6;
+		sa6.sin6_len = sizeof(struct sockaddr_in6);
+		sa6.sin6_addr = *maddr6;
 
-	bzero(in6m, sizeof *in6m);
-	in6m->in6m_addr = *maddr6;
-	in6m->in6m_ifp = ifp;
-	in6m->in6m_refcount = 1;
-	in6m->in6m_ifma = ifma;
-	ifma->ifma_protospec = in6m;
-	in6m->in6m_timer_ch = malloc(sizeof(*in6m->in6m_timer_ch), M_IP6MADDR,
-	    M_NOWAIT);
-	if (in6m->in6m_timer_ch == NULL) {
-		free(in6m, M_IP6MADDR);
-		splx(s);
-		return (NULL);
-	}
-	LIST_INSERT_HEAD(&in6_multihead, in6m, in6m_entry);
+		*errorp = if_addmulti(ifp, (struct sockaddr *)&sa6, &ifma);
+		if (*errorp)
+			break;
 
-	callout_init(in6m->in6m_timer_ch, 0);
-	in6m->in6m_timer = delay;
-	if (in6m->in6m_timer > 0) {
-		in6m->in6m_state = MLD_REPORTPENDING;
-		mld_starttimer(in6m);
+		/*
+		 * If ifma->ifma_protospec is null, then if_addmulti() created
+		 * a new record.  Otherwise, bump refcount, and we are done.
+		 */
+		if (ifma->ifma_protospec != NULL) {
+			in6m = ifma->ifma_protospec;
+			++in6m->in6m_refcount;
+			break;
+		}
 
-		splx(s);
-		return (in6m);
-	}
+		nin6m = malloc(sizeof(*nin6m), M_IP6MADDR, M_NOWAIT | M_ZERO);
+		if (nin6m == NULL) {
+			if_delmulti_ifma(ifma);
+			break;
+		}
 
-	/*
-	 * Let MLD6 know that we have joined a new IPv6 multicast
-	 * group.
-	 */
-	mld6_start_listening(in6m);
-	splx(s);
+		nin6m->in6m_addr = *maddr6;
+		nin6m->in6m_ifp = ifp;
+		nin6m->in6m_refcount = 1;
+		nin6m->in6m_ifma = ifma;
+		ifma->ifma_protospec = nin6m;
+
+		nin6m->in6m_timer_ch = malloc(sizeof(*nin6m->in6m_timer_ch),
+		    M_IP6MADDR, M_NOWAIT);
+		if (nin6m->in6m_timer_ch == NULL) {
+			free(nin6m, M_IP6MADDR);
+			if_delmulti_ifma(ifma);
+			break;
+		}
+
+		LIST_INSERT_HEAD(&in6_multihead, nin6m, in6m_entry);
+
+		callout_init(nin6m->in6m_timer_ch, 0);
+		nin6m->in6m_timer = delay;
+		if (nin6m->in6m_timer > 0) {
+			nin6m->in6m_state = MLD_REPORTPENDING;
+			mld_starttimer(nin6m);
+		}
+
+		mld6_start_listening(nin6m);
+
+		in6m = nin6m;
+
+	} while (0);
+
+	/*IN6_MULTI_UNLOCK();*/
+	IFF_UNLOCKGIANT(ifp);
+
 	return (in6m);
 }
 
 /*
  * Delete a multicast address record.
+ *
+ * TODO: Locking, as per netinet.
  */
 void
-in6_delmulti(in6m)
-	struct in6_multi *in6m;
+in6_delmulti(struct in6_multi *in6m)
 {
-	struct ifmultiaddr *ifma = in6m->in6m_ifma;
-	int	s = splnet();
+	struct ifmultiaddr *ifma;
 
-	if (ifma->ifma_refcount == 1) {
-		/*
-		 * No remaining claims to this record; let MLD6 know
-		 * that we are leaving the multicast group.
-		 */
+	KASSERT(in6m->in6m_refcount >= 1, ("%s: freeing freed in6m", __func__));
+
+	if (--in6m->in6m_refcount == 0) {
 		mld_stoptimer(in6m);
 		mld6_stop_listening(in6m);
+
+		ifma = in6m->in6m_ifma;
+		KASSERT(ifma->ifma_protospec == in6m,
+		    ("%s: ifma_protospec != in6m", __func__));
 		ifma->ifma_protospec = NULL;
+
 		LIST_REMOVE(in6m, in6m_entry);
 		free(in6m->in6m_timer_ch, M_IP6MADDR);
 		free(in6m, M_IP6MADDR);
+
+		if_delmulti_ifma(ifma);
 	}
-	/* XXX - should be separate API for when we have an ifma? */
-	if_delmulti(ifma->ifma_ifp, ifma->ifma_addr);
-	splx(s);
 }

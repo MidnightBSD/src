@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 1982, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +28,14 @@
  * SUCH DAMAGE.
  *
  *	@(#)udp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/udp.h,v 1.9 2005/01/07 01:45:45 imp Exp $
+ * $FreeBSD: src/sys/netinet/udp.h,v 1.10 2007/02/20 10:13:11 rwatson Exp $
  */
 
 #ifndef _NETINET_UDP_H_
-#define _NETINET_UDP_H_
+#define	_NETINET_UDP_H_
 
 /*
- * Udp protocol header.
+ * UDP protocol header.
  * Per RFC 768, September, 1981.
  */
 struct udphdr {

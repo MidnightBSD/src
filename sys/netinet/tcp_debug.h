@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_debug.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp_debug.h,v 1.15 2005/01/07 01:45:45 imp Exp $
+ * $FreeBSD: src/sys/netinet/tcp_debug.h,v 1.16 2007/03/24 22:15:02 maxim Exp $
  */
 
 #ifndef _NETINET_TCP_DEBUG_H_
@@ -45,10 +45,11 @@ struct	tcp_debug {
 	 */
 	struct	tcpiphdr td_ti;
 	struct {
+#define	IP6_HDR_LEN	40	/* sizeof(struct ip6_hdr) */
 #if !defined(_KERNEL) && defined(INET6)
 		struct	ip6_hdr ip6;
 #else
-		u_char	ip6buf[40]; /* sizeof(struct ip6_hdr) */
+		u_char	ip6buf[IP6_HDR_LEN];
 #endif
 		struct	tcphdr th;
 	} td_ti6;

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/route6.c,v 1.11.2.1 2005/11/04 20:26:15 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/route6.c,v 1.14 2007/07/05 16:23:48 delphij Exp $	*/
 /*	$KAME: route6.c,v 1.24 2001/03/14 03:07:05 itojun Exp $	*/
 
 /*-
@@ -49,15 +49,18 @@
 
 #include <netinet/icmp6.h>
 
-extern int ip6_rthdr0_allowed;
-
+#if 0
 static int ip6_rthdr0 __P((struct mbuf *, struct ip6_hdr *,
     struct ip6_rthdr0 *));
 
+#endif /* Disable route header processing. */
+
+/*
+ * proto - is unused
+ */
+
 int
-route6_input(mp, offp, proto)
-	struct mbuf **mp;
-	int *offp, proto;	/* proto is unused */
+route6_input(struct mbuf **mp, int *offp, int proto)
 {
 	struct ip6_hdr *ip6;
 	struct mbuf *m = *mp;
@@ -89,9 +92,8 @@ route6_input(mp, offp, proto)
 #endif
 
 	switch (rh->ip6r_type) {
+#if 0
 	case IPV6_RTHDR_TYPE_0:
-		if (!ip6_rthdr0_allowed)
-			return (IPPROTO_DONE);
 		rhlen = (rh->ip6r_len + 1) << 3;
 #ifndef PULLDOWN_TEST
 		/*
@@ -118,6 +120,7 @@ route6_input(mp, offp, proto)
 		if (ip6_rthdr0(m, ip6, (struct ip6_rthdr0 *)rh))
 			return (IPPROTO_DONE);
 		break;
+#endif /* Disable route header 0 */
 	default:
 		/* unknown routing type */
 		if (rh->ip6r_segleft == 0) {
@@ -140,11 +143,9 @@ route6_input(mp, offp, proto)
  * RFC2292 backward compatibility warning: no support for strict/loose bitmap,
  * as it was dropped between RFC1883 and RFC2460.
  */
+#if 0
 static int
-ip6_rthdr0(m, ip6, rh0)
-	struct mbuf *m;
-	struct ip6_hdr *ip6;
-	struct ip6_rthdr0 *rh0;
+ip6_rthdr0(struct mbuf *m, struct ip6_hdr *ip6, struct ip6_rthdr0 *rh0)
 {
 	int addrs, index;
 	struct in6_addr *nextaddr, tmpaddr;
@@ -237,3 +238,4 @@ ip6_rthdr0(m, ip6, rh0)
 	m_freem(m);
 	return (-1);
 }
+#endif

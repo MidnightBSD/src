@@ -1,6 +1,6 @@
 /*	$KAME: ip6_id.c,v 1.13 2003/09/16 09:11:19 itojun Exp $	*/
 /*	$OpenBSD: ip_id.c,v 1.6 2002/03/15 18:19:52 millert Exp $	*/
-/* $FreeBSD: src/sys/netinet6/ip6_id.c,v 1.7 2005/01/07 02:30:34 imp Exp $ */
+/* $FreeBSD: src/sys/netinet6/ip6_id.c,v 1.8 2007/07/05 16:23:47 delphij Exp $ */
 
 /*-
  * Copyright (C) 2003 WIDE Project.
@@ -152,7 +152,6 @@ static u_int32_t randomid(struct randomtab *);
  * Do a fast modular exponation, returned value will be in the range
  * of 0 - (mod-1)
  */
-
 static u_int32_t
 pmod(u_int32_t gen, u_int32_t expo, u_int32_t mod)
 {

@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 1982, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +28,15 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_fsm.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp_fsm.h,v 1.18 2005/01/07 01:45:45 imp Exp $
+ * $FreeBSD: src/sys/netinet/tcp_fsm.h,v 1.20 2007/07/30 11:06:41 des Exp $
  */
 
 #ifndef _NETINET_TCP_FSM_H_
-#define _NETINET_TCP_FSM_H_
+#define	_NETINET_TCP_FSM_H_
 
 /*
  * TCP FSM state definitions.
+ *
  * Per RFC793, September, 1981.
  */
 
@@ -75,10 +77,10 @@
 
 #ifdef	TCPOUTFLAGS
 /*
- * Flags used when sending segments in tcp_output.
- * Basic flags (TH_RST,TH_ACK,TH_SYN,TH_FIN) are totally
- * determined by state, with the proviso that TH_FIN is sent only
- * if all data queued for output is included in the segment.
+ * Flags used when sending segments in tcp_output.  Basic flags (TH_RST,
+ * TH_ACK,TH_SYN,TH_FIN) are totally determined by state, with the proviso
+ * that TH_FIN is sent only if all data queued for output is included in the
+ * segment.
  */
 static u_char	tcp_outflags[TCP_NSTATES] = {
 	TH_RST|TH_ACK,		/* 0, CLOSED */
@@ -100,7 +102,7 @@ int	tcp_acounts[TCP_NSTATES][PRU_NREQ];
 #endif
 
 #ifdef	TCPSTATES
-const char *tcpstates[] = {
+static char const * const tcpstates[] = {
 	"CLOSED",	"LISTEN",	"SYN_SENT",	"SYN_RCVD",
 	"ESTABLISHED",	"CLOSE_WAIT",	"FIN_WAIT_1",	"CLOSING",
 	"LAST_ACK",	"FIN_WAIT_2",	"TIME_WAIT",

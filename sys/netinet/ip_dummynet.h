@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/ip_dummynet.h,v 1.36.2.2 2006/02/17 16:46:47 ru Exp $
+ * $FreeBSD: src/sys/netinet/ip_dummynet.h,v 1.40 2007/06/17 00:33:34 mjacob Exp $
  */
 
 #ifndef _IP_DUMMYNET_H
@@ -70,11 +70,6 @@ typedef u_int64_t dn_key ;      /* sorting key */
  * virtual time wraps every 15 days.
  */
 
-/*
- * The OFFSET_OF macro is used to return the offset of a field within
- * a structure. It is used by the heap management routines.
- */
-#define OFFSET_OF(type, field) ((int)&( ((type *)0)->field) )
 
 /*
  * The maximum hash table size for queues.  This value must be a power
@@ -121,7 +116,7 @@ struct dn_pkt_tag {
     int dn_dir;			/* action when packet comes out. */
 #define DN_TO_IP_OUT	1
 #define DN_TO_IP_IN	2
-#define DN_TO_BDG_FWD	3
+/* Obsolete: #define DN_TO_BDG_FWD	3 */
 #define DN_TO_ETH_DEMUX	4
 #define DN_TO_ETH_OUT	5
 #define DN_TO_IP6_IN	6

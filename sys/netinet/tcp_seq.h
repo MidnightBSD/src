@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_seq.h	8.3 (Berkeley) 6/21/95
- * $FreeBSD: src/sys/netinet/tcp_seq.h,v 1.25 2005/04/10 05:24:59 ps Exp $
+ * $FreeBSD: src/sys/netinet/tcp_seq.h,v 1.26 2006/06/18 14:24:12 andre Exp $
  */
 
 #ifndef _NETINET_TCP_SEQ_H_
@@ -49,19 +49,6 @@
 #define TSTMP_LT(a,b)	((int)((a)-(b)) < 0)
 #define TSTMP_GT(a,b)	((int)((a)-(b)) > 0)
 #define TSTMP_GEQ(a,b)	((int)((a)-(b)) >= 0)
-
-/*
- * TCP connection counts are 32 bit integers operated
- * on with modular arithmetic.  These macros can be
- * used to compare such integers.
- */
-#define	CC_LT(a,b)	((int)((a)-(b)) < 0)
-#define	CC_LEQ(a,b)	((int)((a)-(b)) <= 0)
-#define	CC_GT(a,b)	((int)((a)-(b)) > 0)
-#define	CC_GEQ(a,b)	((int)((a)-(b)) >= 0)
-
-/* Macro to increment a CC: skip 0 which has a special meaning */
-#define CC_INC(c)	(++(c) == 0 ? ++(c) : (c))
 
 /*
  * Macros to initialize tcp sequence numbers for

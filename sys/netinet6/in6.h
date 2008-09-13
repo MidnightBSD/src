@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6.h,v 1.36.2.6 2006/03/22 06:32:54 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6.h,v 1.51 2007/07/19 09:16:40 bz Exp $	*/
 /*	$KAME: in6.h,v 1.89 2001/05/27 13:28:35 itojun Exp $	*/
 
 /*-
@@ -77,31 +77,9 @@
 #define __KAME_VERSION		"FreeBSD"
 
 /*
- * Local port number conventions:
- *
- * Ports < IPPORT_RESERVED are reserved for privileged processes (e.g. root),
- * unless a kernel is compiled with IPNOPRIVPORTS defined.
- *
- * When a user does a bind(2) or connect(2) with a port number of zero,
- * a non-conflicting local port address is chosen.
- *
- * The default range is IPPORT_ANONMIN to IPPORT_ANONMAX, although
- * that is settable by sysctl(3); net.inet.ip.anonportmin and
- * net.inet.ip.anonportmax respectively.
- *
- * A user may set the IPPROTO_IP option IP_PORTRANGE to change this
- * default assignment range.
- *
- * The value IP_PORTRANGE_DEFAULT causes the default behavior.
- *
- * The value IP_PORTRANGE_HIGH is the same as IP_PORTRANGE_DEFAULT,
- * and exists only for FreeBSD compatibility purposes.
- *
- * The value IP_PORTRANGE_LOW changes the range to the "low" are
- * that is (by convention) restricted to privileged processes.
- * This convention is based on "vouchsafe" principles only.
- * It is only secure if you trust the remote host to restrict these ports.
- * The range is IPPORT_RESERVEDMIN to IPPORT_RESERVEDMAX.
+ * IPv6 port allocation rules should mirror the IPv4 rules and are controlled
+ * by the the net.inet.ip.portrange sysctl tree. The following defines exist
+ * for compatibility with userland applications that need them.
  */
 #if __BSD_VISIBLE
 #define	IPV6PORT_RESERVED	1024
@@ -339,7 +317,7 @@ extern const struct in6_addr in6addr_linklocal_allrouters;
 	(IN6_IS_ADDR_MULTICAST(a) &&	\
 	 (IPV6_ADDR_MC_SCOPE(a) == IPV6_ADDR_SCOPE_LINKLOCAL))
 #define IN6_IS_ADDR_MC_SITELOCAL(a)	\
-	(IN6_IS_ADDR_MULTICAST(a) && 	\
+	(IN6_IS_ADDR_MULTICAST(a) &&	\
 	 (IPV6_ADDR_MC_SCOPE(a) == IPV6_ADDR_SCOPE_SITELOCAL))
 #define IN6_IS_ADDR_MC_ORGLOCAL(a)	\
 	(IN6_IS_ADDR_MULTICAST(a) &&	\
@@ -355,7 +333,7 @@ extern const struct in6_addr in6addr_linklocal_allrouters;
 	(IN6_IS_ADDR_MULTICAST(a) &&	\
 	 (__IPV6_ADDR_MC_SCOPE(a) == __IPV6_ADDR_SCOPE_LINKLOCAL))
 #define IN6_IS_ADDR_MC_SITELOCAL(a)	\
-	(IN6_IS_ADDR_MULTICAST(a) && 	\
+	(IN6_IS_ADDR_MULTICAST(a) &&	\
 	 (__IPV6_ADDR_MC_SCOPE(a) == __IPV6_ADDR_SCOPE_SITELOCAL))
 #define IN6_IS_ADDR_MC_ORGLOCAL(a)	\
 	(IN6_IS_ADDR_MULTICAST(a) &&	\
@@ -372,6 +350,10 @@ extern const struct in6_addr in6addr_linklocal_allrouters;
 #define IN6_IS_SCOPE_LINKLOCAL(a)	\
 	((IN6_IS_ADDR_LINKLOCAL(a)) ||	\
 	 (IN6_IS_ADDR_MC_LINKLOCAL(a)))
+#define	IN6_IS_SCOPE_EMBED(a)			\
+	((IN6_IS_ADDR_LINKLOCAL(a)) ||		\
+	 (IN6_IS_ADDR_MC_LINKLOCAL(a)) ||	\
+	 (IN6_IS_ADDR_MC_INTFACELOCAL(a)))
 
 #define IFA6_IS_DEPRECATED(a) \
 	((a)->ia6_lifetime.ia6t_pltime != ND6_INFINITE_LIFETIME && \
@@ -433,7 +415,8 @@ struct route_in6 {
 
 #if 1 /* IPSEC */
 #define IPV6_IPSEC_POLICY	28 /* struct; get/set security policy */
-#endif
+#endif /* IPSEC */
+
 #define IPV6_FAITH		29 /* bool; accept FAITH'ed connections */
 
 #if 1 /* IPV6FIREWALL */
@@ -489,6 +472,14 @@ struct route_in6 {
 				    * the source address.
 				    */
 
+/*
+ * The following option is private; do not use it from user applications.
+ * It is deliberately defined to the same value as IP_MSFILTER.
+ */
+#define	IPV6_MSFILTER		74 /* struct __msfilterreq;
+				    * set/get multicast source filter list.
+				    */
+
 /* to define items, should talk with KAME guys first, for *BSD compatibility */
 
 #define IPV6_RTHDR_LOOSE     0 /* this hop need not be a neighbor. XXX old spec */
@@ -508,6 +499,18 @@ struct ipv6_mreq {
 	struct in6_addr	ipv6mr_multiaddr;
 	unsigned int	ipv6mr_interface;
 };
+
+#ifdef notyet
+/*
+ * Argument structure for IPV6_ADD_SOURCE_MEMBERSHIP,
+ * IPV6_DROP_SOURCE_MEMBERSHIP, IPV6_BLOCK_SOURCE, and IPV6_UNBLOCK_SOURCE.
+ */
+struct ipv6_mreq_source {
+	struct in6_addr	ipv6mr_multiaddr;
+	struct in6_addr	ipv6mr_sourceaddr;
+	uint32_t	ipv6mr_interface;
+};
+#endif
 
 /*
  * IPV6_PKTINFO: Packet information(RFC2292 sec 5)
@@ -596,8 +599,7 @@ struct ip6_mtuinfo {
 /* New entries should be added here from current IPV6CTL_MAXID value. */
 /* to define items, should talk with KAME guys first, for *BSD compatibility */
 #define IPV6CTL_STEALTH		45
-#define IPV6CTL_RTHDR0_ALLOWED  46
-#define IPV6CTL_MAXID		47
+#define IPV6CTL_MAXID		46
 #endif /* __BSD_VISIBLE */
 
 /*

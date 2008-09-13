@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet/icmp6.h,v 1.16.2.4 2005/12/25 14:03:37 suz Exp $	*/
+/*	$FreeBSD: src/sys/netinet/icmp6.h,v 1.21 2007/05/17 21:20:23 jinmei Exp $	*/
 /*	$KAME: icmp6.h,v 1.46 2001/04/27 15:09:48 itojun Exp $	*/
 
 /*-
@@ -709,6 +709,11 @@ do { \
 
 extern int	icmp6_rediraccept;	/* accept/process redirects */
 extern int	icmp6_redirtimeout;	/* cache time for redirect routes */
+
+#define ICMP6_NODEINFO_FQDNOK		0x1
+#define ICMP6_NODEINFO_NODEADDROK	0x2
+#define ICMP6_NODEINFO_TMPADDROK	0x4
+#define ICMP6_NODEINFO_GLOBALOK		0x8
 #endif /* _KERNEL */
 
 #endif /* not _NETINET_ICMP6_H_ */

@@ -26,12 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet6/udp6_var.h,v 1.7 2005/01/07 02:30:35 imp Exp $
+ * $FreeBSD: src/sys/netinet6/udp6_var.h,v 1.9 2007/07/23 07:58:58 rwatson Exp $
  */
 
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,13 +67,10 @@
 #ifdef _KERNEL
 SYSCTL_DECL(_net_inet6_udp6);
 
-extern struct	pr_usrreqs udp6_usrreqs;
+extern struct pr_usrreqs	udp6_usrreqs;
 
-void	udp6_ctlinput __P((int, struct sockaddr *, void *));
-int	udp6_input __P((struct mbuf **, int *, int));
-int	udp6_output __P((struct inpcb *inp, struct mbuf *m,
-			struct sockaddr *addr, struct mbuf *control,
-			struct thread *td));
+void	udp6_ctlinput(int, struct sockaddr *, void *);
+int	udp6_input(struct mbuf **, int *, int);
 #endif
 
 #endif /*_NETINET6_UDP6_VAR_H_*/

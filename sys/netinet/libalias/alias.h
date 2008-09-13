@@ -25,10 +25,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netinet/libalias/alias.h,v 1.32 2005/05/05 21:53:17 glebius Exp $
+ * $FreeBSD: src/sys/netinet/libalias/alias.h,v 1.34 2006/12/01 16:27:11 piso Exp $
  */
 
-/*-
+/*
  * Alias.h defines the outside world interfaces for the packet aliasing
  * software.
  *
@@ -39,12 +39,16 @@
 #ifndef _ALIAS_H_
 #define	_ALIAS_H_
 
+#include <netinet/in_systm.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+
+#define LIBALIAS_BUF_SIZE 128
 #ifdef	_KERNEL
 /*
  * The kernel version of libalias does not support these features.
  */
 #define	NO_FW_PUNCH
-#define	NO_LOGGING
 #define	NO_USE_SOCKETS
 #endif
 
@@ -180,6 +184,13 @@ void		LibAliasSetTarget(struct libalias *, struct in_addr _target_addr);
 /* Transparent proxying routines. */
 int		LibAliasProxyRule(struct libalias *, const char *_cmd);
 
+/* Module handling API */
+int             LibAliasLoadModule(char *);
+int             LibAliasUnLoadAllModule(void);
+int             LibAliasRefreshModules(void);
+
+/* Mbuf helper function. */
+struct mbuf    *m_megapullup(struct mbuf *, int);
 
 /*
  * Mode flags and other constants.
@@ -192,9 +203,7 @@ int		LibAliasProxyRule(struct libalias *, const char *_cmd);
  * If PKT_ALIAS_LOG is set, a message will be printed to /var/log/alias.log
  * every time a link is created or deleted.  This is useful for debugging.
  */
-#ifndef	NO_LOGGING
 #define	PKT_ALIAS_LOG			0x01
-#endif
 
 /*
  * If PKT_ALIAS_DENY_INCOMING is set, then incoming connections (e.g. to ftp,

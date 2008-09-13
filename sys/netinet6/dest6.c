@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/dest6.c,v 1.10 2005/01/07 02:30:34 imp Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/dest6.c,v 1.11 2007/07/05 16:23:46 delphij Exp $	*/
 /*	$KAME: dest6.c,v 1.59 2003/07/11 13:21:16 t-momose Exp $	*/
 
 /*-
@@ -57,9 +57,7 @@
  * Destination options header processing.
  */
 int
-dest6_input(mp, offp, proto)
-	struct mbuf **mp;
-	int *offp, proto;
+dest6_input(struct mbuf **mp, int *offp, int proto)
 {
 	struct mbuf *m = *mp;
 	int off = *offp, dstoptlen, optlen;

@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sys/netinet/libalias/libalias.3,v 1.53 2005/01/20 09:17:02 ru Exp $
+.\" $FreeBSD: src/sys/netinet/libalias/libalias.3,v 1.58 2006/10/11 07:11:56 ru Exp $
 .\"
-.Dd January 17, 2004
+.Dd October 1, 2006
 .Dt LIBALIAS 3
 .Os
 .Sh NAME
@@ -836,7 +836,7 @@ can route packets to the machine in question.
 .Ed
 .Pp
 .Ft int
-.Fn LibAliasCheckNewLink void
+.Fn LibAliasCheckNewLink "struct libalias *"
 .Bd -ragged -offset indent
 This function returns a non-zero value when a new aliasing link is created.
 In circumstances where incoming traffic is being sequentially sent to
@@ -893,6 +893,9 @@ added support for PPTP and RTSP.
 added support for RTSP/PNA.
 .An Ruslan Ermilov Aq ru@FreeBSD.org
 added support for PPTP and LSNAT as well as general hacking.
+.An Paolo Pisati Aq piso@FreeBSD.org
+made the library modular, moving support for all
+protocols (except for IP, TCP and UDP) to external modules.
 .Sh ACKNOWLEDGMENTS
 Listed below, in approximate chronological order, are individuals who
 have provided valuable comments and/or debugging assistance.
@@ -1011,8 +1014,445 @@ If this results in a conflict, then port numbers are randomly chosen until
 a unique aliasing link can be established.
 In an alternate operating mode, the first choice of an aliasing port is also
 random and unrelated to the local port number.
-.Sh BUGS
-PPTP aliasing does not work when more than one internal client
-connects to the same external server at the same time, because
-PPTP requires a single TCP control connection to be established
-between any two IP addresses.
+.Sh MODULAR ARCHITECTURE (AND Xr ipfw 4 Sh SUPPORT)
+One of the latest improvements to
+.Nm
+was to make its support
+for new protocols independent from the rest of the library, giving it
+the ability to load/unload support for new protocols at run-time.
+To achieve this feature, all the code for protocol handling was moved
+to a series of modules outside of the main library.
+These modules are compiled from the same sources but work in
+different ways, depending on whether they are compiled to work inside a kernel
+or as part of the userland library.
+.Ss LIBALIAS MODULES IN KERNEL LAND
+When compiled for the kernel,
+.Nm
+modules are plain KLDs recognizable with the
+.Pa alias_
+prefix.
+.Pp
+To add support for a new protocol, load the corresponding module.
+For example:
+.Pp
+.Dl "kldload alias_ftp"
+.Pp
+When support for a protocol is no longer needed, its module can be unloaded:
+.Pp
+.Dl "kldunload alias_ftp"
+.Ss LIBALIAS MODULES IN USERLAND
+Due to the differences between kernel and userland (no KLD mechanism,
+many different address spaces, etc.), we had to change a bit how to
+handle module loading/tracking/unloading in userland.
+.Pp
+While compiled for a userland
+.Nm ,
+all the modules are plain libraries, residing in
+.Pa /usr/lib ,
+and recognizable with the
+.Pa libalias_
+prefix.
+.Pp
+There is a configuration file,
+.Pa /etc/libalias.conf ,
+with the following contents (by default):
+.Bd -literal -offset indent
+/usr/lib/libalias_cuseeme.so
+/usr/lib/libalias_ftp.so
+/usr/lib/libalias_irc.so
+/usr/lib/libalias_nbt.so
+/usr/lib/libalias_pptp.so
+/usr/lib/libalias_skinny.so
+/usr/lib/libalias_smedia.so
+.Ed
+.Pp
+This file contains the paths to the modules that
+.Nm
+will load.
+To load/unload a new module, just add its path to
+.Pa libalias.conf
+and call
+.Fn LibAliasRefreshModules
+from the program.
+In case the application provides a
+.Dv SIGHUP
+signal handler, add a call to
+.Fn LibAliasRefreshModules
+inside the handler, and everytime you want to refresh the loaded modules,
+send it the
+.Dv SIGHUP
+signal:
+.Pp
+.Dl "kill -HUP <process_pid>"
+.Ss MODULAR ARCHITECURE: HOW IT WORKS
+The modular architecture of
+.Nm
+works similar whether it is running inside the
+kernel or in userland.
+From
+.Pa alias_mod.c :
+.Bd -literal
+/* Protocol and userland module handlers chains. */
+LIST_HEAD(handler_chain, proto_handler) handler_chain ...
+\&...
+SLIST_HEAD(dll_chain, dll) dll_chain ...
+.Ed
+.Pp
+.Va handler_chain
+keep tracks of all the protocol handlers loaded, while
+.Va ddl_chain
+takes care of userland modules loaded.
+.Pp
+.Va handler_chain
+is composed of
+.Vt "struct proto_handler"
+entries:
+.Bd -literal
+struct proto_handler {
+	u_int pri;
+	int16_t dir;
+	uint8_t proto;
+	int (*fingerprint)(struct libalias *la,
+		 struct ip *pip, struct alias_data *ah);
+	int (*protohandler)(struct libalias *la,
+		 struct ip *pip, struct alias_data *ah);
+	LIST_ENTRY(proto_handler) entries;
+};
+.Ed
+.Pp
+where:
+.Bl -inset
+.It Va pri
+is the priority assigned to a protocol handler, lower
+is better.
+.It Va dir
+is the direction of packets: ingoing or outgoing.
+.It Va proto
+says at which protocol this packet belongs: IP, TCP or UDP.
+.It Va fingerprint
+points to the fingerprint function while protohandler points
+to the protocol handler function.
+.El
+.Pp
+The
+.Va fingerprint
+function has the double of scope of checking if the
+incoming packet is found and if it belongs to any categories that this
+module can handle.
+.Pp
+The
+.Va protohandler
+function actually manipulates
+the packet to make
+.Nm
+correctly NAT it.
+.Pp
+When a packet enters
+.Nm ,
+if it meets a module hook,
+.Va handler_chain
+is searched to see if there is an handler that matches
+this type of a packet (it checks protocol and direction of packet), then if
+more than one handler is found, it starts with the module with
+the lowest priority number: it calls the
+.Va fingerprint
+function and interprets the result.
+.Pp
+If the result value is equal to 0 then it calls the protocol handler
+of this handler and returns.
+Otherwise, it proceeds to the next eligible module until the
+.Va handler_chain
+is exhausted.
+.Pp
+Inside
+.Nm ,
+the module hook looks like this:
+.Bd -literal -offset indent
+struct alias_data ad = {
+	lnk,
+	&original_address,
+	&alias_address,
+	&alias_port,
+	&ud->uh_sport,          /* original source port */
+	&ud->uh_dport,		/* original dest port */
+	256                     /* maxpacketsize */
+};
+
+\&...
+
+/* walk out chain */
+err = find_handler(IN, UDP, la, pip, &ad);
+.Ed
+.Pp
+All data useful to a module are gathered together in an
+.Vt alias_data
+structure, then
+.Fn find_handler
+is called.
+The
+.Fn find_handler
+function is responsible for walking out the handler
+chain, it receives as input parameters:
+.Bl -tag -width indent
+.It Fa IN
+direction
+.It Fa UDP
+working protocol
+.It Fa la
+pointer to this instance of libalias
+.It Fa pip
+pointer to a
+.Vt "struct ip"
+.It Fa ad
+pointer to
+.Vt "struct alias_data"
+(see above)
+.El
+.Pp
+In this case,
+.Fn find_handler
+will search only for modules registered for
+supporting INcoming UDP packets.
+.Pp
+As was mentioned earlier,
+.Nm
+in userland is a bit different, cause
+care has to be taken of module handling too (avoiding duplicate load of
+module, avoiding module with same name, etc.) so
+.Va dll_chain
+was introduced.
+.Pp
+.Va dll_chain
+contains a list of all userland
+.Nm
+modules loaded.
+.Pp
+When an application calls
+.Fn LibAliasRefreshModules ,
+.Nm
+first unloads all the loaded modules, then reloads all the modules listed in
+.Pa /etc/libalias.conf :
+for every module loaded, a new entry to
+.Va dll_chain
+is added.
+.Pp
+.Va dll_chain
+is composed of
+.Vt "struct dll"
+entries:
+.Bd -literal
+struct dll {
+	/* name of module */
+	char            name[DLL_LEN];
+	/*
+	 * ptr to shared obj obtained through
+	 * dlopen() - use this ptr to get access
+	 * to any symbols from a loaded module
+	 * via dlsym()
+	 */
+	void            *handle;
+	struct dll      *next;
+};
+.Ed
+.Bl -inset
+.It Va name
+is the name of the module
+.It Va handle
+is a pointer to the module obtained through
+.Xr dlopen 3
+.El
+Whenever a module is loaded in userland, an entry is added to
+.Va dll_chain ,
+then every protocol handler present in that module
+is resolved and registered in
+.Va handler_chain .
+.Ss HOW TO WRITE A MODULE FOR LIBALIAS
+There is a module (called
+.Pa alias_dummy.[ch] )
+in
+.Nm
+that can be used as a skeleton for future work, here we analyse some parts of that
+module.
+From
+.Pa alias_dummy.c :
+.Bd -literal
+struct proto_handler handlers [] = {{666, IN|OUT, UDP|TCP,
+				    &fingerprint, &protohandler}};
+.Ed
+.Pp
+The variable
+.Va handlers
+is the
+.Dq "most important thing"
+in a module
+cause it describes the handlers present and lets the outside world use
+it in an opaque way.
+.Pp
+It must ALWAYS be present in every module, and it MUST retain
+the name
+.Va handlers ,
+otherwise attempting to load a module in userland will fail and
+complain about missing symbols: for more information about module
+load/unload, please refer to
+.Fn LibAliasRefreshModules ,
+.Fn LibAliasLoadModule
+and
+.Fn LibAliasUnloadModule
+in
+.Pa alias.c .
+.Pp
+.Va handlers
+contains all the
+.Vt proto_handler
+structures present in a module.
+.Bd -literal
+static int
+mod_handler(module_t mod, int type, void *data)
+{
+	int error;
+
+	switch (type) {
+	case MOD_LOAD:
+		error = 0;
+		attach_handlers(handlers);
+		break;
+	case MOD_UNLOAD:
+		error = 0;
+		detach_handlers(handlers;
+		break;
+	default:
+		error = EINVAL;
+	}
+	return (error);
+}
+.Ed
+When running as KLD,
+.Fn mod_handler
+register/deregister the module using
+.Fn attach_handlers
+and
+.Fn detach_handlers ,
+respectively.
+.Pp
+Every module must contain at least 2 functions: one fingerprint
+function and a protocol handler function.
+.Bd -literal
+#ifdef _KERNEL
+static
+#endif
+int
+fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+
+\&...
+}
+
+#ifdef _KERNEL
+static
+#endif
+int
+protohandler(struct libalias *la, struct ip *pip,
+             struct alias_data *ah)
+{
+
+\&...
+}
+.Ed
+and they must accept exactly these input parameters.
+.Ss PATCHING AN APPLICATION FOR USERLAND LIBALIAS MODULES
+To add module support into an application that uses
+.Nm ,
+the following simple steps can be followed.
+.Bl -enum
+.It
+Find the main file of an application
+(let us call it
+.Pa main.c ) .
+.It
+Add this to the header section of
+.Pa main.c ,
+if not already present:
+.Pp
+.Dl "#include <signal.h>"
+.Pp
+and this just after the header section:
+.Pp
+.Dl "static void signal_handler(int);"
+.It
+Add the following line to the init function of an application or,
+if it does not have any init function, put it in
+.Fn main :
+.Pp
+.Dl "signal(SIGHUP, signal_handler);"
+.Pp
+and place the
+.Fn signal_handler
+function somewhere in
+.Pa main.c :
+.Bd -literal -offset indent
+static void
+signal_handler(int sig)
+{
+
+	LibAliasRefreshModules();
+}
+.Ed
+.Pp
+Otherwise, if an application already traps the
+.Dv SIGHUP
+signal, just add a call to
+.Fn LibAliasRefreshModules
+in the signal handler function.
+.El
+For example, to patch
+.Xr natd 8
+to use
+.Nm
+modules, just add the following line to
+.Fn RefreshAddr "int sig __unused" :
+.Pp
+.Dl "LibAliasRefreshModules()"
+.Pp
+recompile and you are done.
+.Ss LOGGING SUPPORT IN KERNEL LAND
+When working as KLD,
+.Nm
+now has log support that
+happens on a buffer allocated inside
+.Vt "struct libalias"
+(from
+.Pa alias_local.h ) :
+.Bd -literal
+struct libalias {
+       ...
+
+	/* log descriptor        */
+#ifdef	KERNEL_LOG
+	char           *logDesc;        /*
+					 * ptr to an auto-malloced
+					 * memory buffer when libalias
+					 * works as kld
+					 */
+#else
+	FILE           *logDesc;	/*
+					 * ptr to /var/log/alias.log
+					 * when libalias runs as a
+					 * userland lib
+					 */
+#endif
+
+	...
+}
+.Ed
+so all applications using
+.Nm
+will be able to handle their
+own logs, if they want, accessing
+.Va logDesc .
+Moreover, every change to a log buffer is automatically added to
+.Xr syslog 3
+with the
+.Dv LOG_SECURITY
+facility and the
+.Dv LOG_INFO
+level.

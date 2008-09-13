@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/in6_proto.c,v 1.32.2.4 2005/11/16 10:31:23 ru Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/in6_proto.c,v 1.46 2007/07/05 16:29:39 delphij Exp $	*/
 /*	$KAME: in6_proto.c,v 1.91 2001/05/27 13:28:35 itojun Exp $	*/
 
 /*-
@@ -66,6 +66,7 @@
 #include "opt_ipsec.h"
 #include "opt_ipstealth.h"
 #include "opt_carp.h"
+#include "opt_sctp.h"
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -102,43 +103,24 @@
 #include <netinet6/pim6_var.h>
 #include <netinet6/nd6.h>
 
-#ifdef IPSEC
-#include <netinet6/ipsec.h>
-#ifdef INET6
-#include <netinet6/ipsec6.h>
-#endif
-#include <netinet6/ah.h>
-#ifdef INET6
-#include <netinet6/ah6.h>
-#endif
-#ifdef IPSEC_ESP
-#include <netinet6/esp.h>
-#ifdef INET6
-#include <netinet6/esp6.h>
-#endif
-#endif
-#include <netinet6/ipcomp.h>
-#ifdef INET6
-#include <netinet6/ipcomp6.h>
-#endif
-#endif /* IPSEC */
-
 #ifdef DEV_CARP
 #include <netinet/ip_carp.h>
 #endif
 
-#ifdef FAST_IPSEC
+#ifdef SCTP
+#include <netinet/in_pcb.h>
+#include <netinet/sctp_pcb.h>
+#include <netinet/sctp.h>
+#include <netinet/sctp_var.h>
+#include <netinet6/sctp6_var.h>
+#endif /* SCTP */
+
+#ifdef IPSEC
+#include <netipsec/ipsec.h>
 #include <netipsec/ipsec6.h>
-#define	IPSEC
-#define	IPSEC_ESP
-#define	ah6_input	ipsec6_common_input
-#define	esp6_input	ipsec6_common_input
-#define	ipcomp6_input	ipsec6_common_input
-#endif /* FAST_IPSEC */
+#endif /* IPSEC */
 
 #include <netinet6/ip6protosw.h>
-
-#include <net/net_osdep.h>
 
 /*
  * TCP/IP protocol family: IP6, ICMP6, UDP, TCP.
@@ -186,6 +168,42 @@ struct ip6protosw inet6sw[] = {
 	.pr_drain =		tcp_drain,
 	.pr_usrreqs =		&tcp6_usrreqs,
 },
+#ifdef SCTP
+{
+	.pr_type =	SOCK_DGRAM,
+	.pr_domain =	&inet6domain,
+        .pr_protocol =	IPPROTO_SCTP,
+        .pr_flags =	PR_WANTRCVD,
+        .pr_input =	sctp6_input,
+        .pr_ctlinput =  sctp6_ctlinput,
+        .pr_ctloutput = sctp_ctloutput,
+        .pr_drain =	sctp_drain,
+        .pr_usrreqs =	&sctp6_usrreqs
+},
+{
+	.pr_type =	SOCK_SEQPACKET,
+	.pr_domain =	&inet6domain,
+        .pr_protocol =	IPPROTO_SCTP,
+        .pr_flags =	PR_WANTRCVD,
+        .pr_input =	sctp6_input,
+        .pr_ctlinput =  sctp6_ctlinput,
+        .pr_ctloutput = sctp_ctloutput,
+        .pr_drain =	sctp_drain,
+        .pr_usrreqs =	&sctp6_usrreqs
+},
+
+{
+	.pr_type =	SOCK_STREAM,
+	.pr_domain =	&inet6domain,
+        .pr_protocol =	IPPROTO_SCTP,
+        .pr_flags =	PR_WANTRCVD,
+        .pr_input =	sctp6_input,
+        .pr_ctlinput =  sctp6_ctlinput,
+        .pr_ctloutput = sctp_ctloutput,
+        .pr_drain =	sctp_drain,
+        .pr_usrreqs =	&sctp6_usrreqs
+},
+#endif /* SCTP */
 {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inet6domain,
@@ -240,26 +258,24 @@ struct ip6protosw inet6sw[] = {
 	.pr_domain =		&inet6domain,
 	.pr_protocol =		IPPROTO_AH,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		ah6_input,
+	.pr_input =		ipsec6_common_input,
 	.pr_usrreqs =		&nousrreqs,
 },
-#ifdef IPSEC_ESP
 {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inet6domain,
 	.pr_protocol =		IPPROTO_ESP,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		esp6_input,
+        .pr_input =		ipsec6_common_input,
 	.pr_ctlinput =		esp6_ctlinput,
 	.pr_usrreqs =		&nousrreqs,
 },
-#endif
 {
 	.pr_type =		SOCK_RAW,
 	.pr_domain =		&inet6domain,
 	.pr_protocol =		IPPROTO_IPCOMP,
 	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_input =		ipcomp6_input,
+        .pr_input =		ipsec6_common_input,
 	.pr_usrreqs =		&nousrreqs,
 },
 #endif /* IPSEC */
@@ -292,7 +308,7 @@ struct ip6protosw inet6sw[] = {
 	.pr_domain =		&inet6domain,
 	.pr_protocol =		IPPROTO_PIM,
 	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
-	.pr_input =		pim6_input,
+	.pr_input =		encap6_input,
 	.pr_output =		rip6_output,
 	.pr_ctloutput =		rip6_ctloutput,
 	.pr_usrreqs =		&rip6_usrreqs
@@ -361,7 +377,7 @@ int	ip6_accept_rtadv = 0;	/* "IPV6FORWARDING ? 0 : 1" is dangerous */
 int	ip6_maxfragpackets;	/* initialized in frag6.c:frag6_init() */
 int	ip6_maxfrags;	/* initialized in frag6.c:frag6_init() */
 int	ip6_log_interval = 5;
-int	ip6_hdrnestlimit = 50;	/* appropriate? */
+int	ip6_hdrnestlimit = 15;	/* How many header options will we process? */
 int	ip6_dad_count = 1;	/* DupAddrDetectionTransmits */
 int	ip6_auto_flowlabel = 1;
 int	ip6_gif_hlim = 0;
@@ -376,8 +392,6 @@ time_t	ip6_log_time = (time_t)0L;
 #ifdef IPSTEALTH
 int	ip6stealth = 0;
 #endif
-int     ip6_rthdr0_allowed = 0; /* Disallow use of routing header 0 */
-				/* by default. */
 
 /* icmp6 */
 /*
@@ -402,7 +416,8 @@ u_long	rip6_recvspace = RIPV6RCVQ;
 int	icmp6_rediraccept = 1;		/* accept and process redirects */
 int	icmp6_redirtimeout = 10 * 60;	/* 10 minutes */
 int	icmp6errppslim = 100;		/* 100pps */
-int	icmp6_nodeinfo = 3;		/* enable/disable NI response */
+/* control how to respond to NI queries */
+int	icmp6_nodeinfo = (ICMP6_NODEINFO_FQDNOK|ICMP6_NODEINFO_NODEADDROK);
 
 /* UDP on IP6 parameters */
 int	udp6_sendspace = 9216;		/* really max datagram size */
@@ -420,6 +435,9 @@ SYSCTL_NODE(_net_inet6,	IPPROTO_IPV6,	ip6,	CTLFLAG_RW, 0,	"IP6");
 SYSCTL_NODE(_net_inet6,	IPPROTO_ICMPV6,	icmp6,	CTLFLAG_RW, 0,	"ICMP6");
 SYSCTL_NODE(_net_inet6,	IPPROTO_UDP,	udp6,	CTLFLAG_RW, 0,	"UDP6");
 SYSCTL_NODE(_net_inet6,	IPPROTO_TCP,	tcp6,	CTLFLAG_RW, 0,	"TCP6");
+#ifdef SCTP
+SYSCTL_NODE(_net_inet6,	IPPROTO_SCTP,	sctp6,	CTLFLAG_RW, 0,	"SCTP6");
+#endif
 #ifdef IPSEC
 SYSCTL_NODE(_net_inet6,	IPPROTO_ESP,	ipsec6,	CTLFLAG_RW, 0,	"IPSEC6");
 #endif /* IPSEC */
@@ -463,7 +481,7 @@ sysctl_ip6_tempvltime(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_FORWARDING,
-	forwarding, CTLFLAG_RW, 	&ip6_forwarding,	0, "");
+	forwarding, CTLFLAG_RW,		&ip6_forwarding,	0, "");
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_SENDREDIRECTS,
 	redirect, CTLFLAG_RW,		&ip6_sendredirects,	0, "");
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_DEFHLIM,
@@ -504,6 +522,7 @@ SYSCTL_OID(_net_inet6_ip6, IPV6CTL_TEMPVLTIME, tempvltime,
 	   sysctl_ip6_tempvltime, "I", "");
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_V6ONLY,
 	v6only,	CTLFLAG_RW,	&ip6_v6only,			0, "");
+TUNABLE_INT("net.inet6.ip6.auto_linklocal", &ip6_auto_linklocal);
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_AUTO_LINKLOCAL,
 	auto_linklocal, CTLFLAG_RW, &ip6_auto_linklocal,	0, "");
 SYSCTL_STRUCT(_net_inet6_ip6, IPV6CTL_RIP6STATS, rip6stats, CTLFLAG_RD,
@@ -515,14 +534,11 @@ SYSCTL_INT(_net_inet6_ip6, IPV6CTL_USE_DEFAULTZONE,
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_MAXFRAGS,
 	maxfrags, CTLFLAG_RW,		&ip6_maxfrags,	0, "");
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_MCAST_PMTU,
-	mcast_pmtu, CTLFLAG_RW, 	&ip6_mcast_pmtu,	0, "");
+	mcast_pmtu, CTLFLAG_RW,		&ip6_mcast_pmtu,	0, "");
 #ifdef IPSTEALTH
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_STEALTH, stealth, CTLFLAG_RW,
 	&ip6stealth, 0, "");
 #endif
-SYSCTL_INT(_net_inet6_ip6, IPV6CTL_RTHDR0_ALLOWED, 
-	   rthdr0_allowed, CTLFLAG_RW, &ip6_rthdr0_allowed, 0, "");
-
 
 /* net.inet6.icmp6 */
 SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_REDIRACCEPT,

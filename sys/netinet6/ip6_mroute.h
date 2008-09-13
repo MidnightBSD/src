@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netinet6/ip6_mroute.h,v 1.6.2.1 2005/10/09 05:21:18 ume Exp $	*/
+/*	$FreeBSD: src/sys/netinet6/ip6_mroute.h,v 1.12 2007/07/05 16:29:40 delphij Exp $	*/
 /*	$KAME: ip6_mroute.h,v 1.19 2001/06/14 06:12:55 suz Exp $	*/
 
 /*-
@@ -100,12 +100,9 @@ typedef	struct if_set {
  * Argument structure for MRT6_ADD_IF.
  */
 struct mif6ctl {
-	mifi_t	    mif6c_mifi;	    	/* the index of the mif to be added  */
-	u_char	    mif6c_flags;     	/* MIFF_ flags defined below         */
+	mifi_t	    mif6c_mifi;		/* the index of the mif to be added  */
+	u_char	    mif6c_flags;	/* MIFF_ flags defined below         */
 	u_short	    mif6c_pifi;		/* the index of the physical IF */
-#ifdef notyet
-	u_int	    mif6c_rate_limit;    /* max rate           		     */
-#endif
 };
 
 #define	MIFF_REGISTER	0x1	/* mif represents a register end-point */
@@ -126,16 +123,16 @@ struct mf6cctl {
 struct mrt6stat {
 	u_quad_t mrt6s_mfc_lookups;	/* # forw. cache hash table hits   */
 	u_quad_t mrt6s_mfc_misses;	/* # forw. cache hash table misses */
-	u_quad_t mrt6s_upcalls;		/* # calls to mrouted              */
+	u_quad_t mrt6s_upcalls;		/* # calls to multicast routing daemon */
 	u_quad_t mrt6s_no_route;	/* no route for packet's origin    */
 	u_quad_t mrt6s_bad_tunnel;	/* malformed tunnel options        */
 	u_quad_t mrt6s_cant_tunnel;	/* no room for tunnel options      */
 	u_quad_t mrt6s_wrong_if;	/* arrived on wrong interface	   */
 	u_quad_t mrt6s_upq_ovflw;	/* upcall Q overflow		   */
-	u_quad_t mrt6s_cache_cleanups;	/* # entries with no upcalls 	   */
-	u_quad_t mrt6s_drop_sel;     	/* pkts dropped selectively        */
-	u_quad_t mrt6s_q_overflow;    	/* pkts dropped - Q overflow       */
-	u_quad_t mrt6s_pkt2large;     	/* pkts dropped - size > BKT SIZE  */
+	u_quad_t mrt6s_cache_cleanups;	/* # entries with no upcalls	   */
+	u_quad_t mrt6s_drop_sel;	/* pkts dropped selectively        */
+	u_quad_t mrt6s_q_overflow;	/* pkts dropped - Q overflow       */
+	u_quad_t mrt6s_pkt2large;	/* pkts dropped - size > BKT SIZE  */
 	u_quad_t mrt6s_upq_sockfull;	/* upcalls dropped - socket full   */
 };
 
@@ -207,13 +204,10 @@ struct sioc_mif_req6 {
  * The kernel's multicast-interface structure.
  */
 struct mif6 {
-        u_char   	m6_flags;     	/* MIFF_ flags defined above         */
-	u_int      	m6_rate_limit; 	/* max rate			     */
-#ifdef notyet
-	struct tbf      *m6_tbf;      	/* token bucket structure at intf.   */
-#endif
-	struct in6_addr	m6_lcl_addr;   	/* local interface address           */
-	struct ifnet    *m6_ifp;     	/* pointer to interface              */
+        u_char		m6_flags;	/* MIFF_ flags defined above         */
+	u_int		m6_rate_limit;	/* max rate			     */
+	struct in6_addr	m6_lcl_addr;	/* local interface address           */
+	struct ifnet    *m6_ifp;	/* pointer to interface              */
 	u_quad_t	m6_pkt_in;	/* # pkts in on interface            */
 	u_quad_t	m6_pkt_out;	/* # pkts out on interface           */
 	u_quad_t	m6_bytes_in;	/* # bytes in on interface	     */
@@ -231,13 +225,13 @@ struct mif6 {
 struct mf6c {
 	struct sockaddr_in6  mf6c_origin;	/* IPv6 origin of mcasts     */
 	struct sockaddr_in6  mf6c_mcastgrp;	/* multicast group associated*/
-	mifi_t	    	 mf6c_parent; 		/* incoming IF               */
+	mifi_t		 mf6c_parent;		/* incoming IF               */
 	struct if_set	 mf6c_ifset;		/* set of outgoing IFs */
 
-	u_quad_t    	mf6c_pkt_cnt;		/* pkt count for src-grp     */
-	u_quad_t    	mf6c_byte_cnt;		/* byte count for src-grp    */
-	u_quad_t    	mf6c_wrong_if;		/* wrong if for src-grp	     */
-	int	    	mf6c_expire;		/* time to clean entry up    */
+	u_quad_t	mf6c_pkt_cnt;		/* pkt count for src-grp     */
+	u_quad_t	mf6c_byte_cnt;		/* byte count for src-grp    */
+	u_quad_t	mf6c_wrong_if;		/* wrong if for src-grp	     */
+	int		mf6c_expire;		/* time to clean entry up    */
 	struct timeval  mf6c_last_assert;	/* last time I sent an assert*/
 	struct rtdetq  *mf6c_stall;		/* pkts waiting for route */
 	struct mf6c    *mf6c_next;		/* hash table linkage */
@@ -250,8 +244,8 @@ struct mf6c {
  */
 #ifndef _NETINET_IP_MROUTE_H_
 struct rtdetq {		/* XXX: rtdetq is also defined in ip_mroute.h */
-    struct mbuf 	*m;		/* A copy of the packet	    	    */
-    struct ifnet	*ifp;		/* Interface pkt came in on 	    */
+    struct mbuf		*m;		/* A copy of the packet		    */
+    struct ifnet	*ifp;		/* Interface pkt came in on	    */
 #ifdef UPCALL_TIMING
     struct timeval	t;		/* Timestamp */
 #endif /* UPCALL_TIMING */
@@ -268,10 +262,10 @@ struct rtdetq {		/* XXX: rtdetq is also defined in ip_mroute.h */
 
 #define MAX_UPQ6	4		/* max. no of pkts in upcall Q */
 
-int	ip6_mrouter_set __P((struct socket *so, struct sockopt *sopt));
-int	ip6_mrouter_get __P((struct socket *so, struct sockopt *sopt));
-int	ip6_mrouter_done __P((void));
-int	mrt6_ioctl __P((int, caddr_t));
+extern int	(*ip6_mrouter_set)(struct socket *so, struct sockopt *sopt);
+extern int	(*ip6_mrouter_get)(struct socket *so, struct sockopt *sopt);
+extern int	(*ip6_mrouter_done)(void);
+extern int	(*mrt6_ioctl)(int, caddr_t);
 #endif /* _KERNEL */
 
 #endif /* !_NETINET6_IP6_MROUTE_H_ */

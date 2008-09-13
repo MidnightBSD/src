@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)in_var.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/netinet/in_var.h,v 1.53.2.2 2005/08/24 17:30:44 rwatson Exp $
+ * $FreeBSD: src/sys/netinet/in_var.h,v 1.61 2007/06/12 16:24:53 bms Exp $
  */
 
 #ifndef _NETINET_IN_VAR_H_
@@ -94,6 +94,19 @@ extern	u_long in_ifaddrhmask;			/* mask for hash table */
 #define INADDR_HASH(x) \
 	(&in_ifaddrhashtbl[INADDR_HASHVAL(x) & in_ifaddrhmask])
 
+/*
+ * Macro for finding the internet address structure (in_ifaddr)
+ * corresponding to one of our IP addresses (in_addr).
+ */
+#define INADDR_TO_IFADDR(addr, ia) \
+	/* struct in_addr addr; */ \
+	/* struct in_ifaddr *ia; */ \
+do { \
+\
+	LIST_FOREACH(ia, INADDR_HASH((addr).s_addr), ia_hash) \
+		if (IA_SIN(ia)->sin_addr.s_addr == (addr).s_addr) \
+			break; \
+} while (0)
 
 /*
  * Macro for finding the interface (ifnet structure) corresponding to one
@@ -105,9 +118,7 @@ extern	u_long in_ifaddrhmask;			/* mask for hash table */
 { \
 	struct in_ifaddr *ia; \
 \
-	LIST_FOREACH(ia, INADDR_HASH((addr).s_addr), ia_hash) \
-		if (IA_SIN(ia)->sin_addr.s_addr == (addr).s_addr) \
-			break; \
+	INADDR_TO_IFADDR(addr, ia); \
 	(ifp) = (ia == NULL) ? NULL : ia->ia_ifp; \
 }
 
@@ -136,6 +147,12 @@ struct router_info {
 	int    rti_type; /* type of router which is querier on this interface */
 	int    rti_time; /* # of slow timeouts since last old query */
 	SLIST_ENTRY(router_info) rti_list;
+#ifdef notyet
+	int	rti_timev1;	/* IGMPv1 querier present */
+	int	rti_timev2;	/* IGMPv2 querier present */
+	int	rti_timer;	/* report to general query */
+	int	rti_qrv;	/* querier robustness */
+#endif
 };
 
 /*
@@ -154,7 +171,44 @@ struct in_multi {
 	u_int	inm_timer;		/* IGMP membership report timer */
 	u_int	inm_state;		/*  state of the membership */
 	struct	router_info *inm_rti;	/* router info*/
+	u_int	inm_refcount;		/* reference count */
+#ifdef notyet		/* IGMPv3 source-specific multicast fields */
+	TAILQ_HEAD(, in_msfentry) inm_msf;	/* all active source filters */
+	TAILQ_HEAD(, in_msfentry) inm_msf_record;	/* recorded sources */
+	TAILQ_HEAD(, in_msfentry) inm_msf_exclude;	/* exclude sources */
+	TAILQ_HEAD(, in_msfentry) inm_msf_include;	/* include sources */
+	/* XXX: should this lot go to the router_info structure? */
+	/* XXX: can/should these be callouts? */
+	/* IGMP protocol timers */
+	int32_t		inm_ti_curstate;	/* current state timer */
+	int32_t		inm_ti_statechg;	/* state change timer */
+	/* IGMP report timers */
+	uint16_t	inm_rpt_statechg;	/* state change report timer */
+	uint16_t	inm_rpt_toxx;		/* fmode change report timer */
+	/* IGMP protocol state */
+	uint16_t	inm_fmode;		/* filter mode */
+	uint32_t	inm_recsrc_count;	/* # of recorded sources */
+	uint16_t	inm_exclude_sock_count;	/* # of exclude-mode sockets */
+	uint16_t	inm_gass_count;		/* # of g-a-s queries */
+#endif
 };
+
+#ifdef notyet
+/*
+ * Internet multicast source filter list. This list is used to store
+ * IP multicast source addresses for each membership on an interface.
+ * TODO: Allocate these structures using UMA.
+ * TODO: Find an easier way of linking the struct into two lists at once.
+ */
+struct in_msfentry {
+	TAILQ_ENTRY(in_msfentry) isf_link;	/* next filter in all-list */
+	TAILQ_ENTRY(in_msfentry) isf_next;	/* next filter in queue */
+	struct in_addr	isf_addr;	/* the address of this source */
+	uint16_t	isf_refcount;	/* reference count */
+	uint16_t	isf_reporttag;	/* what to report to the IGMP router */
+	uint16_t	isf_rexmit;	/* retransmission state/count */
+};
+#endif
 
 #ifdef _KERNEL
 
@@ -234,15 +288,22 @@ do { \
 } while(0)
 
 struct	route;
+struct	ip_moptions;
+
+size_t	imo_match_group(struct ip_moptions *, struct ifnet *,
+	    struct sockaddr *);
+struct	in_msource *imo_match_source(struct ip_moptions *, size_t,
+	    struct sockaddr *);
 struct	in_multi *in_addmulti(struct in_addr *, struct ifnet *);
 void	in_delmulti(struct in_multi *);
+void	in_delmulti_locked(struct in_multi *);
 int	in_control(struct socket *, u_long, caddr_t, struct ifnet *,
 	    struct thread *);
 void	in_rtqdrain(void);
 void	ip_input(struct mbuf *);
 int	in_ifadown(struct ifaddr *ifa, int);
 void	in_ifscrub(struct ifnet *, struct in_ifaddr *);
-int	ip_fastforward(struct mbuf *);
+struct	mbuf	*ip_fastforward(struct mbuf *);
 
 #endif /* _KERNEL */
 

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_var.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/netinet/ip_var.h,v 1.95 2005/07/02 23:13:31 thompsa Exp $
+ * $FreeBSD: src/sys/netinet/ip_var.h,v 1.101 2007/06/12 16:24:53 bms Exp $
  */
 
 #ifndef _NETINET_IP_VAR_H_
@@ -61,7 +61,7 @@ struct ipq {
 	struct mbuf *ipq_frags;		/* to ip headers of fragments */
 	struct	in_addr ipq_src,ipq_dst;
 	u_char	ipq_nfrags;		/* # frags in this packet */
-	struct label *ipq_label;		/* MAC label */
+	struct label *ipq_label;	/* MAC label */
 };
 #endif /* _KERNEL */
 
@@ -79,17 +79,39 @@ struct ipoption {
 };
 
 /*
+ * Multicast source list entry.
+ */
+struct in_msource {
+	TAILQ_ENTRY(in_msource) ims_next;	/* next source */
+	struct sockaddr_storage ims_addr;	/* address of this source */
+};
+
+/*
+ * Multicast filter descriptor; there is one instance per group membership
+ * on a socket, allocated as an expandable vector hung off ip_moptions.
+ * struct in_multi contains separate IPv4-stack-wide state for IGMPv3.
+ */
+struct in_mfilter {
+	uint16_t	imf_fmode;	/* filter mode for this socket/group */
+	uint16_t	imf_nsources;	/* # of sources for this socket/group */
+	TAILQ_HEAD(, in_msource) imf_sources;	/* source list */
+};
+
+/*
  * Structure attached to inpcb.ip_moptions and
  * passed to ip_output when IP multicast options are in use.
+ * This structure is lazy-allocated.
  */
 struct ip_moptions {
 	struct	ifnet *imo_multicast_ifp; /* ifp for outgoing multicasts */
 	struct in_addr imo_multicast_addr; /* ifindex/addr on MULTICAST_IF */
+	u_long	imo_multicast_vif;	/* vif num outgoing multicasts */
 	u_char	imo_multicast_ttl;	/* TTL for outgoing multicasts */
 	u_char	imo_multicast_loop;	/* 1 => hear sends if a member */
 	u_short	imo_num_memberships;	/* no. memberships this socket */
-	struct	in_multi *imo_membership[IP_MAX_MEMBERSHIPS];
-	u_long	imo_multicast_vif;	/* vif num outgoing multicasts */
+	u_short	imo_max_memberships;	/* max memberships this socket */
+	struct	in_multi **imo_membership;	/* group memberships */
+	struct	in_mfilter *imo_mfilters;	/* source filters */
 };
 
 struct	ipstat {
@@ -130,10 +152,13 @@ struct	ipstat {
 #define	IP_FORWARDING		0x1		/* most of ip header exists */
 #define	IP_RAWOUTPUT		0x2		/* raw ip header exists */
 #define	IP_SENDONES		0x4		/* send all-ones broadcast */
-#define	IP_ROUTETOIF		SO_DONTROUTE	/* bypass routing tables */
-#define	IP_ALLOWBROADCAST	SO_BROADCAST	/* can send broadcast packets */
+#define	IP_SENDTOIF		0x8		/* send on specific ifnet */
+#define IP_ROUTETOIF		SO_DONTROUTE	/* 0x10 bypass routing tables */
+#define IP_ALLOWBROADCAST	SO_BROADCAST	/* 0x20 can send broadcast packets */
 
-/* mbuf flag used by ip_fastfwd */
+/*
+ * mbuf flag used by ip_fastfwd
+ */
 #define	M_FASTFWD_OURS		M_PROTO1	/* changed dst to local */
 
 #ifdef __NO_STRICT_ALIGNMENT
@@ -144,52 +169,50 @@ struct	ipstat {
 
 struct ip;
 struct inpcb;
-struct inpcbinfo;
 struct route;
 struct sockopt;
 
 extern struct	ipstat	ipstat;
-extern u_short	ip_id;				/* ip packet ctr, for ids */
-extern int	ip_defttl;			/* default IP ttl */
-extern int	ipforwarding;			/* ip forwarding */
-extern int	ip_doopts;			/* process or ignore IP options */
+extern u_short	ip_id;			/* ip packet ctr, for ids */
+extern int	ip_defttl;		/* default IP ttl */
+extern int	ipforwarding;		/* ip forwarding */
 #ifdef IPSTEALTH
-extern int	ipstealth;			/* stealth forwarding */
+extern int	ipstealth;		/* stealth forwarding */
 #endif
 extern u_char	ip_protox[];
-extern struct socket *ip_rsvpd;	/* reservation protocol daemon */
-extern struct socket *ip_mrouter; /* multicast routing daemon */
+extern struct socket *ip_rsvpd;		/* reservation protocol daemon */
+extern struct socket *ip_mrouter;	/* multicast routing daemon */
 extern int	(*legal_vif_num)(int);
 extern u_long	(*ip_mcast_src)(int);
 extern int rsvp_on;
 extern struct	pr_usrreqs rip_usrreqs;
 
-int	 ip_ctloutput(struct socket *, struct sockopt *sopt);
-int	 ip_ctloutput_pcbinfo(struct socket *, struct sockopt *sopt,
-	    struct inpcbinfo *pcbinfo);
-void	 ip_drain(void);
-void	 ip_fini(void *xtp);
-int	 ip_fragment(struct ip *ip, struct mbuf **m_frag, int mtu,
+void	inp_freemoptions(struct ip_moptions *);
+int	inp_getmoptions(struct inpcb *, struct sockopt *);
+int	inp_setmoptions(struct inpcb *, struct sockopt *);
+
+int	ip_ctloutput(struct socket *, struct sockopt *sopt);
+void	ip_drain(void);
+void	ip_fini(void *xtp);
+int	ip_fragment(struct ip *ip, struct mbuf **m_frag, int mtu,
 	    u_long if_hwassist_flags, int sw_csum);
-void	 ip_freemoptions(struct ip_moptions *);
-void	 ip_init(void);
-extern int	 (*ip_mforward)(struct ip *, struct ifnet *, struct mbuf *,
-			  struct ip_moptions *);
-int	 ip_output(struct mbuf *,
+void	ip_forward(struct mbuf *m, int srcrt);
+void	ip_init(void);
+extern int
+	(*ip_mforward)(struct ip *, struct ifnet *, struct mbuf *,
+	    struct ip_moptions *);
+int	ip_output(struct mbuf *,
 	    struct mbuf *, struct route *, int, struct ip_moptions *,
 	    struct inpcb *);
-int	 ipproto_register(u_char);
-int	 ipproto_unregister(u_char);
+int	ipproto_register(u_char);
+int	ipproto_unregister(u_char);
 struct mbuf *
-	 ip_reass(struct mbuf *);
+	ip_reass(struct mbuf *);
 struct in_ifaddr *
-	 ip_rtaddr(struct in_addr);
-void	 ip_savecontrol(struct inpcb *, struct mbuf **, struct ip *,
-		struct mbuf *);
-void	 ip_slowtimo(void);
-struct mbuf *
-	 ip_srcroute(struct mbuf *);
-void	 ip_stripoptions(struct mbuf *, struct mbuf *);
+	ip_rtaddr(struct in_addr);
+void	ip_savecontrol(struct inpcb *, struct mbuf **, struct ip *,
+	    struct mbuf *);
+void	ip_slowtimo(void);
 u_int16_t	ip_randomid(void);
 int	rip_ctloutput(struct socket *, struct sockopt *);
 void	rip_ctlinput(int, struct sockaddr *, void *);

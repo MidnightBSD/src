@@ -1,6 +1,7 @@
 /*-
  * Copyright (c) 1982, 1986, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +28,10 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_debug.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp_debug.c,v 1.26 2005/01/07 01:45:45 imp Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/netinet/tcp_debug.c,v 1.29 2007/10/07 20:44:23 silby Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -48,7 +51,10 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/mbuf.h>
+#include <sys/mutex.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 
@@ -67,107 +73,95 @@
 #include <netinet/tcp_debug.h>
 
 #ifdef TCPDEBUG
-static int	tcpconsdebug = 0;
+static int		tcpconsdebug = 0;
 #endif
 
-static struct tcp_debug tcp_debug[TCP_NDEBUG];
-static int	tcp_debx;
+/*
+ * Global ring buffer of TCP debugging state.  Each entry captures a snapshot
+ * of TCP connection state at any given moment.  tcp_debx addresses at the
+ * next available slot.  There is no explicit export of this data structure;
+ * it will be read via /dev/kmem by debugging tools.
+ */
+static struct tcp_debug	tcp_debug[TCP_NDEBUG];
+static int		tcp_debx;
 
 /*
- * Tcp debug routines
+ * All global state is protected by tcp_debug_mtx; tcp_trace() is split into
+ * two parts, one of which saves connection and other state into the global
+ * array (locked by tcp_debug_mtx).
+ */
+struct mtx		tcp_debug_mtx;
+MTX_SYSINIT(tcp_debug_mtx, &tcp_debug_mtx, "tcp_debug_mtx", MTX_DEF);
+
+/*
+ * Save TCP state at a given moment; optionally, both tcpcb and TCP packet
+ * header state will be saved.
  */
 void
-tcp_trace(act, ostate, tp, ipgen, th, req)
-	short act, ostate;
-	struct tcpcb *tp;
-	void *ipgen;
-	struct tcphdr *th;
-	int req;
+tcp_trace(short act, short ostate, struct tcpcb *tp, void *ipgen,
+    struct tcphdr *th, int req)
 {
 #ifdef INET6
 	int isipv6;
 #endif /* INET6 */
 	tcp_seq seq, ack;
 	int len, flags;
-	struct tcp_debug *td = &tcp_debug[tcp_debx++];
+	struct tcp_debug *td;
 
+	mtx_lock(&tcp_debug_mtx);
+	td = &tcp_debug[tcp_debx++];
+	if (tcp_debx == TCP_NDEBUG)
+		tcp_debx = 0;
+	bzero(td, sizeof(*td));
 #ifdef INET6
 	isipv6 = (ipgen != NULL && ((struct ip *)ipgen)->ip_v == 6) ? 1 : 0;
 #endif /* INET6 */
 	td->td_family =
 #ifdef INET6
-		(isipv6 != 0) ? AF_INET6 :
+	    (isipv6 != 0) ? AF_INET6 :
 #endif
-		AF_INET;
-	if (tcp_debx == TCP_NDEBUG)
-		tcp_debx = 0;
+	    AF_INET;
 	td->td_time = iptime();
 	td->td_act = act;
 	td->td_ostate = ostate;
 	td->td_tcb = (caddr_t)tp;
-	if (tp)
+	if (tp != NULL)
 		td->td_cb = *tp;
-	else
-		bzero((caddr_t)&td->td_cb, sizeof (*tp));
-	if (ipgen) {
+	if (ipgen != NULL) {
 		switch (td->td_family) {
 		case AF_INET:
-			bcopy((caddr_t)ipgen, (caddr_t)&td->td_ti.ti_i,
-			      sizeof(td->td_ti.ti_i));
-			bzero((caddr_t)td->td_ip6buf, sizeof(td->td_ip6buf));
+			bcopy(ipgen, &td->td_ti.ti_i, sizeof(td->td_ti.ti_i));
 			break;
 #ifdef INET6
 		case AF_INET6:
-			bcopy((caddr_t)ipgen, (caddr_t)td->td_ip6buf,
-			      sizeof(td->td_ip6buf));
-			bzero((caddr_t)&td->td_ti.ti_i,
-			      sizeof(td->td_ti.ti_i));
+			bcopy(ipgen, td->td_ip6buf, sizeof(td->td_ip6buf));
 			break;
 #endif
-		default:
-			bzero((caddr_t)td->td_ip6buf, sizeof(td->td_ip6buf));
-			bzero((caddr_t)&td->td_ti.ti_i,
-			      sizeof(td->td_ti.ti_i));
-			break;
 		}
-	} else {
-		bzero((caddr_t)&td->td_ti.ti_i, sizeof(td->td_ti.ti_i));
-		bzero((caddr_t)td->td_ip6buf, sizeof(td->td_ip6buf));
 	}
-	if (th) {
+	if (th != NULL) {
 		switch (td->td_family) {
 		case AF_INET:
 			td->td_ti.ti_t = *th;
-			bzero((caddr_t)&td->td_ti6.th, sizeof(td->td_ti6.th));
 			break;
 #ifdef INET6
 		case AF_INET6:
 			td->td_ti6.th = *th;
-			bzero((caddr_t)&td->td_ti.ti_t,
-			      sizeof(td->td_ti.ti_t));
 			break;
 #endif
-		default:
-			bzero((caddr_t)&td->td_ti.ti_t,
-			      sizeof(td->td_ti.ti_t));
-			bzero((caddr_t)&td->td_ti6.th, sizeof(td->td_ti6.th));
-			break;
 		}
-	} else {
-		bzero((caddr_t)&td->td_ti.ti_t, sizeof(td->td_ti.ti_t));
-		bzero((caddr_t)&td->td_ti6.th, sizeof(td->td_ti6.th));
 	}
 	td->td_req = req;
+	mtx_unlock(&tcp_debug_mtx);
 #ifdef TCPDEBUG
 	if (tcpconsdebug == 0)
 		return;
-	if (tp)
+	if (tp != NULL)
 		printf("%p %s:", tp, tcpstates[ostate]);
 	else
 		printf("???????? ");
 	printf("%s ", tanames[act]);
 	switch (act) {
-
 	case TA_INPUT:
 	case TA_OUTPUT:
 	case TA_DROP:
@@ -177,9 +171,9 @@ tcp_trace(act, ostate, tp, ipgen, th, req)
 		ack = th->th_ack;
 		len =
 #ifdef INET6
-			isipv6 ? ((struct ip6_hdr *)ipgen)->ip6_plen :
+		    isipv6 ? ((struct ip6_hdr *)ipgen)->ip6_plen :
 #endif
-			((struct ip *)ipgen)->ip_len;
+		    ((struct ip *)ipgen)->ip_len;
 		if (act == TA_OUTPUT) {
 			seq = ntohl(seq);
 			ack = ntohl(ack);
@@ -212,11 +206,11 @@ tcp_trace(act, ostate, tp, ipgen, th, req)
 			printf("<%s>", tcptimers[req>>8]);
 		break;
 	}
-	if (tp)
+	if (tp != NULL)
 		printf(" -> %s", tcpstates[tp->t_state]);
 	/* print out internal state of tp !?! */
 	printf("\n");
-	if (tp == 0)
+	if (tp == NULL)
 		return;
 	printf(
 	"\trcv_(nxt,wnd,up) (%lx,%lx,%lx) snd_(una,nxt,max) (%lx,%lx,%lx)\n",
