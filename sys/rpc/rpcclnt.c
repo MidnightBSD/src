@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.13.2.2 2006/01/27 18:22:11 rees Exp $ */
-/* $Id: rpcclnt.c,v 1.1.1.2 2006-02-25 02:37:44 laffer1 Exp $ */
+/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.20 2007/08/06 14:26:03 rwatson Exp $ */
+/* $Id: rpcclnt.c,v 1.2 2008-09-13 00:50:45 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -360,8 +360,6 @@ rpcclnt_connect(rpc, td)
 		RPC_RETURN(EFAULT);
 	}
 
-	GIANT_REQUIRED;		/* XXX until socket locking done */
-
 	/* create the socket */
 	rpc->rc_so = NULL;
 
@@ -369,7 +367,6 @@ rpcclnt_connect(rpc, td)
 
 	error = socreate(saddr->sa_family, &rpc->rc_so, rpc->rc_sotype,
 			 rpc->rc_soproto, td->td_ucred, td);
-
 	if (error) {
 		RPCDEBUG("error %d in socreate()", error);
 		RPC_RETURN(error);
@@ -409,7 +406,7 @@ rpcclnt_connect(rpc, td)
 		if (error)
 			goto bad;
 
-#if __OpenBSD__
+#ifdef __OpenBSD__
 		MGET(m, M_TRYWAIT, MT_SONAME);
 		sin = mtod(m, struct sockaddr_in *);
 		sin->sin_len = m->m_len = sizeof(struct sockaddr_in);
@@ -432,7 +429,7 @@ rpcclnt_connect(rpc, td)
 		if (error)
 			goto bad;
 
-#if __OpenBSD__
+#ifdef __OpenBSD__
 		MGET(mopt, M_TRYWAIT, MT_SOOPTS);
 		mopt->m_len = sizeof(int);
 		ip = mtod(mopt, int *);
@@ -579,11 +576,13 @@ bad:
 
 
 /*
- * Reconnect routine: Called when a connection is broken on a reliable
- * protocol. - clean up the old socket - nfs_connect() again - set
- * R_MUSTRESEND for all outstanding requests on mount point If this fails the
- * mount point is DEAD! nb: Must be called with the nfs_sndlock() set on the
- * mount point.
+ * Reconnect routine:
+ * Called when a connection is broken on a reliable protocol.
+ * - clean up the old socket
+ * - rpcclnt_connect() again
+ * - set R_MUSTRESEND for all outstanding requests on mount point
+ * If this fails the mount point is DEAD!
+ * nb: Must be called with the rpcclnt_sndlock() set on the mount point.
  */
 int
 rpcclnt_reconnect(rep, td)
@@ -614,15 +613,13 @@ rpcclnt_reconnect(rep, td)
 }
 
 /*
- * NFS disconnect. Clean up and unlink.
+ * RPC transport disconnect. Clean up and unlink.
  */
 void
 rpcclnt_disconnect(rpc)
 	struct rpcclnt *rpc;
 {
 	struct socket  *so;
-
-	GIANT_REQUIRED;		/* XXX until socket locking done */
 
 	if (rpc->rc_so) {
 		so = rpc->rc_so;
@@ -645,14 +642,17 @@ rpcclnt_safedisconnect(struct rpcclnt * rpc)
 }
 
 /*
- * This is the nfs send routine. For connection based socket types, it must
- * be called with an nfs_sndlock() on the socket. "rep == NULL" indicates
- * that it has been called from a server. For the client side: - return EINTR
- * if the RPC is terminated, 0 otherwise - set R_MUSTRESEND if the send fails
- * for any reason - do any cleanup required by recoverable socket errors
- * (???) For the server side: - return EINTR or ERESTART if interrupted by a
- * signal - return EPIPE if a connection is lost for connection based sockets
- * (TCP...) - do any cleanup required by recoverable socket errors (???)
+ * This is the rpc send routine. For connection based socket types, it
+ * must be called with an rpcclnt_sndlock() on the socket.
+ * "rep == NULL" indicates that it has been called from a server.
+ * For the client side:
+ * - return EINTR if the RPC is terminated, 0 otherwise
+ * - set R_MUSTRESEND if the send fails for any reason
+ * - do any cleanup required by recoverable socket errors (?)
+ * For the server side:
+ * - return EINTR or ERESTART if interrupted by a signal
+ * - return EPIPE if a connection is lost for connection based sockets (TCP...)
+ * - do any cleanup required by recoverable socket errors (?)
  */
 static int
 rpcclnt_send(so, nam, top, rep)
@@ -672,8 +672,6 @@ rpcclnt_send(so, nam, top, rep)
 	struct thread  *td = curthread;
 #endif
 	int error, soflags, flags;
-
-	GIANT_REQUIRED;		/* XXX until socket locking done */
 
 	if (rep) {
 		if (rep->r_flags & R_SOFTTERM) {
@@ -700,8 +698,12 @@ rpcclnt_send(so, nam, top, rep)
 	else
 		flags = 0;
 
+	/*
+	 * XXXRW: If/when this code becomes MPSAFE itself, Giant might have
+	 * to be conditionally acquired earlier for the stack so has to avoid
+	 * lock order reversals with any locks held over rpcclnt_send().
+	 */
 	error = sosend(so, sendnam, NULL, top, NULL, flags, td);
-
 	if (error) {
 		if (rep) {
 			log(LOG_INFO, "rpc send error %d for service %s\n", error,
@@ -757,8 +759,6 @@ rpcclnt_receive(rep, aname, mp, td)
 	struct sockaddr **getnam;
 #endif
 	int error, sotype, rcvflg;
-
-	GIANT_REQUIRED;		/* XXX until socket locking done */
 
 	/*
 	 * Set up arguments for soreceive()
@@ -936,7 +936,7 @@ errout:
 		do {
 			rcvflg = 0;
 			error = soreceive(so, getnam, &auio, mp, NULL, &rcvflg);
-			RPCDEBUG("soreceivce returns %d", error);
+			RPCDEBUG("soreceive returns %d", error);
 			if (error == EWOULDBLOCK && (rep->r_flags & R_SOFTTERM)) {
 				RPCDEBUG("wouldblock && softerm -> EINTR");
 				RPC_RETURN(EINTR);
@@ -1115,21 +1115,20 @@ rpcmout:
 
 /* XXX: ignores tryagain! */
 /*
- * code from nfs_request - goes something like this - fill in task struct -
- * links task into list - calls nfs_send() for first transmit - calls
- * nfs_receive() to get reply - fills in reply (which should be initialized
- * prior to calling), which is valid when 0 is returned and is NEVER freed in
- * this function
+ * code from nfs_request - goes something like this
+ *	- fill in task struct
+ *	- links task into list
+ *	- calls rpcclnt_send() for first transmit
+ *	- calls rpcclnt_reply() to get reply
+ *	- fills in reply (which should be initialized prior to
+ *	  calling), which is valid when 0 is returned and is
+ *	  NEVER freed in this function
  * 
- * always frees the request header, but NEVER frees 'mrest'
+ * nb: always frees the request header, but NEVER frees 'mrest'
  * 
- */
-/*
- * ruthtype
- * pcclnt_setauth() should be used before calling this. EAUTH is returned if
+ * rpcclnt_setauth() should be used before calling this. EAUTH is returned if
  * authentication fails.
- */
-/*
+ *
  * note that reply->result_* are invalid unless reply->type ==
  * RPC_MSGACCEPTED and reply->status == RPC_SUCCESS and that reply->verf_*
  * are invalid unless reply->type == RPC_MSGACCEPTED
@@ -1165,6 +1164,18 @@ rpcclnt_request(rpc, mrest, procnum, td, cred, reply)
 
 	m = rpcclnt_buildheader(rpc, procnum, mrest, mrest_len, &xid, &mheadend,
 	    cred);
+	/*
+	 * This can happen if the auth_type is neither UNIX or NULL
+	 */
+	if (m == NULL) {
+#ifdef __OpenBSD__
+		pool_put(&rpctask_pool, task);
+#else
+		FREE(task, M_RPC);
+#endif
+		error = EPROTONOSUPPORT;
+		goto rpcmout;
+	}
 
 	/*
 	 * For stream protocols, insert a Sun RPC Record Mark.
@@ -1370,9 +1381,10 @@ rpcmout:
 
 
 /*
- * Nfs timer routine Scan the nfsreq list and retranmit any requests that
- * have timed out To avoid retransmission attempts on STREAM sockets (in the
- * future) make sure to set the r_retry field to 0 (implies nm_retry == 0).
+ * RPC timer routine
+ * Scan the rpctask list and retranmit any requests that have timed out.
+ * To avoid retransmission attempts on STREAM sockets (in the future) make
+ * sure to set the r_retry field to 0 (implies nm_retry == 0).
  */
 void
 rpcclnt_timer(arg)
@@ -1392,7 +1404,7 @@ rpcclnt_timer(arg)
 	struct thread  *td = curthread;
 #endif
 
-#if __OpenBSD__
+#ifdef __OpenBSD__
 	s = splsoftnet();
 #else
 	s = splnet();
@@ -1851,6 +1863,7 @@ rpcclnt_buildheader(rc, procid, mrest, mrest_len, xidp, mheadend, cred)
 	*tl++ = txdr_unsigned(procid);
 
 	if ((error = rpcauth_buildheader(rc->rc_auth, cred, &mb, &bpos))) {
+		m_freem(mreq);
 		RPCDEBUG("rpcauth_buildheader failed %d", error);
 		return NULL;
 	}
