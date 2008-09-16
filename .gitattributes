@@ -28483,13 +28483,18 @@ sys/sparc64/sparc64/trap.c -text
 sys/sparc64/sparc64/tsb.c -text
 sys/sparc64/sparc64/uio_machdep.c -text
 sys/sparc64/sparc64/vm_machdep.c -text
+sys/sys/_bus_dma.h -text
+sys/sys/_elf_solaris.h -text
 sys/sys/_iovec.h -text
 sys/sys/_label.h -text
 sys/sys/_lock.h -text
 sys/sys/_mutex.h -text
 sys/sys/_null.h -text
 sys/sys/_pthreadtypes.h -text
+sys/sys/_rwlock.h -text
+sys/sys/_semaphore.h -text
 sys/sys/_sigset.h -text
+sys/sys/_sx.h -text
 sys/sys/_task.h -text
 sys/sys/_timespec.h -text
 sys/sys/_timeval.h -text
@@ -28500,6 +28505,7 @@ sys/sys/acl.h -text
 sys/sys/agpio.h -text
 sys/sys/aio.h -text
 sys/sys/alq.h -text
+sys/sys/apm.h -text
 sys/sys/assym.h -text
 sys/sys/ata.h -text
 sys/sys/bio.h -text
@@ -28536,6 +28542,7 @@ sys/sys/diskpc98.h -text
 sys/sys/dkstat.h -text
 sys/sys/domain.h -text
 sys/sys/dvdio.h -text
+sys/sys/elf.h -text
 sys/sys/elf32.h -text
 sys/sys/elf64.h -text
 sys/sys/elf_common.h -text
@@ -28569,6 +28576,7 @@ sys/sys/ioccom.h -text
 sys/sys/ioctl.h -text
 sys/sys/ioctl_compat.h -text
 sys/sys/ipc.h -text
+sys/sys/ipmi.h -text
 sys/sys/jail.h -text
 sys/sys/joystick.h -text
 sys/sys/kbio.h -text
@@ -28578,6 +28586,7 @@ sys/sys/kernel.h -text
 sys/sys/kerneldump.h -text
 sys/sys/kobj.h -text
 sys/sys/kse.h -text
+sys/sys/ksem.h -text
 sys/sys/kthread.h -text
 sys/sys/ktr.h -text
 sys/sys/ktrace.h -text
@@ -28589,6 +28598,7 @@ sys/sys/link_elf.h -text
 sys/sys/linker.h -text
 sys/sys/linker_set.h -text
 sys/sys/lock.h -text
+sys/sys/lock_profile.h -text
 sys/sys/lockf.h -text
 sys/sys/lockmgr.h -text
 sys/sys/mac.h -text
@@ -28605,6 +28615,7 @@ sys/sys/mman.h -text
 sys/sys/module.h -text
 sys/sys/mount.h -text
 sys/sys/mouse.h -text
+sys/sys/mqueue.h -text
 sys/sys/msg.h -text
 sys/sys/msgbuf.h -text
 sys/sys/mtio.h -text
@@ -28620,6 +28631,7 @@ sys/sys/pmc.h -text
 sys/sys/pmckern.h -text
 sys/sys/pmclog.h -text
 sys/sys/poll.h -text
+sys/sys/posix4.h -text
 sys/sys/power.h -text
 sys/sys/priority.h -text
 sys/sys/priv.h -text
@@ -28638,12 +28650,14 @@ sys/sys/resourcevar.h -text
 sys/sys/rman.h -text
 sys/sys/rtprio.h -text
 sys/sys/runq.h -text
+sys/sys/rwlock.h -text
 sys/sys/sbuf.h -text
 sys/sys/sched.h -text
 sys/sys/select.h -text
 sys/sys/selinfo.h -text
 sys/sys/sem.h -text
 sys/sys/sema.h -text
+sys/sys/semaphore.h -text
 sys/sys/serial.h -text
 sys/sys/sf_buf.h -text
 sys/sys/shm.h -text
