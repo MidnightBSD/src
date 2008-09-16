@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/ipsec.c,v 1.12 2005/06/02 23:56:10 hmp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipsec.c,v 1.24 2007/07/01 11:38:29 gnn Exp $	*/
 /*	$KAME: ipsec.c,v 1.103 2001/05/24 07:14:18 sakane Exp $	*/
 
 /*-
@@ -43,6 +43,7 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -75,6 +76,7 @@
 #include <netinet/icmp6.h>
 #endif
 
+#include <sys/types.h>
 #include <netipsec/ipsec.h>
 #ifdef INET6
 #include <netipsec/ipsec6.h>
@@ -92,6 +94,8 @@
 
 #include <machine/in_cksum.h>
 
+#include <opencrypto/cryptodev.h>
+
 #ifdef IPSEC_DEBUG
 int ipsec_debug = 1;
 #else
@@ -99,7 +103,7 @@ int ipsec_debug = 0;
 #endif
 
 /* NB: name changed so netstat doesn't use it */
-struct newipsecstat newipsecstat;
+struct ipsecstat ipsec4stat;
 int ip4_ah_offsetmask = 0;	/* maybe IP_DF? */
 int ip4_ipsec_dfbit = 0;	/* DF bit on encap. 0: clear 1: set 2: copy */
 int ip4_esp_trans_deflev = IPSEC_LEVEL_USE;
@@ -116,7 +120,7 @@ int ip4_esp_randpad = -1;
  * -1	require software support
  *  0	take anything
  */
-int	crypto_support = 0;
+int	crypto_support = CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SOFTWARE;
 
 SYSCTL_DECL(_net_inet_ipsec);
 
@@ -146,9 +150,27 @@ SYSCTL_INT(_net_inet_ipsec, IPSECCTL_ESP_RANDPAD,
 SYSCTL_INT(_net_inet_ipsec, OID_AUTO,
 	crypto_support,	CTLFLAG_RW,	&crypto_support,0, "");
 SYSCTL_STRUCT(_net_inet_ipsec, OID_AUTO,
-	ipsecstats,	CTLFLAG_RD,	&newipsecstat,	newipsecstat, "");
+	ipsecstats,	CTLFLAG_RD,	&ipsec4stat, ipsecstat, "");
 
-#ifdef INET6
+#ifdef REGRESSION
+/*
+ * When set to 1, IPsec will send packets with the same sequence number.
+ * This allows to verify if the other side has proper replay attacks detection.
+ */
+int ipsec_replay = 0;
+SYSCTL_INT(_net_inet_ipsec, OID_AUTO, test_replay, CTLFLAG_RW, &ipsec_replay, 0,
+    "Emulate replay attack");
+/*
+ * When set 1, IPsec will send packets with corrupted HMAC.
+ * This allows to verify if the other side properly detects modified packets.
+ */
+int ipsec_integrity = 0;
+SYSCTL_INT(_net_inet_ipsec, OID_AUTO, test_integrity, CTLFLAG_RW,
+    &ipsec_integrity, 0, "Emulate man-in-the-middle attack");
+#endif
+
+#ifdef INET6 
+struct ipsecstat ipsec6stat;
 int ip6_esp_trans_deflev = IPSEC_LEVEL_USE;
 int ip6_esp_net_deflev = IPSEC_LEVEL_USE;
 int ip6_ah_trans_deflev = IPSEC_LEVEL_USE;
@@ -179,6 +201,8 @@ SYSCTL_INT(_net_inet6_ipsec6, IPSECCTL_DEBUG,
 	debug, CTLFLAG_RW,	&ipsec_debug,	0, "");
 SYSCTL_INT(_net_inet6_ipsec6, IPSECCTL_ESP_RANDPAD,
 	esp_randpad, CTLFLAG_RW,	&ip6_esp_randpad,	0, "");
+SYSCTL_STRUCT(_net_inet6_ipsec6, IPSECCTL_STATS,
+	ipsecstats, CTLFLAG_RD, &ipsec6stat, ipsecstat, "");
 #endif /* INET6 */
 
 static int ipsec4_setspidx_inpcb __P((struct mbuf *, struct inpcb *pcb));
@@ -431,7 +455,7 @@ ipsec4_checkpolicy(m, dir, flag, error, inp)
 		sp = ipsec_getpolicybysock(m, dir, inp, error);
 	if (sp == NULL) {
 		IPSEC_ASSERT(*error != 0, ("getpolicy failed w/o error"));
-		newipsecstat.ips_out_inval++;
+		ipsec4stat.ips_out_inval++;
 		return NULL;
 	}
 	IPSEC_ASSERT(*error == 0, ("sp w/ error set to %u", *error));
@@ -441,7 +465,7 @@ ipsec4_checkpolicy(m, dir, flag, error, inp)
 		printf("%s: invalid policy %u\n", __func__, sp->policy);
 		/* fall thru... */
 	case IPSEC_POLICY_DISCARD:
-		newipsecstat.ips_out_polvio++;
+		ipsec4stat.ips_out_polvio++;
 		*error = -EINVAL;	/* packet is discarded by caller */
 		break;
 	case IPSEC_POLICY_BYPASS:
@@ -732,6 +756,7 @@ ipsec6_get_ulp(m, spidx, needport)
 	int off, nxt;
 	struct tcphdr th;
 	struct udphdr uh;
+	struct icmp6_hdr ih;
 
 	/* sanity check */
 	if (m == NULL)
@@ -772,6 +797,15 @@ ipsec6_get_ulp(m, spidx, needport)
 		((struct sockaddr_in6 *)&spidx->dst)->sin6_port = uh.uh_dport;
 		break;
 	case IPPROTO_ICMPV6:
+		spidx->ul_proto = nxt;
+		if (off + sizeof(struct icmp6_hdr) > m->m_pkthdr.len)
+			break;
+		m_copydata(m, off, sizeof(ih), (caddr_t)&ih);
+		((struct sockaddr_in6 *)&spidx->src)->sin6_port =
+		    htons((uint16_t)ih.icmp6_type);
+		((struct sockaddr_in6 *)&spidx->dst)->sin6_port =
+		    htons((uint16_t)ih.icmp6_code);
+		break;
 	default:
 		/* XXX intermediate headers??? */
 		spidx->ul_proto = nxt;
@@ -1432,7 +1466,7 @@ ipsec4_in_reject(m, inp)
 	if (sp != NULL) {
 		result = ipsec_in_reject(sp, m);
 		if (result)
-			newipsecstat.ips_in_polvio++;
+			ipsec4stat.ips_in_polvio++;
 		KEY_FREESP(&sp);
 	} else {
 		result = 0;	/* XXX should be panic ?
@@ -1472,7 +1506,7 @@ ipsec6_in_reject(m, inp)
 	if (sp != NULL) {
 		result = ipsec_in_reject(sp, m);
 		if (result)
-			newipsecstat.ips_in_polvio++;
+			ipsec6stat.ips_in_polvio++;
 		KEY_FREESP(&sp);
 	} else {
 		result = 0;
@@ -1814,6 +1848,7 @@ inet_ntoa4(struct in_addr ina)
 	unsigned char *ucp = (unsigned char *) &ina;
 	static int i = 3;
 
+	/* XXX-BZ returns static buffer. */
 	i = (i + 1) % 4;
 	sprintf(buf[i], "%d.%d.%d.%d", ucp[0] & 0xff, ucp[1] & 0xff,
 	    ucp[2] & 0xff, ucp[3] & 0xff);
@@ -1824,15 +1859,18 @@ inet_ntoa4(struct in_addr ina)
 char *
 ipsec_address(union sockaddr_union* sa)
 {
+#ifdef INET6
+	char ip6buf[INET6_ADDRSTRLEN];
+#endif
 	switch (sa->sa.sa_family) {
-#if INET
+#ifdef INET
 	case AF_INET:
 		return inet_ntoa4(sa->sin.sin_addr);
 #endif /* INET */
 
-#if INET6
+#ifdef INET6
 	case AF_INET6:
-		return ip6_sprintf(&sa->sin6.sin6_addr);
+		return ip6_sprintf(ip6buf, &sa->sin6.sin6_addr);
 #endif /* INET6 */
 
 	default:

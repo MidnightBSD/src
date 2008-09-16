@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/ipsec.h,v 1.8.2.1 2006/03/23 23:24:32 sam Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipsec.h,v 1.13 2007/07/01 11:38:29 gnn Exp $	*/
 /*	$KAME: ipsec.h,v 1.53 2001/11/20 08:32:38 itojun Exp $	*/
 
 /*-
@@ -205,7 +205,7 @@ struct secspacq {
 				 */
 #define IPSEC_REPLAYWSIZE  32
 
-/* old statistics for ipsec processing */
+/* statistics for ipsec processing */
 struct ipsecstat {
 	u_quad_t in_success;  /* succeeded inbound process */
 	u_quad_t in_polvio;
@@ -236,10 +236,7 @@ struct ipsecstat {
 
 	u_quad_t spdcachelookup;
 	u_quad_t spdcachemiss;
-};
 
-/* statistics for ipsec processing */
-struct newipsecstat {
 	u_int32_t ips_in_polvio;	/* input: sec policy violation */
 	u_int32_t ips_out_polvio;	/* output: sec policy violation */
 	u_int32_t ips_out_nosa;		/* output: SA unavailable  */
@@ -330,8 +327,12 @@ struct ipsec_history {
 };
 
 extern int ipsec_debug;
+#ifdef REGRESSION
+extern int ipsec_replay;
+extern int ipsec_integrity;
+#endif
 
-extern struct newipsecstat newipsecstat;
+extern struct ipsecstat ipsec4stat;
 extern struct secpolicy ip4_def_policy;
 extern int ip4_esp_trans_deflev;
 extern int ip4_esp_net_deflev;
@@ -347,10 +348,6 @@ extern int crypto_support;
 #define ipseclog(x)	do { if (ipsec_debug) log x; } while (0)
 /* for openbsd compatibility */
 #define	DPRINTF(x)	do { if (ipsec_debug) printf x; } while (0)
-
-/* XXX for KAME code compatibility */
-#define ipsec_pcbconn(_x)
-#define	ipsec_pcbdisconn(_x)
 
 extern	struct ipsecrequest *ipsec_newisr(void);
 extern	void ipsec_delisr(struct ipsecrequest *);
@@ -413,6 +410,8 @@ extern	void m_checkalignment(const char* where, struct mbuf *m0,
 extern	struct mbuf *m_makespace(struct mbuf *m0, int skip, int hlen, int *off);
 extern	caddr_t m_pad(struct mbuf *m, int n);
 extern	int m_striphdr(struct mbuf *m, int skip, int hlen);
+extern	int ipsec_filter(struct mbuf **, int);
+extern	void ipsec_bpf(struct mbuf *, struct secasvar *, int);
 #endif /* _KERNEL */
 
 #ifndef _KERNEL

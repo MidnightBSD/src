@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_ipip.c,v 1.11.2.1 2006/04/01 15:22:44 bz Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/xform_ipip.c,v 1.15 2007/07/19 09:57:54 bz Exp $	*/
 /*	$OpenBSD: ip_ipip.c,v 1.25 2002/06/10 18:04:55 itojun Exp $ */
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -41,6 +41,7 @@
  */
 #include "opt_inet.h"
 #include "opt_inet6.h"
+#include "opt_enc.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,6 +52,7 @@
 #include <sys/sysctl.h>
 
 #include <net/if.h>
+#include <net/pfil.h>
 #include <net/route.h>
 #include <net/netisr.h>
 
@@ -345,6 +347,12 @@ _ipip_input(struct mbuf *m, int iphlen, struct ifnet *gifp)
 	/* Statistics */
 	ipipstat.ipips_ibytes += m->m_pkthdr.len - iphlen;
 
+#ifdef DEV_ENC
+	/* pass the mbuf to enc0 for packet filtering */
+	if (ipsec_filter(&m, PFIL_IN) != 0)
+		return;
+#endif
+
 	/*
 	 * Interface pointer stays the same; if no IPsec processing has
 	 * been done (or will be done), this will point to a normal
@@ -599,7 +607,7 @@ bad:
 	return (error);
 }
 
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 static int
 ipe4_init(struct secasvar *sav, struct xformsw *xsp)
 {
@@ -678,4 +686,4 @@ ipe4_attach(void)
 #endif
 }
 SYSINIT(ipe4_xform_init, SI_SUB_PROTO_DOMAIN, SI_ORDER_MIDDLE, ipe4_attach, NULL);
-#endif	/* FAST_IPSEC */
+#endif	/* IPSEC */

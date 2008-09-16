@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_tcp.c,v 1.4 2005/01/07 01:45:46 imp Exp $ */
+/*	$FreeBSD: src/sys/netipsec/xform_tcp.c,v 1.5 2006/03/25 13:38:52 gnn Exp $ */
 
 /*-
  * Copyright (c) 2003 Bruce M. Simpson <bms@spc.org>
@@ -117,7 +117,7 @@ tcpsignature_zeroize(struct secasvar *sav)
 {
 
 	if (sav->key_auth)
-		bzero(_KEYBUF(sav->key_auth), _KEYLEN(sav->key_auth));
+		bzero(sav->key_auth->key_data, _KEYLEN(sav->key_auth));
 
 	sav->tdb_cryptoid = 0;
 	sav->tdb_authalgxform = NULL;

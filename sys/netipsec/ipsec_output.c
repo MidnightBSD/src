@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netipsec/ipsec_output.c,v 1.10 2004/01/20 22:45:10 sam Exp $
+ * $FreeBSD: src/sys/netipsec/ipsec_output.c,v 1.16 2007/07/19 09:57:54 bz Exp $
  */
 
 /*
@@ -32,6 +32,7 @@
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
+#include "opt_enc.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +44,7 @@
 #include <sys/syslog.h>
 
 #include <net/if.h>
+#include <net/pfil.h>
 #include <net/route.h>
 
 #include <netinet/in.h>
@@ -154,7 +156,7 @@ ipsec_process_done(struct mbuf *m, struct ipsecrequest *isr)
 	 * doing further processing.
 	 */
 	if (isr->next) {
-		newipsecstat.ips_out_bundlesa++;
+		ipsec4stat.ips_out_bundlesa++;
 		return ipsec4_process_packet(m, isr->next, 0, 0);
 	}
 	key_sa_recordxfer(sav, m);		/* record data transfer */
@@ -280,7 +282,7 @@ again:
 		 * this packet because it is responsibility for
 		 * upper layer to retransmit the packet.
 		 */
-		newipsecstat.ips_out_nosa++;
+		ipsec4stat.ips_out_nosa++;
 		goto bad;
 	}
 	sav = isr->sav;
@@ -358,6 +360,13 @@ ipsec4_process_packet(
 		goto bad;
 
 	sav = isr->sav;
+
+#ifdef DEV_ENC
+	/* pass the mbuf to enc0 for packet filtering */
+	if ((error = ipsec_filter(&m, PFIL_OUT)) != 0)
+		goto bad;
+#endif
+
 	if (!tunalready) {
 		union sockaddr_union *dst = &sav->sah->saidx.dst;
 		int setdf;
@@ -455,6 +464,11 @@ ipsec4_process_packet(
 		}
 	}
 
+#ifdef DEV_ENC
+	/* pass the mbuf to enc0 for bpf processing */
+	ipsec_bpf(m, sav, AF_INET);
+#endif
+
 	/*
 	 * Dispatch to the appropriate IPsec transform logic.  The
 	 * packet will be returned for transmission after crypto
@@ -500,7 +514,7 @@ ipsec6_splithdr(struct mbuf *m)
 	ip6 = mtod(m, struct ip6_hdr *);
 	hlen = sizeof(struct ip6_hdr);
 	if (m->m_len > hlen) {
-		MGETHDR(mh, M_DONTWAIT, MT_HEADER);
+		MGETHDR(mh, M_DONTWAIT, MT_DATA);
 		if (!mh) {
 			m_freem(m);
 			return NULL;
@@ -546,7 +560,7 @@ ipsec6_output_trans(
 	IPSEC_ASSERT(tun != NULL, ("null tun"));
 
 	KEYDEBUG(KEYDEBUG_IPSEC_DATA,
-		printf("%s: applyed SP\n", __func__);
+		printf("%s: applied SP\n", __func__);
 		kdebug_secpolicy(sp));
 
 	isr = sp->req;
@@ -559,6 +573,7 @@ ipsec6_output_trans(
 	*tun = 0;
 	m = state->m;
 
+	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 	isr = ipsec_nextisr(m, isr, AF_INET6, &saidx, &error);
 	if (isr == NULL) {
 #ifdef notdef
@@ -578,10 +593,15 @@ ipsec6_output_trans(
 		goto bad;
 	}
 
-	return (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
-		sizeof (struct ip6_hdr),
-		offsetof(struct ip6_hdr, ip6_nxt));
+	error = (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
+						  sizeof (struct ip6_hdr),
+						  offsetof(struct ip6_hdr, 
+							   ip6_nxt));
+	IPSECREQUEST_UNLOCK(isr);
+	return error;
 bad:
+	if (isr)
+		IPSECREQUEST_UNLOCK(isr);
 	if (m)
 		m_freem(m);
 	state->m = NULL;
@@ -601,7 +621,7 @@ ipsec6_encapsulate(struct mbuf *m, struct secasvar *sav)
 		m_freem(m);
 		return EINVAL;
 	}
-	IPSEC_ASSERT(m->m_len != sizeof (struct ip6_hdr),
+	IPSEC_ASSERT(m->m_len == sizeof (struct ip6_hdr),
 		("mbuf wrong size; len %u", m->m_len));
 
 
@@ -645,8 +665,8 @@ ipsec6_encapsulate(struct mbuf *m, struct secasvar *sav)
 		/* ip6->ip6_plen will be updated in ip6_output() */
 	}
 	ip6->ip6_nxt = IPPROTO_IPV6;
-	sav->sah->saidx.src.sin6.sin6_addr = ip6->ip6_src;
-	sav->sah->saidx.dst.sin6.sin6_addr = ip6->ip6_dst;
+	ip6->ip6_src = sav->sah->saidx.src.sin6.sin6_addr;
+	ip6->ip6_dst = sav->sah->saidx.dst.sin6.sin6_addr;
 	ip6->ip6_hlim = IPV6_DEFHLIM;
 
 	/* XXX Should ip6_src be updated later ? */
@@ -672,7 +692,7 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 	IPSEC_ASSERT(sp != NULL, ("null sp"));
 
 	KEYDEBUG(KEYDEBUG_IPSEC_DATA,
-		printf("%s: applyed SP\n", __func__);
+		printf("%s: applied SP\n", __func__);
 		kdebug_secpolicy(sp));
 
 	m = state->m;
@@ -684,6 +704,8 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 		if (isr->saidx.mode == IPSEC_MODE_TUNNEL)
 			break;
 	}
+
+	IPSECREQUEST_LOCK(isr);		/* insure SA contents don't change */
 	isr = ipsec_nextisr(m, isr, AF_INET6, &saidx, &error);
 	if (isr == NULL)
 		goto bad;
@@ -701,14 +723,14 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 			ipseclog((LOG_ERR, "%s: family mismatched between "
 			    "inner and outer, spi=%u\n", __func__,
 			    ntohl(isr->sav->spi)));
-			newipsecstat.ips_out_inval++;
+			ipsec6stat.ips_out_inval++;
 			error = EAFNOSUPPORT;
 			goto bad;
 		}
 
 		m = ipsec6_splithdr(m);
 		if (!m) {
-			newipsecstat.ips_out_nomem++;
+			ipsec6stat.ips_out_nomem++;
 			error = ENOMEM;
 			goto bad;
 		}
@@ -737,7 +759,7 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 		}
 		if (state->ro->ro_rt == 0) {
 			ip6stat.ip6s_noroute++;
-			newipsecstat.ips_out_noroute++;
+			ipsec6stat.ips_out_noroute++;
 			error = EHOSTUNREACH;
 			goto bad;
 		}
@@ -751,15 +773,19 @@ ipsec6_output_tunnel(struct ipsec_output_state *state, struct secpolicy *sp, int
 
 	m = ipsec6_splithdr(m);
 	if (!m) {
-		newipsecstat.ips_out_nomem++;
+		ipsec6stat.ips_out_nomem++;
 		error = ENOMEM;
 		goto bad;
 	}
 	ip6 = mtod(m, struct ip6_hdr *);
-	return (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
+	error = (*isr->sav->tdb_xform->xf_output)(m, isr, NULL,
 		sizeof (struct ip6_hdr),
 		offsetof(struct ip6_hdr, ip6_nxt));
+	IPSECREQUEST_UNLOCK(isr);
+	return error;
 bad:
+	if (isr)
+		IPSECREQUEST_UNLOCK(isr);
 	if (m)
 		m_freem(m);
 	state->m = NULL;

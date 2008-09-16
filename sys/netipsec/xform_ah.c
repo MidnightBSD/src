@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_ah.c,v 1.7.2.1 2006/03/23 23:24:33 sam Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/xform_ah.c,v 1.15 2007/08/06 14:26:02 rwatson Exp $	*/
 /*	$OpenBSD: ip_ah.c,v 1.63 2001/06/26 06:18:58 angelos Exp $ */
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -81,11 +81,11 @@
 		sizeof (struct ah) : sizeof (struct ah) + sizeof (u_int32_t))
 /* 
  * Return authenticator size in bytes.  The old protocol is known
- * to use a fixed 16-byte authenticator.  The new algorithm gets
- * this size from the xform but is (currently) always 12.
+ * to use a fixed 16-byte authenticator.  The new algorithm use 12-byte
+ * authenticator.
  */
 #define	AUTHSIZE(sav) \
-	((sav->flags & SADB_X_EXT_OLD) ? 16 : (sav)->tdb_authalgxform->authsize)
+	((sav->flags & SADB_X_EXT_OLD) ? 16 : AH_HMAC_HASHLEN)
 
 int	ah_enable = 1;			/* control flow of packets with AH */
 int	ah_cleartos = 1;		/* clear ip_tos when doing AH calc */
@@ -110,17 +110,17 @@ static int ah_output_cb(struct cryptop*);
 struct auth_hash *
 ah_algorithm_lookup(int alg)
 {
-	if (alg >= AH_ALG_MAX)
+	if (alg > SADB_AALG_MAX)
 		return NULL;
 	switch (alg) {
 	case SADB_X_AALG_NULL:
 		return &auth_hash_null;
 	case SADB_AALG_MD5HMAC:
-		return &auth_hash_hmac_md5_96;
+		return &auth_hash_hmac_md5;
 	case SADB_AALG_SHA1HMAC:
-		return &auth_hash_hmac_sha1_96;
+		return &auth_hash_hmac_sha1;
 	case SADB_X_AALG_RIPEMD160HMAC:
-		return &auth_hash_hmac_ripemd_160_96;
+		return &auth_hash_hmac_ripemd_160;
 	case SADB_X_AALG_MD5:
 		return &auth_hash_key_md5;
 	case SADB_X_AALG_SHA:
@@ -201,7 +201,8 @@ ah_init0(struct secasvar *sav, struct xformsw *xsp, struct cryptoini *cria)
 	bzero(cria, sizeof (*cria));
 	cria->cri_alg = sav->tdb_authalgxform->type;
 	cria->cri_klen = _KEYBITS(sav->key_auth);
-	cria->cri_key = _KEYBUF(sav->key_auth);
+	cria->cri_key = sav->key_auth->key_data;
+	cria->cri_mlen = AUTHSIZE(sav);
 
 	return 0;
 }
@@ -231,7 +232,7 @@ ah_zeroize(struct secasvar *sav)
 	int err;
 
 	if (sav->key_auth)
-		bzero(_KEYBUF(sav->key_auth), _KEYLEN(sav->key_auth));
+		bzero(sav->key_auth->key_data, _KEYLEN(sav->key_auth));
 
 	err = crypto_freesession(sav->tdb_cryptoid);
 	sav->tdb_cryptoid = 0;
@@ -622,8 +623,8 @@ ah_input(struct mbuf *m, struct secasvar *sav, int skip, int protoff)
 
 	/* Authentication operation. */
 	crda->crd_alg = ahx->type;
-	crda->crd_key = _KEYBUF(sav->key_auth);
 	crda->crd_klen = _KEYBITS(sav->key_auth);
+	crda->crd_key = sav->key_auth->key_data;
 
 	/* Find out if we've already done crypto. */
 	for (mtag = m_tag_find(m, PACKET_TAG_IPSEC_IN_CRYPTO_DONE, NULL);
@@ -764,8 +765,10 @@ ah_input_cb(struct cryptop *crp)
 		if (sav->tdb_cryptoid != 0)
 			sav->tdb_cryptoid = crp->crp_sid;
 
-		if (crp->crp_etype == EAGAIN)
-			return crypto_dispatch(crp);
+		if (crp->crp_etype == EAGAIN) {
+			error = crypto_dispatch(crp);
+			return error;
+		}
 
 		ahstat.ahs_noxform++;
 		DPRINTF(("%s: crypto error %d\n", __func__, crp->crp_etype));
@@ -857,7 +860,6 @@ ah_input_cb(struct cryptop *crp)
 	IPSEC_COMMON_INPUT_CB(m, sav, skip, protoff, mtag);
 
 	KEY_FREESAV(&sav);
-
 	return error;
 bad:
 	if (sav)
@@ -992,7 +994,11 @@ ah_output(
 			error = EINVAL;
 			goto bad;
 		}
-		sav->replay->count++;
+#ifdef REGRESSION
+		/* Emulate replay attack when ipsec_replay is TRUE. */
+		if (!ipsec_replay)
+#endif
+			sav->replay->count++;
 		ah->ah_seq = htonl(sav->replay->count);
 	}
 
@@ -1014,7 +1020,7 @@ ah_output(
 
 	/* Authentication operation. */
 	crda->crd_alg = ahx->type;
-	crda->crd_key = _KEYBUF(sav->key_auth);
+	crda->crd_key = sav->key_auth->key_data;
 	crda->crd_klen = _KEYBITS(sav->key_auth);
 
 	/* Allocate IPsec-specific opaque crypto info. */
@@ -1140,7 +1146,8 @@ ah_output_cb(struct cryptop *crp)
 		if (crp->crp_etype == EAGAIN) {
 			KEY_FREESAV(&sav);
 			IPSECREQUEST_UNLOCK(isr);
-			return crypto_dispatch(crp);
+			error = crypto_dispatch(crp);
+			return error;
 		}
 
 		ahstat.ahs_noxform++;
@@ -1168,11 +1175,24 @@ ah_output_cb(struct cryptop *crp)
 	free(tc, M_XDATA);
 	crypto_freereq(crp);
 
+#ifdef REGRESSION
+	/* Emulate man-in-the-middle attack when ipsec_integrity is TRUE. */
+	if (ipsec_integrity) {
+		int alen;
+
+		/*
+		 * Corrupt HMAC if we want to test integrity verification of
+		 * the other side.
+		 */
+		alen = AUTHSIZE(sav);
+		m_copyback(m, m->m_pkthdr.len - alen, alen, ipseczeroes);
+	}
+#endif
+
 	/* NB: m is reclaimed by ipsec_process_done. */
 	err = ipsec_process_done(m, isr);
 	KEY_FREESAV(&sav);
 	IPSECREQUEST_UNLOCK(isr);
-
 	return err;
 bad:
 	if (sav)

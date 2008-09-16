@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_ipcomp.c,v 1.8.2.1 2006/03/23 23:24:33 sam Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/xform_ipcomp.c,v 1.11 2007/08/06 14:26:02 rwatson Exp $	*/
 /* $OpenBSD: ip_ipcomp.c,v 1.1 2001/07/05 12:08:52 jjbg Exp $ */
 
 /*-
@@ -249,7 +249,8 @@ ipcomp_input_cb(struct cryptop *crp)
 
 		if (crp->crp_etype == EAGAIN) {
 			KEY_FREESAV(&sav);
-			return crypto_dispatch(crp);
+			error = crypto_dispatch(crp);
+			return error;
 		}
 
 		ipcompstat.ipcomps_noxform++;
@@ -519,7 +520,8 @@ ipcomp_output_cb(struct cryptop *crp)
 		if (crp->crp_etype == EAGAIN) {
 			KEY_FREESAV(&sav);
 			IPSECREQUEST_UNLOCK(isr);
-			return crypto_dispatch(crp);
+			error = crypto_dispatch(crp);
+			return error;
 		}
 		ipcompstat.ipcomps_noxform++;
 		DPRINTF(("%s: crypto error %d\n", __func__, crp->crp_etype));
@@ -572,7 +574,6 @@ ipcomp_output_cb(struct cryptop *crp)
 	error = ipsec_process_done(m, isr);
 	KEY_FREESAV(&sav);
 	IPSECREQUEST_UNLOCK(isr);
-
 	return error;
 bad:
 	if (sav)

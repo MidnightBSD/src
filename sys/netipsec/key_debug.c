@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/key_debug.c,v 1.3 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/key_debug.c,v 1.5 2007/07/01 11:38:29 gnn Exp $	*/
 /*	$KAME: key_debug.c,v 1.26 2001/06/27 10:46:50 sakane Exp $	*/
 
 /*-
@@ -73,7 +73,7 @@ static void kdebug_secreplay __P((struct secreplay *));
 #endif
 
 #ifndef _KERNEL
-#define panic(param)	{ printf(param); exit(-1); }
+#define panic(fmt, ...)	{ printf(fmt, ## __VA_ARGS__); exit(-1); }
 #endif
 
 /* NOTE: host byte order */
@@ -588,7 +588,7 @@ kdebug_secasv(sav)
 	if (sav->lft_s != NULL)
 		kdebug_sadb_lifetime((struct sadb_ext *)sav->lft_s);
 
-#if notyet
+#ifdef notyet
 	/* XXX: misc[123] ? */
 #endif
 

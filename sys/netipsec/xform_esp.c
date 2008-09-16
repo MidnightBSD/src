@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/xform_esp.c,v 1.10 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/xform_esp.c,v 1.20 2007/08/06 14:26:02 rwatson Exp $	*/
 /*	$OpenBSD: ip_esp.c,v 1.69 2001/06/26 06:18:59 angelos Exp $ */
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -113,6 +113,8 @@ esp_algorithm_lookup(int alg)
 		return &enc_xform_skipjack;
 	case SADB_EALG_NULL:
 		return &enc_xform_null;
+	case SADB_X_EALG_CAMELLIACBC:
+		return &enc_xform_camellia;
 	}
 	return NULL;
 }
@@ -215,7 +217,7 @@ esp_init(struct secasvar *sav, struct xformsw *xsp)
 	bzero(&crie, sizeof (crie));
 	crie.cri_alg = sav->tdb_encalgxform->type;
 	crie.cri_klen = _KEYBITS(sav->key_enc);
-	crie.cri_key = _KEYBUF(sav->key_enc);
+	crie.cri_key = sav->key_enc->key_data;
 	/* XXX Rounds ? */
 
 	if (sav->tdb_authalgxform && sav->tdb_encalgxform) {
@@ -248,7 +250,7 @@ esp_zeroize(struct secasvar *sav)
 	int error = ah_zeroize(sav);
 
 	if (sav->key_enc)
-		bzero(_KEYBUF(sav->key_enc), _KEYLEN(sav->key_enc));
+		bzero(sav->key_enc->key_data, _KEYLEN(sav->key_enc));
 	if (sav->iv) {
 		free(sav->iv, M_XDATA);
 		sav->iv = NULL;
@@ -329,7 +331,7 @@ esp_input(struct mbuf *m, struct secasvar *sav, int skip, int protoff)
 	}
 
 	/* Update the counters */
-	espstat.esps_ibytes += m->m_pkthdr.len - skip - hlen - alen;
+	espstat.esps_ibytes += m->m_pkthdr.len - (skip + hlen + alen);
 
 	/* Find out if we've already done crypto */
 	for (mtag = m_tag_find(m, PACKET_TAG_IPSEC_IN_CRYPTO_DONE, NULL);
@@ -381,7 +383,7 @@ esp_input(struct mbuf *m, struct secasvar *sav, int skip, int protoff)
 		crda->crd_inject = m->m_pkthdr.len - alen;
 
 		crda->crd_alg = esph->type;
-		crda->crd_key = _KEYBUF(sav->key_auth);
+		crda->crd_key = sav->key_auth->key_data;
 		crda->crd_klen = _KEYBITS(sav->key_auth);
 
 		/* Copy the authenticator */
@@ -418,7 +420,7 @@ esp_input(struct mbuf *m, struct secasvar *sav, int skip, int protoff)
 		crde->crd_inject = skip + hlen - sav->ivlen;
 
 		crde->crd_alg = espx->type;
-		crde->crd_key = _KEYBUF(sav->key_enc);
+		crde->crd_key = sav->key_enc->key_data;
 		crde->crd_klen = _KEYBITS(sav->key_enc);
 		/* XXX Rounds ? */
 	}
@@ -496,7 +498,8 @@ esp_input_cb(struct cryptop *crp)
 
 		if (crp->crp_etype == EAGAIN) {
 			KEY_FREESAV(&sav);
-			return crypto_dispatch(crp);
+			error = crypto_dispatch(crp);
+			return error;
 		}
 
 		espstat.esps_noxform++;
@@ -524,13 +527,13 @@ esp_input_cb(struct cryptop *crp)
 		ahstat.ahs_hist[sav->alg_auth]++;
 		if (mtag == NULL) {
 			/* Copy the authenticator from the packet */
-			m_copydata(m, m->m_pkthdr.len - esph->authsize,
-				esph->authsize, aalg);
+			m_copydata(m, m->m_pkthdr.len - AH_HMAC_HASHLEN,
+				AH_HMAC_HASHLEN, aalg);
 
 			ptr = (caddr_t) (tc + 1);
 
 			/* Verify authenticator */
-			if (bcmp(ptr, aalg, esph->authsize) != 0) {
+			if (bcmp(ptr, aalg, AH_HMAC_HASHLEN) != 0) {
 				DPRINTF(("%s: "
 		    "authentication hash mismatch for packet in SA %s/%08lx\n",
 				    __func__,
@@ -543,7 +546,7 @@ esp_input_cb(struct cryptop *crp)
 		}
 
 		/* Remove trailing authenticator */
-		m_adj(m, -(esph->authsize));
+		m_adj(m, -AH_HMAC_HASHLEN);
 	}
 
 	/* Release the crypto descriptors */
@@ -753,7 +756,14 @@ esp_output(
 	/* Initialize ESP header. */
 	bcopy((caddr_t) &sav->spi, mtod(mo, caddr_t) + roff, sizeof(u_int32_t));
 	if (sav->replay) {
-		u_int32_t replay = htonl(++(sav->replay->count));
+		u_int32_t replay;
+
+#ifdef REGRESSION
+		/* Emulate replay attack when ipsec_replay is TRUE. */
+		if (!ipsec_replay)
+#endif
+			sav->replay->count++;
+		replay = htonl(sav->replay->count);
 		bcopy((caddr_t) &replay,
 		    mtod(mo, caddr_t) + roff + sizeof(u_int32_t),
 		    sizeof(u_int32_t));
@@ -819,7 +829,7 @@ esp_output(
 
 		/* Encryption operation. */
 		crde->crd_alg = espx->type;
-		crde->crd_key = _KEYBUF(sav->key_enc);
+		crde->crd_key = sav->key_enc->key_data;
 		crde->crd_klen = _KEYBITS(sav->key_enc);
 		/* XXX Rounds ? */
 	} else
@@ -858,7 +868,7 @@ esp_output(
 
 		/* Authentication operation. */
 		crda->crd_alg = esph->type;
-		crda->crd_key = _KEYBUF(sav->key_auth);
+		crda->crd_key = sav->key_auth->key_data;
 		crda->crd_klen = _KEYBITS(sav->key_auth);
 	}
 
@@ -908,7 +918,8 @@ esp_output_cb(struct cryptop *crp)
 		if (crp->crp_etype == EAGAIN) {
 			KEY_FREESAV(&sav);
 			IPSECREQUEST_UNLOCK(isr);
-			return crypto_dispatch(crp);
+			error = crypto_dispatch(crp);
+			return error;
 		}
 
 		espstat.esps_noxform++;
@@ -932,11 +943,28 @@ esp_output_cb(struct cryptop *crp)
 	free(tc, M_XDATA);
 	crypto_freereq(crp);
 
+#ifdef REGRESSION
+	/* Emulate man-in-the-middle attack when ipsec_integrity is TRUE. */
+	if (ipsec_integrity) {
+		static unsigned char ipseczeroes[AH_HMAC_HASHLEN];
+		struct auth_hash *esph;
+
+		/*
+		 * Corrupt HMAC if we want to test integrity verification of
+		 * the other side.
+		 */
+		esph = sav->tdb_authalgxform;
+		if (esph !=  NULL) {
+			m_copyback(m, m->m_pkthdr.len - AH_HMAC_HASHLEN,
+			    AH_HMAC_HASHLEN, ipseczeroes);
+		}
+	}
+#endif
+
 	/* NB: m is reclaimed by ipsec_process_done. */
 	err = ipsec_process_done(m, isr);
 	KEY_FREESAV(&sav);
 	IPSECREQUEST_UNLOCK(isr);
-
 	return err;
 bad:
 	if (sav)
@@ -970,6 +998,7 @@ esp_attach(void)
 	MAXIV(enc_xform_cast5);		/* SADB_X_EALG_CAST128CBC */
 	MAXIV(enc_xform_skipjack);	/* SADB_X_EALG_SKIPJACK */
 	MAXIV(enc_xform_null);		/* SADB_EALG_NULL */
+	MAXIV(enc_xform_camellia);	/* SADB_X_EALG_CAMELLIACBC */
 
 	xform_register(&esp_xformsw);
 #undef MAXIV

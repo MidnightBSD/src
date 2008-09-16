@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/netipsec/ipsec_input.c,v 1.9 2005/01/07 01:45:46 imp Exp $	*/
+/*	$FreeBSD: src/sys/netipsec/ipsec_input.c,v 1.19 2007/09/12 05:54:53 gnn Exp $	*/
 /*	$OpenBSD: ipsec_input.c,v 1.63 2003/02/20 18:35:43 deraadt Exp $	*/
 /*-
  * The authors of this code are John Ioannidis (ji@tla.org),
@@ -43,6 +43,7 @@
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
+#include "opt_enc.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,6 +56,7 @@
 #include <sys/syslog.h>
 
 #include <net/if.h>
+#include <net/pfil.h>
 #include <net/route.h>
 #include <net/netisr.h>
 
@@ -99,7 +101,7 @@ static void ipsec4_common_ctlinput(int, struct sockaddr *, void *, int);
 /*
  * ipsec_common_input gets called when an IPsec-protected packet
  * is received by IPv4 or IPv6.  It's job is to find the right SA
- # and call the appropriate transform.  The transform callback
+ * and call the appropriate transform.  The transform callback
  * takes care of further processing (like ingress filtering).
  */
 static int
@@ -114,6 +116,10 @@ ipsec_common_input(struct mbuf *m, int skip, int protoff, int af, int sproto)
 		ipcompstat.ipcomps_input);
 
 	IPSEC_ASSERT(m != NULL, ("null packet"));
+
+	IPSEC_ASSERT(sproto == IPPROTO_ESP || sproto == IPPROTO_AH ||
+		sproto == IPPROTO_IPCOMP,
+		("unexpected security protocol %u", sproto));
 
 	if ((sproto == IPPROTO_ESP && !esp_enable) ||
 	    (sproto == IPPROTO_AH && !ah_enable) ||
@@ -276,6 +282,11 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 	struct tdb_ident *tdbi;
 	struct secasindex *saidx;
 	int error;
+#ifdef INET6
+#ifdef notyet
+	char ip6buf[INET6_ADDRSTRLEN];
+#endif
+#endif
 
 	IPSEC_SPLASSERT_SOFTNET(__func__);
 
@@ -321,6 +332,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 	}
 	prot = ip->ip_p;
 
+#ifdef notyet
 	/* IP-in-IP encapsulation */
 	if (prot == IPPROTO_IPIP) {
 		struct ip ipn;
@@ -336,7 +348,6 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 		m_copydata(m, ip->ip_hl << 2, sizeof(struct ip),
 		    (caddr_t) &ipn);
 
-#ifdef notyet
 		/* XXX PROXY address isn't recorded in SAH */
 		/*
 		 * Check that the inner source address is the same as
@@ -364,9 +375,8 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 			error = EACCES;
 			goto bad;
 		}
-#endif /*XXX*/
 	}
-#if INET6
+#ifdef INET6
 	/* IPv6-in-IP encapsulation. */
 	if (prot == IPPROTO_IPV6) {
 		struct ip6_hdr ip6n;
@@ -382,7 +392,6 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 		m_copydata(m, ip->ip_hl << 2, sizeof(struct ip6_hdr),
 		    (caddr_t) &ip6n);
 
-#ifdef notyet
 		/*
 		 * Check that the inner source address is the same as
 		 * the proxy address, if available.
@@ -397,7 +406,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 			DPRINTF(("%s: inner source address %s doesn't "
 			    "correspond to expected proxy source %s, "
 			    "SA %s/%08lx\n", __func__,
-			    ip6_sprintf(&ip6n.ip6_src),
+			    ip6_sprintf(ip6buf, &ip6n.ip6_src),
 			    ipsec_address(&saidx->proxy),
 			    ipsec_address(&saidx->dst),
 			    (u_long) ntohl(sav->spi)));
@@ -408,9 +417,9 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 			error = EACCES;
 			goto bad;
 		}
-#endif /*XXX*/
 	}
 #endif /* INET6 */
+#endif /*XXX*/
 
 	/*
 	 * Record what we've done to the packet (under what SA it was
@@ -437,12 +446,24 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav,
 		tdbi->spi = sav->spi;
 
 		m_tag_prepend(m, mtag);
-	} else {
+	} else if (mt != NULL) {
 		mt->m_tag_id = PACKET_TAG_IPSEC_IN_DONE;
 		/* XXX do we need to mark m_flags??? */
 	}
 
 	key_sa_recordxfer(sav, m);		/* record data transfer */
+
+#ifdef DEV_ENC
+	/*
+	 * Pass the mbuf to enc0 for bpf and pfil. We will filter the IPIP
+	 * packet later after it has been decapsulated.
+	 */
+	ipsec_bpf(m, sav, AF_INET);
+
+	if (prot != IPPROTO_IPIP)
+		if ((error = ipsec_filter(&m, PFIL_IN)) != 0)
+			return (error);
+#endif
 
 	/*
 	 * Re-dispatch via software interrupt.
@@ -531,6 +552,9 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 	int nxt;
 	u_int8_t nxt8;
 	int error, nest;
+#ifdef notyet
+	char ip6buf[INET6_ADDRSTRLEN];
+#endif
 
 	IPSEC_ASSERT(m != NULL, ("null mbuf"));
 	IPSEC_ASSERT(sav != NULL, ("null SA"));
@@ -572,6 +596,7 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 	/* Save protocol */
 	m_copydata(m, protoff, 1, (unsigned char *) &prot);
 
+#ifdef notyet
 #ifdef INET
 	/* IP-in-IP encapsulation */
 	if (prot == IPPROTO_IPIP) {
@@ -587,7 +612,6 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 		/* ipn will now contain the inner IPv4 header */
 		m_copydata(m, skip, sizeof(struct ip), (caddr_t) &ipn);
 
-#ifdef notyet
 		/*
 		 * Check that the inner source address is the same as
 		 * the proxy address, if available.
@@ -611,7 +635,6 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 			error = EACCES;
 			goto bad;
 		}
-#endif /*XXX*/
 	}
 #endif /* INET */
 
@@ -630,7 +653,6 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 		m_copydata(m, skip, sizeof(struct ip6_hdr),
 		    (caddr_t) &ip6n);
 
-#ifdef notyet
 		/*
 		 * Check that the inner source address is the same as
 		 * the proxy address, if available.
@@ -645,7 +667,7 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 			DPRINTF(("%s: inner source address %s doesn't "
 			    "correspond to expected proxy source %s, "
 			    "SA %s/%08lx\n", __func__,
-			    ip6_sprintf(&ip6n.ip6_src),
+			    ip6_sprintf(ip6buf, &ip6n.ip6_src),
 			    ipsec_address(&saidx->proxy),
 			    ipsec_address(&saidx->dst),
 			    (u_long) ntohl(sav->spi)));
@@ -655,8 +677,8 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip, int proto
 			error = EACCES;
 			goto bad;
 		}
-#endif /*XXX*/
 	}
+#endif /*XXX*/
 
 	/*
 	 * Record what we've done to the packet (under what SA it was
@@ -739,6 +761,11 @@ bad:
 void
 esp6_ctlinput(int cmd, struct sockaddr *sa, void *d)
 {
+	struct ip6ctlparam *ip6cp = NULL;
+	struct mbuf *m = NULL;
+	struct ip6_hdr *ip6;
+	int off;
+
 	if (sa->sa_family != AF_INET6 ||
 	    sa->sa_len != sizeof(struct sockaddr_in6))
 		return;
@@ -746,10 +773,18 @@ esp6_ctlinput(int cmd, struct sockaddr *sa, void *d)
 		return;
 
 	/* if the parameter is from icmp6, decode it. */
-	if (d !=  NULL) {
-		struct ip6ctlparam *ip6cp = (struct ip6ctlparam *)d;
-		struct mbuf *m = ip6cp->ip6c_m;
-		int off = ip6cp->ip6c_off;
+	if (d != NULL) {
+		ip6cp = (struct ip6ctlparam *)d;
+		m = ip6cp->ip6c_m;
+		ip6 = ip6cp->ip6c_ip6;
+		off = ip6cp->ip6c_off;
+	} else {
+		m = NULL;
+		ip6 = NULL;
+		off = 0;	/* calm gcc */
+	}
+
+	if (ip6 != NULL) {
 
 		struct ip6ctlparam ip6cp1;
 
