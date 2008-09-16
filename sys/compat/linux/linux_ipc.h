@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/linux/linux_ipc.h,v 1.10 2004/08/16 07:28:16 tjr Exp $
+ * $FreeBSD: src/sys/compat/linux/linux_ipc.h,v 1.11 2006/12/21 13:11:06 netchild Exp $
  */
 
 #ifndef _LINUX_IPC_H_
@@ -134,6 +134,8 @@ int linux_shmat(struct thread *, struct linux_shmat_args *);
 int linux_shmctl(struct thread *, struct linux_shmctl_args *);
 int linux_shmdt(struct thread *, struct linux_shmdt_args *);
 int linux_shmget(struct thread *, struct linux_shmget_args *);
+
+#define	LINUX_MSG_INFO	12
 
 #endif	/* __i386__ || __amd64__ */
 

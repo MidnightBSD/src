@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/freebsd32/freebsd32.h,v 1.4 2004/04/14 23:17:37 peter Exp $
+ * $FreeBSD: src/sys/compat/freebsd32/freebsd32.h,v 1.6.2.1 2007/12/19 20:37:53 jhb Exp $
  */
 
 #ifndef _COMPAT_FREEBSD32_FREEBSD32_H_
@@ -45,7 +45,7 @@ struct timeval32 {
 #define TV_CP(src,dst,fld) do {			\
 	CP((src).fld,(dst).fld,tv_sec);		\
 	CP((src).fld,(dst).fld,tv_usec);	\
-} while (0);
+} while (0)
 
 struct timespec32 {
 	u_int32_t tv_sec;
@@ -75,6 +75,11 @@ struct rusage32 {
 	int32_t	ru_nivcsw;
 };
 
+struct itimerval32 {
+	struct timeval32 it_interval;
+	struct timeval32 it_value;
+};
+
 #define FREEBSD4_MNAMELEN        (88 - 2 * sizeof(int32_t)) /* size of on/from name bufs */
 
 /* 4.x version */
@@ -101,6 +106,71 @@ struct statfs32 {
 	char	f_mntfromname[FREEBSD4_MNAMELEN];
 	int16_t	f_spares2 __packed;
 	int32_t f_spare[2];
+};
+
+struct kevent32 {
+	u_int32_t	ident;		/* identifier for this event */
+	short		filter;		/* filter for event */
+	u_short		flags;
+	u_int		fflags;
+	int32_t		data;
+	u_int32_t	udata;		/* opaque user data identifier */
+};
+
+struct iovec32 {
+	u_int32_t iov_base;
+	int	iov_len;
+};
+
+struct msghdr32 {
+	u_int32_t	 msg_name;
+	socklen_t	 msg_namelen;
+	u_int32_t	 msg_iov;
+	int		 msg_iovlen;
+	u_int32_t	 msg_control;
+	socklen_t	 msg_controllen;
+	int		 msg_flags;
+};
+
+struct stat32 {
+	dev_t	st_dev;
+	ino_t	st_ino;
+	mode_t	st_mode;
+	nlink_t	st_nlink;
+	uid_t	st_uid;
+	gid_t	st_gid;
+	dev_t	st_rdev;
+	struct timespec32 st_atimespec;
+	struct timespec32 st_mtimespec;
+	struct timespec32 st_ctimespec;
+	off_t	st_size;
+	int64_t	st_blocks;
+	u_int32_t st_blksize;
+	u_int32_t st_flags;
+	u_int32_t st_gen;
+	struct timespec32 st_birthtimespec;
+	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
+	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
+};
+
+struct sigaction32 {
+	u_int32_t	sa_u;
+	int		sa_flags;
+	sigset_t	sa_mask;
+};
+
+struct thr_param32 {
+	uint32_t start_func;
+	uint32_t arg;
+	uint32_t stack_base;
+	uint32_t stack_size;
+	uint32_t tls_base;
+	uint32_t tls_size;
+	uint32_t child_tid;
+	uint32_t parent_tid;
+	int32_t	 flags;
+	uint32_t rtp;
+	uint32_t spare[3];
 };
 
 #endif /* !_COMPAT_FREEBSD32_FREEBSD32_H_ */

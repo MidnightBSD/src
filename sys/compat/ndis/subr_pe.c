@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_pe.c,v 1.11.2.1 2005/10/27 17:06:46 wpaul Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_pe.c,v 1.13 2007/04/06 11:18:57 pjd Exp $");
 
 /*
  * This file contains routines for relocating and dynamically linking
@@ -53,8 +53,6 @@ __FBSDID("$FreeBSD: src/sys/compat/ndis/subr_pe.c,v 1.11.2.1 2005/10/27 17:06:46
 #include <sys/errno.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
-extern int ndis_strncasecmp(const char *, const char *, size_t);
-#define strncasecmp(a, b, c) ndis_strncasecmp(a, b, c)
 #else
 #include <stdio.h>
 #include <stddef.h>

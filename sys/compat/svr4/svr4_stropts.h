@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/compat/svr4/svr4_stropts.h,v 1.5 2005/01/05 22:34:37 imp Exp $
+ * $FreeBSD: src/sys/compat/svr4/svr4_stropts.h,v 1.6 2006/07/28 16:56:17 jhb Exp $
  */
 
 #ifndef	_SVR4_STROPTS_H_
@@ -116,12 +116,16 @@ struct svr4_strioctl {
  * Our internal state for the stream
  * For now we keep almost nothing... In the future we can keep more
  * streams state.
+ *
+ * Locking key:
+ *      r - Read only field only set during creation
+ *      G - Giant
  */
 struct svr4_strm {
-	int	s_family;	/* socket family */
-	int	s_cmd;		/* last getmsg reply or putmsg request	*/
-	int	s_afd;		/* last accepted fd; [for fd_insert]	*/
-        int     s_eventmask;    /* state info from I_SETSIG et al */
+	int	s_family;	/* (r) socket family */
+	int	s_cmd;		/* (G) last getmsg reply or putmsg request */
+	int	s_afd;		/* (G) last accepted fd; [for fd_insert] */
+	int	s_eventmask;	/* (G) state info from I_SETSIG et al */
 };
 
 /*

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/compat/svr4/svr4_signal.h,v 1.11 2005/02/25 19:34:10 sam Exp $
+ * $FreeBSD: src/sys/compat/svr4/svr4_signal.h,v 1.12 2005/10/14 12:43:44 davidxu Exp $
  */
 
 #ifndef	_SVR4_SIGNAL_H_
@@ -133,10 +133,12 @@ struct svr4_sigaltstack {
 
 #define	SVR4_MINSIGSTKSZ	8192
 
+struct ksiginfo;
+
 void bsd_to_svr4_sigaltstack(const struct sigaltstack *, struct svr4_sigaltstack *);
 void bsd_to_svr4_sigset(const sigset_t *, svr4_sigset_t *);
 void svr4_to_bsd_sigaltstack(const struct svr4_sigaltstack *, struct sigaltstack *);
 void svr4_to_bsd_sigset(const svr4_sigset_t *, sigset_t *);
-void svr4_sendsig(sig_t, int, sigset_t  *, u_long);
+void svr4_sendsig(sig_t, struct ksiginfo *, sigset_t  *);
 
 #endif /* !_SVR4_SIGNAL_H_ */

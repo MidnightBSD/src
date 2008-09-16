@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ndis.c,v 1.94.2.3 2005/12/16 17:33:47 wpaul Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ndis.c,v 1.108 2007/05/31 11:51:49 kib Exp $");
 
 /*
  * This file implements a translation layer between the BSD networking
@@ -613,53 +613,6 @@ ndis_encode_parm(block, oid, type, parm)
 	return(NDIS_STATUS_SUCCESS);
 }
 
-int
-ndis_strcasecmp(s1, s2)
-        const char              *s1;
-        const char              *s2;
-{
-	char			a, b;
-
-	/*
-	 * In the kernel, toupper() is a macro. Have to be careful
-	 * not to use pointer arithmetic when passing it arguments.
-	 */
-
-	while(1) {
-		a = *s1;
-		b = *s2++;
-		if (toupper(a) != toupper(b))
-			break;
-		if (*s1++ == '\0')
-			return(0);
-	}
-
-	return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
-}
-
-int
-ndis_strncasecmp(s1, s2, n)
-        const char              *s1;
-        const char              *s2;
-	size_t			n;
-{
-	char			a, b;
-
-	if (n != 0) {
-		do {
-			a = *s1;
-			b = *s2++;
-			if (toupper(a) != toupper(b))
-				return (*(const unsigned char *)s1 -
-				    *(const unsigned char *)(s2 - 1));
-			if (*s1++ == '\0')
-				break;
-		} while (--n != 0);
-	}
-
-	return(0);
-}
-
 static void
 NdisReadConfiguration(status, parm, cfg, key, type)
 	ndis_status		*status;
@@ -700,7 +653,7 @@ NdisReadConfiguration(status, parm, cfg, key, type)
 	TAILQ_FOREACH(e, device_get_sysctl_ctx(sc->ndis_dev), link) {
 #endif
 		oidp = e->entry;
-		if (ndis_strcasecmp(oidp->oid_name, keystr) == 0) {
+		if (strcasecmp(oidp->oid_name, keystr) == 0) {
 			if (strcmp((char *)oidp->oid_arg1, "UNSET") == 0) {
 				RtlFreeAnsiString(&as);
 				*status = NDIS_STATUS_FAILURE;
@@ -809,7 +762,7 @@ NdisWriteConfiguration(status, cfg, key, parm)
 	TAILQ_FOREACH(e, device_get_sysctl_ctx(sc->ndis_dev), link) {
 #endif
 		oidp = e->entry;
-		if (ndis_strcasecmp(oidp->oid_name, keystr) == 0) {
+		if (strcasecmp(oidp->oid_name, keystr) == 0) {
 			/* Found it, set the value. */
 			strcpy((char *)oidp->oid_arg1, val);
 			RtlFreeAnsiString(&as);
@@ -2886,6 +2839,32 @@ ndis_find_sym(lf, filename, suffix, sym)
 	return(0);
 }
 
+struct ndis_checkmodule {
+	char	*afilename;
+	ndis_fh	*fh;
+};
+
+/*
+ * See if a single module contains the symbols for a specified file.
+ */
+static int
+NdisCheckModule(linker_file_t lf, void *context)
+{
+	struct ndis_checkmodule *nc;
+	caddr_t			kldstart, kldend;
+
+	nc = (struct ndis_checkmodule *)context;
+	if (ndis_find_sym(lf, nc->afilename, "_start", &kldstart))
+		return (0);
+	if (ndis_find_sym(lf, nc->afilename, "_end", &kldend))
+		return (0);
+	nc->fh->nf_vp = lf;
+	nc->fh->nf_map = NULL;
+	nc->fh->nf_type = NDIS_FH_TYPE_MODULE;
+	nc->fh->nf_maplen = (kldend - kldstart) & 0xFFFFFFFF;
+	return (1);
+}
+
 /* can also return NDIS_STATUS_RESOURCES/NDIS_STATUS_ERROR_READING_FILE */
 static void
 NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
@@ -2899,13 +2878,12 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 	char			*afilename = NULL;
 	struct thread		*td = curthread;
 	struct nameidata	nd;
-	int			flags, error;
+	int			flags, error, vfslocked;
 	struct vattr		vat;
 	struct vattr		*vap = &vat;
 	ndis_fh			*fh;
 	char			*path;
-	linker_file_t		head, lf;
-	caddr_t			kldstart, kldend;
+	struct ndis_checkmodule	nc;
 
 	if (RtlUnicodeStringToAnsiString(&as, filename, TRUE)) {
 		*status = NDIS_STATUS_RESOURCES;
@@ -2943,23 +2921,10 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 	 * us since the kernel appears to us as just another module.
 	 */
 
-	/*
-	 * This is an evil trick for getting the head of the linked
-	 * file list, which is not exported from kern_linker.o. It
-	 * happens that linker file #1 is always the kernel, and is
-	 * always the first element in the list.
-	 */
-
-	head = linker_find_file_by_id(1);
-	for (lf = head; lf != NULL; lf = TAILQ_NEXT(lf, link)) {
-		if (ndis_find_sym(lf, afilename, "_start", &kldstart))
-			continue;
-		if (ndis_find_sym(lf, afilename, "_end", &kldend))
-			continue;
-		fh->nf_vp = lf;
-		fh->nf_map = NULL;
-		fh->nf_type = NDIS_FH_TYPE_MODULE;
-		*filelength = fh->nf_maplen = (kldend - kldstart) & 0xFFFFFFFF;
+	nc.afilename = afilename;
+	nc.fh = fh;
+	if (linker_file_foreach(NdisCheckModule, &nc)) {
+		*filelength = fh->nf_maplen;
 		*filehandle = fh;
 		*status = NDIS_STATUS_SUCCESS;
 		return;
@@ -2986,8 +2951,6 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 
 	snprintf(path, MAXPATHLEN, "%s/%s", ndis_filepath, afilename);
 
-	mtx_lock(&Giant);
-
 	/* Some threads don't have a current working directory. */
 
 	if (td->td_proc->p_fd->fd_rdir == NULL)
@@ -2995,12 +2958,11 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 	if (td->td_proc->p_fd->fd_cdir == NULL)
 		td->td_proc->p_fd->fd_cdir = rootvnode;
 
-	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, path, td);
+	NDINIT(&nd, LOOKUP, FOLLOW | MPSAFE, UIO_SYSSPACE, path, td);
 
 	flags = FREAD;
-	error = vn_open(&nd, &flags, 0, -1);
+	error = vn_open(&nd, &flags, 0, NULL);
 	if (error) {
-		mtx_unlock(&Giant);
 		*status = NDIS_STATUS_FILE_NOT_FOUND;
 		ExFreePool(fh);
 		printf("NDIS: open file %s failed: %d\n", path, error);
@@ -3008,6 +2970,7 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 		free(afilename, M_DEVBUF);
 		return;
 	}
+	vfslocked = NDHASGIANT(&nd);
 
 	ExFreePool(path);
 
@@ -3016,7 +2979,7 @@ NdisOpenFile(status, filehandle, filelength, filename, highestaddr)
 	/* Get the file size. */
 	VOP_GETATTR(nd.ni_vp, vap, td->td_ucred, td);
 	VOP_UNLOCK(nd.ni_vp, 0, td);
-	mtx_unlock(&Giant);
+	VFS_UNLOCK_GIANT(vfslocked);
 
 	fh->nf_vp = nd.ni_vp;
 	fh->nf_map = NULL;
@@ -3038,7 +3001,8 @@ NdisMapFile(status, mappedbuffer, filehandle)
 	struct thread		*td = curthread;
 	linker_file_t		lf;
 	caddr_t			kldstart;
-	int			error, resid;
+	int			error, resid, vfslocked;
+	struct vnode		*vp;
 
 	if (filehandle == NULL) {
 		*status = NDIS_STATUS_FAILURE;
@@ -3076,10 +3040,11 @@ NdisMapFile(status, mappedbuffer, filehandle)
 		return;
 	}
 
-	mtx_lock(&Giant);
-	error = vn_rdwr(UIO_READ, fh->nf_vp, fh->nf_map, fh->nf_maplen, 0,
+	vp = fh->nf_vp;
+	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+	error = vn_rdwr(UIO_READ, vp, fh->nf_map, fh->nf_maplen, 0,
 	    UIO_SYSSPACE, 0, td->td_ucred, NOCRED, &resid, td);
-	mtx_unlock(&Giant);
+	VFS_UNLOCK_GIANT(vfslocked);
 
 	if (error)
 		*status = NDIS_STATUS_FAILURE;
@@ -3114,6 +3079,8 @@ NdisCloseFile(filehandle)
 {
 	struct thread		*td = curthread;
 	ndis_fh			*fh;
+	int			vfslocked;
+	struct vnode		*vp;
 
 	if (filehandle == NULL)
 		return;
@@ -3129,9 +3096,10 @@ NdisCloseFile(filehandle)
 		return;
 
 	if (fh->nf_type == NDIS_FH_TYPE_VFS) {
-		mtx_lock(&Giant);
-		vn_close(fh->nf_vp, FREAD, td->td_ucred, td);
-		mtx_unlock(&Giant);
+		vp = fh->nf_vp;
+		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+		vn_close(vp, FREAD, td->td_ucred, td);
+		VFS_UNLOCK_GIANT(vfslocked);
 	}
 
 	fh->nf_vp = NULL;

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/kern_windrv.c,v 1.11.2.2 2005/11/06 03:52:24 wpaul Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ndis/kern_windrv.c,v 1.14 2007/05/20 22:03:57 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -883,9 +883,9 @@ x86_oldldt(dummy)
 	struct gdt		gtable;
 	uint16_t		ltable;
 
-	mtx_lock_spin(&sched_lock);
-
 	t = curthread;
+
+	mtx_lock_spin(&dt_lock);
 
 	/* Grab location of existing GDT. */
 
@@ -904,7 +904,7 @@ x86_oldldt(dummy)
 
 	x86_setldt(&gtable, ltable);
 
-	mtx_unlock_spin(&sched_lock);
+	mtx_unlock_spin(&dt_lock);
 
 	return;
 }
@@ -918,9 +918,9 @@ x86_newldt(dummy)
 	struct x86desc		*l;
 	struct thread		*t;
 
-	mtx_lock_spin(&sched_lock);
-
 	t = curthread;
+
+	mtx_lock_spin(&dt_lock);
 
 	/* Grab location of existing GDT. */
 
@@ -952,7 +952,7 @@ x86_newldt(dummy)
 
 	x86_setldt(&gtable, ltable);
 
-	mtx_unlock_spin(&sched_lock);
+	mtx_unlock_spin(&dt_lock);
 
 	/* Whew. */
 

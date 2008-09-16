@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/compat/svr4/svr4_util.h,v 1.9 2005/02/07 21:53:42 jhb Exp $
+ * $FreeBSD: src/sys/compat/svr4/svr4_util.h,v 1.12 2006/07/10 21:38:17 jhb Exp $
  */
 
 #ifndef	_SVR4_UTIL_H_
@@ -46,30 +46,6 @@
 #else
 #define DPRINTF(a)
 #endif
-
-
-static __inline caddr_t stackgap_init(void);
-static __inline void *stackgap_alloc(caddr_t *, size_t);
-
-static __inline caddr_t
-stackgap_init()
-{
-#define szsigcode (*(curthread->td_proc->p_sysent->sv_szsigcode))
-        return (caddr_t)(((caddr_t)PS_STRINGS) - szsigcode - SPARE_USRSPACE);
-}
-
-static __inline void *
-stackgap_alloc(sgp, sz)
-	caddr_t	*sgp;
-	size_t   sz;
-{
-	void	*p = (void *) *sgp;
-	sz = ALIGN(sz);
-	if (*sgp + sz > (caddr_t)(PS_STRINGS - szsigcode))
-		return NULL;
-	*sgp += sz;
-	return p;
-}
 
 int	svr4_emul_find(struct thread *, char *, enum uio_seg, char **, int);
 

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/kern_ndis.c,v 1.84.2.3 2005/11/06 03:52:24 wpaul Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ndis/kern_ndis.c,v 1.96 2007/06/10 04:40:13 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -323,8 +323,7 @@ ndis_create_sysctls(arg)
 		TAILQ_FOREACH(e, device_get_sysctl_ctx(sc->ndis_dev), link) {
 #endif
                 	oidp = e->entry;
-			if (ndis_strcasecmp(oidp->oid_name,
-			    vals->nc_cfgkey) == 0)
+			if (strcasecmp(oidp->oid_name, vals->nc_cfgkey) == 0)
 				break;
 			oidp = NULL;
 		}
@@ -405,13 +404,16 @@ ndis_add_sysctl(arg, key, desc, val, flag)
 	cfg->ndis_oid =
 #if __FreeBSD_version < 502113
 	SYSCTL_ADD_STRING(&sc->ndis_ctx, SYSCTL_CHILDREN(sc->ndis_tree),
-#else
-	SYSCTL_ADD_STRING(device_get_sysctl_ctx(sc->ndis_dev),
-	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->ndis_dev)),
-#endif
 	    OID_AUTO, cfg->ndis_cfg.nc_cfgkey, flag,
 	    cfg->ndis_cfg.nc_val, sizeof(cfg->ndis_cfg.nc_val),
 	    cfg->ndis_cfg.nc_cfgdesc);
+#else
+	SYSCTL_ADD_STRING(device_get_sysctl_ctx(sc->ndis_dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->ndis_dev)),
+	    OID_AUTO, cfg->ndis_cfg.nc_cfgkey, flag,
+	    cfg->ndis_cfg.nc_val, sizeof(cfg->ndis_cfg.nc_val),
+	    cfg->ndis_cfg.nc_cfgdesc);
+#endif
 
 	return(0);
 }
@@ -943,7 +945,7 @@ ndis_send_packets(arg, packets, cnt)
 	ndis_senddone_func		senddonefunc;
 	int			i;
 	ndis_packet		*p;
-	uint8_t			irql;
+	uint8_t			irql = 0;
 
 	sc = arg;
 	adapter = sc->ndis_block->nmb_miniportadapterctx;
@@ -986,7 +988,7 @@ ndis_send_packet(arg, packet)
 	ndis_status		status;
 	ndis_sendsingle_handler	sendfunc;
 	ndis_senddone_func		senddonefunc;
-	uint8_t			irql;
+	uint8_t			irql = 0;
 
 	sc = arg;
 	adapter = sc->ndis_block->nmb_miniportadapterctx;
@@ -1079,7 +1081,7 @@ ndis_reset_nic(arg)
 	ndis_reset_handler	resetfunc;
 	uint8_t			addressing_reset;
 	int			rval;
-	uint8_t			irql;
+	uint8_t			irql = 0;
 
 	sc = arg;
 
@@ -1245,7 +1247,7 @@ ndis_init_nic(arg)
 	 * expects them to fire before the halt is called.
 	 */
 
-	tsleep(curthread->td_proc, PWAIT, "ndwait", hz);
+	pause("ndwait", hz);
 
 	NDIS_LOCK(sc);
 	sc->ndis_block->nmb_devicectx = sc;
@@ -1370,7 +1372,7 @@ NdisAddDevice(drv, pdo)
         if (sc->ndis_iftype == PCMCIABus || sc->ndis_iftype == PCIBus) {
 		error = bus_setup_intr(sc->ndis_dev, sc->ndis_irq,
 		    INTR_TYPE_NET | INTR_MPSAFE,
-		    ntoskrnl_intr, NULL, &sc->ndis_intrhand);
+		    NULL, ntoskrnl_intr, NULL, &sc->ndis_intrhand);
 		if (error)
 			return(NDIS_STATUS_FAILURE);
 	}

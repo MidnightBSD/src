@@ -24123,8 +24123,10 @@ sys/cam/scsi/scsi_target.c -text
 sys/cam/scsi/scsi_targetio.h -text
 sys/compat/freebsd32/Makefile -text
 sys/compat/freebsd32/freebsd32.h -text
+sys/compat/freebsd32/freebsd32_ipc.h -text
 sys/compat/freebsd32/freebsd32_misc.c -text
 sys/compat/freebsd32/freebsd32_proto.h -text
+sys/compat/freebsd32/freebsd32_signal.h -text
 sys/compat/freebsd32/freebsd32_syscall.h -text
 sys/compat/freebsd32/freebsd32_syscalls.c -text
 sys/compat/freebsd32/freebsd32_sysent.c -text
@@ -24137,7 +24139,11 @@ sys/compat/ia32/ia32_signal.h -text
 sys/compat/ia32/ia32_sysvec.c -text
 sys/compat/ia32/ia32_util.h -text
 sys/compat/linprocfs/linprocfs.c -text
+sys/compat/linux/linux_emul.c -text
+sys/compat/linux/linux_emul.h -text
 sys/compat/linux/linux_file.c -text
+sys/compat/linux/linux_futex.c -text
+sys/compat/linux/linux_futex.h -text
 sys/compat/linux/linux_getcwd.c -text
 sys/compat/linux/linux_ioctl.c -text
 sys/compat/linux/linux_ioctl.h -text
@@ -24146,6 +24152,7 @@ sys/compat/linux/linux_ipc.h -text
 sys/compat/linux/linux_mib.c -text
 sys/compat/linux/linux_mib.h -text
 sys/compat/linux/linux_misc.c -text
+sys/compat/linux/linux_misc.h -text
 sys/compat/linux/linux_signal.c -text
 sys/compat/linux/linux_signal.h -text
 sys/compat/linux/linux_socket.c -text
@@ -24153,6 +24160,7 @@ sys/compat/linux/linux_socket.h -text
 sys/compat/linux/linux_stats.c -text
 sys/compat/linux/linux_sysctl.c -text
 sys/compat/linux/linux_sysproto.h -text
+sys/compat/linux/linux_time.c -text
 sys/compat/linux/linux_uid16.c -text
 sys/compat/linux/linux_util.c -text
 sys/compat/linux/linux_util.h -text
@@ -24174,8 +24182,6 @@ sys/compat/ndis/winx32_wrap.S -text
 sys/compat/ndis/winx64_wrap.S -text
 sys/compat/netbsd/dvcfg.h -text
 sys/compat/netbsd/physio_proc.h -text
-sys/compat/pecoff/imgact_pecoff.c -text
-sys/compat/pecoff/imgact_pecoff.h -text
 sys/compat/svr4/Makefile -text
 sys/compat/svr4/imgact_svr4.c -text
 sys/compat/svr4/svr4.h -text

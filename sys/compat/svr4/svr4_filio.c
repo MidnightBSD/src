@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_filio.c,v 1.34 2005/01/05 22:34:36 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_filio.c,v 1.35 2007/04/04 09:11:31 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -211,15 +211,15 @@ svr4_fil_ioctl(fp, td, retval, fd, cmd, data)
 
 	switch (cmd) {
 	case SVR4_FIOCLEX:
-		FILEDESC_LOCK_FAST(fdp);
+		FILEDESC_XLOCK(fdp);
 		fdp->fd_ofileflags[fd] |= UF_EXCLOSE;
-		FILEDESC_UNLOCK_FAST(fdp);
+		FILEDESC_XUNLOCK(fdp);
 		return 0;
 
 	case SVR4_FIONCLEX:
-		FILEDESC_LOCK_FAST(fdp);
+		FILEDESC_XLOCK(fdp);
 		fdp->fd_ofileflags[fd] &= ~UF_EXCLOSE;
-		FILEDESC_UNLOCK_FAST(fdp);
+		FILEDESC_XUNLOCK(fdp);
 		return 0;
 
 	case SVR4_FIOGETOWN:

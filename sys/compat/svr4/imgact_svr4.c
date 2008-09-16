@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/imgact_svr4.c,v 1.25 2005/04/01 20:00:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/svr4/imgact_svr4.c,v 1.25.14.1 2008/01/19 18:15:03 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -120,7 +120,9 @@ exec_svr4_imgact(imgp)
     /*
      * Destroy old process VM and create a new one (with a new stack)
      */
-    exec_new_vmspace(imgp, &svr4_sysvec);
+    error = exec_new_vmspace(imgp, &svr4_sysvec);
+    if (error)
+	    goto fail;
     vmspace = imgp->proc->p_vmspace;
 
     /*

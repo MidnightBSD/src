@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/compat/svr4/svr4_socket.h,v 1.9 2005/01/05 22:34:36 imp Exp $
+ * $FreeBSD: src/sys/compat/svr4/svr4_socket.h,v 1.10 2006/07/21 20:40:13 jhb Exp $
  */
 
 #ifndef _SVR4_SOCKET_H_
@@ -48,22 +48,11 @@ struct svr4_sockaddr_in {
         u_char         sin_zero[8];
 };
 
-struct sockaddr_un *svr4_find_socket(struct thread *, struct file *,
-    dev_t, ino_t);
-void svr4_delete_socket(struct proc *, struct file *);
-int svr4_add_socket(struct thread *, const char *, struct stat *);
-
-struct svr4_sockcache_entry {
-	struct proc *p;		/* Process for the socket		*/
-	void *cookie;		/* Internal cookie used for matching	*/
-	struct sockaddr_un sock;/* Pathname for the socket		*/
-	dev_t dev;		/* Device where the socket lives on	*/
-	ino_t ino;		/* Inode where the socket lives on	*/
-	TAILQ_ENTRY(svr4_sockcache_entry) entries;
-};
-
-TAILQ_HEAD(svr4_sockcache_head, svr4_sockcache_entry);
-extern struct svr4_sockcache_head svr4_head;
-extern int svr4_str_initialized;
+int	svr4_add_socket(struct thread *, const char *, struct stat *);
+void	svr4_delete_socket(struct proc *, struct file *);
+int	svr4_find_socket(struct thread *, struct file *, dev_t, ino_t,
+    struct sockaddr_un *);
+void	svr4_sockcache_init(void);
+void	svr4_sockcache_destroy(void);
 
 #endif /* _SVR4_SOCKET_H_ */

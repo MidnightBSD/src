@@ -1,12 +1,13 @@
 /*-
- * Copyright (c) 1998 Mark Newton
+ * Copyright (c) 2006 Roman Divacky
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *    notice, this list of conditions and the following disclaimer
+ *    in this position and unchanged.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -24,16 +25,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/svr4/svr4.h,v 1.9 2005/07/13 15:14:33 jhb Exp $
+ * $FreeBSD: src/sys/compat/linux/linux_misc.h,v 1.2 2006/12/31 11:56:16 netchild Exp $
  */
 
-#include "opt_svr4.h"
+#ifndef _LINUX_MISC_H_
+#define	_LINUX_MISC_H_
 
-#if !defined(_SVR4_H)
-#define _SVR4_H
+/* defines for prctl */
+#define	LINUX_PR_SET_PDEATHSIG  1	/* Second arg is a signal. */
+#define	LINUX_PR_GET_PDEATHSIG  2	/*
+					 * Second arg is a ptr to return the
+					 * signal.
+					 */
+#define	LINUX_PR_SET_NAME	15	/* Set process name. */
+#define	LINUX_PR_GET_NAME	16	/* Get process name. */
 
-extern struct sysentvec svr4_sysvec;
+#define	LINUX_MAX_COMM_LEN	16	/* Maximum length of the process name. */
 
-#define COMPAT_SVR4_SOLARIS2
-
-#endif
+#endif	/* _LINUX_MISC_H_ */

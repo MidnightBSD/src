@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_sysvec.c,v 1.20 2005/01/29 23:11:58 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_sysvec.c,v 1.27 2007/09/24 20:49:39 jhb Exp $");
 
 #include "opt_compat.h"
 
@@ -64,6 +64,7 @@ __FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_sysvec.c,v 1.20 2005/01/29 23:11:58
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 
+#include <compat/freebsd32/freebsd32_signal.h>
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32_proto.h>
 #include <compat/freebsd32/freebsd32_syscall.h>
@@ -85,7 +86,7 @@ __FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_sysvec.c,v 1.20 2005/01/29 23:11:58
 CTASSERT(sizeof(struct ia32_mcontext) == 640);
 CTASSERT(sizeof(struct ia32_ucontext) == 704);
 CTASSERT(sizeof(struct ia32_sigframe) == 800);
-CTASSERT(sizeof(struct ia32_siginfo) == 64);
+CTASSERT(sizeof(struct siginfo32) == 64);
 #ifdef COMPAT_FREEBSD4
 CTASSERT(sizeof(struct ia32_mcontext4) == 260);
 CTASSERT(sizeof(struct ia32_ucontext4) == 324);
@@ -93,11 +94,21 @@ CTASSERT(sizeof(struct ia32_sigframe4) == 408);
 #endif
 
 static register_t *ia32_copyout_strings(struct image_params *imgp);
-static void ia32_fixlimits(struct image_params *imgp);
+static void ia32_fixlimit(struct rlimit *rl, int which);
 
 extern struct sysent freebsd32_sysent[];
 
 SYSCTL_NODE(_compat, OID_AUTO, ia32, CTLFLAG_RW, 0, "ia32 mode");
+
+static u_long	ia32_maxdsiz = IA32_MAXDSIZ;
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxdsiz, CTLFLAG_RW, &ia32_maxdsiz, 0, "");
+TUNABLE_ULONG("compat.ia32.maxdsiz", &ia32_maxdsiz);
+static u_long	ia32_maxssiz = IA32_MAXSSIZ;
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxssiz, CTLFLAG_RW, &ia32_maxssiz, 0, "");
+TUNABLE_ULONG("compat.ia32.maxssiz", &ia32_maxssiz);
+static u_long	ia32_maxvmem = IA32_MAXVMEM;
+SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxvmem, CTLFLAG_RW, &ia32_maxvmem, 0, "");
+TUNABLE_ULONG("compat.ia32.maxvmem", &ia32_maxvmem);
 
 struct sysentvec ia32_freebsd_sysvec = {
 	FREEBSD32_SYS_MAXSYSCALL,
@@ -125,7 +136,8 @@ struct sysentvec ia32_freebsd_sysvec = {
 	VM_PROT_ALL,
 	ia32_copyout_strings,
 	ia32_setregs,
-	ia32_fixlimits
+	ia32_fixlimit,
+	&ia32_maxssiz
 };
 
 
@@ -137,6 +149,7 @@ static Elf32_Brandinfo ia32_brand_info = {
 						"/libexec/ld-elf.so.1",
 						&ia32_freebsd_sysvec,
 						"/libexec/ld-elf32.so.1",
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(ia32, SI_SUB_EXEC, SI_ORDER_ANY,
@@ -151,6 +164,7 @@ static Elf32_Brandinfo ia32_brand_oinfo = {
 						"/usr/libexec/ld-elf.so.1",
 						&ia32_freebsd_sysvec,
 						"/libexec/ld-elf32.so.1",
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(oia32, SI_SUB_EXEC, SI_ORDER_ANY,
@@ -270,44 +284,34 @@ ia32_copyout_strings(struct image_params *imgp)
 	return ((register_t *)stack_base);
 }
 
-static u_long	ia32_maxdsiz = IA32_MAXDSIZ;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxdsiz, CTLFLAG_RW, &ia32_maxdsiz, 0, "");
-static u_long	ia32_maxssiz = IA32_MAXSSIZ;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxssiz, CTLFLAG_RW, &ia32_maxssiz, 0, "");
-static u_long	ia32_maxvmem = IA32_MAXVMEM;
-SYSCTL_ULONG(_compat_ia32, OID_AUTO, maxvmem, CTLFLAG_RW, &ia32_maxvmem, 0, "");
-
 static void
-ia32_fixlimits(struct image_params *imgp)
+ia32_fixlimit(struct rlimit *rl, int which)
 {
-	struct proc *p = imgp->proc;
-	struct plimit *oldlim, *newlim;
 
-	if (ia32_maxdsiz == 0 && ia32_maxssiz == 0 && ia32_maxvmem == 0)
-		return;
-	newlim = lim_alloc();
-	PROC_LOCK(p);
-	oldlim = p->p_limit;
-	lim_copy(newlim, oldlim);
-	if (ia32_maxdsiz != 0) {
-		if (newlim->pl_rlimit[RLIMIT_DATA].rlim_cur > ia32_maxdsiz)
-		    newlim->pl_rlimit[RLIMIT_DATA].rlim_cur = ia32_maxdsiz;
-		if (newlim->pl_rlimit[RLIMIT_DATA].rlim_max > ia32_maxdsiz)
-		    newlim->pl_rlimit[RLIMIT_DATA].rlim_max = ia32_maxdsiz;
+	switch (which) {
+	case RLIMIT_DATA:
+		if (ia32_maxdsiz != 0) {
+			if (rl->rlim_cur > ia32_maxdsiz)
+				rl->rlim_cur = ia32_maxdsiz;
+			if (rl->rlim_max > ia32_maxdsiz)
+				rl->rlim_max = ia32_maxdsiz;
+		}
+		break;
+	case RLIMIT_STACK:
+		if (ia32_maxssiz != 0) {
+			if (rl->rlim_cur > ia32_maxssiz)
+				rl->rlim_cur = ia32_maxssiz;
+			if (rl->rlim_max > ia32_maxssiz)
+				rl->rlim_max = ia32_maxssiz;
+		}
+		break;
+	case RLIMIT_VMEM:
+		if (ia32_maxvmem != 0) {
+			if (rl->rlim_cur > ia32_maxvmem)
+				rl->rlim_cur = ia32_maxvmem;
+			if (rl->rlim_max > ia32_maxvmem)
+				rl->rlim_max = ia32_maxvmem;
+		}
+		break;
 	}
-	if (ia32_maxssiz != 0) {
-		if (newlim->pl_rlimit[RLIMIT_STACK].rlim_cur > ia32_maxssiz)
-		    newlim->pl_rlimit[RLIMIT_STACK].rlim_cur = ia32_maxssiz;
-		if (newlim->pl_rlimit[RLIMIT_STACK].rlim_max > ia32_maxssiz)
-		    newlim->pl_rlimit[RLIMIT_STACK].rlim_max = ia32_maxssiz;
-	}
-	if (ia32_maxvmem != 0) {
-		if (newlim->pl_rlimit[RLIMIT_VMEM].rlim_cur > ia32_maxvmem)
-		    newlim->pl_rlimit[RLIMIT_VMEM].rlim_cur = ia32_maxvmem;
-		if (newlim->pl_rlimit[RLIMIT_VMEM].rlim_max > ia32_maxvmem)
-		    newlim->pl_rlimit[RLIMIT_VMEM].rlim_max = ia32_maxvmem;
-	}
-	p->p_limit = newlim;
-	PROC_UNLOCK(p);
-	lim_free(oldlim);
 }

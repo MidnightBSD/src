@@ -27,12 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_signal.c,v 1.51 2005/02/13 19:50:57 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_signal.c,v 1.65 2007/01/07 19:14:06 netchild Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/sx.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
 #include <sys/syscallsubr.h>
@@ -49,6 +50,7 @@ __FBSDID("$FreeBSD: src/sys/compat/linux/linux_signal.c,v 1.51 2005/02/13 19:50:
 #endif
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
+#include <compat/linux/linux_emul.h>
 
 void
 linux_to_bsd_sigset(l_sigset_t *lss, sigset_t *bss)
@@ -60,11 +62,7 @@ linux_to_bsd_sigset(l_sigset_t *lss, sigset_t *bss)
 	bss->__bits[1] = lss->__bits[1];
 	for (l = 1; l <= LINUX_SIGTBLSZ; l++) {
 		if (LINUX_SIGISMEMBER(*lss, l)) {
-#ifdef __alpha__
-			b = _SIG_IDX(l);
-#else
 			b = linux_to_bsd_signal[_SIG_IDX(l)];
-#endif
 			if (b)
 				SIGADDSET(*bss, b);
 		}
@@ -81,11 +79,7 @@ bsd_to_linux_sigset(sigset_t *bss, l_sigset_t *lss)
 	lss->__bits[1] = bss->__bits[1];
 	for (b = 1; b <= LINUX_SIGTBLSZ; b++) {
 		if (SIGISMEMBER(*bss, b)) {
-#if __alpha__
-			l = _SIG_IDX(b);
-#else
 			l = bsd_to_linux_signal[_SIG_IDX(b)];
-#endif
 			if (l)
 				LINUX_SIGADDSET(*lss, l);
 		}
@@ -150,7 +144,7 @@ linux_do_sigaction(struct thread *td, int linux_sig, l_sigaction_t *linux_nsa,
 	struct sigaction act, oact, *nsa, *osa;
 	int error, sig;
 
-	if (linux_sig <= 0 || linux_sig > LINUX_NSIG)
+	if (!LINUX_SIG_VALID(linux_sig))
 		return (EINVAL);
 
 	osa = (linux_osa != NULL) ? &oact : NULL;
@@ -160,11 +154,9 @@ linux_do_sigaction(struct thread *td, int linux_sig, l_sigaction_t *linux_nsa,
 	} else
 		nsa = NULL;
 
-#ifndef __alpha__
 	if (linux_sig <= LINUX_SIGTBLSZ)
 		sig = linux_to_bsd_signal[_SIG_IDX(linux_sig)];
 	else
-#endif
 		sig = linux_sig;
 
 	error = kern_sigaction(td, sig, nsa, osa, 0);
@@ -178,7 +170,6 @@ linux_do_sigaction(struct thread *td, int linux_sig, l_sigaction_t *linux_nsa,
 }
 
 
-#ifndef __alpha__
 int
 linux_signal(struct thread *td, struct linux_signal_args *args)
 {
@@ -200,7 +191,6 @@ linux_signal(struct thread *td, struct linux_signal_args *args)
 
 	return (error);
 }
-#endif	/*!__alpha__*/
 
 int
 linux_rt_sigaction(struct thread *td, struct linux_rt_sigaction_args *args)
@@ -270,7 +260,6 @@ linux_do_sigprocmask(struct thread *td, int how, l_sigset_t *new,
 	return (error);
 }
 
-#ifndef __alpha__
 int
 linux_sigprocmask(struct thread *td, struct linux_sigprocmask_args *args)
 {
@@ -302,7 +291,6 @@ linux_sigprocmask(struct thread *td, struct linux_sigprocmask_args *args)
 
 	return (error);
 }
-#endif	/*!__alpha__*/
 
 int
 linux_rt_sigprocmask(struct thread *td, struct linux_rt_sigprocmask_args *args)
@@ -337,7 +325,6 @@ linux_rt_sigprocmask(struct thread *td, struct linux_rt_sigprocmask_args *args)
 	return (error);
 }
 
-#ifndef __alpha__
 int
 linux_sgetmask(struct thread *td, struct linux_sgetmask_args *args)
 {
@@ -406,7 +393,119 @@ linux_sigpending(struct thread *td, struct linux_sigpending_args *args)
 	mask = lset.__bits[0];
 	return (copyout(&mask, args->mask, sizeof(mask)));
 }
-#endif	/*!__alpha__*/
+
+/*
+ * MPSAFE
+ */
+int
+linux_rt_sigpending(struct thread *td, struct linux_rt_sigpending_args *args)
+{
+	struct proc *p = td->td_proc;
+	sigset_t bset;
+	l_sigset_t lset;
+
+	if (args->sigsetsize > sizeof(lset))
+		return EINVAL;
+		/* NOT REACHED */
+
+#ifdef DEBUG
+	if (ldebug(rt_sigpending))
+		printf(ARGS(rt_sigpending, "*"));
+#endif
+
+	PROC_LOCK(p);
+	bset = p->p_siglist;
+	SIGSETOR(bset, td->td_siglist);
+	SIGSETAND(bset, td->td_sigmask);
+	PROC_UNLOCK(p);
+	bsd_to_linux_sigset(&bset, &lset);
+	return (copyout(&lset, args->set, args->sigsetsize));
+}
+
+/*
+ * MPSAFE
+ */
+int
+linux_rt_sigtimedwait(struct thread *td,
+	struct linux_rt_sigtimedwait_args *args)
+{
+	int error;
+	l_timeval ltv;
+	struct timeval tv;
+	struct timespec ts, *tsa;
+	l_sigset_t lset;
+	sigset_t bset;
+	l_siginfo_t linfo;
+	ksiginfo_t info;
+
+#ifdef DEBUG
+	if (ldebug(rt_sigtimedwait))
+		printf(ARGS(rt_sigtimedwait, "*"));
+#endif
+	if (args->sigsetsize != sizeof(l_sigset_t))
+		return (EINVAL);
+
+	if ((error = copyin(args->mask, &lset, sizeof(lset))))
+		return (error);
+	linux_to_bsd_sigset(&lset, &bset);
+
+	tsa = NULL;
+	if (args->timeout) {
+		if ((error = copyin(args->timeout, &ltv, sizeof(ltv))))
+			return (error);
+#ifdef DEBUG
+		if (ldebug(rt_sigtimedwait))
+			printf(LMSG("linux_rt_sigtimedwait: incoming timeout (%d/%d)\n"),
+				ltv.tv_sec, ltv.tv_usec);
+#endif
+		tv.tv_sec = (long)ltv.tv_sec;
+		tv.tv_usec = (suseconds_t)ltv.tv_usec;
+		if (itimerfix(&tv)) {
+			/* 
+			 * The timeout was invalid. Convert it to something
+			 * valid that will act as it does under Linux.
+			 */
+			tv.tv_sec += tv.tv_usec / 1000000;
+			tv.tv_usec %= 1000000;
+			if (tv.tv_usec < 0) {
+				tv.tv_sec -= 1;
+				tv.tv_usec += 1000000;
+			}
+			if (tv.tv_sec < 0)
+				timevalclear(&tv);
+#ifdef DEBUG
+			if (ldebug(rt_sigtimedwait))
+				printf(LMSG("linux_rt_sigtimedwait: converted timeout (%jd/%ld)\n"),
+					(intmax_t)tv.tv_sec, tv.tv_usec);
+#endif
+		}
+		TIMEVAL_TO_TIMESPEC(&tv, &ts);
+		tsa = &ts;
+	}
+	error = kern_sigtimedwait(td, bset, &info, tsa);
+#ifdef DEBUG
+	if (ldebug(rt_sigtimedwait))
+		printf(LMSG("linux_rt_sigtimedwait: sigtimedwait returning (%d)\n"), error);
+#endif
+	if (error)
+		return (error);
+
+	if (args->ptr) {
+		memset(&linfo, 0, sizeof(linfo));
+		linfo.lsi_signo = info.ksi_signo;
+		error = copyout(&linfo, args->ptr, sizeof(linfo));
+	}
+
+	/* Repost if we got an error. */
+	if (error && info.ksi_signo) {
+		PROC_LOCK(td->td_proc);
+		tdsignal(td->td_proc, td, info.ksi_signo, &info);
+		PROC_UNLOCK(td->td_proc);
+	} else
+		td->td_retval[0] = info.ksi_signo; 
+
+	return (error);
+}
 
 int
 linux_kill(struct thread *td, struct linux_kill_args *args)
@@ -424,16 +523,66 @@ linux_kill(struct thread *td, struct linux_kill_args *args)
 	/*
 	 * Allow signal 0 as a means to check for privileges
 	 */
-	if (args->signum < 0 || args->signum > LINUX_NSIG)
+	if (!LINUX_SIG_VALID(args->signum) && args->signum != 0)
 		return EINVAL;
 
-#ifndef __alpha__
 	if (args->signum > 0 && args->signum <= LINUX_SIGTBLSZ)
 		tmp.signum = linux_to_bsd_signal[_SIG_IDX(args->signum)];
 	else
-#endif
 		tmp.signum = args->signum;
 
 	tmp.pid = args->pid;
 	return (kill(td, &tmp));
+}
+
+int
+linux_tgkill(struct thread *td, struct linux_tgkill_args *args)
+{
+   	struct linux_emuldata *em;
+	struct linux_kill_args ka;
+	struct proc *p;
+
+#ifdef DEBUG
+	if (ldebug(tgkill))
+		printf(ARGS(tgkill, "%d, %d, %d"), args->tgid, args->pid, args->sig);
+#endif
+
+	ka.pid = args->pid;
+	ka.signum = args->sig;
+
+	if (args->tgid == -1)
+	   	return linux_kill(td, &ka);
+
+	if ((p = pfind(args->pid)) == NULL)
+	      	return ESRCH;
+
+	if (p->p_sysent != &elf_linux_sysvec)
+		return ESRCH;
+
+	PROC_UNLOCK(p);
+
+	em = em_find(p, EMUL_DONTLOCK);
+
+	if (em == NULL) {
+#ifdef DEBUG
+		printf("emuldata not found in tgkill.\n");
+#endif
+		return ESRCH;
+	}
+
+	if (em->shared->group_pid != args->tgid)
+	   	return ESRCH;
+
+	return linux_kill(td, &ka);
+}
+
+int
+linux_tkill(struct thread *td, struct linux_tkill_args *args)
+{
+#ifdef DEBUG
+	if (ldebug(tkill))
+		printf(ARGS(tkill, "%i, %i"), args->tid, args->sig);
+#endif
+
+	return (linux_kill(td, (struct linux_kill_args *) args));
 }

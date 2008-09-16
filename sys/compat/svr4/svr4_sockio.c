@@ -27,8 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_sockio.c,v 1.16.2.1 2005/08/25 05:01:03 rwatson Exp $");
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_sockio.c,v 1.18 2006/08/04 21:15:09 brooks Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -105,7 +104,7 @@ svr4_sock_ioctl(fp, td, retval, fd, cmd, data)
 			 */
 			IFNET_RLOCK();
 			TAILQ_FOREACH(ifp, &ifnet, if_link)
-				if (TAILQ_FIRST(&ifp->if_addrhead) == NULL)
+				if (TAILQ_EMPTY(&ifp->if_addrhead))
 					ifnum++;
 				else
 					TAILQ_FOREACH(ifa, &ifp->if_addrhead,

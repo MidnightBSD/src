@@ -29,8 +29,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ndis/winx32_wrap.S,v 1.2.4.2 2005/11/06 03:52:25 wpaul Exp $
+ * $FreeBSD: src/sys/compat/ndis/winx32_wrap.S,v 1.5 2006/06/12 20:35:59 jhb Exp $
  */
+
+/* The 'ret' macro doesn't work in this file if GPROF is enabled. */
+#ifdef GPROF
+#undef GPROF
+#endif
 
 #include <machine/asmacros.h>
 

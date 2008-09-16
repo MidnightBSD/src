@@ -25,18 +25,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_uid16.c,v 1.16 2005/01/14 04:44:56 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_uid16.c,v 1.22 2007/06/12 00:11:57 rwatson Exp $");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
 #include <sys/systm.h>
-
-#include "opt_compat.h"
 
 #ifdef COMPAT_LINUX32
 #include <machine/../linux32/linux.h>
@@ -123,7 +124,7 @@ linux_setgroups16(struct thread *td, struct linux_setgroups16_args *args)
 	 * Keep cr_groups[0] unchanged to prevent that.
 	 */
 
-	if ((error = suser_cred(oldcred, SUSER_ALLOWJAIL)) != 0) {
+	if ((error = priv_check_cred(oldcred, PRIV_CRED_SETGROUPS, 0)) != 0) {
 		PROC_UNLOCK(p);
 		crfree(newcred);
 		return (error);
@@ -197,10 +198,9 @@ linux_getgroups16(struct thread *td, struct linux_getgroups16_args *args)
 
 /*
  * The FreeBSD native getgid(2) and getuid(2) also modify td->td_retval[1]
- * when COMPAT_43 is defined. This globbers registers that
- * are assumed to be preserved. The following lightweight syscalls fixes
- * this. See also linux_getpid(2), linux_getgid(2) and linux_getuid(2) in
- * linux_misc.c
+ * when COMPAT_43 is defined. This clobbers registers that are assumed to
+ * be preserved. The following lightweight syscalls fixes this. See also
+ * linux_getpid(2), linux_getgid(2) and linux_getuid(2) in linux_misc.c
  *
  * linux_getgid16() - MP SAFE
  * linux_getuid16() - MP SAFE

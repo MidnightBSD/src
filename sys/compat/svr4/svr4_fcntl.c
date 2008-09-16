@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_fcntl.c,v 1.35 2005/02/07 21:53:41 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_fcntl.c,v 1.40 2007/06/12 00:11:57 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -40,11 +40,11 @@ __FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_fcntl.c,v 1.35 2005/02/07 21:53:41 
 #include <sys/filedesc.h>
 /*#include <sys/ioctl.h>*/
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/namei.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/stat.h>
 #include <sys/syscallsubr.h>
@@ -59,6 +59,8 @@ __FBSDID("$FreeBSD: src/sys/compat/svr4/svr4_fcntl.c,v 1.35 2005/02/07 21:53:41 
 #include <compat/svr4/svr4_proto.h>
 #include <compat/svr4/svr4_util.h>
 #include <compat/svr4/svr4_fcntl.h>
+
+#include <security/mac/mac_framework.h>
 
 static int svr4_to_bsd_flags(int);
 static u_long svr4_to_bsd_cmd(u_long);
@@ -279,7 +281,7 @@ fd_revoke(td, fd)
 		goto out;
 
 	if (td->td_ucred->cr_uid != vattr.va_uid &&
-	    (error = suser(td)) != 0)
+	    (error = priv_check(td, PRIV_VFS_ADMIN)) != 0)
 		goto out;
 
 	if ((error = vn_start_write(vp, &mp, V_WAIT | PCATCH)) != 0)

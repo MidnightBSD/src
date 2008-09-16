@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_genassym.c,v 1.4 2004/02/21 23:35:56 peter Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_genassym.c,v 1.5 2006/10/05 01:56:11 davidxu Exp $");
 
 #include "opt_compat.h"
 
@@ -8,6 +8,7 @@ __FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_genassym.c,v 1.4 2004/02/21 23:35:5
 #include <sys/systm.h>
 #include <sys/signal.h>
 
+#include <compat/freebsd32/freebsd32_signal.h>
 #include <compat/ia32/ia32_signal.h>
 
 ASSYM(IA32_SIGF_HANDLER, offsetof(struct ia32_sigframe, sf_ah));

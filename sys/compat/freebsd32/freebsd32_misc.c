@@ -25,19 +25,21 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.38.2.7 2006/03/06 10:56:43 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.67.2.3 2007/12/20 19:43:55 jhb Exp $");
 
 #include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/clock.h>
 #include <sys/exec.h>
 #include <sys/fcntl.h>
 #include <sys/filedesc.h>
 #include <sys/namei.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/file.h>		/* Must come after sys/malloc.h */
@@ -46,8 +48,6 @@ __FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.38.2.7 2006/03
 #include <sys/module.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
-#include <sys/namei.h>
-#include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/reboot.h>
 #include <sys/resource.h>
@@ -65,10 +65,15 @@ __FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.38.2.7 2006/03
 #include <sys/sysctl.h>
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
-#include <sys/systm.h>
+#include <sys/thr.h>
 #include <sys/unistd.h>
+#include <sys/ucontext.h>
 #include <sys/vnode.h>
 #include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/sem.h>
+#include <sys/shm.h>
 
 #include <vm/vm.h>
 #include <vm/vm_kern.h>
@@ -82,12 +87,24 @@ __FBSDID("$FreeBSD: src/sys/compat/freebsd32/freebsd32_misc.c,v 1.38.2.7 2006/03
 
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32.h>
+#include <compat/freebsd32/freebsd32_ipc.h>
+#include <compat/freebsd32/freebsd32_signal.h>
 #include <compat/freebsd32/freebsd32_proto.h>
 
 CTASSERT(sizeof(struct timeval32) == 8);
 CTASSERT(sizeof(struct timespec32) == 8);
+CTASSERT(sizeof(struct itimerval32) == 16);
 CTASSERT(sizeof(struct statfs32) == 256);
 CTASSERT(sizeof(struct rusage32) == 72);
+CTASSERT(sizeof(struct sigaltstack32) == 12);
+CTASSERT(sizeof(struct kevent32) == 20);
+CTASSERT(sizeof(struct iovec32) == 8);
+CTASSERT(sizeof(struct msghdr32) == 28);
+CTASSERT(sizeof(struct stat32) == 96);
+CTASSERT(sizeof(struct sigaction32) == 24);
+
+static int freebsd32_kevent_copyout(void *arg, struct kevent *kevp, int count);
+static int freebsd32_kevent_copyin(void *arg, struct kevent *kevp, int count);
 
 int
 freebsd32_wait4(struct thread *td, struct freebsd32_wait4_args *uap)
@@ -131,28 +148,28 @@ freebsd32_wait4(struct thread *td, struct freebsd32_wait4_args *uap)
 static void
 copy_statfs(struct statfs *in, struct statfs32 *out)
 {
-	
+
+	statfs_scale_blocks(in, INT32_MAX);
 	bzero(out, sizeof(*out));
 	CP(*in, *out, f_bsize);
-	CP(*in, *out, f_iosize);
+	out->f_iosize = MIN(in->f_iosize, INT32_MAX);
 	CP(*in, *out, f_blocks);
 	CP(*in, *out, f_bfree);
 	CP(*in, *out, f_bavail);
-	CP(*in, *out, f_files);
-	CP(*in, *out, f_ffree);
+	out->f_files = MIN(in->f_files, INT32_MAX);
+	out->f_ffree = MIN(in->f_ffree, INT32_MAX);
 	CP(*in, *out, f_fsid);
 	CP(*in, *out, f_owner);
 	CP(*in, *out, f_type);
 	CP(*in, *out, f_flags);
-	CP(*in, *out, f_flags);
-	CP(*in, *out, f_syncwrites);
-	CP(*in, *out, f_asyncwrites);
+	out->f_syncwrites = MIN(in->f_syncwrites, INT32_MAX);
+	out->f_asyncwrites = MIN(in->f_asyncwrites, INT32_MAX);
 	strlcpy(out->f_fstypename,
 	      in->f_fstypename, MFSNAMELEN);
 	strlcpy(out->f_mntonname,
 	      in->f_mntonname, min(MNAMELEN, FREEBSD4_MNAMELEN));
-	CP(*in, *out, f_syncreads);
-	CP(*in, *out, f_asyncreads);
+	out->f_syncreads = MIN(in->f_syncreads, INT32_MAX);
+	out->f_asyncreads = MIN(in->f_asyncreads, INT32_MAX);
 	strlcpy(out->f_mntfromname,
 	      in->f_mntfromname, min(MNAMELEN, FREEBSD4_MNAMELEN));
 }
@@ -185,14 +202,6 @@ freebsd4_freebsd32_getfsstat(struct thread *td, struct freebsd4_freebsd32_getfss
 	return (error);
 }
 #endif
-
-struct sigaltstack32 {
-	u_int32_t	ss_sp;
-	u_int32_t	ss_size;
-	int		ss_flags;
-};
-
-CTASSERT(sizeof(struct sigaltstack32) == 12);
 
 int
 freebsd32_sigaltstack(struct thread *td,
@@ -260,7 +269,7 @@ freebsd32_exec_copyin_args(struct image_args *args, char *fname,
 	    copystr(fname, args->fname, PATH_MAX, &length) :
 	    copyinstr(fname, args->fname, PATH_MAX, &length);
 	if (error != 0)
-		return (error);
+		goto err_exit;
 
 	/*
 	 * extract arguments first
@@ -269,16 +278,15 @@ freebsd32_exec_copyin_args(struct image_args *args, char *fname,
 	for (;;) {
 		error = copyin(p32++, &arg, sizeof(arg));
 		if (error)
-			return (error);
+			goto err_exit;
 		if (arg == 0)
 			break;
 		argp = PTRIN(arg);
 		error = copyinstr(argp, args->endp, args->stringspace, &length);
 		if (error) {
 			if (error == ENAMETOOLONG)
-				return (E2BIG);
-			else
-				return (error);
+				error = E2BIG;
+			goto err_exit;
 		}
 		args->stringspace -= length;
 		args->endp += length;
@@ -295,7 +303,7 @@ freebsd32_exec_copyin_args(struct image_args *args, char *fname,
 		for (;;) {
 			error = copyin(p32++, &arg, sizeof(arg));
 			if (error)
-				return (error);
+				goto err_exit;
 			if (arg == 0)
 				break;
 			envp = PTRIN(arg);
@@ -303,9 +311,8 @@ freebsd32_exec_copyin_args(struct image_args *args, char *fname,
 			    &length);
 			if (error) {
 				if (error == ENAMETOOLONG)
-					return (E2BIG);
-				else
-					return (error);
+					error = E2BIG;
+				goto err_exit;
 			}
 			args->stringspace -= length;
 			args->endp += length;
@@ -314,6 +321,12 @@ freebsd32_exec_copyin_args(struct image_args *args, char *fname,
 	}
 
 	return (0);
+
+err_exit:
+	kmem_free_wakeup(exec_map, (vm_offset_t)args->buf,
+	    PATH_MAX + ARG_MAX + MAXSHELLCMDLEN);
+	args->buf = NULL;
+	return (error);
 }
 
 int
@@ -326,7 +339,6 @@ freebsd32_execve(struct thread *td, struct freebsd32_execve_args *uap)
 	    uap->argv, uap->envv);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
-	exec_free_args(&eargs);
 	return (error);
 }
 
@@ -403,7 +415,6 @@ freebsd32_mmap(struct thread *td, struct freebsd32_mmap_args *uap)
 		start = addr;
 		end = addr + len;
 
-		mtx_lock(&Giant);
 		if (start != trunc_page(start)) {
 			error = freebsd32_mmap_partial(td, start,
 						       round_page(start), prot,
@@ -434,14 +445,11 @@ freebsd32_mmap(struct thread *td, struct freebsd32_mmap_args *uap)
 			prot |= VM_PROT_WRITE;
 			map = &td->td_proc->p_vmspace->vm_map;
 			rv = vm_map_remove(map, start, end);
-			if (rv != KERN_SUCCESS) {
-				mtx_unlock(&Giant);
+			if (rv != KERN_SUCCESS)
 				return (EINVAL);
-			}
 			rv = vm_map_find(map, 0, 0,
 					 &start, end - start, FALSE,
 					 prot, VM_PROT_ALL, 0);
-			mtx_unlock(&Giant);
 			if (rv != KERN_SUCCESS)
 				return (EINVAL);
 			r.fd = fd;
@@ -455,7 +463,6 @@ freebsd32_mmap(struct thread *td, struct freebsd32_mmap_args *uap)
 			td->td_retval[0] = addr;
 			return (0);
 		}
-		mtx_unlock(&Giant);
 		if (end == start) {
 			/*
 			 * After dealing with the ragged ends, there
@@ -479,12 +486,23 @@ freebsd32_mmap(struct thread *td, struct freebsd32_mmap_args *uap)
 	return (mmap(td, &ap));
 }
 
-struct itimerval32 {
-	struct timeval32 it_interval;
-	struct timeval32 it_value;
-};
+#ifdef COMPAT_FREEBSD6
+int
+freebsd6_freebsd32_mmap(struct thread *td, struct freebsd6_freebsd32_mmap_args *uap)
+{
+	struct freebsd32_mmap_args ap;
 
-CTASSERT(sizeof(struct itimerval32) == 16);
+	ap.addr = uap->addr;
+	ap.len = uap->len;
+	ap.prot = uap->prot;
+	ap.flags = uap->flags;
+	ap.fd = uap->fd;
+	ap.poslo = uap->poslo;
+	ap.poshi = uap->poshi;
+
+	return (freebsd32_mmap(td, &ap));
+}
+#endif
 
 int
 freebsd32_setitimer(struct thread *td, struct freebsd32_setitimer_args *uap)
@@ -547,19 +565,6 @@ freebsd32_select(struct thread *td, struct freebsd32_select_args *uap)
 	 */
 	return (kern_select(td, uap->nd, uap->in, uap->ou, uap->ex, tvp));
 }
-
-struct kevent32 {
-	u_int32_t	ident;		/* identifier for this event */
-	short		filter;		/* filter for event */
-	u_short		flags;
-	u_int		fflags;
-	int32_t		data;
-	u_int32_t	udata;		/* opaque user data identifier */
-};
-
-CTASSERT(sizeof(struct kevent32) == 20);
-static int freebsd32_kevent_copyout(void *arg, struct kevent *kevp, int count);
-static int freebsd32_kevent_copyin(void *arg, struct kevent *kevp, int count);
 
 /*
  * Copy 'count' items into the destination list pointed to by uap->eventlist.
@@ -698,13 +703,6 @@ freebsd32_getrusage(struct thread *td, struct freebsd32_getrusage_args *uap)
 	return (error);
 }
 
-struct iovec32 {
-	u_int32_t iov_base;
-	int	iov_len;
-};
-
-CTASSERT(sizeof(struct iovec32) == 8);
-
 static int
 freebsd32_copyinuio(struct iovec32 *iovp, u_int iovcnt, struct uio **uiop)
 {
@@ -828,37 +826,6 @@ freebsd32_copyiniov(struct iovec32 *iovp32, u_int iovcnt, struct iovec **iovp,
 	*iovp = iov;
 	return (0);
 }
-
-static int
-freebsd32_copyoutiov(struct iovec *iov, u_int iovcnt, struct iovec32 *iovp,
-    int error)
-{
-	struct iovec32 iov32;
-	int i;
-
-	if (iovcnt > UIO_MAXIOV)
-		return (error);
-	for (i = 0; i < iovcnt; i++) {
-		iov32.iov_base = PTROUT(iov[i].iov_base);
-		iov32.iov_len = iov[i].iov_len;
-		error = copyout(&iov32, &iovp[i], sizeof(iov32));
-		if (error)
-			return (error);
-	}
-	return (0);
-}
-
-
-struct msghdr32 {
-	u_int32_t	 msg_name;
-	socklen_t	 msg_namelen;
-	u_int32_t	 msg_iov;
-	int		 msg_iovlen;
-	u_int32_t	 msg_control;
-	socklen_t	 msg_controllen;
-	int		 msg_flags;
-};
-CTASSERT(sizeof(struct msghdr32) == 28);
 
 static int
 freebsd32_copyinmsghdr(struct msghdr32 *msg32, struct msghdr *msg)
@@ -1015,8 +982,8 @@ freebsd32_recvmsg(td, uap)
 	error = freebsd32_copyinmsghdr(uap->msg, &msg);
 	if (error)
 		return (error);
-	error = freebsd32_copyiniov((struct iovec32 *)(uintptr_t)m32.msg_iov,
-	    m32.msg_iovlen, &iov, EMSGSIZE);
+	error = freebsd32_copyiniov(PTRIN(m32.msg_iov), m32.msg_iovlen, &iov,
+	    EMSGSIZE);
 	if (error)
 		return (error);
 	msg.msg_flags = uap->flags;
@@ -1024,7 +991,7 @@ freebsd32_recvmsg(td, uap)
 	msg.msg_iov = iov;
 
 	controlp = (msg.msg_control != NULL) ?  &control : NULL;
-	error = kern_recvit(td, uap->s, &msg, NULL, UIO_USERSPACE, controlp);
+	error = kern_recvit(td, uap->s, &msg, UIO_USERSPACE, controlp);
 	if (error == 0) {
 		msg.msg_iov = uiov;
 		
@@ -1033,10 +1000,6 @@ freebsd32_recvmsg(td, uap)
 		
 		if (error == 0)
 			error = freebsd32_copyoutmsghdr(&msg, uap->msg);
-
-		if (error == 0)
-			error = freebsd32_copyoutiov(iov, m32.msg_iovlen,
-			    (struct iovec32 *)(uintptr_t)m32.msg_iov, EMSGSIZE);
 	}
 	free(iov, M_IOV);
 
@@ -1104,8 +1067,8 @@ freebsd32_sendmsg(struct thread *td,
 	error = freebsd32_copyinmsghdr(uap->msg, &msg);
 	if (error)
 		return (error);
-	error = freebsd32_copyiniov((struct iovec32 *)(uintptr_t)m32.msg_iov,
-	    m32.msg_iovlen, &iov, EMSGSIZE);
+	error = freebsd32_copyiniov(PTRIN(m32.msg_iov), m32.msg_iovlen, &iov,
+	    EMSGSIZE);
 	if (error)
 		return (error);
 	msg.msg_iov = iov;
@@ -1153,23 +1116,25 @@ freebsd32_recvfrom(struct thread *td,
 	int error;
 
 	if (uap->fromlenaddr) {
-		error = copyin((void *)(uintptr_t)uap->fromlenaddr,
-		    &msg.msg_namelen, sizeof(msg.msg_namelen));
+		error = copyin(PTRIN(uap->fromlenaddr), &msg.msg_namelen,
+		    sizeof(msg.msg_namelen));
 		if (error)
 			return (error);
 	} else {
 		msg.msg_namelen = 0;
 	}
 
-	msg.msg_name = (void *)(uintptr_t)uap->from;
+	msg.msg_name = PTRIN(uap->from);
 	msg.msg_iov = &aiov;
 	msg.msg_iovlen = 1;
-	aiov.iov_base = (void *)(uintptr_t)uap->buf;
+	aiov.iov_base = PTRIN(uap->buf);
 	aiov.iov_len = uap->len;
-	msg.msg_control = 0;
+	msg.msg_control = NULL;
 	msg.msg_flags = uap->flags;
-	error = kern_recvit(td, uap->s, &msg,
-	    (void *)(uintptr_t)uap->fromlenaddr, UIO_USERSPACE, NULL);
+	error = kern_recvit(td, uap->s, &msg, UIO_USERSPACE, NULL);
+	if (error == 0 && uap->fromlenaddr)
+		error = copyout(&msg.msg_namelen, PTRIN(uap->fromlenaddr),
+		    sizeof (msg.msg_namelen));
 	return (error);
 }
 
@@ -1341,31 +1306,358 @@ freebsd4_freebsd32_fhstatfs(struct thread *td, struct freebsd4_freebsd32_fhstatf
 }
 #endif
 
+static void
+freebsd32_ipcperm_in(struct ipc_perm32 *ip32, struct ipc_perm *ip)
+{
+
+	CP(*ip32, *ip, cuid);
+	CP(*ip32, *ip, cgid);
+	CP(*ip32, *ip, uid);
+	CP(*ip32, *ip, gid);
+	CP(*ip32, *ip, mode);
+	CP(*ip32, *ip, seq);
+	CP(*ip32, *ip, key);
+}
+
+static void
+freebsd32_ipcperm_out(struct ipc_perm *ip, struct ipc_perm32 *ip32)
+{
+
+	CP(*ip, *ip32, cuid);
+	CP(*ip, *ip32, cgid);
+	CP(*ip, *ip32, uid);
+	CP(*ip, *ip32, gid);
+	CP(*ip, *ip32, mode);
+	CP(*ip, *ip32, seq);
+	CP(*ip, *ip32, key);
+}
+
 int
 freebsd32_semsys(struct thread *td, struct freebsd32_semsys_args *uap)
 {
-	/*
-	 * Vector through to semsys if it is loaded.
-	 */
-	return sysent[SYS_semsys].sy_call(td, uap);
+
+	switch (uap->which) {
+	case 0:
+		return (freebsd32_semctl(td,
+		    (struct freebsd32_semctl_args *)&uap->a2));
+	default:
+		return (semsys(td, (struct semsys_args *)uap));
+	}
+}
+
+int
+freebsd32_semctl(struct thread *td, struct freebsd32_semctl_args *uap)
+{
+	struct semid_ds32 dsbuf32;
+	struct semid_ds dsbuf;
+	union semun semun;
+	union semun32 arg;
+	register_t rval;
+	int error;
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_SET:
+	case IPC_STAT:
+	case GETALL:
+	case SETVAL:
+	case SETALL:
+		error = copyin(uap->arg, &arg, sizeof(arg));
+		if (error)
+			return (error);		
+		break;
+	}
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		semun.buf = &dsbuf;
+		break;
+	case IPC_SET:
+		error = copyin(PTRIN(arg.buf), &dsbuf32, sizeof(dsbuf32));
+		if (error)
+			return (error);
+		freebsd32_ipcperm_in(&dsbuf32.sem_perm, &dsbuf.sem_perm);
+		PTRIN_CP(dsbuf32, dsbuf, sem_base);
+		CP(dsbuf32, dsbuf, sem_nsems);
+		CP(dsbuf32, dsbuf, sem_otime);
+		CP(dsbuf32, dsbuf, sem_pad1);
+		CP(dsbuf32, dsbuf, sem_ctime);
+		CP(dsbuf32, dsbuf, sem_pad2);
+		CP(dsbuf32, dsbuf, sem_pad3[0]);
+		CP(dsbuf32, dsbuf, sem_pad3[1]);
+		CP(dsbuf32, dsbuf, sem_pad3[2]);
+		CP(dsbuf32, dsbuf, sem_pad3[3]);
+		semun.buf = &dsbuf;
+		break;
+	case GETALL:
+	case SETALL:
+		semun.array = PTRIN(arg.array);
+		break;
+	case SETVAL:
+		semun.val = arg.val;
+		break;		
+	}
+
+	error = kern_semctl(td, uap->semid, uap->semnum, uap->cmd, &semun,
+	    &rval);
+	if (error)
+		return (error);
+
+	switch (uap->cmd) {
+	case SEM_STAT:
+	case IPC_STAT:
+		freebsd32_ipcperm_out(&dsbuf.sem_perm, &dsbuf32.sem_perm);
+		PTROUT_CP(dsbuf, dsbuf32, sem_base);
+		CP(dsbuf, dsbuf32, sem_nsems);
+		CP(dsbuf, dsbuf32, sem_otime);
+		CP(dsbuf, dsbuf32, sem_pad1);
+		CP(dsbuf, dsbuf32, sem_ctime);
+		CP(dsbuf, dsbuf32, sem_pad2);
+		CP(dsbuf, dsbuf32, sem_pad3[0]);
+		CP(dsbuf, dsbuf32, sem_pad3[1]);
+		CP(dsbuf, dsbuf32, sem_pad3[2]);
+		CP(dsbuf, dsbuf32, sem_pad3[3]);
+		error = copyout(&dsbuf32, PTRIN(arg.buf), sizeof(dsbuf32));
+		break;
+	}
+
+	if (error == 0)
+		td->td_retval[0] = rval;
+	return (error);
 }
 
 int
 freebsd32_msgsys(struct thread *td, struct freebsd32_msgsys_args *uap)
 {
-	/*
-	 * Vector through to msgsys if it is loaded.
-	 */
-	return sysent[SYS_msgsys].sy_call(td, uap);
+
+	switch (uap->which) {
+	case 0:
+		return (freebsd32_msgctl(td,
+		    (struct freebsd32_msgctl_args *)&uap->a2));
+	case 2:
+		return (freebsd32_msgsnd(td,
+		    (struct freebsd32_msgsnd_args *)&uap->a2));
+	case 3:
+		return (freebsd32_msgrcv(td,
+		    (struct freebsd32_msgrcv_args *)&uap->a2));
+	default:
+		return (msgsys(td, (struct msgsys_args *)uap));
+	}
+}
+
+int
+freebsd32_msgctl(struct thread *td, struct freebsd32_msgctl_args *uap)
+{
+	struct msqid_ds msqbuf;
+	struct msqid_ds32 msqbuf32;
+	int error;
+
+	if (uap->cmd == IPC_SET) {
+		error = copyin(uap->buf, &msqbuf32, sizeof(msqbuf32));
+		if (error)
+			return (error);
+		freebsd32_ipcperm_in(&msqbuf32.msg_perm, &msqbuf.msg_perm);
+		PTRIN_CP(msqbuf32, msqbuf, msg_first);
+		PTRIN_CP(msqbuf32, msqbuf, msg_last);
+		CP(msqbuf32, msqbuf, msg_cbytes);
+		CP(msqbuf32, msqbuf, msg_qnum);
+		CP(msqbuf32, msqbuf, msg_qbytes);
+		CP(msqbuf32, msqbuf, msg_lspid);
+		CP(msqbuf32, msqbuf, msg_lrpid);
+		CP(msqbuf32, msqbuf, msg_stime);
+		CP(msqbuf32, msqbuf, msg_pad1);
+		CP(msqbuf32, msqbuf, msg_rtime);
+		CP(msqbuf32, msqbuf, msg_pad2);
+		CP(msqbuf32, msqbuf, msg_ctime);
+		CP(msqbuf32, msqbuf, msg_pad3);
+		CP(msqbuf32, msqbuf, msg_pad4[0]);
+		CP(msqbuf32, msqbuf, msg_pad4[1]);
+		CP(msqbuf32, msqbuf, msg_pad4[2]);
+		CP(msqbuf32, msqbuf, msg_pad4[3]);
+	}
+	error = kern_msgctl(td, uap->msqid, uap->cmd, &msqbuf);
+	if (error)
+		return (error);
+	if (uap->cmd == IPC_STAT) {
+		freebsd32_ipcperm_out(&msqbuf.msg_perm, &msqbuf32.msg_perm);
+		PTROUT_CP(msqbuf, msqbuf32, msg_first);
+		PTROUT_CP(msqbuf, msqbuf32, msg_last);
+		CP(msqbuf, msqbuf32, msg_cbytes);
+		CP(msqbuf, msqbuf32, msg_qnum);
+		CP(msqbuf, msqbuf32, msg_qbytes);
+		CP(msqbuf, msqbuf32, msg_lspid);
+		CP(msqbuf, msqbuf32, msg_lrpid);
+		CP(msqbuf, msqbuf32, msg_stime);
+		CP(msqbuf, msqbuf32, msg_pad1);
+		CP(msqbuf, msqbuf32, msg_rtime);
+		CP(msqbuf, msqbuf32, msg_pad2);
+		CP(msqbuf, msqbuf32, msg_ctime);
+		CP(msqbuf, msqbuf32, msg_pad3);
+		CP(msqbuf, msqbuf32, msg_pad4[0]);
+		CP(msqbuf, msqbuf32, msg_pad4[1]);
+		CP(msqbuf, msqbuf32, msg_pad4[2]);
+		CP(msqbuf, msqbuf32, msg_pad4[3]);
+		error = copyout(&msqbuf32, uap->buf, sizeof(struct msqid_ds32));
+	}
+	return (error);
+}
+
+int
+freebsd32_msgsnd(struct thread *td, struct freebsd32_msgsnd_args *uap)
+{
+	const void *msgp;
+	long mtype;
+	int32_t mtype32;
+	int error;
+
+	msgp = PTRIN(uap->msgp);
+	if ((error = copyin(msgp, &mtype32, sizeof(mtype32))) != 0)
+		return (error);
+	mtype = mtype32;
+	return (kern_msgsnd(td, uap->msqid,
+	    (const char *)msgp + sizeof(mtype32),
+	    uap->msgsz, uap->msgflg, mtype));
+}
+
+int
+freebsd32_msgrcv(struct thread *td, struct freebsd32_msgrcv_args *uap)
+{
+	void *msgp;
+	long mtype;
+	int32_t mtype32;
+	int error;
+
+	msgp = PTRIN(uap->msgp);
+	if ((error = kern_msgrcv(td, uap->msqid,
+	    (char *)msgp + sizeof(mtype32), uap->msgsz,
+	    uap->msgtyp, uap->msgflg, &mtype)) != 0)
+		return (error);
+	mtype32 = (int32_t)mtype;
+	return (copyout(&mtype32, msgp, sizeof(mtype32)));
 }
 
 int
 freebsd32_shmsys(struct thread *td, struct freebsd32_shmsys_args *uap)
 {
-	/*
-	 * Vector through to shmsys if it is loaded.
-	 */
-	return sysent[SYS_shmsys].sy_call(td, uap);
+
+	switch (uap->which) {
+	case 0:	{	/* shmat */
+		struct shmat_args ap;
+
+		ap.shmid = uap->a2;
+		ap.shmaddr = PTRIN(uap->a3);
+		ap.shmflg = uap->a4;
+		return (sysent[SYS_shmat].sy_call(td, &ap));
+	}
+	case 2: {	/* shmdt */
+		struct shmdt_args ap;
+
+		ap.shmaddr = PTRIN(uap->a2);
+		return (sysent[SYS_shmdt].sy_call(td, &ap));
+	}
+	case 3: {	/* shmget */
+		struct shmget_args ap;
+
+		ap.key = uap->a2;
+		ap.size = uap->a3;
+		ap.shmflg = uap->a4;
+		return (sysent[SYS_shmget].sy_call(td, &ap));
+	}
+	case 4: {	/* shmctl */
+		struct freebsd32_shmctl_args ap;
+
+		ap.shmid = uap->a2;
+		ap.cmd = uap->a3;
+		ap.buf = PTRIN(uap->a4);
+		return (freebsd32_shmctl(td, &ap));
+	}
+	case 1:		/* oshmctl */
+	default:
+		return (EINVAL);
+	}
+}
+
+int
+freebsd32_shmctl(struct thread *td, struct freebsd32_shmctl_args *uap)
+{
+	int error = 0;
+	union {
+		struct shmid_ds shmid_ds;
+		struct shm_info shm_info;
+		struct shminfo shminfo;
+	} u;
+	union {
+		struct shmid_ds32 shmid_ds32;
+		struct shm_info32 shm_info32;
+		struct shminfo32 shminfo32;
+	} u32;
+	size_t sz;
+	
+	if (uap->cmd == IPC_SET) {
+		if ((error = copyin(uap->buf, &u32.shmid_ds32,
+		    sizeof(u32.shmid_ds32))))
+			goto done;
+		freebsd32_ipcperm_in(&u32.shmid_ds32.shm_perm,
+		    &u.shmid_ds.shm_perm);
+		CP(u32.shmid_ds32, u.shmid_ds, shm_segsz);
+		CP(u32.shmid_ds32, u.shmid_ds, shm_lpid);
+		CP(u32.shmid_ds32, u.shmid_ds, shm_cpid);
+		CP(u32.shmid_ds32, u.shmid_ds, shm_nattch);
+		CP(u32.shmid_ds32, u.shmid_ds, shm_atime);
+		CP(u32.shmid_ds32, u.shmid_ds, shm_dtime);
+		CP(u32.shmid_ds32, u.shmid_ds, shm_ctime);
+		PTRIN_CP(u32.shmid_ds32, u.shmid_ds, shm_internal);
+	}
+	
+	error = kern_shmctl(td, uap->shmid, uap->cmd, (void *)&u, &sz);
+	if (error)
+		goto done;
+	
+	/* Cases in which we need to copyout */
+	switch (uap->cmd) {
+	case IPC_INFO:
+		CP(u.shminfo, u32.shminfo32, shmmax);
+		CP(u.shminfo, u32.shminfo32, shmmin);
+		CP(u.shminfo, u32.shminfo32, shmmni);
+		CP(u.shminfo, u32.shminfo32, shmseg);
+		CP(u.shminfo, u32.shminfo32, shmall);
+		error = copyout(&u32.shminfo32, uap->buf,
+		    sizeof(u32.shminfo32));
+		break;
+	case SHM_INFO:
+		CP(u.shm_info, u32.shm_info32, used_ids);
+		CP(u.shm_info, u32.shm_info32, shm_rss);
+		CP(u.shm_info, u32.shm_info32, shm_tot);
+		CP(u.shm_info, u32.shm_info32, shm_swp);
+		CP(u.shm_info, u32.shm_info32, swap_attempts);
+		CP(u.shm_info, u32.shm_info32, swap_successes);
+		error = copyout(&u32.shm_info32, uap->buf,
+		    sizeof(u32.shm_info32));
+		break;
+	case SHM_STAT:
+	case IPC_STAT:
+		freebsd32_ipcperm_out(&u.shmid_ds.shm_perm,
+		    &u32.shmid_ds32.shm_perm);
+		CP(u.shmid_ds, u32.shmid_ds32, shm_segsz);
+		CP(u.shmid_ds, u32.shmid_ds32, shm_lpid);
+		CP(u.shmid_ds, u32.shmid_ds32, shm_cpid);
+		CP(u.shmid_ds, u32.shmid_ds32, shm_nattch);
+		CP(u.shmid_ds, u32.shmid_ds32, shm_atime);
+		CP(u.shmid_ds, u32.shmid_ds32, shm_dtime);
+		CP(u.shmid_ds, u32.shmid_ds32, shm_ctime);
+		PTROUT_CP(u.shmid_ds, u32.shmid_ds32, shm_internal);
+		error = copyout(&u32.shmid_ds32, uap->buf,
+		    sizeof(u32.shmid_ds32));
+		break;
+	}
+
+done:
+	if (error) {
+		/* Invalidate the return value */
+		td->td_retval[0] = -1;
+	}
+	return (error);
 }
 
 int
@@ -1430,62 +1722,149 @@ freebsd32_ftruncate(struct thread *td, struct freebsd32_ftruncate_args *uap)
 	return (ftruncate(td, &ap));
 }
 
+#ifdef COMPAT_FREEBSD6
+/* versions with the 'int pad' argument */
+int
+freebsd6_freebsd32_pread(struct thread *td, struct freebsd6_freebsd32_pread_args *uap)
+{
+	struct pread_args ap;
+
+	ap.fd = uap->fd;
+	ap.buf = uap->buf;
+	ap.nbyte = uap->nbyte;
+	ap.offset = (uap->offsetlo | ((off_t)uap->offsethi << 32));
+	return (pread(td, &ap));
+}
+
+int
+freebsd6_freebsd32_pwrite(struct thread *td, struct freebsd6_freebsd32_pwrite_args *uap)
+{
+	struct pwrite_args ap;
+
+	ap.fd = uap->fd;
+	ap.buf = uap->buf;
+	ap.nbyte = uap->nbyte;
+	ap.offset = (uap->offsetlo | ((off_t)uap->offsethi << 32));
+	return (pwrite(td, &ap));
+}
+
+int
+freebsd6_freebsd32_lseek(struct thread *td, struct freebsd6_freebsd32_lseek_args *uap)
+{
+	int error;
+	struct lseek_args ap;
+	off_t pos;
+
+	ap.fd = uap->fd;
+	ap.offset = (uap->offsetlo | ((off_t)uap->offsethi << 32));
+	ap.whence = uap->whence;
+	error = lseek(td, &ap);
+	/* Expand the quad return into two parts for eax and edx */
+	pos = *(off_t *)(td->td_retval);
+	td->td_retval[0] = pos & 0xffffffff;	/* %eax */
+	td->td_retval[1] = pos >> 32;		/* %edx */
+	return error;
+}
+
+int
+freebsd6_freebsd32_truncate(struct thread *td, struct freebsd6_freebsd32_truncate_args *uap)
+{
+	struct truncate_args ap;
+
+	ap.path = uap->path;
+	ap.length = (uap->lengthlo | ((off_t)uap->lengthhi << 32));
+	return (truncate(td, &ap));
+}
+
+int
+freebsd6_freebsd32_ftruncate(struct thread *td, struct freebsd6_freebsd32_ftruncate_args *uap)
+{
+	struct ftruncate_args ap;
+
+	ap.fd = uap->fd;
+	ap.length = (uap->lengthlo | ((off_t)uap->lengthhi << 32));
+	return (ftruncate(td, &ap));
+}
+#endif /* COMPAT_FREEBSD6 */
+
+struct sf_hdtr32 {
+	uint32_t headers;
+	int hdr_cnt;
+	uint32_t trailers;
+	int trl_cnt;
+};
+
+static int
+freebsd32_do_sendfile(struct thread *td,
+    struct freebsd32_sendfile_args *uap, int compat)
+{
+	struct sendfile_args ap;
+	struct sf_hdtr32 hdtr32;
+	struct sf_hdtr hdtr;
+	struct uio *hdr_uio, *trl_uio;
+	struct iovec32 *iov32;
+	int error;
+
+	hdr_uio = trl_uio = NULL;
+
+	ap.fd = uap->fd;
+	ap.s = uap->s;
+	ap.offset = (uap->offsetlo | ((off_t)uap->offsethi << 32));
+	ap.nbytes = uap->nbytes;
+	ap.hdtr = (struct sf_hdtr *)uap->hdtr;		/* XXX not used */
+	ap.sbytes = uap->sbytes;
+	ap.flags = uap->flags;
+
+	if (uap->hdtr != NULL) {
+		error = copyin(uap->hdtr, &hdtr32, sizeof(hdtr32));
+		if (error)
+			goto out;
+		PTRIN_CP(hdtr32, hdtr, headers);
+		CP(hdtr32, hdtr, hdr_cnt);
+		PTRIN_CP(hdtr32, hdtr, trailers);
+		CP(hdtr32, hdtr, trl_cnt);
+
+		if (hdtr.headers != NULL) {
+			iov32 = PTRIN(hdtr32.headers);
+			error = freebsd32_copyinuio(iov32,
+			    hdtr32.hdr_cnt, &hdr_uio);
+			if (error)
+				goto out;
+		}
+		if (hdtr.trailers != NULL) {
+			iov32 = PTRIN(hdtr32.trailers);
+			error = freebsd32_copyinuio(iov32,
+			    hdtr32.trl_cnt, &trl_uio);
+			if (error)
+				goto out;
+		}
+	}
+
+	error = kern_sendfile(td, &ap, hdr_uio, trl_uio, compat);
+out:
+	if (hdr_uio)
+		free(hdr_uio, M_IOV);
+	if (trl_uio)
+		free(trl_uio, M_IOV);
+	return (error);
+}
+
 #ifdef COMPAT_FREEBSD4
 int
 freebsd4_freebsd32_sendfile(struct thread *td,
     struct freebsd4_freebsd32_sendfile_args *uap)
 {
-	struct freebsd4_sendfile_args ap;
-
-	ap.fd = uap->fd;
-	ap.s = uap->s;
-	ap.offset = (uap->offsetlo | ((off_t)uap->offsethi << 32));
-	ap.nbytes = uap->nbytes;	/* XXX check */
-	ap.hdtr = uap->hdtr;		/* XXX check */
-	ap.sbytes = uap->sbytes;	/* XXX FIXME!! */
-	ap.flags = uap->flags;
-	return (freebsd4_sendfile(td, &ap));
+	return (freebsd32_do_sendfile(td,
+	    (struct freebsd32_sendfile_args *)uap, 1));
 }
 #endif
 
 int
 freebsd32_sendfile(struct thread *td, struct freebsd32_sendfile_args *uap)
 {
-	struct sendfile_args ap;
 
-	ap.fd = uap->fd;
-	ap.s = uap->s;
-	ap.offset = (uap->offsetlo | ((off_t)uap->offsethi << 32));
-	ap.nbytes = uap->nbytes;	/* XXX check */
-	ap.hdtr = uap->hdtr;		/* XXX check */
-	ap.sbytes = uap->sbytes;	/* XXX FIXME!! */
-	ap.flags = uap->flags;
-	return (sendfile(td, &ap));
+	return (freebsd32_do_sendfile(td, uap, 0));
 }
-
-struct stat32 {
-	dev_t	st_dev;
-	ino_t	st_ino;
-	mode_t	st_mode;
-	nlink_t	st_nlink;
-	uid_t	st_uid;
-	gid_t	st_gid;
-	dev_t	st_rdev;
-	struct timespec32 st_atimespec;
-	struct timespec32 st_mtimespec;
-	struct timespec32 st_ctimespec;
-	off_t	st_size;
-	int64_t	st_blocks;
-	u_int32_t st_blksize;
-	u_int32_t st_flags;
-	u_int32_t st_gen;
-	struct timespec32 st_birthtimespec;
-	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
-	unsigned int :(8 / 2) * (16 - (int)sizeof(struct timespec32));
-};
-
-
-CTASSERT(sizeof(struct stat32) == 96);
 
 static void
 copy_stat( struct stat *in, struct stat32 *out)
@@ -1582,14 +1961,6 @@ done2:
 	mtx_unlock(&Giant);
 	return (error);
 }
-
-struct sigaction32 {
-	u_int32_t	sa_u;
-	int		sa_flags;
-	sigset_t	sa_mask;
-};
-
-CTASSERT(sizeof(struct sigaction32) == 24);
 
 int
 freebsd32_sigaction(struct thread *td, struct freebsd32_sigaction_args *uap)
@@ -1821,7 +2192,7 @@ ofreebsd32_sigstack(struct thread *td,
 {
 	struct sigstack32 s32;
 	struct sigstack nss, oss;
-	int error = 0;
+	int error = 0, unss;
 
 	if (uap->nss != NULL) {
 		error = copyin(uap->nss, &s32, sizeof(s32));
@@ -1829,13 +2200,16 @@ ofreebsd32_sigstack(struct thread *td,
 			return (error);
 		nss.ss_sp = PTRIN(s32.ss_sp);
 		CP(s32, nss, ss_onstack);
+		unss = 1;
+	} else {
+		unss = 0;
 	}
 	oss.ss_sp = td->td_sigstk.ss_sp;
 	oss.ss_onstack = sigonstack(cpu_getstack(td));
-	if (uap->nss != NULL) {
+	if (unss) {
 		td->td_sigstk.ss_sp = nss.ss_sp;
 		td->td_sigstk.ss_size = 0;
-		td->td_sigstk.ss_flags |= nss.ss_onstack & SS_ONSTACK;
+		td->td_sigstk.ss_flags |= (nss.ss_onstack & SS_ONSTACK);
 		td->td_pflags |= TDP_ALTSTACK;
 	}
 	if (uap->oss != NULL) {
@@ -1928,6 +2302,143 @@ freebsd32_clock_getres(struct thread *td,
 		CP(ts, ts32, tv_nsec);
 		error = copyout(&ts32, uap->tp, sizeof(ts32));
 	}
+	return (error);
+}
+
+int
+freebsd32_thr_new(struct thread *td,
+		  struct freebsd32_thr_new_args *uap)
+{
+	struct thr_param32 param32;
+	struct thr_param param;
+	int error;
+
+	if (uap->param_size < 0 ||
+	    uap->param_size > sizeof(struct thr_param32))
+		return (EINVAL);
+	bzero(&param, sizeof(struct thr_param));
+	bzero(&param32, sizeof(struct thr_param32));
+	error = copyin(uap->param, &param32, uap->param_size);
+	if (error != 0)
+		return (error);
+	param.start_func = PTRIN(param32.start_func);
+	param.arg = PTRIN(param32.arg);
+	param.stack_base = PTRIN(param32.stack_base);
+	param.stack_size = param32.stack_size;
+	param.tls_base = PTRIN(param32.tls_base);
+	param.tls_size = param32.tls_size;
+	param.child_tid = PTRIN(param32.child_tid);
+	param.parent_tid = PTRIN(param32.parent_tid);
+	param.flags = param32.flags;
+	param.rtp = PTRIN(param32.rtp);
+	param.spare[0] = PTRIN(param32.spare[0]);
+	param.spare[1] = PTRIN(param32.spare[1]);
+	param.spare[2] = PTRIN(param32.spare[2]);
+
+	return (kern_thr_new(td, &param));
+}
+
+int
+freebsd32_thr_suspend(struct thread *td, struct freebsd32_thr_suspend_args *uap)
+{
+	struct timespec32 ts32;
+	struct timespec ts, *tsp;
+	int error;
+
+	error = 0;
+	tsp = NULL;
+	if (uap->timeout != NULL) {
+		error = copyin((const void *)uap->timeout, (void *)&ts32,
+		    sizeof(struct timespec32));
+		if (error != 0)
+			return (error);
+		ts.tv_sec = ts32.tv_sec;
+		ts.tv_nsec = ts32.tv_nsec;
+		tsp = &ts;
+	}
+	return (kern_thr_suspend(td, tsp));
+}
+
+void
+siginfo_to_siginfo32(siginfo_t *src, struct siginfo32 *dst)
+{
+	bzero(dst, sizeof(*dst));
+	dst->si_signo = src->si_signo;
+	dst->si_errno = src->si_errno;
+	dst->si_code = src->si_code;
+	dst->si_pid = src->si_pid;
+	dst->si_uid = src->si_uid;
+	dst->si_status = src->si_status;
+	dst->si_addr = dst->si_addr;
+	dst->si_value.sigval_int = src->si_value.sival_int;
+	dst->si_timerid = src->si_timerid;
+	dst->si_overrun = src->si_overrun;
+}
+
+int
+freebsd32_sigtimedwait(struct thread *td, struct freebsd32_sigtimedwait_args *uap)
+{
+	struct timespec32 ts32;
+	struct timespec ts;
+	struct timespec *timeout;
+	sigset_t set;
+	ksiginfo_t ksi;
+	struct siginfo32 si32;
+	int error;
+
+	if (uap->timeout) {
+		error = copyin(uap->timeout, &ts32, sizeof(ts32));
+		if (error)
+			return (error);
+		ts.tv_sec = ts32.tv_sec;
+		ts.tv_nsec = ts32.tv_nsec;
+		timeout = &ts;
+	} else
+		timeout = NULL;
+
+	error = copyin(uap->set, &set, sizeof(set));
+	if (error)
+		return (error);
+
+	error = kern_sigtimedwait(td, set, &ksi, timeout);
+	if (error)
+		return (error);
+
+	if (uap->info) {
+		siginfo_to_siginfo32(&ksi.ksi_info, &si32);
+		error = copyout(&si32, uap->info, sizeof(struct siginfo32));
+	}
+
+	if (error == 0)
+		td->td_retval[0] = ksi.ksi_signo;
+	return (error);
+}
+
+/*
+ * MPSAFE
+ */
+int
+freebsd32_sigwaitinfo(struct thread *td, struct freebsd32_sigwaitinfo_args *uap)
+{
+	ksiginfo_t ksi;
+	struct siginfo32 si32;
+	sigset_t set;
+	int error;
+
+	error = copyin(uap->set, &set, sizeof(set));
+	if (error)
+		return (error);
+
+	error = kern_sigtimedwait(td, set, &ksi, NULL);
+	if (error)
+		return (error);
+
+	if (uap->info) {
+		siginfo_to_siginfo32(&ksi.ksi_info, &si32);
+		error = copyout(&si32, uap->info, sizeof(struct siginfo32));
+	}	
+	if (error == 0)
+		td->td_retval[0] = ksi.ksi_signo;
 	return (error);
 }
 

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.71.2.5 2005/12/16 17:33:47 wpaul Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.90 2007/07/22 20:53:28 thompsa Exp $");
 
 #include <sys/ctype.h>
 #include <sys/unistd.h>
@@ -57,7 +57,6 @@ __FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.71.2.5 2005/12/16 17
 #include <sys/sysctl.h>
 
 #include <machine/atomic.h>
-#include <machine/clock.h>
 #include <machine/bus.h>
 #include <machine/stdarg.h>
 #include <machine/resource.h>
@@ -198,6 +197,11 @@ static slist_entry
 static uint32_t InterlockedIncrement(volatile uint32_t *);
 static uint32_t InterlockedDecrement(volatile uint32_t *);
 static void ExInterlockedAddLargeStatistic(uint64_t *, uint32_t);
+static void *MmAllocateContiguousMemory(uint32_t, uint64_t);
+static void *MmAllocateContiguousMemorySpecifyCache(uint32_t,
+	uint64_t, uint64_t, uint64_t, uint32_t);
+static void MmFreeContiguousMemory(void *);
+static void MmFreeContiguousMemorySpecifyCache(void *, uint32_t, uint32_t);
 static uint32_t MmSizeOfMdl(void *, size_t);
 static void *MmMapLockedPages(mdl *, uint8_t);
 static void *MmMapLockedPagesSpecifyCache(mdl *,
@@ -235,6 +239,7 @@ static uint32_t WmiTraceMessage(uint64_t, uint32_t, void *, uint16_t, ...);
 static uint32_t IoWMIRegistrationControl(device_object *, uint32_t);
 static void *ntoskrnl_memset(void *, int, size_t);
 static void *ntoskrnl_memmove(void *, void *, size_t);
+static void *ntoskrnl_memchr(void *, unsigned char, size_t);
 static char *ntoskrnl_strstr(char *, char *);
 static int ntoskrnl_toupper(int);
 static int ntoskrnl_tolower(int);
@@ -432,6 +437,23 @@ ntoskrnl_memmove(dst, src, size)
 {
 	bcopy(src, dst, size);
 	return(dst);
+}
+
+static void *
+ntoskrnl_memchr(buf, ch, len)
+	void			*buf;
+	unsigned char		ch;
+	size_t			len;
+{
+	if (len != 0) {
+		unsigned char *p = buf;
+
+		do {
+			if (*p++ == ch)
+				return (p - 1);
+		} while (--len != 0);
+	}
+	return (NULL);
 }
 
 static char *
@@ -2472,6 +2494,52 @@ IoFreeMdl(m)
         return;
 }
 
+static void *
+MmAllocateContiguousMemory(size, highest)
+	uint32_t		size;
+	uint64_t		highest;
+{
+	void *addr;
+	size_t pagelength = roundup(size, PAGE_SIZE);
+
+	addr = ExAllocatePoolWithTag(NonPagedPool, pagelength, 0);
+
+	return(addr);
+}
+
+static void *
+MmAllocateContiguousMemorySpecifyCache(size, lowest, highest,
+    boundary, cachetype)
+	uint32_t		size;
+	uint64_t		lowest;
+	uint64_t		highest;
+	uint64_t		boundary;
+	uint32_t		cachetype;
+{
+	void *addr;
+	size_t pagelength = roundup(size, PAGE_SIZE);
+
+	addr = ExAllocatePoolWithTag(NonPagedPool, pagelength, 0);
+
+	return(addr);
+}
+
+static void
+MmFreeContiguousMemory(base)
+	void			*base;
+{
+	ExFreePool(base);
+}
+
+static void
+MmFreeContiguousMemorySpecifyCache(base, size, cachetype)
+	void			*base;
+	uint32_t		size;
+	uint32_t		cachetype;
+{
+	ExFreePool(base);
+}
+
 static uint32_t
 MmSizeOfMdl(vaddr, len)
 	void			*vaddr;
@@ -2710,6 +2778,7 @@ ntoskrnl_workitem_thread(arg)
 		KeAcquireSpinLock(&kq->kq_lock, &irql);
 
 		if (kq->kq_exit) {
+			kq->kq_exit = 0;
 			KeReleaseSpinLock(&kq->kq_lock, irql);
 			break;
 		}
@@ -2746,7 +2815,8 @@ ntoskrnl_destroy_workitem_threads(void)
 		kq = wq_queues + i;
 		kq->kq_exit = 1;
 		KeSetEvent(&kq->kq_proc, IO_NO_INCREMENT, FALSE);	
-		tsleep(kq->kq_td->td_proc, PWAIT, "waitiw", 0);
+		while (kq->kq_exit)
+			tsleep(kq->kq_td->td_proc, PWAIT, "waitiw", hz/10);
 	}
 
 	return;
@@ -3756,7 +3826,7 @@ ntoskrnl_dpc_thread(arg)
 	 * once scheduled by an ISR.
 	 */
 
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 #ifdef NTOSKRNL_MULTIPLE_DPCS
 #if __FreeBSD_version >= 502102
 	sched_bind(curthread, kq->kq_cpu);
@@ -3766,7 +3836,7 @@ ntoskrnl_dpc_thread(arg)
 #if __FreeBSD_version < 600000
         curthread->td_base_pri = PRI_MIN_KERN;
 #endif
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 
 	while (1) {
 		KeWaitForSingleObject(&kq->kq_proc, 0, 0, TRUE, NULL);
@@ -3774,6 +3844,7 @@ ntoskrnl_dpc_thread(arg)
 		KeAcquireSpinLock(&kq->kq_lock, &irql);
 
 		if (kq->kq_exit) {
+			kq->kq_exit = 0;
 			KeReleaseSpinLock(&kq->kq_lock, irql);
 			break;
 		}
@@ -3823,7 +3894,8 @@ ntoskrnl_destroy_dpc_threads(void)
 		KeInitializeDpc(&dpc, NULL, NULL);
 		KeSetTargetProcessorDpc(&dpc, i);
 		KeInsertQueueDpc(&dpc, NULL, NULL);
-		tsleep(kq->kq_td->td_proc, PWAIT, "dpcw", 0);
+		while (kq->kq_exit)
+			tsleep(kq->kq_td->td_proc, PWAIT, "dpcw", hz/10);
 	}
 
 	return;
@@ -4145,6 +4217,7 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_SFUNC(DbgBreakPoint, 0),
 	IMPORT_CFUNC(strncmp, 0),
 	IMPORT_CFUNC(strcmp, 0),
+	IMPORT_CFUNC_MAP(stricmp, strcasecmp, 0),
 	IMPORT_CFUNC(strncpy, 0),
 	IMPORT_CFUNC(strcpy, 0),
 	IMPORT_CFUNC(strlen, 0),
@@ -4152,9 +4225,11 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_CFUNC_MAP(tolower, ntoskrnl_tolower, 0),
 	IMPORT_CFUNC_MAP(strstr, ntoskrnl_strstr, 0),
 	IMPORT_CFUNC_MAP(strchr, index, 0),
+	IMPORT_CFUNC_MAP(strrchr, rindex, 0),
 	IMPORT_CFUNC(memcpy, 0),
 	IMPORT_CFUNC_MAP(memmove, ntoskrnl_memmove, 0),
 	IMPORT_CFUNC_MAP(memset, ntoskrnl_memset, 0),
+	IMPORT_CFUNC_MAP(memchr, ntoskrnl_memchr, 0),
 	IMPORT_SFUNC(IoAllocateDriverObjectExtension, 4),
 	IMPORT_SFUNC(IoGetDriverObjectExtension, 2),
 	IMPORT_FFUNC(IofCallDriver, 2),
@@ -4240,6 +4315,11 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_FFUNC(ExInterlockedAddLargeStatistic, 2),
 	IMPORT_SFUNC(IoAllocateMdl, 5),
 	IMPORT_SFUNC(IoFreeMdl, 1),
+	IMPORT_SFUNC(MmAllocateContiguousMemory, 2),
+	IMPORT_SFUNC(MmAllocateContiguousMemorySpecifyCache, 5),
+	IMPORT_SFUNC(MmFreeContiguousMemory, 1),
+	IMPORT_SFUNC(MmFreeContiguousMemorySpecifyCache, 3),
+	IMPORT_SFUNC_MAP(MmGetPhysicalAddress, pmap_kextract, 1),
 	IMPORT_SFUNC(MmSizeOfMdl, 1),
 	IMPORT_SFUNC(MmMapLockedPages, 2),
 	IMPORT_SFUNC(MmMapLockedPagesSpecifyCache, 6),

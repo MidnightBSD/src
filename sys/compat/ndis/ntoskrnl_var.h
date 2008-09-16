@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ndis/ntoskrnl_var.h,v 1.36.2.2 2005/11/06 19:39:40 wpaul Exp $
+ * $FreeBSD: src/sys/compat/ndis/ntoskrnl_var.h,v 1.43 2006/08/17 22:50:32 imp Exp $
  */
 
 #ifndef _NTOSKRNL_VAR_H_
@@ -1257,8 +1257,7 @@ typedef struct work_queue_item work_queue_item;
 		(w)->wqi_func = (func);			\
 		(w)->wqi_ctx = (ctx);			\
 		InitializeListHead(&((w)->wqi_entry));	\
-	} while (0);					\
-
+	} while (0)
 
 /*
  * FreeBSD's kernel stack is 2 pages in size by default. The

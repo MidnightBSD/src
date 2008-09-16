@@ -28,7 +28,7 @@
  *
  * from: svr4_util.h,v 1.5 1994/11/18 02:54:31 christos Exp
  * from: linux_util.h,v 1.2 1995/03/05 23:23:50 fvdl Exp
- * $FreeBSD: src/sys/compat/linux/linux_util.h,v 1.25.2.1 2005/12/19 17:06:51 glebius Exp $
+ * $FreeBSD: src/sys/compat/linux/linux_util.h,v 1.29 2007/03/29 02:11:45 julian Exp $
  */
 
 /*
@@ -49,45 +49,22 @@
 #include <sys/cdefs.h>
 #include <sys/uio.h>
 
-static __inline caddr_t stackgap_init(void);
-static __inline void *stackgap_alloc(caddr_t *, size_t);
-
-#define szsigcode (*(curthread->td_proc->p_sysent->sv_szsigcode))
-#define psstrings (curthread->td_proc->p_sysent->sv_psstrings)
-
-static __inline caddr_t
-stackgap_init()
-{
-	return (caddr_t)(psstrings - szsigcode - SPARE_USRSPACE);
-}
-
-static __inline void *
-stackgap_alloc(sgp, sz)
-	caddr_t	*sgp;
-	size_t   sz;
-{
-	void *p = (void *) *sgp;
-
-	sz = ALIGN(sz);
-	if (*sgp + sz > (caddr_t)(psstrings - szsigcode))
-		return NULL;
-	*sgp += sz;
-	return p;
-}
-
 extern const char linux_emul_path[];
 
 int linux_emul_convpath(struct thread *, char *, enum uio_seg, char **, int);
 
-#define LCONVPATH(td, upath, pathp, i) 					\
+#define LCONVPATH_SEG(td, upath, pathp, i, seg)				\
 	do {								\
 		int _error;						\
 									\
-		_error = linux_emul_convpath(td, upath, UIO_USERSPACE,  \
+		_error = linux_emul_convpath(td, upath, seg,		\
 		    pathp, i);						\
 		if (*(pathp) == NULL)					\
 			return (_error);				\
 	} while (0)
+
+#define LCONVPATH(td, upath, pathp, i) 	\
+   LCONVPATH_SEG(td, upath, pathp, i, UIO_USERSPACE)
 
 #define LCONVPATHEXIST(td, upath, pathp) LCONVPATH(td, upath, pathp, 0)
 #define LCONVPATHCREAT(td, upath, pathp) LCONVPATH(td, upath, pathp, 1)
@@ -109,5 +86,22 @@ struct __hack
 
 void linux_msg(const struct thread *td, const char *fmt, ...)
 	__printflike(2, 3);
+
+struct linux_device_handler {
+	char	*bsd_driver_name;
+	char	*linux_driver_name;
+	char	*bsd_device_name;
+	char	*linux_device_name;
+	int	linux_major;
+	int	linux_minor;
+	int	linux_char_device;
+};
+
+int	linux_device_register_handler(struct linux_device_handler *h);
+int	linux_device_unregister_handler(struct linux_device_handler *h);
+char	*linux_driver_get_name_dev(device_t dev);
+int	linux_driver_get_major_minor(char *node, int *major, int *minor);
+char	*linux_get_char_devices(void);
+void	linux_free_get_char_devices(char *string);
 
 #endif /* !_LINUX_UTIL_H_ */

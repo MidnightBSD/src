@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ndis/ndis_var.h,v 1.41.2.3 2005/11/07 16:58:23 wpaul Exp $
+ * $FreeBSD: src/sys/compat/ndis/ndis_var.h,v 1.47 2007/04/06 11:18:57 pjd Exp $
  */
 
 #ifndef _NDIS_VAR_H_
@@ -1746,8 +1746,6 @@ extern int ndis_destroy_dma(void *);
 extern int ndis_create_sysctls(void *);
 extern int ndis_add_sysctl(void *, char *, char *, char *, int);
 extern int ndis_flush_sysctls(void *);
-extern int ndis_strcasecmp(const char *, const char *);
-extern int ndis_strncasecmp(const char *, const char *, size_t);
 
 extern uint32_t NdisAddDevice(driver_object *, device_object *);
 extern void NdisAllocatePacketPool(ndis_status *,

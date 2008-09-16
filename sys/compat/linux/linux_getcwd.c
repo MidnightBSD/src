@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_getcwd.c,v 1.19.2.1 2006/03/13 03:04:04 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_getcwd.c,v 1.27 2006/11/18 17:27:39 kib Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -54,12 +54,9 @@ __FBSDID("$FreeBSD: src/sys/compat/linux/linux_getcwd.c,v 1.19.2.1 2006/03/13 03
 #include <sys/mount.h>
 #include <sys/proc.h>
 #include <sys/uio.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/dirent.h>
 #include <ufs/ufs/dir.h>	/* XXX only for DIRBLKSIZ */
-
-#include "opt_compat.h"
 
 #ifdef COMPAT_LINUX32
 #include <machine/../linux32/linux.h>
@@ -69,6 +66,8 @@ __FBSDID("$FreeBSD: src/sys/compat/linux/linux_getcwd.c,v 1.19.2.1 2006/03/13 03
 #include <machine/../linux/linux_proto.h>
 #endif
 #include <compat/linux/linux_util.h>
+
+#include <security/mac/mac_framework.h>
 
 static int
 linux_getcwd_scandir(struct vnode **, struct vnode **,
@@ -386,7 +385,7 @@ linux_getcwd_common (lvp, rvp, bpp, bufp, limit, flags, td)
 		error = linux_getcwd_scandir(&lvp, &uvp, &bp, bufp, td);
 		if (error)
 			goto out;
-#if DIAGNOSTIC		
+#ifdef DIAGNOSTIC		
 		if (lvp != NULL)
 			panic("getcwd: oops, forgot to null lvp");
 		if (bufp && (bp <= bufp)) {
@@ -426,8 +425,8 @@ linux_getcwd(struct thread *td, struct linux_getcwd_args *args)
 	int error, len, lenused;
 
 #ifdef DEBUG
-	printf("Linux-emul(%ld): getcwd(%p, %ld)\n", (long)td->td_proc->p_pid,
-	       args->buf, (long)args->bufsize);
+	if (ldebug(getcwd))
+		printf(ARGS(getcwd, "%p, %ld"), args->buf, (long)args->bufsize);
 #endif
 
 	len = args->bufsize;

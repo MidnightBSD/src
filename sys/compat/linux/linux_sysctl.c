@@ -27,7 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_sysctl.c,v 1.14 2005/01/14 04:44:56 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_sysctl.c,v 1.17 2006/03/19 11:10:33 ru Exp $");
+
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -37,8 +39,6 @@ __FBSDID("$FreeBSD: src/sys/compat/linux/linux_sysctl.c,v 1.14 2005/01/14 04:44:
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <sys/sbuf.h>
-
-#include "opt_compat.h"
 
 #ifdef COMPAT_LINUX32
 #include <machine/../linux32/linux.h>

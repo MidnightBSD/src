@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_mib.c,v 1.23.2.1 2005/12/22 21:25:19 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_mib.c,v 1.29 2007/01/14 16:07:01 netchild Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -52,6 +52,7 @@ struct linux_prison {
 	char	pr_osname[LINUX_MAX_UTSNAME];
 	char	pr_osrelease[LINUX_MAX_UTSNAME];
 	int	pr_oss_version;
+	int	pr_use_linux26;	/* flag to determine whether to use 2.6 emulation */
 };
 
 SYSCTL_NODE(_compat, OID_AUTO, linux, CTLFLAG_RW, 0,
@@ -82,6 +83,7 @@ SYSCTL_PROC(_compat_linux, OID_AUTO, osname,
 	    "Linux kernel OS name");
 
 static char	linux_osrelease[LINUX_MAX_UTSNAME] = "2.4.2";
+static int	linux_use_linux26 = 0;
 
 static int
 linux_sysctl_osrelease(SYSCTL_HANDLER_ARGS)
@@ -227,19 +229,42 @@ linux_get_osrelease(struct thread *td, char *dst)
 }
 
 int
+linux_use26(struct thread *td)
+{
+	struct prison *pr;
+	struct linux_prison *lpr;
+	int use26 = linux_use_linux26;
+
+	pr = td->td_ucred->cr_prison;
+	if (pr != NULL) {
+		if (pr->pr_linux != NULL) {
+			lpr = (struct linux_prison *)pr->pr_linux;
+			use26 = lpr->pr_use_linux26;
+		}
+	}
+	
+	return (use26);
+}
+
+int
 linux_set_osrelease(struct thread *td, char *osrelease)
 {
 	struct prison *pr;
 	struct linux_prison *lpr;
+	int use26;
+
+	use26 = (strlen(osrelease) >= 3 && osrelease[2] == '6');
 
 	pr = linux_get_prison(td);
 	if (pr != NULL) {
 		lpr = (struct linux_prison *)pr->pr_linux;
 		strcpy(lpr->pr_osrelease, osrelease);
+		lpr->pr_use_linux26 = use26;
 		mtx_unlock(&pr->pr_mtx);
 	} else {
 		mtx_lock(&osname_lock);
 		strcpy(linux_osrelease, osrelease);
+		linux_use_linux26 = use26;
 		mtx_unlock(&osname_lock);
 	}
 
