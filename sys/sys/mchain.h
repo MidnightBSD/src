@@ -29,58 +29,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/mchain.h,v 1.8 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/mchain.h,v 1.10 2005/09/19 08:07:18 imura Exp $
  */
 #ifndef _SYS_MCHAIN_H_
 #define _SYS_MCHAIN_H_
-
-#include <machine/endian.h>
-
-#ifndef _KERNEL
-/*
- * This macros probably belongs to the endian.h
- */
-#if (BYTE_ORDER == LITTLE_ENDIAN)
-
-#define	htoles(x)	((u_int16_t)(x))
-#define	letohs(x)	((u_int16_t)(x))
-#define	htolel(x)	((u_int32_t)(x))
-#define	letohl(x)	((u_int32_t)(x))
-#define	htoleq(x)	((int64_t)(x))
-#define	letohq(x)	((int64_t)(x))
-
-#define	htobes(x)	(__htons(x))
-#define	betohs(x)	(__ntohs(x))
-#define	htobel(x)	(__htonl(x))
-#define	betohl(x)	(__ntohl(x))
-
-static __inline int64_t
-htobeq(int64_t x)
-{
-	return (int64_t)__htonl((u_int32_t)(x >> 32)) |
-	    (int64_t)__htonl((u_int32_t)(x & 0xffffffff)) << 32;
-}
-
-static __inline int64_t
-betohq(int64_t x)
-{
-	return (int64_t)__ntohl((u_int32_t)(x >> 32)) |
-	    (int64_t)__ntohl((u_int32_t)(x & 0xffffffff)) << 32;
-}
-
-#else	/* (BYTE_ORDER == LITTLE_ENDIAN) */
-
-#error "Macros for Big-Endians are incomplete"
-
-/*
-#define	htoles(x)	((u_int16_t)(x))
-#define	letohs(x)	((u_int16_t)(x))
-#define	htolel(x)	((u_int32_t)(x))
-#define	letohl(x)	((u_int32_t)(x))
-*/
-#endif	/* (BYTE_ORDER == LITTLE_ENDIAN) */
-#endif	/* _KERNEL */
-
 
 #ifdef _KERNEL
 
@@ -96,7 +48,8 @@ betohq(int64_t x)
 struct mbuf;
 struct mbchain;
 
-typedef int mb_copy_t(struct mbchain *mbp, c_caddr_t src, caddr_t dst, size_t len);
+typedef int mb_copy_t(struct mbchain *mbp, c_caddr_t src, caddr_t dst,
+    size_t *srclen, size_t *dstlen);
 
 struct mbchain {
 	struct mbuf *	mb_top;		/* head of mbufs chain */

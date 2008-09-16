@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/sys/shm.h,v 1.23 2005/04/02 12:33:36 das Exp $ */
+/* $FreeBSD: src/sys/sys/shm.h,v 1.24 2005/08/06 07:20:17 csjp Exp $ */
 /*	$NetBSD: shm.h,v 1.15 1994/06/29 06:45:17 cgd Exp $	*/
 
 /*-
@@ -94,11 +94,11 @@ struct shmid_ds {
  * might be of interest to user programs.  Do we really want/need this?
  */
 struct shminfo {
-	int	shmmax,		/* max shared memory segment size (bytes) */
-		shmmin,		/* min shared memory segment size (bytes) */
-		shmmni,		/* max number of shared memory identifiers */
-		shmseg,		/* max shared memory segments per process */
-		shmall;		/* max amount of shared memory (pages) */
+	u_long	shmmax;		/* max shared memory segment size (bytes) */
+	u_long	shmmin;		/* max shared memory segment size (bytes) */
+	u_long	shmmni;		/* max number of shared memory identifiers */
+	u_long	shmseg;		/* max shared memory segments per process */
+	u_long	shmall;		/* max amount of shared memory (pages) */
 };
 
 /* 

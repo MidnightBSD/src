@@ -39,7 +39,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kernel.h	8.3 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/kernel.h,v 1.126.2.1 2005/11/12 20:55:59 csjp Exp $
+ * $FreeBSD: src/sys/sys/kernel.h,v 1.136 2007/07/27 11:59:57 rwatson Exp $
  */
 
 #ifndef _SYS_KERNEL_H_
@@ -56,10 +56,9 @@
 
 /* 1.1 */
 extern unsigned long hostid;
+extern char hostuuid[64];
 extern char hostname[MAXHOSTNAMELEN];
-extern int hostnamelen;
 extern char domainname[MAXHOSTNAMELEN];
-extern int domainnamelen;
 extern char kernelname[MAXPATHLEN];
 
 extern int tick;			/* usec per tick (1000000 / hz) */
@@ -69,10 +68,9 @@ extern int stathz;			/* statistics clock's frequency */
 extern int profhz;			/* profiling clock's frequency */
 extern int profprocs;			/* number of process's profiling */
 extern int ticks;
+#ifndef _SOLARIS_C_SOURCE
 extern int lbolt;			/* once a second sleep address */
-
-extern int tz_minuteswest;
-extern int tz_dsttime;
+#endif
 
 #endif /* _KERNEL */
 
@@ -90,8 +88,8 @@ extern int tz_dsttime;
  *
  * The SI_SUB_RUN_SCHEDULER value must have the highest lexical value.
  *
- * The SI_SUB_CONSOLE and SI_SUB_SWAP values represent values used by
- * the BSD 4.4Lite but not by FreeBSD; they are maintained in dependent
+ * The SI_SUB_SWAP values represent a value used by
+ * the BSD 4.4Lite but not by FreeBSD; it is maintained in dependent
  * order to support porting.
  *
  * The SI_SUB_PROTO_BEGIN and SI_SUB_PROTO_END bracket a range of
@@ -104,7 +102,6 @@ enum sysinit_sub_id {
 	SI_SUB_DUMMY		= 0x0000000,	/* not executed; for linker*/
 	SI_SUB_DONE		= 0x0000001,	/* processed*/
 	SI_SUB_TUNABLES		= 0x0700000,	/* establish tunable values */
-	SI_SUB_CONSOLE		= 0x0800000,	/* console*/
 	SI_SUB_COPYRIGHT	= 0x0800001,	/* first use of console*/
 	SI_SUB_SETTINGS		= 0x0880000,	/* check and recheck settings */
 	SI_SUB_MTX_POOL_STATIC	= 0x0900000,	/* static mutex pool */
@@ -160,6 +157,7 @@ enum sysinit_sub_id {
 	SI_SUB_MOUNT_ROOT	= 0xb400000,	/* root mount*/
 	SI_SUB_SWAP		= 0xc000000,	/* swap */
 	SI_SUB_INTRINSIC_POST	= 0xd000000,	/* proc 0 cleanup*/
+	SI_SUB_SYSCALLS		= 0xd800000,	/* register system calls */
 	SI_SUB_KTHREAD_INIT	= 0xe000000,	/* init process*/
 	SI_SUB_KTHREAD_PAGE	= 0xe400000,	/* pageout daemon*/
 	SI_SUB_KTHREAD_VM	= 0xe800000,	/* vm daemon*/
@@ -344,11 +342,6 @@ struct tunable_str {
 
 #define	TUNABLE_STR_FETCH(path, var, size)			\
 	getenv_string((path), (var), (size))
-
-void	net_warn_not_mpsafe(const char *component);
-#define	NET_NEEDS_GIANT(component)					\
-	SYSINIT(__CONCAT(__net_warn_not_mpsafe_, __LINE__),		\
-	    SI_SUB_SETTINGS, SI_ORDER_SECOND, net_warn_not_mpsafe, component);
 
 struct intr_config_hook {
 	TAILQ_ENTRY(intr_config_hook) ich_links;

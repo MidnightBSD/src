@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)queue.h	8.5 (Berkeley) 8/20/94
- * $FreeBSD: src/sys/sys/queue.h,v 1.60.2.1 2005/08/16 22:41:39 phk Exp $
+ * $FreeBSD: src/sys/sys/queue.h,v 1.68 2006/10/24 11:20:29 ru Exp $
  */
 
 #ifndef _SYS_QUEUE_H_
@@ -100,8 +100,7 @@
  * _REMOVE			+	+	+	+
  *
  */
-#define	QUEUE_MACRO_DEBUG 0
-#if QUEUE_MACRO_DEBUG
+#ifdef QUEUE_MACRO_DEBUG
 /* Store the last 2 places the queue element or head was altered */
 struct qm_trace {
 	char * lastfile;
@@ -199,6 +198,7 @@ struct {								\
 		SLIST_NEXT(curelm, field) =				\
 		    SLIST_NEXT(SLIST_NEXT(curelm, field), field);	\
 	}								\
+	TRASHIT((elm)->field.sle_next);					\
 } while (0)
 
 #define	SLIST_REMOVE_HEAD(head, field) do {				\
@@ -274,7 +274,7 @@ struct {								\
 #define	STAILQ_LAST(head, type, field)					\
 	(STAILQ_EMPTY((head)) ?						\
 		NULL :							\
-	        ((struct type *)					\
+	        ((struct type *)(void *)				\
 		((char *)((head)->stqh_last) - __offsetof(struct type, field))))
 
 #define	STAILQ_NEXT(elm, field)	((elm)->field.stqe_next)
@@ -291,16 +291,12 @@ struct {								\
 		     STAILQ_NEXT(STAILQ_NEXT(curelm, field), field)) == NULL)\
 			(head)->stqh_last = &STAILQ_NEXT((curelm), field);\
 	}								\
+	TRASHIT((elm)->field.stqe_next);				\
 } while (0)
 
 #define	STAILQ_REMOVE_HEAD(head, field) do {				\
 	if ((STAILQ_FIRST((head)) =					\
 	     STAILQ_NEXT(STAILQ_FIRST((head)), field)) == NULL)		\
-		(head)->stqh_last = &STAILQ_FIRST((head));		\
-} while (0)
-
-#define	STAILQ_REMOVE_HEAD_UNTIL(head, elm, field) do {			\
-	if ((STAILQ_FIRST((head)) = STAILQ_NEXT((elm), field)) == NULL)	\
 		(head)->stqh_last = &STAILQ_FIRST((head));		\
 } while (0)
 
@@ -325,6 +321,31 @@ struct {								\
  * List functions.
  */
 
+#if (defined(_KERNEL) && defined(INVARIANTS))
+#define	QMD_LIST_CHECK_HEAD(head, field) do {				\
+	if (LIST_FIRST((head)) != NULL &&				\
+	    LIST_FIRST((head))->field.le_prev !=			\
+	     &LIST_FIRST((head)))					\
+		panic("Bad list head %p first->prev != head", (head));	\
+} while (0)
+
+#define	QMD_LIST_CHECK_NEXT(elm, field) do {				\
+	if (LIST_NEXT((elm), field) != NULL &&				\
+	    LIST_NEXT((elm), field)->field.le_prev !=			\
+	     &((elm)->field.le_next))					\
+	     	panic("Bad link elm %p next->prev != elm", (elm));	\
+} while (0)
+
+#define	QMD_LIST_CHECK_PREV(elm, field) do {				\
+	if (*(elm)->field.le_prev != (elm))				\
+		panic("Bad link elm %p prev->next != elm", (elm));	\
+} while (0)
+#else
+#define	QMD_LIST_CHECK_HEAD(head, field)
+#define	QMD_LIST_CHECK_NEXT(elm, field)
+#define	QMD_LIST_CHECK_PREV(elm, field)
+#endif /* (_KERNEL && INVARIANTS) */
+
 #define	LIST_EMPTY(head)	((head)->lh_first == NULL)
 
 #define	LIST_FIRST(head)	((head)->lh_first)
@@ -344,6 +365,7 @@ struct {								\
 } while (0)
 
 #define	LIST_INSERT_AFTER(listelm, elm, field) do {			\
+	QMD_LIST_CHECK_NEXT(listelm, field);				\
 	if ((LIST_NEXT((elm), field) = LIST_NEXT((listelm), field)) != NULL)\
 		LIST_NEXT((listelm), field)->field.le_prev =		\
 		    &LIST_NEXT((elm), field);				\
@@ -352,6 +374,7 @@ struct {								\
 } while (0)
 
 #define	LIST_INSERT_BEFORE(listelm, elm, field) do {			\
+	QMD_LIST_CHECK_PREV(listelm, field);				\
 	(elm)->field.le_prev = (listelm)->field.le_prev;		\
 	LIST_NEXT((elm), field) = (listelm);				\
 	*(listelm)->field.le_prev = (elm);				\
@@ -359,6 +382,7 @@ struct {								\
 } while (0)
 
 #define	LIST_INSERT_HEAD(head, elm, field) do {				\
+	QMD_LIST_CHECK_HEAD((head), field);				\
 	if ((LIST_NEXT((elm), field) = LIST_FIRST((head))) != NULL)	\
 		LIST_FIRST((head))->field.le_prev = &LIST_NEXT((elm), field);\
 	LIST_FIRST((head)) = (elm);					\
@@ -368,10 +392,14 @@ struct {								\
 #define	LIST_NEXT(elm, field)	((elm)->field.le_next)
 
 #define	LIST_REMOVE(elm, field) do {					\
+	QMD_LIST_CHECK_NEXT(elm, field);				\
+	QMD_LIST_CHECK_PREV(elm, field);				\
 	if (LIST_NEXT((elm), field) != NULL)				\
 		LIST_NEXT((elm), field)->field.le_prev = 		\
 		    (elm)->field.le_prev;				\
 	*(elm)->field.le_prev = LIST_NEXT((elm), field);		\
+	TRASHIT((elm)->field.le_next);					\
+	TRASHIT((elm)->field.le_prev);					\
 } while (0)
 
 /*
@@ -397,6 +425,37 @@ struct {								\
 /*
  * Tail queue functions.
  */
+#if (defined(_KERNEL) && defined(INVARIANTS))
+#define	QMD_TAILQ_CHECK_HEAD(head, field) do {				\
+	if (!TAILQ_EMPTY(head) &&					\
+	    TAILQ_FIRST((head))->field.tqe_prev !=			\
+	     &TAILQ_FIRST((head)))					\
+		panic("Bad tailq head %p first->prev != head", (head));	\
+} while (0)
+
+#define	QMD_TAILQ_CHECK_TAIL(head, field) do {				\
+	if (*(head)->tqh_last != NULL)					\
+	    	panic("Bad tailq NEXT(%p->tqh_last) != NULL", (head)); 	\
+} while (0)
+
+#define	QMD_TAILQ_CHECK_NEXT(elm, field) do {				\
+	if (TAILQ_NEXT((elm), field) != NULL &&				\
+	    TAILQ_NEXT((elm), field)->field.tqe_prev !=			\
+	     &((elm)->field.tqe_next))					\
+		panic("Bad link elm %p next->prev != elm", (elm));	\
+} while (0)
+
+#define	QMD_TAILQ_CHECK_PREV(elm, field) do {				\
+	if (*(elm)->field.tqe_prev != (elm))				\
+		panic("Bad link elm %p prev->next != elm", (elm));	\
+} while (0)
+#else
+#define	QMD_TAILQ_CHECK_HEAD(head, field)
+#define	QMD_TAILQ_CHECK_TAIL(head, headname)
+#define	QMD_TAILQ_CHECK_NEXT(elm, field)
+#define	QMD_TAILQ_CHECK_PREV(elm, field)
+#endif /* (_KERNEL && INVARIANTS) */
+
 #define	TAILQ_CONCAT(head1, head2, field) do {				\
 	if (!TAILQ_EMPTY(head2)) {					\
 		*(head1)->tqh_last = (head2)->tqh_first;		\
@@ -439,6 +498,7 @@ struct {								\
 } while (0)
 
 #define	TAILQ_INSERT_AFTER(head, listelm, elm, field) do {		\
+	QMD_TAILQ_CHECK_NEXT(listelm, field);				\
 	if ((TAILQ_NEXT((elm), field) = TAILQ_NEXT((listelm), field)) != NULL)\
 		TAILQ_NEXT((elm), field)->field.tqe_prev = 		\
 		    &TAILQ_NEXT((elm), field);				\
@@ -453,6 +513,7 @@ struct {								\
 } while (0)
 
 #define	TAILQ_INSERT_BEFORE(listelm, elm, field) do {			\
+	QMD_TAILQ_CHECK_PREV(listelm, field);				\
 	(elm)->field.tqe_prev = (listelm)->field.tqe_prev;		\
 	TAILQ_NEXT((elm), field) = (listelm);				\
 	*(listelm)->field.tqe_prev = (elm);				\
@@ -462,6 +523,7 @@ struct {								\
 } while (0)
 
 #define	TAILQ_INSERT_HEAD(head, elm, field) do {			\
+	QMD_TAILQ_CHECK_HEAD(head, field);				\
 	if ((TAILQ_NEXT((elm), field) = TAILQ_FIRST((head))) != NULL)	\
 		TAILQ_FIRST((head))->field.tqe_prev =			\
 		    &TAILQ_NEXT((elm), field);				\
@@ -474,6 +536,7 @@ struct {								\
 } while (0)
 
 #define	TAILQ_INSERT_TAIL(head, elm, field) do {			\
+	QMD_TAILQ_CHECK_TAIL(head, field);				\
 	TAILQ_NEXT((elm), field) = NULL;				\
 	(elm)->field.tqe_prev = (head)->tqh_last;			\
 	*(head)->tqh_last = (elm);					\
@@ -491,6 +554,8 @@ struct {								\
 	(*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
 
 #define	TAILQ_REMOVE(head, elm, field) do {				\
+	QMD_TAILQ_CHECK_NEXT(elm, field);				\
+	QMD_TAILQ_CHECK_PREV(elm, field);				\
 	if ((TAILQ_NEXT((elm), field)) != NULL)				\
 		TAILQ_NEXT((elm), field)->field.tqe_prev = 		\
 		    (elm)->field.tqe_prev;				\

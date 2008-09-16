@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)dirent.h	8.3 (Berkeley) 8/10/94
- * $FreeBSD: src/sys/sys/dirent.h,v 1.14 2004/04/07 04:19:49 imp Exp $
+ * $FreeBSD: src/sys/sys/dirent.h,v 1.15 2006/08/16 09:34:56 maxim Exp $
  */
 
 #ifndef	_SYS_DIRENT_H_
@@ -82,7 +82,7 @@ struct dirent {
 
 /*
  * The _GENERIC_DIRSIZ macro gives the minimum record length which will hold
- * the directory entry.  This requires the amount of space in struct direct
+ * the directory entry.  This returns the amount of space in struct direct
  * without the d_name field, plus enough space for the name with a terminating
  * null byte (dp->d_namlen+1), rounded up to a 4 byte boundary.
  *

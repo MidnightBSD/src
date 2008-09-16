@@ -37,7 +37,7 @@
  *
  * From: src/sys/sys/vnioctl.h,v 1.4
  *
- * $FreeBSD: src/sys/sys/mdioctl.h,v 1.20 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/mdioctl.h,v 1.21 2005/11/11 11:31:22 pjd Exp $
  */
 
 #ifndef _SYS_MDIOCTL_H_
@@ -65,7 +65,6 @@ struct md_ioctl {
 };
 
 #define MD_NAME		"md"
-#define MD_MODNAME	"g_md"
 #define MDCTL_NAME	"mdctl"
 #define MDIOVERSION	0
 

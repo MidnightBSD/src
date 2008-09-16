@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: lock.h,v 1.1.1.2 2006-02-25 02:37:50 laffer1 Exp $
- * $FreeBSD: src/sys/sys/lock.h,v 1.52.2.1 2005/12/20 19:28:24 jhb Exp $
+ *	from BSDI $Id: lock.h,v 1.2 2008-09-16 01:18:24 laffer1 Exp $
+ * $FreeBSD: src/sys/sys/lock.h,v 1.68 2007/04/03 17:57:50 kmacy Exp $
  */
 
 #ifndef _SYS_LOCK_H_
@@ -45,12 +45,21 @@ struct thread;
  * an error to perform any type of context switch while holding a spin lock.
  * Also, for an individual lock to be recursable, its class must allow
  * recursion and the lock itself must explicitly allow recursion.
+ *
+ * The 'lc_ddb_show' function pointer is used to dump class-specific
+ * data for the 'show lock' DDB command.  The 'lc_lock' and
+ * 'lc_unlock' function pointers are used in sleep(9) and cv_wait(9)
+ * to lock and unlock locks while blocking on a sleep queue.  The
+ * return value of 'lc_unlock' will be passed to 'lc_lock' on resume
+ * to allow communication of state between the two routines.
  */
 
 struct lock_class {
 	const	char *lc_name;
 	u_int	lc_flags;
 	void	(*lc_ddb_show)(struct lock_object *lock);
+	void	(*lc_lock)(struct lock_object *lock, int how);
+	int	(*lc_unlock)(struct lock_object *lock);
 };
 
 #define	LC_SLEEPLOCK	0x00000001	/* Sleep lock. */
@@ -67,6 +76,19 @@ struct lock_class {
 #define	LO_SLEEPABLE	0x00100000	/* Lock may be held while sleeping. */
 #define	LO_UPGRADABLE	0x00200000	/* Lock may be upgraded/downgraded. */
 #define	LO_DUPOK	0x00400000	/* Don't check for duplicate acquires */
+#define	LO_ENROLLPEND	0x00800000	/* On the pending enroll list. */
+#define	LO_CLASSMASK	0x0f000000	/* Class index bitmask. */
+#define LO_NOPROFILE    0x10000000      /* Don't profile this lock */
+
+/*
+ * Lock classes are statically assigned an index into the gobal lock_classes
+ * array.  Debugging code looks up the lock class for a given lock object
+ * by indexing the array.
+ */
+#define	LO_CLASSSHIFT		24
+#define	LO_CLASSINDEX(lock)	((((lock)->lo_flags) & LO_CLASSMASK) >> LO_CLASSSHIFT)
+#define	LOCK_CLASS(lock)	(lock_classes[LO_CLASSINDEX((lock))])
+#define	LOCK_CLASS_MAX		(LO_CLASSMASK >> LO_CLASSSHIFT)
 
 #define	LI_RECURSEMASK	0x0000ffff	/* Recursion depth of lock instance. */
 #define	LI_EXCLUSIVE	0x00010000	/* Exclusive lock instance. */
@@ -94,7 +116,7 @@ struct lock_class {
  * Lock instances.  A lock instance is the data associated with a lock while
  * it is held by witness.  For example, a lock instance will hold the
  * recursion count of a lock.  Lock instances are held in lists.  Spin locks
- * are held in a per-cpu list while sleep locks are held in per-process list.
+ * are held in a per-cpu list while sleep locks are held in per-thread list.
  */
 struct lock_instance {
 	struct	lock_object *li_lock;
@@ -104,9 +126,9 @@ struct lock_instance {
 };
 
 /*
- * A simple list type used to build the list of locks held by a process
+ * A simple list type used to build the list of locks held by a thread
  * or CPU.  We can't simply embed the list in struct lock_object since a
- * lock may be held by more than one process if it is a shared lock.  Locks
+ * lock may be held by more than one thread if it is a shared lock.  Locks
  * are added to the head of the list, so we fill up each list entry from
  * "the back" logically.  To ease some of the arithmetic, we actually fill
  * in each list entry the normal way (childer[0] then children[1], etc.) but
@@ -130,7 +152,7 @@ struct lock_list_entry {
  * calling conventions for this debugging code in modules so that modules can
  * work with both debug and non-debug kernels.
  */
-#if defined(KLD_MODULE) || defined(WITNESS) || defined(INVARIANTS) || defined(INVARIANT_SUPPORT) || defined(KTR) || defined(MUTEX_PROFILING)
+#if defined(KLD_MODULE) || defined(WITNESS) || defined(INVARIANTS) || defined(INVARIANT_SUPPORT) || defined(KTR) || defined(LOCK_PROFILING)
 #define	LOCK_DEBUG	1
 #else
 #define	LOCK_DEBUG	0
@@ -165,24 +187,26 @@ struct lock_list_entry {
 #define	LOCK_LOG_LOCK(opname, lo, flags, recurse, file, line) do {	\
 	if (LOCK_LOG_TEST((lo), (flags)))				\
 		CTR5(KTR_LOCK, opname " (%s) %s r = %d at %s:%d",	\
-		    (lo)->lo_class->lc_name, (lo)->lo_name,		\
+		    LOCK_CLASS(lo)->lc_name, (lo)->lo_name,		\
 		    (u_int)(recurse), (file), (line));			\
 } while (0)
 
 #define	LOCK_LOG_TRY(opname, lo, flags, result, file, line) do {	\
 	if (LOCK_LOG_TEST((lo), (flags)))				\
 		CTR5(KTR_LOCK, "TRY_" opname " (%s) %s result=%d at %s:%d",\
-		    (lo)->lo_class->lc_name, (lo)->lo_name,		\
+		    LOCK_CLASS(lo)->lc_name, (lo)->lo_name,		\
 		    (u_int)(result), (file), (line));			\
 } while (0)
 
 #define	LOCK_LOG_INIT(lo, flags) do {					\
 	if (LOCK_LOG_TEST((lo), (flags)))				\
 		CTR4(KTR_LOCK, "%s: %p (%s) %s", __func__, (lo),	\
- 		    (lo)->lo_class->lc_name, (lo)->lo_name);		\
+ 		    LOCK_CLASS(lo)->lc_name, (lo)->lo_name);		\
 } while (0)
 
 #define	LOCK_LOG_DESTROY(lo, flags)	LOCK_LOG_INIT(lo, flags)
+
+#define	lock_initalized(lo)	((lo)->lo_flags & LO_INITIALIZED)
 
 /*
  * Helpful macros for quickly coming up with assertions with informative
@@ -197,7 +221,14 @@ struct lock_list_entry {
 extern struct lock_class lock_class_mtx_sleep;
 extern struct lock_class lock_class_mtx_spin;
 extern struct lock_class lock_class_sx;
+extern struct lock_class lock_class_rw;
+extern struct lock_class lock_class_lockmgr;
 
+extern struct lock_class *lock_classes[];
+
+void	lock_init(struct lock_object *, struct lock_class *,
+    const char *, const char *, int);
+void	lock_destroy(struct lock_object *);
 void	spinlock_enter(void);
 void	spinlock_exit(void);
 void	witness_init(struct lock_object *);
@@ -249,6 +280,9 @@ const char *witness_file(struct lock_object *);
 #define	WITNESS_UNLOCK(lock, flags, file, line)				\
 	witness_unlock((lock), (flags), (file), (line))
 
+#define	WITNESS_CHECK(flags, lock, fmt, ...)				\
+	witness_warn((flags), (lock), (fmt), ## __VA_ARGS__)
+
 #define	WITNESS_WARN(flags, lock, fmt, ...)				\
 	witness_warn((flags), (lock), (fmt), ## __VA_ARGS__)
 
@@ -269,14 +303,15 @@ const char *witness_file(struct lock_object *);
 	witness_line(lock)
 
 #else	/* WITNESS */
-#define	WITNESS_INIT(lock)	((lock)->lo_flags |= LO_INITIALIZED)
-#define	WITNESS_DESTROY(lock)	((lock)->lo_flags &= ~LO_INITIALIZED)
+#define	WITNESS_INIT(lock)
+#define	WITNESS_DESTROY(lock)
 #define	WITNESS_DEFINEORDER(lock1, lock2)	0
 #define	WITNESS_CHECKORDER(lock, flags, file, line)
 #define	WITNESS_LOCK(lock, flags, file, line)
 #define	WITNESS_UPGRADE(lock, flags, file, line)
 #define	WITNESS_DOWNGRADE(lock, flags, file, line)
 #define	WITNESS_UNLOCK(lock, flags, file, line)
+#define	WITNESS_CHECK(flags, lock, fmt, ...)	0
 #define	WITNESS_WARN(flags, lock, fmt, ...)
 #define	WITNESS_SAVE_DECL(n)
 #define	WITNESS_SAVE(lock, n)
@@ -289,16 +324,12 @@ const char *witness_file(struct lock_object *);
  * Helper macros to allow developers to add explicit lock order checks
  * wherever they please without having to actually grab a lock to do so.
  */
-#define	witness_check_mutex(m)						\
-	WITNESS_CHECKORDER(&(m)->mtx_object, LOP_EXCLUSIVE, LOCK_FILE,	\
+#define	witness_check(l)						\
+	WITNESS_CHECKORDER(&(l)->lock_object, LOP_EXCLUSIVE, LOCK_FILE,	\
 	    LOCK_LINE)
 
-#define	witness_check_shared_sx(sx)					\
-	WITNESS_CHECKORDER(&(sx)->sx_object, 0, LOCK_FILE, LOCK_LINE)
+#define	witness_check_shared(l)						\
+	WITNESS_CHECKORDER(&(l)->lock_object, 0, LOCK_FILE, LOCK_LINE)
 	
-#define	witness_check_exclusive_sx(sx)					\
-	WITNESS_CHECKORDER(&(sx)->sx_object, LOP_EXCLUSIVE, LOCK_FILE,	\
-	    LOCK_LINE)
-
 #endif	/* _KERNEL */
 #endif	/* _SYS_LOCK_H_ */

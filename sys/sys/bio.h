@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)buf.h	8.9 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/sys/bio.h,v 1.144 2005/06/12 22:33:06 jeff Exp $
+ * $FreeBSD: src/sys/sys/bio.h,v 1.147 2006/10/31 21:11:21 pjd Exp $
  */
 
 #ifndef _SYS_BIO_H_
@@ -59,7 +59,7 @@ struct bio {
 	long	bio_bcount;		/* Valid bytes in buffer. */
 	caddr_t	bio_data;		/* Memory, superblocks, indirect etc. */
 	int	bio_error;		/* Errno for BIO_ERROR. */
-	long	bio_resid;		/* Remaining I/0 in bytes. */
+	long	bio_resid;		/* Remaining I/O in bytes. */
 	void	(*bio_done)(struct bio *);
 	void	*bio_driver1;		/* Private use by the provider. */
 	void	*bio_driver2;		/* Private use by the provider. */
@@ -78,6 +78,11 @@ struct bio {
 
 	bio_task_t *bio_task;		/* Task_queue handler */
 	void	*bio_task_arg;		/* Argument to above */
+#ifdef DIAGNOSTIC
+	void	*_bio_caller1;
+	void	*_bio_caller2;
+	uint8_t	_bio_cflags;
+#endif
 
 	/* XXX: these go away when bio chaining is introduced */
 	daddr_t bio_pblkno;               /* physical block number */
@@ -88,6 +93,7 @@ struct bio {
 #define BIO_WRITE	0x02
 #define BIO_DELETE	0x04
 #define BIO_GETATTR	0x08
+#define BIO_FLUSH	0x10
 #define BIO_CMD0	0x20	/* Available for local hacks */
 #define BIO_CMD1	0x40	/* Available for local hacks */
 #define BIO_CMD2	0x80	/* Available for local hacks */

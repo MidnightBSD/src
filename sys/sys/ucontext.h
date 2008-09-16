@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/ucontext.h,v 1.11 2003/11/09 20:31:04 marcel Exp $
+ * $FreeBSD: src/sys/sys/ucontext.h,v 1.12 2006/05/12 05:04:46 jhb Exp $
  */
 
 #ifndef _SYS_UCONTEXT_H_
@@ -54,7 +54,7 @@ typedef struct __ucontext {
 } ucontext_t;
 
 #if defined(_KERNEL) && defined(COMPAT_FREEBSD4)
-#if defined(__i386__) || defined(__alpha__)
+#if defined(__i386__)
 struct ucontext4 {
 	sigset_t	uc_sigmask;
 	struct mcontext4 uc_mcontext;
@@ -62,9 +62,9 @@ struct ucontext4 {
 	stack_t		uc_stack;
 	int		__spare__[8];
 };
-#else	/* __i386__ || __alpha__ */
+#else	/* __i386__ */
 #define ucontext4 ucontext
-#endif	/* __i386__ || __alpha__ */
+#endif	/* __i386__ */
 #endif	/* _KERNEL */
 
 #ifndef _KERNEL

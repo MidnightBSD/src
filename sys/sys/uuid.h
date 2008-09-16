@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/uuid.h,v 1.4 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/uuid.h,v 1.6 2005/10/07 13:37:10 marcel Exp $
  */
 
 #ifndef _SYS_UUID_H_
@@ -56,9 +56,13 @@ struct uuid {
 
 struct sbuf;
 
+struct uuid *kern_uuidgen(struct uuid *, size_t);
+
 int snprintf_uuid(char *, size_t, struct uuid *);
 int printf_uuid(struct uuid *);
 int sbuf_printf_uuid(struct sbuf *, struct uuid *);
+int parse_uuid(const char *, struct uuid *);
+
 void be_uuid_dec(void const *buf, struct uuid *uuid);
 void be_uuid_enc(void *buf, struct uuid const *uuid);
 void le_uuid_dec(void const *buf, struct uuid *uuid);

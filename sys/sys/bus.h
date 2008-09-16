@@ -23,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/bus.h,v 1.70.2.1 2006/07/07 23:30:14 imp Exp $
+ * $FreeBSD: src/sys/sys/bus.h,v 1.78.4.1 2008/02/06 03:35:40 iwasaki Exp $
  */
 
 #ifndef _SYS_BUS_H_
 #define _SYS_BUS_H_
+
+#include <sys/_bus_dma.h>
 
 /**
  * @defgroup NEWBUS newbus - a generic framework for managing devices
@@ -81,14 +83,10 @@ struct u_device {
  * hook to send the message.  However, devctl_queue_data is also
  * included in case devctl_notify isn't sufficiently general.
  */
+boolean_t devctl_process_running(void);
 void devctl_notify(const char *__system, const char *__subsystem,
     const char *__type, const char *__data);
 void devctl_queue_data(char *__data);
-
-/*
- * Forward declarations
- */
-typedef struct device		*device_t;
 
 /**
  * @brief A device driver (included mainly for compatibility with
@@ -125,8 +123,43 @@ typedef struct devclass		*devclass_t;
 #define device_method_t		kobj_method_t
 
 /**
- * @brief A driver interrupt service routine
+ * @brief Driver interrupt filter return values
+ *
+ * If a driver provides an interrupt filter routine it must return an
+ * integer consisting of oring together zero or more of the following
+ * flags:
+ *
+ *	FILTER_STRAY	- this device did not trigger the interrupt
+ *	FILTER_HANDLED	- the interrupt has been fully handled and can be EOId
+ *	FILTER_SCHEDULE_THREAD - the threaded interrupt handler should be
+ *			  scheduled to execute
+ *
+ * If the driver does not provide a filter, then the interrupt code will
+ * act is if the filter had returned FILTER_SCHEDULE_THREAD.  Note that it
+ * is illegal to specify any other flag with FILTER_STRAY and that it is
+ * illegal to not specify either of FILTER_HANDLED or FILTER_SCHEDULE_THREAD
+ * if FILTER_STRAY is not specified.
  */
+#define	FILTER_STRAY		0x01
+#define	FILTER_HANDLED		0x02
+#define	FILTER_SCHEDULE_THREAD	0x04
+
+/**
+ * @brief Driver interrupt service routines
+ *
+ * The filter routine is run in primary interrupt context and may not
+ * block or use regular mutexes.  It may only use spin mutexes for
+ * synchronization.  The filter may either completely handle the
+ * interrupt or it may perform some of the work and defer more
+ * expensive work to the regular interrupt handler.  If a filter
+ * routine is not registered by the driver, then the regular interrupt
+ * handler is always used to handle interrupts from this device.
+ *
+ * The regular interrupt handler executes in its own thread context
+ * and may use regular mutexes.  However, it is prohibited from
+ * sleeping on a sleep queue.
+ */
+typedef int driver_filter_t(void*);
 typedef void driver_intr_t(void*);
 
 /**
@@ -245,6 +278,9 @@ void	root_bus_configure(void);
 
 int	bus_generic_activate_resource(device_t dev, device_t child, int type,
 				      int rid, struct resource *r);
+device_t
+	bus_generic_add_child(device_t dev, int order, const char *name,
+			      int unit);
 struct resource *
 	bus_generic_alloc_resource(device_t bus, device_t child, int type,
 				   int *rid, u_long start, u_long end,
@@ -257,6 +293,8 @@ int	bus_generic_deactivate_resource(device_t dev, device_t child, int type,
 					int rid, struct resource *r);
 int	bus_generic_detach(device_t dev);
 void	bus_generic_driver_added(device_t dev, driver_t *driver);
+bus_dma_tag_t
+	bus_generic_get_dma_tag(device_t dev, device_t child);
 struct resource_list *
 	bus_generic_get_resource_list (device_t, device_t);
 int	bus_print_child_header(device_t dev, device_t child);
@@ -270,7 +308,8 @@ int	bus_generic_release_resource(device_t bus, device_t child,
 int	bus_generic_resume(device_t dev);
 int	bus_generic_setup_intr(device_t dev, device_t child,
 			       struct resource *irq, int flags,
-			       driver_intr_t *intr, void *arg, void **cookiep);
+			       driver_filter_t *filter, driver_intr_t *intr, 
+			       void *arg, void **cookiep);
 
 struct resource *
 	bus_generic_rl_alloc_resource (device_t, device_t, int, int *,
@@ -294,6 +333,16 @@ int	bus_generic_write_ivar(device_t dev, device_t child, int which,
  * Wrapper functions for the BUS_*_RESOURCE methods to make client code
  * a little simpler.
  */
+
+struct resource_spec {
+	int	type;
+	int	rid;
+	int	flags;
+};
+
+int bus_alloc_resources(device_t dev, struct resource_spec *rs, struct resource **res);
+void bus_release_resources(device_t dev, const struct resource_spec *rs, struct resource **res);
+
 struct	resource *bus_alloc_resource(device_t dev, int type, int *rid,
 				     u_long start, u_long end, u_long count,
 				     u_int flags);
@@ -301,11 +350,13 @@ int	bus_activate_resource(device_t dev, int type, int rid,
 			      struct resource *r);
 int	bus_deactivate_resource(device_t dev, int type, int rid,
 				struct resource *r);
+bus_dma_tag_t bus_get_dma_tag(device_t dev);
 int	bus_release_resource(device_t dev, int type, int rid,
 			     struct resource *r);
 int	bus_free_resource(device_t dev, int type, struct resource *r);
 int	bus_setup_intr(device_t dev, struct resource *r, int flags,
-		       driver_intr_t handler, void *arg, void **cookiep);
+		       driver_filter_t filter, driver_intr_t handler, 
+		       void *arg, void **cookiep);
 int	bus_teardown_intr(device_t dev, struct resource *r, void *cookie);
 int	bus_set_resource(device_t dev, int type, int rid,
 			 u_long start, u_long count);
@@ -317,28 +368,13 @@ void	bus_delete_resource(device_t dev, int type, int rid);
 int	bus_child_present(device_t child);
 int	bus_child_pnpinfo_str(device_t child, char *buf, size_t buflen);
 int	bus_child_location_str(device_t child, char *buf, size_t buflen);
+void	bus_enumerate_hinted_children(device_t bus);
 
 static __inline struct resource *
 bus_alloc_resource_any(device_t dev, int type, int *rid, u_int flags)
 {
 	return (bus_alloc_resource(dev, type, rid, 0ul, ~0ul, 1, flags));
 }
-
-/*
- * Forward compatibility define.   bus_get_dma_tag is defined in current
- * to get the parent's dma tag.  In RELENG_6 this is currently spelled NULL,
- * so provide a stop-gap compatibilty hook until this functionality is
- * merged from head (if ever) (FreeBSD)
- */
-#define bus_get_dma_tag(a) NULL
-
-/*
- * Forward compatibility define.   bus_get_dma_tag is defined in current
- * to get the parent's dma tag.  In RELENG_6 this is currently spelled NULL,
- * so provide a stop-gap compatibilty hook until this functionality is
- * merged from head (if ever) (FreeBSD)
- */
-#define bus_get_dma_tag(a) NULL
 
 /*
  * Access functions for device.
@@ -376,6 +412,7 @@ int	device_is_quiet(device_t dev);
 int	device_print_prettyname(device_t dev);
 int	device_printf(device_t dev, const char *, ...) __printflike(2, 3);
 int	device_probe_and_attach(device_t dev);
+int	device_probe_child(device_t bus, device_t dev);
 int	device_quiesce(device_t dev);
 void	device_quiet(device_t dev);
 void	device_set_desc(device_t dev, const char* desc);
@@ -531,139 +568,139 @@ static __inline void varp ## _set_ ## var(device_t dev, type t)		\
 
 /**
  * Shorthand macros, taking resource argument
+ * Generated with sys/tools/bus_macro.sh
  */
 
 #define bus_barrier(r, o, l, f) \
-	bus_space_barrier(rman_get_bustag(r), rman_get_bushandle(r), (o), (l), (f))
+	bus_space_barrier((r)->r_bustag, (r)->r_bushandle, (o), (l), (f))
 #define bus_read_1(r, o) \
-	bus_space_read_1(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_1((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_1(r, o, d, c) \
-	bus_space_read_multi_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_1(r, o, d, c) \
-	bus_space_read_region_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_1(r, o, v, c) \
-	bus_space_set_multi_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_1((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_1(r, o, v, c) \
-	bus_space_set_region_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_1((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_1(r, o, v) \
-	bus_space_write_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_1((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_1(r, o, d, c) \
-	bus_space_write_multi_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_1(r, o, d, c) \
-	bus_space_write_region_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_region_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_stream_1(r, o) \
-	bus_space_read_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_stream_1((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_stream_1(r, o, d, c) \
-	bus_space_read_multi_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_stream_1(r, o, d, c) \
-	bus_space_read_region_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_stream_1(r, o, v, c) \
-	bus_space_set_multi_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_stream_1(r, o, v, c) \
-	bus_space_set_region_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_stream_1(r, o, v) \
-	bus_space_write_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_stream_1(r, o, d, c) \
-	bus_space_write_multi_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_stream_1(r, o, d, c) \
-	bus_space_write_region_stream_1(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_region_stream_1((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_2(r, o) \
-	bus_space_read_2(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_2((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_2(r, o, d, c) \
-	bus_space_read_multi_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_2(r, o, d, c) \
-	bus_space_read_region_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_2(r, o, v, c) \
-	bus_space_set_multi_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_2((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_2(r, o, v, c) \
-	bus_space_set_region_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_2((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_2(r, o, v) \
-	bus_space_write_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_2((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_2(r, o, d, c) \
-	bus_space_write_multi_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_2(r, o, d, c) \
-	bus_space_write_region_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_region_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_stream_2(r, o) \
-	bus_space_read_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_stream_2((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_stream_2(r, o, d, c) \
-	bus_space_read_multi_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_stream_2(r, o, d, c) \
-	bus_space_read_region_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_stream_2(r, o, v, c) \
-	bus_space_set_multi_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_stream_2(r, o, v, c) \
-	bus_space_set_region_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_stream_2(r, o, v) \
-	bus_space_write_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_stream_2(r, o, d, c) \
-	bus_space_write_multi_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_stream_2(r, o, d, c) \
-	bus_space_write_region_stream_2(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_region_stream_2((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_4(r, o) \
-	bus_space_read_4(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_4((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_4(r, o, d, c) \
-	bus_space_read_multi_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_4(r, o, d, c) \
-	bus_space_read_region_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_4(r, o, v, c) \
-	bus_space_set_multi_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_4((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_4(r, o, v, c) \
-	bus_space_set_region_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_4((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_4(r, o, v) \
-	bus_space_write_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_4((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_4(r, o, d, c) \
-	bus_space_write_multi_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_4(r, o, d, c) \
-	bus_space_write_region_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_region_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_stream_4(r, o) \
-	bus_space_read_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_stream_4((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_stream_4(r, o, d, c) \
-	bus_space_read_multi_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_stream_4(r, o, d, c) \
-	bus_space_read_region_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_stream_4(r, o, v, c) \
-	bus_space_set_multi_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_stream_4(r, o, v, c) \
-	bus_space_set_region_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_stream_4(r, o, v) \
-	bus_space_write_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_stream_4(r, o, d, c) \
-	bus_space_write_multi_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_stream_4(r, o, d, c) \
-	bus_space_write_region_stream_4(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_region_stream_4((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_8(r, o) \
-	bus_space_read_8(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_8((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_8(r, o, d, c) \
-	bus_space_read_multi_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_8(r, o, d, c) \
-	bus_space_read_region_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_8(r, o, v, c) \
-	bus_space_set_multi_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_8((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_8(r, o, v, c) \
-	bus_space_set_region_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_8((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_8(r, o, v) \
-	bus_space_write_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_8((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_8(r, o, d, c) \
-	bus_space_write_multi_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_8(r, o, d, c) \
-	bus_space_write_region_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_region_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_stream_8(r, o) \
-	bus_space_read_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o))
+	bus_space_read_stream_8((r)->r_bustag, (r)->r_bushandle, (o))
 #define bus_read_multi_stream_8(r, o, d, c) \
-	bus_space_read_multi_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_multi_stream_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_read_region_stream_8(r, o, d, c) \
-	bus_space_read_region_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_read_region_stream_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_set_multi_stream_8(r, o, v, c) \
-	bus_space_set_multi_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_multi_stream_8((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_set_region_stream_8(r, o, v, c) \
-	bus_space_set_region_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (v), (c))
+	bus_space_set_region_stream_8((r)->r_bustag, (r)->r_bushandle, (o), (v), (c))
 #define bus_write_stream_8(r, o, v) \
-	bus_space_write_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (v))
+	bus_space_write_stream_8((r)->r_bustag, (r)->r_bushandle, (o), (v))
 #define bus_write_multi_stream_8(r, o, d, c) \
-	bus_space_write_multi_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
+	bus_space_write_multi_stream_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #define bus_write_region_stream_8(r, o, d, c) \
-	bus_space_write_region_stream_8(rman_get_bustag(r), rman_get_bushandle(r), (o), (d), (c))
-
+	bus_space_write_region_stream_8((r)->r_bustag, (r)->r_bushandle, (o), (d), (c))
 #endif /* _KERNEL */
 
 #endif /* !_SYS_BUS_H_ */

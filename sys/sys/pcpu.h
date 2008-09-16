@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/pcpu.h,v 1.16 2005/04/26 17:07:40 jhb Exp $
+ * $FreeBSD: src/sys/sys/pcpu.h,v 1.22 2007/06/06 07:35:08 davidxu Exp $
  */
 
 #ifndef _SYS_PCPU_H_
@@ -60,7 +60,7 @@ struct pcpu {
 	struct thread	*pc_fpcurthread;	/* Fp state owner */
 	struct thread	*pc_deadthread;		/* Zombie thread or NULL */
 	struct pcb	*pc_curpcb;		/* Current pcb */
-	struct bintime	pc_switchtime;	
+	uint64_t	pc_switchtime;	
 	int		pc_switchticks;
 	u_int		pc_cpuid;		/* This cpu number */
 	cpumask_t	pc_cpumask;		/* This cpu mask */
@@ -85,21 +85,6 @@ extern struct cpuhead cpuhead;
 #ifndef curthread
 #define	curthread	PCPU_GET(curthread)
 #endif
-
-/*
- * MI PCPU support functions
- *
- * PCPU_LAZY_INC() -	Lazily increment a per-cpu stats counter, without
- *			guarenteeing atomicity or even necessarily consistency.
- *
- *			XXX we need to create MD primitives to support
- *			this to guarentee at least some level of consistency,
- *			i.e., to prevent us from totally corrupting the 
- *			counters due to preemption in a multi-instruction
- *			increment sequence for architectures that do not
- *			support single-instruction memory increments.
- */
-#define PCPU_LAZY_INC(var)	(++*PCPU_PTR(var))
 
 /*
  * Machine dependent callouts.  cpu_pcpu_init() is responsible for

@@ -28,7 +28,7 @@
  *
  *	@(#)time.h	8.5 (Berkeley) 5/4/95
  * from: FreeBSD: src/sys/sys/time.h,v 1.43 2000/03/20 14:09:05 phk Exp
- *	$FreeBSD: src/sys/sys/timespec.h,v 1.4 2005/01/07 02:29:24 imp Exp $
+ *	$FreeBSD: src/sys/sys/timespec.h,v 1.5 2005/10/23 04:22:56 davidxu Exp $
  */
 
 /*
@@ -61,5 +61,14 @@ struct timespec {
 	} while (0)
 
 #endif /* __BSD_VISIBLE */
+
+/*
+ * Structure defined by POSIX.1b to be like a itimerval, but with
+ * timespecs. Used in the timer_*() system calls.
+ */
+struct itimerspec {
+	struct timespec  it_interval;
+	struct timespec  it_value;
+};
 
 #endif /* _SYS_TIMESPEC_H_ */

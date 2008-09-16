@@ -23,11 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/event.h,v 1.32 2005/07/01 16:28:32 ssouhlal Exp $
+ * $FreeBSD: src/sys/sys/event.h,v 1.37.4.1 2008/01/28 10:43:11 dumbbell Exp $
  */
 
 #ifndef _SYS_EVENT_H_
 #define _SYS_EVENT_H_
+
+#include <sys/queue.h> 
 
 #define EVFILT_READ		(-1)
 #define EVFILT_WRITE		(-2)
@@ -38,8 +40,8 @@
 #define EVFILT_TIMER		(-7)	/* timers */
 #define EVFILT_NETDEV		(-8)	/* network devices */
 #define EVFILT_FS		(-9)	/* filesystem events */
-
-#define EVFILT_SYSCOUNT		9
+#define EVFILT_LIO		(-10)	/* attached to lio requests */
+#define EVFILT_SYSCOUNT		10
 
 #define EV_SET(kevp_, a, b, c, d, e, f) do {	\
 	struct kevent *kevp = (kevp_);		\
@@ -114,13 +116,6 @@ struct kevent {
 #define NOTE_LINKDOWN	0x0002			/* link is down */
 #define NOTE_LINKINV	0x0004			/* link state is invalid */
 
-/*
- * This is currently visible to userland to work around broken
- * programs which pull in <sys/proc.h>.
- */
-#include <sys/queue.h> 
-#include <sys/_lock.h>
-#include <sys/_mutex.h>
 struct knote;
 SLIST_HEAD(klist, knote);
 struct kqueue;
@@ -186,6 +181,8 @@ struct knote {
 	union {
 		struct		file *p_fp;	/* file data pointer */
 		struct		proc *p_proc;	/* proc pointer */
+		struct		aiocblist *p_aio;	/* AIO job pointer */
+		struct		aioliojob *p_lio;	/* LIO job pointer */ 
 	} kn_ptr;
 	struct			filterops *kn_fop;
 	void			*kn_hook;
@@ -223,8 +220,8 @@ extern void	knlist_cleardel(struct knlist *knl, struct thread *td,
 #define knlist_delete(knl, td, islocked)			\
 		knlist_cleardel((knl), (td), (islocked), 1)
 extern void	knote_fdclose(struct thread *p, int fd);
-extern int 	kqueue_register(struct kqueue *kq,
-		    struct kevent *kev, struct thread *p, int waitok);
+extern int 	kqfd_register(int fd, struct kevent *kev, struct thread *p,
+		    int waitok);
 extern int	kqueue_add_filteropts(int filt, struct filterops *filtops);
 extern int	kqueue_del_filteropts(int filt);
 
@@ -235,7 +232,7 @@ struct timespec;
 
 __BEGIN_DECLS
 int     kqueue(void);
-int     kevent(int kq, struct kevent *changelist, int nchanges,
+int     kevent(int kq, const struct kevent *changelist, int nchanges,
 	    struct kevent *eventlist, int nevents,
 	    const struct timespec *timeout);
 __END_DECLS

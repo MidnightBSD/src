@@ -23,18 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/watchdog.h,v 1.3 2004/02/28 20:06:58 phk Exp $
+ * $FreeBSD: src/sys/sys/watchdog.h,v 1.4 2006/12/15 21:44:49 n_hibma Exp $
  */
 #ifndef _SYS_WATCHDOG_H
 #define	_SYS_WATCHDOG_H
 
 #include <sys/ioccom.h>
 
-#ifdef I_HAVE_TOTALLY_LOST_MY_SENSE_OF_HUMOUR
-#define	_PATH_WATCHDOG	"watchdog"
-#else
 #define	_PATH_WATCHDOG	"fido"
-#endif
 
 #define WDIOCPATPAT	_IOW('W', 42, u_int)
 

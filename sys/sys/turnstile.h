@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/turnstile.h,v 1.7 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/turnstile.h,v 1.12 2007/06/04 23:51:44 jeff Exp $
  */
 
 #ifndef _SYS_TURNSTILE_H_
@@ -34,7 +34,10 @@
 
 /*
  * Turnstile interface.  Non-sleepable locks use a turnstile for the
- * queue of threads blocked on them when they are contested.
+ * queue of threads blocked on them when they are contested.  Each
+ * turnstile contains two sub-queues: one for threads waiting for a
+ * shared, or eread, lock, and one for threads waiting for an
+ * exclusive, or write, lock.
  *
  * A thread calls turnstile_lock() to lock the turnstile chain associated
  * with a given lock.  A thread calls turnstile_wait() when the lock is
@@ -50,7 +53,10 @@
  * blocked threads.  The turnstile_signal() function returns true if the
  * turnstile became empty as a result.  After the higher level code finishes
  * releasing the lock, turnstile_unpend() must be called to wake up the
- * pending thread(s).
+ * pending thread(s) and give up ownership of the turnstile.
+ *
+ * Alternatively, if a thread wishes to relinquish ownership of a thread
+ * without waking up any waiters, it may call turnstile_disown().
  *
  * When a lock is acquired that already has at least one thread contested
  * on it, the new owner of the lock must claim ownership of the turnstile
@@ -62,9 +68,9 @@
  * released at thread destruction may not be the same turnstile that the
  * thread allocated when it was created.
  *
- * A function can query a turnstile to see if it is empty via
- * turnstile_empty().  The highest priority thread blocked on a turnstile
- * can be obtained via turnstile_head().
+ * The highest priority thread blocked on a specified queue of a
+ * turnstile can be obtained via turnstile_head().  A given queue can
+ * also be queried to see if it is empty via turnstile_empty().
  */
 
 struct lock_object;
@@ -73,20 +79,31 @@ struct turnstile;
 
 #ifdef _KERNEL
 
+/* Which queue to block on or which queue to wakeup one or more threads from. */
+#define	TS_EXCLUSIVE_QUEUE	0
+#define	TS_SHARED_QUEUE		1
+
+/* The type of lock currently held. */
+#define	TS_EXCLUSIVE_LOCK	TS_EXCLUSIVE_QUEUE
+#define	TS_SHARED_LOCK		TS_SHARED_QUEUE
+
 void	init_turnstiles(void);
 void	turnstile_adjust(struct thread *, u_char);
 struct turnstile *turnstile_alloc(void);
-void	turnstile_broadcast(struct turnstile *);
-void	turnstile_claim(struct lock_object *);
-int	turnstile_empty(struct turnstile *);
+void	turnstile_broadcast(struct turnstile *, int);
+void	turnstile_cancel(struct turnstile *);
+void	turnstile_chain_lock(struct lock_object *);
+void	turnstile_chain_unlock(struct lock_object *);
+void	turnstile_claim(struct turnstile *);
+void	turnstile_disown(struct turnstile *);
+int	turnstile_empty(struct turnstile *ts, int queue);
 void	turnstile_free(struct turnstile *);
-struct thread *turnstile_head(struct turnstile *);
-void	turnstile_lock(struct lock_object *);
+struct thread *turnstile_head(struct turnstile *, int);
 struct turnstile *turnstile_lookup(struct lock_object *);
-void	turnstile_release(struct lock_object *);
-int	turnstile_signal(struct turnstile *);
-void	turnstile_unpend(struct turnstile *);
-void	turnstile_wait(struct lock_object *, struct thread *);
+int	turnstile_signal(struct turnstile *, int);
+struct turnstile *turnstile_trywait(struct lock_object *);
+void	turnstile_unpend(struct turnstile *, int);
+void	turnstile_wait(struct turnstile *, struct thread *, int);
 
 #endif	/* _KERNEL */
 #endif	/* _SYS_TURNSTILE_H_ */

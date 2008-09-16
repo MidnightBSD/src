@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)gmon.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/sys/gmon.h,v 1.19 2004/06/14 18:39:28 bms Exp $
+ * $FreeBSD: src/sys/sys/gmon.h,v 1.20 2006/03/29 18:17:03 jhb Exp $
  */
 
 #ifndef _SYS_GMON_H_
@@ -200,12 +200,13 @@ extern struct gmonparam _gmonparam;
 
 #ifdef _KERNEL
 
-#ifdef GUPROF
-
-#define	CALIB_SCALE	1000
 #define	KCOUNT(p,index) \
 	((p)->kcount[(index) / (HISTFRACTION * sizeof(HISTCOUNTER))])
 #define	PC_TO_I(p, pc)	((uintfptr_t)(pc) - (uintfptr_t)(p)->lowpc)
+
+#ifdef GUPROF
+
+#define	CALIB_SCALE	1000
 
 extern int	cputime_bias;
 

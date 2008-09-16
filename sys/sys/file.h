@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)file.h	8.3 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/file.h,v 1.70 2005/02/10 12:27:58 phk Exp $
+ * $FreeBSD: src/sys/sys/file.h,v 1.73 2007/01/05 19:59:46 jhb Exp $
  */
 
 #ifndef _SYS_FILE_H_
@@ -58,6 +58,7 @@ struct socket;
 #define	DTYPE_FIFO	4	/* fifo (named pipe) */
 #define	DTYPE_KQUEUE	5	/* event queue */
 #define	DTYPE_CRYPTO	6	/* crypto */
+#define	DTYPE_MQUEUE	7	/* posix message queue */
 
 #ifdef _KERNEL
 
@@ -116,11 +117,18 @@ struct file {
 
 	/* DFLAG_SEEKABLE specific fields */
 	off_t	f_offset;
-
+	short     f_vnread_flags; /* 
+				   * (f) home grown sleep lock for f_offset
+				   * Used only for shared vnode locking in
+				   * vnread()
+				   */
+#define  FOFFSET_LOCKED       0x1
+#define  FOFFSET_LOCK_WAITING 0x2		 
 	/* DTYPE_SOCKET specific fields */
 	short	f_gcflag;	/* used by thread doing fd garbage collection */
 #define	FMARK		0x1	/* mark during gc() */
 #define	FDEFER		0x2	/* defer for next gc pass */
+#define	FWAIT		0x4	/* gc is scanning message buffers */
 	int	f_msgcount;	/* (f) references from message queue */
 
 	/* DTYPE_VNODE specific fields */

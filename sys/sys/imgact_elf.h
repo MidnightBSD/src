@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/imgact_elf.h,v 1.27.8.1 2005/12/30 22:13:58 marcel Exp $
+ * $FreeBSD: src/sys/sys/imgact_elf.h,v 1.29 2005/12/26 21:23:56 sobomax Exp $
  */
 
 #ifndef _SYS_IMGACT_ELF_H_
@@ -63,6 +63,8 @@ typedef struct {
 	const char *interp_path;
 	struct sysentvec *sysvec;
 	const char *interp_newpath;
+        int flags;
+#define		BI_CAN_EXEC_DYN	0x0001
 } __ElfN(Brandinfo);
 
 __ElfType(Auxargs);

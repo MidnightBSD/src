@@ -35,11 +35,30 @@
  *
  *	$NetBSD: clock_subr.h,v 1.7 2000/10/03 13:41:07 tsutsui Exp $
  *
- * $FreeBSD: src/sys/sys/clock.h,v 1.1 2002/04/04 23:39:08 tmm Exp $
+ * $FreeBSD: src/sys/sys/clock.h,v 1.7 2006/10/24 10:27:23 phk Exp $
  */
 
 #ifndef _SYS_CLOCK_H_
 #define _SYS_CLOCK_H_
+
+#ifdef _KERNEL		/* No user serviceable parts */
+
+/*
+ * Kernel to clock driver interface.
+ */
+void	inittodr(time_t base);
+void	resettodr(void);
+void	startrtclock(void);
+
+extern int	disable_rtc_set;
+
+/*
+ * Timezone info from settimeofday(2), usually not used
+ */
+extern int tz_minuteswest;
+extern int tz_dsttime;
+
+int utc_offset(void);
 
 /*
  * Structure to hold the values typically reported by time-of-day clocks.
@@ -47,7 +66,7 @@
  * to a struct timespec.
  */
 struct clocktime {
-	int	year;			/* year - 1900 */
+	int	year;			/* year (4 digit year) */
 	int	mon;			/* month (1 - 12) */
 	int	day;			/* day (1 - 31) */
 	int	hour;			/* hour (0 - 23) */
@@ -64,8 +83,8 @@ void clock_register(device_t, long);
 /*
  * BCD to decimal and decimal to BCD.
  */
-#define	FROMBCD(x)	(((x) >> 4) * 10 + ((x) & 0xf))
-#define	TOBCD(x)	(((x) / 10 * 16) + ((x) % 10))
+#define	FROMBCD(x)	bcd2bin(x)
+#define	TOBCD(x)	bin2bcd(x)
 
 /* Some handy constants. */
 #define SECDAY		(24 * 60 * 60)
@@ -73,5 +92,10 @@ void clock_register(device_t, long);
 
 /* Traditional POSIX base year */
 #define	POSIX_BASE_YEAR	1970
+
+void timespec2fattime(struct timespec *tsp, int utc, u_int16_t *ddp, u_int16_t *dtp, u_int8_t *dhp);
+void fattime2timespec(unsigned dd, unsigned dt, unsigned dh, int utc, struct timespec *tsp);
+
+#endif /* _KERNEL */
 
 #endif /* !_SYS_CLOCK_H_ */

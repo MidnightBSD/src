@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/runq.h,v 1.6 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/runq.h,v 1.10 2007/02/08 01:52:24 jeff Exp $
  */
 
 #ifndef	_RUNQ_H_
@@ -31,7 +31,7 @@
 
 #include <machine/runq.h>
 
-struct kse;
+struct td_sched;
 
 /*
  * Run queue parameters.
@@ -43,7 +43,7 @@ struct kse;
 /*
  * Head of run queues.
  */
-TAILQ_HEAD(rqhead, kse);
+TAILQ_HEAD(rqhead, td_sched);
 
 /*
  * Bit array which maintains the status of a run queue.  When a queue is
@@ -62,10 +62,13 @@ struct runq {
 	struct	rqhead rq_queues[RQ_NQS];
 };
 
-void	runq_add(struct runq *, struct kse *, int flags);
+void	runq_add(struct runq *, struct td_sched *, int);
+void	runq_add_pri(struct runq *, struct td_sched *, u_char, int);
 int	runq_check(struct runq *);
-struct	kse *runq_choose(struct runq *);
+struct	td_sched *runq_choose(struct runq *);
+struct	td_sched *runq_choose_from(struct runq *, u_char);
 void	runq_init(struct runq *);
-void	runq_remove(struct runq *, struct kse *);
+void	runq_remove(struct runq *, struct td_sched *);
+void	runq_remove_idx(struct runq *, struct td_sched *, u_char *);
 
 #endif

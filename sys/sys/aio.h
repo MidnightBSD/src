@@ -13,7 +13,7 @@
  * bad that happens because of using this software isn't the responsibility
  * of the author.  This software is distributed AS-IS.
  *
- * $FreeBSD: src/sys/sys/aio.h,v 1.30 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/aio.h,v 1.32 2006/03/23 08:47:28 davidxu Exp $
  */
 
 #ifndef _SYS_AIO_H_
@@ -36,6 +36,9 @@
 #define	LIO_NOP			0x0
 #define LIO_WRITE		0x1
 #define	LIO_READ		0x2
+#ifdef _KERNEL
+#define	LIO_SYNC		0x3
+#endif
 
 /*
  * LIO modes
@@ -66,10 +69,11 @@ typedef struct aiocb {
 	off_t	aio_offset;		/* File offset for I/O */
 	volatile void *aio_buf;         /* I/O buffer in process space */
 	size_t	aio_nbytes;		/* Number of bytes for I/O */
-	struct	sigevent aio_sigevent;	/* Signal to deliver */
+	char 	__spare__[sizeof(int) * 2 + sizeof(void *)]; /* osigevent. */
 	int	aio_lio_opcode;		/* LIO opcode */
 	int	aio_reqprio;		/* Request priority -- ignored */
 	struct	__aiocb_private	_aiocb_private;
+	struct	sigevent aio_sigevent;	/* Signal to deliver */
 } aiocb_t;
 
 #ifndef _KERNEL
@@ -120,6 +124,7 @@ int	aio_suspend(const struct aiocb * const[], int, const struct timespec *);
 
 int	aio_waitcomplete(struct aiocb **, struct timespec *);
 
+int	aio_fsync(int op, struct aiocb *aiocbp);
 __END_DECLS
 
 #else

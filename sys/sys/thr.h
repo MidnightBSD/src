@@ -23,12 +23,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/thr.h,v 1.6 2005/04/23 02:36:07 davidxu Exp $
+ * $FreeBSD: src/sys/sys/thr.h,v 1.14 2007/08/16 05:26:42 davidxu Exp $
  *
  */
 
 #ifndef _SYS_THR_H_
 #define	_SYS_THR_H_
+
+#include <sys/_types.h>
+#include <sys/sched.h>
+
+#ifndef _SIZE_T_DECLARED
+typedef __size_t	size_t;
+#define _SIZE_T_DECLARED
+#endif
 
 /* Create the thread in the suspended state. */
 #define	THR_SUSPENDED		0x0001
@@ -45,21 +53,30 @@ struct thr_param {
     long	*child_tid;		/* address to store new TID. */
     long	*parent_tid;		/* parent accesses the new TID here. */
     int		flags;			/* thread flags. */
-    void	*spare[4];		/* TODO: cpu affinity mask etc. */
+    struct rtprio	*rtp;		/* Real-time scheduling priority */
+    void	*spare[3];		/* TODO: cpu affinity mask etc. */
 };
 
 /* 
  * See pthread_*
  */
 #ifndef _KERNEL
+#include <sys/ucontext.h>
+
+#ifndef _PID_T_DECLARED
+typedef __pid_t		pid_t;
+#define _PID_T_DECLARED
+#endif
 
 int thr_create(ucontext_t *ctx, long *id, int flags);
 int thr_new(struct thr_param *param, int param_size);
 int thr_self(long *id);
 void thr_exit(long *state);
 int thr_kill(long id, int sig);
+int thr_kill2(pid_t pid, long id, int sig);
 int thr_suspend(const struct timespec *timeout);
 int thr_wake(long id);
+int thr_set_name(long id, const char *name);
 
 #endif /* !_KERNEL */
 

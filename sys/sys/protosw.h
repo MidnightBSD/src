@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)protosw.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/protosw.h,v 1.45 2004/11/08 14:44:54 phk Exp $
+ * $FreeBSD: src/sys/sys/protosw.h,v 1.57 2006/07/24 15:20:08 rwatson Exp $
  */
 
 #ifndef _SYS_PROTOSW_H_
@@ -128,7 +128,13 @@ struct protosw {
 #define	PR_LASTHDR	0x40		/* enforce ipsec policy; last header */
 
 /*
- * The arguments to usrreq are:
+ * In earlier BSD network stacks, a single pr_usrreq() function pointer was
+ * invoked with an operation number indicating what operation was desired.
+ * We now provide individual function pointers which protocols can implement,
+ * which offers a number of benefits (such as type checking for arguments).
+ * These older constants are still present in order to support TCP debugging.
+ *
+ * The arguments to usrreq were:
  *	(*protosw[].pr_usrreq)(up, req, m, nam, opt);
  * where up is a (struct socket *), req is one of these requests,
  * m is an optional mbuf chain containing a message,
@@ -164,7 +170,9 @@ struct protosw {
 #define	PRU_PROTOSEND		21	/* send to below */
 /* end for protocol's internal use */
 #define PRU_SEND_EOF		22	/* send and close */
-#define PRU_NREQ		22
+#define	PRU_SOSETLABEL		23	/* MAC label change */
+#define	PRU_CLOSE		24	/* socket close */
+#define PRU_NREQ		24
 
 #ifdef PRUREQUESTS
 const char *prurequests[] = {
@@ -173,8 +181,8 @@ const char *prurequests[] = {
 	"RCVD",		"SEND",		"ABORT",	"CONTROL",
 	"SENSE",	"RCVOOB",	"SENDOOB",	"SOCKADDR",
 	"PEERADDR",	"CONNECT2",	"FASTTIMO",	"SLOWTIMO",
-	"PROTORCV",	"PROTOSEND",
-	"SEND_EOF",
+	"PROTORCV",	"PROTOSEND",	"SEND_EOF",	"SOSETLABEL",
+	"CLOSE",
 };
 #endif
 
@@ -186,17 +194,15 @@ struct ucred;
 struct uio;
 
 /*
- * If the ordering here looks odd, that's because it's alphabetical.
- * Having this structure separated out from the main protoswitch is allegedly
- * a big (12 cycles per call) lose on high-end CPUs.  We will eventually
- * migrate this stuff back into the main structure.
+ * If the ordering here looks odd, that's because it's alphabetical.  These
+ * should eventually be merged back into struct protosw.
  *
  * Some fields initialized to defaults if they are NULL.
  * See uipc_domain.c:net_init_domain()
  */
 struct pr_usrreqs {
 	double	__Break_the_struct_layout_for_now;
-	int	(*pru_abort)(struct socket *so);
+	void	(*pru_abort)(struct socket *so);
 	int	(*pru_accept)(struct socket *so, struct sockaddr **nam);
 	int	(*pru_attach)(struct socket *so, int proto, struct thread *td);
 	int	(*pru_bind)(struct socket *so, struct sockaddr *nam,
@@ -206,9 +212,10 @@ struct pr_usrreqs {
 	int	(*pru_connect2)(struct socket *so1, struct socket *so2);
 	int	(*pru_control)(struct socket *so, u_long cmd, caddr_t data,
 		    struct ifnet *ifp, struct thread *td);
-	int	(*pru_detach)(struct socket *so);
+	void	(*pru_detach)(struct socket *so);
 	int	(*pru_disconnect)(struct socket *so);
-	int	(*pru_listen)(struct socket *so, struct thread *td);
+	int	(*pru_listen)(struct socket *so, int backlog,
+		    struct thread *td);
 	int	(*pru_peeraddr)(struct socket *so, struct sockaddr **nam);
 	int	(*pru_rcvd)(struct socket *so, int flags);
 	int	(*pru_rcvoob)(struct socket *so, struct mbuf *m, int flags);
@@ -221,15 +228,6 @@ struct pr_usrreqs {
 	int	(*pru_sense)(struct socket *so, struct stat *sb);
 	int	(*pru_shutdown)(struct socket *so);
 	int	(*pru_sockaddr)(struct socket *so, struct sockaddr **nam);
-	 
-	/*
-	 * These three added later, so they are out of order.  They are used
-	 * for shortcutting (fast path input/output) in some protocols.
-	 * XXX - that's a lie, they are not implemented yet
-	 * Rather than calling sosend() etc. directly, calls are made
-	 * through these entry points.  For protocols which still use
-	 * the generic code, these just point to those routines.
-	 */
 	int	(*pru_sosend)(struct socket *so, struct sockaddr *addr,
 		    struct uio *uio, struct mbuf *top, struct mbuf *control,
 		    int flags, struct thread *td);
@@ -239,15 +237,12 @@ struct pr_usrreqs {
 	int	(*pru_sopoll)(struct socket *so, int events,
 		    struct ucred *cred, struct thread *td);
 	void	(*pru_sosetlabel)(struct socket *so);
+	void	(*pru_close)(struct socket *so);
 };
 
 /*
- * The dummy protocol specific user requests function pointer array is
- * initialized to the functions below.  All functions return EOPNOTSUPP.
+ * All nonvoid pru_*() functions below return EOPNOTSUPP.
  */
-extern	struct pr_usrreqs nousrreqs;
-
-int	pru_abort_notsupp(struct socket *so);
 int	pru_accept_notsupp(struct socket *so, struct sockaddr **nam);
 int	pru_attach_notsupp(struct socket *so, int proto, struct thread *td);
 int	pru_bind_notsupp(struct socket *so, struct sockaddr *nam,
@@ -257,9 +252,8 @@ int	pru_connect_notsupp(struct socket *so, struct sockaddr *nam,
 int	pru_connect2_notsupp(struct socket *so1, struct socket *so2);
 int	pru_control_notsupp(struct socket *so, u_long cmd, caddr_t data,
 	    struct ifnet *ifp, struct thread *td);
-int	pru_detach_notsupp(struct socket *so);
 int	pru_disconnect_notsupp(struct socket *so);
-int	pru_listen_notsupp(struct socket *so, struct thread *td);
+int	pru_listen_notsupp(struct socket *so, int backlog, struct thread *td);
 int	pru_peeraddr_notsupp(struct socket *so, struct sockaddr **nam);
 int	pru_rcvd_notsupp(struct socket *so, int flags);
 int	pru_rcvoob_notsupp(struct socket *so, struct mbuf *m, int flags);
@@ -276,7 +270,6 @@ int	pru_soreceive_notsupp(struct socket *so, struct sockaddr **paddr,
 	    int *flagsp);
 int	pru_sopoll_notsupp(struct socket *so, int events, struct ucred *cred,
 	    struct thread *td);
-void	pru_sosetlabel_null(struct socket *so);
 
 #endif /* _KERNEL */
 

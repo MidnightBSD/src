@@ -1,6 +1,6 @@
 /*	$NetBSD: tree.h,v 1.8 2004/03/28 19:38:30 provos Exp $	*/
 /*	$OpenBSD: tree.h,v 1.7 2002/10/17 21:51:54 art Exp $	*/
-/* $FreeBSD: src/sys/sys/tree.h,v 1.3 2005/06/10 11:44:57 harti Exp $ */
+/* $FreeBSD: src/sys/sys/tree.h,v 1.6 2007/06/15 16:09:47 jasone Exp $ */
 
 /*-
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
@@ -29,6 +29,8 @@
 
 #ifndef	_SYS_TREE_H_
 #define	_SYS_TREE_H_
+
+#include <sys/cdefs.h>
 
 /*
  * This file defines data structures for different types of trees:
@@ -376,21 +378,30 @@ struct {								\
 } while (/*CONSTCOND*/ 0)
 
 /* Generates prototypes and inline functions */
-#define RB_PROTOTYPE(name, type, field, cmp)				\
-void name##_RB_INSERT_COLOR(struct name *, struct type *);	\
-void name##_RB_REMOVE_COLOR(struct name *, struct type *, struct type *);\
-struct type *name##_RB_REMOVE(struct name *, struct type *);		\
-struct type *name##_RB_INSERT(struct name *, struct type *);		\
-struct type *name##_RB_FIND(struct name *, struct type *);		\
-struct type *name##_RB_NEXT(struct type *);				\
-struct type *name##_RB_MINMAX(struct name *, int);			\
+#define	RB_PROTOTYPE(name, type, field, cmp)				\
+	RB_PROTOTYPE_INTERNAL(name, type, field, cmp,)
+#define	RB_PROTOTYPE_STATIC(name, type, field, cmp)			\
+	RB_PROTOTYPE_INTERNAL(name, type, field, cmp, __unused static)
+#define RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)		\
+attr void name##_RB_INSERT_COLOR(struct name *, struct type *);		\
+attr void name##_RB_REMOVE_COLOR(struct name *, struct type *, struct type *);\
+attr struct type *name##_RB_REMOVE(struct name *, struct type *);	\
+attr struct type *name##_RB_INSERT(struct name *, struct type *);	\
+attr struct type *name##_RB_FIND(struct name *, struct type *);		\
+attr struct type *name##_RB_NFIND(struct name *, struct type *);	\
+attr struct type *name##_RB_NEXT(struct type *);			\
+attr struct type *name##_RB_MINMAX(struct name *, int);			\
 									\
 
 /* Main rb operation.
  * Moves node close to the key of elm to top
  */
-#define RB_GENERATE(name, type, field, cmp)				\
-void									\
+#define	RB_GENERATE(name, type, field, cmp)				\
+	RB_GENERATE_INTERNAL(name, type, field, cmp,)
+#define	RB_GENERATE_STATIC(name, type, field, cmp)			\
+	RB_GENERATE_INTERNAL(name, type, field, cmp, __unused static)
+#define RB_GENERATE_INTERNAL(name, type, field, cmp, attr)		\
+attr void								\
 name##_RB_INSERT_COLOR(struct name *head, struct type *elm)		\
 {									\
 	struct type *parent, *gparent, *tmp;				\
@@ -434,7 +445,7 @@ name##_RB_INSERT_COLOR(struct name *head, struct type *elm)		\
 	RB_COLOR(head->rbh_root, field) = RB_BLACK;			\
 }									\
 									\
-void									\
+attr void								\
 name##_RB_REMOVE_COLOR(struct name *head, struct type *parent, struct type *elm) \
 {									\
 	struct type *tmp;						\
@@ -512,7 +523,7 @@ name##_RB_REMOVE_COLOR(struct name *head, struct type *parent, struct type *elm)
 		RB_COLOR(elm, field) = RB_BLACK;			\
 }									\
 									\
-struct type *								\
+attr struct type *							\
 name##_RB_REMOVE(struct name *head, struct type *elm)			\
 {									\
 	struct type *child, *parent, *old = elm;			\
@@ -580,7 +591,7 @@ color:									\
 }									\
 									\
 /* Inserts a node into the RB tree */					\
-struct type *								\
+attr struct type *							\
 name##_RB_INSERT(struct name *head, struct type *elm)			\
 {									\
 	struct type *tmp;						\
@@ -611,7 +622,7 @@ name##_RB_INSERT(struct name *head, struct type *elm)			\
 }									\
 									\
 /* Finds the node with the same key as elm */				\
-struct type *								\
+attr struct type *							\
 name##_RB_FIND(struct name *head, struct type *elm)			\
 {									\
 	struct type *tmp = RB_ROOT(head);				\
@@ -628,8 +639,29 @@ name##_RB_FIND(struct name *head, struct type *elm)			\
 	return (NULL);							\
 }									\
 									\
+/* Finds the first node greater than or equal to the search key */	\
+attr struct type *							\
+name##_RB_NFIND(struct name *head, struct type *elm)			\
+{									\
+	struct type *tmp = RB_ROOT(head);				\
+	struct type *res = NULL;					\
+	int comp;							\
+	while (tmp) {							\
+		comp = cmp(elm, tmp);					\
+		if (comp < 0) {						\
+			res = tmp;					\
+			tmp = RB_LEFT(tmp, field);			\
+		}							\
+		else if (comp > 0)					\
+			tmp = RB_RIGHT(tmp, field);			\
+		else							\
+			return (tmp);					\
+	}								\
+	return (res);							\
+}									\
+									\
 /* ARGSUSED */								\
-struct type *								\
+attr struct type *							\
 name##_RB_NEXT(struct type *elm)					\
 {									\
 	if (RB_RIGHT(elm, field)) {					\
@@ -650,7 +682,7 @@ name##_RB_NEXT(struct type *elm)					\
 	return (elm);							\
 }									\
 									\
-struct type *								\
+attr struct type *							\
 name##_RB_MINMAX(struct name *head, int val)				\
 {									\
 	struct type *tmp = RB_ROOT(head);				\
@@ -671,6 +703,7 @@ name##_RB_MINMAX(struct name *head, int val)				\
 #define RB_INSERT(name, x, y)	name##_RB_INSERT(x, y)
 #define RB_REMOVE(name, x, y)	name##_RB_REMOVE(x, y)
 #define RB_FIND(name, x, y)	name##_RB_FIND(x, y)
+#define RB_NFIND(name, x, y)	name##_RB_NFIND(x, y)
 #define RB_NEXT(name, x, y)	name##_RB_NEXT(y)
 #define RB_MIN(name, x)		name##_RB_MINMAX(x, RB_NEGINF)
 #define RB_MAX(name, x)		name##_RB_MINMAX(x, RB_INF)

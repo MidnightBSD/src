@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: /repoman/r/ncvs/src/sys/sys/taskqueue.h,v 1.14.2.3 2006/07/06 08:32:50 glebius Exp $
+ * $FreeBSD: src/sys/sys/taskqueue.h,v 1.16 2006/01/14 01:55:24 scottl Exp $
  */
 
 #ifndef _SYS_TASKQUEUE_H_
@@ -50,7 +50,7 @@ typedef void (*taskqueue_enqueue_fn)(void *context);
 struct proc;
 struct taskqueue *taskqueue_create(const char *name, int mflags,
 				    taskqueue_enqueue_fn enqueue,
-				    void *context, struct proc **);
+				    void *context);
 int	taskqueue_start_threads(struct taskqueue **tqp, int count, int pri,
 				const char *name, ...) __printflike(4, 5);
 int	taskqueue_enqueue(struct taskqueue *queue, struct task *task);
@@ -92,7 +92,7 @@ static void								\
 taskqueue_define_##name(void *arg)					\
 {									\
 	taskqueue_##name =						\
-	    taskqueue_create(#name, M_NOWAIT, (enqueue), (context), NULL);\
+	    taskqueue_create(#name, M_NOWAIT, (enqueue), (context));	\
 	init;								\
 }									\
 									\

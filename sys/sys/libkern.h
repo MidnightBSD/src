@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)libkern.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/sys/libkern.h,v 1.49.2.1 2005/08/16 08:10:59 pjd Exp $
+ * $FreeBSD: src/sys/sys/libkern.h,v 1.56 2007/04/10 21:42:12 wkoszek Exp $
  */
 
 #ifndef _SYS_LIBKERN_H_
@@ -58,6 +58,8 @@ static __inline quad_t qmax(quad_t a, quad_t b) { return (a > b ? a : b); }
 static __inline quad_t qmin(quad_t a, quad_t b) { return (a < b ? a : b); }
 static __inline u_long ulmax(u_long a, u_long b) { return (a > b ? a : b); }
 static __inline u_long ulmin(u_long a, u_long b) { return (a < b ? a : b); }
+static __inline off_t omax(off_t a, off_t b) { return (a > b ? a : b); }
+static __inline off_t omin(off_t a, off_t b) { return (a < b ? a : b); }
 
 static __inline int abs(int a) { return (a < 0 ? -a : a); }
 static __inline long labs(long a) { return (a < 0 ? -a : a); }
@@ -108,6 +110,7 @@ int	 strncmp(const char *, const char *, size_t);
 char	*strncpy(char * __restrict, const char * __restrict, size_t);
 char	*strsep(char **, const char *delim);
 size_t	 strspn(const char *, const char *);
+char	*strstr(const char *, const char *);
 int	 strvalid(const char *, size_t);
 
 extern uint32_t crc32_tab[];
@@ -115,7 +118,7 @@ extern uint32_t crc32_tab[];
 static __inline uint32_t
 crc32_raw(const void *buf, size_t size, uint32_t crc)
 {
-	const uint8_t *p = buf;
+	const uint8_t *p = (const uint8_t *)buf;
 
 	while (size--)
 		crc = crc32_tab[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
@@ -148,6 +151,18 @@ memset(void *b, int c, size_t len)
 		for (bb = (char *)b; len--; )
 			*bb++ = c;
 	return (b);
+}
+
+static __inline char *
+strchr(const char *p, int ch)
+{
+	return (index(p, ch));
+}
+
+static __inline char *
+strrchr(const char *p, int ch)
+{
+	return (rindex(p, ch));
 }
 
 /* fnmatch() return values. */

@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ttycom.h	8.1 (Berkeley) 3/28/94
- * $FreeBSD: src/sys/sys/ttycom.h,v 1.23 2004/06/25 21:54:49 phk Exp $
+ * $FreeBSD: src/sys/sys/ttycom.h,v 1.25 2006/09/27 19:57:02 ru Exp $
  */
 
 #ifndef	_SYS_TTYCOM_H_
@@ -63,7 +63,7 @@ struct winsize {
 						/* 11-12 obsolete or unused */
 #define	TIOCEXCL	 _IO('t', 13)		/* set exclusive use of tty */
 #define	TIOCNXCL	 _IO('t', 14)		/* reset exclusive use of tty */
-						/* 15 unused */
+#define	TIOCGPTN	_IOR('t', 15, int)	/* Get pts number. */
 #define	TIOCFLUSH	_IOW('t', 16, int)	/* flush buffers */
 						/* 17-18 compat */
 #define	TIOCGETA	_IOR('t', 19, struct termios) /* get termios struct */
@@ -123,7 +123,7 @@ struct winsize {
 #define	TIOCSCTTY	 _IO('t', 97)		/* become controlling tty */
 						/* 97-90 tun; some conflicts */
 #define	TIOCEXT		_IOW('t', 96, int)	/* pty: external processing */
-#define	TIOCSIG		 _IO('t', 95)		/* pty: generate signal */
+#define	TIOCSIG		_IOWINT('t', 95)	/* pty: generate signal */
 #define	TIOCDRAIN	 _IO('t', 94)		/* wait till output drained */
 						/* 92-90 tap; some conflicts */
 #define	TIOCMSDTRWAIT	_IOW('t', 91, int)	/* modem: set wait on close */

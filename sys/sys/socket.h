@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socket.h	8.4 (Berkeley) 2/21/94
- * $FreeBSD: src/sys/sys/socket.h,v 1.88.2.1 2005/09/27 21:14:10 rwatson Exp $
+ * $FreeBSD: src/sys/sys/socket.h,v 1.95 2007/09/18 09:22:16 alfred Exp $
  */
 
 #ifndef _SYS_SOCKET_H_
@@ -208,7 +208,61 @@ struct accept_filter_arg {
 #define	AF_SCLUSTER	34		/* Sitara cluster protocol */
 #define	AF_ARP		35
 #define	AF_BLUETOOTH	36		/* Bluetooth sockets */
-#define	AF_MAX		37
+#define	AF_IEEE80211	37		/* IEEE 802.11 protocol */
+#define	AF_MAX		38
+/*
+ * When allocating a new AF_ constant, please only allocate
+ * even numbered constants for FreeBSD until 134 as odd numbered AF_
+ * constants 39-133 are now reserved for vendors.
+ */
+#define AF_VENDOR00 39
+#define AF_VENDOR01 41
+#define AF_VENDOR02 43
+#define AF_VENDOR03 45
+#define AF_VENDOR04 47
+#define AF_VENDOR05 49
+#define AF_VENDOR06 51
+#define AF_VENDOR07 53
+#define AF_VENDOR08 55
+#define AF_VENDOR09 57
+#define AF_VENDOR10 59
+#define AF_VENDOR11 61
+#define AF_VENDOR12 63
+#define AF_VENDOR13 65
+#define AF_VENDOR14 67
+#define AF_VENDOR15 69
+#define AF_VENDOR16 71
+#define AF_VENDOR17 73
+#define AF_VENDOR18 75
+#define AF_VENDOR19 77
+#define AF_VENDOR20 79
+#define AF_VENDOR21 81
+#define AF_VENDOR22 83
+#define AF_VENDOR23 85
+#define AF_VENDOR24 87
+#define AF_VENDOR25 89
+#define AF_VENDOR26 91
+#define AF_VENDOR27 93
+#define AF_VENDOR28 95
+#define AF_VENDOR29 97
+#define AF_VENDOR30 99
+#define AF_VENDOR31 101
+#define AF_VENDOR32 103
+#define AF_VENDOR33 105
+#define AF_VENDOR34 107
+#define AF_VENDOR35 109
+#define AF_VENDOR36 111
+#define AF_VENDOR37 113
+#define AF_VENDOR38 115
+#define AF_VENDOR39 117
+#define AF_VENDOR40 119
+#define AF_VENDOR41 121
+#define AF_VENDOR42 123
+#define AF_VENDOR43 125
+#define AF_VENDOR44 127
+#define AF_VENDOR45 129
+#define AF_VENDOR46 131
+#define AF_VENDOR47 133
 #endif
 
 /*
@@ -233,6 +287,7 @@ struct sockproto {
 };
 #endif
 
+#ifndef	_STRUCT_SOCKADDR_STORAGE_DECLARED
 /*
  * RFC 2553: protocol-independent placeholder for socket addresses
  */
@@ -250,6 +305,8 @@ struct sockaddr_storage {
 	__int64_t	__ss_align;	/* force desired struct alignment */
 	char		__ss_pad2[_SS_PAD2SIZE];
 };
+#define	_STRUCT_SOCKADDR_STORAGE_DECLARED
+#endif
 
 #if __BSD_VISIBLE
 /*
@@ -393,6 +450,7 @@ struct msghdr {
 #define	MSG_TRUNC	0x10		/* data discarded before delivery */
 #define	MSG_CTRUNC	0x20		/* control data lost before delivery */
 #define	MSG_WAITALL	0x40		/* wait for full request or error */
+#define MSG_NOTIFICATION 0x2000         /* SCTP notification */
 #if __BSD_VISIBLE
 #define	MSG_DONTWAIT	0x80		/* this message should be nonblocking */
 #define	MSG_EOF		0x100		/* data completes connection */
@@ -469,11 +527,13 @@ struct sockcred {
 
 /* given pointer to struct cmsghdr, return pointer to next cmsghdr */
 #define	CMSG_NXTHDR(mhdr, cmsg)	\
-	(((char *)(cmsg) + _ALIGN((cmsg)->cmsg_len) + \
+	((char *)(cmsg) == NULL ? CMSG_FIRSTHDR(mhdr) : \
+	    ((char *)(cmsg) + _ALIGN(((struct cmsghdr *)(cmsg))->cmsg_len) + \
 	  _ALIGN(sizeof(struct cmsghdr)) > \
 	    (char *)(mhdr)->msg_control + (mhdr)->msg_controllen) ? \
 	    (struct cmsghdr *)0 : \
-	    (struct cmsghdr *)((char *)(cmsg) + _ALIGN((cmsg)->cmsg_len)))
+	    (struct cmsghdr *)((char *)(cmsg) + \
+	    _ALIGN(((struct cmsghdr *)(cmsg))->cmsg_len)))
 
 /*
  * RFC 2292 requires to check msg_controllen, in case that the kernel returns
@@ -545,7 +605,8 @@ struct sf_hdtr {
 /*
  * Sendfile-specific flag(s)
  */
-#define        SF_NODISKIO     0x00000001
+#define	SF_NODISKIO     0x00000001
+#define	SF_MNOWAIT	0x00000002
 #endif
 
 #ifndef	_KERNEL

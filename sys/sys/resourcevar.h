@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)resourcevar.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/resourcevar.h,v 1.47 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/resourcevar.h,v 1.52 2007/06/09 21:48:44 attilio Exp $
  */
 
 #ifndef	_SYS_RESOURCEVAR_H_
@@ -47,12 +47,11 @@
  * Locking key:
  *      b - created at fork, never changes
  *      c - locked by proc mtx
- *      j - locked by sched_lock mtx
+ *      j - locked by proc slock
  *      k - only accessed by curthread
  */
 struct pstats {
-#define	pstat_startzero	p_ru
-	struct	rusage p_ru;		/* Stats for this process. */
+#define	pstat_startzero	p_cru
 	struct	rusage p_cru;		/* Stats for reaped children. */
 	struct	itimerval p_timer[3];	/* (j) Virtual-time timers. */
 #define	pstat_endzero	pstat_startcopy
@@ -78,12 +77,7 @@ struct pstats {
 struct plimit {
 	struct	rlimit pl_rlimit[RLIM_NLIMITS];
 	int	pl_refcnt;		/* number of references */
-	struct	mtx *pl_mtx;
 };
-
-#define	LIM_LOCK(lim)		mtx_lock((lim)->pl_mtx)
-#define	LIM_UNLOCK(lim)		mtx_unlock((lim)->pl_mtx)
-#define	LIM_LOCK_ASSERT(lim, f)	mtx_assert((lim)->pl_mtx, (f))
 
 /*-
  * Per uid resource consumption
@@ -109,8 +103,8 @@ struct proc;
 struct rusage_ext;
 struct thread;
 
-void	 addupc_intr(struct thread *td, uintptr_t pc, u_int ticks);
-void	 addupc_task(struct thread *td, uintptr_t pc, u_int ticks);
+void	 addupc_intr(struct thread *td, uintfptr_t pc, u_int ticks);
+void	 addupc_task(struct thread *td, uintfptr_t pc, u_int ticks);
 void	 calccru(struct proc *p, struct timeval *up, struct timeval *sp);
 void	 calcru(struct proc *p, struct timeval *up, struct timeval *sp);
 int	 chgproccnt(struct uidinfo *uip, int diff, int maxval);
@@ -121,6 +115,7 @@ struct plimit
 	*lim_alloc(void);
 void	 lim_copy(struct plimit *dst, struct plimit *src);
 rlim_t	 lim_cur(struct proc *p, int which);
+void	 lim_fork(struct proc *p1, struct proc *p2);
 void	 lim_free(struct plimit *limp);
 struct plimit
 	*lim_hold(struct plimit *limp);
@@ -128,6 +123,11 @@ rlim_t	 lim_max(struct proc *p, int which);
 void	 lim_rlimit(struct proc *p, int which, struct rlimit *rlp);
 void	 ruadd(struct rusage *ru, struct rusage_ext *rux, struct rusage *ru2,
 	    struct rusage_ext *rux2);
+void	 rucollect(struct rusage *ru, struct rusage *ru2);
+void	 rufetch(struct proc *p, struct rusage *ru);
+void	 rufetchcalc(struct proc *p, struct rusage *ru, struct timeval *up,
+	    struct timeval *sp);
+void	 ruxagg(struct rusage_ext *rux, struct thread *td);
 int	 suswintr(void *base, int word);
 struct uidinfo
 	*uifind(uid_t uid);

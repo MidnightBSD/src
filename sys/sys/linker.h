@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/linker.h,v 1.39.2.1 2005/12/30 22:13:58 marcel Exp $
+ * $FreeBSD: src/sys/sys/linker.h,v 1.46 2006/06/20 20:59:55 jhb Exp $
  */
 
 #ifndef _SYS_LINKER_H_
@@ -95,21 +95,14 @@ struct linker_class {
 };
 
 /*
+ * Function type used when iterating over the list of linker files.
+ */
+typedef int linker_predicate_t(linker_file_t, void *);
+
+/*
  * The "file" for the kernel.
  */
 extern linker_file_t	linker_kernel_file;
-
-/*
- * Add a new file class to the linker.
- */
-int linker_add_class(linker_class_t _cls);
-
-/*
- * Load a kernel module.
- */
-int linker_load_module(const char *_kldname, const char *_modname,
-    struct linker_file *_parent, struct mod_depend *_verinfo,
-    struct linker_file **_lfpp);
 
 /*
  * Obtain a reference to a module, loading it if required.
@@ -118,29 +111,19 @@ int linker_reference_module(const char* _modname, struct mod_depend *_verinfo,
 			    linker_file_t* _result);
 
 /*
- * Find a currently loaded file given its filename.
+ * Release a reference to a module, unloading it if there are no more
+ * references.  Note that one should either provide a module name and
+ * optional version info or a linker file, but not both.
  */
-linker_file_t linker_find_file_by_name(const char* _filename);
+int linker_release_module(const char *_modname, struct mod_depend *_verinfo,
+			  linker_file_t _file);
 
 /*
- * Find a currently loaded file given its file id.
+ * Iterate over all of the currently loaded linker files calling the
+ * predicate function while the function returns 0.  Returns the value
+ * returned by the last predicate function.
  */
-linker_file_t linker_find_file_by_id(int _fileid);
-
-/*
- * Called from a class handler when a file is laoded.
- */
-linker_file_t linker_make_file(const char* _filename, linker_class_t _cls);
-
-/*
- * Unload a file, freeing up memory.
- */
-int linker_file_unload(linker_file_t _file, int flags);
-
-/*
- * Add a dependency to a file.
- */
-int linker_file_add_dependency(linker_file_t _file, linker_file_t _dep);
+int linker_file_foreach(linker_predicate_t *_predicate, void *_context);
 
 /*
  * Lookup a symbol in a file.  If deps is TRUE, look in dependencies
@@ -158,10 +141,12 @@ int linker_file_lookup_set(linker_file_t _file, const char *_name,
 			   void *_start, void *_stop, int *_count);
 
 /*
- * This routine is responsible for finding dependencies of userland
- * initiated kldload(2)'s of files.
+ * Functions soley for use by the linker class handlers.
  */
+int linker_add_class(linker_class_t _cls);
+int linker_file_unload(linker_file_t _file, int flags);
 int linker_load_dependencies(linker_file_t _lf);
+linker_file_t linker_make_file(const char* _filename, linker_class_t _cls);
 
 /*
  * DDB Helpers, tuned specifically for ddb/db_kld.c
@@ -171,6 +156,9 @@ int linker_ddb_search_symbol(caddr_t _value, c_linker_sym_t *_sym,
 			     long *_diffp);
 int linker_ddb_symbol_values(c_linker_sym_t _sym, linker_symval_t *_symval);
 
+
+/* HWPMC helper */
+void *linker_hwpmc_list_objects(void);
 
 #endif	/* _KERNEL */
 

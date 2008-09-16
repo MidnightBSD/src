@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/module.h,v 1.21 2004/07/13 19:36:59 phk Exp $
+ * $FreeBSD: src/sys/sys/module.h,v 1.22 2006/04/17 19:44:44 jhb Exp $
  */
 
 #ifndef _SYS_MODULE_H_
@@ -147,6 +147,7 @@ int	module_unload(module_t, int flags);
 int	module_getid(module_t);
 module_t	module_getfnext(module_t);
 void	module_setspecific(module_t, modspecific_t *);
+struct linker_file *module_file(module_t);
 
 #ifdef	MOD_DEBUG
 extern int mod_debug;

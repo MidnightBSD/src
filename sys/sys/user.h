@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)user.h	8.2 (Berkeley) 9/23/93
- * $FreeBSD: src/sys/sys/user.h,v 1.66 2005/06/09 19:09:02 gad Exp $
+ * $FreeBSD: src/sys/sys/user.h,v 1.70 2007/09/17 05:27:21 jeff Exp $
  */
 
 #ifndef _SYS_USER_H_
@@ -82,14 +82,11 @@
 #define	KI_NSPARE_LONG	12
 #define	KI_NSPARE_PTR	7
 
-#ifdef __alpha__
-#define	KINFO_PROC_SIZE	1088
-#endif
 #ifdef __amd64__
 #define	KINFO_PROC_SIZE	1088
 #endif
 #ifdef __arm__
-#define	KINFO_PROC_SIZE	768		/* value has not been tested... */
+#define	KINFO_PROC_SIZE	792
 #endif
 #ifdef __ia64__
 #define	KINFO_PROC_SIZE 1088
@@ -109,7 +106,7 @@
 
 #define	WMESGLEN	8		/* size of returned wchan message */
 #define	LOCKNAMELEN	8		/* size of returned lock name */
-#define	OCOMMLEN	16		/* size of returned ki_ocomm name */
+#define	OCOMMLEN	16		/* size of returned thread name */
 #define	COMMLEN		19		/* size of returned ki_comm name */
 #define	KI_EMULNAMELEN	16		/* size of returned ki_emul */
 #define	KI_NGROUPS	16		/* number of groups in ki_groups */
@@ -172,7 +169,7 @@ struct kinfo_proc {
 	char	ki_rqindex;		/* Run queue index */
 	u_char	ki_oncpu;		/* Which cpu we are on */
 	u_char	ki_lastcpu;		/* Last cpu we were on */
-	char	ki_ocomm[OCOMMLEN+1];	/* command name */
+	char	ki_ocomm[OCOMMLEN+1];	/* thread name */
 	char	ki_wmesg[WMESGLEN+1];	/* wchan message */
 	char	ki_login[LOGNAMELEN+1];	/* setlogin name */
 	char	ki_lockname[LOCKNAMELEN+1]; /* lock name */
@@ -209,6 +206,12 @@ void fill_kinfo_proc(struct proc *, struct kinfo_proc *);
 /* XXX - the following two defines are temporary */
 #define	ki_childstime	ki_rusage_ch.ru_stime
 #define	ki_childutime	ki_rusage_ch.ru_utime
+
+/*
+ *  Legacy PS_ flag.  This moved to p_flag but is maintained for
+ *  compatibility.
+ */
+#define	PS_INMEM	0x00001		/* Loaded into memory. */
 
 /* ki_sessflag values */
 #define	KI_CTTY		0x00000001	/* controlling tty vnode active */

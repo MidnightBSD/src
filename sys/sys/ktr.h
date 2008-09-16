@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: ktr.h,v 1.1.1.2 2006-02-25 02:37:50 laffer1 Exp $
- * $FreeBSD: src/sys/sys/ktr.h,v 1.32.2.2 2006/01/23 14:56:33 marius Exp $
+ *	from BSDI $Id: ktr.h,v 1.2 2008-09-16 01:18:24 laffer1 Exp $
+ * $FreeBSD: src/sys/sys/ktr.h,v 1.37 2006/01/25 14:57:23 jhb Exp $
  */
 
 /*
@@ -38,36 +38,41 @@
 
 /*
  * Trace classes
+ *
+ * Two of the trace classes (KTR_DEV and KTR_SUBSYS) are special in that
+ * they are really placeholders so that indvidual drivers and subsystems
+ * can map their internal tracing to the general class when they wish to
+ * have tracing enabled and map it to 0 when they don't.
  */
 #define	KTR_GEN		0x00000001		/* General (TR) */
 #define	KTR_NET		0x00000002		/* Network */
 #define	KTR_DEV		0x00000004		/* Device driver */
 #define	KTR_LOCK	0x00000008		/* MP locking */
 #define	KTR_SMP		0x00000010		/* MP general */
-#define	KTR_FS		0x00000020		/* Filesystem */
-#define KTR_PMAP	0x00000040		/* Pmap tracing */
-#define KTR_MALLOC	0x00000080		/* Malloc tracing */
+#define	KTR_SUBSYS	0x00000020		/* Subsystem. */
+#define	KTR_PMAP	0x00000040		/* Pmap tracing */
+#define	KTR_MALLOC	0x00000080		/* Malloc tracing */
 #define	KTR_TRAP	0x00000100		/* Trap processing */
 #define	KTR_INTR	0x00000200		/* Interrupt tracing */
-#define KTR_SIG		0x00000400		/* Signal processing */
-#define	KTR_CLK		0x00000800		/* hardclock verbose */
+#define	KTR_SIG		0x00000400		/* Signal processing */
+#define	KTR_SPARE2	0x00000800		/* Unused */
 #define	KTR_PROC	0x00001000		/* Process scheduling */
 #define	KTR_SYSC	0x00002000		/* System call */
 #define	KTR_INIT	0x00004000		/* System initialization */
-#define KTR_KGDB	0x00008000		/* Trace kgdb internals */
-#define	KTR_IO		0x00010000		/* Upper I/O  */
+#define	KTR_SPARE3	0x00008000		/* Unused */
+#define	KTR_SPARE4	0x00010000		/* Unused */
 #define	KTR_EVH		0x00020000		/* Eventhandler */
-#define KTR_VFS		0x00040000		/* VFS events */
-#define KTR_VOP		0x00080000		/* Auto-generated vop events */
-#define KTR_VM		0x00100000		/* The virtual memory system */
-#define KTR_WITNESS	0x00200000
+#define	KTR_VFS		0x00040000		/* VFS events */
+#define	KTR_VOP		0x00080000		/* Auto-generated vop events */
+#define	KTR_VM		0x00100000		/* The virtual memory system */
+#define	KTR_SPARE1	0x00200000		/* Unused */
 #define	KTR_RUNQ	0x00400000		/* Run queue */
 #define	KTR_CONTENTION	0x00800000		/* Lock contention */
 #define	KTR_UMA		0x01000000		/* UMA slab allocator */
 #define	KTR_CALLOUT	0x02000000		/* Callouts and timeouts */
 #define	KTR_GEOM	0x04000000		/* GEOM I/O events */
 #define	KTR_BUSDMA	0x08000000		/* busdma(9) events */
-#define	KTR_CRITICAL	0x10000000		/* Critical sections */
+#define	KTR_SPARE5	0x10000000		/* Unused */
 #define	KTR_SCHED	0x20000000		/* Machine parsed sched info. */
 #define	KTR_BUF		0x40000000		/* Buffer cache */
 #define	KTR_ALL		0x7fffffff
@@ -94,9 +99,6 @@
 #undef KTR_COMPILE
 #define KTR_COMPILE 0
 #endif	/* KTR */
-
-/* Trace classes that can not be used with KTR_ALQ */
-#define	KTR_ALQ_MASK	(KTR_WITNESS)
 
 /*
  * Version number for ktr_entry struct.  Increment this when you break binary

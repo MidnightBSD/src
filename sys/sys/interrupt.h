@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/interrupt.h,v 1.30.2.2.2.1 2006/04/13 18:45:49 jhb Exp $
+ * $FreeBSD: src/sys/sys/interrupt.h,v 1.37 2007/05/06 17:02:50 piso Exp $
  */
 
 #ifndef _SYS_INTERRUPT_H_
@@ -32,15 +32,9 @@
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 
-/* Compatibility shims */
-#define	tty_intr_event	tty_ithd
-#define	clk_intr_event	clk_ithd
-#define	ithd		intr_event
-#define	ithread_destroy		intr_event_destroy
-#define	ithread_remove_handler	intr_event_remove_handler
-
 struct intr_event;
 struct intr_thread;
+struct trapframe;
 
 /*
  * Describe a hardware interrupt handler.
@@ -49,6 +43,7 @@ struct intr_thread;
  * together.
  */
 struct intr_handler {
+	driver_filter_t	*ih_filter;	/* Filter function. */
 	driver_intr_t	*ih_handler;	/* Handler function. */
 	void		*ih_argument;	/* Argument to pass to handler. */
 	int		 ih_flags;
@@ -57,10 +52,10 @@ struct intr_handler {
 	int		 ih_need;	/* Needs service. */
 	TAILQ_ENTRY(intr_handler) ih_next; /* Next handler for this event. */
 	u_char		 ih_pri;	/* Priority of this handler. */
+	struct intr_thread *ih_thread;	/* Ithread for filtered handler. */
 };
 
 /* Interrupt handle flags kept in ih_flags */
-#define	IH_FAST		0x00000001	/* Fast interrupt. */
 #define	IH_EXCLUSIVE	0x00000002	/* Exclusive interrupt. */
 #define	IH_ENTROPY	0x00000004	/* Device is a good entropy source. */
 #define	IH_DEAD		0x00000008	/* Handler should be removed. */
@@ -78,9 +73,14 @@ struct intr_event {
 	void		*ie_source;	/* Cookie used by MD code. */
 	struct intr_thread *ie_thread;	/* Thread we are connected to. */
 	void		(*ie_enable)(void *);
+#ifdef INTR_FILTER
+	void		(*ie_eoi)(void *);
+	void		(*ie_disab)(void *);
+#endif
 	int		ie_flags;
 	int		ie_count;	/* Loop counter. */
-	int		ie_warned;	/* Warned about interrupt storm. */
+	int		ie_warncnt;	/* Rate-check interrupt storm warns. */
+	struct timeval	ie_warntm;
 };
 
 /* Interrupt event flags kept in ie_flags. */
@@ -118,16 +118,34 @@ extern char 	intrnames[];	/* string table containing device names */
 #ifdef DDB
 void	db_dump_intr_event(struct intr_event *ie, int handlers);
 #endif
+#ifdef INTR_FILTER
+int     intr_filter_loop(struct intr_event *ie, struct trapframe *frame, 
+			 struct intr_thread **ithd);
+int     intr_event_handle(struct intr_event *ie, struct trapframe *frame);
+#endif
 u_char	intr_priority(enum intr_type flags);
 int	intr_event_add_handler(struct intr_event *ie, const char *name,
-	    driver_intr_t handler, void *arg, u_char pri, enum intr_type flags,
-	    void **cookiep);
+	    driver_filter_t filter, driver_intr_t handler, void *arg, 
+	    u_char pri, enum intr_type flags, void **cookiep);	    
+#ifndef INTR_FILTER
 int	intr_event_create(struct intr_event **event, void *source,
 	    int flags, void (*enable)(void *), const char *fmt, ...)
 	    __printflike(5, 6);
+#else
+int	intr_event_create(struct intr_event **event, void *source,
+	    int flags, void (*enable)(void *), void (*eoi)(void *), 
+	    void (*disab)(void *), const char *fmt, ...)
+	    __printflike(7, 8);
+#endif
 int	intr_event_destroy(struct intr_event *ie);
 int	intr_event_remove_handler(void *cookie);
+#ifndef INTR_FILTER
 int	intr_event_schedule_thread(struct intr_event *ie);
+#else
+int	intr_event_schedule_thread(struct intr_event *ie,
+	    struct intr_thread *ithd);
+#endif
+void	*intr_handler_source(void *cookie);
 int	swi_add(struct intr_event **eventp, const char *name,
 	    driver_intr_t handler, void *arg, int pri, enum intr_type flags,
 	    void **cookiep);

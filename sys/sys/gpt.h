@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/gpt.h,v 1.8 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/gpt.h,v 1.10.2.1 2007/10/29 00:11:40 marcel Exp $
  */
 
 #ifndef _SYS_GPT_H_
@@ -65,7 +65,7 @@ struct gpt_ent {
 	uint64_t	ent_lba_end;
 	uint64_t	ent_attr;
 #define	GPT_ENT_ATTR_PLATFORM		(1ULL << 0)
-	short		ent_name[36];		/* UNICODE-16. */
+	uint16_t	ent_name[36];		/* UTF-16. */
 };
 
 #define	GPT_ENT_TYPE_UNUSED		\
@@ -82,6 +82,8 @@ struct gpt_ent {
 	{0x516e7cb6,0x6ecf,0x11d6,0x8f,0xf8,{0x00,0x02,0x2d,0x09,0x71,0x2b}}
 #define	GPT_ENT_TYPE_FREEBSD_VINUM	\
 	{0x516e7cb8,0x6ecf,0x11d6,0x8f,0xf8,{0x00,0x02,0x2d,0x09,0x71,0x2b}}
+#define	GPT_ENT_TYPE_FREEBSD_ZFS	\
+	{0x516e7cba,0x6ecf,0x11d6,0x8f,0xf8,{0x00,0x02,0x2d,0x09,0x71,0x2b}}
 
 /*
  * The following are unused but documented here to avoid reuse.
@@ -112,5 +114,8 @@ struct gpt_ent {
 	{0x0657fd6d,0xa4ab,0x43c4,0x84,0xe5,{0x09,0x33,0xc8,0x4b,0x4f,0x4f}}
 #define	GPT_ENT_TYPE_LINUX_LVM		\
 	{0xe6d6d379,0xf507,0x44c2,0xa2,0x3c,{0x23,0x8f,0x2a,0x3d,0xf9,0x28}}
+
+#define	GPT_ENT_TYPE_APPLE_HFS		\
+	{0x48465300,0x0000,0x11aa,0xaa,0x11,{0x00,0x30,0x65,0x43,0xec,0xac}}
 
 #endif /* _SYS_GPT_H_ */

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/extattr.h,v 1.12 2003/06/04 04:04:24 rwatson Exp $
+ * $FreeBSD: src/sys/sys/extattr.h,v 1.18 2007/03/16 19:18:49 rwatson Exp $
  */
 /*
  * Developed by the TrustedBSD Project.
@@ -35,10 +35,27 @@
 #ifndef _SYS_EXTATTR_H_
 #define	_SYS_EXTATTR_H_
 
+/*
+ * Defined name spaces for extended attributes.  Numeric constants are passed
+ * via system calls, but a user-friendly string is also defined.
+ */
+#define	EXTATTR_NAMESPACE_EMPTY		0x00000000
+#define	EXTATTR_NAMESPACE_EMPTY_STRING	"empty"
 #define	EXTATTR_NAMESPACE_USER		0x00000001
 #define	EXTATTR_NAMESPACE_USER_STRING	"user"
 #define	EXTATTR_NAMESPACE_SYSTEM	0x00000002
 #define	EXTATTR_NAMESPACE_SYSTEM_STRING	"system"
+
+/*
+ * The following macro is designed to initialize an array that maps
+ * extended-attribute namespace values to their names, e.g.:
+ *
+ * char *extattr_namespace_names[] = EXTATTR_NAMESPACE_NAMES;
+ */
+#define EXTATTR_NAMESPACE_NAMES { \
+	EXTATTR_NAMESPACE_EMPTY_STRING, \
+	EXTATTR_NAMESPACE_USER_STRING, \
+	EXTATTR_NAMESPACE_SYSTEM_STRING }
 
 #ifdef _KERNEL
 

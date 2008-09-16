@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/sys/kobj.h,v 1.9 2003/10/16 09:16:28 dfr Exp $
+ *	$FreeBSD: src/sys/sys/kobj.h,v 1.11 2006/08/24 21:09:39 rik Exp $
  */
 
 #ifndef _SYS_KOBJ_H_
@@ -120,7 +120,7 @@ struct kobj_class classvar = {				\
 /*
  * Define a class inheriting a single base class. Use like this:
  *
- * DEFINE_CLASS1(foo, foo_class, foo_methods, sizeof(foo_softc),
+ * DEFINE_CLASS_1(foo, foo_class, foo_methods, sizeof(foo_softc),
  *			  bar);
  */
 #define DEFINE_CLASS_1(name, classvar, methods, size,	\
@@ -135,7 +135,7 @@ struct kobj_class classvar = {				\
 /*
  * Define a class inheriting two base classes. Use like this:
  *
- * DEFINE_CLASS2(foo, foo_class, foo_methods, sizeof(foo_softc),
+ * DEFINE_CLASS_2(foo, foo_class, foo_methods, sizeof(foo_softc),
  *			  bar, baz);
  */
 #define DEFINE_CLASS_2(name, methods, size,		\
@@ -151,7 +151,7 @@ struct kobj_class name ## _class = {			\
 /*
  * Define a class inheriting three base classes. Use like this:
  *
- * DEFINE_CLASS3(foo, foo_class, foo_methods, sizeof(foo_softc),
+ * DEFINE_CLASS_3(foo, foo_class, foo_methods, sizeof(foo_softc),
  *			  bar, baz, foobar);
  */
 #define DEFINE_CLASS_3(name, methods, size,		\
@@ -245,5 +245,10 @@ kobj_method_t* kobj_lookup_method(kobj_class_t cls,
  * Default method implementation. Returns ENXIO.
  */
 int kobj_error_method(void);
+
+/*
+ * Machine-dependent initialisation call for boot-time kobj clients
+ */
+void kobj_machdep_init(void);
 
 #endif /* !_SYS_KOBJ_H_ */

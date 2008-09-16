@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.4 (Berkeley) 5/4/95
- * $FreeBSD: src/sys/sys/signal.h,v 1.45.8.1 2005/11/16 12:44:10 davidxu Exp $
+ * $FreeBSD: src/sys/sys/signal.h,v 1.56.2.1 2007/12/17 03:05:56 davidxu Exp $
  */
 
 #ifndef _SYS_SIGNAL_H_
@@ -42,6 +42,7 @@
 #include <sys/_types.h>
 #include <sys/_sigset.h>
 
+#include <machine/_limits.h>	/* __MINSIGSTKSZ */
 #include <machine/signal.h>	/* sig_atomic_t; trap codes; sigcontext */
 
 /*
@@ -111,9 +112,9 @@
 #define	SIGTHR		32	/* reserved by thread library. */
 #define	SIGLWP		SIGTHR
 #endif
-/*
- * XXX missing SIGRTMIN, SIGRTMAX.
- */
+
+#define	SIGRTMIN	65
+#define	SIGRTMAX	126
 
 #define	SIG_DFL		((__sighandler_t *)0)
 #define	SIG_IGN		((__sighandler_t *)1)
@@ -150,36 +151,43 @@ typedef	__sigset_t	sigset_t;
 #if __POSIX_VISIBLE >= 199309 || __XSI_VISIBLE >= 500
 union sigval {
 	/* Members as suggested by Annex C of POSIX 1003.1b. */
-	int	sigval_int;
-	void	*sigval_ptr;
+	int	sival_int;
+	void	*sival_ptr;
+	/* 6.0 compatibility */
+	int     sigval_int;
+	void    *sigval_ptr;
 };
 #endif
 
 #if __POSIX_VISIBLE >= 199309
 struct sigevent {
 	int	sigev_notify;		/* Notification type */
-	union {
-		int	__sigev_signo;	/* Signal number */
-		int	__sigev_notify_kqueue;
-	} __sigev_u;
+	int	sigev_signo;		/* Signal number */
 	union sigval sigev_value;	/* Signal value */
-/*
- * XXX missing sigev_notify_function, sigev_notify_attributes.
- */
+	union {
+		__lwpid_t	_threadid;
+		struct {
+			void (*_function)(union sigval);
+			void *_attribute; /* pthread_attr_t * */
+		} _sigev_thread;
+		long __spare__[8];
+	} _sigev_un;
 };
-#define	sigev_signo		__sigev_u.__sigev_signo
-#if __BSD_VISIBLE
-#define	sigev_notify_kqueue	__sigev_u.__sigev_notify_kqueue
-#endif
 
-#define	SIGEV_NONE	0		/* No async notification */
-#define	SIGEV_SIGNAL	1		/* Generate a queued signal */
 #if __BSD_VISIBLE
-#define	SIGEV_KEVENT	3		/* Generate a kevent */
+#define	sigev_notify_kqueue		sigev_signo
+#define	sigev_notify_thread_id		_sigev_un._threadid
 #endif
-/*
- * XXX missing SIGEV_THREAD.
- */
+#define	sigev_notify_function		_sigev_un._sigev_thread._function
+#define	sigev_notify_attributes		_sigev_un._sigev_thread._attribute
+
+#define	SIGEV_NONE	0		/* No async notification. */
+#define	SIGEV_SIGNAL	1		/* Generate a queued signal. */
+#define	SIGEV_THREAD	2		/* Call back from another pthread. */
+#if __BSD_VISIBLE
+#define	SIGEV_KEVENT	3		/* Generate a kevent. */
+#define	SIGEV_THREAD_ID	4		/* Send signal to a kernel thread. */
+#endif
 #endif /* __POSIX_VISIBLE >= 199309 */
 
 #if __POSIX_VISIBLE >= 199309 || __XSI_VISIBLE
@@ -198,9 +206,86 @@ typedef	struct __siginfo {
 	int	si_status;		/* exit value */
 	void	*si_addr;		/* faulting instruction */
 	union sigval si_value;		/* signal value */
-	long	si_band;		/* band event for SIGPOLL */
-	int	__spare__[7];		/* gimme some slack */
+	union	{
+		struct {
+			int	_trapno;/* machine specific trap code */
+		} _fault;
+		struct {
+			int	_timerid;
+			int	_overrun;
+		} _timer;
+		struct {
+			int	_mqd;
+		} _mesgq;
+		struct {
+			long	_band;		/* band event for SIGPOLL */
+		} _poll;			/* was this ever used ? */
+		struct {
+			long	__spare1__;
+			int	__spare2__[7];
+		} __spare__;
+	} _reason;
 } siginfo_t;
+
+#define si_trapno	_reason._fault._trapno
+#define si_timerid	_reason._timer._timerid
+#define si_overrun	_reason._timer._overrun
+#define si_mqd		_reason._mesgq._mqd
+#define si_band		_reason._poll._band
+
+/** si_code **/
+/* codes for SIGILL */
+#define ILL_ILLOPC 	1	/* Illegal opcode.			*/
+#define ILL_ILLOPN 	2	/* Illegal operand.			*/
+#define ILL_ILLADR 	3	/* Illegal addressing mode.		*/
+#define ILL_ILLTRP 	4	/* Illegal trap.			*/
+#define ILL_PRVOPC 	5	/* Privileged opcode.			*/
+#define ILL_PRVREG 	6	/* Privileged register.			*/
+#define ILL_COPROC 	7	/* Coprocessor error.			*/
+#define ILL_BADSTK 	8	/* Internal stack error.		*/
+
+/* codes for SIGBUS */
+#define BUS_ADRALN	1	/* Invalid address alignment.		*/
+#define BUS_ADRERR	2	/* Nonexistent physical address.	*/
+#define BUS_OBJERR	3	/* Object-specific hardware error.	*/
+
+/* codes for SIGSEGV */
+#define SEGV_MAPERR	1	/* Address not mapped to object.	*/
+#define SEGV_ACCERR	2	/* Invalid permissions for mapped	*/
+				/* object.				*/
+
+/* codes for SIGFPE */
+#define FPE_INTOVF	1	/* Integer overflow.			*/
+#define FPE_INTDIV	2	/* Integer divide by zero.		*/
+#define FPE_FLTDIV	3	/* Floating point divide by zero.	*/
+#define FPE_FLTOVF	4	/* Floating point overflow.		*/
+#define FPE_FLTUND	5	/* Floating point underflow.		*/
+#define FPE_FLTRES	6	/* Floating point inexact result.	*/
+#define FPE_FLTINV	7	/* Invalid floating point operation.	*/
+#define FPE_FLTSUB	8	/* Subscript out of range.		*/
+
+/* codes for SIGTRAP */
+#define TRAP_BRKPT	1	/* Process breakpoint.			*/
+#define TRAP_TRACE	2	/* Process trace trap.			*/
+
+/* codes for SIGCHLD */
+#define CLD_EXITED	1	/* Child has exited			*/
+#define CLD_KILLED	2	/* Child has terminated abnormally but	*/
+				/* did not create a core file		*/
+#define CLD_DUMPED	3	/* Child has terminated abnormally and	*/
+				/* created a core file			*/
+#define CLD_TRAPPED	4	/* Traced child has trapped		*/
+#define CLD_STOPPED	5	/* Child has stopped			*/
+#define CLD_CONTINUED	6	/* Stopped child has continued		*/
+
+/* codes for SIGPOLL */
+#define POLL_IN		1	/* Data input available			*/
+#define POLL_OUT	2	/* Output buffers available		*/
+#define POLL_MSG	3	/* Input message available		*/
+#define POLL_ERR	4	/* I/O Error				*/
+#define POLL_PRI	5	/* High priority input available	*/
+#define POLL_HUP	4	/* Device disconnected			*/
+
 #endif
 
 #if __POSIX_VISIBLE || __XSI_VISIBLE
@@ -244,11 +329,15 @@ struct sigaction {
 #endif
 
 #if __POSIX_VISIBLE || __XSI_VISIBLE
-#define	SI_USER		0x10001
-#define	SI_QUEUE	0x10002
-#define	SI_TIMER	0x10003
-#define	SI_ASYNCIO	0x10004
-#define	SI_MESGQ	0x10005
+#define	SI_NOINFO	0		/* No signal info besides si_signo. */
+#define	SI_USER		0x10001		/* Signal sent by kill(). */
+#define	SI_QUEUE	0x10002		/* Signal sent by the sigqueue(). */
+#define	SI_TIMER	0x10003		/* Signal generated by expiration of */
+					/* a timer set by timer_settime(). */
+#define	SI_ASYNCIO	0x10004		/* Signal generated by completion of */
+					/* an asynchronous I/O request.*/
+#define	SI_MESGQ	0x10005		/* Signal generated by arrival of a */
+					/* message on an empty message queue. */
 #endif
 #if __BSD_VISIBLE
 #define	SI_UNDEFINED	0
@@ -275,6 +364,7 @@ typedef	struct {
 
 #define	SS_ONSTACK	0x0001	/* take signal on alternate stack */
 #define	SS_DISABLE	0x0004	/* disable taking signals on alternate stack */
+#define	MINSIGSTKSZ	__MINSIGSTKSZ		/* minimum stack size */
 #define	SIGSTKSZ	(MINSIGSTKSZ + 32768)	/* recommended stack size */
 #endif
 
@@ -300,7 +390,7 @@ struct sigvec {
 
 /* Keep this in one place only */
 #if defined(_KERNEL) && defined(COMPAT_43) && \
-    !defined(__i386__) && !defined(__alpha__)
+    !defined(__i386__)
 struct osigcontext {
 	int _not_used;
 };

@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)buf.h	8.9 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/sys/buf.h,v 1.187.2.3 2005/10/04 04:41:26 truckman Exp $
+ * $FreeBSD: src/sys/sys/buf.h,v 1.196 2007/03/08 06:44:34 julian Exp $
  */
 
 #ifndef _SYS_BUF_H_
@@ -135,6 +135,10 @@ struct buf {
 	struct	vm_page *b_pages[btoc(MAXPHYS)];
 	int		b_npages;
 	struct	workhead b_dep;		/* (D) List of filesystem dependencies. */
+	void	*b_fsprivate1;
+	void	*b_fsprivate2;
+	void	*b_fsprivate3;
+	int	b_pin_count;
 };
 
 #define b_object	b_bufobj->bo_object
@@ -212,9 +216,9 @@ struct buf {
 #define	B_RELBUF	0x00400000	/* Release VMIO buffer. */
 #define	B_00800000	0x00800000	/* Available flag. */
 #define	B_01000000	0x01000000	/* Available flag. */
-#define	B_02000000	0x02000000	/* Available flag. */
+#define	B_NEEDSGIANT	0x02000000	/* Buffer's vnode needs giant. */
 #define	B_PAGING	0x04000000	/* volatile paging I/O -- bypass VMIO */
-#define	B_08000000	0x08000000	/* Available flag. */
+#define B_MANAGED	0x08000000	/* Managed by FS. */
 #define B_RAM		0x10000000	/* Read ahead mark (flag) */
 #define B_VMIO		0x20000000	/* VMIO flag */
 #define B_CLUSTER	0x40000000	/* pagein op, so swap() can count it */
@@ -338,8 +342,7 @@ BUF_KERNPROC(struct buf *bp)
 {
 	struct thread *td = curthread;
 
-	if ((td != PCPU_GET(idlethread))
-	&& bp->b_lock.lk_lockholder == td)
+	if (!TD_IS_IDLETHREAD(td) && bp->b_lock.lk_lockholder == td)
 		td->td_locks--;
 	bp->b_lock.lk_lockholder = LK_KERNPROC;
 }
@@ -365,6 +368,17 @@ BUF_REFCNT(struct buf *bp)
 	ret = lockcount(&(bp)->b_lock);
 	splx(s);
 	return ret;
+}
+
+
+/*
+ * Find out the number of waiters on a lock.
+ */
+static __inline int BUF_LOCKWAITERS(struct buf *);
+static __inline int
+BUF_LOCKWAITERS(struct buf *bp)
+{
+	return (lockwaiters(&bp->b_lock));
 }
 
 #endif /* _KERNEL */
@@ -468,6 +482,10 @@ extern int	maxswzone;		/* Max KVA for swap structures */
 extern int	maxbcache;		/* Max KVA for buffer cache */
 extern int	runningbufspace;
 extern int	hibufspace;
+extern int	dirtybufthresh;
+extern int	bdwriteskip;
+extern int	dirtybufferflushes;
+extern int	altbufferflushes;
 extern int      buf_maxio;              /* nominal maximum I/O for buffer */
 extern struct	buf *buf;		/* The buffer headers. */
 extern char	*buffers;		/* The buffer contents. */
@@ -486,6 +504,7 @@ int	buf_dirty_count_severe(void);
 void	bremfree(struct buf *);
 void	bremfreef(struct buf *);	/* XXX Force bremfree, only for nfs. */
 int	bread(struct vnode *, daddr_t, int, struct ucred *, struct buf **);
+void	breada(struct vnode *, daddr_t *, int *, int, struct ucred *);
 int	breadn(struct vnode *, daddr_t, int, daddr_t *, int *, int,
 	    struct ucred *, struct buf **);
 void	bdwrite(struct buf *);
@@ -504,6 +523,7 @@ struct buf *geteblk(int);
 int	bufwait(struct buf *);
 int	bufwrite(struct buf *);
 void	bufdone(struct buf *);
+void	bufdone_finish(struct buf *);
 
 int	cluster_read(struct vnode *, u_quad_t, daddr_t, long,
 	    struct ucred *, long, int, struct buf **);
@@ -527,6 +547,9 @@ void	reassignbuf(struct buf *);
 struct	buf *trypbuf(int *);
 void	bwait(struct buf *, u_char, const char *);
 void	bdone(struct buf *);
+void	bpin(struct buf *);
+void	bunpin(struct buf *);
+void 	bunpin_wait(struct buf *);
 
 #endif /* _KERNEL */
 

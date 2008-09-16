@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)uio.h	8.5 (Berkeley) 2/22/94
- * $FreeBSD: src/sys/sys/uio.h,v 1.39 2005/07/07 18:17:55 jhb Exp $
+ * $FreeBSD: src/sys/sys/uio.h,v 1.40 2006/11/29 19:08:45 alfred Exp $
  */
 
 #ifndef _SYS_UIO_H_
@@ -61,13 +61,13 @@ enum uio_seg {
 #ifdef _KERNEL
 
 struct uio {
-	struct	iovec *uio_iov;
-	int	uio_iovcnt;
-	off_t	uio_offset;
-	int	uio_resid;
-	enum	uio_seg uio_segflg;
-	enum	uio_rw uio_rw;
-	struct	thread *uio_td;
+	struct	iovec *uio_iov;		/* scatter/gather list */
+	int	uio_iovcnt;		/* length of scatter/gather list */
+	off_t	uio_offset;		/* offset in target object */
+	int	uio_resid;		/* remaining bytes to process */
+	enum	uio_seg uio_segflg;	/* address space */
+	enum	uio_rw uio_rw;		/* operation */
+	struct	thread *uio_td;		/* owner */
 };
 
 /*

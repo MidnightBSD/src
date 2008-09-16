@@ -27,17 +27,19 @@
  * SUCH DAMAGE.
  *
  *	@(#)ucred.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/ucred.h,v 1.52 2005/06/28 02:23:56 delphij Exp $
+ * $FreeBSD: src/sys/sys/ucred.h,v 1.55.2.1 2007/12/07 05:46:09 kmacy Exp $
  */
 
 #ifndef _SYS_UCRED_H_
 #define	_SYS_UCRED_H_
 
+#include <bsm/audit.h>
+
 /*
  * Credentials.
  *
- * Please do not inspect cr_uid directly to determine superuserness.
- * Only the suser() or suser_cred() function should be used for this.
+ * Please do not inspect cr_uid directly to determine superuserness.  The
+ * priv(9) interface should be used to check for privilege.
  */
 #if defined(_KERNEL) || defined(_WANT_UCRED)
 struct ucred {
@@ -53,9 +55,10 @@ struct ucred {
 	struct uidinfo	*cr_uidinfo;	/* per euid resource consumption */
 	struct uidinfo	*cr_ruidinfo;	/* per ruid resource consumption */
 	struct prison	*cr_prison;	/* jail(2) */
+	void 		*cr_pspare[3];	/* vimage 2; general use 1 */
 #define	cr_endcopy	cr_label
 	struct label	*cr_label;	/* MAC label */
-	struct mtx	*cr_mtxp;      	/* protect refcount */
+	struct auditinfo_addr	cr_audit;	/* Audit properties. */
 };
 #define	NOCRED	((struct ucred *)0)	/* no credential available */
 #define	FSCRED	((struct ucred *)-1)	/* filesystem credential */

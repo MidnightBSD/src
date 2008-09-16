@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_timeval.h,v 1.1 2002/12/31 04:08:41 mike Exp $
+ * $FreeBSD: src/sys/sys/_timeval.h,v 1.3 2006/05/12 05:04:46 jhb Exp $
  */
 
 #ifndef _SYS__TIMEVAL_H_
@@ -45,7 +45,7 @@ typedef	__time_t	time_t;
  * Structure returned by gettimeofday(2) system call, and used in other calls.
  */
 struct timeval {
-	long		tv_sec;		/* seconds (XXX should be time_t) */
+	time_t		tv_sec;		/* seconds */
 	suseconds_t	tv_usec;	/* and microseconds */
 };
 

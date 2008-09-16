@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)types.h	8.6 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/types.h,v 1.92 2005/05/31 15:18:17 rodrigc Exp $
+ * $FreeBSD: src/sys/sys/types.h,v 1.96 2006/08/04 22:54:10 jb Exp $
  */
 
 #ifndef _SYS_TYPES_H_
@@ -249,6 +249,11 @@ typedef	__timer_t	timer_t;
 #define	_TIMER_T_DECLARED
 #endif
 
+#ifndef _MQD_T_DECLARED
+typedef	__mqd_t	mqd_t;
+#define	_MQD_T_DECLARED
+#endif
+
 typedef	__u_register_t	u_register_t;
 
 #ifndef _UID_T_DECLARED
@@ -270,6 +275,7 @@ typedef	__vm_size_t	vm_size_t;
 #ifdef _KERNEL
 typedef	int		boolean_t;
 typedef	__cpumask_t	cpumask_t;
+typedef	struct device	*device_t;
 typedef	__intfptr_t	intfptr_t;
 
 /*-
@@ -289,6 +295,36 @@ typedef	struct vm_page	*vm_page_t;
 #define offsetof(type, field) __offsetof(type, field)
 
 #endif /* !_KERNEL */
+
+/*
+ * Solaris compatibility definitions.
+ */
+#ifdef _SOLARIS_C_SOURCE
+typedef u_int		uint_t;
+typedef u_char		uchar_t;
+typedef u_short		ushort_t;
+typedef u_long		ulong_t;
+
+typedef	long long	longlong_t;  
+typedef unsigned long long	u_longlong_t;
+
+typedef off_t		off64_t;
+
+typedef id_t		taskid_t;
+typedef id_t		projid_t;
+typedef id_t		poolid_t;
+typedef id_t		zoneid_t;
+typedef id_t		ctid_t;
+
+#ifndef _KERNEL
+#if defined(__XOPEN_OR_POSIX)
+typedef enum { _B_FALSE, _B_TRUE } boolean_t;
+#else
+typedef enum { B_FALSE, B_TRUE } boolean_t;
+#endif /* defined(__XOPEN_OR_POSIX) */
+#endif
+
+#endif /* _SOLARIS_C_SOURCE */
 
 /*
  * The following are all things that really shouldn't exist in this header,

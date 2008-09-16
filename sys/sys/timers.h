@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (c) 1994 by Chris Provenzano, proven@mit.edu
  * All rights reserved.
  *
@@ -29,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/timers.h,v 1.5 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/timers.h,v 1.11 2006/03/01 06:48:31 davidxu Exp $
  *
  * Description : Basic timers header.
  */
@@ -39,4 +40,78 @@
 
 #include <sys/time.h>
 
+#ifdef _KERNEL
+/*
+ * Structures used to manage POSIX timers in a process.
+ */
+struct itimer {
+	struct mtx  		it_mtx;
+	struct sigevent		it_sigev;
+	struct itimerspec	it_time;
+	struct proc 		*it_proc;
+	int	it_flags;
+	int	it_usecount;
+	int	it_overrun;		/* Overruns currently accumulating */
+	int	it_overrun_last;	/* Overruns associated w/ a delivery */
+	int	it_clockid;
+	int	it_timerid;
+	ksiginfo_t	it_ksi;
+	union {
+		/* realtime */
+		struct {
+			struct callout it_callout;
+		} _rt;
+
+		/* cpu timer */
+		struct {
+			LIST_ENTRY(itimer)	it_link;
+			TAILQ_ENTRY(itimer)	it_worklink;
+			int			it_active;
+			int			it_cflags;
+		} _cpu;
+	} _data;
+};
+
+#define it_callout	_data._rt.it_callout
+#define it_link		_data._cpu.it_link
+#define it_active	_data._cpu.it_active
+#define	it_worklink	_data._cpu.it_worklink
+#define	it_cflags	_data._cpu.it_cflags
+
+#define	ITF_DELETING	0x01
+#define	ITF_WANTED	0x02
+
+#define	ITCF_ONWORKLIST	0x01
+
+#define	TIMER_MAX	32
+
+#define	ITIMER_LOCK(it)		mtx_lock(&(it)->it_mtx)
+#define	ITIMER_UNLOCK(it)	mtx_unlock(&(it)->it_mtx)
+
+LIST_HEAD(itimerlist, itimer);
+
+struct	itimers {
+	struct itimerlist	its_virtual;
+	struct itimerlist	its_prof;
+	TAILQ_HEAD(, itimer)	its_worklist;
+	struct itimer		*its_timers[TIMER_MAX];
+};
+
+struct	kclock {
+	int (*timer_create)(struct itimer *timer);
+	int (*timer_settime)(struct itimer * timer, int flags,
+		struct itimerspec * new_value,
+		struct itimerspec * old_value);
+	int (*timer_delete)(struct itimer * timer);
+	int (*timer_gettime)(struct itimer * timer,
+		struct itimerspec * cur_value);
+	void (*event_hook)(struct proc *p, clockid_t clock_id, int event);
+};
+
+/* Event values for event_hook() */
+#define	ITIMER_EV_EXEC	0
+#define	ITIMER_EV_EXIT	1
+
+int	itimer_accept(struct proc *p, int tid, ksiginfo_t *ksi);
 #endif
+#endif /* !_SYS_TIMERS_H_ */

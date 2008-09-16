@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)filio.h	8.1 (Berkeley) 3/28/94
- * $FreeBSD: src/sys/sys/filio.h,v 1.9 2005/03/08 21:32:19 phk Exp $
+ * $FreeBSD: src/sys/sys/filio.h,v 1.10 2007/04/05 21:10:53 pjd Exp $
  */
 
 #ifndef	_SYS_FILIO_H_
@@ -55,5 +55,8 @@ struct fiodgname_arg {
 	void	*buf;
 };
 #define	FIODGNAME	_IOW('f', 120, struct fiodgname_arg) /* get dev. name */
+/* Handle lseek SEEK_DATA and SEEK_HOLE for holey file knowledge. */
+#define	FIOSEEKDATA	_IOWR('f', 97, off_t)	/* SEEK_DATA */
+#define	FIOSEEKHOLE	_IOWR('f', 98, off_t)	/* SEEK_HOLE */
 
 #endif /* !_SYS_FILIO_H_ */

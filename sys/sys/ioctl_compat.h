@@ -32,15 +32,18 @@
  * SUCH DAMAGE.
  *
  *	@(#)ioctl_compat.h	8.4 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/ioctl_compat.h,v 1.8 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/ioctl_compat.h,v 1.10 2007/04/27 11:19:05 benjsc Exp $
  */
 
 #ifndef _SYS_IOCTL_COMPAT_H_
 #define	_SYS_IOCTL_COMPAT_H_
 
-#ifndef BURN_BRIDGES
 #include <sys/ttychars.h>
 #include <sys/ttydev.h>
+
+#ifdef USE_OLD_TTY
+#warning "Old BSD tty API used and depends on COMPAT_43TTY. Use termios.h instead"
+#endif
 
 struct tchars {
 	char	t_intrc;	/* interrupt */
@@ -162,5 +165,4 @@ struct sgttyb {
 #define	NETLDISC	1
 #define	NTTYDISC	2
 
-#endif /* BURN_BRIDGES */
 #endif /* !_SYS_IOCTL_COMPAT_H_ */

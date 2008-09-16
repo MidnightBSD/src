@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/imgact.h,v 1.38 2005/02/25 11:49:42 sobomax Exp $
+ * $FreeBSD: src/sys/sys/imgact.h,v 1.40 2006/08/15 12:10:57 netchild Exp $
  */
 
 #ifndef _SYS_IMGACT_H_
@@ -63,6 +63,7 @@ struct image_params {
 	unsigned long ps_strings; /* PS_STRINGS for BSD/OS binaries */
 	size_t auxarg_size;
 	struct image_args *args;	/* system call arguments */
+	struct sysentvec *sysent;	/* system entry vector */
 };
 
 #ifdef _KERNEL
@@ -76,7 +77,6 @@ void	exec_setregs(struct thread *, u_long, u_long, u_long);
 int	exec_shell_imgact(struct image_params *);
 int	exec_copyin_args(struct image_args *, char *, enum uio_seg,
 	char **, char **);
-void	exec_free_args(struct image_args *);
 #endif
 
 #endif /* !_SYS_IMGACT_H_ */

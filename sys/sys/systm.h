@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)systm.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: src/sys/sys/systm.h,v 1.234.2.1 2005/08/30 15:14:39 pjd Exp $
+ * $FreeBSD: src/sys/sys/systm.h,v 1.260.2.1 2007/12/06 14:19:43 kib Exp $
  */
 
 #ifndef _SYS_SYSTM_H_
@@ -46,7 +46,6 @@
 #include <sys/stdint.h>		/* for people using printf mainly */
 
 extern int securelevel;		/* system security level (see init(8)) */
-extern int suser_enabled;	/* suser() is permitted to return 0 */
 
 extern int cold;		/* nonzero if we are doing a cold boot */
 extern int rebooting;		/* boot() has been called. */
@@ -83,8 +82,11 @@ extern int maxusers;		/* system tune hint */
 	}								\
 } while (0)
 #else
-#define	KASSERT(exp,msg)
-#define	VNASSERT(exp, vp, msg)
+#define	KASSERT(exp,msg) do { \
+} while (0)
+
+#define	VNASSERT(exp, vp, msg) do { \
+} while (0)
 #endif
 
 #ifndef CTASSERT		/* Allow lint to override */
@@ -99,10 +101,11 @@ extern int maxusers;		/* system tune hint */
  * in two files.
  * XXX most of these variables should be const.
  */
+extern int osreldate;
 extern int envmode;
 extern int hintmode;		/* 0 = off. 1 = config, 2 = fallback */
 extern int dynamic_kenv;
-extern struct sx kenv_lock;
+extern struct mtx kenv_lock;
 extern char *kern_envp;
 extern char static_env[];
 extern char static_hints[];	/* by config for now */
@@ -113,7 +116,7 @@ extern char **kenvp;
  * General function declarations.
  */
 
-struct clockframe;
+struct lock_object;
 struct malloc_type;
 struct mtx;
 struct proc;
@@ -132,7 +135,12 @@ int	nullop(void);
 int	eopnotsupp(void);
 int	ureadc(int, struct uio *);
 void	hashdestroy(void *, struct malloc_type *, u_long);
-void	*hashinit(int count, struct malloc_type *type, u_long *hashmask);
+void	*hashinit(int count, struct malloc_type *type, u_long *hashmark);
+void	*hashinit_flags(int count, struct malloc_type *type,
+    u_long *hashmask, int flags);
+#define	HASH_NOWAIT	0x00000001
+#define	HASH_WAITOK	0x00000002
+
 void	*phashinit(int count, struct malloc_type *type, u_long *nentries);
 void	g_waitidle(void);
 
@@ -204,27 +212,28 @@ int	suword(void *base, long word);
 int	suword16(void *base, int word);
 int	suword32(void *base, int32_t word);
 int	suword64(void *base, int64_t word);
-intptr_t casuptr(intptr_t *p, intptr_t old, intptr_t new);
+uint32_t casuword32(volatile uint32_t *base, uint32_t oldval, uint32_t newval);
+u_long	 casuword(volatile u_long *p, u_long oldval, u_long newval);
 
 void	realitexpire(void *);
 
-void	hardclock(struct clockframe *frame);
-void	hardclock_process(struct clockframe *frame);
+/*
+ * Cyclic clock function type definition used to hook the cyclic 
+ * subsystem into the appropriate timer interrupt.
+ */
+typedef	void (*cyclic_clock_func_t)(void);
+
+void	hardclock(int usermode, uintfptr_t pc);
+void	hardclock_cpu(int usermode);
 void	softclock(void *);
-void	statclock(struct clockframe *frame);
-void	profclock(struct clockframe *frame);
+void	statclock(int usermode);
+void	profclock(int usermode, uintfptr_t pc);
 
 void	startprofclock(struct proc *);
 void	stopprofclock(struct proc *);
 void	cpu_startprofclock(void);
 void	cpu_stopprofclock(void);
 
-/* flags for suser() and suser_cred() */
-#define SUSER_ALLOWJAIL	1
-#define SUSER_RUID	2
-
-int	suser(struct thread *td);
-int	suser_cred(struct ucred *cred, int flag);
 int	cr_cansee(struct ucred *u1, struct ucred *u2);
 int	cr_canseesocket(struct ucred *cred, struct socket *so);
 
@@ -239,6 +248,12 @@ int	setenv(const char *name, const char *value);
 int	unsetenv(const char *name);
 int	testenv(const char *name);
 
+typedef uint64_t (cpu_tick_f)(void);
+void set_cputicker(cpu_tick_f *func, uint64_t freq, unsigned var);
+extern cpu_tick_f *cpu_ticks;
+uint64_t cpu_tickrate(void);
+uint64_t cputick2usec(uint64_t tick);
+
 #ifdef APM_FIXUP_CALLTODO
 struct timeval;
 void	adjust_timeout_calltodo(struct timeval *time_change);
@@ -251,15 +266,8 @@ void	consinit(void);
 void	cpu_initclocks(void);
 void	usrinfoinit(void);
 
-/* Finalize the world. */
+/* Finalize the world */
 void	shutdown_nice(int);
-
-/*
- * Kernel to clock driver interface.
- */
-void	inittodr(time_t base);
-void	resettodr(void);
-void	startrtclock(void);
 
 /* Timeouts */
 typedef void timeout_t(void *);	/* timeout function type */
@@ -272,7 +280,7 @@ void	untimeout(timeout_t *, void *, struct callout_handle);
 caddr_t	kern_timeout_callwheel_alloc(caddr_t v);
 void	kern_timeout_callwheel_init(void);
 
-/* Stubs for obsolete functions that used to be for interrupt  management */
+/* Stubs for obsolete functions that used to be for interrupt management */
 static __inline void		spl0(void)		{ return; }
 static __inline intrmask_t	splbio(void)		{ return 0; }
 static __inline intrmask_t	splcam(void)		{ return 0; }
@@ -294,10 +302,15 @@ static __inline void		splx(intrmask_t ipl __unused)	{ return; }
  * Common `proc' functions are declared here so that proc.h can be included
  * less often.
  */
-int	msleep(void *chan, struct mtx *mtx, int pri, const char *wmesg,
-	    int timo);
-int	msleep_spin(void *chan, struct mtx *mtx, const char *wmesg, int timo); 
-#define	tsleep(chan, pri, wmesg, timo)	msleep(chan, NULL, pri, wmesg, timo)
+int	_sleep(void *chan, struct lock_object *lock, int pri, const char *wmesg,
+	    int timo) __nonnull(1);
+#define	msleep(chan, mtx, pri, wmesg, timo)				\
+	_sleep((chan), &(mtx)->lock_object, (pri), (wmesg), (timo))
+int	msleep_spin(void *chan, struct mtx *mtx, const char *wmesg, int timo)
+	    __nonnull(1);
+int	pause(const char *wmesg, int timo);
+#define	tsleep(chan, pri, wmesg, timo)					\
+	_sleep((chan), NULL, (pri), (wmesg), (timo))
 void	wakeup(void *chan) __nonnull(1);
 void	wakeup_one(void *chan) __nonnull(1);
 
@@ -320,6 +333,8 @@ struct root_hold_token;
 
 struct root_hold_token *root_mount_hold(const char *identifier);
 void root_mount_rel(struct root_hold_token *h);
+void root_mount_wait(void);
+int root_mounted(void);
 
 
 /*
@@ -328,6 +343,8 @@ void root_mount_rel(struct root_hold_token *h);
 struct unrhdr;
 struct unrhdr *new_unrhdr(int low, int high, struct mtx *mutex);
 void delete_unrhdr(struct unrhdr *uh);
+void clean_unrhdr(struct unrhdr *uh);
+void clean_unrhdrl(struct unrhdr *uh);
 int alloc_unr(struct unrhdr *uh);
 int alloc_unrl(struct unrhdr *uh);
 void free_unr(struct unrhdr *uh, u_int item);
@@ -378,9 +395,9 @@ bitcount32(uint32_t x)
 
 	x = (x & 0x55555555) + ((x & 0xaaaaaaaa) >> 1);
 	x = (x & 0x33333333) + ((x & 0xcccccccc) >> 2);
-	x = (x & 0x0f0f0f0f) + ((x & 0xf0f0f0f0) >> 4);
-	x = (x & 0x00ff00ff) + ((x & 0xff00ff00) >> 8);
-	x = (x & 0x0000ffff) + ((x & 0xffff0000) >> 16);
+	x = (x + (x >> 4)) & 0x0f0f0f0f;
+	x = (x + (x >> 8));
+	x = (x + (x >> 16)) & 0x000000ff;
 	return (x);
 }
 

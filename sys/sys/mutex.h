@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: mutex.h,v 1.1.1.2 2006-02-25 02:37:50 laffer1 Exp $
- * $FreeBSD: src/sys/sys/mutex.h,v 1.79.2.2 2005/08/05 20:21:46 jhb Exp $
+ *	from BSDI $Id: mutex.h,v 1.2 2008-09-16 01:18:24 laffer1 Exp $
+ * $FreeBSD: src/sys/sys/mutex.h,v 1.101.2.1 2007/11/21 02:21:55 attilio Exp $
  */
 
 #ifndef _SYS_MUTEX_H_
@@ -39,6 +39,7 @@
 
 #ifdef _KERNEL
 #include <sys/pcpu.h>
+#include <sys/lock_profile.h>
 #include <machine/atomic.h>
 #include <machine/cpufunc.h>
 #endif	/* _KERNEL_ */
@@ -56,6 +57,7 @@
 #define MTX_SPIN	0x00000001	/* Spin lock (disables interrupts) */
 #define MTX_RECURSE	0x00000004	/* Option: lock allowed to recurse */
 #define	MTX_NOWITNESS	0x00000008	/* Don't do any witness checking. */
+#define MTX_NOPROFILE   0x00000020	/* Don't profile this lock */
 
 /*
  * Option flags passed to certain lock/unlock routines, through the use
@@ -71,7 +73,12 @@
 #define	MTX_RECURSED	0x00000001	/* lock recursed (for MTX_DEF only) */
 #define	MTX_CONTESTED	0x00000002	/* lock contested (for MTX_DEF only) */
 #define MTX_UNOWNED	0x00000004	/* Cookie for free mutex */
-#define	MTX_FLAGMASK	~(MTX_RECURSED | MTX_CONTESTED)
+#define	MTX_FLAGMASK	(MTX_RECURSED | MTX_CONTESTED | MTX_UNOWNED)
+
+/*
+ * Value stored in mutex->mtx_lock to denote a destroyed mutex.
+ */
+#define	MTX_DESTROYED	(MTX_CONTESTED | MTX_UNOWNED)
 
 #endif	/* _KERNEL */
 
@@ -118,6 +125,14 @@ void	_mtx_unlock_spin_flags(struct mtx *m, int opts, const char *file,
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)
 void	_mtx_assert(struct mtx *m, int what, const char *file, int line);
 #endif
+void	_thread_lock_flags(struct thread *, int, const char *, int);
+
+#define	thread_lock(tdp)						\
+    _thread_lock_flags((tdp), 0, __FILE__, __LINE__)
+#define	thread_lock_flags(tdp, opt)					\
+    _thread_lock_flags((tdp), (opt), __FILE__, __LINE__)
+#define	thread_unlock(tdp)						\
+       mtx_unlock_spin((tdp)->td_lock)
 
 /*
  * We define our machine-independent (unoptimized) mutex micro-operations
@@ -149,9 +164,11 @@ void	_mtx_assert(struct mtx *m, int what, const char *file, int line);
 #ifndef _get_sleep_lock
 #define _get_sleep_lock(mp, tid, opts, file, line) do {			\
 	uintptr_t _tid = (uintptr_t)(tid);				\
-									\
-	if (!_obtain_lock((mp), _tid))					\
+	if (!_obtain_lock((mp), _tid)) {				\
 		_mtx_lock_sleep((mp), _tid, (opts), (file), (line));	\
+	} else 								\
+              	lock_profile_obtain_lock_success(&(mp)->lock_object, 0,	\
+		    0, (file), (line));					\
 } while (0)
 #endif
 
@@ -164,16 +181,18 @@ void	_mtx_assert(struct mtx *m, int what, const char *file, int line);
  */
 #ifndef _get_spin_lock
 #ifdef SMP
-#define _get_spin_lock(mp, tid, opts, file, line) do {			\
+#define _get_spin_lock(mp, tid, opts, file, line) do {	\
 	uintptr_t _tid = (uintptr_t)(tid);				\
-									\
 	spinlock_enter();						\
 	if (!_obtain_lock((mp), _tid)) {				\
 		if ((mp)->mtx_lock == _tid)				\
 			(mp)->mtx_recurse++;				\
-		else							\
+		else {							\
 			_mtx_lock_spin((mp), _tid, (opts), (file), (line)); \
-	}								\
+		}							\
+	} else 								\
+              	lock_profile_obtain_lock_success(&(mp)->lock_object, 0,	\
+		    0, (file), (line));					\
 } while (0)
 #else /* SMP */
 #define _get_spin_lock(mp, tid, opts, file, line) do {			\
@@ -218,9 +237,11 @@ void	_mtx_assert(struct mtx *m, int what, const char *file, int line);
 #define _rel_spin_lock(mp) do {						\
 	if (mtx_recursed((mp)))						\
 		(mp)->mtx_recurse--;					\
-	else								\
+	else {								\
+		lock_profile_release_lock(&(mp)->lock_object);          \
 		_release_lock_quick((mp));				\
-	spinlock_exit();						\
+	}                                                               \
+	spinlock_exit();				                \
 } while (0)
 #else /* SMP */
 #define _rel_spin_lock(mp) do {						\
@@ -320,19 +341,22 @@ extern struct mtx_pool *mtxpool_sleep;
 #define mtx_trylock_flags(m, opts)					\
 	_mtx_trylock((m), (opts), LOCK_FILE, LOCK_LINE)
 
-#define	mtx_initialized(m)	((m)->mtx_object.lo_flags & LO_INITIALIZED)
+#define	mtx_sleep(chan, mtx, pri, wmesg, timo)				\
+	_sleep((chan), &(mtx)->lock_object, (pri), (wmesg), (timo))
 
-#define mtx_owned(m)	(((m)->mtx_lock & MTX_FLAGMASK) == (uintptr_t)curthread)
+#define	mtx_initialized(m)	lock_initalized(&(m)->lock_object)
+
+#define mtx_owned(m)	(((m)->mtx_lock & ~MTX_FLAGMASK) == (uintptr_t)curthread)
 
 #define mtx_recursed(m)	((m)->mtx_recurse != 0)
 
-#define mtx_name(m)	((m)->mtx_object.lo_name)
+#define mtx_name(m)	((m)->lock_object.lo_name)
 
 /*
  * Global locks.
  */
-extern struct mtx sched_lock;
 extern struct mtx Giant;
+extern struct mtx blocked_lock;
 
 /*
  * Giant lock manipulation and clean exit macros.
@@ -344,60 +368,27 @@ extern struct mtx Giant;
 #ifndef DROP_GIANT
 #define DROP_GIANT()							\
 do {									\
-	int _giantcnt;							\
+	int _giantcnt = 0;						\
 	WITNESS_SAVE_DECL(Giant);					\
 									\
-	if (mtx_owned(&Giant))						\
-		WITNESS_SAVE(&Giant.mtx_object, Giant);			\
-	for (_giantcnt = 0; mtx_owned(&Giant); _giantcnt++)		\
-		mtx_unlock(&Giant)
+	if (mtx_owned(&Giant)) {					\
+		WITNESS_SAVE(&Giant.lock_object, Giant);		\
+		for (_giantcnt = 0; mtx_owned(&Giant); _giantcnt++)	\
+			mtx_unlock(&Giant);				\
+	}
 
 #define PICKUP_GIANT()							\
-	mtx_assert(&Giant, MA_NOTOWNED);				\
-	while (_giantcnt--)						\
-		mtx_lock(&Giant);					\
-	if (mtx_owned(&Giant))						\
-		WITNESS_RESTORE(&Giant.mtx_object, Giant);		\
+	PARTIAL_PICKUP_GIANT();						\
 } while (0)
 
 #define PARTIAL_PICKUP_GIANT()						\
 	mtx_assert(&Giant, MA_NOTOWNED);				\
-	while (_giantcnt--)						\
-		mtx_lock(&Giant);					\
-	if (mtx_owned(&Giant))						\
-		WITNESS_RESTORE(&Giant.mtx_object, Giant)
+	if (_giantcnt > 0) {						\
+		while (_giantcnt--)					\
+			mtx_lock(&Giant);				\
+		WITNESS_RESTORE(&Giant.lock_object, Giant);		\
+	}
 #endif
-
-/*
- * Network MPSAFE temporary workarounds.  When debug_mpsafenet
- * is 1 the network is assumed to operate without Giant on the
- * input path and protocols that require Giant must collect it
- * on entry.  When 0 Giant is grabbed in the network interface
- * ISR's and in the netisr path and there is no need to grab
- * the Giant lock.  Note that, unlike GIANT_PICKUP() and
- * GIANT_DROP(), these macros directly wrap mutex operations
- * without special recursion handling.
- *
- * This mechanism is intended as temporary until everything of
- * importance is properly locked.  Note: the semantics for
- * NET_{LOCK,UNLOCK}_GIANT() are not the same as DROP_GIANT()
- * and PICKUP_GIANT(), as they are plain mutex operations
- * without a recursion counter.
- */
-extern	int debug_mpsafenet;		/* defined in net/netisr.c */
-#define	NET_LOCK_GIANT() do {						\
-	if (!debug_mpsafenet)						\
-		mtx_lock(&Giant);					\
-} while (0)
-#define	NET_UNLOCK_GIANT() do {						\
-	if (!debug_mpsafenet)						\
-		mtx_unlock(&Giant);					\
-} while (0)
-#define	NET_ASSERT_GIANT() do {						\
-	if (!debug_mpsafenet)						\
-		mtx_assert(&Giant, MA_OWNED);				\
-} while (0)
-#define	NET_CALLOUT_MPSAFE	(debug_mpsafenet ? CALLOUT_MPSAFE : 0)
 
 #define	UGAR(rval) do {							\
 	int _val = (rval);						\
@@ -430,10 +421,10 @@ struct mtx_args {
  * _mtx_assert() must build.
  */
 #if defined(INVARIANTS) || defined(INVARIANT_SUPPORT)
-#define MA_OWNED	0x01
-#define MA_NOTOWNED	0x02
-#define MA_RECURSED	0x04
-#define MA_NOTRECURSED	0x08
+#define MA_OWNED	LA_XLOCKED
+#define MA_NOTOWNED	LA_UNLOCKED
+#define MA_RECURSED	LA_RECURSED
+#define MA_NOTRECURSED	LA_NOTRECURSED
 #endif
 
 #ifdef INVARIANTS

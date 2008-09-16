@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.2 (Berkeley) 1/7/94
- * $FreeBSD: src/sys/sys/unistd.h,v 1.41 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/unistd.h,v 1.49 2007/04/07 18:31:40 pjd Exp $
  */
 
 #ifndef _SYS_UNISTD_H_
@@ -61,18 +61,19 @@
 #define	_POSIX_MEMLOCK			-1
 #define	_POSIX_MEMLOCK_RANGE		200112L
 #define	_POSIX_MEMORY_PROTECTION	200112L
-#define	_POSIX_MESSAGE_PASSING		-1
-#define	_POSIX_MONOTONIC_CLOCK		-1
+#define	_POSIX_MESSAGE_PASSING		200112L
+#define	_POSIX_MONOTONIC_CLOCK		200112L
 #define	_POSIX_NO_TRUNC			1
 #define	_POSIX_PRIORITIZED_IO		-1
 #define	_POSIX_PRIORITY_SCHEDULING	200112L
 #define	_POSIX_RAW_SOCKETS		200112L
-#define	_POSIX_REALTIME_SIGNALS		-1
+#define	_POSIX_REALTIME_SIGNALS		200112L
 #define	_POSIX_SEMAPHORES		-1
 #define	_POSIX_SHARED_MEMORY_OBJECTS	200112L
 #define	_POSIX_SPORADIC_SERVER		-1
 #define	_POSIX_SYNCHRONIZED_IO		-1
-#define	_POSIX_TIMEOUTS			-1
+#define	_POSIX_TIMEOUTS			200112L
+#define	_POSIX_TIMERS			200112L
 #define	_POSIX_TYPED_MEMORY_OBJECTS	-1
 #define	_POSIX_VDISABLE			0xff
 
@@ -106,6 +107,10 @@
 #define	SEEK_SET	0	/* set file offset to offset */
 #define	SEEK_CUR	1	/* set file offset to current plus offset */
 #define	SEEK_END	2	/* set file offset to EOF plus offset */
+#endif
+#if __BSD_VISIBLE
+#define	SEEK_DATA	3	/* set file offset to next data past offset */
+#define	SEEK_HOLE	4	/* set file offset to next hole past offset */
 #endif
 
 #ifndef _POSIX_SOURCE
@@ -149,6 +154,9 @@
 #define	_PC_INF_PRESENT		62
 #define	_PC_MAC_PRESENT		63
 #endif
+
+/* From OpenSolaris, used by SEEK_DATA/SEEK_HOLE. */
+#define	_PC_MIN_HOLE_SIZE	21
 
 #if __BSD_VISIBLE
 /*

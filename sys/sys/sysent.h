@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/sysent.h,v 1.45 2005/05/29 20:08:39 rwatson Exp $
+ * $FreeBSD: src/sys/sys/sysent.h,v 1.55 2007/07/12 18:01:31 jhb Exp $
  */
 
 #ifndef _SYS_SYSENT_H_
@@ -34,18 +34,33 @@
 
 #include <bsm/audit.h>
 
+struct rlimit;
+struct sysent;
 struct thread;
+struct ksiginfo;
 
 typedef	int	sy_call_t(struct thread *, void *);
+
+/* Used by the machine dependent syscall() code. */
+typedef	void (*systrace_probe_func_t)(u_int32_t, int, struct sysent *, void *);
+
+/*
+ * Used by loaded syscalls to convert arguments to a DTrace array
+ * of 64-bit arguments.
+ */
+typedef	void (*systrace_args_func_t)(void *, u_int64_t *, int *);
+
+extern systrace_probe_func_t	systrace_probe_func;
 
 struct sysent {		/* system call table */
 	int	sy_narg;	/* number of arguments */
 	sy_call_t *sy_call;	/* implementing function */
 	au_event_t sy_auevent;	/* audit event associated with syscall */
+	systrace_args_func_t sy_systrace_args_func;
+				/* optional argument conversion function. */
+	u_int32_t sy_entry;	/* DTrace entry ID for systrace. */ 
+	u_int32_t sy_return;	/* DTrace return ID for systrace. */ 
 };
-
-#define SYF_ARGMASK	0x0000FFFF
-#define SYF_MPSAFE	0x00010000
 
 struct image_params;
 struct __sigset;
@@ -64,8 +79,8 @@ struct sysentvec {
 					/* translate trap-to-signal mapping */
 	int		(*sv_fixup)(register_t **, struct image_params *);
 					/* stack fixup function */
-	void		(*sv_sendsig)(void (*)(int), int, struct __sigset *,
-			    u_long);	/* send signal */
+	void		(*sv_sendsig)(void (*)(int), struct ksiginfo *, struct __sigset *);
+			    		/* send signal */
 	char 		*sv_sigcode;	/* start of sigtramp code */
 	int 		*sv_szsigcode;	/* size of sigtramp code */
 	void		(*sv_prepsyscall)(struct trapframe *, int *, u_int *,
@@ -83,7 +98,8 @@ struct sysentvec {
 	int		sv_stackprot;	/* vm protection for stack */
 	register_t	*(*sv_copyout_strings)(struct image_params *);
 	void		(*sv_setregs)(struct thread *, u_long, u_long, u_long);
-	void		(*sv_fixlimits)(struct image_params *);
+	void		(*sv_fixlimit)(struct rlimit *, int);
+	u_long		*sv_maxssiz;
 };
 
 #ifdef _KERNEL
@@ -104,9 +120,17 @@ struct syscall_module_data {
        struct  sysent old_sysent; /* old sysent */
 };
 
+#define MAKE_SYSENT(syscallname)                        \
+static struct sysent syscallname##_sysent = {           \
+    (sizeof(struct syscallname ## _args )               \
+     / sizeof(register_t)),                             \
+    (sy_call_t *)& syscallname,                         \
+    SYS_AUE_##syscallname                               \
+}
+	
 #define SYSCALL_MODULE(name, offset, new_sysent, evh, arg)     \
 static struct syscall_module_data name##_syscall_mod = {       \
-       evh, arg, offset, new_sysent, { 0, NULL }               \
+       evh, arg, offset, new_sysent, { 0, NULL, AUE_NULL }     \
 };                                                             \
                                                                \
 static moduledata_t name##_mod = {                             \
@@ -114,18 +138,20 @@ static moduledata_t name##_mod = {                             \
        syscall_module_handler,                                 \
        &name##_syscall_mod                                     \
 };                                                             \
-DECLARE_MODULE(name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE)
+DECLARE_MODULE(name, name##_mod, SI_SUB_SYSCALLS, SI_ORDER_MIDDLE)
 
 #define SYSCALL_MODULE_HELPER(syscallname)              \
 static int syscallname##_syscall = SYS_##syscallname;   \
-static struct sysent syscallname##_sysent = {           \
-    (sizeof(struct syscallname ## _args )               \
-     / sizeof(register_t)),                             \
-    (sy_call_t *)& syscallname                          \
-};                                                      \
+MAKE_SYSENT(syscallname);                               \
 SYSCALL_MODULE(syscallname,                             \
     & syscallname##_syscall, & syscallname##_sysent,    \
     NULL, NULL);
+
+#define SYSCALL_MODULE_PRESENT(syscallname)		\
+	(sysent[SYS_##syscallname].sy_call !=		\
+			(sy_call_t *)lkmnosys &&	\
+	sysent[SYS_##syscallname].sy_call !=		\
+			(sy_call_t *)lkmressys)
 
 int    syscall_register(int *offset, struct sysent *new_sysent,
 	    struct sysent *old_sysent);

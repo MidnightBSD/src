@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2005, Joseph Koshy
+ * Copyright (c) 2003-2006, Joseph Koshy
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/pmc.h,v 1.8 2005/07/09 17:29:36 jkoshy Exp $
+ * $FreeBSD: src/sys/sys/pmc.h,v 1.11 2006/03/28 16:20:29 jkoshy Exp $
  */
 
 #ifndef _SYS_PMC_H_
@@ -50,9 +50,9 @@
  *
  * The patch version is incremented for every bug fix.
  */
-#define	PMC_VERSION_MAJOR	0x01
-#define	PMC_VERSION_MINOR	0x02
-#define	PMC_VERSION_PATCH	0x0003
+#define	PMC_VERSION_MAJOR	0x02
+#define	PMC_VERSION_MINOR	0x00
+#define	PMC_VERSION_PATCH	0x0000
 
 #define	PMC_VERSION		(PMC_VERSION_MAJOR << 24 |		\
 	PMC_VERSION_MINOR << 16 | PMC_VERSION_PATCH)
@@ -533,12 +533,11 @@ struct pmc_op_getmsr {
 #include <sys/malloc.h>
 #include <sys/sysctl.h>
 
-#define	PMC_REQUEST_POOL_SIZE			32
 #define	PMC_HASH_SIZE				16
 #define	PMC_MTXPOOL_SIZE			32
 #define	PMC_LOG_BUFFER_SIZE			4
 #define	PMC_NLOGBUFFERS				16
-#define	PMC_NSAMPLES				16
+#define	PMC_NSAMPLES				32
 
 #define PMC_SYSCTL_NAME_PREFIX "kern." PMC_MODULE_NAME "."
 
@@ -894,7 +893,7 @@ extern struct pmc_mdep *md;
 /* driver statistics */
 extern struct pmc_op_getdriverstats pmc_stats;
 
-#if	DEBUG
+#if	defined(DEBUG) && DEBUG
 
 /* debug flags, major flag groups */
 struct pmc_debugflags {

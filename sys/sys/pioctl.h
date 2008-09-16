@@ -33,7 +33,7 @@
 /*
  * procfs ioctl definitions.
  *
- * $FreeBSD: src/sys/sys/pioctl.h,v 1.14 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/pioctl.h,v 1.15 2006/09/27 19:57:02 ru Exp $
  */
 
 #ifndef _SYS_PIOCTL_H
@@ -49,12 +49,12 @@ struct procfs_status {
 	unsigned long	val;	/* Any extra data */
 };
 
-# define	PIOCBIS	_IO('p', 1)	/* Set event flag */
-# define	PIOCBIC	_IO('p', 2)	/* Clear event flag */
-# define	PIOCSFL	_IO('p', 3)	/* Set flags */
+# define	PIOCBIS	_IOWINT('p', 1)	/* Set event flag */
+# define	PIOCBIC	_IOWINT('p', 2)	/* Clear event flag */
+# define	PIOCSFL	_IOWINT('p', 3)	/* Set flags */
 			/* wait for proc to stop */
 # define	PIOCWAIT	_IOR('p', 4, struct procfs_status)
-# define	PIOCCONT	_IO('p', 5)	/* Continue a process */
+# define	PIOCCONT	_IOWINT('p', 5)	/* Continue a process */
 			/* Get proc status */
 # define	PIOCSTATUS	_IOR('p', 6, struct procfs_status)
 # define	PIOCGFL	_IOR('p', 7, unsigned int)	/* Get flags */

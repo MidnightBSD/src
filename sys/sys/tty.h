@@ -40,7 +40,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tty.h	8.6 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/sys/tty.h,v 1.97 2004/10/18 21:51:27 phk Exp $
+ * $FreeBSD: src/sys/sys/tty.h,v 1.101 2006/01/04 09:59:06 phk Exp $
  */
 
 #ifndef _SYS_TTY_H_
@@ -253,6 +253,7 @@ struct xtty {
 
 #define TS_DTR_WAIT	0x1000000	/* DTR hold-down between sessions */
 #define TS_GONE		0x2000000	/* Hardware detached */
+#define TS_CALLOUT	0x4000000	/* Callout devices */
 
 /* Character type information. */
 #define	ORDINARY	0
@@ -336,8 +337,6 @@ int	 ttcompat(struct tty *tp, u_long com, caddr_t data, int flag);
 int	 ttioctl(struct tty *tp, u_long com, void *data, int flag);
 int	 ttread(struct tty *tp, struct uio *uio, int flag);
 void	 ttrstrt(void *tp);
-int	 ttsetcompat(struct tty *tp, u_long *com, caddr_t data,
-	    struct termios *term);
 void	 ttsetwater(struct tty *tp);
 int	 ttspeedtab(int speed, struct speedtab *table);
 int	 ttstart(struct tty *tp);
@@ -350,7 +349,7 @@ void	 ttychars(struct tty *tp);
 int	 ttycheckoutq(struct tty *tp, int wait);
 void	 ttyconsolemode(struct tty *tp, int speed);
 int	 tty_close(struct tty *tp);
-int	 ttycreate(struct tty *tp, struct cdevsw *, int unit, int flags, const char *fmt, ...) __printflike(5, 6);
+int	 ttycreate(struct tty *tp, int flags, const char *fmt, ...) __printflike(3, 4);
 int	 ttydtrwaitsleep(struct tty *tp);
 void	 ttydtrwaitstart(struct tty *tp);
 void	 ttyflush(struct tty *tp, int rw);
@@ -361,7 +360,6 @@ void	 ttyinitmode(struct tty *tp, int echo, int speed);
 int	 ttyinput(int c, struct tty *tp);
 int	 ttylclose(struct tty *tp, int flag);
 void	 ttyldoptim(struct tty *tp);
-struct tty *ttymalloc(struct tty *tp);
 int	 ttymodem(struct tty *tp, int flag);
 int	 tty_open(struct cdev *device, struct tty *tp);
 int	 ttyref(struct tty *tp);
@@ -369,6 +367,82 @@ int	 ttyrel(struct tty *tp);
 int	 ttysleep(struct tty *tp, void *chan, int pri, char *wmesg, int timo);
 int	 ttywait(struct tty *tp);
 int	 unputc(struct clist *q);
+
+static __inline int
+tt_open(struct tty *t, struct cdev *c)
+{
+
+	if (t->t_open == NULL)
+		return (0);
+	return (t->t_open(t, c));
+}
+
+static __inline void
+tt_close(struct tty *t)
+{
+
+	if (t->t_close != NULL)
+		return (t->t_close(t));
+}
+
+static __inline void
+tt_oproc(struct tty *t)
+{
+
+	if (t->t_oproc != NULL)			/* XXX: Kludge for pty. */
+		t->t_oproc(t);
+}
+
+static __inline void
+tt_purge(struct tty *t)
+{
+
+	if (t->t_purge != NULL)
+		t->t_purge(t);
+}
+
+static __inline void
+tt_stop(struct tty *t, int i)
+{
+
+	t->t_stop(t, i);
+}
+
+static __inline int
+tt_param(struct tty *t, struct termios *s)
+{
+
+	if (t->t_param == NULL)
+		return (0);
+	return (t->t_param(t, s));
+}
+
+static __inline int
+tt_modem(struct tty *t, int i, int j)
+{
+
+	if (t->t_modem == NULL)
+		return (0);
+	return (t->t_modem(t, i, j));
+}
+
+static __inline int
+tt_break(struct tty *t, int i)
+{
+
+	if (t->t_break == NULL)
+		return (ENOIOCTL);
+	t->t_break(t, i);
+	return (0);
+}
+
+static __inline int
+tt_ioctl(struct tty *t, u_long cmd, void *data,
+		      int fflag, struct thread *td)
+{
+
+	return (t->t_ioctl(t, cmd, data, fflag, td));
+}
 
 /*
  * XXX: temporary

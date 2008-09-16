@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)malloc.h	8.5 (Berkeley) 5/3/95
- * $FreeBSD: src/sys/sys/malloc.h,v 1.80.2.1 2005/07/23 17:11:33 rwatson Exp $
+ * $FreeBSD: src/sys/sys/malloc.h,v 1.83 2005/12/30 11:45:07 pjd Exp $
  */
 
 #ifndef _SYS_MALLOC_H_
@@ -145,7 +145,7 @@ struct malloc_type_header {
 	SYSINIT(type##_init, SI_SUB_KMEM, SI_ORDER_SECOND, malloc_init,	\
 	    type);							\
 	SYSUNINIT(type##_uninit, SI_SUB_KMEM, SI_ORDER_ANY,		\
-	    malloc_uninit, type);
+	    malloc_uninit, type)
 
 #define	MALLOC_DECLARE(type) \
 	extern struct malloc_type type[1]
@@ -189,6 +189,8 @@ void	*realloc(void *addr, unsigned long size, struct malloc_type *type,
 	    int flags);
 void	*reallocf(void *addr, unsigned long size, struct malloc_type *type,
 	    int flags);
+
+struct malloc_type *malloc_desc2type(const char *desc);
 #endif /* _KERNEL */
 
 #endif /* !_SYS_MALLOC_H_ */

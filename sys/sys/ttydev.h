@@ -27,15 +27,13 @@
  * SUCH DAMAGE.
  *
  *	@(#)ttydev.h	8.2 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/sys/ttydev.h,v 1.11 2004/06/21 22:57:16 phk Exp $
+ * $FreeBSD: src/sys/sys/ttydev.h,v 1.12 2006/01/10 09:19:10 phk Exp $
  */
 
 /* COMPATIBILITY HEADER FILE */
 
 #ifndef _SYS_TTYDEV_H_
 #define	_SYS_TTYDEV_H_
-
-#ifndef BURN_BRIDGES
 
 #ifdef USE_OLD_TTY
 #define B0	0
@@ -60,7 +58,5 @@
 #define B460800	19
 #define B921600	20
 #endif /* USE_OLD_TTY */
-
-#endif /* BURN_BRIDGES */
 
 #endif /* !_SYS_TTYDEV_H_ */

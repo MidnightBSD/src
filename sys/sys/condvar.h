@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/condvar.h,v 1.12 2004/05/05 21:57:44 jhb Exp $
+ * $FreeBSD: src/sys/sys/condvar.h,v 1.14 2007/03/21 22:22:13 jhb Exp $
  */
 
 #ifndef	_SYS_CONDVAR_H_
@@ -32,7 +32,7 @@
 #ifndef	LOCORE
 #include <sys/queue.h>
 
-struct mtx;
+struct lock_object;
 struct thread;
 
 TAILQ_HEAD(cv_waitq, thread);
@@ -52,13 +52,25 @@ struct cv {
 void	cv_init(struct cv *cvp, const char *desc);
 void	cv_destroy(struct cv *cvp);
 
-void	cv_wait(struct cv *cvp, struct mtx *mp);
-int	cv_wait_sig(struct cv *cvp, struct mtx *mp);
-int	cv_timedwait(struct cv *cvp, struct mtx *mp, int timo);
-int	cv_timedwait_sig(struct cv *cvp, struct mtx *mp, int timo);
+void	_cv_wait(struct cv *cvp, struct lock_object *lock);
+void	_cv_wait_unlock(struct cv *cvp, struct lock_object *lock);
+int	_cv_wait_sig(struct cv *cvp, struct lock_object *lock);
+int	_cv_timedwait(struct cv *cvp, struct lock_object *lock, int timo);
+int	_cv_timedwait_sig(struct cv *cvp, struct lock_object *lock, int timo);
 
 void	cv_signal(struct cv *cvp);
 void	cv_broadcastpri(struct cv *cvp, int pri);
+
+#define	cv_wait(cvp, lock)						\
+	_cv_wait((cvp), &(lock)->lock_object)
+#define	cv_wait_unlock(cvp, lock)					\
+	_cv_wait_unlock((cvp), &(lock)->lock_object)
+#define	cv_wait_sig(cvp, lock)						\
+	_cv_wait_sig((cvp), &(lock)->lock_object)
+#define	cv_timedwait(cvp, lock, timo)					\
+	_cv_timedwait((cvp), &(lock)->lock_object, (timo))
+#define	cv_timedwait_sig(cvp, lock, timo)				\
+	_cv_timedwait_sig((cvp), &(lock)->lock_object, (timo))
 
 #define cv_broadcast(cvp)	cv_broadcastpri(cvp, -1)
 

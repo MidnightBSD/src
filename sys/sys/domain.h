@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)domain.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/domain.h,v 1.21 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/domain.h,v 1.22 2006/08/07 12:02:43 rwatson Exp $
  */
 
 #ifndef _SYS_DOMAIN_H_
@@ -66,7 +66,6 @@ struct domain {
 #ifdef _KERNEL
 extern int	domain_init_status;
 extern struct	domain *domains;
-extern struct	domain localdomain;
 extern void	net_add_domain(void *);
 
 #define DOMAIN_SET(name) \

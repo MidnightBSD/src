@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/elf_generic.h,v 1.6.14.1 2005/12/30 22:13:58 marcel Exp $
+ * $FreeBSD: src/sys/sys/elf_generic.h,v 1.8 2005/12/18 19:43:33 kan Exp $
  */
 
 #ifndef _SYS_ELF_GENERIC_H_
@@ -67,6 +67,11 @@ __ElfType(Dyn);
 __ElfType(Rel);
 __ElfType(Rela);
 __ElfType(Sym);
+__ElfType(Verdef);
+__ElfType(Verdaux);
+__ElfType(Verneed);
+__ElfType(Vernaux);
+__ElfType(Versym);
 
 /* Non-standard ELF types. */
 __ElfType(Hashelt);

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)msgbuf.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/msgbuf.h,v 1.27 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/msgbuf.h,v 1.28 2006/09/03 00:33:19 jmg Exp $
  */
 
 #ifndef _SYS_MSGBUF_H_
@@ -68,11 +68,7 @@ int	msgbuf_peekbytes(struct msgbuf *mbp, char *buf, int buflen,
 void	msgbuf_reinit(struct msgbuf *mbp, void *ptr, int size);
 
 #ifndef MSGBUF_SIZE
-#ifdef __amd64__
 #define	MSGBUF_SIZE	(32768 * 2)
-#else
-#define	MSGBUF_SIZE	32768
-#endif
 #endif
 #endif /* KERNEL */
 

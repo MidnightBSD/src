@@ -12,7 +12,7 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by (name).
+ *	This product includes software developed by Henrik Vestergaard Draboel.
  * 4. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/rtprio.h,v 1.14 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/rtprio.h,v 1.18 2007/01/08 21:21:45 imp Exp $
  */
 
 #ifndef _SYS_RTPRIO_H_
@@ -75,9 +75,9 @@ struct rtprio {
 };
 
 #ifdef _KERNEL
-struct ksegrp;
-int	rtp_to_pri(struct rtprio *, struct ksegrp *);
-void	pri_to_rtp(struct ksegrp *, struct rtprio *);
+struct thread;
+int	rtp_to_pri(struct rtprio *, struct thread *);
+void	pri_to_rtp(struct thread *, struct rtprio *);
 #endif
 #endif
 
@@ -86,6 +86,7 @@ void	pri_to_rtp(struct ksegrp *, struct rtprio *);
 
 __BEGIN_DECLS
 int	rtprio(int, pid_t, struct rtprio *);
+int	rtprio_thread(int, lwpid_t, struct rtprio *);
 __END_DECLS
 #endif	/* !_KERNEL */
 #endif	/* !_SYS_RTPRIO_H_ */

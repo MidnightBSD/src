@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cons.h	7.2 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/sys/cons.h,v 1.37 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/cons.h,v 1.40 2006/11/01 04:54:51 jb Exp $
  */
 
 #ifndef _MACHINE_CONS_H_
@@ -45,7 +45,6 @@ typedef	void	cn_term_t(struct consdev *);
 typedef	int	cn_getc_t(struct consdev *);
 typedef	int	cn_checkc_t(struct consdev *);
 typedef	void	cn_putc_t(struct consdev *, int);
-typedef	void	cn_dbctl_t(struct consdev *, int);
 
 struct consdev {
 	cn_probe_t	*cn_probe;
@@ -60,8 +59,6 @@ struct consdev {
 				/* kernel "return char if available" interface */
 	cn_putc_t	*cn_putc;
 				/* kernel putchar interface */
-	cn_dbctl_t	*cn_dbctl;
-				/* debugger control interface */
 	struct	tty *cn_tp;	/* tty structure for console device */
 	short	cn_pri;		/* pecking order; the higher the better */
 	void	*cn_arg;	/* drivers method argument */
@@ -85,7 +82,17 @@ struct consdev {
 
 #define CONS_DRIVER(name, probe, init, term, getc, checkc, putc, dbctl)	\
 	static struct consdev name##_consdev = {			\
-		probe, init, term, getc, checkc, putc, dbctl		\
+		probe, init, term, getc, checkc, putc			\
+	};								\
+	DATA_SET(cons_set, name##_consdev)
+
+#define CONSOLE_DRIVER(name)						\
+	static struct consdev name##_consdev = {			\
+		.cn_probe = name##_cnprobe,				\
+		.cn_init = name##_cninit,				\
+		.cn_term = name##_cnterm,				\
+		.cn_getc = name##_cngetc,				\
+		.cn_putc = name##_cnputc,				\
 	};								\
 	DATA_SET(cons_set, name##_consdev)
 
@@ -98,8 +105,8 @@ void	cnremove(struct consdev *);
 void	cnselect(struct consdev *);
 int	cncheckc(void);
 int	cngetc(void);
-void	cndbctl(int);
 void	cnputc(int);
+void	cnputs(char *);
 int	cnunavailable(void);
 
 #endif /* _KERNEL */

@@ -20,7 +20,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/mouse.h,v 1.23 2005/04/13 07:25:45 mdodd Exp $
+ * $FreeBSD: src/sys/sys/mouse.h,v 1.25 2006/12/18 18:48:28 keramida Exp $
  */
 
 #ifndef _SYS_MOUSE_H_
@@ -41,7 +41,7 @@
 #define MOUSE_READSTATE		_IOWR('M', 8, mousedata_t)
 #define MOUSE_READDATA		_IOWR('M', 9, mousedata_t)
 
-#if notyet
+#ifdef notyet
 #define MOUSE_SETRESOLUTION	_IOW('M', 10, int)
 #define MOUSE_SETSCALING	_IOW('M', 11, int)
 #define MOUSE_SETRATE		_IOW('M', 12, int)
@@ -175,7 +175,7 @@ typedef struct mousemode {
 #define MOUSE_PROTO_HITTAB	8	/* Hitachi Tablet 3 bytes */
 #define MOUSE_PROTO_GLIDEPOINT	9	/* ALPS GlidePoint, 3/4 bytes */
 #define MOUSE_PROTO_INTELLI	10	/* MS IntelliMouse, 4 bytes */
-#define MOUSE_PROTO_THINK	11	/* Kensignton Thinking Mouse, 3/4 bytes */
+#define MOUSE_PROTO_THINK	11	/* Kensington Thinking Mouse, 3/4 bytes */
 #define MOUSE_PROTO_SYSMOUSE	12	/* /dev/sysmouse */
 #define MOUSE_PROTO_X10MOUSEREM	13	/* X10 MouseRemote, 3 bytes */
 #define MOUSE_PROTO_KIDSPAD	14	/* Genius Kidspad */

@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/rman.h,v 1.27 2005/04/12 06:21:58 imp Exp $
+ * $FreeBSD: src/sys/sys/rman.h,v 1.34 2006/06/12 04:06:20 imp Exp $
  */
 
 #ifndef _SYS_RMAN_H_
@@ -35,7 +35,7 @@
 #ifndef	_KERNEL
 #include <sys/queue.h>
 #else
-#include <machine/bus.h>
+#include <machine/_bus.h>
 #include <machine/resource.h>
 #endif
 
@@ -46,6 +46,7 @@
 #define	RF_WANTED	0x0010	/* somebody is waiting for this resource */
 #define	RF_FIRSTSHARE	0x0020	/* first in sharing list */
 #define	RF_PREFETCHABLE	0x0040	/* resource is prefetchable */
+#define	RF_OPTIONAL	0x0080	/* for bus_alloc_resources() */
 
 #define	RF_ALIGNMENT_SHIFT	10 /* alignment size bit starts bit 10 */
 #define	RF_ALIGNMENT_MASK	(0x003F << RF_ALIGNMENT_SHIFT)
@@ -84,37 +85,24 @@ struct u_rman {
 };
 
 #ifdef _KERNEL
+
 /*
- * We use a linked list rather than a bitmap because we need to be able to
- * represent potentially huge objects (like all of a processor's physical
- * address space).  That is also why the indices are defined to have type
- * `unsigned long' -- that being the largest integral type in ISO C (1990).
- * The 1999 version of C allows `long long'; we may need to switch to that
- * at some point in the future, particularly if we want to support 36-bit
- * addresses on IA32 hardware.
+ * The public (kernel) view of struct resource
+ *
+ * NB: Changing the offset/size/type of existing fields in struct resource
+ * NB: breaks the device driver ABI and is strongly FORBIDDEN.
+ * NB: Appending new fields is probably just misguided.
  */
-TAILQ_HEAD(resource_head, resource);
-#ifdef __RMAN_RESOURCE_VISIBLE
+
 struct resource {
-	TAILQ_ENTRY(resource)	r_link;
-	LIST_ENTRY(resource)	r_sharelink;
-	LIST_HEAD(, resource) 	*r_sharehead;
-	u_long	r_start;	/* index of the first entry in this resource */
-	u_long	r_end;		/* index of the last entry (inclusive) */
-	u_int	r_flags;
-	void	*r_virtual;	/* virtual address of this resource */
-	bus_space_tag_t r_bustag; /* bus_space tag */
-	bus_space_handle_t r_bushandle;	/* bus_space handle */
-	struct	device *r_dev;	/* device which has allocated this resource */
-	struct	rman *r_rm;	/* resource manager from whence this came */
-	void    *r_spare1;	/* Spare pointer 1 */
-	void    *r_spare2;	/* Spare pointer 2 */
-	int	r_rid;		/* optional rid for this resource. */
+	struct resource_i	*__r_i;
+	bus_space_tag_t		r_bustag; /* bus_space tag */
+	bus_space_handle_t	r_bushandle;	/* bus_space handle */
 };
-#else
-struct resource;
-struct device;
-#endif
+
+struct resource_i;
+
+TAILQ_HEAD(resource_head, resource_i);
 
 struct rman {
 	struct	resource_head 	rm_list;
@@ -141,8 +129,10 @@ void   *rman_get_virtual(struct resource *);
 int	rman_deactivate_resource(struct resource *r);
 int	rman_fini(struct rman *rm);
 int	rman_init(struct rman *rm);
+int	rman_init_from_resource(struct rman *rm, struct resource *r);
 uint32_t rman_make_alignment_flags(uint32_t size);
 int	rman_manage_region(struct rman *rm, u_long start, u_long end);
+int	rman_is_region_manager(struct resource *r, struct rman *rm);
 int	rman_release_resource(struct resource *r);
 struct resource *rman_reserve_resource(struct rman *rm, u_long start,
 					u_long end, u_long count,
@@ -159,6 +149,7 @@ void	rman_set_start(struct resource *_r, u_long _start);
 void	rman_set_virtual(struct resource *_r, void *_v);
 
 extern	struct rman_head rman_head;
+
 #endif /* _KERNEL */
 
 #endif /* !_SYS_RMAN_H_ */

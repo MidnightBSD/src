@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/limits.h,v 1.9 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/limits.h,v 1.10 2005/12/02 07:45:28 davidxu Exp $
  */
 
 #ifndef _SYS_LIMITS_H_
@@ -91,6 +91,10 @@
 #if __XSI_VISIBLE
 #define	LONG_BIT	__LONG_BIT
 #define	WORD_BIT	__WORD_BIT
+#endif
+
+#if __POSIX_VISIBLE
+#define	MQ_PRIO_MAX	64
 #endif
 
 #endif /* !_SYS_LIMITS_H_ */

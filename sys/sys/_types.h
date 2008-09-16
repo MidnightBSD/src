@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_types.h,v 1.21 2005/03/22 01:19:17 das Exp $
+ * $FreeBSD: src/sys/sys/_types.h,v 1.23 2006/03/01 06:29:34 davidxu Exp $
  */
 
 #ifndef _SYS__TYPES_H_
@@ -57,7 +57,8 @@ typedef	__int64_t	__rlim_t;	/* resource limit - intentionally */
 typedef	__uint8_t	__sa_family_t;
 typedef	__uint32_t	__socklen_t;
 typedef	long		__suseconds_t;	/* microseconds (signed) */
-typedef	__int32_t	__timer_t;	/* timer_gettime()... */
+typedef	struct __timer	*__timer_t;	/* timer_gettime()... */
+typedef	struct __mq	*__mqd_t;	/* mq_open()... */
 typedef	__uint32_t	__uid_t;
 typedef	unsigned int	__useconds_t;	/* microseconds (unsigned) */
 

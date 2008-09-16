@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_mutex.h,v 1.11 2004/01/25 01:59:26 rwatson Exp $
+ * $FreeBSD: src/sys/sys/_mutex.h,v 1.13 2007/03/21 21:20:51 jhb Exp $
  */
 
 #ifndef _SYS__MUTEX_H_
@@ -35,28 +35,9 @@
  * Sleep/spin mutex.
  */
 struct mtx {
-	struct lock_object	mtx_object;	/* Common lock properties. */
+	struct lock_object	lock_object;	/* Common lock properties. */
 	volatile uintptr_t	mtx_lock;	/* Owner and flags. */
 	volatile u_int		mtx_recurse;	/* Number of recursive holds. */
-
-#ifdef MUTEX_PROFILING
-	/*
-	 * This does not result in variant structure sizes because
-	 * MUTEX_PROFILING is in opt_global.h
-	 */
-	u_int64_t		mtx_acqtime;
-	const char		*mtx_filename;
-	int			mtx_lineno;
-	/*
-	 * Fields relating to measuring contention on mutexes.
-	 * holding must be accessed atomically since it's
-	 * modified by threads that don't yet hold the mutex.
-	 * locking is only modified and referenced while
-	 * the mutex is held.
-	 */
-	u_int			mtx_contest_holding;
-	u_int			mtx_contest_locking;
-#endif
 };
 
 #endif /* !_SYS__MUTEX_H_ */

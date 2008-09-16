@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unpcb.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/unpcb.h,v 1.19 2005/04/13 00:01:46 mdodd Exp $
+ * $FreeBSD: src/sys/sys/unpcb.h,v 1.22 2007/02/26 20:47:51 rwatson Exp $
  */
 
 #ifndef _SYS_UNPCB_H_
@@ -78,6 +78,8 @@ struct unpcb {
 	unp_gen_t unp_gencnt;		/* generation count of this instance */
 	int	unp_flags;		/* flags */
 	struct	xucred unp_peercred;	/* peer credentials, if applicable */
+	u_int	unp_refcount;
+	struct	mtx unp_mtx;		/* mutex */
 };
 
 /*
@@ -97,6 +99,14 @@ struct unpcb {
 #define UNP_HAVEPCCACHED		0x002
 #define	UNP_WANTCRED			0x004	/* credentials wanted */
 #define	UNP_CONNWAIT			0x008	/* connect blocks until accepted */
+
+/*
+ * These flags are used to handle non-atomicity in connect() and bind()
+ * operations on a socket: in particular, to avoid races between multiple
+ * threads or processes operating simultaneously on the same socket.
+ */
+#define	UNP_CONNECTING			0x010	/* Currently connecting. */
+#define	UNP_BINDING			0x020	/* Currently binding. */
 
 #define	sotounpcb(so)	((struct unpcb *)((so)->so_pcb))
 

@@ -26,15 +26,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/sleepqueue.h,v 1.6 2005/01/07 02:29:24 imp Exp $
+ * $FreeBSD: src/sys/sys/sleepqueue.h,v 1.12 2007/03/31 23:23:42 jhb Exp $
  */
 
 #ifndef _SYS_SLEEPQUEUE_H_
 #define _SYS_SLEEPQUEUE_H_
 
 /*
- * Sleep queue interface.  Sleep/wakeup and condition variables use a sleep
- * queue for the queue of threads blocked on a sleep channel.
+ * Sleep queue interface.  Sleep/wakeup, condition variables, and sx
+ * locks use a sleep queue for the queue of threads blocked on a sleep
+ * channel.
  *
  * A thread calls sleepq_lock() to lock the sleep queue chain associated
  * with a given wait channel.  A thread can then call call sleepq_add() to
@@ -75,32 +76,35 @@
  * using this interface as well (death to TDI_IWAIT!)
  */
 
-struct mtx;
+struct lock_object;
 struct sleepqueue;
 struct thread;
 
 #ifdef _KERNEL
 
 #define	SLEEPQ_TYPE		0x0ff		/* Mask of sleep queue types. */
-#define	SLEEPQ_MSLEEP		0x00		/* Used by msleep/wakeup. */
+#define	SLEEPQ_SLEEP		0x00		/* Used by sleep/wakeup. */
 #define	SLEEPQ_CONDVAR		0x01		/* Used for a cv. */
+#define	SLEEPQ_PAUSE		0x02		/* Used by pause. */
+#define	SLEEPQ_SX		0x03		/* Used by an sx lock. */
 #define	SLEEPQ_INTERRUPTIBLE	0x100		/* Sleep is interruptible. */
 
 void	init_sleepqueues(void);
-void	sleepq_abort(struct thread *td, int intval);
-void	sleepq_add(void *, struct mtx *, const char *, int);
+void	sleepq_abort(struct thread *td, int intrval);
+void	sleepq_add(void *wchan, struct lock_object *lock, const char *wmesg,
+	    int flags, int queue);
 struct sleepqueue *sleepq_alloc(void);
-void	sleepq_broadcast(void *, int, int);
-void	sleepq_free(struct sleepqueue *);
-void	sleepq_lock(void *);
-struct sleepqueue *sleepq_lookup(void *);
-void	sleepq_release(void *);
-void	sleepq_remove(struct thread *, void *);
-void	sleepq_signal(void *, int, int);
+void	sleepq_broadcast(void *wchan, int flags, int pri, int queue);
+void	sleepq_free(struct sleepqueue *sq);
+void	sleepq_lock(void *wchan);
+struct sleepqueue *sleepq_lookup(void *wchan);
+void	sleepq_release(void *wchan);
+void	sleepq_remove(struct thread *td, void *wchan);
+void	sleepq_signal(void *wchan, int flags, int pri, int queue);
 void	sleepq_set_timeout(void *wchan, int timo);
 int	sleepq_timedwait(void *wchan);
 int	sleepq_timedwait_sig(void *wchan);
-void	sleepq_wait(void *);
+void	sleepq_wait(void *wchan);
 int	sleepq_wait_sig(void *wchan);
 
 #endif	/* _KERNEL */

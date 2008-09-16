@@ -23,13 +23,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/umtx.h,v 1.16.2.1 2006/01/16 05:48:40 davidxu Exp $
+ * $FreeBSD: src/sys/sys/umtx.h,v 1.29 2007/06/06 07:35:08 davidxu Exp $
  *
  */
 
 #ifndef _SYS_UMTX_H_
 #define	_SYS_UMTX_H_
 
+#include <sys/_types.h>
 #include <sys/limits.h>
 
 /* 
@@ -40,25 +41,57 @@
 #define	UMTX_CONTESTED	LONG_MIN
 
 struct umtx {
-	void	*u_owner;	/* Owner of the mutex. */
+	volatile u_long	u_owner;	/* Owner of the mutex. */
+};
+
+#define USYNC_PROCESS_SHARED	0x0001	/* Process shared sync objs */
+
+#define	UMUTEX_UNOWNED		0x0
+#define	UMUTEX_CONTESTED	0x80000000U
+
+#define	UMUTEX_ERROR_CHECK	0x0002	/* Error-checking mutex */
+#define	UMUTEX_PRIO_INHERIT	0x0004	/* Priority inherited mutex */
+#define	UMUTEX_PRIO_PROTECT	0x0008	/* Priority protect mutex */
+
+struct umutex {
+	volatile __lwpid_t	m_owner;	/* Owner of the mutex */
+	uint32_t		m_flags;	/* Flags of the mutex */
+	uint32_t		m_ceilings[2];	/* Priority protect ceiling */
+	uint32_t		m_spare[4];
+};
+
+struct ucond {
+	volatile uint32_t	c_has_waiters;	/* Has waiters in kernel */
+	uint32_t		c_flags;	/* Flags of the condition variable */
+	uint32_t		c_spare[2];	/* Spare space */
 };
 
 /* op code for _umtx_op */
-#define UMTX_OP_LOCK		0
-#define UMTX_OP_UNLOCK		1
-#define UMTX_OP_WAIT		2
-#define UMTX_OP_WAKE		3
+#define	UMTX_OP_LOCK		0
+#define	UMTX_OP_UNLOCK		1
+#define	UMTX_OP_WAIT		2
+#define	UMTX_OP_WAKE		3
+#define	UMTX_OP_MUTEX_TRYLOCK	4
+#define	UMTX_OP_MUTEX_LOCK	5
+#define	UMTX_OP_MUTEX_UNLOCK	6
+#define	UMTX_OP_SET_CEILING	7
+#define	UMTX_OP_CV_WAIT		8
+#define	UMTX_OP_CV_SIGNAL	9
+#define	UMTX_OP_CV_BROADCAST	10
+#define	UMTX_OP_MAX		11
+
+/* flags for UMTX_OP_CV_WAIT */
+#define UMTX_CHECK_UNPARKING	0x01
 
 #ifndef _KERNEL
 
+int _umtx_op(void *obj, int op, u_long val, void *uaddr, void *uaddr2);
+
 /*
- * System calls for acquiring and releasing contested mutexes.
+ * Old (deprecated) userland mutex system calls.
  */
-/* deprecated becaues it can only use thread id */
 int _umtx_lock(struct umtx *mtx);
-/* deprecated becaues it can only use thread id */
 int _umtx_unlock(struct umtx *mtx);
-int _umtx_op(struct umtx *umtx, int op, long id, void *uaddr, void *uaddr2);
 
 /*
  * Standard api.  Try uncontested acquire/release and asks the
@@ -70,73 +103,77 @@ umtx_init(struct umtx *umtx)
 	umtx->u_owner = UMTX_UNOWNED;
 }
 
-static __inline long
+static __inline u_long
 umtx_owner(struct umtx *umtx)
 {
-	return ((long)umtx->u_owner & ~LONG_MIN);
+	return (umtx->u_owner & ~LONG_MIN);
 }
 
 static __inline int
-umtx_lock(struct umtx *umtx, long id)
+umtx_lock(struct umtx *umtx, u_long id)
 {
-	if (atomic_cmpset_acq_ptr(&umtx->u_owner, (void *)UMTX_UNOWNED,
-	    (void *)id) == 0)
+	if (atomic_cmpset_acq_long(&umtx->u_owner, UMTX_UNOWNED, id) == 0)
 		if (_umtx_lock(umtx) == -1)
 			return (errno);
 	return (0);
 }
 
 static __inline int
-umtx_trylock(struct umtx *umtx, long id)
+umtx_trylock(struct umtx *umtx, u_long id)
 {
-	if (atomic_cmpset_acq_ptr(&umtx->u_owner, (void *)UMTX_UNOWNED,
-	    (void *)id) == 0)
+	if (atomic_cmpset_acq_long(&umtx->u_owner, UMTX_UNOWNED, id) == 0)
 		return (EBUSY);
 	return (0);
 }
 
 static __inline int
-umtx_timedlock(struct umtx *umtx, long id, const struct timespec *timeout)
+umtx_timedlock(struct umtx *umtx, u_long id, const struct timespec *timeout)
 {
-	if (atomic_cmpset_acq_ptr(&umtx->u_owner, (void *)UMTX_UNOWNED,
-	    (void *)id) == 0)
-		if (_umtx_op(umtx, UMTX_OP_LOCK, id, 0, (void *)timeout) == -1)
+	if (atomic_cmpset_acq_long(&umtx->u_owner, UMTX_UNOWNED, id) == 0)
+		if (_umtx_op(umtx, UMTX_OP_LOCK, id, 0,
+		    __DECONST(void *, timeout)) == -1)
 			return (errno);
 	return (0);
 }
 
 static __inline int
-umtx_unlock(struct umtx *umtx, long id)
+umtx_unlock(struct umtx *umtx, u_long id)
 {
-	if (atomic_cmpset_rel_ptr(&umtx->u_owner, (void *)id,
-	    (void *)UMTX_UNOWNED) == 0)
+	if (atomic_cmpset_rel_long(&umtx->u_owner, id, UMTX_UNOWNED) == 0)
 		if (_umtx_unlock(umtx) == -1)
 			return (errno);
 	return (0);
 }
 
 static __inline int
-umtx_wait(struct umtx *umtx, long id, const struct timespec *timeout)
+umtx_wait(u_long *p, long val, const struct timespec *timeout)
 {
-	if (_umtx_op(umtx, UMTX_OP_WAIT, id, 0, (void *)timeout) == -1)
+	if (_umtx_op(p, UMTX_OP_WAIT, val, 0,
+	    __DECONST(void *, timeout)) == -1)
 		return (errno);
 	return (0);
 }
 
 /* Wake threads waiting on a user address. */
 static __inline int
-umtx_wake(struct umtx *umtx, int nr_wakeup)
+umtx_wake(u_long *p, int nr_wakeup)
 {
-	if (_umtx_op(umtx, UMTX_OP_WAKE, nr_wakeup, 0, 0) == -1)
+	if (_umtx_op(p, UMTX_OP_WAKE, nr_wakeup, 0, 0) == -1)
 		return (errno);
 	return (0);
 }
+
 #else
+
+struct thread;
 
 struct umtx_q *umtxq_alloc(void);
 void umtxq_free(struct umtx_q *);
-struct thread;
 int kern_umtx_wake(struct thread *td, void *uaddr, int n_wake);
-
+void umtx_pi_adjust(struct thread *td, u_char oldpri);
+void umtx_thread_init(struct thread *td);
+void umtx_thread_fini(struct thread *td);
+void umtx_thread_alloc(struct thread *td);
+void umtx_thread_exit(struct thread *td);
 #endif /* !_KERNEL */
 #endif /* !_SYS_UMTX_H_ */

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)socketvar.h	8.3 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/socketvar.h,v 1.141 2005/07/09 12:24:40 jhb Exp $
+ * $FreeBSD: src/sys/sys/socketvar.h,v 1.158.4.1 2008/02/02 12:44:14 rwatson Exp $
  */
 
 #ifndef _SYS_SOCKETVAR_H_
@@ -37,6 +37,7 @@
 #include <sys/selinfo.h>		/* for struct selinfo */
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <sys/_sx.h>
 
 /*
  * Kernel structure per socket.
@@ -77,7 +78,7 @@ struct socket {
  * We allow connections to queue up based on current queue lengths
  * and limit on number of queued connections for this socket.
  */
-	struct	socket *so_head;	/* (e) back pointer to accept socket */
+	struct	socket *so_head;	/* (e) back pointer to listen socket */
 	TAILQ_HEAD(, socket) so_incomp;	/* (e) queue of partial unaccepted connections */
 	TAILQ_HEAD(, socket) so_comp;	/* (e) queue of complete unaccepted connections */
 	TAILQ_ENTRY(socket) so_list;	/* (e) list of unaccepted connections */
@@ -97,12 +98,15 @@ struct socket {
 	struct sockbuf {
 		struct	selinfo sb_sel;	/* process selecting read/write */
 		struct	mtx sb_mtx;	/* sockbuf lock */
+		struct	sx sb_sx;	/* prevent I/O interlacing */
 		short	sb_state;	/* (c/d) socket state on sockbuf */
 #define	sb_startzero	sb_mb
 		struct	mbuf *sb_mb;	/* (c/d) the mbuf chain */
 		struct	mbuf *sb_mbtail; /* (c/d) the last mbuf in the chain */
 		struct	mbuf *sb_lastrecord;	/* (c/d) first mbuf of last
 						 * record in socket buffer */
+		struct	mbuf *sb_sndptr; /* (c/d) pointer into mbuf chain */
+		u_int	sb_sndptroff;	/* (c/d) byte offset of ptr into chain */
 		u_int	sb_cc;		/* (c/d) actual chars in buffer */
 		u_int	sb_hiwat;	/* (c/d) max actual char count */
 		u_int	sb_mbcnt;	/* (c/d) chars of mbufs used */
@@ -119,23 +123,21 @@ struct socket {
 /*
  * Constants for sb_flags field of struct sockbuf.
  */
-#define	SB_LOCK		0x01		/* lock on data queue */
-#define	SB_WANT		0x02		/* someone is waiting to lock */
 #define	SB_WAIT		0x04		/* someone is waiting for data/space */
 #define	SB_SEL		0x08		/* someone is selecting */
 #define	SB_ASYNC	0x10		/* ASYNC I/O, need signals */
 #define	SB_UPCALL	0x20		/* someone wants an upcall */
 #define	SB_NOINTR	0x40		/* operations not interruptible */
-#define SB_AIO		0x80		/* AIO operations queued */
-#define SB_KNOTE	0x100		/* kernel note attached */
-#define SB_AUTOSIZE	0x800		/* automatically size socket buffer */
+#define	SB_AIO		0x80		/* AIO operations queued */
+#define	SB_KNOTE	0x100		/* kernel note attached */
+#define	SB_AUTOSIZE	0x800		/* automatically size socket buffer */
 
 	void	(*so_upcall)(struct socket *, void *, int);
 	void	*so_upcallarg;
 	struct	ucred *so_cred;		/* (a) user credentials */
 	struct	label *so_label;	/* (b) MAC label for socket */
 	struct	label *so_peerlabel;	/* (b) cached MAC label for peer */
-	/* NB: generation count must not be first; easiest to make it last. */
+	/* NB: generation count must not be first. */
 	so_gen_t so_gencnt;		/* (h) generation count */
 	void	*so_emuldata;		/* (b) private data for emulators */
  	struct so_accf {
@@ -209,6 +211,14 @@ extern struct mtx accept_mtx;
 #define	SS_ASYNC		0x0200	/* async i/o notify */
 #define	SS_ISCONFIRMING		0x0400	/* deciding to accept connection req */
 #define	SS_ISDISCONNECTED	0x2000	/* socket disconnected from peer */
+/*
+ * Protocols can mark a socket as SS_PROTOREF to indicate that, following
+ * pru_detach, they still want the socket to persist, and will free it
+ * themselves when they are done.  Protocols should only ever call sofree()
+ * following setting this flag in pru_detach(), and never otherwise, as
+ * sofree() bypasses socket reference counting.
+ */
+#define	SS_PROTOREF		0x4000	/* strong protocol reference */
 
 /*
  * Socket state bits now stored in the socket buffer state field.
@@ -262,6 +272,13 @@ struct xsocket {
  */
 
 /*
+ * Flags to sblock().
+ */
+#define	SBL_WAIT	0x00000001	/* Wait if not immediately available. */
+#define	SBL_NOINTR	0x00000002	/* Force non-interruptible sleep. */
+#define	SBL_VALID	(SBL_WAIT | SBL_NOINTR)
+
+/*
  * Do we need to notify the other side when I/O is possible?
  */
 #define	sb_notify(sb)	(((sb)->sb_flags & (SB_WAIT | SB_SEL | SB_ASYNC | \
@@ -298,8 +315,7 @@ struct xsocket {
 /* adjust counters in sb reflecting allocation of m */
 #define	sballoc(sb, m) { \
 	(sb)->sb_cc += (m)->m_len; \
-	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
-	    (m)->m_type != MT_OOBDATA) \
+	if ((m)->m_type != MT_DATA && (m)->m_type != MT_OOBDATA) \
 		(sb)->sb_ctl += (m)->m_len; \
 	(sb)->sb_mbcnt += MSIZE; \
 	if ((m)->m_flags & M_EXT) \
@@ -309,32 +325,18 @@ struct xsocket {
 /* adjust counters in sb reflecting freeing of m */
 #define	sbfree(sb, m) { \
 	(sb)->sb_cc -= (m)->m_len; \
-	if ((m)->m_type != MT_DATA && (m)->m_type != MT_HEADER && \
-	    (m)->m_type != MT_OOBDATA) \
+	if ((m)->m_type != MT_DATA && (m)->m_type != MT_OOBDATA) \
 		(sb)->sb_ctl -= (m)->m_len; \
 	(sb)->sb_mbcnt -= MSIZE; \
 	if ((m)->m_flags & M_EXT) \
 		(sb)->sb_mbcnt -= (m)->m_ext.ext_size; \
-}
-
-/*
- * Set lock on sockbuf sb; sleep if lock is already held.
- * Unless SB_NOINTR is set on sockbuf, sleep is interruptible.
- * Returns error without lock if sleep is interrupted.
- */
-#define sblock(sb, wf) ((sb)->sb_flags & SB_LOCK ? \
-		(((wf) == M_WAITOK) ? sb_lock(sb) : EWOULDBLOCK) : \
-		((sb)->sb_flags |= SB_LOCK), 0)
-
-/* release lock on sockbuf sb */
-#define	sbunlock(sb) do { \
-	SOCKBUF_LOCK_ASSERT(sb); \
-	(sb)->sb_flags &= ~SB_LOCK; \
-	if ((sb)->sb_flags & SB_WANT) { \
-		(sb)->sb_flags &= ~SB_WANT; \
-		wakeup(&(sb)->sb_flags); \
+	if ((sb)->sb_sndptr == (m)) { \
+		(sb)->sb_sndptr = NULL; \
+		(sb)->sb_sndptroff = 0; \
 	} \
-} while (0)
+	if ((sb)->sb_sndptroff != 0) \
+		(sb)->sb_sndptroff -= (m)->m_len; \
+}
 
 /*
  * soref()/sorele() ref-count the socket structure.  Note that you must
@@ -472,26 +474,27 @@ void	sbcheck(struct sockbuf *sb);
 void	sbcompress(struct sockbuf *sb, struct mbuf *m, struct mbuf *n);
 struct mbuf *
 	sbcreatecontrol(caddr_t p, int size, int type, int level);
+void	sbdestroy(struct sockbuf *sb, struct socket *so);
 void	sbdrop(struct sockbuf *sb, int len);
 void	sbdrop_locked(struct sockbuf *sb, int len);
 void	sbdroprecord(struct sockbuf *sb);
 void	sbdroprecord_locked(struct sockbuf *sb);
 void	sbflush(struct sockbuf *sb);
 void	sbflush_locked(struct sockbuf *sb);
-void	sbinsertoob(struct sockbuf *sb, struct mbuf *m0);
-void	sbinsertoob_locked(struct sockbuf *sb, struct mbuf *m0);
 void	sbrelease(struct sockbuf *sb, struct socket *so);
 void	sbrelease_locked(struct sockbuf *sb, struct socket *so);
 int	sbreserve(struct sockbuf *sb, u_long cc, struct socket *so,
 	    struct thread *td);
 int	sbreserve_locked(struct sockbuf *sb, u_long cc, struct socket *so,
 	    struct thread *td);
+struct mbuf *
+	sbsndptr(struct sockbuf *sb, u_int off, u_int len, u_int *moff);
 void	sbtoxsockbuf(struct sockbuf *sb, struct xsockbuf *xsb);
 int	sbwait(struct sockbuf *sb);
-int	sb_lock(struct sockbuf *sb);
-int	soabort(struct socket *so);
+int	sblock(struct sockbuf *sb, int flags);
+void	sbunlock(struct sockbuf *sb);
+void	soabort(struct socket *so);
 int	soaccept(struct socket *so, struct sockaddr **nam);
-struct	socket *soalloc(int mflags);
 int	socheckuid(struct socket *so, uid_t uid);
 int	sobind(struct socket *so, struct sockaddr *nam, struct thread *td);
 void	socantrcvmore(struct socket *so);
@@ -504,7 +507,6 @@ int	soconnect2(struct socket *so1, struct socket *so2);
 int	socow_setup(struct mbuf *m0, struct uio *uio);
 int	socreate(int dom, struct socket **aso, int type, int proto,
 	    struct ucred *cred, struct thread *td);
-void	sodealloc(struct socket *so);
 int	sodisconnect(struct socket *so);
 struct	sockaddr *sodupsockaddr(const struct sockaddr *sa, int mflags);
 void	sofree(struct socket *so);
@@ -515,7 +517,7 @@ void	soisconnecting(struct socket *so);
 void	soisdisconnected(struct socket *so);
 void	soisdisconnecting(struct socket *so);
 int	solisten(struct socket *so, int backlog, struct thread *td);
-void	solisten_proto(struct socket *so);
+void	solisten_proto(struct socket *so, int backlog);
 int	solisten_proto_check(struct socket *so);
 struct socket *
 	sonewconn(struct socket *head, int connstatus);
@@ -529,13 +531,24 @@ int	soopt_mcopyout(struct sockopt *sopt, struct mbuf *m);
 
 int	sopoll(struct socket *so, int events, struct ucred *active_cred,
 	    struct thread *td);
+int	sopoll_generic(struct socket *so, int events,
+	    struct ucred *active_cred, struct thread *td);
 int	soreceive(struct socket *so, struct sockaddr **paddr, struct uio *uio,
 	    struct mbuf **mp0, struct mbuf **controlp, int *flagsp);
+int	soreceive_generic(struct socket *so, struct sockaddr **paddr,
+	    struct uio *uio, struct mbuf **mp0, struct mbuf **controlp,
+	    int *flagsp);
 int	soreserve(struct socket *so, u_long sndcc, u_long rcvcc);
 void	sorflush(struct socket *so);
 int	sosend(struct socket *so, struct sockaddr *addr, struct uio *uio,
 	    struct mbuf *top, struct mbuf *control, int flags,
 	    struct thread *td);
+int	sosend_dgram(struct socket *so, struct sockaddr *addr,
+	    struct uio *uio, struct mbuf *top, struct mbuf *control,
+	    int flags, struct thread *td);
+int	sosend_generic(struct socket *so, struct sockaddr *addr,
+	    struct uio *uio, struct mbuf *top, struct mbuf *control,
+	    int flags, struct thread *td);
 int	sosetopt(struct socket *so, struct sockopt *sopt);
 int	soshutdown(struct socket *so, int how);
 void	sotoxsocket(struct socket *so, struct xsocket *xso);

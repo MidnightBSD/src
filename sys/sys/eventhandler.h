@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/eventhandler.h,v 1.33 2004/12/06 10:53:39 jkoshy Exp $
+ * $FreeBSD: src/sys/sys/eventhandler.h,v 1.37.2.1 2007/12/14 13:41:09 rrs Exp $
  */
 
 #ifndef SYS_EVENTHANDLER_H
@@ -104,6 +104,17 @@ struct eventhandler_entry_ ## name 					\
 };									\
 struct __hack
 
+#define EVENTHANDLER_DEFINE(name, func, arg, priority)			\
+	static eventhandler_tag name ## _tag;				\
+	static void name ## _evh_init(void *ctx)			\
+	{								\
+		name ## _tag = EVENTHANDLER_REGISTER(name, func, ctx,	\
+		    priority);						\
+	}								\
+	SYSINIT(name ## _evh_init, SI_SUB_CONFIGURE, SI_ORDER_ANY,	\
+	    name ## _evh_init, arg)					\
+	struct __hack
+
 #define EVENTHANDLER_INVOKE(name, ...)					\
 do {									\
 	struct eventhandler_list *_el;					\
@@ -156,19 +167,47 @@ typedef void (*vm_lowmem_handler_t)(void *, int);
 #define	LOWMEM_PRI_DEFAULT	EVENTHANDLER_PRI_FIRST
 EVENTHANDLER_DECLARE(vm_lowmem, vm_lowmem_handler_t);
 
+/* Low vnodes event */
+typedef void (*vfs_lowvnodes_handler_t)(void *, int);
+EVENTHANDLER_DECLARE(vfs_lowvnodes, vfs_lowvnodes_handler_t);
+
 /*
  * Process events
  * process_fork and exit handlers are called without Giant.
  * exec handlers are called with Giant, but that is by accident.
  */
 struct proc;
+struct image_params;
 
 typedef void (*exitlist_fn)(void *, struct proc *);
 typedef void (*forklist_fn)(void *, struct proc *, struct proc *, int);
-typedef void (*execlist_fn)(void *, struct proc *);
-
+typedef void (*execlist_fn)(void *, struct proc *, struct image_params *);
+typedef void (*proc_ctor_fn)(void *, struct proc *);
+typedef void (*proc_dtor_fn)(void *, struct proc *);
+typedef void (*proc_init_fn)(void *, struct proc *);
+typedef void (*proc_fini_fn)(void *, struct proc *);
+EVENTHANDLER_DECLARE(process_ctor, proc_ctor_fn);
+EVENTHANDLER_DECLARE(process_dtor, proc_dtor_fn);
+EVENTHANDLER_DECLARE(process_init, proc_init_fn);
+EVENTHANDLER_DECLARE(process_fini, proc_fini_fn);
 EVENTHANDLER_DECLARE(process_exit, exitlist_fn);
 EVENTHANDLER_DECLARE(process_fork, forklist_fn);
 EVENTHANDLER_DECLARE(process_exec, execlist_fn);
 
+struct thread;
+typedef void (*thread_ctor_fn)(void *, struct thread *);
+typedef void (*thread_dtor_fn)(void *, struct thread *);
+typedef void (*thread_fini_fn)(void *, struct thread *);
+typedef void (*thread_init_fn)(void *, struct thread *);
+EVENTHANDLER_DECLARE(thread_ctor, thread_ctor_fn);
+EVENTHANDLER_DECLARE(thread_dtor, thread_dtor_fn);
+EVENTHANDLER_DECLARE(thread_init, thread_init_fn);
+EVENTHANDLER_DECLARE(thread_fini, thread_fini_fn);
+
+typedef void (*uma_zone_chfn)(void *);
+EVENTHANDLER_DECLARE(nmbclusters_change, uma_zone_chfn);
+EVENTHANDLER_DECLARE(maxsockets_change, uma_zone_chfn);
+
+typedef void(*schedtail_fn)(void *, struct proc *);
+EVENTHANDLER_DECLARE(schedtail, schedtail_fn);
 #endif /* SYS_EVENTHANDLER_H */

@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)conf.h	8.5 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/conf.h,v 1.222.2.3 2005/09/26 14:36:54 phk Exp $
+ * $FreeBSD: src/sys/sys/conf.h,v 1.233.4.1 2008/01/30 21:21:51 ru Exp $
  */
 
 #ifndef _SYS_CONF_H_
@@ -50,6 +50,7 @@ struct tty;
 struct snapdata;
 struct devfs_dirent;
 struct cdevsw;
+struct file;
 
 struct cdev {
 	struct cdev_priv	*si_priv;
@@ -105,6 +106,7 @@ struct thread;
 struct uio;
 struct knote;
 struct clonedevs;
+struct vnode;
 
 /*
  * Note: d_thread_t is provided as a transition aid for those drivers
@@ -125,7 +127,7 @@ struct clonedevs;
 typedef struct thread d_thread_t;
 
 typedef int d_open_t(struct cdev *dev, int oflags, int devtype, struct thread *td);
-typedef int d_fdopen_t(struct cdev *dev, int oflags, struct thread *td, int fdidx);
+typedef int d_fdopen_t(struct cdev *dev, int oflags, struct thread *td, struct file *fp);
 typedef int d_close_t(struct cdev *dev, int fflag, int devtype, struct thread *td);
 typedef void d_strategy_t(struct bio *bp);
 typedef int d_ioctl_t(struct cdev *dev, u_long cmd, caddr_t data,
@@ -165,7 +167,6 @@ typedef int dumper_t(
 /*
  * Flags for d_flags which the drivers can set.
  */
-#define	D_MEMDISK	0x00010000	/* memory type disk */
 #define	D_TRACKCLOSE	0x00080000	/* track all closes */
 #define D_MMAP_ANON	0x00100000	/* special treatment in vm_mmap.c */
 #define D_PSEUDO	0x00200000	/* make_dev() can return NULL */
@@ -240,11 +241,16 @@ void clone_setup(struct clonedevs **cdp);
 void clone_cleanup(struct clonedevs **);
 #define CLONE_UNITMASK 0xfffff
 #define CLONE_FLAG0 (CLONE_UNITMASK + 1)
-int clone_create(struct clonedevs **, struct cdevsw *, int *unit, struct cdev **dev, u_int extra);
+int clone_create(struct clonedevs **, struct cdevsw *, int *unit, struct cdev **dev, int extra);
 
 int	count_dev(struct cdev *_dev);
 void	destroy_dev(struct cdev *_dev);
+int	destroy_dev_sched(struct cdev *dev);
+int	destroy_dev_sched_cb(struct cdev *dev, void (*cb)(void *), void *arg);
+void	destroy_dev_drain(struct cdevsw *csw);
+void	drain_dev_clone_events(void);
 struct cdevsw *dev_refthread(struct cdev *_dev);
+struct cdevsw *devvn_refthread(struct vnode *vp, struct cdev **devp);
 void	dev_relthread(struct cdev *_dev);
 void	dev_depends(struct cdev *_pdev, struct cdev *_cdev);
 void	dev_ref(struct cdev *dev);
@@ -256,6 +262,12 @@ struct cdev *make_dev(struct cdevsw *_devsw, int _minor, uid_t _uid, gid_t _gid,
 struct cdev *make_dev_cred(struct cdevsw *_devsw, int _minor,
 		struct ucred *_cr, uid_t _uid, gid_t _gid, int _perms,
 		const char *_fmt, ...) __printflike(7, 8);
+#define MAKEDEV_REF     0x1
+#define MAKEDEV_WHTOUT	0x2
+struct cdev *make_dev_credf(int _flags,
+		struct cdevsw *_devsw, int _minornr,
+		struct ucred *_cr, uid_t _uid, gid_t _gid, int _mode,
+		const char *_fmt, ...) __printflike(8, 9);
 struct cdev *make_dev_alias(struct cdev *_pdev, const char *_fmt, ...) __printflike(2, 3);
 int	dev2unit(struct cdev *_dev);
 void	dev_lock(void);
@@ -292,6 +304,7 @@ struct dumperinfo {
 };
 
 int set_dumper(struct dumperinfo *);
+int dump_write(struct dumperinfo *, void *, vm_offset_t, off_t, size_t);
 void dumpsys(struct dumperinfo *);
 extern int dumping;		/* system is dumping */
 

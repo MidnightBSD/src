@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ktrace.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/ktrace.h,v 1.29.2.2 2006/02/14 00:02:01 rwatson Exp $
+ * $FreeBSD: src/sys/sys/ktrace.h,v 1.33 2005/12/26 22:09:09 cognet Exp $
  */
 
 #ifndef _SYS_KTRACE_H_
@@ -68,6 +68,15 @@ struct ktr_header {
 #define	KTRCHECK(td, type)	((td)->td_proc->p_traceflag & (1 << type))
 #define KTRPOINT(td, type)						\
 	(KTRCHECK((td), (type)) && !((td)->td_pflags & TDP_INKTRACE))
+#define	KTRCHECKDRAIN(td)	(!(STAILQ_EMPTY(&(td)->td_proc->p_ktr)))
+#define	KTRUSERRET(td) do {						\
+	if (KTRCHECKDRAIN(td))						\
+		ktruserret(td);						\
+} while (0)
+#define	KTRPROCEXIT(td) do {						\
+	if (KTRCHECKDRAIN(td))						\
+		ktrprocexit(td);					\
+} while (0)
 
 /*
  * ktrace record types
@@ -136,7 +145,7 @@ struct ktr_csw {
 };
 
 /*
- * KTR_USER - data comming from userland
+ * KTR_USER - data coming from userland
  */
 #define KTR_USER_MAXLEN	2048	/* maximum length of passed data */
 #define KTR_USER	7
@@ -174,6 +183,8 @@ void	ktrpsig(int, sig_t, sigset_t *, int);
 void	ktrgenio(int, enum uio_rw, struct uio *, int);
 void	ktrsyscall(int, int narg, register_t args[]);
 void	ktrsysret(int, int, register_t);
+void	ktrprocexit(struct thread *);
+void	ktruserret(struct thread *);
 
 #else
 

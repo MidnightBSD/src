@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)wait.h	8.2 (Berkeley) 7/10/94
- * $FreeBSD: src/sys/sys/wait.h,v 1.21 2005/01/05 22:19:44 jhb Exp $
+ * $FreeBSD: src/sys/sys/wait.h,v 1.22 2005/11/10 05:00:20 davidxu Exp $
  */
 
 #ifndef _SYS_WAIT_H_
@@ -45,11 +45,9 @@
  * values.
  */
 #if __BSD_VISIBLE
-#define	_W_INT(w)	(*(int *)&(w))	/* Convert union wait to int. */
 #define	WCOREFLAG	0200
-#else
-#define	_W_INT(i)	(i)
 #endif
+#define	_W_INT(i)	(i)
 
 #define	_WSTATUS(x)	(_W_INT(x) & 0177)
 #define	_WSTOPPED	0177		/* _WSTATUS if process is stopped */

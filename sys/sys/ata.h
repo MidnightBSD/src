@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/ata.h,v 1.26.2.3 2006/01/25 08:13:43 sos Exp $
+ * $FreeBSD: src/sys/sys/ata.h,v 1.36.2.1 2007/11/15 16:29:33 scottl Exp $
  */
 
 #ifndef _SYS_ATA_H_
@@ -157,6 +157,15 @@ struct ata_params {
 #define ATA_SUPPORT_FLUSHCACHE48        0x2000
 
 /*084/087*/ u_int16_t   extension;
+#define ATA_SUPPORT_SMARTTEST		0x0001
+#define ATA_SUPPORT_SMARTLOG		0x0002
+#define ATA_SUPPORT_MEDIASN		0x0004
+#define ATA_SUPPORT_MEDIAPASS		0x0008
+#define ATA_SUPPORT_STREAMING		0x0010
+#define ATA_SUPPORT_GENLOG		0x0020
+#define ATA_SUPPORT_WRITEDMAFUAEXT	0x0040
+#define ATA_SUPPORT_WRITEDMAQFUAEXT	0x0080
+#define ATA_SUPPORT_64BITWWN		0x0100
 	} __packed support, enabled;
 
 /*088*/ u_int16_t       udmamodes;              /* UltraDMA modes */
@@ -219,6 +228,7 @@ struct ata_params {
 #define ATA_USB1		0x81
 #define ATA_USB2		0x82
 
+
 /* ATA commands */
 #define ATA_NOP                         0x00    /* NOP */
 #define         ATA_NF_FLUSHQUEUE       0x00    /* flush queued cmd's */
@@ -242,6 +252,7 @@ struct ata_params {
 #define ATA_PACKET_CMD                  0xa0    /* packet command */
 #define ATA_ATAPI_IDENTIFY              0xa1    /* get ATAPI params*/
 #define ATA_SERVICE                     0xa2    /* service command */
+#define ATA_SMART_CMD                   0xb0    /* SMART command */
 #define ATA_CFA_ERASE                   0xc0    /* CFA erase */
 #define ATA_READ_MUL                    0xc4    /* read multi */
 #define ATA_WRITE_MUL                   0xc5    /* write multi */
@@ -321,7 +332,7 @@ struct ata_params {
 #define ATAPI_CLOSE_TRACK               0x5b    /* close track/session */
 #define ATAPI_READ_BUFFER_CAPACITY      0x5c    /* get buffer capicity */
 #define ATAPI_SEND_CUE_SHEET            0x5d    /* send CUE sheet */
-#define ATAPI_SERVICE_ACTION_IN		0x96	/* get service data */
+#define ATAPI_SERVICE_ACTION_IN         0x96	/* get service data */
 #define ATAPI_BLANK                     0xa1    /* blank the media */
 #define ATAPI_SEND_KEY                  0xa3    /* send DVD key structure */
 #define ATAPI_REPORT_KEY                0xa4    /* get DVD key structure */
@@ -350,44 +361,44 @@ struct ata_ioc_devices {
 
 /* ATAPI request sense structure */
 struct atapi_sense {
-     u_int8_t    error;                          /* current or deferred errors */
-#define ATA_SENSE_VALID                 0x80
-  	 
-     u_int8_t    segment;                        /* segment number */
-     u_int8_t    key;                            /* sense key */
-#define ATA_SENSE_KEY_MASK              0x0f    /* sense key mask */
-#define ATA_SENSE_NO_SENSE              0x00    /* no specific sense key info */
-#define ATA_SENSE_RECOVERED_ERROR       0x01    /* command OK, data recovered */
-#define ATA_SENSE_NOT_READY             0x02    /* no access to drive */
-#define ATA_SENSE_MEDIUM_ERROR          0x03    /* non-recovered data error */
-#define ATA_SENSE_HARDWARE_ERROR        0x04    /* non-recoverable HW failure */
-#define ATA_SENSE_ILLEGAL_REQUEST       0x05    /* invalid command param(s) */
-#define ATA_SENSE_UNIT_ATTENTION        0x06    /* media changed */
-#define ATA_SENSE_DATA_PROTECT          0x07    /* write protect */
-#define ATA_SENSE_BLANK_CHECK           0x08    /* blank check */
-#define ATA_SENSE_VENDOR_SPECIFIC       0x09    /* vendor specific skey */
-#define ATA_SENSE_COPY_ABORTED          0x0a    /* copy aborted */
-#define ATA_SENSE_ABORTED_COMMAND       0x0b    /* command aborted, try again */
-#define ATA_SENSE_EQUAL                 0x0c    /* equal */
-#define ATA_SENSE_VOLUME_OVERFLOW       0x0d    /* volume overflow */
-#define ATA_SENSE_MISCOMPARE            0x0e    /* data dont match the medium */
-#define ATA_SENSE_RESERVED              0x0f
-#define ATA_SENSE_ILI                   0x20;
-#define ATA_SENSE_EOM                   0x40;
-#define ATA_SENSE_FILEMARK              0x80;
-  	 
-     u_int32_t   cmd_info;               /* cmd information */
-     u_int8_t    sense_length;           /* additional sense len (n-7) */
-     u_int32_t   cmd_specific_info;      /* additional cmd spec info */
-     u_int8_t    asc;                    /* additional sense code */
-     u_int8_t    ascq;                   /* additional sense code qual */
-     u_int8_t    replaceable_unit_code;  /* replaceable unit code */
-     u_int8_t    specific;               /* sense key specific */
-#define ATA_SENSE_SPEC_VALID    0x80
-#define ATA_SENSE_SPEC_MASK     0x7f
-  	 
-     u_int8_t    specific1;              /* sense key specific */
-     u_int8_t    specific2;              /* sense key specific */
+    u_int8_t	error;				/* current or deferred errors */
+#define	ATA_SENSE_VALID			0x80
+
+    u_int8_t	segment;			/* segment number */
+    u_int8_t	key;				/* sense key */
+#define ATA_SENSE_KEY_MASK		0x0f    /* sense key mask */
+#define ATA_SENSE_NO_SENSE		0x00    /* no specific sense key info */
+#define ATA_SENSE_RECOVERED_ERROR 	0x01    /* command OK, data recovered */
+#define ATA_SENSE_NOT_READY		0x02    /* no access to drive */
+#define ATA_SENSE_MEDIUM_ERROR		0x03    /* non-recovered data error */
+#define ATA_SENSE_HARDWARE_ERROR	0x04    /* non-recoverable HW failure */
+#define ATA_SENSE_ILLEGAL_REQUEST	0x05    /* invalid command param(s) */
+#define ATA_SENSE_UNIT_ATTENTION	0x06    /* media changed */
+#define ATA_SENSE_DATA_PROTECT		0x07    /* write protect */
+#define ATA_SENSE_BLANK_CHECK		0x08    /* blank check */
+#define ATA_SENSE_VENDOR_SPECIFIC	0x09    /* vendor specific skey */
+#define ATA_SENSE_COPY_ABORTED		0x0a    /* copy aborted */
+#define ATA_SENSE_ABORTED_COMMAND	0x0b    /* command aborted, try again */
+#define ATA_SENSE_EQUAL			0x0c    /* equal */
+#define ATA_SENSE_VOLUME_OVERFLOW	0x0d    /* volume overflow */
+#define ATA_SENSE_MISCOMPARE		0x0e    /* data dont match the medium */
+#define ATA_SENSE_RESERVED		0x0f
+#define	ATA_SENSE_ILI			0x20;
+#define	ATA_SENSE_EOM			0x40;
+#define	ATA_SENSE_FILEMARK		0x80;
+
+    u_int32_t   cmd_info;		/* cmd information */
+    u_int8_t	sense_length;		/* additional sense len (n-7) */
+    u_int32_t   cmd_specific_info;	/* additional cmd spec info */
+    u_int8_t    asc;			/* additional sense code */
+    u_int8_t    ascq;			/* additional sense code qual */
+    u_int8_t    replaceable_unit_code;	/* replaceable unit code */
+    u_int8_t	specific;		/* sense key specific */
+#define	ATA_SENSE_SPEC_VALID	0x80
+#define	ATA_SENSE_SPEC_MASK	0x7f
+	
+    u_int8_t	specific1;		/* sense key specific */
+    u_int8_t	specific2;		/* sense key specific */
 } __packed;
 
 struct ata_ioc_request {
@@ -400,7 +411,7 @@ struct ata_ioc_request {
 	} ata;
 	struct {
 	    char                ccb[16];
-            struct atapi_sense  sense;
+	    struct atapi_sense	sense;
 	} atapi;
     } u;
     caddr_t             data;
@@ -445,10 +456,26 @@ struct ata_ioc_raid_config {
 	    int                 disks[16];
 };
 
+struct ata_ioc_raid_status {
+	    int                 lun;
+	    int                 type;
+	    int                 interleave;
+	    int                 status;
+	    int                 progress;
+	    int                 total_disks;
+	    struct {
+		    int		state;
+#define AR_DISK_ONLINE			0x01
+#define AR_DISK_PRESENT			0x02
+#define AR_DISK_SPARE			0x04
+		    int		lun;
+	    } disks[16];
+};
+
 /* ATA RAID ioctl calls */
 #define IOCATARAIDCREATE        _IOWR('a', 200, struct ata_ioc_raid_config)
 #define IOCATARAIDDELETE        _IOW('a', 201, int)
-#define IOCATARAIDSTATUS        _IOWR('a', 202, struct ata_ioc_raid_config)
+#define IOCATARAIDSTATUS        _IOWR('a', 202, struct ata_ioc_raid_status)
 #define IOCATARAIDADDSPARE      _IOW('a', 203, struct ata_ioc_raid_config)
 #define IOCATARAIDREBUILD       _IOW('a', 204, int)
 
