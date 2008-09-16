@@ -24078,6 +24078,7 @@ sys/bsm/audit.h -text
 sys/bsm/audit_internal.h -text
 sys/bsm/audit_kevents.h -text
 sys/bsm/audit_record.h -text
+sys/cam/README.quirks -text
 sys/cam/cam.c -text
 sys/cam/cam.h -text
 sys/cam/cam_ccb.h -text
