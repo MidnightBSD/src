@@ -1,8 +1,35 @@
 /*-
- * Copyright (c) 2004-2005 Robert N. M. Watson
- * Copyright (c) 1995, Mike Mitchell
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * Copyright (c) 2004-2005 Robert N. M. Watson
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * Copyright (c) 1995, Mike Mitchell
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/ipx_input.c,v 1.51.2.1 2006/02/14 21:35:07 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netipx/ipx_input.c,v 1.57 2007/05/11 10:38:34 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,7 +134,7 @@ static	void ipxintr(struct mbuf *m);
  */
 
 void
-ipx_init()
+ipx_init(void)
 {
 
 	read_random(&ipx_pexseq, sizeof ipx_pexseq);
@@ -135,8 +162,8 @@ ipx_init()
 static void
 ipxintr(struct mbuf *m)
 {
-	register struct ipx *ipx;
-	register struct ipxpcb *ipxp;
+	struct ipx *ipx;
+	struct ipxpcb *ipxp;
 	struct ipx_ifaddr *ia;
 	int len;
 
@@ -294,28 +321,8 @@ ipx_ctlinput(cmd, arg_as_sa, dummy)
 	struct sockaddr *arg_as_sa;	/* XXX should be swapped with dummy */
 	void *dummy;
 {
-	caddr_t arg = (/* XXX */ caddr_t)arg_as_sa;
-	struct ipx_addr *ipx;
 
-	if (cmd < 0 || cmd >= PRC_NCMDS)
-		return;
-	switch (cmd) {
-		struct sockaddr_ipx *sipx;
-
-	case PRC_IFDOWN:
-	case PRC_HOSTDEAD:
-	case PRC_HOSTUNREACH:
-		sipx = (struct sockaddr_ipx *)arg;
-		if (sipx->sipx_family != AF_IPX)
-			return;
-		ipx = &sipx->sipx_addr;
-		break;
-
-	default:
-		if (ipxprintfs)
-			printf("ipx_ctlinput: cmd %d.\n", cmd);
-		break;
-	}
+	/* Currently, nothing. */
 }
 
 /*
@@ -327,11 +334,10 @@ static struct route ipx_droute;
 static struct route ipx_sroute;
 
 static void
-ipx_forward(m)
-struct mbuf *m;
+ipx_forward(struct mbuf *m)
 {
-	register struct ipx *ipx = mtod(m, struct ipx *);
-	register int error;
+	struct ipx *ipx = mtod(m, struct ipx *);
+	int error;
 	int agedelta = 1;
 	int flags = IPX_FORWARDING;
 	int ok_there = 0;
@@ -417,9 +423,7 @@ cleanup:
 }
 
 static int
-ipx_do_route(src, ro)
-struct ipx_addr *src;
-struct route *ro;
+ipx_do_route(struct ipx_addr *src, struct route *ro)
 {
 	struct sockaddr_ipx *dst;
 
@@ -439,22 +443,25 @@ struct route *ro;
 }
 
 static void
-ipx_undo_route(ro)
-register struct route *ro;
+ipx_undo_route(struct route *ro)
 {
+
 	if (ro->ro_rt != NULL) {
 		RTFREE(ro->ro_rt);
 	}
 }
 
+/*
+ * XXXRW: This code should be run in its own netisr dispatch to avoid a call
+ * back into the socket code from the IPX output path.
+ */
 void
-ipx_watch_output(m, ifp)
-struct mbuf *m;
-struct ifnet *ifp;
+ipx_watch_output(struct mbuf *m, struct ifnet *ifp)
 {
-	register struct ipxpcb *ipxp;
-	register struct ifaddr *ifa;
-	register struct ipx_ifaddr *ia;
+	struct ipxpcb *ipxp;
+	struct ifaddr *ifa;
+	struct ipx_ifaddr *ia;
+
 	/*
 	 * Give any raw listeners a crack at the packet
 	 */
@@ -462,7 +469,7 @@ struct ifnet *ifp;
 	LIST_FOREACH(ipxp, &ipxrawpcb_list, ipxp_list) {
 		struct mbuf *m0 = m_copy(m, 0, (int)M_COPYALL);
 		if (m0 != NULL) {
-			register struct ipx *ipx;
+			struct ipx *ipx;
 
 			M_PREPEND(m0, sizeof(*ipx), M_DONTWAIT);
 			if (m0 == NULL)

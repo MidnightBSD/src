@@ -1,8 +1,35 @@
 /*-
- * Copyright (c) 2004-2005 Robert N. M. Watson
- * Copyright (c) 1995, Mike Mitchell
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * Copyright (c) 2004-2006 Robert N. M. Watson
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * Copyright (c) 1995, Mike Mitchell
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/ipx_usrreq.c,v 1.52 2005/01/09 05:15:59 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netipx/ipx_usrreq.c,v 1.62 2007/06/13 14:01:43 rwatson Exp $");
 
 #include "opt_ipx.h"
 
@@ -44,6 +71,7 @@ __FBSDID("$FreeBSD: src/sys/netipx/ipx_usrreq.c,v 1.52 2005/01/09 05:15:59 rwats
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mbuf.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/signalvar.h>
 #include <sys/socket.h>
@@ -59,7 +87,6 @@ __FBSDID("$FreeBSD: src/sys/netipx/ipx_usrreq.c,v 1.52 2005/01/09 05:15:59 rwats
 
 #include <netipx/ipx.h>
 #include <netipx/ipx_if.h>
-#include <netipx/ipx_ip.h>
 #include <netipx/ipx_pcb.h>
 #include <netipx/ipx_var.h>
 
@@ -74,12 +101,12 @@ static int ipxrecvspace = IPXRCVQ;
 SYSCTL_INT(_net_ipx_ipx, OID_AUTO, ipxrecvspace, CTLFLAG_RW,
             &ipxrecvspace, 0, "");
 
-static	int ipx_usr_abort(struct socket *so);
+static	void ipx_usr_abort(struct socket *so);
 static	int ipx_attach(struct socket *so, int proto, struct thread *td);
 static	int ipx_bind(struct socket *so, struct sockaddr *nam, struct thread *td);
 static	int ipx_connect(struct socket *so, struct sockaddr *nam,
 			struct thread *td);
-static	int ipx_detach(struct socket *so);
+static	void ipx_detach(struct socket *so);
 static	int ipx_disconnect(struct socket *so);
 static	int ipx_send(struct socket *so, int flags, struct mbuf *m,
 		     struct sockaddr *addr, struct mbuf *control,
@@ -87,6 +114,7 @@ static	int ipx_send(struct socket *so, int flags, struct mbuf *m,
 static	int ipx_shutdown(struct socket *so);
 static	int ripx_attach(struct socket *so, int proto, struct thread *td);
 static	int ipx_output(struct ipxpcb *ipxp, struct mbuf *m0);
+static	void ipx_usr_close(struct socket *so);
 
 struct	pr_usrreqs ipx_usrreqs = {
 	.pru_abort =		ipx_usr_abort,
@@ -100,6 +128,7 @@ struct	pr_usrreqs ipx_usrreqs = {
 	.pru_send =		ipx_send,
 	.pru_shutdown =		ipx_shutdown,
 	.pru_sockaddr =		ipx_sockaddr,
+	.pru_close =		ipx_usr_close,
 };
 
 struct	pr_usrreqs ripx_usrreqs = {
@@ -114,17 +143,16 @@ struct	pr_usrreqs ripx_usrreqs = {
 	.pru_send =		ipx_send,
 	.pru_shutdown =		ipx_shutdown,
 	.pru_sockaddr =		ipx_sockaddr,
+	.pru_close =		ipx_usr_close,
 };
 
 /*
  *  This may also be called for raw listeners.
  */
 void
-ipx_input(m, ipxp)
-	struct mbuf *m;
-	register struct ipxpcb *ipxp;
+ipx_input(struct mbuf *m, struct ipxpcb *ipxp)
 {
-	register struct ipx *ipx = mtod(m, struct ipx *);
+	struct ipx *ipx = mtod(m, struct ipx *);
 	struct ifnet *ifp = m->m_pkthdr.rcvif;
 	struct sockaddr_ipx ipx_ipx;
 
@@ -140,7 +168,7 @@ ipx_input(m, ipxp)
 	ipx_ipx.sipx_zero[0] = '\0';
 	ipx_ipx.sipx_zero[1] = '\0';
 	if (ipx_neteqnn(ipx->ipx_sna.x_net, ipx_zeronet) && ifp != NULL) {
-		register struct ifaddr *ifa;
+		struct ifaddr *ifa;
 
 		for (ifa = TAILQ_FIRST(&ifp->if_addrhead); ifa != NULL;
 		     ifa = TAILQ_NEXT(ifa, ifa_link)) {
@@ -169,9 +197,7 @@ ipx_input(m, ipxp)
  * the specified error.
  */
 void
-ipx_drop(ipxp, errno)
-	register struct ipxpcb *ipxp;
-	int errno;
+ipx_drop(struct ipxpcb *ipxp, int errno)
 {
 	struct socket *so = ipxp->ipxp_socket;
 
@@ -195,14 +221,12 @@ ipx_drop(ipxp, errno)
 }
 
 static int
-ipx_output(ipxp, m0)
-	struct ipxpcb *ipxp;
-	struct mbuf *m0;
+ipx_output(struct ipxpcb *ipxp, struct mbuf *m0)
 {
-	register struct ipx *ipx;
-	register struct socket *so;
-	register int len = 0;
-	register struct route *ro;
+	struct ipx *ipx;
+	struct socket *so;
+	int len = 0;
+	struct route *ro;
 	struct mbuf *m;
 	struct mbuf *mprev = NULL;
 
@@ -297,7 +321,7 @@ ipx_output(ipxp, m0)
 
 			}
 			if ((ro->ro_rt->rt_flags & RTF_GATEWAY) == 0) {
-				register struct ipx_addr *dst =
+				struct ipx_addr *dst =
 						&satoipx_addr(ro->ro_dst);
 				dst->x_host = ipx->ipx_dna.x_host;
 			}
@@ -317,9 +341,7 @@ ipx_output(ipxp, m0)
 }
 
 int
-ipx_ctloutput(so, sopt)
-	struct socket *so;
-	struct sockopt *sopt;
+ipx_ctloutput(struct socket *so, struct sockopt *sopt)
 {
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 	int mask, error, optval;
@@ -327,9 +349,8 @@ ipx_ctloutput(so, sopt)
 	struct ipx ioptval;
 	long seq;
 
+	KASSERT(ipxp != NULL, ("ipx_ctloutput: ipxp == NULL"));
 	error = 0;
-	if (ipxp == NULL)
-		return (EINVAL);
 
 	switch (sopt->sopt_dir) {
 	case SOPT_GET:
@@ -415,11 +436,6 @@ ipx_ctloutput(so, sopt)
 			/* Unlocked write. */
 			ipxp->ipxp_dpt = ioptval.ipx_pt;
 			break;
-#ifdef IPXIP
-		case SO_IPXIP_ROUTE:
-			error = ipxip_route(so, sopt);
-			break;
-#endif /* IPXIP */
 		default:
 			error = EINVAL;
 		}
@@ -428,51 +444,39 @@ ipx_ctloutput(so, sopt)
 	return (error);
 }
 
-static int
-ipx_usr_abort(so)
-	struct socket *so;
+static void
+ipx_usr_abort(struct socket *so)
 {
-	struct ipxpcb *ipxp = sotoipxpcb(so);
 
-	IPX_LIST_LOCK();
-	IPX_LOCK(ipxp);
-	ipx_pcbdetach(ipxp);
-	IPX_LIST_UNLOCK();
+	/* XXXRW: Possibly ipx_disconnect() here? */
 	soisdisconnected(so);
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
-	sotryfree(so);
-	return (0);
 }
 
 static int
-ipx_attach(so, proto, td)
-	struct socket *so;
-	int proto;
-	struct thread *td;
+ipx_attach(struct socket *so, int proto, struct thread *td)
 {
+#ifdef INVARIANTS
 	struct ipxpcb *ipxp = sotoipxpcb(so);
+#endif
 	int error;
 
-	if (ipxp != NULL)
-		return (EINVAL);
+	KASSERT(ipxp == NULL, ("ipx_attach: ipxp != NULL"));
+	error = soreserve(so, ipxsendspace, ipxrecvspace);
+	if (error != 0)
+		return (error);
 	IPX_LIST_LOCK();
 	error = ipx_pcballoc(so, &ipxpcb_list, td);
 	IPX_LIST_UNLOCK();
-	if (error == 0)
-		error = soreserve(so, ipxsendspace, ipxrecvspace);
 	return (error);
 }
 
 static int
-ipx_bind(so, nam, td)
-	struct socket *so;
-	struct sockaddr *nam;
-	struct thread *td;
+ipx_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 {
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 	int error;
 
+	KASSERT(ipxp != NULL, ("ipx_bind: ipxp == NULL"));
 	IPX_LIST_LOCK();
 	IPX_LOCK(ipxp);
 	error = ipx_pcbbind(ipxp, nam, td);
@@ -481,15 +485,21 @@ ipx_bind(so, nam, td)
 	return (error);
 }
 
+static void
+ipx_usr_close(struct socket *so)
+{
+
+	/* XXXRW: Possibly ipx_disconnect() here? */
+	soisdisconnected(so);
+}
+
 static int
-ipx_connect(so, nam, td)
-	struct socket *so;
-	struct sockaddr *nam;
-	struct thread *td;
+ipx_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 {
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 	int error;
 
+	KASSERT(ipxp != NULL, ("ipx_connect: ipxp == NULL"));
 	IPX_LIST_LOCK();
 	IPX_LOCK(ipxp);
 	if (!ipx_nullhost(ipxp->ipxp_faddr)) {
@@ -505,28 +515,27 @@ out:
 	return (error);
 }
 
-static int
-ipx_detach(so)
-	struct socket *so;
+static void
+ipx_detach(struct socket *so)
 {
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 
-	if (ipxp == NULL)
-		return (ENOTCONN);
+	/* XXXRW: Should assert detached. */
+	KASSERT(ipxp != NULL, ("ipx_detach: ipxp == NULL"));
 	IPX_LIST_LOCK();
 	IPX_LOCK(ipxp);
 	ipx_pcbdetach(ipxp);
+	ipx_pcbfree(ipxp);
 	IPX_LIST_UNLOCK();
-	return (0);
 }
 
 static int
-ipx_disconnect(so)
-	struct socket *so;
+ipx_disconnect(struct socket *so)
 {
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 	int error;
 
+	KASSERT(ipxp != NULL, ("ipx_disconnect: ipxp == NULL"));
 	IPX_LIST_LOCK();
 	IPX_LOCK(ipxp);
 	error = 0;
@@ -543,29 +552,24 @@ out:
 }
 
 int
-ipx_peeraddr(so, nam)
-	struct socket *so;
-	struct sockaddr **nam;
+ipx_peeraddr(struct socket *so, struct sockaddr **nam)
 {
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 
-	ipx_setpeeraddr(ipxp, nam);
+	KASSERT(ipxp != NULL, ("ipx_peeraddr: ipxp == NULL"));
+	ipx_getpeeraddr(ipxp, nam);
 	return (0);
 }
 
 static int
-ipx_send(so, flags, m, nam, control, td)
-	struct socket *so;
-	int flags;
-	struct mbuf *m;
-	struct sockaddr *nam;
-	struct mbuf *control;
-	struct thread *td;
+ipx_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
+    struct mbuf *control, struct thread *td)
 {
 	int error;
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 	struct ipx_addr laddr;
 
+	KASSERT(ipxp != NULL, ("ipxp_send: ipxp == NULL"));
 	/*
 	 * Attempt to only acquire the necessary locks: if the socket is
 	 * already connected, we don't need to hold the IPX list lock to be
@@ -619,32 +623,36 @@ static int
 ipx_shutdown(so)
 	struct socket *so;
 {
+
+	KASSERT(so->so_pcb != NULL, ("ipx_shutdown: so_pcb == NULL"));
 	socantsendmore(so);
 	return (0);
 }
 
 int
-ipx_sockaddr(so, nam)
-	struct socket *so;
-	struct sockaddr **nam;
+ipx_sockaddr(struct socket *so, struct sockaddr **nam)
 {
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 
-	ipx_setsockaddr(ipxp, nam);
+	KASSERT(ipxp != NULL, ("ipx_sockaddr: ipxp == NULL"));
+	ipx_getsockaddr(ipxp, nam);
 	return (0);
 }
 
 static int
-ripx_attach(so, proto, td)
-	struct socket *so;
-	int proto;
-	struct thread *td;
+ripx_attach(struct socket *so, int proto, struct thread *td)
 {
 	int error = 0;
 	struct ipxpcb *ipxp = sotoipxpcb(so);
 
-	if (td != NULL && (error = suser(td)) != 0)
-		return (error);
+	KASSERT(ipxp == NULL, ("ripx_attach: ipxp != NULL"));
+
+	if (td != NULL) {
+		error = priv_check(td, PRIV_NETIPX_RAW);
+		if (error)
+			return (error);
+	}
+
 	/*
 	 * We hold the IPX list lock for the duration as address parameters
 	 * of the IPX pcb are changed.  Since no one else holds a reference

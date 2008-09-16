@@ -1,8 +1,35 @@
 /*-
- * Copyright (c) 2004-2005 Robert N. M. Watson
- * Copyright (c) 1995, Mike Mitchell
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * Copyright (c) 2004-2006 Robert N. M. Watson
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * Copyright (c) 1995, Mike Mitchell
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,11 +63,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netipx/ipx_pcb.c,v 1.43 2005/01/09 05:10:43 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netipx/ipx_pcb.c,v 1.49 2007/05/11 10:38:34 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 
@@ -56,13 +84,11 @@ static struct	ipx_addr zeroipx_addr;
 static u_short	ipxpcb_lport_cache;
 
 int
-ipx_pcballoc(so, head, td)
-	struct socket *so;
-	struct ipxpcbhead *head;
-	struct thread *td;
+ipx_pcballoc(struct socket *so, struct ipxpcbhead *head, struct thread *td)
 {
-	register struct ipxpcb *ipxp;
+	struct ipxpcb *ipxp;
 
+	KASSERT(so->so_pcb == NULL, ("ipx_pcballoc: so_pcb != NULL"));
 	IPX_LIST_LOCK_ASSERT();
 
 	MALLOC(ipxp, struct ipxpcb *, sizeof *ipxp, M_PCB, M_NOWAIT | M_ZERO);
@@ -78,12 +104,9 @@ ipx_pcballoc(so, head, td)
 }
 
 int
-ipx_pcbbind(ipxp, nam, td)
-	register struct ipxpcb *ipxp;
-	struct sockaddr *nam;
-	struct thread *td;
+ipx_pcbbind(struct ipxpcb *ipxp, struct sockaddr *nam, struct thread *td)
 {
-	register struct sockaddr_ipx *sipx;
+	struct sockaddr_ipx *sipx;
 	u_short lport = 0;
 
 	IPX_LIST_LOCK_ASSERT();
@@ -105,11 +128,10 @@ ipx_pcbbind(ipxp, nam, td)
 	lport = sipx->sipx_port;
 	if (lport) {
 		u_short aport = ntohs(lport);
-		int error;
 
-		if (aport < IPXPORT_RESERVED &&
-		    td != NULL && (error = suser(td)) != 0)
-			return (error);
+		if (aport < IPXPORT_RESERVED && td != NULL &&
+		    priv_check(td, PRIV_NETIPX_RESERVEDPORT))
+			return (EACCES);
 		if (ipx_pcblookup(&zeroipx_addr, lport, 0))
 			return (EADDRINUSE);
 	}
@@ -134,15 +156,12 @@ noname:
  * then pick one.
  */
 int
-ipx_pcbconnect(ipxp, nam, td)
-	struct ipxpcb *ipxp;
-	struct sockaddr *nam;
-	struct thread *td;
+ipx_pcbconnect(struct ipxpcb *ipxp, struct sockaddr *nam, struct thread *td)
 {
 	struct ipx_ifaddr *ia;
-	register struct sockaddr_ipx *sipx = (struct sockaddr_ipx *)nam;
-	register struct ipx_addr *dst;
-	register struct route *ro;
+	struct sockaddr_ipx *sipx = (struct sockaddr_ipx *)nam;
+	struct ipx_addr *dst;
+	struct route *ro;
 	struct ifnet *ifp;
 
 	IPX_LIST_LOCK_ASSERT();
@@ -264,31 +283,36 @@ ipx_pcbconnect(ipxp, nam, td)
 }
 
 void
-ipx_pcbdisconnect(ipxp)
-	struct ipxpcb *ipxp;
+ipx_pcbdisconnect(struct ipxpcb *ipxp)
 {
 
 	IPX_LIST_LOCK_ASSERT();
 	IPX_LOCK_ASSERT(ipxp);
 
 	ipxp->ipxp_faddr = zeroipx_addr;
-	if (ipxp->ipxp_socket->so_state & SS_NOFDREF)
-		ipx_pcbdetach(ipxp);
 }
 
 void
-ipx_pcbdetach(ipxp)
-	struct ipxpcb *ipxp;
+ipx_pcbdetach(struct ipxpcb *ipxp)
 {
 	struct socket *so = ipxp->ipxp_socket;
 
 	IPX_LIST_LOCK_ASSERT();
 	IPX_LOCK_ASSERT(ipxp);
 
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
 	so->so_pcb = NULL;
-	sotryfree(so);
+	ipxp->ipxp_socket = NULL;
+}
+
+void
+ipx_pcbfree(struct ipxpcb *ipxp)
+{
+
+	KASSERT(ipxp->ipxp_socket == NULL,
+	    ("ipx_pcbfree: ipxp_socket != NULL"));
+	IPX_LIST_LOCK_ASSERT();
+	IPX_LOCK_ASSERT(ipxp);
+
 	if (ipxp->ipxp_route.ro_rt != NULL)
 		RTFREE(ipxp->ipxp_route.ro_rt);
 	LIST_REMOVE(ipxp, ipxp_list);
@@ -297,9 +321,7 @@ ipx_pcbdetach(ipxp)
 }
 
 void
-ipx_setsockaddr(ipxp, nam)
-	register struct ipxpcb *ipxp;
-	struct sockaddr **nam;
+ipx_getsockaddr(struct ipxpcb *ipxp, struct sockaddr **nam)
 {
 	struct sockaddr_ipx *sipx, ssipx;
 
@@ -314,9 +336,7 @@ ipx_setsockaddr(ipxp, nam)
 }
 
 void
-ipx_setpeeraddr(ipxp, nam)
-	register struct ipxpcb *ipxp;
-	struct sockaddr **nam;
+ipx_getpeeraddr(struct ipxpcb *ipxp, struct sockaddr **nam)
 {
 	struct sockaddr_ipx *sipx, ssipx;
 
@@ -331,12 +351,9 @@ ipx_setpeeraddr(ipxp, nam)
 }
 
 struct ipxpcb *
-ipx_pcblookup(faddr, lport, wildp)
-	struct ipx_addr *faddr;
-	u_short lport;
-	int wildp;
+ipx_pcblookup(struct ipx_addr *faddr, u_short lport, int wildp)
 {
-	register struct ipxpcb *ipxp, *match = NULL;
+	struct ipxpcb *ipxp, *match = NULL;
 	int matchwild = 3, wildcard;
 	u_short fport;
 

@@ -28125,8 +28125,6 @@ sys/netipx/ipx.h -text
 sys/netipx/ipx_cksum.c -text
 sys/netipx/ipx_if.h -text
 sys/netipx/ipx_input.c -text
-sys/netipx/ipx_ip.c -text
-sys/netipx/ipx_ip.h -text
 sys/netipx/ipx_outputfl.c -text
 sys/netipx/ipx_pcb.c -text
 sys/netipx/ipx_pcb.h -text

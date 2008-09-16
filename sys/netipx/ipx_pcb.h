@@ -1,8 +1,35 @@
 /*-
- * Copyright (c) 2004-2005 Robert N. M. Watson
- * Copyright (c) 1995, Mike Mitchell
  * Copyright (c) 1984, 1985, 1986, 1987, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *	The Regents of the University of California.
+ * Copyright (c) 2004-2006 Robert N. M. Watson
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * Copyright (c) 1995, Mike Mitchell
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +61,7 @@
  *
  *	@(#)ipx_pcb.h
  *
- * $FreeBSD: src/sys/netipx/ipx_pcb.h,v 1.23 2005/01/09 05:00:41 rwatson Exp $
+ * $FreeBSD: src/sys/netipx/ipx_pcb.h,v 1.29 2007/05/11 10:38:34 rwatson Exp $
  */
 
 #ifndef _NETIPX_IPX_PCB_H_
@@ -68,13 +95,16 @@ extern struct ipxpcbhead ipxrawpcb_list;
 extern struct mtx	ipxpcb_list_mtx;
 #endif
 
-/* possible flags */
-
-#define IPXP_IN_ABORT		0x1	/* calling abort through socket */
-#define IPXP_RAWIN		0x2	/* show headers on input */
-#define IPXP_RAWOUT		0x4	/* show header on output */
-#define IPXP_ALL_PACKETS	0x8	/* Turn off higher proto processing */
-#define	IPXP_CHECKSUM		0x10	/* use checksum on this socket */
+/*
+ * IPX/SPX PCB flags.
+ */
+#define IPXP_IN_ABORT		0x1	/* Calling abort through socket. */
+#define IPXP_RAWIN		0x2	/* Show headers on input. */
+#define IPXP_RAWOUT		0x4	/* Show header on output. */
+#define IPXP_ALL_PACKETS	0x8	/* Turn off higher proto processing. */
+#define	IPXP_CHECKSUM		0x10	/* Use checksum on this socket. */
+#define	IPXP_DROPPED		0x20	/* Connection dropped. */
+#define	IPXP_SPX		0x40	/* SPX PCB. */
 
 #define	IPX_WILDCARD		1
 
@@ -91,17 +121,17 @@ extern struct mtx	ipxpcb_list_mtx;
 
 #ifdef _KERNEL
 int	ipx_pcballoc(struct socket *so, struct ipxpcbhead *head,
-			  struct thread *p);
+	    struct thread *p);
 int	ipx_pcbbind(struct ipxpcb *ipxp, struct sockaddr *nam,
-			 struct thread *p);
+	    struct thread *p);
 int	ipx_pcbconnect(struct ipxpcb *ipxp, struct sockaddr *nam,
-			    struct thread *p);
+	    struct thread *p);
 void	ipx_pcbdetach(struct ipxpcb *ipxp);
 void	ipx_pcbdisconnect(struct ipxpcb *ipxp);
-struct ipxpcb *
-	ipx_pcblookup(struct ipx_addr *faddr, int lport, int wildp);
-void	ipx_setpeeraddr(struct ipxpcb *ipxp, struct sockaddr **nam);
-void	ipx_setsockaddr(struct ipxpcb *ipxp, struct sockaddr **nam);
+void	ipx_pcbfree(struct ipxpcb *ipxp);
+struct ipxpcb *ipx_pcblookup(struct ipx_addr *faddr, u_short lport, int wildp);
+void	ipx_getpeeraddr(struct ipxpcb *ipxp, struct sockaddr **nam);
+void	ipx_getsockaddr(struct ipxpcb *ipxp, struct sockaddr **nam);
 
 #define	IPX_LIST_LOCK_INIT()	mtx_init(&ipxpcb_list_mtx, "ipx_list_mtx", \
 				    NULL, MTX_DEF | MTX_RECURSE)
