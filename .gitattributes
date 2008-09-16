@@ -26205,8 +26205,6 @@ sys/dev/zs/z8530reg.h -text
 sys/dev/zs/z8530var.h -text
 sys/dev/zs/zs.c -text
 sys/dev/zs/zs_macio.c -text
-sys/doc/Doxyfile -text
-sys/doc/Makefile -text
 sys/fs/deadfs/dead_vnops.c -text
 sys/fs/devfs/devfs.h -text
 sys/fs/devfs/devfs_devs.c -text
