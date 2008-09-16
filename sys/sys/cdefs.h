@@ -31,7 +31,7 @@
  *
  *	@(#)cdefs.h	8.8 (Berkeley) 1/9/95
  * $FreeBSD: src/sys/sys/cdefs.h,v 1.88.2.2 2006/01/31 17:57:16 stefanf Exp $
- * $MidnightBSD: src/sys/sys/cdefs.h,v 1.3 2006/07/26 12:45:59 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/cdefs.h,v 1.4 2008/05/13 04:04:14 laffer1 Exp $
  */
 
 #ifndef	_SYS_CDEFS_H_
@@ -241,6 +241,12 @@
 #define	__always_inline
 #endif
 
+#if __GNUC_PREREQ__(4, 2) /* actually 4.1.3 */
+#define	__gnu89_inline	__attribute__((__gnu_inline__)) __inline
+#else
+#define	__gnu89_inline
+#endif
+
 #if __GNUC_PREREQ__(3, 3)
 #define __nonnull(x)	__attribute__((__nonnull__(x)))
 #else
@@ -310,6 +316,9 @@
  * We define this here since <stddef.h>, <sys/queue.h>, and <sys/types.h>
  * require it.
  */
+#if __GNUC_PREREQ__(4, 1)
+#define __offsetof(type, field)	 __builtin_offsetof(type, field)
+#else
 #ifndef __cplusplus
 #define	__offsetof(type, field)	((size_t)(&((type *)0)->field))
 #else
@@ -317,6 +326,7 @@
   (__offsetof__ (reinterpret_cast <size_t>			\
                  (&reinterpret_cast <const volatile char &>	\
                   (static_cast<type *> (0)->field))))
+#endif
 #endif
 #define	__rangeof(type, start, end) \
 	(__offsetof(type, end) - __offsetof(type, start))
@@ -350,7 +360,7 @@
 #if defined(__GNUC__) || defined(__INTEL_COMPILER)
 #ifndef __INTEL_COMPILER
 #define	__strong_reference(sym,aliassym)	\
-	extern __typeof (sym) aliassym __attribute__ ((__alias__ (#sym)));
+	extern __typeof (sym) aliassym __attribute__ ((__alias__ (#sym)))
 #endif
 #ifdef __STDC__
 #define	__weak_reference(sym,alias)	\
@@ -360,6 +370,10 @@
 	__asm__(".section .gnu.warning." #sym);	\
 	__asm__(".asciz \"" msg "\"");	\
 	__asm__(".previous")
+#define	__sym_compat(sym,impl,verid)	\
+	__asm__(".symver " #impl ", " #sym "@" #verid)
+#define	__sym_default(sym,impl,verid)	\
+	__asm__(".symver " #impl ", " #sym "@@" #verid)
 #else
 #define	__weak_reference(sym,alias)	\
 	__asm__(".weak alias");		\
@@ -368,6 +382,10 @@
 	__asm__(".section .gnu.warning.sym"); \
 	__asm__(".asciz \"msg\"");	\
 	__asm__(".previous")
+#define	__sym_compat(sym,impl,verid)	\
+	__asm__(".symver impl, sym@verid")
+#define	__sym_default(impl,sym,verid)	\
+	__asm__(".symver impl, sym@@verid")
 #endif	/* __STDC__ */
 #endif	/* __GNUC__ || __INTEL_COMPILER */
 
@@ -387,7 +405,7 @@
  * Embed the rcs id of a source file in the resulting library.  Note that in
  * more recent ELF binutils, we use .ident allowing the ID to be stripped.
  * Usage:
- *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.3 2006/07/26 12:45:59 laffer1 Exp $");
+ *	__MBSDID("$MidnightBSD: src/sys/sys/cdefs.h,v 1.4 2008/05/13 04:04:14 laffer1 Exp $");
  */
 #ifndef	__MBSDID
 #if !defined(lint) && !defined(STRIP_MBSDID)
