@@ -1,4 +1,4 @@
-# $MidnightBSD: src/sys/Makefile,v 1.3 2007/08/06 04:46:04 laffer1 Exp $
+# $MidnightBSD: src/sys/Makefile,v 1.4 2008/09/08 01:42:28 laffer1 Exp $
 # $FreeBSD: src/sys/Makefile,v 1.33 2005/03/08 00:09:41 grog Exp $
 
 # The boot loader
@@ -7,7 +7,7 @@ SUBDIR=	boot
 .endif
 
 # Directories to include in cscope name file and TAGS.
-CSCOPEDIRS=	coda compat conf contrib crypto ddb dev fs gnu i4b isa \
+CSCOPEDIRS=	compat conf contrib crypto ddb dev fs gnu i4b isa \
 		isofs kern libkern modules net netatalk netatm netgraph \
 		netinet netinet6 netipx netkey netnatm netncp netsmb nfs \
 		pccard pci posix4 sys ufs vm ${ARCHDIR}
