@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sa.c,v 1.105.2.1 2006/01/26 04:57:04 mjacob Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_sa.c,v 1.113 2007/06/16 18:20:29 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -447,35 +447,31 @@ saopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	struct sa_softc *softc;
 	int unit;
 	int error;
-	int s;
 
 	unit = SAUNIT(dev);
 
-	s = splsoftcam();
 	periph = (struct cam_periph *)dev->si_drv1;
-	if (periph == NULL) {
-		(void) splx(s);
-		return (ENXIO);	
+	if (cam_periph_acquire(periph) != CAM_REQ_CMP) {
+		return (ENXIO);
 	}
+
+	cam_periph_lock(periph);
+
 	softc = (struct sa_softc *)periph->softc;
-	if ((error = cam_periph_lock(periph, PRIBIO|PCATCH)) != 0) {
-		splx(s);
-		return (error);
-	}
-	splx(s);
 
 	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE|CAM_DEBUG_INFO,
 	    ("saopen(%d): dev=0x%x softc=0x%x\n", unit, unit, softc->flags));
-
-	if (cam_periph_acquire(periph) != CAM_REQ_CMP) {
-		cam_periph_unlock(periph);
-		return (ENXIO);
-	}
 
 	if (SA_IS_CTRL(dev)) {
 		softc->ctrl_mode = 1;
 		cam_periph_unlock(periph);
 		return (0);
+	}
+
+	if ((error = cam_periph_hold(periph, PRIBIO|PCATCH)) != 0) {
+		cam_periph_unlock(periph);
+		cam_periph_release(periph);
+		return (error);
 	}
 
 	if (softc->flags & SA_FLAG_OPEN) {
@@ -499,17 +495,23 @@ saopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 		if (error && (flags & O_NONBLOCK)) {
 			softc->flags |= SA_FLAG_OPEN;
 			softc->open_pending_mount = 1;
+			cam_periph_unhold(periph);
 			cam_periph_unlock(periph);
 			return (0);
 		}
 	}
 
 	if (error) {
+		cam_periph_unhold(periph);
+		cam_periph_unlock(periph);
 		cam_periph_release(periph);
-	} else {
-		saprevent(periph, PR_PREVENT);
-		softc->flags |= SA_FLAG_OPEN;
+		return (error);
 	}
+
+	saprevent(periph, PR_PREVENT);
+	softc->flags |= SA_FLAG_OPEN;
+
+	cam_periph_unhold(periph);
 	cam_periph_unlock(periph);
 	return (error);
 }
@@ -528,30 +530,33 @@ saclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 	if (periph == NULL)
 		return (ENXIO);	
 
+	cam_periph_lock(periph);
+
 	softc = (struct sa_softc *)periph->softc;
 
 	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE|CAM_DEBUG_INFO,
 	    ("saclose(%d): dev=0x%x softc=0x%x\n", unit, unit, softc->flags));
 
 
-	if ((error = cam_periph_lock(periph, PRIBIO)) != 0) {
-		return (error);
-	}
-
 	softc->open_rdonly = 0; 
 	if (SA_IS_CTRL(dev)) {
 		softc->ctrl_mode = 0;
-		cam_periph_release(periph);
 		cam_periph_unlock(periph);
+		cam_periph_release(periph);
 		return (0);
 	}
 
 	if (softc->open_pending_mount) {
 		softc->flags &= ~SA_FLAG_OPEN;
 		softc->open_pending_mount = 0; 
-		cam_periph_release(periph);
 		cam_periph_unlock(periph);
+		cam_periph_release(periph);
 		return (0);
+	}
+
+	if ((error = cam_periph_hold(periph, PRIBIO)) != 0) {
+		cam_periph_unlock(periph);
+		return (error);
 	}
 
 	/*
@@ -566,8 +571,8 @@ saclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 	 */
 	error = sacheckeod(periph);
 	if (error) {
-		xpt_print_path(periph->path);
-		printf("failed to write terminating filemark(s)\n");
+		xpt_print(periph->path,
+		    "failed to write terminating filemark(s)\n");
 		softc->flags |= SA_FLAG_TAPE_FROZEN;
 	}
 
@@ -622,19 +627,18 @@ saclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 		if (error == 0 && writing && (softc->quirks & SA_QUIRK_2FM)) {
 			tmp = saspace(periph, -1, SS_FILEMARKS);
 			if (tmp) {
-				xpt_print_path(periph->path);
-				printf("unable to backspace over one of double"
-				   " filemarks at end of tape\n");
-				xpt_print_path(periph->path);
-				printf("it is possible that this device"
-				   " needs a SA_QUIRK_1FM quirk set for it\n");
+				xpt_print(periph->path, "unable to backspace "
+				    "over one of double filemarks at end of "
+				    "tape\n");
+				xpt_print(periph->path, "it is possible that "
+				    "this device needs a SA_QUIRK_1FM quirk set"
+				    "for it\n");
 				softc->flags |= SA_FLAG_TAPE_FROZEN;
 			}
 		}
 		break;
 	default:
-		xpt_print_path(periph->path);
-		panic("unknown mode 0x%x in saclose", mode);
+		xpt_print(periph->path, "unknown mode 0x%x in saclose\n", mode);
 		/* NOTREACHED */
 		break;
 	}
@@ -654,15 +658,15 @@ saclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 	 * Inform users if tape state if frozen....
 	 */
 	if (softc->flags & SA_FLAG_TAPE_FROZEN) {
-		xpt_print_path(periph->path);
-		printf("tape is now frozen- use an OFFLINE, REWIND or MTEOM "
-		    "command to clear this state.\n");
+		xpt_print(periph->path, "tape is now frozen- use an OFFLINE, "
+		    "REWIND or MTEOM command to clear this state.\n");
 	}
 	
 	/* release the device if it is no longer mounted */
 	if ((softc->flags & SA_FLAG_TAPE_MOUNTED) == 0)
 		sareservereleaseunit(periph, FALSE);
 
+	cam_periph_unhold(periph);
 	cam_periph_unlock(periph);
 	cam_periph_release(periph);
 
@@ -679,7 +683,6 @@ sastrategy(struct bio *bp)
 {
 	struct cam_periph *periph;
 	struct sa_softc *softc;
-	int    s;
 	
 	bp->bio_resid = bp->bio_bcount;
 	if (SA_IS_CTRL(bp->bio_dev)) {
@@ -691,18 +694,18 @@ sastrategy(struct bio *bp)
 		biofinish(bp, NULL, ENXIO);
 		return;
 	}
+	cam_periph_lock(periph);
+
 	softc = (struct sa_softc *)periph->softc;
 
-	s = splsoftcam();
-
 	if (softc->flags & SA_FLAG_INVALID) {
-		splx(s);
+		cam_periph_unlock(periph);
 		biofinish(bp, NULL, ENXIO);
 		return;
 	}
 
 	if (softc->flags & SA_FLAG_TAPE_FROZEN) {
-		splx(s);
+		cam_periph_unlock(periph);
 		biofinish(bp, NULL, EPERM);
 		return;
 	}
@@ -713,16 +716,15 @@ sastrategy(struct bio *bp)
 	 * file descriptor.
 	 */
 	if (bp->bio_cmd == BIO_WRITE && softc->open_rdonly) {
-		splx(s);
+		cam_periph_unlock(periph);
 		biofinish(bp, NULL, EBADF);
 		return;
 	}
 
-	splx(s);
-
 	if (softc->open_pending_mount) {
 		int error = samount(periph, 0, bp->bio_dev);
 		if (error) {
+			cam_periph_unlock(periph);
 			biofinish(bp, NULL, ENXIO);
 			return;
 		}
@@ -735,6 +737,7 @@ sastrategy(struct bio *bp)
 	 * If it's a null transfer, return immediately
 	 */
 	if (bp->bio_bcount == 0) {
+		cam_periph_unlock(periph);
 		biodone(bp);
 		return;
 	}
@@ -749,10 +752,10 @@ sastrategy(struct bio *bp)
 		    ((bp->bio_bcount & softc->blk_mask) != 0)) ||
 		    ((softc->blk_mask == ~0) &&
 		    ((bp->bio_bcount % softc->min_blk) != 0))) {
-			xpt_print_path(periph->path);
-			printf("Invalid request.  Fixed block device "
-			       "requests must be a multiple "
-			       "of %d bytes\n", softc->min_blk);
+			xpt_print(periph->path, "Invalid request.  Fixed block "
+			    "device requests must be a multiple of %d bytes\n",
+			    softc->min_blk);
+			cam_periph_unlock(periph);
 			biofinish(bp, NULL, EINVAL);
 			return;
 		}
@@ -761,23 +764,17 @@ sastrategy(struct bio *bp)
 		   (bp->bio_bcount & softc->blk_mask) != 0) {
 
 		xpt_print_path(periph->path);
-		printf("Invalid request.  Variable block device "
-		    "requests must be ");
+		printf("Invalid request.  Variable block "
+		    "device requests must be ");
 		if (softc->blk_mask != 0) {
 			printf("a multiple of %d ", (0x1 << softc->blk_gran));
 		}
 		printf("between %d and %d bytes\n", softc->min_blk,
 		    softc->max_blk);
+		cam_periph_unlock(periph);
 		biofinish(bp, NULL, EINVAL);
 		return;
         }
-	
-	/*
-	 * Mask interrupts so that the device cannot be invalidated until
-	 * after we are in the queue.  Otherwise, we might not properly
-	 * clean up one of the buffers.
-	 */
-	s = splbio();
 	
 	/*
 	 * Place it at the end of the queue.
@@ -794,12 +791,12 @@ sastrategy(struct bio *bp)
 		CAM_DEBUG(periph->path, CAM_DEBUG_INFO,
 		    ("sastrategy: queue count now %d\n", softc->queue_count));
 	}
-	splx(s);
 	
 	/*
 	 * Schedule ourselves for performing the work.
 	 */
 	xpt_schedule(periph, 1);
+	cam_periph_unlock(periph);
 
 	return;
 }
@@ -822,7 +819,6 @@ saioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 	struct sa_softc *softc;
 	scsi_space_code spaceop;
 	int didlockperiph = 0;
-	int s;
 	int mode;
 	int error = 0;
 
@@ -834,6 +830,7 @@ saioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 	if (periph == NULL)
 		return (ENXIO);	
 
+	cam_periph_lock(periph);
 	softc = (struct sa_softc *)periph->softc;
 
 	/*
@@ -859,13 +856,10 @@ saioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 			 * other thread that has this device open to do
 			 * an MTIOCERRSTAT that would clear latched status.
 			 */
-			s = splsoftcam();
 			if ((periph->flags & CAM_PERIPH_LOCKED) == 0) {
-				error = cam_periph_lock(periph, PRIBIO|PCATCH);
-				if (error != 0) {
-					splx(s);
+				error = cam_periph_hold(periph, PRIBIO|PCATCH);
+				 if (error != 0)
 					return (error);
-				}
 				didlockperiph = 1;
 			}
 			break;
@@ -898,12 +892,9 @@ saioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 			 * than at open time because we are sharing writable
 			 * access to data structures.
 			 */
-			s = splsoftcam();
-			error = cam_periph_lock(periph, PRIBIO|PCATCH);
-			if (error != 0) {
-				splx(s);
+			error = cam_periph_hold(periph, PRIBIO|PCATCH);
+			if (error != 0)
 				return (error);
-			}
 			didlockperiph = 1;
 			break;
 
@@ -1070,8 +1061,8 @@ saioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 			nmarks = softc->filemarks;
 			error = sacheckeod(periph);
 			if (error) {
-				xpt_print_path(periph->path);
-				printf("EOD check prior to spacing failed\n");
+				xpt_print(periph->path,
+				    "EOD check prior to spacing failed\n");
 				softc->flags |= SA_FLAG_EIO_PENDING;
 				break;
 			}
@@ -1322,16 +1313,17 @@ saioctl(struct cdev *dev, u_long cmd, caddr_t arg, int flag, struct thread *td)
 			softc->fileno = (daddr_t) -1;
 			softc->blkno = (daddr_t) -1;
 			softc->flags &= ~SA_FLAG_TAPE_FROZEN;
-			xpt_print_path(periph->path);
-			printf("tape state now unfrozen.\n");
+			xpt_print(periph->path,
+			    "tape state now unfrozen.\n");
 			break;
 		default:
 			break;
 		}
 	}
 	if (didlockperiph) {
-		cam_periph_unlock(periph);
+		cam_periph_unhold(periph);
 	}
+	cam_periph_unlock(periph);
 	return (error);
 }
 
@@ -1339,29 +1331,11 @@ static void
 sainit(void)
 {
 	cam_status status;
-	struct cam_path *path;
 
 	/*
 	 * Install a global async callback.
 	 */
-	status = xpt_create_path(&path, NULL, CAM_XPT_PATH_ID,
-				 CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD);
-
-	if (status == CAM_REQ_CMP) {
-		/* Register the async callbacks of interrest */
-		struct ccb_setasync csa; /*
-					  * This is an immediate CCB,
-					  * so using the stack is OK
-					  */
-		xpt_setup_ccb(&csa.ccb_h, path, 5);
-		csa.ccb_h.func_code = XPT_SASYNC_CB;
-		csa.event_enable = AC_FOUND_DEVICE;
-		csa.callback = saasync;
-		csa.callback_arg = NULL;
-		xpt_action((union ccb *)&csa);
-		status = csa.ccb_h.status;
-		xpt_free_path(path);
-	}
+	status = xpt_register_async(AC_FOUND_DEVICE, saasync, NULL, NULL);
 
 	if (status != CAM_REQ_CMP) {
 		printf("sa: Failed to attach master async callback "
@@ -1373,30 +1347,15 @@ static void
 saoninvalidate(struct cam_periph *periph)
 {
 	struct sa_softc *softc;
-	struct ccb_setasync csa;
-	int s;
 
 	softc = (struct sa_softc *)periph->softc;
 
 	/*
 	 * De-register any async callbacks.
 	 */
-	xpt_setup_ccb(&csa.ccb_h, periph->path,
-		      /* priority */ 5);
-	csa.ccb_h.func_code = XPT_SASYNC_CB;
-	csa.event_enable = 0;
-	csa.callback = saasync;
-	csa.callback_arg = periph;
-	xpt_action((union ccb *)&csa);
+	xpt_register_async(0, saasync, periph, periph->path);
 
 	softc->flags |= SA_FLAG_INVALID;
-
-	/*
-	 * Although the oninvalidate() routines are always called at
-	 * splsoftcam, we need to be at splbio() here to keep the buffer
-	 * queue from being modified while we traverse it.
-	 */
-	s = splbio();
 
 	/*
 	 * Return all queued I/O with ENXIO.
@@ -1405,10 +1364,8 @@ saoninvalidate(struct cam_periph *periph)
 	 */
 	bioq_flush(&softc->bio_queue, NULL, ENXIO);
 	softc->queue_count = 0;
-	splx(s);
 
-	xpt_print_path(periph->path);
-	printf("lost device\n");
+	xpt_print(periph->path, "lost device\n");
 
 }
 
@@ -1430,8 +1387,7 @@ sacleanup(struct cam_periph *periph)
 		destroy_dev(softc->devs.mode_devs[i].er_dev);
 	}
 
-	xpt_print_path(periph->path);
-	printf("removing device entry\n");
+	xpt_print(periph->path, "removing device entry\n");
 	free(softc, M_SCSISA);
 }
 
@@ -1481,7 +1437,6 @@ static cam_status
 saregister(struct cam_periph *periph, void *arg)
 {
 	struct sa_softc *softc;
-	struct ccb_setasync csa;
 	struct ccb_getdev *cgd;
 	caddr_t match;
 	int i;
@@ -1525,9 +1480,8 @@ saregister(struct cam_periph *periph, void *arg)
 		softc->last_media_blksize =
 		    ((struct sa_quirk_entry *)match)->prefblk;
 #ifdef	CAMDEBUG
-		xpt_print_path(periph->path);
-		printf("found quirk entry %d\n", (int)
-		    (((struct sa_quirk_entry *) match) - sa_quirk_table));
+		xpt_print(periph->path, "found quirk entry %d\n",
+		    (int) (((struct sa_quirk_entry *) match) - sa_quirk_table));
 #endif
 	} else
 		softc->quirks = SA_QUIRK_NONE;
@@ -1537,6 +1491,7 @@ saregister(struct cam_periph *periph, void *arg)
 	 * blocksize until we media is inserted.  So, set a flag to
 	 * indicate that the blocksize is unavailable right now.
 	 */
+	cam_periph_unlock(periph);
 	softc->device_stats = devstat_new_entry("sa", periph->unit_number, 0,
 	    DEVSTAT_BS_UNAVAILABLE, SID_TYPE(&cgd->inq_data) |
 	    DEVSTAT_TYPE_IF_SCSI, DEVSTAT_PRIORITY_TAPE);
@@ -1583,17 +1538,13 @@ saregister(struct cam_periph *periph, void *arg)
 			alias->si_drv1 = periph;
 		}
 	}
+	cam_periph_lock(periph);
 
 	/*
 	 * Add an async callback so that we get
 	 * notified if this device goes away.
 	 */
-	xpt_setup_ccb(&csa.ccb_h, periph->path, /* priority */ 5);
-	csa.ccb_h.func_code = XPT_SASYNC_CB;
-	csa.event_enable = AC_LOST_DEVICE;
-	csa.callback = saasync;
-	csa.callback_arg = periph;
-	xpt_action((union ccb *)&csa);
+	xpt_register_async(AC_LOST_DEVICE, saasync, periph, periph->path);
 
 	xpt_announce_periph(periph, NULL);
 
@@ -1615,12 +1566,10 @@ sastart(struct cam_periph *periph, union ccb *start_ccb)
 	{
 		/* Pull a buffer from the queue and get going on it */		
 		struct bio *bp;
-		int s;
 
 		/*
 		 * See if there is a buf with work for us to do..
 		 */
-		s = splbio();
 		bp = bioq_first(&softc->bio_queue);
 		if (periph->immediate_priority <= periph->pinfo.priority) {
 			CAM_DEBUG_PRINT(CAM_DEBUG_SUBTRACE,
@@ -1629,10 +1578,8 @@ sastart(struct cam_periph *periph, union ccb *start_ccb)
 			SLIST_INSERT_HEAD(&periph->ccb_list, &start_ccb->ccb_h,
 					  periph_links.sle);
 			periph->immediate_priority = CAM_PRIORITY_NONE;
-			splx(s);
 			wakeup(&periph->ccb_list);
 		} else if (bp == NULL) {
-			splx(s);
 			xpt_release_ccb(start_ccb);
 		} else if ((softc->flags & SA_FLAG_ERR_PENDING) != 0) {
 			struct bio *done_bp;
@@ -1675,7 +1622,6 @@ again:
 			    "%d more buffers queued up\n",
 			    (softc->flags & SA_FLAG_ERR_PENDING),
 			    (bp != NULL)? "not " : " ", softc->queue_count));
-			splx(s);
 			xpt_release_ccb(start_ccb);
 			biodone(done_bp);
 		} else {
@@ -1693,10 +1639,8 @@ again:
 					    softc->media_blksize;
 				} else {
 					bp->bio_error = EIO;
-					xpt_print_path(periph->path);
-					printf("zero blocksize for "
-					    "FIXED length writes?\n");
-					splx(s);
+					xpt_print(periph->path, "zero blocksize"
+					    " for FIXED length writes?\n");
 					biodone(bp);
 					break;
 				}
@@ -1747,7 +1691,6 @@ again:
 			Set_CCB_Type(start_ccb, SA_CCB_BUFFER_IO);
 			start_ccb->ccb_h.ccb_bp = bp;
 			bp = bioq_first(&softc->bio_queue);
-			splx(s);
 			xpt_action(start_ccb);
 		}
 		
@@ -1792,7 +1735,6 @@ sadone(struct cam_periph *periph, union ccb *done_ccb)
 		}
 
 		if (error == EIO) {
-			int s;			
 
 			/*
 			 * Catastrophic error. Mark the tape as frozen
@@ -1805,10 +1747,8 @@ sadone(struct cam_periph *periph, union ccb *done_ccb)
 			 *
 			 */
 
-			s = splbio();
 			softc->flags |= SA_FLAG_TAPE_FROZEN;
 			bioq_flush(&softc->bio_queue, NULL, EIO);
-			splx(s);
 		}
 		if (error != 0) {
 			bp->bio_resid = bp->bio_bcount;
@@ -1920,8 +1860,8 @@ samount(struct cam_periph *periph, int oflags, struct cdev *dev)
 			 */
 			softc->flags &= ~SA_FLAG_TAPE_MOUNTED;
 			if (CAM_DEBUGGED(periph->path, CAM_DEBUG_INFO)) {
-				xpt_print_path(periph->path);
-				printf("error %d on TUR in samount\n", error);
+				xpt_print(periph->path,
+				    "error %d on TUR in samount\n", error);
 			}
 		}
 	} else {
@@ -1982,10 +1922,9 @@ samount(struct cam_periph *periph, int oflags, struct cdev *dev)
 		 * read a full record.
 		 */
 		rblim = (struct  scsi_read_block_limits_data *)
-		    malloc(8192, M_TEMP, M_WAITOK);
+		    malloc(8192, M_SCSISA, M_NOWAIT);
 		if (rblim == NULL) {
-			xpt_print_path(periph->path);
-			printf("no memory for test read\n");
+			xpt_print(periph->path, "no memory for test read\n");
 			xpt_release_ccb(ccb);
 			error = ENOMEM;
 			goto exit;
@@ -2006,8 +1945,8 @@ samount(struct cam_periph *periph, int oflags, struct cdev *dev)
 			    softc->device_stats);
 			QFRLS(ccb);
 			if (error) {
-				xpt_print_path(periph->path);
-				printf("unable to rewind after test read\n");
+				xpt_print(periph->path,
+				    "unable to rewind after test read\n");
 				xpt_release_ccb(ccb);
 				goto exit;
 			}
@@ -2171,8 +2110,8 @@ samount(struct cam_periph *periph, int oflags, struct cdev *dev)
 		if ((softc->max_blk < softc->media_blksize) ||
 		    (softc->min_blk > softc->media_blksize &&
 		    softc->media_blksize)) {
-			xpt_print_path(periph->path);
-			printf("BLOCK LIMITS (%d..%d) could not match current "
+			xpt_print(periph->path,
+			    "BLOCK LIMITS (%d..%d) could not match current "
 			    "block settings (%d)- adjusting\n", softc->min_blk,
 			    softc->max_blk, softc->media_blksize);
 			softc->max_blk = softc->min_blk =
@@ -2206,9 +2145,9 @@ tryagain:
 			error = sasetparams(periph, SA_PARAM_BLOCKSIZE,
 			    softc->media_blksize, 0, 0, SF_NO_PRINT);
 			if (error) {
-				xpt_print_path(periph->path);
-				printf("unable to set fixed blocksize to %d\n",
-				     softc->media_blksize);
+				xpt_print(periph->path,
+				    "unable to set fixed blocksize to %d\n",
+				    softc->media_blksize);
 				goto exit;
 			}
 		}
@@ -2233,8 +2172,8 @@ tryagain:
 						softc->last_media_blksize = 512;
 					goto tryagain;
 				}
-				xpt_print_path(periph->path);
-				printf("unable to set variable blocksize\n");
+				xpt_print(periph->path,
+				    "unable to set variable blocksize\n");
 				goto exit;
 			}
 		}
@@ -2291,8 +2230,8 @@ tryagain:
 			if (error == 0) {
 				softc->buffer_mode = SMH_SA_BUF_MODE_SIBUF;
 			} else {
-				xpt_print_path(periph->path);
-				printf("unable to set buffered mode\n");
+				xpt_print(periph->path,
+				    "unable to set buffered mode\n");
 			}
 			error = 0;	/* not an error */
 		}
@@ -2303,7 +2242,7 @@ tryagain:
 		}
 exit:
 		if (rblim != NULL)
-			free(rblim, M_TEMP);
+			free(rblim, M_SCSISA);
 
 		if (error != 0) {
 			softc->dsreg = MTIO_DSREG_NIL;
@@ -2534,8 +2473,8 @@ saerror(union ccb *ccb, u_int32_t cflgs, u_int32_t sflgs)
 	 */
 	if (error == 0 && (sense->flags & SSD_ILI)) {
 		if (info < 0) {
-			xpt_print_path(csio->ccb_h.path);
-			printf(toobig, csio->dxfer_len - info);
+			xpt_print(csio->ccb_h.path, toobig,
+			    csio->dxfer_len - info);
 			csio->resid = csio->dxfer_len;
 			error = EIO;
 		} else {
@@ -2604,7 +2543,12 @@ retry:
 			mode_buffer_len += sizeof (sa_comp_t);
 	}
 
-	mode_buffer = malloc(mode_buffer_len, M_TEMP, M_WAITOK | M_ZERO);
+	/* XXX Fix M_NOWAIT */
+	mode_buffer = malloc(mode_buffer_len, M_SCSISA, M_NOWAIT | M_ZERO);
+	if (mode_buffer == NULL) {
+		xpt_release_ccb(ccb);
+		return (ENOMEM);
+	}
 	mode_hdr = (struct scsi_mode_header_6 *)mode_buffer;
 	mode_blk = (struct scsi_mode_blk_desc *)&mode_hdr[1];
 
@@ -2633,7 +2577,7 @@ retry:
 			goto retry;
 		}
 		softc->quirks |= SA_QUIRK_NOCOMP;
-		free(mode_buffer, M_TEMP);
+		free(mode_buffer, M_SCSISA);
 		goto retry;
 	} else if (status == CAM_SCSI_STATUS_ERROR) {
 		/* Tell the user about the fatal error. */
@@ -2742,7 +2686,7 @@ retry:
 sagetparamsexit:
 
 	xpt_release_ccb(ccb);
-	free(mode_buffer, M_TEMP);
+	free(mode_buffer, M_SCSISA);
 	return (error);
 }
 
@@ -2784,7 +2728,9 @@ sasetparams(struct cam_periph *periph, sa_params params_to_set,
 
 	softc = (struct sa_softc *)periph->softc;
 
-	ccomp = malloc(sizeof (sa_comp_t), M_TEMP, M_WAITOK);
+	ccomp = malloc(sizeof (sa_comp_t), M_SCSISA, M_NOWAIT);
+	if (ccomp == NULL)
+		return (ENOMEM);
 
 	/*
 	 * Since it doesn't make sense to set the number of blocks, or
@@ -2799,7 +2745,7 @@ sasetparams(struct cam_periph *periph, sa_params params_to_set,
 	    &current_calg, ccomp);
 
 	if (error != 0) {
-		free(ccomp, M_TEMP);
+		free(ccomp, M_SCSISA);
 		return (error);
 	}
 
@@ -2807,7 +2753,11 @@ sasetparams(struct cam_periph *periph, sa_params params_to_set,
 	if (params_to_set & SA_PARAM_COMPRESSION)
 		mode_buffer_len += sizeof (sa_comp_t);
 
-	mode_buffer = malloc(mode_buffer_len, M_TEMP, M_WAITOK | M_ZERO);
+	mode_buffer = malloc(mode_buffer_len, M_SCSISA, M_NOWAIT | M_ZERO);
+	if (mode_buffer == NULL) {
+		free(ccomp, M_SCSISA);
+		return (ENOMEM);
+	}
 
 	mode_hdr = (struct scsi_mode_header_6 *)mode_buffer;
 	mode_blk = (struct scsi_mode_blk_desc *)&mode_hdr[1];
@@ -2956,8 +2906,8 @@ retry:
 			 * so turn off the set compression bit.
 			 */
 			params_to_set &= ~SA_PARAM_COMPRESSION;
-			xpt_print_path(periph->path);
-			printf("device does not seem to support compression\n");
+			xpt_print(periph->path,
+			    "device does not seem to support compression\n");
 
 			/*
 			 * If that was the only thing the user wanted us to set,
@@ -2965,7 +2915,7 @@ retry:
 			 * 'operation not supported'.
 			 */
 			if (params_to_set == SA_PARAM_NONE) {
-				free(mode_buffer, M_TEMP);
+				free(mode_buffer, M_SCSISA);
 				xpt_release_ccb(ccb);
 				return (ENODEV);
 			}
@@ -3050,7 +3000,7 @@ retry:
 	xpt_release_ccb(ccb);
 
 	if (ccomp != NULL)
-		free(ccomp, M_TEMP);
+		free(ccomp, M_SCSISA);
 
 	if (params_to_set & SA_PARAM_COMPRESSION) {
 		if (error) {
@@ -3069,7 +3019,7 @@ retry:
 		}
 	}
 
-	free(mode_buffer, M_TEMP);
+	free(mode_buffer, M_SCSISA);
 	return (error);
 }
 

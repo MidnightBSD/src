@@ -25,13 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_periph.h,v 1.16 2005/01/05 22:34:34 imp Exp $
+ * $FreeBSD: src/sys/cam/cam_periph.h,v 1.18 2007/04/19 22:46:26 scottl Exp $
  */
 
 #ifndef _CAM_CAM_PERIPH_H
 #define _CAM_CAM_PERIPH_H 1
 
 #include <sys/queue.h>
+#include <cam/cam_sim.h>
 
 #ifdef _KERNEL
 
@@ -104,6 +105,7 @@ struct cam_periph {
 	char			*periph_name;
 	struct cam_path		*path;	/* Compiled path to device */
 	void			*softc;
+	struct cam_sim		*sim;
 	u_int32_t		 unit_number;
 	cam_periph_type		 type;
 	u_int32_t		 flags;
@@ -113,6 +115,7 @@ struct cam_periph {
 #define CAM_PERIPH_INVALID		0x08
 #define CAM_PERIPH_NEW_DEV_FOUND	0x10
 #define CAM_PERIPH_RECOVERY_INPROG	0x20
+#define CAM_PERIPH_POLLED		0x40
 	u_int32_t		 immediate_priority;
 	u_int32_t		 refcount;
 	SLIST_HEAD(, ccb_hdr)	 ccb_list;	/* For "immediate" requests */
@@ -136,10 +139,10 @@ cam_status cam_periph_alloc(periph_ctor_t *periph_ctor,
 			    char *name, cam_periph_type type, struct cam_path *,
 			    ac_callback_t *, ac_code, void *arg);
 struct cam_periph *cam_periph_find(struct cam_path *path, char *name);
-int		cam_periph_lock(struct cam_periph *periph, int priority);
-void		cam_periph_unlock(struct cam_periph *periph);
 cam_status	cam_periph_acquire(struct cam_periph *periph);
 void		cam_periph_release(struct cam_periph *periph);
+int		cam_periph_hold(struct cam_periph *periph, int priority);
+void		cam_periph_unhold(struct cam_periph *periph);
 void		cam_periph_invalidate(struct cam_periph *periph);
 int		cam_periph_mapmem(union ccb *ccb,
 				  struct cam_periph_map_info *mapinfo);
@@ -172,6 +175,18 @@ void		cam_periph_freeze_after_event(struct cam_periph *periph,
 					      u_int duration_ms);
 int		cam_periph_error(union ccb *ccb, cam_flags camflags,
 				 u_int32_t sense_flags, union ccb *save_ccb);
+
+static __inline void
+cam_periph_lock(struct cam_periph *periph)
+{
+	mtx_lock(periph->sim->mtx);
+}
+
+static __inline void
+cam_periph_unlock(struct cam_periph *periph)
+{
+	mtx_unlock(periph->sim->mtx);
+}
 
 #endif /* _KERNEL */
 #endif /* _CAM_CAM_PERIPH_H */

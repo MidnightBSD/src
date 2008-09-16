@@ -27,12 +27,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/cam_sim.c,v 1.9 2005/07/01 15:21:29 avatar Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/cam_sim.c,v 1.11 2007/04/19 14:28:43 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -58,38 +60,42 @@ cam_simq_free(struct cam_devq *devq)
 struct cam_sim *
 cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 	      const char *sim_name, void *softc, u_int32_t unit,
-	      int max_dev_transactions,
+	      struct mtx *mtx, int max_dev_transactions,
 	      int max_tagged_dev_transactions, struct cam_devq *queue)
 {
 	struct cam_sim *sim;
 
-	/*
-	 * If this is the xpt layer creating a sim, then it's OK
-	 * to wait for an allocation.
-	 *
-	 * XXX Should we pass in a flag to indicate that wait is OK?
-	 */
-	if (strcmp(sim_name, "xpt") == 0)
-		sim = (struct cam_sim *)malloc(sizeof(struct cam_sim),
-					       M_CAMSIM, M_WAITOK);
-	else
-		sim = (struct cam_sim *)malloc(sizeof(struct cam_sim),
-					       M_CAMSIM, M_NOWAIT);
+	if (mtx == NULL)
+		return (NULL);
 
-	if (sim != NULL) {
-		sim->sim_action = sim_action;
-		sim->sim_poll = sim_poll;
-		sim->sim_name = sim_name;
-		sim->softc = softc;
-		sim->path_id = CAM_PATH_ANY;
-		sim->unit_number = unit;
-		sim->bus_id = 0;	/* set in xpt_bus_register */
-		sim->max_tagged_dev_openings = max_tagged_dev_transactions;
-		sim->max_dev_openings = max_dev_transactions;
-		sim->flags = 0;
-		callout_handle_init(&sim->c_handle);
-		sim->devq = queue;
+	sim = (struct cam_sim *)malloc(sizeof(struct cam_sim),
+	    M_CAMSIM, M_NOWAIT);
+
+	if (sim == NULL)
+		return (NULL);
+
+	sim->sim_action = sim_action;
+	sim->sim_poll = sim_poll;
+	sim->sim_name = sim_name;
+	sim->softc = softc;
+	sim->path_id = CAM_PATH_ANY;
+	sim->unit_number = unit;
+	sim->bus_id = 0;	/* set in xpt_bus_register */
+	sim->max_tagged_dev_openings = max_tagged_dev_transactions;
+	sim->max_dev_openings = max_dev_transactions;
+	sim->flags = 0;
+	sim->devq = queue;
+	sim->mtx = mtx;
+	if (mtx == &Giant) {
+		sim->flags |= 0;
+		callout_init(&sim->callout, 0);
+	} else {
+		sim->flags |= CAM_SIM_MPSAFE;
+		callout_init(&sim->callout, 1);
 	}
+
+	SLIST_INIT(&sim->ccb_freeq);
+	TAILQ_INIT(&sim->sim_doneq);
 
 	return (sim);
 }

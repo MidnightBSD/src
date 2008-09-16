@@ -24115,6 +24115,8 @@ sys/cam/scsi/scsi_sa.c -text
 sys/cam/scsi/scsi_sa.h -text
 sys/cam/scsi/scsi_ses.c -text
 sys/cam/scsi/scsi_ses.h -text
+sys/cam/scsi/scsi_sg.c -text
+sys/cam/scsi/scsi_sg.h -text
 sys/cam/scsi/scsi_targ_bh.c -text
 sys/cam/scsi/scsi_target.c -text
 sys/cam/scsi/scsi_targetio.h -text

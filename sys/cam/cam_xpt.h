@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_xpt.h,v 1.5 2005/01/05 22:34:34 imp Exp $
+ * $FreeBSD: src/sys/cam/cam_xpt.h,v 1.9 2007/05/16 16:54:23 scottl Exp $
  */
 
 #ifndef _CAM_CAM_XPT_H
@@ -58,10 +58,15 @@ cam_status		xpt_create_path(struct cam_path **new_path_ptr,
 					struct cam_periph *perph,
 					path_id_t path_id,
 					target_id_t target_id, lun_id_t lun_id);
+cam_status		xpt_create_path_unlocked(struct cam_path **new_path_ptr,
+					struct cam_periph *perph,
+					path_id_t path_id,
+					target_id_t target_id, lun_id_t lun_id);
 void			xpt_free_path(struct cam_path *path);
 int			xpt_path_comp(struct cam_path *path1,
 				      struct cam_path *path2);
 void			xpt_print_path(struct cam_path *path);
+void			xpt_print(struct cam_path *path, const char *fmt, ...);
 int			xpt_path_string(struct cam_path *path, char *str,
 					size_t str_len);
 path_id_t		xpt_path_path_id(struct cam_path *path);
@@ -71,6 +76,11 @@ struct cam_sim		*xpt_path_sim(struct cam_path *path);
 struct cam_periph	*xpt_path_periph(struct cam_path *path);
 void			xpt_async(u_int32_t async_code, struct cam_path *path,
 				  void *async_arg);
+void			xpt_rescan(union ccb *ccb);
+void			xpt_lock_buses(void);
+void			xpt_unlock_buses(void);
+cam_status		xpt_register_async(int event, ac_callback_t *cbfunc,
+					   void *cbarg, struct cam_path *path);
 #endif /* _KERNEL */
 
 #endif /* _CAM_CAM_XPT_H */

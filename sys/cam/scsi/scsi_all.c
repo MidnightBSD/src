@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_all.c,v 1.48.2.1 2006/09/09 07:21:18 ken Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_all.c,v 1.51 2007/06/04 18:25:03 dwmalone Exp $");
 
 #include <sys/param.h>
 
@@ -726,8 +726,6 @@ scsi_op_desc(u_int16_t opcode, struct scsi_inquiry_data *inq_data)
 
 #endif
 
-
-#include <sys/param.h>
 
 #if !defined(SCSI_NO_SENSE_STRINGS)
 #define SST(asc, ascq, action, desc) \
@@ -3025,7 +3023,7 @@ sysctl_scsi_delay(SYSCTL_HANDLER_ARGS)
 	int error, delay;
 
 	delay = scsi_delay;
-	error = sysctl_handle_int(oidp, &delay, sizeof(delay), req);
+	error = sysctl_handle_int(oidp, &delay, 0, req);
 	if (error != 0 || req->newptr == NULL)
 		return (error);
 	return (set_scsi_delay(delay));

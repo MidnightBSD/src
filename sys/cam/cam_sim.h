@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/cam/cam_sim.h,v 1.6 2005/01/05 22:34:34 imp Exp $
+ * $FreeBSD: src/sys/cam/cam_sim.h,v 1.8 2007/04/19 14:28:43 scottl Exp $
  */
 
 #ifndef _CAM_CAM_SIM_H
@@ -56,6 +56,7 @@ struct cam_sim *  cam_sim_alloc(sim_action_func sim_action,
 				const char *sim_name,
 				void *softc,
 				u_int32_t unit,
+				struct mtx *mtx,
 				int max_dev_transactions,
 				int max_tagged_dev_transactions,
 				struct cam_devq *queue);
@@ -90,16 +91,35 @@ struct cam_sim {
 	sim_poll_func		sim_poll;
 	const char		*sim_name;
 	void			*softc;
+	struct mtx		*mtx;
+	TAILQ_HEAD(, ccb_hdr)	sim_doneq;
+	TAILQ_ENTRY(cam_sim)	links;
 	u_int32_t		path_id;/* The Boot device may set this to 0? */
 	u_int32_t		unit_number;
 	u_int32_t		bus_id;
 	int			max_tagged_dev_openings;
 	int			max_dev_openings;
 	u_int32_t		flags;
-#define		CAM_SIM_REL_TIMEOUT_PENDING	0x01
-	struct callout_handle	c_handle;
+#define	CAM_SIM_REL_TIMEOUT_PENDING	0x01
+#define	CAM_SIM_MPSAFE			0x02
+#define CAM_SIM_ON_DONEQ		0x04
+	struct callout		callout;
 	struct cam_devq 	*devq;	/* Device Queue to use for this SIM */
+
+	/* "Pool" of inactive ccbs managed by xpt_alloc_ccb and xpt_free_ccb */
+	SLIST_HEAD(,ccb_hdr)	ccb_freeq;
+	/*
+	 * Maximum size of ccb pool.  Modified as devices are added/removed
+	 * or have their * opening counts changed.
+	 */
+	u_int			max_ccbs;
+	/* Current count of allocated ccbs */
+	u_int			ccb_count;
+
 };
+
+#define CAM_SIM_LOCK(sim)	mtx_lock((sim)->mtx);
+#define CAM_SIM_UNLOCK(sim)	mtx_unlock((sim)->mtx);
 
 static __inline u_int32_t
 cam_sim_path(struct cam_sim *sim)

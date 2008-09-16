@@ -68,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_ch.c,v 1.42 2005/03/26 04:21:11 ken Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_ch.c,v 1.46 2007/05/16 16:54:23 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -173,8 +173,6 @@ struct ch_softc {
 	int		sc_settledelay;	/* delay for settle */
 };
 
-#define CHUNIT(x)       (minor((x)))
-
 static	d_open_t	chopen;
 static	d_close_t	chclose;
 static	d_ioctl_t	chioctl;
@@ -213,38 +211,25 @@ PERIPHDRIVER_DECLARE(ch, chdriver);
 
 static struct cdevsw ch_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
+	.d_flags =	0,
 	.d_open =	chopen,
 	.d_close =	chclose,
 	.d_ioctl =	chioctl,
 	.d_name =	"ch",
 };
 
+MALLOC_DEFINE(M_SCSICH, "scsi_ch", "scsi_ch buffers");
+
 static void
 chinit(void)
 {
 	cam_status status;
-	struct cam_path *path;
 
 	/*
 	 * Install a global async callback.  This callback will
 	 * receive async callbacks like "new device found".
 	 */
-	status = xpt_create_path(&path, /*periph*/NULL, CAM_XPT_PATH_ID,
-				 CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD);
-
-	if (status == CAM_REQ_CMP) {
-		struct ccb_setasync csa;
-
-                xpt_setup_ccb(&csa.ccb_h, path, /*priority*/5);
-                csa.ccb_h.func_code = XPT_SASYNC_CB;
-                csa.event_enable = AC_FOUND_DEVICE;
-                csa.callback = chasync;
-                csa.callback_arg = NULL;
-                xpt_action((union ccb *)&csa);
-		status = csa.ccb_h.status;
-                xpt_free_path(path);
-        }
+	status = xpt_register_async(AC_FOUND_DEVICE, chasync, NULL, NULL);
 
 	if (status != CAM_REQ_CMP) {
 		printf("ch: Failed to attach master async callback "
@@ -256,25 +241,17 @@ static void
 choninvalidate(struct cam_periph *periph)
 {
 	struct ch_softc *softc;
-	struct ccb_setasync csa;
 
 	softc = (struct ch_softc *)periph->softc;
 
 	/*
 	 * De-register any async callbacks.
 	 */
-	xpt_setup_ccb(&csa.ccb_h, periph->path,
-		      /* priority */ 5);
-	csa.ccb_h.func_code = XPT_SASYNC_CB;
-	csa.event_enable = 0;
-	csa.callback = chasync;
-	csa.callback_arg = periph;
-	xpt_action((union ccb *)&csa);
+	xpt_register_async(0, chasync, periph, periph->path);
 
 	softc->flags |= CH_FLAG_INVALID;
 
-	xpt_print_path(periph->path);
-	printf("lost device\n");
+	xpt_print(periph->path, "lost device\n");
 
 }
 
@@ -287,8 +264,7 @@ chcleanup(struct cam_periph *periph)
 
 	devstat_remove_entry(softc->device_stats);
 	destroy_dev(softc->dev);
-	xpt_print_path(periph->path);
-	printf("removing device entry\n");
+	xpt_print(periph->path, "removing device entry\n");
 	free(softc, M_DEVBUF);
 }
 
@@ -340,7 +316,6 @@ static cam_status
 chregister(struct cam_periph *periph, void *arg)
 {
 	struct ch_softc *softc;
-	struct ccb_setasync csa;
 	struct ccb_getdev *cgd;
 
 	cgd = (struct ccb_getdev *)arg;
@@ -371,6 +346,7 @@ chregister(struct cam_periph *periph, void *arg)
 	 * Changers don't have a blocksize, and obviously don't support
 	 * tagged queueing.
 	 */
+	cam_periph_unlock(periph);
 	softc->device_stats = devstat_new_entry("ch",
 			  periph->unit_number, 0,
 			  DEVSTAT_NO_BLOCKSIZE | DEVSTAT_NO_ORDERED_TAGS,
@@ -381,24 +357,20 @@ chregister(struct cam_periph *periph, void *arg)
 	softc->dev = make_dev(&ch_cdevsw, periph->unit_number, UID_ROOT,
 			      GID_OPERATOR, 0600, "%s%d", periph->periph_name,
 			      periph->unit_number);
+	cam_periph_lock(periph);
 	softc->dev->si_drv1 = periph;
 
 	/*
 	 * Add an async callback so that we get
 	 * notified if this device goes away.
 	 */
-	xpt_setup_ccb(&csa.ccb_h, periph->path, /* priority */ 5);
-	csa.ccb_h.func_code = XPT_SASYNC_CB;
-	csa.event_enable = AC_LOST_DEVICE;
-	csa.callback = chasync;
-	csa.callback_arg = periph;
-	xpt_action((union ccb *)&csa);
+	xpt_register_async(AC_LOST_DEVICE, chasync, periph, periph->path);
 
 	/*
-	 * Lock this peripheral until we are setup.
+	 * Lock this periph until we are setup.
 	 * This first call can't block
 	 */
-	(void)cam_periph_lock(periph, PRIBIO);
+	(void)cam_periph_hold(periph, PRIBIO);
 	xpt_schedule(periph, /*priority*/5);
 
 	return(CAM_REQ_CMP);
@@ -410,31 +382,30 @@ chopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 	struct cam_periph *periph;
 	struct ch_softc *softc;
 	int error;
-	int s;
 
 	periph = (struct cam_periph *)dev->si_drv1;
-	if (periph == NULL)
-		return(ENXIO);
+	if (cam_periph_acquire(periph) != CAM_REQ_CMP)
+		return (ENXIO);
 
 	softc = (struct ch_softc *)periph->softc;
 
-	s = splsoftcam();
+	cam_periph_lock(periph);
+	
 	if (softc->flags & CH_FLAG_INVALID) {
-		splx(s);
+		cam_periph_unlock(periph);
+		cam_periph_release(periph);
 		return(ENXIO);
 	}
 
-	if ((error = cam_periph_lock(periph, PRIBIO | PCATCH)) != 0) {
-		splx(s);
-		return (error);
-	}
-	
-	splx(s);
-
-	if ((softc->flags & CH_FLAG_OPEN) == 0) {
-		if (cam_periph_acquire(periph) != CAM_REQ_CMP)
-			return(ENXIO);
+	if ((softc->flags & CH_FLAG_OPEN) == 0)
 		softc->flags |= CH_FLAG_OPEN;
+	else
+		cam_periph_release(periph);
+
+	if ((error = cam_periph_hold(periph, PRIBIO | PCATCH)) != 0) {
+		cam_periph_unlock(periph);
+		cam_periph_release(periph);
+		return (error);
 	}
 
 	/*
@@ -447,6 +418,7 @@ chopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 		return(error);
 	}
 
+	cam_periph_unhold(periph);
 	cam_periph_unlock(periph);
 
 	return(error);
@@ -467,8 +439,7 @@ chclose(struct cdev *dev, int flag, int fmt, struct thread *td)
 
 	softc = (struct ch_softc *)periph->softc;
 
-	if ((error = cam_periph_lock(periph, PRIBIO)) != 0)
-		return(error);
+	cam_periph_lock(periph);
 
 	softc->flags &= ~CH_FLAG_OPEN;
 
@@ -482,24 +453,20 @@ static void
 chstart(struct cam_periph *periph, union ccb *start_ccb)
 {
 	struct ch_softc *softc;
-	int s;
 
 	softc = (struct ch_softc *)periph->softc;
 
 	switch (softc->state) {
 	case CH_STATE_NORMAL:
 	{
-		s = splbio();
 		if (periph->immediate_priority <= periph->pinfo.priority){
 			start_ccb->ccb_h.ccb_state = CH_CCB_WAITING;
 
 			SLIST_INSERT_HEAD(&periph->ccb_list, &start_ccb->ccb_h,
 					  periph_links.sle);
 			periph->immediate_priority = CAM_PRIORITY_NONE;
-			splx(s);
 			wakeup(&periph->ccb_list);
-		} else
-			splx(s);
+		}
 		break;
 	}
 	case CH_STATE_PROBE:
@@ -515,7 +482,7 @@ chstart(struct cam_periph *periph, union ccb *start_ccb)
 				  sizeof(struct scsi_mode_blk_desc) +
 				 sizeof(struct page_element_address_assignment);
 
-		mode_buffer = malloc(mode_buffer_len, M_TEMP, M_NOWAIT);
+		mode_buffer = malloc(mode_buffer_len, M_SCSICH, M_NOWAIT);
 
 		if (mode_buffer == NULL) {
 			printf("chstart: couldn't malloc mode sense data\n");
@@ -647,13 +614,12 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 				    == CAM_SCSI_STATUS_ERROR) 
 					scsi_sense_print(&done_ccb->csio);
 				else {
-					xpt_print_path(periph->path);
-					printf("got CAM status %#x\n",
-					       done_ccb->ccb_h.status);
+					xpt_print(periph->path,
+					    "got CAM status %#x\n",
+					    done_ccb->ccb_h.status);
 				}
-				xpt_print_path(periph->path);
-				printf("fatal error, failed to attach to"
-				       " device\n");
+				xpt_print(periph->path, "fatal error, failed "
+				    "to attach to device\n");
 
 				cam_periph_invalidate(periph);
 
@@ -663,7 +629,7 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 		if (announce_buf[0] != '\0')
 			xpt_announce_periph(periph, announce_buf);
 		softc->state = CH_STATE_NORMAL;
-		free(mode_header, M_TEMP);
+		free(mode_header, M_SCSICH);
 		/*
 		 * Since our peripheral may be invalidated by an error
 		 * above or an external event, we must release our CCB
@@ -673,7 +639,7 @@ chdone(struct cam_periph *periph, union ccb *done_ccb)
 		 * operation.
 		 */
 		xpt_release_ccb(done_ccb);
-		cam_periph_unlock(periph);
+		cam_periph_unhold(periph);
 		return;
 	}
 	case CH_CCB_WAITING:
@@ -712,6 +678,7 @@ chioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 	if (periph == NULL)
 		return(ENXIO);
 
+	cam_periph_lock(periph);
 	CAM_DEBUG(periph->path, CAM_DEBUG_TRACE, ("entering chioctl\n"));
 
 	softc = (struct ch_softc *)periph->softc;
@@ -732,8 +699,10 @@ chioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 		break;
 
 	default:
-		if ((flag & FWRITE) == 0)
+		if ((flag & FWRITE) == 0) {
+			cam_periph_unlock(periph);
 			return (EBADF);
+		}
 	}
 
 	switch (cmd) {
@@ -757,8 +726,10 @@ chioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 	{
 		int new_picker = *(int *)addr;
 
-		if (new_picker > (softc->sc_counts[CHET_MT] - 1))
-			return (EINVAL);
+		if (new_picker > (softc->sc_counts[CHET_MT] - 1)) {
+			error = EINVAL;
+			break;
+		}
 		softc->sc_picker = softc->sc_firsts[CHET_MT] + new_picker;
 		break;
 	}
@@ -797,6 +768,7 @@ chioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 		break;
 	}
 
+	cam_periph_unlock(periph);
 	return (error);
 }
 
@@ -1094,8 +1066,10 @@ chgetelemstatus(struct cam_periph *periph,
 	 * we can allocate enough storage for all of them.  We assume
 	 * that the first one can fit into 1k.
 	 */
+	cam_periph_unlock(periph);
 	data = (caddr_t)malloc(1024, M_DEVBUF, M_WAITOK);
 
+	cam_periph_lock(periph);
 	ccb = cam_periph_getccb(periph, /*priority*/ 1);
 
 	scsi_read_element_status(&ccb->csio,
@@ -1116,6 +1090,7 @@ chgetelemstatus(struct cam_periph *periph,
 
 	if (error)
 		goto done;
+	cam_periph_unlock(periph);
 
 	st_hdr = (struct read_element_status_header *)data;
 	pg_hdr = (struct read_element_status_page_header *)((uintptr_t)st_hdr +
@@ -1133,6 +1108,7 @@ chgetelemstatus(struct cam_periph *periph,
 	free(data, M_DEVBUF);
 	data = (caddr_t)malloc(size, M_DEVBUF, M_WAITOK);
 
+	cam_periph_lock(periph);
 	scsi_read_element_status(&ccb->csio,
 				 /* retries */ 1,
 				 /* cbfcnp */ chdone,
@@ -1152,6 +1128,7 @@ chgetelemstatus(struct cam_periph *periph,
 
 	if (error)
 		goto done;
+	cam_periph_unlock(periph);
 
 	/*
 	 * Fill in the user status array.
@@ -1162,8 +1139,8 @@ chgetelemstatus(struct cam_periph *periph,
 	avail = scsi_2btoul(st_hdr->count);
 
 	if (avail != cesr->cesr_element_count) {
-		xpt_print_path(periph->path);
-		printf("warning, READ ELEMENT STATUS avail != count\n");
+		xpt_print(periph->path,
+		    "warning, READ ELEMENT STATUS avail != count\n");
 	}
 
 	user_data = (struct changer_element_status *)
@@ -1189,6 +1166,7 @@ chgetelemstatus(struct cam_periph *periph,
 	error = copyout(user_data,
 			cesr->cesr_element_status,
 			avail * sizeof(struct changer_element_status));
+	cam_periph_lock(periph);
 
  done:
 	xpt_release_ccb(ccb);
@@ -1349,7 +1327,7 @@ chgetparams(struct cam_periph *periph)
 	 */
 	mode_buffer_len = sizeof(struct scsi_mode_sense_data);
 
-	mode_buffer = malloc(mode_buffer_len, M_TEMP, M_NOWAIT);
+	mode_buffer = malloc(mode_buffer_len, M_SCSICH, M_NOWAIT);
 
 	if (mode_buffer == NULL) {
 		printf("chgetparams: couldn't malloc mode sense data\n");
@@ -1403,11 +1381,11 @@ chgetparams(struct cam_periph *periph)
 		}
 
 		if (error) {
-			xpt_print_path(periph->path);
-			printf("chgetparams: error getting element "
-			       "address page\n");
+			xpt_print(periph->path,
+			    "chgetparams: error getting element "
+			    "address page\n");
 			xpt_release_ccb(ccb);
-			free(mode_buffer, M_TEMP);
+			free(mode_buffer, M_SCSICH);
 			return(error);
 		}
 	}
@@ -1466,11 +1444,11 @@ chgetparams(struct cam_periph *periph)
 		}
 
 		if (error) {
-			xpt_print_path(periph->path);
-			printf("chgetparams: error getting device "
-			       "capabilities page\n");
+			xpt_print(periph->path,
+			    "chgetparams: error getting device "
+			    "capabilities page\n");
 			xpt_release_ccb(ccb);
-			free(mode_buffer, M_TEMP);
+			free(mode_buffer, M_SCSICH);
 			return(error);
 		}
 	}
@@ -1489,7 +1467,7 @@ chgetparams(struct cam_periph *periph)
 		softc->sc_exchangemask[from] = exchanges[from];
 	}
 
-	free(mode_buffer, M_TEMP);
+	free(mode_buffer, M_SCSICH);
 
 	return(error);
 }
