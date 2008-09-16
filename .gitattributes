@@ -28486,7 +28486,6 @@ sys/sparc64/sparc64/vm_machdep.c -text
 sys/sys/_bus_dma.h -text
 sys/sys/_elf_solaris.h -text
 sys/sys/_iovec.h -text
-sys/sys/_label.h -text
 sys/sys/_lock.h -text
 sys/sys/_mutex.h -text
 sys/sys/_null.h -text
@@ -28602,7 +28601,6 @@ sys/sys/lock_profile.h -text
 sys/sys/lockf.h -text
 sys/sys/lockmgr.h -text
 sys/sys/mac.h -text
-sys/sys/mac_policy.h -text
 sys/sys/malloc.h -text
 sys/sys/mbpool.h -text
 sys/sys/mbuf.h -text
