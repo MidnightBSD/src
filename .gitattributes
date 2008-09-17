@@ -24553,6 +24553,8 @@ sys/contrib/dev/iwi/LICENSE -text
 sys/contrib/dev/iwi/ipw2200-bss.fw.uu -text
 sys/contrib/dev/iwi/ipw2200-ibss.fw.uu -text
 sys/contrib/dev/iwi/ipw2200-sniffer.fw.uu -text
+sys/contrib/dev/npe/IxNpeMicrocode.dat.uu -text
+sys/contrib/dev/npe/LICENSE -text
 sys/contrib/dev/nve/adapter.h -text
 sys/contrib/dev/nve/amd64/nvenetlib.README -text
 sys/contrib/dev/nve/amd64/nvenetlib.o.bz2.uu -text
