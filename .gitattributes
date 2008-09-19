@@ -24575,6 +24575,8 @@ sys/contrib/dev/oltr/trlld.h -text
 sys/contrib/dev/oltr/trlldbm.c -text
 sys/contrib/dev/oltr/trlldhm.c -text
 sys/contrib/dev/oltr/trlldmac.c -text
+sys/contrib/dev/wpi/LICENSE -text
+sys/contrib/dev/wpi/iwlwifi-3945-2.14.4.fw.uu -text
 sys/contrib/ia64/libuwx/src.diff -text
 sys/contrib/ia64/libuwx/src/Makefile -text
 sys/contrib/ia64/libuwx/src/uwx.h -text
