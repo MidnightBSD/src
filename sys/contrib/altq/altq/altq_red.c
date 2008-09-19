@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_red.c,v 1.2 2004/06/12 00:57:20 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_red.c,v 1.4 2007/07/03 12:46:05 mlaier Exp $	*/
 /*	$KAME: altq_red.c,v 1.18 2003/09/05 22:40:36 itojun Exp $	*/
 
 /*
@@ -514,16 +514,12 @@ int
 mark_ecn(struct mbuf *m, struct altq_pktattr *pktattr, int flags)
 {
 	struct mbuf	*m0;
-	struct m_tag	*t;
-	struct altq_tag	*at;
+	struct pf_mtag	*at;
 	void		*hdr;
 	int		 af;
 
-	t = m_tag_find(m, PACKET_TAG_PF_QID, NULL);
-	if (t != NULL) {
-		at = (struct altq_tag *)(t + 1);
-		if (at == NULL)
-			return (0);
+	at = pf_find_mtag(m);
+	if (at != NULL) {
 		af = at->af;
 		hdr = at->hdr;
 #ifdef ALTQ3_COMPAT
@@ -781,7 +777,9 @@ redioctl(dev, cmd, addr, flag, p)
 	case RED_GETSTATS:
 		break;
 	default:
-#if (__FreeBSD_version > 400000)
+#if (__FreeBSD_version > 700000)
+		if ((error = priv_check(p, PRIV_ALTQ_MANAGE)) != 0)
+#elsif (__FreeBSD_version > 400000)
 		if ((error = suser(p)) != 0)
 #else
 		if ((error = suser(p->p_ucred, &p->p_acflag)) != 0)

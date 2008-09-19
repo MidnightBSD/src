@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_priq.c,v 1.2 2004/06/12 00:57:20 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_priq.c,v 1.4 2007/07/03 12:46:05 mlaier Exp $	*/
 /*	$KAME: altq_priq.c,v 1.11 2003/09/17 14:23:25 kjc Exp $	*/
 /*
  * Copyright (C) 2000-2003
@@ -461,7 +461,7 @@ priq_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
 {
 	struct priq_if	*pif = (struct priq_if *)ifq->altq_disc;
 	struct priq_class *cl;
-	struct m_tag *t;
+	struct pf_mtag *t;
 	int len;
 
 	IFQ_LOCK_ASSERT(ifq);
@@ -481,8 +481,8 @@ priq_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
 		return (ENOBUFS);
 	}
 	cl = NULL;
-	if ((t = m_tag_find(m, PACKET_TAG_PF_QID, NULL)) != NULL)
-		cl = clh_to_clp(pif, ((struct altq_tag *)(t+1))->qid);
+	if ((t = pf_find_mtag(m)) != NULL)
+		cl = clh_to_clp(pif, t->qid);
 #ifdef ALTQ3_COMPAT
 	else if ((ifq->altq_flags & ALTQF_CLASSIFY) && pktattr != NULL)
 		cl = pktattr->pattr_class;
@@ -772,7 +772,10 @@ priqioctl(dev, cmd, addr, flag, p)
 	case PRIQ_GETSTATS:
 		break;
 	default:
-#if (__FreeBSD_version > 400000)
+#if (__FreeBSD_version > 700000)
+		if ((error = priv_check(p, PRIV_ALTQ_MANAGE)) != 0)
+			return (error);
+#elsif (__FreeBSD_version > 400000)
 		if ((error = suser(p)) != 0)
 			return (error);
 #else

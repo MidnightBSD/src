@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_hfsc.c,v 1.2 2004/06/12 00:57:20 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_hfsc.c,v 1.4 2007/07/03 12:46:05 mlaier Exp $	*/
 /*	$KAME: altq_hfsc.c,v 1.24 2003/12/05 05:40:46 kjc Exp $	*/
 
 /*
@@ -693,7 +693,7 @@ hfsc_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
 {
 	struct hfsc_if	*hif = (struct hfsc_if *)ifq->altq_disc;
 	struct hfsc_class *cl;
-	struct m_tag *t;
+	struct pf_mtag *t;
 	int len;
 
 	IFQ_LOCK_ASSERT(ifq);
@@ -713,8 +713,8 @@ hfsc_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
 		return (ENOBUFS);
 	}
 	cl = NULL;
-	if ((t = m_tag_find(m, PACKET_TAG_PF_QID, NULL)) != NULL)
-		cl = clh_to_clp(hif, ((struct altq_tag *)(t+1))->qid);
+	if ((t = pf_find_mtag(m)) != NULL)
+		cl = clh_to_clp(hif, t->qid);
 #ifdef ALTQ3_COMPAT
 	else if ((ifq->altq_flags & ALTQF_CLASSIFY) && pktattr != NULL)
 		cl = pktattr->pattr_class;
@@ -1975,7 +1975,10 @@ hfscioctl(dev, cmd, addr, flag, p)
 	case HFSC_GETSTATS:
 		break;
 	default:
-#if (__FreeBSD_version > 400000)
+#if (__FreeBSD_version > 700000)
+		if ((error = priv_check(p, PRIV_ALTQ_MANAGE)) != 0)
+			return (error);
+#elsif (__FreeBSD_version > 400000)
 		if ((error = suser(p)) != 0)
 			return (error);
 #else

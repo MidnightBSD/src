@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_rio.c,v 1.3 2005/06/10 16:49:03 brooks Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_rio.c,v 1.4 2006/11/06 13:41:50 rwatson Exp $	*/
 /*	$KAME: altq_rio.c,v 1.17 2003/07/10 12:07:49 kjc Exp $	*/
 
 /*
@@ -531,7 +531,10 @@ rioioctl(dev, cmd, addr, flag, p)
 	case RIO_GETSTATS:
 		break;
 	default:
-#if (__FreeBSD_version > 400000)
+#if (__FreeBSD_version > 700000)
+		if ((error = priv_check(p, PRIV_ALTQ_MANAGE)) != 0)
+			return (error);
+#elsif (__FreeBSD_version > 400000)
 		if ((error = suser(p)) != 0)
 			return (error);
 #else

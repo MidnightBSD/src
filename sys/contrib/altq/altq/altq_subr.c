@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_subr.c,v 1.7.2.1 2006/03/06 06:38:38 thompsa Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_subr.c,v 1.10 2007/07/12 17:00:51 njl Exp $	*/
 /*	$KAME: altq_subr.c,v 1.21 2003/11/06 06:32:53 kjc Exp $	*/
 
 /*
@@ -74,6 +74,9 @@
 #if __FreeBSD__ < 3
 #include "opt_cpu.h"	/* for FreeBSD-2.2.8 to get i586_ctr_freq */
 #endif
+#include <sys/bus.h>
+#include <sys/cpu.h>
+#include <sys/eventhandler.h>
 #include <machine/clock.h>
 #endif
 #if defined(__i386__)
@@ -884,8 +887,8 @@ write_dsfield(m, pktattr, dsfield)
 #define	MACHCLK_SHIFT	8
 
 int machclk_usepcc;
-u_int32_t machclk_freq = 0;
-u_int32_t machclk_per_tick = 0;
+u_int32_t machclk_freq;
+u_int32_t machclk_per_tick;
 
 #ifdef __alpha__
 #ifdef __FreeBSD__
@@ -898,8 +901,24 @@ extern u_int64_t cycles_per_usec;	/* alpha cpu clock frequency */
 extern u_int64_t cpu_tsc_freq;
 #endif /* __alpha__ */
 
-void
-init_machclk(void)
+#if (__FreeBSD_version >= 700035)
+/* Update TSC freq with the value indicated by the caller. */
+static void
+tsc_freq_changed(void *arg, const struct cf_level *level, int status)
+{
+	/* If there was an error during the transition, don't do anything. */
+	if (status != 0)
+		return;
+
+	/* Total setting for this level gives the new frequency in MHz. */
+	init_machclk();
+}
+EVENTHANDLER_DEFINE(cpufreq_post_change, tsc_freq_changed, NULL,
+    EVENTHANDLER_PRI_LAST);
+#endif /* __FreeBSD_version >= 700035 */
+
+static void
+init_machclk_setup(void)
 {
 #if (__FreeBSD_version >= 600000)
 	callout_init(&tbr_callout, 0);
@@ -922,6 +941,18 @@ init_machclk(void)
 	    tsc_is_broken))
 		machclk_usepcc = 0;
 #endif
+}
+
+void
+init_machclk(void)
+{
+	static int called;
+
+	/* Call one-time initialization function. */
+	if (!called) {
+		init_machclk_setup();
+		called = 1;
+	}
 
 	if (machclk_usepcc == 0) {
 		/* emulate 256MHz using microtime() */

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_cdnr.c,v 1.2 2004/06/12 00:57:20 mlaier Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_cdnr.c,v 1.3 2006/11/06 13:41:50 rwatson Exp $	*/
 /*	$KAME: altq_cdnr.c,v 1.14 2003/09/05 22:40:36 itojun Exp $	*/
 
 /*
@@ -1262,7 +1262,9 @@ cdnrioctl(dev, cmd, addr, flag, p)
 	case CDNR_GETSTATS:
 		break;
 	default:
-#if (__FreeBSD_version > 400000)
+#if (__FreeBSD_version > 700000)
+		if ((error = priv_check(p, PRIV_ALTQ_MANAGE)) != 0)
+#elsif (__FreeBSD_version > 400000)
 		if ((error = suser(p)) != 0)
 #else
 		if ((error = suser(p->p_ucred, &p->p_acflag)) != 0)

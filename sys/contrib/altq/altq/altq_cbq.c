@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/altq/altq/altq_cbq.c,v 1.2.8.1 2005/08/25 05:01:03 rwatson Exp $	*/
+/*	$FreeBSD: src/sys/contrib/altq/altq/altq_cbq.c,v 1.5 2007/07/03 12:46:05 mlaier Exp $	*/
 /*	$KAME: altq_cbq.c,v 1.19 2003/09/17 14:23:25 kjc Exp $	*/
 
 /*
@@ -500,7 +500,7 @@ cbq_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
 {
 	cbq_state_t	*cbqp = (cbq_state_t *)ifq->altq_disc;
 	struct rm_class	*cl;
-	struct m_tag	*t;
+	struct pf_mtag	*t;
 	int		 len;
 
 	IFQ_LOCK_ASSERT(ifq);
@@ -520,8 +520,8 @@ cbq_enqueue(struct ifaltq *ifq, struct mbuf *m, struct altq_pktattr *pktattr)
 		return (ENOBUFS);
 	}
 	cl = NULL;
-	if ((t = m_tag_find(m, PACKET_TAG_PF_QID, NULL)) != NULL)
-		cl = clh_to_clp(cbqp, ((struct altq_tag *)(t+1))->qid);
+	if ((t = pf_find_mtag(m)) != NULL)
+		cl = clh_to_clp(cbqp, t->qid);
 #ifdef ALTQ3_COMPAT
 	else if ((ifq->altq_flags & ALTQF_CLASSIFY) && pktattr != NULL)
 		cl = pktattr->pattr_class;
@@ -1062,7 +1062,9 @@ cbqioctl(dev, cmd, addr, flag, p)
 		/* currently only command that an ordinary user can call */
 		break;
 	default:
-#if (__FreeBSD_version > 400000)
+#if (__FreeBSD_version > 700000)
+		error = priv_check(p, PRIV_ALTQ_MANAGE);
+#elsif (__FreeBSD_version > 400000)
 		error = suser(p);
 #else
 		error = suser(p->p_ucred, &p->p_acflag);
