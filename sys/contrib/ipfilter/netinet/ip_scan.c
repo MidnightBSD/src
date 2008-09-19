@@ -1,5 +1,3 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_scan.c,v 1.1.1.1 2005/04/25 18:15:35 darrenr Exp $	*/
-
 /*
  * Copyright (C) 1995-2001 by Darren Reed.
  *
@@ -34,7 +32,7 @@ struct file;
 # endif
 #endif
 #include <sys/socket.h>
-#if !defined(__hpux) && !defined(__osf__) && !defined(linux)
+#if !defined(__hpux) && !defined(__osf__) && !defined(linux) && !defined(AIX)
 # include <sys/ioccom.h>
 #endif
 #ifdef __FreeBSD__
@@ -60,7 +58,7 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_state.c	1.8 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)Id: ip_scan.c,v 2.40.2.2 2005/01/18 10:13:16 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ip_scan.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
 #endif
 
 #ifdef	IPFILTER_SCAN	/* endif at bottom of file */
@@ -86,18 +84,23 @@ int ipsc_matchstr __P((sinfo_t *, char *, int));
 int ipsc_matchisc __P((ipscan_t *, ipstate_t *, int, int, int *));
 int ipsc_match __P((ipstate_t *));
 
+static int	ipsc_inited = 0;
 
 
 int ipsc_init()
 {
 	RWLOCK_INIT(&ipsc_rwlock, "ip scan rwlock");
+	ipsc_inited = 1;
 	return 0;
 }
 
 
 void fr_scanunload()
 {
-	RW_DESTROY(&ipsc_rwlock);
+	if (ipsc_inited == 1) {
+		RW_DESTROY(&ipsc_rwlock);
+		ipsc_inited = 0;
+	}
 }
 
 
@@ -112,8 +115,10 @@ caddr_t data;
 		return ENOMEM;
 
 	err = copyinptr(data, isc, sizeof(*isc));
-	if (err)
+	if (err) {
+		KFREE(isc);
 		return err;
+	}
 
 	WRITE_ENTER(&ipsc_rwlock);
 
@@ -227,20 +232,17 @@ struct ipstate *is;
 	fr = is->is_rule;
 	if (fr) {
 		i = fr->fr_isc;
-		if (!i || (i != (ipscan_t *)-1)) {
+		if ((i != NULL) && (i != (ipscan_t *)-1)) {
 			is->is_isc = i;
-			if (i) {
-				ATOMIC_INC32(i->ipsc_sref);
-				if (i->ipsc_clen)
-					is->is_flags |= IS_SC_CLIENT;
-				else
-					is->is_flags |= IS_SC_MATCHC;
-				if (i->ipsc_slen)
-					is->is_flags |= IS_SC_SERVER;
-				else
-					is->is_flags |= IS_SC_MATCHS;
-			} else
-				is->is_flags |= (IS_SC_CLIENT|IS_SC_SERVER);
+			ATOMIC_INC32(i->ipsc_sref);
+			if (i->ipsc_clen)
+				is->is_flags |= IS_SC_CLIENT;
+			else
+				is->is_flags |= IS_SC_MATCHC;
+			if (i->ipsc_slen)
+				is->is_flags |= IS_SC_SERVER;
+			else
+				is->is_flags |= IS_SC_MATCHS;
 		}
 	}
 	RWLOCK_EXIT(&ipsc_rwlock);
@@ -433,6 +435,8 @@ ipstate_t *is;
 		}
 		if (k == 1)
 			isc = lm;
+		if (isc == NULL)
+			return 0;
 
 		/*
 		 * No matches or partial matches, so reset the respective
@@ -539,8 +543,8 @@ ipstate_t *is;
 	j = 0xffff >> (16 - dlen);
 	i = (0xffff & j) << off;
 #ifdef _KERNEL
-	COPYDATA(*(mb_t **)fin->fin_mp, fin->fin_hlen + thoff, dlen,
-		 (caddr_t)is->is_sbuf[rv] + off);
+	COPYDATA(*(mb_t **)fin->fin_mp, fin->fin_plen - fin->fin_dlen + thoff,
+		 dlen, (caddr_t)is->is_sbuf[rv] + off);
 #endif
 	is->is_smsk[rv] |= i;
 	for (j = 0, i = is->is_smsk[rv]; i & 1; i >>= 1)
@@ -563,10 +567,11 @@ ipstate_t *is;
 }
 
 
-int fr_scan_ioctl(data, cmd, mode)
+int fr_scan_ioctl(data, cmd, mode, uid, ctx)
 caddr_t data;
 ioctlcmd_t cmd;
-int mode;
+int mode, uid;
+void *ctx;
 {
 	ipscanstat_t ipscs;
 	int err = 0;
@@ -582,7 +587,9 @@ int mode;
 	case SIOCGSCST :
 		bcopy((char *)&ipsc_stat, (char *)&ipscs, sizeof(ipscs));
 		ipscs.iscs_list = ipsc_list;
-		BCOPYOUT(&ipscs, data, sizeof(ipscs));
+		err = BCOPYOUT(&ipscs, data, sizeof(ipscs));
+		if (err != 0)
+			err = EFAULT;
 		break;
 	default :
 		err = EINVAL;

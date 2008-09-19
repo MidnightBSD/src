@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_sync.c,v 1.2 2005/06/14 09:18:26 darrenr Exp $	*/
+/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_sync.c,v 1.5.2.1 2007/10/31 05:00:38 darrenr Exp $	*/
 
 /*
  * Copyright (C) 1995-1998 by Darren Reed.
@@ -98,7 +98,7 @@ struct file;
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)Id: ip_sync.c,v 2.40.2.3 2005/02/18 13:06:29 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ip_sync.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
 #endif
 
 #define	SYNC_STATETABSZ	256
@@ -231,8 +231,10 @@ ipstate_t *ips;
 		ips->is_die = htonl(ips->is_die);
 		ips->is_pass = htonl(ips->is_pass);
 		ips->is_flags = htonl(ips->is_flags);
-		ips->is_opt = htonl(ips->is_opt);
-		ips->is_optmsk = htonl(ips->is_optmsk);
+		ips->is_opt[0] = htonl(ips->is_opt[0]);
+		ips->is_opt[1] = htonl(ips->is_opt[1]);
+		ips->is_optmsk[0] = htonl(ips->is_optmsk[0]);
+		ips->is_optmsk[1] = htonl(ips->is_optmsk[1]);
 		ips->is_sec = htons(ips->is_sec);
 		ips->is_secmsk = htons(ips->is_secmsk);
 		ips->is_auth = htons(ips->is_auth);
@@ -246,8 +248,10 @@ ipstate_t *ips;
 		ips->is_die = ntohl(ips->is_die);
 		ips->is_pass = ntohl(ips->is_pass);
 		ips->is_flags = ntohl(ips->is_flags);
-		ips->is_opt = ntohl(ips->is_opt);
-		ips->is_optmsk = ntohl(ips->is_optmsk);
+		ips->is_opt[0] = ntohl(ips->is_opt[0]);
+		ips->is_opt[1] = ntohl(ips->is_opt[1]);
+		ips->is_optmsk[0] = ntohl(ips->is_optmsk[0]);
+		ips->is_optmsk[1] = ntohl(ips->is_optmsk[1]);
 		ips->is_sec = ntohs(ips->is_sec);
 		ips->is_secmsk = ntohs(ips->is_secmsk);
 		ips->is_auth = ntohs(ips->is_auth);
@@ -297,7 +301,7 @@ struct uio *uio;
 
 		if (uio->uio_resid >= sizeof(sh)) {
 
-			err = UIOMOVE((caddr_t)&sh, sizeof(sh), UIO_WRITE, uio);
+			err = UIOMOVE(&sh, sizeof(sh), UIO_WRITE, uio);
 
 			if (err) {
 				if (ipf_sync_debug > 2)
@@ -369,7 +373,7 @@ struct uio *uio;
 
 		if (uio->uio_resid >= sh.sm_len) {
 
-			err = UIOMOVE((caddr_t)data, sh.sm_len, UIO_WRITE, uio);
+			err = UIOMOVE(data, sh.sm_len, UIO_WRITE, uio);
 
 			if (err) {
 				if (ipf_sync_debug > 2)
@@ -469,7 +473,7 @@ struct uio *uio;
 	READ_ENTER(&ipf_syncstate);
 	while ((sl_tail < sl_idx)  && (uio->uio_resid > sizeof(*sl))) {
 		sl = synclog + sl_tail++;
-		err = UIOMOVE((caddr_t)sl, sizeof(*sl), UIO_READ, uio);
+		err = UIOMOVE(sl, sizeof(*sl), UIO_READ, uio);
 		if (err != 0)
 			break;
 	}
@@ -477,7 +481,7 @@ struct uio *uio;
 	while ((su_tail < su_idx)  && (uio->uio_resid > sizeof(*su))) {
 		su = syncupd + su_tail;
 		su_tail++;
-		err = UIOMOVE((caddr_t)su, sizeof(*su), UIO_READ, uio);
+		err = UIOMOVE(su, sizeof(*su), UIO_READ, uio);
 		if (err != 0)
 			break;
 		if (su->sup_hdr.sm_sl != NULL)
@@ -700,7 +704,6 @@ int ipfsync_nat(sp, data)
 synchdr_t *sp;
 void *data;
 {
-	synclogent_t sle;
 	syncupdent_t su;
 	nat_t *n, *nat;
 	synclist_t *sl;
@@ -712,8 +715,6 @@ void *data;
 	switch (sp->sm_cmd)
 	{
 	case SMC_CREATE :
-		bcopy(data, &sle, sizeof(sle));
-
 		KMALLOC(n, nat_t *);
 		if (n == NULL) {
 			err = ENOMEM;
@@ -727,9 +728,7 @@ void *data;
 			break;
 		}
 
-		WRITE_ENTER(&ipf_nat);
-
-		nat = &sle.sle_un.sleu_ipn;
+		nat = (nat_t *)data;
 		bzero((char *)n, offsetof(nat_t, nat_age));
 		bcopy((char *)&nat->nat_age, (char *)&n->nat_age,
 		      sizeof(*n) - offsetof(nat_t, nat_age));
@@ -739,6 +738,8 @@ void *data;
 		sl->sl_idx = -1;
 		sl->sl_ipn = n;
 		sl->sl_num = ntohl(sp->sm_num);
+
+		WRITE_ENTER(&ipf_nat);
 		sl->sl_pnext = syncstatetab + hv;
 		sl->sl_next = syncstatetab[hv];
 		if (syncstatetab[hv] != NULL)
@@ -996,11 +997,24 @@ synclist_t *sl;
 /* This function currently does not handle any ioctls and so just returns   */
 /* EINVAL on all occasions.                                                 */
 /* ------------------------------------------------------------------------ */
-int fr_sync_ioctl(data, cmd, mode)
+int fr_sync_ioctl(data, cmd, mode, uid, ctx)
 caddr_t data;
 ioctlcmd_t cmd;
-int mode;
+int mode, uid;
+void *ctx;
 {
 	return EINVAL;
+}
+
+
+int ipfsync_canread()
+{
+	return !((sl_tail == sl_idx) && (su_tail == su_idx));
+}
+
+
+int ipfsync_canwrite()
+{
+	return 1;
 }
 #endif /* IPFILTER_SYNC */

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_proxy.c,v 1.25 2005/04/27 05:53:12 darrenr Exp $	*/
+/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_proxy.c,v 1.29.2.1 2007/10/31 05:00:38 darrenr Exp $	*/
 
 /*
  * Copyright (C) 1997-2003 by Darren Reed.
@@ -16,7 +16,9 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/file.h>
-#include <sys/fcntl.h>
+#if !defined(AIX)
+# include <sys/fcntl.h>
+#endif
 #if !defined(_KERNEL) && !defined(__KERNEL__)
 # include <stdio.h>
 # include <string.h>
@@ -35,7 +37,8 @@ struct file;
 #include <sys/socket.h>
 #if defined(_KERNEL)
 # if !defined(__NetBSD__) && !defined(sun) && !defined(__osf__) && \
-     !defined(__OpenBSD__) && !defined(__hpux) && !defined(__sgi)
+     !defined(__OpenBSD__) && !defined(__hpux) && !defined(__sgi) && \
+     !defined(AIX)
 #  include <sys/ctype.h>
 # endif
 # include <sys/systm.h>
@@ -93,12 +96,6 @@ struct file;
 #if defined(_KERNEL)
 # include "netinet/ip_irc_pxy.c"
 # include "netinet/ip_raudio_pxy.c"
-# ifdef IPFILTER_H323
-#  include "netinet/ip_h323_pxy.c"
-# endif
-# ifdef	IPFILTER_PRO
-#  include "netinet/ip_msnrpc_pxy.c"
-# endif
 # include "netinet/ip_netbios_pxy.c"
 #endif
 #include "netinet/ip_ipsec_pxy.c"
@@ -107,7 +104,7 @@ struct file;
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)Id: ip_proxy.c,v 2.62.2.12 2005/03/03 14:28:24 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ip_proxy.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
 #endif
 
 static int appr_fixseqack __P((fr_info_t *, ip_t *, ap_session_t *, int ));
@@ -125,7 +122,7 @@ aproxy_t	*ap_proxylist = NULL;
 aproxy_t	ap_proxies[] = {
 #ifdef	IPF_FTP_PROXY
 	{ NULL, "ftp", (char)IPPROTO_TCP, 0, 0, ippr_ftp_init, ippr_ftp_fini,
-	  ippr_ftp_new, NULL, ippr_ftp_in, ippr_ftp_out, NULL },
+	  ippr_ftp_new, NULL, ippr_ftp_in, ippr_ftp_out, NULL, NULL },
 #endif
 #ifdef	IPF_IRC_PROXY
 	{ NULL, "irc", (char)IPPROTO_TCP, 0, 0, ippr_irc_init, ippr_irc_fini,
@@ -159,9 +156,9 @@ aproxy_t	ap_proxies[] = {
 #endif
 #ifdef  IPF_H323_PROXY
 	{ NULL, "h323", (char)IPPROTO_TCP, 0, 0, ippr_h323_init, ippr_h323_fini,
-	  ippr_h323_new, ippr_h323_del, ippr_h323_in, NULL, NULL },
+	  ippr_h323_new, ippr_h323_del, ippr_h323_in, NULL, NULL, NULL },
 	{ NULL, "h245", (char)IPPROTO_TCP, 0, 0, NULL, NULL,
-	  ippr_h245_new, NULL, NULL, ippr_h245_out, NULL },
+	  ippr_h245_new, NULL, NULL, ippr_h245_out, NULL, NULL },
 #endif
 #ifdef	IPF_RPCB_PROXY
 # if 0
@@ -173,7 +170,7 @@ aproxy_t	ap_proxies[] = {
 	  ippr_rpcb_init, ippr_rpcb_fini, ippr_rpcb_new, ippr_rpcb_del,
 	  ippr_rpcb_in, ippr_rpcb_out, NULL, NULL },
 #endif
-	{ NULL, "", '\0', 0, 0, NULL, NULL, NULL, NULL }
+	{ NULL, "", '\0', 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
 /*
@@ -195,7 +192,7 @@ aproxy_t *ap;
 			return -1;
 		}
 
-	for (a = ap_proxylist; a->apr_p; a = a->apr_next)
+	for (a = ap_proxylist; (a != NULL); a = a->apr_next)
 		if ((a->apr_p == ap->apr_p) &&
 		    !strncmp(a->apr_label, ap->apr_label,
 			     sizeof(ap->apr_label))) {
@@ -292,13 +289,14 @@ ipnat_t *nat;
 }
 
 
-int appr_ioctl(data, cmd, mode)
+int appr_ioctl(data, cmd, mode, ctx)
 caddr_t data;
 ioctlcmd_t cmd;
 int mode;
+void *ctx;
 {
 	ap_ctl_t ctl;
-	caddr_t ptr;
+	u_char *ptr;
 	int error;
 
 	mode = mode;	/* LINT */
@@ -306,11 +304,13 @@ int mode;
 	switch (cmd)
 	{
 	case SIOCPROXY :
-		BCOPYIN(data, &ctl, sizeof(ctl));
+		error = BCOPYIN(data, &ctl, sizeof(ctl));
+		if (error != 0)
+			return EFAULT;
 		ptr = NULL;
 
 		if (ctl.apc_dsize > 0) {
-			KMALLOCS(ptr, caddr_t, ctl.apc_dsize);
+			KMALLOCS(ptr, u_char *, ctl.apc_dsize);
 			if (ptr == NULL)
 				error = ENOMEM;
 			else {
@@ -327,8 +327,7 @@ int mode;
 		if (error == 0)
 			error = appr_ctl(&ctl);
 
-		if ((ctl.apc_dsize > 0) && (ptr != NULL) &&
-		    (ctl.apc_data == ptr)) {
+		if (ptr != NULL) {
 			KFREES(ptr, ctl.apc_dsize);
 		}
 		break;
@@ -567,8 +566,8 @@ nat_t *nat;
 		if (err != 0) {
 			short adjlen = err & 0xffff;
 
-			s1 = LONG_SUM(ip->ip_len - adjlen);
-			s2 = LONG_SUM(ip->ip_len);
+			s1 = LONG_SUM(fin->fin_plen - adjlen);
+			s2 = LONG_SUM(fin->fin_plen);
 			CALC_SUMD(s1, s2, sd);
 			fix_outcksum(fin, &ip->ip_sum, sd);
 		}
@@ -588,19 +587,23 @@ nat_t *nat;
 #if SOLARIS && defined(_KERNEL) && (SOLARIS2 >= 6)
 			if (dosum)
 				tcp->th_sum = fr_cksum(fin->fin_qfm, ip,
-						       IPPROTO_TCP, tcp);
+						       IPPROTO_TCP, tcp,
+						       fin->fin_plen);
 #else
 			tcp->th_sum = fr_cksum(fin->fin_m, ip,
-					       IPPROTO_TCP, tcp);
+					       IPPROTO_TCP, tcp,
+					       fin->fin_plen);
 #endif
 		} else if ((udp != NULL) && (udp->uh_sum != 0)) {
 #if SOLARIS && defined(_KERNEL) && (SOLARIS2 >= 6)
 			if (dosum)
 				udp->uh_sum = fr_cksum(fin->fin_qfm, ip,
-						       IPPROTO_UDP, udp);
+						       IPPROTO_UDP, udp,
+						       fin->fin_plen);
 #else
 			udp->uh_sum = fr_cksum(fin->fin_m, ip,
-					       IPPROTO_UDP, udp);
+					       IPPROTO_UDP, udp,
+					       fin->fin_plen);
 #endif
 		}
 		aps->aps_bytes += fin->fin_plen;
@@ -691,9 +694,9 @@ int inc;
 	tcp = (tcphdr_t *)fin->fin_dp;
 	out = fin->fin_out;
 	/*
-	 * ip_len has already been adjusted by 'inc'.
+	 * fin->fin_plen has already been adjusted by 'inc'.
 	 */
-	nlen = ip->ip_len;
+	nlen = fin->fin_plen;
 	nlen -= (IP_HL(ip) << 2) + (TCP_OFF(tcp) << 2);
 
 	inc2 = inc;
@@ -814,7 +817,7 @@ int inc;
 
 	if (ipf_proxy_debug > 8)
 		printf("appr_fixseqack: seq %x ack %x\n",
-			ntohl(tcp->th_seq), ntohl(tcp->th_ack));
+			(u_32_t)ntohl(tcp->th_seq), (u_32_t)ntohl(tcp->th_ack));
 	return ch ? 2 : 0;
 }
 

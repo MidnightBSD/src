@@ -1,12 +1,10 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_scan.h,v 1.1.1.1 2005/04/25 18:15:35 darrenr Exp $	*/
-
 /*
  * Copyright (C) 1993-2001 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_fil.h	1.35 6/5/96
- * Id: ip_scan.h,v 2.9 2003/07/25 22:05:01 darrenr Exp
+ * $Id: ip_scan.h,v 1.2 2008-09-19 02:15:13 laffer1 Exp $
  */
 
 #ifndef __IP_SCAN_H__
@@ -27,7 +25,7 @@ struct ip;
 struct ipstate;
 
 
-#if defined(__STDC__) || defined(__GNUC__)
+#if defined(__STDC__) || defined(__GNUC__) || defined(_AIX51)
 # define	SIOCADSCA	_IOWR('r', 60, struct ipscan *)
 # define	SIOCRMSCA	_IOWR('r', 61, struct ipscan *)
 # define	SIOCGSCST	_IOWR('r', 62, struct ipscan *)
@@ -96,7 +94,7 @@ typedef	struct	ipscanstat	{
 } ipscanstat_t;
 
 
-extern	int fr_scan_ioctl __P((caddr_t, ioctlcmd_t, int));
+extern	int fr_scan_ioctl __P((caddr_t, ioctlcmd_t, int, int, void *));
 extern	int ipsc_init __P((void));
 extern	int ipsc_attachis __P((struct ipstate *));
 extern	int ipsc_attachfr __P((struct frentry *));

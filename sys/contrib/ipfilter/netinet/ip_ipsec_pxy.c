@@ -1,5 +1,3 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_ipsec_pxy.c,v 1.1.1.2 2005/04/25 18:15:18 darrenr Exp $	*/
-
 /*
  * Copyright (C) 2001-2003 by Darren Reed
  *
@@ -8,7 +6,7 @@
  * Simple ISAKMP transparent proxy for in-kernel use.  For use with the NAT
  * code.
  *
- * Id: ip_ipsec_pxy.c,v 2.20.2.6 2005/03/28 10:47:53 darrenr Exp
+ * $Id: ip_ipsec_pxy.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $
  *
  */
 #define	IPF_IPSEC_PROXY
@@ -96,8 +94,8 @@ nat_t *nat;
 	mb_t *m;
 	ip_t *ip;
 
+	off = fin->fin_plen - fin->fin_dlen + fin->fin_ipoff;
 	bzero(ipsec_buffer, sizeof(ipsec_buffer));
-	off = fin->fin_hlen + sizeof(udphdr_t);
 	ip = fin->fin_ip;
 	m = fin->fin_m;
 
@@ -179,7 +177,7 @@ nat_t *nat;
 		ipsec->ipsc_state = fr_addstate(&fi, &ipsec->ipsc_state,
 						SI_WILDP);
 		if (fi.fin_state != NULL)
-			fr_statederef(&fi, (ipstate_t **)&fi.fin_state);
+			fr_statederef((ipstate_t **)&fi.fin_state);
 	}
 	ip->ip_p = p & 0xff;
 	return 0;
@@ -258,7 +256,7 @@ nat_t *nat;
 							&ipsec->ipsc_state,
 							SI_WILDP);
 			if (fi.fin_state != NULL)
-				fr_statederef(&fi, (ipstate_t **)&fi.fin_state);
+				fr_statederef((ipstate_t **)&fi.fin_state);
 		}
 		ip->ip_p = p;
 	}
@@ -287,8 +285,8 @@ nat_t *nat;
 	if ((fin->fin_dlen < sizeof(cookies)) || (fin->fin_flx & FI_FRAG))
 		return -1;
 
+	off = fin->fin_plen - fin->fin_dlen + fin->fin_ipoff;
 	ipsec = aps->aps_data;
-	off = fin->fin_hlen + sizeof(udphdr_t);
 	m = fin->fin_m;
 	COPYDATA(m, off, sizeof(cookies), (char *)cookies);
 

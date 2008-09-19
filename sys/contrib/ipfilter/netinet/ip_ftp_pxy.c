@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c,v 1.25 2005/04/25 18:43:14 darrenr Exp $	*/
+/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c,v 1.28 2007/06/04 02:54:35 darrenr Exp $	*/
 
 /*
  * Copyright (C) 1997-2003 by Darren Reed
@@ -8,8 +8,8 @@
  * Simple FTP transparent proxy for in-kernel use.  For use with the NAT
  * code.
  *
- * $FreeBSD: src/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c,v 1.25 2005/04/25 18:43:14 darrenr Exp $
- * Id: ip_ftp_pxy.c,v 2.88.2.15 2005/03/19 19:38:10 darrenr Exp
+ * $FreeBSD: src/sys/contrib/ipfilter/netinet/ip_ftp_pxy.c,v 1.28 2007/06/04 02:54:35 darrenr Exp $
+ * Id: ip_ftp_pxy.c,v 2.88.2.19 2006/04/01 10:14:53 darrenr Exp $
  */
 
 #define	IPF_FTP_PROXY
@@ -369,26 +369,13 @@ int dlen;
 				fi.fin_fi.fi_daddr = nat->nat_inip.s_addr;
 				ip->ip_dst = nat->nat_inip;
 			}
-			(void) fr_addstate(&fi, &nat2->nat_state, SI_W_DPORT);
+			(void) fr_addstate(&fi, NULL, SI_W_DPORT);
 			if (fi.fin_state != NULL)
-				fr_statederef(&fi, (ipstate_t **)&fi.fin_state);
+				fr_statederef((ipstate_t **)&fi.fin_state);
 		}
 		ip->ip_len = slen;
 		ip->ip_src = swip;
 		ip->ip_dst = swip2;
-	} else {
-		ipstate_t *is;
-
-		nat_update(&fi, nat2, nat->nat_ptr);
-		READ_ENTER(&ipf_state);
-		is = nat2->nat_state;
-		if (is != NULL) {
-			MUTEX_ENTER(&is->is_lock);
-			(void)fr_tcp_age(&is->is_sti, &fi, ips_tqtqb,
-					 is->is_flags);
-			MUTEX_EXIT(&is->is_lock);
-		}
-		RWLOCK_EXIT(&ipf_state);
 	}
 	return APR_INC(inc);
 }
@@ -474,9 +461,10 @@ int dlen;
 {
 	u_int a1, a2, a3, a4, data_ip;
 	char newbuf[IPF_FTPBUFSZ];
-	char *s, *brackets[2];
+	const char *brackets[2];
 	u_short a5, a6;
 	ftpside_t *f;
+	char *s;
 
 	if (ippr_ftp_forcepasv != 0 &&
 	    ftp->ftp_side[0].ftps_cmds != FTPXY_C_PASV) {
@@ -730,27 +718,14 @@ u_int data_ip;
 				fi.fin_fi.fi_daddr = nat->nat_inip.s_addr;
 				ip->ip_dst = nat->nat_inip;
 			}
-			(void) fr_addstate(&fi, &nat2->nat_state, sflags);
+			(void) fr_addstate(&fi, NULL, sflags);
 			if (fi.fin_state != NULL)
-				fr_statederef(&fi, (ipstate_t **)&fi.fin_state);
+				fr_statederef((ipstate_t **)&fi.fin_state);
 		}
 
 		ip->ip_len = slen;
 		ip->ip_src = swip;
 		ip->ip_dst = swip2;
-	} else {
-		ipstate_t *is;
-
-		nat_update(&fi, nat2, nat->nat_ptr);
-		READ_ENTER(&ipf_state);
-		is = nat2->nat_state;
-		if (is != NULL) {
-			MUTEX_ENTER(&is->is_lock);
-			(void)fr_tcp_age(&is->is_sti, &fi, ips_tqtqb,
-					 is->is_flags);
-			MUTEX_EXIT(&is->is_lock);
-		}
-		RWLOCK_EXIT(&ipf_state);
 	}
 	return inc;
 }
@@ -1029,13 +1004,14 @@ int rv;
 	if (ippr_ftp_debug > 4)
 		printf("ippr_ftp_process: mlen %d\n", mlen);
 
-	if (mlen <= 0) {
-		if ((tcp->th_flags & TH_OPENING) == TH_OPENING) {
-			f->ftps_seq[0] = thseq + 1;
-			t->ftps_seq[0] = thack;
-		}
+	if ((mlen == 0) && ((tcp->th_flags & TH_OPENING) == TH_OPENING)) {
+		f->ftps_seq[0] = thseq + 1;
+		t->ftps_seq[0] = thack;
+		return 0;
+	} else if (mlen < 0) {
 		return 0;
 	}
+
 	aps = nat->nat_aps;
 
 	sel = aps->aps_sel[1 - rv];
@@ -1142,8 +1118,8 @@ int rv;
 				f->ftps_seq[1] = thseq + 1 - seqoff;
 			} else {
 				if (ippr_ftp_debug > 1) {
-					printf("FIN: thseq %x seqoff %d ftps_seq %x\n",
-					       thseq, seqoff, f->ftps_seq[0]);
+					printf("FIN: thseq %x seqoff %d ftps_seq %x %x\n",
+					       thseq, seqoff, f->ftps_seq[0], f->ftps_seq[1]);
 				}
 				return APR_ERR(1);
 			}
@@ -1425,7 +1401,7 @@ int dlen;
 		ap += *s++ - '0';
 	}
 
-	if (!s)
+	if (!*s)
 		return 0;
 
 	if (*s == '|')

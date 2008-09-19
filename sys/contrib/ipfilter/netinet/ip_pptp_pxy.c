@@ -1,12 +1,10 @@
-/*	$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_pptp_pxy.c,v 1.1.1.1 2005/04/25 18:15:30 darrenr Exp $	*/
-
 /*
  * Copyright (C) 2002-2003 by Darren Reed
  *
  * Simple PPTP transparent proxy for in-kernel use.  For use with the NAT
  * code.
  *
- * Id: ip_pptp_pxy.c,v 2.10.2.9 2005/03/16 18:17:34 darrenr Exp
+ * $Id: ip_pptp_pxy.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $
  *
  */
 #define	IPF_PPTP_PROXY
@@ -80,6 +78,9 @@ void ippr_pptp_fini()
 
 /*
  * Setup for a new PPTP proxy.
+ *
+ * NOTE: The printf's are broken up with %s in them to prevent them being
+ * optimised into puts statements on FreeBSD (this doesn't exist in the kernel)
  */
 int ippr_pptp_new(fin, aps, nat)
 fr_info_t *fin;
@@ -89,15 +90,14 @@ nat_t *nat;
 	pptp_pxy_t *pptp;
 	ipnat_t *ipn;
 	ip_t *ip;
-	int off;
 
 	ip = fin->fin_ip;
-	off = fin->fin_hlen + sizeof(udphdr_t);
 
 	if (nat_outlookup(fin, 0, IPPROTO_GRE, nat->nat_inip,
 			  ip->ip_dst) != NULL) {
 		if (ippr_pptp_debug > 0)
-			printf("ippr_pptp_new: GRE session already exists\n");
+			printf("ippr_pptp_new: GRE session %s\n",
+			       "already exists");
 		return -1;
 	}
 
@@ -105,7 +105,8 @@ nat_t *nat;
 	KMALLOCS(aps->aps_data, pptp_pxy_t *, sizeof(*pptp));
 	if (aps->aps_data == NULL) {
 		if (ippr_pptp_debug > 0)
-			printf("ippr_pptp_new: malloc for aps_data failed\n");
+			printf("ippr_pptp_new: malloc for aps_data %s\n",
+			       "failed");
 		return -1;
 	}
 
@@ -212,15 +213,17 @@ pptp_pxy_t *pptp;
 		RWLOCK_EXIT(&ipf_state);
 	} else {
 		RWLOCK_EXIT(&ipf_state);
-		if (nat->nat_dir == NAT_INBOUND)
-			fi.fin_fi.fi_daddr = nat2->nat_inip.s_addr;
-		else
-			fi.fin_fi.fi_saddr = nat2->nat_inip.s_addr;
+		if (nat2 != NULL) {
+			if (nat->nat_dir == NAT_INBOUND)
+				fi.fin_fi.fi_daddr = nat2->nat_inip.s_addr;
+			else
+				fi.fin_fi.fi_saddr = nat2->nat_inip.s_addr;
+		}
 		fi.fin_ifp = NULL;
 		pptp->pptp_state = fr_addstate(&fi, &pptp->pptp_state,
 					       0);
 		if (fi.fin_state != NULL)
-			fr_statederef(&fi, (ipstate_t **)&fi.fin_state);
+			fr_statederef((ipstate_t **)&fi.fin_state);
 	}
 	ip->ip_p = p;
 	return;
@@ -238,7 +241,7 @@ nat_t *nat;
 pptp_pxy_t *pptp;
 int rev;
 {
-	static char *funcname = "ippr_pptp_nextmessage";
+	static const char *funcname = "ippr_pptp_nextmessage";
 	pptp_side_t *pptps;
 	u_32_t start, end;
 	pptp_hdr_t *hdr;
