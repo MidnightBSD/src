@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  * Module Name: dbdisply - debug display commands
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  ******************************************************************************/
 
@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -127,12 +127,21 @@
 
 #ifdef ACPI_DEBUGGER
 
-
 #define _COMPONENT          ACPI_CA_DEBUGGER
         ACPI_MODULE_NAME    ("dbdisply")
 
+/* Local prototypes */
 
-/******************************************************************************
+static void
+AcpiDbDumpParserDescriptor (
+    ACPI_PARSE_OBJECT       *Op);
+
+static void *
+AcpiDbGetPointer (
+    void                    *Target);
+
+
+/*******************************************************************************
  *
  * FUNCTION:    AcpiDbGetPointer
  *
@@ -142,33 +151,16 @@
  *
  * DESCRIPTION: Convert an ascii pointer value to a real value
  *
- *****************************************************************************/
+ ******************************************************************************/
 
-void *
+static void *
 AcpiDbGetPointer (
     void                    *Target)
 {
     void                    *ObjPtr;
 
 
-#if ACPI_MACHINE_WIDTH == 16
-#include <stdio.h>
-
-    /* Have to handle 16-bit pointers of the form segment:offset */
-
-    if (!sscanf (Target, "%p", &ObjPtr))
-    {
-        AcpiOsPrintf ("Invalid pointer: %s\n", Target);
-        return (NULL);
-    }
-
-#else
-
-    /* Simple flat pointer */
-
     ObjPtr = ACPI_TO_POINTER (ACPI_STRTOUL (Target, NULL, 16));
-#endif
-
     return (ObjPtr);
 }
 
@@ -185,7 +177,7 @@ AcpiDbGetPointer (
  *
  ******************************************************************************/
 
-void
+static void
 AcpiDbDumpParserDescriptor (
     ACPI_PARSE_OBJECT       *Op)
 {
@@ -197,7 +189,8 @@ AcpiDbDumpParserDescriptor (
     AcpiOsPrintf ("Parser Op Descriptor:\n");
     AcpiOsPrintf ("%20.20s : %4.4X\n", "Opcode", Op->Common.AmlOpcode);
 
-    ACPI_DEBUG_ONLY_MEMBERS (AcpiOsPrintf ("%20.20s : %s\n", "Opcode Name", Info->Name));
+    ACPI_DEBUG_ONLY_MEMBERS (AcpiOsPrintf ("%20.20s : %s\n", "Opcode Name",
+        Info->Name));
 
     AcpiOsPrintf ("%20.20s : %p\n", "Value/ArgList", Op->Common.Value.Arg);
     AcpiOsPrintf ("%20.20s : %p\n", "Parent", Op->Common.Parent);
@@ -243,7 +236,7 @@ AcpiDbDecodeAndDisplayObject (
 
     if (OutputType)
     {
-        ACPI_STRUPR (OutputType);
+        AcpiUtStrupr (OutputType);
         if (OutputType[0] == 'W')
         {
             Display = DB_WORD_DISPLAY;
@@ -268,7 +261,8 @@ AcpiDbDecodeAndDisplayObject (
         ObjPtr = AcpiDbGetPointer (Target);
         if (!AcpiOsReadable (ObjPtr, 16))
         {
-            AcpiOsPrintf ("Address %p is invalid in this address space\n", ObjPtr);
+            AcpiOsPrintf ("Address %p is invalid in this address space\n",
+                ObjPtr);
             return;
         }
 
@@ -282,12 +276,13 @@ AcpiDbDecodeAndDisplayObject (
 
             if (!AcpiOsReadable (ObjPtr, sizeof (ACPI_NAMESPACE_NODE)))
             {
-                AcpiOsPrintf ("Cannot read entire Named object at address %p\n", ObjPtr);
+                AcpiOsPrintf (
+                    "Cannot read entire Named object at address %p\n", ObjPtr);
                 return;
             }
 
             Node = ObjPtr;
-            goto DumpNte;
+            goto DumpNode;
 
 
         case ACPI_DESC_TYPE_OPERAND:
@@ -296,11 +291,13 @@ AcpiDbDecodeAndDisplayObject (
 
             if (!AcpiOsReadable (ObjPtr, sizeof (ACPI_OPERAND_OBJECT)))
             {
-                AcpiOsPrintf ("Cannot read entire ACPI object at address %p\n", ObjPtr);
+                AcpiOsPrintf ("Cannot read entire ACPI object at address %p\n",
+                    ObjPtr);
                 return;
             }
 
-            AcpiUtDumpBuffer (ObjPtr, sizeof (ACPI_OPERAND_OBJECT), Display, ACPI_UINT32_MAX);
+            AcpiUtDumpBuffer (ObjPtr, sizeof (ACPI_OPERAND_OBJECT), Display,
+                ACPI_UINT32_MAX);
             AcpiExDumpObjectDescriptor (ObjPtr, 1);
             break;
 
@@ -311,11 +308,13 @@ AcpiDbDecodeAndDisplayObject (
 
             if (!AcpiOsReadable (ObjPtr, sizeof (ACPI_PARSE_OBJECT)))
             {
-                AcpiOsPrintf ("Cannot read entire Parser object at address %p\n", ObjPtr);
+                AcpiOsPrintf (
+                    "Cannot read entire Parser object at address %p\n", ObjPtr);
                 return;
             }
 
-            AcpiUtDumpBuffer (ObjPtr, sizeof (ACPI_PARSE_OBJECT), Display, ACPI_UINT32_MAX);
+            AcpiUtDumpBuffer (ObjPtr, sizeof (ACPI_PARSE_OBJECT), Display,
+                ACPI_UINT32_MAX);
             AcpiDbDumpParserDescriptor ((ACPI_PARSE_OBJECT *) ObjPtr);
             break;
 
@@ -348,8 +347,8 @@ AcpiDbDecodeAndDisplayObject (
     }
 
 
-DumpNte:
-    /* Now dump the Named obj */
+DumpNode:
+    /* Now dump the NS node */
 
     Status = AcpiGetName (Node, ACPI_FULL_PATHNAME, &RetBuf);
     if (ACPI_FAILURE (Status))
@@ -359,7 +358,8 @@ DumpNte:
 
     else
     {
-        AcpiOsPrintf ("Object (%p) Pathname:  %s\n", Node, (char *) RetBuf.Pointer);
+        AcpiOsPrintf ("Object (%p) Pathname:  %s\n",
+            Node, (char *) RetBuf.Pointer);
     }
 
     if (!AcpiOsReadable (Node, sizeof (ACPI_NAMESPACE_NODE)))
@@ -368,8 +368,9 @@ DumpNte:
         return;
     }
 
-    AcpiUtDumpBuffer ((void *) Node, sizeof (ACPI_NAMESPACE_NODE), Display, ACPI_UINT32_MAX);
-    AcpiExDumpNode (Node, 1);
+    AcpiUtDumpBuffer ((void *) Node, sizeof (ACPI_NAMESPACE_NODE),
+        Display, ACPI_UINT32_MAX);
+    AcpiExDumpNamespaceNode (Node, 1);
 
     ObjDesc = AcpiNsGetAttachedObject (Node);
     if (ObjDesc)
@@ -377,11 +378,13 @@ DumpNte:
         AcpiOsPrintf ("\nAttached Object (%p):\n", ObjDesc);
         if (!AcpiOsReadable (ObjDesc, sizeof (ACPI_OPERAND_OBJECT)))
         {
-            AcpiOsPrintf ("Invalid internal ACPI Object at address %p\n", ObjDesc);
+            AcpiOsPrintf ("Invalid internal ACPI Object at address %p\n",
+                ObjDesc);
             return;
         }
 
-        AcpiUtDumpBuffer ((void *) ObjDesc, sizeof (ACPI_OPERAND_OBJECT), Display, ACPI_UINT32_MAX);
+        AcpiUtDumpBuffer ((void *) ObjDesc, sizeof (ACPI_OPERAND_OBJECT),
+            Display, ACPI_UINT32_MAX);
         AcpiExDumpObjectDescriptor (ObjDesc, 1);
     }
 }
@@ -415,8 +418,6 @@ AcpiDbDisplayMethodInfo (
     UINT32                  NumRemainingOps = 0;
     UINT32                  NumRemainingOperands = 0;
     UINT32                  NumRemainingOperators = 0;
-    UINT32                  NumArgs;
-    UINT32                  Concurrency;
     BOOLEAN                 CountRemaining = FALSE;
 
 
@@ -430,13 +431,11 @@ AcpiDbDisplayMethodInfo (
     ObjDesc = WalkState->MethodDesc;
     Node    = WalkState->MethodNode;
 
-    NumArgs     = ObjDesc->Method.ParamCount;
-    Concurrency = ObjDesc->Method.Concurrency;
-
     AcpiOsPrintf ("Currently executing control method is [%4.4s]\n",
             AcpiUtGetNodeName (Node));
-    AcpiOsPrintf ("%X arguments, max concurrency = %X\n",
-            NumArgs, Concurrency);
+    AcpiOsPrintf ("%X Arguments, SyncLevel = %X\n",
+            (UINT32) ObjDesc->Method.ParamCount,
+            (UINT32) ObjDesc->Method.SyncLevel);
 
 
     RootOp = StartOp;
@@ -492,11 +491,13 @@ AcpiDbDisplayMethodInfo (
         Op = AcpiPsGetDepthNext (StartOp, Op);
     }
 
-    AcpiOsPrintf ("Method contains:       %X AML Opcodes - %X Operators, %X Operands\n",
-                NumOps, NumOperators, NumOperands);
+    AcpiOsPrintf (
+        "Method contains:       %X AML Opcodes - %X Operators, %X Operands\n",
+        NumOps, NumOperators, NumOperands);
 
-    AcpiOsPrintf ("Remaining to execute:  %X AML Opcodes - %X Operators, %X Operands\n",
-                NumRemainingOps, NumRemainingOperators, NumRemainingOperands);
+    AcpiOsPrintf (
+        "Remaining to execute:  %X AML Opcodes - %X Operators, %X Operands\n",
+        NumRemainingOps, NumRemainingOperators, NumRemainingOperands);
 }
 
 
@@ -513,7 +514,8 @@ AcpiDbDisplayMethodInfo (
  ******************************************************************************/
 
 void
-AcpiDbDisplayLocals (void)
+AcpiDbDisplayLocals (
+    void)
 {
     ACPI_WALK_STATE         *WalkState;
 
@@ -542,7 +544,8 @@ AcpiDbDisplayLocals (void)
  ******************************************************************************/
 
 void
-AcpiDbDisplayArguments (void)
+AcpiDbDisplayArguments (
+    void)
 {
     ACPI_WALK_STATE         *WalkState;
 
@@ -571,13 +574,16 @@ AcpiDbDisplayArguments (void)
  ******************************************************************************/
 
 void
-AcpiDbDisplayResults (void)
+AcpiDbDisplayResults (
+    void)
 {
     UINT32                  i;
     ACPI_WALK_STATE         *WalkState;
     ACPI_OPERAND_OBJECT     *ObjDesc;
-    UINT32                  NumResults = 0;
+    UINT32                  ResultCount = 0;
     ACPI_NAMESPACE_NODE     *Node;
+    ACPI_GENERIC_STATE      *Frame;
+    UINT32                  Index; /* Index onto current frame */
 
 
     WalkState = AcpiDsGetCurrentWalkState (AcpiGbl_CurrentWalkList);
@@ -592,17 +598,28 @@ AcpiDbDisplayResults (void)
 
     if (WalkState->Results)
     {
-        NumResults = WalkState->Results->Results.NumResults;
+        ResultCount = WalkState->ResultCount;
     }
 
     AcpiOsPrintf ("Method [%4.4s] has %X stacked result objects\n",
-            AcpiUtGetNodeName (Node), NumResults);
+            AcpiUtGetNodeName (Node), ResultCount);
 
-    for (i = 0; i < NumResults; i++)
+    /* From the top element of result stack */
+
+    Frame = WalkState->Results;
+    Index = (ResultCount - 1) % ACPI_RESULTS_FRAME_OBJ_NUM;
+
+    for (i = 0; i < ResultCount; i++)
     {
-        ObjDesc = WalkState->Results->Results.ObjDesc[i];
+        ObjDesc = Frame->Results.ObjDesc[Index];
         AcpiOsPrintf ("Result%d: ", i);
         AcpiDmDisplayInternalObject (ObjDesc, WalkState);
+        if (Index == 0)
+        {
+            Frame = Frame->Results.Next;
+            Index = ACPI_RESULTS_FRAME_OBJ_NUM;
+        }
+        Index--;
     }
 }
 
@@ -620,7 +637,8 @@ AcpiDbDisplayResults (void)
  ******************************************************************************/
 
 void
-AcpiDbDisplayCallingTree (void)
+AcpiDbDisplayCallingTree (
+    void)
 {
     ACPI_WALK_STATE         *WalkState;
     ACPI_NAMESPACE_NODE     *Node;
@@ -677,22 +695,24 @@ AcpiDbDisplayObjectType (
     if (ACPI_SUCCESS (Status))
     {
         Info = Buffer.Pointer;
-        AcpiOsPrintf ("S1D-%2.2X S2D-%2.2X S3D-%2.2X S4D-%2.2X    HID: %s, ADR: %8.8X%8.8X, Status %8.8X\n",
-                        Info->HighestDstates[0], Info->HighestDstates[1],
-                        Info->HighestDstates[2], Info->HighestDstates[3],
-                        Info->HardwareId.Value,
-                        ACPI_FORMAT_UINT64 (Info->Address),
-                        Info->CurrentStatus);
+        AcpiOsPrintf (
+            "S1D-%2.2X S2D-%2.2X S3D-%2.2X S4D-%2.2X    HID: %s, ADR: %8.8X%8.8X, Status %8.8X\n",
+            Info->HighestDstates[0], Info->HighestDstates[1],
+            Info->HighestDstates[2], Info->HighestDstates[3],
+            Info->HardwareId.Value,
+            ACPI_FORMAT_UINT64 (Info->Address),
+            Info->CurrentStatus);
 
         if (Info->Valid & ACPI_VALID_CID)
         {
             for (i = 0; i < Info->CompatibilityId.Count; i++)
             {
-                AcpiOsPrintf ("CID #%d: %s\n", (UINT32) i, Info->CompatibilityId.Id[i].Value);
+                AcpiOsPrintf ("CID #%d: %s\n", (UINT32) i,
+                    Info->CompatibilityId.Id[i].Value);
             }
         }
 
-        ACPI_MEM_FREE (Info);
+        ACPI_FREE (Info);
     }
     else
     {
@@ -779,7 +799,8 @@ AcpiDbDisplayArgumentObject (
  ******************************************************************************/
 
 void
-AcpiDbDisplayGpes (void)
+AcpiDbDisplayGpes (
+    void)
 {
     ACPI_GPE_BLOCK_INFO     *GpeBlock;
     ACPI_GPE_XRUPT_INFO     *GpeXruptInfo;
@@ -814,18 +835,23 @@ AcpiDbDisplayGpes (void)
             }
 
             AcpiOsPrintf ("\nBlock %d - Info %p  DeviceNode %p [%s]\n",
-                    Block, GpeBlock, GpeBlock->Node, Buffer);
-            AcpiOsPrintf ("    Registers:    %u (%u GPEs) \n",
-                    GpeBlock->RegisterCount,
-                    ACPI_MUL_8 (GpeBlock->RegisterCount));
+                Block, GpeBlock, GpeBlock->Node, Buffer);
+
+            AcpiOsPrintf ("    Registers:    %u (%u GPEs)\n",
+                GpeBlock->RegisterCount,
+                ACPI_MUL_8 (GpeBlock->RegisterCount));
+
             AcpiOsPrintf ("    GPE range:    0x%X to 0x%X\n",
-                    GpeBlock->BlockBaseNumber,
-                    GpeBlock->BlockBaseNumber +
-                        (GpeBlock->RegisterCount * 8) -1);
-            AcpiOsPrintf ("    RegisterInfo: %p  Status %8.8X%8.8X Enable %8.8X%8.8X\n",
-                    GpeBlock->RegisterInfo,
-                    ACPI_FORMAT_UINT64 (ACPI_GET_ADDRESS (GpeBlock->RegisterInfo->StatusAddress.Address)),
-                    ACPI_FORMAT_UINT64 (ACPI_GET_ADDRESS (GpeBlock->RegisterInfo->EnableAddress.Address)));
+                GpeBlock->BlockBaseNumber,
+                GpeBlock->BlockBaseNumber +
+                    (GpeBlock->RegisterCount * 8) -1);
+
+            AcpiOsPrintf (
+                "    RegisterInfo: %p  Status %8.8X%8.8X Enable %8.8X%8.8X\n",
+                GpeBlock->RegisterInfo,
+                ACPI_FORMAT_UINT64 (GpeBlock->RegisterInfo->StatusAddress.Address),
+                ACPI_FORMAT_UINT64 (GpeBlock->RegisterInfo->EnableAddress.Address));
+
             AcpiOsPrintf ("    EventInfo:    %p\n", GpeBlock->EventInfo);
 
             /* Examine each GPE Register within the block */
@@ -835,11 +861,11 @@ AcpiDbDisplayGpes (void)
                 GpeRegisterInfo = &GpeBlock->RegisterInfo[i];
 
                 AcpiOsPrintf (
-                        "    Reg %u:  WakeEnable %2.2X, RunEnable %2.2X  Status %8.8X%8.8X Enable %8.8X%8.8X\n",
-                        i, GpeRegisterInfo->EnableForWake,
-                        GpeRegisterInfo->EnableForRun,
-                        ACPI_FORMAT_UINT64 (ACPI_GET_ADDRESS (GpeRegisterInfo->StatusAddress.Address)),
-                        ACPI_FORMAT_UINT64 (ACPI_GET_ADDRESS (GpeRegisterInfo->EnableAddress.Address)));
+                    "    Reg %u:  WakeEnable %2.2X, RunEnable %2.2X  Status %8.8X%8.8X Enable %8.8X%8.8X\n",
+                    i, GpeRegisterInfo->EnableForWake,
+                    GpeRegisterInfo->EnableForRun,
+                    ACPI_FORMAT_UINT64 (GpeRegisterInfo->StatusAddress.Address),
+                    ACPI_FORMAT_UINT64 (GpeRegisterInfo->EnableAddress.Address));
 
                 /* Now look at the individual GPEs in this byte register */
 
@@ -856,10 +882,10 @@ AcpiDbDisplayGpes (void)
                     }
 
                     AcpiOsPrintf (
-                            "        GPE %.3X: %p  Bit %2.2X  Flags %2.2X: ",
-                            GpeBlock->BlockBaseNumber + GpeIndex,
-                            GpeEventInfo, GpeEventInfo->RegisterBit,
-                            GpeEventInfo->Flags);
+                        "        GPE %.3X: %p Flags %2.2X: ",
+                        GpeBlock->BlockBaseNumber + GpeIndex,
+                        GpeEventInfo,
+                        GpeEventInfo->Flags);
 
                     if (GpeEventInfo->Flags & ACPI_GPE_LEVEL_TRIGGERED)
                     {
@@ -930,7 +956,6 @@ AcpiDbDisplayGpes (void)
         GpeXruptInfo = GpeXruptInfo->Next;
     }
 }
-
 
 #endif /* ACPI_DEBUGGER */
 

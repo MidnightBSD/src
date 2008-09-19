@@ -2,7 +2,7 @@
 /******************************************************************************
  *
  * Module Name: aslutils -- compiler utilities
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -10,7 +10,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -116,10 +116,10 @@
  *****************************************************************************/
 
 
-#include "aslcompiler.h"
+#include <contrib/dev/acpica/compiler/aslcompiler.h>
 #include "aslcompiler.y.h"
-#include "acnamesp.h"
-#include "amlcode.h"
+#include <contrib/dev/acpica/acnamesp.h>
+#include <contrib/dev/acpica/amlcode.h>
 
 #define _COMPONENT          ACPI_COMPILER
         ACPI_MODULE_NAME    ("aslutils")
@@ -131,13 +131,23 @@ static const char * const       *yytname = &AslCompilername[254];
 extern const char * const       yytname[];
 #endif
 
+/* Local prototypes */
 
-void
-AslOptimizeNamepath (
-    char                *Buffer)
-{
-    printf ("NamePath: %s\n", Buffer);
-}
+static ACPI_STATUS
+UtStrtoul64 (
+    char                    *String,
+    UINT32                  Base,
+    ACPI_INTEGER            *RetInteger);
+
+static void
+UtPadNameWithUnderscores (
+    char                    *NameSeg,
+    char                    *PaddedNameSeg);
+
+static void
+UtAttachNameseg (
+    ACPI_PARSE_OBJECT       *Op,
+    char                    *Name);
 
 
 /*******************************************************************************
@@ -156,7 +166,8 @@ void
 UtDisplayConstantOpcodes (
     void)
 {
-    UINT32              i;
+    UINT32                  i;
+
 
     printf ("Constant expression opcode information\n\n");
 
@@ -191,7 +202,7 @@ UtLocalCalloc (
     void                    *Allocated;
 
 
-    Allocated = ACPI_MEM_CALLOCATE (Size);
+    Allocated = ACPI_ALLOCATE_ZEROED (Size);
     if (!Allocated)
     {
         AslCommonError (ASL_ERROR, ASL_MSG_MEMORY_ALLOCATION,
@@ -203,7 +214,7 @@ UtLocalCalloc (
 
     TotalAllocations++;
     TotalAllocated += Size;
-    return Allocated;
+    return (Allocated);
 }
 
 
@@ -211,24 +222,32 @@ UtLocalCalloc (
  *
  * FUNCTION:    UtBeginEvent
  *
- * PARAMETERS:  Event       - Event number (integer index)
- *              Name        - Ascii name of this event
+ * PARAMETERS:  Name        - Ascii name of this event
  *
- * RETURN:      None
+ * RETURN:      Event       - Event number (integer index)
  *
  * DESCRIPTION: Saves the current time with this event
  *
  ******************************************************************************/
 
-void
+UINT8
 UtBeginEvent (
-    UINT32                  Event,
     char                    *Name)
 {
 
-    AslGbl_Events[Event].StartTime = (time_t) AcpiOsGetTimer();
-    AslGbl_Events[Event].EventName = Name;
-    AslGbl_Events[Event].Valid = TRUE;
+    if (AslGbl_NextEvent >= ASL_NUM_EVENTS)
+    {
+        AcpiOsPrintf ("Ran out of compiler event structs!\n");
+        return (AslGbl_NextEvent);
+    }
+
+    /* Init event with current (start) time */
+
+    AslGbl_Events[AslGbl_NextEvent].StartTime = AcpiOsGetTimer ();
+    AslGbl_Events[AslGbl_NextEvent].EventName = Name;
+    AslGbl_Events[AslGbl_NextEvent].Valid = TRUE;
+
+    return (AslGbl_NextEvent++);
 }
 
 
@@ -246,10 +265,17 @@ UtBeginEvent (
 
 void
 UtEndEvent (
-    UINT32                  Event)
+    UINT8                  Event)
 {
 
-    AslGbl_Events[Event].EndTime = (time_t) AcpiOsGetTimer();
+    if (Event >= ASL_NUM_EVENTS)
+    {
+        return;
+    }
+
+    /* Insert end time for event */
+
+    AslGbl_Events[Event].EndTime = AcpiOsGetTimer ();
 }
 
 
@@ -257,7 +283,7 @@ UtEndEvent (
  *
  * FUNCTION:    UtHexCharToValue
  *
- * PARAMETERS:  hc          - Hex character in Ascii
+ * PARAMETERS:  HexChar         - Hex character in Ascii
  *
  * RETURN:      The binary value of the hex character
  *
@@ -267,20 +293,20 @@ UtEndEvent (
 
 UINT8
 UtHexCharToValue (
-    int                     hc)
+    int                     HexChar)
 {
 
-    if (hc <= 0x39)
+    if (HexChar <= 0x39)
     {
-        return ((UINT8) (hc - 0x30));
+        return ((UINT8) (HexChar - 0x30));
     }
 
-    if (hc <= 0x46)
+    if (HexChar <= 0x46)
     {
-        return ((UINT8) (hc - 0x37));
+        return ((UINT8) (HexChar - 0x37));
     }
 
-    return ((UINT8) (hc - 0x57));
+    return ((UINT8) (HexChar - 0x57));
 }
 
 
@@ -289,7 +315,7 @@ UtHexCharToValue (
  * FUNCTION:    UtConvertByteToHex
  *
  * PARAMETERS:  RawByte         - Binary data
- *              *Buffer         - Pointer to where the hex bytes will be stored
+ *              Buffer          - Pointer to where the hex bytes will be stored
  *
  * RETURN:      Ascii hex byte is stored in Buffer.
  *
@@ -317,7 +343,7 @@ UtConvertByteToHex (
  * FUNCTION:    UtConvertByteToAsmHex
  *
  * PARAMETERS:  RawByte         - Binary data
- *              *Buffer         - Pointer to where the hex bytes will be stored
+ *              Buffer          - Pointer to where the hex bytes will be stored
  *
  * RETURN:      Ascii hex byte is stored in Buffer.
  *
@@ -333,7 +359,6 @@ UtConvertByteToAsmHex (
 {
 
     Buffer[0] = '0';
-
     Buffer[1] = (UINT8) hex[(RawByte >> 4) & 0xF];
     Buffer[2] = (UINT8) hex[RawByte & 0xF];
     Buffer[3] = 'h';
@@ -344,7 +369,8 @@ UtConvertByteToAsmHex (
  *
  * FUNCTION:    DbgPrint
  *
- * PARAMETERS:  Fmt             - Printf format string
+ * PARAMETERS:  Type            - Type of output
+ *              Fmt             - Printf format string
  *              ...             - variable printf list
  *
  * RETURN:      None
@@ -403,9 +429,13 @@ UtPrintFormattedName (
     UINT32                  Level)
 {
 
+    if (Level)
+    {
+        DbgPrint (ASL_TREE_OUTPUT,
+            "%*s", (3 * Level), " ");
+    }
     DbgPrint (ASL_TREE_OUTPUT,
-        "%*s %-16.16s", (3 * Level), " ",
-        UtGetOpName (ParseOpcode));
+        " %-20.20s", UtGetOpName (ParseOpcode));
 
     if (Level < TEXT_OFFSET)
     {
@@ -431,7 +461,9 @@ void
 UtSetParseOpName (
     ACPI_PARSE_OBJECT       *Op)
 {
-    strncpy (Op->Asl.ParseOpName, UtGetOpName (Op->Asl.ParseOpcode), 12);
+
+    strncpy (Op->Asl.ParseOpName, UtGetOpName (Op->Asl.ParseOpcode),
+        ACPI_MAX_PARSEOP_NAME);
 }
 
 
@@ -456,7 +488,8 @@ UtGetOpName (
      * First entries (ASL_YYTNAME_START) in yytname are special reserved names.
      * Ignore first 8 characters of the name
      */
-    return ((char *) yytname [(ParseOpcode - ASL_FIRST_PARSE_OPCODE) + ASL_YYTNAME_START] + 8);
+    return ((char *) yytname
+        [(ParseOpcode - ASL_FIRST_PARSE_OPCODE) + ASL_YYTNAME_START] + 8);
 }
 
 
@@ -464,7 +497,7 @@ UtGetOpName (
  *
  * FUNCTION:    UtDisplaySummary
  *
- * PARAMETERS:  None
+ * PARAMETERS:  FileID          - ID of outpout file
  *
  * RETURN:      None
  *
@@ -507,7 +540,9 @@ UtDisplaySummary (
     FlPrintFile (FileId,
         "Compilation complete. %d Errors, %d Warnings, %d Remarks, %d Optimizations\n",
         Gbl_ExceptionCount[ASL_ERROR],
-        Gbl_ExceptionCount[ASL_WARNING],
+        Gbl_ExceptionCount[ASL_WARNING] +
+            Gbl_ExceptionCount[ASL_WARNING2] +
+            Gbl_ExceptionCount[ASL_WARNING3],
         Gbl_ExceptionCount[ASL_REMARK],
         Gbl_ExceptionCount[ASL_OPTIMIZATION]);
 }
@@ -517,7 +552,7 @@ UtDisplaySummary (
  *
  * FUNCTION:    UtDisplaySummary
  *
- * PARAMETERS:  Op            - Integer parse node
+ * PARAMETERS:  Op              - Integer parse node
  *              LowValue        - Smallest allowed value
  *              HighValue       - Largest allowed value
  *
@@ -590,7 +625,8 @@ UtGetStringBuffer (
     if ((Gbl_StringCacheNext + Length) >= Gbl_StringCacheLast)
     {
         Gbl_StringCacheNext = UtLocalCalloc (ASL_STRING_CACHE_SIZE + Length);
-        Gbl_StringCacheLast = Gbl_StringCacheNext + ASL_STRING_CACHE_SIZE + Length;
+        Gbl_StringCacheLast = Gbl_StringCacheNext + ASL_STRING_CACHE_SIZE +
+                                Length;
     }
 
     Buffer = Gbl_StringCacheNext;
@@ -667,7 +703,7 @@ UtInternalizeName (
  *
  ******************************************************************************/
 
-void
+static void
 UtPadNameWithUnderscores (
     char                    *NameSeg,
     char                    *PaddedNameSeg)
@@ -698,14 +734,14 @@ UtPadNameWithUnderscores (
  * PARAMETERS:  Op              - Parent parse node
  *              Name            - Full ExternalName
  *
- * RETURN:      Sets the NameSeg field in parent node
+ * RETURN:      None; Sets the NameSeg field in parent node
  *
  * DESCRIPTION: Extract the last nameseg of the ExternalName and store it
  *              in the NameSeg field of the Op.
  *
  ******************************************************************************/
 
-void
+static void
 UtAttachNameseg (
     ACPI_PARSE_OBJECT       *Op,
     char                    *Name)
@@ -775,6 +811,10 @@ UtAttachNamepathToOwner (
 
     Op->Asl.ExternalName = NameOp->Asl.Value.String;
 
+    /* Save the NameOp for possible error reporting later */
+
+    Op->Asl.ParentMethod = (void *) NameOp;
+
     /* Last nameseg of the path */
 
     UtAttachNameseg (Op, Op->Asl.ExternalName);
@@ -813,7 +853,8 @@ UtDoConstant (
     Status = UtStrtoul64 (String, 0, &Converted);
     if (ACPI_FAILURE (Status))
     {
-        sprintf (ErrBuf, "%s %s\n", "Conversion error:", AcpiFormatException (Status));
+        sprintf (ErrBuf, "%s %s\n", "Conversion error:",
+            AcpiFormatException (Status));
         AslCompilererror (ErrBuf);
     }
 
@@ -821,12 +862,15 @@ UtDoConstant (
 }
 
 
+/* TBD: use version in ACPI CA main code base? */
+
 /*******************************************************************************
  *
  * FUNCTION:    UtStrtoul64
  *
  * PARAMETERS:  String          - Null terminated string
- *              Terminater      - Where a pointer to the terminating byte is returned
+ *              Terminater      - Where a pointer to the terminating byte is
+ *                                returned
  *              Base            - Radix of the string
  *
  * RETURN:      Converted value
@@ -834,10 +878,8 @@ UtDoConstant (
  * DESCRIPTION: Convert a string into an unsigned value.
  *
  ******************************************************************************/
-#define NEGATIVE    1
-#define POSITIVE    0
 
-ACPI_STATUS
+static ACPI_STATUS
 UtStrtoul64 (
     char                    *String,
     UINT32                  Base,
@@ -867,9 +909,8 @@ UtStrtoul64 (
         return (AE_BAD_PARAMETER);
     }
 
-    /*
-     * skip over any white space in the buffer:
-     */
+    /* Skip over any white space in the buffer: */
+
     while (isspace (*String) || *String == '\t')
     {
         ++String;
@@ -977,9 +1018,8 @@ UtStrtoul64 (
     }
 
 
-    /*
-     * If a minus sign was present, then "the conversion is negated":
-     */
+    /* If a minus sign was present, then "the conversion is negated": */
+
     if (Sign == NEGATIVE)
     {
         ReturnValue = (ACPI_UINT32_MAX - ReturnValue) + 1;

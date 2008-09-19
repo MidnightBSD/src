@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/contrib/dev/oltr/if_oltr.c,v 1.37.2.2 2005/10/09 04:18:17 delphij Exp $
+ * $FreeBSD: src/sys/contrib/dev/oltr/if_oltr.c,v 1.43 2007/02/23 12:18:28 piso Exp $
  */
 
 #include <sys/param.h>
@@ -41,7 +41,7 @@
 #include <sys/socket.h>
 
 #include <net/if.h>
-#include <net/if_arp.h>
+#include <net/if_dl.h>
 #include <net/iso88025.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
@@ -58,7 +58,6 @@
 #include <vm/pmap.h>            /* for vtophys */
 
 #include <machine/bus.h>
-#include <machine/clock.h>
 #include <machine/resource.h>
 
 #include <sys/bus.h>
@@ -155,7 +154,7 @@ oltr_attach(device_t dev)
 		if_free(ifp);
 		return (-1);
 	}
-	if (bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET, oltr_intr,
+	if (bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET, NULL, oltr_intr,
 			sc, &sc-> oltr_intrhand)) {
 		device_printf(dev, "couldn't setup interrupt\n");
                 bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq_res);
@@ -173,7 +172,6 @@ oltr_attach(device_t dev)
 	ifp->if_ioctl	= oltr_ioctl;
 	ifp->if_flags	= IFF_BROADCAST | IFF_NEEDSGIANT;
 	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
-	bcopy(sc->config.macaddress, IFP2ENADDR(sc->ifp), sizeof(sc->config.macaddress));
 
 	/*
 	 * Do ifmedia setup.
@@ -203,7 +201,7 @@ oltr_attach(device_t dev)
 	 * Attach the interface
 	 */
 
-	iso88025_ifattach(ifp, ISO88025_BPF_SUPPORTED);
+	iso88025_ifattach(ifp, sc->config.macaddress, ISO88025_BPF_SUPPORTED);
 
 	return(0);
 }
@@ -490,7 +488,7 @@ oltr_init(void * xsc)
 	/*
 	 * Open the adapter
 	 */
-	rc = TRlldOpen(sc->TRlldAdapter, IFP2ENADDR(sc->ifp), sc->GroupAddress,
+	rc = TRlldOpen(sc->TRlldAdapter, IF_LLADDR(sc->ifp), sc->GroupAddress,
 		sc->FunctionalAddress, 1552, sc->AdapterMode);
 	switch(rc) {
 		case TRLLD_OPEN_OK:

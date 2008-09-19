@@ -2,7 +2,7 @@
 /******************************************************************************
  *
  * Name: hwtimer.c - ACPI Power Management Timer Interface
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -10,7 +10,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -137,7 +137,7 @@ ACPI_STATUS
 AcpiGetTimerResolution (
     UINT32                  *Resolution)
 {
-    ACPI_FUNCTION_TRACE ("AcpiGetTimerResolution");
+    ACPI_FUNCTION_TRACE (AcpiGetTimerResolution);
 
 
     if (!Resolution)
@@ -145,7 +145,7 @@ AcpiGetTimerResolution (
         return_ACPI_STATUS (AE_BAD_PARAMETER);
     }
 
-    if (0 == AcpiGbl_FADT->TmrValExt)
+    if ((AcpiGbl_FADT.Flags & ACPI_FADT_32BIT_TIMER) == 0)
     {
         *Resolution = 24;
     }
@@ -157,6 +157,8 @@ AcpiGetTimerResolution (
     return_ACPI_STATUS (AE_OK);
 }
 
+ACPI_EXPORT_SYMBOL (AcpiGetTimerResolution)
+
 
 /******************************************************************************
  *
@@ -164,7 +166,7 @@ AcpiGetTimerResolution (
  *
  * PARAMETERS:  Ticks               - Where the timer value is returned
  *
- * RETURN:      Status and current ticks
+ * RETURN:      Status and current timer value (ticks)
  *
  * DESCRIPTION: Obtains current value of ACPI PM Timer (in ticks).
  *
@@ -177,7 +179,7 @@ AcpiGetTimer (
     ACPI_STATUS             Status;
 
 
-    ACPI_FUNCTION_TRACE ("AcpiGetTimer");
+    ACPI_FUNCTION_TRACE (AcpiGetTimer);
 
 
     if (!Ticks)
@@ -185,10 +187,12 @@ AcpiGetTimer (
         return_ACPI_STATUS (AE_BAD_PARAMETER);
     }
 
-    Status = AcpiHwLowLevelRead (32, Ticks, &AcpiGbl_FADT->XPmTmrBlk);
+    Status = AcpiHwLowLevelRead (32, Ticks, &AcpiGbl_FADT.XPmTimerBlock);
 
     return_ACPI_STATUS (Status);
 }
+
+ACPI_EXPORT_SYMBOL (AcpiGetTimer)
 
 
 /******************************************************************************
@@ -231,7 +235,7 @@ AcpiGetTimerDuration (
     ACPI_INTEGER            Quotient;
 
 
-    ACPI_FUNCTION_TRACE ("AcpiGetTimerDuration");
+    ACPI_FUNCTION_TRACE (AcpiGetTimerDuration);
 
 
     if (!TimeElapsed)
@@ -249,7 +253,7 @@ AcpiGetTimerDuration (
     }
     else if (StartTicks > EndTicks)
     {
-        if (0 == AcpiGbl_FADT->TmrValExt)
+        if ((AcpiGbl_FADT.Flags & ACPI_FADT_32BIT_TIMER) == 0)
         {
             /* 24-bit Timer */
 
@@ -280,4 +284,5 @@ AcpiGetTimerDuration (
     return_ACPI_STATUS (Status);
 }
 
+ACPI_EXPORT_SYMBOL (AcpiGetTimerDuration)
 

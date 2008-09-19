@@ -24309,8 +24309,10 @@ sys/contrib/dev/acpica/achware.h -text
 sys/contrib/dev/acpica/acinterp.h -text
 sys/contrib/dev/acpica/aclocal.h -text
 sys/contrib/dev/acpica/acmacros.h -text
+sys/contrib/dev/acpica/acnames.h -text
 sys/contrib/dev/acpica/acnamesp.h -text
 sys/contrib/dev/acpica/acobject.h -text
+sys/contrib/dev/acpica/acopcode.h -text
 sys/contrib/dev/acpica/acoutput.h -text
 sys/contrib/dev/acpica/acparser.h -text
 sys/contrib/dev/acpica/acpi.h -text
@@ -24325,9 +24327,16 @@ sys/contrib/dev/acpica/actbl1.h -text
 sys/contrib/dev/acpica/actbl2.h -text
 sys/contrib/dev/acpica/actypes.h -text
 sys/contrib/dev/acpica/acutils.h -text
+sys/contrib/dev/acpica/aecommon.h -text
 sys/contrib/dev/acpica/amlcode.h -text
 sys/contrib/dev/acpica/amlresrc.h -text
+sys/contrib/dev/acpica/common/adfile.c -text
 sys/contrib/dev/acpica/common/adisasm.c -text
+sys/contrib/dev/acpica/common/adwalk.c -text
+sys/contrib/dev/acpica/common/dmrestag.c -text
+sys/contrib/dev/acpica/common/dmtable.c -text
+sys/contrib/dev/acpica/common/dmtbdump.c -text
+sys/contrib/dev/acpica/common/dmtbinfo.c -text
 sys/contrib/dev/acpica/common/getopt.c -text
 sys/contrib/dev/acpica/compiler/aslanalyze.c -text
 sys/contrib/dev/acpica/compiler/aslcodegen.c -text
@@ -24335,6 +24344,7 @@ sys/contrib/dev/acpica/compiler/aslcompile.c -text
 sys/contrib/dev/acpica/compiler/aslcompiler.h -text
 sys/contrib/dev/acpica/compiler/aslcompiler.l -text
 sys/contrib/dev/acpica/compiler/aslcompiler.y -text
+sys/contrib/dev/acpica/compiler/asldefine.h -text
 sys/contrib/dev/acpica/compiler/aslerror.c -text
 sys/contrib/dev/acpica/compiler/aslfiles.c -text
 sys/contrib/dev/acpica/compiler/aslfold.c -text
@@ -24441,6 +24451,7 @@ sys/contrib/dev/acpica/nsxfname.c -text
 sys/contrib/dev/acpica/nsxfobj.c -text
 sys/contrib/dev/acpica/osunixxf.c -text
 sys/contrib/dev/acpica/psargs.c -text
+sys/contrib/dev/acpica/psloop.c -text
 sys/contrib/dev/acpica/psopcode.c -text
 sys/contrib/dev/acpica/psparse.c -text
 sys/contrib/dev/acpica/psscope.c -text
@@ -24452,6 +24463,7 @@ sys/contrib/dev/acpica/rsaddr.c -text
 sys/contrib/dev/acpica/rscalc.c -text
 sys/contrib/dev/acpica/rscreate.c -text
 sys/contrib/dev/acpica/rsdump.c -text
+sys/contrib/dev/acpica/rsinfo.c -text
 sys/contrib/dev/acpica/rsio.c -text
 sys/contrib/dev/acpica/rsirq.c -text
 sys/contrib/dev/acpica/rslist.c -text
@@ -24460,6 +24472,8 @@ sys/contrib/dev/acpica/rsmisc.c -text
 sys/contrib/dev/acpica/rsutils.c -text
 sys/contrib/dev/acpica/rsxface.c -text
 sys/contrib/dev/acpica/tbconvrt.c -text
+sys/contrib/dev/acpica/tbfadt.c -text
+sys/contrib/dev/acpica/tbfind.c -text
 sys/contrib/dev/acpica/tbget.c -text
 sys/contrib/dev/acpica/tbgetall.c -text
 sys/contrib/dev/acpica/tbinstal.c -text
@@ -24468,6 +24482,7 @@ sys/contrib/dev/acpica/tbutils.c -text
 sys/contrib/dev/acpica/tbxface.c -text
 sys/contrib/dev/acpica/tbxfroot.c -text
 sys/contrib/dev/acpica/utalloc.c -text
+sys/contrib/dev/acpica/utcache.c -text
 sys/contrib/dev/acpica/utclib.c -text
 sys/contrib/dev/acpica/utcopy.c -text
 sys/contrib/dev/acpica/utdebug.c -text
@@ -24477,7 +24492,11 @@ sys/contrib/dev/acpica/utglobal.c -text
 sys/contrib/dev/acpica/utinit.c -text
 sys/contrib/dev/acpica/utmath.c -text
 sys/contrib/dev/acpica/utmisc.c -text
+sys/contrib/dev/acpica/utmutex.c -text
 sys/contrib/dev/acpica/utobject.c -text
+sys/contrib/dev/acpica/utresrc.c -text
+sys/contrib/dev/acpica/utstate.c -text
+sys/contrib/dev/acpica/uttrack.c -text
 sys/contrib/dev/acpica/utxface.c -text
 sys/contrib/dev/ath/COPYRIGHT -text
 sys/contrib/dev/ath/README -text

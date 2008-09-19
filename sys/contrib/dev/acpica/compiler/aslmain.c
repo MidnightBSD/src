@@ -2,7 +2,7 @@
 /******************************************************************************
  *
  * Module Name: aslmain - compiler main and utilities
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -10,7 +10,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -118,9 +118,10 @@
 
 #define _DECLARE_GLOBALS
 
-#include "aslcompiler.h"
-#include "acnamesp.h"
-#include "acapps.h"
+#include <contrib/dev/acpica/compiler/aslcompiler.h>
+#include <contrib/dev/acpica/acnamesp.h>
+#include <contrib/dev/acpica/actables.h>
+#include <contrib/dev/acpica/acapps.h>
 
 #ifdef _DEBUG
 #include <crtdbg.h>
@@ -133,9 +134,37 @@ BOOLEAN                 AslToFile = TRUE;
 BOOLEAN                 DoCompile = TRUE;
 BOOLEAN                 DoSignon = TRUE;
 
-char                    hex[] = {'0','1','2','3','4','5','6','7',
-                                 '8','9','A','B','C','D','E','F'};
+char                    hex[] =
+{
+    '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
+};
 
+/* Local prototypes */
+
+static void
+Options (
+    void);
+
+static void
+HelpMessage (
+    void);
+
+static void
+Usage (
+    void);
+
+static void
+AslInitialize (
+    void);
+
+static void
+AslCommandLine (
+    int                     argc,
+    char                    **argv);
+
+#ifdef _DEBUG
+#include <crtdbg.h>
+#endif
 
 /*******************************************************************************
  *
@@ -149,7 +178,7 @@ char                    hex[] = {'0','1','2','3','4','5','6','7',
  *
  ******************************************************************************/
 
-void
+static void
 Options (
     void)
 {
@@ -160,6 +189,7 @@ Options (
     printf ("  -vo            Enable optimization comments\n");
     printf ("  -vr            Disable remarks\n");
     printf ("  -vs            Disable signon\n");
+    printf ("  -w<1|2|3>      Set warning reporting level\n");
 
     printf ("\nAML Output Files:\n");
     printf ("  -s<a|c>        Create AML in assembler or C source file (*.asm or *.c)\n");
@@ -179,10 +209,11 @@ Options (
     printf ("  -ls            Create combined source file (expanded includes) (*.src)\n");
 
     printf ("\nAML Disassembler:\n");
-    printf ("  -d  [file]     Disassemble AML to ASL source code file (*.dsl)\n");
+    printf ("  -d  [file]     Disassemble or decode binary ACPI table to file (*.dsl)\n");
     printf ("  -dc [file]     Disassemble AML and immediately compile it\n");
     printf ("                 (Obtain DSDT from current system if no input file)\n");
-    printf ("  -e             Generate External() statements for unresolved symbols\n");
+    printf ("  -e  [file]     Include ACPI table for external symbol resolution\n");
+    printf ("  -2             Emit ACPI 2.0 compatible ASL code\n");
     printf ("  -g             Get ACPI tables and write to files (*.dat)\n");
 
     printf ("\nHelp:\n");
@@ -194,7 +225,7 @@ Options (
 
 /*******************************************************************************
  *
- * FUNCTION:    Usage
+ * FUNCTION:    HelpMessage
  *
  * PARAMETERS:  None
  *
@@ -204,7 +235,7 @@ Options (
  *
  ******************************************************************************/
 
-void
+static void
 HelpMessage (
     void)
 {
@@ -220,7 +251,7 @@ HelpMessage (
 
     Options ();
 
-    printf ("\nCompiler Debug Options:\n");
+    printf ("\nCompiler/Disassembler Debug Options:\n");
     printf ("  -b<p|t|b>      Create compiler debug/trace file (*.txt)\n");
     printf ("                   Types: Parse/Tree/Both\n");
     printf ("  -f             Ignore errors, force creation of AML output file(s)\n");
@@ -242,7 +273,7 @@ HelpMessage (
  *
  ******************************************************************************/
 
-void
+static void
 Usage (
     void)
 {
@@ -264,8 +295,9 @@ Usage (
  *
  ******************************************************************************/
 
-void
-AslInitialize (void)
+static void
+AslInitialize (
+    void)
 {
     UINT32                  i;
 
@@ -302,13 +334,13 @@ AslInitialize (void)
  *
  ******************************************************************************/
 
-void
+static void
 AslCommandLine (
     int                     argc,
     char                    **argv)
 {
     BOOLEAN                 BadCommandLine = FALSE;
-    ACPI_NATIVE_UINT        j;
+    ACPI_NATIVE_INT         j;
 
 
     /* Minimum command line contains at least one option or an input file */
@@ -322,10 +354,10 @@ AslCommandLine (
 
     /* Get the command line options */
 
-    while ((j = AcpiGetopt (argc, argv, "ab:cd^efgh^i^l^o:p:r:s:t:v:x:")) != EOF) switch (j)
+    while ((j = AcpiGetopt (argc, argv, "2b:cd^e:fgh^i^l^o:p:r:s:t:v:w:x:")) != EOF) switch (j)
     {
-    case 'a':
-        AslToFile = FALSE;
+    case '2':
+        Gbl_Acpi2 = TRUE;
         break;
 
 
@@ -385,10 +417,7 @@ AslCommandLine (
 
 
     case 'e':
-
-        /* Generate external statements for unresolved symbols */
-
-        Gbl_GenerateExternals = TRUE;
+        Gbl_ExternalFilename = AcpiGbl_Optarg;
         break;
 
 
@@ -632,6 +661,30 @@ AslCommandLine (
         break;
 
 
+    case 'w': /* Set warning levels */
+
+        switch (AcpiGbl_Optarg[0])
+        {
+        case '1':
+            Gbl_WarningLevel = ASL_WARNING;
+            break;
+
+        case '2':
+            Gbl_WarningLevel = ASL_WARNING2;
+            break;
+
+        case '3':
+            Gbl_WarningLevel = ASL_WARNING3;
+            break;
+
+        default:
+            printf ("Unknown option: -w%s\n", AcpiGbl_Optarg);
+            BadCommandLine = TRUE;
+            break;
+        }
+        break;
+
+
     case 'x':
 
         AcpiDbgLevel = strtoul (AcpiGbl_Optarg, NULL, 16);
@@ -647,7 +700,10 @@ AslCommandLine (
     /* Next parameter must be the input filename */
 
     Gbl_Files[ASL_FILE_INPUT].Filename = argv[AcpiGbl_Optind];
-    if (!Gbl_Files[ASL_FILE_INPUT].Filename && !Gbl_DisasmFlag && !Gbl_GetAllTables)
+
+    if (!Gbl_Files[ASL_FILE_INPUT].Filename &&
+        !Gbl_DisasmFlag &&
+        !Gbl_GetAllTables)
     {
         printf ("Missing input filename\n");
         BadCommandLine = TRUE;
@@ -697,6 +753,11 @@ main (
     char                    *Prefix;
 
 
+#ifdef _DEBUG
+    _CrtSetDbgFlag (_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_LEAK_CHECK_DF |
+                    _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
+#endif
+
     /* Init and command line */
 
     AslInitialize ();
@@ -706,32 +767,35 @@ main (
      * If -p not specified, we will use the input filename as the
      * output filename prefix
      */
-    FlSplitInputPathname (Gbl_Files[ASL_FILE_INPUT].Filename,
+    Status = FlSplitInputPathname (Gbl_Files[ASL_FILE_INPUT].Filename,
         &Gbl_DirectoryPath, &Prefix);
+    if (ACPI_FAILURE (Status))
+    {
+        return -1;
+    }
 
     if (Gbl_UseDefaultAmlFilename)
     {
         Gbl_OutputFilenamePrefix = Prefix;
     }
 
-    /*
-     * AML Disassembly (Optional)
-     */
+    /* AML Disassembly (Optional) */
+
     if (Gbl_DisasmFlag || Gbl_GetAllTables)
     {
         /* ACPI CA subsystem initialization */
 
-        Status = AcpiOsInitialize ();
-        AcpiUtInitGlobals ();
-        Status = AcpiUtMutexInitialize ();
+        Status = AdInitialize ();
         if (ACPI_FAILURE (Status))
         {
             return -1;
         }
 
-        Status = AcpiNsRootInitialize ();
+        Status = AcpiAllocateRootTable (4);
         if (ACPI_FAILURE (Status))
         {
+            AcpiOsPrintf ("Could not initialize ACPI Table Manager, %s\n",
+                AcpiFormatException (Status));
             return -1;
         }
 
@@ -768,8 +832,12 @@ main (
          * If -p not specified, we will use the input filename as the
          * output filename prefix
          */
-        FlSplitInputPathname (Gbl_Files[ASL_FILE_INPUT].Filename,
+        Status = FlSplitInputPathname (Gbl_Files[ASL_FILE_INPUT].Filename,
             &Gbl_DirectoryPath, &Prefix);
+        if (ACPI_FAILURE (Status))
+        {
+            return -1;
+        }
 
         if (Gbl_UseDefaultAmlFilename)
         {

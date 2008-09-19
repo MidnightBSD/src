@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  * Module Name: dmresrcs.c - "Small" Resource Descriptor disassembly
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  ******************************************************************************/
 
@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -135,13 +135,13 @@
  *
  * RETURN:      None
  *
- * DESCRIPTION: Decode a IRQ descriptor
+ * DESCRIPTION: Decode a IRQ descriptor, either Irq() or IrqNoFlags()
  *
  ******************************************************************************/
 
 void
 AcpiDmIrqDescriptor (
-    ASL_IRQ_FORMAT_DESC     *Resource,
+    AML_RESOURCE            *Resource,
     UINT32                  Length,
     UINT32                  Level)
 {
@@ -150,15 +150,23 @@ AcpiDmIrqDescriptor (
     AcpiOsPrintf ("%s (",
         AcpiGbl_IrqDecode [Length & 1]);
 
+    /* Decode flags byte if present */
+
     if (Length & 1)
     {
-        AcpiOsPrintf ("%s, %s, %s",
-            AcpiGbl_HEDecode [Resource->Flags & 1],
-            AcpiGbl_LLDecode [(Resource->Flags >> 3) & 1],
-            AcpiGbl_SHRDecode [(Resource->Flags >> 4) & 1]);
+        AcpiOsPrintf ("%s, %s, %s, ",
+            AcpiGbl_HeDecode [Resource->Irq.Flags & 1],
+            AcpiGbl_LlDecode [(Resource->Irq.Flags >> 3) & 1],
+            AcpiGbl_ShrDecode [(Resource->Irq.Flags >> 4) & 1]);
     }
 
-    AcpiDmBitList (Resource->IrqMask);
+    /* Insert a descriptor name */
+
+    AcpiDmDescriptorName ();
+    AcpiOsPrintf (")\n");
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmBitList (Resource->Irq.IrqMask);
 }
 
 
@@ -178,18 +186,24 @@ AcpiDmIrqDescriptor (
 
 void
 AcpiDmDmaDescriptor (
-    ASL_DMA_FORMAT_DESC     *Resource,
+    AML_RESOURCE            *Resource,
     UINT32                  Length,
     UINT32                  Level)
 {
 
     AcpiDmIndent (Level);
-    AcpiOsPrintf ("DMA (%s, %s, %s",
-            AcpiGbl_TYPDecode [(Resource->Flags >> 5) & 3],
-            AcpiGbl_BMDecode  [(Resource->Flags >> 2) & 1],
-            AcpiGbl_SIZDecode [(Resource->Flags >> 0) & 3]);
+    AcpiOsPrintf ("DMA (%s, %s, %s, ",
+            AcpiGbl_TypDecode [(Resource->Dma.Flags >> 5) & 3],
+            AcpiGbl_BmDecode  [(Resource->Dma.Flags >> 2) & 1],
+            AcpiGbl_SizDecode [(Resource->Dma.Flags >> 0) & 3]);
 
-    AcpiDmBitList (Resource->DmaChannelMask);
+    /* Insert a descriptor name */
+
+    AcpiDmDescriptorName ();
+    AcpiOsPrintf (")\n");
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmBitList (Resource->Dma.DmaChannelMask);
 }
 
 
@@ -209,18 +223,32 @@ AcpiDmDmaDescriptor (
 
 void
 AcpiDmIoDescriptor (
-    ASL_IO_PORT_DESC        *Resource,
+    AML_RESOURCE            *Resource,
     UINT32                  Length,
     UINT32                  Level)
 {
 
     AcpiDmIndent (Level);
-    AcpiOsPrintf ("IO (%s, 0x%4.4X, 0x%4.4X, 0x%2.2X, 0x%2.2X)\n",
-        AcpiGbl_IoDecode [(Resource->Information & 1)],
-        (UINT32) Resource->AddressMin,
-        (UINT32) Resource->AddressMax,
-        (UINT32) Resource->Alignment,
-        (UINT32) Resource->Length);
+    AcpiOsPrintf ("IO (%s,\n",
+        AcpiGbl_IoDecode [(Resource->Io.Flags & 1)]);
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDumpInteger16 (Resource->Io.Minimum, "Range Minimum");
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDumpInteger16 (Resource->Io.Maximum, "Range Maximum");
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDumpInteger8 (Resource->Io.Alignment, "Alignment");
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDumpInteger8 (Resource->Io.AddressLength, "Length");
+
+    /* Insert a descriptor name */
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDescriptorName ();
+    AcpiOsPrintf (")\n");
 }
 
 
@@ -240,15 +268,25 @@ AcpiDmIoDescriptor (
 
 void
 AcpiDmFixedIoDescriptor (
-    ASL_FIXED_IO_PORT_DESC  *Resource,
+    AML_RESOURCE            *Resource,
     UINT32                  Length,
     UINT32                  Level)
 {
 
     AcpiDmIndent (Level);
-    AcpiOsPrintf ("FixedIO (0x%4.4X, 0x%2.2X)\n",
-        (UINT32) Resource->BaseAddress,
-        (UINT32) Resource->Length);
+    AcpiOsPrintf ("FixedIO (\n");
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDumpInteger16 (Resource->FixedIo.Address, "Address");
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDumpInteger8 (Resource->FixedIo.AddressLength, "Length");
+
+    /* Insert a descriptor name */
+
+    AcpiDmIndent (Level + 1);
+    AcpiDmDescriptorName ();
+    AcpiOsPrintf (")\n");
 }
 
 
@@ -268,7 +306,7 @@ AcpiDmFixedIoDescriptor (
 
 void
 AcpiDmStartDependentDescriptor (
-    ASL_START_DEPENDENT_DESC *Resource,
+    AML_RESOURCE            *Resource,
     UINT32                  Length,
     UINT32                  Level)
 {
@@ -278,8 +316,8 @@ AcpiDmStartDependentDescriptor (
     if (Length & 1)
     {
         AcpiOsPrintf ("StartDependentFn (0x%2.2X, 0x%2.2X)\n",
-            (UINT32) Resource->Flags & 3,
-            (UINT32) (Resource->Flags >> 2) & 3);
+            (UINT32) Resource->StartDpf.Flags & 3,
+            (UINT32) (Resource->StartDpf.Flags >> 2) & 3);
     }
     else
     {
@@ -307,7 +345,7 @@ AcpiDmStartDependentDescriptor (
 
 void
 AcpiDmEndDependentDescriptor (
-    ASL_START_DEPENDENT_DESC *Resource,
+    AML_RESOURCE            *Resource,
     UINT32                  Length,
     UINT32                  Level)
 {
@@ -335,18 +373,15 @@ AcpiDmEndDependentDescriptor (
 
 void
 AcpiDmVendorSmallDescriptor (
-    ASL_SMALL_VENDOR_DESC   *Resource,
+    AML_RESOURCE            *Resource,
     UINT32                  Length,
     UINT32                  Level)
 {
 
-    AcpiDmIndent (Level);
-    AcpiOsPrintf ("VendorShort () {");
-
-    AcpiDmDisasmByteList (0, (UINT8 *) Resource->VendorDefined, Length);
-    AcpiOsPrintf ("}\n");
+    AcpiDmVendorCommon ("Short",
+        ACPI_ADD_PTR (UINT8, Resource, sizeof (AML_RESOURCE_SMALL_HEADER)),
+        Length, Level);
 }
 
 #endif
-
 

@@ -2,7 +2,7 @@
 /******************************************************************************
  *
  * Module Name: hwacpi - ACPI Hardware Initialization/Mode Interface
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -10,7 +10,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -126,49 +126,6 @@
 
 /******************************************************************************
  *
- * FUNCTION:    AcpiHwInitialize
- *
- * PARAMETERS:  None
- *
- * RETURN:      Status
- *
- * DESCRIPTION: Initialize and validate various ACPI registers
- *
- ******************************************************************************/
-
-ACPI_STATUS
-AcpiHwInitialize (
-    void)
-{
-    ACPI_STATUS             Status;
-
-
-    ACPI_FUNCTION_TRACE ("HwInitialize");
-
-
-    /* We must have the ACPI tables by the time we get here */
-
-    if (!AcpiGbl_FADT)
-    {
-        ACPI_DEBUG_PRINT ((ACPI_DB_ERROR, "A FADT is not loaded\n"));
-
-        return_ACPI_STATUS (AE_NO_ACPI_TABLES);
-    }
-
-    /* Sanity check the FADT for valid values */
-
-    Status = AcpiUtValidateFadt ();
-    if (ACPI_FAILURE (Status))
-    {
-        return_ACPI_STATUS (Status);
-    }
-
-    return_ACPI_STATUS (AE_OK);
-}
-
-
-/******************************************************************************
- *
  * FUNCTION:    AcpiHwSetMode
  *
  * PARAMETERS:  Mode            - SYS_MODE_ACPI or SYS_MODE_LEGACY
@@ -188,15 +145,15 @@ AcpiHwSetMode (
     UINT32                  Retry;
 
 
-    ACPI_FUNCTION_TRACE ("HwSetMode");
+    ACPI_FUNCTION_TRACE (HwSetMode);
 
     /*
      * ACPI 2.0 clarified that if SMI_CMD in FADT is zero,
      * system does not support mode transition.
      */
-    if (!AcpiGbl_FADT->SmiCmd)
+    if (!AcpiGbl_FADT.SmiCommand)
     {
-        ACPI_REPORT_ERROR (("No SMI_CMD in FADT, mode transition failed.\n"));
+        ACPI_ERROR ((AE_INFO, "No SMI_CMD in FADT, mode transition failed"));
         return_ACPI_STATUS (AE_NO_HARDWARE_RESPONSE);
     }
 
@@ -207,9 +164,10 @@ AcpiHwSetMode (
      * we make sure both the numbers are zero to determine these
      * transitions are not supported.
      */
-    if (!AcpiGbl_FADT->AcpiEnable && !AcpiGbl_FADT->AcpiDisable)
+    if (!AcpiGbl_FADT.AcpiEnable && !AcpiGbl_FADT.AcpiDisable)
     {
-        ACPI_REPORT_ERROR (("No ACPI mode transition supported in this system (enable/disable both zero)\n"));
+        ACPI_ERROR ((AE_INFO,
+            "No ACPI mode transition supported in this system (enable/disable both zero)"));
         return_ACPI_STATUS (AE_OK);
     }
 
@@ -219,8 +177,8 @@ AcpiHwSetMode (
 
         /* BIOS should have disabled ALL fixed and GP events */
 
-        Status = AcpiOsWritePort (AcpiGbl_FADT->SmiCmd,
-                        (UINT32) AcpiGbl_FADT->AcpiEnable, 8);
+        Status = AcpiOsWritePort (AcpiGbl_FADT.SmiCommand,
+                        (UINT32) AcpiGbl_FADT.AcpiEnable, 8);
         ACPI_DEBUG_PRINT ((ACPI_DB_INFO, "Attempting to enable ACPI mode\n"));
         break;
 
@@ -230,8 +188,8 @@ AcpiHwSetMode (
          * BIOS should clear all fixed status bits and restore fixed event
          * enable bits to default
          */
-        Status = AcpiOsWritePort (AcpiGbl_FADT->SmiCmd,
-                    (UINT32) AcpiGbl_FADT->AcpiDisable, 8);
+        Status = AcpiOsWritePort (AcpiGbl_FADT.SmiCommand,
+                    (UINT32) AcpiGbl_FADT.AcpiDisable, 8);
         ACPI_DEBUG_PRINT ((ACPI_DB_INFO,
                     "Attempting to enable Legacy (non-ACPI) mode\n"));
         break;
@@ -242,7 +200,8 @@ AcpiHwSetMode (
 
     if (ACPI_FAILURE (Status))
     {
-        ACPI_REPORT_ERROR (("Could not write mode change, %s\n", AcpiFormatException (Status)));
+        ACPI_EXCEPTION ((AE_INFO, Status,
+            "Could not write ACPI mode change"));
         return_ACPI_STATUS (Status);
     }
 
@@ -255,19 +214,20 @@ AcpiHwSetMode (
     {
         if (AcpiHwGetMode() == Mode)
         {
-            ACPI_DEBUG_PRINT ((ACPI_DB_INFO, "Mode %X successfully enabled\n", Mode));
+            ACPI_DEBUG_PRINT ((ACPI_DB_INFO, "Mode %X successfully enabled\n",
+                Mode));
             return_ACPI_STATUS (AE_OK);
         }
         AcpiOsStall(1000);
         Retry--;
     }
 
-    ACPI_REPORT_ERROR (("Hardware never changed modes\n"));
+    ACPI_ERROR ((AE_INFO, "Hardware did not change modes"));
     return_ACPI_STATUS (AE_NO_HARDWARE_RESPONSE);
 }
 
 
-/******************************************************************************
+/*******************************************************************************
  *
  * FUNCTION:    AcpiHwGetMode
  *
@@ -281,36 +241,37 @@ AcpiHwSetMode (
  ******************************************************************************/
 
 UINT32
-AcpiHwGetMode (void)
+AcpiHwGetMode (
+    void)
 {
     ACPI_STATUS             Status;
     UINT32                  Value;
 
 
-    ACPI_FUNCTION_TRACE ("HwGetMode");
+    ACPI_FUNCTION_TRACE (HwGetMode);
 
 
     /*
      * ACPI 2.0 clarified that if SMI_CMD in FADT is zero,
      * system does not support mode transition.
      */
-    if (!AcpiGbl_FADT->SmiCmd)
+    if (!AcpiGbl_FADT.SmiCommand)
     {
-        return_VALUE (ACPI_SYS_MODE_ACPI);
+        return_UINT32 (ACPI_SYS_MODE_ACPI);
     }
 
-    Status = AcpiGetRegister (ACPI_BITREG_SCI_ENABLE, &Value, ACPI_MTX_LOCK);
+    Status = AcpiGetRegister (ACPI_BITREG_SCI_ENABLE, &Value);
     if (ACPI_FAILURE (Status))
     {
-        return_VALUE (ACPI_SYS_MODE_LEGACY);
+        return_UINT32 (ACPI_SYS_MODE_LEGACY);
     }
 
     if (Value)
     {
-        return_VALUE (ACPI_SYS_MODE_ACPI);
+        return_UINT32 (ACPI_SYS_MODE_ACPI);
     }
     else
     {
-        return_VALUE (ACPI_SYS_MODE_LEGACY);
+        return_UINT32 (ACPI_SYS_MODE_LEGACY);
     }
 }

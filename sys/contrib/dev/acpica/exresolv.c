@@ -2,7 +2,7 @@
 /******************************************************************************
  *
  * Module Name: exresolv - AML Interpreter object resolution
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -10,7 +10,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -128,6 +128,13 @@
 #define _COMPONENT          ACPI_EXECUTER
         ACPI_MODULE_NAME    ("exresolv")
 
+/* Local prototypes */
+
+static ACPI_STATUS
+AcpiExResolveObjectToValue (
+    ACPI_OPERAND_OBJECT     **StackPtr,
+    ACPI_WALK_STATE         *WalkState);
+
 
 /*******************************************************************************
  *
@@ -152,12 +159,12 @@ AcpiExResolveToValue (
     ACPI_STATUS             Status;
 
 
-    ACPI_FUNCTION_TRACE_PTR ("ExResolveToValue", StackPtr);
+    ACPI_FUNCTION_TRACE_PTR (ExResolveToValue, StackPtr);
 
 
     if (!StackPtr || !*StackPtr)
     {
-        ACPI_DEBUG_PRINT ((ACPI_DB_ERROR, "Internal - null pointer\n"));
+        ACPI_ERROR ((AE_INFO, "Internal - null pointer"));
         return_ACPI_STATUS (AE_AML_NO_OPERAND);
     }
 
@@ -172,6 +179,12 @@ AcpiExResolveToValue (
         if (ACPI_FAILURE (Status))
         {
             return_ACPI_STATUS (Status);
+        }
+
+        if (!*StackPtr)
+        {
+            ACPI_ERROR ((AE_INFO, "Internal - null pointer"));
+            return_ACPI_STATUS (AE_AML_NO_OPERAND);
         }
     }
 
@@ -199,30 +212,28 @@ AcpiExResolveToValue (
  *
  * FUNCTION:    AcpiExResolveObjectToValue
  *
- * PARAMETERS:  StackPtr        - Pointer to a stack location that contains a
- *                                ptr to an internal object.
+ * PARAMETERS:  StackPtr        - Pointer to an internal object
  *              WalkState       - Current method state
  *
  * RETURN:      Status
  *
- * DESCRIPTION: Retrieve the value from an internal object.  The Reference type
+ * DESCRIPTION: Retrieve the value from an internal object. The Reference type
  *              uses the associated AML opcode to determine the value.
  *
  ******************************************************************************/
 
-ACPI_STATUS
+static ACPI_STATUS
 AcpiExResolveObjectToValue (
     ACPI_OPERAND_OBJECT     **StackPtr,
     ACPI_WALK_STATE         *WalkState)
 {
     ACPI_STATUS             Status = AE_OK;
     ACPI_OPERAND_OBJECT     *StackDesc;
-    void                    *TempNode;
-    ACPI_OPERAND_OBJECT     *ObjDesc;
+    ACPI_OPERAND_OBJECT     *ObjDesc = NULL;
     UINT16                  Opcode;
 
 
-    ACPI_FUNCTION_TRACE ("ExResolveObjectToValue");
+    ACPI_FUNCTION_TRACE (ExResolveObjectToValue);
 
 
     StackDesc = *StackPtr;
@@ -237,24 +248,6 @@ AcpiExResolveObjectToValue (
 
         switch (Opcode)
         {
-        case AML_NAME_OP:
-
-            /*
-             * Convert indirect name ptr to a direct name ptr.
-             * Then, AcpiExResolveNodeToValue can be used to get the value
-             */
-            TempNode = StackDesc->Reference.Object;
-
-            /* Delete the Reference Object */
-
-            AcpiUtRemoveReference (StackDesc);
-
-            /* Put direct name pointer onto stack and exit */
-
-            (*StackPtr) = TempNode;
-            break;
-
-
         case AML_LOCAL_OP:
         case AML_ARG_OP:
 
@@ -311,8 +304,8 @@ AcpiExResolveObjectToValue (
                      * A NULL object descriptor means an unitialized element of
                      * the package, can't dereference it
                      */
-                    ACPI_DEBUG_PRINT ((ACPI_DB_ERROR,
-                        "Attempt to deref an Index to NULL pkg element Idx=%p\n",
+                    ACPI_ERROR ((AE_INFO,
+                        "Attempt to deref an Index to NULL pkg element Idx=%p",
                         StackDesc));
                     Status = AE_AML_UNINITIALIZED_ELEMENT;
                 }
@@ -323,8 +316,8 @@ AcpiExResolveObjectToValue (
 
                 /* Invalid reference object */
 
-                ACPI_REPORT_ERROR ((
-                    "During resolve, Unknown TargetType %X in Index/Reference obj %p\n",
+                ACPI_ERROR ((AE_INFO,
+                    "Unknown TargetType %X in Index/Reference obj %p",
                     StackDesc->Reference.TargetType, StackDesc));
                 Status = AE_AML_INTERNAL;
                 break;
@@ -340,10 +333,32 @@ AcpiExResolveObjectToValue (
 
             break;
 
+        case AML_INT_NAMEPATH_OP:   /* Reference to a named object */
+
+            /* Dereference the name */
+
+            if ((StackDesc->Reference.Node->Type == ACPI_TYPE_DEVICE) ||
+                (StackDesc->Reference.Node->Type == ACPI_TYPE_THERMAL))
+            {
+                /* These node types do not have 'real' subobjects */
+
+                *StackPtr = (void *) StackDesc->Reference.Node;
+            }
+            else
+            {
+                /* Get the object pointed to by the namespace node */
+
+                *StackPtr = (StackDesc->Reference.Node)->Object;
+                AcpiUtAddReference (*StackPtr);
+            }
+
+            AcpiUtRemoveReference (StackDesc);
+            break;
 
         default:
 
-            ACPI_REPORT_ERROR (("During resolve, Unknown Reference opcode %X (%s) in %p\n",
+            ACPI_ERROR ((AE_INFO,
+                "Unknown Reference opcode %X (%s) in %p",
                 Opcode, AcpiPsGetOpcodeName (Opcode), StackDesc));
             Status = AE_AML_INTERNAL;
             break;
@@ -363,9 +378,6 @@ AcpiExResolveObjectToValue (
         break;
 
 
-    /*
-     * These cases may never happen here, but just in case..
-     */
     case ACPI_TYPE_BUFFER_FIELD:
     case ACPI_TYPE_LOCAL_REGION_FIELD:
     case ACPI_TYPE_LOCAL_BANK_FIELD:
@@ -375,6 +387,10 @@ AcpiExResolveObjectToValue (
             StackDesc, ACPI_GET_OBJECT_TYPE (StackDesc)));
 
         Status = AcpiExReadDataFromField (WalkState, StackDesc, &ObjDesc);
+
+        /* Remove a reference to the original operand, then override */
+
+        AcpiUtRemoveReference (*StackPtr);
         *StackPtr = (void *) ObjDesc;
         break;
 
@@ -415,13 +431,11 @@ AcpiExResolveMultiple (
     ACPI_STATUS             Status;
 
 
-    ACPI_FUNCTION_TRACE ("AcpiExResolveMultiple");
+    ACPI_FUNCTION_TRACE (AcpiExResolveMultiple);
 
 
+    /* Operand can be either a namespace node or an operand descriptor */
 
-    /* 
-     * Operand can be either a namespace node or an operand descriptor
-     */
     switch (ACPI_GET_DESCRIPTOR_TYPE (ObjDesc))
     {
     case ACPI_DESC_TYPE_OPERAND:
@@ -445,10 +459,8 @@ AcpiExResolveMultiple (
         return_ACPI_STATUS (AE_AML_OPERAND_TYPE);
     }
 
+    /* If type is anything other than a reference, we are done */
 
-    /*
-     * If type is anything other than a reference, we are done 
-     */
     if (Type != ACPI_TYPE_LOCAL_REFERENCE)
     {
         goto Exit;
@@ -465,17 +477,26 @@ AcpiExResolveMultiple (
         switch (ObjDesc->Reference.Opcode)
         {
         case AML_REF_OF_OP:
+        case AML_INT_NAMEPATH_OP:
 
             /* Dereference the reference pointer */
 
-            Node = ObjDesc->Reference.Object;
+            if (ObjDesc->Reference.Opcode == AML_REF_OF_OP)
+            {
+                Node = ObjDesc->Reference.Object;
+            }
+            else /* AML_INT_NAMEPATH_OP */
+            {
+                Node = ObjDesc->Reference.Node;
+            }
 
             /* All "References" point to a NS node */
 
             if (ACPI_GET_DESCRIPTOR_TYPE (Node) != ACPI_DESC_TYPE_NAMED)
             {
-                ACPI_REPORT_ERROR (("AcpiExResolveMultiple: Not a NS node %p [%s]\n",
-                        Node, AcpiUtGetDescriptorName (Node)));
+                ACPI_ERROR ((AE_INFO,
+                    "Not a NS node %p [%s]",
+                    Node, AcpiUtGetDescriptorName (Node)));
                 return_ACPI_STATUS (AE_AML_INTERNAL);
             }
 
@@ -517,40 +538,12 @@ AcpiExResolveMultiple (
              * This could of course in turn be another reference object.
              */
             ObjDesc = *(ObjDesc->Reference.Where);
-            break;
-
-
-        case AML_INT_NAMEPATH_OP:
-
-            /* Dereference the reference pointer */
-
-            Node = ObjDesc->Reference.Node;
-
-            /* All "References" point to a NS node */
-
-            if (ACPI_GET_DESCRIPTOR_TYPE (Node) != ACPI_DESC_TYPE_NAMED)
-            {
-                ACPI_REPORT_ERROR (("AcpiExResolveMultiple: Not a NS node %p [%s]\n",
-                        Node, AcpiUtGetDescriptorName (Node)));
-               return_ACPI_STATUS (AE_AML_INTERNAL);
-            }
-
-            /* Get the attached object */
-
-            ObjDesc = AcpiNsGetAttachedObject (Node);
             if (!ObjDesc)
             {
-                /* No object, use the NS node type */
+                /* NULL package elements are allowed */
 
-                Type = AcpiNsGetType (Node);
+                Type = 0; /* Uninitialized */
                 goto Exit;
-            }
-
-            /* Check for circular references */
-
-            if (ObjDesc == Operand)
-            {
-                return_ACPI_STATUS (AE_AML_CIRCULAR_REFERENCE);
             }
             break;
 
@@ -561,7 +554,7 @@ AcpiExResolveMultiple (
             if (ReturnDesc)
             {
                 Status = AcpiDsMethodDataGetValue (ObjDesc->Reference.Opcode,
-                                ObjDesc->Reference.Offset, WalkState, &ObjDesc);
+                            ObjDesc->Reference.Offset, WalkState, &ObjDesc);
                 if (ACPI_FAILURE (Status))
                 {
                     return_ACPI_STATUS (Status);
@@ -597,7 +590,8 @@ AcpiExResolveMultiple (
 
         default:
 
-            ACPI_REPORT_ERROR (("AcpiExResolveMultiple: Unknown Reference subtype %X\n",
+            ACPI_ERROR ((AE_INFO,
+                "Unknown Reference subtype %X",
                 ObjDesc->Reference.Opcode));
             return_ACPI_STATUS (AE_AML_INTERNAL);
         }

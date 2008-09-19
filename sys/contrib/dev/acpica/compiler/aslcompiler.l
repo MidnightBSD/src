@@ -3,7 +3,7 @@
 /******************************************************************************
  *
  * Module Name: aslcompiler.l - Flex input file
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -11,7 +11,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -119,7 +119,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "aslcompiler.h"
+#include <contrib/dev/acpica/compiler/aslcompiler.h>
 #include "aslcompiler.y.h"
 YYSTYPE AslCompilerlval;
 
@@ -357,6 +357,7 @@ NamePathTail                [.]{NameSeg}
 "MutexObj"                  { count (0); return (PARSEOP_OBJECTTYPE_MTX); }
 "OpRegionObj"               { count (0); return (PARSEOP_OBJECTTYPE_OPR); }
 "PowerResObj"               { count (0); return (PARSEOP_OBJECTTYPE_POW); }
+"ProcessorObj"              { count (0); return (PARSEOP_OBJECTTYPE_PRO); }
 "ThermalZoneObj"            { count (0); return (PARSEOP_OBJECTTYPE_THZ); }
 "BuffFieldObj"              { count (0); return (PARSEOP_OBJECTTYPE_BFF); }
 "DDBHandleObj"              { count (0); return (PARSEOP_OBJECTTYPE_DDB); }
@@ -476,7 +477,7 @@ NamePathTail                [.]{NameSeg}
                                 if (strcmp (AslCompilertext, "\\"))
                                 {
                                     strcpy (s, "____");
-                                    ACPI_STRUPR (AslCompilertext);
+                                    AcpiUtStrupr (AslCompilertext);
                                 }
                                 memcpy (s, AslCompilertext, strlen (AslCompilertext));
                                 AslCompilerlval.s = s;
@@ -486,7 +487,7 @@ NamePathTail                [.]{NameSeg}
 {NameString}                { char *s;
                                 count (0);
                                 s=malloc (strlen (AslCompilertext)+1);
-                                ACPI_STRUPR (AslCompilertext);
+                                AcpiUtStrupr (AslCompilertext);
                                 strcpy (s, AslCompilertext);
                                 s[strlen (AslCompilertext)] = 0;
                                 AslCompilerlval.s = s;
@@ -578,7 +579,7 @@ AslPopInputFileStack (
 
     /* All done with this node */
 
-    ACPI_MEM_FREE (Fnode);
+    ACPI_FREE (Fnode);
     return 0;
 }
 
@@ -925,7 +926,8 @@ comment2 (void)
 char
 literal (void)
 {
-    char                *s = MsgBuffer;
+    char                *StringBuffer = MsgBuffer;
+    char                *EndBuffer = MsgBuffer + ASL_MSG_BUFFER_SIZE;
     char                *CleanString;
     char                StringChar;
     UINT32              State = ASL_NORMAL_CHAR;
@@ -1060,8 +1062,12 @@ DoCharacter:
                 }
                 else
                 {
-                    *s = (char) Digit;
-                    s++;
+                    *StringBuffer = (char) Digit;
+                    StringBuffer++;
+                    if (StringBuffer >= EndBuffer)
+                    {
+                        goto BufferOverflow;
+                    }
                 }
 
                 State = ASL_NORMAL_CHAR;
@@ -1101,8 +1107,12 @@ DoCharacter:
                 }
                 else
                 {
-                    *s = (char) Digit;
-                    s++;
+                    *StringBuffer = (char) Digit;
+                    StringBuffer++;
+                    if (StringBuffer >= EndBuffer)
+                    {
+                        goto BufferOverflow;
+                    }
                 }
 
                 State = ASL_NORMAL_CHAR;
@@ -1119,8 +1129,12 @@ DoCharacter:
 
         /* Save the finished character */
 
-        *s = StringChar;
-        s++;
+        *StringBuffer = StringChar;
+        StringBuffer++;
+        if (StringBuffer >= EndBuffer)
+        {
+            goto BufferOverflow;
+        }
     }
 
     /*
@@ -1137,7 +1151,7 @@ CompletedString:
     /*
      * Null terminate the input string and copy string to a new buffer
      */
-    *s = 0;
+    *StringBuffer = 0;
 
     CleanString = UtGetStringBuffer (strlen (MsgBuffer) + 1);
     if (!CleanString)
@@ -1152,6 +1166,17 @@ CompletedString:
     ACPI_STRCPY (CleanString, MsgBuffer);
     AslCompilerlval.s = CleanString;
     return (TRUE);
+
+
+BufferOverflow:
+
+    /* Literal was too long */
+
+    AslCommonError (ASL_ERROR, ASL_MSG_STRING_LENGTH,
+                    Gbl_CurrentLineNumber, Gbl_LogicalLineNumber,
+                    Gbl_CurrentLineOffset, Gbl_CurrentColumn,
+                    Gbl_Files[ASL_FILE_INPUT].Filename, "Max length 4096");
+    return (FALSE);
 }
 
 

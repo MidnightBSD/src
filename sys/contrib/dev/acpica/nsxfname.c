@@ -2,7 +2,7 @@
  *
  * Module Name: nsxfname - Public interfaces to the ACPI subsystem
  *                         ACPI Namespace oriented interfaces
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -10,7 +10,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -130,9 +130,9 @@
  * FUNCTION:    AcpiGetHandle
  *
  * PARAMETERS:  Parent          - Object to search under (search scope).
- *              PathName        - Pointer to an asciiz string containing the
- *                                  name
- *              RetHandle       - Where the return handle is placed
+ *              Pathname        - Pointer to an asciiz string containing the
+ *                                name
+ *              RetHandle       - Where the return handle is returned
  *
  * RETURN:      Status
  *
@@ -168,41 +168,42 @@ AcpiGetHandle (
 
     if (Parent)
     {
-        Status = AcpiUtAcquireMutex (ACPI_MTX_NAMESPACE);
-        if (ACPI_FAILURE (Status))
-        {
-            return (Status);
-        }
-
         PrefixNode = AcpiNsMapHandleToNode (Parent);
         if (!PrefixNode)
         {
-            (void) AcpiUtReleaseMutex (ACPI_MTX_NAMESPACE);
             return (AE_BAD_PARAMETER);
         }
-
-        Status = AcpiUtReleaseMutex (ACPI_MTX_NAMESPACE);
-        if (ACPI_FAILURE (Status))
-        {
-            return (Status);
-        }
-    }
-
-    /* Special case for root, since we can't search for it */
-
-    if (ACPI_STRCMP (Pathname, ACPI_NS_ROOT_PATH) == 0)
-    {
-        *RetHandle = AcpiNsConvertEntryToHandle (AcpiGbl_RootNode);
-        return (AE_OK);
     }
 
     /*
-     *  Find the Node and convert to a handle
+     * Valid cases are:
+     * 1) Fully qualified pathname
+     * 2) Parent + Relative pathname
+     *
+     * Error for <null Parent + relative path>
      */
-    Status = AcpiNsGetNodeByPath (Pathname, PrefixNode, ACPI_NS_NO_UPSEARCH,
-                    &Node);
+    if (AcpiNsValidRootPrefix (Pathname[0]))
+    {
+        /* Pathname is fully qualified (starts with '\') */
 
-    *RetHandle = NULL;
+        /* Special case for root-only, since we can't search for it */
+
+        if (!ACPI_STRCMP (Pathname, ACPI_NS_ROOT_PATH))
+        {
+            *RetHandle = AcpiNsConvertEntryToHandle (AcpiGbl_RootNode);
+            return (AE_OK);
+        }
+    }
+    else if (!PrefixNode)
+    {
+        /* Relative path with null prefix is disallowed */
+
+        return (AE_BAD_PARAMETER);
+    }
+
+    /* Find the Node and convert to a handle */
+
+    Status = AcpiNsGetNode (PrefixNode, Pathname, ACPI_NS_NO_UPSEARCH, &Node);
     if (ACPI_SUCCESS (Status))
     {
         *RetHandle = AcpiNsConvertEntryToHandle (Node);
@@ -210,6 +211,8 @@ AcpiGetHandle (
 
     return (Status);
 }
+
+ACPI_EXPORT_SYMBOL (AcpiGetHandle)
 
 
 /******************************************************************************
@@ -298,13 +301,15 @@ UnlockAndExit:
     return (Status);
 }
 
+ACPI_EXPORT_SYMBOL (AcpiGetName)
+
 
 /******************************************************************************
  *
  * FUNCTION:    AcpiGetObjectInfo
  *
  * PARAMETERS:  Handle          - Object Handle
- *              Info            - Where the info is returned
+ *              Buffer          - Where the info is returned
  *
  * RETURN:      Status
  *
@@ -321,7 +326,7 @@ AcpiGetObjectInfo (
 {
     ACPI_STATUS             Status;
     ACPI_NAMESPACE_NODE     *Node;
-    ACPI_DEVICE_INFO        Info;
+    ACPI_DEVICE_INFO        *Info;
     ACPI_DEVICE_INFO        *ReturnInfo;
     ACPI_COMPATIBLE_ID_LIST *CidList = NULL;
     ACPI_SIZE               Size;
@@ -340,61 +345,66 @@ AcpiGetObjectInfo (
         return (Status);
     }
 
+    Info = ACPI_ALLOCATE_ZEROED (sizeof (ACPI_DEVICE_INFO));
+    if (!Info)
+    {
+        return (AE_NO_MEMORY);
+    }
+
     Status = AcpiUtAcquireMutex (ACPI_MTX_NAMESPACE);
     if (ACPI_FAILURE (Status))
     {
-        return (Status);
+        goto Cleanup;
     }
 
     Node = AcpiNsMapHandleToNode (Handle);
     if (!Node)
     {
         (void) AcpiUtReleaseMutex (ACPI_MTX_NAMESPACE);
-        return (AE_BAD_PARAMETER);
+        goto Cleanup;
     }
 
     /* Init return structure */
 
     Size = sizeof (ACPI_DEVICE_INFO);
-    ACPI_MEMSET (&Info, 0, Size);
 
-    Info.Type  = Node->Type;
-    Info.Name  = Node->Name.Integer;
-    Info.Valid = 0;
+    Info->Type  = Node->Type;
+    Info->Name  = Node->Name.Integer;
+    Info->Valid = 0;
 
     Status = AcpiUtReleaseMutex (ACPI_MTX_NAMESPACE);
     if (ACPI_FAILURE (Status))
     {
-        return (Status);
+        goto Cleanup;
     }
 
     /* If not a device, we are all done */
 
-    if (Info.Type == ACPI_TYPE_DEVICE)
+    if (Info->Type == ACPI_TYPE_DEVICE)
     {
         /*
          * Get extra info for ACPI Devices objects only:
          * Run the Device _HID, _UID, _CID, _STA, _ADR and _SxD methods.
          *
          * Note: none of these methods are required, so they may or may
-         * not be present for this device.  The Info.Valid bitfield is used
+         * not be present for this device.  The Info->Valid bitfield is used
          * to indicate which methods were found and ran successfully.
          */
 
         /* Execute the Device._HID method */
 
-        Status = AcpiUtExecute_HID (Node, &Info.HardwareId);
+        Status = AcpiUtExecute_HID (Node, &Info->HardwareId);
         if (ACPI_SUCCESS (Status))
         {
-            Info.Valid |= ACPI_VALID_HID;
+            Info->Valid |= ACPI_VALID_HID;
         }
 
         /* Execute the Device._UID method */
 
-        Status = AcpiUtExecute_UID (Node, &Info.UniqueId);
+        Status = AcpiUtExecute_UID (Node, &Info->UniqueId);
         if (ACPI_SUCCESS (Status))
         {
-            Info.Valid |= ACPI_VALID_UID;
+            Info->Valid |= ACPI_VALID_UID;
         }
 
         /* Execute the Device._CID method */
@@ -402,37 +412,34 @@ AcpiGetObjectInfo (
         Status = AcpiUtExecute_CID (Node, &CidList);
         if (ACPI_SUCCESS (Status))
         {
-            Size += ((ACPI_SIZE) CidList->Count - 1) *
-                                 sizeof (ACPI_COMPATIBLE_ID);
-            Info.Valid |= ACPI_VALID_CID;
+            Size += CidList->Size;
+            Info->Valid |= ACPI_VALID_CID;
         }
 
         /* Execute the Device._STA method */
 
-        Status = AcpiUtExecute_STA (Node, &Info.CurrentStatus);
+        Status = AcpiUtExecute_STA (Node, &Info->CurrentStatus);
         if (ACPI_SUCCESS (Status))
         {
-            Info.Valid |= ACPI_VALID_STA;
+            Info->Valid |= ACPI_VALID_STA;
         }
 
         /* Execute the Device._ADR method */
 
         Status = AcpiUtEvaluateNumericObject (METHOD_NAME__ADR, Node,
-                        &Info.Address);
+                        &Info->Address);
         if (ACPI_SUCCESS (Status))
         {
-            Info.Valid |= ACPI_VALID_ADR;
+            Info->Valid |= ACPI_VALID_ADR;
         }
 
         /* Execute the Device._SxD methods */
 
-        Status = AcpiUtExecute_Sxds (Node, Info.HighestDstates);
+        Status = AcpiUtExecute_Sxds (Node, Info->HighestDstates);
         if (ACPI_SUCCESS (Status))
         {
-            Info.Valid |= ACPI_VALID_SXDS;
+            Info->Valid |= ACPI_VALID_SXDS;
         }
-
-        Status = AE_OK;
     }
 
     /* Validate/Allocate/Clear caller buffer */
@@ -446,7 +453,7 @@ AcpiGetObjectInfo (
     /* Populate the return buffer */
 
     ReturnInfo = Buffer->Pointer;
-    ACPI_MEMCPY (ReturnInfo, &Info, sizeof (ACPI_DEVICE_INFO));
+    ACPI_MEMCPY (ReturnInfo, Info, sizeof (ACPI_DEVICE_INFO));
 
     if (CidList)
     {
@@ -455,10 +462,13 @@ AcpiGetObjectInfo (
 
 
 Cleanup:
+    ACPI_FREE (Info);
     if (CidList)
     {
-        ACPI_MEM_FREE (CidList);
+        ACPI_FREE (CidList);
     }
     return (Status);
 }
+
+ACPI_EXPORT_SYMBOL (AcpiGetObjectInfo)
 

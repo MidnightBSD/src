@@ -2,7 +2,7 @@
 /******************************************************************************
  *
  * Module Name: aslmap - parser to AML opcode mapping table
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -10,7 +10,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -116,9 +116,9 @@
  *****************************************************************************/
 
 
-#include "aslcompiler.h"
-#include "amlcode.h"
-#include "acparser.h"
+#include <contrib/dev/acpica/compiler/aslcompiler.h>
+#include <contrib/dev/acpica/amlcode.h>
+#include <contrib/dev/acpica/acparser.h>
 
 
 #define _COMPONENT          ACPI_COMPILER
@@ -167,6 +167,56 @@ AslMapNamedOpcodeToDataType (
     }
 
     return (ACPI_TYPE_ANY);
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    MpDisplayReservedNames
+ *
+ * PARAMETERS:  None
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Print the table above
+ *
+ ******************************************************************************/
+
+void
+MpDisplayReservedNames (
+    void)
+{
+    UINT32              i;
+
+    printf ("Reserved name information\n\n");
+
+    for (i = 0; ReservedMethods[i].Name; i++)
+    {
+        printf ("%s    ", ReservedMethods[i].Name);
+
+        if (ReservedMethods[i].Flags & ASL_RSVD_SCOPE)
+        {
+            printf ("Reserved scope name\n");
+        }
+        else if (ReservedMethods[i].Flags & ASL_RSVD_RESOURCE_NAME)
+        {
+            printf ("Resource data type reserved field name\n");
+        }
+        else
+        {
+            printf ("Method with %d arguments, ",
+                ReservedMethods[i].NumArguments);
+
+            if (ReservedMethods[i].Flags & ASL_RSVD_RETURN_VALUE)
+            {
+                printf ("must return a value\n");
+            }
+            else
+            {
+                printf ("no return value\n");
+            }
+        }
+    }
 }
 
 
@@ -258,7 +308,7 @@ const ASL_RESERVED_INFO         ReservedMethods[] = {
     {"_EJ3",     1,      0},
     {"_EJ4",     1,      0},
     {"_EJD",     0,      ASL_RSVD_RETURN_VALUE},
-    {"_ERR",     2,      ASL_RSVD_RETURN_VALUE},
+    {"_ERR",     3,      ASL_RSVD_RETURN_VALUE},
     {"_FDE",     0,      ASL_RSVD_RETURN_VALUE},
     {"_FDI",     0,      ASL_RSVD_RETURN_VALUE},
     {"_FDM",     1,      0},
@@ -371,6 +421,7 @@ const ASL_RESERVED_INFO         ReservedMethods[] = {
     {"_SWS",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
     {"_TC1",     0,      ASL_RSVD_RETURN_VALUE},
     {"_TC2",     0,      ASL_RSVD_RETURN_VALUE},
+    {"_TDL",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0b */
     {"_TMP",     0,      ASL_RSVD_RETURN_VALUE},
     {"_TPC",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
     {"_TPT",     1,      0},                        /* Acpi 3.0 */
@@ -395,56 +446,10 @@ const ASL_RESERVED_INFO         ReservedMethods[] = {
     {"_UPP",     0,      ASL_RSVD_RETURN_VALUE},    /* Acpi 3.0 */
     {"_VPO",     0,      ASL_RSVD_RETURN_VALUE},
     {"_WAK",     1,      ASL_RSVD_RETURN_VALUE},
+    {"_WDG",     0,      ASL_RSVD_RETURN_VALUE},    /* MS Extension */
+    {"_WED",     1,      ASL_RSVD_RETURN_VALUE},    /* MS Extension */
     {NULL,       0,      0},
 };
-
-
-/*******************************************************************************
- *
- * FUNCTION:    MpDisplayReservedNames
- *
- * PARAMETERS:  None
- *
- * RETURN:      None
- *
- * DESCRIPTION: Print the table above
- *
- ******************************************************************************/
-
-void
-MpDisplayReservedNames (
-    void)
-{
-    UINT32              i;
-
-    printf ("Reserved name information\n\n");
-
-    for (i = 0; ReservedMethods[i].Name; i++)
-    {
-        printf ("%s    ", ReservedMethods[i].Name);
-
-        if (ReservedMethods[i].Flags & ASL_RSVD_SCOPE)
-        {
-            printf ("Reserved scope name\n");
-        }
-        else if (ReservedMethods[i].Flags & ASL_RSVD_RESOURCE_NAME)
-        {
-            printf ("Resource data type reserved field name\n");
-        }
-        else
-        {
-            printf ("Method with %d arguments, ", ReservedMethods[i].NumArguments);
-            if (ReservedMethods[i].Flags & ASL_RSVD_RETURN_VALUE)
-            {
-                printf ("must return a value\n");
-            }
-            else
-            {
-                printf ("no return value\n");
-            }
-        }
-    }
-}
 
 
 /*******************************************************************************
@@ -549,6 +554,7 @@ const ASL_MAPPING_ENTRY     AslKeywordMapping [] =
 /* ELSE */                      OP_TABLE_ENTRY (AML_ELSE_OP,                0,                              NODE_AML_PACKAGE,   0),
 /* ELSEIF */                    OP_TABLE_ENTRY (AML_DEFAULT_ARG_OP,         0,                              NODE_AML_PACKAGE,   0),
 /* ENDDEPENDENTFN */            OP_TABLE_ENTRY (AML_DEFAULT_ARG_OP,         0,                              0,                  0),
+/* ENDTAG */                    OP_TABLE_ENTRY (AML_DEFAULT_ARG_OP,         0,                              0,                  0),
 /* ERRORNODE */                 OP_TABLE_ENTRY (AML_NOOP_OP,                0,                              0,                  0),
 /* EVENT */                     OP_TABLE_ENTRY (AML_EVENT_OP,               0,                              0,                  0),
 /* EXTENDEDIO */                OP_TABLE_ENTRY (AML_BYTE_OP,                0,                              0,                  0),
@@ -647,6 +653,7 @@ const ASL_MAPPING_ENTRY     AslKeywordMapping [] =
 /* OBJECTTYPE_OPR */            OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_TYPE_REGION,               0,                  0),
 /* OBJECTTYPE_PKG */            OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_TYPE_PACKAGE,              0,                  0),
 /* OBJECTTYPE_POW */            OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_TYPE_POWER,                0,                  0),
+/* OBJECTTYPE_PRO */            OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_TYPE_PROCESSOR,            0,                  0),
 /* OBJECTTYPE_STR */            OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_TYPE_STRING,               0,                  0),
 /* OBJECTTYPE_THZ */            OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_TYPE_THERMAL,              0,                  0),
 /* OBJECTTYPE_UNK */            OP_TABLE_ENTRY (AML_BYTE_OP,                ACPI_TYPE_ANY,                  0,                  0),
@@ -706,7 +713,7 @@ const ASL_MAPPING_ENTRY     AslKeywordMapping [] =
 /* THERMALZONE */               OP_TABLE_ENTRY (AML_THERMAL_ZONE_OP,        0,                              NODE_AML_PACKAGE,   0),
 /* TIMER */                     OP_TABLE_ENTRY (AML_TIMER_OP,               0,                              0,                  ACPI_BTYPE_INTEGER),
 /* TOBCD */                     OP_TABLE_ENTRY (AML_TO_BCD_OP,              0,                              0,                  ACPI_BTYPE_INTEGER),
-/* TOBUFFER */                  OP_TABLE_ENTRY (AML_TO_BUFFER_OP,           0,                              0,                  ACPI_BTYPE_COMPUTE_DATA),
+/* TOBUFFER */                  OP_TABLE_ENTRY (AML_TO_BUFFER_OP,           0,                              0,                  ACPI_BTYPE_BUFFER),
 /* TODECIMALSTRING */           OP_TABLE_ENTRY (AML_TO_DECSTRING_OP,        0,                              0,                  ACPI_BTYPE_STRING),
 /* TOHEXSTRING */               OP_TABLE_ENTRY (AML_TO_HEXSTRING_OP,        0,                              0,                  ACPI_BTYPE_STRING),
 /* TOINTEGER */                 OP_TABLE_ENTRY (AML_TO_INTEGER_OP,          0,                              0,                  ACPI_BTYPE_INTEGER),

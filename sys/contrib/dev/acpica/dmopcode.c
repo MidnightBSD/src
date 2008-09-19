@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  * Module Name: dmopcode - AML disassembler, specific AML opcodes
- *              $Revision: 1.1.1.2 $
+ *              $Revision: 1.2 $
  *
  ******************************************************************************/
 
@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -124,6 +124,12 @@
 #define _COMPONENT          ACPI_CA_DEBUGGER
         ACPI_MODULE_NAME    ("dmopcode")
 
+/* Local prototypes */
+
+static void
+AcpiDmMatchKeyword (
+    ACPI_PARSE_OBJECT       *Op);
+
 
 /*******************************************************************************
  *
@@ -196,16 +202,16 @@ AcpiDmFieldFlags (
     UINT32                  Flags;
 
 
-    /* The next Op contains the flags */
+    /* The next peer Op (not child op) contains the flags */
 
-    Op = AcpiPsGetDepthNext (NULL, Op);
+    Op = Op->Common.Next;
     Flags = (UINT8) Op->Common.Value.Integer;
 
     /* Mark the Op as completed */
 
     Op->Common.DisasmFlags |= ACPI_PARSEOP_IGNORE;
 
-    AcpiOsPrintf ("%s, ", AcpiGbl_AccessTypes [Flags & 0x0F]);
+    AcpiOsPrintf ("%s, ", AcpiGbl_AccessTypes [Flags & 0x07]);
     AcpiOsPrintf ("%s, ", AcpiGbl_LockRule [(Flags & 0x10) >> 4]);
     AcpiOsPrintf ("%s)",  AcpiGbl_UpdateRules [(Flags & 0x60) >> 5]);
 }
@@ -328,19 +334,20 @@ AcpiDmMatchOp (
  *
  ******************************************************************************/
 
-void
+static void
 AcpiDmMatchKeyword (
     ACPI_PARSE_OBJECT       *Op)
 {
 
 
-    if (((UINT32) Op->Common.Value.Integer) >= ACPI_NUM_MATCH_OPS)
+    if (((UINT32) Op->Common.Value.Integer) > ACPI_MAX_MATCH_OPCODE)
     {
         AcpiOsPrintf ("/* Unknown Match Keyword encoding */");
     }
     else
     {
-        AcpiOsPrintf ("%s", (char *) (uintptr_t)AcpiGbl_MatchOps[(ACPI_SIZE) Op->Common.Value.Integer]);
+        AcpiOsPrintf ("%s", ACPI_CAST_PTR (char,
+            AcpiGbl_MatchOps[(ACPI_SIZE) Op->Common.Value.Integer]));
     }
 }
 
@@ -368,6 +375,8 @@ AcpiDmDisassembleOneOp (
     const ACPI_OPCODE_INFO  *OpInfo = NULL;
     UINT32                  Offset;
     UINT32                  Length;
+    ACPI_PARSE_OBJECT       *Child;
+    ACPI_STATUS             Status;
 
 
     if (!Op)
@@ -383,37 +392,51 @@ AcpiDmDisassembleOneOp (
         AcpiDmMatchKeyword (Op);
         return;
 
+    case ACPI_DASM_LNOT_SUFFIX:
+        switch (Op->Common.AmlOpcode)
+        {
+        case AML_LEQUAL_OP:
+            AcpiOsPrintf ("LNotEqual");
+            break;
+
+        case AML_LGREATER_OP:
+            AcpiOsPrintf ("LLessEqual");
+            break;
+
+        case AML_LLESS_OP:
+            AcpiOsPrintf ("LGreaterEqual");
+            break;
+        }
+        Op->Common.DisasmOpcode = 0;
+        Op->Common.DisasmFlags |= ACPI_PARSEOP_IGNORE;
+        return;
+
     default:
         break;
     }
+
+
+    OpInfo = AcpiPsGetOpcodeInfo (Op->Common.AmlOpcode);
 
     /* The op and arguments */
 
     switch (Op->Common.AmlOpcode)
     {
-    case AML_ZERO_OP:
+    case AML_LNOT_OP:
 
-        AcpiOsPrintf ("Zero");
+        Child = Op->Common.Value.Arg;
+        if ((Child->Common.AmlOpcode == AML_LEQUAL_OP) ||
+            (Child->Common.AmlOpcode == AML_LGREATER_OP) ||
+            (Child->Common.AmlOpcode == AML_LLESS_OP))
+        {
+            Child->Common.DisasmOpcode = ACPI_DASM_LNOT_SUFFIX;
+            Op->Common.DisasmOpcode = ACPI_DASM_LNOT_PREFIX;
+        }
+        else
+        {
+            AcpiOsPrintf ("%s", OpInfo->Name);
+        }
         break;
-
-
-    case AML_ONE_OP:
-
-        AcpiOsPrintf ("One");
-        break;
-
-
-    case AML_ONES_OP:
-
-        AcpiOsPrintf ("Ones");
-        break;
-
-
-    case AML_REVISION_OP:
-
-        AcpiOsPrintf ("Revision");
-        break;
-
 
     case AML_BYTE_OP:
 
@@ -474,12 +497,19 @@ AcpiDmDisassembleOneOp (
          * types of buffers, we have to closely look at the data in the
          * buffer to determine the type.
          */
-        if (AcpiDmIsResourceDescriptor (Op))
+        Status = AcpiDmIsResourceTemplate (Op);
+        if (ACPI_SUCCESS (Status))
         {
             Op->Common.DisasmOpcode = ACPI_DASM_RESOURCE;
             AcpiOsPrintf ("ResourceTemplate");
+            break;
         }
-        else if (AcpiDmIsUnicodeBuffer (Op))
+        else if (Status == AE_AML_NO_RESOURCE_END_TAG)
+        {
+            AcpiOsPrintf ("/**** Is ResourceTemplate, but EndTag not at buffer end ****/ ");
+        }
+
+        if (AcpiDmIsUnicodeBuffer (Op))
         {
             Op->Common.DisasmOpcode = ACPI_DASM_UNICODE;
             AcpiOsPrintf ("Unicode (");
@@ -513,14 +543,14 @@ AcpiDmDisassembleOneOp (
     case AML_INT_NAMEPATH_OP:
 
         AcpiDmNamestring (Op->Common.Value.Name);
-        AcpiDmValidateName (Op->Common.Value.Name, Op);
         break;
 
 
     case AML_INT_NAMEDFIELD_OP:
 
         Length = AcpiDmDumpName ((char *) &Op->Named.Name);
-        AcpiOsPrintf (",%*.s  %d", (int) (5 - Length), " ", (UINT32) Op->Common.Value.Integer);
+        AcpiOsPrintf (",%*.s  %d", (int) (5 - Length), " ",
+            (UINT32) Op->Common.Value.Integer);
         AcpiDmCommaIfFieldMember (Op);
 
         Info->BitOffset += (UINT32) Op->Common.Value.Integer;
@@ -536,7 +566,7 @@ AcpiDmDisassembleOneOp (
 
         if (Info->BitOffset % 8 == 0)
         {
-            AcpiOsPrintf ("Offset (0x%.2X)", ACPI_DIV_8 (Info->BitOffset));
+            AcpiOsPrintf ("        Offset (0x%.2X)", ACPI_DIV_8 (Info->BitOffset));
         }
         else
         {
@@ -549,8 +579,8 @@ AcpiDmDisassembleOneOp (
 
     case AML_INT_ACCESSFIELD_OP:
 
-        AcpiOsPrintf ("AccessAs (%s, ",
-            AcpiGbl_AccessTypes [(UINT32) Op->Common.Value.Integer >> 8]);
+        AcpiOsPrintf ("        AccessAs (%s, ",
+            AcpiGbl_AccessTypes [(UINT32) (Op->Common.Value.Integer >> 8) & 0x7]);
 
         AcpiDmDecodeAttribute ((UINT8) Op->Common.Value.Integer);
         AcpiOsPrintf (")");
@@ -566,7 +596,6 @@ AcpiDmDisassembleOneOp (
 
     case AML_INT_METHODCALL_OP:
 
-        OpInfo = AcpiPsGetOpcodeInfo (Op->Common.AmlOpcode);
         Op = AcpiPsGetDepthNext (NULL, Op);
         Op->Common.DisasmFlags |= ACPI_PARSEOP_IGNORE;
 
@@ -578,7 +607,6 @@ AcpiDmDisassembleOneOp (
 
         /* Just get the opcode name and print it */
 
-        OpInfo = AcpiPsGetOpcodeInfo (Op->Common.AmlOpcode);
         AcpiOsPrintf ("%s", OpInfo->Name);
 
 
@@ -587,12 +615,15 @@ AcpiDmDisassembleOneOp (
         if ((Op->Common.AmlOpcode == AML_INT_RETURN_VALUE_OP) &&
             (WalkState) &&
             (WalkState->Results) &&
-            (WalkState->Results->Results.NumResults))
+            (WalkState->ResultCount))
         {
             AcpiDmDecodeInternalObject (
-                WalkState->Results->Results.ObjDesc [WalkState->Results->Results.NumResults-1]);
+                WalkState->Results->Results.ObjDesc [
+                    (WalkState->ResultCount - 1) %
+                        ACPI_RESULTS_FRAME_OBJ_NUM]);
         }
 #endif
+
         break;
     }
 }

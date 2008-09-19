@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Name: acnamesp.h - Namespace subcomponent prototypes and defines
- *       $Revision: 1.1.1.2 $
+ *       $Revision: 1.2 $
  *
  *****************************************************************************/
 
@@ -9,7 +9,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -130,17 +130,6 @@
 #define ACPI_NS_NEWSCOPE            1   /* a definition of this type opens a name scope */
 #define ACPI_NS_LOCAL               2   /* suppress search of enclosing scopes */
 
-
-/* Definitions of the predefined namespace names  */
-
-#define ACPI_UNKNOWN_NAME           (UINT32) 0x3F3F3F3F     /* Unknown name is  "????" */
-#define ACPI_ROOT_NAME              (UINT32) 0x5F5F5F5C     /* Root name is     "\___" */
-#define ACPI_SYS_BUS_NAME           (UINT32) 0x5F53425F     /* Sys bus name is  "_SB_" */
-
-#define ACPI_NS_ROOT_PATH           "\\"
-#define ACPI_NS_SYSTEM_BUS          "_SB_"
-
-
 /* Flags for AcpiNsLookup, AcpiNsSearchAndEnter */
 
 #define ACPI_NS_NO_UPSEARCH         0
@@ -148,15 +137,20 @@
 #define ACPI_NS_DONT_OPEN_SCOPE     0x02
 #define ACPI_NS_NO_PEER_SEARCH      0x04
 #define ACPI_NS_ERROR_IF_FOUND      0x08
+#define ACPI_NS_PREFIX_IS_SCOPE     0x10
+#define ACPI_NS_EXTERNAL            0x20
+#define ACPI_NS_TEMPORARY           0x40
 
-#define ACPI_NS_WALK_UNLOCK         TRUE
-#define ACPI_NS_WALK_NO_UNLOCK      FALSE
+/* Flags for AcpiNsWalkNamespace */
+
+#define ACPI_NS_WALK_NO_UNLOCK      0
+#define ACPI_NS_WALK_UNLOCK         0x01
+#define ACPI_NS_WALK_TEMP_NODES     0x02
 
 
-ACPI_STATUS
-AcpiNsLoadNamespace (
-    void);
-
+/*
+ * nsinit - Namespace initialization
+ */
 ACPI_STATUS
 AcpiNsInitializeObjects (
     void);
@@ -166,29 +160,28 @@ AcpiNsInitializeDevices (
     void);
 
 
-/* Namespace init - nsxfinit */
+/*
+ * nsload -  Namespace loading
+ */
+ACPI_STATUS
+AcpiNsLoadNamespace (
+    void);
 
 ACPI_STATUS
-AcpiNsInitOneDevice (
-    ACPI_HANDLE             ObjHandle,
-    UINT32                  NestingLevel,
-    void                    *Context,
-    void                    **ReturnValue);
-
-ACPI_STATUS
-AcpiNsInitOneObject (
-    ACPI_HANDLE             ObjHandle,
-    UINT32                  Level,
-    void                    *Context,
-    void                    **ReturnValue);
+AcpiNsLoadTable (
+    ACPI_NATIVE_UINT        TableIndex,
+    ACPI_NAMESPACE_NODE     *Node);
 
 
+/*
+ * nswalk - walk the namespace
+ */
 ACPI_STATUS
 AcpiNsWalkNamespace (
     ACPI_OBJECT_TYPE        Type,
     ACPI_HANDLE             StartObject,
     UINT32                  MaxDepth,
-    BOOLEAN                 UnlockBeforeCallback,
+    UINT32                  Flags,
     ACPI_WALK_CALLBACK      UserFunction,
     void                    *Context,
     void                    **ReturnValue);
@@ -199,37 +192,24 @@ AcpiNsGetNextNode (
     ACPI_NAMESPACE_NODE     *Parent,
     ACPI_NAMESPACE_NODE     *Child);
 
-void
-AcpiNsDeleteNamespaceByOwner (
-    UINT16                  TableId);
 
-
-/* Namespace loading - nsload */
+/*
+ * nsparse - table parsing
+ */
+ACPI_STATUS
+AcpiNsParseTable (
+    ACPI_NATIVE_UINT        TableIndex,
+    ACPI_NAMESPACE_NODE     *StartNode);
 
 ACPI_STATUS
 AcpiNsOneCompleteParse (
-    UINT32                  PassNumber,
-    ACPI_TABLE_DESC         *TableDesc);
-
-ACPI_STATUS
-AcpiNsParseTable (
-    ACPI_TABLE_DESC         *TableDesc,
-    ACPI_NAMESPACE_NODE     *Scope);
-
-ACPI_STATUS
-AcpiNsLoadTable (
-    ACPI_TABLE_DESC         *TableDesc,
-    ACPI_NAMESPACE_NODE     *Node);
-
-ACPI_STATUS
-AcpiNsLoadTableByType (
-    ACPI_TABLE_TYPE         TableType);
+    ACPI_NATIVE_UINT        PassNumber,
+    ACPI_NATIVE_UINT        TableIndex);
 
 
 /*
- * Top-level namespace access - nsaccess
+ * nsaccess - Top-level namespace access
  */
-
 ACPI_STATUS
 AcpiNsRootInitialize (
     void);
@@ -246,9 +226,8 @@ AcpiNsLookup (
 
 
 /*
- * Named object allocation/deallocation - nsalloc
+ * nsalloc - Named object allocation/deallocation
  */
-
 ACPI_NAMESPACE_NODE *
 AcpiNsCreateNode (
     UINT32                  Name);
@@ -260,6 +239,10 @@ AcpiNsDeleteNode (
 void
 AcpiNsDeleteNamespaceSubtree (
     ACPI_NAMESPACE_NODE     *ParentHandle);
+
+void
+AcpiNsDeleteNamespaceByOwner (
+    ACPI_OWNER_ID           OwnerId);
 
 void
 AcpiNsDetachObject (
@@ -274,28 +257,10 @@ AcpiNsCompareNames (
     char                    *Name1,
     char                    *Name2);
 
-void
-AcpiNsRemoveReference (
-    ACPI_NAMESPACE_NODE     *Node);
-
 
 /*
- * Namespace modification - nsmodify
+ * nsdump - Namespace dump/print utilities
  */
-
-ACPI_STATUS
-AcpiNsUnloadNamespace (
-    ACPI_HANDLE             Handle);
-
-ACPI_STATUS
-AcpiNsDeleteSubtree (
-    ACPI_HANDLE             StartHandle);
-
-
-/*
- * Namespace dump/print utilities - nsdump
- */
-
 void
 AcpiNsDumpTables (
     ACPI_HANDLE             SearchBase,
@@ -319,17 +284,6 @@ AcpiNsPrintPathname (
     char                    *Pathname);
 
 ACPI_STATUS
-AcpiNsDumpOneDevice (
-    ACPI_HANDLE             ObjHandle,
-    UINT32                  Level,
-    void                    *Context,
-    void                    **ReturnValue);
-
-void
-AcpiNsDumpRootDevices (
-    void);
-
-ACPI_STATUS
 AcpiNsDumpOneObject (
     ACPI_HANDLE             ObjHandle,
     UINT32                  Level,
@@ -341,50 +295,21 @@ AcpiNsDumpObjects (
     ACPI_OBJECT_TYPE        Type,
     UINT8                   DisplayType,
     UINT32                  MaxDepth,
-    UINT32                  OwnderId,
+    ACPI_OWNER_ID           OwnerId,
     ACPI_HANDLE             StartHandle);
 
 
 /*
- * Namespace evaluation functions - nseval
+ * nseval - Namespace evaluation functions
  */
-
 ACPI_STATUS
-AcpiNsEvaluateByHandle (
-    ACPI_PARAMETER_INFO     *Info);
-
-ACPI_STATUS
-AcpiNsEvaluateByName (
-    char                    *Pathname,
-    ACPI_PARAMETER_INFO     *Info);
-
-ACPI_STATUS
-AcpiNsEvaluateRelative (
-    char                    *Pathname,
-    ACPI_PARAMETER_INFO     *Info);
-
-ACPI_STATUS
-AcpiNsExecuteControlMethod (
-    ACPI_PARAMETER_INFO     *Info);
-
-ACPI_STATUS
-AcpiNsGetObjectValue (
-    ACPI_PARAMETER_INFO     *Info);
+AcpiNsEvaluate (
+    ACPI_EVALUATE_INFO      *Info);
 
 
 /*
- * Parent/Child/Peer utility functions
+ * nsnames - Name and Scope manipulation
  */
-
-ACPI_NAME
-AcpiNsFindParentName (
-    ACPI_NAMESPACE_NODE     *NodeToSearch);
-
-
-/*
- * Name and Scope manipulation - nsnames
- */
-
 UINT32
 AcpiNsOpensScope (
     ACPI_OBJECT_TYPE        Type);
@@ -414,9 +339,9 @@ AcpiNsPatternMatch (
     char                    *SearchFor);
 
 ACPI_STATUS
-AcpiNsGetNodeByPath (
+AcpiNsGetNode (
+    ACPI_NAMESPACE_NODE     *PrefixNode,
     char                    *ExternalPathname,
-    ACPI_NAMESPACE_NODE     *InPrefixNode,
     UINT32                  Flags,
     ACPI_NAMESPACE_NODE     **OutNode);
 
@@ -426,9 +351,8 @@ AcpiNsGetPathnameLength (
 
 
 /*
- * Object management for namespace nodes - nsobject
+ * nsobject - Object management for namespace nodes
  */
-
 ACPI_STATUS
 AcpiNsAttachObject (
     ACPI_NAMESPACE_NODE     *Node,
@@ -462,9 +386,8 @@ AcpiNsGetAttachedData (
 
 
 /*
- * Namespace searching and entry - nssearch
+ * nssearch - Namespace searching and entry
  */
-
 ACPI_STATUS
 AcpiNsSearchAndEnter (
     UINT32                  EntryName,
@@ -476,7 +399,7 @@ AcpiNsSearchAndEnter (
     ACPI_NAMESPACE_NODE     **RetNode);
 
 ACPI_STATUS
-AcpiNsSearchNode (
+AcpiNsSearchOneScope (
     UINT32                  EntryName,
     ACPI_NAMESPACE_NODE     *Node,
     ACPI_OBJECT_TYPE        Type,
@@ -491,16 +414,11 @@ AcpiNsInstallNode (
 
 
 /*
- * Utility functions - nsutils
+ * nsutils - Utility functions
  */
-
 BOOLEAN
 AcpiNsValidRootPrefix (
     char                    Prefix);
-
-BOOLEAN
-AcpiNsValidPathSeparator (
-    char                    Sep);
 
 ACPI_OBJECT_TYPE
 AcpiNsGetType (
@@ -514,7 +432,6 @@ void
 AcpiNsReportError (
     char                    *ModuleName,
     UINT32                  LineNumber,
-    UINT32                  ComponentId,
     char                    *InternalName,
     ACPI_STATUS             LookupStatus);
 
@@ -522,7 +439,6 @@ void
 AcpiNsReportMethodError (
     char                    *ModuleName,
     UINT32                  LineNumber,
-    UINT32                  ComponentId,
     char                    *Message,
     ACPI_NAMESPACE_NODE     *Node,
     char                    *Path,
@@ -573,6 +489,5 @@ AcpiNsGetParentNode (
 ACPI_NAMESPACE_NODE *
 AcpiNsGetNextValidNode (
     ACPI_NAMESPACE_NODE     *Node);
-
 
 #endif /* __ACNAMESP_H__ */

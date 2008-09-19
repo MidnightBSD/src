@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2004, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2007, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -137,6 +137,10 @@
 extern FILE                    *AcpiGbl_DebugFile;
 FILE                           *AcpiGbl_OutputFile;
 
+ACPI_PHYSICAL_ADDRESS
+AeLocalGetRootPointer (
+    void);
+
 
 /******************************************************************************
  *
@@ -170,30 +174,20 @@ AcpiOsTerminate (void)
  *
  * FUNCTION:    AcpiOsGetRootPointer
  *
- * PARAMETERS:  Flags   - Logical or physical addressing mode
- *              Address - Where the address is returned
+ * PARAMETERS:  None
  *
- * RETURN:      Status
+ * RETURN:      RSDP physical address
  *
  * DESCRIPTION: Gets the root pointer (RSDP)
  *
  *****************************************************************************/
 
-ACPI_STATUS
+ACPI_PHYSICAL_ADDRESS
 AcpiOsGetRootPointer (
-    UINT32                  Flags,
-    ACPI_POINTER           *Address)
+    void)
 {
 
-#if 0
-    /* The supporting code for this is not yet available.
-     * Return to the old situation for now.
-     */
-    return (AeLocalGetRootPointer(Flags, Address));
-#else
-    return (AE_OK);
-#endif
-
+    return (AeLocalGetRootPointer ());
 }
 
 
@@ -254,11 +248,11 @@ AcpiOsTableOverride (
 
     *NewTable = NULL;
 
-#ifdef _ACPI_EXEC_APP
+#ifdef ACPI_EXEC_APP
 
     /* This code exercises the table override mechanism in the core */
 
-    if (!ACPI_STRNCMP (ExistingTable->Signature, DSDT_SIG, ACPI_NAME_SIZE))
+    if (ACPI_COMPARE_NAME (ExistingTable->Signature, ACPI_SIG_DSDT))
     {
         /* override DSDT with itself */
 
@@ -464,7 +458,6 @@ AcpiOsGetLine (
  *
  * PARAMETERS:  where               Physical address of memory to be mapped
  *              length              How much memory to map
- *              there               Logical address of mapped memory
  *
  * RETURN:      Pointer to mapped memory.  Null on error.
  *
@@ -472,15 +465,13 @@ AcpiOsGetLine (
  *
  *****************************************************************************/
 
-ACPI_STATUS
+void *
 AcpiOsMapMemory (
     ACPI_PHYSICAL_ADDRESS   where,
-    ACPI_SIZE               length,
-    void                    **there)
+    ACPI_SIZE               length)
 {
-    *there = ACPI_TO_POINTER (where);
 
-    return AE_OK;
+    return (ACPI_TO_POINTER ((ACPI_NATIVE_UINT) where));
 }
 
 
@@ -658,7 +649,7 @@ AcpiOsSignalSemaphore (
 
 ACPI_STATUS
 AcpiOsCreateLock (
-    ACPI_HANDLE             *OutHandle)
+    ACPI_SPINLOCK           *OutHandle)
 {
 
     return (AcpiOsCreateSemaphore (1, 1, OutHandle));
@@ -666,25 +657,25 @@ AcpiOsCreateLock (
 
 void
 AcpiOsDeleteLock (
-    ACPI_HANDLE             Handle)
+    ACPI_SPINLOCK           Handle)
 {
     AcpiOsDeleteSemaphore (Handle);
 }
 
 
-void
+ACPI_CPU_FLAGS
 AcpiOsAcquireLock (
-    ACPI_HANDLE             Handle,
-    UINT32                  Flags)
+    ACPI_HANDLE             Handle)
 {
     AcpiOsWaitSemaphore (Handle, 1, 0xFFFF);
+    return (0);
 }
 
 
 void
 AcpiOsReleaseLock (
-    ACPI_HANDLE             Handle,
-    UINT32                  Flags)
+    ACPI_SPINLOCK           Handle,
+    ACPI_CPU_FLAGS          Flags)
 {
     AcpiOsSignalSemaphore (Handle, 1);
 }
@@ -741,21 +732,21 @@ AcpiOsRemoveInterruptHandler (
 
 /******************************************************************************
  *
- * FUNCTION:    AcpiOsQueueForExecution
+ * FUNCTION:    AcpiOsExecute
  *
- * PARAMETERS:  Priority        - Requested execution priority
+ * PARAMETERS:  Type            - Type of execution
  *              Function        - Address of the function to execute
  *              Context         - Passed as a parameter to the function
  *
  * RETURN:      Status.
  *
- * DESCRIPTION: Sleep at microsecond granularity
+ * DESCRIPTION: Execute a new thread
  *
  *****************************************************************************/
 
 ACPI_STATUS
-AcpiOsQueueForExecution (
-    UINT32                  Priority,
+AcpiOsExecute (
+    ACPI_EXECUTE_TYPE       Type,
     ACPI_OSD_EXEC_CALLBACK  Function,
     void                    *Context)
 {
@@ -782,8 +773,6 @@ AcpiOsBreakpoint (
     char                    *Msg)
 {
 
-    /* Print the message and do an INT 3 */
-
     if (Msg)
     {
         AcpiOsPrintf ("AcpiOsBreakpoint: %s ****\n", Msg);
@@ -792,7 +781,6 @@ AcpiOsBreakpoint (
     {
         AcpiOsPrintf ("At AcpiOsBreakpoint ****\n");
     }
-
 
     return AE_OK;
 }
@@ -872,6 +860,55 @@ AcpiOsGetTimer (void)
     /* Seconds * 10^7 = 100ns(10^-7), Microseconds(10^-6) * 10^1 = 100ns */
 
     return (((UINT64) time.tv_sec * 10000000) + ((UINT64) time.tv_usec * 10));
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    AcpiOsValidateInterface
+ *
+ * PARAMETERS:  Interface           - Requested interface to be validated
+ *
+ * RETURN:      AE_OK if interface is supported, AE_SUPPORT otherwise
+ *
+ * DESCRIPTION: Match an interface string to the interfaces supported by the
+ *              host. Strings originate from an AML call to the _OSI method.
+ *
+ *****************************************************************************/
+
+ACPI_STATUS
+AcpiOsValidateInterface (
+    char                    *Interface)
+{
+
+    return (AE_SUPPORT);
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    AcpiOsValidateAddress
+ *
+ * PARAMETERS:  SpaceId             - ACPI space ID
+ *              Address             - Physical address
+ *              Length              - Address length
+ *
+ * RETURN:      AE_OK if Address/Length is valid for the SpaceId. Otherwise,
+ *              should return AE_AML_ILLEGAL_ADDRESS.
+ *
+ * DESCRIPTION: Validate a system address via the host OS. Used to validate
+ *              the addresses accessed by AML operation regions.
+ *
+ *****************************************************************************/
+
+ACPI_STATUS
+AcpiOsValidateAddress (
+    UINT8                   SpaceId,
+    ACPI_PHYSICAL_ADDRESS   Address,
+    ACPI_SIZE               Length)
+{
+
+    return (AE_OK);
 }
 
 
@@ -1066,7 +1103,7 @@ AcpiOsWriteMemory (
 }
 
 
-UINT32
+ACPI_THREAD_ID
 AcpiOsGetThreadId(void)
 {
     return getpid();
