@@ -33,7 +33,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGES.
  *
- * $Id: ah_devid.h,v 1.1.1.2 2006-02-25 02:36:09 laffer1 Exp $
+ * $Id: ah_devid.h,v 1.2 2008-09-19 02:07:52 laffer1 Exp $
  */
 
 #ifndef _DEV_ATH_DEVID_H_
@@ -87,6 +87,12 @@
 /* AR5213 */
 #define	AR5213_SREV_1_0		0x0055
 #define	AR5213_SREV_REG		0x4020
+
+/* AR5416  */
+#define AR5416_DEVID_EMU_PCI	0xff1d		/* PCI Owl Emulation*/
+#define AR5416_DEVID_EMU_PCIE	0xff1c		/* PCIe Owl Emulation*/
+#define AR5416_DEVID		0x0023          /* PCI (MB/CB) */
+#define AR5418_DEVID		0x0024          /* PCI Express (XB) */
 
 #define	AR_SUBVENDOR_ID_NOG	0x0e11		/* No 11G subvendor ID */
 #define AR_SUBVENDOR_ID_NEW_A	0x7065		/* Update device to new RD */

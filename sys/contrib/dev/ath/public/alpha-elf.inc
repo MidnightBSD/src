@@ -33,7 +33,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $Id: alpha-elf.inc,v 1.1.1.1 2006-02-25 02:36:12 laffer1 Exp $
+# $Id: alpha-elf.inc,v 1.2 2008-09-19 02:07:52 laffer1 Exp $
 #
 
 #
@@ -69,3 +69,8 @@ NM=	${TOOLPREFIX}nm
 AH_REGOPS_FUNC=1
 
 COPTS+=	-DAH_BYTE_ORDER=AH_LITTLE_ENDIAN
+#
+# NB: this should come from inttypes.h but can't until we cleanp
+#     the definition of va_list on linux
+#
+COPTS+=	-DAH_WORDSIZE=64

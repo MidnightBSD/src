@@ -33,7 +33,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $Id: mips1-le-elf.inc,v 1.1.1.2 2006-02-25 02:36:11 laffer1 Exp $
+# $Id: mips1-le-elf.inc,v 1.2 2008-09-19 02:07:54 laffer1 Exp $
 #
 
 #
@@ -60,6 +60,11 @@ LD=	${TOOLPREFIX}ld
 STRIP=	${TOOLPREFIX}strip
 OBJCOPY=${TOOLPREFIX}objcopy
 NM=	${TOOLPREFIX}nm
+
+#
+# Force register read/write operations to go through a function.
+#
+AH_REGOPS_FUNC=1
 
 LDOPTS=	-EL
 COPTS+=	-DAH_BYTE_ORDER=AH_LITTLE_ENDIAN

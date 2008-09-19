@@ -33,7 +33,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $Id: arm9-le-thumb-elf.inc,v 1.1.1.2 2006-02-25 02:36:09 laffer1 Exp $
+# $Id: arm9-le-thumb-elf.inc,v 1.2 2008-09-19 02:07:53 laffer1 Exp $
 #
 
 #
@@ -74,4 +74,5 @@ NM=	${TOOLPREFIX}nm
 
 LDOPTS=	-EL
 COPTS+=	-DAH_BYTE_ORDER=AH_LITTLE_ENDIAN
-COPTS+=	-mthumb -mlittle-endian -mcpu=arm9 -ffunction-sections -fdata-sections
+COPTS+=	-mthumb -mlittle-endian -mcpu=arm9 \
+	-ffunction-sections -fdata-sections

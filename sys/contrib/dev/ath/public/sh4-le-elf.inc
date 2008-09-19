@@ -33,7 +33,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $Id: sh4-le-elf.inc,v 1.1.1.2 2006-02-25 02:36:12 laffer1 Exp $
+# $Id: sh4-le-elf.inc,v 1.2 2008-09-19 02:07:54 laffer1 Exp $
 #
 
 #

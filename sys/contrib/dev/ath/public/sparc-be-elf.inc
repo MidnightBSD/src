@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
+# Copyright (c) 2002-2004 Sam Leffler, Errno Consulting
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,18 +33,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $Id: sparc64-be-elf.inc,v 1.2 2008-09-19 02:07:55 laffer1 Exp $
+# $Id: sparc-be-elf.inc,v 1.1 2008-09-19 02:07:54 laffer1 Exp $
 #
 
 #
-# Compilation configuration for building big-endian Sparc64 w/ elf.
+# Compilation configuration for building big-endian Sparc for 32-bit.
 #
 # Built with GNU cross-devel tools:
 #
 # PREFIX=/pub/gnu
 # BINUTILS=binutils-2.14
 # GCC=gcc-3.3.2
-# target=sparc64-elf
+# target=sparc-elf
 #
 # ${BINUTILS}/configure --target=$target --prefix=${PREFIX}
 # ${GCC}/configure --target=$target   --prefix=${PREFIX} \
@@ -52,7 +52,7 @@
 #	--with-newlib   --with-gxx-include-dir=${PREFIX}/$target/include
 #
 ifndef TOOLPREFIX
-TOOLPREFIX=	/pub/gnu/bin/sparc64-elf-
+TOOLPREFIX=	/pub/gnu/bin/sparc-elf-
 endif
 #
 CC=	${TOOLPREFIX}gcc
@@ -68,16 +68,5 @@ AH_REGOPS_FUNC=1
 
 LDOPTS=	-EB
 COPTS+=	-DAH_BYTE_ORDER=AH_BIG_ENDIAN
-#
-# NB: this should come from inttypes.h but can't until we cleanp
-#     the definition of va_list on linux
-#
-COPTS+=	-DAH_WORDSIZE=64
-COPTS+= -mcmodel=medlow
+COPTS+= -m32
 COPTS+= -mno-fpu
-#
-# Suppress TLS register usage; haven't figured out to do this
-# when we build the toolchain (so unfortunately we pollute the
-# build options).
-#
-COPTS+= -ffixed-g2 -ffixed-g3
