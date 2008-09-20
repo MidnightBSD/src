@@ -25,13 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
-__FBSDID("$FreeBSD: src/sys/fs/msdosfs/msdosfs_iconv.c,v 1.2 2003/12/26 17:24:37 trhodes Exp $");
+__FBSDID("$FreeBSD: src/sys/fs/msdosfs/msdosfs_iconv.c,v 1.4 2007/08/07 02:25:56 bde Exp $");
 
 #include <sys/param.h>
+#include <sys/iconv.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/mount.h>
-#include <sys/iconv.h>
 
 VFS_DECLARE_ICONV(msdosfs);

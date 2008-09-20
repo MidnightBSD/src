@@ -31,7 +31,7 @@
  *
  *	@(#)portal_vnops.c	8.14 (Berkeley) 5/21/95
  *
- * $FreeBSD: src/sys/fs/portalfs/portal_vnops.c,v 1.70 2005/03/28 09:33:52 jeff Exp $
+ * $FreeBSD: src/sys/fs/portalfs/portal_vnops.c,v 1.73 2007/03/13 01:50:23 tegge Exp $
  */
 
 /*
@@ -52,7 +52,7 @@
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/stat.h>
-#include <sys/sysproto.h>
+#include <sys/syscallsubr.h>
 #include <sys/systm.h>
 #include <sys/un.h>
 #include <sys/unpcb.h>
@@ -77,10 +77,8 @@ portal_closefd(td, fd)
 	int fd;
 {
 	int error;
-	struct close_args ua;
 
-	ua.fd = fd;
-	error = close(td, &ua);
+	error = kern_close(td, fd);
 	/*
 	 * We should never get an error, and there isn't anything
 	 * we could do if we got one, so just print a message.
@@ -156,6 +154,11 @@ portal_lookup(ap)
 
 	*vpp = fvp;
 	vn_lock(fvp, LK_EXCLUSIVE | LK_RETRY, td);
+	error = insmntque(fvp, dvp->v_mount);
+	if (error != 0) {
+		*vpp = NULLVP;
+		return (error);
+	}
 	return (0);
 
 bad:;
@@ -233,7 +236,7 @@ portal_open(ap)
 	/*
 	 * Can't be opened unless the caller is set up
 	 * to deal with the side effects.  Check for this
-	 * by testing whether the p_dupfd has been set.
+	 * by testing whether td_dupfd has been set.
 	 */
 	if (td->td_dupfd >= 0)
 		return (ENODEV);

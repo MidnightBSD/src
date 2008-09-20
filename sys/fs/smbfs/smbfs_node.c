@@ -29,17 +29,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_node.c,v 1.28.2.1 2006/03/12 21:50:01 scottl Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_node.c,v 1.34 2007/05/29 11:28:28 rwatson Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
+#include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/vnode.h>
@@ -64,8 +64,8 @@
 
 extern struct vop_vector smbfs_vnodeops;	/* XXX -> .h file */
 
-MALLOC_DEFINE(M_SMBNODE, "SMBFS node", "SMBFS vnode private part");
-static MALLOC_DEFINE(M_SMBNODENAME, "SMBFS nname", "SMBFS node name");
+MALLOC_DEFINE(M_SMBNODE, "smbufs_node", "SMBFS vnode private part");
+static MALLOC_DEFINE(M_SMBNODENAME, "smbufs_nname", "SMBFS node name");
 
 int smbfs_hashprint(struct mount *mp);
 
@@ -139,22 +139,16 @@ smbfs_name_free(u_char *name)
 
 	cp = name;
 	cp--;
-	if (*cp != 0xfc) {
-		printf("First byte of name entry '%s' corrupted\n", name);
-		kdb_enter("ditto");
-	}
+	if (*cp != 0xfc)
+		panic("First byte of name entry '%s' corrupted", name);
 	cp -= sizeof(int);
 	nmlen = *(int*)cp;
 	slen = strlen(name) + 1;
-	if (nmlen != slen) {
-		printf("Name length mismatch: was %d, now %d name '%s'\n",
+	if (nmlen != slen)
+		panic("Name length mismatch: was %d, now %d name '%s'",
 		    nmlen, slen, name);
-		kdb_enter("ditto");
-	}
-	if (name[nmlen] != 0xfe) {
-		printf("Last byte of name entry '%s' corrupted\n", name);
-		kdb_enter("ditto");
-	}
+	if (name[nmlen] != 0xfe)
+		panic("Last byte of name entry '%s' corrupted\n", name);
 	free(cp, M_SMBNODENAME);
 #else
 	free(name, M_SMBNODENAME);
@@ -240,6 +234,11 @@ loop:
 	if (error) {
 		FREE(np, M_SMBNODE);
 		return error;
+	}
+	error = insmntque(vp, mp);	/* XXX: Too early for mpsafe fs */
+	if (error != 0) {
+		FREE(np, M_SMBNODE);
+		return (error);
 	}
 	vp->v_type = fap->fa_attr & SMB_FA_DIR ? VDIR : VREG;
 	bzero(np, sizeof(*np));
@@ -421,6 +420,8 @@ smbfs_attr_cachelookup(struct vnode *vp, struct vattr *va)
 	va->va_type = vp->v_type;		/* vnode type (for create) */
 	if (vp->v_type == VREG) {
 		va->va_mode = smp->sm_file_mode; /* files access mode and type */
+		if (np->n_dosattr & SMB_FA_RDONLY)
+			va->va_mode &= ~(S_IWUSR|S_IWGRP|S_IWOTH);
 	} else if (vp->v_type == VDIR) {
 		va->va_mode = smp->sm_dir_mode;	/* files access mode and type */
 	} else

@@ -31,7 +31,7 @@
  *
  *	@(#)fdesc_vnops.c	8.9 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.99.2.2 2006/03/22 17:39:27 tegge Exp $
+ * $FreeBSD: src/sys/fs/fdescfs/fdesc_vnops.c,v 1.104 2007/04/04 09:11:32 rwatson Exp $
  */
 
 /*
@@ -74,7 +74,19 @@ static vop_readdir_t	fdesc_readdir;
 static vop_reclaim_t	fdesc_reclaim;
 static vop_setattr_t	fdesc_setattr;
 
-extern struct vop_vector fdesc_vnodeops;
+static struct vop_vector fdesc_vnodeops = {
+	.vop_default =		&default_vnodeops,
+
+	.vop_access =		VOP_NULL,
+	.vop_getattr =		fdesc_getattr,
+	.vop_inactive =		fdesc_inactive,
+	.vop_lookup =		fdesc_lookup,
+	.vop_open =		fdesc_open,
+	.vop_pathconf =		vop_stdpathconf,
+	.vop_readdir =		fdesc_readdir,
+	.vop_reclaim =		fdesc_reclaim,
+	.vop_setattr =		fdesc_setattr,
+};
 
 /*
  * Initialise cache headers
@@ -139,6 +151,13 @@ loop:
 	fd->fd_type = ftype;
 	fd->fd_fd = -1;
 	fd->fd_ix = ix;
+	/* XXX: vnode should be locked here */
+	error = insmntque(*vpp, mp); /* XXX: Too early for mpsafe fs */
+	if (error != 0) {
+		free(fd, M_TEMP);
+		*vpp = NULLVP;
+		goto out;
+	}
 	LIST_INSERT_HEAD(fc, fd, fd_hash);
 
 out:
@@ -438,7 +457,7 @@ fdesc_readdir(ap)
 
 	fcnt = i - 2;		/* The first two nodes are `.' and `..' */
 
-	FILEDESC_LOCK_FAST(fdp);
+	FILEDESC_SLOCK(fdp);
 	while (i < fdp->fd_nfiles + 2 && uio->uio_resid >= UIO_MX) {
 		switch (i) {
 		case 0:	/* `.' */
@@ -454,7 +473,7 @@ fdesc_readdir(ap)
 			break;
 		default:
 			if (fdp->fd_ofiles[fcnt] == NULL) {
-				FILEDESC_UNLOCK_FAST(fdp);
+				FILEDESC_SUNLOCK(fdp);
 				goto done;
 			}
 
@@ -468,15 +487,15 @@ fdesc_readdir(ap)
 		/*
 		 * And ship to userland
 		 */
-		FILEDESC_UNLOCK_FAST(fdp);
+		FILEDESC_SUNLOCK(fdp);
 		error = uiomove(dp, UIO_MX, uio);
 		if (error)
 			goto done;
-		FILEDESC_LOCK_FAST(fdp);
+		FILEDESC_SLOCK(fdp);
 		i++;
 		fcnt++;
 	}
-	FILEDESC_UNLOCK_FAST(fdp);
+	FILEDESC_SUNLOCK(fdp);
 
 done:
 	uio->uio_offset = i * UIO_MX;
@@ -515,17 +534,3 @@ fdesc_reclaim(ap)
 
 	return (0);
 }
-
-static struct vop_vector fdesc_vnodeops = {
-	.vop_default =		&default_vnodeops,
-
-	.vop_access =		VOP_NULL,
-	.vop_getattr =		fdesc_getattr,
-	.vop_inactive =		fdesc_inactive,
-	.vop_lookup =		fdesc_lookup,
-	.vop_open =		fdesc_open,
-	.vop_pathconf =		vop_stdpathconf,
-	.vop_readdir =		fdesc_readdir,
-	.vop_reclaim =		fdesc_reclaim,
-	.vop_setattr =		fdesc_setattr,
-};

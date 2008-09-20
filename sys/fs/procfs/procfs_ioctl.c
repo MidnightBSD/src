@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *      $FreeBSD: src/sys/fs/procfs/procfs_ioctl.c,v 1.12 2005/06/30 07:49:21 peter Exp $
+ *      $FreeBSD: src/sys/fs/procfs/procfs_ioctl.c,v 1.19 2007/06/12 00:11:58 rwatson Exp $
  */
 
 #include "opt_compat.h"
@@ -34,6 +34,7 @@
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/pioctl.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
 #include <sys/systm.h>
@@ -65,39 +66,70 @@ procfs_ioctl(PFS_IOCTL_ARGS)
 	struct procfs_status32 *ps32;
 #endif
 	int error, flags, sig;
+#ifdef COMPAT_FREEBSD6
+	int ival;
+#endif
 
-	PROC_LOCK(p);
+	KASSERT(p != NULL,
+	    ("%s() called without a process", __func__));
+	PROC_LOCK_ASSERT(p, MA_OWNED);
+
 	error = 0;
 	switch (cmd) {
 #if defined(COMPAT_FREEBSD5) || defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
 	case _IOC(IOC_IN, 'p', 1, 0):
 #endif
+#ifdef COMPAT_FREEBSD6
+	case _IO('p', 1):
+		ival = IOCPARM_IVAL(data);
+		data = &ival;
+#endif
 	case PIOCBIS:
-		p->p_stops |= *(uintptr_t *)data;
+		p->p_stops |= *(unsigned int *)data;
 		break;
 #if defined(COMPAT_FREEBSD5) || defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
 	case _IOC(IOC_IN, 'p', 2, 0):
 #endif
+#ifdef COMPAT_FREEBSD6
+	case _IO('p', 2):
+		ival = IOCPARM_IVAL(data);
+		data = &ival;
+#endif
 	case PIOCBIC:
-		p->p_stops &= ~*(uintptr_t *)data;
+		p->p_stops &= ~*(unsigned int *)data;
 		break;
 #if defined(COMPAT_FREEBSD5) || defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
 	case _IOC(IOC_IN, 'p', 3, 0):
 #endif
+#ifdef COMPAT_FREEBSD6
+	case _IO('p', 3):
+		ival = IOCPARM_IVAL(data);
+		data = &ival;
+#endif
 	case PIOCSFL:
-		flags = *(uintptr_t *)data;
-		if (flags & PF_ISUGID && (error = suser(td)) != 0)
-			break;
+		flags = *(unsigned int *)data;
+		if (flags & PF_ISUGID) {
+			/*
+			 * XXXRW: Is this specific check required here, as
+			 * p_candebug() should implement it, or other checks
+			 * are missing.
+			 */
+			error = priv_check(td, PRIV_DEBUG_SUGID);
+			if (error)
+				break;
+		}
 		p->p_pfsflags = flags;
 		break;
 	case PIOCGFL:
 		*(unsigned int *)data = p->p_pfsflags;
 		break;
 	case PIOCWAIT:
-		while (p->p_step == 0) {
+		while (p->p_step == 0 && (p->p_flag & P_WEXIT) == 0) {
 			/* sleep until p stops */
+			_PHOLD(p);
 			error = msleep(&p->p_stype, &p->p_mtx,
 			    PWAIT|PCATCH, "pioctl", 0);
+			_PRELE(p);
 			if (error != 0)
 				break;
 		}
@@ -112,10 +144,12 @@ procfs_ioctl(PFS_IOCTL_ARGS)
 		break;
 #ifdef COMPAT_IA32
 	case PIOCWAIT32:
-		while (p->p_step == 0) {
+		while (p->p_step == 0 && (p->p_flag & P_WEXIT) == 0) {
 			/* sleep until p stops */
+			_PHOLD(p);
 			error = msleep(&p->p_stype, &p->p_mtx,
 			    PWAIT|PCATCH, "pioctl", 0);
+			_PRELE(p);
 			if (error != 0)
 				break;
 		}
@@ -132,10 +166,15 @@ procfs_ioctl(PFS_IOCTL_ARGS)
 #if defined(COMPAT_FREEBSD5) || defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
 	case _IOC(IOC_IN, 'p', 5, 0):
 #endif
+#ifdef COMPAT_FREEBSD6
+	case _IO('p', 5):
+		ival = IOCPARM_IVAL(data);
+		data = &ival;
+#endif
 	case PIOCCONT:
 		if (p->p_step == 0)
 			break;
-		sig = *(uintptr_t *)data;
+		sig = *(unsigned int *)data;
 		if (sig != 0 && !_SIG_VALID(sig)) {
 			error = EINVAL;
 			break;
@@ -145,9 +184,9 @@ procfs_ioctl(PFS_IOCTL_ARGS)
 		if (P_SHOULDSTOP(p)) {
 			p->p_xstat = sig;
 			p->p_flag &= ~(P_STOPPED_TRACE|P_STOPPED_SIG);
-			mtx_lock_spin(&sched_lock);
+			PROC_SLOCK(p);
 			thread_unsuspend(p);
-			mtx_unlock_spin(&sched_lock);
+			PROC_SUNLOCK(p);
 		} else if (sig)
 			psignal(p, sig);
 #else
@@ -160,7 +199,6 @@ procfs_ioctl(PFS_IOCTL_ARGS)
 	default:
 		error = (ENOTTY);
 	}
-	PROC_UNLOCK(p);
 
 	return (error);
 }

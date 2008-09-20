@@ -31,17 +31,13 @@
  *	@(#)kernfs_vfsops.c	8.10 (Berkeley) 5/14/95
  * From: FreeBSD: src/sys/miscfs/kernfs/kernfs_vfsops.c 1.36
  *
- * $FreeBSD: src/sys/fs/devfs/devfs_vfsops.c,v 1.44.2.3 2005/09/26 14:36:52 phk Exp $
+ * $FreeBSD: src/sys/fs/devfs/devfs_vfsops.c,v 1.52 2006/09/26 04:12:45 tegge Exp $
  */
-
-#include "opt_devfs.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/proc.h>
@@ -81,12 +77,15 @@ devfs_mount(struct mount *mp, struct thread *td)
 	fmp = malloc(sizeof *fmp, M_DEVFS, M_WAITOK | M_ZERO);
 	fmp->dm_idx = alloc_unr(devfs_unr);
 	sx_init(&fmp->dm_lock, "devfsmount");
+	fmp->dm_holdcnt = 1;
 
+	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
 	mp->mnt_kern_flag |= MNTK_MPSAFE;
 #ifdef MAC
 	mp->mnt_flag |= MNT_MULTILABEL;
 #endif
+	MNT_IUNLOCK(mp);
 	fmp->dm_mount = mp;
 	mp->mnt_data = (void *) fmp;
 	vfs_getnewfsid(mp);
@@ -108,14 +107,25 @@ devfs_mount(struct mount *mp, struct thread *td)
 	return (0);
 }
 
+void
+devfs_unmount_final(struct devfs_mount *fmp)
+{
+	sx_destroy(&fmp->dm_lock);
+	free(fmp, M_DEVFS);
+}
+
 static int
 devfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 {
 	int error;
 	int flags = 0;
 	struct devfs_mount *fmp;
+	int hold;
+	u_int idx;
 
 	fmp = VFSTODEVFS(mp);
+	KASSERT(fmp->dm_mount != NULL,
+		("devfs_unmount unmounted devfs_mount"));
 	/* There is 1 extra root vnode reference from devfs_mount(). */
 	error = vflush(mp, 1, flags, td);
 	if (error)
@@ -123,11 +133,14 @@ devfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 	sx_xlock(&fmp->dm_lock);
 	devfs_cleanup(fmp);
 	devfs_rules_cleanup(fmp);
-	sx_xunlock(&fmp->dm_lock);
+	fmp->dm_mount = NULL;
+	hold = --fmp->dm_holdcnt;
 	mp->mnt_data = NULL;
-	sx_destroy(&fmp->dm_lock);
-	free_unr(devfs_unr, fmp->dm_idx);
-	free(fmp, M_DEVFS);
+	idx = fmp->dm_idx;
+	sx_xunlock(&fmp->dm_lock);
+	free_unr(devfs_unr, idx);
+	if (hold == 0)
+		devfs_unmount_final(fmp);
 	return 0;
 }
 
@@ -141,6 +154,7 @@ devfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
 	struct devfs_mount *dmp;
 
 	dmp = VFSTODEVFS(mp);
+	sx_xlock(&dmp->dm_lock);
 	error = devfs_allocv(dmp->dm_rootdir, mp, &vp, td);
 	if (error)
 		return (error);

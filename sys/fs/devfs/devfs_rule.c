@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/devfs/devfs_rule.c,v 1.14.2.3 2006/01/11 10:15:57 rwatson Exp $
+ * $FreeBSD: src/sys/fs/devfs/devfs_rule.c,v 1.23 2006/11/06 13:41:56 rwatson Exp $
  */
 
 /*
@@ -62,13 +62,12 @@
  * know the convention).
  */
 
-#include "opt_devfs.h"
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/dirent.h>
 #include <sys/ioccom.h>
 #include <sys/lock.h>
@@ -166,11 +165,13 @@ devfs_rules_ioctl(struct devfs_mount *dm, u_long cmd, caddr_t data, struct threa
 	sx_assert(&dm->dm_lock, SX_XLOCKED);
 
 	/*
-	 * XXX: This returns an error regardless of whether we
-	 * actually support the cmd or not.
+	 * XXX: This returns an error regardless of whether we actually
+	 * support the cmd or not.
+	 *
+	 * We could make this privileges finer grained if desired.
 	 */
-	error = suser(td);
-	if (error != 0)
+	error = priv_check(td, PRIV_DEVFS_RULE);
+	if (error)
 		return (error);
 
 	sx_xlock(&sx_rules);

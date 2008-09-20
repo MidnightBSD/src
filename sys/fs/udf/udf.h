@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/udf.h,v 1.13 2005/03/16 08:09:52 phk Exp $
+ * $FreeBSD: src/sys/fs/udf/udf.h,v 1.14 2007/02/15 22:08:33 pjd Exp $
  */
 
 #define UDF_HASHTBLSIZE 100
@@ -72,6 +72,13 @@ struct udf_dirstream {
 	int		size;
 	int		error;
 	int		fid_fragment;
+};
+
+struct ifid {
+	u_short	ifid_len;
+	u_short	ifid_pad;
+	int	ifid_ino;
+	long	ifid_start;
 };
 
 #define	VFSTOUDFFS(mp)	((struct udf_mnt *)((mp)->mnt_data))

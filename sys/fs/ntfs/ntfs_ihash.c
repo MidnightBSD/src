@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_ihash.c	8.7 (Berkeley) 5/17/95
- * $FreeBSD: src/sys/fs/ntfs/ntfs_ihash.c,v 1.21 2005/01/06 18:10:39 imp Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_ihash.c,v 1.22.2.1 2007/11/29 19:02:05 maxim Exp $
  */
 
 #include <sys/param.h>
@@ -45,7 +45,7 @@
 #include <fs/ntfs/ntfs_inode.h>
 #include <fs/ntfs/ntfs_ihash.h>
 
-MALLOC_DEFINE(M_NTFSNTHASH, "NTFS nthash", "NTFS ntnode hash tables");
+MALLOC_DEFINE(M_NTFSNTHASH, "ntfs_nthash", "NTFS ntnode hash tables");
 
 /*
  * Structures associated with inode cacheing.
@@ -73,6 +73,7 @@ ntfs_nthashinit()
 void
 ntfs_nthashdestroy(void)
 {
+	hashdestroy(ntfs_nthashtbl, M_NTFSNTHASH, ntfs_nthash);
 	lockdestroy(&ntfs_hashlock);
 	mtx_destroy(&ntfs_nthash_mtx);
 }

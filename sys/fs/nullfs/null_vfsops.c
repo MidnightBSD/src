@@ -32,7 +32,7 @@
  *	@(#)null_vfsops.c	8.2 (Berkeley) 1/21/94
  *
  * @(#)lofs_vfsops.c	1.2 (Berkeley) 6/18/92
- * $FreeBSD: src/sys/fs/nullfs/null_vfsops.c,v 1.72.2.3 2006/03/13 03:05:21 jeff Exp $
+ * $FreeBSD: src/sys/fs/nullfs/null_vfsops.c,v 1.83 2007/05/29 11:28:28 rwatson Exp $
  */
 
 /*
@@ -42,7 +42,6 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -53,10 +52,9 @@
 
 #include <fs/nullfs/null.h>
 
-static MALLOC_DEFINE(M_NULLFSMNT, "NULLFS mount", "NULLFS mount structure");
+static MALLOC_DEFINE(M_NULLFSMNT, "nullfs_mount", "NULLFS mount structure");
 
 static vfs_fhtovp_t	nullfs_fhtovp;
-static vfs_checkexp_t	nullfs_checkexp;
 static vfs_mount_t	nullfs_mount;
 static vfs_quotactl_t	nullfs_quotactl;
 static vfs_root_t	nullfs_root;
@@ -64,7 +62,6 @@ static vfs_sync_t	nullfs_sync;
 static vfs_statfs_t	nullfs_statfs;
 static vfs_unmount_t	nullfs_unmount;
 static vfs_vget_t	nullfs_vget;
-static vfs_vptofh_t	nullfs_vptofh;
 static vfs_extattrctl_t	nullfs_extattrctl;
 
 /*
@@ -89,8 +86,13 @@ nullfs_mount(struct mount *mp, struct thread *td)
 	 * Update is a no-op
 	 */
 	if (mp->mnt_flag & MNT_UPDATE) {
-		return (EOPNOTSUPP);
-		/* return VFS_MOUNT(MOUNTTONULLMOUNT(mp)->nullm_vfs, path, data, ndp, td);*/
+		/*
+		 * Only support update mounts for NFS export.
+		 */
+		if (vfs_flagopt(mp->mnt_optnew, "export", NULL, 0))
+			return (0);
+		else
+			return (EOPNOTSUPP);
 	}
 
 	/*
@@ -175,9 +177,14 @@ nullfs_mount(struct mount *mp, struct thread *td)
 	 */
 	VOP_UNLOCK(vp, 0, td);
 
-	if (NULLVPTOLOWERVP(nullm_rootvp)->v_mount->mnt_flag & MNT_LOCAL)
+	if (NULLVPTOLOWERVP(nullm_rootvp)->v_mount->mnt_flag & MNT_LOCAL) {
+		MNT_ILOCK(mp);
 		mp->mnt_flag |= MNT_LOCAL;
+		MNT_IUNLOCK(mp);
+	}
+	MNT_ILOCK(mp);
 	mp->mnt_kern_flag |= lowerrootvp->v_mount->mnt_kern_flag & MNTK_MPSAFE;
+	MNT_IUNLOCK(mp);
 	mp->mnt_data = (qaddr_t) xmp;
 	vfs_getnewfsid(mp);
 
@@ -240,11 +247,8 @@ nullfs_root(mp, flags, vpp, td)
 	VREF(vp);
 
 #ifdef NULLFS_DEBUG
-	if (VOP_ISLOCKED(vp, NULL)) {
-		kdb_enter("root vnode is locked.\n");
-		vrele(vp);
-		return (EDEADLK);
-	}
+	if (VOP_ISLOCKED(vp, NULL))
+		panic("root vnode is locked.\n");
 #endif
 	vn_lock(vp, flags | LK_RETRY, td);
 	*vpp = vp;
@@ -256,7 +260,7 @@ nullfs_quotactl(mp, cmd, uid, arg, td)
 	struct mount *mp;
 	int cmd;
 	uid_t uid;
-	caddr_t arg;
+	void *arg;
 	struct thread *td;
 {
 	return VFS_QUOTACTL(MOUNTTONULLMOUNT(mp)->nullm_vfs, cmd, uid, arg, td);
@@ -335,29 +339,6 @@ nullfs_fhtovp(mp, fidp, vpp)
 	return (null_nodeget(mp, *vpp, vpp));
 }
 
-static int
-nullfs_checkexp(mp, nam, extflagsp, credanonp)
-	struct mount *mp;
-	struct sockaddr *nam;
-	int *extflagsp; 
-	struct ucred **credanonp;
-{
-
-	return VFS_CHECKEXP(MOUNTTONULLMOUNT(mp)->nullm_vfs, nam, 
-		extflagsp, credanonp);
-}
-
-static int
-nullfs_vptofh(vp, fhp)
-	struct vnode *vp;
-	struct fid *fhp;
-{
-	struct vnode *lvp;
-
-	lvp = NULLVPTOLOWERVP(vp);
-	return VFS_VPTOFH(lvp, fhp);
-}
-
 static int                        
 nullfs_extattrctl(mp, cmd, filename_vp, namespace, attrname, td)
 	struct mount *mp;
@@ -373,7 +354,6 @@ nullfs_extattrctl(mp, cmd, filename_vp, namespace, attrname, td)
 
 
 static struct vfsops null_vfsops = {
-	.vfs_checkexp =		nullfs_checkexp,
 	.vfs_extattrctl =	nullfs_extattrctl,
 	.vfs_fhtovp =		nullfs_fhtovp,
 	.vfs_init =		nullfs_init,
@@ -385,7 +365,6 @@ static struct vfsops null_vfsops = {
 	.vfs_uninit =		nullfs_uninit,
 	.vfs_unmount =		nullfs_unmount,
 	.vfs_vget =		nullfs_vget,
-	.vfs_vptofh =		nullfs_vptofh,
 };
 
 VFS_SET(null_vfsops, nullfs, VFCF_LOOPBACK);

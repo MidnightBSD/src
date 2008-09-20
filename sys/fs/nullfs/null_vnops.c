@@ -36,7 +36,7 @@
  *	...and...
  *	@(#)null_vnodeops.c 1.20 92/07/07 UCLA Ficus project
  *
- * $FreeBSD: src/sys/fs/nullfs/null_vnops.c,v 1.87.2.3 2006/03/13 03:05:26 jeff Exp $
+ * $FreeBSD: src/sys/fs/nullfs/null_vnops.c,v 1.95.2.1 2007/10/22 05:44:07 daichi Exp $
  */
 
 /*
@@ -180,7 +180,6 @@
 #include <sys/namei.h>
 #include <sys/sysctl.h>
 #include <sys/vnode.h>
-#include <sys/kdb.h>
 
 #include <fs/nullfs/null.h>
 
@@ -510,7 +509,7 @@ null_rename(struct vop_rename_args *ap)
  * vnodes below us on the stack.
  */
 static int
-null_lock(struct vop_lock_args *ap)
+null_lock(struct vop_lock1_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	int flags = ap->a_flags;
@@ -587,20 +586,33 @@ null_unlock(struct vop_unlock_args *ap)
 {
 	struct vnode *vp = ap->a_vp;
 	int flags = ap->a_flags;
+	int mtxlkflag = 0;
 	struct thread *td = ap->a_td;
 	struct null_node *nn;
 	struct vnode *lvp;
 	int error;
 
-	if ((flags & LK_INTERLOCK) != 0) {
-		VI_UNLOCK(vp);
-		ap->a_flags = flags &= ~LK_INTERLOCK;
+	if ((flags & LK_INTERLOCK) != 0)
+		mtxlkflag = 1;
+	else if (mtx_owned(VI_MTX(vp)) == 0) {
+		VI_LOCK(vp);
+		mtxlkflag = 2;
 	}
 	nn = VTONULL(vp);
-	if (nn != NULL && (lvp = NULLVPTOLOWERVP(vp)) != NULL)
+	if (nn != NULL && (lvp = NULLVPTOLOWERVP(vp)) != NULL) {
+		VI_LOCK_FLAGS(lvp, MTX_DUPOK);
+		flags |= LK_INTERLOCK;
+		vholdl(lvp);
+		VI_UNLOCK(vp);
 		error = VOP_UNLOCK(lvp, flags, td);
-	else
+		vdrop(lvp);
+		if (mtxlkflag == 0)
+			VI_LOCK(vp);
+	} else {
+		if (mtxlkflag == 2)
+			VI_UNLOCK(vp);
 		error = vop_stdunlock(ap);
+	}
 
 	return (error);
 }
@@ -708,6 +720,15 @@ null_getwritemount(struct vop_getwritemount_args *ap)
 	return (0);
 }
 
+static int
+null_vptofh(struct vop_vptofh_args *ap)
+{
+	struct vnode *lvp;
+
+	lvp = NULLVPTOLOWERVP(ap->a_vp);
+	return VOP_VPTOFH(lvp, ap->a_fhp);
+}
+
 /*
  * Global vfs data structures
  */
@@ -719,7 +740,7 @@ struct vop_vector null_vnodeops = {
 	.vop_getwritemount =	null_getwritemount,
 	.vop_inactive =		null_inactive,
 	.vop_islocked =		null_islocked,
-	.vop_lock =		null_lock,
+	.vop_lock1 =		null_lock,
 	.vop_lookup =		null_lookup,
 	.vop_open =		null_open,
 	.vop_print =		null_print,
@@ -728,4 +749,5 @@ struct vop_vector null_vnodeops = {
 	.vop_setattr =		null_setattr,
 	.vop_strategy =		VOP_EOPNOTSUPP,
 	.vop_unlock =		null_unlock,
+	.vop_vptofh =		null_vptofh,
 };

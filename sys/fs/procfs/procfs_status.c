@@ -33,8 +33,8 @@
  *	@(#)procfs_status.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_status.c,v 1.1.1.2 2006-02-25 02:37:05 laffer1 Exp $
- * $FreeBSD: src/sys/fs/procfs/procfs_status.c,v 1.56 2005/03/15 11:05:11 phk Exp $
+ *	$Id: procfs_status.c,v 1.2 2008-09-20 00:44:24 laffer1 Exp $
+ * $FreeBSD: src/sys/fs/procfs/procfs_status.c,v 1.62 2007/09/17 05:31:39 jeff Exp $
  */
 
 #include <sys/param.h>
@@ -112,10 +112,12 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 		sbuf_printf(sb, "noflags");
 	}
 
-	mtx_lock_spin(&sched_lock);
+#ifdef KSE
 	if (p->p_flag & P_SA)
 		wmesg = "-kse- ";
-	else {
+	else
+#endif
+	{
 		tdfirst = FIRST_THREAD_IN_PROC(p);
 		if (tdfirst->td_wchan != NULL) {
 			KASSERT(tdfirst->td_wmesg != NULL,
@@ -124,21 +126,21 @@ procfs_doprocstatus(PFS_FILL_ARGS)
 		} else
 			wmesg = "nochan";
 	}
-	mtx_unlock_spin(&sched_lock);
 
-	if (p->p_sflag & PS_INMEM) {
+	if (p->p_flag & P_INMEM) {
 		struct timeval start, ut, st;
 
+		PROC_SLOCK(p);
 		calcru(p, &ut, &st);
+		PROC_SUNLOCK(p);
 		start = p->p_stats->p_start;
 		timevaladd(&start, &boottime);
-		sbuf_printf(sb, " %ld,%ld %ld,%ld %ld,%ld",
-		    start.tv_sec, start.tv_usec,
-		    ut.tv_sec, ut.tv_usec,
-		    st.tv_sec, st.tv_usec);
-	} else {
+		sbuf_printf(sb, " %jd,%ld %jd,%ld %jd,%ld",
+		    (intmax_t)start.tv_sec, start.tv_usec,
+		    (intmax_t)ut.tv_sec, ut.tv_usec,
+		    (intmax_t)st.tv_sec, st.tv_usec);
+	} else
 		sbuf_printf(sb, " -1,-1 -1,-1 -1,-1");
-	}
 
 	sbuf_printf(sb, " %s", wmesg);
 

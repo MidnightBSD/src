@@ -31,7 +31,7 @@
  *
  *	@(#)portal_vfsops.c	8.11 (Berkeley) 5/14/95
  *
- * $FreeBSD: src/sys/fs/portalfs/portal_vfsops.c,v 1.57 2005/03/24 07:36:14 jeff Exp $
+ * $FreeBSD: src/sys/fs/portalfs/portal_vfsops.c,v 1.60 2007/03/13 01:50:23 tegge Exp $
  */
 
 /*
@@ -56,7 +56,7 @@
 
 #include <fs/portalfs/portal.h>
 
-static MALLOC_DEFINE(M_PORTALFSMNT, "PORTAL mount", "PORTAL mount structure");
+static MALLOC_DEFINE(M_PORTALFSMNT, "portal_mount", "PORTAL mount structure");
 
 static vfs_unmount_t	portal_unmount;
 static vfs_root_t	portal_root;
@@ -136,6 +136,13 @@ portal_mount(struct mount *mp, struct thread *td)
 		return (error);
 	}
 
+	error = insmntque(rvp, mp);	/* XXX: Too early for mpsafe fs */
+	if (error != 0) {
+		FREE(fmp, M_PORTALFSMNT);
+		FREE(pn, M_TEMP);
+		fdrop(fp, td);
+		return (error);
+	}
 	rvp->v_data = pn;
 	rvp->v_type = VDIR;
 	rvp->v_vflag |= VV_ROOT;
@@ -146,7 +153,9 @@ portal_mount(struct mount *mp, struct thread *td)
 	fhold(fp);
 	fmp->pm_server = fp;
 
+	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 	mp->mnt_data = (qaddr_t) fmp;
 	vfs_getnewfsid(mp);
 

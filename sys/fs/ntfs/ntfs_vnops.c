@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.55.2.2 2006/03/12 21:50:01 scottl Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.60 2007/02/15 22:08:32 pjd Exp $
  *
  */
 
@@ -80,6 +80,7 @@ static vop_readdir_t	ntfs_readdir;
 static vop_cachedlookup_t	ntfs_lookup;
 static vop_fsync_t	ntfs_fsync;
 static vop_pathconf_t	ntfs_pathconf;
+static vop_vptofh_t	ntfs_vptofh;
 
 int	ntfs_prtactive = 1;	/* 1 => print out reclaim of active vnodes */
 
@@ -138,7 +139,7 @@ ntfs_read(ap)
 	if (uio->uio_offset > fp->f_size)
 		return (0);
 
-	resid = min(uio->uio_resid, fp->f_size - uio->uio_offset);
+	resid = MIN(uio->uio_resid, fp->f_size - uio->uio_offset);
 
 	dprintf((", resid: %d\n", resid));
 
@@ -147,7 +148,7 @@ ntfs_read(ap)
 		cn = ntfs_btocn(uio->uio_offset);
 		off = ntfs_btocnoff(uio->uio_offset);
 
-		toread = min(off + resid, ntfs_cntob(1));
+		toread = MIN(off + resid, ntfs_cntob(1));
 
 		error = bread(vp, cn, ntfs_cntob(1), NOCRED, &bp);
 		if (error) {
@@ -187,7 +188,7 @@ ntfs_getattr(ap)
 	vap->va_fsid = dev2udev(ip->i_dev);
 	vap->va_fileid = ip->i_number;
 	vap->va_mode = ip->i_mp->ntm_mode;
-	vap->va_nlink = ip->i_nlink;
+	vap->va_nlink = (ip->i_nlink || ip->i_flag & IN_LOADED ? ip->i_nlink : 1);
 	vap->va_uid = ip->i_mp->ntm_uid;
 	vap->va_gid = ip->i_mp->ntm_gid;
 	vap->va_rdev = 0;				/* XXX UNODEV ? */
@@ -285,7 +286,7 @@ ntfs_strategy(ap)
 		(u_int32_t)bp->b_offset,(u_int32_t)bp->b_blkno,
 		(u_int32_t)bp->b_lblkno));
 
-	dprintf(("strategy: bcount: %d flags: 0x%lx\n", 
+	dprintf(("strategy: bcount: %d flags: 0x%x\n", 
 		(u_int32_t)bp->b_bcount,bp->b_flags));
 
 	if (bp->b_iocmd == BIO_READ) {
@@ -295,7 +296,7 @@ ntfs_strategy(ap)
 			clrbuf(bp);
 			error = 0;
 		} else {
-			toread = min(bp->b_bcount,
+			toread = MIN(bp->b_bcount,
 				 fp->f_size-ntfs_cntob(bp->b_blkno));
 			dprintf(("ntfs_strategy: toread: %d, fsize: %d\n",
 				toread,(u_int32_t)fp->f_size));
@@ -321,7 +322,7 @@ ntfs_strategy(ap)
 			bp->b_error = error = EFBIG;
 			bp->b_ioflags |= BIO_ERROR;
 		} else {
-			towrite = min(bp->b_bcount,
+			towrite = MIN(bp->b_bcount,
 				fp->f_size-ntfs_cntob(bp->b_blkno));
 			dprintf(("ntfs_strategy: towrite: %d, fsize: %d\n",
 				towrite,(u_int32_t)fp->f_size));
@@ -367,7 +368,7 @@ ntfs_write(ap)
 		return (EFBIG);
 	}
 
-	towrite = min(uio->uio_resid, fp->f_size - uio->uio_offset);
+	towrite = MIN(uio->uio_resid, fp->f_size - uio->uio_offset);
 
 	dprintf((", towrite: %d\n",(u_int32_t)towrite));
 
@@ -438,14 +439,14 @@ ntfs_open(ap)
 		struct thread *a_td;
 	} */ *ap;
 {
-#if NTFS_DEBUG
+#ifdef NTFS_DEBUG
 	register struct vnode *vp = ap->a_vp;
 	register struct ntnode *ip = VTONT(vp);
 
 	printf("ntfs_open: %d\n",ip->i_number);
 #endif
 
-	vnode_create_vobject_off(ap->a_vp, VTOF(ap->a_vp)->f_size, ap->a_td);
+	vnode_create_vobject(ap->a_vp, VTOF(ap->a_vp)->f_size, ap->a_td);
 
 	/*
 	 * Files marked append-only must be opened for appending.
@@ -469,7 +470,7 @@ ntfs_close(ap)
 		struct thread *a_td;
 	} */ *ap;
 {
-#if NTFS_DEBUG
+#ifdef NTFS_DEBUG
 	register struct vnode *vp = ap->a_vp;
 	register struct ntnode *ip = VTONT(vp);
 
@@ -731,6 +732,26 @@ ntfs_pathconf(ap)
 	/* NOTREACHED */
 }
 
+int
+ntfs_vptofh(ap)
+	struct vop_vptofh_args /* {
+		struct vnode *a_vp;
+		struct fid *a_fhp;
+	} */ *ap;
+{
+	register struct ntnode *ntp;
+	register struct ntfid *ntfhp;
+
+	ddprintf(("ntfs_fhtovp(): %p\n", ap->a_vp));
+
+	ntp = VTONT(ap->a_vp);
+	ntfhp = (struct ntfid *)ap->a_fhp;
+	ntfhp->ntfid_len = sizeof(struct ntfid);
+	ntfhp->ntfid_ino = ntp->i_number;
+	/* ntfhp->ntfid_gen = ntp->i_gen; */
+	return (0);
+}
+
 /*
  * Global vfs data structures
  */
@@ -752,4 +773,5 @@ struct vop_vector ntfs_vnodeops = {
 	.vop_reclaim =		ntfs_reclaim,
 	.vop_strategy =		ntfs_strategy,
 	.vop_write =		ntfs_write,
+	.vop_vptofh =		ntfs_vptofh,
 };

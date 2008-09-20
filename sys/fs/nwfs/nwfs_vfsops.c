@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_vfsops.c,v 1.40.2.2 2006/02/10 00:37:57 yar Exp $
+ * $FreeBSD: src/sys/fs/nwfs/nwfs_vfsops.c,v 1.44 2006/09/26 04:12:46 tegge Exp $
  */
 
 #include <sys/param.h>
@@ -135,7 +135,7 @@ static int nwfs_cmount(struct mntarg *ma, void *data, int flags,
 	struct nwfs_args args; 	  /* will hold data from mount request */
 	int error;
 
-	error = copyin(data, (caddr_t)&args, sizeof(struct nwfs_args));
+	error = copyin(data, &args, sizeof(struct nwfs_args));
 	if (error)
 		return (error);
 
@@ -267,7 +267,9 @@ nwfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 	if (nmp->m.flags & NWFS_MOUNT_HAVE_NLS)
 		free(nmp->m.nls.to_lower, M_NWFSDATA);
 	free(nmp, M_NWFSDATA);
+	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 	return (error);
 }
 
@@ -373,7 +375,7 @@ nwfs_quotactl(mp, cmd, uid, arg, td)
 	struct mount *mp;
 	int cmd;
 	uid_t uid;
-	caddr_t arg;
+	void *arg;
 	struct thread *td;
 {
 	NCPVODEBUG("return EOPNOTSUPP\n");

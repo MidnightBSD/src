@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfsmount.h,v 1.37 2005/03/15 20:57:25 phk Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfsmount.h,v 1.39 2007/07/12 16:09:07 bde Exp $ */
 /*	$NetBSD: msdosfsmount.h,v 1.17 1997/11/17 15:37:07 ws Exp $	*/
 
 /*-
@@ -95,7 +94,7 @@ struct msdosfsmount {
 	u_long pm_fatsize;	/* size of fat in bytes */
 	u_int32_t pm_fatmask;	/* mask to use for fat numbers */
 	u_long pm_fsinfo;	/* fsinfo block number */
-	u_long pm_nxtfree;	/* next free cluster in fsinfo block */
+	u_long pm_nxtfree;	/* next place to search for a free cluster */
 	u_int pm_fatmult;	/* these 2 values are used in fat */
 	u_int pm_fatdiv;	/*	offset computation */
 	u_int pm_curfat;	/* current fat for FAT32 (0 otherwise) */
@@ -210,12 +209,6 @@ struct msdosfs_fileno {
 	((dirclu) == MSDOSFSROOT \
 	 ? roottobn((pmp), (dirofs)) \
 	 : cntobn((pmp), (dirclu)))
-
-/*
- * Calculate fsinfo block size
- */
-#define	fsi_size(pmp) \
-	(1024 << ((pmp)->pm_BlkPerSec >> 2))
 
 void msdosfs_fileno_init(struct mount *);
 void msdosfs_fileno_free(struct mount *);

@@ -1,7 +1,22 @@
 /*
  * Prototypes for the OSTA functions
  *
- * $FreeBSD: src/sys/fs/udf/osta.h,v 1.2 2003/11/05 06:55:23 scottl Exp $
+ * $FreeBSD: src/sys/fs/udf/osta.h,v 1.3 2006/09/12 19:02:34 imp Exp $
+ */
+
+/*-
+ **********************************************************************
+ * OSTA compliant Unicode compression, uncompression routines.
+ * Copyright 1995 Micro Design International, Inc.
+ * Written by Jason M. Rinn.
+ * Micro Design International gives permission for the free use of the
+ * following source code.
+ */
+
+/*
+ * Various routines from the OSTA 2.01 specs.  Copyrights are included with
+ * each code segment.  Slight whitespace modifications have been made for
+ * formatting purposes.  Typos/bugs have been fixed.
  */
 
 #ifndef UNIX

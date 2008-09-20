@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_vnops.c,v 1.61.2.1 2006/02/20 00:53:13 yar Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_vnops.c,v 1.65 2007/05/31 11:51:50 kib Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +44,7 @@
 #include <sys/vnode.h>
 #include <sys/limits.h>
 #include <sys/lockf.h>
+#include <sys/stat.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -214,7 +215,7 @@ smbfs_open(ap)
 	}
 	if (error == 0) {
 		np->n_flag |= NOPEN;
-		vnode_create_vobject_off(ap->a_vp, vattr.va_size, ap->a_td);
+		vnode_create_vobject(ap->a_vp, vattr.va_size, ap->a_td);
 	}
 	smbfs_attr_cacheremove(vp);
 	return error;
@@ -301,6 +302,7 @@ smbfs_setattr(ap)
 	struct smb_vc *vcp = SSTOVC(ssp);
 	u_quad_t tsize = 0;
 	int isreadonly, doclose, error = 0;
+	int old_n_dosattr;
 
 	SMBVDEBUG("\n");
 	if (vap->va_flags != VNOVAL)
@@ -346,17 +348,31 @@ smbfs_setattr(ap)
 			return error;
 		}
   	}
+	if (vap->va_mode != (mode_t)VNOVAL) {
+		old_n_dosattr = np->n_dosattr;
+		if (vap->va_mode & S_IWUSR)
+			np->n_dosattr &= ~SMB_FA_RDONLY;
+		else
+			np->n_dosattr |= SMB_FA_RDONLY;
+		if (np->n_dosattr != old_n_dosattr) {
+			error = smbfs_smb_setpattr(np, np->n_dosattr, NULL, &scred);
+			if (error)
+				return error;
+		}
+	}
 	mtime = atime = NULL;
 	if (vap->va_mtime.tv_sec != VNOVAL)
 		mtime = &vap->va_mtime;
 	if (vap->va_atime.tv_sec != VNOVAL)
 		atime = &vap->va_atime;
 	if (mtime != atime) {
-		if (ap->a_cred->cr_uid != VTOSMBFS(vp)->sm_uid &&
-		    (error = suser_cred(ap->a_cred, SUSER_ALLOWJAIL)) &&
-		    ((vap->va_vaflags & VA_UTIMES_NULL) == 0 ||
-		    (error = VOP_ACCESS(vp, VWRITE, ap->a_cred, ap->a_td))))
-			return (error);
+		if (vap->va_vaflags & VA_UTIMES_NULL) {
+			error = VOP_ACCESS(vp, VADMIN, ap->a_cred, ap->a_td);
+			if (error)
+				error = VOP_ACCESS(vp, VWRITE, ap->a_cred,
+				    ap->a_td);
+		} else
+			error = VOP_ACCESS(vp, VADMIN, ap->a_cred, ap->a_td);
 #if 0
 		if (mtime == NULL)
 			mtime = &np->n_mtime;
@@ -369,7 +385,7 @@ smbfs_setattr(ap)
 		 */
 		if ((np->n_flag & NOPEN) == 0) {
 			if (vcp->vc_flags & SMBV_WIN95) {
-				error = VOP_OPEN(vp, FWRITE, ap->a_cred, ap->a_td, -1);
+				error = VOP_OPEN(vp, FWRITE, ap->a_cred, ap->a_td, NULL);
 				if (!error) {
 /*				error = smbfs_smb_setfattrNT(np, 0, mtime, atime, &scred);
 				VOP_GETATTR(vp, &vattr, ap->a_cred, ap->a_td);*/

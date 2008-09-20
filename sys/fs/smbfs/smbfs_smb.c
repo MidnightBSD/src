@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_smb.c,v 1.15 2005/05/04 15:05:46 takawata Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_smb.c,v 1.18 2007/02/27 17:23:28 jhb Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -512,9 +512,10 @@ smbfs_smb_setpattr(struct smbnode *np, u_int16_t attr, struct timespec *mtime,
 		mb_put_uint8(mbp, 0);
 		smb_rq_bend(rqp);
 		error = smb_rq_simple(rqp);
-		SMBERROR("%d\n", error);
-		if (error)
+		if (error) {
+			SMBERROR("smb_rq_simple(rqp) => error %d\n", error);
 			break;
+		}
 	} while(0);
 	smb_rq_done(rqp);
 	return error;
@@ -1198,7 +1199,7 @@ smbfs_smb_trans2find2(struct smbfs_fctx *ctx)
 			 * I've didn't notice any problem, but put code
 			 * for it.
 			 */
-			 tsleep(&flags, PVFS, "fix95", tvtohz(&tv));
+			 pause("fix95", tvtohz(&tv));
 		}
 #endif
 	}

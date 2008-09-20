@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_subr.h,v 1.13 2003/09/26 20:26:23 fjoe Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_subr.h,v 1.14 2006/11/20 19:28:36 le Exp $
  */
 
 #define	VA_LOADED		0x0001
@@ -45,8 +45,8 @@ struct ntvattr {
 
 	u_int32_t		va_compression;
 	u_int32_t		va_compressalg;
-	u_int32_t		va_datalen;
-	u_int32_t		va_allocated;
+	u_int64_t		va_datalen;
+	u_int64_t		va_allocated;
 	cn_t	 		va_vcnstart;
 	cn_t	 		va_vcnend;
 	u_int16_t		va_index;

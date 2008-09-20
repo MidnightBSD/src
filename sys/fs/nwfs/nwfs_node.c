@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_node.c,v 1.36.2.1 2006/03/12 21:50:01 scottl Exp $
+ * $FreeBSD: src/sys/fs/nwfs/nwfs_node.c,v 1.39 2007/03/13 01:50:23 tegge Exp $
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,8 +64,8 @@ static LIST_HEAD(nwnode_hash_head,nwnode) *nwhashtbl;
 static u_long nwnodehash;
 static struct lock nwhashlock;
 
-static MALLOC_DEFINE(M_NWNODE, "NWFS node", "NWFS vnode private part");
-static MALLOC_DEFINE(M_NWFSHASH, "NWFS hash", "NWFS has table");
+static MALLOC_DEFINE(M_NWNODE, "nwfs_node", "NWFS vnode private part");
+static MALLOC_DEFINE(M_NWFSHASH, "nwfs_hash", "NWFS has table");
 
 static int nwfs_sysctl_vnprint(SYSCTL_HANDLER_ARGS);
 
@@ -172,6 +172,12 @@ rescan:
 	if (error) {
 		*vpp = NULL;
 		FREE(np, M_NWNODE);
+		return (error);
+	}
+	error = insmntque(vp, mp);	/* XXX: Too early for mpsafe fs */
+	if (error != 0) {
+		FREE(np, M_NWNODE);
+		*vpp = NULL;
 		return (error);
 	}
 	vp->v_data = np;

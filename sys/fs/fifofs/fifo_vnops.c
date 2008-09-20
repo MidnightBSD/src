@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)fifo_vnops.c	8.10 (Berkeley) 5/27/95
- * $FreeBSD: src/sys/fs/fifofs/fifo_vnops.c,v 1.113.2.19 2006/03/28 12:42:20 rwatson Exp $
+ * $FreeBSD: src/sys/fs/fifofs/fifo_vnops.c,v 1.138 2007/07/26 16:58:09 pjd Exp $
  */
 
 #include <sys/param.h>
@@ -175,12 +175,12 @@ fifo_open(ap)
 	struct fifoinfo *fip;
 	struct thread *td = ap->a_td;
 	struct ucred *cred = ap->a_cred;
+	struct file *fp = ap->a_fp;
 	struct socket *rso, *wso;
-	struct file *fp;
 	int error;
 
-	ASSERT_VOP_LOCKED(vp, "fifo_open");
-	if (ap->a_fdidx < 0)
+	ASSERT_VOP_ELOCKED(vp, "fifo_open");
+	if (fp == NULL)
 		return (EINVAL);
 	if ((fip = vp->v_fifoinfo) == NULL) {
 		MALLOC(fip, struct fifoinfo *, sizeof(*fip), M_VNODE, M_WAITOK);
@@ -293,11 +293,12 @@ fail1:
 		}
 	}
 	mtx_unlock(&fifo_mtx);
-	KASSERT(ap->a_fdidx >= 0, ("can't fifo/vnode bypass %d", ap->a_fdidx));
-	fp = ap->a_td->td_proc->p_fd->fd_ofiles[ap->a_fdidx];
+	KASSERT(fp != NULL, ("can't fifo/vnode bypass"));
+	FILE_LOCK(fp);
 	KASSERT(fp->f_ops == &badfileops, ("not badfileops in fifo_open"));
-	fp->f_ops = &fifo_ops_f;
 	fp->f_data = fip;
+	fp->f_ops = &fifo_ops_f;
+	FILE_UNLOCK(fp);
 	return (0);
 }
 
@@ -447,11 +448,10 @@ fifo_printinfo(vp)
 {
 	register struct fifoinfo *fip = vp->v_fifoinfo;
 
-	if (fip == NULL) {
+	if (fip == NULL){
 		printf(", NULL v_fifoinfo");
 		return (0);
 	}
-
 	printf(", fifo with %ld readers and %ld writers",
 		fip->fi_readers, fip->fi_writers);
 	return (0);
@@ -713,7 +713,9 @@ fifo_read_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, str
 	if (uio->uio_resid == 0)
 		return (0);
 	sflags = (fp->f_flag & FNONBLOCK) ? MSG_NBIO : 0;
+	mtx_lock(&Giant);
 	error = soreceive(fip->fi_readsock, NULL, uio, NULL, NULL, &sflags);
+	mtx_unlock(&Giant);
 	return (error);
 }
 
@@ -733,6 +735,8 @@ fifo_write_f(struct file *fp, struct uio *uio, struct ucred *cred, int flags, st
 	fip = fp->f_data;
 	KASSERT(uio->uio_rw == UIO_WRITE,("fifo_write mode"));
 	sflags = (fp->f_flag & FNONBLOCK) ? MSG_NBIO : 0;
+	mtx_lock(&Giant);
 	error = sosend(fip->fi_writesock, NULL, uio, 0, NULL, sflags, td);
+	mtx_unlock(&Giant);
 	return (error);
 }

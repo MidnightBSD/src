@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_conv.c,v 1.44.2.1 2005/07/23 17:02:04 imura Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_conv.c,v 1.53 2007/08/31 22:29:55 bde Exp $ */
 /*	$NetBSD: msdosfs_conv.c,v 1.25 1997/11/17 15:36:40 ws Exp $	*/
 
 /*-
@@ -49,202 +48,23 @@
  * October 1992
  */
 
-/*
- * System include files.
- */
 #include <sys/param.h>
-#include <sys/time.h>
-#include <sys/kernel.h>		/* defines tz */
 #include <sys/systm.h>
-#include <machine/clock.h>
 #include <sys/dirent.h>
 #include <sys/iconv.h>
 #include <sys/mount.h>
-#include <sys/malloc.h>
+
+#include <fs/msdosfs/bpb.h>
+#include <fs/msdosfs/direntry.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 extern struct iconv_functions *msdosfs_iconv;
-
-/*
- * MSDOSFS include files.
- */
-#include <fs/msdosfs/bpb.h>
-#include <fs/msdosfs/msdosfsmount.h>
-#include <fs/msdosfs/direntry.h>
-
-/*
- * Total number of days that have passed for each month in a regular year.
- */
-static u_short regyear[] = {
-	31, 59, 90, 120, 151, 181,
-	212, 243, 273, 304, 334, 365
-};
-
-/*
- * Total number of days that have passed for each month in a leap year.
- */
-static u_short leapyear[] = {
-	31, 60, 91, 121, 152, 182,
-	213, 244, 274, 305, 335, 366
-};
-
-/*
- * Variables used to remember parts of the last time conversion.  Maybe we
- * can avoid a full conversion.
- */
-static u_long  lasttime;
-static u_long  lastday;
-static u_short lastddate;
-static u_short lastdtime;
 
 static int mbsadjpos(const char **, size_t, size_t, int, int, void *handle);
 static u_int16_t dos2unixchr(const u_char **, size_t *, int, struct msdosfsmount *);
 static u_int16_t unix2doschr(const u_char **, size_t *, struct msdosfsmount *);
 static u_int16_t win2unixchr(u_int16_t, struct msdosfsmount *);
 static u_int16_t unix2winchr(const u_char **, size_t *, int, struct msdosfsmount *);
-
-static char	*nambuf_ptr;
-static size_t	nambuf_len;
-static int	nambuf_last_id;
-
-/*
- * Convert the unix version of time to dos's idea of time to be used in
- * file timestamps. The passed in unix time is assumed to be in GMT.
- */
-void
-unix2dostime(tsp, ddp, dtp, dhp)
-	struct timespec *tsp;
-	u_int16_t *ddp;
-	u_int16_t *dtp;
-	u_int8_t *dhp;
-{
-	u_long t;
-	u_long days;
-	u_long inc;
-	u_long year;
-	u_long month;
-	u_short *months;
-
-	/*
-	 * If the time from the last conversion is the same as now, then
-	 * skip the computations and use the saved result.
-	 */
-	t = tsp->tv_sec - (tz_minuteswest * 60)
-	    - (wall_cmos_clock ? adjkerntz : 0);
-	    /* - daylight savings time correction */
-	t &= ~1;
-	if (lasttime != t) {
-		lasttime = t;
-		lastdtime = (((t / 2) % 30) << DT_2SECONDS_SHIFT)
-		    + (((t / 60) % 60) << DT_MINUTES_SHIFT)
-		    + (((t / 3600) % 24) << DT_HOURS_SHIFT);
-
-		/*
-		 * If the number of days since 1970 is the same as the last
-		 * time we did the computation then skip all this leap year
-		 * and month stuff.
-		 */
-		days = t / (24 * 60 * 60);
-		if (days != lastday) {
-			lastday = days;
-			for (year = 1970;; year++) {
-				inc = year & 0x03 ? 365 : 366;
-				if (days < inc)
-					break;
-				days -= inc;
-			}
-			months = year & 0x03 ? regyear : leapyear;
-			for (month = 0; days >= months[month]; month++)
-				;
-			if (month > 0)
-				days -= months[month - 1];
-			lastddate = ((days + 1) << DD_DAY_SHIFT)
-			    + ((month + 1) << DD_MONTH_SHIFT);
-			/*
-			 * Remember dos's idea of time is relative to 1980.
-			 * unix's is relative to 1970.  If somehow we get a
-			 * time before 1980 then don't give totally crazy
-			 * results.
-			 */
-			if (year > 1980)
-				lastddate += (year - 1980) << DD_YEAR_SHIFT;
-		}
-	}
-	if (dtp)
-		*dtp = lastdtime;
-	if (dhp)
-		*dhp = (tsp->tv_sec & 1) * 100 + tsp->tv_nsec / 10000000;
-
-	*ddp = lastddate;
-}
-
-/*
- * The number of seconds between Jan 1, 1970 and Jan 1, 1980. In that
- * interval there were 8 regular years and 2 leap years.
- */
-#define	SECONDSTO1980	(((8 * 365) + (2 * 366)) * (24 * 60 * 60))
-
-static u_short lastdosdate;
-static u_long  lastseconds;
-
-/*
- * Convert from dos' idea of time to unix'. This will probably only be
- * called from the stat(), and fstat() system calls and so probably need
- * not be too efficient.
- */
-void
-dos2unixtime(dd, dt, dh, tsp)
-	u_int dd;
-	u_int dt;
-	u_int dh;
-	struct timespec *tsp;
-{
-	u_long seconds;
-	u_long month;
-	u_long year;
-	u_long days;
-	u_short *months;
-
-	if (dd == 0) {
-		/*
-		 * Uninitialized field, return the epoch.
-		 */
-		tsp->tv_sec = 0;
-		tsp->tv_nsec = 0;
-		return;
-	}
-	seconds = (((dt & DT_2SECONDS_MASK) >> DT_2SECONDS_SHIFT) << 1)
-	    + ((dt & DT_MINUTES_MASK) >> DT_MINUTES_SHIFT) * 60
-	    + ((dt & DT_HOURS_MASK) >> DT_HOURS_SHIFT) * 3600
-	    + dh / 100;
-	/*
-	 * If the year, month, and day from the last conversion are the
-	 * same then use the saved value.
-	 */
-	if (lastdosdate != dd) {
-		lastdosdate = dd;
-		days = 0;
-		year = (dd & DD_YEAR_MASK) >> DD_YEAR_SHIFT;
-		days = year * 365;
-		days += year / 4 + 1;	/* add in leap days */
-		if ((year & 0x03) == 0)
-			days--;		/* if year is a leap year */
-		months = year & 0x03 ? regyear : leapyear;
-		month = (dd & DD_MONTH_MASK) >> DD_MONTH_SHIFT;
-		if (month < 1 || month > 12) {
-			printf("dos2unixtime(): month value out of range (%ld)\n",
-			    month);
-			month = 1;
-		}
-		if (month > 1)
-			days += months[month - 2];
-		days += ((dd & DD_DAY_MASK) >> DD_DAY_SHIFT) - 1;
-		lastseconds = (days * 24 * 60 * 60) + SECONDSTO1980;
-	}
-	tsp->tv_sec = seconds + lastseconds + (tz_minuteswest * 60)
-	     + adjkerntz;
-	     /* + daylight savings time correction */
-	tsp->tv_nsec = (dh % 100) * 10000000;
-}
 
 /*
  * 0 - character disallowed in long file name.
@@ -437,7 +257,8 @@ dos2unixfn(dn, un, lower, pmp)
 	 * Copy the name portion into the unix filename string.
 	 */
 	for (i = 8; i > 0 && *dn != ' ';) {
-		c = dos2unixchr((const u_char **)&dn, &i, lower, pmp);
+		c = dos2unixchr((const u_char **)&dn, &i, lower & LCASE_BASE,
+		    pmp);
 		if (c & 0xff00) {
 			*un++ = c >> 8;
 			thislong++;
@@ -455,7 +276,8 @@ dos2unixfn(dn, un, lower, pmp)
 		*un++ = '.';
 		thislong++;
 		for (i = 3; i > 0 && *dn != ' ';) {
-			c = dos2unixchr((const u_char **)&dn, &i, lower, pmp);
+			c = dos2unixchr((const u_char **)&dn, &i,
+			    lower & LCASE_EXT, pmp);
 			if (c & 0xff00) {
 				*un++ = c >> 8;
 				thislong++;
@@ -774,7 +596,8 @@ unix2winfn(un, unlen, wep, cnt, chksum, pmp)
  * Returns the checksum or -1 if no match
  */
 int
-winChkName(un, unlen, chksum, pmp)
+winChkName(nbp, un, unlen, chksum, pmp)
+	struct mbnambuf *nbp;
 	const u_char *un;
 	size_t unlen;
 	int chksum;
@@ -786,9 +609,9 @@ winChkName(un, unlen, chksum, pmp)
 	struct dirent dirbuf;
 
 	/*
-	 * We alread have winentry in mbnambuf
+	 * We already have winentry in *nbp.
 	 */
-	if (!mbnambuf_flush(&dirbuf) || !dirbuf.d_namlen)
+	if (!mbnambuf_flush(nbp, &dirbuf) || dirbuf.d_namlen == 0)
 		return -1;
 
 #ifdef MSDOSFS_DEBUG
@@ -823,7 +646,8 @@ winChkName(un, unlen, chksum, pmp)
  * Returns the checksum or -1 if impossible
  */
 int
-win2unixfn(wep, chksum, pmp)
+win2unixfn(nbp, wep, chksum, pmp)
+	struct mbnambuf *nbp;
 	struct winentry *wep;
 	int chksum;
 	struct msdosfsmount *pmp;
@@ -856,7 +680,7 @@ win2unixfn(wep, chksum, pmp)
 		switch (code) {
 		case 0:
 			*np = '\0';
-			mbnambuf_write(name, (wep->weCnt & WIN_CNT) - 1);
+			mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
 			return chksum;
 		case '/':
 			*np = '\0';
@@ -875,7 +699,7 @@ win2unixfn(wep, chksum, pmp)
 		switch (code) {
 		case 0:
 			*np = '\0';
-			mbnambuf_write(name, (wep->weCnt & WIN_CNT) - 1);
+			mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
 			return chksum;
 		case '/':
 			*np = '\0';
@@ -894,7 +718,7 @@ win2unixfn(wep, chksum, pmp)
 		switch (code) {
 		case 0:
 			*np = '\0';
-			mbnambuf_write(name, (wep->weCnt & WIN_CNT) - 1);
+			mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
 			return chksum;
 		case '/':
 			*np = '\0';
@@ -909,7 +733,7 @@ win2unixfn(wep, chksum, pmp)
 		cp += 2;
 	}
 	*np = '\0';
-	mbnambuf_write(name, (wep->weCnt & WIN_CNT) - 1);
+	mbnambuf_write(nbp, name, (wep->weCnt & WIN_CNT) - 1);
 	return chksum;
 }
 
@@ -917,22 +741,21 @@ win2unixfn(wep, chksum, pmp)
  * Compute the unrolled checksum of a DOS filename for Win95 LFN use.
  */
 u_int8_t
-winChksum(name)
-	u_int8_t *name;
+winChksum(struct direntry *dep)
 {
 	u_int8_t s;
 
-	s = name[0];
-	s = ((s << 7) | (s >> 1)) + name[1];
-	s = ((s << 7) | (s >> 1)) + name[2];
-	s = ((s << 7) | (s >> 1)) + name[3];
-	s = ((s << 7) | (s >> 1)) + name[4];
-	s = ((s << 7) | (s >> 1)) + name[5];
-	s = ((s << 7) | (s >> 1)) + name[6];
-	s = ((s << 7) | (s >> 1)) + name[7];
-	s = ((s << 7) | (s >> 1)) + name[8];
-	s = ((s << 7) | (s >> 1)) + name[9];
-	s = ((s << 7) | (s >> 1)) + name[10];
+	s = dep->deName[0];
+	s = ((s << 7) | (s >> 1)) + dep->deName[1];
+	s = ((s << 7) | (s >> 1)) + dep->deName[2];
+	s = ((s << 7) | (s >> 1)) + dep->deName[3];
+	s = ((s << 7) | (s >> 1)) + dep->deName[4];
+	s = ((s << 7) | (s >> 1)) + dep->deName[5];
+	s = ((s << 7) | (s >> 1)) + dep->deName[6];
+	s = ((s << 7) | (s >> 1)) + dep->deName[7];
+	s = ((s << 7) | (s >> 1)) + dep->deExtension[0];
+	s = ((s << 7) | (s >> 1)) + dep->deExtension[1];
+	s = ((s << 7) | (s >> 1)) + dep->deExtension[2];
 
 	return (s);
 }
@@ -1211,19 +1034,15 @@ unix2winchr(const u_char **instr, size_t *ilen, int lower, struct msdosfsmount *
 }
 
 /*
- * Initialize the temporary concatenation buffer (once) and mark it as
- * empty on subsequent calls.
+ * Initialize the temporary concatenation buffer.
  */
 void
-mbnambuf_init(void)
+mbnambuf_init(struct mbnambuf *nbp)
 {
 
-        if (nambuf_ptr == NULL) { 
-		nambuf_ptr = malloc(MAXNAMLEN + 1, M_MSDOSFSMNT, M_WAITOK);
-		nambuf_ptr[MAXNAMLEN] = '\0';
-	}
-	nambuf_len = 0;
-	nambuf_last_id = -1;
+	nbp->nb_len = 0;
+	nbp->nb_last_id = -1;
+	nbp->nb_buf[sizeof(nbp->nb_buf) - 1] = '\0';
 }
 
 /*
@@ -1236,30 +1055,31 @@ mbnambuf_init(void)
  * WIN_CHARS bytes when they are first encountered.
  */
 void
-mbnambuf_write(char *name, int id)
+mbnambuf_write(struct mbnambuf *nbp, char *name, int id)
 {
-	size_t count;
 	char *slot;
+	size_t count, newlen;
 
-	KASSERT(nambuf_len == 0 || id == nambuf_last_id - 1,
-	    ("non-decreasing id, id %d last id %d", id, nambuf_last_id));
+	KASSERT(nbp->nb_len == 0 || id == nbp->nb_last_id - 1,
+	    ("non-decreasing id: id %d, last id %d", id, nbp->nb_last_id));
 
-	/* Store this substring in a WIN_CHAR-aligned slot. */
-	slot = nambuf_ptr + (id * WIN_CHARS);
+	/* Will store this substring in a WIN_CHARS-aligned slot. */
+	slot = &nbp->nb_buf[id * WIN_CHARS];
 	count = strlen(name);
-	if (nambuf_len + count > MAXNAMLEN) {
-		printf("msdosfs: file name %zu too long\n", nambuf_len + count);
+	newlen = nbp->nb_len + count;
+	if (newlen > WIN_MAXLEN || newlen > MAXNAMLEN) {
+		printf("msdosfs: file name length %zu too large\n", newlen);
 		return;
 	}
 
 	/* Shift suffix upwards by the amount length exceeds WIN_CHARS. */
-	if (count > WIN_CHARS && nambuf_len != 0)
-		bcopy(slot + WIN_CHARS, slot + count, nambuf_len);
+	if (count > WIN_CHARS && nbp->nb_len != 0)
+		bcopy(slot + WIN_CHARS, slot + count, nbp->nb_len);
 
 	/* Copy in the substring to its slot and update length so far. */
 	bcopy(name, slot, count);
-	nambuf_len += count;
-	nambuf_last_id = id;
+	nbp->nb_len = newlen;
+	nbp->nb_last_id = id;
 }
 
 /*
@@ -1270,17 +1090,17 @@ mbnambuf_write(char *name, int id)
  * have been written via mbnambuf_write(), the result will be incorrect.
  */
 char *
-mbnambuf_flush(struct dirent *dp)
+mbnambuf_flush(struct mbnambuf *nbp, struct dirent *dp)
 {
 
-	if (nambuf_len > sizeof(dp->d_name) - 1) {
-		mbnambuf_init();
+	if (nbp->nb_len > sizeof(dp->d_name) - 1) {
+		mbnambuf_init(nbp);
 		return (NULL);
 	}
-	bcopy(nambuf_ptr, dp->d_name, nambuf_len);
-	dp->d_name[nambuf_len] = '\0';
-	dp->d_namlen = nambuf_len;
+	bcopy(&nbp->nb_buf[0], dp->d_name, nbp->nb_len);
+	dp->d_name[nbp->nb_len] = '\0';
+	dp->d_namlen = nbp->nb_len;
 
-	mbnambuf_init();
+	mbnambuf_init(nbp);
 	return (dp->d_name);
 }

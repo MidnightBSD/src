@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/nwfs/nwfs_io.c,v 1.41 2005/03/13 12:18:24 jeff Exp $
+ * $FreeBSD: src/sys/fs/nwfs/nwfs_io.c,v 1.46 2007/06/01 14:33:10 kib Exp $
  *
  */
 #include <sys/param.h>
@@ -226,7 +226,7 @@ nwfs_writevnode(vp, uiop, cred, ioflag)
 		/* We can relay only on local information about file size,
 		 * because until file is closed NetWare will not return
 		 * the correct size. */
-#if notyet
+#ifdef notyet
 			nwfs_attr_cacheremove(vp);
 			error = VOP_GETATTR(vp, &vattr, cred, td);
 			if (error) return (error);
@@ -483,7 +483,7 @@ nwfs_getpages(ap)
 			 * now tell them that it is ok to use.
 			 */
 			if (!error) {
-				if (m->flags & PG_WANTED)
+				if (m->oflags & VPO_WANTED)
 					vm_page_activate(m);
 				else
 					vm_page_deactivate(m);
@@ -524,7 +524,7 @@ nwfs_putpages(ap)
 #ifndef NWFS_RWCACHE
 	td = curthread;			/* XXX */
 	cred = td->td_ucred;		/* XXX */
-	VOP_OPEN(vp, FWRITE, cred, td, -1);
+	VOP_OPEN(vp, FWRITE, cred, td, NULL);
 	error = vop_stdputpages(ap);
 	VOP_CLOSE(vp, FWRITE, cred, td);
 	return error;
@@ -541,7 +541,7 @@ nwfs_putpages(ap)
 
 	td = curthread;			/* XXX */
 	cred = td->td_ucred;		/* XXX */
-/*	VOP_OPEN(vp, FWRITE, cred, td, -1);*/
+/*	VOP_OPEN(vp, FWRITE, cred, td, NULL);*/
 	np = VTONW(vp);
 	nmp = VFSTONWFS(vp->v_mount);
 	pages = ap->a_m;
@@ -611,6 +611,13 @@ nwfs_vinvalbuf(vp, td)
 			return EINTR;
 	}
 	np->n_flag |= NFLUSHINPROG;
+
+	if (vp->v_bufobj.bo_object != NULL) {
+		VM_OBJECT_LOCK(vp->v_bufobj.bo_object);
+		vm_object_page_clean(vp->v_bufobj.bo_object, 0, 0, OBJPC_SYNC);
+		VM_OBJECT_UNLOCK(vp->v_bufobj.bo_object);
+	}
+
 	error = vinvalbuf(vp, V_SAVE, td, PCATCH, 0);
 	while (error) {
 		if (error == ERESTART || error == EINTR) {

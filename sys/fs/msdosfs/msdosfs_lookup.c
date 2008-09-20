@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_lookup.c,v 1.46 2005/04/16 23:47:19 das Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_lookup.c,v 1.51 2007/08/31 22:29:55 bde Exp $ */
 /*	$NetBSD: msdosfs_lookup.c,v 1.37 1997/11/17 15:36:54 ws Exp $	*/
 
 /*-
@@ -51,17 +50,16 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/namei.h>
-#include <sys/bio.h>
 #include <sys/buf.h>
-#include <sys/vnode.h>
 #include <sys/mount.h>
+#include <sys/namei.h>
+#include <sys/vnode.h>
 
 #include <fs/msdosfs/bpb.h>
-#include <fs/msdosfs/msdosfsmount.h>
 #include <fs/msdosfs/direntry.h>
 #include <fs/msdosfs/denode.h>
 #include <fs/msdosfs/fat.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 /*
  * When we search a directory the blocks containing directory entries are
@@ -86,6 +84,7 @@ msdosfs_lookup(ap)
 		struct componentname *a_cnp;
 	} */ *ap;
 {
+	struct mbnambuf nb;
 	struct vnode *vdp = ap->a_dvp;
 	struct vnode **vpp = ap->a_vpp;
 	struct componentname *cnp = ap->a_cnp;
@@ -187,7 +186,7 @@ msdosfs_lookup(ap)
 	 * by cnp->cn_nameptr.
 	 */
 	tdp = NULL;
-	mbnambuf_init();
+	mbnambuf_init(&nb);
 	/*
 	 * The outer loop ranges over the clusters that make up the
 	 * directory.  Note that the root directory is different from all
@@ -227,7 +226,7 @@ msdosfs_lookup(ap)
 				 * Drop memory of previous long matches
 				 */
 				chksum = -1;
-				mbnambuf_init();
+				mbnambuf_init(&nb);
 
 				if (slotcount < wincnt) {
 					slotcount++;
@@ -252,16 +251,15 @@ msdosfs_lookup(ap)
 					if (pmp->pm_flags & MSDOSFSMNT_SHORTNAME)
 						continue;
 
-					chksum = win2unixfn((struct winentry *)dep,
-							    chksum,
-							    pmp);
+					chksum = win2unixfn(&nb,
+					    (struct winentry *)dep, chksum,
+					    pmp);
 					continue;
 				}
 
-				chksum = winChkName((const u_char *)cnp->cn_nameptr,
-						    unlen,
-						    chksum,
-						    pmp);
+				chksum = winChkName(&nb,
+				    (const u_char *)cnp->cn_nameptr, unlen,
+				    chksum, pmp);
 				if (chksum == -2) {
 					chksum = -1;
 					continue;
@@ -279,7 +277,7 @@ msdosfs_lookup(ap)
 				/*
 				 * Check for a checksum or name match
 				 */
-				chksum_ok = (chksum == winChksum(dep->deName));
+				chksum_ok = (chksum == winChksum(dep));
 				if (!chksum_ok
 				    && (!olddos || bcmp(dosfilename, dep->deName, 11))) {
 					chksum = -1;
@@ -620,7 +618,7 @@ createde(dep, ddep, depp, cnp)
 	 * Now write the Win95 long name
 	 */
 	if (ddep->de_fndcnt > 0) {
-		u_int8_t chksum = winChksum(ndep->deName);
+		u_int8_t chksum = winChksum(ndep);
 		const u_char *un = (const u_char *)cnp->cn_nameptr;
 		int unlen = cnp->cn_namelen;
 		int cnt = 1;

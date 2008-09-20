@@ -31,7 +31,7 @@
  *
  *	@(#)fdesc_vfsops.c	8.4 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/sys/fs/fdescfs/fdesc_vfsops.c,v 1.53 2005/03/24 07:36:13 jeff Exp $
+ * $FreeBSD: src/sys/fs/fdescfs/fdesc_vfsops.c,v 1.56 2007/04/04 09:11:32 rwatson Exp $
  */
 
 /*
@@ -52,12 +52,22 @@
 
 #include <fs/fdescfs/fdesc.h>
 
-static MALLOC_DEFINE(M_FDESCMNT, "FDESC mount", "FDESC mount structure");
+static MALLOC_DEFINE(M_FDESCMNT, "fdesc_mount", "FDESC mount structure");
 
+static vfs_cmount_t	fdesc_cmount;
 static vfs_mount_t	fdesc_mount;
 static vfs_unmount_t	fdesc_unmount;
 static vfs_statfs_t	fdesc_statfs;
 static vfs_root_t	fdesc_root;
+
+/*
+ * Compatibility shim for old mount(2) system call.
+ */
+int
+fdesc_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
+{
+	return kernel_mount(ma, flags);
+}
 
 /*
  * Mount the per-process file descriptors (/dev/fd)
@@ -166,7 +176,7 @@ fdesc_statfs(mp, sbp, td)
 	lim = lim_cur(td->td_proc, RLIMIT_NOFILE);
 	PROC_UNLOCK(td->td_proc);
 	fdp = td->td_proc->p_fd;
-	FILEDESC_LOCK_FAST(fdp);
+	FILEDESC_SLOCK(fdp);
 	last = min(fdp->fd_nfiles, lim);
 	freefd = 0;
 	for (i = fdp->fd_freefile; i < last; i++)
@@ -179,7 +189,7 @@ fdesc_statfs(mp, sbp, td)
 	 */
 	if (fdp->fd_nfiles < lim)
 		freefd += (lim - fdp->fd_nfiles);
-	FILEDESC_UNLOCK_FAST(fdp);
+	FILEDESC_SUNLOCK(fdp);
 
 	sbp->f_flags = 0;
 	sbp->f_bsize = DEV_BSIZE;
@@ -193,6 +203,7 @@ fdesc_statfs(mp, sbp, td)
 }
 
 static struct vfsops fdesc_vfsops = {
+	.vfs_cmount =		fdesc_cmount,
 	.vfs_init =		fdesc_init,
 	.vfs_mount =		fdesc_mount,
 	.vfs_root =		fdesc_root,

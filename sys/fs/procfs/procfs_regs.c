@@ -33,8 +33,8 @@
  *	@(#)procfs_regs.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_regs.c,v 1.1.1.2 2006-02-25 02:37:05 laffer1 Exp $
- * $FreeBSD: src/sys/fs/procfs/procfs_regs.c,v 1.31 2005/06/30 07:49:21 peter Exp $
+ *	$Id: procfs_regs.c,v 1.2 2008-09-20 00:44:24 laffer1 Exp $
+ * $FreeBSD: src/sys/fs/procfs/procfs_regs.c,v 1.32 2007/04/15 13:24:03 des Exp $
  */
 
 #include "opt_compat.h"
@@ -89,8 +89,11 @@ procfs_doprocregs(PFS_FILL_ARGS)
 	int wrap32 = 0;
 #endif
 
+	if (uio->uio_offset != 0)
+		return (0);
+
 	PROC_LOCK(p);
-	KASSERT(p->p_lock > 0, ("proc not held"));
+	PROC_ASSERT_HELD(p);
 	if (p_candebug(td, p)) {
 		PROC_UNLOCK(p);
 		return (EPERM);
@@ -122,6 +125,5 @@ procfs_doprocregs(PFS_FILL_ARGS)
 	}
 	PROC_UNLOCK(p);
 
-	uio->uio_offset = 0;
 	return (error);
 }

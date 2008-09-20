@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/denode.h,v 1.33 2005/04/07 07:55:37 phk Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/denode.h,v 1.37 2007/08/07 03:22:10 bde Exp $ */
 /*	$NetBSD: denode.h,v 1.25 1997/11/17 15:36:28 ws Exp $	*/
 
 /*-
@@ -117,10 +116,12 @@ struct fatcache {
  * cache is probably pretty worthless if a file is opened by multiple
  * processes.
  */
-#define	FC_SIZE		2	/* number of entries in the cache */
+#define	FC_SIZE		3	/* number of entries in the cache */
 #define	FC_LASTMAP	0	/* entry the last call to pcbmap() resolved
 				 * to */
 #define	FC_LASTFC	1	/* entry for the last cluster in the file */
+#define	FC_NEXTTOLASTFC	2	/* entry for a close to the last cluster in
+				 * the file */
 
 #define	FCE_EMPTY	0xffffffff	/* doesn't represent an actual cluster # */
 
@@ -130,6 +131,13 @@ struct fatcache {
 #define	fc_setcache(dep, slot, frcn, fsrcn) \
 	(dep)->de_fc[(slot)].fc_frcn = (frcn); \
 	(dep)->de_fc[(slot)].fc_fsrcn = (fsrcn);
+
+#define	fc_last_to_nexttolast(dep) do {		 \
+	(dep)->de_fc[FC_NEXTTOLASTFC].fc_frcn =  \
+	(dep)->de_fc[FC_LASTFC].fc_frcn;	 \
+	(dep)->de_fc[FC_NEXTTOLASTFC].fc_fsrcn = \
+	(dep)->de_fc[FC_LASTFC].fc_fsrcn;	 \
+} while (0)
 
 /*
  * This is the in memory variant of a dos directory entry.  It is usually
@@ -217,32 +225,32 @@ struct denode {
 #define	DETOV(de)	((de)->de_vnode)
 
 #define	DETIMES(dep, acc, mod, cre) do {				\
-	if ((dep)->de_flag & DE_UPDATE) { 				\
+	if ((dep)->de_flag & DE_UPDATE) {				\
 		(dep)->de_flag |= DE_MODIFIED;				\
-		unix2dostime((mod), &(dep)->de_MDate, &(dep)->de_MTime,	\
-		    NULL);						\
-		(dep)->de_Attributes |= ATTR_ARCHIVE; 			\
+		timespec2fattime((mod), 0, &(dep)->de_MDate,		\
+		    &(dep)->de_MTime, NULL);				\
+		(dep)->de_Attributes |= ATTR_ARCHIVE;			\
 	}								\
 	if ((dep)->de_pmp->pm_flags & MSDOSFSMNT_NOWIN95) {		\
 		(dep)->de_flag &= ~(DE_UPDATE | DE_CREATE | DE_ACCESS);	\
 		break;							\
 	}								\
 	if ((dep)->de_flag & DE_ACCESS) {				\
-	    	u_int16_t adate;					\
+		u_int16_t adate;					\
 									\
-		unix2dostime((acc), &adate, NULL, NULL);		\
+		timespec2fattime((acc), 0, &adate, NULL, NULL);		\
 		if (adate != (dep)->de_ADate) {				\
 			(dep)->de_flag |= DE_MODIFIED;			\
 			(dep)->de_ADate = adate;			\
 		}							\
 	}								\
 	if ((dep)->de_flag & DE_CREATE) {				\
-		unix2dostime((cre), &(dep)->de_CDate, &(dep)->de_CTime,	\
-		    &(dep)->de_CHun);					\
-		    (dep)->de_flag |= DE_MODIFIED;			\
+		timespec2fattime((cre), 0, &(dep)->de_CDate,		\
+		    &(dep)->de_CTime, &(dep)->de_CHun);			\
+		(dep)->de_flag |= DE_MODIFIED;				\
 	}								\
 	(dep)->de_flag &= ~(DE_UPDATE | DE_CREATE | DE_ACCESS);		\
-} while (0);
+} while (0)
 
 /*
  * This overlays the fid structure (see mount.h)

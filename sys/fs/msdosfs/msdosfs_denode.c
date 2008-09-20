@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_denode.c,v 1.88.2.2 2006/03/12 21:50:01 scottl Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_denode.c,v 1.97 2007/08/07 03:59:49 bde Exp $ */
 /*	$NetBSD: msdosfs_denode.c,v 1.28 1998/02/10 14:10:00 mrg Exp $	*/
 
 /*-
@@ -51,24 +50,23 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/mount.h>
-#include <sys/malloc.h>
-#include <sys/bio.h>
 #include <sys/buf.h>
+#include <sys/clock.h>
+#include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/mount.h>
 #include <sys/vnode.h>
-#include <sys/mutex.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 
 #include <fs/msdosfs/bpb.h>
-#include <fs/msdosfs/msdosfsmount.h>
 #include <fs/msdosfs/direntry.h>
 #include <fs/msdosfs/denode.h>
 #include <fs/msdosfs/fat.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
-static MALLOC_DEFINE(M_MSDOSFSNODE, "MSDOSFS node", "MSDOSFS vnode private part");
+static MALLOC_DEFINE(M_MSDOSFSNODE, "msdosfs_node", "MSDOSFS vnode private part");
 
 static int
 de_vncmpf(struct vnode *vp, void *arg)
@@ -107,6 +105,7 @@ deget(pmp, dirclust, diroffset, depp)
 	struct denode *ldep;
 	struct vnode *nvp, *xvp;
 	struct buf *bp;
+	struct thread *td;
 
 #ifdef MSDOSFS_DEBUG
 	printf("deget(pmp %p, dirclust %lu, diroffset %lx, depp %p)\n",
@@ -137,7 +136,7 @@ deget(pmp, dirclust, diroffset, depp)
 	error = vfs_hash_get(mntp, inode, LK_EXCLUSIVE, curthread, &nvp,
 	    de_vncmpf, &inode);
 	if (error)
-		return(error);
+		return (error);
 	if (nvp != NULL) {
 		*depp = VTODE(nvp);
 		KASSERT((*depp)->de_dirclust == dirclust, ("wrong dirclust"));
@@ -172,7 +171,15 @@ deget(pmp, dirclust, diroffset, depp)
 	ldep->de_inode = inode;
 	fc_purge(ldep, 0);	/* init the fat cache for this denode */
 
-	error = vfs_hash_insert(nvp, inode, LK_EXCLUSIVE, curthread, &xvp,
+	td = curthread;
+	lockmgr(nvp->v_vnlock, LK_EXCLUSIVE, NULL, td);
+	error = insmntque(nvp, mntp);
+	if (error != 0) {
+		FREE(ldep, M_MSDOSFSNODE);
+		*depp = NULL;
+		return (error);
+	}
+	error = vfs_hash_insert(nvp, inode, LK_EXCLUSIVE, td, &xvp,
 	    de_vncmpf, &inode);
 	if (error) {
 		*depp = NULL;
@@ -211,7 +218,7 @@ deget(pmp, dirclust, diroffset, depp)
 			ldep->de_FileSize = pmp->pm_rootdirsize * DEV_BSIZE;
 		}
 		/*
-		 * fill in time and date so that dos2unixtime() doesn't
+		 * fill in time and date so that fattime2timespec() doesn't
 		 * spit up when called from msdosfs_getattr() with root
 		 * denode
 		 */
@@ -256,13 +263,13 @@ deget(pmp, dirclust, diroffset, depp)
 		u_long size;
 
 		/*
-		 * XXX Sometimes, these arrives that . entry have cluster
-		 * number 0, when it shouldn't.  Use real cluster number
+		 * XXX it sometimes happens that the "." entry has cluster
+		 * number 0 when it shouldn't.  Use the actual cluster number
 		 * instead of what is written in directory entry.
 		 */
-		if ((diroffset == 0) && (ldep->de_StartCluster != dirclust)) {
-			printf("deget(): . entry at clust %ld != %ld\n",
-					dirclust, ldep->de_StartCluster);
+		if (diroffset == 0 && ldep->de_StartCluster != dirclust) {
+			printf("deget(): \".\" entry at clust %lu != %lu\n",
+			    dirclust, ldep->de_StartCluster);
 			ldep->de_StartCluster = dirclust;
 		}
 
@@ -354,7 +361,6 @@ detrunc(dep, length, flags, cred, td)
 		return (EINVAL);
 	}
 
-
 	if (dep->de_FileSize < length) {
 		vnode_pager_setsize(DETOV(dep), length);
 		return deextend(dep, length, cred);
@@ -417,14 +423,14 @@ detrunc(dep, length, flags, cred, td)
 	 */
 	dep->de_FileSize = length;
 	if (!isadir)
-		dep->de_flag |= DE_UPDATE|DE_MODIFIED;
+		dep->de_flag |= DE_UPDATE | DE_MODIFIED;
 	allerror = vtruncbuf(DETOV(dep), cred, td, length, pmp->pm_bpcluster);
 #ifdef MSDOSFS_DEBUG
 	if (allerror)
 		printf("detrunc(): vtruncbuf error %d\n", allerror);
 #endif
 	error = deupdat(dep, 1);
-	if (error && (allerror == 0))
+	if (error != 0 && allerror == 0)
 		allerror = error;
 #ifdef MSDOSFS_DEBUG
 	printf("detrunc(): allerror %d, eofentry %lu\n",
@@ -501,7 +507,7 @@ deextend(dep, length, cred)
 		}
 	}
 	dep->de_FileSize = length;
-	dep->de_flag |= DE_UPDATE|DE_MODIFIED;
+	dep->de_flag |= DE_UPDATE | DE_MODIFIED;
 	return (deupdat(dep, 1));
 }
 
@@ -529,7 +535,7 @@ reinsert(dep)
 #endif
 	vp = DETOV(dep);
 	dep->de_inode = (uint64_t)dep->de_pmp->pm_bpcluster * dep->de_dirclust +
-	     dep->de_diroffset;
+	    dep->de_diroffset;
 	vfs_hash_rehash(vp, dep->de_inode);
 }
 

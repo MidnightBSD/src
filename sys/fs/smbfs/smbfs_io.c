@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/smbfs/smbfs_io.c,v 1.33 2005/03/13 12:18:24 jeff Exp $
+ * $FreeBSD: src/sys/fs/smbfs/smbfs_io.c,v 1.41 2007/06/04 21:45:16 attilio Exp $
  *
  */
 #include <sys/param.h>
@@ -264,7 +264,7 @@ smbfs_writevnode(struct vnode *vp, struct uio *uiop,
 				return error;
 		}
 		if (ioflag & IO_APPEND) {
-#if notyet
+#ifdef notyet
 			/*
 			 * File size can be changed by another client
 			 */
@@ -475,8 +475,8 @@ smbfs_getpages(ap)
 
 	kva = (vm_offset_t) bp->b_data;
 	pmap_qenter(kva, pages, npages);
-	cnt.v_vnodein++;
-	cnt.v_vnodepgsin += npages;
+	PCPU_INC(cnt.v_vnodein);
+	PCPU_ADD(cnt.v_vnodepgsin, npages);
 
 	iov.iov_base = (caddr_t) kva;
 	iov.iov_len = count;
@@ -551,7 +551,7 @@ smbfs_getpages(ap)
 			 * now tell them that it is ok to use.
 			 */
 			if (!error) {
-				if (m->flags & PG_WANTED)
+				if (m->oflags & VPO_WANTED)
 					vm_page_activate(m);
 				else
 					vm_page_deactivate(m);
@@ -592,7 +592,7 @@ smbfs_putpages(ap)
 #ifdef SMBFS_RWGENERIC
 	td = curthread;			/* XXX */
 	cred = td->td_ucred;		/* XXX */
-	VOP_OPEN(vp, FWRITE, cred, td, -1);
+	VOP_OPEN(vp, FWRITE, cred, td, NULL);
 	error = vop_stdputpages(ap);
 	VOP_CLOSE(vp, FWRITE, cred, td);
 	return error;
@@ -610,7 +610,7 @@ smbfs_putpages(ap)
 
 	td = curthread;			/* XXX */
 	cred = td->td_ucred;		/* XXX */
-/*	VOP_OPEN(vp, FWRITE, cred, td, -1);*/
+/*	VOP_OPEN(vp, FWRITE, cred, td, NULL);*/
 	np = VTOSMB(vp);
 	smp = VFSTOSMBFS(vp->v_mount);
 	pages = ap->a_m;
@@ -626,8 +626,8 @@ smbfs_putpages(ap)
 
 	kva = (vm_offset_t) bp->b_data;
 	pmap_qenter(kva, pages, npages);
-	cnt.v_vnodeout++;
-	cnt.v_vnodepgsout += count;
+	PCPU_INC(cnt.v_vnodeout);
+	PCPU_ADD(cnt.v_vnodepgsout, count);
 
 	iov.iov_base = (caddr_t) kva;
 	iov.iov_len = count;
@@ -683,6 +683,13 @@ smbfs_vinvalbuf(struct vnode *vp, struct thread *td)
 			return EINTR;
 	}
 	np->n_flag |= NFLUSHINPROG;
+
+	if (vp->v_bufobj.bo_object != NULL) {
+		VM_OBJECT_LOCK(vp->v_bufobj.bo_object);
+		vm_object_page_clean(vp->v_bufobj.bo_object, 0, 0, OBJPC_SYNC);
+		VM_OBJECT_UNLOCK(vp->v_bufobj.bo_object);
+	}
+
 	error = vinvalbuf(vp, V_SAVE, td, PCATCH, 0);
 	while (error) {
 		if (error == ERESTART || error == EINTR) {

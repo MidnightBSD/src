@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/udf_vfsops.c,v 1.33.2.2 2006/02/20 00:53:13 yar Exp $
+ * $FreeBSD: src/sys/fs/udf/udf_vfsops.c,v 1.48.4.1 2008/01/28 12:51:31 kib Exp $
  */
 
 /* udf_vfsops.c */
@@ -84,6 +84,7 @@
 #include <sys/malloc.h>
 #include <sys/mount.h>
 #include <sys/namei.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/vnode.h>
@@ -99,8 +100,8 @@
 #include <fs/udf/udf.h>
 #include <fs/udf/udf_mount.h>
 
-static MALLOC_DEFINE(M_UDFMOUNT, "UDF mount", "UDF mount structure");
-MALLOC_DEFINE(M_UDFFENTRY, "UDF fentry", "UDF file entry structure");
+static MALLOC_DEFINE(M_UDFMOUNT, "udf_mount", "UDF mount structure");
+MALLOC_DEFINE(M_UDFFENTRY, "udf_fentry", "UDF file entry structure");
 
 struct iconv_functions *udf_iconv = NULL;
 
@@ -116,7 +117,6 @@ static vfs_root_t      udf_root;
 static vfs_statfs_t    udf_statfs;
 static vfs_unmount_t   udf_unmount;
 static vfs_fhtovp_t	udf_fhtovp;
-static vfs_vptofh_t	udf_vptofh;
 
 static int udf_find_partmaps(struct udf_mnt *, struct logvol_desc *);
 
@@ -129,7 +129,6 @@ static struct vfsops udf_vfsops = {
 	.vfs_uninit =		udf_uninit,
 	.vfs_unmount =		udf_unmount,
 	.vfs_vget =		udf_vget,
-	.vfs_vptofh =		udf_vptofh,
 };
 VFS_SET(udf_vfsops, udf, VFCF_READONLY);
 
@@ -191,7 +190,6 @@ udf_mount(struct mount *mp, struct thread *td)
 {
 	struct vnode *devvp;	/* vnode of the mount device */
 	struct udf_mnt *imp = 0;
-	struct export_args *export;
 	struct vfsoptlist *opts;
 	char *fspec, *cs_disk, *cs_local;
 	int error, len, *udf_flags;
@@ -199,8 +197,12 @@ udf_mount(struct mount *mp, struct thread *td)
 
 	opts = mp->mnt_optnew;
 
-	if ((mp->mnt_flag & MNT_RDONLY) == 0)
-		return (EROFS);
+	/*
+	 * Unconditionally mount as read-only.
+	 */
+	MNT_ILOCK(mp);
+	mp->mnt_flag |= MNT_RDONLY;
+	MNT_IUNLOCK(mp);
 
 	/*
 	 * No root filesystem support.  Probably not a big deal, since the
@@ -215,14 +217,7 @@ udf_mount(struct mount *mp, struct thread *td)
 		return (EINVAL);
 
 	if (mp->mnt_flag & MNT_UPDATE) {
-		imp = VFSTOUDFFS(mp);
-		if (fspec == NULL) {
-			error = vfs_getopt(opts, "export", (void **)&export,
-			    &len);
-			if (error || len != sizeof(struct export_args))
-				return (EINVAL);
-			return (vfs_export(mp, export));
-		}
+		return (0);
 	}
 
 	/* Check that the mount device exists */
@@ -242,7 +237,7 @@ udf_mount(struct mount *mp, struct thread *td)
 	/* Check the access rights on the mount device */
 	error = VOP_ACCESS(devvp, VREAD, td->td_ucred, td);
 	if (error)
-		error = suser(td);
+		error = priv_check(td, PRIV_VFS_MOUNT_PERM);
 	if (error) {
 		vput(devvp);
 		return (error);
@@ -292,7 +287,7 @@ udf_checktag(struct desc_tag *tag, uint16_t id)
 
 	itag = (uint8_t *)tag;
 
-	if (tag->id != id)
+	if (le16toh(tag->id) != id)
 		return (EINVAL);
 
 	for (i = 0; i < 15; i++)
@@ -315,6 +310,7 @@ udf_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td) {
 	struct fileset_desc *fsd;
 	struct file_entry *root_fentry;
 	uint32_t sector, size, mvds_start, mvds_end;
+	uint32_t logical_secsize;
 	uint32_t fsd_offset = 0;
 	uint16_t part_num = 0, fsd_part = 0;
 	int error = EINVAL;
@@ -346,7 +342,9 @@ udf_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td) {
 	mp->mnt_data = (qaddr_t)udfmp;
 	mp->mnt_stat.f_fsid.val[0] = dev2udev(devvp->v_rdev);
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
+	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 	udfmp->im_mountp = mp;
 	udfmp->im_dev = devvp->v_rdev;
 	udfmp->im_devvp = devvp;
@@ -357,16 +355,31 @@ udf_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td) {
 #if 0
 	udfmp->im_l2d = NULL;
 #endif
+	/*
+	 * The UDF specification defines a logical sectorsize of 2048
+	 * for DVD media.
+	 */
+	logical_secsize = 2048;
 
-	bsize = 2048;	/* XXX Should probe the media for it's size */
+	if (((logical_secsize % cp->provider->sectorsize) != 0) ||
+	    (logical_secsize < cp->provider->sectorsize)) {
+		DROP_GIANT();
+		g_topology_lock();
+		g_vfs_close(cp, td);
+		g_topology_unlock();
+		PICKUP_GIANT();
+		return (EINVAL);
+	}
+
+	bsize = cp->provider->sectorsize;
 
 	/* 
 	 * Get the Anchor Volume Descriptor Pointer from sector 256.
 	 * XXX Should also check sector n - 256, n, and 512.
 	 */
 	sector = 256;
-	if ((error = bread(devvp, sector * btodb(bsize), bsize, NOCRED,
-			   &bp)) != 0)
+	if ((error = bread(devvp, sector * btodb(logical_secsize), bsize,
+			   NOCRED, &bp)) != 0)
 		goto bail;
 	if ((error = udf_checktag((struct desc_tag *)bp->b_data, TAGID_ANCHOR)))
 		goto bail;
@@ -384,8 +397,8 @@ udf_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td) {
 	mvds_start = le32toh(avdp.main_vds_ex.loc);
 	mvds_end = mvds_start + (le32toh(avdp.main_vds_ex.len) - 1) / bsize;
 	for (sector = mvds_start; sector < mvds_end; sector++) {
-		if ((error = bread(devvp, sector * btodb(bsize), bsize, 
-				   NOCRED, &bp)) != 0) {
+		if ((error = bread(devvp, sector * btodb(logical_secsize),
+				   bsize, NOCRED, &bp)) != 0) {
 			printf("Can't read sector %d of VDS\n", sector);
 			goto bail;
 		}
@@ -522,7 +535,9 @@ udf_unmount(struct mount *mp, int mntflags, struct thread *td)
 	FREE(udfmp, M_UDFMOUNT);
 
 	mp->mnt_data = (qaddr_t)0;
+	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 
 	return (0);
 }
@@ -598,7 +613,13 @@ udf_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	unode->udfmp = udfmp;
 	vp->v_data = unode;
 
-	error = vfs_hash_insert(vp, ino, flags, curthread, vpp, NULL, NULL);
+	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL, td);
+	error = insmntque(vp, mp);
+	if (error != 0) {
+		uma_zfree(udf_zone_node, unode);
+		return (error);
+	}
+	error = vfs_hash_insert(vp, ino, flags, td, vpp, NULL, NULL);
 	if (error || *vpp != NULL)
 		return (error);
 
@@ -609,6 +630,7 @@ udf_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	devvp = udfmp->im_devvp;
 	if ((error = RDSECTOR(devvp, sector, udfmp->bsize, &bp)) != 0) {
 		printf("Cannot read sector %d\n", sector);
+		vgone(vp);
 		vput(vp);
 		brelse(bp);
 		*vpp = NULL;
@@ -618,6 +640,7 @@ udf_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	fe = (struct file_entry *)bp->b_data;
 	if (udf_checktag(&fe->tag, TAGID_FENTRY)) {
 		printf("Invalid file entry!\n");
+		vgone(vp);
 		vput(vp);
 		brelse(bp);
 		*vpp = NULL;
@@ -628,6 +651,7 @@ udf_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	    M_NOWAIT | M_ZERO);
 	if (unode->fentry == NULL) {
 		printf("Cannot allocate file entry block\n");
+		vgone(vp);
 		vput(vp);
 		brelse(bp);
 		*vpp = NULL;
@@ -670,18 +694,13 @@ udf_vget(struct mount *mp, ino_t ino, int flags, struct vnode **vpp)
 	return (0);
 }
 
-struct ifid {
-	u_short	ifid_len;
-	u_short	ifid_pad;
-	int	ifid_ino;
-	long	ifid_start;
-};
-
 static int
 udf_fhtovp(struct mount *mp, struct fid *fhp, struct vnode **vpp)
 {
 	struct ifid *ifhp;
 	struct vnode *nvp;
+	struct udf_node *np;
+	off_t fsize;
 	int error;
 
 	ifhp = (struct ifid *)fhp;
@@ -691,52 +710,42 @@ udf_fhtovp(struct mount *mp, struct fid *fhp, struct vnode **vpp)
 		return (error);
 	}
 
+	np = VTON(nvp);
+	fsize = le64toh(np->fentry->inf_len);
+
 	*vpp = nvp;
-	vnode_create_vobject_off(*vpp, 0, curthread);
-	return (0);
-}
-
-static int
-udf_vptofh (struct vnode *vp, struct fid *fhp)
-{
-	struct udf_node *node;
-	struct ifid *ifhp;
-
-	node = VTON(vp);
-	ifhp = (struct ifid *)fhp;
-	ifhp->ifid_len = sizeof(struct ifid);
-	ifhp->ifid_ino = node->hash_id;
-
+	vnode_create_vobject(*vpp, fsize, curthread);
 	return (0);
 }
 
 static int
 udf_find_partmaps(struct udf_mnt *udfmp, struct logvol_desc *lvd)
 {
-	union udf_pmap *pmap;
 	struct part_map_spare *pms;
 	struct regid *pmap_id;
 	struct buf *bp;
 	unsigned char regid_id[UDF_REGID_ID_SIZE + 1];
 	int i, k, ptype, psize, error;
+	uint8_t *pmap = (uint8_t *) &lvd->maps[0];
 
 	for (i = 0; i < le32toh(lvd->n_pm); i++) {
-		pmap = (union udf_pmap *)&lvd->maps[i * UDF_PMAP_SIZE];
-		ptype = pmap->data[0];
-		psize = pmap->data[1];
+		ptype = pmap[0];
+		psize = pmap[1];
 		if (((ptype != 1) && (ptype != 2)) ||
-		    ((psize != UDF_PMAP_SIZE) && (psize != 6))) {
+		    ((psize != UDF_PMAP_TYPE1_SIZE) &&
+		     (psize != UDF_PMAP_TYPE2_SIZE))) {
 			printf("Invalid partition map found\n");
 			return (1);
 		}
 
 		if (ptype == 1) {
 			/* Type 1 map.  We don't care */
+			pmap += UDF_PMAP_TYPE1_SIZE;
 			continue;
 		}
 
 		/* Type 2 map.  Gotta find out the details */
-		pmap_id = (struct regid *)&pmap->data[4];
+		pmap_id = (struct regid *)&pmap[4];
 		bzero(&regid_id[0], UDF_REGID_ID_SIZE);
 		bcopy(&pmap_id->id[0], &regid_id[0], UDF_REGID_ID_SIZE);
 
@@ -746,7 +755,8 @@ udf_find_partmaps(struct udf_mnt *udfmp, struct logvol_desc *lvd)
 			return (1);
 		}
 
-		pms = &pmap->pms;
+		pms = (struct part_map_spare *)pmap;
+		pmap += UDF_PMAP_TYPE2_SIZE;
 		MALLOC(udfmp->s_table, struct udf_sparing_table *,
 		    le32toh(pms->st_size), M_UDFMOUNT, M_NOWAIT | M_ZERO);
 		if (udfmp->s_table == NULL)

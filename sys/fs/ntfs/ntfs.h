@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs.h,v 1.19 2004/12/06 20:22:16 phk Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs.h,v 1.20 2005/09/11 15:57:07 rodrigc Exp $
  */
 
 /*#define NTFS_DEBUG 1*/
@@ -285,7 +285,6 @@ struct ntfsmount {
 #define	ntfs_bpbl	(daddr_t)((ntmp)->ntm_bps)
 
 #ifdef MALLOC_DECLARE
-MALLOC_DECLARE(M_NTFSMNT);
 MALLOC_DECLARE(M_NTFSNTNODE);
 MALLOC_DECLARE(M_NTFSFNODE);
 MALLOC_DECLARE(M_NTFSDIR);

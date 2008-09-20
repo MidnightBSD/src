@@ -31,7 +31,7 @@
  *
  *	@(#)null_subr.c	8.7 (Berkeley) 5/14/95
  *
- * $FreeBSD: src/sys/fs/nullfs/null_subr.c,v 1.48.2.1 2006/03/13 03:05:17 jeff Exp $
+ * $FreeBSD: src/sys/fs/nullfs/null_subr.c,v 1.51.2.1 2007/10/22 05:44:07 daichi Exp $
  */
 
 #include <sys/param.h>
@@ -64,8 +64,8 @@ static LIST_HEAD(null_node_hashhead, null_node) *null_node_hashtbl;
 static u_long null_node_hash;
 struct mtx null_hashmtx;
 
-static MALLOC_DEFINE(M_NULLFSHASH, "NULLFS hash", "NULLFS hash table");
-MALLOC_DEFINE(M_NULLFSNODE, "NULLFS node", "NULLFS vnode private part");
+static MALLOC_DEFINE(M_NULLFSHASH, "nullfs_hash", "NULLFS hash table");
+MALLOC_DEFINE(M_NULLFSNODE, "nullfs_node", "NULLFS vnode private part");
 
 static struct vnode * null_hashget(struct mount *, struct vnode *);
 static struct vnode * null_hashins(struct mount *, struct null_node *);
@@ -185,6 +185,18 @@ null_hashins(mp, xp)
 	return (NULLVP);
 }
 
+static void
+null_insmntque_dtr(struct vnode *vp, void *xp)
+{
+	vp->v_data = NULL;
+	vp->v_vnlock = &vp->v_lock;
+	FREE(xp, M_NULLFSNODE);
+	vp->v_op = &dead_vnodeops;
+	(void) vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, curthread);
+	vgone(vp);
+	vput(vp);
+}
+
 /*
  * Make a new or get existing nullfs node.
  * Vp is the alias vnode, lowervp is the lower vnode.
@@ -239,6 +251,9 @@ null_nodeget(mp, lowervp, vpp)
 	vp->v_vnlock = lowervp->v_vnlock;
 	if (vp->v_vnlock == NULL)
 		panic("null_nodeget: Passed a NULL vnlock.\n");
+	error = insmntque1(vp, mp, null_insmntque_dtr, xp);
+	if (error != 0)
+		return (error);
 	/*
 	 * Atomically insert our new node into the hash or vget existing 
 	 * if someone else has beaten us to it.
@@ -283,6 +298,7 @@ null_checkvp(vp, fil, lno)
 	char *fil;
 	int lno;
 {
+	int interlock = 0;
 	struct null_node *a = VTONULL(vp);
 #ifdef notyet
 	/*
@@ -306,6 +322,10 @@ null_checkvp(vp, fil, lno)
 		while (null_checkvp_barrier) /*WAIT*/ ;
 		panic("null_checkvp");
 	}
+	if (mtx_owned(VI_MTX(vp)) != 0) {
+		VI_UNLOCK(vp);
+		interlock = 1;
+	}
 	if (vrefcnt(a->null_lowervp) < 1) {
 		int i; u_long *p;
 		printf("vp = %p, unref'ed lowervp\n", (void *)vp);
@@ -316,6 +336,8 @@ null_checkvp(vp, fil, lno)
 		while (null_checkvp_barrier) /*WAIT*/ ;
 		panic ("null with unref'ed lowervp");
 	};
+	if (interlock != 0)
+		VI_LOCK(vp);
 #ifdef notyet
 	printf("null %x/%d -> %x/%d [%s, %d]\n",
 	        NULLTOV(a), vrefcnt(NULLTOV(a)),

@@ -33,8 +33,8 @@
  *	@(#)procfs_ctl.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_ctl.c,v 1.2 2007-01-07 04:22:54 laffer1 Exp $
- * $FreeBSD: src/sys/fs/procfs/procfs_ctl.c,v 1.53.2.1 2006/03/01 20:52:10 jhb Exp $
+ *	$Id: procfs_ctl.c,v 1.3 2008-09-20 00:44:24 laffer1 Exp $
+ * $FreeBSD: src/sys/fs/procfs/procfs_ctl.c,v 1.56 2007/06/05 00:00:51 jeff Exp $
  */
 
 #include <sys/param.h>
@@ -215,7 +215,7 @@ out:
 		p->p_flag &= ~P_TRACED;
 
 		/* remove pending SIGTRAP, else the process will die */
-		SIGDELSET(p->p_siglist, SIGTRAP);
+		sigqueue_delete_proc(p, SIGTRAP);
 		PROC_UNLOCK(p);
 
 		/* give process back to original parent */
@@ -286,9 +286,9 @@ out:
 		panic("procfs_control");
 	}
 
-	mtx_lock_spin(&sched_lock);
+	PROC_SLOCK(p);
 	thread_unsuspend(p); /* If it can run, let it do so. */
-	mtx_unlock_spin(&sched_lock);
+	PROC_SUNLOCK(p);
 	return (0);
 }
 
@@ -344,9 +344,9 @@ procfs_doprocctl(PFS_FILL_ARGS)
 #endif
 				/* XXXKSE: */
 				p->p_flag &= ~P_STOPPED_SIG;
-				mtx_lock_spin(&sched_lock);
+				PROC_SLOCK(p);
 				thread_unsuspend(p);
-				mtx_unlock_spin(&sched_lock);
+				PROC_SUNLOCK(p);
 			} else
 				psignal(p, nm->nm_val);
 			PROC_UNLOCK(p);

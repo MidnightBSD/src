@@ -37,7 +37,7 @@
  *
  *	@(#)procfs_vfsops.c	8.7 (Berkeley) 5/10/95
  *
- * $FreeBSD: src/sys/fs/procfs/procfs.c,v 1.12 2005/01/06 18:10:40 imp Exp $
+ * $FreeBSD: src/sys/fs/procfs/procfs.c,v 1.16 2007/03/12 12:16:52 des Exp $
  */
 
 #include <sys/param.h>
@@ -69,10 +69,18 @@ procfs_doprocfile(PFS_FILL_ARGS)
 {
 	char *fullpath = "unknown";
 	char *freepath = NULL;
+	struct vnode *textvp;
+	int err;
 
-	vn_lock(p->p_textvp, LK_EXCLUSIVE | LK_RETRY, td);
-	vn_fullpath(td, p->p_textvp, &fullpath, &freepath);
-	VOP_UNLOCK(p->p_textvp, 0, td);
+	textvp = p->p_textvp;
+	VI_LOCK(textvp);
+	vholdl(textvp);
+	err = vn_lock(textvp, LK_EXCLUSIVE | LK_INTERLOCK, td);
+	vdrop(textvp);
+	if (err)
+		return (err);
+	vn_fullpath(td, textvp, &fullpath, &freepath);
+	VOP_UNLOCK(textvp, 0, td);
 	sbuf_printf(sb, "%s", fullpath);
 	if (freepath)
 		free(freepath, M_TEMP);
@@ -98,9 +106,7 @@ procfs_attr(PFS_ATTR_ARGS)
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 
 	/* XXX inefficient, split into separate functions */
-	if (p->p_flag & P_SUGID)
-		vap->va_mode = 0;
-	else if (strcmp(pn->pn_name, "ctl") == 0 ||
+	if (strcmp(pn->pn_name, "ctl") == 0 ||
 	    strcmp(pn->pn_name, "note") == 0 ||
 	    strcmp(pn->pn_name, "notepg") == 0)
 		vap->va_mode = 0200;
@@ -109,6 +115,9 @@ procfs_attr(PFS_ATTR_ARGS)
 	    strcmp(pn->pn_name, "dbregs") == 0 ||
 	    strcmp(pn->pn_name, "fpregs") == 0)
 		vap->va_mode = 0600;
+
+	if ((p->p_flag & P_SUGID) && pn->pn_type != pfstype_procdir)
+		vap->va_mode = 0;
 
 	vap->va_uid = p->p_ucred->cr_uid;
 	vap->va_gid = p->p_ucred->cr_gid;
@@ -151,39 +160,39 @@ procfs_init(PFS_INIT_ARGS)
 	root = pi->pi_root;
 
 	pfs_create_link(root, "curproc", procfs_docurproc,
-	    NULL, NULL, 0);
+	    NULL, NULL, NULL, 0);
 
 	dir = pfs_create_dir(root, "pid",
-	    procfs_attr, NULL, PFS_PROCDEP);
+	    procfs_attr, NULL, NULL, PFS_PROCDEP);
 	pfs_create_file(dir, "cmdline", procfs_doproccmdline,
-	    NULL, NULL, PFS_RD);
+	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "ctl", procfs_doprocctl,
-	    procfs_attr, NULL, PFS_WR);
+	    procfs_attr, NULL, NULL, PFS_WR);
 	pfs_create_file(dir, "dbregs", procfs_doprocdbregs,
-	    procfs_attr, procfs_candebug, PFS_RDWR|PFS_RAW);
+	    procfs_attr, procfs_candebug, NULL, PFS_RDWR|PFS_RAW);
 	pfs_create_file(dir, "etype", procfs_doproctype,
-	    NULL, NULL, PFS_RD);
+	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "fpregs", procfs_doprocfpregs,
-	    procfs_attr, procfs_candebug, PFS_RDWR|PFS_RAW);
+	    procfs_attr, procfs_candebug, NULL, PFS_RDWR|PFS_RAW);
 	pfs_create_file(dir, "map", procfs_doprocmap,
-	    NULL, procfs_notsystem, PFS_RD);
+	    NULL, procfs_notsystem, NULL, PFS_RD);
 	node = pfs_create_file(dir, "mem", procfs_doprocmem,
-	    procfs_attr, procfs_candebug, PFS_RDWR|PFS_RAW);
+	    procfs_attr, procfs_candebug, NULL, PFS_RDWR|PFS_RAW);
 	node->pn_ioctl = procfs_ioctl;
 	node->pn_close = procfs_close;
 	pfs_create_file(dir, "note", procfs_doprocnote,
-	    procfs_attr, procfs_candebug, PFS_WR);
+	    procfs_attr, procfs_candebug, NULL, PFS_WR);
 	pfs_create_file(dir, "notepg", procfs_doprocnote,
-	    procfs_attr, procfs_candebug, PFS_WR);
+	    procfs_attr, procfs_candebug, NULL, PFS_WR);
 	pfs_create_file(dir, "regs", procfs_doprocregs,
-	    procfs_attr, procfs_candebug, PFS_RDWR|PFS_RAW);
+	    procfs_attr, procfs_candebug, NULL, PFS_RDWR|PFS_RAW);
 	pfs_create_file(dir, "rlimit", procfs_doprocrlimit,
-	    NULL, NULL, PFS_RD);
+	    NULL, NULL, NULL, PFS_RD);
 	pfs_create_file(dir, "status", procfs_doprocstatus,
-	    NULL, NULL, PFS_RD);
+	    NULL, NULL, NULL, PFS_RD);
 
 	pfs_create_link(dir, "file", procfs_doprocfile,
-	    NULL, procfs_notsystem, 0);
+	    NULL, procfs_notsystem, NULL, 0);
 
 	return (0);
 }

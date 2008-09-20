@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/udf_vnops.c,v 1.58.2.1 2006/03/12 21:50:02 scottl Exp $
+ * $FreeBSD: src/sys/fs/udf/udf_vnops.c,v 1.66 2007/06/11 20:14:44 remko Exp $
  */
 
 /* udf_vnops.c */
@@ -57,6 +57,7 @@ extern struct iconv_functions *udf_iconv;
 
 static vop_access_t	udf_access;
 static vop_getattr_t	udf_getattr;
+static vop_open_t	udf_open;
 static vop_ioctl_t	udf_ioctl;
 static vop_pathconf_t	udf_pathconf;
 static vop_read_t	udf_read;
@@ -66,6 +67,7 @@ static vop_strategy_t	udf_strategy;
 static vop_bmap_t	udf_bmap;
 static vop_cachedlookup_t	udf_lookup;
 static vop_reclaim_t	udf_reclaim;
+static vop_vptofh_t	udf_vptofh;
 static int udf_readatoffset(struct udf_node *node, int *size, off_t offset,
     struct buf **bp, uint8_t **data);
 static int udf_bmap_internal(struct udf_node *node, off_t offset,
@@ -80,16 +82,18 @@ static struct vop_vector udf_vnodeops = {
 	.vop_getattr =		udf_getattr,
 	.vop_ioctl =		udf_ioctl,
 	.vop_lookup =		vfs_cache_lookup,
+	.vop_open =		udf_open,
 	.vop_pathconf =		udf_pathconf,
 	.vop_read =		udf_read,
 	.vop_readdir =		udf_readdir,
 	.vop_readlink =		udf_readlink,
 	.vop_reclaim =		udf_reclaim,
 	.vop_strategy =		udf_strategy,
+	.vop_vptofh =		udf_vptofh,
 };
 
-MALLOC_DEFINE(M_UDFFID, "UDF FID", "UDF FileId structure");
-MALLOC_DEFINE(M_UDFDS, "UDF DS", "UDF Dirstream structure");
+MALLOC_DEFINE(M_UDFFID, "udf_fid", "UDF FileId structure");
+MALLOC_DEFINE(M_UDFDS, "udf_ds", "UDF Dirstream structure");
 
 #define UDF_INVALID_BMAP	-1
 
@@ -157,6 +161,16 @@ udf_access(struct vop_access_args *a)
 
 	return (vaccess(vp->v_type, mode, node->fentry->uid, node->fentry->gid,
 	    a_mode, a->a_cred, NULL));
+}
+
+static int
+udf_open(struct vop_open_args *ap) {
+	struct udf_node *np = VTON(ap->a_vp);
+	off_t fsize;
+
+	fsize = le64toh(np->fentry->inf_len);
+	vnode_create_vobject(ap->a_vp, fsize, ap->a_td);
+	return 0;
 }
 
 static int mon_lens[2][12] = {
@@ -327,38 +341,60 @@ udf_pathconf(struct vop_pathconf_args *a)
 	}
 }
 
-static int
-udf_read(struct vop_read_args *a)
-{
-	struct vnode *vp = a->a_vp;
-	struct uio *uio = a->a_uio;
-	struct udf_node *node = VTON(vp);
-	struct buf *bp;
-	uint8_t *data;
-	off_t fsize, offset;
-	int error = 0;
-	int size;
+#define lblkno(udfmp, loc)	((loc) >> (udfmp)->bshift)
+#define blkoff(udfmp, loc)	((loc) & (udfmp)->bmask)
+#define lblktosize(imp, blk)	((blk) << (udfmp)->bshift)
 
+static int
+udf_read(struct vop_read_args *ap)
+{
+	struct vnode *vp = ap->a_vp;
+	struct uio *uio = ap->a_uio;
+	struct udf_node *node = VTON(vp);
+	struct udf_mnt *udfmp;
+	struct buf *bp;
+	daddr_t lbn, rablock;
+	off_t diff, fsize;
+	int error = 0;
+	long size, n, on;
+
+	if (uio->uio_resid == 0)
+		return (0);
 	if (uio->uio_offset < 0)
 		return (EINVAL);
-
 	fsize = le64toh(node->fentry->inf_len);
-
-	while (uio->uio_offset < fsize && uio->uio_resid > 0) {
-		offset = uio->uio_offset;
-		if (uio->uio_resid + offset <= fsize)
-			size = uio->uio_resid;
-		else
-			size = fsize - offset;
-		error = udf_readatoffset(node, &size, offset, &bp, &data);
-		if (error == 0)
-			error = uiomove(data, size, uio);
-		if (bp != NULL)
+	udfmp = node->udfmp;
+	do {
+		lbn = lblkno(udfmp, uio->uio_offset);
+		on = blkoff(udfmp, uio->uio_offset);
+		n = min((u_int)(udfmp->bsize - on),
+			uio->uio_resid);
+		diff = fsize - uio->uio_offset;
+		if (diff <= 0)
+			return (0);
+		if (diff < n)
+			n = diff;
+		size = udfmp->bsize;
+		rablock = lbn + 1;
+		if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0) {
+			if (lblktosize(udfmp, rablock) < fsize) {
+				error = cluster_read(vp, fsize, lbn, size, NOCRED,
+					uio->uio_resid, (ap->a_ioflag >> 16), &bp);
+			} else {
+				error = bread(vp, lbn, size, NOCRED, &bp);
+			}
+		} else {
+			error = bread(vp, lbn, size, NOCRED, &bp);
+		}
+		n = min(n, size - bp->b_resid);
+		if (error) {
 			brelse(bp);
-		if (error)
-			break;
-	};
+			return (error);
+		}
 
+		error = uiomove(bp->b_data + on, (int)n, uio);
+		brelse(bp);
+	} while (error == 0 && uio->uio_resid > 0 && n != 0);
 	return (error);
 }
 
@@ -764,23 +800,29 @@ udf_strategy(struct vop_strategy_args *a)
 	struct vnode *vp;
 	struct udf_node *node;
 	int maxsize;
+	daddr_t sector;
 	struct bufobj *bo;
+	int multiplier;
 
 	bp = a->a_bp;
 	vp = a->a_vp;
 	node = VTON(vp);
 
-	/* cd9660 has this test reversed, but it seems more logical this way */
-	if (bp->b_blkno != bp->b_lblkno) {
+	if (bp->b_blkno == bp->b_lblkno) {
 		/*
 		 * Files that are embedded in the fentry don't translate well
 		 * to a block number.  Reject.
 		 */
 		if (udf_bmap_internal(node, bp->b_lblkno * node->udfmp->bsize,
-		    &bp->b_lblkno, &maxsize)) {
+		    &sector, &maxsize)) {
 			clrbuf(bp);
 			bp->b_blkno = -1;
 		}
+
+		/* bmap gives sector numbers, bio works with device blocks */
+		multiplier = node->udfmp->bsize / DEV_BSIZE;
+		bp->b_blkno = sector * multiplier;
+
 	}
 	if ((long)bp->b_blkno == -1) {
 		bufdone(bp);
@@ -860,7 +902,7 @@ udf_lookup(struct vop_cachedlookup_args *a)
 	 * If this is a LOOKUP and we've already partially searched through
 	 * the directory, pick up where we left off and flag that the
 	 * directory may need to be searched twice.  For a full description,
-	 * see /sys/isofs/cd9660/cd9660_lookup.c:cd9660_lookup()
+	 * see /sys/fs/cd9660/cd9660_lookup.c:cd9660_lookup()
 	 */
 	if (nameiop != LOOKUP || node->diroff == 0 || node->diroff > fsize) {
 		offset = 0;
@@ -982,6 +1024,20 @@ udf_reclaim(struct vop_reclaim_args *a)
 	return (0);
 }
 
+static int
+udf_vptofh(struct vop_vptofh_args *a)
+{
+	struct udf_node *node;
+	struct ifid *ifhp;
+
+	node = VTON(a->a_vp);
+	ifhp = (struct ifid *)a->a_fhp;
+	ifhp->ifid_len = sizeof(struct ifid);
+	ifhp->ifid_ino = node->hash_id;
+
+	return (0);
+}
+
 /*
  * Read the block and then set the data pointer to correspond with the
  * offset passed in.  Only read in at most 'size' bytes, and then set 'size'
@@ -1024,20 +1080,22 @@ udf_readatoffset(struct udf_node *node, int *size, off_t offset,
 		*size = max_size;
 	*size = min(*size, MAXBSIZE);
 
-	if ((error = udf_readlblks(udfmp, sector, *size, bp))) {
+	if ((error = udf_readlblks(udfmp, sector, *size + (offset & udfmp->bmask), bp))) {
 		printf("warning: udf_readlblks returned error %d\n", error);
 		/* note: *bp may be non-NULL */
 		return (error);
 	}
 
 	bp1 = *bp;
-	*data = (uint8_t *)&bp1->b_data[offset % udfmp->bsize];
+	*data = (uint8_t *)&bp1->b_data[offset & udfmp->bmask];
 	return (0);
 }
 
 /*
  * Translate a file offset into a logical block and then into a physical
  * block.
+ * max_size - maximum number of bytes that can be read starting from given
+ * offset, rather than beginning of calculated sector number
  */
 static int
 udf_bmap_internal(struct udf_node *node, off_t offset, daddr_t *sector,
@@ -1090,9 +1148,9 @@ udf_bmap_internal(struct udf_node *node, off_t offset, daddr_t *sector,
 		} while(offset >= icblen);
 
 		lsector = (offset  >> udfmp->bshift) +
-		    ((struct short_ad *)(icb))->pos;
+		    le32toh(((struct short_ad *)(icb))->pos);
 
-		*max_size = GETICBLEN(short_ad, icb);
+		*max_size = icblen - offset;
 
 		break;
 	case 1:
@@ -1117,7 +1175,7 @@ udf_bmap_internal(struct udf_node *node, off_t offset, daddr_t *sector,
 		lsector = (offset >> udfmp->bshift) +
 		    le32toh(((struct long_ad *)(icb))->loc.lb_num);
 
-		*max_size = GETICBLEN(long_ad, icb);
+		*max_size = icblen - offset;
 
 		break;
 	case 3:

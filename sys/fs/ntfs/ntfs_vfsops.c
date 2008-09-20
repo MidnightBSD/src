@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.78.2.2 2006/02/20 00:53:13 yar Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.88 2007/09/21 23:50:15 rodrigc Exp $
  */
 
 
@@ -60,10 +60,10 @@
 #include <fs/ntfs/ntfs_ihash.h>
 #include <fs/ntfs/ntfsmount.h>
 
-static MALLOC_DEFINE(M_NTFSMNT, "NTFS mount", "NTFS mount structure");
-MALLOC_DEFINE(M_NTFSNTNODE,"NTFS ntnode",  "NTFS ntnode information");
-MALLOC_DEFINE(M_NTFSFNODE,"NTFS fnode",  "NTFS fnode information");
-MALLOC_DEFINE(M_NTFSDIR,"NTFS dir",  "NTFS dir buffer");
+static MALLOC_DEFINE(M_NTFSMNT, "ntfs_mount", "NTFS mount structure");
+MALLOC_DEFINE(M_NTFSNTNODE,"ntfs_ntnode",  "NTFS ntnode information");
+MALLOC_DEFINE(M_NTFSFNODE,"ntfs_fnode",  "NTFS fnode information");
+MALLOC_DEFINE(M_NTFSDIR,"ntfs_dir",  "NTFS dir buffer");
 
 struct sockaddr;
 
@@ -80,7 +80,6 @@ static vfs_mount_t      ntfs_mount;
 static vfs_root_t       ntfs_root;
 static vfs_statfs_t     ntfs_statfs;
 static vfs_unmount_t    ntfs_unmount;
-static vfs_vptofh_t     ntfs_vptofh;
 
 static b_strategy_t     ntfs_bufstrategy;
 
@@ -157,7 +156,6 @@ ntfs_mount (
 	struct vnode	*devvp;
 	struct nameidata ndp;
 	char *from;
-	struct export_args export;
 
 	if (vfs_filteropt(mp->mnt_optnew, ntfs_opts))
 		return (EINVAL);
@@ -171,20 +169,14 @@ ntfs_mount (
 	 * read/write.
 	 */
 	if (mp->mnt_flag & MNT_UPDATE) {
-		error = vfs_copyopt(mp->mnt_optnew, "export",	
-		    &export, sizeof export);
-		if ((error == 0) && export.ex_flags != 0) {
-			/*
-			 * Process export requests.  Jumping to "success"
-			 * will return the vfs_export() error code.
-			 */
-			err = vfs_export(mp, &export);
+		if (vfs_flagopt(mp->mnt_optnew, "export", NULL, 0)) {
+			/* Process export requests in vfs_mount.c */
 			goto success;
+		} else {
+			printf("ntfs_mount(): MNT_UPDATE not supported\n");
+			err = EINVAL;
+			goto error_1;
 		}
-
-		printf("ntfs_mount(): MNT_UPDATE not supported\n");
-		err = EINVAL;
-		goto error_1;
 	}
 
 	/*
@@ -269,12 +261,26 @@ ntfs_mountfs(devvp, mp, td)
 	int error, ronly, i, v;
 	struct vnode *vp;
 	struct g_consumer *cp;
+	struct g_provider *pp;
 	char *cs_ntfs, *cs_local;
 
 	ronly = (mp->mnt_flag & MNT_RDONLY) != 0;
 	DROP_GIANT();
 	g_topology_lock();
-	error = g_vfs_open(devvp, &cp, "ntfs", ronly ? 0 : 1);
+
+	/*
+	 * XXX: Do not allow more than one consumer to open a device
+	 *      associated with a particular GEOM provider.
+	 *      This disables multiple read-only mounts of a device,
+	 *      but it gets rid of panics in vget() when you try to
+	 *      mount the same device more than once.
+	 */
+	pp = g_dev_getprovider(devvp->v_rdev);
+ 	if ((pp != NULL) && ((pp->acr | pp->acw | pp->ace ) != 0)) 
+		error = EPERM;
+	else 
+		error = g_vfs_open(devvp, &cp, "ntfs", ronly ? 0 : 1);
+
 	g_topology_unlock();
 	PICKUP_GIANT();
 	VOP_UNLOCK(devvp, 0, td);
@@ -299,7 +305,7 @@ ntfs_mountfs(devvp, mp, td)
 	brelse( bp );
 	bp = NULL;
 
-	if (strncmp(ntmp->ntm_bootfile.bf_sysid, NTFS_BBID, NTFS_BBIDLEN)) {
+	if (strncmp((const char *)ntmp->ntm_bootfile.bf_sysid, NTFS_BBID, NTFS_BBIDLEN)) {
 		error = EINVAL;
 		dprintf(("ntfs_mountfs: invalid boot block\n"));
 		goto out;
@@ -334,10 +340,10 @@ ntfs_mountfs(devvp, mp, td)
 	ntmp->ntm_bo = &devvp->v_bufobj;
 
 	cs_local = vfs_getopts(mp->mnt_optnew, "cs_local", &error);
-	if (error)
+	if (error && error != ENOENT)
 		goto out;
 	cs_ntfs = vfs_getopts(mp->mnt_optnew, "cs_ntfs", &error);
-	if (error)
+	if (error && error != ENOENT)
 		goto out;
 	/* Copy in the 8-bit to Unicode conversion table */
 	/* Initialize Unicode to 8-bit table from 8toU table */
@@ -437,7 +443,9 @@ ntfs_mountfs(devvp, mp, td)
 	mp->mnt_stat.f_fsid.val[0] = dev2udev(dev);
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
 	mp->mnt_maxsymlinklen = 0;
+	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 	return (0);
 
 out1:
@@ -514,7 +522,9 @@ ntfs_unmount(
 	ntfs_u28_uninit(ntmp);
 	ntfs_82u_uninit(ntmp);
 	mp->mnt_data = (qaddr_t)0;
+	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 	FREE(ntmp->ntm_ad, M_NTFSMNT);
 	FREE(ntmp, M_NTFSMNT);
 	return (error);
@@ -621,25 +631,7 @@ ntfs_fhtovp(
 	/* XXX as unlink/rmdir/mkdir/creat are not currently possible
 	 * with NTFS, we don't need to check anything else for now */
 	*vpp = nvp;
-	vnode_create_vobject_off(nvp, VTOF(nvp)->f_size, curthread);
-	return (0);
-}
-
-static int
-ntfs_vptofh(
-	struct vnode *vp,
-	struct fid *fhp)
-{
-	register struct ntnode *ntp;
-	register struct ntfid *ntfhp;
-
-	ddprintf(("ntfs_fhtovp(): %p\n", vp));
-
-	ntp = VTONT(vp);
-	ntfhp = (struct ntfid *)fhp;
-	ntfhp->ntfid_len = sizeof(struct ntfid);
-	ntfhp->ntfid_ino = ntp->i_number;
-	/* ntfhp->ntfid_gen = ntp->i_gen; */
+	vnode_create_vobject(nvp, VTOF(nvp)->f_size, curthread);
 	return (0);
 }
 
@@ -728,6 +720,13 @@ ntfs_vgetex(
 		ntfs_ntput(ip);
 		return (error);
 	}
+	/* XXX: Too early for mpsafe fs, lacks vnode lock */
+	error = insmntque(vp, ntmp->ntm_mountp);
+	if (error) {
+		ntfs_frele(fp);
+		ntfs_ntput(ip);
+		return (error);
+	}
 	dprintf(("ntfs_vget: vnode: %p for ntnode: %d\n", vp,ino));
 
 	fp->f_vp = vp;
@@ -790,7 +789,6 @@ static struct vfsops ntfs_vfsops = {
 	.vfs_uninit =	ntfs_uninit,
 	.vfs_unmount =	ntfs_unmount,
 	.vfs_vget =	ntfs_vget,
-	.vfs_vptofh =	ntfs_vptofh,
 };
 VFS_SET(ntfs_vfsops, ntfs, 0);
 MODULE_VERSION(ntfs, 1);

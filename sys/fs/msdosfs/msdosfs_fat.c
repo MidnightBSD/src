@@ -1,5 +1,4 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_fat.c,v 1.37 2005/01/06 18:10:38 imp Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_fat.c,v 1.48 2007/09/23 14:49:32 bde Exp $ */
 /*	$NetBSD: msdosfs_fat.c,v 1.28 1997/11/17 15:36:49 ws Exp $	*/
 
 /*-
@@ -49,24 +48,17 @@
  * October 1992
  */
 
-/*
- * kernel include files.
- */
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/bio.h>
 #include <sys/buf.h>
-#include <sys/mount.h>		/* to define statfs structure */
-#include <sys/vnode.h>		/* to define vattr structure */
+#include <sys/mount.h>
+#include <sys/vnode.h>
 
-/*
- * msdosfs include files.
- */
 #include <fs/msdosfs/bpb.h>
-#include <fs/msdosfs/msdosfsmount.h>
 #include <fs/msdosfs/direntry.h>
 #include <fs/msdosfs/denode.h>
 #include <fs/msdosfs/fat.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 /*
  * Fat cache stats.
@@ -80,6 +72,8 @@ static int fc_bmapcalls;		/* # of times pcbmap was called		 */
 static int fc_lmdistance[LMMAX];/* counters for how far off the last
 				 * cluster mapped entry was. */
 static int fc_largedistance;	/* off by more than LMMAX		 */
+static int fc_wherefrom, fc_whereto, fc_lastclust;
+static int pm_fatblocksize;
 
 static int	chainalloc(struct msdosfsmount *pmp, u_long start,
 		    u_long count, u_long fillwith, u_long *retcluster,
@@ -120,6 +114,7 @@ fatblock(pmp, ofs, bnp, sizep, bop)
 		*sizep = size;
 	if (bop)
 		*bop = ofs % pmp->pm_fatblocksize;
+	pm_fatblocksize = pmp->pm_fatblocksize;
 }
 
 /*
@@ -211,9 +206,12 @@ pcbmap(dep, findcn, bnp, cnp, sp)
 	 */
 	i = 0;
 	fc_lookup(dep, findcn, &i, &cn);
-	if ((bn = findcn - i) >= LMMAX)
+	if ((bn = findcn - i) >= LMMAX) {
 		fc_largedistance++;
-	else
+		fc_wherefrom = i;
+		fc_whereto = findcn;
+		fc_lastclust = dep->de_fc[FC_LASTFC].fc_frcn;
+	} else
 		fc_lmdistance[bn]++;
 
 	/*
@@ -355,23 +353,7 @@ updatefats(pmp, bp, fatbn)
 	 * If we have an FSInfo block, update it.
 	 */
 	if (pmp->pm_fsinfo) {
-		u_long cn = pmp->pm_nxtfree;
-
-		if (pmp->pm_freeclustercount
-		    && (pmp->pm_inusemap[cn / N_INUSEBITS]
-			& (1 << (cn % N_INUSEBITS)))) {
-			/*
-			 * The cluster indicated in FSInfo isn't free
-			 * any longer.  Got get a new free one.
-			 */
-			for (cn = 0; cn < pmp->pm_maxcluster; cn += N_INUSEBITS)
-				if (pmp->pm_inusemap[cn / N_INUSEBITS] != (u_int)-1)
-					break;
-			pmp->pm_nxtfree = cn
-				+ ffs(pmp->pm_inusemap[cn / N_INUSEBITS]
-				      ^ (u_int)-1) - 1;
-		}
-		if (bread(pmp->pm_devvp, pmp->pm_fsinfo, fsi_size(pmp), 
+		if (bread(pmp->pm_devvp, pmp->pm_fsinfo, pmp->pm_BytesPerSec,
 		    NOCRED, &bpn) != 0) {
 			/*
 			 * Ignore the error, but turn off FSInfo update for the future.
@@ -524,7 +506,7 @@ fatentry(function, pmp, cn, oldcontents, newcontents)
 
 #ifdef	MSDOSFS_DEBUG
 	printf("fatentry(func %d, pmp %p, clust %lu, oldcon %p, newcon %lx)\n",
-	     function, pmp, cn, oldcontents, newcontents);
+	    function, pmp, cn, oldcontents, newcontents);
 #endif
 
 #ifdef DIAGNOSTIC
@@ -719,7 +701,7 @@ chainlength(pmp, start, count)
 			break;
 		map = pmp->pm_inusemap[idx];
 		if (map) {
-			len +=  ffs(map) - 1;
+			len += ffs(map) - 1;
 			break;
 		}
 		len += N_INUSEBITS;
@@ -764,6 +746,9 @@ chainalloc(pmp, start, count, fillwith, retcluster, got)
 		*retcluster = start;
 	if (got)
 		*got = count;
+	pmp->pm_nxtfree = start + count;
+	if (pmp->pm_nxtfree > pmp->pm_maxcluster)
+		pmp->pm_nxtfree = CLUST_FIRST;
 	return (0);
 }
 
@@ -793,19 +778,15 @@ clusteralloc(pmp, start, count, fillwith, retcluster, got)
 	u_int map;
 
 #ifdef MSDOSFS_DEBUG
-	printf("clusteralloc(): find %lu clusters\n",count);
+	printf("clusteralloc(): find %lu clusters\n", count);
 #endif
 	if (start) {
 		if ((len = chainlength(pmp, start, count)) >= count)
 			return (chainalloc(pmp, start, count, fillwith, retcluster, got));
-	} else 
+	} else
 		len = 0;
 
-	/*
-	 * Start at a (pseudo) random place to maximize cluster runs
-	 * under multiple writers.
-	 */
-	newst = random() % (pmp->pm_maxcluster + 1);
+	newst = pmp->pm_nxtfree;
 	foundl = 0;
 
 	for (cn = newst; cn <= pmp->pm_maxcluster;) {
@@ -1026,6 +1007,7 @@ extendfile(dep, count, bpp, ncp, flags)
 			return (error);
 	}
 
+	fc_last_to_nexttolast(dep);
 	while (count > 0) {
 		/*
 		 * Allocate a new cluster chain and cat onto the end of the
@@ -1082,8 +1064,8 @@ extendfile(dep, count, bpp, ncp, flags)
 				 */
 				if (dep->de_Attributes & ATTR_DIRECTORY)
 					bp = getblk(pmp->pm_devvp,
-						    cntobn(pmp, cn++),
-						    pmp->pm_bpcluster, 0, 0, 0);
+					    cntobn(pmp, cn++),
+					    pmp->pm_bpcluster, 0, 0, 0);
 				else {
 					bp = getblk(DETOV(dep),
 					    de_cn2bn(pmp, frcn++),
@@ -1100,7 +1082,7 @@ extendfile(dep, count, bpp, ncp, flags)
 					else
 						bp->b_blkno = blkno;
 				}
-				clrbuf(bp);
+				vfs_bio_clrbuf(bp);
 				if (bpp) {
 					*bpp = bp;
 					bpp = NULL;
