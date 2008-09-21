@@ -1,5 +1,4 @@
 /*-
- * Copyright (c) 2008 Lucas Holt.  All rights reserved.
  * Copyright (c) 2002 David E. O'Brien.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/stdarg.h,v 1.8 2005/03/11 22:16:09 peter Exp $
- * $MidnightBSD$
+ * $FreeBSD: src/sys/amd64/include/stdarg.h,v 1.9 2006/09/21 01:37:01 kan Exp $
  */
 
 #ifndef _MACHINE_STDARG_H_
@@ -44,7 +42,7 @@ typedef	__va_list	va_list;
 #ifdef __GNUCLIKE_BUILTIN_STDARG
 
 #define	va_start(ap, last) \
-	__builtin_stdarg_start((ap), (last))
+	__builtin_va_start((ap), (last))
 
 #define	va_arg(ap, type) \
 	__builtin_va_arg((ap), type)
@@ -69,17 +67,6 @@ typedef	__va_list	va_list;
 #define	va_arg(ap, type) \
 	(*(type *)((ap) += __va_size(type), (ap) - __va_size(type)))
 #define	va_end(ap)
-
-#elif defined(__PCC__) /* !__GNUCLIKE_BUILTIN_STDARG */
-
-#define va_start(ap, last) \
-        __builtin_stdarg_start((ap), last)
-#define va_arg(ap, type) \
-        __builtin_va_arg((ap), type)
-#define va_end(ap) \
-        __builtin_va_end((ap))
-#define __va_copy(dest, src) \
-        __builtin_va_copy((dest), (src))
 
 #else
 #error this file needs to be ported to your compiler

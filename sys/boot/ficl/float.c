@@ -4,7 +4,7 @@
 ** ANS Forth FLOAT word-set written in C
 ** Author: Guy Carver & John Sadler (john_sadler@alum.mit.edu)
 ** Created: Apr 2001
-** $Id: float.c,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
+** $Id: float.c,v 1.2 2008-09-21 15:21:33 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/float.c,v 1.1 2002/04/09 17:45:11 dcs Exp $ */
+/* $FreeBSD: src/sys/boot/ficl/float.c,v 1.2 2007/03/23 22:26:01 jkim Exp $ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -977,6 +977,8 @@ int ficlParseFloatNumber( FICL_VM *pVM, STRINGINFO si )
     }
 
     PUSHFLOAT(accum);
+    if (pVM->state == COMPILE)
+        fliteralIm(pVM);
 
     return(1);
 }
@@ -1062,3 +1064,4 @@ void ficlCompileFloat(FICL_SYSTEM *pSys)
 #endif
     return;
 }
+

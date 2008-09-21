@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/amd64/include/_limits.h,v 1.10 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/_limits.h,v 1.11 2005/08/20 16:44:40 stefanf Exp $
  */
 
 #ifndef	_MACHINE__LIMITS_H_
@@ -82,5 +82,11 @@
 
 #define	__LONG_BIT	64
 #define	__WORD_BIT	32
+
+/*
+ * Minimum signal stack size. The current signal frame
+ * for i386 is 408 bytes large.
+ */
+#define	__MINSIGSTKSZ	(512 * 4)
 
 #endif /* !_MACHINE__LIMITS_H_ */

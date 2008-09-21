@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/io.c,v 1.1 2004/08/01 11:40:50 markm Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/io.c,v 1.2 2006/11/06 13:41:49 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/io.c,v 1.1 2004/08/01 11:40:50 markm Exp
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/signalvar.h>
 #include <sys/systm.h>
@@ -54,7 +55,7 @@ ioopen(struct cdev *dev __unused, int flags __unused, int fmt __unused,
 {
 	int error;
 
-	error = suser(td);
+	error = priv_check(td, PRIV_IO);
 	if (error != 0)
 		return (error);
 	error = securelevel_gt(td->td_ucred, 0);

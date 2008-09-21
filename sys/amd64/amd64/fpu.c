@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/fpu.c,v 1.157 2005/03/11 22:16:09 peter Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/fpu.c,v 1.159 2006/06/19 22:36:01 davidxu Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -125,6 +125,10 @@ fpuinit(void)
 	mxcsr = __INITIAL_MXCSR__;
 	ldmxcsr(mxcsr);
 	fxsave(&fpu_cleanstate);
+	if (fpu_cleanstate.sv_env.en_mxcsr_mask)
+		cpu_mxcsr_mask = fpu_cleanstate.sv_env.en_mxcsr_mask;
+	else
+		cpu_mxcsr_mask = 0xFFBF;
 	start_emulating();
 	bzero(fpu_cleanstate.sv_fp, sizeof(fpu_cleanstate.sv_fp));
 	bzero(fpu_cleanstate.sv_xmm, sizeof(fpu_cleanstate.sv_xmm));

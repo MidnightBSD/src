@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/uma_machdep.c,v 1.1 2003/10/14 05:51:31 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/uma_machdep.c,v 1.4 2007/09/15 18:47:01 alc Exp $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -44,14 +44,15 @@ uma_small_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 {
 	static vm_pindex_t colour;
 	vm_page_t m;
+	vm_paddr_t pa;
 	void *va;
 	int pflags;
 
 	*flags = UMA_SLAB_PRIV;
 	if ((wait & (M_NOWAIT|M_USE_RESERVE)) == M_NOWAIT)
-		pflags = VM_ALLOC_INTERRUPT;
+		pflags = VM_ALLOC_INTERRUPT | VM_ALLOC_WIRED;
 	else
-		pflags = VM_ALLOC_SYSTEM;
+		pflags = VM_ALLOC_SYSTEM | VM_ALLOC_WIRED;
 	if (wait & M_ZERO)
 		pflags |= VM_ALLOC_ZERO;
 	for (;;) {
@@ -64,7 +65,9 @@ uma_small_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 		} else
 			break;
 	}
-	va = (void *)PHYS_TO_DMAP(m->phys_addr);
+	pa = m->phys_addr;
+	dump_add_page(pa);
+	va = (void *)PHYS_TO_DMAP(pa);
 	if ((wait & M_ZERO) && (m->flags & PG_ZERO) == 0)
 		pagezero(va);
 	return (va);
@@ -74,9 +77,12 @@ void
 uma_small_free(void *mem, int size, u_int8_t flags)
 {
 	vm_page_t m;
+	vm_paddr_t pa;
 
-	m = PHYS_TO_VM_PAGE(DMAP_TO_PHYS((vm_offset_t)mem));
-	vm_page_lock_queues();
+	pa = DMAP_TO_PHYS((vm_offset_t)mem);
+	dump_drop_page(pa);
+	m = PHYS_TO_VM_PAGE(pa);
+	m->wire_count--;
 	vm_page_free(m);
-	vm_page_unlock_queues();
+	atomic_subtract_int(&cnt.v_wire_count, 1);
 }

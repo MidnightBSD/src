@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/module.c,v 1.25.10.1 2006/01/23 14:33:53 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/module.c,v 1.27 2007/10/04 18:29:52 obrien Exp $");
 
 /*
  * file/module function dispatcher, support, etc.
@@ -75,6 +75,7 @@ struct preloaded_file *preloaded_files = NULL;
 static char *kld_ext_list[] = {
     ".ko",
     "",
+    ".debug",
     NULL
 };
 

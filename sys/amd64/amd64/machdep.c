@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.638.2.6 2006/03/20 19:56:43 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.675.2.2.2.1 2008/01/19 18:15:01 kib Exp $");
 
 #include "opt_atalk.h"
 #include "opt_atpic.h"
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.638.2.6 2006/03/20 19:56:4
 #include <sys/buf.h>
 #include <sys/bus.h>
 #include <sys/callout.h>
+#include <sys/clock.h>
 #include <sys/cons.h>
 #include <sys/cpu.h>
 #include <sys/eventhandler.h>
@@ -124,9 +125,11 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.638.2.6 2006/03/20 19:56:4
 #include <machine/smp.h>
 #endif
 
-#include <dev/ic/i8259.h>
+#ifdef DEV_ATPIC
 #include <amd64/isa/icu.h>
+#else
 #include <machine/apicvar.h>
+#endif
 
 #include <isa/isareg.h>
 #include <isa/rtc.h>
@@ -135,7 +138,6 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/machdep.c,v 1.638.2.6 2006/03/20 19:56:4
 CTASSERT(offsetof(struct pcpu, pc_curthread) == 0);
 
 extern u_int64_t hammer_time(u_int64_t, u_int64_t);
-extern void dblfault_handler(void);
 
 extern void printcpuinfo(void);	/* XXX header file */
 extern void identify_cpu(void);
@@ -153,6 +155,10 @@ SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
 extern vm_offset_t ksym_start, ksym_end;
 #endif
 
+/* Intel ICH registers */
+#define ICH_PMBASE	0x400
+#define ICH_SMI_EN	ICH_PMBASE + 0x30
+
 int	_udatasel, _ucodesel, _ucode32sel;
 
 int cold = 1;
@@ -160,8 +166,16 @@ int cold = 1;
 long Maxmem = 0;
 long realmem = 0;
 
-vm_paddr_t phys_avail[20];
-vm_paddr_t dump_avail[20];
+/*
+ * The number of PHYSMAP entries must be one less than the number of
+ * PHYSSEG entries because the PHYSMAP entry that spans the largest
+ * physical address that is accessible by ISA DMA is split into two
+ * PHYSSEG entries.
+ */
+#define	PHYSMAP_SIZE	(2 * (VM_PHYSSEG_MAX - 1))
+
+vm_paddr_t phys_avail[PHYSMAP_SIZE + 2];
+vm_paddr_t dump_avail[PHYSMAP_SIZE + 2];
 
 /* must be 2 less so 0 0 can signal end of chunks */
 #define PHYS_AVAIL_ARRAY_END ((sizeof(phys_avail) / sizeof(phys_avail[0])) - 2)
@@ -182,6 +196,27 @@ static void
 cpu_startup(dummy)
 	void *dummy;
 {
+	char *sysenv;
+
+	/*
+	 * On MacBooks, we need to disallow the legacy USB circuit to
+	 * generate an SMI# because this can cause several problems,
+	 * namely: incorrect CPU frequency detection and failure to
+	 * start the APs.
+	 * We do this by disabling a bit in the SMI_EN (SMI Control and
+	 * Enable register) of the Intel ICH LPC Interface Bridge. 
+	 */
+	sysenv = getenv("smbios.system.product");
+	if (sysenv != NULL) {
+		if (strncmp(sysenv, "MacBook", 7) == 0) {
+			if (bootverbose)
+				printf("Disabling LEGACY_USB_EN bit on "
+				    "Intel ICH.\n");
+			outl(ICH_SMI_EN, inl(ICH_SMI_EN) & ~0x8);
+		}
+		freeenv(sysenv);
+	}
+
 	/*
 	 * Good {morning,afternoon,evening,night}.
 	 */
@@ -191,8 +226,8 @@ cpu_startup(dummy)
 #ifdef PERFMON
 	perfmon_init();
 #endif
-	printf("real memory  = %ju (%ju MB)\n", ptoa((uintmax_t)Maxmem),
-	    ptoa((uintmax_t)Maxmem) / 1048576);
+	printf("usable memory = %ju (%ju MB)\n", ptoa((uintmax_t)physmem),
+	    ptoa((uintmax_t)physmem) / 1048576);
 	realmem = Maxmem;
 	/*
 	 * Display any holes after the first chunk of extended memory.
@@ -215,7 +250,7 @@ cpu_startup(dummy)
 
 	vm_ksubmap_init(&kmi);
 
-	printf("avail memory = %ju (%ju MB)\n",
+	printf("avail memory  = %ju (%ju MB)\n",
 	    ptoa((uintmax_t)cnt.v_free_count),
 	    ptoa((uintmax_t)cnt.v_free_count) / 1048576);
 
@@ -239,11 +274,7 @@ cpu_startup(dummy)
  * specified pc, psl.
  */
 void
-sendsig(catcher, sig, mask, code)
-	sig_t catcher;
-	int sig;
-	sigset_t *mask;
-	u_long code;
+sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct sigframe sf, *sfp;
 	struct proc *p;
@@ -251,11 +282,13 @@ sendsig(catcher, sig, mask, code)
 	struct sigacts *psp;
 	char *sp;
 	struct trapframe *regs;
+	int sig;
 	int oonstack;
 
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	regs = td->td_frame;
@@ -299,13 +332,13 @@ sendsig(catcher, sig, mask, code)
 		sf.sf_ahu.sf_action = (__siginfohandler_t *)catcher;
 
 		/* Fill in POSIX parts */
-		sf.sf_si.si_signo = sig;
-		sf.sf_si.si_code = code;
-		regs->tf_rcx = regs->tf_addr;	/* arg 4 in %rcx */
+		sf.sf_si = ksi->ksi_info;
+		sf.sf_si.si_signo = sig; /* maybe a translated signal */
+		regs->tf_rcx = (register_t)ksi->ksi_addr; /* arg 4 in %rcx */
 	} else {
 		/* Old FreeBSD-style arguments. */
-		regs->tf_rsi = code;		/* arg 2 in %rsi */
-		regs->tf_rcx = regs->tf_addr;	/* arg 4 in %rcx */
+		regs->tf_rsi = ksi->ksi_code;	/* arg 2 in %rsi */
+		regs->tf_rcx = (register_t)ksi->ksi_addr; /* arg 4 in %rcx */
 		sf.sf_ahu.sf_handler = catcher;
 	}
 	mtx_unlock(&psp->ps_mtx);
@@ -331,28 +364,6 @@ sendsig(catcher, sig, mask, code)
 }
 
 /*
- * Build siginfo_t for SA thread
- */
-void
-cpu_thread_siginfo(int sig, u_long code, siginfo_t *si)
-{
-	struct proc *p;
-	struct thread *td;
-	struct trapframe *regs;
-
-	td = curthread;
-	p = td->td_proc;
-	regs = td->td_frame;
-	PROC_LOCK_ASSERT(p, MA_OWNED);
-
-	bzero(si, sizeof(*si));
-	si->si_signo = sig;
-	si->si_code = code;
-	si->si_addr = (void *)regs->tf_addr;
-	/* XXXKSE fill other fields */
-}
-
-/*
  * System call to cleanup state after a signal
  * has been taken.  Reset signal mask and
  * stack state from context left by sendsig (above).
@@ -367,7 +378,7 @@ int
 sigreturn(td, uap)
 	struct thread *td;
 	struct sigreturn_args /* {
-		const __ucontext *sigcntxp;
+		const struct __ucontext *sigcntxp;
 	} */ *uap;
 {
 	ucontext_t uc;
@@ -376,6 +387,7 @@ sigreturn(td, uap)
 	const ucontext_t *ucp;
 	long rflags;
 	int cs, error, ret;
+	ksiginfo_t ksi;
 
 	error = copyin(uap->sigcntxp, &uc, sizeof(uc));
 	if (error != 0)
@@ -409,7 +421,12 @@ sigreturn(td, uap)
 	cs = ucp->uc_mcontext.mc_cs;
 	if (!CS_SECURE(cs)) {
 		printf("sigreturn: cs = 0x%x\n", cs);
-		trapsignal(td, SIGBUS, T_PROTFLT);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGBUS;
+		ksi.ksi_code = BUS_OBJERR;
+		ksi.ksi_trapno = T_PROTFLT;
+		ksi.ksi_addr = (void *)regs->tf_rip;
+		trapsignal(td, &ksi);
 		return (EINVAL);
 	}
 
@@ -473,9 +490,9 @@ cpu_est_clockrate(int cpu_id, uint64_t *rate)
 
 #ifdef SMP
 	/* Schedule ourselves on the indicated cpu. */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_bind(curthread, cpu_id);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 #endif
 
 	/* Calibrate by measuring a short delay. */
@@ -486,9 +503,9 @@ cpu_est_clockrate(int cpu_id, uint64_t *rate)
 	intr_restore(reg);
 
 #ifdef SMP
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_unbind(curthread);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 #endif
 
 	/*
@@ -527,6 +544,7 @@ cpu_halt(void)
  * help lock contention somewhat, and this is critical for HTT. -Peter
  */
 static int	cpu_idle_hlt = 1;
+TUNABLE_INT("machdep.cpu_idle_hlt", &cpu_idle_hlt);
 SYSCTL_INT(_machdep, OID_AUTO, cpu_idle_hlt, CTLFLAG_RW,
     &cpu_idle_hlt, 0, "Idle loop HLT enable");
 
@@ -646,26 +664,6 @@ cpu_setregs(void)
 	load_cr0(cr0);
 }
 
-static int
-sysctl_machdep_adjkerntz(SYSCTL_HANDLER_ARGS)
-{
-	int error;
-	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2,
-		req);
-	if (!error && req->newptr)
-		resettodr();
-	return (error);
-}
-
-SYSCTL_PROC(_machdep, CPU_ADJKERNTZ, adjkerntz, CTLTYPE_INT|CTLFLAG_RW,
-	&adjkerntz, 0, sysctl_machdep_adjkerntz, "I", "");
-
-SYSCTL_INT(_machdep, CPU_DISRTCSET, disable_rtc_set,
-	CTLFLAG_RW, &disable_rtc_set, 0, "");
-
-SYSCTL_INT(_machdep, CPU_WALLCLOCK, wall_cmos_clock,
-	CTLFLAG_RW, &wall_cmos_clock, 0, "");
-
 /*
  * Initialize amd64 and configure to run kernel
  */
@@ -757,6 +755,15 @@ struct soft_segment_descriptor gdt_segs[] = {
 	0,			/* long */
 	0,			/* default 32 vs 16 bit size */
 	0  			/* limit granularity (byte/page units)*/ },
+/* GUGS32_SEL	8 32 bit GS Descriptor for user */
+{	0x0,			/* segment base address  */
+	0xfffff,		/* length - all address space */
+	SDT_MEMRWA,		/* segment type */
+	SEL_UPL,		/* segment descriptor priority level */
+	1,			/* segment descriptor present */
+	0,			/* long */
+	1,			/* default 32 vs 16 bit size */
+	1  			/* limit granularity (byte/page units)*/ },
 };
 
 void
@@ -779,8 +786,6 @@ setidt(idx, func, typ, dpl, ist)
 	ip->gd_p = 1;
 	ip->gd_hioffset = ((uintptr_t)func)>>16 ;
 }
-
-#define	IDTVEC(name)	__CONCAT(X,name)
 
 extern inthand_t
 	IDTVEC(div), IDTVEC(dbg), IDTVEC(nmi), IDTVEC(bpt), IDTVEC(ofl),
@@ -850,8 +855,6 @@ isa_irq_pending(void)
 }
 #endif
 
-#define PHYSMAP_SIZE	(2 * 20)
-
 u_int basemem;
 
 /*
@@ -870,7 +873,7 @@ u_int basemem;
 static void
 getmemsize(caddr_t kmdp, u_int64_t first)
 {
-	int i, physmap_idx, pa_indx, da_indx;
+	int i, off, physmap_idx, pa_indx, da_indx;
 	vm_paddr_t pa, physmap[PHYSMAP_SIZE];
 	u_long physmem_tunable;
 	pt_entry_t *pte;
@@ -912,7 +915,7 @@ getmemsize(caddr_t kmdp, u_int64_t first)
 			if (smap->base < physmap[i + 1]) {
 				if (boothowto & RB_VERBOSE)
 					printf(
-	"Overlapping or non-montonic memory region, ignoring second region\n");
+	"Overlapping or non-monotonic memory region, ignoring second region\n");
 				continue;
 			}
 		}
@@ -965,16 +968,16 @@ getmemsize(caddr_t kmdp, u_int64_t first)
 	if (TUNABLE_ULONG_FETCH("hw.physmem", &physmem_tunable))
 		Maxmem = atop(physmem_tunable);
 
+	/*
+	 * Don't allow MAXMEM or hw.physmem to extend the amount of memory
+	 * in the system.
+	 */
+	if (Maxmem > atop(physmap[physmap_idx + 1]))
+		Maxmem = atop(physmap[physmap_idx + 1]);
+
 	if (atop(physmap[physmap_idx + 1]) != Maxmem &&
 	    (boothowto & RB_VERBOSE))
 		printf("Physical memory use set to %ldK\n", Maxmem * 4);
-
-	/*
-	 * If Maxmem has been increased beyond what the system has detected,
-	 * extend the last memory segment to the new limit.
-	 */
-	if (atop(physmap[physmap_idx + 1]) < Maxmem)
-		physmap[physmap_idx + 1] = ptoa((vm_paddr_t)Maxmem);
 
 	/* call pmap initialization to make new kernel address space */
 	pmap_bootstrap(&first);
@@ -1133,14 +1136,17 @@ do_next:
 	/* Trim off space for the message buffer. */
 	phys_avail[pa_indx] -= round_page(MSGBUF_SIZE);
 
-	avail_end = phys_avail[pa_indx];
+	/* Map the message buffer. */
+	for (off = 0; off < round_page(MSGBUF_SIZE); off += PAGE_SIZE)
+		pmap_kenter((vm_offset_t)msgbufp + off, phys_avail[pa_indx] +
+		    off);
 }
 
 u_int64_t
 hammer_time(u_int64_t modulep, u_int64_t physfree)
 {
 	caddr_t kmdp;
-	int gsel_tss, off, x;
+	int gsel_tss, x;
 	struct pcpu *pc;
 	u_int64_t msr;
 	char *env;
@@ -1155,7 +1161,7 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
  	 * This may be done better later if it gets more high level
  	 * components in it. If so just link td->td_proc here.
 	 */
-	proc_linkup(&proc0, &ksegrp0, &thread0);
+	proc_linkup0(&proc0, &thread0);
 
 	preload_metadata = (caddr_t)(uintptr_t)(modulep + KERNBASE);
 	preload_bootstrap_relocate(KERNBASE);
@@ -1208,7 +1214,6 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	 *	     under witness.
 	 */
 	mutex_init();
-	mtx_init(&clock_lock, "clk", NULL, MTX_SPIN);
 	mtx_init(&icu_lock, "icu", NULL, MTX_SPIN | MTX_NOWITNESS);
 
 	/* exceptions */
@@ -1216,7 +1221,7 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 		setidt(x, &IDTVEC(rsvd), SDT_SYSIGT, SEL_KPL, 0);
 	setidt(IDT_DE, &IDTVEC(div),  SDT_SYSIGT, SEL_KPL, 0);
 	setidt(IDT_DB, &IDTVEC(dbg),  SDT_SYSIGT, SEL_KPL, 0);
-	setidt(IDT_NMI, &IDTVEC(nmi),  SDT_SYSIGT, SEL_KPL, 0);
+	setidt(IDT_NMI, &IDTVEC(nmi),  SDT_SYSIGT, SEL_KPL, 1);
  	setidt(IDT_BP, &IDTVEC(bpt),  SDT_SYSIGT, SEL_UPL, 0);
 	setidt(IDT_OF, &IDTVEC(ofl),  SDT_SYSIGT, SEL_KPL, 0);
 	setidt(IDT_BR, &IDTVEC(bnd),  SDT_SYSIGT, SEL_KPL, 0);
@@ -1239,6 +1244,12 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	lidt(&r_idt);
 
 	/*
+	 * Initialize the i8254 before the console so that console
+	 * initialization can use DELAY().
+	 */
+	i8254_init();
+
+	/*
 	 * Initialize the console before we print anything out.
 	 */
 	cninit();
@@ -1249,19 +1260,7 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	atpic_startup();
 #else
 	/* Reset and mask the atpics and leave them shut down. */
-	outb(IO_ICU1, ICW1_RESET | ICW1_IC4);
-	outb(IO_ICU1 + ICU_IMR_OFFSET, IDT_IO_INTS);
-	outb(IO_ICU1 + ICU_IMR_OFFSET, 1 << 2);
-	outb(IO_ICU1 + ICU_IMR_OFFSET, ICW4_8086);
-	outb(IO_ICU1 + ICU_IMR_OFFSET, 0xff);
-	outb(IO_ICU1, OCW3_SEL | OCW3_RR);
-
-	outb(IO_ICU2, ICW1_RESET | ICW1_IC4);
-	outb(IO_ICU2 + ICU_IMR_OFFSET, IDT_IO_INTS + 8);
-	outb(IO_ICU2 + ICU_IMR_OFFSET, 2);
-	outb(IO_ICU2 + ICU_IMR_OFFSET, ICW4_8086);
-	outb(IO_ICU2 + ICU_IMR_OFFSET, 0xff);
-	outb(IO_ICU2, OCW3_SEL | OCW3_RR);
+	atpic_reset();
 
 	/*
 	 * Point the ICU spurious interrupt vectors at the APIC spurious
@@ -1314,10 +1313,6 @@ hammer_time(u_int64_t modulep, u_int64_t physfree)
 	init_param2(physmem);
 
 	/* now running on new page tables, configured,and u/iom is accessible */
-
-	/* Map the message buffer. */
-	for (off = 0; off < round_page(MSGBUF_SIZE); off += PAGE_SIZE)
-		pmap_kenter((vm_offset_t)msgbufp + off, avail_end + off);
 
 	msgbufinit(msgbufp, MSGBUF_SIZE);
 	fpuinit();
@@ -1525,7 +1520,7 @@ set_fpregs_xmm(struct fpreg *fpregs, struct savefpu *sv_xmm)
 	penv_xmm->en_rip = penv_fpreg->en_rip;
 	penv_xmm->en_rdp = penv_fpreg->en_rdp;
 	penv_xmm->en_mxcsr = penv_fpreg->en_mxcsr;
-	penv_xmm->en_mxcsr_mask = penv_fpreg->en_mxcsr_mask;
+	penv_xmm->en_mxcsr_mask = penv_fpreg->en_mxcsr_mask & cpu_mxcsr_mask;
 
 	/* FPU registers */
 	for (i = 0; i < 8; ++i)
@@ -1652,6 +1647,7 @@ get_fpcontext(struct thread *td, mcontext_t *mcp)
 static int
 set_fpcontext(struct thread *td, const mcontext_t *mcp)
 {
+	struct savefpu *fpstate;
 
 	if (mcp->mc_fpformat == _MC_FPFMT_NODEV)
 		return (0);
@@ -1667,7 +1663,9 @@ set_fpcontext(struct thread *td, const mcontext_t *mcp)
 		 * be called with interrupts disabled.
 		 * XXX obsolete on trap-16 systems?
 		 */
-		fpusetregs(td, (struct savefpu *)&mcp->mc_fpstate);
+		fpstate = (struct savefpu *)&mcp->mc_fpstate;
+		fpstate->sv_env.en_mxcsr &= cpu_mxcsr_mask;
+		fpusetregs(td, fpstate);
 	} else
 		return (EINVAL);
 	return (0);
@@ -1734,7 +1732,6 @@ set_dbregs(struct thread *td, struct dbreg *dbregs)
 {
 	struct pcb *pcb;
 	int i;
-	u_int64_t mask1, mask2;
 
 	if (td == NULL) {
 		load_dr0(dbregs->dr[0]);
@@ -1751,10 +1748,13 @@ set_dbregs(struct thread *td, struct dbreg *dbregs)
 		 * TRCTRAP or a general protection fault right here.
 		 * Upper bits of dr6 and dr7 must not be set
 		 */
-		for (i = 0, mask1 = 0x3<<16, mask2 = 0x2<<16; i < 8;
-		     i++, mask1 <<= 2, mask2 <<= 2)
-			if ((dbregs->dr[7] & mask1) == mask2)
+		for (i = 0; i < 4; i++) {
+			if (DBREG_DR7_ACCESS(dbregs->dr[7], i) == 0x02)
 				return (EINVAL);
+			if (td->td_frame->tf_cs == _ucode32sel &&
+			    DBREG_DR7_LEN(dbregs->dr[7], i) == DBREG_DR7_LEN_8)
+				return (EINVAL);
+		}
 		if ((dbregs->dr[6] & 0xffffffff00000000ul) != 0 ||
 		    (dbregs->dr[7] & 0xffffffff00000000ul) != 0)
 			return (EINVAL);
@@ -1775,22 +1775,22 @@ set_dbregs(struct thread *td, struct dbreg *dbregs)
 		 * from within kernel mode?
 		 */
 
-		if (dbregs->dr[7] & 0x3) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 0)) {
 			/* dr0 is enabled */
 			if (dbregs->dr[0] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
 		}
-		if (dbregs->dr[7] & 0x3<<2) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 1)) {
 			/* dr1 is enabled */
 			if (dbregs->dr[1] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
 		}
-		if (dbregs->dr[7] & 0x3<<4) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 2)) {
 			/* dr2 is enabled */
 			if (dbregs->dr[2] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
 		}
-		if (dbregs->dr[7] & 0x3<<6) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 3)) {
 			/* dr3 is enabled */
 			if (dbregs->dr[3] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
@@ -1874,9 +1874,8 @@ user_dbreg_trap(void)
                 addr[nbp++] = (caddr_t)rdr3();
         }
 
-        for (i=0; i<nbp; i++) {
-                if (addr[i] <
-                    (caddr_t)VM_MAXUSER_ADDRESS) {
+        for (i = 0; i < nbp; i++) {
+                if (addr[i] < (caddr_t)VM_MAXUSER_ADDRESS) {
                         /*
                          * addr[i] is in user space
                          */

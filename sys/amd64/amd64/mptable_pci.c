@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/mptable_pci.c,v 1.2.8.1 2005/09/18 02:55:09 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/mptable_pci.c,v 1.8 2007/05/02 17:50:34 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,6 +72,37 @@ mptable_hostb_attach(device_t dev)
 	return (bus_generic_attach(dev));
 }
 
+/* Pass MSI requests up to the nexus. */
+static int
+mptable_hostb_alloc_msi(device_t pcib, device_t dev, int count, int maxcount,
+    int *irqs)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSI(device_get_parent(bus), dev, count, maxcount,
+	    irqs));
+}
+
+static int
+mptable_hostb_alloc_msix(device_t pcib, device_t dev, int *irq)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSIX(device_get_parent(bus), dev, irq));
+}
+
+static int
+mptable_hostb_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
+    uint32_t *data)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_MAP_MSI(device_get_parent(bus), dev, irq, addr, data));
+}
+
 static device_method_t mptable_hostb_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		mptable_hostb_probe),
@@ -96,17 +127,19 @@ static device_method_t mptable_hostb_methods[] = {
 	DEVMETHOD(pcib_read_config,	legacy_pcib_read_config),
 	DEVMETHOD(pcib_write_config,	legacy_pcib_write_config),
 	DEVMETHOD(pcib_route_interrupt,	mptable_pci_route_interrupt),
+	DEVMETHOD(pcib_alloc_msi,	mptable_hostb_alloc_msi),
+	DEVMETHOD(pcib_release_msi,	pcib_release_msi),
+	DEVMETHOD(pcib_alloc_msix,	mptable_hostb_alloc_msix),
+	DEVMETHOD(pcib_release_msix,	pcib_release_msix),
+	DEVMETHOD(pcib_map_msi,		mptable_hostb_map_msi),
 
 	{ 0, 0 }
 };
 
-static driver_t mptable_hostb_driver = {
-	"pcib",
-	mptable_hostb_methods,
-	1,
-};
+static devclass_t hostb_devclass;
 
-DRIVER_MODULE(mptable_pcib, legacy, mptable_hostb_driver, pcib_devclass, 0, 0);
+DEFINE_CLASS_0(pcib, mptable_hostb_driver, mptable_hostb_methods, 1);
+DRIVER_MODULE(mptable_pcib, legacy, mptable_hostb_driver, hostb_devclass, 0, 0);
 
 /* PCI to PCI bridge driver. */
 
@@ -151,15 +184,17 @@ static device_method_t mptable_pcib_pci_methods[] = {
 	DEVMETHOD(pcib_read_config,	pcib_read_config),
 	DEVMETHOD(pcib_write_config,	pcib_write_config),
 	DEVMETHOD(pcib_route_interrupt,	mptable_pci_route_interrupt),
+	DEVMETHOD(pcib_alloc_msi,	pcib_alloc_msi),
+	DEVMETHOD(pcib_release_msi,	pcib_release_msi),
+	DEVMETHOD(pcib_alloc_msix,	pcib_alloc_msix),
+	DEVMETHOD(pcib_release_msix,	pcib_release_msix),
+	DEVMETHOD(pcib_map_msi,		pcib_map_msi),
 
 	{0, 0}
 };
 
-static driver_t mptable_pcib_driver = {
-	"pcib",
-	mptable_pcib_pci_methods,
-	sizeof(struct pcib_softc),
-};
+static devclass_t pcib_devclass;
 
+DEFINE_CLASS_0(pcib, mptable_pcib_driver, mptable_pcib_pci_methods,
+    sizeof(struct pcib_softc));
 DRIVER_MODULE(mptable_pcib, pci, mptable_pcib_driver, pcib_devclass, 0, 0);
-

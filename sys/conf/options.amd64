@@ -1,12 +1,12 @@
-# $FreeBSD: src/sys/conf/options.amd64,v 1.21 2005/06/29 23:23:16 peter Exp $
+# $FreeBSD: src/sys/conf/options.amd64,v 1.29 2007/07/04 00:18:38 bz Exp $
 # Options specific to AMD64 platform kernels
 
 AUTO_EOI_1		opt_auto_eoi.h
 AUTO_EOI_2		opt_auto_eoi.h
 MAXMEM
-PERFMON			opt_perfmon.h
+PERFMON
 PMAP_SHPGPERPROC	opt_pmap.h
-MP_WATCHDOG		opt_mp_watchdog.h
+MP_WATCHDOG
 
 # Options for emulators.  These should only be used at config time, so
 # they are handled like options for static filesystems
@@ -17,11 +17,19 @@ COMPAT_IA32		opt_compat.h
 COMPAT_LINUX32		opt_compat.h
 #COMPAT_SVR4		opt_dontuse.h
 #DEBUG_SVR4		opt_svr4.h
+LINPROCFS		opt_dontuse.h
+LINSYSFS		opt_dontuse.h
 NDISAPI			opt_dontuse.h
 
 CLK_CALIBRATION_LOOP		opt_clock.h
 CLK_USE_I8254_CALIBRATION	opt_clock.h
 TIMER_FREQ			opt_clock.h
+
+# options for serial support
+COM_ESP			opt_sio.h
+COM_MULTIPORT		opt_sio.h
+CONSPEED		opt_sio.h
+GDBSPEED		opt_sio.h
 
 VGA_ALT_SEQACCESS	opt_vga.h
 VGA_DEBUG		opt_vga.h
@@ -42,19 +50,20 @@ ELSA_QS1PCI		opt_i4b.h
 # temporary workaround for SMP machines
 I4B_SMP_WORKAROUND	opt_i4b.h
 # enable VJ compression code for ipr i/f
-IPR_VJ			opt_i4b.h
-IPR_LOG			opt_i4b.h
+#XXXBZ#IPR_VJ			opt_i4b.h
+#XXXBZ#IPR_LOG			opt_i4b.h
 
 # -------------------------------
 # EOF
 # -------------------------------
 HAMMER			opt_cpu.h
-PPC_PROBE_CHIPSET	opt_ppc.h
-PPC_DEBUG		opt_ppc.h
 PSM_HOOKRESUME		opt_psm.h
 PSM_RESETAFTERSUSPEND	opt_psm.h
 PSM_DEBUG		opt_psm.h
 DEV_ATPIC		opt_atpic.h
 
 # Debugging
-KDB_STOP_NMI		opt_kdb.h
+STOP_NMI		opt_cpu.h
+
+# BPF just-in-time compiler
+BPF_JITTER		opt_bpf.h

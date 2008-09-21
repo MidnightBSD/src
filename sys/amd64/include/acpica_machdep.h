@@ -23,18 +23,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/acpica_machdep.h,v 1.6 2004/10/11 05:39:15 njl Exp $
+ * $FreeBSD: src/sys/amd64/include/acpica_machdep.h,v 1.7 2007/03/22 18:16:39 jkim Exp $
  */
 
 /******************************************************************************
  *
  * Name: acpica_machdep.h - arch-specific defines, etc.
- *       $Revision: 1.1.1.2 $
+ *       $Revision: 1.2 $
  *
  *****************************************************************************/
 
 #ifndef __ACPICA_MACHDEP_H__
-#define __ACPICA_MACHDEP_H__
+#define	__ACPICA_MACHDEP_H__
 
 #ifdef _KERNEL
 /*
@@ -45,33 +45,35 @@
  * ACPI_INTERNAL_XFACE      - Internal ACPI interfaces
  * ACPI_INTERNAL_VAR_XFACE  - Internal variable-parameter list interfaces
  */
-#define ACPI_SYSTEM_XFACE
-#define ACPI_EXTERNAL_XFACE
-#define ACPI_INTERNAL_XFACE
-#define ACPI_INTERNAL_VAR_XFACE
+#define	ACPI_SYSTEM_XFACE
+#define	ACPI_EXTERNAL_XFACE
+#define	ACPI_INTERNAL_XFACE
+#define	ACPI_INTERNAL_VAR_XFACE
 
 /* Asm macros */
 
-#define ACPI_ASM_MACROS
-#define BREAKPOINT3
-#define ACPI_DISABLE_IRQS() disable_intr()
-#define ACPI_ENABLE_IRQS()  enable_intr()
+#define	ACPI_ASM_MACROS
+#define	BREAKPOINT3
+#define	ACPI_DISABLE_IRQS() disable_intr()
+#define	ACPI_ENABLE_IRQS()  enable_intr()
 
-#define ACPI_FLUSH_CPU_CACHE()	wbinvd()
+#define	ACPI_FLUSH_CPU_CACHE()	wbinvd()
 
 /* Section 5.2.9.1:  global lock acquire/release functions */
 extern int	acpi_acquire_global_lock(uint32_t *lock);
 extern int	acpi_release_global_lock(uint32_t *lock);
-#define ACPI_ACQUIRE_GLOBAL_LOCK(GLptr, Acq) \
-		((Acq) = acpi_acquire_global_lock(GLptr))
-#define ACPI_RELEASE_GLOBAL_LOCK(GLptr, Acq) \
-		((Acq) = acpi_release_global_lock(GLptr))
+#define	ACPI_ACQUIRE_GLOBAL_LOCK(GLptr, Acq)	do {			\
+	(Acq) = acpi_acquire_global_lock(&((GLptr)->GlobalLock));	\
+} while (0)
+#define	ACPI_RELEASE_GLOBAL_LOCK(GLptr, Acq)	do {			\
+	(Acq) = acpi_release_global_lock(&((GLptr)->GlobalLock));	\
+} while (0)
  
 #endif /* _KERNEL */
 
-#define ACPI_MACHINE_WIDTH             64
-#define COMPILER_DEPENDENT_INT64       long
-#define COMPILER_DEPENDENT_UINT64      unsigned long
+#define	ACPI_MACHINE_WIDTH             64
+#define	COMPILER_DEPENDENT_INT64       long
+#define	COMPILER_DEPENDENT_UINT64      unsigned long
 
 void	acpi_SetDefaultIntrModel(int model);
 void	acpi_cpu_c1(void);

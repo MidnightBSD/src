@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 #	@(#)systags.sh	8.1 (Berkeley) 6/10/93
-# $FreeBSD: src/sys/conf/systags.sh,v 1.9 2004/04/07 20:45:56 imp Exp $
+# $FreeBSD: src/sys/conf/systags.sh,v 1.10 2005/12/03 21:37:54 ru Exp $
 #
 # systags.sh - construct a system tags file using dependence relations
 #	in a .depend file
@@ -36,8 +36,7 @@
 # First written May 16, 1992 by Van Jacobson, Lawrence Berkeley Laboratory.
 
 rm -f tags tags.tmp tags.cfiles tags.sfiles tags.hfiles
-MACHINE=`uname -m`
-sed -e "s, machine/, ../../../$MACHINE/include/,g" \
+sed -e "s, machine/, ../../include/,g" \
 	-e 's,[a-z][^/    ]*/\.\./,,g' .depend | awk '{
 		for (i = 1; i <= NF; ++i) {
 			t = substr($i, length($i) - 1)

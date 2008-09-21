@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ddb/ddb.h,v 1.39 2005/07/02 23:52:37 marcel Exp $
+ * $FreeBSD: src/sys/ddb/ddb.h,v 1.43 2006/07/12 21:22:43 jhb Exp $
  */
 
 /*
@@ -52,23 +52,24 @@ int	DB_CALL(db_expr_t, db_expr_t *, int, db_expr_t[]);
 typedef void db_cmdfcn_t(db_expr_t addr, boolean_t have_addr, db_expr_t count,
 	    char *modif);
 
-typedef void db_page_calloutfcn_t(void *arg);
-
 #define DB_COMMAND(cmd_name, func_name) \
-	DB_SET(cmd_name, func_name, db_cmd_set, 0, NULL)
+	DB_FUNC(cmd_name, func_name, db_cmd_set, 0, NULL)
 #define DB_SHOW_COMMAND(cmd_name, func_name) \
-	DB_SET(cmd_name, func_name, db_show_cmd_set, 0, NULL)
+	DB_FUNC(cmd_name, func_name, db_show_cmd_set, 0, NULL)
 
-#define DB_SET(cmd_name, func_name, set, flag, more)		\
-static db_cmdfcn_t	func_name;				\
-								\
-static const struct command __CONCAT(func_name,_cmd) = {	\
+#define	DB_SET(cmd_name, func_name, set, flag, more)		\
+static const struct command __CONCAT(cmd_name,_cmd) = {		\
 	__STRING(cmd_name),					\
 	func_name,						\
 	flag,							\
 	more							\
 };								\
-TEXT_SET(set, __CONCAT(func_name,_cmd));			\
+TEXT_SET(set, __CONCAT(cmd_name,_cmd))
+
+#define DB_FUNC(cmd_name, func_name, set, flag, more)		\
+static db_cmdfcn_t	func_name;				\
+								\
+DB_SET(cmd_name, func_name, set, flag, more);			\
 								\
 static void							\
 func_name(addr, have_addr, count, modif)			\
@@ -82,6 +83,7 @@ extern int db_indent;
 extern int db_inst_count;
 extern int db_load_count;
 extern int db_store_count;
+extern volatile int db_pager_quit;
 extern db_expr_t db_radix;
 extern db_expr_t db_max_width;
 extern db_expr_t db_tab_stop_width;
@@ -98,9 +100,14 @@ void		db_error(const char *s);
 int		db_expression(db_expr_t *valuep);
 int		db_get_variable(db_expr_t *valuep);
 void		db_iprintf(const char *,...) __printflike(1, 2);
+struct proc	*db_lookup_proc(db_expr_t addr);
+struct thread	*db_lookup_thread(db_expr_t addr, boolean_t check_pid);
 struct vm_map	*db_map_addr(vm_offset_t);
 boolean_t	db_map_current(struct vm_map *);
 boolean_t	db_map_equal(struct vm_map *, struct vm_map *);
+int		db_md_set_watchpoint(db_expr_t addr, db_expr_t size);
+int		db_md_clr_watchpoint(db_expr_t addr, db_expr_t size);
+void		db_md_list_watchpoints(void);
 void		db_print_loc_and_inst(db_addr_t loc);
 void		db_print_thread(void);
 void		db_printf(const char *fmt, ...) __printflike(1, 2);
@@ -110,8 +117,6 @@ int		db_readline(char *lstart, int lsize);
 void		db_restart_at_pc(boolean_t watchpt);
 int		db_set_variable(db_expr_t value);
 void		db_set_watchpoints(void);
-void		db_setup_paging(db_page_calloutfcn_t *callout, void *arg,
-				int maxlines);
 void		db_skip_to_eol(void);
 boolean_t	db_stop_at_pc(boolean_t *is_breakpoint);
 #define		db_strcpy	strcpy
@@ -141,11 +146,17 @@ db_cmdfcn_t	db_trace_until_matching_cmd;
 db_cmdfcn_t	db_watchpoint_cmd;
 db_cmdfcn_t	db_write_cmd;
 
-db_page_calloutfcn_t db_simple_pager;
-
 /*
  * Command table.
  */
+struct command;
+
+struct command_table {
+	struct command *table;
+	struct command **aux_tablep;
+	struct command **aux_tablep_end;
+};
+
 struct command {
 	char *	name;		/* command name */
 	db_cmdfcn_t *fcn;	/* function to call */
@@ -154,7 +165,7 @@ struct command {
 #define	CS_MORE		0x2	/* standard syntax, but may have other words
 				 * at end */
 #define	CS_SET_DOT	0x100	/* set dot after command */
-	struct command *more;	/* another level of command */
+	struct command_table *more; /* another level of command */
 };
 
 #endif /* !_DDB_DDB_H_ */

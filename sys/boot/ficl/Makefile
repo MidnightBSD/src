@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/ficl/Makefile,v 1.41 2005/05/31 18:13:29 obrien Exp $
+# $FreeBSD: src/sys/boot/ficl/Makefile,v 1.44.2.1 2007/10/18 12:08:53 nyan Exp $
 #
 .PATH: ${.CURDIR}/${MACHINE_ARCH:S/amd64/i386/}
 BASE_SRCS=	dict.c ficl.c fileaccess.c float.c loader.c math64.c \
@@ -7,18 +7,12 @@ BASE_SRCS=	dict.c ficl.c fileaccess.c float.c loader.c math64.c \
 SRCS=		${BASE_SRCS} sysdep.c softcore.c
 CLEANFILES=	softcore.c testmain testmain.o
 CFLAGS+=	-ffreestanding
-.if ${MACHINE_ARCH} == "alpha"
-CFLAGS+=	-mno-fp-regs -Os
-.endif
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 CFLAGS+=	-mpreferred-stack-boundary=2
 CFLAGS+=	-mno-mmx -mno-3dnow -mno-sse -mno-sse2
 .endif
-.if ${MACHINE_ARCH} == "powerpc"
-CFLAGS+=	-msoft-float
-.endif
-.if ${MACHINE} == "pc98"
-CFLAGS+=	-DPC98
+.if ${MACHINE_ARCH} == "i386"
+CFLAGS+=	-mno-sse3
 .endif
 .if HAVE_PNP
 CFLAGS+=	-DHAVE_PNP
@@ -42,7 +36,7 @@ SOFTWORDS=	softcore.fr jhlocal.fr marker.fr freebsd.fr ficllocal.fr \
 #SOFTWORDS+=	oo.fr classes.fr
 
 .if ${MACHINE_ARCH} == "amd64"
-CFLAGS+=	-m32 -I.
+CFLAGS+=	-m32 -march=i386 -I.
 .endif
 
 CFLAGS+=	-I${.CURDIR} -I${.CURDIR}/${MACHINE_ARCH:S/amd64/i386/} \

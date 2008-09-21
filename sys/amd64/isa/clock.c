@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/isa/clock.c,v 1.221.2.1 2005/07/18 19:52:04 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/isa/clock.c,v 1.234.2.1 2007/10/29 22:26:34 peter Exp $");
 
 /*
  * Routines to handle clock hardware.
@@ -52,20 +52,26 @@ __FBSDID("$FreeBSD: src/sys/amd64/isa/clock.c,v 1.221.2.1 2005/07/18 19:52:04 jh
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/clock.h>
+#include <sys/conf.h>
+#include <sys/fcntl.h>
 #include <sys/lock.h>
 #include <sys/kdb.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/time.h>
 #include <sys/timetc.h>
+#include <sys/uio.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/module.h>
+#include <sys/sched.h>
 #include <sys/sysctl.h>
 #include <sys/cons.h>
 #include <sys/power.h>
 
 #include <machine/clock.h>
+#include <machine/cpu.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
 #include <machine/md_var.h>
@@ -90,9 +96,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/isa/clock.c,v 1.221.2.1 2005/07/18 19:52:04 jh
 
 #define	TIMER_DIV(x) ((timer_freq + (x) / 2) / (x))
 
-int	adjkerntz;		/* local offset from GMT in seconds */
 int	clkintr_pending;
-int	disable_rtc_set;	/* disable resettodr() if != 0 */
 int	pscnt = 1;
 int	psdiv = 1;
 int	statclock_disable;
@@ -102,12 +106,11 @@ int	statclock_disable;
 u_int	timer_freq = TIMER_FREQ;
 int	timer0_max_count;
 int	timer0_real_max_count;
-int	wall_cmos_clock;	/* wall CMOS clock assumed if != 0 */
-struct mtx clock_lock;
 #define	RTC_LOCK	mtx_lock_spin(&clock_lock)
 #define	RTC_UNLOCK	mtx_unlock_spin(&clock_lock)
 
 static	int	beeping = 0;
+static	struct mtx clock_lock;
 static	const u_char daysinmonth[] = {31,28,31,30,31,30,31,31,30,31,30,31};
 static	struct intsrc *i8254_intsrc;
 static	u_int32_t i8254_lastcount;
@@ -115,6 +118,7 @@ static	u_int32_t i8254_offset;
 static	int	(*i8254_pending)(struct intsrc *);
 static	int	i8254_ticked;
 static	int	using_lapic_timer;
+static	int	rtc_reg = -1;
 static	u_char	rtc_statusa = RTCSA_DIVIDER | RTCSA_NOPROF;
 static	u_char	rtc_statusb = RTCSB_24HR;
 
@@ -139,8 +143,8 @@ static struct timecounter i8254_timecounter = {
 	0			/* quality */
 };
 
-static void
-clkintr(struct clockframe *frame)
+static int
+clkintr(struct trapframe *frame)
 {
 
 	if (timecounter->tc_get_timecount == i8254_get_timecount) {
@@ -154,8 +158,9 @@ clkintr(struct clockframe *frame)
 		clkintr_pending = 0;
 		mtx_unlock_spin(&clock_lock);
 	}
-	if (!using_lapic_timer)
-		hardclock(frame);
+	KASSERT(!using_lapic_timer, ("clk interrupt enabled with lapic timer"));
+	hardclock(TRAPF_USERMODE(frame), TRAPF_PC(frame));
+	return (FILTER_HANDLED);
 }
 
 int
@@ -210,19 +215,22 @@ release_timer2()
  * Stat clock ticks can still be lost, causing minor loss of accuracy
  * in the statistics, but the stat clock will no longer stop.
  */
-static void
-rtcintr(struct clockframe *frame)
+static int
+rtcintr(struct trapframe *frame)
 {
+	int flag = 0;
 
 	while (rtcin(RTC_INTR) & RTCIR_PERIOD) {
+		flag = 1;
 		if (profprocs != 0) {
 			if (--pscnt == 0)
 				pscnt = psdiv;
-			profclock(frame);
+			profclock(TRAPF_USERMODE(frame), TRAPF_PC(frame));
 		}
 		if (pscnt == psdiv)
-			statclock(frame);
+			statclock(TRAPF_USERMODE(frame));
 	}
+	return(flag ? FILTER_HANDLED : FILTER_STRAY);
 }
 
 #include "opt_ddb.h"
@@ -269,7 +277,21 @@ DELAY(int n)
 	int getit_calls = 1;
 	int n1;
 	static int state = 0;
+#endif
 
+	if (tsc_freq != 0 && !tsc_is_broken) {
+		uint64_t start, end, now;
+
+		sched_pin();
+		start = rdtsc();
+		end = start + (tsc_freq * n) / 1000000;
+		do {
+			now = rdtsc();
+		} while (now < end || (now > start && end < start));
+		sched_unpin();
+		return;
+	}
+#ifdef DELAYDEBUG
 	if (state == 0) {
 		state = 1;
 		for (n1 = 1; n1 <= 10000000; n1 *= 10)
@@ -279,13 +301,6 @@ DELAY(int n)
 	if (state == 1)
 		printf("DELAY(%d)...", n);
 #endif
-	/*
-	 * Guard against the timer being uninitialized if we are called
-	 * early for console i/o.
-	 */
-	if (timer0_max_count == 0)
-		set_timer_freq(timer_freq, hz);
-
 	/*
 	 * Read the counter first, so that the rest of the setup overhead is
 	 * counted.  Guess the initial overhead is 20 usec (on most systems it
@@ -407,24 +422,30 @@ rtcin(reg)
 	u_char val;
 
 	RTC_LOCK;
-	outb(IO_RTC, reg);
-	inb(0x84);
+	if (rtc_reg != reg) {
+		inb(0x84);
+		outb(IO_RTC, reg);
+		rtc_reg = reg;
+		inb(0x84);
+	}
 	val = inb(IO_RTC + 1);
-	inb(0x84);
 	RTC_UNLOCK;
 	return (val);
 }
 
-static __inline void
-writertc(u_char reg, u_char val)
+void
+writertc(int reg, u_char val)
 {
 
 	RTC_LOCK;
-	inb(0x84);
-	outb(IO_RTC, reg);
-	inb(0x84);
+	if (rtc_reg != reg) {
+		inb(0x84);
+		outb(IO_RTC, reg);
+		rtc_reg = reg;
+		inb(0x84);
+	}
 	outb(IO_RTC + 1, val);
-	inb(0x84);		/* XXX work around wrong order in rtcin() */
+	inb(0x84);
 	RTC_UNLOCK;
 }
 
@@ -539,10 +560,15 @@ set_timer_freq(u_int freq, int intr_freq)
 	mtx_unlock_spin(&clock_lock);
 }
 
-/*
- * Initialize 8254 timer 0 early so that it can be used in DELAY().
- * XXX initialization of other timers is unintentionally left blank.
- */
+/* This is separate from startrtclock() so that it can be called early. */
+void
+i8254_init(void)
+{
+
+	mtx_init(&clock_lock, "clk", NULL, MTX_SPIN | MTX_NOPROFILE);
+	set_timer_freq(timer_freq, hz);
+}
+
 void
 startrtclock()
 {
@@ -551,7 +577,6 @@ startrtclock()
 	writertc(RTC_STATUSA, rtc_statusa);
 	writertc(RTC_STATUSB, RTCSB_24HR);
 
-	set_timer_freq(timer_freq, hz);
 	freq = calibrate_clocks();
 #ifdef CLK_CALIBRATION_LOOP
 	if (bootverbose) {
@@ -648,7 +673,7 @@ inittodr(time_t base)
 	/* sec now contains the number of seconds, since Jan 1 1970,
 	   in the local time zone */
 
-	sec += tz_minuteswest * 60 + (wall_cmos_clock ? adjkerntz : 0);
+	sec += utc_offset();
 
 	y = time_second - sec;
 	if (y <= -2 || y >= 2) {
@@ -661,8 +686,7 @@ inittodr(time_t base)
 	return;
 
 wrong_time:
-	printf("Invalid time in real time clock.\n");
-	printf("Check and reset the date immediately!\n");
+	printf("Invalid time in clock: check and reset the date!\n");
 }
 
 /*
@@ -686,7 +710,7 @@ resettodr()
 
 	/* Calculate local time to put in RTC */
 
-	tm -= tz_minuteswest * 60 + (wall_cmos_clock ? adjkerntz : 0);
+	tm -= utc_offset();
 
 	writertc(RTC_SEC, bin2bcd(tm%60)); tm /= 60;	/* Write back Seconds */
 	writertc(RTC_MIN, bin2bcd(tm%60)); tm /= 60;	/* Write back Minutes */
@@ -740,8 +764,8 @@ cpu_initclocks()
 	 * timecounter to user a simpler algorithm.
 	 */
 	if (!using_lapic_timer) {
-		intr_add_handler("clk", 0, (driver_intr_t *)clkintr, NULL,
-		    INTR_TYPE_CLK | INTR_FAST, NULL);
+		intr_add_handler("clk", 0, (driver_filter_t *)clkintr, NULL, NULL,
+		    INTR_TYPE_CLK, NULL);
 		i8254_intsrc = intr_lookup_source(0);
 		if (i8254_intsrc != NULL)
 			i8254_pending =
@@ -774,8 +798,8 @@ cpu_initclocks()
 
 		/* Enable periodic interrupts from the RTC. */
 		rtc_statusb |= RTCSB_PINTR;
-		intr_add_handler("rtc", 8, (driver_intr_t *)rtcintr, NULL,
-		    INTR_TYPE_CLK | INTR_FAST, NULL);
+		intr_add_handler("rtc", 8, (driver_filter_t *)rtcintr, NULL, NULL,
+		    INTR_TYPE_CLK, NULL);
 
 		writertc(RTC_STATUSB, rtc_statusb);
 		rtcin(RTC_INTR);
@@ -817,7 +841,7 @@ sysctl_machdep_i8254_freq(SYSCTL_HANDLER_ARGS)
 	 * is is too generic.  Should use it everywhere.
 	 */
 	freq = timer_freq;
-	error = sysctl_handle_int(oidp, &freq, sizeof(freq), req);
+	error = sysctl_handle_int(oidp, &freq, 0, req);
 	if (error == 0 && req->newptr != NULL)
 		set_timer_freq(freq, hz);
 	return (error);
@@ -909,4 +933,5 @@ static devclass_t attimer_devclass;
 
 DRIVER_MODULE(attimer, isa, attimer_driver, attimer_devclass, 0, 0);
 DRIVER_MODULE(attimer, acpi, attimer_driver, attimer_devclass, 0, 0);
+
 #endif /* DEV_ISA */

@@ -23,26 +23,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/gdb_machdep.h,v 1.3 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/gdb_machdep.h,v 1.6 2007/02/05 21:48:32 jhb Exp $
  */
 
 #ifndef _MACHINE_GDB_MACHDEP_H_
 #define	_MACHINE_GDB_MACHDEP_H_
 
-#define	GDB_BUFSZ	500
+#define	GDB_BUFSZ	(GDB_NREGS * 16)
 #define	GDB_NREGS	56
-#define	GDB_REG_PC	18
+#define	GDB_REG_PC	16
 
 static __inline size_t
 gdb_cpu_regsz(int regnum)
 {
 	return ((regnum > 16 && regnum < 24) ? 4 : 8);
-}
-
-static __inline int
-gdb_cpu_signal(int type, int code __unused)
-{
-	return (type);
 }
 
 static __inline int
@@ -53,5 +47,6 @@ gdb_cpu_query(void)
 
 void *gdb_cpu_getreg(int, size_t *);
 void gdb_cpu_setreg(int, void *);
+int gdb_cpu_signal(int, int);
 
 #endif /* !_MACHINE_GDB_MACHDEP_H_ */

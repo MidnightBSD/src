@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/genassym.c,v 1.155.2.2 2005/11/15 00:25:59 peter Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/genassym.c,v 1.165 2007/09/17 21:55:28 peter Exp $");
 
 #include "opt_compat.h"
 #include "opt_kstack_pages.h"
@@ -74,11 +74,12 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/genassym.c,v 1.155.2.2 2005/11/15 00:25:
 ASSYM(P_VMSPACE, offsetof(struct proc, p_vmspace));
 ASSYM(VM_PMAP, offsetof(struct vmspace, vm_pmap));
 ASSYM(PM_ACTIVE, offsetof(struct pmap, pm_active));
-ASSYM(P_SFLAG, offsetof(struct proc, p_sflag));
 
+ASSYM(TD_LOCK, offsetof(struct thread, td_lock));
 ASSYM(TD_FLAGS, offsetof(struct thread, td_flags));
 ASSYM(TD_PCB, offsetof(struct thread, td_pcb));
 ASSYM(TD_PROC, offsetof(struct thread, td_proc));
+ASSYM(TD_TID, offsetof(struct thread, td_tid));
 
 ASSYM(TDF_ASTPENDING, TDF_ASTPENDING);
 ASSYM(TDF_NEEDRESCHED, TDF_NEEDRESCHED);
@@ -135,12 +136,14 @@ ASSYM(PCB_DR6, offsetof(struct pcb, pcb_dr6));
 ASSYM(PCB_DR7, offsetof(struct pcb, pcb_dr7));
 ASSYM(PCB_DBREGS, PCB_DBREGS);
 ASSYM(PCB_32BIT, PCB_32BIT);
+ASSYM(PCB_FULLCTX, PCB_FULLCTX);
 
 ASSYM(PCB_FLAGS, offsetof(struct pcb, pcb_flags));
-ASSYM(PCB_FULLCTX, PCB_FULLCTX);
 ASSYM(PCB_SAVEFPU, offsetof(struct pcb, pcb_save));
 ASSYM(PCB_SAVEFPU_SIZE, sizeof(struct savefpu));
 ASSYM(PCB_ONFAULT, offsetof(struct pcb, pcb_onfault));
+ASSYM(PCB_GS32P, offsetof(struct pcb, pcb_gs32p));
+ASSYM(PCB_GS32SD, offsetof(struct pcb, pcb_gs32sd));
 
 ASSYM(PCB_SIZE, sizeof(struct pcb));
 
@@ -177,6 +180,7 @@ ASSYM(UC_EFLAGS, offsetof(ucontext_t, uc_mcontext.mc_rflags));
 ASSYM(ENOENT, ENOENT);
 ASSYM(EFAULT, EFAULT);
 ASSYM(ENAMETOOLONG, ENAMETOOLONG);
+ASSYM(MAXCPU, MAXCPU);
 ASSYM(MAXCOMLEN, MAXCOMLEN);
 ASSYM(MAXPATHLEN, MAXPATHLEN);
 ASSYM(PC_SIZEOF, sizeof(struct pcpu));

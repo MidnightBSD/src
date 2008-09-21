@@ -3,7 +3,7 @@
 ** Forth Inspired Command Language - virtual machine methods
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
-** $Id: vm.c,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
+** $Id: vm.c,v 1.2 2008-09-21 15:21:33 laffer1 Exp $
 *******************************************************************/
 /*
 ** This file implements the virtual machine of FICL. Each virtual
@@ -47,7 +47,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/vm.c,v 1.9 2002/04/09 17:45:11 dcs Exp $ */
+/* $FreeBSD: src/sys/boot/ficl/vm.c,v 1.10 2007/03/23 22:26:01 jkim Exp $ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>
@@ -316,14 +316,28 @@ STRINGINFO vmGetWord0(FICL_VM *pVM)
     char *pEnd      = vmGetInBufEnd(pVM);
     STRINGINFO si;
     FICL_UNS count = 0;
-    char ch;
+    char ch = 0;
 
     pSrc = skipSpace(pSrc, pEnd);
     SI_SETPTR(si, pSrc);
 
+/*
     for (ch = *pSrc; (pEnd != pSrc) && !isspace(ch); ch = *++pSrc)
     {
         count++;
+    }
+*/
+
+    /* Changed to make Purify happier.  --lch */
+    for (;;)
+    {
+        if (pEnd == pSrc)
+            break;
+        ch = *pSrc;
+        if (isspace(ch))
+            break;
+        count++;
+        pSrc++;
     }
 
     SI_SETLEN(si, count);

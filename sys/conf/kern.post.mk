@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/kern.post.mk,v 1.83.2.1 2005/11/16 10:03:02 ru Exp $
+# $FreeBSD: src/sys/conf/kern.post.mk,v 1.100 2007/03/23 21:55:59 imp Exp $
 
 # Part of a unified Makefile for building kernels.  This part includes all
 # the definitions that need to be after all the % directives except %RULES
@@ -42,9 +42,9 @@ ports-${__target}:
 
 .ORDER: kernel-install modules-install
 
-kernel-all: ${KERNEL_KO}
+kernel-all: ${KERNEL_KO} ${KERNEL_EXTRA}
 
-kernel-cleandir: kernel-clean
+kernel-cleandir: kernel-clean kernel-cleandepend
 
 kernel-clobber:
 	find . -maxdepth 1 ! -type d ! -name version -delete
@@ -63,10 +63,13 @@ modules-all modules-depend: modules-obj
 FULLKERNEL=	${KERNEL_KO}
 .else
 FULLKERNEL=	${KERNEL_KO}.debug
-${KERNEL_KO}: ${FULLKERNEL}
-	${OBJCOPY} --strip-debug ${FULLKERNEL} ${KERNEL_KO}
+${KERNEL_KO}: ${FULLKERNEL} ${KERNEL_KO}.symbols
+	${OBJCOPY} --strip-debug --add-gnu-debuglink=${KERNEL_KO}.symbols\
+	    ${FULLKERNEL} ${.TARGET}
+${KERNEL_KO}.symbols: ${FULLKERNEL}
+	${OBJCOPY} --only-keep-debug ${FULLKERNEL} ${.TARGET}
 install.debug reinstall.debug: gdbinit
-	cd ${.CURDIR}; ${MAKE} -DINSTALL_DEBUG ${.TARGET:R}
+	cd ${.CURDIR}; ${MAKE} ${.TARGET:R}
 
 # Install gdbinit files for kernel debugging.
 gdbinit:
@@ -87,6 +90,15 @@ ${FULLKERNEL}: ${SYSTEM_DEP} vers.o
 	${OBJCOPY} --strip-debug ${.TARGET}
 .endif
 	${SYSTEM_LD_TAIL}
+.if defined(MFS_IMAGE)
+	@dd if="${MFS_IMAGE}" ibs=8192 of="${FULLKERNEL}"		\
+	   obs=`strings -at d "${FULLKERNEL}" |				\
+	         grep "MFS Filesystem goes here" | awk '{print $$1}'`	\
+	   oseek=1 conv=notrunc 2>/dev/null &&				\
+	 strings ${FULLKERNEL} |					\
+	 grep 'MFS Filesystem had better STOP here' > /dev/null ||	\
+	 (rm ${FULLKERNEL} && echo 'MFS image too large' && false)
+.endif
 
 .if !exists(${.OBJDIR}/.depend)
 ${SYSTEM_OBJS}: assym.s vnode_if.h ${BEFORE_DEPEND:M*.h} ${MFILES:T:S/.m$/.h/}
@@ -105,7 +117,8 @@ ${mfile:T:S/.m$/.h/}: ${mfile}
 
 kernel-clean:
 	rm -f *.o *.so *.So *.ko *.s eddep errs \
-	    ${FULLKERNEL} ${KERNEL_KO} linterrs makelinks tags vers.c \
+	    ${FULLKERNEL} ${KERNEL_KO} ${KERNEL_KO}.symbols \
+	    linterrs makelinks tags vers.c \
 	    vnode_if.c vnode_if.h vnode_if_newproto.h vnode_if_typedef.h \
 	    ${MFILES:T:S/.m$/.c/} ${MFILES:T:S/.m$/.h/} \
 	    ${CLEAN}
@@ -119,7 +132,7 @@ lint: ${LNFILES}
 # in the a.out ld.  For now, this works.
 HACK_EXTRA_FLAGS?= -shared
 hack.So: Makefile
-	touch hack.c
+	:> hack.c
 	${CC} ${HACK_EXTRA_FLAGS} -nostdlib hack.c -o hack.So
 	rm -f hack.c
 
@@ -137,9 +150,10 @@ ${SYSTEM_OBJS} genassym.o vers.o: opt_global.h
 kernel-depend: .depend
 # The argument list can be very long, so use make -V and xargs to
 # pass it to mkdep.
-.depend: assym.s vnode_if.h ${BEFORE_DEPEND} ${CFILES} \
-	    ${SYSTEM_CFILES} ${GEN_CFILES} ${SFILES} \
-	    ${MFILES:T:S/.m$/.h/}
+SRCS=	assym.s vnode_if.h ${BEFORE_DEPEND} ${CFILES} \
+	${SYSTEM_CFILES} ${GEN_CFILES} ${SFILES} \
+	${MFILES:T:S/.m$/.h/}
+.depend: .PRECIOUS ${SRCS}
 	rm -f .newdep
 	${MAKE} -V CFILES -V SYSTEM_CFILES -V GEN_CFILES | \
 	    MKDEP_CPP="${CC} -E" CC="${CC}" xargs mkdep -a -f .newdep ${CFLAGS}
@@ -148,8 +162,31 @@ kernel-depend: .depend
 	rm -f .depend
 	mv .newdep .depend
 
+_ILINKS= machine
+.if ${MACHINE} != ${MACHINE_ARCH}
+_ILINKS+= ${MACHINE_ARCH}
+.endif
+
+# Ensure that the link exists without depending on it when it exists.
+.for _link in ${_ILINKS}
+.if !exists(${.OBJDIR}/${_link})
+${SRCS}: ${_link}
+.endif
+.endfor
+
+${_ILINKS}:
+	@case ${.TARGET} in \
+	machine) \
+		path=${S}/${MACHINE}/include ;; \
+	${MACHINE_ARCH}) \
+		path=${S}/${MACHINE_ARCH}/include ;; \
+	esac ; \
+	${ECHO} ${.TARGET} "->" $$path ; \
+	ln -s $$path ${.TARGET}
+
+# .depend needs include links so we remove them only together.
 kernel-cleandepend:
-	rm -f .depend
+	rm -f .depend ${_ILINKS}
 
 links:
 	egrep '#if' ${CFILES} | sed -f $S/conf/defines | \
@@ -162,27 +199,9 @@ links:
 kernel-tags:
 	@[ -f .depend ] || { echo "you must make depend first"; exit 1; }
 	sh $S/conf/systags.sh
-	rm -f tags1
-	sed -e 's,      ../,    ,' tags > tags1
-
-.if ${MACHINE_ARCH} != "ia64"
-.if exists(${DESTDIR}/boot)
-kernel-install-check:
-	@if [ ! -f ${DESTDIR}/boot/device.hints ] ; then \
-		echo "You must set up a ${DESTDIR}/boot/device.hints file first." ; \
-		exit 1 ; \
-	fi
-	@if [ x"`grep device.hints ${DESTDIR}/boot/defaults/loader.conf ${DESTDIR}/boot/loader.conf`" = "x" ]; then \
-		echo "You must activate /boot/device.hints in loader.conf." ; \
-		exit 1 ; \
-	fi
-
-kernel-install: kernel-install-check
-.endif
-.endif
 
 kernel-install:
-	@if [ ! -f ${FULLKERNEL} ] ; then \
+	@if [ ! -f ${KERNEL_KO} ] ; then \
 		echo "You must build a kernel first." ; \
 		exit 1 ; \
 	fi
@@ -201,18 +220,21 @@ kernel-install:
 	fi
 .endif
 	mkdir -p ${DESTDIR}${KODIR}
-.if defined(DEBUG) && defined(INSTALL_DEBUG)
-	${INSTALL} -p -m 555 -o root -g wheel ${FULLKERNEL} ${DESTDIR}${KODIR}
-.else
 	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO} ${DESTDIR}${KODIR}
+.if defined(DEBUG) && !defined(INSTALL_NODEBUG)
+	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
+.if defined(KERNEL_EXTRA_INSTALL)
+	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_EXTRA_INSTALL} ${DESTDIR}${KODIR}
+.endif
+
+
 
 kernel-reinstall:
 	@-chflags -R noschg ${DESTDIR}${KODIR}
-.if defined(DEBUG) && defined(INSTALL_DEBUG)
-	${INSTALL} -p -m 555 -o root -g wheel ${FULLKERNEL} ${DESTDIR}${KODIR}
-.else
 	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO} ${DESTDIR}${KODIR}
+.if defined(DEBUG) && !defined(INSTALL_NODEBUG)
+	${INSTALL} -p -m 555 -o root -g wheel ${KERNEL_KO}.symbols ${DESTDIR}${KODIR}
 .endif
 
 config.o env.o hints.o vers.o vnode_if.o:
@@ -227,9 +249,13 @@ vers.c: $S/conf/newvers.sh $S/sys/param.h ${SYSTEM_DEP}
 vnode_if.c: $S/tools/vnode_if.awk $S/kern/vnode_if.src
 	${AWK} -f $S/tools/vnode_if.awk $S/kern/vnode_if.src -c
 
-vnode_if.h: $S/tools/vnode_if.awk $S/kern/vnode_if.src
+vnode_if.h vnode_if_newproto.h vnode_if_typedef.h: $S/tools/vnode_if.awk \
+    $S/kern/vnode_if.src
+vnode_if.h: vnode_if_newproto.h vnode_if_typedef.h
 	${AWK} -f $S/tools/vnode_if.awk $S/kern/vnode_if.src -h
+vnode_if_newproto.h:
 	${AWK} -f $S/tools/vnode_if.awk $S/kern/vnode_if.src -p
+vnode_if_typedef.h:
 	${AWK} -f $S/tools/vnode_if.awk $S/kern/vnode_if.src -q
 
 # XXX strictly, everything depends on Makefile because changes to ${PROF}

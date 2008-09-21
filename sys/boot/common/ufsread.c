@@ -44,14 +44,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/ufsread.c,v 1.14 2005/01/30 14:58:00 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/ufsread.c,v 1.14.10.1 2007/11/08 21:31:38 jhb Exp $");
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>
-#ifdef __i386__
+#ifdef UFS_SMALL_CGBASE
 /* XXX: Revert to old (broken for over 1.5Tb filesystems) version of cgbase
-   (see sys/ufs/ffs/fs.h rev 1.39) so that i386 boot loader (boot2) can
-   support both UFS1 and UFS2 again. */
+   (see sys/ufs/ffs/fs.h rev 1.39) so that small boot loaders (e.g. boot2) can
+   support both UFS1 and UFS2. */
 #undef cgbase
 #define cgbase(fs, c)   ((ufs2_daddr_t)((fs)->fs_fpg * (c)))
 #endif

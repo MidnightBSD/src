@@ -26,12 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/load_elf.c,v 1.32.2.1 2005/12/30 22:13:58 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/load_elf.c,v 1.37 2006/11/02 17:52:43 ru Exp $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
 #include <sys/linker.h>
 #include <sys/module.h>
+#include <sys/stdint.h>
 #include <string.h>
 #include <machine/elf.h>
 #include <stand.h>
@@ -400,9 +401,9 @@ __elfN(loadimage)(struct preloaded_file *fp, elf_file_t ef, u_int64_t off)
 	lastaddr += sizeof(size);
 
 #ifdef ELF_VERBOSE
-	printf("\n%s: 0x%lx@0x%lx -> 0x%lx-0x%lx", secname,
-	    shdr[i].sh_size, shdr[i].sh_offset,
-	    lastaddr, lastaddr + shdr[i].sh_size);
+	printf("\n%s: 0x%jx@0x%jx -> 0x%jx-0x%jx", secname,
+	    (uintmax_t)shdr[i].sh_size, (uintmax_t)shdr[i].sh_offset,
+	    (uintmax_t)lastaddr, (uintmax_t)(lastaddr + shdr[i].sh_size));
 #else
 	if (i == symstrindex)
 	    printf("+");

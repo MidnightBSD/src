@@ -1,23 +1,23 @@
-# $FreeBSD: src/sys/boot/common/Makefile.inc,v 1.21 2004/10/24 12:32:41 ru Exp $
-# $MidnightBSD: src/sys/boot/common/Makefile.inc,v 1.2 2006/07/26 12:35:19 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/boot/common/Makefile.inc,v 1.23 2006/11/02 00:26:44 marcel Exp $
 
-SRCS+=	bcache.c boot.c commands.c console.c devopen.c interp.c 
+SRCS+=	boot.c commands.c console.c devopen.c interp.c 
 SRCS+=	interp_backslash.c interp_parse.c ls.c misc.c 
 SRCS+=	module.c panic.c
 
 .if ${MACHINE} == "i386" || ${MACHINE_ARCH} == "amd64"
 SRCS+=	load_elf32.c load_elf32_obj.c reloc_elf32.c
 SRCS+=	load_elf64.c load_elf64_obj.c reloc_elf64.c
-.elif ${MACHINE} == "pc98"
-SRCS+=	load_elf32.c load_elf32_obj.c reloc_elf32.c
-.elif ${MACHINE_ARCH} == "powerpc"
-SRCS+=	load_elf32.c reloc_elf32.c
-.elif ${MACHINE_ARCH} == "sparc64" || ${MACHINE_ARCH} == "ia64"
+.elif ${MACHINE_ARCH} == "sparc64"
 SRCS+=	load_elf64.c reloc_elf64.c
 .endif
 
 .if defined(LOADER_NET_SUPPORT)
 SRCS+=	dev_net.c
+.endif
+
+.if defined(HAVE_BCACHE)
+SRCS+=  bcache.c
 .endif
 
 # Machine-independant ISA PnP

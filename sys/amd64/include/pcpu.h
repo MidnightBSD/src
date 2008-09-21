@@ -23,14 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/pcpu.h,v 1.44 2005/03/11 22:16:09 peter Exp $
+ * $FreeBSD: src/sys/amd64/include/pcpu.h,v 1.48 2007/06/04 21:38:45 attilio Exp $
  */
 
 #ifndef _MACHINE_PCPU_H_
-#define _MACHINE_PCPU_H_
+#define	_MACHINE_PCPU_H_
 
 #ifndef _SYS_CDEFS_H_
-#error this file needs sys/cdefs.h as a prerequisite
+#error "sys/cdefs.h is a prerequisite for this file"
 #endif
 
 #ifdef _KERNEL
@@ -51,16 +51,17 @@
 	u_int	pc_apic_id;						\
 	u_int   pc_acpi_id		/* ACPI CPU id */
 
-#if defined(lint)
- 
+#ifdef lint
+
 extern struct pcpu *pcpup;
- 
-#define PCPU_GET(member)        (pcpup->pc_ ## member)
-#define PCPU_PTR(member)        (&pcpup->pc_ ## member)
-#define PCPU_SET(member,value)  (pcpup->pc_ ## member = (value))
- 
-#elif defined(__GNUCLIKE_ASM) && defined(__GNUCLIKE___TYPEOF) \
-    && defined(__GNUCLIKE___OFFSETOF)
+
+#define	PCPU_GET(member)	(pcpup->pc_ ## member)
+#define	PCPU_ADD(member, val)	(pcpup->pc_ ## member += (val))
+#define	PCPU_INC(member)	PCPU_ADD(member, 1)
+#define	PCPU_PTR(member)	(&pcpup->pc_ ## member)
+#define	PCPU_SET(member, val)	(pcpup->pc_ ## member = (val))
+
+#elif defined(__GNUCLIKE_ASM) && defined(__GNUCLIKE___TYPEOF)
 
 /*
  * Evaluates to the byte offset of the per-cpu variable name.
@@ -92,75 +93,96 @@ extern struct pcpu *pcpup;
  * Evaluates to the value of the per-cpu variable name.
  */
 #define	__PCPU_GET(name) __extension__ ({				\
-	__pcpu_type(name) __result;					\
+	__pcpu_type(name) __res;					\
+	struct __s {							\
+		u_char	__b[MIN(sizeof(__pcpu_type(name)), 8)];		\
+	} __s;								\
 									\
-	if (sizeof(__result) == 1) {					\
-		u_char __b;						\
-		__asm __volatile("movb %%gs:%1,%0"			\
-		    : "=r" (__b)					\
-		    : "m" (*(u_char *)(__pcpu_offset(name))));		\
-		__result = *(__pcpu_type(name) *)&__b;			\
-	} else if (sizeof(__result) == 2) {				\
-		u_short __w;						\
-		__asm __volatile("movw %%gs:%1,%0"			\
-		    : "=r" (__w)					\
-		    : "m" (*(u_short *)(__pcpu_offset(name))));		\
-		__result = *(__pcpu_type(name) *)&__w;			\
-	} else if (sizeof(__result) == 4) {				\
-		u_int __i;						\
-		__asm __volatile("movl %%gs:%1,%0"			\
-		    : "=r" (__i)					\
-		    : "m" (*(u_int *)(__pcpu_offset(name))));		\
-		__result = *(__pcpu_type(name) *)&__i;			\
-	} else if (sizeof(__result) == 8) {				\
-		u_long __l;						\
-		__asm __volatile("movq %%gs:%1,%0"			\
-		    : "=r" (__l)					\
-		    : "m" (*(u_long *)(__pcpu_offset(name))));		\
-		__result = *(__pcpu_type(name) *)&__l;			\
+	if (sizeof(__res) == 1 || sizeof(__res) == 2 ||			\
+	    sizeof(__res) == 4 || sizeof(__res) == 8) {			\
+		__asm __volatile("mov %%gs:%1,%0"			\
+		    : "=r" (__s)					\
+		    : "m" (*(struct __s *)(__pcpu_offset(name))));	\
+		*(struct __s *)(void *)&__res = __s;			\
 	} else {							\
-		__result = *__PCPU_PTR(name);				\
+		__res = *__PCPU_PTR(name);				\
 	}								\
-									\
-	__result;							\
+	__res;								\
 })
+
+/*
+ * Adds the value to the per-cpu counter name.  The implementation
+ * must be atomic with respect to interrupts.
+ */
+#define	__PCPU_ADD(name, val) do {					\
+	__pcpu_type(name) __val;					\
+	struct __s {							\
+		u_char	__b[MIN(sizeof(__pcpu_type(name)), 8)];		\
+	} __s;								\
+									\
+	__val = (val);							\
+	if (sizeof(__val) == 1 || sizeof(__val) == 2 ||			\
+	    sizeof(__val) == 4 || sizeof(__val) == 8) {			\
+		__s = *(struct __s *)(void *)&__val;			\
+		__asm __volatile("add %1,%%gs:%0"			\
+		    : "=m" (*(struct __s *)(__pcpu_offset(name)))	\
+		    : "r" (__s));					\
+	} else								\
+		*__PCPU_PTR(name) += __val;				\
+} while (0)
+
+/*
+ * Increments the value of the per-cpu counter name.  The implementation
+ * must be atomic with respect to interrupts.
+ */
+#define	__PCPU_INC(name) do {						\
+	CTASSERT(sizeof(__pcpu_type(name)) == 1 ||			\
+	    sizeof(__pcpu_type(name)) == 2 ||				\
+	    sizeof(__pcpu_type(name)) == 4 ||				\
+	    sizeof(__pcpu_type(name)) == 8);				\
+	if (sizeof(__pcpu_type(name)) == 1) {				\
+		__asm __volatile("incb %%gs:%0"				\
+		    : "=m" (*(__pcpu_type(name) *)(__pcpu_offset(name)))\
+		    : "m" (*(__pcpu_type(name) *)(__pcpu_offset(name))));\
+	} else if (sizeof(__pcpu_type(name)) == 2) {			\
+		__asm __volatile("incw %%gs:%0"				\
+		    : "=m" (*(__pcpu_type(name) *)(__pcpu_offset(name)))\
+		    : "m" (*(__pcpu_type(name) *)(__pcpu_offset(name))));\
+	} else if (sizeof(__pcpu_type(name)) == 4) {			\
+		__asm __volatile("incl %%gs:%0"				\
+		    : "=m" (*(__pcpu_type(name) *)(__pcpu_offset(name)))\
+		    : "m" (*(__pcpu_type(name) *)(__pcpu_offset(name))));\
+	} else if (sizeof(__pcpu_type(name)) == 8) {			\
+		__asm __volatile("incq %%gs:%0"				\
+		    : "=m" (*(__pcpu_type(name) *)(__pcpu_offset(name)))\
+		    : "m" (*(__pcpu_type(name) *)(__pcpu_offset(name))));\
+	}								\
+} while (0)
 
 /*
  * Sets the value of the per-cpu variable name to value val.
  */
 #define	__PCPU_SET(name, val) {						\
-	__pcpu_type(name) __val = (val);				\
+	__pcpu_type(name) __val;					\
+	struct __s {							\
+		u_char	__b[MIN(sizeof(__pcpu_type(name)), 8)];		\
+	} __s;								\
 									\
-	if (sizeof(__val) == 1) {					\
-		u_char __b;						\
-		__b = *(u_char *)&__val;				\
-		__asm __volatile("movb %1,%%gs:%0"			\
-		    : "=m" (*(u_char *)(__pcpu_offset(name)))		\
-		    : "r" (__b));					\
-	} else if (sizeof(__val) == 2) {				\
-		u_short __w;						\
-		__w = *(u_short *)&__val;				\
-		__asm __volatile("movw %1,%%gs:%0"			\
-		    : "=m" (*(u_short *)(__pcpu_offset(name)))		\
-		    : "r" (__w));					\
-	} else if (sizeof(__val) == 4) {				\
-		u_int __i;						\
-		__i = *(u_int *)&__val;					\
-		__asm __volatile("movl %1,%%gs:%0"			\
-		    : "=m" (*(u_int *)(__pcpu_offset(name)))		\
-		    : "r" (__i));					\
-	} else if (sizeof(__val) == 8) {				\
-		u_long __l;						\
-		__l = *(u_long *)&__val;				\
-		__asm __volatile("movq %1,%%gs:%0"			\
-		    : "=m" (*(u_long *)(__pcpu_offset(name)))		\
-		    : "r" (__l));					\
+	__val = (val);							\
+	if (sizeof(__val) == 1 || sizeof(__val) == 2 ||			\
+	    sizeof(__val) == 4 || sizeof(__val) == 8) {			\
+		__s = *(struct __s *)(void *)&__val;			\
+		__asm __volatile("mov %1,%%gs:%0"			\
+		    : "=m" (*(struct __s *)(__pcpu_offset(name)))	\
+		    : "r" (__s));					\
 	} else {							\
 		*__PCPU_PTR(name) = __val;				\
 	}								\
 }
 
 #define	PCPU_GET(member)	__PCPU_GET(pc_ ## member)
+#define	PCPU_ADD(member, val)	__PCPU_ADD(pc_ ## member, val)
+#define	PCPU_INC(member)	__PCPU_INC(pc_ ## member)
 #define	PCPU_PTR(member)	__PCPU_PTR(pc_ ## member)
 #define	PCPU_SET(member, val)	__PCPU_SET(pc_ ## member, val)
 
@@ -172,12 +194,14 @@ __curthread(void)
 	__asm __volatile("movq %%gs:0,%0" : "=r" (td));
 	return (td);
 }
-#define	curthread (__curthread())
+#define	curthread		(__curthread())
 
-#else
-#error this file needs to be ported to your compiler
-#endif
+#else /* !lint || defined(__GNUCLIKE_ASM) && defined(__GNUCLIKE___TYPEOF) */
 
-#endif	/* _KERNEL */
+#error "this file needs to be ported to your compiler"
 
-#endif	/* ! _MACHINE_PCPU_H_ */
+#endif /* lint, etc. */
+
+#endif /* _KERNEL */
+
+#endif /* !_MACHINE_PCPU_H_ */

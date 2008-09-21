@@ -1,13 +1,13 @@
-/*
- * Copyright (c) 1999, Stefan Esser <se@freebsd.org>
+/*-
+ * Copyright (c) 2006 Peter Wemm
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ *
  * 1. Redistributions of source code must retain the above copyright
- *    notice unmodified, this list of conditions, and the following
- *    disclaimer.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -22,18 +22,25 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD: src/sys/amd64/include/minidump.h,v 1.1 2006/04/21 04:24:50 peter Exp $
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/arc/lib/prom.c,v 1.3 2004/01/04 23:28:01 obrien Exp $");
+#ifndef	_MACHINE_MINIDUMP_H_
+#define	_MACHINE_MINIDUMP_H_ 1
 
-#define	PROM_E_BOOTED_DEV	"XXX1"
-#define	PROM_E_BOOTED_FILE	"XXX2"
-#define	PROM_E_BOOTED_OSFLAGS	"XXX3"
-#define	PROM_E_TTY_DEV		"XXX4"
+#define	MINIDUMP_MAGIC		"minidump FreeBSD/amd64"
+#define	MINIDUMP_VERSION	1
 
-u_int64_t
-prom_getenv(PROM_E_BOOTED_FILE, bootfile, sizeof(bootfile))
-{
+struct minidumphdr {
+	char magic[24];
+	uint32_t version;
+	uint32_t msgbufsize;
+	uint32_t bitmapsize;
+	uint32_t ptesize;
+	uint64_t kernbase;
+	uint64_t dmapbase;
+	uint64_t dmapend;
+};
 
-}
+#endif /* _MACHINE_MINIDUMP_H_ */

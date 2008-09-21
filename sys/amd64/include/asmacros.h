@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/asmacros.h,v 1.28 2004/04/05 21:25:51 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/asmacros.h,v 1.33 2007/08/22 04:26:07 jkoshy Exp $
  */
 
 #ifndef _MACHINE_ASMACROS_H_
@@ -37,14 +37,12 @@
 /* XXX too much duplication in various asm*.h's. */
 
 /*
- * CNAME and HIDENAME manage the relationship between symbol names in C
+ * CNAME is used to manage the relationship between symbol names in C
  * and the equivalent assembly language names.  CNAME is given a name as
  * it would be used in a C program.  It expands to the equivalent assembly
- * language name.  HIDENAME is given an assembly-language name, and expands
- * to a possibly-modified form that will be invisible to C programs.
+ * language name.
  */
 #define CNAME(csym)		csym
-#define HIDENAME(asmsym)	.asmsym
 
 #define ALIGN_DATA	.p2align 3	/* 8 byte alignment, zero filled */
 #ifdef GPROF
@@ -59,11 +57,7 @@
 #define NON_GPROF_ENTRY(name)	GEN_ENTRY(name)
 #define NON_GPROF_RET		.byte 0xc3	/* opcode for `ret' */
 
-#ifdef LOCORE
-#define	PCPU(member)	%gs:PC_ ## member
-#define	PCPU_ADDR(member, reg)	movq %gs:PC_PRVSPACE,reg; \
-			addq $PC_ ## member,reg
-#endif
+#define	END(name)		.size name, . - name
 
 #ifdef GPROF
 /*
@@ -114,8 +108,12 @@
 #define FAKE_MCOUNT(caller)	pushq caller ; call __mcount ; popq %rcx
 #define MCOUNT			call __mcount
 #define MCOUNT_LABEL(name)	GEN_ENTRY(name) ; nop ; ALIGN_TEXT
-#define MEXITCOUNT		call HIDENAME(mexitcount)
+#ifdef GUPROF
+#define MEXITCOUNT		call .mexitcount
 #define ret			MEXITCOUNT ; NON_GPROF_RET
+#else
+#define MEXITCOUNT
+#endif
 
 #else /* !GPROF */
 /*
@@ -136,10 +134,64 @@
 
 #ifdef LOCORE
 /*
- * Convenience macros for declaring interrupt entry points.
+ * Convenience macro for declaring interrupt entry points.
  */
 #define	IDTVEC(name)	ALIGN_TEXT; .globl __CONCAT(X,name); \
 			.type __CONCAT(X,name),@function; __CONCAT(X,name):
+
+/*
+ * Macros to create and destroy a trap frame.
+ */
+#define PUSH_FRAME							\
+	subq	$TF_RIP,%rsp ;	/* skip dummy tf_err and tf_trapno */	\
+	testb	$SEL_RPL_MASK,TF_CS(%rsp) ; /* come from kernel? */	\
+	jz	1f ;		/* Yes, dont swapgs again */		\
+	swapgs ;							\
+1:	movq	%rdi,TF_RDI(%rsp) ;					\
+	movq	%rsi,TF_RSI(%rsp) ;					\
+	movq	%rdx,TF_RDX(%rsp) ;					\
+	movq	%rcx,TF_RCX(%rsp) ;					\
+	movq	%r8,TF_R8(%rsp) ;					\
+	movq	%r9,TF_R9(%rsp) ;					\
+	movq	%rax,TF_RAX(%rsp) ;					\
+	movq	%rbx,TF_RBX(%rsp) ;					\
+	movq	%rbp,TF_RBP(%rsp) ;					\
+	movq	%r10,TF_R10(%rsp) ;					\
+	movq	%r11,TF_R11(%rsp) ;					\
+	movq	%r12,TF_R12(%rsp) ;					\
+	movq	%r13,TF_R13(%rsp) ;					\
+	movq	%r14,TF_R14(%rsp) ;					\
+	movq	%r15,TF_R15(%rsp)
+
+#define POP_FRAME							\
+	movq	TF_RDI(%rsp),%rdi ;					\
+	movq	TF_RSI(%rsp),%rsi ;					\
+	movq	TF_RDX(%rsp),%rdx ;					\
+	movq	TF_RCX(%rsp),%rcx ;					\
+	movq	TF_R8(%rsp),%r8 ;					\
+	movq	TF_R9(%rsp),%r9 ;					\
+	movq	TF_RAX(%rsp),%rax ;					\
+	movq	TF_RBX(%rsp),%rbx ;					\
+	movq	TF_RBP(%rsp),%rbp ;					\
+	movq	TF_R10(%rsp),%r10 ;					\
+	movq	TF_R11(%rsp),%r11 ;					\
+	movq	TF_R12(%rsp),%r12 ;					\
+	movq	TF_R13(%rsp),%r13 ;					\
+	movq	TF_R14(%rsp),%r14 ;					\
+	movq	TF_R15(%rsp),%r15 ;					\
+	testb	$SEL_RPL_MASK,TF_CS(%rsp) ; /* come from kernel? */	\
+	jz	1f ;		/* keep kernel GS.base */		\
+	cli ;								\
+	swapgs ;							\
+1:	addq	$TF_RIP,%rsp	/* skip over tf_err, tf_trapno */
+
+/*
+ * Access per-CPU data.
+ */
+#define	PCPU(member)	%gs:PC_ ## member
+#define	PCPU_ADDR(member, reg)					\
+	movq %gs:PC_PRVSPACE, reg ;				\
+	addq $PC_ ## member, reg
 
 #endif /* LOCORE */
 

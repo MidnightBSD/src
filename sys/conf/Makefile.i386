@@ -1,10 +1,9 @@
 # Makefile.i386 -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: src/sys/conf/Makefile.i386,v 1.265.2.1 2005/10/28 19:04:03 jhb Exp $
-# $MidnightBSD$
+# $FreeBSD: src/sys/conf/Makefile.i386,v 1.273 2007/05/16 17:23:53 wkoszek Exp $
 #
-# Makefile for MidnightBSD
+# Makefile for FreeBSD
 #
 # This makefile is constructed from a machine description:
 #	config machineid
@@ -18,7 +17,7 @@
 #
 
 # Which version of config(8) is required.
-%VERSREQ=	600003
+%VERSREQ=	600004
 
 STD8X16FONT?=	iso
 
@@ -31,7 +30,9 @@ S=	../../..
 .endif
 .include "$S/conf/kern.pre.mk"
 
-MKMODULESENV+= MACHINE=i386
+MACHINE=i386
+
+MKMODULESENV+=	MACHINE=${MACHINE}
 
 %BEFORE_DEPEND
 

@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: src/sys/amd64/isa/atpic_vector.S,v 1.45 2004/05/24 12:08:56 bde Exp $
+ * $FreeBSD: src/sys/amd64/isa/atpic_vector.S,v 1.48 2006/12/17 06:48:40 kmacy Exp $
  */
 
 /*
@@ -41,33 +41,16 @@
 #include "assym.s"
 
 /*
- * Macros for interrupt interrupt entry, call to handler, and exit.
+ * Macros for interrupt entry, call to handler, and exit.
  */
 #define	INTR(irq_num, vec_name) \
 	.text ;								\
 	SUPERALIGN_TEXT ;						\
 IDTVEC(vec_name) ;							\
-	subq	$TF_RIP,%rsp ;	/* skip dummy tf_err and tf_trapno */	\
-	testb	$SEL_RPL_MASK,TF_CS(%rsp) ; /* come from kernel? */	\
-	jz	1f ;		/* Yes, dont swapgs again */		\
-	swapgs ;							\
-1:	movq	%rdi,TF_RDI(%rsp) ;					\
-	movq	%rsi,TF_RSI(%rsp) ;					\
-	movq	%rdx,TF_RDX(%rsp) ;					\
-	movq	%rcx,TF_RCX(%rsp) ;					\
-	movq	%r8,TF_R8(%rsp) ;					\
-	movq	%r9,TF_R9(%rsp) ;					\
-	movq	%rax,TF_RAX(%rsp) ;					\
-	movq	%rbx,TF_RBX(%rsp) ;					\
-	movq	%rbp,TF_RBP(%rsp) ;					\
-	movq	%r10,TF_R10(%rsp) ;					\
-	movq	%r11,TF_R11(%rsp) ;					\
-	movq	%r12,TF_R12(%rsp) ;					\
-	movq	%r13,TF_R13(%rsp) ;					\
-	movq	%r14,TF_R14(%rsp) ;					\
-	movq	%r15,TF_R15(%rsp) ;					\
+	PUSH_FRAME ;							\
 	FAKE_MCOUNT(TF_RIP(%rsp)) ;					\
-	movq	$irq_num, %rdi; 	/* pass the IRQ */		\
+	movq	%rsp, %rsi	;                                       \
+	movl	$irq_num, %edi; 	/* pass the IRQ */		\
 	call	atpic_handle_intr ;					\
 	MEXITCOUNT ;							\
 	jmp	doreti

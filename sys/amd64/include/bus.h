@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/bus.h,v 1.16 2005/05/29 04:42:15 nyan Exp $
+ * $FreeBSD: src/sys/amd64/include/bus.h,v 1.17 2006/03/14 00:01:56 peter Exp $
  */
 
 /*	$NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $	*/
@@ -1003,6 +1003,17 @@ bus_space_barrier(bus_space_tag_t tag __unused, bus_space_handle_t bsh __unused,
 		__asm __volatile("" : : : "memory");
 #endif
 }
+
+#ifdef BUS_SPACE_NO_LEGACY
+#undef inb
+#undef outb
+#define inb(a) compiler_error
+#define inw(a) compiler_error
+#define inl(a) compiler_error
+#define outb(a, b) compiler_error
+#define outw(a, b) compiler_error
+#define outl(a, b) compiler_error
+#endif
 
 #include <machine/bus_dma.h>
 

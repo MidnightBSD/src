@@ -1,5 +1,5 @@
 #	From: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: src/sys/conf/kmod.mk,v 1.192.2.4 2006/02/23 02:13:31 mlaier Exp $
+# $FreeBSD: src/sys/conf/kmod.mk,v 1.219 2007/07/11 01:20:37 marcel Exp $
 #
 # The include file <bsd.kmod.mk> handles building and installing loadable
 # kernel modules.
@@ -38,6 +38,10 @@
 #
 # FIRMWS	List of firmware images in format filename:shortname:version
 #
+# FIRMWARE_LICENSE
+#		Set to the name of the license the user has to agree on in
+#		order to use this firmware. See /usr/share/doc/legal
+#
 # DESTDIR	The tree where the module gets installed. [not set]
 #
 # +++ targets +++
@@ -75,7 +79,7 @@ CFLAGS:=	${CFLAGS:C/(-x[^M^K^W]+)[MKW]+|-x[MKW]+/\1/}
 . if !empty(CFLAGS:M-O[23s]) && empty(CFLAGS:M-fno-strict-aliasing)
 CFLAGS+=	-fno-strict-aliasing
 . endif
-WERROR?=	-Werror
+#WERROR?=	-Werror
 .endif
 CFLAGS+=	${WERROR}
 CFLAGS+=	-D_KERNEL
@@ -85,9 +89,11 @@ CFLAGS+=	-DKLD_MODULE
 .if ${CC} == "icc"
 NOSTDINC=	-X
 .else
+C_DIALECT=	-std=c99
 NOSTDINC=	-nostdinc
 .endif
-CFLAGS:=	${CFLAGS:N-I*} ${NOSTDINC} -I- ${INCLMAGIC} ${CFLAGS:M-I*}
+CFLAGS+=	${C_DIALECT}
+CFLAGS:=	${CFLAGS:N-I*} ${NOSTDINC} ${INCLMAGIC} ${CFLAGS:M-I*}
 .if defined(KERNBUILDDIR)
 CFLAGS+=	-DHAVE_KERNEL_OPTION_HEADERS -include ${KERNBUILDDIR}/opt_global.h
 .endif
@@ -101,22 +107,10 @@ CFLAGS+=	-I. -I@
 # for example.
 CFLAGS+=	-I@/contrib/altq
 
-# Add a -I path to standard headers like <stddef.h>.  Use a relative
-# path to src/include if possible.  If the @ symlink hasn't been built
-# yet, then we can't tell if the relative path exists.  Add both the
-# potential relative path and an absolute path in that case.
-.if exists(@)
-.if exists(@/../include)
-CFLAGS+=	-I@/../include
-.else
-CFLAGS+=	-I${DESTDIR}/usr/include
-.endif
-.else # !@
-CFLAGS+=	-I@/../include -I${DESTDIR}/usr/include
-.endif # @
-
 .if ${CC} != "icc"
 CFLAGS+=	-finline-limit=${INLINE_LIMIT}
+CFLAGS+= --param inline-unit-growth=100
+CFLAGS+= --param large-function-growth=1000
 .endif
 
 # Disallow common variables, and if we end up with commons from
@@ -141,7 +135,8 @@ ${KMOD:S/$/.c/}: @
 .else
 ${KMOD:S/$/.c/}: @/tools/fw_stub.awk
 .endif
-	${AWK} -f @/tools/fw_stub.awk ${FIRMWS} -m${KMOD} -c${KMOD:S/$/.c/g}
+	${AWK} -f @/tools/fw_stub.awk ${FIRMWS} -m${KMOD} -c${KMOD:S/$/.c/g} \
+	    ${FIRMWARE_LICENSE:C/.+/-l/}${FIRMWARE_LICENSE}
 
 SRCS+=	${KMOD:S/$/.c/}
 CLEANFILES+=	${KMOD:S/$/.c/}
@@ -150,12 +145,12 @@ CLEANFILES+=	${KMOD:S/$/.c/}
 ${_firmw:C/\:.*$/.fwo/}:	${_firmw:C/\:.*$//}
 	@${ECHO} ${_firmw:C/\:.*$//} ${.ALLSRC:M*${_firmw:C/\:.*$//}}
 	@if [ -e ${_firmw:C/\:.*$//} ]; then			\
-		${LD} -b binary ${LDFLAGS} -r -d -o ${.TARGET}	\
-		    ${_firmw:C/\:.*$//};			\
+		${LD} -b binary --no-warn-mismatch ${LDFLAGS}	\
+		    -r -d -o ${.TARGET}	${_firmw:C/\:.*$//};	\
 	else							\
 		ln -s ${.ALLSRC:M*${_firmw:C/\:.*$//}} ${_firmw:C/\:.*$//}; \
-		${LD} -b binary ${LDFLAGS} -r -d -o ${.TARGET}	\
-		    ${_firmw:C/\:.*$//};			\
+		${LD} -b binary --no-warn-mismatch ${LDFLAGS}	\
+		    -r -d -o ${.TARGET}	${_firmw:C/\:.*$//};	\
 		rm ${_firmw:C/\:.*$//};				\
 	fi
 
@@ -173,8 +168,11 @@ PROG=	${KMOD}.ko
 FULLPROG=	${PROG}
 .else
 FULLPROG=	${PROG}.debug
-${PROG}: ${FULLPROG}
-	${OBJCOPY} --strip-debug ${FULLPROG} ${PROG}
+${PROG}: ${FULLPROG} ${PROG}.symbols
+	${OBJCOPY} --strip-debug --add-gnu-debuglink=${PROG}.symbols\
+	    ${FULLPROG} ${.TARGET}
+${PROG}.symbols: ${FULLPROG}
+	${OBJCOPY} --only-keep-debug ${FULLPROG} ${.TARGET}
 .endif
 
 .if ${MACHINE_ARCH} != amd64
@@ -199,7 +197,7 @@ ${FULLPROG}: ${OBJS}
 .if defined(EXPORT_SYMS)
 .if ${EXPORT_SYMS} != YES
 .if ${EXPORT_SYMS} == NO
-	touch export_syms
+	:> export_syms
 .elif !exists(${.CURDIR}/${EXPORT_SYMS})
 	echo ${EXPORT_SYMS} > export_syms
 .else
@@ -251,12 +249,12 @@ ${_ILINKS}:
 	esac ; \
 	path=`(cd $$path && /bin/pwd)` ; \
 	${ECHO} ${.TARGET} "->" $$path ; \
-	ln -s $$path ${.TARGET}
+	ln -sf $$path ${.TARGET}
 
-CLEANFILES+= ${PROG} ${KMOD}.kld ${OBJS} ${_ILINKS}
+CLEANFILES+= ${PROG} ${KMOD}.kld ${OBJS}
 
 .if defined(DEBUG_FLAGS)
-CLEANFILES+= ${FULLPROG}
+CLEANFILES+= ${FULLPROG} ${PROG}.symbols
 .endif
 
 .if !target(install)
@@ -266,21 +264,16 @@ _INSTALLFLAGS:=	${INSTALLFLAGS}
 _INSTALLFLAGS:=	${_INSTALLFLAGS${ie}}
 .endfor
 
-.if !target(install.debug) && defined(DEBUG_FLAGS)
-install.debug:
-	cd ${.CURDIR}; ${MAKE} -DINSTALL_DEBUG install
-.endif
-
 .if !target(realinstall)
 realinstall: _kmodinstall
 .ORDER: beforeinstall _kmodinstall
 _kmodinstall:
-.if defined(DEBUG_FLAGS) && defined(INSTALL_DEBUG)
-	${INSTALL} -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
-	    ${_INSTALLFLAGS} ${FULLPROG} ${DESTDIR}${KMODDIR}
-.else
 	${INSTALL} -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
 	    ${_INSTALLFLAGS} ${PROG} ${DESTDIR}${KMODDIR}
+.if defined(DEBUG_FLAGS) && !defined(INSTALL_NODEBUG)
+	${INSTALL} -o ${KMODOWN} -g ${KMODGRP} -m ${KMODMODE} \
+	    ${_INSTALLFLAGS} ${PROG}.symbols ${DESTDIR}${KMODDIR}
+.endif
 
 .include <bsd.links.mk>
 
@@ -293,7 +286,6 @@ _kldxref:
 		${ECHO} kldxref ${DESTDIR}${KMODDIR}; \
 		kldxref ${DESTDIR}${KMODDIR}; \
 	fi
-.endif
 .endif
 .endif # !target(realinstall)
 
@@ -316,7 +308,7 @@ CFLAGS+=	-I${KERNBUILDDIR}
 CLEANFILES+=	${_src}
 .if !target(${_src})
 ${_src}:
-	ln -s ${KERNBUILDDIR}/${_src} ${.TARGET}
+	ln -sf ${KERNBUILDDIR}/${_src} ${.TARGET}
 .endif
 .endfor
 .else
@@ -324,21 +316,23 @@ ${_src}:
 CLEANFILES+=	${_src}
 .if !target(${_src})
 ${_src}:
-	touch ${.TARGET}
+	:> ${.TARGET}
 .endif
 .endfor
 .endif
 
 MFILES?= dev/acpica/acpi_if.m dev/ata/ata_if.m dev/eisa/eisa_if.m \
 	dev/iicbus/iicbb_if.m dev/iicbus/iicbus_if.m \
+	dev/mmc/mmcbr_if.m dev/mmc/mmcbus_if.m \
 	dev/mii/miibus_if.m dev/ofw/ofw_bus_if.m \
 	dev/pccard/card_if.m dev/pccard/power_if.m dev/pci/pci_if.m \
 	dev/pci/pcib_if.m dev/ppbus/ppbus_if.m dev/smbus/smbus_if.m \
 	dev/sound/pcm/ac97_if.m dev/sound/pcm/channel_if.m \
-	dev/sound/pcm/feeder_if.m dev/sound/pcm/mixer_if.m dev/uart/uart_if.m \
-	dev/usb/usb_if.m isa/isa_if.m \
-	kern/bus_if.m kern/cpufreq_if.m kern/device_if.m \
-	libkern/iconv_converter_if.m opencrypto/crypto_if.m \
+	dev/sound/pcm/feeder_if.m dev/sound/pcm/mixer_if.m \
+	dev/sound/midi/mpu_if.m dev/sound/midi/mpufoi_if.m \
+	dev/sound/midi/synth_if.m dev/usb/usb_if.m isa/isa_if.m \
+	kern/bus_if.m kern/cpufreq_if.m kern/device_if.m kern/serdev_if.m \
+	libkern/iconv_converter_if.m opencrypto/cryptodev_if.m \
 	pc98/pc98/canbus_if.m pci/agp_if.m
 
 .for _srcsrc in ${MFILES}
@@ -357,7 +351,7 @@ ${_src}: @/tools/makeobjops.awk @/${_srcsrc}
 .endfor # _ext
 .endfor # _srcsrc
 
-.if ${SRCS:Mvnode_if.c} != ""
+.if !empty(SRCS:Mvnode_if.c)
 CLEANFILES+=	vnode_if.c
 .if !exists(@)
 vnode_if.c: @
@@ -367,7 +361,7 @@ vnode_if.c: @/tools/vnode_if.awk @/kern/vnode_if.src
 	${AWK} -f @/tools/vnode_if.awk @/kern/vnode_if.src -c
 .endif
 
-.if ${SRCS:Mvnode_if.h} != ""
+.if !empty(SRCS:Mvnode_if.h)
 CLEANFILES+=	vnode_if.h vnode_if_newproto.h vnode_if_typedef.h
 .if !exists(@)
 vnode_if.h vnode_if_newproto.h vnode_if_typedef.h: @
@@ -384,7 +378,7 @@ vnode_if_typedef.h:
 .endif
 
 .for _i in mii pccard
-.if ${SRCS:M${_i}devs.h} != ""
+.if !empty(SRCS:M${_i}devs.h)
 CLEANFILES+=	${_i}devs.h
 .if !exists(@)
 ${_i}devs.h: @
@@ -395,7 +389,7 @@ ${_i}devs.h: @/tools/${_i}devs2h.awk @/dev/${_i}/${_i}devs
 .endif
 .endfor # _i
 
-.if ${SRCS:Musbdevs.h} != ""
+.if !empty(SRCS:Musbdevs.h)
 CLEANFILES+=	usbdevs.h
 .if !exists(@)
 usbdevs.h: @
@@ -405,7 +399,7 @@ usbdevs.h: @/tools/usbdevs2h.awk @/dev/usb/usbdevs
 	${AWK} -f @/tools/usbdevs2h.awk @/dev/usb/usbdevs -h
 .endif
 
-.if ${SRCS:Musbdevs_data.h} != ""
+.if !empty(SRCS:Musbdevs_data.h)
 CLEANFILES+=	usbdevs_data.h
 .if !exists(@)
 usbdevs_data.h: @
@@ -415,7 +409,7 @@ usbdevs_data.h: @/tools/usbdevs2h.awk @/dev/usb/usbdevs
 	${AWK} -f @/tools/usbdevs2h.awk @/dev/usb/usbdevs -d
 .endif
 
-.if ${SRCS:Macpi_quirks.h} != ""
+.if !empty(SRCS:Macpi_quirks.h)
 CLEANFILES+=	acpi_quirks.h
 .if !exists(@)
 acpi_quirks.h: @
@@ -425,7 +419,7 @@ acpi_quirks.h: @/tools/acpi_quirks2h.awk @/dev/acpica/acpi_quirks
 	${AWK} -f @/tools/acpi_quirks2h.awk @/dev/acpica/acpi_quirks
 .endif
 
-.if ${SRCS:Massym.s} != ""
+.if !empty(SRCS:Massym.s)
 CLEANFILES+=	assym.s genassym.o
 assym.s: genassym.o
 .if !exists(@)
@@ -446,6 +440,11 @@ lint: ${SRCS}
 	${LINT} ${LINTKERNFLAGS} ${CFLAGS:M-[DILU]*} ${.ALLSRC:M*.c}
 
 .include <bsd.dep.mk>
+
+cleandepend: cleanilinks
+# .depend needs include links so we remove them only together.
+cleanilinks:
+	rm -f ${_ILINKS}
 
 .if !exists(${.OBJDIR}/${DEPENDFILE})
 ${OBJS}: ${SRCS:M*.h}

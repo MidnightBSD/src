@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)vmparam.h	5.9 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/amd64/include/vmparam.h,v 1.45 2004/10/27 17:21:15 peter Exp $
+ * $FreeBSD: src/sys/amd64/include/vmparam.h,v 1.49 2007/09/25 06:25:04 alc Exp $
  */
 
 
@@ -88,6 +88,50 @@
 #define	UMA_MD_SMALL_ALLOC
 
 /*
+ * The physical address space is densely populated.
+ */
+#define	VM_PHYSSEG_DENSE
+
+/*
+ * The number of PHYSSEG entries must be one greater than the number
+ * of phys_avail entries because the phys_avail entry that spans the
+ * largest physical address that is accessible by ISA DMA is split
+ * into two PHYSSEG entries. 
+ */
+#define	VM_PHYSSEG_MAX		31
+
+/*
+ * Create three free page pools: VM_FREEPOOL_DEFAULT is the default pool
+ * from which physical pages are allocated and VM_FREEPOOL_DIRECT is
+ * the pool from which physical pages for page tables and small UMA
+ * objects are allocated.
+ */
+#define	VM_NFREEPOOL		3
+#define	VM_FREEPOOL_CACHE	2
+#define	VM_FREEPOOL_DEFAULT	0
+#define	VM_FREEPOOL_DIRECT	1
+
+/*
+ * Create two free page lists: VM_FREELIST_DEFAULT is for physical
+ * pages that are above the largest physical address that is
+ * accessible by ISA DMA and VM_FREELIST_ISADMA is for physical pages
+ * that are below that address.
+ */
+#define	VM_NFREELIST		2
+#define	VM_FREELIST_DEFAULT	0
+#define	VM_FREELIST_ISADMA	1
+
+/*
+ * An allocation size of 16MB is supported in order to optimize the
+ * use of the direct map by UMA.  Specifically, a cache line contains
+ * at most 8 PDEs, collectively mapping 16MB of physical memory.  By
+ * reducing the number of distinct 16MB "pages" that are used by UMA,
+ * the physical memory allocator reduces the likelihood of both 2MB
+ * page TLB misses and cache misses caused by 2MB page TLB misses.
+ */
+#define	VM_NFREEORDER		13
+
+/*
  * Virtual addresses of things.  Derived from the page directory and
  * page table indexes from pmap.h for precision.
  * Because of the page that is both a PD and PT, it looks a little
@@ -122,7 +166,8 @@
 
 /*
  * How many physical pages per KVA page allocated.
- * min(max(VM_KMEM_SIZE, Physical memory/VM_KMEM_SIZE_SCALE), VM_KMEM_SIZE_MAX)
+ * min(max(max(VM_KMEM_SIZE, Physical memory/VM_KMEM_SIZE_SCALE),
+ *     VM_KMEM_SIZE_MIN), VM_KMEM_SIZE_MAX)
  * is the total KVA space allocated for kmem_map.
  */
 #ifndef VM_KMEM_SIZE_SCALE

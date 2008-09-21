@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)pcb.h	5.10 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/amd64/include/pcb.h,v 1.60.8.1 2005/11/15 00:26:00 peter Exp $
+ * $FreeBSD: src/sys/amd64/include/pcb.h,v 1.63 2007/03/30 00:06:21 jkim Exp $
  */
 
 #ifndef _AMD64_PCB_H_
@@ -41,9 +41,9 @@
  * AMD64 process control block
  */
 #include <machine/fpu.h>
+#include <machine/segments.h>
 
 struct pcb {
-	register_t	__pad0[8];	/* Spare */
 	register_t	pcb_cr3;
 	register_t	pcb_r15;
 	register_t	pcb_r14;
@@ -53,7 +53,6 @@ struct pcb {
 	register_t	pcb_rsp;
 	register_t	pcb_rbx;
 	register_t	pcb_rip;
-	register_t	__pad1;		/* Spare */
 	register_t	pcb_fsbase;
 	register_t	pcb_gsbase;
 	u_int32_t	pcb_ds;
@@ -75,6 +74,10 @@ struct pcb {
 #define	PCB_FULLCTX	0x80	/* full context restore on sysret */
 
 	caddr_t	pcb_onfault;	/* copyin/out fault recovery */
+
+	/* 32-bit segment descriptor */
+	struct user_segment_descriptor	*pcb_gs32p;
+	struct user_segment_descriptor	pcb_gs32sd;
 };
 
 #ifdef _KERNEL

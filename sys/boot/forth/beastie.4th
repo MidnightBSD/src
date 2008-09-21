@@ -24,7 +24,7 @@
 \ SUCH DAMAGE.
 \
 \ $FreeBSD: src/sys/boot/forth/beastie.4th,v 1.10.2.1 2005/10/30 14:37:02 scottl Exp $
-\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.2 2006/07/26 00:16:40 laffer1 Exp $
+\ $MidnightBSD: src/sys/boot/forth/beastie.4th,v 1.3 2006/09/30 15:00:44 laffer1 Exp $
 
 marker task-beastie.4th
 
@@ -268,6 +268,7 @@ set-current
 			s" 0" s" hw.ata.atapi_dma" setenv
 			s" 0" s" hw.ata.wc" setenv
 			s" 0" s" hw.eisa_slots" setenv
+			s" 1" s" hint.kbdmux.0.disabled" setenv
 			0 boot
 		then
 		dup bootverbosekey @ = if

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/ia32/ia32_signal.c,v 1.10 2004/04/05 23:55:14 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/ia32/ia32_signal.c,v 1.15 2006/10/05 01:56:10 davidxu Exp $");
 
 #include "opt_compat.h"
 
@@ -67,6 +67,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/ia32/ia32_signal.c,v 1.10 2004/04/05 23:55:14 
 #include <vm/vm_object.h>
 #include <vm/vm_extern.h>
 
+#include <compat/freebsd32/freebsd32_signal.h>
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32_proto.h>
 #include <compat/ia32/ia32_signal.h>
@@ -79,7 +80,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/ia32/ia32_signal.c,v 1.10 2004/04/05 23:55:14 
 #include <machine/cpufunc.h>
 
 #ifdef COMPAT_FREEBSD4
-static void freebsd4_ia32_sendsig(sig_t, int, sigset_t *, u_long);
+static void freebsd4_ia32_sendsig(sig_t, ksiginfo_t *, sigset_t *);
 #endif
 static void ia32_get_fpcontext(struct thread *td, struct ia32_mcontext *mcp);
 static int ia32_set_fpcontext(struct thread *td, const struct ia32_mcontext *mcp);
@@ -92,38 +93,14 @@ extern int _ucode32sel, _udatasel;
 static void
 ia32_get_fpcontext(struct thread *td, struct ia32_mcontext *mcp)
 {
-	struct savefpu *addr;
 
-	/*
-	 * XXX mc_fpstate might be misaligned, since its declaration is not
-	 * unportabilized using __attribute__((aligned(16))) like the
-	 * declaration of struct savemm, and anyway, alignment doesn't work
-	 * for auto variables since we don't use gcc's pessimal stack
-	 * alignment.  Work around this by abusing the spare fields after
-	 * mcp->mc_fpstate.
-	 *
-	 * XXX unpessimize most cases by only aligning when fxsave might be
-	 * called, although this requires knowing too much about
-	 * fpugetregs()'s internals.
-	 */
-	addr = (struct savefpu *)&mcp->mc_fpstate;
-	if (td == PCPU_GET(fpcurthread) && ((uintptr_t)(void *)addr & 0xF)) {
-		do
-			addr = (void *)((char *)addr + 4);
-		while ((uintptr_t)(void *)addr & 0xF);
-	}
-	mcp->mc_ownedfp = fpugetregs(td, addr);
-	if (addr != (struct savefpu *)&mcp->mc_fpstate) {
-		bcopy(addr, &mcp->mc_fpstate, sizeof(mcp->mc_fpstate));
-		bzero(&mcp->mc_spare2, sizeof(mcp->mc_spare2));
-	}
+	mcp->mc_ownedfp = fpugetregs(td, (struct savefpu *)&mcp->mc_fpstate);
 	mcp->mc_fpformat = fpuformat();
 }
 
 static int
 ia32_set_fpcontext(struct thread *td, const struct ia32_mcontext *mcp)
 {
-	struct savefpu *addr;
 
 	if (mcp->mc_fpformat == _MC_FPFMT_NODEV)
 		return (0);
@@ -134,28 +111,177 @@ ia32_set_fpcontext(struct thread *td, const struct ia32_mcontext *mcp)
 		fpstate_drop(td);
 	else if (mcp->mc_ownedfp == _MC_FPOWNED_FPU ||
 	    mcp->mc_ownedfp == _MC_FPOWNED_PCB) {
-		/* XXX align as above. */
-		addr = (struct savefpu *)&mcp->mc_fpstate;
-		if (td == PCPU_GET(fpcurthread) &&
-		    ((uintptr_t)(void *)addr & 0xF)) {
-			do
-				addr = (void *)((char *)addr + 4);
-			while ((uintptr_t)(void *)addr & 0xF);
-			bcopy(&mcp->mc_fpstate, addr, sizeof(mcp->mc_fpstate));
-		}
 		/*
 		 * XXX we violate the dubious requirement that fpusetregs()
 		 * be called with interrupts disabled.
 		 */
-		fpusetregs(td, addr);
-		/*
-		 * Don't bother putting things back where they were in the
-		 * misaligned case, since we know that the caller won't use
-		 * them again.
-		 */
+		fpusetregs(td, (struct savefpu *)&mcp->mc_fpstate);
 	} else
 		return (EINVAL);
 	return (0);
+}
+
+/*
+ * Get machine context.
+ */
+static int
+ia32_get_mcontext(struct thread *td, struct ia32_mcontext *mcp, int flags)
+{
+	struct trapframe *tp;
+
+	tp = td->td_frame;
+
+	PROC_LOCK(curthread->td_proc);
+	mcp->mc_onstack = sigonstack(tp->tf_rsp);
+	PROC_UNLOCK(curthread->td_proc);
+	mcp->mc_gs = td->td_pcb->pcb_gs;
+	mcp->mc_fs = td->td_pcb->pcb_fs;
+	mcp->mc_es = td->td_pcb->pcb_es;
+	mcp->mc_ds = td->td_pcb->pcb_ds;
+	mcp->mc_edi = tp->tf_rdi;
+	mcp->mc_esi = tp->tf_rsi;
+	mcp->mc_ebp = tp->tf_rbp;
+	mcp->mc_isp = tp->tf_rsp;
+	if (flags & GET_MC_CLEAR_RET) {
+		mcp->mc_eax = 0;
+		mcp->mc_edx = 0;
+	} else {
+		mcp->mc_eax = tp->tf_rax;
+		mcp->mc_edx = tp->tf_rdx;
+	}
+	mcp->mc_ebx = tp->tf_rbx;
+	mcp->mc_ecx = tp->tf_rcx;
+	mcp->mc_eip = tp->tf_rip;
+	mcp->mc_cs = tp->tf_cs;
+	mcp->mc_eflags = tp->tf_rflags;
+	mcp->mc_esp = tp->tf_rsp;
+	mcp->mc_ss = tp->tf_ss;
+	mcp->mc_len = sizeof(*mcp);
+	ia32_get_fpcontext(td, mcp);
+	return (0);
+}
+
+/*
+ * Set machine context.
+ *
+ * However, we don't set any but the user modifiable flags, and we won't
+ * touch the cs selector.
+ */
+static int
+ia32_set_mcontext(struct thread *td, const struct ia32_mcontext *mcp)
+{
+	struct trapframe *tp;
+	long rflags;
+	int ret;
+
+	tp = td->td_frame;
+	if (mcp->mc_len != sizeof(*mcp))
+		return (EINVAL);
+	rflags = (mcp->mc_eflags & PSL_USERCHANGE) |
+	    (tp->tf_rflags & ~PSL_USERCHANGE);
+	ret = ia32_set_fpcontext(td, mcp);
+	if (ret != 0)
+		return (ret);
+#if 0	/* XXX deal with load_fs() and friends */
+	tp->tf_fs = mcp->mc_fs;
+	tp->tf_es = mcp->mc_es;
+	tp->tf_ds = mcp->mc_ds;
+#endif
+	tp->tf_rdi = mcp->mc_edi;
+	tp->tf_rsi = mcp->mc_esi;
+	tp->tf_rbp = mcp->mc_ebp;
+	tp->tf_rbx = mcp->mc_ebx;
+	tp->tf_rdx = mcp->mc_edx;
+	tp->tf_rcx = mcp->mc_ecx;
+	tp->tf_rax = mcp->mc_eax;
+	/* trapno, err */
+	tp->tf_rip = mcp->mc_eip;
+	tp->tf_rflags = rflags;
+	tp->tf_rsp = mcp->mc_esp;
+	tp->tf_ss = mcp->mc_ss;
+#if 0	/* XXX deal with load_gs() and friends */
+	td->td_pcb->pcb_gs = mcp->mc_gs;
+#endif
+	td->td_pcb->pcb_flags |= PCB_FULLCTX;
+	return (0);
+}
+
+/*
+ * The first two fields of a ucontext_t are the signal mask and
+ * the machine context.  The next field is uc_link; we want to
+ * avoid destroying the link when copying out contexts.
+ */
+#define	UC_COPY_SIZE	offsetof(struct ia32_ucontext, uc_link)
+
+int
+freebsd32_getcontext(struct thread *td, struct freebsd32_getcontext_args *uap)
+{
+	struct ia32_ucontext uc;
+	int ret;
+
+	if (uap->ucp == NULL)
+		ret = EINVAL;
+	else {
+		ia32_get_mcontext(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
+		PROC_LOCK(td->td_proc);
+		uc.uc_sigmask = td->td_sigmask;
+		PROC_UNLOCK(td->td_proc);
+		ret = copyout(&uc, uap->ucp, UC_COPY_SIZE);
+	}
+	return (ret);
+}
+
+int
+freebsd32_setcontext(struct thread *td, struct freebsd32_setcontext_args *uap)
+{
+	struct ia32_ucontext uc;
+	int ret;	
+
+	if (uap->ucp == NULL)
+		ret = EINVAL;
+	else {
+		ret = copyin(uap->ucp, &uc, UC_COPY_SIZE);
+		if (ret == 0) {
+			ret = ia32_set_mcontext(td, &uc.uc_mcontext);
+			if (ret == 0) {
+				SIG_CANTMASK(uc.uc_sigmask);
+				PROC_LOCK(td->td_proc);
+				td->td_sigmask = uc.uc_sigmask;
+				PROC_UNLOCK(td->td_proc);
+			}
+		}
+	}
+	return (ret == 0 ? EJUSTRETURN : ret);
+}
+
+int
+freebsd32_swapcontext(struct thread *td, struct freebsd32_swapcontext_args *uap)
+{
+	struct ia32_ucontext uc;
+	int ret;	
+
+	if (uap->oucp == NULL || uap->ucp == NULL)
+		ret = EINVAL;
+	else {
+		ia32_get_mcontext(td, &uc.uc_mcontext, GET_MC_CLEAR_RET);
+		PROC_LOCK(td->td_proc);
+		uc.uc_sigmask = td->td_sigmask;
+		PROC_UNLOCK(td->td_proc);
+		ret = copyout(&uc, uap->oucp, UC_COPY_SIZE);
+		if (ret == 0) {
+			ret = copyin(uap->ucp, &uc, UC_COPY_SIZE);
+			if (ret == 0) {
+				ret = ia32_set_mcontext(td, &uc.uc_mcontext);
+				if (ret == 0) {
+					SIG_CANTMASK(uc.uc_sigmask);
+					PROC_LOCK(td->td_proc);
+					td->td_sigmask = uc.uc_sigmask;
+					PROC_UNLOCK(td->td_proc);
+				}
+			}
+		}
+	}
+	return (ret == 0 ? EJUSTRETURN : ret);
 }
 
 /*
@@ -170,18 +296,23 @@ ia32_set_fpcontext(struct thread *td, const struct ia32_mcontext *mcp)
  */
 #ifdef COMPAT_FREEBSD4
 static void
-freebsd4_ia32_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+freebsd4_ia32_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct ia32_sigframe4 sf, *sfp;
+	struct siginfo32 siginfo;
 	struct proc *p;
 	struct thread *td;
 	struct sigacts *psp;
 	struct trapframe *regs;
 	int oonstack;
+	int sig;
 
 	td = curthread;
 	p = td->td_proc;
+	siginfo_to_siginfo32(&ksi->ksi_info, &siginfo);
+
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = siginfo.si_signo;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	regs = td->td_frame;
@@ -237,13 +368,12 @@ freebsd4_ia32_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 		sf.sf_ah = (u_int32_t)(uintptr_t)catcher;
 
 		/* Fill in POSIX parts */
+		sf.sf_si = siginfo;
 		sf.sf_si.si_signo = sig;
-		sf.sf_si.si_code = code;
-		sf.sf_si.si_addr = regs->tf_addr;
 	} else {
 		/* Old FreeBSD-style arguments. */
-		sf.sf_siginfo = code;
-		sf.sf_addr = regs->tf_addr;
+		sf.sf_siginfo = siginfo.si_code;
+		sf.sf_addr = (u_int32_t)siginfo.si_addr;
 		sf.sf_ah = (u_int32_t)(uintptr_t)catcher;
 	}
 	mtx_unlock(&psp->ps_mtx);
@@ -275,23 +405,27 @@ freebsd4_ia32_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 #endif	/* COMPAT_FREEBSD4 */
 
 void
-ia32_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+ia32_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct ia32_sigframe sf, *sfp;
+	struct siginfo32 siginfo;
 	struct proc *p;
 	struct thread *td;
 	struct sigacts *psp;
 	char *sp;
 	struct trapframe *regs;
 	int oonstack;
+	int sig;
 
+	siginfo_to_siginfo32(&ksi->ksi_info, &siginfo);
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = siginfo.si_signo;
 	psp = p->p_sigacts;
 #ifdef COMPAT_FREEBSD4
 	if (SIGISMEMBER(psp->ps_freebsd4, sig)) {
-		freebsd4_ia32_sendsig(catcher, sig, mask, code);
+		freebsd4_ia32_sendsig(catcher, ksi, mask);
 		return;
 	}
 #endif
@@ -354,13 +488,12 @@ ia32_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 		sf.sf_ah = (u_int32_t)(uintptr_t)catcher;
 
 		/* Fill in POSIX parts */
+		sf.sf_si = siginfo;
 		sf.sf_si.si_signo = sig;
-		sf.sf_si.si_code = code;
-		sf.sf_si.si_addr = regs->tf_addr;
 	} else {
 		/* Old FreeBSD-style arguments. */
-		sf.sf_siginfo = code;
-		sf.sf_addr = regs->tf_addr;
+		sf.sf_siginfo = siginfo.si_code;
+		sf.sf_addr = (u_int32_t)siginfo.si_addr;
 		sf.sf_ah = (u_int32_t)(uintptr_t)catcher;
 	}
 	mtx_unlock(&psp->ps_mtx);
@@ -415,6 +548,7 @@ freebsd4_freebsd32_sigreturn(td, uap)
 	struct trapframe *regs;
 	const struct ia32_ucontext4 *ucp;
 	int cs, eflags, error;
+	ksiginfo_t ksi;
 
 	error = copyin(uap->sigcntxp, &uc, sizeof(uc));
 	if (error != 0)
@@ -448,7 +582,12 @@ freebsd4_freebsd32_sigreturn(td, uap)
 	cs = ucp->uc_mcontext.mc_cs;
 	if (!CS_SECURE(cs)) {
 		printf("freebsd4_sigreturn: cs = 0x%x\n", cs);
-		trapsignal(td, SIGBUS, T_PROTFLT);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGBUS;
+		ksi.ksi_code = BUS_OBJERR;
+		ksi.ksi_trapno = T_PROTFLT;
+		ksi.ksi_addr = (void *)regs->tf_rip;
+		trapsignal(td, &ksi);
 		return (EINVAL);
 	}
 
@@ -492,6 +631,7 @@ freebsd32_sigreturn(td, uap)
 	struct trapframe *regs;
 	const struct ia32_ucontext *ucp;
 	int cs, eflags, error, ret;
+	ksiginfo_t ksi;
 
 	error = copyin(uap->sigcntxp, &uc, sizeof(uc));
 	if (error != 0)
@@ -525,7 +665,12 @@ freebsd32_sigreturn(td, uap)
 	cs = ucp->uc_mcontext.mc_cs;
 	if (!CS_SECURE(cs)) {
 		printf("sigreturn: cs = 0x%x\n", cs);
-		trapsignal(td, SIGBUS, T_PROTFLT);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGBUS;
+		ksi.ksi_code = BUS_OBJERR;
+		ksi.ksi_trapno = T_PROTFLT;
+		ksi.ksi_addr = (void *)regs->tf_rip;
+		trapsignal(td, &ksi);
 		return (EINVAL);
 	}
 

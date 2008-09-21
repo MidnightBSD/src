@@ -25,12 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/dump_machdep.c,v 1.11 2005/07/02 19:57:30 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/dump_machdep.c,v 1.12.4.1 2008/01/30 21:21:50 ru Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
+#include <sys/sysctl.h>
 #include <sys/kernel.h>
 #include <sys/kerneldump.h>
 #include <vm/vm.h>
@@ -39,6 +40,11 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/dump_machdep.c,v 1.11 2005/07/02 19:57:3
 #include <machine/md_var.h>
 
 CTASSERT(sizeof(struct kerneldumpheader) == 512);
+
+int do_minidump = 1;
+TUNABLE_INT("debug.minidump", &do_minidump);
+SYSCTL_INT(_debug, OID_AUTO, minidump, CTLFLAG_RW, &do_minidump, 0,
+    "Enable mini crash dumps");
 
 /*
  * Don't touch the first SIZEOF_METADATA bytes on the dump device. This
@@ -134,7 +140,7 @@ buf_write(struct dumperinfo *di, char *ptr, size_t sz)
 		ptr += len;
 		sz -= len;
 		if (fragsz == DEV_BSIZE) {
-			error = di->dumper(di->priv, buffer, 0, dumplo,
+			error = dump_write(di, buffer, 0, dumplo,
 			    DEV_BSIZE);
 			if (error)
 				return error;
@@ -154,7 +160,7 @@ buf_flush(struct dumperinfo *di)
 	if (fragsz == 0)
 		return (0);
 
-	error = di->dumper(di->priv, buffer, 0, dumplo, DEV_BSIZE);
+	error = dump_write(di, buffer, 0, dumplo, DEV_BSIZE);
 	dumplo += DEV_BSIZE;
 	fragsz = 0;
 	return (error);
@@ -195,7 +201,7 @@ cb_dumpdata(struct md_pa *mdp, int seqnr, void *arg)
 			a = pa + i * PAGE_SIZE;
 			va = pmap_kenter_temporary(trunc_page(a), i);
 		}
-		error = di->dumper(di->priv, va, 0, dumplo, sz);
+		error = dump_write(di, va, 0, dumplo, sz);
 		if (error)
 			break;
 		dumplo += sz;
@@ -272,6 +278,10 @@ dumpsys(struct dumperinfo *di)
 	size_t hdrsz;
 	int error;
 
+	if (do_minidump) {
+		minidumpsys(di);
+		return;
+	}
 	bzero(&ehdr, sizeof(ehdr));
 	ehdr.e_ident[EI_MAG0] = ELFMAG0;
 	ehdr.e_ident[EI_MAG1] = ELFMAG1;
@@ -317,7 +327,7 @@ dumpsys(struct dumperinfo *di)
 	    ehdr.e_phnum);
 
 	/* Dump leader */
-	error = di->dumper(di->priv, &kdh, 0, dumplo, sizeof(kdh));
+	error = dump_write(di, &kdh, 0, dumplo, sizeof(kdh));
 	if (error)
 		goto fail;
 	dumplo += sizeof(kdh);
@@ -348,12 +358,12 @@ dumpsys(struct dumperinfo *di)
 		goto fail;
 
 	/* Dump trailer */
-	error = di->dumper(di->priv, &kdh, 0, dumplo, sizeof(kdh));
+	error = dump_write(di, &kdh, 0, dumplo, sizeof(kdh));
 	if (error)
 		goto fail;
 
 	/* Signal completion, signoff and exit stage left. */
-	di->dumper(di->priv, NULL, 0, 0, 0);
+	dump_write(di, NULL, 0, 0, 0);
 	printf("\nDump complete\n");
 	return;
 

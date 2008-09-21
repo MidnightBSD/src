@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/ia32/ia32_exception.S,v 1.4 2004/05/24 11:28:11 bde Exp $
+ * $FreeBSD: src/sys/amd64/ia32/ia32_exception.S,v 1.5 2006/12/17 06:48:39 kmacy Exp $
  */
 
 #include <machine/asmacros.h>
@@ -61,6 +61,7 @@ IDTVEC(int0x80_syscall)
 	movq	%r14,TF_R14(%rsp)
 	movq	%r15,TF_R15(%rsp)
 	FAKE_MCOUNT(TF_RIP(%rsp))
+	movq	%rsp, %rdi
 	call	ia32_syscall
 	MEXITCOUNT
 	jmp	doreti

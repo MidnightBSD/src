@@ -30,13 +30,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/amd64/cpu_switch.S,v 1.151.8.2 2005/11/15 00:25:59 peter Exp $
+ * $FreeBSD: src/sys/amd64/amd64/cpu_switch.S,v 1.160 2007/08/22 05:06:14 jkoshy Exp $
  */
 
 #include <machine/asmacros.h>
 #include <machine/specialreg.h>
 
 #include "assym.s"
+#include "opt_sched.h"
 
 /*****************************************************************************/
 /* Scheduling                                                                */
@@ -48,6 +49,12 @@
 #define LK	lock ;
 #else
 #define LK
+#endif
+
+#if defined(SCHED_ULE) && defined(SMP)
+#define	SETLK	xchgq
+#else
+#define	SETLK	movq
 #endif
 
 /*
@@ -73,19 +80,17 @@ ENTRY(cpu_throw)
 	movq	TD_PCB(%rsi),%rdx		/* newtd->td_proc */
 	movq	PCB_CR3(%rdx),%rdx
 	movq	%rdx,%cr3			/* new address space */
-	/* set bit in new pm_active */
-	movq	TD_PROC(%rsi),%rdx
-	movq	P_VMSPACE(%rdx), %rdx
-	LK btsl	%eax, VM_PMAP+PM_ACTIVE(%rdx)	/* set new */
-	jmp	sw1
+	jmp	swact
+END(cpu_throw)
 
 /*
- * cpu_switch(old, new)
+ * cpu_switch(old, new, mtx)
  *
  * Save the current thread state, then select the next thread to run
  * and load its state.
  * %rdi = oldtd
  * %rsi = newtd
+ * %rdx = mtx
  */
 ENTRY(cpu_switch)
 	/* Switch to new thread.  First, save context. */
@@ -104,11 +109,12 @@ ENTRY(cpu_switch)
 	testl	$PCB_32BIT,PCB_FLAGS(%r8)
 	jz	1f				/* no, skip over */
 
-	/* Save segment selector numbers */
-	movl	%ds,PCB_DS(%r8)
-	movl	%es,PCB_ES(%r8)
-	movl	%fs,PCB_FS(%r8)
+	/* Save userland %gs */
 	movl	%gs,PCB_GS(%r8)
+	movq	PCB_GS32P(%r8),%rax
+	movq	(%rax),%rax
+	movq	%rax,PCB_GS32SD(%r8)
+
 1:
 	/* Test if debug registers should be saved. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%r8)
@@ -138,7 +144,7 @@ ENTRY(cpu_switch)
 	smsw	%ax
 	orb	$CR0_TS,%al
 	lmsw	%ax
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	%rax,PCPU(FPCURTHREAD)
 1:
 
@@ -146,45 +152,42 @@ ENTRY(cpu_switch)
 	movq	TD_PCB(%rsi),%r8
 
 	/* switch address space */
-	movq	PCB_CR3(%r8),%rdx
+	movq	PCB_CR3(%r8),%rcx
 	movq	%cr3,%rax
-	cmpq	%rdx,%rax			/* Same address space? */
-	je	sw1
-	movq	%rdx,%cr3			/* new address space */
-
+	cmpq	%rcx,%rax			/* Same address space? */
+	jne	swinact
+	SETLK	%rdx, TD_LOCK(%rdi)		/* Release the old thread */
+	jmp	sw1
+swinact:
+	movq	%rcx,%cr3			/* new address space */
 	movl	PCPU(CPUID), %eax
 	/* Release bit from old pmap->pm_active */
-	movq	TD_PROC(%rdi), %rdx		/* oldproc */
-	movq	P_VMSPACE(%rdx), %rdx
-	LK btrl	%eax, VM_PMAP+PM_ACTIVE(%rdx)	/* clear old */
-
+	movq	TD_PROC(%rdi), %rcx		/* oldproc */
+	movq	P_VMSPACE(%rcx), %rcx
+	LK btrl	%eax, VM_PMAP+PM_ACTIVE(%rcx)	/* clear old */
+	SETLK	%rdx, TD_LOCK(%rdi)		/* Release the old thread */
+swact:
 	/* Set bit in new pmap->pm_active */
 	movq	TD_PROC(%rsi),%rdx		/* newproc */
 	movq	P_VMSPACE(%rdx), %rdx
 	LK btsl	%eax, VM_PMAP+PM_ACTIVE(%rdx)	/* set new */
 
 sw1:
+#if defined(SCHED_ULE) && defined(SMP)
+	/* Wait for the new thread to become unblocked */
+	movq	$blocked_lock, %rdx
+1:
+	movq	TD_LOCK(%rsi),%rcx
+	cmpq	%rcx, %rdx
+	pause
+	je	1b
+	lfence
+#endif
 	/*
 	 * At this point, we've switched address spaces and are ready
 	 * to load up the rest of the next context.
 	 */
 	movq	TD_PCB(%rsi),%r8
-
-	testl	$PCB_32BIT,PCB_FLAGS(%r8)
-	jz	1f				/* no, skip over */
-
-	/* Restore segment selector numbers */
-	movl	PCB_DS(%r8),%ds
-	movl	PCB_ES(%r8),%es
-	movl	PCB_FS(%r8),%fs
-
-	/* Restore userland %gs while preserving kernel gsbase */
-	movl	$MSR_GSBASE,%ecx
-	rdmsr
-	movl	PCB_GS(%r8),%gs
-	wrmsr
-	jmp	2f
-1:
 
 	/* Restore userland %fs */
 	movl	$MSR_FSBASE,%ecx
@@ -197,7 +200,6 @@ sw1:
 	movl	PCB_GSBASE(%r8),%eax
 	movl	PCB_GSBASE+4(%r8),%edx
 	wrmsr
-2:
 
 	/* Update the TSS_RSP0 pointer for the next interrupt */
 	movq	PCPU(TSSP), %rax
@@ -206,6 +208,22 @@ sw1:
 	movq	%rbx, (%rax)
 	movq	%rbx, PCPU(RSP0)
 
+	movq	%r8, PCPU(CURPCB)
+	movq	%rsi, PCPU(CURTHREAD)		/* into next thread */
+
+	testl	$PCB_32BIT,PCB_FLAGS(%r8)
+	jz	1f				/* no, skip over */
+
+	/* Restore userland %gs while preserving kernel gsbase */
+	movq	PCB_GS32P(%r8),%rax
+	movq	PCB_GS32SD(%r8),%rbx
+	movq	%rbx,(%rax)
+	movl	$MSR_GSBASE,%ecx
+	rdmsr
+	movl	PCB_GS(%r8),%gs
+	wrmsr
+
+1:
 	/* Restore context. */
 	movq	PCB_RBX(%r8),%rbx
 	movq	PCB_RSP(%r8),%rsp
@@ -216,9 +234,6 @@ sw1:
 	movq	PCB_R15(%r8),%r15
 	movq	PCB_RIP(%r8),%rax
 	movq	%rax,(%rsp)
-
-	movq	%r8, PCPU(CURPCB)
-	movq	%rsi, PCPU(CURTHREAD)		/* into next thread */
 
 	/* Test if debug registers should be restored. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%r8)
@@ -242,7 +257,8 @@ sw1:
 	movq	%rax,%dr7
 1:
 	ret
-
+END(cpu_switch)
+	
 /*
  * savectx(pcb)
  * Update pcb, saving current processor state.
@@ -300,3 +316,4 @@ ENTRY(savectx)
 	popfq
 
 	ret
+END(savectx)

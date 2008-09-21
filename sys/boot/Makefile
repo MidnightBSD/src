@@ -1,22 +1,24 @@
-# $FreeBSD: src/sys/boot/Makefile,v 1.26 2004/12/21 12:32:13 ru Exp $
-# $MidnightBSD: src/sys/boot/Makefile,v 1.2 2006/06/26 15:12:15 laffer1 Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/boot/Makefile,v 1.32 2006/11/05 22:03:02 marcel Exp $
 
-.if !defined(NO_FORTH)
+.include <bsd.own.mk>
+
+.if ${MK_FORTH} != "no"
 # Build the add-in FORTH interpreter.
 SUBDIR+=		ficl
 .endif
 
 # Build EFI library.
-.if ${MACHINE_ARCH} == "ia64"
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
 SUBDIR+=		efi
 .endif
 
 # Build Open Firmware library.
-.if ${MACHINE_ARCH} == "powerpc" || ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_ARCH} == "sparc64"
 SUBDIR+=		ofw
 .endif
 
 # Pick the machine-dependent subdir based on the target architecture.
-SUBDIR+=		${MACHINE:S/amd64/i386/}
+SUBDIR+=		${MACHINE:S/amd64/i386/:S/sun4v/sparc64/}
 
 .include <bsd.subdir.mk>

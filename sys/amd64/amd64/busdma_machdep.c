@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.70.2.3 2006/03/28 06:28:37 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.83 2007/06/17 04:21:58 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/busdma_machdep.c,v 1.70.2.3 2006/03/28 0
 #include <machine/atomic.h>
 #include <machine/bus.h>
 #include <machine/md_var.h>
+#include <machine/specialreg.h>
 
 #define MAX_BPAGES 8192
 
@@ -218,6 +219,10 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	/* Basic sanity checking */
 	if (boundary != 0 && boundary < maxsegsz)
 		maxsegsz = boundary;
+
+	if (maxsegsz == 0) {
+		return (EINVAL);
+	}
 
 	/* Return a NULL tag on failure */
 	*dmat = NULL;
@@ -492,7 +497,16 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 		}
 	}
 
+	/* 
+	 * XXX:
+	 * (dmat->alignment < dmat->maxsize) is just a quick hack; the exact
+	 * alignment guarantees of malloc need to be nailed down, and the
+	 * code below should be rewritten to take that into account.
+	 *
+	 * In the meantime, we'll warn the user if malloc gets it wrong.
+	 */
 	if ((dmat->maxsize <= PAGE_SIZE) &&
+	   (dmat->alignment < dmat->maxsize) &&
 	    dmat->lowaddr >= ptoa((vm_paddr_t)Maxmem)) {
 		*vaddr = malloc(dmat->maxsize, M_DEVBUF, mflags);
 	} else {
@@ -510,7 +524,12 @@ bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
 		CTR4(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error %d",
 		    __func__, dmat, dmat->flags, ENOMEM);
 		return (ENOMEM);
+	} else if ((uintptr_t)*vaddr & (dmat->alignment - 1)) {
+		printf("bus_dmamem_alloc failed to align memory properly.\n");
 	}
+	if (flags & BUS_DMA_NOCACHE)
+		pmap_change_attr((vm_offset_t)*vaddr, dmat->maxsize,
+		    PAT_UNCACHEABLE);
 	CTR4(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error %d",
 	    __func__, dmat, dmat->flags, ENOMEM);
 	return (0);
@@ -529,8 +548,10 @@ bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
 	 */
 	if (map != NULL)
 		panic("bus_dmamem_free: Invalid map freed\n");
-	if ((dmat->maxsize <= PAGE_SIZE)
-	 && dmat->lowaddr >= ptoa((vm_paddr_t)Maxmem))
+	pmap_change_attr((vm_offset_t)vaddr, dmat->maxsize, PAT_WRITE_BACK);
+	if ((dmat->maxsize <= PAGE_SIZE) &&
+	   (dmat->alignment < dmat->maxsize) &&
+	    dmat->lowaddr >= ptoa((vm_paddr_t)Maxmem))
 		free(vaddr, M_DEVBUF);
 	else {
 		contigfree(vaddr, dmat->maxsize, M_DEVBUF);
@@ -632,6 +653,8 @@ _bus_dmamap_load_buffer(bus_dma_tag_t dmat,
 		 * Compute the segment size, and adjust counts.
 		 */
 		sgsize = PAGE_SIZE - ((u_long)curaddr & PAGE_MASK);
+		if (sgsize > dmat->maxsegsz)
+			sgsize = dmat->maxsegsz;
 		if (buflen < sgsize)
 			sgsize = buflen;
 
@@ -703,9 +726,10 @@ bus_dmamap_load(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
 	error = _bus_dmamap_load_buffer(dmat, map, buf, buflen, NULL, flags,
 	     &lastaddr, dmat->segments, &nsegs, 1);
 
+	CTR5(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error %d nsegs %d",
+	    __func__, dmat, dmat->flags, error, nsegs + 1);
+
 	if (error == EINPROGRESS) {
-		CTR4(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error %d",
-		    __func__, dmat, dmat->flags, error);
 		return (error);
 	}
 
@@ -714,8 +738,13 @@ bus_dmamap_load(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
 	else
 		(*callback)(callback_arg, dmat->segments, nsegs + 1, 0);
 
-	CTR4(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error 0 nsegs %d",
-	    __func__, dmat, dmat->flags, nsegs + 1);
+	/*
+	 * Return ENOMEM to the caller so that it can pass it up the stack.
+	 * This error only happens when NOWAIT is set, so deferal is disabled.
+	 */
+	if (error == ENOMEM)
+		return (error);
+
 	return (0);
 }
 
@@ -812,7 +841,7 @@ bus_dmamap_load_uio(bus_dma_tag_t dmat, bus_dmamap_t map,
 		    bus_dmamap_callback2_t *callback, void *callback_arg,
 		    int flags)
 {
-	bus_addr_t lastaddr;
+	bus_addr_t lastaddr = 0;
 	int nsegs, error, first, i;
 	bus_size_t resid;
 	struct iovec *iov;
@@ -888,7 +917,6 @@ _bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 		 * want to add support for invalidating
 		 * the caches on broken hardware
 		 */
-		dmat->bounce_zone->total_bounced++;
 		CTR4(KTR_BUSDMA, "%s: tag %p tag flags 0x%x op 0x%x "
 		    "performing bounce", __func__, op, dmat, dmat->flags);
 
@@ -899,6 +927,7 @@ _bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 				      bpage->datacount);
 				bpage = STAILQ_NEXT(bpage, links);
 			}
+			dmat->bounce_zone->total_bounced++;
 		}
 
 		if (op & BUS_DMASYNC_POSTREAD) {
@@ -908,6 +937,7 @@ _bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 				      bpage->datacount);
 				bpage = STAILQ_NEXT(bpage, links);
 			}
+			dmat->bounce_zone->total_bounced++;
 		}
 	}
 }

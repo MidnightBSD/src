@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/common/bootstrap.h,v 1.41.2.1 2005/12/30 22:13:58 marcel Exp $
+ * $FreeBSD: src/sys/boot/common/bootstrap.h,v 1.44 2006/12/18 07:35:14 kmacy Exp $
  */
 
 #include <sys/types.h>
@@ -43,6 +43,7 @@ struct devdesc
 #define DEVT_DISK	1
 #define DEVT_NET	2
 #define	DEVT_CD		3
+    int			d_unit;
 };
 
 /* Commands and return values; nonzero return sets command_errmsg != NULL */
@@ -291,6 +292,8 @@ struct arch_switch
     /* Perform ISA byte port I/O (only for systems with ISA) */
     int		(*arch_isainb)(int port);
     void	(*arch_isaoutb)(int port, int value);
+    /* Pass in initial kernel memory size */
+    void        (*arch_maphint)(vm_offset_t va, size_t len);	
 };
 extern struct arch_switch archsw;
 

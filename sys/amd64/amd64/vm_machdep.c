@@ -41,10 +41,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.248.2.1 2005/11/15 00:25:59 peter Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.255 2007/06/04 23:57:29 jeff Exp $");
 
 #include "opt_isa.h"
 #include "opt_cpu.h"
+#include "opt_compat.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,6 +70,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.248.2.1 2005/11/15 00:2
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 #include <machine/pcb.h>
+#include <machine/specialreg.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -78,6 +80,12 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/vm_machdep.c,v 1.248.2.1 2005/11/15 00:2
 #include <vm/vm_param.h>
 
 #include <amd64/isa/isa.h>
+
+#ifdef COMPAT_IA32
+
+extern struct sysentvec ia32_freebsd_sysvec;
+
+#endif
 
 static void	cpu_reset_real(void);
 #ifdef SMP
@@ -162,7 +170,7 @@ cpu_fork(td1, p2, td2, flags)
 	 * pcb2->pcb_[fg]sbase:	cloned above
 	 */
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
 
@@ -296,7 +304,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	 * pcb2->pcb_[fg]sbase: cloned above
 	 */
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release spin count in fork_exit(). */
 	td->td_md.md_spinlock_count = 1;
 	td->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
 }
@@ -320,6 +328,28 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	 */
 	cpu_thread_clean(td);
 
+#ifdef COMPAT_IA32
+	if (td->td_proc->p_sysent == &ia32_freebsd_sysvec) {
+		/*
+	 	 * Set the trap frame to point at the beginning of the uts
+		 * function.
+		 */
+		td->td_frame->tf_rbp = 0;
+		td->td_frame->tf_rsp =
+		   (((uintptr_t)stack->ss_sp + stack->ss_size - 4) & ~0x0f) - 4;
+		td->td_frame->tf_rip = (uintptr_t)entry;
+
+		/*
+		 * Pass the address of the mailbox for this kse to the uts
+		 * function as a parameter on the stack.
+		 */
+		suword32((void *)(td->td_frame->tf_rsp + sizeof(int32_t)),
+		    (uint32_t)(uintptr_t)arg);
+
+		return;
+	}
+#endif
+
 	/*
 	 * Set the trap frame to point at the beginning of the uts
 	 * function.
@@ -328,7 +358,6 @@ cpu_set_upcall_kse(struct thread *td, void (*entry)(void *), void *arg,
 	td->td_frame->tf_rsp =
 	    ((register_t)stack->ss_sp + stack->ss_size) & ~0x0f;
 	td->td_frame->tf_rsp -= 8;
-	td->td_frame->tf_rbp = 0;
 	td->td_frame->tf_rip = (register_t)entry;
 
 	/*
@@ -345,6 +374,19 @@ cpu_set_user_tls(struct thread *td, void *tls_base)
 	if ((u_int64_t)tls_base >= VM_MAXUSER_ADDRESS)
 		return (EINVAL);
 
+#ifdef COMPAT_IA32
+	if (td->td_proc->p_sysent == &ia32_freebsd_sysvec) {
+		if (td == curthread) {
+			critical_enter();
+			td->td_pcb->pcb_gsbase = (register_t)tls_base;
+			wrmsr(MSR_KGSBASE, td->td_pcb->pcb_gsbase);
+			critical_exit();
+		} else {
+			td->td_pcb->pcb_gsbase = (register_t)tls_base;
+		}
+		return (0);
+	}
+#endif
 	if (td == curthread) {
 		critical_enter();
 		td->td_pcb->pcb_fsbase = (register_t)tls_base;
@@ -389,7 +431,9 @@ cpu_reset()
 			cpustop_restartfunc = cpu_reset_proxy;
 			cpu_reset_proxy_active = 0;
 			printf("cpu_reset: Restarting BSP\n");
-			started_cpus = (1<<0);		/* Restart CPU #0 */
+
+			/* Restart CPU #0. */
+			atomic_store_rel_int(&started_cpus, 1 << 0);
 
 			cnt = 0;
 			while (cpu_reset_proxy_active == 0 && cnt < 10000000)
@@ -413,6 +457,10 @@ cpu_reset()
 static void
 cpu_reset_real()
 {
+	struct region_descriptor null_idt;
+	int b;
+
+	disable_intr();
 
 	/*
 	 * Attempt to do a CPU reset via the keyboard controller,
@@ -421,14 +469,44 @@ cpu_reset_real()
 	 */
 	outb(IO_KBD + 4, 0xFE);
 	DELAY(500000);	/* wait 0.5 sec to see if that did it */
-	printf("Keyboard reset did not work, attempting CPU shutdown\n");
+
+	/*
+	 * Attempt to force a reset via the Reset Control register at
+	 * I/O port 0xcf9.  Bit 2 forces a system reset when it is
+	 * written as 1.  Bit 1 selects the type of reset to attempt:
+	 * 0 selects a "soft" reset, and 1 selects a "hard" reset.  We
+	 * try to do a "soft" reset first, and then a "hard" reset.
+	 */
+	outb(0xcf9, 0x2);
+	outb(0xcf9, 0x6);
+	DELAY(500000);  /* wait 0.5 sec to see if that did it */
+
+	/*
+	 * Attempt to force a reset via the Fast A20 and Init register
+	 * at I/O port 0x92.  Bit 1 serves as an alternate A20 gate.
+	 * Bit 0 asserts INIT# when set to 1.  We are careful to only
+	 * preserve bit 1 while setting bit 0.  We also must clear bit
+	 * 0 before setting it if it isn't already clear.
+	 */
+	b = inb(0x92);
+	if (b != 0xff) {
+		if ((b & 0x1) != 0)
+			outb(0x92, b & 0xfe);
+		outb(0x92, b | 0x1);
+		DELAY(500000);  /* wait 0.5 sec to see if that did it */
+	}
+
+	printf("No known reset method worked, attempting CPU shutdown\n");
 	DELAY(1000000);	/* wait 1 sec for printf to complete */
 
-	/* Force a shutdown by unmapping entire address space. */
-	bzero((caddr_t)PML4map, PAGE_SIZE);
+	/* Wipe the IDT. */
+	null_idt.rd_limit = 0;
+	null_idt.rd_base = 0;
+	lidt(&null_idt);
 
 	/* "good night, sweet prince .... <THUNK!>" */
-	invltlb();
+	breakpoint();
+
 	/* NOTREACHED */
 	while(1);
 }

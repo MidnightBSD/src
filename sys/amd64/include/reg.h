@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)reg.h	5.5 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/amd64/include/reg.h,v 1.35 2004/04/05 23:55:14 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/reg.h,v 1.38 2006/11/17 20:27:01 jhb Exp $
  */
 
 #ifndef _MACHINE_REG_H_
@@ -92,11 +92,26 @@ struct dbreg {
 				/* Index 8-15: reserved */
 };
 
-#define DBREG_DR7_EXEC      0x00      /* break on execute       */
-#define DBREG_DR7_WRONLY    0x01      /* break on write         */
-#define DBREG_DR7_RDWR      0x03      /* break on read or write */
-#define DBREG_DRX(d,x) ((d)->dr[(x)]) /* reference dr0 - dr15 by
-                                         register number */
+#define	DBREG_DR7_LOCAL_ENABLE	0x01
+#define	DBREG_DR7_GLOBAL_ENABLE	0x02
+#define	DBREG_DR7_LEN_1		0x00	/* 1 byte length          */
+#define	DBREG_DR7_LEN_2		0x01
+#define	DBREG_DR7_LEN_4		0x03
+#define	DBREG_DR7_LEN_8		0x02
+#define	DBREG_DR7_EXEC		0x00	/* break on execute       */
+#define	DBREG_DR7_WRONLY	0x01	/* break on write         */
+#define	DBREG_DR7_RDWR		0x03	/* break on read or write */
+#define	DBREG_DR7_MASK(i)	((u_long)0xf << ((i) * 4 + 16) | 0x3 << (i) * 2)
+#define	DBREG_DR7_SET(i, len, access, enable)				\
+	((u_long)((len) << 2 | (access)) << ((i) * 4 + 16) | (enable) << (i) * 2)
+#define	DBREG_DR7_GD		0x2000
+#define	DBREG_DR7_ENABLED(d, i)	(((d) & 0x3 << (i) * 2) != 0)
+#define	DBREG_DR7_ACCESS(d, i)	((d) >> ((i) * 4 + 16) & 0x3)
+#define	DBREG_DR7_LEN(d, i)	((d) >> ((i) * 4 + 18) & 0x3)
+
+#define	DBREG_DRX(d,x)	((d)->dr[(x)])	/* reference dr0 - dr15 by
+					   register number */
+
 #ifdef _KERNEL
 /*
  * XXX these interfaces are MI, so they should be declared in a MI place.

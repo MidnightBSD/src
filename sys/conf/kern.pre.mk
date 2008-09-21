@@ -1,7 +1,12 @@
-# $FreeBSD: src/sys/conf/kern.pre.mk,v 1.65.2.2 2005/11/07 09:55:47 obrien Exp $
+# $FreeBSD: src/sys/conf/kern.pre.mk,v 1.92 2007/08/08 19:12:06 marcel Exp $
 
 # Part of a unified Makefile for building kernels.  This part contains all
 # of the definitions that need to be before %BEFORE_DEPEND.
+
+SRCCONF?=	/etc/src.conf
+.if exists(${SRCCONF})
+.include "${SRCCONF}"
+.endif
 
 # Can be overridden by makeoptions or /etc/make.conf
 KERNEL_KO?=	kernel
@@ -41,16 +46,20 @@ COPTFLAGS+= ${_CPUCFLAGS}
 . endif
 .endif
 .if ${CC} == "icc"
+C_DIALECT=
 NOSTDINC= -X
 .else
+C_DIALECT= -std=c99
 NOSTDINC= -nostdinc
 .endif
 
-INCLUDES= ${NOSTDINC} -I- ${INCLMAGIC} -I. -I$S
+INCLUDES= ${NOSTDINC} ${INCLMAGIC} -I. -I$S
 
 # This hack lets us use the OpenBSD altq code without spamming a new
 # include path into contrib'ed source files.
 INCLUDES+= -I$S/contrib/altq
+
+.if make(depend) || make(kernel-depend)
 
 # ... and the same for ipfilter
 INCLUDES+= -I$S/contrib/ipfilter
@@ -59,7 +68,7 @@ INCLUDES+= -I$S/contrib/ipfilter
 INCLUDES+= -I$S/contrib/pf
 
 # ... and the same for Atheros HAL
-INCLUDES+= -I$S/contrib/dev/ath -I$S/contrib/dev/ath/freebsd
+INCLUDES+= -I$S/dev/ath
 
 # ... and the same for the NgATM stuff
 INCLUDES+= -I$S/contrib/ngatm
@@ -67,13 +76,22 @@ INCLUDES+= -I$S/contrib/ngatm
 # .. and the same for twa
 INCLUDES+= -I$S/dev/twa
 
-CFLAGS=	${COPTFLAGS} ${CWARNFLAGS} ${DEBUG}
+# ...  and XFS
+INCLUDES+= -I$S/gnu/fs/xfs/FreeBSD -I$S/gnu/fs/xfs/FreeBSD/support -I$S/gnu/fs/xfs
+
+.endif
+
+CFLAGS=	${COPTFLAGS} ${C_DIALECT} ${DEBUG} ${CWARNFLAGS}
 CFLAGS+= ${INCLUDES} -D_KERNEL -DHAVE_KERNEL_OPTION_HEADERS -include opt_global.h
 .if ${CC} != "icc"
 CFLAGS+= -fno-common -finline-limit=${INLINE_LIMIT}
 CFLAGS+= --param inline-unit-growth=100
 CFLAGS+= --param large-function-growth=1000
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE} == "i386" || \
+    ${MACHINE_ARCH} == "ia64" || ${MACHINE_ARCH} == "powerpc" || \
+    ${MACHINE_ARCH} == "sparc64"
 WERROR?= -Werror
+.endif
 .endif
 
 # XXX LOCORE means "don't declare C stuff" not "for locore.s".
@@ -81,24 +99,14 @@ ASM_CFLAGS= -x assembler-with-cpp -DLOCORE ${CFLAGS}
 
 .if defined(PROFLEVEL) && ${PROFLEVEL} >= 1
 .if ${CC} == "icc"
-.error Profiling doesn't work with ICC yet.
-.else
-CFLAGS+=	-DGPROF -falign-functions=16
+.error "Profiling doesn't work with icc yet"
 .endif
+CFLAGS+=	-DGPROF -falign-functions=16
 .if ${PROFLEVEL} >= 2
 CFLAGS+=	-DGPROF4 -DGUPROF
-. if ${CC} == "icc"
-# XXX doesn't work yet
-#PROF=	-prof_gen
-. else
-PROF=	-finstrument-functions -Wno-inline
-. endif
+PROF=	-pg -mprofiler-epilogue
 .else
-. if ${CC} == "icc"
-PROF=	-p
-. else
 PROF=	-pg
-. endif
 .endif
 .endif
 DEFINED_PROF=	${PROF}

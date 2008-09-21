@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/nexus.c,v 1.66 2005/03/18 11:57:43 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/nexus.c,v 1.77 2007/05/08 21:29:13 jhb Exp $");
 
 /*
  * This code implements a `root nexus' for Intel Architecture
@@ -41,13 +41,13 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/nexus.c,v 1.66 2005/03/18 11:57:43 phk E
  * and I/O memory address space.
  */
 
-#define __RMAN_RESOURCE_VISIBLE
 #include "opt_isa.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
+#include <sys/linker.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <machine/bus.h>
@@ -60,7 +60,11 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/nexus.c,v 1.66 2005/03/18 11:57:43 phk E
 #include <vm/pmap.h>
 #include <machine/pmap.h>
 
+#include <machine/metadata.h>
 #include <machine/resource.h>
+#include <machine/pc/bios.h>
+
+#include "pcib_if.h"
 
 #ifdef DEV_ISA
 #include <isa/isavar.h>
@@ -94,13 +98,19 @@ static	int nexus_deactivate_resource(device_t, device_t, int, int,
 static	int nexus_release_resource(device_t, device_t, int, int,
 				   struct resource *);
 static	int nexus_setup_intr(device_t, device_t, struct resource *, int flags,
-			     void (*)(void *), void *, void **);
+			     driver_filter_t filter, void (*)(void *), void *, 
+			     void **);
 static	int nexus_teardown_intr(device_t, device_t, struct resource *,
 				void *);
 static struct resource_list *nexus_get_reslist(device_t dev, device_t child);
 static	int nexus_set_resource(device_t, device_t, int, int, u_long, u_long);
 static	int nexus_get_resource(device_t, device_t, int, int, u_long *, u_long *);
 static void nexus_delete_resource(device_t, device_t, int, int);
+static	int nexus_alloc_msi(device_t pcib, device_t dev, int count, int maxcount, int *irqs);
+static	int nexus_release_msi(device_t pcib, device_t dev, int count, int *irqs);
+static	int nexus_alloc_msix(device_t pcib, device_t dev, int *irq);
+static	int nexus_release_msix(device_t pcib, device_t dev, int irq);
+static	int nexus_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr, uint32_t *data);
 
 static device_method_t nexus_methods[] = {
 	/* Device interface */
@@ -126,6 +136,13 @@ static device_method_t nexus_methods[] = {
 	DEVMETHOD(bus_get_resource,	nexus_get_resource),
 	DEVMETHOD(bus_delete_resource,	nexus_delete_resource),
 
+	/* pcib interface */
+	DEVMETHOD(pcib_alloc_msi,	nexus_alloc_msi),
+	DEVMETHOD(pcib_release_msi,	nexus_release_msi),
+	DEVMETHOD(pcib_alloc_msix,	nexus_alloc_msix),
+	DEVMETHOD(pcib_release_msix,	nexus_release_msix),
+	DEVMETHOD(pcib_map_msi,		nexus_map_msi),
+
 	{ 0, 0 }
 };
 
@@ -141,7 +158,7 @@ DRIVER_MODULE(nexus, root, nexus_driver, nexus_devclass, 0, 0);
 static int
 nexus_probe(device_t dev)
 {
-	int irq, last;
+	int irq;
 
 	device_quiet(dev);	/* suppress attach message for neatness */
 
@@ -174,18 +191,10 @@ nexus_probe(device_t dev)
 	 * We search for regions of existing IRQs and add those to the IRQ
 	 * resource manager.
 	 */
-	last = -1;
 	for (irq = 0; irq < NUM_IO_INTS; irq++)
-		if (intr_lookup_source(irq) != NULL) {
-			if (last == -1)
-				last = irq;
-		} else if (last != -1) {
-			if (rman_manage_region(&irq_rman, last, irq - 1) != 0)
+		if (intr_lookup_source(irq) != NULL)
+			if (rman_manage_region(&irq_rman, irq, irq) != 0)
 				panic("nexus_probe irq_rman add");
-			last = -1;
-		}
-	if (last != -1 && rman_manage_region(&irq_rman, last, irq - 1) != 0)
-		panic("nexus_probe irq_rman add");
 
 	/*
 	 * ISA DMA on PCI systems is implemented in the ISA part of each
@@ -341,13 +350,7 @@ nexus_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	rv = rman_reserve_resource(rm, start, end, count, flags, child);
 	if (rv == 0)
 		return 0;
-
-	if (type == SYS_RES_MEMORY) {
-		rman_set_bustag(rv, AMD64_BUS_SPACE_MEM);
-	} else if (type == SYS_RES_IOPORT) {
-		rman_set_bustag(rv, AMD64_BUS_SPACE_IO);
-		rman_set_bushandle(rv, rman_get_start(rv));
-	}
+	rman_set_rid(rv, *rid);
 
 	if (needactivate) {
 		if (bus_activate_resource(child, type, *rid, rv)) {
@@ -367,27 +370,16 @@ nexus_activate_resource(device_t bus, device_t child, int type, int rid,
 	/*
 	 * If this is a memory resource, map it into the kernel.
 	 */
-	if (rman_get_bustag(r) == AMD64_BUS_SPACE_MEM) {
-		caddr_t vaddr = 0;
+	if (type == SYS_RES_MEMORY) {
+		void *vaddr;
 
-		if (rman_get_end(r) < 1024 * 1024) {
-			/*
-			 * The first 1Mb is mapped at KERNBASE.
-			 */
-			vaddr = (caddr_t)(uintptr_t)(KERNBASE + rman_get_start(r));
-		} else {
-			u_int64_t paddr;
-			u_int64_t psize;
-			u_int32_t poffs;
-
-			paddr = rman_get_start(r);
-			psize = rman_get_size(r);
-
-			poffs = paddr - trunc_page(paddr);
-			vaddr = (caddr_t) pmap_mapdev(paddr-poffs, psize+poffs) + poffs;
-		}
+		vaddr = pmap_mapdev(rman_get_start(r), rman_get_size(r));
 		rman_set_virtual(r, vaddr);
+		rman_set_bustag(r, AMD64_BUS_SPACE_MEM);
 		rman_set_bushandle(r, (bus_space_handle_t) vaddr);
+	} else if (type == SYS_RES_IOPORT) {
+		rman_set_bustag(r, AMD64_BUS_SPACE_IO);
+		rman_set_bushandle(r, rman_get_start(r));
 	}
 	return (rman_activate_resource(r));
 }
@@ -399,12 +391,9 @@ nexus_deactivate_resource(device_t bus, device_t child, int type, int rid,
 	/*
 	 * If this is a memory resource, unmap it.
 	 */
-	if ((rman_get_bustag(r) == AMD64_BUS_SPACE_MEM) &&
-	    (rman_get_end(r) >= 1024 * 1024)) {
-		u_int32_t psize;
-
-		psize = rman_get_size(r);
-		pmap_unmapdev((vm_offset_t)rman_get_virtual(r), psize);
+	if (type == SYS_RES_MEMORY) {
+		pmap_unmapdev((vm_offset_t)rman_get_virtual(r),
+		    rman_get_size(r));
 	}
 		
 	return (rman_deactivate_resource(r));
@@ -430,7 +419,8 @@ nexus_release_resource(device_t bus, device_t child, int type, int rid,
  */
 static int
 nexus_setup_intr(device_t bus, device_t child, struct resource *irq,
-		 int flags, void (*ihand)(void *), void *arg, void **cookiep)
+		 int flags, driver_filter_t filter, void (*ihand)(void *), 
+		 void *arg, void **cookiep)
 {
 	int		error;
 
@@ -450,7 +440,7 @@ nexus_setup_intr(device_t bus, device_t child, struct resource *irq,
 		return (error);
 
 	error = intr_add_handler(device_get_nameunit(child),
-	    rman_get_start(irq), ihand, arg, flags, cookiep);
+	    rman_get_start(irq), filter, ihand, arg, flags, cookiep);
 
 	return (error);
 }
@@ -512,6 +502,123 @@ nexus_delete_resource(device_t dev, device_t child, int type, int rid)
 
 	resource_list_delete(rl, type, rid);
 }
+
+/* Called from the MSI code to add new IRQs to the IRQ rman. */
+void
+nexus_add_irq(u_long irq)
+{
+
+	if (rman_manage_region(&irq_rman, irq, irq) != 0)
+		panic("%s: failed", __func__);
+}
+
+static int
+nexus_alloc_msix(device_t pcib, device_t dev, int *irq)
+{
+
+	return (msix_alloc(dev, irq));
+}
+
+static int
+nexus_release_msix(device_t pcib, device_t dev, int irq)
+{
+
+	return (msix_release(irq));
+}
+
+static int
+nexus_alloc_msi(device_t pcib, device_t dev, int count, int maxcount, int *irqs)
+{
+
+	return (msi_alloc(dev, count, maxcount, irqs));
+}
+
+static int
+nexus_release_msi(device_t pcib, device_t dev, int count, int *irqs)
+{
+
+	return (msi_release(irqs, count));
+}
+
+static int
+nexus_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr, uint32_t *data)
+{
+
+	return (msi_map(irq, addr, data));
+}
+
+/* Placeholder for system RAM. */
+static void
+ram_identify(driver_t *driver, device_t parent)
+{
+
+	if (resource_disabled("ram", 0))
+		return;	
+	if (BUS_ADD_CHILD(parent, 0, "ram", 0) == NULL)
+		panic("ram_identify");
+}
+
+static int
+ram_probe(device_t dev)
+{
+
+	device_quiet(dev);
+	device_set_desc(dev, "System RAM");
+	return (0);
+}
+
+static int
+ram_attach(device_t dev)
+{
+	struct bios_smap *smapbase, *smap, *smapend;
+	struct resource *res;
+	caddr_t kmdp;
+	uint32_t smapsize;
+	int error, rid;
+
+	/* Retrieve the system memory map from the loader. */
+	kmdp = preload_search_by_type("elf kernel");
+	if (kmdp == NULL)
+		kmdp = preload_search_by_type("elf64 kernel");	
+	smapbase = (struct bios_smap *)preload_search_info(kmdp,
+	    MODINFO_METADATA | MODINFOMD_SMAP);
+	smapsize = *((u_int32_t *)smapbase - 1);
+	smapend = (struct bios_smap *)((uintptr_t)smapbase + smapsize);
+
+	rid = 0;
+	for (smap = smapbase; smap < smapend; smap++) {
+		if (smap->type != 0x01 || smap->length == 0)
+			continue;
+		error = bus_set_resource(dev, SYS_RES_MEMORY, rid, smap->base,
+		    smap->length);
+		if (error)
+			panic("ram_attach: resource %d failed set with %d", rid,
+			    error);
+		res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid, 0);
+		if (res == NULL)
+			panic("ram_attach: resource %d failed to attach", rid);
+		rid++;
+	}
+	return (0);
+}
+
+static device_method_t ram_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_identify,	ram_identify),
+	DEVMETHOD(device_probe,		ram_probe),
+	DEVMETHOD(device_attach,	ram_attach),
+	{ 0, 0 }
+};
+
+static driver_t ram_driver = {
+	"ram",
+	ram_methods,
+	1,		/* no softc */
+};
+
+static devclass_t ram_devclass;
+
+DRIVER_MODULE(ram, nexus, ram_driver, ram_devclass, 0, 0);
 
 #ifdef DEV_ISA
 /*

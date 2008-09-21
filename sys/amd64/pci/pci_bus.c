@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/pci/pci_bus.c,v 1.113.2.1 2005/09/18 02:55:10 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/pci/pci_bus.c,v 1.122 2007/09/30 11:05:13 marius Exp $");
 
 #include "opt_cpu.h"
 
@@ -79,6 +79,38 @@ legacy_pcib_route_interrupt(device_t pcib, device_t dev, int pin)
 
 	/* No routing possible */
 	return (PCI_INVALID_IRQ);
+}
+
+/* Pass MSI requests up to the nexus. */
+
+static int
+legacy_pcib_alloc_msi(device_t pcib, device_t dev, int count, int maxcount,
+    int *irqs)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSI(device_get_parent(bus), dev, count, maxcount,
+	    irqs));
+}
+
+static int
+legacy_pcib_alloc_msix(device_t pcib, device_t dev, int *irq)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSIX(device_get_parent(bus), dev, irq));
+}
+
+static int
+legacy_pcib_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
+    uint32_t *data)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_MAP_MSI(device_get_parent(bus), dev, irq, addr, data));
 }
 
 static const char *
@@ -244,6 +276,9 @@ legacy_pcib_read_ivar(device_t dev, device_t child, int which,
 {
 
 	switch (which) {
+	case  PCIB_IVAR_DOMAIN:
+		*result = 0;
+		return 0;
 	case  PCIB_IVAR_BUS:
 		*result = legacy_get_pcibus(dev);
 		return 0;
@@ -257,6 +292,8 @@ legacy_pcib_write_ivar(device_t dev, device_t child, int which,
 {
 
 	switch (which) {
+	case  PCIB_IVAR_DOMAIN:
+		return EINVAL;
 	case  PCIB_IVAR_BUS:
 		legacy_set_pcibus(dev, value);
 		return 0;
@@ -322,75 +359,19 @@ static device_method_t legacy_pcib_methods[] = {
 	DEVMETHOD(pcib_read_config,	legacy_pcib_read_config),
 	DEVMETHOD(pcib_write_config,	legacy_pcib_write_config),
 	DEVMETHOD(pcib_route_interrupt,	legacy_pcib_route_interrupt),
+	DEVMETHOD(pcib_alloc_msi,	legacy_pcib_alloc_msi),
+	DEVMETHOD(pcib_release_msi,	pcib_release_msi),
+	DEVMETHOD(pcib_alloc_msix,	legacy_pcib_alloc_msix),
+	DEVMETHOD(pcib_release_msix,	pcib_release_msix),
+	DEVMETHOD(pcib_map_msi,		legacy_pcib_map_msi),
 
 	{ 0, 0 }
 };
 
-static driver_t legacy_pcib_driver = {
-	"pcib",
-	legacy_pcib_methods,
-	1,
-};
+static devclass_t hostb_devclass;
 
-DRIVER_MODULE(pcib, legacy, legacy_pcib_driver, pcib_devclass, 0, 0);
-
-
-/*
- * Provide a device to "eat" the host->pci bridges that we dug up above
- * and stop them showing up twice on the probes.  This also stops them
- * showing up as 'none' in pciconf -l.
- */
-static int
-pci_hostb_probe(device_t dev)
-{
-	u_int32_t id;
-
-	id = pci_get_devid(dev);
-
-	switch (id) {
-
-	/* VIA VT82C596 Power Managment Function */
-	case 0x30501106:
-		return ENXIO;
-
-	default:
-		break;
-	}
-
-	if (pci_get_class(dev) == PCIC_BRIDGE &&
-	    pci_get_subclass(dev) == PCIS_BRIDGE_HOST) {
-		device_set_desc(dev, "Host to PCI bridge");
-		device_quiet(dev);
-		return -10000;
-	}
-	return ENXIO;
-}
-
-static int
-pci_hostb_attach(device_t dev)
-{
-
-	return 0;
-}
-
-static device_method_t pci_hostb_methods[] = {
-	/* Device interface */
-	DEVMETHOD(device_probe,		pci_hostb_probe),
-	DEVMETHOD(device_attach,	pci_hostb_attach),
-	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	DEVMETHOD(device_suspend,	bus_generic_suspend),
-	DEVMETHOD(device_resume,	bus_generic_resume),
-
-	{ 0, 0 }
-};
-static driver_t pci_hostb_driver = {
-	"hostb",
-	pci_hostb_methods,
-	1,
-};
-static devclass_t pci_hostb_devclass;
-
-DRIVER_MODULE(hostb, pci, pci_hostb_driver, pci_hostb_devclass, 0, 0);
+DEFINE_CLASS_0(pcib, legacy_pcib_driver, legacy_pcib_methods, 1);
+DRIVER_MODULE(pcib, legacy, legacy_pcib_driver, hostb_devclass, 0, 0);
 
 
 /*
@@ -435,12 +416,7 @@ static device_method_t pcibus_pnp_methods[] = {
 	{ 0, 0 }
 };
 
-static driver_t pcibus_pnp_driver = {
-	"pcibus_pnp",
-	pcibus_pnp_methods,
-	1,		/* no softc */
-};
-
 static devclass_t pcibus_pnp_devclass;
 
+DEFINE_CLASS_0(pcibus_pnp, pcibus_pnp_driver, pcibus_pnp_methods, 1);
 DRIVER_MODULE(pcibus_pnp, isa, pcibus_pnp_driver, pcibus_pnp_devclass, 0, 0);

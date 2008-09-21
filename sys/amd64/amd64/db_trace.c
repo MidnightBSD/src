@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.66.2.2 2006/03/13 03:03:51 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/db_trace.c,v 1.80.2.1 2007/11/21 16:38:54 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -91,6 +91,7 @@ struct db_variable db_regs[] = {
 	{ "r15",	DB_OFFSET(tf_r15),	db_frame },
 	{ "rip",	DB_OFFSET(tf_rip),	db_frame },
 	{ "rflags",	DB_OFFSET(tf_rflags),	db_frame },
+#define	DB_N_SHOW_REGS	20	/* Don't show registers after here. */
 	{ "dr0",	NULL,			db_dr0 },
 	{ "dr1",	NULL,			db_dr1 },
 	{ "dr2",	NULL,			db_dr2 },
@@ -100,7 +101,7 @@ struct db_variable db_regs[] = {
 	{ "dr6",	NULL,			db_dr6 },
 	{ "dr7",	NULL,			db_dr7 },
 };
-struct db_variable *db_eregs = db_regs + sizeof(db_regs)/sizeof(db_regs[0]);
+struct db_variable *db_eregs = db_regs + DB_N_SHOW_REGS;
 
 #define DB_DRX_FUNC(reg)		\
 static int				\
@@ -192,19 +193,17 @@ struct amd64_frame {
 #define	TRAP		1
 #define	INTERRUPT	2
 #define	SYSCALL		3
+#define	TRAP_INTERRUPT	5
 
 static void db_nextframe(struct amd64_frame **, db_addr_t *, struct thread *);
 static int db_numargs(struct amd64_frame *);
 static void db_print_stack_entry(const char *, int, char **, long *, db_addr_t);
 static void decode_syscall(int, struct thread *);
 
-static char * watchtype_str(int type);
-int  amd64_set_watch(int watchnum, unsigned int watchaddr, int size, int access,
-		    struct dbreg * d);
-int  amd64_clr_watch(int watchnum, struct dbreg * d);
-int  db_md_set_watchpoint(db_expr_t addr, db_expr_t size);
-int  db_md_clr_watchpoint(db_expr_t addr, db_expr_t size);
-void db_md_list_watchpoints(void);
+static const char * watchtype_str(int type);
+int  amd64_set_watch(int watchnum, unsigned long watchaddr, int size,
+		    int access, struct dbreg *d);
+int  amd64_clr_watch(int watchnum, struct dbreg *d);
 
 /*
  * Figure out how many arguments were passed into the frame at "fp".
@@ -318,14 +317,24 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 	if (name != NULL) {
 		if (strcmp(name, "calltrap") == 0 ||
 		    strcmp(name, "fork_trampoline") == 0 ||
-		    strcmp(name, "nmi_calltrap") == 0)
+		    strcmp(name, "nmi_calltrap") == 0 ||
+		    strcmp(name, "Xdblfault") == 0)
 			frame_type = TRAP;
 		else if (strncmp(name, "Xatpic_intr", 11) == 0 ||
-		    strncmp(name, "Xatpic_fastintr", 15) == 0 ||
-		    strncmp(name, "Xapic_isr", 9) == 0)
+		    strncmp(name, "Xapic_isr", 9) == 0 ||
+		    strcmp(name, "Xtimerint") == 0 ||
+		    strcmp(name, "Xipi_intr_bitmap_handler") == 0 ||
+		    strcmp(name, "Xcpustop") == 0 ||
+		    strcmp(name, "Xrendezvous") == 0)
 			frame_type = INTERRUPT;
 		else if (strcmp(name, "Xfast_syscall") == 0)
 			frame_type = SYSCALL;
+		/* XXX: These are interrupts with trap frames. */
+		else if (strcmp(name, "Xtimerint") == 0 ||
+		    strcmp(name, "Xcpustop") == 0 ||
+		    strcmp(name, "Xrendezvous") == 0 ||
+		    strcmp(name, "Xipi_intr_bitmap_handler") == 0)
+			frame_type = TRAP_INTERRUPT;
 	}
 
 	/*
@@ -357,6 +366,7 @@ db_nextframe(struct amd64_frame **fp, db_addr_t *ip, struct thread *td)
 			db_printf("--- syscall");
 			decode_syscall(tf->tf_rax, td);
 			break;
+		case TRAP_INTERRUPT:
 		case INTERRUPT:
 			db_printf("--- interrupt");
 			break;
@@ -382,16 +392,14 @@ db_backtrace(struct thread *td, struct trapframe *tf,
 	long *argp;
 	db_expr_t offset;
 	c_db_sym_t sym;
-	int narg, quit;
+	int narg;
 	boolean_t first;
 
 	if (count == -1)
 		count = 1024;
 
 	first = TRUE;
-	quit = 0;
-	db_setup_paging(db_simple_pager, &quit, db_lines_per_page);
-	while (count-- && !quit) {
+	while (count-- && !db_pager_quit) {
 		sym = db_search_symbol(pc, DB_STGY_ANY, &offset);
 		db_symbol_values(sym, &name, NULL);
 
@@ -526,24 +534,23 @@ stack_save(struct stack *st)
 int
 amd64_set_watch(watchnum, watchaddr, size, access, d)
 	int watchnum;
-	unsigned int watchaddr;
+	unsigned long watchaddr;
 	int size;
 	int access;
-	struct dbreg * d;
+	struct dbreg *d;
 {
-	int i;
-	unsigned int mask;
-	
+	int i, len;
+
 	if (watchnum == -1) {
-		for (i = 0, mask = 0x3; i < 4; i++, mask <<= 2)
-			if ((d->dr[7] & mask) == 0)
+		for (i = 0; i < 4; i++)
+			if (!DBREG_DR7_ENABLED(d->dr[7], i))
 				break;
 		if (i < 4)
 			watchnum = i;
 		else
 			return (-1);
 	}
-	
+
 	switch (access) {
 	case DBREG_DR7_EXEC:
 		size = 1; /* size must be 1 for an execution breakpoint */
@@ -551,29 +558,39 @@ amd64_set_watch(watchnum, watchaddr, size, access, d)
 	case DBREG_DR7_WRONLY:
 	case DBREG_DR7_RDWR:
 		break;
-	default : return (-1);
+	default:
+		return (-1);
 	}
-	
+
 	/*
-	 * we can watch a 1, 2, or 4 byte sized location
+	 * we can watch a 1, 2, 4, or 8 byte sized location
 	 */
 	switch (size) {
-	case 1	: mask = 0x00; break;
-	case 2	: mask = 0x01 << 2; break;
-	case 4	: mask = 0x03 << 2; break;
-	default : return (-1);
+	case 1:
+		len = DBREG_DR7_LEN_1;
+		break;
+	case 2:
+		len = DBREG_DR7_LEN_2;
+		break;
+	case 4:
+		len = DBREG_DR7_LEN_4;
+		break;
+	case 8:
+		len = DBREG_DR7_LEN_8;
+		break;
+	default:
+		return (-1);
 	}
 
-	mask |= access;
-
 	/* clear the bits we are about to affect */
-	d->dr[7] &= ~((0x3 << (watchnum*2)) | (0x0f << (watchnum*4+16)));
+	d->dr[7] &= ~DBREG_DR7_MASK(watchnum);
 
 	/* set drN register to the address, N=watchnum */
-	DBREG_DRX(d,watchnum) = watchaddr;
+	DBREG_DRX(d, watchnum) = watchaddr;
 
 	/* enable the watchpoint */
-	d->dr[7] |= (0x2 << (watchnum*2)) | (mask << (watchnum*4+16));
+	d->dr[7] |= DBREG_DR7_SET(watchnum, len, access,
+	    DBREG_DR7_GLOBAL_ENABLE);
 
 	return (watchnum);
 }
@@ -582,15 +599,15 @@ amd64_set_watch(watchnum, watchaddr, size, access, d)
 int
 amd64_clr_watch(watchnum, d)
 	int watchnum;
-	struct dbreg * d;
+	struct dbreg *d;
 {
 
 	if (watchnum < 0 || watchnum >= 4)
 		return (-1);
-	
-	d->dr[7] = d->dr[7] & ~((0x3 << (watchnum*2)) | (0x0f << (watchnum*4+16)));
-	DBREG_DRX(d,watchnum) = 0;
-	
+
+	d->dr[7] &= ~DBREG_DR7_MASK(watchnum);
+	DBREG_DRX(d, watchnum) = 0;
+
 	return (0);
 }
 
@@ -600,38 +617,38 @@ db_md_set_watchpoint(addr, size)
 	db_expr_t addr;
 	db_expr_t size;
 {
-	int avail, wsize;
-	int i;
 	struct dbreg d;
-	
+	int avail, i, wsize;
+
 	fill_dbregs(NULL, &d);
-	
+
 	avail = 0;
-	for(i=0; i<4; i++) {
-		if ((d.dr[7] & (3 << (i*2))) == 0)
+	for(i = 0; i < 4; i++) {
+		if (!DBREG_DR7_ENABLED(d.dr[7], i))
 			avail++;
 	}
-	
-	if (avail*4 < size)
+
+	if (avail * 8 < size)
 		return (-1);
-	
-	for (i=0; i<4 && (size != 0); i++) {
-		if ((d.dr[7] & (3<<(i*2))) == 0) {
-			if (size > 4)
+
+	for (i = 0; i < 4 && (size > 0); i++) {
+		if (!DBREG_DR7_ENABLED(d.dr[7], i)) {
+			if (size >= 8 || (avail == 1 && size > 4))
+				wsize = 8;
+			else if (size > 2)
 				wsize = 4;
 			else
 				wsize = size;
-			if (wsize == 3)
-				wsize++;
-			amd64_set_watch(i, addr, wsize, 
+			amd64_set_watch(i, addr, wsize,
 				       DBREG_DR7_WRONLY, &d);
 			addr += wsize;
 			size -= wsize;
+			avail--;
 		}
 	}
-	
+
 	set_dbregs(NULL, &d);
-	
+
 	return(0);
 }
 
@@ -641,28 +658,27 @@ db_md_clr_watchpoint(addr, size)
 	db_expr_t addr;
 	db_expr_t size;
 {
-	int i;
 	struct dbreg d;
+	int i;
 
 	fill_dbregs(NULL, &d);
 
-	for(i=0; i<4; i++) {
-		if (d.dr[7] & (3 << (i*2))) {
-			if ((DBREG_DRX((&d), i) >= addr) && 
+	for(i = 0; i < 4; i++) {
+		if (DBREG_DR7_ENABLED(d.dr[7], i)) {
+			if ((DBREG_DRX((&d), i) >= addr) &&
 			    (DBREG_DRX((&d), i) < addr+size))
 				amd64_clr_watch(i, &d);
-			
+
 		}
 	}
-	
+
 	set_dbregs(NULL, &d);
-	
+
 	return(0);
 }
 
 
-static 
-char *
+static const char *
 watchtype_str(type)
 	int type;
 {
@@ -678,30 +694,33 @@ watchtype_str(type)
 void
 db_md_list_watchpoints()
 {
-	int i;
 	struct dbreg d;
+	int i, len, type;
 
 	fill_dbregs(NULL, &d);
 
 	db_printf("\nhardware watchpoints:\n");
-	db_printf("  watch    status        type  len     address\n");
-	db_printf("  -----  --------  ----------  ---  ----------\n");
-	for (i=0; i<4; i++) {
-		if (d.dr[7] & (0x03 << (i*2))) {
-			unsigned type, len;
-			type = (d.dr[7] >> (16+(i*4))) & 3;
-			len =  (d.dr[7] >> (16+(i*4)+2)) & 3;
-			db_printf("  %-5d  %-8s  %10s  %3d  0x%016lx\n",
-				  i, "enabled", watchtype_str(type), 
-				  len + 1, DBREG_DRX((&d), i));
-		}
-		else {
+	db_printf("  watch    status        type  len             address\n");
+	db_printf("  -----  --------  ----------  ---  ------------------\n");
+	for (i = 0; i < 4; i++) {
+		if (DBREG_DR7_ENABLED(d.dr[7], i)) {
+			type = DBREG_DR7_ACCESS(d.dr[7], i);
+			len = DBREG_DR7_LEN(d.dr[7], i);
+			if (len == DBREG_DR7_LEN_8)
+				len = 8;
+			else
+				len++;
+			db_printf("  %-5d  %-8s  %10s  %3d  ",
+			    i, "enabled", watchtype_str(type), len);
+			db_printsym((db_addr_t)DBREG_DRX((&d), i), DB_STGY_ANY);
+			db_printf("\n");
+		} else {
 			db_printf("  %-5d  disabled\n", i);
 		}
 	}
-	
+
 	db_printf("\ndebug register values:\n");
-	for (i=0; i<8; i++) {
+	for (i = 0; i < 8; i++) {
 		db_printf("  dr%d 0x%016lx\n", i, DBREG_DRX((&d), i));
 	}
 	db_printf("\n");

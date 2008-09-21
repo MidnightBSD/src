@@ -3,7 +3,7 @@
 ** Forth Inspired Command Language - programming tools
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 20 June 2000
-** $Id: tools.c,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
+** $Id: tools.c,v 1.2 2008-09-21 15:21:33 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -54,7 +54,7 @@
 ** Specify breakpoint default action
 */
 
-/* $FreeBSD: src/sys/boot/ficl/tools.c,v 1.2 2002/04/09 17:45:11 dcs Exp $ */
+/* $FreeBSD: src/sys/boot/ficl/tools.c,v 1.3 2007/03/23 22:26:01 jkim Exp $ */
 
 #ifdef TESTMAIN
 #include <stdlib.h>
@@ -244,10 +244,17 @@ static void seeColon(FICL_VM *pVM, CELL *pc)
                 break;                                                           
             case BRANCH:
                 c = *++pc;
-                if (c.i > 0)
+                if (c.i == 0)
+                    sprintf(cp, "repeat (branch %d)",     pc+c.i-param0);
+                else if (c.i == 1)
                     sprintf(cp, "else (branch %d)",       pc+c.i-param0);
                 else
-                    sprintf(cp, "repeat (branch %d)",     pc+c.i-param0);
+                    sprintf(cp, "endof (branch %d)",       pc+c.i-param0);
+                break;
+
+            case OF:
+                c = *++pc;
+                sprintf(cp, "of (branch %d)",       pc+c.i-param0);
                 break;
 
             case QDO:

@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sys/boot/common/loader.8,v 1.82.2.2 2006/02/14 06:20:14 ru Exp $
+.\" $FreeBSD: src/sys/boot/common/loader.8,v 1.93 2007/05/09 02:37:58 sepotvin Exp $
 .\"
-.Dd September 22, 2005
+.Dd May 8, 2007
 .Dt LOADER 8
 .Os
 .Sh NAME
@@ -159,7 +159,7 @@ Defaults to 10 seconds.
 .Pp
 .It Ic bcachestat
 Displays statistics about disk cache usage.
-For depuration only.
+For debugging only.
 .Pp
 .It Ic boot
 .It Ic boot Ar kernelname Op Cm ...
@@ -423,12 +423,63 @@ userland output (e.g.\& from
 .It Va currdev
 Selects the default device.
 Syntax for devices is odd.
+.It Va init_chroot
+If set to a valid directory in the root file system, it causes
+.Xr init 8
+to perform a
+.Xr chroot 2
+operation on that directory, making it the new root directory.
+That happens before entering single-user mode or multi-user
+mode (but after executing the
+.Va init_script
+if enabled).
 .It Va init_path
 Sets the list of binaries which the kernel will try to run as the initial
 process.
 The first matching binary is used.
 The default list is
-.Dq Li /sbin/init:/sbin/oinit:/sbin/init.bak:/rescue/init:/stand/sysinstall .
+.Dq Li /sbin/init:/sbin/oinit:/sbin/init.bak:\:/rescue/init:/stand/sysinstall .
+.It Va init_script
+If set to a valid file name in the root file system,
+instructs
+.Xr init 8
+to run that script as the very first action,
+before doing anything else.
+Signal handling and exit code interpretation is similar to
+running the
+.Pa /etc/rc
+script.
+In particular, single-user operation is enforced
+if the script terminates with a non-zero exit code,
+or if a SIGTERM is delivered to the
+.Xr init 8
+process (PID 1).
+.It Va init_script
+Defines the shell binary to be used for executing the various shell scripts.
+The default is
+.Dq Li /bin/sh .
+It is used for running the
+.Va init_script
+if set, as well as for the
+.Pa /etc/rc
+and
+.Pa /etc/rc.shutdown
+scripts.
+The value of the corresponding
+.Xr kenv 2
+variable is evaluated every time
+.Xr init 8
+calls a shell script, so it can be changed later on using the
+.Xr kenv 1
+utility.
+In particular, if a non-default shell is used for running an
+.Va init_script ,
+it might be desirable to have that script reset the value of
+.Va init_shell
+back to the default, so that the
+.Pa /etc/rc
+script is executed with the standard shell
+.Pa /bin/sh .
 .It Va interpret
 Has the value
 .Dq Li OK
@@ -509,33 +560,33 @@ compile-time configuration file.
 Set the number of mbuf clusters to be allocated.
 The value cannot be set below the default
 determined when the kernel was compiled.
-Modifies
-.Dv NMBCLUSTERS .
 .It Va kern.ipc.nsfbufs
 Set the number of
 .Xr sendfile 2
 buffers to be allocated.
 Overrides
 .Dv NSFBUFS .
+Not all architectures use such buffers; see
+.Xr sendfile 2
+for details.
 .It Va kern.maxswzone
 Limits the amount of KVM to be used to hold swap
 meta information, which directly governs the
 maximum amount of swap the system can support.
 This value is specified in bytes of KVA space
-and defaults to around 70MBytes.
+and defaults to 32MBytes on i386 and amd64.
 Care should be taken
 to not reduce this value such that the actual
 amount of configured swap exceeds 1/2 the
 kernel-supported swap.
-The default 70MB allows
-the kernel to support a maximum of (approximately)
-14GB of configured swap.
-Only mess around with
+The default of 32MB allows
+the kernel to support a maximum of ~7GB of swap.
+Only change
 this parameter if you need to greatly extend the
 KVM reservation for other resources such as the
 buffer cache or
-.Dv NMBCLUSTERS .
-Modifies
+.Va kern.ipc.nmbclusters .
+Modifies kernel option
 .Dv VM_SWZONE_SIZE_MAX .
 .It Va kern.maxbcache
 Limits the amount of KVM reserved for use by the
@@ -547,7 +598,7 @@ KVM in large-memory machine configurations.
 Only mess around with this parameter if you need to
 greatly extend the KVM reservation for other resources
 such as the swap zone or
-.Dv NMBCLUSTERS .
+.Va kern.ipc.nmbclusters .
 Note that
 the NBUF parameter will override this limit.
 Modifies
@@ -564,6 +615,15 @@ Sets the size of kernel memory (bytes).
 This overrides the value determined when the kernel was compiled.
 Modifies
 .Dv VM_KMEM_SIZE .
+.It Va vm.kmem_size_min
+.It Va vm.kmem_size_max
+Sets the minimum and maximum (respectively) amount of kernel memory
+that will be automatically allocated by the kernel.
+These override the values determined when the kernel was compiled.
+Modifies
+.Dv VM_KMEM_SIZE_MIN
+and
+.Dv VM_KMEM_SIZE_MAX .
 .El
 .Ss BUILTIN PARSER
 When a builtin command is executed, the rest of the line is taken
@@ -800,9 +860,6 @@ Does not work with
 .It arch-i386
 .Ic TRUE
 if the architecture is IA32.
-.It arch-alpha
-.Ic TRUE
-if the architecture is AXP.
 .It FreeBSD_version
 .Fx
 version at compile time.

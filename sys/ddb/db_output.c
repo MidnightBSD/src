@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_output.c,v 1.33 2005/01/06 01:34:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_output.c,v 1.37 2006/10/10 06:36:01 bde Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -66,15 +66,15 @@ db_expr_t	db_tab_stop_width = 8;		/* how wide are tab stops? */
 	((((i) + db_tab_stop_width) / db_tab_stop_width) * db_tab_stop_width)
 db_expr_t	db_max_width = 79;		/* output line width */
 db_expr_t	db_lines_per_page = 20;		/* lines per page */
+volatile int	db_pager_quit;			/* user requested quit */
 static int	db_newlines;			/* # lines this page */
-static int	db_maxlines = -1;		/* max lines/page when paging */
-static db_page_calloutfcn_t *db_page_callout = NULL;
-static void	*db_page_callout_arg = NULL;
+static int	db_maxlines;			/* max lines/page when paging */
 static int	ddb_use_printf = 0;
 SYSCTL_INT(_debug, OID_AUTO, ddb_use_printf, CTLFLAG_RW, &ddb_use_printf, 0,
     "use printf for all ddb output");
 
 static void	db_putchar(int c, void *arg);
+static void	db_pager(void);
 
 /*
  * Force pending whitespace.
@@ -120,12 +120,10 @@ db_putchar(c, arg)
 			return;
 		if (c == '\r' || c == '\n')
 			db_check_interrupt();
-		if (c == '\n' && db_maxlines > 0 && db_page_callout != NULL) {
+		if (c == '\n' && db_maxlines > 0) {
 			db_newlines++;
-			if (db_newlines >= db_maxlines) {
-				db_maxlines = -1;
-				db_page_callout(db_page_callout_arg);
-			}
+			if (db_newlines >= db_maxlines)
+				db_pager();
 		}
 		return;
 	}
@@ -144,22 +142,18 @@ db_putchar(c, arg)
 	}
 	else if (c == '\n') {
 	    /* Newline */
-	    db_force_whitespace();
 	    cnputc(c);
 	    db_output_position = 0;
 	    db_last_non_space = 0;
 	    db_check_interrupt();
-	    if (db_maxlines > 0 && db_page_callout != NULL) {
+	    if (db_maxlines > 0) {
 		    db_newlines++;
-		    if (db_newlines >= db_maxlines) {
-			    db_maxlines = -1;
-			    db_page_callout(db_page_callout_arg);
-		    }
+		    if (db_newlines >= db_maxlines)
+			    db_pager();
 	    }
 	}
 	else if (c == '\r') {
 	    /* Return */
-	    db_force_whitespace();
 	    cnputc(c);
 	    db_output_position = 0;
 	    db_last_non_space = 0;
@@ -181,24 +175,34 @@ db_putchar(c, arg)
 }
 
 /*
- * Register callout for providing a pager for output.
+ * Turn on the pager.
  */
 void
-db_setup_paging(db_page_calloutfcn_t *callout, void *arg, int maxlines)
+db_enable_pager(void)
 {
-
-	db_page_callout = callout;
-	db_page_callout_arg = arg;
-	db_maxlines = maxlines;
-	db_newlines = 0;
+	if (db_maxlines == 0) {
+		db_maxlines = db_lines_per_page;
+		db_newlines = 0;
+		db_pager_quit = 0;
+	}
 }
 
 /*
- * A simple paging callout function.  If the argument is not null, it
- * points to an integer that will be set to 1 if the user asks to quit.
+ * Turn off the pager.
  */
 void
-db_simple_pager(void *arg)
+db_disable_pager(void)
+{
+	db_maxlines = 0;
+}
+
+/*
+ * A simple paging callout function.  It supports several simple more(1)-like
+ * commands as well as a quit command that sets db_pager_quit which db
+ * commands can poll to see if they should terminate early.
+ */
+void
+db_pager(void)
 {
 	int c, done;
 
@@ -211,20 +215,18 @@ db_simple_pager(void *arg)
 		case 'j':
 		case '\n':
 			/* Just one more line. */
-			db_setup_paging(db_simple_pager, arg, 1);
+			db_maxlines = 1;
 			done++;
 			break;
 		case 'd':
 			/* Half a page. */
-			db_setup_paging(db_simple_pager, arg,
-			    db_lines_per_page / 2);
+			db_maxlines = db_lines_per_page / 2;
 			done++;
 			break;
 		case 'f':
 		case ' ':
 			/* Another page. */
-			db_setup_paging(db_simple_pager, arg,
-			    db_lines_per_page);
+			db_maxlines = db_lines_per_page;
 			done++;
 			break;
 		case 'q':
@@ -232,11 +234,10 @@ db_simple_pager(void *arg)
 		case 'x':
 		case 'X':
 			/* Quit */
-			if (arg != NULL) {
-				*(int *)arg = 1;
-				done++;
-				break;
-			}
+			db_maxlines = 0;
+			db_pager_quit = 1;
+			done++;
+			break;
 #if 0
 			/* FALLTHROUGH */
 		default:
@@ -244,7 +245,10 @@ db_simple_pager(void *arg)
 #endif
 		}
 	}
-	db_printf("        \r");
+	db_printf("        ");
+	db_force_whitespace();
+	db_printf("\r");
+	db_newlines = 0;
 }
 
 /*
@@ -300,8 +304,8 @@ db_iprintf(fmt)
  * End line if too long.
  */
 void
-db_end_line()
+db_end_line(int field_width)
 {
-	if (db_output_position >= db_max_width)
+	if (db_output_position + field_width > db_max_width)
 	    db_printf("\n");
 }

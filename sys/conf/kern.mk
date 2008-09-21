@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/kern.mk,v 1.45 2005/03/31 22:53:58 peter Exp $
+# $FreeBSD: src/sys/conf/kern.mk,v 1.52 2007/05/24 21:53:42 obrien Exp $
 
 #
 # Warning flags for compiling the kernel and components of the kernel.
@@ -12,7 +12,13 @@ CWARNFLAGS=
 .else
 CWARNFLAGS?=	-Wall -Wredundant-decls -Wnested-externs -Wstrict-prototypes \
 		-Wmissing-prototypes -Wpointer-arith -Winline -Wcast-qual \
-		-fformat-extensions -std=c99
+		${_wundef} ${_Wno_pointer_sign} -fformat-extensions
+.if !defined(WITH_GCC3)
+_Wno_pointer_sign=-Wno-pointer-sign
+.endif
+.if !defined(NO_UNDEF)
+_wundef=	-Wundef
+.endif
 .endif
 #
 # The following flags are next up for working on:
@@ -31,18 +37,8 @@ CWARNFLAGS?=	-Wall -Wredundant-decls -Wnested-externs -Wstrict-prototypes \
 #
 .if ${MACHINE_ARCH} == "i386" && ${CC} != "icc"
 CFLAGS+=	-mno-align-long-strings -mpreferred-stack-boundary=2 \
-		-mno-mmx -mno-3dnow -mno-sse -mno-sse2
+		-mno-mmx -mno-3dnow -mno-sse -mno-sse2 -mno-sse3
 INLINE_LIMIT?=	8000
-.endif
-
-#
-# On the alpha, make sure that we don't use floating-point registers and
-# allow the use of BWX etc instructions (only needed for low-level i/o).
-# Also, reserve register t7 to point at per-cpu global variables.
-#
-.if ${MACHINE_ARCH} == "alpha"
-CFLAGS+=	-mno-fp-regs -ffixed-8 -Wa,-mev6
-INLINE_LIMIT?=	15000
 .endif
 
 .if ${MACHINE_ARCH} == "arm"
@@ -53,7 +49,7 @@ INLINE_LIMIT?=	8000
 # a very small subset of float registers for integer divides.
 #
 .if ${MACHINE_ARCH} == "ia64"
-CFLAGS+=	-ffixed-r13 -mfixed-range=f32-f127 -mno-sdata
+CFLAGS+=	-ffixed-r13 -mfixed-range=f32-f127 -fpic #-mno-sdata
 INLINE_LIMIT?=	15000
 .endif
 
@@ -63,7 +59,7 @@ INLINE_LIMIT?=	15000
 # operations which it has a tendency to do.
 #
 .if ${MACHINE_ARCH} == "sparc64"
-CFLAGS+=	-mcmodel=medlow -msoft-float
+CFLAGS+=	-mcmodel=medany -msoft-float
 INLINE_LIMIT?=	15000
 .endif
 

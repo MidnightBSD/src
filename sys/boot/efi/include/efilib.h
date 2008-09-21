@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2000 Doug Rabson
+ * Copyright (c) 2006 Marcel Moolenaar
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,18 +24,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/boot/efi/include/efilib.h,v 1.4 2004/11/28 00:30:22 marcel Exp $
+ * $FreeBSD: src/sys/boot/efi/include/efilib.h,v 1.6 2006/11/05 22:03:02 marcel Exp $
  */
+
+#include <stand.h>
 
 extern EFI_HANDLE		IH;
 extern EFI_SYSTEM_TABLE		*ST;
 extern EFI_BOOT_SERVICES	*BS;
 extern EFI_RUNTIME_SERVICES	*RS;
 
+extern struct devsw efifs_dev;
+extern struct fs_ops efifs_fsops;
+
+extern struct devsw efinet_dev;
+extern struct netif_driver efinetif;
+
 void *efi_get_table(EFI_GUID *tbl);
 void efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table);
 
-EFI_PHYSICAL_ADDRESS efimd_va2pa(EFI_VIRTUAL_ADDRESS);
+int efi_register_handles(struct devsw *, EFI_HANDLE *, int);
+EFI_HANDLE efi_find_handle(struct devsw *, int);
+int efi_handle_lookup(EFI_HANDLE, struct devsw **, int *);
+
+int efi_status_to_errno(EFI_STATUS);
+time_t efi_time(EFI_TIME *);
 
 EFI_STATUS main(int argc, CHAR16 *argv[]);
 void exit(EFI_STATUS status);

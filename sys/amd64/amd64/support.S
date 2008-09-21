@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/amd64/support.S,v 1.115 2005/06/24 00:45:01 peter Exp $
+ * $FreeBSD: src/sys/amd64/amd64/support.S,v 1.128 2007/08/22 05:06:14 jkoshy Exp $
  */
 
 #include "opt_ddb.h"
@@ -59,7 +59,7 @@ eintrnames:
 /* done */
 ENTRY(bzero)
 	movq	%rsi,%rcx
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	shrq	$3,%rcx
 	cld
 	rep
@@ -69,12 +69,13 @@ ENTRY(bzero)
 	rep
 	stosb
 	ret
-
+END(bzero)
+	
 /* Address: %rdi */
 ENTRY(pagezero)
 	movq	$-PAGE_SIZE,%rdx
 	subq	%rdx,%rdi
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 1:
 	movnti	%rax,(%rdi,%rdx)
 	movnti	%rax,8(%rdi,%rdx)
@@ -84,6 +85,7 @@ ENTRY(pagezero)
 	jne	1b
 	sfence
 	ret
+END(pagezero)
 
 ENTRY(bcmp)
 	movq	%rdx,%rcx
@@ -101,6 +103,7 @@ ENTRY(bcmp)
 	setne	%al
 	movsbl	%al,%eax
 	ret
+END(bcmp)
 
 /*
  * bcopy(src, dst, cnt)
@@ -144,7 +147,8 @@ ENTRY(bcopy)
 	movsq
 	cld
 	ret
-
+END(bcopy)
+	
 /*
  * Note: memcpy does not support overlapping copies
  */
@@ -159,6 +163,7 @@ ENTRY(memcpy)
 	rep
 	movsb
 	ret
+END(memcpy)
 
 /*
  * pagecopy(%rdi=from, %rsi=to)
@@ -185,6 +190,7 @@ ENTRY(pagecopy)
 	jne	2b
 	sfence
 	ret
+END(pagecopy)
 
 /* fillw(pat, base, cnt) */  
 /*       %rdi,%rsi, %rdx */
@@ -196,6 +202,7 @@ ENTRY(fillw)
 	rep
 	stosw
 	ret
+END(fillw)
 
 /*****************************************************************************/
 /* copyout and fubyte family                                                 */
@@ -242,7 +249,7 @@ ENTRY(copyout)
 	cmpq	%rcx,%rax
 	ja	copyout_fault
 
-	xchgq	%rdi, %rsi
+	xchgq	%rdi,%rsi
 	/* bcopy(%rsi, %rdi, %rdx) */
 	movq	%rdx,%rcx
 
@@ -256,7 +263,7 @@ ENTRY(copyout)
 	movsb
 
 done_copyout:
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rdx
 	movq	%rax,PCB_ONFAULT(%rdx)
 	ret
@@ -267,6 +274,7 @@ copyout_fault:
 	movq	$0,PCB_ONFAULT(%rdx)
 	movq	$EFAULT,%rax
 	ret
+END(copyout)
 
 /*
  * copyin(from_user, to_kernel, len) - MP SAFE
@@ -288,8 +296,8 @@ ENTRY(copyin)
 	cmpq	%rcx,%rax
 	ja	copyin_fault
 
-	xchgq	%rdi, %rsi
-	movq	%rdx, %rcx
+	xchgq	%rdi,%rsi
+	movq	%rdx,%rcx
 	movb	%cl,%al
 	shrq	$3,%rcx				/* copy longword-wise */
 	cld
@@ -301,7 +309,7 @@ ENTRY(copyin)
 	movsb
 
 done_copyin:
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rdx
 	movq	%rax,PCB_ONFAULT(%rdx)
 	ret
@@ -312,12 +320,13 @@ copyin_fault:
 	movq	$0,PCB_ONFAULT(%rdx)
 	movq	$EFAULT,%rax
 	ret
+END(copyin)
 
 /*
- * casuptr.  Compare and set user pointer.  Returns -1 or the current value.
+ * casuword32.  Compare and set user integer.  Returns -1 or the current value.
  *        dst = %rdi, old = %rsi, new = %rdx
  */
-ENTRY(casuptr)
+ENTRY(casuword32)
 	movq	PCPU(CURPCB),%rcx
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 
@@ -325,11 +334,40 @@ ENTRY(casuptr)
 	cmpq	%rax,%rdi			/* verify address is valid */
 	ja	fusufault
 
-	movq	%rsi, %rax			/* old */
+	movl	%esi,%eax			/* old */
 #ifdef SMP
 	lock
 #endif
-	cmpxchgq %rdx, (%rdi)			/* new = %rdx */
+	cmpxchgl %edx,(%rdi)			/* new = %edx */
+
+	/*
+	 * The old value is in %eax.  If the store succeeded it will be the
+	 * value we expected (old) from before the store, otherwise it will
+	 * be the current value.
+	 */
+
+	movq	PCPU(CURPCB),%rcx
+	movq	$0,PCB_ONFAULT(%rcx)
+	ret
+END(casuword32)
+
+/*
+ * casuword.  Compare and set user word.  Returns -1 or the current value.
+ *        dst = %rdi, old = %rsi, new = %rdx
+ */
+ENTRY(casuword)
+	movq	PCPU(CURPCB),%rcx
+	movq	$fusufault,PCB_ONFAULT(%rcx)
+
+	movq	$VM_MAXUSER_ADDRESS-4,%rax
+	cmpq	%rax,%rdi			/* verify address is valid */
+	ja	fusufault
+
+	movq	%rsi,%rax			/* old */
+#ifdef SMP
+	lock
+#endif
+	cmpxchgq %rdx,(%rdi)			/* new = %rdx */
 
 	/*
 	 * The old value is in %eax.  If the store succeeded it will be the
@@ -341,6 +379,7 @@ ENTRY(casuptr)
 	movq	$fusufault,PCB_ONFAULT(%rcx)
 	movq	$0,PCB_ONFAULT(%rcx)
 	ret
+END(casuword)
 
 /*
  * Fetch (load) a 64-bit word, a 32-bit word, a 16-bit word, or an 8-bit
@@ -360,6 +399,8 @@ ENTRY(fuword)
 	movq	(%rdi),%rax
 	movq	$0,PCB_ONFAULT(%rcx)
 	ret
+END(fuword64)	
+END(fuword)
 
 ENTRY(fuword32)
 	movq	PCPU(CURPCB),%rcx
@@ -372,6 +413,7 @@ ENTRY(fuword32)
 	movl	(%rdi),%eax
 	movq	$0,PCB_ONFAULT(%rcx)
 	ret
+END(fuword32)
 
 /*
  * fuswintr() and suswintr() are specialized variants of fuword16() and
@@ -384,6 +426,8 @@ ALTENTRY(suswintr)
 ENTRY(fuswintr)
 	movq	$-1,%rax
 	ret
+END(suswintr)
+END(fuswintr)
 
 ENTRY(fuword16)
 	movq	PCPU(CURPCB),%rcx
@@ -396,6 +440,7 @@ ENTRY(fuword16)
 	movzwl	(%rdi),%eax
 	movq	$0,PCB_ONFAULT(%rcx)
 	ret
+END(fuword16)
 
 ENTRY(fubyte)
 	movq	PCPU(CURPCB),%rcx
@@ -408,11 +453,12 @@ ENTRY(fubyte)
 	movzbl	(%rdi),%eax
 	movq	$0,PCB_ONFAULT(%rcx)
 	ret
+END(fubyte)
 
 	ALIGN_TEXT
 fusufault:
 	movq	PCPU(CURPCB),%rcx
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	%rax,PCB_ONFAULT(%rcx)
 	decq	%rax
 	ret
@@ -432,10 +478,12 @@ ENTRY(suword)
 	ja	fusufault
 
 	movq	%rsi,(%rdi)
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx
 	movq	%rax,PCB_ONFAULT(%rcx)
 	ret
+END(suword64)
+END(suword)
 
 ENTRY(suword32)
 	movq	PCPU(CURPCB),%rcx
@@ -446,10 +494,11 @@ ENTRY(suword32)
 	ja	fusufault
 
 	movl	%esi,(%rdi)
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx
 	movq	%rax,PCB_ONFAULT(%rcx)
 	ret
+END(suword32)
 
 ENTRY(suword16)
 	movq	PCPU(CURPCB),%rcx
@@ -460,10 +509,11 @@ ENTRY(suword16)
 	ja	fusufault
 
 	movw	%si,(%rdi)
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx		/* restore trashed register */
 	movq	%rax,PCB_ONFAULT(%rcx)
 	ret
+END(suword16)
 
 ENTRY(subyte)
 	movq	PCPU(CURPCB),%rcx
@@ -473,12 +523,13 @@ ENTRY(subyte)
 	cmpq	%rax,%rdi			/* verify address validity */
 	ja	fusufault
 
-	movl	%esi, %eax
+	movl	%esi,%eax
 	movb	%al,(%rdi)
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	movq	PCPU(CURPCB),%rcx		/* restore trashed register */
 	movq	%rax,PCB_ONFAULT(%rcx)
 	ret
+END(subyte)
 
 /*
  * copyinstr(from, to, maxlen, int *lencopied) - MP SAFE
@@ -490,9 +541,9 @@ ENTRY(subyte)
  *	return the actual length in *lencopied.
  */
 ENTRY(copyinstr)
-	movq	%rdx, %r8			/* %r8 = maxlen */
-	movq	%rcx, %r9			/* %r9 = *len */
-	xchgq	%rdi, %rsi			/* %rdi = from, %rsi = to */
+	movq	%rdx,%r8			/* %r8 = maxlen */
+	movq	%rcx,%r9			/* %r9 = *len */
+	xchgq	%rdi,%rsi			/* %rdi = from, %rsi = to */
 	movq	PCPU(CURPCB),%rcx
 	movq	$cpystrflt,PCB_ONFAULT(%rcx)
 
@@ -522,7 +573,7 @@ ENTRY(copyinstr)
 
 	/* Success -- 0 byte reached */
 	decq	%rdx
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	jmp	cpystrflt_x
 3:
 	/* rdx is zero - return ENAMETOOLONG or EFAULT */
@@ -547,16 +598,16 @@ cpystrflt_x:
 	movq	%r8,(%r9)
 1:
 	ret
-
+END(copyinstr)
 
 /*
  * copystr(from, to, maxlen, int *lencopied) - MP SAFE
  *         %rdi, %rsi, %rdx, %rcx
  */
 ENTRY(copystr)
-	movq	%rdx, %r8			/* %r8 = maxlen */
+	movq	%rdx,%r8			/* %r8 = maxlen */
 
-	xchgq	%rdi, %rsi
+	xchgq	%rdi,%rsi
 	incq	%rdx
 	cld
 1:
@@ -569,7 +620,7 @@ ENTRY(copystr)
 
 	/* Success -- 0 byte reached */
 	decq	%rdx
-	xorq	%rax,%rax
+	xorl	%eax,%eax
 	jmp	6f
 4:
 	/* rdx is zero -- return ENAMETOOLONG */
@@ -577,13 +628,14 @@ ENTRY(copystr)
 
 6:
 
-	testq	%rcx, %rcx
+	testq	%rcx,%rcx
 	jz	7f
 	/* set *lencopied and return %rax */
-	subq	%rdx, %r8
-	movq	%r8, (%rcx)
+	subq	%rdx,%r8
+	movq	%r8,(%rcx)
 7:
 	ret
+END(copystr)
 
 /*
  * Handling of special amd64 registers and descriptor tables etc
@@ -598,7 +650,7 @@ ENTRY(lgdt)
 	jmp	1f
 	nop
 1:
-	movl	$KDSEL, %eax
+	movl	$KDSEL,%eax
 	movl	%eax,%ds
 	movl	%eax,%es
 	movl	%eax,%fs	/* Beware, use wrmsr to set 64 bit base */
@@ -611,6 +663,7 @@ ENTRY(lgdt)
 	pushq	%rax
 	MEXITCOUNT
 	lretq
+END(lgdt)
 
 /*****************************************************************************/
 /* setjump, longjump                                                         */
@@ -628,6 +681,7 @@ ENTRY(setjmp)
 	movq	%rdx,56(%rdi)			/* save rip */
 	xorl	%eax,%eax			/* return(0); */
 	ret
+END(setjmp)
 
 ENTRY(longjmp)
 	movq	0(%rdi),%rbx			/* restore rbx */
@@ -642,6 +696,7 @@ ENTRY(longjmp)
 	xorl	%eax,%eax			/* return(1); */
 	incl	%eax
 	ret
+END(longjmp)
 
 /*
  * Support for BB-profiling (gcc -a).  The kernbb program will extract

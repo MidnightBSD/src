@@ -1,26 +1,23 @@
-# Makefile.arm -- with config changes.
+# Makefile.sparc64 -- with config changes.
 # Copyright 1990 W. Jolitz
 #	from: @(#)Makefile.i386	7.1 5/10/91
-# $FreeBSD: src/sys/conf/Makefile.arm,v 1.10.2.1 2005/10/28 19:04:03 jhb Exp $
+# $FreeBSD: src/sys/conf/Makefile.sun4v,v 1.3 2007/05/16 17:23:54 wkoszek Exp $
 #
 # Makefile for FreeBSD
 #
 # This makefile is constructed from a machine description:
 #	config machineid
 # Most changes should be made in the machine description
-#	/sys/arm/conf/``machineid''
+#	/sys/sparc64/conf/``machineid''
 # after which you should do
 #	 config machineid
 # Generic makefile changes should be made in
-#	/sys/conf/Makefile.arm
+#	/sys/conf/Makefile.sparc64
 # after which config should be rerun for all machines.
 #
 
 # Which version of config(8) is required.
-%VERSREQ=	600003
-
-# Temporary stuff while we're still embryonic
-NO_MODULES=
+%VERSREQ=	600004
 
 STD8X16FONT?=	iso
 
@@ -33,17 +30,8 @@ S=	../../..
 .endif
 .include "$S/conf/kern.pre.mk"
 
-SYSTEM_LD:= ${SYSTEM_LD:$S/conf/ldscript.$M=ldscript.$M}
-SYSTEM_DEP:= ${SYSTEM_DEP:$S/conf/ldscript.$M=ldscript.$M}
+MDOBJS=	exception.o interrupt.o
 
-.if defined(ARM_BIG_ENDIAN)
-CC += -mbig-endian
-SYSTEM_LD += -EB
-.endif
-
-.if !defined(DEBUG)
-CFLAGS += -mno-apcs-frame
-.endif
 %BEFORE_DEPEND
 
 %OBJS
@@ -56,9 +44,6 @@ CFLAGS += -mno-apcs-frame
 
 %CLEAN
 
-ldscript.$M: $S/conf/ldscript.$M
-	cat $S/conf/ldscript.$M|sed s/KERNPHYSADDR/${KERNPHYSADDR}/g| \
-	  sed s/KERNVIRTADDR/${KERNVIRTADDR}/g > ldscript.$M
 %RULES
-	
+
 .include "$S/conf/kern.post.mk"

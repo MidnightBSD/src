@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/pc/bios.h,v 1.18 2004/09/24 00:42:36 peter Exp $
+ * $FreeBSD: src/sys/amd64/include/pc/bios.h,v 1.19 2005/07/21 09:48:36 phk Exp $
  */
 
 #ifndef _MACHINE_PC_BIOS_H_
@@ -48,7 +48,22 @@ struct bios_smap {
     u_int32_t	type;
 } __packed;
 
-const u_char *bios_string(u_int from, u_int to, const u_char *string, int len);
+struct bios_oem_signature {
+	char * anchor;		/* search anchor string in BIOS memory */
+	size_t offset;		/* offset from anchor (may be negative) */
+	size_t totlen;		/* total length of BIOS string to copy */
+} __packed;
+struct bios_oem_range {
+	u_int from;		/* shouldn't be below 0xe0000 */
+	u_int to;		/* shouldn't be above 0xfffff */
+} __packed;
+struct bios_oem {
+	struct bios_oem_range range;
+	struct bios_oem_signature signature[];
+} __packed;
+
+extern int
+bios_oem_strings(struct bios_oem *oem, u_char *buffer, size_t maxlen);
 
 
 #endif /* _MACHINE_PC_BIOS_H_ */

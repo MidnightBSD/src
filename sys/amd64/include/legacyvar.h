@@ -23,19 +23,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/legacyvar.h,v 1.6.2.1 2005/09/18 02:55:10 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/legacyvar.h,v 1.8 2007/09/30 11:05:13 marius Exp $
  */
 
 #ifndef _MACHINE_LEGACYVAR_H_
 #define	_MACHINE_LEGACYVAR_H_
 
 enum legacy_device_ivars {
+	LEGACY_IVAR_PCIDOMAIN,
 	LEGACY_IVAR_PCIBUS
 };
 
 #define LEGACY_ACCESSOR(var, ivar, type)				\
     __BUS_ACCESSOR(legacy, var, LEGACY, ivar, type)
 
+LEGACY_ACCESSOR(pcidomain,		PCIDOMAIN,	uint32_t)
 LEGACY_ACCESSOR(pcibus,			PCIBUS,		uint32_t)
 
 #undef LEGACY_ACCESSOR

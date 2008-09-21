@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/amd64/include/signal.h,v 1.28 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/signal.h,v 1.29 2005/08/20 16:44:40 stefanf Exp $
  */
 
 #ifndef _MACHINE_SIGNAL_H_
@@ -42,14 +42,6 @@
  */
 
 typedef long sig_atomic_t;
-
-#if __XSI_VISIBLE
-/*
- * Minimum signal stack size. The current signal frame
- * for i386 is 408 bytes large.
- */
-#define	MINSIGSTKSZ	(512 * 4)
-#endif
 
 #if __BSD_VISIBLE
 #include <machine/trap.h>	/* codes for SIGILL, SIGFPE */

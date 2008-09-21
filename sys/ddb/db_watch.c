@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_watch.c,v 1.26 2005/01/06 01:34:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_watch.c,v 1.28 2006/11/17 16:41:56 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -65,11 +65,6 @@ static boolean_t	db_find_watchpoint(vm_map_t map, db_addr_t addr,
 static void		db_list_watchpoints(void);
 static void		db_set_watchpoint(vm_map_t map, db_addr_t addr,
 				       vm_size_t size);
-
-int  db_md_set_watchpoint(db_expr_t addr, db_expr_t size);
-int  db_md_clr_watchpoint(db_expr_t addr, db_expr_t size);
-void db_md_list_watchpoints(void);
-
 
 static db_watchpoint_t
 db_watchpoint_alloc()
@@ -173,11 +168,19 @@ db_list_watchpoints()
 	    return;
 	}
 
+#ifdef __LP64__
+	db_printf(" Map                Address          Size\n");
+#else
 	db_printf(" Map        Address  Size\n");
+#endif
 	for (watch = db_watchpoint_list;
 	     watch != 0;
 	     watch = watch->link)
+#ifdef __LP64__
+	    db_printf("%s%16p  %16lx  %lx\n",
+#else
 	    db_printf("%s%8p  %8lx  %lx\n",
+#endif
 		      db_map_current(watch->map) ? "*" : " ",
 		      (void *)watch->map, (long)watch->loaddr,
 		      (long)watch->hiaddr - (long)watch->loaddr);

@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)frame.h	5.2 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/amd64/include/frame.h,v 1.28 2004/07/10 22:39:56 marcel Exp $
+ * $FreeBSD: src/sys/amd64/include/frame.h,v 1.30 2005/12/22 22:16:05 jhb Exp $
  */
 
 #ifndef _MACHINE_FRAME_H_
@@ -74,66 +74,6 @@ struct trapframe {
 	register_t	tf_rflags;
 	register_t	tf_rsp;
 	register_t	tf_ss;
-};
-
-/* Interrupt stack frame */
-
-struct intrframe {
-	register_t	if_rdi;
-	register_t	if_rsi;
-	register_t	if_rdx;
-	register_t	if_rcx;
-	register_t	if_r8;
-	register_t	if_r9;
-	register_t	if_rax;
-	register_t	if_rbx;
-	register_t	if_rbp;
-	register_t	if_r10;
-	register_t	if_r11;
-	register_t	if_r12;
-	register_t	if_r13;
-	register_t	if_r14;
-	register_t	if_r15;
-	register_t	:64;		/* compat with trap frame - trapno */
-	register_t	:64;		/* compat with trap frame - addr */
-	register_t	:64;		/* compat with trap frame - flags */
-	register_t	:64;		/* compat with trap frame - err */
-	/* below portion defined in hardware */
-	register_t	if_rip;
-	register_t	if_cs;
-	register_t	if_rflags;
-	register_t	if_rsp;
-	register_t	if_ss;
-};
-
-/* frame of clock (same as interrupt frame) */
-
-struct clockframe {
-	register_t	cf_rdi;
-	register_t	cf_rsi;
-	register_t	cf_rdx;
-	register_t	cf_rcx;
-	register_t	cf_r8;
-	register_t	cf_r9;
-	register_t	cf_rax;
-	register_t	cf_rbx;
-	register_t	cf_rbp;
-	register_t	cf_r10;
-	register_t	cf_r11;
-	register_t	cf_r12;
-	register_t	cf_r13;
-	register_t	cf_r14;
-	register_t	cf_r15;
-	register_t	:64;		/* compat with trap frame - trapno */
-	register_t	:64;		/* compat with trap frame - addr */
-	register_t	:64;		/* compat with trap frame - flags */
-	register_t	:64;		/* compat with trap frame - err */
-	/* below portion defined in hardware */
-	register_t	cf_rip;
-	register_t	cf_cs;
-	register_t	cf_rflags;
-	register_t	cf_rsp;
-	register_t	cf_ss;
 };
 
 #endif /* _MACHINE_FRAME_H_ */

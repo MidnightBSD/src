@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/boot/ficl/unix.c,v 1.1 2001/04/29 02:36:34 dcs Exp $ */
+/* $FreeBSD: src/sys/boot/ficl/unix.c,v 1.2 2007/03/23 22:26:01 jkim Exp $ */
 
 #include <string.h>
 #include <netinet/in.h>
@@ -8,9 +8,9 @@
 
 
 unsigned long ficlNtohl(unsigned long number)
-	{
-	return ntohl(number);
-	}
+{
+    return ntohl(number);
+}
 
 
 

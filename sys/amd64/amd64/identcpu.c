@@ -39,12 +39,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/identcpu.c,v 1.136.2.3 2006/04/24 18:21:54 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/identcpu.c,v 1.154 2007/05/30 14:23:26 des Exp $");
 
 #include "opt_cpu.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
+#include <sys/cpu.h>
+#include <sys/eventhandler.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
@@ -69,6 +71,8 @@ void panicifcpuunsupported(void);
 
 static void print_AMD_info(void);
 static void print_AMD_assoc(int i);
+void setPQL2(int *const size, int *const ways);
+static void setPQL2_AMD(int *const size, int *const ways);
 
 int	cpu_class;
 char machine[] = "amd64";
@@ -92,6 +96,9 @@ static struct {
 	{ "Clawhammer",		CPUCLASS_K8 },		/* CPU_CLAWHAMMER */
 	{ "Sledgehammer",	CPUCLASS_K8 },		/* CPU_SLEDGEHAMMER */
 };
+
+extern int pq_l2size;
+extern int pq_l2nways;
 
 void
 printcpuinfo(void)
@@ -350,7 +357,8 @@ printcpuinfo(void)
 			else if (strcmp(cpu_vendor, "GenuineIntel") == 0 &&
 			    (cpu_high >= 4)) {
 				cpuid_count(4, 0, regs);
-				cmp = ((regs[0] & 0xfc000000) >> 26) + 1;
+				if ((regs[0] & 0x1f) != 0)
+					cmp = ((regs[0] >> 26) & 0x3f) + 1;
 			}
 			if (cmp > 1)
 				printf("\n  Cores per package: %d", cmp);
@@ -392,6 +400,21 @@ panicifcpuunsupported(void)
 	}
 }
 
+
+/* Update TSC freq with the value indicated by the caller. */
+static void
+tsc_freq_changed(void *arg, const struct cf_level *level, int status)
+{
+	/* If there was an error during the transition, don't do anything. */
+	if (status != 0)
+		return;
+
+	/* Total setting for this level gives the new frequency in MHz. */
+	hw_clockrate = level->total_set.freq;
+}
+
+EVENTHANDLER_DEFINE(cpufreq_post_change, tsc_freq_changed, NULL,
+    EVENTHANDLER_PRI_ANY);
 
 /*
  * Final stage of CPU identification. -- Should I check TI?
@@ -520,4 +543,31 @@ print_AMD_info(void)
 		printf(", %d lines/tag", (regs[2] >> 8) & 0x0f);
 		print_AMD_l2_assoc((regs[2] >> 12) & 0x0f);	
 	}
+}
+
+static void             
+setPQL2_AMD(int *const size, int *const ways)
+{
+	if (cpu_exthigh >= 0x80000006) {
+		u_int regs[4];
+
+		do_cpuid(0x80000006, regs);
+		*size = regs[2] >> 16;
+		*ways = (regs[2] >> 12) & 0x0f;
+		switch (*ways) {
+		case 0:				/* disabled/not present */
+		case 15:			/* fully associative */
+		default: *ways = 1; break;	/* reserved configuration */
+		case 4: *ways = 4; break;
+		case 6: *ways = 8; break;
+		case 8: *ways = 16; break;
+		}
+	}
+}
+
+void
+setPQL2(int *const size, int *const ways)
+{
+	if (strcmp(cpu_vendor, "AuthenticAMD") == 0)
+		setPQL2_AMD(size, ways);
 }

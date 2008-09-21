@@ -1,10 +1,17 @@
-/* $FreeBSD: src/sys/boot/efi/include/efistdarg.h,v 1.1 2001/06/09 16:49:49 dfr Exp $ */
+/* $FreeBSD: src/sys/boot/efi/include/efistdarg.h,v 1.2 2006/11/02 02:42:47 marcel Exp $ */
 #ifndef _EFISTDARG_H_
 #define _EFISTDARG_H_
 
 /*++
 
-Copyright (c) 1998  Intel Corporation
+Copyright (c)  1999 - 2002 Intel Corporation. All rights reserved
+This software and associated documentation (if any) is furnished
+under a license and may only be used or copied in accordance
+with the terms of the license. Except as permitted by such
+license, no part of this software or documentation may be
+reproduced, stored in a retrieval system, or transmitted in any
+form or by any means without the express written consent of
+Intel Corporation.
 
 Module Name:
 

@@ -4,7 +4,7 @@
 ** Author: John Sadler (john_sadler@alum.mit.edu)
 ** Created: 19 July 1997
 ** Dedicated to RHS, in loving memory
-** $Id: ficl.h,v 1.1.1.2 2006-02-25 02:35:59 laffer1 Exp $
+** $Id: ficl.h,v 1.2 2008-09-21 15:21:33 laffer1 Exp $
 *******************************************************************/
 /*
 ** Copyright (c) 1997-2001 John Sadler (john_sadler@alum.mit.edu)
@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/ficl.h,v 1.21 2004/11/30 11:35:30 scottl Exp $ */
+/* $FreeBSD: src/sys/boot/ficl/ficl.h,v 1.22 2007/03/23 22:26:01 jkim Exp $ */
 
 #if !defined (__FICL_H__)
 #define __FICL_H__
@@ -237,9 +237,9 @@ typedef struct ficl_system_info FICL_SYSTEM_INFO;
 /* 
 ** the Good Stuff starts here...
 */
-#define FICL_VER        "3.02"
+#define FICL_VER        "3.03"
 #define FICL_VER_MAJOR  3
-#define FICL_VER_MINOR  2
+#define FICL_VER_MINOR  3
 #if !defined (FICL_PROMPT)
 #define FICL_PROMPT "ok> "
 #endif
@@ -857,7 +857,7 @@ struct ficl_system
 	FICL_WORD *pDoesParen;
 	FICL_WORD *pExitInner;
 	FICL_WORD *pExitParen;
-	FICL_WORD *pIfParen;
+	FICL_WORD *pBranch0;
 	FICL_WORD *pInterpret;
 	FICL_WORD *pLitParen;
 	FICL_WORD *pTwoLitParen;
@@ -865,7 +865,9 @@ struct ficl_system
 	FICL_WORD *pPLoopParen;
 	FICL_WORD *pQDoParen;
 	FICL_WORD *pSemiParen;
+	FICL_WORD *pOfParen;
 	FICL_WORD *pStore;
+	FICL_WORD *pDrop;
 	FICL_WORD *pCStringLit;
 	FICL_WORD *pStringLit;
 
@@ -1086,6 +1088,7 @@ typedef enum
     IF,
     LITERAL,
     LOOP,
+    OF,
     PLOOP,
     PRIMITIVE,
     QDO,

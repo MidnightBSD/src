@@ -36,7 +36,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/amd64/include/param.h,v 1.18 2005/06/29 15:13:25 jhb Exp $
+ * $FreeBSD: src/sys/amd64/include/param.h,v 1.20 2006/01/09 06:05:56 imp Exp $
  */
 
 /*
@@ -64,14 +64,10 @@
 #define	_ALIGNED_POINTER(p,t)	((((u_long)(p)) & (sizeof(t)-1)) == 0)
 #endif
 
-#ifndef _MACHINE
-#define	_MACHINE	amd64
-#endif
-#ifndef _MACHINE_ARCH
-#define	_MACHINE_ARCH	amd64
-#endif
-
 #ifndef _NO_NAMESPACE_POLLUTION
+
+#define __HAVE_ACPI
+#define __PCI_REROUTE_INTERRUPT
 
 #ifndef _MACHINE_PARAM_H_
 #define	_MACHINE_PARAM_H_

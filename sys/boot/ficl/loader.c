@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/boot/ficl/loader.c,v 1.11 2004/11/30 11:35:30 scottl Exp $
+ *	$FreeBSD: src/sys/boot/ficl/loader.c,v 1.12 2006/05/12 04:07:42 jhb Exp $
  */
 
 /*******************************************************************
@@ -691,22 +691,14 @@ void ficlCompilePlatform(FICL_SYSTEM *pSys)
     ficlSetEnv(pSys, "arch-pc98",         FICL_TRUE);
 #elif defined(__i386__)
     ficlSetEnv(pSys, "arch-i386",         FICL_TRUE);
-    ficlSetEnv(pSys, "arch-alpha",        FICL_FALSE);
-    ficlSetEnv(pSys, "arch-ia64",         FICL_FALSE);
-    ficlSetEnv(pSys, "arch-powerpc",      FICL_FALSE);
-#elif defined(__alpha__)
-    ficlSetEnv(pSys, "arch-i386",         FICL_FALSE);
-    ficlSetEnv(pSys, "arch-alpha",        FICL_TRUE);
     ficlSetEnv(pSys, "arch-ia64",         FICL_FALSE);
     ficlSetEnv(pSys, "arch-powerpc",      FICL_FALSE);
 #elif defined(__ia64__)
     ficlSetEnv(pSys, "arch-i386",         FICL_FALSE);
-    ficlSetEnv(pSys, "arch-alpha",        FICL_FALSE);
     ficlSetEnv(pSys, "arch-ia64",         FICL_TRUE);
     ficlSetEnv(pSys, "arch-powerpc",      FICL_FALSE);
 #elif defined(__powerpc__)
     ficlSetEnv(pSys, "arch-i386",         FICL_FALSE);
-    ficlSetEnv(pSys, "arch-alpha",        FICL_FALSE);
     ficlSetEnv(pSys, "arch-ia64",         FICL_FALSE);
     ficlSetEnv(pSys, "arch-powerpc",      FICL_TRUE);
 #endif

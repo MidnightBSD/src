@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/elf_machdep.c,v 1.22.8.1 2005/12/30 22:13:57 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/elf_machdep.c,v 1.26 2007/05/22 02:22:57 kan Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -82,6 +82,7 @@ static Elf64_Brandinfo freebsd_brand_info = {
 						"/libexec/ld-elf.so.1",
 						&elf64_freebsd_sysvec,
 						NULL,
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(elf64, SI_SUB_EXEC, SI_ORDER_ANY,
@@ -96,6 +97,7 @@ static Elf64_Brandinfo freebsd_brand_oinfo = {
 						"/usr/libexec/ld-elf.so.1",
 						&elf64_freebsd_sysvec,
 						NULL,
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(oelf64, SI_SUB_EXEC, SI_ORDER_ANY,
@@ -195,6 +197,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			break;
 
 		case R_X86_64_GLOB_DAT:	/* S */
+		case R_X86_64_JMP_SLOT:	/* XXX need addend + offset */
 			addr = lookup(lf, symidx, 1);
 			if (addr == 0)
 				return -1;

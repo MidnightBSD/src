@@ -23,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/ddb/db_output.h,v 1.13 2005/01/06 01:34:41 imp Exp $
+ * $FreeBSD: src/sys/ddb/db_output.h,v 1.15 2006/10/08 18:15:08 bde Exp $
  */
 
 #ifndef _DDB_DB_OUTPUT_H_
@@ -38,7 +38,9 @@
  * Printing routines for kernel debugger.
  */
 
-void	db_end_line(void);
+void	db_disable_pager(void);
+void	db_enable_pager(void);
+void	db_end_line(int);
 void	db_force_whitespace(void);
 int	db_print_position(void);
 

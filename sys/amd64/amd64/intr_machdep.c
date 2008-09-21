@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/amd64/intr_machdep.c,v 1.15.2.2 2006/03/10 19:37:30 jhb Exp $
+ * $FreeBSD: src/sys/amd64/amd64/intr_machdep.c,v 1.34.2.1 2007/11/26 15:06:49 scottl Exp $
  */
 
 /*
@@ -37,22 +37,33 @@
  * that source.
  */
 
+#include "opt_atpic.h"
 #include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/interrupt.h>
-#include <sys/lock.h>
 #include <sys/ktr.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/syslog.h>
 #include <sys/systm.h>
+#include <sys/sx.h>
 #include <machine/clock.h>
 #include <machine/intr_machdep.h>
+#include <machine/smp.h>
 #ifdef DDB
 #include <ddb/ddb.h>
+#endif
+
+#ifndef DEV_ATPIC
+#include <machine/segments.h>
+#include <machine/frame.h>
+#include <dev/ic/i8259.h>
+#include <amd64/isa/icu.h>
+#include <amd64/isa/isa.h>
 #endif
 
 #define	MAX_STRAY_LOG	5
@@ -61,7 +72,15 @@ typedef void (*mask_fn)(void *);
 
 static int intrcnt_index;
 static struct intsrc *interrupt_sources[NUM_IO_INTS];
-static struct mtx intr_table_lock;
+static struct sx intr_table_lock;
+static struct mtx intrcnt_lock;
+static STAILQ_HEAD(, pic) pics;
+
+#ifdef INTR_FILTER
+static void intr_eoi_src(void *arg);
+static void intr_disab_eoi_src(void *arg);
+static void intr_event_stray(void *cookie);
+#endif
 
 #ifdef SMP
 static int assign_cpu;
@@ -70,9 +89,44 @@ static void	intr_assign_next_cpu(struct intsrc *isrc);
 #endif
 
 static void	intr_init(void *__dummy);
+static int	intr_pic_registered(struct pic *pic);
 static void	intrcnt_setname(const char *name, int index);
 static void	intrcnt_updatename(struct intsrc *is);
 static void	intrcnt_register(struct intsrc *is);
+
+static int
+intr_pic_registered(struct pic *pic)
+{
+	struct pic *p;
+
+	STAILQ_FOREACH(p, &pics, pics) {
+		if (p == pic)
+			return (1);
+	}
+	return (0);
+}
+
+/*
+ * Register a new interrupt controller (PIC).  This is to support suspend
+ * and resume where we suspend/resume controllers rather than individual
+ * sources.  This also allows controllers with no active sources (such as
+ * 8259As in a system using the APICs) to participate in suspend and resume.
+ */
+int
+intr_register_pic(struct pic *pic)
+{
+	int error;
+
+	sx_xlock(&intr_table_lock);
+	if (intr_pic_registered(pic))
+		error = EBUSY;
+	else {
+		STAILQ_INSERT_TAIL(&pics, pic, pics);
+		error = 0;
+	}
+	sx_xunlock(&intr_table_lock);
+	return (error);
+}
 
 /*
  * Register a new interrupt source with the global interrupt system.
@@ -84,23 +138,30 @@ intr_register_source(struct intsrc *isrc)
 {
 	int error, vector;
 
+	KASSERT(intr_pic_registered(isrc->is_pic), ("unregistered PIC"));
 	vector = isrc->is_pic->pic_vector(isrc);
 	if (interrupt_sources[vector] != NULL)
 		return (EEXIST);
+#ifdef INTR_FILTER
+	error = intr_event_create(&isrc->is_event, isrc, 0,
+	    (mask_fn)isrc->is_pic->pic_enable_source,
+	    intr_eoi_src, intr_disab_eoi_src, "irq%d:", vector);
+#else
 	error = intr_event_create(&isrc->is_event, isrc, 0,
 	    (mask_fn)isrc->is_pic->pic_enable_source, "irq%d:", vector);
+#endif
 	if (error)
 		return (error);
-	mtx_lock_spin(&intr_table_lock);
+	sx_xlock(&intr_table_lock);
 	if (interrupt_sources[vector] != NULL) {
-		mtx_unlock_spin(&intr_table_lock);
+		sx_xunlock(&intr_table_lock);
 		intr_event_destroy(isrc->is_event);
 		return (EEXIST);
 	}
 	intrcnt_register(isrc);
 	interrupt_sources[vector] = isrc;
-	isrc->is_enabled = 0;
-	mtx_unlock_spin(&intr_table_lock);
+	isrc->is_handlers = 0;
+	sx_xunlock(&intr_table_lock);
 	return (0);
 }
 
@@ -112,8 +173,8 @@ intr_lookup_source(int vector)
 }
 
 int
-intr_add_handler(const char *name, int vector, driver_intr_t handler,
-    void *arg, enum intr_type flags, void **cookiep)
+intr_add_handler(const char *name, int vector, driver_filter_t filter, 
+    driver_intr_t handler, void *arg, enum intr_type flags, void **cookiep)    
 {
 	struct intsrc *isrc;
 	int error;
@@ -121,22 +182,21 @@ intr_add_handler(const char *name, int vector, driver_intr_t handler,
 	isrc = intr_lookup_source(vector);
 	if (isrc == NULL)
 		return (EINVAL);
-	error = intr_event_add_handler(isrc->is_event, name, handler, arg,
-	    intr_priority(flags), flags, cookiep);
+	error = intr_event_add_handler(isrc->is_event, name, filter, handler,
+	    arg, intr_priority(flags), flags, cookiep);
 	if (error == 0) {
+		sx_xlock(&intr_table_lock);
 		intrcnt_updatename(isrc);
-		mtx_lock_spin(&intr_table_lock);
-		if (!isrc->is_enabled) {
-			isrc->is_enabled = 1;
+		isrc->is_handlers++;
+		if (isrc->is_handlers == 1) {
 #ifdef SMP
 			if (assign_cpu)
 				intr_assign_next_cpu(isrc);
 #endif
-			mtx_unlock_spin(&intr_table_lock);
 			isrc->is_pic->pic_enable_intr(isrc);
-		} else
-			mtx_unlock_spin(&intr_table_lock);
-		isrc->is_pic->pic_enable_source(isrc);
+			isrc->is_pic->pic_enable_source(isrc);
+		}
+		sx_xunlock(&intr_table_lock);
 	}
 	return (error);
 }
@@ -144,13 +204,21 @@ intr_add_handler(const char *name, int vector, driver_intr_t handler,
 int
 intr_remove_handler(void *cookie)
 {
+	struct intsrc *isrc;
 	int error;
 
+	isrc = intr_handler_source(cookie);
 	error = intr_event_remove_handler(cookie);
-#ifdef XXX
-	if (error == 0)
-		intrcnt_updatename(/* XXX */);
-#endif
+	if (error == 0) {
+		sx_xlock(&intr_table_lock);
+		isrc->is_handlers--;
+		if (isrc->is_handlers == 0) {
+			isrc->is_pic->pic_disable_source(isrc, PIC_NO_EOI);
+			isrc->is_pic->pic_disable_intr(isrc);
+		}
+		intrcnt_updatename(isrc);
+		sx_xunlock(&intr_table_lock);
+	}
 	return (error);
 }
 
@@ -165,13 +233,13 @@ intr_config_intr(int vector, enum intr_trigger trig, enum intr_polarity pol)
 	return (isrc->is_pic->pic_config_intr(isrc, trig, pol));
 }
 
+#ifdef INTR_FILTER
 void
-intr_execute_handlers(struct intsrc *isrc, struct intrframe *iframe)
+intr_execute_handlers(struct intsrc *isrc, struct trapframe *frame)
 {
 	struct thread *td;
 	struct intr_event *ie;
-	struct intr_handler *ih;
-	int error, vector, thread;
+	int vector;
 
 	td = curthread;
 
@@ -182,7 +250,78 @@ intr_execute_handlers(struct intsrc *isrc, struct intrframe *iframe)
 	 * processed too.
 	 */
 	(*isrc->is_count)++;
-	PCPU_LAZY_INC(cnt.v_intr);
+	PCPU_INC(cnt.v_intr);
+
+	ie = isrc->is_event;
+
+	/*
+	 * XXX: We assume that IRQ 0 is only used for the ISA timer
+	 * device (clk).
+	 */
+	vector = isrc->is_pic->pic_vector(isrc);
+	if (vector == 0)
+		clkintr_pending = 1;
+
+	if (intr_event_handle(ie, frame) != 0)
+		intr_event_stray(isrc);
+}
+
+static void
+intr_event_stray(void *cookie)
+{
+	struct intsrc *isrc;
+
+	isrc = cookie;
+	/*
+	 * For stray interrupts, mask and EOI the source, bump the
+	 * stray count, and log the condition.
+	 */
+	isrc->is_pic->pic_disable_source(isrc, PIC_EOI);
+	(*isrc->is_straycount)++;
+	if (*isrc->is_straycount < MAX_STRAY_LOG)
+		log(LOG_ERR, "stray irq%d\n", isrc->is_pic->pic_vector(isrc));
+	else if (*isrc->is_straycount == MAX_STRAY_LOG)
+		log(LOG_CRIT,
+		    "too many stray irq %d's: not logging anymore\n",
+		    isrc->is_pic->pic_vector(isrc));
+}
+
+static void
+intr_eoi_src(void *arg)
+{
+	struct intsrc *isrc;
+
+	isrc = arg;
+	isrc->is_pic->pic_eoi_source(isrc);
+}
+
+static void
+intr_disab_eoi_src(void *arg)
+{
+	struct intsrc *isrc;
+
+	isrc = arg;
+	isrc->is_pic->pic_disable_source(isrc, PIC_EOI);
+}
+#else
+void
+intr_execute_handlers(struct intsrc *isrc, struct trapframe *frame)
+{
+	struct thread *td;
+	struct intr_event *ie;
+	struct intr_handler *ih;
+	int error, vector, thread, ret;
+
+	td = curthread;
+
+	/*
+	 * We count software interrupts when we process them.  The
+	 * code here follows previous practice, but there's an
+	 * argument for counting hardware interrupts when they're
+	 * processed too.
+	 */
+	(*isrc->is_count)++;
+	PCPU_INC(cnt.v_intr);
 
 	ie = isrc->is_event;
 
@@ -214,23 +353,32 @@ intr_execute_handlers(struct intsrc *isrc, struct intrframe *iframe)
 	 * Execute fast interrupt handlers directly.
 	 * To support clock handlers, if a handler registers
 	 * with a NULL argument, then we pass it a pointer to
-	 * an intrframe as its argument.
+	 * a trapframe as its argument.
 	 */
 	td->td_intr_nesting_level++;
+	ret = 0;
 	thread = 0;
 	critical_enter();
 	TAILQ_FOREACH(ih, &ie->ie_handlers, ih_next) {
-		if (!(ih->ih_flags & IH_FAST)) {
+		if (ih->ih_filter == NULL) {
 			thread = 1;
 			continue;
 		}
 		CTR4(KTR_INTR, "%s: exec %p(%p) for %s", __func__,
-		    ih->ih_handler, ih->ih_argument == NULL ? iframe :
+		    ih->ih_filter, ih->ih_argument == NULL ? frame :
 		    ih->ih_argument, ih->ih_name);
 		if (ih->ih_argument == NULL)
-			ih->ih_handler(iframe);
+			ret = ih->ih_filter(frame);
 		else
-			ih->ih_handler(ih->ih_argument);
+			ret = ih->ih_filter(ih->ih_argument);
+		/*
+		 * Wrapper handler special case: see
+		 * i386/intr_machdep.c::intr_execute_handlers()
+		 */
+		if (!thread) {
+			if (ret == FILTER_SCHEDULE_THREAD)
+				thread = 1;
+		}
 	}
 
 	/*
@@ -242,40 +390,44 @@ intr_execute_handlers(struct intsrc *isrc, struct intrframe *iframe)
 		isrc->is_pic->pic_disable_source(isrc, PIC_EOI);
 	else
 		isrc->is_pic->pic_eoi_source(isrc);
-	critical_exit();
 
 	/* Schedule the ithread if needed. */
 	if (thread) {
 		error = intr_event_schedule_thread(ie);
 		KASSERT(error == 0, ("bad stray interrupt"));
 	}
+	critical_exit();
 	td->td_intr_nesting_level--;
 }
+#endif
 
 void
 intr_resume(void)
 {
-	struct intsrc **isrc;
-	int i;
+	struct pic *pic;
 
-	mtx_lock_spin(&intr_table_lock);
-	for (i = 0, isrc = interrupt_sources; i < NUM_IO_INTS; i++, isrc++)
-		if (*isrc != NULL && (*isrc)->is_pic->pic_resume != NULL)
-			(*isrc)->is_pic->pic_resume(*isrc);
-	mtx_unlock_spin(&intr_table_lock);
+#ifndef DEV_ATPIC
+	atpic_reset();
+#endif
+	sx_xlock(&intr_table_lock);
+	STAILQ_FOREACH(pic, &pics, pics) {
+		if (pic->pic_resume != NULL)
+			pic->pic_resume(pic);
+	}
+	sx_xunlock(&intr_table_lock);
 }
 
 void
 intr_suspend(void)
 {
-	struct intsrc **isrc;
-	int i;
+	struct pic *pic;
 
-	mtx_lock_spin(&intr_table_lock);
-	for (i = 0, isrc = interrupt_sources; i < NUM_IO_INTS; i++, isrc++)
-		if (*isrc != NULL && (*isrc)->is_pic->pic_suspend != NULL)
-			(*isrc)->is_pic->pic_suspend(*isrc);
-	mtx_unlock_spin(&intr_table_lock);
+	sx_xlock(&intr_table_lock);
+	STAILQ_FOREACH(pic, &pics, pics) {
+		if (pic->pic_suspend != NULL)
+			pic->pic_suspend(pic);
+	}
+	sx_xunlock(&intr_table_lock);
 }
 
 static void
@@ -298,8 +450,8 @@ intrcnt_register(struct intsrc *is)
 {
 	char straystr[MAXCOMLEN + 1];
 
-	/* mtx_assert(&intr_table_lock, MA_OWNED); */
 	KASSERT(is->is_event != NULL, ("%s: isrc with no event", __func__));
+	mtx_lock_spin(&intrcnt_lock);
 	is->is_index = intrcnt_index;
 	intrcnt_index += 2;
 	snprintf(straystr, MAXCOMLEN + 1, "stray irq%d",
@@ -308,17 +460,18 @@ intrcnt_register(struct intsrc *is)
 	is->is_count = &intrcnt[is->is_index];
 	intrcnt_setname(straystr, is->is_index + 1);
 	is->is_straycount = &intrcnt[is->is_index + 1];
+	mtx_unlock_spin(&intrcnt_lock);
 }
 
 void
 intrcnt_add(const char *name, u_long **countp)
 {
 
-	mtx_lock_spin(&intr_table_lock);
+	mtx_lock_spin(&intrcnt_lock);
 	*countp = &intrcnt[intrcnt_index];
 	intrcnt_setname(name, intrcnt_index);
 	intrcnt_index++;
-	mtx_unlock_spin(&intr_table_lock);
+	mtx_unlock_spin(&intrcnt_lock);
 }
 
 static void
@@ -327,9 +480,33 @@ intr_init(void *dummy __unused)
 
 	intrcnt_setname("???", 0);
 	intrcnt_index = 1;
-	mtx_init(&intr_table_lock, "intr table", NULL, MTX_SPIN);
+	STAILQ_INIT(&pics);
+	sx_init(&intr_table_lock, "intr sources");
+	mtx_init(&intrcnt_lock, "intrcnt", NULL, MTX_SPIN);
 }
 SYSINIT(intr_init, SI_SUB_INTR, SI_ORDER_FIRST, intr_init, NULL)
+
+#ifndef DEV_ATPIC
+/* Initialize the two 8259A's to a known-good shutdown state. */
+void
+atpic_reset(void)
+{
+
+	outb(IO_ICU1, ICW1_RESET | ICW1_IC4);
+	outb(IO_ICU1 + ICU_IMR_OFFSET, IDT_IO_INTS);
+	outb(IO_ICU1 + ICU_IMR_OFFSET, 1 << 2);
+	outb(IO_ICU1 + ICU_IMR_OFFSET, ICW4_8086);
+	outb(IO_ICU1 + ICU_IMR_OFFSET, 0xff);
+	outb(IO_ICU1, OCW3_SEL | OCW3_RR);
+
+	outb(IO_ICU2, ICW1_RESET | ICW1_IC4);
+	outb(IO_ICU2 + ICU_IMR_OFFSET, IDT_IO_INTS + 8);
+	outb(IO_ICU2 + ICU_IMR_OFFSET, 2);
+	outb(IO_ICU2 + ICU_IMR_OFFSET, ICW4_8086);
+	outb(IO_ICU2 + ICU_IMR_OFFSET, 0xff);
+	outb(IO_ICU2, OCW3_SEL | OCW3_RR);
+}
+#endif
 
 #ifdef DDB
 /*
@@ -338,16 +515,14 @@ SYSINIT(intr_init, SI_SUB_INTR, SI_ORDER_FIRST, intr_init, NULL)
 DB_SHOW_COMMAND(irqs, db_show_irqs)
 {
 	struct intsrc **isrc;
-	int i, quit, verbose;
+	int i, verbose;
 
-	quit = 0;
 	if (strcmp(modif, "v") == 0)
 		verbose = 1;
 	else
 		verbose = 0;
 	isrc = interrupt_sources;
-	db_setup_paging(db_simple_pager, &quit, db_lines_per_page);
-	for (i = 0; i < NUM_IO_INTS && !quit; i++, isrc++)
+	for (i = 0; i < NUM_IO_INTS && !db_pager_quit; i++, isrc++)
 		if (*isrc != NULL)
 			db_dump_intr_event((*isrc)->is_event, verbose);
 }
@@ -359,8 +534,9 @@ DB_SHOW_COMMAND(irqs, db_show_irqs)
  * allocate CPUs round-robin.
  */
 
-static u_int cpu_apic_ids[MAXCPU];
-static int current_cpu, num_cpus;
+/* The BSP is always a valid target. */
+static cpumask_t intr_cpus = (1 << 0);
+static int current_cpu, num_cpus = 1;
 
 static void
 intr_assign_next_cpu(struct intsrc *isrc)
@@ -373,29 +549,29 @@ intr_assign_next_cpu(struct intsrc *isrc)
 	 */
 	pic = isrc->is_pic;
 	apic_id = cpu_apic_ids[current_cpu];
-	current_cpu++;
-	if (current_cpu >= num_cpus)
-		current_cpu = 0;
-	if (bootverbose) {
-		printf("INTR: Assigning IRQ %d", pic->pic_vector(isrc));
-		printf(" to local APIC %u\n", apic_id);
-	}
 	pic->pic_assign_cpu(isrc, apic_id);
+	do {
+		current_cpu++;
+		if (current_cpu >= num_cpus)
+			current_cpu = 0;
+	} while (!(intr_cpus & (1 << current_cpu)));
 }
 
 /*
- * Add a local APIC ID to our list of valid local APIC IDs that can
- * be destinations of interrupts.
+ * Add a CPU to our mask of valid CPUs that can be destinations of
+ * interrupts.
  */
 void
-intr_add_cpu(u_int apic_id)
+intr_add_cpu(u_int cpu)
 {
 
+	if (cpu >= MAXCPU)
+		panic("%s: Invalid CPU ID", __func__);
 	if (bootverbose)
-		printf("INTR: Adding local APIC %d as a target\n", apic_id);
-	if (num_cpus >= MAXCPU)
-		panic("WARNING: Local APIC IDs exhausted!");
-	cpu_apic_ids[num_cpus] = apic_id;
+		printf("INTR: Adding local APIC %d as a target\n",
+		    cpu_apic_ids[cpu]);
+
+	intr_cpus |= (1 << cpu);
 	num_cpus++;
 }
 
@@ -413,15 +589,15 @@ intr_shuffle_irqs(void *arg __unused)
 	if (num_cpus <= 1)
 		return;
 
-	/* Round-robin assign each enabled source a CPU. */
-	mtx_lock_spin(&intr_table_lock);
+	/* Round-robin assign a CPU to each enabled source. */
+	sx_xlock(&intr_table_lock);
 	assign_cpu = 1;
 	for (i = 0; i < NUM_IO_INTS; i++) {
 		isrc = interrupt_sources[i];
-		if (isrc != NULL && isrc->is_enabled)
+		if (isrc != NULL && isrc->is_handlers > 0)
 			intr_assign_next_cpu(isrc);
 	}
-	mtx_unlock_spin(&intr_table_lock);
+	sx_xunlock(&intr_table_lock);
 }
 SYSINIT(intr_shuffle_irqs, SI_SUB_SMP, SI_ORDER_SECOND, intr_shuffle_irqs, NULL)
 #endif

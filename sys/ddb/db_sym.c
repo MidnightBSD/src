@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_sym.c,v 1.36 2005/01/06 01:34:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_sym.c,v 1.37 2006/06/16 16:17:52 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -230,7 +230,6 @@ db_search_symbol( val, strategy, offp)
 	c_db_sym_t	ret = C_DB_SYM_NULL, sym;
 
 	newdiff = diff = ~0;
-	db_last_symtab = 0;
 	for (i = 0; i < db_nsymtab; i++) {
 	    sym = X_db_search_symbol(&db_symtabs[i], val, strategy, &newdiff);
 	    if (newdiff < diff) {

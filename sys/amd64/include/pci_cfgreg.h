@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/pci_cfgreg.h,v 1.13 2005/01/05 20:17:20 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/pci_cfgreg.h,v 1.13.10.1 2007/12/06 08:25:43 jhb Exp $
  *
  */
 
@@ -36,11 +36,6 @@
 #define CONF1_ENABLE_CHK1  0xff000001ul
 #define CONF1_ENABLE_MSK1  0x80000001ul
 #define CONF1_ENABLE_RES1  0x80000000ul
-
-#define CONF2_ENABLE_PORT  0x0cf8
-#define CONF2_FORWARD_PORT 0x0cfa
-#define CONF2_ENABLE_CHK   0x0e
-#define CONF2_ENABLE_RES   0x0e
 
 int		pci_cfgregopen(void);
 u_int32_t	pci_cfgregread(int bus, int slot, int func, int reg, int bytes);

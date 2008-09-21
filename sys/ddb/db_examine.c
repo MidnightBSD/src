@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ddb/db_examine.c,v 1.32 2005/01/06 01:34:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/ddb/db_examine.c,v 1.33.2.1 2007/11/08 20:25:47 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -80,7 +80,7 @@ db_examine(addr, fmt, count)
 	int		width;
 	char *		fp;
 
-	while (--count >= 0) {
+	while (--count >= 0 && !db_pager_quit) {
 	    fp = fmt;
 	    size = 4;
 	    while ((c = *fp++) != 0) {
@@ -176,7 +176,7 @@ db_examine(addr, fmt, count)
 				break;
 			}
 			if (db_print_position() != 0)
-			    db_end_line();
+			    db_end_line(1);
 			break;
 		}
 	    }

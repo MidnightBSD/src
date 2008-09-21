@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/apicvar.h,v 1.13.2.2 2006/03/07 18:33:20 jhb Exp $
+ * $FreeBSD: src/sys/amd64/include/apicvar.h,v 1.25 2007/05/08 22:01:03 jhb Exp $
  */
 
 #ifndef _MACHINE_APICVAR_H_
@@ -79,6 +79,7 @@
  * I/O device!
  */
 
+#define	MAX_APIC_ID	0xfe
 #define	APIC_ID_ALL	0xff
 
 /* I/O Interrupts are used for external devices such as ISA, PCI, etc. */
@@ -118,8 +119,9 @@
 #define	IPI_INVLTLB	(APIC_IPI_INTS + 1)	/* TLB Shootdown IPIs */
 #define	IPI_INVLPG	(APIC_IPI_INTS + 2)
 #define	IPI_INVLRNG	(APIC_IPI_INTS + 3)
+#define	IPI_INVLCACHE	(APIC_IPI_INTS + 4)
 /* Vector to handle bitmap based IPIs */
-#define	IPI_BITMAP_VECTOR	(APIC_IPI_INTS + 5) 
+#define	IPI_BITMAP_VECTOR	(APIC_IPI_INTS + 6) 
 
 /* IPIs handled by IPI_BITMAPED_VECTOR  (XXX ups is there a better place?) */
 #define	IPI_AST		0 	/* Generate software trap. */
@@ -127,7 +129,7 @@
 #define IPI_BITMAP_LAST IPI_PREEMPT
 #define IPI_IS_BITMAPED(x) ((x) <= IPI_BITMAP_LAST)
 
-#define	IPI_STOP	(APIC_IPI_INTS + 6)	/* Stop CPU until restarted. */
+#define	IPI_STOP	(APIC_IPI_INTS + 7)	/* Stop CPU until restarted. */
 
 /*
  * The spurious interrupt can share the priority class with the IPIs since
@@ -173,12 +175,16 @@ inthand_t
 	IDTVEC(apic_isr4), IDTVEC(apic_isr5), IDTVEC(apic_isr6),
 	IDTVEC(apic_isr7), IDTVEC(spuriousint), IDTVEC(timerint);
 
+extern vm_paddr_t lapic_paddr;
+
 u_int	apic_alloc_vector(u_int irq);
+u_int	apic_alloc_vectors(u_int *irqs, u_int count, u_int align);
+void	apic_disable_vector(u_int vector);
 void	apic_enable_vector(u_int vector);
 void	apic_free_vector(u_int vector, u_int irq);
 u_int	apic_idt_to_irq(u_int vector);
 void	apic_register_enumerator(struct apic_enumerator *enumerator);
-void	*ioapic_create(uintptr_t addr, int32_t id, int intbase);
+void	*ioapic_create(vm_paddr_t addr, int32_t apic_id, int intbase);
 int	ioapic_disable_pin(void *cookie, u_int pin);
 int	ioapic_get_vector(void *cookie, u_int pin);
 void	ioapic_register(void *cookie);
@@ -195,13 +201,13 @@ void	lapic_disable(void);
 void	lapic_dump(const char *str);
 void	lapic_eoi(void);
 int	lapic_id(void);
-void	lapic_init(uintptr_t addr);
+void	lapic_init(vm_paddr_t addr);
 int	lapic_intr_pending(u_int vector);
 void	lapic_ipi_raw(register_t icrlo, u_int dest);
 void	lapic_ipi_vectored(u_int vector, int dest);
 int	lapic_ipi_wait(int delay);
-void	lapic_handle_intr(void *cookie, struct intrframe frame);
-void	lapic_handle_timer(struct clockframe frame);
+void	lapic_handle_intr(int vector, struct trapframe *frame);
+void	lapic_handle_timer(struct trapframe *frame);
 void	lapic_set_logical_id(u_int apic_id, u_int cluster, u_int cluster_id);
 int	lapic_set_lvt_mask(u_int apic_id, u_int lvt, u_char masked);
 int	lapic_set_lvt_mode(u_int apic_id, u_int lvt, u_int32_t mode);
@@ -210,7 +216,7 @@ int	lapic_set_lvt_polarity(u_int apic_id, u_int lvt,
 int	lapic_set_lvt_triggermode(u_int apic_id, u_int lvt,
 	    enum intr_trigger trigger);
 void	lapic_set_tpr(u_int vector);
-void	lapic_setup(void);
+void	lapic_setup(int boot);
 int	lapic_setup_clock(void);
 
 #endif /* !LOCORE */
