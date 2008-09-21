@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/net/if_gif.c,v 1.52.2.4 2006/01/31 15:56:46 glebius Exp $	*/
+/*	$FreeBSD: src/sys/net/if_gif.c,v 1.66 2006/10/22 11:52:15 rwatson Exp $	*/
 /*	$KAME: if_gif.c,v 1.87 2001/10/19 08:50:27 itojun Exp $	*/
 
 /*-
@@ -37,7 +37,6 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
@@ -84,7 +83,7 @@
 #include <net/if_bridgevar.h>
 #include <net/if_gif.h>
 
-#include <net/net_osdep.h>
+#include <security/mac/mac_framework.h>
 
 #define GIFNAME		"gif"
 
@@ -101,7 +100,7 @@ void	(*ng_gif_attach_p)(struct ifnet *ifp);
 void	(*ng_gif_detach_p)(struct ifnet *ifp);
 
 static void	gif_start(struct ifnet *);
-static int	gif_clone_create(struct if_clone *, int);
+static int	gif_clone_create(struct if_clone *, int, caddr_t);
 static void	gif_clone_destroy(struct ifnet *);
 
 IFC_SIMPLE_DECLARE(gif, 0);
@@ -140,9 +139,10 @@ SYSCTL_INT(_net_link_gif, OID_AUTO, parallel_tunnels, CTLFLAG_RW,
     &parallel_tunnels, 0, "Allow parallel tunnels?");
 
 static int
-gif_clone_create(ifc, unit)
+gif_clone_create(ifc, unit, params)
 	struct if_clone *ifc;
 	int unit;
+	caddr_t params;
 {
 	struct gif_softc *sc;
 
@@ -184,10 +184,15 @@ gif_clone_create(ifc, unit)
 }
 
 static void
-gif_destroy(struct gif_softc *sc)
+gif_clone_destroy(ifp)
+	struct ifnet *ifp;
 {
-	struct ifnet *ifp = GIF2IFP(sc);
 	int err;
+	struct gif_softc *sc = ifp->if_softc;
+
+	mtx_lock(&gif_mtx);
+	LIST_REMOVE(sc, gif_list);
+	mtx_unlock(&gif_mtx);
 
 	gif_delete_tunnel(ifp);
 #ifdef INET6
@@ -214,25 +219,12 @@ gif_destroy(struct gif_softc *sc)
 	free(sc, M_GIF);
 }
 
-static void
-gif_clone_destroy(ifp)
-	struct ifnet *ifp;
-{
-	struct gif_softc *sc = ifp->if_softc;
-
-	mtx_lock(&gif_mtx);
-	LIST_REMOVE(sc, gif_list);
-	mtx_unlock(&gif_mtx);
-	gif_destroy(sc);
-}
-
 static int
 gifmodevent(mod, type, data)
 	module_t mod;
 	int type;
 	void *data;
 {
-	struct gif_softc *sc;
 
 	switch (type) {
 	case MOD_LOAD:
@@ -247,15 +239,6 @@ gifmodevent(mod, type, data)
 		break;
 	case MOD_UNLOAD:
 		if_clone_detach(&gif_cloner);
-
-		mtx_lock(&gif_mtx);
-		while ((sc = LIST_FIRST(&gif_softc_list)) != NULL) {
-			LIST_REMOVE(sc, gif_list);
-			mtx_unlock(&gif_mtx);
-			gif_destroy(sc);
-			mtx_lock(&gif_mtx);
-		}
-		mtx_unlock(&gif_mtx);
 		mtx_destroy(&gif_mtx);
 #ifdef INET6
 		ip6_gif_hlim = 0;
@@ -429,6 +412,7 @@ gif_output(ifp, m, dst, rt)
 
 	if (!(ifp->if_flags & IFF_UP) ||
 	    sc->gif_psrc == NULL || sc->gif_pdst == NULL) {
+		GIF_UNLOCK(sc);
 		m_freem(m);
 		error = ENETDOWN;
 		goto end;
@@ -441,9 +425,7 @@ gif_output(ifp, m, dst, rt)
 	}
 
 	af = dst->sa_family;
-	if (ifp->if_bpf) {
-		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);
-	}
+	BPF_MTAP2(ifp, &af, sizeof(af), m);
 	ifp->if_opackets++;	
 	ifp->if_obytes += m->m_pkthdr.len;
 
@@ -470,13 +452,12 @@ gif_output(ifp, m, dst, rt)
 	default:
 		m_freem(m);		
 		error = ENETDOWN;
-		goto end;
 	}
 
+	GIF_UNLOCK(sc);
   end:
 	if (error)
 		ifp->if_oerrors++;
-	GIF_UNLOCK(sc);
 	return (error);
 }
 
@@ -501,7 +482,7 @@ gif_input(m, af, ifp)
 	mac_create_mbuf_from_ifnet(ifp, m);
 #endif
 
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		u_int32_t af1 = af;
 		bpf_mtap2(ifp->if_bpf, &af1, sizeof(af1), m);
 	}
@@ -935,13 +916,6 @@ gif_set_tunnel(ifp, src, dst)
 	if (odst)
 		free((caddr_t)odst, M_IFADDR);
 
-	if (sc->gif_psrc && sc->gif_pdst)
-		ifp->if_drv_flags |= IFF_DRV_RUNNING;
-	else
-		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-
-	return 0;
-
  bad:
 	if (sc->gif_psrc && sc->gif_pdst)
 		ifp->if_drv_flags |= IFF_DRV_RUNNING;
@@ -972,9 +946,5 @@ gif_delete_tunnel(ifp)
 #ifdef INET6
 	(void)in6_gif_detach(sc);
 #endif
-
-	if (sc->gif_psrc && sc->gif_pdst)
-		ifp->if_drv_flags |= IFF_DRV_RUNNING;
-	else
-		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 }

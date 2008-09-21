@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_usrreq.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_usrreq.c,v 1.37 2005/01/07 01:45:35 imp Exp $
+ * $FreeBSD: src/sys/net/raw_usrreq.c,v 1.44 2006/11/06 13:42:02 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -36,6 +36,7 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/signalvar.h>
 #include <sys/socket.h>
@@ -138,19 +139,24 @@ raw_ctlinput(cmd, arg, dummy)
 	/* INCOMPLETE */
 }
 
-static int
+static void
 raw_uabort(struct socket *so)
 {
 	struct rawcb *rp = sotorawcb(so);
 
-	if (rp == 0)
-		return EINVAL;
+	KASSERT(rp != NULL, ("raw_uabort: rp == NULL"));
 	raw_disconnect(rp);
 	soisdisconnected(so);
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
-	sotryfree(so);
-	return 0;
+}
+
+static void
+raw_uclose(struct socket *so)
+{
+	struct rawcb *rp = sotorawcb(so);
+
+	KASSERT(rp != NULL, ("raw_uabort: rp == NULL"));
+	raw_disconnect(rp);
+	soisdisconnected(so);
 }
 
 /* pru_accept is EOPNOTSUPP */
@@ -158,13 +164,19 @@ raw_uabort(struct socket *so)
 static int
 raw_uattach(struct socket *so, int proto, struct thread *td)
 {
-	struct rawcb *rp = sotorawcb(so);
 	int error;
 
-	if (rp == 0)
-		return EINVAL;
-	if (td && (error = suser(td)) != 0)
-		return error;
+	/*
+	 * Implementors of raw sockets will already have allocated the PCB,
+	 * so it must be non-NULL here.
+	 */
+	KASSERT(sotorawcb(so) != NULL, ("raw_uattach: so_pcb == NULL"));
+
+	if (td != NULL) {
+		error = priv_check(td, PRIV_NET_RAW);
+		if (error)
+			return error;
+	}
 	return raw_attach(so, proto);
 }
 
@@ -183,16 +195,13 @@ raw_uconnect(struct socket *so, struct sockaddr *nam, struct thread *td)
 /* pru_connect2 is EOPNOTSUPP */
 /* pru_control is EOPNOTSUPP */
 
-static int
+static void
 raw_udetach(struct socket *so)
 {
 	struct rawcb *rp = sotorawcb(so);
 
-	if (rp == 0)
-		return EINVAL;
-
+	KASSERT(rp != NULL, ("raw_udetach: rp == NULL"));
 	raw_detach(rp);
-	return 0;
 }
 
 static int
@@ -200,8 +209,7 @@ raw_udisconnect(struct socket *so)
 {
 	struct rawcb *rp = sotorawcb(so);
 
-	if (rp == 0)
-		return EINVAL;
+	KASSERT(rp != NULL, ("raw_udisconnect: rp == NULL"));
 	if (rp->rcb_faddr == 0) {
 		return ENOTCONN;
 	}
@@ -217,8 +225,7 @@ raw_upeeraddr(struct socket *so, struct sockaddr **nam)
 {
 	struct rawcb *rp = sotorawcb(so);
 
-	if (rp == 0)
-		return EINVAL;
+	KASSERT(rp != NULL, ("raw_upeeraddr: rp == NULL"));
 	if (rp->rcb_faddr == 0) {
 		return ENOTCONN;
 	}
@@ -236,10 +243,7 @@ raw_usend(struct socket *so, int flags, struct mbuf *m,
 	int error;
 	struct rawcb *rp = sotorawcb(so);
 
-	if (rp == 0) {
-		error = EINVAL;
-		goto release;
-	}
+	KASSERT(rp != NULL, ("raw_usend: rp == NULL"));
 
 	if (flags & PRUS_OOB) {
 		error = EOPNOTSUPP;
@@ -275,10 +279,8 @@ release:
 static int
 raw_ushutdown(struct socket *so)
 {
-	struct rawcb *rp = sotorawcb(so);
 
-	if (rp == 0)
-		return EINVAL;
+	KASSERT(sotorawcb(so) != NULL, ("raw_ushutdown: rp == NULL"));
 	socantsendmore(so);
 	return 0;
 }
@@ -288,8 +290,7 @@ raw_usockaddr(struct socket *so, struct sockaddr **nam)
 {
 	struct rawcb *rp = sotorawcb(so);
 
-	if (rp == 0)
-		return EINVAL;
+	KASSERT(rp != NULL, ("raw_usockaddr: rp == NULL"));
 	if (rp->rcb_laddr == 0)
 		return EINVAL;
 	*nam = sodupsockaddr(rp->rcb_laddr, M_WAITOK);
@@ -307,4 +308,5 @@ struct pr_usrreqs raw_usrreqs = {
 	.pru_send =		raw_usend,
 	.pru_shutdown =		raw_ushutdown,
 	.pru_sockaddr =		raw_usockaddr,
+	.pru_close =		raw_uclose,
 };

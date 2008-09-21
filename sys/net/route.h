@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/net/route.h,v 1.63.2.1 2006/04/04 20:07:23 andre Exp $
+ * $FreeBSD: src/sys/net/route.h,v 1.65.4.1 2008/01/09 15:23:36 mux Exp $
  */
 
 #ifndef _NET_ROUTE_H_
@@ -289,6 +289,7 @@ struct rt_addrinfo {
 #define	RT_LOCK_INIT(_rt) \
 	mtx_init(&(_rt)->rt_mtx, "rtentry", NULL, MTX_DEF | MTX_DUPOK)
 #define	RT_LOCK(_rt)		mtx_lock(&(_rt)->rt_mtx)
+#define	RT_TRYLOCK(_rt)		mtx_trylock(&(_rt)->rt_mtx)
 #define	RT_UNLOCK(_rt)		mtx_unlock(&(_rt)->rt_mtx)
 #define	RT_LOCK_DESTROY(_rt)	mtx_destroy(&(_rt)->rt_mtx)
 #define	RT_LOCK_ASSERT(_rt)	mtx_assert(&(_rt)->rt_mtx, MA_OWNED)
@@ -298,13 +299,13 @@ struct rt_addrinfo {
 	KASSERT((_rt)->rt_refcnt >= 0,				\
 		("negative refcnt %ld", (_rt)->rt_refcnt));	\
 	(_rt)->rt_refcnt++;					\
-} while (0);
+} while (0)
 #define	RT_REMREF(_rt)	do {					\
 	RT_LOCK_ASSERT(_rt);					\
 	KASSERT((_rt)->rt_refcnt > 0,				\
 		("bogus refcnt %ld", (_rt)->rt_refcnt));	\
 	(_rt)->rt_refcnt--;					\
-} while (0);
+} while (0)
 
 #define	RTFREE_LOCKED(_rt) do {					\
 		if ((_rt)->rt_refcnt <= 1)			\

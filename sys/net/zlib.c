@@ -10,7 +10,7 @@
  * - added inflateIncomp and deflateOutputPending
  * - allow strm->next_out to be NULL, meaning discard the output
  *
- * $FreeBSD: src/sys/net/zlib.c,v 1.19 2005/01/07 01:45:35 imp Exp $
+ * $FreeBSD: src/sys/net/zlib.c,v 1.20 2005/09/11 16:13:02 rodrigc Exp $
  */
 
 /* 
@@ -94,7 +94,7 @@ typedef unsigned short ush;
 typedef ush FAR ushf;
 typedef unsigned long  ulg;
 
-extern const char *z_errmsg[10]; /* indexed by 2-zlib_error */
+static const char *z_errmsg[10]; /* indexed by 2-zlib_error */
 /* (size given to avoid silly warnings with Visual C++) */
 
 #define ERR_MSG(err) z_errmsg[Z_NEED_DICT-(err)]

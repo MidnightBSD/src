@@ -71,11 +71,12 @@
  * Paul Mackerras (paulus@cs.anu.edu.au).
  */
 
-/* $FreeBSD: src/sys/net/if_ppp.c,v 1.105.2.2 2005/08/25 05:01:20 rwatson Exp $ */
+/* $FreeBSD: src/sys/net/if_ppp.c,v 1.121 2007/07/02 15:44:30 rwatson Exp $ */
 /* from if_sl.c,v 1.11 84/10/04 12:54:47 rick Exp */
 /* from NetBSD: if_ppp.c,v 1.15.2.2 1994/07/28 05:17:58 cgd Exp */
 
 #include "opt_inet.h"
+#include "opt_inet6.h"
 #include "opt_ipx.h"
 #include "opt_mac.h"
 #include "opt_ppp.h"
@@ -87,8 +88,8 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
-#include <sys/mac.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/filio.h>
@@ -104,14 +105,14 @@
 #include <net/netisr.h>
 #include <net/bpf.h>
 
-#if INET
+#ifdef INET
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
 #include <netinet/ip.h>
 #endif
 
-#if IPX
+#ifdef IPX
 #include <netipx/ipx.h>
 #include <netipx/ipx_if.h>
 #endif
@@ -122,6 +123,8 @@
 
 #include <net/if_ppp.h>
 #include <net/if_pppvar.h>
+
+#include <security/mac/mac_framework.h>
 
 /* minimise diffs */
 #ifndef splsoftnet
@@ -157,7 +160,7 @@ static void	ppp_ccp(struct ppp_softc *, struct mbuf *m, int rcvd);
 static void	ppp_ccp_closed(struct ppp_softc *);
 static void	ppp_inproc(struct ppp_softc *, struct mbuf *);
 static void	pppdumpm(struct mbuf *m0);
-static int	ppp_clone_create(struct if_clone *, int);
+static int	ppp_clone_create(struct if_clone *, int, caddr_t);
 static void	ppp_clone_destroy(struct ifnet *);
 
 IFC_SIMPLE_DECLARE(ppp, 0);
@@ -193,10 +196,10 @@ extern struct compressor ppp_bsd_compress;
 extern struct compressor ppp_deflate, ppp_deflate_draft;
 
 static struct compressor *ppp_compressors[8] = {
-#if DO_BSD_COMPRESS && defined(PPP_BSDCOMP)
+#if defined(PPP_BSDCOMP)
     &ppp_bsd_compress,
 #endif
-#if DO_DEFLATE && defined(PPP_DEFLATE)
+#if defined(PPP_DEFLATE)
     &ppp_deflate,
     &ppp_deflate_draft,
 #endif
@@ -205,7 +208,7 @@ static struct compressor *ppp_compressors[8] = {
 #endif /* PPP_COMPRESS */
 
 static int
-ppp_clone_create(struct if_clone *ifc, int unit)
+ppp_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 {
 	struct ifnet		*ifp;
 	struct ppp_softc	*sc;
@@ -217,6 +220,7 @@ ppp_clone_create(struct if_clone *ifc, int unit)
 		return (ENOSPC);
 	}
 
+	callout_init(&sc->sc_timo_ch, 0);
 	ifp->if_softc = sc;
 	if_initname(ifp, ifc->ifc_name, unit);
 	ifp->if_mtu = PPP_MTU;
@@ -242,11 +246,15 @@ ppp_clone_create(struct if_clone *ifc, int unit)
 }
 
 static void
-ppp_destroy(struct ppp_softc *sc)
+ppp_clone_destroy(struct ifnet *ifp)
 {
-	struct ifnet *ifp;
+	struct ppp_softc *sc;
 
-	ifp = PPP2IFP(sc);
+	sc = ifp->if_softc;
+	PPP_LIST_LOCK();
+	LIST_REMOVE(sc, sc_list);
+	PPP_LIST_UNLOCK();
+
 	bpfdetach(ifp);
 	if_detach(ifp);
 	if_free(ifp);
@@ -256,22 +264,9 @@ ppp_destroy(struct ppp_softc *sc)
 	free(sc, M_PPP);
 }
 
-static void
-ppp_clone_destroy(struct ifnet *ifp)
-{
-	struct ppp_softc *sc;
-
-	sc = ifp->if_softc;
-	PPP_LIST_LOCK();
-	LIST_REMOVE(sc, sc_list);
-	PPP_LIST_UNLOCK();
-	ppp_destroy(sc);
-}
-
 static int
 ppp_modevent(module_t mod, int type, void *data) 
 {
-	struct ppp_softc *sc;
 
 	switch (type) { 
 	case MOD_LOAD: 
@@ -293,14 +288,6 @@ ppp_modevent(module_t mod, int type, void *data)
 		netisr_unregister(NETISR_PPP);
 
 		if_clone_detach(&ppp_cloner);
-
-		PPP_LIST_LOCK();
-		while ((sc = LIST_FIRST(&ppp_softc_list)) != NULL) {
-			LIST_REMOVE(sc, sc_list);
-			PPP_LIST_UNLOCK();
-			ppp_destroy(sc);
-			PPP_LIST_LOCK();
-		}
 		PPP_LIST_LOCK_DESTROY();
 		break; 
 	default:
@@ -345,7 +332,7 @@ pppalloc(pid)
     /* Try to clone an interface if we don't have a free one */
     if (sc == NULL) {
 	strcpy(tmpname, PPPNAME);
-	if (if_clone_create(tmpname, sizeof(tmpname)) != 0)
+	if (if_clone_create(tmpname, sizeof(tmpname), (caddr_t) 0) != 0)
 	    return NULL;
 	ifp = ifunit(tmpname);
 	if (ifp == NULL)
@@ -373,7 +360,7 @@ pppalloc(pid)
 	sc->sc_npmode[i] = NPMODE_ERROR;
     sc->sc_npqueue = NULL;
     sc->sc_npqtail = &sc->sc_npqueue;
-    sc->sc_last_sent = sc->sc_last_recv = time_second;
+    sc->sc_last_sent = sc->sc_last_recv = time_uptime;
 
     return sc;
 }
@@ -467,7 +454,8 @@ pppioctl(sc, cmd, data, flag, td)
 	break;
 
     case PPPIOCSFLAGS:
-	if ((error = suser(td)) != 0)
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
 	    break;
 	flags = *(int *)data & SC_MASK;
 	s = splsoftnet();
@@ -481,8 +469,9 @@ pppioctl(sc, cmd, data, flag, td)
 	break;
 
     case PPPIOCSMRU:
-	if ((error = suser(td)) != 0)
-	    return (error);
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
+		return (error);
 	mru = *(int *)data;
 	if (mru >= PPP_MRU && mru <= PPP_MAXMRU)
 	    sc->sc_mru = mru;
@@ -494,7 +483,8 @@ pppioctl(sc, cmd, data, flag, td)
 
 #ifdef VJC
     case PPPIOCSMAXCID:
-	if ((error = suser(td)) != 0)
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
 	    break;
 	if (sc->sc_comp) {
 	    s = splsoftnet();
@@ -505,14 +495,16 @@ pppioctl(sc, cmd, data, flag, td)
 #endif
 
     case PPPIOCXFERUNIT:
-	if ((error = suser(td)) != 0)
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
 	    break;
 	sc->sc_xfer = p->p_pid;
 	break;
 
 #ifdef PPP_COMPRESS
     case PPPIOCSCOMPRESS:
-	if ((error = suser(td)) != 0)
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
 	    break;
 	odp = (struct ppp_option_data *) data;
 	nb = odp->length;
@@ -560,7 +552,7 @@ pppioctl(sc, cmd, data, flag, td)
 		    sc->sc_flags &= ~SC_DECOMP_RUN;
 		    splx(s);
 		}
-		break;
+		return (error);
 	    }
 	if (sc->sc_flags & SC_DEBUG)
 	    if_printf(PPP2IFP(sc), "no compressor for [%x %x %x], %x\n",
@@ -577,6 +569,9 @@ pppioctl(sc, cmd, data, flag, td)
 	case PPP_IP:
 	    npx = NP_IP;
 	    break;
+	case PPP_IPV6:
+	    npx = NP_IPV6;
+	    break;
 	default:
 	    error = EINVAL;
 	}
@@ -585,7 +580,8 @@ pppioctl(sc, cmd, data, flag, td)
 	if (cmd == PPPIOCGNPMODE) {
 	    npi->mode = sc->sc_npmode[npx];
 	} else {
-	    if ((error = suser(td)) != 0)
+	    error = priv_check(td, PRIV_NET_PPP);
+	    if (error)
 		break;
 	    if (npi->mode != sc->sc_npmode[npx]) {
 		s = splsoftnet();
@@ -601,7 +597,7 @@ pppioctl(sc, cmd, data, flag, td)
 
     case PPPIOCGIDLE:
 	s = splsoftnet();
-	t = time_second;
+	t = time_uptime;
 	((struct ppp_idle *)data)->xmit_idle = t - sc->sc_last_sent;
 	((struct ppp_idle *)data)->recv_idle = t - sc->sc_last_recv;
 	splx(s);
@@ -684,6 +680,10 @@ pppsioctl(ifp, cmd, data)
 	case AF_INET:
 	    break;
 #endif
+#ifdef INET6
+	case AF_INET6:
+	    break;
+#endif
 #ifdef IPX
 	case AF_IPX:
 	    break;
@@ -700,6 +700,10 @@ pppsioctl(ifp, cmd, data)
 	case AF_INET:
 	    break;
 #endif
+#ifdef INET6
+	case AF_INET6:
+	    break;
+#endif
 #ifdef IPX
 	case AF_IPX:
 	    break;
@@ -711,7 +715,12 @@ pppsioctl(ifp, cmd, data)
 	break;
 
     case SIOCSIFMTU:
-	if ((error = suser(td)) != 0)
+	/*
+	 * XXXRW: Isn't this priv_check() check redundant to the one at the
+	 * ifnet layer?
+	 */
+	error = priv_check(td, PRIV_NET_SETIFMTU);
+	if (error)
 	    break;
 	if (ifr->ifr_mtu > PPP_MAXMTU)
 	    error = EINVAL;
@@ -735,6 +744,10 @@ pppsioctl(ifp, cmd, data)
 	switch(ifr->ifr_addr.sa_family) {
 #ifdef INET
 	case AF_INET:
+	    break;
+#endif
+#ifdef INET6
+	case AF_INET6:
 	    break;
 #endif
 	default:
@@ -834,6 +847,24 @@ pppoutput(ifp, m0, dst, rtp)
 	    m0->m_flags |= M_HIGHPRI;
 	break;
 #endif
+#ifdef INET6
+    case AF_INET6:
+	address = PPP_ALLSTATIONS;	/*XXX*/
+	control = PPP_UI;		/*XXX*/
+	protocol = PPP_IPV6;
+	mode = sc->sc_npmode[NP_IPV6];
+
+#if 0	/* XXX flowinfo/traffic class, maybe? */
+	/*
+	 * If this packet has the "low delay" bit set in the IP header,
+	 * put it on the fastq instead.
+	 */
+	ip = mtod(m0, struct ip *);
+	if (ip->ip_tos & IPTOS_LOWDELAY)
+	    m0->m_flags |= M_HIGHPRI;
+#endif
+	break;
+#endif
 #ifdef IPX
     case AF_IPX:
 	/*
@@ -918,14 +949,14 @@ pppoutput(ifp, m0, dst, rtp)
 	 */
 	if (sc->sc_active_filt.bf_insns == 0
 	    || bpf_filter(sc->sc_active_filt.bf_insns, (u_char *) m0, len, 0))
-	    sc->sc_last_sent = time_second;
+	    sc->sc_last_sent = time_uptime;
 
 	*mtod(m0, u_char *) = address;
 #else
 	/*
 	 * Update the time we sent the most recent data packet.
 	 */
-	sc->sc_last_sent = time_second;
+	sc->sc_last_sent = time_uptime;
 #endif /* PPP_FILTER */
     }
 
@@ -989,6 +1020,9 @@ ppp_requeue(sc)
 	switch (PPP_PROTOCOL(mtod(m, u_char *))) {
 	case PPP_IP:
 	    mode = sc->sc_npmode[NP_IP];
+	    break;
+	case PPP_IPV6:
+	    mode = sc->sc_npmode[NP_IPV6];
 	    break;
 	default:
 	    mode = NPMODE_PASS;
@@ -1557,14 +1591,14 @@ ppp_inproc(sc, m)
 	}
 	if (sc->sc_active_filt.bf_insns == 0
 	    || bpf_filter(sc->sc_active_filt.bf_insns, (u_char *) m, ilen, 0))
-	    sc->sc_last_recv = time_second;
+	    sc->sc_last_recv = time_uptime;
 
 	*mtod(m, u_char *) = adrs;
 #else
 	/*
 	 * Record the time that we received this packet.
 	 */
-	sc->sc_last_recv = time_second;
+	sc->sc_last_recv = time_uptime;
 #endif /* PPP_FILTER */
     }
 
@@ -1587,9 +1621,26 @@ ppp_inproc(sc, m)
 	m->m_pkthdr.len -= PPP_HDRLEN;
 	m->m_data += PPP_HDRLEN;
 	m->m_len -= PPP_HDRLEN;
-	if (ip_fastforward(m))
+	if ((m = ip_fastforward(m)) == NULL)
 	    return;
 	isr = NETISR_IP;
+	break;
+#endif
+#ifdef INET6
+    case PPP_IPV6:
+	/*
+	 * IPv6 packet - take off the ppp header and pass it up to IPv6.
+	 */
+	if ((ifp->if_flags & IFF_UP) == 0
+	    || sc->sc_npmode[NP_IPV6] != NPMODE_PASS) {
+	    /* interface is down - drop the packet. */
+	    m_freem(m);
+	    return;
+	}
+	m->m_pkthdr.len -= PPP_HDRLEN;
+	m->m_data += PPP_HDRLEN;
+	m->m_len -= PPP_HDRLEN;
+	isr = NETISR_IPV6;
 	break;
 #endif
 #ifdef IPX
@@ -1607,7 +1658,7 @@ ppp_inproc(sc, m)
 	m->m_data += PPP_HDRLEN;
 	m->m_len -= PPP_HDRLEN;
 	isr = NETISR_IPX;
-	sc->sc_last_recv = time_second;	/* update time of last pkt rcvd */
+	sc->sc_last_recv = time_uptime;	/* update time of last pkt rcvd */
 	break;
 #endif
 

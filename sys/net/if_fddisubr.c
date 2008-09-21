@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	from: if_ethersubr.c,v 1.5 1994/12/13 22:31:45 wollman Exp
- * $FreeBSD: src/sys/net/if_fddisubr.c,v 1.98.2.2 2005/08/25 05:01:20 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_fddisubr.c,v 1.104 2006/10/22 11:52:15 rwatson Exp $
  */
 
 #include "opt_atalk.h"
@@ -45,7 +45,6 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
@@ -88,6 +87,8 @@
 extern u_char	at_org_code[ 3 ];
 extern u_char	aarp_org_code[ 3 ];
 #endif /* NETATALK */
+
+#include <security/mac/mac_framework.h>
 
 static const u_char fddibroadcastaddr[FDDI_ADDR_LEN] =
 			{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
@@ -309,7 +310,7 @@ fddi_output(ifp, m, dst, rt0)
 	if (hdrcmplt)
 		bcopy((caddr_t)esrc, (caddr_t)fh->fddi_shost, FDDI_ADDR_LEN);
 	else
-		bcopy(IFP2ENADDR(ifp), (caddr_t)fh->fddi_shost,
+		bcopy(IF_LLADDR(ifp), (caddr_t)fh->fddi_shost,
 			FDDI_ADDR_LEN);
 
 	/*
@@ -420,7 +421,7 @@ fddi_input(ifp, m)
 	 * is in promiscuous mode.
 	 */
 	if ((ifp->if_flags & IFF_PROMISC) && ((fh->fddi_dhost[0] & 1) == 0) &&
-	    (bcmp(IFP2ENADDR(ifp), (caddr_t)fh->fddi_dhost,
+	    (bcmp(IF_LLADDR(ifp), (caddr_t)fh->fddi_dhost,
 	     FDDI_ADDR_LEN) != 0))
 		goto dropanyway;
 
@@ -495,7 +496,7 @@ fddi_input(ifp, m)
 		switch (type) {
 #ifdef INET
 		case ETHERTYPE_IP:
-			if (ip_fastforward(m))
+			if ((m = ip_fastforward(m)) == NULL)
 				return;
 			isr = NETISR_IP;
 			break;
@@ -556,8 +557,9 @@ dropanyway:
  * Perform common duties while attaching to interface list
  */
 void
-fddi_ifattach(ifp, bpf)
+fddi_ifattach(ifp, lla, bpf)
 	struct ifnet *ifp;
+	const u_int8_t *lla;
 	int bpf;
 {
 	struct ifaddr *ifa;
@@ -578,16 +580,13 @@ fddi_ifattach(ifp, bpf)
 #ifdef IFF_NOTRAILERS
 	ifp->if_flags |= IFF_NOTRAILERS;
 #endif
-	ifa = ifaddr_byindex(ifp->if_index);
-	if (ifa == NULL) {
-		if_printf(ifp, "%s() no lladdr!\n", __func__);
-		return;
-	}
+	ifa = ifp->if_addr;
+	KASSERT(ifa != NULL, ("%s: no lladdr!\n", __func__));
 
 	sdl = (struct sockaddr_dl *)ifa->ifa_addr;
 	sdl->sdl_type = IFT_FDDI;
 	sdl->sdl_alen = ifp->if_addrlen;
-	bcopy(IFP2ENADDR(ifp), LLADDR(sdl), ifp->if_addrlen);
+	bcopy(lla, LLADDR(sdl), ifp->if_addrlen);
 
 	if (bpf)
 		bpfattach(ifp, DLT_FDDI, FDDI_HDR_LEN);
@@ -645,10 +644,10 @@ fddi_ioctl (ifp, command, data)
 
 				if (ipx_nullhost(*ina)) {
 					ina->x_host = *(union ipx_host *)
-							IFP2ENADDR(ifp);
+							IF_LLADDR(ifp);
 				} else {
 					bcopy((caddr_t) ina->x_host.c_host,
-					      (caddr_t) IFP2ENADDR(ifp),
+					      (caddr_t) IF_LLADDR(ifp),
 					      ETHER_ADDR_LEN);
 				}
 	
@@ -668,7 +667,7 @@ fddi_ioctl (ifp, command, data)
 			struct sockaddr *sa;
 
 			sa = (struct sockaddr *) & ifr->ifr_data;
-			bcopy(IFP2ENADDR(ifp),
+			bcopy(IF_LLADDR(ifp),
 			      (caddr_t) sa->sa_data, FDDI_ADDR_LEN);
 
 		}

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)raw_cb.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/raw_cb.c,v 1.32 2005/01/24 22:56:09 rwatson Exp $
+ * $FreeBSD: src/sys/net/raw_cb.c,v 1.34 2006/06/02 08:27:15 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -98,10 +98,9 @@ raw_detach(rp)
 {
 	struct socket *so = rp->rcb_socket;
 
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
-	so->so_pcb = 0;
-	sotryfree(so);
+	KASSERT(so->so_pcb == rp, ("raw_detach: so_pcb != rp"));
+
+	so->so_pcb = NULL;
 	mtx_lock(&rawcb_mtx);
 	LIST_REMOVE(rp, list);
 	mtx_unlock(&rawcb_mtx);
@@ -114,7 +113,7 @@ raw_detach(rp)
 }
 
 /*
- * Disconnect and possibly release resources.
+ * Disconnect raw socket.
  */
 void
 raw_disconnect(rp)
@@ -126,8 +125,6 @@ raw_disconnect(rp)
 		m_freem(dtom(rp->rcb_faddr));
 	rp->rcb_faddr = 0;
 #endif
-	if (rp->rcb_socket->so_state & SS_NOFDREF)
-		raw_detach(rp);
 }
 
 #ifdef notdef

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_ef.c,v 1.34.2.3 2006/02/14 21:11:19 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_ef.c,v 1.39 2006/01/18 14:24:39 andre Exp $
  */
 
 #include "opt_inet.h"
@@ -126,8 +126,6 @@ static int
 ef_attach(struct efnet *sc)
 {
 	struct ifnet *ifp = sc->ef_ifp;
-	struct ifaddr *ifa2;
-	struct sockaddr_dl *sdl2;
 
 	ifp->if_start = ef_start;
 	ifp->if_watchdog = NULL;
@@ -137,9 +135,7 @@ ef_attach(struct efnet *sc)
 	/*
 	 * Attach the interface
 	 */
-	ifa2 = ifaddr_byindex(sc->ef_pifp->if_index);
-	sdl2 = (struct sockaddr_dl *)ifa2->ifa_addr;
-	ether_ifattach(ifp, LLADDR(sdl2));
+	ether_ifattach(ifp, IF_LLADDR(sc->ef_pifp));
 
 	ifp->if_resolvemulti = 0;
 	ifp->if_type = IFT_XETHER;
@@ -251,7 +247,7 @@ ef_inputEII(struct mbuf *m, struct ether_header *eh, u_short ether_type)
 #endif
 #ifdef INET
 	case ETHERTYPE_IP:
-		if (ip_fastforward(m))
+		if ((m = ip_fastforward(m)) == NULL)
 			return (0);
 		isr = NETISR_IP;
 		break;

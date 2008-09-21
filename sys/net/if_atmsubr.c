@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net/if_atmsubr.c,v 1.37.2.3 2005/08/25 05:01:19 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/net/if_atmsubr.c,v 1.45 2006/12/01 22:45:43 rwatson Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: src/sys/net/if_atmsubr.c,v 1.37.2.3 2005/08/25 05:01:19 rwat
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
-#include <sys/mac.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -70,6 +69,8 @@ __FBSDID("$FreeBSD: src/sys/net/if_atmsubr.c,v 1.37.2.3 2005/08/25 05:01:19 rwat
 #ifdef NATM
 #include <netnatm/natm.h>
 #endif
+
+#include <security/mac/mac_framework.h>
 
 /*
  * Netgraph interface functions.
@@ -189,14 +190,8 @@ atm_output(struct ifnet *ifp, struct mbuf *m0, struct sockaddr *dst,
 			break;
 			
 		default:
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 501113) || \
-    defined(__NetBSD__) || defined(__OpenBSD__)
 			printf("%s: can't handle af%d\n", ifp->if_xname, 
 			    dst->sa_family);
-#elif defined(__FreeBSD__) || defined(__bsdi__)
-			printf("%s%d: can't handle af%d\n", ifp->if_name, 
-			    ifp->if_unit, dst->sa_family);
-#endif
 			senderr(EAFNOSUPPORT);
 		}
 
@@ -315,17 +310,9 @@ atm_input(struct ifnet *ifp, struct atm_pseudohdr *ah, struct mbuf *m,
 				return; /* failed */
 			alc = mtod(m, struct atmllc *);
 			if (bcmp(alc, ATMLLC_HDR, 6)) {
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 501113) || \
-    defined(__NetBSD__) || defined(__OpenBSD__)
 				printf("%s: recv'd invalid LLC/SNAP frame "
 				    "[vp=%d,vc=%d]\n", ifp->if_xname,
 				    ATM_PH_VPI(ah), ATM_PH_VCI(ah));
-#elif defined(__FreeBSD__) || defined(__bsdi__)
-				printf("%s%d: recv'd invalid LLC/SNAP frame "
-				    "[vp=%d,vc=%d]\n", ifp->if_name,
-				    ifp->if_unit, ATM_PH_VPI(ah),
-				    ATM_PH_VCI(ah));
-#endif
 				m_freem(m);
 				return;
 			}
@@ -380,16 +367,9 @@ atm_ifattach(struct ifnet *ifp)
 #endif
 	ifp->if_snd.ifq_maxlen = 50;	/* dummy */
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	TAILQ_FOREACH(ifa, &ifp->if_addrlist, ifa_list)
-#elif defined(__FreeBSD__) && (__FreeBSD__ > 2)
-	for (ifa = TAILQ_FIRST(&ifp->if_addrhead); ifa; 
-	    ifa = TAILQ_NEXT(ifa, ifa_link))
-#elif defined(__FreeBSD__) || defined(__bsdi__)
-	for (ifa = ifp->if_addrlist; ifa; ifa = ifa->ifa_next) 
-#endif
-		if ((sdl = (struct sockaddr_dl *)ifa->ifa_addr) &&
-		    sdl->sdl_family == AF_LINK) {
+	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
+		if (ifa->ifa_addr->sa_family == AF_LINK) {
+			sdl = (struct sockaddr_dl *)ifa->ifa_addr;
 			sdl->sdl_type = IFT_ATM;
 			sdl->sdl_alen = ifp->if_addrlen;
 #ifdef notyet /* if using ATMARP, store hardware address using the next line */

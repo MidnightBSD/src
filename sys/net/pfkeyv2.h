@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/net/pfkeyv2.h,v 1.14 2005/01/07 01:45:35 imp Exp $	*/
+/*	$FreeBSD: src/sys/net/pfkeyv2.h,v 1.16 2007/07/03 12:13:43 gnn Exp $	*/
 /*	$KAME: pfkeyv2.h,v 1.37 2003/09/06 05:15:43 itojun Exp $	*/
 
 /*-
@@ -325,8 +325,10 @@ struct sadb_x_ipsecrequest {
 #define SADB_X_EALG_BLOWFISHCBC	7
 #define SADB_X_EALG_RIJNDAELCBC	12
 #define SADB_X_EALG_AES		12
+/* private allocations - based on RFC4312/IANA assignment */
+#define SADB_X_EALG_CAMELLIACBC		22
 /* private allocations should use 249-255 (RFC2407) */
-#define SADB_X_EALG_SKIPJACK	249	/*250*/ /* for FAST_IPSEC */
+#define SADB_X_EALG_SKIPJACK	249	/*250*/ /* for IPSEC */
 #define SADB_X_EALG_AESCTR	250	/*249*/ /* draft-ietf-ipsec-ciph-aes-ctr-03 */
 
 /* private allocations - based on RFC2407/IANA assignment */

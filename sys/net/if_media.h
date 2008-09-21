@@ -1,5 +1,5 @@
 /*	$NetBSD: if_media.h,v 1.3 1997/03/26 01:19:27 thorpej Exp $	*/
-/* $FreeBSD: /repoman/r/ncvs/src/sys/net/if_media.h,v 1.30.2.1 2006/03/17 20:17:43 glebius Exp $ */
+/* $FreeBSD: src/sys/net/if_media.h,v 1.40 2007/09/18 20:30:40 sam Exp $ */
 
 /*-
  * Copyright (c) 1997
@@ -143,6 +143,8 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_HPNA_1	17		/* HomePNA 1.0 (1Mb/s) */
 #define	IFM_10G_LR	18		/* 10GBase-LR 1310nm Single-mode */
 #define	IFM_10G_SR	19		/* 10GBase-SR 850nm Multi-mode */
+#define	IFM_10G_CX4	20		/* 10GBase CX4 copper */
+#define IFM_2500_SX	21		/* 2500BaseSX - multi-mode fiber */
 
 /* note 31 is the max! */
 
@@ -197,6 +199,11 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_IEEE80211_OFDM72	18	/* OFDM 72Mbps */
 #define	IFM_IEEE80211_DS354k	19	/* Direct Sequence 354Kbps */
 #define	IFM_IEEE80211_DS512k	20	/* Direct Sequence 512Kbps */
+#define	IFM_IEEE80211_OFDM3	21	/* OFDM 3Mbps */
+#define	IFM_IEEE80211_OFDM4	22	/* OFDM 4.5Mbps */
+#define	IFM_IEEE80211_OFDM27	23	/* OFDM 27Mbps */
+/* NB: not enough bits to express MCS fully */
+#define	IFM_IEEE80211_MCS	24	/* HT MCS rate */
 
 #define	IFM_IEEE80211_ADHOC	0x00000100	/* Operate in Adhoc mode */
 #define	IFM_IEEE80211_HOSTAP	0x00000200	/* Operate in Host AP mode */
@@ -210,6 +217,8 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_IEEE80211_11B	0x00020000	/* Direct Sequence mode */
 #define	IFM_IEEE80211_11G	0x00030000	/* 2Ghz, CCK mode */
 #define	IFM_IEEE80211_FH	0x00040000	/* 2Ghz, GFSK mode */
+#define	IFM_IEEE80211_11NA	0x00050000	/* 5Ghz, HT mode */
+#define	IFM_IEEE80211_11NG	0x00060000	/* 2Ghz, HT mode */
 
 /*
  * ATM
@@ -270,12 +279,12 @@ uint64_t	ifmedia_baudrate(int);
 #define	IFM_ACTIVE	0x00000002	/* Interface attached to working net */
 
 /* Mask of "status valid" bits, for ifconfig(8). */
-#define IFM_STATUS_VALID        IFM_AVALID
- 	 
+#define	IFM_STATUS_VALID	IFM_AVALID
+
 /* List of "status valid" bits, for ifconfig(8). */
-#define IFM_STATUS_VALID_LIST {          \
-     IFM_AVALID,                         \
-     0                                   \
+#define IFM_STATUS_VALID_LIST {						\
+        IFM_AVALID,							\
+        0								\
 }
 
 /*
@@ -339,6 +348,8 @@ struct ifmedia_description {
 	{ IFM_HPNA_1,	"homePNA" },					\
 	{ IFM_10G_LR,	"10Gbase-LR" },					\
 	{ IFM_10G_SR,	"10Gbase-SR" },					\
+	{ IFM_10G_CX4,	"10Gbase-CX4" },				\
+	{ IFM_2500_SX,	"2500BaseSX" },					\
 	{ 0, NULL },							\
 }
 
@@ -360,6 +371,7 @@ struct ifmedia_description {
 	{ IFM_1000_CX,	"1000CX" },					\
 	{ IFM_1000_T,	"1000TX" },					\
 	{ IFM_1000_T,	"1000T" },					\
+	{ IFM_2500_SX,	"2500SX" },					\
 	{ 0, NULL },							\
 }
 
@@ -435,6 +447,9 @@ struct ifmedia_description {
 	{ IFM_IEEE80211_OFDM72, "OFDM/72Mbps" },			\
 	{ IFM_IEEE80211_DS354k, "DS/354Kbps" },				\
 	{ IFM_IEEE80211_DS512k, "DS/512Kbps" },				\
+	{ IFM_IEEE80211_OFDM3, "OFDM/3Mbps" },				\
+	{ IFM_IEEE80211_OFDM4, "OFDM/4.5Mbps" },			\
+	{ IFM_IEEE80211_OFDM27, "OFDM/27Mbps" },			\
 	{ 0, NULL },							\
 }
 
@@ -470,6 +485,9 @@ struct ifmedia_description {
 	{ IFM_IEEE80211_DS354k, "DirectSequence/354Kbps" },		\
 	{ IFM_IEEE80211_DS512k, "DS512K" },				\
 	{ IFM_IEEE80211_DS512k, "DirectSequence/512Kbps" },		\
+	{ IFM_IEEE80211_OFDM3, "OFDM3" },				\
+	{ IFM_IEEE80211_OFDM4, "OFDM4.5" },				\
+	{ IFM_IEEE80211_OFDM27, "OFDM27" },				\
 	{ 0, NULL },							\
 }
 
@@ -489,6 +507,8 @@ struct ifmedia_description {
 	{ IFM_IEEE80211_11B, "11b" },					\
 	{ IFM_IEEE80211_11G, "11g" },					\
 	{ IFM_IEEE80211_FH, "fh" },					\
+	{ IFM_IEEE80211_11NA, "11na" },					\
+	{ IFM_IEEE80211_11NG, "11ng" },					\
 	{ 0, NULL },							\
 }
 
@@ -580,6 +600,9 @@ struct ifmedia_baudrate {
 	{ IFM_ETHER | IFM_1000_T,	IF_Mbps(1000) },		\
 	{ IFM_ETHER | IFM_HPNA_1,	IF_Mbps(1) },			\
 	{ IFM_ETHER | IFM_10G_LR,	IF_Gbps(10ULL) },		\
+	{ IFM_ETHER | IFM_10G_SR,	IF_Gbps(10ULL) },		\
+	{ IFM_ETHER | IFM_10G_CX4,	IF_Gbps(10ULL) },		\
+	{ IFM_ETHER | IFM_2500_SX,	IF_Mbps(2500ULL) },		\
 									\
 	{ IFM_TOKEN | IFM_TOK_STP4,	IF_Mbps(4) },			\
 	{ IFM_TOKEN | IFM_TOK_STP16,	IF_Mbps(16) },			\
@@ -614,30 +637,29 @@ struct ifmedia_baudrate {
  * Status descriptions for the various media types.
  */
 struct ifmedia_status_description {
-	int        ifms_type;
-	int        ifms_valid;
-	int        ifms_bit;
+	int	   ifms_type;
+	int	   ifms_valid;
+	int	   ifms_bit;
 	const char *ifms_string[2];
 };
- 	 
-#define IFM_STATUS_DESC(ifms, bit)                                      \
-     (ifms)->ifms_string[((ifms)->ifms_bit & (bit)) ? 1 : 0]
- 	 
-#define IFM_STATUS_DESCRIPTIONS {                                       \
-     { IFM_ETHER,            IFM_AVALID,     IFM_ACTIVE,             \
-        { "no carrier", "active" } },                               \
-     { IFM_FDDI,             IFM_AVALID,     IFM_ACTIVE,             \
-        { "no ring", "inserted" } },                                \
-     { IFM_TOKEN,            IFM_AVALID,     IFM_ACTIVE,             \
-        { "no ring", "inserted" } },                                \
-     { IFM_IEEE80211,        IFM_AVALID,     IFM_ACTIVE,             \
-        { "no network", "active" } },                               \
-     { IFM_ATM,              IFM_AVALID,     IFM_ACTIVE,             \
-        { "no network", "active" } },                               \
-     { IFM_CARP,             IFM_AVALID,     IFM_ACTIVE,             \
-        { "backup", "master" } },                                   \
-     { 0,                    0,              0,                      \
-        { NULL, NULL } }                                            \
-}
 
+#define IFM_STATUS_DESC(ifms, bit)					\
+	(ifms)->ifms_string[((ifms)->ifms_bit & (bit)) ? 1 : 0]
+
+#define IFM_STATUS_DESCRIPTIONS {					\
+	{ IFM_ETHER,		IFM_AVALID,	IFM_ACTIVE,		\
+	    { "no carrier", "active" } },				\
+	{ IFM_FDDI,		IFM_AVALID,	IFM_ACTIVE,		\
+	    { "no ring", "inserted" } },				\
+	{ IFM_TOKEN,		IFM_AVALID,	IFM_ACTIVE,		\
+	    { "no ring", "inserted" } },				\
+	{ IFM_IEEE80211,	IFM_AVALID,	IFM_ACTIVE,		\
+	    { "no network", "active" } },				\
+	{ IFM_ATM,		IFM_AVALID,	IFM_ACTIVE,		\
+	    { "no network", "active" } },				\
+	{ IFM_CARP,		IFM_AVALID,	IFM_ACTIVE,		\
+	    { "backup", "master" } },					\
+	{ 0,			0,		0,			\
+	    { NULL, NULL } }						\
+}
 #endif	/* _NET_IF_MEDIA_H_ */

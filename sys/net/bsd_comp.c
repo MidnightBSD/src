@@ -37,7 +37,7 @@
 /*
  * This version is for use with mbufs on BSD-derived systems.
  *
- * $FreeBSD: src/sys/net/bsd_comp.c,v 1.23 2005/07/05 23:39:49 rwatson Exp $
+ * $FreeBSD: src/sys/net/bsd_comp.c,v 1.24 2006/10/22 11:52:15 rwatson Exp $
  */
 
 #include "opt_mac.h"
@@ -45,7 +45,6 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
@@ -54,6 +53,8 @@
 
 #define PACKETPTR	struct mbuf *
 #include <net/ppp_comp.h>
+
+#include <security/mac/mac_framework.h>
 
 /*
  * PPP "BSD compress" compression

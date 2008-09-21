@@ -1,5 +1,5 @@
 /*	$NetBSD: if_gre.c,v 1.49 2003/12/11 00:22:29 itojun Exp $ */
-/*	 $FreeBSD: src/sys/net/if_gre.c,v 1.32.2.5 2006/02/16 01:08:40 qingli Exp $ */
+/*	 $FreeBSD: src/sys/net/if_gre.c,v 1.46 2007/06/26 23:01:01 rwatson Exp $ */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -57,6 +57,7 @@
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mbuf.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -83,7 +84,6 @@
 
 #include <net/bpf.h>
 
-#include <net/net_osdep.h>
 #include <net/if_gre.h>
 
 /*
@@ -104,7 +104,7 @@ static MALLOC_DEFINE(M_GRE, GRENAME, "Generic Routing Encapsulation");
 
 struct gre_softc_head gre_softc_list;
 
-static int	gre_clone_create(struct if_clone *, int);
+static int	gre_clone_create(struct if_clone *, int, caddr_t);
 static void	gre_clone_destroy(struct ifnet *);
 static int	gre_ioctl(struct ifnet *, u_long, caddr_t);
 static int	gre_output(struct ifnet *, struct mbuf *, struct sockaddr *,
@@ -171,9 +171,10 @@ greattach(void)
 }
 
 static int
-gre_clone_create(ifc, unit)
+gre_clone_create(ifc, unit, params)
 	struct if_clone *ifc;
 	int unit;
+	caddr_t params;
 {
 	struct gre_softc *sc;
 
@@ -210,20 +211,6 @@ gre_clone_create(ifc, unit)
 }
 
 static void
-gre_destroy(struct gre_softc *sc)
-{
-
-#ifdef INET
-	if (sc->encap != NULL)
-		encap_detach(sc->encap);
-#endif
-	bpfdetach(GRE2IFP(sc));
-	if_detach(GRE2IFP(sc));
-	if_free(GRE2IFP(sc));
-	free(sc, M_GRE);
-}
-
-static void
 gre_clone_destroy(ifp)
 	struct ifnet *ifp;
 {
@@ -232,7 +219,15 @@ gre_clone_destroy(ifp)
 	mtx_lock(&gre_mtx);
 	LIST_REMOVE(sc, sc_list);
 	mtx_unlock(&gre_mtx);
-	gre_destroy(sc);
+
+#ifdef INET
+	if (sc->encap != NULL)
+		encap_detach(sc->encap);
+#endif
+	bpfdetach(ifp);
+	if_detach(ifp);
+	if_free(ifp);
+	free(sc, M_GRE);
 }
 
 /*
@@ -282,7 +277,7 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		dst->sa_family = af;
 	}
 
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		af = dst->sa_family;
 		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);
 	}
@@ -300,7 +295,7 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 			 * RFC2004 specifies that fragmented diagrams shouldn't
 			 * be encapsulated.
 			 */
-			if ((ip->ip_off & IP_MF) != 0) {
+			if (ip->ip_off & (IP_MF | IP_OFFMASK)) {
 				_IF_DROP(&ifp->if_snd);
 				m_freem(m);
 				error = EINVAL;    /* is there better errno? */
@@ -329,7 +324,7 @@ gre_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 
 			if ((m->m_data - msiz) < m->m_pktdat) {
 				/* need new mbuf */
-				MGETHDR(m0, M_DONTWAIT, MT_HEADER);
+				MGETHDR(m0, M_DONTWAIT, MT_DATA);
 				if (m0 == NULL) {
 					_IF_DROP(&ifp->if_snd);
 					m_freem(m);
@@ -458,7 +453,11 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	case SIOCSIFDSTADDR:
 		break;
 	case SIOCSIFFLAGS:
-		if ((error = suser(curthread)) != 0)
+		/*
+		 * XXXRW: Isn't this priv_check() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_SETIFFLAGS)) != 0)
 			break;
 		if ((ifr->ifr_flags & IFF_LINK0) != 0)
 			sc->g_proto = IPPROTO_GRE;
@@ -470,7 +469,11 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			sc->wccp_ver = WCCP_V1;
 		goto recompute;
 	case SIOCSIFMTU:
-		if ((error = suser(curthread)) != 0)
+		/*
+		 * XXXRW: Isn't this priv_check() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_SETIFMTU)) != 0)
 			break;
 		if (ifr->ifr_mtu < 576) {
 			error = EINVAL;
@@ -482,8 +485,36 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		ifr->ifr_mtu = GRE2IFP(sc)->if_mtu;
 		break;
 	case SIOCADDMULTI:
+		/*
+		 * XXXRW: Isn't this priv_checkr() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_ADDMULTI)) != 0)
+			break;
+		if (ifr == 0) {
+			error = EAFNOSUPPORT;
+			break;
+		}
+		switch (ifr->ifr_addr.sa_family) {
+#ifdef INET
+		case AF_INET:
+			break;
+#endif
+#ifdef INET6
+		case AF_INET6:
+			break;
+#endif
+		default:
+			error = EAFNOSUPPORT;
+			break;
+		}
+		break;
 	case SIOCDELMULTI:
-		if ((error = suser(curthread)) != 0)
+		/*
+		 * XXXRW: Isn't this priv_check() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_DELIFGROUP)) != 0)
 			break;
 		if (ifr == 0) {
 			error = EAFNOSUPPORT;
@@ -504,7 +535,11 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		}
 		break;
 	case GRESPROTO:
-		if ((error = suser(curthread)) != 0)
+		/*
+		 * XXXRW: Isn't this priv_check() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_GRE)) != 0)
 			break;
 		sc->g_proto = ifr->ifr_flags;
 		switch (sc->g_proto) {
@@ -524,8 +559,9 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		break;
 	case GRESADDRS:
 	case GRESADDRD:
-		if ((error = suser(curthread)) != 0)
-			break;
+		error = priv_check(curthread, PRIV_NET_GRE);
+		if (error)
+			return (error);
 		/*
 		 * set tunnel endpoints, compute a less specific route
 		 * to the remote end and mark if as up
@@ -590,7 +626,11 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		ifr->ifr_addr = *sa;
 		break;
 	case SIOCSIFPHYADDR:
-		if ((error = suser(curthread)) != 0)
+		/*
+		 * XXXRW: Isn't this priv_check() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_SETIFPHYS)) != 0)
 			break;
 		if (aifr->ifra_addr.sin_family != AF_INET ||
 		    aifr->ifra_dstaddr.sin_family != AF_INET) {
@@ -606,7 +646,11 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		sc->g_dst = aifr->ifra_dstaddr.sin_addr;
 		goto recompute;
 	case SIOCSLIFPHYADDR:
-		if ((error = suser(curthread)) != 0)
+		/*
+		 * XXXRW: Isn't this priv_check() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_SETIFPHYS)) != 0)
 			break;
 		if (lifr->addr.ss_family != AF_INET ||
 		    lifr->dstaddr.ss_family != AF_INET) {
@@ -623,7 +667,11 @@ gre_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		    (satosin(&lifr->dstaddr))->sin_addr;
 		goto recompute;
 	case SIOCDIFPHYADDR:
-		if ((error = suser(curthread)) != 0)
+		/*
+		 * XXXRW: Isn't this priv_check() redundant to the ifnet
+		 * layer check?
+		 */
+		if ((error = priv_check(curthread, PRIV_NET_SETIFPHYS)) != 0)
 			break;
 		sc->g_src.s_addr = INADDR_ANY;
 		sc->g_dst.s_addr = INADDR_ANY;
@@ -788,7 +836,6 @@ gre_in_cksum(u_int16_t *p, u_int len)
 static int
 gremodevent(module_t mod, int type, void *data)
 {
-	struct gre_softc *sc;
 
 	switch (type) {
 	case MOD_LOAD:
@@ -796,15 +843,6 @@ gremodevent(module_t mod, int type, void *data)
 		break;
 	case MOD_UNLOAD:
 		if_clone_detach(&gre_cloner);
-
-		mtx_lock(&gre_mtx);
-		while ((sc = LIST_FIRST(&gre_softc_list)) != NULL) {
-			LIST_REMOVE(sc, sc_list);
-			mtx_unlock(&gre_mtx);
-			gre_destroy(sc);
-			mtx_lock(&gre_mtx);
-		}
-		mtx_unlock(&gre_mtx);
 		mtx_destroy(&gre_mtx);
 		break;
 	default:

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_var.h,v 1.98.2.5 2005/10/07 14:00:05 glebius Exp $
+ * $FreeBSD: src/sys/net/if_var.h,v 1.115.2.1 2007/12/07 05:46:08 kmacy Exp $
  */
 
 #ifndef	_NET_IF_VAR_H_
@@ -69,6 +69,7 @@ struct	rt_addrinfo;
 struct	socket;
 struct	ether_header;
 struct	carp_if;
+struct  ifvlantrunk;
 #endif
 
 #include <sys/queue.h>		/* get TAILQ macros */
@@ -90,6 +91,7 @@ TAILQ_HEAD(ifnethead, ifnet);	/* we use TAILQs so that the order of */
 TAILQ_HEAD(ifaddrhead, ifaddr);	/* instantiation is preserved in the list */
 TAILQ_HEAD(ifprefixhead, ifprefix);
 TAILQ_HEAD(ifmultihead, ifmultiaddr);
+TAILQ_HEAD(ifgrouphead, ifg_group);
 
 /*
  * Structure defining a queue for a network interface.
@@ -125,7 +127,7 @@ struct ifnet {
 		 * addresses which store the link-level address and the name
 		 * of the interface.
 		 * However, access to the AF_LINK address through this
-		 * field is deprecated. Use ifaddr_byindex() instead.
+		 * field is deprecated. Use if_addr or ifaddr_byindex() instead.
 		 */
 	struct	knlist if_klist;	/* events attached to this if */
 	int	if_pcount;		/* number of promiscuous listeners */
@@ -133,10 +135,10 @@ struct ifnet {
 	struct	bpf_if *if_bpf;		/* packet filter structure */
 	u_short	if_index;		/* numeric abbreviation for this if  */
 	short	if_timer;		/* time 'til if_watchdog called */
-	u_short	if_nvlans;		/* number of active vlans */
+	struct  ifvlantrunk *if_vlantrunk; /* pointer to 802.1q data */
 	int	if_flags;		/* up/down, broadcast, etc. */
-	int	if_capabilities;	/* interface capabilities */
-	int	if_capenable;		/* enabled features */
+	int	if_capabilities;	/* interface features & capabilities */
+	int	if_capenable;		/* enabled features & capabilities */
 	void	*if_linkmib;		/* link-type-specific MIB data */
 	size_t	if_linkmiblen;		/* length of above data */
 	struct	if_data if_data;
@@ -158,9 +160,8 @@ struct ifnet {
 		(void *);
 	int	(*if_resolvemulti)	/* validate/resolve multicast */
 		(struct ifnet *, struct sockaddr **, struct sockaddr *);
-	void	*if_spare1;		/* spare pointer 1 */
-	void	*if_spare2;		/* spare pointer 2 */
-	void	*if_spare3;		/* spare pointer 3 */
+	struct	ifaddr	*if_addr;	/* pointer to link-level address */
+	void	*if_llsoftc;		/* link layer softc */
 	int	if_drv_flags;		/* driver-managed status flags */
 	u_int	if_spare_flags2;	/* spare flags 2 */
 	struct  ifaltq if_snd;		/* output queue (includes altq) */
@@ -180,6 +181,13 @@ struct ifnet {
 	struct	task if_starttask;	/* task for IFF_NEEDSGIANT */
 	struct	task if_linktask;	/* task for link change events */
 	struct	mtx if_addr_mtx;	/* mutex to protect address lists */
+	LIST_ENTRY(ifnet) if_clones;	/* interfaces of a cloner */
+	TAILQ_HEAD(, ifg_list) if_groups; /* linked list of groups per if */
+					/* protected by if_addr_mtx */
+	void	*if_pf_kif;
+	void	*if_lagg;		/* lagg glue */
+	void	*if_pspare[10];		/* multiq/TOE 3; vimage 3; general use 4 */
+	int	if_ispare[2];		/* general use 2 */
 };
 
 typedef void if_init_f_t(void *);
@@ -209,13 +217,12 @@ typedef void if_init_f_t(void *);
 #define	if_iqdrops	if_data.ifi_iqdrops
 #define	if_noproto	if_data.ifi_noproto
 #define	if_lastchange	if_data.ifi_lastchange
-#define if_recvquota	if_data.ifi_recvquota
-#define	if_xmitquota	if_data.ifi_xmitquota
 #define if_rawoutput(if, m, sa) if_output(if, m, sa, (struct rtentry *)NULL)
 
 /* for compatibility with other BSDs */
 #define	if_addrlist	if_addrhead
 #define	if_list		if_link
+#define	if_name(ifp)	((ifp)->if_xname)
 
 /*
  * Locks for address lists on the network interface.
@@ -315,6 +322,37 @@ EVENTHANDLER_DECLARE(ifnet_arrival_event, ifnet_arrival_event_handler_t);
 /* interface departure event */
 typedef void (*ifnet_departure_event_handler_t)(void *, struct ifnet *);
 EVENTHANDLER_DECLARE(ifnet_departure_event, ifnet_departure_event_handler_t);
+
+/*
+ * interface groups
+ */
+struct ifg_group {
+	char				 ifg_group[IFNAMSIZ];
+	u_int				 ifg_refcnt;
+	void				*ifg_pf_kif;
+	TAILQ_HEAD(, ifg_member)	 ifg_members;
+	TAILQ_ENTRY(ifg_group)		 ifg_next;
+};
+
+struct ifg_member {
+	TAILQ_ENTRY(ifg_member)	 ifgm_next;
+	struct ifnet		*ifgm_ifp;
+};
+
+struct ifg_list {
+	struct ifg_group	*ifgl_group;
+	TAILQ_ENTRY(ifg_list)	 ifgl_next;
+};
+
+/* group attach event */
+typedef void (*group_attach_event_handler_t)(void *, struct ifg_group *);
+EVENTHANDLER_DECLARE(group_attach_event, group_attach_event_handler_t);
+/* group detach event */
+typedef void (*group_detach_event_handler_t)(void *, struct ifg_group *);
+EVENTHANDLER_DECLARE(group_detach_event, group_detach_event_handler_t);
+/* group change event */
+typedef void (*group_change_event_handler_t)(void *, const char *);
+EVENTHANDLER_DECLARE(group_change_event, group_change_event_handler_t);
 
 #define	IF_AFDATA_LOCK_INIT(ifp)	\
     mtx_init(&(ifp)->if_afdata_mtx, "if_afdata", NULL, MTX_DEF)
@@ -562,8 +600,6 @@ struct ifprefix {
 /*
  * Multicast address structure.  This is analogous to the ifaddr
  * structure except that it keeps track of multicast addresses.
- * Also, the reference count here is a count of requests for this
- * address, not a count of pointers to this structure.
  */
 struct ifmultiaddr {
 	TAILQ_ENTRY(ifmultiaddr) ifma_link; /* queue macro glue */
@@ -572,6 +608,7 @@ struct ifmultiaddr {
 	struct	ifnet *ifma_ifp;	/* back-pointer to interface */
 	u_int	ifma_refcount;		/* reference count */
 	void	*ifma_protospec;	/* protocol-specific state, if any */
+	struct	ifmultiaddr *ifma_llifma; /* pointer to ifma for ifma_lladdr */
 };
 
 #ifdef _KERNEL
@@ -604,7 +641,6 @@ extern	struct mtx ifnet_lock;
 
 struct ifindex_entry {
 	struct	ifnet *ife_ifnet;
-	struct	ifaddr *ife_ifnet_addr;
 	struct cdev *ife_dev;
 };
 
@@ -614,7 +650,7 @@ struct ifindex_entry {
  * link-level ifaddr for the interface. You are not supposed to use
  * it to traverse the list of addresses associated to the interface.
  */
-#define ifaddr_byindex(idx)	ifindex_table[(idx)].ife_ifnet_addr
+#define ifaddr_byindex(idx)	ifnet_byindex(idx)->if_addr
 #define ifdev_byindex(idx)	ifindex_table[(idx)].ife_dev
 
 extern	struct ifnethead ifnet;
@@ -623,14 +659,19 @@ extern	int ifqmaxlen;
 extern	struct ifnet *loif;	/* first loopback interface */
 extern	int if_index;
 
+int	if_addgroup(struct ifnet *, const char *);
+int	if_delgroup(struct ifnet *, const char *);
 int	if_addmulti(struct ifnet *, struct sockaddr *, struct ifmultiaddr **);
 int	if_allmulti(struct ifnet *, int);
 struct	ifnet* if_alloc(u_char);
 void	if_attach(struct ifnet *);
 int	if_delmulti(struct ifnet *, struct sockaddr *);
+void	if_delmulti_ifma(struct ifmultiaddr *);
 void	if_detach(struct ifnet *);
 void	if_purgeaddrs(struct ifnet *);
 void	if_down(struct ifnet *);
+struct ifmultiaddr *
+	if_findmulti(struct ifnet *, struct sockaddr *);
 void	if_free(struct ifnet *);
 void	if_free_type(struct ifnet *, u_char);
 void	if_initname(struct ifnet *, const char *, int);
@@ -644,6 +685,7 @@ int	ifpromisc(struct ifnet *, int);
 struct	ifnet *ifunit(const char *);
 
 struct	ifaddr *ifa_ifwithaddr(struct sockaddr *);
+struct	ifaddr *ifa_ifwithbroadaddr(struct sockaddr *);
 struct	ifaddr *ifa_ifwithdstaddr(struct sockaddr *);
 struct	ifaddr *ifa_ifwithnet(struct sockaddr *);
 struct	ifaddr *ifa_ifwithroute(int, struct sockaddr *, struct sockaddr *);
@@ -657,7 +699,7 @@ void	if_register_com_alloc(u_char type, if_com_alloc_t *a, if_com_free_t *f);
 void	if_deregister_com_alloc(u_char type);
 
 #define IF_LLADDR(ifp)							\
-    LLADDR((struct sockaddr_dl *) ifaddr_byindex((ifp)->if_index)->ifa_addr)
+    LLADDR((struct sockaddr_dl *)((ifp)->if_addr->ifa_addr))
 
 #ifdef DEVICE_POLLING
 enum poll_cmd {	POLL_ONLY, POLL_AND_CHECK_STATUS };

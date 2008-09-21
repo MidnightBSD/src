@@ -1,5 +1,5 @@
 /*	$NetBSD: if_arc.h,v 1.13 1999/11/19 20:41:19 thorpej Exp $	*/
-/* $FreeBSD: src/sys/net/if_arc.h,v 1.8 2005/06/10 16:49:18 brooks Exp $ */
+/* $FreeBSD: src/sys/net/if_arc.h,v 1.9 2006/04/12 07:44:31 rwatson Exp $ */
 
 /*-
  * Copyright (c) 1982, 1986, 1993
@@ -130,7 +130,7 @@ extern int arc_ipmtu;	/* XXX new ip only, no RFC 1051! */
 void	arc_ifattach(struct ifnet *, u_int8_t);
 void	arc_ifdetach(struct ifnet *);
 void	arc_storelladdr(struct ifnet *, u_int8_t);
-int	arc_isphds(int);
+int	arc_isphds(u_int8_t);
 void	arc_input(struct ifnet *, struct mbuf *);
 int	arc_output(struct ifnet *, struct mbuf *,
 	    struct sockaddr *, struct rtentry *);

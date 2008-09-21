@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_fddi.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/fddi.h,v 1.14 2005/01/07 01:45:34 imp Exp $
+ * $FreeBSD: src/sys/net/fddi.h,v 1.15 2005/11/11 07:36:14 ru Exp $
  */
 
 #ifndef _NETINET_IF_FDDI_H_
@@ -97,7 +97,7 @@ struct fddi_header {
 #define	FDDI_BPF_UNSUPPORTED	0
 #define	FDDI_BPF_SUPPORTED	1
 
-void	fddi_ifattach(struct ifnet *, int);
+void	fddi_ifattach(struct ifnet *, const u_int8_t *, int);
 void	fddi_ifdetach(struct ifnet *, int);
 int	fddi_ioctl(struct ifnet *, int, caddr_t);
 

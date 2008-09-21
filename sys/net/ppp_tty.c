@@ -71,7 +71,7 @@
  * Paul Mackerras (paulus@cs.anu.edu.au).
  */
 
-/* $FreeBSD: src/sys/net/ppp_tty.c,v 1.66.2.2 2005/08/25 05:01:20 rwatson Exp $ */
+/* $FreeBSD: src/sys/net/ppp_tty.c,v 1.72 2006/12/05 18:54:21 ume Exp $ */
 
 #include "opt_ppp.h"		/* XXX for ppp_defs.h */
 
@@ -79,6 +79,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
@@ -179,7 +180,8 @@ pppopen(dev, tp)
     register struct ppp_softc *sc;
     int error, s;
 
-    if ((error = suser(td)) != 0)
+    error = priv_check(td, PRIV_NET_PPP);
+    if (error)
 	return (error);
 
     s = spltty();
@@ -275,7 +277,7 @@ pppasyncrelinq(sc)
 	sc->sc_m = NULL;
     }
     if (sc->sc_flags & SC_TIMEOUT) {
-	untimeout(ppp_timeout, (void *) sc, sc->sc_ch);
+	callout_stop(&sc->sc_timo_ch);
 	sc->sc_flags &= ~SC_TIMEOUT;
     }
     splx(s);
@@ -384,7 +386,7 @@ pppwrite(tp, uio, flag)
 	return (EMSGSIZE);
 
     s = spltty();
-    if ((m = m_uiotombuf(uio, M_DONTWAIT, 0, 0)) == NULL) {
+    if ((m = m_uiotombuf(uio, M_DONTWAIT, 0, 0, M_PKTHDR)) == NULL) {
 	splx(s);
 	return (ENOBUFS);
     }
@@ -423,7 +425,8 @@ ppptioctl(tp, cmd, data, flag, td)
     error = 0;
     switch (cmd) {
     case PPPIOCSASYNCMAP:
-	if ((error = suser(td)) != 0)
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
 	    break;
 	sc->sc_asyncmap[0] = *(u_int *)data;
 	break;
@@ -433,7 +436,8 @@ ppptioctl(tp, cmd, data, flag, td)
 	break;
 
     case PPPIOCSRASYNCMAP:
-	if ((error = suser(td)) != 0)
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
 	    break;
 	sc->sc_rasyncmap = *(u_int *)data;
 	break;
@@ -443,7 +447,8 @@ ppptioctl(tp, cmd, data, flag, td)
 	break;
 
     case PPPIOCSXASYNCMAP:
-	if ((error = suser(td)) != 0)
+	error = priv_check(td, PRIV_NET_PPP);
+	if (error)
 	    break;
 	s = spltty();
 	bcopy(data, sc->sc_asyncmap, sizeof(sc->sc_asyncmap));
@@ -693,7 +698,7 @@ pppasyncstart(sc)
      * drained the t_outq.
      */
     if (!idle && (sc->sc_flags & SC_TIMEOUT) == 0) {
-	sc->sc_ch = timeout(ppp_timeout, (void *) sc, 1);
+	callout_reset(&sc->sc_timo_ch, 1, ppp_timeout, sc);
 	sc->sc_flags |= SC_TIMEOUT;
     }
 
@@ -735,8 +740,7 @@ pppstart(tp)
      * Call output process whether or not there is any output.
      * We are being called in lieu of ttstart and must do what it would.
      */
-    if (tp->t_oproc != NULL)
-	(*tp->t_oproc)(tp);
+    tt_oproc(tp);
 
     /*
      * If the transmit queue has drained and the tty has not hung up
@@ -844,14 +848,13 @@ pppinput(c, tp)
 	if (c == tp->t_cc[VSTOP] && tp->t_cc[VSTOP] != _POSIX_VDISABLE) {
 	    if ((tp->t_state & TS_TTSTOP) == 0) {
 		tp->t_state |= TS_TTSTOP;
-		tp->t_stop(tp, 0);
+		tt_stop(tp, 0);
 	    }
 	    return 0;
 	}
 	if (c == tp->t_cc[VSTART] && tp->t_cc[VSTART] != _POSIX_VDISABLE) {
 	    tp->t_state &= ~TS_TTSTOP;
-	    if (tp->t_oproc != NULL)
-		(*tp->t_oproc)(tp);
+	    tt_oproc(tp);
 	    return 0;
 	}
     }

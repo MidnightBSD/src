@@ -26,7 +26,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_mib.c,v 1.15.2.2 2006/01/26 07:46:28 harti Exp $
+ * $FreeBSD: src/sys/net/if_mib.c,v 1.18 2006/01/04 12:57:09 harti Exp $
  */
 
 #include <sys/param.h>
@@ -82,10 +82,10 @@ sysctl_ifdata(SYSCTL_HANDLER_ARGS) /* XXX bad syntax! */
 		return EINVAL;
 
 	if (name[0] <= 0 || name[0] > if_index ||
-	    ifaddr_byindex(name[0]) == NULL)
+	    ifnet_byindex(name[0]) == NULL)
 		return ENOENT;
 
-	ifp = ifaddr_byindex(name[0])->ifa_ifp;
+	ifp = ifnet_byindex(name[0]);
 
 	switch(name[1]) {
 	default:
@@ -152,7 +152,6 @@ sysctl_ifdata(SYSCTL_HANDLER_ARGS) /* XXX bad syntax! */
 			error = EPERM;
 		free(dbuf, M_TEMP);
 		return (error);
-		
 	}
 	return 0;
 }

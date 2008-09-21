@@ -1,5 +1,5 @@
 /*	$NetBSD: if_media.c,v 1.1 1997/03/17 02:55:15 thorpej Exp $	*/
-/* $FreeBSD: src/sys/net/if_media.c,v 1.21 2005/01/07 01:45:34 imp Exp $ */
+/* $FreeBSD: src/sys/net/if_media.c,v 1.23 2006/02/14 12:10:03 glebius Exp $ */
 
 /*-
  * Copyright (c) 1997
@@ -51,6 +51,8 @@
 #include <sys/socket.h>
 #include <sys/sockio.h>
 #include <sys/malloc.h>
+#include <sys/module.h>
+#include <sys/sysctl.h>
 
 #include <net/if.h>
 #include <net/if_media.h>
@@ -67,6 +69,8 @@ static struct ifmedia_entry *ifmedia_match(struct ifmedia *ifm,
 
 #ifdef IFMEDIA_DEBUG
 int	ifmedia_debug = 0;
+SYSCTL_INT(_debug, OID_AUTO, ifmedia, CTLFLAG_RW, &ifmedia_debug,
+	    0, "if_media debugging msgs");
 static	void ifmedia_printword(int);
 #endif
 
@@ -382,28 +386,27 @@ ifmedia_match(ifm, target, mask)
 }
 
 /*
-  	  * Compute the interface `baudrate' from the media, for the interface
-  	  * metrics (used by routing daemons).
-  	  */
-  	 static const struct ifmedia_baudrate ifmedia_baudrate_descriptions[] =
-  	     IFM_BAUDRATE_DESCRIPTIONS;
-  	 
-  	 uint64_t
-  	 ifmedia_baudrate(int mword)
-  	 {
-  	         int i;
-  	 
-  	         for (i = 0; ifmedia_baudrate_descriptions[i].ifmb_word != 0; i++) {
-  	                 if ((mword & (IFM_NMASK|IFM_TMASK)) ==
-  	                     ifmedia_baudrate_descriptions[i].ifmb_word)
-  	                         return (ifmedia_baudrate_descriptions[i].ifmb_baudrate);
-  	         }
-  	 
-  	         /* Not known. */
-  	         return (0);
-  	 }
-  	 
+ * Compute the interface `baudrate' from the media, for the interface
+ * metrics (used by routing daemons).
+ */
+static const struct ifmedia_baudrate ifmedia_baudrate_descriptions[] =   
+    IFM_BAUDRATE_DESCRIPTIONS;
 
+uint64_t
+ifmedia_baudrate(int mword)
+{
+	int i;
+
+	for (i = 0; ifmedia_baudrate_descriptions[i].ifmb_word != 0; i++) {
+		if ((mword & (IFM_NMASK|IFM_TMASK)) ==
+		    ifmedia_baudrate_descriptions[i].ifmb_word)
+			return (ifmedia_baudrate_descriptions[i].ifmb_baudrate);
+	}
+
+	/* Not known. */
+	return (0);
+}
+ 
 #ifdef IFMEDIA_DEBUG
 struct ifmedia_description ifm_type_descriptions[] =
     IFM_TYPE_DESCRIPTIONS;

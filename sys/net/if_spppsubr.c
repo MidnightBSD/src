@@ -18,7 +18,7 @@
  *
  * From: Version 2.4, Thu Apr 30 17:17:21 MSD 1997
  *
- * $FreeBSD: src/sys/net/if_spppsubr.c,v 1.119.2.2 2005/11/04 20:26:14 ume Exp $
+ * $FreeBSD: src/sys/net/if_spppsubr.c,v 1.127 2007/06/10 04:53:13 mjacob Exp $
  */
 
 #include <sys/param.h>
@@ -793,7 +793,7 @@ sppp_input(struct ifnet *ifp, struct mbuf *m)
 		 * packets.  This is used by some subsystems to detect
 		 * idle lines.
 		 */
-		sp->pp_last_recv = time_second;
+		sp->pp_last_recv = time_uptime;
 }
 
 static void
@@ -1066,7 +1066,7 @@ out:
 	 * network-layer traffic; control-layer traffic is handled
 	 * by sppp_cp_send().
 	 */
-	sp->pp_last_sent = time_second;
+	sp->pp_last_sent = time_uptime;
 	return (0);
 }
 
@@ -1104,7 +1104,7 @@ sppp_attach(struct ifnet *ifp)
 		mtx_init(&sp->pp_cpq.ifq_mtx, "sppp_cpq", NULL, MTX_DEF);
 	if(!mtx_initialized(&sp->pp_fastq.ifq_mtx))
 		mtx_init(&sp->pp_fastq.ifq_mtx, "sppp_fastq", NULL, MTX_DEF);
-	sp->pp_last_recv = sp->pp_last_sent = time_second;
+	sp->pp_last_recv = sp->pp_last_sent = time_uptime;
 	sp->confflags = 0;
 #ifdef INET
 	sp->confflags |= CONF_ENABLE_VJ;
@@ -3502,6 +3502,7 @@ sppp_ipv6cp_RCR(struct sppp *sp, struct lcp_header *h, int len)
 	int ifidcount;
 	int type;
 	int collision, nohisaddr;
+	char ip6buf[INET6_ADDRSTRLEN];
 
 	len -= 4;
 	origlen = len;
@@ -3595,8 +3596,8 @@ sppp_ipv6cp_RCR(struct sppp *sp, struct lcp_header *h, int len)
 
 				if (debug) {
 					log(-1, " %s [%s]",
-					       ip6_sprintf(&desiredaddr),
-					       sppp_cp_type_name(type));
+					    ip6_sprintf(ip6buf, &desiredaddr),
+					    sppp_cp_type_name(type));
 				}
 				continue;
 			}
@@ -3617,8 +3618,9 @@ sppp_ipv6cp_RCR(struct sppp *sp, struct lcp_header *h, int len)
 				bcopy(&suggestaddr.s6_addr[8], &p[2], 8);
 			}
 			if (debug)
-				log(-1, " %s [%s]", ip6_sprintf(&desiredaddr),
-				       sppp_cp_type_name(type));
+				log(-1, " %s [%s]",
+				    ip6_sprintf(ip6buf, &desiredaddr),
+				    sppp_cp_type_name(type));
 			break;
 		}
 		/* Add the option to nak'ed list. */
@@ -3639,7 +3641,8 @@ sppp_ipv6cp_RCR(struct sppp *sp, struct lcp_header *h, int len)
 
 		if (debug) {
 			log(-1, " send %s suggest %s\n",
-			       sppp_cp_type_name(type), ip6_sprintf(&suggestaddr));
+			    sppp_cp_type_name(type),
+			    ip6_sprintf(ip6buf, &suggestaddr));
 		}
 		sppp_cp_send (sp, PPP_IPV6CP, type, h->ident, rlen, buf);
 	}
@@ -3706,6 +3709,7 @@ sppp_ipv6cp_RCN_nak(struct sppp *sp, struct lcp_header *h, int len)
 	struct ifnet *ifp = SP2IFP(sp);
 	int debug = ifp->if_flags & IFF_DEBUG;
 	struct in6_addr suggestaddr;
+	char ip6buf[INET6_ADDRSTRLEN];
 
 	len -= 4;
 	buf = malloc (len, M_TEMP, M_NOWAIT);
@@ -3738,7 +3742,7 @@ sppp_ipv6cp_RCN_nak(struct sppp *sp, struct lcp_header *h, int len)
 			sp->ipv6cp.opts |= (1 << IPV6CP_OPT_IFID);
 			if (debug)
 				log(-1, " [suggestaddr %s]",
-				       ip6_sprintf(&suggestaddr));
+				       ip6_sprintf(ip6buf, &suggestaddr));
 #ifdef IPV6CP_MYIFID_DYN
 			/*
 			 * When doing dynamic address assignment,
@@ -4967,7 +4971,7 @@ sppp_set_ip_addr(struct sppp *sp, u_long src)
 	if (ifa && si)
 	{
 		int error;
-#if __NetBSD_Version__ >= 103080000
+#if defined(__NetBSD__) && __NetBSD_Version__ >= 103080000
 		struct sockaddr_in new_sin = *si;
 
 		new_sin.sin_addr.s_addr = htonl(src);
@@ -5023,16 +5027,15 @@ sppp_get_ip6_addrs(struct sppp *sp, struct in6_addr *src, struct in6_addr *dst,
 	 * Pick the first link-local AF_INET6 address from the list,
 	 * aliases don't make any sense on a p2p link anyway.
 	 */
+	si = 0;
 #if defined(__FreeBSD__) && __FreeBSD__ >= 3
-	for (ifa = ifp->if_addrhead.tqh_first, si = 0;
-	     ifa;
-	     ifa = ifa->ifa_link.tqe_next)
+	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
 #elif defined(__NetBSD__) || defined (__OpenBSD__)
-	for (ifa = ifp->if_addrlist.tqh_first, si = 0;
+	for (ifa = ifp->if_addrlist.tqh_first;
 	     ifa;
 	     ifa = ifa->ifa_list.tqe_next)
 #else
-	for (ifa = ifp->if_addrlist, si = 0;
+	for (ifa = ifp->if_addrlist;
 	     ifa;
 	     ifa = ifa->ifa_next)
 #endif
@@ -5089,9 +5092,7 @@ sppp_set_ip6_addr(struct sppp *sp, const struct in6_addr *src)
 
 	sin6 = NULL;
 #if defined(__FreeBSD__) && __FreeBSD__ >= 3
-	for (ifa = ifp->if_addrhead.tqh_first;
-	     ifa;
-	     ifa = ifa->ifa_link.tqe_next)
+	TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
 #elif defined(__NetBSD__) || defined (__OpenBSD__)
 	for (ifa = ifp->if_addrlist.tqh_first;
 	     ifa;
@@ -5175,7 +5176,7 @@ sppp_params(struct sppp *sp, u_long cmd, void *data)
 	}
 
 	switch (subcmd) {
-	case (int)SPPPIOGDEFS:
+	case (u_long)SPPPIOGDEFS:
 		if (cmd != SIOCGIFGENERIC) {
 			rv = EINVAL;
 			break;
@@ -5210,7 +5211,7 @@ sppp_params(struct sppp *sp, u_long cmd, void *data)
 			     sizeof(struct spppreq));
 		break;
 
-	case (int)SPPPIOSDEFS:
+	case (u_long)SPPPIOSDEFS:
 		if (cmd != SIOCSIFGENERIC) {
 			rv = EINVAL;
 			break;

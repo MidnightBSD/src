@@ -34,7 +34,7 @@
  *      @(#)bpf.h	8.1 (Berkeley) 6/10/93
  *	@(#)bpf.h	1.34 (LBL)     6/16/96
  *
- * $FreeBSD: src/sys/net/bpf.h,v 1.39.2.1 2005/09/29 23:48:04 csjp Exp $
+ * $FreeBSD: src/sys/net/bpf.h,v 1.47.2.1 2007/10/21 14:05:27 mlaier Exp $
  */
 
 #ifndef _NET_BPF_H_
@@ -109,12 +109,24 @@ struct bpf_version {
 #define BIOCSRSIG	_IOW('B',115, u_int)
 #define BIOCGHDRCMPLT	_IOR('B',116, u_int)
 #define BIOCSHDRCMPLT	_IOW('B',117, u_int)
-#define BIOCGSEESENT	_IOR('B',118, u_int)
-#define BIOCSSEESENT	_IOW('B',119, u_int)
+#define BIOCGDIRECTION	_IOR('B',118, u_int)
+#define BIOCSDIRECTION	_IOW('B',119, u_int)
 #define	BIOCSDLT	_IOW('B',120, u_int)
 #define	BIOCGDLTLIST	_IOWR('B',121, struct bpf_dltlist)
 #define	BIOCLOCK	_IO('B', 122)
 #define	BIOCSETWF	_IOW('B',123, struct bpf_program)
+#define	BIOCFEEDBACK	_IOW('B',124, u_int)
+
+/* Obsolete */
+#define	BIOCGSEESENT	BIOCGDIRECTION
+#define	BIOCSSEESENT	BIOCSDIRECTION
+
+/* Packet directions */
+enum bpf_direction {
+	BPF_D_IN,	/* See incoming packets */
+	BPF_D_INOUT,	/* See incoming and outgoing packets */
+	BPF_D_OUT	/* See outgoing packets */
+};
 
 /*
  * Structure prepended to each packet.
@@ -523,6 +535,152 @@ struct bpf_hdr {
 #define DLT_LINUX_LAPD		177
 
 /*
+ * Juniper-private data link type, as per request from
+ * Hannes Gredler <hannes@juniper.net>. 
+ * The DLT_ are used for prepending meta-information
+ * like interface index, interface name
+ * before standard Ethernet, PPP, Frelay & C-HDLC Frames
+ */
+#define DLT_JUNIPER_ETHER       178
+#define DLT_JUNIPER_PPP         179
+#define DLT_JUNIPER_FRELAY      180
+#define DLT_JUNIPER_CHDLC       181
+
+/*
+ * Multi Link Frame Relay (FRF.16)
+ */
+#define DLT_MFR                 182
+
+/*
+ * Juniper-private data link type, as per request from
+ * Hannes Gredler <hannes@juniper.net>. 
+ * The DLT_ is used for internal communication with a
+ * voice Adapter Card (PIC)
+ */
+#define DLT_JUNIPER_VP          183
+
+/*
+ * Arinc 429 frames.
+ * DLT_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ * Every frame contains a 32bit A429 label.
+ * More documentation on Arinc 429 can be found at
+ * http://www.condoreng.com/support/downloads/tutorials/ARINCTutorial.pdf
+ */
+#define DLT_A429                184
+
+/*
+ * Arinc 653 Interpartition Communication messages.
+ * DLT_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ * Please refer to the A653-1 standard for more information.
+ */
+#define DLT_A653_ICM            185
+
+/*
+ * USB packets, beginning with a USB setup header; requested by
+ * Paolo Abeni <paolo.abeni@email.it>.
+ */
+#define DLT_USB			186
+
+/*
+ * Bluetooth HCI UART transport layer (part H:4); requested by
+ * Paolo Abeni.
+ */
+#define DLT_BLUETOOTH_HCI_H4	187
+
+/*
+ * IEEE 802.16 MAC Common Part Sublayer; requested by Maria Cruz
+ * <cruz_petagay@bah.com>.
+ */
+#define DLT_IEEE802_16_MAC_CPS	188
+
+/*
+ * USB packets, beginning with a Linux USB header; requested by
+ * Paolo Abeni <paolo.abeni@email.it>.
+ */
+#define DLT_USB_LINUX		189
+
+/*
+ * Controller Area Network (CAN) v. 2.0B packets.
+ * DLT_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ * Used to dump CAN packets coming from a CAN Vector board.
+ * More documentation on the CAN v2.0B frames can be found at
+ * http://www.can-cia.org/downloads/?269
+ */
+#define DLT_CAN20B              190
+
+/*
+ * IEEE 802.15.4, with address fields padded, as is done by Linux
+ * drivers; requested by Juergen Schimmer.
+ */
+#define DLT_IEEE802_15_4_LINUX	191
+
+/*
+ * Per Packet Information encapsulated packets.
+ * DLT_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ */
+#define DLT_PPI			192
+
+/*
+ * Header for 802.16 MAC Common Part Sublayer plus a radiotap radio header;
+ * requested by Charles Clancy.
+ */
+#define DLT_IEEE802_16_MAC_CPS_RADIO	193
+
+/*
+ * Juniper-private data link type, as per request from
+ * Hannes Gredler <hannes@juniper.net>. 
+ * The DLT_ is used for internal communication with a
+ * integrated service module (ISM).
+ */
+#define DLT_JUNIPER_ISM         194
+
+/*
+ * IEEE 802.15.4, exactly as it appears in the spec (no padding, no
+ * nothing); requested by Mikko Saarnivala <mikko.saarnivala@sensinode.com>.
+ */
+#define DLT_IEEE802_15_4	195
+
+/*
+ * Various link-layer types, with a pseudo-header, for SITA
+ * (http://www.sita.aero/); requested by Fulko Hew (fulko.hew@gmail.com).
+ */
+#define DLT_SITA		196
+
+/*
+ * Various link-layer types, with a pseudo-header, for Endace DAG cards;
+ * encapsulates Endace ERF records.  Requested by Stephen Donnelly
+ * <stephen@endace.com>.
+ */
+#define DLT_ERF			197
+
+/*
+ * Special header prepended to Ethernet packets when capturing from a
+ * u10 Networks board.  Requested by Phil Mulholland
+ * <phil@u10networks.com>.
+ */
+#define DLT_RAIF1		198
+
+/*
+ * IPMB packet for IPMI, beginning with the I2C slave address, followed
+ * by the netFn and LUN, etc..  Requested by Chanthy Toeung
+ * <chanthy.toeung@ca.kontron.com>.
+ */
+#define DLT_IPMB		199
+
+/*
+ * Juniper-private data link type, as per request from
+ * Hannes Gredler <hannes@juniper.net>. 
+ * The DLT_ is used for capturing data on a secure tunnel interface.
+ */
+#define DLT_JUNIPER_ST          200
+
+/*
+ * Bluetooth HCI UART transport layer (part H:4), with pseudo-header
+ * that includes direction information; requested by Paolo Abeni.
+ */
+#define DLT_BLUETOOTH_HCI_H4_WITH_PHDR	201
+
+/*
  * The instruction encodings.
  */
 /* instruction classes */
@@ -603,7 +761,18 @@ struct bpf_dltlist {
 };
 
 #ifdef _KERNEL
-struct bpf_if;
+/*
+ * Descriptor associated with each attached hardware interface.
+ */
+struct bpf_if {
+	LIST_ENTRY(bpf_if)	bif_next;	/* list of all interfaces */
+	LIST_HEAD(, bpf_d)	bif_dlist;	/* descriptor list */
+	u_int bif_dlt;				/* link layer type */
+	u_int bif_hdrlen;		/* length of header (with padding) */
+	struct ifnet *bif_ifp;		/* corresponding interface */
+	struct mtx	bif_mtx;	/* mutex for interface */
+};
+
 int	 bpf_validate(const struct bpf_insn *, int);
 void	 bpf_tap(struct bpf_if *, u_char *, u_int);
 void	 bpf_mtap(struct bpf_if *, struct mbuf *);
@@ -615,18 +784,27 @@ void	 bpfdetach(struct ifnet *);
 void	 bpfilterattach(int);
 u_int	 bpf_filter(const struct bpf_insn *, u_char *, u_int, u_int);
 
+static __inline int
+bpf_peers_present(struct bpf_if *bpf)
+{
+
+	if (!LIST_EMPTY(&bpf->bif_dlist))
+		return (1);
+	return (0);
+}
+
 #define	BPF_TAP(_ifp,_pkt,_pktlen) do {				\
-	if ((_ifp)->if_bpf)					\
+	if (bpf_peers_present((_ifp)->if_bpf))			\
 		bpf_tap((_ifp)->if_bpf, (_pkt), (_pktlen));	\
 } while (0)
 #define	BPF_MTAP(_ifp,_m) do {					\
-	if ((_ifp)->if_bpf) {					\
+	if (bpf_peers_present((_ifp)->if_bpf)) {		\
 		M_ASSERTVALID(_m);				\
 		bpf_mtap((_ifp)->if_bpf, (_m));			\
 	}							\
 } while (0)
 #define	BPF_MTAP2(_ifp,_data,_dlen,_m) do {			\
-	if ((_ifp)->if_bpf) {					\
+	if (bpf_peers_present((_ifp)->if_bpf)) {		\
 		M_ASSERTVALID(_m);				\
 		bpf_mtap2((_ifp)->if_bpf,(_data),(_dlen),(_m));	\
 	}							\

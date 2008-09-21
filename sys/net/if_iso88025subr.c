@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_iso88025subr.c,v 1.67.2.3 2005/08/25 05:01:20 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_iso88025subr.c,v 1.75 2006/10/22 11:52:15 rwatson Exp $
  *
  */
 
@@ -48,7 +48,6 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
@@ -79,6 +78,8 @@
 #include <netipx/ipx_if.h>
 #endif
 
+#include <security/mac/mac_framework.h>
+
 static const u_char iso88025_broadcastaddr[ISO88025_ADDR_LEN] =
 			{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
@@ -91,7 +92,7 @@ static int iso88025_resolvemulti (struct ifnet *, struct sockaddr **,
  * Perform common duties while attaching to interface list
  */
 void
-iso88025_ifattach(struct ifnet *ifp, int bpf)
+iso88025_ifattach(struct ifnet *ifp, const u_int8_t *lla, int bpf)
 {
     struct ifaddr *ifa;
     struct sockaddr_dl *sdl;
@@ -114,16 +115,13 @@ iso88025_ifattach(struct ifnet *ifp, int bpf)
     if (ifp->if_mtu == 0)
         ifp->if_mtu = ISO88025_DEFAULT_MTU;
 
-    ifa = ifaddr_byindex(ifp->if_index);
-    if (ifa == 0) {
-        if_printf(ifp, "%s() no lladdr!\n", __func__);
-        return;
-    }
+    ifa = ifp->if_addr;
+    KASSERT(ifa != NULL, ("%s: no lladdr!\n", __func__));
 
     sdl = (struct sockaddr_dl *)ifa->ifa_addr;
     sdl->sdl_type = IFT_ISO88025;
     sdl->sdl_alen = ifp->if_addrlen;
-    bcopy(IFP2ENADDR(ifp), LLADDR(sdl), ifp->if_addrlen);
+    bcopy(lla, LLADDR(sdl), ifp->if_addrlen);
 
     if (bpf)
         bpfattach(ifp, DLT_IEEE802, ISO88025_HDR_LEN);
@@ -181,10 +179,10 @@ iso88025_ioctl(struct ifnet *ifp, int command, caddr_t data)
 
 				if (ipx_nullhost(*ina))
 					ina->x_host = *(union ipx_host *)
-							IFP2ENADDR(ifp);
+							IF_LLADDR(ifp);
 				else
 					bcopy((caddr_t) ina->x_host.c_host,
-					      (caddr_t) IFP2ENADDR(ifp),
+					      (caddr_t) IF_LLADDR(ifp),
 					      ISO88025_ADDR_LEN);
 
 				/*
@@ -204,7 +202,7 @@ iso88025_ioctl(struct ifnet *ifp, int command, caddr_t data)
                         struct sockaddr *sa;
 
                         sa = (struct sockaddr *) & ifr->ifr_data;
-                        bcopy(IFP2ENADDR(ifp),
+                        bcopy(IF_LLADDR(ifp),
                               (caddr_t) sa->sa_data, ISO88025_ADDR_LEN);
                 }
                 break;
@@ -274,7 +272,7 @@ iso88025_output(ifp, m, dst, rt0)
 	/* Generate a generic 802.5 header for the packet */
 	gen_th.ac = TR_AC;
 	gen_th.fc = TR_LLC_FRAME;
-	(void)memcpy((caddr_t)gen_th.iso88025_shost, IFP2ENADDR(ifp),
+	(void)memcpy((caddr_t)gen_th.iso88025_shost, IF_LLADDR(ifp),
 		     ISO88025_ADDR_LEN);
 	if (rif_len) {
 		gen_th.iso88025_shost[0] |= TR_RII;
@@ -520,7 +518,7 @@ iso88025_input(ifp, m)
 	 */
 	if ((ifp->if_flags & IFF_PROMISC) &&
 	    ((th->iso88025_dhost[0] & 1) == 0) &&
-	     (bcmp(IFP2ENADDR(ifp), (caddr_t) th->iso88025_dhost,
+	     (bcmp(IF_LLADDR(ifp), (caddr_t) th->iso88025_dhost,
 	     ISO88025_ADDR_LEN) != 0))
 		goto dropanyway;
 
@@ -586,7 +584,7 @@ iso88025_input(ifp, m)
 #ifdef INET
 		case ETHERTYPE_IP:
 			th->iso88025_shost[0] &= ~(TR_RII); 
-			if (ip_fastforward(m))
+			if ((m = ip_fastforward(m)) == NULL)
 				return;
 			isr = NETISR_IP;
 			break;
@@ -650,7 +648,7 @@ iso88025_input(ifp, m)
 			l->llc_dsap = l->llc_ssap;
 			l->llc_ssap = c;
 			if (m->m_flags & (M_BCAST | M_MCAST))
-				bcopy((caddr_t)IFP2ENADDR(ifp),
+				bcopy((caddr_t)IF_LLADDR(ifp),
 				      (caddr_t)th->iso88025_dhost,
 					ISO88025_ADDR_LEN);
 			sa.sa_family = AF_UNSPEC;

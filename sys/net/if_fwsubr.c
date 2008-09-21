@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_fwsubr.c,v 1.12.2.5 2006/01/24 06:30:51 brooks Exp $
+ * $FreeBSD: src/sys/net/if_fwsubr.c,v 1.24 2007/06/05 14:15:45 simokawa Exp $
  */
 
 #include "opt_inet.h"
@@ -37,7 +37,6 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
@@ -61,6 +60,8 @@
 #ifdef INET6
 #include <netinet6/nd6.h>
 #endif
+
+#include <security/mac/mac_framework.h>
 
 MALLOC_DEFINE(M_FWCOM, "fw_com", "firewire interface internals");
 
@@ -190,7 +191,7 @@ firewire_output(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 	/*
 	 * Let BPF tap off a copy before we encapsulate.
 	 */
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		struct fw_bpfhdr h;
 		if (unicast)
 			bcopy(destfw, h.firewire_dhost, 8);
@@ -336,8 +337,6 @@ firewire_input_fragment(struct fw_com *fc, struct mbuf *m, int src)
 	int dsize;
 	int fstart, fend, start, end, islast;
 	uint32_t id;
-
-	GIANT_REQUIRED;
 
 	/*
 	 * Find an existing reassembly buffer or create a new one.
@@ -501,8 +500,6 @@ firewire_input(struct ifnet *ifp, struct mbuf *m, uint16_t src)
 	union fw_encap *enc;
 	int type, isr;
 
-	GIANT_REQUIRED;
-
 	/*
 	 * The caller has already stripped off the packet header
 	 * (stream or wreqb) and marked the mbuf's M_BCAST flag
@@ -516,6 +513,8 @@ firewire_input(struct ifnet *ifp, struct mbuf *m, uint16_t src)
 	}
 
 	m = m_pullup(m, sizeof(uint32_t));
+	if (m == NULL)
+		return;
 	enc = mtod(m, union fw_encap *);
 
 	/*
@@ -565,7 +564,7 @@ firewire_input(struct ifnet *ifp, struct mbuf *m, uint16_t src)
 	 * Give bpf a chance at the packet. The link-level driver
 	 * should have left us a tag with the EUID of the sender.
 	 */
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		struct fw_bpfhdr h;
 		struct m_tag *mtag;
 
@@ -601,7 +600,7 @@ firewire_input(struct ifnet *ifp, struct mbuf *m, uint16_t src)
 	switch (type) {
 #ifdef INET
 	case ETHERTYPE_IP:
-		if (ip_fastforward(m))
+		if ((m = ip_fastforward(m)) == NULL)
 			return;
 		isr = NETISR_IP;
 		break;
@@ -764,7 +763,7 @@ firewire_ifattach(struct ifnet *ifp, struct fw_hwaddr *llc)
 	ifp->if_resolvemulti = firewire_resolvemulti;
 	ifp->if_broadcastaddr = (u_char *) &firewire_broadcastaddr;
 
-	ifa = ifaddr_byindex(ifp->if_index);
+	ifa = ifp->if_addr;
 	KASSERT(ifa != NULL, ("%s: no lladdr!\n", __func__));
 	sdl = (struct sockaddr_dl *)ifa->ifa_addr;
 	sdl->sdl_type = IFT_IEEE1394;

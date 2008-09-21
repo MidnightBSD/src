@@ -33,7 +33,7 @@
  *
  *      @(#)bpf_filter.c	8.1 (Berkeley) 6/10/93
  *
- * $FreeBSD: src/sys/net/bpf_filter.c,v 1.23 2005/01/07 01:45:34 imp Exp $
+ * $FreeBSD: src/sys/net/bpf_filter.c,v 1.28 2007/09/13 09:00:32 dwmalone Exp $
  */
 
 #include <sys/param.h>
@@ -186,7 +186,7 @@ bpf_filter(pc, p, wirelen, buflen)
 {
 	register u_int32_t A = 0, X = 0;
 	register bpf_u_int32 k;
-	int32_t mem[BPF_MEMWORDS];
+	u_int32_t mem[BPF_MEMWORDS];
 
 	if (pc == 0)
 		/*
@@ -334,7 +334,7 @@ bpf_filter(pc, p, wirelen, buflen)
 					return 0;
 				m = (struct mbuf *)p;
 				MINDEX(m, k);
-				A = mtod(m, char *)[k];
+				A = mtod(m, u_char *)[k];
 				continue;
 #else
 				return 0;
@@ -353,7 +353,7 @@ bpf_filter(pc, p, wirelen, buflen)
 					return 0;
 				m = (struct mbuf *)p;
 				MINDEX(m, k);
-				X = (mtod(m, char *)[k] & 0xf) << 2;
+				X = (mtod(m, u_char *)[k] & 0xf) << 2;
 				continue;
 #else
 				return 0;
@@ -519,6 +519,14 @@ bpf_validate(f, len)
 {
 	register int i;
 	register const struct bpf_insn *p;
+
+	/* Do not accept negative length filter. */
+	if (len < 0)
+		return 0;
+
+	/* An empty filter means accept all. */
+	if (len == 0)
+		return 1;
 
 	for (i = 0; i < len; ++i) {
 		/*

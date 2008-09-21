@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_llc.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_llc.h,v 1.12 2005/06/05 03:13:12 thompsa Exp $
+ * $FreeBSD: src/sys/net/if_llc.h,v 1.13 2006/12/01 17:50:11 imp Exp $
  */
 
 #ifndef _NET_IF_LLC_H_
@@ -52,15 +52,15 @@ struct llc {
 		u_int8_t format_id;
 		u_int8_t class;
 		u_int8_t window_x2;
-	    } type_u __packed;
+	    } __packed type_u;
 	    struct {
 		u_int8_t num_snd_x2;
 		u_int8_t num_rcv_x2;
-	    } type_i __packed;
+	    } __packed type_i;
 	    struct {
 		u_int8_t control;
 		u_int8_t num_rcv_x2;
-	    } type_s __packed;
+	    } __packed type_s;
 	    struct {
 	        u_int8_t control;
 		/*
@@ -72,17 +72,17 @@ struct llc {
 		u_int8_t frmr_control;
 		u_int8_t frmr_control_ext;
 		u_int8_t frmr_cause;
-	    } type_frmr __packed;
+	    } __packed type_frmr;
 	    struct {
 		u_int8_t  control;
 		u_int8_t  org_code[3];
 		u_int16_t ether_type;
-	    } type_snap __packed;
+	    } __packed type_snap;
 	    struct {
 		u_int8_t control;
 		u_int8_t control_ext;
-	    } type_raw __packed;
-	} llc_un /* XXX __packed ??? */;
+	    } __packed type_raw;
+	} __packed llc_un;
 } __packed;
 
 struct frmrinfo {
@@ -113,6 +113,10 @@ struct frmrinfo {
 #define LLC_UFRAMELEN  3
 #define LLC_FRMRLEN    7
 #define LLC_SNAPFRAMELEN 8
+
+#ifdef CTASSERT
+CTASSERT(sizeof (struct llc) == LLC_SNAPFRAMELEN);
+#endif
 
 /*
  * Unnumbered LLC format commands

@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net/if_faith.c,v 1.36.2.1 2005/08/25 05:01:19 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_faith.c,v 1.42 2006/08/04 21:27:37 brooks Exp $
  */
 /*
  * derived from
@@ -78,13 +78,10 @@
 #include <netinet6/ip6_var.h>
 #endif
 
-#include <net/net_osdep.h>
-
 #define FAITHNAME	"faith"
 
 struct faith_softc {
 	struct ifnet *sc_ifp;
-	LIST_ENTRY(faith_softc) sc_list;
 };
 
 static int faithioctl(struct ifnet *, u_long, caddr_t);
@@ -97,13 +94,10 @@ static int faithprefix(struct in6_addr *);
 
 static int faithmodevent(module_t, int, void *);
 
-static struct mtx faith_mtx;
 static MALLOC_DEFINE(M_FAITH, FAITHNAME, "Firewall Assisted Tunnel Interface");
-static LIST_HEAD(, faith_softc) faith_softc_list;
 
-static int	faith_clone_create(struct if_clone *, int);
+static int	faith_clone_create(struct if_clone *, int, caddr_t);
 static void	faith_clone_destroy(struct ifnet *);
-static void	faith_destroy(struct faith_softc *);
 
 IFC_SIMPLE_DECLARE(faith, 0);
 
@@ -115,12 +109,9 @@ faithmodevent(mod, type, data)
 	int type;
 	void *data;
 {
-	struct faith_softc *sc;
 
 	switch (type) {
 	case MOD_LOAD:
-		mtx_init(&faith_mtx, "faith_mtx", NULL, MTX_DEF);
-		LIST_INIT(&faith_softc_list);
 		if_clone_attach(&faith_cloner);
 
 #ifdef INET6
@@ -134,16 +125,6 @@ faithmodevent(mod, type, data)
 #endif
 
 		if_clone_detach(&faith_cloner);
-
-		mtx_lock(&faith_mtx);
-		while ((sc = LIST_FIRST(&faith_softc_list)) != NULL) {
-			LIST_REMOVE(sc, sc_list);
-			mtx_unlock(&faith_mtx);
-			faith_destroy(sc);
-			mtx_lock(&faith_mtx);
-		}
-		mtx_unlock(&faith_mtx);
-		mtx_destroy(&faith_mtx);
 		break;
 	default:
 		return EOPNOTSUPP;
@@ -161,9 +142,10 @@ DECLARE_MODULE(if_faith, faith_mod, SI_SUB_PSEUDO, SI_ORDER_ANY);
 MODULE_VERSION(if_faith, 1);
 
 static int
-faith_clone_create(ifc, unit)
+faith_clone_create(ifc, unit, params)
 	struct if_clone *ifc;
 	int unit;
+	caddr_t params;
 {
 	struct ifnet *ifp;
 	struct faith_softc *sc;
@@ -188,20 +170,7 @@ faith_clone_create(ifc, unit)
 	ifp->if_snd.ifq_maxlen = ifqmaxlen;
 	if_attach(ifp);
 	bpfattach(ifp, DLT_NULL, sizeof(u_int32_t));
-	mtx_lock(&faith_mtx);
-	LIST_INSERT_HEAD(&faith_softc_list, sc, sc_list);
-	mtx_unlock(&faith_mtx);
 	return (0);
-}
-
-static void
-faith_destroy(struct faith_softc *sc)
-{
-
-	bpfdetach(sc->sc_ifp);
-	if_detach(sc->sc_ifp);
-	if_free(sc->sc_ifp);
-	free(sc, M_FAITH);
 }
 
 static void
@@ -210,11 +179,10 @@ faith_clone_destroy(ifp)
 {
 	struct faith_softc *sc = ifp->if_softc;
 
-	mtx_lock(&faith_mtx);
-	LIST_REMOVE(sc, sc_list);
-	mtx_unlock(&faith_mtx);
-
-	faith_destroy(sc);
+	bpfdetach(ifp);
+	if_detach(ifp);
+	if_free(ifp);
+	free(sc, M_FAITH);
 }
 
 int
@@ -235,7 +203,7 @@ faithoutput(ifp, m, dst, rt)
 		dst->sa_family = af;
 	}
 
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		af = dst->sa_family;
 		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);
 	}

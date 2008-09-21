@@ -33,7 +33,7 @@
  *
  *      @(#)bpfdesc.h	8.1 (Berkeley) 6/10/93
  *
- * $FreeBSD: src/sys/net/bpfdesc.h,v 1.29.2.2 2005/09/29 23:48:04 csjp Exp $
+ * $FreeBSD: src/sys/net/bpfdesc.h,v 1.38 2007/08/06 14:26:00 rwatson Exp $
  */
 
 #ifndef _NET_BPFDESC_H_
@@ -51,12 +51,12 @@
 struct bpf_d {
 	LIST_ENTRY(bpf_d) bd_next;	/* Linked list of descriptors */
 	/*
-	 * Buffer slots: two mbuf clusters buffer the incoming packets.
+	 * Buffer slots: two malloc buffers store the incoming packets.
 	 *   The model has three slots.  Sbuf is always occupied.
 	 *   sbuf (store) - Receive interrupt puts packets here.
-	 *   hbuf (hold) - When sbuf is full, put cluster here and
+	 *   hbuf (hold) - When sbuf is full, put buffer here and
 	 *                 wakeup read (replace sbuf with fbuf).
-	 *   fbuf (free) - When read is done, put cluster here.
+	 *   fbuf (free) - When read is done, put buffer here.
 	 * On receiving, if sbuf is full and fbuf is 0, packet is dropped.
 	 */
 	caddr_t		bd_sbuf;	/* store slot */
@@ -71,6 +71,9 @@ struct bpf_d {
 	u_long		bd_rtout;	/* Read timeout in 'ticks' */
 	struct bpf_insn *bd_rfilter; 	/* read filter code */
 	struct bpf_insn *bd_wfilter;	/* write filter code */
+#ifdef BPF_JITTER
+	bpf_jit_filter	*bd_bfilter;	/* binary filter code */
+#endif
 	u_long		bd_rcount;	/* number of packets received */
 	u_long		bd_dcount;	/* number of packets dropped */
 
@@ -78,24 +81,17 @@ struct bpf_d {
 	u_char		bd_state;	/* idle, waiting, or timed out */
 	u_char		bd_immediate;	/* true to return on packet arrival */
 	int		bd_hdrcmplt;	/* false to fill in src lladdr automatically */
-	int		bd_seesent;	/* true if bpf should see sent packets */
+	int		bd_direction;	/* select packet direction */
+	int		bd_feedback;	/* true to feed back sent packets */
 	int		bd_async;	/* non-zero if packet reception should generate signal */
 	int		bd_sig;		/* signal to send upon packet reception */
 	struct sigio *	bd_sigio;	/* information for async I/O */
-#if BSD < 199103
-	u_char		bd_selcoll;	/* true if selects collide */
-	int		bd_timedout;
-	struct thread *	bd_selthread;	/* process that last selected us */
-#else
-	u_char		bd_pad;		/* explicit alignment */
 	struct selinfo	bd_sel;		/* bsd select info */
-#endif
 	struct mtx	bd_mtx;		/* mutex for this descriptor */
 	struct callout	bd_callout;	/* for BPF timeouts with select */
 	struct label	*bd_label;	/* MAC label for descriptor */
 	u_long		bd_fcount;	/* number of packets which matched filter */
 	pid_t		bd_pid;		/* PID which created descriptor */
-	char		bd_pcomm[MAXCOMLEN + 1];
 	int		bd_locked;	/* true if descriptor is locked */
 };
 
@@ -106,10 +102,7 @@ struct bpf_d {
 
 #define BPFD_LOCK(bd)		mtx_lock(&(bd)->bd_mtx)
 #define BPFD_UNLOCK(bd)		mtx_unlock(&(bd)->bd_mtx)
-#define BPFD_LOCK_ASSERT(bd)	do {				\
-	mtx_assert(&(bd)->bd_mtx, MA_OWNED);			\
-	NET_ASSERT_GIANT();					\
-} while (0)
+#define BPFD_LOCK_ASSERT(bd)	mtx_assert(&(bd)->bd_mtx, MA_OWNED);
 
 /* Test whether a BPF is ready for read(). */
 #define	bpf_ready(bd)						 \
@@ -118,26 +111,14 @@ struct bpf_d {
 	  (bd)->bd_slen != 0))
 
 /*
- * Descriptor associated with each attached hardware interface.
- */
-struct bpf_if {
-	LIST_ENTRY(bpf_if)	bif_next;	/* list of all interfaces */
-	LIST_HEAD(, bpf_d)	bif_dlist;	/* descriptor list */
-	struct bpf_if **bif_driverp;	/* pointer into softc */
-	u_int bif_dlt;			/* link layer type */
-	u_int bif_hdrlen;		/* length of header (with padding) */
-	struct ifnet *bif_ifp;		/* corresponding interface */
-	struct mtx	bif_mtx;	/* mutex for interface */
-};
-
-/*
  * External representation of the bpf descriptor
  */
 struct xbpf_d {
 	u_char		bd_promisc;
 	u_char		bd_immediate;
 	int		bd_hdrcmplt;
-	int		bd_seesent;
+	int		bd_direction;
+	int		bd_feedback;
 	int		bd_async;
 	u_long		bd_rcount;
 	u_long		bd_dcount;
@@ -148,7 +129,6 @@ struct xbpf_d {
 	int		bd_bufsize;
 	pid_t		bd_pid;
 	char		bd_ifname[IFNAMSIZ];
-	char		bd_pcomm[MAXCOMLEN + 1];
 	int		bd_locked;
 };
 

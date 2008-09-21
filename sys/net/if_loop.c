@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_loop.c	8.2 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/net/if_loop.c,v 1.106.2.1 2005/08/25 05:01:20 rwatson Exp $
+ * $FreeBSD: src/sys/net/if_loop.c,v 1.112 2007/02/09 00:09:35 cognet Exp $
  */
 
 /*
@@ -87,7 +87,7 @@
 #elif defined(LARGE_LOMTU)
 #define LOMTU	131072
 #else
-#define LOMTU	32768
+#define LOMTU	16384
 #endif
 
 #define LONAME	"lo"
@@ -101,7 +101,7 @@ int		loioctl(struct ifnet *, u_long, caddr_t);
 static void	lortrequest(int, struct rtentry *, struct rt_addrinfo *);
 int		looutput(struct ifnet *ifp, struct mbuf *m,
 		    struct sockaddr *dst, struct rtentry *rt);
-static int	lo_clone_create(struct if_clone *, int);
+static int	lo_clone_create(struct if_clone *, int, caddr_t);
 static void	lo_clone_destroy(struct ifnet *);
 
 struct ifnet *loif = NULL;			/* Used externally */
@@ -134,9 +134,10 @@ lo_clone_destroy(ifp)
 }
 
 static int
-lo_clone_create(ifc, unit)
+lo_clone_create(ifc, unit, params)
 	struct if_clone *ifc;
 	int unit;
+	caddr_t params;
 {
 	struct ifnet *ifp;
 	struct lo_softc *sc;
@@ -258,24 +259,42 @@ if_simloop(ifp, m, af, hlen)
 	m_tag_delete_nonpersistent(m);
 	m->m_pkthdr.rcvif = ifp;
 
-	/* Let BPF see incoming packet */
-	if (ifp->if_bpf) {
-		if (ifp->if_bpf->bif_dlt == DLT_NULL) {
-			u_int32_t af1 = af;	/* XXX beware sizeof(af) != 4 */
-			/*
-			 * We need to prepend the address family.
-			 */
-			bpf_mtap2(ifp->if_bpf, &af1, sizeof(af1), m);
-		} else
+	/*
+	 * Let BPF see incoming packet in the following manner:
+	 *  - Emulated packet loopback for a simplex interface 
+	 *    (net/if_ethersubr.c)
+	 *	-> passes it to ifp's BPF
+	 *  - IPv4/v6 multicast packet loopback (netinet(6)/ip(6)_output.c)
+	 *	-> not passes it to any BPF
+	 *  - Normal packet loopback from myself to myself (net/if_loop.c)
+	 *	-> passes to lo0's BPF (even in case of IPv6, where ifp!=lo0)
+	 */
+	if (hlen > 0) {
+		if (bpf_peers_present(ifp->if_bpf)) {
 			bpf_mtap(ifp->if_bpf, m);
+		}
+	} else {
+		if (bpf_peers_present(loif->if_bpf)) {
+			if ((m->m_flags & M_MCAST) == 0 || loif == ifp) {
+				/* XXX beware sizeof(af) != 4 */
+				u_int32_t af1 = af;	
+
+				/*
+				 * We need to prepend the address family.
+				 */
+				bpf_mtap2(loif->if_bpf, &af1, sizeof(af1), m);
+			}
+		}
 	}
 
 	/* Strip away media header */
 	if (hlen > 0) {
 		m_adj(m, hlen);
-#if defined(__alpha__) || defined(__ia64__) || defined(__sparc64__)
-		/* The alpha doesn't like unaligned data.
-		 * We move data down in the first mbuf */
+#ifndef __NO_STRICT_ALIGNMENT
+		/*
+		 * Some archs do not like unaligned data, so
+		 * we move data down in the first mbuf.
+		 */
 		if (mtod(m, vm_offset_t) & 3) {
 			KASSERT(hlen >= 3, ("if_simloop: hlen too small"));
 			bcopy(m->m_data, 

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)route.c	8.3.1.1 (Berkeley) 2/23/95
- * $FreeBSD: src/sys/net/route.c,v 1.109.2.2 2005/09/26 14:59:12 glebius Exp $
+ * $FreeBSD: src/sys/net/route.c,v 1.120.2.1.2.1 2008/01/09 15:23:36 mux Exp $
  */
 
 #include "opt_inet.h"
@@ -137,7 +137,6 @@ rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 	int err = 0, msgtype = RTM_MISS;
 
 	newrt = NULL;
-	bzero(&info, sizeof(info));
 	/*
 	 * Look up the address in the table for that Address Family
 	 */
@@ -150,7 +149,7 @@ rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 	    (rn->rn_flags & RNF_ROOT) == 0) {
 		/*
 		 * If we find it and it's not the root node, then
-		 * get a refernce on the rtentry associated.
+		 * get a reference on the rtentry associated.
 		 */
 		newrt = rt = RNTORT(rn);
 		nflags = rt->rt_flags & ~ignflags;
@@ -183,12 +182,13 @@ rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 				goto miss;
 			}
 			/* Inform listeners of the new route. */
+			bzero(&info, sizeof(info));
 			info.rti_info[RTAX_DST] = rt_key(newrt);
 			info.rti_info[RTAX_NETMASK] = rt_mask(newrt);
 			info.rti_info[RTAX_GATEWAY] = newrt->rt_gateway;
 			if (newrt->rt_ifp != NULL) {
 				info.rti_info[RTAX_IFP] =
-				    ifaddr_byindex(newrt->rt_ifp->if_index)->ifa_addr;
+				    newrt->rt_ifp->if_addr->ifa_addr;
 				info.rti_info[RTAX_IFA] = newrt->rt_ifa->ifa_addr;
 			}
 			rt_missmsg(RTM_ADD, &info, newrt->rt_flags, 0);
@@ -213,6 +213,7 @@ rtalloc1(struct sockaddr *dst, int report, u_long ignflags)
 			 * Authorities.
 			 * For a delete, this is not an error. (report == 0)
 			 */
+			bzero(&info, sizeof(info));
 			info.rti_info[RTAX_DST] = dst;
 			rt_missmsg(msgtype, &info, 0, err);
 		}
@@ -231,22 +232,21 @@ rtfree(struct rtentry *rt)
 {
 	struct radix_node_head *rnh;
 
-	/* XXX the NULL checks are probably useless */
-	if (rt == NULL)
-		panic("rtfree: NULL rt");
+	KASSERT(rt != NULL,("%s: NULL rt", __func__));
 	rnh = rt_tables[rt_key(rt)->sa_family];
-	if (rnh == NULL)
-		panic("rtfree: NULL rnh");
+	KASSERT(rnh != NULL,("%s: NULL rnh", __func__));
 
 	RT_LOCK_ASSERT(rt);
 
 	/*
-	 * decrement the reference count by one and if it reaches 0,
-	 * and there is a close function defined, call the close function
+	 * The callers should use RTFREE_LOCKED() or RTFREE(), so
+	 * we should come here exactly with the last reference.
 	 */
 	RT_REMREF(rt);
-	if (rt->rt_refcnt > 0)
+	if (rt->rt_refcnt > 0) {
+		printf("%s: %p has %lu refs\n", __func__, rt, rt->rt_refcnt);
 		goto done;
+	}
 
 	/*
 	 * On last reference give the "close method" a chance
@@ -267,7 +267,7 @@ rtfree(struct rtentry *rt)
 	 */
 	if ((rt->rt_flags & RTF_UP) == 0) {
 		if (rt->rt_nodes->rn_flags & (RNF_ACTIVE | RNF_ROOT))
-			panic ("rtfree 2");
+			panic("rtfree 2");
 		/*
 		 * the rtentry must have been removed from the routing table
 		 * so it is represented in rttrash.. remove that now.
@@ -435,6 +435,7 @@ struct ifaddr *
 ifa_ifwithroute(int flags, struct sockaddr *dst, struct sockaddr *gateway)
 {
 	register struct ifaddr *ifa;
+	int not_found = 0;
 
 	if ((flags & RTF_GATEWAY) == 0) {
 		/*
@@ -463,8 +464,26 @@ ifa_ifwithroute(int flags, struct sockaddr *dst, struct sockaddr *gateway)
 		struct rtentry *rt = rtalloc1(gateway, 0, 0UL);
 		if (rt == NULL)
 			return (NULL);
+		/*
+		 * dismiss a gateway that is reachable only
+		 * through the default router
+		 */
+		switch (gateway->sa_family) {
+		case AF_INET:
+			if (satosin(rt_key(rt))->sin_addr.s_addr == INADDR_ANY)
+				not_found = 1;
+			break;
+		case AF_INET6:
+			if (IN6_IS_ADDR_UNSPECIFIED(&satosin6(rt_key(rt))->sin6_addr))
+				not_found = 1;
+			break;
+		default:
+			break;
+		}
 		RT_REMREF(rt);
 		RT_UNLOCK(rt);
+		if (not_found)
+			return (NULL);
 		if ((ifa = rt->rt_ifa) == NULL)
 			return (NULL);
 	}
@@ -498,6 +517,9 @@ rtrequest(int req,
 	struct rtentry **ret_nrt)
 {
 	struct rt_addrinfo info;
+
+	if (dst->sa_len == 0)
+		return(EINVAL);
 
 	bzero((caddr_t)&info, sizeof(info));
 	info.rti_flags = flags;
@@ -858,7 +880,7 @@ rtrequest1(int req, struct rt_addrinfo *info, struct rtentry **ret_nrt)
 		}
 
 		/*
-		 * if this protocol has something to add to this then
+		 * If this protocol has something to add to this then
 		 * allow it to do that as well.
 		 */
 		if (ifa->ifa_rtrequest)
@@ -995,6 +1017,7 @@ rt_setgate(struct rtentry *rt, struct sockaddr *dst, struct sockaddr *gate)
 	struct radix_node_head *rnh = rt_tables[dst->sa_family];
 	int dlen = SA_SIZE(dst), glen = SA_SIZE(gate);
 
+again:
 	RT_LOCK_ASSERT(rt);
 
 	/*
@@ -1024,11 +1047,18 @@ rt_setgate(struct rtentry *rt, struct sockaddr *dst, struct sockaddr *gate)
 		RT_UNLOCK(rt);		/* XXX workaround LOR */
 		gwrt = rtalloc1(gate, 1, 0);
 		if (gwrt == rt) {
-			RT_LOCK_ASSERT(rt);
 			RT_REMREF(rt);
 			return (EADDRINUSE); /* failure */
 		}
-		RT_LOCK(rt);
+		/*
+		 * Try to reacquire the lock on rt, and if it fails,
+		 * clean state and restart from scratch.
+		 */
+		if (!RT_TRYLOCK(rt)) {
+			RTFREE_LOCKED(gwrt);
+			RT_LOCK(rt);
+			goto again;
+		}
 		/*
 		 * If there is already a gwroute, then drop it. If we
 		 * are asked to replace route with itself, then do
@@ -1137,6 +1167,9 @@ rtinit(struct ifaddr *ifa, int cmd, int flags)
 		dst = ifa->ifa_addr;
 		netmask = ifa->ifa_netmask;
 	}
+	if (dst->sa_len == 0)
+		return(EINVAL);
+
 	/*
 	 * If it's a delete, check that if it exists, it's on the correct
 	 * interface or we might scrub a route to another ifa which would
@@ -1252,7 +1285,6 @@ bad:
 int
 rt_check(struct rtentry **lrt, struct rtentry **lrt0, struct sockaddr *dst)
 {
-#define senderr(x) { error = x ; goto bad; }
 	struct rtentry *rt;
 	struct rtentry *rt0;
 	int error;
@@ -1269,7 +1301,7 @@ rt_check(struct rtentry **lrt, struct rtentry **lrt0, struct sockaddr *dst)
 			RT_REMREF(rt);
 			/* XXX what about if change? */
 		} else
-			senderr(EHOSTUNREACH);
+			return (EHOSTUNREACH);
 		rt0 = rt;
 	}
 	/* XXX BSD/OS checks dst->sa_family != AF_NS */
@@ -1279,16 +1311,24 @@ rt_check(struct rtentry **lrt, struct rtentry **lrt0, struct sockaddr *dst)
 		rt = rt->rt_gwroute;
 		RT_LOCK(rt);		/* NB: gwroute */
 		if ((rt->rt_flags & RTF_UP) == 0) {
-			rtfree(rt);	/* unlock gwroute */
+			RTFREE_LOCKED(rt);	/* unlock gwroute */
 			rt = rt0;
+			rt0->rt_gwroute = NULL;
 		lookup:
 			RT_UNLOCK(rt0);
 			rt = rtalloc1(rt->rt_gateway, 1, 0UL);
+			if (rt == rt0) {
+				RT_REMREF(rt0);
+				RT_UNLOCK(rt0);
+				return (ENETUNREACH);
+			}
 			RT_LOCK(rt0);
+			if (rt0->rt_gwroute != NULL)
+				RTFREE(rt0->rt_gwroute);
 			rt0->rt_gwroute = rt;
 			if (rt == NULL) {
 				RT_UNLOCK(rt0);
-				senderr(EHOSTUNREACH);
+				return (EHOSTUNREACH);
 			}
 		}
 		RT_UNLOCK(rt0);
@@ -1296,19 +1336,15 @@ rt_check(struct rtentry **lrt, struct rtentry **lrt0, struct sockaddr *dst)
 	/* XXX why are we inspecting rmx_expire? */
 	error = (rt->rt_flags & RTF_REJECT) &&
 		(rt->rt_rmx.rmx_expire == 0 ||
-			time_second < rt->rt_rmx.rmx_expire);
+			time_uptime < rt->rt_rmx.rmx_expire);
 	if (error) {
 		RT_UNLOCK(rt);
-		senderr(rt == rt0 ? EHOSTDOWN : EHOSTUNREACH);
+		return (rt == rt0 ? EHOSTDOWN : EHOSTUNREACH);
 	}
 
 	*lrt = rt;
 	*lrt0 = rt0;
 	return (0);
-bad:
-	/* NB: lrt and lrt0 should not be interpreted if error is non-zero */
-	return (error);
-#undef senderr
 }
 
 /* This must be before ip6_init2(), which is now SI_ORDER_MIDDLE */

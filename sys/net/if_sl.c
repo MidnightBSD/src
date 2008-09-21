@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_sl.c	8.6 (Berkeley) 2/1/94
- * $FreeBSD: src/sys/net/if_sl.c,v 1.129 2005/06/10 16:49:18 brooks Exp $
+ * $FreeBSD: src/sys/net/if_sl.c,v 1.133 2006/11/06 13:42:02 rwatson Exp $
  */
 
 /*
@@ -68,6 +68,7 @@
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
@@ -366,7 +367,7 @@ slopen(struct cdev *dev, register struct tty *tp)
 	register struct sl_softc *sc;
 	int s, error;
 
-	error = suser(curthread);
+	error = priv_check(curthread, PRIV_NET_SLIP);
 	if (error)
 		return (error);
 
@@ -628,7 +629,7 @@ sltstart(struct tty *tp)
 		 * output queue.  We are being called in lieu of ttstart
 		 * and must do what it would.
 		 */
-		(*tp->t_oproc)(tp);
+		tt_oproc(tp);
 
 		if (tp->t_outq.c_cc != 0) {
 			if (sc != NULL)
@@ -662,7 +663,7 @@ sltstart(struct tty *tp)
 		 * queueing, and the connection id compression will get
 		 * munged when this happens.
 		 */
-		if (SL2IFP(sc)->if_bpf) {
+		if (bpf_peers_present(SL2IFP(sc)->if_bpf)) {
 			/*
 			 * We need to save the TCP/IP header before it's
 			 * compressed.  To avoid complicated code, we just
@@ -696,7 +697,7 @@ sltstart(struct tty *tp)
 				*mtod(m, u_char *) |= sl_compress_tcp(m, ip,
 				    &sc->sc_comp, 1);
 		}
-		if (SL2IFP(sc)->if_bpf && sc->bpfbuf) {
+		if (bpf_peers_present(SL2IFP(sc)->if_bpf) && sc->bpfbuf) {
 			/*
 			 * Put the SLIP pseudo-"link header" in place.  The
 			 * compressed header is now at the beginning of the
@@ -876,15 +877,15 @@ slinput(int c, struct tty *tp)
 			 * this one is within the time limit.
 			 */
 			if (sc->sc_abortcount &&
-			    time_second >= sc->sc_starttime + ABT_WINDOW)
+			    time_uptime >= sc->sc_starttime + ABT_WINDOW)
 				sc->sc_abortcount = 0;
 			/*
 			 * If we see an abort after "idle" time, count it;
 			 * record when the first abort escape arrived.
 			 */
-			if (time_second >= sc->sc_lasttime + ABT_IDLE) {
+			if (time_uptime >= sc->sc_lasttime + ABT_IDLE) {
 				if (++sc->sc_abortcount == 1)
-					sc->sc_starttime = time_second;
+					sc->sc_starttime = time_uptime;
 				if (sc->sc_abortcount >= ABT_COUNT) {
 					slclose(tp,0);
 					return 0;
@@ -892,7 +893,7 @@ slinput(int c, struct tty *tp)
 			}
 		} else
 			sc->sc_abortcount = 0;
-		sc->sc_lasttime = time_second;
+		sc->sc_lasttime = time_uptime;
 	}
 
 	switch (c) {
@@ -922,7 +923,7 @@ slinput(int c, struct tty *tp)
 			/* less than min length packet - ignore */
 			goto newpack;
 
-		if (SL2IFP(sc)->if_bpf) {
+		if (bpf_peers_present(SL2IFP(sc)->if_bpf)) {
 			/*
 			 * Save the compressed header, so we
 			 * can tack it on later.  Note that we
@@ -961,7 +962,7 @@ slinput(int c, struct tty *tp)
 			} else
 				goto error;
 		}
-		if (SL2IFP(sc)->if_bpf) {
+		if (bpf_peers_present(SL2IFP(sc)->if_bpf)) {
 			/*
 			 * Put the SLIP pseudo-"link header" in place.
 			 * We couldn't do this any earlier since
@@ -1110,7 +1111,7 @@ sl_outfill(void *chan)
 			s = splimp ();
 			++SL2IFP(sc)->if_obytes;
 			(void) putc(FRAME_END, &tp->t_outq);
-			(*tp->t_oproc)(tp);
+			tt_oproc(tp);
 			splx (s);
 		} else
 			sc->sc_flags |= SC_OUTWAIT;

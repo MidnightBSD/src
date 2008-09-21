@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/net/if_stf.c,v 1.50.2.1 2005/11/16 10:31:21 ru Exp $	*/
+/*	$FreeBSD: src/sys/net/if_stf.c,v 1.60 2007/09/23 17:50:17 csjp Exp $	*/
 /*	$KAME: if_stf.c,v 1.73 2001/12/03 11:08:30 keiichi Exp $	*/
 
 /*-
@@ -82,7 +82,6 @@
 #include <sys/systm.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
-#include <sys/mac.h>
 #include <sys/mbuf.h>
 #include <sys/errno.h>
 #include <sys/kernel.h>
@@ -115,9 +114,9 @@
 
 #include <machine/stdarg.h>
 
-#include <net/net_osdep.h>
-
 #include <net/bpf.h>
+
+#include <security/mac/mac_framework.h>
 
 #define STFNAME		"stf"
 #define STFUNIT		0
@@ -138,19 +137,14 @@ struct stf_softc {
 	} __sc_ro46;
 #define sc_ro	__sc_ro46.__sc_ro4
 	const struct encaptab *encap_cookie;
-	LIST_ENTRY(stf_softc) sc_list;	/* all stf's are linked */
 };
 #define STF2IFP(sc)	((sc)->sc_ifp)
 
 /*
- * All mutable global variables in if_stf.c are protected by stf_mtx.
  * XXXRW: Note that mutable fields in the softc are not currently locked:
  * in particular, sc_ro needs to be protected from concurrent entrance
  * of stf_output().
  */
-static struct mtx stf_mtx;
-static LIST_HEAD(, stf_softc) stf_softc_list;
-
 static MALLOC_DEFINE(M_STF, STFNAME, "6to4 Tunnel Interface");
 static const int ip_stf_ttl = 40;
 
@@ -182,7 +176,7 @@ static void stf_rtrequest(int, struct rtentry *, struct rt_addrinfo *);
 static int stf_ioctl(struct ifnet *, u_long, caddr_t);
 
 static int stf_clone_match(struct if_clone *, const char *);
-static int stf_clone_create(struct if_clone *, char *, size_t);
+static int stf_clone_create(struct if_clone *, char *, size_t, caddr_t);
 static int stf_clone_destroy(struct if_clone *, struct ifnet *);
 struct if_clone stf_cloner = IFC_CLONE_INITIALIZER(STFNAME, NULL, 0,
     NULL, stf_clone_match, stf_clone_create, stf_clone_destroy);
@@ -201,7 +195,7 @@ stf_clone_match(struct if_clone *ifc, const char *name)
 }
 
 static int
-stf_clone_create(struct if_clone *ifc, char *name, size_t len)
+stf_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 {
 	int err, unit;
 	struct stf_softc *sc;
@@ -249,36 +243,22 @@ stf_clone_create(struct if_clone *ifc, char *name, size_t len)
 	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
 	if_attach(ifp);
 	bpfattach(ifp, DLT_NULL, sizeof(u_int32_t));
-	mtx_lock(&stf_mtx);
-	LIST_INSERT_HEAD(&stf_softc_list, sc, sc_list);
-	mtx_unlock(&stf_mtx);
 	return (0);
-}
-
-static void
-stf_destroy(struct stf_softc *sc)
-{
-	int err;
-
-	err = encap_detach(sc->encap_cookie);
-	KASSERT(err == 0, ("Unexpected error detaching encap_cookie"));
-	bpfdetach(STF2IFP(sc));
-	if_detach(STF2IFP(sc));
-	if_free(STF2IFP(sc));
-
-	free(sc, M_STF);
 }
 
 static int
 stf_clone_destroy(struct if_clone *ifc, struct ifnet *ifp)
 {
 	struct stf_softc *sc = ifp->if_softc;
+	int err;
 
-	mtx_lock(&stf_mtx);
-	LIST_REMOVE(sc, sc_list);
-	mtx_unlock(&stf_mtx);
+	err = encap_detach(sc->encap_cookie);
+	KASSERT(err == 0, ("Unexpected error detaching encap_cookie"));
+	bpfdetach(ifp);
+	if_detach(ifp);
+	if_free(ifp);
 
-	stf_destroy(sc);
+	free(sc, M_STF);
 	ifc_free_unit(ifc, STFUNIT);
 
 	return (0);
@@ -290,27 +270,13 @@ stfmodevent(mod, type, data)
 	int type;
 	void *data;
 {
-	struct stf_softc *sc;
 
 	switch (type) {
 	case MOD_LOAD:
-		mtx_init(&stf_mtx, "stf_mtx", NULL, MTX_DEF);
-		LIST_INIT(&stf_softc_list);
 		if_clone_attach(&stf_cloner);
-
 		break;
 	case MOD_UNLOAD:
 		if_clone_detach(&stf_cloner);
-
-		mtx_lock(&stf_mtx);
-		while ((sc = LIST_FIRST(&stf_softc_list)) != NULL) {
-			LIST_REMOVE(sc, sc_list);
-			mtx_unlock(&stf_mtx);
-			stf_destroy(sc);
-			mtx_lock(&stf_mtx);
-		}
-		mtx_unlock(&stf_mtx);
-		mtx_destroy(&stf_mtx);
 		break;
 	default:
 		return (EOPNOTSUPP);
@@ -400,12 +366,7 @@ stf_getsrcifa6(ifp)
 	struct sockaddr_in6 *sin6;
 	struct in_addr in;
 
-	for (ia = TAILQ_FIRST(&ifp->if_addrlist);
-	     ia;
-	     ia = TAILQ_NEXT(ia, ifa_list))
-	{
-		if (ia->ifa_addr == NULL)
-			continue;
+	TAILQ_FOREACH(ia, &ifp->if_addrlist, ifa_list) {
 		if (ia->ifa_addr->sa_family != AF_INET6)
 			continue;
 		sin6 = (struct sockaddr_in6 *)ia->ifa_addr;
@@ -509,7 +470,7 @@ stf_output(ifp, m, dst, rt)
 	}
 	bcopy(ptr, &in4, sizeof(in4));
 
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		/*
 		 * We need to prepend the address family as
 		 * a four byte field.  Cons up a dummy header
@@ -646,10 +607,10 @@ stf_checkaddr4(sc, in, inifp)
 			    (u_int32_t)ntohl(sin.sin_addr.s_addr));
 #endif
 			if (rt)
-				rtfree(rt);
+				RTFREE_LOCKED(rt);
 			return -1;
 		}
-		rtfree(rt);
+		RTFREE_LOCKED(rt);
 	}
 
 	return 0;
@@ -756,7 +717,7 @@ in_stf_input(m, off)
 
 	m->m_pkthdr.rcvif = ifp;
 	
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		/*
 		 * We need to prepend the address family as
 		 * a four byte field.  Cons up a dummy header

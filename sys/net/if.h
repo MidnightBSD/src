@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if.h,v 1.96.2.4 2006/02/15 03:37:15 ps Exp $
+ * $FreeBSD: src/sys/net/if.h,v 1.108 2007/06/11 20:08:11 andre Exp $
  */
 
 #ifndef _NET_IF_H_
@@ -83,8 +83,8 @@ struct if_data {
 	u_char	ifi_addrlen;		/* media address length */
 	u_char	ifi_hdrlen;		/* media header length */
 	u_char	ifi_link_state;		/* current link state */
-	u_char	ifi_recvquota;		/* polling quota for receive intrs */
-	u_char	ifi_xmitquota;		/* polling quota for xmit intrs */
+	u_char	ifi_spare_char1;	/* spare byte */
+	u_char	ifi_spare_char2;	/* spare byte */
 	u_char	ifi_datalen;		/* length of this data struct */
 	u_long	ifi_mtu;		/* maximum transmission unit */
 	u_long	ifi_metric;		/* routing metric (external only) */
@@ -101,11 +101,8 @@ struct if_data {
 	u_long	ifi_omcasts;		/* packets sent via multicast */
 	u_long	ifi_iqdrops;		/* dropped on input, this interface */
 	u_long	ifi_noproto;		/* destined for unsupported protocol */
-	u_long	ifi_hwassist;		/* HW offload capabilities */
+	u_long	ifi_hwassist;		/* HW offload capabilities, see IFCAP */
 	time_t	ifi_epoch;		/* uptime at attach or stat reset */
-#ifdef __alpha__
-	u_int	ifi_timepad;		/* time_t is int, not long on alpha */
-#endif
 	struct	timeval ifi_lastchange;	/* time of last administrative change */
 };
 
@@ -183,7 +180,24 @@ struct if_data {
 #define	IF_Mbps(x)	(IF_Kbps((x) * 1000))	/* megabits/sec. */
 #define	IF_Gbps(x)	(IF_Mbps((x) * 1000))	/* gigabits/sec. */
 
-/* Capabilities that interfaces can advertise. */
+/*
+ * Capabilities that interfaces can advertise.
+ *
+ * struct ifnet.if_capabilities
+ *   contains the optional features & capabilities a particular interface
+ *   supports (not only the driver but also the detected hw revision).
+ *   Capabilities are defined by IFCAP_* below.
+ * struct ifnet.if_capenable
+ *   contains the enabled (either by default or through ifconfig) optional
+ *   features & capabilities on this interface.
+ *   Capabilities are defined by IFCAP_* below.
+ * struct if_data.ifi_hwassist in mbuf CSUM_ flag form, controlled by above
+ *   contains the enabled optional feature & capabilites that can be used
+ *   individually per packet and are specified in the mbuf pkthdr.csum_flags
+ *   field.  IFCAP_* and CSUM_* do not match one to one and CSUM_* may be
+ *   more detailed or differenciated than IFCAP_*.
+ *   Hwassist features are defined CSUM_* in sys/mbuf.h
+ */
 #define IFCAP_RXCSUM		0x0001  /* can offload checksum on RX */
 #define IFCAP_TXCSUM		0x0002  /* can offload checksum on TX */
 #define IFCAP_NETCONS		0x0004  /* can be a network console */
@@ -191,8 +205,13 @@ struct if_data {
 #define	IFCAP_VLAN_HWTAGGING	0x0010	/* hardware VLAN tag support */
 #define	IFCAP_JUMBO_MTU		0x0020	/* 9000 byte MTU supported */
 #define	IFCAP_POLLING		0x0040	/* driver supports polling */
+#define	IFCAP_VLAN_HWCSUM	0x0080	/* can do IFCAP_HWCSUM on VLANs */
+#define	IFCAP_TSO4		0x0100	/* can do TCP Segmentation Offload */
+#define	IFCAP_TSO6		0x0200	/* can do TCP6 Segmentation Offload */
+#define	IFCAP_LRO		0x0400	/* can do Large Receive Offload */
 
 #define IFCAP_HWCSUM		(IFCAP_RXCSUM | IFCAP_TXCSUM)
+#define	IFCAP_TSO		(IFCAP_TSO4 | IFCAP_TSO6)
 
 #define	IFQ_MAXLEN	50
 #define	IFNET_SLOWHZ	1		/* granularity is 1 second */
@@ -356,6 +375,37 @@ struct ifconf32 {
 	} ifc_ifcu;
 };
 #endif
+
+/*
+ * interface groups
+ */
+
+#define	IFG_ALL		"all"		/* group contains all interfaces */
+/* XXX: will we implement this? */
+#define	IFG_EGRESS	"egress"	/* if(s) default route(s) point to */
+
+struct ifg_req {
+	union {
+		char			 ifgrqu_group[IFNAMSIZ];
+		char			 ifgrqu_member[IFNAMSIZ];
+	} ifgrq_ifgrqu;
+#define	ifgrq_group	ifgrq_ifgrqu.ifgrqu_group
+#define	ifgrq_member	ifgrq_ifgrqu.ifgrqu_member
+};
+
+/*
+ * Used to lookup groups for an interface
+ */
+struct ifgroupreq {
+	char	ifgr_name[IFNAMSIZ];
+	u_int	ifgr_len;
+	union {
+		char	ifgru_group[IFNAMSIZ];
+		struct	ifg_req *ifgru_groups;
+	} ifgr_ifgru;
+#define ifgr_group	ifgr_ifgru.ifgru_group
+#define ifgr_groups	ifgr_ifgru.ifgru_groups
+};
 
 /*
  * Structure for SIOC[AGD]LIFADDR

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if_loop.c	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_disc.c,v 1.48.2.1 2005/11/25 14:41:31 glebius Exp $
+ * $FreeBSD: src/sys/net/if_disc.c,v 1.54 2007/03/26 09:10:28 yar Exp $
  */
 
 /*
@@ -62,25 +62,22 @@
 #define DISCNAME	"disc"
 
 struct disc_softc {
-	struct ifnet *sc_ifp;	/* must be first */
-	LIST_ENTRY(disc_softc) sc_list;
+	struct ifnet *sc_ifp;
 };
 
 static int	discoutput(struct ifnet *, struct mbuf *,
 		    struct sockaddr *, struct rtentry *);
 static void	discrtrequest(int, struct rtentry *, struct rt_addrinfo *);
 static int	discioctl(struct ifnet *, u_long, caddr_t);
-static int	disc_clone_create(struct if_clone *, int);
+static int	disc_clone_create(struct if_clone *, int, caddr_t);
 static void	disc_clone_destroy(struct ifnet *);
 
-static struct mtx disc_mtx;
 static MALLOC_DEFINE(M_DISC, DISCNAME, "Discard interface");
-static LIST_HEAD(, disc_softc) disc_softc_list;
 
 IFC_SIMPLE_DECLARE(disc, 0);
 
 static int
-disc_clone_create(struct if_clone *ifc, int unit)
+disc_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 {
 	struct ifnet		*ifp;
 	struct disc_softc	*sc;
@@ -104,22 +101,8 @@ disc_clone_create(struct if_clone *ifc, int unit)
 	ifp->if_snd.ifq_maxlen = 20;
 	if_attach(ifp);
 	bpfattach(ifp, DLT_NULL, sizeof(u_int32_t));
-	mtx_lock(&disc_mtx);
-	LIST_INSERT_HEAD(&disc_softc_list, sc, sc_list);
-	mtx_unlock(&disc_mtx);
 
 	return (0);
-}
-
-static void
-disc_destroy(struct disc_softc *sc)
-{
-
-	bpfdetach(sc->sc_ifp);
-	if_detach(sc->sc_ifp);
-	if_free(sc->sc_ifp);
-
-	free(sc, M_DISC);
 }
 
 static void
@@ -128,36 +111,24 @@ disc_clone_destroy(struct ifnet *ifp)
 	struct disc_softc	*sc;
 
 	sc = ifp->if_softc;
-	mtx_lock(&disc_mtx);
-	LIST_REMOVE(sc, sc_list);
-	mtx_unlock(&disc_mtx);
 
-	disc_destroy(sc);
+	bpfdetach(ifp);
+	if_detach(ifp);
+	if_free(ifp);
+
+	free(sc, M_DISC);
 }
 
 static int
 disc_modevent(module_t mod, int type, void *data)
 {
-	struct disc_softc *sc;
 
 	switch (type) {
 	case MOD_LOAD:
-		mtx_init(&disc_mtx, "disc_mtx", NULL, MTX_DEF);
-		LIST_INIT(&disc_softc_list);
 		if_clone_attach(&disc_cloner);
 		break;
 	case MOD_UNLOAD:
 		if_clone_detach(&disc_cloner);
-
-		mtx_lock(&disc_mtx);
-		while ((sc = LIST_FIRST(&disc_softc_list)) != NULL) {
-			LIST_REMOVE(sc, sc_list);
-			mtx_unlock(&disc_mtx);
-			disc_destroy(sc);
-			mtx_lock(&disc_mtx);
-		}
-		mtx_unlock(&disc_mtx);
-		mtx_destroy(&disc_mtx);
 		break;
 	default:
 		return (EOPNOTSUPP);
@@ -187,7 +158,7 @@ discoutput(struct ifnet *ifp, struct mbuf *m, struct sockaddr *dst,
 		dst->sa_family = af;
 	}
 
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		u_int af = dst->sa_family;
 		bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);
 	}

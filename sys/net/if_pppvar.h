@@ -40,7 +40,7 @@
  * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/sys/net/if_pppvar.h,v 1.23.2.1 2005/08/19 14:52:21 glebius Exp $
+ * $FreeBSD: src/sys/net/if_pppvar.h,v 1.26 2006/12/05 18:54:21 ume Exp $
  */
 
 /*
@@ -48,7 +48,8 @@
  * indexing sc_npmode.
  */
 #define NP_IP	0		/* Internet Protocol */
-#define NUM_NP	1		/* Number of NPs. */
+#define NP_IPV6	1		/* Internet Protocol version 6 */
+#define NUM_NP	2		/* Number of NPs. */
 
 /*
  * Structure describing each ppp unit.
@@ -56,7 +57,7 @@
 struct ppp_softc {
 	struct	ifnet *sc_ifp;		/* network-visible interface */
 /*hi*/	u_int	sc_flags;		/* control/status bits; see if_ppp.h */
-	struct	callout_handle sc_ch;	/* Used for scheduling timeouts */
+	struct	callout sc_timo_ch;	/* Used for scheduling timeouts */
 	void	*sc_devp;		/* pointer to device-dep structure */
 	void	(*sc_start)(struct ppp_softc *);	/* start output proc */
 	void	(*sc_ctlp)(struct ppp_softc *); /* rcvd control pkt */

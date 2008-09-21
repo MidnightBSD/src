@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)if.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_clone.h,v 1.2 2005/01/07 01:45:34 imp Exp $
+ * $FreeBSD: src/sys/net/if_clone.h,v 1.4 2006/07/09 06:04:00 sam Exp $
  */
 
 #ifndef	_NET_IF_CLONE_H_
@@ -61,18 +61,19 @@ struct if_clone {
 	/* (c) Driver specific cloning functions.  Called with no locks held. */
 	void	(*ifc_attach)(struct if_clone *);
 	int	(*ifc_match)(struct if_clone *, const char *);
-	int	(*ifc_create)(struct if_clone *, char *, size_t);
+	int	(*ifc_create)(struct if_clone *, char *, size_t, caddr_t);
 	int	(*ifc_destroy)(struct if_clone *, struct ifnet *);
 
 	long ifc_refcnt;		/* (i) Refrence count. */
 	struct mtx ifc_mtx;		/* Muted to protect members. */
+	LIST_HEAD(, ifnet) ifc_iflist;	/* (i) List of cloned interfaces */
 };
 
 void	if_clone_init(void);
 void	if_clone_attach(struct if_clone *);
 void	if_clone_detach(struct if_clone *);
 
-int	if_clone_create(char *, size_t);
+int	if_clone_create(char *, size_t, caddr_t);
 int	if_clone_destroy(const char *);
 int	if_clone_list(struct if_clonereq *);
 
@@ -88,7 +89,7 @@ void	ifc_free_unit(struct if_clone *, int);
 struct ifc_simple_data {
 	int ifcs_minifs;		/* minimum number of interfaces */
 
-	int	(*ifcs_create)(struct if_clone *, int);
+	int	(*ifcs_create)(struct if_clone *, int, caddr_t);
 	void	(*ifcs_destroy)(struct ifnet *);
 };
 
@@ -105,7 +106,7 @@ struct if_clone name##_cloner =						\
 
 void	ifc_simple_attach(struct if_clone *);
 int	ifc_simple_match(struct if_clone *, const char *);
-int	ifc_simple_create(struct if_clone *, char *, size_t);
+int	ifc_simple_create(struct if_clone *, char *, size_t, caddr_t);
 int	ifc_simple_destroy(struct if_clone *, struct ifnet *);
 
 #endif /* _KERNEL */

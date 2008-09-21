@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)if_arp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/net/if_arp.h,v 1.22 2005/06/10 16:49:18 brooks Exp $
+ * $FreeBSD: src/sys/net/if_arp.h,v 1.24 2005/11/11 16:04:48 ru Exp $
  */
 
 #ifndef _NET_IF_ARP_H_
@@ -103,11 +103,9 @@ struct arpreq {
  */
 struct	arpcom {
 	struct 	ifnet *ac_ifp;		/* network-visible interface */
-	u_char	_ac_enaddr[6];		/* ethernet hardware address */
 	void	*ac_netgraph;		/* ng_ether(4) netgraph node info */
 };
 #define IFP2AC(ifp) ((struct arpcom *)(ifp->if_l2com))
-#define IFP2ENADDR(ifp) (IFP2AC(ifp)->_ac_enaddr)
 #define AC2IFP(ac) ((ac)->ac_ifp)
 
 #endif
