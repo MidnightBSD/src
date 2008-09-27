@@ -1,8 +1,10 @@
-# $MidnightBSD: src/sys/Makefile,v 1.4 2008/09/08 01:42:28 laffer1 Exp $
+# $MidnightBSD: src/sys/Makefile,v 1.5 2008/09/16 00:36:47 laffer1 Exp $
 # $FreeBSD: src/sys/Makefile,v 1.33 2005/03/08 00:09:41 grog Exp $
 
+.include <bsd.own.mk>
+
 # The boot loader
-.if !defined(NO_BOOT)
+.if ${MK_BOOT} != "no"
 SUBDIR=	boot
 .endif
 
