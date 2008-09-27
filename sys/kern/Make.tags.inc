@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/kern/Make.tags.inc,v 1.15 2003/03/05 19:24:21 peter Exp $
+# $FreeBSD: src/sys/kern/Make.tags.inc,v 1.20 2007/07/05 08:55:14 bz Exp $
 #	@(#)Make.tags.inc	8.1 (Berkeley) 6/11/93
 
 SYS?=	${.CURDIR}/..
@@ -14,11 +14,8 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/dev/aha/*.[ch] \
 	${SYS}/dev/aic7xxx/*.[ch] \
 	${SYS}/dev/buslogic/*.[ch] \
-	${SYS}/dev/ccd/*.[ch] \
-	${SYS}/dev/dec/*.[ch] \
 	${SYS}/dev/dpt/*.[ch] \
 	${SYS}/dev/en/*.[ch] \
-	${SYS}/dev/hea/*.[ch] \
 	${SYS}/dev/hfa/*.[ch] \
 	${SYS}/dev/iicbus/*.[ch] \
 	${SYS}/dev/isp/*.[ch] \
@@ -26,28 +23,34 @@ COMM=	${SYS}/dev/advansys/*.[ch] \
 	${SYS}/dev/ppbus/*.[ch] \
 	${SYS}/dev/smbus/*.[ch] \
 	${SYS}/dev/vx/*.[ch] \
+	${SYS}/fs/cd9660/*.[ch] \
 	${SYS}/fs/deadfs/*.[ch] \
+	${SYS}/fs/devfs/*.[ch] \
 	${SYS}/fs/fdescfs/*.[ch] \
 	${SYS}/fs/fifofs/*.[ch] \
+	${SYS}/fs/hpfs/*.[ch] \
 	${SYS}/fs/msdosfs/*.[ch] \
+	${SYS}/fs/ntfs/*.[ch] \
 	${SYS}/fs/nullfs/*.[ch] \
+	${SYS}/fs/nwfs/*.[ch] \
 	${SYS}/fs/portalfs/*.[ch] \
 	${SYS}/fs/procfs/*.[ch] \
-	${SYS}/fs/specfs/*.[ch] \
-	${SYS}/fs/umapfs/*.[ch] \
+	${SYS}/fs/smbfs/*.[ch] \
+	${SYS}/fs/udf/*.[ch] \
 	${SYS}/fs/unionfs/*.[ch] \
-	${SYS}/isofs/cd9660/*.[ch] \
 	${SYS}/kern/*.[ch] \
 	${SYS}/net/*.[ch] \
 	${SYS}/netatalk/*.[ch] \
 	${SYS}/netatm/*.[ch] \
 	${SYS}/netinet/*.[ch] \
+	${SYS}/netinet6/*.[ch] \
+	${SYS}/netipsec/*.[ch] \
 	${SYS}/netipx/*.[ch] \
-	${SYS}/netkey/*.[ch] \
 	${SYS}/netnatm/*.[ch] \
 	${SYS}/nfs/*.[ch] \
+	${SYS}/nfsclient/*.[ch] \
+	${SYS}/nfsserver/*.[ch] \
 	${SYS}/pci/*.[ch] \
-	${SYS}/posix4/*.[ch] \
 	${SYS}/ufs/ffs/*.[ch] \
 	${SYS}/ufs/ufs/*.[ch] \
 	${SYS}/vm/*.[ch] \
@@ -59,12 +62,12 @@ COMMDIR1= ${SYS}/conf \
 	${SYS}/netatalk \
 	${SYS}/netatm \
 	${SYS}/netinet \
+	${SYS}/netinet6 \
+	${SYS}/netipsec \
 	${SYS}/netipx \
-	${SYS}/netkey \
 	${SYS}/netnatm \
 	${SYS}/nfs \
 	${SYS}/pci \
-	${SYS}/posix4 \
 	${SYS}/vm \
 	${SYS}/sys
 
@@ -94,8 +97,7 @@ COMMDIR2= ${SYS}/dev/advansys \
 	${SYS}/fs/portalfs \
 	${SYS}/fs/procfs \
 	${SYS}/fs/specfs \
-	${SYS}/fs/umapfs \
 	${SYS}/fs/unionfs \
-	${SYS}/isofs/cd9660 \
+	${SYS}/fs/cd9660 \
 	${SYS}/ufs/ffs \
 	${SYS}/ufs/ufs
