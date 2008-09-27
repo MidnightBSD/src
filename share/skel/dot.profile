@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/skel/dot.profile,v 1.21 2002/07/07 00:00:54 mp Exp $
-# $MidnightBSD: src/share/skel/dot.profile,v 1.5 2007/04/24 18:45:52 ctriv Exp $
+# $MidnightBSD: src/share/skel/dot.profile,v 1.6 2007/10/13 21:25:46 laffer1 Exp $
 #
 # .profile - Bourne Shell startup script for login shells
 #
@@ -28,7 +28,7 @@ alias ll="ls -lA"
 BLOCKSIZE=K;	export BLOCKSIZE
 EDITOR=vi;   	export EDITOR
 PAGER=more;  	export PAGER
-VISUAL=emacs;	export VISUAL
+VISUAL=vi;	export VISUAL
 
 # set ENV to a file invoked each time sh is started for interactive use.
 if [ $SHELL = "/bin/ksh" ]; then
