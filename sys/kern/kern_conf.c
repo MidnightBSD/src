@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_conf.c,v 1.186.2.5 2005/11/06 15:58:06 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_conf.c,v 1.208.2.1 2007/12/07 03:45:16 thompsa Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -39,9 +39,11 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_conf.c,v 1.186.2.5 2005/11/06 15:58:06 jhb
 #include <sys/vnode.h>
 #include <sys/queue.h>
 #include <sys/poll.h>
+#include <sys/sx.h>
 #include <sys/ctype.h>
 #include <sys/tty.h>
 #include <sys/ucred.h>
+#include <sys/taskqueue.h>
 #include <machine/stdarg.h>
 
 #include <fs/devfs/devfs_int.h>
@@ -50,15 +52,46 @@ static MALLOC_DEFINE(M_DEVT, "cdev", "cdev storage");
 
 struct mtx devmtx;
 static void destroy_devl(struct cdev *dev);
-static struct cdev *make_dev_credv(struct cdevsw *devsw, int minornr,
-	    struct ucred *cr, uid_t uid, gid_t gid, int mode, const char *fmt,
-	    va_list ap);
+static int destroy_dev_sched_cbl(struct cdev *dev,
+    void (*cb)(void *), void *arg);
+static struct cdev *make_dev_credv(int flags,
+    struct cdevsw *devsw, int minornr,
+    struct ucred *cr, uid_t uid, gid_t gid, int mode, const char *fmt,
+    va_list ap);
+
+static struct cdev_priv_list cdevp_free_list =
+    TAILQ_HEAD_INITIALIZER(cdevp_free_list);
 
 void
 dev_lock(void)
 {
 
 	mtx_lock(&devmtx);
+}
+
+static void
+dev_unlock_and_free(void)
+{
+	struct cdev_priv *cdp;
+
+	mtx_assert(&devmtx, MA_OWNED);
+	while ((cdp = TAILQ_FIRST(&cdevp_free_list)) != NULL) {
+		TAILQ_REMOVE(&cdevp_free_list, cdp, cdp_list);
+		mtx_unlock(&devmtx);
+		devfs_free(&cdp->cdp_c);
+		mtx_lock(&devmtx);
+	}
+	mtx_unlock(&devmtx);
+}
+
+static void
+dev_free_devlocked(struct cdev *cdev)
+{
+	struct cdev_priv *cdp;
+
+	mtx_assert(&devmtx, MA_OWNED);
+	cdp = cdev->si_priv;
+	TAILQ_INSERT_HEAD(&cdevp_free_list, cdp, cdp_list);
 }
 
 void
@@ -102,7 +135,7 @@ dev_rel(struct cdev *dev)
 		;
 	else 
 #endif
-if (dev->si_devsw == NULL && dev->si_refcount == 0) {
+	if (dev->si_devsw == NULL && dev->si_refcount == 0) {
 		LIST_REMOVE(dev, si_list);
 		flag = 1;
 	}
@@ -115,12 +148,40 @@ struct cdevsw *
 dev_refthread(struct cdev *dev)
 {
 	struct cdevsw *csw;
+	struct cdev_priv *cdp;
 
 	mtx_assert(&devmtx, MA_NOTOWNED);
 	dev_lock();
 	csw = dev->si_devsw;
-	if (csw != NULL)
-		dev->si_threadcount++;
+	if (csw != NULL) {
+		cdp = dev->si_priv;
+		if ((cdp->cdp_flags & CDP_SCHED_DTR) == 0)
+			dev->si_threadcount++;
+		else
+			csw = NULL;
+	}
+	dev_unlock();
+	return (csw);
+}
+
+struct cdevsw *
+devvn_refthread(struct vnode *vp, struct cdev **devp)
+{
+	struct cdevsw *csw;
+	struct cdev_priv *cdp;
+
+	mtx_assert(&devmtx, MA_NOTOWNED);
+	csw = NULL;
+	dev_lock();
+	*devp = vp->v_rdev;
+	if (*devp != NULL) {
+		cdp = (*devp)->si_priv;
+		if ((cdp->cdp_flags & CDP_SCHED_DTR) == 0) {
+			csw = (*devp)->si_devsw;
+			if (csw != NULL)
+				(*devp)->si_threadcount++;
+		}
+	}
 	dev_unlock();
 	return (csw);
 }
@@ -246,13 +307,13 @@ giant_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 }
 
 static int
-giant_fdopen(struct cdev *dev, int oflags, struct thread *td, int fdidx)
+giant_fdopen(struct cdev *dev, int oflags, struct thread *td, struct file *fp)
 {
 	int retval;
 
 	mtx_lock(&Giant);
 	retval = dev->si_devsw->d_gianttrick->
-	    d_fdopen(dev, oflags, td, fdidx);
+	    d_fdopen(dev, oflags, td, fp);
 	mtx_unlock(&Giant);
 	return (retval);
 }
@@ -399,7 +460,7 @@ newdev(struct cdevsw *csw, int y, struct cdev *si)
 	udev = y;
 	LIST_FOREACH(si2, &csw->d_devs, si_list) {
 		if (si2->si_drv0 == udev) {
-			devfs_free(si);
+			dev_free_devlocked(si);
 			return (si2);
 		}
 	}
@@ -449,7 +510,8 @@ prep_cdevsw(struct cdevsw *devsw)
 	if (devsw->d_version != D_VERSION_01) {
 		printf(
 		    "WARNING: Device driver \"%s\" has wrong version %s\n",
-		    devsw->d_name, "and is disabled.  Recompile KLD module.");
+		    devsw->d_name == NULL ? "???" : devsw->d_name,
+		    "and is disabled.  Recompile KLD module.");
 		devsw->d_open = dead_open;
 		devsw->d_close = dead_close;
 		devsw->d_read = dead_read;
@@ -507,8 +569,9 @@ prep_cdevsw(struct cdevsw *devsw)
 	dev_unlock();
 }
 
-static struct cdev *
-make_dev_credv(struct cdevsw *devsw, int minornr, struct ucred *cr, uid_t uid,
+struct cdev *
+make_dev_credv(int flags, struct cdevsw *devsw, int minornr,
+    struct ucred *cr, uid_t uid,
     gid_t gid, int mode, const char *fmt, va_list ap)
 {
 	struct cdev *dev;
@@ -522,6 +585,8 @@ make_dev_credv(struct cdevsw *devsw, int minornr, struct ucred *cr, uid_t uid,
 	dev = devfs_alloc();
 	dev_lock();
 	dev = newdev(devsw, minornr, dev);
+	if (flags & MAKEDEV_REF)
+		dev_refl(dev);
 	if (dev->si_flags & SI_CHEAPCLONE &&
 	    dev->si_flags & SI_NAMED) {
 		/*
@@ -529,7 +594,7 @@ make_dev_credv(struct cdevsw *devsw, int minornr, struct ucred *cr, uid_t uid,
 		 * simplifies cloning devices.
 		 * XXX: still ??
 		 */
-		dev_unlock();
+		dev_unlock_and_free();
 		return (dev);
 	}
 	KASSERT(!(dev->si_flags & SI_NAMED),
@@ -543,15 +608,18 @@ make_dev_credv(struct cdevsw *devsw, int minornr, struct ucred *cr, uid_t uid,
 	}
 		
 	dev->si_flags |= SI_NAMED;
+#ifdef MAC
 	if (cr != NULL)
 		dev->si_cred = crhold(cr);
 	else
+#endif
 		dev->si_cred = NULL;
 	dev->si_uid = uid;
 	dev->si_gid = gid;
 	dev->si_mode = mode;
 
 	devfs_create(dev);
+	clean_unrhdrl(devfs_inos);
 	dev_unlock();
 	return (dev);
 }
@@ -564,7 +632,7 @@ make_dev(struct cdevsw *devsw, int minornr, uid_t uid, gid_t gid, int mode,
 	va_list ap;
 
 	va_start(ap, fmt);
-	dev = make_dev_credv(devsw, minornr, NULL, uid, gid, mode, fmt, ap);
+	dev = make_dev_credv(0, devsw, minornr, NULL, uid, gid, mode, fmt, ap);
 	va_end(ap);
 	return (dev);
 }
@@ -577,7 +645,23 @@ make_dev_cred(struct cdevsw *devsw, int minornr, struct ucred *cr, uid_t uid,
 	va_list ap;
 
 	va_start(ap, fmt);
-	dev = make_dev_credv(devsw, minornr, cr, uid, gid, mode, fmt, ap);
+	dev = make_dev_credv(0, devsw, minornr, cr, uid, gid, mode, fmt, ap);
+	va_end(ap);
+
+	return (dev);
+}
+
+struct cdev *
+make_dev_credf(int flags, struct cdevsw *devsw, int minornr,
+    struct ucred *cr, uid_t uid,
+    gid_t gid, int mode, const char *fmt, ...)
+{
+	struct cdev *dev;
+	va_list ap;
+
+	va_start(ap, fmt);
+	dev = make_dev_credv(flags, devsw, minornr, cr, uid, gid, mode,
+	    fmt, ap);
 	va_end(ap);
 
 	return (dev);
@@ -622,6 +706,7 @@ make_dev_alias(struct cdev *pdev, const char *fmt, ...)
 	va_end(ap);
 
 	devfs_create(dev);
+	clean_unrhdrl(devfs_inos);
 	dev_unlock();
 	dev_depends(pdev, dev);
 	return (dev);
@@ -635,7 +720,7 @@ destroy_devl(struct cdev *dev)
 	mtx_assert(&devmtx, MA_OWNED);
 	KASSERT(dev->si_flags & SI_NAMED,
 	    ("WARNING: Driver mistake: destroy_dev on %d\n", minor(dev)));
-		
+
 	devfs_destroy(dev);
 
 	/* Remove name marking */
@@ -657,16 +742,20 @@ destroy_devl(struct cdev *dev)
 		dev->si_flags &= ~SI_CLONELIST;
 	}
 
+	dev->si_refcount++;	/* Avoid race with dev_rel() */
 	csw = dev->si_devsw;
 	dev->si_devsw = NULL;	/* already NULL for SI_ALIAS */
 	while (csw != NULL && csw->d_purge != NULL && dev->si_threadcount) {
-		printf("Purging %lu threads from %s\n",
-		    dev->si_threadcount, devtoname(dev));
 		csw->d_purge(dev);
 		msleep(csw, &devmtx, PRIBIO, "devprg", hz/10);
+		if (dev->si_threadcount)
+			printf("Still %lu threads in %s\n",
+			    dev->si_threadcount, devtoname(dev));
 	}
-	if (csw != NULL && csw->d_purge != NULL)
-		printf("All threads purged from %s\n", devtoname(dev));
+	while (dev->si_threadcount != 0) {
+		/* Use unique dummy wait ident */
+		msleep(&csw, &devmtx, PRIBIO, "devdrn", hz / 10);
+	}
 
 	dev->si_drv1 = 0;
 	dev->si_drv2 = 0;
@@ -677,15 +766,18 @@ destroy_devl(struct cdev *dev)
 		LIST_REMOVE(dev, si_list);
 
 		/* If cdevsw has no more struct cdev *'s, clean it */
-		if (LIST_EMPTY(&csw->d_devs))
+		if (LIST_EMPTY(&csw->d_devs)) {
 			fini_cdevsw(csw);
+			wakeup(&csw->d_devs);
+		}
 	}
 	dev->si_flags &= ~SI_ALIAS;
+	dev->si_refcount--;	/* Avoid race with dev_rel() */
 
 	if (dev->si_refcount > 0) {
 		LIST_INSERT_HEAD(&dead_cdevsw.d_devs, dev, si_list);
 	} else {
-		devfs_free(dev);
+		dev_free_devlocked(dev);
 	}
 }
 
@@ -695,7 +787,7 @@ destroy_dev(struct cdev *dev)
 
 	dev_lock();
 	destroy_devl(dev);
-	dev_unlock();
+	dev_unlock_and_free();
 }
 
 const char *
@@ -779,7 +871,7 @@ clone_setup(struct clonedevs **cdp)
 }
 
 int
-clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up, struct cdev **dp, u_int extra)
+clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up, struct cdev **dp, int extra)
 {
 	struct clonedevs *cd;
 	struct cdev *dev, *ndev, *dl, *de;
@@ -815,8 +907,8 @@ clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up, struct cdev **
 		u = dev2unit(dev);
 		if (u == (unit | extra)) {
 			*dp = dev;
-			devfs_free(ndev);
 			dev_unlock();
+			devfs_free(ndev);
 			return (0);
 		}
 		if (unit == -1 && u == low) {
@@ -852,7 +944,7 @@ clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up, struct cdev **
 		LIST_INSERT_HEAD(&cd->head, dev, si_clone);
 	dev->si_flags |= SI_CLONELIST;
 	*up = unit;
-	dev_unlock();
+	dev_unlock_and_free();
 	return (1);
 }
 
@@ -863,21 +955,126 @@ clone_create(struct clonedevs **cdp, struct cdevsw *csw, int *up, struct cdev **
 void
 clone_cleanup(struct clonedevs **cdp)
 {
-	struct cdev *dev, *tdev;
+	struct cdev *dev;
+	struct cdev_priv *cp;
 	struct clonedevs *cd;
 	
 	cd = *cdp;
 	if (cd == NULL)
 		return;
 	dev_lock();
-	LIST_FOREACH_SAFE(dev, &cd->head, si_clone, tdev) {
+	while (!LIST_EMPTY(&cd->head)) {
+		dev = LIST_FIRST(&cd->head);
+		LIST_REMOVE(dev, si_clone);
 		KASSERT(dev->si_flags & SI_CLONELIST,
 		    ("Dev %p(%s) should be on clonelist", dev, dev->si_name));
-		KASSERT(dev->si_flags & SI_NAMED,
-		    ("Driver has goofed in cloning underways udev %x", dev->si_drv0));
-		destroy_devl(dev);
+		dev->si_flags &= ~SI_CLONELIST;
+		cp = dev->si_priv;
+		if (!(cp->cdp_flags & CDP_SCHED_DTR)) {
+			cp->cdp_flags |= CDP_SCHED_DTR;
+			KASSERT(dev->si_flags & SI_NAMED,
+				("Driver has goofed in cloning underways udev %x", dev->si_drv0));
+			destroy_devl(dev);
+		}
 	}
 	dev_unlock();
 	free(cd, M_DEVBUF);
 	*cdp = NULL;
 }
+
+static TAILQ_HEAD(, cdev_priv) dev_ddtr =
+	TAILQ_HEAD_INITIALIZER(dev_ddtr);
+static struct task dev_dtr_task;
+
+static void
+destroy_dev_tq(void *ctx, int pending)
+{
+	struct cdev_priv *cp;
+	struct cdev *dev;
+	void (*cb)(void *);
+	void *cb_arg;
+
+	dev_lock();
+	while (!TAILQ_EMPTY(&dev_ddtr)) {
+		cp = TAILQ_FIRST(&dev_ddtr);
+		dev = &cp->cdp_c;
+		KASSERT(cp->cdp_flags & CDP_SCHED_DTR,
+		    ("cdev %p in dev_destroy_tq without CDP_SCHED_DTR", cp));
+		TAILQ_REMOVE(&dev_ddtr, cp, cdp_dtr_list);
+		cb = cp->cdp_dtr_cb;
+		cb_arg = cp->cdp_dtr_cb_arg;
+		destroy_devl(dev);
+		dev_unlock();
+		dev_rel(dev);
+		if (cb != NULL)
+			cb(cb_arg);
+		dev_lock();
+	}
+	dev_unlock();
+}
+
+/*
+ * devmtx shall be locked on entry. devmtx will be unlocked after
+ * function return.
+ */
+static int
+destroy_dev_sched_cbl(struct cdev *dev, void (*cb)(void *), void *arg)
+{
+	struct cdev_priv *cp;
+
+	mtx_assert(&devmtx, MA_OWNED);
+	cp = dev->si_priv;
+	if (cp->cdp_flags & CDP_SCHED_DTR) {
+		dev_unlock();
+		return (0);
+	}
+	dev_refl(dev);
+	cp->cdp_flags |= CDP_SCHED_DTR;
+	cp->cdp_dtr_cb = cb;
+	cp->cdp_dtr_cb_arg = arg;
+	TAILQ_INSERT_TAIL(&dev_ddtr, cp, cdp_dtr_list);
+	dev_unlock();
+	taskqueue_enqueue(taskqueue_swi_giant, &dev_dtr_task);
+	return (1);
+}
+
+int
+destroy_dev_sched_cb(struct cdev *dev, void (*cb)(void *), void *arg)
+{
+	dev_lock();
+	return (destroy_dev_sched_cbl(dev, cb, arg));
+}
+
+int
+destroy_dev_sched(struct cdev *dev)
+{
+	return (destroy_dev_sched_cb(dev, NULL, NULL));
+}
+
+void
+destroy_dev_drain(struct cdevsw *csw)
+{
+
+	dev_lock();
+	while (!LIST_EMPTY(&csw->d_devs)) {
+		msleep(&csw->d_devs, &devmtx, PRIBIO, "devscd", hz/10);
+	}
+	dev_unlock();
+}
+
+void
+drain_dev_clone_events(void)
+{
+
+	sx_xlock(&clone_drain_lock);
+	sx_xunlock(&clone_drain_lock);
+}
+
+static void
+devdtr_init(void *dummy __unused)
+{
+
+	TASK_INIT(&dev_dtr_task, 0, destroy_dev_tq, NULL);
+}
+
+SYSINIT(devdtr, SI_SUB_DEVFS, SI_ORDER_SECOND, devdtr_init, NULL);

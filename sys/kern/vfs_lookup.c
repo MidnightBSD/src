@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.80.2.6.2.1 2006/04/30 03:58:12 kris Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.102 2007/09/21 10:16:56 pjd Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_mac.h"
@@ -45,7 +45,6 @@ __FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.80.2.6.2.1 2006/04/30 03:58:12
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/mutex.h>
 #include <sys/namei.h>
 #include <sys/vnode.h>
@@ -58,6 +57,9 @@ __FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.80.2.6.2.1 2006/04/30 03:58:12
 #include <sys/ktrace.h>
 #endif
 
+#include <security/audit/audit.h>
+#include <security/mac/mac_framework.h>
+
 #include <vm/uma.h>
 
 #define	NAMEI_DIAGNOSTIC 1
@@ -67,13 +69,22 @@ __FBSDID("$FreeBSD: src/sys/kern/vfs_lookup.c,v 1.80.2.6.2.1 2006/04/30 03:58:12
  * Allocation zone for namei
  */
 uma_zone_t namei_zone;
+/*
+ * Placeholder vnode for mp traversal
+ */
+static struct vnode *vp_crossmp;
 
 static void
 nameiinit(void *dummy __unused)
 {
+	int error;
+
 	namei_zone = uma_zcreate("NAMEI", MAXPATHLEN, NULL, NULL, NULL, NULL,
 	    UMA_ALIGN_PTR, 0);
-
+	error = getnewvnode("crossmp", NULL, &dead_vnodeops, &vp_crossmp);
+	if (error != 0)
+		panic("nameiinit: getnewvnode");
+	vp_crossmp->v_vnlock->lk_flags &= ~LK_NOSHARE;
 }
 SYSINIT(vfs, SI_SUB_VFS, SI_ORDER_SECOND, nameiinit, NULL)
 
@@ -86,7 +97,7 @@ SYSCTL_INT(_vfs, OID_AUTO, lookup_shared, CTLFLAG_RW, &lookup_shared, 0,
     "Enables/Disables shared locks for path name translation");
 
 /*
- * Convert a pathname into a pointer to a locked inode.
+ * Convert a pathname into a pointer to a locked vnode.
  *
  * The FOLLOW flag is set when symbolic links are to be followed
  * when they occur at the end of the name translation process.
@@ -106,12 +117,11 @@ SYSCTL_INT(_vfs, OID_AUTO, lookup_shared, CTLFLAG_RW, &lookup_shared, 0,
  *	}
  */
 int
-namei(ndp)
-	register struct nameidata *ndp;
+namei(struct nameidata *ndp)
 {
-	register struct filedesc *fdp;	/* pointer to file descriptor state */
-	register char *cp;		/* pointer into pathname argument */
-	register struct vnode *dp;	/* the directory we are searching */
+	struct filedesc *fdp;	/* pointer to file descriptor state */
+	char *cp;		/* pointer into pathname argument */
+	struct vnode *dp;	/* the directory we are searching */
 	struct iovec aiov;		/* uio for reading symbolic links */
 	struct uio auio;
 	int error, linklen;
@@ -145,6 +155,12 @@ namei(ndp)
 		error = copyinstr(ndp->ni_dirp, cnp->cn_pnbuf,
 			    MAXPATHLEN, (size_t *)&ndp->ni_pathlen);
 
+	/* If we are auditing the kernel pathname, save the user pathname. */
+	if (cnp->cn_flags & AUDITVNODE1)
+		AUDIT_ARG(upath, td, cnp->cn_pnbuf, ARG_UPATH1);
+	if (cnp->cn_flags & AUDITVNODE2)
+		AUDIT_ARG(upath, td, cnp->cn_pnbuf, ARG_UPATH2);
+
 	/*
 	 * Don't allow empty pathnames.
 	 */
@@ -172,14 +188,14 @@ namei(ndp)
 	/*
 	 * Get starting point for the translation.
 	 */
-	FILEDESC_LOCK(fdp);
+	FILEDESC_SLOCK(fdp);
 	ndp->ni_rootdir = fdp->fd_rdir;
 	ndp->ni_topdir = fdp->fd_jdir;
 
 	dp = fdp->fd_cdir;
 	vfslocked = VFS_LOCK_GIANT(dp->v_mount);
 	VREF(dp);
-	FILEDESC_UNLOCK(fdp);
+	FILEDESC_SUNLOCK(fdp);
 	for (;;) {
 		/*
 		 * Check if root directory should replace current directory.
@@ -296,6 +312,17 @@ namei(ndp)
 	return (error);
 }
 
+static int
+compute_cn_lkflags(struct mount *mp, int lkflags)
+{
+	if (mp == NULL || 
+	    ((lkflags & LK_SHARED) && !(mp->mnt_kern_flag & MNTK_LOOKUP_SHARED))) {
+		lkflags &= ~LK_SHARED;
+		lkflags |= LK_EXCLUSIVE;
+	}
+	return lkflags;
+}
+
 /*
  * Search a pathname.
  * This is a very central and rather complicated routine.
@@ -335,11 +362,10 @@ namei(ndp)
  *	    if WANTPARENT set, return unlocked parent in ni_dvp
  */
 int
-lookup(ndp)
-	register struct nameidata *ndp;
+lookup(struct nameidata *ndp)
 {
-	register char *cp;		/* pointer into pathname argument */
-	register struct vnode *dp = 0;	/* the directory we are searching */
+	char *cp;		/* pointer into pathname argument */
+	struct vnode *dp = 0;	/* the directory we are searching */
 	struct vnode *tdp;		/* saved dp */
 	struct mount *mp;		/* mount table entry */
 	int docache;			/* == 0 do not cache last component */
@@ -353,7 +379,8 @@ lookup(ndp)
 	int vfslocked;			/* VFS Giant state for child */
 	int dvfslocked;			/* VFS Giant state for parent */
 	int tvfslocked;
-
+	int lkflags_save;
+	
 	/*
 	 * Setup: break out flag bits into variables.
 	 */
@@ -381,7 +408,7 @@ lookup(ndp)
 		cnp->cn_lkflags = LK_EXCLUSIVE;
 	dp = ndp->ni_startdir;
 	ndp->ni_startdir = NULLVP;
-	vn_lock(dp, cnp->cn_lkflags | LK_RETRY, td);
+	vn_lock(dp, compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags | LK_RETRY), td);
 
 dirloop:
 	/*
@@ -460,6 +487,12 @@ dirloop:
 			VREF(dp);
 		}
 		ndp->ni_vp = dp;
+
+		if (cnp->cn_flags & AUDITVNODE1)
+			AUDIT_ARG(vnode, dp, ARG_VNODE1);
+		else if (cnp->cn_flags & AUDITVNODE2)
+			AUDIT_ARG(vnode, dp, ARG_VNODE2);
+
 		if (!(cnp->cn_flags & (LOCKPARENT | LOCKLEAF)))
 			VOP_UNLOCK(dp, 0, td);
 		/* XXX This should probably move to the top of function. */
@@ -491,15 +524,16 @@ dirloop:
 		for (;;) {
 			if (dp == ndp->ni_rootdir || 
 			    dp == ndp->ni_topdir || 
-			    dp == rootvnode) {
+			    dp == rootvnode ||
+			    ((dp->v_vflag & VV_ROOT) != 0 &&
+			     (cnp->cn_flags & NOCROSSMOUNT) != 0)) {
 				ndp->ni_dvp = dp;
 				ndp->ni_vp = dp;
 				vfslocked = VFS_LOCK_GIANT(dp->v_mount);
 				VREF(dp);
 				goto nextname;
 			}
-			if ((dp->v_vflag & VV_ROOT) == 0 ||
-			    (cnp->cn_flags & NOCROSSMOUNT))
+			if ((dp->v_vflag & VV_ROOT) == 0)
 				break;
 			if (dp->v_iflag & VI_DOOMED) {	/* forced unmount */
 				error = EBADF;
@@ -512,7 +546,7 @@ dirloop:
 			VREF(dp);
 			vput(tdp);
 			VFS_UNLOCK_GIANT(tvfslocked);
-			vn_lock(dp, cnp->cn_lkflags | LK_RETRY, td);
+			vn_lock(dp, compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags | LK_RETRY), td);
 		}
 	}
 
@@ -535,7 +569,8 @@ unionlookup:
 	 * If we have a shared lock we may need to upgrade the lock for the
 	 * last operation.
 	 */
-	if (VOP_ISLOCKED(dp, td) == LK_SHARED &&
+	if (dp != vp_crossmp &&
+	    VOP_ISLOCKED(dp, td) == LK_SHARED &&
 	    (cnp->cn_flags & ISLASTCN) && (cnp->cn_flags & LOCKPARENT))
 		vn_lock(dp, LK_UPGRADE|LK_RETRY, td);
 	/*
@@ -548,7 +583,10 @@ unionlookup:
 #ifdef NAMEI_DIAGNOSTIC
 	vprint("lookup in", dp);
 #endif
+	lkflags_save = cnp->cn_lkflags;
+	cnp->cn_lkflags = compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags);
 	if ((error = VOP_LOOKUP(dp, &ndp->ni_vp, cnp)) != 0) {
+		cnp->cn_lkflags = lkflags_save;
 		KASSERT(ndp->ni_vp == NULL, ("leaf should be empty"));
 #ifdef NAMEI_DIAGNOSTIC
 		printf("not found\n");
@@ -563,7 +601,7 @@ unionlookup:
 			VREF(dp);
 			vput(tdp);
 			VFS_UNLOCK_GIANT(tvfslocked);
-			vn_lock(dp, cnp->cn_lkflags | LK_RETRY, td);
+			vn_lock(dp, compute_cn_lkflags(dp->v_mount, cnp->cn_lkflags | LK_RETRY), td);
 			goto unionlookup;
 		}
 
@@ -593,14 +631,15 @@ unionlookup:
 		/*
 		 * We return with ni_vp NULL to indicate that the entry
 		 * doesn't currently exist, leaving a pointer to the
-		 * (possibly locked) directory inode in ndp->ni_dvp.
+		 * (possibly locked) directory vnode in ndp->ni_dvp.
 		 */
 		if (cnp->cn_flags & SAVESTART) {
 			ndp->ni_startdir = ndp->ni_dvp;
 			VREF(ndp->ni_startdir);
 		}
 		goto success;
-	}
+	} else
+		cnp->cn_lkflags = lkflags_save;
 #ifdef NAMEI_DIAGNOSTIC
 	printf("found\n");
 #endif
@@ -630,10 +669,17 @@ unionlookup:
 		VFS_UNLOCK_GIANT(vfslocked);
 		vfslocked = VFS_LOCK_GIANT(mp);
 		if (dp != ndp->ni_dvp)
-			VOP_UNLOCK(ndp->ni_dvp, 0, td);
-		error = VFS_ROOT(mp, cnp->cn_lkflags, &tdp, td);
+			vput(ndp->ni_dvp);
+		else
+			vrele(ndp->ni_dvp);
+		VFS_UNLOCK_GIANT(dvfslocked);
+		dvfslocked = 0;
+		vref(vp_crossmp);
+		ndp->ni_dvp = vp_crossmp;
+		error = VFS_ROOT(mp, compute_cn_lkflags(mp, cnp->cn_lkflags), &tdp, td);
 		vfs_unbusy(mp, td);
-		vn_lock(ndp->ni_dvp, cnp->cn_lkflags | LK_RETRY, td);
+		if (vn_lock(vp_crossmp, LK_SHARED | LK_NOWAIT, td))
+			panic("vp_crossmp exclusively locked or reclaimed");
 		if (error) {
 			dpunlocked = 1;
 			goto bad2;
@@ -718,9 +764,22 @@ nextname:
 	} else if ((cnp->cn_flags & LOCKPARENT) == 0 && ndp->ni_dvp != dp)
 		VOP_UNLOCK(ndp->ni_dvp, 0, td);
 
+	if (cnp->cn_flags & AUDITVNODE1)
+		AUDIT_ARG(vnode, dp, ARG_VNODE1);
+	else if (cnp->cn_flags & AUDITVNODE2)
+		AUDIT_ARG(vnode, dp, ARG_VNODE2);
+
 	if ((cnp->cn_flags & LOCKLEAF) == 0)
 		VOP_UNLOCK(dp, 0, td);
 success:
+	/*
+	 * Because of lookup_shared we may have the vnode shared locked, but
+	 * the caller may want it to be exclusively locked.
+	 */
+	if ((cnp->cn_flags & (ISLASTCN | LOCKSHARED | LOCKLEAF)) ==
+	    (ISLASTCN | LOCKLEAF) && VOP_ISLOCKED(dp, td) != LK_EXCLUSIVE) {
+		vn_lock(dp, LK_UPGRADE | LK_RETRY, td);
+	}
 	if (vfslocked && dvfslocked)
 		VFS_UNLOCK_GIANT(dvfslocked);	/* Only need one */
 	if (vfslocked || dvfslocked)
@@ -744,12 +803,10 @@ bad:
 
 /*
  * relookup - lookup a path name component
- *    Used by lookup to re-aquire things.
+ *    Used by lookup to re-acquire things.
  */
 int
-relookup(dvp, vpp, cnp)
-	struct vnode *dvp, **vpp;
-	struct componentname *cnp;
+relookup(struct vnode *dvp, struct vnode **vpp, struct componentname *cnp)
 {
 	struct thread *td = cnp->cn_thread;
 	struct vnode *dp = 0;		/* the directory we are searching */
@@ -840,10 +897,11 @@ relookup(dvp, vpp, cnp)
 		/*
 		 * We return with ni_vp NULL to indicate that the entry
 		 * doesn't currently exist, leaving a pointer to the
-		 * (possibly locked) directory inode in ndp->ni_dvp.
+		 * (possibly locked) directory vnode in ndp->ni_dvp.
 		 */
 		return (0);
 	}
+
 	dp = *vpp;
 
 	/*
@@ -891,9 +949,7 @@ bad:
  * Free data allocated by namei(); see namei(9) for details.
  */
 void
-NDFREE(ndp, flags)
-     struct nameidata *ndp;
-     const u_int flags;
+NDFREE(struct nameidata *ndp, const u_int flags)
 {
 	int unlock_dvp;
 	int unlock_vp;

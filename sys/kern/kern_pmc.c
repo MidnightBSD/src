@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_pmc.c,v 1.4.2.1 2005/08/15 18:46:12 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_pmc.c,v 1.6 2005/12/04 02:12:43 ru Exp $");
 
 #include "opt_hwpmc_hooks.h"
 
@@ -33,7 +33,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_pmc.c,v 1.4.2.1 2005/08/15 18:46:12 jkoshy
 #include <sys/pmckern.h>
 #include <sys/smp.h>
 
-#if	HWPMC_HOOKS
+#ifdef	HWPMC_HOOKS
 #define	PMC_KERNEL_VERSION	PMC_VERSION
 #else
 #define	PMC_KERNEL_VERSION	0

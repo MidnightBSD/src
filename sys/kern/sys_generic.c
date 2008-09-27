@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sys_generic.c,v 1.146 2005/07/07 18:17:55 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/sys_generic.c,v 1.158 2007/07/04 22:57:21 peter Exp $");
 
 #include "opt_compat.h"
 #include "opt_ktrace.h"
@@ -68,8 +68,6 @@ __FBSDID("$FreeBSD: src/sys/kern/sys_generic.c,v 1.146 2005/07/07 18:17:55 jhb E
 #ifdef KTRACE
 #include <sys/ktrace.h>
 #endif
-#include <vm/vm.h>
-#include <vm/vm_page.h>
 
 static MALLOC_DEFINE(M_IOCTLOPS, "ioctlops", "ioctl data buffer");
 static MALLOC_DEFINE(M_SELECT, "select", "select() buffer");
@@ -83,9 +81,6 @@ static int	dofilewrite(struct thread *, int, struct file *, struct uio *,
 		    off_t, int);
 static void	doselwakeup(struct selinfo *, int);
 
-/*
- * Read system call.
- */
 #ifndef _SYS_SYSPROTO_H_
 struct read_args {
 	int	fd;
@@ -93,9 +88,6 @@ struct read_args {
 	size_t	nbyte;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 read(td, uap)
 	struct thread *td;
@@ -129,9 +121,6 @@ struct pread_args {
 	off_t	offset;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 pread(td, uap)
 	struct thread *td;
@@ -153,6 +142,20 @@ pread(td, uap)
 	return(error);
 }
 
+int
+freebsd6_pread(td, uap)
+	struct thread *td;
+	struct freebsd6_pread_args *uap;
+{
+	struct pread_args oargs;
+
+	oargs.fd = uap->fd;
+	oargs.buf = uap->buf;
+	oargs.nbyte = uap->nbyte;
+	oargs.offset = uap->offset;
+	return (pread(td, &oargs));
+}
+
 /*
  * Scatter read system call.
  */
@@ -163,9 +166,6 @@ struct readv_args {
 	u_int	iovcnt;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 readv(struct thread *td, struct readv_args *uap)
 {
@@ -205,9 +205,6 @@ struct preadv_args {
 	off_t	offset;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 preadv(struct thread *td, struct preadv_args *uap)
 {
@@ -293,9 +290,6 @@ dofileread(td, fd, fp, auio, offset, flags)
 	return (error);
 }
 
-/*
- * Write system call
- */
 #ifndef _SYS_SYSPROTO_H_
 struct write_args {
 	int	fd;
@@ -303,9 +297,6 @@ struct write_args {
 	size_t	nbyte;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 write(td, uap)
 	struct thread *td;
@@ -328,7 +319,7 @@ write(td, uap)
 }
 
 /*
- * Positioned write system call
+ * Positioned write system call.
  */
 #ifndef _SYS_SYSPROTO_H_
 struct pwrite_args {
@@ -339,9 +330,6 @@ struct pwrite_args {
 	off_t	offset;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 pwrite(td, uap)
 	struct thread *td;
@@ -363,8 +351,22 @@ pwrite(td, uap)
 	return(error);
 }
 
+int
+freebsd6_pwrite(td, uap)
+	struct thread *td;
+	struct freebsd6_pwrite_args *uap;
+{
+	struct pwrite_args oargs;
+
+	oargs.fd = uap->fd;
+	oargs.buf = uap->buf;
+	oargs.nbyte = uap->nbyte;
+	oargs.offset = uap->offset;
+	return (pwrite(td, &oargs));
+}
+
 /*
- * Gather write system call
+ * Gather write system call.
  */
 #ifndef _SYS_SYSPROTO_H_
 struct writev_args {
@@ -373,9 +375,6 @@ struct writev_args {
 	u_int	iovcnt;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 writev(struct thread *td, struct writev_args *uap)
 {
@@ -398,14 +397,14 @@ kern_writev(struct thread *td, int fd, struct uio *auio)
 
 	error = fget_write(td, fd, &fp);
 	if (error)
-		return (EBADF);	/* XXX this can't be right */
+		return (error);
 	error = dofilewrite(td, fd, fp, auio, (off_t)-1, 0);
 	fdrop(fp, td);
 	return (error);
 }
 
 /*
- * Gather positioned write system call
+ * Gather positioned write system call.
  */
 #ifndef _SYS_SYSPROTO_H_
 struct pwritev_args {
@@ -415,9 +414,6 @@ struct pwritev_args {
 	off_t	offset;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 pwritev(struct thread *td, struct pwritev_args *uap)
 {
@@ -444,7 +440,7 @@ kern_pwritev(td, fd, auio, offset)
 
 	error = fget_write(td, fd, &fp);
 	if (error)
-		return (EBADF);	/* XXX this can't be right */
+		return (error);
 	if (!(fp->f_ops->fo_flags & DFLAG_SEEKABLE))
 		error = ESPIPE;
 	else if (offset < 0 && fp->f_vnode->v_type != VCHR)
@@ -506,9 +502,6 @@ dofilewrite(td, fd, fp, auio, offset, flags)
 	return (error);
 }
 
-/*
- * Ioctl system call
- */
 #ifndef _SYS_SYSPROTO_H_
 struct ioctl_args {
 	int	fd;
@@ -516,20 +509,14 @@ struct ioctl_args {
 	caddr_t	data;
 };
 #endif
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 ioctl(struct thread *td, struct ioctl_args *uap)
 {
-	struct file *fp;
-	struct filedesc *fdp;
 	u_long com;
-	int error = 0;
+	int arg, error;
 	u_int size;
-	caddr_t data, memp;
-	int tmp;
+	caddr_t data;
 
 	if (uap->com > 0xffffffff) {
 		printf(
@@ -537,27 +524,7 @@ ioctl(struct thread *td, struct ioctl_args *uap)
 		    td->td_proc->p_pid, td->td_proc->p_comm, uap->com);
 		uap->com &= 0xffffffff;
 	}
-	if ((error = fget(td, uap->fd, &fp)) != 0)
-		return (error);
-	if ((fp->f_flag & (FREAD | FWRITE)) == 0) {
-		fdrop(fp, td);
-		return (EBADF);
-	}
-	fdp = td->td_proc->p_fd;
-	switch (com = uap->com) {
-	case FIONCLEX:
-		FILEDESC_LOCK_FAST(fdp);
-		fdp->fd_ofileflags[uap->fd] &= ~UF_EXCLOSE;
-		FILEDESC_UNLOCK_FAST(fdp);
-		fdrop(fp, td);
-		return (0);
-	case FIOCLEX:
-		FILEDESC_LOCK_FAST(fdp);
-		fdp->fd_ofileflags[uap->fd] |= UF_EXCLOSE;
-		FILEDESC_UNLOCK_FAST(fdp);
-		fdrop(fp, td);
-		return (0);
-	}
+	com = uap->com;
 
 	/*
 	 * Interpret high order word to find amount of data to be
@@ -571,23 +538,25 @@ ioctl(struct thread *td, struct ioctl_args *uap)
 #else
 	    ((com & (IOC_IN | IOC_OUT)) && size == 0) ||
 #endif
-	    ((com & IOC_VOID) && size > 0)) {
-		fdrop(fp, td);
+	    ((com & IOC_VOID) && size > 0 && size != sizeof(int)))
 		return (ENOTTY);
-	}
 
 	if (size > 0) {
-		memp = malloc((u_long)size, M_IOCTLOPS, M_WAITOK);
-		data = memp;
-	} else {
-		memp = NULL;
+		if (!(com & IOC_VOID))
+			data = malloc((u_long)size, M_IOCTLOPS, M_WAITOK);
+		else {
+			/* Integer argument. */
+			arg = (intptr_t)uap->data;
+			data = (void *)&arg;
+			size = 0;
+		}
+	} else
 		data = (void *)&uap->data;
-	}
 	if (com & IOC_IN) {
 		error = copyin(uap->data, data, (u_int)size);
 		if (error) {
-			free(memp, M_IOCTLOPS);
-			fdrop(fp, td);
+			if (size > 0)
+				free(data, M_IOCTLOPS);
 			return (error);
 		}
 	} else if (com & IOC_OUT) {
@@ -598,7 +567,43 @@ ioctl(struct thread *td, struct ioctl_args *uap)
 		bzero(data, size);
 	}
 
-	if (com == FIONBIO) {
+	error = kern_ioctl(td, uap->fd, com, data);
+
+	if (error == 0 && (com & IOC_OUT))
+		error = copyout(data, uap->data, (u_int)size);
+
+	if (size > 0)
+		free(data, M_IOCTLOPS);
+	return (error);
+}
+
+int
+kern_ioctl(struct thread *td, int fd, u_long com, caddr_t data)
+{
+	struct file *fp;
+	struct filedesc *fdp;
+	int error;
+	int tmp;
+
+	if ((error = fget(td, fd, &fp)) != 0)
+		return (error);
+	if ((fp->f_flag & (FREAD | FWRITE)) == 0) {
+		fdrop(fp, td);
+		return (EBADF);
+	}
+	fdp = td->td_proc->p_fd;
+	switch (com) {
+	case FIONCLEX:
+		FILEDESC_XLOCK(fdp);
+		fdp->fd_ofileflags[fd] &= ~UF_EXCLOSE;
+		FILEDESC_XUNLOCK(fdp);
+		goto out;
+	case FIOCLEX:
+		FILEDESC_XLOCK(fdp);
+		fdp->fd_ofileflags[fd] |= UF_EXCLOSE;
+		FILEDESC_XUNLOCK(fdp);
+		goto out;
+	case FIONBIO:
 		FILE_LOCK(fp);
 		if ((tmp = *(int *)data))
 			fp->f_flag |= FNONBLOCK;
@@ -606,7 +611,8 @@ ioctl(struct thread *td, struct ioctl_args *uap)
 			fp->f_flag &= ~FNONBLOCK;
 		FILE_UNLOCK(fp);
 		data = (void *)&tmp;
-	} else if (com == FIOASYNC) {
+		break;
+	case FIOASYNC:
 		FILE_LOCK(fp);
 		if ((tmp = *(int *)data))
 			fp->f_flag |= FASYNC;
@@ -614,15 +620,11 @@ ioctl(struct thread *td, struct ioctl_args *uap)
 			fp->f_flag &= ~FASYNC;
 		FILE_UNLOCK(fp);
 		data = (void *)&tmp;
+		break;
 	}
 
 	error = fo_ioctl(fp, com, data, td->td_ucred, td);
-
-	if (error == 0 && (com & IOC_OUT))
-		error = copyout(data, uap->data, (u_int)size);
-
-	if (memp != NULL)
-		free(memp, M_IOCTLOPS);
+out:
 	fdrop(fp, td);
 	return (error);
 }
@@ -635,9 +637,6 @@ struct cv	selwait;
 u_int		nselcoll;	/* Select collisions since boot */
 SYSCTL_UINT(_kern, OID_AUTO, nselcoll, CTLFLAG_RD, &nselcoll, 0, "");
 
-/*
- * Select system call.
- */
 #ifndef _SYS_SYSPROTO_H_
 struct select_args {
 	int	nd;
@@ -645,9 +644,6 @@ struct select_args {
 	struct	timeval *tv;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 select(td, uap)
 	register struct thread *td;
@@ -688,11 +684,10 @@ kern_select(struct thread *td, int nd, fd_set *fd_in, fd_set *fd_ou,
 		return (EINVAL);
 	fdp = td->td_proc->p_fd;
 	
-	FILEDESC_LOCK_FAST(fdp);
-
+	FILEDESC_SLOCK(fdp);
 	if (nd > td->td_proc->p_fd->fd_nfiles)
 		nd = td->td_proc->p_fd->fd_nfiles;   /* forgiving; slightly wrong */
-	FILEDESC_UNLOCK_FAST(fdp);
+	FILEDESC_SUNLOCK(fdp);
 
 	/*
 	 * Allocate just enough bits for the non-null fd_sets.  Use the
@@ -755,9 +750,9 @@ kern_select(struct thread *td, int nd, fd_set *fd_in, fd_set *fd_ou,
 	mtx_lock(&sellock);
 retry:
 	ncoll = nselcoll;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags |= TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 	error = selscan(td, ibits, obits, nd);
@@ -780,12 +775,12 @@ retry:
 	 * collisions and rescan the file descriptors if
 	 * necessary.
 	 */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	if ((td->td_flags & TDF_SELECT) == 0 || nselcoll != ncoll) {
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td);
 		goto retry;
 	}
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 
 	if (timo > 0)
 		error = cv_timedwait_sig(&selwait, &sellock, timo);
@@ -797,9 +792,9 @@ retry:
 
 done:
 	clear_selinfo_list(td);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags &= ~TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 done_nosellock:
@@ -839,7 +834,7 @@ selscan(td, ibits, obits, nfd)
 	static int flag[3] = { POLLRDNORM, POLLWRNORM, POLLRDBAND };
 	struct filedesc *fdp = td->td_proc->p_fd;
 
-	FILEDESC_LOCK(fdp);
+	FILEDESC_SLOCK(fdp);
 	for (msk = 0; msk < 3; msk++) {
 		if (ibits[msk] == NULL)
 			continue;
@@ -850,7 +845,7 @@ selscan(td, ibits, obits, nfd)
 				if (!(bits & 1))
 					continue;
 				if ((fp = fget_locked(fdp, fd)) == NULL) {
-					FILEDESC_UNLOCK(fdp);
+					FILEDESC_SUNLOCK(fdp);
 					return (EBADF);
 				}
 				if (fo_poll(fp, flag[msk], td->td_ucred,
@@ -862,14 +857,11 @@ selscan(td, ibits, obits, nfd)
 			}
 		}
 	}
-	FILEDESC_UNLOCK(fdp);
+	FILEDESC_SUNLOCK(fdp);
 	td->td_retval[0] = n;
 	return (0);
 }
 
-/*
- * Poll system call.
- */
 #ifndef _SYS_SYSPROTO_H_
 struct poll_args {
 	struct pollfd *fds;
@@ -877,9 +869,6 @@ struct poll_args {
 	int	timeout;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 poll(td, uap)
 	struct thread *td;
@@ -935,9 +924,9 @@ poll(td, uap)
 	mtx_lock(&sellock);
 retry:
 	ncoll = nselcoll;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags |= TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 	error = pollscan(td, bits, nfds);
@@ -958,12 +947,12 @@ retry:
 	 * sellock, so check TDF_SELECT and the number of collisions
 	 * and rescan the file descriptors if necessary.
 	 */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	if ((td->td_flags & TDF_SELECT) == 0 || nselcoll != ncoll) {
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td);
 		goto retry;
 	}
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 
 	if (timo > 0)
 		error = cv_timedwait_sig(&selwait, &sellock, timo);
@@ -975,9 +964,9 @@ retry:
 
 done:
 	clear_selinfo_list(td);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags &= ~TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 done_nosellock:
@@ -1009,7 +998,7 @@ pollscan(td, fds, nfd)
 	struct file *fp;
 	int n = 0;
 
-	FILEDESC_LOCK(fdp);
+	FILEDESC_SLOCK(fdp);
 	for (i = 0; i < nfd; i++, fds++) {
 		if (fds->fd >= fdp->fd_nfiles) {
 			fds->revents = POLLNVAL;
@@ -1033,13 +1022,14 @@ pollscan(td, fds, nfd)
 			}
 		}
 	}
-	FILEDESC_UNLOCK(fdp);
+	FILEDESC_SUNLOCK(fdp);
 	td->td_retval[0] = n;
 	return (0);
 }
 
 /*
  * OpenBSD poll system call.
+ *
  * XXX this isn't quite a true representation..  OpenBSD uses select ops.
  */
 #ifndef _SYS_SYSPROTO_H_
@@ -1049,9 +1039,6 @@ struct openbsd_poll_args {
 	int	timeout;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 openbsd_poll(td, uap)
 	register struct thread *td;
@@ -1061,12 +1048,12 @@ openbsd_poll(td, uap)
 }
 
 /*
- * Remove the references to the thread from all of the objects
- * we were polling.
+ * Remove the references to the thread from all of the objects we were
+ * polling.
  *
- * This code assumes that the underlying owner of the selinfo
- * structure will hold sellock before it changes it, and that
- * it will unlink itself from our list if it goes away.
+ * This code assumes that the underlying owner of the selinfo structure will
+ * hold sellock before it changes it, and that it will unlink itself from our
+ * list if it goes away.
  */
 void
 clear_selinfo_list(td)
@@ -1150,9 +1137,9 @@ doselwakeup(sip, pri)
 	}
 	TAILQ_REMOVE(&td->td_selq, sip, si_thrlist);
 	sip->si_thread = NULL;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags &= ~TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	sleepq_remove(td, &selwait);
 	mtx_unlock(&sellock);
 }

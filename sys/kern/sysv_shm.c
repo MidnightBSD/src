@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sysv_shm.c,v 1.102 2005/05/12 20:04:48 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/sysv_shm.c,v 1.111 2007/03/05 13:10:57 rwatson Exp $");
 
 #include "opt_compat.h"
 #include "opt_sysvipc.h"
@@ -84,7 +84,8 @@ __FBSDID("$FreeBSD: src/sys/kern/sysv_shm.c,v 1.102 2005/05/12 20:04:48 jhb Exp 
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/jail.h>
-#include <sys/mac.h>
+
+#include <security/mac/mac_framework.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -94,28 +95,26 @@ __FBSDID("$FreeBSD: src/sys/kern/sysv_shm.c,v 1.102 2005/05/12 20:04:48 jhb Exp 
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
-#ifdef MAC_DEBUG
-#define MPRINTF(a)      printf a
-#else
-#define MPRINTF(a)	
-#endif
-
 static MALLOC_DEFINE(M_SHM, "shm", "SVID compatible shared memory segments");
 
+#if defined(__i386__) && (defined(COMPAT_FREEBSD4) || defined(COMPAT_43))
 struct oshmctl_args;
 static int oshmctl(struct thread *td, struct oshmctl_args *uap);
+#endif
 
 static int shmget_allocate_segment(struct thread *td,
     struct shmget_args *uap, int mode);
 static int shmget_existing(struct thread *td, struct shmget_args *uap,
     int mode, int segnum);
 
+#if defined(__i386__) && (defined(COMPAT_FREEBSD4) || defined(COMPAT_43))
 /* XXX casting to (sy_call_t *) is bogus, as usual. */
 static sy_call_t *shmcalls[] = {
 	(sy_call_t *)shmat, (sy_call_t *)oshmctl,
 	(sy_call_t *)shmdt, (sy_call_t *)shmget,
 	(sy_call_t *)shmctl
 };
+#endif
 
 #define	SHMSEG_FREE     	0x0200
 #define	SHMSEG_REMOVED  	0x0400
@@ -176,16 +175,15 @@ struct	shminfo shminfo = {
 static int shm_use_phys;
 static int shm_allow_removed;
 
-SYSCTL_DECL(_kern_ipc);
-SYSCTL_INT(_kern_ipc, OID_AUTO, shmmax, CTLFLAG_RW, &shminfo.shmmax, 0,
+SYSCTL_ULONG(_kern_ipc, OID_AUTO, shmmax, CTLFLAG_RW, &shminfo.shmmax, 0,
     "Maximum shared memory segment size");
-SYSCTL_INT(_kern_ipc, OID_AUTO, shmmin, CTLFLAG_RW, &shminfo.shmmin, 0,
+SYSCTL_ULONG(_kern_ipc, OID_AUTO, shmmin, CTLFLAG_RW, &shminfo.shmmin, 0,
     "Minimum shared memory segment size");
-SYSCTL_INT(_kern_ipc, OID_AUTO, shmmni, CTLFLAG_RDTUN, &shminfo.shmmni, 0,
+SYSCTL_ULONG(_kern_ipc, OID_AUTO, shmmni, CTLFLAG_RDTUN, &shminfo.shmmni, 0,
     "Number of shared memory identifiers");
-SYSCTL_INT(_kern_ipc, OID_AUTO, shmseg, CTLFLAG_RDTUN, &shminfo.shmseg, 0,
+SYSCTL_ULONG(_kern_ipc, OID_AUTO, shmseg, CTLFLAG_RDTUN, &shminfo.shmseg, 0,
     "Number of segments per process");
-SYSCTL_INT(_kern_ipc, OID_AUTO, shmall, CTLFLAG_RW, &shminfo.shmall, 0,
+SYSCTL_ULONG(_kern_ipc, OID_AUTO, shmall, CTLFLAG_RW, &shminfo.shmall, 0,
     "Maximum number of pages available for shared memory");
 SYSCTL_INT(_kern_ipc, OID_AUTO, shm_use_phys, CTLFLAG_RW,
     &shm_use_phys, 0, "Enable/Disable locking of shared memory pages in core");
@@ -291,10 +289,6 @@ struct shmdt_args {
 	const void *shmaddr;
 };
 #endif
-
-/*
- * MPSAFE
- */
 int
 shmdt(td, uap)
 	struct thread *td;
@@ -329,10 +323,8 @@ shmdt(td, uap)
 #ifdef MAC
 	shmsegptr = &shmsegs[IPCID_TO_IX(shmmap_s->shmid)];
 	error = mac_check_sysv_shmdt(td->td_ucred, shmsegptr);
-	if (error != 0) {
-		MPRINTF(("mac_check_sysv_shmdt returned %d\n", error));
+	if (error != 0)
 		goto done2;
-	}
 #endif
 	error = shm_delete_mapping(p->p_vmspace, shmmap_s);
 done2:
@@ -347,10 +339,6 @@ struct shmat_args {
 	int shmflg;
 };
 #endif
-
-/*
- * MPSAFE
- */
 int
 kern_shmat(td, shmid, shmaddr, shmflg)
 	struct thread *td;
@@ -390,10 +378,8 @@ kern_shmat(td, shmid, shmaddr, shmflg)
 		goto done2;
 #ifdef MAC
 	error = mac_check_sysv_shmat(td->td_ucred, shmseg, shmflg);
-	if (error != 0) {
-	 	MPRINTF(("mac_check_sysv_shmat returned %d\n", error));
+	if (error != 0)
 		goto done2;
-	}
 #endif
 	for (i = 0; i < shminfo.shmseg; i++) {
 		if (shmmap_s->shmid == -1)
@@ -464,6 +450,7 @@ shmat(td, uap)
 	return kern_shmat(td, uap->shmid, uap->shmaddr, uap->shmflg);
 }
 
+#if defined(__i386__) && (defined(COMPAT_FREEBSD4) || defined(COMPAT_43))
 struct oshmid_ds {
 	struct	ipc_perm shm_perm;	/* operation perms */
 	int	shm_segsz;		/* size of segment (bytes) */
@@ -481,10 +468,6 @@ struct oshmctl_args {
 	int cmd;
 	struct oshmid_ds *ubuf;
 };
-
-/*
- * MPSAFE
- */
 static int
 oshmctl(td, uap)
 	struct thread *td;
@@ -510,11 +493,8 @@ oshmctl(td, uap)
 			goto done2;
 #ifdef MAC
 		error = mac_check_sysv_shmctl(td->td_ucred, shmseg, uap->cmd);
-		if (error != 0) {
-			MPRINTF(("mac_check_sysv_shmctl returned %d\n",
-			    error));
+		if (error != 0)
 			goto done2;
-		}
 #endif
 		outbuf.shm_perm = shmseg->u.shm_perm;
 		outbuf.shm_segsz = shmseg->u.shm_segsz;
@@ -540,6 +520,7 @@ done2:
 	return (EINVAL);
 #endif
 }
+#endif
 
 #ifndef _SYS_SYSPROTO_H_
 struct shmctl_args {
@@ -548,10 +529,6 @@ struct shmctl_args {
 	struct shmid_ds *buf;
 };
 #endif
-
-/*
- * MPSAFE
- */
 int
 kern_shmctl(td, shmid, cmd, buf, bufsz)
 	struct thread *td;
@@ -599,10 +576,8 @@ kern_shmctl(td, shmid, cmd, buf, bufsz)
 	}
 #ifdef MAC
 	error = mac_check_sysv_shmctl(td->td_ucred, shmseg, cmd);
-	if (error != 0) {
-		MPRINTF(("mac_check_sysv_shmctl returned %d\n", error));
+	if (error != 0)
 		goto done2;
-	}
 #endif
 	switch (cmd) {
 	case SHM_STAT:
@@ -700,7 +675,6 @@ struct shmget_args {
 	int shmflg;
 };
 #endif
-
 static int
 shmget_existing(td, uap, mode, segnum)
 	struct thread *td;
@@ -726,14 +700,11 @@ shmget_existing(td, uap, mode, segnum)
 	}
 	if ((uap->shmflg & (IPC_CREAT | IPC_EXCL)) == (IPC_CREAT | IPC_EXCL))
 		return (EEXIST);
-	error = ipcperm(td, &shmseg->u.shm_perm, mode);
 #ifdef MAC
 	error = mac_check_sysv_shmget(td->td_ucred, shmseg, uap->shmflg);
 	if (error != 0)
-		MPRINTF(("mac_check_sysv_shmget returned %d\n", error));
-#endif
-	if (error)
 		return (error);
+#endif
 	if (uap->size && uap->size > shmseg->u.shm_segsz)
 		return (EINVAL);
 	td->td_retval[0] = IXSEQ_TO_IPCID(segnum, shmseg->u.shm_perm);
@@ -825,9 +796,6 @@ shmget_allocate_segment(td, uap, mode)
 	return (0);
 }
 
-/*
- * MPSAFE
- */
 int
 shmget(td, uap)
 	struct thread *td;
@@ -860,9 +828,6 @@ done2:
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 shmsys(td, uap)
 	struct thread *td;
@@ -874,6 +839,7 @@ shmsys(td, uap)
 		int	a4;
 	} */ *uap;
 {
+#if defined(__i386__) && (defined(COMPAT_FREEBSD4) || defined(COMPAT_43))
 	int error;
 
 	if (!jail_sysvipc_allowed && jailed(td->td_ucred))
@@ -885,6 +851,9 @@ shmsys(td, uap)
 	error = (*shmcalls[uap->which])(td, &uap->a2);
 	mtx_unlock(&Giant);
 	return (error);
+#else
+	return (nosys(td, NULL));
+#endif
 }
 
 static void
@@ -955,15 +924,15 @@ shminit()
 {
 	int i;
 
-	TUNABLE_INT_FETCH("kern.ipc.shmmaxpgs", &shminfo.shmall);
+	TUNABLE_ULONG_FETCH("kern.ipc.shmmaxpgs", &shminfo.shmall);
 	for (i = PAGE_SIZE; i > 0; i--) {
 		shminfo.shmmax = shminfo.shmall * i;
 		if (shminfo.shmmax >= shminfo.shmall)
 			break;
 	}
-	TUNABLE_INT_FETCH("kern.ipc.shmmin", &shminfo.shmmin);
-	TUNABLE_INT_FETCH("kern.ipc.shmmni", &shminfo.shmmni);
-	TUNABLE_INT_FETCH("kern.ipc.shmseg", &shminfo.shmseg);
+	TUNABLE_ULONG_FETCH("kern.ipc.shmmin", &shminfo.shmmin);
+	TUNABLE_ULONG_FETCH("kern.ipc.shmmni", &shminfo.shmmni);
+	TUNABLE_ULONG_FETCH("kern.ipc.shmseg", &shminfo.shmseg);
 	TUNABLE_INT_FETCH("kern.ipc.shm_use_phys", &shm_use_phys);
 
 	shmalloced = shminfo.shmmni;

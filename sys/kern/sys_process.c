@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sys_process.c,v 1.131.2.3 2006/03/07 18:08:09 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/sys_process.c,v 1.145 2007/10/09 00:03:39 jeff Exp $");
 
 #include "opt_compat.h"
 
@@ -48,6 +48,8 @@ __FBSDID("$FreeBSD: src/sys/kern/sys_process.c,v 1.131.2.3 2006/03/07 18:08:09 j
 #include <sys/signalvar.h>
 
 #include <machine/reg.h>
+
+#include <security/audit/audit.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -102,7 +104,7 @@ struct ptrace_io_desc32 {
 	int error;							\
 									\
 	PROC_LOCK_ASSERT(td->td_proc, MA_OWNED);			\
-	if ((td->td_proc->p_sflag & PS_INMEM) == 0)			\
+	if ((td->td_proc->p_flag & P_INMEM) == 0)			\
 		error = EIO;						\
 	else								\
 		error = (action);					\
@@ -366,9 +368,6 @@ struct ptrace_args {
 #define	COPYIN(u, k, s)		copyin(u, k, s)
 #define	COPYOUT(k, u, s)	copyout(k, u, s)
 #endif
-/*
- * MPSAFE
- */
 int
 ptrace(struct thread *td, struct ptrace_args *uap)
 {
@@ -397,6 +396,10 @@ ptrace(struct thread *td, struct ptrace_args *uap)
 	if (td->td_proc->p_sysent == &ia32_freebsd_sysvec)
 		wrap32 = 1;
 #endif
+	AUDIT_ARG(pid, uap->pid);
+	AUDIT_ARG(cmd, uap->req);
+	AUDIT_ARG(addr, uap->addr);
+	AUDIT_ARG(value, uap->data);
 	addr = &r;
 	switch (uap->req) {
 	case PT_GETREGS:
@@ -524,12 +527,12 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 			sx_slock(&allproc_lock);
 			FOREACH_PROC_IN_SYSTEM(p) {
 				PROC_LOCK(p);
-				mtx_lock_spin(&sched_lock);
+				PROC_SLOCK(p);
 				FOREACH_THREAD_IN_PROC(p, td2) {
 					if (td2->td_tid == pid)
 						break;
 				}
-				mtx_unlock_spin(&sched_lock);
+				PROC_SUNLOCK(p);
 				if (td2 != NULL)
 					break; /* proc lock held */
 				PROC_UNLOCK(p);
@@ -544,6 +547,7 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 			pid = p->p_pid;
 		}
 	}
+	AUDIT_ARG(process, p);
 
 	if ((p->p_flag & P_WEXIT) != 0) {
 		error = ESRCH;
@@ -697,15 +701,15 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 		break;
 
 	case PT_SUSPEND:
-		mtx_lock_spin(&sched_lock);
+		thread_lock(td2);
 		td2->td_flags |= TDF_DBSUSPEND;
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td2);
 		break;
 
 	case PT_RESUME:
-		mtx_lock_spin(&sched_lock);
+		thread_lock(td2);
 		td2->td_flags &= ~TDF_DBSUSPEND;
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td2);
 		break;
 
 	case PT_STEP:
@@ -748,6 +752,10 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 			if (p->p_oppid != p->p_pptr->p_pid) {
 				struct proc *pp;
 
+				PROC_LOCK(p->p_pptr);
+				sigqueue_take(p->p_ksi);
+				PROC_UNLOCK(p->p_pptr);
+
 				PROC_UNLOCK(p);
 				pp = pfind(p->p_oppid);
 				if (pp == NULL)
@@ -763,6 +771,7 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 			p->p_oppid = 0;
 
 			/* should we send SIGCHLD? */
+			/* childproc_continued(p); */
 		}
 
 	sendsig:
@@ -770,36 +779,41 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 			sx_xunlock(&proctree_lock);
 			proctree_locked = 0;
 		}
-		/* deliver or queue signal */
-		mtx_lock_spin(&sched_lock);
-		td2->td_flags &= ~TDF_XSIG;
-		mtx_unlock_spin(&sched_lock);
-		td2->td_xsig = data;
 		p->p_xstat = data;
 		p->p_xthread = NULL;
 		if ((p->p_flag & (P_STOPPED_SIG | P_STOPPED_TRACE)) != 0) {
-			mtx_lock_spin(&sched_lock);
+			/* deliver or queue signal */
+			thread_lock(td2);
+			td2->td_flags &= ~TDF_XSIG;
+			thread_unlock(td2);
+			td2->td_xsig = data;
+
+			PROC_SLOCK(p);
 			if (req == PT_DETACH) {
 				struct thread *td3;
-				FOREACH_THREAD_IN_PROC(p, td3)
+				FOREACH_THREAD_IN_PROC(p, td3) {
+					thread_lock(td3);
 					td3->td_flags &= ~TDF_DBSUSPEND; 
+					thread_unlock(td3);
+				}
 			}
 			/*
 			 * unsuspend all threads, to not let a thread run,
 			 * you should use PT_SUSPEND to suspend it before
 			 * continuing process.
 			 */
-			mtx_unlock_spin(&sched_lock);
+#ifdef KSE
+			PROC_SUNLOCK(p);
 			thread_continued(p);
+			PROC_SLOCK(p);
+#endif
 			p->p_flag &= ~(P_STOPPED_TRACE|P_STOPPED_SIG|P_WAITED);
-			mtx_lock_spin(&sched_lock);
 			thread_unsuspend(p);
-			mtx_unlock_spin(&sched_lock);
+			PROC_SUNLOCK(p);
+		} else {
+			if (data)
+				psignal(p, data);
 		}
-
-		if (data)
-			psignal(p, data);
-
 		break;
 
 	case PT_WRITE_I:
@@ -918,7 +932,7 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 		break;
 
 	case PT_LWPINFO:
-		if (data == 0 || data > sizeof(*pl)) {
+		if (data <= 0 || data > sizeof(*pl)) {
 			error = EINVAL;
 			break;
 		}
@@ -928,6 +942,7 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 			pl->pl_event = PL_EVENT_SIGNAL;
 		else
 			pl->pl_event = 0;
+#ifdef KSE
 		if (td2->td_pflags & TDP_SA) {
 			pl->pl_flags = PL_FLAG_SA;
 			if (td2->td_upcall && !TD_CAN_UNBIND(td2))
@@ -935,6 +950,11 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 		} else {
 			pl->pl_flags = 0;
 		}
+#else
+		pl->pl_flags = 0;
+#endif
+		pl->pl_sigmask = td2->td_sigmask;
+		pl->pl_siglist = td2->td_siglist;
 		break;
 
 	case PT_GETNUMLWPS:
@@ -951,18 +971,18 @@ kern_ptrace(struct thread *td, int req, pid_t pid, void *addr, int data)
 		buf = malloc(num * sizeof(lwpid_t), M_TEMP, M_WAITOK);
 		tmp = 0;
 		PROC_LOCK(p);
-		mtx_lock_spin(&sched_lock);
+		PROC_SLOCK(p);
 		FOREACH_THREAD_IN_PROC(p, td2) {
 			if (tmp >= num)
 				break;
 			buf[tmp++] = td2->td_tid;
 		}
-		mtx_unlock_spin(&sched_lock);
+		PROC_SUNLOCK(p);
 		PROC_UNLOCK(p);
 		error = copyout(buf, addr, tmp * sizeof(lwpid_t));
 		free(buf, M_TEMP);
 		if (!error)
-			td->td_retval[0] = num;
+			td->td_retval[0] = tmp;
 		PROC_LOCK(p);
 		break;
 

@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.69 2005/04/16 18:46:28 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.73 2007/08/06 14:26:00 rwatson Exp $");
 
 #include "opt_mac.h"
 
@@ -38,7 +38,6 @@ __FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.69 2005/04/16 18:46:28 rwatson
 #include <sys/systm.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
-#include <sys/mac.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/sigio.h>
@@ -55,7 +54,9 @@ __FBSDID("$FreeBSD: src/sys/kern/sys_socket.c,v 1.69 2005/04/16 18:46:28 rwatson
 #include <net/if.h>
 #include <net/route.h>
 
-struct	fileops socketops = {
+#include <security/mac/mac_framework.h>
+
+struct fileops	socketops = {
 	.fo_read = soo_read,
 	.fo_write = soo_write,
 	.fo_ioctl = soo_ioctl,
@@ -68,78 +69,54 @@ struct	fileops socketops = {
 
 /* ARGSUSED */
 int
-soo_read(fp, uio, active_cred, flags, td)
-	struct file *fp;
-	struct uio *uio;
-	struct ucred *active_cred;
-	struct thread *td;
-	int flags;
+soo_read(struct file *fp, struct uio *uio, struct ucred *active_cred,
+    int flags, struct thread *td)
 {
 	struct socket *so = fp->f_data;
+#ifdef MAC
 	int error;
 
-	NET_LOCK_GIANT();
-#ifdef MAC
 	SOCK_LOCK(so);
 	error = mac_check_socket_receive(active_cred, so);
 	SOCK_UNLOCK(so);
-	if (error) {
-		NET_UNLOCK_GIANT();
+	if (error)
 		return (error);
-	}
 #endif
-	error = so->so_proto->pr_usrreqs->pru_soreceive(so, 0, uio, 0, 0, 0);
-	NET_UNLOCK_GIANT();
-	return (error);
+	return (soreceive(so, 0, uio, 0, 0, 0));
 }
 
 /* ARGSUSED */
 int
-soo_write(fp, uio, active_cred, flags, td)
-	struct file *fp;
-	struct uio *uio;
-	struct ucred *active_cred;
-	struct thread *td;
-	int flags;
+soo_write(struct file *fp, struct uio *uio, struct ucred *active_cred,
+    int flags, struct thread *td)
 {
 	struct socket *so = fp->f_data;
 	int error;
 
-	NET_LOCK_GIANT();
 #ifdef MAC
 	SOCK_LOCK(so);
 	error = mac_check_socket_send(active_cred, so);
 	SOCK_UNLOCK(so);
-	if (error) {
-		NET_UNLOCK_GIANT();
+	if (error)
 		return (error);
-	}
 #endif
-	error = so->so_proto->pr_usrreqs->pru_sosend(so, 0, uio, 0, 0, 0,
-						    uio->uio_td);
+	error = sosend(so, 0, uio, 0, 0, 0, uio->uio_td);
 	if (error == EPIPE && (so->so_options & SO_NOSIGPIPE) == 0) {
 		PROC_LOCK(uio->uio_td->td_proc);
 		psignal(uio->uio_td->td_proc, SIGPIPE);
 		PROC_UNLOCK(uio->uio_td->td_proc);
 	}
-	NET_UNLOCK_GIANT();
 	return (error);
 }
 
 int
-soo_ioctl(fp, cmd, data, active_cred, td)
-	struct file *fp;
-	u_long cmd;
-	void *data;
-	struct ucred *active_cred;
-	struct thread *td;
+soo_ioctl(struct file *fp, u_long cmd, void *data, struct ucred *active_cred,
+    struct thread *td)
 {
 	struct socket *so = fp->f_data;
 	int error = 0;
 
-	NET_LOCK_GIANT();
 	switch (cmd) {
-
 	case FIONBIO:
 		SOCK_LOCK(so);
 		if (*(int *)data)
@@ -151,10 +128,10 @@ soo_ioctl(fp, cmd, data, active_cred, td)
 
 	case FIOASYNC:
 		/*
-		 * XXXRW: This code separately acquires SOCK_LOCK(so)
-		 * and SOCKBUF_LOCK(&so->so_rcv) even though they are
-		 * the same mutex to avoid introducing the assumption
-		 * that they are the same.
+		 * XXXRW: This code separately acquires SOCK_LOCK(so) and
+		 * SOCKBUF_LOCK(&so->so_rcv) even though they are the same
+		 * mutex to avoid introducing the assumption that they are
+		 * the same.
 		 */
 		if (*(int *)data) {
 			SOCK_LOCK(so);
@@ -206,9 +183,9 @@ soo_ioctl(fp, cmd, data, active_cred, td)
 		break;
 	default:
 		/*
-		 * Interface/routing/protocol specific ioctls:
-		 * interface and routing ioctls should have a
-		 * different entry since a socket's unnecessary
+		 * Interface/routing/protocol specific ioctls: interface and
+		 * routing ioctls should have a different entry since a
+		 * socket is unnecessary.
 		 */
 		if (IOCGROUP(cmd) == 'i')
 			error = ifioctl(so, cmd, data, td);
@@ -219,65 +196,50 @@ soo_ioctl(fp, cmd, data, active_cred, td)
 			    (so, cmd, data, 0, td));
 		break;
 	}
-	NET_UNLOCK_GIANT();
-	return(error);
-}
-
-int
-soo_poll(fp, events, active_cred, td)
-	struct file *fp;
-	int events;
-	struct ucred *active_cred;
-	struct thread *td;
-{
-	struct socket *so = fp->f_data;
-	int error;
-
-	NET_LOCK_GIANT();
-#ifdef MAC
-	SOCK_LOCK(so);
-	error = mac_check_socket_poll(active_cred, so);
-	SOCK_UNLOCK(so);
-	if (error) {
-		NET_UNLOCK_GIANT();
-		return (error);
-	}
-#endif
-	error = (so->so_proto->pr_usrreqs->pru_sopoll)
-	    (so, events, fp->f_cred, td);
-	NET_UNLOCK_GIANT();
-
 	return (error);
 }
 
 int
-soo_stat(fp, ub, active_cred, td)
-	struct file *fp;
-	struct stat *ub;
-	struct ucred *active_cred;
-	struct thread *td;
+soo_poll(struct file *fp, int events, struct ucred *active_cred,
+    struct thread *td)
 {
 	struct socket *so = fp->f_data;
+#ifdef MAC
 	int error;
+
+	SOCK_LOCK(so);
+	error = mac_check_socket_poll(active_cred, so);
+	SOCK_UNLOCK(so);
+	if (error)
+		return (error);
+#endif
+	return (sopoll(so, events, fp->f_cred, td));
+}
+
+int
+soo_stat(struct file *fp, struct stat *ub, struct ucred *active_cred,
+    struct thread *td)
+{
+	struct socket *so = fp->f_data;
+#ifdef MAC
+	int error;
+#endif
 
 	bzero((caddr_t)ub, sizeof (*ub));
 	ub->st_mode = S_IFSOCK;
-	NET_LOCK_GIANT();
 #ifdef MAC
 	SOCK_LOCK(so);
 	error = mac_check_socket_stat(active_cred, so);
 	SOCK_UNLOCK(so);
-	if (error) {
-		NET_UNLOCK_GIANT();
+	if (error)
 		return (error);
-	}
 #endif
 	/*
 	 * If SBS_CANTRCVMORE is set, but there's still data left in the
 	 * receive buffer, the socket is still readable.
 	 *
-	 * XXXRW: perhaps should lock socket buffer so st_size result
-	 * is consistent.
+	 * XXXRW: perhaps should lock socket buffer so st_size result is
+	 * consistent.
 	 */
 	/* Unlocked read. */
 	if ((so->so_rcv.sb_state & SBS_CANTRCVMORE) == 0 ||
@@ -288,33 +250,27 @@ soo_stat(fp, ub, active_cred, td)
 	ub->st_size = so->so_rcv.sb_cc - so->so_rcv.sb_ctl;
 	ub->st_uid = so->so_cred->cr_uid;
 	ub->st_gid = so->so_cred->cr_gid;
-	error = (*so->so_proto->pr_usrreqs->pru_sense)(so, ub);
-	NET_UNLOCK_GIANT();
-	return (error);
+	return (*so->so_proto->pr_usrreqs->pru_sense)(so, ub);
 }
 
 /*
- * API socket close on file pointer.  We call soclose() to close the 
- * socket (including initiating closing protocols).  soclose() will
- * sorele() the file reference but the actual socket will not go away
- * until the socket's ref count hits 0.
+ * API socket close on file pointer.  We call soclose() to close the socket
+ * (including initiating closing protocols).  soclose() will sorele() the
+ * file reference but the actual socket will not go away until the socket's
+ * ref count hits 0.
  */
 /* ARGSUSED */
 int
-soo_close(fp, td)
-	struct file *fp;
-	struct thread *td;
+soo_close(struct file *fp, struct thread *td)
 {
 	int error = 0;
 	struct socket *so;
 
-	NET_LOCK_GIANT();
 	so = fp->f_data;
 	fp->f_ops = &badfileops;
 	fp->f_data = NULL;
 
 	if (so)
 		error = soclose(so);
-	NET_UNLOCK_GIANT();
 	return (error);
 }

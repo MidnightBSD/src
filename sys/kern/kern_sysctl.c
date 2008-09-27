@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.165.2.3 2006/03/01 21:08:53 andre Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.177 2007/09/02 09:59:33 rwatson Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -45,13 +45,16 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.165.2.3 2006/03/01 21:08:53 a
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/sx.h>
 #include <sys/sysproto.h>
+
+#include <security/mac/mac_framework.h>
+
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 
@@ -510,7 +513,7 @@ sysctl_sysctl_debug(SYSCTL_HANDLER_ARGS)
 {
 	int error;
 
-	error = suser(req->td);
+	error = priv_check(req->td, PRIV_SYSCTL_DEBUG);
 	if (error)
 		return (error);
 	sysctl_sysctl_debug_dump_node(&sysctl__children, 0);
@@ -889,6 +892,31 @@ sysctl_handle_long(SYSCTL_HANDLER_ARGS)
 }
 
 /*
+ * Handle a 64 bit int, signed or unsigned.  arg1 points to it.
+ */
+
+int
+sysctl_handle_quad(SYSCTL_HANDLER_ARGS)
+{
+	int error = 0;
+	uint64_t tmpout;
+
+	/*
+	 * Attempt to get a coherent snapshot by making a copy of the data.
+	 */
+	if (!arg1)
+		return (EINVAL);
+	tmpout = *(uint64_t *)arg1;
+	error = SYSCTL_OUT(req, &tmpout, sizeof(uint64_t));
+
+	if (error || !req->newptr)
+		return (error);
+
+	error = SYSCTL_IN(req, arg1, sizeof(uint64_t));
+	return (error);
+}
+
+/*
  * Handle our generic '\0' terminated 'C' string.
  * Two cases:
  * 	a variable string:  point arg1 at it, arg2 is max length.
@@ -1135,10 +1163,6 @@ sysctl_new_user(struct sysctl_req *req, void *p, size_t l)
 /*
  * Wire the user space destination buffer.  If set to a value greater than
  * zero, the len parameter limits the maximum amount of wired memory.
- *
- * XXX - The len parameter is currently ignored due to the lack of
- * a place to save it in the sysctl_req structure so that the matching
- * amount of memory can be unwired in the sysctl exit code.
  */
 int
 sysctl_wire_old_buffer(struct sysctl_req *req, size_t len)
@@ -1255,13 +1279,10 @@ sysctl_root(SYSCTL_HANDLER_ARGS)
 
 	/* Is this sysctl writable by only privileged users? */
 	if (req->newptr && !(oid->oid_kind & CTLFLAG_ANYBODY)) {
-		int flags;
-
 		if (oid->oid_kind & CTLFLAG_PRISON)
-			flags = SUSER_ALLOWJAIL;
+			error = priv_check(req->td, PRIV_SYSCTL_WRITEJAIL);
 		else
-			flags = 0;
-		error = suser_cred(req->td->td_ucred, flags);
+			error = priv_check(req->td, PRIV_SYSCTL_WRITE);
 		if (error)
 			return (error);
 	}
@@ -1297,10 +1318,6 @@ struct sysctl_args {
 	size_t	newlen;
 };
 #endif
-
-/*
- * MPSAFE
- */
 int
 __sysctl(struct thread *td, struct sysctl_args *uap)
 {
@@ -1366,7 +1383,7 @@ userland_sysctl(struct thread *td, int *name, u_int namelen, void *old,
 	}
 
 	if (new != NULL) {
-		if (!useracc(new, req.newlen, VM_PROT_READ))
+		if (!useracc(new, newlen, VM_PROT_READ))
 			return (EFAULT);
 		req.newlen = newlen;
 		req.newptr = new;
@@ -1452,6 +1469,7 @@ static struct {
 	/* the actual string data is appended here */
 
 } bsdi_si;
+
 /*
  * this data is appended to the end of the bsdi_si structure during copyout.
  * The "char *" offsets are relative to the base of the bsdi_si struct.
@@ -1468,10 +1486,6 @@ struct getkerninfo_args {
 	int	arg;
 };
 #endif
-
-/*
- * MPSAFE
- */
 int
 ogetkerninfo(struct thread *td, struct getkerninfo_args *uap)
 {

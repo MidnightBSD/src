@@ -27,11 +27,10 @@
  * SUCH DAMAGE.
  *
  *	@(#)kern_proc.c	8.7 (Berkeley) 2/14/95
- * $FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.3 2006/01/05 20:23:10 truckman Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.3 2006/01/05 20:23:10 truckman Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.252.2.2.2.1 2008/01/19 18:15:05 kib Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_kstack_pages.h"
@@ -43,6 +42,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.3 2006/01/05 20:23:10 tru
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/refcount.h>
 #include <sys/sysent.h>
 #include <sys/sched.h>
 #include <sys/smp.h>
@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_proc.c,v 1.230.2.3 2006/01/05 20:23:10 tru
 #include <sys/user.h>
 #include <sys/jail.h>
 #include <sys/vnode.h>
+#include <sys/eventhandler.h>
 #ifdef KTRACE
 #include <sys/uio.h>
 #include <sys/ktrace.h>
@@ -92,7 +93,6 @@ struct proclist allproc;
 struct proclist zombproc;
 struct sx allproc_lock;
 struct sx proctree_lock;
-struct mtx pargs_ref_lock;
 struct mtx ppeers_lock;
 uma_zone_t proc_zone;
 uma_zone_t ithread_zone;
@@ -111,7 +111,6 @@ procinit()
 
 	sx_init(&allproc_lock, "allproc");
 	sx_init(&proctree_lock, "proctree");
-	mtx_init(&pargs_ref_lock, "struct pargs.ref", NULL, MTX_DEF);
 	mtx_init(&ppeers_lock, "p_peers", NULL, MTX_DEF);
 	LIST_INIT(&allproc);
 	LIST_INIT(&zombproc);
@@ -132,6 +131,7 @@ proc_ctor(void *mem, int size, void *arg, int flags)
 	struct proc *p;
 
 	p = (struct proc *)mem;
+	EVENTHANDLER_INVOKE(process_ctor, p);
 	return (0);
 }
 
@@ -143,29 +143,28 @@ proc_dtor(void *mem, int size, void *arg)
 {
 	struct proc *p;
 	struct thread *td;
-#ifdef INVARIANTS
-	struct ksegrp *kg;
-#endif
 
 	/* INVARIANTS checks go here */
 	p = (struct proc *)mem;
         td = FIRST_THREAD_IN_PROC(p);
+	if (td != NULL) {
 #ifdef INVARIANTS
-	KASSERT((p->p_numthreads == 1),
-	    ("bad number of threads in exiting process"));
-	KASSERT((p->p_numksegrps == 1), ("free proc with > 1 ksegrp"));
-	KASSERT((td != NULL), ("proc_dtor: bad thread pointer"));
-        kg = FIRST_KSEGRP_IN_PROC(p);
-	KASSERT((kg != NULL), ("proc_dtor: bad kg pointer"));
+		KASSERT((p->p_numthreads == 1),
+		    ("bad number of threads in exiting process"));
+		KASSERT(STAILQ_EMPTY(&p->p_ktr), ("proc_dtor: non-empty p_ktr"));
 #endif
 
-	/* Dispose of an alternate kstack, if it exists.
-	 * XXX What if there are more than one thread in the proc?
-	 *     The first thread in the proc is special and not
-	 *     freed, so you gotta do this here.
-	 */
-	if (((p->p_flag & P_KTHREAD) != 0) && (td->td_altkstack != 0))
-		vm_thread_dispose_altkstack(td);
+		/* Dispose of an alternate kstack, if it exists.
+		 * XXX What if there are more than one thread in the proc?
+		 *     The first thread in the proc is special and not
+		 *     freed, so you gotta do this here.
+		 */
+		if (((p->p_flag & P_KTHREAD) != 0) && (td->td_altkstack != 0))
+			vm_thread_dispose_altkstack(td);
+	}
+	EVENTHANDLER_INVOKE(process_dtor, p);
+	if (p->p_ksi != NULL)
+		KASSERT(! KSI_ONQ(p->p_ksi), ("SIGCHLD queue"));
 }
 
 /*
@@ -175,18 +174,15 @@ static int
 proc_init(void *mem, int size, int flags)
 {
 	struct proc *p;
-	struct thread *td;
-	struct ksegrp *kg;
 
 	p = (struct proc *)mem;
 	p->p_sched = (struct p_sched *)&p[1];
-	td = thread_alloc();
-	kg = ksegrp_alloc();
 	bzero(&p->p_mtx, sizeof(struct mtx));
 	mtx_init(&p->p_mtx, "process lock", NULL, MTX_DEF | MTX_DUPOK);
+	mtx_init(&p->p_slock, "process slock", NULL, MTX_SPIN | MTX_RECURSE);
+	TAILQ_INIT(&p->p_threads);	     /* all threads in proc */
+	EVENTHANDLER_INVOKE(process_init, p);
 	p->p_stats = pstats_alloc();
-	proc_linkup(p, kg, td);
-	sched_newproc(p, kg, td);
 	return (0);
 }
 
@@ -197,8 +193,19 @@ proc_init(void *mem, int size, int flags)
 static void
 proc_fini(void *mem, int size)
 {
+#ifdef notnow
+	struct proc *p;
 
+	p = (struct proc *)mem;
+	EVENTHANDLER_INVOKE(process_fini, p);
+	pstats_free(p->p_stats);
+	thread_free(FIRST_THREAD_IN_PROC(p));
+	mtx_destroy(&p->p_mtx);
+	if (p->p_ksi != NULL)
+		ksiginfo_free(p->p_ksi);
+#else
 	panic("proc reclaimed");
+#endif
 }
 
 /*
@@ -297,7 +304,7 @@ enterpgrp(p, pgid, pgrp, sess)
 		 * new session
 		 */
 		mtx_init(&sess->s_mtx, "session", NULL, MTX_DEF);
-		mtx_lock(&Giant);	/* XXX TTY */
+		mtx_lock(&Giant);       /* XXX TTY */
 		PROC_LOCK(p);
 		p->p_flag &= ~P_CONTROLT;
 		PROC_UNLOCK(p);
@@ -313,7 +320,7 @@ enterpgrp(p, pgid, pgrp, sess)
 		KASSERT(p == curproc,
 		    ("enterpgrp: mksession and p != curproc"));
 	} else {
-		mtx_lock(&Giant);	/* XXX TTY */
+		mtx_lock(&Giant);       /* XXX TTY */
 		pgrp->pg_session = p->p_session;
 		SESS_LOCK(pgrp->pg_session);
 		pgrp->pg_session->s_count++;
@@ -331,7 +338,7 @@ enterpgrp(p, pgid, pgrp, sess)
 	pgrp->pg_jobc = 0;
 	SLIST_INIT(&pgrp->pg_sigiolst);
 	PGRP_UNLOCK(pgrp);
-	mtx_unlock(&Giant);	/* XXX TTY */
+	mtx_unlock(&Giant);       /* XXX TTY */
 
 	doenterpgrp(p, pgrp);
 
@@ -391,7 +398,7 @@ doenterpgrp(p, pgrp)
 	fixjobc(p, pgrp, 1);
 	fixjobc(p, p->p_pgrp, 0);
 
-	mtx_lock(&Giant);	/* XXX TTY */
+	mtx_lock(&Giant);       /* XXX TTY */
 	PGRP_LOCK(pgrp);
 	PGRP_LOCK(savepgrp);
 	PROC_LOCK(p);
@@ -401,7 +408,7 @@ doenterpgrp(p, pgrp)
 	LIST_INSERT_HEAD(&pgrp->pg_members, p, p_pglist);
 	PGRP_UNLOCK(savepgrp);
 	PGRP_UNLOCK(pgrp);
-	mtx_unlock(&Giant);	/* XXX TTY */
+	mtx_unlock(&Giant);     /* XXX TTY */
 	if (LIST_EMPTY(&savepgrp->pg_members))
 		pgdelete(savepgrp);
 }
@@ -449,7 +456,7 @@ pgdelete(pgrp)
 	 */
 	funsetownlst(&pgrp->pg_sigiolst);
 
-	mtx_lock(&Giant);	/* XXX TTY */
+	mtx_lock(&Giant);       /* XXX TTY */
 	PGRP_LOCK(pgrp);
 	if (pgrp->pg_session->s_ttyp != NULL &&
 	    pgrp->pg_session->s_ttyp->t_pgrp == pgrp)
@@ -460,7 +467,7 @@ pgdelete(pgrp)
 	PGRP_UNLOCK(pgrp);
 	mtx_destroy(&pgrp->pg_mtx);
 	FREE(pgrp, M_PGRP);
-	mtx_unlock(&Giant);	 /* XXX TTY */
+	mtx_unlock(&Giant);     /* XXX TTY */
 }
 
 static void
@@ -620,7 +627,6 @@ fill_kinfo_proc_only(struct proc *p, struct kinfo_proc *kp)
 	struct thread *td0;
 	struct tty *tp;
 	struct session *sp;
-	struct timeval tv;
 	struct ucred *cred;
 	struct sigacts *ps;
 
@@ -667,7 +673,7 @@ fill_kinfo_proc_only(struct proc *p, struct kinfo_proc *kp)
 		kp->ki_sigcatch = ps->ps_sigcatch;
 		mtx_unlock(&ps->ps_mtx);
 	}
-	mtx_lock_spin(&sched_lock);
+	PROC_SLOCK(p);
 	if (p->p_state != PRS_NEW &&
 	    p->p_state != PRS_ZOMBIE &&
 	    p->p_vmspace != NULL) {
@@ -687,18 +693,23 @@ fill_kinfo_proc_only(struct proc *p, struct kinfo_proc *kp)
 		kp->ki_ssize = vm->vm_ssize;
 	} else if (p->p_state == PRS_ZOMBIE)
 		kp->ki_stat = SZOMB;
-	kp->ki_sflag = p->p_sflag;
-	kp->ki_swtime = p->p_swtime;
+	if (kp->ki_flag & P_INMEM)
+		kp->ki_sflag = PS_INMEM;
+	else
+		kp->ki_sflag = 0;
+	/* Calculate legacy swtime as seconds since 'swtick'. */
+	kp->ki_swtime = (ticks - p->p_swtick) / hz;
 	kp->ki_pid = p->p_pid;
 	kp->ki_nice = p->p_nice;
-	bintime2timeval(&p->p_rux.rux_runtime, &tv);
-	kp->ki_runtime = tv.tv_sec * (u_int64_t)1000000 + tv.tv_usec;
-	mtx_unlock_spin(&sched_lock);
-	if ((p->p_sflag & PS_INMEM) && p->p_stats != NULL) {
+	rufetch(p, &kp->ki_rusage);
+	kp->ki_runtime = cputick2usec(p->p_rux.rux_runtime);
+	PROC_SUNLOCK(p);
+	if ((p->p_flag & P_INMEM) && p->p_stats != NULL) {
 		kp->ki_start = p->p_stats->p_start;
 		timevaladd(&kp->ki_start, &boottime);
-		kp->ki_rusage = p->p_stats->p_ru;
+		PROC_SLOCK(p);
 		calcru(p, &kp->ki_rusage.ru_utime, &kp->ki_rusage.ru_stime);
+		PROC_SUNLOCK(p);
 		calccru(p, &kp->ki_childutime, &kp->ki_childstime);
 
 		/* Some callers want child-times in a single value */
@@ -731,10 +742,8 @@ fill_kinfo_proc_only(struct proc *p, struct kinfo_proc *kp)
 			kp->ki_tsid = tp->t_session->s_sid;
 	} else
 		kp->ki_tdev = NODEV;
-	if (p->p_comm[0] != '\0') {
+	if (p->p_comm[0] != '\0')
 		strlcpy(kp->ki_comm, p->p_comm, sizeof(kp->ki_comm));
-		strlcpy(kp->ki_ocomm, p->p_comm, sizeof(kp->ki_ocomm));
-	}
 	if (p->p_sysent && p->p_sysent->sv_name != NULL &&
 	    p->p_sysent->sv_name[0] != '\0')
 		strlcpy(kp->ki_emul, p->p_sysent->sv_name, sizeof(kp->ki_emul));
@@ -748,20 +757,23 @@ fill_kinfo_proc_only(struct proc *p, struct kinfo_proc *kp)
 
 /*
  * Fill in information that is thread specific.
- * Must be called with sched_lock locked.
+ * Must be called with p_slock locked.
  */
 static void
 fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp)
 {
-	struct ksegrp *kg;
 	struct proc *p;
 
 	p = td->td_proc;
+	PROC_SLOCK_ASSERT(p, MA_OWNED);
 
+	thread_lock(td);
 	if (td->td_wmesg != NULL)
 		strlcpy(kp->ki_wmesg, td->td_wmesg, sizeof(kp->ki_wmesg));
 	else
 		bzero(kp->ki_wmesg, sizeof(kp->ki_wmesg));
+	if (td->td_name[0] != '\0')
+		strlcpy(kp->ki_ocomm, td->td_name, sizeof(kp->ki_ocomm));
 	if (TD_ON_LOCK(td)) {
 		kp->ki_kiflag |= KI_LOCKBLOCK;
 		strlcpy(kp->ki_lockname, td->td_lockname,
@@ -791,14 +803,6 @@ fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp)
 		kp->ki_stat = SIDL;
 	}
 
-	kg = td->td_ksegrp;
-
-	/* things in the KSE GROUP */
-	kp->ki_estcpu = kg->kg_estcpu;
-	kp->ki_slptime = kg->kg_slptime;
-	kp->ki_pri.pri_user = kg->kg_user_pri;
-	kp->ki_pri.pri_class = kg->kg_pri_class;
-
 	/* Things in the thread */
 	kp->ki_wchan = td->td_wchan;
 	kp->ki_pri.pri_level = td->td_priority;
@@ -811,12 +815,17 @@ fill_kinfo_thread(struct thread *td, struct kinfo_proc *kp)
 	kp->ki_pcb = td->td_pcb;
 	kp->ki_kstack = (void *)td->td_kstack;
 	kp->ki_pctcpu = sched_pctcpu(td);
+	kp->ki_estcpu = td->td_estcpu;
+	kp->ki_slptime = (ticks - td->td_slptick) / hz;
+	kp->ki_pri.pri_class = td->td_pri_class;
+	kp->ki_pri.pri_user = td->td_user_pri;
 
 	/* We can't get this anymore but ps etc never used it anyway. */
 	kp->ki_rqindex = 0;
 
 	SIGSETOR(kp->ki_siglist, td->td_siglist);
 	kp->ki_sigmask = td->td_sigmask;
+	thread_unlock(td);
 }
 
 /*
@@ -828,10 +837,10 @@ fill_kinfo_proc(struct proc *p, struct kinfo_proc *kp)
 {
 
 	fill_kinfo_proc_only(p, kp);
-	mtx_lock_spin(&sched_lock);
+	PROC_SLOCK(p);
 	if (FIRST_THREAD_IN_PROC(p) != NULL)
 		fill_kinfo_thread(FIRST_THREAD_IN_PROC(p), kp);
-	mtx_unlock_spin(&sched_lock);
+	PROC_SUNLOCK(p);
 }
 
 struct pstats *
@@ -898,26 +907,26 @@ sysctl_out_proc(struct proc *p, struct sysctl_req *req, int flags)
 
 	fill_kinfo_proc_only(p, &kinfo_proc);
 	if (flags & KERN_PROC_NOTHREADS) {
-		mtx_lock_spin(&sched_lock);
+		PROC_SLOCK(p);
 		if (FIRST_THREAD_IN_PROC(p) != NULL)
 			fill_kinfo_thread(FIRST_THREAD_IN_PROC(p), &kinfo_proc);
-		mtx_unlock_spin(&sched_lock);
+		PROC_SUNLOCK(p);
 		error = SYSCTL_OUT(req, (caddr_t)&kinfo_proc,
 				   sizeof(kinfo_proc));
 	} else {
-		mtx_lock_spin(&sched_lock);
+		PROC_SLOCK(p);
 		if (FIRST_THREAD_IN_PROC(p) != NULL)
 			FOREACH_THREAD_IN_PROC(p, td) {
 				fill_kinfo_thread(td, &kinfo_proc);
 				error = SYSCTL_OUT(req, (caddr_t)&kinfo_proc,
-					   	sizeof(kinfo_proc));
+						   sizeof(kinfo_proc));
 				if (error)
 					break;
 			}
 		else
 			error = SYSCTL_OUT(req, (caddr_t)&kinfo_proc,
-				   	sizeof(kinfo_proc));
-		mtx_unlock_spin(&sched_lock);
+					   sizeof(kinfo_proc));
+		PROC_SUNLOCK(p);
 	}
 	PROC_UNLOCK(p);
 	if (error)
@@ -1007,13 +1016,15 @@ sysctl_kern_proc(SYSCTL_HANDLER_ARGS)
 			/*
 			 * Skip embryonic processes.
 			 */
-			mtx_lock_spin(&sched_lock);
+			PROC_SLOCK(p);
 			if (p->p_state == PRS_NEW) {
-				mtx_unlock_spin(&sched_lock);
+				PROC_SUNLOCK(p);
 				continue;
 			}
-			mtx_unlock_spin(&sched_lock);
+			PROC_SUNLOCK(p);
 			PROC_LOCK(p);
+			KASSERT(p->p_ucred != NULL,
+			    ("process credential is NULL for non-NEW proc"));
 			/*
 			 * Show a user only appropriate processes.
 			 */
@@ -1028,8 +1039,7 @@ sysctl_kern_proc(SYSCTL_HANDLER_ARGS)
 			switch (oid_number) {
 
 			case KERN_PROC_GID:
-				if (p->p_ucred == NULL ||
-				    p->p_ucred->cr_gid != (gid_t)name[0]) {
+				if (p->p_ucred->cr_gid != (gid_t)name[0]) {
 					PROC_UNLOCK(p);
 					continue;
 				}
@@ -1037,7 +1047,7 @@ sysctl_kern_proc(SYSCTL_HANDLER_ARGS)
 
 			case KERN_PROC_PGRP:
 				/* could do this by traversing pgrp */
-				if (p->p_pgrp == NULL || 
+				if (p->p_pgrp == NULL ||
 				    p->p_pgrp->pg_id != (pid_t)name[0]) {
 					PROC_UNLOCK(p);
 					continue;
@@ -1045,8 +1055,7 @@ sysctl_kern_proc(SYSCTL_HANDLER_ARGS)
 				break;
 
 			case KERN_PROC_RGID:
-				if (p->p_ucred == NULL ||
-				    p->p_ucred->cr_rgid != (gid_t)name[0]) {
+				if (p->p_ucred->cr_rgid != (gid_t)name[0]) {
 					PROC_UNLOCK(p);
 					continue;
 				}
@@ -1078,16 +1087,14 @@ sysctl_kern_proc(SYSCTL_HANDLER_ARGS)
 				break;
 
 			case KERN_PROC_UID:
-				if (p->p_ucred == NULL || 
-				    p->p_ucred->cr_uid != (uid_t)name[0]) {
+				if (p->p_ucred->cr_uid != (uid_t)name[0]) {
 					PROC_UNLOCK(p);
 					continue;
 				}
 				break;
 
 			case KERN_PROC_RUID:
-				if (p->p_ucred == NULL || 
-				    p->p_ucred->cr_ruid != (uid_t)name[0]) {
+				if (p->p_ucred->cr_ruid != (uid_t)name[0]) {
 					PROC_UNLOCK(p);
 					continue;
 				}
@@ -1119,7 +1126,7 @@ pargs_alloc(int len)
 
 	MALLOC(pa, struct pargs *, sizeof(struct pargs) + len, M_PARGS,
 		M_WAITOK);
-	pa->ar_ref = 1;
+	refcount_init(&pa->ar_ref, 1);
 	pa->ar_length = len;
 	return (pa);
 }
@@ -1137,9 +1144,7 @@ pargs_hold(struct pargs *pa)
 
 	if (pa == NULL)
 		return;
-	PARGS_LOCK(pa);
-	pa->ar_ref++;
-	PARGS_UNLOCK(pa);
+	refcount_acquire(&pa->ar_ref);
 }
 
 void
@@ -1148,12 +1153,8 @@ pargs_drop(struct pargs *pa)
 
 	if (pa == NULL)
 		return;
-	PARGS_LOCK(pa);
-	if (--pa->ar_ref == 0) {
-		PARGS_UNLOCK(pa);
+	if (refcount_release(&pa->ar_ref))
 		pargs_free(pa);
-	} else
-		PARGS_UNLOCK(pa);
 }
 
 /*
@@ -1242,6 +1243,11 @@ sysctl_kern_proc_pathname(SYSCTL_HANDLER_ARGS)
 	}
 
 	vp = p->p_textvp;
+	if (vp == NULL) {
+		if (*pidp != -1)
+			PROC_UNLOCK(p);
+		return (0);
+	}
 	vref(vp);
 	if (*pidp != -1)
 		PROC_UNLOCK(p);

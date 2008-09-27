@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/kern/bus_if.m,v 1.29 2005/01/06 23:35:38 imp Exp $
+# $FreeBSD: src/sys/kern/bus_if.m,v 1.34 2007/02/23 12:19:01 piso Exp $
 #
 
 #include <sys/bus.h>
@@ -326,6 +326,7 @@ METHOD int setup_intr {
 	device_t	_child;
 	struct resource *_irq;
 	int		_flags;
+	driver_filter_t	*_filter;
 	driver_intr_t	*_intr;
 	void		*_arg;
 	void		**_cookiep;
@@ -507,3 +508,36 @@ METHOD int config_intr {
 	enum intr_trigger _trig;
 	enum intr_polarity _pol;
 } DEFAULT bus_generic_config_intr;
+
+/**
+ * @brief Notify a (bus) driver about a child that the hints mechanism
+ * believes it has discovered.
+ *
+ * The bus is responsible for then adding the child in the right order
+ * and discovering other things about the child.  The bus driver is
+ * free to ignore this hint, to do special things, etc.  It is all up
+ * to the bus driver to interpret.
+ *
+ * This method is only called in response to the parent bus asking for
+ * hinted devices to be enumerated.
+ *
+ * @param _dev		the bus device
+ * @param _dname	the name of the device w/o unit numbers
+ * @param _dunit	the unit number of the device
+ */
+METHOD void hinted_child {
+	device_t	_dev;
+	const char *	_dname;
+	int		_dunit;
+};
+
+/**
+ * @brief Returns bus_dma_tag_t for use w/ devices on the bus.
+ *
+ * @param _dev		the parent device of @p _child
+ * @param _child	the device to which the tag will belong
+ */
+METHOD bus_dma_tag_t get_dma_tag {
+	device_t	_dev;
+	device_t	_child;
+} DEFAULT bus_generic_get_dma_tag;

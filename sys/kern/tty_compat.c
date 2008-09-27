@@ -30,15 +30,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_compat.c,v 1.37 2004/06/21 22:57:15 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_compat.c,v 1.39 2006/01/10 09:19:09 phk Exp $");
 
 #include "opt_compat.h"
 
-#ifndef BURN_BRIDGES
 /*
  * mapping routines for old line discipline (yuck)
  */
-#if defined(COMPAT_43)
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -93,7 +91,7 @@ ttcompatspeedtab(int speed, struct speedtab *table)
 	return (1); /* 50, min and not hangup */
 }
 
-int
+static int
 ttsetcompat(struct tty *tp, u_long *com, caddr_t data, struct termios *term)
 {
 	switch (*com) {
@@ -471,6 +469,3 @@ ttcompatsetlflags(struct tty *tp, struct termios *t)
 	t->c_lflag = lflag;
 	t->c_cflag = cflag;
 }
-#endif	/* COMPAT_43 */
-
-#endif /* BURN_BRIDGES */

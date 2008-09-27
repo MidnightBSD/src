@@ -35,12 +35,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_cons.c,v 1.131 2005/02/27 21:52:41 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_cons.c,v 1.139 2007/05/31 11:51:51 kib Exp $");
 
 #include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/conf.h>
 #include <sys/cons.h>
 #include <sys/fcntl.h>
@@ -49,6 +51,7 @@ __FBSDID("$FreeBSD: src/sys/kern/tty_cons.c,v 1.131 2005/02/27 21:52:41 phk Exp 
 #include <sys/malloc.h>
 #include <sys/msgbuf.h>
 #include <sys/namei.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/reboot.h>
@@ -99,7 +102,7 @@ static STAILQ_HEAD(, cn_device) cn_devlist =
 	    (cnd->cnd_vp->v_type == VBAD && !cn_devopen(cnd, td, 1)))
 
 static dev_t	cn_udev_t;
-SYSCTL_OPAQUE(_machdep, CPU_CONSDEV, consdev, CTLFLAG_RD,
+SYSCTL_OPAQUE(_machdep, OID_AUTO, consdev, CTLFLAG_RD,
 	&cn_udev_t, sizeof cn_udev_t, "T,struct cdev *", "");
 
 int	cons_avail_mask = 0;	/* Bit mask. Each registered low level console
@@ -117,10 +120,13 @@ static u_char console_pausing;		/* pause after each line during probe */
 static char *console_pausestr=
 "<pause; press any key to proceed to next line or '.' to end pause mode>";
 struct tty *constty;			/* pointer to console "window" tty */
+static struct mtx cnputs_mtx;		/* Mutex for cnputs(). */
+static int use_cnputs_mtx = 0;		/* != 0 if cnputs_mtx locking reqd. */
 
 static void constty_timeout(void *arg);
 
-CONS_DRIVER(cons, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+static struct consdev cons_consdev;
+DATA_SET(cons_set, cons_consdev);
 SET_DECLARE(cons_set, struct consdev);
 
 void
@@ -157,15 +163,15 @@ cninit(void)
 			/*
 			 * Initialize console, and attach to it.
 			 */
-			cnadd(cn);
 			cn->cn_init(cn);
+			cnadd(cn);
 		}
 	}
 	if (best_cn == NULL)
 		return;
 	if ((boothowto & RB_MULTIPLE) == 0) {
-		cnadd(best_cn);
 		best_cn->cn_init(best_cn);
+		cnadd(best_cn);
 	}
 	if (boothowto & RB_PAUSE)
 		console_pausing = 1;
@@ -401,7 +407,7 @@ cn_devopen(struct cn_device *cnd, struct thread *td, int forceopen)
 	}
 	snprintf(path, sizeof(path), "/dev/%s", cnd->cnd_cn->cn_name);
 	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, path, td);
-	error = vn_open(&nd, &openflag, 0, -1);
+	error = vn_open(&nd, &openflag, 0, NULL);
 	if (error == 0) {
 		NDFREE(&nd, NDF_ONLY_PNBUF);
 		VOP_UNLOCK(nd.ni_vp, 0, td);
@@ -505,7 +511,7 @@ cnioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	 * output from the "virtual" console.
 	 */
 	if (cmd == TIOCCONS && constty) {
-		error = suser(td);
+		error = priv_check(td, PRIV_TTY_CONSOLE);
 		if (error)
 			return (error);
 		constty = NULL;
@@ -597,7 +603,10 @@ cncheckc(void)
 	STAILQ_FOREACH(cnd, &cn_devlist, cnd_next) {
 		cn = cnd->cnd_cn;
 		if (!kdb_active || !(cn->cn_flags & CN_FLAG_NODEBUG)) {
-			c = cn->cn_checkc(cn);
+			if (cn->cn_checkc != NULL)
+				c = cn->cn_checkc(cn);
+			else
+				c = cn->cn_getc(cn);
 			if (c != -1) {
 				return (c);
 			}
@@ -636,22 +645,21 @@ cnputc(int c)
 }
 
 void
-cndbctl(int on)
+cnputs(char *p)
 {
-	struct cn_device *cnd;
-	struct consdev *cn;
-	static int refcount;
+	int c;
+	int unlock_reqd = 0;
 
-	if (!on)
-		refcount--;
-	if (refcount == 0)
-		STAILQ_FOREACH(cnd, &cn_devlist, cnd_next) {
-			cn = cnd->cnd_cn;
-			if (cn->cn_dbctl != NULL)
-				cn->cn_dbctl(cn, on);
-		}
-	if (on)
-		refcount++;
+	if (use_cnputs_mtx) {
+		mtx_lock_spin(&cnputs_mtx);
+		unlock_reqd = 1;
+	}
+
+	while ((c = *p++) != '\0')
+		cnputc(c);
+
+	if (unlock_reqd)
+		mtx_unlock_spin(&cnputs_mtx);
 }
 
 static int consmsgbuf_size = 8192;
@@ -723,6 +731,9 @@ cn_drvinit(void *unused)
 {
 
 	make_dev(&cn_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600, "console");
+
+	mtx_init(&cnputs_mtx, "cnputs_mtx", NULL, MTX_SPIN | MTX_NOWITNESS);
+	use_cnputs_mtx = 1;
 }
 
 SYSINIT(cndev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, cn_drvinit, NULL)

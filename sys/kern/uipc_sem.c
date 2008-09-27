@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_sem.c,v 1.20.2.1 2006/02/13 23:51:19 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_sem.c,v 1.28.4.1 2008/01/17 19:52:01 rwatson Exp $");
 
 #include "opt_mac.h"
 #include "opt_posix.h"
@@ -42,26 +42,27 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_sem.c,v 1.20.2.1 2006/02/13 23:51:19 rwats
 #include <sys/sysproto.h>
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
+#include <sys/ksem.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
+#include <sys/posix4.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/module.h>
 #include <sys/condvar.h>
 #include <sys/sem.h>
 #include <sys/uio.h>
+#include <sys/semaphore.h>
 #include <sys/syscall.h>
 #include <sys/stat.h>
 #include <sys/sysent.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/fcntl.h>
+#include <sys/_semaphore.h>
 
-#include <posix4/ksem.h>
-#include <posix4/posix4.h>
-#include <posix4/semaphore.h>
-#include <posix4/_semaphore.h>
+#include <security/mac/mac_framework.h>
 
 static int sem_count_proc(struct proc *p);
 static struct ksem *sem_lookup_byname(const char *name);
@@ -71,6 +72,7 @@ static void sem_free(struct ksem *ksnew);
 static int sem_perm(struct thread *td, struct ksem *ks);
 static void sem_enter(struct proc *p, struct ksem *ks);
 static int sem_leave(struct proc *p, struct ksem *ks);
+static void sem_exechook(void *arg, struct proc *p, struct image_params *imgp);
 static void sem_exithook(void *arg, struct proc *p);
 static void sem_forkhook(void *arg, struct proc *p1, struct proc *p2,
     int flags);
@@ -417,21 +419,32 @@ sem_perm(struct thread *td, struct ksem *ks)
 {
 	struct ucred *uc;
 
+	/*
+	 * XXXRW: This permission routine appears to be incorrect.  If the
+	 * user matches, we shouldn't go on to the group if the user
+	 * permissions don't allow the action?  Not changed for now.  To fix,
+	 * change from a series of if (); if (); to if () else if () else...
+	 */
 	uc = td->td_ucred;
 	DP(("sem_perm: uc(%d,%d) ks(%d,%d,%o)\n",
 	    uc->cr_uid, uc->cr_gid,
 	     ks->ks_uid, ks->ks_gid, ks->ks_mode));
-	if ((uc->cr_uid == ks->ks_uid && (ks->ks_mode & S_IWUSR) != 0) ||
-	    (uc->cr_gid == ks->ks_gid && (ks->ks_mode & S_IWGRP) != 0) ||
-	    (ks->ks_mode & S_IWOTH) != 0 || suser(td) == 0)
+	if ((uc->cr_uid == ks->ks_uid) && (ks->ks_mode & S_IWUSR) != 0)
 		return (0);
-	return (EPERM);
+	if ((uc->cr_gid == ks->ks_gid) && (ks->ks_mode & S_IWGRP) != 0)
+		return (0);
+	if ((ks->ks_mode & S_IWOTH) != 0)
+		return (0);
+	return (priv_check(td, PRIV_SEM_WRITE));
 }
 
 static void
 sem_free(struct ksem *ks)
 {
 
+#ifdef MAC
+	mac_destroy_posix_sem(ks);
+#endif
 	nsems--;
 	if (ks->ks_onlist)
 		LIST_REMOVE(ks, ks_entry);
@@ -508,7 +521,6 @@ struct ksem_unlink_args {
 };
 int ksem_unlink(struct thread *td, struct ksem_unlink_args *uap);
 #endif
-	
 int
 ksem_unlink(struct thread *td, struct ksem_unlink_args *uap)
 {
@@ -556,7 +568,6 @@ struct ksem_close_args {
 };
 int ksem_close(struct thread *td, struct ksem_close_args *uap);
 #endif
-
 int
 ksem_close(struct thread *td, struct ksem_close_args *uap)
 {
@@ -629,7 +640,6 @@ struct ksem_wait_args {
 };
 int ksem_wait(struct thread *td, struct ksem_wait_args *uap);
 #endif
-
 int
 ksem_wait(struct thread *td, struct ksem_wait_args *uap)
 {
@@ -640,7 +650,7 @@ ksem_wait(struct thread *td, struct ksem_wait_args *uap)
 #ifndef _SYS_SYSPROTO_H_
 struct ksem_timedwait_args {
 	semid_t id;
-	struct timespec *abstime;
+	const struct timespec *abstime;
 };
 int ksem_timedwait(struct thread *td, struct ksem_timedwait_args *uap);
 #endif
@@ -919,6 +929,12 @@ race_lost:
 }
 
 static void
+sem_exechook(void *arg, struct proc *p, struct image_params *imgp __unused)
+{
+   	sem_exithook(arg, p);   	
+}
+
+static void
 sem_exithook(void *arg, struct proc *p)
 {
 	struct ksem *ks, *ksnext;
@@ -951,7 +967,7 @@ sem_modload(struct module *module, int cmd, void *arg)
 		p31b_setcfg(CTL_P1003_1B_SEM_VALUE_MAX, SEM_VALUE_MAX);
 		sem_exit_tag = EVENTHANDLER_REGISTER(process_exit, sem_exithook,
 		    NULL, EVENTHANDLER_PRI_ANY);
-		sem_exec_tag = EVENTHANDLER_REGISTER(process_exec, sem_exithook,
+		sem_exec_tag = EVENTHANDLER_REGISTER(process_exec, sem_exechook,
 		    NULL, EVENTHANDLER_PRI_ANY);
 		sem_fork_tag = EVENTHANDLER_REGISTER(process_fork, sem_forkhook, NULL, EVENTHANDLER_PRI_ANY);
                 break;

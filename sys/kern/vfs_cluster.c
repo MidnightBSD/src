@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_cluster.c,v 1.166.2.3 2006/03/22 17:54:50 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_cluster.c,v 1.176 2007/06/01 01:12:44 jeff Exp $");
 
 #include "opt_debug_cluster.h"
 
@@ -58,7 +58,7 @@ SYSCTL_INT(_debug, OID_AUTO, rcluster, CTLFLAG_RW, &rcluster, 0,
     "Debug VFS clustering code");
 #endif
 
-static MALLOC_DEFINE(M_SEGMENT, "cluster_save buffer", "cluster_save buffer");
+static MALLOC_DEFINE(M_SEGMENT, "cl_savebuf", "cluster_save buffer");
 
 static struct cluster_save *
 	cluster_collectbufs(struct vnode *vp, struct buf *last_bp);
@@ -228,7 +228,7 @@ cluster_read(vp, filesize, lblkno, size, cred, totread, seqcount, bpp)
 			BUF_KERNPROC(bp);
 		bp->b_iooffset = dbtob(bp->b_blkno);
 		bstrategy(bp);
-		curproc->p_stats->p_ru.ru_inblock++;
+		curthread->td_ru.ru_inblock++;
 	}
 
 	/*
@@ -281,7 +281,7 @@ cluster_read(vp, filesize, lblkno, size, cred, totread, seqcount, bpp)
 			BUF_KERNPROC(rbp);
 		rbp->b_iooffset = dbtob(rbp->b_blkno);
 		bstrategy(rbp);
-		curproc->p_stats->p_ru.ru_inblock++;
+		curthread->td_ru.ru_inblock++;
 	}
 
 	if (reqbp)
@@ -595,7 +595,7 @@ cluster_write(struct vnode *vp, struct buf *bp, u_quad_t filesize, int seqcount)
 	int async;
 
 	if (vp->v_type == VREG) {
-		async = vp->v_mount->mnt_flag & MNT_ASYNC;
+		async = vp->v_mount->mnt_kern_flag & MNTK_ASYNC;
 		lblocksize = vp->v_mount->mnt_stat.f_iosize;
 	} else {
 		async = 0;
@@ -770,6 +770,12 @@ cluster_wbuild(vp, size, start_lbn, len)
 			--len;
 			continue;
 		}
+		if (tbp->b_pin_count >  0) {
+			BUF_UNLOCK(tbp);
+			++start_lbn;
+			--len;
+			continue;
+		}
 		bremfree(tbp);
 		tbp->b_flags &= ~B_DONE;
 
@@ -873,6 +879,15 @@ cluster_wbuild(vp, size, start_lbn, len)
 					BUF_UNLOCK(tbp);
 					break;
 				}
+
+				/*
+				 * Do not pull in pinned buffers.
+				 */
+				if (tbp->b_pin_count > 0) {
+					BUF_UNLOCK(tbp);
+					break;
+				}
+
 				/*
 				 * Ok, it's passed all the tests,
 				 * so remove it from the free list
@@ -896,7 +911,7 @@ cluster_wbuild(vp, size, start_lbn, len)
 				if (i != 0) { /* if not first buffer */
 					for (j = 0; j < tbp->b_npages; j += 1) {
 						m = tbp->b_pages[j];
-						if (m->flags & PG_BUSY) {
+						if (m->oflags & VPO_BUSY) {
 							VM_OBJECT_UNLOCK(
 							    tbp->b_object);
 							bqrelse(tbp);

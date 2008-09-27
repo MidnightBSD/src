@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_mbpool.c,v 1.3 2005/01/06 23:35:39 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_mbpool.c,v 1.4 2007/05/27 17:38:36 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -338,7 +338,7 @@ mbp_count(struct mbpool *p, u_int *used, u_int *card, u_int *free)
 	}
 	mtx_lock(&p->free_lock);
 	SLIST_FOREACH(cf, &p->free_list, link)
-		*free++;
+		(*free)++;
 	mtx_unlock(&p->free_lock);
 }
 

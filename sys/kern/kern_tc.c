@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_tc.c,v 1.164 2005/03/26 20:04:28 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_tc.c,v 1.178 2007/06/04 18:25:07 dwmalone Exp $");
 
 #include "opt_ntp.h"
 
@@ -61,7 +61,7 @@ struct timehands {
 	struct timehands	*th_next;
 };
 
-extern struct timehands th0;
+static struct timehands th0;
 static struct timehands th9 = { NULL, 0, 0, 0, {0, 0}, {0, 0}, {0, 0}, 0, &th0};
 static struct timehands th8 = { NULL, 0, 0, 0, {0, 0}, {0, 0}, {0, 0}, 0, &th9};
 static struct timehands th7 = { NULL, 0, 0, 0, {0, 0}, {0, 0}, {0, 0}, 0, &th8};
@@ -88,7 +88,7 @@ struct timecounter *timecounter = &dummy_timecounter;
 static struct timecounter *timecounters = &dummy_timecounter;
 
 time_t time_second = 1;
-time_t time_uptime = 0;
+time_t time_uptime = 1;
 
 static struct bintime boottimebin;
 struct timeval boottime;
@@ -97,6 +97,7 @@ SYSCTL_PROC(_kern, KERN_BOOTTIME, boottime, CTLTYPE_STRUCT|CTLFLAG_RD,
     NULL, 0, sysctl_kern_boottime, "S,timeval", "System boottime");
 
 SYSCTL_NODE(_kern, OID_AUTO, timecounter, CTLFLAG_RW, 0, "");
+SYSCTL_NODE(_kern_timecounter, OID_AUTO, tc, CTLFLAG_RW, 0, "");
 
 static int timestepwarnings;
 SYSCTL_INT(_kern_timecounter, OID_AUTO, stepwarnings, CTLFLAG_RW,
@@ -116,6 +117,7 @@ TC_STATS(nsetclock);
 #undef TC_STATS
 
 static void tc_windup(void);
+static void cpu_tick_calibrate(int);
 
 static int
 sysctl_kern_boottime(SYSCTL_HANDLER_ARGS)
@@ -131,6 +133,27 @@ sysctl_kern_boottime(SYSCTL_HANDLER_ARGS)
 #endif
 		return SYSCTL_OUT(req, &boottime, sizeof(boottime));
 }
+
+static int
+sysctl_kern_timecounter_get(SYSCTL_HANDLER_ARGS)
+{
+	u_int ncount;
+	struct timecounter *tc = arg1;
+
+	ncount = tc->tc_get_timecount(tc);
+	return sysctl_handle_int(oidp, &ncount, 0, req);
+}
+
+static int
+sysctl_kern_timecounter_freq(SYSCTL_HANDLER_ARGS)
+{
+	u_int64_t freq;
+	struct timecounter *tc = arg1;
+
+	freq = tc->tc_frequency;
+	return sysctl_handle_quad(oidp, &freq, 0, req);
+}
+
 /*
  * Return the difference between the timehands' counter value now and what
  * was when we copied it to the timehands' offset_count.
@@ -307,6 +330,7 @@ void
 tc_init(struct timecounter *tc)
 {
 	u_int u;
+	struct sysctl_oid *tc_root;
 
 	u = tc->tc_frequency / tc->tc_counter_mask;
 	/* XXX: We need some margin here, 10% is a guess */
@@ -327,6 +351,24 @@ tc_init(struct timecounter *tc)
 
 	tc->tc_next = timecounters;
 	timecounters = tc;
+	/*
+	 * Set up sysctl tree for this counter.
+	 */
+	tc_root = SYSCTL_ADD_NODE(NULL,
+	    SYSCTL_STATIC_CHILDREN(_kern_timecounter_tc), OID_AUTO, tc->tc_name,
+	    CTLFLAG_RW, 0, "timecounter description");
+	SYSCTL_ADD_UINT(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
+	    "mask", CTLFLAG_RD, &(tc->tc_counter_mask), 0,
+	    "mask for implemented bits");
+	SYSCTL_ADD_PROC(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
+	    "counter", CTLTYPE_UINT | CTLFLAG_RD, tc, sizeof(*tc),
+	    sysctl_kern_timecounter_get, "IU", "current timecounter value");
+	SYSCTL_ADD_PROC(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
+	    "frequency", CTLTYPE_QUAD | CTLFLAG_RD, tc, sizeof(*tc),
+	     sysctl_kern_timecounter_freq, "QU", "timecounter frequency");
+	SYSCTL_ADD_INT(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
+	    "quality", CTLFLAG_RD, &(tc->tc_quality), 0,
+	    "goodness of time counter");
 	/*
 	 * Never automatically use a timecounter with negative quality.
 	 * Even though we run on the dummy counter, switching here may be
@@ -360,12 +402,14 @@ tc_getfrequency(void)
 void
 tc_setclock(struct timespec *ts)
 {
-	struct timespec ts2;
+	struct timespec tbef, taft;
 	struct bintime bt, bt2;
 
+	cpu_tick_calibrate(1);
 	nsetclock++;
-	binuptime(&bt2);
+	nanotime(&tbef);
 	timespec2bintime(ts, &bt);
+	binuptime(&bt2);
 	bintime_sub(&bt, &bt2);
 	bintime_add(&bt2, &boottimebin);
 	boottimebin = bt;
@@ -373,12 +417,15 @@ tc_setclock(struct timespec *ts)
 
 	/* XXX fiddle all the little crinkly bits around the fiords... */
 	tc_windup();
+	nanotime(&taft);
 	if (timestepwarnings) {
-		bintime2timespec(&bt2, &ts2);
-		log(LOG_INFO, "Time stepped from %jd.%09ld to %jd.%09ld\n",
-		    (intmax_t)ts2.tv_sec, ts2.tv_nsec,
+		log(LOG_INFO,
+		    "Time stepped from %jd.%09ld to %jd.%09ld (%jd.%09ld)\n",
+		    (intmax_t)tbef.tv_sec, tbef.tv_nsec,
+		    (intmax_t)taft.tv_sec, taft.tv_nsec,
 		    (intmax_t)ts->tv_sec, ts->tv_nsec);
 	}
+	cpu_tick_calibrate(1);
 }
 
 /*
@@ -475,8 +522,8 @@ tc_windup(void)
 	 *	 x = a * 2^32 / 10^9 = a * 4.294967296
 	 *
 	 * The range of th_adjustment is +/- 5000PPM so inside a 64bit int
-	 * we can only multiply by about 850 without overflowing, but that
-	 * leaves suitably precise fractions for multiply before divide.
+	 * we can only multiply by about 850 without overflowing, that
+	 * leaves no suitably precise fractions for multiply before divide.
 	 *
 	 * Divide before multiply with a fraction of 2199/512 results in a
 	 * systematic undercompensation of 10PPM of th_adjustment.  On a
@@ -749,11 +796,16 @@ void
 tc_ticktock(void)
 {
 	static int count;
+	static time_t last_calib;
 
 	if (++count < tc_tick)
 		return;
 	count = 0;
 	tc_windup();
+	if (time_uptime != last_calib && !(time_uptime & 0xf)) {
+		cpu_tick_calibrate(0);
+		last_calib = time_uptime;
+	}
 }
 
 static void
@@ -782,3 +834,147 @@ inittimecounter(void *dummy)
 }
 
 SYSINIT(timecounter, SI_SUB_CLOCKS, SI_ORDER_SECOND, inittimecounter, NULL)
+
+/* Cpu tick handling -------------------------------------------------*/
+
+static int cpu_tick_variable;
+static uint64_t	cpu_tick_frequency;
+
+static uint64_t
+tc_cpu_ticks(void)
+{
+	static uint64_t base;
+	static unsigned last;
+	unsigned u;
+	struct timecounter *tc;
+
+	tc = timehands->th_counter;
+	u = tc->tc_get_timecount(tc) & tc->tc_counter_mask;
+	if (u < last)
+		base += (uint64_t)tc->tc_counter_mask + 1;
+	last = u;
+	return (u + base);
+}
+
+/*
+ * This function gets called ever 16 seconds on only one designated
+ * CPU in the system from hardclock() via tc_ticktock().
+ *
+ * Whenever the real time clock is stepped we get called with reset=1
+ * to make sure we handle suspend/resume and similar events correctly.
+ */
+
+static void
+cpu_tick_calibrate(int reset)
+{
+	static uint64_t c_last;
+	uint64_t c_this, c_delta;
+	static struct bintime  t_last;
+	struct bintime t_this, t_delta;
+	uint32_t divi;
+
+	if (reset) {
+		/* The clock was stepped, abort & reset */
+		t_last.sec = 0;
+		return;
+	}
+
+	/* we don't calibrate fixed rate cputicks */
+	if (!cpu_tick_variable)
+		return;
+
+	getbinuptime(&t_this);
+	c_this = cpu_ticks();
+	if (t_last.sec != 0) {
+		c_delta = c_this - c_last;
+		t_delta = t_this;
+		bintime_sub(&t_delta, &t_last);
+		/*
+		 * Validate that 16 +/- 1/256 seconds passed. 
+		 * After division by 16 this gives us a precision of
+		 * roughly 250PPM which is sufficient
+		 */
+		if (t_delta.sec > 16 || (
+		    t_delta.sec == 16 && t_delta.frac >= (0x01LL << 56))) {
+			/* too long */
+			if (bootverbose)
+				printf("%ju.%016jx too long\n",
+				    (uintmax_t)t_delta.sec,
+				    (uintmax_t)t_delta.frac);
+		} else if (t_delta.sec < 15 ||
+		    (t_delta.sec == 15 && t_delta.frac <= (0xffLL << 56))) {
+			/* too short */
+			if (bootverbose)
+				printf("%ju.%016jx too short\n",
+				    (uintmax_t)t_delta.sec,
+				    (uintmax_t)t_delta.frac);
+		} else {
+			/* just right */
+			/*
+			 * Headroom:
+			 * 	2^(64-20) / 16[s] =
+			 * 	2^(44) / 16[s] =
+			 * 	17.592.186.044.416 / 16 =
+			 * 	1.099.511.627.776 [Hz]
+			 */
+			divi = t_delta.sec << 20;
+			divi |= t_delta.frac >> (64 - 20);
+			c_delta <<= 20;
+			c_delta /= divi;
+			if (c_delta  > cpu_tick_frequency) {
+				if (0 && bootverbose)
+					printf("cpu_tick increased to %ju Hz\n",
+					    c_delta);
+				cpu_tick_frequency = c_delta;
+			}
+		}
+	}
+	c_last = c_this;
+	t_last = t_this;
+}
+
+void
+set_cputicker(cpu_tick_f *func, uint64_t freq, unsigned var)
+{
+
+	if (func == NULL) {
+		cpu_ticks = tc_cpu_ticks;
+	} else {
+		cpu_tick_frequency = freq;
+		cpu_tick_variable = var;
+		cpu_ticks = func;
+	}
+}
+
+uint64_t
+cpu_tickrate(void)
+{
+
+	if (cpu_ticks == tc_cpu_ticks) 
+		return (tc_getfrequency());
+	return (cpu_tick_frequency);
+}
+
+/*
+ * We need to be slightly careful converting cputicks to microseconds.
+ * There is plenty of margin in 64 bits of microseconds (half a million
+ * years) and in 64 bits at 4 GHz (146 years), but if we do a multiply
+ * before divide conversion (to retain precision) we find that the
+ * margin shrinks to 1.5 hours (one millionth of 146y).
+ * With a three prong approach we never lose significant bits, no
+ * matter what the cputick rate and length of timeinterval is.
+ */
+
+uint64_t
+cputick2usec(uint64_t tick)
+{
+
+	if (tick > 18446744073709551LL)		/* floor(2^64 / 1000) */
+		return (tick / (cpu_tickrate() / 1000000LL));
+	else if (tick > 18446744073709LL)	/* floor(2^64 / 1000000) */
+		return ((tick * 1000LL) / (cpu_tickrate() / 1000LL));
+	else
+		return ((tick * 1000000LL) / cpu_tickrate());
+}
+
+cpu_tick_f	*cpu_ticks = tc_cpu_ticks;

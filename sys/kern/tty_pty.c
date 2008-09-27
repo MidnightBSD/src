@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_pty.c,v 1.137.2.2 2006/03/30 16:46:56 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_pty.c,v 1.152.2.2.2.2 2008/01/28 12:47:56 kib Exp $");
 
 /*
  * Pseudo-teletype Driver
@@ -40,14 +40,14 @@ __FBSDID("$FreeBSD: src/sys/kern/tty_pty.c,v 1.137.2.2 2006/03/30 16:46:56 csjp 
 #include "opt_tty.h"
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/libkern.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/sx.h>
-#ifndef BURN_BRIDGES
-#if defined(COMPAT_43)
+#if defined(COMPAT_43TTY)
 #include <sys/ioctl_compat.h>
 #endif
-#endif
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/tty.h>
 #include <sys/conf.h>
@@ -109,6 +109,7 @@ struct	ptsc {
 	u_char	pt_ucntl;
 	struct tty *pt_tty;
 	struct cdev *devs, *devc;
+	int	pt_devs_open, pt_devc_open;
 	struct	prison *pt_prison;
 };
 
@@ -121,41 +122,78 @@ struct	ptsc {
 #define	TSA_PTC_WRITE(tp)	((void *)&(tp)->t_rawq.c_cl)
 #define	TSA_PTS_READ(tp)	((void *)&(tp)->t_canq)
 
-static char *names = "pqrsPQRS";
+static const char names[] = "pqrsPQRSlmnoLMNO";
 /*
  * This function creates and initializes a pts/ptc pair
  *
- * pts == /dev/tty[pqrsPQRS][0123456789abcdefghijklmnopqrstuv]
- * ptc == /dev/pty[pqrsPQRS][0123456789abcdefghijklmnopqrstuv]
- *
- * XXX: define and add mapping of upper minor bits to allow more
- *      than 256 ptys.
+ * pts == /dev/tty[pqrsPQRSlmnoLMNO][0123456789abcdefghijklmnopqrstuv]
+ * ptc == /dev/pty[pqrsPQRSlmnoLMNO][0123456789abcdefghijklmnopqrstuv]
  */
 static struct cdev *
 ptyinit(struct cdev *devc, struct thread *td)
 {
-	struct cdev *devs;
 	struct ptsc *pt;
 	int n;
 
-	n = minor(devc);
-	/* For now we only map the lower 8 bits of the minor */
-	if (n & ~0xff)
+	n = minor2unit(minor(devc));
+
+	/* We only allow for up to 32 ptys per char in "names". */
+	if (n >= 32 * (sizeof(names) - 1))
 		return (NULL);
 
 	devc->si_flags &= ~SI_CHEAPCLONE;
 
+	/*
+	 * Initially do not create a slave endpoint.
+	 */
 	pt = malloc(sizeof(*pt), M_PTY, M_WAITOK | M_ZERO);
-	pt->devs = devs = make_dev_cred(&pts_cdevsw, n, td->td_ucred,
-	    UID_ROOT, GID_WHEEL, 0666, "tty%c%r", names[n / 32], n % 32);
 	pt->devc = devc;
 
-	pt->pt_tty = ttymalloc(pt->pt_tty);
+	pt->pt_tty = ttyalloc();
 	pt->pt_tty->t_sc = pt;
-	devs->si_drv1 = devc->si_drv1 = pt;
-	devs->si_tty = devc->si_tty = pt->pt_tty;
-	pt->pt_tty->t_dev = devs;
+	devc->si_drv1 = pt;
+	devc->si_tty = pt->pt_tty;
 	return (devc);
+}
+
+static void
+pty_create_slave(struct ucred *cred, struct ptsc *pt, int m)
+{
+	int n;
+
+	n = minor2unit(m);
+	KASSERT(n >= 0 && n / 32 < sizeof(names),
+	    ("pty_create_slave: n %d ptsc %p", n, pt));
+	pt->devs = make_dev_cred(&pts_cdevsw, m, cred, UID_ROOT, GID_WHEEL,
+	    0666, "tty%c%r", names[n / 32], n % 32);
+	pt->devs->si_drv1 = pt;
+	pt->devs->si_tty = pt->pt_tty;
+	pt->pt_tty->t_dev = pt->devs;
+}
+
+static void
+pty_destroy_slave(struct ptsc *pt)
+{
+
+	if (pt->pt_tty->t_refcnt > 1)
+		return;
+	pt->pt_tty->t_dev = NULL;
+	ttyrel(pt->pt_tty);
+	pt->pt_tty = NULL;
+	destroy_dev(pt->devs);
+	pt->devs = NULL;
+}
+
+static void
+pty_maybe_destroy_slave(struct ptsc *pt)
+{
+
+	/*
+	 * vfs bugs and complications near revoke() make
+	 * it currently impossible to destroy struct cdev
+	 */
+	if (0 && pt->pt_devc_open == 0 && pt->pt_devs_open == 0)
+		pty_destroy_slave(pt);
 }
 
 /*ARGSUSED*/
@@ -170,11 +208,14 @@ ptsopen(struct cdev *dev, int flag, int devtype, struct thread *td)
 		return(ENXIO);
 	pt = dev->si_drv1;
 	tp = dev->si_tty;
+
 	if ((tp->t_state & TS_ISOPEN) == 0) {
 		ttyinitmode(tp, 1, 0);
-	} else if (tp->t_state & TS_XCLUDE && suser(td))
+	} else if (tp->t_state & TS_XCLUDE && priv_check(td,
+	    PRIV_TTY_EXCLUSIVE))
 		return (EBUSY);
-	else if (pt->pt_prison != td->td_ucred->cr_prison && suser(td))
+	else if (pt->pt_prison != td->td_ucred->cr_prison &&
+	    priv_check(td, PRIV_TTY_PRISON))
 		return (EBUSY);
 	if (tp->t_oproc)			/* Ctrlr still around. */
 		(void)ttyld_modem(tp, 1);
@@ -187,20 +228,32 @@ ptsopen(struct cdev *dev, int flag, int devtype, struct thread *td)
 			return (error);
 	}
 	error = ttyld_open(tp, dev);
-	if (error == 0)
+	if (error == 0) {
 		ptcwakeup(tp, FREAD|FWRITE);
+		pt->pt_devs_open = 1;
+	} else
+		pty_maybe_destroy_slave(pt);
 	return (error);
 }
 
 static	int
 ptsclose(struct cdev *dev, int flag, int mode, struct thread *td)
 {
+	struct ptsc *pti;
 	struct tty *tp;
 	int err;
 
 	tp = dev->si_tty;
+	pti = dev->si_drv1;
+
+	KASSERT(dev == pti->devs, ("ptsclose: dev != pti->devs"));
+
 	err = ttyld_close(tp, flag);
 	(void) tty_close(tp);
+
+	pti->pt_devs_open = 0;
+	pty_maybe_destroy_slave(pti);
+
 	return (err);
 }
 
@@ -275,7 +328,19 @@ ptcopen(struct cdev *dev, int flag, int devtype, struct thread *td)
 		ptyinit(dev, td);
 	if (!dev->si_drv1)
 		return(ENXIO);
+
+	pt = dev->si_drv1;
+	/*
+	 * In case we have destroyed the struct tty at the last connect time,
+	 * we need to recreate it.
+	 */
+	if (pt->pt_tty == NULL) {
+		pt->pt_tty = ttyalloc();
+		pt->pt_tty->t_sc = pt;
+		dev->si_tty = pt->pt_tty;
+	}
 	tp = dev->si_tty;
+
 	if (tp->t_oproc)
 		return (EIO);
 	tp->t_timeout = -1;
@@ -283,17 +348,22 @@ ptcopen(struct cdev *dev, int flag, int devtype, struct thread *td)
 	tp->t_stop = ptsstop;
 	(void)ttyld_modem(tp, 1);
 	tp->t_lflag &= ~EXTPROC;
-	pt = dev->si_drv1;
 	pt->pt_prison = td->td_ucred->cr_prison;
 	pt->pt_flags = 0;
 	pt->pt_send = 0;
 	pt->pt_ucntl = 0;
+
+	if (!pt->devs)
+		pty_create_slave(td->td_ucred, pt, minor(dev));
+	pt->pt_devc_open = 1;
+
 	return (0);
 }
 
 static	int
 ptcclose(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
+	struct ptsc *pti = dev->si_drv1;
 	struct tty *tp;
 
 	tp = dev->si_tty;
@@ -314,6 +384,8 @@ ptcclose(struct cdev *dev, int flags, int fmt, struct thread *td)
 	}
 
 	tp->t_oproc = 0;		/* mark closed */
+	pti->pt_devc_open = 0;
+	pty_maybe_destroy_slave(pti);
 	return (0);
 }
 
@@ -515,6 +587,10 @@ ptcioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 {
 	struct tty *tp = dev->si_tty;
 	struct ptsc *pt = dev->si_drv1;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	int ival;
+#endif
 
 	switch (cmd) {
 
@@ -553,11 +629,9 @@ ptcioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 		return (EAGAIN);
 
 	switch (cmd) {
-#ifndef BURN_BRIDGES
-#ifdef COMPAT_43
+#ifdef COMPAT_43TTY
 	case TIOCSETP:
 	case TIOCSETN:
-#endif
 #endif
 	case TIOCSETD:
 	case TIOCSETA:
@@ -571,6 +645,13 @@ ptcioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 		ndflush(&tp->t_outq, tp->t_outq.c_cc);
 		break;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('t', 95):
+		ival = IOCPARM_IVAL(data);
+		data = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case TIOCSIG:
 		if (*(unsigned int *)data >= NSIG ||
 		    *(unsigned int *)data == 0)
@@ -642,8 +723,7 @@ ptsioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 		case TIOCSETA:
 		case TIOCSETAW:
 		case TIOCSETAF:
-#ifndef BURN_BRIDGES
-#ifdef COMPAT_43
+#ifdef COMPAT_43TTY
 		case TIOCSETP:
 		case TIOCSETN:
 		case TIOCSETC:
@@ -651,7 +731,6 @@ ptsioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td
 		case TIOCLBIS:
 		case TIOCLBIC:
 		case TIOCLSET:
-#endif
 #endif
 			pt->pt_send |= TIOCPKT_IOCTL;
 			ptcwakeup(tp, FREAD);
@@ -684,34 +763,27 @@ static void
 pty_clone(void *arg, struct ucred *cr, char *name, int namelen,
     struct cdev **dev)
 {
+	char *cp;
 	int u;
 
 	if (*dev != NULL)
 		return;
 	if (bcmp(name, "pty", 3) != 0)
 		return;
-	if (name[5] != '\0')
+	if (name[5] != '\0' || name[3] == '\0')
 		return;
-	switch (name[3]) {
-	case 'p': u =   0; break;
-	case 'q': u =  32; break;
-	case 'r': u =  64; break;
-	case 's': u =  96; break;
-	case 'P': u = 128; break;
-	case 'Q': u = 160; break;
-	case 'R': u = 192; break;
-	case 'S': u = 224; break;
-	default: return;
-	}
+	cp = index(names, name[3]);
+	if (cp == NULL)
+		return;
+	u = (cp - names) * 32;
 	if (name[4] >= '0' && name[4] <= '9')
 		u += name[4] - '0';
 	else if (name[4] >= 'a' && name[4] <= 'v')
 		u += name[4] - 'a' + 10;
 	else
 		return;
-	*dev = make_dev_cred(&ptc_cdevsw, u, cr,
+	*dev = make_dev_credf(MAKEDEV_REF, &ptc_cdevsw, unit2minor(u), cr,
 	    UID_ROOT, GID_WHEEL, 0666, "pty%c%r", names[u / 32], u % 32);
-	dev_ref(*dev);
 	(*dev)->si_flags |= SI_CHEAPCLONE;
 	return;
 }

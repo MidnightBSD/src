@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_init.c,v 1.81 2005/02/20 23:02:20 das Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_init.c,v 1.85 2007/02/16 17:32:41 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/kern/vfs_init.c,v 1.81 2005/02/20 23:02:20 das Exp $
 #include <sys/linker.h>
 #include <sys/mount.h>
 #include <sys/proc.h>
+#include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
 #include <sys/vnode.h>
 #include <sys/malloc.h>
@@ -108,30 +109,21 @@ struct vfsconf *
 vfs_byname_kld(const char *fstype, struct thread *td, int *error)
 {
 	struct vfsconf *vfsp;
-	linker_file_t lf;
+	int fileid;
 
 	vfsp = vfs_byname(fstype);
 	if (vfsp != NULL)
 		return (vfsp);
 
-	/* Only load modules for root (very important!). */
-	*error = suser(td);
+	/* Try to load the respective module. */
+	*error = kern_kldload(td, fstype, &fileid);
 	if (*error)
 		return (NULL);
-	*error = securelevel_gt(td->td_ucred, 0);
-	if (*error) 
-		return (NULL);
-	*error = linker_load_module(NULL, fstype, NULL, NULL, &lf);
-	if (lf == NULL)
-		*error = ENODEV;
-	if (*error)
-		return (NULL);
-	lf->userrefs++;
+
 	/* Look up again to see if the VFS was loaded. */
 	vfsp = vfs_byname(fstype);
 	if (vfsp == NULL) {
-		lf->userrefs--;
-		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
+		(void)kern_kldunload(td, fileid, LINKER_UNLOAD_FORCE);
 		*error = ENODEV;
 		return (NULL);
 	}
@@ -223,9 +215,6 @@ vfs_register(struct vfsconf *vfc)
 	if (vfsops->vfs_checkexp == NULL)
 		/* check if file system is exported */
 		vfsops->vfs_checkexp =	vfs_stdcheckexp;
-	if (vfsops->vfs_vptofh == NULL)
-		/* turn a vnode into an NFS file handle */
-		vfsops->vfs_vptofh =	vfs_stdvptofh;
 	if (vfsops->vfs_init == NULL)
 		/* file system specific initialisation */
 		vfsops->vfs_init =	vfs_stdinit;

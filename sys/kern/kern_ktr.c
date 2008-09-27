@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_ktr.c,v 1.48 2005/06/10 23:21:29 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_ktr.c,v 1.53 2006/09/09 16:09:01 rwatson Exp $");
 
 #include "opt_ddb.h"
 #include "opt_ktr.h"
@@ -55,8 +55,10 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_ktr.c,v 1.48 2005/06/10 23:21:29 jeff Exp 
 #include <machine/ktr.h>
 #endif
 
-
+#ifdef DDB
 #include <ddb/ddb.h>
+#include <ddb/db_output.h>
+#endif
 
 #ifndef KTR_ENTRIES
 #define	KTR_ENTRIES	1024
@@ -100,6 +102,26 @@ SYSCTL_INT(_debug_ktr, OID_AUTO, version, CTLFLAG_RD, &ktr_version, 0, "");
 volatile int	ktr_idx = 0;
 struct	ktr_entry ktr_buf[KTR_ENTRIES];
 
+static int
+sysctl_debug_ktr_clear(SYSCTL_HANDLER_ARGS)
+{
+	int clear, error;
+
+	clear = 0;
+	error = sysctl_handle_int(oidp, &clear, 0, req);
+	if (error || !req->newptr)
+		return (error);
+
+	if (clear) {
+		bzero(ktr_buf, sizeof(ktr_buf));
+		ktr_idx = 0;
+	}
+
+	return (error);
+}
+SYSCTL_PROC(_debug_ktr, OID_AUTO, clear, CTLTYPE_INT|CTLFLAG_RW, 0, 0,
+    sysctl_debug_ktr_clear, "I", "Clear KTR Buffer");
+
 #ifdef KTR_VERBOSE
 int	ktr_verbose = KTR_VERBOSE;
 TUNABLE_INT("debug.ktr.verbose", &ktr_verbose);
@@ -134,21 +156,17 @@ sysctl_debug_ktr_alq_enable(SYSCTL_HANDLER_ARGS)
 
 	enable = ktr_alq_enabled;
 
-        error = sysctl_handle_int(oidp, &enable, 0, req);
-        if (error || !req->newptr)
-                return (error);
+	error = sysctl_handle_int(oidp, &enable, 0, req);
+	if (error || !req->newptr)
+		return (error);
 
 	if (enable) {
 		if (ktr_alq_enabled)
 			return (0);
-		error = suser(curthread);
-		if (error)
-			return (error);
 		error = alq_open(&ktr_alq, (const char *)ktr_alq_file,
 		    req->td->td_ucred, ALQ_DEFAULT_CMODE,
 		    sizeof(struct ktr_entry), ktr_alq_depth);
 		if (error == 0) {
-			ktr_mask &= ~KTR_ALQ_MASK;
 			ktr_alq_cnt = 0;
 			ktr_alq_failed = 0;
 			ktr_alq_enabled = 1;
@@ -269,22 +287,17 @@ static	int db_mach_vtrace(void);
 
 DB_SHOW_COMMAND(ktr, db_ktr_all)
 {
-	int quit;
 	
-	quit = 0;
 	tstate.cur = (ktr_idx - 1) & (KTR_ENTRIES - 1);
 	tstate.first = -1;
-	if (strcmp(modif, "v") == 0)
-		db_ktr_verbose = 1;
-	else
-		db_ktr_verbose = 0;
-	if (strcmp(modif, "a") == 0) {
+	db_ktr_verbose = index(modif, 'v') != NULL;
+	if (index(modif, 'a') != NULL) {
+		db_disable_pager();
 		while (cncheckc() != -1)
 			if (db_mach_vtrace() == 0)
 				break;
 	} else {
-		db_setup_paging(db_simple_pager, &quit, db_lines_per_page);
-		while (!quit)
+		while (!db_pager_quit)
 			if (db_mach_vtrace() == 0)
 				break;
 	}

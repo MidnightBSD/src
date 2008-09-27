@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_subr.c,v 1.96 2005/01/06 23:35:39 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_subr.c,v 1.103 2007/06/05 00:00:54 jeff Exp $");
 
 #include "opt_zero.h"
 
@@ -105,9 +105,9 @@ vm_pgmoveco(vm_map_t mapa, vm_offset_t kaddr, vm_offset_t uaddr)
 	VM_OBJECT_LOCK(uobject);
 retry:
 	if ((user_pg = vm_page_lookup(uobject, upindex)) != NULL) {
-		vm_page_lock_queues();
-		if (vm_page_sleep_if_busy(user_pg, 1, "vm_pgmoveco"))
+		if (vm_page_sleep_if_busy(user_pg, TRUE, "vm_pgmoveco"))
 			goto retry;
+		vm_page_lock_queues();
 		pmap_remove_all(user_pg);
 		vm_page_free(user_pg);
 	} else {
@@ -358,10 +358,11 @@ again:
 }
 
 /*
- * General routine to allocate a hash table.
+ * General routine to allocate a hash table with control of memory flags.
  */
 void *
-hashinit(int elements, struct malloc_type *type, u_long *hashmask)
+hashinit_flags(int elements, struct malloc_type *type, u_long *hashmask,
+    int flags)
 {
 	long hashsize;
 	LIST_HEAD(generic, generic) *hashtbl;
@@ -369,14 +370,38 @@ hashinit(int elements, struct malloc_type *type, u_long *hashmask)
 
 	if (elements <= 0)
 		panic("hashinit: bad elements");
+
+	/* Exactly one of HASH_WAITOK and HASH_NOWAIT must be set. */
+	KASSERT((flags & HASH_WAITOK) ^ (flags & HASH_NOWAIT),
+	    ("Bad flags (0x%x) passed to hashinit_flags", flags));
+
 	for (hashsize = 1; hashsize <= elements; hashsize <<= 1)
 		continue;
 	hashsize >>= 1;
-	hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl), type, M_WAITOK);
-	for (i = 0; i < hashsize; i++)
-		LIST_INIT(&hashtbl[i]);
-	*hashmask = hashsize - 1;
+
+	if (flags & HASH_NOWAIT)
+		hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl),
+		    type, M_NOWAIT);
+	else
+		hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl),
+		    type, M_WAITOK);
+
+	if (hashtbl != NULL) {
+		for (i = 0; i < hashsize; i++)
+			LIST_INIT(&hashtbl[i]);
+		*hashmask = hashsize - 1;
+	}
 	return (hashtbl);
+}
+
+/*
+ * Allocate and initialize a hash table with default flag: may sleep.
+ */
+void *
+hashinit(int elements, struct malloc_type *type, u_long *hashmask)
+{
+
+	return (hashinit_flags(elements, type, hashmask, HASH_WAITOK));
 }
 
 void
@@ -428,11 +453,11 @@ uio_yield(void)
 	struct thread *td;
 
 	td = curthread;
-	mtx_lock_spin(&sched_lock);
 	DROP_GIANT();
-	sched_prio(td, td->td_ksegrp->kg_user_pri); /* XXXKSE */
+	thread_lock(td);
+	sched_prio(td, td->td_user_pri);
 	mi_switch(SW_INVOL, NULL);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	PICKUP_GIANT();
 }
 

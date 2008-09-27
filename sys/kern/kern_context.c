@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_context.c,v 1.7 2003/11/09 20:31:03 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_context.c,v 1.9 2007/03/05 13:10:57 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -39,9 +39,9 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_context.c,v 1.7 2003/11/09 20:31:03 marcel
 #include <sys/ucontext.h>
 
 /*
- * The first two fields of a ucontext_t are the signal mask and
- * the machine context.  The next field is uc_link; we want to
- * avoid destroying the link when copying out contexts.
+ * The first two fields of a ucontext_t are the signal mask and the machine
+ * context.  The next field is uc_link; we want to avoid destroying the link
+ * when copying out contexts.
  */
 #define	UC_COPY_SIZE	offsetof(ucontext_t, uc_link)
 
@@ -58,9 +58,6 @@ struct swapcontext_args {
 }
 #endif
 
-/*
- * MPSAFE
- */
 int
 getcontext(struct thread *td, struct getcontext_args *uap)
 {
@@ -79,9 +76,6 @@ getcontext(struct thread *td, struct getcontext_args *uap)
 	return (ret);
 }
 
-/*
- * MPSAFE
- */
 int
 setcontext(struct thread *td, struct setcontext_args *uap)
 {

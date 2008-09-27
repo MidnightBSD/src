@@ -41,7 +41,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_lock.c,v 1.89.2.3 2006/03/13 03:05:50 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_lock.c,v 1.110 2007/05/18 15:04:59 jhb Exp $");
+
+#include "opt_ddb.h"
+#include "opt_global.h"
 
 #include <sys/param.h>
 #include <sys/kdb.h>
@@ -52,20 +55,52 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_lock.c,v 1.89.2.3 2006/03/13 03:05:50 jeff
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
+#include <sys/lock_profile.h>
 #ifdef DEBUG_LOCKS
 #include <sys/stack.h>
 #endif
+
+#ifdef DDB
+#include <ddb/ddb.h>
+static void	db_show_lockmgr(struct lock_object *lock);
+#endif
+static void	lock_lockmgr(struct lock_object *lock, int how);
+static int	unlock_lockmgr(struct lock_object *lock);
+
+struct lock_class lock_class_lockmgr = {
+	.lc_name = "lockmgr",
+	.lc_flags = LC_SLEEPLOCK | LC_SLEEPABLE | LC_RECURSABLE | LC_UPGRADABLE,
+#ifdef DDB
+	.lc_ddb_show = db_show_lockmgr,
+#endif
+	.lc_lock = lock_lockmgr,
+	.lc_unlock = unlock_lockmgr,
+};
 
 /*
  * Locking primitives implementation.
  * Locks provide shared/exclusive sychronization.
  */
 
+void
+lock_lockmgr(struct lock_object *lock, int how)
+{
+
+	panic("lockmgr locks do not support sleep interlocking");
+}
+
+int
+unlock_lockmgr(struct lock_object *lock)
+{
+
+	panic("lockmgr locks do not support sleep interlocking");
+}
+
 #define	COUNT(td, x)	if ((td)) (td)->td_locks += (x)
 #define LK_ALL (LK_HAVE_EXCL | LK_WANT_EXCL | LK_WANT_UPGRADE | \
 	LK_SHARE_NONZERO | LK_WAIT_NONZERO)
 
-static int acquire(struct lock **lkpp, int extflags, int wanted);
+static int acquire(struct lock **lkpp, int extflags, int wanted, int *contested, uint64_t *waittime);
 static int acquiredrain(struct lock *lkp, int extflags) ;
 
 static __inline void
@@ -93,7 +128,7 @@ shareunlock(struct thread *td, struct lock *lkp, int decr) {
 }
 
 static int
-acquire(struct lock **lkpp, int extflags, int wanted)
+acquire(struct lock **lkpp, int extflags, int wanted, int *contested, uint64_t *waittime)
 {
 	struct lock *lkp = *lkpp;
 	int error;
@@ -104,6 +139,9 @@ acquire(struct lock **lkpp, int extflags, int wanted)
 	if ((extflags & LK_NOWAIT) && (lkp->lk_flags & wanted))
 		return EBUSY;
 	error = 0;
+	if ((lkp->lk_flags & wanted) != 0)
+		lock_profile_obtain_lock_failed(&lkp->lk_object, contested, waittime);
+	
 	while ((lkp->lk_flags & wanted) != 0) {
 		CTR2(KTR_LOCK,
 		    "acquire(): lkp == %p, lk_flags == 0x%x sleeping",
@@ -142,16 +180,16 @@ acquire(struct lock **lkpp, int extflags, int wanted)
  * accepted shared locks and shared-to-exclusive upgrades to go away.
  */
 int
-lockmgr(lkp, flags, interlkp, td)
-	struct lock *lkp;
-	u_int flags;
-	struct mtx *interlkp;
-	struct thread *td;
+_lockmgr(struct lock *lkp, u_int flags, struct mtx *interlkp, 
+	 struct thread *td, char *file, int line)
+
 {
 	int error;
 	struct thread *thr;
 	int extflags, lockflags;
-
+	int contested = 0;
+	uint64_t waitstart = 0;
+	
 	error = 0;
 	if (td == NULL)
 		thr = LK_KERNPROC;
@@ -179,7 +217,7 @@ lockmgr(lkp, flags, interlkp, td)
 
 	if ((flags & (LK_NOWAIT|LK_RELEASE)) == 0)
 		WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK,
-		    &lkp->lk_interlock->mtx_object,
+		    &lkp->lk_interlock->lock_object,
 		    "Acquiring lockmgr lock \"%s\"", lkp->lk_wmesg);
 
 	if (panicstr != NULL) {
@@ -209,10 +247,13 @@ lockmgr(lkp, flags, interlkp, td)
 			lockflags = LK_HAVE_EXCL;
 			if (td != NULL && !(td->td_pflags & TDP_DEADLKTREAT))
 				lockflags |= LK_WANT_EXCL | LK_WANT_UPGRADE;
-			error = acquire(&lkp, extflags, lockflags);
+			error = acquire(&lkp, extflags, lockflags, &contested, &waitstart);
 			if (error)
 				break;
 			sharelock(td, lkp, 1);
+			if (lkp->lk_sharecount == 1)
+				lock_profile_obtain_lock_success(&lkp->lk_object, contested, waitstart, file, line);
+
 #if defined(DEBUG_LOCKS)
 			stack_save(&lkp->lk_stack);
 #endif
@@ -223,6 +264,8 @@ lockmgr(lkp, flags, interlkp, td)
 		 * An alternative would be to fail with EDEADLK.
 		 */
 		sharelock(td, lkp, 1);
+		if (lkp->lk_sharecount == 1)
+			lock_profile_obtain_lock_success(&lkp->lk_object, contested, waitstart, file, line);
 		/* FALLTHROUGH downgrade */
 
 	case LK_DOWNGRADE:
@@ -266,6 +309,8 @@ lockmgr(lkp, flags, interlkp, td)
 		if (lkp->lk_sharecount <= 0)
 			panic("lockmgr: upgrade without shared");
 		shareunlock(td, lkp, 1);
+		if (lkp->lk_sharecount == 0)
+			lock_profile_release_lock(&lkp->lk_object);
 		/*
 		 * If we are just polling, check to see if we will block.
 		 */
@@ -282,7 +327,7 @@ lockmgr(lkp, flags, interlkp, td)
 			 * drop to zero, then take exclusive lock.
 			 */
 			lkp->lk_flags |= LK_WANT_UPGRADE;
-			error = acquire(&lkp, extflags, LK_SHARE_NONZERO);
+			error = acquire(&lkp, extflags, LK_SHARE_NONZERO, &contested, &waitstart);
 			lkp->lk_flags &= ~LK_WANT_UPGRADE;
 
 			if (error) {
@@ -296,6 +341,7 @@ lockmgr(lkp, flags, interlkp, td)
 			lkp->lk_lockholder = thr;
 			lkp->lk_exclusivecount = 1;
 			COUNT(td, 1);
+			lock_profile_obtain_lock_success(&lkp->lk_object, contested, waitstart, file, line);
 #if defined(DEBUG_LOCKS)
 			stack_save(&lkp->lk_stack);
 #endif
@@ -335,14 +381,14 @@ lockmgr(lkp, flags, interlkp, td)
 		/*
 		 * Try to acquire the want_exclusive flag.
 		 */
-		error = acquire(&lkp, extflags, (LK_HAVE_EXCL | LK_WANT_EXCL));
+		error = acquire(&lkp, extflags, (LK_HAVE_EXCL | LK_WANT_EXCL), &contested, &waitstart);
 		if (error)
 			break;
 		lkp->lk_flags |= LK_WANT_EXCL;
 		/*
 		 * Wait for shared locks and upgrades to finish.
 		 */
-		error = acquire(&lkp, extflags, LK_HAVE_EXCL | LK_WANT_UPGRADE | LK_SHARE_NONZERO);
+		error = acquire(&lkp, extflags, LK_HAVE_EXCL | LK_WANT_UPGRADE | LK_SHARE_NONZERO, &contested, &waitstart);
 		lkp->lk_flags &= ~LK_WANT_EXCL;
 		if (error) {
 			if (lkp->lk_flags & LK_WAIT_NONZERO)		
@@ -355,6 +401,7 @@ lockmgr(lkp, flags, interlkp, td)
 			panic("lockmgr: non-zero exclusive count");
 		lkp->lk_exclusivecount = 1;
 		COUNT(td, 1);
+		lock_profile_obtain_lock_success(&lkp->lk_object, contested, waitstart, file, line);
 #if defined(DEBUG_LOCKS)
 		stack_save(&lkp->lk_stack);
 #endif
@@ -374,11 +421,18 @@ lockmgr(lkp, flags, interlkp, td)
 				lkp->lk_flags &= ~LK_HAVE_EXCL;
 				lkp->lk_lockholder = LK_NOPROC;
 				lkp->lk_exclusivecount = 0;
+				lock_profile_release_lock(&lkp->lk_object);
 			} else {
 				lkp->lk_exclusivecount--;
 			}
 		} else if (lkp->lk_flags & LK_SHARE_NONZERO)
 			shareunlock(td, lkp, 1);
+		else  {
+			printf("lockmgr: thread %p unlocking unheld lock\n",
+			    thr);
+			kdb_backtrace();
+		}
+
 		if (lkp->lk_flags & LK_WAIT_NONZERO)
 			wakeup((void *)lkp);
 		break;
@@ -490,13 +544,14 @@ lockinit(lkp, prio, wmesg, timo, flags)
 	lkp->lk_waitcount = 0;
 	lkp->lk_exclusivecount = 0;
 	lkp->lk_prio = prio;
-	lkp->lk_wmesg = wmesg;
 	lkp->lk_timo = timo;
 	lkp->lk_lockholder = LK_NOPROC;
 	lkp->lk_newlock = NULL;
 #ifdef DEBUG_LOCKS
 	stack_zero(&lkp->lk_stack);
 #endif
+	lock_init(&lkp->lk_object, &lock_class_lockmgr, wmesg, NULL,
+	    LO_RECURSABLE | LO_SLEEPABLE | LO_UPGRADABLE);
 }
 
 /*
@@ -506,8 +561,10 @@ void
 lockdestroy(lkp)
 	struct lock *lkp;
 {
+
 	CTR2(KTR_LOCK, "lockdestroy(): lkp == %p (lk_wmesg == \"%s\")",
 	    lkp, lkp->lk_wmesg);
+	lock_destroy(&lkp->lk_object);
 }
 
 /*
@@ -554,6 +611,21 @@ lockcount(lkp)
 }
 
 /*
+ * Determine the number of waiters on a lock.
+ */
+int
+lockwaiters(lkp)
+	struct lock *lkp;
+{
+	int count;
+
+	mtx_lock(lkp->lk_interlock);
+	count = lkp->lk_waitcount;
+	mtx_unlock(lkp->lk_interlock);
+	return (count);
+}
+
+/*
  * Print out information about state of a lock. Used by VOP_PRINT
  * routines to display status about contained locks.
  */
@@ -575,3 +647,71 @@ lockmgr_printinfo(lkp)
 	stack_print(&lkp->lk_stack);
 #endif
 }
+
+#ifdef DDB
+/*
+ * Check to see if a thread that is blocked on a sleep queue is actually
+ * blocked on a 'struct lock'.  If so, output some details and return true.
+ * If the lock has an exclusive owner, return that in *ownerp.
+ */
+int
+lockmgr_chain(struct thread *td, struct thread **ownerp)
+{
+	struct lock *lkp;
+
+	lkp = td->td_wchan;
+
+	/* Simple test to see if wchan points to a lockmgr lock. */
+	if (LOCK_CLASS(&lkp->lk_object) == &lock_class_lockmgr &&
+	    lkp->lk_wmesg == td->td_wmesg)
+		goto ok;
+
+	/*
+	 * If this thread is doing a DRAIN, then it would be asleep on
+	 * &lkp->lk_flags rather than lkp.
+	 */
+	lkp = (struct lock *)((char *)td->td_wchan -
+	    offsetof(struct lock, lk_flags));
+	if (LOCK_CLASS(&lkp->lk_object) == &lock_class_lockmgr &&
+	    lkp->lk_wmesg == td->td_wmesg && (lkp->lk_flags & LK_WAITDRAIN))
+		goto ok;
+
+	/* Doen't seem to be a lockmgr lock. */
+	return (0);
+
+ok:
+	/* Ok, we think we have a lockmgr lock, so output some details. */
+	db_printf("blocked on lk \"%s\" ", lkp->lk_wmesg);
+	if (lkp->lk_sharecount) {
+		db_printf("SHARED (count %d)\n", lkp->lk_sharecount);
+		*ownerp = NULL;
+	} else {
+		db_printf("EXCL (count %d)\n", lkp->lk_exclusivecount);
+		*ownerp = lkp->lk_lockholder;
+	}
+	return (1);
+}
+
+void
+db_show_lockmgr(struct lock_object *lock)
+{
+	struct thread *td;
+	struct lock *lkp;
+
+	lkp = (struct lock *)lock;
+
+	db_printf(" lock type: %s\n", lkp->lk_wmesg);
+	db_printf(" state: ");
+	if (lkp->lk_sharecount)
+		db_printf("SHARED (count %d)\n", lkp->lk_sharecount);
+	else if (lkp->lk_flags & LK_HAVE_EXCL) {
+		td = lkp->lk_lockholder;
+		db_printf("EXCL (count %d) %p ", lkp->lk_exclusivecount, td);
+		db_printf("(tid %d, pid %d, \"%s\")\n", td->td_tid,
+		    td->td_proc->p_pid, td->td_proc->p_comm);
+	} else
+		db_printf("UNLOCKED\n");
+	if (lkp->lk_waitcount > 0)
+		db_printf(" waiters: %d\n", lkp->lk_waitcount);
+}
+#endif

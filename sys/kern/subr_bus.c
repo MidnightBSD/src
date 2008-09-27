@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_bus.c,v 1.184.2.1 2005/10/06 23:15:18 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_bus.c,v 1.201.4.1 2008/02/06 03:35:40 iwasaki Exp $");
 
 #include "opt_bus.h"
 
@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_bus.c,v 1.184.2.1 2005/10/06 23:15:18 imp 
 #include <sys/systm.h>
 #include <sys/uio.h>
 #include <sys/bus.h>
+#include <sys/interrupt.h>
 
 #include <machine/stdarg.h>
 
@@ -417,7 +418,7 @@ devclose(struct cdev *dev, int fflag, int devtype, d_thread_t *td)
  * userland in realtime.  We are required to free the data as well as
  * the n1 object because we allocate them separately.  Also note that
  * we return one record at a time.  If you try to read this device a
- * character at a time, you will loose the rest of the data.  Listening
+ * character at a time, you will lose the rest of the data.  Listening
  * programs are expected to cope.
  */
 static int
@@ -495,6 +496,15 @@ devpoll(struct cdev *dev, int events, d_thread_t *td)
 	mtx_unlock(&devsoftc.mtx);
 
 	return (revents);
+}
+
+/**
+ * @brief Return whether the userland process is running
+ */
+boolean_t
+devctl_process_running(void)
+{
+	return (devsoftc.async_proc != NULL);
 }
 
 /**
@@ -781,8 +791,18 @@ devclass_find_internal(const char *classname, const char *parentname,
 
 		bus_data_generation_update();
 	}
-	if (parentname && dc && !dc->parent) {
-		dc->parent = devclass_find_internal(parentname, 0, FALSE);
+
+	/*
+	 * If a parent class is specified, then set that as our parent so
+	 * that this devclass will support drivers for the parent class as
+	 * well.  If the parent class has the same name don't do this though
+	 * as it creates a cycle that can trigger an infinite loop in
+	 * device_probe_child() if a device exists for which there is no
+	 * suitable driver.
+	 */
+	if (parentname && dc && !dc->parent &&
+	    strcmp(classname, parentname) != 0) {
+		dc->parent = devclass_find_internal(parentname, NULL, FALSE);
 	}
 
 	return (dc);
@@ -799,7 +819,7 @@ devclass_find_internal(const char *classname, const char *parentname,
 devclass_t
 devclass_create(const char *classname)
 {
-	return (devclass_find_internal(classname, 0, TRUE));
+	return (devclass_find_internal(classname, NULL, TRUE));
 }
 
 /**
@@ -813,7 +833,7 @@ devclass_create(const char *classname)
 devclass_t
 devclass_find(const char *classname)
 {
-	return (devclass_find_internal(classname, 0, FALSE));
+	return (devclass_find_internal(classname, NULL, FALSE));
 }
 
 /**
@@ -850,7 +870,7 @@ devclass_add_driver(devclass_t dc, driver_t *driver)
 	/*
 	 * Make sure the devclass which the driver is implementing exists.
 	 */
-	devclass_find_internal(driver->name, 0, TRUE);
+	devclass_find_internal(driver->name, NULL, TRUE);
 
 	dl->driver = driver;
 	TAILQ_INSERT_TAIL(&dc->drivers, dl, link);
@@ -1427,7 +1447,7 @@ make_device(device_t parent, const char *name, int unit)
 	PDEBUG(("%s at %s as unit %d", name, DEVICENAME(parent), unit));
 
 	if (name) {
-		dc = devclass_find_internal(name, 0, TRUE);
+		dc = devclass_find_internal(name, NULL, TRUE);
 		if (!dc) {
 			printf("make_device: can't find device class %s\n",
 			    name);
@@ -1677,11 +1697,11 @@ next_matching_driver(devclass_t dc, device_t dev, driverlink_t last)
 /**
  * @internal
  */
-static int
+int
 device_probe_child(device_t dev, device_t child)
 {
 	devclass_t dc;
-	driverlink_t best = 0;
+	driverlink_t best = NULL;
 	driverlink_t dl;
 	int result, pri = 0;
 	int hasclass = (child->devclass != 0);
@@ -1717,7 +1737,7 @@ device_probe_child(device_t dev, device_t child)
 			/* Reset flags and devclass before the next probe. */
 			child->devflags = 0;
 			if (!hasclass)
-				device_set_devclass(child, 0);
+				device_set_devclass(child, NULL);
 
 			/*
 			 * If the driver returns SUCCESS, there can be
@@ -1734,7 +1754,7 @@ device_probe_child(device_t dev, device_t child)
 			 * certainly doesn't match.
 			 */
 			if (result > 0) {
-				device_set_driver(child, 0);
+				device_set_driver(child, NULL);
 				continue;
 			}
 
@@ -1743,7 +1763,7 @@ device_probe_child(device_t dev, device_t child)
 			 * best matching driver. Initialise the value
 			 * of pri for the first match.
 			 */
-			if (best == 0 || result > pri) {
+			if (best == NULL || result > pri) {
 				best = dl;
 				pri = result;
 				continue;
@@ -2230,7 +2250,7 @@ device_set_devclass(device_t dev, const char *classname)
 		return (EINVAL);
 	}
 
-	dc = devclass_find_internal(classname, 0, TRUE);
+	dc = devclass_find_internal(classname, NULL, TRUE);
 	if (!dc)
 		return (ENOMEM);
 
@@ -2260,7 +2280,7 @@ device_set_driver(device_t dev, driver_t *driver)
 		free(dev->softc, M_BUS_SC);
 		dev->softc = NULL;
 	}
-	kobj_delete((kobj_t) dev, 0);
+	kobj_delete((kobj_t) dev, NULL);
 	dev->driver = driver;
 	if (driver) {
 		kobj_init((kobj_t) dev, (kobj_class_t) driver);
@@ -2268,7 +2288,7 @@ device_set_driver(device_t dev, driver_t *driver)
 			dev->softc = malloc(driver->size, M_BUS_SC,
 			    M_NOWAIT | M_ZERO);
 			if (!dev->softc) {
-				kobj_delete((kobj_t) dev, 0);
+				kobj_delete((kobj_t) dev, NULL);
 				kobj_init((kobj_t) dev, &null_class);
 				dev->driver = NULL;
 				return (ENOMEM);
@@ -2369,8 +2389,8 @@ device_attach(device_t dev)
 		printf("device_attach: %s%d attach returned %d\n",
 		    dev->driver->name, dev->unit, error);
 		/* Unset the class; set in device_probe_child */
-		if (dev->devclass == 0)
-			device_set_devclass(dev, 0);
+		if (dev->devclass == NULL)
+			device_set_devclass(dev, NULL);
 		device_set_driver(dev, NULL);
 		device_sysctl_fini(dev);
 		dev->state = DS_NOTPRESENT;
@@ -2681,7 +2701,7 @@ struct resource *
 resource_list_alloc(struct resource_list *rl, device_t bus, device_t child,
     int type, int *rid, u_long start, u_long end, u_long count, u_int flags)
 {
-	struct resource_list_entry *rle = 0;
+	struct resource_list_entry *rle = NULL;
 	int passthrough = (device_get_parent(child) != bus);
 	int isdefault = (start == 0UL && end == ~0UL);
 
@@ -2740,7 +2760,7 @@ int
 resource_list_release(struct resource_list *rl, device_t bus, device_t child,
     int type, int rid, struct resource *res)
 {
-	struct resource_list_entry *rle = 0;
+	struct resource_list_entry *rle = NULL;
 	int passthrough = (device_get_parent(child) != bus);
 	int error;
 
@@ -2820,13 +2840,20 @@ resource_list_purge(struct resource_list *rl)
 {
 	struct resource_list_entry *rle;
 
-	STAILQ_FOREACH(rle, rl, link) {
+	while ((rle = STAILQ_FIRST(rl)) != NULL) {
 		if (rle->res)
 			bus_release_resource(rman_get_device(rle->res),
 			    rle->type, rle->rid, rle->res);
 		STAILQ_REMOVE_HEAD(rl, link);
 		free(rle, M_BUS);
 	}
+}
+
+device_t
+bus_generic_add_child(device_t dev, int order, const char *name, int unit)
+{
+
+	return (device_add_child_ordered(dev, order, name, unit));
 }
 
 /**
@@ -3078,12 +3105,13 @@ bus_generic_driver_added(device_t dev, driver_t *driver)
  */
 int
 bus_generic_setup_intr(device_t dev, device_t child, struct resource *irq,
-    int flags, driver_intr_t *intr, void *arg, void **cookiep)
+    int flags, driver_filter_t *filter, driver_intr_t *intr, void *arg, 
+    void **cookiep)
 {
 	/* Propagate up the bus hierarchy until someone handles it. */
 	if (dev->parent)
 		return (BUS_SETUP_INTR(dev->parent, child, irq, flags,
-		    intr, arg, cookiep));
+		    filter, intr, arg, cookiep));
 	return (EINVAL);
 }
 
@@ -3186,6 +3214,22 @@ bus_generic_config_intr(device_t dev, int irq, enum intr_trigger trig,
 	if (dev->parent)
 		return (BUS_CONFIG_INTR(dev->parent, irq, trig, pol));
 	return (EINVAL);
+}
+
+/**
+ * @brief Helper function for implementing BUS_GET_DMA_TAG().
+ *
+ * This simple implementation of BUS_GET_DMA_TAG() simply calls the
+ * BUS_GET_DMA_TAG() method of the parent of @p dev.
+ */
+bus_dma_tag_t
+bus_generic_get_dma_tag(device_t dev, device_t child)
+{
+
+	/* Propagate up the bus hierarchy until someone handles it. */
+	if (dev->parent != NULL)
+		return (BUS_GET_DMA_TAG(dev->parent, child));
+	return (NULL);
 }
 
 /**
@@ -3325,6 +3369,39 @@ bus_generic_child_present(device_t dev, device_t child)
  * to maintain some sort of a list of resources allocated by each device.
  */
 
+int
+bus_alloc_resources(device_t dev, struct resource_spec *rs,
+    struct resource **res)
+{
+	int i;
+
+	for (i = 0; rs[i].type != -1; i++)
+		res[i] = NULL;
+	for (i = 0; rs[i].type != -1; i++) {
+		res[i] = bus_alloc_resource_any(dev,
+		    rs[i].type, &rs[i].rid, rs[i].flags);
+		if (res[i] == NULL && !(rs[i].flags & RF_OPTIONAL)) {
+			bus_release_resources(dev, rs, res);
+			return (ENXIO);
+		}
+	}
+	return (0);
+}
+
+void
+bus_release_resources(device_t dev, const struct resource_spec *rs,
+    struct resource **res)
+{
+	int i;
+
+	for (i = 0; rs[i].type != -1; i++)
+		if (res[i] != NULL) {
+			bus_release_resource(
+			    dev, rs[i].type, rs[i].rid, res[i]);
+			res[i] = NULL;
+		}
+}
+
 /**
  * @brief Wrapper function for BUS_ALLOC_RESOURCE().
  *
@@ -3335,8 +3412,8 @@ struct resource *
 bus_alloc_resource(device_t dev, int type, int *rid, u_long start, u_long end,
     u_long count, u_int flags)
 {
-	if (dev->parent == 0)
-		return (0);
+	if (dev->parent == NULL)
+		return (NULL);
 	return (BUS_ALLOC_RESOURCE(dev->parent, dev, type, rid, start, end,
 	    count, flags));
 }
@@ -3350,7 +3427,7 @@ bus_alloc_resource(device_t dev, int type, int *rid, u_long start, u_long end,
 int
 bus_activate_resource(device_t dev, int type, int rid, struct resource *r)
 {
-	if (dev->parent == 0)
+	if (dev->parent == NULL)
 		return (EINVAL);
 	return (BUS_ACTIVATE_RESOURCE(dev->parent, dev, type, rid, r));
 }
@@ -3364,7 +3441,7 @@ bus_activate_resource(device_t dev, int type, int rid, struct resource *r)
 int
 bus_deactivate_resource(device_t dev, int type, int rid, struct resource *r)
 {
-	if (dev->parent == 0)
+	if (dev->parent == NULL)
 		return (EINVAL);
 	return (BUS_DEACTIVATE_RESOURCE(dev->parent, dev, type, rid, r));
 }
@@ -3378,7 +3455,7 @@ bus_deactivate_resource(device_t dev, int type, int rid, struct resource *r)
 int
 bus_release_resource(device_t dev, int type, int rid, struct resource *r)
 {
-	if (dev->parent == 0)
+	if (dev->parent == NULL)
 		return (EINVAL);
 	return (BUS_RELEASE_RESOURCE(dev->parent, dev, type, rid, r));
 }
@@ -3391,23 +3468,25 @@ bus_release_resource(device_t dev, int type, int rid, struct resource *r)
  */
 int
 bus_setup_intr(device_t dev, struct resource *r, int flags,
-    driver_intr_t handler, void *arg, void **cookiep)
+    driver_filter_t filter, driver_intr_t handler, void *arg, void **cookiep)
 {
 	int error;
 
-	if (dev->parent != 0) {
-		if ((flags &~ INTR_ENTROPY) == (INTR_TYPE_NET | INTR_MPSAFE) &&
-		    !debug_mpsafenet)
-			flags &= ~INTR_MPSAFE;
+	if (dev->parent != NULL) {
 		error = BUS_SETUP_INTR(dev->parent, dev, r, flags,
-		    handler, arg, cookiep);
+		    filter, handler, arg, cookiep);
 		if (error == 0) {
-			if (!(flags & (INTR_MPSAFE | INTR_FAST)))
+			if (handler != NULL && !(flags & INTR_MPSAFE))
 				device_printf(dev, "[GIANT-LOCKED]\n");
 			if (bootverbose && (flags & INTR_MPSAFE))
 				device_printf(dev, "[MPSAFE]\n");
-			if (flags & INTR_FAST)
-				device_printf(dev, "[FAST]\n");
+			if (filter != NULL) {
+				if (handler == NULL)
+					device_printf(dev, "[FILTER]\n");
+				else 
+					device_printf(dev, "[FILTER+ITHREAD]\n");
+			} else 
+				device_printf(dev, "[ITHREAD]\n");
 		}
 	} else
 		error = EINVAL;
@@ -3423,7 +3502,7 @@ bus_setup_intr(device_t dev, struct resource *r, int flags,
 int
 bus_teardown_intr(device_t dev, struct resource *r, void *cookie)
 {
-	if (dev->parent == 0)
+	if (dev->parent == NULL)
 		return (EINVAL);
 	return (BUS_TEARDOWN_INTR(dev->parent, dev, r, cookie));
 }
@@ -3556,6 +3635,35 @@ bus_child_location_str(device_t child, char *buf, size_t buflen)
 	return (BUS_CHILD_LOCATION_STR(parent, child, buf, buflen));
 }
 
+/**
+ * @brief Wrapper function for BUS_GET_DMA_TAG().
+ *
+ * This function simply calls the BUS_GET_DMA_TAG() method of the
+ * parent of @p dev.
+ */
+bus_dma_tag_t
+bus_get_dma_tag(device_t dev)
+{
+	device_t parent;
+
+	parent = device_get_parent(dev);
+	if (parent == NULL)
+		return (NULL);
+	return (BUS_GET_DMA_TAG(parent, dev));
+}
+
+/* Resume all devices and then notify userland that we're up again. */
+static int
+root_resume(device_t dev)
+{
+	int error;
+
+	error = bus_generic_resume(dev);
+	if (error == 0)
+		devctl_notify("kern", "power", "resume", NULL);
+	return (error);
+}
+
 static int
 root_print_child(device_t dev, device_t child)
 {
@@ -3594,7 +3702,7 @@ static kobj_method_t root_methods[] = {
 	/* Device interface */
 	KOBJMETHOD(device_shutdown,	bus_generic_shutdown),
 	KOBJMETHOD(device_suspend,	bus_generic_suspend),
-	KOBJMETHOD(device_resume,	bus_generic_resume),
+	KOBJMETHOD(device_resume,	root_resume),
 
 	/* Bus interface */
 	KOBJMETHOD(bus_print_child,	root_print_child),
@@ -3627,7 +3735,7 @@ root_bus_module_handler(module_t mod, int what, void* arg)
 		kobj_init((kobj_t) root_bus, (kobj_class_t) &root_driver);
 		root_bus->driver = &root_driver;
 		root_bus->state = DS_ATTACHED;
-		root_devclass = devclass_find_internal("root", 0, FALSE);
+		root_devclass = devclass_find_internal("root", NULL, FALSE);
 		devinit();
 		return (0);
 
@@ -3683,7 +3791,7 @@ driver_module_handler(module_t mod, int what, void *arg)
 	kobj_class_t driver;
 
 	dmd = (struct driver_module_data *)arg;
-	bus_devclass = devclass_find_internal(dmd->dmd_busname, 0, TRUE);
+	bus_devclass = devclass_find_internal(dmd->dmd_busname, NULL, TRUE);
 	error = 0;
 
 	switch (what) {
@@ -3713,7 +3821,7 @@ driver_module_handler(module_t mod, int what, void *arg)
 				    parentname, TRUE);
 		} else {
 			*dmd->dmd_devclass =
-				devclass_find_internal(driver->name, 0, TRUE);
+				devclass_find_internal(driver->name, NULL, TRUE);
 		}
 		break;
 
@@ -3743,6 +3851,40 @@ driver_module_handler(module_t mod, int what, void *arg)
 	}
 
 	return (error);
+}
+
+/**
+ * @brief Enumerate all hinted devices for this bus.
+ *
+ * Walks through the hints for this bus and calls the bus_hinted_child
+ * routine for each one it fines.  It searches first for the specific
+ * bus that's being probed for hinted children (eg isa0), and then for
+ * generic children (eg isa).
+ *
+ * @param	dev	bus device to enumerate
+ */
+void
+bus_enumerate_hinted_children(device_t bus)
+{
+	int i;
+	const char *dname, *busname;
+	int dunit;
+
+	/*
+	 * enumerate all devices on the specific bus
+	 */
+	busname = device_get_nameunit(bus);
+	i = 0;
+	while (resource_find_match(&i, &dname, &dunit, "at", busname) == 0)
+		BUS_HINTED_CHILD(bus, dname, dunit);
+
+	/*
+	 * and all the generic ones.
+	 */
+	busname = device_get_name(bus);
+	i = 0;
+	while (resource_find_match(&i, &dname, &dunit, "at", busname) == 0)
+		BUS_HINTED_CHILD(bus, dname, dunit);
 }
 
 #ifdef BUS_DEBUG

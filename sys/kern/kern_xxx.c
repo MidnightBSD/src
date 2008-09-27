@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_xxx.c,v 1.46 2005/01/06 23:35:39 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_xxx.c,v 1.49 2007/03/05 13:10:57 rwatson Exp $");
 
 #include "opt_compat.h"
 
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_xxx.c,v 1.46 2005/01/06 23:35:39 imp Exp $
 #include <sys/systm.h>
 #include <sys/sysproto.h>
 #include <sys/kernel.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -53,9 +54,6 @@ struct gethostname_args {
 	u_int	len;
 };
 #endif
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 ogethostname(td, uap)
@@ -81,9 +79,6 @@ struct sethostname_args {
 	u_int	len;
 };
 #endif
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 osethostname(td, uap)
@@ -107,9 +102,6 @@ struct ogethostid_args {
 	int	dummy;
 };
 #endif
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 ogethostid(td, uap)
@@ -128,9 +120,6 @@ struct osethostid_args {
 	long	hostid;
 };
 #endif
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 osethostid(td, uap)
@@ -139,7 +128,8 @@ osethostid(td, uap)
 {
 	int error;
 
-	if ((error = suser(td)))
+	error = priv_check(td, PRIV_SETHOSTID);
+	if (error)
 		return (error);
 	mtx_lock(&Giant);
 	hostid = uap->hostid;
@@ -147,22 +137,20 @@ osethostid(td, uap)
 	return (0);
 }
 
-/*
- * MPSAFE
- */
 int
 oquota(td, uap)
 	struct thread *td;
 	struct oquota_args *uap;
 {
+
 	return (ENOSYS);
 }
 #endif /* COMPAT_43 */
 
 /*
- * This is the FreeBSD-1.1 compatable uname(2) interface.  These
- * days it is done in libc as a wrapper around a bunch of sysctl's.
- * This must maintain the old 1.1 binary ABI.
+ * This is the FreeBSD-1.1 compatable uname(2) interface.  These days it is
+ * done in libc as a wrapper around a bunch of sysctl's.  This must maintain
+ * the old 1.1 binary ABI.
  */
 #if SYS_NMLN != 32
 #error "FreeBSD-1.1 uname syscall has been broken"
@@ -172,10 +160,6 @@ struct uname_args {
         struct utsname  *name;
 };
 #endif
-
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 uname(td, uap)
@@ -255,10 +239,6 @@ struct getdomainname_args {
         int     len;
 };
 #endif
-
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 getdomainname(td, uap)
@@ -283,10 +263,6 @@ struct setdomainname_args {
         int     len;
 };
 #endif
-
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 setdomainname(td, uap)
@@ -295,9 +271,10 @@ setdomainname(td, uap)
 {
         int error, domainnamelen;
 
+	error = priv_check(td, PRIV_SETDOMAINNAME);
+	if (error)
+		return (error);
 	mtx_lock(&Giant);
-        if ((error = suser(td)))
-		goto done2;
         if ((u_int)uap->len > sizeof (domainname) - 1) {
 		error = EINVAL;
 		goto done2;
@@ -309,4 +286,3 @@ done2:
 	mtx_unlock(&Giant);
         return (error);
 }
-

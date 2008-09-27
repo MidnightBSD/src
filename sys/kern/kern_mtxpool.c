@@ -24,7 +24,7 @@
  */
 
 /* Mutex pool routines.  These routines are designed to be used as short
- * term leaf mutexes (e.g. the last mutex you might aquire other then
+ * term leaf mutexes (e.g. the last mutex you might acquire other then
  * calling msleep()).  They operate using a shared pool.  A mutex is chosen
  * from the pool based on the supplied pointer (which may or may not be
  * valid).
@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mtxpool.c,v 1.11 2005/02/10 12:02:37 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_mtxpool.c,v 1.12 2007/05/27 20:50:23 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

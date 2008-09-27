@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_alq.c,v 1.12 2005/04/16 12:12:27 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_alq.c,v 1.19 2007/06/01 14:33:11 kib Exp $");
 
 #include "opt_mac.h"
 
@@ -34,7 +34,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_alq.c,v 1.12 2005/04/16 12:12:27 rwatson E
 #include <sys/kernel.h>
 #include <sys/kthread.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
+#include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/namei.h>
 #include <sys/proc.h>
@@ -44,6 +44,8 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_alq.c,v 1.12 2005/04/16 12:12:27 rwatson E
 #include <sys/unistd.h>
 #include <sys/fcntl.h>
 #include <sys/eventhandler.h>
+
+#include <security/mac/mac_framework.h>
 
 /* Async. Logging Queue */
 struct alq {
@@ -172,8 +174,6 @@ ald_daemon(void)
 	int needwakeup;
 	struct alq *alq;
 
-	mtx_lock(&Giant);
-
 	ald_thread = FIRST_THREAD_IN_PROC(ald_proc);
 
 	EVENTHANDLER_REGISTER(shutdown_pre_sync, ald_shutdown, NULL,
@@ -250,6 +250,7 @@ alq_doio(struct alq *alq)
 	struct ale *alstart;
 	int totlen;
 	int iov;
+	int vfslocked;
 
 	vp = alq->aq_vp;
 	td = curthread;
@@ -291,6 +292,7 @@ alq_doio(struct alq *alq)
 	/*
 	 * Do all of the junk required to write now.
 	 */
+	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_start_write(vp, &mp, V_WAIT);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
 	VOP_LEASE(vp, td, alq->aq_cred, LEASE_WRITE);
@@ -303,6 +305,7 @@ alq_doio(struct alq *alq)
 		VOP_WRITE(vp, &auio, IO_UNIT | IO_APPEND, alq->aq_cred);
 	VOP_UNLOCK(vp, 0, td);
 	vn_finished_write(mp);
+	VFS_UNLOCK_GIANT(vfslocked);
 
 	ALQ_LOCK(alq);
 	alq->aq_flags &= ~AQ_FLUSHING;
@@ -345,21 +348,23 @@ alq_open(struct alq **alqp, const char *file, struct ucred *cred, int cmode,
 	char *bufp;
 	int flags;
 	int error;
-	int i;
+	int i, vfslocked;
 
 	*alqp = NULL;
 	td = curthread;
 
-	NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_SYSSPACE, file, td);
+	NDINIT(&nd, LOOKUP, NOFOLLOW | MPSAFE, UIO_SYSSPACE, file, td);
 	flags = FWRITE | O_NOFOLLOW | O_CREAT;
 
-	error = vn_open_cred(&nd, &flags, cmode, cred, -1);
+	error = vn_open_cred(&nd, &flags, cmode, cred, NULL);
 	if (error)
 		return (error);
-	
+
+	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	/* We just unlock so we hold a reference */
 	VOP_UNLOCK(nd.ni_vp, 0, td);
+	VFS_UNLOCK_GIANT(vfslocked);
 
 	alq = malloc(sizeof(*alq), M_ALD, M_WAITOK|M_ZERO);
 	alq->aq_entbuf = malloc(count * size, M_ALD, M_WAITOK|M_ZERO);

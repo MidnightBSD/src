@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_uuid.c,v 1.8 2005/01/06 23:35:39 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_uuid.c,v 1.13 2007/04/23 12:53:00 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -116,7 +116,7 @@ uuid_node(uint16_t *node)
 /*
  * Get the current time as a 60 bit count of 100-nanosecond intervals
  * since 00:00:00.00, October 15,1582. We apply a magic offset to convert
- * the Unix time since 00:00:00.00, Januari 1, 1970 to the date of the
+ * the Unix time since 00:00:00.00, January 1, 1970 to the date of the
  * Gregorian reform to the Christian calendar.
  */
 static uint64_t
@@ -131,30 +131,12 @@ uuid_time(void)
 	return (time & ((1LL << 60) - 1LL));
 }
 
-#ifndef _SYS_SYSPROTO_H_
-struct uuidgen_args {
-	struct uuid *store;
-	int	count;
-};
-#endif
-
-int
-uuidgen(struct thread *td, struct uuidgen_args *uap)
+struct uuid *
+kern_uuidgen(struct uuid *store, size_t count)
 {
 	struct uuid_private uuid;
 	uint64_t time;
-	int error;
-
-	/*
-	 * Limit the number of UUIDs that can be created at the same time
-	 * to some arbitrary number. This isn't really necessary, but I
-	 * like to have some sort of upper-bound that's less than 2G :-)
-	 * XXX needs to be tunable.
-	 */
-	if (uap->count < 1 || uap->count > 2048)
-		return (EINVAL);
-
-	/* XXX: pre-validate accessibility to the whole of the UUID store? */
+	size_t n;
 
 	mtx_lock(&uuid_mutex);
 
@@ -171,25 +153,52 @@ uuidgen(struct thread *td, struct uuidgen_args *uap)
 		uuid.seq = uuid_last.seq;
 
 	uuid_last = uuid;
-	uuid_last.time.ll = (time + uap->count - 1) & ((1LL << 60) - 1LL);
+	uuid_last.time.ll = (time + count - 1) & ((1LL << 60) - 1LL);
 
 	mtx_unlock(&uuid_mutex);
 
 	/* Set sequence and variant and deal with byte order. */
 	uuid.seq = htobe16(uuid.seq | 0x8000);
 
-	/* XXX: this should copyout larger chunks at a time. */
-	do {
-		/* Set time and version (=1) and deal with byte order. */
+	for (n = 0; n < count; n++) {
+		/* Set time and version (=1). */
 		uuid.time.x.low = (uint32_t)time;
 		uuid.time.x.mid = (uint16_t)(time >> 32);
 		uuid.time.x.hi = ((uint16_t)(time >> 48) & 0xfff) | (1 << 12);
-		error = copyout(&uuid, uap->store, sizeof(uuid));
-		uap->store++;
-		uap->count--;
+		store[n] = *(struct uuid *)&uuid;
 		time++;
-	} while (uap->count > 0 && !error);
+	}
 
+	return (store);
+}
+
+#ifndef _SYS_SYSPROTO_H_
+struct uuidgen_args {
+	struct uuid *store;
+	int	count;
+};
+#endif
+int
+uuidgen(struct thread *td, struct uuidgen_args *uap)
+{
+	struct uuid *store;
+	size_t count;
+	int error;
+
+	/*
+	 * Limit the number of UUIDs that can be created at the same time
+	 * to some arbitrary number. This isn't really necessary, but I
+	 * like to have some sort of upper-bound that's less than 2G :-)
+	 * XXX probably needs to be tunable.
+	 */
+	if (uap->count < 1 || uap->count > 2048)
+		return (EINVAL);
+
+	count = uap->count;
+	store = malloc(count * sizeof(struct uuid), M_TEMP, M_WAITOK);
+	kern_uuidgen(store, count);
+	error = copyout(store, uap->store, count * sizeof(struct uuid));
+	free(store, M_TEMP);
 	return (error);
 }
 
@@ -272,6 +281,7 @@ le_uuid_dec(void const *buf, struct uuid *uuid)
 	for (i = 0; i < _UUID_NODE_LEN; i++)
 		uuid->node[i] = p[10 + i];
 }
+
 void
 be_uuid_enc(void *buf, struct uuid const *uuid)
 {
@@ -302,4 +312,50 @@ be_uuid_dec(void const *buf, struct uuid *uuid)
 	uuid->clock_seq_low = p[9];
 	for (i = 0; i < _UUID_NODE_LEN; i++)
 		uuid->node[i] = p[10 + i];
+}
+
+int
+parse_uuid(const char *str, struct uuid *uuid)
+{
+	u_int c[11];
+	int n;
+
+	/* An empty string represents a nil UUID. */
+	if (*str == '\0') {
+		bzero(uuid, sizeof(*uuid));
+		return (0);
+	}
+
+	/* The UUID string representation has a fixed length. */
+	if (strlen(str) != 36)
+		return (EINVAL);
+
+	/*
+	 * We only work with "new" UUIDs. New UUIDs have the form:
+	 *      01234567-89ab-cdef-0123-456789abcdef
+	 * The so called "old" UUIDs, which we don't support, have the form:
+	 *      0123456789ab.cd.ef.01.23.45.67.89.ab
+	 */
+	if (str[8] != '-')
+		return (EINVAL);
+
+	n = sscanf(str, "%8x-%4x-%4x-%2x%2x-%2x%2x%2x%2x%2x%2x", c + 0, c + 1,
+	    c + 2, c + 3, c + 4, c + 5, c + 6, c + 7, c + 8, c + 9, c + 10);
+	/* Make sure we have all conversions. */
+	if (n != 11)
+		return (EINVAL);
+
+	/* Successful scan. Build the UUID. */
+	uuid->time_low = c[0];
+	uuid->time_mid = c[1];
+	uuid->time_hi_and_version = c[2];
+	uuid->clock_seq_hi_and_reserved = c[3];
+	uuid->clock_seq_low = c[4];
+	for (n = 0; n < 6; n++)
+		uuid->node[n] = c[n + 5];
+
+	/* Check semantics... */
+	return (((c[3] & 0x80) != 0x00 &&		/* variant 0? */
+	    (c[3] & 0xc0) != 0x80 &&			/* variant 1? */
+	    (c[3] & 0xe0) != 0xc0) ? EINVAL : 0);	/* variant 2? */
 }

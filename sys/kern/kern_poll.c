@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_poll.c,v 1.19.2.2 2005/10/07 14:00:05 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_poll.c,v 1.31 2007/08/06 14:26:00 rwatson Exp $");
 
 #include "opt_device_polling.h"
 
@@ -113,7 +113,7 @@ static int poll_burst_max_sysctl(SYSCTL_HANDLER_ARGS)
 	uint32_t val = poll_burst_max;
 	int error;
 
-	error = sysctl_handle_int(oidp, &val, sizeof(int), req);
+	error = sysctl_handle_int(oidp, &val, 0, req);
 	if (error || !req->newptr )
 		return (error);
 	if (val < MIN_POLL_BURST_MAX || val > MAX_POLL_BURST_MAX)
@@ -137,7 +137,7 @@ static int poll_each_burst_sysctl(SYSCTL_HANDLER_ARGS)
 	uint32_t val = poll_each_burst;
 	int error;
 
-	error = sysctl_handle_int(oidp, &val, sizeof(int), req);
+	error = sysctl_handle_int(oidp, &val, 0, req);
 	if (error || !req->newptr )
 		return (error);
 	if (val < 1)
@@ -167,7 +167,7 @@ static int user_frac_sysctl(SYSCTL_HANDLER_ARGS)
 	uint32_t val = user_frac;
 	int error;
 
-	error = sysctl_handle_int(oidp, &val, sizeof(int), req);
+	error = sysctl_handle_int(oidp, &val, 0, req);
 	if (error || !req->newptr )
 		return (error);
 	if (val < 0 || val > 99)
@@ -190,7 +190,7 @@ static int reg_frac_sysctl(SYSCTL_HANDLER_ARGS)
 	uint32_t val = reg_frac;
 	int error;
 
-	error = sysctl_handle_int(oidp, &val, sizeof(int), req);
+	error = sysctl_handle_int(oidp, &val, 0, req);
 	if (error || !req->newptr )
 		return (error);
 	if (val < 1 || val > hz)
@@ -329,7 +329,6 @@ ether_poll(int count)
 {
 	int i;
 
-	NET_LOCK_GIANT();
 	mtx_lock(&poll_mtx);
 
 	if (count > poll_each_burst)
@@ -339,7 +338,6 @@ ether_poll(int count)
 		pr[i].handler(pr[i].ifp, POLL_ONLY, count);
 
 	mtx_unlock(&poll_mtx);
-	NET_UNLOCK_GIANT();
 }
 
 /*
@@ -365,8 +363,6 @@ netisr_pollmore()
 {
 	struct timeval t;
 	int kern_load;
-
-	NET_ASSERT_GIANT();
 
 	mtx_lock(&poll_mtx);
 	phase = 5;
@@ -417,8 +413,6 @@ netisr_poll(void)
 	int i, cycles;
 	enum poll_cmd arg = POLL_ONLY;
 
-	NET_ASSERT_GIANT();
-
 	mtx_lock(&poll_mtx);
 	phase = 3;
 	if (residual_burst == 0) { /* first call in this tick */
@@ -455,8 +449,6 @@ ether_poll_register(poll_handler_t *h, struct ifnet *ifp)
 
 	KASSERT(h != NULL, ("%s: handler is NULL", __func__));
 	KASSERT(ifp != NULL, ("%s: ifp is NULL", __func__));
-
-	NET_ASSERT_GIANT();
 
 	mtx_lock(&poll_mtx);
 	if (poll_handlers >= POLL_LIST_LEN) {
@@ -504,7 +496,6 @@ ether_poll_deregister(struct ifnet *ifp)
 
 	KASSERT(ifp != NULL, ("%s: ifp is NULL", __func__));
 
-	NET_ASSERT_GIANT();
 	mtx_lock(&poll_mtx);
 
 	for (i = 0 ; i < poll_handlers ; i++)
@@ -535,7 +526,7 @@ poll_switch(SYSCTL_HANDLER_ARGS)
 	int error;
 	int val = polling;
 
-	error = sysctl_handle_int(oidp, &val, sizeof(int), req);
+	error = sysctl_handle_int(oidp, &val, 0, req);
 	if (error || !req->newptr )
 		return (error);
 
@@ -547,7 +538,6 @@ poll_switch(SYSCTL_HANDLER_ARGS)
 
 	polling = val;
 
-	NET_LOCK_GIANT();
 	IFNET_RLOCK();
 	TAILQ_FOREACH(ifp, &ifnet, if_link) {
 		if (ifp->if_capabilities & IFCAP_POLLING) {
@@ -565,7 +555,6 @@ poll_switch(SYSCTL_HANDLER_ARGS)
 		}
 	}
 	IFNET_RUNLOCK();
-	NET_UNLOCK_GIANT();
 
 	log(LOG_ERR, "kern.polling.enable is deprecated. Use ifconfig(8)");
 
@@ -580,17 +569,17 @@ poll_idle(void)
 
 	rtp.prio = RTP_PRIO_MAX;	/* lowest priority */
 	rtp.type = RTP_PRIO_IDLE;
-	mtx_lock_spin(&sched_lock);
-	rtp_to_pri(&rtp, td->td_ksegrp);
-	mtx_unlock_spin(&sched_lock);
+	PROC_SLOCK(td->td_proc);
+	rtp_to_pri(&rtp, td);
+	PROC_SUNLOCK(td->td_proc);
 
 	for (;;) {
 		if (poll_in_idle_loop && poll_handlers > 0) {
 			idlepoll_sleeping = 0;
 			ether_poll(poll_each_burst);
-			mtx_lock_spin(&sched_lock);
+			thread_lock(td);
 			mi_switch(SW_VOL, NULL);
-			mtx_unlock_spin(&sched_lock);
+			thread_unlock(td);
 		} else {
 			idlepoll_sleeping = 1;
 			tsleep(&idlepoll_sleeping, 0, "pollid", hz * 3);

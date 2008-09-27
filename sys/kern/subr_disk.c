@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_disk.c,v 1.85.2.1 2006/02/14 03:29:31 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_disk.c,v 1.88 2006/10/31 21:11:21 pjd Exp $");
 
 #include "opt_geom.h"
 
@@ -43,6 +43,7 @@ disk_err(struct bio *bp, const char *what, int blkdone, int nl)
 	case BIO_WRITE:		printf("cmd=write "); break;
 	case BIO_DELETE:	printf("cmd=delete "); break;
 	case BIO_GETATTR:	printf("cmd=getattr "); break;
+	case BIO_FLUSH:		printf("cmd=flush "); break;
 	default:		printf("cmd=%x ", bp->bio_cmd); break;
 	}
 	sn = bp->bio_pblkno;
@@ -99,7 +100,7 @@ void
 bioq_insert_head(struct bio_queue_head *head, struct bio *bp)
 {
 
-	if (TAILQ_FIRST(&head->queue) == NULL)
+	if (TAILQ_EMPTY(&head->queue))
 		head->insert_point = bp;
 	TAILQ_INSERT_HEAD(&head->queue, bp, bio_queue);
 }
@@ -108,7 +109,7 @@ void
 bioq_insert_tail(struct bio_queue_head *head, struct bio *bp)
 {
 
-	if (TAILQ_FIRST(&head->queue) == NULL)
+	if (TAILQ_EMPTY(&head->queue))
 		head->insert_point = bp;
 	TAILQ_INSERT_TAIL(&head->queue, bp, bio_queue);
 }

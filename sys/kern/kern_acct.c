@@ -2,13 +2,39 @@
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
  * (c) UNIX System Laboratories, Inc.
+ * Copyright (c) 2005 Robert N. M. Watson
+ * All rights reserved.
+ *
  * All or some portions of this file are derived from material licensed
  * to the University of California by American Telephone and Telegraph
  * Co. or Unix System Laboratories, Inc. and are reproduced herein with
  * the permission of UNIX System Laboratories, Inc.
  *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
  * Copyright (c) 1994 Christopher G. Demetriou
- * Copyright (c) 2005 Robert N. M. Watson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_acct.c,v 1.74.2.3 2006/02/14 23:13:17 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_acct.c,v 1.95 2007/08/31 13:56:26 dds Exp $");
 
 #include "opt_mac.h"
 
@@ -52,11 +78,12 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_acct.c,v 1.74.2.3 2006/02/14 23:13:17 jhb 
 #include <sys/fcntl.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
+#include <sys/limits.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/namei.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
 #include <sys/sched.h>
@@ -68,23 +95,33 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_acct.c,v 1.74.2.3 2006/02/14 23:13:17 jhb 
 #include <sys/tty.h>
 #include <sys/vnode.h>
 
+#include <security/mac/mac_framework.h>
+
 /*
  * The routines implemented in this file are described in:
  *      Leffler, et al.: The Design and Implementation of the 4.3BSD
  *	    UNIX Operating System (Addison Welley, 1989)
  * on pages 62-63.
+ * On May 2007 the historic 3 bits base 8 exponent, 13 bit fraction
+ * compt_t representation described in the above reference was replaced
+ * with that of IEEE-754 floats.
  *
  * Arguably, to simplify accounting operations, this mechanism should
  * be replaced by one in which an accounting log file (similar to /dev/klog)
  * is read by a user process, etc.  However, that has its own problems.
  */
 
+/* Floating point definitions from <float.h>. */
+#define FLT_MANT_DIG    24              /* p */
+#define FLT_MAX_EXP     128             /* emax */
+
 /*
  * Internal accounting functions.
  * The former's operation is described in Leffler, et al., and the latter
  * was provided by UCB with the 4.4BSD-Lite release
  */
-static comp_t	encode_comp_t(u_long, u_long);
+static uint32_t	encode_timeval(struct timeval);
+static uint32_t	encode_long(long);
 static void	acctwatch(void);
 static void	acct_thread(void *);
 static int	acct_disable(struct thread *);
@@ -94,6 +131,7 @@ static int	acct_disable(struct thread *);
  * acct_sx protects against changes to the active vnode and credentials
  * while accounting records are being committed to disk.
  */
+static int		 acct_configured;
 static int		 acct_suspended;
 static struct vnode	*acct_vp;
 static struct ucred	*acct_cred;
@@ -146,60 +184,60 @@ SYSCTL_PROC(_kern, OID_AUTO, acct_chkfreq, CTLTYPE_INT|CTLFLAG_RW,
     &acctchkfreq, 0, sysctl_acct_chkfreq, "I",
     "frequency for checking the free space");
 
+SYSCTL_INT(_kern, OID_AUTO, acct_configured, CTLFLAG_RD, &acct_configured, 0,
+	"Accounting configured or not");
+
 SYSCTL_INT(_kern, OID_AUTO, acct_suspended, CTLFLAG_RD, &acct_suspended, 0,
 	"Accounting suspended or not");
 
 /*
- * Accounting system call.  Written based on the specification and
- * previous implementation done by Mark Tinguely.
- *
- * MPSAFE
+ * Accounting system call.  Written based on the specification and previous
+ * implementation done by Mark Tinguely.
  */
 int
 acct(struct thread *td, struct acct_args *uap)
 {
 	struct nameidata nd;
-	int error, flags;
+	int error, flags, vfslocked;
 
-	/* Make sure that the caller is root. */
-	error = suser(td);
+	error = priv_check(td, PRIV_ACCT);
 	if (error)
 		return (error);
 
 	/*
 	 * If accounting is to be started to a file, open that file for
-	 * appending and make sure it's a 'normal'.  While we could
-	 * conditionally acquire Giant here, we're actually interacting with
-	 * vnodes from possibly two file systems, making the logic a bit
-	 * complicated.  For now, use Giant unconditionally.
+	 * appending and make sure it's a 'normal'.
 	 */
-	mtx_lock(&Giant);
 	if (uap->path != NULL) {
-		NDINIT(&nd, LOOKUP, NOFOLLOW, UIO_USERSPACE, uap->path, td);
+		NDINIT(&nd, LOOKUP, NOFOLLOW | MPSAFE | AUDITVNODE1,
+		    UIO_USERSPACE, uap->path, td);
 		flags = FWRITE | O_APPEND;
-		error = vn_open(&nd, &flags, 0, -1);
+		error = vn_open(&nd, &flags, 0, NULL);
 		if (error)
-			goto done;
+			return (error);
+		vfslocked = NDHASGIANT(&nd);
 		NDFREE(&nd, NDF_ONLY_PNBUF);
 #ifdef MAC
 		error = mac_check_system_acct(td->td_ucred, nd.ni_vp);
 		if (error) {
 			VOP_UNLOCK(nd.ni_vp, 0, td);
 			vn_close(nd.ni_vp, flags, td->td_ucred, td);
-			goto done;
+			VFS_UNLOCK_GIANT(vfslocked);
+			return (error);
 		}
 #endif
 		VOP_UNLOCK(nd.ni_vp, 0, td);
 		if (nd.ni_vp->v_type != VREG) {
 			vn_close(nd.ni_vp, flags, td->td_ucred, td);
-			error = EACCES;
-			goto done;
+			VFS_UNLOCK_GIANT(vfslocked);
+			return (EACCES);
 		}
+		VFS_UNLOCK_GIANT(vfslocked);
 #ifdef MAC
 	} else {
 		error = mac_check_system_acct(td->td_ucred, NULL);
 		if (error)
-			goto done;
+			return (error);
 #endif
 	}
 
@@ -216,15 +254,18 @@ acct(struct thread *td, struct acct_args *uap)
 	 * enabled.
 	 */
 	acct_suspended = 0;
-	if (acct_vp != NULL)
+	if (acct_vp != NULL) {
+		vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
 		error = acct_disable(td);
+		VFS_UNLOCK_GIANT(vfslocked);
+	}
 	if (uap->path == NULL) {
 		if (acct_state & ACCT_RUNNING) {
 			acct_state |= ACCT_EXITREQ;
 			wakeup(&acct_state);
 		}
 		sx_xunlock(&acct_sx);
-		goto done;
+		return (error);
 	}
 
 	/*
@@ -245,20 +286,22 @@ acct(struct thread *td, struct acct_args *uap)
 		error = kthread_create(acct_thread, NULL, NULL, 0, 0,
 		    "accounting");
 		if (error) {
+			vfslocked = VFS_LOCK_GIANT(acct_vp->v_mount);
 			(void) vn_close(acct_vp, acct_flags, acct_cred, td);
+			VFS_UNLOCK_GIANT(vfslocked);
 			crfree(acct_cred);
+			acct_configured = 0;
 			acct_vp = NULL;
 			acct_cred = NULL;
 			acct_flags = 0;
 			sx_xunlock(&acct_sx);
 			log(LOG_NOTICE, "Unable to start accounting thread\n");
-			goto done;
+			return (error);
 		}
 	}
+	acct_configured = 1;
 	sx_xunlock(&acct_sx);
 	log(LOG_NOTICE, "Accounting enabled\n");
-done:
-	mtx_unlock(&Giant);
 	return (error);
 }
 
@@ -274,6 +317,7 @@ acct_disable(struct thread *td)
 	sx_assert(&acct_sx, SX_XLOCKED);
 	error = vn_close(acct_vp, acct_flags, acct_cred, td);
 	crfree(acct_cred);
+	acct_configured = 0;
 	acct_vp = NULL;
 	acct_cred = NULL;
 	acct_flags = 0;
@@ -290,11 +334,11 @@ acct_disable(struct thread *td)
 int
 acct_process(struct thread *td)
 {
-	struct acct acct;
+	struct acctv2 acct;
 	struct timeval ut, st, tmp;
 	struct plimit *newlim, *oldlim;
 	struct proc *p;
-	struct rusage *r;
+	struct rusage ru;
 	int t, ret, vfslocked;
 
 	/*
@@ -327,9 +371,9 @@ acct_process(struct thread *td)
 	bcopy(p->p_comm, acct.ac_comm, sizeof acct.ac_comm);
 
 	/* (2) The amount of user and system time that was used */
-	calcru(p, &ut, &st);
-	acct.ac_utime = encode_comp_t(ut.tv_sec, ut.tv_usec);
-	acct.ac_stime = encode_comp_t(st.tv_sec, st.tv_usec);
+	rufetchcalc(p, &ru, &ut, &st);
+	acct.ac_utime = encode_timeval(ut);
+	acct.ac_stime = encode_timeval(st);
 
 	/* (3) The elapsed time the command ran (and its starting time) */
 	tmp = boottime;
@@ -337,20 +381,21 @@ acct_process(struct thread *td)
 	acct.ac_btime = tmp.tv_sec;
 	microuptime(&tmp);
 	timevalsub(&tmp, &p->p_stats->p_start);
-	acct.ac_etime = encode_comp_t(tmp.tv_sec, tmp.tv_usec);
+	acct.ac_etime = encode_timeval(tmp);
 
 	/* (4) The average amount of memory used */
-	r = &p->p_stats->p_ru;
 	tmp = ut;
 	timevaladd(&tmp, &st);
+	/* Convert tmp (i.e. u + s) into hz units to match ru_i*. */
 	t = tmp.tv_sec * hz + tmp.tv_usec / tick;
 	if (t)
-		acct.ac_mem = (r->ru_ixrss + r->ru_idrss + r->ru_isrss) / t;
+		acct.ac_mem = encode_long((ru.ru_ixrss + ru.ru_idrss +
+		    + ru.ru_isrss) / t);
 	else
 		acct.ac_mem = 0;
 
 	/* (5) The number of disk I/O operations done */
-	acct.ac_io = encode_comp_t(r->ru_inblock + r->ru_oublock, 0);
+	acct.ac_io = encode_long(ru.ru_inblock + ru.ru_oublock);
 
 	/* (6) The UID and GID of the process */
 	acct.ac_uid = p->p_ucred->cr_ruid;
@@ -365,8 +410,14 @@ acct_process(struct thread *td)
 	SESS_UNLOCK(p->p_session);
 
 	/* (8) The boolean flags that tell how the process terminated, etc. */
-	acct.ac_flag = p->p_acflag;
+	acct.ac_flagx = p->p_acflag;
 	PROC_UNLOCK(p);
+
+	/* Setup ancillary structure fields. */
+	acct.ac_flagx |= ANVER;
+	acct.ac_zero = 0;
+	acct.ac_version = 2;
+	acct.ac_len = acct.ac_len2 = sizeof(acct);
 
 	/*
 	 * Eliminate any file size rlimit.
@@ -393,43 +444,106 @@ acct_process(struct thread *td)
 	return (ret);
 }
 
+/* FLOAT_CONVERSION_START (Regression testing; don't remove this line.) */
+
+/* Convert timevals and longs into IEEE-754 bit patterns. */
+
+/* Mantissa mask (MSB is implied, so subtract 1). */
+#define MANT_MASK ((1 << (FLT_MANT_DIG - 1)) - 1)
+
 /*
- * Encode_comp_t converts from ticks in seconds and microseconds
- * to ticks in 1/AHZ seconds.  The encoding is described in
- * Leffler, et al., on page 63.
+ * We calculate integer values to a precision of approximately
+ * 28 bits.
+ * This is high-enough precision to fill the 24 float bits
+ * and low-enough to avoid overflowing the 32 int bits.
  */
+#define CALC_BITS 28
 
-#define	MANTSIZE	13			/* 13 bit mantissa. */
-#define	EXPSIZE		3			/* Base 8 (3 bit) exponent. */
-#define	MAXFRACT	((1 << MANTSIZE) - 1)	/* Maximum fractional value. */
+/* log_2(1000000). */
+#define LOG2_1M 20
 
-static comp_t
-encode_comp_t(u_long s, u_long us)
+/*
+ * Convert the elements of a timeval into a 32-bit word holding
+ * the bits of a IEEE-754 float.
+ * The float value represents the timeval's value in microsecond units.
+ */
+static uint32_t
+encode_timeval(struct timeval tv)
 {
-	int exp, rnd;
+	int log2_s;
+	int val, exp;	/* Unnormalized value and exponent */
+	int norm_exp;	/* Normalized exponent */
+	int shift;
 
-	exp = 0;
-	rnd = 0;
-	s *= AHZ;
-	s += us / (1000000 / AHZ);	/* Maximize precision. */
-
-	while (s > MAXFRACT) {
-	rnd = s & (1 << (EXPSIZE - 1));	/* Round up? */
-		s >>= EXPSIZE;		/* Base 8 exponent == 3 bit shift. */
-		exp++;
+	/*
+	 * First calculate value and exponent to about CALC_BITS precision.
+	 * Note that the following conditionals have been ordered so that
+	 * the most common cases appear first.
+	 */
+	if (tv.tv_sec == 0) {
+		if (tv.tv_usec == 0)
+			return (0);
+		exp = 0;
+		val = tv.tv_usec;
+	} else {
+		/*
+		 * Calculate the value to a precision of approximately
+		 * CALC_BITS.
+		 */
+		log2_s = fls(tv.tv_sec) - 1;
+		if (log2_s + LOG2_1M < CALC_BITS) {
+			exp = 0;
+			val = 1000000 * tv.tv_sec + tv.tv_usec;
+		} else {
+			exp = log2_s + LOG2_1M - CALC_BITS;
+			val = (unsigned int)(((u_int64_t)1000000 * tv.tv_sec +
+			    tv.tv_usec) >> exp);
+		}
 	}
-
-	/* If we need to round up, do it (and handle overflow correctly). */
-	if (rnd && (++s > MAXFRACT)) {
-		s >>= EXPSIZE;
-		exp++;
-	}
-
-	/* Clean it up and polish it off. */
-	exp <<= MANTSIZE;		/* Shift the exponent into place */
-	exp += s;			/* and add on the mantissa. */
-	return (exp);
+	/* Now normalize and pack the value into an IEEE-754 float. */
+	norm_exp = fls(val) - 1;
+	shift = FLT_MANT_DIG - norm_exp - 1;
+#ifdef ACCT_DEBUG
+	printf("val=%d exp=%d shift=%d log2(val)=%d\n",
+	    val, exp, shift, norm_exp);
+	printf("exp=%x mant=%x\n", FLT_MAX_EXP - 1 + exp + norm_exp,
+	    ((shift > 0 ? (val << shift) : (val >> -shift)) & MANT_MASK));
+#endif
+	return (((FLT_MAX_EXP - 1 + exp + norm_exp) << (FLT_MANT_DIG - 1)) |
+	    ((shift > 0 ? val << shift : val >> -shift) & MANT_MASK));
 }
+
+/*
+ * Convert a non-negative long value into the bit pattern of
+ * an IEEE-754 float value.
+ */
+static uint32_t
+encode_long(long val)
+{
+	int norm_exp;	/* Normalized exponent */
+	int shift;
+
+	if (val == 0)
+		return (0);
+	if (val < 0) {
+		log(LOG_NOTICE,
+		    "encode_long: negative value %ld in accounting record\n",
+		    val);
+		val = LONG_MAX;
+	}
+	norm_exp = fls(val) - 1;
+	shift = FLT_MANT_DIG - norm_exp - 1;
+#ifdef ACCT_DEBUG
+	printf("val=%d shift=%d log2(val)=%d\n",
+	    val, shift, norm_exp);
+	printf("exp=%x mant=%x\n", FLT_MAX_EXP - 1 + exp + norm_exp,
+	    ((shift > 0 ? (val << shift) : (val >> -shift)) & MANT_MASK));
+#endif
+	return (((FLT_MAX_EXP - 1 + norm_exp) << (FLT_MANT_DIG - 1)) |
+	    ((shift > 0 ? val << shift : val >> -shift) & MANT_MASK));
+}
+
+/* FLOAT_CONVERSION_END (Regression testing; don't remove this line.) */
 
 /*
  * Periodically check the filesystem to see if accounting
@@ -503,9 +617,9 @@ acct_thread(void *dummy)
 
 	/* This is a low-priority kernel thread. */
 	pri = PRI_MAX_KERN;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_prio(curthread, pri);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 
 	/* If another accounting kthread is already running, just die. */
 	sx_xlock(&acct_sx);
@@ -527,9 +641,8 @@ acct_thread(void *dummy)
 		 * to exit.
 		 */
 		if (!(acct_state & ACCT_EXITREQ)) {
-			sx_xunlock(&acct_sx);
-			tsleep(&acct_state, pri, "-", acctchkfreq * hz);
-			sx_xlock(&acct_sx);
+			sx_sleep(&acct_state, &acct_sx, 0, "-",
+			    acctchkfreq * hz);
 		}
 	}
 

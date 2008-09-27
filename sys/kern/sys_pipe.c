@@ -89,7 +89,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/sys_pipe.c,v 1.184.2.2 2006/01/31 15:44:51 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/sys_pipe.c,v 1.191.2.1 2007/11/25 11:11:28 dumbbell Exp $");
 
 #include "opt_mac.h"
 
@@ -101,7 +101,6 @@ __FBSDID("$FreeBSD: src/sys/kern/sys_pipe.c,v 1.184.2.2 2006/01/31 15:44:51 gleb
 #include <sys/filio.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/mutex.h>
 #include <sys/ttycom.h>
 #include <sys/stat.h>
@@ -116,6 +115,8 @@ __FBSDID("$FreeBSD: src/sys/kern/sys_pipe.c,v 1.184.2.2 2006/01/31 15:44:51 gleb
 #include <sys/vnode.h>
 #include <sys/uio.h>
 #include <sys/event.h>
+
+#include <security/mac/mac_framework.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -174,19 +175,14 @@ static struct filterops pipe_wfiltops =
 #define MINPIPESIZE (PIPE_SIZE/3)
 #define MAXPIPESIZE (2*PIPE_SIZE/3)
 
-static int amountpipes;
 static int amountpipekva;
 static int pipefragretry;
 static int pipeallocfail;
 static int piperesizefail;
 static int piperesizeallowed = 1;
 
-SYSCTL_DECL(_kern_ipc);
-
 SYSCTL_INT(_kern_ipc, OID_AUTO, maxpipekva, CTLFLAG_RDTUN,
 	   &maxpipekva, 0, "Pipe KVA limit");
-SYSCTL_INT(_kern_ipc, OID_AUTO, pipes, CTLFLAG_RD,
-	   &amountpipes, 0, "Current # of pipes");
 SYSCTL_INT(_kern_ipc, OID_AUTO, pipekva, CTLFLAG_RD,
 	   &amountpipekva, 0, "Pipe KVA usage");
 SYSCTL_INT(_kern_ipc, OID_AUTO, pipefragretry, CTLFLAG_RD,
@@ -215,7 +211,6 @@ static int pipespace(struct pipe *cpipe, int size);
 static int pipespace_new(struct pipe *cpipe, int size);
 
 static int	pipe_zone_ctor(void *mem, int size, void *arg, int flags);
-static void	pipe_zone_dtor(void *mem, int size, void *arg);
 static int	pipe_zone_init(void *mem, int size, int flags);
 static void	pipe_zone_fini(void *mem, int size);
 
@@ -227,8 +222,8 @@ static void
 pipeinit(void *dummy __unused)
 {
 
-	pipe_zone = uma_zcreate("PIPE", sizeof(struct pipepair),
-	    pipe_zone_ctor, pipe_zone_dtor, pipe_zone_init, pipe_zone_fini,
+	pipe_zone = uma_zcreate("pipe", sizeof(struct pipepair),
+	    pipe_zone_ctor, NULL, pipe_zone_init, pipe_zone_fini,
 	    UMA_ALIGN_PTR, 0);
 	KASSERT(pipe_zone != NULL, ("pipe_zone not initialized"));
 }
@@ -278,20 +273,7 @@ pipe_zone_ctor(void *mem, int size, void *arg, int flags)
 	 */
 	pp->pp_label = NULL;
 
-	atomic_add_int(&amountpipes, 2);
 	return (0);
-}
-
-static void
-pipe_zone_dtor(void *mem, int size, void *arg)
-{
-	struct pipepair *pp;
-
-	KASSERT(size == sizeof(*pp), ("pipe_zone_dtor: wrong size"));
-
-	pp = (struct pipepair *)mem;
-
-	atomic_subtract_int(&amountpipes, 2);
 }
 
 static int
@@ -320,10 +302,9 @@ pipe_zone_fini(void *mem, int size)
 }
 
 /*
- * The pipe system call for the DTYPE_PIPE type of pipes.  If we fail,
- * let the zone pick up the pieces via pipeclose().
+ * The pipe system call for the DTYPE_PIPE type of pipes.  If we fail, let
+ * the zone pick up the pieces via pipeclose().
  */
-
 /* ARGSUSED */
 int
 pipe(td, uap)
@@ -897,9 +878,9 @@ retry:
 	while (wpipe->pipe_state & PIPE_DIRECTW) {
 		if (wpipe->pipe_state & PIPE_WANTR) {
 			wpipe->pipe_state &= ~PIPE_WANTR;
-			pipeselwakeup(wpipe);
 			wakeup(wpipe);
 		}
+		pipeselwakeup(wpipe);
 		wpipe->pipe_state |= PIPE_WANTW;
 		pipeunlock(wpipe);
 		error = msleep(wpipe, PIPE_MTX(wpipe),
@@ -913,9 +894,9 @@ retry:
 	if (wpipe->pipe_buffer.cnt > 0) {
 		if (wpipe->pipe_state & PIPE_WANTR) {
 			wpipe->pipe_state &= ~PIPE_WANTR;
-			pipeselwakeup(wpipe);
 			wakeup(wpipe);
 		}
+		pipeselwakeup(wpipe);
 		wpipe->pipe_state |= PIPE_WANTW;
 		pipeunlock(wpipe);
 		error = msleep(wpipe, PIPE_MTX(wpipe),
@@ -1077,8 +1058,9 @@ pipe_write(fp, uio, active_cred, flags, td)
 		 * The direct write mechanism will detect the reader going
 		 * away on us.
 		 */
-		if ((uio->uio_iov->iov_len >= PIPE_MINDIRECT) &&
-		    (wpipe->pipe_buffer.size >= PIPE_MINDIRECT) &&
+		if (uio->uio_segflg == UIO_USERSPACE &&
+		    uio->uio_iov->iov_len >= PIPE_MINDIRECT &&
+		    wpipe->pipe_buffer.size >= PIPE_MINDIRECT &&
 		    (fp->f_flag & FNONBLOCK) == 0) {
 			pipeunlock(wpipe);
 			error = pipe_direct_write(wpipe, uio);
@@ -1098,9 +1080,10 @@ pipe_write(fp, uio, active_cred, flags, td)
 		if (wpipe->pipe_state & PIPE_DIRECTW) {
 			if (wpipe->pipe_state & PIPE_WANTR) {
 				wpipe->pipe_state &= ~PIPE_WANTR;
-				pipeselwakeup(wpipe);
 				wakeup(wpipe);
 			}
+			pipeselwakeup(wpipe);
+			wpipe->pipe_state |= PIPE_WANTW;
 			pipeunlock(wpipe);
 			error = msleep(wpipe, PIPE_MTX(rpipe), PRIBIO | PCATCH,
 			    "pipbww", 0);

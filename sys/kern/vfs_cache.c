@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_cache.c,v 1.103.2.1 2006/03/13 03:06:14 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_cache.c,v 1.114 2007/09/21 10:16:56 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -141,8 +141,8 @@ static int	doingcache = 1;		/* 1 => enable the cache */
 SYSCTL_INT(_debug, OID_AUTO, vfscache, CTLFLAG_RW, &doingcache, 0, "");
 
 /* Export size information to userland */
-SYSCTL_INT(_debug, OID_AUTO, vnsize, CTLFLAG_RD, 0, sizeof(struct vnode), "");
-SYSCTL_INT(_debug, OID_AUTO, ncsize, CTLFLAG_RD, 0, sizeof(struct namecache), "");
+SYSCTL_INT(_debug_sizeof, OID_AUTO, namecache, CTLFLAG_RD, 0,
+	sizeof(struct namecache), "");
 
 /*
  * The new name cache statistics
@@ -293,37 +293,6 @@ cache_zap(ncp)
 }
 
 /*
- * cache_leaf_test()
- *
- *      Test whether this (directory) vnode's namei cache entry contains
- *      subdirectories or not.  Used to determine whether the directory is
- *      a leaf in the namei cache or not.  Note: the directory may still
- *      contain files in the namei cache.
- *
- *      Returns 0 if the directory is a leaf, -1 if it isn't.
- */
-int
-cache_leaf_test(struct vnode *vp)
-{
-	struct namecache *ncpc;
-	int leaf;
-
-	leaf = 0;
-	CACHE_LOCK();
-	for (ncpc = LIST_FIRST(&vp->v_cache_src);
-	     ncpc != NULL;
-	     ncpc = LIST_NEXT(ncpc, nc_src)
-	 ) {
-		if (ncpc->nc_vp != NULL && ncpc->nc_vp->v_type == VDIR) {
-			leaf = -1;
-			break;
-		}
-	}
-	CACHE_UNLOCK();
-	return (leaf);
-}
-
-/*
  * Lookup an entry in the cache
  *
  * Lookup is called with dvp pointing to the directory to search,
@@ -345,13 +314,15 @@ cache_lookup(dvp, vpp, cnp)
 	struct componentname *cnp;
 {
 	struct namecache *ncp;
+	struct thread *td;
 	u_int32_t hash;
-	int error;
+	int error, ltype;
 
 	if (!doingcache) {
 		cnp->cn_flags &= ~MAKEENTRY;
 		return (0);
 	}
+	td = cnp->cn_thread;
 retry:
 	CACHE_LOCK();
 	numcalls++;
@@ -450,15 +421,29 @@ success:
 	if (dvp == *vpp) {   /* lookup on "." */
 		VREF(*vpp);
 		CACHE_UNLOCK();
+		/*
+		 * When we lookup "." we still can be asked to lock it
+		 * differently...
+		 */
+		ltype = cnp->cn_lkflags & (LK_SHARED | LK_EXCLUSIVE);
+		if (ltype == VOP_ISLOCKED(*vpp, td))
+			return (-1);
+		else if (ltype == LK_EXCLUSIVE)
+			vn_lock(*vpp, LK_UPGRADE | LK_RETRY, td);
 		return (-1);
 	}
-	if (cnp->cn_flags & ISDOTDOT)
-		VOP_UNLOCK(dvp, 0, cnp->cn_thread);
+	ltype = 0;	/* silence gcc warning */
+	if (cnp->cn_flags & ISDOTDOT) {
+		ltype = VOP_ISLOCKED(dvp, td);
+		VOP_UNLOCK(dvp, 0, td);
+	}
 	VI_LOCK(*vpp);
 	CACHE_UNLOCK();
-	error = vget(*vpp, cnp->cn_lkflags | LK_INTERLOCK, cnp->cn_thread);
+	error = vget(*vpp, cnp->cn_lkflags | LK_INTERLOCK, td);
 	if (cnp->cn_flags & ISDOTDOT)
-		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY, cnp->cn_thread);
+		vn_lock(dvp, ltype | LK_RETRY, td);
+	if ((cnp->cn_flags & ISLASTCN) && (cnp->cn_lkflags & LK_EXCLUSIVE))
+		ASSERT_VOP_ELOCKED(*vpp, "cache_lookup");
 	if (error) {
 		*vpp = NULL;
 		goto retry;
@@ -601,9 +586,6 @@ cache_purge(vp)
 
 /*
  * Flush all entries referencing a particular filesystem.
- *
- * Since we need to check it anyway, we will flush all the invalid
- * entries at the same time.
  */
 void
 cache_purgevfs(mp)
@@ -611,24 +593,15 @@ cache_purgevfs(mp)
 {
 	struct nchashhead *ncpp;
 	struct namecache *ncp, *nnp;
-	struct nchashhead mplist;
-
-	LIST_INIT(&mplist);
-	ncp = NULL;
 
 	/* Scan hash tables for applicable entries */
 	CACHE_LOCK();
 	for (ncpp = &nchashtbl[nchash]; ncpp >= nchashtbl; ncpp--) {
-		for (ncp = LIST_FIRST(ncpp); ncp != 0; ncp = nnp) {
-			nnp = LIST_NEXT(ncp, nc_hash);
-			if (ncp->nc_dvp->v_mount == mp) {
-				LIST_REMOVE(ncp, nc_hash);
-				LIST_INSERT_HEAD(&mplist, ncp, nc_hash);
-			}
+		LIST_FOREACH_SAFE(ncp, ncpp, nc_hash, nnp) {
+			if (ncp->nc_dvp->v_mount == mp)
+				cache_zap(ncp);
 		}
 	}
-	while (!LIST_EMPTY(&mplist))
-		cache_zap(LIST_FIRST(&mplist));
 	CACHE_UNLOCK();
 }
 
@@ -690,7 +663,7 @@ static int disablecwd;
 SYSCTL_INT(_debug, OID_AUTO, disablecwd, CTLFLAG_RW, &disablecwd, 0,
    "Disable the getcwd syscall");
 
-/* Implementation of the getcwd syscall */
+/* Implementation of the getcwd syscall. */
 int
 __getcwd(td, uap)
 	struct thread *td;
@@ -717,10 +690,10 @@ kern___getcwd(struct thread *td, u_char *buf, enum uio_seg bufseg, u_int buflen)
 	tmpbuf = malloc(buflen, M_TEMP, M_WAITOK);
 	fdp = td->td_proc->p_fd;
 	mtx_lock(&Giant);
-	FILEDESC_LOCK(fdp);
+	FILEDESC_SLOCK(fdp);
 	error = vn_fullpath1(td, fdp->fd_cdir, fdp->fd_rdir, tmpbuf,
 	    &bp, buflen);
-	FILEDESC_UNLOCK(fdp);
+	FILEDESC_SUNLOCK(fdp);
 	mtx_unlock(&Giant);
 
 	if (!error) {
@@ -771,11 +744,9 @@ vn_fullpath(struct thread *td, struct vnode *vn, char **retbuf, char **freebuf)
 
 	buf = malloc(MAXPATHLEN, M_TEMP, M_WAITOK);
 	fdp = td->td_proc->p_fd;
-	mtx_lock(&Giant);
-	FILEDESC_LOCK(fdp);
+	FILEDESC_SLOCK(fdp);
 	error = vn_fullpath1(td, vn, fdp->fd_rdir, buf, retbuf, MAXPATHLEN);
-	FILEDESC_UNLOCK(fdp);
-	mtx_unlock(&Giant);
+	FILEDESC_SUNLOCK(fdp);
 
 	if (!error)
 		*freebuf = buf;
@@ -794,8 +765,6 @@ vn_fullpath1(struct thread *td, struct vnode *vp, struct vnode *rdir,
 	char *bp;
 	int error, i, slash_prefixed;
 	struct namecache *ncp;
-
-	mtx_assert(&Giant, MA_OWNED);
 
 	bp = buf + buflen - 1;
 	*bp = '\0';

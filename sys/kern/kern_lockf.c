@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_lockf.c,v 1.54 2005/03/29 08:13:01 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_lockf.c,v 1.57 2007/08/07 09:04:50 kib Exp $");
 
 #include "opt_debug_lockf.h"
 
@@ -73,14 +73,14 @@ MALLOC_DEFINE(M_LOCKF, "lockf", "Byte-range locking structures");
 #define NOLOCKF (struct lockf *)0
 #define SELF	0x1
 #define OTHERS	0x2
-static int	 lf_clearlock(struct lockf *);
+static int	 lf_clearlock(struct lockf *, struct lockf **);
 static int	 lf_findoverlap(struct lockf *,
 	    struct lockf *, int, struct lockf ***, struct lockf **);
 static struct lockf *
 	 lf_getblock(struct lockf *);
 static int	 lf_getlock(struct lockf *, struct flock *);
-static int	 lf_setlock(struct lockf *);
-static void	 lf_split(struct lockf *, struct lockf *);
+static int	 lf_setlock(struct lockf *, struct vnode *, struct lockf **);
+static void	 lf_split(struct lockf *, struct lockf *, struct lockf **);
 static void	 lf_wakelock(struct lockf *);
 #ifdef LOCKF_DEBUG
 static void	 lf_print(char *, struct lockf *);
@@ -102,12 +102,13 @@ lf_advlock(ap, head, size)
 	struct lockf **head;
 	u_quad_t size;
 {
-	register struct flock *fl = ap->a_fl;
-	register struct lockf *lock;
+	struct flock *fl = ap->a_fl;
+	struct lockf *lock;
+	struct vnode *vp = ap->a_vp;
 	off_t start, end, oadd;
+	struct lockf *clean, *n;
 	int error;
 
-	mtx_lock(&Giant);
 	/*
 	 * Convert the flock structure into a start and end.
 	 */
@@ -124,40 +125,29 @@ lf_advlock(ap, head, size)
 
 	case SEEK_END:
 		if (size > OFF_MAX ||
-		    (fl->l_start > 0 && size > OFF_MAX - fl->l_start)) {
-			error = EOVERFLOW;
-			goto out;
-		}
+		    (fl->l_start > 0 && size > OFF_MAX - fl->l_start))
+			return (EOVERFLOW);
 		start = size + fl->l_start;
 		break;
 
 	default:
-		error = EINVAL;
-		goto out;
+		return (EINVAL);
 	}
-	if (start < 0) {
-		error = EINVAL;
-		goto out;
-	}
+	if (start < 0)
+		return (EINVAL);
 	if (fl->l_len < 0) {
-		if (start == 0) {
-			error = EINVAL;
-			goto out;
-		}
+		if (start == 0)
+			return (EINVAL);
 		end = start - 1;
 		start += fl->l_len;
-		if (start < 0) {
-			error = EINVAL;
-			goto out;
-		}
+		if (start < 0)
+			return (EINVAL);
 	} else if (fl->l_len == 0)
 		end = -1;
 	else {
 		oadd = fl->l_len - 1;
-		if (oadd > OFF_MAX - start) {
-			error = EOVERFLOW;
-			goto out;
-		}
+		if (oadd > OFF_MAX - start)
+			return (EOVERFLOW);
 		end = start + oadd;
 	}
 	/*
@@ -166,9 +156,16 @@ lf_advlock(ap, head, size)
 	if (*head == (struct lockf *)0) {
 		if (ap->a_op != F_SETLK) {
 			fl->l_type = F_UNLCK;
-			error = 0;
-			goto out;
+			return (0);
 		}
+	}
+	/*
+	 * Allocate a spare structure in case we have to split.
+	 */
+	clean = NULL;
+	if (ap->a_op == F_SETLK || ap->a_op == F_UNLCK) {
+		MALLOC(clean, struct lockf *, sizeof *lock, M_LOCKF, M_WAITOK);
+		clean->lf_next = NULL;
 	}
 	/*
 	 * Create the lockf structure
@@ -192,29 +189,36 @@ lf_advlock(ap, head, size)
 	/*
 	 * Do the requested operation.
 	 */
+	VI_LOCK(vp);
 	switch(ap->a_op) {
 	case F_SETLK:
-		error = lf_setlock(lock);
-		goto out;
+		error = lf_setlock(lock, vp, &clean);
+		break;
 
 	case F_UNLCK:
-		error = lf_clearlock(lock);
-		FREE(lock, M_LOCKF);
-		goto out;
+		error = lf_clearlock(lock, &clean);
+		lock->lf_next = clean;
+		clean = lock;
+		break;
 
 	case F_GETLK:
 		error = lf_getlock(lock, fl);
-		FREE(lock, M_LOCKF);
-		goto out;
+		lock->lf_next = clean;
+		clean = lock;
+		break;
 
 	default:
-		free(lock, M_LOCKF);
+		lock->lf_next = clean;
+		clean = lock;
 		error = EINVAL;
-		goto out;
+		break;
 	}
-	/* NOTREACHED */
-out:
-	mtx_unlock(&Giant);
+	VI_UNLOCK(vp);
+	for (lock = clean; lock != NULL; ) {
+		n = lock->lf_next;
+		free(lock, M_LOCKF);
+		lock = n;
+	}
 	return (error);
 }
 
@@ -222,10 +226,12 @@ out:
  * Set a byte-range lock.
  */
 static int
-lf_setlock(lock)
-	register struct lockf *lock;
+lf_setlock(lock, vp, clean)
+	struct lockf *lock;
+	struct vnode *vp;
+	struct lockf **clean;
 {
-	register struct lockf *block;
+	struct lockf *block;
 	struct lockf **head = lock->lf_head;
 	struct lockf **prev, *overlap, *ltmp;
 	static char lockstr[] = "lockf";
@@ -251,7 +257,8 @@ lf_setlock(lock)
 		 * Free the structure and return if nonblocking.
 		 */
 		if ((lock->lf_flags & F_WAIT) == 0) {
-			FREE(lock, M_LOCKF);
+			lock->lf_next = *clean;
+			*clean = lock;
 			return (EAGAIN);
 		}
 		/*
@@ -266,16 +273,19 @@ lf_setlock(lock)
 		 */
 		if ((lock->lf_flags & F_POSIX) &&
 		    (block->lf_flags & F_POSIX)) {
-			register struct proc *wproc;
+			struct proc *wproc;
+			struct proc *nproc;
 			struct thread *td;
-			register struct lockf *waitblock;
+			struct lockf *waitblock;
 			int i = 0;
 
 			/* The block is waiting on something */
-			/* XXXKSE this is not complete under threads */
 			wproc = (struct proc *)block->lf_id;
-			mtx_lock_spin(&sched_lock);
+restart:
+			nproc = NULL;
+			PROC_SLOCK(wproc);
 			FOREACH_THREAD_IN_PROC(wproc, td) {
+				thread_lock(td);
 				while (td->td_wchan &&
 				    (td->td_wmesg == lockstr) &&
 				    (i++ < maxlockdepth)) {
@@ -284,15 +294,21 @@ lf_setlock(lock)
 					waitblock = waitblock->lf_next;
 					if ((waitblock->lf_flags & F_POSIX) == 0)
 						break;
-					wproc = (struct proc *)waitblock->lf_id;
-					if (wproc == (struct proc *)lock->lf_id) {
-						mtx_unlock_spin(&sched_lock);
-						free(lock, M_LOCKF);
+					nproc = (struct proc *)waitblock->lf_id;
+					if (nproc == (struct proc *)lock->lf_id) {
+						PROC_SUNLOCK(wproc);
+						thread_unlock(td);
+						lock->lf_next = *clean;
+						*clean = lock;
 						return (EDEADLK);
 					}
 				}
+				thread_unlock(td);
 			}
-			mtx_unlock_spin(&sched_lock);
+			PROC_SUNLOCK(wproc);
+			wproc = nproc;
+			if (wproc)
+				goto restart;
 		}
 		/*
 		 * For flock type locks, we must first remove
@@ -302,7 +318,7 @@ lf_setlock(lock)
 		if ((lock->lf_flags & F_FLOCK) &&
 		    lock->lf_type == F_WRLCK) {
 			lock->lf_type = F_UNLCK;
-			(void) lf_clearlock(lock);
+			(void) lf_clearlock(lock, clean);
 			lock->lf_type = F_WRLCK;
 		}
 		/*
@@ -317,7 +333,7 @@ lf_setlock(lock)
 			lf_printlist("lf_setlock", block);
 		}
 #endif /* LOCKF_DEBUG */
-		error = tsleep(lock, priority, lockstr, 0);
+		error = msleep(lock, VI_MTX(vp), priority, lockstr, 0);
 		/*
 		 * We may have been awakened by a signal and/or by a
 		 * debugger continuing us (in which cases we must remove
@@ -331,7 +347,8 @@ lf_setlock(lock)
 			lock->lf_next = NOLOCKF;
 		}
 		if (error) {
-			free(lock, M_LOCKF);
+			lock->lf_next = *clean;
+			*clean = lock;
 			return (error);
 		}
 	}
@@ -376,7 +393,8 @@ lf_setlock(lock)
 			    overlap->lf_type == F_WRLCK)
 				lf_wakelock(overlap);
 			overlap->lf_type = lock->lf_type;
-			FREE(lock, M_LOCKF);
+			lock->lf_next = *clean;
+			*clean = lock;
 			lock = overlap; /* for debug output below */
 			break;
 
@@ -385,7 +403,8 @@ lf_setlock(lock)
 			 * Check for common starting point and different types.
 			 */
 			if (overlap->lf_type == lock->lf_type) {
-				free(lock, M_LOCKF);
+				lock->lf_next = *clean;
+				*clean = lock;
 				lock = overlap; /* for debug output below */
 				break;
 			}
@@ -394,7 +413,7 @@ lf_setlock(lock)
 				lock->lf_next = overlap;
 				overlap->lf_start = lock->lf_end + 1;
 			} else
-				lf_split(overlap, lock);
+				lf_split(overlap, lock, clean);
 			lf_wakelock(overlap);
 			break;
 
@@ -426,7 +445,8 @@ lf_setlock(lock)
 				needtolink = 0;
 			} else
 				*prev = overlap->lf_next;
-			free(overlap, M_LOCKF);
+			overlap->lf_next = *clean;
+			*clean = overlap;
 			continue;
 
 		case 4: /* overlap starts before lock */
@@ -471,8 +491,9 @@ lf_setlock(lock)
  * and remove it (or shrink it), then wakeup anyone we can.
  */
 static int
-lf_clearlock(unlock)
-	register struct lockf *unlock;
+lf_clearlock(unlock, clean)
+	struct lockf *unlock;
+	struct lockf **clean;
 {
 	struct lockf **head = unlock->lf_head;
 	register struct lockf *lf = *head;
@@ -498,7 +519,8 @@ lf_clearlock(unlock)
 
 		case 1: /* overlap == lock */
 			*prev = overlap->lf_next;
-			FREE(overlap, M_LOCKF);
+			overlap->lf_next = *clean;
+			*clean = overlap;
 			break;
 
 		case 2: /* overlap contains lock: split it */
@@ -506,14 +528,15 @@ lf_clearlock(unlock)
 				overlap->lf_start = unlock->lf_end + 1;
 				break;
 			}
-			lf_split(overlap, unlock);
+			lf_split(overlap, unlock, clean);
 			overlap->lf_next = unlock->lf_next;
 			break;
 
 		case 3: /* lock contains overlap */
 			*prev = overlap->lf_next;
 			lf = overlap->lf_next;
-			free(overlap, M_LOCKF);
+			overlap->lf_next = *clean;
+			*clean = overlap;
 			continue;
 
 		case 4: /* overlap starts before lock */
@@ -714,11 +737,12 @@ lf_findoverlap(lf, lock, type, prev, overlap)
  * two or three locks as necessary.
  */
 static void
-lf_split(lock1, lock2)
-	register struct lockf *lock1;
-	register struct lockf *lock2;
+lf_split(lock1, lock2, split)
+	struct lockf *lock1;
+	struct lockf *lock2;
+	struct lockf **split;
 {
-	register struct lockf *splitlock;
+	struct lockf *splitlock;
 
 #ifdef LOCKF_DEBUG
 	if (lockf_debug & 2) {
@@ -742,9 +766,12 @@ lf_split(lock1, lock2)
 	}
 	/*
 	 * Make a new lock consisting of the last part of
-	 * the encompassing lock
+	 * the encompassing lock.  We use the preallocated
+	 * splitlock so we don't have to block.
 	 */
-	MALLOC(splitlock, struct lockf *, sizeof *splitlock, M_LOCKF, M_WAITOK);
+	splitlock = *split;
+	KASSERT(splitlock != NULL, ("no split"));
+	*split = splitlock->lf_next;
 	bcopy(lock1, splitlock, sizeof *splitlock);
 	splitlock->lf_start = lock2->lf_end + 1;
 	TAILQ_INIT(&splitlock->lf_blkhd);

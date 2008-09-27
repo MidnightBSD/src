@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 1987, 1991, 1993
  *	The Regents of the University of California.
- * Copyright (c) 2005 Robert N. M. Watson
+ * Copyright (c) 2005-2006 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,19 @@
  *	@(#)kern_malloc.c	8.3 (Berkeley) 1/4/94
  */
 
+/*
+ * Kernel malloc(9) implementation -- general purpose kernel memory allocator
+ * based on memory types.  Back end is implemented using the UMA(9) zone
+ * allocator.  A set of fixed-size buckets are used for smaller allocations,
+ * and a special UMA allocation interface is used for larger allocations.
+ * Callers declare memory types, and statistics are maintained independently
+ * for each memory type.  Statistics are maintained per-CPU for performance
+ * reasons.  See malloc(9) and comments in malloc.h for a detailed
+ * description.
+ */
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_malloc.c,v 1.142.2.7 2006/01/17 10:19:37 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_malloc.c,v 1.162 2007/06/27 13:39:38 rwatson Exp $");
 
 #include "opt_ddb.h"
 #include "opt_vm.h"
@@ -65,6 +76,9 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_malloc.c,v 1.142.2.7 2006/01/17 10:19:37 p
 #ifdef DEBUG_MEMGUARD
 #include <vm/memguard.h>
 #endif
+#ifdef DEBUG_REDZONE
+#include <vm/redzone.h>
+#endif
 
 #if defined(INVARIANTS) && defined(__i386__)
 #include <machine/cpu.h>
@@ -82,6 +96,9 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_malloc.c,v 1.142.2.7 2006/01/17 10:19:37 p
 #define	REALLOC_FRACTION	1	/* new block if <= half the size */
 #endif
 
+/*
+ * Centrally define some common malloc types.
+ */
 MALLOC_DEFINE(M_CACHE, "cache", "Various Dynamically allocated caches");
 MALLOC_DEFINE(M_DEVBUF, "devbuf", "device driver memory");
 MALLOC_DEFINE(M_TEMP, "temp", "misc temporary data buffers");
@@ -95,8 +112,8 @@ SYSINIT(kmem, SI_SUB_KMEM, SI_ORDER_FIRST, kmeminit, NULL)
 static MALLOC_DEFINE(M_FREE, "free", "should be on free list");
 
 static struct malloc_type *kmemstatistics;
-static char *kmembase;
-static char *kmemlimit;
+static vm_offset_t kmembase;
+static vm_offset_t kmemlimit;
 static int kmemcount;
 
 #define KMEM_ZSHIFT	4
@@ -107,7 +124,14 @@ static int kmemcount;
 #define KMEM_ZSIZE	(KMEM_ZMAX >> KMEM_ZSHIFT)
 static u_int8_t kmemsize[KMEM_ZSIZE + 1];
 
-/* These won't be powers of two for long */
+/*
+ * Small malloc(9) memory allocations are allocated from a set of UMA buckets
+ * of various sizes.
+ *
+ * XXX: The comment here used to read "These won't be powers of two for
+ * long."  It's possible that a significant amount of wasted memory could be
+ * recovered by tuning the sizes of these buckets.
+ */
 struct {
 	int kz_size;
 	char *kz_name;
@@ -140,17 +164,23 @@ struct {
 	{0, NULL},
 };
 
+/*
+ * Zone to allocate malloc type descriptions from.  For ABI reasons, memory
+ * types are described by a data structure passed by the declaring code, but
+ * the malloc(9) implementation has its own data structure describing the
+ * type and statistics.  This permits the malloc(9)-internal data structures
+ * to be modified without breaking binary-compiled kernel modules that
+ * declare malloc types.
+ */
 static uma_zone_t mt_zone;
-
-#ifdef DEBUG_MEMGUARD
-u_int vm_memguard_divisor;
-SYSCTL_UINT(_vm, OID_AUTO, memguard_divisor, CTLFLAG_RD, &vm_memguard_divisor,
-    0, "(kmem_size/memguard_divisor) == memguard submap size");
-#endif
 
 u_int vm_kmem_size;
 SYSCTL_UINT(_vm, OID_AUTO, kmem_size, CTLFLAG_RD, &vm_kmem_size, 0,
     "Size of kernel memory");
+
+u_int vm_kmem_size_min;
+SYSCTL_UINT(_vm, OID_AUTO, kmem_size_min, CTLFLAG_RD, &vm_kmem_size_min, 0,
+    "Minimum size of kernel memory");
 
 u_int vm_kmem_size_max;
 SYSCTL_UINT(_vm, OID_AUTO, kmem_size_max, CTLFLAG_RD, &vm_kmem_size_max, 0,
@@ -163,7 +193,6 @@ SYSCTL_UINT(_vm, OID_AUTO, kmem_size_scale, CTLFLAG_RD, &vm_kmem_size_scale, 0,
 /*
  * The malloc_mtx protects the kmemstatistics linked list.
  */
-
 struct mtx malloc_mtx;
 
 #ifdef MALLOC_PROFILE
@@ -172,17 +201,18 @@ uint64_t krequests[KMEM_ZSIZE + 1];
 static int sysctl_kern_mprof(SYSCTL_HANDLER_ARGS);
 #endif
 
-static int sysctl_kern_malloc(SYSCTL_HANDLER_ARGS);
 static int sysctl_kern_malloc_stats(SYSCTL_HANDLER_ARGS);
 
-/* time_uptime of last malloc(9) failure */
+/*
+ * time_uptime of the last malloc(9) failure (induced or real).
+ */
 static time_t t_malloc_fail;
 
-#ifdef MALLOC_MAKE_FAILURES
 /*
- * Causes malloc failures every (n) mallocs with M_NOWAIT.  If set to 0,
- * doesn't cause failures.
+ * malloc(9) fault injection -- cause malloc failures every (n) mallocs when
+ * the caller specifies M_NOWAIT.  If set to 0, no failures are caused.
  */
+#ifdef MALLOC_MAKE_FAILURES
 SYSCTL_NODE(_debug, OID_AUTO, malloc, CTLFLAG_RD, 0,
     "Kernel malloc debugging options");
 
@@ -204,7 +234,10 @@ malloc_last_fail(void)
 }
 
 /*
- * Add this to the informational malloc_type bucket.
+ * An allocation has succeeded -- update malloc type statistics for the
+ * amount of bucket size.  Occurs within a critical section so that the
+ * thread isn't preempted and doesn't migrate while updating per-PCU
+ * statistics.
  */
 static void
 malloc_type_zone_allocated(struct malloc_type *mtp, unsigned long size,
@@ -234,7 +267,10 @@ malloc_type_allocated(struct malloc_type *mtp, unsigned long size)
 }
 
 /*
- * Remove this allocation from the informational malloc_type bucket.
+ * A free operation has occurred -- update malloc type statistics for the
+ * amount of the bucket size.  Occurs within a critical section so that the
+ * thread isn't preempted and doesn't migrate while updating per-CPU
+ * statistics.
  */
 void
 malloc_type_freed(struct malloc_type *mtp, unsigned long size)
@@ -265,7 +301,7 @@ malloc(unsigned long size, struct malloc_type *mtp, int flags)
 	caddr_t va;
 	uma_zone_t zone;
 	uma_keg_t keg;
-#ifdef DIAGNOSTIC
+#if defined(DIAGNOSTIC) || defined(DEBUG_REDZONE)
 	unsigned long osize = size;
 #endif
 
@@ -285,10 +321,6 @@ malloc(unsigned long size, struct malloc_type *mtp, int flags)
 		}
 	}
 #endif
-#if 0
-	if (size == 0)
-		kdb_enter("zero size malloc");
-#endif
 #ifdef MALLOC_MAKE_FAILURES
 	if ((flags & M_NOWAIT) && (malloc_failure_rate != 0)) {
 		atomic_add_int(&malloc_nowait_count, 1);
@@ -304,9 +336,12 @@ malloc(unsigned long size, struct malloc_type *mtp, int flags)
 		   ("malloc(M_WAITOK) in interrupt context"));
 
 #ifdef DEBUG_MEMGUARD
-	/* XXX CHANGEME! */
-	if (mtp == M_SUBPROC)
+	if (memguard_cmp(mtp))
 		return memguard_alloc(size, flags);
+#endif
+
+#ifdef DEBUG_REDZONE
+	size = redzone_size_ntor(size);
 #endif
 
 	if (size <= KMEM_ZMAX) {
@@ -338,6 +373,10 @@ malloc(unsigned long size, struct malloc_type *mtp, int flags)
 		memset(va, 0x70, osize);
 	}
 #endif
+#ifdef DEBUG_REDZONE
+	if (va != NULL)
+		va = redzone_setup(va, osize);
+#endif
 	return ((void *) va);
 }
 
@@ -359,11 +398,15 @@ free(void *addr, struct malloc_type *mtp)
 		return;
 
 #ifdef DEBUG_MEMGUARD
-	/* XXX CHANGEME! */
-	if (mtp == M_SUBPROC) {
+	if (memguard_cmp(mtp)) {
 		memguard_free(addr);
 		return;
 	}
+#endif
+
+#ifdef DEBUG_REDZONE
+	redzone_check(addr);
+	addr = redzone_addr_ntor(addr);
 #endif
 
 	size = 0;
@@ -423,13 +466,16 @@ realloc(void *addr, unsigned long size, struct malloc_type *mtp, int flags)
 	 */
 
 #ifdef DEBUG_MEMGUARD
-/* XXX: CHANGEME! */
-if (mtp == M_SUBPROC) {
+if (memguard_cmp(mtp)) {
 	slab = NULL;
 	alloc = size;
 } else {
 #endif
 
+#ifdef DEBUG_REDZONE
+	slab = NULL;
+	alloc = redzone_get_size(addr);
+#else
 	slab = vtoslab((vm_offset_t)addr & ~(UMA_SLAB_MASK));
 
 	/* Sanity check */
@@ -446,6 +492,7 @@ if (mtp == M_SUBPROC) {
 	if (size <= alloc
 	    && (size > (alloc >> REALLOC_FRACTION) || alloc == MINALLOCSIZE))
 		return (addr);
+#endif /* !DEBUG_REDZONE */
 
 #ifdef DEBUG_MEMGUARD
 }
@@ -510,6 +557,14 @@ kmeminit(void *dummy)
 	    (mem_size / vm_kmem_size_scale) > (vm_kmem_size / PAGE_SIZE))
 		vm_kmem_size = (mem_size / vm_kmem_size_scale) * PAGE_SIZE;
 
+#if defined(VM_KMEM_SIZE_MIN)
+	vm_kmem_size_min = VM_KMEM_SIZE_MIN;
+#endif
+	TUNABLE_INT_FETCH("vm.kmem_size_min", &vm_kmem_size_min);
+	if (vm_kmem_size_min > 0 && vm_kmem_size < vm_kmem_size_min) {
+		vm_kmem_size = vm_kmem_size_min;
+	}
+
 #if defined(VM_KMEM_SIZE_MAX)
 	vm_kmem_size_max = VM_KMEM_SIZE_MAX;
 #endif
@@ -538,8 +593,8 @@ kmeminit(void *dummy)
 	 */
 	init_param3(vm_kmem_size / PAGE_SIZE);
 
-	kmem_map = kmem_suballoc(kernel_map, (vm_offset_t *)&kmembase,
-		(vm_offset_t *)&kmemlimit, vm_kmem_size);
+	kmem_map = kmem_suballoc(kernel_map, &kmembase, &kmemlimit,
+	    vm_kmem_size);
 	kmem_map->system_map = 1;
 
 #ifdef DEBUG_MEMGUARD
@@ -549,7 +604,7 @@ kmeminit(void *dummy)
 	 * scenarios as they occur.  It is only used for debugging.
 	 */
 	vm_memguard_divisor = 10;
-	TUNABLE_INT_FETCH("vm.memguard_divisor", &vm_memguard_divisor);
+	TUNABLE_INT_FETCH("vm.memguard.divisor", &vm_memguard_divisor);
 
 	/* Pick a conservative value if provided value sucks. */
 	if ((vm_memguard_divisor <= 0) ||
@@ -647,112 +702,22 @@ malloc_uninit(void *data)
 		    temp_allocs, temp_bytes);
 	}
 
-        slab = vtoslab((vm_offset_t) mtip & (~UMA_SLAB_MASK));
+	slab = vtoslab((vm_offset_t) mtip & (~UMA_SLAB_MASK));
 	uma_zfree_arg(mt_zone, mtip, slab);
 }
 
-static int
-sysctl_kern_malloc(SYSCTL_HANDLER_ARGS)
+struct malloc_type *
+malloc_desc2type(const char *desc)
 {
-	struct malloc_type_stats mts_local, *mtsp;
-	struct malloc_type_internal *mtip;
 	struct malloc_type *mtp;
-	struct sbuf sbuf;
-	long temp_allocs, temp_bytes;
-	int linesize = 128;
-	int bufsize;
-	int first;
-	int error;
-	char *buf;
-	int cnt;
-	int i;
 
-	cnt = 0;
-
-	/* Guess at how much room is needed. */
-	mtx_lock(&malloc_mtx);
-	cnt = kmemcount;
-	mtx_unlock(&malloc_mtx);
-
-	bufsize = linesize * (cnt + 1);
-	buf = malloc(bufsize, M_TEMP, M_WAITOK|M_ZERO);
-	sbuf_new(&sbuf, buf, bufsize, SBUF_FIXEDLEN);
-
-	mtx_lock(&malloc_mtx);
-	sbuf_printf(&sbuf,
-	    "\n        Type  InUse MemUse HighUse Requests  Size(s)\n");
-	for (mtp = kmemstatistics; cnt != 0 && mtp != NULL;
-	    mtp = mtp->ks_next, cnt--) {
-		mtip = mtp->ks_handle;
-		bzero(&mts_local, sizeof(mts_local));
-		for (i = 0; i < MAXCPU; i++) {
-			mtsp = &mtip->mti_stats[i];
-			mts_local.mts_memalloced += mtsp->mts_memalloced;
-			mts_local.mts_memfreed += mtsp->mts_memfreed;
-			mts_local.mts_numallocs += mtsp->mts_numallocs;
-			mts_local.mts_numfrees += mtsp->mts_numfrees;
-			mts_local.mts_size |= mtsp->mts_size;
-		}
-		if (mts_local.mts_numallocs == 0)
-			continue;
-
-		/*
-		 * Due to races in per-CPU statistics gather, it's possible to
-		 * get a slightly negative number here.  If we do, approximate
-		 * with 0.
-		 */
-		if (mts_local.mts_numallocs > mts_local.mts_numfrees)
-			temp_allocs = mts_local.mts_numallocs -
-			    mts_local.mts_numfrees;
-		else
-			temp_allocs = 0;
-
-		/*
-		 * Ditto for bytes allocated.
-		 */
-		if (mts_local.mts_memalloced > mts_local.mts_memfreed)
-			temp_bytes = mts_local.mts_memalloced -
-			    mts_local.mts_memfreed;
-		else
-			temp_bytes = 0;
-
-		/*
-		 * High-waterwark is no longer easily available, so we just
-		 * print '-' for that column.
-		 */
-		sbuf_printf(&sbuf, "%13s%6lu%6luK       -%9llu",
-		    mtp->ks_shortdesc,
-		    temp_allocs,
-		    (temp_bytes + 1023) / 1024,
-		    (unsigned long long)mts_local.mts_numallocs);
-
-		first = 1;
-		for (i = 0; i < sizeof(kmemzones) / sizeof(kmemzones[0]) - 1;
-		    i++) {
-			if (mts_local.mts_size & (1 << i)) {
-				if (first)
-					sbuf_printf(&sbuf, "  ");
-				else
-					sbuf_printf(&sbuf, ",");
-				sbuf_printf(&sbuf, "%s",
-				    kmemzones[i].kz_name);
-				first = 0;
-			}
-		}
-		sbuf_printf(&sbuf, "\n");
+	mtx_assert(&malloc_mtx, MA_OWNED);
+	for (mtp = kmemstatistics; mtp != NULL; mtp = mtp->ks_next) {
+		if (strcmp(mtp->ks_shortdesc, desc) == 0)
+			return (mtp);
 	}
-	sbuf_finish(&sbuf);
-	mtx_unlock(&malloc_mtx);
-
-	error = SYSCTL_OUT(req, sbuf_data(&sbuf), sbuf_len(&sbuf));
-
-	sbuf_delete(&sbuf);
-	free(buf, M_TEMP);
-	return (error);
+	return (NULL);
 }
-
-SYSCTL_OID(_kern, OID_AUTO, malloc, CTLTYPE_STRING|CTLFLAG_RD,
-    NULL, 0, sysctl_kern_malloc, "A", "Malloc Stats");
 
 static int
 sysctl_kern_malloc_stats(SYSCTL_HANDLER_ARGS)
@@ -845,20 +810,26 @@ DB_SHOW_COMMAND(malloc, db_show_malloc)
 	struct malloc_type_internal *mtip;
 	struct malloc_type *mtp;
 	u_int64_t allocs, frees;
+	u_int64_t alloced, freed;
 	int i;
 
-	db_printf("%18s %12s %12s %12s\n", "Type", "Allocs", "Frees",
-	    "Used");
+	db_printf("%18s %12s  %12s %12s\n", "Type", "InUse", "MemUse",
+	    "Requests");
 	for (mtp = kmemstatistics; mtp != NULL; mtp = mtp->ks_next) {
 		mtip = (struct malloc_type_internal *)mtp->ks_handle;
 		allocs = 0;
 		frees = 0;
+		alloced = 0;
+		freed = 0;
 		for (i = 0; i < MAXCPU; i++) {
 			allocs += mtip->mti_stats[i].mts_numallocs;
 			frees += mtip->mti_stats[i].mts_numfrees;
+			alloced += mtip->mti_stats[i].mts_memalloced;
+			freed += mtip->mti_stats[i].mts_memfreed;
 		}
-		db_printf("%18s %12ju %12ju %12ju\n", mtp->ks_shortdesc,
-		    allocs, frees, allocs - frees);
+		db_printf("%18s %12ju %12juK %12ju\n",
+		    mtp->ks_shortdesc, allocs - frees,
+		    (alloced - freed + 1023) / 1024, allocs);
 	}
 }
 #endif

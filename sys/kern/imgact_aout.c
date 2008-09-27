@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/imgact_aout.c,v 1.99.2.1 2006/03/16 00:25:31 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/imgact_aout.c,v 1.101.4.1 2008/01/19 18:15:05 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -198,9 +198,11 @@ exec_aout_imgact(imgp)
 	/*
 	 * Destroy old process VM and create a new one (with a new stack)
 	 */
-	exec_new_vmspace(imgp, &aout_sysvec);
+	error = exec_new_vmspace(imgp, &aout_sysvec);
 
 	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
+	if (error)
+		return (error);
 
 	/*
 	 * The vm space can be changed by exec_new_vmspace
@@ -220,6 +222,7 @@ exec_aout_imgact(imgp)
 		MAP_COPY_ON_WRITE | MAP_PREFAULT);
 	if (error) {
 		vm_map_unlock(map);
+		vm_object_deallocate(object);
 		return (error);
 	}
 	data_end = text_end + a_out->a_data;
@@ -232,6 +235,7 @@ exec_aout_imgact(imgp)
 			MAP_COPY_ON_WRITE | MAP_PREFAULT);
 		if (error) {
 			vm_map_unlock(map);
+			vm_object_deallocate(object);
 			return (error);
 		}
 	}

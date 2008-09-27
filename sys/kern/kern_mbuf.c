@@ -26,13 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.9.2.8 2006/05/16 07:27:48 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.32.2.1 2007/12/15 23:16:04 rrs Exp $");
 
 #include "opt_mac.h"
 #include "opt_param.h"
 
 #include <sys/param.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
@@ -42,6 +41,8 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_mbuf.c,v 1.9.2.8 2006/05/16 07:27:48 ps Ex
 #include <sys/protosw.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
+
+#include <security/mac/mac_framework.h>
 
 #include <vm/vm.h>
 #include <vm/vm_page.h>
@@ -106,19 +107,98 @@ tunable_mbinit(void *dummy)
 
 	/* This has to be done before VM init. */
 	nmbclusters = 1024 + maxusers * 64;
+	nmbjumbop = nmbclusters / 2;
+	nmbjumbo9 = nmbjumbop / 2;
+	nmbjumbo16 = nmbjumbo9 / 2;
 	TUNABLE_INT_FETCH("kern.ipc.nmbclusters", &nmbclusters);
 }
 SYSINIT(tunable_mbinit, SI_SUB_TUNABLES, SI_ORDER_ANY, tunable_mbinit, NULL);
 
-SYSCTL_DECL(_kern_ipc);
-SYSCTL_INT(_kern_ipc, OID_AUTO, nmbclusters, CTLFLAG_RW, &nmbclusters, 0,
-    "Maximum number of mbuf clusters allowed.");
-SYSCTL_INT(_kern_ipc, OID_AUTO, nmbjumbop, CTLFLAG_RW, &nmbjumbop, 0,
-    "Maximum number of mbuf page size jumbo clusters allowed");
-SYSCTL_INT(_kern_ipc, OID_AUTO, nmbjumbo9, CTLFLAG_RW, &nmbjumbo9, 0,
-    "Maximum number of mbuf 9k jumbo clusters allowed");
-SYSCTL_INT(_kern_ipc, OID_AUTO, nmbjumbo16, CTLFLAG_RW, &nmbjumbo16, 0,
+/* XXX: These should be tuneables. Can't change UMA limits on the fly. */
+static int
+sysctl_nmbclusters(SYSCTL_HANDLER_ARGS)
+{
+	int error, newnmbclusters;
+
+	newnmbclusters = nmbclusters;
+	error = sysctl_handle_int(oidp, &newnmbclusters, 0, req); 
+	if (error == 0 && req->newptr) {
+		if (newnmbclusters > nmbclusters) {
+			nmbclusters = newnmbclusters;
+			uma_zone_set_max(zone_clust, nmbclusters);
+			EVENTHANDLER_INVOKE(nmbclusters_change);
+		} else
+			error = EINVAL;
+	}
+	return (error);
+}
+SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbclusters, CTLTYPE_INT|CTLFLAG_RW,
+&nmbclusters, 0, sysctl_nmbclusters, "IU",
+    "Maximum number of mbuf clusters allowed");
+
+static int
+sysctl_nmbjumbop(SYSCTL_HANDLER_ARGS)
+{
+	int error, newnmbjumbop;
+
+	newnmbjumbop = nmbjumbop;
+	error = sysctl_handle_int(oidp, &newnmbjumbop, 0, req); 
+	if (error == 0 && req->newptr) {
+		if (newnmbjumbop> nmbjumbop) {
+			nmbjumbop = newnmbjumbop;
+			uma_zone_set_max(zone_jumbop, nmbjumbop);
+		} else
+			error = EINVAL;
+	}
+	return (error);
+}
+SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbjumbop, CTLTYPE_INT|CTLFLAG_RW,
+&nmbjumbop, 0, sysctl_nmbjumbop, "IU",
+	 "Maximum number of mbuf page size jumbo clusters allowed");
+
+
+static int
+sysctl_nmbjumbo9(SYSCTL_HANDLER_ARGS)
+{
+	int error, newnmbjumbo9;
+
+	newnmbjumbo9 = nmbjumbo9;
+	error = sysctl_handle_int(oidp, &newnmbjumbo9, 0, req); 
+	if (error == 0 && req->newptr) {
+		if (newnmbjumbo9> nmbjumbo9) {
+			nmbjumbo9 = newnmbjumbo9;
+			uma_zone_set_max(zone_jumbo9, nmbjumbo9);
+		} else
+			error = EINVAL;
+	}
+	return (error);
+}
+SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbjumbo9, CTLTYPE_INT|CTLFLAG_RW,
+&nmbjumbo9, 0, sysctl_nmbjumbo9, "IU",
+	"Maximum number of mbuf 9k jumbo clusters allowed"); 
+
+static int
+sysctl_nmbjumbo16(SYSCTL_HANDLER_ARGS)
+{
+	int error, newnmbjumbo16;
+
+	newnmbjumbo16 = nmbjumbo16;
+	error = sysctl_handle_int(oidp, &newnmbjumbo16, 0, req); 
+	if (error == 0 && req->newptr) {
+		if (newnmbjumbo16> nmbjumbo16) {
+			nmbjumbo16 = newnmbjumbo16;
+			uma_zone_set_max(zone_jumbo16, nmbjumbo16);
+		} else
+			error = EINVAL;
+	}
+	return (error);
+}
+SYSCTL_PROC(_kern_ipc, OID_AUTO, nmbjumbo16, CTLTYPE_INT|CTLFLAG_RW,
+&nmbjumbo16, 0, sysctl_nmbjumbo16, "IU",
     "Maximum number of mbuf 16k jumbo clusters allowed");
+
+
+
 SYSCTL_STRUCT(_kern_ipc, OID_AUTO, mbstat, CTLFLAG_RD, &mbstat, mbstat,
     "Mbuf general information and statistics");
 
@@ -131,6 +211,7 @@ uma_zone_t	zone_pack;
 uma_zone_t	zone_jumbop;
 uma_zone_t	zone_jumbo9;
 uma_zone_t	zone_jumbo16;
+uma_zone_t	zone_ext_refcnt;
 
 /*
  * Local prototypes.
@@ -178,7 +259,6 @@ mbuf_init(void *dummy)
 	    NULL, NULL,
 #endif
 	    UMA_ALIGN_PTR, UMA_ZONE_REFCNT);
-
 	if (nmbclusters > 0)
 		uma_zone_set_max(zone_clust, nmbclusters);
 
@@ -218,6 +298,11 @@ mbuf_init(void *dummy)
 	    UMA_ALIGN_PTR, UMA_ZONE_REFCNT);
 	if (nmbjumbo16 > 0)
 		uma_zone_set_max(zone_jumbo16, nmbjumbo16);
+
+	zone_ext_refcnt = uma_zcreate(MBUF_EXTREFCNT_MEM_NAME, sizeof(u_int),
+	    NULL, NULL,
+	    NULL, NULL,
+	    UMA_ALIGN_PTR, UMA_ZONE_ZINIT);
 
 	/* uma_prealloc() goes here... */
 
@@ -294,6 +379,8 @@ mb_ctor_mbuf(void *mem, int size, void *arg, int how)
 		m->m_pkthdr.header = NULL;
 		m->m_pkthdr.csum_flags = 0;
 		m->m_pkthdr.csum_data = 0;
+		m->m_pkthdr.tso_segsz = 0;
+		m->m_pkthdr.ether_vtag = 0;
 		SLIST_INIT(&m->m_pkthdr.tags);
 #ifdef MAC
 		/* If the label init fails, fail the alloc */
@@ -303,7 +390,6 @@ mb_ctor_mbuf(void *mem, int size, void *arg, int how)
 #endif
 	} else
 		m->m_data = m->m_dat;
-	mbstat.m_mbufs += 1;	/* XXX */
 	return (0);
 }
 
@@ -314,14 +400,18 @@ static void
 mb_dtor_mbuf(void *mem, int size, void *arg)
 {
 	struct mbuf *m;
+	unsigned long flags; 
 
 	m = (struct mbuf *)mem;
-	if ((m->m_flags & M_PKTHDR) != 0)
+	flags = (unsigned long)arg;
+	
+	if ((flags & MB_NOTAGS) == 0 && (m->m_flags & M_PKTHDR) != 0)
 		m_tag_delete_chain(m, NULL);
+	KASSERT((m->m_flags & M_EXT) == 0, ("%s: M_EXT set", __func__));
+	KASSERT((m->m_flags & M_NOFREE) == 0, ("%s: M_NOFREE set", __func__));	
 #ifdef INVARIANTS
 	trash_dtor(mem, size, arg);
 #endif
-	mbstat.m_mbufs -= 1;	/* XXX */
 }
 
 /*
@@ -343,11 +433,18 @@ mb_dtor_pack(void *mem, int size, void *arg)
 	KASSERT(m->m_ext.ext_args == NULL, ("%s: ext_args != NULL", __func__));
 	KASSERT(m->m_ext.ext_size == MCLBYTES, ("%s: ext_size != MCLBYTES", __func__));
 	KASSERT(m->m_ext.ext_type == EXT_PACKET, ("%s: ext_type != EXT_PACKET", __func__));
+	KASSERT(*m->m_ext.ref_cnt == 1, ("%s: ref_cnt != 1", __func__));
 #ifdef INVARIANTS
 	trash_dtor(m->m_ext.ext_buf, MCLBYTES, arg);
 #endif
-	mbstat.m_mbufs -= 1;	/* XXX */
-	mbstat.m_mclusts -= 1;	/* XXX */
+	/*
+	 * If there are processes blocked on zone_clust, waiting for pages to be freed up,
+	 * cause them to be woken up by draining the packet zone. We are exposed to a race here 
+	 * (in the check for the UMA_ZFLAG_FULL) where we might miss the flag set, but that is 
+	 * deliberate. We don't want to acquire the zone lock for every mbuf free.
+	 */
+ 	if (uma_zone_exhausted_nolock(zone_clust))
+ 		zone_drain(zone_pack);
 }
 
 /*
@@ -362,32 +459,41 @@ static int
 mb_ctor_clust(void *mem, int size, void *arg, int how)
 {
 	struct mbuf *m;
-	int type = 0;
-
+	u_int *refcnt;
+	int type;
+	uma_zone_t zone;
+	
 #ifdef INVARIANTS
 	trash_ctor(mem, size, arg, how);
 #endif
- 	m = (struct mbuf *)arg;
-	if (m != NULL) {
-		switch (size) {
-		case MCLBYTES:
-			type = EXT_CLUSTER;
-			break;
+	switch (size) {
+	case MCLBYTES:
+		type = EXT_CLUSTER;
+		zone = zone_clust;
+		break;
 #if MJUMPAGESIZE != MCLBYTES
-		case MJUMPAGESIZE:
-			type = EXT_JUMBOP;
-			break;
+	case MJUMPAGESIZE:
+		type = EXT_JUMBOP;
+		zone = zone_jumbop;
+		break;
 #endif
-		case MJUM9BYTES:
-			type = EXT_JUMBO9;
-			break;
-		case MJUM16BYTES:
-			type = EXT_JUMBO16;
-			break;
-		default:
-			panic("unknown cluster size");
-			break;
-		}
+	case MJUM9BYTES:
+		type = EXT_JUMBO9;
+		zone = zone_jumbo9;
+		break;
+	case MJUM16BYTES:
+		type = EXT_JUMBO16;
+		zone = zone_jumbo16;
+		break;
+	default:
+		panic("unknown cluster size");
+		break;
+	}
+
+	m = (struct mbuf *)arg;
+	refcnt = uma_find_refcnt(zone, mem);
+	*refcnt = 1;			
+	if (m != NULL) {
 		m->m_ext.ext_buf = (caddr_t)mem;
 		m->m_data = m->m_ext.ext_buf;
 		m->m_flags |= M_EXT;
@@ -395,9 +501,9 @@ mb_ctor_clust(void *mem, int size, void *arg, int how)
 		m->m_ext.ext_args = NULL;
 		m->m_ext.ext_size = size;
 		m->m_ext.ext_type = type;
-		m->m_ext.ref_cnt = NULL;	/* Lazy counter assign. */
+		m->m_ext.ref_cnt = refcnt;
 	}
-	mbstat.m_mclusts += 1;	/* XXX */
+
 	return (0);
 }
 
@@ -408,9 +514,15 @@ static void
 mb_dtor_clust(void *mem, int size, void *arg)
 {
 #ifdef INVARIANTS
+	uma_zone_t zone;
+
+	zone = m_getzone(size);
+	KASSERT(*(uma_find_refcnt(zone, mem)) <= 1,
+		("%s: refcnt incorrect %u", __func__,
+		 *(uma_find_refcnt(zone, mem))) );
+
 	trash_dtor(mem, size, arg);
 #endif
-	mbstat.m_mclusts -= 1;	/* XXX */
 }
 
 /*
@@ -422,7 +534,7 @@ mb_zinit_pack(void *mem, int size, int how)
 {
 	struct mbuf *m;
 
-	m = (struct mbuf *)mem;
+	m = (struct mbuf *)mem;		/* m is virgin. */
 	if (uma_zalloc_arg(zone_clust, m, how) == NULL ||
 	    m->m_ext.ext_buf == NULL)
 		return (ENOMEM);
@@ -430,7 +542,6 @@ mb_zinit_pack(void *mem, int size, int how)
 #ifdef INVARIANTS
 	trash_init(m->m_ext.ext_buf, MCLBYTES, how);
 #endif
-	mbstat.m_mclusts -= 1;	/* XXX */
 	return (0);
 }
 
@@ -448,8 +559,6 @@ mb_zfini_pack(void *mem, int size)
 	trash_fini(m->m_ext.ext_buf, MCLBYTES);
 #endif
 	uma_zfree_arg(zone_clust, m->m_ext.ext_buf, NULL);
-	m->m_ext.ext_buf = NULL;
-	mbstat.m_mclusts += 1;	/* XXX */
 #ifdef INVARIANTS
 	trash_dtor(mem, size, NULL);
 #endif
@@ -483,14 +592,15 @@ mb_ctor_pack(void *mem, int size, void *arg, int how)
 	m->m_len = 0;
 	m->m_flags = (flags | M_EXT);
 	m->m_type = type;
-	m->m_ext.ref_cnt = NULL;	/* Lazy counter assign. */
-
+	    
 	if (flags & M_PKTHDR) {
 		m->m_pkthdr.rcvif = NULL;
 		m->m_pkthdr.len = 0;
 		m->m_pkthdr.header = NULL;
 		m->m_pkthdr.csum_flags = 0;
 		m->m_pkthdr.csum_data = 0;
+		m->m_pkthdr.tso_segsz = 0;
+		m->m_pkthdr.ether_vtag = 0;
 		SLIST_INIT(&m->m_pkthdr.tags);
 #ifdef MAC
 		/* If the label init fails, fail the alloc */
@@ -501,8 +611,6 @@ mb_ctor_pack(void *mem, int size, void *arg, int how)
 	}
 	/* m_ext is already initialized. */
 
-	mbstat.m_mbufs += 1;	/* XXX */
-	mbstat.m_mclusts += 1;	/* XXX */
 	return (0);
 }
 
@@ -522,7 +630,6 @@ mb_reclaim(void *junk)
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK | WARN_PANIC, NULL,
 	    "mb_reclaim()");
 
-	mbstat.m_drain++;
 	for (dp = domains; dp != NULL; dp = dp->dom_next)
 		for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++)
 			if (pr->pr_drain != NULL)

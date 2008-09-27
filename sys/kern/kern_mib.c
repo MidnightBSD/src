@@ -36,12 +36,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_mib.c,v 1.74.2.2 2005/10/08 07:06:49 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_mib.c,v 1.84.2.1 2007/12/06 14:19:42 kib Exp $");
 
 #include "opt_posix.h"
+#include "opt_config.h"
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/sbuf.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
 #include <sys/proc.h>
@@ -102,7 +104,6 @@ SYSCTL_STRING(_kern, KERN_OSTYPE, ostype, CTLFLAG_RD,
  * NOTICE: The *userland* release date is available in
  * /usr/include/osreldate.h
  */
-extern int osreldate;
 SYSCTL_INT(_kern, KERN_OSRELDATE, osreldate, CTLFLAG_RD,
     &osreldate, 0, "Kernel release date");
 
@@ -148,6 +149,18 @@ SYSCTL_INT(_hw, HW_BYTEORDER, byteorder, CTLFLAG_RD,
 
 SYSCTL_INT(_hw, HW_PAGESIZE, pagesize, CTLFLAG_RD,
     0, PAGE_SIZE, "System memory page size");
+
+static int
+sysctl_kern_arnd(SYSCTL_HANDLER_ARGS)
+{
+	u_long val;
+
+	arc4rand(&val, sizeof(val), 0);
+	return (sysctl_handle_long(oidp, &val, 0, req));
+}
+
+SYSCTL_PROC(_kern, KERN_ARND, arandom, CTLFLAG_RD,
+	0, 0, sysctl_kern_arnd, "L", "arc4rand");
 
 static int
 sysctl_hw_physmem(SYSCTL_HANDLER_ARGS)
@@ -295,12 +308,30 @@ SYSCTL_PROC(_kern, KERN_SECURELVL, securelevel,
     CTLTYPE_INT|CTLFLAG_RW|CTLFLAG_PRISON, 0, 0, sysctl_kern_securelvl,
     "I", "Current secure level");
 
+#ifdef INCLUDE_CONFIG_FILE
+/* Actual kernel configuration options. */
+extern char kernconfstring[];
+
+static int
+sysctl_kern_config(SYSCTL_HANDLER_ARGS)
+{
+	return (sysctl_handle_string(oidp, kernconfstring,
+	    strlen(kernconfstring), req));
+}
+
+SYSCTL_PROC(_kern, OID_AUTO, conftxt, CTLTYPE_STRING|CTLFLAG_RW, 
+    0, 0, sysctl_kern_config, "", "Kernel configuration file");
+#endif
+
 char domainname[MAXHOSTNAMELEN];
 SYSCTL_STRING(_kern, KERN_NISDOMAINNAME, domainname, CTLFLAG_RW,
     &domainname, sizeof(domainname), "Name of the current YP/NIS domain");
 
 u_long hostid;
 SYSCTL_ULONG(_kern, KERN_HOSTID, hostid, CTLFLAG_RW, &hostid, 0, "Host ID");
+char hostuuid[64] = "00000000-0000-0000-0000-000000000000";
+SYSCTL_STRING(_kern, KERN_HOSTUUID, hostuuid, CTLFLAG_RW, hostuuid,
+    sizeof(hostuuid), "Host UUID");
 
 /*
  * This is really cheating.  These actually live in the libc, something

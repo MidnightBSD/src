@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_sbuf.c,v 1.29 2005/02/10 12:02:37 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_sbuf.c,v 1.30 2005/12/23 11:49:53 phk Exp $");
 
 #include <sys/param.h>
 
@@ -379,7 +379,7 @@ sbuf_copyin(struct sbuf *s, const void *uaddr, size_t len)
 		return (-1);	/* XXX */
 	}
 
-	return (0);
+	return (done);
 }
 #endif
 

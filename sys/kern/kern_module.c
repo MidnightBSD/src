@@ -27,7 +27,7 @@
 #include "opt_compat.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_module.c,v 1.48 2005/02/18 22:14:40 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_module.c,v 1.52.2.1 2007/12/19 20:37:53 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -99,10 +99,12 @@ module_shutdown(void *arg1, int arg2)
 
 	if (arg2 & RB_NOSYNC)
 		return;
+	mtx_lock(&Giant);
 	MOD_SLOCK;
 	TAILQ_FOREACH(mod, &modules, link)
 		MOD_EVENT(mod, MOD_SHUTDOWN);
 	MOD_SUNLOCK;
+	mtx_unlock(&Giant);
 }
 
 void
@@ -112,6 +114,7 @@ module_register_init(const void *arg)
 	int error;
 	module_t mod;
 
+	mtx_lock(&Giant);
 	MOD_SLOCK;
 	mod = module_lookupbyname(data->name);
 	if (mod == NULL)
@@ -128,6 +131,7 @@ module_register_init(const void *arg)
 		    " %d\n", data->name, (void *)data->evhand, data->priv,
 		    error); 
 	}
+	mtx_unlock(&Giant);
 }
 
 int
@@ -136,20 +140,20 @@ module_register(const moduledata_t *data, linker_file_t container)
 	size_t namelen;
 	module_t newmod;
 
-	MOD_SLOCK;
+	MOD_XLOCK;
 	newmod = module_lookupbyname(data->name);
 	if (newmod != NULL) {
-		MOD_SUNLOCK;
+		MOD_XUNLOCK;
 		printf("module_register: module %s already exists!\n",
 		    data->name);
 		return (EEXIST);
 	}
-	MOD_SUNLOCK;
 	namelen = strlen(data->name) + 1;
 	newmod = malloc(sizeof(struct module) + namelen, M_MODULE, M_WAITOK);
-	if (newmod == NULL)
+	if (newmod == NULL) {
+		MOD_XUNLOCK;
 		return (ENOMEM);
-	MOD_XLOCK;
+	}
 	newmod->refs = 1;
 	newmod->id = nextid++;
 	newmod->name = (char *)(newmod + 1);
@@ -232,12 +236,14 @@ module_unload(module_t mod, int flags)
 {
 	int error;
 
+	mtx_lock(&Giant);
 	error = MOD_EVENT(mod, MOD_QUIESCE);
 	if (error == EOPNOTSUPP || error == EINVAL)
 		error = 0;
-	if (flags == LINKER_UNLOAD_NORMAL && error != 0)
-		return (error);
-        return (MOD_EVENT(mod, MOD_UNLOAD));
+	if (error == 0 || flags == LINKER_UNLOAD_FORCE)
+		error = MOD_EVENT(mod, MOD_UNLOAD);
+	mtx_unlock(&Giant);
+	return (error);
 }
 
 int
@@ -264,11 +270,15 @@ module_setspecific(module_t mod, modspecific_t *datap)
 	mod->data = *datap;
 }
 
+linker_file_t
+module_file(module_t mod)
+{
+
+	return (mod->file);
+}
+
 /*
  * Syscalls.
- */
-/*
- * MPSAFE
  */
 int
 modnext(struct thread *td, struct modnext_args *uap)
@@ -301,9 +311,6 @@ done2:
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 modfnext(struct thread *td, struct modfnext_args *uap)
 {
@@ -334,9 +341,6 @@ struct module_stat_v1 {
 	int	id;
 };
 
-/*
- * MPSAFE
- */
 int
 modstat(struct thread *td, struct modstat_args *uap)
 {
@@ -390,9 +394,6 @@ modstat(struct thread *td, struct modstat_args *uap)
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 modfind(struct thread *td, struct modfind_args *uap)
 {
@@ -415,6 +416,7 @@ modfind(struct thread *td, struct modfind_args *uap)
 
 #ifdef COMPAT_IA32
 #include <sys/mount.h>
+#include <sys/socket.h>
 #include <compat/freebsd32/freebsd32_util.h>
 #include <compat/freebsd32/freebsd32.h>
 #include <compat/freebsd32/freebsd32_proto.h>
@@ -434,9 +436,6 @@ struct module_stat32 {
 	modspecific32_t	data;
 };
 
-/*
- * MPSAFE
- */
 int
 freebsd32_modstat(struct thread *td, struct freebsd32_modstat_args *uap)
 {

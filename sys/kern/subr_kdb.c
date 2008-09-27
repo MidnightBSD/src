@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_kdb.c,v 1.12.2.1 2005/10/02 10:06:15 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_kdb.c,v 1.24 2007/09/17 05:27:20 jeff Exp $");
 
 #include "opt_kdb.h"
 
@@ -42,16 +42,8 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_kdb.c,v 1.12.2.1 2005/10/02 10:06:15 rwats
 #include <machine/kdb.h>
 #include <machine/pcb.h>
 
-#ifdef KDB_STOP_NMI
+#ifdef SMP
 #include <machine/smp.h>
-#endif
-
-/* 
- * KDB_STOP_NMI requires SMP to pick up the right dependencies
- * (And isn't useful on UP anyway) 
- */
-#if defined(KDB_STOP_NMI) && !defined(SMP)
-#error "options KDB_STOP_NMI" requires "options SMP"
 #endif
 
 int kdb_active = 0;
@@ -68,6 +60,9 @@ SET_DECLARE(kdb_dbbe_set, struct kdb_dbbe);
 static int kdb_sysctl_available(SYSCTL_HANDLER_ARGS);
 static int kdb_sysctl_current(SYSCTL_HANDLER_ARGS);
 static int kdb_sysctl_enter(SYSCTL_HANDLER_ARGS);
+static int kdb_sysctl_panic(SYSCTL_HANDLER_ARGS);
+static int kdb_sysctl_trap(SYSCTL_HANDLER_ARGS);
+static int kdb_sysctl_trap_code(SYSCTL_HANDLER_ARGS);
 
 SYSCTL_NODE(_debug, OID_AUTO, kdb, CTLFLAG_RW, NULL, "KDB nodes");
 
@@ -80,6 +75,15 @@ SYSCTL_PROC(_debug_kdb, OID_AUTO, current, CTLTYPE_STRING | CTLFLAG_RW, 0, 0,
 SYSCTL_PROC(_debug_kdb, OID_AUTO, enter, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
     kdb_sysctl_enter, "I", "set to enter the debugger");
 
+SYSCTL_PROC(_debug_kdb, OID_AUTO, panic, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
+    kdb_sysctl_panic, "I", "set to panic the kernel");
+
+SYSCTL_PROC(_debug_kdb, OID_AUTO, trap, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
+    kdb_sysctl_trap, "I", "set to cause a page fault via data access");
+
+SYSCTL_PROC(_debug_kdb, OID_AUTO, trap_code, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
+    kdb_sysctl_trap_code, "I", "set to cause a page fault via code access");
+
 /*
  * Flag indicating whether or not to IPI the other CPUs to stop them on
  * entering the debugger.  Sometimes, this will result in a deadlock as
@@ -89,21 +93,8 @@ SYSCTL_PROC(_debug_kdb, OID_AUTO, enter, CTLTYPE_INT | CTLFLAG_RW, 0, 0,
 #ifdef SMP
 static int kdb_stop_cpus = 1;
 SYSCTL_INT(_debug_kdb, OID_AUTO, stop_cpus, CTLTYPE_INT | CTLFLAG_RW,
-    &kdb_stop_cpus, 0, "");
+    &kdb_stop_cpus, 0, "stop other CPUs when entering the debugger");
 TUNABLE_INT("debug.kdb.stop_cpus", &kdb_stop_cpus);
-
-#ifdef KDB_STOP_NMI
-/* 
- * Provide an alternate method of stopping other CPUs. If another CPU has
- * disabled interrupts the conventional STOP IPI will be blocked. This 
- * NMI-based stop should get through in that case.
- */
-static int kdb_stop_cpus_with_nmi = 1;
-SYSCTL_INT(_debug_kdb, OID_AUTO, stop_cpus_with_nmi, CTLTYPE_INT | CTLFLAG_RW,
-    &kdb_stop_cpus_with_nmi, 0, "");
-TUNABLE_INT("debug.kdb.stop_cpus_with_nmi", &kdb_stop_cpus_with_nmi);
-#endif /* KDB_STOP_NMI */
-
 #endif
 
 static int
@@ -173,6 +164,55 @@ kdb_sysctl_enter(SYSCTL_HANDLER_ARGS)
 	if (kdb_active)
 		return (EBUSY);
 	kdb_enter("sysctl debug.kdb.enter");
+	return (0);
+}
+
+static int
+kdb_sysctl_panic(SYSCTL_HANDLER_ARGS)
+{
+	int error, i;
+
+	error = sysctl_wire_old_buffer(req, sizeof(int));
+	if (error == 0) {
+		i = 0;
+		error = sysctl_handle_int(oidp, &i, 0, req);
+	}
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	panic("kdb_sysctl_panic");
+	return (0);
+}
+
+static int
+kdb_sysctl_trap(SYSCTL_HANDLER_ARGS)
+{
+	int error, i;
+	int *addr = (int *)0x10;
+
+	error = sysctl_wire_old_buffer(req, sizeof(int));
+	if (error == 0) {
+		i = 0;
+		error = sysctl_handle_int(oidp, &i, 0, req);
+	}
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	return (*addr);
+}
+
+static int
+kdb_sysctl_trap_code(SYSCTL_HANDLER_ARGS)
+{
+	int error, i;
+	void (*fp)(u_int, u_int, u_int) = (void *)0xdeadc0de;
+
+	error = sysctl_wire_old_buffer(req, sizeof(int));
+	if (error == 0) {
+		i = 0;
+		error = sysctl_handle_int(oidp, &i, 0, req);
+	}
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	(*fp)(0x11111111, 0x22222222, 0x33333333);
 	return (0);
 }
 
@@ -335,27 +375,22 @@ kdb_reenter(void)
 
 struct pcb *
 kdb_thr_ctx(struct thread *thr)
-#ifdef KDB_STOP_NMI
 {  
-  u_int		cpuid;
-  struct pcpu *pc;
-  
-  if (thr == curthread) 
-    return &kdb_pcb;
+#if defined(SMP) && defined(KDB_STOPPEDPCB)
+	struct pcpu *pc;
+#endif
+ 
+	if (thr == curthread) 
+		return (&kdb_pcb);
 
-  SLIST_FOREACH(pc, &cpuhead, pc_allcpu)  {
-    cpuid = pc->pc_cpuid;
-    if (pc->pc_curthread == thr && (atomic_load_acq_int(&stopped_cpus) & (1 << cpuid)))
-      return &stoppcbs[cpuid];
-  }
-
-  return  thr->td_pcb;
+#if defined(SMP) && defined(KDB_STOPPEDPCB)
+	SLIST_FOREACH(pc, &cpuhead, pc_allcpu)  {
+		if (pc->pc_curthread == thr && (stopped_cpus & pc->pc_cpumask))
+			return (KDB_STOPPEDPCB(pc));
+	}
+#endif
+	return (thr->td_pcb);
 }
-#else
-{
-	return ((thr == curthread) ? &kdb_pcb : thr->td_pcb);
-}
-#endif /* KDB_STOP_NMI */
 
 struct thread *
 kdb_thr_first(void)
@@ -365,7 +400,7 @@ kdb_thr_first(void)
 
 	p = LIST_FIRST(&allproc);
 	while (p != NULL) {
-		if (p->p_sflag & PS_INMEM) {
+		if (p->p_flag & P_INMEM) {
 			thr = FIRST_THREAD_IN_PROC(p);
 			if (thr != NULL)
 				return (thr);
@@ -382,7 +417,7 @@ kdb_thr_from_pid(pid_t pid)
 
 	p = LIST_FIRST(&allproc);
 	while (p != NULL) {
-		if (p->p_sflag & PS_INMEM && p->p_pid == pid)
+		if (p->p_flag & P_INMEM && p->p_pid == pid)
 			return (FIRST_THREAD_IN_PROC(p));
 		p = LIST_NEXT(p, p_list);
 	}
@@ -411,7 +446,7 @@ kdb_thr_next(struct thread *thr)
 		if (thr != NULL)
 			return (thr);
 		p = LIST_NEXT(p, p_list);
-		if (p != NULL && (p->p_sflag & PS_INMEM))
+		if (p != NULL && (p->p_flag & P_INMEM))
 			thr = FIRST_THREAD_IN_PROC(p);
 	} while (p != NULL);
 	return (NULL);
@@ -434,6 +469,7 @@ kdb_thr_select(struct thread *thr)
 int
 kdb_trap(int type, int code, struct trapframe *tf)
 {
+	register_t intr;
 #ifdef SMP
 	int did_stop_cpus;
 #endif
@@ -446,21 +482,14 @@ kdb_trap(int type, int code, struct trapframe *tf)
 	if (kdb_active)
 		return (0);
 
-	critical_enter();
-
-	kdb_active++;
+	intr = intr_disable();
 
 #ifdef SMP
 	if ((did_stop_cpus = kdb_stop_cpus) != 0)
-	  {
-#ifdef KDB_STOP_NMI
-	    if(kdb_stop_cpus_with_nmi)
-	      stop_cpus_nmi(PCPU_GET(other_cpus));
-	    else
-#endif /* KDB_STOP_NMI */
 		stop_cpus(PCPU_GET(other_cpus));
-	  }
 #endif
+
+	kdb_active++;
 
 	kdb_frame = tf;
 
@@ -472,14 +501,14 @@ kdb_trap(int type, int code, struct trapframe *tf)
 
 	handled = kdb_dbbe->dbbe_trap(type, code);
 
+	kdb_active--;
+
 #ifdef SMP
 	if (did_stop_cpus)
 		restart_cpus(stopped_cpus);
 #endif
 
-	kdb_active--;
-
-	critical_exit();
+	intr_restore(intr);
 
 	return (handled);
 }

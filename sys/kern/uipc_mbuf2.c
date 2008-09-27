@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_mbuf2.c,v 1.31.2.1 2005/07/25 00:08:12 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_mbuf2.c,v 1.33 2006/10/22 11:52:13 rwatson Exp $");
 
 /*#define PULLDOWN_DEBUG*/
 
@@ -71,10 +71,11 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_mbuf2.c,v 1.31.2.1 2005/07/25 00:08:12 rwa
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
+
+#include <security/mac/mac_framework.h>
 
 static MALLOC_DEFINE(M_PACKET_TAGS, MBUF_TAG_MEM_NAME,
     "packet-attached information");

@@ -25,11 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_hints.c,v 1.11.2.1 2005/10/06 18:29:30 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_hints.c,v 1.13 2006/07/09 21:42:58 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
-#include <sys/sx.h>
+#include <sys/mutex.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 
@@ -72,7 +72,7 @@ res_find(int *line, int *startln,
 			break;
 		case 2:		/* fallback mode */
 			if (dynamic_kenv) {
-				sx_slock(&kenv_lock);
+				mtx_lock(&kenv_lock);
 				cp = kenvp[0];
 				for (i = 0; cp != NULL; cp = kenvp[++i]) {
 					if (!strncmp(cp, "hint.", 5)) {
@@ -81,7 +81,7 @@ res_find(int *line, int *startln,
 						break;
 					}
 				}
-				sx_sunlock(&kenv_lock);
+				mtx_unlock(&kenv_lock);
 			} else {
 				cp = kern_envp;
 				while (cp) {
@@ -114,11 +114,11 @@ res_find(int *line, int *startln,
 	}
 
 	if (use_kenv) {
-		sx_slock(&kenv_lock);
+		mtx_lock(&kenv_lock);
 		i = 0;
 		cp = kenvp[0];
 		if (cp == NULL) {
-			sx_sunlock(&kenv_lock);
+			mtx_unlock(&kenv_lock);
 			return (ENOENT);
 		}
 	} else
@@ -165,7 +165,7 @@ res_find(int *line, int *startln,
 		}
 	}
 	if (use_kenv)
-		sx_sunlock(&kenv_lock);
+		mtx_unlock(&kenv_lock);
 	if (cp == NULL)
 		return ENOENT;
 

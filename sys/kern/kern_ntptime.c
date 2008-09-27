@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_ntptime.c,v 1.59 2005/05/28 14:34:41 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_ntptime.c,v 1.64 2007/06/14 18:37:58 rwatson Exp $");
 
 #include "opt_ntp.h"
 
@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_ntptime.c,v 1.59 2005/05/28 14:34:41 rwats
 #include <sys/systm.h>
 #include <sys/sysproto.h>
 #include <sys/kernel.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -248,9 +249,8 @@ ntp_gettime1(struct ntptimeval *ntvp)
 /*
  * ntp_gettime() - NTP user application interface
  *
- * See the timex.h header file for synopsis and API description. Note
- * that the TAI offset is returned in the ntvtimeval.tai structure
- * member.
+ * See the timex.h header file for synopsis and API description.  Note that
+ * the TAI offset is returned in the ntvtimeval.tai structure member.
  */
 #ifndef _SYS_SYSPROTO_H_
 struct ntp_gettime_args {
@@ -267,6 +267,7 @@ ntp_gettime(struct thread *td, struct ntp_gettime_args *uap)
 	ntp_gettime1(&ntv);
 	mtx_unlock(&Giant);
 
+	td->td_retval[0] = ntv.time_state;
 	return (copyout(&ntv, uap->ntvp, sizeof(ntv)));
 }
 
@@ -292,12 +293,13 @@ SYSCTL_INT(_kern_ntp_pll, OID_AUTO, time_monitor, CTLFLAG_RD, &time_monitor, 0, 
 SYSCTL_OPAQUE(_kern_ntp_pll, OID_AUTO, pps_freq, CTLFLAG_RD, &pps_freq, sizeof(pps_freq), "I", "");
 SYSCTL_OPAQUE(_kern_ntp_pll, OID_AUTO, time_freq, CTLFLAG_RD, &time_freq, sizeof(time_freq), "I", "");
 #endif
+
 /*
  * ntp_adjtime() - NTP daemon application interface
  *
- * See the timex.h header file for synopsis and API description. Note
- * that the timex.constant structure member has a dual purpose to set
- * the time constant and to set the TAI offset.
+ * See the timex.h header file for synopsis and API description.  Note that
+ * the timex.constant structure member has a dual purpose to set the time
+ * constant and to set the TAI offset.
  */
 #ifndef _SYS_SYSPROTO_H_
 struct ntp_adjtime_args {
@@ -305,9 +307,6 @@ struct ntp_adjtime_args {
 };
 #endif
 
-/*
- * MPSAFE
- */
 int
 ntp_adjtime(struct thread *td, struct ntp_adjtime_args *uap)
 {
@@ -333,7 +332,7 @@ ntp_adjtime(struct thread *td, struct ntp_adjtime_args *uap)
 	mtx_lock(&Giant);
 	modes = ntv.modes;
 	if (modes)
-		error = suser(td);
+		error = priv_check(td, PRIV_NTP_ADJTIME);
 	if (error)
 		goto done2;
 	s = splclock();
@@ -925,9 +924,6 @@ struct adjtime_args {
 	struct timeval *olddelta;
 };
 #endif
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 adjtime(struct thread *td, struct adjtime_args *uap)
@@ -954,9 +950,6 @@ kern_adjtime(struct thread *td, struct timeval *delta, struct timeval *olddelta)
 	struct timeval atv;
 	int error;
 
-	if ((error = suser(td)))
-		return (error);
-
 	mtx_lock(&Giant);
 	if (olddelta) {
 		atv.tv_sec = time_adjtime / 1000000;
@@ -967,10 +960,15 @@ kern_adjtime(struct thread *td, struct timeval *delta, struct timeval *olddelta)
 		}
 		*olddelta = atv;
 	}
-	if (delta)
+	if (delta) {
+		if ((error = priv_check(td, PRIV_ADJTIME))) {
+			mtx_unlock(&Giant);
+			return (error);
+		}
 		time_adjtime = (int64_t)delta->tv_sec * 1000000 +
 		    delta->tv_usec;
+	}
 	mtx_unlock(&Giant);
-	return (error);
+	return (0);
 }
 

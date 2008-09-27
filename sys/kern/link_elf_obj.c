@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/link_elf_obj.c,v 1.87.2.3 2005/12/30 22:13:58 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/link_elf_obj.c,v 1.95 2007/05/31 11:51:51 kib Exp $");
 
 #include "opt_ddb.h"
 #include "opt_mac.h"
@@ -35,9 +35,9 @@ __FBSDID("$FreeBSD: src/sys/kern/link_elf_obj.c,v 1.87.2.3 2005/12/30 22:13:58 m
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/mount.h>
 #include <sys/proc.h>
 #include <sys/namei.h>
 #include <sys/fcntl.h>
@@ -45,6 +45,8 @@ __FBSDID("$FreeBSD: src/sys/kern/link_elf_obj.c,v 1.87.2.3 2005/12/30 22:13:58 m
 #include <sys/linker.h>
 
 #include <machine/elf.h>
+
+#include <security/mac/mac_framework.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -393,19 +395,19 @@ link_elf_load_file(linker_class_t cls, const char *filename,
 	int nsym;
 	int pb, rl, ra;
 	int alignmask;
-
-	GIANT_REQUIRED;
+	int vfslocked;
 
 	shdr = NULL;
 	lf = NULL;
 	mapsize = 0;
 	hdr = NULL;
 
-	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, filename, td);
+	NDINIT(&nd, LOOKUP, FOLLOW | MPSAFE, UIO_SYSSPACE, filename, td);
 	flags = FREAD;
-	error = vn_open(&nd, &flags, 0, -1);
+	error = vn_open(&nd, &flags, 0, NULL);
 	if (error)
 		return error;
+	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 #ifdef MAC
 	error = mac_check_kld_load(td->td_ucred, nd.ni_vp);
@@ -788,6 +790,7 @@ out:
 		free(hdr, M_LINKER);
 	VOP_UNLOCK(nd.ni_vp, 0, td);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
+	VFS_UNLOCK_GIANT(vfslocked);
 
 	return error;
 }
@@ -1112,6 +1115,51 @@ elf_obj_lookup(linker_file_t lf, Elf_Size symidx, int deps)
 }
 
 static void
+link_elf_fix_link_set(elf_file_t ef)
+{
+	static const char startn[] = "__start_";
+	static const char stopn[] = "__stop_";
+	Elf_Sym *sym;
+	const char *sym_name, *linkset_name;
+	Elf_Addr startp, stopp;
+	Elf_Size symidx;
+	int start, i;
+
+	startp = stopp = 0;
+	for (symidx = 1 /* zero entry is special */;
+		symidx < ef->ddbsymcnt; symidx++) {
+		sym = ef->ddbsymtab + symidx;
+		if (sym->st_shndx != SHN_UNDEF)
+			continue;
+
+		sym_name = ef->ddbstrtab + sym->st_name;
+		if (strncmp(sym_name, startn, sizeof(startn) - 1) == 0) {
+			start = 1;
+			linkset_name = sym_name + sizeof(startn) - 1;
+		}
+		else if (strncmp(sym_name, stopn, sizeof(stopn) - 1) == 0) {
+			start = 0;
+			linkset_name = sym_name + sizeof(stopn) - 1;
+		}
+		else
+			continue;
+
+		for (i = 0; i < ef->nprogtab; i++) {
+			if (strcmp(ef->progtab[i].name, linkset_name) == 0) {
+				startp = (Elf_Addr)ef->progtab[i].addr;
+				stopp = (Elf_Addr)(startp + ef->progtab[i].size);
+				break;
+			}
+		}
+		if (i == ef->nprogtab)
+			continue;
+
+		sym->st_value = start ? startp : stopp;
+		sym->st_shndx = i;
+	}
+}
+
+static void
 link_elf_reloc_local(linker_file_t lf)
 {
 	elf_file_t ef = (elf_file_t)lf;
@@ -1123,6 +1171,8 @@ link_elf_reloc_local(linker_file_t lf)
 	Elf_Addr base;
 	int i;
 	Elf_Size symidx;
+
+	link_elf_fix_link_set(ef);
 
 	/* Perform relocations without addend if there are any: */
 	for (i = 0; i < ef->nrel; i++) {

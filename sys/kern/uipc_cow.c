@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_cow.c,v 1.23.2.1 2005/10/26 20:21:23 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_cow.c,v 1.26 2005/10/23 07:41:56 alc Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

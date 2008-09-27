@@ -30,7 +30,7 @@
  * This file should be kept in sync with src/lib/libmd/md5c.c
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/md5c.c,v 1.25 2005/02/10 12:20:42 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/md5c.c,v 1.27 2006/03/30 18:45:50 pjd Exp $");
 
 #include <sys/types.h>
 
@@ -60,10 +60,15 @@ static void
 Encode (unsigned char *output, u_int32_t *input, unsigned int len)
 {
 	unsigned int i;
-	u_int32_t *op = (u_int32_t *)output;
+	uint32_t ip;
 
-	for (i = 0; i < len / 4; i++)
-		op[i] = htole32(input[i]);
+	for (i = 0; i < len / 4; i++) {
+		ip = input[i];
+		*output++ = ip;
+		*output++ = ip >> 8;
+		*output++ = ip >> 16;
+		*output++ = ip >> 24;
+	}
 }
 
 /*
@@ -75,10 +80,11 @@ static void
 Decode (u_int32_t *output, const unsigned char *input, unsigned int len)
 {
 	unsigned int i;
-	const u_int32_t *ip = (const u_int32_t *)input;
 
-	for (i = 0; i < len / 4; i++)
-		output[i] = le32dec(&ip[i]);
+	for (i = 0; i < len; i += 4) { 
+		*output++ = input[i] | (input[i+1] << 8) | (input[i+2] << 16) |
+		    (input[i+3] << 24);
+	}
 }
 #endif
 
@@ -145,12 +151,13 @@ MD5Init (context)
  */
 
 void
-MD5Update (context, input, inputLen)
+MD5Update (context, in, inputLen)
 	MD5_CTX *context;
-	const unsigned char *input;
+	const void *in;
 	unsigned int inputLen;
 {
 	unsigned int i, index, partLen;
+	const unsigned char *input = in;
 
 	/* Compute number of bytes mod 64 */
 	index = (unsigned int)((context->count[0] >> 3) & 0x3F);

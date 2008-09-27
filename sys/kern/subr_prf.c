@@ -35,9 +35,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_prf.c,v 1.116.2.3 2005/10/07 12:40:51 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_prf.c,v 1.130 2007/03/08 06:44:34 julian Exp $");
 
 #include "opt_ddb.h"
+#include "opt_printf.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,6 +49,7 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_prf.c,v 1.116.2.3 2005/10/07 12:40:51 phk 
 #include <sys/kernel.h>
 #include <sys/msgbuf.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/stddef.h>
 #include <sys/sysctl.h>
@@ -55,6 +57,7 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_prf.c,v 1.116.2.3 2005/10/07 12:40:51 phk 
 #include <sys/syslog.h>
 #include <sys/cons.h>
 #include <sys/uio.h>
+#include <sys/ctype.h>
 
 #ifdef DDB
 #include <ddb/ddb.h>
@@ -77,6 +80,10 @@ struct putchar_arg {
 	int	flags;
 	int	pri;
 	struct	tty *tty;
+	char	*p_bufr;
+	size_t	n_bufr;
+	char	*p_next;
+	size_t	remain;
 };
 
 struct snprintf_arg {
@@ -88,10 +95,9 @@ extern	int log_open;
 
 static void  msglogchar(int c, int pri);
 static void  putchar(int ch, void *arg);
-static char *ksprintn(char *nbuf, uintmax_t num, int base, int *len);
+static char *ksprintn(char *nbuf, uintmax_t num, int base, int *len, int upper);
 static void  snprintf_func(int ch, void *arg);
 
-static int consintr = 1;		/* Ok to handle console interrupts? */
 static int msgbufmapped;		/* Set when safe to use msgbuf */
 int msgbuftrigger;
 
@@ -127,7 +133,7 @@ uprintf(const char *fmt, ...)
 	struct putchar_arg pca;
 	int retval;
 
-	if (td == NULL || td == PCPU_GET(idlethread))
+	if (td == NULL || TD_IS_IDLETHREAD(td))
 		return (0);
 
 	mtx_lock(&Giant);
@@ -233,6 +239,7 @@ log(int level, const char *fmt, ...)
 	pca.tty = NULL;
 	pca.pri = level;
 	pca.flags = log_open ? TOLOG : TOCONS;
+	pca.p_bufr = NULL;
 
 	va_start(ap, fmt);
 	kvprintf(fmt, putchar, &pca, 10, ap);
@@ -283,41 +290,106 @@ int
 printf(const char *fmt, ...)
 {
 	va_list ap;
-	int savintr;
 	struct putchar_arg pca;
 	int retval;
+#ifdef PRINTF_BUFR_SIZE
+	char bufr[PRINTF_BUFR_SIZE];
+#endif
 
-	savintr = consintr;		/* disable interrupts */
-	consintr = 0;
 	va_start(ap, fmt);
 	pca.tty = NULL;
 	pca.flags = TOCONS | TOLOG;
 	pca.pri = -1;
+#ifdef PRINTF_BUFR_SIZE
+	pca.p_bufr = bufr;
+	pca.p_next = pca.p_bufr;
+	pca.n_bufr = sizeof(bufr);
+	pca.remain = sizeof(bufr);
+	*pca.p_next = '\0';
+#else
+	/* Don't buffer console output. */
+	pca.p_bufr = NULL;
+#endif
+
 	retval = kvprintf(fmt, putchar, &pca, 10, ap);
 	va_end(ap);
+
+#ifdef PRINTF_BUFR_SIZE
+	/* Write any buffered console output: */
+	if (*pca.p_bufr != '\0')
+		cnputs(pca.p_bufr);
+#endif
+
 	if (!panicstr)
 		msgbuftrigger = 1;
-	consintr = savintr;		/* reenable interrupts */
+
 	return (retval);
 }
 
 int
 vprintf(const char *fmt, va_list ap)
 {
-	int savintr;
 	struct putchar_arg pca;
 	int retval;
+#ifdef PRINTF_BUFR_SIZE
+	char bufr[PRINTF_BUFR_SIZE];
+#endif
 
-	savintr = consintr;		/* disable interrupts */
-	consintr = 0;
 	pca.tty = NULL;
 	pca.flags = TOCONS | TOLOG;
 	pca.pri = -1;
+#ifdef PRINTF_BUFR_SIZE
+	pca.p_bufr = bufr;
+	pca.p_next = pca.p_bufr;
+	pca.n_bufr = sizeof(bufr);
+	pca.remain = sizeof(bufr);
+	*pca.p_next = '\0';
+#else
+	/* Don't buffer console output. */
+	pca.p_bufr = NULL;
+#endif
+
 	retval = kvprintf(fmt, putchar, &pca, 10, ap);
+
+#ifdef PRINTF_BUFR_SIZE
+	/* Write any buffered console output: */
+	if (*pca.p_bufr != '\0')
+		cnputs(pca.p_bufr);
+#endif
+
 	if (!panicstr)
 		msgbuftrigger = 1;
-	consintr = savintr;		/* reenable interrupts */
+
 	return (retval);
+}
+
+static void
+putcons(int c, struct putchar_arg *ap)
+{
+	/* Check if no console output buffer was provided. */
+	if (ap->p_bufr == NULL)
+		/* Output direct to the console. */
+		cnputc(c);
+	else {
+		/* Buffer the character: */
+		if (c == '\n') {
+			*ap->p_next++ = '\r';
+			ap->remain--;
+		}
+		*ap->p_next++ = c;
+		ap->remain--;
+
+		/* Always leave the buffer zero terminated. */
+		*ap->p_next = '\0';
+
+		/* Check if the buffer needs to be flushed. */
+		if (ap->remain < 3 || c == '\n') {
+			cnputs(ap->p_bufr);
+			ap->p_next = ap->p_bufr;
+			ap->remain = ap->n_bufr;
+			*ap->p_next = '\0';
+		}
+	}
 }
 
 /*
@@ -330,17 +402,15 @@ putchar(int c, void *arg)
 {
 	struct putchar_arg *ap = (struct putchar_arg*) arg;
 	struct tty *tp = ap->tty;
-	int consdirect, flags = ap->flags;
+	int flags = ap->flags;
 
-	consdirect = ((flags & TOCONS) && constty == NULL);
 	/* Don't use the tty code after a panic or while in ddb. */
-	if (panicstr)
-		consdirect = 1;
-	if (kdb_active)
-		consdirect = 1;
-	if (consdirect) {
+	if (kdb_active) {
 		if (c != '\0')
 			cnputc(c);
+	} else if (panicstr || ((flags & TOCONS) && constty == NULL)) {
+		if (c != '\0')
+			putcons(c, ap);
 	} else {
 		if ((flags & TOTTY) && tp != NULL)
 			tputchar(c, tp);
@@ -348,7 +418,7 @@ putchar(int c, void *arg)
 			if (constty != NULL)
 				msgbuf_addchar(&consmsgbuf, c);
 			if (always_console_output && c != '\0')
-				cnputc(c);
+				putcons(c, ap);
 		}
 	}
 	if ((flags & TOLOG))
@@ -451,14 +521,15 @@ snprintf_func(int ch, void *arg)
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
 static char *
-ksprintn(char *nbuf, uintmax_t num, int base, int *lenp)
+ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
 {
-	char *p;
+	char *p, c;
 
 	p = nbuf;
 	*p = '\0';
 	do {
-		*++p = hex2ascii(num % base);
+		c = hex2ascii(num % base);
+		*++p = upper ? toupper(c) : c;
 	} while (num /= base);
 	if (lenp)
 		*lenp = p - nbuf;
@@ -503,7 +574,7 @@ kvprintf(char const *fmt, void (*func)(int, void*), void *arg, int radix, va_lis
 	uintmax_t num;
 	int base, lflag, qflag, tmp, width, ladjust, sharpflag, neg, sign, dot;
 	int cflag, hflag, jflag, tflag, zflag;
-	int dwidth;
+	int dwidth, upper;
 	char padc;
 	int stop = 0, retval = 0;
 
@@ -529,7 +600,7 @@ kvprintf(char const *fmt, void (*func)(int, void*), void *arg, int radix, va_lis
 		}
 		percent = fmt - 1;
 		qflag = 0; lflag = 0; ladjust = 0; sharpflag = 0; neg = 0;
-		sign = 0; dot = 0; dwidth = 0;
+		sign = 0; dot = 0; dwidth = 0; upper = 0;
 		cflag = 0; hflag = 0; jflag = 0; tflag = 0; zflag = 0;
 reswitch:	switch (ch = (u_char)*fmt++) {
 		case '.':
@@ -579,7 +650,7 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 		case 'b':
 			num = (u_int)va_arg(ap, int);
 			p = va_arg(ap, char *);
-			for (q = ksprintn(nbuf, num, *p++, NULL); *q;)
+			for (q = ksprintn(nbuf, num, *p++, NULL, 0); *q;)
 				PCHAR(*q--);
 
 			if (num == 0)
@@ -698,8 +769,9 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 		case 'u':
 			base = 10;
 			goto handle_nosign;
-		case 'x':
 		case 'X':
+			upper = 1;
+		case 'x':
 			base = 16;
 			goto handle_nosign;
 		case 'y':
@@ -750,7 +822,7 @@ number:
 				neg = 1;
 				num = -(intmax_t)num;
 			}
-			p = ksprintn(nbuf, num, base, &tmp);
+			p = ksprintn(nbuf, num, base, &tmp, upper);
 			if (sharpflag && num != 0) {
 				if (base == 8)
 					tmp++;
@@ -823,7 +895,7 @@ msglogchar(int c, int pri)
 			dangling = 0;
 		}
 		msgbuf_addchar(msgbufp, '<');
-		for (p = ksprintn(nbuf, (uintmax_t)pri, 10, NULL); *p;)
+		for (p = ksprintn(nbuf, (uintmax_t)pri, 10, NULL, 0); *p;)
 			msgbuf_addchar(msgbufp, *p--);
 		msgbuf_addchar(msgbufp, '>');
 		lastpri = pri;
@@ -853,8 +925,6 @@ msgbufinit(void *ptr, int size)
 	oldp = msgbufp;
 }
 
-SYSCTL_DECL(_security_bsd);
-
 static int unprivileged_read_msgbuf = 1;
 SYSCTL_INT(_security_bsd, OID_AUTO, unprivileged_read_msgbuf,
     CTLFLAG_RW, &unprivileged_read_msgbuf, 0,
@@ -869,7 +939,7 @@ sysctl_kern_msgbuf(SYSCTL_HANDLER_ARGS)
 	int error, len;
 
 	if (!unprivileged_read_msgbuf) {
-		error = suser(req->td);
+		error = priv_check(req->td, PRIV_MSGBUF);
 		if (error)
 			return (error);
 	}
@@ -909,20 +979,17 @@ SYSCTL_PROC(_kern, OID_AUTO, msgbuf_clear,
 
 DB_SHOW_COMMAND(msgbuf, db_show_msgbuf)
 {
-	int i, j, quit;
-
-	quit = 0;
+	int i, j;
 
 	if (!msgbufmapped) {
 		db_printf("msgbuf not mapped yet\n");
 		return;
 	}
-	db_setup_paging(db_simple_pager, &quit, db_lines_per_page);
 	db_printf("msgbufp = %p\n", msgbufp);
 	db_printf("magic = %x, size = %d, r= %u, w = %u, ptr = %p, cksum= %u\n",
 	    msgbufp->msg_magic, msgbufp->msg_size, msgbufp->msg_rseq,
 	    msgbufp->msg_wseq, msgbufp->msg_ptr, msgbufp->msg_cksum);
-	for (i = 0; i < msgbufp->msg_size && !quit; i++) {
+	for (i = 0; i < msgbufp->msg_size && !db_pager_quit; i++) {
 		j = MSGBUF_SEQ_TO_POS(msgbufp, i + msgbufp->msg_rseq);
 		db_printf("%c", msgbufp->msg_ptr[j]);
 	}

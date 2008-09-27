@@ -33,9 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_smp.c,v 1.196 2005/06/30 03:38:10 peter Exp $");
-
-#include "opt_kdb.h"
+__FBSDID("$FreeBSD: src/sys/kern/subr_smp.c,v 1.201 2007/09/11 22:54:09 attilio Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,6 +47,7 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_smp.c,v 1.196 2005/06/30 03:38:10 peter Ex
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 
+#include <machine/cpu.h>
 #include <machine/smp.h>
 
 #include "opt_sched.h"
@@ -109,7 +108,7 @@ static void (*smp_rv_setup_func)(void *arg);
 static void (*smp_rv_action_func)(void *arg);
 static void (*smp_rv_teardown_func)(void *arg);
 static void *smp_rv_func_arg;
-static volatile int smp_rv_waiters[2];
+static volatile int smp_rv_waiters[3];
 
 /* 
  * Shared mutex to restrict busywaits between smp_rendezvous() and
@@ -145,11 +144,11 @@ mp_start(void *dummy)
 
 	mtx_init(&smp_ipi_mtx, "smp rendezvous", NULL, MTX_SPIN);
 	cpu_mp_start();
-	printf("MidnightBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
+	printf("FreeBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
 	    mp_ncpus);
 	cpu_mp_announce();
 }
-SYSINIT(cpu_mp, SI_SUB_CPU, SI_ORDER_SECOND, mp_start, NULL)
+SYSINIT(cpu_mp, SI_SUB_CPU, SI_ORDER_THIRD, mp_start, NULL)
 
 void
 forward_signal(struct thread *td)
@@ -161,7 +160,7 @@ forward_signal(struct thread *td)
 	 * this thread, so all we need to do is poke it if it is currently
 	 * executing so that it executes ast().
 	 */
-	mtx_assert(&sched_lock, MA_OWNED);
+	THREAD_LOCK_ASSERT(td, MA_OWNED);
 	KASSERT(TD_IS_RUNNING(td),
 	    ("forward_signal: thread is not TDS_RUNNING"));
 
@@ -189,8 +188,6 @@ forward_roundrobin(void)
 	struct thread *td;
 	cpumask_t id, map, me;
 
-	mtx_assert(&sched_lock, MA_OWNED);
-
 	CTR0(KTR_SMP, "forward_roundrobin()");
 
 	if (!smp_started || cold || panicstr)
@@ -203,7 +200,7 @@ forward_roundrobin(void)
 		td = pc->pc_curthread;
 		id = pc->pc_cpumask;
 		if (id != me && (id & stopped_cpus) == 0 &&
-		    td != pc->pc_idlethread) {
+		    !TD_IS_IDLETHREAD(td)) {
 			td->td_flags |= TDF_NEEDRESCHED;
 			map |= id;
 		}
@@ -242,8 +239,9 @@ stop_cpus(cpumask_t map)
 	ipi_selected(map, IPI_STOP);
 
 	i = 0;
-	while ((atomic_load_acq_int(&stopped_cpus) & map) != map) {
+	while ((stopped_cpus & map) != map) {
 		/* spin */
+		cpu_spinwait();
 		i++;
 #ifdef DIAGNOSTIC
 		if (i == 100000) {
@@ -255,36 +253,6 @@ stop_cpus(cpumask_t map)
 
 	return 1;
 }
-
-#ifdef KDB_STOP_NMI
-int
-stop_cpus_nmi(cpumask_t map)
-{
-	int i;
-
-	if (!smp_started)
-		return 0;
-
-	CTR1(KTR_SMP, "stop_cpus(%x)", map);
-
-	/* send the stop IPI to all CPUs in map */
-	ipi_nmi_selected(map);
-
-	i = 0;
-	while ((atomic_load_acq_int(&stopped_cpus) & map) != map) {
-		/* spin */
-		i++;
-#ifdef DIAGNOSTIC
-		if (i == 100000) {
-			printf("timeout stopping cpus\n");
-			break;
-		}
-#endif
-	}
-
-	return 1;
-}
-#endif /* KDB_STOP_NMI */
 
 /*
  * Called by a CPU to restart stopped CPUs. 
@@ -312,8 +280,8 @@ restart_cpus(cpumask_t map)
 	atomic_store_rel_int(&started_cpus, map);
 
 	/* wait for each to clear its bit */
-	while ((atomic_load_acq_int(&stopped_cpus) & map) != 0)
-		;	/* nothing */
+	while ((stopped_cpus & map) != 0)
+		cpu_spinwait();
 
 	return 1;
 }
@@ -331,20 +299,29 @@ void
 smp_rendezvous_action(void)
 {
 
+	/* Ensure we have up-to-date values. */
+	atomic_add_acq_int(&smp_rv_waiters[0], 1);
+	while (smp_rv_waiters[0] < mp_ncpus)
+		cpu_spinwait();
+
 	/* setup function */
 	if (smp_rv_setup_func != NULL)
 		smp_rv_setup_func(smp_rv_func_arg);
+
 	/* spin on entry rendezvous */
-	atomic_add_int(&smp_rv_waiters[0], 1);
-	while (atomic_load_acq_int(&smp_rv_waiters[0]) < mp_ncpus)
-		;	/* nothing */
+	atomic_add_int(&smp_rv_waiters[1], 1);
+	while (smp_rv_waiters[1] < mp_ncpus)
+		cpu_spinwait();
+
 	/* action function */
 	if (smp_rv_action_func != NULL)
 		smp_rv_action_func(smp_rv_func_arg);
+
 	/* spin on exit rendezvous */
-	atomic_add_int(&smp_rv_waiters[1], 1);
-	while (atomic_load_acq_int(&smp_rv_waiters[1]) < mp_ncpus)
-		;	/* nothing */
+	atomic_add_int(&smp_rv_waiters[2], 1);
+	while (smp_rv_waiters[2] < mp_ncpus)
+		cpu_spinwait();
+
 	/* teardown function */
 	if (smp_rv_teardown_func != NULL)
 		smp_rv_teardown_func(smp_rv_func_arg);
@@ -375,8 +352,9 @@ smp_rendezvous(void (* setup_func)(void *),
 	smp_rv_action_func = action_func;
 	smp_rv_teardown_func = teardown_func;
 	smp_rv_func_arg = arg;
-	smp_rv_waiters[0] = 0;
 	smp_rv_waiters[1] = 0;
+	smp_rv_waiters[2] = 0;
+	atomic_store_rel_int(&smp_rv_waiters[0], 0);
 
 	/* signal other processors, which will enter the IPI with interrupts off */
 	ipi_all_but_self(IPI_RENDEZVOUS);

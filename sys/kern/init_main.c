@@ -39,12 +39,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)init_main.c	8.9 (Berkeley) 1/21/94
- * $FreeBSD: src/sys/kern/init_main.c,v 1.256.2.2 2005/10/05 10:31:03 rwatson Exp $
  */
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/sys/kern/init_main.c,v 1.2 2006/08/29 16:34:08 laffer1 Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/init_main.c,v 1.283.2.2 2007/12/14 13:41:08 rrs Exp $");
 
+#include "opt_ddb.h"
 #include "opt_init_path.h"
 #include "opt_mac.h"
 
@@ -55,7 +55,6 @@ __MBSDID("$MidnightBSD: src/sys/kern/init_main.c,v 1.2 2006/08/29 16:34:08 laffe
 #include <sys/filedesc.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/syscallsubr.h>
@@ -77,11 +76,17 @@ __MBSDID("$MidnightBSD: src/sys/kern/init_main.c,v 1.2 2006/08/29 16:34:08 laffe
 
 #include <machine/cpu.h>
 
+#include <security/audit/audit.h>
+#include <security/mac/mac_framework.h>
+
 #include <vm/vm.h>
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
 #include <sys/copyright.h>
+
+#include <ddb/ddb.h>
+#include <ddb/db_sym.h>
 
 void mi_startup(void);				/* Should be elsewhere */
 
@@ -89,8 +94,7 @@ void mi_startup(void);				/* Should be elsewhere */
 static struct session session0;
 static struct pgrp pgrp0;
 struct	proc proc0;
-struct	thread thread0 __aligned(8);
-struct	ksegrp ksegrp0;
+struct	thread thread0 __aligned(16);
 struct	vmspace vmspace0;
 struct	proc *initproc;
 
@@ -168,6 +172,11 @@ mi_startup(void)
 	register struct sysinit **xipp;		/* interior loop of sort*/
 	register struct sysinit *save;		/* bubble*/
 
+#if defined(VERBOSE_SYSINIT)
+	int last;
+	int verbose;
+#endif
+
 	if (sysinit == NULL) {
 		sysinit = SET_BEGIN(sysinit_set);
 		sysinit_end = SET_LIMIT(sysinit_set);
@@ -190,6 +199,14 @@ restart:
 		}
 	}
 
+#if defined(VERBOSE_SYSINIT)
+	last = SI_SUB_COPYRIGHT;
+	verbose = 0;
+#if !defined(DDB)
+	printf("VERBOSE_SYSINIT: DDB not enabled, symbol lookups disabled.\n");
+#endif
+#endif
+
 	/*
 	 * Traverse the (now) ordered list of system initialization tasks.
 	 * Perform each task, and continue on to the next task.
@@ -205,8 +222,37 @@ restart:
 		if ((*sipp)->subsystem == SI_SUB_DONE)
 			continue;
 
+#if defined(VERBOSE_SYSINIT)
+		if ((*sipp)->subsystem > last) {
+			verbose = 1;
+			last = (*sipp)->subsystem;
+			printf("subsystem %x\n", last);
+		}
+		if (verbose) {
+#if defined(DDB)
+			const char *name;
+			c_db_sym_t sym;
+			db_expr_t  offset;
+
+			sym = db_search_symbol((vm_offset_t)(*sipp)->func,
+			    DB_STGY_PROC, &offset);
+			db_symbol_values(sym, &name, NULL);
+			if (name != NULL)
+				printf("   %s(%p)... ", name, (*sipp)->udata);
+			else
+#endif
+				printf("   %p(%p)... ", (*sipp)->func,
+				    (*sipp)->udata);
+		}
+#endif
+
 		/* Call function */
 		(*((*sipp)->func))((*sipp)->udata);
+
+#if defined(VERBOSE_SYSINIT)
+		if (verbose)
+			printf("done.\n");
+#endif
 
 		/* Check off the one we're just done */
 		(*sipp)->subsystem = SI_SUB_DONE;
@@ -242,19 +288,24 @@ print_caddr_t(void *data __unused)
 	printf("%s", (char *)data);
 }
 SYSINIT(announce, SI_SUB_COPYRIGHT, SI_ORDER_FIRST, print_caddr_t, copyright)
-SYSINIT(version, SI_SUB_COPYRIGHT, SI_ORDER_SECOND, print_caddr_t, version)
+SYSINIT(trademark, SI_SUB_COPYRIGHT, SI_ORDER_SECOND, print_caddr_t, trademark)
+SYSINIT(version, SI_SUB_COPYRIGHT, SI_ORDER_THIRD, print_caddr_t, version)
 
 #ifdef WITNESS
 static char wit_warn[] =
      "WARNING: WITNESS option enabled, expect reduced performance.\n";
-SYSINIT(witwarn, SI_SUB_COPYRIGHT, SI_ORDER_SECOND + 1,
+SYSINIT(witwarn, SI_SUB_COPYRIGHT, SI_ORDER_THIRD + 1,
+   print_caddr_t, wit_warn)
+SYSINIT(witwarn2, SI_SUB_RUN_SCHEDULER, SI_ORDER_THIRD + 1,
    print_caddr_t, wit_warn)
 #endif
 
 #ifdef DIAGNOSTIC
 static char diag_warn[] =
      "WARNING: DIAGNOSTIC option enabled, expect reduced performance.\n";
-SYSINIT(diagwarn, SI_SUB_COPYRIGHT, SI_ORDER_SECOND + 2,
+SYSINIT(diagwarn, SI_SUB_COPYRIGHT, SI_ORDER_THIRD + 2,
+    print_caddr_t, diag_warn)
+SYSINIT(diagwarn2, SI_SUB_RUN_SCHEDULER, SI_ORDER_THIRD + 2,
     print_caddr_t, diag_warn)
 #endif
 
@@ -316,27 +367,26 @@ proc0_init(void *dummy __unused)
 	struct proc *p;
 	unsigned i;
 	struct thread *td;
-	struct ksegrp *kg;
 
 	GIANT_REQUIRED;
 	p = &proc0;
 	td = &thread0;
-	kg = &ksegrp0;
 
 	/*
-	 * Initialize magic number.
+	 * Initialize magic number and osrel.
 	 */
 	p->p_magic = P_MAGIC;
+	p->p_osrel = osreldate;
 
 	/*
-	 * Initialize thread, process and ksegrp structures.
+	 * Initialize thread and process structures.
 	 */
 	procinit();	/* set up proc zone */
-	threadinit();	/* set up thead, upcall and KSEGRP zones */
+	threadinit();	/* set up UMA zones */
 
 	/*
 	 * Initialise scheduler resources.
-	 * Add scheduler specific parts to proc, ksegrp, thread as needed.
+	 * Add scheduler specific parts to proc, thread as needed.
 	 */
 	schedinit();	/* scheduler gets its house in order */
 	/*
@@ -366,17 +416,19 @@ proc0_init(void *dummy __unused)
 	session0.s_leader = p;
 
 	p->p_sysent = &null_sysvec;
-	p->p_flag = P_SYSTEM;
-	p->p_sflag = PS_INMEM;
+	p->p_flag = P_SYSTEM | P_INMEM;
 	p->p_state = PRS_NORMAL;
 	knlist_init(&p->p_klist, &p->p_mtx, NULL, NULL, NULL);
+	STAILQ_INIT(&p->p_ktr);
 	p->p_nice = NZERO;
 	td->td_state = TDS_RUNNING;
-	kg->kg_pri_class = PRI_TIMESHARE;
-	kg->kg_user_pri = PUSER;
+	td->td_pri_class = PRI_TIMESHARE;
+	td->td_user_pri = PUSER;
+	td->td_base_user_pri = PUSER;
 	td->td_priority = PVM;
 	td->td_base_pri = PUSER;
 	td->td_oncpu = 0;
+	td->td_flags = TDF_INMEM;
 	p->p_peers = 0;
 	p->p_leader = p;
 
@@ -384,6 +436,7 @@ proc0_init(void *dummy __unused)
 	bcopy("swapper", p->p_comm, sizeof ("swapper"));
 
 	callout_init(&p->p_itcallout, CALLOUT_MPSAFE);
+	callout_init_mtx(&p->p_limco, &p->p_mtx, 0);
 	callout_init(&td->td_slpcallout, CALLOUT_MPSAFE);
 
 	/* Create credentials. */
@@ -392,6 +445,9 @@ proc0_init(void *dummy __unused)
 	p->p_ucred->cr_uidinfo = uifind(0);
 	p->p_ucred->cr_ruidinfo = uifind(0);
 	p->p_ucred->cr_prison = NULL;	/* Don't jail it. */
+#ifdef AUDIT
+	audit_cred_kproc0(p->p_ucred);
+#endif
 #ifdef MAC
 	mac_create_proc0(p->p_ucred);
 #endif
@@ -431,6 +487,15 @@ proc0_init(void *dummy __unused)
 	vm_map_init(&vmspace0.vm_map, p->p_sysent->sv_minuser,
 	    p->p_sysent->sv_maxuser);
 	vmspace0.vm_map.pmap = vmspace_pmap(&vmspace0);
+	/*-
+	 * call the init and ctor for the new thread and proc
+	 * we wait to do this until all other structures
+	 * are fairly sane.
+	 */
+	EVENTHANDLER_INVOKE(process_init, p);
+	EVENTHANDLER_INVOKE(thread_init, td);
+	EVENTHANDLER_INVOKE(process_ctor, p);
+	EVENTHANDLER_INVOKE(thread_ctor, td);
 
 	/*
 	 * Charge root for one process.
@@ -445,19 +510,25 @@ proc0_post(void *dummy __unused)
 {
 	struct timespec ts;
 	struct proc *p;
+	struct rusage ru;
 
 	/*
 	 * Now we can look at the time, having had a chance to verify the
 	 * time from the filesystem.  Pretend that proc0 started now.
 	 */
 	sx_slock(&allproc_lock);
-	LIST_FOREACH(p, &allproc, p_list) {
+	FOREACH_PROC_IN_SYSTEM(p) {
 		microuptime(&p->p_stats->p_start);
-		p->p_rux.rux_runtime.sec = 0;
-		p->p_rux.rux_runtime.frac = 0;
+		PROC_SLOCK(p);
+		rufetch(p, &ru);	/* Clears thread stats */
+		PROC_SUNLOCK(p);
+		p->p_rux.rux_runtime = 0;
+		p->p_rux.rux_uticks = 0;
+		p->p_rux.rux_sticks = 0;
+		p->p_rux.rux_iticks = 0;
 	}
 	sx_sunlock(&allproc_lock);
-	binuptime(PCPU_PTR(switchtime));
+	PCPU_SET(switchtime, cpu_ticks());
 	PCPU_SET(switchticks, ticks);
 
 	/*
@@ -649,19 +720,19 @@ create_init(const void *udata __unused)
 	/* divorce init's credentials from the kernel's */
 	newcred = crget();
 	PROC_LOCK(initproc);
-	initproc->p_flag |= P_SYSTEM;
+	initproc->p_flag |= P_SYSTEM | P_INMEM;
 	oldcred = initproc->p_ucred;
 	crcopy(newcred, oldcred);
 #ifdef MAC
 	mac_create_proc1(newcred);
 #endif
+#ifdef AUDIT
+	audit_cred_proc1(newcred);
+#endif
 	initproc->p_ucred = newcred;
 	PROC_UNLOCK(initproc);
 	crfree(oldcred);
 	cred_update_thread(FIRST_THREAD_IN_PROC(initproc));
-	mtx_lock_spin(&sched_lock);
-	initproc->p_sflag |= PS_INMEM;
-	mtx_unlock_spin(&sched_lock);
 	cpu_set_fork_handler(FIRST_THREAD_IN_PROC(initproc), start_init, NULL);
 }
 SYSINIT(init, SI_SUB_CREATE_INIT, SI_ORDER_FIRST, create_init, NULL)
@@ -675,9 +746,9 @@ kick_init(const void *udata __unused)
 	struct thread *td;
 
 	td = FIRST_THREAD_IN_PROC(initproc);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	TD_SET_CAN_RUN(td);
-	setrunqueue(td, SRQ_BORING);	/* XXXKSE */
-	mtx_unlock_spin(&sched_lock);
+	sched_add(td, SRQ_BORING);
+	thread_unlock(td);
 }
 SYSINIT(kickinit, SI_SUB_KTHREAD_INIT, SI_ORDER_FIRST, kick_init, NULL)

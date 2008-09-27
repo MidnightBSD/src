@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.174.2.3 2006/03/13 03:05:54 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.182.4.1 2008/01/30 21:21:50 ru Exp $");
 
 #include "opt_kdb.h"
 #include "opt_mac.h"
@@ -53,9 +53,9 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.174.2.3 2006/03/13 03:05:54
 #include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/reboot.h>
 #include <sys/resourcevar.h>
@@ -67,6 +67,14 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_shutdown.c,v 1.174.2.3 2006/03/13 03:05:54
 #include <machine/cpu.h>
 #include <machine/pcb.h>
 #include <machine/smp.h>
+
+#include <security/mac/mac_framework.h>
+
+#include <vm/vm.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page.h>
+#include <vm/vm_pager.h>
+#include <vm/swap_pager.h>
 
 #include <sys/signalvar.h>
 
@@ -142,9 +150,7 @@ shutdown_conf(void *unused)
 SYSINIT(shutdown_conf, SI_SUB_INTRINSIC, SI_ORDER_ANY, shutdown_conf, NULL)
 
 /*
- * The system call that results in a reboot
- *
- * MPSAFE
+ * The system call that results in a reboot.
  */
 /* ARGSUSED */
 int
@@ -157,7 +163,7 @@ reboot(struct thread *td, struct reboot_args *uap)
 	error = mac_check_system_reboot(td->td_ucred, uap->opt);
 #endif
 	if (error == 0)
-		error = suser(td);
+		error = priv_check(td, PRIV_REBOOT);
 	if (error == 0) {
 		mtx_lock(&Giant);
 		boot(uap->opt);
@@ -261,9 +267,9 @@ boot(int howto)
 	 * systems don't shutdown properly (i.e., ACPI power off) if we
 	 * run on another processor.
 	 */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_bind(curthread, 0);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 	KASSERT(PCPU_GET(cpuid) == 0, ("boot: not running on cpu 0"));
 #endif
 	/* We're in the process of rebooting. */
@@ -334,9 +340,9 @@ boot(int howto)
 			 */
 			DROP_GIANT();
 			for (subiter = 0; subiter < 50 * iter; subiter++) {
-				mtx_lock_spin(&sched_lock);
+				thread_lock(curthread);
 				mi_switch(SW_VOL, NULL);
-				mtx_unlock_spin(&sched_lock);
+				thread_unlock(curthread);
 				DELAY(1000);
 			}
 			PICKUP_GIANT();
@@ -384,6 +390,7 @@ boot(int howto)
 			if (panicstr == 0)
 				vfs_unmountall();
 		}
+		swapoff_all();
 		DELAY(100000);		/* wait for console output to finish */
 	}
 
@@ -486,8 +493,6 @@ static u_int panic_cpu = NOCPU;
  * Panic is called on unresolvable fatal errors.  It prints "panic: mesg",
  * and then reboots.  If we are called twice, then we avoid trying to sync
  * the disks as this often leads to recursive panics.
- *
- * MPSAFE
  */
 void
 panic(const char *fmt, ...)
@@ -550,9 +555,9 @@ panic(const char *fmt, ...)
 	}
 #endif
 #endif
-	mtx_lock_spin(&sched_lock);
+	/*thread_lock(td); */
 	td->td_flags |= TDF_INPANIC;
-	mtx_unlock_spin(&sched_lock);
+	/* thread_unlock(td); */
 	if (!sync_on_panic)
 		bootopt |= RB_NOSYNC;
 	boot(bootopt);
@@ -624,6 +629,20 @@ set_dumper(struct dumperinfo *di)
 		return (EBUSY);
 	dumper = *di;
 	return (0);
+}
+
+/* Call dumper with bounds checking. */
+int
+dump_write(struct dumperinfo *di, void *virtual, vm_offset_t physical,
+    off_t offset, size_t length)
+{
+
+	if (length != 0 && (offset < di->mediaoffset ||
+	    offset - di->mediaoffset + length > di->mediasize)) {
+		printf("Attempt to write outside dump device boundaries.\n");
+		return (ENXIO);
+	}
+	return (di->dumper(di->priv, virtual, physical, offset, length));
 }
 
 #if defined(__powerpc__)

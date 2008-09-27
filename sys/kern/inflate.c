@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/inflate.c,v 1.19 2003/06/11 00:56:54 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/inflate.c,v 1.20 2005/10/31 15:41:25 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/inflate.h>
@@ -20,7 +20,7 @@ __FBSDID("$FreeBSD: src/sys/kern/inflate.c,v 1.19 2003/06/11 00:56:54 obrien Exp
 #include <sys/malloc.h>
 
 #ifdef _KERNEL
-static MALLOC_DEFINE(M_GZIP, "Gzip trees", "Gzip trees");
+static MALLOC_DEFINE(M_GZIP, "gzip_trees", "Gzip trees");
 #endif
 
 /* needed to make inflate() work */

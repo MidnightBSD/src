@@ -24,14 +24,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_tty.c,v 1.56.2.1 2005/08/13 21:24:16 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_tty.c,v 1.60 2007/07/03 17:46:37 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/proc.h>
+#include <sys/sx.h>
 #include <sys/vnode.h>
+
+#include <fs/devfs/devfs.h>
+#include <fs/devfs/devfs_int.h>
 
 static	d_open_t	cttyopen;
 
@@ -60,13 +64,25 @@ ctty_clone(void *arg, struct ucred *cred, char *name, int namelen,
 		return;
 	if (strcmp(name, "tty"))
 		return;
+	sx_sunlock(&clone_drain_lock);
+	mtx_lock(&Giant);
+	sx_slock(&proctree_lock);
+	sx_slock(&clone_drain_lock);
+	dev_lock();
 	if (!(curthread->td_proc->p_flag & P_CONTROLT))
 		*dev = ctty;
 	else if (curthread->td_proc->p_session->s_ttyvp == NULL)
 		*dev = ctty;
-	else
+	else if (curthread->td_proc->p_session->s_ttyvp->v_type == VBAD ||
+	    curthread->td_proc->p_session->s_ttyvp->v_rdev == NULL) {
+		/* e.g. s_ttyvp was revoked */
+		*dev = ctty;
+	} else
 		*dev = curthread->td_proc->p_session->s_ttyvp->v_rdev;
-	dev_ref(*dev);
+	dev_refl(*dev);
+	dev_unlock();
+	sx_sunlock(&proctree_lock);
+	mtx_unlock(&Giant);
 }
 
 static void

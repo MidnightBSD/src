@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_default.c,v 1.127.2.2 2006/03/13 03:06:17 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_default.c,v 1.138 2007/05/18 13:02:13 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -86,7 +86,7 @@ struct vop_vector default_vnodeops = {
 	.vop_kqfilter =		vop_stdkqfilter,
 	.vop_islocked =		vop_stdislocked,
 	.vop_lease =		VOP_NULL,
-	.vop_lock =		vop_stdlock,
+	.vop_lock1 =		vop_stdlock,
 	.vop_lookup =		vop_nolookup,
 	.vop_open =		VOP_NULL,
 	.vop_pathconf =		VOP_EINVAL,
@@ -96,6 +96,7 @@ struct vop_vector default_vnodeops = {
 	.vop_revoke =		VOP_PANIC,
 	.vop_strategy =		vop_nostrategy,
 	.vop_unlock =		vop_stdunlock,
+	.vop_vptofh =		vop_stdvptofh,
 };
 
 /*
@@ -217,6 +218,12 @@ vop_stdpathconf(ap)
 {
 
 	switch (ap->a_name) {
+		case _PC_NAME_MAX:
+			*ap->a_retval = NAME_MAX;
+			return (0);
+		case _PC_PATH_MAX:
+			*ap->a_retval = PATH_MAX;
+			return (0);
 		case _PC_LINK_MAX:
 			*ap->a_retval = LINK_MAX;
 			return (0);
@@ -246,15 +253,17 @@ vop_stdpathconf(ap)
  */
 int
 vop_stdlock(ap)
-	struct vop_lock_args /* {
+	struct vop_lock1_args /* {
 		struct vnode *a_vp;
 		int a_flags;
 		struct thread *a_td;
+		char *file;
+		int line;
 	} */ *ap;
 {
 	struct vnode *vp = ap->a_vp;
 
-	return (lockmgr(vp->v_vnlock, ap->a_flags, VI_MTX(vp), ap->a_td));
+	return (_lockmgr(vp->v_vnlock, ap->a_flags, VI_MTX(vp), ap->a_td, ap->a_file, ap->a_line));
 }
 
 /* See above. */
@@ -337,8 +346,24 @@ vop_stdgetwritemount(ap)
 		struct mount **a_mpp;
 	} */ *ap;
 {
+	struct mount *mp;
 
-	*(ap->a_mpp) = ap->a_vp->v_mount;
+	/*
+	 * XXX Since this is called unlocked we may be recycled while
+	 * attempting to ref the mount.  If this is the case or mountpoint
+	 * will be set to NULL.  We only have to prevent this call from
+	 * returning with a ref to an incorrect mountpoint.  It is not
+	 * harmful to return with a ref to our previous mountpoint.
+	 */
+	mp = ap->a_vp->v_mount;
+	if (mp != NULL) {
+		vfs_ref(mp);
+		if (mp != ap->a_vp->v_mount) {
+			vfs_rel(mp);
+			mp = NULL;
+		}
+	}
+	*(ap->a_mpp) = mp;
 	return (0);
 }
 
@@ -487,6 +512,12 @@ vop_stdputpages(ap)
 	     ap->a_sync, ap->a_rtvals);
 }
 
+int
+vop_stdvptofh(struct vop_vptofh_args *ap)
+{
+	return (EOPNOTSUPP);
+}
+
 /*
  * vfs default ops
  * used to fill the vfs function table to get reasonable default return values.
@@ -513,20 +544,11 @@ vfs_stdstatfs (mp, sbp, td)
 }
 
 int
-vfs_stdvptofh (vp, fhp)
-	struct vnode *vp;
-	struct fid *fhp;
-{
-
-	return (EOPNOTSUPP);
-}
-
-int
 vfs_stdquotactl (mp, cmds, uid, arg, td)
 	struct mount *mp;
 	int cmds;
 	uid_t uid;
-	caddr_t arg;
+	void *arg;
 	struct thread *td;
 {
 
@@ -571,6 +593,7 @@ loop:
 		if (error)
 			allerror = error;
 
+		/* Do not turn this into vput.  td is not always curthread. */
 		VOP_UNLOCK(vp, 0, td);
 		vrele(vp);
 		MNT_ILOCK(mp);

@@ -33,8 +33,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.221.2.1 2005/12/28 19:30:41 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.259.4.2 2008/02/14 11:45:41 simon Exp $");
 
+#include "opt_sctp.h"
 #include "opt_compat.h"
 #include "opt_ktrace.h"
 #include "opt_mac.h"
@@ -43,7 +44,6 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.221.2.1 2005/12/28 19:30:41
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/mutex.h>
 #include <sys/sysproto.h>
 #include <sys/malloc.h>
@@ -68,12 +68,19 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.221.2.1 2005/12/28 19:30:41
 #include <sys/ktrace.h>
 #endif
 
+#include <security/mac/mac_framework.h>
+
 #include <vm/vm.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pageout.h>
 #include <vm/vm_kern.h>
 #include <vm/vm_extern.h>
+
+#ifdef SCTP
+#include <netinet/sctp.h>
+#include <netinet/sctp_peeloff.h>
+#endif /* SCTP */
 
 static int sendit(struct thread *td, int s, struct msghdr *mp, int flags);
 static int recvit(struct thread *td, int s, struct msghdr *mp, void *namelenp);
@@ -92,7 +99,6 @@ int nsfbufs;
 int nsfbufspeak;
 int nsfbufsused;
 
-SYSCTL_DECL(_kern_ipc);
 SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufs, CTLFLAG_RDTUN, &nsfbufs, 0,
     "Maximum number of sendfile(2) sf_bufs available");
 SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufspeak, CTLFLAG_RD, &nsfbufspeak, 0,
@@ -105,10 +111,11 @@ SYSCTL_INT(_kern_ipc, OID_AUTO, nsfbufsused, CTLFLAG_RD, &nsfbufsused, 0,
  * file entry is held upon returning.  This is lighter weight than
  * fgetsock(), which bumps the socket reference drops the file reference
  * count instead, as this approach avoids several additional mutex operations
- * associated with the additional reference count.
+ * associated with the additional reference count.  If requested, return the
+ * open file flags.
  */
 static int
-getsock(struct filedesc *fdp, int fd, struct file **fpp)
+getsock(struct filedesc *fdp, int fd, struct file **fpp, u_int *fflagp)
 {
 	struct file *fp;
 	int error;
@@ -117,7 +124,7 @@ getsock(struct filedesc *fdp, int fd, struct file **fpp)
 	if (fdp == NULL)
 		error = EBADF;
 	else {
-		FILEDESC_LOCK_FAST(fdp);
+		FILEDESC_SLOCK(fdp);
 		fp = fget_locked(fdp, fd);
 		if (fp == NULL)
 			error = EBADF;
@@ -126,9 +133,11 @@ getsock(struct filedesc *fdp, int fd, struct file **fpp)
 			error = ENOTSOCK;
 		} else {
 			fhold(fp);
+			if (fflagp != NULL)
+				*fflagp = fp->f_flag;
 			error = 0;
 		}
-		FILEDESC_UNLOCK_FAST(fdp);
+		FILEDESC_SUNLOCK(fdp);
 	}
 	*fpp = fp;
 	return (error);
@@ -141,13 +150,10 @@ getsock(struct filedesc *fdp, int fd, struct file **fpp)
 #define COMPAT_OLDSOCK
 #endif
 
-/*
- * MPSAFE
- */
 int
 socket(td, uap)
 	struct thread *td;
-	register struct socket_args /* {
+	struct socket_args /* {
 		int	domain;
 		int	type;
 		int	protocol;
@@ -169,33 +175,28 @@ socket(td, uap)
 	if (error)
 		return (error);
 	/* An extra reference on `fp' has been held for us by falloc(). */
-	NET_LOCK_GIANT();
 	error = socreate(uap->domain, &so, uap->type, uap->protocol,
 	    td->td_ucred, td);
-	NET_UNLOCK_GIANT();
 	if (error) {
 		fdclose(fdp, fp, fd, td);
 	} else {
-		FILEDESC_LOCK_FAST(fdp);
+		FILE_LOCK(fp);
 		fp->f_data = so;	/* already has ref count */
 		fp->f_flag = FREAD|FWRITE;
-		fp->f_ops = &socketops;
 		fp->f_type = DTYPE_SOCKET;
-		FILEDESC_UNLOCK_FAST(fdp);
+		fp->f_ops = &socketops;
+		FILE_UNLOCK(fp);
 		td->td_retval[0] = fd;
 	}
 	fdrop(fp, td);
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 bind(td, uap)
 	struct thread *td;
-	register struct bind_args /* {
+	struct bind_args /* {
 		int	s;
 		caddr_t	name;
 		int	namelen;
@@ -207,7 +208,9 @@ bind(td, uap)
 	if ((error = getsockaddr(&sa, uap->name, uap->namelen)) != 0)
 		return (error);
 
-	return (kern_bind(td, uap->s, sa));
+	error = kern_bind(td, uap->s, sa);
+	free(sa, M_SONAME);
+	return (error);
 }
 
 int
@@ -220,37 +223,30 @@ kern_bind(td, fd, sa)
 	struct file *fp;
 	int error;
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, fd, &fp);
+	error = getsock(td->td_proc->p_fd, fd, &fp, NULL);
 	if (error)
-		goto done2;
+		return (error);
 	so = fp->f_data;
 #ifdef MAC
 	SOCK_LOCK(so);
 	error = mac_check_socket_bind(td->td_ucred, so, sa);
 	SOCK_UNLOCK(so);
 	if (error)
-		goto done1;
+		goto done;
 #endif
 	error = sobind(so, sa, td);
 #ifdef MAC
-done1:
+done:
 #endif
 	fdrop(fp, td);
-done2:
-	NET_UNLOCK_GIANT();
-	FREE(sa, M_SONAME);
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 listen(td, uap)
 	struct thread *td;
-	register struct listen_args /* {
+	struct listen_args /* {
 		int	s;
 		int	backlog;
 	} */ *uap;
@@ -259,8 +255,7 @@ listen(td, uap)
 	struct file *fp;
 	int error;
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, uap->s, &fp);
+	error = getsock(td->td_proc->p_fd, uap->s, &fp, NULL);
 	if (error == 0) {
 		so = fp->f_data;
 #ifdef MAC
@@ -276,28 +271,71 @@ done:
 #endif
 		fdrop(fp, td);
 	}
-	NET_UNLOCK_GIANT();
 	return(error);
 }
 
 /*
  * accept1()
- * MPSAFE
  */
 static int
 accept1(td, uap, compat)
 	struct thread *td;
-	register struct accept_args /* {
+	struct accept_args /* {
 		int	s;
 		struct sockaddr	* __restrict name;
 		socklen_t	* __restrict anamelen;
 	} */ *uap;
 	int compat;
 {
-	struct filedesc *fdp;
-	struct file *nfp = NULL;
-	struct sockaddr *sa = NULL;
+	struct sockaddr *name;
 	socklen_t namelen;
+	struct file *fp;
+	int error;
+
+	if (uap->name == NULL)
+		return (kern_accept(td, uap->s, NULL, NULL, NULL));
+
+	error = copyin(uap->anamelen, &namelen, sizeof (namelen));
+	if (error)
+		return (error);
+
+	error = kern_accept(td, uap->s, &name, &namelen, &fp);
+
+	/*
+	 * return a namelen of zero for older code which might
+	 * ignore the return value from accept.
+	 */
+	if (error) {
+		(void) copyout(&namelen,
+		    uap->anamelen, sizeof(*uap->anamelen));
+		return (error);
+	}
+
+	if (error == 0 && name != NULL) {
+#ifdef COMPAT_OLDSOCK
+		if (compat)
+			((struct osockaddr *)name)->sa_family =
+			    name->sa_family;
+#endif
+		error = copyout(name, uap->name, namelen);
+	}
+	if (error == 0)
+		error = copyout(&namelen, uap->anamelen,
+		    sizeof(namelen));
+	if (error)
+		fdclose(td->td_proc->p_fd, fp, td->td_retval[0], td);
+	fdrop(fp, td);
+	free(name, M_SONAME);
+	return (error);
+}
+
+int
+kern_accept(struct thread *td, int s, struct sockaddr **name,
+    socklen_t *namelen, struct file **fp)
+{
+	struct filedesc *fdp;
+	struct file *headfp, *nfp = NULL;
+	struct sockaddr *sa = NULL;
 	int error;
 	struct socket *head, *so;
 	int fd;
@@ -305,18 +343,17 @@ accept1(td, uap, compat)
 	pid_t pgid;
 	int tmp;
 
-	fdp = td->td_proc->p_fd;
-	if (uap->name) {
-		error = copyin(uap->anamelen, &namelen, sizeof (namelen));
-		if(error)
-			return (error);
-		if (namelen < 0)
+	if (name) {
+		*name = NULL;
+		if (*namelen < 0)
 			return (EINVAL);
 	}
-	NET_LOCK_GIANT();
-	error = fgetsock(td, uap->s, &head, &fflag);
+
+	fdp = td->td_proc->p_fd;
+	error = getsock(fdp, s, &headfp, &fflag);
 	if (error)
-		goto done2;
+		return (error);
+	head = headfp->f_data;
 	if ((head->so_options & SO_ACCEPTCONN) == 0) {
 		error = EINVAL;
 		goto done;
@@ -389,8 +426,8 @@ accept1(td, uap, compat)
 	FILE_LOCK(nfp);
 	nfp->f_data = so;	/* nfp has ref count from falloc */
 	nfp->f_flag = fflag;
-	nfp->f_ops = &socketops;
 	nfp->f_type = DTYPE_SOCKET;
+	nfp->f_ops = &socketops;
 	FILE_UNLOCK(nfp);
 	/* Sync socket nonblocking/async state with file flags */
 	tmp = fflag & FNONBLOCK;
@@ -404,34 +441,21 @@ accept1(td, uap, compat)
 		 * return a namelen of zero for older code which might
 		 * ignore the return value from accept.
 		 */
-		if (uap->name != NULL) {
-			namelen = 0;
-			(void) copyout(&namelen,
-			    uap->anamelen, sizeof(*uap->anamelen));
-		}
+		if (name)
+			*namelen = 0;
 		goto noconnection;
 	}
 	if (sa == NULL) {
-		namelen = 0;
-		if (uap->name)
-			goto gotnoname;
-		error = 0;
+		if (name)
+			*namelen = 0;
 		goto done;
 	}
-	if (uap->name) {
+	if (name) {
 		/* check sa_len before it is destroyed */
-		if (namelen > sa->sa_len)
-			namelen = sa->sa_len;
-#ifdef COMPAT_OLDSOCK
-		if (compat)
-			((struct osockaddr *)sa)->sa_family =
-			    sa->sa_family;
-#endif
-		error = copyout(sa, uap->name, (u_int)namelen);
-		if (!error)
-gotnoname:
-			error = copyout(&namelen,
-			    uap->anamelen, sizeof (*uap->anamelen));
+		if (*namelen > sa->sa_len)
+			*namelen = sa->sa_len;
+		*name = sa;
+		sa = NULL;
 	}
 noconnection:
 	if (sa)
@@ -445,20 +469,23 @@ noconnection:
 		fdclose(fdp, nfp, fd, td);
 
 	/*
-	 * Release explicitly held references before returning.
+	 * Release explicitly held references before returning.  We return
+	 * a reference on nfp to the caller on success if they request it.
 	 */
 done:
+	if (fp != NULL) {
+		if (error == 0) {
+			*fp = nfp;
+			nfp = NULL;
+		} else
+			*fp = NULL;
+	}
 	if (nfp != NULL)
 		fdrop(nfp, td);
-	fputsock(head);
-done2:
-	NET_UNLOCK_GIANT();
+	fdrop(headfp, td);
 	return (error);
 }
 
-/*
- * MPSAFE (accept1() is MPSAFE)
- */
 int
 accept(td, uap)
 	struct thread *td;
@@ -469,9 +496,6 @@ accept(td, uap)
 }
 
 #ifdef COMPAT_OLDSOCK
-/*
- * MPSAFE (accept1() is MPSAFE)
- */
 int
 oaccept(td, uap)
 	struct thread *td;
@@ -482,14 +506,11 @@ oaccept(td, uap)
 }
 #endif /* COMPAT_OLDSOCK */
 
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 connect(td, uap)
 	struct thread *td;
-	register struct connect_args /* {
+	struct connect_args /* {
 		int	s;
 		caddr_t	name;
 		int	namelen;
@@ -502,7 +523,9 @@ connect(td, uap)
 	if (error)
 		return (error);
 
-	return (kern_connect(td, uap->s, sa));
+	error = kern_connect(td, uap->s, sa);
+	free(sa, M_SONAME);
+	return (error);
 }
 
 
@@ -517,10 +540,9 @@ kern_connect(td, fd, sa)
 	int error;
 	int interrupted = 0;
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, fd, &fp);
+	error = getsock(td->td_proc->p_fd, fd, &fp, NULL);
 	if (error)
-		goto done2;
+		return (error);
 	so = fp->f_data;
 	if (so->so_state & SS_ISCONNECTING) {
 		error = EALREADY;
@@ -562,26 +584,20 @@ bad:
 		error = EINTR;
 done1:
 	fdrop(fp, td);
-done2:
-	NET_UNLOCK_GIANT();
-	FREE(sa, M_SONAME);
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 socketpair(td, uap)
 	struct thread *td;
-	register struct socketpair_args /* {
+	struct socketpair_args /* {
 		int	domain;
 		int	type;
 		int	protocol;
 		int	*rsv;
 	} */ *uap;
 {
-	register struct filedesc *fdp = td->td_proc->p_fd;
+	struct filedesc *fdp = td->td_proc->p_fd;
 	struct file *fp1, *fp2;
 	struct socket *so1, *so2;
 	int fd, error, sv[2];
@@ -594,11 +610,10 @@ socketpair(td, uap)
 		return (error);
 #endif
 
-	NET_LOCK_GIANT();
 	error = socreate(uap->domain, &so1, uap->type, uap->protocol,
 	    td->td_ucred, td);
 	if (error)
-		goto done2;
+		return (error);
 	error = socreate(uap->domain, &so2, uap->type, uap->protocol,
 	    td->td_ucred, td);
 	if (error)
@@ -627,18 +642,21 @@ socketpair(td, uap)
 	}
 	FILE_LOCK(fp1);
 	fp1->f_flag = FREAD|FWRITE;
-	fp1->f_ops = &socketops;
 	fp1->f_type = DTYPE_SOCKET;
+	fp1->f_ops = &socketops;
 	FILE_UNLOCK(fp1);
 	FILE_LOCK(fp2);
 	fp2->f_flag = FREAD|FWRITE;
-	fp2->f_ops = &socketops;
 	fp2->f_type = DTYPE_SOCKET;
+	fp2->f_ops = &socketops;
 	FILE_UNLOCK(fp2);
+	so1 = so2 = NULL;
 	error = copyout(sv, uap->rsv, 2 * sizeof (int));
+	if (error)
+		goto free4;
 	fdrop(fp1, td);
 	fdrop(fp2, td);
-	goto done2;
+	return (0);
 free4:
 	fdclose(fdp, fp2, sv[1], td);
 	fdrop(fp2, td);
@@ -646,19 +664,19 @@ free3:
 	fdclose(fdp, fp1, sv[0], td);
 	fdrop(fp1, td);
 free2:
-	(void)soclose(so2);
+	if (so2 != NULL)
+		(void)soclose(so2);
 free1:
-	(void)soclose(so1);
-done2:
-	NET_UNLOCK_GIANT();
+	if (so1 != NULL)
+		(void)soclose(so1);
 	return (error);
 }
 
 static int
 sendit(td, s, mp, flags)
-	register struct thread *td;
+	struct thread *td;
 	int s;
-	register struct msghdr *mp;
+	struct msghdr *mp;
 	int flags;
 {
 	struct mbuf *control;
@@ -691,7 +709,7 @@ sendit(td, s, mp, flags)
 			goto bad;
 #ifdef COMPAT_OLDSOCK
 		if (mp->msg_flags == MSG_COMPAT) {
-			register struct cmsghdr *cm;
+			struct cmsghdr *cm;
 
 			M_PREPEND(control, sizeof(*cm), M_TRYWAIT);
 			if (control == 0) {
@@ -736,10 +754,9 @@ kern_sendit(td, s, mp, flags, control, segflg)
 	struct uio *ktruio = NULL;
 #endif
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, s, &fp);
+	error = getsock(td->td_proc->p_fd, s, &fp, NULL);
 	if (error)
-		goto bad2;
+		return (error);
 	so = (struct socket *)fp->f_data;
 
 #ifdef MAC
@@ -769,8 +786,7 @@ kern_sendit(td, s, mp, flags, control, segflg)
 		ktruio = cloneuio(&auio);
 #endif
 	len = auio.uio_resid;
-	error = so->so_proto->pr_usrreqs->pru_sosend(so, mp->msg_name, &auio,
-	    0, control, flags, td);
+	error = sosend(so, mp->msg_name, &auio, 0, control, flags, td);
 	if (error) {
 		if (auio.uio_resid != len && (error == ERESTART ||
 		    error == EINTR || error == EWOULDBLOCK))
@@ -793,18 +809,13 @@ kern_sendit(td, s, mp, flags, control, segflg)
 #endif
 bad:
 	fdrop(fp, td);
-bad2:
-	NET_UNLOCK_GIANT();
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 sendto(td, uap)
 	struct thread *td;
-	register struct sendto_args /* {
+	struct sendto_args /* {
 		int	s;
 		caddr_t	buf;
 		size_t	len;
@@ -832,13 +843,10 @@ sendto(td, uap)
 }
 
 #ifdef COMPAT_OLDSOCK
-/*
- * MPSAFE
- */
 int
 osend(td, uap)
 	struct thread *td;
-	register struct osend_args /* {
+	struct osend_args /* {
 		int	s;
 		caddr_t	buf;
 		int	len;
@@ -861,9 +869,6 @@ osend(td, uap)
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 osendmsg(td, uap)
 	struct thread *td;
@@ -891,9 +896,6 @@ osendmsg(td, uap)
 }
 #endif
 
-/*
- * MPSAFE
- */
 int
 sendmsg(td, uap)
 	struct thread *td;
@@ -923,12 +925,11 @@ sendmsg(td, uap)
 }
 
 int
-kern_recvit(td, s, mp, namelenp, segflg, controlp)
+kern_recvit(td, s, mp, fromseg, controlp)
 	struct thread *td;
 	int s;
 	struct msghdr *mp;
-	void *namelenp;
-	enum uio_seg segflg;
+	enum uio_seg fromseg;
 	struct mbuf **controlp;
 {
 	struct uio auio;
@@ -948,12 +949,9 @@ kern_recvit(td, s, mp, namelenp, segflg, controlp)
 	if(controlp != NULL)
 		*controlp = 0;
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, s, &fp);
-	if (error) {
-		NET_UNLOCK_GIANT();
+	error = getsock(td->td_proc->p_fd, s, &fp, NULL);
+	if (error)
 		return (error);
-	}
 	so = fp->f_data;
 
 #ifdef MAC
@@ -962,14 +960,13 @@ kern_recvit(td, s, mp, namelenp, segflg, controlp)
 	SOCK_UNLOCK(so);
 	if (error) {
 		fdrop(fp, td);
-		NET_UNLOCK_GIANT();
 		return (error);
 	}
 #endif
 
 	auio.uio_iov = mp->msg_iov;
 	auio.uio_iovcnt = mp->msg_iovlen;
-	auio.uio_segflg = segflg;
+	auio.uio_segflg = UIO_USERSPACE;
 	auio.uio_rw = UIO_READ;
 	auio.uio_td = td;
 	auio.uio_offset = 0;			/* XXX */
@@ -978,7 +975,6 @@ kern_recvit(td, s, mp, namelenp, segflg, controlp)
 	for (i = 0; i < mp->msg_iovlen; i++, iov++) {
 		if ((auio.uio_resid += iov->iov_len) < 0) {
 			fdrop(fp, td);
-			NET_UNLOCK_GIANT();
 			return (EINVAL);
 		}
 	}
@@ -987,8 +983,8 @@ kern_recvit(td, s, mp, namelenp, segflg, controlp)
 		ktruio = cloneuio(&auio);
 #endif
 	len = auio.uio_resid;
-	error = so->so_proto->pr_usrreqs->pru_soreceive(so, &fromsa, &auio,
-	    (struct mbuf **)0, (mp->msg_control || controlp) ? &control : (struct mbuf **)0,
+	error = soreceive(so, &fromsa, &auio, (struct mbuf **)0,
+	    (mp->msg_control || controlp) ? &control : (struct mbuf **)0,
 	    &mp->msg_flags);
 	if (error) {
 		if (auio.uio_resid != (int)len && (error == ERESTART ||
@@ -1016,20 +1012,15 @@ kern_recvit(td, s, mp, namelenp, segflg, controlp)
 				((struct osockaddr *)fromsa)->sa_family =
 				    fromsa->sa_family;
 #endif
-			error = copyout(fromsa, mp->msg_name, (unsigned)len);
-			if (error)
-				goto out;
+			if (fromseg == UIO_USERSPACE) {
+				error = copyout(fromsa, mp->msg_name,
+				    (unsigned)len);
+				if (error)
+					goto out;
+			} else
+				bcopy(fromsa, mp->msg_name, len);
 		}
 		mp->msg_namelen = len;
-		if (namelenp &&
-		    (error = copyout(&len, namelenp, sizeof (socklen_t)))) {
-#ifdef COMPAT_OLDSOCK
-			if (mp->msg_flags & MSG_COMPAT)
-				error = 0;	/* old recvfrom didn't check */
-			else
-#endif
-			goto out;
-		}
 	}
 	if (mp->msg_control && controlp == NULL) {
 #ifdef COMPAT_OLDSOCK
@@ -1079,7 +1070,6 @@ kern_recvit(td, s, mp, namelenp, segflg, controlp)
 	}
 out:
 	fdrop(fp, td);
-	NET_UNLOCK_GIANT();
 	if (fromsa)
 		FREE(fromsa, M_SONAME);
 
@@ -1098,17 +1088,25 @@ recvit(td, s, mp, namelenp)
 	struct msghdr *mp;
 	void *namelenp;
 {
+	int error;
 
-	return (kern_recvit(td, s, mp, namelenp, UIO_USERSPACE, NULL));
+	error = kern_recvit(td, s, mp, UIO_USERSPACE, NULL);
+	if (error)
+		return (error);
+	if (namelenp) {
+		error = copyout(&mp->msg_namelen, namelenp, sizeof (socklen_t));
+#ifdef COMPAT_OLDSOCK
+		if (mp->msg_flags & MSG_COMPAT)
+			error = 0;	/* old recvfrom didn't check */
+#endif
+	}
+	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 recvfrom(td, uap)
 	struct thread *td;
-	register struct recvfrom_args /* {
+	struct recvfrom_args /* {
 		int	s;
 		caddr_t	buf;
 		size_t	len;
@@ -1142,9 +1140,6 @@ done2:
 }
 
 #ifdef COMPAT_OLDSOCK
-/*
- * MPSAFE
- */
 int
 orecvfrom(td, uap)
 	struct thread *td;
@@ -1156,15 +1151,11 @@ orecvfrom(td, uap)
 }
 #endif
 
-
 #ifdef COMPAT_OLDSOCK
-/*
- * MPSAFE
- */
 int
 orecv(td, uap)
 	struct thread *td;
-	register struct orecv_args /* {
+	struct orecv_args /* {
 		int	s;
 		caddr_t	buf;
 		int	len;
@@ -1191,8 +1182,6 @@ orecv(td, uap)
  * Old recvmsg.  This code takes advantage of the fact that the old msghdr
  * overlays the new one, missing only the flags, and with the (old) access
  * rights where the control fields are now.
- *
- * MPSAFE
  */
 int
 orecvmsg(td, uap)
@@ -1224,9 +1213,6 @@ orecvmsg(td, uap)
 }
 #endif
 
-/*
- * MPSAFE
- */
 int
 recvmsg(td, uap)
 	struct thread *td;
@@ -1261,14 +1247,11 @@ recvmsg(td, uap)
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 shutdown(td, uap)
 	struct thread *td;
-	register struct shutdown_args /* {
+	struct shutdown_args /* {
 		int	s;
 		int	how;
 	} */ *uap;
@@ -1277,25 +1260,20 @@ shutdown(td, uap)
 	struct file *fp;
 	int error;
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, uap->s, &fp);
+	error = getsock(td->td_proc->p_fd, uap->s, &fp, NULL);
 	if (error == 0) {
 		so = fp->f_data;
 		error = soshutdown(so, uap->how);
 		fdrop(fp, td);
 	}
-	NET_UNLOCK_GIANT();
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 setsockopt(td, uap)
 	struct thread *td;
-	register struct setsockopt_args /* {
+	struct setsockopt_args /* {
 		int	s;
 		int	level;
 		int	name;
@@ -1344,25 +1322,20 @@ kern_setsockopt(td, s, level, name, val, valseg, valsize)
 		panic("kern_setsockopt called with bad valseg");
 	}
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, s, &fp);
+	error = getsock(td->td_proc->p_fd, s, &fp, NULL);
 	if (error == 0) {
 		so = fp->f_data;
 		error = sosetopt(so, &sopt);
 		fdrop(fp, td);
 	}
-	NET_UNLOCK_GIANT();
 	return(error);
 }
 
-/*
- * MPSAFE
- */
 /* ARGSUSED */
 int
 getsockopt(td, uap)
 	struct thread *td;
-	register struct getsockopt_args /* {
+	struct getsockopt_args /* {
 		int	s;
 		int	level;
 		int	name;
@@ -1427,83 +1400,89 @@ kern_getsockopt(td, s, level, name, val, valseg, valsize)
 		panic("kern_getsockopt called with bad valseg");
 	}
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, s, &fp);
+	error = getsock(td->td_proc->p_fd, s, &fp, NULL);
 	if (error == 0) {
 		so = fp->f_data;
 		error = sogetopt(so, &sopt);
 		*valsize = sopt.sopt_valsize;
 		fdrop(fp, td);
 	}
-	NET_UNLOCK_GIANT();
 	return (error);
 }
 
 /*
  * getsockname1() - Get socket name.
- *
- * MPSAFE
  */
 /* ARGSUSED */
 static int
 getsockname1(td, uap, compat)
 	struct thread *td;
-	register struct getsockname_args /* {
+	struct getsockname_args /* {
 		int	fdes;
 		struct sockaddr * __restrict asa;
 		socklen_t * __restrict alen;
 	} */ *uap;
 	int compat;
 {
-	struct socket *so;
 	struct sockaddr *sa;
+	socklen_t len;
+	int error;
+
+	error = copyin(uap->alen, &len, sizeof(len));
+	if (error)
+		return (error);
+
+	error = kern_getsockname(td, uap->fdes, &sa, &len);
+	if (error)
+		return (error);
+
+	if (len != 0) {
+#ifdef COMPAT_OLDSOCK
+		if (compat)
+			((struct osockaddr *)sa)->sa_family = sa->sa_family;
+#endif
+		error = copyout(sa, uap->asa, (u_int)len);
+	}
+	free(sa, M_SONAME);
+	if (error == 0)
+		error = copyout(&len, uap->alen, sizeof(len));
+	return (error);
+}
+
+int
+kern_getsockname(struct thread *td, int fd, struct sockaddr **sa,
+    socklen_t *alen)
+{
+	struct socket *so;
 	struct file *fp;
 	socklen_t len;
 	int error;
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, uap->fdes, &fp);
+	if (*alen < 0)
+		return (EINVAL);
+
+	error = getsock(td->td_proc->p_fd, fd, &fp, NULL);
 	if (error)
-		goto done2;
+		return (error);
 	so = fp->f_data;
-	error = copyin(uap->alen, &len, sizeof (len));
-	if (error)
-		goto done1;
-	if (len < 0) {
-		error = EINVAL;
-		goto done1;
-	}
-	sa = 0;
-	error = (*so->so_proto->pr_usrreqs->pru_sockaddr)(so, &sa);
+	*sa = NULL;
+	error = (*so->so_proto->pr_usrreqs->pru_sockaddr)(so, sa);
 	if (error)
 		goto bad;
-	if (sa == 0) {
+	if (*sa == NULL)
 		len = 0;
-		goto gotnothing;
-	}
-
-	len = MIN(len, sa->sa_len);
-#ifdef COMPAT_OLDSOCK
-	if (compat)
-		((struct osockaddr *)sa)->sa_family = sa->sa_family;
-#endif
-	error = copyout(sa, uap->asa, (u_int)len);
-	if (error == 0)
-gotnothing:
-		error = copyout(&len, uap->alen, sizeof (len));
+	else
+		len = MIN(*alen, (*sa)->sa_len);
+	*alen = len;
 bad:
-	if (sa)
-		FREE(sa, M_SONAME);
-done1:
 	fdrop(fp, td);
-done2:
-	NET_UNLOCK_GIANT();
+	if (error && *sa) {
+		free(*sa, M_SONAME);
+		*sa = NULL;
+	}
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 getsockname(td, uap)
 	struct thread *td;
@@ -1514,9 +1493,6 @@ getsockname(td, uap)
 }
 
 #ifdef COMPAT_OLDSOCK
-/*
- * MPSAFE
- */
 int
 ogetsockname(td, uap)
 	struct thread *td;
@@ -1529,74 +1505,82 @@ ogetsockname(td, uap)
 
 /*
  * getpeername1() - Get name of peer for connected socket.
- *
- * MPSAFE
  */
 /* ARGSUSED */
 static int
 getpeername1(td, uap, compat)
 	struct thread *td;
-	register struct getpeername_args /* {
+	struct getpeername_args /* {
 		int	fdes;
 		struct sockaddr * __restrict	asa;
 		socklen_t * __restrict	alen;
 	} */ *uap;
 	int compat;
 {
-	struct socket *so;
 	struct sockaddr *sa;
+	socklen_t len;
+	int error;
+
+	error = copyin(uap->alen, &len, sizeof (len));
+	if (error)
+		return (error);
+
+	error = kern_getpeername(td, uap->fdes, &sa, &len);
+	if (error)
+		return (error);
+
+	if (len != 0) {
+#ifdef COMPAT_OLDSOCK
+		if (compat)
+			((struct osockaddr *)sa)->sa_family = sa->sa_family;
+#endif
+		error = copyout(sa, uap->asa, (u_int)len);
+	}
+	free(sa, M_SONAME);
+	if (error == 0)
+		error = copyout(&len, uap->alen, sizeof(len));
+	return (error);
+}
+
+int
+kern_getpeername(struct thread *td, int fd, struct sockaddr **sa,
+    socklen_t *alen)
+{
+	struct socket *so;
 	struct file *fp;
 	socklen_t len;
 	int error;
 
-	NET_LOCK_GIANT();
-	error = getsock(td->td_proc->p_fd, uap->fdes, &fp);
+	if (*alen < 0)
+		return (EINVAL);
+
+	error = getsock(td->td_proc->p_fd, fd, &fp, NULL);
 	if (error)
-		goto done2;
+		return (error);
 	so = fp->f_data;
 	if ((so->so_state & (SS_ISCONNECTED|SS_ISCONFIRMING)) == 0) {
 		error = ENOTCONN;
-		goto done1;
+		goto done;
 	}
-	error = copyin(uap->alen, &len, sizeof (len));
-	if (error)
-		goto done1;
-	if (len < 0) {
-		error = EINVAL;
-		goto done1;
-	}
-	sa = 0;
-	error = (*so->so_proto->pr_usrreqs->pru_peeraddr)(so, &sa);
+	*sa = NULL;
+	error = (*so->so_proto->pr_usrreqs->pru_peeraddr)(so, sa);
 	if (error)
 		goto bad;
-	if (sa == 0) {
+	if (*sa == NULL)
 		len = 0;
-		goto gotnothing;
-	}
-	len = MIN(len, sa->sa_len);
-#ifdef COMPAT_OLDSOCK
-	if (compat)
-		((struct osockaddr *)sa)->sa_family =
-		    sa->sa_family;
-#endif
-	error = copyout(sa, uap->asa, (u_int)len);
-	if (error)
-		goto bad;
-gotnothing:
-	error = copyout(&len, uap->alen, sizeof (len));
+	else
+		len = MIN(*alen, (*sa)->sa_len);
+	*alen = len;
 bad:
-	if (sa)
-		FREE(sa, M_SONAME);
-done1:
+	if (error && *sa) {
+		free(*sa, M_SONAME);
+		*sa = NULL;
+	}
+done:
 	fdrop(fp, td);
-done2:
-	NET_UNLOCK_GIANT();
 	return (error);
 }
 
-/*
- * MPSAFE
- */
 int
 getpeername(td, uap)
 	struct thread *td;
@@ -1607,9 +1591,6 @@ getpeername(td, uap)
 }
 
 #ifdef COMPAT_OLDSOCK
-/*
- * MPSAFE
- */
 int
 ogetpeername(td, uap)
 	struct thread *td;
@@ -1627,8 +1608,8 @@ sockargs(mp, buf, buflen, type)
 	caddr_t buf;
 	int buflen, type;
 {
-	register struct sockaddr *sa;
-	register struct mbuf *m;
+	struct sockaddr *sa;
+	struct mbuf *m;
 	int error;
 
 	if ((u_int)buflen > MLEN) {
@@ -1722,22 +1703,54 @@ sf_buf_mext(void *addr, void *args)
 /*
  * sendfile(2)
  *
- * MPSAFE
- *
  * int sendfile(int fd, int s, off_t offset, size_t nbytes,
  *	 struct sf_hdtr *hdtr, off_t *sbytes, int flags)
  *
  * Send a file specified by 'fd' and starting at 'offset' to a socket
- * specified by 's'. Send only 'nbytes' of the file or until EOF if
- * nbytes == 0. Optionally add a header and/or trailer to the socket
- * output. If specified, write the total number of bytes sent into *sbytes.
- *
+ * specified by 's'. Send only 'nbytes' of the file or until EOF if nbytes ==
+ * 0.  Optionally add a header and/or trailer to the socket output.  If
+ * specified, write the total number of bytes sent into *sbytes.
  */
 int
 sendfile(struct thread *td, struct sendfile_args *uap)
 {
 
 	return (do_sendfile(td, uap, 0));
+}
+
+static int
+do_sendfile(struct thread *td, struct sendfile_args *uap, int compat)
+{
+	struct sf_hdtr hdtr;
+	struct uio *hdr_uio, *trl_uio;
+	int error;
+
+	hdr_uio = trl_uio = NULL;
+
+	if (uap->hdtr != NULL) {
+		error = copyin(uap->hdtr, &hdtr, sizeof(hdtr));
+		if (error)
+			goto out;
+		if (hdtr.headers != NULL) {
+			error = copyinuio(hdtr.headers, hdtr.hdr_cnt, &hdr_uio);
+			if (error)
+				goto out;
+		}
+		if (hdtr.trailers != NULL) {
+			error = copyinuio(hdtr.trailers, hdtr.trl_cnt, &trl_uio);
+			if (error)
+				goto out;
+
+		}
+	}
+
+	error = kern_sendfile(td, uap, hdr_uio, trl_uio, compat);
+out:
+	if (hdr_uio)
+		free(hdr_uio, M_IOV);
+	if (trl_uio)
+		free(trl_uio, M_IOV);
+	return (error);
 }
 
 #ifdef COMPAT_FREEBSD4
@@ -1758,329 +1771,188 @@ freebsd4_sendfile(struct thread *td, struct freebsd4_sendfile_args *uap)
 }
 #endif /* COMPAT_FREEBSD4 */
 
-static int
-do_sendfile(struct thread *td, struct sendfile_args *uap, int compat)
+int
+kern_sendfile(struct thread *td, struct sendfile_args *uap,
+    struct uio *hdr_uio, struct uio *trl_uio, int compat)
 {
+	struct file *sock_fp;
 	struct vnode *vp;
 	struct vm_object *obj = NULL;
 	struct socket *so = NULL;
-	struct mbuf *m, *m_header = NULL;
+	struct mbuf *m = NULL;
 	struct sf_buf *sf;
 	struct vm_page *pg;
-	struct writev_args nuap;
-	struct sf_hdtr hdtr;
-	struct uio *hdr_uio = NULL;
-	off_t off, xfsize, hdtr_size, sbytes = 0;
-	int error, headersize = 0, headersent = 0;
-
-	mtx_lock(&Giant);
-
-	hdtr_size = 0;
+	off_t off, xfsize, fsbytes = 0, sbytes = 0, rem = 0;
+	int error, hdrlen = 0, mnw = 0;
+	int vfslocked;
 
 	/*
-	 * The descriptor must be a regular file and have a backing VM object.
+	 * The file descriptor must be a regular file and have a
+	 * backing VM object.
+	 * File offset must be positive.  If it goes beyond EOF
+	 * we send only the header/trailer and no payload data.
 	 */
 	if ((error = fgetvp_read(td, uap->fd, &vp)) != 0)
-		goto done;
+		goto out;
+	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
-	if (vp->v_type == VREG)
+	if (vp->v_type == VREG) {
 		obj = vp->v_object;
+		if (obj != NULL) {
+			/*
+			 * Temporarily increase the backing VM
+			 * object's reference count so that a forced
+			 * reclamation of its vnode does not
+			 * immediately destroy it.
+			 */
+			VM_OBJECT_LOCK(obj);
+			if ((obj->flags & OBJ_DEAD) == 0) {
+				vm_object_reference_locked(obj);
+				VM_OBJECT_UNLOCK(obj);
+			} else {
+				VM_OBJECT_UNLOCK(obj);
+				obj = NULL;
+			}
+		}
+	}
 	VOP_UNLOCK(vp, 0, td);
+	VFS_UNLOCK_GIANT(vfslocked);
 	if (obj == NULL) {
 		error = EINVAL;
-		goto done;
-	}
-	if ((error = fgetsock(td, uap->s, &so, NULL)) != 0)
-		goto done;
-	if (so->so_type != SOCK_STREAM) {
-		error = EINVAL;
-		goto done;
-	}
-	if ((so->so_state & SS_ISCONNECTED) == 0) {
-		error = ENOTCONN;
-		goto done;
+		goto out;
 	}
 	if (uap->offset < 0) {
 		error = EINVAL;
-		goto done;
+		goto out;
 	}
+
+	/*
+	 * The socket must be a stream socket and connected.
+	 * Remember if it a blocking or non-blocking socket.
+	 */
+	if ((error = getsock(td->td_proc->p_fd, uap->s, &sock_fp,
+	    NULL)) != 0)
+		goto out;
+	so = sock_fp->f_data;
+	if (so->so_type != SOCK_STREAM) {
+		error = EINVAL;
+		goto out;
+	}
+	if ((so->so_state & SS_ISCONNECTED) == 0) {
+		error = ENOTCONN;
+		goto out;
+	}
+	/*
+	 * Do not wait on memory allocations but return ENOMEM for
+	 * caller to retry later.
+	 * XXX: Experimental.
+	 */
+	if (uap->flags & SF_MNOWAIT)
+		mnw = 1;
 
 #ifdef MAC
 	SOCK_LOCK(so);
 	error = mac_check_socket_send(td->td_ucred, so);
 	SOCK_UNLOCK(so);
 	if (error)
-		goto done;
+		goto out;
 #endif
 
-	/*
-	 * If specified, get the pointer to the sf_hdtr struct for
-	 * any headers/trailers.
-	 */
-	if (uap->hdtr != NULL) {
-		error = copyin(uap->hdtr, &hdtr, sizeof(hdtr));
-		if (error)
-			goto done;
-		/*
-		 * Send any headers.
-		 */
-		if (hdtr.headers != NULL) {
-			error = copyinuio(hdtr.headers, hdtr.hdr_cnt, &hdr_uio);
-			if (error)
-				goto done;
-			hdr_uio->uio_td = td;
-			hdr_uio->uio_rw = UIO_WRITE;
-			if (hdr_uio->uio_resid > 0) {
-				m_header = m_uiotombuf(hdr_uio, M_DONTWAIT, 0, 0);
-				if (m_header == NULL)
-					goto done;
-				headersize = m_header->m_pkthdr.len;
-				if (compat)
-					sbytes += headersize;
+	/* If headers are specified copy them into mbufs. */
+	if (hdr_uio != NULL) {
+		hdr_uio->uio_td = td;
+		hdr_uio->uio_rw = UIO_WRITE;
+		if (hdr_uio->uio_resid > 0) {
+			/*
+			 * In FBSD < 5.0 the nbytes to send also included
+			 * the header.  If compat is specified subtract the
+			 * header size from nbytes.
+			 */
+			if (compat) {
+				if (uap->nbytes > hdr_uio->uio_resid)
+					uap->nbytes -= hdr_uio->uio_resid;
+				else
+					uap->nbytes = 0;
 			}
+			m = m_uiotombuf(hdr_uio, (mnw ? M_NOWAIT : M_WAITOK),
+			    0, 0, 0);
+			if (m == NULL) {
+				error = mnw ? EAGAIN : ENOBUFS;
+				goto out;
+			}
+			hdrlen = m_length(m, NULL);
 		}
 	}
 
 	/*
 	 * Protect against multiple writers to the socket.
+	 *
+	 * XXXRW: Historically this has assumed non-interruptibility, so now
+	 * we implement that, but possibly shouldn't.
 	 */
-	SOCKBUF_LOCK(&so->so_snd);
-	(void) sblock(&so->so_snd, M_WAITOK);
-	SOCKBUF_UNLOCK(&so->so_snd);
+	(void)sblock(&so->so_snd, SBL_WAIT | SBL_NOINTR);
 
 	/*
-	 * Loop through the pages in the file, starting with the requested
+	 * Loop through the pages of the file, starting with the requested
 	 * offset. Get a file page (do I/O if necessary), map the file page
 	 * into an sf_buf, attach an mbuf header to the sf_buf, and queue
 	 * it on the socket.
+	 * This is done in two loops.  The inner loop turns as many pages
+	 * as it can, up to available socket buffer space, without blocking
+	 * into mbufs to have it bulk delivered into the socket send buffer.
+	 * The outer loop checks the state and available space of the socket
+	 * and takes care of the overall progress.
 	 */
-	for (off = uap->offset; ; off += xfsize, sbytes += xfsize) {
-		vm_pindex_t pindex;
-		vm_offset_t pgoff;
+	for (off = uap->offset, rem = uap->nbytes; ; ) {
+		int loopbytes = 0;
+		int space = 0;
+		int done = 0;
 
-		pindex = OFF_TO_IDX(off);
-		VM_OBJECT_LOCK(obj);
-retry_lookup:
 		/*
-		 * Calculate the amount to transfer. Not to exceed a page,
-		 * the EOF, or the passed in nbytes.
-		 */
-		xfsize = obj->un_pager.vnp.vnp_size - off;
-		VM_OBJECT_UNLOCK(obj);
-		if (xfsize > PAGE_SIZE)
-			xfsize = PAGE_SIZE;
-		pgoff = (vm_offset_t)(off & PAGE_MASK);
-		if (PAGE_SIZE - pgoff < xfsize)
-			xfsize = PAGE_SIZE - pgoff;
-		if (uap->nbytes && xfsize > (uap->nbytes - sbytes))
-			xfsize = uap->nbytes - sbytes;
-		if (xfsize <= 0) {
-			if (m_header != NULL) {
-				m = m_header;
-				m_header = NULL;
-				SOCKBUF_LOCK(&so->so_snd);
-				goto retry_space;
-			} else
-				break;
-		}
-		/*
-		 * Optimize the non-blocking case by looking at the socket space
-		 * before going to the extra work of constituting the sf_buf.
+		 * Check the socket state for ongoing connection,
+		 * no errors and space in socket buffer.
+		 * If space is low allow for the remainder of the
+		 * file to be processed if it fits the socket buffer.
+		 * Otherwise block in waiting for sufficient space
+		 * to proceed, or if the socket is nonblocking, return
+		 * to userland with EAGAIN while reporting how far
+		 * we've come.
+		 * We wait until the socket buffer has significant free
+		 * space to do bulk sends.  This makes good use of file
+		 * system read ahead and allows packet segmentation
+		 * offloading hardware to take over lots of work.  If
+		 * we were not careful here we would send off only one
+		 * sfbuf at a time.
 		 */
 		SOCKBUF_LOCK(&so->so_snd);
-		if ((so->so_state & SS_NBIO) && sbspace(&so->so_snd) <= 0) {
-			if (so->so_snd.sb_state & SBS_CANTSENDMORE)
-				error = EPIPE;
-			else
-				error = EAGAIN;
-			sbunlock(&so->so_snd);
-			SOCKBUF_UNLOCK(&so->so_snd);
-			goto done;
-		}
-		SOCKBUF_UNLOCK(&so->so_snd);
-		VM_OBJECT_LOCK(obj);
-		/*
-		 * Attempt to look up the page.
-		 *
-		 *	Allocate if not found
-		 *
-		 *	Wait and loop if busy.
-		 */
-		pg = vm_page_lookup(obj, pindex);
-
-		if (pg == NULL) {
-			pg = vm_page_alloc(obj, pindex, VM_ALLOC_NOBUSY |
-			    VM_ALLOC_NORMAL | VM_ALLOC_WIRED);
-			if (pg == NULL) {
-				VM_OBJECT_UNLOCK(obj);
-				VM_WAIT;
-				VM_OBJECT_LOCK(obj);
-				goto retry_lookup;
-			}
-			vm_page_lock_queues();
-		} else {
-			vm_page_lock_queues();
-			if (vm_page_sleep_if_busy(pg, TRUE, "sfpbsy"))
-				goto retry_lookup;
-			/*
-			 * Wire the page so it does not get ripped out from
-			 * under us.
-			 */
-			vm_page_wire(pg);
-		}
-
-		/*
-		 * If page is not valid for what we need, initiate I/O
-		 */
-
-		if (pg->valid && vm_page_is_valid(pg, pgoff, xfsize)) {
-			VM_OBJECT_UNLOCK(obj);
-		} else if (uap->flags & SF_NODISKIO) {
-			error = EBUSY;
-		} else {
-			int bsize, resid;
-
-			/*
-			 * Ensure that our page is still around when the I/O
-			 * completes.
-			 */
-			vm_page_io_start(pg);
-			vm_page_unlock_queues();
-			VM_OBJECT_UNLOCK(obj);
-
-			/*
-			 * Get the page from backing store.
-			 */
-			bsize = vp->v_mount->mnt_stat.f_iosize;
-			vn_lock(vp, LK_SHARED | LK_RETRY, td);
-			/*
-			 * XXXMAC: Because we don't have fp->f_cred here,
-			 * we pass in NOCRED.  This is probably wrong, but
-			 * is consistent with our original implementation.
-			 */
-			error = vn_rdwr(UIO_READ, vp, NULL, MAXBSIZE,
-			    trunc_page(off), UIO_NOCOPY, IO_NODELOCKED |
-			    IO_VMIO | ((MAXBSIZE / bsize) << IO_SEQSHIFT),
-			    td->td_ucred, NOCRED, &resid, td);
-			VOP_UNLOCK(vp, 0, td);
-			VM_OBJECT_LOCK(obj);
-			vm_page_lock_queues();
-			vm_page_io_finish(pg);
-			if (!error)
-				VM_OBJECT_UNLOCK(obj);
-			mbstat.sf_iocnt++;
-		}
-	
-		if (error) {
-			vm_page_unwire(pg, 0);
-			/*
-			 * See if anyone else might know about this page.
-			 * If not and it is not valid, then free it.
-			 */
-			if (pg->wire_count == 0 && pg->valid == 0 &&
-			    pg->busy == 0 && !(pg->flags & PG_BUSY) &&
-			    pg->hold_count == 0) {
-				vm_page_free(pg);
-			}
-			vm_page_unlock_queues();
-			VM_OBJECT_UNLOCK(obj);
-			SOCKBUF_LOCK(&so->so_snd);
-			sbunlock(&so->so_snd);
-			SOCKBUF_UNLOCK(&so->so_snd);
-			goto done;
-		}
-		vm_page_unlock_queues();
-
-		/*
-		 * Get a sendfile buf. We usually wait as long as necessary,
-		 * but this wait can be interrupted.
-		 */
-		if ((sf = sf_buf_alloc(pg, SFB_CATCH)) == NULL) {
-			mbstat.sf_allocfail++;
-			vm_page_lock_queues();
-			vm_page_unwire(pg, 0);
-			if (pg->wire_count == 0 && pg->object == NULL)
-				vm_page_free(pg);
-			vm_page_unlock_queues();
-			SOCKBUF_LOCK(&so->so_snd);
-			sbunlock(&so->so_snd);
-			SOCKBUF_UNLOCK(&so->so_snd);
-			error = EINTR;
-			goto done;
-		}
-
-		/*
-		 * Get an mbuf header and set it up as having external storage.
-		 */
-		if (m_header)
-			MGET(m, M_TRYWAIT, MT_DATA);
-		else
-			MGETHDR(m, M_TRYWAIT, MT_DATA);
-		if (m == NULL) {
-			error = ENOBUFS;
-			sf_buf_mext((void *)sf_buf_kva(sf), sf);
-			SOCKBUF_LOCK(&so->so_snd);
-			sbunlock(&so->so_snd);
-			SOCKBUF_UNLOCK(&so->so_snd);
-			goto done;
-		}
-		/*
-		 * Setup external storage for mbuf.
-		 */
-		MEXTADD(m, sf_buf_kva(sf), PAGE_SIZE, sf_buf_mext, sf, M_RDONLY,
-		    EXT_SFBUF);
-		m->m_data = (char *)sf_buf_kva(sf) + pgoff;
-		m->m_pkthdr.len = m->m_len = xfsize;
-
-		if (m_header) {
-			m_cat(m_header, m);
-			m = m_header;
-			m_header = NULL;
-			m_fixhdr(m);
-		}
-
-		/*
-		 * Add the buffer to the socket buffer chain.
-		 */
-		SOCKBUF_LOCK(&so->so_snd);
+		if (so->so_snd.sb_lowat < so->so_snd.sb_hiwat / 2)
+			so->so_snd.sb_lowat = so->so_snd.sb_hiwat / 2;
 retry_space:
-		/*
-		 * Make sure that the socket is still able to take more data.
-		 * CANTSENDMORE being true usually means that the connection
-		 * was closed. so_error is true when an error was sensed after
-		 * a previous send.
-		 * The state is checked after the page mapping and buffer
-		 * allocation above since those operations may block and make
-		 * any socket checks stale. From this point forward, nothing
-		 * blocks before the pru_send (or more accurately, any blocking
-		 * results in a loop back to here to re-check).
-		 */
-		SOCKBUF_LOCK_ASSERT(&so->so_snd);
-		if ((so->so_snd.sb_state & SBS_CANTSENDMORE) || so->so_error) {
-			if (so->so_snd.sb_state & SBS_CANTSENDMORE) {
-				error = EPIPE;
-			} else {
-				error = so->so_error;
-				so->so_error = 0;
-			}
-			m_freem(m);
-			sbunlock(&so->so_snd);
+		if (so->so_snd.sb_state & SBS_CANTSENDMORE) {
+			error = EPIPE;
+			SOCKBUF_UNLOCK(&so->so_snd);
+			goto done;
+		} else if (so->so_error) {
+			error = so->so_error;
+			so->so_error = 0;
 			SOCKBUF_UNLOCK(&so->so_snd);
 			goto done;
 		}
-		/*
-		 * Wait for socket space to become available. We do this just
-		 * after checking the connection state above in order to avoid
-		 * a race condition with sbwait().
-		 */
-		if (sbspace(&so->so_snd) < so->so_snd.sb_lowat) {
+		space = sbspace(&so->so_snd);
+		if (space < rem &&
+		    (space <= 0 ||
+		     space < so->so_snd.sb_lowat)) {
 			if (so->so_state & SS_NBIO) {
-				m_freem(m);
-				sbunlock(&so->so_snd);
 				SOCKBUF_UNLOCK(&so->so_snd);
 				error = EAGAIN;
 				goto done;
 			}
+			/*
+			 * sbwait drops the lock while sleeping.
+			 * When we loop back to retry_space the
+			 * state may have changed and we retest
+			 * for it.
+			 */
 			error = sbwait(&so->so_snd);
 			/*
 			 * An error from sbwait usually indicates that we've
@@ -2088,51 +1960,235 @@ retry_space:
 			 * then return bytes sent, otherwise return the error.
 			 */
 			if (error) {
-				m_freem(m);
-				sbunlock(&so->so_snd);
 				SOCKBUF_UNLOCK(&so->so_snd);
 				goto done;
 			}
 			goto retry_space;
 		}
 		SOCKBUF_UNLOCK(&so->so_snd);
-		error = (*so->so_proto->pr_usrreqs->pru_send)(so, 0, m, 0, 0, td);
-		if (error) {
-			SOCKBUF_LOCK(&so->so_snd);
-			sbunlock(&so->so_snd);
-			SOCKBUF_UNLOCK(&so->so_snd);
-			goto done;
+
+		/*
+		 * Reduce space in the socket buffer by the size of
+		 * the header mbuf chain.
+		 * hdrlen is set to 0 after the first loop.
+		 */
+		space -= hdrlen;
+
+		/*
+		 * Loop and construct maximum sized mbuf chain to be bulk
+		 * dumped into socket buffer.
+		 */
+		while(space > loopbytes) {
+			vm_pindex_t pindex;
+			vm_offset_t pgoff;
+			struct mbuf *m0;
+
+			VM_OBJECT_LOCK(obj);
+			/*
+			 * Calculate the amount to transfer.
+			 * Not to exceed a page, the EOF,
+			 * or the passed in nbytes.
+			 */
+			pgoff = (vm_offset_t)(off & PAGE_MASK);
+			xfsize = omin(PAGE_SIZE - pgoff,
+			    obj->un_pager.vnp.vnp_size - uap->offset -
+			    fsbytes - loopbytes);
+			if (uap->nbytes)
+				rem = (uap->nbytes - fsbytes - loopbytes);
+			else
+				rem = obj->un_pager.vnp.vnp_size -
+				    uap->offset - fsbytes - loopbytes;
+			xfsize = omin(rem, xfsize);
+			if (xfsize <= 0) {
+				VM_OBJECT_UNLOCK(obj);
+				done = 1;		/* all data sent */
+				break;
+			}
+			/*
+			 * Don't overflow the send buffer.
+			 * Stop here and send out what we've
+			 * already got.
+			 */
+			if (space < loopbytes + xfsize) {
+				VM_OBJECT_UNLOCK(obj);
+				break;
+			}
+
+			/*
+			 * Attempt to look up the page.  Allocate
+			 * if not found or wait and loop if busy.
+			 */
+			pindex = OFF_TO_IDX(off);
+			pg = vm_page_grab(obj, pindex, VM_ALLOC_NOBUSY |
+			    VM_ALLOC_NORMAL | VM_ALLOC_WIRED | VM_ALLOC_RETRY);
+
+			/*
+			 * Check if page is valid for what we need,
+			 * otherwise initiate I/O.
+			 * If we already turned some pages into mbufs,
+			 * send them off before we come here again and
+			 * block.
+			 */
+			if (pg->valid && vm_page_is_valid(pg, pgoff, xfsize))
+				VM_OBJECT_UNLOCK(obj);
+			else if (m != NULL)
+				error = EAGAIN;	/* send what we already got */
+			else if (uap->flags & SF_NODISKIO)
+				error = EBUSY;
+			else {
+				int bsize, resid;
+
+				/*
+				 * Ensure that our page is still around
+				 * when the I/O completes.
+				 */
+				vm_page_io_start(pg);
+				VM_OBJECT_UNLOCK(obj);
+
+				/*
+				 * Get the page from backing store.
+				 */
+				bsize = vp->v_mount->mnt_stat.f_iosize;
+				vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+				vn_lock(vp, LK_SHARED | LK_RETRY, td);
+
+				/*
+				 * XXXMAC: Because we don't have fp->f_cred
+				 * here, we pass in NOCRED.  This is probably
+				 * wrong, but is consistent with our original
+				 * implementation.
+				 */
+				error = vn_rdwr(UIO_READ, vp, NULL, MAXBSIZE,
+				    trunc_page(off), UIO_NOCOPY, IO_NODELOCKED |
+				    IO_VMIO | ((MAXBSIZE / bsize) << IO_SEQSHIFT),
+				    td->td_ucred, NOCRED, &resid, td);
+				VOP_UNLOCK(vp, 0, td);
+				VFS_UNLOCK_GIANT(vfslocked);
+				VM_OBJECT_LOCK(obj);
+				vm_page_io_finish(pg);
+				if (!error)
+					VM_OBJECT_UNLOCK(obj);
+				mbstat.sf_iocnt++;
+			}
+			if (error) {
+				vm_page_lock_queues();
+				vm_page_unwire(pg, 0);
+				/*
+				 * See if anyone else might know about
+				 * this page.  If not and it is not valid,
+				 * then free it.
+				 */
+				if (pg->wire_count == 0 && pg->valid == 0 &&
+				    pg->busy == 0 && !(pg->oflags & VPO_BUSY) &&
+				    pg->hold_count == 0) {
+					vm_page_free(pg);
+				}
+				vm_page_unlock_queues();
+				VM_OBJECT_UNLOCK(obj);
+				if (error == EAGAIN)
+					error = 0;	/* not a real error */
+				break;
+			}
+
+			/*
+			 * Get a sendfile buf.  We usually wait as long
+			 * as necessary, but this wait can be interrupted.
+			 */
+			if ((sf = sf_buf_alloc(pg,
+			    (mnw ? SFB_NOWAIT : SFB_CATCH))) == NULL) {
+				mbstat.sf_allocfail++;
+				vm_page_lock_queues();
+				vm_page_unwire(pg, 0);
+				/*
+				 * XXX: Not same check as above!?
+				 */
+				if (pg->wire_count == 0 && pg->object == NULL)
+					vm_page_free(pg);
+				vm_page_unlock_queues();
+				error = (mnw ? EAGAIN : EINTR);
+				break;
+			}
+
+			/*
+			 * Get an mbuf and set it up as having
+			 * external storage.
+			 */
+			m0 = m_get((mnw ? M_NOWAIT : M_WAITOK), MT_DATA);
+			if (m0 == NULL) {
+				error = (mnw ? EAGAIN : ENOBUFS);
+				sf_buf_mext((void *)sf_buf_kva(sf), sf);
+				break;
+			}
+			MEXTADD(m0, sf_buf_kva(sf), PAGE_SIZE, sf_buf_mext,
+			    sf, M_RDONLY, EXT_SFBUF);
+			m0->m_data = (char *)sf_buf_kva(sf) + pgoff;
+			m0->m_len = xfsize;
+
+			/* Append to mbuf chain. */
+			if (m != NULL)
+				m_cat(m, m0);
+			else
+				m = m0;
+
+			/* Keep track of bits processed. */
+			loopbytes += xfsize;
+			off += xfsize;
 		}
-		headersent = 1;
+
+		/* Add the buffer chain to the socket buffer. */
+		if (m != NULL) {
+			int mlen, err;
+
+			mlen = m_length(m, NULL);
+			SOCKBUF_LOCK(&so->so_snd);
+			if (so->so_snd.sb_state & SBS_CANTSENDMORE) {
+				error = EPIPE;
+				SOCKBUF_UNLOCK(&so->so_snd);
+				goto done;
+			}
+			SOCKBUF_UNLOCK(&so->so_snd);
+			/* Avoid error aliasing. */
+			err = (*so->so_proto->pr_usrreqs->pru_send)
+				    (so, 0, m, NULL, NULL, td);
+			if (err == 0) {
+				/*
+				 * We need two counters to get the
+				 * file offset and nbytes to send
+				 * right:
+				 * - sbytes contains the total amount
+				 *   of bytes sent, including headers.
+				 * - fsbytes contains the total amount
+				 *   of bytes sent from the file.
+				 */
+				sbytes += mlen;
+				fsbytes += mlen;
+				if (hdrlen) {
+					fsbytes -= hdrlen;
+					hdrlen = 0;
+				}
+			} else if (error == 0)
+				error = err;
+			m = NULL;	/* pru_send always consumes */
+		}
+
+		/* Quit outer loop on error or when we're done. */
+		if (error || done)
+			goto done;
 	}
-	SOCKBUF_LOCK(&so->so_snd);
-	sbunlock(&so->so_snd);
-	SOCKBUF_UNLOCK(&so->so_snd);
 
 	/*
 	 * Send trailers. Wimp out and use writev(2).
 	 */
-	if (uap->hdtr != NULL && hdtr.trailers != NULL) {
-			nuap.fd = uap->s;
-			nuap.iovp = hdtr.trailers;
-			nuap.iovcnt = hdtr.trl_cnt;
-			error = writev(td, &nuap);
-			if (error)
-				goto done;
-			if (compat)
-				sbytes += td->td_retval[0];
-			else
-				hdtr_size += td->td_retval[0];
+	if (trl_uio != NULL) {
+		error = kern_writev(td, uap->s, trl_uio);
+		if (error)
+			goto done;
+		sbytes += td->td_retval[0];
 	}
 
 done:
-	if (headersent) {
-		if (!compat)
-			hdtr_size += headersize;
-	} else {
-		if (compat)
-			sbytes -= headersize;
-	}
+	sbunlock(&so->so_snd);
+out:
 	/*
 	 * If there was no error we have to clear td->td_retval[0]
 	 * because it may have been set by writev.
@@ -2141,23 +2197,464 @@ done:
 		td->td_retval[0] = 0;
 	}
 	if (uap->sbytes != NULL) {
-		if (!compat)
-			sbytes += hdtr_size;
 		copyout(&sbytes, uap->sbytes, sizeof(off_t));
 	}
-	if (vp)
+	if (obj != NULL)
+		vm_object_deallocate(obj);
+	if (vp != NULL) {
+		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 		vrele(vp);
+		VFS_UNLOCK_GIANT(vfslocked);
+	}
 	if (so)
-		fputsock(so);
-	if (hdr_uio != NULL)
-		free(hdr_uio, M_IOV);
-	if (m_header)
-		m_freem(m_header);
-
-	mtx_unlock(&Giant);
+		fdrop(sock_fp, td);
+	if (m)
+		m_freem(m);
 
 	if (error == ERESTART)
 		error = EINTR;
 
 	return (error);
+}
+
+/*
+ * SCTP syscalls.
+ * Functionality only compiled in if SCTP is defined in the kernel Makefile,
+ * otherwise all return EOPNOTSUPP.
+ * XXX: We should make this loadable one day.
+ */
+int
+sctp_peeloff(td, uap)
+	struct thread *td;
+	struct sctp_peeloff_args /* {
+		int	sd;
+		caddr_t	name;
+	} */ *uap;
+{
+#ifdef SCTP
+	struct filedesc *fdp;
+	struct file *nfp = NULL;
+	int error;
+	struct socket *head, *so;
+	int fd;
+	u_int fflag;
+
+	fdp = td->td_proc->p_fd;
+	error = fgetsock(td, uap->sd, &head, &fflag);
+	if (error)
+		goto done2;
+	error = sctp_can_peel_off(head, (sctp_assoc_t)uap->name);
+	if (error)
+		goto done2;
+	/*
+	 * At this point we know we do have a assoc to pull
+	 * we proceed to get the fd setup. This may block
+	 * but that is ok.
+	 */
+
+	error = falloc(td, &nfp, &fd);
+	if (error)
+		goto done;
+	td->td_retval[0] = fd;
+
+	so = sonewconn(head, SS_ISCONNECTED);
+	if (so == NULL) 
+		goto noconnection;
+	/*
+	 * Before changing the flags on the socket, we have to bump the
+	 * reference count.  Otherwise, if the protocol calls sofree(),
+	 * the socket will be released due to a zero refcount.
+	 */
+        SOCK_LOCK(so);
+        soref(so);                      /* file descriptor reference */
+        SOCK_UNLOCK(so);
+
+	ACCEPT_LOCK();
+
+	TAILQ_REMOVE(&head->so_comp, so, so_list);
+	head->so_qlen--;
+	so->so_state |= (head->so_state & SS_NBIO);
+	so->so_state &= ~SS_NOFDREF;
+	so->so_qstate &= ~SQ_COMP;
+	so->so_head = NULL;
+	ACCEPT_UNLOCK();
+	FILE_LOCK(nfp);
+	nfp->f_data = so;
+	nfp->f_flag = fflag;
+	nfp->f_type = DTYPE_SOCKET;
+	nfp->f_ops = &socketops;
+	FILE_UNLOCK(nfp);
+	error = sctp_do_peeloff(head, so, (sctp_assoc_t)uap->name);
+	if (error)
+		goto noconnection;
+	if (head->so_sigio != NULL)
+		fsetown(fgetown(&head->so_sigio), &so->so_sigio);
+
+noconnection:
+	/*
+	 * close the new descriptor, assuming someone hasn't ripped it
+	 * out from under us.
+	 */
+	if (error)
+		fdclose(fdp, nfp, fd, td);
+
+	/*
+	 * Release explicitly held references before returning.
+	 */
+done:
+	if (nfp != NULL)
+		fdrop(nfp, td);
+	fputsock(head);
+done2:
+	return (error);
+#else  /* SCTP */
+	return (EOPNOTSUPP);
+#endif /* SCTP */
+}
+
+int
+sctp_generic_sendmsg (td, uap)
+	struct thread *td;
+	struct sctp_generic_sendmsg_args /* {
+		int sd, 
+		caddr_t msg, 
+		int mlen, 
+		caddr_t to, 
+		__socklen_t tolen, 
+		struct sctp_sndrcvinfo *sinfo, 
+		int flags
+	} */ *uap;
+{
+#ifdef SCTP
+	struct sctp_sndrcvinfo sinfo, *u_sinfo = NULL;
+	struct socket *so;
+	struct file *fp = NULL;
+	int use_rcvinfo = 1;
+	int error = 0, len;
+	struct sockaddr *to = NULL;
+#ifdef KTRACE
+	struct uio *ktruio = NULL;
+#endif
+	struct uio auio;
+	struct iovec iov[1];
+
+	if (uap->sinfo) {
+		error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
+		if (error)
+			return (error);
+		u_sinfo = &sinfo;
+	}
+	if (uap->tolen) {
+		error = getsockaddr(&to, uap->to, uap->tolen);
+		if (error) {
+			to = NULL;
+			goto sctp_bad2;
+		}
+	}
+
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
+	if (error)
+		goto sctp_bad;
+
+	iov[0].iov_base = uap->msg;
+	iov[0].iov_len = uap->mlen;
+
+	so = (struct socket *)fp->f_data;
+#ifdef MAC
+	SOCK_LOCK(so);
+	error = mac_check_socket_send(td->td_ucred, so);
+	SOCK_UNLOCK(so);
+	if (error)
+		goto sctp_bad;
+#endif /* MAC */
+
+	auio.uio_iov =  iov;
+	auio.uio_iovcnt = 1;
+	auio.uio_segflg = UIO_USERSPACE;
+	auio.uio_rw = UIO_WRITE;
+	auio.uio_td = td;
+	auio.uio_offset = 0;			/* XXX */
+	auio.uio_resid = 0;
+	len = auio.uio_resid = uap->mlen;
+	error = sctp_lower_sosend(so, to, &auio,
+		    (struct mbuf *)NULL, (struct mbuf *)NULL,
+		    uap->flags, use_rcvinfo, u_sinfo, td);
+	if (error) {
+		if (auio.uio_resid != len && (error == ERESTART ||
+		    error == EINTR || error == EWOULDBLOCK))
+			error = 0;
+		/* Generation of SIGPIPE can be controlled per socket. */
+		if (error == EPIPE && !(so->so_options & SO_NOSIGPIPE) &&
+		    !(uap->flags & MSG_NOSIGNAL)) {
+			PROC_LOCK(td->td_proc);
+			psignal(td->td_proc, SIGPIPE);
+			PROC_UNLOCK(td->td_proc);
+		}
+	}
+	if (error == 0)
+		td->td_retval[0] = len - auio.uio_resid;
+#ifdef KTRACE
+	if (ktruio != NULL) {
+		ktruio->uio_resid = td->td_retval[0];
+		ktrgenio(uap->sd, UIO_WRITE, ktruio, error);
+	}
+#endif /* KTRACE */
+sctp_bad:
+	if (fp)
+		fdrop(fp, td);
+sctp_bad2:
+	if (to)
+		free(to, M_SONAME);
+	return (error);
+#else  /* SCTP */
+	return (EOPNOTSUPP);
+#endif /* SCTP */
+}
+
+int
+sctp_generic_sendmsg_iov(td, uap)
+	struct thread *td;
+	struct sctp_generic_sendmsg_iov_args /* {
+		int sd, 
+		struct iovec *iov, 
+		int iovlen, 
+		caddr_t to, 
+		__socklen_t tolen, 
+		struct sctp_sndrcvinfo *sinfo, 
+		int flags
+	} */ *uap;
+{
+#ifdef SCTP
+	struct sctp_sndrcvinfo sinfo, *u_sinfo = NULL;
+	struct socket *so;
+	struct file *fp = NULL;
+	int use_rcvinfo = 1;
+	int error=0, len, i;
+	struct sockaddr *to = NULL;
+#ifdef KTRACE
+	struct uio *ktruio = NULL;
+#endif
+	struct uio auio;
+	struct iovec *iov, *tiov;
+
+	if (uap->sinfo) {
+		error = copyin(uap->sinfo, &sinfo, sizeof (sinfo));
+		if (error)
+			return (error);
+		u_sinfo = &sinfo;
+	}
+	if (uap->tolen) {
+		error = getsockaddr(&to, uap->to, uap->tolen);
+		if (error) {
+			to = NULL;
+			goto sctp_bad2;
+		}
+	}
+
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
+	if (error)
+		goto sctp_bad1;
+
+	error = copyiniov(uap->iov, uap->iovlen, &iov, EMSGSIZE);
+	if (error)
+		goto sctp_bad1;
+
+	so = (struct socket *)fp->f_data;
+#ifdef MAC
+	SOCK_LOCK(so);
+	error = mac_check_socket_send(td->td_ucred, so);
+	SOCK_UNLOCK(so);
+	if (error)
+		goto sctp_bad;
+#endif /* MAC */
+
+	auio.uio_iov =  iov;
+	auio.uio_iovcnt = uap->iovlen;
+	auio.uio_segflg = UIO_USERSPACE;
+	auio.uio_rw = UIO_WRITE;
+	auio.uio_td = td;
+	auio.uio_offset = 0;			/* XXX */
+	auio.uio_resid = 0;
+	tiov = iov;
+	for (i = 0; i <uap->iovlen; i++, tiov++) {
+		if ((auio.uio_resid += tiov->iov_len) < 0) {
+			error = EINVAL;
+			goto sctp_bad;
+		}
+	}
+	len = auio.uio_resid;
+	error = sctp_lower_sosend(so, to, &auio,
+		    (struct mbuf *)NULL, (struct mbuf *)NULL,
+		    uap->flags, use_rcvinfo, u_sinfo, td);
+	if (error) {
+		if (auio.uio_resid != len && (error == ERESTART ||
+		    error == EINTR || error == EWOULDBLOCK))
+			error = 0;
+		/* Generation of SIGPIPE can be controlled per socket */
+		if (error == EPIPE && !(so->so_options & SO_NOSIGPIPE) &&
+		    !(uap->flags & MSG_NOSIGNAL)) {
+			PROC_LOCK(td->td_proc);
+			psignal(td->td_proc, SIGPIPE);
+			PROC_UNLOCK(td->td_proc);
+		}
+	}
+	if (error == 0)
+		td->td_retval[0] = len - auio.uio_resid;
+#ifdef KTRACE
+	if (ktruio != NULL) {
+		ktruio->uio_resid = td->td_retval[0];
+		ktrgenio(uap->sd, UIO_WRITE, ktruio, error);
+	}
+#endif /* KTRACE */
+sctp_bad:
+	free(iov, M_IOV);
+sctp_bad1:
+	if (fp)
+		fdrop(fp, td);
+sctp_bad2:
+	if (to)
+		free(to, M_SONAME);
+	return (error);
+#else  /* SCTP */
+	return (EOPNOTSUPP);
+#endif /* SCTP */
+}
+
+int
+sctp_generic_recvmsg(td, uap)
+	struct thread *td;
+	struct sctp_generic_recvmsg_args /* {
+		int sd, 
+		struct iovec *iov, 
+		int iovlen,
+		struct sockaddr *from, 
+		__socklen_t *fromlenaddr,
+		struct sctp_sndrcvinfo *sinfo, 
+		int *msg_flags
+	} */ *uap;
+{
+#ifdef SCTP
+	u_int8_t sockbufstore[256];
+	struct uio auio;
+	struct iovec *iov, *tiov;
+	struct sctp_sndrcvinfo sinfo;
+	struct socket *so;
+	struct file *fp = NULL;
+	struct sockaddr *fromsa;
+	int fromlen;
+	int len, i, msg_flags;
+	int error = 0;
+#ifdef KTRACE
+	struct uio *ktruio = NULL;
+#endif
+	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
+	if (error) {
+		return (error);
+	}
+	error = copyiniov(uap->iov, uap->iovlen, &iov, EMSGSIZE);
+	if (error) {
+		goto out1;
+	}
+
+	so = fp->f_data;
+#ifdef MAC
+	SOCK_LOCK(so);
+	error = mac_check_socket_receive(td->td_ucred, so);
+	SOCK_UNLOCK(so);
+	if (error) {
+		goto out;
+		return (error);
+	}
+#endif /* MAC */
+
+	if (uap->fromlenaddr) {
+		error = copyin(uap->fromlenaddr,
+		    &fromlen, sizeof (fromlen));
+		if (error) {
+			goto out;
+		}
+	} else {
+		fromlen = 0;
+	}
+	if(uap->msg_flags) {
+		error = copyin(uap->msg_flags, &msg_flags, sizeof (int));
+		if (error) {
+			goto out;
+		}
+	} else {
+		msg_flags = 0;
+	}
+	auio.uio_iov = iov;
+	auio.uio_iovcnt = uap->iovlen;
+  	auio.uio_segflg = UIO_USERSPACE;
+	auio.uio_rw = UIO_READ;
+	auio.uio_td = td;
+	auio.uio_offset = 0;			/* XXX */
+	auio.uio_resid = 0;
+	tiov = iov;
+	for (i = 0; i <uap->iovlen; i++, tiov++) {
+		if ((auio.uio_resid += tiov->iov_len) < 0) {
+			error = EINVAL;
+			goto out;
+		}
+	}
+	len = auio.uio_resid;
+	fromsa = (struct sockaddr *)sockbufstore;
+
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_GENIO))
+		ktruio = cloneuio(&auio);
+#endif /* KTRACE */
+	error = sctp_sorecvmsg(so, &auio, (struct mbuf **)NULL,
+		    fromsa, fromlen, &msg_flags,
+		    (struct sctp_sndrcvinfo *)&sinfo, 1);
+	if (error) {
+		if (auio.uio_resid != (int)len && (error == ERESTART ||
+		    error == EINTR || error == EWOULDBLOCK))
+			error = 0;
+	} else {
+		if (uap->sinfo)
+			error = copyout(&sinfo, uap->sinfo, sizeof (sinfo));
+	}
+#ifdef KTRACE
+	if (ktruio != NULL) {
+		ktruio->uio_resid = (int)len - auio.uio_resid;
+		ktrgenio(uap->sd, UIO_READ, ktruio, error);
+	}
+#endif /* KTRACE */
+	if (error)
+		goto out;
+	td->td_retval[0] = (int)len - auio.uio_resid;
+
+	if (fromlen && uap->from) {
+		len = fromlen;
+		if (len <= 0 || fromsa == 0)
+			len = 0;
+		else {
+			len = MIN(len, fromsa->sa_len);
+			error = copyout(fromsa, uap->from, (unsigned)len);
+			if (error)
+				goto out;
+		}
+		error = copyout(&len, uap->fromlenaddr, sizeof (socklen_t));
+		if (error) {
+			goto out;
+		}
+	}
+	if (uap->msg_flags) {
+		error = copyout(&msg_flags, uap->msg_flags, sizeof (int));
+		if (error) {
+			goto out;
+		}
+	}
+out:
+	free(iov, M_IOV);
+out1:
+	if (fp) 
+		fdrop(fp, td);
+
+	return (error);
+#else  /* SCTP */
+	return (EOPNOTSUPP);
+#endif /* SCTP */
 }

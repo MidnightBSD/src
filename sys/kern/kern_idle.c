@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_idle.c,v 1.43 2005/04/04 21:53:54 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_idle.c,v 1.48 2007/06/05 00:00:53 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,8 +43,6 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_idle.c,v 1.43 2005/04/04 21:53:54 jhb Exp 
 static void idle_setup(void *dummy);
 SYSINIT(idle_setup, SI_SUB_SCHED_IDLE, SI_ORDER_FIRST, idle_setup, NULL)
 
-static void idle_proc(void *dummy);
-
 /*
  * Set up per-cpu idle process contexts.  The AP's shouldn't be running or
  * accessing their idle processes at this point, so don't bother with
@@ -62,11 +60,11 @@ idle_setup(void *dummy)
 
 #ifdef SMP
 	SLIST_FOREACH(pc, &cpuhead, pc_allcpu) {
-		error = kthread_create(idle_proc, NULL, &p,
+		error = kthread_create(sched_idletd, NULL, &p,
 		    RFSTOPPED | RFHIGHPID, 0, "idle: cpu%d", pc->pc_cpuid);
 		pc->pc_idlethread = FIRST_THREAD_IN_PROC(p);
 #else
-		error = kthread_create(idle_proc, NULL, &p,
+		error = kthread_create(sched_idletd, NULL, &p,
 		    RFSTOPPED | RFHIGHPID, 0, "idle");
 		PCPU_SET(idlethread, FIRST_THREAD_IN_PROC(p));
 #endif
@@ -75,53 +73,15 @@ idle_setup(void *dummy)
 
 		PROC_LOCK(p);
 		p->p_flag |= P_NOLOAD;
-		mtx_lock_spin(&sched_lock);
 		td = FIRST_THREAD_IN_PROC(p);
+		thread_lock(td);
 		TD_SET_CAN_RUN(td);
 		td->td_flags |= TDF_IDLETD;
-		sched_class(td->td_ksegrp, PRI_IDLE);
+		sched_class(td, PRI_IDLE);
 		sched_prio(td, PRI_MAX_IDLE);
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td);
 		PROC_UNLOCK(p);
 #ifdef SMP
 	}
 #endif
-}
-
-/*
- * The actual idle process.
- */
-static void
-idle_proc(void *dummy)
-{
-	struct proc *p;
-	struct thread *td;
-#ifdef SMP
-	cpumask_t mycpu;
-#endif
-
-	td = curthread;
-	p = td->td_proc;
-#ifdef SMP
-	mycpu = PCPU_GET(cpumask);
-	mtx_lock_spin(&sched_lock);
-	idle_cpus_mask |= mycpu;
-	mtx_unlock_spin(&sched_lock);
-#endif
-	for (;;) {
-		mtx_assert(&Giant, MA_NOTOWNED);
-
-		while (sched_runnable() == 0)
-			cpu_idle();
-
-		mtx_lock_spin(&sched_lock);
-#ifdef SMP
-		idle_cpus_mask &= ~mycpu;
-#endif
-		mi_switch(SW_VOL, NULL);
-#ifdef SMP
-		idle_cpus_mask |= mycpu;
-#endif
-		mtx_unlock_spin(&sched_lock);
-	}
 }

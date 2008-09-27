@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/imgact_elf.c,v 1.162.2.3 2006/03/16 00:25:31 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/imgact_elf.c,v 1.178.2.2.2.1 2008/01/19 18:15:05 kib Exp $");
 
 #include "opt_compat.h"
 
@@ -106,6 +106,10 @@ SYSCTL_INT(_debug, OID_AUTO, __elfN(legacy_coredump), CTLFLAG_RW,
 
 static Elf_Brandinfo *elf_brand_list[MAX_BRANDS];
 
+#define	trunc_page_ps(va, ps)	((va) & ~(ps - 1))
+#define	round_page_ps(va, ps)	(((va) + (ps - 1)) & ~(ps - 1))
+#define	aligned(a, t)	(trunc_page_ps((u_long)(a), sizeof(t)) == (u_long)(a))
+
 int
 __elfN(insert_brand_entry)(Elf_Brandinfo *entry)
 {
@@ -145,7 +149,7 @@ __elfN(brand_inuse)(Elf_Brandinfo *entry)
 	int rval = FALSE;
 
 	sx_slock(&allproc_lock);
-	LIST_FOREACH(p, &allproc, p_list) {
+	FOREACH_PROC_IN_SYSTEM(p) {
 		if (p->p_sysent == entry->sysvec) {
 			rval = TRUE;
 			break;
@@ -360,9 +364,6 @@ __elfN(load_section)(struct vmspace *vmspace,
 		return (ENOEXEC);
 	}
 
-#define trunc_page_ps(va, ps)	((va) & ~(ps - 1))
-#define round_page_ps(va, ps)	(((va) + (ps - 1)) & ~(ps - 1))
-
 	map_addr = trunc_page_ps((vm_offset_t)vmaddr, pagesize);
 	file_addr = trunc_page_ps(offset, pagesize);
 
@@ -549,6 +550,10 @@ __elfN(load_file)(struct proc *p, const char *file, u_long *addr,
 	}
 
 	phdr = (const Elf_Phdr *)(imgp->image_header + hdr->e_phoff);
+	if (!aligned(phdr, Elf_Addr)) {
+		error = ENOEXEC;
+		goto fail;
+	}
 
 	for (i = 0, numsegs = 0; i < hdr->e_phnum; i++) {
 		if (phdr[i].p_type == PT_LOAD) {	/* Loadable segment */
@@ -592,11 +597,13 @@ fail:
 	return (error);
 }
 
+static const char FREEBSD_ABI_VENDOR[] = "FreeBSD";
+
 static int
 __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 {
 	const Elf_Ehdr *hdr = (const Elf_Ehdr *)imgp->image_header;
-	const Elf_Phdr *phdr;
+	const Elf_Phdr *phdr, *pnote = NULL;
 	Elf_Auxargs *elf_auxargs;
 	struct vmspace *vmspace;
 	vm_prot_t prot;
@@ -607,7 +614,9 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	int error = 0, i;
 	const char *interp = NULL;
 	Elf_Brandinfo *brand_info;
+	const Elf_Note *note, *note_end;
 	char *path;
+	const char *note_name;
 	struct thread *td = curthread;
 	struct sysentvec *sv;
 
@@ -632,6 +641,8 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 		return (ENOEXEC);
 	}
 	phdr = (const Elf_Phdr *)(imgp->image_header + hdr->e_phoff);
+	if (!aligned(phdr, Elf_Addr))
+		return (ENOEXEC);
 	for (i = 0; i < hdr->e_phnum; i++) {
 		if (phdr[i].p_type == PT_INTERP) {
 			/* Path to interpreter */
@@ -649,7 +660,8 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 		    hdr->e_ident[EI_OSABI]);
 		return (ENOEXEC);
 	}
-	if (hdr->e_type == ET_DYN && brand_info->brand != ELFOSABI_LINUX)
+	if (hdr->e_type == ET_DYN &&
+	    (brand_info->flags & BI_CAN_EXEC_DYN) == 0)
 		return (ENOEXEC);
 	sv = brand_info->sysvec;
 	if (interp != NULL && brand_info->interp_newpath != NULL)
@@ -665,9 +677,12 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	 */
 	VOP_UNLOCK(imgp->vp, 0, td);
 
-	exec_new_vmspace(imgp, sv);
+	error = exec_new_vmspace(imgp, sv);
+	imgp->proc->p_sysent = sv;
 
 	vn_lock(imgp->vp, LK_EXCLUSIVE | LK_RETRY, td);
+	if (error)
+		return (error);
 
 	vmspace = imgp->proc->p_vmspace;
 
@@ -743,6 +758,9 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 		case PT_PHDR: 	/* Program header table info */
 			proghdr = phdr[i].p_vaddr;
 			break;
+		case PT_NOTE:
+			pnote = &phdr[i];
+			break;
 		default:
 			break;
 		}
@@ -783,7 +801,6 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 
 	imgp->entry_addr = entry;
 
-	imgp->proc->p_sysent = sv;
 	if (interp != NULL) {
 		VOP_UNLOCK(imgp->vp, 0, td);
 		if (brand_info->emul_path != NULL &&
@@ -824,6 +841,41 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 
 	imgp->auxargs = elf_auxargs;
 	imgp->interpreted = 0;
+
+	/*
+	 * Try to fetch the osreldate for FreeBSD binary from the ELF
+	 * OSABI-note. Only the first page of the image is searched,
+	 * the same as for headers.
+	 */
+	if (pnote != NULL && pnote->p_offset < PAGE_SIZE &&
+	    pnote->p_offset + pnote->p_filesz < PAGE_SIZE ) {
+		note = (const Elf_Note *)(imgp->image_header + pnote->p_offset);
+		if (!aligned(note, Elf32_Addr)) {
+			free(imgp->auxargs, M_TEMP);
+			imgp->auxargs = NULL;
+			return (ENOEXEC);
+		}
+		note_end = (const Elf_Note *)(imgp->image_header + pnote->p_offset +
+		    pnote->p_filesz);
+		while (note < note_end) {
+			if (note->n_namesz == sizeof(FREEBSD_ABI_VENDOR) &&
+			    note->n_descsz == sizeof(int32_t) &&
+			    note->n_type == 1 /* ABI_NOTETYPE */) {
+				note_name = (const char *)(note + 1);
+				if (strncmp(FREEBSD_ABI_VENDOR, note_name,
+				    sizeof(FREEBSD_ABI_VENDOR)) == 0) {
+					imgp->proc->p_osrel = *(const int32_t *)
+					    (note_name +
+					    round_page_ps(sizeof(FREEBSD_ABI_VENDOR),
+						sizeof(Elf32_Addr)));
+					break;
+				}
+			}
+			note = (const Elf_Note *)((const char *)(note + 1) +
+			    round_page_ps(note->n_namesz, sizeof(Elf32_Addr)) +
+			    round_page_ps(note->n_descsz, sizeof(Elf32_Addr)));
+		}
+	}
 
 	return (error);
 }
@@ -890,8 +942,6 @@ static int __elfN(corehdr)(struct thread *, struct vnode *, struct ucred *,
 static void __elfN(puthdr)(struct thread *, void *, size_t *, int);
 static void __elfN(putnote)(void *, size_t *, const char *, int,
     const void *, size_t);
-
-extern int osreldate;
 
 int
 __elfN(coredump)(td, vp, limit)
@@ -1017,11 +1067,12 @@ each_writable_segment(td, func, closure)
 	struct proc *p = td->td_proc;
 	vm_map_t map = &p->p_vmspace->vm_map;
 	vm_map_entry_t entry;
+	vm_object_t backing_object, object;
+	boolean_t ignore_entry;
 
+	vm_map_lock_read(map);
 	for (entry = map->header.next; entry != &map->header;
 	    entry = entry->next) {
-		vm_object_t obj;
-
 		/*
 		 * Don't dump inaccessible mappings, deal with legacy
 		 * coredump mode.
@@ -1047,21 +1098,25 @@ each_writable_segment(td, func, closure)
 		if (entry->eflags & (MAP_ENTRY_NOCOREDUMP|MAP_ENTRY_IS_SUB_MAP))
 			continue;
 
-		if ((obj = entry->object.vm_object) == NULL)
+		if ((object = entry->object.vm_object) == NULL)
 			continue;
 
-		/* Find the deepest backing object. */
-		while (obj->backing_object != NULL)
-			obj = obj->backing_object;
-
 		/* Ignore memory-mapped devices and such things. */
-		if (obj->type != OBJT_DEFAULT &&
-		    obj->type != OBJT_SWAP &&
-		    obj->type != OBJT_VNODE)
+		VM_OBJECT_LOCK(object);
+		while ((backing_object = object->backing_object) != NULL) {
+			VM_OBJECT_LOCK(backing_object);
+			VM_OBJECT_UNLOCK(object);
+			object = backing_object;
+		}
+		ignore_entry = object->type != OBJT_DEFAULT &&
+		    object->type != OBJT_SWAP && object->type != OBJT_VNODE;
+		VM_OBJECT_UNLOCK(object);
+		if (ignore_entry)
 			continue;
 
 		(*func)(entry, closure);
 	}
+	vm_map_unlock_read(map);
 }
 
 /*

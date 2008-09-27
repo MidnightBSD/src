@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_kthread.c,v 1.34 2005/01/06 23:35:39 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_kthread.c,v 1.38 2007/06/05 00:00:54 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -38,6 +38,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_kthread.c,v 1.34 2005/01/06 23:35:39 imp E
 #include <sys/sx.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
+#include <sys/sched.h>
 
 #include <machine/stdarg.h>
 
@@ -112,9 +113,9 @@ kthread_create(void (*func)(void *), void *arg,
 
 	/* Delay putting it on the run queue until now. */
 	if (!(flags & RFSTOPPED)) {
-		mtx_lock_spin(&sched_lock);
-		setrunqueue(td, SRQ_BORING); 
-		mtx_unlock_spin(&sched_lock);
+		thread_lock(td);
+		sched_add(td, SRQ_BORING); 
+		thread_unlock(td);
 	}
 
 	return 0;
@@ -128,11 +129,23 @@ kthread_exit(int ecode)
 
 	td = curthread;
 	p = td->td_proc;
+
+	/*
+	 * Reparent curthread from proc0 to init so that the zombie
+	 * is harvested.
+	 */
 	sx_xlock(&proctree_lock);
 	PROC_LOCK(p);
 	proc_reparent(p, initproc);
 	PROC_UNLOCK(p);
 	sx_xunlock(&proctree_lock);
+
+	/*
+	 * Wakeup anyone waiting for us to exit.
+	 */
+	wakeup(p);
+
+	/* Buh-bye! */
 	exit1(td, W_EXITCODE(ecode, 0));
 }
 

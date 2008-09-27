@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_hash.c,v 1.9.2.1 2005/09/12 15:53:58 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_hash.c,v 1.13 2007/03/13 01:50:26 tegge Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,7 +35,7 @@ __FBSDID("$FreeBSD: src/sys/kern/vfs_hash.c,v 1.9.2.1 2005/09/12 15:53:58 tegge 
 #include <sys/mount.h>
 #include <sys/vnode.h>
 
-static MALLOC_DEFINE(M_VFS_HASH, "VFS hash", "VFS hash table");
+static MALLOC_DEFINE(M_VFS_HASH, "vfs_hash", "VFS hash table");
 
 static LIST_HEAD(vfs_hash_head, vnode)	*vfs_hash_tbl;
 static LIST_HEAD(,vnode)		vfs_hash_side;
@@ -55,14 +55,14 @@ vfs_hashinit(void *dummy __unused)
 SYSINIT(vfs_hash, SI_SUB_VFS, SI_ORDER_SECOND, vfs_hashinit, NULL)
 
 static struct vfs_hash_head *
-vfs_hash_index(struct mount *mp, u_int hash)
+vfs_hash_index(const struct mount *mp, u_int hash)
 {
 
 	return(&vfs_hash_tbl[(hash + mp->mnt_hashseed) & vfs_hash_mask]);
 }
 
 int
-vfs_hash_get(struct mount *mp, u_int hash, int flags, struct thread *td, struct vnode **vpp, vfs_hash_cmp_t *fn, void *arg)
+vfs_hash_get(const struct mount *mp, u_int hash, int flags, struct thread *td, struct vnode **vpp, vfs_hash_cmp_t *fn, void *arg)
 {
 	struct vnode *vp;
 	int error;
@@ -109,7 +109,6 @@ vfs_hash_insert(struct vnode *vp, u_int hash, int flags, struct thread *td, stru
 	struct vnode *vp2;
 	int error;
 
-	lockmgr(vp->v_vnlock, flags & LK_TYPE_MASK, NULL, td);
 	*vpp = NULL;
 	while (1) {
 		mtx_lock(&vfs_hash_mtx);

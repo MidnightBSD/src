@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_syscalls.c,v 1.11 2004/07/15 08:26:05 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_syscalls.c,v 1.12 2006/08/01 16:32:20 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/sysproto.h>
@@ -97,8 +97,11 @@ syscall_module_handler(struct module *mod, int what, void *arg)
        case MOD_LOAD :
                error = syscall_register(data->offset, data->new_sysent,
                                         &data->old_sysent);
-               if (error)
+               if (error) {
+                       /* Leave a mark so we know to safely unload below. */
+                       data->offset = NULL;
                        return error;
+               }
 	       ms.intval = *data->offset;
 	       MOD_XLOCK;
 	       module_setspecific(mod, &ms);
@@ -108,6 +111,13 @@ syscall_module_handler(struct module *mod, int what, void *arg)
                return error;
 
        case MOD_UNLOAD :
+               /*
+                * MOD_LOAD failed, so just return without calling the
+                * chained handler since we didn't pass along the MOD_LOAD
+                * event.
+                */
+               if (data->offset == NULL)
+                       return (0);
                if (data->chainevh) {
                        error = data->chainevh(mod, what, data->chainarg);
                        if (error)

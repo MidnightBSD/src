@@ -25,45 +25,64 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_thr.c,v 1.34.2.2 2006/01/16 06:25:32 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_thr.c,v 1.62.4.1 2008/01/19 18:15:05 kib Exp $");
 
+#include "opt_compat.h"
+#include "opt_posix.h"
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
+#include <sys/posix4.h>
 #include <sys/resourcevar.h>
 #include <sys/sched.h>
 #include <sys/sysctl.h>
 #include <sys/smp.h>
+#include <sys/syscallsubr.h>
 #include <sys/sysent.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
 #include <sys/signalvar.h>
 #include <sys/ucontext.h>
 #include <sys/thr.h>
+#include <sys/rtprio.h>
 #include <sys/umtx.h>
+#include <sys/limits.h>
 
 #include <machine/frame.h>
 
+#include <security/audit/audit.h>
+
+#ifdef COMPAT_IA32
+
+extern struct sysentvec ia32_freebsd_sysvec;
+
+static inline int
+suword_lwpid(void *addr, lwpid_t lwpid)
+{
+	int error;
+
+	if (curproc->p_sysent != &ia32_freebsd_sysvec)
+		error = suword(addr, lwpid);
+	else
+		error = suword32(addr, lwpid);
+	return (error);
+}
+
+#else
+#define suword_lwpid	suword
+#endif
+
 extern int max_threads_per_proc;
-extern int max_groups_per_proc;
-
-SYSCTL_DECL(_kern_threads);
-static int thr_scope = 0;
-SYSCTL_INT(_kern_threads, OID_AUTO, thr_scope, CTLFLAG_RW,
-	&thr_scope, 0, "sys or proc scope scheduling");
-
-static int thr_concurrency = 0;
-SYSCTL_INT(_kern_threads, OID_AUTO, thr_concurrency, CTLFLAG_RW,
-	&thr_concurrency, 0, "a concurrency value if not default");
 
 static int create_thread(struct thread *td, mcontext_t *ctx,
 			 void (*start_func)(void *), void *arg,
 			 char *stack_base, size_t stack_size,
 			 char *tls_base,
 			 long *child_tid, long *parent_tid,
-			 int flags);
+			 int flags, struct rtprio *rtp);
 
 /*
  * System call interface.
@@ -79,7 +98,7 @@ thr_create(struct thread *td, struct thr_create_args *uap)
 		return (error);
 
 	error = create_thread(td, &ctx.uc_mcontext, NULL, NULL,
-		NULL, 0, NULL, uap->id, NULL, uap->flags);
+		NULL, 0, NULL, uap->id, NULL, uap->flags, NULL);
 	return (error);
 }
 
@@ -90,13 +109,29 @@ thr_new(struct thread *td, struct thr_new_args *uap)
 	struct thr_param param;
 	int error;
 
-	if (uap->param_size < sizeof(param))
+	if (uap->param_size < 0 || uap->param_size > sizeof(param))
 		return (EINVAL);
-	if ((error = copyin(uap->param, &param, sizeof(param))))
+	bzero(&param, sizeof(param));
+	if ((error = copyin(uap->param, &param, uap->param_size)))
 		return (error);
-	error = create_thread(td, NULL, param.start_func, param.arg,
-		param.stack_base, param.stack_size, param.tls_base,
-		param.child_tid, param.parent_tid, param.flags);
+	return (kern_thr_new(td, &param));
+}
+
+int
+kern_thr_new(struct thread *td, struct thr_param *param)
+{
+	struct rtprio rtp, *rtpp;
+	int error;
+
+	rtpp = NULL;
+	if (param->rtp != 0) {
+		error = copyin(param->rtp, &rtp, sizeof(struct rtprio));
+		rtpp = &rtp;
+	}
+	error = create_thread(td, NULL, param->start_func, param->arg,
+		param->stack_base, param->stack_size, param->tls_base,
+		param->child_tid, param->parent_tid, param->flags,
+		rtpp);
 	return (error);
 }
 
@@ -106,36 +141,42 @@ create_thread(struct thread *td, mcontext_t *ctx,
 	    char *stack_base, size_t stack_size,
 	    char *tls_base,
 	    long *child_tid, long *parent_tid,
-	    int flags)
+	    int flags, struct rtprio *rtp)
 {
 	stack_t stack;
 	struct thread *newtd;
-	struct ksegrp *kg, *newkg;
 	struct proc *p;
-	long id;
-	int error, scope_sys, linkkg;
+	int error;
 
 	error = 0;
 	p = td->td_proc;
-	kg = td->td_ksegrp;
 
 	/* Have race condition but it is cheap. */
-	if ((p->p_numksegrps >= max_groups_per_proc) ||
-	    (p->p_numthreads >= max_threads_per_proc)) {
+	if (p->p_numthreads >= max_threads_per_proc)
 		return (EPROCLIM);
+
+	if (rtp != NULL) {
+		switch(rtp->type) {
+		case RTP_PRIO_REALTIME:
+		case RTP_PRIO_FIFO:
+			/* Only root can set scheduler policy */
+			if (priv_check(td, PRIV_SCHED_SETPOLICY) != 0)
+				return (EPERM);
+			if (rtp->prio > RTP_PRIO_MAX)
+				return (EINVAL);
+			break;
+		case RTP_PRIO_NORMAL:
+			rtp->prio = 0;
+			break;
+		default:
+			return (EINVAL);
+		}
 	}
 
-	/* Check PTHREAD_SCOPE_SYSTEM */
-	scope_sys = (flags & THR_SYSTEM_SCOPE) != 0;
-
-	/* sysctl overrides user's flag */
-	if (thr_scope == 1)
-		scope_sys = 0;
-	else if (thr_scope == 2)
-		scope_sys = 1;
-
-	/* Initialize our td and new ksegrp.. */
+	/* Initialize our td */
 	newtd = thread_alloc();
+	if (newtd == NULL)
+		return (ENOMEM);
 
 	/*
 	 * Try the copyout as soon as we allocate the td so we don't
@@ -146,14 +187,14 @@ create_thread(struct thread *td, mcontext_t *ctx,
 	 * its storage, because child thread may exit quickly and
 	 * memory is freed before parent thread can access it.
 	 */
-	id = newtd->td_tid;
 	if ((child_tid != NULL &&
-	    (error = copyout(&id, child_tid, sizeof(long)))) ||
+	    suword_lwpid(child_tid, newtd->td_tid)) ||
 	    (parent_tid != NULL &&
-	    (error = copyout(&id, parent_tid, sizeof(long))))) {
-	    	thread_free(newtd);
-		return (error);
+	    suword_lwpid(parent_tid, newtd->td_tid))) {
+		thread_free(newtd);
+		return (EFAULT);
 	}
+
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
 	bcopy(&td->td_startcopy, &newtd->td_startcopy,
@@ -185,70 +226,29 @@ create_thread(struct thread *td, mcontext_t *ctx,
 		}
 	}
 
-	if ((td->td_proc->p_flag & P_HADTHREADS) == 0) {
-		/* Treat initial thread as it has PTHREAD_SCOPE_PROCESS. */
-		p->p_procscopegrp = kg;
-		mtx_lock_spin(&sched_lock);
-		sched_set_concurrency(kg,
-		    thr_concurrency ? thr_concurrency : (2*mp_ncpus));
-		mtx_unlock_spin(&sched_lock);
-	}
-
-	linkkg = 0;
-	if (scope_sys) {
-		linkkg = 1;
-		newkg = ksegrp_alloc();
-		bzero(&newkg->kg_startzero,
-		    __rangeof(struct ksegrp, kg_startzero, kg_endzero));
-		bcopy(&kg->kg_startcopy, &newkg->kg_startcopy,
-		    __rangeof(struct ksegrp, kg_startcopy, kg_endcopy));
-		sched_init_concurrency(newkg);
-		PROC_LOCK(td->td_proc);
-	} else {
-		/*
-		 * Try to create a KSE group which will be shared
-		 * by all PTHREAD_SCOPE_PROCESS threads.
-		 */
-retry:
-		PROC_LOCK(td->td_proc);
-		if ((newkg = p->p_procscopegrp) == NULL) {
-			PROC_UNLOCK(p);
-			newkg = ksegrp_alloc();
-			bzero(&newkg->kg_startzero,
-			    __rangeof(struct ksegrp, kg_startzero, kg_endzero));
-			bcopy(&kg->kg_startcopy, &newkg->kg_startcopy,
-			    __rangeof(struct ksegrp, kg_startcopy, kg_endcopy));
-			PROC_LOCK(p);
-			if (p->p_procscopegrp == NULL) {
-				p->p_procscopegrp = newkg;
-				sched_init_concurrency(newkg);
-				sched_set_concurrency(newkg,
-				    thr_concurrency ? thr_concurrency : (2*mp_ncpus));
-				linkkg = 1;
-			} else {
-				PROC_UNLOCK(p);
-				ksegrp_free(newkg);
-				goto retry;
-			}
-		}
-	}
-
+	PROC_LOCK(td->td_proc);
 	td->td_proc->p_flag |= P_HADTHREADS;
 	newtd->td_sigmask = td->td_sigmask;
-	mtx_lock_spin(&sched_lock);
-	if (linkkg)
-		ksegrp_link(newkg, p);
-	thread_link(newtd, newkg);
-	PROC_UNLOCK(p);
-
+	PROC_SLOCK(p);
+	thread_link(newtd, p); 
+	thread_lock(td);
 	/* let the scheduler know about these things. */
-	if (linkkg)
-		sched_fork_ksegrp(td, newkg);
 	sched_fork_thread(td, newtd);
+	thread_unlock(td);
+	PROC_SUNLOCK(p);
+	PROC_UNLOCK(p);
+	thread_lock(newtd);
+	if (rtp != NULL) {
+		if (!(td->td_pri_class == PRI_TIMESHARE &&
+		      rtp->type == RTP_PRIO_NORMAL)) {
+			rtp_to_pri(rtp, newtd);
+			sched_prio(newtd, newtd->td_user_pri);
+		} /* ignore timesharing class */
+	}
 	TD_SET_CAN_RUN(newtd);
 	/* if ((flags & THR_SUSPENDED) == 0) */
-		setrunqueue(newtd, SRQ_BORING);
-	mtx_unlock_spin(&sched_lock);
+		sched_add(newtd, SRQ_BORING);
+	thread_unlock(newtd);
 
 	return (error);
 }
@@ -257,13 +257,11 @@ int
 thr_self(struct thread *td, struct thr_self_args *uap)
     /* long *id */
 {
-	long id;
 	int error;
 
-	id = td->td_tid;
-	if ((error = copyout(&id, uap->id, sizeof(long))))
-		return (error);
-
+	error = suword_lwpid(uap->id, (unsigned)td->td_tid);
+	if (error == -1)
+		return (EFAULT);
 	return (0);
 }
 
@@ -277,12 +275,13 @@ thr_exit(struct thread *td, struct thr_exit_args *uap)
 
 	/* Signal userland that it can free the stack. */
 	if ((void *)uap->state != NULL) {
-		suword((void *)uap->state, 1);
+		suword_lwpid(uap->state, 1);
 		kern_umtx_wake(td, uap->state, INT_MAX);
 	}
 
 	PROC_LOCK(p);
-	mtx_lock_spin(&sched_lock);
+	sigqueue_flush(&td->td_sigqueue);
+	PROC_SLOCK(p);
 
 	/*
 	 * Shutting down last thread in the proc.  This will actually
@@ -293,7 +292,7 @@ thr_exit(struct thread *td, struct thr_exit_args *uap)
 		thread_exit();
 		/* NOTREACHED */
 	}
-	mtx_unlock_spin(&sched_lock);
+	PROC_SUNLOCK(p);
 	PROC_UNLOCK(p);
 	return (0);
 }
@@ -319,17 +318,14 @@ thr_kill(struct thread *td, struct thr_kill_args *uap)
 					error = 0;
 					if (uap->sig == 0)
 						break;
-					tdsignal(ttd, uap->sig, SIGTARGET_TD);
+					tdsignal(p, ttd, uap->sig, NULL);
 				}
 			}
 		}
 	} else {
-		if (uap->id != td->td_tid) {
-			FOREACH_THREAD_IN_PROC(p, ttd) {
-				if (ttd->td_tid == uap->id)
-					break;
-			}
-		} else
+		if (uap->id != td->td_tid)
+			ttd = thread_find(p, uap->id);
+		else
 			ttd = td;
 		if (ttd == NULL)
 			error = ESRCH;
@@ -338,7 +334,60 @@ thr_kill(struct thread *td, struct thr_kill_args *uap)
 		else if (!_SIG_VALID(uap->sig))
 			error = EINVAL;
 		else
-			tdsignal(ttd, uap->sig, SIGTARGET_TD);
+			tdsignal(p, ttd, uap->sig, NULL);
+	}
+	PROC_UNLOCK(p);
+	return (error);
+}
+
+int
+thr_kill2(struct thread *td, struct thr_kill2_args *uap)
+    /* pid_t pid, long id, int sig */
+{
+	struct thread *ttd;
+	struct proc *p;
+	int error;
+
+	AUDIT_ARG(signum, uap->sig);
+
+	if (uap->pid == td->td_proc->p_pid) {
+		p = td->td_proc;
+		PROC_LOCK(p);
+	} else if ((p = pfind(uap->pid)) == NULL) {
+		return (ESRCH);
+	}
+	AUDIT_ARG(process, p);
+
+	error = p_cansignal(td, p, uap->sig);
+	if (error == 0) {
+		if (uap->id == -1) {
+			if (uap->sig != 0 && !_SIG_VALID(uap->sig)) {
+				error = EINVAL;
+			} else {
+				error = ESRCH;
+				FOREACH_THREAD_IN_PROC(p, ttd) {
+					if (ttd != td) {
+						error = 0;
+						if (uap->sig == 0)
+							break;
+						tdsignal(p, ttd, uap->sig, NULL);
+					}
+				}
+			}
+		} else {
+			if (uap->id != td->td_tid)
+				ttd = thread_find(p, uap->id);
+			else
+				ttd = td;
+			if (ttd == NULL)
+				error = ESRCH;
+			else if (uap->sig == 0)
+				;
+			else if (!_SIG_VALID(uap->sig))
+				error = EINVAL;
+			else
+				tdsignal(p, ttd, uap->sig, NULL);
+		}
 	}
 	PROC_UNLOCK(p);
 	return (error);
@@ -348,33 +397,50 @@ int
 thr_suspend(struct thread *td, struct thr_suspend_args *uap)
 	/* const struct timespec *timeout */
 {
-	struct timespec ts;
-	struct timeval	tv;
+	struct timespec ts, *tsp;
 	int error;
-	int hz;
 
-	hz = 0;
 	error = 0;
+	tsp = NULL;
 	if (uap->timeout != NULL) {
 		error = copyin((const void *)uap->timeout, (void *)&ts,
 		    sizeof(struct timespec));
 		if (error != 0)
 			return (error);
-		if (ts.tv_nsec < 0 || ts.tv_nsec > 1000000000)
+		tsp = &ts;
+	}
+
+	return (kern_thr_suspend(td, tsp));
+}
+
+int
+kern_thr_suspend(struct thread *td, struct timespec *tsp)
+{
+	struct timeval tv;
+	int error = 0, hz = 0;
+
+	if (tsp != NULL) {
+		if (tsp->tv_nsec < 0 || tsp->tv_nsec > 1000000000)
 			return (EINVAL);
-		if (ts.tv_sec == 0 && ts.tv_nsec == 0)
+		if (tsp->tv_sec == 0 && tsp->tv_nsec == 0)
 			return (ETIMEDOUT);
-		TIMESPEC_TO_TIMEVAL(&tv, &ts);
+		TIMESPEC_TO_TIMEVAL(&tv, tsp);
 		hz = tvtohz(&tv);
 	}
+
+	if (td->td_pflags & TDP_WAKEUP) {
+		td->td_pflags &= ~TDP_WAKEUP;
+		return (0);
+	}
+
 	PROC_LOCK(td->td_proc);
 	if ((td->td_flags & TDF_THRWAKEUP) == 0)
-		error = msleep((void *)td, &td->td_proc->p_mtx,
-		    PCATCH, "lthr", hz);
+		error = msleep((void *)td, &td->td_proc->p_mtx, PCATCH, "lthr",
+		    hz);
 	if (td->td_flags & TDF_THRWAKEUP) {
-		mtx_lock_spin(&sched_lock);
+		thread_lock(td);
 		td->td_flags &= ~TDF_THRWAKEUP;
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td);
 		PROC_UNLOCK(td->td_proc);
 		return (0);
 	}
@@ -392,21 +458,54 @@ int
 thr_wake(struct thread *td, struct thr_wake_args *uap)
 	/* long id */
 {
+	struct proc *p;
 	struct thread *ttd;
 
-	PROC_LOCK(td->td_proc);
-	FOREACH_THREAD_IN_PROC(td->td_proc, ttd) {
-		if (ttd->td_tid == uap->id)
-			break;
-	}
+	if (uap->id == td->td_tid) {
+		td->td_pflags |= TDP_WAKEUP;
+		return (0);
+	} 
+
+	p = td->td_proc;
+	PROC_LOCK(p);
+	ttd = thread_find(p, uap->id);
 	if (ttd == NULL) {
-		PROC_UNLOCK(td->td_proc);
+		PROC_UNLOCK(p);
 		return (ESRCH);
 	}
-	mtx_lock_spin(&sched_lock);
+	thread_lock(ttd);
 	ttd->td_flags |= TDF_THRWAKEUP;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(ttd);
 	wakeup((void *)ttd);
-	PROC_UNLOCK(td->td_proc);
+	PROC_UNLOCK(p);
 	return (0);
+}
+
+int
+thr_set_name(struct thread *td, struct thr_set_name_args *uap)
+{
+	struct proc *p = td->td_proc;
+	char name[MAXCOMLEN + 1];
+	struct thread *ttd;
+	int error;
+
+	error = 0;
+	name[0] = '\0';
+	if (uap->name != NULL) {
+		error = copyinstr(uap->name, name, sizeof(name),
+			NULL);
+		if (error)
+			return (error);
+	}
+	PROC_LOCK(p);
+	if (uap->id == td->td_tid)
+		ttd = td;
+	else
+		ttd = thread_find(p, uap->id);
+	if (ttd != NULL)
+		strcpy(ttd->td_name, name);
+	else 
+		error = ESRCH;
+	PROC_UNLOCK(p);
+	return (error);
 }

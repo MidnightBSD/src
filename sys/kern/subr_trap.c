@@ -38,19 +38,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_trap.c,v 1.281 2005/03/28 12:52:46 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_trap.c,v 1.299 2007/09/17 05:27:20 jeff Exp $");
 
 #include "opt_ktrace.h"
 #include "opt_mac.h"
 #ifdef __i386__
 #include "opt_npx.h"
 #endif
+#include "opt_sched.h"
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/ktr.h>
@@ -67,17 +67,14 @@ __FBSDID("$FreeBSD: src/sys/kern/subr_trap.c,v 1.281 2005/03/28 12:52:46 jeff Ex
 #include <machine/cpu.h>
 #include <machine/pcb.h>
 
+#include <security/mac/mac_framework.h>
+
 /*
- * Define the code needed before returning to user mode, for
- * trap and syscall.
- *
- * MPSAFE
+ * Define the code needed before returning to user mode, for trap and
+ * syscall.
  */
 void
-userret(td, frame, oticks)
-	struct thread *td;
-	struct trapframe *frame;
-	u_int oticks;
+userret(struct thread *td, struct trapframe *frame)
 {
 	struct proc *p = td->td_proc;
 
@@ -86,12 +83,16 @@ userret(td, frame, oticks)
 #ifdef DIAGNOSTIC
 	/* Check that we called signotify() enough. */
 	PROC_LOCK(p);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	if (SIGPENDING(td) && ((td->td_flags & TDF_NEEDSIGCHK) == 0 ||
 	    (td->td_flags & TDF_ASTPENDING) == 0))
 		printf("failed to set signal flags properly for ast()\n");
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	PROC_UNLOCK(p);
+#endif
+
+#ifdef KTRACE
+	KTRUSERRET(td);
 #endif
 
 	/*
@@ -113,20 +114,20 @@ userret(td, frame, oticks)
 		PROC_UNLOCK(p);
 	}
 
+#ifdef KSE
 	/*
 	 * Do special thread processing, e.g. upcall tweaking and such.
 	 */
 	if (p->p_flag & P_SA)
 		thread_userret(td, frame);
+#endif
 
 	/*
 	 * Charge system time if profiling.
 	 */
 	if (p->p_flag & P_PROFIL) {
-		quad_t ticks;
 
-		ticks = td->td_sticks - oticks;
-		addupc_task(td, TRAPF_PC(frame), (u_int)ticks * psratio);
+		addupc_task(td, TRAPF_PC(frame), td->td_pticks * psratio);
 	}
 
 	/*
@@ -147,54 +148,48 @@ ast(struct trapframe *framep)
 {
 	struct thread *td;
 	struct proc *p;
-	struct ksegrp *kg;
-	struct rlimit rlim;
-	u_int sticks;
-	int sflag;
 	int flags;
 	int sig;
 #if defined(DEV_NPX) && !defined(SMP)
 	int ucode;
+	ksiginfo_t ksi;
 #endif
 
 	td = curthread;
 	p = td->td_proc;
-	kg = td->td_ksegrp;
 
 	CTR3(KTR_SYSC, "ast: thread %p (pid %d, %s)", td, p->p_pid,
             p->p_comm);
 	KASSERT(TRAPF_USERMODE(framep), ("ast in kernel mode"));
 	WITNESS_WARN(WARN_PANIC, NULL, "Returning to user mode");
 	mtx_assert(&Giant, MA_NOTOWNED);
-	mtx_assert(&sched_lock, MA_NOTOWNED);
+	THREAD_LOCK_ASSERT(td, MA_NOTOWNED);
 	td->td_frame = framep;
-	sticks = td->td_sticks;
+	td->td_pticks = 0;
 
+#ifdef KSE
 	if ((p->p_flag & P_SA) && (td->td_mailbox == NULL))
 		thread_user_enter(td);
+#endif
 
 	/*
-	 * This updates the p_sflag's for the checks below in one
+	 * This updates the td_flag's for the checks below in one
 	 * "atomic" operation with turning off the astpending flag.
 	 * If another AST is triggered while we are handling the
-	 * AST's saved in sflag, the astpending flag will be set and
+	 * AST's saved in flags, the astpending flag will be set and
 	 * ast() will be called again.
 	 */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	flags = td->td_flags;
-	sflag = p->p_sflag;
-	p->p_sflag &= ~(PS_ALRMPEND | PS_PROFPEND | PS_XCPU);
-#ifdef MAC
-	p->p_sflag &= ~PS_MACPEND;
-#endif
 	td->td_flags &= ~(TDF_ASTPENDING | TDF_NEEDSIGCHK |
-	    TDF_NEEDRESCHED | TDF_INTERRUPT);
-	cnt.v_soft++;
-	mtx_unlock_spin(&sched_lock);
+	    TDF_NEEDRESCHED | TDF_INTERRUPT | TDF_ALRMPEND | TDF_PROFPEND |
+	    TDF_MACPEND);
+	thread_unlock(td);
+	PCPU_INC(cnt.v_trap);
 
 	/*
 	 * XXXKSE While the fact that we owe a user profiling
-	 * tick is stored per KSE in this code, the statistics
+	 * tick is stored per thread in this code, the statistics
 	 * themselves are still stored per process.
 	 * This should probably change, by which I mean that
 	 * possibly the location of both might change.
@@ -206,7 +201,7 @@ ast(struct trapframe *framep)
 		td->td_profil_ticks = 0;
 		td->td_pflags &= ~TDP_OWEUPC;
 	}
-	if (sflag & PS_ALRMPEND) {
+	if (flags & TDF_ALRMPEND) {
 		PROC_LOCK(p);
 		psignal(p, SIGVTALRM);
 		PROC_UNLOCK(p);
@@ -217,32 +212,20 @@ ast(struct trapframe *framep)
 		    PCB_NPXTRAP);
 		ucode = npxtrap();
 		if (ucode != -1) {
-			trapsignal(td, SIGFPE, ucode);
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGFPE;
+			ksi.ksi_code = ucode;
+			trapsignal(td, &ksi);
 		}
 	}
 #endif
-	if (sflag & PS_PROFPEND) {
+	if (flags & TDF_PROFPEND) {
 		PROC_LOCK(p);
 		psignal(p, SIGPROF);
 		PROC_UNLOCK(p);
 	}
-	if (sflag & PS_XCPU) {
-		PROC_LOCK(p);
-		lim_rlimit(p, RLIMIT_CPU, &rlim);
-		mtx_lock_spin(&sched_lock);
-		if (p->p_rux.rux_runtime.sec >= rlim.rlim_max) {
-			mtx_unlock_spin(&sched_lock);
-			killproc(p, "exceeded maximum CPU limit");
-		} else {
-			if (p->p_cpulimit < rlim.rlim_max)
-				p->p_cpulimit += 5;
-			mtx_unlock_spin(&sched_lock);
-			psignal(p, SIGXCPU);
-		}
-		PROC_UNLOCK(p);
-	}
 #ifdef MAC
-	if (sflag & PS_MACPEND)
+	if (flags & TDF_MACPEND)
 		mac_thread_userret(td);
 #endif
 	if (flags & TDF_NEEDRESCHED) {
@@ -250,10 +233,11 @@ ast(struct trapframe *framep)
 		if (KTRPOINT(td, KTR_CSW))
 			ktrcsw(1, 1);
 #endif
-		mtx_lock_spin(&sched_lock);
-		sched_prio(td, kg->kg_user_pri);
+		thread_lock(td);
+		sched_prio(td, td->td_user_pri);
+		SCHED_STAT_INC(switch_needresched);
 		mi_switch(SW_INVOL, NULL);
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td);
 #ifdef KTRACE
 		if (KTRPOINT(td, KTR_CSW))
 			ktrcsw(0, 1);
@@ -268,6 +252,6 @@ ast(struct trapframe *framep)
 		PROC_UNLOCK(p);
 	}
 
-	userret(td, framep, sticks);
+	userret(td, framep);
 	mtx_assert(&Giant, MA_NOTOWNED);
 }
