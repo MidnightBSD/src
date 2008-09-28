@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/bios.c,v 1.72.2.1 2005/08/16 22:47:14 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/bios.c,v 1.74 2007/04/19 09:18:51 phk Exp $");
 
 /*
  * Code for dealing with the BIOS in x86 PC systems.
@@ -475,7 +475,8 @@ bios16(struct bios_args *args, char *fmt, ...)
     return (i);
 }
 
-int bios_oem_strings(struct bios_oem *oem, u_char *buffer, size_t maxlen)
+int
+bios_oem_strings(struct bios_oem *oem, u_char *buffer, size_t maxlen)
 {
 	size_t idx = 0;
 	struct bios_oem_signature *sig;

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/genassym.c,v 1.151 2005/04/13 22:57:17 peter Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/genassym.c,v 1.160 2007/09/17 21:55:28 peter Exp $");
 
 #include "opt_apic.h"
 #include "opt_compat.h"
@@ -78,12 +78,13 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/genassym.c,v 1.151 2005/04/13 22:57:17 pet
 ASSYM(P_VMSPACE, offsetof(struct proc, p_vmspace));
 ASSYM(VM_PMAP, offsetof(struct vmspace, vm_pmap));
 ASSYM(PM_ACTIVE, offsetof(struct pmap, pm_active));
-ASSYM(P_SFLAG, offsetof(struct proc, p_sflag));
 
 ASSYM(TD_FLAGS, offsetof(struct thread, td_flags));
+ASSYM(TD_LOCK, offsetof(struct thread, td_lock));
 ASSYM(TD_PCB, offsetof(struct thread, td_pcb));
 ASSYM(TD_PROC, offsetof(struct thread, td_proc));
 ASSYM(TD_MD, offsetof(struct thread, td_md));
+ASSYM(TD_TID, offsetof(struct thread, td_tid));
 
 ASSYM(P_MD, offsetof(struct proc, p_md));
 ASSYM(MD_LDT, offsetof(struct mdproc, md_ldt));
@@ -140,7 +141,6 @@ ASSYM(PCB_FLAGS, offsetof(struct pcb, pcb_flags));
 ASSYM(PCB_SAVEFPU, offsetof(struct pcb, pcb_save));
 ASSYM(PCB_SAVEFPU_SIZE, sizeof(union savefpu));
 ASSYM(PCB_ONFAULT, offsetof(struct pcb, pcb_onfault));
-ASSYM(PCB_SWITCHOUT, offsetof(struct pcb, pcb_switchout));
 
 ASSYM(PCB_SIZE, sizeof(struct pcb));
 ASSYM(PCB_VM86CALL, PCB_VM86CALL);
@@ -173,6 +173,7 @@ ASSYM(UC_GS, offsetof(ucontext_t, uc_mcontext.mc_gs));
 ASSYM(ENOENT, ENOENT);
 ASSYM(EFAULT, EFAULT);
 ASSYM(ENAMETOOLONG, ENAMETOOLONG);
+ASSYM(MAXCPU, MAXCPU);
 ASSYM(MAXCOMLEN, MAXCOMLEN);
 ASSYM(MAXPATHLEN, MAXPATHLEN);
 ASSYM(BOOTINFO_SIZE, sizeof(struct bootinfo));
@@ -198,6 +199,7 @@ ASSYM(PC_FSGS_GDT, offsetof(struct pcpu, pc_fsgs_gdt));
 ASSYM(PC_CURRENTLDT, offsetof(struct pcpu, pc_currentldt));
 ASSYM(PC_CPUID, offsetof(struct pcpu, pc_cpuid));
 ASSYM(PC_CURPMAP, offsetof(struct pcpu, pc_curpmap));
+ASSYM(PC_PRIVATE_TSS, offsetof(struct pcpu, pc_private_tss));
 
 #ifdef DEV_APIC
 ASSYM(LA_VER, offsetof(struct LAPIC, version));

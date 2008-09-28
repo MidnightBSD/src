@@ -14,7 +14,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.616.2.2 2006/02/07 00:29:33 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.658.2.1.2.1 2008/01/19 18:15:03 kib Exp $");
 
 #include "opt_apic.h"
 #include "opt_atalk.h"
@@ -49,6 +53,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.616.2.2 2006/02/07 00:29:33 
 #include "opt_msgbuf.h"
 #include "opt_npx.h"
 #include "opt_perfmon.h"
+#include "opt_xbox.h"
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -57,6 +62,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.616.2.2 2006/02/07 00:29:33 
 #include <sys/buf.h>
 #include <sys/bus.h>
 #include <sys/callout.h>
+#include <sys/clock.h>
 #include <sys/cons.h>
 #include <sys/cpu.h>
 #include <sys/eventhandler.h>
@@ -129,6 +135,13 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/machdep.c,v 1.616.2.2 2006/02/07 00:29:33 
 #include <i386/isa/icu.h>
 #endif
 
+#ifdef XBOX
+#include <machine/xbox.h>
+
+int arch_i386_is_xbox = 0;
+uint32_t arch_i386_xbox_memsize = 0;
+#endif
+
 /* Sanity check for __curthread() */
 CTASSERT(offsetof(struct pcpu, pc_curthread) == 0);
 
@@ -161,24 +174,35 @@ SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
 extern vm_offset_t ksym_start, ksym_end;
 #endif
 
+/* Intel ICH registers */
+#define ICH_PMBASE	0x400
+#define ICH_SMI_EN	ICH_PMBASE + 0x30
+
 int	_udatasel, _ucodesel;
 u_int	basemem;
 
 int cold = 1;
 
 #ifdef COMPAT_43
-static void osendsig(sig_t catcher, int sig, sigset_t *mask, u_long code);
+static void osendsig(sig_t catcher, ksiginfo_t *, sigset_t *mask);
 #endif
 #ifdef COMPAT_FREEBSD4
-static void freebsd4_sendsig(sig_t catcher, int sig, sigset_t *mask,
-    u_long code);
+static void freebsd4_sendsig(sig_t catcher, ksiginfo_t *, sigset_t *mask);
 #endif
 
 long Maxmem = 0;
 long realmem = 0;
 
-vm_paddr_t phys_avail[10];
-vm_paddr_t dump_avail[10];
+/*
+ * The number of PHYSMAP entries must be one less than the number of
+ * PHYSSEG entries because the PHYSMAP entry that spans the largest
+ * physical address that is accessible by ISA DMA is split into two
+ * PHYSSEG entries.
+ */
+#define	PHYSMAP_SIZE	(2 * (VM_PHYSSEG_MAX - 1))
+
+vm_paddr_t phys_avail[PHYSMAP_SIZE + 2];
+vm_paddr_t dump_avail[PHYSMAP_SIZE + 2];
 
 /* must be 2 less so 0 0 can signal end of chunks */
 #define PHYS_AVAIL_ARRAY_END ((sizeof(phys_avail) / sizeof(phys_avail[0])) - 2)
@@ -199,6 +223,27 @@ static void
 cpu_startup(dummy)
 	void *dummy;
 {
+	char *sysenv;
+	
+	/*
+	 * On MacBooks, we need to disallow the legacy USB circuit to
+	 * generate an SMI# because this can cause several problems,
+	 * namely: incorrect CPU frequency detection and failure to
+	 * start the APs.
+	 * We do this by disabling a bit in the SMI_EN (SMI Control and
+	 * Enable register) of the Intel ICH LPC Interface Bridge.
+	 */
+	sysenv = getenv("smbios.system.product");
+	if (sysenv != NULL) {
+		if (strncmp(sysenv, "MacBook", 7) == 0) {
+			if (bootverbose)
+				printf("Disabling LEGACY_USB_EN bit on "
+				    "Intel ICH.\n");
+			outl(ICH_SMI_EN, inl(ICH_SMI_EN) & ~0x8);
+		}
+		freeenv(sysenv);
+	}
+
 	/*
 	 * Good {morning,afternoon,evening,night}.
 	 */
@@ -257,22 +302,20 @@ cpu_startup(dummy)
  */
 #ifdef COMPAT_43
 static void
-osendsig(catcher, sig, mask, code)
-	sig_t catcher;
-	int sig;
-	sigset_t *mask;
-	u_long code;
+osendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct osigframe sf, *fp;
 	struct proc *p;
 	struct thread *td;
 	struct sigacts *psp;
 	struct trapframe *regs;
+	int sig;
 	int oonstack;
 
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	regs = td->td_frame;
@@ -300,12 +343,12 @@ osendsig(catcher, sig, mask, code)
 		/* Signal handler installed with SA_SIGINFO. */
 		sf.sf_arg2 = (register_t)&fp->sf_siginfo;
 		sf.sf_siginfo.si_signo = sig;
-		sf.sf_siginfo.si_code = code;
+		sf.sf_siginfo.si_code = ksi->ksi_code;
 		sf.sf_ahu.sf_action = (__osiginfohandler_t *)catcher;
 	} else {
 		/* Old FreeBSD-style arguments. */
-		sf.sf_arg2 = code;
-		sf.sf_addr = regs->tf_err;
+		sf.sf_arg2 = ksi->ksi_code;
+		sf.sf_addr = (register_t)ksi->ksi_addr;
 		sf.sf_ahu.sf_handler = catcher;
 	}
 	mtx_unlock(&psp->ps_mtx);
@@ -387,22 +430,20 @@ osendsig(catcher, sig, mask, code)
 
 #ifdef COMPAT_FREEBSD4
 static void
-freebsd4_sendsig(catcher, sig, mask, code)
-	sig_t catcher;
-	int sig;
-	sigset_t *mask;
-	u_long code;
+freebsd4_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct sigframe4 sf, *sfp;
 	struct proc *p;
 	struct thread *td;
 	struct sigacts *psp;
 	struct trapframe *regs;
+	int sig;
 	int oonstack;
 
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	regs = td->td_frame;
@@ -443,12 +484,12 @@ freebsd4_sendsig(catcher, sig, mask, code)
 
 		/* Fill in POSIX parts */
 		sf.sf_si.si_signo = sig;
-		sf.sf_si.si_code = code;
-		sf.sf_si.si_addr = (void *)regs->tf_err;
+		sf.sf_si.si_code = ksi->ksi_code;
+		sf.sf_si.si_addr = ksi->ksi_addr;
 	} else {
 		/* Old FreeBSD-style arguments. */
-		sf.sf_siginfo = code;
-		sf.sf_addr = regs->tf_err;
+		sf.sf_siginfo = ksi->ksi_code;
+		sf.sf_addr = (register_t)ksi->ksi_addr;
 		sf.sf_ahu.sf_handler = catcher;
 	}
 	mtx_unlock(&psp->ps_mtx);
@@ -508,11 +549,7 @@ freebsd4_sendsig(catcher, sig, mask, code)
 #endif	/* COMPAT_FREEBSD4 */
 
 void
-sendsig(catcher, sig, mask, code)
-	sig_t catcher;
-	int sig;
-	sigset_t *mask;
-	u_long code;
+sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct sigframe sf, *sfp;
 	struct proc *p;
@@ -520,22 +557,24 @@ sendsig(catcher, sig, mask, code)
 	struct sigacts *psp;
 	char *sp;
 	struct trapframe *regs;
+	int sig;
 	int oonstack;
 
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 #ifdef COMPAT_FREEBSD4
 	if (SIGISMEMBER(psp->ps_freebsd4, sig)) {
-		freebsd4_sendsig(catcher, sig, mask, code);
+		freebsd4_sendsig(catcher, ksi, mask);
 		return;
 	}
 #endif
 #ifdef COMPAT_43
 	if (SIGISMEMBER(psp->ps_osigset, sig)) {
-		osendsig(catcher, sig, mask, code);
+		osendsig(catcher, ksi, mask);
 		return;
 	}
 #endif
@@ -581,13 +620,12 @@ sendsig(catcher, sig, mask, code)
 		sf.sf_ahu.sf_action = (__siginfohandler_t *)catcher;
 
 		/* Fill in POSIX parts */
-		sf.sf_si.si_signo = sig;
-		sf.sf_si.si_code = code;
-		sf.sf_si.si_addr = (void *)regs->tf_err;
+		sf.sf_si = ksi->ksi_info;
+		sf.sf_si.si_signo = sig; /* maybe a translated signal */
 	} else {
 		/* Old FreeBSD-style arguments. */
-		sf.sf_siginfo = code;
-		sf.sf_addr = regs->tf_err;
+		sf.sf_siginfo = ksi->ksi_code;
+		sf.sf_addr = (register_t)ksi->ksi_addr;
 		sf.sf_ahu.sf_handler = catcher;
 	}
 	mtx_unlock(&psp->ps_mtx);
@@ -646,26 +684,6 @@ sendsig(catcher, sig, mask, code)
 }
 
 /*
- * Build siginfo_t for SA thread
- */
-void
-cpu_thread_siginfo(int sig, u_long code, siginfo_t *si)
-{
-	struct proc *p;
-	struct thread *td;
-
-	td = curthread;
-	p = td->td_proc;
-	PROC_LOCK_ASSERT(p, MA_OWNED);
-
-	bzero(si, sizeof(*si));
-	si->si_signo = sig;
-	si->si_code = code;
-	si->si_addr = (void *)td->td_frame->tf_err;
-	/* XXXKSE fill other fields */
-}
-
-/*
  * System call to cleanup state after a signal
  * has been taken.  Reset signal mask and
  * stack state from context left by sendsig (above).
@@ -689,6 +707,7 @@ osigreturn(td, uap)
 	struct osigcontext *scp;
 	struct proc *p = td->td_proc;
 	int eflags, error;
+	ksiginfo_t ksi;
 
 	regs = td->td_frame;
 	error = copyin(uap->sigcntxp, &sc, sizeof(sc));
@@ -711,8 +730,13 @@ osigreturn(td, uap)
 			return (EINVAL);
 
 		/* Go back to user mode if both flags are set. */
-		if ((eflags & PSL_VIP) && (eflags & PSL_VIF))
-			trapsignal(td, SIGBUS, 0);
+		if ((eflags & PSL_VIP) && (eflags & PSL_VIF)) {
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGBUS;
+			ksi.ksi_code = BUS_OBJERR;
+			ksi.ksi_addr = (void *)regs->tf_eip;
+			trapsignal(td, &ksi);
+		}
 
 		if (vm86->vm86_has_vme) {
 			eflags = (tf->tf_eflags & ~VME_USERCHANGE) |
@@ -753,7 +777,12 @@ osigreturn(td, uap)
 		 * other selectors, invalid %eip's and invalid %esp's.
 		 */
 		if (!CS_SECURE(scp->sc_cs)) {
-			trapsignal(td, SIGBUS, T_PROTFLT);
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGBUS;
+			ksi.ksi_code = BUS_OBJERR;
+			ksi.ksi_trapno = T_PROTFLT;
+			ksi.ksi_addr = (void *)regs->tf_eip;
+			trapsignal(td, &ksi);
 			return (EINVAL);
 		}
 		regs->tf_ds = scp->sc_ds;
@@ -807,6 +836,7 @@ freebsd4_sigreturn(td, uap)
 	struct trapframe *regs;
 	const struct ucontext4 *ucp;
 	int cs, eflags, error;
+	ksiginfo_t ksi;
 
 	error = copyin(uap->sigcntxp, &uc, sizeof(uc));
 	if (error != 0)
@@ -829,9 +859,13 @@ freebsd4_sigreturn(td, uap)
 			return (EINVAL);
 
 		/* Go back to user mode if both flags are set. */
-		if ((eflags & PSL_VIP) && (eflags & PSL_VIF))
-			trapsignal(td, SIGBUS, 0);
-
+		if ((eflags & PSL_VIP) && (eflags & PSL_VIF)) {
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGBUS;
+			ksi.ksi_code = BUS_OBJERR;
+			ksi.ksi_addr = (void *)regs->tf_eip;
+			trapsignal(td, &ksi);
+		}
 		if (vm86->vm86_has_vme) {
 			eflags = (tf->tf_eflags & ~VME_USERCHANGE) |
 			    (eflags & VME_USERCHANGE) | PSL_VM;
@@ -876,7 +910,12 @@ freebsd4_sigreturn(td, uap)
 		cs = ucp->uc_mcontext.mc_cs;
 		if (!CS_SECURE(cs)) {
 			printf("freebsd4_sigreturn: cs = 0x%x\n", cs);
-			trapsignal(td, SIGBUS, T_PROTFLT);
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGBUS;
+			ksi.ksi_code = BUS_OBJERR;
+			ksi.ksi_trapno = T_PROTFLT;
+			ksi.ksi_addr = (void *)regs->tf_eip;
+			trapsignal(td, &ksi);
 			return (EINVAL);
 		}
 
@@ -906,7 +945,7 @@ int
 sigreturn(td, uap)
 	struct thread *td;
 	struct sigreturn_args /* {
-		const __ucontext *sigcntxp;
+		const struct __ucontext *sigcntxp;
 	} */ *uap;
 {
 	ucontext_t uc;
@@ -914,6 +953,7 @@ sigreturn(td, uap)
 	struct trapframe *regs;
 	const ucontext_t *ucp;
 	int cs, eflags, error, ret;
+	ksiginfo_t ksi;
 
 	error = copyin(uap->sigcntxp, &uc, sizeof(uc));
 	if (error != 0)
@@ -936,8 +976,13 @@ sigreturn(td, uap)
 			return (EINVAL);
 
 		/* Go back to user mode if both flags are set. */
-		if ((eflags & PSL_VIP) && (eflags & PSL_VIF))
-			trapsignal(td, SIGBUS, 0);
+		if ((eflags & PSL_VIP) && (eflags & PSL_VIF)) {
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGBUS;
+			ksi.ksi_code = BUS_OBJERR;
+			ksi.ksi_addr = (void *)regs->tf_eip;
+			trapsignal(td, &ksi);
+		}
 
 		if (vm86->vm86_has_vme) {
 			eflags = (tf->tf_eflags & ~VME_USERCHANGE) |
@@ -983,7 +1028,12 @@ sigreturn(td, uap)
 		cs = ucp->uc_mcontext.mc_cs;
 		if (!CS_SECURE(cs)) {
 			printf("sigreturn: cs = 0x%x\n", cs);
-			trapsignal(td, SIGBUS, T_PROTFLT);
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = SIGBUS;
+			ksi.ksi_code = BUS_OBJERR;
+			ksi.ksi_trapno = T_PROTFLT;
+			ksi.ksi_addr = (void *)regs->tf_eip;
+			trapsignal(td, &ksi);
 			return (EINVAL);
 		}
 
@@ -1039,9 +1089,9 @@ cpu_est_clockrate(int cpu_id, uint64_t *rate)
 
 #ifdef SMP
 	/* Schedule ourselves on the indicated cpu. */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_bind(curthread, cpu_id);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 #endif
 
 	/* Calibrate by measuring a short delay. */
@@ -1052,9 +1102,9 @@ cpu_est_clockrate(int cpu_id, uint64_t *rate)
 	intr_restore(reg);
 
 #ifdef SMP
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_unbind(curthread);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 #endif
 
 	/*
@@ -1093,6 +1143,7 @@ cpu_halt(void)
  * help lock contention somewhat, and this is critical for HTT. -Peter
  */
 static int	cpu_idle_hlt = 1;
+TUNABLE_INT("machdep.cpu_idle_hlt", &cpu_idle_hlt);
 SYSCTL_INT(_machdep, OID_AUTO, cpu_idle_hlt, CTLFLAG_RW,
     &cpu_idle_hlt, 0, "Idle loop HLT enable");
 
@@ -1151,8 +1202,11 @@ exec_setregs(td, entry, stack, ps_strings)
 	pcb->pcb_gs = _udatasel;
 	load_gs(_udatasel);
 
+	mtx_lock_spin(&dt_lock);
 	if (td->td_proc->p_md.md_ldt)
 		user_ldt_free(td);
+	else
+		mtx_unlock_spin(&dt_lock);
   
 	bzero((char *)regs, sizeof(struct trapframe));
 	regs->tf_eip = entry;
@@ -1218,37 +1272,27 @@ cpu_setregs(void)
 	unsigned int cr0;
 
 	cr0 = rcr0();
+
 	/*
-	 * CR0_MP, CR0_NE and CR0_TS are also set by npx_probe() for the
-	 * BSP.  See the comments there about why we set them.
+	 * CR0_MP, CR0_NE and CR0_TS are set for NPX (FPU) support:
+	 *
+	 * Prepare to trap all ESC (i.e., NPX) instructions and all WAIT
+	 * instructions.  We must set the CR0_MP bit and use the CR0_TS
+	 * bit to control the trap, because setting the CR0_EM bit does
+	 * not cause WAIT instructions to trap.  It's important to trap
+	 * WAIT instructions - otherwise the "wait" variants of no-wait
+	 * control instructions would degenerate to the "no-wait" variants
+	 * after FP context switches but work correctly otherwise.  It's
+	 * particularly important to trap WAITs when there is no NPX -
+	 * otherwise the "wait" variants would always degenerate.
+	 *
+	 * Try setting CR0_NE to get correct error reporting on 486DX's.
+	 * Setting it should fail or do nothing on lesser processors.
 	 */
 	cr0 |= CR0_MP | CR0_NE | CR0_TS | CR0_WP | CR0_AM;
 	load_cr0(cr0);
 	load_gs(_udatasel);
 }
-
-static int
-sysctl_machdep_adjkerntz(SYSCTL_HANDLER_ARGS)
-{
-	int error;
-	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2,
-		req);
-	if (!error && req->newptr)
-		resettodr();
-	return (error);
-}
-
-SYSCTL_PROC(_machdep, CPU_ADJKERNTZ, adjkerntz, CTLTYPE_INT|CTLFLAG_RW,
-	&adjkerntz, 0, sysctl_machdep_adjkerntz, "I", "");
-
-SYSCTL_INT(_machdep, CPU_DISRTCSET, disable_rtc_set,
-	CTLFLAG_RW, &disable_rtc_set, 0, "");
-
-SYSCTL_STRUCT(_machdep, CPU_BOOTINFO, bootinfo, 
-	CTLFLAG_RD, &bootinfo, bootinfo, "");
-
-SYSCTL_INT(_machdep, CPU_WALLCLOCK, wall_cmos_clock,
-	CTLFLAG_RW, &wall_cmos_clock, 0, "");
 
 u_long bootdev;		/* not a struct cdev *- encoding is different */
 SYSCTL_ULONG(_machdep, OID_AUTO, guessed_bootdev,
@@ -1268,8 +1312,7 @@ static struct gate_descriptor idt0[NIDT];
 struct gate_descriptor *idt = &idt0[0];	/* interrupt descriptor table */
 union descriptor ldt[NLDT];		/* local descriptor table */
 struct region_descriptor r_gdt, r_idt;	/* table descriptors */
-
-int private_tss;			/* flag indicating private tss */
+struct mtx dt_lock;			/* lock for GDT and LDT */
 
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
 extern int has_f00f_bug;
@@ -1540,8 +1583,6 @@ setidt(idx, func, typ, dpl, selec)
 	ip->gd_hioffset = ((int)func)>>16 ;
 }
 
-#define	IDTVEC(name)	__CONCAT(X,name)
-
 extern inthand_t
 	IDTVEC(div), IDTVEC(dbg), IDTVEC(nmi), IDTVEC(bpt), IDTVEC(ofl),
 	IDTVEC(bnd), IDTVEC(ill), IDTVEC(dna), IDTVEC(fpusegm),
@@ -1557,12 +1598,11 @@ extern inthand_t
 DB_SHOW_COMMAND(idt, db_show_idt)
 {
 	struct gate_descriptor *ip;
-	int idx, quit;
+	int idx;
 	uintptr_t func;
 
 	ip = idt;
-	db_setup_paging(db_simple_pager, &quit, db_lines_per_page);
-	for (idx = 0, quit = 0; idx < NIDT; idx++) {
+	for (idx = 0; idx < NIDT && !db_pager_quit; idx++) {
 		func = (ip->gd_hioffset << 16 | ip->gd_looffset);
 		if (func != (uintptr_t)&IDTVEC(rsvd)) {
 			db_printf("%3d\t", idx);
@@ -1571,6 +1611,25 @@ DB_SHOW_COMMAND(idt, db_show_idt)
 		}
 		ip++;
 	}
+}
+
+/* Show privileged registers. */
+DB_SHOW_COMMAND(sysregs, db_show_sysregs)
+{
+	uint64_t idtr, gdtr;
+
+	idtr = ridt();
+	db_printf("idtr\t0x%08x/%04x\n",
+	    (u_int)(idtr >> 16), (u_int)idtr & 0xffff);
+	gdtr = rgdt();
+	db_printf("gdtr\t0x%08x/%04x\n",
+	    (u_int)(gdtr >> 16), (u_int)gdtr & 0xffff);
+	db_printf("ldtr\t0x%04x\n", rldt());
+	db_printf("tr\t0x%04x\n", rtr());
+	db_printf("cr0\t0x%08x\n", rcr0());
+	db_printf("cr2\t0x%08x\n", rcr2());
+	db_printf("cr3\t0x%08x\n", rcr3());
+	db_printf("cr4\t0x%08x\n", rcr4());
 }
 #endif
 
@@ -1588,8 +1647,6 @@ sdtossd(sd, ssd)
 	ssd->ssd_gran  = sd->sd_gran;
 }
 
-#define PHYSMAP_SIZE	(2 * 8)
-
 /*
  * Populate the (physmap) array with base/bound pairs describing the
  * available physical memory in the system, then test this memory and
@@ -1606,8 +1663,8 @@ sdtossd(sd, ssd)
 static void
 getmemsize(int first)
 {
-	int i, physmap_idx, pa_indx, da_indx;
-	int hasbrokenint12;
+	int i, off, physmap_idx, pa_indx, da_indx;
+	int hasbrokenint12, has_smap;
 	u_long physmem_tunable;
 	u_int extmem;
 	struct vm86frame vmf;
@@ -1616,6 +1673,20 @@ getmemsize(int first)
 	pt_entry_t *pte;
 	struct bios_smap *smap;
 	quad_t dcons_addr, dcons_size;
+
+	has_smap = 0;
+#ifdef XBOX
+	if (arch_i386_is_xbox) {
+		/*
+		 * We queried the memory size before, so chop off 4MB for
+		 * the framebuffer and inform the OS of this.
+		 */
+		physmap[0] = 0;
+		physmap[1] = (arch_i386_xbox_memsize * 1024 * 1024) - XBOX_FB_SIZE;
+		physmap_idx = 0;
+		goto physmap_done;
+	}
+#endif
 
 	hasbrokenint12 = 0;
 	TUNABLE_INT_FETCH("hw.hasbrokenint12", &hasbrokenint12);
@@ -1703,6 +1774,7 @@ int15e820:
 		if (boothowto & RB_VERBOSE)
 			printf("SMAP type=%02x base=%016llx len=%016llx\n",
 			    smap->type, smap->base, smap->length);
+		has_smap = 1;
 
 		if (smap->type != 0x01)
 			continue;
@@ -1722,7 +1794,7 @@ int15e820:
 			if (smap->base < physmap[i + 1]) {
 				if (boothowto & RB_VERBOSE)
 					printf(
-	"Overlapping or non-montonic memory region, ignoring second region\n");
+	"Overlapping or non-monotonic memory region, ignoring second region\n");
 				continue;
 			}
 		}
@@ -1844,6 +1916,13 @@ physmap_done:
 	if (TUNABLE_ULONG_FETCH("hw.physmem", &physmem_tunable))
 		Maxmem = atop(physmem_tunable);
 
+	/*
+	 * If we have an SMAP, don't allow MAXMEM or hw.physmem to extend
+	 * the amount of memory in the system.
+	 */
+	if (has_smap && Maxmem > atop(physmap[physmap_idx + 1]))
+		Maxmem = atop(physmap[physmap_idx + 1]);
+
 	if (atop(physmap[physmap_idx + 1]) != Maxmem &&
 	    (boothowto & RB_VERBOSE))
 		printf("Physical memory use set to %ldK\n", Maxmem * 4);
@@ -1856,7 +1935,7 @@ physmap_done:
 		physmap[physmap_idx + 1] = ptoa((vm_paddr_t)Maxmem);
 
 	/* call pmap initialization to make new kernel address space */
-	pmap_bootstrap(first, 0);
+	pmap_bootstrap(first);
 
 	/*
 	 * Size up each available chunk of physical memory.
@@ -2012,7 +2091,10 @@ do_next:
 	/* Trim off space for the message buffer. */
 	phys_avail[pa_indx] -= round_page(MSGBUF_SIZE);
 
-	avail_end = phys_avail[pa_indx];
+	/* Map the message buffer. */
+	for (off = 0; off < round_page(MSGBUF_SIZE); off += PAGE_SIZE)
+		pmap_kenter((vm_offset_t)msgbufp + off, phys_avail[pa_indx] +
+		    off);
 }
 
 void
@@ -2020,7 +2102,7 @@ init386(first)
 	int first;
 {
 	struct gate_descriptor *gdp;
-	int gsel_tss, metadata_missing, off, x;
+	int gsel_tss, metadata_missing, x;
 	struct pcpu *pc;
 
 	thread0.td_kstack = proc0kstack;
@@ -2031,7 +2113,7 @@ init386(first)
  	 * This may be done better later if it gets more high level
  	 * components in it. If so just link td->td_proc here.
 	 */
-	proc_linkup(&proc0, &ksegrp0, &thread0);
+	proc_linkup0(&proc0, &thread0);
 
 	metadata_missing = 0;
 	if (bootinfo.bi_modulep) {
@@ -2073,6 +2155,7 @@ init386(first)
 
 	r_gdt.rd_limit = NGDT * sizeof(gdt[0]) - 1;
 	r_gdt.rd_base =  (int) gdt;
+	mtx_init(&dt_lock, "descriptor tables", NULL, MTX_SPIN);
 	lgdt(&r_gdt);
 
 	pcpu_init(pc, 0, sizeof(struct pcpu));
@@ -2089,8 +2172,7 @@ init386(first)
 	 *	     under witness.
 	 */
 	mutex_init();
-	mtx_init(&clock_lock, "clk", NULL, MTX_SPIN);
-	mtx_init(&icu_lock, "icu", NULL, MTX_SPIN | MTX_NOWITNESS);
+	mtx_init(&icu_lock, "icu", NULL, MTX_SPIN | MTX_NOWITNESS | MTX_NOPROFILE);
 
 	/* make ldt memory segments */
 	ldt_segs[LUCODE_SEL].ssd_limit = atop(0 - 1);
@@ -2150,6 +2232,34 @@ init386(first)
 	r_idt.rd_base = (int) idt;
 	lidt(&r_idt);
 
+#ifdef XBOX
+	/*
+	 * The following code queries the PCI ID of 0:0:0. For the XBOX,
+	 * This should be 0x10de / 0x02a5.
+	 *
+	 * This is exactly what Linux does.
+	 */
+	outl(0xcf8, 0x80000000);
+	if (inl(0xcfc) == 0x02a510de) {
+		arch_i386_is_xbox = 1;
+		pic16l_setled(XBOX_LED_GREEN);
+
+		/*
+		 * We are an XBOX, but we may have either 64MB or 128MB of
+		 * memory. The PCI host bridge should be programmed for this,
+		 * so we just query it. 
+		 */
+		outl(0xcf8, 0x80000084);
+		arch_i386_xbox_memsize = (inl(0xcfc) == 0x7FFFFFF) ? 128 : 64;
+	}
+#endif /* XBOX */
+
+	/*
+	 * Initialize the i8254 before the console so that console
+	 * initialization can use DELAY().
+	 */
+	i8254_init();
+
 	/*
 	 * Initialize the console before we print anything out.
 	 */
@@ -2188,7 +2298,6 @@ init386(first)
 	    KSTACK_PAGES * PAGE_SIZE - sizeof(struct pcb) - 16);
 	PCPU_SET(common_tss.tss_ss0, GSEL(GDATA_SEL, SEL_KPL));
 	gsel_tss = GSEL(GPROC0_SEL, SEL_KPL);
-	private_tss = 0;
 	PCPU_SET(tss_gdt, &gdt[GPROC0_SEL].sd);
 	PCPU_SET(common_tssd, *PCPU_GET(tss_gdt));
 	PCPU_SET(common_tss.tss_ioopt, (sizeof (struct i386tss)) << 16);
@@ -2220,10 +2329,6 @@ init386(first)
 
 	/* now running on new page tables, configured,and u/iom is accessible */
 
-	/* Map the message buffer. */
-	for (off = 0; off < round_page(MSGBUF_SIZE); off += PAGE_SIZE)
-		pmap_kenter((vm_offset_t)msgbufp + off, avail_end + off);
-
 	msgbufinit(msgbufp, MSGBUF_SIZE);
 
 	/* make a call gate to reenter kernel with */
@@ -2249,7 +2354,7 @@ init386(first)
 	_udatasel = GSEL(GUDATA_SEL, SEL_UPL);
 
 	/* setup proc 0's pcb */
-	thread0.td_pcb->pcb_flags = 0; /* XXXKSE */
+	thread0.td_pcb->pcb_flags = 0;
 #ifdef PAE
 	thread0.td_pcb->pcb_cr3 = (int)IdlePDPT;
 #else
@@ -2650,8 +2755,8 @@ set_fpcontext(struct thread *td, const mcontext_t *mcp)
 		}
 #ifdef DEV_NPX
 #ifdef CPU_ENABLE_SSE
-	if (cpu_fxsr)
-		addr->sv_xmm.sv_env.en_mxcsr &= cpu_mxcsr_mask;
+		if (cpu_fxsr)
+			addr->sv_xmm.sv_env.en_mxcsr &= cpu_mxcsr_mask;
 #endif
 		/*
 		 * XXX we violate the dubious requirement that npxsetregs()
@@ -2726,7 +2831,6 @@ set_dbregs(struct thread *td, struct dbreg *dbregs)
 {
 	struct pcb *pcb;
 	int i;
-	u_int32_t mask1, mask2;
 
 	if (td == NULL) {
 		load_dr0(dbregs->dr[0]);
@@ -2744,10 +2848,12 @@ set_dbregs(struct thread *td, struct dbreg *dbregs)
 		 * result in undefined behaviour and can lead to an unexpected
 		 * TRCTRAP.
 		 */
-		for (i = 0, mask1 = 0x3<<16, mask2 = 0x2<<16; i < 8; 
-		     i++, mask1 <<= 2, mask2 <<= 2)
-			if ((dbregs->dr[7] & mask1) == mask2)
+		for (i = 0; i < 4; i++) {
+			if (DBREG_DR7_ACCESS(dbregs->dr[7], i) == 0x02)
 				return (EINVAL);
+			if (DBREG_DR7_LEN(dbregs->dr[7], i) == 0x02)
+				return (EINVAL);
+		}
 		
 		pcb = td->td_pcb;
 		
@@ -2765,25 +2871,25 @@ set_dbregs(struct thread *td, struct dbreg *dbregs)
 		 * from within kernel mode?
 		 */
 
-		if (dbregs->dr[7] & 0x3) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 0)) {
 			/* dr0 is enabled */
 			if (dbregs->dr[0] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
 		}
 			
-		if (dbregs->dr[7] & (0x3<<2)) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 1)) {
 			/* dr1 is enabled */
 			if (dbregs->dr[1] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
 		}
 			
-		if (dbregs->dr[7] & (0x3<<4)) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 2)) {
 			/* dr2 is enabled */
 			if (dbregs->dr[2] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
 		}
 			
-		if (dbregs->dr[7] & (0x3<<6)) {
+		if (DBREG_DR7_ENABLED(dbregs->dr[7], 3)) {
 			/* dr3 is enabled */
 			if (dbregs->dr[3] >= VM_MAXUSER_ADDRESS)
 				return (EINVAL);
@@ -2855,9 +2961,8 @@ user_dbreg_trap(void)
                 addr[nbp++] = (caddr_t)rdr3();
         }
 
-        for (i=0; i<nbp; i++) {
-                if (addr[i] <
-                    (caddr_t)VM_MAXUSER_ADDRESS) {
+        for (i = 0; i < nbp; i++) {
+                if (addr[i] < (caddr_t)VM_MAXUSER_ADDRESS) {
                         /*
                          * addr[i] is in user space
                          */
@@ -2886,7 +2991,7 @@ apic_register_enumerator(struct apic_enumerator *enumerator)
 }
 
 void *
-ioapic_create(uintptr_t addr, int32_t id, int intbase)
+ioapic_create(vm_paddr_t addr, int32_t apic_id, int intbase)
 {
 	return (NULL);
 }
@@ -2944,7 +3049,7 @@ lapic_create(u_int apic_id, int boot_cpu)
 }
 
 void
-lapic_init(uintptr_t addr)
+lapic_init(vm_paddr_t addr)
 {
 }
 

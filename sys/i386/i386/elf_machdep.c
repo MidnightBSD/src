@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/elf_machdep.c,v 1.20 2004/08/11 02:35:05 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/elf_machdep.c,v 1.22 2007/05/22 02:22:58 kan Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -82,6 +82,7 @@ static Elf32_Brandinfo freebsd_brand_info = {
 						"/libexec/ld-elf.so.1",
 						&elf32_freebsd_sysvec,
 						NULL,
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(elf32, SI_SUB_EXEC, SI_ORDER_ANY,
@@ -96,6 +97,7 @@ static Elf32_Brandinfo freebsd_brand_oinfo = {
 						"/usr/libexec/ld-elf.so.1",
 						&elf32_freebsd_sysvec,
 						NULL,
+						BI_CAN_EXEC_DYN,
 					  };
 
 SYSINIT(oelf32, SI_SUB_EXEC, SI_ORDER_ANY,

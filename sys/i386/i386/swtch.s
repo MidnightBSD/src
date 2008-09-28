@@ -29,14 +29,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/swtch.s,v 1.148 2005/04/13 22:57:17 peter Exp $
+ * $FreeBSD: src/sys/i386/i386/swtch.s,v 1.156 2007/08/22 05:06:14 jkoshy Exp $
  */
 
 #include "opt_npx.h"
+#include "opt_sched.h"
 
 #include <machine/asmacros.h>
 
 #include "assym.s"
+
+#if defined(SMP) && defined(SCHED_ULE)
+#define	SETOP		xchgl
+#define	BLOCK_SPIN(reg)							\
+		movl		$blocked_lock,%eax ;			\
+	100: ;								\
+		lock ;							\
+		cmpxchgl	%eax,TD_LOCK(reg) ;			\
+		jne		101f ;					\
+		pause ;							\
+		jmp		100b ;					\
+	101:
+#else
+#define	SETOP		movl
+#define	BLOCK_SPIN(reg)
+#endif
 
 /*****************************************************************************/
 /* Scheduling                                                                */
@@ -82,6 +99,7 @@ ENTRY(cpu_throw)
 #endif
 	btsl	%esi, PM_ACTIVE(%ebx)		/* set new */
 	jmp	sw1
+END(cpu_throw)
 
 /*
  * cpu_switch(old, new)
@@ -91,6 +109,7 @@ ENTRY(cpu_throw)
  * 0(%esp) = ret
  * 4(%esp) = oldtd
  * 8(%esp) = newtd
+ * 12(%esp) = newlock
  */
 ENTRY(cpu_switch)
 
@@ -114,12 +133,6 @@ ENTRY(cpu_switch)
 	movl	%gs,PCB_GS(%edx)
 	pushfl					/* PSL */
 	popl	PCB_PSL(%edx)
-	/* Check to see if we need to call a switchout function. */
-	movl	PCB_SWITCHOUT(%edx),%eax
-	cmpl	$0, %eax
-	je	1f
-	call	*%eax
-1:
 	/* Test if debug registers should be saved. */
 	testl	$PCB_DBREGS,PCB_FLAGS(%edx)
 	jz      1f                              /* no, skip over */
@@ -151,14 +164,14 @@ ENTRY(cpu_switch)
 #endif
 
 	/* Save is done.  Now fire up new thread. Leave old vmspace. */
-	movl	%ecx,%edi
+	movl	4(%esp),%edi
 	movl	8(%esp),%ecx			/* New thread */
+	movl	12(%esp),%esi			/* New lock */
 #ifdef INVARIANTS
 	testl	%ecx,%ecx			/* no thread? */
 	jz	badsw3				/* no, panic */
 #endif
 	movl	TD_PCB(%ecx),%edx
-	movl	PCPU(CPUID), %esi
 
 	/* switch address space */
 	movl	PCB_CR3(%edx),%eax
@@ -167,11 +180,14 @@ ENTRY(cpu_switch)
 #else
 	cmpl	%eax,IdlePTD			/* Kernel address space? */
 #endif
-	je	sw1
+	je	sw0
 	movl	%cr3,%ebx			/* The same address space? */
 	cmpl	%ebx,%eax
-	je	sw1
+	je	sw0
 	movl	%eax,%cr3			/* new address space */
+	movl	%esi,%eax
+	movl	PCPU(CPUID),%esi
+	SETOP	%eax,TD_LOCK(%edi)		/* Switchout td_lock */
 
 	/* Release bit from old pmap->pm_active */
 	movl	PCPU(CURPMAP), %ebx
@@ -189,15 +205,19 @@ ENTRY(cpu_switch)
 	lock
 #endif
 	btsl	%esi, PM_ACTIVE(%ebx)		/* set new */
+	jmp	sw1
 
+sw0:
+	SETOP	%esi,TD_LOCK(%edi)		/* Switchout td_lock */
 sw1:
+	BLOCK_SPIN(%ecx)
 	/*
 	 * At this point, we've switched address spaces and are ready
 	 * to load up the rest of the next context.
 	 */
 	cmpl	$0, PCB_EXT(%edx)		/* has pcb extension? */
 	je	1f				/* If not, use the default */
-	btsl	%esi, private_tss		/* mark use of private tss */
+	movl	$1, PCPU(PRIVATE_TSS) 		/* mark use of private tss */
 	movl	PCB_EXT(%edx), %edi		/* new tss descriptor */
 	jmp	2f				/* Load it up */
 
@@ -213,8 +233,9 @@ sw1:
 	 * Test this CPU's  bit in the bitmap to see if this
 	 * CPU was using a private TSS.
 	 */
-	btrl	%esi, private_tss		/* Already using the common? */
-	jae	3f				/* if so, skip reloading */
+	cmpl	$0, PCPU(PRIVATE_TSS)		/* Already using the common? */
+	je	3f				/* if so, skip reloading */
+	movl	$0, PCPU(PRIVATE_TSS)
 	PCPU_ADDR(COMMON_TSSD, %edi)
 2:
 	/* Move correct tss descriptor into GDT slot, then reload tr. */
@@ -223,7 +244,7 @@ sw1:
 	movl	4(%edi), %esi
 	movl	%eax, 0(%ebx)
 	movl	%esi, 4(%ebx)
-	movl	$GPROC0_SEL*8, %esi		/* GSEL(entry, SEL_KPL) */
+	movl	$GPROC0_SEL*8, %esi		/* GSEL(GPROC0_SEL, SEL_KPL) */
 	ltr	%si
 3:
 
@@ -251,6 +272,7 @@ sw1:
 	popfl
 
 	movl	%edx, PCPU(CURPCB)
+	movl	TD_TID(%ecx),%eax
 	movl	%ecx, PCPU(CURTHREAD)		/* into next thread */
 
 	/*
@@ -327,6 +349,7 @@ badsw3:
 	call	panic
 sw0_3:	.asciz	"cpu_switch: no newthread supplied"
 #endif
+END(cpu_switch)
 
 /*
  * savectx(pcb)
@@ -392,3 +415,4 @@ ENTRY(savectx)
 #endif	/* DEV_NPX */
 
 	ret
+END(savectx)

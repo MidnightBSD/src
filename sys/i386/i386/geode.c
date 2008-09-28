@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/geode.c,v 1.5.8.1 2005/08/16 22:47:14 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/geode.c,v 1.10 2007/09/18 09:19:44 phk Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -44,6 +44,16 @@ static struct bios_oem bios_soekris = {
 	{
 		{ "Soekris", 0, 8 },	/* Soekris Engineering. */
 		{ "net4", 0, 8 },	/* net45xx */
+		{ "comBIOS", 0, 54 },	/* comBIOS ver. 1.26a  20040819 ... */
+		{ NULL, 0, 0 },
+	}
+};
+
+static struct bios_oem bios_soekris_55 = {
+	{ 0xf0000, 0xf1000 },
+	{
+		{ "Soekris", 0, 8 },	/* Soekris Engineering. */
+		{ "net5", 0, 8 },	/* net5xxx */
 		{ "comBIOS", 0, 54 },	/* comBIOS ver. 1.26a  20040819 ... */
 		{ NULL, 0, 0 },
 	}
@@ -94,6 +104,25 @@ led_func(void *ptr, int onoff)
 	outl(gpio, u);
 }
 
+static void
+cs5536_led_func(void *ptr, int onoff)
+{
+	int bit;
+	uint16_t a;
+
+	bit = *(int *)ptr;
+	if (bit < 0) {
+		bit = -bit;
+		onoff = !onoff;
+	}
+
+	a = rdmsr(0x5140000c);
+	if (onoff)
+		outl(a, 1 << bit);
+	else
+		outl(a, 1 << (bit + 16));
+}
+
 
 static unsigned
 geode_get_timecount(struct timecounter *tc)
@@ -110,6 +139,20 @@ static struct timecounter geode_timecounter = {
 	1000
 };
 
+static uint64_t
+geode_cputicks(void)
+{
+	unsigned c;
+	static unsigned last;
+	static uint64_t offset;
+
+	c = inl(geode_counter);
+	if (c < last)
+		offset += (1LL << 32);
+	last = c;
+	return (offset | c);
+}
+
 /*
  * The GEODE watchdog runs from a 32kHz frequency.  One period of that is
  * 31250 nanoseconds which we round down to 2^14 nanoseconds.  The watchdog
@@ -122,7 +165,7 @@ geode_watchdog(void *foo __unused, u_int cmd, int *error)
 	u_int u, p, r;
 
 	u = cmd & WD_INTERVAL;
-	if (cmd && u >= 14 && u <= 43) {
+	if (u >= 14 && u <= 43) {
 		u -= 14;
 		if (u > 16) {
 			p = u - 16;
@@ -144,6 +187,43 @@ geode_watchdog(void *foo __unused, u_int cmd, int *error)
 }
 
 /*
+ * We run MFGPT0 off the 32kHz frequency and prescale by 16384 giving a
+ * period of half a second.
+ * Range becomes 2^30 (= 1 sec) to 2^44 (almost 5 hours)
+ */
+static void
+cs5536_watchdog(void *foo __unused, u_int cmd, int *error)
+{
+	u_int u, p;
+	uint16_t a;
+	uint32_t m;
+
+	a = rdmsr(0x5140000d);
+	m = rdmsr(0x51400029);
+	m &= ~(1 << 24);
+	wrmsr(0x51400029, m);
+
+	u = cmd & WD_INTERVAL;
+	if (u >= 30 && u <= 44) {
+		p = 1 << (u - 29);
+
+		/* Set up MFGPT0, 32khz, prescaler 16k, C2 event */
+		outw(a + 6, 0x030e);
+		/* set comparator 2 */
+		outw(a + 2, p);
+		/* reset counter */
+		outw(a + 4, 0);
+		/* Arm reset mechanism */
+		m |= (1 << 24);
+		wrmsr(0x51400029, m);
+		/* Start counter */
+		outw(a + 6, 0x8000);
+
+		*error = 0;
+	}
+}
+
+/*
  * The Advantech PCM-582x watchdog expects 0x1 at I/O port 0x0443
  * every 1.6 secs +/- 30%. Writing 0x0 disables the watchdog
  * NB: reading the I/O port enables the timer as well
@@ -151,8 +231,15 @@ geode_watchdog(void *foo __unused, u_int cmd, int *error)
 static void
 advantech_watchdog(void *foo __unused, u_int cmd, int *error)
 {
-	outb(0x0443, (cmd & WD_INTERVAL) ? 1 : 0);
-	*error = 0;
+	u_int u;
+
+	u = cmd & WD_INTERVAL;
+	if (u > 0 && u <= WD_TO_1SEC) {
+		outb(0x0443, 1);
+		*error = 0;
+	} else {
+		outb(0x0443, 0);
+	}
 }
 
 static int
@@ -161,7 +248,8 @@ geode_probe(device_t self)
 #define BIOS_OEM_MAXLEN 80
 	static u_char bios_oem[BIOS_OEM_MAXLEN] = "\0";
 
-	if (pci_get_devid(self) == 0x0515100b) {
+	switch (pci_get_devid(self)) {
+	case 0x0515100b:
 		if (geode_counter == 0) {
 			/*
 			 * The address of the CBA is written to this register
@@ -176,8 +264,10 @@ geode_probe(device_t self)
 			tc_init(&geode_timecounter);
 			EVENTHANDLER_REGISTER(watchdog_list, geode_watchdog,
 			    NULL, 0);
+			set_cputicker(geode_cputicks, 27000000, 0);
 		}
-	} else if (pci_get_devid(self) == 0x0510100b) {
+		break;
+	case 0x0510100b:
 		gpio = pci_read_config(self, PCIR_BAR(0), 4);
 		gpio &= ~0x1f;
 		printf("Geode GPIO@ = %x\n", gpio);
@@ -201,13 +291,26 @@ geode_probe(device_t self)
 		}
 		if ( strlen(bios_oem) )
 			printf("Geode %s\n", bios_oem);
-	} else if (pci_get_devid(self) == 0x01011078) {
+		break;
+	case 0x01011078:
 		if ( bios_oem_strings(&bios_advantech,
 				bios_oem, BIOS_OEM_MAXLEN) > 0 ) {
 			printf("Geode %s\n", bios_oem);
 			EVENTHANDLER_REGISTER(watchdog_list, advantech_watchdog,
 			    NULL, 0);
 		}
+		break;
+	case 0x20801022:
+		if ( bios_oem_strings(&bios_soekris_55,
+		    bios_oem, BIOS_OEM_MAXLEN) > 0 ) {
+			printf("Geode LX: %s\n", bios_oem);
+			led1b = 6;
+			led1 = led_create(cs5536_led_func, &led1b, "error");
+		}
+		printf("MFGPT bar: %jx\n", rdmsr(0x5140000d));
+		EVENTHANDLER_REGISTER(watchdog_list, cs5536_watchdog,
+		    NULL, 0);
+		break;
 	}
 	return (ENXIO);
 }

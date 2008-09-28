@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/initcpu.c,v 1.52.2.3 2006/07/21 15:12:02 mr Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/initcpu.c,v 1.56 2007/04/06 18:15:02 ru Exp $");
 
 #include "opt_cpu.h"
 
@@ -40,6 +40,9 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/initcpu.c,v 1.52.2.3 2006/07/21 15:12:02 m
 #include <machine/cputypes.h>
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
+
+#include <vm/vm.h>
+#include <vm/pmap.h>
 
 #if !defined(CPU_DISABLE_SSE) && defined(I686_CPU)
 #define CPU_ENABLE_SSE
@@ -686,6 +689,15 @@ initializecpu(void)
 				break;
 			}
 		}
+#ifdef PAE
+		if ((amd_feature & AMDID_NX) != 0) {
+			uint64_t msr;
+
+			msr = rdmsr(MSR_EFER) | EFER_NXE;
+			wrmsr(MSR_EFER, msr);
+			pg_nx = PG_NX;
+		}
+#endif
 		break;
 #endif
 	default:

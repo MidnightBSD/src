@@ -41,12 +41,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.259.2.3 2006/03/13 02:46:55 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.283 2007/07/07 16:59:01 attilio Exp $");
 
 #include "opt_isa.h"
 #include "opt_npx.h"
 #include "opt_reset.h"
 #include "opt_cpu.h"
+#include "opt_xbox.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,6 +93,10 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.259.2.3 2006/03/13 02:46:
 #include <pc98/cbus/cbus.h>
 #else
 #include <i386/isa/isa.h>
+#endif
+
+#ifdef XBOX
+#include <machine/xbox.h>
 #endif
 
 #ifndef NSFBUFS
@@ -153,23 +158,25 @@ cpu_fork(td1, p2, td2, flags)
 			struct mdproc *mdp1 = &p1->p_md;
 			struct proc_ldt *pldt;
 
-			pldt = mdp1->md_ldt;
-			if (pldt && pldt->ldt_refcnt > 1) {
+			mtx_lock_spin(&dt_lock);
+			if ((pldt = mdp1->md_ldt) != NULL &&
+			    pldt->ldt_refcnt > 1) {
 				pldt = user_ldt_alloc(mdp1, pldt->ldt_len);
 				if (pldt == NULL)
 					panic("could not copy LDT");
 				mdp1->md_ldt = pldt;
 				set_user_ldt(mdp1);
 				user_ldt_free(td1);
-			}
+			} else
+				mtx_unlock_spin(&dt_lock);
 		}
 		return;
 	}
 
 	/* Ensure that p1's pcb is up to date. */
-#ifdef DEV_NPX
 	if (td1 == curthread)
 		td1->td_pcb->pcb_gs = rgs();
+#ifdef DEV_NPX
 	savecrit = intr_disable();
 	if (PCPU_GET(fpcurthread) == td1)
 		npxsave(&td1->td_pcb->pcb_save);
@@ -228,7 +235,6 @@ cpu_fork(td1, p2, td2, flags)
 	pcb2->pcb_ebx = (int)td2;		/* fork_trampoline argument */
 	pcb2->pcb_eip = (int)fork_trampoline;
 	pcb2->pcb_psl = PSL_KERNEL;		/* ints disabled */
-	pcb2->pcb_gs = rgs();
 	/*-
 	 * pcb2->pcb_dr*:	cloned above.
 	 * pcb2->pcb_savefpu:	cloned above.
@@ -244,7 +250,7 @@ cpu_fork(td1, p2, td2, flags)
 	pcb2->pcb_ext = 0;
 
 	/* Copy the LDT, if necessary. */
-	mtx_lock_spin(&sched_lock);
+	mtx_lock_spin(&dt_lock);
 	if (mdp2->md_ldt != NULL) {
 		if (flags & RFMEM) {
 			mdp2->md_ldt->ldt_refcnt++;
@@ -255,9 +261,9 @@ cpu_fork(td1, p2, td2, flags)
 				panic("could not copy LDT");
 		}
 	}
-	mtx_unlock_spin(&sched_lock);
+	mtx_unlock_spin(&dt_lock);
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
 
@@ -300,11 +306,13 @@ cpu_exit(struct thread *td)
 	 * If this process has a custom LDT, release it.  Reset pc->pcb_gs
 	 * and %gs before we free it in case they refer to an LDT entry.
 	 */
+	mtx_lock_spin(&dt_lock);
 	if (td->td_proc->p_md.md_ldt) {
 		td->td_pcb->pcb_gs = _udatasel;
 		load_gs(_udatasel);
 		user_ldt_free(td);
-	}
+	} else
+		mtx_unlock_spin(&dt_lock);
 }
 
 void
@@ -429,7 +437,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	 */
 	pcb2->pcb_ext = NULL;
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release spin count in fork_exit(). */
 	td->td_md.md_spinlock_count = 1;
 	td->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
 }
@@ -536,6 +544,14 @@ cpu_reset_proxy()
 void
 cpu_reset()
 {
+#ifdef XBOX
+	if (arch_i386_is_xbox) {
+		/* Kick the PIC16L, it can reboot the box */
+		pic16l_reboot();
+		for (;;);
+	}
+#endif
+
 #ifdef SMP
 	u_int cnt, map;
 
@@ -551,7 +567,10 @@ cpu_reset()
 			cpustop_restartfunc = cpu_reset_proxy;
 			cpu_reset_proxy_active = 0;
 			printf("cpu_reset: Restarting BSP\n");
-			started_cpus = (1<<0);		/* Restart CPU #0 */
+
+			/* Restart CPU #0. */
+			/* XXX: restart_cpus(1 << 0); */
+			atomic_store_rel_int(&started_cpus, (1 << 0));
 
 			cnt = 0;
 			while (cpu_reset_proxy_active == 0 && cnt < 10000000)
@@ -575,7 +594,12 @@ cpu_reset()
 static void
 cpu_reset_real()
 {
+	struct region_descriptor null_idt;
+#ifndef PC98
+	int b;
+#endif
 
+	disable_intr();
 #ifdef CPU_ELAN
 	if (elan_mmcr != NULL)
 		elan_mmcr->RESCFG = 1;
@@ -591,7 +615,6 @@ cpu_reset_real()
 	/*
 	 * Attempt to do a CPU reset via CPU reset port.
 	 */
-	disable_intr();
 	if ((inb(0x35) & 0xa0) != 0xa0) {
 		outb(0x37, 0x0f);		/* SHUT0 = 0. */
 		outb(0x37, 0x0b);		/* SHUT1 = 0. */
@@ -606,16 +629,46 @@ cpu_reset_real()
 	 */
 	outb(IO_KBD + 4, 0xFE);
 	DELAY(500000);	/* wait 0.5 sec to see if that did it */
-	printf("Keyboard reset did not work, attempting CPU shutdown\n");
-	DELAY(1000000);	/* wait 1 sec for printf to complete */
 #endif
+
+	/*
+	 * Attempt to force a reset via the Reset Control register at
+	 * I/O port 0xcf9.  Bit 2 forces a system reset when it is
+	 * written as 1.  Bit 1 selects the type of reset to attempt:
+	 * 0 selects a "soft" reset, and 1 selects a "hard" reset.  We
+	 * try to do a "soft" reset first, and then a "hard" reset.
+	 */
+	outb(0xcf9, 0x2);
+	outb(0xcf9, 0x6);
+	DELAY(500000);  /* wait 0.5 sec to see if that did it */
+
+	/*
+	 * Attempt to force a reset via the Fast A20 and Init register
+	 * at I/O port 0x92.  Bit 1 serves as an alternate A20 gate.
+	 * Bit 0 asserts INIT# when set to 1.  We are careful to only
+	 * preserve bit 1 while setting bit 0.  We also must clear bit
+	 * 0 before setting it if it isn't already clear.
+	 */
+	b = inb(0x92);
+	if (b != 0xff) {
+		if ((b & 0x1) != 0)
+			outb(0x92, b & 0xfe);
+		outb(0x92, b | 0x1);
+		DELAY(500000);  /* wait 0.5 sec to see if that did it */
+	}
 #endif /* PC98 */
 
-	/* Force a shutdown by unmapping entire address space. */
-	bzero((caddr_t)PTD, NBPTD);
+	printf("No known reset method worked, attempting CPU shutdown\n");
+	DELAY(1000000); /* wait 1 sec for printf to complete */
+
+	/* Wipe the IDT. */
+	null_idt.rd_limit = 0;
+	null_idt.rd_base = 0;
+	lidt(&null_idt);
 
 	/* "good night, sweet prince .... <THUNK!>" */
-	invltlb();
+	breakpoint();
+
 	/* NOTREACHED */
 	while(1);
 }
@@ -647,7 +700,7 @@ sf_buf_init(void *arg)
 }
 
 /*
- * Get an sf_buf from the freelist. Will block if none are available.
+ * Get an sf_buf from the freelist.  May block if none are available.
  */
 struct sf_buf *
 sf_buf_alloc(struct vm_page *m, int flags)
@@ -734,9 +787,7 @@ shootdown:
 		other_cpus = PCPU_GET(other_cpus) & ~sf->cpumask;
 		if (other_cpus != 0) {
 			sf->cpumask |= other_cpus;
-			mtx_lock_spin(&smp_ipi_mtx);
 			smp_masked_invlpg(other_cpus, sf->kva);
-			mtx_unlock_spin(&smp_ipi_mtx);
 		}
 	}
 	sched_unpin();	

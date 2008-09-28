@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/exception.s,v 1.113.2.1 2005/07/28 03:30:53 jkoshy Exp $
+ * $FreeBSD: src/sys/i386/i386/exception.s,v 1.117 2006/12/17 05:07:00 kmacy Exp $
  */
 
 #include "opt_apic.h"
@@ -74,6 +74,8 @@
 MCOUNT_LABEL(user)
 MCOUNT_LABEL(btrap)
 
+#define	TRAP(a)		pushl $(a) ; jmp alltraps
+
 IDTVEC(div)
 	pushl $0; TRAP(T_DIVIDE)
 IDTVEC(dbg)
@@ -116,8 +118,9 @@ IDTVEC(xmm)
 	/*
 	 * alltraps entry point.  Interrupts are enabled if this was a trap
 	 * gate (TGT), else disabled if this was an interrupt gate (IGT).
-	 * Note that int0x80_syscall is a trap gate.  Only page faults
-	 * use an interrupt gate.
+	 * Note that int0x80_syscall is a trap gate.   Interrupt gates are
+	 * used by page faults, non-maskable interrupts, debug and breakpoint
+	 * exceptions.
 	 */
 
 	SUPERALIGN_TEXT
@@ -129,15 +132,13 @@ alltraps:
 	pushl	%es
 	pushl	%fs
 alltraps_with_regs_pushed:
-	movl	$KDSEL,%eax
-	movl	%eax,%ds
-	movl	%eax,%es
-	movl	$KPSEL,%eax
-	movl	%eax,%fs
+	SET_KERNEL_SREGS
 	FAKE_MCOUNT(TF_EIP(%esp))
 calltrap:
+	pushl	%esp
 	call	trap
-
+	add	$4, %esp
+	
 	/*
 	 * Return via doreti to handle ASTs.
 	 */
@@ -166,13 +167,11 @@ IDTVEC(lcall_syscall)
 	pushl	%ds
 	pushl	%es
 	pushl	%fs
-	movl	$KDSEL,%eax		/* switch to kernel segments */
-	movl	%eax,%ds
-	movl	%eax,%es
-	movl	$KPSEL,%eax
-	movl	%eax,%fs
+	SET_KERNEL_SREGS
 	FAKE_MCOUNT(TF_EIP(%esp))
+	pushl	%esp
 	call	syscall
+	add	$4, %esp
 	MEXITCOUNT
 	jmp	doreti
 
@@ -191,13 +190,11 @@ IDTVEC(int0x80_syscall)
 	pushl	%ds
 	pushl	%es
 	pushl	%fs
-	movl	$KDSEL,%eax		/* switch to kernel segments */
-	movl	%eax,%ds
-	movl	%eax,%es
-	movl	$KPSEL,%eax
-	movl	%eax,%fs
+	SET_KERNEL_SREGS
 	FAKE_MCOUNT(TF_EIP(%esp))
+	pushl	%esp
 	call	syscall
+	add	$4, %esp
 	MEXITCOUNT
 	jmp	doreti
 

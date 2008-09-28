@@ -24,14 +24,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/mp_machdep.c,v 1.252.2.5.2.1 2006/04/28 06:54:34 cperciva Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/mp_machdep.c,v 1.281.2.2 2007/11/28 23:24:07 cperciva Exp $");
 
 #include "opt_apic.h"
 #include "opt_cpu.h"
-#include "opt_kdb.h"
 #include "opt_kstack_pages.h"
 #include "opt_mp_watchdog.h"
 #include "opt_sched.h"
+#include "opt_smp.h"
 
 #if !defined(lint)
 #if !defined(SMP)
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/mp_machdep.c,v 1.252.2.5.2.1 2006/04/28 06
 #include <sys/mutex.h>
 #include <sys/pcpu.h>
 #include <sys/proc.h>
+#include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 
@@ -71,12 +72,11 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/mp_machdep.c,v 1.252.2.5.2.1 2006/04/28 06
 #include <vm/vm_extern.h>
 
 #include <machine/apicreg.h>
-#include <machine/clock.h>
 #include <machine/md_var.h>
 #include <machine/mp_watchdog.h>
 #include <machine/pcb.h>
+#include <machine/psl.h>
 #include <machine/smp.h>
-#include <machine/smptests.h>	/** COUNT_XINVLTLB_HITS */
 #include <machine/specialreg.h>
 #include <machine/privatespace.h>
 
@@ -127,28 +127,8 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/mp_machdep.c,v 1.252.2.5.2.1 2006/04/28 06
 
 #endif				/* CHECK_POINTS */
 
-/*
- * Values to send to the POST hardware.
- */
-#define MP_BOOTADDRESS_POST	0x10
-#define MP_PROBE_POST		0x11
-#define MPTABLE_PASS1_POST	0x12
-
-#define MP_START_POST		0x13
-#define MP_ENABLE_POST		0x14
-#define MPTABLE_PASS2_POST	0x15
-
-#define START_ALL_APS_POST	0x16
-#define INSTALL_AP_TRAMP_POST	0x17
-#define START_AP_POST		0x18
-
-#define MP_ANNOUNCE_POST	0x19
-
 /* lock region used by kernel profiling */
 int	mcount_lock;
-
-/** XXX FIXME: where does this really belong, isa.h/isa.c perhaps? */
-int	current_postcode;
 
 int	mp_naps;		/* # of Applications processors */
 int	boot_cpu_id = -1;	/* designated BSP */
@@ -177,19 +157,20 @@ vm_offset_t smp_tlb_addr1;
 vm_offset_t smp_tlb_addr2;
 volatile int smp_tlb_wait;
 
-#ifdef KDB_STOP_NMI
+#ifdef STOP_NMI
 volatile cpumask_t ipi_nmi_pending;
+
+static void	ipi_nmi_selected(u_int32_t cpus);
 #endif 
 
 #ifdef COUNT_IPIS
 /* Interrupt counts. */
-#ifdef IPI_PREEMPTION
 static u_long *ipi_preempt_counts[MAXCPU];
-#endif
 static u_long *ipi_ast_counts[MAXCPU];
 u_long *ipi_invltlb_counts[MAXCPU];
 u_long *ipi_invlrng_counts[MAXCPU];
 u_long *ipi_invlpg_counts[MAXCPU];
+u_long *ipi_invlcache_counts[MAXCPU];
 u_long *ipi_rendezvous_counts[MAXCPU];
 u_long *ipi_lazypmap_counts[MAXCPU];
 #endif
@@ -197,6 +178,20 @@ u_long *ipi_lazypmap_counts[MAXCPU];
 /*
  * Local data and functions.
  */
+
+#ifdef STOP_NMI
+/* 
+ * Provide an alternate method of stopping other CPUs. If another CPU has
+ * disabled interrupts the conventional STOP IPI will be blocked. This 
+ * NMI-based stop should get through in that case.
+ */
+static int stop_cpus_with_nmi = 1;
+SYSCTL_INT(_debug, OID_AUTO, stop_cpus_with_nmi, CTLTYPE_INT | CTLFLAG_RW,
+    &stop_cpus_with_nmi, 0, "");
+TUNABLE_INT("debug.stop_cpus_with_nmi", &stop_cpus_with_nmi);
+#else
+#define	stop_cpus_with_nmi	0
+#endif
 
 static u_int logical_cpus;
 
@@ -214,24 +209,25 @@ struct cpu_info {
 	int	cpu_present:1;
 	int	cpu_bsp:1;
 	int	cpu_disabled:1;
-} static cpu_info[MAXCPU];
-static int cpu_apic_ids[MAXCPU];
+} static cpu_info[MAX_APIC_ID + 1];
+int cpu_apic_ids[MAXCPU];
 
 /* Holds pending bitmap based IPIs per CPU */
 static volatile u_int cpu_ipi_pending[MAXCPU];
 
 static u_int boot_address;
 
+static void	assign_cpu_ids(void);
+static void	install_ap_tramp(void);
 static void	set_interrupt_apic_ids(void);
 static int	start_all_aps(void);
-static void	install_ap_tramp(void);
 static int	start_ap(int apic_id);
 static void	release_aps(void *dummy);
 
 static int	hlt_logical_cpus;
 static u_int	hyperthreading_cpus;
 static cpumask_t	hyperthreading_cpus_mask;
-static int	hyperthreading_allowed;
+static int	hyperthreading_allowed = 1;
 static struct	sysctl_ctx_list logical_cpu_clist;
 
 static void
@@ -245,28 +241,25 @@ void
 mp_topology(void)
 {
 	struct cpu_group *group;
-	int logical_cpus;
 	int apic_id;
 	int groups;
 	int cpu;
 
 	/* Build the smp_topology map. */
 	/* Nothing to do if there is no HTT support. */
-	if ((cpu_feature & CPUID_HTT) == 0)
-		return;
-	logical_cpus = (cpu_procinfo & CPUID_HTT_CORES) >> 16;
-	if (logical_cpus <= 1)
+	if (hyperthreading_cpus <= 1)
 		return;
 	group = &mp_groups[0];
 	groups = 1;
-	for (cpu = 0, apic_id = 0; apic_id < MAXCPU; apic_id++) {
+	for (cpu = 0, apic_id = 0; apic_id <= MAX_APIC_ID; apic_id++) {
 		if (!cpu_info[apic_id].cpu_present)
 			continue;
 		/*
 		 * If the current group has members and we're not a logical
 		 * cpu, create a new group.
 		 */
-		if (group->cg_count != 0 && (apic_id % logical_cpus) == 0) {
+		if (group->cg_count != 0 &&
+		    (apic_id % hyperthreading_cpus) == 0) {
 			group++;
 			groups++;
 		}
@@ -287,7 +280,6 @@ mp_topology(void)
 u_int
 mp_bootaddress(u_int basemem)
 {
-	POSTCODE(MP_BOOTADDRESS_POST);
 
 	boot_address = trunc_page(basemem);	/* round down to 4k boundary */
 	if ((basemem - boot_address) < bootMP_size)
@@ -300,9 +292,8 @@ void
 cpu_add(u_int apic_id, char boot_cpu)
 {
 
-	if (apic_id >= MAXCPU) {
-		printf("SMP: CPU %d exceeds maximum CPU %d, ignoring\n",
-		    apic_id, MAXCPU - 1);
+	if (apic_id > MAX_APIC_ID) {
+		panic("SMP: APIC ID %d too high", apic_id);
 		return;
 	}
 	KASSERT(cpu_info[apic_id].cpu_present == 0, ("CPU %d added twice",
@@ -315,11 +306,11 @@ cpu_add(u_int apic_id, char boot_cpu)
 		boot_cpu_id = apic_id;
 		cpu_info[apic_id].cpu_bsp = 1;
 	}
-	mp_ncpus++;
+	if (mp_ncpus < MAXCPU)
+		mp_ncpus++;
 	if (bootverbose)
 		printf("SMP: Added CPU %d (%s)\n", apic_id, boot_cpu ? "BSP" :
 		    "AP");
-	
 }
 
 void
@@ -370,8 +361,6 @@ cpu_mp_start(void)
 	int i;
 	u_int threads_per_cache, p[4];
 
-	POSTCODE(MP_START_POST);
-
 	/* Initialize the logical ID to APIC ID table. */
 	for (i = 0; i < MAXCPU; i++) {
 		cpu_apic_ids[i] = -1;
@@ -385,7 +374,11 @@ cpu_mp_start(void)
 	       SDT_SYS386IGT, SEL_KPL, GSEL(GCODE_SEL, SEL_KPL));
 	setidt(IPI_INVLRNG, IDTVEC(invlrng),
 	       SDT_SYS386IGT, SEL_KPL, GSEL(GCODE_SEL, SEL_KPL));
-	
+
+	/* Install an inter-CPU IPI for cache invalidation. */
+	setidt(IPI_INVLCACHE, IDTVEC(invlcache),
+	       SDT_SYS386IGT, SEL_KPL, GSEL(GCODE_SEL, SEL_KPL));
+
 	/* Install an inter-CPU IPI for lazy pmap release */
 	setidt(IPI_LAZYPMAP, IDTVEC(lazypmap),
 	       SDT_SYS386IGT, SEL_KPL, GSEL(GCODE_SEL, SEL_KPL));
@@ -411,6 +404,8 @@ cpu_mp_start(void)
 		KASSERT(boot_cpu_id == PCPU_GET(apic_id),
 		    ("BSP's APIC ID doesn't match boot_cpu_id"));
 	cpu_apic_ids[0] = boot_cpu_id;
+
+	assign_cpu_ids();
 
 	/* Start each Application Processor */
 	start_all_aps();
@@ -463,6 +458,9 @@ cpu_mp_start(void)
 	}
 
 	set_interrupt_apic_ids();
+
+	/* Last, setup the cpu topology now that we have probed CPUs */
+	mp_topology();
 }
 
 
@@ -474,11 +472,9 @@ cpu_mp_announce(void)
 {
 	int i, x;
 
-	POSTCODE(MP_ANNOUNCE_POST);
-
 	/* List CPUs */
 	printf(" cpu0 (BSP): APIC ID: %2d\n", boot_cpu_id);
-	for (i = 1, x = 0; x < MAXCPU; x++) {
+	for (i = 1, x = 0; x <= MAX_APIC_ID; x++) {
 		if (!cpu_info[x].cpu_present || cpu_info[x].cpu_bsp)
 			continue;
 		if (cpu_info[x].cpu_disabled)
@@ -564,6 +560,9 @@ init_secondary(void)
 	lidt(&r_idt);
 #endif
 
+	/* Initialize the PAT MSR if present. */
+	pmap_init_pat();
+
 	/* set up CPU registers and state */
 	cpu_setregs();
 
@@ -572,6 +571,16 @@ init_secondary(void)
 
 	/* set up SSE registers */
 	enable_sse();
+
+#ifdef PAE
+	/* Enable the PTE no-execute bit. */
+	if ((amd_feature & AMDID_NX) != 0) {
+		uint64_t msr;
+
+		msr = rdmsr(MSR_EFER) | EFER_NXE;
+		wrmsr(MSR_EFER, msr);
+	}
+#endif
 
 	/* A quick check from sanity claus */
 	if (PCPU_GET(apic_id) != lapic_id()) {
@@ -589,7 +598,7 @@ init_secondary(void)
 	mtx_lock_spin(&ap_boot_mtx);
 
 	/* Init local apic for irq's */
-	lapic_setup();
+	lapic_setup(1);
 
 	/* Set memory range attributes for this CPU to match the BSP */
 	mem_range_AP_init();
@@ -626,25 +635,8 @@ init_secondary(void)
 	while (smp_started == 0)
 		ia32_pause();
 
-	/* ok, now grab sched_lock and enter the scheduler */
-	mtx_lock_spin(&sched_lock);
-
-	/*
-	 * Correct spinlock nesting.  The idle thread context that we are
-	 * borrowing was created so that it would start out with a single
-	 * spin lock (sched_lock) held in fork_trampoline().  Since we've
-	 * explicitly acquired locks in this function, the nesting count
-	 * is now 2 rather than 1.  Since we are nested, calling
-	 * spinlock_exit() will simply adjust the counts without allowing
-	 * spin lock using code to interrupt us.
-	 */
-	spinlock_exit();
-	KASSERT(curthread->td_md.md_spinlock_count == 1, ("invalid count"));
-
-	binuptime(PCPU_PTR(switchtime));
-	PCPU_SET(switchticks, ticks);
-
-	cpu_throw(NULL, choosethread());	/* doesn't return */
+	/* enter the scheduler */
+	sched_throw(NULL);
 
 	panic("scheduler returned us to %s", __func__);
 	/* NOTREACHED */
@@ -664,12 +656,15 @@ init_secondary(void)
 static void
 set_interrupt_apic_ids(void)
 {
-	u_int apic_id;
+	u_int i, apic_id;
 
-	for (apic_id = 0; apic_id < MAXCPU; apic_id++) {
-		if (!cpu_info[apic_id].cpu_present)
+	for (i = 0; i < MAXCPU; i++) {
+		apic_id = cpu_apic_ids[i];
+		if (apic_id == -1)
 			continue;
 		if (cpu_info[apic_id].cpu_bsp)
+			continue;
+		if (cpu_info[apic_id].cpu_disabled)
 			continue;
 
 		/* Don't let hyperthreads service interrupts. */
@@ -677,8 +672,50 @@ set_interrupt_apic_ids(void)
 		    apic_id % hyperthreading_cpus != 0)
 			continue;
 
-		intr_add_cpu(apic_id);
+		intr_add_cpu(i);
 	}
+}
+
+/*
+ * Assign logical CPU IDs to local APICs.
+ */
+static void
+assign_cpu_ids(void)
+{
+	u_int i;
+
+	/* Check for explicitly disabled CPUs. */
+	for (i = 0; i <= MAX_APIC_ID; i++) {
+		if (!cpu_info[i].cpu_present || cpu_info[i].cpu_bsp)
+			continue;
+
+		/* Don't use this CPU if it has been disabled by a tunable. */
+		if (resource_disabled("lapic", i)) {
+			cpu_info[i].cpu_disabled = 1;
+			continue;
+		}
+	}
+
+	/*
+	 * Assign CPU IDs to local APIC IDs and disable any CPUs
+	 * beyond MAXCPU.  CPU 0 has already been assigned to the BSP,
+	 * so we only have to assign IDs for APs.
+	 */
+	mp_ncpus = 1;
+	for (i = 0; i <= MAX_APIC_ID; i++) {
+		if (!cpu_info[i].cpu_present || cpu_info[i].cpu_bsp ||
+		    cpu_info[i].cpu_disabled)
+			continue;
+
+		if (mp_ncpus < MAXCPU) {
+			cpu_apic_ids[mp_ncpus] = i;
+			mp_ncpus++;
+		} else
+			cpu_info[i].cpu_disabled = 1;
+	}
+	KASSERT(mp_maxid >= mp_ncpus - 1,
+	    ("%s: counters out of sync: max %d, count %d", __func__, mp_maxid,
+	    mp_ncpus));		
 }
 
 /*
@@ -695,8 +732,6 @@ start_all_aps(void)
 	uintptr_t kptbase;
 	u_int32_t mpbioswarmvec;
 	int apic_id, cpu, i, pg;
-
-	POSTCODE(START_ALL_APS_POST);
 
 	mtx_init(&ap_boot_mtx, "ap boot", NULL, MTX_SPIN);
 
@@ -719,24 +754,8 @@ start_all_aps(void)
 	invltlb();
 
 	/* start each AP */
-	for (cpu = 0, apic_id = 0; apic_id < MAXCPU; apic_id++) {
-
-		/* Ignore non-existent CPUs and the BSP. */
-		if (!cpu_info[apic_id].cpu_present ||
-		    cpu_info[apic_id].cpu_bsp)
-			continue;
-
-		/* Don't use this CPU if it has been disabled by a tunable. */
-		if (resource_disabled("lapic", apic_id)) {
-			cpu_info[apic_id].cpu_disabled = 1;
-			mp_ncpus--;
-			continue;
-		}
-
-		cpu++;
-
-		/* save APIC ID for this logical ID */
-		cpu_apic_ids[cpu] = apic_id;
+	for (cpu = 1; cpu < mp_ncpus; cpu++) {
+		apic_id = cpu_apic_ids[cpu];
 
 		/* first page of AP's private space */
 		pg = cpu * i386_btop(sizeof(struct privatespace));
@@ -841,8 +860,6 @@ install_ap_tramp(void)
 	u_int16_t *dst16;
 	u_int32_t *dst32;
 
-	POSTCODE(INSTALL_AP_TRAMP_POST);
-
 	KASSERT (size <= PAGE_SIZE,
 	    ("'size' do not fit into PAGE_SIZE, as expected."));
 	pmap_kenter(va, boot_address);
@@ -892,8 +909,6 @@ start_ap(int apic_id)
 {
 	int vector, ms;
 	int cpus;
-
-	POSTCODE(START_AP_POST);
 
 	/* calculate the vector */
 	vector = (boot_address >> 12) & 0xff;
@@ -1008,13 +1023,16 @@ smp_tlb_shootdown(u_int vector, vm_offset_t addr1, vm_offset_t addr2)
 	ncpu = mp_ncpus - 1;	/* does not shootdown self */
 	if (ncpu < 1)
 		return;		/* no other cpus */
-	mtx_assert(&smp_ipi_mtx, MA_OWNED);
+	if (!(read_eflags() & PSL_I))
+		panic("%s: interrupts disabled", __func__);
+	mtx_lock_spin(&smp_ipi_mtx);
 	smp_tlb_addr1 = addr1;
 	smp_tlb_addr2 = addr2;
 	atomic_store_rel_int(&smp_tlb_wait, 0);
 	ipi_all_but_self(vector);
 	while (smp_tlb_wait < ncpu)
 		ia32_pause();
+	mtx_unlock_spin(&smp_ipi_mtx);
 }
 
 static void
@@ -1042,7 +1060,9 @@ smp_targeted_tlb_shootdown(u_int mask, u_int vector, vm_offset_t addr1, vm_offse
 		if (ncpu < 1)
 			return;
 	}
-	mtx_assert(&smp_ipi_mtx, MA_OWNED);
+	if (!(read_eflags() & PSL_I))
+		panic("%s: interrupts disabled", __func__);
+	mtx_lock_spin(&smp_ipi_mtx);
 	smp_tlb_addr1 = addr1;
 	smp_tlb_addr2 = addr2;
 	atomic_store_rel_int(&smp_tlb_wait, 0);
@@ -1052,6 +1072,15 @@ smp_targeted_tlb_shootdown(u_int mask, u_int vector, vm_offset_t addr1, vm_offse
 		ipi_selected(mask, vector);
 	while (smp_tlb_wait < ncpu)
 		ia32_pause();
+	mtx_unlock_spin(&smp_ipi_mtx);
+}
+
+void
+smp_cache_flush(void)
+{
+
+	if (smp_started)
+		smp_tlb_shootdown(IPI_INVLCACHE, 0, 0);
 }
 
 void
@@ -1128,36 +1157,30 @@ smp_masked_invlpg_range(u_int mask, vm_offset_t addr1, vm_offset_t addr2)
 	}
 }
 
-
 void
-ipi_bitmap_handler(struct clockframe frame)
+ipi_bitmap_handler(struct trapframe frame)
 {
 	int cpu = PCPU_GET(cpuid);
 	u_int ipi_bitmap;
 
 	ipi_bitmap = atomic_readandclear_int(&cpu_ipi_pending[cpu]);
 
-#ifdef IPI_PREEMPTION
-	if (ipi_bitmap & IPI_PREEMPT) {
+	if (ipi_bitmap & (1 << IPI_PREEMPT)) {
+		struct thread *running_thread = curthread;
 #ifdef COUNT_IPIS
-		*ipi_preempt_counts[cpu]++;
+		(*ipi_preempt_counts[cpu])++;
 #endif
-		mtx_lock_spin(&sched_lock);
-		/* Don't preempt the idle thread */
-		if (curthread->td_priority <  PRI_MIN_IDLE) {
-			struct thread *running_thread = curthread;
-			if (running_thread->td_critnest > 1) 
-				running_thread->td_owepreempt = 1;
-			else 		
-				mi_switch(SW_INVOL | SW_PREEMPT, NULL);
-		}
-		mtx_unlock_spin(&sched_lock);
+		thread_lock(running_thread);
+		if (running_thread->td_critnest > 1) 
+			running_thread->td_owepreempt = 1;
+		else 		
+			mi_switch(SW_INVOL | SW_PREEMPT, NULL);
+		thread_unlock(running_thread);
 	}
-#endif
 
-	if (ipi_bitmap & IPI_AST) {
+	if (ipi_bitmap & (1 << IPI_AST)) {
 #ifdef COUNT_IPIS
-		*ipi_ast_counts[cpu]++;
+		(*ipi_ast_counts[cpu])++;
 #endif
 		/* Nothing to do for AST */
 	}
@@ -1179,6 +1202,12 @@ ipi_selected(u_int32_t cpus, u_int ipi)
 		ipi = IPI_BITMAP_VECTOR;
 	}
 
+#ifdef STOP_NMI
+	if (ipi == IPI_STOP && stop_cpus_with_nmi) {
+		ipi_nmi_selected(cpus);
+		return;
+	}
+#endif
 	CTR3(KTR_SMP, "%s: cpus: %x ipi: %x", __func__, cpus, ipi);
 	while ((cpu = ffs(cpus)) != 0) {
 		cpu--;
@@ -1209,6 +1238,10 @@ void
 ipi_all(u_int ipi)
 {
 
+	if (IPI_IS_BITMAPED(ipi) || (ipi == IPI_STOP && stop_cpus_with_nmi)) {
+		ipi_selected(all_cpus, ipi);
+		return;
+	}
 	CTR2(KTR_SMP, "%s: ipi: %x", __func__, ipi);
 	lapic_ipi_vectored(ipi, APIC_IPI_DEST_ALL);
 }
@@ -1220,6 +1253,10 @@ void
 ipi_all_but_self(u_int ipi)
 {
 
+	if (IPI_IS_BITMAPED(ipi) || (ipi == IPI_STOP && stop_cpus_with_nmi)) {
+		ipi_selected(PCPU_GET(other_cpus), ipi);
+		return;
+	}
 	CTR2(KTR_SMP, "%s: ipi: %x", __func__, ipi);
 	lapic_ipi_vectored(ipi, APIC_IPI_DEST_OTHERS);
 }
@@ -1231,11 +1268,15 @@ void
 ipi_self(u_int ipi)
 {
 
+	if (IPI_IS_BITMAPED(ipi) || (ipi == IPI_STOP && stop_cpus_with_nmi)) {
+		ipi_selected(PCPU_GET(cpumask), ipi);
+		return;
+	}
 	CTR2(KTR_SMP, "%s: ipi: %x", __func__, ipi);
 	lapic_ipi_vectored(ipi, APIC_IPI_DEST_SELF);
 }
 
-#ifdef KDB_STOP_NMI
+#ifdef STOP_NMI
 /*
  * send NMI IPI to selected CPUs
  */
@@ -1245,7 +1286,6 @@ ipi_self(u_int ipi)
 void
 ipi_nmi_selected(u_int32_t cpus)
 {
-
 	int cpu;
 	register_t icrlo;
 
@@ -1254,9 +1294,7 @@ ipi_nmi_selected(u_int32_t cpus)
 	
 	CTR2(KTR_SMP, "%s: cpus: %x nmi", __func__, cpus);
 
-
 	atomic_set_int(&ipi_nmi_pending, cpus);
-
 
 	while ((cpu = ffs(cpus)) != 0) {
 		cpu--;
@@ -1269,41 +1307,52 @@ ipi_nmi_selected(u_int32_t cpus)
 		if (!lapic_ipi_wait(BEFORE_SPIN))
 			panic("ipi_nmi_selected: previous IPI has not cleared");
 
-		lapic_ipi_raw(icrlo,cpu_apic_ids[cpu]);
+		lapic_ipi_raw(icrlo, cpu_apic_ids[cpu]);
 	}
 }
 
-
 int
-ipi_nmi_handler()
+ipi_nmi_handler(void)
 {
-	int cpu  = PCPU_GET(cpuid);
+	int cpumask = PCPU_GET(cpumask);
 
-	if(!(atomic_load_acq_int(&ipi_nmi_pending) & (1 << cpu)))
+	if (!(ipi_nmi_pending & cpumask))
 		return 1;
 
-	atomic_clear_int(&ipi_nmi_pending,1 << cpu);
+	atomic_clear_int(&ipi_nmi_pending, cpumask);
+	cpustop_handler();
+	return 0;
+}
+
+#endif /* STOP_NMI */
+
+/*
+ * Handle an IPI_STOP by saving our current context and spinning until we
+ * are resumed.
+ */
+void
+cpustop_handler(void)
+{
+	int cpu = PCPU_GET(cpuid);
+	int cpumask = PCPU_GET(cpumask);
 
 	savectx(&stoppcbs[cpu]);
 
 	/* Indicate that we are stopped */
-	atomic_set_int(&stopped_cpus,1 << cpu);
-
+	atomic_set_int(&stopped_cpus, cpumask);
 
 	/* Wait for restart */
-	while(!(atomic_load_acq_int(&started_cpus) & (1 << cpu)))
+	while (!(started_cpus & cpumask))
 	    ia32_pause();
 
-	atomic_clear_int(&started_cpus,1 << cpu);
-	atomic_clear_int(&stopped_cpus,1 << cpu);
+	atomic_clear_int(&started_cpus, cpumask);
+	atomic_clear_int(&stopped_cpus, cpumask);
 
-	if(cpu == 0 && cpustop_restartfunc != NULL)
+	if (cpu == 0 && cpustop_restartfunc != NULL) {
 		cpustop_restartfunc();
-
-	return 0;
+		cpustop_restartfunc = NULL;
+	}
 }
-     
-#endif /* KDB_STOP_NMI */
 
 /*
  * This is called once the rest of the system is up and running and we're
@@ -1315,11 +1364,9 @@ release_aps(void *dummy __unused)
 
 	if (mp_ncpus == 1) 
 		return;
-	mtx_lock_spin(&sched_lock);
 	atomic_store_rel_int(&aps_ready, 1);
 	while (smp_started == 0)
 		ia32_pause();
-	mtx_unlock_spin(&sched_lock);
 }
 SYSINIT(start_aps, SI_SUB_SMP, SI_ORDER_FIRST, release_aps, NULL);
 
@@ -1482,10 +1529,8 @@ mp_ipi_intrcnt(void *dummy)
 		intrcnt_add(buf, &ipi_invlrng_counts[i]);
 		snprintf(buf, sizeof(buf), "cpu%d: invlpg", i);
 		intrcnt_add(buf, &ipi_invlpg_counts[i]);
-#ifdef IPI_PREEMPTION
 		snprintf(buf, sizeof(buf), "cpu%d: preempt", i);
 		intrcnt_add(buf, &ipi_preempt_counts[i]);
-#endif
 		snprintf(buf, sizeof(buf), "cpu%d: ast", i);
 		intrcnt_add(buf, &ipi_ast_counts[i]);
 		snprintf(buf, sizeof(buf), "cpu%d: rendezvous", i);

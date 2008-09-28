@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/mp_clock.c,v 1.19 2004/05/30 20:34:57 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/mp_clock.c,v 1.20 2007/06/04 18:25:06 dwmalone Exp $");
 
 /*-
  * Just when we thought life were beautiful, reality pops its grim face over
@@ -71,7 +71,7 @@ sysctl_machdep_piix_freq(SYSCTL_HANDLER_ARGS)
 	if (piix_timecounter.tc_frequency == 0)
 		return (EOPNOTSUPP);
 	freq = piix_freq;
-	error = sysctl_handle_int(oidp, &freq, sizeof(freq), req);
+	error = sysctl_handle_int(oidp, &freq, 0, req);
 	if (error == 0 && req->newptr != NULL) {
 		piix_freq = freq;
 		piix_timecounter.tc_frequency = piix_freq;

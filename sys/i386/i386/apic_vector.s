@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: src/sys/i386/i386/apic_vector.s,v 1.103.2.1 2005/10/04 15:15:21 jhb Exp $
+ * $FreeBSD: src/sys/i386/i386/apic_vector.s,v 1.113 2006/12/17 05:07:00 kmacy Exp $
  */
 
 /*
@@ -36,29 +36,12 @@
  * as well as IPI handlers.
  */
 
+#include "opt_smp.h"
+
 #include <machine/asmacros.h>
 #include <machine/apicreg.h>
-#include <machine/smptests.h>
 
 #include "assym.s"
-
-/*
- * Macros to create and destroy a trap frame.
- */
-#define PUSH_FRAME							\
-	pushl	$0 ;		/* dummy error code */			\
-	pushl	$0 ;		/* dummy trap type */			\
-	pushal ;		/* 8 ints */				\
-	pushl	%ds ;		/* save data and extra segments ... */	\
-	pushl	%es ;							\
-	pushl	%fs
-
-#define POP_FRAME							\
-	popl	%fs ;							\
-	popl	%es ;							\
-	popl	%ds ;							\
-	popal ;								\
-	addl	$4+4,%esp
 
 /*
  * I/O Interrupt Entry Point.  Rather than having one entry point for
@@ -72,11 +55,7 @@
 	SUPERALIGN_TEXT ;						\
 IDTVEC(vec_name) ;							\
 	PUSH_FRAME ;							\
-	movl	$KDSEL, %eax ;	/* reload with kernel's data segment */	\
-	movl	%eax, %ds ;						\
-	movl	%eax, %es ;						\
-	movl	$KPSEL, %eax ;	/* reload with per-CPU data segment */	\
-	movl	%eax, %fs ;						\
+	SET_KERNEL_SREGS ;						\
 	FAKE_MCOUNT(TF_EIP(%esp)) ;					\
 	movl	lapic, %edx ;	/* pointer to local APIC */		\
 	movl	LA_ISR + 16 * (index)(%edx), %eax ;	/* load ISR */	\
@@ -84,9 +63,10 @@ IDTVEC(vec_name) ;							\
 	jz	2f ;							\
 	addl	$(32 * index),%eax ;					\
 1: ;									\
+	pushl	%esp		;                                       \
 	pushl	%eax ;		/* pass the IRQ */			\
 	call	lapic_handle_intr ;					\
-	addl	$4, %esp ;	/* discard parameter */			\
+	addl	$8, %esp ;	/* discard parameter */			\
 	MEXITCOUNT ;							\
 	jmp	doreti ;						\
 2:	movl	$-1, %eax ;	/* send a vector of -1 */		\
@@ -122,20 +102,11 @@ IDTVEC(spuriousint)
 	SUPERALIGN_TEXT
 IDTVEC(timerint)
 	PUSH_FRAME
-	movl	$KDSEL, %eax	/* reload with kernel's data segment */
-	movl	%eax, %ds
-	movl	%eax, %es
-	movl	$KPSEL, %eax
-	movl	%eax, %fs
-
-	movl	lapic, %edx
-	movl	$0, LA_EOI(%edx)	/* End Of Interrupt to APIC */
-	
+	SET_KERNEL_SREGS
 	FAKE_MCOUNT(TF_EIP(%esp))
-
-	pushl	$0		/* XXX convert trapframe to clockframe */
+	pushl	%esp
 	call	lapic_handle_timer
-	addl	$4, %esp	/* XXX convert clockframe to trapframe */
+	add	$4, %esp
 	MEXITCOUNT
 	jmp	doreti
 
@@ -264,97 +235,71 @@ IDTVEC(invlrng)
 	iret
 
 /*
- * Forward hardclock to another CPU.  Pushes a clockframe and calls
- * forwarded_hardclock().
+ * Invalidate cache.
+ */
+	.text
+	SUPERALIGN_TEXT
+IDTVEC(invlcache)
+	pushl	%eax
+	pushl	%ds
+	movl	$KDSEL, %eax		/* Kernel data selector */
+	movl	%eax, %ds
+
+#ifdef COUNT_IPIS
+	pushl	%fs
+	movl	$KPSEL, %eax		/* Private space selector */
+	movl	%eax, %fs
+	movl	PCPU(CPUID), %eax
+	popl	%fs
+	movl	ipi_invlcache_counts(,%eax,4),%eax
+	incl	(%eax)
+#endif
+
+	wbinvd
+
+	movl	lapic, %eax
+	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
+
+	lock
+	incl	smp_tlb_wait
+
+	popl	%ds
+	popl	%eax
+	iret
+
+/*
+ * Handler for IPIs sent via the per-cpu IPI bitmap.
  */
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(ipi_intr_bitmap_handler)	
-	
 	PUSH_FRAME
-	movl	$KDSEL, %eax	/* reload with kernel's data segment */
-	movl	%eax, %ds
-	movl	%eax, %es
-	movl	$KPSEL, %eax
-	movl	%eax, %fs
+	SET_KERNEL_SREGS
 
 	movl	lapic, %edx
 	movl	$0, LA_EOI(%edx)	/* End Of Interrupt to APIC */
 	
 	FAKE_MCOUNT(TF_EIP(%esp))
 
-	pushl	$0		/* XXX convert trapframe to clockframe */
 	call	ipi_bitmap_handler
-	addl	$4, %esp	/* XXX convert clockframe to trapframe */
 	MEXITCOUNT
 	jmp	doreti
 
 /*
- * Executed by a CPU when it receives an Xcpustop IPI from another CPU,
- *
- *  - Signals its receipt.
- *  - Waits for permission to restart.
- *  - Signals its restart.
+ * Executed by a CPU when it receives an IPI_STOP from another CPU.
  */
 	.text
 	SUPERALIGN_TEXT
 IDTVEC(cpustop)
-	pushl	%ebp
-	movl	%esp, %ebp
-	pushl	%eax
-	pushl	%ecx
-	pushl	%edx
-	pushl	%ds			/* save current data segment */
-	pushl	%es
-	pushl	%fs
-
-	movl	$KDSEL, %eax
-	movl	%eax, %ds		/* use KERNEL data segment */
-	movl	%eax, %es
-	movl	$KPSEL, %eax
-	movl	%eax, %fs
+	PUSH_FRAME
+	SET_KERNEL_SREGS
 
 	movl	lapic, %eax
 	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
 
-	movl	PCPU(CPUID), %eax
-	imull	$PCB_SIZE, %eax
-	leal	CNAME(stoppcbs)(%eax), %eax
-	pushl	%eax
-	call	CNAME(savectx)		/* Save process context */
-	addl	$4, %esp
-		
-	movl	PCPU(CPUID), %eax
+	call	cpustop_handler
 
-	lock
-	btsl	%eax, CNAME(stopped_cpus) /* stopped_cpus |= (1<<id) */
-1:
-	btl	%eax, CNAME(started_cpus) /* while (!(started_cpus & (1<<id))) */
-	jnc	1b
-
-	lock
-	btrl	%eax, CNAME(started_cpus) /* started_cpus &= ~(1<<id) */
-	lock
-	btrl	%eax, CNAME(stopped_cpus) /* stopped_cpus &= ~(1<<id) */
-
-	test	%eax, %eax
-	jnz	2f
-
-	movl	CNAME(cpustop_restartfunc), %eax
-	test	%eax, %eax
-	jz	2f
-	movl	$0, CNAME(cpustop_restartfunc)	/* One-shot */
-
-	call	*%eax
-2:
-	popl	%fs
-	popl	%es
-	popl	%ds			/* restore previous data segment */
-	popl	%edx
-	popl	%ecx
-	popl	%eax
-	movl	%ebp, %esp
-	popl	%ebp
+	POP_FRAME
 	iret
 
 /*
@@ -366,11 +311,7 @@ IDTVEC(cpustop)
 	SUPERALIGN_TEXT
 IDTVEC(rendezvous)
 	PUSH_FRAME
-	movl	$KDSEL, %eax
-	movl	%eax, %ds		/* use KERNEL data segment */
-	movl	%eax, %es
-	movl	$KPSEL, %eax
-	movl	%eax, %fs
+	SET_KERNEL_SREGS
 
 #ifdef COUNT_IPIS
 	movl	PCPU(CPUID), %eax
@@ -391,20 +332,11 @@ IDTVEC(rendezvous)
 	SUPERALIGN_TEXT
 IDTVEC(lazypmap)
 	PUSH_FRAME
-	movl	$KDSEL, %eax
-	movl	%eax, %ds		/* use KERNEL data segment */
-	movl	%eax, %es
-	movl	$KPSEL, %eax
-	movl	%eax, %fs
+	SET_KERNEL_SREGS
 
-#ifdef COUNT_IPIS
-	movl	PCPU(CPUID), %eax
-	movl	ipi_lazypmap_counts(,%eax,4), %eax
-	incl	(%eax)
-#endif
 	call	pmap_lazyfix_action
 
-	movl	lapic, %eax	
+	movl	lapic, %eax
 	movl	$0, LA_EOI(%eax)	/* End Of Interrupt to APIC */
 	POP_FRAME
 	iret

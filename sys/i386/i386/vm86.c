@@ -25,10 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/vm86.c,v 1.57 2004/11/27 06:51:36 das Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/vm86.c,v 1.62 2006/12/17 05:07:01 kmacy Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -54,7 +55,7 @@ static struct mtx vm86_lock;
 extern int vm86_bioscall(struct vm86frame *);
 extern void vm86_biosret(struct vm86frame *);
 
-void vm86_prepcall(struct vm86frame);
+void vm86_prepcall(struct vm86frame *);
 
 struct system_map {
 	int		type;
@@ -505,46 +506,33 @@ full:
 	panic("vm86_addpage: not enough room");
 }
 
-static void
-vm86_initflags(struct vm86frame *vmf)
-{
-	int eflags = vmf->vmf_eflags;
-	struct vm86_kernel *vm86 = &PCPU_GET(curpcb)->pcb_ext->ext_vm86;
-
-	if (vm86->vm86_has_vme) {
-		eflags = (vmf->vmf_eflags & ~VME_USERCHANGE) |
-		    (eflags & VME_USERCHANGE) | PSL_VM;
-	} else {
-		vm86->vm86_eflags = eflags;     /* save VIF, VIP */
-		eflags = (vmf->vmf_eflags & ~VM_USERCHANGE) |             
-		    (eflags & VM_USERCHANGE) | PSL_VM;
-	}
-	vmf->vmf_eflags = eflags | PSL_VM;
-}
-
 /*
  * called from vm86_bioscall, while in vm86 address space, to finalize setup.
  */
 void
-vm86_prepcall(struct vm86frame vmf)
+vm86_prepcall(struct vm86frame *vmf)
 {
 	uintptr_t addr[] = { 0xA00, 0x1000 };	/* code, stack */
 	u_char intcall[] = {
 		CLI, INTn, 0x00, STI, HLT
 	};
+	struct vm86_kernel *vm86;
 
-	if ((vmf.vmf_trapno & PAGE_MASK) <= 0xff) {
+	if ((vmf->vmf_trapno & PAGE_MASK) <= 0xff) {
 		/* interrupt call requested */
-        	intcall[2] = (u_char)(vmf.vmf_trapno & 0xff);
+		intcall[2] = (u_char)(vmf->vmf_trapno & 0xff);
 		memcpy((void *)addr[0], (void *)intcall, sizeof(intcall));
-		vmf.vmf_ip = addr[0];
-		vmf.vmf_cs = 0;
+		vmf->vmf_ip = addr[0];
+		vmf->vmf_cs = 0;
 	}
-	vmf.vmf_sp = addr[1] - 2;              /* keep aligned */
-	vmf.kernel_fs = vmf.kernel_es = vmf.kernel_ds = 0;
-	vmf.vmf_ss = 0;
-	vmf.vmf_eflags = PSL_VIF | PSL_VM | PSL_USER;
-	vm86_initflags(&vmf);
+	vmf->vmf_sp = addr[1] - 2;              /* keep aligned */
+	vmf->kernel_fs = vmf->kernel_es = vmf->kernel_ds = 0;
+	vmf->vmf_ss = 0;
+	vmf->vmf_eflags = PSL_VIF | PSL_VM | PSL_USER;
+
+	vm86 = &PCPU_GET(curpcb)->pcb_ext->ext_vm86;
+	if (!vm86->vm86_has_vme) 
+		vm86->vm86_eflags = vmf->vmf_eflags;  /* save VIF, VIP */
 }
 
 /*
@@ -724,7 +712,7 @@ vm86_sysarch(td, args)
 	case VM86_INTCALL: {
 		struct vm86_intcall_args sa;
 
-		if ((error = suser(td)))
+		if ((error = priv_check(td, PRIV_VM86_INTCALL)))
 			return (error);
 		if ((error = copyin(ua.sub_args, &sa, sizeof(sa))))
 			return (error);

@@ -26495,6 +26495,8 @@ sys/i386/i386/atomic.c -text
 sys/i386/i386/autoconf.c -text
 sys/i386/i386/bios.c -text
 sys/i386/i386/bioscall.s -text
+sys/i386/i386/bpf_jit_machdep.c -text
+sys/i386/i386/bpf_jit_machdep.h -text
 sys/i386/i386/busdma_machdep.c -text
 sys/i386/i386/db_disasm.c -text
 sys/i386/i386/db_interface.c -text
@@ -26520,12 +26522,14 @@ sys/i386/i386/locore.s -text
 sys/i386/i386/longrun.c -text
 sys/i386/i386/machdep.c -text
 sys/i386/i386/mem.c -text
+sys/i386/i386/minidump_machdep.c -text
 sys/i386/i386/mp_clock.c -text
 sys/i386/i386/mp_machdep.c -text
 sys/i386/i386/mp_watchdog.c -text
 sys/i386/i386/mpboot.s -text
 sys/i386/i386/mptable.c -text
 sys/i386/i386/mptable_pci.c -text
+sys/i386/i386/msi.c -text
 sys/i386/i386/nexus.c -text
 sys/i386/i386/perfmon.c -text
 sys/i386/i386/pmap.c -text

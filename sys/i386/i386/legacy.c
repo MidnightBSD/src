@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/legacy.c,v 1.61 2005/02/15 07:21:20 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/legacy.c,v 1.63 2007/09/30 11:05:16 marius Exp $");
 
 /*
  * This code implements a system driver for legacy systems that do not
@@ -110,10 +110,10 @@ legacy_identify(driver_t *driver, device_t parent)
 {
 
 	/*
-	 * Add child device with order of 1 so it gets probed
-	 * after ACPI (which is at order 0.
+	 * Add child device with order of 11 so it gets probed
+	 * after ACPI (which is at order 10).
 	 */
-	if (BUS_ADD_CHILD(parent, 1, "legacy", 0) == NULL)
+	if (BUS_ADD_CHILD(parent, 11, "legacy", 0) == NULL)
 		panic("legacy: could not attach");
 }
 
@@ -228,6 +228,9 @@ legacy_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
 	struct legacy_device *atdev = DEVTOAT(child);
 
 	switch (which) {
+	case LEGACY_IVAR_PCIDOMAIN:
+		*result = 0;
+		break;
 	case LEGACY_IVAR_PCIBUS:
 		*result = atdev->lg_pcibus;
 		break;
@@ -244,6 +247,8 @@ legacy_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
 	struct legacy_device *atdev = DEVTOAT(child);
 
 	switch (which) {
+	case LEGACY_IVAR_PCIDOMAIN:
+		return EINVAL;
 	case LEGACY_IVAR_PCIBUS:
 		atdev->lg_pcibus = value;
 		break;

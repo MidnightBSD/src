@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.277.2.3 2005/11/28 20:03:04 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.307.2.1 2007/12/06 14:20:24 kib Exp $");
 
 /*
  * 386 Trap and System call handling
@@ -77,6 +77,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.277.2.3 2005/11/28 20:03:04 jhb
 #ifdef HWPMC_HOOKS
 #include <sys/pmckern.h>
 #endif
+#include <security/audit/audit.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -101,8 +102,8 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/trap.c,v 1.277.2.3 2005/11/28 20:03:04 jhb
 #include <machine/clock.h>
 #endif
 
-extern void trap(struct trapframe frame);
-extern void syscall(struct trapframe frame);
+extern void trap(struct trapframe *frame);
+extern void syscall(struct trapframe *frame);
 
 static int trap_pfault(struct trapframe *, int, vm_offset_t);
 static void trap_fatal(struct trapframe *, vm_offset_t);
@@ -157,10 +158,11 @@ SYSCTL_INT(_machdep, OID_AUTO, kdb_on_nmi, CTLFLAG_RW,
 static int panic_on_nmi = 1;
 SYSCTL_INT(_machdep, OID_AUTO, panic_on_nmi, CTLFLAG_RW,
 	&panic_on_nmi, 0, "Panic on NMI");
+static int prot_fault_translation = 0;
+SYSCTL_INT(_machdep, OID_AUTO, prot_fault_translation, CTLFLAG_RW,
+	&prot_fault_translation, 0, "Select signal to deliver on protection fault");
 
-#ifdef WITNESS
 extern char *syscallnames[];
-#endif
 
 /*
  * Exception, fault, and trap interface to the FreeBSD kernel.
@@ -170,28 +172,31 @@ extern char *syscallnames[];
  */
 
 void
-trap(frame)
-	struct trapframe frame;
+trap(struct trapframe *frame)
 {
 	struct thread *td = curthread;
 	struct proc *p = td->td_proc;
-	u_int sticks = 0;
-	int i = 0, ucode = 0, type, code;
+	int i = 0, ucode = 0, code;
+	u_int type;
+	register_t addr = 0;
 	vm_offset_t eva;
+	ksiginfo_t ksi;
 #ifdef POWERFAIL_NMI
 	static int lastalert = 0;
 #endif
 
-	PCPU_LAZY_INC(cnt.v_trap);
-	type = frame.tf_trapno;
+	PCPU_INC(cnt.v_trap);
+	type = frame->tf_trapno;
 
-#ifdef KDB_STOP_NMI
-	/* Handler for NMI IPIs used for debugging */
+#ifdef SMP
+#ifdef STOP_NMI
+	/* Handler for NMI IPIs used for stopping CPUs. */
 	if (type == T_NMI) {
 	         if (ipi_nmi_handler() == 0)
 	                   goto out;
 	}
-#endif /* KDB_STOP_NMI */
+#endif /* STOP_NMI */
+#endif /* SMP */
 
 #ifdef KDB
 	if (kdb_active) {
@@ -209,12 +214,12 @@ trap(frame)
 	 * return immediately.
 	 */
 	if (type == T_NMI && pmc_intr &&
-	    (*pmc_intr)(PCPU_GET(cpuid), (uintptr_t) frame.tf_eip,
-		TRAPF_USERMODE(&frame)))
+	    (*pmc_intr)(PCPU_GET(cpuid), (uintptr_t) frame->tf_eip,
+		TRAPF_USERMODE(frame)))
 	    goto out;
 #endif
 
-	if ((frame.tf_eflags & PSL_I) == 0) {
+	if ((frame->tf_eflags & PSL_I) == 0) {
 		/*
 		 * Buggy application or kernel code has disabled
 		 * interrupts and then trapped.  Enabling interrupts
@@ -222,12 +227,12 @@ trap(frame)
 		 * interrupts disabled until they are accidentally
 		 * enabled later.
 		 */
-		if (ISPL(frame.tf_cs) == SEL_UPL || (frame.tf_eflags & PSL_VM))
+		if (ISPL(frame->tf_cs) == SEL_UPL || (frame->tf_eflags & PSL_VM))
 			printf(
 			    "pid %ld (%s): trap %d with interrupts disabled\n",
 			    (long)curproc->p_pid, curproc->p_comm, type);
 		else if (type != T_BPTFLT && type != T_TRCTRAP &&
-			 frame.tf_eip != (int)cpu_switch_load_gs) {
+			 frame->tf_eip != (int)cpu_switch_load_gs) {
 			/*
 			 * XXX not quite right, since this may be for a
 			 * multiple fault in user mode.
@@ -236,17 +241,17 @@ trap(frame)
 			    type);
 			/*
 			 * Page faults need interrupts disabled until later,
-			 * and we shouldn't enable interrupts while in a
-			 * critical section or if servicing an NMI.
+			 * and we shouldn't enable interrupts while holding
+			 * a spin lock or if servicing an NMI.
 			 */
 			if (type != T_NMI && type != T_PAGEFLT &&
-			    td->td_critnest == 0)
+			    td->td_md.md_spinlock_count == 0)
 				enable_intr();
 		}
 	}
 
 	eva = 0;
-	code = frame.tf_err;
+	code = frame->tf_err;
 	if (type == T_PAGEFLT) {
 		/*
 		 * For some Cyrix CPUs, %cr2 is clobbered by
@@ -261,35 +266,45 @@ trap(frame)
 		 * do the VM lookup, so just consider it a fatal trap so the
 		 * kernel can print out a useful trap message and even get
 		 * to the debugger.
+		 *
+		 * If we get a page fault while holding a non-sleepable
+		 * lock, then it is most likely a fatal kernel page fault.
+		 * If WITNESS is enabled, then it's going to whine about
+		 * bogus LORs with various VM locks, so just skip to the
+		 * fatal trap handling directly.
 		 */
 		eva = rcr2();
-		if (td->td_critnest == 0)
-			enable_intr();
+		if (td->td_critnest != 0 ||
+		    WITNESS_CHECK(WARN_SLEEPOK | WARN_GIANTOK, NULL,
+		    "Kernel page fault") != 0)
+			trap_fatal(frame, eva);
 		else
-			trap_fatal(&frame, eva);
+			enable_intr();
 	}
 
-        if ((ISPL(frame.tf_cs) == SEL_UPL) ||
-	    ((frame.tf_eflags & PSL_VM) && 
+        if ((ISPL(frame->tf_cs) == SEL_UPL) ||
+	    ((frame->tf_eflags & PSL_VM) && 
 		!(PCPU_GET(curpcb)->pcb_flags & PCB_VM86CALL))) {
 		/* user trap */
 
-		sticks = td->td_sticks;
-		td->td_frame = &frame;
+		td->td_pticks = 0;
+		td->td_frame = frame;
+		addr = frame->tf_eip;
 		if (td->td_ucred != p->p_ucred) 
 			cred_update_thread(td);
 
 		switch (type) {
 		case T_PRIVINFLT:	/* privileged instruction fault */
-			ucode = type;
 			i = SIGILL;
+			ucode = ILL_PRVOPC;
 			break;
 
 		case T_BPTFLT:		/* bpt instruction fault */
 		case T_TRCTRAP:		/* trace trap */
 			enable_intr();
-			frame.tf_eflags &= ~PSL_T;
+			frame->tf_eflags &= ~PSL_T;
 			i = SIGTRAP;
+			ucode = (type == T_TRCTRAP ? TRAP_TRACE : TRAP_BRKPT);
 			break;
 
 		case T_ARITHTRAP:	/* arithmetic trap */
@@ -298,7 +313,7 @@ trap(frame)
 			if (ucode == -1)
 				goto userout;
 #else
-			ucode = code;
+			ucode = 0;
 #endif
 			i = SIGFPE;
 			break;
@@ -310,27 +325,36 @@ trap(frame)
 			 */
 		case T_PROTFLT:		/* general protection fault */
 		case T_STKFLT:		/* stack fault */
-			if (frame.tf_eflags & PSL_VM) {
-				i = vm86_emulate((struct vm86frame *)&frame);
+			if (frame->tf_eflags & PSL_VM) {
+				i = vm86_emulate((struct vm86frame *)frame);
 				if (i == 0)
 					goto user;
 				break;
 			}
-			/* FALLTHROUGH */
-
+			i = SIGBUS;
+			ucode = (type == T_PROTFLT) ? BUS_OBJERR : BUS_ADRERR;
+			break;
 		case T_SEGNPFLT:	/* segment not present fault */
+			i = SIGBUS;
+			ucode = BUS_ADRERR;
+			break;
 		case T_TSSFLT:		/* invalid TSS fault */
+			i = SIGBUS;
+			ucode = BUS_OBJERR;
+			break;
 		case T_DOUBLEFLT:	/* double fault */
 		default:
-			ucode = code + BUS_SEGM_FAULT ;
 			i = SIGBUS;
+			ucode = BUS_OBJERR;
 			break;
 
 		case T_PAGEFLT:		/* page fault */
+#ifdef KSE
 			if (td->td_pflags & TDP_SA)
 				thread_user_enter(td);
+#endif
 
-			i = trap_pfault(&frame, TRUE, eva);
+			i = trap_pfault(frame, TRUE, eva);
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
 			if (i == -2) {
 				/*
@@ -338,10 +362,10 @@ trap(frame)
 				 * treat the fault as an illegal instruction 
 				 * (T_PRIVINFLT) instead of a page fault.
 				 */
-				type = frame.tf_trapno = T_PRIVINFLT;
+				type = frame->tf_trapno = T_PRIVINFLT;
 
 				/* Proceed as in that case. */
-				ucode = type;
+				ucode = ILL_PRVOPC;
 				i = SIGILL;
 				break;
 			}
@@ -351,7 +375,37 @@ trap(frame)
 			if (i == 0)
 				goto user;
 
-			ucode = T_PAGEFLT;
+			if (i == SIGSEGV)
+				ucode = SEGV_MAPERR;
+			else {
+				if (prot_fault_translation == 0) {
+					/*
+					 * Autodetect.
+					 * This check also covers the images
+					 * without the ABI-tag ELF note.
+					 */
+					if (p->p_osrel >= 700004) {
+						i = SIGSEGV;
+						ucode = SEGV_ACCERR;
+					} else {
+						i = SIGBUS;
+						ucode = BUS_PAGE_FAULT;
+					}
+				} else if (prot_fault_translation == 1) {
+					/*
+					 * Always compat mode.
+					 */
+					i = SIGBUS;
+					ucode = BUS_PAGE_FAULT;
+				} else {
+					/*
+					 * Always SIGSEGV mode.
+					 */
+					i = SIGSEGV;
+					ucode = SEGV_ACCERR;
+				}
+			}
+			addr = eva;
 			break;
 
 		case T_DIVIDE:		/* integer divide fault */
@@ -384,7 +438,7 @@ trap(frame)
 				 */
 				if (kdb_on_nmi) {
 					printf ("NMI ... going to debugger\n");
-					kdb_trap(type, 0, &frame);
+					kdb_trap(type, 0, frame);
 				}
 #endif /* KDB */
 				goto userout;
@@ -410,12 +464,14 @@ trap(frame)
 			if (npxdna())
 				goto userout;
 #endif
-			i = SIGFPE;
-			ucode = FPE_FPU_NP_TRAP;
+			printf("pid %d killed due to lack of floating point\n",
+				p->p_pid);
+			i = SIGKILL;
+			ucode = 0;
 			break;
 
 		case T_FPOPFLT:		/* FPU operand fetch fault */
-			ucode = T_FPOPFLT;
+			ucode = ILL_COPROC;
 			i = SIGILL;
 			break;
 
@@ -431,7 +487,7 @@ trap(frame)
 		    ("kernel trap doesn't have ucred"));
 		switch (type) {
 		case T_PAGEFLT:			/* page fault */
-			(void) trap_pfault(&frame, FALSE, eva);
+			(void) trap_pfault(frame, FALSE, eva);
 			goto out;
 
 		case T_DNA:
@@ -453,13 +509,13 @@ trap(frame)
 			 */
 		case T_PROTFLT:		/* general protection fault */
 		case T_STKFLT:		/* stack fault */
-			if (frame.tf_eflags & PSL_VM) {
-				i = vm86_emulate((struct vm86frame *)&frame);
+			if (frame->tf_eflags & PSL_VM) {
+				i = vm86_emulate((struct vm86frame *)frame);
 				if (i != 0)
 					/*
 					 * returns to original process
 					 */
-					vm86_trap((struct vm86frame *)&frame);
+					vm86_trap((struct vm86frame *)frame);
 				goto out;
 			}
 			if (type == T_STKFLT)
@@ -480,7 +536,7 @@ trap(frame)
 			 * (XXX) so that we can continue, and generate
 			 * a signal.
 			 */
-			if (frame.tf_eip == (int)cpu_switch_load_gs) {
+			if (frame->tf_eip == (int)cpu_switch_load_gs) {
 				PCPU_GET(curpcb)->pcb_gs = 0;
 #if 0				
 				PROC_LOCK(p);
@@ -503,24 +559,24 @@ trap(frame)
 			 * selectors and pointers when the user changes
 			 * them.
 			 */
-			if (frame.tf_eip == (int)doreti_iret) {
-				frame.tf_eip = (int)doreti_iret_fault;
+			if (frame->tf_eip == (int)doreti_iret) {
+				frame->tf_eip = (int)doreti_iret_fault;
 				goto out;
 			}
-			if (frame.tf_eip == (int)doreti_popl_ds) {
-				frame.tf_eip = (int)doreti_popl_ds_fault;
+			if (frame->tf_eip == (int)doreti_popl_ds) {
+				frame->tf_eip = (int)doreti_popl_ds_fault;
 				goto out;
 			}
-			if (frame.tf_eip == (int)doreti_popl_es) {
-				frame.tf_eip = (int)doreti_popl_es_fault;
+			if (frame->tf_eip == (int)doreti_popl_es) {
+				frame->tf_eip = (int)doreti_popl_es_fault;
 				goto out;
 			}
-			if (frame.tf_eip == (int)doreti_popl_fs) {
-				frame.tf_eip = (int)doreti_popl_fs_fault;
+			if (frame->tf_eip == (int)doreti_popl_fs) {
+				frame->tf_eip = (int)doreti_popl_fs_fault;
 				goto out;
 			}
 			if (PCPU_GET(curpcb)->pcb_onfault != NULL) {
-				frame.tf_eip =
+				frame->tf_eip =
 				    (int)PCPU_GET(curpcb)->pcb_onfault;
 				goto out;
 			}
@@ -536,14 +592,14 @@ trap(frame)
 			 * problem here and not every time the kernel is
 			 * entered.
 			 */
-			if (frame.tf_eflags & PSL_NT) {
-				frame.tf_eflags &= ~PSL_NT;
+			if (frame->tf_eflags & PSL_NT) {
+				frame->tf_eflags &= ~PSL_NT;
 				goto out;
 			}
 			break;
 
 		case T_TRCTRAP:	 /* trace trap */
-			if (frame.tf_eip == (int)IDTVEC(lcall_syscall)) {
+			if (frame->tf_eip == (int)IDTVEC(lcall_syscall)) {
 				/*
 				 * We've just entered system mode via the
 				 * syscall lcall.  Continue single stepping
@@ -552,12 +608,12 @@ trap(frame)
 				 */
 				goto out;
 			}
-			if (frame.tf_eip == (int)IDTVEC(lcall_syscall) + 1) {
+			if (frame->tf_eip == (int)IDTVEC(lcall_syscall) + 1) {
 				/*
 				 * The syscall handler has now saved the
 				 * flags.  Stop single stepping it.
 				 */
-				frame.tf_eflags &= ~PSL_T;
+				frame->tf_eflags &= ~PSL_T;
 				goto out;
 			}
 			/*
@@ -589,8 +645,7 @@ trap(frame)
 			 * Otherwise, debugger traps "can't happen".
 			 */
 #ifdef KDB
-			/* XXX Giant */
-			if (kdb_trap(type, 0, &frame))
+			if (kdb_trap(type, 0, frame))
 				goto out;
 #endif
 			break;
@@ -617,7 +672,7 @@ trap(frame)
 				 */
 				if (kdb_on_nmi) {
 					printf ("NMI ... going to debugger\n");
-					kdb_trap(type, 0, &frame);
+					kdb_trap(type, 0, frame);
 				}
 #endif /* KDB */
 				goto out;
@@ -628,7 +683,7 @@ trap(frame)
 #endif /* DEV_ISA */
 		}
 
-		trap_fatal(&frame, eva);
+		trap_fatal(frame, eva);
 		goto out;
 	}
 
@@ -636,7 +691,12 @@ trap(frame)
 	if (*p->p_sysent->sv_transtrap)
 		i = (*p->p_sysent->sv_transtrap)(i, type);
 
-	trapsignal(td, i, ucode);
+	ksiginfo_init_trap(&ksi);
+	ksi.ksi_signo = i;
+	ksi.ksi_code = ucode;
+	ksi.ksi_addr = (void *)addr;
+	ksi.ksi_trapno = type;
+	trapsignal(td, &ksi);
 
 #ifdef DEBUG
 	if (type <= MAX_TRAP_MSG) {
@@ -649,7 +709,7 @@ trap(frame)
 #endif
 
 user:
-	userret(td, &frame, sticks);
+	userret(td, frame);
 	mtx_assert(&Giant, MA_NOTOWNED);
 userout:
 out:
@@ -664,7 +724,7 @@ trap_pfault(frame, usermode, eva)
 {
 	vm_offset_t va;
 	struct vmspace *vm = NULL;
-	vm_map_t map = 0;
+	vm_map_t map;
 	int rv = 0;
 	vm_prot_t ftype;
 	struct thread *td = curthread;
@@ -703,8 +763,16 @@ trap_pfault(frame, usermode, eva)
 		map = &vm->vm_map;
 	}
 
+	/*
+	 * PGEX_I is defined only if the execute disable bit capability is
+	 * supported and enabled.
+	 */
 	if (frame->tf_err & PGEX_W)
 		ftype = VM_PROT_WRITE;
+#ifdef PAE
+	else if ((frame->tf_err & PGEX_I) && pg_nx != 0)
+		ftype = VM_PROT_EXECUTE;
+#endif
 	else
 		ftype = VM_PROT_READ;
 
@@ -745,9 +813,6 @@ nogo:
 		return (-1);
 	}
 
-	/* kludge to pass faulting virtual address to sendsig */
-	frame->tf_err = eva;
-
 	return((rv == KERN_PROTECTION_FAILURE) ? SIGBUS : SIGSEGV);
 }
 
@@ -756,7 +821,8 @@ trap_fatal(frame, eva)
 	struct trapframe *frame;
 	vm_offset_t eva;
 {
-	int code, type, ss, esp;
+	int code, ss, esp;
+	u_int type;
 	struct soft_segment_descriptor softseg;
 	char *msg;
 
@@ -813,22 +879,19 @@ trap_fatal(frame, eva)
 	printf("IOPL = %d\n", (frame->tf_eflags & PSL_IOPL) >> 12);
 	printf("current process		= ");
 	if (curproc) {
-		printf("%lu (%s)\n",
-		    (u_long)curproc->p_pid, curproc->p_comm ?
-		    curproc->p_comm : "");
+		printf("%lu (%s)\n", (u_long)curproc->p_pid, curproc->p_comm);
 	} else {
 		printf("Idle\n");
 	}
 
 #ifdef KDB
 	if (debugger_on_panic || kdb_active) {
-		register_t eflags;
-		eflags = intr_disable();
+		frame->tf_err = eva;	/* smuggle fault address to ddb */
 		if (kdb_trap(type, 0, frame)) {
-			intr_restore(eflags);
+			frame->tf_err = code;	/* restore error code */
 			return;
 		}
-		intr_restore(eflags);
+		frame->tf_err = code;		/* restore error code */
 	}
 #endif
 	printf("trap number		= %d\n", type);
@@ -871,50 +934,45 @@ dblfault_handler()
  *	A system call is essentially treated as a trap.
  */
 void
-syscall(frame)
-	struct trapframe frame;
+syscall(struct trapframe *frame)
 {
 	caddr_t params;
 	struct sysent *callp;
 	struct thread *td = curthread;
 	struct proc *p = td->td_proc;
 	register_t orig_tf_eflags;
-	u_int sticks;
 	int error;
 	int narg;
 	int args[8];
 	u_int code;
+	ksiginfo_t ksi;
 
-	/*
-	 * note: PCPU_LAZY_INC() can only be used if we can afford
-	 * occassional inaccuracy in the count.
-	 */
-	PCPU_LAZY_INC(cnt.v_syscall);
+	PCPU_INC(cnt.v_syscall);
 
 #ifdef DIAGNOSTIC
-	if (ISPL(frame.tf_cs) != SEL_UPL) {
-		mtx_lock(&Giant);	/* try to stabilize the system XXX */
+	if (ISPL(frame->tf_cs) != SEL_UPL) {
 		panic("syscall");
 		/* NOT REACHED */
-		mtx_unlock(&Giant);
 	}
 #endif
 
-	sticks = td->td_sticks;
-	td->td_frame = &frame;
+	td->td_pticks = 0;
+	td->td_frame = frame;
 	if (td->td_ucred != p->p_ucred) 
 		cred_update_thread(td);
+#ifdef KSE
 	if (p->p_flag & P_SA)
 		thread_user_enter(td);
-	params = (caddr_t)frame.tf_esp + sizeof(int);
-	code = frame.tf_eax;
-	orig_tf_eflags = frame.tf_eflags;
+#endif
+	params = (caddr_t)frame->tf_esp + sizeof(int);
+	code = frame->tf_eax;
+	orig_tf_eflags = frame->tf_eflags;
 
 	if (p->p_sysent->sv_prepsyscall) {
 		/*
 		 * The prep code is MP aware.
 		 */
-		(*p->p_sysent->sv_prepsyscall)(&frame, args, &code, &params);
+		(*p->p_sysent->sv_prepsyscall)(frame, args, &code, &params);
 	} else {
 		/*
 		 * Need to check if this is a 32 bit or 64 bit syscall.
@@ -944,7 +1002,7 @@ syscall(frame)
   	else
  		callp = &p->p_sysent->sv_table[code];
 
-	narg = callp->sy_narg & SYF_ARGMASK;
+	narg = callp->sy_narg;
 
 	/*
 	 * copyin and the ktrsyscall()/ktrsysret() code is MP-aware
@@ -963,29 +1021,26 @@ syscall(frame)
 	CTR4(KTR_SYSC, "syscall enter thread %p pid %d proc %s code %d", td,
 	    td->td_proc->p_pid, td->td_proc->p_comm, code);
 
-	/*
-	 * Try to run the syscall without Giant if the syscall
-	 * is MP safe.
-	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_lock(&Giant);
+	td->td_syscalls++;
 
 	if (error == 0) {
 		td->td_retval[0] = 0;
-		td->td_retval[1] = frame.tf_edx;
+		td->td_retval[1] = frame->tf_edx;
 
 		STOPEVENT(p, S_SCE, narg);
 
 		PTRACESTOP_SC(p, td, S_PT_SCE);
 
+		AUDIT_SYSCALL_ENTER(code, td);
 		error = (*callp->sy_call)(td, args);
+		AUDIT_SYSCALL_EXIT(error, td);
 	}
 
 	switch (error) {
 	case 0:
-		frame.tf_eax = td->td_retval[0];
-		frame.tf_edx = td->td_retval[1];
-		frame.tf_eflags &= ~PSL_C;
+		frame->tf_eax = td->td_retval[0];
+		frame->tf_edx = td->td_retval[1];
+		frame->tf_eflags &= ~PSL_C;
 		break;
 
 	case ERESTART:
@@ -993,7 +1048,7 @@ syscall(frame)
 		 * Reconstruct pc, assuming lcall $X,y is 7 bytes,
 		 * int 0x80 is 2 bytes. We saved this in tf_err.
 		 */
-		frame.tf_eip -= frame.tf_err;
+		frame->tf_eip -= frame->tf_err;
 		break;
 
 	case EJUSTRETURN:
@@ -1006,29 +1061,40 @@ syscall(frame)
    			else
   				error = p->p_sysent->sv_errtbl[error];
 		}
-		frame.tf_eax = error;
-		frame.tf_eflags |= PSL_C;
+		frame->tf_eax = error;
+		frame->tf_eflags |= PSL_C;
 		break;
 	}
-
-	/*
-	 * Release Giant if we previously set it.
-	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_unlock(&Giant);
 
 	/*
 	 * Traced syscall.
 	 */
 	if ((orig_tf_eflags & PSL_T) && !(orig_tf_eflags & PSL_VM)) {
-		frame.tf_eflags &= ~PSL_T;
-		trapsignal(td, SIGTRAP, 0);
+		frame->tf_eflags &= ~PSL_T;
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGTRAP;
+		ksi.ksi_code = TRAP_TRACE;
+		ksi.ksi_addr = (void *)frame->tf_eip;
+		trapsignal(td, &ksi);
 	}
+
+	/*
+	 * Check for misbehavior.
+	 */
+	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
+	KASSERT(td->td_critnest == 0,
+	    ("System call %s returning in a critical section",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
+	KASSERT(td->td_locks == 0,
+	    ("System call %s returning with %d locks held",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
+	    td->td_locks));
 
 	/*
 	 * Handle reschedule and other end-of-syscall issues
 	 */
-	userret(td, &frame, sticks);
+	userret(td, frame);
 
 	CTR4(KTR_SYSC, "syscall exit thread %p pid %d proc %s code %d", td,
 	    td->td_proc->p_pid, td->td_proc->p_comm, code);
@@ -1046,10 +1112,5 @@ syscall(frame)
 	STOPEVENT(p, S_SCX, code);
 
 	PTRACESTOP_SC(p, td, S_PT_SCX);
-
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	mtx_assert(&sched_lock, MA_NOTOWNED);
-	mtx_assert(&Giant, MA_NOTOWNED);
 }
 

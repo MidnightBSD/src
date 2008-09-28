@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)locore.s	7.3 (Berkeley) 5/13/91
- * $FreeBSD: src/sys/i386/i386/locore.s,v 1.186 2005/05/16 09:47:53 obrien Exp $
+ * $FreeBSD: src/sys/i386/i386/locore.s,v 1.188 2007/03/24 19:53:22 alc Exp $
  *
  *		originally from: locore.s, by William F. Jolitz
  *
@@ -777,21 +777,6 @@ no_kernend:
 	movl	%esi, R(SMPpt)		/* relocated to KVM space */
 #endif	/* SMP */
 
-/* Map page zero read-write so bios32 calls can use it */
-	xorl	%eax, %eax
-	movl	$PG_RW,%edx
-	movl	$1,%ecx
-	fillkptphys(%edx)
-
-/* Map read-only from page 1 to the beginning of the kernel text section */
-	movl	$PAGE_SIZE, %eax
-	xorl	%edx,%edx
-	movl	$R(btext),%ecx
-	addl	$PAGE_MASK,%ecx
-	subl	%eax,%ecx
-	shrl	$PAGE_SHIFT,%ecx
-	fillkptphys(%edx)
-
 /*
  * Enable PSE and PGE.
  */
@@ -815,22 +800,21 @@ no_kernend:
 #endif
 
 /*
- * Write page tables for the kernel starting at btext and
- * until the end.  Make sure to map read+write.  We do this even
+ * Initialize page table pages mapping physical address zero through the
+ * end of the kernel.  All of the page table entries allow read and write
+ * access.  Write access to the first physical page is required by bios32
+ * calls, and write access to the first 1 MB of physical memory is required
+ * by ACPI for implementing suspend and resume.  We do this even
  * if we've enabled PSE above, we'll just switch the corresponding kernel
  * PDEs before we turn on paging.
  *
  * XXX: We waste some pages here in the PSE case!  DON'T BLINDLY REMOVE
  * THIS!  SMP needs the page table to be there to map the kernel P==V.
  */
-	movl	$R(btext),%eax
-	addl	$PAGE_MASK, %eax
-	andl	$~PAGE_MASK, %eax
-	movl	$PG_RW,%edx
+	xorl	%eax, %eax
 	movl	R(KERNend),%ecx
-	subl	%eax,%ecx
 	shrl	$PAGE_SHIFT,%ecx
-	fillkptphys(%edx)
+	fillkptphys($PG_RW)
 
 /* Map page directory. */
 #ifdef PAE
@@ -901,17 +885,43 @@ no_kernend:
 	fillkpt(R(SMPptpa), $PG_RW)
 #endif	/* SMP */
 
-/* install a pde for temporary double map of bottom of VA */
+/*
+ * Create an identity mapping for low physical memory, including the kernel.
+ * The part of this mapping that covers the first 1 MB of physical memory
+ * becomes a permanent part of the kernel's address space.  The rest of this
+ * mapping is destroyed in pmap_bootstrap().  Ordinarily, the same page table
+ * pages are shared by the identity mapping and the kernel's native mapping.
+ * However, the permanent identity mapping cannot contain PG_G mappings.
+ * Thus, if the kernel is loaded within the permanent identity mapping, that
+ * page table page must be duplicated and not shared.
+ *
+ * N.B. Due to errata concerning large pages and physical address zero,
+ * a PG_PS mapping is not used.
+ */
 	movl	R(KPTphys), %eax
 	xorl	%ebx, %ebx
 	movl	$NKPT, %ecx
 	fillkpt(R(IdlePTD), $PG_RW)
+#if KERNLOAD < (1 << PDRSHIFT)
+	testl	$PG_G, R(pgeflag)
+	jz	1f
+	ALLOCPAGES(1)
+	movl	%esi, %edi
+	movl	R(IdlePTD), %eax
+	movl	(%eax), %esi
+	movl	%edi, (%eax)
+	movl	$PAGE_SIZE, %ecx
+	cld
+	rep
+	movsb
+1:	
+#endif
 
 /*
- * For the non-PSE case, install PDEs for PTs covering the kernel.
+ * For the non-PSE case, install PDEs for PTs covering the KVA.
  * For the PSE case, do the same, but clobber the ones corresponding
- * to the kernel (from btext to KERNend) with 4M ('PS') PDEs immediately
- * after.
+ * to the kernel (from btext to KERNend) with 4M (2M for PAE) ('PS')
+ * PDEs immediately after.
  */
 	movl	R(KPTphys), %eax
 	movl	$KPTDI, %ebx

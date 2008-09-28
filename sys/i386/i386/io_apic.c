@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/io_apic.c,v 1.20.2.4 2006/03/07 18:33:21 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/io_apic.c,v 1.35 2007/06/05 18:57:48 jhb Exp $");
 
 #include "opt_isa.h"
 
@@ -36,10 +36,14 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/io_apic.c,v 1.20.2.4 2006/03/07 18:33:21 j
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
-#include <sys/malloc.h>
 #include <sys/lock.h>
+#include <sys/malloc.h>
+#include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/sysctl.h>
+
+#include <dev/pci/pcireg.h>
+#include <dev/pci/pcivar.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -48,6 +52,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/io_apic.c,v 1.20.2.4 2006/03/07 18:33:21 j
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
 #include <machine/apicvar.h>
+#include <machine/resource.h>
 #include <machine/segments.h>
 
 #define IOAPIC_ISA_INTS		16
@@ -60,9 +65,7 @@ __FBSDID("$FreeBSD: src/sys/i386/i386/io_apic.c,v 1.20.2.4 2006/03/07 18:33:21 j
 #define	IRQ_SMI			(NUM_IO_INTS + 3)
 #define	IRQ_DISABLED		(NUM_IO_INTS + 4)
 
-#define	TODO		printf("%s: not implemented!\n", __func__)
-
-static MALLOC_DEFINE(M_IOAPIC, "I/O APIC", "I/O APIC structures");
+static MALLOC_DEFINE(M_IOAPIC, "io_apic", "I/O APIC structures");
 
 /*
  * I/O APIC interrupt source driver.  Each pin is assigned an IRQ cookie
@@ -72,6 +75,10 @@ static MALLOC_DEFINE(M_IOAPIC, "I/O APIC", "I/O APIC structures");
  * IRQs behave as PCI IRQs by default.  We also assume that the pin for
  * IRQ 0 is actually an ExtINT pin.  The apic enumerators override the
  * configuration of individual pins as indicated by their tables.
+ *
+ * Documentation for the I/O APIC: "82093AA I/O Advanced Programmable
+ * Interrupt Controller (IOAPIC)", May 1996, Intel Corp.
+ * ftp://download.intel.com/design/chipsets/datashts/29056601.pdf
  */
 
 struct ioapic_intsrc {
@@ -84,6 +91,7 @@ struct ioapic_intsrc {
 	u_int io_edgetrigger:1;
 	u_int io_masked:1;
 	int io_bus:4;
+	uint32_t io_lowreg;
 };
 
 struct ioapic {
@@ -93,6 +101,7 @@ struct ioapic {
 	u_int io_intbase:8;		/* System Interrupt base */
 	u_int io_numintr:8;
 	volatile ioapic_t *io_addr;	/* XXX: should use bus_space */
+	vm_paddr_t io_paddr;
 	STAILQ_ENTRY(ioapic) io_next;
 	struct ioapic_intsrc io_pins[0];
 };
@@ -105,20 +114,20 @@ static void	ioapic_enable_source(struct intsrc *isrc);
 static void	ioapic_disable_source(struct intsrc *isrc, int eoi);
 static void	ioapic_eoi_source(struct intsrc *isrc);
 static void	ioapic_enable_intr(struct intsrc *isrc);
+static void	ioapic_disable_intr(struct intsrc *isrc);
 static int	ioapic_vector(struct intsrc *isrc);
 static int	ioapic_source_pending(struct intsrc *isrc);
 static int	ioapic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
 		    enum intr_polarity pol);
-static void	ioapic_suspend(struct intsrc *isrc);
-static void	ioapic_resume(struct intsrc *isrc);
+static void	ioapic_resume(struct pic *pic);
 static void	ioapic_assign_cpu(struct intsrc *isrc, u_int apic_id);
 static void	ioapic_program_intpin(struct ioapic_intsrc *intpin);
 
 static STAILQ_HEAD(,ioapic) ioapic_list = STAILQ_HEAD_INITIALIZER(ioapic_list);
 struct pic ioapic_template = { ioapic_enable_source, ioapic_disable_source,
 			       ioapic_eoi_source, ioapic_enable_intr,
-			       ioapic_vector, ioapic_source_pending,
-			       ioapic_suspend, ioapic_resume,
+			       ioapic_disable_intr, ioapic_vector,
+			       ioapic_source_pending, NULL, ioapic_resume,
 			       ioapic_config_intr, ioapic_assign_cpu };
 
 static int next_ioapic_base;
@@ -202,9 +211,7 @@ ioapic_enable_source(struct intsrc *isrc)
 
 	mtx_lock_spin(&icu_lock);
 	if (intpin->io_masked) {
-		flags = ioapic_read(io->io_addr,
-		    IOAPIC_REDTBL_LO(intpin->io_intpin));
-		flags &= ~(IOART_INTMASK);
+		flags = intpin->io_lowreg & ~IOART_INTMASK;
 		ioapic_write(io->io_addr, IOAPIC_REDTBL_LO(intpin->io_intpin),
 		    flags);
 		intpin->io_masked = 0;
@@ -221,9 +228,7 @@ ioapic_disable_source(struct intsrc *isrc, int eoi)
 
 	mtx_lock_spin(&icu_lock);
 	if (!intpin->io_masked && !intpin->io_edgetrigger) {
-		flags = ioapic_read(io->io_addr,
-		    IOAPIC_REDTBL_LO(intpin->io_intpin));
-		flags |= IOART_INTMSET;
+		flags = intpin->io_lowreg | IOART_INTMSET;
 		ioapic_write(io->io_addr, IOAPIC_REDTBL_LO(intpin->io_intpin),
 		    flags);
 		intpin->io_masked = 1;
@@ -308,6 +313,7 @@ ioapic_program_intpin(struct ioapic_intsrc *intpin)
 
 	/* Write the values to the APIC. */
 	mtx_lock_spin(&icu_lock);
+	intpin->io_lowreg = low;
 	ioapic_write(io->io_addr, IOAPIC_REDTBL_LO(intpin->io_intpin), low);
 	value = ioapic_read(io->io_addr, IOAPIC_REDTBL_HI(intpin->io_intpin));
 	value &= ~IOART_DEST;
@@ -351,6 +357,23 @@ ioapic_enable_intr(struct intsrc *isrc)
 		}
 		ioapic_program_intpin(intpin);
 		apic_enable_vector(intpin->io_vector);
+	}
+}
+
+static void
+ioapic_disable_intr(struct intsrc *isrc)
+{
+	struct ioapic_intsrc *intpin = (struct ioapic_intsrc *)isrc;
+	u_int vector;
+
+	if (intpin->io_vector != 0) {
+		/* Mask this interrupt pin and free its APIC vector. */
+		vector = intpin->io_vector;
+		apic_disable_vector(vector);
+		intpin->io_masked = 1;
+		intpin->io_vector = 0;
+		ioapic_program_intpin(intpin);
+		apic_free_vector(vector, intpin->io_irq);
 	}
 }
 
@@ -416,24 +439,20 @@ ioapic_config_intr(struct intsrc *isrc, enum intr_trigger trig,
 }
 
 static void
-ioapic_suspend(struct intsrc *isrc)
+ioapic_resume(struct pic *pic)
 {
+	struct ioapic *io = (struct ioapic *)pic;
+	int i;
 
-	TODO;
-}
-
-static void
-ioapic_resume(struct intsrc *isrc)
-{
-
-	ioapic_program_intpin((struct ioapic_intsrc *)isrc);
+	for (i = 0; i < io->io_numintr; i++)
+		ioapic_program_intpin(&io->io_pins[i]);
 }
 
 /*
  * Create a plain I/O APIC object.
  */
 void *
-ioapic_create(uintptr_t addr, int32_t apic_id, int intbase)
+ioapic_create(vm_paddr_t addr, int32_t apic_id, int intbase)
 {
 	struct ioapic *io;
 	struct ioapic_intsrc *intpin;
@@ -442,7 +461,7 @@ ioapic_create(uintptr_t addr, int32_t apic_id, int intbase)
 	uint32_t value;
 
 	/* Map the register window so we can access the device. */
-	apic = (ioapic_t *)pmap_mapdev(addr, IOAPIC_MEM_REGION);
+	apic = pmap_mapdev(addr, IOAPIC_MEM_REGION);
 	mtx_lock_spin(&icu_lock);
 	value = ioapic_read(apic, IOAPIC_VER);
 	mtx_unlock_spin(&icu_lock);
@@ -473,13 +492,14 @@ ioapic_create(uintptr_t addr, int32_t apic_id, int intbase)
 		intbase = next_ioapic_base;
 		printf("ioapic%u: Assuming intbase of %d\n", io->io_id,
 		    intbase);
-	} else if (intbase != next_ioapic_base)
+	} else if (intbase != next_ioapic_base && bootverbose)
 		printf("ioapic%u: WARNING: intbase %d != expected base %d\n",
 		    io->io_id, intbase, next_ioapic_base);
 	io->io_intbase = intbase;
 	next_ioapic_base = intbase + numintr;
 	io->io_numintr = numintr;
 	io->io_addr = apic;
+	io->io_paddr = addr;
 
 	/*
 	 * Initialize pins.  Start off with interrupts disabled.  Default
@@ -517,13 +537,6 @@ ioapic_create(uintptr_t addr, int32_t apic_id, int intbase)
 		 * be routed to other CPUs later after they are enabled.
 		 */
 		intpin->io_cpu = PCPU_GET(apic_id);
-		if (bootverbose && intpin->io_irq != IRQ_DISABLED) {
-			printf("ioapic%u: intpin %d -> ",  io->io_id, i);
-			ioapic_print_irq(intpin);
-			printf(" (%s, %s)\n", intpin->io_edgetrigger ?
-			    "edge" : "level", intpin->io_activehi ? "high" :
-			    "low");
-		}
 		value = ioapic_read(apic, IOAPIC_REDTBL_LO(i));
 		ioapic_write(apic, IOAPIC_REDTBL_LO(i), value | IOART_INTMSET);
 	}
@@ -588,6 +601,8 @@ ioapic_set_bus(void *cookie, u_int pin, int bus_type)
 		return (EINVAL);
 	if (io->io_pins[pin].io_irq >= NUM_IO_INTS)
 		return (EINVAL);
+	if (io->io_pins[pin].io_bus == bus_type)
+		return (0);
 	io->io_pins[pin].io_bus = bus_type;
 	if (bootverbose)
 		printf("ioapic%u: intpin %d bus %s\n", io->io_id, pin,
@@ -671,13 +686,17 @@ int
 ioapic_set_polarity(void *cookie, u_int pin, enum intr_polarity pol)
 {
 	struct ioapic *io;
+	int activehi;
 
 	io = (struct ioapic *)cookie;
 	if (pin >= io->io_numintr || pol == INTR_POLARITY_CONFORM)
 		return (EINVAL);
 	if (io->io_pins[pin].io_irq >= NUM_IO_INTS)
 		return (EINVAL);
-	io->io_pins[pin].io_activehi = (pol == INTR_POLARITY_HIGH);
+	activehi = (pol == INTR_POLARITY_HIGH);
+	if (io->io_pins[pin].io_activehi == activehi)
+		return (0);
+	io->io_pins[pin].io_activehi = activehi;
 	if (bootverbose)
 		printf("ioapic%u: intpin %d polarity: %s\n", io->io_id, pin,
 		    pol == INTR_POLARITY_HIGH ? "high" : "low");
@@ -688,13 +707,17 @@ int
 ioapic_set_triggermode(void *cookie, u_int pin, enum intr_trigger trigger)
 {
 	struct ioapic *io;
+	int edgetrigger;
 
 	io = (struct ioapic *)cookie;
 	if (pin >= io->io_numintr || trigger == INTR_TRIGGER_CONFORM)
 		return (EINVAL);
 	if (io->io_pins[pin].io_irq >= NUM_IO_INTS)
 		return (EINVAL);
-	io->io_pins[pin].io_edgetrigger = (trigger == INTR_TRIGGER_EDGE);
+	edgetrigger = (trigger == INTR_TRIGGER_EDGE);
+	if (io->io_pins[pin].io_edgetrigger == edgetrigger)
+		return (0);
+	io->io_pins[pin].io_edgetrigger = edgetrigger;
 	if (bootverbose)
 		printf("ioapic%u: intpin %d trigger: %s\n", io->io_id, pin,
 		    trigger == INTR_TRIGGER_EDGE ? "edge" : "level");
@@ -724,7 +747,129 @@ ioapic_register(void *cookie)
 	    io->io_intbase + io->io_numintr - 1);
 
 	/* Register valid pins as interrupt sources. */
+	intr_register_pic(&io->io_pic);
 	for (i = 0, pin = io->io_pins; i < io->io_numintr; i++, pin++)
 		if (pin->io_irq < NUM_IO_INTS)
 			intr_register_source(&pin->io_intsrc);
 }
+
+/* A simple new-bus driver to consume PCI I/O APIC devices. */
+static int
+ioapic_pci_probe(device_t dev)
+{
+
+	if (pci_get_class(dev) == PCIC_BASEPERIPH &&
+	    pci_get_subclass(dev) == PCIS_BASEPERIPH_PIC) {
+		switch (pci_get_progif(dev)) {
+		case PCIP_BASEPERIPH_PIC_IO_APIC:
+			device_set_desc(dev, "IO APIC");
+			break;
+		case PCIP_BASEPERIPH_PIC_IOX_APIC:
+			device_set_desc(dev, "IO(x) APIC");
+			break;
+		default:
+			return (ENXIO);
+		}
+		device_quiet(dev);
+		return (-10000);
+	}
+	return (ENXIO);
+}
+
+static int
+ioapic_pci_attach(device_t dev)
+{
+
+	return (0);
+}
+
+static device_method_t ioapic_pci_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		ioapic_pci_probe),
+	DEVMETHOD(device_attach,	ioapic_pci_attach),
+
+	{ 0, 0 }
+};
+
+DEFINE_CLASS_0(ioapic, ioapic_pci_driver, ioapic_pci_methods, 0);
+
+static devclass_t ioapic_devclass;
+DRIVER_MODULE(ioapic, pci, ioapic_pci_driver, ioapic_devclass, 0, 0);
+
+/*
+ * A new-bus driver to consume the memory resources associated with
+ * the APICs in the system.  On some systems ACPI or PnPBIOS system
+ * resource devices may already claim these resources.  To keep from
+ * breaking those devices, we attach ourself to the nexus device after
+ * legacy0 and acpi0 and ignore any allocation failures.
+ */
+static void
+apic_identify(driver_t *driver, device_t parent)
+{
+
+	/*
+	 * Add at order 12.  acpi0 is probed at order 10 and legacy0
+	 * is probed at order 11.
+	 */
+	if (lapic_paddr != 0)
+		BUS_ADD_CHILD(parent, 12, "apic", 0);
+}
+
+static int
+apic_probe(device_t dev)
+{
+
+	device_set_desc(dev, "APIC resources");
+	device_quiet(dev);
+	return (0);
+}
+
+static void
+apic_add_resource(device_t dev, int rid, vm_paddr_t base, size_t length)
+{
+	int error;
+
+#ifdef PAE
+	/*
+	 * Resources use long's to track resources, so we can't
+	 * include memory regions above 4GB.
+	 */
+	if (base >= ~0ul)
+		return;
+#endif
+	error = bus_set_resource(dev, SYS_RES_MEMORY, rid, base, length);
+	if (error)
+		panic("apic_add_resource: resource %d failed set with %d", rid,
+		    error);
+	bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid, 0);
+}
+
+static int
+apic_attach(device_t dev)
+{
+	struct ioapic *io;
+	int i;
+
+	/* Reserve the local APIC. */
+	apic_add_resource(dev, 0, lapic_paddr, sizeof(lapic_t));
+	i = 1;
+	STAILQ_FOREACH(io, &ioapic_list, io_next) {
+		apic_add_resource(dev, i, io->io_paddr, IOAPIC_MEM_REGION);
+		i++;
+	}
+	return (0);
+}
+
+static device_method_t apic_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_identify,	apic_identify),
+	DEVMETHOD(device_probe,		apic_probe),
+	DEVMETHOD(device_attach,	apic_attach),
+
+	{ 0, 0 }
+};
+
+DEFINE_CLASS_0(apic, apic_driver, apic_methods, 0);
+
+static devclass_t apic_devclass;
+DRIVER_MODULE(apic, nexus, apic_driver, apic_devclass, 0, 0);
