@@ -33,7 +33,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/for.c,v 1.43 2005/05/10 12:02:15 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/for.c,v 1.44 2008/03/24 12:33:28 ru Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /*-
  * for.c --
@@ -56,6 +57,7 @@ __FBSDID("$FreeBSD: src/usr.bin/make/for.c,v 1.43 2005/05/10 12:02:15 harti Exp 
 #include "lst.h"
 #include "make.h"
 #include "parse.h"
+#include "str.h"
 #include "util.h"
 #include "var.h"
 
@@ -97,6 +99,8 @@ For_For(char *line)
 	char	*sub;
 	Buffer	*buf;
 	size_t	varlen;
+	int	i;
+	ArgArray words;
 
 	ptr = line;
 
@@ -148,33 +152,16 @@ For_For(char *line)
 
 	/*
 	 * Make a list with the remaining words
-	 * XXX should use brk_string here.
 	 */
 	sub = Buf_Peel(Var_Subst(ptr, VAR_CMD, FALSE));
-	for (ptr = sub; *ptr != '\0' && isspace((u_char)*ptr); ptr++)
-		;
-
+	brk_string(&words, sub, FALSE);
 	Lst_Init(&forLst);
-	buf = Buf_Init(0);
-	for (wrd = ptr; *ptr != '\0'; ptr++) {
-		if (isspace((u_char)*ptr)) {
-			Buf_AppendRange(buf, wrd, ptr);
-			Lst_AtFront(&forLst, Buf_Peel(buf));
-
-			buf = Buf_Init(0);
-			while (*ptr != '\0' && isspace((u_char)*ptr))
-				ptr++;
-			wrd = ptr--;
-		}
+	for (i = 1; i < words.argc; i++) {
+		if (words.argv[i][0] != '\0')
+			Lst_AtFront(&forLst, estrdup(words.argv[i]));
 	}
+	ArgArray_Done(&words);
 	DEBUGF(FOR, ("For: Iterator %s List %s\n", forVar, sub));
-
-	if (ptr - wrd > 0) {
-		Buf_AppendRange(buf, wrd, ptr);
-		Lst_AtFront(&forLst, Buf_Peel(buf));
-	} else {
-		Buf_Destroy(buf, TRUE);
-	}
 	free(sub);
 
 	forBuf = Buf_Init(0);

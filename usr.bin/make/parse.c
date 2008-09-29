@@ -39,7 +39,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/parse.c,v 1.108.2.1 2005/11/16 08:25:19 ru Exp $");
+/* $FreeBSD: src/usr.bin/make/parse.c,v 1.114 2008/03/12 14:50:58 obrien Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /*-
  * parse.c --
@@ -168,6 +169,7 @@ typedef enum {
 	ExPath,		/* .PATH */
 	Phony,		/* .PHONY */
 	Posix,		/* .POSIX */
+	MakefileDeps,	/* .MAKEFILEDEPS */
 	Precious,	/* .PRECIOUS */
 	ExShell,	/* .SHELL */
 	Silent,		/* .SILENT */
@@ -213,6 +215,7 @@ static const struct keyword {
 	{ ".LIBS",		Libs,		0 },
 	{ ".MAIN",		Main,		0 },
 	{ ".MAKE",		Attribute,	OP_MAKE },
+	{ ".MAKEFILEDEPS",	MakefileDeps,	0 },
 	{ ".MAKEFLAGS",		MFlags,		0 },
 	{ ".MFLAGS",		MFlags,		0 },
 	{ ".NOTMAIN",		Attribute,	OP_NOTMAIN },
@@ -239,6 +242,7 @@ static const struct keyword {
 #define	NKEYWORDS	(sizeof(parseKeywords) / sizeof(parseKeywords[0]))
 
 static void parse_include(char *, int, int);
+static void parse_sinclude(char *, int, int);
 static void parse_message(char *, int, int);
 static void parse_undef(char *, int, int);
 static void parse_for(char *, int, int);
@@ -267,6 +271,7 @@ static const struct directive {
 	{ "ifndef",	COND_IFNDEF,	TRUE,	Cond_If },
 	{ "ifnmake",	COND_IFNMAKE,	TRUE,	Cond_If },
 	{ "include",	0,		FALSE,	parse_include },
+	{ "sinclude",	0,		FALSE,	parse_sinclude },
 	{ "undef",	0,		FALSE,	parse_undef },
 	{ "warning",	0,		FALSE,	parse_message },
 	/* DIRECTIVES-END-TAG */
@@ -1067,7 +1072,11 @@ ParseDoDependency(char *line)
 			LST_FOREACH(ln, &paths)
 			Path_Clear(Lst_Datum(ln));
 			break;
+		  case MakefileDeps:
+			mfAutoDeps = TRUE;
+			break;
 		  case Posix:
+			is_posix = TRUE;
 			Var_Set("%POSIX", "1003.2", VAR_GLOBAL);
 			break;
 		  default:
@@ -2057,7 +2066,7 @@ ParseFinishLine(void)
 }
 
 /**
- * parse_include
+ * xparse_include
  *	Parse an .include directive and push the file onto the input stack.
  *	The input is the line minus the .include. A file spec is a string
  *	enclosed in <> or "". The former is looked for only in sysIncPath.
@@ -2065,7 +2074,7 @@ ParseFinishLine(void)
  *	options
  */
 static void
-parse_include(char *file, int code __unused, int lineno __unused)
+xparse_include(char *file, int sinclude)
 {
 	char	*fullname;	/* full pathname of file */
 	char	endc;		/* the character which ends the file spec */
@@ -2180,10 +2189,14 @@ parse_include(char *file, int code __unused, int lineno __unused)
 
 	if (fullname == NULL) {
 		*cp = endc;
-		Parse_Error(PARSE_FATAL, "Could not find %s", file);
+		if (!sinclude)
+			Parse_Error(PARSE_FATAL, "Could not find %s", file);
+		else
+			Main_AddSourceMakefile(file);
 		free(file);
 		return;
 	}
+	Main_AddSourceMakefile(fullname);
 	free(file);
 
 	/*
@@ -2192,6 +2205,19 @@ parse_include(char *file, int code __unused, int lineno __unused)
 	 * place.
 	 */
 	ParsePushInput(fullname, NULL, NULL, 0);
+	DEBUGF(DIR, (".include %s\n", fullname));
+}
+
+static void
+parse_include(char *file, int code __unused, int lineno __unused)
+{
+	xparse_include(file, 0);
+}
+
+static void
+parse_sinclude(char *file, int code __unused, int lineno __unused)
+{
+	xparse_include(file, 1);
 }
 
 /**
@@ -2215,7 +2241,7 @@ parse_message(char *line, int iserror, int lineno __unused)
 	while (isspace((u_char)*line))
 		line++;
 
-	line = Buf_Peel(Var_Subst(line, VAR_GLOBAL, FALSE));
+	line = Buf_Peel(Var_Subst(line, VAR_CMD, FALSE));
 	Parse_Error(iserror ? PARSE_FATAL : PARSE_WARNING, "%s", line);
 	free(line);
 

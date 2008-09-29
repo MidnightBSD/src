@@ -39,8 +39,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/suff.c,v 1.64 2005/05/24 15:58:35 harti Exp $");
-
+/* $FreeBSD: src/usr.bin/make/suff.c,v 1.64 2005/05/24 15:58:35 harti Exp $ */
+__MBSDID("$MidnightBSD$");
 /*-
  * suff.c --
  *	Functions to maintain suffix lists and find implicit dependents

@@ -38,7 +38,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/shell.c,v 1.1 2005/05/24 15:30:03 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/shell.c,v 1.1 2005/05/24 15:30:03 harti Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/queue.h>
 #include <stdio.h>

@@ -36,6 +36,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.bin/make/for.h,v 1.3 2005/05/13 08:53:00 harti Exp $
+ * $MidnightBSD$
  */
 
 #ifndef for_h_9d770f33

@@ -38,6 +38,7 @@
  *
  *	@(#)dir.h	8.2 (Berkeley) 4/28/95
  * $FreeBSD: src/usr.bin/make/dir.h,v 1.21 2005/03/23 12:56:15 harti Exp $
+ * $MidnightBSD$
  */
 
 #ifndef dir_h_6002e3b8

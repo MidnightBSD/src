@@ -35,7 +35,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/make/GNode.h,v 1.4 2005/05/13 08:53:00 harti Exp $
+ * $MidnightBSD$
+ * $FreeBSD: src/usr.bin/make/GNode.h,v 1.5 2007/04/20 06:33:25 fjoe Exp $
  */
 
 #ifndef GNode_h_39503bf2
@@ -170,6 +171,7 @@ typedef struct GNode {
 	int	unmade;		/* The number of unmade children */
 	int	mtime;		/* Its modification time */
 	int	cmtime;		/* Modification time of its youngest child */
+	struct GNode *cmtime_gn;/* Youngest child */
 
 	/*
 	 * Links to parents for which this is an implied source, if any. (nodes

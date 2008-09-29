@@ -39,7 +39,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/make.c,v 1.38 2005/05/24 16:05:51 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/make.c,v 1.39 2007/04/20 06:33:25 fjoe Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /*
  * make.c
@@ -118,6 +119,7 @@ Make_TimeStamp(GNode *pgn, GNode *cgn)
 
 	if (cgn->mtime > pgn->cmtime) {
 		pgn->cmtime = cgn->mtime;
+		pgn->cmtime_gn = cgn;
 	}
 	return (0);
 }
@@ -223,7 +225,8 @@ Make_OODate(GNode *gn)
 		 * Make does it.
 		 */
 		if (gn->mtime < gn->cmtime) {
-			DEBUGF(MAKE, ("modified before source..."));
+			DEBUGF(MAKE, ("modified before source (%s)...",
+			    gn->cmtime_gn ? gn->cmtime_gn->path : "???"));
 		} else if (gn->mtime == 0) {
 			DEBUGF(MAKE, ("non-existent and no sources..."));
 		} else {
@@ -421,14 +424,9 @@ Make_Update(GNode *cgn)
 			pgn->unmade -= 1;
 
 			if (!(cgn->type & (OP_EXEC | OP_USE))) {
-				if (cgn->made == MADE) {
+				if (cgn->made == MADE)
 					pgn->childMade = TRUE;
-					if (pgn->cmtime < cgn->mtime) {
-						pgn->cmtime = cgn->mtime;
-					}
-				} else {
-					Make_TimeStamp(pgn, cgn);
-				}
+				Make_TimeStamp(pgn, cgn);
 			}
 			if (pgn->unmade == 0) {
 				/*

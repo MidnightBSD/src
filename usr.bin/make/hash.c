@@ -40,7 +40,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/hash.c,v 1.25 2005/05/13 08:53:00 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/hash.c,v 1.25 2005/05/13 08:53:00 harti Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /* hash.c --
  *

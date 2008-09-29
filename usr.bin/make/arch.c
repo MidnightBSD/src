@@ -39,7 +39,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/arch.c,v 1.66 2005/05/24 15:58:34 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/arch.c,v 1.67 2008/03/04 15:56:17 imp Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /*-
  * arch.c --
@@ -94,6 +95,7 @@ __FBSDID("$FreeBSD: src/usr.bin/make/arch.c,v 1.66 2005/05/24 15:58:34 harti Exp
 #include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <regex.h>
 #include <stdlib.h>
 #include <stdio.h>

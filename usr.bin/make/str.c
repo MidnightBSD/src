@@ -39,7 +39,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/str.c,v 1.45 2005/05/23 13:27:52 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/str.c,v 1.46 2006/10/09 19:37:26 ru Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -260,8 +261,10 @@ brk_string(ArgArray *aa, const char str[], Boolean expand)
 				}
 			} else {
 				*arg++ = str[0];
-				++str;
-				*arg++ = str[0];
+				if (str[1] != '\0') {
+					++str;
+					*arg++ = str[0];
+				}
 			}
 			break;
 		default:

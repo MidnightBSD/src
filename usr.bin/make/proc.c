@@ -25,7 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/proc.c,v 1.1 2005/05/24 15:41:34 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/proc.c,v 1.1 2005/05/24 15:41:34 harti Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <unistd.h>
 #include <errno.h>

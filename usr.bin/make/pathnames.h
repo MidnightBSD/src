@@ -28,6 +28,7 @@
  *
  *	@(#)pathnames.h	8.2 (Berkeley) 4/28/95
  * $FreeBSD: src/usr.bin/make/pathnames.h,v 1.14 2005/03/11 13:02:38 harti Exp $
+ * $MidnightBSD$
  */
 
 #ifndef pathnames_h_235b888a

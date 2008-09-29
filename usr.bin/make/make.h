@@ -36,7 +36,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)make.h	8.3 (Berkeley) 6/13/95
- * $FreeBSD: src/usr.bin/make/make.h,v 1.34 2005/05/13 08:53:00 harti Exp $
+ * $FreeBSD: src/usr.bin/make/make.h,v 1.35 2007/03/08 09:16:10 fjoe Exp $
+ * $MidnightBSD$
  */
 
 #ifndef make_h_a91074b9
@@ -68,5 +69,6 @@ void Make_DoAllVar(struct GNode *);
 Boolean Make_Run(struct Lst *);
 void Main_ParseArgLine(char *, int);
 int Main_ParseWarn(const char *, int);
+void Main_AddSourceMakefile(const char *);
 
 #endif /* make_h_a91074b9 */

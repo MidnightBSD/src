@@ -40,7 +40,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/var.c,v 1.159 2005/05/24 16:05:51 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/var.c,v 1.163 2006/07/17 21:05:27 obrien Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /**
  * var.c --
@@ -1025,10 +1026,9 @@ Var_Set(const char *name, const char *val, GNode *ctxt)
 			 */
 			setenv(n, val, 1);
 		}
-
+		DEBUGF(VAR, ("%s:%s = %s\n", ctxt->name, n, val));
 	}
 
-	DEBUGF(VAR, ("%s:%s = %s\n", ctxt->name, n, val));
 	free(n);
 }
 
@@ -1229,6 +1229,41 @@ SortIncreasing(const void *l, const void *r)
 {
 
 	return (strcmp(*(const char* const*)l, *(const char* const*)r));
+}
+
+/**
+ * Remove adjacent duplicate words.
+ *
+ * Results:
+ *	A string containing the resulting words.
+ */
+static char *
+VarUniq(const char *str)
+{
+	ArgArray	aa;
+	Buffer		*buf;		    /* Buffer for new string */
+	int		i, j;
+
+	buf = Buf_Init(0);
+	brk_string(&aa, str, FALSE);
+
+	if (aa.argc > 2) {
+		for (j = 1, i = 2; i < aa.argc; i++) {
+			if (strcmp(aa.argv[i], aa.argv[j]) != 0 && (++j != i))
+				aa.argv[j] = aa.argv[i];
+		}
+		aa.argc = j + 1;
+	}
+
+	for (i = 1; i < aa.argc; i++) {
+		Buf_AddBytes(buf, strlen(aa.argv[i]), (Byte *)aa.argv[i]);
+		if (i != aa.argc - 1)
+			Buf_AddByte(buf, ' ');
+	}
+	Buf_AddByte(buf, '\0');
+
+	ArgArray_Done(&aa);
+	return (Buf_Peel(buf));
 }
 
 /**
@@ -1666,6 +1701,10 @@ Var_Quote(const char *str)
  *		words which match the given <pattern>.
  *		<pattern> is of the standard file
  *		wildcarding form.
+ *	:N<pattern>
+ *		words which do not match the given <pattern>
+ *		<pattern> is of the standard file
+ *		wildcarding form.
  *	:S<d><pat1><d><pat2><d>[g]
  *		Substitute <pat2> for <pat1> in the value
  *	:C<d><pat1><d><pat2><d>[g]
@@ -1681,8 +1720,8 @@ Var_Quote(const char *str)
  *		the invocation.
  *	:U	Converts variable to upper-case.
  *	:L	Converts variable to lower-case.
- *
- * XXXHB update this comment or remove it and point to the man page.
+ *	:O	("Order") Alphabeticaly sort words in variable.
+ *	:u	("uniq") Remove adjacent duplicate words.
  */
 static char *
 ParseModifier(VarParser *vp, char startc, Var *v, Boolean *freeResult)
@@ -1791,6 +1830,10 @@ ParseModifier(VarParser *vp, char startc, Var *v, Boolean *freeResult)
 				break;
 			case 'R':
 				newStr = VarModify(value, VarRoot, NULL);
+				vp->ptr++;
+				break;
+			case 'u':
+				newStr = VarUniq(value);
 				vp->ptr++;
 				break;
 			default:
@@ -2246,7 +2289,7 @@ match_var(const char str[], const char var[])
 				   str[0] == CLOSE_BRACE) {
 				len = str - (start + 2);
 
-				if (var[len] == '\0' && strncmp(var, start + 2, len) == 0) {
+				if (strncmp(var, start + 2, len) == 0 && var[len] == '\0') {
 					return (0);	/* match */
 				} else {
 					/*

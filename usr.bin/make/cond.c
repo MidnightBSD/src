@@ -40,7 +40,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/make/cond.c,v 1.54 2005/05/25 16:06:14 harti Exp $");
+/* $FreeBSD: src/usr.bin/make/cond.c,v 1.54 2005/05/25 16:06:14 harti Exp $ */
+__MBSDID("$MidnightBSD$");
 
 /*
  * Functions to handle conditionals in a makefile.

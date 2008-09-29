@@ -1,6 +1,7 @@
 #	@(#)Makefile	5.2 (Berkeley) 12/28/90
-#	$Id: Makefile,v 1.1.1.2 2006-02-25 02:38:15 laffer1 Exp $
-# $FreeBSD: src/usr.bin/make/Makefile,v 1.61 2005/05/25 08:46:31 harti Exp $
+#	$Id: Makefile,v 1.2 2008-09-29 20:36:53 laffer1 Exp $
+# $FreeBSD: src/usr.bin/make/Makefile,v 1.66 2008/03/04 22:32:58 obrien Exp $
+# $MidnightBSD$
 
 PROG=	make
 CFLAGS+=-I${.CURDIR}
@@ -13,10 +14,6 @@ WARNS?=	6
 NO_SHARED?=	YES
 
 CFLAGS+=-DMAKE_VERSION=\"5200408120\"
-.if defined(_UPGRADING)
-CFLAGS+=-D__FBSDID=__RCSID
-.endif
-
 # There is no obvious performance improvement currently.
 # CFLAGS+=-DUSE_KQUEUE
 
@@ -29,7 +26,7 @@ CFLAGS+=-D__FBSDID=__RCSID
 main.o shell.o: ${MAKEFILE}
 
 # Directive and keyword tables. We use hash tables. These hash tables have been
-# generated with mph which can be found on the usual GNU mirrors.
+# generated with mph (ports/devel/mph)
 # If you change the directives or keywords (adding, deleting, reordering) you
 # need to create new tables and hash functions (directive_hash, keyword_hash).
 #
