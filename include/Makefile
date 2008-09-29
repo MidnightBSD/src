@@ -1,22 +1,25 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.2 2007/03/12 23:32:12 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.3 2007/08/01 19:31:20 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
+.include <bsd.own.mk>
+
 CLEANFILES= osreldate.h version vers.c
-SUBDIR= arpa protocols rpcsvc rpc
+SUBDIR= arpa gssapi protocols rpcsvc rpc
 INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 	db.h \
 	dirent.h dlfcn.h elf.h elf-hints.h err.h fmtmsg.h fnmatch.h fstab.h \
-	fts.h ftw.h getopt.h glob.h grp.h \
-	hesiod.h histedit.h ieeefp.h ifaddrs.h \
+	fts.h ftw.h getopt.h glob.h grp.h gssapi.h \
+	histedit.h ieeefp.h ifaddrs.h \
 	inttypes.h iso646.h kenv.h langinfo.h libgen.h limits.h link.h \
-	locale.h malloc.h memory.h monetary.h mpool.h ndbm.h netconfig.h \
-	netdb.h nl_types.h nlist.h nss.h nsswitch.h objformat.h paths.h \
-	proc_service.h pthread.h \
+	locale.h malloc.h malloc_np.h memory.h monetary.h mpool.h mqueue.h \
+	ndbm.h netconfig.h \
+	netdb.h nl_types.h nlist.h nss.h nsswitch.h paths.h \
+	printf.h proc_service.h pthread.h \
 	pthread_np.h pwd.h ranlib.h readpassphrase.h regex.h regexp.h \
-	resolv.h runetype.h search.h setjmp.h sgtty.h \
+	res_update.h resolv.h runetype.h search.h setjmp.h sgtty.h \
 	signal.h stab.h \
 	stdbool.h stddef.h stdio.h stdlib.h string.h stringlist.h \
 	strings.h sysexits.h tar.h tgmath.h \
@@ -26,15 +29,14 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 
 MHDRS=	float.h floatingpoint.h stdarg.h
 
-# posix4/mqueue.h is useless without an implementation and isn't installed:
 PHDRS=	sched.h semaphore.h _semaphore.h # mqueue.h
 
 LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdint.h syslog.h \
 	termios.h ucontext.h
 
 LDIRS=	bsm cam geom net net80211 netatalk netatm netgraph netinet netinet6 \
-	netipsec netipx netkey netnatm netncp netsmb nfs nfsclient nfsserver \
-	pccard posix4 sys vm
+	netipsec netipx netnatm netncp netsmb nfs nfsclient nfsserver \
+	pccard sys vm
 
 LSUBDIRS=	cam/scsi \
 	dev/acpica dev/an dev/bktr dev/firewire dev/hwpmc \
@@ -42,20 +44,20 @@ LSUBDIRS=	cam/scsi \
 	dev/pbio dev/ppbus dev/smbus dev/speaker dev/usb dev/wi dev/utopia \
 	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/ntfs fs/nullfs \
 	fs/nwfs fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
-	geom/concat geom/eli geom/gate geom/label geom/mirror geom/nop \
-	geom/raid3 geom/shsec geom/stripe \
-	isofs/cd9660 \
-	netatm/ipatm netatm/sigpvc netatm/spans netatm/uni \
+	geom/cache geom/concat geom/eli geom/gate geom/journal geom/label \
+	geom/mirror geom/multipath geom/nop \
+	geom/raid3 geom/shsec geom/stripe geom/virstor \
 	netgraph/atm netgraph/netflow \
+	security/audit \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
 	security/mac_mls security/mac_partition \
 	ufs/ffs ufs/ufs
 
-.if !defined(NO_GPIB)
+.if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
 .endif
 
-.if !defined(NO_BLUETOOTH)
+.if ${MK_BLUETOOTH} != "no"
 LSUBSUBDIRS=	netgraph/bluetooth/include
 .endif
 
@@ -113,7 +115,7 @@ compat:
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} \
 	    -f ${.CURDIR}/../etc/mtree/BSD.include.dist \
 	    -p ${DESTDIR}${INCLUDEDIR}
-.if defined(WITH_BIND_LIBS) && !defined(NO_BIND)
+.if ${MK_BIND_LIBS} != "no"
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} \
 	    -f ${.CURDIR}/../etc/mtree/BIND.include.dist \
 	    -p ${DESTDIR}${INCLUDEDIR}
@@ -143,7 +145,10 @@ copies:
 	cd ${.CURDIR}/../sys/contrib/altq/altq; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
 	    ${DESTDIR}${INCLUDEDIR}/altq
-.if !defined(NO_IPFILTER)
+	cd ${.CURDIR}/../sys/fs/cd9660/; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
+		${DESTDIR}${INCLUDEDIR}/isofs/cd9660
+.if ${MK_IPFILTER} != "no"
 	cd ${.CURDIR}/../sys/contrib/ipfilter/netinet; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
 	    ${DESTDIR}${INCLUDEDIR}/netinet
