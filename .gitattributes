@@ -23488,6 +23488,8 @@ sys/boot/efi/libefi/delay.c -text
 sys/boot/efi/libefi/efi_console.c -text
 sys/boot/efi/libefi/efifs.c -text
 sys/boot/efi/libefi/efinet.c -text
+sys/boot/efi/libefi/errno.c -text
+sys/boot/efi/libefi/handles.c -text
 sys/boot/efi/libefi/libefi.c -text
 sys/boot/efi/libefi/time.c -text
 sys/boot/ficl/Makefile -text
