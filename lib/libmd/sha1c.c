@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libmd/sha1c.c,v 1.4 2002/03/21 23:38:21 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libmd/sha1c.c,v 1.5 2006/01/17 15:35:56 phk Exp $");
 
 #include <sys/types.h>
 
@@ -143,14 +143,15 @@ SHA_CTX *c;
 	}
 
 void
-SHA1_Update(c, data, len)
+SHA1_Update(c, in, len)
 	SHA_CTX *c;
-	const unsigned char *data;
+	const void *in;
 	size_t len;
 {
 	u_int32_t *p;
 	int ew,ec,sw,sc;
 	u_int32_t l;
+	const unsigned char *data = in;
 
 	if (len == 0) return;
 

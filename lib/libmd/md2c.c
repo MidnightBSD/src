@@ -2,7 +2,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libmd/md2c.c,v 1.10 2003/06/05 13:17:32 markm Exp $");
+__FBSDID("$FreeBSD: src/lib/libmd/md2c.c,v 1.11 2006/01/17 15:35:56 phk Exp $");
 
 /* Copyright (C) 1990-2, RSA Data Security, Inc. Created 1990. All
    rights reserved.
@@ -99,12 +99,13 @@ MD2_CTX *context;                                        /* context */
      operation, processing another message block, and updating the
      context.
  */
-void MD2Update (context, input, inputLen)
+void MD2Update (context, in, inputLen)
 MD2_CTX *context;                                        /* context */
-const unsigned char *input;                                /* input block */
+const void *in;                                /* input block */
 unsigned int inputLen;                     /* length of input block */
 {
   unsigned int i, idx, partLen;
+  const unsigned char *input = in;
 
   /* Update number of bytes mod 16 */
   idx = context->count;

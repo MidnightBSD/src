@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libmd/sha256.h,v 1.1 2005/03/09 19:23:04 cperciva Exp $
+ * $FreeBSD: src/lib/libmd/sha256.h,v 1.2 2006/01/17 15:35:56 phk Exp $
  */
 
 #ifndef _SHA256_H_
@@ -39,12 +39,12 @@ typedef struct SHA256Context {
 
 __BEGIN_DECLS
 void	SHA256_Init(SHA256_CTX *);
-void	SHA256_Update(SHA256_CTX *, const unsigned char *, size_t);
+void	SHA256_Update(SHA256_CTX *, const void *, size_t);
 void	SHA256_Final(unsigned char [32], SHA256_CTX *);
 char   *SHA256_End(SHA256_CTX *, char *);
 char   *SHA256_File(const char *, char *);
 char   *SHA256_FileChunk(const char *, char *, off_t, off_t);
-char   *SHA256_Data(const unsigned char *, unsigned int, char *);
+char   *SHA256_Data(const void *, unsigned int, char *);
 __END_DECLS
 
 #endif /* !_SHA256_H_ */

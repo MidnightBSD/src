@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libmd/sha256c.c,v 1.1 2005/03/09 19:23:04 cperciva Exp $");
+__FBSDID("$FreeBSD: src/lib/libmd/sha256c.c,v 1.2 2006/01/17 15:35:56 phk Exp $");
 
 #include <sys/endian.h>
 #include <sys/types.h>
@@ -240,10 +240,11 @@ SHA256_Init(SHA256_CTX * ctx)
 
 /* Add bytes into the hash */
 void
-SHA256_Update(SHA256_CTX * ctx, const unsigned char *src, size_t len)
+SHA256_Update(SHA256_CTX * ctx, const void *in, size_t len)
 {
 	uint32_t bitlen[2];
 	uint32_t r;
+	const unsigned char *src = in;
 
 	/* Number of bytes left in the buffer from previous updates */
 	r = (ctx->count[1] >> 3) & 0x3f;
