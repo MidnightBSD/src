@@ -14,10 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm.c,v 1.27.2.1 2006/01/24 04:05:47 csjp Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm.c,v 1.31 2007/06/15 11:35:11 simokawa Exp $");
 
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
@@ -223,6 +219,8 @@ _kvm_open(kd, uf, mf, flag, errout)
 		_kvm_syserr(kd, kd->program, "%s", uf);
 		goto failed;
 	}
+	if (strncmp(mf, _PATH_FWMEM, strlen(_PATH_FWMEM)) == 0)
+		kd->rawdump = 1;
 	if (_kvm_initvtop(kd) < 0)
 		goto failed;
 	return (kd);
@@ -307,6 +305,7 @@ kvm_nlist(kd, nl)
 	struct nlist *p;
 	int nvalid;
 	struct kld_sym_lookup lookup;
+	int error;
 
 	/*
 	 * If we can't use the kld symbol lookup, revert to the
@@ -339,9 +338,13 @@ kvm_nlist(kd, nl)
 		}
 	}
 	/*
-	 * Return the number of entries that weren't found.
+	 * Return the number of entries that weren't found. If they exist,
+	 * also fill internal error buffer.
 	 */
-	return ((p - nl) - nvalid);
+	error = ((p - nl) - nvalid);
+	if (error)
+		_kvm_syserr(kd, kd->program, "kvm_nlist");
+	return (error);
 }
 
 ssize_t

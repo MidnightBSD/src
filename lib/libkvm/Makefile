@@ -1,11 +1,20 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libkvm/Makefile,v 1.14 2003/08/18 15:25:38 obrien Exp $
+# $FreeBSD: src/lib/libkvm/Makefile,v 1.17 2006/10/09 05:12:54 kmacy Exp $
+# $MidnightBSD$
 
 LIB=	kvm
 SHLIBDIR?= /lib
 CFLAGS+=-DLIBC_SCCS -I${.CURDIR}
+
+.if ${MACHINE} == "sun4v"
+CFLAGS+=-DSUN4V
+.endif
+
 SRCS=	kvm.c kvm_${MACHINE_ARCH}.c kvm_file.c kvm_getloadavg.c \
 	kvm_getswapinfo.c kvm_proc.c
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+SRCS+=	kvm_minidump_${MACHINE_ARCH}.c
+.endif
 INCS=	kvm.h
 
 MAN=	kvm.3 kvm_geterr.3 kvm_getfiles.3 kvm_getloadavg.3 kvm_getprocs.3 \

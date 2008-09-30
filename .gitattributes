@@ -18515,9 +18515,7 @@ lib/libkvm/Makefile -text
 lib/libkvm/kvm.3 -text
 lib/libkvm/kvm.c -text
 lib/libkvm/kvm.h -text
-lib/libkvm/kvm_alpha.c -text
 lib/libkvm/kvm_amd64.c -text
-lib/libkvm/kvm_arm.c -text
 lib/libkvm/kvm_file.c -text
 lib/libkvm/kvm_geterr.3 -text
 lib/libkvm/kvm_getfiles.3 -text
@@ -18527,10 +18525,10 @@ lib/libkvm/kvm_getprocs.3 -text
 lib/libkvm/kvm_getswapinfo.3 -text
 lib/libkvm/kvm_getswapinfo.c -text
 lib/libkvm/kvm_i386.c -text
-lib/libkvm/kvm_ia64.c -text
+lib/libkvm/kvm_minidump_amd64.c -text
+lib/libkvm/kvm_minidump_i386.c -text
 lib/libkvm/kvm_nlist.3 -text
 lib/libkvm/kvm_open.3 -text
-lib/libkvm/kvm_powerpc.c -text
 lib/libkvm/kvm_private.h -text
 lib/libkvm/kvm_proc.c -text
 lib/libkvm/kvm_read.3 -text

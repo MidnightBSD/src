@@ -14,10 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,7 +38,7 @@ static char sccsid[] = "@(#)kvm_proc.c	8.3 (Berkeley) 9/23/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libkvm/kvm_proc.c,v 1.87 2005/06/24 00:37:04 peter Exp $");
+__FBSDID("$FreeBSD: src/lib/libkvm/kvm_proc.c,v 1.94 2007/09/21 04:11:34 jeff Exp $");
 
 /*
  * Proc traversal interface for kvm.  ps and w are (probably) the exclusive
@@ -89,6 +85,9 @@ __FBSDID("$FreeBSD: src/lib/libkvm/kvm_proc.c,v 1.87 2005/06/24 00:37:04 peter E
 #define KREAD(kd, addr, obj) \
 	(kvm_read(kd, addr, (char *)(obj), sizeof(*obj)) != sizeof(*obj))
 
+static int ticks;
+static int hz;
+
 /*
  * Read proc's from memory file into buffer bp, which has space to hold
  * at most maxcnt procs.
@@ -113,8 +112,6 @@ kvm_proclist(kd, what, arg, p, bp, maxcnt)
 	struct ucred ucred;
 	struct prison pr;
 	struct thread mtd;
-	/*struct kse mke;*/
-	struct ksegrp mkg;
 	struct proc proc;
 	struct proc pproc;
 	struct timeval tv;
@@ -136,25 +133,6 @@ kvm_proclist(kd, what, arg, p, bp, maxcnt)
 				    "can't read thread at %x",
 				    TAILQ_FIRST(&proc.p_threads));
 				return (-1);
-			}
-			if ((proc.p_flag & P_SA) == 0) {
-				if (KREAD(kd,
-				    (u_long)TAILQ_FIRST(&proc.p_ksegrps),
-				    &mkg)) {
-					_kvm_err(kd, kd->program,
-					    "can't read ksegrp at %x",
-					    TAILQ_FIRST(&proc.p_ksegrps));
-					return (-1);
-				}
-#if 0
-				if (KREAD(kd,
-				    (u_long)TAILQ_FIRST(&mkg.kg_kseq), &mke)) {
-					_kvm_err(kd, kd->program,
-					    "can't read kse at %x",
-					    TAILQ_FIRST(&mkg.kg_kseq));
-					return (-1);
-				}
-#endif
 			}
 		}
 		if (KREAD(kd, (u_long)proc.p_ucred, &ucred) == 0) {
@@ -233,7 +211,8 @@ kvm_proclist(kd, what, arg, p, bp, maxcnt)
 			kp->ki_sigignore = sigacts.ps_sigignore;
 			kp->ki_sigcatch = sigacts.ps_sigcatch;
 		}
-		if ((proc.p_sflag & PS_INMEM) && proc.p_stats != NULL) {
+#if 0
+		if ((proc.p_flag & P_INMEM) && proc.p_stats != NULL) {
 			if (KREAD(kd, (u_long)proc.p_stats, &pstats)) {
 				_kvm_err(kd, kd->program,
 				    "can't read stats at %x", proc.p_stats);
@@ -253,6 +232,7 @@ kvm_proclist(kd, what, arg, p, bp, maxcnt)
 			timeradd(&kp->ki_childstime, &kp->ki_childutime,
 			    &kp->ki_childtime);
 		}
+#endif
 		if (proc.p_oppid)
 			kp->ki_ppid = proc.p_oppid;
 		else if (proc.p_pptr) {
@@ -374,6 +354,13 @@ nopgrp:
 				    kp->ki_lockname, LOCKNAMELEN);
 			kp->ki_lockname[LOCKNAMELEN] = 0;
 		}
+		/*
+		 * XXX: This is plain wrong, rux_runtime has nothing
+		 * to do with struct bintime, rux_runtime is just a 64-bit
+		 * integer counter of cputicks.  What we need here is a way
+		 * to convert cputicks to usecs.  The kernel does it in
+		 * kern/kern_tc.c, but the function can't be just copied.
+		 */
 		bintime2timeval(&proc.p_rux.rux_runtime, &tv);
 		kp->ki_runtime = (u_int64_t)tv.tv_sec * 1000000 + tv.tv_usec;
 		kp->ki_pid = proc.p_pid;
@@ -384,9 +371,9 @@ nopgrp:
 		kp->ki_acflag = proc.p_acflag;
 		kp->ki_lock = proc.p_lock;
 		if (proc.p_state != PRS_ZOMBIE) {
-			kp->ki_swtime = proc.p_swtime;
+			kp->ki_swtime = (ticks - proc.p_swtick) / hz;
 			kp->ki_flag = proc.p_flag;
-			kp->ki_sflag = proc.p_sflag;
+			kp->ki_sflag = 0;
 			kp->ki_nice = proc.p_nice;
 			kp->ki_traceflag = proc.p_traceflag;
 			if (proc.p_state == PRS_NORMAL) { 
@@ -418,20 +405,8 @@ nopgrp:
 			kp->ki_oncpu = mtd.td_oncpu;
 
 			if (!(proc.p_flag & P_SA)) {
-				/* stuff from the ksegrp */
-				kp->ki_slptime = mkg.kg_slptime;
-				kp->ki_pri.pri_class = mkg.kg_pri_class;
-				kp->ki_pri.pri_user = mkg.kg_user_pri;
-				kp->ki_estcpu = mkg.kg_estcpu;
-
-#if 0
-				/* Stuff from the kse */
-				kp->ki_pctcpu = mke.ke_pctcpu;
-				kp->ki_rqindex = mke.ke_rqindex;
-#else
 				kp->ki_pctcpu = 0;
 				kp->ki_rqindex = 0;
-#endif
 			} else {
 				kp->ki_tdflags = -1;
 				/* All the rest are 0 for now */
@@ -563,12 +538,14 @@ kvm_getprocs(kd, op, arg, cnt)
 liveout:
 		nprocs = size == 0 ? 0 : size / kd->procbase->ki_structsize;
 	} else {
-		struct nlist nl[4], *p;
+		struct nlist nl[6], *p;
 
 		nl[0].n_name = "_nprocs";
 		nl[1].n_name = "_allproc";
 		nl[2].n_name = "_zombproc";
-		nl[3].n_name = 0;
+		nl[3].n_name = "_ticks";
+		nl[4].n_name = "_hz";
+		nl[5].n_name = 0;
 
 		if (kvm_nlist(kd, nl) != 0) {
 			for (p = nl; p->n_type != 0; ++p)
@@ -579,6 +556,14 @@ liveout:
 		}
 		if (KREAD(kd, nl[0].n_value, &nprocs)) {
 			_kvm_err(kd, kd->program, "can't read nprocs");
+			return (0);
+		}
+		if (KREAD(kd, nl[3].n_value, &ticks)) {
+			_kvm_err(kd, kd->program, "can't read ticks");
+			return (0);
+		}
+		if (KREAD(kd, nl[4].n_value, &hz)) {
+			_kvm_err(kd, kd->program, "can't read hz");
 			return (0);
 		}
 		size = nprocs * sizeof(struct kinfo_proc);

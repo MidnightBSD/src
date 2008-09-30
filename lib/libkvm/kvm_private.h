@@ -14,10 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -35,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)kvm_private.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: src/lib/libkvm/kvm_private.h,v 1.9 2005/06/29 22:39:41 peter Exp $
+ * $FreeBSD: src/lib/libkvm/kvm_private.h,v 1.12 2007/06/15 11:35:11 simokawa Exp $
  */
 
 struct __kvm {
@@ -65,6 +61,7 @@ struct __kvm {
 	 * only allocate it if necessary.
 	 */
 	struct vmstate *vmst;
+	int	rawdump;	/* raw dump format */
 };
 
 /*
@@ -81,3 +78,9 @@ void	*_kvm_realloc(kvm_t *kd, void *, size_t);
 void	 _kvm_syserr (kvm_t *kd, const char *program, const char *fmt, ...)
 	    __printflike(3, 4);
 int	 _kvm_uvatop(kvm_t *, const struct proc *, u_long, u_long *);
+
+#if defined(__amd64__) || defined(__i386__)
+void	 _kvm_minidump_freevtop(kvm_t *);
+int	 _kvm_minidump_initvtop(kvm_t *);
+int	 _kvm_minidump_kvatop(kvm_t *, u_long, off_t *);
+#endif
