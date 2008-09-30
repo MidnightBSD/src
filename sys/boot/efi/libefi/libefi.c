@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/efi/libefi/libefi.c,v 1.6 2003/04/03 21:36:29 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/efi/libefi/libefi.c,v 1.7 2006/11/03 04:19:31 marcel Exp $");
 
 #include <efi.h>
 #include <efilib.h>
@@ -98,7 +98,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	if (status != EFI_SUCCESS)
 		BS->Exit(IH, status, 0, NULL);
 
-	setheap((void *)heap, (void *)(heap + heapsize));
+	setheap((void *)(uintptr_t)heap, (void *)(uintptr_t)(heap + heapsize));
 
 	/* Use exit() from here on... */
 
