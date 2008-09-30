@@ -25967,6 +25967,8 @@ sys/geom/bde/g_bde.h -text
 sys/geom/bde/g_bde_crypt.c -text
 sys/geom/bde/g_bde_lock.c -text
 sys/geom/bde/g_bde_work.c -text
+sys/geom/cache/g_cache.c -text
+sys/geom/cache/g_cache.h -text
 sys/geom/concat/g_concat.c -text
 sys/geom/concat/g_concat.h -text
 sys/geom/eli/g_eli.c -text
