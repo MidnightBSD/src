@@ -29284,7 +29284,6 @@ tools/tools/pciid/mk_pci_vendors.pl -text
 tools/tools/pirtool/Makefile -text
 tools/tools/pirtool/pirtable.h -text
 tools/tools/pirtool/pirtool.c -text
-tools/tools/portsinfo/portsinfo.sh -text
 tools/tools/prstats/prstats.pl -text
 tools/tools/recoverdisk/Makefile -text
 tools/tools/recoverdisk/README -text
