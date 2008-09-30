@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.3 2007/08/01 19:31:20 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.4 2008/09/29 21:06:22 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -29,12 +29,12 @@ INCS=	a.out.h ar.h assert.h bitstring.h complex.h cpio.h _ctype.h ctype.h \
 
 MHDRS=	float.h floatingpoint.h stdarg.h
 
-PHDRS=	sched.h semaphore.h _semaphore.h # mqueue.h
+PHDRS=	sched.h semaphore.h _semaphore.h
 
 LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdint.h syslog.h \
 	termios.h ucontext.h
 
-LDIRS=	bsm cam geom net net80211 netatalk netatm netgraph netinet netinet6 \
+LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
 	netipsec netipx netnatm netncp netsmb nfs nfsclient nfsserver \
 	pccard sys vm
 
@@ -70,20 +70,20 @@ SHARED?=	copies
 
 INCS+=	osreldate.h
 
-osreldate.h:	${.CURDIR}/../sys/conf/newvers.sh \
-		${.CURDIR}/../sys/sys/param.h \
-		${.CURDIR}/Makefile
+osreldate.h: ${.CURDIR}/../sys/conf/newvers.sh ${.CURDIR}/../sys/sys/param.h \
+    ${.CURDIR}/Makefile
 	@${ECHO} creating osreldate.h from newvers.sh
-	@setvar PARAMFILE ${.CURDIR}/../sys/sys/param.h; \
-	MAKE=${MAKE} . ${.CURDIR}/../sys/conf/newvers.sh;	\
-	echo "$$COPYRIGHT" > osreldate.h;			\
-	echo "#ifdef _KERNEL" >> osreldate.h;			\
-	echo '#error "<osreldate.h> cannot be used in the kernel, use <sys/param.h>"' >> osreldate.h; \
-	echo "#else" >> osreldate.h;				\
-	echo \#'undef __FreeBSD_version' >> osreldate.h;	\
-	echo \#'define __FreeBSD_version' $$RELDATE >> osreldate.h; \
-	echo \#'undef __MidnightBSD_version' >> osreldate.h;	\
-	echo \#'define __MidnightBSD_version' $$RELDATE >> osreldate.h; \
+	@MAKE=${MAKE}; \
+	PARAMFILE=${.CURDIR}/../sys/sys/param.h; \
+	. ${.CURDIR}/../sys/conf/newvers.sh; \
+	echo "$$COPYRIGHT" > osreldate.h; \
+	echo "#ifdef _KERNEL" >> osreldate.h; \
+	echo "#error \"<osreldate.h> cannot be used in the kernel, use <sys/param.h>\"" >> osreldate.h; \
+	echo "#else" >> osreldate.h; \
+	echo "#undef __FreeBSD_version" >> osreldate.h; \
+	echo "#define __FreeBSD_version $$RELDATE" >> osreldate.h; \
+	echo "#undef __MidnightBSD_version" >> osreldate.h; \
+	echo "#define __MidnightBSD_version $$RELDATE" >> osreldate.h; \
 	echo "#endif" >> osreldate.h
 
 .for i in ${LHDRS}
@@ -93,7 +93,7 @@ INCSLINKS+=	sys/$i ${INCLUDEDIR}/$i
 INCSLINKS+=	machine/$i ${INCLUDEDIR}/$i
 .endfor
 .for i in ${PHDRS}
-INCSLINKS+=	posix4/$i ${INCLUDEDIR}/$i
+INCSLINKS+=	sys/$i ${INCLUDEDIR}/$i
 .endfor
 
 .if ${MACHINE} != ${MACHINE_ARCH}
@@ -147,7 +147,7 @@ copies:
 	    ${DESTDIR}${INCLUDEDIR}/altq
 	cd ${.CURDIR}/../sys/fs/cd9660/; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
-		${DESTDIR}${INCLUDEDIR}/isofs/cd9660
+	    ${DESTDIR}${INCLUDEDIR}/isofs/cd9660
 .if ${MK_IPFILTER} != "no"
 	cd ${.CURDIR}/../sys/contrib/ipfilter/netinet; \
 	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 *.h \
@@ -184,6 +184,9 @@ copies:
 	    ${DESTDIR}${INCLUDEDIR}/${_MARCH}/pc
 .endif
 .endif
+	cd ${.CURDIR}/../sys/rpc; \
+	${INSTALL} -C -o ${BINOWN} -g ${BINGRP} -m 444 types.h \
+	    ${DESTDIR}${INCLUDEDIR}/rpc
 
 symlinks:
 	@${ECHO} "Setting up symlinks to kernel source tree..."
@@ -220,7 +223,7 @@ symlinks:
 		ln -fs ../../../sys/contrib/altq/altq/$$h \
 		    ${DESTDIR}${INCLUDEDIR}/altq; \
 	done
-.if !defined(NO_IPFILTER)
+.if ${MK_IPFILTER} != "no"
 	cd ${.CURDIR}/../sys/contrib/ipfilter/netinet; \
 	for h in *.h; do \
 		ln -fs ../../../sys/contrib/ipfilter/netinet/$$h \
@@ -272,3 +275,13 @@ symlinks:
 	done
 .endif
 .endif
+	cd ${.CURDIR}/../sys/fs/cd9660; \
+	for h in *.h; do \
+		ln -fs ../../../../sys/fs/cd9660/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/isofs/cd9660; \
+	done
+	cd ${.CURDIR}/../sys/rpc; \
+	for h in types.h; do \
+		ln -fs ../../../sys/rpc/$$h \
+		    ${DESTDIR}${INCLUDEDIR}/rpc; \
+	done
