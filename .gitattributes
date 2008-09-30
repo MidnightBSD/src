@@ -26024,6 +26024,8 @@ sys/geom/label/g_label_ufs.c -text
 sys/geom/mirror/g_mirror.c -text
 sys/geom/mirror/g_mirror.h -text
 sys/geom/mirror/g_mirror_ctl.c -text
+sys/geom/multipath/g_multipath.c -text
+sys/geom/multipath/g_multipath.h -text
 sys/geom/nop/g_nop.c -text
 sys/geom/nop/g_nop.h -text
 sys/geom/notes -text
