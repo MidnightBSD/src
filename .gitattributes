@@ -25975,7 +25975,9 @@ sys/geom/eli/g_eli.c -text
 sys/geom/eli/g_eli.h -text
 sys/geom/eli/g_eli_crypto.c -text
 sys/geom/eli/g_eli_ctl.c -text
+sys/geom/eli/g_eli_integrity.c -text
 sys/geom/eli/g_eli_key.c -text
+sys/geom/eli/g_eli_privacy.c -text
 sys/geom/eli/pkcs5v2.c -text
 sys/geom/eli/pkcs5v2.h -text
 sys/geom/gate/g_gate.c -text
@@ -26016,6 +26018,7 @@ sys/geom/label/g_label.h -text
 sys/geom/label/g_label_ext2fs.c -text
 sys/geom/label/g_label_iso9660.c -text
 sys/geom/label/g_label_msdosfs.c -text
+sys/geom/label/g_label_msdosfs.h -text
 sys/geom/label/g_label_ntfs.c -text
 sys/geom/label/g_label_reiserfs.c -text
 sys/geom/label/g_label_ufs.c -text
