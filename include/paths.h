@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)paths.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/paths.h,v 1.25 2004/01/04 17:17:46 iedowse Exp $
+ * $FreeBSD: src/include/paths.h,v 1.26 2007/06/11 02:21:18 simokawa Exp $
  */
 
 #ifndef _PATHS_H_
@@ -61,6 +61,7 @@
 #define	_PATH_DRUM	"/dev/drum"
 #define	_PATH_ETC	"/etc"
 #define	_PATH_FTPUSERS	"/etc/ftpusers"
+#define	_PATH_FWMEM	"/dev/fwmem"
 #define	_PATH_HALT	"/sbin/halt"
 #define	_PATH_IFCONFIG	"/sbin/ifconfig"
 #define	_PATH_KMEM	"/dev/kmem"

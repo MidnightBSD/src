@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdio.h	8.5 (Berkeley) 4/29/95
- * $FreeBSD: src/include/stdio.h,v 1.56.8.1 2006/01/31 17:57:17 stefanf Exp $
+ * $FreeBSD: src/include/stdio.h,v 1.60 2007/04/07 16:02:30 pjd Exp $
  */
 
 #ifndef	_STDIO_H_
@@ -327,6 +327,7 @@ char	*tempnam(const char *, const char *);
 #if __BSD_VISIBLE
 int	 asprintf(char **, const char *, ...) __printflike(2, 3);
 char	*ctermid_r(char *);
+void	fcloseall(void);
 char	*fgetln(FILE *, size_t *);
 __const char *fmtcheck(const char *, const char *) __format_arg(2);
 int	 fpurge(FILE *);

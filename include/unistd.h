@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)unistd.h	8.12 (Berkeley) 4/27/95
- * $FreeBSD: src/include/unistd.h,v 1.78 2005/05/13 16:27:30 delphij Exp $
+ * $FreeBSD: src/include/unistd.h,v 1.80 2006/12/14 21:42:03 pjd Exp $
  */
 
 #ifndef _UNISTD_H_
@@ -103,12 +103,12 @@ typedef	__useconds_t	useconds_t;
  * the POSIX standard; however, if the relevant sysconf() function
  * returns -1, the functions may be stubbed out.
  */
-#define	_POSIX_BARRIERS			-1
+#define	_POSIX_BARRIERS			200112L
 #define	_POSIX_READER_WRITER_LOCKS	200112L
 #define	_POSIX_REGEXP			1
 #define	_POSIX_SHELL			1
 #define	_POSIX_SPAWN			-1
-#define	_POSIX_SPIN_LOCKS		-1
+#define	_POSIX_SPIN_LOCKS		200112L
 #define	_POSIX_THREAD_ATTR_STACKADDR	200112L
 #define	_POSIX_THREAD_ATTR_STACKSIZE	200112L
 #define	_POSIX_THREAD_CPUTIME		-1
@@ -293,6 +293,9 @@ typedef	__useconds_t	useconds_t;
 #define	_SC_NPROCESSORS_CONF	57
 #define	_SC_NPROCESSORS_ONLN	58
 #endif
+
+/* Extensions found in Solaris and Linux. */
+#define	_SC_PHYS_PAGES		121
 
 /* Keys for the confstr(3) function. */
 #if __POSIX_VISIBLE >= 199209

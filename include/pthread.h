@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/pthread.h,v 1.36.2.1 2005/12/15 06:50:39 davidxu Exp $
+ * $FreeBSD: src/include/pthread.h,v 1.40.2.1 2007/11/14 01:10:11 kris Exp $
  */
 #ifndef _PTHREAD_H_
 #define _PTHREAD_H_
@@ -39,20 +39,20 @@
  * Header files.
  */
 #include <sys/cdefs.h>
-#include <sys/types.h>
 #include <sys/_pthreadtypes.h>
-#include <sys/time.h>
-#include <sys/signal.h>
-#include <limits.h>
+#include <machine/_limits.h>
+#include <machine/_types.h>
+#include <sys/_sigset.h>
 #include <sched.h>
+#include <time.h>
 
 /*
  * Run-time invariant values:
  */
 #define PTHREAD_DESTRUCTOR_ITERATIONS		4
 #define PTHREAD_KEYS_MAX			256
-#define PTHREAD_STACK_MIN			MINSIGSTKSZ
-#define PTHREAD_THREADS_MAX			ULONG_MAX
+#define PTHREAD_STACK_MIN			__MINSIGSTKSZ
+#define PTHREAD_THREADS_MAX			__ULONG_MAX
 #define PTHREAD_BARRIER_SERIAL_THREAD		-1
 
 /*
@@ -98,6 +98,7 @@
  * Static initialization values. 
  */
 #define PTHREAD_MUTEX_INITIALIZER	NULL
+#define PTHREAD_ADAPTIVE_MUTEX_INITIALIZER_NP	NULL
 #define PTHREAD_COND_INITIALIZER	NULL
 #define PTHREAD_RWLOCK_INITIALIZER	NULL
 
@@ -121,8 +122,6 @@
  *
  *	PTHREAD_MUTEX_NORMAL
  *	PTHREAD_MUTEX_RECURSIVE
- *      MUTEX_TYPE_FAST (deprecated)
- *	MUTEX_TYPE_COUNTING_FAST (deprecated)
  *
  * will deviate from POSIX specified semantics.
  */
@@ -130,23 +129,20 @@ enum pthread_mutextype {
 	PTHREAD_MUTEX_ERRORCHECK	= 1,	/* Default POSIX mutex */
 	PTHREAD_MUTEX_RECURSIVE		= 2,	/* Recursive mutex */
 	PTHREAD_MUTEX_NORMAL		= 3,	/* No error checking */
-	MUTEX_TYPE_MAX
+	PTHREAD_MUTEX_ADAPTIVE_NP	= 4,	/* Adaptive mutex, spins briefly before blocking on lock */
+	PTHREAD_MUTEX_TYPE_MAX
 };
 
 #define PTHREAD_MUTEX_DEFAULT		PTHREAD_MUTEX_ERRORCHECK
-#define MUTEX_TYPE_FAST			PTHREAD_MUTEX_NORMAL
-#define MUTEX_TYPE_COUNTING_FAST	PTHREAD_MUTEX_RECURSIVE
 
 /*
  * Thread function prototype definitions:
  */
 __BEGIN_DECLS
-int		pthread_atfork(void (*prepare)(void), void (*parent)(void),
-			void (*child)(void));
+int		pthread_atfork(void (*)(void), void (*)(void), void (*)(void));
 int		pthread_attr_destroy(pthread_attr_t *);
 int		pthread_attr_getstack(const pthread_attr_t * __restrict, 
-			void ** __restrict stackaddr, 
-			size_t * __restrict stacksize);
+			void ** __restrict, size_t * __restrict);
 int		pthread_attr_getstacksize(const pthread_attr_t *, size_t *);
 int		pthread_attr_getguardsize(const pthread_attr_t *, size_t *);
 int		pthread_attr_getstackaddr(const pthread_attr_t *, void **);
@@ -167,14 +163,13 @@ int		pthread_barrierattr_getpshared(const pthread_barrierattr_t *,
 int		pthread_barrierattr_init(pthread_barrierattr_t *);
 int		pthread_barrierattr_setpshared(pthread_barrierattr_t *, int);
 void		pthread_cleanup_pop(int);
-void		pthread_cleanup_push(void (*) (void *), void *routine_arg);
+void		pthread_cleanup_push(void (*) (void *), void *);
 int		pthread_condattr_destroy(pthread_condattr_t *);
-int		pthread_condattr_init(pthread_condattr_t *);
+int		pthread_condattr_getclock(const pthread_condattr_t *,
+			clockid_t *);
 int		pthread_condattr_getpshared(const pthread_condattr_t *, int *);
-int             pthread_condattr_getclock(const pthread_condattr_t *,
-                        clockid_t *);
-int             pthread_condattr_setclock(pthread_condattr_t *,
-                        clockid_t);
+int		pthread_condattr_init(pthread_condattr_t *);
+int		pthread_condattr_setclock(pthread_condattr_t *, clockid_t);
 int		pthread_condattr_setpshared(pthread_condattr_t *, int);
 int		pthread_cond_broadcast(pthread_cond_t *);
 int		pthread_cond_destroy(pthread_cond_t *);
@@ -197,9 +192,9 @@ int		pthread_key_delete(pthread_key_t);
 int		pthread_kill(pthread_t, int);
 int		pthread_mutexattr_init(pthread_mutexattr_t *);
 int		pthread_mutexattr_destroy(pthread_mutexattr_t *);
-int		pthread_mutexattr_gettype(pthread_mutexattr_t *, int *);
 int		pthread_mutexattr_getpshared(const pthread_mutexattr_t *,
 			int *);
+int		pthread_mutexattr_gettype(pthread_mutexattr_t *, int *);
 int		pthread_mutexattr_settype(pthread_mutexattr_t *, int);
 int		pthread_mutexattr_setpshared(pthread_mutexattr_t *, int);
 int		pthread_mutex_destroy(pthread_mutex_t *);
@@ -230,7 +225,7 @@ int		pthread_rwlockattr_setpshared(pthread_rwlockattr_t *, int);
 int		pthread_rwlockattr_destroy(pthread_rwlockattr_t *);
 pthread_t	pthread_self(void);
 int		pthread_setspecific(pthread_key_t, const void *);
-int		pthread_sigmask(int, const sigset_t *, sigset_t *);
+int		pthread_sigmask(int, const __sigset_t *, __sigset_t *);
 
 int		pthread_spin_init(pthread_spinlock_t *, int);
 int		pthread_spin_destroy(pthread_spinlock_t *);

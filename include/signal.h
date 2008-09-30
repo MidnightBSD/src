@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)signal.h	8.3 (Berkeley) 3/30/94
- * $FreeBSD: src/include/signal.h,v 1.24 2003/03/31 23:30:41 jeff Exp $
+ * $FreeBSD: src/include/signal.h,v 1.26 2005/10/16 22:23:03 davidxu Exp $
  */
 
 #ifndef _SIGNAL_H_
@@ -77,15 +77,8 @@ int	sigwait(const sigset_t * __restrict, int * __restrict);
 #endif
 
 #if __POSIX_VISIBLE >= 199506 || __XSI_VISIBLE >= 600
-#if 0
-/*
- * PR: 35924
- * XXX we don't actually have these.  We set _POSIX_REALTIME_SIGNALS to
- * -1 to show that we don't have them, but this symbol is not necessarily
- * in scope (in the current implementation), so we can't use it here.
- */
 int	sigqueue(__pid_t, int, const union sigval);
-#endif
+
 struct timespec;
 int	sigtimedwait(const sigset_t * __restrict, siginfo_t * __restrict,
 	    const struct timespec * __restrict);

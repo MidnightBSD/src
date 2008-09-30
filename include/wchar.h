@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/wchar.h,v 1.45 2004/08/12 12:19:10 tjr Exp $
+ * $FreeBSD: src/include/wchar.h,v 1.46 2005/08/13 05:54:33 tjr Exp $
  */
 
 /*-
@@ -214,6 +214,7 @@ int	wcwidth(wchar_t);
 wchar_t	*fgetwln(struct __sFILE * __restrict, size_t * __restrict);
 size_t	mbsnrtowcs(wchar_t * __restrict, const char ** __restrict, size_t,
 	    size_t, mbstate_t * __restrict);
+wchar_t	*wcsdup(const wchar_t *);
 size_t	wcsnrtombs(char * __restrict, const wchar_t ** __restrict, size_t,
 	    size_t, mbstate_t * __restrict);
 size_t	wcslcat(wchar_t *, const wchar_t *, size_t);

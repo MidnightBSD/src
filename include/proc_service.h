@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/proc_service.h,v 1.3 2005/05/31 09:43:03 dfr Exp $
+ * $FreeBSD: src/include/proc_service.h,v 1.4 2006/02/07 02:29:54 davidxu Exp $
  */
 
 #ifndef _PROC_SERVICE_H_
@@ -56,6 +56,7 @@ ps_err_e ps_lgetxmmregs (struct ps_prochandle *, lwpid_t, char *);
 ps_err_e ps_lsetxmmregs (struct ps_prochandle *, lwpid_t, const char *);
 #endif
 ps_err_e ps_lstop(struct ps_prochandle *, lwpid_t);
+ps_err_e ps_linfo(struct ps_prochandle *, lwpid_t, void *);
 ps_err_e ps_pcontinue(struct ps_prochandle *);
 ps_err_e ps_pdmodel(struct ps_prochandle *, int *);
 ps_err_e ps_pglobal_lookup(struct ps_prochandle *, const char *, const char *,

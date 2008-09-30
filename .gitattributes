@@ -16144,6 +16144,7 @@ include/malloc.h -text
 include/memory.h -text
 include/monetary.h -text
 include/mpool.h -text
+include/mqueue.h -text
 include/ndbm.h -text
 include/netconfig.h -text
 include/netdb.h -text
@@ -16154,6 +16155,7 @@ include/nsswitch.h -text
 include/objformat.h -text
 include/ohash.h -text
 include/paths.h -text
+include/printf.h -text
 include/proc_service.h -text
 include/protocols/Makefile -text
 include/protocols/dumprestore.h -text
@@ -16168,6 +16170,7 @@ include/ranlib.h -text
 include/readpassphrase.h -text
 include/regex.h -text
 include/regexp.h -text
+include/res_update.h -text
 include/resolv.h -text
 include/rpc/Makefile -text
 include/rpc/auth.h -text

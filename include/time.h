@@ -39,7 +39,7 @@
  */
 
 /*
- * $FreeBSD: src/include/time.h,v 1.32 2005/04/02 12:33:27 das Exp $
+ * $FreeBSD: src/include/time.h,v 1.34 2006/04/15 03:08:55 jb Exp $
  */
 
 #ifndef _TIME_H_
@@ -100,6 +100,14 @@ typedef	__timer_t	timer_t;
 #define CLOCK_PROF	2
 #endif
 #define CLOCK_MONOTONIC	4
+#define CLOCK_UPTIME	5		/* FreeBSD-specific. */
+#define CLOCK_UPTIME_PRECISE	7	/* FreeBSD-specific. */
+#define CLOCK_UPTIME_FAST	8	/* FreeBSD-specific. */
+#define CLOCK_REALTIME_PRECISE	9	/* FreeBSD-specific. */
+#define CLOCK_REALTIME_FAST	10	/* FreeBSD-specific. */
+#define CLOCK_MONOTONIC_PRECISE	11	/* FreeBSD-specific. */
+#define CLOCK_MONOTONIC_FAST	12	/* FreeBSD-specific. */
+#define CLOCK_SECOND	13		/* FreeBSD-specific. */
 #endif /* !defined(CLOCK_REALTIME) && __POSIX_VISIBLE >= 200112 */
 
 #if !defined(TIMER_ABSTIME) && __POSIX_VISIBLE >= 200112
@@ -139,7 +147,15 @@ time_t mktime(struct tm *);
 size_t strftime(char * __restrict, size_t, const char * __restrict,
     const struct tm * __restrict);
 time_t time(time_t *);
-
+#if __POSIX_VISIBLE >= 200112
+struct sigevent;
+int timer_create(clockid_t, struct sigevent *__restrict, timer_t *__restrict);
+int timer_delete(timer_t);
+int timer_gettime(timer_t, struct itimerspec *);
+int timer_getoverrun(timer_t);
+int timer_settime(timer_t, int, const struct itimerspec *__restrict,
+	struct itimerspec *__restrict);
+#endif
 #if __POSIX_VISIBLE
 void tzset(void);
 #endif

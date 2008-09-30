@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/pthread_np.h,v 1.15 2003/01/07 21:43:30 fjoe Exp $
+ * $FreeBSD: src/include/pthread_np.h,v 1.16 2005/10/04 07:23:56 davidxu Exp $
  */
 #ifndef _PTHREAD_NP_H_
 #define _PTHREAD_NP_H_
@@ -57,6 +57,7 @@ void pthread_suspend_all_np(void);
 int pthread_suspend_np(pthread_t);
 int pthread_switch_add_np(pthread_switch_routine_t);
 int pthread_switch_delete_np(pthread_switch_routine_t);
+int pthread_timedjoin_np(pthread_t, void **, const struct timespec *);
 __END_DECLS
 
 #endif
