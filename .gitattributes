@@ -16125,6 +16125,7 @@ include/ftw.h -text
 include/getopt.h -text
 include/glob.h -text
 include/grp.h -text
+include/gssapi.h -text
 include/gssapi/Makefile -text
 include/gssapi/gssapi.h -text
 include/hesiod.h -text
