@@ -33,7 +33,7 @@
 static char sccsid[] = "@(#)mkheaders.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/config/mkoptions.c,v 1.32 2004/08/07 04:19:37 imp Exp $";
+  "$FreeBSD: src/usr.sbin/config/mkoptions.c,v 1.34 2006/06/07 01:43:26 delphij Exp $";
 #endif /* not lint */
 
 /*
@@ -69,8 +69,7 @@ options(void)
 
 	/* Fake the cpu types as options. */
 	SLIST_FOREACH(cp, &cputype, cpu_next) {
-		op = (struct opt *)malloc(sizeof(*op));
-		memset(op, 0, sizeof(*op));
+		op = (struct opt *)calloc(1, sizeof(*op));
 		op->op_name = ns(cp->cpu_name);
 		SLIST_INSERT_HEAD(&opt, op, op_next);
 	}	
@@ -84,8 +83,7 @@ options(void)
 		printf("warning: maxusers > %d (%d)\n", users.u_max, maxusers);
 
 	/* Fake MAXUSERS as an option. */
-	op = (struct opt *)malloc(sizeof(*op));
-	memset(op, 0, sizeof(*op));
+	op = (struct opt *)calloc(1, sizeof(*op));
 	op->op_name = ns("MAXUSERS");
 	snprintf(buf, sizeof(buf), "%d", maxusers);
 	op->op_value = ns(buf);
@@ -200,8 +198,7 @@ do_option(char *name)
 				inw, basefile, ol->o_file);
 			tidy++;
 		} else {
-			op = (struct opt *) malloc(sizeof *op);
-			bzero(op, sizeof(*op));
+			op = (struct opt *) calloc(1, sizeof *op);
 			op->op_name = inw;
 			op->op_value = invalue;
 			SLIST_INSERT_HEAD(&op_head, op, op_next);
@@ -227,8 +224,7 @@ do_option(char *name)
 
 	if (value && !seen) {
 		/* New option appears */
-		op = (struct opt *) malloc(sizeof *op);
-		bzero(op, sizeof(*op));
+		op = (struct opt *) calloc(1, sizeof *op);
 		op->op_name = ns(name);
 		op->op_value = value ? ns(value) : NULL;
 		SLIST_INSERT_HEAD(&op_head, op, op_next);
@@ -290,10 +286,6 @@ read_options(void)
 	char genopt[MAXPATHLEN];
 
 	SLIST_INIT(&otab);
-	if (ident == NULL) {
-		printf("no ident line specified\n");
-		exit(1);
-	}
 	(void) snprintf(fname, sizeof(fname), "../../conf/options");
 openit:
 	fp = fopen(fname, "r");
@@ -343,8 +335,7 @@ next:
 		}
 	}
 	
-	po = (struct opt_list *) malloc(sizeof *po);
-	bzero(po, sizeof(*po));
+	po = (struct opt_list *) calloc(1, sizeof *po);
 	po->o_name = this;
 	po->o_file = val;
 	SLIST_INSERT_HEAD(&otab, po, o_next);

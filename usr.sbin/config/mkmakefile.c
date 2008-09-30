@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)mkmakefile.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/config/mkmakefile.c,v 1.81 2004/08/30 23:03:56 peter Exp $";
+  "$FreeBSD: src/usr.sbin/config/mkmakefile.c,v 1.91 2006/10/24 07:12:31 imp Exp $";
 #endif /* not lint */
 
 /*
@@ -97,8 +97,7 @@ new_fent(void)
 {
 	struct file_list *fp;
 
-	fp = (struct file_list *) malloc(sizeof *fp);
-	bzero(fp, sizeof *fp);
+	fp = (struct file_list *) calloc(1, sizeof *fp);
 	STAILQ_INSERT_TAIL(&ftab, fp, f_next);
 	return (fp);
 }
@@ -113,7 +112,6 @@ makefile(void)
 	char line[BUFSIZ];
 	struct opt *op;
 	int versreq;
-	char *s;
 
 	read_files();
 	snprintf(line, sizeof(line), "../../conf/Makefile.%s", machinename);
@@ -124,12 +122,6 @@ makefile(void)
 	}
 	if (ifp == 0)
 		err(1, "%s", line);
-
-	/* XXX this check seems to be misplaced. */
-	if (SLIST_EMPTY(&cputype)) {
-		printf("cpu type must be specified\n");
-		exit(1);
-	}
 
 	ofp = fopen(path("Makefile.new"), "w");
 	if (ofp == 0)
@@ -160,7 +152,8 @@ makefile(void)
 			do_clean(ofp);
 		else if (strncmp(line, "%VERSREQ=", sizeof("%VERSREQ=") - 1) == 0) {
 			versreq = atoi(line + sizeof("%VERSREQ=") - 1);
-			if (versreq != CONFIGVERS) {
+			if (MAJOR_VERS(versreq) != MAJOR_VERS(CONFIGVERS) ||
+			    versreq > CONFIGVERS) {
 				fprintf(stderr, "ERROR: version of config(8) does not match kernel!\n");
 				fprintf(stderr, "config version = %d, ", CONFIGVERS);
 				fprintf(stderr, "version required = %d\n\n", versreq);
@@ -181,15 +174,19 @@ makefile(void)
 	(void) fclose(ifp);
 	(void) fclose(ofp);
 	moveifchanged(path("Makefile.new"), path("Makefile"));
+}
 
-	/* XXX makefile() should make the Makefile, not hints.c. */
-	if (hints) {
-		ifp = fopen(hints, "r");
-		if (ifp == NULL)
-			err(1, "%s", hints);
-	} else {
-		ifp = NULL;
-	}
+/*
+ * Build hints.c from the skeleton
+ */
+void
+makehints(void)
+{
+	FILE *ifp, *ofp;
+	char line[BUFSIZ];
+	char *s;
+	struct hint *hint;
+
 	ofp = fopen(path("hints.c.new"), "w");
 	if (ofp == NULL)
 		err(1, "%s", path("hints.c.new"));
@@ -198,7 +195,10 @@ makefile(void)
 	fprintf(ofp, "\n");
 	fprintf(ofp, "int hintmode = %d;\n", hintmode);
 	fprintf(ofp, "char static_hints[] = {\n");
-	if (ifp) {
+	STAILQ_FOREACH(hint, &hints, hint_next) {
+		ifp = fopen(hint->hint_name, "r");
+		if (ifp == NULL)
+			err(1, "%s", hint->hint_name);
 		while (fgets(line, BUFSIZ, ifp) != 0) {
 			/* zap trailing CR and/or LF */
 			while ((s = rindex(line, '\n')) != NULL)
@@ -228,14 +228,23 @@ makefile(void)
 				continue;
 			fprintf(ofp, "\"%s\\0\"\n", line);
 		}
+		fclose(ifp);
 	}
 	fprintf(ofp, "\"\\0\"\n};\n");
-	if (ifp)
-		fclose(ifp);
 	fclose(ofp);
 	moveifchanged(path("hints.c.new"), path("hints.c"));
+}
 
-	/* XXX makefile() should make the Makefile, not env.c. */
+/*
+ * Build env.c from the skeleton
+ */
+void
+makeenv(void)
+{
+	FILE *ifp, *ofp;
+	char line[BUFSIZ];
+	char *s;
+
 	if (env) {
 		ifp = fopen(env, "r");
 		if (ifp == NULL)
@@ -292,12 +301,13 @@ makefile(void)
 static void
 read_file(char *fname)
 {
+	char ifname[MAXPATHLEN];
 	FILE *fp;
-	struct file_list *tp, *pf;
+	struct file_list *tp;
 	struct device *dp;
 	struct opt *op;
-	char *wd, *this, *needs, *compilewith, *depends, *clean, *warning;
-	int nreqs, isdup, std, filetype,
+	char *wd, *this, *compilewith, *depends, *clean, *warning;
+	int compile, match, nreqs, std, filetype,
 	    imp_rule, no_obj, before_depend, mandatory, nowerror;
 
 	fp = fopen(fname, "r");
@@ -305,8 +315,9 @@ read_file(char *fname)
 		err(1, "%s", fname);
 next:
 	/*
+	 * include "filename"
 	 * filename    [ standard | mandatory | optional ]
-	 *	[ dev* | profiling-routine ] [ no-obj ]
+	 *	[ dev* [ | dev* ... ] | profiling-routine ] [ no-obj ]
 	 *	[ compile-with "compile rule" [no-implicit-rule] ]
 	 *      [ dependency "dependency-list"] [ before-depend ]
 	 *	[ clean "file-list"] [ warning "text warning" ]
@@ -324,6 +335,18 @@ next:
 			;
 		goto next;
 	}
+	if (eq(wd, "include")) {
+		next_quoted_word(fp, wd);
+		if (wd == 0) {
+			printf("%s: missing include filename.\n", fname);
+			exit(1);
+		}
+		(void) snprintf(ifname, sizeof(ifname), "../../%s", wd);
+		read_file(ifname);
+		while (((wd = get_word(fp)) != (char *)EOF) && wd)
+			;
+		goto next;
+	}
 	this = ns(wd);
 	next_word(fp, wd);
 	if (wd == 0) {
@@ -331,17 +354,14 @@ next:
 		    fname, this);
 		exit(1);
 	}
-	if ((pf = fl_lookup(this)) && (pf->f_type != INVISIBLE || pf->f_flags))
-		isdup = ISDUP;
-	else
-		isdup = 0;
-	tp = 0;
+	tp = fl_lookup(this);
+	compile = 0;
+	match = 1;
 	nreqs = 0;
 	compilewith = 0;
 	depends = 0;
 	clean = 0;
 	warning = 0;
-	needs = 0;
 	std = mandatory = 0;
 	imp_rule = 0;
 	no_obj = 0;
@@ -365,9 +385,21 @@ next:
 nextparam:
 	next_word(fp, wd);
 	if (wd == 0) {
-		if (isdup)
-			goto next;
-		goto doneparam;
+		compile += match;
+		if (compile && tp == NULL)
+			goto doneparam;
+		goto next;
+	}
+	if (eq(wd, "|")) {
+		if (nreqs == 0) {
+			printf("%s: syntax error describing %s\n",
+			    fname, this);
+			exit(1);
+		}
+		compile += match;
+		match = 1;
+		nreqs = 0;
+		goto nextparam;
 	}
 	if (eq(wd, "no-obj")) {
 		no_obj++;
@@ -443,13 +475,11 @@ nextparam:
 		nowerror = 1;
 		goto nextparam;
 	}
-	if (needs == 0 && nreqs == 1)
-		needs = ns(wd);
-	if (isdup)
-		goto invis;
 	STAILQ_FOREACH(dp, &dtab, d_next)
-		if (eq(dp->d_name, wd))
+		if (eq(dp->d_name, wd)) {
+			dp->d_done |= DEVDONE;
 			goto nextparam;
+		}
 	if (mandatory) {
 		printf("%s: mandatory device \"%s\" not found\n",
 		       fname, wd);
@@ -461,27 +491,10 @@ nextparam:
 		exit(1);
 	}
 	SLIST_FOREACH(op, &opt, op_next)
-		if (op->op_value == 0 && opteq(op->op_name, wd)) {
-			if (nreqs == 1) {
-				free(needs);
-				needs = 0;
-			}
+		if (op->op_value == 0 && opteq(op->op_name, wd))
 			goto nextparam;
-		}
-invis:
-	while ((wd = get_word(fp)) != 0)
-		;
-	if (tp == 0)
-		tp = new_fent();
-	tp->f_fn = this;
-	tp->f_type = INVISIBLE;
-	tp->f_needs = needs;
-	tp->f_flags |= isdup;
-	tp->f_compilewith = compilewith;
-	tp->f_depends = depends;
-	tp->f_clean = clean;
-	tp->f_warn = warning;
-	goto next;
+	match = 0;
+	goto nextparam;
 
 doneparam:
 	if (std == 0 && nreqs == 0) {
@@ -497,11 +510,9 @@ doneparam:
 	}
 	if (filetype == PROFILING && profiling == 0)
 		goto next;
-	if (tp == 0)
-		tp = new_fent();
+	tp = new_fent();
 	tp->f_fn = this;
 	tp->f_type = filetype;
-	tp->f_flags &= ~ISDUP;
 	if (imp_rule)
 		tp->f_flags |= NO_IMPLCT_RULE;
 	if (no_obj)
@@ -510,13 +521,10 @@ doneparam:
 		tp->f_flags |= BEFORE_DEPEND;
 	if (nowerror)
 		tp->f_flags |= NOWERROR;
-	tp->f_needs = needs;
 	tp->f_compilewith = compilewith;
 	tp->f_depends = depends;
 	tp->f_clean = clean;
 	tp->f_warn = warning;
-	if (pf && pf->f_type == INVISIBLE)
-		pf->f_flags |= ISDUP;		/* mark as duplicate */
 	goto next;
 }
 
@@ -530,10 +538,6 @@ read_files(void)
 	char fname[MAXPATHLEN];
 	struct files_name *nl, *tnl;
 	
-	if (ident == NULL) {
-		printf("no ident line specified\n");
-		exit(1);
-	}
 	(void) snprintf(fname, sizeof(fname), "../../conf/files");
 	read_file(fname);
 	(void) snprintf(fname, sizeof(fname),
@@ -599,7 +603,7 @@ do_objs(FILE *fp)
 	fprintf(fp, "OBJS=");
 	lpos = 6;
 	STAILQ_FOREACH(tp, &ftab, f_next) {
-		if (tp->f_type == INVISIBLE || tp->f_flags & NO_OBJ)
+		if (tp->f_flags & NO_OBJ)
 			continue;
 		sp = tail(tp->f_fn);
 		cp = sp + (len = strlen(sp)) - 1;
@@ -635,7 +639,7 @@ do_xxfiles(char *tag, FILE *fp)
 	fprintf(fp, "%sFILES=", SUFF);
 	lpos = 8;
 	STAILQ_FOREACH(tp, &ftab, f_next)
-		if (tp->f_type != INVISIBLE && tp->f_type != NODEPEND) {
+		if (tp->f_type != NODEPEND) {
 			len = strlen(tp->f_fn);
 			if (tp->f_fn[len - slen - 1] != '.')
 				continue;
@@ -673,13 +677,11 @@ tail(char *fn)
 static void
 do_rules(FILE *f)
 {
-	char *cp, *np, och, *tp;
+	char *cp, *np, och;
 	struct file_list *ftp;
 	char *compilewith;
 
 	STAILQ_FOREACH(ftp, &ftab, f_next) {
-		if (ftp->f_type == INVISIBLE)
-			continue;
 		if (ftp->f_warn)
 			printf("WARNING: %s\n", ftp->f_warn);
 		cp = (np = ftp->f_fn) + strlen(ftp->f_fn) - 1;
@@ -712,7 +714,6 @@ do_rules(FILE *f)
 					np, och);
 			}
 		}
-		tp = tail(np);
 		compilewith = ftp->f_compilewith;
 		if (compilewith == 0) {
 			const char *ftype = NULL;

@@ -67,9 +67,10 @@
  * SUCH DAMAGE.
  *
  *	@(#)config.y	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.sbin/config/config.y,v 1.66.2.2 2005/12/01 17:43:09 ru Exp $
+ * $FreeBSD: src/usr.sbin/config/config.y,v 1.78 2007/05/17 04:53:52 imp Exp $
  */
 
+#include <assert.h>
 #include <ctype.h>
 #include <err.h>
 #include <stdio.h>
@@ -81,7 +82,6 @@ struct	device_head dtab;
 char	*ident;
 char	*env;
 int	envmode;
-char	*hints;
 int	hintmode;
 int	yyline;
 const	char *yyfile;
@@ -123,7 +123,10 @@ Spec:
 	Config_spec SEMICOLON
 		|
 	INCLUDE ID SEMICOLON
-	      = { include($2, 0); };
+	      = {
+	          if (incignore == 0)
+		  	include($2, 0);
+		};
 		|
 	FILES ID SEMICOLON
 	      = { newfile($2); };
@@ -136,7 +139,7 @@ Spec:
 Config_spec:
 	ARCH Save_id
 	    = {
-		if (machinename != NULL)
+		if (machinename != NULL && !eq($2, machinename))
 		    errx(1, "%s:%d: only one machine directive is allowed",
 			yyfile, yyline);
 		machinename = $2;
@@ -144,7 +147,8 @@ Config_spec:
 	      } |
 	ARCH Save_id Save_id
 	    = {
-		if (machinename != NULL)
+		if (machinename != NULL &&
+		    !(eq($2, machinename) && eq($3, machinearch)))
 		    errx(1, "%s:%d: only one machine directive is allowed",
 			yyfile, yyline);
 		machinename = $2;
@@ -153,8 +157,7 @@ Config_spec:
 	CPU Save_id
 	      = {
 		struct cputype *cp =
-		    (struct cputype *)malloc(sizeof (struct cputype));
-		memset(cp, 0, sizeof(*cp));
+		    (struct cputype *)calloc(1, sizeof (struct cputype));
 		cp->cpu_name = $2;
 		SLIST_INSERT_HEAD(&cputype, cp, cpu_next);
 	      } |
@@ -162,21 +165,20 @@ Config_spec:
 	      = {
 		struct cputype *cp, *cp2;
 		SLIST_FOREACH_SAFE(cp, &cputype, cpu_next, cp2) {
-			if (strcmp(cp->cpu_name, $2) != 0)
-				continue;
-			SLIST_REMOVE(&cputype, cp, cputype, cpu_next);
-			free(cp);
-			break;
+			if (eq(cp->cpu_name, $2)) {
+				SLIST_REMOVE(&cputype, cp, cputype, cpu_next);
+				free(cp);
+			}
 		}
 	      } |
 	OPTIONS Opt_list
 		|
 	NOOPTION Save_id
-	      = { rmopt(&opt, $2); } |
+	      = { rmopt_schedule(&opt, $2); } |
 	MAKEOPTIONS Mkopt_list
 		|
 	NOMAKEOPTION Save_id
-	      = { rmopt(&mkopt, $2); } |
+	      = { rmopt_schedule(&mkopt, $2); } |
 	IDENT ID
 	      = { ident = $2; } |
 	System_spec
@@ -187,13 +189,17 @@ Config_spec:
 	      = { profiling = $2; } |
 	ENV ID
 	      = {
-		      env = $2;
-		      envmode = 1;
+		env = $2;
+		envmode = 1;
 		} |
 	HINTS ID
 	      = {
-		      hints = $2;
-		      hintmode = 1;
+		struct hint *hint;
+
+		hint = (struct hint *)calloc(1, sizeof (struct hint));
+		hint->hint_name = $2;
+		STAILQ_INSERT_TAIL(&hints, hint, hint_next);
+		hintmode = 1;
 	        }
 
 System_spec:
@@ -222,10 +228,8 @@ Opt_list:
 Option:
 	Save_id
 	      = {
-		char *s;
-
 		newopt(&opt, $1, NULL);
-		if ((s = strchr($1, '=')))
+		if (strchr($1, '=') != NULL)
 			errx(1, "%s:%d: The `=' in options should not be "
 			    "quoted", yyfile, yyline);
 	      } |
@@ -298,10 +302,10 @@ NoDevice:
 	      = {
 		char *s = devopt($1);
 
-		rmopt(&opt, s);
+		rmopt_schedule(&opt, s);
 		free(s);
 		/* and the device part */
-		rmdev($1);
+		rmdev_schedule(&dtab, $1);
 		} ;
 
 %%
@@ -316,7 +320,6 @@ yyerror(const char *s)
 int
 yywrap(void)
 {
-
 	if (found_defaults) {
 		if (freopen(PREFIX, "r", stdin) == NULL)
 			err(2, "%s", PREFIX);		
@@ -336,76 +339,115 @@ newfile(char *name)
 {
 	struct files_name *nl;
 	
-	nl = (struct files_name *) malloc(sizeof *nl);
-	bzero(nl, sizeof *nl);
+	nl = (struct files_name *) calloc(1, sizeof *nl);
 	nl->f_name = name;
 	STAILQ_INSERT_TAIL(&fntab, nl, f_next);
 }
 	
 /*
- * add a device to the list of devices
+ * Find a device in the list of devices.
+ */
+static struct device *
+finddev(struct device_head *dlist, char *name)
+{
+	struct device *dp;
+
+	STAILQ_FOREACH(dp, dlist, d_next)
+		if (eq(dp->d_name, name))
+			return (dp);
+
+	return (NULL);
+}
+	
+/*
+ * Add a device to the list of devices.
  */
 static void
 newdev(char *name)
 {
 	struct device *np;
 
-	np = (struct device *) malloc(sizeof *np);
-	memset(np, 0, sizeof(*np));
+	if (finddev(&dtab, name)) {
+		printf("WARNING: duplicate device `%s' encountered.\n", name);
+		return;
+	}
+
+	np = (struct device *) calloc(1, sizeof *np);
 	np->d_name = name;
 	STAILQ_INSERT_TAIL(&dtab, np, d_next);
 }
 
 /*
- * remove a device from the list of devices
+ * Schedule a device to removal.
  */
 static void
-rmdev(char *name)
+rmdev_schedule(struct device_head *dh, char *name)
 {
-	struct device *dp, *rmdp;
+	struct device *dp;
 
-	STAILQ_FOREACH(dp, &dtab, d_next) {
-		if (eq(dp->d_name, name)) {
-			rmdp = dp;
-			dp = STAILQ_NEXT(dp, d_next);
-			STAILQ_REMOVE(&dtab, rmdp, device, d_next);
-			free(rmdp->d_name);
-			free(rmdp);
-			if (dp == NULL)
-				break;
-		}
+	dp = finddev(dh, name);
+	if (dp != NULL) {
+		STAILQ_REMOVE(dh, dp, device, d_next);
+		free(dp->d_name);
+		free(dp);
 	}
 }
 
+/*
+ * Find an option in the list of options.
+ */
+static struct opt *
+findopt(struct opt_head *list, char *name)
+{
+	struct opt *op;
+
+	SLIST_FOREACH(op, list, op_next)
+		if (eq(op->op_name, name))
+			return (op);
+
+	return (NULL);
+}
+
+/*
+ * Add an option to the list of options.
+ */
 static void
 newopt(struct opt_head *list, char *name, char *value)
 {
 	struct opt *op;
 
-	op = (struct opt *)malloc(sizeof (struct opt));
-	memset(op, 0, sizeof(*op));
+	/*
+	 * Ignore inclusions listed explicitly for configuration files.
+	 */
+	if (eq(name, OPT_AUTOGEN)) {
+		incignore = 1;
+		return;
+	}
+
+	if (findopt(list, name)) {
+		printf("WARNING: duplicate option `%s' encountered.\n", name);
+		return;
+	}
+
+	op = (struct opt *)calloc(1, sizeof (struct opt));
 	op->op_name = name;
 	op->op_ownfile = 0;
 	op->op_value = value;
 	SLIST_INSERT_HEAD(list, op, op_next);
 }
 
+/*
+ * Remove an option from the list of options.
+ */
 static void
-rmopt(struct opt_head *list, char *name)
+rmopt_schedule(struct opt_head *list, char *name)
 {
-	struct opt *op, *rmop;
+	struct opt *op;
 
-	SLIST_FOREACH(op, list, op_next) {
-		if (eq(op->op_name, name)) {
-			rmop = op;
-			op = SLIST_NEXT(op, op_next);
-			SLIST_REMOVE(list, rmop, opt, op_next);
-			free(rmop->op_name);
-			if (rmop->op_value != NULL)
-				free(rmop->op_value);
-			free(rmop);
-			if (op == NULL)
-				break;
-		}
+	op = findopt(list, name);
+	if (op != NULL) {
+		SLIST_REMOVE(list, op, opt, op_next);
+		free(op->op_name);
+		free(op);
 	}
 }
