@@ -26010,6 +26010,9 @@ sys/geom/geom_sunlabel_enc.c -text
 sys/geom/geom_vfs.c -text
 sys/geom/geom_vfs.h -text
 sys/geom/geom_vol_ffs.c -text
+sys/geom/journal/g_journal.c -text
+sys/geom/journal/g_journal.h -text
+sys/geom/journal/g_journal_ufs.c -text
 sys/geom/label/g_label.c -text
 sys/geom/label/g_label.h -text
 sys/geom/label/g_label_ext2fs.c -text
