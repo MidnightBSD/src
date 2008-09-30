@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/vinum/geom_vinum.h,v 1.9.2.1 2005/11/26 11:06:11 le Exp $
+ * $FreeBSD: src/sys/geom/vinum/geom_vinum.h,v 1.13 2007/04/12 17:54:35 le Exp $
  */
 
 #ifndef	_GEOM_VINUM_H_
@@ -57,6 +57,7 @@ void	gv_rename(struct g_geom *, struct gctl_req *);
 
 /* geom_vinum_rm.c */
 void	gv_remove(struct g_geom *, struct gctl_req *);
+int	gv_resetconfig(struct g_geom *, struct gctl_req *);
 int	gv_rm_sd(struct gv_softc *sc, struct gctl_req *req,
 	    struct gv_sd *s, int flags);
 
@@ -71,6 +72,7 @@ void	gv_update_vol_state(struct gv_volume *);
 
 /* geom_vinum_subr.c */
 void	gv_adjust_freespace(struct gv_sd *, off_t);
+void	gv_free_sd(struct gv_sd *);
 struct g_geom	*find_vinum_geom(void);
 struct gv_drive	*gv_find_drive(struct gv_softc *, char *);
 struct gv_plex	*gv_find_plex(struct gv_softc *, char *);
@@ -89,5 +91,7 @@ int	gv_sd_to_drive(struct gv_softc *, struct gv_drive *, struct gv_sd *,
 int	gv_sd_to_plex(struct gv_plex *, struct gv_sd *, int);
 void	gv_update_plex_config(struct gv_plex *);
 void	gv_update_vol_size(struct gv_volume *, off_t);
+off_t	gv_vol_size(struct gv_volume *);
+off_t	gv_plex_size(struct gv_plex *);
 
 #endif /* !_GEOM_VINUM_H_ */

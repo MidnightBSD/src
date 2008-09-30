@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_io.c,v 1.64.2.3 2006/09/03 16:28:40 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_io.c,v 1.75 2007/05/05 16:35:22 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_io.c,v 1.64.2.3 2006/09/03 16:28:40 pjd Ex
 #include <sys/bio.h>
 #include <sys/ktr.h>
 #include <sys/proc.h>
+#include <sys/stack.h>
 
 #include <sys/errno.h>
 #include <geom/geom.h>
@@ -113,6 +114,15 @@ g_new_bio(void)
 	struct bio *bp;
 
 	bp = uma_zalloc(biozone, M_NOWAIT | M_ZERO);
+#ifdef KTR
+	if (KTR_COMPILE & KTR_GEOM) {
+		struct stack st;
+
+		CTR1(KTR_GEOM, "g_new_bio(): %p", bp);
+		stack_save(&st);
+		CTRSTACK(KTR_GEOM, &st, 3, 0);
+	}
+#endif
 	return (bp);
 }
 
@@ -122,13 +132,30 @@ g_alloc_bio(void)
 	struct bio *bp;
 
 	bp = uma_zalloc(biozone, M_WAITOK | M_ZERO);
+#ifdef KTR
+	if (KTR_COMPILE & KTR_GEOM) {
+		struct stack st;
+
+		CTR1(KTR_GEOM, "g_alloc_bio(): %p", bp);
+		stack_save(&st);
+		CTRSTACK(KTR_GEOM, &st, 3, 0);
+	}
+#endif
 	return (bp);
 }
 
 void
 g_destroy_bio(struct bio *bp)
 {
+#ifdef KTR
+	if (KTR_COMPILE & KTR_GEOM) {
+		struct stack st;
 
+		CTR1(KTR_GEOM, "g_destroy_bio(): %p", bp);
+		stack_save(&st);
+		CTRSTACK(KTR_GEOM, &st, 3, 0);
+	}
+#endif
 	uma_zfree(biozone, bp);
 }
 
@@ -147,6 +174,15 @@ g_clone_bio(struct bio *bp)
 		bp2->bio_attribute = bp->bio_attribute;
 		bp->bio_children++;
 	}
+#ifdef KTR
+	if (KTR_COMPILE & KTR_GEOM) {
+		struct stack st;
+
+		CTR2(KTR_GEOM, "g_clone_bio(%p): %p", bp, bp2);
+		stack_save(&st);
+		CTRSTACK(KTR_GEOM, &st, 3, 0);
+	}
+#endif
 	return(bp2);
 }
 
@@ -163,6 +199,15 @@ g_duplicate_bio(struct bio *bp)
 	bp2->bio_data = bp->bio_data;
 	bp2->bio_attribute = bp->bio_attribute;
 	bp->bio_children++;
+#ifdef KTR
+	if (KTR_COMPILE & KTR_GEOM) {
+		struct stack st;
+
+		CTR2(KTR_GEOM, "g_duplicate_bio(%p): %p", bp, bp2);
+		stack_save(&st);
+		CTRSTACK(KTR_GEOM, &st, 3, 0);
+	}
+#endif
 	return(bp2);
 }
 
@@ -199,6 +244,26 @@ g_io_getattr(const char *attr, struct g_consumer *cp, int *len, void *ptr)
 	return (error);
 }
 
+int
+g_io_flush(struct g_consumer *cp)
+{
+	struct bio *bp;
+	int error;
+
+	g_trace(G_T_BIO, "bio_flush(%s)", cp->provider->name);
+	bp = g_alloc_bio();
+	bp->bio_cmd = BIO_FLUSH;
+	bp->bio_done = NULL;
+	bp->bio_attribute = NULL;
+	bp->bio_offset = cp->provider->mediasize;
+	bp->bio_length = 0;
+	bp->bio_data = NULL;
+	g_io_request(bp, cp);
+	error = biowait(bp, "gflush");
+	g_destroy_bio(bp);
+	return (error);
+}
+
 static int
 g_io_check(struct bio *bp)
 {
@@ -217,6 +282,7 @@ g_io_check(struct bio *bp)
 		break;
 	case BIO_WRITE:
 	case BIO_DELETE:
+	case BIO_FLUSH:
 		if (cp->acw == 0)
 			return (EPERM);
 		break;
@@ -259,10 +325,33 @@ g_io_request(struct bio *bp, struct g_consumer *cp)
 
 	KASSERT(cp != NULL, ("NULL cp in g_io_request"));
 	KASSERT(bp != NULL, ("NULL bp in g_io_request"));
-	KASSERT(bp->bio_data != NULL, ("NULL bp->data in g_io_request"));
 	pp = cp->provider;
 	KASSERT(pp != NULL, ("consumer not attached in g_io_request"));
+#ifdef DIAGNOSTIC
+	KASSERT(bp->bio_driver1 == NULL,
+	    ("bio_driver1 used by the consumer (geom %s)", cp->geom->name));
+	KASSERT(bp->bio_driver2 == NULL,
+	    ("bio_driver2 used by the consumer (geom %s)", cp->geom->name));
+	KASSERT(bp->bio_pflags == 0,
+	    ("bio_pflags used by the consumer (geom %s)", cp->geom->name));
+	/*
+	 * Remember consumer's private fields, so we can detect if they were
+	 * modified by the provider.
+	 */
+	bp->_bio_caller1 = bp->bio_caller1;
+	bp->_bio_caller2 = bp->bio_caller2;
+	bp->_bio_cflags = bp->bio_cflags;
+#endif
 
+	if (bp->bio_cmd & (BIO_READ|BIO_WRITE|BIO_GETATTR)) {
+		KASSERT(bp->bio_data != NULL,
+		    ("NULL bp->data in g_io_request(cmd=%hhu)", bp->bio_cmd));
+	}
+	if (bp->bio_cmd & (BIO_DELETE|BIO_FLUSH)) {
+		KASSERT(bp->bio_data == NULL,
+		    ("non-NULL bp->data in g_io_request(cmd=%hhu)",
+		    bp->bio_cmd));
+	}
 	if (bp->bio_cmd & (BIO_READ|BIO_WRITE|BIO_DELETE)) {
 		KASSERT(bp->bio_offset % cp->provider->sectorsize == 0,
 		    ("wrong offset %jd for sectorsize %u",
@@ -316,6 +405,14 @@ g_io_deliver(struct bio *bp, int error)
 	KASSERT(bp != NULL, ("NULL bp in g_io_deliver"));
 	pp = bp->bio_to;
 	KASSERT(pp != NULL, ("NULL bio_to in g_io_deliver"));
+#ifdef DIAGNOSTIC
+	KASSERT(bp->bio_caller1 == bp->_bio_caller1,
+	    ("bio_caller1 used by the provider %s", pp->name));
+	KASSERT(bp->bio_caller2 == bp->_bio_caller2,
+	    ("bio_caller2 used by the provider %s", pp->name));
+	KASSERT(bp->bio_cflags == bp->_bio_cflags,
+	    ("bio_cflags used by the provider %s", pp->name));
+#endif
 	cp = bp->bio_from;
 	if (cp == NULL) {
 		bp->bio_error = error;
@@ -395,7 +492,7 @@ g_io_schedule_down(struct thread *tp __unused)
 		g_bioq_unlock(&g_bio_run_down);
 		if (pace > 0) {
 			CTR1(KTR_GEOM, "g_down pacing self (pace %d)", pace);
-			msleep(&error, NULL, PRIBIO, "g_down", hz/10);
+			pause("g_down", hz/10);
 			pace--;
 		}
 		error = g_io_check(bp);
@@ -549,6 +646,28 @@ g_write_data(struct g_consumer *cp, off_t offset, void *ptr, off_t length)
 	return (error);
 }
 
+int
+g_delete_data(struct g_consumer *cp, off_t offset, off_t length)
+{
+	struct bio *bp;
+	int error;
+
+	KASSERT(length > 0 && length >= cp->provider->sectorsize &&
+	    length <= MAXPHYS, ("g_delete_data(): invalid length %jd",
+	    (intmax_t)length));
+
+	bp = g_alloc_bio();
+	bp->bio_cmd = BIO_DELETE;
+	bp->bio_done = NULL;
+	bp->bio_offset = offset;
+	bp->bio_length = length;
+	bp->bio_data = NULL;
+	g_io_request(bp, cp);
+	error = biowait(bp, "gdelete");
+	g_destroy_bio(bp);
+	return (error);
+}
+
 void
 g_print_bio(struct bio *bp)
 {
@@ -563,6 +682,10 @@ g_print_bio(struct bio *bp)
 	case BIO_GETATTR:
 		cmd = "GETATTR";
 		printf("%s[%s(attr=%s)]", pname, cmd, bp->bio_attribute);
+		return;
+	case BIO_FLUSH:
+		cmd = "FLUSH";
+		printf("%s[%s]", pname, cmd);
 		return;
 	case BIO_READ:
 		cmd = "READ";

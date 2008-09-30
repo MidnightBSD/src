@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_event.c,v 1.53.2.2 2006/09/19 11:07:59 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_event.c,v 1.56 2007/09/27 20:18:34 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/malloc.h>
@@ -144,6 +144,8 @@ g_orphan_register(struct g_provider *pp)
 	g_topology_assert();
 	G_VALID_PROVIDER(pp);
 	g_trace(G_T_TOPOLOGY, "g_orphan_register(%s)", pp->name);
+
+	g_cancel_event(pp);
 
 	wf = pp->flags & G_PF_WITHER;
 	pp->flags &= ~G_PF_WITHER;

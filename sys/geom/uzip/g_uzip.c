@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/uzip/g_uzip.c,v 1.4.2.3 2006/01/25 15:55:27 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/uzip/g_uzip.c,v 1.12 2007/04/24 06:30:06 simokawa Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: src/sys/geom/uzip/g_uzip.c,v 1.4.2.3 2006/01/25 15:55:27 pjd
 #define DPRINTF(a)
 #endif
 
-MALLOC_DEFINE(M_GEOM_UZIP, "GEOM UZIP", "GEOM UZIP data structures");
+MALLOC_DEFINE(M_GEOM_UZIP, "geom_uzip", "GEOM UZIP data structures");
 
 #define UZIP_CLASS_NAME	"UZIP"
 
@@ -162,6 +162,13 @@ g_uzip_done(struct bio *bp)
 		ulen = MIN(sc->blksz - uoff, bp2->bio_length - upos);
 		len = sc->offsets[i + 1] - sc->offsets[i];
 
+		if (len == 0) {
+			/* All zero block: no cache update */
+			bzero(bp2->bio_data + upos, ulen);
+			upos += ulen;
+			bp2->bio_completed += ulen;
+			continue;
+		}
 		zs.next_in = bp->bio_data + pos;
 		zs.avail_in = len;
 		zs.next_out = sc->last_buf;
@@ -453,7 +460,7 @@ g_uzip_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	g_topology_lock();
 	pp2 = g_new_providerf(gp, "%s", gp->name);
 	pp2->sectorsize = 512;
-	pp2->mediasize = sc->nblocks * sc->blksz;
+	pp2->mediasize = (off_t)sc->nblocks * sc->blksz;
         pp2->flags = pp->flags & G_PF_CANDELETE;
         if (pp->stripesize > 0) {
                 pp2->stripesize = pp->stripesize;
@@ -522,5 +529,5 @@ static struct g_class g_uzip_class = {
 	.spoiled = g_uzip_spoiled,
 };
 
-DECLARE_GEOM_CLASS(g_uzip_class, geom_uzip);
-MODULE_DEPEND(geom_uzip, zlib, 1, 1, 1);
+DECLARE_GEOM_CLASS(g_uzip_class, g_uzip);
+MODULE_DEPEND(g_uzip, zlib, 1, 1, 1);

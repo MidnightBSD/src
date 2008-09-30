@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3_ctl.c,v 1.11.2.4 2006/09/19 11:42:42 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/raid3/g_raid3_ctl.c,v 1.21 2006/11/01 22:51:49 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,8 +98,9 @@ g_raid3_ctl_configure(struct gctl_req *req, struct g_class *mp)
 	struct g_raid3_softc *sc;
 	struct g_raid3_disk *disk;
 	const char *name;
-	int *nargs, do_sync = 0;
+	int *nargs, do_sync = 0, dirty = 1;
 	int *autosync, *noautosync;
+	int *failsync, *nofailsync;
 	int *round_robin, *noround_robin;
 	int *verify, *noverify;
 	u_int n;
@@ -126,6 +127,21 @@ g_raid3_ctl_configure(struct gctl_req *req, struct g_class *mp)
 	if (*autosync && *noautosync) {
 		gctl_error(req, "'%s' and '%s' specified.", "autosync",
 		    "noautosync");
+		return;
+	}
+	failsync = gctl_get_paraml(req, "failsync", sizeof(*failsync));
+	if (failsync == NULL) {
+		gctl_error(req, "No '%s' argument.", "failsync");
+		return;
+	}
+	nofailsync = gctl_get_paraml(req, "nofailsync", sizeof(*nofailsync));
+	if (nofailsync == NULL) {
+		gctl_error(req, "No '%s' argument.", "nofailsync");
+		return;
+	}
+	if (*failsync && *nofailsync) {
+		gctl_error(req, "'%s' and '%s' specified.", "failsync",
+		    "nofailsync");
 		return;
 	}
 	round_robin = gctl_get_paraml(req, "round_robin", sizeof(*round_robin));
@@ -159,8 +175,8 @@ g_raid3_ctl_configure(struct gctl_req *req, struct g_class *mp)
 		    "noverify");
 		return;
 	}
-	if (!*autosync && !*noautosync && !*round_robin && !*noround_robin &&
-	    !*verify && !*noverify) {
+	if (!*autosync && !*noautosync && !*failsync && !*nofailsync &&
+	    !*round_robin && !*noround_robin && !*verify && !*noverify) {
 		gctl_error(req, "Nothing has changed.");
 		return;
 	}
@@ -187,6 +203,15 @@ g_raid3_ctl_configure(struct gctl_req *req, struct g_class *mp)
 	} else {
 		if (*noautosync)
 			sc->sc_flags |= G_RAID3_DEVICE_FLAG_NOAUTOSYNC;
+	}
+	if ((sc->sc_flags & G_RAID3_DEVICE_FLAG_NOFAILSYNC) != 0) {
+		if (*failsync)
+			sc->sc_flags &= ~G_RAID3_DEVICE_FLAG_NOFAILSYNC;
+	} else {
+		if (*nofailsync) {
+			sc->sc_flags |= G_RAID3_DEVICE_FLAG_NOFAILSYNC;
+			dirty = 0;
+		}
 	}
 	if ((sc->sc_flags & G_RAID3_DEVICE_FLAG_VERIFY) != 0) {
 		if (*noverify)
@@ -215,6 +240,8 @@ g_raid3_ctl_configure(struct gctl_req *req, struct g_class *mp)
 			if (disk->d_state == G_RAID3_DISK_STATE_SYNCHRONIZING)
 				disk->d_flags &= ~G_RAID3_DISK_FLAG_FORCE_SYNC;
 		}
+		if (!dirty)
+			disk->d_flags &= ~G_RAID3_DISK_FLAG_DIRTY;
 		g_raid3_update_metadata(disk);
 		if (do_sync) {
 			if (disk->d_state == G_RAID3_DISK_STATE_STALE) {
@@ -471,11 +498,11 @@ g_raid3_ctl_insert(struct gctl_req *req, struct g_class *mp)
 	g_raid3_fill_metadata(disk, &md);
 	sx_xunlock(&sc->sc_lock);
 	md.md_syncid = 0;
-        md.md_dflags = 0;
+	md.md_dflags = 0;
 	if (*hardcode)
-                strlcpy(md.md_provider, pp->name, sizeof(md.md_provider));
-        else
-                bzero(md.md_provider, sizeof(md.md_provider));
+		strlcpy(md.md_provider, pp->name, sizeof(md.md_provider));
+	else
+		bzero(md.md_provider, sizeof(md.md_provider));
 	md.md_provsize = pp->mediasize;
 	sector = g_malloc(pp->sectorsize, M_WAITOK);
 	raid3_metadata_encode(&md, sector);

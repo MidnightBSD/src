@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.13.2.4 2006/03/01 17:53:57 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.21 2006/08/12 15:30:24 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/geom/label/g_label.c,v 1.13.2.4 2006/03/01 17:53:57 
 #include <sys/bio.h>
 #include <sys/sysctl.h>
 #include <sys/malloc.h>
+#include <sys/libkern.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
 #include <geom/label/g_label.h>
@@ -116,6 +117,23 @@ g_label_spoiled(struct g_consumer *cp)
 	g_slice_spoiled(cp);
 }
 
+static int
+g_label_is_name_ok(const char *label)
+{
+	const char *s;
+
+	/* Check is the label starts from ../ */
+	if (strncmp(label, "../", 3) == 0)
+		return (0);
+	/* Check is the label contains /../ */
+	if (strstr(label, "/../") != NULL)
+		return (0);
+	/* Check is the label ends at ../ */
+	if ((s = strstr(label, "/..")) != NULL && s[3] == '\0')
+		return (0);
+	return (1);
+}
+
 static struct g_geom *
 g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
     const char *label, const char *dir, off_t mediasize)
@@ -127,6 +145,12 @@ g_label_create(struct gctl_req *req, struct g_class *mp, struct g_provider *pp,
 
 	g_topology_assert();
 
+	if (!g_label_is_name_ok(label)) {
+		G_LABEL_DEBUG(0, "%s contains suspicious label, skipping.",
+		    pp->name);
+		G_LABEL_DEBUG(1, "%s suspicious label is: %s", pp->name, label);
+		return (NULL);
+	}
 	gp = NULL;
 	cp = NULL;
 	snprintf(name, sizeof(name), "%s/%s", dir, label);

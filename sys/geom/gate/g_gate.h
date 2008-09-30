@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/gate/g_gate.h,v 1.7 2005/07/10 21:10:20 pjd Exp $
+ * $FreeBSD: src/sys/geom/gate/g_gate.h,v 1.10 2006/09/08 10:20:44 pjd Exp $
  */
 
 #ifndef _G_GATE_H_
@@ -68,9 +68,9 @@
  */
 struct g_gate_softc {
 	int			 sc_unit;		/* P: (read-only) */
-	int16_t			 sc_ref;		/* P: g_gate_list_mtx */
+	int			 sc_ref;		/* P: g_gate_list_mtx */
 	struct g_provider	*sc_provider;		/* P: (read-only) */
-	uint32_t		 sc_flags;		/* P: (read-only) */
+	uint32_t		 sc_flags;		/* P: sc_queue_mtx */
 
 	struct bio_queue_head	 sc_inqueue;		/* P: sc_queue_mtx */
 	struct bio_queue_head	 sc_outqueue;		/* P: sc_queue_mtx */

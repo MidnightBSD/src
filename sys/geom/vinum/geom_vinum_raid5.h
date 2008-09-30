@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/vinum/geom_vinum_raid5.h,v 1.6 2005/01/06 18:27:30 imp Exp $
+ * $FreeBSD: src/sys/geom/vinum/geom_vinum_raid5.h,v 1.7 2006/08/17 22:50:33 imp Exp $
  */
 
 #ifndef _GEOM_VINUM_RAID5_H_
@@ -45,7 +45,7 @@
 				pbp = pbp->bio_caller1;		\
 			pbp->bio_caller1 = cbp;			\
 		}						\
-	} while (0);
+	} while (0)
 
 struct gv_raid5_packet {
 	caddr_t	data;		/* Data buffer of this sub-request- */

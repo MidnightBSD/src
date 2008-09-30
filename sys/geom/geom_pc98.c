@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_pc98.c,v 1.53.2.2 2005/12/29 05:59:51 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_pc98.c,v 1.56 2005/11/30 22:15:00 sobomax Exp $");
 
 #include <sys/param.h>
 #include <sys/endian.h>

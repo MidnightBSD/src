@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_rm.c,v 1.6.2.3 2005/11/26 11:06:11 le Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_rm.c,v 1.13 2007/04/12 17:54:35 le Exp $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
@@ -38,7 +38,6 @@ __FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_rm.c,v 1.6.2.3 2005/11/26 11:0
 #include <geom/vinum/geom_vinum.h>
 #include <geom/vinum/geom_vinum_share.h>
 
-static void	gv_free_sd(struct gv_sd *);
 static int	gv_rm_drive(struct gv_softc *, struct gctl_req *,
 		    struct gv_drive *, int);
 static int	gv_rm_plex(struct gv_softc *, struct gctl_req *,
@@ -125,6 +124,45 @@ gv_remove(struct g_geom *gp, struct gctl_req *req)
 	gv_save_config_all(sc);
 }
 
+/* Resets configuration */
+int
+gv_resetconfig(struct g_geom *gp, struct gctl_req *req)
+{
+	struct gv_softc *sc;
+	struct gv_drive *d, *d2;
+	struct gv_volume *v, *v2;
+	struct gv_plex *p, *p2;
+	struct gv_sd *s, *s2;
+	int flags;
+
+	d = NULL;
+	d2 = NULL;
+	p = NULL;
+	p2 = NULL;
+	s = NULL;
+	s2 = NULL;
+	flags = GV_FLAG_R;
+	sc = gp->softc;
+	/* First loop through to make sure no volumes are up */
+        LIST_FOREACH_SAFE(v, &sc->volumes, volume, v2) {
+		if (gv_is_open(v->geom)) {
+			gctl_error(req, "volume '%s' is busy", v->name);
+			return (-1);
+		}
+	}
+	/* Then if not, we remove everything. */
+	LIST_FOREACH_SAFE(v, &sc->volumes, volume, v2)
+		gv_rm_vol(sc, req, v, flags);
+	LIST_FOREACH_SAFE(p, &sc->plexes, plex, p2)
+		gv_rm_plex(sc, req, p, flags);
+	LIST_FOREACH_SAFE(s, &sc->subdisks, sd, s2)
+		gv_rm_sd(sc, req, s, flags);
+	LIST_FOREACH_SAFE(d, &sc->drives, drive, d2)
+		gv_rm_drive(sc, req, d, flags);
+	gv_save_config_all(sc);
+	return (0);
+}
+
 /* Remove a volume. */
 static int
 gv_rm_vol(struct gv_softc *sc, struct gctl_req *req, struct gv_volume *v, int flags)
@@ -178,6 +216,7 @@ static int
 gv_rm_plex(struct gv_softc *sc, struct gctl_req *req, struct gv_plex *p, int flags)
 {
 	struct g_geom *gp;
+	struct gv_volume *v;
 	struct gv_sd *s, *s2;
 	int err;
 
@@ -207,7 +246,6 @@ gv_rm_plex(struct gv_softc *sc, struct gctl_req *req, struct gv_plex *p, int fla
 
 	/* Remove the subdisks our plex has. */
 	LIST_FOREACH_SAFE(s, &p->subdisks, in_plex, s2) {
-		p->sdcount--;
 #if 0
 		LIST_REMOVE(s, in_plex);
 		s->plex_sc = NULL;
@@ -218,12 +256,15 @@ gv_rm_plex(struct gv_softc *sc, struct gctl_req *req, struct gv_plex *p, int fla
 			return (err);
 	}
 
+	v = p->vol_sc;
 	/* Clean up and let our geom fade away. */
 	LIST_REMOVE(p, plex);
 	if (p->vol_sc != NULL) {
 		p->vol_sc->plexcount--;
 		LIST_REMOVE(p, in_volume);
 		p->vol_sc = NULL;
+		/* Correctly update the volume size. */
+		gv_update_vol_size(v, gv_vol_size(v));
 	}
 
 	gv_kill_plex_thread(p);
@@ -242,14 +283,28 @@ int
 gv_rm_sd(struct gv_softc *sc, struct gctl_req *req, struct gv_sd *s, int flags)
 {
 	struct g_provider *pp;
+	struct gv_plex *p;
+	struct gv_volume *v;
 
 	KASSERT(s != NULL, ("gv_rm_sd: NULL s"));
 
 	pp = s->provider;
+	p = s->plex_sc;
+	v = NULL;
 
 	/* Clean up. */
-	if (s->plex_sc)
+	if (p != NULL) {
 		LIST_REMOVE(s, in_plex);
+
+		p->sdcount--;
+		/* Update the plexsize. */
+		p->size = gv_plex_size(p);
+		v = p->vol_sc;
+		if (v != NULL) {
+			/* Update the size of our plex' volume. */
+			gv_update_vol_size(v, gv_vol_size(v));
+		}
+	}
 	if (s->drive_sc)
 		LIST_REMOVE(s, from_drive);
 	LIST_REMOVE(s, sd);
@@ -341,61 +396,4 @@ gv_rm_drive(struct gv_softc *sc, struct gctl_req *req, struct gv_drive *d, int f
 	g_wither_geom(gp, ENXIO);
 
 	return (err);
-}
-
-static void
-gv_free_sd(struct gv_sd *s)
-{
-	struct gv_drive *d;
-	struct gv_freelist *fl, *fl2;
-
-	KASSERT(s != NULL, ("gv_free_sd: NULL s"));
-
-	d = s->drive_sc;
-	if (d == NULL)
-		return;
-
-	/*
-	 * First, find the free slot that's immediately before or after this
-	 * subdisk.
-	 */
-	fl = NULL;
-	LIST_FOREACH(fl, &d->freelist, freelist) {
-		if (fl->offset == s->drive_offset + s->size)
-			break;
-		if (fl->offset + fl->size == s->drive_offset)
-			break;
-	}
-
-	/* If there is no free slot behind this subdisk, so create one. */
-	if (fl == NULL) {
-
-		fl = g_malloc(sizeof(*fl), M_WAITOK | M_ZERO);
-		fl->size = s->size;
-		fl->offset = s->drive_offset;
-
-		if (d->freelist_entries == 0) {
-			LIST_INSERT_HEAD(&d->freelist, fl, freelist);
-		} else {
-			LIST_FOREACH(fl2, &d->freelist, freelist) {
-				if (fl->offset < fl2->offset) {
-					LIST_INSERT_BEFORE(fl2, fl, freelist);
-					break;
-				} else if (LIST_NEXT(fl2, freelist) == NULL) {
-					LIST_INSERT_AFTER(fl2, fl, freelist);
-					break;
-				}
-			}
-		}
-
-		d->freelist_entries++;
-
-	/* Expand the free slot we just found. */
-	} else {
-		fl->size += s->size;
-		if (fl->offset > s->drive_offset)
-			fl->offset = s->drive_offset;
-	}
-
-	d->avail += s->size;
 }

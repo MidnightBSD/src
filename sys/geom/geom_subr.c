@@ -34,7 +34,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.87.2.1 2005/11/26 22:55:20 jdp Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.91 2007/05/05 16:33:44 pjd Exp $");
+
+#include "opt_ddb.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,6 +54,10 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_subr.c,v 1.87.2.1 2005/11/26 22:55:20 jdp 
 #include <geom/geom.h>
 #include <geom/geom_int.h>
 #include <machine/stdarg.h>
+
+#ifdef DDB
+#include <ddb/ddb.h>
+#endif
 
 struct class_list_head g_classes = LIST_HEAD_INITIALIZER(g_classes);
 static struct g_tailq_head geoms = TAILQ_HEAD_INITIALIZER(geoms);
@@ -315,6 +321,18 @@ g_wither_geom(struct g_geom *gp, int error)
 				g_orphan_provider(pp, error);
 	}
 	g_do_wither();
+}
+
+/*
+ * Convenience function to destroy a particular provider.
+ */
+void
+g_wither_provider(struct g_provider *pp, int error)
+{
+
+	pp->flags |= G_PF_WITHER;
+	if (!(pp->flags & G_PF_ORPHAN))
+		g_orphan_provider(pp, error);
 }
 
 /*
@@ -772,20 +790,35 @@ g_handleattr_off_t(struct bio *bp, const char *attribute, off_t val)
 }
 
 int
+g_handleattr_str(struct bio *bp, const char *attribute, char *str)
+{
+
+	return (g_handleattr(bp, attribute, str, 0));
+}
+
+int
 g_handleattr(struct bio *bp, const char *attribute, void *val, int len)
 {
-	int error;
+	int error = 0;
 
 	if (strcmp(bp->bio_attribute, attribute))
 		return (0);
-	if (bp->bio_length != len) {
-		printf("bio_length %jd len %d -> EFAULT\n",
-		    (intmax_t)bp->bio_length, len);
-		error = EFAULT;
-	} else {
-		error = 0;
+	if (len == 0) {
+		bzero(bp->bio_data, bp->bio_length);
+		if (strlcpy(bp->bio_data, val, bp->bio_length) >=
+		    bp->bio_length) {
+			printf("%s: %s bio_length %jd len %zu -> EFAULT\n",
+			    __func__, bp->bio_to->name,
+			    (intmax_t)bp->bio_length, strlen(val));
+			error = EFAULT;
+		}
+	} else if (bp->bio_length == len) {
 		bcopy(val, bp->bio_data, len);
 		bp->bio_completed = len;
+	} else {
+		printf("%s: %s bio_length %jd len %d -> EFAULT\n", __func__,
+		    bp->bio_to->name, (intmax_t)bp->bio_length, len);
+		error = EFAULT;
 	}
 	g_io_deliver(bp, error);
 	return (1);
@@ -908,7 +941,7 @@ g_getattr__(const char *attr, struct g_consumer *cp, void *var, int len)
 	return (0);
 }
 
-#ifdef DIAGNOSTIC
+#if defined(DIAGNOSTIC) || defined(DDB)
 /*
  * This function walks (topologically unsafely) the mesh and return a
  * non-zero integer if it finds the argument pointer is an object.
@@ -942,3 +975,208 @@ g_valid_obj(void const *ptr)
 	return(0);
 }
 #endif
+
+#ifdef DDB
+
+#define	gprintf(...)	do {						\
+	printf("%*s", indent, "");					\
+	printf(__VA_ARGS__);						\
+} while (0)
+#define	gprintln(...)	do {						\
+	gprintf(__VA_ARGS__);						\
+	printf("\n");							\
+} while (0)
+
+#define	ADDFLAG(obj, flag, sflag)	do {				\
+	if ((obj)->flags & (flag)) {					\
+		if (comma)						\
+			strlcat(str, ",", size);			\
+		strlcat(str, (sflag), size);				\
+		comma = 1;						\
+	}								\
+} while (0)
+
+static char *
+provider_flags_to_string(struct g_provider *pp, char *str, size_t size)
+{
+	int comma = 0;
+
+	bzero(str, size);
+	if (pp->flags == 0) {
+		strlcpy(str, "NONE", size);
+		return (str);
+	}
+	ADDFLAG(pp, G_PF_CANDELETE, "G_PF_CANDELETE");
+	ADDFLAG(pp, G_PF_WITHER, "G_PF_WITHER");
+	ADDFLAG(pp, G_PF_ORPHAN, "G_PF_ORPHAN");
+	return (str);
+}
+
+static char *
+geom_flags_to_string(struct g_geom *gp, char *str, size_t size)
+{
+	int comma = 0;
+
+	bzero(str, size);
+	if (gp->flags == 0) {
+		strlcpy(str, "NONE", size);
+		return (str);
+	}
+	ADDFLAG(gp, G_GEOM_WITHER, "G_GEOM_WITHER");
+	return (str);
+}
+static void
+db_show_geom_consumer(int indent, struct g_consumer *cp)
+{
+
+	if (indent == 0) {
+		gprintln("consumer: %p", cp);
+		gprintln("  class:    %s (%p)", cp->geom->class->name,
+		    cp->geom->class);
+		gprintln("  geom:     %s (%p)", cp->geom->name, cp->geom);
+		if (cp->provider == NULL)
+			gprintln("  provider: none");
+		else {
+			gprintln("  provider: %s (%p)", cp->provider->name,
+			    cp->provider);
+		}
+		gprintln("  access:   r%dw%de%d", cp->acr, cp->acw, cp->ace);
+		gprintln("  spoiled:  %d", cp->spoiled);
+		gprintln("  nstart:   %u", cp->nstart);
+		gprintln("  nend:     %u", cp->nend);
+	} else {
+		gprintf("consumer: %p (%s), access=r%dw%de%d", cp,
+		    cp->provider != NULL ? cp->provider->name : "none",
+		    cp->acr, cp->acw, cp->ace);
+		if (cp->spoiled)
+			printf(", spoiled=%d", cp->spoiled);
+		printf("\n");
+	}
+}
+
+static void
+db_show_geom_provider(int indent, struct g_provider *pp)
+{
+	struct g_consumer *cp;
+	char flags[64];
+
+	if (indent == 0) {
+		gprintln("provider: %s (%p)", pp->name, pp);
+		gprintln("  class:        %s (%p)", pp->geom->class->name,
+		    pp->geom->class);
+		gprintln("  geom:         %s (%p)", pp->geom->name, pp->geom);
+		gprintln("  mediasize:    %jd", (intmax_t)pp->mediasize);
+		gprintln("  sectorsize:   %u", pp->sectorsize);
+		gprintln("  stripesize:   %u", pp->stripesize);
+		gprintln("  stripeoffset: %u", pp->stripeoffset);
+		gprintln("  access:       r%dw%de%d", pp->acr, pp->acw,
+		    pp->ace);
+		gprintln("  flags:        %s (0x%04x)",
+		    provider_flags_to_string(pp, flags, sizeof(flags)),
+		    pp->flags);
+		gprintln("  error:        %d", pp->error);
+		gprintln("  nstart:       %u", pp->nstart);
+		gprintln("  nend:         %u", pp->nend);
+		if (LIST_EMPTY(&pp->consumers))
+			gprintln("  consumers:    none");
+	} else {
+		gprintf("provider: %s (%p), access=r%dw%de%d",
+		    pp->name, pp, pp->acr, pp->acw, pp->ace);
+		if (pp->flags != 0) {
+			printf(", flags=%s (0x%04x)",
+			    provider_flags_to_string(pp, flags, sizeof(flags)),
+			    pp->flags);
+		}
+		printf("\n");
+	}
+	if (!LIST_EMPTY(&pp->consumers)) {
+		LIST_FOREACH(cp, &pp->consumers, consumers)
+			db_show_geom_consumer(indent + 2, cp);
+	}
+}
+
+static void
+db_show_geom_geom(int indent, struct g_geom *gp)
+{
+	struct g_provider *pp;
+	struct g_consumer *cp;
+	char flags[64];
+
+	if (indent == 0) {
+		gprintln("geom: %s (%p)", gp->name, gp);
+		gprintln("  class:     %s (%p)", gp->class->name, gp->class);
+		gprintln("  flags:     %s (0x%04x)",
+		    geom_flags_to_string(gp, flags, sizeof(flags)), gp->flags);
+		gprintln("  rank:      %d", gp->rank);
+		if (LIST_EMPTY(&gp->provider))
+			gprintln("  providers: none");
+		if (LIST_EMPTY(&gp->consumer))
+			gprintln("  consumers: none");
+	} else {
+		gprintf("geom: %s (%p), rank=%d", gp->name, gp, gp->rank);
+		if (gp->flags != 0) {
+			printf(", flags=%s (0x%04x)",
+			    geom_flags_to_string(gp, flags, sizeof(flags)),
+			    gp->flags);
+		}
+		printf("\n");
+	}
+	if (!LIST_EMPTY(&gp->provider)) {
+		LIST_FOREACH(pp, &gp->provider, provider)
+			db_show_geom_provider(indent + 2, pp);
+	}
+	if (!LIST_EMPTY(&gp->consumer)) {
+		LIST_FOREACH(cp, &gp->consumer, consumer)
+			db_show_geom_consumer(indent + 2, cp);
+	}
+}
+
+static void
+db_show_geom_class(struct g_class *mp)
+{
+	struct g_geom *gp;
+
+	printf("class: %s (%p)\n", mp->name, mp);
+	LIST_FOREACH(gp, &mp->geom, geom)
+		db_show_geom_geom(2, gp);
+}
+
+/*
+ * Print the GEOM topology or the given object.
+ */
+DB_SHOW_COMMAND(geom, db_show_geom)
+{
+	struct g_class *mp;
+
+	if (!have_addr) {
+		/* No address given, print the entire topology. */
+		LIST_FOREACH(mp, &g_classes, class) {
+			db_show_geom_class(mp);
+			printf("\n");
+		}
+	} else {
+		switch (g_valid_obj((void *)addr)) {
+		case 1:
+			db_show_geom_class((struct g_class *)addr);
+			break;
+		case 2:
+			db_show_geom_geom(0, (struct g_geom *)addr);
+			break;
+		case 3:
+			db_show_geom_consumer(0, (struct g_consumer *)addr);
+			break;
+		case 4:
+			db_show_geom_provider(0, (struct g_provider *)addr);
+			break;
+		default:
+			printf("Not a GEOM object.\n");
+			break;
+		}
+	}
+}
+
+#undef	gprintf
+#undef	gprintln
+#undef	ADDFLAG
+
+#endif	/* DDB */

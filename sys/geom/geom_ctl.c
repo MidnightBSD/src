@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_ctl.c,v 1.35 2005/04/08 09:28:08 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_ctl.c,v 1.39 2007/03/30 16:32:08 delphij Exp $");
 
 #include "opt_geom.h"
 
@@ -86,8 +86,6 @@ g_ctl_init(void)
 /*
  * Report an error back to the user in ascii format.  Return whatever copyout
  * returned, or EINVAL if it succeeded.
- * XXX: should not be static.
- * XXX: should take printf like args.
  */
 int
 gctl_error(struct gctl_req *req, const char *fmt, ...)
@@ -270,8 +268,9 @@ gctl_dump(struct gctl_req *req)
 	}
 }
 
-void
-gctl_set_param(struct gctl_req *req, const char *param, void const *ptr, int len)
+int
+gctl_set_param(struct gctl_req *req, const char *param, void const *ptr,
+    int len)
 {
 	int i;
 	struct gctl_req_arg *ap;
@@ -280,20 +279,35 @@ gctl_set_param(struct gctl_req *req, const char *param, void const *ptr, int len
 		ap = &req->arg[i];
 		if (strcmp(param, ap->name))
 			continue;
-		if (!(ap->flag & GCTL_PARAM_WR)) {
-			gctl_error(req, "No write access %s argument", param);
-			return;
-		}
+		if (!(ap->flag & GCTL_PARAM_WR))
+			return (EPERM);
+		ap->flag |= GCTL_PARAM_CHANGED;
 		if (ap->len < len) {
-			gctl_error(req, "Wrong length %s argument", param);
-			return;
+			bcopy(ptr, ap->kvalue, ap->len);
+			return (ENOSPC);
 		}
 		bcopy(ptr, ap->kvalue, len);
-		ap->flag |= GCTL_PARAM_CHANGED;
-		return;
+		return (0);
 	}
-	gctl_error(req, "Missing %s argument", param);
-	return;
+	return (EINVAL);
+}
+
+void
+gctl_set_param_err(struct gctl_req *req, const char *param, void const *ptr,
+    int len)
+{
+
+	switch (gctl_set_param(req, param, ptr, len)) {
+	case EPERM:
+		gctl_error(req, "No write access %s argument", param);
+		break;
+	case ENOSPC:
+		gctl_error(req, "Wrong length %s argument", param);
+		break;
+	case EINVAL:
+		gctl_error(req, "Missing %s argument", param);
+		break;
+	}
 }
 
 void *
@@ -373,7 +387,6 @@ gctl_get_class(struct gctl_req *req, char const *arg)
 		if (!strcmp(p, cp->name))
 			return (cp);
 	}
-	gctl_error(req, "Class not found");
 	return (NULL);
 }
 
@@ -385,17 +398,17 @@ gctl_get_geom(struct gctl_req *req, struct g_class *mpr, char const *arg)
 	struct g_geom *gp;
 
 	p = gctl_get_asciiparam(req, arg);
-	if (p != NULL) {
-		LIST_FOREACH(mp, &g_classes, class) {
-			if (mpr != NULL && mpr != mp)
-				continue;
-			LIST_FOREACH(gp, &mp->geom, geom) {
-				if (!strcmp(p, gp->name))
-					return (gp);
-			}
+	if (p == NULL)
+		return (NULL);
+	LIST_FOREACH(mp, &g_classes, class) {
+		if (mpr != NULL && mpr != mp)
+			continue;
+		LIST_FOREACH(gp, &mp->geom, geom) {
+			if (!strcmp(p, gp->name))
+				return (gp);
 		}
 	}
-	gctl_error(req, "Geom not found");
+	gctl_error(req, "Geom not found: \"%s\"", p);
 	return (NULL);
 }
 
@@ -411,7 +424,7 @@ gctl_get_provider(struct gctl_req *req, char const *arg)
 	pp = g_provider_by_name(p);
 	if (pp != NULL)
 		return (pp);
-	gctl_error(req, "Provider not found");
+	gctl_error(req, "Provider not found: \"%s\"", p);
 	return (NULL);
 }
 
@@ -429,11 +442,16 @@ g_ctl_req(void *arg, int flag __unused)
 		gctl_error(req, "Class not found");
 		return;
 	}
-	verb = gctl_get_param(req, "verb", NULL);
-	if (mp->ctlreq == NULL)
+	if (mp->ctlreq == NULL) {
 		gctl_error(req, "Class takes no requests");
-	else
-		mp->ctlreq(req, mp, verb);
+		return;
+	}
+	verb = gctl_get_param(req, "verb", NULL);
+	if (verb == NULL) {
+		gctl_error(req, "Verb missing");
+		return;
+	}
+	mp->ctlreq(req, mp, verb);
 	g_topology_assert();
 }
 

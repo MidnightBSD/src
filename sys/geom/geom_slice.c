@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_slice.c,v 1.57.2.1 2005/10/08 22:11:38 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_slice.c,v 1.62 2007/05/05 17:52:22 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -172,6 +172,28 @@ g_slice_finish_hot(struct bio *bp)
 }
 
 static void
+g_slice_done(struct bio *bp)
+{
+
+	KASSERT(bp->bio_cmd == BIO_GETATTR &&
+	    strcmp(bp->bio_attribute, "GEOM::ident") == 0,
+	    ("bio_cmd=0x%x bio_attribute=%s", bp->bio_cmd, bp->bio_attribute));
+
+	if (bp->bio_error == 0 && bp->bio_data[0] != '\0') {
+		char idx[8];
+
+		/* Add index to the ident received. */
+		snprintf(idx, sizeof(idx), "s%d",
+		    bp->bio_parent->bio_to->index);
+		if (strlcat(bp->bio_data, idx, bp->bio_length) >=
+		    bp->bio_length) {
+			bp->bio_error = EFAULT;
+		}
+	}
+	g_std_done(bp);
+}
+
+static void
 g_slice_start(struct bio *bp)
 {
 	struct bio *bp2;
@@ -251,6 +273,16 @@ g_slice_start(struct bio *bp)
 		/* Give the real method a chance to override */
 		if (gsp->start != NULL && gsp->start(bp))
 			return;
+		if (!strcmp("GEOM::ident", bp->bio_attribute)) {
+			bp2 = g_clone_bio(bp);
+			if (bp2 == NULL) {
+				g_io_deliver(bp, ENOMEM);
+				return;
+			}
+			bp2->bio_done = g_slice_done;
+			g_io_request(bp2, cp);
+			return;
+		}
 		if (!strcmp("GEOM::kerneldump", bp->bio_attribute)) {
 			struct g_kerneldump *gkd;
 
@@ -260,6 +292,8 @@ g_slice_start(struct bio *bp)
 				gkd->length = gsp->slices[idx].length;
 			/* now, pass it on downwards... */
 		}
+		/* FALLTHROUGH */
+	case BIO_FLUSH:
 		bp2 = g_clone_bio(bp);
 		if (bp2 == NULL) {
 			g_io_deliver(bp, ENOMEM);
@@ -338,8 +372,7 @@ g_slice_config(struct g_geom *gp, u_int idx, int how, off_t offset, off_t length
 			return (0);
 		if (bootverbose)
 			printf("GEOM: Deconfigure %s\n", pp->name);
-		pp->flags |= G_PF_WITHER;
-		g_orphan_provider(pp, ENXIO);
+		g_wither_provider(pp, ENXIO);
 		gsl->provider = NULL;
 		gsp->nprovider--;
 		return (0);

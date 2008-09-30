@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.73.2.2 2006/03/23 22:40:28 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.78.2.1 2007/12/18 01:24:27 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/endian.h>
@@ -55,6 +55,8 @@ __FBSDID("$FreeBSD: src/sys/geom/geom_bsd.c,v 1.73.2.2 2006/03/23 22:40:28 sobom
 #include <sys/md5.h>
 #include <sys/errno.h>
 #include <sys/disklabel.h>
+#include <sys/gpt.h>
+#include <sys/uuid.h>
 #include <geom/geom.h>
 #include <geom/geom_slice.h>
 
@@ -449,8 +451,6 @@ g_bsd_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp, struct g_
  *
  * If flags == G_TF_NORMAL, the idea is to take a bite of the provider and
  * if we find valid, consistent magic on it, build a geom on it.
- * any magic bits which indicate that we should automatically put a BSD
- * geom on it.
  *
  * There may be cases where the operator would like to put a BSD-geom on
  * providers which do not meet all of the requirements.  This can be done
@@ -463,6 +463,8 @@ g_bsd_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp, struct g_
  * not implemented here.
  */
 
+static struct uuid freebsd_slice = GPT_ENT_TYPE_FREEBSD;
+
 static struct g_geom *
 g_bsd_taste(struct g_class *mp, struct g_provider *pp, int flags)
 {
@@ -474,6 +476,7 @@ g_bsd_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	struct g_slicer *gsp;
 	u_char hash[16];
 	MD5_CTX md5sum;
+	struct uuid uuid;
 
 	g_trace(G_T_TOPOLOGY, "bsd_taste(%s,%s)", mp->name, pp->name);
 	g_topology_assert();
@@ -526,6 +529,14 @@ g_bsd_taste(struct g_class *mp, struct g_provider *pp, int flags)
 				break;
 			error = g_getattr("PC98::offset", cp, &ms->mbroffset);
 			if (error)
+				break;
+		}
+
+		/* Same thing if we are inside a GPT */
+		error = g_getattr("GPT::type", cp, &uuid);
+		if (!error) {
+			if (memcmp(&uuid, &freebsd_slice, sizeof(uuid)) != 0 &&
+			    flags == G_TF_NORMAL)
 				break;
 		}
 
@@ -635,8 +646,8 @@ g_bsd_config(struct gctl_req *req, struct g_class *mp, char const *verb)
 	gsp = gp->softc;
 	ms = gsp->softc;
 	if (!strcmp(verb, "read mbroffset")) {
-		gctl_set_param(req, "mbroffset",
-		    &ms->mbroffset, sizeof(ms->mbroffset));
+		gctl_set_param_err(req, "mbroffset", &ms->mbroffset,
+		    sizeof(ms->mbroffset));
 		return;
 	} else if (!strcmp(verb, "write label")) {
 		label = gctl_get_paraml(req, "label", LABELSIZE);

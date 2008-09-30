@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_subr.c,v 1.13 2005/01/19 13:57:09 le Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_subr.c,v 1.16 2007/04/12 17:54:35 le Exp $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -53,6 +53,8 @@ __FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_subr.c,v 1.13 2005/01/19 13:57
 #include <geom/vinum/geom_vinum_var.h>
 #include <geom/vinum/geom_vinum.h>
 #include <geom/vinum/geom_vinum_share.h>
+
+static off_t gv_plex_smallest_sd(struct gv_plex *, off_t);
 
 /* Find the VINUM class and it's associated geom. */
 struct g_geom *
@@ -235,6 +237,20 @@ gv_format_config(struct gv_softc *sc, struct sbuf *sb, int ondisk, char *prefix)
 	return;
 }
 
+static off_t
+gv_plex_smallest_sd(struct gv_plex *p, off_t smallest)
+{
+	struct gv_sd *s;
+
+	KASSERT(p != NULL, ("gv_plex_smallest_sd: NULL p"));
+
+	LIST_FOREACH(s, &p->subdisks, in_plex) {
+		if (s->size < smallest)
+			smallest = s->size;
+	}
+	return (smallest);
+}
+
 int
 gv_sd_to_plex(struct gv_plex *p, struct gv_sd *s, int check)
 {
@@ -245,6 +261,15 @@ gv_sd_to_plex(struct gv_plex *p, struct gv_sd *s, int check)
 	/* If this subdisk was already given to this plex, do nothing. */
 	if (s->plex_sc == p)
 		return (0);
+
+	/* Check correct size of this subdisk. */
+	s2 = LIST_FIRST(&p->subdisks);
+	if (s2 != NULL && gv_is_striped(p) && (s2->size != s->size)) {
+		printf("GEOM_VINUM: need equal sized subdisks for "
+		    "this plex organisation - %s (%jd) <-> %s (%jd)\n",
+		    s2->name, s2->size, s->name, s->size);
+		return (-1);
+	}
 
 	/* Find the correct plex offset for this subdisk, if needed. */
 	if (s->plex_offset == -1) {
@@ -271,7 +296,7 @@ gv_sd_to_plex(struct gv_plex *p, struct gv_sd *s, int check)
 		break;
 
 	case GV_PLEX_RAID5:
-		p->size = (p->sdcount - 1) * s->size;
+		p->size = (p->sdcount - 1) * gv_plex_smallest_sd(p, s->size);
 		break;
 
 	default:
@@ -318,6 +343,60 @@ gv_update_vol_size(struct gv_volume *v, off_t size)
 	}
 
 	v->size = size;
+}
+
+/* Calculates the plex size. */
+off_t
+gv_plex_size(struct gv_plex *p)
+{
+	struct gv_sd *s;
+	off_t size;
+
+	KASSERT(p != NULL, ("gv_plex_size: NULL p"));
+
+	if (p->sdcount == 0)
+		return (0);
+
+	/* Adjust the size of our plex. */
+	size = 0;
+	switch (p->org) {
+	case GV_PLEX_CONCAT:
+		LIST_FOREACH(s, &p->subdisks, in_plex)
+			size += s->size;
+		break;
+	case GV_PLEX_STRIPED:
+		s = LIST_FIRST(&p->subdisks);
+		size = p->sdcount * s->size;
+		break;
+	case GV_PLEX_RAID5:
+		s = LIST_FIRST(&p->subdisks);
+		size = (p->sdcount - 1) * s->size;
+		break;
+	}
+
+	return (size);
+}
+
+/* Returns the size of a volume. */
+off_t
+gv_vol_size(struct gv_volume *v)
+{
+	struct gv_plex *p;
+	off_t minplexsize;
+
+	KASSERT(v != NULL, ("gv_vol_size: NULL v"));
+
+	p = LIST_FIRST(&v->plexes);
+	if (p == NULL)
+		return (0);
+
+	minplexsize = p->size;
+	LIST_FOREACH(p, &v->plexes, plex) {
+		if (p->size < minplexsize) {
+			minplexsize = p->size;
+		}
+	}
+	return (minplexsize);
 }
 
 void
@@ -613,6 +692,64 @@ gv_sd_to_drive(struct gv_softc *sc, struct gv_drive *d, struct gv_sd *s,
 }
 
 void
+gv_free_sd(struct gv_sd *s)
+{
+	struct gv_drive *d;
+	struct gv_freelist *fl, *fl2;
+
+	KASSERT(s != NULL, ("gv_free_sd: NULL s"));
+
+	d = s->drive_sc;
+	if (d == NULL)
+		return;
+
+	/*
+	 * First, find the free slot that's immediately before or after this
+	 * subdisk.
+	 */
+	fl = NULL;
+	LIST_FOREACH(fl, &d->freelist, freelist) {
+		if (fl->offset == s->drive_offset + s->size)
+			break;
+		if (fl->offset + fl->size == s->drive_offset)
+			break;
+	}
+
+	/* If there is no free slot behind this subdisk, so create one. */
+	if (fl == NULL) {
+
+		fl = g_malloc(sizeof(*fl), M_WAITOK | M_ZERO);
+		fl->size = s->size;
+		fl->offset = s->drive_offset;
+
+		if (d->freelist_entries == 0) {
+			LIST_INSERT_HEAD(&d->freelist, fl, freelist);
+		} else {
+			LIST_FOREACH(fl2, &d->freelist, freelist) {
+				if (fl->offset < fl2->offset) {
+					LIST_INSERT_BEFORE(fl2, fl, freelist);
+					break;
+				} else if (LIST_NEXT(fl2, freelist) == NULL) {
+					LIST_INSERT_AFTER(fl2, fl, freelist);
+					break;
+				}
+			}
+		}
+
+		d->freelist_entries++;
+
+	/* Expand the free slot we just found. */
+	} else {
+		fl->size += s->size;
+		if (fl->offset > s->drive_offset)
+			fl->offset = s->drive_offset;
+	}
+
+	d->avail += s->size;
+	d->sdcount--;
+}
+
+void
 gv_adjust_freespace(struct gv_sd *s, off_t remainder)
 {
 	struct gv_drive *d;
@@ -792,6 +929,8 @@ gv_kill_drive_thread(struct gv_drive *d)
 		d->flags &= ~GV_DRIVE_THREAD_ACTIVE;
 		d->flags &= ~GV_DRIVE_THREAD_DIE;
 		d->flags &= ~GV_DRIVE_THREAD_DEAD;
+		g_free(d->bqueue);
+		d->bqueue = NULL;
 		mtx_destroy(&d->bqueue_mtx);
 	}
 }
@@ -807,6 +946,10 @@ gv_kill_plex_thread(struct gv_plex *p)
 		p->flags &= ~GV_PLEX_THREAD_ACTIVE;
 		p->flags &= ~GV_PLEX_THREAD_DIE;
 		p->flags &= ~GV_PLEX_THREAD_DEAD;
+		g_free(p->bqueue);
+		g_free(p->wqueue);
+		p->bqueue = NULL;
+		p->wqueue = NULL;
 		mtx_destroy(&p->bqueue_mtx);
 	}
 }
@@ -822,6 +965,8 @@ gv_kill_vol_thread(struct gv_volume *v)
 		v->flags &= ~GV_VOL_THREAD_ACTIVE;
 		v->flags &= ~GV_VOL_THREAD_DIE;
 		v->flags &= ~GV_VOL_THREAD_DEAD;
+		g_free(v->bqueue);
+		v->bqueue = NULL;
 		mtx_destroy(&v->bqueue_mtx);
 	}
 }

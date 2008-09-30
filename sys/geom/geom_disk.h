@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom_disk.h,v 1.4.2.1 2005/11/26 22:55:20 jdp Exp $
+ * $FreeBSD: src/sys/geom/geom_disk.h,v 1.7 2007/05/05 17:12:15 pjd Exp $
  */
 
 #ifndef _GEOM_GEOM_DISK_H_
@@ -42,6 +42,7 @@
 #include <sys/queue.h>
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
+#include <sys/disk.h>
 
 struct disk;
 
@@ -83,6 +84,7 @@ struct disk {
 	u_int			d_maxsize;
 	u_int			d_stripeoffset;
 	u_int			d_stripesize;
+	char			d_ident[DISK_IDENT_SIZE];
 
 	/* Fields private to the driver */
 	void			*d_drv1;
@@ -91,6 +93,7 @@ struct disk {
 #define DISKFLAG_NEEDSGIANT	0x1
 #define DISKFLAG_OPEN		0x2
 #define DISKFLAG_CANDELETE	0x4
+#define DISKFLAG_CANFLUSHCACHE	0x8
 
 struct disk *disk_alloc(void);
 void disk_create(struct disk *disk, int version);
@@ -98,7 +101,8 @@ void disk_destroy(struct disk *disk);
 void disk_gone(struct disk *disk);
 
 #define DISK_VERSION_00		0x58561059
-#define DISK_VERSION		DISK_VERSION_00
+#define DISK_VERSION_01		0x5856105a
+#define DISK_VERSION		DISK_VERSION_01
 
 #endif /* _KERNEL */
 #endif /* _GEOM_GEOM_DISK_H_ */

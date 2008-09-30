@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/mirror/g_mirror.h,v 1.17.2.1 2006/03/20 15:48:55 pjd Exp $
+ * $FreeBSD: src/sys/geom/mirror/g_mirror.h,v 1.24 2006/11/01 22:51:49 pjd Exp $
  */
 
 #ifndef	_G_MIRROR_H_
@@ -41,8 +41,9 @@
  * 1 - Added 'prefer' balance algorithm.
  * 2 - Added md_genid field to metadata.
  * 3 - Added md_provsize field to metadata.
+ * 4 - Added 'no failure synchronization' flag.
  */
-#define	G_MIRROR_VERSION	3
+#define	G_MIRROR_VERSION	4
 
 #define	G_MIRROR_BALANCE_NONE		0
 #define	G_MIRROR_BALANCE_ROUND_ROBIN	1
@@ -64,7 +65,9 @@
 					 G_MIRROR_DISK_FLAG_INACTIVE)
 
 #define	G_MIRROR_DEVICE_FLAG_NOAUTOSYNC	0x0000000000000001ULL
-#define	G_MIRROR_DEVICE_FLAG_MASK	(G_MIRROR_DEVICE_FLAG_NOAUTOSYNC)
+#define	G_MIRROR_DEVICE_FLAG_NOFAILSYNC	0x0000000000000002ULL
+#define	G_MIRROR_DEVICE_FLAG_MASK	(G_MIRROR_DEVICE_FLAG_NOAUTOSYNC | \
+					 G_MIRROR_DEVICE_FLAG_NOFAILSYNC)
 
 #ifdef _KERNEL
 extern u_int g_mirror_debug;
@@ -153,6 +156,7 @@ struct g_mirror_event {
 
 #define	G_MIRROR_DEVICE_FLAG_DESTROY	0x0100000000000000ULL
 #define	G_MIRROR_DEVICE_FLAG_WAIT	0x0200000000000000ULL
+#define	G_MIRROR_DEVICE_FLAG_DESTROYING	0x0400000000000000ULL
 
 #define	G_MIRROR_DEVICE_STATE_STARTING		0
 #define	G_MIRROR_DEVICE_STATE_RUNNING		1
@@ -209,7 +213,10 @@ struct g_mirror_softc {
 #define	sc_name	sc_geom->name
 
 u_int g_mirror_ndisks(struct g_mirror_softc *sc, int state);
-int g_mirror_destroy(struct g_mirror_softc *sc, boolean_t force);
+#define	G_MIRROR_DESTROY_SOFT		0
+#define	G_MIRROR_DESTROY_DELAYED	1
+#define	G_MIRROR_DESTROY_HARD		2
+int g_mirror_destroy(struct g_mirror_softc *sc, int how);
 int g_mirror_event_send(void *arg, int state, int flags);
 struct g_mirror_metadata;
 int g_mirror_add_disk(struct g_mirror_softc *sc, struct g_provider *pp,
@@ -337,7 +344,7 @@ mirror_metadata_decode_v2(const u_char *data, struct g_mirror_metadata *md)
 	return (0);
 }
 static __inline int
-mirror_metadata_decode_v3(const u_char *data, struct g_mirror_metadata *md)
+mirror_metadata_decode_v3v4(const u_char *data, struct g_mirror_metadata *md)
 {
 	MD5_CTX ctx;
 
@@ -381,7 +388,8 @@ mirror_metadata_decode(const u_char *data, struct g_mirror_metadata *md)
 		error = mirror_metadata_decode_v2(data, md);
 		break;
 	case 3:
-		error = mirror_metadata_decode_v3(data, md);
+	case 4:
+		error = mirror_metadata_decode_v3v4(data, md);
 		break;
 	default:
 		error = EINVAL;
@@ -452,6 +460,8 @@ mirror_metadata_dump(const struct g_mirror_metadata *md)
 	if (md->md_mflags == 0)
 		printf(" NONE");
 	else {
+		if ((md->md_mflags & G_MIRROR_DEVICE_FLAG_NOFAILSYNC) != 0)
+			printf(" NOFAILSYNC");
 		if ((md->md_mflags & G_MIRROR_DEVICE_FLAG_NOAUTOSYNC) != 0)
 			printf(" NOAUTOSYNC");
 	}

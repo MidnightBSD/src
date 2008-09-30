@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_kern.c,v 1.39 2005/04/19 06:23:58 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_kern.c,v 1.41 2007/06/05 00:00:51 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,9 +88,9 @@ g_up_procbody(void)
 	struct thread *tp = FIRST_THREAD_IN_PROC(p);
 
 	mtx_assert(&Giant, MA_NOTOWNED);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(tp);
 	sched_prio(tp, PRIBIO);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(tp);
 	for(;;) {
 		g_io_schedule_up(tp);
 	}
@@ -111,9 +111,9 @@ g_down_procbody(void)
 	struct thread *tp = FIRST_THREAD_IN_PROC(p);
 
 	mtx_assert(&Giant, MA_NOTOWNED);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(tp);
 	sched_prio(tp, PRIBIO);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(tp);
 	for(;;) {
 		g_io_schedule_down(tp);
 	}
@@ -134,9 +134,9 @@ g_event_procbody(void)
 	struct thread *tp = FIRST_THREAD_IN_PROC(p);
 
 	mtx_assert(&Giant, MA_NOTOWNED);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(tp);
 	sched_prio(tp, PRIBIO);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(tp);
 	for(;;) {
 		g_run_events();
 		tsleep(&g_wait_event, PRIBIO, "-", hz/10);
@@ -229,18 +229,19 @@ SYSCTL_PROC(_kern_geom, OID_AUTO, conftxt, CTLTYPE_STRING|CTLFLAG_RD,
 
 TUNABLE_INT("kern.geom.debugflags", &g_debugflags);
 SYSCTL_INT(_kern_geom, OID_AUTO, debugflags, CTLFLAG_RW,
-	&g_debugflags, 0, "");
+	&g_debugflags, 0, "Set various trace levels for GEOM debugging");
 
 SYSCTL_INT(_kern_geom, OID_AUTO, collectstats, CTLFLAG_RW,
-	&g_collectstats, 0, "");
+	&g_collectstats, 0,
+	"Control statistics collection on GEOM providers and consumers");
 
 SYSCTL_INT(_debug_sizeof, OID_AUTO, g_class, CTLFLAG_RD,
-	0, sizeof(struct g_class), "");
+	0, sizeof(struct g_class), "sizeof(struct g_class)");
 SYSCTL_INT(_debug_sizeof, OID_AUTO, g_geom, CTLFLAG_RD,
-	0, sizeof(struct g_geom), "");
+	0, sizeof(struct g_geom), "sizeof(struct g_geom)");
 SYSCTL_INT(_debug_sizeof, OID_AUTO, g_provider, CTLFLAG_RD,
-	0, sizeof(struct g_provider), "");
+	0, sizeof(struct g_provider), "sizeof(struct g_provider)");
 SYSCTL_INT(_debug_sizeof, OID_AUTO, g_consumer, CTLFLAG_RD,
-	0, sizeof(struct g_consumer), "");
+	0, sizeof(struct g_consumer), "sizeof(struct g_consumer)");
 SYSCTL_INT(_debug_sizeof, OID_AUTO, g_bioq, CTLFLAG_RD,
-	0, sizeof(struct g_bioq), "");
+	0, sizeof(struct g_bioq), "sizeof(struct g_bioq)");

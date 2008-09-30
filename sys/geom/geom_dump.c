@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_dump.c,v 1.31 2004/03/10 08:49:08 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_dump.c,v 1.32 2005/11/12 20:02:02 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/sbuf.h>
@@ -145,11 +145,10 @@ g_conftxt(void *p, int flag)
 	KASSERT(flag != EV_CANCEL, ("g_conftxt was cancelled"));
 	sb = p;
 	g_topology_assert();
-	LIST_FOREACH(mp, &g_classes, class)
-		if (!strcmp(mp->name, "DISK"))
-			break;
-	if (mp != NULL)
-		g_conftxt_class(sb, mp);
+	LIST_FOREACH(mp, &g_classes, class) {
+		if (!strcmp(mp->name, "DISK") || !strcmp(mp->name, "MD"))
+			g_conftxt_class(sb, mp);
+	}
 	sbuf_finish(sb);
 }
 

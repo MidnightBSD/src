@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -23,14 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/nop/g_nop.h,v 1.4.8.1 2006/01/17 09:11:30 pjd Exp $
+ * $FreeBSD: src/sys/geom/nop/g_nop.h,v 1.7 2006/09/30 08:16:49 pjd Exp $
  */
 
 #ifndef	_G_NOP_H_
 #define	_G_NOP_H_
 
 #define	G_NOP_CLASS_NAME	"NOP"
-#define	G_NOP_VERSION		3
+#define	G_NOP_VERSION		4
 #define	G_NOP_SUFFIX		".nop"
 
 #ifdef _KERNEL
@@ -55,8 +55,10 @@
 } while (0)
 
 struct g_nop_softc {
+	int		sc_error;
 	off_t		sc_offset;
-	u_int		sc_failprob;
+	u_int		sc_rfailprob;
+	u_int		sc_wfailprob;
 	uintmax_t	sc_reads;
 	uintmax_t	sc_writes;
 	uintmax_t	sc_readbytes;

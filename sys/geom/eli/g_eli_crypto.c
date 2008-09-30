@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_crypto.c,v 1.1.2.2 2006/03/01 17:52:15 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/eli/g_eli_crypto.c,v 1.5 2007/09/01 06:33:01 pjd Exp $");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -73,7 +73,7 @@ g_eli_crypto_cipher(u_int algo, int enc, u_char *data, size_t datasize,
 	cri.cri_alg = algo;
 	cri.cri_key = __DECONST(void *, key);
 	cri.cri_klen = keysize;
-	error = crypto_newsession(&sid, &cri, 0);
+	error = crypto_newsession(&sid, &cri, CRYPTOCAP_F_SOFTWARE);
 	if (error != 0)
 		return (error);
 	p = malloc(sizeof(*crp) + sizeof(*crd) + sizeof(*uio) + sizeof(*iov),
@@ -97,7 +97,7 @@ g_eli_crypto_cipher(u_int algo, int enc, u_char *data, size_t datasize,
 
 	crd->crd_skip = 0;
 	crd->crd_len = datasize;
-	crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT | CRD_F_KEY_EXPLICIT;
+	crd->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
 	if (enc)
 		crd->crd_flags |= CRD_F_ENCRYPT;
 	crd->crd_alg = algo;
@@ -157,6 +157,21 @@ g_eli_crypto_cipher(u_int algo, int enc, u_char *data, size_t datasize,
 		break;
 	case CRYPTO_BLF_CBC:
 		type = EVP_bf_cbc();
+		break;
+	case CRYPTO_CAMELLIA_CBC:
+		switch (keysize) {
+		case 128:
+			type = EVP_camellia_128_cbc();
+			break;
+		case 192:
+			type = EVP_camellia_192_cbc();
+			break;
+		case 256:
+			type = EVP_camellia_256_cbc();
+			break;
+		default:
+			return (EINVAL);
+		}
 		break;
 	case CRYPTO_3DES_CBC:
 		type = EVP_des_ede3_cbc();

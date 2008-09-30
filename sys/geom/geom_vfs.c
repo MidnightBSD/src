@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_vfs.c,v 1.9.2.1 2006/02/20 00:53:13 yar Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_vfs.c,v 1.11 2007/01/23 10:01:17 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,6 +50,7 @@ static struct buf_ops __g_vfs_bufops = {
 	.bop_write =	bufwrite,
 	.bop_strategy =	g_vfs_strategy,	
 	.bop_sync =	bufsync,	
+	.bop_bdflush =	bufbdflush
 };
 
 struct buf_ops *g_vfs_bufops = &__g_vfs_bufops;
@@ -149,7 +150,7 @@ g_vfs_open(struct vnode *vp, struct g_consumer **cpp, const char *fsname, int wr
 		return (error);
 	}
 	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
-	vnode_create_vobject_off(vp, pp->mediasize, curthread);
+	vnode_create_vobject(vp, pp->mediasize, curthread);
 	VFS_UNLOCK_GIANT(vfslocked);
 	*cpp = cp;
 	bo = &vp->v_bufobj;

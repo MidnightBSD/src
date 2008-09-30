@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_disk.c,v 1.96.2.1 2005/11/26 22:55:20 jdp Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_disk.c,v 1.104 2007/05/05 18:09:17 pjd Exp $");
 
 #include "opt_geom.h"
 
@@ -133,7 +133,7 @@ g_disk_access(struct g_provider *pp, int r, int w, int e)
 		if (dp->d_open != NULL) {
 			g_disk_lock_giant(dp);
 			error = dp->d_open(dp);
-			if (error != 0)
+			if (bootverbose && error != 0)
 				printf("Opened disk %s -> %d\n",
 				    pp->name, error);
 			g_disk_unlock_giant(dp);
@@ -202,12 +202,14 @@ g_disk_done(struct bio *bp)
 	if (bp2->bio_error == 0)
 		bp2->bio_error = bp->bio_error;
 	bp2->bio_completed += bp->bio_completed;
+	if ((bp->bio_cmd & (BIO_READ|BIO_WRITE|BIO_DELETE)) &&
+	    (dp = bp2->bio_to->geom->softc)) {
+		devstat_end_transaction_bio(dp->d_devstat, bp);
+	}
 	g_destroy_bio(bp);
 	bp2->bio_inbed++;
 	if (bp2->bio_children == bp2->bio_inbed) {
 		bp2->bio_resid = bp2->bio_bcount - bp2->bio_completed;
-		if ((dp = bp2->bio_to->geom->softc))
-			devstat_end_transaction_bio(dp->d_devstat, bp2);
 		g_io_deliver(bp2, bp2->bio_error);
 	}
 	mtx_unlock(&g_disk_done_mtx);
@@ -261,7 +263,6 @@ g_disk_start(struct bio *bp)
 			error = ENOMEM;
 			break;
 		}
-		devstat_start_transaction_bio(dp->d_devstat, bp);
 		do {
 			bp2->bio_offset += off;
 			bp2->bio_length -= off;
@@ -285,6 +286,7 @@ g_disk_start(struct bio *bp)
 			bp2->bio_pblkno = bp2->bio_offset / dp->d_sectorsize;
 			bp2->bio_bcount = bp2->bio_length;
 			bp2->bio_disk = dp;
+			devstat_start_transaction_bio(dp->d_devstat, bp2);
 			g_disk_lock_giant(dp);
 			dp->d_strategy(bp2);
 			g_disk_unlock_giant(dp);
@@ -299,10 +301,30 @@ g_disk_start(struct bio *bp)
 			break;
 		else if (g_handleattr_off_t(bp, "GEOM::frontstuff", 0))
 			break;
+		else if (g_handleattr_str(bp, "GEOM::ident", dp->d_ident))
+			break;
 		else if (!strcmp(bp->bio_attribute, "GEOM::kerneldump"))
 			g_disk_kerneldump(bp, dp);
 		else 
 			error = ENOIOCTL;
+		break;
+	case BIO_FLUSH:
+		g_trace(G_T_TOPOLOGY, "g_disk_flushcache(%s)",
+		    bp->bio_to->name);
+		if (!(dp->d_flags & DISKFLAG_CANFLUSHCACHE)) {
+			g_io_deliver(bp, ENODEV);
+			return;
+		}
+		bp2 = g_clone_bio(bp);
+		if (bp2 == NULL) {
+			g_io_deliver(bp, ENOMEM);
+			return;
+		}
+		bp2->bio_done = g_disk_done;
+		bp2->bio_disk = dp;
+		g_disk_lock_giant(dp);
+		dp->d_strategy(bp2);
+		g_disk_unlock_giant(dp);
 		break;
 	default:
 		error = EOPNOTSUPP;
@@ -376,6 +398,45 @@ g_disk_destroy(void *ptr, int flag)
 	g_free(dp);
 }
 
+/*
+ * We only allow [a-zA-Z0-9-_@#%.:] characters, the rest is converted to 'x<HH>'.
+ */
+static void
+g_disk_ident_adjust(char *ident, size_t size)
+{
+	char newid[DISK_IDENT_SIZE], tmp[4];
+	size_t len;
+	char *p;
+
+	bzero(newid, sizeof(newid));
+	len = 0;
+	for (p = ident; *p != '\0' && len < sizeof(newid) - 1; p++) {
+		switch (*p) {
+		default:
+			if ((*p < 'a' || *p > 'z') &&
+			    (*p < 'A' || *p > 'Z') &&
+			    (*p < '0' || *p > '9')) {
+				snprintf(tmp, sizeof(tmp), "x%02hhx", *p);
+				strlcat(newid, tmp, sizeof(newid));
+				len += 3;
+				break;
+			}
+			/* FALLTHROUGH */
+		case '-':
+		case '_':
+		case '@':
+		case '#':
+		case '%':
+		case '.':
+		case ':':
+			newid[len++] = *p;
+			break;
+		}
+	}
+	bzero(ident, size);
+	strlcpy(ident, newid, size);
+}
+
 struct disk *
 disk_alloc()
 {
@@ -388,7 +449,7 @@ disk_alloc()
 void
 disk_create(struct disk *dp, int version)
 {
-	if (version != DISK_VERSION_00) {
+	if (version != DISK_VERSION_00 && version != DISK_VERSION_01) {
 		printf("WARNING: Attempt to add disk %s%d %s",
 		    dp->d_name, dp->d_unit,
 		    " using incompatible ABI version of disk(9)\n");
@@ -405,6 +466,7 @@ disk_create(struct disk *dp, int version)
 		    dp->d_sectorsize, DEVSTAT_ALL_SUPPORTED,
 		    DEVSTAT_TYPE_DIRECT, DEVSTAT_PRIORITY_MAX);
 	dp->d_geom = NULL;
+	g_disk_ident_adjust(dp->d_ident, sizeof(dp->d_ident));
 	g_post_event(g_disk_create, dp, M_WAITOK, dp, NULL);
 }
 
@@ -428,7 +490,7 @@ disk_gone(struct disk *dp)
 	gp = dp->d_geom;
 	if (gp != NULL)
 		LIST_FOREACH(pp, &gp->provider, provider)
-			g_orphan_provider(pp, ENXIO);
+			g_wither_provider(pp, ENXIO);
 }
 
 static void

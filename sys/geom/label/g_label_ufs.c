@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/label/g_label_ufs.c,v 1.3.2.3 2006/03/08 14:20:14 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/label/g_label_ufs.c,v 1.11 2006/09/16 11:24:41 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,8 +78,8 @@ g_label_ufs_taste(struct g_consumer *cp, char *label, size_t size)
 		if (fs == NULL)
 			continue;
 		/* Check for magic and make sure things are the right size */
-		if (fs->fs_magic == FS_UFS1_MAGIC &&
-		    fs->fs_old_size * fs->fs_fsize == (int32_t)pp->mediasize) {
+		if (fs->fs_magic == FS_UFS1_MAGIC && fs->fs_fsize > 0 &&
+		    pp->mediasize / fs->fs_fsize == fs->fs_old_size) {
 		    	/* Valid UFS1. */
 		} else if (fs->fs_magic == FS_UFS2_MAGIC && fs->fs_fsize > 0 &&
 		    pp->mediasize / fs->fs_fsize == fs->fs_size) {

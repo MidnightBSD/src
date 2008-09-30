@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/stripe/g_stripe.c,v 1.25.2.2 2005/08/30 15:14:40 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/stripe/g_stripe.c,v 1.32 2007/06/04 18:25:06 dwmalone Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: src/sys/geom/stripe/g_stripe.c,v 1.25.2.2 2005/08/30 15:14:4
 
 
 #define	MAX_IO_SIZE	(DFLTPHYS * 2)
-static MALLOC_DEFINE(M_STRIPE, "stripe data", "GEOM_STRIPE Data");
+static MALLOC_DEFINE(M_STRIPE, "stripe_data", "GEOM_STRIPE Data");
 
 static uma_zone_t g_stripe_zone;
 
@@ -80,7 +80,7 @@ g_sysctl_stripe_fast(SYSCTL_HANDLER_ARGS)
 	int error, fast;
 
 	fast = g_stripe_fast;
-	error = sysctl_handle_int(oidp, &fast, sizeof(fast), req);
+	error = sysctl_handle_int(oidp, &fast, 0, req);
 	if (error == 0 && req->newptr != NULL)
 		g_stripe_fast = fast;
 	return (error);
@@ -520,6 +520,42 @@ failure:
 }
 
 static void
+g_stripe_flush(struct g_stripe_softc *sc, struct bio *bp)
+{
+	struct bio_queue_head queue;
+	struct g_consumer *cp;
+	struct bio *cbp;
+	u_int no;
+
+	bioq_init(&queue);
+	for (no = 0; no < sc->sc_ndisks; no++) {
+		cbp = g_clone_bio(bp);
+		if (cbp == NULL) {
+			for (cbp = bioq_first(&queue); cbp != NULL;
+			    cbp = bioq_first(&queue)) {
+				bioq_remove(&queue, cbp);
+				g_destroy_bio(cbp);
+			}
+			if (bp->bio_error == 0)
+				bp->bio_error = ENOMEM;
+			g_io_deliver(bp, bp->bio_error);
+			return;
+		}
+		bioq_insert_tail(&queue, cbp);
+		cbp->bio_done = g_std_done;
+		cbp->bio_caller1 = sc->sc_disks[no];
+		cbp->bio_to = sc->sc_disks[no]->provider;
+	}
+	for (cbp = bioq_first(&queue); cbp != NULL; cbp = bioq_first(&queue)) {
+		bioq_remove(&queue, cbp);
+		G_STRIPE_LOGREQ(cbp, "Sending request.");
+		cp = cbp->bio_caller1;
+		cbp->bio_caller1 = NULL;
+		g_io_request(cbp, cp);
+	}
+}
+
+static void
 g_stripe_start(struct bio *bp)
 {
 	off_t offset, start, length, nstripe;
@@ -542,10 +578,10 @@ g_stripe_start(struct bio *bp)
 	case BIO_READ:
 	case BIO_WRITE:
 	case BIO_DELETE:
-		/*
-		 * Only those requests are supported.
-		 */
 		break;
+	case BIO_FLUSH:
+		g_stripe_flush(sc, bp);
+		return;
 	case BIO_GETATTR:
 		/* To which provider it should be delivered? */
 	default:
@@ -846,7 +882,7 @@ g_stripe_destroy(struct g_stripe_softc *sc, boolean_t force)
 	free(sc->sc_disks, M_STRIPE);
 	free(sc, M_STRIPE);
 
-	pp = LIST_FIRST(&gp->provider); 
+	pp = LIST_FIRST(&gp->provider);
 	if (pp == NULL || (pp->acr == 0 && pp->acw == 0 && pp->ace == 0))
 		G_STRIPE_DEBUG(0, "Device %s destroyed.", gp->name);
 

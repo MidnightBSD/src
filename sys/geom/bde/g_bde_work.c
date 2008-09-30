@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/bde/g_bde_work.c,v 1.26 2005/03/11 15:42:51 ume Exp $
+ * $FreeBSD: src/sys/geom/bde/g_bde_work.c,v 1.28 2006/08/04 07:56:34 yar Exp $
  */
 /*
  * This source file contains the state-engine which makes things happen in the
@@ -90,7 +90,7 @@ static void g_bde_purge_sector(struct g_bde_softc *sc, int fraction);
 static u_int g_bde_nwork;
 SYSCTL_UINT(_debug, OID_AUTO, gbde_nwork, CTLFLAG_RD, &g_bde_nwork, 0, "");
 
-static MALLOC_DEFINE(M_GBDE, "GBDE", "GBDE data structures");
+static MALLOC_DEFINE(M_GBDE, "gbde", "GBDE data structures");
 
 static struct g_bde_work *
 g_bde_new_work(struct g_bde_softc *sc)

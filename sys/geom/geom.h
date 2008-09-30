@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/geom.h,v 1.90.2.3 2006/09/19 11:44:16 pjd Exp $
+ * $FreeBSD: src/sys/geom/geom.h,v 1.100 2007/05/05 16:35:22 pjd Exp $
  */
 
 #ifndef _GEOM_GEOM_H_
@@ -95,7 +95,7 @@ struct g_class {
 	g_fini_t		*fini;
 	g_ctl_destroy_geom_t	*destroy_geom;
 	/*
-	 * Defaults values for geom methods
+	 * Default values for geom methods
 	 */
 	g_start_t		*start;
 	g_spoiled_t		*spoiled;
@@ -230,6 +230,7 @@ int g_getattr__(const char *attr, struct g_consumer *cp, void *var, int len);
 int g_handleattr(struct bio *bp, const char *attribute, void *val, int len);
 int g_handleattr_int(struct bio *bp, const char *attribute, int val);
 int g_handleattr_off_t(struct bio *bp, const char *attribute, off_t val);
+int g_handleattr_str(struct bio *bp, const char *attribute, char *str);
 struct g_consumer * g_new_consumer(struct g_geom *gp);
 struct g_geom * g_new_geomf(struct g_class *mp, const char *fmt, ...);
 struct g_provider * g_new_providerf(struct g_geom *gp, const char *fmt, ...);
@@ -239,9 +240,12 @@ void g_std_done(struct bio *bp);
 void g_std_spoiled(struct g_consumer *cp);
 void g_wither_geom(struct g_geom *gp, int error);
 void g_wither_geom_close(struct g_geom *gp, int error);
+void g_wither_provider(struct g_provider *pp, int error);
 
-#ifdef DIAGNOSTIC
+#if defined(DIAGNOSTIC) || defined(DDB)
 int g_valid_obj(void const *ptr);
+#endif
+#ifdef DIAGNOSTIC
 #define G_VALID_CLASS(foo) \
     KASSERT(g_valid_obj(foo) == 1, ("%p is not a g_class", foo))
 #define G_VALID_GEOM(foo) \
@@ -265,11 +269,13 @@ struct bio * g_duplicate_bio(struct bio *);
 void g_destroy_bio(struct bio *);
 void g_io_deliver(struct bio *bp, int error);
 int g_io_getattr(const char *attr, struct g_consumer *cp, int *len, void *ptr);
+int g_io_flush(struct g_consumer *cp);
 void g_io_request(struct bio *bp, struct g_consumer *cp);
 struct bio *g_new_bio(void);
 struct bio *g_alloc_bio(void);
 void * g_read_data(struct g_consumer *cp, off_t offset, off_t length, int *error);
 int g_write_data(struct g_consumer *cp, off_t offset, void *ptr, off_t length);
+int g_delete_data(struct g_consumer *cp, off_t offset, off_t length);
 void g_print_bio(struct bio *bp);
 
 /* geom_kern.c / geom_kernsim.c */
@@ -340,7 +346,8 @@ g_free(void *ptr)
 #endif /* _KERNEL */
 
 /* geom_ctl.c */
-void gctl_set_param(struct gctl_req *req, const char *param, void const *ptr, int len);
+int gctl_set_param(struct gctl_req *req, const char *param, void const *ptr, int len);
+void gctl_set_param_err(struct gctl_req *req, const char *param, void const *ptr, int len);
 void *gctl_get_param(struct gctl_req *req, const char *param, int *len);
 char const *gctl_get_asciiparam(struct gctl_req *req, const char *param);
 void *gctl_get_paraml(struct gctl_req *req, const char *param, int len);

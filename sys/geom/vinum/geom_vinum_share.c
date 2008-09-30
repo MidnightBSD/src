@@ -41,7 +41,7 @@
 /* This file is shared between kernel and userland. */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_share.c,v 1.4 2004/11/15 12:30:59 le Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_share.c,v 1.5 2007/04/12 17:40:44 le Exp $");
 
 #include <sys/param.h>
 #ifdef _KERNEL
@@ -403,12 +403,9 @@ gv_new_drive(int max, char *token[])
 				break;
 			}
 			ptr = token[j];
-			if (*ptr == '/') {
-				ptr++;
-				while (*ptr != '/')
-					ptr++;
-				ptr++;
-			}
+
+			if (strncmp(ptr, "/dev/", 5) == 0)
+				ptr += 5;
 			strncpy(d->device, ptr, GV_MAXDRIVENAME);
 		} else {
 			/* We assume this is the drive name. */

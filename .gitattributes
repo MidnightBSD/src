@@ -25982,7 +25982,6 @@ sys/geom/gate/g_gate.c -text
 sys/geom/gate/g_gate.h -text
 sys/geom/geom.h -text
 sys/geom/geom_aes.c -text
-sys/geom/geom_apple.c -text
 sys/geom/geom_bsd.c -text
 sys/geom/geom_bsd_enc.c -text
 sys/geom/geom_ccd.c -text
@@ -25994,7 +25993,6 @@ sys/geom/geom_disk.h -text
 sys/geom/geom_dump.c -text
 sys/geom/geom_event.c -text
 sys/geom/geom_fox.c -text
-sys/geom/geom_gpt.c -text
 sys/geom/geom_int.h -text
 sys/geom/geom_io.c -text
 sys/geom/geom_kern.c -text
@@ -26029,6 +26027,12 @@ sys/geom/multipath/g_multipath.h -text
 sys/geom/nop/g_nop.c -text
 sys/geom/nop/g_nop.h -text
 sys/geom/notes -text
+sys/geom/part/g_part.c -text
+sys/geom/part/g_part.h -text
+sys/geom/part/g_part_apm.c -text
+sys/geom/part/g_part_gpt.c -text
+sys/geom/part/g_part_if.m -text
+sys/geom/part/g_part_mbr.c -text
 sys/geom/raid3/g_raid3.c -text
 sys/geom/raid3/g_raid3.h -text
 sys/geom/raid3/g_raid3_ctl.c -text
@@ -26054,6 +26058,12 @@ sys/geom/vinum/geom_vinum_state.c -text
 sys/geom/vinum/geom_vinum_subr.c -text
 sys/geom/vinum/geom_vinum_var.h -text
 sys/geom/vinum/geom_vinum_volume.c -text
+sys/geom/virstor/binstream.c -text
+sys/geom/virstor/binstream.h -text
+sys/geom/virstor/g_virstor.c -text
+sys/geom/virstor/g_virstor.h -text
+sys/geom/virstor/g_virstor_md.c -text
+sys/geom/virstor/g_virstor_md.h -text
 sys/geom/zero/g_zero.c -text
 sys/gnu/dev/sound/pci/csaimg.h -text
 sys/gnu/dev/sound/pci/emu10k1-ac97.h -text

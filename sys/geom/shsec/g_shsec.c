@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/shsec/g_shsec.c,v 1.3 2005/02/27 23:07:47 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/shsec/g_shsec.c,v 1.6 2006/11/01 12:30:51 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: src/sys/geom/shsec/g_shsec.c,v 1.3 2005/02/27 23:07:47 pjd E
 #include <geom/shsec/g_shsec.h>
 
 
-static MALLOC_DEFINE(M_SHSEC, "shsec data", "GEOM_SHSEC Data");
+static MALLOC_DEFINE(M_SHSEC, "shsec_data", "GEOM_SHSEC Data");
 
 static uma_zone_t g_shsec_zone;
 
@@ -317,6 +317,7 @@ g_shsec_start(struct bio *bp)
 	switch (bp->bio_cmd) {
 	case BIO_READ:
 	case BIO_WRITE:
+	case BIO_FLUSH:
 		/*
 		 * Only those requests are supported.
 		 */
@@ -606,7 +607,7 @@ g_shsec_destroy(struct g_shsec_softc *sc, boolean_t force)
 	free(sc->sc_disks, M_SHSEC);
 	free(sc, M_SHSEC);
 
-	pp = LIST_FIRST(&gp->provider); 
+	pp = LIST_FIRST(&gp->provider);
 	if (pp == NULL || (pp->acr == 0 && pp->acw == 0 && pp->ace == 0))
 		G_SHSEC_DEBUG(0, "Device %s destroyed.", gp->name);
 

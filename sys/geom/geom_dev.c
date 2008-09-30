@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_dev.c,v 1.89 2005/03/18 06:57:58 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_dev.c,v 1.94 2007/05/05 17:02:19 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -220,7 +220,7 @@ g_dev_close(struct cdev *dev, int flags, int fmt, struct thread *td)
 			break;
  		if (cp->nstart == cp->nend)
 			break;
-		tsleep(&i, PRIBIO, "gdevwclose", hz / 10);
+		pause("gdevwclose", hz / 10);
 		i += hz / 10;
 	}
 	if (cp->acr == 0 && cp->acw == 0 && cp->nstart != cp->nend) {
@@ -245,6 +245,7 @@ g_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread
 	struct g_geom *gp;
 	struct g_consumer *cp;
 	struct g_kerneldump kd;
+	off_t offset, length;
 	int i, error;
 	u_int u;
 
@@ -293,6 +294,25 @@ g_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag, struct thread
 		error = g_io_getattr("GEOM::kerneldump", cp, &i, &kd);
 		if (!error)
 			dev->si_flags |= SI_DUMPDEV;
+		break;
+	case DIOCGFLUSH:
+		error = g_io_flush(cp);
+		break;
+	case DIOCGDELETE:
+		offset = ((off_t *)data)[0];
+		length = ((off_t *)data)[1];
+		if ((offset % cp->provider->sectorsize) != 0 ||
+		    (length % cp->provider->sectorsize) != 0 ||
+		     length <= 0 || length > MAXPHYS) {
+			printf("%s: offset=%jd length=%jd\n", __func__, offset,
+			    length);
+			error = EINVAL;
+			break;
+		}
+		error = g_delete_data(cp, offset, length);
+		break;
+	case DIOCGIDENT:
+		error = g_io_getattr("GEOM::ident", cp, &i, data);
 		break;
 
 	default:
@@ -358,7 +378,7 @@ g_dev_strategy(struct bio *bp)
 		bp2 = g_clone_bio(bp);
 		if (bp2 != NULL)
 			break;
-		tsleep(&bp, PRIBIO, "gdstrat", hz / 10);
+		pause("gdstrat", hz / 10);
 	}
 	KASSERT(bp2 != NULL, ("XXX: ENOMEM in a bad place"));
 	bp2->bio_done = g_dev_done;
@@ -408,7 +428,7 @@ g_dev_orphan(struct g_consumer *cp)
 
 	/* Wait for the cows to come home */
 	while (cp->nstart != cp->nend)
-		msleep(&dev, NULL, PRIBIO, "gdevorphan", hz / 10);
+		pause("gdevorphan", hz / 10);
 
 	if (cp->acr > 0 || cp->acw > 0 || cp->ace > 0)
 		g_access(cp, -cp->acr, -cp->acw, -cp->ace);

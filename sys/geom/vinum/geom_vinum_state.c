@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_state.c,v 1.7 2005/01/21 18:27:23 le Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/vinum/geom_vinum_state.c,v 1.8 2006/03/30 14:01:25 le Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -339,6 +339,12 @@ gv_update_vol_state(struct gv_volume *v)
 	struct gv_plex *p;
 
 	KASSERT(v != NULL, ("gv_update_vol_state: NULL v"));
+
+	/* The volume can't be up without plexes. */
+	if (v->plexcount == 0) {
+		v->state = GV_VOL_DOWN;
+		return;
+	}
 
 	LIST_FOREACH(p, &v->plexes, in_volume) {
 		/* One of our plexes is accessible, and so are we. */

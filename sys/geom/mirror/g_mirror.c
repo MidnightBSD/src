@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.66.2.4.2.1 2006/04/26 06:35:10 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/mirror/g_mirror.c,v 1.93 2007/06/05 00:00:52 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -78,7 +78,7 @@ SYSCTL_UINT(_kern_geom_mirror, OID_AUTO, sync_requests, CTLFLAG_RDTUN,
 	G_MIRROR_DEBUG(4, "%s: Woken up %p.", __func__, (ident));	\
 } while (0)
 
-static eventhandler_tag g_mirror_pre_sync = NULL, g_mirror_post_sync = NULL;
+static eventhandler_tag g_mirror_pre_sync = NULL;
 
 static int g_mirror_destroy_geom(struct gctl_req *req, struct g_class *mp,
     struct g_geom *gp);
@@ -539,13 +539,11 @@ g_mirror_destroy_device(struct g_mirror_softc *sc)
 		}
 	}
 	callout_drain(&sc->sc_callout);
-	gp->softc = NULL;
 
 	g_topology_lock();
 	LIST_FOREACH_SAFE(cp, &sc->sc_sync.ds_geom->consumer, consumer, tmpcp) {
 		g_mirror_disconnect_consumer(sc, cp);
 	}
-	sc->sc_sync.ds_geom->softc = NULL;
 	g_wither_geom(sc->sc_sync.ds_geom, ENXIO);
 	G_MIRROR_DEBUG(0, "Device %s destroyed.", gp->name);
 	g_wither_geom(gp, ENXIO);
@@ -804,6 +802,8 @@ g_mirror_idle(struct g_mirror_softc *sc, int acw)
 
 	if (sc->sc_provider == NULL)
 		return (0);
+	if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_NOFAILSYNC) != 0)
+		return (0);
 	if (sc->sc_idle)
 		return (0);
 	if (sc->sc_writes > 0)
@@ -833,6 +833,8 @@ g_mirror_unidle(struct g_mirror_softc *sc)
 	g_topology_assert_not();
 	sx_assert(&sc->sc_lock, SX_XLOCKED);
 
+	if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_NOFAILSYNC) != 0)
+		return;
 	sc->sc_idle = 0;
 	sc->sc_last_write = time_uptime;
 	LIST_FOREACH(disk, &sc->sc_disks, d_next) {
@@ -876,7 +878,7 @@ g_mirror_done(struct bio *bp)
 	struct g_mirror_softc *sc;
 
 	sc = bp->bio_from->geom->softc;
-	bp->bio_cflags |= G_MIRROR_BIO_FLAG_REGULAR;
+	bp->bio_cflags = G_MIRROR_BIO_FLAG_REGULAR;
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_disksort(&sc->sc_queue, bp);
 	wakeup(sc);
@@ -1004,7 +1006,7 @@ g_mirror_sync_done(struct bio *bp)
 
 	G_MIRROR_LOGREQ(3, bp, "Synchronization request delivered.");
 	sc = bp->bio_from->geom->softc;
-	bp->bio_cflags |= G_MIRROR_BIO_FLAG_SYNC;
+	bp->bio_cflags = G_MIRROR_BIO_FLAG_SYNC;
 	mtx_lock(&sc->sc_queue_mtx);
 	bioq_disksort(&sc->sc_queue, bp);
 	wakeup(sc);
@@ -1044,6 +1046,48 @@ g_mirror_kernel_dump(struct bio *bp)
 }
 
 static void
+g_mirror_flush(struct g_mirror_softc *sc, struct bio *bp)
+{
+	struct bio_queue_head queue;
+	struct g_mirror_disk *disk;
+	struct g_consumer *cp;
+	struct bio *cbp;
+
+	bioq_init(&queue);
+	LIST_FOREACH(disk, &sc->sc_disks, d_next) {
+		if (disk->d_state != G_MIRROR_DISK_STATE_ACTIVE)
+			continue;
+		cbp = g_clone_bio(bp);
+		if (cbp == NULL) {
+			for (cbp = bioq_first(&queue); cbp != NULL;
+			    cbp = bioq_first(&queue)) {
+				bioq_remove(&queue, cbp);
+				g_destroy_bio(cbp);
+			}
+			if (bp->bio_error == 0)
+				bp->bio_error = ENOMEM;
+			g_io_deliver(bp, bp->bio_error);
+			return;
+		}
+		bioq_insert_tail(&queue, cbp);
+		cbp->bio_done = g_std_done;
+		cbp->bio_caller1 = disk;
+		cbp->bio_to = disk->d_consumer->provider;
+	}
+	for (cbp = bioq_first(&queue); cbp != NULL; cbp = bioq_first(&queue)) {
+		bioq_remove(&queue, cbp);
+		G_MIRROR_LOGREQ(3, cbp, "Sending request.");
+		disk = cbp->bio_caller1;
+		cbp->bio_caller1 = NULL;
+		cp = disk->d_consumer;
+		KASSERT(cp->acr >= 1 && cp->acw >= 1 && cp->ace >= 1,
+		    ("Consumer %s not opened (r%dw%de%d).", cp->provider->name,
+		    cp->acr, cp->acw, cp->ace));
+		g_io_request(cbp, disk->d_consumer);
+	}
+}
+
+static void
 g_mirror_start(struct bio *bp)
 {
 	struct g_mirror_softc *sc;
@@ -1063,6 +1107,9 @@ g_mirror_start(struct bio *bp)
 	case BIO_WRITE:
 	case BIO_DELETE:
 		break;
+	case BIO_FLUSH:
+		g_mirror_flush(sc, bp);
+		return;
 	case BIO_GETATTR:
 		if (strcmp("GEOM::kerneldump", bp->bio_attribute) == 0) {
 			g_mirror_kernel_dump(bp);
@@ -1660,6 +1707,8 @@ g_mirror_can_destroy(struct g_mirror_softc *sc)
 
 	g_topology_assert();
 	gp = sc->sc_geom;
+	if (gp->softc == NULL)
+		return (1);
 	LIST_FOREACH(cp, &gp->consumer, consumer) {
 		if (g_mirror_is_busy(sc, cp))
 			return (0);
@@ -1689,6 +1738,8 @@ g_mirror_try_destroy(struct g_mirror_softc *sc)
 		g_topology_unlock();
 		return (0);
 	}
+	sc->sc_geom->softc = NULL;
+	sc->sc_sync.ds_geom->softc = NULL;
 	if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_WAIT) != 0) {
 		g_topology_unlock();
 		G_MIRROR_DEBUG(4, "%s: Waking up %p.", __func__,
@@ -1717,9 +1768,9 @@ g_mirror_worker(void *arg)
 	int timeout;
 
 	sc = arg;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_prio(curthread, PRIBIO);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 
 	sx_xlock(&sc->sc_lock);
 	for (;;) {
@@ -1782,14 +1833,6 @@ g_mirror_worker(void *arg)
 		mtx_lock(&sc->sc_queue_mtx);
 		bp = bioq_first(&sc->sc_queue);
 		if (bp == NULL) {
-			if (ep != NULL) {
-				/*
-				 * We have a pending even, try to serve it
-				 * again.
-				 */
-				mtx_unlock(&sc->sc_queue_mtx);
-				continue;
-			}
 			if ((sc->sc_flags &
 			    G_MIRROR_DEVICE_FLAG_DESTROY) != 0) {
 				mtx_unlock(&sc->sc_queue_mtx);
@@ -1801,6 +1844,15 @@ g_mirror_worker(void *arg)
 				mtx_lock(&sc->sc_queue_mtx);
 			}
 			sx_xunlock(&sc->sc_lock);
+			/*
+			 * XXX: We can miss an event here, because an event
+			 *      can be added without sx-device-lock and without
+			 *      mtx-queue-lock. Maybe I should just stop using
+			 *      dedicated mutex for events synchronization and
+			 *      stick with the queue lock?
+			 *      The event will hang here until next I/O request
+			 *      or next event is received.
+			 */
 			MSLEEP(sc, &sc->sc_queue_mtx, PRIBIO | PDROP, "m:w1",
 			    timeout * hz);
 			sx_xlock(&sc->sc_lock);
@@ -1810,12 +1862,22 @@ g_mirror_worker(void *arg)
 		bioq_remove(&sc->sc_queue, bp);
 		mtx_unlock(&sc->sc_queue_mtx);
 
-		if ((bp->bio_cflags & G_MIRROR_BIO_FLAG_REGULAR) != 0)
-			g_mirror_regular_request(bp);
-		else if ((bp->bio_cflags & G_MIRROR_BIO_FLAG_SYNC) != 0)
-			g_mirror_sync_request(bp);
-		else
+		if (bp->bio_from->geom == sc->sc_sync.ds_geom &&
+		    (bp->bio_cflags & G_MIRROR_BIO_FLAG_SYNC) != 0) {
+			g_mirror_sync_request(bp);	/* READ */
+		} else if (bp->bio_to != sc->sc_provider) {
+			if ((bp->bio_cflags & G_MIRROR_BIO_FLAG_REGULAR) != 0)
+				g_mirror_regular_request(bp);
+			else if ((bp->bio_cflags & G_MIRROR_BIO_FLAG_SYNC) != 0)
+				g_mirror_sync_request(bp);	/* WRITE */
+			else {
+				KASSERT(0,
+				    ("Invalid request cflags=0x%hhx to=%s.",
+				    bp->bio_cflags, bp->bio_to->name));
+			}
+		} else {
 			g_mirror_register_request(bp);
+		}
 		G_MIRROR_DEBUG(5, "%s: I'm here 9.", __func__);
 	}
 }
@@ -1826,6 +1888,8 @@ g_mirror_update_idle(struct g_mirror_softc *sc, struct g_mirror_disk *disk)
 
 	sx_assert(&sc->sc_lock, SX_LOCKED);
 
+	if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_NOFAILSYNC) != 0)
+		return;
 	if (!sc->sc_idle && (disk->d_flags & G_MIRROR_DISK_FLAG_DIRTY) == 0) {
 		G_MIRROR_DEBUG(1, "Disk %s (device %s) marked as dirty.",
 		    g_mirror_get_diskname(disk), sc->sc_name);
@@ -1870,7 +1934,8 @@ g_mirror_sync_start(struct g_mirror_disk *disk)
 
 	G_MIRROR_DEBUG(0, "Device %s: rebuilding provider %s.", sc->sc_name,
 	    g_mirror_get_diskname(disk));
-	disk->d_flags |= G_MIRROR_DISK_FLAG_DIRTY;
+	if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_NOFAILSYNC) == 0)
+		disk->d_flags |= G_MIRROR_DISK_FLAG_DIRTY;
 	KASSERT(disk->d_sync.ds_consumer == NULL,
 	    ("Sync consumer already exists (device=%s, disk=%s).",
 	    sc->sc_name, g_mirror_get_diskname(disk)));
@@ -1978,8 +2043,8 @@ g_mirror_launch_provider(struct g_mirror_softc *sc)
 	sc->sc_provider = pp;
 	g_error_provider(pp, 0);
 	g_topology_unlock();
-	G_MIRROR_DEBUG(0, "Device %s: provider %s launched.", sc->sc_name,
-	    pp->name);
+	G_MIRROR_DEBUG(0, "Device %s launched (%u/%u).", pp->name,
+	    g_mirror_ndisks(sc, G_MIRROR_DISK_STATE_ACTIVE), sc->sc_ndisks);
 	LIST_FOREACH(disk, &sc->sc_disks, d_next) {
 		if (disk->d_state == G_MIRROR_DISK_STATE_SYNCHRONIZING)
 			g_mirror_sync_start(disk);
@@ -2074,9 +2139,9 @@ g_mirror_determine_state(struct g_mirror_disk *disk)
 		 * Not good, NOT GOOD!
 		 * It means that mirror was started on stale disks
 		 * and more fresh disk just arrive.
-		 * If there were writes, mirror is fucked up, sorry.
+		 * If there were writes, mirror is broken, sorry.
 		 * I think the best choice here is don't touch
-		 * this disk and inform the user laudly.
+		 * this disk and inform the user loudly.
 		 */
 		G_MIRROR_DEBUG(0, "Device %s was started before the freshest "
 		    "disk (%s) arrives!! It will not be connected to the "
@@ -2381,7 +2446,7 @@ again:
 			if (dp != NULL)
 				LIST_INSERT_AFTER(dp, disk, d_next);
 		}
-		G_MIRROR_DEBUG(0, "Device %s: provider %s detected.",
+		G_MIRROR_DEBUG(1, "Device %s: provider %s detected.",
 		    sc->sc_name, g_mirror_get_diskname(disk));
 		if (sc->sc_state == G_MIRROR_DEVICE_STATE_STARTING)
 			break;
@@ -2422,7 +2487,7 @@ again:
 		disk->d_sync.ds_offset_done = 0;
 		g_mirror_update_idle(sc, disk);
 		g_mirror_update_metadata(disk);
-		G_MIRROR_DEBUG(0, "Device %s: provider %s activated.",
+		G_MIRROR_DEBUG(1, "Device %s: provider %s activated.",
 		    sc->sc_name, g_mirror_get_diskname(disk));
 		break;
 	case G_MIRROR_DISK_STATE_STALE:
@@ -2697,36 +2762,75 @@ g_mirror_add_disk(struct g_mirror_softc *sc, struct g_provider *pp,
 	return (0);
 }
 
+static void
+g_mirror_destroy_delayed(void *arg, int flag)
+{
+	struct g_mirror_softc *sc;
+	int error;
+
+	if (flag == EV_CANCEL) {
+		G_MIRROR_DEBUG(1, "Destroying canceled.");
+		return;
+	}
+	sc = arg;
+	g_topology_unlock();
+	sx_xlock(&sc->sc_lock);
+	KASSERT((sc->sc_flags & G_MIRROR_DEVICE_FLAG_DESTROY) == 0,
+	    ("DESTROY flag set on %s.", sc->sc_name));
+	KASSERT((sc->sc_flags & G_MIRROR_DEVICE_FLAG_DESTROYING) != 0,
+	    ("DESTROYING flag not set on %s.", sc->sc_name));
+	G_MIRROR_DEBUG(1, "Destroying %s (delayed).", sc->sc_name);
+	error = g_mirror_destroy(sc, G_MIRROR_DESTROY_SOFT);
+	if (error != 0) {
+		G_MIRROR_DEBUG(0, "Cannot destroy %s.", sc->sc_name);
+		sx_xunlock(&sc->sc_lock);
+	}
+	g_topology_lock();
+}
+
 static int
 g_mirror_access(struct g_provider *pp, int acr, int acw, int ace)
 {
 	struct g_mirror_softc *sc;
-	int dcr, dcw, dce;
+	int dcr, dcw, dce, error = 0;
 
 	g_topology_assert();
 	G_MIRROR_DEBUG(2, "Access request for %s: r%dw%de%d.", pp->name, acr,
 	    acw, ace);
 
+	sc = pp->geom->softc;
+	if (sc == NULL && acr <= 0 && acw <= 0 && ace <= 0)
+		return (0);
+	KASSERT(sc != NULL, ("NULL softc (provider=%s).", pp->name));
+
 	dcr = pp->acr + acr;
 	dcw = pp->acw + acw;
 	dce = pp->ace + ace;
 
-	sc = pp->geom->softc;
-	if (sc == NULL || LIST_EMPTY(&sc->sc_disks) ||
-	    (sc->sc_flags & G_MIRROR_DEVICE_FLAG_DESTROY) != 0) {
-		if (acr <= 0 && acw <= 0 && ace <= 0)
-			return (0);
-		else
-			return (ENXIO);
+	g_topology_unlock();
+	sx_xlock(&sc->sc_lock);
+	if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_DESTROY) != 0 ||
+	    LIST_EMPTY(&sc->sc_disks)) {
+		if (acr > 0 || acw > 0 || ace > 0)
+			error = ENXIO;
+		goto end;
 	}
-	if (dcw == 0 && !sc->sc_idle) {
-		g_topology_unlock();
-		sx_xlock(&sc->sc_lock);
+	if (dcw == 0 && !sc->sc_idle)
 		g_mirror_idle(sc, dcw);
-		sx_xunlock(&sc->sc_lock);
-		g_topology_lock();
+	if ((sc->sc_flags & G_MIRROR_DEVICE_FLAG_DESTROYING) != 0) {
+		if (acr > 0 || acw > 0 || ace > 0) {
+			error = ENXIO;
+			goto end;
+		}
+		if (dcr == 0 && dcw == 0 && dce == 0) {
+			g_post_event(g_mirror_destroy_delayed, sc, M_WAITOK,
+			    sc, NULL);
+		}
 	}
-	return (0);
+end:
+	sx_xunlock(&sc->sc_lock);
+	g_topology_lock();
+	return (error);
 }
 
 static struct g_geom *
@@ -2800,7 +2904,8 @@ g_mirror_create(struct g_class *mp, const struct g_mirror_metadata *md)
 		return (NULL);
 	}
 
-	G_MIRROR_DEBUG(0, "Device %s created (id=%u).", sc->sc_name, sc->sc_id);
+	G_MIRROR_DEBUG(1, "Device %s created (%u components, id=%u).",
+	    sc->sc_name, sc->sc_ndisks, sc->sc_id);
 
 	sc->sc_rootmount = root_mount_hold("GMIRROR");
 	G_MIRROR_DEBUG(1, "root_mount_hold %p", sc->sc_rootmount);
@@ -2813,8 +2918,9 @@ g_mirror_create(struct g_class *mp, const struct g_mirror_metadata *md)
 }
 
 int
-g_mirror_destroy(struct g_mirror_softc *sc, boolean_t force)
+g_mirror_destroy(struct g_mirror_softc *sc, int how)
 {
+	struct g_mirror_disk *disk;
 	struct g_provider *pp;
 
 	g_topology_assert_not();
@@ -2824,16 +2930,38 @@ g_mirror_destroy(struct g_mirror_softc *sc, boolean_t force)
 
 	pp = sc->sc_provider;
 	if (pp != NULL && (pp->acr != 0 || pp->acw != 0 || pp->ace != 0)) {
-		if (force) {
-			G_MIRROR_DEBUG(1, "Device %s is still open, so it "
-			    "can't be definitely removed.", pp->name);
-		} else {
+		switch (how) {
+		case G_MIRROR_DESTROY_SOFT:
 			G_MIRROR_DEBUG(1,
 			    "Device %s is still open (r%dw%de%d).", pp->name,
 			    pp->acr, pp->acw, pp->ace);
 			return (EBUSY);
+		case G_MIRROR_DESTROY_DELAYED:
+			G_MIRROR_DEBUG(1,
+			    "Device %s will be destroyed on last close.",
+			    pp->name);
+			LIST_FOREACH(disk, &sc->sc_disks, d_next) {
+				if (disk->d_state ==
+				    G_MIRROR_DISK_STATE_SYNCHRONIZING) {
+					g_mirror_sync_stop(disk, 1);
+				}
+			}
+			sc->sc_flags |= G_MIRROR_DEVICE_FLAG_DESTROYING;
+			return (EBUSY);
+		case G_MIRROR_DESTROY_HARD:
+			G_MIRROR_DEBUG(1, "Device %s is still open, so it "
+			    "can't be definitely removed.", pp->name);
 		}
 	}
+
+	g_topology_lock();
+	if (sc->sc_geom->softc == NULL) {
+		g_topology_unlock();
+		return (0);
+	}
+	sc->sc_geom->softc = NULL;
+	sc->sc_sync.ds_geom->softc = NULL;
+	g_topology_unlock();
 
 	sc->sc_flags |= G_MIRROR_DEVICE_FLAG_DESTROY;
 	sc->sc_flags |= G_MIRROR_DEVICE_FLAG_WAIT;
@@ -2937,7 +3065,8 @@ g_mirror_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 		G_MIRROR_DEBUG(0, "Cannot add disk %s to %s (error=%d).",
 		    pp->name, gp->name, error);
 		if (LIST_EMPTY(&sc->sc_disks)) {
-			g_mirror_destroy(sc, 1);
+			g_cancel_event(sc);
+			g_mirror_destroy(sc, G_MIRROR_DESTROY_HARD);
 			g_topology_lock();
 			return (NULL);
 		}
@@ -2958,7 +3087,8 @@ g_mirror_destroy_geom(struct gctl_req *req __unused,
 	g_topology_unlock();
 	sc = gp->softc;
 	sx_xlock(&sc->sc_lock);
-	error = g_mirror_destroy(gp->softc, 0);
+	g_cancel_event(sc);
+	error = g_mirror_destroy(gp->softc, G_MIRROR_DESTROY_SOFT);
 	if (error != 0)
 		sx_xunlock(&sc->sc_lock);
 	g_topology_lock();
@@ -3057,6 +3187,7 @@ g_mirror_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp,
 		sbuf_printf(sb, name);					\
 	}								\
 } while (0)
+			ADD_FLAG(G_MIRROR_DEVICE_FLAG_NOFAILSYNC, "NOFAILSYNC");
 			ADD_FLAG(G_MIRROR_DEVICE_FLAG_NOAUTOSYNC, "NOAUTOSYNC");
 #undef	ADD_FLAG
 		}
@@ -3087,7 +3218,7 @@ g_mirror_shutdown_pre_sync(void *arg, int howto)
 	struct g_class *mp;
 	struct g_geom *gp, *gp2;
 	struct g_mirror_softc *sc;
-	struct g_mirror_disk *disk;
+	int error;
 
 	mp = arg;
 	DROP_GIANT();
@@ -3100,43 +3231,14 @@ g_mirror_shutdown_pre_sync(void *arg, int howto)
 			continue;
 		g_topology_unlock();
 		sx_xlock(&sc->sc_lock);
-		LIST_FOREACH(disk, &sc->sc_disks, d_next) {
-			if (disk->d_state == G_MIRROR_DISK_STATE_SYNCHRONIZING)
-				g_mirror_sync_stop(disk, 1);
-		}
-		sx_xunlock(&sc->sc_lock);
+		g_cancel_event(sc);
+		error = g_mirror_destroy(sc, G_MIRROR_DESTROY_DELAYED);
+		if (error != 0)
+			sx_xunlock(&sc->sc_lock);
 		g_topology_lock();
 	}
 	g_topology_unlock();
 	PICKUP_GIANT();
-}
-
-static void
-g_mirror_shutdown_post_sync(void *arg, int howto)
-{
-	struct g_class *mp;
-	struct g_geom *gp, *gp2;
-	struct g_mirror_softc *sc;
-
-	mp = arg;
-	DROP_GIANT();
-	g_topology_lock();
-	LIST_FOREACH_SAFE(gp, &mp->geom, geom, gp2) {
-		if ((sc = gp->softc) == NULL)
-			continue;
-		/* Skip synchronization geom. */
-		if (gp == sc->sc_sync.ds_geom)
-			continue;
-		g_topology_unlock();
-		sx_xlock(&sc->sc_lock);
-		g_mirror_destroy(sc, 1);
-		g_topology_lock();
-	}
-	g_topology_unlock();
-	PICKUP_GIANT();
-#if 0
-	tsleep(&gp, PRIBIO, "m:shutdown", hz * 20);
-#endif
 }
 
 static void
@@ -3145,9 +3247,7 @@ g_mirror_init(struct g_class *mp)
 
 	g_mirror_pre_sync = EVENTHANDLER_REGISTER(shutdown_pre_sync,
 	    g_mirror_shutdown_pre_sync, mp, SHUTDOWN_PRI_FIRST);
-	g_mirror_post_sync = EVENTHANDLER_REGISTER(shutdown_post_sync,
-	    g_mirror_shutdown_post_sync, mp, SHUTDOWN_PRI_FIRST);
-	if (g_mirror_pre_sync == NULL || g_mirror_post_sync == NULL)
+	if (g_mirror_pre_sync == NULL)
 		G_MIRROR_DEBUG(0, "Warning! Cannot register shutdown event.");
 }
 
@@ -3157,8 +3257,6 @@ g_mirror_fini(struct g_class *mp)
 
 	if (g_mirror_pre_sync != NULL)
 		EVENTHANDLER_DEREGISTER(shutdown_pre_sync, g_mirror_pre_sync);
-	if (g_mirror_post_sync != NULL)
-		EVENTHANDLER_DEREGISTER(shutdown_post_sync, g_mirror_post_sync);
 }
 
 DECLARE_GEOM_CLASS(g_mirror_class, g_mirror);
