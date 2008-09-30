@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1999
  *      University of California.  All rights reserved.
  *
@@ -28,7 +28,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libcrypt/misc.c,v 1.3 2002/03/06 17:18:08 markm Exp $");
+/* $FreeBSD: src/lib/libcrypt/misc.c,v 1.3 2002/03/06 17:18:08 markm Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 

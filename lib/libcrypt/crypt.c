@@ -1,4 +1,4 @@
-/*
+/*-
  * Copyright (c) 1999
  *      Mark Murray.  All rights reserved.
  *
@@ -25,7 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libcrypt/crypt.c,v 1.23 2003/06/02 19:29:27 markm Exp $");
+/* $FreeBSD: src/lib/libcrypt/crypt.c,v 1.23 2003/06/02 19:29:27 markm Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 #include <string.h>

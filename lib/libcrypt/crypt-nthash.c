@@ -25,7 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libcrypt/crypt-nthash.c,v 1.1 2003/06/02 19:29:27 markm Exp $");
+/* $FreeBSD: src/lib/libcrypt/crypt-nthash.c,v 1.1 2003/06/02 19:29:27 markm Exp $ */
+__MBSDID("$MidnightBSD$");
 
 #include <sys/types.h>
 
