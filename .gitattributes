@@ -23483,8 +23483,6 @@ sys/boot/efi/include/efiser.h -text
 sys/boot/efi/include/efistdarg.h -text
 sys/boot/efi/include/i386/efibind.h -text
 sys/boot/efi/include/i386/pe.h -text
-sys/boot/efi/include/ia64/efibind.h -text
-sys/boot/efi/include/ia64/pe.h -text
 sys/boot/efi/libefi/Makefile -text
 sys/boot/efi/libefi/bootinfo.c -text
 sys/boot/efi/libefi/copy.c -text
