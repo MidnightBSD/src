@@ -31133,10 +31133,12 @@ usr.sbin/config/SMM.doc/c.t -text
 usr.sbin/config/SMM.doc/d.t -text
 usr.sbin/config/SMM.doc/e.t -text
 usr.sbin/config/SMM.doc/spell.ok -text
+usr.sbin/config/config.5 -text
 usr.sbin/config/config.8 -text
 usr.sbin/config/config.h -text
 usr.sbin/config/config.y -text
 usr.sbin/config/configvers.h -text
+usr.sbin/config/kernconf.tmpl -text
 usr.sbin/config/lang.l -text
 usr.sbin/config/main.c -text
 usr.sbin/config/mkheaders.c -text
