@@ -11,10 +11,9 @@
 # If you are in doubt as to the purpose or necessity of a line, check first
 # in NOTES.
 #
-# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.7 2008/06/27 16:33:36 laffer1 Exp $
+# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.8 2008/09/30 02:18:57 laffer1 Exp $
 # $FreeBSD: src/sys/amd64/conf/GENERIC,v 1.439.2.7 2005/10/28 19:21:27 jhb Exp $
 
-machine		amd64
 cpu		HAMMER
 ident		GENERIC
 
@@ -47,6 +46,7 @@ options 	COMPAT_43		# Needed by COMPAT_LINUX32
 options 	COMPAT_IA32		# Compatible with i386 binaries
 options 	COMPAT_FREEBSD4		# Compatible with FreeBSD4
 options 	COMPAT_FREEBSD5		# Compatible with FreeBSD5
+options 	COMPAT_FREEBSD6		# Compatible with FreeBSD6
 options 	COMPAT_LINUX32		# Compatible with i386 linux binaries 
 options 	SCSI_DELAY=5000		# Delay (in ms) before probing SCSI
 options 	KTRACE			# ktrace(1) support
