@@ -1,10 +1,13 @@
 #
-# $FreeBSD: src/lib/libcrypt/Makefile,v 1.35.2.1 2005/07/22 17:29:04 kensmith Exp $
+# $FreeBSD: src/lib/libcrypt/Makefile,v 1.39 2007/05/21 02:49:03 deischen Exp $
 #
 
-SHLIB_MAJOR=	3
-LIB=		crypt
 SHLIBDIR?=	/lib
+
+.include <bsd.own.mk>
+
+SHLIB_MAJOR=	4
+LIB=		crypt
 
 .PATH:		${.CURDIR}/../libmd
 SRCS=		crypt.c misc.c \
@@ -15,7 +18,7 @@ MLINKS=		crypt.3 crypt_get_format.3 crypt.3 crypt_set_format.3
 CFLAGS+=	-I${.CURDIR}/../libmd -I${.CURDIR}/../libutil
 
 # Pull in the strong crypto, if it is present.
-.if exists(${.CURDIR}/../../secure/lib/libcrypt) && !defined(NO_CRYPT)
+.if exists(${.CURDIR}/../../secure/lib/libcrypt) && ${MK_CRYPT} != "no"
 .PATH:		${.CURDIR}/../../secure/lib/libcrypt
 SRCS+=		crypt-des.c crypt-blowfish.c blowfish.c
 CFLAGS+=	-I${.CURDIR} -DHAS_DES -DHAS_BLOWFISH
