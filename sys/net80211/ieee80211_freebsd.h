@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2003-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,8 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -24,10 +22,23 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_freebsd.h,v 1.5.2.1 2005/09/03 22:40:02 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_freebsd.h,v 1.15.2.1 2007/11/11 17:44:35 sam Exp $
  */
 #ifndef _NET80211_IEEE80211_FREEBSD_H_
 #define _NET80211_IEEE80211_FREEBSD_H_
+
+#ifdef _KERNEL
+/*
+ * Common state locking definitions.
+ */
+typedef struct mtx ieee80211_com_lock_t;
+#define	IEEE80211_LOCK_INIT(_ic, _name) \
+	mtx_init(&(_ic)->ic_comlock, _name, "802.11 com lock", MTX_DEF)
+#define	IEEE80211_LOCK_DESTROY(_ic) mtx_destroy(&(_ic)->ic_comlock)
+#define	IEEE80211_LOCK(_ic)	   mtx_lock(&(_ic)->ic_comlock)
+#define	IEEE80211_UNLOCK(_ic)	   mtx_unlock(&(_ic)->ic_comlock)
+#define	IEEE80211_LOCK_ASSERT(_ic) \
+	mtx_assert(&(_ic)->ic_comlock, MA_OWNED)
 
 /*
  * Beacon locking definitions.
@@ -61,7 +72,7 @@ typedef struct mtx ieee80211_node_lock_t;
  */
 typedef struct mtx ieee80211_scan_lock_t;
 #define	IEEE80211_SCAN_LOCK_INIT(_nt, _name) \
-	mtx_init(&(_nt)->nt_scanlock, _name, "802.11 scangen", MTX_DEF)
+	mtx_init(&(_nt)->nt_scanlock, _name, "802.11 node scangen", MTX_DEF)
 #define	IEEE80211_SCAN_LOCK_DESTROY(_nt)	mtx_destroy(&(_nt)->nt_scanlock)
 #define	IEEE80211_SCAN_LOCK(_nt)		mtx_lock(&(_nt)->nt_scanlock)
 #define	IEEE80211_SCAN_UNLOCK(_nt)		mtx_unlock(&(_nt)->nt_scanlock)
@@ -114,6 +125,28 @@ typedef struct mtx ieee80211_scan_lock_t;
 	(_qlen) = ++(_ni)->ni_savedq.ifq_len; 			\
 } while (0)
 
+#define	IEEE80211_TAPQ_INIT(_tap) do {				\
+	mtx_init(&(tap)->txa_q.ifq_mtx, "ampdu tx queue", NULL, MTX_DEF); \
+	(_tap)->txa_q.ifq_maxlen = IEEE80211_AGGR_BAWMAX;	\
+} while (0)
+#define	IEEE80211_TAPQ_DESTROY(_tap) \
+	mtx_destroy(&(_tap)->txa_q.ifq_mtx)
+
+#ifndef IF_PREPEND_LIST
+#define _IF_PREPEND_LIST(ifq, mhead, mtail, mcount) do {	\
+	(mtail)->m_nextpkt = (ifq)->ifq_head;			\
+	if ((ifq)->ifq_tail == NULL)				\
+		(ifq)->ifq_tail = (mtail);			\
+	(ifq)->ifq_head = (mhead);				\
+	(ifq)->ifq_len += (mcount);				\
+} while (0)
+#define IF_PREPEND_LIST(ifq, mhead, mtail, mcount) do {		\
+	IF_LOCK(ifq);						\
+	_IF_PREPEND_LIST(ifq, mhead, mtail, mcount);		\
+	IF_UNLOCK(ifq);						\
+} while (0)
+#endif /* IF_PREPEND_LIST */
+
 /*
  * 802.1x MAC ACL database locking definitions.
  */
@@ -148,10 +181,30 @@ struct ieee80211_node;
 int	ieee80211_node_dectestref(struct ieee80211_node *ni);
 #define	ieee80211_node_refcnt(_ni)	(_ni)->ni_refcnt
 
-struct mbuf *ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen);
+struct ifqueue;
+void	ieee80211_drain_ifq(struct ifqueue *);
+
+#define	msecs_to_ticks(ms)	(((ms)*hz)/1000)
+#define	ticks_to_msecs(t)	((t) / hz)
+#define time_after(a,b) 	((long)(b) - (long)(a) < 0)
+#define time_before(a,b)	time_after(b,a)
+#define time_after_eq(a,b)	((long)(a) - (long)(b) >= 0)
+#define time_before_eq(a,b)	time_after_eq(b,a)
+
+struct mbuf *ieee80211_getmgtframe(uint8_t **frm, int headroom, int pktlen);
+
+/* tx path usage */
 #define	M_LINK0		M_PROTO1		/* WEP requested */
 #define	M_PWR_SAV	M_PROTO4		/* bypass PS handling */
 #define	M_MORE_DATA	M_PROTO5		/* more data frames to follow */
+#define	M_FF		0x20000			/* fast frame */
+#define	M_TXCB		0x40000			/* do tx complete callback */
+#define	M_80211_TX	(0x60000|M_PROTO1|M_WME_AC_MASK|M_PROTO4|M_PROTO5)
+
+/* rx path usage */
+#define	M_AMPDU		M_PROTO1		/* A-MPDU processing done */
+#define	M_WEP		M_PROTO2		/* WEP done by hardware */
+#define	M_80211_RX	(M_AMPDU|M_WEP)
 /*
  * Encode WME access control bits in the PROTO flags.
  * This is safe since it's passed directly in to the
@@ -176,6 +229,17 @@ struct mbuf *ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen);
 #define	M_AGE_GET(m)		(m->m_pkthdr.csum_data)
 #define	M_AGE_SUB(m,adj)	(m->m_pkthdr.csum_data -= adj)
 
+#define	MTAG_ABI_NET80211	1132948340	/* net80211 ABI */
+
+struct ieee80211_cb {
+	void	(*func)(struct ieee80211_node *, void *, int status);
+	void	*arg;
+};
+#define	NET80211_TAG_CALLBACK	0	/* xmit complete callback */
+int	ieee80211_add_callback(struct mbuf *m,
+		void (*func)(struct ieee80211_node *, void *, int), void *arg);
+void	ieee80211_process_callback(struct ieee80211_node *, struct mbuf *, int);
+
 void	get_random_bytes(void *, size_t);
 
 struct ieee80211com;
@@ -184,6 +248,37 @@ void	ieee80211_sysctl_attach(struct ieee80211com *);
 void	ieee80211_sysctl_detach(struct ieee80211com *);
 
 void	ieee80211_load_module(const char *);
+
+#define	IEEE80211_CRYPTO_MODULE(name, version) \
+static int								\
+name##_modevent(module_t mod, int type, void *unused)			\
+{									\
+	switch (type) {							\
+	case MOD_LOAD:							\
+		ieee80211_crypto_register(&name);			\
+		return 0;						\
+	case MOD_UNLOAD:						\
+	case MOD_QUIESCE:						\
+		if (nrefs) {						\
+			printf("wlan_##name: still in use (%u dynamic refs)\n",\
+				nrefs);					\
+			return EBUSY;					\
+		}							\
+		if (type == MOD_UNLOAD)					\
+			ieee80211_crypto_unregister(&name);		\
+		return 0;						\
+	}								\
+	return EINVAL;							\
+}									\
+static moduledata_t name##_mod = {					\
+	"wlan_" #name,							\
+	name##_modevent,						\
+	0								\
+};									\
+DECLARE_MODULE(wlan_##name, name##_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);\
+MODULE_VERSION(wlan_##name, version);					\
+MODULE_DEPEND(wlan_##name, wlan, 1, 1, 1)
+#endif /* _KERNEL */
 
 /* XXX this stuff belongs elsewhere */
 /*
@@ -225,4 +320,37 @@ struct ieee80211_michael_event {
 #define	RTM_IEEE80211_MICHAEL	107	/* Michael MIC failure detected */
 #define	RTM_IEEE80211_REJOIN	108	/* station re-associate (ap mode) */
 
+/*
+ * Structure prepended to raw packets sent through the bpf
+ * interface when set to DLT_IEEE802_11_RADIO.  This allows
+ * user applications to specify pretty much everything in
+ * an Atheros tx descriptor.  XXX need to generalize.
+ *
+ * XXX cannot be more than 14 bytes as it is copied to a sockaddr's
+ * XXX sa_data area.
+ */
+struct ieee80211_bpf_params {
+	uint8_t		ibp_vers;	/* version */
+#define	IEEE80211_BPF_VERSION	0
+	uint8_t		ibp_len;	/* header length in bytes */
+	uint8_t		ibp_flags;
+#define	IEEE80211_BPF_SHORTPRE	0x01	/* tx with short preamble */
+#define	IEEE80211_BPF_NOACK	0x02	/* tx with no ack */
+#define	IEEE80211_BPF_CRYPTO	0x04	/* tx with h/w encryption */
+#define	IEEE80211_BPF_FCS	0x10	/* frame incldues FCS */
+#define	IEEE80211_BPF_DATAPAD	0x20	/* frame includes data padding */
+#define	IEEE80211_BPF_RTS	0x40	/* tx with RTS/CTS */
+#define	IEEE80211_BPF_CTS	0x80	/* tx with CTS only */
+	uint8_t		ibp_pri;	/* WME/WMM AC+tx antenna */
+	uint8_t		ibp_try0;	/* series 1 try count */
+	uint8_t		ibp_rate0;	/* series 1 IEEE tx rate */
+	uint8_t		ibp_power;	/* tx power (device units) */
+	uint8_t		ibp_ctsrate;	/* IEEE tx rate for CTS */
+	uint8_t		ibp_try1;	/* series 2 try count */
+	uint8_t		ibp_rate1;	/* series 2 IEEE tx rate */
+	uint8_t		ibp_try2;	/* series 3 try count */
+	uint8_t		ibp_rate2;	/* series 3 IEEE tx rate */
+	uint8_t		ibp_try3;	/* series 4 try count */
+	uint8_t		ibp_rate3;	/* series 4 IEEE tx rate */
+};
 #endif /* _NET80211_IEEE80211_FREEBSD_H_ */

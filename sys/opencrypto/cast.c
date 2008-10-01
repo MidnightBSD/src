@@ -7,7 +7,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/cast.c,v 1.3 2005/01/07 02:29:16 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/opencrypto/cast.c,v 1.4 2007/07/05 06:59:14 peter Exp $");
 
 #include <sys/types.h>
 #include <opencrypto/cast.h>
@@ -131,7 +131,7 @@ u_int32_t t, l, r;
 
 void cast_setkey(cast_key* key, u_int8_t* rawkey, int keybytes)
 {
-u_int32_t t[4], z[4], x[4];
+u_int32_t t[4] = {0, 0, 0, 0}, z[4] = {0, 0, 0, 0}, x[4];
 int i;
 
 	/* Set number of rounds to 12 or 16, depending on key length */

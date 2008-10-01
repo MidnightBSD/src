@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -30,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto_tkip.c,v 1.9.2.2 2005/12/22 19:02:08 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto_tkip.c,v 1.13 2007/06/11 03:36:54 sam Exp $");
 
 /*
  * IEEE 802.11i TKIP crypto support.
@@ -58,7 +52,7 @@ __FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto_tkip.c,v 1.9.2.2 2005/12/2
 static	void *tkip_attach(struct ieee80211com *, struct ieee80211_key *);
 static	void tkip_detach(struct ieee80211_key *);
 static	int tkip_setkey(struct ieee80211_key *);
-static	int tkip_encap(struct ieee80211_key *, struct mbuf *m, u_int8_t keyid);
+static	int tkip_encap(struct ieee80211_key *, struct mbuf *m, uint8_t keyid);
 static	int tkip_enmic(struct ieee80211_key *, struct mbuf *, int);
 static	int tkip_decap(struct ieee80211_key *, struct mbuf *, int);
 static	int tkip_demic(struct ieee80211_key *, struct mbuf *, int);
@@ -156,11 +150,11 @@ tkip_setkey(struct ieee80211_key *k)
  * Add privacy headers and do any s/w encryption required.
  */
 static int
-tkip_encap(struct ieee80211_key *k, struct mbuf *m, u_int8_t keyid)
+tkip_encap(struct ieee80211_key *k, struct mbuf *m, uint8_t keyid)
 {
 	struct tkip_ctx *ctx = k->wk_private;
 	struct ieee80211com *ic = ctx->tc_ic;
-	u_int8_t *ivp;
+	uint8_t *ivp;
 	int hdrlen;
 
 	/*
@@ -185,7 +179,7 @@ tkip_encap(struct ieee80211_key *k, struct mbuf *m, u_int8_t keyid)
 	M_PREPEND(m, tkip.ic_header, M_NOWAIT);
 	if (m == NULL)
 		return 0;
-	ivp = mtod(m, u_int8_t *);
+	ivp = mtod(m, uint8_t *);
 	memmove(ivp, ivp + tkip.ic_header, hdrlen);
 	ivp += hdrlen;
 
@@ -976,32 +970,4 @@ tkip_decrypt(struct tkip_ctx *ctx, struct ieee80211_key *key,
 /*
  * Module glue.
  */
-static int
-tkip_modevent(module_t mod, int type, void *unused)
-{
-	switch (type) {
-	case MOD_LOAD:
-		ieee80211_crypto_register(&tkip);
-		return 0;
-	case MOD_UNLOAD:
-	case MOD_QUIESCE:
-		if (nrefs) {
-			printf("wlan_tkip: still in use (%u dynamic refs)\n",
-				nrefs);
-			return EBUSY;
-		}
-		if (type == MOD_UNLOAD)
-			ieee80211_crypto_unregister(&tkip);
-		return 0;
-	}
-	return EINVAL;
-}
-
-static moduledata_t tkip_mod = {
-	"wlan_tkip",
-	tkip_modevent,
-	0
-};
-DECLARE_MODULE(wlan_tkip, tkip_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
-MODULE_VERSION(wlan_tkip, 1);
-MODULE_DEPEND(wlan_tkip, wlan, 1, 1, 1);
+IEEE80211_CRYPTO_MODULE(tkip, 1);

@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2001 Atsushi Onoe
- * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,12 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -31,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_proto.c,v 1.17.2.9 2006/03/13 03:10:31 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_proto.c,v 1.42.2.3 2007/11/28 06:11:18 sam Exp $");
 
 /*
  * IEEE 802.11 protocol support.
@@ -41,8 +35,8 @@ __FBSDID("$FreeBSD: src/sys/net80211/ieee80211_proto.c,v 1.17.2.9 2006/03/13 03:
 
 #include <sys/param.h>
 #include <sys/kernel.h>
-#include <sys/systm.h> 
- 
+#include <sys/systm.h>
+
 #include <sys/socket.h>
 
 #include <net/if.h>
@@ -61,7 +55,7 @@ const char *ieee80211_mgt_subtype_name[] = {
 	"assoc_req",	"assoc_resp",	"reassoc_req",	"reassoc_resp",
 	"probe_req",	"probe_resp",	"reserved#6",	"reserved#7",
 	"beacon",	"atim",		"disassoc",	"auth",
-	"deauth",	"reserved#13",	"reserved#14",	"reserved#15"
+	"deauth",	"action",	"reserved#14",	"reserved#15"
 };
 const char *ieee80211_ctl_subtype_name[] = {
 	"reserved#0",	"reserved#1",	"reserved#2",	"reserved#3",
@@ -69,12 +63,25 @@ const char *ieee80211_ctl_subtype_name[] = {
 	"reserved#8",	"reserved#9",	"ps_poll",	"rts",
 	"cts",		"ack",		"cf_end",	"cf_end_ack"
 };
+const char *ieee80211_opmode_name[IEEE80211_OPMODE_MAX] = {
+	"IBSS",		/* IEEE80211_M_IBSS */
+	"STA",		/* IEEE80211_M_STA */
+	"#2",
+	"AHDEMO",	/* IEEE80211_M_AHDEMO */
+	"#4", "#5",
+	"HOSTAP",	/* IEEE80211_M_HOSTAP */
+	"#7",
+	"MONITOR"	/* IEEE80211_M_MONITOR */
+};
 const char *ieee80211_state_name[IEEE80211_S_MAX] = {
 	"INIT",		/* IEEE80211_S_INIT */
 	"SCAN",		/* IEEE80211_S_SCAN */
 	"AUTH",		/* IEEE80211_S_AUTH */
 	"ASSOC",	/* IEEE80211_S_ASSOC */
-	"RUN"		/* IEEE80211_S_RUN */
+	"CAC",		/* IEEE80211_S_CAC */
+	"RUN",		/* IEEE80211_S_RUN */
+	"CSA",		/* IEEE80211_S_CSA */
+	"SLEEP",	/* IEEE80211_S_SLEEP */
 };
 const char *ieee80211_wme_acnames[] = {
 	"WME_AC_BE",
@@ -85,6 +92,11 @@ const char *ieee80211_wme_acnames[] = {
 };
 
 static int ieee80211_newstate(struct ieee80211com *, enum ieee80211_state, int);
+
+static void
+null_update_beacon(struct ieee80211com *ic, int item)
+{
+}
 
 void
 ieee80211_proto_attach(struct ieee80211com *ic)
@@ -99,6 +111,7 @@ ieee80211_proto_attach(struct ieee80211com *ic)
 	ic->ic_fixed_rate = IEEE80211_FIXED_RATE_NONE;
 	ic->ic_bmiss_max = IEEE80211_BMISS_MAX;
 	callout_init(&ic->ic_swbmiss, CALLOUT_MPSAFE);
+	callout_init(&ic->ic_mgtsend, CALLOUT_MPSAFE);
 	ic->ic_mcast_rate = IEEE80211_MCAST_RATE_DEFAULT;
 	ic->ic_protmode = IEEE80211_PROT_CTSONLY;
 	ic->ic_roaming = IEEE80211_ROAMING_AUTO;
@@ -110,10 +123,12 @@ ieee80211_proto_attach(struct ieee80211com *ic)
 
 	/* protocol state change handler */
 	ic->ic_newstate = ieee80211_newstate;
+	ic->ic_update_beacon = null_update_beacon;
 
 	/* initialize management frame handlers */
 	ic->ic_recv_mgmt = ieee80211_recv_mgmt;
 	ic->ic_send_mgmt = ieee80211_send_mgmt;
+	ic->ic_raw_xmit = ieee80211_raw_xmit;
 }
 
 void
@@ -128,7 +143,7 @@ ieee80211_proto_detach(struct ieee80211com *ic)
 	if (ic->ic_auth->ia_detach)
 		ic->ic_auth->ia_detach(ic);
 
-	IF_DRAIN(&ic->ic_mgtq);
+	ieee80211_drain_ifq(&ic->ic_mgtq);
 	mtx_destroy(&ic->ic_mgtq.ifq_mtx);
 
 	/*
@@ -232,9 +247,9 @@ ieee80211_aclator_get(const char *name)
 }
 
 void
-ieee80211_print_essid(const u_int8_t *essid, int len)
+ieee80211_print_essid(const uint8_t *essid, int len)
 {
-	const u_int8_t *p; 
+	const uint8_t *p;
 	int i;
 
 	if (len > IEEE80211_NWID_LEN)
@@ -257,7 +272,8 @@ ieee80211_print_essid(const u_int8_t *essid, int len)
 }
 
 void
-ieee80211_dump_pkt(const u_int8_t *buf, int len, int rate, int rssi)
+ieee80211_dump_pkt(struct ieee80211com *ic,
+	const uint8_t *buf, int len, int rate, int rssi)
 {
 	const struct ieee80211_frame *wh;
 	int i;
@@ -280,7 +296,7 @@ ieee80211_dump_pkt(const u_int8_t *buf, int len, int rate, int rssi)
 		printf("(%s)", ether_sprintf(wh->i_addr2));
 		break;
 	case IEEE80211_FC1_DIR_DSTODS:
-		printf("DSDS %s", ether_sprintf((const u_int8_t *)&wh[1]));
+		printf("DSDS %s", ether_sprintf((const uint8_t *)&wh[1]));
 		printf("->%s", ether_sprintf(wh->i_addr3));
 		printf("(%s", ether_sprintf(wh->i_addr2));
 		printf("->%s)", ether_sprintf(wh->i_addr1));
@@ -299,12 +315,22 @@ ieee80211_dump_pkt(const u_int8_t *buf, int len, int rate, int rssi)
 		printf(" type#%d", wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK);
 		break;
 	}
+	if (IEEE80211_QOS_HAS_SEQ(wh)) {
+		const struct ieee80211_qosframe *qwh = 
+			(const struct ieee80211_qosframe *)buf;
+		printf(" QoS [TID %u%s]", qwh->i_qos[0] & IEEE80211_QOS_TID,
+			qwh->i_qos[0] & IEEE80211_QOS_ACKPOLICY ? " ACM" : "");
+	}
 	if (wh->i_fc[1] & IEEE80211_FC1_WEP) {
-		int i;
-		printf(" WEP [IV");
-		for (i = 0; i < IEEE80211_WEP_IVLEN; i++)
-			printf(" %.02x", buf[sizeof(*wh)+i]);
-		printf(" KID %u]", buf[sizeof(*wh)+i] >> 6);
+		int off;
+
+		off = ieee80211_anyhdrspace(ic, wh);
+		printf(" WEP [IV %.02x %.02x %.02x",
+			buf[off+0], buf[off+1], buf[off+2]);
+		if (buf[off+IEEE80211_WEP_IVLEN] & IEEE80211_WEP_EXTIV)
+			printf(" %.02x %.02x %.02x",
+				buf[off+4], buf[off+5], buf[off+6]);
+		printf(" KID %u]", buf[off+IEEE80211_WEP_IVLEN] >> 6);
 	}
 	if (rate >= 0)
 		printf(" %dM", rate / 2);
@@ -321,29 +347,33 @@ ieee80211_dump_pkt(const u_int8_t *buf, int len, int rate, int rssi)
 	}
 }
 
+static __inline int
+findrix(const struct ieee80211_rateset *rs, int r)
+{
+	int i;
+
+	for (i = 0; i < rs->rs_nrates; i++)
+		if ((rs->rs_rates[i] & IEEE80211_RATE_VAL) == r)
+			return i;
+	return -1;
+}
+
 int
-ieee80211_fix_rate(struct ieee80211_node *ni, int flags)
+ieee80211_fix_rate(struct ieee80211_node *ni,
+	struct ieee80211_rateset *nrs, int flags)
 {
 #define	RV(v)	((v) & IEEE80211_RATE_VAL)
 	struct ieee80211com *ic = ni->ni_ic;
-	int i, j, ignore, error;
+	int i, j, rix, error;
 	int okrate, badrate, fixedrate;
-	struct ieee80211_rateset *srs, *nrs;
-	u_int8_t r;
+	const struct ieee80211_rateset *srs;
+	uint8_t r;
 
-	/*
-	 * If the fixed rate check was requested but no
-	 * fixed has been defined then just remove it.
-	 */
-	if ((flags & IEEE80211_F_DOFRATE) &&
-	    ic->ic_fixed_rate == IEEE80211_FIXED_RATE_NONE)
-		flags &= ~IEEE80211_F_DOFRATE;
 	error = 0;
-	okrate = badrate = fixedrate = 0;
-	srs = &ic->ic_sup_rates[ieee80211_chan2mode(ic, ni->ni_chan)];
-	nrs = &ni->ni_rates;
+	okrate = badrate = 0;
+	fixedrate = IEEE80211_FIXED_RATE_NONE;
+	srs = ieee80211_get_suprates(ic, ni->ni_chan);
 	for (i = 0; i < nrs->rs_nrates; ) {
-		ignore = 0;
 		if (flags & IEEE80211_F_DOSORT) {
 			/*
 			 * Sort rates.
@@ -358,63 +388,50 @@ ieee80211_fix_rate(struct ieee80211_node *ni, int flags)
 		}
 		r = nrs->rs_rates[i] & IEEE80211_RATE_VAL;
 		badrate = r;
-		if (flags & IEEE80211_F_DOFRATE) {
-			/*
-			 * Check any fixed rate is included. 
-			 */
-			if (r == RV(srs->rs_rates[ic->ic_fixed_rate]))
-				fixedrate = r;
-		}
+		/*
+		 * Check for fixed rate.
+		 */
+		if (r == ic->ic_fixed_rate)
+			fixedrate = r;
+		/*
+		 * Check against supported rates.
+		 */
+		rix = findrix(srs, r);
 		if (flags & IEEE80211_F_DONEGO) {
-			/*
-			 * Check against supported rates.
-			 */
-			for (j = 0; j < srs->rs_nrates; j++) {
-				if (r == RV(srs->rs_rates[j])) {
-					/*
-					 * Overwrite with the supported rate
-					 * value so any basic rate bit is set.
-					 * This insures that response we send
-					 * to stations have the necessary basic
-					 * rate bit set.
-					 */
-					nrs->rs_rates[i] = srs->rs_rates[j];
-					break;
-				}
-			}
-			if (j == srs->rs_nrates) {
+			if (rix < 0) {
 				/*
 				 * A rate in the node's rate set is not
 				 * supported.  If this is a basic rate and we
-				 * are operating as an AP then this is an error.
+				 * are operating as a STA then this is an error.
 				 * Otherwise we just discard/ignore the rate.
-				 * Note that this is important for 11b stations
-				 * when they want to associate with an 11g AP.
 				 */
-				if (ic->ic_opmode == IEEE80211_M_HOSTAP &&
+				if ((flags & IEEE80211_F_JOIN) &&
 				    (nrs->rs_rates[i] & IEEE80211_RATE_BASIC))
 					error++;
-				ignore++;
+			} else if ((flags & IEEE80211_F_JOIN) == 0) {
+				/*
+				 * Overwrite with the supported rate
+				 * value so any basic rate bit is set.
+				 */
+				nrs->rs_rates[i] = srs->rs_rates[rix];
 			}
 		}
-		if (flags & IEEE80211_F_DODEL) {
+		if ((flags & IEEE80211_F_DODEL) && rix < 0) {
 			/*
 			 * Delete unacceptable rates.
 			 */
-			if (ignore) {
-				nrs->rs_nrates--;
-				for (j = i; j < nrs->rs_nrates; j++)
-					nrs->rs_rates[j] = nrs->rs_rates[j + 1];
-				nrs->rs_rates[j] = 0;
-				continue;
-			}
+			nrs->rs_nrates--;
+			for (j = i; j < nrs->rs_nrates; j++)
+				nrs->rs_rates[j] = nrs->rs_rates[j + 1];
+			nrs->rs_rates[j] = 0;
+			continue;
 		}
-		if (!ignore)
+		if (rix >= 0)
 			okrate = nrs->rs_rates[i];
 		i++;
 	}
 	if (okrate == 0 || error != 0 ||
-	    ((flags & IEEE80211_F_DOFRATE) && fixedrate == 0))
+	    ((flags & IEEE80211_F_DOFRATE) && fixedrate != ic->ic_fixed_rate))
 		return badrate | IEEE80211_RATE_BASIC;
 	else
 		return RV(okrate);
@@ -436,14 +453,15 @@ ieee80211_reset_erp(struct ieee80211com *ic)
 	 * the driver is capable of doing it.
 	 */
 	ieee80211_set_shortslottime(ic,
-		ic->ic_curmode == IEEE80211_MODE_11A ||
-		(ic->ic_curmode == IEEE80211_MODE_11G &&
+		IEEE80211_IS_CHAN_A(ic->ic_curchan) ||
+		IEEE80211_IS_CHAN_HT(ic->ic_curchan) ||
+		(IEEE80211_IS_CHAN_ANYG(ic->ic_curchan) &&
 		ic->ic_opmode == IEEE80211_M_HOSTAP &&
 		(ic->ic_caps & IEEE80211_C_SHSLOT)));
 	/*
 	 * Set short preamble and ERP barker-preamble flags.
 	 */
-	if (ic->ic_curmode == IEEE80211_MODE_11A ||
+	if (IEEE80211_IS_CHAN_A(ic->ic_curchan) ||
 	    (ic->ic_caps & IEEE80211_C_SHPREAMBLE)) {
 		ic->ic_flags |= IEEE80211_F_SHPREAMBLE;
 		ic->ic_flags &= ~IEEE80211_F_USEBARKER;
@@ -507,13 +525,16 @@ ieee80211_iserp_rateset(struct ieee80211com *ic, struct ieee80211_rateset *rs)
 void
 ieee80211_set11gbasicrates(struct ieee80211_rateset *rs, enum ieee80211_phymode mode)
 {
-	static const struct ieee80211_rateset basic[] = {
-	    { 0 },			/* IEEE80211_MODE_AUTO */
+	static const struct ieee80211_rateset basic[IEEE80211_MODE_MAX] = {
+	    { .rs_nrates = 0 },		/* IEEE80211_MODE_AUTO */
 	    { 3, { 12, 24, 48 } },	/* IEEE80211_MODE_11A */
 	    { 2, { 2, 4 } },		/* IEEE80211_MODE_11B */
 	    { 4, { 2, 4, 11, 22 } },	/* IEEE80211_MODE_11G (mixed b/g) */
-	    { 0 },			/* IEEE80211_MODE_FH */
+	    { .rs_nrates = 0 },		/* IEEE80211_MODE_FH */
 					/* IEEE80211_MODE_PUREG (not yet) */
+	    { 7, { 2, 4, 11, 22, 12, 24, 48 } },
+	    { 3, { 12, 24, 48 } },	/* IEEE80211_MODE_11NA */
+					/* IEEE80211_MODE_11NG (mixed b/g) */
 	    { 7, { 2, 4, 11, 22, 12, 24, 48 } },
 	};
 	int i, j;
@@ -532,76 +553,97 @@ ieee80211_set11gbasicrates(struct ieee80211_rateset *rs, enum ieee80211_phymode 
  * WME protocol support.  The following parameters come from the spec.
  */
 typedef struct phyParamType {
-	u_int8_t aifsn; 
-	u_int8_t logcwmin;
-	u_int8_t logcwmax; 
-	u_int16_t txopLimit;
-	u_int8_t acm;
+	uint8_t aifsn;
+	uint8_t logcwmin;
+	uint8_t logcwmax;
+	uint16_t txopLimit;
+	uint8_t acm;
 } paramType;
 
 static const struct phyParamType phyParamForAC_BE[IEEE80211_MODE_MAX] = {
-	{ 3, 4, 6 },		/* IEEE80211_MODE_AUTO */
-	{ 3, 4, 6 },		/* IEEE80211_MODE_11A */ 
-	{ 3, 5, 7 },		/* IEEE80211_MODE_11B */ 
-	{ 3, 4, 6 },		/* IEEE80211_MODE_11G */ 
-	{ 3, 5, 7 },		/* IEEE80211_MODE_FH */ 
-	{ 2, 3, 5 },		/* IEEE80211_MODE_TURBO_A */ 
-	{ 2, 3, 5 },		/* IEEE80211_MODE_TURBO_G */ 
+	{ 3, 4,  6,  0, 0 },	/* IEEE80211_MODE_AUTO */
+	{ 3, 4,  6,  0, 0 },	/* IEEE80211_MODE_11A */
+	{ 3, 4,  6,  0, 0 },	/* IEEE80211_MODE_11B */
+	{ 3, 4,  6,  0, 0 },	/* IEEE80211_MODE_11G */
+	{ 3, 4,  6,  0, 0 },	/* IEEE80211_MODE_FH */
+	{ 2, 3,  5,  0, 0 },	/* IEEE80211_MODE_TURBO_A */
+	{ 2, 3,  5,  0, 0 },	/* IEEE80211_MODE_TURBO_G */
+	{ 2, 3,  5,  0, 0 },	/* IEEE80211_MODE_STURBO_A */
+	{ 3, 4,  6,  0, 0 },	/* IEEE80211_MODE_11NA */
+	{ 3, 4,  6,  0, 0 },	/* IEEE80211_MODE_11NG */
 };
 static const struct phyParamType phyParamForAC_BK[IEEE80211_MODE_MAX] = {
-	{ 7, 4, 10 },		/* IEEE80211_MODE_AUTO */
-	{ 7, 4, 10 },		/* IEEE80211_MODE_11A */ 
-	{ 7, 5, 10 },		/* IEEE80211_MODE_11B */ 
-	{ 7, 4, 10 },		/* IEEE80211_MODE_11G */ 
-	{ 7, 5, 10 },		/* IEEE80211_MODE_FH */ 
-	{ 7, 3, 10 },		/* IEEE80211_MODE_TURBO_A */ 
-	{ 7, 3, 10 },		/* IEEE80211_MODE_TURBO_G */ 
+	{ 7, 4, 10,  0, 0 },	/* IEEE80211_MODE_AUTO */
+	{ 7, 4, 10,  0, 0 },	/* IEEE80211_MODE_11A */
+	{ 7, 4, 10,  0, 0 },	/* IEEE80211_MODE_11B */
+	{ 7, 4, 10,  0, 0 },	/* IEEE80211_MODE_11G */
+	{ 7, 4, 10,  0, 0 },	/* IEEE80211_MODE_FH */
+	{ 7, 3, 10,  0, 0 },	/* IEEE80211_MODE_TURBO_A */
+	{ 7, 3, 10,  0, 0 },	/* IEEE80211_MODE_TURBO_G */
+	{ 7, 3, 10,  0, 0 },	/* IEEE80211_MODE_STURBO_A */
+	{ 7, 4, 10,  0, 0 },	/* IEEE80211_MODE_11NA */
+	{ 7, 4, 10,  0, 0 },	/* IEEE80211_MODE_11NG */
 };
 static const struct phyParamType phyParamForAC_VI[IEEE80211_MODE_MAX] = {
-	{ 1, 3, 4,  94 },	/* IEEE80211_MODE_AUTO */
-	{ 1, 3, 4,  94 },	/* IEEE80211_MODE_11A */ 
-	{ 1, 4, 5, 188 },	/* IEEE80211_MODE_11B */ 
-	{ 1, 3, 4,  94 },	/* IEEE80211_MODE_11G */ 
-	{ 1, 4, 5, 188 },	/* IEEE80211_MODE_FH */ 
-	{ 1, 2, 3,  94 },	/* IEEE80211_MODE_TURBO_A */ 
-	{ 1, 2, 3,  94 },	/* IEEE80211_MODE_TURBO_G */ 
+	{ 1, 3, 4,  94, 0 },	/* IEEE80211_MODE_AUTO */
+	{ 1, 3, 4,  94, 0 },	/* IEEE80211_MODE_11A */
+	{ 1, 3, 4, 188, 0 },	/* IEEE80211_MODE_11B */
+	{ 1, 3, 4,  94, 0 },	/* IEEE80211_MODE_11G */
+	{ 1, 3, 4, 188, 0 },	/* IEEE80211_MODE_FH */
+	{ 1, 2, 3,  94, 0 },	/* IEEE80211_MODE_TURBO_A */
+	{ 1, 2, 3,  94, 0 },	/* IEEE80211_MODE_TURBO_G */
+	{ 1, 2, 3,  94, 0 },	/* IEEE80211_MODE_STURBO_A */
+	{ 1, 3, 4,  94, 0 },	/* IEEE80211_MODE_11NA */
+	{ 1, 3, 4,  94, 0 },	/* IEEE80211_MODE_11NG */
 };
 static const struct phyParamType phyParamForAC_VO[IEEE80211_MODE_MAX] = {
-	{ 1, 2, 3,  47 },	/* IEEE80211_MODE_AUTO */
-	{ 1, 2, 3,  47 },	/* IEEE80211_MODE_11A */ 
-	{ 1, 3, 4, 102 },	/* IEEE80211_MODE_11B */ 
-	{ 1, 2, 3,  47 },	/* IEEE80211_MODE_11G */ 
-	{ 1, 3, 4, 102 },	/* IEEE80211_MODE_FH */ 
-	{ 1, 2, 2,  47 },	/* IEEE80211_MODE_TURBO_A */ 
-	{ 1, 2, 2,  47 },	/* IEEE80211_MODE_TURBO_G */ 
+	{ 1, 2, 3,  47, 0 },	/* IEEE80211_MODE_AUTO */
+	{ 1, 2, 3,  47, 0 },	/* IEEE80211_MODE_11A */
+	{ 1, 2, 3, 102, 0 },	/* IEEE80211_MODE_11B */
+	{ 1, 2, 3,  47, 0 },	/* IEEE80211_MODE_11G */
+	{ 1, 2, 3, 102, 0 },	/* IEEE80211_MODE_FH */
+	{ 1, 2, 2,  47, 0 },	/* IEEE80211_MODE_TURBO_A */
+	{ 1, 2, 2,  47, 0 },	/* IEEE80211_MODE_TURBO_G */
+	{ 1, 2, 2,  47, 0 },	/* IEEE80211_MODE_STURBO_A */
+	{ 1, 2, 3,  47, 0 },	/* IEEE80211_MODE_11NA */
+	{ 1, 2, 3,  47, 0 },	/* IEEE80211_MODE_11NG */
 };
 
 static const struct phyParamType bssPhyParamForAC_BE[IEEE80211_MODE_MAX] = {
-	{ 3, 4, 10 },		/* IEEE80211_MODE_AUTO */
-	{ 3, 4, 10 },		/* IEEE80211_MODE_11A */ 
-	{ 3, 5, 10 },		/* IEEE80211_MODE_11B */ 
-	{ 3, 4, 10 },		/* IEEE80211_MODE_11G */ 
-	{ 3, 5, 10 },		/* IEEE80211_MODE_FH */ 
-	{ 2, 3, 10 },		/* IEEE80211_MODE_TURBO_A */ 
-	{ 2, 3, 10 },		/* IEEE80211_MODE_TURBO_G */ 
+	{ 3, 4, 10,  0, 0 },	/* IEEE80211_MODE_AUTO */
+	{ 3, 4, 10,  0, 0 },	/* IEEE80211_MODE_11A */
+	{ 3, 4, 10,  0, 0 },	/* IEEE80211_MODE_11B */
+	{ 3, 4, 10,  0, 0 },	/* IEEE80211_MODE_11G */
+	{ 3, 4, 10,  0, 0 },	/* IEEE80211_MODE_FH */
+	{ 2, 3, 10,  0, 0 },	/* IEEE80211_MODE_TURBO_A */
+	{ 2, 3, 10,  0, 0 },	/* IEEE80211_MODE_TURBO_G */
+	{ 2, 3, 10,  0, 0 },	/* IEEE80211_MODE_STURBO_A */
+	{ 3, 4, 10,  0, 0 },	/* IEEE80211_MODE_11NA */
+	{ 3, 4, 10,  0, 0 },	/* IEEE80211_MODE_11NG */
 };
 static const struct phyParamType bssPhyParamForAC_VI[IEEE80211_MODE_MAX] = {
-	{ 2, 3, 4,  94 },	/* IEEE80211_MODE_AUTO */
-	{ 2, 3, 4,  94 },	/* IEEE80211_MODE_11A */ 
-	{ 2, 4, 5, 188 },	/* IEEE80211_MODE_11B */ 
-	{ 2, 3, 4,  94 },	/* IEEE80211_MODE_11G */ 
-	{ 2, 4, 5, 188 },	/* IEEE80211_MODE_FH */ 
-	{ 2, 2, 3,  94 },	/* IEEE80211_MODE_TURBO_A */ 
-	{ 2, 2, 3,  94 },	/* IEEE80211_MODE_TURBO_G */ 
+	{ 2, 3, 4,  94, 0 },	/* IEEE80211_MODE_AUTO */
+	{ 2, 3, 4,  94, 0 },	/* IEEE80211_MODE_11A */
+	{ 2, 3, 4, 188, 0 },	/* IEEE80211_MODE_11B */
+	{ 2, 3, 4,  94, 0 },	/* IEEE80211_MODE_11G */
+	{ 2, 3, 4, 188, 0 },	/* IEEE80211_MODE_FH */
+	{ 2, 2, 3,  94, 0 },	/* IEEE80211_MODE_TURBO_A */
+	{ 2, 2, 3,  94, 0 },	/* IEEE80211_MODE_TURBO_G */
+	{ 2, 2, 3,  94, 0 },	/* IEEE80211_MODE_STURBO_A */
+	{ 2, 3, 4,  94, 0 },	/* IEEE80211_MODE_11NA */
+	{ 2, 3, 4,  94, 0 },	/* IEEE80211_MODE_11NG */
 };
 static const struct phyParamType bssPhyParamForAC_VO[IEEE80211_MODE_MAX] = {
-	{ 2, 2, 3,  47 },	/* IEEE80211_MODE_AUTO */
-	{ 2, 2, 3,  47 },	/* IEEE80211_MODE_11A */ 
-	{ 2, 3, 4, 102 },	/* IEEE80211_MODE_11B */ 
-	{ 2, 2, 3,  47 },	/* IEEE80211_MODE_11G */ 
-	{ 2, 3, 4, 102 },	/* IEEE80211_MODE_FH */ 
-	{ 1, 2, 2,  47 },	/* IEEE80211_MODE_TURBO_A */ 
-	{ 1, 2, 2,  47 },	/* IEEE80211_MODE_TURBO_G */ 
+	{ 2, 2, 3,  47, 0 },	/* IEEE80211_MODE_AUTO */
+	{ 2, 2, 3,  47, 0 },	/* IEEE80211_MODE_11A */
+	{ 2, 2, 3, 102, 0 },	/* IEEE80211_MODE_11B */
+	{ 2, 2, 3,  47, 0 },	/* IEEE80211_MODE_11G */
+	{ 2, 2, 3, 102, 0 },	/* IEEE80211_MODE_FH */
+	{ 1, 2, 2,  47, 0 },	/* IEEE80211_MODE_TURBO_A */
+	{ 1, 2, 2,  47, 0 },	/* IEEE80211_MODE_TURBO_G */
+	{ 1, 2, 2,  47, 0 },	/* IEEE80211_MODE_STURBO_A */
+	{ 2, 2, 3,  47, 0 },	/* IEEE80211_MODE_11NA */
+	{ 2, 2, 3,  47, 0 },	/* IEEE80211_MODE_11NG */
 };
 
 void
@@ -610,29 +652,40 @@ ieee80211_wme_initparams(struct ieee80211com *ic)
 	struct ieee80211_wme_state *wme = &ic->ic_wme;
 	const paramType *pPhyParam, *pBssPhyParam;
 	struct wmeParams *wmep;
+	enum ieee80211_phymode mode;
 	int i;
 
 	if ((ic->ic_caps & IEEE80211_C_WME) == 0)
 		return;
 
+	/*
+	 * Select mode; we can be called early in which case we
+	 * always use auto mode.  We know we'll be called when
+	 * entering the RUN state with bsschan setup properly
+	 * so state will eventually get set correctly
+	 */
+	if (ic->ic_bsschan != IEEE80211_CHAN_ANYC)
+		mode = ieee80211_chan2mode(ic->ic_bsschan);
+	else
+		mode = IEEE80211_MODE_AUTO;
 	for (i = 0; i < WME_NUM_AC; i++) {
 		switch (i) {
 		case WME_AC_BK:
-			pPhyParam = &phyParamForAC_BK[ic->ic_curmode];
-			pBssPhyParam = &phyParamForAC_BK[ic->ic_curmode];
+			pPhyParam = &phyParamForAC_BK[mode];
+			pBssPhyParam = &phyParamForAC_BK[mode];
 			break;
 		case WME_AC_VI:
-			pPhyParam = &phyParamForAC_VI[ic->ic_curmode];
-			pBssPhyParam = &bssPhyParamForAC_VI[ic->ic_curmode];
+			pPhyParam = &phyParamForAC_VI[mode];
+			pBssPhyParam = &bssPhyParamForAC_VI[mode];
 			break;
 		case WME_AC_VO:
-			pPhyParam = &phyParamForAC_VO[ic->ic_curmode];
-			pBssPhyParam = &bssPhyParamForAC_VO[ic->ic_curmode];
+			pPhyParam = &phyParamForAC_VO[mode];
+			pBssPhyParam = &bssPhyParamForAC_VO[mode];
 			break;
 		case WME_AC_BE:
 		default:
-			pPhyParam = &phyParamForAC_BE[ic->ic_curmode];
-			pBssPhyParam = &bssPhyParamForAC_BE[ic->ic_curmode];
+			pPhyParam = &phyParamForAC_BE[mode];
+			pBssPhyParam = &bssPhyParamForAC_BE[mode];
 			break;
 		}
 
@@ -700,17 +753,21 @@ void
 ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 {
 	static const paramType phyParam[IEEE80211_MODE_MAX] = {
-		{ 2, 4, 10, 64 },	/* IEEE80211_MODE_AUTO */ 
-		{ 2, 4, 10, 64 },	/* IEEE80211_MODE_11A */ 
-		{ 2, 5, 10, 64 },	/* IEEE80211_MODE_11B */ 
-		{ 2, 4, 10, 64 },	/* IEEE80211_MODE_11G */ 
-		{ 2, 5, 10, 64 },	/* IEEE80211_MODE_FH */ 
-		{ 1, 3, 10, 64 },	/* IEEE80211_MODE_TURBO_A */ 
-		{ 1, 3, 10, 64 },	/* IEEE80211_MODE_TURBO_G */ 
+		{ 2, 4, 10, 64, 0 },	/* IEEE80211_MODE_AUTO */
+		{ 2, 4, 10, 64, 0 },	/* IEEE80211_MODE_11A */
+		{ 2, 5, 10, 64, 0 },	/* IEEE80211_MODE_11B */
+		{ 2, 4, 10, 64, 0 },	/* IEEE80211_MODE_11G */
+		{ 2, 5, 10, 64, 0 },	/* IEEE80211_MODE_FH */
+		{ 1, 3, 10, 64, 0 },	/* IEEE80211_MODE_TURBO_A */
+		{ 1, 3, 10, 64, 0 },	/* IEEE80211_MODE_TURBO_G */
+		{ 1, 3, 10, 64, 0 },	/* IEEE80211_MODE_STURBO_A */
+		{ 2, 4, 10, 64, 0 },	/* IEEE80211_MODE_11NA */ /*XXXcheck*/
+		{ 2, 4, 10, 64, 0 },	/* IEEE80211_MODE_11NG */ /*XXXcheck*/
 	};
 	struct ieee80211_wme_state *wme = &ic->ic_wme;
 	const struct wmeParams *wmep;
 	struct wmeParams *chanp, *bssp;
+	enum ieee80211_phymode mode;
 	int i;
 
        	/* set up the channel access parameters for the physical device */
@@ -731,6 +788,17 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 	}
 
 	/*
+	 * Select mode; we can be called early in which case we
+	 * always use auto mode.  We know we'll be called when
+	 * entering the RUN state with bsschan setup properly
+	 * so state will eventually get set correctly
+	 */
+	if (ic->ic_bsschan != IEEE80211_CHAN_ANYC)
+		mode = ieee80211_chan2mode(ic->ic_bsschan);
+	else
+		mode = IEEE80211_MODE_AUTO;
+
+	/*
 	 * This implements agressive mode as found in certain
 	 * vendors' AP's.  When there is significant high
 	 * priority (VI/VO) traffic in the BSS throttle back BE
@@ -746,15 +814,14 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 		chanp = &wme->wme_chanParams.cap_wmeParams[WME_AC_BE];
 		bssp = &wme->wme_bssChanParams.cap_wmeParams[WME_AC_BE];
 
-		chanp->wmep_aifsn = bssp->wmep_aifsn =
-			phyParam[ic->ic_curmode].aifsn;
+		chanp->wmep_aifsn = bssp->wmep_aifsn = phyParam[mode].aifsn;
 		chanp->wmep_logcwmin = bssp->wmep_logcwmin =
-			phyParam[ic->ic_curmode].logcwmin;
+			phyParam[mode].logcwmin;
 		chanp->wmep_logcwmax = bssp->wmep_logcwmax =
-			phyParam[ic->ic_curmode].logcwmax;
+			phyParam[mode].logcwmax;
 		chanp->wmep_txopLimit = bssp->wmep_txopLimit =
 			(ic->ic_flags & IEEE80211_F_BURST) ?
-				phyParam[ic->ic_curmode].txopLimit : 0;		
+				phyParam[mode].txopLimit : 0;		
 		IEEE80211_DPRINTF(ic, IEEE80211_MSG_WME,
 			"%s: %s [acm %u aifsn %u log2(cwmin) %u "
 			"log2(cwmax) %u txpoLimit %u]\n", __func__
@@ -769,7 +836,7 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 	
 	if (ic->ic_opmode == IEEE80211_M_HOSTAP &&
 	    ic->ic_sta_assoc < 2 && (wme->wme_flags & WME_F_AGGRMODE) != 0) {
-        	static const u_int8_t logCwMin[IEEE80211_MODE_MAX] = {
+        	static const uint8_t logCwMin[IEEE80211_MODE_MAX] = {
               		3,	/* IEEE80211_MODE_AUTO */
               		3,	/* IEEE80211_MODE_11A */
               		4,	/* IEEE80211_MODE_11B */
@@ -777,12 +844,14 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
               		4,	/* IEEE80211_MODE_FH */
               		3,	/* IEEE80211_MODE_TURBO_A */
               		3,	/* IEEE80211_MODE_TURBO_G */
+              		3,	/* IEEE80211_MODE_STURBO_A */
+              		3,	/* IEEE80211_MODE_11NA */
+              		3,	/* IEEE80211_MODE_11NG */
 		};
 		chanp = &wme->wme_chanParams.cap_wmeParams[WME_AC_BE];
 		bssp = &wme->wme_bssChanParams.cap_wmeParams[WME_AC_BE];
 
-		chanp->wmep_logcwmin = bssp->wmep_logcwmin = 
-			logCwMin[ic->ic_curmode];
+		chanp->wmep_logcwmin = bssp->wmep_logcwmin = logCwMin[mode];
 		IEEE80211_DPRINTF(ic, IEEE80211_MSG_WME,
 			"%s: %s log2(cwmin) %u\n", __func__
 			, ieee80211_wme_acnames[WME_AC_BE]
@@ -796,7 +865,7 @@ ieee80211_wme_updateparams_locked(struct ieee80211com *ic)
 		 */
 		wme->wme_bssChanParams.cap_info =
 			(wme->wme_bssChanParams.cap_info+1) & WME_QOSINFO_COUNT;
-		ic->ic_flags |= IEEE80211_F_WMEUPDATE;
+		ieee80211_beacon_notify(ic, IEEE80211_BEACON_WME);
 	}
 
 	wme->wme_update(ic);
@@ -819,6 +888,75 @@ ieee80211_wme_updateparams(struct ieee80211com *ic)
 	}
 }
 
+/*
+ * Start a device.  If this is the first vap running on the
+ * underlying device then we first bring it up.
+ */
+int
+ieee80211_init(struct ieee80211com *ic, int forcescan)
+{
+
+	IEEE80211_DPRINTF(ic,
+		IEEE80211_MSG_STATE | IEEE80211_MSG_DEBUG,
+		"%s\n", "start running");
+
+	/*
+	 * Kick the 802.11 state machine as appropriate.
+	 */
+	if (ic->ic_roaming != IEEE80211_ROAMING_MANUAL) {
+		if (ic->ic_opmode == IEEE80211_M_STA) {
+			ieee80211_new_state(ic, IEEE80211_S_SCAN, 0);
+		} else {
+			/*
+			 * For monitor+wds modes there's nothing to do but
+			 * start running.  Otherwise, if this is the first
+			 * vap to be brought up, start a scan which may be
+			 * preempted if the station is locked to a particular
+			 * channel.
+			 */
+			if (ic->ic_opmode == IEEE80211_M_MONITOR ||
+			    ic->ic_opmode == IEEE80211_M_WDS) {
+				ic->ic_state = IEEE80211_S_INIT;	/* XXX*/
+				ieee80211_new_state(ic, IEEE80211_S_RUN, -1);
+			} else
+				ieee80211_new_state(ic, IEEE80211_S_SCAN, 0);
+		}
+	}
+	return 0;
+}
+
+/*
+ * Switch between turbo and non-turbo operating modes.
+ * Use the specified channel flags to locate the new
+ * channel, update 802.11 state, and then call back into
+ * the driver to effect the change.
+ */
+void
+ieee80211_dturbo_switch(struct ieee80211com *ic, int newflags)
+{
+	struct ieee80211_channel *chan;
+
+	chan = ieee80211_find_channel(ic, ic->ic_bsschan->ic_freq, newflags);
+	if (chan == NULL) {		/* XXX should not happen */
+		IEEE80211_DPRINTF(ic, IEEE80211_MSG_SUPERG,
+		    "%s: no channel with freq %u flags 0x%x\n",
+		    __func__, ic->ic_bsschan->ic_freq, newflags);
+		return;
+	}
+
+	IEEE80211_DPRINTF(ic, IEEE80211_MSG_SUPERG,
+	    "%s: %s -> %s (freq %u flags 0x%x)\n", __func__,
+	    ieee80211_phymode_name[ieee80211_chan2mode(ic->ic_bsschan)],
+	    ieee80211_phymode_name[ieee80211_chan2mode(chan)],
+	    chan->ic_freq, chan->ic_flags);
+
+	ic->ic_bsschan = chan;
+	ic->ic_prevchan = ic->ic_curchan;
+	ic->ic_curchan = chan;
+	ic->ic_set_channel(ic);
+	/* NB: do not need to reset ERP state 'cuz we're in sta mode */
+}
+
 void
 ieee80211_beacon_miss(struct ieee80211com *ic)
 {
@@ -827,8 +965,7 @@ ieee80211_beacon_miss(struct ieee80211com *ic)
 		/* XXX check ic_curchan != ic_bsschan? */
 		return;
 	}
-	IEEE80211_DPRINTF(ic,
-		IEEE80211_MSG_STATE | IEEE80211_MSG_DEBUG,
+	IEEE80211_DPRINTF(ic, IEEE80211_MSG_STATE | IEEE80211_MSG_DEBUG,
 		"%s\n", "beacon miss");
 
 	/*
@@ -853,7 +990,28 @@ ieee80211_beacon_miss(struct ieee80211com *ic)
 		return;
 	}
 	ic->ic_bmiss_count = 0;
-	ieee80211_new_state(ic, IEEE80211_S_SCAN, 0);
+	if (ic->ic_roaming == IEEE80211_ROAMING_AUTO) {
+		/*
+		 * If we receive a beacon miss interrupt when using
+		 * dynamic turbo, attempt to switch modes before
+		 * reassociating.
+		 */
+		if (IEEE80211_ATH_CAP(ic, ic->ic_bss, IEEE80211_NODE_TURBOP))
+			ieee80211_dturbo_switch(ic,
+			    ic->ic_bsschan->ic_flags ^ IEEE80211_CHAN_TURBO);
+		/*
+		 * Try to reassociate before scanning for a new ap.
+		 */
+		ieee80211_new_state(ic, IEEE80211_S_ASSOC, 1);
+	} else {
+		/*
+		 * Somebody else is controlling state changes (e.g.
+		 * a user-mode app) don't do anything that would
+		 * confuse them; just drop into scan mode so they'll
+		 * notified of the state change and given control.
+		 */
+		ieee80211_new_state(ic, IEEE80211_S_SCAN, 0);
+	}
 }
 
 /*
@@ -897,6 +1055,35 @@ sta_deauth(void *arg, struct ieee80211_node *ni)
 		IEEE80211_REASON_ASSOC_LEAVE);
 }
 
+/*
+ * Handle deauth with reason.  We retry only for
+ * the cases where we might succeed.  Otherwise
+ * we downgrade the ap and scan.
+ */
+static void
+sta_authretry(struct ieee80211com *ic, struct ieee80211_node *ni, int reason)
+{
+	switch (reason) {
+	case IEEE80211_STATUS_SUCCESS:
+	case IEEE80211_STATUS_TIMEOUT:
+	case IEEE80211_REASON_ASSOC_EXPIRE:
+	case IEEE80211_REASON_NOT_AUTHED:
+	case IEEE80211_REASON_NOT_ASSOCED:
+	case IEEE80211_REASON_ASSOC_LEAVE:
+	case IEEE80211_REASON_ASSOC_NOT_AUTHED:
+		IEEE80211_SEND_MGMT(ic, ni, IEEE80211_FC0_SUBTYPE_AUTH, 1);
+		break;
+	default:
+		ieee80211_scan_assoc_fail(ic, ic->ic_bss->ni_macaddr, reason);
+		if (ic->ic_roaming == IEEE80211_ROAMING_AUTO)
+			ieee80211_check_scan(ic,
+				IEEE80211_SCAN_ACTIVE,
+				IEEE80211_SCAN_FOREVER,
+				ic->ic_des_nssid, ic->ic_des_ssid);
+		break;
+	}
+}
+
 static int
 ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
@@ -908,6 +1095,9 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 	IEEE80211_DPRINTF(ic, IEEE80211_MSG_STATE, "%s: %s -> %s\n", __func__,
 		ieee80211_state_name[ostate], ieee80211_state_name[nstate]);
 	ic->ic_state = nstate;			/* state transition */
+	callout_stop(&ic->ic_mgtsend);		/* XXX callout_drain */
+	if (ostate != IEEE80211_S_SCAN)
+		ieee80211_cancel_scan(ic);	/* background scan */
 	ni = ic->ic_bss;			/* NB: no reference held */
 	if (ic->ic_flags_ext & IEEE80211_FEXT_SWBMISS)
 		callout_stop(&ic->ic_swbmiss);
@@ -931,7 +1121,7 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 			default:
 				break;
 			}
-			goto reset;
+			break;
 		case IEEE80211_S_ASSOC:
 			switch (ic->ic_opmode) {
 			case IEEE80211_M_STA:
@@ -946,16 +1136,20 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 			default:
 				break;
 			}
-			goto reset;
+			break;
 		case IEEE80211_S_SCAN:
 			ieee80211_cancel_scan(ic);
-			goto reset;
-		case IEEE80211_S_AUTH:
-		reset:
-			ic->ic_mgt_timer = 0;
-			IF_DRAIN(&ic->ic_mgtq);
-			ieee80211_reset_bss(ic);
 			break;
+		case IEEE80211_S_AUTH:
+			break;
+		default:
+			break;
+		}
+		if (ostate != IEEE80211_S_INIT) {
+			/* NB: optimize INIT -> INIT case */
+			ieee80211_drain_ifq(&ic->ic_mgtq);
+			ieee80211_reset_bss(ic);
+			ieee80211_scan_flush(ic);
 		}
 		if (ic->ic_auth->ia_detach != NULL)
 			ic->ic_auth->ia_detach(ic);
@@ -963,50 +1157,73 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 	case IEEE80211_S_SCAN:
 		switch (ostate) {
 		case IEEE80211_S_INIT:
+		createibss:
 			if ((ic->ic_opmode == IEEE80211_M_HOSTAP ||
 			     ic->ic_opmode == IEEE80211_M_IBSS ||
 			     ic->ic_opmode == IEEE80211_M_AHDEMO) &&
 			    ic->ic_des_chan != IEEE80211_CHAN_ANYC) {
 				/*
-				 * AP operation and we already have a channel;
-				 * bypass the scan and startup immediately.
+				 * Already have a channel; bypass the
+				 * scan and startup immediately.  Because
+				 * of this explicitly sync the scanner state.
 				 */
+				ieee80211_scan_update(ic);
 				ieee80211_create_ibss(ic, ic->ic_des_chan);
 			} else {
-				ieee80211_begin_scan(ic, arg);
+				ieee80211_check_scan(ic,
+					IEEE80211_SCAN_ACTIVE |
+					IEEE80211_SCAN_FLUSH,
+					IEEE80211_SCAN_FOREVER,
+					ic->ic_des_nssid, ic->ic_des_ssid);
 			}
 			break;
 		case IEEE80211_S_SCAN:
-			/*
-			 * Scan next. If doing an active scan probe
-			 * for the requested ap (if any).
-			 */
-			if (ic->ic_flags & IEEE80211_F_ASCAN)
-				ieee80211_probe_curchan(ic, 0);
-			break;
-		case IEEE80211_S_RUN:
-			/* beacon miss */
-			IEEE80211_DPRINTF(ic, IEEE80211_MSG_STATE,
-				"no recent beacons from %s; rescanning\n",
-				ether_sprintf(ic->ic_bss->ni_bssid));
-			ieee80211_sta_leave(ic, ni);
-			ic->ic_flags &= ~IEEE80211_F_SIBSS;	/* XXX */
-			/* FALLTHRU */
 		case IEEE80211_S_AUTH:
 		case IEEE80211_S_ASSOC:
-			/* timeout restart scan */
-			ni = ieee80211_find_node(&ic->ic_scan,
-				ic->ic_bss->ni_macaddr);
-			if (ni != NULL) {
-				ni->ni_fails++;
-				ieee80211_unref_node(&ni);
-			}
+			/*
+			 * These can happen either because of a timeout
+			 * on an assoc/auth response or because of a
+			 * change in state that requires a reset.  For
+			 * the former we're called with a non-zero arg
+			 * that is the cause for the failure; pass this
+			 * to the scan code so it can update state.
+			 * Otherwise trigger a new scan unless we're in
+			 * manual roaming mode in which case an application
+			 * must issue an explicit scan request.
+			 */
+			if (arg != 0)
+				ieee80211_scan_assoc_fail(ic,
+					ic->ic_bss->ni_macaddr, arg);
 			if (ic->ic_roaming == IEEE80211_ROAMING_AUTO)
-				ieee80211_begin_scan(ic, arg);
+				ieee80211_check_scan(ic,
+					IEEE80211_SCAN_ACTIVE,
+					IEEE80211_SCAN_FOREVER,
+					ic->ic_des_nssid, ic->ic_des_ssid);
+			break;
+		case IEEE80211_S_RUN:		/* beacon miss */
+			if (ic->ic_opmode == IEEE80211_M_STA) {
+				ieee80211_sta_leave(ic, ni);
+				ic->ic_flags &= ~IEEE80211_F_SIBSS;	/* XXX */
+				if (ic->ic_roaming == IEEE80211_ROAMING_AUTO)
+					ieee80211_check_scan(ic,
+						IEEE80211_SCAN_ACTIVE,
+						IEEE80211_SCAN_FOREVER,
+						ic->ic_des_nssid,
+						ic->ic_des_ssid);
+			} else {
+				ieee80211_iterate_nodes(&ic->ic_sta,
+					sta_disassoc, ic);
+				goto createibss;
+			}
+			break;
+		default:
 			break;
 		}
 		break;
 	case IEEE80211_S_AUTH:
+		KASSERT(ic->ic_opmode == IEEE80211_M_STA,
+			("switch to %s state when operating in mode %u",
+			 ieee80211_state_name[nstate], ic->ic_opmode));
 		switch (ostate) {
 		case IEEE80211_S_INIT:
 		case IEEE80211_S_SCAN:
@@ -1015,19 +1232,19 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 			break;
 		case IEEE80211_S_AUTH:
 		case IEEE80211_S_ASSOC:
-			switch (arg) {
+			switch (arg & 0xff) {
 			case IEEE80211_FC0_SUBTYPE_AUTH:
 				/* ??? */
 				IEEE80211_SEND_MGMT(ic, ni,
 				    IEEE80211_FC0_SUBTYPE_AUTH, 2);
 				break;
 			case IEEE80211_FC0_SUBTYPE_DEAUTH:
-				/* ignore and retry scan on timeout */
+				sta_authretry(ic, ni, arg>>8);
 				break;
 			}
 			break;
 		case IEEE80211_S_RUN:
-			switch (arg) {
+			switch (arg & 0xff) {
 			case IEEE80211_FC0_SUBTYPE_AUTH:
 				IEEE80211_SEND_MGMT(ic, ni,
 				    IEEE80211_FC0_SUBTYPE_AUTH, 2);
@@ -1043,26 +1260,34 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 				break;
 			}
 			break;
+		default:
+			break;
 		}
 		break;
 	case IEEE80211_S_ASSOC:
+		KASSERT(ic->ic_opmode == IEEE80211_M_STA,
+			("switch to %s state when operating in mode %u",
+			 ieee80211_state_name[nstate], ic->ic_opmode));
 		switch (ostate) {
 		case IEEE80211_S_INIT:
 		case IEEE80211_S_SCAN:
-		case IEEE80211_S_ASSOC:
 			IEEE80211_DPRINTF(ic, IEEE80211_MSG_ANY,
 				"%s: invalid transition\n", __func__);
 			break;
 		case IEEE80211_S_AUTH:
+		case IEEE80211_S_ASSOC:
 			IEEE80211_SEND_MGMT(ic, ni,
 			    IEEE80211_FC0_SUBTYPE_ASSOC_REQ, 0);
 			break;
 		case IEEE80211_S_RUN:
 			ieee80211_sta_leave(ic, ni);
 			if (ic->ic_roaming == IEEE80211_ROAMING_AUTO) {
-				IEEE80211_SEND_MGMT(ic, ni,
-				    IEEE80211_FC0_SUBTYPE_ASSOC_REQ, 1);
+				IEEE80211_SEND_MGMT(ic, ni, arg ?
+				    IEEE80211_FC0_SUBTYPE_REASSOC_REQ :
+				    IEEE80211_FC0_SUBTYPE_ASSOC_REQ, 0);
 			}
+			break;
+		default:
 			break;
 		}
 		break;
@@ -1072,8 +1297,20 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 		}
 		switch (ostate) {
 		case IEEE80211_S_INIT:
-			if (ic->ic_opmode == IEEE80211_M_MONITOR)
+			if (ic->ic_opmode == IEEE80211_M_MONITOR ||
+			    ic->ic_opmode == IEEE80211_M_WDS ||
+			    ic->ic_opmode == IEEE80211_M_HOSTAP) {
+				/*
+				 * Already have a channel; bypass the
+				 * scan and startup immediately.  Because
+				 * of this explicitly sync the scanner state.
+				 */
+				ieee80211_scan_update(ic);
+				ieee80211_create_ibss(ic,
+				    ieee80211_ht_adjust_channel(ic,
+					ic->ic_curchan, ic->ic_flags_ext));
 				break;
+			}
 			/* fall thru... */
 		case IEEE80211_S_AUTH:
 			IEEE80211_DPRINTF(ic, IEEE80211_MSG_ANY,
@@ -1101,11 +1338,15 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 					IEEE80211_RATE2MBS(ni->ni_rates.rs_rates[ni->ni_txrate]));
 			}
 #endif
-			ic->ic_mgt_timer = 0;
-			if (ic->ic_opmode == IEEE80211_M_STA)
+			if (ic->ic_opmode == IEEE80211_M_STA) {
+				ieee80211_scan_assoc_success(ic,
+					ni->ni_macaddr);
 				ieee80211_notify_node_join(ic, ni, 
 					arg == IEEE80211_FC0_SUBTYPE_ASSOC_RESP);
+			}
 			if_start(ifp);		/* XXX not authorized yet */
+			break;
+		default:
 			break;
 		}
 		if (ostate != IEEE80211_S_RUN &&
@@ -1144,8 +1385,10 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg
 		 * Enable inactivity processing.
 		 * XXX
 		 */
-		ic->ic_scan.nt_inact_timer = IEEE80211_INACT_WAIT;
-		ic->ic_sta.nt_inact_timer = IEEE80211_INACT_WAIT;
+		callout_reset(&ic->ic_inact, IEEE80211_INACT_WAIT*hz,
+			ieee80211_node_timeout, ic);
+		break;
+	default:
 		break;
 	}
 	return 0;

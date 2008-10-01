@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -30,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto_ccmp.c,v 1.7.2.1 2005/12/22 19:02:08 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto_ccmp.c,v 1.10 2007/06/11 03:36:54 sam Exp $");
 
 /*
  * IEEE 802.11i AES-CCMP crypto support.
@@ -66,7 +60,7 @@ struct ccmp_ctx {
 static	void *ccmp_attach(struct ieee80211com *, struct ieee80211_key *);
 static	void ccmp_detach(struct ieee80211_key *);
 static	int ccmp_setkey(struct ieee80211_key *);
-static	int ccmp_encap(struct ieee80211_key *k, struct mbuf *, u_int8_t keyid);
+static	int ccmp_encap(struct ieee80211_key *k, struct mbuf *, uint8_t keyid);
 static	int ccmp_decap(struct ieee80211_key *, struct mbuf *, int);
 static	int ccmp_enmic(struct ieee80211_key *, struct mbuf *, int);
 static	int ccmp_demic(struct ieee80211_key *, struct mbuf *, int);
@@ -140,11 +134,11 @@ ccmp_setkey(struct ieee80211_key *k)
  * Add privacy headers appropriate for the specified key.
  */
 static int
-ccmp_encap(struct ieee80211_key *k, struct mbuf *m, u_int8_t keyid)
+ccmp_encap(struct ieee80211_key *k, struct mbuf *m, uint8_t keyid)
 {
 	struct ccmp_ctx *ctx = k->wk_private;
 	struct ieee80211com *ic = ctx->cc_ic;
-	u_int8_t *ivp;
+	uint8_t *ivp;
 	int hdrlen;
 
 	hdrlen = ieee80211_hdrspace(ic, mtod(m, void *));
@@ -155,7 +149,7 @@ ccmp_encap(struct ieee80211_key *k, struct mbuf *m, u_int8_t keyid)
 	M_PREPEND(m, ccmp.ic_header, M_NOWAIT);
 	if (m == NULL)
 		return 0;
-	ivp = mtod(m, u_int8_t *);
+	ivp = mtod(m, uint8_t *);
 	ovbcopy(ivp + ccmp.ic_header, ivp, hdrlen);
 	ivp += hdrlen;
 
@@ -250,7 +244,7 @@ ccmp_decap(struct ieee80211_key *k, struct mbuf *m, int hdrlen)
 	/*
 	 * Copy up 802.11 header and strip crypto bits.
 	 */
-	ovbcopy(mtod(m, void *), mtod(m, u_int8_t *) + ccmp.ic_header, hdrlen);
+	ovbcopy(mtod(m, void *), mtod(m, uint8_t *) + ccmp.ic_header, hdrlen);
 	m_adj(m, ccmp.ic_header);
 	m_adj(m, -ccmp.ic_trailer);
 
@@ -356,7 +350,7 @@ ccmp_init_blocks(rijndael_ctx *ctx, struct ieee80211_frame *wh,
 			b0[1] = aad[30];
 			aad[1] = 22 + IEEE80211_ADDR_LEN + 2;
 		} else {
-			*(u_int16_t *)&aad[30] = 0;
+			*(uint16_t *)&aad[30] = 0;
 			b0[1] = 0;
 			aad[1] = 22 + IEEE80211_ADDR_LEN;
 		}
@@ -369,12 +363,12 @@ ccmp_init_blocks(rijndael_ctx *ctx, struct ieee80211_frame *wh,
 			b0[1] = aad[24];
 			aad[1] = 22 + 2;
 		} else {
-			*(u_int16_t *)&aad[24] = 0;
+			*(uint16_t *)&aad[24] = 0;
 			b0[1] = 0;
 			aad[1] = 22;
 		}
-		*(u_int16_t *)&aad[26] = 0;
-		*(u_int32_t *)&aad[28] = 0;
+		*(uint16_t *)&aad[26] = 0;
+		*(uint32_t *)&aad[28] = 0;
 	}
 
 	/* Start with the first block and AAD */
@@ -635,32 +629,4 @@ ccmp_decrypt(struct ieee80211_key *key, u_int64_t pn, struct mbuf *m, int hdrlen
 /*
  * Module glue.
  */
-static int
-ccmp_modevent(module_t mod, int type, void *unused)
-{
-	switch (type) {
-	case MOD_LOAD:
-		ieee80211_crypto_register(&ccmp);
-		return 0;
-	case MOD_UNLOAD:
-	case MOD_QUIESCE:
-		if (nrefs) {
-			printf("wlan_ccmp: still in use (%u dynamic refs)\n",
-				nrefs);
-			return EBUSY;
-		}
-		if (type == MOD_UNLOAD)
-			ieee80211_crypto_unregister(&ccmp);
-		return 0;
-	}
-	return EINVAL;
-}
-
-static moduledata_t ccmp_mod = {
-	"wlan_ccmp",
-	ccmp_modevent,
-	0
-};
-DECLARE_MODULE(wlan_ccmp, ccmp_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
-MODULE_VERSION(wlan_ccmp, 1);
-MODULE_DEPEND(wlan_ccmp, wlan, 1, 1, 1);
+IEEE80211_CRYPTO_MODULE(ccmp, 1);

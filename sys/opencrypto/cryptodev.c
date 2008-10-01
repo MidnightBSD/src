@@ -2,6 +2,7 @@
 
 /*-
  * Copyright (c) 2001 Theo de Raadt
+ * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.25.2.2 2006/03/01 21:40:14 wkoszek Exp $");
+__FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.35 2007/10/08 20:08:34 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -50,6 +51,7 @@ __FBSDID("$FreeBSD: src/sys/opencrypto/cryptodev.c,v 1.25.2.2 2006/03/01 21:40:1
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/fcntl.h>
+#include <sys/bus.h>
 
 #include <opencrypto/cryptodev.h>
 #include <opencrypto/xform.h>
@@ -71,7 +73,6 @@ struct csession {
 
 	caddr_t		mackey;
 	int		mackeylen;
-	u_char		tmp_mac[CRYPTO_MAX_MAC_LEN];
 
 	struct iovec	iovec;
 	struct uio	uio;
@@ -114,6 +115,7 @@ static int csefree(struct csession *);
 static	int cryptodev_op(struct csession *, struct crypt_op *,
 			struct ucred *, struct thread *td);
 static	int cryptodev_key(struct crypt_kop *);
+static	int cryptodev_find(struct crypt_find_op *);
 
 static int
 cryptof_rw(
@@ -127,6 +129,22 @@ cryptof_rw(
 	return (EIO);
 }
 
+/*
+ * Check a crypto identifier to see if it requested
+ * a software device/driver.  This can be done either
+ * by device name/class or through search constraints.
+ */
+static int
+checkforsoftware(int crid)
+{
+	if (crid & CRYPTOCAP_F_SOFTWARE)
+		return EINVAL;		/* XXX */
+	if ((crid & CRYPTOCAP_F_HARDWARE) == 0 &&
+	    (crypto_getcaps(crid) & CRYPTOCAP_F_HARDWARE) == 0)
+		return EINVAL;		/* XXX */
+	return 0;
+}
+
 /* ARGSUSED */
 static int
 cryptof_ioctl(
@@ -136,6 +154,7 @@ cryptof_ioctl(
 	struct ucred *active_cred,
 	struct thread *td)
 {
+#define	SES2(p)	((struct session2_op *)p)
 	struct cryptoini cria, crie;
 	struct fcrypt *fcr = fp->f_data;
 	struct csession *cse;
@@ -143,16 +162,14 @@ cryptof_ioctl(
 	struct crypt_op *cop;
 	struct enc_xform *txform = NULL;
 	struct auth_hash *thash = NULL;
+	struct crypt_kop *kop;
 	u_int64_t sid;
 	u_int32_t ses;
-	int error = 0;
+	int error = 0, crid;
 
-	/*
-	 * XXX: Not sure Giant is needed, but better safe than sorry
-	 */
-	mtx_lock(&Giant);
 	switch (cmd) {
 	case CIOCGSESSION:
+	case CIOCGSESSION2:
 		sop = (struct session_op *)data;
 		switch (sop->cipher) {
 		case 0:
@@ -181,8 +198,10 @@ cryptof_ioctl(
 		case CRYPTO_ARC4:
 			txform = &enc_xform_arc4;
 			break;
+ 		case CRYPTO_CAMELLIA_CBC:
+ 			txform = &enc_xform_camellia;
+ 			break;
 		default:
-			mtx_unlock(&Giant);
 			return (EINVAL);
 		}
 
@@ -190,25 +209,22 @@ cryptof_ioctl(
 		case 0:
 			break;
 		case CRYPTO_MD5_HMAC:
-			thash = &auth_hash_hmac_md5_96;
+			thash = &auth_hash_hmac_md5;
 			break;
 		case CRYPTO_SHA1_HMAC:
-			thash = &auth_hash_hmac_sha1_96;
+			thash = &auth_hash_hmac_sha1;
 			break;
-		case CRYPTO_SHA2_HMAC:
-			if (sop->mackeylen == auth_hash_hmac_sha2_256.keysize)
-				thash = &auth_hash_hmac_sha2_256;
-			else if (sop->mackeylen == auth_hash_hmac_sha2_384.keysize)
-				thash = &auth_hash_hmac_sha2_384;
-			else if (sop->mackeylen == auth_hash_hmac_sha2_512.keysize)
-				thash = &auth_hash_hmac_sha2_512;
-			else {
-				mtx_unlock(&Giant);
-				return (EINVAL);
-			}
+		case CRYPTO_SHA2_256_HMAC:
+			thash = &auth_hash_hmac_sha2_256;
+			break;
+		case CRYPTO_SHA2_384_HMAC:
+			thash = &auth_hash_hmac_sha2_384;
+			break;
+		case CRYPTO_SHA2_512_HMAC:
+			thash = &auth_hash_hmac_sha2_512;
 			break;
 		case CRYPTO_RIPEMD160_HMAC:
-			thash = &auth_hash_hmac_ripemd_160_96;
+			thash = &auth_hash_hmac_ripemd_160;
 			break;
 #ifdef notdef
 		case CRYPTO_MD5:
@@ -222,7 +238,6 @@ cryptof_ioctl(
 			thash = &auth_hash_null;
 			break;
 		default:
-			mtx_unlock(&Giant);
 			return (EINVAL);
 		}
 
@@ -264,7 +279,15 @@ cryptof_ioctl(
 			}
 		}
 
-		error = crypto_newsession(&sid, (txform ? &crie : &cria), 1);
+		/* NB: CIOGSESSION2 has the crid */
+		if (cmd == CIOCGSESSION2) {
+			crid = SES2(sop)->crid;
+			error = checkforsoftware(crid);
+			if (error)
+				goto bail;
+		} else
+			crid = CRYPTOCAP_F_HARDWARE;
+		error = crypto_newsession(&sid, (txform ? &crie : &cria), crid);
 		if (error)
 			goto bail;
 
@@ -278,7 +301,10 @@ cryptof_ioctl(
 			goto bail;
 		}
 		sop->ses = cse->ses;
-
+		if (cmd == CIOCGSESSION2) {
+			/* return hardware/driver id */
+			SES2(sop)->crid = CRYPTO_SESID2HID(cse->sid);
+		}
 bail:
 		if (error) {
 			if (crie.cri_key)
@@ -290,33 +316,53 @@ bail:
 	case CIOCFSESSION:
 		ses = *(u_int32_t *)data;
 		cse = csefind(fcr, ses);
-		if (cse == NULL) {
-			mtx_unlock(&Giant);
+		if (cse == NULL)
 			return (EINVAL);
-		}
 		csedelete(fcr, cse);
 		error = csefree(cse);
 		break;
 	case CIOCCRYPT:
 		cop = (struct crypt_op *)data;
 		cse = csefind(fcr, cop->ses);
-		if (cse == NULL) {
-			mtx_unlock(&Giant);
+		if (cse == NULL)
 			return (EINVAL);
-		}
 		error = cryptodev_op(cse, cop, active_cred, td);
 		break;
 	case CIOCKEY:
-		error = cryptodev_key((struct crypt_kop *)data);
+	case CIOCKEY2:
+		if (!crypto_userasymcrypto)
+			return (EPERM);		/* XXX compat? */
+		mtx_lock(&Giant);
+		kop = (struct crypt_kop *)data;
+		if (cmd == CIOCKEY) {
+			/* NB: crypto core enforces s/w driver use */
+			kop->crk_crid =
+			    CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SOFTWARE;
+		}
+		error = cryptodev_key(kop);
+		mtx_unlock(&Giant);
 		break;
 	case CIOCASYMFEAT:
-		error = crypto_getfeat((int *)data);
+		if (!crypto_userasymcrypto) {
+			/*
+			 * NB: if user asym crypto operations are
+			 * not permitted return "no algorithms"
+			 * so well-behaved applications will just
+			 * fallback to doing them in software.
+			 */
+			*(int *)data = 0;
+		} else
+			error = crypto_getfeat((int *)data);
+		break;
+	case CIOCFINDDEV:
+		error = cryptodev_find((struct crypt_find_op *)data);
 		break;
 	default:
 		error = EINVAL;
+		break;
 	}
-	mtx_unlock(&Giant);
 	return (error);
+#undef SES2
 }
 
 static int cryptodev_cb(void *);
@@ -349,7 +395,10 @@ cryptodev_op(
 	cse->uio.uio_rw = UIO_WRITE;
 	cse->uio.uio_td = td;
 	cse->uio.uio_iov[0].iov_len = cop->len;
-	cse->uio.uio_iov[0].iov_base = malloc(cop->len, M_XDATA, M_WAITOK);
+	if (cse->thash)
+		cse->uio.uio_iov[0].iov_len += cse->thash->hashsize;
+	cse->uio.uio_iov[0].iov_base = malloc(cse->uio.uio_iov[0].iov_len,
+	    M_XDATA, M_WAITOK);
 
 	crp = crypto_getreq((cse->txform != NULL) + (cse->thash != NULL));
 	if (crp == NULL) {
@@ -376,7 +425,7 @@ cryptodev_op(
 	if (crda) {
 		crda->crd_skip = 0;
 		crda->crd_len = cop->len;
-		crda->crd_inject = 0;	/* ??? */
+		crda->crd_inject = cop->len;
 
 		crda->crd_alg = cse->mac;
 		crda->crd_key = cse->mackey;
@@ -426,12 +475,9 @@ cryptodev_op(
 		crde->crd_len -= cse->txform->blocksize;
 	}
 
-	if (cop->mac) {
-		if (crda == NULL) {
-			error = EINVAL;
-			goto bail;
-		}
-		crp->crp_mac=cse->tmp_mac;
+	if (cop->mac && crda == NULL) {
+		error = EINVAL;
+		goto bail;
 	}
 
 	/*
@@ -465,7 +511,8 @@ cryptodev_op(
 		goto bail;
 
 	if (cop->mac &&
-	    (error = copyout(crp->crp_mac, cop->mac, cse->thash->authsize)))
+	    (error = copyout((caddr_t)cse->uio.uio_iov[0].iov_base + cop->len,
+	    cop->mac, cse->thash->hashsize)))
 		goto bail;
 
 bail:
@@ -482,12 +529,16 @@ cryptodev_cb(void *op)
 {
 	struct cryptop *crp = (struct cryptop *) op;
 	struct csession *cse = (struct csession *)crp->crp_opaque;
+	int error;
 
-	cse->error = crp->crp_etype;
-	if (crp->crp_etype == EAGAIN)
-		return crypto_dispatch(crp);
+	error = crp->crp_etype;
+	if (error == EAGAIN)
+		error = crypto_dispatch(crp);
 	mtx_lock(&cse->lock);
-	wakeup_one(crp);
+	if (error != 0 || (crp->crp_flags & CRYPTO_F_DONE)) {
+		cse->error = error;
+		wakeup_one(crp);
+	}
 	mtx_unlock(&cse->lock);
 	return (0);
 }
@@ -497,7 +548,7 @@ cryptodevkey_cb(void *op)
 {
 	struct cryptkop *krp = (struct cryptkop *) op;
 
-	wakeup(krp);
+	wakeup_one(krp);
 	return (0);
 }
 
@@ -539,19 +590,23 @@ cryptodev_key(struct crypt_kop *kop)
 		return (EINVAL);
 	}
 
-	krp = (struct cryptkop *)malloc(sizeof *krp, M_XDATA, M_WAITOK);
+	krp = (struct cryptkop *)malloc(sizeof *krp, M_XDATA, M_WAITOK|M_ZERO);
 	if (!krp)
 		return (ENOMEM);
-	bzero(krp, sizeof *krp);
 	krp->krp_op = kop->crk_op;
 	krp->krp_status = kop->crk_status;
 	krp->krp_iparams = kop->crk_iparams;
 	krp->krp_oparams = kop->crk_oparams;
+	krp->krp_crid = kop->crk_crid;
 	krp->krp_status = 0;
 	krp->krp_callback = (int (*) (struct cryptkop *)) cryptodevkey_cb;
 
-	for (i = 0; i < CRK_MAXPARAM; i++)
+	for (i = 0; i < CRK_MAXPARAM; i++) {
+		if (kop->crk_param[i].crp_nbits > 65536)
+			/* Limit is the same as in OpenBSD */
+			goto fail;
 		krp->krp_param[i].crp_nbits = kop->crk_param[i].crp_nbits;
+	}
 	for (i = 0; i < krp->krp_iparams + krp->krp_oparams; i++) {
 		size = (krp->krp_param[i].crp_nbits + 7) / 8;
 		if (size == 0)
@@ -573,6 +628,7 @@ cryptodev_key(struct crypt_kop *kop)
 		goto fail;
 	}
 	
+	kop->crk_crid = krp->krp_crid;		/* device that did the work */
 	if (krp->krp_status != 0) {
 		error = krp->krp_status;
 		goto fail;
@@ -597,6 +653,25 @@ fail:
 		free(krp, M_XDATA);
 	}
 	return (error);
+}
+
+static int
+cryptodev_find(struct crypt_find_op *find)
+{
+	device_t dev;
+
+	if (find->crid != -1) {
+		dev = crypto_find_device_byhid(find->crid);
+		if (dev == NULL)
+			return (ENOENT);
+		strlcpy(find->name, device_get_nameunit(dev),
+		    sizeof(find->name));
+	} else {
+		find->crid = crypto_find_driver(find->name);
+		if (find->crid == -1)
+			return (ENOENT);
+	}
+	return (0);
 }
 
 /* ARGSUSED */
@@ -765,12 +840,20 @@ cryptoioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread 
 			return (error);
 		}
 		/* falloc automatically provides an extra reference to 'f'. */
+		FILE_LOCK(f);
 		f->f_flag = FREAD | FWRITE;
 		f->f_type = DTYPE_CRYPTO;
-		f->f_ops = &cryptofops;
 		f->f_data = fcr;
+		f->f_ops = &cryptofops;
+		FILE_UNLOCK(f);
 		*(u_int32_t *)data = fd;
 		fdrop(f, td);
+		break;
+	case CRIOFINDDEV:
+		error = cryptodev_find((struct crypt_find_op *)data);
+		break;
+	case CRIOASYMFEAT:
+		error = crypto_getfeat((int *)data);
 		break;
 	default:
 		error = EINVAL;

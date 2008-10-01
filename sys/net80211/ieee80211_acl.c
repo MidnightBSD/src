@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2004-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,12 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -30,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_acl.c,v 1.3.2.1 2005/09/03 22:40:02 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_acl.c,v 1.6 2007/06/11 03:36:54 sam Exp $");
 
 /*
  * IEEE 802.11 MAC ACL support.
@@ -70,7 +64,7 @@ enum {
 struct acl {
 	TAILQ_ENTRY(acl)	acl_list;
 	LIST_ENTRY(acl)		acl_hash;
-	u_int8_t		acl_macaddr[IEEE80211_ADDR_LEN];
+	uint8_t			acl_macaddr[IEEE80211_ADDR_LEN];
 };
 struct aclstate {
 	acl_lock_t		as_lock;
@@ -83,7 +77,7 @@ struct aclstate {
 
 /* simple hash is enough for variation of macaddr */
 #define	ACL_HASH(addr)	\
-	(((const u_int8_t *)(addr))[IEEE80211_ADDR_LEN - 1] % ACL_HASHSIZE)
+	(((const uint8_t *)(addr))[IEEE80211_ADDR_LEN - 1] % ACL_HASHSIZE)
 
 MALLOC_DEFINE(M_80211_ACL, "acl", "802.11 station acl");
 
@@ -118,7 +112,7 @@ acl_detach(struct ieee80211com *ic)
 }
 
 static __inline struct acl *
-_find_acl(struct aclstate *as, const u_int8_t *macaddr)
+_find_acl(struct aclstate *as, const uint8_t *macaddr)
 {
 	struct acl *acl;
 	int hash;
@@ -143,7 +137,7 @@ _acl_free(struct aclstate *as, struct acl *acl)
 }
 
 static int
-acl_check(struct ieee80211com *ic, const u_int8_t mac[IEEE80211_ADDR_LEN])
+acl_check(struct ieee80211com *ic, const uint8_t mac[IEEE80211_ADDR_LEN])
 {
 	struct aclstate *as = ic->ic_as;
 
@@ -159,7 +153,7 @@ acl_check(struct ieee80211com *ic, const u_int8_t mac[IEEE80211_ADDR_LEN])
 }
 
 static int
-acl_add(struct ieee80211com *ic, const u_int8_t mac[IEEE80211_ADDR_LEN])
+acl_add(struct ieee80211com *ic, const uint8_t mac[IEEE80211_ADDR_LEN])
 {
 	struct aclstate *as = ic->ic_as;
 	struct acl *acl, *new;
@@ -197,7 +191,7 @@ acl_add(struct ieee80211com *ic, const u_int8_t mac[IEEE80211_ADDR_LEN])
 }
 
 static int
-acl_remove(struct ieee80211com *ic, const u_int8_t mac[IEEE80211_ADDR_LEN])
+acl_remove(struct ieee80211com *ic, const uint8_t mac[IEEE80211_ADDR_LEN])
 {
 	struct aclstate *as = ic->ic_as;
 	struct acl *acl;

@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2001 Atsushi Onoe
- * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,12 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -31,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto.c,v 1.10.2.2 2005/09/03 22:40:02 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_crypto.c,v 1.16 2007/06/11 03:36:54 sam Exp $");
 
 /*
  * IEEE 802.11 generic crypto support.
@@ -90,7 +84,7 @@ null_key_delete(struct ieee80211com *ic, const struct ieee80211_key *k)
 }
 static 	int
 null_key_set(struct ieee80211com *ic, const struct ieee80211_key *k,
-	     const u_int8_t mac[IEEE80211_ADDR_LEN])
+	const uint8_t mac[IEEE80211_ADDR_LEN])
 {
 	return 1;
 }
@@ -131,7 +125,7 @@ dev_key_delete(struct ieee80211com *ic,
 
 static __inline int
 dev_key_set(struct ieee80211com *ic, const struct ieee80211_key *key,
-	const u_int8_t mac[IEEE80211_ADDR_LEN])
+	const uint8_t mac[IEEE80211_ADDR_LEN])
 {
 	return ic->ic_crypto.cs_key_set(ic, key, mac);
 }
@@ -467,7 +461,7 @@ ieee80211_crypto_delglobalkeys(struct ieee80211com *ic)
  */
 int
 ieee80211_crypto_setkey(struct ieee80211com *ic, struct ieee80211_key *key,
-		const u_int8_t macaddr[IEEE80211_ADDR_LEN])
+		const uint8_t macaddr[IEEE80211_ADDR_LEN])
 {
 	const struct ieee80211_cipher *cip = key->wk_cipher;
 
@@ -511,7 +505,7 @@ ieee80211_crypto_encap(struct ieee80211com *ic,
 	struct ieee80211_key *k;
 	struct ieee80211_frame *wh;
 	const struct ieee80211_cipher *cip;
-	u_int8_t keyid;
+	uint8_t keyid;
 
 	/*
 	 * Multicast traffic always uses the multicast key.
@@ -521,7 +515,7 @@ ieee80211_crypto_encap(struct ieee80211com *ic,
 	 */
 	wh = mtod(m, struct ieee80211_frame *);
 	if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
-	    ni->ni_ucastkey.wk_cipher == &ieee80211_cipher_none) {
+	    IEEE80211_KEY_UNDEFINED(&ni->ni_ucastkey)) {
 		if (ic->ic_def_txkey == IEEE80211_KEYIX_NONE) {
 			IEEE80211_DPRINTF(ic, IEEE80211_MSG_CRYPTO,
 			    "[%s] no default transmit key (%s) deftxkey %u\n",
@@ -555,8 +549,8 @@ ieee80211_crypto_decap(struct ieee80211com *ic,
 	struct ieee80211_key *k;
 	struct ieee80211_frame *wh;
 	const struct ieee80211_cipher *cip;
-	const u_int8_t *ivp;
-	u_int8_t keyid;
+	const uint8_t *ivp;
+	uint8_t keyid;
 
 	/* NB: this minimum size data frame could be bigger */
 	if (m->m_pkthdr.len < IEEE80211_WEP_MINLEN) {
@@ -574,10 +568,10 @@ ieee80211_crypto_decap(struct ieee80211com *ic,
 	 * the key id in the header is meaningless (typically 0).
 	 */
 	wh = mtod(m, struct ieee80211_frame *);
-	ivp = mtod(m, const u_int8_t *) + hdrlen;	/* XXX contig */
+	ivp = mtod(m, const uint8_t *) + hdrlen;	/* XXX contig */
 	keyid = ivp[IEEE80211_WEP_IVLEN];
 	if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
-	    ni->ni_ucastkey.wk_cipher == &ieee80211_cipher_none)
+	    IEEE80211_KEY_UNDEFINED(&ni->ni_ucastkey))
 		k = &ic->ic_nw_keys[keyid >> 6];
 	else
 		k = &ni->ni_ucastkey;
@@ -592,7 +586,7 @@ ieee80211_crypto_decap(struct ieee80211com *ic,
 		    "[%s] unable to pullup %s header\n",
 		    ether_sprintf(wh->i_addr2), cip->ic_name);
 		ic->ic_stats.is_rx_wepfail++;	/* XXX */
-		return 0;
+		return NULL;
 	}
 
 	return (cip->ic_decap(k, m, hdrlen) ? k : NULL);

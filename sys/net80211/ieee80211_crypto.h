@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2001 Atsushi Onoe
- * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,12 +11,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -29,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/net80211/ieee80211_crypto.h,v 1.9.2.1 2005/09/03 22:40:02 sam Exp $
+ * $FreeBSD: src/sys/net80211/ieee80211_crypto.h,v 1.13 2007/06/11 03:36:54 sam Exp $
  */
 #ifndef _NET80211_IEEE80211_CRYPTO_H_
 #define _NET80211_IEEE80211_CRYPTO_H_
@@ -45,7 +39,7 @@
  */
 struct ieee80211_wepkey {
 	u_int		wk_len;		/* key length in bytes */
-	u_int8_t	wk_key[IEEE80211_KEYBUF_SIZE];
+	uint8_t		wk_key[IEEE80211_KEYBUF_SIZE];
 };
 
 struct ieee80211_cipher;
@@ -66,12 +60,12 @@ struct ieee80211_cipher;
  * Ciphers such as TKIP may also support mixed hardware/software
  * encrypt/decrypt and MIC processing.
  */
-typedef u_int16_t ieee80211_keyix;	/* h/w key index */
+typedef uint16_t ieee80211_keyix;	/* h/w key index */
 
 struct ieee80211_key {
-	u_int8_t	wk_keylen;	/* key length in bytes */
-	u_int8_t	wk_pad;
-	u_int16_t	wk_flags;
+	uint8_t		wk_keylen;	/* key length in bytes */
+	uint8_t		wk_pad;
+	uint16_t	wk_flags;
 #define	IEEE80211_KEY_XMIT	0x01	/* key used for xmit */
 #define	IEEE80211_KEY_RECV	0x02	/* key used for recv */
 #define	IEEE80211_KEY_GROUP	0x04	/* key used for WPA group operation */
@@ -79,11 +73,11 @@ struct ieee80211_key {
 #define	IEEE80211_KEY_SWMIC	0x20	/* host-based enmic/demic */
 	ieee80211_keyix	wk_keyix;	/* h/w key index */
 	ieee80211_keyix	wk_rxkeyix;	/* optional h/w rx key index */
-	u_int8_t	wk_key[IEEE80211_KEYBUF_SIZE+IEEE80211_MICBUF_SIZE];
+	uint8_t		wk_key[IEEE80211_KEYBUF_SIZE+IEEE80211_MICBUF_SIZE];
 #define	wk_txmic	wk_key+IEEE80211_KEYBUF_SIZE+0	/* XXX can't () right */
 #define	wk_rxmic	wk_key+IEEE80211_KEYBUF_SIZE+8	/* XXX can't () right */
-	u_int64_t	wk_keyrsc;	/* key receive sequence counter */
-	u_int64_t	wk_keytsc;	/* key transmit sequence counter */
+	uint64_t	wk_keyrsc;	/* key receive sequence counter */
+	uint64_t	wk_keytsc;	/* key transmit sequence counter */
 	const struct ieee80211_cipher *wk_cipher;
 	void		*wk_private;	/* private cipher state */
 };
@@ -122,7 +116,7 @@ struct mbuf;
 struct ieee80211_crypto_state {
 	struct ieee80211_key	cs_nw_keys[IEEE80211_WEP_NKID];
 	ieee80211_keyix		cs_def_txkey;	/* default/group tx key index */
-	u_int16_t		cs_max_keyix;	/* max h/w key index */
+	uint16_t		cs_max_keyix;	/* max h/w key index */
 
 	int			(*cs_key_alloc)(struct ieee80211com *,
 					const struct ieee80211_key *,
@@ -131,7 +125,7 @@ struct ieee80211_crypto_state {
 					const struct ieee80211_key *);
 	int			(*cs_key_set)(struct ieee80211com *,
 					const struct ieee80211_key *,
-					const u_int8_t mac[IEEE80211_ADDR_LEN]);
+					const uint8_t mac[IEEE80211_ADDR_LEN]);
 	void			(*cs_key_update_begin)(struct ieee80211com *);
 	void			(*cs_key_update_end)(struct ieee80211com *);
 };
@@ -143,7 +137,7 @@ int	ieee80211_crypto_newkey(struct ieee80211com *,
 int	ieee80211_crypto_delkey(struct ieee80211com *,
 		struct ieee80211_key *);
 int	ieee80211_crypto_setkey(struct ieee80211com *,
-		struct ieee80211_key *, const u_int8_t macaddr[IEEE80211_ADDR_LEN]);
+		struct ieee80211_key *, const uint8_t macaddr[IEEE80211_ADDR_LEN]);
 void	ieee80211_crypto_delglobalkeys(struct ieee80211com *);
 
 /*
@@ -162,12 +156,15 @@ struct ieee80211_cipher {
 	void	(*ic_detach)(struct ieee80211_key *);
 	int	(*ic_setkey)(struct ieee80211_key *);
 	int	(*ic_encap)(struct ieee80211_key *, struct mbuf *,
-			u_int8_t keyid);
+			uint8_t keyid);
 	int	(*ic_decap)(struct ieee80211_key *, struct mbuf *, int);
 	int	(*ic_enmic)(struct ieee80211_key *, struct mbuf *, int);
 	int	(*ic_demic)(struct ieee80211_key *, struct mbuf *, int);
 };
 extern	const struct ieee80211_cipher ieee80211_cipher_none;
+
+#define	IEEE80211_KEY_UNDEFINED(k) \
+	((k)->wk_cipher == &ieee80211_cipher_none)
 
 void	ieee80211_crypto_register(const struct ieee80211_cipher *);
 void	ieee80211_crypto_unregister(const struct ieee80211_cipher *);

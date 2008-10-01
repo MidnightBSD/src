@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2003-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2003-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,8 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -26,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_freebsd.c,v 1.7.2.2 2005/12/22 19:22:51 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/net80211/ieee80211_freebsd.c,v 1.16.2.1 2007/11/11 17:44:35 sam Exp $");
 
 /*
  * IEEE 802.11 support (FreeBSD-specific code)
@@ -55,6 +53,27 @@ SYSCTL_NODE(_net, OID_AUTO, wlan, CTLFLAG_RD, 0, "IEEE 80211 parameters");
 int	ieee80211_debug = 0;
 SYSCTL_INT(_net_wlan, OID_AUTO, debug, CTLFLAG_RW, &ieee80211_debug,
 	    0, "debugging printfs");
+#endif
+extern int ieee80211_recv_bar_ena;
+SYSCTL_INT(_net_wlan, OID_AUTO, recv_bar, CTLFLAG_RW, &ieee80211_recv_bar_ena,
+	    0, "BAR frame processing (ena/dis)");
+
+#ifdef IEEE80211_AMPDU_AGE
+static int
+ieee80211_sysctl_ampdu_age(SYSCTL_HANDLER_ARGS)
+{
+	extern int ieee80211_ampdu_age;
+	int ampdu_age = ticks_to_msecs(ieee80211_ampdu_age);
+	int error;
+
+	error = sysctl_handle_int(oidp, &ampdu_age, 0, req);
+	if (error || !req->newptr)
+		return error;
+	ieee80211_ampdu_age = msecs_to_ticks(ampdu_age);
+	return 0;
+}
+SYSCTL_PROC(_net_wlan, OID_AUTO, "ampdu_age", CTLFLAG_RW, NULL, 0,
+	ieee80211_sysctl_ampdu_age, "A", "AMPDU max reorder age (ms)");
 #endif
 
 static int
@@ -138,6 +157,7 @@ ieee80211_sysctl_detach(struct ieee80211com *ic)
 
 	if (ic->ic_sysctl != NULL) {
 		sysctl_ctx_free(ic->ic_sysctl);
+		FREE(ic->ic_sysctl, M_DEVBUF);
 		ic->ic_sysctl = NULL;
 	}
 }
@@ -150,6 +170,35 @@ ieee80211_node_dectestref(struct ieee80211_node *ni)
 	return atomic_cmpset_int(&ni->ni_refcnt, 0, 1);
 }
 
+void
+ieee80211_drain_ifq(struct ifqueue *ifq)
+{
+	struct ieee80211_node *ni;
+	struct mbuf *m;
+
+	for (;;) {
+		IF_DEQUEUE(ifq, m);
+		if (m == NULL)
+			break;
+
+		ni = (struct ieee80211_node *)m->m_pkthdr.rcvif;
+		KASSERT(ni != NULL, ("frame w/o node"));
+		ieee80211_free_node(ni);
+		m->m_pkthdr.rcvif = NULL;
+
+		m_freem(m);
+	}
+}
+
+/*
+ * As above, for mbufs allocated with m_gethdr/MGETHDR
+ * or initialized by M_COPY_PKTHDR.
+ */
+#define	MC_ALIGN(m, len)						\
+do {									\
+	(m)->m_data += (MCLBYTES - (len)) &~ (sizeof(long) - 1);	\
+} while (/* CONSTCOND */ 0)
+
 /*
  * Allocate and setup a management frame of the specified
  * size.  We return the mbuf and a pointer to the start
@@ -160,7 +209,7 @@ ieee80211_node_dectestref(struct ieee80211_node *ni)
  * can use this interface too.
  */
 struct mbuf *
-ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
+ieee80211_getmgtframe(uint8_t **frm, int headroom, int pktlen)
 {
 	struct mbuf *m;
 	u_int len;
@@ -169,11 +218,10 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 	 * NB: we know the mbuf routines will align the data area
 	 *     so we don't need to do anything special.
 	 */
-	/* XXX 4-address frame? */
-	len = roundup(sizeof(struct ieee80211_frame) + pktlen, 4);
+	len = roundup2(headroom + pktlen, 4);
 	KASSERT(len <= MCLBYTES, ("802.11 mgt frame too large: %u", len));
 	if (len < MINCLSIZE) {
-		m = m_gethdr(M_NOWAIT, MT_HEADER);
+		m = m_gethdr(M_NOWAIT, MT_DATA);
 		/*
 		 * Align the data in case additional headers are added.
 		 * This should only happen when a WEP header is added
@@ -182,13 +230,49 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 		 */
 		if (m != NULL)
 			MH_ALIGN(m, len);
-	} else
-		m = m_getcl(M_NOWAIT, MT_HEADER, M_PKTHDR);
+	} else {
+		m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
+		if (m != NULL)
+			MC_ALIGN(m, len);
+	}
 	if (m != NULL) {
-		m->m_data += sizeof(struct ieee80211_frame);
+		m->m_data += headroom;
 		*frm = m->m_data;
 	}
 	return m;
+}
+
+int
+ieee80211_add_callback(struct mbuf *m,
+	void (*func)(struct ieee80211_node *, void *, int), void *arg)
+{
+	struct m_tag *mtag;
+	struct ieee80211_cb *cb;
+
+	mtag = m_tag_alloc(MTAG_ABI_NET80211, NET80211_TAG_CALLBACK,
+			sizeof(struct ieee80211_cb), M_NOWAIT);
+	if (mtag == NULL)
+		return 0;
+
+	cb = (struct ieee80211_cb *)(mtag+1);
+	cb->func = func;
+	cb->arg = arg;
+	m_tag_prepend(m, mtag);
+	m->m_flags |= M_TXCB;
+	return 1;
+}
+
+void
+ieee80211_process_callback(struct ieee80211_node *ni,
+	struct mbuf *m, int status)
+{
+	struct m_tag *mtag;
+
+	mtag = m_tag_locate(m, MTAG_ABI_NET80211, NET80211_TAG_CALLBACK, NULL);
+	if (mtag != NULL) {
+		struct ieee80211_cb *cb = (struct ieee80211_cb *)(mtag+1);
+		cb->func(ni, cb->arg, status);
+	}
 }
 
 #include <sys/libkern.h>
@@ -196,13 +280,13 @@ ieee80211_getmgtframe(u_int8_t **frm, u_int pktlen)
 void
 get_random_bytes(void *p, size_t n)
 {
-	u_int8_t *dp = p;
+	uint8_t *dp = p;
 
 	while (n > 0) {
-		u_int32_t v = arc4random();
-		size_t nb = n > sizeof(u_int32_t) ? sizeof(u_int32_t) : n;
-		bcopy(&v, dp, n > sizeof(u_int32_t) ? sizeof(u_int32_t) : n);
-		dp += sizeof(u_int32_t), n -= nb;
+		uint32_t v = arc4random();
+		size_t nb = n > sizeof(uint32_t) ? sizeof(uint32_t) : n;
+		bcopy(&v, dp, n > sizeof(uint32_t) ? sizeof(uint32_t) : n);
+		dp += sizeof(uint32_t), n -= nb;
 	}
 }
 
@@ -249,8 +333,7 @@ ieee80211_notify_scan_done(struct ieee80211com *ic)
 {
 	struct ifnet *ifp = ic->ic_ifp;
 
-	IEEE80211_DPRINTF(ic, IEEE80211_MSG_SCAN,
-		"%s: notify scan done\n", ic->ic_ifp->if_xname);
+	IEEE80211_DPRINTF(ic, IEEE80211_MSG_SCAN, "%s\n", "notify scan done");
 
 	/* dispatch wireless event indicating scan completed */
 	rt_ieee80211msg(ifp, RTM_IEEE80211_SCAN, NULL, 0);
@@ -310,14 +393,9 @@ ieee80211_notify_michael_failure(struct ieee80211com *ic,
 void
 ieee80211_load_module(const char *modname)
 {
-#ifdef notyet
-	struct thread *td = curthread;
 
-	if (suser(td) == 0 && securelevel_gt(td->td_ucred, 0) == 0) {
-		mtx_lock(&Giant);
-		(void) linker_load_module(modname, NULL, NULL, NULL, NULL);
-		mtx_unlock(&Giant);
-	}
+#ifdef notyet
+	(void)kern_kldload(curthread, modname, NULL);
 #else
 	printf("%s: load the %s module by hand for now.\n", __func__, modname);
 #endif

@@ -1,8 +1,9 @@
-/*	$FreeBSD: src/sys/opencrypto/cryptodev.h,v 1.10 2005/01/07 02:29:16 imp Exp $	*/
+/*	$FreeBSD: src/sys/opencrypto/cryptodev.h,v 1.25 2007/05/09 19:37:02 gnn Exp $	*/
 /*	$OpenBSD: cryptodev.h,v 1.31 2002/06/11 11:14:29 beck Exp $	*/
 
 /*-
  * The author of this code is Angelos D. Keromytis (angelos@cis.upenn.edu)
+ * Copyright (c) 2002-2006 Sam Leffler, Errno Consulting
  *
  * This code was written by Angelos D. Keromytis in Athens, Greece, in
  * February 2000. Network Security Technologies Inc. (NSTI) kindly
@@ -61,22 +62,43 @@
 #define CRYPTO_DRIVERS_INITIAL	4
 #define CRYPTO_SW_SESSIONS	32
 
+/* Hash values */
+#define	NULL_HASH_LEN		16
+#define	MD5_HASH_LEN		16
+#define	SHA1_HASH_LEN		20
+#define	RIPEMD160_HASH_LEN	20
+#define	SHA2_256_HASH_LEN	32
+#define	SHA2_384_HASH_LEN	48
+#define	SHA2_512_HASH_LEN	64
+#define	MD5_KPDK_HASH_LEN	16
+#define	SHA1_KPDK_HASH_LEN	20
+/* Maximum hash algorithm result length */
+#define	HASH_MAX_LEN		SHA2_512_HASH_LEN /* Keep this updated */
+
 /* HMAC values */
-#define HMAC_BLOCK_LEN		64
-#define HMAC_IPAD_VAL		0x36
-#define HMAC_OPAD_VAL		0x5C
+#define	NULL_HMAC_BLOCK_LEN		64
+#define	MD5_HMAC_BLOCK_LEN		64
+#define	SHA1_HMAC_BLOCK_LEN		64
+#define	RIPEMD160_HMAC_BLOCK_LEN	64
+#define	SHA2_256_HMAC_BLOCK_LEN		64
+#define	SHA2_384_HMAC_BLOCK_LEN		128
+#define	SHA2_512_HMAC_BLOCK_LEN		128
+/* Maximum HMAC block length */
+#define	HMAC_MAX_BLOCK_LEN		SHA2_512_HMAC_BLOCK_LEN /* Keep this updated */
+#define	HMAC_IPAD_VAL			0x36
+#define	HMAC_OPAD_VAL			0x5C
 
 /* Encryption algorithm block sizes */
+#define NULL_BLOCK_LEN		4
 #define DES_BLOCK_LEN		8
 #define DES3_BLOCK_LEN		8
 #define BLOWFISH_BLOCK_LEN	8
 #define SKIPJACK_BLOCK_LEN	8
 #define CAST128_BLOCK_LEN	8
 #define RIJNDAEL128_BLOCK_LEN	16
-#define EALG_MAX_BLOCK_LEN	16 /* Keep this updated */
-
-/* Maximum hash algorithm result length */
-#define AALG_MAX_RESULT_LEN	64 /* Keep this updated */
+#define AES_BLOCK_LEN		RIJNDAEL128_BLOCK_LEN
+#define CAMELLIA_BLOCK_LEN	16
+#define EALG_MAX_BLOCK_LEN	AES_BLOCK_LEN /* Keep this updated */
 
 #define	CRYPTO_ALGORITHM_MIN	1
 #define CRYPTO_DES_CBC		1
@@ -94,17 +116,32 @@
 #define CRYPTO_ARC4		12
 #define	CRYPTO_MD5		13
 #define	CRYPTO_SHA1		14
-#define	CRYPTO_SHA2_HMAC	15
-#define CRYPTO_NULL_HMAC	16
-#define CRYPTO_NULL_CBC		17
-#define CRYPTO_DEFLATE_COMP	18 /* Deflate compression algorithm */
-#define CRYPTO_ALGORITHM_MAX	18 /* Keep updated - see below */
+#define	CRYPTO_NULL_HMAC	15
+#define	CRYPTO_NULL_CBC		16
+#define	CRYPTO_DEFLATE_COMP	17 /* Deflate compression algorithm */
+#define	CRYPTO_SHA2_256_HMAC	18
+#define	CRYPTO_SHA2_384_HMAC	19
+#define	CRYPTO_SHA2_512_HMAC	20
+#define CRYPTO_CAMELLIA_CBC	21
+#define	CRYPTO_ALGORITHM_MAX	21 /* Keep updated - see below */
 
 /* Algorithm flags */
 #define	CRYPTO_ALG_FLAG_SUPPORTED	0x01 /* Algorithm is supported */
 #define	CRYPTO_ALG_FLAG_RNG_ENABLE	0x02 /* Has HW RNG for DH/DSA */
 #define	CRYPTO_ALG_FLAG_DSA_SHA		0x04 /* Can do SHA on msg */
 
+/*
+ * Crypto driver/device flags.  They can set in the crid
+ * parameter when creating a session or submitting a key
+ * op to affect the device/driver assigned.  If neither
+ * of these are specified then the crid is assumed to hold
+ * the driver id of an existing (and suitable) device that
+ * must be used to satisfy the request.
+ */
+#define CRYPTO_FLAG_HARDWARE	0x01000000	/* hardware accelerated */
+#define CRYPTO_FLAG_SOFTWARE	0x02000000	/* software implementation */
+
+/* NB: deprecated */
 struct session_op {
 	u_int32_t	cipher;		/* ie. CRYPTO_DES_CBC */
 	u_int32_t	mac;		/* ie. CRYPTO_MD5_HMAC */
@@ -115,6 +152,20 @@ struct session_op {
 	caddr_t		mackey;
 
   	u_int32_t	ses;		/* returns: session # */ 
+};
+
+struct session2_op {
+	u_int32_t	cipher;		/* ie. CRYPTO_DES_CBC */
+	u_int32_t	mac;		/* ie. CRYPTO_MD5_HMAC */
+
+	u_int32_t	keylen;		/* cipher key */
+	caddr_t		key;
+	int		mackeylen;	/* mac key */
+	caddr_t		mackey;
+
+  	u_int32_t	ses;		/* returns: session # */ 
+	int		crid;		/* driver id + flags (rw) */
+	int		pad[4];		/* for future expansion */
 };
 
 struct crypt_op {
@@ -130,7 +181,15 @@ struct crypt_op {
 	caddr_t		iv;
 };
 
-#define CRYPTO_MAX_MAC_LEN	20
+/*
+ * Parameters for looking up a crypto driver/device by
+ * device name or by id.  The latter are returned for
+ * created sessions (crid) and completed key operations.
+ */
+struct crypt_find_op {
+	int		crid;		/* driver id + flags */
+	char		name[32];	/* device/driver name */
+};
 
 /* bignum parameter, in packed bytes, ... */
 struct crparam {
@@ -145,7 +204,7 @@ struct crypt_kop {
 	u_int		crk_status;	/* return status */
 	u_short		crk_iparams;	/* # of input parameters */
 	u_short		crk_oparams;	/* # of output parameters */
-	u_int		crk_pad1;
+	u_int		crk_crid;	/* NB: only used by CIOCKEY2 (rw) */
 	struct crparam	crk_param[CRK_MAXPARAM];
 };
 #define	CRK_ALGORITM_MIN	0
@@ -167,14 +226,18 @@ struct crypt_kop {
  * Please use F_SETFD against the cloned descriptor.
  */
 #define	CRIOGET		_IOWR('c', 100, u_int32_t)
+#define	CRIOASYMFEAT	CIOCASYMFEAT
+#define	CRIOFINDDEV	CIOCFINDDEV
 
 /* the following are done against the cloned descriptor */
 #define	CIOCGSESSION	_IOWR('c', 101, struct session_op)
 #define	CIOCFSESSION	_IOW('c', 102, u_int32_t)
 #define CIOCCRYPT	_IOWR('c', 103, struct crypt_op)
 #define CIOCKEY		_IOWR('c', 104, struct crypt_kop)
-
 #define CIOCASYMFEAT	_IOR('c', 105, u_int32_t)
+#define	CIOCGSESSION2	_IOWR('c', 106, struct session2_op)
+#define	CIOCKEY2	_IOWR('c', 107, struct crypt_kop)
+#define	CIOCFINDDEV	_IOWR('c', 108, struct crypt_find_op)
 
 struct cryptotstat {
 	struct timespec	acc;		/* total accumulated time */
@@ -209,7 +272,8 @@ struct cryptostats {
 struct cryptoini {
 	int		cri_alg;	/* Algorithm to use */
 	int		cri_klen;	/* Key length, in bits */
-	int		cri_rnd;	/* Algorithm rounds, where relevant */
+	int		cri_mlen;	/* Number of bytes we want from the
+					   entire hash. 0 means all. */
 	caddr_t		cri_key;	/* key to use */
 	u_int8_t	cri_iv[EALG_MAX_BLOCK_LEN];	/* IV to use */
 	struct cryptoini *cri_next;
@@ -233,7 +297,6 @@ struct cryptodesc {
 	struct cryptoini	CRD_INI; /* Initialization/context data */
 #define crd_iv		CRD_INI.cri_iv
 #define crd_key		CRD_INI.cri_key
-#define crd_rnd		CRD_INI.cri_rnd
 #define crd_alg		CRD_INI.cri_alg
 #define crd_klen	CRD_INI.cri_klen
 
@@ -274,7 +337,6 @@ struct cryptop {
 
 	int (*crp_callback)(struct cryptop *); /* Callback function */
 
-	caddr_t		crp_mac;
 	struct bintime	crp_tstamp;	/* performance time stamp */
 };
 
@@ -297,38 +359,10 @@ struct cryptkop {
 	u_int		krp_status;	/* return status */
 	u_short		krp_iparams;	/* # of input parameters */
 	u_short		krp_oparams;	/* # of output parameters */
+	u_int		krp_crid;	/* desired device, etc. */
 	u_int32_t	krp_hid;
 	struct crparam	krp_param[CRK_MAXPARAM];	/* kvm */
 	int		(*krp_callback)(struct cryptkop *);
-};
-
-/* Crypto capabilities structure */
-struct cryptocap {
-	u_int32_t	cc_sessions;
-
-	/*
-	 * Largest possible operator length (in bits) for each type of
-	 * encryption algorithm.
-	 */
-	u_int16_t	cc_max_op_len[CRYPTO_ALGORITHM_MAX + 1];
-
-	u_int8_t	cc_alg[CRYPTO_ALGORITHM_MAX + 1];
-
-	u_int8_t	cc_kalg[CRK_ALGORITHM_MAX + 1];
-
-	u_int8_t	cc_flags;
-	u_int8_t	cc_qblocked;		/* symmetric q blocked */
-	u_int8_t	cc_kqblocked;		/* asymmetric q blocked */
-#define CRYPTOCAP_F_CLEANUP	0x01		/* needs resource cleanup */
-#define CRYPTOCAP_F_SOFTWARE	0x02		/* software implementation */
-#define CRYPTOCAP_F_SYNC	0x04		/* operates synchronously */
-
-	void		*cc_arg;		/* callback argument */
-	int		(*cc_newsession)(void*, u_int32_t*, struct cryptoini*);
-	int		(*cc_process)(void*, struct cryptop *, int);
-	int		(*cc_freesession)(void*, u_int64_t);
-	void		*cc_karg;		/* callback argument */
-	int		(*cc_kprocess) (void*, struct cryptkop *, int);
 };
 
 /*
@@ -338,24 +372,24 @@ struct cryptocap {
  * a copy of the driver's capabilities that can be used by client code to
  * optimize operation.
  */
-#define	CRYPTO_SESID2HID(_sid)	(((_sid) >> 32) & 0xffffff)
-#define	CRYPTO_SESID2CAPS(_sid)	(((_sid) >> 56) & 0xff)
+#define	CRYPTO_SESID2HID(_sid)	(((_sid) >> 32) & 0x00ffffff)
+#define	CRYPTO_SESID2CAPS(_sid)	(((_sid) >> 32) & 0xff000000)
 #define	CRYPTO_SESID2LID(_sid)	(((u_int32_t) (_sid)) & 0xffffffff)
 
 MALLOC_DECLARE(M_CRYPTO_DATA);
 
 extern	int crypto_newsession(u_int64_t *sid, struct cryptoini *cri, int hard);
 extern	int crypto_freesession(u_int64_t sid);
-extern	int32_t crypto_get_driverid(u_int32_t flags);
+#define CRYPTOCAP_F_HARDWARE	CRYPTO_FLAG_HARDWARE
+#define CRYPTOCAP_F_SOFTWARE	CRYPTO_FLAG_SOFTWARE
+#define CRYPTOCAP_F_SYNC	0x04000000	/* operates synchronously */
+extern	int32_t crypto_get_driverid(device_t dev, int flags);
+extern	int crypto_find_driver(const char *);
+extern	device_t crypto_find_device_byhid(int hid);
+extern	int crypto_getcaps(int hid);
 extern	int crypto_register(u_int32_t driverid, int alg, u_int16_t maxoplen,
-	    u_int32_t flags,
-	    int (*newses)(void*, u_int32_t*, struct cryptoini*),
-	    int (*freeses)(void*, u_int64_t),
-	    int (*process)(void*, struct cryptop *, int),
-	    void *arg);
-extern	int crypto_kregister(u_int32_t, int, u_int32_t,
-	    int (*)(void*, struct cryptkop *, int),
-	    void *arg);
+	    u_int32_t flags);
+extern	int crypto_kregister(u_int32_t, int, u_int32_t);
 extern	int crypto_unregister(u_int32_t driverid, int alg);
 extern	int crypto_unregister_all(u_int32_t driverid);
 extern	int crypto_dispatch(struct cryptop *crp);
@@ -384,5 +418,14 @@ struct uio;
 extern	void cuio_copydata(struct uio* uio, int off, int len, caddr_t cp);
 extern	void cuio_copyback(struct uio* uio, int off, int len, caddr_t cp);
 extern	struct iovec *cuio_getptr(struct uio *uio, int loc, int *off);
+extern	int cuio_apply(struct uio *uio, int off, int len,
+	    int (*f)(void *, void *, u_int), void *arg);
+
+extern	void crypto_copyback(int flags, caddr_t buf, int off, int size,
+	    caddr_t in);
+extern	void crypto_copydata(int flags, caddr_t buf, int off, int size,
+	    caddr_t out);
+extern	int crypto_apply(int flags, caddr_t buf, int off, int len,
+	    int (*f)(void *, void *, u_int), void *arg);
 #endif /* _KERNEL */
 #endif /* _CRYPTO_CRYPTO_H_ */
