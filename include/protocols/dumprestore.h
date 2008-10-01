@@ -37,7 +37,7 @@
  *
  *	@(#)dumprestore.h	8.2 (Berkeley) 1/21/94
  *
- * $FreeBSD: src/include/protocols/dumprestore.h,v 1.10 2002/07/17 02:03:19 mckusick Exp $
+ * $FreeBSD: src/include/protocols/dumprestore.h,v 1.11 2007/02/26 08:15:56 mckusick Exp $
  */
 
 #ifndef _PROTOCOLS_DUMPRESTORE_H_
@@ -97,7 +97,8 @@ union u_spcl {
 		int64_t	c_birthtime;	    /* creation time, seconds */
 		int64_t	c_atime;	    /* last access time, seconds */
 		int64_t	c_mtime;	    /* last modified time, seconds */
-		int32_t	c_spare4[7];	    /* old block pointers */
+		int32_t	c_extsize;	    /* external attribute size */
+		int32_t	c_spare4[6];	    /* old block pointers */
 		u_int32_t c_file_flags;	    /* status flags (chflags) */
 		int32_t	c_spare5[2];	    /* old blocks, generation number */
 		u_int32_t c_uid;	    /* file owner */

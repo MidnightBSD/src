@@ -1,5 +1,5 @@
 #	from: @(#)Makefile	2.3 88/08/11 4.0 RPCSRC
-#	$FreeBSD: src/include/rpc/Makefile,v 1.2 2002/05/12 16:00:48 ru Exp $
+#	$FreeBSD: src/include/rpc/Makefile,v 1.3 2007/04/10 22:10:16 pjd Exp $
 
 .SUFFIXES: .x
 
@@ -12,7 +12,7 @@ XFILES= rpcb_prot.x
 HFILES=	auth.h auth_unix.h clnt.h clnt_soc.h clnt_stat.h \
 	nettype.h pmap_clnt.h pmap_prot.h pmap_rmt.h raw.h \
 	rpc.h rpc_msg.h rpcb_clnt.h rpcent.h rpc_com.h \
-	svc.h svc_auth.h svc_soc.h svc_dg.h types.h xdr.h
+	svc.h svc_auth.h svc_soc.h svc_dg.h xdr.h
 
 # Secure RPC
 HFILES+= auth_des.h des.h des_crypt.h

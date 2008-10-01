@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tftp.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/arpa/tftp.h,v 1.5 2001/09/27 20:50:14 obrien Exp $
+ * $FreeBSD: src/include/arpa/tftp.h,v 1.6 2007/08/01 11:59:09 ticso Exp $
  */
 
 #ifndef _ARPA_TFTP_H_
@@ -58,9 +58,9 @@ struct tftphdr {
 		unsigned short	tu_block;	/* block # */
 		unsigned short	tu_code;	/* error code */
 		char	tu_stuff[1];	/* request packet stuff */
-	} th_u;
+	} __packed th_u;
 	char	th_data[1];		/* data or error string */
-};
+} __packed;
 
 #define	th_block	th_u.tu_block
 #define	th_code		th_u.tu_code

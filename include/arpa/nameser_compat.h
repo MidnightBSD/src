@@ -30,16 +30,16 @@
  * SUCH DAMAGE.
  */
 
-/*
+/*%
  *      from nameser.h	8.1 (Berkeley) 6/2/93
- *	From: Id: nameser_compat.h,v 8.9 1998/03/20 23:25:10 halley Exp
- * $FreeBSD: src/include/arpa/nameser_compat.h,v 1.4 2002/05/28 04:32:25 mike Exp $
+ *	$Id: nameser_compat.h,v 1.2 2008-10-01 14:01:16 laffer1 Exp $
+ * $FreeBSD: src/include/arpa/nameser_compat.h,v 1.7 2007/06/03 17:20:25 ume Exp $
  */
 
 #ifndef _ARPA_NAMESER_COMPAT_
 #define	_ARPA_NAMESER_COMPAT_
 
-#define	__BIND		19950621	/* (DEAD) interface version stamp. */
+#define	__BIND		19950621	/*%< (DEAD) interface version stamp. */
 
 #include <machine/endian.h>
 
@@ -54,7 +54,7 @@
 #error "Undefined or invalid _BYTE_ORDER";
 #endif
 
-/*
+/*%
  * Structure for query header.  The order of the fields is machine- and
  * compiler-dependent, depending on the byte/bit order and the layout
  * of bit fields.  We use bit fields only in int variables, as this
@@ -62,40 +62,40 @@
  */
 
 typedef struct {
-	unsigned	id :16;		/* query identification number */
+	unsigned	id :16;		/*%< query identification number */
 #if _BYTE_ORDER == _BIG_ENDIAN
 			/* fields in third byte */
-	unsigned	qr: 1;		/* response flag */
-	unsigned	opcode: 4;	/* purpose of message */
-	unsigned	aa: 1;		/* authoritive answer */
-	unsigned	tc: 1;		/* truncated message */
-	unsigned	rd: 1;		/* recursion desired */
+	unsigned	qr: 1;		/*%< response flag */
+	unsigned	opcode: 4;	/*%< purpose of message */
+	unsigned	aa: 1;		/*%< authoritive answer */
+	unsigned	tc: 1;		/*%< truncated message */
+	unsigned	rd: 1;		/*%< recursion desired */
 			/* fields in fourth byte */
-	unsigned	ra: 1;		/* recursion available */
-	unsigned	unused :1;	/* unused bits (MBZ as of 4.9.3a3) */
-	unsigned	ad: 1;		/* authentic data from named */
-	unsigned	cd: 1;		/* checking disabled by resolver */
-	unsigned	rcode :4;	/* response code */
+	unsigned	ra: 1;		/*%< recursion available */
+	unsigned	unused :1;	/*%< unused bits (MBZ as of 4.9.3a3) */
+	unsigned	ad: 1;		/*%< authentic data from named */
+	unsigned	cd: 1;		/*%< checking disabled by resolver */
+	unsigned	rcode :4;	/*%< response code */
 #endif
 #if _BYTE_ORDER == _LITTLE_ENDIAN || _BYTE_ORDER == _PDP_ENDIAN
 			/* fields in third byte */
-	unsigned	rd :1;		/* recursion desired */
-	unsigned	tc :1;		/* truncated message */
-	unsigned	aa :1;		/* authoritive answer */
-	unsigned	opcode :4;	/* purpose of message */
-	unsigned	qr :1;		/* response flag */
+	unsigned	rd :1;		/*%< recursion desired */
+	unsigned	tc :1;		/*%< truncated message */
+	unsigned	aa :1;		/*%< authoritive answer */
+	unsigned	opcode :4;	/*%< purpose of message */
+	unsigned	qr :1;		/*%< response flag */
 			/* fields in fourth byte */
-	unsigned	rcode :4;	/* response code */
-	unsigned	cd: 1;		/* checking disabled by resolver */
-	unsigned	ad: 1;		/* authentic data from named */
-	unsigned	unused :1;	/* unused bits (MBZ as of 4.9.3a3) */
-	unsigned	ra :1;		/* recursion available */
+	unsigned	rcode :4;	/*%< response code */
+	unsigned	cd: 1;		/*%< checking disabled by resolver */
+	unsigned	ad: 1;		/*%< authentic data from named */
+	unsigned	unused :1;	/*%< unused bits (MBZ as of 4.9.3a3) */
+	unsigned	ra :1;		/*%< recursion available */
 #endif
 			/* remaining bytes */
-	unsigned	qdcount :16;	/* number of question entries */
-	unsigned	ancount :16;	/* number of answer entries */
-	unsigned	nscount :16;	/* number of authority entries */
-	unsigned	arcount :16;	/* number of resource entries */
+	unsigned	qdcount :16;	/*%< number of question entries */
+	unsigned	ancount :16;	/*%< number of answer entries */
+	unsigned	nscount :16;	/*%< number of authority entries */
+	unsigned	arcount :16;	/*%< number of resource entries */
 } HEADER;
 
 #define PACKETSZ	NS_PACKETSZ
@@ -107,6 +107,7 @@ typedef struct {
 #define RRFIXEDSZ	NS_RRFIXEDSZ
 #define	INT32SZ		NS_INT32SZ
 #define	INT16SZ		NS_INT16SZ
+#define	INT8SZ		NS_INT8SZ
 #define	INADDRSZ	NS_INADDRSZ
 #define	IN6ADDRSZ	NS_IN6ADDRSZ
 #define	INDIR_MASK	NS_CMPRSFLGS
@@ -134,6 +135,10 @@ typedef struct {
 #define NXRRSET		ns_r_nxrrset
 #define NOTAUTH		ns_r_notauth
 #define NOTZONE		ns_r_notzone
+/*#define BADSIG		ns_r_badsig*/
+/*#define BADKEY		ns_r_badkey*/
+/*#define BADTIME		ns_r_badtime*/
+
 
 #define DELETE		ns_uop_delete
 #define ADD		ns_uop_add
@@ -173,7 +178,9 @@ typedef struct {
 #define	T_SRV		ns_t_srv
 #define T_ATMA		ns_t_atma
 #define T_NAPTR		ns_t_naptr
+#define T_A6		ns_t_a6
 #define T_OPT		ns_t_opt
+#define	T_TSIG		ns_t_tsig
 #define	T_IXFR		ns_t_ixfr
 #define T_AXFR		ns_t_axfr
 #define T_MAILB		ns_t_mailb
@@ -193,3 +200,4 @@ typedef struct {
 #define	PUTLONG			NS_PUT32
 
 #endif /* _ARPA_NAMESER_COMPAT_ */
+/*! \file */

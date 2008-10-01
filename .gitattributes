@@ -16141,6 +16141,7 @@ include/limits.h -text
 include/link.h -text
 include/locale.h -text
 include/malloc.h -text
+include/malloc_np.h -text
 include/memory.h -text
 include/monetary.h -text
 include/mpool.h -text
@@ -16197,7 +16198,6 @@ include/rpc/svc.h -text
 include/rpc/svc_auth.h -text
 include/rpc/svc_dg.h -text
 include/rpc/svc_soc.h -text
-include/rpc/types.h -text
 include/rpc/xdr.h -text
 include/rpcsvc/Makefile -text
 include/rpcsvc/bootparam_prot.x -text
