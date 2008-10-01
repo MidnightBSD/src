@@ -16332,10 +16332,6 @@ lib/csu/amd64/Makefile -text
 lib/csu/amd64/crt1.c -text
 lib/csu/amd64/crti.S -text
 lib/csu/amd64/crtn.S -text
-lib/csu/arm/Makefile -text
-lib/csu/arm/crt1.c -text
-lib/csu/arm/crti.S -text
-lib/csu/arm/crtn.S -text
 lib/csu/common/crtbegin.c -text
 lib/csu/common/crtbrand.c -text
 lib/csu/common/crtend.c -text
@@ -16343,10 +16339,6 @@ lib/csu/i386-elf/Makefile -text
 lib/csu/i386-elf/crt1.c -text
 lib/csu/i386-elf/crti.S -text
 lib/csu/i386-elf/crtn.S -text
-lib/csu/ia64/Makefile -text
-lib/csu/ia64/crt1.S -text
-lib/csu/ia64/crti.S -text
-lib/csu/ia64/crtn.S -text
 lib/csu/sparc64/Makefile -text
 lib/csu/sparc64/crt1.c -text
 lib/csu/sparc64/crti.S -text
