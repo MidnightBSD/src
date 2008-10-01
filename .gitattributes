@@ -23621,14 +23621,6 @@ sys/boot/ofw/libofw/ofw_reboot.c -text
 sys/boot/ofw/libofw/ofw_time.c -text
 sys/boot/ofw/libofw/openfirm.c -text
 sys/boot/ofw/libofw/openfirm.h -text
-sys/boot/powerpc/Makefile -text
-sys/boot/powerpc/loader/Makefile -text
-sys/boot/powerpc/loader/conf.c -text
-sys/boot/powerpc/loader/help.ofw -text
-sys/boot/powerpc/loader/ldscript.powerpc -text
-sys/boot/powerpc/loader/metadata.c -text
-sys/boot/powerpc/loader/start.c -text
-sys/boot/powerpc/loader/version -text
 sys/boot/sparc64/Makefile -text
 sys/boot/sparc64/Makefile.inc -text
 sys/boot/sparc64/boot1/Makefile -text
