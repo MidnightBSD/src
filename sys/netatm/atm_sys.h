@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/sys/netatm/atm_sys.h,v 1.8 2005/01/07 01:45:36 imp Exp $
+ *	@(#) $FreeBSD: src/sys/netatm/atm_sys.h,v 1.9 2005/12/27 12:33:18 stefanf Exp $
  *
  */
 
@@ -186,7 +186,7 @@ struct atm_time {
 		delta.tv_sec--;						\
 		delta.tv_usec += 1000000;				\
 	}								\
-	printf("%3ld.%6ld: ", delta.tv_sec, delta.tv_usec);
+	printf("%3ld.%6ld: ", (long)delta.tv_sec, delta.tv_usec);
 
 #define	ATM_DEBUG0(f)		if (atm_debug) {ATM_TIME; printf(f);}
 #define	ATM_DEBUGN0(f)		if (atm_debug) {printf(f);}

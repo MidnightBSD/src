@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/sys/netatm/atm_var.h,v 1.26 2005/02/21 21:58:16 rwatson Exp $
+ *	@(#) $FreeBSD: src/sys/netatm/atm_var.h,v 1.29 2006/04/01 15:41:59 rwatson Exp $
  *
  */
 
@@ -82,7 +82,7 @@ void		atm_aal5_init(void);
 int		atm_cm_connect(Atm_endpoint *, void *, Atm_attributes *,
 			Atm_connection **);
 int		atm_cm_listen(struct socket *, Atm_endpoint *, void *,
-			Atm_attributes *, Atm_connection **);
+			Atm_attributes *, Atm_connection **, int);
 int		atm_cm_addllc(Atm_endpoint *, void *, struct attr_llc *,
 			Atm_connection *, Atm_connection **);
 int		atm_cm_addparty(Atm_connection *, int, struct t_atm_sap *);
@@ -136,6 +136,7 @@ int		atm_proto_notsupp2(struct socket *, struct sockaddr *,
 int		atm_proto_notsupp3(struct socket *, struct sockaddr **);
 int		atm_proto_notsupp4(struct socket *, int, KBuffer *, 
 			struct sockaddr *, KBuffer *, struct thread *);
+void		atm_proto_notsupp5(struct socket *);
 
 	/* atm_signal.c */
 int		atm_sigmgr_register(struct sigmgr *);
@@ -150,9 +151,9 @@ int		atm_create_stack(Atm_connvc *, struct stack_list *,
 	/* atm_socket.c */
 void		atm_sock_init(void);
 int		atm_sock_attach(struct socket *, u_long, u_long);
-int		atm_sock_detach(struct socket *);
+void		atm_sock_detach(struct socket *);
 int		atm_sock_bind(struct socket *, struct sockaddr *);
-int		atm_sock_listen(struct socket *, Atm_endpoint *);
+int		atm_sock_listen(struct socket *, Atm_endpoint *, int);
 int		atm_sock_connect(struct socket *, struct sockaddr *,
 			Atm_endpoint *);
 int		atm_sock_disconnect(struct socket *);

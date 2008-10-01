@@ -33,10 +33,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.103 2005/03/26 11:29:02 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.116.2.1 2007/10/12 03:59:18 mohans Exp $");
 
 #include "opt_inet6.h"
-#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -46,9 +45,9 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.103 2005/03/26 11:29:02
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/vnode.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/mount.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/bio.h>
 #include <sys/buf.h>
@@ -74,11 +73,10 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_syscalls.c,v 1.103 2005/03/26 11:29:02
 #include <nfsserver/nfsm_subs.h>
 #include <nfsserver/nfsrvcache.h>
 
-static MALLOC_DEFINE(M_NFSSVC, "NFS srvsock", "Nfs server structure");
+static MALLOC_DEFINE(M_NFSSVC, "nfss_srvsock", "Nfs server structure");
 
-MALLOC_DEFINE(M_NFSRVDESC, "NFSV3 srvdesc", "NFS server socket descriptor");
-MALLOC_DEFINE(M_NFSD, "NFS daemon", "Nfs server daemon structure");
-
+MALLOC_DEFINE(M_NFSRVDESC, "nfss_srvdesc", "NFS server socket descriptor");
+MALLOC_DEFINE(M_NFSD, "nfss_daemon", "Nfs server daemon structure");
 
 #define	TRUE	1
 #define	FALSE	0
@@ -102,6 +100,8 @@ static int	nfssvc_addsock(struct file *, struct sockaddr *,
 static void	nfsrv_zapsock(struct nfssvc_sock *slp);
 static int	nfssvc_nfsd(struct thread *);
 
+extern u_long sb_max_adj;
+
 /*
  * NFS server system calls
  */
@@ -123,9 +123,6 @@ struct nfssvc_args {
 	caddr_t argp;
 };
 #endif
-/*
- * MPSAFE
- */
 int
 nfssvc(struct thread *td, struct nfssvc_args *uap)
 {
@@ -136,15 +133,9 @@ nfssvc(struct thread *td, struct nfssvc_args *uap)
 
 	KASSERT(!mtx_owned(&Giant), ("nfssvc(): called with Giant"));
 
-#ifdef MAC
-	error = mac_check_system_nfsd(td->td_ucred);
+	error = priv_check(td, PRIV_NFS_DAEMON);
 	if (error)
 		return (error);
-#endif
-	error = suser(td);
-	if (error)
-		return (error);
-	NET_LOCK_GIANT();
 	NFSD_LOCK();
 	while (nfssvc_sockhead_flag & SLP_INIT) {
 		 nfssvc_sockhead_flag |= SLP_WANTINIT;
@@ -155,12 +146,12 @@ nfssvc(struct thread *td, struct nfssvc_args *uap)
 	if (uap->flag & NFSSVC_ADDSOCK) {
 		error = copyin(uap->argp, (caddr_t)&nfsdarg, sizeof(nfsdarg));
 		if (error)
-			goto done2;
+			return (error);
 		if ((error = fget(td, nfsdarg.sock, &fp)) != 0)
-			goto done2;
+			return (error);
 		if (fp->f_type != DTYPE_SOCKET) {
 			fdrop(fp, td);
-			goto done2;
+			return (error);	/* XXXRW: Should be EINVAL? */
 		}
 		/*
 		 * Get the client address for connected sockets.
@@ -172,7 +163,7 @@ nfssvc(struct thread *td, struct nfssvc_args *uap)
 					    nfsdarg.namelen);
 			if (error) {
 				fdrop(fp, td);
-				goto done2;
+				return (error);
 			}
 		}
 		error = nfssvc_addsock(fp, nam, td);
@@ -184,8 +175,6 @@ nfssvc(struct thread *td, struct nfssvc_args *uap)
 	}
 	if (error == EINTR || error == ERESTART)
 		error = 0;
-done2:
-	NET_UNLOCK_GIANT();
 	return (error);
 }
 
@@ -199,8 +188,6 @@ nfssvc_addsock(struct file *fp, struct sockaddr *mynam, struct thread *td)
 	struct nfssvc_sock *slp;
 	struct socket *so;
 	int error, s;
-
-	NET_ASSERT_GIANT();
 
 	so = fp->f_data;
 #if 0
@@ -221,10 +208,7 @@ nfssvc_addsock(struct file *fp, struct sockaddr *mynam, struct thread *td)
 		}
 	}
 #endif
-	if (so->so_type == SOCK_STREAM)
-		siz = NFS_MAXPACKET + sizeof (u_long);
-	else
-		siz = NFS_MAXPACKET;
+	siz = sb_max_adj;
 	error = soreserve(so, siz, siz);
 	if (error) {
 		if (mynam != NULL)
@@ -315,8 +299,6 @@ nfssvc_nfsd(struct thread *td)
 	int procrastinate;
 	u_quad_t cur_usec;
 
-	NET_ASSERT_GIANT();
-
 #ifndef nolint
 	cacherep = RC_DOIT;
 	writes_todo = 0;
@@ -390,6 +372,8 @@ nfssvc_nfsd(struct thread *td)
 		}
 		if (error || (slp->ns_flag & SLP_VALID) == 0) {
 			if (nd) {
+				if (nd->nd_cr != NULL)
+					crfree(nd->nd_cr);
 				free((caddr_t)nd, M_NFSRVDESC);
 				nd = NULL;
 			}
@@ -426,27 +410,31 @@ nfssvc_nfsd(struct thread *td)
 			port = ntohs(sin->sin_port);
 			if (port >= IPPORT_RESERVED &&
 			    nd->nd_procnum != NFSPROC_NULL) {
-#if defined(INET6) && defined(KLD_MODULE)
-	/* do not use ip6_sprintf: the nfs module should work without INET6 */
-	char b6[INET6_ADDRSTRLEN];
-#define ip6_sprintf(a) \
-	 (sprintf(b6, "%x:%x:%x:%x:%x:%x:%x:%x", \
+#ifdef INET6
+			    char b6[INET6_ADDRSTRLEN];
+#if defined(KLD_MODULE)
+	/* Do not use ip6_sprintf: the nfs module should work without INET6. */
+#define ip6_sprintf(buf, a) \
+	 (sprintf((buf), "%x:%x:%x:%x:%x:%x:%x:%x", \
 		  (a)->s6_addr16[0], (a)->s6_addr16[1], \
 		  (a)->s6_addr16[2], (a)->s6_addr16[3], \
 		  (a)->s6_addr16[4], (a)->s6_addr16[5], \
 		  (a)->s6_addr16[6], (a)->s6_addr16[7]), \
-	  b6)
+	 (buf))
+#endif
 #endif
 			    nd->nd_procnum = NFSPROC_NOOP;
 			    nd->nd_repstat = (NFSERR_AUTHERR | AUTH_TOOWEAK);
 			    cacherep = RC_DOIT;
 			    printf("NFS request from unprivileged port (%s:%d)\n",
 #ifdef INET6
-				   sin->sin_family == AF_INET6 ?
-					ip6_sprintf(&satosin6(sin)->sin6_addr) :
+				sin->sin_family == AF_INET6 ?
+				    ip6_sprintf(b6, &satosin6(sin)->sin6_addr) :
+#if defined(KLD_MODULE)
 #undef ip6_sprintf
 #endif
-				   inet_ntoa(sin->sin_addr), port);
+#endif
+				    inet_ntoa(sin->sin_addr), port);
 			}
 		    }
 
@@ -463,6 +451,7 @@ nfssvc_nfsd(struct thread *td)
 			    procrastinate = nfsrvw_procrastinate_v3;
 			else
 			    procrastinate = nfsrvw_procrastinate;
+			NFSD_UNLOCK();
 			if (writes_todo || (!(nd->nd_flag & ND_NFSV3) &&
 			    nd->nd_procnum == NFSPROC_WRITE &&
 			    procrastinate > 0 && !notstarted))
@@ -471,6 +460,7 @@ nfssvc_nfsd(struct thread *td)
 			else
 			    error = (*(nfsrv3_procs[nd->nd_procnum]))(nd,
 				slp, nfsd->nfsd_td, &mreq);
+			NFSD_LOCK();
 			if (mreq == NULL)
 				break;
 			if (error != 0 && error != NFSERR_RETVOID) {
@@ -522,6 +512,8 @@ nfssvc_nfsd(struct thread *td)
 			if (slp->ns_so->so_proto->pr_flags & PR_CONNREQUIRED)
 				nfs_slpunlock(slp);
 			if (error == EINTR || error == ERESTART) {
+				if (nd->nd_cr != NULL)
+					crfree(nd->nd_cr);
 				free((caddr_t)nd, M_NFSRVDESC);
 				nfsrv_slpderef(slp);
 				s = splnet();
@@ -535,6 +527,8 @@ nfssvc_nfsd(struct thread *td)
 			break;
 		    };
 		    if (nd) {
+			if (nd->nd_cr != NULL)
+				crfree(nd->nd_cr);
 			FREE((caddr_t)nd, M_NFSRVDESC);
 			nd = NULL;
 		    }
@@ -559,16 +553,10 @@ nfssvc_nfsd(struct thread *td)
 			nfsd->nfsd_slp = NULL;
 			nfsrv_slpderef(slp);
 		}
-		KASSERT(!(debug_mpsafenet == 0 && !mtx_owned(&Giant)),
-		    ("nfssvc_nfsd(): debug.mpsafenet=0 && !Giant"));
-		KASSERT(!(debug_mpsafenet == 1 && mtx_owned(&Giant)),
-		    ("nfssvc_nfsd(): debug.mpsafenet=1 && Giant"));
+		mtx_assert(&Giant, MA_NOTOWNED);
 	}
 done:
-	KASSERT(!(debug_mpsafenet == 0 && !mtx_owned(&Giant)),
-	    ("nfssvc_nfsd(): debug.mpsafenet=0 && !Giant"));
-	KASSERT(!(debug_mpsafenet == 1 && mtx_owned(&Giant)),
-	    ("nfssvc_nfsd(): debug.mpsafenet=1 && Giant"));
+	mtx_assert(&Giant, MA_NOTOWNED);
 	TAILQ_REMOVE(&nfsd_head, nfsd, nfsd_chain);
 	splx(s);
 	free((caddr_t)nfsd, M_NFSD);
@@ -594,7 +582,6 @@ nfsrv_zapsock(struct nfssvc_sock *slp)
 	struct nfsrv_rec *rec;
 	int s;
 
-	NET_ASSERT_GIANT();
 	NFSD_LOCK_ASSERT();
 
 	/*
@@ -630,6 +617,8 @@ nfsrv_zapsock(struct nfssvc_sock *slp)
 		for (nwp = LIST_FIRST(&slp->ns_tq); nwp; nwp = nnwp) {
 			nnwp = LIST_NEXT(nwp, nd_tq);
 			LIST_REMOVE(nwp, nd_tq);
+			if (nwp->nd_cr != NULL)
+				crfree(nwp->nd_cr);
 			free((caddr_t)nwp, M_NFSRVDESC);
 		}
 		LIST_INIT(&slp->ns_tq);
@@ -705,16 +694,13 @@ nfsrv_init(int terminating)
 {
 	struct nfssvc_sock *slp, *nslp;
 
-	NET_ASSERT_GIANT();
 	NFSD_LOCK_ASSERT();
 
 	if (nfssvc_sockhead_flag & SLP_INIT)
 		panic("nfsd init");
 	nfssvc_sockhead_flag |= SLP_INIT;
 	if (terminating) {
-		for (slp = TAILQ_FIRST(&nfssvc_sockhead); slp != NULL;
-		    slp = nslp) {
-			nslp = TAILQ_NEXT(slp, ns_chain);
+		TAILQ_FOREACH_SAFE(slp, &nfssvc_sockhead, ns_chain, nslp) {
 			if (slp->ns_flag & SLP_VALID)
 				nfsrv_zapsock(slp);
 			TAILQ_REMOVE(&nfssvc_sockhead, slp, ns_chain);

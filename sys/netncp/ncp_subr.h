@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netncp/ncp_subr.h,v 1.9 2005/01/07 01:45:49 imp Exp $
+ * $FreeBSD: src/sys/netncp/ncp_subr.h,v 1.10 2006/11/06 13:42:06 rwatson Exp $
  */
 #ifndef _NETNCP_NCP_SUBR_H_
 #define _NETNCP_NCP_SUBR_H_
@@ -84,7 +84,7 @@
 
 #define checkbad(fn) {error=(fn);if(error) goto bad;}
 
-#define	ncp_suser(cred)	suser_cred(cred, 0)
+#define	ncp_suser(cred)	priv_check_cred(cred, PRIV_NETNCP, 0)
 
 #define ncp_isowner(conn,cred) ((cred)->cr_uid == (conn)->nc_owner->cr_uid)
 

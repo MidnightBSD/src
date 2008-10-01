@@ -33,7 +33,7 @@
  */ 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_rq.c,v 1.14 2005/01/07 01:45:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netncp/ncp_rq.c,v 1.15 2005/07/29 13:22:37 imura Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -151,8 +151,18 @@ ncp_rq_done(struct ncp_rq *rqp)
  */
 
 static int
-ncp_rq_pathstrhelp(struct mbchain *mbp, c_caddr_t src, caddr_t dst, size_t len)
+ncp_rq_pathstrhelp(struct mbchain *mbp, c_caddr_t src, caddr_t dst,
+    size_t *srclen, size_t *dstlen)
 {
+	int len;
+
+	if (*srclen < *dstlen) {
+		*dstlen = *srclen;
+		len = (int)*srclen;
+	} else {
+		*srclen = *dstlen;
+		len = (int)*dstlen;
+	}
 	ncp_pathcopy(src, dst, len, mbp->mb_udata);
 	return 0;
 }

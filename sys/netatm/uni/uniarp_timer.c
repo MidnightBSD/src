@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/uni/uniarp_timer.c,v 1.11 2005/01/07 01:45:37 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/uni/uniarp_timer.c,v 1.12 2007/06/23 00:02:20 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -90,7 +90,7 @@ uniarp_timeout(tip)
 	 * Back-off to uniarp control block
 	 */
 	uap = (struct uniarp *)
-			((caddr_t)tip - (int)(&((struct uniarp *)0)->ua_time));
+		((caddr_t)tip - offsetof(struct uniarp, ua_time));
 	uip = uap->ua_intf;
 
 

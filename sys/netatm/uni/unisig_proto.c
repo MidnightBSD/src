@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/uni/unisig_proto.c,v 1.12 2005/01/07 01:45:37 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/uni/unisig_proto.c,v 1.13 2007/06/23 00:02:20 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -88,7 +88,7 @@ unisig_timer(tip)
 	 * Back-off to UNISIG control block
 	 */
 	usp = (struct unisig *)
-		((caddr_t)tip - (int)(&((struct unisig *)0)->us_time));
+		((caddr_t)tip - offsetof(struct unisig, us_time));
 
 	ATM_DEBUG2("unisig_timer: usp=%p,state=%d\n",
 			usp, usp->us_state);
@@ -127,8 +127,8 @@ unisig_vctimer(tip)
 	/*
 	 * Get VCCB and UNISIG control block addresses
 	 */
-	uvp = (struct unisig_vccb *) ((caddr_t)tip -
-			(int)(&((struct vccb *)0)->vc_time));
+	uvp = (struct unisig_vccb *)
+		((caddr_t)tip - offsetof(struct vccb, vc_time));
 	usp = (struct unisig *)uvp->uv_pif->pif_siginst;
 
 	ATM_DEBUG3("unisig_vctimer: uvp=%p, sstate=%d, ustate=%d\n",

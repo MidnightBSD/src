@@ -23,7 +23,7 @@
  * Copies of this Software may be made, however, the above copyright
  * notice must be reproduced on all copies.
  *
- *	@(#) $FreeBSD: src/sys/netatm/uni/unisig_decode.h,v 1.4 2005/01/07 01:45:37 imp Exp $
+ *	@(#) $FreeBSD: src/sys/netatm/uni/unisig_decode.h,v 1.5 2007/06/23 00:02:20 mjacob Exp $
  *
  */
 
@@ -58,19 +58,8 @@ struct ie_ent {
 				(struct usfmt *, struct ie_generic *);
 };
 
-/*
- * Macro to give the offset of a field in a generic IE structure
- */
-#define	IE_OFFSET(f) \
-	((int)&((struct ie_generic *) 0)->f)
-
-/*
- * Macro to give the size of a field in a generic IE structure
- */
-#define IE_FSIZE(f) \
-	(sizeof(((struct ie_generic *) 0)->f))
-
-#define IE_OFF_SIZE(f)   IE_OFFSET(f),IE_FSIZE(f)
+#define IE_OFF_SIZE(f)   \
+	offsetof(struct ie_generic, f), (sizeof(((struct ie_generic *) 0)->f))
 
 
 /*

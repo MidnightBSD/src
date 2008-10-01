@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/atm_socket.c,v 1.24 2005/06/10 16:49:20 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/atm_socket.c,v 1.26 2006/04/01 15:41:59 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -146,12 +146,8 @@ atm_sock_attach(so, send, recv)
  * Arguments:
  *	so	pointer to socket
  *
- * Returns:
- *	0	detach successful
- *	errno	detach failed - reason indicated
- *
  */
-int
+void
 atm_sock_detach(so)
 	struct socket	*so;
 {
@@ -160,8 +156,7 @@ atm_sock_detach(so)
 	/*
 	 * Make sure we're still attached
 	 */
-	if (atp == NULL)
-		return (ENOTCONN);
+	KASSERT(atp != NULL, ("atm_sock_detach: atp == NULL"));
 
 	/*
 	 * Terminate any (possibly pending) connection
@@ -170,17 +165,9 @@ atm_sock_detach(so)
 		(void) atm_sock_disconnect(so);
 	}
 
-	/*
-	 * Break links and free control blocks
-	 */
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
 	so->so_pcb = NULL;
-	sotryfree(so);
 
 	uma_zfree(atm_pcb_zone, atp);
-
-	return (0);
 }
 
 
@@ -335,9 +322,10 @@ atm_sock_bind(so, addr)
  *
  */
 int
-atm_sock_listen(so, epp)
+atm_sock_listen(so, epp, backlog)
 	struct socket	*so;
 	Atm_endpoint	*epp;
+	int		 backlog;
 {
 	Atm_pcb		*atp = sotoatmpcb(so);
 
@@ -350,7 +338,8 @@ atm_sock_listen(so, epp)
 	/*
 	 * Start listening for incoming calls
 	 */
-	return (atm_cm_listen(so, epp, atp, &atp->atp_attr, &atp->atp_conn));
+	return (atm_cm_listen(so, epp, atp, &atp->atp_attr, &atp->atp_conn,
+	    backlog));
 }
 
 

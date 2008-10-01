@@ -1,5 +1,4 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.20.2.3 2006/01/27 18:22:53 rees Exp $ */
-/* $Id: nfs4_vfsops.c,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
+/* $Id: nfs4_vfsops.c,v 1.2 2008-10-01 16:44:41 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -60,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.20.2.3 2006/01/27 18:22:53 rees Exp $");
+__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.27 2007/01/25 14:18:40 bde Exp $");
 
 #include "opt_bootp.h"
 #include "opt_nfsroot.h"
@@ -115,33 +114,33 @@ SYSCTL_NODE(_vfs, OID_AUTO, nfs4, CTLFLAG_RW, 0, "NFS4 filesystem");
 SYSCTL_STRUCT(_vfs_nfs4, NFS_NFSSTATS, nfsstats, CTLFLAG_RD,
 	&nfsstats, nfsstats, "S,nfsstats");
 
-static void	nfs_decode_args(struct nfsmount *nmp, struct nfs_args *argp);
+static void	nfs4_decode_args(struct nfsmount *nmp, struct nfs_args *argp);
 static void	nfs4_daemon(void *arg);
 static int	mountnfs(struct nfs_args *, struct mount *,
 		    struct sockaddr *, char *, struct vnode **,
 		    struct ucred *cred);
 static int	nfs4_do_setclientid(struct nfsmount *nmp, struct ucred *cred);
-static vfs_mount_t nfs_mount;
-static vfs_cmount_t nfs_cmount;
-static vfs_unmount_t nfs_unmount;
-static vfs_root_t nfs_root;
-static vfs_statfs_t nfs_statfs;
-static vfs_sync_t nfs_sync;
+static vfs_mount_t nfs4_mount;
+static vfs_cmount_t nfs4_cmount;
+static vfs_unmount_t nfs4_unmount;
+static vfs_root_t nfs4_root;
+static vfs_statfs_t nfs4_statfs;
+static vfs_sync_t nfs4_sync;
 
 /*
  * nfs vfs operations.
  */
-static struct vfsops nfs_vfsops = {
+static struct vfsops nfs4_vfsops = {
 	.vfs_init =		nfs4_init,
-	.vfs_mount =		nfs_mount,
-	.vfs_cmount =		nfs_cmount,
-	.vfs_root =		nfs_root,
-	.vfs_statfs =		nfs_statfs,
-	.vfs_sync =		nfs_sync,
+	.vfs_mount =		nfs4_mount,
+	.vfs_cmount =		nfs4_cmount,
+	.vfs_root =		nfs4_root,
+	.vfs_statfs =		nfs4_statfs,
+	.vfs_sync =		nfs4_sync,
 	.vfs_uninit =		nfs4_uninit,
-	.vfs_unmount =		nfs_unmount,
+	.vfs_unmount =		nfs4_unmount,
 };
-VFS_SET(nfs_vfsops, nfs4, VFCF_NETWORK);
+VFS_SET(nfs4_vfsops, nfs4, VFCF_NETWORK);
 
 static struct nfs_rpcops nfs4_rpcops = {
 	nfs4_readrpc,
@@ -184,7 +183,7 @@ nfs4_uninit(struct vfsconf *vfsp)
  * nfs statfs call
  */
 static int
-nfs_statfs(struct mount *mp, struct statfs *sbp, struct thread *td)
+nfs4_statfs(struct mount *mp, struct statfs *sbp, struct thread *td)
 {
 	struct vnode *vp;
 	struct nfs_statfs *sfp;
@@ -200,7 +199,7 @@ nfs_statfs(struct mount *mp, struct statfs *sbp, struct thread *td)
 #ifndef nolint
 	sfp = NULL;
 #endif
-	error = nfs_nget(mp, (nfsfh_t *)nmp->nm_fh, nmp->nm_fhsize, &np);
+	error = nfs_nget(mp, (nfsfh_t *)nmp->nm_fh, nmp->nm_fhsize, &np, LK_EXCLUSIVE);
 	if (error)
 		return (error);
 	vp = NFSTOV(np);
@@ -238,19 +237,25 @@ nfsmout:
 }
 
 static void
-nfs_decode_args(struct nfsmount *nmp, struct nfs_args *argp)
+nfs4_decode_args(struct nfsmount *nmp, struct nfs_args *argp)
 {
 	int s;
 	int adjsock;
 	int maxio;
 
 	s = splnet();
+
 	/*
 	 * Silently clear NFSMNT_NOCONN if it's a TCP mount, it makes
-	 * no sense in that context.
+	 * no sense in that context.  Also, set appropriate retransmit
+	 * and soft timeout behavior.
 	 */
-	if (argp->sotype == SOCK_STREAM)
+	if (argp->sotype == SOCK_STREAM) {
 		nmp->nm_flag &= ~NFSMNT_NOCONN;
+		nmp->nm_flag |= NFSMNT_DUMBTIMR;
+		nmp->nm_timeo = NFS_MAXTIMEO;
+		nmp->nm_retry = NFS_RETRANS_TCP;
+	}
 
 	nmp->nm_flag &= ~NFSMNT_RDIRPLUS;
 
@@ -368,9 +373,8 @@ nfs_decode_args(struct nfsmount *nmp, struct nfs_args *argp)
 		nfs_safedisconnect(nmp);
 		if (nmp->nm_sotype == SOCK_DGRAM) {
 			while (nfs4_connect(nmp)) {
-				printf("nfs_args: retrying connect\n");
-				(void) tsleep((caddr_t)&lbolt,
-					      PSOCK, "nfscon", 0);
+				printf("nfs4_decode_args: retrying connect\n");
+				(void)tsleep(&lbolt, PSOCK, "nfscon", 0);
 			}
 		}
 	}
@@ -387,24 +391,21 @@ nfs_decode_args(struct nfsmount *nmp, struct nfs_args *argp)
  */
 /* ARGSUSED */
 static int
-nfs_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
+nfs4_cmount(struct mntarg *ma, void *data, int flags, struct thread *td)
 {
 	struct nfs_args args;
 	int error;
 
-	error = copyin(data, (caddr_t)&args, sizeof (struct nfs_args));
+	error = copyin(data, &args, sizeof(struct nfs_args));
 	if (error)
 		return (error);
-
 	ma = mount_arg(ma, "nfs_args", &args, sizeof args);
-
 	error = kernel_mount(ma, flags);
-
-	 return (error);
+	return (error);
 }
 
 static int
-nfs_mount(struct mount *mp, struct thread *td)
+nfs4_mount(struct mount *mp, struct thread *td)
 {
 	int error;
 	struct nfs_args args;
@@ -414,8 +415,8 @@ nfs_mount(struct mount *mp, struct thread *td)
 	size_t len;
 
 	if (mp->mnt_flag & MNT_ROOTFS) {
-		printf("NFSv4: nfs_mountroot not supported\n");
-		return EINVAL;
+		printf("nfs4_mountroot not supported\n");
+		return (EINVAL);
 	}
 	error = vfs_copyopt(mp->mnt_optnew, "nfs_args", &args, sizeof args);
 	if (error)
@@ -436,7 +437,7 @@ nfs_mount(struct mount *mp, struct thread *td)
 		    ~(NFSMNT_NFSV3 | NFSMNT_NFSV4 | NFSMNT_NOLOCKD)) |
 		    (nmp->nm_flag &
 			(NFSMNT_NFSV3 | NFSMNT_NFSV4 | NFSMNT_NOLOCKD));
-		nfs_decode_args(nmp, &args);
+		nfs4_decode_args(nmp, &args);
 		return (0);
 	}
 
@@ -563,6 +564,8 @@ mountnfs(struct nfs_args *argp, struct mount *mp, struct sockaddr *nam,
 
 	vfs_getnewfsid(mp);
 	nmp->nm_mountp = mp;
+	mtx_init(&nmp->nm_mtx, "NFS4mount lock", NULL, MTX_DEF);			
+
 	nmp->nm_maxfilesize = 0xffffffffLL;
 	nmp->nm_timeo = NFS_TIMEO;
 	nmp->nm_retry = NFS_RETRANS;
@@ -583,7 +586,7 @@ mountnfs(struct nfs_args *argp, struct mount *mp, struct sockaddr *nam,
 
 	argp->flags |= (NFSMNT_NFSV3 | NFSMNT_NFSV4);
 
-	nfs_decode_args(nmp, argp);
+	nfs4_decode_args(nmp, argp);
 
 	if ((error = nfs4_connect(nmp)))
 		goto bad;
@@ -652,6 +655,7 @@ mountnfs(struct nfs_args *argp, struct mount *mp, struct sockaddr *nam,
 	if (mrep != NULL)
 		m_freem(mrep);
 bad:
+	mtx_destroy(&nmp->nm_mtx);
 	nfs4_disconnect(nmp);
 	uma_zfree(nfsmount_zone, nmp);
 	FREE(nam, M_SONAME);
@@ -663,7 +667,7 @@ bad:
  * unmount system call
  */
 static int
-nfs_unmount(struct mount *mp, int mntflags, struct thread *td)
+nfs4_unmount(struct mount *mp, int mntflags, struct thread *td)
 {
 	struct nfsmount *nmp;
 	int error, flags = 0;
@@ -698,6 +702,7 @@ nfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 	/* XXX there's a race condition here for SMP */
 	wakeup(&nfs4_daemonproc);
 
+	mtx_destroy(&nmp->nm_mtx);
 	uma_zfree(nfsmount_zone, nmp);
 	return (0);
 }
@@ -706,7 +711,7 @@ nfs_unmount(struct mount *mp, int mntflags, struct thread *td)
  * Return root of a filesystem
  */
 static int
-nfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
+nfs4_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
 {
 	struct vnode *vp;
 	struct nfsmount *nmp;
@@ -714,7 +719,8 @@ nfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
 	int error;
 
 	nmp = VFSTONFS(mp);
-	error = nfs_nget(mp, (nfsfh_t *)nmp->nm_fh, nmp->nm_fhsize, &np);
+	error = nfs_nget(mp, (nfsfh_t *)nmp->nm_fh, nmp->nm_fhsize, &np,
+	    LK_EXCLUSIVE);
 	if (error)
 		return (error);
 	vp = NFSTOV(np);
@@ -729,9 +735,8 @@ nfs_root(struct mount *mp, int flags, struct vnode **vpp, struct thread *td)
 /*
  * Flush out the buffer cache
  */
-/* ARGSUSED */
 static int
-nfs_sync(struct mount *mp, int waitfor, struct thread *td)
+nfs4_sync(struct mount *mp, int waitfor, struct thread *td)
 {
 	struct vnode *vp, *mvp;
 	int error, allerror = 0;

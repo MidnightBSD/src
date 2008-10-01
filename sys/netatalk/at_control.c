@@ -23,7 +23,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD: src/sys/netatalk/at_control.c,v 1.44 2005/02/22 14:20:29 rwatson Exp $
+ * $FreeBSD: src/sys/netatalk/at_control.c,v 1.46 2007/02/19 22:40:02 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -31,6 +31,7 @@
 #include <sys/sockio.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
+#include <sys/priv.h>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <net/route.h>
@@ -118,8 +119,10 @@ at_control(struct socket *so, u_long cmd, caddr_t data, struct ifnet *ifp,
 	case SIOCSIFADDR:
 		/* 
 		 * If we are not superuser, then we don't get to do these ops.
+		 *
+		 * XXXRW: Layering?
 		 */
-		if (suser(td))
+		if (priv_check(td, PRIV_NET_ADDIFADDR))
 			return (EPERM);
 
 		sat = satosat(&ifr->ifr_addr);

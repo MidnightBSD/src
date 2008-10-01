@@ -31,11 +31,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/atm_usrreq.c,v 1.24 2005/06/10 16:49:20 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/atm_usrreq.c,v 1.28 2006/11/06 13:42:03 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -66,11 +67,11 @@ static int	atm_dgram_info(caddr_t);
  * New-style socket request routines
  */
 struct pr_usrreqs	atm_dgram_usrreqs = {
-	.pru_abort =		atm_proto_notsupp1,
+	.pru_abort =		atm_proto_notsupp5,
 	.pru_attach =		atm_dgram_attach,
 	.pru_bind =		atm_proto_notsupp2,
 	.pru_control =		atm_dgram_control,
-	.pru_detach =		atm_proto_notsupp1,
+	.pru_detach =		atm_proto_notsupp5,
 	.pru_disconnect =	atm_proto_notsupp1,
 	.pru_peeraddr =		atm_proto_notsupp3,
 	.pru_send =		atm_proto_notsupp4,
@@ -79,6 +80,7 @@ struct pr_usrreqs	atm_dgram_usrreqs = {
 	.pru_sosend =		NULL,
 	.pru_soreceive =	NULL,
 	.pru_sopoll =		NULL,
+	.pru_close =		atm_proto_notsupp5,
 };
 
 
@@ -180,8 +182,11 @@ atm_dgram_control(so, cmd, data, ifp, td)
 		struct atmcfgreq	*acp = (struct atmcfgreq *)data;
 		struct atm_pif		*pip;
 
-		if (td && (suser(td) != 0))
-			ATM_RETERR(EPERM);
+		if (td != NULL) {
+			err = priv_check(td, PRIV_NETATM_CFG);
+			if (err)
+				ATM_RETERR(err);
+		}
 
 		switch (acp->acr_opcode) {
 
@@ -213,8 +218,11 @@ atm_dgram_control(so, cmd, data, ifp, td)
 		struct atmaddreq	*aap = (struct atmaddreq *)data;
 		Atm_endpoint		*epp;
 
-		if (td && (suser(td) != 0))
-			ATM_RETERR(EPERM);
+		if (td != NULL) {
+			err = priv_check(td, PRIV_NETATM_ADD);
+			if (err)
+				ATM_RETERR(err);
+		}
 
 		switch (aap->aar_opcode) {
 
@@ -263,8 +271,11 @@ atm_dgram_control(so, cmd, data, ifp, td)
 		struct sigmgr		*smp;
 		Atm_endpoint		*epp;
 
-		if (td && (suser(td) != 0))
-			ATM_RETERR(EPERM);
+		if (td != NULL) {
+			err = priv_check(td, PRIV_NETATM_DEL);
+			if (err)
+				ATM_RETERR(err);
+		}
 
 		switch (adp->adr_opcode) {
 
@@ -316,8 +327,11 @@ atm_dgram_control(so, cmd, data, ifp, td)
 		struct sigmgr		*smp;
 		struct ifnet		*ifp2;
 
-		if (td && (suser(td) != 0))
-			ATM_RETERR(EPERM);
+		if (td != NULL) {
+			err = priv_check(td, PRIV_NETATM_SET);
+			if (err)
+				ATM_RETERR(err);
+		}
 
 		switch (asp->asr_opcode) {
 

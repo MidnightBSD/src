@@ -33,12 +33,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_conn.c,v 1.26.2.1 2006/02/14 21:55:15 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netncp/ncp_conn.c,v 1.30 2007/05/27 17:14:33 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/sysctl.h>
@@ -73,7 +74,7 @@ SYSCTL_INT (_net_ncp, OID_AUTO, conn_cnt, CTLFLAG_RD, &ncp_conn_cnt, 0, "");
 SYSCTL_PROC(_net_ncp, OID_AUTO, conn_stat, CTLFLAG_RD|CTLTYPE_OPAQUE,
 	    NULL, 0, ncp_sysctl_connstat, "S,connstat", "Connections list");
 
-MALLOC_DEFINE(M_NCPDATA, "NCP data", "NCP private data");
+MALLOC_DEFINE(M_NCPDATA, "ncp_data", "NCP private data");
 
 int
 ncp_conn_init(void)
@@ -222,10 +223,10 @@ ncp_conn_alloc(struct ncp_conn_args *cap, struct thread *td, struct ucred *cred,
 
 	if (cap->saddr.sa_family != AF_INET && cap->saddr.sa_family != AF_IPX)
 		return EPROTONOSUPPORT;
-	isroot = ncp_suser(cred) == 0;
 	/*
-	 * Only root can change ownership
+	 * Only root can change ownership.
 	 */
+	isroot = ncp_suser(cred) == 0;
 	if (cap->owner != NCP_DEFAULT_OWNER && !isroot)
 		return EPERM;
 	if (cap->group != NCP_DEFAULT_GROUP &&
@@ -233,6 +234,7 @@ ncp_conn_alloc(struct ncp_conn_args *cap, struct thread *td, struct ucred *cred,
 		return EPERM;
 	if (cap->owner != NCP_DEFAULT_OWNER) {
 		owner = crget();
+		crcopy(owner, cred);
 		owner->cr_uid = cap->owner;
 	} else
 		owner = crhold(cred);
@@ -242,7 +244,7 @@ ncp_conn_alloc(struct ncp_conn_args *cap, struct thread *td, struct ucred *cred,
 	lockinit(&ncp->nc_lock, PZERO, "ncplck", 0, 0);
 	ncp_conn_cnt++;
 	ncp->nc_id = ncp_next_ref++;
-	ncp->nc_owner = cred;
+	ncp->nc_owner = owner;
 	ncp->seq = 0;
 	ncp->connid = 0xFFFF;
 	ncp->li = *cap;

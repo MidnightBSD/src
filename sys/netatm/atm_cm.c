@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/atm_cm.c,v 1.33 2005/02/21 21:58:16 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/atm_cm.c,v 1.35 2007/06/23 00:02:19 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -536,12 +536,13 @@ done:
  *
  */
 int
-atm_cm_listen(so, epp, token, ap, copp)
+atm_cm_listen(so, epp, token, ap, copp, backlog)
 	struct socket	*so;
 	Atm_endpoint	*epp;
 	void		*token;
 	Atm_attributes	*ap;
 	Atm_connection	**copp;
+	int		 backlog;
 {
 	Atm_connection	*cop;
 	int		s, err = 0;
@@ -737,7 +738,7 @@ atm_cm_listen(so, epp, token, ap, copp)
 	cop->co_state = COS_LISTEN;
 	LINK2TAIL(cop, Atm_connection, atm_listen_queue, co_next);
 	if (so != NULL)
-		solisten_proto(so);
+		solisten_proto(so, backlog);
 
 donex:
 	(void) splx(s);
@@ -2611,7 +2612,7 @@ atm_cm_timeout(tip)
 	 * Back-off to cvc control block
 	 */
 	cvp = (Atm_connvc *)
-			((caddr_t)tip - (int)(&((Atm_connvc *)0)->cvc_time));
+		((caddr_t)tip - offsetof(Atm_connvc, cvc_time));
 
 	/*
 	 * Process timeout based on protocol state

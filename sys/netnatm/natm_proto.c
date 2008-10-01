@@ -1,6 +1,4 @@
-/*	$NetBSD: natm_proto.c,v 1.3 1996/09/18 00:56:41 chuck Exp $	*/
 /*-
- *
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
  * All rights reserved.
  *
@@ -29,6 +27,8 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $NetBSD: natm_proto.c,v 1.3 1996/09/18 00:56:41 chuck Exp $
  */
 
 /*
@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netnatm/natm_proto.c,v 1.15.2.3 2005/11/16 10:31:23 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/netnatm/natm_proto.c,v 1.20 2007/01/08 22:30:39 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,9 +52,9 @@ __FBSDID("$FreeBSD: src/sys/netnatm/natm_proto.c,v 1.15.2.3 2005/11/16 10:31:23 
 
 #include <netnatm/natm.h>
 
-extern	struct domain natmdomain;
-
 static	void natm_init(void);
+
+static struct domain natmdomain;
 
 static struct protosw natmsw[] = {
 {

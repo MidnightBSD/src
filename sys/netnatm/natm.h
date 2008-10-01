@@ -1,8 +1,4 @@
-/*	$NetBSD: natm.h,v 1.1 1996/07/04 03:20:12 chuck Exp $	*/
-/* $FreeBSD: src/sys/netnatm/natm.h,v 1.10.2.2 2005/08/15 09:52:22 rwatson Exp $ */
-
 /*-
- *
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
  * All rights reserved.
  *
@@ -31,6 +27,9 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $NetBSD: natm.h,v 1.1 1996/07/04 03:20:12 chuck Exp $
+ * $FreeBSD: src/sys/netnatm/natm.h,v 1.14 2007/04/16 12:31:35 pjd Exp $
  */
 
 /*
@@ -75,7 +74,7 @@ struct natmpcb {
 #define	NPCB_FREE	0x01		/* free (not on any list) */
 #define	NPCB_CONNECTED	0x02		/* connected */
 #define	NPCB_IP		0x04		/* used by IP */
-#define	NPCB_DRAIN	0x08		/* destory as soon as inq == 0 */
+#define	NPCB_DRAIN	0x08		/* destroy as soon as inq == 0 */
 
 /* flag arg to npcb_free */
 #define	NPCB_REMOVE	0		/* remove from global list */

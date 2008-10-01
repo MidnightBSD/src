@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1990,1991 Regents of The University of Michigan.
+ * Copyright (c) 1990, 1991 Regents of The University of Michigan.
  * All Rights Reserved.
  *
  * Permission to use, copy, modify, and distribute this software and
@@ -20,7 +20,7 @@
  *	+1-313-763-0525
  *	netatalk@itd.umich.edu
  *
- * $FreeBSD: src/sys/netatalk/at_proto.c,v 1.10.2.1 2005/11/16 10:31:22 ru Exp $
+ * $FreeBSD: src/sys/netatalk/at_proto.c,v 1.13 2007/01/12 13:18:08 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -36,19 +36,19 @@
 #include <netatalk/ddp_var.h>
 #include <netatalk/at_extern.h>
 
-extern struct domain	atalkdomain;
+static struct domain	atalkdomain;
 
 static struct protosw	atalksw[] = {
-    {
-	/* Identifiers */
-	.pr_type =		SOCK_DGRAM,
-	.pr_domain =		&atalkdomain,
-	.pr_protocol =		ATPROTO_DDP,
-	.pr_flags =		PR_ATOMIC|PR_ADDR,
-	.pr_output =		ddp_output,
-	.pr_init =		ddp_init,
-	.pr_usrreqs =		&ddp_usrreqs
-    },
+	{
+		/* Identifiers */
+		.pr_type =		SOCK_DGRAM,
+		.pr_domain =		&atalkdomain,
+		.pr_protocol =		ATPROTO_DDP,
+		.pr_flags =		PR_ATOMIC|PR_ADDR,
+		.pr_output =		ddp_output,
+		.pr_init =		ddp_init,
+		.pr_usrreqs =		&ddp_usrreqs,
+	},
 };
 
 static struct domain	atalkdomain = {
@@ -58,8 +58,7 @@ static struct domain	atalkdomain = {
 	.dom_protoswNPROTOSW =	&atalksw[sizeof(atalksw)/sizeof(atalksw[0])],
 	.dom_rtattach =		rn_inithead,
 	.dom_rtoffset =		offsetof(struct sockaddr_at, sat_addr) << 3,
-	.dom_maxrtkey =		sizeof(struct sockaddr_at)
+	.dom_maxrtkey =		sizeof(struct sockaddr_at),
 };
 
 DOMAIN_SET(atalk);
-

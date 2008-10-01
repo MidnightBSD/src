@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/atm_proto.c,v 1.13.2.1 2005/11/16 10:31:22 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/atm_proto.c,v 1.16 2007/07/14 21:49:23 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -51,7 +51,7 @@ __FBSDID("$FreeBSD: src/sys/netatm/atm_proto.c,v 1.13.2.1 2005/11/16 10:31:22 ru
 #include <netatm/atm_pcb.h>
 #include <netatm/atm_var.h>
 
-NET_NEEDS_GIANT("netatm");
+#error "NET_NEEDS_GIANT"
 
 struct protosw atmsw[] = {
 {
@@ -183,4 +183,18 @@ atm_proto_notsupp4(so, i, m, addr, m2, td)
 	struct thread	*td;
 {
 	return (EOPNOTSUPP);
+}
+
+/*
+ * Protocol request not supported
+ *
+ * Arguments:
+ *	so	pointer to socket
+ *
+ */
+void
+atm_proto_notsupp5(so)
+	struct socket	*so;
+{
+
 }

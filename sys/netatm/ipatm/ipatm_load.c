@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/ipatm/ipatm_load.c,v 1.22 2005/06/10 16:49:20 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/ipatm/ipatm_load.c,v 1.23 2005/10/30 19:44:39 rwatson Exp $");
 
 #ifndef ATM_IP_MODULE
 #include "opt_atm.h"
@@ -524,7 +524,7 @@ ipatm_start()
 		 */
 		if ((err = atm_cm_listen(NULL, &ipatm_endpt,
 				(void *)(intptr_t)i, &ipatm_listeners[i].attr,
-				&ipatm_listeners[i].conn)) != 0)
+				&ipatm_listeners[i].conn, -1)) != 0)
 			goto done;
 	}
 

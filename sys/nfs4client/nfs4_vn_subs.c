@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_vn_subs.c,v 1.4 2005/01/07 01:45:50 imp Exp $ */
-/* $Id: nfs4_vn_subs.c,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
+/* $FreeBSD: src/sys/nfs4client/nfs4_vn_subs.c,v 1.5 2006/11/28 19:33:28 rees Exp $ */
+/* $Id: nfs4_vn_subs.c,v 1.2 2008-10-01 16:44:41 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -121,6 +121,8 @@ nfs4_vnop_loadattrcache(struct vnode *vp, struct nfsv4_fattr *fap,
                 vap->va_fileid = nfs_v4fileid4_to_fileid(fap->fa4_fileid);
         if (fap->fa4_valid & FA4V_ATIME)
                 vap->va_atime = fap->fa4_atime;
+        if (fap->fa4_valid & FA4V_BTIME)
+                vap->va_birthtime = fap->fa4_btime;
         if (fap->fa4_valid & FA4V_CTIME)
                 vap->va_ctime = fap->fa4_ctime;
         vap->va_flags = 0;

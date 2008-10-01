@@ -35,12 +35,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_conn.c,v 1.15 2005/05/13 11:27:48 peadar Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_conn.c,v 1.18 2006/11/06 13:42:06 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/sysctl.h>
@@ -59,7 +60,7 @@ static int smb_vcnext = 1;	/* next unique id for VC */
 
 SYSCTL_NODE(_net, OID_AUTO, smb, CTLFLAG_RW, NULL, "SMB protocol");
 
-MALLOC_DEFINE(M_SMBCONN, "SMB conn", "SMB connection");
+MALLOC_DEFINE(M_SMBCONN, "smb_conn", "SMB connection");
 
 static void smb_co_init(struct smb_connobj *cp, int level, char *objname,
 	struct thread *td);
@@ -233,7 +234,8 @@ smb_co_init(struct smb_connobj *cp, int level, char *objname, struct thread *td)
 	lockinit(&cp->co_lock, PZERO, objname, 0, 0);
 	cp->co_level = level;
 	cp->co_usecount = 1;
-	KASSERT(smb_co_lock(cp, LK_EXCLUSIVE, td) == 0, ("smb_co_init: lock failed"));
+	if (smb_co_lock(cp, LK_EXCLUSIVE, td) != 0)
+	    panic("smb_co_init: lock failed");
 }
 
 static void

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $FreeBSD: src/sys/nfsserver/nfs.h,v 1.78 2005/04/17 16:25:36 rwatson Exp $
+ * $FreeBSD: src/sys/nfsserver/nfs.h,v 1.82.2.1 2007/11/25 19:15:53 rwatson Exp $
  */
 
 #ifndef _NFSSERVER_NFS_H_
@@ -258,7 +258,7 @@ struct nfsrv_descript {
 	u_int32_t		nd_retxid;	/* Reply xid */
 	struct timeval		nd_starttime;	/* Time RPC initiated */
 	fhandle_t		nd_fh;		/* File handle */
-	struct ucred		nd_cr;		/* Credentials */
+	struct ucred		*nd_cr;		/* Credentials */
 };
 
 /* Bits for "nd_flag" */
@@ -337,6 +337,7 @@ int	nfs_namei(struct nameidata *, fhandle_t *, int,
 void	nfsm_adj(struct mbuf *, int, int);
 int	nfsm_mbuftouio(struct mbuf **, struct uio *, int, caddr_t *);
 void	nfsrv_initcache(void);
+void	nfsrv_destroycache(void);
 void	nfsrv_timer(void *);
 int	nfsrv_dorec(struct nfssvc_sock *, struct nfsd *,
 	    struct nfsrv_descript **);
@@ -346,7 +347,6 @@ void	nfsrv_cleancache(void);
 void	nfsrv_init(int);
 int	nfsrv_errmap(struct nfsrv_descript *, int);
 void	nfsrvw_sort(gid_t *, int);
-void	nfsrv_setcred(struct ucred *, struct ucred *);
 void	nfsrv_wakenfsd(struct nfssvc_sock *slp);
 int	nfsrv_writegather(struct nfsrv_descript **, struct nfssvc_sock *,
 	    struct thread *, struct mbuf **);
@@ -357,7 +357,7 @@ int	nfsrv_commit(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	    struct thread *td, struct mbuf **mrq);
 int	nfsrv_create(struct nfsrv_descript *nfsd, struct nfssvc_sock *slp,
 	    struct thread *td, struct mbuf **mrq);
-int	nfsrv_fhtovp(fhandle_t *, int, struct vnode **, struct ucred *,
+int	nfsrv_fhtovp(fhandle_t *, int, struct vnode **, int *, struct ucred *,
 	    struct nfssvc_sock *, struct sockaddr *, int *, int);
 int	nfsrv_setpublicfs(struct mount *, struct netexport *,
 	    struct export_args *);

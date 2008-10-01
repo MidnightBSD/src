@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/atm_aal5.c,v 1.21 2005/01/07 01:45:36 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/atm_aal5.c,v 1.25 2006/07/21 17:11:13 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -66,10 +66,11 @@ u_long		atm_aal5_recvspace = 64 * 1024;	/* XXX */
  * Local functions
  */
 static int	atm_aal5_attach(struct socket *, int, struct thread *td);
-static int	atm_aal5_detach(struct socket *);
+static void	atm_aal5_detach(struct socket *);
 static int	atm_aal5_bind(struct socket *, struct sockaddr *, 
 			struct thread *td);
-static int	atm_aal5_listen(struct socket *, struct thread *td);
+static int	atm_aal5_listen(struct socket *, int backlog,
+			struct thread *td);
 static int	atm_aal5_connect(struct socket *, struct sockaddr *,
 			struct thread *td);
 static int	atm_aal5_accept(struct socket *, struct sockaddr **);
@@ -77,7 +78,7 @@ static int	atm_aal5_disconnect(struct socket *);
 static int	atm_aal5_shutdown(struct socket *);
 static int	atm_aal5_send(struct socket *, int, KBuffer *,
 			struct sockaddr *, KBuffer *, struct thread *td);
-static int	atm_aal5_abort(struct socket *);
+static void	atm_aal5_abort(struct socket *);
 static int	atm_aal5_control(struct socket *, u_long, caddr_t, 
 			struct ifnet *, struct thread *td);
 static int	atm_aal5_sense(struct socket *, struct stat *);
@@ -87,6 +88,7 @@ static int	atm_aal5_incoming(void *, Atm_connection *,
 			Atm_attributes *, void **);
 static void	atm_aal5_cpcs_data(void *, KBuffer *);
 static caddr_t	atm_aal5_getname(void *);
+static void	atm_aal5_close(struct socket *);
 
 
 /*
@@ -107,6 +109,7 @@ struct pr_usrreqs	atm_aal5_usrreqs = {
 	.pru_sense =		atm_aal5_sense,
 	.pru_shutdown =		atm_aal5_shutdown,
 	.pru_sockaddr =		atm_aal5_sockaddr,
+	.pru_close =		atm_aal5_close,
 };
 
 /*
@@ -203,6 +206,11 @@ static Atm_attributes	atm_aal5_defattr = {
 	;
 #endif /* DIAGNOSTIC */
 
+#define	ATM_INTRO_NOERR(f)					\
+	int		s;					\
+	s = splnet();						\
+	;
+
 #define	ATM_OUTRO()						\
 	/*							\
 	 * Drain any deferred calls				\
@@ -210,6 +218,14 @@ static Atm_attributes	atm_aal5_defattr = {
 	STACK_DRAIN();						\
 	(void) splx(s);						\
 	return (err);						\
+	;
+
+#define	ATM_OUTRO_NOERR()					\
+	/*							\
+	 * Drain any deferred calls				\
+	 */							\
+	STACK_DRAIN();						\
+	(void) splx(s);						\
 	;
 
 #define	ATM_RETERR(errno) {					\
@@ -276,15 +292,15 @@ out:
  *	errno	error processing request - reason indicated
  *
  */
-static int
+static void
 atm_aal5_detach(so)
 	struct socket	*so;
 {
-	ATM_INTRO("detach");
+	ATM_INTRO_NOERR("detach");
 
-	err = atm_sock_detach(so);
+	atm_sock_detach(so);
 
-	ATM_OUTRO();
+	ATM_OUTRO_NOERR();
 }
 
 
@@ -328,13 +344,14 @@ atm_aal5_bind(so, addr, td)
  *
  */
 static int
-atm_aal5_listen(so, td)
+atm_aal5_listen(so, backlog, td)
 	struct socket	*so;
+	int		 backlog;
 	struct thread	*td;
 {
 	ATM_INTRO("listen");
 
-	err = atm_sock_listen(so, &atm_aal5_endpt);
+	err = atm_sock_listen(so, &atm_aal5_endpt, backlog);
 
 	ATM_OUTRO();
 }
@@ -544,16 +561,27 @@ out:
  *	errno	error processing request - reason indicated
  *
  */
-static int
+static void
 atm_aal5_abort(so)
 	struct socket	*so;
 {
-	ATM_INTRO("abort");
+	ATM_INTRO_NOERR("abort");
 
+	(void)atm_sock_disconnect(so);
 	so->so_error = ECONNABORTED;
-	err = atm_sock_detach(so);
 
-	ATM_OUTRO();
+	ATM_OUTRO_NOERR();
+}
+
+static void
+atm_aal5_close(so)
+	struct socket	*so;
+{
+	ATM_INTRO_NOERR("close");
+
+	(void)atm_sock_disconnect(so);
+
+	ATM_OUTRO_NOERR();
 }
 
 

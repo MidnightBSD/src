@@ -1,5 +1,4 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_vnops.c,v 1.31 2005/04/25 05:11:19 jeff Exp $ */
-/* $Id: nfs4_vnops.c,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
+/* $Id: nfs4_vnops.c,v 1.2 2008-10-01 16:44:41 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -60,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vnops.c,v 1.31 2005/04/25 05:11:19 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vnops.c,v 1.37 2007/06/01 01:12:44 jeff Exp $");
 
 /*
  * vnode op calls for Sun NFS version 2 and 3
@@ -220,14 +219,15 @@ struct nfs4_lowner nfs4_masterlowner;
 
 SYSCTL_DECL(_vfs_nfs4);
 
-static int	nfsaccess_cache_timeout = NFS_MAXATTRTIMO;
+static int	nfs4_access_cache_timeout = NFS_MAXATTRTIMO;
 SYSCTL_INT(_vfs_nfs4, OID_AUTO, access_cache_timeout, CTLFLAG_RW,
-	   &nfsaccess_cache_timeout, 0, "NFS ACCESS cache timeout");
+	   &nfs4_access_cache_timeout, 0, "NFS ACCESS cache timeout");
 
+#if 0
 static int	nfsv3_commit_on_close = 0;
 SYSCTL_INT(_vfs_nfs4, OID_AUTO, nfsv3_commit_on_close, CTLFLAG_RW,
 	   &nfsv3_commit_on_close, 0, "write+commit on close, else only write");
-#if 0
+
 SYSCTL_INT(_vfs_nfs4, OID_AUTO, access_cache_hits, CTLFLAG_RD,
 	   &nfsstats.accesscache_hits, 0, "NFS ACCESS cache hit count");
 
@@ -239,7 +239,7 @@ SYSCTL_INT(_vfs_nfs4, OID_AUTO, access_cache_misses, CTLFLAG_RD,
 			 | NFSV3ACCESS_EXTEND | NFSV3ACCESS_EXECUTE	\
 			 | NFSV3ACCESS_DELETE | NFSV3ACCESS_LOOKUP)
 static int
-nfs3_access_otw(struct vnode *vp, int wmode, struct thread *td,
+nfs4_v3_access_otw(struct vnode *vp, int wmode, struct thread *td,
     struct ucred *cred)
 {
 	const int v3 = 1;
@@ -337,7 +337,7 @@ nfs4_access(struct vop_access_args *ap)
 				mode |= NFSV3ACCESS_LOOKUP;
 		}
 		/* XXX safety belt, only make blanket request if caching */
-		if (nfsaccess_cache_timeout > 0) {
+		if (nfs4_access_cache_timeout > 0) {
 			wmode = NFSV3ACCESS_READ | NFSV3ACCESS_MODIFY |
 			    NFSV3ACCESS_EXTEND | NFSV3ACCESS_EXECUTE |
 			    NFSV3ACCESS_DELETE | NFSV3ACCESS_LOOKUP;
@@ -349,20 +349,20 @@ nfs4_access(struct vop_access_args *ap)
 		 * Does our cached result allow us to give a definite yes to
 		 * this request?
 		 */
-		if ((time_second < (np->n_modestamp + nfsaccess_cache_timeout)) &&
-		    (ap->a_cred->cr_uid == np->n_modeuid) &&
-		    ((np->n_mode & mode) == mode)) {
+		if (time_second < np->n_modestamp + nfs4_access_cache_timeout &&
+		    ap->a_cred->cr_uid == np->n_modeuid &&
+		    (np->n_mode & mode) == mode) {
 			nfsstats.accesscache_hits++;
 		} else {
 			/*
 			 * Either a no, or a don't know.  Go to the wire.
 			 */
 			nfsstats.accesscache_misses++;
-		        error = nfs3_access_otw(vp, wmode, ap->a_td,ap->a_cred);
-			if (!error) {
-				if ((np->n_mode & mode) != mode) {
+		        error = nfs4_v3_access_otw(vp, wmode, ap->a_td,
+			    ap->a_cred);
+			if (error == 0) {
+				if ((np->n_mode & mode) != mode)
 					error = EACCES;
-				}
 			}
 		}
 		return (error);
@@ -497,7 +497,7 @@ nfs4_openrpc(struct vnode *dvp, struct vnode **vpp, struct componentname *cnp,
 	if (vp == NULL) {
 		/* New file */
 		error = nfs_nget(dvp->v_mount, &getfh.fh_val,
-		    getfh.fh_len, &np);
+				 getfh.fh_len, &np, LK_EXCLUSIVE);
 		if (error != 0)
 			goto nfsmout;
 
@@ -1031,7 +1031,7 @@ nfs4_lookup(struct vop_lookup_args *ap)
 		if (NFS_CMPFH(np, fhp, fhsize))
 			return (EISDIR);
 
-		error = nfs_nget(dvp->v_mount, fhp, fhsize, &np);
+		error = nfs_nget(dvp->v_mount, fhp, fhsize, &np, LK_EXCLUSIVE);
 		if (error)
 			return (error);
 
@@ -1047,7 +1047,7 @@ nfs4_lookup(struct vop_lookup_args *ap)
 	if (flags & ISDOTDOT) {
 		VOP_UNLOCK(dvp, 0, td);
 
-		error = nfs_nget(dvp->v_mount, fhp, fhsize, &np);
+		error = nfs_nget(dvp->v_mount, fhp, fhsize, &np, LK_EXCLUSIVE);
 		vn_lock(dvp, LK_EXCLUSIVE | LK_RETRY, td);
 		if (error)
 			return (error);
@@ -1058,7 +1058,7 @@ nfs4_lookup(struct vop_lookup_args *ap)
 		VREF(dvp);
 		newvp = dvp;
 	} else {
-		error = nfs_nget(dvp->v_mount, fhp, fhsize, &np);
+		error = nfs_nget(dvp->v_mount, fhp, fhsize, &np, LK_EXCLUSIVE);
 		if (error)
 			return (error);
 		newvp = NFSTOV(np);
@@ -1431,7 +1431,7 @@ nfs4_createrpc(struct vnode *dvp, struct vnode **vpp, struct componentname *cnp,
 	nfsm_v4dissect_getattr(&cp, &ga);
 	nfsm_v4dissect_getfh(&cp, &gfh);	
 	
-	error = nfs_nget(dvp->v_mount, &gfh.fh_val, gfh.fh_len, &np);
+	error = nfs_nget(dvp->v_mount, &gfh.fh_val, gfh.fh_len, &np, LK_EXCLUSIVE);
 	if (error != 0)
 		goto nfsmout;
 
@@ -1924,7 +1924,7 @@ nfs4_readdir(struct vop_readdir_args *ap)
 	if (np->n_direofoffset > 0 && uio->uio_offset >= np->n_direofoffset &&
 	    (np->n_flag & NMODIFIED) == 0) {
 		if (VOP_GETATTR(vp, &vattr, ap->a_cred, uio->uio_td) == 0 &&
-			np->n_mtime.tv_sec == vattr.va_mtime.tv_sec) {
+			!NFS_TIMESPEC_COMPARE(&np->n_mtime, &vattr.va_mtime)) {
 			nfsstats.direofcache_hits++;
 			return (0);
 		}
@@ -2336,7 +2336,7 @@ nfs4_lookitup(struct vnode *dvp, const char *name, int len, struct ucred *cred,
 			VREF(dvp);
 			newvp = dvp;
 		} else {
-			error = nfs_nget(dvp->v_mount, nfhp, fhlen, &np);
+			error = nfs_nget(dvp->v_mount, nfhp, fhlen, &np, LK_EXCLUSIVE);
 			if (error) {
 				m_freem(mrep);
 				return (error);
@@ -2444,16 +2444,10 @@ nfs4_strategy(struct vop_strategy_args *ap)
 {
 	struct buf *bp = ap->a_bp;
 	struct ucred *cr;
-	struct thread *td;
 	int error = 0;
 
 	KASSERT(!(bp->b_flags & B_DONE), ("nfs4_strategy: buffer %p unexpectedly marked B_DONE", bp));
 	KASSERT(BUF_REFCNT(bp) > 0, ("nfs4_strategy: buffer %p not locked", bp));
-
-	if (bp->b_flags & B_ASYNC)
-		td = NULL;
-	else
-		td = curthread;	/* XXX */
 
 	if (bp->b_iocmd == BIO_READ)
 		cr = bp->b_rcred;
@@ -2466,8 +2460,8 @@ nfs4_strategy(struct vop_strategy_args *ap)
 	 * otherwise just do it ourselves.
 	 */
 	if ((bp->b_flags & B_ASYNC) == 0 ||
-		nfs_asyncio(VFSTONFS(ap->a_vp->v_mount), bp, NOCRED, td))
-		error = nfs_doio(ap->a_vp, bp, cr, td);
+		nfs_asyncio(VFSTONFS(ap->a_vp->v_mount), bp, NOCRED, curthread))
+		error = nfs_doio(ap->a_vp, bp, cr, curthread);
 	return (error);
 }
 
@@ -2834,7 +2828,7 @@ nfs4_writebp(struct buf *bp, int force __unused, struct thread *td)
 	bp->b_iocmd = BIO_WRITE;
 
 	bufobj_wref(bp->b_bufobj);
-	curthread->td_proc->p_stats->p_ru.ru_oublock++;
+	curthread->td_ru.ru_oublock++;
 	splx(s);
 
 	/*
@@ -2880,4 +2874,5 @@ struct buf_ops buf_ops_nfs4 = {
 	.bop_write	=	nfs4_bwrite,
 	.bop_strategy	=	bufstrategy,
 	.bop_sync	=	bufsync,
+	.bop_bdflush	=	bufbdflush,
 };

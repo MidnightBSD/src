@@ -32,11 +32,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_mod.c,v 1.15 2005/01/07 01:45:48 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netncp/ncp_mod.c,v 1.16 2006/11/06 13:42:06 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/kernel.h>
 #include <sys/module.h>

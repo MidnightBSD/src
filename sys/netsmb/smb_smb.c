@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_smb.c,v 1.13 2005/01/07 01:45:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_smb.c,v 1.15 2007/06/15 23:49:54 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -197,10 +197,8 @@ smb_smb_negotiate(struct smb_vc *vcp, struct smb_cred *scred)
 				vcp->vc_chlen = sblen;
 				vcp->obj.co_flags |= SMBV_ENCRYPT;
 			}
-#ifdef NETSMBCRYPTO
 			if (sp->sv_sm & SMB_SM_SIGS_REQUIRE)
 				vcp->vc_hflags2 |= SMB_FLAGS2_SECURITY_SIGNATURE;
-#endif
 			vcp->vc_hflags2 |= SMB_FLAGS2_KNOWS_LONG_NAMES;
 			if (dp->d_id == SMB_DIALECT_NTLM0_12 &&
 			    sp->sv_maxtx < 4096 &&
@@ -807,6 +805,7 @@ smb_read(struct smb_share *ssp, u_int16_t fid, struct uio *uio,
 
 	tsize = uio->uio_resid;
 	while (tsize > 0) {
+		resid = 0;
 		len = tsize;
 		error = smb_smb_read(ssp, fid, &len, &resid, uio, scred);
 		if (error)
@@ -882,6 +881,7 @@ smb_write(struct smb_share *ssp, u_int16_t fid, struct uio *uio,
 	tsize = uio->uio_resid;
 	olduio = *uio;
 	while (tsize > 0) {
+		resid = 0;
 		len = tsize;
 		error = smb_smb_write(ssp, fid, &len, &resid, uio, scred);
 		if (error)

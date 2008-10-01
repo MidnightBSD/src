@@ -33,11 +33,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsock.c,v 1.94 2005/01/19 22:53:40 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsock.c,v 1.104 2007/08/06 14:26:02 rwatson Exp $");
 
 /*
  * Socket operations for use by nfs
  */
+
+#include "opt_mac.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -49,6 +51,7 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsock.c,v 1.94 2005/01/19 22:53:40 p
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/protosw.h>
+#include <sys/refcount.h>
 #include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -64,6 +67,8 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvsock.c,v 1.94 2005/01/19 22:53:40 p
 #include <nfsserver/nfs.h>
 #include <nfs/xdr_subs.h>
 #include <nfsserver/nfsm_subs.h>
+
+#include <security/mac/mac_framework.h>
 
 #define	TRUE	1
 #define	FALSE	0
@@ -140,13 +145,9 @@ nfs_rephead(int siz, struct nfsrv_descript *nd, int err,
 	caddr_t bpos;
 	struct mbuf *mb;
 
-	/* XXXRW: not 100% clear the lock is needed here. */
-	NFSD_LOCK_ASSERT();
-
 	nd->nd_repstat = err;
 	if (err && (nd->nd_flag & ND_NFSV3) == 0)	/* XXX recheck */
 		siz = 0;
-	NFSD_UNLOCK();
 	MGETHDR(mreq, M_TRYWAIT, MT_DATA);
 	mb = mreq;
 	/*
@@ -159,7 +160,6 @@ nfs_rephead(int siz, struct nfsrv_descript *nd, int err,
 		MCLGET(mreq, M_TRYWAIT);
 	} else
 		mreq->m_data += min(max_hdr, M_TRAILINGSPACE(mreq));
-	NFSD_LOCK();
 	tl = mtod(mreq, u_int32_t *);
 	bpos = ((caddr_t)tl) + mreq->m_len;
 	*tl++ = txdr_unsigned(nd->nd_retxid);
@@ -241,18 +241,13 @@ nfs_realign(struct mbuf **pm, int hsiz)	/* XXX COMMON */
 	struct mbuf *n = NULL;
 	int off = 0;
 
-	/* XXXRW: may not need lock? */
-	NFSD_LOCK_ASSERT();
-
 	++nfs_realign_test;
 	while ((m = *pm) != NULL) {
 		if ((m->m_len & 0x3) || (mtod(m, intptr_t) & 0x3)) {
-			NFSD_UNLOCK();
 			MGET(n, M_TRYWAIT, MT_DATA);
 			if (m->m_len >= MINCLSIZE) {
 				MCLGET(n, M_TRYWAIT);
 			}
-			NFSD_LOCK();
 			n->m_len = 0;
 			break;
 		}
@@ -361,17 +356,13 @@ nfs_getreq(struct nfsrv_descript *nd, struct nfsd *nfsd, int has_header)
 		}
 		nfsm_adv(nfsm_rndup(len));
 		tl = nfsm_dissect_nonblock(u_int32_t *, 3 * NFSX_UNSIGNED);
-		/*
-		 * XXX: This credential should be managed using crget(9)
-		 * and related calls.  Right now, this tramples on any
-		 * extensible data in the ucred, fails to initialize the
-		 * mutex, and worse.  This must be fixed before FreeBSD
-		 * 5.3-RELEASE.
-		 */
-		bzero((caddr_t)&nd->nd_cr, sizeof (struct ucred));
-		nd->nd_cr.cr_ref = 1;
-		nd->nd_cr.cr_uid = fxdr_unsigned(uid_t, *tl++);
-		nd->nd_cr.cr_gid = fxdr_unsigned(gid_t, *tl++);
+		nd->nd_cr->cr_uid = nd->nd_cr->cr_ruid =
+		    nd->nd_cr->cr_svuid = fxdr_unsigned(uid_t, *tl++);
+		nd->nd_cr->cr_groups[0] = nd->nd_cr->cr_rgid =
+		    nd->nd_cr->cr_svgid = fxdr_unsigned(gid_t, *tl++);
+#ifdef MAC
+		mac_associate_nfsd_label(nd->nd_cr);
+#endif
 		len = fxdr_unsigned(int, *tl);
 		if (len < 0 || len > RPCAUTH_UNIXGIDS) {
 			m_freem(mrep);
@@ -380,12 +371,12 @@ nfs_getreq(struct nfsrv_descript *nd, struct nfsd *nfsd, int has_header)
 		tl = nfsm_dissect_nonblock(u_int32_t *, (len + 2) * NFSX_UNSIGNED);
 		for (i = 1; i <= len; i++)
 		    if (i < NGROUPS)
-			nd->nd_cr.cr_groups[i] = fxdr_unsigned(gid_t, *tl++);
+			nd->nd_cr->cr_groups[i] = fxdr_unsigned(gid_t, *tl++);
 		    else
 			tl++;
-		nd->nd_cr.cr_ngroups = (len >= NGROUPS) ? NGROUPS : (len + 1);
-		if (nd->nd_cr.cr_ngroups > 1)
-		    nfsrvw_sort(nd->nd_cr.cr_groups, nd->nd_cr.cr_ngroups);
+		nd->nd_cr->cr_ngroups = (len >= NGROUPS) ? NGROUPS : (len + 1);
+		if (nd->nd_cr->cr_ngroups > 1)
+		    nfsrvw_sort(nd->nd_cr->cr_groups, nd->nd_cr->cr_ngroups);
 		len = fxdr_unsigned(int, *++tl);
 		if (len < 0 || len > RPCAUTH_MAXSIZ) {
 			m_freem(mrep);
@@ -422,12 +413,6 @@ nfsrv_rcv(struct socket *so, void *arg, int waitflag)
 	struct uio auio;
 	int flags, error;
 
-	/*
-	 * XXXRW: For now, assert Giant here since the NFS server upcall
-	 * will perform socket operations requiring Giant in a non-mpsafe
-	 * kernel.
-	 */
-	NET_ASSERT_GIANT();
 	NFSD_UNLOCK_ASSERT();
 
 	/* XXXRW: Unlocked read. */
@@ -466,8 +451,7 @@ nfsrv_rcv(struct socket *so, void *arg, int waitflag)
 		auio.uio_resid = 1000000000;
 		flags = MSG_DONTWAIT;
 		NFSD_UNLOCK();
-		error = so->so_proto->pr_usrreqs->pru_soreceive
-			(so, &nam, &auio, &mp, NULL, &flags);
+		error = soreceive(so, &nam, &auio, &mp, NULL, &flags);
 		NFSD_LOCK();
 		if (error || mp == NULL) {
 			if (error == EWOULDBLOCK)
@@ -503,8 +487,7 @@ nfsrv_rcv(struct socket *so, void *arg, int waitflag)
 			auio.uio_resid = 1000000000;
 			flags = MSG_DONTWAIT;
 			NFSD_UNLOCK();
-			error = so->so_proto->pr_usrreqs->pru_soreceive
-				(so, &nam, &auio, &mp, NULL, &flags);
+			error = soreceive(so, &nam, &auio, &mp, NULL, &flags);
 			if (mp) {
 				struct nfsrv_rec *rec;
 				rec = malloc(sizeof(struct nfsrv_rec),
@@ -517,8 +500,8 @@ nfsrv_rcv(struct socket *so, void *arg, int waitflag)
 					NFSD_LOCK();
 					continue;
 				}
-				NFSD_LOCK();
 				nfs_realign(&mp, 10 * NFSX_UNSIGNED);
+				NFSD_LOCK();
 				rec->nr_address = nam;
 				rec->nr_packet = mp;
 				STAILQ_INSERT_TAIL(&slp->ns_rec, rec, nr_link);
@@ -702,6 +685,7 @@ nfsrv_dorec(struct nfssvc_sock *slp, struct nfsd *nfsd,
 	    STAILQ_FIRST(&slp->ns_rec) == NULL)
 		return (ENOBUFS);
 	rec = STAILQ_FIRST(&slp->ns_rec);
+	KASSERT(rec->nr_packet != NULL, ("nfsrv_dorec: missing mbuf"));
 	STAILQ_REMOVE_HEAD(&slp->ns_rec, nr_link);
 	nam = rec->nr_address;
 	m = rec->nr_packet;
@@ -709,6 +693,7 @@ nfsrv_dorec(struct nfssvc_sock *slp, struct nfsd *nfsd,
 	NFSD_UNLOCK();
 	MALLOC(nd, struct nfsrv_descript *, sizeof (struct nfsrv_descript),
 		M_NFSRVDESC, M_WAITOK);
+	nd->nd_cr = crget();
 	NFSD_LOCK();
 	nd->nd_md = nd->nd_mrep = m;
 	nd->nd_nam2 = nam;
@@ -718,6 +703,8 @@ nfsrv_dorec(struct nfssvc_sock *slp, struct nfsd *nfsd,
 		if (nam) {
 			FREE(nam, M_SONAME);
 		}
+		if (nd->nd_cr != NULL)
+			crfree(nd->nd_cr);
 		free((caddr_t)nd, M_NFSRVDESC);
 		return (error);
 	}
@@ -768,7 +755,6 @@ nfsrv_send(struct socket *so, struct sockaddr *nam, struct mbuf *top)
 	struct sockaddr *sendnam;
 	int error, soflags, flags;
 
-	NET_ASSERT_GIANT();
 	NFSD_UNLOCK_ASSERT();
 
 	soflags = so->so_proto->pr_flags;
@@ -781,8 +767,7 @@ nfsrv_send(struct socket *so, struct sockaddr *nam, struct mbuf *top)
 	else
 		flags = 0;
 
-	error = so->so_proto->pr_usrreqs->pru_sosend(so, sendnam, 0, top, 0,
-						     flags, curthread/*XXX*/);
+	error = sosend(so, sendnam, 0, top, 0, flags, curthread/*XXX*/);
 	if (error == ENOBUFS && so->so_type == SOCK_DGRAM)
 		error = 0;
 

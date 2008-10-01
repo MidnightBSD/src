@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_dev.c,v 1.27.2.2 2006/01/13 10:23:39 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_dev.c,v 1.33 2007/07/10 09:23:10 avatar Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -175,7 +175,7 @@ nsmb_dev_close(struct cdev *dev, int flag, int fmt, struct thread *td)
 */
 	dev->si_drv1 = NULL;
 	free(sdp, M_NSMBDEV);
-	destroy_dev(dev);
+	destroy_dev_sched(dev);
 	splx(s);
 	return 0;
 }
@@ -349,6 +349,8 @@ nsmb_dev_load(module_t mod, int cmd, void *arg)
 		if (error)
 			break;
 		EVENTHANDLER_DEREGISTER(dev_clone, nsmb_dev_tag);
+		drain_dev_clone_events();
+		destroy_dev_drain(&nsmb_cdevsw);
 		printf("netsmb_dev: unloaded\n");
 		break;
 	    default:
@@ -368,15 +370,15 @@ nsmb_getfp(struct filedesc* fdp, int fd, int flag)
 {
 	struct file* fp;
 
-	FILEDESC_LOCK(fdp);
+	FILEDESC_SLOCK(fdp);
 	if (((u_int)fd) >= fdp->fd_nfiles ||
 	    (fp = fdp->fd_ofiles[fd]) == NULL ||
 	    (fp->f_flag & flag) == 0) {
-		FILEDESC_UNLOCK(fdp);
+		FILEDESC_SUNLOCK(fdp);
 		return (NULL);
 	}
 	fhold(fp);
-	FILEDESC_UNLOCK(fdp);
+	FILEDESC_SUNLOCK(fdp);
 	return (fp);
 }
 

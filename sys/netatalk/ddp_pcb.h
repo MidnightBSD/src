@@ -1,6 +1,29 @@
 /*-
  * Copyright (c) 2004 Robert N. M. Watson
- * Copyright (c) 1990,1994 Regents of The University of Michigan.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * Copyright (c) 1990, 1994 Regents of The University of Michigan.
  * All Rights Reserved.
  *
  * Permission to use, copy, modify, and distribute this software and
@@ -24,7 +47,7 @@
  *	+1-313-764-2278
  *	netatalk@umich.edu
  *
- * $FreeBSD: src/sys/netatalk/ddp_pcb.h,v 1.3 2005/01/07 02:35:34 imp Exp $
+ * $FreeBSD: src/sys/netatalk/ddp_pcb.h,v 1.5 2007/01/12 15:07:51 rwatson Exp $
  */
 
 #ifndef _NETATALK_DDP_PCB_H_
@@ -58,4 +81,4 @@ void	at_sockaddr(struct ddpcb *ddp, struct sockaddr **addr);
 #define	DDP_LIST_SUNLOCK()	mtx_unlock(&ddp_list_mtx)
 #define	DDP_LIST_SLOCK_ASSERT()	mtx_assert(&ddp_list_mtx, MA_OWNED)
 
-#endif
+#endif /* !_NETATALK_DDP_PCB_H_ */

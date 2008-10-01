@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netsmb/smb_rq.h,v 1.4 2005/01/07 01:45:49 imp Exp $
+ * $FreeBSD: src/sys/netsmb/smb_rq.h,v 1.5 2006/08/22 03:05:51 marcel Exp $
  */
 #ifndef _NETSMB_SMB_RQ_H_
 #define	_NETSMB_SMB_RQ_H_
@@ -82,7 +82,7 @@ struct smb_rq {
 	u_int8_t		sr_rqflags;
 	u_int16_t		sr_rqflags2;
 	u_char *		sr_wcount;
-	u_short *		sr_bcount;
+	void *			sr_bcount;	/* Points to 2-byte buffer. */
 	struct mdchain		sr_rp;
 	int			sr_rpgen;
 	int			sr_rplast;
@@ -95,8 +95,8 @@ struct smb_rq {
 	struct timespec 	sr_timesent;
 	int			sr_lerror;
 	u_int8_t *		sr_rqsig;
-	u_int16_t *		sr_rqtid;
-	u_int16_t *		sr_rquid;
+	void *			sr_rqtid;	/* Points to 2-byte buffer. */
+	void *			sr_rquid;	/* Points to 2-byte buffer. */
 	u_int8_t		sr_errclass;
 	u_int16_t		sr_serror;
 	u_int32_t		sr_error;

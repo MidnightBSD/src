@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netsmb/smb_subr.h,v 1.12 2005/01/07 01:45:49 imp Exp $
+ * $FreeBSD: src/sys/netsmb/smb_subr.h,v 1.13 2006/11/06 13:42:06 rwatson Exp $
  */
 #ifndef _NETSMB_SMB_SUBR_H_
 #define _NETSMB_SMB_SUBR_H_
@@ -68,7 +68,7 @@ void m_dumpm(struct mbuf *m);
 	 SIGISMEMBER(set, SIGHUP) || SIGISMEMBER(set, SIGKILL) ||	\
 	 SIGISMEMBER(set, SIGQUIT))
 
-#define	smb_suser(cred)	suser_cred(cred, 0)
+#define	smb_suser(cred)	priv_check_cred(cred, PRIV_NETSMB, 0)
 
 /*
  * Compatibility wrappers for simple locks

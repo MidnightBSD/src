@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netatm/ipatm/ipatm_event.c,v 1.10 2005/01/07 01:45:37 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netatm/ipatm/ipatm_event.c,v 1.11 2007/06/23 00:02:19 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -82,7 +82,7 @@ ipatm_timeout(tip)
 	 * Back-off to ipvcc control block
 	 */
 	ivp = (struct ipvcc *)
-			((caddr_t)tip - (int)(&((struct ipvcc *)0)->iv_time));
+		((caddr_t)tip - offsetof(struct ipvcc, iv_time));
 
 	/*
 	 * Process timeout based on protocol state

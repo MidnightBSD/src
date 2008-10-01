@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_subr.c,v 1.18.2.1 2006/01/24 04:08:48 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_subr.c,v 1.21 2006/11/05 06:31:08 bp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -269,6 +269,8 @@ smb_maperror(int eclass, int eno)
 			return ENOENT;
 		    case 145:		/* samba */
 			return ENOTEMPTY;
+		    case ERRnotlocked:
+			return 0;	/* file become unlocked */
 		    case 183:
 			return EEXIST;
 		    case ERRquota:
@@ -323,11 +325,20 @@ smb_maperror(int eclass, int eno)
 }
 
 static int
-smb_copy_iconv(struct mbchain *mbp, c_caddr_t src, caddr_t dst, size_t len)
+smb_copy_iconv(struct mbchain *mbp, c_caddr_t src, caddr_t dst,
+    size_t *srclen, size_t *dstlen)
 {
-	size_t outlen = len;
+	int error;
+	size_t inlen = *srclen, outlen = *dstlen;
 
-	return iconv_conv((struct iconv_drv*)mbp->mb_udata, &src, &len, &dst, &outlen);
+	error = iconv_conv((struct iconv_drv*)mbp->mb_udata, &src, &inlen,
+	    &dst, &outlen);
+	if (inlen != *srclen || outlen != *dstlen) {
+		*srclen -= inlen;
+		*dstlen -= outlen;
+		return 0;
+	} else
+		return error;
 }
 
 int

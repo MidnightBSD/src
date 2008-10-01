@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_trantcp.c,v 1.22 2005/01/07 01:45:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_trantcp.c,v 1.26 2007/06/15 23:49:54 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/condvar.h>
@@ -75,8 +75,7 @@ SYSCTL_DECL(_net_smb);
 SYSCTL_INT(_net_smb, OID_AUTO, tcpsndbuf, CTLFLAG_RW, &smb_tcpsndbuf, 0, "");
 SYSCTL_INT(_net_smb, OID_AUTO, tcprcvbuf, CTLFLAG_RW, &smb_tcprcvbuf, 0, "");
 
-#define nb_sosend(so,m,flags,td) (so)->so_proto->pr_usrreqs->pru_sosend( \
-				    so, NULL, 0, m, 0, flags, td)
+#define nb_sosend(so,m,flags,td) sosend(so, NULL, 0, m, 0, flags, td)
 
 static int  nbssn_recv(struct nbpcb *nbp, struct mbuf **mpp, int *lenp,
 	u_int8_t *rpcodep, struct thread *td);
@@ -95,19 +94,12 @@ nb_setsockopt_int(struct socket *so, int level, int name, int val)
 	return sosetopt(so, &sopt);
 }
 
-static __inline int
-nb_poll(struct nbpcb *nbp, int events, struct thread *td)
-{
-	return nbp->nbp_tso->so_proto->pr_usrreqs->pru_sopoll(nbp->nbp_tso,
-	    events, NULL, td);
-}
-
 static int
 nbssn_rselect(struct nbpcb *nbp, struct timeval *tv, int events,
 	struct thread *td)
 {
 	struct timeval atv, rtv, ttv;
-	int ncoll, timo, error;
+	int ncoll, timo, error, revents;
 
 	if (tv) {
 		atv = *tv;
@@ -123,23 +115,25 @@ nbssn_rselect(struct nbpcb *nbp, struct timeval *tv, int events,
 retry:
 
 	ncoll = nselcoll;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags |= TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 	/* XXX: Should be done when the thread is initialized. */
 	TAILQ_INIT(&td->td_selq);
-	error = nb_poll(nbp, events, td);
+	revents = sopoll(nbp->nbp_tso, events, NULL, td);
 	mtx_lock(&sellock);
-	if (error) {
+	if (revents) {
 		error = 0;
 		goto done;
 	}
 	if (tv) {
 		getmicrouptime(&rtv);
-		if (timevalcmp(&rtv, &atv, >=))
+		if (timevalcmp(&rtv, &atv, >=)) {
+			error = EWOULDBLOCK;
 			goto done;
+		}
 		ttv = atv;
 		timevalsub(&ttv, &rtv);
 		timo = tvtohz(&ttv);
@@ -150,12 +144,12 @@ retry:
 	 * the process, test P_SELECT and rescan file descriptors if
 	 * necessary.
 	 */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	if ((td->td_flags & TDF_SELECT) == 0 || nselcoll != ncoll) {
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td);
 		goto retry;
 	}
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 
 	if (timo > 0)
 		error = cv_timedwait(&selwait, &sellock, timo);
@@ -167,9 +161,9 @@ retry:
 done:
 	clear_selinfo_list(td);
 	
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags &= ~TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 done_noproclock:
@@ -377,8 +371,7 @@ nbssn_recvhdr(struct nbpcb *nbp, int *lenp,
 	auio.uio_offset = 0;
 	auio.uio_resid = sizeof(len);
 	auio.uio_td = td;
-	error = so->so_proto->pr_usrreqs->pru_soreceive
-	    (so, (struct sockaddr **)NULL, &auio,
+	error = soreceive(so, (struct sockaddr **)NULL, &auio,
 	    (struct mbuf **)NULL, (struct mbuf **)NULL, &flags);
 	if (error)
 		return error;
@@ -419,6 +412,8 @@ nbssn_recv(struct nbpcb *nbp, struct mbuf **mpp, int *lenp,
 		 * Poll for a response header.
 		 * If we don't have one waiting, return.
 		 */
+		len = 0;
+		rpcode = 0;
 		error = nbssn_recvhdr(nbp, &len, &rpcode, MSG_DONTWAIT, td);
 		if ((so->so_state & (SS_ISDISCONNECTING | SS_ISDISCONNECTED)) ||
 		    (so->so_rcv.sb_state & SBS_CANTRCVMORE)) {
@@ -461,8 +456,7 @@ nbssn_recv(struct nbpcb *nbp, struct mbuf **mpp, int *lenp,
 			 */
 			do {
 				rcvflg = MSG_WAITALL;
-				error = so->so_proto->pr_usrreqs->pru_soreceive
-				    (so, (struct sockaddr **)NULL,
+				error = soreceive(so, (struct sockaddr **)NULL,
 				    &auio, &tm, (struct mbuf **)NULL, &rcvflg);
 			} while (error == EWOULDBLOCK || error == EINTR ||
 				 error == ERESTART);

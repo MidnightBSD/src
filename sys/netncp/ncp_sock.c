@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netncp/ncp_sock.c,v 1.15 2005/01/07 01:45:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netncp/ncp_sock.c,v 1.19 2007/06/05 00:00:55 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
@@ -139,10 +139,9 @@ int ncp_sock_recv(struct socket *so, struct mbuf **mp, int *rlen)
 	auio.uio_td = td;
 	flags = MSG_DONTWAIT;
 
-/*	error = so->so_proto->pr_usrreqs->pru_soreceive(so, 0, &auio,
-	    (struct mbuf **)0, (struct mbuf **)0, &flags);*/
-	error = so->so_proto->pr_usrreqs->pru_soreceive(so, 0, &auio,
-	    mp, (struct mbuf **)0, &flags);
+/*	error = soreceive(so, 0, &auio, (struct mbuf **)0, (struct mbuf **)0,
+	    &flags);*/
+	error = soreceive(so, 0, &auio, mp, (struct mbuf **)0, &flags);
 	*rlen = len - auio.uio_resid;
 /*	if (!error) {
 	    *rlen=iov.iov_len;
@@ -163,17 +162,16 @@ ncp_sock_send(struct socket *so, struct mbuf *top, struct ncp_rq *rqp)
 	struct ncp_conn *conn = rqp->nr_conn;
 	struct mbuf *m;
 	int error, flags=0;
-	int sendwait;
 
 	for (;;) {
 		m = m_copym(top, 0, M_COPYALL, M_TRYWAIT);
 /*		NCPDDEBUG(m);*/
-		error = so->so_proto->pr_usrreqs->pru_sosend(so, to, 0, m, 0, flags, td);
+		error = sosend(so, to, 0, m, 0, flags, td);
 		if (error == 0 || error == EINTR || error == ENETDOWN)
 			break;
 		if (rqp->rexmit == 0) break;
 		rqp->rexmit--;
-		tsleep(&sendwait, PWAIT, "ncprsn", conn->li.timeout * hz);
+		pause("ncprsn", conn->li.timeout * hz);
 		error = ncp_chkintr(conn, td);
 		if (error == EINTR) break;
 	}
@@ -186,10 +184,28 @@ ncp_sock_send(struct socket *so, struct mbuf *top, struct ncp_rq *rqp)
 int
 ncp_poll(struct socket *so, int events)
 {
-    struct thread *td = curthread;
-    struct ucred *cred = NULL;
+	struct thread *td = curthread;
+	int revents;
 
-    return so->so_proto->pr_usrreqs->pru_sopoll(so, events, cred, td);
+	/* Fake up enough state to look like we are in poll(2). */
+	mtx_lock(&sellock);
+	thread_lock(td);
+	td->td_flags |= TDF_SELECT;
+	thread_unlock(td);
+	mtx_unlock(&sellock);
+	TAILQ_INIT(&td->td_selq);
+
+	revents = sopoll(so, events, NULL, td);
+
+	/* Tear down the fake poll(2) state. */
+	mtx_lock(&sellock);
+	clear_selinfo_list(td);
+	thread_lock(td);
+	td->td_flags &= ~TDF_SELECT;
+	thread_unlock(td);
+	mtx_unlock(&sellock);
+
+	return (revents);
 }
 
 int
@@ -197,7 +213,7 @@ ncp_sock_rselect(struct socket *so, struct thread *td, struct timeval *tv,
 		 int events)
 {
 	struct timeval atv, rtv, ttv;
-	int ncoll, timo, error = 0;
+	int ncoll, timo, error, revents;
 
 	if (tv) {
 		atv = *tv;
@@ -213,22 +229,24 @@ ncp_sock_rselect(struct socket *so, struct thread *td, struct timeval *tv,
 
 retry:
 	ncoll = nselcoll;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags |= TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 	TAILQ_INIT(&td->td_selq);
-	error = ncp_poll(so, events);
+	revents = sopoll(so, events, NULL, td);
 	mtx_lock(&sellock);
-	if (error) {
+	if (revents) {
 		error = 0;
 		goto done;
 	}
 	if (tv) {
 		getmicrouptime(&rtv);
-		if (timevalcmp(&rtv, &atv, >=))
+		if (timevalcmp(&rtv, &atv, >=)) {
+			error = EWOULDBLOCK;
 			goto done;
+		}
 		ttv = atv;
 		timevalsub(&ttv, &rtv);
 		timo = tvtohz(&ttv);
@@ -239,12 +257,12 @@ retry:
 	 * the process, test TDF_SELECT and rescan file descriptors if
 	 * necessary.
 	 */
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	if ((td->td_flags & TDF_SELECT) == 0 || nselcoll != ncoll) {
-		mtx_unlock_spin(&sched_lock);
+		thread_unlock(td);
 		goto retry;
 	}
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 
 	if (timo > 0)
 		error = cv_timedwait(&selwait, &sellock, timo);
@@ -256,9 +274,9 @@ retry:
 done:
 	clear_selinfo_list(td);
 
-	mtx_lock_spin(&sched_lock);
+	thread_lock(td);
 	td->td_flags &= ~TDF_SELECT;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(td);
 	mtx_unlock(&sellock);
 
 done_noproclock:
@@ -443,8 +461,8 @@ ncp_watchdog(struct ncp_conn *conn) {
 		auio.uio_resid = len = 1000000;
 		auio.uio_td = curthread;
 		flags = MSG_DONTWAIT;
-		error = so->so_proto->pr_usrreqs->pru_soreceive(so,
-		    (struct sockaddr**)&sa, &auio, &m, (struct mbuf**)0, &flags);
+		error = soreceive(so, (struct sockaddr**)&sa, &auio, &m,
+		    (struct mbuf**)0, &flags);
 		if (error) break;
 		len -= auio.uio_resid;
 		NCPSDEBUG("got watch dog %d\n",len);
@@ -452,7 +470,7 @@ ncp_watchdog(struct ncp_conn *conn) {
 		buf = mtod(m, char*);
 		if (buf[1] != '?') break;
 		buf[1] = 'Y';
-		error = so->so_proto->pr_usrreqs->pru_sosend(so, (struct sockaddr*)sa, 0, m, 0, 0, curthread);
+		error = sosend(so, (struct sockaddr*)sa, 0, m, 0, 0, curthread);
 		NCPSDEBUG("send watch dog %d\n",error);
 		break;
 	}

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netsmb/smb_rq.c,v 1.16 2005/01/07 01:45:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netsmb/smb_rq.c,v 1.17 2006/08/22 03:05:51 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -141,9 +141,9 @@ smb_rq_new(struct smb_rq *rqp, u_char cmd)
 		rqp->sr_rqsig = (u_int8_t *)mb_reserve(mbp, 8);
 		mb_put_uint16le(mbp, 0);
 	}
-	rqp->sr_rqtid = (u_int16_t*)mb_reserve(mbp, sizeof(u_int16_t));
+	rqp->sr_rqtid = mb_reserve(mbp, sizeof(u_int16_t));
 	mb_put_uint16le(mbp, 1 /*scred->sc_p->p_pid & 0xffff*/);
-	rqp->sr_rquid = (u_int16_t*)mb_reserve(mbp, sizeof(u_int16_t));
+	rqp->sr_rquid = mb_reserve(mbp, sizeof(u_int16_t));
 	mb_put_uint16le(mbp, rqp->sr_mid);
 	return 0;
 }
@@ -239,7 +239,7 @@ smb_rq_wend(struct smb_rq *rqp)
 void
 smb_rq_bstart(struct smb_rq *rqp)
 {
-	rqp->sr_bcount = (u_short*)mb_reserve(&rqp->sr_rq, sizeof(u_short));
+	rqp->sr_bcount = mb_reserve(&rqp->sr_rq, sizeof(u_short));
 	rqp->sr_rq.mb_count = 0;
 }
 
@@ -255,7 +255,7 @@ smb_rq_bend(struct smb_rq *rqp)
 	bcnt = rqp->sr_rq.mb_count;
 	if (bcnt > 0xffff)
 		SMBERROR("byte count too large (%d)\n", bcnt);
-	*rqp->sr_bcount = htole16(bcnt);
+	le16enc(rqp->sr_bcount, bcnt);
 }
 
 int

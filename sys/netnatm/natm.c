@@ -1,8 +1,29 @@
-/*	$NetBSD: natm.c,v 1.5 1996/11/09 03:26:26 chuck Exp $	*/
 /*-
+ * Copyright (c) 2005-2006 Robert N. M. Watson
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  *
  * Copyright (c) 1996 Charles D. Cranor and Washington University.
- * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,14 +51,16 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $NetBSD: natm.c,v 1.5 1996/11/09 03:26:26 chuck Exp $
  */
 
 /*
- * natm.c: native mode ATM access (both aal0 and aal5).
+ * natm.c: Native mode ATM access (both aal0 and aal5).
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netnatm/natm.c,v 1.37.2.3 2005/08/25 05:01:23 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netnatm/natm.c,v 1.49 2007/01/08 22:30:39 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -62,333 +85,300 @@ __FBSDID("$FreeBSD: src/sys/netnatm/natm.c,v 1.37.2.3 2005/08/25 05:01:23 rwatso
 
 #include <netnatm/natm.h>
 
-static const u_long natm5_sendspace = 16*1024;
-static const u_long natm5_recvspace = 16*1024;
+static const u_long	natm5_sendspace = 16*1024;
+static const u_long	natm5_recvspace = 16*1024;
 
-static const u_long natm0_sendspace = 16*1024;
-static const u_long natm0_recvspace = 16*1024;
-
-struct mtx natm_mtx;
+static const u_long	natm0_sendspace = 16*1024;
+static const u_long	natm0_recvspace = 16*1024;
 
 /*
- * user requests
+ * netnatm global subsystem lock, protects all global data structures in
+ * netnatm.
  */
-static int natm_usr_attach(struct socket *, int, d_thread_t *);
-static int natm_usr_detach(struct socket *);
-static int natm_usr_connect(struct socket *, struct sockaddr *, d_thread_t *);
-static int natm_usr_disconnect(struct socket *);
-static int natm_usr_shutdown(struct socket *);
-static int natm_usr_send(struct socket *, int, struct mbuf *,
-    struct sockaddr *, struct mbuf *, d_thread_t *);
-static int natm_usr_peeraddr(struct socket *, struct sockaddr **);
-static int natm_usr_control(struct socket *, u_long, caddr_t,
-    struct ifnet *, d_thread_t *);
-static int natm_usr_abort(struct socket *);
-static int natm_usr_bind(struct socket *, struct sockaddr *, d_thread_t *);
-static int natm_usr_sockaddr(struct socket *, struct sockaddr **);
+struct mtx	natm_mtx;
+
+/*
+ * User socket requests.
+ */
+static int	natm_usr_attach(struct socket *, int, d_thread_t *);
+static void	natm_usr_detach(struct socket *);
+static int	natm_usr_connect(struct socket *, struct sockaddr *,
+		    d_thread_t *);
+static int	natm_usr_disconnect(struct socket *);
+static int	natm_usr_shutdown(struct socket *);
+static int	natm_usr_send(struct socket *, int, struct mbuf *,
+		    struct sockaddr *, struct mbuf *, d_thread_t *);
+static int	natm_usr_peeraddr(struct socket *, struct sockaddr **);
+static int	natm_usr_control(struct socket *, u_long, caddr_t,
+		    struct ifnet *, d_thread_t *);
+static void	natm_usr_abort(struct socket *);
+static int	natm_usr_bind(struct socket *, struct sockaddr *,
+		    d_thread_t *);
+static int	natm_usr_sockaddr(struct socket *, struct sockaddr **);
 
 static int
 natm_usr_attach(struct socket *so, int proto, d_thread_t *p)
 {
-    struct natmpcb *npcb;
-    int error = 0;
+	struct natmpcb *npcb;
+	int error = 0;
 
-    npcb = (struct natmpcb *)so->so_pcb;
+	npcb = (struct natmpcb *)so->so_pcb;
+	KASSERT(npcb == NULL, ("natm_usr_attach: so_pcb != NULL"));
 
-    KASSERT(npcb == NULL, ("natm_usr_attach: so_pcb != NULL"));
-
-    if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
-	if (proto == PROTO_NATMAAL5) 
-	    error = soreserve(so, natm5_sendspace, natm5_recvspace);
-	else
-	    error = soreserve(so, natm0_sendspace, natm0_recvspace);
-        if (error)
-          goto out;
-    }
-
-    so->so_pcb = (caddr_t) (npcb = npcb_alloc(M_WAITOK));
-    npcb->npcb_socket = so;
-out:
-    return (error);
+	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
+		if (proto == PROTO_NATMAAL5) 
+			error = soreserve(so, natm5_sendspace,
+			    natm5_recvspace);
+		else
+			error = soreserve(so, natm0_sendspace,
+			    natm0_recvspace);
+		if (error)
+			return (error);
+	}
+	so->so_pcb = npcb = npcb_alloc(M_WAITOK);
+	npcb->npcb_socket = so;
+	return (error);
 }
 
-static int
+static void
 natm_usr_detach(struct socket *so)
 {
-    struct natmpcb *npcb;
-    int error = 0;
+	struct natmpcb *npcb;
 
-    NATM_LOCK();
-    npcb = (struct natmpcb *)so->so_pcb;
-    if (npcb == NULL) {
-	/* XXXRW: Does this case ever actually happen? */
-	error = EINVAL;
-	goto out;
-    }
+	npcb = (struct natmpcb *)so->so_pcb;
+	KASSERT(npcb != NULL, ("natm_usr_detach: npcb == NULL"));
 
-    /*
-     * we turn on 'drain' *before* we sofree.
-     */
-    npcb_free(npcb, NPCB_DESTROY);	/* drain */
-    ACCEPT_LOCK();
-    SOCK_LOCK(so);
-    so->so_pcb = NULL;
-    sotryfree(so);
- out:
-    NATM_UNLOCK();
-    return (error);
+	NATM_LOCK();
+	npcb_free(npcb, NPCB_DESTROY);	/* drain */
+	so->so_pcb = NULL;
+	NATM_UNLOCK();
 }
 
 static int
 natm_usr_connect(struct socket *so, struct sockaddr *nam, d_thread_t *p)
 {
-    struct natmpcb *npcb;
-    struct sockaddr_natm *snatm;
-    struct atmio_openvcc op;
-    struct ifnet *ifp;
-    int error = 0;
-    int proto = so->so_proto->pr_protocol;
+	struct natmpcb *npcb;
+	struct sockaddr_natm *snatm;
+	struct atmio_openvcc op;
+	struct ifnet *ifp;
+	int error = 0;
+	int proto = so->so_proto->pr_protocol;
 
-    NATM_LOCK();
-    npcb = (struct natmpcb *)so->so_pcb;
-    if (npcb == NULL) {
-	/* XXXRW: Does this case ever actually happen? */
-	error = EINVAL;
-	goto out;
-    }
+	npcb = (struct natmpcb *)so->so_pcb;
+	KASSERT(npcb != NULL, ("natm_usr_connect: npcb == NULL"));
 
-    /*
-     * validate nam and npcb
-     */
-    snatm = (struct sockaddr_natm *)nam;
-    if (snatm->snatm_len != sizeof(*snatm) ||
-	(npcb->npcb_flags & NPCB_FREE) == 0) {
-	error = EINVAL;
-	goto out;
-    }
-    if (snatm->snatm_family != AF_NATM) {
-	error = EAFNOSUPPORT;
-	goto out;
-    }
+	/*
+	 * Validate nam and npcb.
+	 */
+	NATM_LOCK();
+	snatm = (struct sockaddr_natm *)nam;
+	if (snatm->snatm_len != sizeof(*snatm) ||
+		(npcb->npcb_flags & NPCB_FREE) == 0) {
+		NATM_UNLOCK();
+		return (EINVAL);
+	}
+	if (snatm->snatm_family != AF_NATM) {
+		NATM_UNLOCK();
+		return (EAFNOSUPPORT);
+	}
 
-    snatm->snatm_if[IFNAMSIZ - 1] = '\0';	/* XXX ensure null termination
+	snatm->snatm_if[IFNAMSIZ - 1] = '\0';	/* XXX ensure null termination
 						   since ifunit() uses strcmp */
 
-    /*
-     * convert interface string to ifp, validate.
-     */
-    ifp = ifunit(snatm->snatm_if);
-    if (ifp == NULL || (ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
-	error = ENXIO;
-	goto out;
-    }
-    if (ifp->if_output != atm_output) {
-	error = EAFNOSUPPORT;
-	goto out;
-    }
+	/*
+	 * Convert interface string to ifp, validate.
+	 */
+	ifp = ifunit(snatm->snatm_if);
+	if (ifp == NULL || (ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) {
+		NATM_UNLOCK();
+		return (ENXIO);
+	}
+	if (ifp->if_output != atm_output) {
+		NATM_UNLOCK();
+		return (EAFNOSUPPORT);
+	}
 
-    /*
-     * register us with the NATM PCB layer
-     */
-    if (npcb_add(npcb, ifp, snatm->snatm_vci, snatm->snatm_vpi) != npcb) {
-        error = EADDRINUSE;
-        goto out;
-    }
-    NATM_UNLOCK();
+	/*
+	 * Register us with the NATM PCB layer.
+	 */
+	if (npcb_add(npcb, ifp, snatm->snatm_vci, snatm->snatm_vpi) != npcb) {
+		NATM_UNLOCK();
+		return (EADDRINUSE);
+	}
 
-    /*
-     * open the channel
-     */
-    bzero(&op, sizeof(op));
-    op.rxhand = npcb;
-    op.param.flags = ATMIO_FLAG_PVC;
-    op.param.vpi = npcb->npcb_vpi;
-    op.param.vci = npcb->npcb_vci;
-    op.param.rmtu = op.param.tmtu = ifp->if_mtu;
-    op.param.aal = (proto == PROTO_NATMAAL5) ? ATMIO_AAL_5 : ATMIO_AAL_0;
-    op.param.traffic = ATMIO_TRAFFIC_UBR;
+	/*
+	 * Open the channel.
+	 *
+	 * XXXRW: Eventually desirable to hold mutex over ioctl?
+	 */
+	bzero(&op, sizeof(op));
+	op.rxhand = npcb;
+	op.param.flags = ATMIO_FLAG_PVC;
+	op.param.vpi = npcb->npcb_vpi;
+	op.param.vci = npcb->npcb_vci;
+	op.param.rmtu = op.param.tmtu = ifp->if_mtu;
+	op.param.aal = (proto == PROTO_NATMAAL5) ? ATMIO_AAL_5 : ATMIO_AAL_0;
+	op.param.traffic = ATMIO_TRAFFIC_UBR;
+	NATM_UNLOCK();
 
-    IFF_LOCKGIANT(ifp);
-    if (ifp->if_ioctl == NULL || 
-	ifp->if_ioctl(ifp, SIOCATMOPENVCC, (caddr_t)&op) != 0) {
+	IFF_LOCKGIANT(ifp);
+	if (ifp->if_ioctl == NULL || 
+	    ifp->if_ioctl(ifp, SIOCATMOPENVCC, (caddr_t)&op) != 0) {
+		IFF_UNLOCKGIANT(ifp);
+		return (EIO);
+	}
 	IFF_UNLOCKGIANT(ifp);
-	NATM_LOCK();
-	npcb_free(npcb, NPCB_REMOVE);
-        error = EIO;
-	goto out;
-    }
-    IFF_UNLOCKGIANT(ifp);
-
-    NATM_LOCK();
-    soisconnected(so);
-
- out:
-    NATM_UNLOCK();
-    return (error);
+	soisconnected(so);
+	return (error);
 }
 
 static int
 natm_usr_disconnect(struct socket *so)
 {
-    struct natmpcb *npcb;
-    struct atmio_closevcc cl;
-    struct ifnet *ifp;
-    int error = 0;
+	struct natmpcb *npcb;
+	struct atmio_closevcc cl;
+	struct ifnet *ifp;
+	int error = 0;
 
-    NATM_LOCK();
-    npcb = (struct natmpcb *)so->so_pcb;
-    if (npcb == NULL) {
-	/* XXXRW: Does this case ever actually happen? */
-	error = EINVAL;
-	goto out;
-    }
+	npcb = (struct natmpcb *)so->so_pcb;
+	KASSERT(npcb != NULL, ("natm_usr_disconnect: npcb == NULL"));
 
-    if ((npcb->npcb_flags & NPCB_CONNECTED) == 0) {
-        printf("natm: disconnected check\n");
-        error = EIO;
-	goto out;
-    }
-    ifp = npcb->npcb_ifp;
+	NATM_LOCK();
+	if ((npcb->npcb_flags & NPCB_CONNECTED) == 0) {
+		NATM_UNLOCK();
+		printf("natm: disconnected check\n");
+		return (EIO);
+	}
+	ifp = npcb->npcb_ifp;
 
-    /*
-     * disable rx
-     */
-    cl.vpi = npcb->npcb_vpi;
-    cl.vci = npcb->npcb_vci;
-    NATM_UNLOCK();
-    if (ifp->if_ioctl != NULL) {
-	IFF_LOCKGIANT(ifp);
-	ifp->if_ioctl(ifp, SIOCATMCLOSEVCC, (caddr_t)&cl);
-	IFF_UNLOCKGIANT(ifp);
-    }
-    NATM_LOCK();
-
-    npcb_free(npcb, NPCB_REMOVE);
-    soisdisconnected(so);
-
- out:
-    NATM_UNLOCK();
-    return (error);
+	/*
+	 * Disable rx.
+	 *
+	 * XXXRW: Eventually desirable to hold mutex over ioctl?
+	 */
+	cl.vpi = npcb->npcb_vpi;
+	cl.vci = npcb->npcb_vci;
+	NATM_UNLOCK();
+	if (ifp->if_ioctl != NULL) {
+		IFF_LOCKGIANT(ifp);
+		ifp->if_ioctl(ifp, SIOCATMCLOSEVCC, (caddr_t)&cl);
+		IFF_UNLOCKGIANT(ifp);
+	}
+	soisdisconnected(so);
+	return (error);
 }
 
 static int
 natm_usr_shutdown(struct socket *so)
 {
-    socantsendmore(so);
-    return (0);
+
+	socantsendmore(so);
+	return (0);
 }
 
 static int
 natm_usr_send(struct socket *so, int flags, struct mbuf *m, 
-    struct sockaddr *nam, struct mbuf *control, d_thread_t *p)
+	struct sockaddr *nam, struct mbuf *control, d_thread_t *p)
 {
-    struct natmpcb *npcb;
-    struct atm_pseudohdr *aph;
-    int error = 0;
-    int proto = so->so_proto->pr_protocol;
+	struct natmpcb *npcb;
+	struct atm_pseudohdr *aph;
+	int error = 0;
+	int proto = so->so_proto->pr_protocol;
 
-    NATM_LOCK();
-    npcb = (struct natmpcb *)so->so_pcb;
-    if (npcb == NULL) {
-	/* XXXRW: Does this case ever actually happen? */
-	error = EINVAL;
-	goto out;
-    }
+	npcb = (struct natmpcb *)so->so_pcb;
+	KASSERT(npcb != NULL, ("natm_usr_send: npcb == NULL"));
 
-    if (control && control->m_len) {
-	m_freem(control);
-	m_freem(m);
-	error = EINVAL;
-	goto out;
-    }
+	NATM_LOCK();
+	if (control && control->m_len) {
+		NATM_UNLOCK();
+		m_freem(control);
+		m_freem(m);
+		return (EINVAL);
+	}
 
-    /*
-     * send the data.   we must put an atm_pseudohdr on first
-     */
-    M_PREPEND(m, sizeof(*aph), M_DONTWAIT);
-    if (m == NULL) {
-        error = ENOBUFS;
-	goto out;
-    }
-    aph = mtod(m, struct atm_pseudohdr *);
-    ATM_PH_VPI(aph) = npcb->npcb_vpi;
-    ATM_PH_SETVCI(aph, npcb->npcb_vci);
-    ATM_PH_FLAGS(aph) = (proto == PROTO_NATMAAL5) ? ATM_PH_AAL5 : 0;
-
-    error = atm_output(npcb->npcb_ifp, m, NULL, NULL);
-
- out:
-    NATM_UNLOCK();
-    return (error);
+	/*
+	 * Send the data.  We must put an atm_pseudohdr on first.
+	 */
+	M_PREPEND(m, sizeof(*aph), M_DONTWAIT);
+	if (m == NULL) {
+		NATM_UNLOCK();
+		m_freem(control);
+		return (ENOBUFS);
+	}
+	aph = mtod(m, struct atm_pseudohdr *);
+	ATM_PH_VPI(aph) = npcb->npcb_vpi;
+	ATM_PH_SETVCI(aph, npcb->npcb_vci);
+	ATM_PH_FLAGS(aph) = (proto == PROTO_NATMAAL5) ? ATM_PH_AAL5 : 0;
+	error = atm_output(npcb->npcb_ifp, m, NULL, NULL);
+	NATM_UNLOCK();
+	return (error);
 }
 
 static int
 natm_usr_peeraddr(struct socket *so, struct sockaddr **nam)
 {
-    struct natmpcb *npcb;
-    struct sockaddr_natm *snatm, ssnatm;
+	struct natmpcb *npcb;
+	struct sockaddr_natm *snatm, ssnatm;
 
-    NATM_LOCK();
-    npcb = (struct natmpcb *)so->so_pcb;
-    if (npcb == NULL) {
-	/* XXXRW: Does this case ever actually happen? */
-    	NATM_UNLOCK();
-	return (EINVAL);
-    }
+	npcb = (struct natmpcb *)so->so_pcb;
+	KASSERT(npcb != NULL, ("natm_usr_peeraddr: npcb == NULL"));
 
-    snatm = &ssnatm;
-    bzero(snatm, sizeof(*snatm));
-    snatm->snatm_len = sizeof(*snatm);
-    snatm->snatm_family = AF_NATM;
-    strlcpy(snatm->snatm_if, npcb->npcb_ifp->if_xname,
-        sizeof(snatm->snatm_if));
-    snatm->snatm_vci = npcb->npcb_vci;
-    snatm->snatm_vpi = npcb->npcb_vpi;
-    NATM_UNLOCK();
-    *nam = sodupsockaddr((struct sockaddr *)snatm, M_WAITOK);
-    return (0);
+	NATM_LOCK();
+	snatm = &ssnatm;
+	bzero(snatm, sizeof(*snatm));
+	snatm->snatm_len = sizeof(*snatm);
+	snatm->snatm_family = AF_NATM;
+	strlcpy(snatm->snatm_if, npcb->npcb_ifp->if_xname,
+	    sizeof(snatm->snatm_if));
+	snatm->snatm_vci = npcb->npcb_vci;
+	snatm->snatm_vpi = npcb->npcb_vpi;
+	NATM_UNLOCK();
+	*nam = sodupsockaddr((struct sockaddr *)snatm, M_WAITOK);
+	return (0);
 }
 
 static int
 natm_usr_control(struct socket *so, u_long cmd, caddr_t arg,
-    struct ifnet *ifp, d_thread_t *p)
+	struct ifnet *ifp, d_thread_t *p)
 {
-    struct natmpcb *npcb;
-    int error;
+	struct natmpcb *npcb;
+	int error;
 
-    /*
-     * XXXRW: Does this case ever actually happen?  And does it even matter
-     * given that npcb is unused?
-     */
-    npcb = (struct natmpcb *)so->so_pcb;
-    if (npcb == NULL)
-	return (EINVAL);
+	npcb = (struct natmpcb *)so->so_pcb;
+	KASSERT(npcb != NULL, ("natm_usr_control: npcb == NULL"));
 
-    if (ifp == NULL || ifp->if_ioctl == NULL)
-	return (EOPNOTSUPP);
-
-    IFF_LOCKGIANT(ifp);
-    error = ((*ifp->if_ioctl)(ifp, cmd, arg));
-    IFF_UNLOCKGIANT(ifp);
-    return (error);
+	if (ifp == NULL || ifp->if_ioctl == NULL)
+		return (EOPNOTSUPP);
+	IFF_LOCKGIANT(ifp);
+	error = ((*ifp->if_ioctl)(ifp, cmd, arg));
+	IFF_UNLOCKGIANT(ifp);
+	return (error);
 }
 
-static int
+static void
 natm_usr_abort(struct socket *so)
 {
-    return (natm_usr_shutdown(so));
+
+}
+
+static void
+natm_usr_close(struct socket *so)
+{
+
 }
 
 static int
 natm_usr_bind(struct socket *so, struct sockaddr *nam, d_thread_t *p)
 {
-    return (EOPNOTSUPP);
+
+	return (EOPNOTSUPP);
 }
 
 static int
 natm_usr_sockaddr(struct socket *so, struct sockaddr **nam)
 {
-    return (EOPNOTSUPP);
+
+	return (EOPNOTSUPP);
 }
 
 /* xxx - should be const */
@@ -404,14 +394,15 @@ struct pr_usrreqs natm_usrreqs = {
 	.pru_send =		natm_usr_send,
 	.pru_shutdown =		natm_usr_shutdown,
 	.pru_sockaddr =		natm_usr_sockaddr,
+	.pru_close =		natm_usr_close,
 };
 
 /*
  * natmintr: interrupt
  *
- * note: we expect a socket pointer in rcvif rather than an interface
- * pointer.    we can get the interface pointer from the so's PCB if
- * we really need it.
+ * Note: we expect a socket pointer in rcvif rather than an interface
+ * pointer.  We can get the interface pointer from the so's PCB if we really
+ * need it.
  */
 void
 natmintr(struct mbuf *m)
@@ -476,6 +467,7 @@ natmintr(struct mbuf *m)
 int
 natm0_sysctl(SYSCTL_HANDLER_ARGS)
 {
+
 	/* All sysctl names at this level are terminal. */
 	return (ENOENT);
 }
@@ -487,6 +479,7 @@ natm0_sysctl(SYSCTL_HANDLER_ARGS)
 int
 natm5_sysctl(SYSCTL_HANDLER_ARGS)
 {
+
 	/* All sysctl names at this level are terminal. */
 	return (ENOENT);
 }

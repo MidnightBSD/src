@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_vfs_subs.c,v 1.4 2005/01/07 01:45:50 imp Exp $ */
-/* $Id: nfs4_vfs_subs.c,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
+/* $FreeBSD: src/sys/nfs4client/nfs4_vfs_subs.c,v 1.5 2007/01/25 13:07:25 bde Exp $ */
+/* $Id: nfs4_vfs_subs.c,v 1.2 2008-10-01 16:44:41 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -64,24 +64,6 @@
 #include <nfs4client/nfs4_vfs.h>
 
 #include <nfsclient/nfsnode.h>
-
-static int	nfs_iosize(struct nfsmount *nmp);
-
-static int
-nfs_iosize(struct nfsmount *nmp)
-{
-	int iosize;
-
-	/*
-	 * Calculate the size used for io buffers.  Use the larger
-	 * of the two sizes to minimise nfs requests but make sure
-	 * that it is at least one VM page to avoid wasting buffer
-	 * space.
-	 */
-	iosize = max(nmp->nm_rsize, nmp->nm_wsize);
-	if (iosize < PAGE_SIZE) iosize = PAGE_SIZE;
-	return iosize;
-}
 
 void
 nfs4_vfsop_fsinfo(struct nfsv4_fattr *fap, struct nfsmount *nmp)

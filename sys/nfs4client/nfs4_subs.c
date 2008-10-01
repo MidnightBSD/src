@@ -1,5 +1,5 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_subs.c,v 1.5 2005/01/07 01:45:50 imp Exp $ */
-/* $Id: nfs4_subs.c,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
+/* $FreeBSD: src/sys/nfs4client/nfs4_subs.c,v 1.6 2006/11/28 19:33:28 rees Exp $ */
+/* $Id: nfs4_subs.c,v 1.2 2008-10-01 16:44:41 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
@@ -129,8 +129,10 @@ nfsm_v4init(void)
 	FA4_SET(FA4_OWNER, __getattr_bm);
 	FA4_SET(FA4_OWNER_GROUP, __getattr_bm);
 	FA4_SET(FA4_FILEID, __getattr_bm);
-	FA4_SET(FA4_TIME_MODIFY, __getattr_bm);
 	FA4_SET(FA4_TIME_ACCESS, __getattr_bm);
+	FA4_SET(FA4_TIME_CREATE, __getattr_bm);
+	FA4_SET(FA4_TIME_METADATA, __getattr_bm);
+	FA4_SET(FA4_TIME_MODIFY, __getattr_bm);
 
 	FA4_SET(FA4_TYPE, __readdir_bm);
 	FA4_SET(FA4_FSID, __readdir_bm);
@@ -1343,6 +1345,11 @@ nfsm_v4dissect_attrs_xx(struct nfsv4_fattr *fa, struct mbuf **md, caddr_t *dpos)
 		len += 3 * NFSX_UNSIGNED;
 	}
 	if (FA4_ISSET(FA4_TIME_CREATE, bmval)) {
+		NFSM_MTOTIME(fa->fa4_btime);
+		fa->fa4_valid |= FA4V_BTIME;
+		len += 3 * NFSX_UNSIGNED;
+	}
+	if (FA4_ISSET(FA4_TIME_METADATA, bmval)) {
 		NFSM_MTOTIME(fa->fa4_ctime);
 		fa->fa4_valid |= FA4V_CTIME;
 		len += 3 * NFSX_UNSIGNED;

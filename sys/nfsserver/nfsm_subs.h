@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsm_subs.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfsserver/nfsm_subs.h,v 1.37 2005/01/07 01:45:51 imp Exp $
+ * $FreeBSD: src/sys/nfsserver/nfsm_subs.h,v 1.39 2007/03/17 18:18:08 jeff Exp $
  */
 
 #ifndef _NFSSERVER_NFSM_SUBS_H_
@@ -74,6 +74,7 @@
 
 int	nfsm_srvstrsiz_xx(int *s, int m, struct mbuf **md, caddr_t *dpos);
 int	nfsm_srvnamesiz_xx(int *s, int m, struct mbuf **md, caddr_t *dpos);
+int	nfsm_srvnamesiz0_xx(int *s, int m, struct mbuf **md, caddr_t *dpos);
 int	nfsm_srvmtofh_xx(fhandle_t *f, struct nfsrv_descript *nfsd,
 	    struct mbuf **md, caddr_t *dpos);
 int	nfsm_srvsattr_xx(struct vattr *a, struct mbuf **md, caddr_t *dpos);
@@ -101,7 +102,7 @@ do { \
 #define	nfsm_srvpathsiz(s) \
 do { \
 	int t1; \
-	t1 = nfsm_srvnamesiz_xx(&(s), NFS_MAXPATHLEN, &md, &dpos); \
+	t1 = nfsm_srvnamesiz0_xx(&(s), NFS_MAXPATHLEN, &md, &dpos); \
 	if (t1) { \
 		error = t1; \
 		nfsm_reply(0); \
@@ -160,7 +161,7 @@ void	nfsm_srvfhtom_xx(fhandle_t *f, int v3, struct mbuf **mb,
 	    caddr_t *bpos);
 void	nfsm_srvpostop_fh_xx(fhandle_t *f, struct mbuf **mb, caddr_t *bpos);
 void	nfsm_clget_xx(u_int32_t **tl, struct mbuf *mb, struct mbuf **mp,
-	    char **bp, char **be, caddr_t bpos, int droplock);
+	    char **bp, char **be, caddr_t bpos);
 
 #define nfsm_srvfhtom(f, v3) \
 	nfsm_srvfhtom_xx((f), (v3), &mb, &bpos)
@@ -178,9 +179,6 @@ void	nfsm_clget_xx(u_int32_t **tl, struct mbuf *mb, struct mbuf **mp,
 	nfsm_srvfattr(nfsd, (a), (f))
 
 #define nfsm_clget \
-	nfsm_clget_xx(&tl, mb, &mp, &bp, &be, bpos, 1)
-
-#define nfsm_clget_nolock \
-	nfsm_clget_xx(&tl, mb, &mp, &bp, &be, bpos, 0)
+	nfsm_clget_xx(&tl, mb, &mp, &bp, &be, bpos)
 
 #endif

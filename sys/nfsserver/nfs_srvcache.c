@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvcache.c,v 1.40 2005/01/07 01:45:51 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvcache.c,v 1.44 2007/03/17 18:18:08 jeff Exp $");
 
 /*
  * Reference: Chet Juszczak, "Improving the Performance and Correctness
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvcache.c,v 1.40 2005/01/07 01:45:51 
 #include <sys/mutex.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>	/* for sodupsockaddr */
+#include <sys/eventhandler.h>
 
 #include <netinet/in.h>
 #include <nfs/rpcv2.h>
@@ -57,13 +58,14 @@ __FBSDID("$FreeBSD: src/sys/nfsserver/nfs_srvcache.c,v 1.40 2005/01/07 01:45:51 
 #include <nfsserver/nfsrvcache.h>
 
 static long numnfsrvcache;
-static long desirednfsrvcache = NFSRVCACHESIZ;
+static long desirednfsrvcache;
 
 #define	NFSRCHASH(xid) \
 	(&nfsrvhashtbl[((xid) + ((xid) >> 24)) & nfsrvhash])
 static LIST_HEAD(nfsrvhash, nfsrvcache) *nfsrvhashtbl;
 static TAILQ_HEAD(nfsrvlru, nfsrvcache) nfsrvlruhead;
 static u_long nfsrvhash;
+static eventhandler_tag nfsrv_nmbclusters_tag;
 
 #define TRUE	1
 #define	FALSE	0
@@ -122,15 +124,43 @@ static const int nfsv2_repstat[NFS_NPROCS] = {
 	FALSE,
 };
 
+/* 
+ * Size the NFS server's duplicate request cache at 1/2 the nmbclsters, floating 
+ * within a (64, 2048) range. This is to prevent all mbuf clusters being tied up 
+ * in the NFS dupreq cache for small values of nmbclusters. 
+ */
+static void
+nfsrvcache_size_change(void *tag)
+{
+	desirednfsrvcache = nmbclusters /2;
+	if (desirednfsrvcache > NFSRVCACHE_MAX_SIZE)
+		desirednfsrvcache = NFSRVCACHE_MAX_SIZE;
+	if (desirednfsrvcache < NFSRVCACHE_MIN_SIZE)
+		desirednfsrvcache = NFSRVCACHE_MIN_SIZE;	
+}
+
 /*
  * Initialize the server request cache list
  */
 void
 nfsrv_initcache(void)
 {
-
+	nfsrvcache_size_change(NULL);
 	nfsrvhashtbl = hashinit(desirednfsrvcache, M_NFSD, &nfsrvhash);
 	TAILQ_INIT(&nfsrvlruhead);
+	nfsrv_nmbclusters_tag = EVENTHANDLER_REGISTER(nmbclusters_change,
+	    nfsrvcache_size_change, NULL, EVENTHANDLER_PRI_FIRST);
+}
+
+/*
+ * Teardown the server request cache list
+ */
+void
+nfsrv_destroycache(void)
+{
+	KASSERT(TAILQ_EMPTY(&nfsrvlruhead), ("%s: pending requests", __func__));
+	EVENTHANDLER_DEREGISTER(nmbclusters_change, nfsrv_nmbclusters_tag);
+	hashdestroy(nfsrvhashtbl, M_NFSD, nfsrvhash);
 }
 
 /*
@@ -188,9 +218,11 @@ loop:
 				ret = RC_DROPIT;
 			} else if (rp->rc_flag & RC_REPSTATUS) {
 				nfsrvstats.srvcache_nonidemdonehits++;
+				NFSD_UNLOCK();
 				*repp = nfs_rephead(0, nd, rp->rc_status,
 				    &mb, &bpos);
 				ret = RC_REPLY;
+				NFSD_LOCK();
 			} else if (rp->rc_flag & RC_REPMBUF) {
 				nfsrvstats.srvcache_nonidemdonehits++;
 				NFSD_UNLOCK();
@@ -342,8 +374,7 @@ nfsrv_cleancache(void)
 
 	NFSD_LOCK_ASSERT();
 
-	for (rp = TAILQ_FIRST(&nfsrvlruhead); rp != 0; rp = nextrp) {
-		nextrp = TAILQ_NEXT(rp, rc_lru);
+	TAILQ_FOREACH_SAFE(rp, &nfsrvlruhead, rc_lru, nextrp) {
 		LIST_REMOVE(rp, rc_hash);
 		TAILQ_REMOVE(&nfsrvlruhead, rp, rc_lru);
 		if (rp->rc_flag & RC_REPMBUF)
