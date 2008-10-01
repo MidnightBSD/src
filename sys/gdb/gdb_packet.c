@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/gdb/gdb_packet.c,v 1.2 2005/01/06 18:27:29 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/gdb/gdb_packet.c,v 1.4 2007/06/09 21:55:17 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: src/sys/gdb/gdb_packet.c,v 1.2 2005/01/06 18:27:29 imp Exp $
 #include <sys/kdb.h>
 
 #include <machine/gdb_machdep.h>
+#include <machine/kdb.h>
 
 #include <gdb/gdb.h>
 #include <gdb/gdb_int.h>
@@ -46,6 +47,21 @@ char *gdb_txp = NULL;			/* Used in inline functions. */
 #define	C2N(c)	(((c) < 'A') ? (c) - '0' : \
 	    10 + (((c) < 'a') ? (c) - 'A' : (c) - 'a'))
 #define	N2C(n)	(((n) < 10) ? (n) + '0' : (n) + 'a' - 10)
+
+/*
+ * Get a single character
+ */
+
+static int
+gdb_getc(void)
+{
+	int c;
+
+	do
+		c = gdb_cur->gdb_getc();
+	while (c == -1);
+	return (c);
+}
 
 /*
  * Functions to receive and extract from a packet.
@@ -62,14 +78,14 @@ gdb_rx_begin(void)
 		 * Wait for the start character, ignore all others.
 		 * XXX needs a timeout.
 		 */
-		while ((c = gdb_cur->gdb_getc()) != '$')
+		while ((c = gdb_getc()) != '$')
 			;
 
 		/* Read until a # or end of buffer is found. */
 		cksum = 0;
 		gdb_rxsz = 0;
 		while (gdb_rxsz < sizeof(gdb_rxbuf) - 1) {
-			c = gdb_cur->gdb_getc();
+			c = gdb_getc();
 			if (c == '#')
 				break;
 			gdb_rxbuf[gdb_rxsz++] = c;
@@ -84,9 +100,9 @@ gdb_rx_begin(void)
 			return (ENOSPC);
 		}
 
-		c = gdb_cur->gdb_getc();
+		c = gdb_getc();
 		cksum -= (C2N(c) << 4) & 0xf0;
-		c = gdb_cur->gdb_getc();
+		c = gdb_getc();
 		cksum -= C2N(c) & 0x0f;
 		gdb_cur->gdb_putc((cksum == 0) ? '+' : '-');
 		if (cksum != 0)
@@ -114,8 +130,10 @@ gdb_rx_equal(const char *str)
 int
 gdb_rx_mem(unsigned char *addr, size_t size)
 {
+	unsigned char *p;
 	void *prev;
 	jmp_buf jb;
+	size_t cnt;
 	int ret;
 	unsigned char c;
 
@@ -125,13 +143,16 @@ gdb_rx_mem(unsigned char *addr, size_t size)
 	prev = kdb_jmpbuf(jb);
 	ret = setjmp(jb);
 	if (ret == 0) {
-		while (size-- > 0) {
+		p = addr;
+		cnt = size;
+		while (cnt-- > 0) {
 			c = (C2N(gdb_rxp[0]) << 4) & 0xf0;
 			c |= C2N(gdb_rxp[1]) & 0x0f;
-			*addr++ = c;
+			*p++ = c;
 			gdb_rxsz -= 2;
 			gdb_rxp += 2;
 		}
+		kdb_cpu_sync_icache(addr, size);
 	}
 	(void)kdb_jmpbuf(prev);
 	return ((ret == 0) ? 1 : 0);
@@ -245,7 +266,7 @@ gdb_tx_end(void)
 		c = cksum & 0x0f;
 		gdb_cur->gdb_putc(N2C(c));
 
-		c = gdb_cur->gdb_getc();
+		c = gdb_getc();
 	} while (c != '+');
 
 	return (0);

@@ -23,13 +23,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/gdb/gdb_int.h,v 1.2 2005/01/06 18:27:29 imp Exp $
+ * $FreeBSD: src/sys/gdb/gdb_int.h,v 1.3 2006/03/23 23:06:14 sam Exp $
  */
 
 #ifndef _GDB_GDB_INT_H_
 #define	_GDB_GDB_INT_H_
 
 extern struct gdb_dbgport *gdb_cur;
+
+extern int gdb_listening;
+void gdb_consinit(void);
 
 extern char *gdb_rxp;
 extern size_t gdb_rxsz;

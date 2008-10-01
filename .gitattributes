@@ -25952,6 +25952,7 @@ sys/fs/unionfs/union_subr.c -text
 sys/fs/unionfs/union_vfsops.c -text
 sys/fs/unionfs/union_vnops.c -text
 sys/gdb/gdb.h -text
+sys/gdb/gdb_cons.c -text
 sys/gdb/gdb_int.h -text
 sys/gdb/gdb_main.c -text
 sys/gdb/gdb_packet.c -text
