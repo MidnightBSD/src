@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/amd64/include/pthread_md.h,v 1.1 2005/04/02 01:19:57 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/arch/amd64/include/pthread_md.h,v 1.4 2006/12/15 11:52:00 davidxu Exp $
  */
 
 /*
@@ -36,7 +36,8 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <machine/sysarch.h>
-#include <ucontext.h>
+
+#define	CPU_SPINWAIT		__asm __volatile("pause")
 
 #define	DTV_OFFSET		offsetof(struct tcb, tcb_dtv)
 
@@ -91,13 +92,9 @@ _tcb_get(void)
 	return (TCB_GET64(tcb_self));
 }
 
-extern struct pthread *_thr_initial;
-
 static __inline struct pthread *
 _get_curthread(void)
 {
-	if (_thr_initial)
-		return (TCB_GET64(tcb_thread));
-	return (NULL);
+	return (TCB_GET64(tcb_thread));
 }
 #endif

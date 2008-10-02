@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_fork.c,v 1.1.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_fork.c,v 1.8 2007/01/12 07:26:20 imp Exp $
  */
 
 /*
@@ -39,10 +39,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -60,12 +57,14 @@
  *
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <spinlock.h>
+#include "un-namespace.h"
 
 #include "libc_private.h"
 #include "thr_private.h"
@@ -88,19 +87,15 @@ _pthread_atfork(void (*prepare)(void), void (*parent)(void),
 	af->prepare = prepare;
 	af->parent = parent;
 	af->child = child;
-	THR_UMTX_LOCK(curthread, &_thr_atfork_lock);
+	THR_UMUTEX_LOCK(curthread, &_thr_atfork_lock);
 	TAILQ_INSERT_TAIL(&_thr_atfork_list, af, qe);
-	THR_UMTX_UNLOCK(curthread, &_thr_atfork_lock);
+	THR_UMUTEX_UNLOCK(curthread, &_thr_atfork_lock);
 	return (0);
 }
 
-/*
- * For a while, allow libpthread to work with a libc that doesn't
- * export the malloc lock.
- */
-#pragma weak __malloc_lock
-
 __weak_reference(_fork, fork);
+
+pid_t _fork(void);
 
 pid_t
 _fork(void)
@@ -116,7 +111,7 @@ _fork(void)
 
 	curthread = _get_curthread();
 
-	THR_UMTX_LOCK(curthread, &_thr_atfork_lock);
+	THR_UMUTEX_LOCK(curthread, &_thr_atfork_lock);
 
 	/* Run down atfork prepare handlers. */
 	TAILQ_FOREACH_REVERSE(af, &_thr_atfork_list, atfork_head, qe) {
@@ -129,9 +124,9 @@ _fork(void)
 	 * child process because another thread in malloc code will
 	 * simply be kill by fork().
 	 */
-	if ((_thr_isthreaded() != 0) && (__malloc_lock != NULL)) {
+	if (_thr_isthreaded() != 0) {
 		unlock_malloc = 1;
-		_spinlock(__malloc_lock);
+		_malloc_prefork();
 	} else {
 		unlock_malloc = 0;
 	}
@@ -145,7 +140,9 @@ _fork(void)
 	if ((ret = __sys_fork()) == 0) {
 		/* Child process */
 		errsave = errno;
-		curthread->cancelflags &= ~THR_CANCEL_NEEDED;
+		curthread->cancel_pending = 0;
+		curthread->flags &= ~THR_FLAGS_NEED_SUSPEND;
+
 		/*
 		 * Thread list will be reinitialized, and later we call
 		 * _libpthread_init(), it will add us back to list.
@@ -156,11 +153,11 @@ _fork(void)
 		thr_self(&curthread->tid);
 
 		/* clear other threads locked us. */
-		_thr_umtx_init(&curthread->lock);
-		_thr_umtx_init(&_thr_atfork_lock);
+		_thr_umutex_init(&curthread->lock);
+		_thr_umutex_init(&_thr_atfork_lock);
 		_thr_setthreaded(0);
 
-		/* reinitialize libc spinlocks, this includes __malloc_lock. */
+		/* reinitialize libc spinlocks. */
 		_thr_spinlock_init();
 		_mutex_fork(curthread);
 
@@ -183,7 +180,7 @@ _fork(void)
 		_thr_signal_unblock(curthread);
 
 		if (unlock_malloc)
-			_spinunlock(__malloc_lock);
+			_malloc_postfork();
 
 		/* Run down atfork parent handlers. */
 		TAILQ_FOREACH(af, &_thr_atfork_list, qe) {
@@ -191,7 +188,7 @@ _fork(void)
 				af->parent();
 		}
 
-		THR_UMTX_UNLOCK(curthread, &_thr_atfork_lock);
+		THR_UMUTEX_UNLOCK(curthread, &_thr_atfork_lock);
 	}
 	errno = errsave;
 

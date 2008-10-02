@@ -23,12 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_barrier.c,v 1.4 2005/04/04 23:43:53 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_barrier.c,v 1.8 2006/12/05 23:46:11 davidxu Exp $
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
@@ -54,9 +56,11 @@ _pthread_barrier_destroy(pthread_barrier_t *barrier)
 
 int
 _pthread_barrier_init(pthread_barrier_t *barrier,
-		      const pthread_barrierattr_t *attr, int count)
+		      const pthread_barrierattr_t *attr, unsigned count)
 {
 	pthread_barrier_t	bar;
+
+	(void)attr;
 
 	if (barrier == NULL || count <= 0)
 		return (EINVAL);
@@ -65,7 +69,8 @@ _pthread_barrier_init(pthread_barrier_t *barrier,
 	if (bar == NULL)
 		return (ENOMEM);
 
-	_thr_umtx_init(&bar->b_lock);
+	_thr_umutex_init(&bar->b_lock);
+	_thr_ucond_init(&bar->b_cv);
 	bar->b_cycle	= 0;
 	bar->b_waiters	= 0;
 	bar->b_count	= count;
@@ -79,28 +84,29 @@ _pthread_barrier_wait(pthread_barrier_t *barrier)
 {
 	struct pthread *curthread = _get_curthread();
 	pthread_barrier_t bar;
-	long cycle;
+	int64_t cycle;
 	int ret;
 
 	if (barrier == NULL || *barrier == NULL)
 		return (EINVAL);
 
 	bar = *barrier;
-	THR_UMTX_LOCK(curthread, &bar->b_lock);
+	THR_UMUTEX_LOCK(curthread, &bar->b_lock);
 	if (++bar->b_waiters == bar->b_count) {
 		/* Current thread is lastest thread */
 		bar->b_waiters = 0;
 		bar->b_cycle++;
-		_thr_umtx_wake(&bar->b_cycle, bar->b_count - 1);
-		THR_UMTX_UNLOCK(curthread, &bar->b_lock);
+		_thr_ucond_broadcast(&bar->b_cv);
+		THR_UMUTEX_UNLOCK(curthread, &bar->b_lock);
 		ret = PTHREAD_BARRIER_SERIAL_THREAD;
 	} else {
 		cycle = bar->b_cycle;
-		THR_UMTX_UNLOCK(curthread, &bar->b_lock);
 		do {
-			_thr_umtx_wait(&bar->b_cycle, cycle, NULL);
+			_thr_ucond_wait(&bar->b_cv, &bar->b_lock, NULL, 0);
+			THR_UMUTEX_LOCK(curthread, &bar->b_lock);
 			/* test cycle to avoid bogus wakeup */
 		} while (cycle == bar->b_cycle);
+		THR_UMUTEX_UNLOCK(curthread, &bar->b_lock);
 		ret = 0;
 	}
 	return (ret);

@@ -29,12 +29,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_switch_np.c,v 1.1 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_switch_np.c,v 1.2 2006/04/04 02:57:49 davidxu Exp $
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <pthread.h>
 #include <pthread_np.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
@@ -43,13 +45,13 @@ __weak_reference(_pthread_switch_add_np, pthread_switch_add_np);
 __weak_reference(_pthread_switch_delete_np, pthread_switch_delete_np);
 
 int
-_pthread_switch_add_np(pthread_switch_routine_t routine)
+_pthread_switch_add_np(pthread_switch_routine_t routine __unused)
 {
 	return (ENOTSUP);
 }
 
 int
-_pthread_switch_delete_np(pthread_switch_routine_t routine)
+_pthread_switch_delete_np(pthread_switch_routine_t routine __unused)
 {
 	return (ENOTSUP);
 }

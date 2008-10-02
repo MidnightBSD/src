@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,9 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_setprio.c,v 1.1 2003/04/01 03:46:29 jeff Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_setprio.c,v 1.8 2007/01/12 07:26:20 imp Exp $
  */
+
+#include "namespace.h"
 #include <pthread.h>
+#include "un-namespace.h"
+
 #include "thr_private.h"
 
 __weak_reference(_pthread_setprio, pthread_setprio);
@@ -39,14 +40,43 @@ __weak_reference(_pthread_setprio, pthread_setprio);
 int
 _pthread_setprio(pthread_t pthread, int prio)
 {
-	int ret, policy;
-	struct sched_param param;
+	struct pthread	*curthread = _get_curthread();
+	struct sched_param	param;
+	int	ret;
 
-	if ((ret = pthread_getschedparam(pthread, &policy, &param)) == 0) {
-		param.sched_priority = prio;
-		ret = pthread_setschedparam(pthread, policy, &param);
+	param.sched_priority = prio;
+	if (pthread == curthread) {
+		THR_LOCK(curthread);
+		if (curthread->attr.sched_policy == SCHED_OTHER ||
+		    curthread->attr.prio == prio) {
+			curthread->attr.prio = prio;
+			ret = 0;
+		} else {
+			ret = _thr_setscheduler(curthread->tid,
+			    curthread->attr.sched_policy, &param);
+			if (ret == -1)
+				ret = errno;
+			else 
+				curthread->attr.prio = prio;
+		}
+		THR_UNLOCK(curthread);
+	} else if ((ret = _thr_ref_add(curthread, pthread, /*include dead*/0))
+		== 0) {
+		THR_THREAD_LOCK(curthread, pthread);
+		if (pthread->attr.sched_policy == SCHED_OTHER ||
+		    pthread->attr.prio == prio) {
+			pthread->attr.prio = prio;
+			ret = 0;
+		} else {
+			ret = _thr_setscheduler(pthread->tid,
+				curthread->attr.sched_policy, &param);
+			if (ret == -1)
+				ret = errno;
+			else
+				pthread->attr.prio = prio;
+		}
+		THR_THREAD_UNLOCK(curthread, pthread);
+		_thr_ref_delete(curthread, pthread);
 	}
-
-	/* Return the error status: */
 	return (ret);
 }

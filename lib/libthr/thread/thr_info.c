@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,13 +26,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
- * $FreeBSD: src/lib/libthr/thread/thr_info.c,v 1.4.2.2 2006/01/24 02:04:21 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_info.c,v 1.10 2007/04/05 07:20:31 davidxu Exp $
  */
 
-#include <stdio.h>
+#include "namespace.h"
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+#include <pthread_np.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
@@ -43,20 +42,29 @@ __weak_reference(_pthread_set_name_np, pthread_set_name_np);
 
 /* Set the thread name for debug. */
 void
-_pthread_set_name_np(pthread_t thread, char *name)
+_pthread_set_name_np(pthread_t thread, const char *name)
 {
-#if 0
 	struct pthread *curthread = _get_curthread();
+	int ret = 0;
 
-	if (thread != NULL && thread->magic == THR_MAGIC) {
-		THR_THREAD_LOCK(curthread, thread);
-		if (thread->name != NULL) {
-			free(thread->name);
-			thread->name = NULL;
+	if (curthread == thread) {
+		if (thr_set_name(thread->tid, name))
+			ret = errno;
+	} else {
+		if (_thr_ref_add(curthread, thread, 0) == 0) {
+			THR_THREAD_LOCK(curthread, thread);
+			if (thread->state != PS_DEAD) {
+				if (thr_set_name(thread->tid, name))
+					ret = errno;
+			}
+			THR_THREAD_UNLOCK(curthread, thread);
+			_thr_ref_delete(curthread, thread);
+		} else {
+			ret = ESRCH;
 		}
-		if (name != NULL)
-			thread->name = strdup(name);
-		THR_THREAD_UNLOCK(curthread, thread);
 	}
+#if 0
+	/* XXX should return error code. */
+	return (ret);
 #endif
 }

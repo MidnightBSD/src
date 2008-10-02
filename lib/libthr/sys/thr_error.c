@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/sys/thr_error.c,v 1.2 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/sys/thr_error.c,v 1.3 2006/07/12 03:44:05 davidxu Exp $
  */
 
 #include <pthread.h>
@@ -45,10 +45,12 @@ extern	int	errno;
 int *
 __error(void)
 {
-	struct pthread *curthread = _get_curthread();
+	struct pthread *curthread;
 
-	if (curthread != NULL && curthread != _thr_initial)
-		return (&curthread->error);
-	else
-		return (&errno);
+	if (_thr_initial != NULL) {
+		curthread = _get_curthread();
+		if (curthread != NULL && curthread != _thr_initial)
+			return (&curthread->error);
+	}
+	return (&errno);
 }

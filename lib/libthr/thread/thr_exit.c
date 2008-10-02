@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_exit.c,v 1.18.2.2 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_exit.c,v 1.23 2007/01/12 07:26:20 imp Exp $
  */
 
 #include <errno.h>
@@ -44,7 +41,7 @@ void	_pthread_exit(void *status);
 __weak_reference(_pthread_exit, pthread_exit);
 
 void
-_thread_exit(char *fname, int lineno, char *msg)
+_thread_exit(const char *fname, int lineno, const char *msg)
 {
 
 	/* Write an error message to the standard error file descriptor: */
@@ -87,7 +84,7 @@ _pthread_exit(void *status)
 	struct pthread *curthread = _get_curthread();
 
 	/* Check if this thread is already in the process of exiting: */
-	if ((curthread->cancelflags & THR_CANCEL_EXITING) != 0) {
+	if (curthread->cancelling) {
 		char msg[128];
 		snprintf(msg, sizeof(msg), "Thread %p has called "
 		    "pthread_exit() from a destructor. POSIX 1003.1 "
@@ -96,7 +93,7 @@ _pthread_exit(void *status)
 	}
 
 	/* Flag this thread as exiting. */
-	atomic_set_int(&curthread->cancelflags, THR_CANCEL_EXITING);
+	curthread->cancelling = 1;
 	
 	_thr_exit_cleanup();
 
@@ -105,9 +102,7 @@ _pthread_exit(void *status)
 	while (curthread->cleanup != NULL) {
 		pthread_cleanup_pop(1);
 	}
-	if (curthread->attr.cleanup_attr != NULL) {
-		curthread->attr.cleanup_attr(curthread->attr.arg_attr);
-	}
+
 	/* Check if there is thread specific data: */
 	if (curthread->specific != NULL) {
 		/* Run the thread-specific data destructors: */

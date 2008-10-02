@@ -23,13 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_rwlockattr.c,v 1.1 2003/04/01 03:46:29 jeff Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_rwlockattr.c,v 1.2 2006/04/04 02:57:49 davidxu Exp $
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <stdlib.h>
-
 #include <pthread.h>
+#include "un-namespace.h"
+
 #include "thr_private.h"
 
 __weak_reference(_pthread_rwlockattr_destroy, pthread_rwlockattr_destroy);

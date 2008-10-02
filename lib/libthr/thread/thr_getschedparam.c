@@ -29,11 +29,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_getschedparam.c,v 1.3 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_getschedparam.c,v 1.9 2006/09/21 04:21:30 davidxu Exp $
  */
 
+#include "namespace.h"
+#include <sys/types.h>
+#include <sys/rtprio.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
@@ -44,34 +48,30 @@ _pthread_getschedparam(pthread_t pthread, int *policy,
 	struct sched_param *param)
 {
 	struct pthread *curthread = _get_curthread();
-	int ret, tmp;
+	int ret;
 
-	if ((param == NULL) || (policy == NULL))
-		/* Return an invalid argument error: */
-		ret = EINVAL;
-	else if (pthread == curthread) {
+	if (policy == NULL || param == NULL)
+		return (EINVAL);
+
+	if (pthread == curthread) {
 		/*
 		 * Avoid searching the thread list when it is the current
 		 * thread.
 		 */
-		THR_THREAD_LOCK(curthread, curthread);
-		param->sched_priority =
-		    THR_BASE_PRIORITY(pthread->base_priority);
-		tmp = pthread->attr.sched_policy;
-		THR_THREAD_UNLOCK(curthread, curthread);
-		*policy = tmp;
+		THR_LOCK(curthread);
+		*policy = curthread->attr.sched_policy;
+		param->sched_priority = curthread->attr.prio;
+		THR_UNLOCK(curthread);
 		ret = 0;
 	}
 	/* Find the thread in the list of active threads. */
 	else if ((ret = _thr_ref_add(curthread, pthread, /*include dead*/0))
 	    == 0) {
 		THR_THREAD_LOCK(curthread, pthread);
-		param->sched_priority =
-		    THR_BASE_PRIORITY(pthread->base_priority);
-		tmp = pthread->attr.sched_policy;
+		*policy = pthread->attr.sched_policy;
+		param->sched_priority = pthread->attr.prio;
 		THR_THREAD_UNLOCK(curthread, pthread);
 		_thr_ref_delete(curthread, pthread);
-		*policy = tmp;
 	}
 	return (ret);
 }

@@ -23,38 +23,63 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_umtx.c,v 1.1 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_umtx.c,v 1.12 2007/05/09 08:39:33 davidxu Exp $
  *
  */
 
 #include "thr_private.h"
 #include "thr_umtx.h"
 
-int
-__thr_umtx_lock(volatile umtx_t *mtx, long id)
+void
+_thr_umutex_init(struct umutex *mtx)
 {
-	while (_umtx_op((struct umtx *)mtx, UMTX_OP_LOCK, id, 0, 0))
-		;
-	return (0);
+	static struct umutex default_mtx = DEFAULT_UMUTEX;
+
+	*mtx = default_mtx;
 }
 
 int
-__thr_umtx_timedlock(volatile umtx_t *mtx, long id,
+__thr_umutex_lock(struct umutex *mtx)
+{
+	if (_umtx_op(mtx, UMTX_OP_MUTEX_LOCK, 0, 0, 0) != -1)
+		return 0;
+	return (errno);
+}
+
+int
+__thr_umutex_timedlock(struct umutex *mtx,
 	const struct timespec *timeout)
 {
 	if (timeout && (timeout->tv_sec < 0 || (timeout->tv_sec == 0 &&
 		timeout->tv_nsec <= 0)))
 		return (ETIMEDOUT);
-	if (_umtx_op((struct umtx *)mtx, UMTX_OP_LOCK, id, 0,
-		(void *)timeout) == 0)
+	if (_umtx_op(mtx, UMTX_OP_MUTEX_LOCK, 0, 0,
+		__DECONST(void *, timeout)) != -1)
 		return (0);
 	return (errno);
 }
 
 int
-__thr_umtx_unlock(volatile umtx_t *mtx, long id)
+__thr_umutex_unlock(struct umutex *mtx)
 {
-	if (_umtx_op((struct umtx *)mtx, UMTX_OP_UNLOCK, id, 0, 0) == 0)
+	if (_umtx_op(mtx, UMTX_OP_MUTEX_UNLOCK, 0, 0, 0) != -1)
+		return (0);
+	return (errno);
+}
+
+int
+__thr_umutex_trylock(struct umutex *mtx)
+{
+	if (_umtx_op(mtx, UMTX_OP_MUTEX_TRYLOCK, 0, 0, 0) != -1)
+		return (0);
+	return (errno);
+}
+
+int
+__thr_umutex_set_ceiling(struct umutex *mtx, uint32_t ceiling,
+	uint32_t *oldceiling)
+{
+	if (_umtx_op(mtx, UMTX_OP_SET_CEILING, ceiling, oldceiling, 0) != -1)
 		return (0);
 	return (errno);
 }
@@ -65,8 +90,8 @@ _thr_umtx_wait(volatile umtx_t *mtx, long id, const struct timespec *timeout)
 	if (timeout && (timeout->tv_sec < 0 || (timeout->tv_sec == 0 &&
 		timeout->tv_nsec <= 0)))
 		return (ETIMEDOUT);
-	if (_umtx_op((struct umtx *)mtx, UMTX_OP_WAIT, id, 0,
-		(void*) timeout) == 0)
+	if (_umtx_op(__DEVOLATILE(void *, mtx), UMTX_OP_WAIT, id, 0,
+		__DECONST(void*, timeout)) != -1)
 		return (0);
 	return (errno);
 }
@@ -74,7 +99,51 @@ _thr_umtx_wait(volatile umtx_t *mtx, long id, const struct timespec *timeout)
 int
 _thr_umtx_wake(volatile umtx_t *mtx, int nr_wakeup)
 {
-	if (_umtx_op((struct umtx *)mtx, UMTX_OP_WAKE, nr_wakeup, 0, 0) == 0)
+	if (_umtx_op(__DEVOLATILE(void *, mtx), UMTX_OP_WAKE,
+		nr_wakeup, 0, 0) != -1)
+		return (0);
+	return (errno);
+}
+
+void
+_thr_ucond_init(struct ucond *cv)
+{
+	bzero(cv, sizeof(struct ucond));
+}
+
+int
+_thr_ucond_wait(struct ucond *cv, struct umutex *m,
+	const struct timespec *timeout, int check_unparking)
+{
+	if (timeout && (timeout->tv_sec < 0 || (timeout->tv_sec == 0 &&
+	    timeout->tv_nsec <= 0))) {
+		__thr_umutex_unlock(m);
+                return (ETIMEDOUT);
+	}
+	if (_umtx_op(cv, UMTX_OP_CV_WAIT,
+		     check_unparking ? UMTX_CHECK_UNPARKING : 0, 
+		     m, __DECONST(void*, timeout)) != -1) {
+		return (0);
+	}
+	return (errno);
+}
+ 
+int
+_thr_ucond_signal(struct ucond *cv)
+{
+	if (!cv->c_has_waiters)
+		return (0);
+	if (_umtx_op(cv, UMTX_OP_CV_SIGNAL, 0, NULL, NULL) != -1)
+		return (0);
+	return (errno);
+}
+
+int
+_thr_ucond_broadcast(struct ucond *cv)
+{
+	if (!cv->c_has_waiters)
+		return (0);
+	if (_umtx_op(cv, UMTX_OP_CV_BROADCAST, 0, NULL, NULL) != -1)
 		return (0);
 	return (errno);
 }

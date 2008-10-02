@@ -28,7 +28,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_syscalls.c,v 1.9.2.2 2005/12/01 00:49:45 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_syscalls.c,v 1.16 2007/01/12 07:26:21 imp Exp $
  */
 
 /*
@@ -43,10 +43,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -64,6 +61,7 @@
  *
  */
 
+#include "namespace.h"
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/param.h>
@@ -87,50 +85,100 @@
 #include <termios.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
-extern int __creat(const char *, mode_t);
-extern int __pause(void);
-extern int __pselect(int count, fd_set *rfds, fd_set *wfds, fd_set *efds,
-		const struct timespec *timo, const sigset_t *mask);
-extern unsigned int __sleep(unsigned int);
-extern int __system(const char *);
-extern int __tcdrain(int);
-extern int __usleep(useconds_t);
-extern pid_t __wait(int *);
-extern pid_t __sys_wait4(pid_t, int *, int, struct rusage *);
-extern pid_t __waitpid(pid_t, int *, int);
+extern int	__creat(const char *, mode_t);
+extern int	__pselect(int, fd_set *, fd_set *, fd_set *,
+			const struct timespec *, const sigset_t *);
+extern unsigned	__sleep(unsigned int);
+extern int	__system(const char *);
+extern int	__tcdrain(int);
+extern int	__usleep(useconds_t);
+extern pid_t	__wait(int *);
+extern pid_t	__waitpid(pid_t, int *, int);
+extern int	__sys_aio_suspend(const struct aiocb * const[], int,
+			const struct timespec *);
+extern int	__sys_accept(int, struct sockaddr *, socklen_t *);
+extern int	__sys_connect(int, const struct sockaddr *, socklen_t);
+extern int	__sys_fsync(int);
+extern int	__sys_msync(void *, size_t, int);
+extern int	__sys_poll(struct pollfd *, unsigned, int);
+extern ssize_t	__sys_recv(int, void *, size_t, int);
+extern ssize_t	__sys_recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
+extern ssize_t	__sys_recvmsg(int, struct msghdr *, int);
+extern int	__sys_select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
+extern int	__sys_sendfile(int, int, off_t, size_t, struct sf_hdtr *,
+			off_t *, int);
+extern ssize_t	__sys_sendmsg(int, const struct msghdr *, int);
+extern ssize_t	__sys_sendto(int, const void *,size_t, int, const struct sockaddr *, socklen_t);
+extern ssize_t	__sys_readv(int, const struct iovec *, int);
+extern pid_t	__sys_wait4(pid_t, int *, int, struct rusage *);
+extern ssize_t	__sys_writev(int, const struct iovec *, int);
+
+int	___creat(const char *, mode_t);
+int	___pselect(int, fd_set *, fd_set *, fd_set *, 
+		const struct timespec *, const sigset_t *);
+unsigned	___sleep(unsigned);
+int	___system(const char *);
+int	___tcdrain(int);
+int	___usleep(useconds_t useconds);
+pid_t	___wait(int *);
+pid_t	___waitpid(pid_t, int *, int);
+int	__accept(int, struct sockaddr *, socklen_t *);
+int	__aio_suspend(const struct aiocb * const iocbs[], int,
+		const struct timespec *);
+int	__close(int);
+int	__connect(int, const struct sockaddr *, socklen_t);
+int	__fcntl(int, int,...);
+int	__fsync(int);
+int	__msync(void *, size_t, int);
+int	__nanosleep(const struct timespec *, struct timespec *);
+int	__open(const char *, int,...);
+int	__poll(struct pollfd *, unsigned int, int);
+ssize_t	__read(int, void *buf, size_t);
+ssize_t	__readv(int, const struct iovec *, int);
+ssize_t	__recvfrom(int, void *, size_t, int f, struct sockaddr *, socklen_t *);
+ssize_t	__recvmsg(int, struct msghdr *, int);
+int	__select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
+ssize_t	__sendmsg(int, const struct msghdr *, int);
+ssize_t	__sendto(int, const void *, size_t, int,
+		const struct sockaddr *, socklen_t);
+pid_t	__wait3(int *, int, struct rusage *);
+pid_t	__wait4(pid_t, int *, int, struct rusage *);
+ssize_t	__write(int, const void *, size_t);
+ssize_t	__writev(int, const struct iovec *, int);
+int	_vfork(void);
 
 __weak_reference(__accept, accept);
+
 int
 __accept(int s, struct sockaddr *addr, socklen_t *addrlen)
 {
 	struct pthread *curthread;
-	int oldcancel;
 	int ret;
 
 	curthread = _get_curthread();
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_accept(s, addr, addrlen);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
  	return (ret);
 }
 
-__weak_reference(_aio_suspend, aio_suspend);
+__weak_reference(__aio_suspend, aio_suspend);
 
 int
-_aio_suspend(const struct aiocb * const iocbs[], int niocb, const struct
+__aio_suspend(const struct aiocb * const iocbs[], int niocb, const struct
     timespec *timeout)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	int ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_aio_suspend(iocbs, niocb, timeout);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return (ret);
 }
@@ -141,13 +189,12 @@ int
 __close(int fd)
 {
 	struct pthread	*curthread = _get_curthread();
-	int	oldcancel;
 	int	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_close(fd);
-	_thr_cancel_leave(curthread, oldcancel);
-
+	_thr_cancel_leave(curthread);
+	
 	return (ret);
 }
 
@@ -157,12 +204,11 @@ int
 __connect(int fd, const struct sockaddr *name, socklen_t namelen)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	int ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_connect(fd, name, namelen);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
  	return (ret);
 }
@@ -173,12 +219,11 @@ int
 ___creat(const char *path, mode_t mode)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	int ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __creat(path, mode);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	
 	return ret;
 }
@@ -189,11 +234,10 @@ int
 __fcntl(int fd, int cmd,...)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	int	ret;
 	va_list	ap;
 	
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 
 	va_start(ap, cmd);
 	switch (cmd) {
@@ -213,7 +257,7 @@ __fcntl(int fd, int cmd,...)
 	}
 	va_end(ap);
 
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return (ret);
 }
@@ -224,12 +268,11 @@ int
 __fsync(int fd)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	int	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_fsync(fd);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return (ret);
 }
@@ -240,12 +283,11 @@ int
 __msync(void *addr, size_t len, int flags)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	int	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_msync(addr, len, flags);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return ret;
 }
@@ -257,12 +299,11 @@ __nanosleep(const struct timespec *time_to_sleep,
     struct timespec *time_remaining)
 {
 	struct pthread *curthread = _get_curthread();
-	int		oldcancel;
 	int		ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_nanosleep(time_to_sleep, time_remaining);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return (ret);
 }
@@ -273,12 +314,11 @@ int
 __open(const char *path, int flags,...)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	int	ret;
 	int	mode = 0;
 	va_list	ap;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	
 	/* Check if the file is being created: */
 	if (flags & O_CREAT) {
@@ -290,24 +330,8 @@ __open(const char *path, int flags,...)
 	
 	ret = __sys_open(path, flags, mode);
 
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
-	return ret;
-}
-
-__weak_reference(_pause, pause);
-
-int
-_pause(void)
-{
-	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
-	int	ret;
-
-	oldcancel = _thr_cancel_enter(curthread);
-	ret = __pause();
-	_thr_cancel_leave(curthread, oldcancel);
-	
 	return ret;
 }
 
@@ -317,44 +341,28 @@ int
 __poll(struct pollfd *fds, unsigned int nfds, int timeout)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	int ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_poll(fds, nfds, timeout);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return ret;
 }
 
-__weak_reference(_pselect, pselect);
+__weak_reference(___pselect, pselect);
 
 int 
-_pselect(int count, fd_set *rfds, fd_set *wfds, fd_set *efds, 
+___pselect(int count, fd_set *rfds, fd_set *wfds, fd_set *efds, 
 	const struct timespec *timo, const sigset_t *mask)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	int ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __pselect(count, rfds, wfds, efds, timo, mask);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
-	return (ret);
-}
-
-__weak_reference(_raise, raise);
-
-int
-_raise(int sig)
-{
-	int ret;
-
-	if (!_thr_isthreaded())
-		ret = kill(getpid(), sig);
-	else
-		ret = _thr_send_sig(_get_curthread(), sig);
 	return (ret);
 }
 
@@ -364,12 +372,11 @@ ssize_t
 __read(int fd, void *buf, size_t nbytes)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	ssize_t	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_read(fd, buf, nbytes);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return ret;
 }
@@ -380,12 +387,11 @@ ssize_t
 __readv(int fd, const struct iovec *iov, int iovcnt)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	ssize_t ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_readv(fd, iov, iovcnt);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return ret;
 }
@@ -397,12 +403,11 @@ __recvfrom(int s, void *b, size_t l, int f, struct sockaddr *from,
     socklen_t *fl)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	ssize_t ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_recvfrom(s, b, l, f, from, fl);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	return (ret);
 }
 
@@ -413,11 +418,10 @@ __recvmsg(int s, struct msghdr *m, int f)
 {
 	struct pthread *curthread = _get_curthread();
 	ssize_t ret;
-	int oldcancel;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_recvmsg(s, m, f);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	return (ret);
 }
 
@@ -428,12 +432,11 @@ __select(int numfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	struct timeval *timeout)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	int ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_select(numfds, readfds, writefds, exceptfds, timeout);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	return ret;
 }
 
@@ -444,11 +447,10 @@ __sendmsg(int s, const struct msghdr *m, int f)
 {
 	struct pthread *curthread = _get_curthread();
 	ssize_t ret;
-	int oldcancel;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_sendmsg(s, m, f);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	return (ret);
 }
 
@@ -460,74 +462,69 @@ __sendto(int s, const void *m, size_t l, int f, const struct sockaddr *t,
 {
 	struct pthread *curthread = _get_curthread();
 	ssize_t ret;
-	int oldcancel;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_sendto(s, m, l, f, t, tl);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	return (ret);
 }
 
-__weak_reference(_sleep, sleep);
+__weak_reference(___sleep, sleep);
 
 unsigned int
-_sleep(unsigned int seconds)
+___sleep(unsigned int seconds)
 {
 	struct pthread *curthread = _get_curthread();
-	int		oldcancel;
 	unsigned int	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sleep(seconds);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	
 	return (ret);
 }
 
-__weak_reference(_system, system);
+__weak_reference(___system, system);
 
 int
-_system(const char *string)
+___system(const char *string)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	int	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __system(string);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	
 	return ret;
 }
 
-__weak_reference(_tcdrain, tcdrain);
+__weak_reference(___tcdrain, tcdrain);
 
 int
-_tcdrain(int fd)
+___tcdrain(int fd)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	int	ret;
 	
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __tcdrain(fd);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return (ret);
 }
 
-__weak_reference(_usleep, usleep);
+__weak_reference(___usleep, usleep);
 
 int
-_usleep(useconds_t useconds)
+___usleep(useconds_t useconds)
 {
 	struct pthread *curthread = _get_curthread();
-	int		oldcancel;
 	int		ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __usleep(useconds);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	
 	return (ret);
 }
@@ -540,50 +537,62 @@ _vfork(void)
 	return (fork());
 }
 
-__weak_reference(_wait, wait);
+__weak_reference(___wait, wait);
 
 pid_t
-_wait(int *istat)
+___wait(int *istat)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	pid_t	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __wait(istat);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return ret;
+}
+
+__weak_reference(__wait3, wait3);
+
+pid_t
+__wait3(int *status, int options, struct rusage *rusage)
+{
+	struct pthread *curthread = _get_curthread();
+	pid_t ret;
+
+	_thr_cancel_enter(curthread);
+	ret = _wait4(WAIT_ANY, status, options, rusage);
+	_thr_cancel_leave(curthread);
+
+	return (ret);
 }
 
 __weak_reference(__wait4, wait4);
 
 pid_t
-__wait4(pid_t pid, int *istat, int options, struct rusage *rusage)
+__wait4(pid_t pid, int *status, int options, struct rusage *rusage)
 {
 	struct pthread *curthread = _get_curthread();
-	int oldcancel;
 	pid_t ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
-	ret = __sys_wait4(pid, istat, options, rusage);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_enter(curthread);
+	ret = __sys_wait4(pid, status, options, rusage);
+	_thr_cancel_leave(curthread);
 
 	return ret;
 }
 
-__weak_reference(_waitpid, waitpid);
+__weak_reference(___waitpid, waitpid);
 
 pid_t
-_waitpid(pid_t wpid, int *status, int options)
+___waitpid(pid_t wpid, int *status, int options)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	pid_t	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __waitpid(wpid, status, options);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 	
 	return ret;
 }
@@ -594,12 +603,11 @@ ssize_t
 __write(int fd, const void *buf, size_t nbytes)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	ssize_t	ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_write(fd, buf, nbytes);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return ret;
 }
@@ -610,12 +618,11 @@ ssize_t
 __writev(int fd, const struct iovec *iov, int iovcnt)
 {
 	struct pthread *curthread = _get_curthread();
-	int	oldcancel;
 	ssize_t ret;
 
-	oldcancel = _thr_cancel_enter(curthread);
+	_thr_cancel_enter(curthread);
 	ret = __sys_writev(fd, iov, iovcnt);
-	_thr_cancel_leave(curthread, oldcancel);
+	_thr_cancel_leave(curthread);
 
 	return ret;
 }

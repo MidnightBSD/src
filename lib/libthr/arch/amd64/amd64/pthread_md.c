@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/amd64/amd64/pthread_md.c,v 1.1 2005/04/02 01:19:57 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/arch/amd64/amd64/pthread_md.c,v 1.2 2006/04/04 03:26:05 davidxu Exp $
  */
 
 #include <sys/types.h>
@@ -38,13 +38,11 @@ struct tcb *
 _tcb_ctor(struct pthread *thread, int initial)
 {
 	struct tcb *tcb;
-	void *oldtls;
 
 	if (initial)
-		__asm __volatile("movq %%fs:0, %0" : "=r" (oldtls));
+		__asm __volatile("movq %%fs:0, %0" : "=r" (tcb));
 	else
-		oldtls = NULL;
-	tcb = _rtld_allocate_tls(oldtls, sizeof(struct tcb), 16);
+		tcb = _rtld_allocate_tls(NULL, sizeof(struct tcb), 16);
 	if (tcb)
 		tcb->tcb_thread = thread;
 	return (tcb);

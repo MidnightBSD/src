@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/lib/libthr/thread/Makefile.inc,v 1.10.2.1 2006/01/16 05:36:30 davidxu Exp $
+# $FreeBSD: src/lib/libthr/thread/Makefile.inc,v 1.16 2006/04/04 02:57:49 davidxu Exp $
 
 # thr sources
 .PATH: ${.CURDIR}/thread
@@ -31,17 +30,15 @@ SRCS+= \
 	thr_multi_np.c \
 	thr_mutex.c \
 	thr_mutexattr.c \
-	thr_mutex_prioceiling.c \
-	thr_mutex_protocol.c \
 	thr_once.c \
 	thr_printf.c \
 	thr_pspinlock.c \
 	thr_resume_np.c \
+	thr_rtld.c \
 	thr_rwlock.c \
 	thr_rwlockattr.c \
 	thr_self.c \
 	thr_sem.c \
-	thr_seterrno.c \
 	thr_setprio.c \
 	thr_setschedparam.c \
 	thr_sig.c \

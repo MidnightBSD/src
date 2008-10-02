@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_stack.c,v 1.6 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_stack.c,v 1.7 2006/04/04 02:57:49 davidxu Exp $
  */
 
 #include <sys/types.h>
@@ -113,7 +113,7 @@ static LIST_HEAD(, stack)	mstackq = LIST_HEAD_INITIALIZER(mstackq);
  * high memory
  *
  */
-static void *last_stack = NULL;
+static char *last_stack = NULL;
 
 /*
  * Round size up to the nearest multiple of
@@ -236,8 +236,9 @@ _thr_stack_free(struct pthread_attr *attr)
 
 	if ((attr != NULL) && ((attr->flags & THR_STACK_USER) == 0)
 	    && (attr->stackaddr_attr != NULL)) {
-		spare_stack = (attr->stackaddr_attr + attr->stacksize_attr
-		    - sizeof(struct stack));
+		spare_stack = (struct stack *)
+			((char *)attr->stackaddr_attr +
+			attr->stacksize_attr - sizeof(struct stack));
 		spare_stack->stacksize = round_up(attr->stacksize_attr);
 		spare_stack->guardsize = round_up(attr->guardsize_attr);
 		spare_stack->stackaddr = attr->stackaddr_attr;

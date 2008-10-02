@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,11 +26,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_resume_np.c,v 1.8.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_resume_np.c,v 1.11 2007/01/12 07:26:20 imp Exp $
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <pthread.h>
+#include <pthread_np.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 

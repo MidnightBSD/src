@@ -27,7 +27,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_sem.c,v 1.5.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_sem.c,v 1.9 2006/11/24 09:57:38 davidxu Exp $
  */
 
 #include "namespace.h"
@@ -81,7 +81,7 @@ sem_alloc(unsigned int value, semid_t semid, int system_sem)
 		errno = ENOSPC;
 		return (NULL);
 	}
-	_thr_umtx_init((umtx_t *)&sem->lock);
+	bzero(sem, sizeof(*sem));
 	/*
 	 * Fortunatly count and nwaiters are adjacency, so we can
 	 * use umtx_wait to wait on it, umtx_wait needs an address
@@ -176,16 +176,16 @@ int
 _sem_wait(sem_t *sem)
 {
 	struct pthread *curthread;
-	int val, oldcancel, retval;
+	int val, retval;
 
 	if (sem_check_validity(sem) != 0)
 		return (-1);
 
 	curthread = _get_curthread();
 	if ((*sem)->syssem != 0) {
-		oldcancel = _thr_cancel_enter(curthread);
+		_thr_cancel_enter(curthread);
 		retval = ksem_wait((*sem)->semid);
-		_thr_cancel_leave(curthread, oldcancel);
+		_thr_cancel_leave(curthread);
 		return (retval);
 	}
 
@@ -195,29 +195,30 @@ _sem_wait(sem_t *sem)
 			if (atomic_cmpset_acq_int(&(*sem)->count, val, val - 1))
 				return (0);
 		}
-		oldcancel = _thr_cancel_enter(curthread);
+		_thr_cancel_enter(curthread);
 		retval = _thr_umtx_wait((umtx_t *)&(*sem)->count, 0, NULL);
-		_thr_cancel_leave(curthread, oldcancel);
+		_thr_cancel_leave(curthread);
 	} while (retval == 0);
 	errno = retval;
 	return (-1);
 }
 
 int
-_sem_timedwait(sem_t * __restrict sem, struct timespec * __restrict abstime)
+_sem_timedwait(sem_t * __restrict sem,
+    const struct timespec * __restrict abstime)
 {
 	struct timespec ts, ts2;
 	struct pthread *curthread;
-	int val, oldcancel, retval;
+	int val, retval;
 
 	if (sem_check_validity(sem) != 0)
 		return (-1);
 
 	curthread = _get_curthread();
 	if ((*sem)->syssem != 0) {
-		oldcancel = _thr_cancel_enter(curthread);
+		_thr_cancel_enter(curthread);
 		retval = ksem_timedwait((*sem)->semid, abstime);
-		_thr_cancel_leave(curthread, oldcancel);
+		_thr_cancel_leave(curthread);
 		return (retval);
 	}
 
@@ -237,9 +238,9 @@ _sem_timedwait(sem_t * __restrict sem, struct timespec * __restrict abstime)
 		}
 		clock_gettime(CLOCK_REALTIME, &ts);
 		TIMESPEC_SUB(&ts2, abstime, &ts);
-		oldcancel = _thr_cancel_enter(curthread);
+		_thr_cancel_enter(curthread);
 		retval = _thr_umtx_wait((umtx_t *)&(*sem)->count, 0, &ts2);
-		_thr_cancel_leave(curthread, oldcancel);
+		_thr_cancel_leave(curthread);
 	} while (retval == 0);
 	errno = retval;
 	return (-1);

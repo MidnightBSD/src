@@ -24,16 +24,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_create.c,v 1.22.2.2 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_create.c,v 1.36 2006/12/15 11:52:01 davidxu Exp $
  */
 
+#include "namespace.h"
 #include <sys/types.h>
+#include <sys/rtprio.h>
 #include <sys/signalvar.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
 #include <pthread.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
@@ -48,6 +51,8 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 {
 	struct pthread *curthread, *new_thread;
 	struct thr_param param;
+	struct sched_param sched_param;
+	struct rtprio rtp;
 	int ret = 0, locked, create_suspended;
 	sigset_t set, oset;
 
@@ -76,16 +81,10 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 			new_thread->attr.flags |= PTHREAD_SCOPE_SYSTEM;
 		else
 			new_thread->attr.flags &= ~PTHREAD_SCOPE_SYSTEM;
-		/*
-		 * scheduling policy and scheduling parameters will be
-		 * inherited in following code.
-		 */
-	}
 
-	if (_thr_scope_system > 0)
-		new_thread->attr.flags |= PTHREAD_SCOPE_SYSTEM;
-	else if (_thr_scope_system < 0)
-		new_thread->attr.flags &= ~PTHREAD_SCOPE_SYSTEM;
+		new_thread->attr.prio = curthread->attr.prio;
+		new_thread->attr.sched_policy = curthread->attr.sched_policy;
+	}
 
 	new_thread->tid = TID_TERMINATED;
 
@@ -101,35 +100,11 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 	new_thread->magic = THR_MAGIC;
 	new_thread->start_routine = start_routine;
 	new_thread->arg = arg;
-	new_thread->cancelflags = PTHREAD_CANCEL_ENABLE |
-	    PTHREAD_CANCEL_DEFERRED;
-	/*
-	 * Check if this thread is to inherit the scheduling
-	 * attributes from its parent:
-	 */
-	if (new_thread->attr.sched_inherit == PTHREAD_INHERIT_SCHED) {
-		/*
-		 * Copy the scheduling attributes. Lock the scheduling
-		 * lock to get consistent scheduling parameters.
-		 */
-		THR_LOCK(curthread);
-		new_thread->base_priority = curthread->base_priority;
-		new_thread->attr.prio = curthread->base_priority;
-		new_thread->attr.sched_policy = curthread->attr.sched_policy;
-		THR_UNLOCK(curthread);
-	} else {
-		/*
-		 * Use just the thread priority, leaving the
-		 * other scheduling attributes as their
-		 * default values:
-		 */
-		new_thread->base_priority = new_thread->attr.prio;
-	}
-	new_thread->active_priority = new_thread->base_priority;
-
+	new_thread->cancel_enable = 1;
+	new_thread->cancel_async = 0;
 	/* Initialize the mutex queue: */
 	TAILQ_INIT(&new_thread->mutexq);
-	TAILQ_INIT(&new_thread->pri_mutexq);
+	TAILQ_INIT(&new_thread->pp_mutexq);
 
 	/* Initialise hooks in the thread structure: */
 	if (new_thread->attr.suspend == THR_CREATE_SUSPENDED) {
@@ -165,6 +140,14 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 	param.flags = 0;
 	if (new_thread->attr.flags & PTHREAD_SCOPE_SYSTEM)
 		param.flags |= THR_SYSTEM_SCOPE;
+	if (new_thread->attr.sched_inherit == PTHREAD_INHERIT_SCHED)
+		param.rtp = NULL;
+	else {
+		sched_param.sched_priority = new_thread->attr.prio;
+		_schedparam_to_rtp(new_thread->attr.sched_policy,
+			&sched_param, &rtp);
+		param.rtp = &rtp;
+	}
 
 	/* Schedule the new thread. */
 	if (create_suspended) {
@@ -175,6 +158,15 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 	}
 
 	ret = thr_new(&param, sizeof(param));
+
+	if (ret != 0) {
+		ret = errno;
+		/*
+		 * Translate EPROCLIM into well-known POSIX code EAGAIN.
+		 */
+		if (ret == EPROCLIM)
+			ret = EAGAIN;
+	}
 
 	if (create_suspended)
 		__sys_sigprocmask(SIG_SETMASK, &oset, NULL);
@@ -195,7 +187,6 @@ _pthread_create(pthread_t * thread, const pthread_attr_t * attr,
 		_thr_ref_delete_unlocked(curthread, new_thread);
 		THREAD_LIST_UNLOCK(curthread);
 		(*thread) = 0;
-		ret = EAGAIN;
 	} else if (locked) {
 		_thr_report_creation(curthread, new_thread);
 		THR_THREAD_UNLOCK(curthread, new_thread);
@@ -243,7 +234,7 @@ thread_start(struct pthread *curthread)
 	THR_UNLOCK(curthread);
 
 	/* Run the current thread's start routine with argument: */
-	pthread_exit(curthread->start_routine(curthread->arg));
+	_pthread_exit(curthread->start_routine(curthread->arg));
 
 	/* This point should never be reached. */
 	PANIC("Thread has resumed after exit");

@@ -24,13 +24,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_detach.c,v 1.9.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_detach.c,v 1.11 2006/04/04 02:57:49 davidxu Exp $
  *
  */
 
+#include "namespace.h"
 #include <sys/types.h>
 #include <errno.h>
 #include <pthread.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 

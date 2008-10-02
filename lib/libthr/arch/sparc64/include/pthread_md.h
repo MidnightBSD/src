@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/sparc64/include/pthread_md.h,v 1.1 2005/04/02 01:19:59 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/arch/sparc64/include/pthread_md.h,v 1.2 2006/12/15 11:52:01 davidxu Exp $
  */
 
 /*
@@ -34,6 +34,8 @@
 #define	_PTHREAD_MD_H_
 
 #include <stddef.h>
+
+#define	CPU_SPINWAIT
 
 #define	DTV_OFFSET		offsetof(struct tcb, tcb_dtv)
 

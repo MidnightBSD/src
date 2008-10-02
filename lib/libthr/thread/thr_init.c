@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_init.c,v 1.23.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_init.c,v 1.46.2.1 2007/11/14 01:10:12 kris Exp $
  */
 
 #include "namespace.h"
@@ -40,6 +40,7 @@
 #include <sys/sysctl.h>
 #include <sys/ttycom.h>
 #include <sys/mman.h>
+#include <sys/rtprio.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <paths.h>
@@ -55,9 +56,8 @@
 #include "libc_private.h"
 #include "thr_private.h"
 
-void		*_usrstack;
+char		*_usrstack;
 struct pthread	*_thr_initial;
-int		_thr_scope_system;
 int		_libthr_debug;
 int		_thread_event_mask;
 struct pthread	*_thread_last_event;
@@ -65,17 +65,20 @@ pthreadlist	_thread_list = TAILQ_HEAD_INITIALIZER(_thread_list);
 pthreadlist 	_thread_gc_list = TAILQ_HEAD_INITIALIZER(_thread_gc_list);
 int		_thread_active_threads = 1;
 atfork_head	_thr_atfork_list = TAILQ_HEAD_INITIALIZER(_thr_atfork_list);
-umtx_t		_thr_atfork_lock;
+struct umutex	_thr_atfork_lock = DEFAULT_UMUTEX;
+
+struct pthread_prio	_thr_priorities[3] = {
+	{RTP_PRIO_MIN,  RTP_PRIO_MAX, 0}, /* FIFO */
+	{0, 0, 63}, /* OTHER */
+	{RTP_PRIO_MIN, RTP_PRIO_MAX, 0}  /* RR */
+};
 
 struct pthread_attr _pthread_attr_default = {
-	.sched_policy = SCHED_RR,
+	.sched_policy = SCHED_OTHER,
 	.sched_inherit = 0,
-	.sched_interval = TIMESLICE_USEC,
-	.prio = THR_DEFAULT_PRIORITY,
+	.prio = 0,
 	.suspend = THR_CREATE_RUNNING,
-	.flags = 0,
-	.arg_attr = NULL,
-	.cleanup_attr = NULL,
+	.flags = PTHREAD_SCOPE_SYSTEM,
 	.stackaddr_attr = NULL,
 	.stacksize_attr = THR_STACK_DEFAULT,
 	.guardsize_attr = 0
@@ -95,17 +98,20 @@ struct pthread_cond_attr _pthread_condattr_default = {
 };
 
 pid_t		_thr_pid;
-int		_thr_guard_default;
-int		_thr_stack_default = THR_STACK_DEFAULT;
-int		_thr_stack_initial = THR_STACK_INITIAL;
+int		_thr_is_smp = 0;
+size_t		_thr_guard_default;
+size_t		_thr_stack_default = THR_STACK_DEFAULT;
+size_t		_thr_stack_initial = THR_STACK_INITIAL;
 int		_thr_page_size;
+int		_thr_spinloops;
+int		_thr_yieldloops;
 int		_gc_count;
-umtx_t		_mutex_static_lock;
-umtx_t		_cond_static_lock;
-umtx_t		_rwlock_static_lock;
-umtx_t		_keytable_lock;
-umtx_t		_thr_list_lock;
-umtx_t		_thr_event_lock;
+struct umutex	_mutex_static_lock = DEFAULT_UMUTEX;
+struct umutex	_cond_static_lock = DEFAULT_UMUTEX;
+struct umutex	_rwlock_static_lock = DEFAULT_UMUTEX;
+struct umutex	_keytable_lock = DEFAULT_UMUTEX;
+struct umutex	_thr_list_lock = DEFAULT_UMUTEX;
+struct umutex	_thr_event_lock = DEFAULT_UMUTEX;
 
 int	__pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *);
 int	__pthread_mutex_lock(pthread_mutex_t *);
@@ -119,29 +125,8 @@ static void init_main_thread(struct pthread *thread);
  * All weak references used within libc should be in this table.
  * This is so that static libraries will work.
  */
-STATIC_LIB_REQUIRE(_accept);
-STATIC_LIB_REQUIRE(_bind);
-STATIC_LIB_REQUIRE(_close);
-STATIC_LIB_REQUIRE(_connect);
-STATIC_LIB_REQUIRE(_dup);
-STATIC_LIB_REQUIRE(_dup2);
-STATIC_LIB_REQUIRE(_execve);
-STATIC_LIB_REQUIRE(_fcntl);
-STATIC_LIB_REQUIRE(_flock);
-STATIC_LIB_REQUIRE(_flockfile);
-STATIC_LIB_REQUIRE(_fstat);
-STATIC_LIB_REQUIRE(_fstatfs);
-STATIC_LIB_REQUIRE(_fsync);
-STATIC_LIB_REQUIRE(_getdirentries);
-STATIC_LIB_REQUIRE(_getlogin);
-STATIC_LIB_REQUIRE(_getpeername);
-STATIC_LIB_REQUIRE(_getsockname);
-STATIC_LIB_REQUIRE(_getsockopt);
-STATIC_LIB_REQUIRE(_ioctl);
-STATIC_LIB_REQUIRE(_kevent);
-STATIC_LIB_REQUIRE(_listen);
-STATIC_LIB_REQUIRE(_nanosleep);
-STATIC_LIB_REQUIRE(_open);
+
+STATIC_LIB_REQUIRE(_fork);
 STATIC_LIB_REQUIRE(_pthread_getspecific);
 STATIC_LIB_REQUIRE(_pthread_key_create);
 STATIC_LIB_REQUIRE(_pthread_key_delete);
@@ -155,23 +140,25 @@ STATIC_LIB_REQUIRE(_pthread_mutexattr_destroy);
 STATIC_LIB_REQUIRE(_pthread_mutexattr_settype);
 STATIC_LIB_REQUIRE(_pthread_once);
 STATIC_LIB_REQUIRE(_pthread_setspecific);
-STATIC_LIB_REQUIRE(_read);
-STATIC_LIB_REQUIRE(_readv);
-STATIC_LIB_REQUIRE(_recvfrom);
-STATIC_LIB_REQUIRE(_recvmsg);
-STATIC_LIB_REQUIRE(_select);
-STATIC_LIB_REQUIRE(_sendmsg);
-STATIC_LIB_REQUIRE(_sendto);
-STATIC_LIB_REQUIRE(_setsockopt);
+STATIC_LIB_REQUIRE(_raise);
+STATIC_LIB_REQUIRE(_sem_destroy);
+STATIC_LIB_REQUIRE(_sem_getvalue);
+STATIC_LIB_REQUIRE(_sem_init);
+STATIC_LIB_REQUIRE(_sem_post);
+STATIC_LIB_REQUIRE(_sem_timedwait);
+STATIC_LIB_REQUIRE(_sem_trywait);
+STATIC_LIB_REQUIRE(_sem_wait);
 STATIC_LIB_REQUIRE(_sigaction);
 STATIC_LIB_REQUIRE(_sigprocmask);
 STATIC_LIB_REQUIRE(_sigsuspend);
-STATIC_LIB_REQUIRE(_socket);
-STATIC_LIB_REQUIRE(_socketpair);
+STATIC_LIB_REQUIRE(_sigtimedwait);
+STATIC_LIB_REQUIRE(_sigwait);
+STATIC_LIB_REQUIRE(_sigwaitinfo);
+STATIC_LIB_REQUIRE(_spinlock);
+STATIC_LIB_REQUIRE(_spinlock_debug);
+STATIC_LIB_REQUIRE(_spinunlock);
 STATIC_LIB_REQUIRE(_thread_init_hack);
-STATIC_LIB_REQUIRE(_wait4);
-STATIC_LIB_REQUIRE(_write);
-STATIC_LIB_REQUIRE(_writev);
+STATIC_LIB_REQUIRE(_vfork);
 
 /*
  * These are needed when linking statically.  All references within
@@ -198,16 +185,47 @@ STATIC_LIB_REQUIRE(_thread_state_running);
 	(pthread_func_t)entry, (pthread_func_t)entry
 
 static pthread_func_t jmp_table[][2] = {
+	{DUAL_ENTRY(_pthread_atfork)},	/* PJT_ATFORK */
+	{DUAL_ENTRY(_pthread_attr_destroy)},	/* PJT_ATTR_DESTROY */
+	{DUAL_ENTRY(_pthread_attr_getdetachstate)},	/* PJT_ATTR_GETDETACHSTATE */
+	{DUAL_ENTRY(_pthread_attr_getguardsize)},	/* PJT_ATTR_GETGUARDSIZE */
+	{DUAL_ENTRY(_pthread_attr_getinheritsched)},	/* PJT_ATTR_GETINHERITSCHED */
+	{DUAL_ENTRY(_pthread_attr_getschedparam)},	/* PJT_ATTR_GETSCHEDPARAM */
+	{DUAL_ENTRY(_pthread_attr_getschedpolicy)},	/* PJT_ATTR_GETSCHEDPOLICY */
+	{DUAL_ENTRY(_pthread_attr_getscope)},	/* PJT_ATTR_GETSCOPE */
+	{DUAL_ENTRY(_pthread_attr_getstackaddr)},	/* PJT_ATTR_GETSTACKADDR */
+	{DUAL_ENTRY(_pthread_attr_getstacksize)},	/* PJT_ATTR_GETSTACKSIZE */
+	{DUAL_ENTRY(_pthread_attr_init)},	/* PJT_ATTR_INIT */
+	{DUAL_ENTRY(_pthread_attr_setdetachstate)},	/* PJT_ATTR_SETDETACHSTATE */
+	{DUAL_ENTRY(_pthread_attr_setguardsize)},	/* PJT_ATTR_SETGUARDSIZE */
+	{DUAL_ENTRY(_pthread_attr_setinheritsched)},	/* PJT_ATTR_SETINHERITSCHED */
+	{DUAL_ENTRY(_pthread_attr_setschedparam)},	/* PJT_ATTR_SETSCHEDPARAM */
+	{DUAL_ENTRY(_pthread_attr_setschedpolicy)},	/* PJT_ATTR_SETSCHEDPOLICY */
+	{DUAL_ENTRY(_pthread_attr_setscope)},	/* PJT_ATTR_SETSCOPE */
+	{DUAL_ENTRY(_pthread_attr_setstackaddr)},	/* PJT_ATTR_SETSTACKADDR */
+	{DUAL_ENTRY(_pthread_attr_setstacksize)},	/* PJT_ATTR_SETSTACKSIZE */
+	{DUAL_ENTRY(_pthread_cancel)},	/* PJT_CANCEL */
+	{DUAL_ENTRY(_pthread_cleanup_pop)},	/* PJT_CLEANUP_POP */
+	{DUAL_ENTRY(_pthread_cleanup_push)},	/* PJT_CLEANUP_PUSH */
 	{DUAL_ENTRY(_pthread_cond_broadcast)},	/* PJT_COND_BROADCAST */
 	{DUAL_ENTRY(_pthread_cond_destroy)},	/* PJT_COND_DESTROY */
 	{DUAL_ENTRY(_pthread_cond_init)},	/* PJT_COND_INIT */
 	{DUAL_ENTRY(_pthread_cond_signal)},	/* PJT_COND_SIGNAL */
+	{DUAL_ENTRY(_pthread_cond_timedwait)},	/* PJT_COND_TIMEDWAIT */
 	{(pthread_func_t)__pthread_cond_wait,
 	 (pthread_func_t)_pthread_cond_wait},	/* PJT_COND_WAIT */
+	{DUAL_ENTRY(_pthread_detach)},	/* PJT_DETACH */
+	{DUAL_ENTRY(_pthread_equal)},	/* PJT_EQUAL */
+	{DUAL_ENTRY(_pthread_exit)},	/* PJT_EXIT */
 	{DUAL_ENTRY(_pthread_getspecific)},	/* PJT_GETSPECIFIC */
+	{DUAL_ENTRY(_pthread_join)},	/* PJT_JOIN */
 	{DUAL_ENTRY(_pthread_key_create)},	/* PJT_KEY_CREATE */
 	{DUAL_ENTRY(_pthread_key_delete)},	/* PJT_KEY_DELETE*/
+	{DUAL_ENTRY(_pthread_kill)},	/* PJT_KILL */
 	{DUAL_ENTRY(_pthread_main_np)},		/* PJT_MAIN_NP */
+	{DUAL_ENTRY(_pthread_mutexattr_destroy)}, /* PJT_MUTEXATTR_DESTROY */
+	{DUAL_ENTRY(_pthread_mutexattr_init)},	/* PJT_MUTEXATTR_INIT */
+	{DUAL_ENTRY(_pthread_mutexattr_settype)}, /* PJT_MUTEXATTR_SETTYPE */
 	{DUAL_ENTRY(_pthread_mutex_destroy)},	/* PJT_MUTEX_DESTROY */
 	{DUAL_ENTRY(_pthread_mutex_init)},	/* PJT_MUTEX_INIT */
 	{(pthread_func_t)__pthread_mutex_lock,
@@ -215,9 +233,6 @@ static pthread_func_t jmp_table[][2] = {
 	{(pthread_func_t)__pthread_mutex_trylock,
 	 (pthread_func_t)_pthread_mutex_trylock},/* PJT_MUTEX_TRYLOCK */
 	{DUAL_ENTRY(_pthread_mutex_unlock)},	/* PJT_MUTEX_UNLOCK */
-	{DUAL_ENTRY(_pthread_mutexattr_destroy)}, /* PJT_MUTEXATTR_DESTROY */
-	{DUAL_ENTRY(_pthread_mutexattr_init)},	/* PJT_MUTEXATTR_INIT */
-	{DUAL_ENTRY(_pthread_mutexattr_settype)}, /* PJT_MUTEXATTR_SETTYPE */
 	{DUAL_ENTRY(_pthread_once)},		/* PJT_ONCE */
 	{DUAL_ENTRY(_pthread_rwlock_destroy)},	/* PJT_RWLOCK_DESTROY */
 	{DUAL_ENTRY(_pthread_rwlock_init)},	/* PJT_RWLOCK_INIT */
@@ -227,8 +242,11 @@ static pthread_func_t jmp_table[][2] = {
 	{DUAL_ENTRY(_pthread_rwlock_unlock)},	/* PJT_RWLOCK_UNLOCK */
 	{DUAL_ENTRY(_pthread_rwlock_wrlock)},	/* PJT_RWLOCK_WRLOCK */
 	{DUAL_ENTRY(_pthread_self)},		/* PJT_SELF */
+	{DUAL_ENTRY(_pthread_setcancelstate)},	/* PJT_SETCANCELSTATE */
+	{DUAL_ENTRY(_pthread_setcanceltype)},	/* PJT_SETCANCELTYPE */
 	{DUAL_ENTRY(_pthread_setspecific)},	/* PJT_SETSPECIFIC */
-	{DUAL_ENTRY(_pthread_sigmask)}		/* PJT_SIGMASK */
+	{DUAL_ENTRY(_pthread_sigmask)},		/* PJT_SIGMASK */
+	{DUAL_ENTRY(_pthread_testcancel)}	/* PJT_TESTCANCEL */
 };
 
 static int init_once = 0;
@@ -301,7 +319,7 @@ _libpthread_init(struct pthread *curthread)
 			PANIC("Can't open console");
 		if (setlogin("root") == -1)
 			PANIC("Can't set login to root");
-		if (__sys_ioctl(fd, TIOCSCTTY, (char *) NULL) == -1)
+		if (_ioctl(fd, TIOCSCTTY, (char *) NULL) == -1)
 			PANIC("Can't set controlling terminal");
 	}
 
@@ -346,6 +364,8 @@ _libpthread_init(struct pthread *curthread)
 static void
 init_main_thread(struct pthread *thread)
 {
+	struct sched_param sched_param;
+
 	/* Setup the thread attributes. */
 	thr_self(&thread->tid);
 	thread->attr = _pthread_attr_default;
@@ -358,7 +378,7 @@ init_main_thread(struct pthread *thread)
 	 * resource limits, so this stack needs an explicitly mapped
 	 * red zone to protect the thread stack that is just beyond.
 	 */
-	if (mmap((void *)_usrstack - _thr_stack_initial -
+	if (mmap(_usrstack - _thr_stack_initial -
 	    _thr_guard_default, _thr_guard_default, 0, MAP_ANON,
 	    -1, 0) == MAP_FAILED)
 		PANIC("Cannot allocate red zone for initial thread");
@@ -372,7 +392,7 @@ init_main_thread(struct pthread *thread)
 	 *       actually free() it; it just puts it in the free
 	 *       stack queue for later reuse.
 	 */
-	thread->attr.stackaddr_attr = (void *)_usrstack - _thr_stack_initial;
+	thread->attr.stackaddr_attr = _usrstack - _thr_stack_initial;
 	thread->attr.stacksize_attr = _thr_stack_initial;
 	thread->attr.guardsize_attr = _thr_guard_default;
 	thread->attr.flags |= THR_STACK_USER;
@@ -383,19 +403,19 @@ init_main_thread(struct pthread *thread)
 	 */
 	thread->magic = THR_MAGIC;
 
-	thread->cancelflags = PTHREAD_CANCEL_ENABLE | PTHREAD_CANCEL_DEFERRED;
-	thread->name = strdup("initial thread");
-
-	/* Default the priority of the initial thread: */
-	thread->base_priority = THR_DEFAULT_PRIORITY;
-	thread->active_priority = THR_DEFAULT_PRIORITY;
-	thread->inherited_priority = 0;
+	thread->cancel_enable = 1;
+	thread->cancel_async = 0;
+	thr_set_name(thread->tid, "initial thread");
 
 	/* Initialize the mutex queue: */
 	TAILQ_INIT(&thread->mutexq);
-	TAILQ_INIT(&thread->pri_mutexq);
+	TAILQ_INIT(&thread->pp_mutexq);
 
 	thread->state = PS_RUNNING;
+
+	_thr_getscheduler(thread->tid, &thread->attr.sched_policy,
+		 &sched_param);
+	thread->attr.prio = sched_param.sched_priority;
 
 	/* Others cleared to zero by thr_alloc() */
 }
@@ -405,13 +425,15 @@ init_private(void)
 {
 	size_t len;
 	int mib[2];
+	char *env;
 
-	_thr_umtx_init(&_mutex_static_lock);
-	_thr_umtx_init(&_cond_static_lock);
-	_thr_umtx_init(&_rwlock_static_lock);
-	_thr_umtx_init(&_keytable_lock);
-	_thr_umtx_init(&_thr_atfork_lock);
-	_thr_umtx_init(&_thr_event_lock);
+	_thr_umutex_init(&_mutex_static_lock);
+	_thr_umutex_init(&_cond_static_lock);
+	_thr_umutex_init(&_rwlock_static_lock);
+	_thr_umutex_init(&_keytable_lock);
+	_thr_umutex_init(&_thr_atfork_lock);
+	_thr_umutex_init(&_thr_event_lock);
+	_thr_once_init();
 	_thr_spinlock_init();
 	_thr_list_init();
 
@@ -426,20 +448,20 @@ init_private(void)
 		len = sizeof (_usrstack);
 		if (sysctl(mib, 2, &_usrstack, &len, NULL, 0) == -1)
 			PANIC("Cannot get kern.usrstack from sysctl");
+		len = sizeof(_thr_is_smp);
+		sysctlbyname("kern.smp.cpus", &_thr_is_smp, &len, NULL, 0);
+		_thr_is_smp = (_thr_is_smp > 1);
 		_thr_page_size = getpagesize();
 		_thr_guard_default = _thr_page_size;
 		_pthread_attr_default.guardsize_attr = _thr_guard_default;
 		_pthread_attr_default.stacksize_attr = _thr_stack_default;
-
+		env = getenv("LIBPTHREAD_SPINLOOPS");
+		if (env)
+			_thr_spinloops = atoi(env);
+		env = getenv("LIBPTHREAD_YIELDLOOPS");
+		if (env)
+			_thr_yieldloops = atoi(env);
 		TAILQ_INIT(&_thr_atfork_list);
-#ifdef SYSTEM_SCOPE_ONLY
-		_thr_scope_system = 1;
-#else
-		if (getenv("LIBPTHREAD_SYSTEM_SCOPE") != NULL)
-			_thr_scope_system = 1;
-		else if (getenv("LIBPTHREAD_PROCESS_SCOPE") != NULL)
-			_thr_scope_system = -1;
-#endif
 	}
 	init_once = 1;
 }

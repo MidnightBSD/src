@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_atfork.c,v 1.2 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_atfork.c,v 1.3 2006/09/06 04:04:10 davidxu Exp $
  */
 
 #include <errno.h>
@@ -50,8 +50,8 @@ _pthread_atfork(void (*prepare)(void), void (*parent)(void),
 	af->prepare = prepare;
 	af->parent = parent;
 	af->child = child;
-	THR_UMTX_LOCK(curthread, &_thr_atfork_lock);
+	THR_UMUTEX_LOCK(curthread, &_thr_atfork_lock);
 	TAILQ_INSERT_TAIL(&_thr_atfork_list, af, qe);
-	THR_UMTX_UNLOCK(curthread, &_thr_atfork_lock);
+	THR_UMUTEX_UNLOCK(curthread, &_thr_atfork_lock);
 	return (0);
 }

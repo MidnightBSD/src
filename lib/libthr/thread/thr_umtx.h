@@ -23,65 +23,78 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_umtx.h,v 1.1.2.2 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_umtx.h,v 1.10 2006/12/20 04:43:34 davidxu Exp $
  */
 
 #ifndef _THR_FBSD_UMTX_H_
 #define _THR_FBSD_UMTX_H_
 
+#include <strings.h>
 #include <sys/umtx.h>
+
+#define DEFAULT_UMUTEX	{0}
 
 typedef long umtx_t;
 
-int __thr_umtx_lock(volatile umtx_t *mtx, long id) __hidden;
-int __thr_umtx_timedlock(volatile umtx_t *mtx, long id,
+int __thr_umutex_lock(struct umutex *mtx) __hidden;
+int __thr_umutex_timedlock(struct umutex *mtx,
 	const struct timespec *timeout) __hidden;
-int __thr_umtx_unlock(volatile umtx_t *mtx, long id) __hidden;
+int __thr_umutex_unlock(struct umutex *mtx) __hidden;
+int __thr_umutex_trylock(struct umutex *mtx) __hidden;
+int __thr_umutex_set_ceiling(struct umutex *mtx, uint32_t ceiling,
+	uint32_t *oldceiling) __hidden;
 
-static inline void
-_thr_umtx_init(volatile umtx_t *mtx)
+void _thr_umutex_init(struct umutex *mtx) __hidden;
+int _thr_umtx_wait(volatile umtx_t *mtx, umtx_t exp,
+	const struct timespec *timeout) __hidden;
+int _thr_umtx_wake(volatile umtx_t *mtx, int count) __hidden;
+int _thr_ucond_wait(struct ucond *cv, struct umutex *m,
+        const struct timespec *timeout, int check_unpaking) __hidden;
+void _thr_ucond_init(struct ucond *cv) __hidden;
+int _thr_ucond_signal(struct ucond *cv) __hidden;
+int _thr_ucond_broadcast(struct ucond *cv) __hidden;
+
+static inline int
+_thr_umutex_trylock(struct umutex *mtx, uint32_t id)
 {
-    *mtx = 0;
+    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id))
+	return (0);
+    if ((mtx->m_flags & UMUTEX_PRIO_PROTECT) == 0)
+    	return (EBUSY);
+    return (__thr_umutex_trylock(mtx));
 }
 
 static inline int
-_thr_umtx_trylock(volatile umtx_t *mtx, long id)
+_thr_umutex_trylock2(struct umutex *mtx, uint32_t id)
 {
-    if (atomic_cmpset_acq_ptr((volatile uintptr_t *)mtx,
-	(uintptr_t)UMTX_UNOWNED, (uintptr_t)id))
+    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id))
 	return (0);
     return (EBUSY);
 }
 
 static inline int
-_thr_umtx_lock(volatile umtx_t *mtx, long id)
+_thr_umutex_lock(struct umutex *mtx, uint32_t id)
 {
-    if (atomic_cmpset_acq_ptr((volatile uintptr_t *)mtx,
-	(uintptr_t)UMTX_UNOWNED, (uintptr_t)id))
+    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id))
 	return (0);
-    return (__thr_umtx_lock(mtx, id));
+    return (__thr_umutex_lock(mtx));
 }
 
 static inline int
-_thr_umtx_timedlock(volatile umtx_t *mtx, long id,
+_thr_umutex_timedlock(struct umutex *mtx, uint32_t id,
 	const struct timespec *timeout)
 {
-    if (atomic_cmpset_acq_ptr((volatile uintptr_t *)mtx,
-	(uintptr_t)UMTX_UNOWNED, (uintptr_t)id))
+    if (atomic_cmpset_acq_32(&mtx->m_owner, UMUTEX_UNOWNED, id))
 	return (0);
-    return (__thr_umtx_timedlock(mtx, id, timeout));
+    return (__thr_umutex_timedlock(mtx, timeout));
 }
 
 static inline int
-_thr_umtx_unlock(volatile umtx_t *mtx, long id)
+_thr_umutex_unlock(struct umutex *mtx, uint32_t id)
 {
-    if (atomic_cmpset_rel_ptr((volatile uintptr_t *)mtx,
-	(uintptr_t)id, (uintptr_t)UMTX_UNOWNED))
+    if (atomic_cmpset_rel_32(&mtx->m_owner, id, UMUTEX_UNOWNED))
 	return (0);
-    return __thr_umtx_unlock(mtx, id);
+    return (__thr_umutex_unlock(mtx));
 }
 
-int _thr_umtx_wait(volatile umtx_t *mtx, umtx_t exp,
-	const struct timespec *timeout) __hidden;
-int _thr_umtx_wake(volatile umtx_t *mtx, int count) __hidden;
 #endif

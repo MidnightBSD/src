@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_list.c,v 1.4.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_list.c,v 1.11 2006/11/24 09:57:38 davidxu Exp $
  */
 
 #include <sys/types.h>
@@ -44,6 +44,8 @@
 #define DBG_MSG(x...)
 #endif
 
+#define MAX_THREADS		100000
+
 /*
  * Define a high water mark for the maximum number of threads that
  * will be cached.  Once this level is reached, any extra threads
@@ -57,10 +59,11 @@
  * after a fork().
  */
 static TAILQ_HEAD(, pthread)	free_threadq;
-static umtx_t			free_thread_lock;
-static umtx_t			tcb_lock;
+static struct umutex		free_thread_lock = DEFAULT_UMUTEX;
+static struct umutex		tcb_lock = DEFAULT_UMUTEX;
 static int			free_thread_count = 0;
 static int			inited = 0;
+static int			total_threads;
 
 LIST_HEAD(thread_hash_head, pthread);
 #define HASH_QUEUES	128
@@ -75,11 +78,12 @@ _thr_list_init(void)
 	int i;
 
 	_gc_count = 0;
-	_thr_umtx_init(&_thr_list_lock);
+	total_threads = 1;
+	_thr_umutex_init(&_thr_list_lock);
 	TAILQ_INIT(&_thread_list);
 	TAILQ_INIT(&free_threadq);
-	_thr_umtx_init(&free_thread_lock);
-	_thr_umtx_init(&tcb_lock);
+	_thr_umutex_init(&free_thread_lock);
+	_thr_umutex_init(&tcb_lock);
 	if (inited) {
 		for (i = 0; i < HASH_QUEUES; ++i)
 			LIST_INIT(&thr_hashtable[i]);
@@ -97,8 +101,7 @@ _thr_gc(struct pthread *curthread)
 	THREAD_LIST_LOCK(curthread);
 
 	/* Check the threads waiting for GC. */
-	for (td = TAILQ_FIRST(&_thread_gc_list); td != NULL; td = td_next) {
-		td_next = TAILQ_NEXT(td, gcle);
+	TAILQ_FOREACH_SAFE(td, &_thread_gc_list, gcle, td_next) {
 		if (td->tid != TID_TERMINATED) {
 			/* make sure we are not still in userland */
 			continue;
@@ -152,9 +155,14 @@ _thr_alloc(struct pthread *curthread)
 		}
 	}
 	if (thread == NULL) {
-		thread = malloc(sizeof(struct pthread));
-		if (thread == NULL)
+		if (total_threads > MAX_THREADS)
 			return (NULL);
+		atomic_fetchadd_int(&total_threads, 1);
+		thread = malloc(sizeof(struct pthread));
+		if (thread == NULL) {
+			atomic_fetchadd_int(&total_threads, -1);
+			return (NULL);
+		}
 	}
 	if (curthread != NULL) {
 		THR_LOCK_ACQUIRE(curthread, &tcb_lock);
@@ -168,6 +176,7 @@ _thr_alloc(struct pthread *curthread)
 		thread->tcb = tcb;
 	} else {
 		thr_destroy(curthread, thread);
+		atomic_fetchadd_int(&total_threads, -1);
 		thread = NULL;
 	}
 	return (thread);
@@ -177,10 +186,7 @@ void
 _thr_free(struct pthread *curthread, struct pthread *thread)
 {
 	DBG_MSG("Freeing thread %p\n", thread);
-	if (thread->name) {
-		free(thread->name);
-		thread->name = NULL;
-	}
+
 	/*
 	 * Always free tcb, as we only know it is part of RTLD TLS
 	 * block, but don't know its detail and can not assume how
@@ -196,6 +202,7 @@ _thr_free(struct pthread *curthread, struct pthread *thread)
 	thread->tcb = NULL;
 	if ((curthread == NULL) || (free_thread_count >= MAX_CACHED_THREADS)) {
 		thr_destroy(curthread, thread);
+		atomic_fetchadd_int(&total_threads, -1);
 	} else {
 		/*
 		 * Add the thread to the free thread list, this also avoids
@@ -286,6 +293,7 @@ _thr_ref_add(struct pthread *curthread, struct pthread *thread,
 	THREAD_LIST_LOCK(curthread);
 	if ((ret = _thr_find_thread(curthread, thread, include_dead)) == 0) {
 		thread->refcount++;
+		THR_CRITICAL_ENTER(curthread);
 	}
 	THREAD_LIST_UNLOCK(curthread);
 
@@ -302,18 +310,20 @@ _thr_ref_delete(struct pthread *curthread, struct pthread *thread)
 }
 
 void
-_thr_ref_delete_unlocked(struct pthread *curthread, struct pthread *thread)
+_thr_ref_delete_unlocked(struct pthread *curthread,
+	struct pthread *thread)
 {
 	if (thread != NULL) {
 		thread->refcount--;
 		if ((thread->refcount == 0) && thread->state == PS_DEAD &&
 		    (thread->tlflags & TLFLAGS_DETACHED) != 0)
 			THR_GCLIST_ADD(thread);
+		THR_CRITICAL_LEAVE(curthread);
 	}
 }
 
 int
-_thr_find_thread(struct pthread *curthread, struct pthread *thread,
+_thr_find_thread(struct pthread *curthread __unused, struct pthread *thread,
     int include_dead)
 {
 	struct pthread *pthread;

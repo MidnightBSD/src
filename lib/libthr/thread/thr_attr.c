@@ -74,10 +74,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -93,14 +90,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_attr.c,v 1.3.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_attr.c,v 1.8 2007/01/12 07:26:20 imp Exp $
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread_np.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 
@@ -422,20 +421,31 @@ __weak_reference(_pthread_attr_setschedparam, pthread_attr_setschedparam);
 int
 _pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param)
 {
-	int ret = 0;
+	int policy;
 
 	if ((attr == NULL) || (*attr == NULL))
-		ret = EINVAL;
-	else if (param == NULL) {
-		ret = ENOTSUP;
-	} else if ((param->sched_priority < THR_MIN_PRIORITY) ||
-	    (param->sched_priority > THR_MAX_PRIORITY)) {
-		/* Return an unsupported value error. */
-		ret = ENOTSUP;
-	} else
-		(*attr)->prio = param->sched_priority;
+		return (EINVAL);
 
-	return(ret);
+	if (param == NULL)
+		return (ENOTSUP);
+
+	policy = (*attr)->sched_policy;
+
+	if (policy == SCHED_FIFO || policy == SCHED_RR) {
+		if (param->sched_priority < _thr_priorities[policy-1].pri_min ||
+		    param->sched_priority > _thr_priorities[policy-1].pri_max)
+		return (ENOTSUP);
+	} else {
+		/*
+		 * Ignore it for SCHED_OTHER now, patches for glib ports
+		 * are wrongly using M:N thread library's internal macro
+		 * THR_MIN_PRIORITY and THR_MAX_PRIORITY.
+		 */
+	}
+
+	(*attr)->prio = param->sched_priority;
+
+	return (0);
 }
 
 __weak_reference(_pthread_attr_setschedpolicy, pthread_attr_setschedpolicy);
@@ -449,9 +459,10 @@ _pthread_attr_setschedpolicy(pthread_attr_t *attr, int policy)
 		ret = EINVAL;
 	else if ((policy < SCHED_FIFO) || (policy > SCHED_RR)) {
 		ret = ENOTSUP;
-	} else
+	} else {
 		(*attr)->sched_policy = policy;
-
+		(*attr)->prio = _thr_priorities[policy-1].pri_default;
+	}
 	return(ret);
 }
 

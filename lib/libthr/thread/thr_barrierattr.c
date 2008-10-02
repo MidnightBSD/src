@@ -25,12 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_barrierattr.c,v 1.2 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_barrierattr.c,v 1.3 2006/04/04 02:57:49 davidxu Exp $
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "un-namespace.h"
 
 #include "thr_private.h"
 

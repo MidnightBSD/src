@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,10 +26,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_multi_np.c,v 1.1 2003/04/01 03:46:29 jeff Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_multi_np.c,v 1.3 2007/01/12 07:26:20 imp Exp $
  */
+
+#include "namespace.h"
 #include <pthread.h>
 #include <pthread_np.h>
+#include "un-namespace.h"
 
 __weak_reference(_pthread_multi_np, pthread_multi_np);
 
@@ -45,6 +45,6 @@ _pthread_multi_np()
 	 * XXX - Do we want to do this?
 	 * __is_threaded = 1;
 	 */
-	pthread_resume_all_np();
+	_pthread_resume_all_np();
 	return (0);
 }

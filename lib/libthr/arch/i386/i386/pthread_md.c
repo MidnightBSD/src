@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/arch/i386/i386/pthread_md.c,v 1.5.2.1 2006/01/16 05:36:30 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/arch/i386/i386/pthread_md.c,v 1.7 2006/04/04 03:26:06 davidxu Exp $
  */
 
 #include <sys/types.h>
@@ -39,14 +39,11 @@ struct tcb *
 _tcb_ctor(struct pthread *thread, int initial)
 {
 	struct tcb *tcb;
-	void *oldtls;
 
 	if (initial)
-		__asm __volatile("movl %%gs:0, %0" : "=r" (oldtls));
+		__asm __volatile("movl %%gs:0, %0" : "=r" (tcb));
 	else
-		oldtls = NULL;
-
-	tcb = _rtld_allocate_tls(oldtls, sizeof(struct tcb), 16);
+		tcb = _rtld_allocate_tls(NULL, sizeof(struct tcb), 16);
 	if (tcb)
 		tcb->tcb_thread = thread;
 	return (tcb);

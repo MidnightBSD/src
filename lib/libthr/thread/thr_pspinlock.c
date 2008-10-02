@@ -23,12 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthr/thread/thr_pspinlock.c,v 1.1 2005/04/02 01:20:00 davidxu Exp $
+ * $FreeBSD: src/lib/libthr/thread/thr_pspinlock.c,v 1.5 2006/12/15 11:52:01 davidxu Exp $
  */
 
+#include "namespace.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "un-namespace.h"
+
 #include "thr_private.h"
 
 #define SPIN_COUNT 100000
@@ -50,7 +53,7 @@ _pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 	else if ((lck = malloc(sizeof(struct pthread_spinlock))) == NULL)
 		ret = ENOMEM;
 	else {
-		_thr_umtx_init(&lck->s_lock);
+		_thr_umutex_init(&lck->s_lock);
 		*lock = lck;
 		ret = 0;
 	}
@@ -84,7 +87,7 @@ _pthread_spin_trylock(pthread_spinlock_t *lock)
 	if (lock == NULL || (lck = *lock) == NULL)
 		ret = EINVAL;
 	else
-		ret = THR_UMTX_TRYLOCK(curthread, &lck->s_lock);
+		ret = THR_UMUTEX_TRYLOCK(curthread, &lck->s_lock);
 	return (ret);
 }
 
@@ -99,15 +102,17 @@ _pthread_spin_lock(pthread_spinlock_t *lock)
 		ret = EINVAL;
 	else {
 		count = SPIN_COUNT;
-		while ((ret = THR_UMTX_TRYLOCK(curthread, &lck->s_lock)) != 0) {
-			while (lck->s_lock) {
-#ifdef __i386__
-				/* tell cpu we are spinning */
-				__asm __volatile("pause");
-#endif
-				if (--count <= 0) {
-					count = SPIN_COUNT;
+		while ((ret = THR_UMUTEX_TRYLOCK(curthread, &lck->s_lock)) != 0) {
+			while (lck->s_lock.m_owner) {
+				if (_thr_is_smp) {
 					_pthread_yield();
+				} else {
+					CPU_SPINWAIT;
+
+					if (--count <= 0) {
+						count = SPIN_COUNT;
+						_pthread_yield();
+					}
 				}
 			}
 		}
@@ -127,7 +132,7 @@ _pthread_spin_unlock(pthread_spinlock_t *lock)
 	if (lock == NULL || (lck = *lock) == NULL)
 		ret = EINVAL;
 	else {
-		ret = THR_UMTX_UNLOCK(curthread, &lck->s_lock);
+		ret = THR_UMUTEX_UNLOCK(curthread, &lck->s_lock);
 	}
 	return (ret);
 }
