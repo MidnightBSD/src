@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.5 2007/10/23 14:46:24 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.6 2008/10/02 02:01:50 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -14,7 +14,7 @@
 # libkvm must be built before libdevstat.
 # msun must be built before libg++ and libstdc++.
 # libmd must be built before libatm, libopie, libradius, and libtacplus.
-# libncurses must be built before libdialog, libedit and libreadline.
+# ncurses must be built before libdialog, libedit and libreadline.
 # libnetgraph must be built before libbsnmp/modules/snmp_netgraph.
 # libopie must be built before libpam.
 # libradius must be built before libpam.
