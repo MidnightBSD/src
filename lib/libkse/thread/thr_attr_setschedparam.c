@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 1989, 1993
- *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 1998 Daniel Eischen <eischen@vigrid.com>.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,16 +12,15 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
- * 4. Neither the name of the University nor the names of its contributors
+ *	This product includes software developed by Daniel Eischen.
+ * 4. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY DANIEL EISCHEN AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -30,9 +29,32 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)pathnames.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: src/lib/libncurses/pathnames.h,v 1.1 1999/08/30 07:57:50 peter Exp $
+ * $FreeBSD: src/lib/libkse/thread/thr_attr_setschedparam.c,v 1.12 2007/10/09 13:42:27 obrien Exp $
  */
+#include <errno.h>
+#include <pthread.h>
+#include "thr_private.h"
 
-#define	_PATH_DEF	".termcap /usr/share/misc/termcap"
-#define	_PATH_DEF_SEC	"/usr/share/misc/termcap"
+LT10_COMPAT_PRIVATE(_pthread_attr_setschedparam);
+LT10_COMPAT_DEFAULT(pthread_attr_setschedparam);
+
+__weak_reference(_pthread_attr_setschedparam, pthread_attr_setschedparam);
+
+int
+_pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param)
+{
+	int ret = 0;
+
+	if ((attr == NULL) || (*attr == NULL))
+		ret = EINVAL;
+	else if (param == NULL) {
+		ret = ENOTSUP;
+	} else if ((param->sched_priority < THR_MIN_PRIORITY) ||
+	    (param->sched_priority > THR_MAX_PRIORITY)) {
+		/* Return an unsupported value error. */
+		ret = ENOTSUP;
+	} else
+		(*attr)->prio = param->sched_priority;
+
+	return(ret);
+}

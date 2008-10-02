@@ -1,6 +1,4 @@
-/*
- * $FreeBSD: src/lib/libthr/pthread.map,v 1.18 2007/05/13 14:12:39 deischen Exp $
- */
+/* $FreeBSD: src/lib/libkse/kse.map,v 1.1 2007/10/09 13:42:21 obrien Exp $ */
 
 /*
  * Use the same naming scheme as libc.
@@ -63,11 +61,7 @@ global:
 	pthread_cond_timedwait;
 	pthread_cond_wait;
 	pthread_condattr_destroy;
-	pthread_condattr_getclock;
-	pthread_condattr_getpshared;
 	pthread_condattr_init;
-	pthread_condattr_setclock;
-	pthread_condattr_setpshared;
 	pthread_create;
 	pthread_detach;
 	pthread_equal;
@@ -93,14 +87,12 @@ global:
 	pthread_mutexattr_destroy;
 	pthread_mutexattr_getkind_np;
 	pthread_mutexattr_getprioceiling;
-	pthread_mutexattr_getpshared;
 	pthread_mutexattr_getprotocol;
 	pthread_mutexattr_gettype;
 	pthread_mutexattr_init;
 	pthread_mutexattr_setkind_np;
 	pthread_mutexattr_setprioceiling;
 	pthread_mutexattr_setprotocol;
-	pthread_mutexattr_setpshared;
 	pthread_mutexattr_settype;
 	pthread_once;
 	pthread_resume_all_np;
@@ -138,24 +130,19 @@ global:
 	pthread_switch_add_np;
 	pthread_switch_delete_np;
 	pthread_testcancel;
-	pthread_timedjoin_np;
 	pthread_yield;
 	raise;
 	read;
 	readv;
-	recvfrom;
-	recvmsg;
+	sched_yield;
 	select;
-	sem_destroy;
-	sem_getvalue;
 	sem_init;
 	sem_post;
 	sem_timedwait;
-	sem_trywait;
 	sem_wait;
-	sendmsg;
-	sendto;
 	sigaction;
+	sigaltstack;
+	sigpending;
 	sigprocmask;
 	sigsuspend;
 	sigwait;
@@ -166,9 +153,8 @@ global:
 	tcdrain;
 	usleep;
 	vfork;
-	wait;
-	wait3;
 	wait4;
+	wait;
 	waitpid;
 	write;
 	writev;
@@ -183,16 +169,7 @@ local:
 FBSDprivate_1.0 {
 global:
 	___creat;
-	___pause;
-	___pselect;
-	___sleep;
-	___system;
-	___tcdrain;
-	___usleep;
-	___wait;
-	___waitpid;
 	__accept;
-	__aio_suspend;
 	__close;
 	__connect;
 	__fcntl;
@@ -205,24 +182,24 @@ global:
 	__pthread_cond_wait;
 	__pthread_mutex_init;
 	__pthread_mutex_lock;
-	__pthread_mutex_timedlock;
 	__pthread_mutex_trylock;
+	__pthread_mutex_timedlock;
 	__read;
 	__readv;
-	__recvfrom;
-	__recvmsg;
 	__select;
-	__sendmsg;
-	__sendto;
 	__sigsuspend;
 	__sigtimedwait;
 	__sigwait;
 	__sigwaitinfo;
-	__wait3;
 	__wait4;
 	__write;
 	__writev;
+	_aio_suspend;
+	_execve;
 	_fork;
+	_nanosleep;
+	_pause;
+	_pselect;
 	_pthread_atfork;
 	_pthread_barrier_destroy;
 	_pthread_barrier_init;
@@ -262,12 +239,9 @@ global:
 	_pthread_cond_signal;
 	_pthread_cond_timedwait;
 	_pthread_cond_wait;
+	_pthread_condattr_default;
 	_pthread_condattr_destroy;
-	_pthread_condattr_getclock;
-	_pthread_condattr_getpshared;
 	_pthread_condattr_init;
-	_pthread_condattr_setclock;
-	_pthread_condattr_setpshared;
 	_pthread_create;
 	_pthread_detach;
 	_pthread_equal;
@@ -290,17 +264,16 @@ global:
 	_pthread_mutex_timedlock;
 	_pthread_mutex_trylock;
 	_pthread_mutex_unlock;
+	_pthread_mutexattr_default;
 	_pthread_mutexattr_destroy;
 	_pthread_mutexattr_getkind_np;
 	_pthread_mutexattr_getprioceiling;
 	_pthread_mutexattr_getprotocol;
-	_pthread_mutexattr_getpshared;
 	_pthread_mutexattr_gettype;
 	_pthread_mutexattr_init;
 	_pthread_mutexattr_setkind_np;
 	_pthread_mutexattr_setprioceiling;
 	_pthread_mutexattr_setprotocol;
-	_pthread_mutexattr_setpshared;
 	_pthread_mutexattr_settype;
 	_pthread_once;
 	_pthread_resume_all_np;
@@ -338,53 +311,58 @@ global:
 	_pthread_switch_add_np;
 	_pthread_switch_delete_np;
 	_pthread_testcancel;
-	_pthread_timedjoin_np;
 	_pthread_yield;
 	_raise;
-	_sem_destroy;
-	_sem_getvalue;
+	_sched_yield;
 	_sem_init;
 	_sem_post;
 	_sem_timedwait;
-	_sem_trywait;
 	_sem_wait;
 	_sigaction;
+	_sigaltstack;
+	_sigpending;
 	_sigprocmask;
 	_sigsuspend;
 	_sigtimedwait;
 	_sigwait;
 	_sigwaitinfo;
+	_sleep;
 	_spinlock;
 	_spinlock_debug;
 	_spinunlock;
+	_system;
+	_tcdrain;
+	_usleep;
 	_vfork;
+	_wait;
+	_waitpid;
 
 	/* Debugger needs these. */
-	_libthr_debug;
+	_libkse_debug;
+	_thread_activated;
 	_thread_active_threads;
-	_thread_bp_create;
-	_thread_bp_death;
-	_thread_event_mask;
 	_thread_keytable;
-	_thread_last_event;
 	_thread_list;
 	_thread_max_keys;
 	_thread_off_attr_flags;
 	_thread_off_dtv;
-	_thread_off_event_buf;
-	_thread_off_event_mask;
-	_thread_off_key_allocated;
-	_thread_off_key_destructor;
 	_thread_off_linkmap;
 	_thread_off_next;
-	_thread_off_report_events;
-	_thread_off_state;
 	_thread_off_tcb;
-	_thread_off_tid;
+	_thread_off_tmbx;
+	_thread_off_key_allocated;
+	_thread_off_key_destructor;
+	_thread_off_kse;
+	_thread_off_kse_locklevel;
+	_thread_off_sigmask;
+	_thread_off_sigpend;
+	_thread_off_state;
+	_thread_off_thr_locklevel;
 	_thread_off_tlsindex;
 	_thread_size_key;
 	_thread_state_running;
 	_thread_state_zoombie;
+
 local:
 	*;
 };

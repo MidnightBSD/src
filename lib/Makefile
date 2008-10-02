@@ -1,6 +1,8 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.4 2007/10/23 03:30:28 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.5 2007/10/23 14:46:24 laffer1 Exp $
+
+.include <bsd.own.mk>
 
 # To satisfy shared library or ELF linkage when only the libraries being
 # built are visible:
@@ -21,21 +23,21 @@
 # libtacplus must be built before libpam.
 # libutil must be built before libpam.
 # libypclnt must be built before libpam.
-# libpthread must be built before libsqlite3
+# libkse must be built before libsqlite3
 # libbz2 must be built before libarchive
 # Otherwise, the SUBDIR list should be in alphabetical order.
 
-SUBDIR=	${_csu} libc ${_libc_r} libcom_err libcrypt libkvm msun libmd libncurses \
-	libnetgraph libradius librpcsvc libsbuf libtacplus libutil \
+SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libkvm msun libmd \
+	ncurses libnetgraph libradius librpcsvc libsbuf libtacplus libutil \
 	${_libypclnt} libalias libbz2 libarchive ${_libatm} \
 	libbegemot ${_libbluetooth} libbsnmp \
-	libcalendar libcam libcompat libdevinfo libdevstat ${_libdisk} \
+	libcalendar libcam libcompat libdevinfo libdevstat libdisk \
 	libedit libexpat libfetch libform libftpio libgeom ${_libgpib} \
 	libipsec \
 	libipx libkiconv libmagic libmemstat libmenu ${_libmilter} ${_libmp} \
 	${_libncp} ${_libngatm} libopie libpam libpanel libpcap \
-	libpmc ${_libpthread} ${_libsdp} ${_libsm} ${_libsmb} ${_libsmdb} \
-	${_libsmutil} libstand libtelnet ${_libthr} ${_libthread_db} libufs \
+	libpmc ${_libkse} ${_libsdp} ${_libsm} ${_libsmb} ${_libsmdb} \
+	${_libsmutil} libstand libtelnet ${_libthr} libthread_db libufs \
 	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz ${_bind} \
 	libsqlite3
 
@@ -47,72 +49,72 @@ _csu=csu/${MACHINE_ARCH}
 _csu=csu
 .endif
 
-.if !defined(NO_ATM)
-_libatm=	libatm
+.if ${MK_ATM} != "no"
+# Not MPSAFE
+#_libatm=	libatm
 _libngatm=	libngatm
 .endif
 
-.if !defined(NO_BIND)
+.if ${MK_BIND} != "no"
 _bind=		bind
 .endif
 
-.if !defined(NO_BLUETOOTH)
+.if ${MK_BLUETOOTH} != "no"
 _libbluetooth=	libbluetooth
 _libsdp=	libsdp
 .endif
 
+.if ${MK_GSSAPI} != "no"
+_libgssapi=	libgssapi
+.endif
+
+.if ${MK_IPX} != "no"
+_libipx=	libipx
+.endif
+
 .if ${MACHINE_ARCH} == "i386"
+.if ${MK_NCP} != "no"
 _libncp=	libncp
+.endif
 _libsmb=	libsmb
 _libvgl=	libvgl
 .endif
 
-.if ${MACHINE_ARCH} != "arm" && ${MACHINE_ARCH} != "ia64" && \
-    ${MACHINE_ARCH} != "powerpc" && !defined(NO_LIBC_R)
-_libc_r=	libc_r
-.endif
-
-.if ${MACHINE_ARCH} != "arm"
-_libdisk=	libdisk
-.endif
-
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 _libmilter=	libmilter
 _libsm=		libsm
 _libsmdb=	libsmdb
 _libsmutil=	libsmutil
 .endif
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 _libmp=		libmp
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
+.if ${MK_NCP} != "no"
 _libncp=	libncp
+.endif
 _libsmb=	libsmb
 .endif
 
-.if !defined(NO_LIBPTHREAD)
-_libpthread=	libpthread
+.if ${MK_LIBKSE} != "no"
+_libkse=	libkse
 .endif
 
-.if !defined(NO_LIBTHR)
-_libthr= libthr
+.if ${MK_LIBTHR} != "no"
+_libthr=	libthr
 .endif
 
-.if ${MACHINE_ARCH} != "arm" && ${MACHINE_ARCH} != "powerpc"
-_libthread_db= libthread_db
-.endif
-
-.if !defined(NO_USB)
+.if ${MK_USB} != "no"
 _libusbhid=	libusbhid
 .endif
 
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 _libypclnt=	libypclnt
 .endif
 
-.if !defined(NO_GPIB)
+.if ${MK_GPIB} != "no"
 _libgpib=	libgpib
 .endif
 
