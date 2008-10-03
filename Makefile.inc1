@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.8 2008/04/29 00:23:55 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.9 2008/04/29 01:36:03 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_DYNAMICROOT do not link /bin and /sbin dynamically
@@ -424,7 +424,7 @@ build32:
 	cd ${.CURDIR}/${_dir}; \
 	    ${LIB32MAKE} DESTDIR=${LIB32TMP} obj
 .endfor
-.for _dir in lib/libncurses lib/libmagic
+.for _dir in lib/ncurses lib/libmagic
 	cd ${.CURDIR}/${_dir}; \
 	    MAKEOBJDIRPREFIX=${OBJTREE}/lib32 ${MAKE} DESTDIR= build-tools
 .endfor
@@ -874,7 +874,7 @@ build-tools:
     bin/csh \
     bin/sh \
     ${_rescue} \
-    lib/libncurses \
+    lib/ncurses \
     ${_share} \
     ${_aicasm} \
     usr.bin/awk \
@@ -974,7 +974,7 @@ _generic_libs+=	kerberos5/lib
 
 _prebuild_libs+= lib/libbz2 lib/libcom_err lib/libcrypt lib/libexpat \
 		lib/libkvm lib/libmd \
-		lib/libncurses \
+		lib/ncurses \
 		lib/libnetgraph lib/libopie lib/libpam \
 		lib/libpthread lib/libthr lib/libradius \
 		lib/libsbuf lib/libtacplus lib/libutil \
