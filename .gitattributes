@@ -8851,6 +8851,7 @@ contrib/ncurses/ANNOUNCE -text
 contrib/ncurses/AUTHORS -text
 contrib/ncurses/INSTALL -text
 contrib/ncurses/MANIFEST -text
+contrib/ncurses/MIDNIGHTBSD-Xlist -text
 contrib/ncurses/Makefile.glibc -text
 contrib/ncurses/Makefile.in -text
 contrib/ncurses/Makefile.os2 -text
