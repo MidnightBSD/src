@@ -31,7 +31,7 @@
  *  Author: Thomas E. Dickey <dickey@clark.net> 1997                        *
  ****************************************************************************/
 /*
- * $Id: ncurses_cfg.h,v 1.1 2008-10-02 02:01:56 laffer1 Exp $
+ * $Id: ncurses_cfg.h,v 1.2 2008-10-05 18:18:57 laffer1 Exp $
  *
  * This is a template-file used to generate the "ncurses_cfg.h" file.
  *
@@ -44,7 +44,7 @@
  *	ftp://invisible-island.net/autoconf/
  */
 
-/* $FreeBSD: src/lib/ncurses/ncurses/ncurses_cfg.h,v 1.8 2007/03/09 12:11:57 rafan Exp $ */
+/* $MidnightBSD$ */
 
 #ifndef NC_CONFIG_H
 #define NC_CONFIG_H

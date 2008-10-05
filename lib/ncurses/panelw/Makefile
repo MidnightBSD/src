@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/lib/ncurses/panelw/Makefile,v 1.1 2007/03/09 12:11:58 rafan Exp $
+# $MidnightBSD: src/lib/ncurses/panelw/Makefile,v 1.2 2008/10/02 17:05:38 laffer1 Exp $
 
 ENABLE_WIDEC=
 
