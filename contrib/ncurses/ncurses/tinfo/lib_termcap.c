@@ -36,6 +36,8 @@
  * (but it has changed a lot)                                               *
  ****************************************************************************/
 
+/* $MidnightBSD$ */
+
 #define __INTERNAL_CAPS_VISIBLE
 #include <curses.priv.h>
 
@@ -45,10 +47,14 @@
 
 #include <term_entry.h>
 
-MODULE_ID("$Id: lib_termcap.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_termcap.c,v 1.2 2008-10-05 15:34:49 laffer1 Exp $")
 
 NCURSES_EXPORT_VAR(char *) UP = 0;
 NCURSES_EXPORT_VAR(char *) BC = 0;
+
+#ifdef FREEBSD_NATIVE
+extern char _nc_termcap[];	/* buffer to copy out */
+#endif
 
 typedef struct {
     long sequence;
@@ -174,6 +180,16 @@ tgetent(char *bufp, const char *name)
 #endif*/
 
     }
+
+#ifdef FREEBSD_NATIVE
+    /*
+     * This is a REALLY UGLY hack. Basically, if we originate with
+     * a termcap source, try and copy it out.
+     */
+    if (bufp && _nc_termcap[0])
+	strncpy(bufp, _nc_termcap, 1024);
+#endif
+
     returnCode(errcode);
 }
 

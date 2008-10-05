@@ -32,6 +32,8 @@
  *     and: Thomas E. Dickey                        1996 on                 *
  ****************************************************************************/
 
+/* $MidnightBSD$ */
+
 /*
  *	comp_scan.c --- Lexical scanner for terminfo compiler.
  *
@@ -51,7 +53,7 @@
 #include <term_entry.h>
 #include <tic.h>
 
-MODULE_ID("$Id: comp_scan.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: comp_scan.c,v 1.2 2008-10-05 15:34:49 laffer1 Exp $")
 
 /*
  * Maximum length of string capability we'll accept before raising an error.
@@ -513,8 +515,10 @@ _nc_get_token(bool silent)
 		if (!silent) {
 		    if (*after_list == '\0')
 			_nc_warning("empty longname field");
+#ifndef FREEBSD_NATIVE
 		    else if (strchr(after_list, ' ') == 0)
 			_nc_warning("older tic versions may treat the description field as an alias");
+#endif
 		}
 	    } else {
 		after_list = buffer + strlen(buffer);
