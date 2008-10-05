@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,1999,2000,2001 Free Software Foundation, Inc.         *
+ * Copyright (c) 1998-2001,2006 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -40,7 +40,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_clrbot.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
+MODULE_ID("$Id: lib_clrbot.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
 wclrtobot(WINDOW *win)
@@ -54,8 +54,8 @@ wclrtobot(WINDOW *win)
 	NCURSES_SIZE_T startx = win->_curx;
 	NCURSES_CH_T blank = win->_nc_bkgd;
 
-	T(("clearing from y = %d to y = %d with maxx =  %d",
-	   win->_cury, win->_maxy, win->_maxx));
+	T(("clearing from y = %ld to y = %ld with maxx =  %ld",
+	   (long) win->_cury, (long) win->_maxy, (long) win->_maxx));
 
 	for (y = win->_cury; y <= win->_maxy; y++) {
 	    struct ldat *line = &(win->_line[y]);

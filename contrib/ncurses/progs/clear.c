@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998 Free Software Foundation, Inc.                        *
+ * Copyright (c) 1998-2005,2006 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -29,8 +29,8 @@
 /****************************************************************************
  *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
+ *     and: Thomas E. Dickey                        1996-on                 *
  ****************************************************************************/
-
 
 /*
  * clear.c --  clears the terminal's screen
@@ -38,21 +38,21 @@
 
 #include <progs.priv.h>
 
-#include <curses.h>
+MODULE_ID("$Id: clear.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
-MODULE_ID("$Id: clear.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
-
-static int putch(int c)
+static int
+putch(int c)
 {
-	return putchar(c);
+    return putchar(c);
 }
 
-int main(
+int
+main(
 	int argc GCC_UNUSED,
-	char *argv[] GCC_UNUSED)
+	char *argv[]GCC_UNUSED)
 {
-	setupterm((char *) 0, STDOUT_FILENO, (int *) 0);
-	return (tputs(clear_screen, lines > 0 ? lines : 1, putch) == ERR)
+    setupterm((char *) 0, STDOUT_FILENO, (int *) 0);
+    ExitProgram((tputs(clear_screen, lines > 0 ? lines : 1, putch) == ERR)
 		? EXIT_FAILURE
-		: EXIT_SUCCESS;
+		: EXIT_SUCCESS);
 }

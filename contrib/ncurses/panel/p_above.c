@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2005 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -35,17 +35,18 @@
  */
 #include "panel.priv.h"
 
-MODULE_ID("$Id: p_above.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
+MODULE_ID("$Id: p_above.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(PANEL *)
-panel_above (const PANEL *pan)
+panel_above(const PANEL * pan)
 {
-  if(!pan)
+  T((T_CALLED("panel_above(%p)"), pan));
+  if (!pan)
     {
       /* if top and bottom are equal, we have no or only the pseudo panel;
-	 if not, we return the panel above the pseudo panel */
-      return(EMPTY_STACK() ? (PANEL*)0 : _nc_bottom_panel->above);
+         if not, we return the panel above the pseudo panel */
+      returnPanel(EMPTY_STACK()? (PANEL *) 0 : _nc_bottom_panel->above);
     }
   else
-    return(pan->above);
+    returnPanel(pan->above);
 }

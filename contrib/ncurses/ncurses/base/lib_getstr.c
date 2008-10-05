@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2002,2006 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -41,7 +41,7 @@
 #include <curses.priv.h>
 #include <term.h>
 
-MODULE_ID("$Id: lib_getstr.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
+MODULE_ID("$Id: lib_getstr.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 /*
  * This wipes out the last character, no matter whether it was a tab, control
@@ -70,7 +70,10 @@ WipeOut(WINDOW *win, int y, int x, char *first, char *last, bool echoed)
 }
 
 NCURSES_EXPORT(int)
-wgetnstr(WINDOW *win, char *str, int maxlen)
+wgetnstr_events(WINDOW *win,
+		char *str,
+		int maxlen,
+		EVENTLIST_1st(_nc_eventlist * evl))
 {
     TTY buf;
     bool oldnl, oldecho, oldraw, oldcbreak;
@@ -105,7 +108,7 @@ wgetnstr(WINDOW *win, char *str, int maxlen)
     if (is_wintouched(win) || (win->_flags & _HASMOVED))
 	wrefresh(win);
 
-    while ((ch = wgetch(win)) != ERR) {
+    while ((ch = wgetch_events(win, evl)) != ERR) {
 	/*
 	 * Some terminals (the Wyse-50 is the most common) generate
 	 * a \n from the down-arrow key.  With this logic, it's the
@@ -122,6 +125,14 @@ wgetnstr(WINDOW *win, char *str, int maxlen)
 		wechochar(win, (chtype) '\n');
 	    break;
 	}
+#ifdef KEY_EVENT
+	if (ch == KEY_EVENT)
+	    break;
+#endif
+#ifdef KEY_RESIZE
+	if (ch == KEY_RESIZE)
+	    break;
+#endif
 	if (ch == erasec || ch == KEY_LEFT || ch == KEY_BACKSPACE) {
 	    if (str > oldstr) {
 		str = WipeOut(win, y, x, oldstr, str, oldecho);
@@ -185,9 +196,29 @@ wgetnstr(WINDOW *win, char *str, int maxlen)
 
     *str = '\0';
     if (ch == ERR)
-	returnCode(ERR);
+	returnCode(ch);
 
     T(("wgetnstr returns %s", _nc_visbuf(oldstr)));
 
+#ifdef KEY_EVENT
+    if (ch == KEY_EVENT)
+	returnCode(ch);
+#endif
+#ifdef KEY_RESIZE
+    if (ch == KEY_RESIZE)
+	returnCode(ch);
+#endif
+
     returnCode(OK);
 }
+
+#ifdef NCURSES_WGETCH_EVENTS
+NCURSES_EXPORT(int)
+wgetnstr(WINDOW *win, char *str, int maxlen)
+{
+    returnCode(wgetnstr_events(win,
+			       str,
+			       maxlen,
+			       EVENTLIST_1st((_nc_eventlist *) 0)));
+}
+#endif

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2003,2004 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,7 +27,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- *   Author: Juergen Pfeifer <juergen.pfeifer@gmx.net> 1995,1997            *
+ *   Author:  Juergen Pfeifer, 1995,1997                                    *
  ****************************************************************************/
 
 /***************************************************************************
@@ -37,7 +37,7 @@
 
 #include "menu.priv.h"
 
-MODULE_ID("$Id: m_item_vis.c,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $")
+MODULE_ID("$Id: m_item_vis.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnmenu  
@@ -50,18 +50,19 @@ MODULE_ID("$Id: m_item_vis.c,v 1.1.1.2 2006-02-25 02:33:39 laffer1 Exp $")
 |                    FALSE if invisible
 +--------------------------------------------------------------------------*/
 NCURSES_EXPORT(bool)
-item_visible (const ITEM * item)
+item_visible(const ITEM * item)
 {
   MENU *menu;
-  
-  if ( item                                               && 
-      (menu=item->imenu)                                  && 
-      (menu->status & _POSTED)                            &&
-      ( (menu->toprow + menu->arows) > (item->y) )        &&
-      ( item->y >= menu->toprow) )
-    return TRUE;
+
+  T((T_CALLED("item_visible(%p)"), item));
+  if (item &&
+      (menu = item->imenu) &&
+      (menu->status & _POSTED) &&
+      ((menu->toprow + menu->arows) > (item->y)) &&
+      (item->y >= menu->toprow))
+    returnBool(TRUE);
   else
-    return FALSE;
+    returnBool(FALSE);
 }
 
 /* m_item_vis.c ends here */

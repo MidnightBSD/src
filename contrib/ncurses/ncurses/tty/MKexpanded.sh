@@ -1,6 +1,6 @@
 #! /bin/sh
 ##############################################################################
-# Copyright (c) 1998,2000 Free Software Foundation, Inc.                     #
+# Copyright (c) 1998-2000,2005 Free Software Foundation, Inc.                #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
 # copy of this software and associated documentation files (the "Software"), #
@@ -29,7 +29,7 @@
 #
 # Author: Thomas E. Dickey <dickey@clark.net> 1997
 #
-# $Id: MKexpanded.sh,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $
+# $Id: MKexpanded.sh,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $
 #
 # Script to generate 'expanded.c', a dummy source that contains functions
 # corresponding to complex macros used in this library.  By making functions,
@@ -84,7 +84,7 @@ NCURSES_EXPORT(int) _nc_InsCharCost (int count)
 {
 	return InsCharCost(count);
 }
-NCURSES_EXPORT(void) _nc_UpdateAttrs (chtype c)
+NCURSES_EXPORT(void) _nc_UpdateAttrs (NCURSES_CH_T c)
 {
 	UpdateAttrs(c);
 }

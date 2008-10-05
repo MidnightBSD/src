@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2005 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,32 +36,34 @@
  */
 #include "panel.priv.h"
 
-MODULE_ID("$Id: p_show.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
+MODULE_ID("$Id: p_show.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
-show_panel (PANEL *pan)
-{ 
+show_panel(PANEL * pan)
+{
   int err = OK;
 
-  if(!pan)
-    return(ERR);
+  T((T_CALLED("show_panel(%p)"), pan));
+
+  if (!pan)
+    returnCode(ERR);
 
   if (Is_Top(pan))
-    return(OK);
+    returnCode(OK);
 
   dBug(("--> show_panel %s", USER_PTR(pan->user)));
 
-  HIDE_PANEL(pan,err,OK);
+  HIDE_PANEL(pan, err, OK);
 
-  dStack("<lt%d>",1,pan);
+  dStack("<lt%d>", 1, pan);
   assert(_nc_bottom_panel == _nc_stdscr_pseudo_panel);
 
   _nc_top_panel->above = pan;
-  pan->below = _nc_top_panel;  
-  pan->above = (PANEL *)0;
+  pan->below = _nc_top_panel;
+  pan->above = (PANEL *) 0;
   _nc_top_panel = pan;
-  
-  dStack("<lt%d>",9,pan);
 
-  return(OK);
+  dStack("<lt%d>", 9, pan);
+
+  returnCode(OK);
 }

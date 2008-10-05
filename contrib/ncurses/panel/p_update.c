@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2005 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,18 +36,19 @@
  */
 #include "panel.priv.h"
 
-MODULE_ID("$Id: p_update.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
+MODULE_ID("$Id: p_update.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(void)
-update_panels (void)
+update_panels(void)
 {
   PANEL *pan;
 
+  T((T_CALLED("update_panels()")));
   dBug(("--> update_panels"));
   pan = _nc_bottom_panel;
-  while(pan && pan->above)
+  while (pan && pan->above)
     {
-      PANEL_UPDATE(pan,pan->above);
+      PANEL_UPDATE(pan, pan->above);
       pan = pan->above;
     }
 
@@ -57,4 +58,6 @@ update_panels (void)
       Wnoutrefresh(pan);
       pan = pan->above;
     }
+
+  returnVoid;
 }

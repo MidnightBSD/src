@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2003,2004 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,12 +27,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- *   Author: Juergen Pfeifer <juergen.pfeifer@gmx.net> 1995,1997            *
+ *   Author:  Juergen Pfeifer, 1995,1997                                    *
  ****************************************************************************/
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: frm_win.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
+MODULE_ID("$Id: frm_win.c,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform  
@@ -44,14 +44,16 @@ MODULE_ID("$Id: frm_win.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 |                    E_POSTED   - form is posted
 +--------------------------------------------------------------------------*/
 NCURSES_EXPORT(int)
-set_form_win (FORM * form, WINDOW * win)
+set_form_win(FORM *form, WINDOW *win)
 {
-  if (form && (form->status & _POSTED))	
+  T((T_CALLED("set_form_win(%p,%p)"), form, win));
+
+  if (form && (form->status & _POSTED))
     RETURN(E_POSTED);
 
-  Normalize_Form( form )->win = win;
+  Normalize_Form(form)->win = win;
   RETURN(E_OK);
-}	
+}
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform  
@@ -62,11 +64,14 @@ set_form_win (FORM * form, WINDOW * win)
 |   Return Values :  The pointer to the Window or stdscr if there is none.
 +--------------------------------------------------------------------------*/
 NCURSES_EXPORT(WINDOW *)
-form_win (const FORM * form)
+form_win(const FORM *form)
 {
-  const FORM* f = Normalize_Form( form );
-  return (f->win ? f->win : stdscr);
+  const FORM *f;
+
+  T((T_CALLED("form_win(%p)"), form));
+
+  f = Normalize_Form(form);
+  returnWin(f->win ? f->win : stdscr);
 }
 
 /* frm_win.c ends here */
-

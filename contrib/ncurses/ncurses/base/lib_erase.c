@@ -29,6 +29,7 @@
 /****************************************************************************
  *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
  *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
+ *     and: Thomas E. Dickey                        1996-on                 *
  ****************************************************************************/
 
 /*
@@ -40,7 +41,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_erase.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
+MODULE_ID("$Id: lib_erase.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
 werase(WINDOW *win)
@@ -57,6 +58,24 @@ werase(WINDOW *win)
 	for (y = 0; y <= win->_maxy; y++) {
 	    start = win->_line[y].text;
 	    end = &start[win->_maxx];
+
+	    /*
+	     * If this is a derived window, we have to handle the case where
+	     * a multicolumn character extends into the window that we are
+	     * erasing.
+	     */
+	    if_WIDEC({
+		if (isWidecExt(start[0])) {
+		    int x = (win->_parent != 0) ? (win->_begx) : 0;
+		    while (x-- > 0) {
+			if (isWidecBase(start[-1])) {
+			    --start;
+			    break;
+			}
+			--start;
+		    }
+		}
+	    });
 
 	    for (sp = start; sp <= end; sp++)
 		*sp = blank;

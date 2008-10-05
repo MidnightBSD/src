@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000,2001,2002 Free Software Foundation, Inc.         *
+ * Copyright (c) 1998-2003,2004 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -38,7 +38,7 @@
 
 #if !HAVE_VSSCANF
 
-MODULE_ID("$Id: vsscanf.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
+MODULE_ID("$Id: vsscanf.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 #if !(HAVE_VFSCANF || HAVE__DOSCAN)
 
@@ -210,7 +210,8 @@ vsscanf(const char *str, const char *format, va_list ap)
     if (can_convert) {
 	size_t len_fmt = strlen(format) + 32;
 	char *my_fmt = malloc(len_fmt);
-	ChunkType other, chunk, check;
+	ChunkType chunk, ctest;
+	OtherType other, otest;
 	ScanState state;
 	unsigned n;
 	int eaten;
@@ -229,7 +230,7 @@ vsscanf(const char *str, const char *format, va_list ap)
 		/* find a chunk */
 		state = sUnknown;
 		chunk = cUnknown;
-		other = cUnknown;
+		other = oUnknown;
 		pointer = 0;
 		for (n = 0; format[n] != 0 && state != sFinal; ++n) {
 		    my_fmt[n] = format[n];
@@ -265,12 +266,12 @@ vsscanf(const char *str, const char *format, va_list ap)
 			if (format[n] == '*') {
 			    state = sUnknown;
 			} else {
-			    if ((check = final_ch(format[n], other)) != cUnknown) {
+			    if ((ctest = final_ch(format[n], other)) != cUnknown) {
 				state = sFinal;
-				chunk = check;
-			    } else if ((check = other_ch(format[n])) != oUnknown) {
-				other = check;
-			    } else if (isalpha(format[n])) {
+				chunk = ctest;
+			    } else if ((otest = other_ch(format[n])) != oUnknown) {
+				other = otest;
+			    } else if (isalpha(UChar(format[n]))) {
 				state = sFinal;
 				chunk = cError;
 			    }

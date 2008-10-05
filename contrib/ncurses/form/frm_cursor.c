@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2003,2004 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,11 +27,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- *   Author: Juergen Pfeifer <juergen.pfeifer@gmx.net> 1995,1997            *
+ *   Author:  Juergen Pfeifer, 1995,1997                                    *
  ****************************************************************************/
+
 #include "form.priv.h"
 
-MODULE_ID("$Id: frm_cursor.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
+MODULE_ID("$Id: frm_cursor.c,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform  
@@ -48,16 +49,18 @@ MODULE_ID("$Id: frm_cursor.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 |                    E_NOT_POSTED              - Form is not posted
 +--------------------------------------------------------------------------*/
 NCURSES_EXPORT(int)
-pos_form_cursor (FORM * form)
+pos_form_cursor(FORM *form)
 {
   int res;
 
+  T((T_CALLED("pos_form_cursor(%p)"), form));
+
   if (!form)
-   res = E_BAD_ARGUMENT;
+    res = E_BAD_ARGUMENT;
   else
     {
       if (!(form->status & _POSTED))
-        res = E_NOT_POSTED;
+	res = E_NOT_POSTED;
       else
 	res = _nc_Position_Form_Cursor(form);
     }

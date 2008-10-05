@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2000,2005 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,10 +36,11 @@
  */
 #include "panel.priv.h"
 
-MODULE_ID("$Id: p_top.c,v 1.1.1.2 2006-02-25 02:33:42 laffer1 Exp $")
+MODULE_ID("$Id: p_top.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
-top_panel (PANEL *pan)
+top_panel(PANEL * pan)
 {
-  return(show_panel(pan));
+  T((T_CALLED("top_panel(%p)"), pan));
+  returnCode(show_panel(pan));
 }

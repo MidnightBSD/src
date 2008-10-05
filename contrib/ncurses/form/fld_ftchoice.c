@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,2000 Free Software Foundation, Inc.                   *
+ * Copyright (c) 1998-2003,2004 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,12 +27,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- *   Author: Juergen Pfeifer <juergen.pfeifer@gmx.net> 1995,1997            *
+ *   Author:  Juergen Pfeifer, 1995,1997                                    *
  ****************************************************************************/
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_ftchoice.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
+MODULE_ID("$Id: fld_ftchoice.c,v 1.1.1.3 2008-10-05 15:21:40 laffer1 Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform  
@@ -47,12 +47,13 @@ MODULE_ID("$Id: fld_ftchoice.c,v 1.1.1.2 2006-02-25 02:33:38 laffer1 Exp $")
 |                    E_BAD_ARGUMENT - invalid arguments
 +--------------------------------------------------------------------------*/
 NCURSES_EXPORT(int)
-set_fieldtype_choice
-    (FIELDTYPE * typ,
-     bool (* const next_choice) (FIELD *,const void *),
-     bool (* const prev_choice) (FIELD *,const void *))
+set_fieldtype_choice(FIELDTYPE *typ,
+		     bool (*const next_choice) (FIELD *, const void *),
+		     bool (*const prev_choice) (FIELD *, const void *))
 {
-  if ( !typ || !next_choice || !prev_choice ) 
+  T((T_CALLED("set_fieldtype_choice(%p,%p,%p)"), typ, next_choice, prev_choice));
+
+  if (!typ || !next_choice || !prev_choice)
     RETURN(E_BAD_ARGUMENT);
 
   typ->status |= _HAS_CHOICE;

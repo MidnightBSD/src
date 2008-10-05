@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,1999,2000 Free Software Foundation, Inc.              *
+ * Copyright (c) 1998-2000,2003 Free Software Foundation, Inc.              *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -36,12 +36,12 @@
 #include <term_entry.h>
 #include <tic.h>
 
-MODULE_ID("$Id: lib_ti.c,v 1.1.1.2 2006-02-25 02:33:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_ti.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(int)
 tigetflag(NCURSES_CONST char *str)
 {
-    int i;
+    unsigned i;
 
     T((T_CALLED("tigetflag(%s)"), str));
 
@@ -62,7 +62,7 @@ tigetflag(NCURSES_CONST char *str)
 NCURSES_EXPORT(int)
 tigetnum(NCURSES_CONST char *str)
 {
-    int i;
+    unsigned i;
 
     T((T_CALLED("tigetnum(%s)"), str));
 
@@ -84,7 +84,7 @@ tigetnum(NCURSES_CONST char *str)
 NCURSES_EXPORT(char *)
 tigetstr(NCURSES_CONST char *str)
 {
-    int i;
+    unsigned i;
 
     T((T_CALLED("tigetstr(%s)"), str));
 

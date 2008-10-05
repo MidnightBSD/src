@@ -27,8 +27,8 @@
  ****************************************************************************/
 
 /****************************************************************************
- *  Author: Zeyd M. Ben-Halim <zmbenhal@netcom.com> 1992,1995               *
- *     and: Eric S. Raymond <esr@snark.thyrsus.com>                         *
+ *  Author:  Juergen Pfeifer, 1997                                          *
+ *     and:  Thomas E. Dickey 2005                                          *
  ****************************************************************************/
 
 /*
@@ -38,7 +38,7 @@
  */
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_slkattr.c,v 1.1.1.2 2006-02-25 02:33:40 laffer1 Exp $")
+MODULE_ID("$Id: lib_slkattr.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
 
 NCURSES_EXPORT(attr_t)
 slk_attr(void)
@@ -46,7 +46,11 @@ slk_attr(void)
     T((T_CALLED("slk_attr()")));
 
     if (SP != 0 && SP->_slk != 0) {
-	returnAttr(SP->_slk->attr);
+	attr_t result = AttrOf(SP->_slk->attr) & ALL_BUT_COLOR;
+	int pair = GetPair(SP->_slk->attr);
+
+	result |= COLOR_PAIR(pair);
+	returnAttr(result);
     } else
 	returnAttr(0);
 }
