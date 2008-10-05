@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.3 2007/05/11 06:32:11 ctriv Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -15,18 +15,19 @@ LIBALIAS?=	${DESTDIR}${LIBDIR}/libalias.a
 LIBARCHIVE?=	${DESTDIR}${LIBDIR}/libarchive.a
 LIBASN1?=	${DESTDIR}${LIBDIR}/libasn1.a
 LIBATM?=	${DESTDIR}${LIBDIR}/libatm.a
+LIBAVL?=	${DESTDIR}${LIBDIR}/libavl.a
 LIBBEGEMOT?=	${DESTDIR}${LIBDIR}/libbegemot.a
-.if !defined(NO_BIND) && defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 LIBBIND?=	${DESTDIR}${LIBDIR}/libbind.a
 LIBBIND9?=	${DESTDIR}${LIBDIR}/libbind9.a
 .endif
 LIBBLUETOOTH?=	${DESTDIR}${LIBDIR}/libbluetooth.a
 LIBBSDXML?=	${DESTDIR}${LIBDIR}/libbsdxml.a
+LIBBSM?=	${DESTDIR}${LIBDIR}/libbsm.a
 LIBBSNMP?=	${DESTDIR}${LIBDIR}/libbsnmp.a
 LIBBZ2?=	${DESTDIR}${LIBDIR}/libbz2.a
 LIBC?=		${DESTDIR}${LIBDIR}/libc.a
 LIBC_PIC?=	${DESTDIR}${LIBDIR}/libc_pic.a
-LIBC_R?=	${DESTDIR}${LIBDIR}/libc_r.a
 LIBCALENDAR?=	${DESTDIR}${LIBDIR}/libcalendar.a
 LIBCAM?=	${DESTDIR}${LIBDIR}/libcam.a
 LIBCOM_ERR?=	${DESTDIR}${LIBDIR}/libcom_err.a
@@ -53,8 +54,10 @@ LIBGSSAPI?=	${DESTDIR}${LIBDIR}/libgssapi.a
 LIBHDB?=	${DESTDIR}${LIBDIR}/libhdb.a
 LIBHISTORY?=	${DESTDIR}${LIBDIR}/libhistory.a
 LIBIPSEC?=	${DESTDIR}${LIBDIR}/libipsec.a
+.if ${MK_IPX} != "no"
 LIBIPX?=	${DESTDIR}${LIBDIR}/libipx.a
-.if !defined(NO_BIND) && defined(WITH_BIND_LIBS)
+.endif
+.if ${MK_BIND_LIBS} != "no"
 LIBISC?=	${DESTDIR}${LIBDIR}/libisc.a
 LIBISCCC?=	${DESTDIR}${LIBDIR}/libisccc.a
 LIBISCCFG?=	${DESTDIR}${LIBDIR}/libisccfg.a
@@ -68,7 +71,7 @@ LIBKRB5?=	${DESTDIR}${LIBDIR}/libkrb5.a
 LIBKVM?=	${DESTDIR}${LIBDIR}/libkvm.a
 LIBL?=		${DESTDIR}${LIBDIR}/libl.a
 LIBLN?=		"don't use LIBLN, use LIBL"
-.if !defined(NO_BIND)
+.if ${MK_BIND} != "no"
 LIBLWRES?=	${DESTDIR}${LIBDIR}/liblwres.a
 .endif
 LIBM?=		${DESTDIR}${LIBDIR}/libm.a
@@ -76,15 +79,18 @@ LIBMAGIC?=	${DESTDIR}${LIBDIR}/libmagic.a
 LIBMD?=		${DESTDIR}${LIBDIR}/libmd.a
 LIBMEMSTAT?=	${DESTDIR}${LIBDIR}/libmemstat.a
 LIBMENU?=	${DESTDIR}${LIBDIR}/libmenu.a
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 LIBMILTER?=	${DESTDIR}${LIBDIR}/libmilter.a
 .endif
 LIBMP?=		${DESTDIR}${LIBDIR}/libmp.a
-LIBMYTINFO?=	"don't use LIBMYTINFO, use LIBNCURSES"
+.if ${MK_NCP} != "no"
 LIBNCP?=	${DESTDIR}${LIBDIR}/libncp.a
+.endif
 LIBNCURSES?=	${DESTDIR}${LIBDIR}/libncurses.a
+LIBNCURSESW?=	${DESTDIR}${LIBDIR}/libncursesw.a
 LIBNETGRAPH?=	${DESTDIR}${LIBDIR}/libnetgraph.a
 LIBNGATM?=	${DESTDIR}${LIBDIR}/libngatm.a
+LIBNVPAIR?=	${DESTDIR}${LIBDIR}/libnvpair.a
 LIBOBJC?=	${DESTDIR}${LIBDIR}/libobjc.a
 LIBOPIE?=	${DESTDIR}${LIBDIR}/libopie.a
 
@@ -93,7 +99,7 @@ LIBOPIE?=	${DESTDIR}${LIBDIR}/libopie.a
 LIBPAM?=	${DESTDIR}${LIBDIR}/libpam.a
 MINUSLPAM=	-lpam
 .if defined(LDFLAGS) && !empty(LDFLAGS:M-static)
-.if !defined(NO_KERBEROS) && !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_KERBEROS} != "no"
 LIBPAM+=	${LIBKRB5} ${LIBASN1} ${LIBCRYPTO} ${LIBCRYPT} \
 		${LIBROKEN} ${LIBCOM_ERR}
 MINUSLPAM+=	-lkrb5 -lasn1 -lcrypto -lcrypt -lroken -lcom_err
@@ -102,11 +108,11 @@ LIBPAM+=	${LIBRADIUS} ${LIBTACPLUS} ${LIBCRYPT} \
 		${LIBUTIL} ${LIBOPIE} ${LIBMD}
 MINUSLPAM+=	-lradius -ltacplus -lcrypt \
 		-lutil -lopie -lmd
-.if !defined(NO_OPENSSH) && !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSH} != "no"
 LIBPAM+=	${LIBSSH} ${LIBCRYPTO} ${LIBCRYPT}
 MINUSLPAM+=	-lssh -lcrypto -lcrypt
 .endif
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 LIBPAM+=	${LIBYPCLNT}
 MINUSLPAM+=	-lypclnt
 .endif
@@ -134,8 +140,10 @@ LIBTERMLIB?=	"don't use LIBTERMLIB, use LIBTERMCAP"
 LIBTINFO?=	"don't use LIBTINFO, use LIBNCURSES"
 LIBUFS?=	${DESTDIR}${LIBDIR}/libufs.a
 LIBUGIDFW?=	${DESTDIR}${LIBDIR}/libugidfw.a
+LIBUMEM?=	${DESTDIR}${LIBDIR}/libumem.a
 LIBUSBHID?=	${DESTDIR}${LIBDIR}/libusbhid.a
 LIBUTIL?=	${DESTDIR}${LIBDIR}/libutil.a
+LIBUUTIL?=	${DESTDIR}${LIBDIR}/libuutil.a
 LIBVGL?=	${DESTDIR}${LIBDIR}/libvgl.a
 LIBWRAP?=	${DESTDIR}${LIBDIR}/libwrap.a
 LIBXPG4?=	${DESTDIR}${LIBDIR}/libxpg4.a
