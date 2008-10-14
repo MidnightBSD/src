@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.3 2007/05/11 06:32:11 ctriv Exp $
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.4 2008/10/05 17:18:13 laffer1 Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -150,3 +150,5 @@ LIBXPG4?=	${DESTDIR}${LIBDIR}/libxpg4.a
 LIBY?=		${DESTDIR}${LIBDIR}/liby.a
 LIBYPCLNT?=	${DESTDIR}${LIBDIR}/libypclnt.a
 LIBZ?=		${DESTDIR}${LIBDIR}/libz.a
+LIBZFS?=	${DESTDIR}${LIBDIR}/libzfs.a
+LIBZPOOL?=	${DESTDIR}${LIBDIR}/libzpool.a

@@ -1,6 +1,6 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
 # $FreeBSD: src/share/mk/bsd.lib.mk,v 1.168.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.lib.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 
 .include <bsd.init.mk>
 
@@ -26,6 +26,11 @@ SONAME?=	${SHLIB_NAME}
 
 .if defined(CRUNCH_CFLAGS)
 CFLAGS+=	${CRUNCH_CFLAGS}
+.endif
+
+.if ${MK_ASSERT_DEBUG} == "no"
+CFLAGS+= -DNDEBUG
+NO_WERROR=
 .endif
 
 .if defined(DEBUG_FLAGS)
@@ -99,6 +104,15 @@ PO_FLAG=-pg
 
 all: objwarn
 
+.include <bsd.symver.mk>
+
+# Allow librararies to specify their own version map or have it
+# automatically generated (see bsd.symver.mk above).
+.if ${MK_SYMVER} == "yes" && !empty(VERSION_MAP)
+${SHLIB_NAME}:	${VERSION_MAP}
+LDFLAGS+=	-Wl,--version-script=${VERSION_MAP}
+.endif
+
 .if defined(LIB) && !empty(LIB) || defined(SHLIB_NAME)
 OBJS+=		${SRCS:N*.h:R:S/$/.o/}
 .endif
@@ -109,20 +123,28 @@ _LIBS=		lib${LIB}.a
 lib${LIB}.a: ${OBJS} ${STATICOBJS}
 	@${ECHO} building static ${LIB} library
 	@rm -f ${.TARGET}
+.if !defined(NM)
 	@${AR} cq ${.TARGET} `lorder ${OBJS} ${STATICOBJS} | tsort -q` ${ARADD}
+.else
+	@${AR} cq ${.TARGET} `NM='${NM}' lorder ${OBJS} ${STATICOBJS} | tsort -q` ${ARADD}
+.endif
 	${RANLIB} ${.TARGET}
 .endif
 
 .if !defined(INTERNALLIB)
 
-.if !defined(NO_PROFILE) && defined(LIB) && !empty(LIB)
+.if ${MK_PROFILE} != "no" && defined(LIB) && !empty(LIB)
 _LIBS+=		lib${LIB}_p.a
 POBJS+=		${OBJS:.o=.po} ${STATICOBJS:.o=.po}
 
 lib${LIB}_p.a: ${POBJS}
 	@${ECHO} building profiled ${LIB} library
 	@rm -f ${.TARGET}
+.if !defined(NM)
 	@${AR} cq ${.TARGET} `lorder ${POBJS} | tsort -q` ${ARADD}
+.else
+	@${AR} cq ${.TARGET} `NM='${NM}' lorder ${POBJS} | tsort -q` ${ARADD}
+.endif
 	${RANLIB} ${.TARGET}
 .endif
 
@@ -140,12 +162,18 @@ ${SHLIB_NAME}: ${SOBJS}
 .if defined(SHLIB_LINK)
 	@ln -fs ${.TARGET} ${SHLIB_LINK}
 .endif
+.if !defined(NM)
 	@${CC} ${LDFLAGS} -shared -Wl,-x \
 	    -o ${.TARGET} -Wl,-soname,${SONAME} \
 	    `lorder ${SOBJS} | tsort -q` ${LDADD}
+.else
+	@${CC} ${LDFLAGS} -shared -Wl,-x \
+	    -o ${.TARGET} -Wl,-soname,${SONAME} \
+	    `NM='${NM}' lorder ${SOBJS} | tsort -q` ${LDADD}
+.endif
 .endif
 
-.if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB)
+.if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB) && ${MK_TOOLCHAIN} != "no"
 _LIBS+=		lib${LIB}_pic.a
 
 lib${LIB}_pic.a: ${SOBJS}
@@ -170,7 +198,7 @@ ${LINTLIB}: ${LINTOBJS}
 
 all: ${_LIBS}
 
-.if !defined(NO_MAN)
+.if ${MK_MAN} != "no"
 all: _manpages
 .endif
 
@@ -207,11 +235,11 @@ _SHLINSTALLFLAGS:=	${_SHLINSTALLFLAGS${ie}}
 realinstall: _libinstall
 .ORDER: beforeinstall _libinstall
 _libinstall:
-.if defined(LIB) && !empty(LIB) && !defined(NO_INSTALLLIB)
+.if defined(LIB) && !empty(LIB) && ${MK_INSTALLLIB} != "no"
 	${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} lib${LIB}.a ${DESTDIR}${LIBDIR}
 .endif
-.if !defined(NO_PROFILE) && defined(LIB) && !empty(LIB)
+.if ${MK_PROFILE} != "no" && defined(LIB) && !empty(LIB)
 	${INSTALL} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} lib${LIB}_p.a ${DESTDIR}${LIBDIR}
 .endif
@@ -232,7 +260,7 @@ _libinstall:
 .endif
 .endif
 .endif
-.if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB)
+.if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB) && ${MK_TOOLCHAIN} != "no"
 	${INSTALL} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} lib${LIB}_pic.a ${DESTDIR}${LIBDIR}
 .endif
@@ -244,12 +272,10 @@ _libinstall:
 
 .include <bsd.nls.mk>
 .include <bsd.files.mk>
-.if !defined(NO_INCS)
 .include <bsd.incs.mk>
-.endif
 .include <bsd.links.mk>
 
-.if !defined(NO_MAN)
+.if ${MK_MAN} != "no"
 realinstall: _maninstall
 .ORDER: beforeinstall _maninstall
 .endif
@@ -261,7 +287,7 @@ lint: ${SRCS:M*.c}
 	${LINT} ${LINTFLAGS} ${CFLAGS:M-[DIU]*} ${.ALLSRC}
 .endif
 
-.if !defined(NO_MAN)
+.if ${MK_MAN} != "no"
 .include <bsd.man.mk>
 .endif
 
@@ -292,7 +318,7 @@ clean:
 	rm -f a.out ${OBJS} ${OBJS:S/$/.tmp/} ${STATICOBJS}
 .endif
 .if !defined(INTERNALLIB)
-.if !defined(NO_PROFILE) && defined(LIB) && !empty(LIB)
+.if ${MK_PROFILE} != "no" && defined(LIB) && !empty(LIB)
 	rm -f ${POBJS} ${POBJS:S/$/.tmp/}
 .endif
 .if defined(SHLIB_NAME) || \
@@ -316,6 +342,9 @@ clean:
 .endif
 .if defined(CLEANDIRS) && !empty(CLEANDIRS)
 	rm -rf ${CLEANDIRS}
+.endif
+.if !empty(VERSION_DEF) && !empty(SYMBOL_MAPS)
+	rm -f ${VERSION_MAP}
 .endif
 .endif
 

@@ -1,6 +1,6 @@
 #	from: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
 # $FreeBSD: src/share/mk/bsd.prog.mk,v 1.144.2.1 2005/11/28 19:08:51 ru Exp $
-# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.prog.mk,v 1.3 2007/04/13 05:35:11 ctriv Exp $
 
 .include <bsd.init.mk>
 
@@ -14,6 +14,11 @@ PREFIX=${TRUE_PREFIX}
 # XXX The use of COPTS in modern makefiles is discouraged.
 .if defined(COPTS)
 CFLAGS+=${COPTS}
+.endif
+
+.if ${MK_ASSERT_DEBUG} == "no"
+CFLAGS+= -DNDEBUG
+NO_WERROR=
 .endif
 
 .if defined(DEBUG_FLAGS)
@@ -41,8 +46,12 @@ PROG=	${PROG_CXX}
 
 # If there are Objective C sources, link with Objective C libraries.
 .if !empty(SRCS:M*.m)
-OBJCLIBS?= -lobjc -lpthread
+.if defined(OBJCLIBS)
 LDADD+=	${OBJCLIBS}
+.else
+DPADD+=	${LIBOBJC} ${LIBPTHREAD}
+LDADD+=	-lobjc -lpthread
+.endif
 .endif
 
 OBJS+=  ${SRCS:N*.h:R:S/$/.o/g}
@@ -80,7 +89,7 @@ ${PROG}: ${OBJS}
 
 .endif
 
-.if	!defined(NO_MAN) && !defined(MAN) && \
+.if	${MK_MAN} != "no" && !defined(MAN) && \
 	!defined(MAN1) && !defined(MAN2) && !defined(MAN3) && \
 	!defined(MAN4) && !defined(MAN5) && !defined(MAN6) && \
 	!defined(MAN7) && !defined(MAN8) && !defined(MAN9) && \
@@ -91,7 +100,7 @@ MAN1=	${MAN}
 .endif
 
 all: objwarn ${PROG} ${SCRIPTS}
-.if !defined(NO_MAN)
+.if ${MK_MAN} != "no"
 all: _manpages
 .endif
 
@@ -180,12 +189,10 @@ NLSNAME?=	${PROG}
 .include <bsd.nls.mk>
 
 .include <bsd.files.mk>
-.if !defined(NO_INCS)
 .include <bsd.incs.mk>
-.endif
 .include <bsd.links.mk>
 
-.if !defined(NO_MAN)
+.if ${MK_MAN} != "no"
 realinstall: _maninstall
 .ORDER: beforeinstall _maninstall
 .endif
@@ -199,7 +206,7 @@ lint: ${SRCS:M*.c}
 .endif
 .endif
 
-.if !defined(NO_MAN)
+.if ${MK_MAN} != "no"
 .include <bsd.man.mk>
 .endif
 

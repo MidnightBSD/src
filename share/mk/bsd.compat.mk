@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.compat.mk,v 1.20 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.compat.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
 
 .if !defined(BURN_BRIDGES)
 .for oldnew in \
@@ -16,7 +16,6 @@
 	NOINFO:NO_INFO \
 	NOINFOCOMPRESS:NO_INFOCOMPRESS \
 	NOINSTALLLIB:NO_INSTALLLIB \
-	NOLIBC_R:NO_LIBC_R \
 	NOLIBPTHREAD:NO_LIBPTHREAD \
 	NOLIBTHR:NO_LIBTHR \
 	NOLINT:NO_LINT \
@@ -34,7 +33,7 @@
 .for old in ${oldnew:C/:.*//}
 .for new in ${oldnew:C/.*://}
 .if defined(${old}) && !defined(${new})
-.warning ${old} is deprecated in favor of ${new}
+.warning ${old} is deprecated in favour of ${new}
 ${new}=	${${old}}
 .endif
 .endfor

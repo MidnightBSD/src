@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.info.mk,v 1.71 2005/02/27 22:02:31 obrien Exp $
-# $MidnightBSD: src/share/mk/bsd.info.mk,v 1.2 2006/05/22 06:03:21 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.info.mk,v 1.3 2007/01/19 02:25:17 laffer1 Exp $
 #
 # The include file <bsd.info.mk> handles installing GNU (tech)info files.
 # Texinfo is a documentation system that uses a single source
@@ -53,8 +53,6 @@
 #		file. [makeinfo]
 #
 # MAKEINFOFLAGS		Options for ${MAKEINFO} command. [--no-split]
-#
-# NO_INFO	Do not make or install info files. [not set]
 #
 # NO_INFOCOMPRESS	If you do not want info files be
 #			compressed when they are installed. [not set]
@@ -124,7 +122,7 @@ DVIPS2ASCII?=	dvips2ascii
 IFILENS+=	${INFO:S/$/.${_f}/}
 .endfor
 
-.if !defined(NO_INFO)
+.if ${MK_INFO} != "no"
 CLEANFILES+=	${IFILENS}
 .if !defined(NO_INFOCOMPRESS)
 CLEANFILES+=	${IFILENS:S/$/${ICOMPRESS_EXT}/}
@@ -146,11 +144,18 @@ ${x:S/$/${ICOMPRESS_EXT}/}:	${x}
 .for x in ${INFO}
 INSTALLINFODIRS+= ${x:S/$/-install/}
 ${x:S/$/-install/}:
+.if !empty(.MAKEFLAGS:M-j)
 	lockf -k ${DESTDIR}${INFODIR}/${INFODIRFILE} \
 	${INSTALLINFO} ${INSTALLINFOFLAGS} \
 	    --defsection=${INFOSECTION} \
 	    --defentry=${INFOENTRY_${x}} \
 	    ${x}.info ${DESTDIR}${INFODIR}/${INFODIRFILE}
+.else
+	${INSTALLINFO} ${INSTALLINFOFLAGS} \
+	    --defsection=${INFOSECTION} \
+	    --defentry=${INFOENTRY_${x}} \
+	    ${x}.info ${DESTDIR}${INFODIR}/${INFODIRFILE}
+.endif
 .endfor
 
 .PHONY: ${INSTALLINFODIRS}
@@ -173,7 +178,7 @@ CLEANFILES+=	${INFO:S/$/-la.texi/}
 CLEANFILES+=	${INFO:S/$/.info.*.html/} ${INFO:S/$/.info/}
 .endif
 
-.if !defined(NO_INFO) && defined(INFO)
+.if ${MK_INFO} != "no" && defined(INFO)
 install: ${INSTALLINFODIRS}
 .if !empty(IFILES:N*.html)
 	${INSTALL} -o ${INFOOWN} -g ${INFOGRP} -m ${INFOMODE} \
