@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.sys.mk,v 1.37 2005/01/16 21:18:16 obrien Exp $
-# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.4 2007/02/26 00:10:27 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.sys.mk,v 1.5 2008/10/14 21:13:54 laffer1 Exp $
 #
 # This file contains common settings used for building FreeBSD
 # sources.
@@ -55,9 +55,9 @@ CWARNFLAGS	+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls
 # XXX always get it right.
 CWARNFLAGS	+=	-Wno-uninitialized
 .  endif
-.  if !defined(WITH_GCC3)
-CWARNFLAGS	+=	-Wno-pointer-sign
-.  endif
+#.  if !defined(WITH_GCC3)
+#CWARNFLAGS	+=	-Wno-pointer-sign
+#.  endif
 . endif
 
 . if defined(FORMAT_AUDIT)
