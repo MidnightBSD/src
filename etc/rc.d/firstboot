@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/firstboot,v 1.2.2.2 2008/08/30 20:00:56 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/firstboot,v 1.3 2008/09/02 01:33:17 laffer1 Exp $
 
 # PROVIDE: firstboot
 # REQUIRE: NETWORKING cleanvar
@@ -32,7 +32,9 @@ firstboot_start()
 		read installbstat
 		if [ ${installbstat} = "yes" ]; then
 			if [ ! -f /usr/local/etc/rc.d/bsdstats.sh ]; then
+				/sbin/ipfw disable firewall
 				/usr/sbin/pkg_add -r bsdstats
+				/sbin/ipfw enable firewall
 			fi
 			echo "bsdstats_enable=\"YES\"" >> /etc/rc.conf
 		fi
@@ -48,9 +50,11 @@ firstboot_start()
 				echo "ttyv8 \"/usr/local/bin/kdm -nodaemon\" xterm on secure" >> /etc/ttys
 			else
 #			GNUSTEP/WindowMaker/Slim
+				/sbin/ipfw disable firewall
 				/usr/sbin/pkg_add -r gnustep
 				/usr/sbin/pkg_add -r slim
 				/usr/sbin/pkg_add -r windowmaker
+				/sbin/ipfw enable firewall
 				echo "slim_enable=\"YES\"" >> /etc/rc.conf
 			fi
 			echo "Please restart to enable graphical login."
