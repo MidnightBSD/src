@@ -27,10 +27,11 @@
  * SUCH DAMAGE.
  */
 
-/* static char sccsid[] = "@(#)devname.c	8.2 (Berkeley) 4/29/95"; */
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)devname.c	8.2 (Berkeley) 4/29/95";
+#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/devname.c,v 1.9 2003/06/20 09:52:27 phk Exp $"); */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/devname.c,v 1.11 2007/01/09 00:27:53 imp Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -38,6 +39,7 @@ __MBSDID("$MidnightBSD$");
 #include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>

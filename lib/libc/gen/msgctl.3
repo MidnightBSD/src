@@ -29,7 +29,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/gen/msgctl.3,v 1.19 2003/09/08 19:57:14 ru Exp $
+.\" $FreeBSD: src/lib/libc/gen/msgctl.3,v 1.20 2006/08/09 18:05:44 maxim Exp $
 .\"/
 .Dd November 24, 1997
 .Dt MSGCTL 3
@@ -83,7 +83,7 @@ struct msqid_ds {
 The
 .Vt ipc_perm
 structure used inside the
-.Vt shmid_ds
+.Vt msqid_ds
 structure is defined in
 .In sys/ipc.h
 and looks like this:

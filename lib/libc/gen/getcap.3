@@ -12,10 +12,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -33,9 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)getcap.3	8.4 (Berkeley) 5/13/94
-.\" $FreeBSD: src/lib/libc/gen/getcap.3,v 1.27 2005/02/13 23:45:46 ru Exp $
+.\" $FreeBSD: src/lib/libc/gen/getcap.3,v 1.30 2007/02/11 18:14:49 maxim Exp $
 .\"
-.Dd May 13, 1994
+.Dd March 22, 2002
 .Dt GETCAP 3
 .Os
 .Sh NAME
@@ -55,19 +51,19 @@
 .Sh SYNOPSIS
 .In stdlib.h
 .Ft int
-.Fn cgetent "char **buf" "char **db_array" "char *name"
+.Fn cgetent "char **buf" "char **db_array" "const char *name"
 .Ft int
-.Fn cgetset "char *ent"
+.Fn cgetset "const char *ent"
 .Ft int
-.Fn cgetmatch "char *buf" "char *name"
+.Fn cgetmatch "const char *buf" "const char *name"
 .Ft char *
-.Fn cgetcap "char *buf" "char *cap" "int type"
+.Fn cgetcap "char *buf" "const char *cap" "int type"
 .Ft int
-.Fn cgetnum "char *buf" "char *cap" "long *num"
+.Fn cgetnum "char *buf" "const char *cap" "long *num"
 .Ft int
-.Fn cgetstr "char *buf" "char *cap" "char **str"
+.Fn cgetstr "char *buf" "const char *cap" "char **str"
 .Ft int
-.Fn cgetustr "char *buf" "char *cap" "char **str"
+.Fn cgetustr "char *buf" "const char *cap" "char **str"
 .Ft int
 .Fn cgetfirst "char **buf" "char **db_array"
 .Ft int
@@ -531,7 +527,7 @@ on failure.
 The
 .Fn cgetent ,
 and
-.Fn cgetseq
+.Fn cgetset
 functions may fail and set
 .Va errno
 for any of the errors specified for the library functions:

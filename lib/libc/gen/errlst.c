@@ -27,10 +27,11 @@
  * SUCH DAMAGE.
  */
 
-/*static char sccsid[] = "@(#)errlst.c	8.2 (Berkeley) 11/16/93";*/
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)errlst.c	8.2 (Berkeley) 11/16/93";
+#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/errlst.c,v 1.8 2005/04/02 12:33:28 das Exp $");*/
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/errlst.c,v 1.9 2007/01/09 00:27:53 imp Exp $");
 
 #include <stdio.h>
 

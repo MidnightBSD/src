@@ -24,8 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/arc4random.c,v 1.10 2004/03/24 14:44:57 green Exp $"); */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/arc4random.c,v 1.12 2007/05/25 10:40:33 delphij Exp $");
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -62,14 +61,15 @@ static pthread_mutex_t	arc4random_mtx = PTHREAD_MUTEX_INITIALIZER;
 static struct arc4_stream rs;
 static int rs_initialized;
 static int rs_stired;
+static int arc4_count;
 
 static inline u_int8_t arc4_getbyte(struct arc4_stream *);
 static void arc4_stir(struct arc4_stream *);
 
-static inline void 
+static inline void
 arc4_init(struct arc4_stream *as)
 {
-	int n;
+	int     n;
 
 	for (n = 0; n < 256; n++)
 		as->s[n] = n;
@@ -77,10 +77,10 @@ arc4_init(struct arc4_stream *as)
 	as->j = 0;
 }
 
-static inline void 
+static inline void
 arc4_addrandom(struct arc4_stream *as, u_char *dat, int datlen)
 {
-	int n;
+	int     n;
 	u_int8_t si;
 
 	as->i--;
@@ -96,7 +96,7 @@ arc4_addrandom(struct arc4_stream *as, u_char *dat, int datlen)
 static void
 arc4_stir(struct arc4_stream *as)
 {
-	int fd, n;
+	int     fd, n;
 	struct {
 		struct timeval tv;
 		pid_t pid;
@@ -123,7 +123,8 @@ arc4_stir(struct arc4_stream *as)
 	 * by Ilya Mironov.
 	 */
 	for (n = 0; n < 1024; n++)
-		arc4_getbyte(as);
+		(void) arc4_getbyte(as);
+	arc4_count = 400000;
 }
 
 static inline u_int8_t
@@ -166,14 +167,14 @@ arc4_check_init(void)
 static void
 arc4_check_stir(void)
 {
-	if (!rs_stired) {
+	if (!rs_stired || --arc4_count == 0) {
 		arc4_stir(&rs);
 		rs_stired = 1;
 	}
 }
 
 void
-arc4random_stir()
+arc4random_stir(void)
 {
 	THREAD_LOCK();
 	arc4_check_init();
@@ -192,7 +193,7 @@ arc4random_addrandom(u_char *dat, int datlen)
 }
 
 u_int32_t
-arc4random()
+arc4random(void)
 {
 	u_int32_t rnd;
 

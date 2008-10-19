@@ -31,18 +31,18 @@
 static char sccsid[] = "@(#)valloc.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/valloc.c,v 1.3 2002/03/22 21:52:05 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/valloc.c,v 1.5 2007/01/09 00:27:56 imp Exp $");
 
 #include <stdlib.h>
 #include <unistd.h>
 
 void *
-valloc(i)
-	size_t i;
+valloc(size_t i)
 {
-	long valsiz = getpagesize(), j;
-	void *cp = malloc(i + (valsiz-1));
+	void	*ret;
 
-	j = ((long)cp + (valsiz-1)) &~ (valsiz-1);
-	return ((void *)j);
+	if (posix_memalign(&ret, getpagesize(), i) != 0)
+		ret = NULL;
+
+	return ret;
 }

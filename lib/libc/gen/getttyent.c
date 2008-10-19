@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -35,19 +31,25 @@
 static char sccsid[] = "@(#)getttyent.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getttyent.c,v 1.12.14.1 2005/07/25 20:19:39 mdodd Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/getttyent.c,v 1.16 2007/01/09 00:27:54 imp Exp $");
 
 #include <ttyent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <dirent.h>
+#include <paths.h>
 
 static char zapchar;
 static FILE *tf;
+static int maxpts = 0;
+static int curpts = 0;
+static int pts_valid = 0;
 static size_t lbsize;
 static char *line;
 
+#define PTS "pts/"
 #define	MALLOCCHUNK	100
 
 static char *skip(char *);
@@ -73,6 +75,7 @@ struct ttyent *
 getttyent()
 {
 	static struct ttyent tty;
+	static char devpts_name[] = "pts/4294967295";
 	char *p;
 	int c;
 	size_t i;
@@ -80,8 +83,19 @@ getttyent()
 	if (!tf && !setttyent())
 		return (NULL);
 	for (;;) {
-		if (!fgets(p = line, lbsize, tf))
+		if (!fgets(p = line, lbsize, tf)) {
+			if (pts_valid == 1 && curpts <= maxpts) {
+				sprintf(devpts_name, "pts/%d", curpts++);
+				tty.ty_name = devpts_name;
+				tty.ty_getty = tty.ty_type = NULL;
+				tty.ty_status = TTY_NETWORK;
+				tty.ty_window = NULL;   
+				tty.ty_comment = NULL;
+				tty.ty_group  = _TTYS_NOGROUP; 	
+				return (&tty);
+			}
 			return (NULL);
+		}
 		/* extend buffer if line was too big, and retry */
 		while (!index(p, '\n')) {
 			i = strlen(p);
@@ -209,11 +223,28 @@ value(p)
 int
 setttyent()
 {
+	DIR *devpts_dir;
 
 	if (line == NULL) {
 		if ((line = malloc(MALLOCCHUNK)) == NULL)
 			return (0);
 		lbsize = MALLOCCHUNK;
+	}
+	devpts_dir = opendir(_PATH_DEV PTS);
+	if (devpts_dir) {
+		struct dirent *dp;
+
+		while ((dp = readdir(devpts_dir))) {
+			if (strcmp(dp->d_name, ".") != 0 &&
+			    strcmp(dp->d_name, "..") != 0) {
+				if (atoi(dp->d_name) > maxpts) {
+					maxpts = atoi(dp->d_name);
+					pts_valid = 1;
+					curpts = 0;
+				}
+			}
+		}
+		closedir(devpts_dir);
 	}
 	if (tf) {
 		rewind(tf);
@@ -228,6 +259,7 @@ endttyent()
 {
 	int rval;
 
+	pts_valid = 0;
 	/*
          * NB: Don't free `line' because getttynam()
 	 * may still be referencing it

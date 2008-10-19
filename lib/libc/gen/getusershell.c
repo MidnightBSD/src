@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,7 +32,7 @@ static char sccsid[] = "@(#)getusershell.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 /*	$NetBSD: getusershell.c,v 1.17 1999/01/25 01:09:34 lukem Exp $	*/
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getusershell.c,v 1.9 2003/04/24 20:16:21 nectar Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/getusershell.c,v 1.10 2007/01/09 00:27:54 imp Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>

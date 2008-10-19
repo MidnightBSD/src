@@ -16744,6 +16744,8 @@ lib/libc/gdtoa/machdep_ldisQ.c -text
 lib/libc/gdtoa/machdep_ldisd.c -text
 lib/libc/gdtoa/machdep_ldisx.c -text
 lib/libc/gen/Makefile.inc -text
+lib/libc/gen/Symbol.map -text
+lib/libc/gen/__getosreldate.c -text
 lib/libc/gen/__xuname.c -text
 lib/libc/gen/_pthread_stubs.c -text
 lib/libc/gen/_rand48.c -text
@@ -16801,6 +16803,8 @@ lib/libc/gen/frexp.c -text
 lib/libc/gen/fstab.c -text
 lib/libc/gen/ftok.3 -text
 lib/libc/gen/ftok.c -text
+lib/libc/gen/fts-compat.c -text
+lib/libc/gen/fts-compat.h -text
 lib/libc/gen/fts.3 -text
 lib/libc/gen/fts.c -text
 lib/libc/gen/ftw.3 -text
@@ -16831,8 +16835,6 @@ lib/libc/gen/getmntinfo.3 -text
 lib/libc/gen/getmntinfo.c -text
 lib/libc/gen/getnetgrent.3 -text
 lib/libc/gen/getnetgrent.c -text
-lib/libc/gen/getobjformat.3 -text
-lib/libc/gen/getobjformat.c -text
 lib/libc/gen/getosreldate.3 -text
 lib/libc/gen/getosreldate.c -text
 lib/libc/gen/getpagesize.3 -text

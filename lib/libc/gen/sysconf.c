@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@
 static char sccsid[] = "@(#)sysconf.c	8.2 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/sysconf.c,v 1.20 2002/11/17 08:54:29 dougb Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/sysconf.c,v 1.25 2007/04/14 13:06:57 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -77,10 +73,9 @@ sysconf(name)
 	struct rlimit rl;
 	size_t len;
 	int mib[2], sverrno, value;
-	long defaultresult;
+	long lvalue, defaultresult;
 	const char *path;
 
-	len = sizeof(value);
 	defaultresult = -1;
 
 	switch (name) {
@@ -170,11 +165,11 @@ sysconf(name)
 do_NAME_MAX:
 		sverrno = errno;
 		errno = 0;
-		value = pathconf(path, _PC_NAME_MAX);
-		if (value == -1 && errno != 0)
+		lvalue = pathconf(path, _PC_NAME_MAX);
+		if (lvalue == -1 && errno != 0)
 			return (-1);
 		errno = sverrno;
-		return (value);
+		return (lvalue);
 
 	case _SC_ASYNCHRONOUS_IO:
 #if _POSIX_ASYNCHRONOUS_IO == 0
@@ -297,12 +292,13 @@ do_NAME_MAX:
 	case _SC_TIMER_MAX:
 		mib[0] = CTL_P1003_1B;
 		mib[1] = CTL_P1003_1B_TIMER_MAX;
-
-yesno:		if (sysctl(mib, 2, &value, &len, NULL, 0) == -1)
+yesno:
+		len = sizeof(value);
+		if (sysctl(mib, 2, &value, &len, NULL, 0) == -1)
 			return (-1);
 		if (value == 0)
 			return (defaultresult);
-		return (value);
+		return ((long)value);
 
 	case _SC_2_PBS:
 	case _SC_2_PBS_ACCOUNTING:
@@ -530,8 +526,9 @@ yesno:		if (sysctl(mib, 2, &value, &len, NULL, 0) == -1)
 		return (_XOPEN_REALTIME_THREADS);
 #endif
 	case _SC_XOPEN_SHM:
+		len = sizeof(lvalue);
 		sverrno = errno;
-		if (sysctlbyname("kern.ipc.shmmin", &value, &len, NULL, 
+		if (sysctlbyname("kern.ipc.shmmin", &lvalue, &len, NULL,
 		    0) == -1) {
 			errno = sverrno;
 			return (-1);
@@ -574,9 +571,20 @@ yesno:		if (sysctl(mib, 2, &value, &len, NULL, 0) == -1)
 		mib[1] = HW_NCPU;
 		break;
 
+#ifdef _SC_PHYS_PAGES
+	case _SC_PHYS_PAGES:
+		len = sizeof(lvalue);
+		if (sysctlbyname("hw.availpages", &lvalue, &len, NULL, 0) == -1)
+			return (-1);
+		return (lvalue);
+#endif
+
 	default:
 		errno = EINVAL;
 		return (-1);
 	}
-	return (sysctl(mib, 2, &value, &len, NULL, 0) == -1 ? -1 : value);
+	len = sizeof(value);
+	if (sysctl(mib, 2, &value, &len, NULL, 0) == -1)
+		value = -1;
+	return ((long)value);
 }

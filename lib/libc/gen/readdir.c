@@ -31,7 +31,7 @@
 static char sccsid[] = "@(#)readdir.c	8.3 (Berkeley) 9/29/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/readdir.c,v 1.11 2002/02/26 21:39:32 alfred Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/readdir.c,v 1.13 2007/01/09 00:27:55 imp Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/readdir.c,v 1.11 2002/02/26 21:39:32 alfred
 #include "un-namespace.h"
 
 #include "libc_private.h"
+#include "telldir.h"
 
 /*
  * get next entry in a directory.

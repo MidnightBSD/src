@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)vis.3	8.1 (Berkeley) 6/9/93
-.\" $FreeBSD: src/lib/libc/gen/vis.3,v 1.27 2005/01/15 11:40:33 ru Exp $
+.\" $FreeBSD: src/lib/libc/gen/vis.3,v 1.30 2007/01/09 00:27:56 imp Exp $
 .\"
-.Dd March 21, 2004
+.Dd April 9, 2006
 .Dt VIS 3
 .Os
 .Sh NAME
@@ -239,6 +239,8 @@ The following sequences are used to represent the indicated characters:
 .Dv NL No (012)
 .It Li \er
 .Dv CR No (015)
+.It Li \es
+.Dv SP No (040)
 .It Li \et
 .Dv HT No (011)
 .It Li \ev

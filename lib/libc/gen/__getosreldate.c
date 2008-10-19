@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 John D. Polstra
+ * Copyright (c) 2007 Peter Wemm
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,20 +25,37 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gen/getobjformat.c,v 1.7 2002/09/17 01:48:50 peter Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gen/__getosreldate.c,v 1.1 2007/07/04 23:27:38 peter Exp $");
 
 #include <sys/param.h>
-#include <objformat.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <sys/sysctl.h>
+
+/*
+ * This is private to libc.  It is intended for wrapping syscall stubs in order
+ * to avoid having to put SIGSYS signal handlers in place to test for presence
+ * of new syscalls.  This caches the result in order to be as quick as possible.
+ *
+ * Use getosreldate(3) for public use as it respects the $OSVERSION environment
+ * variable.
+ */
 
 int
-getobjformat(char *buf, size_t bufsize, int *argcp, char **argv)
+__getosreldate(void)
 {
+	static int osreldate;
+	size_t len;
+	int oid[2];
+	int error, osrel;
 
-	if (bufsize < 4)
-		return -1;
-	strcpy(buf, "elf");
-	return 3;
+	if (osreldate != 0)
+		return (osreldate);
+	
+	oid[0] = CTL_KERN;
+	oid[1] = KERN_OSRELDATE;
+	osrel = 0;
+	len = sizeof(osrel);
+	error = sysctl(oid, 2, &osrel, &len, NULL, 0);
+	if (error == 0 && osrel > 0 && len == sizeof(osrel))
+		osreldate = osrel;
+	return (osreldate);
 }

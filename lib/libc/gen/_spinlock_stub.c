@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,8 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/_spinlock_stub.c,v 1.8 2003/03/26 04:02:24 jeff Exp $");*/
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/_spinlock_stub.c,v 1.10 2007/01/12 07:31:30 imp Exp $");
 
 #include <stdio.h>
 
@@ -44,7 +40,7 @@ __MBSDID("$MidnightBSD$");
  */
 __weak_reference(_atomic_lock_stub, _atomic_lock);
 __weak_reference(_spinlock_stub, _spinlock);
-__weak_reference(_spinlock_stub, _spinunlock);
+__weak_reference(_spinunlock_stub, _spinunlock);
 __weak_reference(_spinlock_debug_stub, _spinlock_debug);
 
 

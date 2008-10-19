@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)kvm_getvfsbyname.3	8.3 (Berkeley) 5/4/95
-.\" $FreeBSD: src/lib/libc/gen/getvfsbyname.3,v 1.15 2002/12/19 09:40:21 ru Exp $
+.\" $FreeBSD: src/lib/libc/gen/getvfsbyname.3,v 1.18 2007/04/05 21:17:52 pjd Exp $
 .\"
-.Dd May 4, 1995
+.Dd April 5, 2007
 .Dt GETVFSBYNAME 3
 .Os
 .Sh NAME
@@ -85,6 +81,11 @@ data does not represent real files
 aliases some other mounted FS
 .It Dv VFCF_UNICODE
 stores file names as Unicode
+.It Dv VFCF_JAIL
+can be mounted from within a jail if
+.Va security.jail.mount_allowed
+sysctl is set to
+.Dv 1 .
 .El
 .Sh RETURN VALUES
 .Rv -std getvfsbyname
@@ -103,8 +104,10 @@ argument
 specifies a file system that is unknown or not configured in the kernel.
 .El
 .Sh SEE ALSO
+.Xr jail 2 ,
 .Xr mount 2 ,
 .Xr sysctl 3 ,
+.Xr jail 8 ,
 .Xr mount 8 ,
 .Xr sysctl 8
 .Sh HISTORY

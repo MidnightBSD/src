@@ -27,10 +27,11 @@
  * SUCH DAMAGE.
  */
 
-/* static char sccsid[] = "@(#)disklabel.c	8.2 (Berkeley) 5/3/95"; */
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)disklabel.c	8.2 (Berkeley) 5/3/95";
+#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/disklabel.c,v 1.16 2002/08/16 15:33:20 bmilekic Exp $");*/
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/disklabel.c,v 1.17 2007/01/09 00:27:53 imp Exp $");
 
 #include <sys/param.h>
 #define DKTYPENAMES

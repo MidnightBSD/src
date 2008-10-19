@@ -27,17 +27,21 @@
  * SUCH DAMAGE.
  */
 
-/* static char sccsid[] = "@(#)assert.c	8.1 (Berkeley) 6/4/93"; */
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)assert.c	8.1 (Berkeley) 6/4/93";
+#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/assert.c,v 1.7 2002/02/01 00:57:29 obrien Exp $"); */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/assert.c,v 1.8 2007/01/09 00:27:53 imp Exp $");
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 void
-__assert(const char *func, const char *file, int line, const char *failedexpr)
+__assert(func, file, line, failedexpr)
+	const char *func, *file;
+	int line;
+	const char *failedexpr;
 {
 	if (func == NULL)
 		(void)fprintf(stderr,

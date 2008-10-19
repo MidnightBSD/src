@@ -25,13 +25,13 @@
  */
 
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/dlfcn.c,v 1.12 2004/03/05 08:10:17 markm Exp $");*/
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/dlfcn.c,v 1.14 2007/04/03 18:35:20 kan Exp $");
 
 /*
  * Linkage to services provided by the dynamic linker.
  */
 #include <dlfcn.h>
+#include <link.h>
 #include <stddef.h>
 
 static const char sorry[] = "Service unavailable";
@@ -105,6 +105,15 @@ dlsym(void * __restrict handle, const char * __restrict name)
 	return NULL;
 }
 
+#pragma weak dlvsym
+void *
+dlvsym(void * __restrict handle, const char * __restrict name,
+    const char * __restrict version)
+{
+	_rtld_error(sorry);
+	return NULL;
+}
+
 #pragma weak dlinfo
 int
 dlinfo(void * __restrict handle, int request, void * __restrict p)
@@ -118,4 +127,13 @@ void
 _rtld_thread_init(void * li)
 {
 	_rtld_error(sorry);
+}
+
+#pragma weak dl_iterate_phdr
+int
+dl_iterate_phdr(int (*callback)(struct dl_phdr_info *, size_t, void *),
+    void *data)
+{
+	_rtld_error(sorry);
+	return 0;
 }

@@ -1,10 +1,12 @@
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
-# $FreeBSD: src/lib/libc/gen/Makefile.inc,v 1.121.2.1 2005/12/05 19:59:20 jhb Exp $
+# $FreeBSD: src/lib/libc/gen/Makefile.inc,v 1.128 2007/09/28 02:22:56 scf Exp $
+# $MidnightBSD$
 
 # machine-independent gen sources
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/gen ${.CURDIR}/gen
 
-SRCS+=  __xuname.c _pthread_stubs.c _rand48.c _spinlock_stub.c _thread_init.c \
+SRCS+=  __getosreldate.c __xuname.c \
+	_pthread_stubs.c _rand48.c _spinlock_stub.c _thread_init.c \
 	alarm.c arc4random.c assert.c basename.c check_utility_compat.c \
 	clock.c closedir.c confstr.c \
 	crypt.c ctermid.c daemon.c devname.c dirname.c disklabel.c \
@@ -14,7 +16,7 @@ SRCS+=  __xuname.c _pthread_stubs.c _rand48.c _spinlock_stub.c _thread_init.c \
 	getbootfile.c getbsize.c \
 	getcap.c getcwd.c getdomainname.c getgrent.c getgrouplist.c \
 	gethostname.c getloadavg.c getlogin.c getmntinfo.c getnetgrent.c \
-	getobjformat.c getosreldate.c getpagesize.c \
+	getosreldate.c getpagesize.c \
 	getpeereid.c getprogname.c getpwent.c getttyent.c \
 	getusershell.c getvfsbyname.c glob.c \
 	initgroups.c isatty.c isinf.c isnan.c jrand48.c lcong48.c \
@@ -33,6 +35,8 @@ SRCS+=  __xuname.c _pthread_stubs.c _rand48.c _spinlock_stub.c _thread_init.c \
 	usleep.c utime.c valloc.c vis.c wait.c wait3.c waitpid.c \
 	wordexp.c
 
+SYM_MAPS+=${.CURDIR}/gen/Symbol.map
+
 # machine-dependent gen sources
 .if exists(${.CURDIR}/${MACHINE_ARCH}/gen/Makefile.inc)
 .include "${.CURDIR}/${MACHINE_ARCH}/gen/Makefile.inc"
@@ -47,7 +51,7 @@ MAN+=	alarm.3 arc4random.3 \
 	getbootfile.3 getbsize.3 getcap.3 getcontext.3 getcwd.3 \
 	getdiskbyname.3 getdomainname.3 getfsent.3 \
 	getgrent.3 getgrouplist.3 gethostname.3 getloadavg.3 \
-	getmntinfo.3 getnetgrent.3 getobjformat.3 getosreldate.3 \
+	getmntinfo.3 getnetgrent.3 getosreldate.3 \
 	getpagesize.3 getpass.3 getpeereid.3 getprogname.3 getpwent.3 \
 	getttyent.3 getusershell.3 getvfsbyname.3 \
 	glob.3 initgroups.3 isgreater.3 ldexp.3 lockf.3 makecontext.3 \
@@ -66,6 +70,7 @@ MAN+=	alarm.3 arc4random.3 \
 
 MLINKS+=arc4random.3 arc4random_addrandom.3 arc4random.3 arc4random_stir.3
 MLINKS+=ctermid.3 ctermid_r.3
+MLINKS+=devname.3 devname_r.3
 MLINKS+=directory.3 closedir.3 directory.3 dirfd.3 directory.3 opendir.3 \
 	directory.3 readdir.3 directory.3 readdir_r.3 directory.3 rewinddir.3 \
 	directory.3 seekdir.3 directory.3 telldir.3
@@ -81,7 +86,8 @@ MLINKS+=fpclassify.3 finite.3 fpclassify.3 finitef.3 \
 	fpclassify.3 isnormal.3
 MLINKS+=frexp.3 frexpf.3 frexp.3 frexpl.3
 MLINKS+=fts.3 fts_children.3 fts.3 fts_close.3 fts.3 fts_open.3 \
-	fts.3 fts_read.3 fts.3 fts_set.3
+	fts.3 fts_read.3 fts.3 fts_set.3 fts.3 fts_set_clientptr.3 \
+	fts.3 fts_get_clientptr.3 fts.3 fts_get_stream.3
 MLINKS+=ftw.3 nftw.3
 MLINKS+=getcap.3 cgetcap.3 getcap.3 cgetclose.3 getcap.3 cgetent.3 \
 	getcap.3 cgetfirst.3 getcap.3 cgetmatch.3 getcap.3 cgetnext.3 \
@@ -94,7 +100,8 @@ MLINKS+=getfsent.3 endfsent.3 getfsent.3 getfsfile.3 getfsent.3 getfsspec.3 \
 	getfsent.3 getfstype.3 getfsent.3 setfsent.3 \
 	getfsent.3 setfstab.3 getfsent.3 getfstab.3
 MLINKS+=getgrent.3 endgrent.3 getgrent.3 getgrgid.3 getgrent.3 getgrnam.3 \
-	getgrent.3 setgrent.3 getgrent.3 setgroupent.3
+	getgrent.3 setgrent.3 getgrent.3 setgroupent.3 \
+	getgrent.3 getgrent_r.3 getgrent.3 getgrnam_r.3 getgrent.3 getgrgid_r.3
 MLINKS+=gethostname.3 sethostname.3
 MLINKS+=getnetgrent.3 endnetgrent.3 getnetgrent.3 innetgr.3 \
 	getnetgrent.3 setnetgrent.3

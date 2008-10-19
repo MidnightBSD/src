@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/gen/sem.c,v 1.13 2004/02/06 15:15:44 deischen Exp $
+ * $FreeBSD: src/lib/libc/gen/sem.c,v 1.15 2005/10/18 17:24:03 stefanf Exp $
  */
 
 /*
@@ -57,6 +57,7 @@
  * sem_post() may need to be wrapped to be signal-safe.
  */
 #include "namespace.h"
+#include <sys/types.h>
 #include <sys/queue.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -321,7 +322,7 @@ __sem_trywait(sem_t *sem)
 
 int
 __sem_timedwait(sem_t * __restrict sem,
-    struct timespec * __restrict abs_timeout)
+    const struct timespec * __restrict abs_timeout)
 {
 	if (sem_check_validity(sem) != 0)
 		return (-1);

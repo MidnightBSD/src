@@ -27,10 +27,11 @@
  * SUCH DAMAGE.
  */
 
-/* static char sccsid[] = "@(#)alarm.c	8.1 (Berkeley) 6/4/93"; */
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)alarm.c	8.1 (Berkeley) 6/4/93";
+#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/alarm.c,v 1.2 2002/02/01 01:08:47 obrien Exp $");*/
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/alarm.c,v 1.3 2007/01/09 00:27:53 imp Exp $");
 
 /*
  * Backwards compatible alarm.

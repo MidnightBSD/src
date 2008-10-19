@@ -27,10 +27,11 @@
  * SUCH DAMAGE.
  */
 
-/* static char sccsid[] = "@(#)exec.c	8.1 (Berkeley) 6/4/93"; */
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)exec.c	8.1 (Berkeley) 6/4/93";
+#endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-/*__FBSDID("$FreeBSD: src/lib/libc/gen/exec.c,v 1.22 2003/07/01 12:30:03 bde Exp $");*/
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/lib/libc/gen/exec.c,v 1.23 2007/01/09 00:27:53 imp Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
