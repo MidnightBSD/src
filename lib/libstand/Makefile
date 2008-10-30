@@ -22,12 +22,6 @@ CFLAGS+=	-mno-mmx -mno-3dnow -mno-sse -mno-sse2
 .if ${MACHINE_ARCH} == "i386"
 CFLAGS+=	-mno-sse3
 .endif
-.if ${MACHINE} == "pc98"
-CFLAGS+=	-Os
-.endif
-.if ${MACHINE_ARCH} == "powerpc"
-CFLAGS+=	-msoft-float -D_STANDALONE
-.endif
 .if ${MACHINE_ARCH} == "amd64"
 CFLAGS+=	-m32 -I.
 .endif
@@ -52,24 +46,6 @@ SRCS+=	bcmp.c bcopy.c bzero.c ffs.c index.c memccpy.c memchr.c memcmp.c \
         memcpy.c memmove.c memset.c qdivrem.c rindex.c strcat.c strchr.c \
         strcmp.c strcpy.c strcspn.c strlen.c strncat.c strncmp.c strncpy.c \
 	strpbrk.c strrchr.c strsep.c strspn.c strstr.c strtok.c swab.c
-.endif
-.if ${MACHINE_ARCH} == "ia64"
-.PATH: ${.CURDIR}/../libc/ia64/string
-SRCS+=	bcmp.c bcopy.S bzero.S ffs.S index.c memccpy.c memchr.c memcmp.c \
-	memcpy.S memmove.S memset.c rindex.c strcat.c strchr.c \
-	strcmp.c strcpy.c strcspn.c strlen.c \
-	strncat.c strncmp.c strncpy.c strpbrk.c strrchr.c strsep.c \
-	strspn.c strstr.c strtok.c swab.c
-
-.PATH: ${.CURDIR}/../libc/ia64/gen
-SRCS+= __divdi3.S __divsi3.S __moddi3.S __modsi3.S
-SRCS+= __udivdi3.S __udivsi3.S __umoddi3.S __umodsi3.S
-.endif
-.if ${MACHINE_ARCH} == "powerpc"
-.PATH: ${.CURDIR}/../libc/quad
-SRCS+=	ashldi3.c ashrdi3.c
-.PATH: ${.CURDIR}/../libc/powerpc/gen
-SRCS+=	syncicache.c
 .endif
 
 # _setjmp/_longjmp

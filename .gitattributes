@@ -19172,8 +19172,6 @@ lib/libsmutil/Makefile -text
 lib/libsqlite3/Makefile -text
 lib/libstand/Makefile -text
 lib/libstand/__main.c -text
-lib/libstand/alpha/_setjmp.S -text
-lib/libstand/arm/_setjmp.S -text
 lib/libstand/arp.c -text
 lib/libstand/assert.c -text
 lib/libstand/bcd.c -text
