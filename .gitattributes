@@ -19323,7 +19323,6 @@ lib/libthread_db/Makefile -text
 lib/libthread_db/Symbol.map -text
 lib/libthread_db/arch/amd64/libc_r_md.c -text
 lib/libthread_db/arch/amd64/libpthread_md.c -text
-lib/libthread_db/arch/arm/libpthread_md.c -text
 lib/libthread_db/arch/i386/libc_r_md.c -text
 lib/libthread_db/arch/i386/libpthread_md.c -text
 lib/libthread_db/arch/ia64/libc_r_md.c -text
@@ -19493,10 +19492,6 @@ lib/msun/amd64/s_remquof.S -text
 lib/msun/amd64/s_scalbn.S -text
 lib/msun/amd64/s_scalbnf.S -text
 lib/msun/amd64/s_scalbnl.S -text
-lib/msun/arm/Makefile.inc -text
-lib/msun/arm/Symbol.map -text
-lib/msun/arm/fenv.c -text
-lib/msun/arm/fenv.h -text
 lib/msun/bsdsrc/b_exp.c -text
 lib/msun/bsdsrc/b_log.c -text
 lib/msun/bsdsrc/b_tgamma.c -text
