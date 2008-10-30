@@ -16628,11 +16628,6 @@ lib/libc/amd64/gen/rfork_thread.S -text
 lib/libc/amd64/gen/setjmp.S -text
 lib/libc/amd64/gen/signalcontext.c -text
 lib/libc/amd64/gen/sigsetjmp.S -text
-lib/libc/amd64/net/Makefile.inc -text
-lib/libc/amd64/net/htonl.S -text
-lib/libc/amd64/net/htons.S -text
-lib/libc/amd64/net/ntohl.S -text
-lib/libc/amd64/net/ntohs.S -text
 lib/libc/amd64/stdlib/Makefile.inc -text
 lib/libc/amd64/stdlib/div.S -text
 lib/libc/amd64/stdlib/ldiv.S -text
