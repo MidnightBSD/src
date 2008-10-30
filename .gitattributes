@@ -19344,7 +19344,6 @@ lib/libufs/block.c -text
 lib/libufs/bread.3 -text
 lib/libufs/cgread.3 -text
 lib/libufs/cgroup.c -text
-lib/libufs/getino.3 -text
 lib/libufs/inode.c -text
 lib/libufs/libufs.3 -text
 lib/libufs/libufs.h -text
