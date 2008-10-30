@@ -19506,8 +19506,6 @@ lib/msun/i387/e_log10f.S -text
 lib/msun/i387/e_logf.S -text
 lib/msun/i387/e_remainder.S -text
 lib/msun/i387/e_remainderf.S -text
-lib/msun/i387/e_scalb.S -text
-lib/msun/i387/e_scalbf.S -text
 lib/msun/i387/e_sqrt.S -text
 lib/msun/i387/e_sqrtf.S -text
 lib/msun/i387/fenv.c -text

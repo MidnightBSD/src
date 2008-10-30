@@ -1,6 +1,6 @@
 #  @(#)Makefile 5.1beta 93/09/24
-# $FreeBSD: src/lib/msun/Makefile,v 1.71.2.1 2005/07/22 17:29:09 kensmith Exp $
-# $MidnightBSD$
+# $FreeBSD: src/lib/msun/Makefile,v 1.78 2007/05/21 02:49:08 deischen Exp $
+# $ MidnightBSD$
 #
 #  ====================================================
 #  Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
@@ -27,7 +27,7 @@ ARCH_SUBDIR= ${MACHINE_ARCH}
 
 LIB=	m
 SHLIBDIR?= /lib
-SHLIB_MAJOR= 4
+SHLIB_MAJOR= 5
 COMMON_SRCS= b_exp.c b_log.c b_tgamma.c \
 	e_acos.c e_acosf.c e_acosh.c e_acoshf.c e_asin.c e_asinf.c \
 	e_atan2.c e_atan2f.c e_atanh.c e_atanhf.c e_cosh.c e_coshf.c e_exp.c \
@@ -37,7 +37,7 @@ COMMON_SRCS= b_exp.c b_log.c b_tgamma.c \
 	e_log.c e_log10.c e_log10f.c e_logf.c e_pow.c e_powf.c e_rem_pio2.c \
 	e_rem_pio2f.c e_remainder.c e_remainderf.c e_scalb.c e_scalbf.c \
 	e_sinh.c e_sinhf.c e_sqrt.c e_sqrtf.c fenv.c \
-	k_cos.c k_cosf.c k_rem_pio2.c k_rem_pio2f.c k_sin.c k_sinf.c \
+	k_cos.c k_cosf.c k_rem_pio2.c k_sin.c k_sinf.c \
 	k_tan.c k_tanf.c \
 	s_asinh.c s_asinhf.c s_atan.c s_atanf.c s_cbrt.c s_cbrtf.c \
 	s_ceil.c s_ceilf.c s_ceill.c \
@@ -62,9 +62,13 @@ COMMON_SRCS= b_exp.c b_log.c b_tgamma.c \
 # Location of fpmath.h and _fpmath.h
 LIBCDIR=	${.CURDIR}/../libc
 CFLAGS+=	-I${LIBCDIR}/include -I${LIBCDIR}/${MACHINE_ARCH}
+SYM_MAPS+=	${.CURDIR}/Symbol.map
+
+VERSION_DEF=	${LIBCDIR}/Versions.def
+SYMBOL_MAPS=	${SYM_MAPS}
 
 # C99 long double functions
-COMMON_SRCS+=	s_copysignl.c s_fabsl.c
+COMMON_SRCS+=	s_copysignl.c s_fabsl.c s_modfl.c
 .if ${LDBL_PREC} != 53
 # If long double != double use these; otherwise, we alias the double versions.
 COMMON_SRCS+=	s_fmal.c s_frexpl.c s_nextafterl.c s_nexttoward.c s_scalbnl.c
@@ -130,10 +134,10 @@ MLINKS+=fmax.3 fmaxf.3 fmax.3 fmaxl.3 \
 	fmax.3 fmin.3 fmax.3 fminf.3 fmax.3 fminl.3
 MLINKS+=fmod.3 fmodf.3
 MLINKS+=hypot.3 cabs.3 hypot.3 cabsf.3 hypot.3 hypotf.3
-MLINKS+=ieee_test.3 logb.3 ieee_test.3 logbf.3
 MLINKS+=ieee_test.3 scalb.3 ieee_test.3 scalbf.3
 MLINKS+=ieee_test.3 significand.3 ieee_test.3 significandf.3
-MLINKS+=ilogb.3 ilogbf.3 ilogb.3 ilogbl.3
+MLINKS+=ilogb.3 ilogbf.3 ilogb.3 ilogbl.3 \
+	ilogb.3 logb.3 ilogb.3 logbf.3
 MLINKS+=j0.3 j1.3 j0.3 jn.3 j0.3 y0.3 j0.3 y1.3 j0.3 y1f.3 j0.3 yn.3
 MLINKS+=j0.3 j0f.3 j0.3 j1f.3 j0.3 jnf.3 j0.3 y0f.3 j0.3 ynf.3
 MLINKS+=lgamma.3 gamma.3 lgamma.3 gammaf.3 lgamma.3 lgammaf.3 lgamma.3 tgamma.3

@@ -22,12 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $MidnightBSD$
- * $FreeBSD: src/lib/msun/amd64/e_sqrt.S,v 1.2 2005/02/04 14:08:32 das Exp $
  */
 
 #include <machine/asm.h>
+__FBSDID("$FreeBSD: src/lib/msun/amd64/e_sqrt.S,v 1.2 2005/02/04 14:08:32 das Exp $")
 	
 ENTRY(sqrt)
 	sqrtsd	%xmm0, %xmm0
