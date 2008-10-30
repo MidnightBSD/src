@@ -18153,7 +18153,6 @@ lib/libc/sys/munmap.2 -text
 lib/libc/sys/nanosleep.2 -text
 lib/libc/sys/nfssvc.2 -text
 lib/libc/sys/ntp_adjtime.2 -text
-lib/libc/sys/ntp_gettime.2 -text
 lib/libc/sys/open.2 -text
 lib/libc/sys/pathconf.2 -text
 lib/libc/sys/pipe.2 -text
@@ -18208,6 +18207,7 @@ lib/libc/sys/sigwait.2 -text
 lib/libc/sys/sigwaitinfo.2 -text
 lib/libc/sys/socket.2 -text
 lib/libc/sys/socketpair.2 -text
+lib/libc/sys/stack_protector.c -text
 lib/libc/sys/stat.2 -text
 lib/libc/sys/statfs.2 -text
 lib/libc/sys/swapon.2 -text
@@ -18488,7 +18488,6 @@ lib/libdisk/libdisk.h -text
 lib/libdisk/open_disk.c -text
 lib/libdisk/rules.c -text
 lib/libdisk/tst01.c -text
-lib/libdisk/write_alpha_disk.c -text
 lib/libdisk/write_amd64_disk.c -text
 lib/libdisk/write_arm_disk.c -text
 lib/libdisk/write_disk.c -text
@@ -18649,7 +18648,6 @@ lib/libfetch/ftp.c -text
 lib/libfetch/ftp.errors -text
 lib/libfetch/http.c -text
 lib/libfetch/http.errors -text
-lib/libform/Makefile -text
 lib/libftpio/Makefile -text
 lib/libftpio/ftp.errors -text
 lib/libftpio/ftpio.3 -text
@@ -18997,7 +18995,6 @@ lib/libmemstat/memstat_all.c -text
 lib/libmemstat/memstat_internal.h -text
 lib/libmemstat/memstat_malloc.c -text
 lib/libmemstat/memstat_uma.c -text
-lib/libmenu/Makefile -text
 lib/libmilter/Makefile -text
 lib/libmp/Makefile -text
 lib/libmp/libmp.3 -text
@@ -19128,7 +19125,6 @@ lib/libpam/modules/pam_tacplus/pam_tacplus.c -text
 lib/libpam/modules/pam_unix/Makefile -text
 lib/libpam/modules/pam_unix/pam_unix.8 -text
 lib/libpam/modules/pam_unix/pam_unix.c -text
-lib/libpanel/Makefile -text
 lib/libpcap/Makefile -text
 lib/libpcap/config.h -text
 lib/libpmc/Makefile -text

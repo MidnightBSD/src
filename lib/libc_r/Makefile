@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libc_r/Makefile,v 1.41.2.1 2005/07/22 17:29:04 kensmith Exp $
+# $FreeBSD: src/lib/libc_r/Makefile,v 1.49 2007/05/21 02:49:03 deischen Exp $
 #
 # All library objects contain FreeBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
@@ -7,8 +7,15 @@
 # To included legacy CSRG sccsid strings, add -DLIBC_SCCS and -DSYSLIBC_SCCS
 # (for system call stubs) to CFLAGS below.  -DSYSLIBC_SCCS affects just the
 # system call stubs.
+
+.include <bsd.own.mk>
+
+.if ${DEFAULT_THREAD_LIB} == "libc_r" && ${SHLIBDIR} == "/usr/lib"
+SHLIBDIR= /lib
+.endif
+
 LIB=c_r
-SHLIB_MAJOR= 6
+SHLIB_MAJOR= 7
 CFLAGS+=-DPTHREAD_KERNEL 
 CFLAGS+=-I${.CURDIR}/../libc/include -I${.CURDIR}/uthread \
 	-I${.CURDIR}/../../include
@@ -25,13 +32,12 @@ PRECIOUSLIB=
 .include "${.CURDIR}/uthread/Makefile.inc"
 .include "${.CURDIR}/sys/Makefile.inc"
 
-.if ${MACHINE_ARCH} == "sparc64"
-SHLIBDIR?=/lib
+.if ${DEFAULT_THREAD_LIB} == "libc_r"
 SYMLINKS+=lib${LIB}.a ${LIBDIR}/libpthread.a
 .if !defined(NO_PIC)
 SYMLINKS+=lib${LIB}.so ${LIBDIR}/libpthread.so
 .endif
-.if !defined(NO_PROFILE)
+.if ${MK_PROFILE} != "no"
 SYMLINKS+=lib${LIB}_p.a ${LIBDIR}/libpthread_p.a
 .endif
 .endif

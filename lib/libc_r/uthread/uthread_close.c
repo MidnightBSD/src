@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc_r/uthread/uthread_close.c,v 1.16 2003/06/09 16:45:37 netchild Exp $
+ * $FreeBSD: src/lib/libc_r/uthread/uthread_close.c,v 1.17 2007/01/12 07:25:25 imp Exp $
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -63,7 +60,8 @@ _close(int fd)
 	 * Lock the file descriptor while the file is closed and get
 	 * the file descriptor status:
 	 */
-	else if ((ret = _FD_LOCK(fd, FD_RDWR, NULL)) == 0) {
+	else if (((ret = _FD_LOCK(fd, FD_RDWR, NULL)) == 0) &&
+	    ((ret = __sys_fstat(fd, &sb)) == 0)) {
 		/*
 		 * Check if the file should be left as blocking.
 		 *
@@ -84,8 +82,7 @@ _close(int fd)
 		 * using, which would then cause any reads to block
 		 * indefinitely.
 		 */
-		if (__sys_fstat(fd, &sb) == 0 &&
-		    (S_ISREG(sb.st_mode) || S_ISCHR(sb.st_mode))
+		if ((S_ISREG(sb.st_mode) || S_ISCHR(sb.st_mode))
 		    && (_thread_fd_getflags(fd) & O_NONBLOCK) == 0) {
 			/* Get the current flags: */
 			flags = __sys_fcntl(fd, F_GETFL, NULL);

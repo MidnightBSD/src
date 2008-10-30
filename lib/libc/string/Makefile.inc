@@ -1,6 +1,6 @@
 #	@(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libc/string/Makefile.inc,v 1.34.8.1 2005/08/29 18:46:39 andre Exp $
-# $MidnightBSD$
+# $FreeBSD: src/lib/libc/string/Makefile.inc,v 1.37 2006/03/13 01:15:00 deischen Exp $
+# $MidnightBSD: src/lib/libc/string/Makefile.inc,v 1.2 2007/01/04 06:22:04 laffer1 Exp $
 
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/string ${.CURDIR}/string
 
@@ -15,11 +15,13 @@ MISRCS+=bcmp.c bcopy.c bzero.c ffs.c ffsl.c fls.c flsl.c index.c memccpy.c \
 	strncpy.c strndup.c strcasestr.c strnstr.c \
 	strpbrk.c strrchr.c strsep.c strsignal.c strspn.c strstr.c strtok.c \
 	strxfrm.c swab.c wcscat.c wcschr.c wcscmp.c wcscoll.c wcscpy.c \
-	wcscspn.c \
+	wcscspn.c wcsdup.c \
 	wcslcat.c wcslcpy.c wcslen.c wcsncat.c wcsncmp.c wcsncpy.c wcspbrk.c \
 	wcsrchr.c wcsspn.c wcsstr.c wcstok.c wcswidth.c wcsxfrm.c wmemchr.c \
 	wmemcmp.c \
 	wmemcpy.c wmemmove.c wmemset.c
+
+SYM_MAPS+=	${.CURDIR}/string/Symbol.map
 
 
 # machine-dependent string sources
@@ -55,7 +57,8 @@ MLINKS+=wmemchr.3 wmemcmp.3 wmemchr.3 wmemcpy.3 \
 	wmemchr.3 wmemmove.3 wmemchr.3 wmemset.3 \
 	wmemchr.3 wcscat.3 wmemchr.3 wcschr.3 \
 	wmemchr.3 wcscmp.3 wmemchr.3 wcscpy.3 \
-	wmemchr.3 wcscspn.3 wmemchr.3 wcslcat.3 \
+	wmemchr.3 wcscspn.3 wmemchr.3 wcsdup.3 \
+	wmemchr.3 wcslcat.3 \
 	wmemchr.3 wcslcpy.3 wmemchr.3 wcslen.3 \
 	wmemchr.3 wcsncat.3 wmemchr.3 wcsncmp.3 \
 	wmemchr.3 wcsncpy.3 wmemchr.3 wcspbrk.3 \
