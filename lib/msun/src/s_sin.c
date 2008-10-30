@@ -11,7 +11,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_sin.c,v 1.9 2003/07/23 04:53:47 peter Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_sin.c,v 1.10 2005/10/24 14:08:36 bde Exp $";
 #endif
 
 /* sin(x)
@@ -59,7 +59,11 @@ sin(double x)
 
     /* |x| ~< pi/4 */
 	ix &= 0x7fffffff;
-	if(ix <= 0x3fe921fb) return __kernel_sin(x,z,0);
+	if(ix <= 0x3fe921fb) {
+	    if(ix<0x3e400000)			/* |x| < 2**-27 */
+	       {if((int)x==0) return x;}	/* generate inexact */
+	    return __kernel_sin(x,z,0);
+	}
 
     /* sin(Inf or NaN) is NaN */
 	else if (ix>=0x7ff00000) return x-x;

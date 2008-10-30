@@ -56,7 +56,7 @@
 static char sccsid[] = "@(#)rpcb_clnt.c 1.30 89/06/21 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/rpcb_clnt.c,v 1.14 2004/10/16 06:11:35 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/rpcb_clnt.c,v 1.17 2007/09/20 22:35:24 matteo Exp $");
 
 /*
  * rpcb_clnt.c
@@ -89,6 +89,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/rpcb_clnt.c,v 1.14 2004/10/16 06:11:35 obri
 #include "un-namespace.h"
 
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 static struct timeval tottimeout = { 60, 0 };
 static const struct timeval rmttimeout = { 3, 0 };
@@ -165,7 +166,6 @@ __rpc_control(request, info)
  * block all clnt_create's if we are trying to connect to a host that's down,
  * since the lock will be held all during that time.
  */
-extern rwlock_t	rpcbaddr_cache_lock;
 
 /*
  * The routines check_cache(), add_cache(), delete_cache() manage the
@@ -239,11 +239,21 @@ add_cache(host, netid, taddr, uaddr)
 	ad_cache->ac_taddr = (struct netbuf *)malloc(sizeof (struct netbuf));
 	if (!ad_cache->ac_host || !ad_cache->ac_netid || !ad_cache->ac_taddr ||
 		(uaddr && !ad_cache->ac_uaddr)) {
-		return;
+		goto out;
 	}
 	ad_cache->ac_taddr->len = ad_cache->ac_taddr->maxlen = taddr->len;
 	ad_cache->ac_taddr->buf = (char *) malloc(taddr->len);
 	if (ad_cache->ac_taddr->buf == NULL) {
+out:
+		if (ad_cache->ac_host)
+			free(ad_cache->ac_host);
+		if (ad_cache->ac_netid)
+			free(ad_cache->ac_netid);
+		if (ad_cache->ac_uaddr)
+			free(ad_cache->ac_uaddr);
+		if (ad_cache->ac_taddr)
+			free(ad_cache->ac_taddr);
+		free(ad_cache);
 		return;
 	}
 	memcpy(ad_cache->ac_taddr->buf, taddr->buf, taddr->len);
@@ -374,10 +384,15 @@ getclnthandle(host, nconf, targaddr)
 			return (NULL);
 		} else {
 			struct sockaddr_un sun;
-
-			*targaddr = malloc(sizeof(sun.sun_path));
-			strncpy(*targaddr, _PATH_RPCBINDSOCK,
-			    sizeof(sun.sun_path));
+			if (targaddr) {
+			    *targaddr = malloc(sizeof(sun.sun_path));
+			    if (*targaddr == NULL) {
+				CLNT_DESTROY(client);
+				return (NULL);
+			    }
+			    strncpy(*targaddr, _PATH_RPCBINDSOCK,
+				sizeof(sun.sun_path));
+			}
 			return (client);
 		}
 	} else {
@@ -448,7 +463,6 @@ local_rpcb()
 	CLIENT *client;
 	static struct netconfig *loopnconf;
 	static char *hostname;
-	extern mutex_t loopnconf_lock;
 	int sock;
 	size_t tsize;
 	struct netbuf nbuf;
@@ -675,7 +689,7 @@ got_entry(relp, nconf)
  * Quick check to see if rpcbind is up.  Tries to connect over
  * local transport.
  */
-bool_t
+static bool_t
 __rpcbind_is_up()
 {
 	struct netconfig *nconf;
@@ -1011,11 +1025,6 @@ regular_rpcbind:
 			clnt_geterr(client, &rpc_createerr.cf_error);
 			goto error;
 		}
-	}
-
-	if ((address == NULL) || (address->len == 0)) {
-		rpc_createerr.cf_stat = RPC_PROGNOTREGISTERED;
-		clnt_geterr(client, &rpc_createerr.cf_error);
 	}
 
 error:

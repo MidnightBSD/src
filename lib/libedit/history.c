@@ -29,14 +29,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$NetBSD: history.c,v 1.31 2005/08/01 14:34:06 christos Exp $
+ *	$NetBSD: history.c,v 1.32 2006/09/28 13:52:51 christos Exp $
  */
 
 #if !defined(lint) && !defined(SCCSID)
 static char sccsid[] = "@(#)history.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint && not SCCSID */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libedit/history.c,v 1.7.14.1 2005/10/09 03:44:01 delphij Exp $");
+__FBSDID("$FreeBSD: src/lib/libedit/history.c,v 1.9 2007/03/11 21:47:39 stefanf Exp $");
 
 /*
  * hist.c: History access functions
@@ -543,6 +543,7 @@ history_end(History *h)
 
 	if (h->h_next == history_def_next)
 		history_def_clear(h->h_ref, &ev);
+	h_free(h->h_ref);
 	h_free(h);
 }
 

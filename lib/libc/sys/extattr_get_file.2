@@ -24,7 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/extattr_get_file.2,v 1.17 2005/06/10 16:54:17 rodrigc Exp $
+.\" $FreeBSD: src/lib/libc/sys/extattr_get_file.2,v 1.18 2006/11/06 15:12:43 rwatson Exp $
 .\"
 .Dd February 23, 2005
 .Dt EXTATTR 2
@@ -48,7 +48,6 @@
 .Sh SYNOPSIS
 .In sys/types.h
 .In sys/extattr.h
-.In sys/uio.h
 .Ft ssize_t
 .Fn extattr_get_fd "int fd" "int attrnamespace" "const char *attrname" "void *data" "size_t nbytes"
 .Ft int

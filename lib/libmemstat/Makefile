@@ -1,8 +1,8 @@
-# $FreeBSD: src/lib/libmemstat/Makefile,v 1.3.2.3 2006/02/24 17:17:09 rwatson Exp $
+# $FreeBSD: src/lib/libmemstat/Makefile,v 1.6 2007/05/21 02:49:05 deischen Exp $
 
 WARNS?=		3
 LIB=		memstat
-SHLIB_MAJOR=	1
+SHLIB_MAJOR=	2
 DPADD=		${LIBKVM}
 LDADD=		-lkvm
 SRCS+=		memstat.c

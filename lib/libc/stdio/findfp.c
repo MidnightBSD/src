@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@
 static char sccsid[] = "@(#)findfp.c	8.2 (Berkeley) 1/4/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/findfp.c,v 1.29 2004/05/22 15:19:41 tjr Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/stdio/findfp.c,v 1.31 2007/01/09 00:28:06 imp Exp $");
 
 #include <sys/param.h>
 #include <machine/atomic.h>
@@ -86,7 +82,7 @@ FILE __sF[3] = {
  * with future versions of libc.  Or rather it allows us to work with
  * libraries that have been built with a newer libc that defines these
  * symbols and expects libc to provide them.  We only have need to support
- * i386 and alpha because they are the only "old" systems we have deployed.
+ * i386 because it is the only "old" system we have deployed.
  */
 FILE *__stdinp = &__sF[0];
 FILE *__stdoutp = &__sF[1];

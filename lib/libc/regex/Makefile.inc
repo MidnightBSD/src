@@ -1,5 +1,5 @@
 #	from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libc/regex/Makefile.inc,v 1.7 2002/11/18 09:50:56 ru Exp $
+# $FreeBSD: src/lib/libc/regex/Makefile.inc,v 1.8 2006/03/13 01:14:58 deischen Exp $
 
 # regex sources
 .PATH: ${.CURDIR}/regex
@@ -7,6 +7,8 @@
 CFLAGS+=-DPOSIX_MISTAKE
 
 SRCS+=	regcomp.c regerror.c regexec.c regfree.c
+
+SYM_MAPS+=${.CURDIR}/regex/Symbol.map
 
 MAN+=	regex.3
 MAN+=	re_format.7

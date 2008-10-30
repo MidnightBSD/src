@@ -22,21 +22,23 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/lib/libradius/Makefile,v 1.11.2.1 2005/07/22 17:29:07 kensmith Exp $
+# $FreeBSD: src/lib/libradius/Makefile,v 1.15 2007/05/21 02:49:06 deischen Exp $
+
+.include <bsd.own.mk>
 
 LIB=		radius
 SRCS=		radlib.c
 INCS=		radlib.h radlib_vs.h
 CFLAGS+=	-Wall
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 MAN=		libradius.3 radius.conf.5
 
-.if defined(NO_CRYPT) || defined(NO_OPENSSL)
+.if ${MK_OPENSSL} == "no"
 DPADD=		${LIBMD}
 LDADD=		-lmd
 .else
-DPADD=		${LIBSSL}
-LDADD=		-lssl
+DPADD=		${LIBCRYPTO}
+LDADD=		-lcrypto
 CFLAGS+=	-DWITH_SSL
 .endif
 

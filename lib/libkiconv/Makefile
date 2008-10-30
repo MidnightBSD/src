@@ -1,11 +1,11 @@
-# $FreeBSD: src/lib/libkiconv/Makefile,v 1.2.8.1 2005/07/22 17:29:05 kensmith Exp $
+# $FreeBSD: src/lib/libkiconv/Makefile,v 1.4 2007/05/21 02:49:04 deischen Exp $
 
 LIB=		kiconv
 SHLIBDIR?=	/lib
 SRCS=		xlat16_iconv.c xlat16_sysctl.c
 SRCS+=		quirks.c
 
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 
 MAN=		kiconv.3
 

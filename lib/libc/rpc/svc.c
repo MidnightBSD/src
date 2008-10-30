@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)svc.c 1.44 88/02/08 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc.c	2.4 88/08/11 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc.c,v 1.23 2004/10/16 06:11:35 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/svc.c,v 1.24 2006/02/27 22:10:59 deischen Exp $");
 
 /*
  * svc.c, Server-side remote procedure call interface.
@@ -62,6 +62,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc.c,v 1.23 2004/10/16 06:11:35 obrien Exp
 #include "un-namespace.h"
 
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 #define	RQCRED_SIZE	400		/* this size is excessive */
 
@@ -83,9 +84,6 @@ static struct svc_callout {
 	char		   *sc_netid;
 	void		    (*sc_dispatch)(struct svc_req *, SVCXPRT *);
 } *svc_head;
-
-extern rwlock_t svc_lock;
-extern rwlock_t svc_fd_lock;
 
 static struct svc_callout *svc_find(rpcprog_t, rpcvers_t,
     struct svc_callout **, char *);

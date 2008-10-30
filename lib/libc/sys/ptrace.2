@@ -1,8 +1,8 @@
-.\" $FreeBSD: src/lib/libc/sys/ptrace.2,v 1.37 2005/02/13 22:25:13 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/ptrace.2,v 1.41 2007/04/11 20:31:06 emaste Exp $
 .\"	$NetBSD: ptrace.2,v 1.2 1995/02/27 12:35:37 cgd Exp $
 .\"
 .\" This file is in the public domain.
-.Dd August 11, 2003
+.Dd April 9, 2007
 .Dt PTRACE 2
 .Os
 .Sh NAME
@@ -297,6 +297,20 @@ The
 .Fa data
 argument is to be set to the size of the structure known to the caller.
 This allows the structure to grow without affecting older programs.
+.It PT_GETNUMLWPS
+This request returns the number of kernel threads associated with the
+traced process.
+.It PT_GETLWPLIST
+This request can be used to get the current thread list.
+A pointer to an array of type
+.Vt lwpid_t
+should be passed in
+.Fa addr ,
+with the array size specified by
+.Fa data .
+The return value from
+.Fn ptrace
+is the count of array entries filled in.
 .El
 .Pp
 Additionally, machine-specific requests can exist.

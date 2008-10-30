@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libncp/ncpl_nls.c,v 1.5 2004/03/14 05:19:38 bde Exp $");
+__FBSDID("$FreeBSD: src/lib/libncp/ncpl_nls.c,v 1.7 2007/01/09 23:27:39 imp Exp $");
 
 /*
  * Languages support. Currently is very primitive.
@@ -40,7 +37,7 @@ __FBSDID("$FreeBSD: src/lib/libncp/ncpl_nls.c,v 1.5 2004/03/14 05:19:38 bde Exp 
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 #include <locale.h>
 
 #include <netncp/ncp_lib.h>

@@ -20,10 +20,11 @@
 # Copies of this Software may be made, however, the above copyright
 # notice must be reproduced on all copies.
 #
-#	@(#) $Id: Makefile,v 1.1.1.2 2006-02-25 02:34:50 laffer1 Exp $
-# $FreeBSD: src/lib/libatm/Makefile,v 1.12 2005/04/22 18:57:31 trhodes Exp $
+#	@(#) $Id: Makefile,v 1.1.1.3 2008-10-30 20:39:05 laffer1 Exp $
+# $FreeBSD: src/lib/libatm/Makefile,v 1.14 2007/05/21 02:49:02 deischen Exp $
 
 LIB=	atm
+SHLIB_MAJOR= 5
 SHLIBDIR?= /lib
 SRCS=	atm_addr.c cache_key.c ioctl_subr.c ip_addr.c ip_checksum.c timer.c
 INCS=	libatm.h

@@ -50,14 +50,14 @@
 
 %{
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipsec/policy_parse.y,v 1.4 2003/11/05 09:41:23 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libipsec/policy_parse.y,v 1.5 2007/07/01 12:08:06 gnn Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 
 #include <stdlib.h>
 #include <stdio.h>

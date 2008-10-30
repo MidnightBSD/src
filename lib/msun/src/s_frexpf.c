@@ -14,7 +14,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_frexpf.c,v 1.8 2002/05/28 18:15:04 alfred Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_frexpf.c,v 1.9 2007/06/11 07:48:52 bde Exp $";
 #endif
 
 #include "math.h"
@@ -39,6 +39,6 @@ frexpf(float x, int *eptr)
 	}
 	*eptr += (ix>>23)-126;
 	hx = (hx&0x807fffff)|0x3f000000;
-	*(int*)&x = hx;
+	SET_FLOAT_WORD(x,hx);
 	return x;
 }

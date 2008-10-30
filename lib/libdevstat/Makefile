@@ -1,9 +1,9 @@
-# $FreeBSD: src/lib/libdevstat/Makefile,v 1.14.8.1 2005/07/22 17:29:04 kensmith Exp $
+# $FreeBSD: src/lib/libdevstat/Makefile,v 1.16 2007/05/21 02:49:03 deischen Exp $
 
 LIB=	devstat
 SHLIBDIR?= /lib
 # Bump DEVSTAT_USER_API_VER in devstat.h every time this is incremented.
-SHLIB_MAJOR= 5
+SHLIB_MAJOR= 6
 SRCS=	devstat.c
 INCS=	devstat.h
 

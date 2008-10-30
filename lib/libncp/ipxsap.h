@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    This product includes software developed by Boris Popov.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libncp/ipxsap.h,v 1.1 1999/10/12 11:56:37 bp Exp $
+ * $FreeBSD: src/lib/libncp/ipxsap.h,v 1.3 2007/02/26 12:07:08 rwatson Exp $
  */
 #ifndef _IPXSAP_H_
 #define _IPXSAP_H_
@@ -51,19 +48,19 @@
 struct sap_query {
 	u_short		query_type;	/* net order */
 	u_short		server_type;	/* net order */
-};
+} __packed;
 
 struct sap_entry {
 	u_short		server_type;
 	u_char		server_name[IPX_SAP_SERVER_NAME_LEN];
 	struct ipx_addr	ipx;
 	u_short		hops;
-};
+} __packed;
 
 struct sap_packet {
 	u_short		operation;
 	struct sap_entry sap_entries[1];
-};
+} __packed;
 
 struct sap_rq {
 	struct sockaddr_ipx dest_addr;

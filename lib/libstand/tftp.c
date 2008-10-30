@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libstand/tftp.c,v 1.12 2004/10/03 15:58:20 stefanf Exp $");
+__FBSDID("$FreeBSD: src/lib/libstand/tftp.c,v 1.12.10.1 2007/10/28 15:41:11 marius Exp $");
 
 /*
  * Simple TFTP implementation for libsa.
@@ -95,10 +95,10 @@ struct tftp_handle {
 		u_char header[HEADER_SIZE];
 		struct tftphdr t;
 		u_char space[RSPACE];
-	} lastdata;
+	} __packed __aligned(4) lastdata;
 };
 
-static int tftperrors[8] = {
+static const int tftperrors[8] = {
 	0,			/* ??? */
 	ENOENT,
 	EPERM,
@@ -175,7 +175,7 @@ tftp_makereq(h)
 		u_char header[HEADER_SIZE];
 		struct tftphdr  t;
 		u_char space[FNAME_SIZE + 6];
-	} wbuf;
+	} __packed __aligned(4) wbuf;
 	char           *wtail;
 	int             l;
 	ssize_t         res;
@@ -218,7 +218,7 @@ tftp_getnextblock(h)
 	struct {
 		u_char header[HEADER_SIZE];
 		struct tftphdr t;
-	} wbuf;
+	} __packed __aligned(4) wbuf;
 	char           *wtail;
 	int             res;
 	struct tftphdr *t;

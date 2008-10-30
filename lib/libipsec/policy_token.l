@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/lib/libipsec/policy_token.l,v 1.8 2004/02/11 04:34:34 bms Exp $	*/
+/*	$FreeBSD: src/lib/libipsec/policy_token.l,v 1.9 2007/07/01 12:08:06 gnn Exp $	*/
 /*	$KAME: policy_token.l,v 1.13 2003/05/09 05:19:55 sakane Exp $	*/
 
 /*
@@ -36,9 +36,9 @@
 #include <sys/socket.h>
 #include <net/route.h>
 #include <net/pfkeyv2.h>
-#include <netkey/keydb.h>
+#include <netipsec/keydb.h>
 #include <netinet/in.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 
 #include <stdlib.h>
 #include <limits.h>

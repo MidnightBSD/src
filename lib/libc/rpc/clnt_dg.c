@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_dg.c,v 1.17 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_dg.c,v 1.19 2007/03/04 12:25:03 simon Exp $");
 
 /*
  * Implements a connectionless client side RPC.
@@ -60,9 +60,17 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_dg.c,v 1.17 2004/10/16 06:11:34 obrien
 #include <err.h>
 #include "un-namespace.h"
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 
+#ifdef _FREEFALL_CONFIG
+/*
+ * Disable RPC exponential back-off for FreeBSD.org systems.
+ */
+#define	RPC_MAX_BACKOFF		1 /* second */
+#else
 #define	RPC_MAX_BACKOFF		30 /* seconds */
+#endif
 
 
 static struct clnt_ops *clnt_dg_ops(void);
@@ -92,7 +100,6 @@ static void clnt_dg_destroy(CLIENT *);
  *	at a time.
  */
 static int	*dg_fd_locks;
-extern mutex_t clnt_fd_lock;
 static cond_t	*dg_cv;
 #define	release_fd_lock(fd, mask) {		\
 	mutex_lock(&clnt_fd_lock);	\
@@ -754,7 +761,6 @@ static struct clnt_ops *
 clnt_dg_ops()
 {
 	static struct clnt_ops ops;
-	extern mutex_t	ops_lock;
 	sigset_t mask;
 	sigset_t newmask;
 

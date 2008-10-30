@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -40,7 +36,7 @@ static char sccsid[] = "@(#)vfprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/vfwprintf.c,v 1.24 2005/04/16 22:36:51 das Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/stdio/vfwprintf.c,v 1.27 2007/01/09 00:28:08 imp Exp $");
 
 /*
  * Actual wprintf innards.
@@ -1538,7 +1534,7 @@ done:
 			(*argtable) [n].sizearg = va_arg (ap, size_t);
 			break;
 		    case TP_SIZET:
-			(*argtable) [n].psizearg = va_arg (ap, ssize_t *);
+			(*argtable) [n].psizearg = va_arg (ap, size_t *);
 			break;
 		    case T_INTMAXT:
 			(*argtable) [n].intmaxarg = va_arg (ap, intmax_t);
@@ -1549,14 +1545,16 @@ done:
 		    case TP_INTMAXT:
 			(*argtable) [n].pintmaxarg = va_arg (ap, intmax_t *);
 			break;
-#ifndef NO_FLOATING_POINT
 		    case T_DOUBLE:
+#ifndef NO_FLOATING_POINT
 			(*argtable) [n].doublearg = va_arg (ap, double);
+#endif
 			break;
 		    case T_LONG_DOUBLE:
+#ifndef NO_FLOATING_POINT
 			(*argtable) [n].longdoublearg = va_arg (ap, long double);
-			break;
 #endif
+			break;
 		    case TP_CHAR:
 			(*argtable) [n].pchararg = va_arg (ap, char *);
 			break;

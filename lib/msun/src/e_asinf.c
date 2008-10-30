@@ -14,7 +14,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_asinf.c,v 1.8 2002/05/28 17:03:12 alfred Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_asinf.c,v 1.9 2005/12/04 13:52:46 bde Exp $";
 #endif
 
 #include "math.h"
@@ -25,7 +25,7 @@ one =  1.0000000000e+00, /* 0x3F800000 */
 huge =  1.000e+30,
 pio2_hi =  1.5707962513e+00, /* 0x3fc90fda */
 pio2_lo =  7.5497894159e-08, /* 0x33a22168 */
-pio4_hi =  7.8539818525e-01, /* 0x3f490fdb */
+pio4_hi =  7.8539812565e-01, /* 0x3f490fda */
 	/* coefficient for R(x^2) */
 pS0 =  1.6666667163e-01, /* 0x3e2aaaab */
 pS1 = -3.2556581497e-01, /* 0xbea6b090 */

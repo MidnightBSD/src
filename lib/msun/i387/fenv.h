@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/msun/i387/fenv.h,v 1.4 2005/03/17 22:21:46 das Exp $
+ * $FreeBSD: src/lib/msun/i387/fenv.h,v 1.6 2007/01/06 21:46:23 das Exp $
  */
 
 #ifndef	_FENV_H_
@@ -80,6 +80,8 @@ typedef	__uint16_t	fexcept_t;
 #define	_SSE_ROUND_SHIFT	3
 #define	_SSE_EMASK_SHIFT	7
 
+__BEGIN_DECLS
+
 /* After testing for SSE support once, we cache the result in __has_sse. */
 enum __sse_support { __SSE_YES, __SSE_NO, __SSE_UNK };
 extern enum __sse_support __has_sse;
@@ -91,14 +93,15 @@ int __test_sse(void);
 			 (__has_sse == __SSE_UNK && __test_sse()))
 #endif
 
-__BEGIN_DECLS
-
 /* Default floating-point environment */
 extern const fenv_t	__fe_dfl_env;
 #define	FE_DFL_ENV	(&__fe_dfl_env)
 
 #define	__fldcw(__cw)		__asm __volatile("fldcw %0" : : "m" (__cw))
 #define	__fldenv(__env)		__asm __volatile("fldenv %0" : : "m" (__env))
+#define	__fldenvx(__env)	__asm __volatile("fldenv %0" : : "m" (__env)  \
+				: "st", "st(1)", "st(2)", "st(3)", "st(4)",   \
+				"st(5)", "st(6)", "st(7)")
 #define	__fnclex()		__asm __volatile("fnclex")
 #define	__fnstenv(__env)	__asm __volatile("fnstenv %0" : "=m" (*(__env)))
 #define	__fnstcw(__cw)		__asm __volatile("fnstcw %0" : "=m" (*(__cw)))
@@ -207,7 +210,15 @@ fesetenv(const fenv_t *__envp)
 
 	__mxcsr = __get_mxcsr(__env);
 	__set_mxcsr(__env, 0xffffffff);
-	__fldenv(__env);
+	/*
+	 * XXX Using fldenvx() instead of fldenv() tells the compiler that this
+	 * instruction clobbers the i387 register stack.  This happens because
+	 * we restore the tag word from the saved environment.  Normally, this
+	 * would happen anyway and we wouldn't care, because the ABI allows
+	 * function calls to clobber the i387 regs.  However, fesetenv() is
+	 * inlined, so we need to be more careful.
+	 */
+	__fldenvx(__env);
 	if (__HAS_SSE())
 		__ldmxcsr(__mxcsr);
 	return (0);

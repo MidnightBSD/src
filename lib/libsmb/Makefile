@@ -1,11 +1,12 @@
-# $FreeBSD: src/lib/libsmb/Makefile,v 1.7.2.1 2005/07/22 17:29:07 kensmith Exp $
+# $FreeBSD: src/lib/libsmb/Makefile,v 1.11 2007/05/21 02:49:06 deischen Exp $
 
 CONTRIBDIR=	${.CURDIR}/../../contrib/smbfs
 .PATH: ${CONTRIBDIR}/lib/smb
 
 LIB=	smb
-SHLIB_MAJOR=	2
-NO_MAN=
+SHLIB_MAJOR=	3
+DPADD=	${LIBKICONV}
+LDADD=	-lkiconv
 
 SRCS=	rcfile.c ctx.c cfopt.c subr.c nls.c rap.c mbuf.c rq.c file.c \
 	print.c \

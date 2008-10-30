@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:34:50 laffer1 Exp $
-# $FreeBSD: src/lib/libbluetooth/Makefile,v 1.1.10.1 2005/07/22 17:29:03 kensmith Exp $
+# $Id: Makefile,v 1.1.1.3 2008-10-30 20:39:05 laffer1 Exp $
+# $FreeBSD: src/lib/libbluetooth/Makefile,v 1.3 2007/05/21 02:49:02 deischen Exp $
 
 LIB=		bluetooth
 MAN=		bluetooth.3
@@ -7,7 +7,7 @@ MAN=		bluetooth.3
 WARNS?=		2
 CFLAGS+=	-I${.CURDIR} -I${.CURDIR}/../../sys
 
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 
 SRCS=		bluetooth.c
 INCS=		bluetooth.h

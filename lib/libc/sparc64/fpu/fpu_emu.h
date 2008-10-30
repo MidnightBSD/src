@@ -6,11 +6,6 @@
  * at Lawrence Berkeley Laboratory under DARPA contract BG 91-66 and
  * contributed to Berkeley.
  *
- * All advertising materials mentioning features or use of this software
- * must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Lawrence Berkeley Laboratory.
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -19,10 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -41,7 +32,7 @@
  *
  *	@(#)fpu_emu.h	8.1 (Berkeley) 6/11/93
  *	$NetBSD: fpu_emu.h,v 1.4 2000/08/03 18:32:07 eeh Exp $
- * $FreeBSD: src/lib/libc/sparc64/fpu/fpu_emu.h,v 1.4 2002/03/22 23:41:59 obrien Exp $
+ * $FreeBSD: src/lib/libc/sparc64/fpu/fpu_emu.h,v 1.6 2007/01/09 00:28:05 imp Exp $
  */
 
 /*
@@ -157,6 +148,7 @@ struct fpn {
 struct fpemu {
 	u_long	fe_fsr;			/* fsr copy (modified during op) */
 	int	fe_cx;			/* exceptions */
+	int     pad;                    /* align access to following fields */
 	struct	fpn fe_f1;		/* operand 1 */
 	struct	fpn fe_f2;		/* operand 2, if required */
 	struct	fpn fe_f3;		/* available storage for result */

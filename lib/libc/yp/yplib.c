@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/yp/yplib.c,v 1.49 2005/05/03 20:30:31 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/yp/yplib.c,v 1.51 2007/07/24 13:06:08 simon Exp $");
 
 #include "namespace.h"
 #include "reentrant.h"
@@ -103,7 +103,7 @@ void *ypresp_data;
 static void _yp_unbind(struct dom_binding *);
 struct dom_binding *_ypbindlist;
 static char _yp_domain[MAXHOSTNAMELEN];
-int _yplib_timeout = 10;
+int _yplib_timeout = 20;
 
 static mutex_t _ypmutex = MUTEX_INITIALIZER;
 #define YPLOCK()	mutex_lock(&_ypmutex);
@@ -554,6 +554,14 @@ gotit:
 		ysd->dom_pnext = _ypbindlist;
 		_ypbindlist = ysd;
 	}
+
+	/*
+	 * Set low retry timeout to realistically handle UDP packet
+	 * loss for YP packet bursts.
+	 */
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	clnt_control(ysd->dom_client, CLSET_RETRY_TIMEOUT, (char*)&tv);
 
 	if (ypdb != NULL)
 		*ypdb = ysd;

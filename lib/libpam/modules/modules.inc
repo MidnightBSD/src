@@ -1,4 +1,6 @@
-# $FreeBSD: src/lib/libpam/modules/modules.inc,v 1.19 2004/12/21 10:16:00 ru Exp $
+# $FreeBSD: src/lib/libpam/modules/modules.inc,v 1.20 2006/03/17 18:54:27 ru Exp $
+
+.include <bsd.own.mk>
 
 MODULES		 =
 MODULES		+= pam_chroot
@@ -8,7 +10,7 @@ MODULES		+= pam_exec
 MODULES		+= pam_ftpusers
 MODULES		+= pam_group
 MODULES		+= pam_guest
-.if !defined(NO_KERBEROS) && !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_KERBEROS} != "no"
 MODULES		+= pam_krb5
 MODULES		+= pam_ksu
 .endif
@@ -24,7 +26,7 @@ MODULES		+= pam_rhosts
 MODULES		+= pam_rootok
 MODULES		+= pam_securetty
 MODULES		+= pam_self
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL) && !defined(NO_OPENSSH)
+.if ${MK_OPENSSH} != "no"
 MODULES		+= pam_ssh
 .endif
 MODULES		+= pam_tacplus

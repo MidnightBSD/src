@@ -3,9 +3,9 @@
 .\" describe the actual BSD implementation. Permission for
 .\" use of this page comes from Rob Pike <rob@plan9.att.com>.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/rfork.2,v 1.34 2005/02/13 22:25:13 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/rfork.2,v 1.35 2007/05/14 13:58:54 pav Exp $
 .\"
-.Dd January 31, 2003
+.Dd May 14, 2007
 .Dt RFORK 2
 .Os
 .Sh NAME
@@ -54,6 +54,14 @@ single table.
 If set, the new process starts with a clean file descriptor table.
 Is mutually exclusive with
 .Dv RFFDG .
+.It Dv RFTHREAD
+If set, the new process shares file descriptor to process leaders table
+with its parent.
+Only applies when neither
+.Dv RFFDG
+nor
+.Dv RFCFDG
+are set.
 .It Dv RFMEM
 If set, the kernel will force sharing of the entire address space,
 typically by sharing the hardware page table directly.

@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libc/gdtoa/Makefile.inc,v 1.8 2005/01/27 05:44:16 das Exp $
+# $FreeBSD: src/lib/libc/gdtoa/Makefile.inc,v 1.9 2006/03/13 01:14:56 deischen Exp $
 
 # netlib gdtoa sources
 .PATH: ${.CURDIR}/gdtoa
@@ -7,6 +7,8 @@ MISRCS+=_hdtoa.c _ldtoa.c glue.c
 GDTOASRCS+=dmisc.c dtoa.c gdtoa.c gethex.c gmisc.c \
 	hd_init.c hexnan.c misc.c smisc.c \
 	strtod.c strtodg.c strtof.c strtord.c sum.c ulp.c
+
+SYM_MAPS+=${.CURDIR}/gdtoa/Symbol.map
 
 CFLAGS+=-I${.CURDIR}/../../contrib/gdtoa
 

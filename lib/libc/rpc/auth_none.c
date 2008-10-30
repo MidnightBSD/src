@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)auth_none.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)auth_none.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/auth_none.c,v 1.13 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/auth_none.c,v 1.14 2006/02/27 22:10:58 deischen Exp $");
 
 /*
  * auth_none.c
@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/auth_none.c,v 1.13 2004/10/16 06:11:34 obri
 #include <rpc/xdr.h>
 #include <rpc/auth.h>
 #include "un-namespace.h"
+#include "mt_misc.h"
 
 #define MAX_MARSHAL_SIZE 20
 
@@ -81,7 +82,6 @@ authnone_create()
 	struct authnone_private *ap = authnone_private;
 	XDR xdr_stream;
 	XDR *xdrs;
-	extern mutex_t authnone_lock;
 
 	mutex_lock(&authnone_lock);
 	if (ap == 0) {
@@ -113,7 +113,6 @@ authnone_marshal(AUTH *client, XDR *xdrs)
 {
 	struct authnone_private *ap;
 	bool_t dummy;
-	extern mutex_t authnone_lock;
 
 	assert(xdrs != NULL);
 
@@ -161,7 +160,6 @@ static struct auth_ops *
 authnone_ops()
 {
 	static struct auth_ops ops;
-	extern mutex_t ops_lock;
  
 /* VARIABLES PROTECTED BY ops_lock: ops */
  

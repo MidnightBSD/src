@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: util.c,v 1.1.1.2 2006-02-25 02:35:07 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/util.c,v 1.5 2005/05/27 19:11:33 emax Exp $
+ * $Id: util.c,v 1.1.1.3 2008-10-30 20:39:09 laffer1 Exp $
+ * $FreeBSD: src/lib/libsdp/util.c,v 1.7 2006/08/26 23:16:35 markus Exp $
  */
 
 #include <netinet/in.h>
@@ -117,6 +117,9 @@ static sdp_attr_desc_t	sdp_uuids_desc[] = {
 { SDP_SERVICE_CLASS_UDI_TA, "UDI TA", },
 { SDP_SERVICE_CLASS_AUDIO_VIDEO, "Audio/Video", },
 { SDP_SERVICE_CLASS_SIM_ACCESS, "SIM Access", },
+{ SDP_SERVICE_CLASS_PHONEBOOK_ACCESS_PCE, "Phonebook Access - PCE", },
+{ SDP_SERVICE_CLASS_PHONEBOOK_ACCESS_PSE, "Phonebook Access - PSE", },
+{ SDP_SERVICE_CLASS_PHONEBOOK_ACCESS, "Phonebook Access", },
 { SDP_SERVICE_CLASS_PNP_INFORMATION, "PNP Information", },
 { SDP_SERVICE_CLASS_GENERIC_NETWORKING, "Generic Networking", },
 { SDP_SERVICE_CLASS_GENERIC_FILE_TRANSFER, "Generic File Transfer", },
@@ -127,6 +130,9 @@ static sdp_attr_desc_t	sdp_uuids_desc[] = {
 { SDP_SERVICE_CLASS_ESDP_UPNP_IP_PAN, "ESDP UPNP IP PAN", },
 { SDP_SERVICE_CLASS_ESDP_UPNP_IP_LAP, "ESDP UPNP IP LAP", },
 { SDP_SERVICE_CLASS_ESDP_UPNP_L2CAP, "ESDP UPNP L2CAP", },
+{ SDP_SERVICE_CLASS_VIDEO_SOURCE, "Video Source", },
+{ SDP_SERVICE_CLASS_VIDEO_SINK, "Video Sink", },
+{ SDP_SERVICE_CLASS_VIDEO_DISTRIBUTION, "Video Distribution", },
 { 0xffff, NULL, }
 };
 
@@ -241,10 +247,13 @@ static sdp_attr_desc_t	sdp_attrs_desc[] = {
 { SDP_ATTR_TOTAL_IMAGING_DATA_CAPACITY,
   "Total Imaging Data Capacity",
   },
+{ SDP_ATTR_SUPPORTED_REPOSITORIES,
+  "Supported Repositories",
+  },
 { 0xffff, NULL, }
 };
 
-char const * const
+char const *
 sdp_attr2desc(uint16_t attr)
 {
 	register sdp_attr_desc_p	a = sdp_attrs_desc;
@@ -256,7 +265,7 @@ sdp_attr2desc(uint16_t attr)
 	return ((a->desc != NULL)? a->desc : "Unknown");
 }
 
-char const * const
+char const *
 sdp_uuid2desc(uint16_t uuid)
 {
 	register sdp_attr_desc_p	a = sdp_uuids_desc;

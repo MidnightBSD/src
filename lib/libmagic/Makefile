@@ -1,11 +1,13 @@
-# $FreeBSD: src/lib/libmagic/Makefile,v 1.6.2.1 2005/07/22 17:29:06 kensmith Exp $
+# $FreeBSD: src/lib/libmagic/Makefile,v 1.10 2007/05/21 02:49:05 deischen Exp $
 # Copyright (c) David E. O'Brien, 2000-2004
 
 CONTRDIR=	${.CURDIR}/../../contrib/file
 .PATH: ${CONTRDIR}
 
 LIB=	magic
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
+DPADD=	${LIBZ}
+LDADD=	-lz
 MAN=	libmagic.3 magic.5
 
 SRCS=	apprentice.c apptype.c ascmagic.c compress.c fsmagic.c funcs.c \
@@ -14,7 +16,7 @@ INCS=	magic.h
 
 MAGICPATH?=	/usr/share/misc
 
-CFLAGS+= -DMAGIC='"${MAGICPATH}/magic"' -DBUILTIN_ELF -DELFCORE -DHAVE_CONFIG_H
+CFLAGS+= -DMAGIC='"${MAGICPATH}/magic"' -DHAVE_CONFIG_H
 CFLAGS+= -I${.CURDIR} -I${CONTRDIR}
 
 CLEANFILES+=	magic magic.mgc magic.mime.mgc

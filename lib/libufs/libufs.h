@@ -24,7 +24,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libufs/libufs.h,v 1.11 2003/06/09 09:47:38 jmallett Exp $
+ * $FreeBSD: src/lib/libufs/libufs.h,v 1.12 2006/10/31 21:21:48 pjd Exp $
  */
 
 #ifndef	__LIBUFS_H__
@@ -110,6 +110,7 @@ ssize_t bwrite(struct uufsd *, ufs2_daddr_t, const void *, size_t);
  */
 int cgread(struct uufsd *);
 int cgread1(struct uufsd *, int);
+int cgwrite1(struct uufsd *, int);
 
 /*
  * inode.c

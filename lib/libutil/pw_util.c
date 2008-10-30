@@ -17,10 +17,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -43,7 +39,7 @@
 static const char sccsid[] = "@(#)pw_util.c	8.3 (Berkeley) 4/2/94";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/lib/libutil/pw_util.c,v 1.35 2004/05/18 15:53:58 stefanf Exp $";
+  "$FreeBSD: src/lib/libutil/pw_util.c,v 1.38 2007/01/09 01:02:05 imp Exp $";
 #endif /* not lint */
 
 /*
@@ -481,13 +477,22 @@ pw_copy(int ffd, int tfd, const struct passwd *pw, struct passwd *old_pw)
 		}
 
 		/* is it the one we're looking for? */
+
 		t = *q;
 		*q = '\0';
+
 		fpw = pw_scan(r, PWSCAN_MASTER);
+
+		/*
+		 * fpw is either the struct passwd for the current line,
+		 * or NULL if the line is malformed.
+		 */
+
 		*q = t;
-		if (strcmp(fpw->pw_name, pw->pw_name) != 0) {
+		if (fpw == NULL || strcmp(fpw->pw_name, pw->pw_name) != 0) {
 			/* nope */
-			free(fpw);
+			if (fpw != NULL)
+				free(fpw);
 			if (write(tfd, p, q - p + 1) != q - p + 1)
 				goto err;
 			++q;

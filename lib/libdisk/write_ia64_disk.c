@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdisk/write_ia64_disk.c,v 1.15 2004/01/30 20:52:54 marcel Exp $");
+__FBSDID("$FreeBSD: src/lib/libdisk/write_ia64_disk.c,v 1.16 2006/08/09 20:19:15 marcel Exp $");
 
 #include <sys/types.h>
 #include <sys/disklabel.h>
@@ -123,6 +123,8 @@ write_pmbr(int fd, const struct disk *disk)
 
 	error = 0;
 	nsects = disk->media_size / disk->sector_size;
+	nsects--;	/* The GPT starts at LBA 1 */
+
 	buffer = calloc(disk->sector_size, 1);
 	if (buffer == NULL)
 		return (ENOMEM);

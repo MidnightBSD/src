@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libypclnt/ypclnt.h,v 1.2 2002/05/08 00:48:39 des Exp $
+ * $FreeBSD: src/lib/libypclnt/ypclnt.h,v 1.4 2006/07/28 21:34:37 stefanf Exp $
  */
 
 #ifndef _YPCLNT_H_INCLUDED
@@ -52,11 +52,5 @@ void		 ypclnt_error(ypclnt_t *, const char *, const char *, ...);
 int		 ypclnt_connect(ypclnt_t *);
 int		 ypclnt_havepasswdd(ypclnt_t *);
 int		 ypclnt_passwd(ypclnt_t *, const struct passwd *, const char *);
-
-#if defined(DEBUG) && defined(__GNUC__)
-#define YPCLNT_DEBUG(fmt...) warnx(__FUNCTION__ ": " fmt, ##fmt)
-#else
-#define YPCLNT_DEBUG(fmt...)
-#endif
 
 #endif

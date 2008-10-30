@@ -42,7 +42,7 @@
 static char sccsid[] = "@(#)rpc_soc.c 1.41 89/05/02 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/rpc_soc.c,v 1.14 2004/10/16 06:11:35 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/rpc_soc.c,v 1.15 2006/02/27 22:10:59 deischen Exp $");
 
 #ifdef PORTMAP
 /*
@@ -74,8 +74,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/rpc_soc.c,v 1.14 2004/10/16 06:11:35 obrien
 #include "un-namespace.h"
 
 #include "rpc_com.h"
-
-extern mutex_t	rpcsoc_lock;
+#include "mt_misc.h"
 
 static CLIENT *clnt_com_create(struct sockaddr_in *, rpcprog_t, rpcvers_t,
     int *, u_int, u_int, char *);
@@ -399,7 +398,6 @@ clnt_broadcast(prog, vers, proc, xargs, argsp, xresults, resultsp, eachresult)
 	void	       *resultsp;	/* pointer to results */
 	resultproc_t	eachresult;	/* call with each result obtained */
 {
-	extern mutex_t tsd_lock;
 
 	if (thr_main())
 		clnt_broadcast_result_main = eachresult;

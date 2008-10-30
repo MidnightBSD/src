@@ -35,7 +35,7 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_vc.c,v 1.18 2005/03/10 08:25:49 stefanf Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_vc.c,v 1.20 2006/09/09 22:18:57 mbr Exp $");
  
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
@@ -79,6 +79,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_vc.c,v 1.18 2005/03/10 08:25:49 stefan
 #include <rpc/rpc.h>
 #include "un-namespace.h"
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 #define MCALL_MSG_SIZE 24
 
@@ -129,7 +130,6 @@ struct ct_data {
  *      should be the first thing fixed.  One step at a time.
  */
 static int      *vc_fd_locks;
-extern mutex_t  clnt_fd_lock;
 static cond_t   *vc_cv;
 #define release_fd_lock(fd, mask) {	\
 	mutex_lock(&clnt_fd_lock);	\
@@ -243,9 +243,9 @@ clnt_vc_create(fd, raddr, prog, vers, sendsz, recvsz)
 		}
 	}
 	mutex_unlock(&clnt_fd_lock);
+	thr_sigsetmask(SIG_SETMASK, &(mask), NULL);
 	if (!__rpc_fd2sockinfo(fd, &si))
 		goto err;
-	thr_sigsetmask(SIG_SETMASK, &(mask), NULL);
 
 	ct->ct_closeit = FALSE;
 
@@ -753,7 +753,6 @@ static struct clnt_ops *
 clnt_vc_ops()
 {
 	static struct clnt_ops ops;
-	extern mutex_t  ops_lock;
 	sigset_t mask, newmask;
 
 	/* VARIABLES PROTECTED BY ops_lock: ops */

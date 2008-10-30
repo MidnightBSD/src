@@ -25,10 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/ungetwc.c,v 1.9 2004/07/20 08:27:27 tjr Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/stdio/ungetwc.c,v 1.10 2005/08/20 07:59:13 stefanf Exp $");
 
 #include "namespace.h"
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>

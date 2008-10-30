@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/sparc64/fpu/fpu_qp.c,v 1.7 2005/06/21 21:13:07 stefanf Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/sparc64/fpu/fpu_qp.c,v 1.8 2006/04/16 14:32:53 marius Exp $");
 
 #include <sys/types.h>
 #include <machine/fsr.h>
@@ -139,10 +139,10 @@ _QP_QTOT(ui,	i,	u_int)
 _QP_QTOT(ux,	x,	u_long,	&u.a)
 
 _QP_CMP(feq,	0,	FCC_EQ)
-_QP_CMP(fge,	0,	FCC_GE)
-_QP_CMP(fgt,	0,	FCC_GT)
-_QP_CMP(fle,	0,	FCC_LE)
-_QP_CMP(flt,	0,	FCC_LT)
+_QP_CMP(fge,	1,	FCC_GE)
+_QP_CMP(fgt,	1,	FCC_GT)
+_QP_CMP(fle,	1,	FCC_LE)
+_QP_CMP(flt,	1,	FCC_LT)
 _QP_CMP(fne,	0, 	FCC_NE)
 _QP_CMP(cmp,	0, 	FCC_ID)
 _QP_CMP(cmpe,	1, 	FCC_ID)

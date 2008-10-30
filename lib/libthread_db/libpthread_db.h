@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libthread_db/libpthread_db.h,v 1.3 2005/05/31 09:43:03 dfr Exp $
+ * $FreeBSD: src/lib/libthread_db/libpthread_db.h,v 1.4 2006/05/17 05:12:42 davidxu Exp $
  */
 
 #ifndef _LIBPTHREAD_DB_H_
@@ -73,6 +73,8 @@ struct td_thragent {
 	int		thread_off_key_destructor;
 	int		thread_state_zoombie;
 	int		thread_state_running;
+	int		thread_off_sigmask;
+	int		thread_off_sigpend;
 	struct pt_map	*map;
 	int		map_len;
 };

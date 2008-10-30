@@ -30,8 +30,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)chared.h	8.1 (Berkeley) 6/4/93
- *	$NetBSD: chared.h,v 1.16 2005/08/08 14:05:37 christos Exp $
- * $FreeBSD: src/lib/libedit/chared.h,v 1.6.12.1 2005/10/09 03:44:01 delphij Exp $
+ *	$NetBSD: chared.h,v 1.17 2006/03/06 21:11:56 christos Exp $
+ * $FreeBSD: src/lib/libedit/chared.h,v 1.9 2007/03/11 18:30:22 stefanf Exp $
  */
 
 /*
@@ -116,7 +116,6 @@ typedef struct el_chared_t {
 } el_chared_t;
 
 
-#define	STReof		"^D\b\b"
 #define	STRQQ		"\"\""
 
 #define	isglob(a)	(strchr("*[]?", (a)) != NULL)

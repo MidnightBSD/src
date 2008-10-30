@@ -1,4 +1,4 @@
-$ $FreeBSD: src/lib/libc/nls/ko_KR.UTF-8.msg,v 1.1 2005/03/07 13:57:24 phantom Exp $
+$ $FreeBSD: src/lib/libc/nls/ko_KR.UTF-8.msg,v 1.2 2005/07/16 05:40:14 jkim Exp $
 $
 $ Message catalog for ko_KR.UTF-8 locale
 $
@@ -194,11 +194,11 @@ $ SIGQUIT
 $ SIGILL
 4 잘못된 명령
 $ SIGTRAP
-5 Trace/BPT 덫
+5 Trace/BPT 트랩
 $ SIGABRT
-6 Abort 덫
+6 Abort 트랩
 $ SIGEMT
-7 EMT 덫
+7 EMT 트랩
 $ SIGFPE
 8 부동소수점 연산 예외
 $ SIGKILL

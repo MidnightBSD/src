@@ -23,9 +23,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libmemstat/memstat_malloc.c,v 1.4.2.3 2005/11/09 10:22:28 rwatson Exp $
+ * $FreeBSD: src/lib/libmemstat/memstat_malloc.c,v 1.7 2007/05/21 18:16:04 rwatson Exp $
  */
 
+#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/malloc.h>
 #include <sys/sysctl.h>
@@ -253,14 +254,14 @@ kread(kvm_t *kvm, void *kvm_pointer, void *address, size_t size,
 }
 
 static int
-kread_string(kvm_t *kvm, void *kvm_pointer, char *buffer, int buflen)
+kread_string(kvm_t *kvm, const void *kvm_pointer, char *buffer, int buflen)
 {
 	ssize_t ret;
 	int i;
 
 	for (i = 0; i < buflen; i++) {
-		ret = kvm_read(kvm, (unsigned long)kvm_pointer + i,
-		    &(buffer[i]), sizeof(char));
+		ret = kvm_read(kvm, __DECONST(unsigned long, kvm_pointer) +
+		    i, &(buffer[i]), sizeof(char));
 		if (ret < 0)
 			return (MEMSTAT_ERROR_KVM);
 		if ((size_t)ret != sizeof(char))

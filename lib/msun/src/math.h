@@ -11,7 +11,7 @@
 
 /*
  * from: @(#)fdlibm.h 5.1 93/09/24
- * $FreeBSD: src/lib/msun/src/math.h,v 1.61 2005/04/16 21:12:47 das Exp $
+ * $FreeBSD: src/lib/msun/src/math.h,v 1.62 2007/01/07 07:54:21 das Exp $
  */
 
 #ifndef _MATH_H_
@@ -439,8 +439,8 @@ long double	logl(long double);
 long		lrintl(long double);
 #endif
 long		lroundl(long double);
-#if 0
 long double	modfl(long double, long double *); /* fundamentally !__pure2 */
+#if 0
 long double	nanl(const char *) __pure2;
 long double	nearbyintl(long double);
 #endif

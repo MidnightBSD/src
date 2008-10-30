@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libypclnt/ypclnt_connect.c,v 1.1 2002/04/13 06:20:02 des Exp $
+ * $FreeBSD: src/lib/libypclnt/ypclnt_connect.c,v 1.2 2006/07/28 21:34:37 stefanf Exp $
  */
 
 #include <sys/param.h>
@@ -64,7 +64,6 @@ ypclnt_connect(ypclnt_t *ypclnt)
 			return (-1);
 		}
 	}
-	YPCLNT_DEBUG("domain '%s'", ypclnt->domain);
 
 	/* map must be specified */
 	if (ypclnt->map == NULL) {
@@ -72,7 +71,6 @@ ypclnt_connect(ypclnt_t *ypclnt)
 		    "caller must specify map name");
 		return (-1);
 	}
-	YPCLNT_DEBUG("map '%s'", ypclnt->map);
 
 	/* get master server for requested map unless specified */
 	if (ypclnt->server == NULL) {
@@ -83,7 +81,6 @@ ypclnt_connect(ypclnt_t *ypclnt)
 			return (-1);
 		}
 	}
-	YPCLNT_DEBUG("server '%s'", ypclnt->server);
 
 	ypclnt_error(ypclnt, NULL, NULL);
 	return (0);

@@ -25,7 +25,7 @@
  */
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/utf8.c,v 1.13 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/utf8.c,v 1.14.2.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <errno.h>
 #include <limits.h>
@@ -34,6 +34,8 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/utf8.c,v 1.13 2005/02/27 15:11:09 phanto
 #include <string.h>
 #include <wchar.h>
 #include "mblocal.h"
+
+extern int __mb_sb_limit;
 
 static size_t	_UTF8_mbrtowc(wchar_t * __restrict, const char * __restrict,
 		    size_t, mbstate_t * __restrict);
@@ -63,6 +65,12 @@ _UTF8_init(_RuneLocale *rl)
 	__wcsnrtombs = _UTF8_wcsnrtombs;
 	_CurrentRuneLocale = rl;
 	__mb_cur_max = 6;
+	/*
+	 * UCS-4 encoding used as the internal representation, so
+	 * slots 0x0080-0x00FF are occuped and must be excluded
+	 * from the single byte ctype by setting the limit.
+	 */
+	__mb_sb_limit = 128;
 
 	return (0);
 }
@@ -140,7 +148,7 @@ _UTF8_mbrtowc(wchar_t * __restrict pwc, const char * __restrict s, size_t n,
 			mask = 0x03;
 			want = 5;
 			lbound = 0x200000;
-		} else if ((ch & 0xfc) == 0xfc) {
+		} else if ((ch & 0xfe) == 0xfc) {
 			mask = 0x01;
 			want = 6;
 			lbound = 0x4000000;

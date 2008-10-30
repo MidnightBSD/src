@@ -14,10 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,7 +41,7 @@
 	RCSID("$NetBSD: fixunsdfsi.S,v 1.3 2000/07/25 04:26:12 mycroft Exp $")
 #endif
 #endif /* LIBC_SCCS and not lint */
-__FBSDID("$FreeBSD: src/lib/libc/sparc64/gen/fixunsdfsi.S,v 1.3 2002/06/29 03:23:51 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/sparc64/gen/fixunsdfsi.S,v 1.4 2007/01/09 00:28:05 imp Exp $");
 
 /*
  * Convert double to unsigned integer (for gcc).

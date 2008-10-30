@@ -1,10 +1,12 @@
 #	Makefile.inc,v 1.2 1994/09/13 21:26:01 wollman Exp
-# $FreeBSD: src/lib/libc/stdtime/Makefile.inc,v 1.14 2002/11/18 09:50:56 ru Exp $
+# $FreeBSD: src/lib/libc/stdtime/Makefile.inc,v 1.15 2006/03/13 01:15:00 deischen Exp $
 
 .PATH:	${.CURDIR}/stdtime ${.CURDIR}/../locale
 
 SRCS+=	asctime.c difftime.c localtime.c strftime.c strptime.c timelocal.c \
 	time32.c
+
+SYM_MAPS+= ${.CURDIR}/stdtime/Symbol.map
 
 MAN+=	ctime.3 strftime.3 strptime.3 time2posix.3
 MAN+=	tzfile.5

@@ -34,7 +34,7 @@ static char *sccsid2 = "from: @(#)svc_run.c 1.1 87/10/13 Copyr 1984 Sun Micro";
 static char *sccsid = "from: @(#)svc_run.c	2.1 88/07/29 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_run.c,v 1.19 2004/10/16 06:11:35 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_run.c,v 1.20 2006/02/27 22:10:59 deischen Exp $");
 
 /*
  * This is the rpc server side idle loop
@@ -52,13 +52,13 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc_run.c,v 1.19 2004/10/16 06:11:35 obrien
 
 #include <rpc/rpc.h>
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 void
 svc_run()
 {
 	fd_set readfds, cleanfds;
 	struct timeval timeout;
-	extern rwlock_t svc_fd_lock;
 
 	timeout.tv_sec = 30;
 	timeout.tv_usec = 0;
@@ -92,8 +92,6 @@ svc_run()
 void
 svc_exit()
 {
-	extern rwlock_t svc_fd_lock;
-
 	rwlock_wrlock(&svc_fd_lock);
 	FD_ZERO(&svc_fdset);
 	rwlock_unlock(&svc_fd_lock);

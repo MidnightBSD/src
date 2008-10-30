@@ -1,14 +1,19 @@
-# $FreeBSD: src/lib/libftpio/Makefile,v 1.13.14.1 2005/07/22 17:29:05 kensmith Exp $
+# $FreeBSD: src/lib/libftpio/Makefile,v 1.16 2007/05/21 02:49:04 deischen Exp $
+
+.include <bsd.own.mk>
 
 LIB=		ftpio
-SHLIB_MAJOR=	6
+SHLIB_MAJOR=	7
 
 SRCS=		ftpio.c ftperr.c
 INCS=		ftpio.h
 CFLAGS+=	-I${.CURDIR} -Wall
-CFLAGS+=	-DINET6
 MAN=		ftpio.3
 CLEANFILES=	ftperr.c
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=	-DINET6
+.endif
 
 ftperr.c:	ftp.errors
 	@echo '#include <stdio.h>' > ${.TARGET}

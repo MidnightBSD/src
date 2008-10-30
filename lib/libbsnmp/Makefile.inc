@@ -1,6 +1,6 @@
-# $FreeBSD: src/lib/libbsnmp/Makefile.inc,v 1.5.2.1 2005/07/22 17:29:03 kensmith Exp $
+# $FreeBSD: src/lib/libbsnmp/Makefile.inc,v 1.7 2007/06/18 18:47:54 rafan Exp $
 
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 WARNS?=		6
 NO_WERROR=
 INCSDIR=	${INCLUDEDIR}/bsnmp

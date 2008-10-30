@@ -39,9 +39,10 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libnetgraph/sock.c,v 1.8 2005/04/26 14:25:11 mux Exp $");
+__FBSDID("$FreeBSD: src/lib/libnetgraph/sock.c,v 1.9 2006/10/17 16:56:29 glebius Exp $");
 
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <stdarg.h>
 #include <netgraph/ng_message.h>
 #include <netgraph/ng_socket.h>

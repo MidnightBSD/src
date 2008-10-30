@@ -1,11 +1,11 @@
-# $FreeBSD: src/lib/libnetgraph/Makefile,v 1.10.8.1 2005/07/22 17:29:06 kensmith Exp $
+# $FreeBSD: src/lib/libnetgraph/Makefile,v 1.12 2007/05/21 02:49:05 deischen Exp $
 # $Whistle: Makefile,v 1.4 1999/01/17 03:41:02 julian Exp $
 
 LIB=		netgraph
 WARNS?=		3
 MAN=		netgraph.3
 
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 
 SRCS=		sock.c msg.c debug.c
 INCS=		netgraph.h

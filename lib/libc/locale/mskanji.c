@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)mskanji.c	1.0 (Phase One) 5/5/95";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/mskanji.c,v 1.17 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/mskanji.c,v 1.17.10.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <sys/types.h>
 #include <errno.h>
@@ -46,6 +46,8 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/mskanji.c,v 1.17 2005/02/27 15:11:09 pha
 #include <string.h>
 #include <wchar.h>
 #include "mblocal.h"
+
+extern int __mb_sb_limit;
 
 static size_t	_MSKanji_mbrtowc(wchar_t * __restrict, const char * __restrict,
 		    size_t, mbstate_t * __restrict);
@@ -66,6 +68,7 @@ _MSKanji_init(_RuneLocale *rl)
 	__mbsinit = _MSKanji_mbsinit;
 	_CurrentRuneLocale = rl;
 	__mb_cur_max = 2;
+	__mb_sb_limit = 256;
 	return (0);
 }
 

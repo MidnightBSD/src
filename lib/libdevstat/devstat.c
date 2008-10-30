@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdevstat/devstat.c,v 1.28 2005/04/26 15:02:01 mux Exp $");
+__FBSDID("$FreeBSD: src/lib/libdevstat/devstat.c,v 1.29 2005/10/04 22:00:35 stefanf Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -1582,7 +1582,7 @@ readkmem_nl(kvm_t *kd, const char *name, void *buf, size_t nbytes)
 static char *
 get_devstat_kvm(kvm_t *kd)
 {
-	int error, i, wp;
+	int i, wp;
 	long gen;
 	struct devstat *nds;
 	struct devstat ds;
@@ -1592,7 +1592,6 @@ get_devstat_kvm(kvm_t *kd)
 
 	if ((num_devs = devstat_getnumdevs(kd)) <= 0)
 		return(NULL);
-	error = 0;
 	if (KREADNL(kd, X_DEVICE_STATQ, dhead) == -1)
 		return(NULL);
 

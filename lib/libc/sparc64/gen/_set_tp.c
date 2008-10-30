@@ -23,13 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libc/sparc64/gen/_set_tp.c,v 1.1 2004/08/15 16:18:03 dfr Exp $
+ *	$FreeBSD: src/lib/libc/sparc64/gen/_set_tp.c,v 1.2 2006/10/08 02:50:33 kmacy Exp $
  */
 
 void
 _set_tp(void *tpval)
 {
-	register void* tp __asm__("%g7");
 
-	tp = tpval;
+	__asm __volatile("mov %0, %%g7" : : "r" (tpval));
 }

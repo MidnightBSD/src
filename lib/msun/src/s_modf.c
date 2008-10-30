@@ -11,7 +11,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_modf.c,v 1.7 2002/05/28 18:15:04 alfred Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_modf.c,v 1.8 2007/01/06 21:22:38 das Exp $";
 #endif
 
 /*
@@ -55,6 +55,10 @@ modf(double x, double *iptr)
 	    }
 	} else if (j0>51) {		/* no fraction part */
 	    u_int32_t high;
+	    if (j0 == 0x400) {		/* inf/NaN */
+		*iptr = x;
+		return 0.0 / x;
+	    }
 	    *iptr = x*one;
 	    GET_HIGH_WORD(high,x);
 	    INSERT_WORDS(x,high&0x80000000,0);	/* return +-0 */

@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/nsparser.y,v 1.4 2003/04/17 14:14:22 nectar Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/nsparser.y,v 1.6 2007/05/17 03:33:23 jon Exp $");
 
 #include "namespace.h"
 #define _NS_PRIVATE
@@ -82,6 +82,9 @@ Lines
 Entry
 	: NL
 	| Database ':' NL
+		{
+			free((char*)curdbt.name);
+		}
 	| Database ':' Srclist NL
 		{
 			_nsdbtput(&curdbt);
@@ -157,11 +160,13 @@ _nsaddsrctomap(elem)
 
 	lineno = _nsyylineno - (*_nsyytext == '\n' ? 1 : 0);
 	if (curdbt.srclistsize > 0) {
-		if ((strcasecmp(elem, NSSRC_COMPAT) == 0) ||
+		if (((strcasecmp(elem, NSSRC_COMPAT) == 0) &&
+		    (strcasecmp(curdbt.srclist[0].name, NSSRC_CACHE) != 0)) ||
 		    (strcasecmp(curdbt.srclist[0].name, NSSRC_COMPAT) == 0)) {
 			syslog(LOG_ERR,
-	    "NSSWITCH(nsparser): %s line %d: 'compat' used with other sources",
+	    "NSSWITCH(nsparser): %s line %d: 'compat' used with sources, other than 'cache'",
 			    _PATH_NS_CONF, lineno);
+			free((void*)elem);
 			return;
 		}
 	}
@@ -170,6 +175,7 @@ _nsaddsrctomap(elem)
 			syslog(LOG_ERR,
 		       "NSSWITCH(nsparser): %s line %d: duplicate source '%s'",
 			    _PATH_NS_CONF, lineno, elem);
+			free((void*)elem);
 			return;
 		}
 	}

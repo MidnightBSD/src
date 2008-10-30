@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: search.c,v 1.1.1.2 2006-02-25 02:35:07 laffer1 Exp $
- * $FreeBSD: src/lib/libsdp/search.c,v 1.7 2004/12/09 18:57:12 emax Exp $
+ * $Id: search.c,v 1.1.1.3 2008-10-30 20:39:09 laffer1 Exp $
+ * $FreeBSD: src/lib/libsdp/search.c,v 1.7.10.1 2007/11/21 17:36:14 emax Exp $
  */
 
 #include <sys/uio.h>
@@ -204,15 +204,18 @@ sdp_search(void *xss,
 			return (-1);
 		}
 
+		rsp += xpdu.len;
+		ss->tid ++;
+
 		/* Save continuation state (if any) */
-		ss->cslen = rsp[xpdu.len];
+		ss->cslen = rsp[0];
 		if (ss->cslen > 0) {
 			if (ss->cslen > sizeof(ss->cs)) {
 				ss->error = ENOBUFS;
 				return (-1);
 			}
 
-			memcpy(ss->cs, rsp + xpdu.len + 1, ss->cslen);
+			memcpy(ss->cs, rsp + 1, ss->cslen);
 
 			/*
 			 * Ensure that we always have ss->imtu bytes
@@ -236,9 +239,6 @@ sdp_search(void *xss,
 				rsp = ss->rsp + offset;
 			}
 		}
-
-		rsp += xpdu.len;
-		ss->tid ++;
 	} while (ss->cslen > 0);
 
 	/*

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libcam/camlib.c,v 1.12.8.1 2005/07/17 17:28:26 delphij Exp $");
+__FBSDID("$FreeBSD: src/lib/libcam/camlib.c,v 1.16 2006/11/02 00:54:32 mjacob Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -514,6 +514,7 @@ cam_lookup_pass(const char *dev_name, int unit, int flags,
 			 "%s: %s%s", func_name, func_name, strerror(errno),
 			 (errno == ENOENT) ? tmpstr : "");
 
+		close(fd);
 		return(NULL);
 	}
 
@@ -675,16 +676,24 @@ cam_real_open_device(const char *path, int flags, struct cam_device *device,
 	 */
 	ccb.ccb_h.func_code = XPT_GET_TRAN_SETTINGS;
 
-	ccb.cts.flags = CCB_TRANS_CURRENT_SETTINGS;
+	ccb.cts.type = CTS_TYPE_CURRENT_SETTINGS;
 
 	if (ioctl(fd, CAMIOCOMMAND, &ccb) == -1) {
 		sprintf(cam_errbuf, "%s: Get Transfer Settings CCB failed\n"
 			"%s: %s", func_name, func_name, strerror(errno));
 		goto crod_bailout;
 	}
-	device->sync_period = ccb.cts.sync_period;
-	device->sync_offset = ccb.cts.sync_offset;
-	device->bus_width = ccb.cts.bus_width;
+	if (ccb.cts.protocol == XPORT_SPI) {
+		struct ccb_trans_settings_spi *spi =
+		    &ccb.cts.xport_specific.spi;
+		device->sync_period = spi->sync_period;
+		device->sync_offset = spi->sync_offset;
+		device->bus_width = spi->bus_width;
+	} else {
+		device->sync_period = 0;
+		device->sync_offset = 0;
+		device->bus_width = 0;
+	}
 
 	return(device);
 

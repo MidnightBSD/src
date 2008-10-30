@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libmemstat/memstat.h,v 1.7.2.3 2005/11/09 10:22:28 rwatson Exp $
+ * $FreeBSD: src/lib/libmemstat/memstat.h,v 1.11 2007/03/15 10:44:18 rwatson Exp $
  */
 
 #ifndef _MEMSTAT_H_
@@ -33,7 +33,7 @@
  * Number of CPU slots in library-internal data structures.  This should be
  * at least the value of MAXCPU from param.h.
  */
-#define	MEMSTAT_MAXCPU	16
+#define	MEMSTAT_MAXCPU	32
 
 /*
  * Amount of caller data to maintain for each caller data slot.  Applications
@@ -64,7 +64,7 @@
  * Library error conditions, mostly from the underlying data sources.  On
  * failure, functions typically return (-1) or (NULL); on success, (0) or a
  * valid data pointer.  The error from the last operation is stored in
- * struct memory_type, and accessed via memstat_get_error(mtp).
+ * struct memory_type_list, and accessed via memstat_get_error(list).
  */
 #define	MEMSTAT_ERROR_UNDEFINED		0	/* Initialization value. */
 #define	MEMSTAT_ERROR_NOMEMORY		1	/* Out of memory. */

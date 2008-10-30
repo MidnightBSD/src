@@ -1,6 +1,6 @@
 .\"	$NetBSD: netconfig.5,v 1.2 2000/11/08 13:18:28 lukem Exp $
 .\" $NetBSD: netconfig.5,v 1.2 2000/11/08 13:18:28 lukem Exp $
-.\" $FreeBSD: src/lib/libc/rpc/netconfig.5,v 1.1 2001/03/19 12:49:51 alfred Exp $
+.\" $FreeBSD: src/lib/libc/rpc/netconfig.5,v 1.3 2006/01/11 13:57:15 ceri Exp $
 .Dd November 17, 2000
 .Dt NETCONFIG 5
 .Os
@@ -43,11 +43,17 @@ A raw connection.
 .It Ar flags
 This field is either blank (specified by
 .Dq Li - ) ,
-or contains a
-.Dq Li v ,
-meaning visible to the
-.Xr getnetconfig 3
+or contains one or more of the following characters:
+.Bl -tag -width b -offset indent
+.It Sy b
+The network represented by this entry is broadcast capable.
+This flag is meaningless in
+.Fx .
+.It Sy v
+The entry may be returned by the
+.Xr getnetpath 3
 function.
+.El
 .It Ar family
 The protocol family of the transport.
 This is currently one of:
@@ -107,8 +113,8 @@ the following format:
 .Bd -literal
 struct netconfig {
     char *nc_netid;              /* Network ID */
-    unsigned long nc_semantics;  /* Semantics (see below) */
-    unsigned long nc_flag;       /* Flags (see below) */
+    unsigned long nc_semantics;  /* Semantics */
+    unsigned long nc_flag;       /* Flags */
     char *nc_protofmly;          /* Protocol family */
     char *nc_proto;              /* Protocol name */
     char *nc_device;             /* Network device pathname (unused) */

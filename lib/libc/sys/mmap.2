@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mmap.2	8.4 (Berkeley) 5/11/95
-.\" $FreeBSD: src/lib/libc/sys/mmap.2,v 1.50.8.1 2005/09/24 01:59:36 keramida Exp $
+.\" $FreeBSD: src/lib/libc/sys/mmap.2,v 1.56 2007/01/09 00:28:15 imp Exp $
 .\"
-.Dd November 17, 2001
+.Dd April 21, 2006
 .Dt MMAP 2
 .Os
 .Sh NAME
@@ -123,12 +119,15 @@ If
 is specified,
 .Fa addr
 must be a multiple of the pagesize.
-If a MAP_FIXED request is successful, the mapping established by
+If a
+.Dv MAP_FIXED
+request is successful, the mapping established by
 .Fn mmap
 replaces any previous mappings for the process' pages in the range from
 .Fa addr
 to
-.Fa addr +
+.Fa addr
++
 .Fa len .
 Use of this option is discouraged.
 .It Dv MAP_HASSEMAPHORE
@@ -308,12 +307,6 @@ was negative.
 was specified and the
 .Fa fd
 argument was not -1.
-.It Bq Er EINVAL
-.Dv MAP_ANON
-has not been specified and
-.Fa fd
-did not reference a regular or character special file.
-.It Bq Er EINVAL
 The
 .Fa offset
 argument
@@ -321,6 +314,11 @@ was not page-aligned.
 (See
 .Sx BUGS
 below.)
+.It Bq Er ENODEV
+.Dv MAP_ANON
+has not been specified and
+.Fa fd
+did not reference a regular or character special file.
 .It Bq Er ENOMEM
 .Dv MAP_FIXED
 was specified and the
@@ -347,29 +345,16 @@ sysctl.
 The
 .Fa len
 argument
-is limited to 2GB.
-Mmapping slightly more than 2GB does not work, but
-it is possible to map a window of size (filesize % 2GB) for file sizes
-of slightly less than 2G, 4GB, 6GB and 8GB.
+is limited to the maximum file size or available userland address
+space.
+Files may not be able to be made more than 1TB large on 32 bit systems
+due to file systems restrictions and bugs, but address space is far more
+restrictive.
+Larger files may be possible on 64 bit systems.
 .Pp
-The limit is imposed for a variety of reasons.
-Most of them have to do
-with
-.Fx
-not wanting to use 64 bit offsets in the VM system due to
-the extreme performance penalty.
-So
-.Fx
-uses 32bit page indexes and
-this gives
-.Fx
-a maximum of 8TB filesizes.
-It is actually bugs in
-the file system code that causes the limit to be further restricted to
-1TB (loss of precision when doing blockno calculations).
-.Pp
-Another reason for the 2GB limit is that file system metadata can
-reside at negative offsets.
+The previous documented limit of 2GB was a documentation bug.
+That limit has not existed since
+.Fx 2.2 .
 .Pp
 Note that an attempt to
 .Fn mmap

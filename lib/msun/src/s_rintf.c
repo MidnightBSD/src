@@ -14,7 +14,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_rintf.c,v 1.9 2004/06/09 21:24:52 das Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_rintf.c,v 1.10 2005/12/03 09:00:29 bde Exp $";
 #endif
 
 #include <sys/types.h>
@@ -40,6 +40,8 @@ rintf(float x)
 		if((i0&0x7fffffff)==0) return x;
 	        w = TWO23[sx]+x;
 	        t =  w-TWO23[sx];
+		GET_FLOAT_WORD(i0,t);
+		SET_FLOAT_WORD(t,(i0&0x7fffffff)|(sx<<31));
 	        return t;
 	    }
 	    w = TWO23[sx]+x;

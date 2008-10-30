@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libc/posix1e/Makefile.inc,v 1.17 2005/06/03 15:50:55 imp Exp $
+# $FreeBSD: src/lib/libc/posix1e/Makefile.inc,v 1.19 2006/07/07 14:02:17 rwatson Exp $
 
 .PATH: ${.CURDIR}/posix1e
 
@@ -21,6 +21,8 @@ SRCS+=	acl_calc_mask.c			\
 	mac_exec.c			\
 	mac_get.c			\
 	mac_set.c
+
+SYM_MAPS+=${.CURDIR}/posix1e/Symbol.map
 
 MAN+=	acl.3				\
 	acl_add_perm.3			\
@@ -51,7 +53,7 @@ MAN+=	acl.3				\
 	mac.3				\
 	mac.conf.5			\
 	mac_free.3			\
-	mac_is_present_np.3		\
+	mac_is_present.3		\
 	mac_get.3			\
 	mac_prepare.3			\
 	mac_set.3			\

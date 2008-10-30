@@ -1,5 +1,5 @@
 #	from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libc/locale/Makefile.inc,v 1.60 2005/01/09 03:55:13 tjr Exp $
+# $FreeBSD: src/lib/libc/locale/Makefile.inc,v 1.61 2006/03/13 01:14:57 deischen Exp $
 
 # locale sources
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/locale ${.CURDIR}/locale
@@ -21,6 +21,8 @@ SRCS+=	big5.c btowc.c collate.c collcmp.c euc.c fix_grouping.c \
 	wcstombs.c \
 	wcstoul.c wcstoull.c wcstoumax.c wctob.c wctomb.c wctrans.c wctype.c \
 	wcwidth.c
+
+SYM_MAPS+=${.CURDIR}/locale/Symbol.map
 
 MAN+=	btowc.3 \
 	ctype.3 digittoint.3 isalnum.3 isalpha.3 isascii.3 isblank.3 iscntrl.3 \

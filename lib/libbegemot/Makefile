@@ -1,11 +1,11 @@
-# $FreeBSD: src/lib/libbegemot/Makefile,v 1.2.2.1 2005/07/22 17:29:03 kensmith Exp $
+# $FreeBSD: src/lib/libbegemot/Makefile,v 1.4 2007/05/21 02:49:02 deischen Exp $
 
 LIBBEGEMOT_DIR=${.CURDIR}/../../contrib/libbegemot
 
 .PATH: ${LIBBEGEMOT_DIR}
 
 LIB=	begemot
-SHLIB_MAJOR= 2
+SHLIB_MAJOR= 3
 SHLIBDIR?= /lib
 
 # WARNS?=	6

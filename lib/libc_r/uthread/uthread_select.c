@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc_r/uthread/uthread_select.c,v 1.21 2002/08/29 21:39:19 archie Exp $
+ * $FreeBSD: src/lib/libc_r/uthread/uthread_select.c,v 1.23 2007/01/12 07:25:26 imp Exp $
  */
 #include <unistd.h>
 #include <errno.h>
@@ -58,26 +55,6 @@ _select(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds,
 	if (numfds > _thread_dtablesize) {
 		numfds = _thread_dtablesize;
 	}
-	/* Check if a timeout was specified: */
-	if (timeout) {
-		if (timeout->tv_sec < 0 ||
-			timeout->tv_usec < 0 || timeout->tv_usec >= 1000000) {
-			errno = EINVAL;
-			return (-1);
-		}
-
-		/* Convert the timeval to a timespec: */
-		TIMEVAL_TO_TIMESPEC(timeout, &ts);
-
-		/* Set the wake up time: */
-		_thread_kern_set_timeout(&ts);
-		if (ts.tv_sec == 0 && ts.tv_nsec == 0)
-			f_wait = 0;
-	} else {
-		/* Wait for ever: */
-		_thread_kern_set_timeout(NULL);
-	}
-
 	/* Count the number of file descriptors to be polled: */
 	if (readfds || writefds || exceptfds) {
 		for (i = 0; i < numfds; i++) {
@@ -111,6 +88,26 @@ _select(int numfds, fd_set * readfds, fd_set * writefds, fd_set * exceptfds,
 			curthread->poll_data.nfds = MAX(128, fd_count);
 		}
 	}
+	/* Check if a timeout was specified: */
+	if (timeout) {
+		if (timeout->tv_sec < 0 ||
+			timeout->tv_usec < 0 || timeout->tv_usec >= 1000000) {
+			errno = EINVAL;
+			return (-1);
+		}
+
+		/* Convert the timeval to a timespec: */
+		TIMEVAL_TO_TIMESPEC(timeout, &ts);
+
+		/* Set the wake up time: */
+		_thread_kern_set_timeout(&ts);
+		if (ts.tv_sec == 0 && ts.tv_nsec == 0)
+			f_wait = 0;
+	} else {
+		/* Wait for ever: */
+		_thread_kern_set_timeout(NULL);
+	}
+
 	if (ret == 0) {
 		/* Setup the wait data. */
 		data.fds = curthread->poll_data.fds;

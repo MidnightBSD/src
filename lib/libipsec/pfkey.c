@@ -30,15 +30,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipsec/pfkey.c,v 1.8 2004/02/11 04:34:34 bms Exp $");
+__FBSDID("$FreeBSD: src/lib/libipsec/pfkey.c,v 1.9 2007/07/01 12:08:05 gnn Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <net/pfkeyv2.h>
-#include <netkey/key_var.h>
+#include <netipsec/key_var.h>
 #include <netinet/in.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 
 #include <stdlib.h>
 #include <unistd.h>

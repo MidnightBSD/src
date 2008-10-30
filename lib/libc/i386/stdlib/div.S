@@ -10,9 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *      This product includes software developed by Winning Strategies, Inc.
  * 4. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission
  *
@@ -29,7 +26,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/stdlib/div.S,v 1.10 2002/12/22 06:41:09 kan Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/stdlib/div.S,v 1.11 2007/01/09 00:27:59 imp Exp $");
 
 ENTRY(div)
         movl    4(%esp),%eax

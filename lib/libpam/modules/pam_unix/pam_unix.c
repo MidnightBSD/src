@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_unix/pam_unix.c,v 1.51 2005/07/05 18:42:18 des Exp $");
+__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_unix/pam_unix.c,v 1.52 2007/03/27 09:59:15 yar Exp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -69,6 +69,9 @@ __FBSDID("$FreeBSD: src/lib/libpam/modules/pam_unix/pam_unix.c,v 1.51 2005/07/05
 #define PASSWORD_HASH		"md5"
 #define DEFAULT_WARN		(2L * 7L * 86400L)  /* Two weeks */
 #define	SALTSIZE		32
+
+#define	LOCKED_PREFIX		"*LOCKED*"
+#define	LOCKED_PREFIX_LEN	(sizeof(LOCKED_PREFIX) - 1)
 
 static void makesalt(char []);
 
@@ -175,6 +178,9 @@ pam_sm_acct_mgmt(pam_handle_t *pamh, int flags __unused,
 	if (*pwd->pw_passwd == '\0' &&
 	    (flags & PAM_DISALLOW_NULL_AUTHTOK) != 0)
 		return (PAM_NEW_AUTHTOK_REQD);
+
+	if (strncmp(pwd->pw_passwd, LOCKED_PREFIX, LOCKED_PREFIX_LEN) == 0)
+		return (PAM_AUTH_ERR);
 
 	lc = login_getpwclass(pwd);
 	if (lc == NULL) {

@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/i386/sys/i386_set_watch.3,v 1.7 2004/07/02 23:52:11 ru Exp $
+.\" $FreeBSD: src/lib/libc/i386/sys/i386_set_watch.3,v 1.9 2006/09/17 21:27:33 ru Exp $
 .\"
 .Dd August 24, 2000
 .Os
@@ -57,12 +57,12 @@ will set up the specified debug registers as indicated by the
 arguments.
 The
 .Fa watchnum
-argument specifies which watch register is used, 0, 1, 2, 3, or -1.
+argument specifies which watch register is used, 0, 1, 2, 3, or \-1.
 If
 .Fa watchnum
-is -1, a free watch register is found and used.
+is \-1, a free watch register is found and used.
 If there are no free
-watch registers, an error code of -1 is returned.
+watch registers, an error code of \-1 is returned.
 The
 .Fa watchaddr
 argument
@@ -86,24 +86,24 @@ You must use
 .Xr ptrace 2
 to retrieve and install the debug register values for a process.
 .Sh RETURN VALUES
-The
+On success, the
 .Fn i386_clr_watch
-function
-returns 0 on success, or -1 if
+function returns 0.
+On error, \-1 returned which indicates that
 .Fa watchnum
 is invalid (not in the range of 0-3).
+If the specified watchnum was already disabled, no error is returned.
 .Pp
-The
+On success, the
 .Fn i386_set_watch
-function
-will return the
+function returns the
 .Fa watchnum
-argument, or the watchnum actually used in the case that
+argument, or the watchnum actually used in the case where the specified
 .Fa watchnum
-is -1 on success.
-On error,
+was \-1.
+On error, the
 .Fn i386_set_watch
-will return -1 indicating that the watchpoint could not be set up
+function returns \-1 indicating that the watchpoint could not established
 because either no more watchpoints are available, or
 .Fa watchnum ,
 .Fa size ,

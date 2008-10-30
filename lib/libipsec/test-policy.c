@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipsec/test-policy.c,v 1.7 2003/10/26 12:00:27 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libipsec/test-policy.c,v 1.8 2007/07/01 12:08:06 gnn Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -38,8 +38,8 @@ __FBSDID("$FreeBSD: src/lib/libipsec/test-policy.c,v 1.7 2003/10/26 12:00:27 ume
 
 #include <netinet/in.h>
 #include <net/pfkeyv2.h>
-#include <netkey/key_debug.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/key_debug.h>
+#include <netipsec/ipsec.h>
 
 #include <stdio.h>
 #include <stdlib.h>

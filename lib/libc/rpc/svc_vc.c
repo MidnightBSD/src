@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)svc_tcp.c 1.21 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)svc_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_vc.c,v 1.24 2004/10/16 06:11:35 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_vc.c,v 1.26 2006/09/09 22:33:21 mbr Exp $");
 
 /*
  * svc_vc.c, Server side for Connection Oriented based RPC. 
@@ -68,9 +68,8 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc_vc.c,v 1.24 2004/10/16 06:11:35 obrien 
 #include <rpc/rpc.h>
 
 #include "rpc_com.h"
+#include "mt_misc.h"
 #include "un-namespace.h"
-
-extern rwlock_t svc_fd_lock;
 
 static SVCXPRT *makefd_xprt(int, u_int, u_int);
 static bool_t rendezvous_request(SVCXPRT *, struct rpc_msg *);
@@ -136,13 +135,14 @@ svc_vc_create(fd, sendsize, recvsize)
 	struct sockaddr_storage sslocal;
 	socklen_t slen;
 
+	if (!__rpc_fd2sockinfo(fd, &si))
+		return NULL;
+
 	r = mem_alloc(sizeof(*r));
 	if (r == NULL) {
 		warnx("svc_vc_create: out of memory");
 		goto cleanup_svc_vc_create;
 	}
-	if (!__rpc_fd2sockinfo(fd, &si))
-		return NULL;
 	r->sendsize = __rpc_get_t_size(si.si_af, si.si_proto, (int)sendsize);
 	r->recvsize = __rpc_get_t_size(si.si_af, si.si_proto, (int)recvsize);
 	r->maxrec = __svc_maxrec;
@@ -178,6 +178,8 @@ svc_vc_create(fd, sendsize, recvsize)
 	xprt_register(xprt);
 	return (xprt);
 cleanup_svc_vc_create:
+	if (xprt)
+		mem_free(xprt, sizeof(*xprt));
 	if (r != NULL)
 		mem_free(r, sizeof(*r));
 	return (NULL);
@@ -672,7 +674,6 @@ svc_vc_ops(xprt)
 {
 	static struct xp_ops ops;
 	static struct xp_ops2 ops2;
-	extern mutex_t ops_lock;
 
 /* VARIABLES PROTECTED BY ops_lock: ops, ops2 */
 
@@ -697,7 +698,6 @@ svc_vc_rendezvous_ops(xprt)
 {
 	static struct xp_ops ops;
 	static struct xp_ops2 ops2;
-	extern mutex_t ops_lock;
 
 	mutex_lock(&ops_lock);
 	if (ops.xp_recv == NULL) {

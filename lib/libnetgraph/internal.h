@@ -36,7 +36,7 @@
  *
  * Author: Archie Cobbs <archie@whistle.com>
  *
- * $FreeBSD: src/lib/libnetgraph/internal.h,v 1.4 2003/11/14 08:09:01 harti Exp $
+ * $FreeBSD: src/lib/libnetgraph/internal.h,v 1.5 2007/05/14 14:18:41 mav Exp $
  * $Whistle: internal.h,v 1.5 1999/01/20 00:57:22 archie Exp $
  */
 
@@ -44,7 +44,7 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/socket.h>
-#include <sys/select.h>
+#include <poll.h>
 #include <sys/linker.h>
 #include <stddef.h>
 

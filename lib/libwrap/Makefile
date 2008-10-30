@@ -1,14 +1,18 @@
 #
-# $FreeBSD: src/lib/libwrap/Makefile,v 1.16.2.1 2005/07/22 17:29:09 kensmith Exp $
+# $FreeBSD: src/lib/libwrap/Makefile,v 1.22 2007/05/21 02:49:08 deischen Exp $
 #
 
+.include <bsd.own.mk>
+
 LIB=	wrap
-SHLIB_MAJOR= 4
+SHLIB_MAJOR= 5
 INCS=	tcpd.h
 MAN=	hosts_access.3
 MAN+=	hosts_access.5 hosts_options.5
-MLINKS=	hosts_access.3 hosts_ctl.3 hosts_access.3 request_init.3 \
-	hosts_access.3 request_set.3
+MLINKS=	hosts_access.3 hosts_ctl.3 \
+	hosts_access.3 request_init.3 \
+	hosts_access.3 request_set.3 \
+	hosts_options.5 hosts.allow.5
 
 .PATH:	${.CURDIR}/../../contrib/tcp_wrappers
 
@@ -17,10 +21,10 @@ CFLAGS+=-DFACILITY=LOG_AUTH -DHOSTS_ACCESS -DNETGROUP -DDAEMON_UMASK=022 \
 	-DSEVERITY=LOG_INFO -DRFC931_TIMEOUT=10 \
 	-DHOSTS_DENY=\"/etc/hosts.deny\" -DHOSTS_ALLOW=\"/etc/hosts.allow\" \
 	-DSYS_ERRLIST_DEFINED -DALWAYS_HOSTNAME -DUSE_STRSEP -DPROCESS_OPTIONS
-.if defined(NO_NIS)
+.if ${MK_NIS} == "no"
 CFLAGS+= -DUSE_GETDOMAIN
 .endif
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
 

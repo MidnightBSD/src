@@ -12,7 +12,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_log.c,v 1.10 2005/02/04 18:26:06 das Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/e_log.c,v 1.13 2007/06/14 05:57:13 bde Exp $";
 #endif
 
 /* __ieee754_log(x)
@@ -107,7 +107,7 @@ __ieee754_log(double x)
 	SET_HIGH_WORD(x,hx|(i^0x3ff00000));	/* normalize x or x/2 */
 	k += (i>>20);
 	f = x-1.0;
-	if((0x000fffff&(2+hx))<3) {	/* |f| < 2**-20 */
+	if((0x000fffff&(2+hx))<3) {	/* -2**-20 <= f < 2**-20 */
 	    if(f==zero) if(k==0) return zero;  else {dk=(double)k;
 				 return dk*ln2_hi+dk*ln2_lo;}
 	    R = f*f*(0.5-0.33333333333333333*f);

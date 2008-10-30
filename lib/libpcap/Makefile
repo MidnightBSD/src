@@ -1,12 +1,16 @@
 # Makefile for libpcap
-# $FreeBSD: src/lib/libpcap/Makefile,v 1.36 2005/06/03 09:41:26 ume Exp $
+# $FreeBSD: src/lib/libpcap/Makefile,v 1.39.2.1 2007/10/19 03:04:02 mlaier Exp $
+
+SHLIBDIR?= /lib
+
+.include <bsd.own.mk>
 
 LIB=	pcap
 SRCS=	grammar.y tokdefs.h version.h pcap-bpf.c \
 	pcap.c inet.c fad-getad.c gencode.c optimize.c nametoaddr.c \
 	etherent.c savefile.c bpf_filter.c bpf_image.c bpf_dump.c \
 	scanner.l version.c
-INCS=	pcap.h pcap-int.h pcap-namedb.h
+INCS=	pcap.h pcap-int.h pcap-namedb.h pcap-bpf.h
 MAN=	pcap.3
 CLEANFILES=tokdefs.h version.h version.c
 
@@ -15,11 +19,14 @@ LFLAGS+=-Ppcapyy
 CFLAGS+=-DHAVE_CONFIG_H -Dyylval=pcapyylval -I${.CURDIR} -I.
 CFLAGS+=-D_U_="__attribute__((unused))"
 CFLAGS+=-DHAVE_SNPRINTF -DHAVE_VSNPRINTF
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
+.if ${MK_PF} != "no"
+CFLAGS+=-DHAVE_NET_PFVAR_H
+.endif
 
-SHLIB_MAJOR=4
+SHLIB_MAJOR=5
 
 #
 # Magic to grab sources out of src/contrib

@@ -1,10 +1,10 @@
-# $FreeBSD: src/lib/libexpat/Makefile,v 1.4.10.1 2005/07/22 17:29:04 kensmith Exp $
+# $FreeBSD: src/lib/libexpat/Makefile,v 1.6 2007/05/21 02:49:04 deischen Exp $
 
 EXPAT=		${.CURDIR}/../../contrib/expat
 
 LIB=		bsdxml
 SHLIBDIR?=	/lib
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 SRCS=		xmlparse.c xmlrole.c xmltok.c
 INCS=		bsdxml.h
 MAN=		libbsdxml.3

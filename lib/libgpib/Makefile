@@ -1,12 +1,10 @@
-# $FreeBSD: src/lib/libgpib/Makefile,v 1.1.4.1 2005/07/22 17:29:05 kensmith Exp $
+# $FreeBSD: src/lib/libgpib/Makefile,v 1.6 2007/05/21 02:49:04 deischen Exp $
 
-LIB =		gpib
-SHLIBDIR ?=	/lib
-SHLIB_MAJOR =	1
-NO_MAN =	sorry
-SRCS =		ibfoo.c
-INCS =		gpib.h
-INCSDIR =	${INCLUDEDIR}/gpib
+LIB=		gpib
+SHLIB_MAJOR=	2
+INCS=		gpib.h
+INCSDIR=	${INCLUDEDIR}/gpib
+SRCS=		ibfoo.c
 WARNS?=		6
 
 .include <bsd.lib.mk>

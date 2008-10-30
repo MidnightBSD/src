@@ -1,6 +1,6 @@
-# $FreeBSD: src/lib/libvgl/Makefile,v 1.10.14.1 2005/07/22 17:29:09 kensmith Exp $
+# $FreeBSD: src/lib/libvgl/Makefile,v 1.12 2007/05/21 02:49:08 deischen Exp $
 LIB=	vgl
-SHLIB_MAJOR= 4
+SHLIB_MAJOR= 5
 CFLAGS+=-Wall -I${.CURDIR}
 SRCS=	main.c simple.c bitmap.c text.c mouse.c keyboard.c
 INCS=	vgl.h

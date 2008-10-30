@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)gethostbyname.3	8.4 (Berkeley) 5/25/95
-.\" $FreeBSD: src/lib/libc/net/gethostbyname.3,v 1.34 2005/04/28 18:03:43 ume Exp $
+.\" $FreeBSD: src/lib/libc/net/gethostbyname.3,v 1.38 2007/01/09 00:28:02 imp Exp $
 .\"
-.Dd May 25, 1995
+.Dd May 12, 2006
 .Dt GETHOSTBYNAME 3
 .Os
 .Sh NAME
@@ -49,13 +45,13 @@
 .Lb libc
 .Sh SYNOPSIS
 .In netdb.h
-.Vt extern int h_errno ;
+.Vt int h_errno ;
 .Ft struct hostent *
 .Fn gethostbyname "const char *name"
 .Ft struct hostent *
 .Fn gethostbyname2 "const char *name" "int af"
 .Ft struct hostent *
-.Fn gethostbyaddr "const char *addr" "int len" "int type"
+.Fn gethostbyaddr "const void *addr" "socklen_t len" "int type"
 .Ft struct hostent *
 .Fn gethostent void
 .Ft void
@@ -246,7 +242,7 @@ struct hostent *hp;
 if (!inet_aton(ipstr, &ip))
 	errx(1, "can't parse IP address %s", ipstr);
 
-if ((hp = gethostbyaddr((const char *)&ip,
+if ((hp = gethostbyaddr((const void *)&ip,
     sizeof ip, AF_INET)) == NULL)
 	errx(1, "no name associated with %s", ipstr);
 
@@ -261,7 +257,7 @@ and
 is indicated by return of a
 .Dv NULL
 pointer.
-The external integer
+The integer
 .Va h_errno
 may then be checked to see whether this is a temporary failure
 or an invalid or unknown host.

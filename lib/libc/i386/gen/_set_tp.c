@@ -23,12 +23,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/lib/libc/i386/gen/_set_tp.c,v 1.6 2005/06/29 23:15:35 peter Exp $
+ *	$FreeBSD: src/lib/libc/i386/gen/_set_tp.c,v 1.7 2005/09/12 19:52:41 stefanf Exp $
  */
 
 #include <string.h>
 #include <stdint.h>
 #include <machine/sysarch.h>
+
+#include "libc_private.h"
 
 void
 _set_tp(void *tp)

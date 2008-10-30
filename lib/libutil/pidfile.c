@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libutil/pidfile.c,v 1.1.2.1 2006/01/15 17:50:35 delphij Exp $");
+__FBSDID("$FreeBSD: src/lib/libutil/pidfile.c,v 1.7.2.1 2007/10/15 10:49:05 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: src/lib/libutil/pidfile.c,v 1.1.2.1 2006/01/15 17:50:35 delp
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <time.h>
 #include <err.h>
 #include <errno.h>
 #include <libutil.h>
@@ -46,7 +47,6 @@ static int
 pidfile_verify(struct pidfh *pfh)
 {
 	struct stat sb;
-	int fd;
 
 	if (pfh == NULL || pfh->pf_fd == -1)
 		return (EDOOFUS);
@@ -75,6 +75,8 @@ pidfile_read(const char *path, pid_t *pidptr)
 	close(fd);
 	if (i == -1)
 		return (error);
+	else if (i == 0)
+		return (EAGAIN);
 	buf[i] = '\0';
 
 	*pidptr = strtol(buf, &endptr, 10);
@@ -89,19 +91,20 @@ pidfile_open(const char *path, mode_t mode, pid_t *pidptr)
 {
 	struct pidfh *pfh;
 	struct stat sb;
-	int error, fd;
+	int error, fd, len, count;
+	struct timespec rqtp;
 
 	pfh = malloc(sizeof(*pfh));
 	if (pfh == NULL)
 		return (NULL);
 
-	if (path == NULL) {
-		snprintf(pfh->pf_path, sizeof(pfh->pf_path), "/var/run/%s.pid",
-		    getprogname());
-	} else {
-		strlcpy(pfh->pf_path, path, sizeof(pfh->pf_path));
-	}
-	if (strlen(pfh->pf_path) == sizeof(pfh->pf_path) - 1) {
+	if (path == NULL)
+		len = snprintf(pfh->pf_path, sizeof(pfh->pf_path),
+		    "/var/run/%s.pid", getprogname());
+	else
+		len = snprintf(pfh->pf_path, sizeof(pfh->pf_path),
+		    "%s", path);
+	if (len >= (int)sizeof(pfh->pf_path)) {
 		free(pfh);
 		errno = ENAMETOOLONG;
 		return (NULL);
@@ -113,13 +116,23 @@ pidfile_open(const char *path, mode_t mode, pid_t *pidptr)
 	 * PID file will be truncated again in pidfile_write(), so
 	 * pidfile_write() can be called multiple times.
 	 */
-	fd = open(pfh->pf_path,
-	    O_WRONLY | O_CREAT | O_EXLOCK | O_TRUNC | O_NONBLOCK, mode);
+	fd = flopen(pfh->pf_path,
+	    O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, mode);
 	if (fd == -1) {
+		count = 0;
+		rqtp.tv_sec = 0;
+		rqtp.tv_nsec = 5000000;
 		if (errno == EWOULDBLOCK && pidptr != NULL) {
+		again:
 			errno = pidfile_read(pfh->pf_path, pidptr);
 			if (errno == 0)
 				errno = EEXIST;
+			else if (errno == EAGAIN) {
+				if (++count <= 3) {
+					nanosleep(&rqtp, 0);
+					goto again;
+				}
+			}
 		}
 		free(pfh);
 		return (NULL);
@@ -147,7 +160,6 @@ pidfile_open(const char *path, mode_t mode, pid_t *pidptr)
 int
 pidfile_write(struct pidfh *pfh)
 {
-	struct stat sb;
 	char pidstr[16];
 	int error, fd;
 
@@ -175,7 +187,7 @@ pidfile_write(struct pidfh *pfh)
 	}
 
 	snprintf(pidstr, sizeof(pidstr), "%u", getpid());
-	if (write(fd, pidstr, strlen(pidstr)) != (ssize_t)strlen(pidstr)) {
+	if (pwrite(fd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr)) {
 		error = errno;
 		_pidfile_remove(pfh, 0);
 		errno = error;

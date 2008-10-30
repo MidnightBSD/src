@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libkiconv/xlat16_sysctl.c,v 1.1.10.1 2005/09/08 15:46:38 imura Exp $
+ * $FreeBSD: src/lib/libkiconv/xlat16_sysctl.c,v 1.2 2005/08/24 12:38:26 imura Exp $
  */
 
 /*

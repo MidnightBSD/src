@@ -70,7 +70,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libmp/mpasbn.c,v 1.3 2003/01/28 23:03:15 markm Exp $");
+__FBSDID("$FreeBSD: src/lib/libmp/mpasbn.c,v 1.5 2006/07/30 19:29:26 simon Exp $");
 
 #include <ctype.h>
 #include <err.h>
@@ -82,7 +82,6 @@ __FBSDID("$FreeBSD: src/lib/libmp/mpasbn.c,v 1.3 2003/01/28 23:03:15 markm Exp $
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 
-#include "openssl/crypto/bn/bn_lcl.h"
 #include "mp.h"
 
 #define MPERR(s)	do { warn s; abort(); } while (0)
@@ -96,15 +95,16 @@ static MINT *_dtom(const char *, const char *);
 static MINT *_itom(const char *, short);
 static void _madd(const char *, const MINT *, const MINT *, MINT *);
 static int _mcmpa(const char *, const MINT *, const MINT *);
-static void _mdiv(const char *, const MINT *, const MINT *, MINT *, MINT *);
+static void _mdiv(const char *, const MINT *, const MINT *, MINT *, MINT *,
+		BN_CTX *);
 static void _mfree(const char *, MINT *);
 static void _moveb(const char *, const BIGNUM *, MINT *);
 static void _movem(const char *, const MINT *, MINT *);
 static void _msub(const char *, const MINT *, const MINT *, MINT *);
 static char *_mtod(const char *, const MINT *);
 static char *_mtox(const char *, const MINT *);
-static void _mult(const char *, const MINT *, const MINT *, MINT *);
-static void _sdiv(const char *, const MINT *, short, MINT *, short *);
+static void _mult(const char *, const MINT *, const MINT *, MINT *, BN_CTX *);
+static void _sdiv(const char *, const MINT *, short, MINT *, short *, BN_CTX *);
 static MINT *_xtom(const char *, const char *);
 
 /*
@@ -143,14 +143,16 @@ void
 gcd(const MINT *mp1, const MINT *mp2, MINT *rmp)
 {
 	BIGNUM b;
-	BN_CTX c;
+	BN_CTX *c;
 
-	BN_CTX_init(&c);
+	c = BN_CTX_new();
+	if (c == NULL)
+		_bnerr("gcd");
 	BN_init(&b);
-	BN_ERRCHECK("gcd", BN_gcd(&b, mp1->bn, mp2->bn, &c));
+	BN_ERRCHECK("gcd", BN_gcd(&b, mp1->bn, mp2->bn, c));
 	_moveb("gcd", &b, rmp);
 	BN_free(&b);
-	BN_CTX_free(&c);
+	BN_CTX_free(c);
 }
 
 /*
@@ -222,27 +224,30 @@ _mcmpa(const char *msg __unused, const MINT *mp1, const MINT *mp2)
  * Compute qmp=nmp/dmp and rmp=nmp%dmp.
  */
 static void
-_mdiv(const char *msg, const MINT *nmp, const MINT *dmp, MINT *qmp, MINT *rmp)
+_mdiv(const char *msg, const MINT *nmp, const MINT *dmp, MINT *qmp, MINT *rmp,
+    BN_CTX *c)
 {
 	BIGNUM q, r;
-	BN_CTX c;
 
-	BN_CTX_init(&c);
 	BN_init(&r);
 	BN_init(&q);
-	BN_ERRCHECK(msg, BN_div(&q, &r, nmp->bn, dmp->bn, &c));
+	BN_ERRCHECK(msg, BN_div(&q, &r, nmp->bn, dmp->bn, c));
 	_moveb(msg, &q, qmp);
 	_moveb(msg, &r, rmp);
 	BN_free(&q);
 	BN_free(&r);
-	BN_CTX_free(&c);
 }
 
 void
 mdiv(const MINT *nmp, const MINT *dmp, MINT *qmp, MINT *rmp)
 {
+	BN_CTX *c;
 
-	_mdiv("mdiv", nmp, dmp, qmp, rmp);
+	c = BN_CTX_new();
+	if (c == NULL)
+		_bnerr("mdiv");
+	_mdiv("mdiv", nmp, dmp, qmp, rmp, c);
+	BN_CTX_free(c);
 }
 
 /*
@@ -354,11 +359,15 @@ _movem(const char *msg, const MINT *smp, MINT *tmp)
 void
 msqrt(const MINT *nmp, MINT *xmp, MINT *rmp)
 {
+	BN_CTX *c;
 	MINT *tolerance;
 	MINT *ox, *x;
 	MINT *z1, *z2, *z3;
 	short i;
 
+	c = BN_CTX_new();
+	if (c == NULL)
+		_bnerr("msqrt");
 	tolerance = _itom("msqrt", 1);
 	x = _itom("msqrt", 1);
 	ox = _itom("msqrt", 0);
@@ -367,13 +376,13 @@ msqrt(const MINT *nmp, MINT *xmp, MINT *rmp)
 	z3 = _itom("msqrt", 0);
 	do {
 		_movem("msqrt", x, ox);
-		_mdiv("msqrt", nmp, x, z1, z2);
+		_mdiv("msqrt", nmp, x, z1, z2, c);
 		_madd("msqrt", x, z1, z2);
-		_sdiv("msqrt", z2, 2, x, &i);
+		_sdiv("msqrt", z2, 2, x, &i, c);
 		_msub("msqrt", ox, x, z3);
 	} while (_mcmpa("msqrt", z3, tolerance) == 1);
 	_movem("msqrt", x, xmp);
-	_mult("msqrt", x, x, z1);
+	_mult("msqrt", x, x, z1, c);
 	_msub("msqrt", nmp, z1, z2);
 	_movem("msqrt", z2, rmp);
 	_mfree("msqrt", tolerance);
@@ -382,6 +391,7 @@ msqrt(const MINT *nmp, MINT *xmp, MINT *rmp)
 	_mfree("msqrt", z1);
 	_mfree("msqrt", z2);
 	_mfree("msqrt", z3);
+	BN_CTX_free(c);
 }
 
 /*
@@ -467,24 +477,26 @@ mtox(const MINT *mp)
  * Compute rmp=mp1*mp2.
  */
 static void
-_mult(const char *msg, const MINT *mp1, const MINT *mp2, MINT *rmp)
+_mult(const char *msg, const MINT *mp1, const MINT *mp2, MINT *rmp, BN_CTX *c)
 {
 	BIGNUM b;
-	BN_CTX c;
 
-	BN_CTX_init(&c);
 	BN_init(&b);
-	BN_ERRCHECK(msg, BN_mul(&b, mp1->bn, mp2->bn, &c));
+	BN_ERRCHECK(msg, BN_mul(&b, mp1->bn, mp2->bn, c));
 	_moveb(msg, &b, rmp);
 	BN_free(&b);
-	BN_CTX_free(&c);
 }
 
 void
 mult(const MINT *mp1, const MINT *mp2, MINT *rmp)
 {
+	BN_CTX *c;
 
-	_mult("mult", mp1, mp2, rmp);
+	c = BN_CTX_new();
+	if (c == NULL)
+		_bnerr("mult");
+	_mult("mult", mp1, mp2, rmp, c);
+	BN_CTX_free(c);
 }
 
 /*
@@ -495,14 +507,16 @@ void
 pow(const MINT *bmp, const MINT *emp, const MINT *mmp, MINT *rmp)
 {
 	BIGNUM b;
-	BN_CTX c;
+	BN_CTX *c;
 
-	BN_CTX_init(&c);
+	c = BN_CTX_new();
+	if (c == NULL)
+		_bnerr("pow");
 	BN_init(&b);
-	BN_ERRCHECK("pow", BN_mod_exp(&b, bmp->bn, emp->bn, mmp->bn, &c));
+	BN_ERRCHECK("pow", BN_mod_exp(&b, bmp->bn, emp->bn, mmp->bn, c));
 	_moveb("pow", &b, rmp);
 	BN_free(&b);
-	BN_CTX_free(&c);
+	BN_CTX_free(c);
 }
 
 /*
@@ -513,35 +527,36 @@ rpow(const MINT *bmp, short e, MINT *rmp)
 {
 	MINT *emp;
 	BIGNUM b;
-	BN_CTX c;
+	BN_CTX *c;
 
-	BN_CTX_init(&c);
+	c = BN_CTX_new();
+	if (c == NULL)
+		_bnerr("rpow");
 	BN_init(&b);
 	emp = _itom("rpow", e);
-	BN_ERRCHECK("rpow", BN_exp(&b, bmp->bn, emp->bn, &c));
+	BN_ERRCHECK("rpow", BN_exp(&b, bmp->bn, emp->bn, c));
 	_moveb("rpow", &b, rmp);
 	_mfree("rpow", emp);
 	BN_free(&b);
-	BN_CTX_free(&c);
+	BN_CTX_free(c);
 }
 
 /*
  * Compute qmp=nmp/d and ro=nmp%d.
  */
 static void
-_sdiv(const char *msg, const MINT *nmp, short d, MINT *qmp, short *ro)
+_sdiv(const char *msg, const MINT *nmp, short d, MINT *qmp, short *ro,
+    BN_CTX *c)
 {
 	MINT *dmp, *rmp;
 	BIGNUM q, r;
-	BN_CTX c;
 	char *s;
 
-	BN_CTX_init(&c);
 	BN_init(&q);
 	BN_init(&r);
 	dmp = _itom(msg, d);
 	rmp = _itom(msg, 0);
-	BN_ERRCHECK(msg, BN_div(&q, &r, nmp->bn, dmp->bn, &c));
+	BN_ERRCHECK(msg, BN_div(&q, &r, nmp->bn, dmp->bn, c));
 	_moveb(msg, &q, qmp);
 	_moveb(msg, &r, rmp);
 	s = _mtox(msg, rmp);
@@ -554,14 +569,18 @@ _sdiv(const char *msg, const MINT *nmp, short d, MINT *qmp, short *ro)
 	_mfree(msg, rmp);
 	BN_free(&r);
 	BN_free(&q);
-	BN_CTX_free(&c);
 }
 
 void
 sdiv(const MINT *nmp, short d, MINT *qmp, short *ro)
 {
+	BN_CTX *c;
 
-	_sdiv("sdiv", nmp, d, qmp, ro);
+	c = BN_CTX_new();
+	if (c == NULL)
+		_bnerr("sdiv");
+	_sdiv("sdiv", nmp, d, qmp, ro, c);
+	BN_CTX_free(c);
 }
 
 /*

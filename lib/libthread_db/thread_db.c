@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libthread_db/thread_db.c,v 1.3 2005/05/31 09:43:03 dfr Exp $");
+__FBSDID("$FreeBSD: src/lib/libthread_db/thread_db.c,v 1.4 2006/10/20 14:15:42 davidxu Exp $");
 
 #include <proc_service.h>
 #include <stddef.h>
@@ -41,14 +41,12 @@ struct td_thragent
 
 static TAILQ_HEAD(, td_thragent) proclist = TAILQ_HEAD_INITIALIZER(proclist);
 
-extern struct ta_ops libc_r_db_ops;
 extern struct ta_ops libpthread_db_ops;
 extern struct ta_ops libthr_db_ops;
 
 static struct ta_ops *ops[] = {
 	&libpthread_db_ops,
 	&libthr_db_ops,
-	&libc_r_db_ops
 };
 
 td_err_e

@@ -1,4 +1,4 @@
-$ $FreeBSD: src/lib/libc/nls/ko_KR.eucKR.msg,v 1.1 2005/03/07 13:57:24 phantom Exp $
+$ $FreeBSD: src/lib/libc/nls/ko_KR.eucKR.msg,v 1.2 2005/07/16 05:40:14 jkim Exp $
 $
 $ Message catalog for ko_KR.eucKR locale
 $
@@ -194,11 +194,11 @@ $ SIGQUIT
 $ SIGILL
 4 Àß¸øµÈ ¸í·É
 $ SIGTRAP
-5 Trace/BPT µ£
+5 Trace/BPT Æ®·¦
 $ SIGABRT
-6 Abort µ£
+6 Abort Æ®·¦
 $ SIGEMT
-7 EMT µ£
+7 EMT Æ®·¦
 $ SIGFPE
 8 ºÎµ¿¼Ò¼öÁ¡ ¿¬»ê ¿¹¿Ü
 $ SIGKILL

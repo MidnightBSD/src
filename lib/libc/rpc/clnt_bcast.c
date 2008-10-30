@@ -37,7 +37,7 @@
 static char sccsid[] = "@(#)clnt_bcast.c 1.15 89/04/21 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_bcast.c,v 1.8 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_bcast.c,v 1.9 2006/09/09 22:14:42 mbr Exp $");
 
 
 /*
@@ -141,8 +141,10 @@ __rpc_getbroadifs(int af, int proto, int socktype, broadlist_t *list)
 	hints.ai_protocol = proto;
 	hints.ai_socktype = socktype;
 
-	if (getaddrinfo(NULL, "sunrpc", &hints, &res) != 0)
+	if (getaddrinfo(NULL, "sunrpc", &hints, &res) != 0) {
+		freeifaddrs(ifp);
 		return 0;
+	}
 
 	for (ifap = ifp; ifap != NULL; ifap = ifap->ifa_next) {
 		if (ifap->ifa_addr->sa_family != af ||
@@ -299,6 +301,7 @@ rpc_broadcast_exp(prog, vers, proc, xargs, argsp, xresults, resultsp,
 	if (nettype == NULL)
 		nettype = "datagram_n";
 	if ((handle = __rpc_setconf(nettype)) == NULL) {
+		AUTH_DESTROY(sys_auth);
 		return (RPC_UNKNOWNPROTO);
 	}
 	while ((nconf = __rpc_getconf(handle)) != NULL) {

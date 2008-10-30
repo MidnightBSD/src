@@ -25,7 +25,7 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/lib/libc/i386/gen/_ctx_start.S,v 1.3 2004/07/02 14:19:44 davidxu Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/i386/gen/_ctx_start.S,v 1.4 2006/06/05 14:59:33 kib Exp $");
 
 /*
  * _ctx_start((void *func)(int arg1, ..., argn),
@@ -41,10 +41,11 @@ __FBSDID("$FreeBSD: src/lib/libc/i386/gen/_ctx_start.S,v 1.3 2004/07/02 14:19:44
 ENTRY(_ctx_start)
 	popl	%eax		/* get start function */
 	call	*%eax		/* call start function */
+	PIC_PROLOGUE
 	movl	%esi, %esp	/*
 				 * setup stack for completion routine;
 				 * ucp is now at top of stack
 				 */
-	call	_ctx_done	/* should never return */
-	call	abort		/* fubar */
+	call	PIC_PLT(_ctx_done)	/* should never return */
+	call	PIC_PLT(abort)		/* fubar */
 	ret

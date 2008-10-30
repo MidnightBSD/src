@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)gettimeofday.2	8.2 (Berkeley) 5/26/95
-.\" $FreeBSD: src/lib/libc/sys/gettimeofday.2,v 1.25 2004/07/02 23:52:13 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/gettimeofday.2,v 1.28 2007/01/09 00:28:14 imp Exp $
 .\"
 .Dd May 26, 1995
 .Dt GETTIMEOFDAY 2
@@ -82,8 +78,8 @@ as:
 .Pp
 .Bd -literal
 struct timeval {
-	long	tv_sec;		/* seconds since Jan. 1, 1970 */
-	long	tv_usec;	/* and microseconds */
+	time_t		tv_sec;		/* seconds */
+	suseconds_t	tv_usec;	/* and microseconds */
 };
 
 struct timezone {

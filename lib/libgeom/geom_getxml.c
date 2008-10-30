@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libgeom/geom_getxml.c,v 1.1 2003/02/10 00:11:43 phk Exp $
+ * $FreeBSD: src/lib/libgeom/geom_getxml.c,v 1.2 2007/05/01 10:47:09 wkoszek Exp $
  */
 
 #include <sys/types.h>
@@ -53,7 +53,7 @@ geom_getxml()
 		free(p);
 	}
 	l = 0;
-	i = sysctlbyname("kern.geom.confxml", p, &l, NULL, 0);
+	i = sysctlbyname("kern.geom.confxml", NULL, &l, NULL, 0);
 	if (i != 0)
 		return (NULL);
 	p = malloc(l + 4096);

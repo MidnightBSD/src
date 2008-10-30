@@ -37,7 +37,7 @@ static char *sccsid2 = "from: @(#)clnt_simple.c 1.35 87/08/11 Copyr 1984 Sun Mic
 static char *sccsid = "from: @(#)clnt_simple.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_simple.c,v 1.19 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_simple.c,v 1.20 2006/02/27 22:10:59 deischen Exp $");
 
 /*
  * clnt_simple.c
@@ -56,6 +56,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_simple.c,v 1.19 2004/10/16 06:11:34 ob
 #include <fcntl.h>
 #include <unistd.h>
 #include "un-namespace.h"
+#include "mt_misc.h"
 
 #ifndef MAXHOSTNAMELEN
 #define	MAXHOSTNAMELEN 64
@@ -112,7 +113,6 @@ rpc_call(host, prognum, versnum, procnum, inproc, in, outproc, out, nettype)
 	enum clnt_stat clnt_stat;
 	struct timeval timeout, tottimeout;
 	static thread_key_t rpc_call_key;
-	extern mutex_t tsd_lock;
 	int main_thread = 1;
 
 	if ((main_thread = thr_main())) {

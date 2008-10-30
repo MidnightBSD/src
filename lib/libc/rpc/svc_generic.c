@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)svc_generic.c 1.21 89/02/28 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_generic.c,v 1.6 2004/10/16 06:11:35 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_generic.c,v 1.7 2006/02/27 22:10:59 deischen Exp $");
 
 /*
  * svc_generic.c, Server side for RPC.
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc_generic.c,v 1.6 2004/10/16 06:11:35 obr
 #include "un-namespace.h"
 
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 extern int __svc_vc_setflag(SVCXPRT *, int);
 
@@ -89,7 +90,6 @@ svc_create(dispatch, prognum, versnum, nettype)
 	SVCXPRT *xprt;
 	struct netconfig *nconf;
 	void *handle;
-	extern mutex_t xprtlist_lock;
 
 /* VARIABLES PROTECTED BY xprtlist_lock: xprtlist */
 

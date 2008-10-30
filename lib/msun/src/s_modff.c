@@ -14,7 +14,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_modff.c,v 1.7 2002/05/28 18:15:04 alfred Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_modff.c,v 1.8 2007/01/06 21:22:57 das Exp $";
 #endif
 
 #include "math.h"
@@ -49,6 +49,8 @@ modff(float x, float *iptr)
 	} else {			/* no fraction part */
 	    u_int32_t ix;
 	    *iptr = x*one;
+	    if (x != x)			/* NaN */
+		return x;
 	    GET_FLOAT_WORD(ix,x);
 	    SET_FLOAT_WORD(x,ix&0x80000000);	/* return +-0 */
 	    return x;

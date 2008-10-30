@@ -1,5 +1,5 @@
 #	$NetBSD: Makefile.inc,v 1.3 2003/05/06 08:58:20 rearnsha Exp $
-# $FreeBSD: src/lib/libc/softfloat/Makefile.inc,v 1.2 2005/03/15 15:53:39 das Exp $
+# $FreeBSD: src/lib/libc/softfloat/Makefile.inc,v 1.3 2006/03/13 01:14:59 deischen Exp $
 
 SOFTFLOAT_BITS?=64
 .PATH:		${MACHINE_ARCH}/softfloat \
@@ -16,3 +16,5 @@ SRCS+=		fpgetround.c fpsetround.c fpgetmask.c fpsetmask.c \
 SRCS+=		eqsf2.c nesf2.c gtsf2.c gesf2.c ltsf2.c lesf2.c negsf2.c \
 		eqdf2.c nedf2.c gtdf2.c gedf2.c ltdf2.c ledf2.c negdf2.c \
 		unordsf2.c unorddf2.c
+
+SYM_MAPS+=	${.CURDIR}/softfloat/Symbol.map

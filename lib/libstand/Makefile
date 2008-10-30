@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libstand/Makefile,v 1.54 2005/06/03 06:55:22 obrien Exp $
+# $FreeBSD: src/lib/libstand/Makefile,v 1.57.2.1 2007/10/18 12:08:52 nyan Exp $
 # Originally from	$NetBSD: Makefile,v 1.21 1997/10/26 22:08:38 lukem Exp $
 #
 # Notes:
@@ -15,12 +15,15 @@ MAN=		libstand.3
 CFLAGS+= -ffreestanding -Wformat
 CFLAGS+= -I${.CURDIR}
 
-.if ${MACHINE_ARCH} == "alpha"
-CFLAGS+=	-mno-fp-regs
-.endif
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 CFLAGS+=	-mpreferred-stack-boundary=2
 CFLAGS+=	-mno-mmx -mno-3dnow -mno-sse -mno-sse2
+.endif
+.if ${MACHINE_ARCH} == "i386"
+CFLAGS+=	-mno-sse3
+.endif
+.if ${MACHINE} == "pc98"
+CFLAGS+=	-Os
 .endif
 .if ${MACHINE_ARCH} == "powerpc"
 CFLAGS+=	-msoft-float -D_STANDALONE
@@ -37,13 +40,9 @@ SRCS+=	zutil.h __main.c assert.c bcd.c bswap.c environment.c getopt.c gets.c \
 # private (pruned) versions of libc string functions
 SRCS+=	strcasecmp.c
 
-# byte order functions from libc
-.if ${MACHINE_ARCH} != "amd64"
-.PATH: ${.CURDIR}/../libc/${MACHINE_ARCH}/net
-.else
-.PATH: ${.CURDIR}/../libc/i386/net
-.endif
-SRCS+= htons.S ntohs.S htonl.S ntohl.S
+.PATH: ${.CURDIR}/../libc/net
+
+SRCS+= ntoh.c
 
 # string functions from libc
 .PATH: ${.CURDIR}/../libc/string
@@ -53,53 +52,6 @@ SRCS+=	bcmp.c bcopy.c bzero.c ffs.c index.c memccpy.c memchr.c memcmp.c \
         memcpy.c memmove.c memset.c qdivrem.c rindex.c strcat.c strchr.c \
         strcmp.c strcpy.c strcspn.c strlen.c strncat.c strncmp.c strncpy.c \
 	strpbrk.c strrchr.c strsep.c strspn.c strstr.c strtok.c swab.c
-.endif
-.if ${MACHINE_ARCH} == "alpha"
-.PATH: ${.CURDIR}/../libc/alpha/string
-SRCS+=	bcmp.c bcopy.S bzero.S ffs.S index.c memccpy.c memchr.c memcmp.c \
-	memcpy.S memmove.S memset.c rindex.c strcat.c strchr.c \
-	strcmp.c strcpy.c strcspn.c strlen.c \
-	strncat.c strncmp.c strncpy.c strpbrk.c strrchr.c strsep.c \
-	strspn.c strstr.c strtok.c swab.c
-
-SRCS+= __divqu.S __divq.S __divlu.S __divl.S
-SRCS+= __remqu.S __remq.S __remlu.S __reml.S
-
-CLEANFILES+=   __divqu.S __divq.S __divlu.S __divl.S
-CLEANFILES+=   __remqu.S __remq.S __remlu.S __reml.S
-
-
-__divqu.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__divqu -DOP=div -DS=false -DWORDSIZE=64 \
-		${.ALLSRC} > ${.TARGET}
-
-__divq.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__divq -DOP=div -DS=true -DWORDSIZE=64 \
-		${.ALLSRC} > ${.TARGET}
-
-__divlu.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__divlu -DOP=div -DS=false -DWORDSIZE=32 \
-		${.ALLSRC} > ${.TARGET}
-
-__divl.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__divl -DOP=div -DS=true -DWORDSIZE=32 \
-		${.ALLSRC} > ${.TARGET}
-
-__remqu.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__remqu -DOP=rem -DS=false -DWORDSIZE=64 \
-		${.ALLSRC} > ${.TARGET}
-
-__remq.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__remq -DOP=rem -DS=true -DWORDSIZE=64 \
-		${.ALLSRC} > ${.TARGET}
-
-__remlu.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__remlu -DOP=rem -DS=false -DWORDSIZE=32 \
-		${.ALLSRC} > ${.TARGET}
-
-__reml.S: ${.CURDIR}/../libc/alpha/gen/divrem.m4
-	m4 -DNAME=__reml -DOP=rem -DS=true -DWORDSIZE=32 \
-		${.ALLSRC} > ${.TARGET}
 .endif
 .if ${MACHINE_ARCH} == "ia64"
 .PATH: ${.CURDIR}/../libc/ia64/string

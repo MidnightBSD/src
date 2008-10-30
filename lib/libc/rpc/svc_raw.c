@@ -38,7 +38,7 @@
 static char sccsid[] = "@(#)svc_raw.c 1.25 89/01/31 Copyr 1984 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_raw.c,v 1.14 2004/10/16 06:11:35 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_raw.c,v 1.15 2006/02/27 22:10:59 deischen Exp $");
 
 /*
  * svc_raw.c,   This a toy for simple testing and timing.
@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc_raw.c,v 1.14 2004/10/16 06:11:35 obrien
 #include <rpc/raw.h>
 #include <stdlib.h>
 #include "un-namespace.h"
+#include "mt_misc.h"
 
 #ifndef UDPMSGSIZE
 #define	UDPMSGSIZE 8800
@@ -69,8 +70,6 @@ static struct svc_raw_private {
 	XDR	xdr_stream;
 	char	verf_body[MAX_AUTH_BYTES];
 } *svc_raw_private;
-
-extern mutex_t	svcraw_lock;
 
 static enum xprt_stat svc_raw_stat(SVCXPRT *);
 static bool_t svc_raw_recv(SVCXPRT *, struct rpc_msg *);
@@ -239,7 +238,6 @@ svc_raw_ops(xprt)
 {
 	static struct xp_ops ops;
 	static struct xp_ops2 ops2;
-	extern mutex_t ops_lock;
 
 /* VARIABLES PROTECTED BY ops_lock: ops */
 

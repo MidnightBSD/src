@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -35,7 +31,7 @@
 static char sccsid[] = "@(#)gmon.c	8.1 (Berkeley) 6/4/93";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gmon/gmon.c,v 1.20 2004/10/16 06:32:43 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gmon/gmon.c,v 1.22 2007/01/09 00:27:58 imp Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -53,7 +49,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gmon/gmon.c,v 1.20 2004/10/16 06:32:43 obrien E
 
 #include "libc_private.h"
 
-#if defined(__i386__) || defined(__sparc64__) || defined(__amd64__)
+#if defined(__i386__) || defined(__sparc64__) || defined(__amd64__) || defined(__powerpc__)
 extern char *minbrk __asm (".minbrk");
 #else
 extern char *minbrk __asm ("minbrk");

@@ -1,12 +1,11 @@
-# $FreeBSD: src/lib/libncp/Makefile,v 1.5.2.1 2005/07/22 17:29:06 kensmith Exp $
-
-NCPLIB=${.CURDIR}
+# $FreeBSD: src/lib/libncp/Makefile,v 1.9 2007/05/21 02:49:05 deischen Exp $
 
 LIB=		ncp
 
-SHLIB_MAJOR=	2
+SHLIB_MAJOR=	3
 
-NO_MAN=
+DPADD=		${LIBIPX}
+LDADD=		-lipx
 
 SRCS=	ncpl_subr.c ncpl_bind.c ncpl_queue.c ncpl_file.c ncpl_misc.c \
 	ncpl_net.c ncpl_rcfile.c ncpl_conn.c ncpl_nls.c ncpl_msg.c \

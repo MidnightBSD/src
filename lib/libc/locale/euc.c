@@ -39,7 +39,7 @@
 static char sccsid[] = "@(#)euc.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/param.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/euc.c,v 1.21 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/euc.c,v 1.21.10.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <errno.h>
 #include <limits.h>
@@ -48,6 +48,8 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/euc.c,v 1.21 2005/02/27 15:11:09 phantom
 #include <string.h>
 #include <wchar.h>
 #include "mblocal.h"
+
+extern int __mb_sb_limit;
 
 static size_t	_EUC_mbrtowc(wchar_t * __restrict, const char * __restrict,
 		    size_t, mbstate_t * __restrict);
@@ -116,6 +118,7 @@ _EUC_init(_RuneLocale *rl)
 	__mbrtowc = _EUC_mbrtowc;
 	__wcrtomb = _EUC_wcrtomb;
 	__mbsinit = _EUC_mbsinit;
+	__mb_sb_limit = 256;
 	return (0);
 }
 

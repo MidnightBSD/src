@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/msun/src/s_roundf.c,v 1.3 2005/01/13 15:43:41 das Exp $");
+__FBSDID("$FreeBSD: src/lib/msun/src/s_roundf.c,v 1.4 2005/12/02 13:45:06 bde Exp $");
 
 #include <math.h>
 
@@ -38,14 +38,14 @@ roundf(float x)
 		return (x);
 
 	if (x >= 0.0) {
-		t = ceilf(x);
-		if (t - x > 0.5)
-			t -= 1.0;
+		t = floorf(x);
+		if (t - x <= -0.5)
+			t += 1.0;
 		return (t);
 	} else {
-		t = ceilf(-x);
-		if (t + x > 0.5)
-			t -= 1.0;
+		t = floorf(-x);
+		if (t + x <= -0.5)
+			t += 1.0;
 		return (-t);
 	}
 }

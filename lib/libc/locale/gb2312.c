@@ -26,7 +26,7 @@
  */
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/gb2312.c,v 1.9 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/gb2312.c,v 1.9.10.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <errno.h>
 #include <runetype.h>
@@ -34,6 +34,8 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/gb2312.c,v 1.9 2005/02/27 15:11:09 phant
 #include <string.h>
 #include <wchar.h>
 #include "mblocal.h"
+
+extern int __mb_sb_limit;
 
 static size_t	_GB2312_mbrtowc(wchar_t * __restrict, const char * __restrict,
 		    size_t, mbstate_t * __restrict);
@@ -55,6 +57,7 @@ _GB2312_init(_RuneLocale *rl)
 	__wcrtomb = _GB2312_wcrtomb;
 	__mbsinit = _GB2312_mbsinit;
 	__mb_cur_max = 2;
+	__mb_sb_limit = 128;
 	return (0);
 }
 

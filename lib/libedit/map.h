@@ -31,7 +31,7 @@
  *
  *	@(#)map.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: map.h,v 1.8 2003/08/07 16:44:32 agc Exp $
- * $FreeBSD: src/lib/libedit/map.h,v 1.3.14.1 2005/10/09 03:44:01 delphij Exp $
+ * $FreeBSD: src/lib/libedit/map.h,v 1.4 2005/08/07 20:51:52 stefanf Exp $
  */
 
 /*

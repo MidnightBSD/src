@@ -28,12 +28,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/posix1e/extattr.c,v 1.6 2002/03/22 21:52:38 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/posix1e/extattr.c,v 1.7 2005/09/12 19:52:41 stefanf Exp $");
 
 #include <sys/types.h>
 #include <sys/extattr.h>
 
 #include <errno.h>
+#include <libutil.h>
 #include <string.h>
 
 int

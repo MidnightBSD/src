@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libufs/cgroup.c,v 1.3 2003/06/09 09:32:29 jmallett Exp $");
+__FBSDID("$FreeBSD: src/lib/libufs/cgroup.c,v 1.4 2006/10/31 21:21:48 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -70,4 +70,18 @@ cgread1(struct uufsd *disk, int c)
 	}
 	disk->d_lcg = c;
 	return (1);
+}
+
+int
+cgwrite1(struct uufsd *disk, int c)
+{
+	struct fs *fs;
+
+	fs = &disk->d_fs;
+	if (bwrite(disk, fsbtodb(fs, cgtod(fs, c)),
+	    disk->d_cgunion.d_buf, fs->fs_bsize) == -1) {
+		ERROR(disk, "unable to write cylinder group");
+		return (-1);
+	}
+	return (0);
 }

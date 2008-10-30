@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)auth_unix.c 1.19 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)auth_unix.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/auth_unix.c,v 1.16 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/auth_unix.c,v 1.18 2007/06/14 20:07:35 harti Exp $");
 
 /*
  * auth_unix.c, Implements UNIX style authentication parameters.
@@ -64,6 +64,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/auth_unix.c,v 1.16 2004/10/16 06:11:34 obri
 #include <rpc/auth.h>
 #include <rpc/auth_unix.h>
 #include "un-namespace.h"
+#include "mt_misc.h"
 
 /* auth_unix.c */
 static void authunix_nextverf (AUTH *);
@@ -188,15 +189,17 @@ authunix_create_default()
 	char machname[MAXHOSTNAMELEN + 1];
 	uid_t uid;
 	gid_t gid;
-	gid_t gids[NGRPS];
+	gid_t gids[NGROUPS_MAX];
 
 	if (gethostname(machname, sizeof machname) == -1)
 		abort();
 	machname[sizeof(machname) - 1] = 0;
 	uid = geteuid();
 	gid = getegid();
-	if ((len = getgroups(NGRPS, gids)) < 0)
+	if ((len = getgroups(NGROUPS_MAX, gids)) < 0)
 		abort();
+	if (len > NGRPS)
+		len = NGRPS;
 	/* XXX: interface problem; those should all have been unsigned */
 	return (authunix_create(machname, (int)uid, (int)gid, len,
 	    (int *)gids));
@@ -356,7 +359,6 @@ static struct auth_ops *
 authunix_ops()
 {
 	static struct auth_ops ops;
-	extern mutex_t ops_lock;
 
 	/* VARIABLES PROTECTED BY ops_lock: ops */
 

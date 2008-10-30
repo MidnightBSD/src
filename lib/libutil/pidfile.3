@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libutil/pidfile.3,v 1.3.2.1 2006/01/15 17:50:35 delphij Exp $
+.\" $FreeBSD: src/lib/libutil/pidfile.3,v 1.5.2.1 2007/10/15 10:49:05 kib Exp $
 .\"
 .Dd August 22, 2005
 .Dt PIDFILE 3
@@ -105,14 +105,24 @@ will be set.
 .Rv -std pidfile_write pidfile_close pidfile_remove
 .Sh EXAMPLES
 The following example shows in which order these functions should be used.
+Note that it is safe to pass
+.Dv NULL
+to
+.Fn pidfile_write ,
+.Fn pidfile_remove
+and
+.Fn pidfile_close
+functions.
 .Bd -literal
 struct pidfh *pfh;
 pid_t otherpid, childpid;
 
 pfh = pidfile_open("/var/run/daemon.pid", 0600, &otherpid);
 if (pfh == NULL) {
-	if (errno == EEXIST)
-		errx(EXIT_FAILURE, "Daemon already running, pid: %d.", otherpid);
+	if (errno == EEXIST) {
+		errx(EXIT_FAILURE, "Daemon already running, pid: %jd.",
+		    (intmax_t)otherpid);
+	}
 	/* If we cannot create pidfile from other reasons, only warn. */
 	warn("Cannot open or create pidfile");
 }
@@ -137,7 +147,7 @@ for (;;) {
 		/* Do child work. */
 		break;
 	default:
-		syslog(LOG_INFO, "Child %d started.", childpid);
+		syslog(LOG_INFO, "Child %jd started.", (intmax_t)childpid);
 		break;
 	}
 }
@@ -158,6 +168,11 @@ Specified pidfile's name is too long.
 .It Bq Er EINVAL
 Some process already holds the lock on the given pidfile, but PID read
 from there is invalid.
+.It Bq Er EAGAIN
+Some process already holds the lock on the given pidfile, but the file
+is truncated.
+Most likely, the existing daemon is writing new PID into
+the file.
 .El
 .Pp
 The

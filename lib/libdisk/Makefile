@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libdisk/Makefile,v 1.44 2004/12/21 09:33:46 ru Exp $
+# $FreeBSD: src/lib/libdisk/Makefile,v 1.48 2006/10/09 05:12:54 kmacy Exp $
 
 .if ${MACHINE_ARCH} == "ia64"
 _open_disk=	open_ia64_disk.c
@@ -9,7 +9,13 @@ _open_disk=	open_disk.c
 
 LIB=	disk
 SRCS=	blocks.c ${_change} chunk.c create_chunk.c disk.c ${_open_disk} \
-	rules.c write_disk.c write_${MACHINE}_disk.c
+	rules.c write_disk.c 
+.if ${MACHINE} == "sun4v"
+SRCS+=  write_sparc64_disk.c
+.else
+SRCS+=  write_${MACHINE}_disk.c
+.endif
+
 INCS=	libdisk.h
 
 WARNS?=	2

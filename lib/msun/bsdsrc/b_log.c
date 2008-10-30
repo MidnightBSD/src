@@ -35,7 +35,7 @@
 static char sccsid[] = "@(#)log.c	8.2 (Berkeley) 11/30/93";
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/msun/bsdsrc/b_log.c,v 1.7 2004/12/16 20:40:37 das Exp $");
+__FBSDID("$FreeBSD: src/lib/msun/bsdsrc/b_log.c,v 1.8 2005/09/19 11:28:19 bde Exp $");
 
 #include <math.h>
 #include <errno.h>
@@ -76,9 +76,6 @@ __FBSDID("$FreeBSD: src/lib/msun/bsdsrc/b_log.c,v 1.7 2004/12/16 20:40:37 das Ex
  *	neg	return signalling NaN
  *	+Inf	return +Inf
 */
-
-#define endian		(((*(int *) &one)) ? 1 : 0)
-#define TRUNC(x)	*(((int *) &x) + endian) &= 0xf8000000
 
 #define N 128
 
@@ -438,7 +435,7 @@ __log__D(x) double x;
 #endif
 {
 	int m, j;
-	double F, f, g, q, u, v, u2, one = 1.0;
+	double F, f, g, q, u, v, u2;
 	volatile double u1;
 	struct Double r;
 

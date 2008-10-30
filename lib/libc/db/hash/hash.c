@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@
 static char sccsid[] = "@(#)hash.c	8.9 (Berkeley) 6/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/db/hash/hash.c,v 1.12 2004/09/10 05:41:41 kuriyama Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/db/hash/hash.c,v 1.14 2007/05/25 09:57:48 delphij Exp $");
 
 #include "namespace.h"
 #include <sys/param.h>
@@ -72,7 +68,7 @@ static void *hash_realloc(SEGMENT **, int, int);
 static int   hash_seq(const DB *, DBT *, DBT *, u_int32_t);
 static int   hash_sync(const DB *, u_int32_t);
 static int   hdestroy(HTAB *);
-static HTAB *init_hash(HTAB *, const char *, HASHINFO *);
+static HTAB *init_hash(HTAB *, const char *, const HASHINFO *);
 static int   init_htab(HTAB *, int);
 #if BYTE_ORDER == LITTLE_ENDIAN
 static void  swap_header(HTAB *);
@@ -144,7 +140,7 @@ __hash_open(file, flags, mode, info, dflags)
 		(void)_fcntl(hashp->fp, F_SETFD, 1);
 	}
 	if (new_table) {
-		if (!(hashp = init_hash(hashp, file, (HASHINFO *)info)))
+		if (!(hashp = init_hash(hashp, file, info)))
 			RETURN_ERROR(errno, error1);
 	} else {
 		/* Table already exists */
@@ -290,7 +286,7 @@ static HTAB *
 init_hash(hashp, file, info)
 	HTAB *hashp;
 	const char *file;
-	HASHINFO *info;
+	const HASHINFO *info;
 {
 	struct stat statbuf;
 	int nelem;

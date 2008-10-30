@@ -1,7 +1,7 @@
-# $FreeBSD: src/lib/libypclnt/Makefile,v 1.12.8.1 2005/07/22 17:29:09 kensmith Exp $
+# $FreeBSD: src/lib/libypclnt/Makefile,v 1.16 2007/05/21 02:49:08 deischen Exp $
 
 LIB=	ypclnt
-SHLIB_MAJOR= 2
+SHLIB_MAJOR= 3
 SRCS=	ypclnt_connect.c \
 	ypclnt_error.c \
 	ypclnt_free.c \

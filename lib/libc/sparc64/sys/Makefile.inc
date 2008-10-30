@@ -1,4 +1,4 @@
-# $FreeBSD: src/lib/libc/sparc64/sys/Makefile.inc,v 1.9 2003/08/11 07:14:07 bms Exp $
+# $FreeBSD: src/lib/libc/sparc64/sys/Makefile.inc,v 1.11 2007/07/04 23:23:01 peter Exp $
 
 SRCS+=	__sparc_sigtramp_setup.c \
 	__sparc_utrap.c \
@@ -11,13 +11,17 @@ SRCS+=	__sparc_sigtramp_setup.c \
 	sigcode.S
 
 CFLAGS+= -I${.CURDIR}/sparc64/fpu
+.if ${MACHINE} == "sun4v"
+CFLAGS+= -DSUN4V
+.endif
 
 MDASM+=	brk.S cerror.S exect.S pipe.S ptrace.S sbrk.S setlogin.S sigaction.S
 
 # Don't generate default code for these syscalls:
-NOASM=	break.o exit.o ftruncate.o getdomainname.o getlogin.o \
-	lseek.o mmap.o openbsd_poll.o pread.o \
-	pwrite.o setdomainname.o sstk.o truncate.o uname.o yield.o
+NOASM=	break.o exit.o getdomainname.o getlogin.o openbsd_poll.o \
+	setdomainname.o sstk.o uname.o yield.o
 
 PSEUDO=	_getlogin.o _exit.o
-
+.if !defined(WITHOUT_SYSCALL_COMPAT)
+PSEUDO+= _pread.o _pwrite.o _lseek.o _mmap.o _ftruncate.o _truncate.o
+.endif

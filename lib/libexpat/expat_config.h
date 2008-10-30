@@ -1,7 +1,13 @@
-/* $FreeBSD: src/lib/libexpat/expat_config.h,v 1.1 2002/10/02 07:35:35 phk Exp $ */
+/* $FreeBSD: src/lib/libexpat/expat_config.h,v 1.2 2007/04/24 06:29:27 phk Exp $ */
+
+#include <machine/endian.h>
 
 /* 1234 = LIL_ENDIAN, 4321 = BIGENDIAN */
+#if BYTE_ORDER == LITTLE_ENDIAN
 #define BYTEORDER 1234
+#else
+#define BYTEORDER 4321
+#endif
 
 /* Define to 1 if you have the `bcopy' function. */
 #define HAVE_BCOPY 1
@@ -67,7 +73,11 @@
 #define STDC_HEADERS 1
 
 /* whether byteorder is bigendian */
-/* #undef WORDS_BIGENDIAN */
+#if BYTE_ORDER == BIG_ENDIAN
+#define WORDS_BIGENDIAN
+#else
+#undef WORDS_BIGENDIAN 
+#endif
 
 /* Define to specify how much context to retain around the current parse
    point. */

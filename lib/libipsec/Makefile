@@ -25,18 +25,21 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/lib/libipsec/Makefile,v 1.16.2.1 2005/07/22 17:29:05 kensmith Exp $
+# $FreeBSD: src/lib/libipsec/Makefile,v 1.21 2007/07/01 12:08:05 gnn Exp $
+
+SHLIBDIR?= /lib
+
+.include <bsd.own.mk>
 
 LIB=	ipsec
-SHLIBDIR?= /lib
-SHLIB_MAJOR= 2
+SHLIB_MAJOR= 3
 CFLAGS+=-I. -I${.CURDIR}
 CFLAGS+=-DIPSEC_DEBUG -DIPSEC
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DINET6
 .endif
 
-#.PATH:	${.CURDIR}/../../sys/netkey
+#.PATH:	${.CURDIR}/../../sys/netipsec
 #SRCS=	pfkey.c pfkey_dump.c
 SRCS+=	ipsec_strerror.c policy_parse.y policy_token.l
 SRCS+=	ipsec_dump_policy.c ipsec_get_policylen.c

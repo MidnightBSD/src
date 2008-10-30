@@ -12,10 +12,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -33,7 +29,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)quotactl.2	8.2 (Berkeley) 3/10/95
-.\" $FreeBSD: src/lib/libc/sys/quotactl.2,v 1.24 2005/01/20 09:17:05 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/quotactl.2,v 1.26 2007/02/01 02:31:02 mpp Exp $
 .\"
 .Dd March 5, 1999
 .Dt QUOTACTL 2
@@ -58,7 +54,7 @@ given by
 .Fa cmd
 operates on the given filename
 .Fa path
-for the given user
+for the given user or group
 .Fa id .
 (NOTE: One should use the QCMD macro defined in
 .In ufs/ufs/quota.h
@@ -68,6 +64,12 @@ The address of an optional command specific data structure,
 .Fa addr ,
 may be given; its interpretation
 is discussed below with each command.
+.Pp
+For commands that use the
+.Fa id
+identifier, it must be either -1 or any positive value.
+The value of -1 indicates that the current UID or GID should be used.
+Any other negative value will return an error.
 .Pp
 Currently quotas are supported only for the
 .Dq ufs
@@ -179,6 +181,15 @@ In
 and
 .Dv Q_SETQUOTA ,
 quotas are not currently enabled for this file system.
+.Pp
+The
+.Fa id
+argument to
+.Dv Q_GETQUOTA ,
+.Dv Q_SETQUOTA 
+or
+.Dv Q_SETUSE
+is a negative value.
 .It Bq Er EACCES
 In
 .Dv Q_QUOTAON ,

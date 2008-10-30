@@ -11,7 +11,7 @@
 
 /*
  * from: @(#)fdlibm.h 5.1 93/09/24
- * $FreeBSD: src/lib/msun/src/math_private.h,v 1.17 2005/02/04 20:05:39 das Exp $
+ * $FreeBSD: src/lib/msun/src/math_private.h,v 1.20 2005/11/28 04:58:57 bde Exp $
  */
 
 #ifndef _MATH_PRIVATE_H_
@@ -154,6 +154,48 @@ do {								\
   (d) = sf_u.value;						\
 } while (0)
 
+#ifdef _COMPLEX_H
+/*
+ * Inline functions that can be used to construct complex values.
+ *
+ * The C99 standard intends x+I*y to be used for this, but x+I*y is
+ * currently unusable in general since gcc introduces many overflow,
+ * underflow, sign and efficiency bugs by rewriting I*y as
+ * (0.0+I)*(y+0.0*I) and laboriously computing the full complex product.
+ * In particular, I*Inf is corrupted to NaN+I*Inf, and I*-0 is corrupted
+ * to -0.0+I*0.0.
+ */
+static __inline float complex
+cpackf(float x, float y)
+{
+	float complex z;
+
+	__real__ z = x;
+	__imag__ z = y;
+	return (z);
+}
+
+static __inline double complex
+cpack(double x, double y)
+{
+	double complex z;
+
+	__real__ z = x;
+	__imag__ z = y;
+	return (z);
+}
+
+static __inline long double complex
+cpackl(long double x, long double y)
+{
+	long double complex z;
+
+	__real__ z = x;
+	__imag__ z = y;
+	return (z);
+}
+#endif /* _COMPLEX_H */
+ 
 /*
  * ieee style elementary functions
  *
@@ -222,9 +264,9 @@ int	__kernel_rem_pio2(double*,double*,int,int,int,const int*);
 
 /* float versions of fdlibm kernel functions */
 int	__ieee754_rem_pio2f(float,float*);
-float	__kernel_sinf(float,float,int);
-float	__kernel_cosf(float,float);
-float	__kernel_tanf(float,float,int);
+float	__kernel_sindf(double);
+float	__kernel_cosdf(double);
+float	__kernel_tandf(double,int);
 int	__kernel_rem_pio2f(float*,float*,int,int,int,const int*);
 
 #endif /* !_MATH_PRIVATE_H_ */

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdevinfo/devinfo.c,v 1.8 2005/06/22 15:20:11 jhb Exp $");
+__FBSDID("$FreeBSD: src/lib/libdevinfo/devinfo.c,v 1.9 2006/07/17 09:33:24 stefanf Exp $");
 
 /*
  * An interface to the FreeBSD kernel's bus/device information interface.
@@ -83,10 +83,13 @@ static int	devinfo_initted = 0;
 static int	devinfo_generation = 0;
 
 #if 0
-# define debug(fmt, args...)	\
-	fprintf(stderr, "%s:" fmt "\n", __func__ , ##args)
+# define debug(...)	do { \
+	fprintf(stderr, "%s:", __func__); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, "\n"); \
+} while (0)
 #else
-# define debug(fmt, args...)
+# define debug(...)
 #endif
 
 /*

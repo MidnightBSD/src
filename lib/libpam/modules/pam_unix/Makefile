@@ -32,7 +32,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/lib/libpam/modules/pam_unix/Makefile,v 1.19 2004/11/13 20:40:29 bz Exp $
+# $FreeBSD: src/lib/libpam/modules/pam_unix/Makefile,v 1.21.2.1 2007/10/23 15:41:33 ru Exp $
+
+NO_PROFILE=
+NO_INSTALLLIB=
+.include <bsd.own.mk>
 
 LIB=	pam_unix
 SRCS=	pam_unix.c
@@ -41,7 +45,7 @@ MAN=	pam_unix.8
 DPADD= ${LIBUTIL} ${LIBCRYPT}
 LDADD= -lutil -lcrypt
 
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 CFLAGS+= -DYP
 DPADD+= ${LIBYPCLNT}
 LDADD+= -lypclnt

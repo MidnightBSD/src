@@ -14,7 +14,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/k_rem_pio2f.c,v 1.7 2005/04/05 23:27:47 das Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/k_rem_pio2f.c,v 1.8 2005/10/11 07:56:05 bde Exp $";
 #endif
 
 #include "math.h"
@@ -169,6 +169,7 @@ recompute:
 	    case 2:
 		fw = 0.0;
 		for (i=jz;i>=0;i--) fw += fq[i];
+		fw = *(volatile float *)&fw;	/* clip any extra precision */
 		y[0] = (ih==0)? fw: -fw;
 		fw = fq[0]-fw;
 		for (i=1;i<=jz;i++) fw += fq[i];

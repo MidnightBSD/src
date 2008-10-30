@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/sendfile.2,v 1.27 2005/01/11 20:50:50 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/sendfile.2,v 1.31 2006/11/24 11:44:19 yar Exp $
 .\"
-.Dd October 16, 2004
+.Dd November 24, 2006
 .Dt SENDFILE 2
 .Os
 .Sh NAME
@@ -130,7 +130,7 @@ implementation of
 .Fn sendfile
 is "zero-copy", meaning that it has been optimized so that copying of the file data is avoided.
 .Sh TUNING
-Internally, this system call uses a special
+On some architectures, this system call internally uses a special
 .Fn sendfile
 buffer
 .Pq Vt "struct sf_buf"
@@ -184,10 +184,22 @@ variables show current and peak
 buffers usage respectively.
 These values may also be viewed through
 .Nm netstat Fl m .
+.Pp
+If a value of zero is reported for
+.Va kern.ipc.nsfbufs ,
+your architecture does not need to use
+.Fn sendfile
+buffers because their task can be efficiently performed
+by the generic virtual memory structures.
 .Sh RETURN VALUES
 .Rv -std sendfile
 .Sh ERRORS
 .Bl -tag -width Er
+.It Bq Er EAGAIN
+The socket is marked for non-blocking I/O and not all data was sent due to
+the socket buffer being filled.
+If specified, the number of bytes successfully sent will be returned in
+.Fa *sbytes .
 .It Bq Er EBADF
 The
 .Fa fd
@@ -205,11 +217,15 @@ Partial data may have been sent.
 (This error can only occur when
 .Dv SF_NODISKIO
 is specified.)
-.It Bq Er ENOTSOCK
-The
-.Fa s
-argument
-is not a socket.
+.It Bq Er EFAULT
+An invalid address was specified for an argument.
+.It Bq Er EINTR
+A signal interrupted
+.Fn sendfile
+before it could be completed.
+If specified, the number
+of bytes successfully sent will be returned in
+.Fa *sbytes .
 .It Bq Er EINVAL
 The
 .Fa fd
@@ -225,29 +241,26 @@ The
 .Fa offset
 argument
 is negative.
+.It Bq Er EIO
+An error occurred while reading from
+.Fa fd .
 .It Bq Er ENOTCONN
 The
 .Fa s
 argument
 points to an unconnected socket.
+.It Bq Er ENOTSOCK
+The
+.Fa s
+argument
+is not a socket.
+.It Bq Er EOPNOTSUPP
+The file system for descriptor
+.Fa fd
+does not support
+.Fn sendfile .
 .It Bq Er EPIPE
 The socket peer has closed the connection.
-.It Bq Er EIO
-An error occurred while reading from
-.Fa fd .
-.It Bq Er EFAULT
-An invalid address was specified for an argument.
-.It Bq Er EINTR
-A signal interrupted
-.Fn sendfile
-before it could be completed.
-If specified, the number
-of bytes successfully sent will be returned in
-.Fa *sbytes .
-.It Bq Er EAGAIN
-The socket is marked for non-blocking I/O and not all data was sent due to the socket buffer being filled.
-If specified, the number of bytes successfully sent will be returned in
-.Fa *sbytes .
 .El
 .Sh SEE ALSO
 .Xr netstat 1 ,
@@ -256,6 +269,16 @@ If specified, the number of bytes successfully sent will be returned in
 .Xr socket 2 ,
 .Xr writev 2 ,
 .Xr tuning 7
+.Rs
+.%A K. Elmeleegy
+.%A A. Chanda
+.%A A. L. Cox
+.%A W. Zwaenepoel
+.%T A Portable Kernel Abstraction for Low-Overhead Ephemeral Mapping Management
+.%J The Proceedings of the 2005 USENIX Annual Technical Conference
+.%P pp 223-236
+.%D 2005
+.Re
 .Sh HISTORY
 The
 .Fn sendfile

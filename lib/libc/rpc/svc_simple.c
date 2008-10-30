@@ -34,7 +34,7 @@
 
 /* #pragma ident	"@(#)svc_simple.c	1.18	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_simple.c,v 1.14 2002/03/22 23:18:37 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/svc_simple.c,v 1.16 2006/09/09 22:32:07 mbr Exp $");
 
 /*
  * svc_simple.c
@@ -60,6 +60,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/svc_simple.c,v 1.14 2002/03/22 23:18:37 obr
 #include "un-namespace.h"
 
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 static void universal(struct svc_req *, SVCXPRT *);
 
@@ -106,8 +107,6 @@ rpc_reg(prognum, versnum, procnum, progname, inproc, outproc, nettype)
 	struct netconfig *nconf;
 	int done = FALSE;
 	void *handle;
-	extern mutex_t proglst_lock;
-
 
 
 	if (procnum == NULLPROC) {
@@ -166,6 +165,10 @@ rpc_reg(prognum, versnum, procnum, progname, inproc, outproc, nettype)
 			if (((xdrbuf = malloc((unsigned)recvsz)) == NULL) ||
 				((netid = strdup(nconf->nc_netid)) == NULL)) {
 				warnx(rpc_reg_err, rpc_reg_msg, __no_mem_str);
+				if (xdrbuf != NULL)
+					free(xdrbuf);
+				if (netid != NULL)
+					free(netid);
 				SVC_DESTROY(svcxprt);
 				break;
 			}
@@ -250,7 +253,6 @@ universal(rqstp, transp)
 	char *outdata;
 	char *xdrbuf;
 	struct proglst *pl;
-	extern mutex_t proglst_lock;
 
 	/*
 	 * enforce "procnum 0 is echo" convention

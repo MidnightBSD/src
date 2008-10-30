@@ -1,56 +1,59 @@
 #	from @(#)Makefile.inc	8.2 (Berkeley) 9/5/93
-# $FreeBSD: src/lib/libc/net/Makefile.inc,v 1.54 2005/04/06 12:45:51 ume Exp $
+# $FreeBSD: src/lib/libc/net/Makefile.inc,v 1.69.2.1 2007/11/16 07:18:12 ru Exp $
 
 # machine-independent net sources
-.PATH: ${.CURDIR}/${MACHINE_ARCH}/net ${.CURDIR}/net
+.PATH: ${.CURDIR}/net
 
-SRCS+=	addr2ascii.c ascii2addr.c base64.c ether_addr.c eui64.c \
+SRCS+=	base64.c ether_addr.c eui64.c \
 	gai_strerror.c getaddrinfo.c \
 	gethostbydns.c gethostbyht.c gethostbynis.c gethostnamadr.c \
 	getifaddrs.c getifmaddrs.c getnameinfo.c \
 	getnetbydns.c getnetbyht.c getnetbynis.c getnetnamadr.c \
-	getproto.c getprotoent.c getprotoname.c getservbyname.c \
-	getservbyport.c getservent.c herror.c hesiod.c inet_addr.c \
-	if_indextoname.c if_nameindex.c if_nametoindex.c inet_lnaof.c \
-	inet_makeaddr.c inet_net_ntop.c inet_net_pton.c inet_neta.c \
-	inet_netof.c inet_network.c inet_ntoa.c inet_ntop.c \
-	inet_pton.c ip6opt.c linkaddr.c map_v4v6.c name6.c \
-	ns_name.c ns_netint.c ns_parse.c ns_print.c ns_ttl.c \
-	nsdispatch.c nslexer.c nsparser.c nss_compat.c \
-	nsap_addr.c rcmd.c rcmdsh.c recv.c res_comp.c res_data.c res_debug.c \
-	res_init.c res_mkquery.c res_mkupdate.c res_query.c res_send.c \
-	res_update.c rthdr.c send.c sockatmark.c vars.c
+	getproto.c getprotoent.c getprotoname.c getservent.c \
+	if_indextoname.c if_nameindex.c if_nametoindex.c \
+	ip6opt.c linkaddr.c map_v4v6.c name6.c ntoh.c \
+	nsdispatch.c nslexer.c nsparser.y nss_compat.c \
+	rcmd.c rcmdsh.c recv.c rthdr.c sctp_sys_calls.c send.c \
+        sockatmark.c sourcefilter.c vars.c
 
-CFLAGS+=-DINET6 -I${.OBJDIR}
+.if ${MK_NS_CACHING} != "no"
+SRCS+=	nscache.c nscachedcli.c
+.endif
+
+SYM_MAPS+=${.CURDIR}/net/Symbol.map
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=-DINET6
+.endif
+
+CFLAGS+=-I${.OBJDIR}
+
+# name6.c refers res_private.h
+CFLAGS+=-I${.CURDIR}/resolv
 
 YFLAGS+=-p_nsyy
 LFLAGS+=-P_nsyy
 
-CLEANFILES+=nsparser.c nslexer.c nsparser.h
+CLEANFILES+=nslexer.c
 
-nsparser.h: nsparser.c
-	mv y.tab.h ${.TARGET}
-
-nslexer.c: nslexer.l nsparser.h
+nslexer.c: nslexer.l
 	${LEX} ${LFLAGS} -o/dev/stdout ${.IMPSRC} | \
 		sed -e '/YY_BUF_SIZE/s/16384/1024/' >${.TARGET}
 
-# machine-dependent net sources
-.if exists(${.CURDIR}/${MACHINE_ARCH}/net/Makefile.inc)
-.include "${.CURDIR}/${MACHINE_ARCH}/net/Makefile.inc"
-.endif
-
-MAN+=	addr2ascii.3 byteorder.3 ethers.3 eui64.3 \
+MAN+=	byteorder.3 ethers.3 eui64.3 \
 	getaddrinfo.3 gai_strerror.3 gethostbyname.3 \
 	getifaddrs.3 getifmaddrs.3 getipnodebyname.3 \
-	getnameinfo.3 getnetent.3 getprotoent.3 getservent.3 hesiod.3 \
+	getnameinfo.3 getnetent.3 getprotoent.3 getservent.3 \
 	if_indextoname.3 \
 	inet.3 inet_net.3 \
 	inet6_opt_init.3 inet6_option_space.3 inet6_rth_space.3 \
 	inet6_rthdr_space.3 linkaddr.3 \
-	nsdispatch.3 rcmd.3 rcmdsh.3 resolver.3 sockatmark.3
+	nsdispatch.3 rcmd.3 rcmdsh.3 resolver.3 sockatmark.3 \
+	sourcefilter.3 \
+        sctp_bindx.3 sctp_connectx.3 sctp_freepaddrs.3 \
+        sctp_getaddrlen.3 sctp_getassocid.3 sctp_getpaddrs.3 \
+        sctp_opt_info.3 sctp_recvmsg.3 sctp_send.3 sctp_sendmsg.3 \
 
-MLINKS+=addr2ascii.3 ascii2addr.3
 MLINKS+=byteorder.3 htonl.3 byteorder.3 htons.3 byteorder.3 ntohl.3 \
 	byteorder.3 ntohs.3
 MLINKS+=ethers.3 ether_aton.3 ethers.3 ether_hostton.3 ethers.3 ether_line.3 \
@@ -75,9 +78,13 @@ MLINKS+=if_indextoname.3 if_nametoindex.3 if_indextoname.3 if_nameindex.3 \
 	if_indextoname.3 if_freenameindex.3
 MLINKS+=inet.3 addr.3 inet.3 inet_addr.3 inet.3 inet_aton.3 \
 	inet.3 inet_lnaof.3 inet.3 inet_makeaddr.3 inet.3 inet_netof.3 \
-	inet.3 inet_network.3 inet.3 inet_ntoa.3 \
+	inet.3 inet_network.3 inet.3 inet_ntoa.3 inet.3 inet_ntoa_r.3\
 	inet.3 inet_ntop.3 inet.3 inet_pton.3 \
 	inet.3 network.3 inet.3 ntoa.3 
+MLINKS+= sctp_send.3 sctp_sendx.3
+MLINKS+= sctp_sendmsg.3 sctp_sendmsgx.3
+MLINKS+= sctp_freepaddrs.3 sctp_freeladdrs.3
+MLINKS+= sctp_getpaddrs.3 sctp_getladdrs.3
 MLINKS+=inet_net.3 inet_net_ntop.3 inet_net.3 inet_net_pton.3
 MLINKS+=inet6_opt_init.3 inet6_opt_append.3 \
 	inet6_opt_init.3 inet6_opt_find.3 \
@@ -112,3 +119,11 @@ MLINKS+=resolver.3 dn_comp.3 resolver.3 dn_expand.3 resolver.3 res_init.3 \
 	resolver.3 res_search.3 resolver.3 res_send.3 resolver.3 dn_skipname.3 \
 	resolver.3 ns_get16.3 resolver.3 ns_get32.3 \
 	resolver.3 ns_put16.3 resolver.3 ns_put32.3
+MLINKS+=sourcefilter.3 setipv4sourcefilter.3 sourcefilter.3 getipv4sourcefilter.3 \
+	sourcefilter.3 setsourcefilter.3 sourcefilter.3 getsourcefilter.3
+
+.if ${MK_HESIOD} != "no"
+SRCS+=	hesiod.c 
+MAN+=	hesiod.3
+.endif
+

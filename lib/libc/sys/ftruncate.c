@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -35,11 +31,12 @@
 static char sccsid[] = "@(#)ftruncate.c	8.1 (Berkeley) 6/17/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/sys/ftruncate.c,v 1.5 2002/03/22 21:53:24 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/sys/ftruncate.c,v 1.7 2007/07/04 23:27:38 peter Exp $");
 
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include "libc_private.h"
 
 /*
  * This function provides 64-bit offset padding that
@@ -51,5 +48,8 @@ ftruncate(fd, length)
 	off_t	length;
 {
 
-	return(__syscall((quad_t)SYS_ftruncate, fd, 0, length));
+	if (__getosreldate() >= 700051)
+		return(__sys_ftruncate(fd, length));
+	else
+		return(__sys_freebsd6_ftruncate(fd, 0, length));
 }

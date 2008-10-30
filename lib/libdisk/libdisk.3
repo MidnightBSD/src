@@ -25,9 +25,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libdisk/libdisk.3,v 1.34 2005/02/13 22:25:13 ru Exp $
+.\" $FreeBSD: src/lib/libdisk/libdisk.3,v 1.39 2006/01/30 08:26:59 harti Exp $
 .\" "
-.Dd March 15, 1996
+.Dd January 30, 2006
 .Dt LIBDISK 3
 .Os
 .Sh NAME
@@ -79,11 +79,11 @@
 .Ft int
 .Fn Collapse_Chunk "struct disk *disk" "struct chunk *chunk"
 .Ft int
-.Fn Create_Chunk "struct disk *disk" "daddr_t offset" "daddr_t size" "chunk_e type" "int subtype" "u_long flags"
+.Fn Create_Chunk "struct disk *disk" "daddr_t offset" "daddr_t size" "chunk_e type" "int subtype" "u_long flags" "const char *sname"
 .Ft void
 .Fn All_FreeBSD "struct disk *d" "int force_all"
 .Ft char *
-.Fn CheckRules "struct disk *"
+.Fn CheckRules "const struct disk *"
 .Ft char **
 .Fn Disk_Names "void"
 .Ft void
@@ -91,19 +91,19 @@
 .Ft int
 .Fn Set_Boot_Blocks "struct disk *d" "const u_char *boot1" "const u_char *boot2"
 .Ft int
-.Fn Write_Disk "struct disk *d"
+.Fn Write_Disk "const struct disk *d"
 .Ft int
 .Fn Cyl_Aligned "struct disk *d" "daddr_t offset"
 .Ft daddr_t
-.Fn Next_Cyl_Aligned "struct disk *d" "daddr_t offset"
+.Fn Next_Cyl_Aligned "const struct disk *d" "daddr_t offset"
 .Ft daddr_t
-.Fn Prev_Cyl_Aligned "struct disk *d" "daddr_t offset"
+.Fn Prev_Cyl_Aligned "const struct disk *d" "daddr_t offset"
 .Ft int
-.Fn Track_Aligned "struct disk *d" "daddr_t offset"
+.Fn Track_Aligned "const struct disk *d" "daddr_t offset"
 .Ft daddr_t
-.Fn Next_Track_Aligned "struct disk *d" "daddr_t offset"
+.Fn Next_Track_Aligned "const struct disk *d" "daddr_t offset"
 .Ft daddr_t
-.Fn Prev_Track_Aligned "struct disk *d" "daddr_t offset"
+.Fn Prev_Track_Aligned "const struct disk *d" "daddr_t offset"
 .Ft struct chunk *
 .Fn Create_Chunk_DWIM "struct disk *d" "struct chunk *parent" "daddr_t size" "chunk_e type" "int subtype" "u_long flags"
 .Ft int
@@ -117,6 +117,15 @@
 .Ft const char *
 .Fn slice_type_name "int type" "int subtype"
 .Sh DESCRIPTION
+.Bf Sy
+.Nm libdisk
+is just for the use of
+.Xr sysinstall 8 .
+You should consider using
+.Xr libgeom 3
+instead.
+.Ef
+.Pp
 The
 .Nm libdisk
 library provides an interface to the low-level disk slice and partition labels.

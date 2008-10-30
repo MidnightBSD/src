@@ -1,5 +1,7 @@
 #	from: @(#)Makefile    5.10 (Berkeley) 6/24/90
-# $FreeBSD: src/lib/librpcsvc/Makefile,v 1.20 2005/06/04 10:48:21 ru Exp $
+# $FreeBSD: src/lib/librpcsvc/Makefile,v 1.22 2006/03/17 18:54:27 ru Exp $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../include/rpcsvc
 
@@ -12,7 +14,7 @@ RPCSRCS= klm_prot.x mount.x nfs_prot.x nlm_prot.x rex.x rnusers.x \
 OTHERSRCS=  rnusers.c rstat.c rwall.c
 SECRPCSRCS= secretkey.c xcrypt.c
 
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 OTHERSRCS+= yp_passwd.c yp_update.c
 .endif
 
@@ -26,8 +28,6 @@ GENSRCS= ${RPCSRCS:R:S/$/_xdr.c/g}
 SRCS+= ${GENSRCS} ${OTHERSRCS} ${SECRPCSRCS}
 
 CLEANFILES+= ${GENSRCS}
-
-NO_MAN=
 
 .include <bsd.lib.mk>
 

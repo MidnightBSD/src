@@ -30,7 +30,7 @@
  */
 
 #include <sys/param.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/gb18030.c,v 1.7 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/gb18030.c,v 1.7.10.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <errno.h>
 #include <runetype.h>
@@ -38,6 +38,8 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/gb18030.c,v 1.7 2005/02/27 15:11:09 phan
 #include <string.h>
 #include <wchar.h>
 #include "mblocal.h"
+
+extern int __mb_sb_limit;
 
 static size_t	_GB18030_mbrtowc(wchar_t * __restrict, const char * __restrict,
 		    size_t, mbstate_t * __restrict);
@@ -59,6 +61,7 @@ _GB18030_init(_RuneLocale *rl)
 	__mbsinit = _GB18030_mbsinit;
 	_CurrentRuneLocale = rl;
 	__mb_cur_max = 4;
+	__mb_sb_limit = 128;
 
 	return (0);
 }

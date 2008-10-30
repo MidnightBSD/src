@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)open.2	8.2 (Berkeley) 11/16/93
-.\" $FreeBSD: src/lib/libc/sys/open.2,v 1.29 2004/07/02 23:52:13 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/open.2,v 1.38 2007/01/09 00:28:15 imp Exp $
 .\"
-.Dd November 16, 1993
+.Dd January 7, 2007
 .Dt OPEN 2
 .Os
 .Sh NAME
@@ -86,7 +82,9 @@ O_SHLOCK	atomically obtain a shared lock
 O_EXLOCK	atomically obtain an exclusive lock
 O_DIRECT	eliminate or reduce cache effects
 O_FSYNC		synchronous writes
+O_SYNC		synchronous writes
 O_NOFOLLOW	do not follow symlinks
+O_NOCTTY	don't assign controlling terminal
 .Ed
 .Pp
 Opening a file with
@@ -133,6 +131,12 @@ the kernel will not cache written data
 and all writes on the descriptor will not return until
 the data to be written completes.
 .Pp
+.Dv O_SYNC
+is a synonym for
+.Dv O_FSYNC
+required by
+.Tn POSIX .
+.Pp
 If
 .Dv O_NOFOLLOW
 is used in the mask and the target file passed to
@@ -159,6 +163,19 @@ The system will attempt to avoid caching the data you read or write.
 If it cannot avoid caching the data,
 it will minimize the impact the data has on the cache.
 Use of this flag can drastically reduce performance if not used with care.
+.Pp
+.Dv O_NOCTTY
+may be used to ensure the OS does not assign this file as the
+controlling terminal when it opens a tty device.
+This is the default on
+.Fx ,
+but is present for
+.Tn POSIX
+compatibility.
+The
+.Fn open
+system call will not assign controlling terminals on
+.Fx .
 .Pp
 If successful,
 .Fn open
@@ -208,19 +225,39 @@ Search permission is denied for a component of the path prefix.
 The required permissions (for reading and/or writing)
 are denied for the given flags.
 .It Bq Er EACCES
+.Dv O_TRUNC
+is specified and write permission is denied.
+.It Bq Er EACCES
 .Dv O_CREAT
 is specified,
 the file does not exist,
 and the directory in which it is to be created
 does not permit writing.
+.It Bq Er EPERM
+.Dv O_CREAT
+is specified, the file does not exist, and the directory in which it is to be
+created has its immutable flag set, see the
+.Xr chflags 2
+manual page for more information.
+.It Bq Er EPERM
+.Dv The named file has its immutable flag set and the file is to be modified.
+.It Bq Er EPERM
+.Dv The named file has its append-only flag set, the file is to be modified, and
+.Dv O_TRUNC
+is specified or
+.Dv O_APPEND
+is not specified.
 .It Bq Er ELOOP
 Too many symbolic links were encountered in translating the pathname.
 .It Bq Er EISDIR
 The named file is a directory, and the arguments specify
-it is to be opened for writing.
+it is to be modified.
 .It Bq Er EROFS
 The named file resides on a read-only file system,
 and the file is to be modified.
+.It Bq Er EROFS
+.Dv O_CREAT
+is specified and the named file would reside on a read-only file system.
 .It Bq Er EMFILE
 The process has already reached its limit for open file descriptors.
 .It Bq Er ENFILE
@@ -233,9 +270,10 @@ The named file is a character special or block
 special file, and the device associated with this special file
 does not exist.
 .It Bq Er ENXIO
-The named file is a fifo, no process has
-it open for reading, and the arguments specify it is
-to be opened for writing.
+.Dv O_NONBLOCK
+is set, the named file is a fifo,
+.Dv O_WRONLY
+is set, and no process has the file open for reading.
 .It Bq Er EINTR
 The
 .Fn open
@@ -315,7 +353,10 @@ and
 .Xr chmod 2 ,
 .Xr close 2 ,
 .Xr dup 2 ,
+.Xr fhopen 2 ,
 .Xr getdtablesize 2 ,
+.Xr getfh 2 ,
+.Xr lgetfh 2 ,
 .Xr lseek 2 ,
 .Xr read 2 ,
 .Xr umask 2 ,

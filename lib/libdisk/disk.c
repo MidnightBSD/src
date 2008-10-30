@@ -8,7 +8,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libdisk/disk.c,v 1.125 2005/04/13 13:42:38 nyan Exp $");
+__FBSDID("$FreeBSD: src/lib/libdisk/disk.c,v 1.127 2006/04/25 20:42:15 maxim Exp $");
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +50,8 @@ const enum platform platform =
 	p_ppc
 #elif defined(__amd64__)
 	p_amd64
+#elif defined(__arm__)
+	p_arm
 #else
 	IHAVENOIDEA
 #endif
@@ -348,6 +350,10 @@ slice_type_name( int type, int subtype )
 		case 14:        return "fat (16-bit,>32Mb,LBA)";
 		case 15:        return "extended DOS, LBA";
 		case 18:        return "Compaq Diagnostic";
+		case 57:	return "Plan 9";
+		case 77:	return "QNX 4.X";
+		case 78:	return "QNX 4.X 2nd part";
+		case 79:	return "QNX 4.X 3rd part";
 		case 84:	return "OnTrack diskmgr";
 		case 100:	return "Netware 2.x";
 		case 101:	return "Netware 3.x";
@@ -356,8 +362,11 @@ slice_type_name( int type, int subtype )
 		case 129:	return "Minix 1.5";
 		case 130:	return "linux_swap";
 		case 131:	return "ext2fs";
+		case 133:	return "linux extended";
 		case 166:	return "OpenBSD FFS";	/* 0xA6 */
+		case 168:	return "Mac OS-X";
 		case 169:	return "NetBSD FFS";	/* 0xA9 */
+		case 171:	return "Mac OS-X Boot";
 		case 182:	return "OpenBSD";	/* dedicated */
 		case 183:	return "bsd/os";
 		case 184:	return "bsd/os swap";

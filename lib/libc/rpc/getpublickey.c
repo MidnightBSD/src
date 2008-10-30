@@ -32,7 +32,7 @@
 static char sccsid[] = "@(#)publickey.c 1.10 91/03/11 Copyr 1986 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/getpublickey.c,v 1.7 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/getpublickey.c,v 1.9 2006/02/28 16:02:26 deischen Exp $");
 
 /*
  * publickey.c
@@ -63,9 +63,9 @@ int (*__getpublickey_LOCAL)() = 0;
 /*
  * Get somebody's public key
  */
-int
+static int
 __getpublickey_real(netname, publickey)
-	char *netname;
+	const char *netname;
 	char *publickey;
 {
 	char lookup[3 * HEXKEYBYTES];
@@ -92,7 +92,7 @@ __getpublickey_real(netname, publickey)
 
 int
 getpublicandprivatekey(key, ret)
-	char *key;
+	const char *key;
 	char *ret;
 {
 	char buf[1024];	/* big enough */

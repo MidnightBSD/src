@@ -32,7 +32,7 @@
 
 #ident	"@(#)key_call.c	1.25	94/04/24 SMI"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/key_call.c,v 1.15 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/key_call.c,v 1.16 2006/02/27 22:10:59 deischen Exp $");
 
 /*
  * key_call.c, Interface to keyserver
@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/key_call.c,v 1.15 2004/10/16 06:11:34 obrie
 #include <sys/wait.h>
 #include <sys/fcntl.h>
 #include "un-namespace.h"
+#include "mt_misc.h"
 
 
 #define	KEY_TIMEOUT	5	/* per-try timeout in seconds */
@@ -307,7 +308,6 @@ int	vers;
 	int main_thread;
 	int fd;
 	static thread_key_t key_call_key;
-	extern mutex_t tsd_lock;
 
 #define	TOTAL_TIMEOUT	30	/* total timeout talking to keyserver */
 #define	TOTAL_TRIES	5	/* Number of tries */

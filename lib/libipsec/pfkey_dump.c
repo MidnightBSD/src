@@ -30,18 +30,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipsec/pfkey_dump.c,v 1.15 2004/02/11 04:34:34 bms Exp $");
+__FBSDID("$FreeBSD: src/lib/libipsec/pfkey_dump.c,v 1.17 2007/07/01 12:08:06 gnn Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 #include <net/pfkeyv2.h>
-#include <netkey/key_var.h>
-#include <netkey/key_debug.h>
+#include <netipsec/key_var.h>
+#include <netipsec/key_debug.h>
 
 #include <netinet/in.h>
-#include <netinet6/ipsec.h>
 #include <arpa/inet.h>
 
 #include <stdlib.h>
@@ -187,6 +186,9 @@ static struct val2str str_alg_enc[] = {
 #endif
 #ifdef SADB_X_EALG_AESCTR
 	{ SADB_X_EALG_AESCTR, "aes-ctr", },
+#endif
+#ifdef SADB_X_EALG_CAMELLIACBC
+	{ SADB_X_EALG_CAMELLIACBC, "camellia-cbc", },
 #endif
 	{ -1, NULL, },
 };

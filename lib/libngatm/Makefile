@@ -1,9 +1,9 @@
-# $FreeBSD: src/lib/libngatm/Makefile,v 1.5.8.1 2005/07/22 17:29:06 kensmith Exp $
+# $FreeBSD: src/lib/libngatm/Makefile,v 1.7 2007/05/21 02:49:05 deischen Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 #
 LIB=	ngatm
-SHLIB_MAJOR= 2
+SHLIB_MAJOR= 3
 MAN=	libngatm.3 uniaddr.3 unifunc.3 unimsg.3 unisap.3 unistruct.3
 WARNS?=	6
 

@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)unlink.2	8.1 (Berkeley) 6/4/93
-.\" $FreeBSD: src/lib/libc/sys/unlink.2,v 1.18 2005/02/23 23:55:58 trhodes Exp $
+.\" $FreeBSD: src/lib/libc/sys/unlink.2,v 1.22 2007/01/09 00:28:16 imp Exp $
 .\"
-.Dd February 23, 2005
+.Dd December 10, 2006
 .Dt UNLINK 2
 .Os
 .Sh NAME
@@ -87,17 +83,16 @@ Too many symbolic links were encountered in translating the pathname.
 .It Bq Er EPERM
 The named file is a directory.
 .It Bq Er EPERM
-The named file has its immutable or append-only
-flag set, see the
+The named file has its immutable, undeletable or append-only flag set, see the
 .Xr chflags 2
 manual page for more information.
+.It Bq Er EPERM
+The parent directory of the named file has its immutable or append-only flag
+set.
 .It Bq Er EPERM
 The directory containing the file is marked sticky,
 and neither the containing directory nor the file to be removed
 are owned by the effective user ID.
-.It Bq Er EBUSY
-The entry to be unlinked is the mount point for a
-mounted file system.
 .It Bq Er EIO
 An I/O error occurred while deleting the directory entry
 or deallocating the inode.

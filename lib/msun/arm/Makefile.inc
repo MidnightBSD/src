@@ -1,3 +1,4 @@
-# $FreeBSD: src/lib/msun/arm/Makefile.inc,v 1.1 2005/03/07 04:53:35 das Exp $
+# $FreeBSD: src/lib/msun/arm/Makefile.inc,v 1.2 2006/03/27 23:59:44 deischen Exp $
 
 LDBL_PREC = 53
+SYM_MAPS += ${.CURDIR}/arm/Symbol.map

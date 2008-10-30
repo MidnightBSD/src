@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_support.c,v 1.13 2003/11/03 21:00:16 rwatson Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/posix1e/acl_support.c,v 1.14 2007/02/26 02:07:02 kientzle Exp $");
 
 #include <sys/types.h>
 #include "namespace.h"
@@ -286,59 +286,6 @@ _posix1e_acl_id_to_name(acl_tag_t tag, uid_t id, ssize_t buf_len, char *buf)
 		return (EINVAL);
 	}
 }
-
-
-/*
- * Given a username/groupname from a text form of an ACL, return the uid/gid
- * XXX NOT THREAD SAFE, RELIES ON GETPWNAM, GETGRNAM
- * XXX USES *PW* AND *GR* WHICH ARE STATEFUL AND THEREFORE THIS ROUTINE
- * MAY HAVE SIDE-EFFECTS
- *
- * XXX currently doesn't deal correctly with a numeric uid being passed
- * instead of a username.  What is correct behavior here?  Check chown.
- */
-int
-_posix1e_acl_name_to_id(acl_tag_t tag, char *name, uid_t *id)
-{
-	struct group	*g;
-	struct passwd	*p;
-	unsigned long	l;
-	char 		*endp;
-
-	switch(tag) {
-	case ACL_USER:
-		p = getpwnam(name);
-		if (p == NULL) {
-			l = strtoul(name, &endp, 0);
-			if (*endp != '\0' || l != (unsigned long)(uid_t)l) {
-				errno = EINVAL;
-				return (-1);
-			}
-			*id = (uid_t)l;
-			return (0);
-		}
-		*id = p->pw_uid;
-		return (0);
-
-	case ACL_GROUP:
-		g = getgrnam(name);
-		if (g == NULL) {
-			l = strtoul(name, &endp, 0);
-			if (*endp != '\0' || l != (unsigned long)(gid_t)l) {
-				errno = EINVAL;
-				return (-1);
-			}
-			*id = (gid_t)l;
-			return (0);
-		}
-		*id = g->gr_gid;
-		return (0);
-
-	default:
-		return (EINVAL);
-	}
-}
-
 
 /*
  * Given a right-shifted permission (i.e., direct ACL_PERM_* mask), fill

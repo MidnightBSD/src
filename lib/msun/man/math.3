@@ -9,10 +9,6 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. All advertising materials mentioning features or use of this software
-.\"    must display the following acknowledgement:
-.\"	This product includes software developed by the University of
-.\"	California, Berkeley and its contributors.
 .\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
@@ -30,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	from: @(#)math.3	6.10 (Berkeley) 5/6/91
-.\" $FreeBSD: src/lib/msun/man/math.3,v 1.25 2005/06/16 21:56:03 ru Exp $
+.\" $FreeBSD: src/lib/msun/man/math.3,v 1.28 2007/01/09 01:02:06 imp Exp $
 .\"
-.Dd April 5, 2005
+.Dd November 6, 2005
 .Dt MATH 3
 .Os
 .if n \{\
@@ -97,6 +93,7 @@ isnormal	determine whether a value is normalized
 frexp	extract exponent and mantissa
 ilogb	extract exponent
 ldexp	multiply by power of 2
+logb	extract exponent
 scalbln	adjust exponent
 scalbn	adjust exponent
 .El

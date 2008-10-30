@@ -34,7 +34,7 @@ static char *sccsid2 = "@(#)clnt_raw.c 1.22 87/08/11 Copyr 1984 Sun Micro";
 static char *sccsid = "@(#)clnt_raw.c	2.2 88/08/01 4.0 RPCSRC";
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_raw.c,v 1.19 2004/10/16 06:11:34 obrien Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_raw.c,v 1.20 2006/02/27 22:10:58 deischen Exp $");
 
 /*
  * clnt_raw.c
@@ -57,8 +57,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/clnt_raw.c,v 1.19 2004/10/16 06:11:34 obrie
 #include <rpc/rpc.h>
 #include <rpc/raw.h>
 #include "un-namespace.h"
-
-extern mutex_t clntraw_lock;
+#include "mt_misc.h"
 
 #define MCALL_MSG_SIZE 24
 
@@ -296,7 +295,6 @@ static struct clnt_ops *
 clnt_raw_ops()
 {
 	static struct clnt_ops ops;
-	extern mutex_t  ops_lock;
 
 	/* VARIABLES PROTECTED BY ops_lock: ops */
 

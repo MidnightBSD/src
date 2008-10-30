@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -35,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/setrunelocale.c,v 1.45 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/setrunelocale.c,v 1.46.2.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <runetype.h>
 #include <errno.h>
@@ -48,6 +44,8 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/setrunelocale.c,v 1.45 2005/02/27 15:11:
 #include "ldpart.h"
 #include "mblocal.h"
 #include "setlocale.h"
+
+extern int __mb_sb_limit;
 
 extern _RuneLocale	*_Read_RuneMagi(FILE *);
 
@@ -63,6 +61,7 @@ __setrunelocale(const char *encoding)
 	static char ctype_encoding[ENCODING_LEN + 1];
 	static _RuneLocale *CachedRuneLocale;
 	static int Cached__mb_cur_max;
+	static int Cached__mb_sb_limit;
 	static size_t (*Cached__mbrtowc)(wchar_t * __restrict,
 	    const char * __restrict, size_t, mbstate_t * __restrict);
 	static size_t (*Cached__wcrtomb)(char * __restrict, wchar_t,
@@ -89,6 +88,7 @@ __setrunelocale(const char *encoding)
 	    strcmp(encoding, ctype_encoding) == 0) {
 		_CurrentRuneLocale = CachedRuneLocale;
 		__mb_cur_max = Cached__mb_cur_max;
+		__mb_sb_limit = Cached__mb_sb_limit;
 		__mbrtowc = Cached__mbrtowc;
 		__mbsinit = Cached__mbsinit;
 		__mbsnrtowcs = Cached__mbsnrtowcs;
@@ -151,6 +151,7 @@ __setrunelocale(const char *encoding)
 		}
 		CachedRuneLocale = _CurrentRuneLocale;
 		Cached__mb_cur_max = __mb_cur_max;
+		Cached__mb_sb_limit = __mb_sb_limit;
 		Cached__mbrtowc = __mbrtowc;
 		Cached__mbsinit = __mbsinit;
 		Cached__mbsnrtowcs = __mbsnrtowcs;

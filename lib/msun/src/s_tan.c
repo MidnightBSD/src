@@ -11,7 +11,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_tan.c,v 1.9 2003/07/23 04:53:47 peter Exp $";
+static char rcsid[] = "$FreeBSD: src/lib/msun/src/s_tan.c,v 1.10 2005/11/02 14:01:45 bde Exp $";
 #endif
 
 /* tan(x)
@@ -58,7 +58,11 @@ tan(double x)
 
     /* |x| ~< pi/4 */
 	ix &= 0x7fffffff;
-	if(ix <= 0x3fe921fb) return __kernel_tan(x,z,1);
+	if(ix <= 0x3fe921fb) {
+	    if(ix<0x3e300000)			/* x < 2**-28 */
+		if((int)x==0) return x;		/* generate inexact */
+	    return __kernel_tan(x,z,1);
+	}
 
     /* tan(Inf or NaN) is NaN */
 	else if (ix>=0x7ff00000) return x-x;		/* NaN */

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/gai_strerror.c,v 1.1 2005/04/06 12:45:51 ume Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/gai_strerror.c,v 1.2 2006/05/21 11:22:31 ume Exp $");
 
 #include <netdb.h>
 
@@ -48,7 +48,8 @@ static const char *ai_errlist[] = {
 	"ai_socktype not supported", 			/* EAI_SOCKTYPE */
 	"System error returned in errno", 		/* EAI_SYSTEM */
 	"Invalid value for hints",			/* EAI_BADHINTS */
-	"Resolved protocol is unknown"			/* EAI_PROTOCOL */
+	"Resolved protocol is unknown",			/* EAI_PROTOCOL */
+	"Argument buffer overflow"			/* EAI_OVERFLOW */
 };
 
 const char *

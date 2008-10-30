@@ -1,5 +1,5 @@
 #	from @(#)Makefile.inc	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/lib/libc/quad/Makefile.inc,v 1.9 2002/11/18 09:50:56 ru Exp $
+# $FreeBSD: src/lib/libc/quad/Makefile.inc,v 1.11 2007/07/06 13:42:24 deischen Exp $
 
 # Quad support, if needed
 .PATH: ${.CURDIR}/${MACHINE_ARCH}/quad ${.CURDIR}/quad
@@ -17,3 +17,5 @@ SRCS+=	adddi3.c anddi3.c ashldi3.c ashrdi3.c cmpdi2.c divdi3.c fixdfdi.c \
 	xordi3.c
 
 .endif
+
+SYM_MAPS+=${.CURDIR}/quad/Symbol.map

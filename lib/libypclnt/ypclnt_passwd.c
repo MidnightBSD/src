@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libypclnt/ypclnt_passwd.c,v 1.6 2003/06/15 10:36:53 mbr Exp $
+ * $FreeBSD: src/lib/libypclnt/ypclnt_passwd.c,v 1.7 2006/07/28 21:34:37 stefanf Exp $
  */
 
 #include <sys/types.h>
@@ -119,13 +119,10 @@ ypclnt_passwd(ypclnt_t *ypclnt, const struct passwd *pwd, const char *passwd)
 {
 	switch (ypclnt_havepasswdd(ypclnt)) {
 	case 0:
-		YPCLNT_DEBUG("using remote update method");
 		return (yppasswd_remote(ypclnt, pwd, passwd));
 	case 1:
-		YPCLNT_DEBUG("using local update method");
 		return (yppasswd_local(ypclnt, pwd));
 	default:
-		YPCLNT_DEBUG("no rpc.yppasswdd");
 		return (-1);
 	}
 }

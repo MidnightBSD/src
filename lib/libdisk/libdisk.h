@@ -6,7 +6,7 @@
 * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 * ----------------------------------------------------------------------------
 *
-* $FreeBSD: src/lib/libdisk/libdisk.h,v 1.62 2004/04/21 23:21:13 grehan Exp $
+* $FreeBSD: src/lib/libdisk/libdisk.h,v 1.63 2006/01/25 11:24:37 cognet Exp $
 *
 */
 
@@ -28,7 +28,8 @@ enum platform {
 	p_sparc64,
 	p_ia64,
 	p_ppc,
-	p_amd64
+	p_amd64,
+	p_arm
 };
 extern const enum platform platform;
 

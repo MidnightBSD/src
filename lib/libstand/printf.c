@@ -15,10 +15,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -39,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libstand/printf.c,v 1.8 2003/04/06 05:25:48 peter Exp $");
+__FBSDID("$FreeBSD: src/lib/libstand/printf.c,v 1.10 2007/01/09 01:02:04 imp Exp $");
 
 /*
  * Standaloneified version of the FreeBSD kernel printf family.
@@ -60,7 +56,7 @@ __FBSDID("$FreeBSD: src/lib/libstand/printf.c,v 1.8 2003/04/06 05:25:48 peter Ex
 
 #define MAXNBUF (sizeof(intmax_t) * CHAR_BIT + 1)
 
-static char	*ksprintn (char *buf, uintmax_t num, int base, int *len);
+static char	*ksprintn (char *buf, uintmax_t num, int base, int *len, int upper);
 static int	kvprintf(char const *fmt, void (*func)(int), void *arg, int radix, va_list ap);
 
 int
@@ -111,14 +107,15 @@ vsprintf(char *buf, const char *cfmt, va_list ap)
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
 static char *
-ksprintn(char *nbuf, uintmax_t num, int base, int *lenp)
+ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
 {
-	char *p;
+	char *p, c;
 
 	p = nbuf;
 	*p = '\0';
 	do {
-		*++p = hex2ascii(num % base);
+		c = hex2ascii(num % base);
+		*++p = upper ? toupper(c) : c;
 	} while (num /= base);
 	if (lenp)
 		*lenp = p - nbuf;
@@ -163,7 +160,7 @@ kvprintf(char const *fmt, void (*func)(int), void *arg, int radix, va_list ap)
 	uintmax_t num;
 	int base, lflag, qflag, tmp, width, ladjust, sharpflag, neg, sign, dot;
 	int jflag, tflag, zflag;
-	int dwidth;
+	int dwidth, upper;
 	char padc;
 	int retval = 0;
 
@@ -189,7 +186,7 @@ kvprintf(char const *fmt, void (*func)(int), void *arg, int radix, va_list ap)
 		}
 		percent = fmt - 1;
 		qflag = 0; lflag = 0; ladjust = 0; sharpflag = 0; neg = 0;
-		sign = 0; dot = 0; dwidth = 0;
+		sign = 0; dot = 0; dwidth = 0; upper = 0;
 		jflag = 0; tflag = 0; zflag = 0;
 reswitch:	switch (ch = (u_char)*fmt++) {
 		case '.':
@@ -239,7 +236,7 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 		case 'b':
 			num = va_arg(ap, int);
 			p = va_arg(ap, char *);
-			for (q = ksprintn(nbuf, num, *p++, NULL); *q;)
+			for (q = ksprintn(nbuf, num, *p++, NULL, 0); *q;)
 				PCHAR(*q--);
 
 			if (num == 0)
@@ -347,8 +344,9 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 		case 'u':
 			base = 10;
 			goto handle_nosign;
-		case 'x':
 		case 'X':
+			upper = 1;
+		case 'x':
 			base = 16;
 			goto handle_nosign;
 		case 'y':
@@ -391,7 +389,7 @@ number:
 				neg = 1;
 				num = -(intmax_t)num;
 			}
-			p = ksprintn(nbuf, num, base, &tmp);
+			p = ksprintn(nbuf, num, base, &tmp, upper);
 			if (sharpflag && num != 0) {
 				if (base == 8)
 					tmp++;

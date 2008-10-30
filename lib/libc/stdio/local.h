@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -34,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)local.h	8.3 (Berkeley) 7/3/94
- * $FreeBSD: src/lib/libc/stdio/local.h,v 1.26.8.1 2005/12/23 06:07:43 davidxu Exp $
+ * $FreeBSD: src/lib/libc/stdio/local.h,v 1.30 2007/01/09 00:28:06 imp Exp $
  */
 
 #include <sys/types.h>	/* for off_t */
@@ -53,6 +49,7 @@ extern fpos_t	_sseek(FILE *, fpos_t, int);
 extern int	_ftello(FILE *, fpos_t *);
 extern int	_fseeko(FILE *, off_t, int, int);
 extern int	__fflush(FILE *fp);
+extern void	__fcloseall(void);
 extern wint_t	__fgetwc(FILE *);
 extern wint_t	__fputwc(wchar_t, FILE *);
 extern int	__sflush(FILE *);
@@ -65,7 +62,6 @@ extern fpos_t	__sseek(void *, fpos_t, int);
 extern int	__sclose(void *);
 extern void	__sinit(void);
 extern void	_cleanup(void);
-extern void	(*__cleanup)(void);
 extern void	__smakebuf(FILE *);
 extern int	__swhatbuf(FILE *, size_t *, int *);
 extern int	_fwalk(int (*)(FILE *));

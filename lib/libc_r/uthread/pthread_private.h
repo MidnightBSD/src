@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +28,7 @@
  *
  * Private thread definitions for the uthread kernel.
  *
- * $FreeBSD: src/lib/libc_r/uthread/pthread_private.h,v 1.87 2005/05/31 19:57:23 jhb Exp $
+ * $FreeBSD: src/lib/libc_r/uthread/pthread_private.h,v 1.88 2007/01/12 07:25:24 imp Exp $
  */
 
 #ifndef _PTHREAD_PRIVATE_H

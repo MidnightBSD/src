@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -35,7 +31,7 @@
  *
  *	@(#)SYS.h	5.5 (Berkeley) 5/7/91
  *	from: FreeBSD: src/lib/libc/i386/SYS.h,v 1.20 2001/01/29
- * $FreeBSD: src/lib/libc/sparc64/SYS.h,v 1.4 2002/03/22 23:41:58 obrien Exp $
+ * $FreeBSD: src/lib/libc/sparc64/SYS.h,v 1.6 2007/07/04 23:18:38 peter Exp $
  */
 
 #include <sys/syscall.h>
@@ -82,8 +78,7 @@ ENTRY(__CONCAT(__sys_,x)) ; \
 	.weak	CNAME(__CONCAT(_,x)) ; \
 	.type	CNAME(__CONCAT(_,x)),@function ; \
 	.set	CNAME(__CONCAT(_,x)),CNAME(__CONCAT(__sys_,x)) ; \
-	mov	__CONCAT(SYS_,x), %g1 ; \
-	ta	%xcc, ST_SYSCALL ; \
+	_SYSCALL(x) ; \
 	retl ; \
 	 nop ; \
 	.size	CNAME(__CONCAT(__sys_,x)), . - CNAME(__CONCAT(__sys_,x)) ; \

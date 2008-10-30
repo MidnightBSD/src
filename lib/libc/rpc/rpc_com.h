@@ -28,7 +28,7 @@
  * 2550 Garcia Avenue
  * Mountain View, California  94043
  *
- * $FreeBSD: src/lib/libc/rpc/rpc_com.h,v 1.7 2003/02/27 13:40:01 nectar Exp $
+ * $FreeBSD: src/lib/libc/rpc/rpc_com.h,v 1.8 2006/02/27 22:10:59 deischen Exp $
  */
 /*
  * Copyright (c) 1986 - 1991 by Sun Microsystems, Inc.
@@ -74,8 +74,6 @@ int __rpc_socktype2seman(int);
 void *rpc_nullproc(CLIENT *);
 int __rpc_sockisbound(int);
 
-struct netbuf *__rpcb_findaddr(rpcprog_t, rpcvers_t, const struct netconfig *,
-    const char *, CLIENT **);
 struct netbuf *__rpcb_findaddr_timed(rpcprog_t, rpcvers_t,
     const struct netconfig *, const char *host, CLIENT **clpp,
     struct timeval *tp);

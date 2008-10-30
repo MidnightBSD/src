@@ -31,7 +31,7 @@
  *
  *	@(#)prompt.h	8.1 (Berkeley) 6/4/93
  *	$NetBSD: prompt.h,v 1.6 2003/08/07 16:44:32 agc Exp $
- * $FreeBSD: src/lib/libedit/prompt.h,v 1.2.14.1 2005/10/09 03:44:01 delphij Exp $
+ * $FreeBSD: src/lib/libedit/prompt.h,v 1.3 2005/08/07 20:51:52 stefanf Exp $
  */
 
 /*

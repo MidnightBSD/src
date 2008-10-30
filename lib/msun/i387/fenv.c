@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/msun/i387/fenv.c,v 1.2 2005/03/17 22:21:46 das Exp $
+ * $FreeBSD: src/lib/msun/i387/fenv.c,v 1.3 2007/01/05 07:15:26 das Exp $
  */
 
 #include <sys/cdefs.h>
@@ -117,19 +117,18 @@ feraiseexcept(int excepts)
 int
 fegetenv(fenv_t *envp)
 {
-	int control, mxcsr;
+	int mxcsr;
 
-	/*
-	 * fnstenv masks all exceptions, so we need to save and
-	 * restore the control word to avoid this side effect.
-	 */
-	__fnstcw(&control);
 	__fnstenv(envp);
+	/*
+	 * fnstenv masks all exceptions, so we need to restore
+	 * the old control word to avoid this side effect.
+	 */
+	__fldcw(envp->__control);
 	if (__HAS_SSE()) {
 		__stmxcsr(&mxcsr);
 		__set_mxcsr(*envp, mxcsr);
 	}
-	__fldcw(control);
 	return (0);
 }
 

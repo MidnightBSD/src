@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_exec/pam_exec.c,v 1.4.2.1 2005/09/19 20:56:10 cperciva Exp $");
+__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_exec/pam_exec.c,v 1.6 2006/11/10 23:33:25 des Exp $");
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -63,8 +63,9 @@ static int
 _pam_exec(pam_handle_t *pamh __unused, int flags __unused,
     int argc, const char *argv[])
 {
-	int childerr, envlen, i, nitems, pam_err, status;
+	int envlen, i, nitems, pam_err, status;
 	char *env, **envlist, **tmp;
+	volatile int childerr;
 	pid_t pid;
 
 	if (argc < 1)

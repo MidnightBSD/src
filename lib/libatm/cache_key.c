@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libatm/cache_key.c,v 1.9 2003/07/29 13:35:03 harti Exp $");
+__FBSDID("$FreeBSD: src/lib/libatm/cache_key.c,v 1.10 2007/04/04 03:24:01 kan Exp $");
 
 /*
  * User Space Library Functions
@@ -69,7 +69,8 @@ void
 scsp_cache_key(const Atm_addr *ap, const struct in_addr *ip, int ol, char *op)
 {
 	int	i, len;
-	char	buff[32], digest[16];
+	char	buff[32];
+        unsigned char digest[16];
 	MD5_CTX	context;
 
 	/*

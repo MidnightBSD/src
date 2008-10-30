@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by John Birrell.
- * 4. Neither the name of the author nor the names of any co-contributors
+ * 3. Neither the name of the author nor the names of any co-contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libc/include/libc_private.h,v 1.12 2004/08/15 16:18:03 dfr Exp $
+ * $FreeBSD: src/lib/libc/include/libc_private.h,v 1.17 2007/07/04 23:27:38 peter Exp $
  *
  * Private definitions for libc, libc_r and libpthread.
  *
@@ -70,23 +67,51 @@ extern int	__isthreaded;
  * libraries that reference it (libc_r, libpthread).
  */
 typedef enum {
+	PJT_ATFORK,
+	PJT_ATTR_DESTROY,
+	PJT_ATTR_GETDETACHSTATE,
+	PJT_ATTR_GETGUARDSIZE,
+	PJT_ATTR_GETINHERITSCHED,
+	PJT_ATTR_GETSCHEDPARAM,
+	PJT_ATTR_GETSCHEDPOLICY,
+	PJT_ATTR_GETSCOPE,
+	PJT_ATTR_GETSTACKADDR,
+	PJT_ATTR_GETSTACKSIZE,
+	PJT_ATTR_INIT,
+	PJT_ATTR_SETDETACHSTATE,
+	PJT_ATTR_SETGUARDSIZE,
+	PJT_ATTR_SETINHERITSCHED,
+	PJT_ATTR_SETSCHEDPARAM,
+	PJT_ATTR_SETSCHEDPOLICY,
+	PJT_ATTR_SETSCOPE,
+	PJT_ATTR_SETSTACKADDR,
+	PJT_ATTR_SETSTACKSIZE,
+	PJT_CANCEL,
+	PJT_CLEANUP_POP,
+	PJT_CLEANUP_PUSH,
 	PJT_COND_BROADCAST,
 	PJT_COND_DESTROY,
 	PJT_COND_INIT,
 	PJT_COND_SIGNAL,
+	PJT_COND_TIMEDWAIT,
 	PJT_COND_WAIT,
+	PJT_DETACH,
+	PJT_EQUAL,
+	PJT_EXIT,
 	PJT_GETSPECIFIC,
+	PJT_JOIN,
 	PJT_KEY_CREATE,
 	PJT_KEY_DELETE,
+	PJT_KILL,
 	PJT_MAIN_NP,
+	PJT_MUTEXATTR_DESTROY,
+	PJT_MUTEXATTR_INIT,
+	PJT_MUTEXATTR_SETTYPE,
 	PJT_MUTEX_DESTROY,
 	PJT_MUTEX_INIT,
 	PJT_MUTEX_LOCK,
 	PJT_MUTEX_TRYLOCK,
 	PJT_MUTEX_UNLOCK,
-	PJT_MUTEXATTR_DESTROY,
-	PJT_MUTEXATTR_INIT,
-	PJT_MUTEXATTR_SETTYPE,
 	PJT_ONCE,
 	PJT_RWLOCK_DESTROY,
 	PJT_RWLOCK_INIT,
@@ -96,8 +121,11 @@ typedef enum {
 	PJT_RWLOCK_UNLOCK,
 	PJT_RWLOCK_WRLOCK,
 	PJT_SELF,
+	PJT_SETCANCELSTATE,
+	PJT_SETCANCELTYPE,
 	PJT_SETSPECIFIC,
 	PJT_SIGMASK,
+	PJT_TESTCANCEL,
 	PJT_MAX
 } pjt_index_t;
 
@@ -130,9 +158,38 @@ void _set_tp(void *tp);
 extern const char *__progname;
 
 /*
- * This is the lock to make malloc() thread-safe.  It is externalized
- * so that thread libraries can protect malloc across fork().
+ * These functions are used by the threading libraries in order to protect
+ * malloc across fork().
  */
-extern struct _spinlock *__malloc_lock;
+void _malloc_prefork(void);
+void _malloc_postfork(void);
+
+/*
+ * Function to clean up streams, called from abort() and exit().
+ */
+extern void (*__cleanup)(void);
+
+/*
+ * Get kern.osreldate to detect ABI revisions.  Explicitly
+ * ignores value of $OSVERSION and caches result.  Prototypes
+ * for the wrapped "new" pad-less syscalls are here for now.
+ */
+extern int __getosreldate(void);
+#include <sys/_types.h>
+/* Without pad */
+extern __off_t	__sys_lseek(int, __off_t, int);
+extern int	__sys_ftruncate(int, __off_t);
+extern int	__sys_truncate(const char *, __off_t);
+extern __ssize_t __sys_pread(int, void *, __size_t, __off_t);
+extern __ssize_t __sys_pwrite(int, const void *, __size_t, __off_t);
+extern void *	__sys_mmap(void *, __size_t, int, int, int, __off_t);
+
+/* With pad */
+extern __off_t	__sys_freebsd6_lseek(int, int, __off_t, int);
+extern int	__sys_freebsd6_ftruncate(int, int, __off_t);
+extern int	__sys_freebsd6_truncate(const char *, int, __off_t);
+extern __ssize_t __sys_freebsd6_pread(int, void *, __size_t, int, __off_t);
+extern __ssize_t __sys_freebsd6_pwrite(int, const void *, __size_t, int, __off_t);
+extern void *	__sys_freebsd6_mmap(void *, __size_t, int, int, int, int, __off_t);
 
 #endif /* _LIBC_PRIVATE_H_ */

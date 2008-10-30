@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/gdtoa/_hdtoa.c,v 1.3 2005/01/18 18:44:07 das Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/gdtoa/_hdtoa.c,v 1.5 2007/05/08 02:59:37 das Exp $");
 
 #include <float.h>
 #include <limits.h>
@@ -55,7 +55,7 @@ roundup(char *s0, int ndigits)
 			*s = 1;
 			return (1);
 		}
-		++*s;
+		*s = 0;
 	}
 	++*s;
 	return (0);
@@ -78,7 +78,7 @@ dorounding(char *s0, int ndigits, int sign, int *decpt)
 		break;
 	case 1:		/* to nearest, halfway rounds to even */
 		if ((s0[ndigits] > 8) ||
-		    (s0[ndigits] == 8 && s0[ndigits - 1] & 1))
+		    (s0[ndigits] == 8 && s0[ndigits + 1] & 1))
 			adjust = roundup(s0, ndigits);
 		break;
 	case 2:		/* toward +inf */

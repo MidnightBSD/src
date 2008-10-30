@@ -1,10 +1,10 @@
 # Makefile for libopie
 #
-# $FreeBSD: src/lib/libopie/Makefile,v 1.20.2.1 2005/07/22 17:29:07 kensmith Exp $
+# $FreeBSD: src/lib/libopie/Makefile,v 1.22 2007/05/21 02:49:06 deischen Exp $
 #
 OPIE_DIST?=	${.CURDIR}/../../contrib/opie
 DIST_DIR=	${OPIE_DIST}/${.CURDIR:T}
-SHLIB_MAJOR=    4
+SHLIB_MAJOR=    5
 
 KEYFILE?=	\"/etc/opiekeys\"
 

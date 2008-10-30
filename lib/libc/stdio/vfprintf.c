@@ -13,10 +13,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,7 +34,7 @@
 static char sccsid[] = "@(#)vfprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/stdio/vfprintf.c,v 1.69 2005/04/16 22:36:51 das Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/stdio/vfprintf.c,v 1.77 2007/05/08 03:08:28 das Exp $");
 
 /*
  * Actual printf innards.
@@ -58,6 +54,7 @@ __FBSDID("$FreeBSD: src/lib/libc/stdio/vfprintf.c,v 1.69 2005/04/16 22:36:51 das
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
+#include <printf.h>
 
 #include <stdarg.h>
 #include "un-namespace.h"
@@ -331,9 +328,9 @@ __ujtoa(uintmax_t val, char *endp, int base, int octzero, const char *xdigs,
 
 /*
  * Convert a wide character string argument for the %ls format to a multibyte
- * string representation. ``prec'' specifies the maximum number of bytes
- * to output. If ``prec'' is greater than or equal to zero, we can't assume
- * that the wide char. string ends in a null character.
+ * string representation. If not -1, prec specifies the maximum number of
+ * bytes to output, and also means that we can't assume that the wide char.
+ * string ends is null-terminated.
  */
 static char *
 __wcsconv(wchar_t *wcsarg, int prec)
@@ -342,53 +339,49 @@ __wcsconv(wchar_t *wcsarg, int prec)
 	mbstate_t mbs;
 	char buf[MB_LEN_MAX];
 	wchar_t *p;
-	char *convbuf, *mbp;
+	char *convbuf;
 	size_t clen, nbytes;
 
-	/*
-	 * Determine the number of bytes to output and allocate space for
-	 * the output.
-	 */
-	if (prec >= 0) {
-		nbytes = 0;
-		p = wcsarg;
-		mbs = initial;
-		for (;;) {
-			clen = wcrtomb(buf, *p++, &mbs);
-			if (clen == 0 || clen == (size_t)-1 ||
-			    nbytes + clen > prec)
-				break;
-			nbytes += clen;
-		}
-	} else {
+	/* Allocate space for the maximum number of bytes we could output. */
+	if (prec < 0) {
 		p = wcsarg;
 		mbs = initial;
 		nbytes = wcsrtombs(NULL, (const wchar_t **)&p, 0, &mbs);
 		if (nbytes == (size_t)-1)
 			return (NULL);
+	} else {
+		/*
+		 * Optimisation: if the output precision is small enough,
+		 * just allocate enough memory for the maximum instead of
+		 * scanning the string.
+		 */
+		if (prec < 128)
+			nbytes = prec;
+		else {
+			nbytes = 0;
+			p = wcsarg;
+			mbs = initial;
+			for (;;) {
+				clen = wcrtomb(buf, *p++, &mbs);
+				if (clen == 0 || clen == (size_t)-1 ||
+				    nbytes + clen > prec)
+					break;
+				nbytes += clen;
+			}
+		}
 	}
 	if ((convbuf = malloc(nbytes + 1)) == NULL)
 		return (NULL);
 
-	/*
-	 * Fill the output buffer with the multibyte representations of as
-	 * many wide characters as will fit.
-	 */
-	mbp = convbuf;
+	/* Fill the output buffer. */
 	p = wcsarg;
 	mbs = initial;
-	while (mbp - convbuf < nbytes) {
-		clen = wcrtomb(mbp, *p++, &mbs);
-		if (clen == 0 || clen == (size_t)-1)
-			break;
-		mbp += clen;
-	}
-	if (clen == (size_t)-1) {
+	if ((nbytes = wcsrtombs(convbuf, (const wchar_t **)&p,
+	    nbytes, &mbs)) == (size_t)-1) {
 		free(convbuf);
 		return (NULL);
 	}
-	*mbp = '\0';
-
+	convbuf[nbytes] = '\0';
 	return (convbuf);
 }
 
@@ -470,6 +463,12 @@ __vfprintf(FILE *fp, const char *fmt0, va_list ap)
 	char sign;		/* sign prefix (' ', '+', '-', or \0) */
 	char thousands_sep;	/* locale specific thousands separator */
 	const char *grouping;	/* locale specific numeric grouping rules */
+
+	if (__use_xprintf == 0 && getenv("USE_XPRINTF"))
+		__use_xprintf = 1;
+	if (__use_xprintf > 0)
+		return (__xvprintf(fp, fmt0, ap));
+
 #ifndef NO_FLOATING_POINT
 	/*
 	 * We can decompose the printed representation of floating
@@ -909,6 +908,7 @@ fp_common:
 				} else
 					cp = (ch >= 'a') ? "inf" : "INF";
 				size = 3;
+				flags &= ~ZEROPAD;
 				break;
 			}
 			flags |= FPT;
@@ -1543,7 +1543,7 @@ done:
 			(*argtable) [n].sizearg = va_arg (ap, size_t);
 			break;
 		    case TP_SIZET:
-			(*argtable) [n].psizearg = va_arg (ap, ssize_t *);
+			(*argtable) [n].psizearg = va_arg (ap, size_t *);
 			break;
 		    case T_INTMAXT:
 			(*argtable) [n].intmaxarg = va_arg (ap, intmax_t);
@@ -1554,14 +1554,16 @@ done:
 		    case TP_INTMAXT:
 			(*argtable) [n].pintmaxarg = va_arg (ap, intmax_t *);
 			break;
-#ifndef NO_FLOATING_POINT
 		    case T_DOUBLE:
+#ifndef NO_FLOATING_POINT
 			(*argtable) [n].doublearg = va_arg (ap, double);
+#endif
 			break;
 		    case T_LONG_DOUBLE:
+#ifndef NO_FLOATING_POINT
 			(*argtable) [n].longdoublearg = va_arg (ap, long double);
-			break;
 #endif
+			break;
 		    case TP_CHAR:
 			(*argtable) [n].pchararg = va_arg (ap, char *);
 			break;

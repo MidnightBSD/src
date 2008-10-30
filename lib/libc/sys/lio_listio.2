@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/lib/libc/sys/lio_listio.2,v 1.2 2003/06/01 19:19:59 ru Exp $
+.\" $FreeBSD: src/lib/libc/sys/lio_listio.2,v 1.6 2006/10/07 05:13:32 trhodes Exp $
 .\"
 .Dd January 12, 2003
 .Dt LIO_LISTIO 2
@@ -37,7 +37,7 @@
 .Ft int
 .Fo lio_listio
 .Fa "int mode"
-.Fa "struct aiocb * const [] list"
+.Fa "struct aiocb * const list[]"
 .Fa "int nent"
 .Fa "struct sigevent *sig"
 .Fc
@@ -112,7 +112,7 @@ is
 .Dv LIO_NOWAIT ,
 the
 .Fn lio_listio
-function 0 if the operations are successfully queued,
+function returns 0 if the operations are successfully queued,
 otherwise \-1.
 .Sh ERRORS
 The
@@ -166,6 +166,7 @@ structure individually by calling
 .Xr aio_write 2 ,
 .Xr read 2 ,
 .Xr write 2 ,
+.Xr siginfo 3 ,
 .Xr aio 4
 .Sh STANDARDS
 The

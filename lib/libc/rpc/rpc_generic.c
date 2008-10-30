@@ -34,7 +34,7 @@
 
 /* #pragma ident	"@(#)rpc_generic.c	1.17	94/04/24 SMI" */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/rpc/rpc_generic.c,v 1.12 2003/10/29 09:20:33 mbr Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/rpc/rpc_generic.c,v 1.14 2007/09/20 22:35:24 matteo Exp $");
 
 /*
  * rpc_generic.c, Miscl routines for RPC.
@@ -63,6 +63,7 @@ __FBSDID("$FreeBSD: src/lib/libc/rpc/rpc_generic.c,v 1.12 2003/10/29 09:20:33 mb
 #include <rpc/nettype.h>
 #include "un-namespace.h"
 #include "rpc_com.h"
+#include "mt_misc.h"
 
 struct handle {
 	NCONF_HANDLE *nhandle;
@@ -236,7 +237,6 @@ __rpc_getconfip(nettype)
 	struct netconfig *dummy;
 	int main_thread;
 	static thread_key_t tcp_key, udp_key;
-	extern mutex_t tsd_lock;
 
 	if ((main_thread = thr_main())) {
 		netid_udp = netid_udp_main;
@@ -319,10 +319,8 @@ __rpc_setconf(nettype)
 	case _RPC_NETPATH:
 	case _RPC_CIRCUIT_N:
 	case _RPC_DATAGRAM_N:
-		if (!(handle->nhandle = setnetpath())) {
-			free(handle);
-			return (NULL);
-		}
+		if (!(handle->nhandle = setnetpath()))
+			goto failed;
 		handle->nflag = TRUE;
 		break;
 	case _RPC_VISIBLE:
@@ -332,16 +330,19 @@ __rpc_setconf(nettype)
 	case _RPC_UDP:
 		if (!(handle->nhandle = setnetconfig())) {
 		        syslog (LOG_ERR, "rpc: failed to open " NETCONFIG);
-			free(handle);
-			return (NULL);
+			goto failed;
 		}
 		handle->nflag = FALSE;
 		break;
 	default:
-		return (NULL);
+		goto failed;
 	}
 
 	return (handle);
+
+failed:
+	free(handle);
+	return (NULL);
 }
 
 /*

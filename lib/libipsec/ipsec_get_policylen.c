@@ -30,12 +30,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libipsec/ipsec_get_policylen.c,v 1.3 2001/09/30 21:43:45 dillon Exp $");
+__FBSDID("$FreeBSD: src/lib/libipsec/ipsec_get_policylen.c,v 1.4 2007/07/01 12:08:05 gnn Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
 
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 
 #include <net/pfkeyv2.h>
 

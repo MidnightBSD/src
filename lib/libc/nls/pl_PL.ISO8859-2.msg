@@ -1,4 +1,4 @@
-$ $FreeBSD: src/lib/libc/nls/pl_PL.ISO8859-2.msg,v 1.1 2005/03/01 14:38:30 pjd Exp $
+$ $FreeBSD: src/lib/libc/nls/pl_PL.ISO8859-2.msg,v 1.2 2005/07/23 21:30:35 pjd Exp $
 $
 $ Message catalog for pl_PL.ISO8859-2 locale
 $
@@ -62,7 +62,7 @@ $ EFBIG
 $ ENOSPC
 28 Brak miejsca na urz±dzeniu
 $ ESPIPE
-29 B³êdne przesuniêcie
+29 Przesuniêcie niemo¿liwe
 $ EROFS
 30 System plików tylko do odczytu
 $ EMLINK

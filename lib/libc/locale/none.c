@@ -14,10 +14,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -39,7 +35,7 @@
 static char sccsid[] = "@(#)none.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/none.c,v 1.13 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/none.c,v 1.14.2.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <errno.h>
 #include <limits.h>
@@ -62,6 +58,11 @@ static size_t	_none_wcrtomb(char * __restrict, wchar_t,
 static size_t	_none_wcsnrtombs(char * __restrict, const wchar_t ** __restrict,
 		    size_t, size_t, mbstate_t * __restrict);
 
+/* setup defaults */
+
+int __mb_cur_max = 1;
+int __mb_sb_limit = 256; /* Expected to be <= _CACHED_RUNES */
+
 int
 _none_init(_RuneLocale *rl)
 {
@@ -73,6 +74,7 @@ _none_init(_RuneLocale *rl)
 	__wcsnrtombs = _none_wcsnrtombs;
 	_CurrentRuneLocale = rl;
 	__mb_cur_max = 1;
+	__mb_sb_limit = 256;
 	return(0);
 }
 
@@ -180,7 +182,6 @@ _none_wcsnrtombs(char * __restrict dst, const wchar_t ** __restrict src,
 
 /* setup defaults */
 
-int __mb_cur_max = 1;
 size_t (*__mbrtowc)(wchar_t * __restrict, const char * __restrict, size_t,
     mbstate_t * __restrict) = _none_mbrtowc;
 int (*__mbsinit)(const mbstate_t *) = _none_mbsinit;

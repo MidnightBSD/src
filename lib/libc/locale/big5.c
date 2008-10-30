@@ -39,7 +39,7 @@
 static char sccsid[] = "@(#)big5.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/locale/big5.c,v 1.17 2005/02/27 15:11:09 phantom Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/locale/big5.c,v 1.17.10.1 2007/10/24 14:29:31 rafan Exp $");
 
 #include <sys/types.h>
 #include <errno.h>
@@ -48,6 +48,8 @@ __FBSDID("$FreeBSD: src/lib/libc/locale/big5.c,v 1.17 2005/02/27 15:11:09 phanto
 #include <string.h>
 #include <wchar.h>
 #include "mblocal.h"
+
+extern int __mb_sb_limit;
 
 static size_t	_BIG5_mbrtowc(wchar_t * __restrict, const char * __restrict,
 		    size_t, mbstate_t * __restrict);
@@ -68,6 +70,7 @@ _BIG5_init(_RuneLocale *rl)
 	__mbsinit = _BIG5_mbsinit;
 	_CurrentRuneLocale = rl;
 	__mb_cur_max = 2;
+	__mb_sb_limit = 128;
 	return (0);
 }
 
