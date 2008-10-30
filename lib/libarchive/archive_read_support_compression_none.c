@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_compression_none.c,v 1.17 2007/05/29 01:00:19 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_compression_none.c,v 1.17.2.1 2007/11/02 08:42:14 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -334,7 +334,7 @@ archive_decompressor_none_skip(struct archive_read *a, off_t request)
 		const void* dummy_buffer;
 		ssize_t bytes_read;
 		bytes_read = archive_decompressor_none_read_ahead(a,
-		    &dummy_buffer, request);
+		    &dummy_buffer, 1);
 		if (bytes_read < 0)
 			return (bytes_read);
 		if (bytes_read == 0) {

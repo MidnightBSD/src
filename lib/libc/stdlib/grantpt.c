@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__FBSDID("$FreeBSD: src/lib/libc/stdlib/grantpt.c,v 1.4 2005/07/07 17:48:40 marcus Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/stdlib/grantpt.c,v 1.7.2.2.2.2 2008/01/14 22:55:54 cperciva Exp $");
 #endif /* not lint */
 
 #include "namespace.h"
@@ -41,6 +41,8 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/grantpt.c,v 1.4 2005/07/07 17:48:40 marc
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/sysctl.h>
+#include <sys/ioctl.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -54,16 +56,19 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/grantpt.c,v 1.4 2005/07/07 17:48:40 marc
 #include <unistd.h>
 #include "un-namespace.h"
 
-#define PTM_PREFIX	"pty"	/* pseudo tty master naming convention */
-#define PTS_PREFIX	"tty"	/* pseudo tty slave naming convention */
+#define PTYM_PREFIX	"pty"	/* pty(4) master naming convention */
+#define PTYS_PREFIX	"tty"	/* pty(4) slave naming convention */
+#define PTMXM_PREFIX	"ptc/"	/* pts(4) master naming convention */
+#define PTMXS_PREFIX	"pts/"	/* pts(4) slave naming convention */
+#define PTMX		"ptmx"
 
 /*
  * The following are range values for pseudo TTY devices.  Pseudo TTYs have a
- * name of /dev/[pt]ty[p-sP-S][0-9a-v], yielding 256 combinations per major.
+ * name of /dev/[pt]ty[l-sL-S][0-9a-v], yielding 256 combinations per major.
  */
-#define PT_MAX		256
-#define	PT_DEV1		"pqrsPQRS"
-#define PT_DEV2		"0123456789abcdefghijklmnopqrstuv"
+#define PTY_MAX		256
+#define	PTY_DEV1	"pqrsPQRSlmnoLMNO"
+#define PTY_DEV2	"0123456789abcdefghijklmnopqrstuv"
 
 /*
  * grantpt(3) support utility.
@@ -76,7 +81,29 @@ __FBSDID("$FreeBSD: src/lib/libc/stdlib/grantpt.c,v 1.4 2005/07/07 17:48:40 marc
  */
 #define ISPTM(x)	(S_ISCHR((x).st_mode) && 			\
 			 minor((x).st_rdev) >= 0 &&			\
-			 minor((x).st_rdev) < PT_MAX)
+			 minor((x).st_rdev) < PTY_MAX)
+
+
+#if 0
+int
+__use_pts(void)
+{
+	int use_pts;
+	size_t len;
+	int error;
+
+	len = sizeof(use_pts);
+	error = sysctlbyname("kern.pts.enable", &use_pts, &len, NULL, 0);
+	if (error) {
+		struct stat sb;
+
+		if (stat(_PATH_DEV PTMX, &sb) != 0)
+			return (0);
+		use_pts = 1;
+	}
+	return (use_pts);
+}
+#endif
 
 /*
  * grantpt():  grant ownership of a slave pseudo-terminal device to the
@@ -165,7 +192,7 @@ grantpt(int fildes)
 int
 posix_openpt(int oflag)
 {
-	char *mc1, *mc2, master[] = _PATH_DEV PTM_PREFIX "XY";
+	char *mc1, *mc2, master[] = _PATH_DEV PTYM_PREFIX "XY";
 	const char *pc1, *pc2;
 	int fildes, bflag, serrno;
 
@@ -180,12 +207,18 @@ posix_openpt(int oflag)
 	if (oflag & ~(O_RDWR | O_NOCTTY))
 		errno = EINVAL;
 	else {
-		mc1 = master + strlen(_PATH_DEV PTM_PREFIX);
+#if 0
+		if (__use_pts()) {
+			fildes = _open(_PATH_DEV PTMX, oflag);
+			return (fildes);
+		}
+#endif
+		mc1 = master + strlen(_PATH_DEV PTYM_PREFIX);
 		mc2 = mc1 + 1;
 
 		/* Cycle through all possible master PTY devices. */
-		for (pc1 = PT_DEV1; !bflag && (*mc1 = *pc1); ++pc1)
-			for (pc2 = PT_DEV2; (*mc2 = *pc2) != '\0'; ++pc2) {
+		for (pc1 = PTY_DEV1; !bflag && (*mc1 = *pc1); ++pc1)
+			for (pc2 = PTY_DEV2; (*mc2 = *pc2) != '\0'; ++pc2) {
 				/*
 				 * Break out if we successfully open a PTY,
 				 * or if open() fails due to limits.
@@ -213,9 +246,22 @@ posix_openpt(int oflag)
 char *
 ptsname(int fildes)
 {
-	static char slave[] = _PATH_DEV PTS_PREFIX "XY";
+	static char pty_slave[] = _PATH_DEV PTYS_PREFIX "XY";
+#if 0
+	static char ptmx_slave[] = _PATH_DEV PTMXS_PREFIX "4294967295";
+#endif
 	const char *master;
 	struct stat sbuf;
+#if 0
+	int ptn;
+
+	/* Handle pts(4) masters first. */
+	if (_ioctl(fildes, TIOCGPTN, &ptn) == 0) {
+		(void)snprintf(ptmx_slave, sizeof(ptmx_slave),
+		    _PATH_DEV PTMXS_PREFIX "%d", ptn);
+		return (ptmx_slave);
+	}
+#endif
 
 	/* All master pty's must be char devices. */
 	if (_fstat(fildes, &sbuf) == -1)
@@ -225,15 +271,15 @@ ptsname(int fildes)
 
 	/* Check to see if this device is a pty(4) master. */
 	master = devname(sbuf.st_rdev, S_IFCHR);
-	if (strlen(master) != strlen(PTM_PREFIX "XY"))
+	if (strlen(master) != strlen(PTYM_PREFIX "XY"))
 		goto invalid;
-	if (strncmp(master, PTM_PREFIX, strlen(PTM_PREFIX)) != 0)
+	if (strncmp(master, PTYM_PREFIX, strlen(PTYM_PREFIX)) != 0)
 		goto invalid;
 
 	/* It is, so generate the corresponding pty(4) slave name. */
-	(void)snprintf(slave, sizeof(slave), _PATH_DEV PTS_PREFIX "%s",
-	    master + strlen(PTM_PREFIX));
-	return (slave);
+	(void)snprintf(pty_slave, sizeof(pty_slave), _PATH_DEV PTYS_PREFIX "%s",
+	    master + strlen(PTYM_PREFIX));
+	return (pty_slave);
 
 invalid:
 	errno = EINVAL;

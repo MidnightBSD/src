@@ -19,10 +19,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -44,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/sparc64/fpu/fpu_implode.c,v 1.6 2004/07/28 05:41:05 kan Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/sparc64/fpu/fpu_implode.c,v 1.8 2007/01/09 00:28:05 imp Exp $");
 
 /*
  * FPU subroutines: `implode' internal format numbers into the machine's
@@ -259,14 +255,15 @@ __fpu_ftox(fe, fp, res)
 
 	case FPC_NUM:
 		/*
-		 * If exp >= 2^64, overflow.  Otherwise shift value right
-		 * into last mantissa word (this will not exceed 0xffffffffffffffff),
-		 * shifting any guard and round bits out into the sticky
-		 * bit.  Then ``round'' towards zero, i.e., just set an
-		 * inexact exception if sticky is set (see round()).
-		 * If the result is > 0x8000000000000000, or is positive and equals
-		 * 0x8000000000000000, overflow; otherwise the last fraction word
-		 * is the result.
+		 * If exp >= 2^64, overflow.  Otherwise shift value
+		 * right into last mantissa word (this will not exceed
+		 * 0xffffffffffffffff), shifting any guard and round
+		 * bits out into the sticky bit.  Then ``round'' towards
+		 * zero, i.e., just set an inexact exception if sticky
+		 * is set (see round()).
+		 * If the result is > 0x8000000000000000, or is positive
+		 * and equals 0x8000000000000000, overflow; otherwise
+		 * the last fraction word is the result.
 		 */
 		if ((exp = fp->fp_exp) >= 64)
 			break;

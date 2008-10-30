@@ -1,9 +1,8 @@
 # $FreeBSD: src/lib/libarchive/Makefile,v 1.77 2007/07/15 19:10:34 kientzle Exp $
-# $MidnightBSD: src/lib/libarchive/Makefile,v 1.3 2007/09/29 22:13:40 ctriv Exp $
 
 LIB=	archive
-#DPADD=	${LIBBZ2} ${LIBZ}
-#LDADD=	-lbz2 -lz
+DPADD=	${LIBBZ2} ${LIBZ}
+LDADD=	-lbz2 -lz
 
 # The libarchive version stamp.
 # Version is three numbers:
@@ -20,8 +19,9 @@ ARCHIVE_API_REV!=	echo ${VERSION} | sed -e 's/[^0-9]/./g' -e 's/.*\.//'
 # that's not available during installworld.  Fortunately, awk is.
 ARCHIVE_VERSION_STAMP!=	echo ${ARCHIVE_API_MAJOR} ${ARCHIVE_API_MINOR} ${ARCHIVE_API_REV} | awk '{printf("%d%03d%03d",$$1,$$2,$$3)}'
 
-
-SHLIB_MAJOR= 2
+# FreeBSD SHLIB_MAJOR value is managed as part of the FreeBSD system.
+# It has no real relation to the version number above.
+SHLIB_MAJOR= 4
 
 CFLAGS+=	-DPACKAGE_NAME=\"lib${LIB}\"
 CFLAGS+=	-DPACKAGE_VERSION=\"${VERSION}\"
@@ -34,7 +34,7 @@ WARNS?=	6
 INCS=	archive.h archive_entry.h
 
 # Build archive.h from archive.h.in by substituting version information.
-# Note: mbsd has inttypes.h, so enable that include in archive.h.in
+# Note: FreeBSD has inttypes.h, so enable that include in archive.h.in
 archive.h:	archive.h.in Makefile
 	cat ${.CURDIR}/archive.h.in | sed				\
 		-e 's/@ARCHIVE_VERSION@/${VERSION}/g'	 		\
@@ -245,8 +245,6 @@ MLINKS+=	archive_write_disk.3 archive_write_disk_set_skip_file.3
 MLINKS+=	archive_write_disk.3 archive_write_disk_set_standard_lookup.3
 MLINKS+=	archive_write_disk.3 archive_write_disk_set_user_lookup.3
 MLINKS+=	libarchive.3 archive.3
-
-.PHONY: test
 
 test:
 	cd ${.CURDIR}/test && make test

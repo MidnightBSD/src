@@ -1,24 +1,32 @@
 #	@(#)Makefile	8.2 (Berkeley) 2/3/94
-# $FreeBSD: src/lib/libc/Makefile,v 1.56 2005/01/15 05:23:56 das Exp $
-# $MidnightBSD: src/lib/libc/Makefile,v 1.3 2007/03/24 07:53:53 archite Exp $
-#
-# All library objects contain FreeBSD revision strings by default; they may be
+# $FreeBSD: src/lib/libc/Makefile,v 1.73 2007/10/01 18:15:10 ru Exp $
+# $MidnightBSD$
+
+SHLIBDIR?= /lib
+
+.include <bsd.own.mk>
+
+# All library objects contain MidnightBSD revision strings by default; they may be
 # excluded as a space-saving measure.  To produce a library that does
 # not contain these strings, add -DSTRIP_FBSDID (see <sys/cdefs.h>) to CFLAGS
 # below.  Note: there are no IDs for syscall stubs whose sources are generated.
 # To include legacy CSRG sccsid strings, add -DLIBC_SCCS and -DSYSLIBC_SCCS
 # to CFLAGS below.  -DSYSLIBC_SCCS affects just the system call stubs.
 LIB=c
-# If you bump SHLIB_MAJOR, remove the kluge from gen/gethostname.c.
-# If you bump SHLIB_MAJOR, see standards/55112.
-SHLIB_MAJOR= 6
-SHLIBDIR?= /lib
+SHLIB_MAJOR= 7
 WARNS?=	2
 CFLAGS+=-I${.CURDIR}/include -I${.CURDIR}/../../include
 CFLAGS+=-I${.CURDIR}/${MACHINE_ARCH}
 CLEANFILES+=tags
 INSTALL_PIC_ARCHIVE=
 PRECIOUSLIB=
+
+#
+# Only link with static libgcc.a (no libgcc_eh.a).
+#
+DPADD+=	${LIBGCC}
+LDFLAGS+= -nodefaultlibs
+LDADD+= -lgcc
 
 # Define (empty) variables so that make doesn't give substitution
 # errors if the included makefiles don't change these:
@@ -34,15 +42,20 @@ NOASM=
 .include "${.CURDIR}/gdtoa/Makefile.inc"
 .include "${.CURDIR}/gen/Makefile.inc"
 .include "${.CURDIR}/gmon/Makefile.inc"
+.include "${.CURDIR}/inet/Makefile.inc"
+.include "${.CURDIR}/isc/Makefile.inc"
 .include "${.CURDIR}/locale/Makefile.inc"
-.include "${.CURDIR}/ohash/Makefile.inc"
+.include "${.CURDIR}/nameser/Makefile.inc"
 .include "${.CURDIR}/net/Makefile.inc"
 .include "${.CURDIR}/nls/Makefile.inc"
+.include "${.CURDIR}/ohash/Makefile.inc"
 .include "${.CURDIR}/posix1e/Makefile.inc"
-.if !defined(NO_QUAD)
+.if ${MACHINE_ARCH} != "amd64" && \
+    ${MACHINE_ARCH} != "sparc64"
 .include "${.CURDIR}/quad/Makefile.inc"
 .endif
 .include "${.CURDIR}/regex/Makefile.inc"
+.include "${.CURDIR}/resolv/Makefile.inc"
 .include "${.CURDIR}/stdio/Makefile.inc"
 .include "${.CURDIR}/stdlib/Makefile.inc"
 .include "${.CURDIR}/stdtime/Makefile.inc"
@@ -54,16 +67,26 @@ NOASM=
 .if ${MACHINE_ARCH} == "arm"
 .include "${.CURDIR}/softfloat/Makefile.inc"
 .endif
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 CFLAGS+= -DYP
 .include "${.CURDIR}/yp/Makefile.inc"
 .endif
-.if !defined(NO_HESIOD_LIBC)
+.if ${MK_HESIOD} != "no"
 CFLAGS+= -DHESIOD
 .endif
-.if defined(NO_FP_LIBC)
+.if ${MK_FP_LIBC} == "no"
 CFLAGS+= -DNO_FLOATING_POINT
 .endif
+.if ${MK_NS_CACHING} != "no"
+CFLAGS+= -DNS_CACHING
+.endif
+.if defined(_FREEFALL_CONFIG)
+CFLAGS+=-D_FREEFALL_CONFIG
+.endif
+
+VERSION_DEF=${.CURDIR}/Versions.def
+SYMBOL_MAPS=${SYM_MAPS}
+CFLAGS+= -DSYMBOL_VERSIONING
 
 # If there are no machine dependent sources, append all the
 # machine-independent sources:
@@ -95,7 +118,7 @@ libkern.${MACHINE_ARCH}:: ${KMSRCS}
 .if defined(KMSRCS) && !empty(KMSRCS)
 	cp -p ${.ALLSRC} ${DESTDIR}/sys/libkern/${MACHINE_ARCH}
 .endif
-
+        
 .include <bsd.lib.mk>
 
 # Disable warnings in contributed sources.

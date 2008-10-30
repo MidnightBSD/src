@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_zip.c,v 1.14 2007/07/15 19:13:59 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_zip.c,v 1.14.2.2 2007/12/08 07:52:40 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -335,6 +335,11 @@ zip_read_file_header(struct archive_read *a, struct archive_entry *entry,
 	zip->entry_bytes_remaining = zip->compressed_size;
 	zip->entry_offset = 0;
 
+	/* If there's no body, force read_data() to return EOF immediately. */
+	if (0 == (zip->flags & ZIP_LENGTH_AT_END)
+	    && zip->entry_bytes_remaining < 1)
+		zip->end_of_entry = 1;
+
 	/* Set up a more descriptive format name. */
 	sprintf(zip->format_name, "ZIP %d.%d (%s)",
 	    zip->version / 10, zip->version % 10,
@@ -422,6 +427,9 @@ archive_read_format_zip_read_data(struct archive_read *a,
 			/* End-of-entry cleanup done. */
 			zip->end_of_entry_cleanup = 1;
 		}
+		*offset = zip->entry_uncompressed_bytes_read;
+		*size = 0;
+		*buff = NULL;
 		return (ARCHIVE_EOF);
 	}
 
