@@ -17462,7 +17462,6 @@ lib/libc/posix1e/mac_free.3 -text
 lib/libc/posix1e/mac_get.3 -text
 lib/libc/posix1e/mac_get.c -text
 lib/libc/posix1e/mac_is_present.3 -text
-lib/libc/posix1e/mac_is_present_np.3 -text
 lib/libc/posix1e/mac_prepare.3 -text
 lib/libc/posix1e/mac_set.3 -text
 lib/libc/posix1e/mac_set.c -text
@@ -17939,7 +17938,6 @@ lib/libc/stdlib/malloc.c -text
 lib/libc/stdlib/memory.3 -text
 lib/libc/stdlib/merge.c -text
 lib/libc/stdlib/posix_memalign.3 -text
-lib/libc/stdlib/putenv.c -text
 lib/libc/stdlib/qsort.3 -text
 lib/libc/stdlib/qsort.c -text
 lib/libc/stdlib/qsort_r.c -text
@@ -17953,7 +17951,6 @@ lib/libc/stdlib/reallocf.c -text
 lib/libc/stdlib/realpath.3 -text
 lib/libc/stdlib/realpath.c -text
 lib/libc/stdlib/remque.c -text
-lib/libc/stdlib/setenv.c -text
 lib/libc/stdlib/strfmon.3 -text
 lib/libc/stdlib/strfmon.c -text
 lib/libc/stdlib/strtod.3 -text
