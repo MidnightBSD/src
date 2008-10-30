@@ -21,9 +21,9 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/lib/libpmc/pmc.3,v 1.5.2.3 2006/03/19 01:48:44 jkoshy Exp $
+.\" $FreeBSD: src/lib/libpmc/pmc.3,v 1.13 2007/04/12 09:16:54 jkoshy Exp $
 .\"
-.Dd March 19, 2006
+.Dd February 25, 2006
 .Os
 .Dt PMC 3
 .Sh NAME
@@ -68,7 +68,7 @@
 .Fa "const char *eventspecifier"
 .Fa "enum pmc_mode mode"
 .Fa "uint32_t flags"
-.Fa "uint32_t cpu"
+.Fa "int cpu"
 .Fa "pmc_id_t *pmcid"
 .Fc
 .Ft int
@@ -82,9 +82,9 @@
 .Ft int
 .Fn pmc_detach "pmc_id_t pmcid" "pid_t pid"
 .Ft int
-.Fn pmc_disable "uint32_t cpu" "int pmc"
+.Fn pmc_disable "int cpu" "int pmc"
 .Ft int
-.Fn pmc_enable "uint32_t cpu" "int pmc"
+.Fn pmc_enable "int cpu" "int pmc"
 .Ft int
 .Fo pmc_event_names_of_class
 .Fa "enum pmc_class cl"
@@ -116,9 +116,9 @@
 .Ft int
 .Fn pmc_ncpu void
 .Ft int
-.Fn pmc_npmc "uint32_t cpu"
+.Fn pmc_npmc "int cpu"
 .Ft int
-.Fn pmc_pmcinfo "uint32_t cpu" "struct pmc_pmcinfo **pmc_info"
+.Fn pmc_pmcinfo "int cpu" "struct pmc_pmcinfo **pmc_info"
 .Ft int
 .Fn pmc_read "pmc_id_t pmc" "pmc_value_t *value"
 .Ft int
@@ -191,7 +191,7 @@ information please see
 The function
 .Fn pmc_init
 initializes the
-.Xr pmc 3
+.Nm pmc
 library.
 This function must be called first, before any of the other
 functions in the library.
@@ -357,7 +357,10 @@ The function
 .Fn pmc_cpuinfo
 sets argument
 .Fa cpu_info
-to point to a structure with information about the system's CPUs.
+to point to an internal structure with information about the system's CPUs.
+The caller should not
+.Fn free
+this pointer value.
 Function
 .Fn pmc_pmcinfo
 returns information about the current state of CPU
@@ -435,7 +438,7 @@ events.
 Event name aliases are CPU architecture independent names for commonly
 used events.
 The following aliases are known to this version of the
-.Xr pmc 3
+.Nm pmc
 library:
 .Bl -tag -width indent
 .It Li branches
@@ -1597,7 +1600,8 @@ Count the weighted number of cycles while a data cache unit miss is
 outstanding, incremented by the number of outstanding cache misses at
 any time.
 .It Li p6-div
-Count the number of floating point multiplies.
+Count the number of integer and floating-point divides including
+speculative divides.
 This event is only allocated on counter 1.
 .It Li p6-emon-esp-uops
 .Pq Tn "Pentium M"
@@ -2043,7 +2047,8 @@ Count the number of MMX saturating instructions executed.
 .Pq Tn "Pentium II" , Tn "Pentium III"
 Count the number of MMX micro-ops executed.
 .It Li p6-mul
-Count the number of floating point multiplies.
+Count the number of integer and floating-point multiplies, including
+speculative multiplies.
 This event is only allocated on counter 1.
 .It Li p6-partial-rat-stalls
 Count the number of cycles or events for partial stalls.
@@ -3268,7 +3273,7 @@ is returned and the global variable
 is set to indicate the error.
 .Sh COMPATIBILITY
 The interface between the
-.Xr pmc 3
+.Nm pmc
 library and the
 .Xr hwpmc 4
 driver is intended to be private to the implementation and may
@@ -3276,11 +3281,11 @@ change.
 In order to ease forward compatibility with future versions of the
 .Xr hwpmc 4
 driver, applications are urged to dynamically link with the
-.Xr pmc 3
+.Nm pmc
 library.
 .Pp
 The
-.Xr pmc 3
+.Nm pmc
 API is
 .Ud
 .Sh ERRORS
@@ -3298,7 +3303,7 @@ An unknown CPU type was encountered during initialization.
 The version number of the
 .Xr hwpmc 4
 kernel module did not match that compiled into the
-.Xr pmc 3
+.Nm pmc
 library.
 .El
 .Pp
@@ -3326,7 +3331,7 @@ may fail with the following error:
 .Bl -tag -width Er
 .It Bq Er ENXIO
 The
-.Xr pmc 3
+.Nm pmc
 has not been initialized.
 .El
 .Pp
@@ -3338,7 +3343,7 @@ may fail with the following errors:
 The argument passed in was out of range.
 .It Bq Er ENXIO
 The
-.Xr pmc 3
+.Nm pmc
 library has not been initialized.
 .El
 .Pp
@@ -3349,7 +3354,7 @@ may fail with the following errors, in addition to those returned by
 .Bl -tag -width Er
 .It Bq Er ENXIO
 The
-.Xr pmc 3
+.Nm pmc
 library is not yet initialized.
 .El
 .Pp
@@ -3406,7 +3411,7 @@ driver.
 .Xr pmcstat 8
 .Sh HISTORY
 The
-.Xr pmc 3
+.Nm pmc
 library first appeared in
 .Fx 6.0 .
 .Sh BUGS

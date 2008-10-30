@@ -1,5 +1,7 @@
-# $FreeBSD: src/lib/libsm/Makefile,v 1.9.2.1 2006/03/29 07:34:59 gshapiro Exp $
+# $FreeBSD: src/lib/libsm/Makefile,v 1.12 2007/04/09 01:45:30 gshapiro Exp $
 # $MidnightBSD$
+
+.include <bsd.own.mk>
 
 SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 .PATH:	${SENDMAIL_DIR}/libsm
@@ -7,7 +9,7 @@ SENDMAIL_DIR=${.CURDIR}/../../contrib/sendmail
 CFLAGS+=-I${SENDMAIL_DIR}/src -I${SENDMAIL_DIR}/include -I.
 CFLAGS+=-DNEWDB -DNIS -DMAP_REGEX -DNOT_SENDMAIL
 
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=-DNETINET6
 .endif
 
