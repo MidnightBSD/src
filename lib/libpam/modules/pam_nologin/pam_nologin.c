@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright 2001 Mark R V Murray
  * All rights reserved.
@@ -36,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_nologin/pam_nologin.c,v 1.10 2002/04/12 22:27:21 des Exp $");
+__FBSDID("$FreeBSD: src/lib/libpam/modules/pam_nologin/pam_nologin.c,v 1.13 2007/06/14 13:07:06 yar Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -47,7 +46,6 @@ __FBSDID("$FreeBSD: src/lib/libpam/modules/pam_nologin/pam_nologin.c,v 1.10 2002
 #include <stdlib.h>
 #include <unistd.h>
 
-#define PAM_SM_AUTH
 #define PAM_SM_ACCOUNT
 
 #include <security/pam_appl.h>
@@ -58,8 +56,9 @@ __FBSDID("$FreeBSD: src/lib/libpam/modules/pam_nologin/pam_nologin.c,v 1.10 2002
 
 static char nologin_def[] = _PATH_NOLOGIN;
 
-static int
-pam_nologin_check(pam_handle_t *pamh, int flags)
+PAM_EXTERN int
+pam_sm_acct_mgmt(pam_handle_t *pamh, int flags,
+    int argc __unused, const char *argv[] __unused)
 {
 	login_cap_t *lc;
 	struct passwd *pwd;
@@ -78,12 +77,6 @@ pam_nologin_check(pam_handle_t *pamh, int flags)
 	pwd = getpwnam(user);
 	if (pwd == NULL)
 		return (PAM_USER_UNKNOWN);
-
-	/*
-	 * Old bug compatibility in RELENG_6: always let root in.
-	 */
-	if (pwd->pw_uid == 0)
-		return (PAM_SUCCESS);
 
 	/*
 	 * login_getpwclass(3) will select the "root" class by default
@@ -129,30 +122,6 @@ pam_nologin_check(pam_handle_t *pamh, int flags)
 	login_close(lc);
 
 	return (PAM_AUTH_ERR);
-}
-
-PAM_EXTERN int
-pam_sm_authenticate(pam_handle_t *pamh, int flags,
-    int argc __unused, const char *argv[] __unused)
-{
-
-	return (pam_nologin_check(pamh, flags));
-}
-
-PAM_EXTERN int
-pam_sm_acct_mgmt(pam_handle_t *pamh, int flags,
-    int argc __unused, const char *argv[] __unused)
-{
-
-	return (pam_nologin_check(pamh, flags));
-}
-
-PAM_EXTERN int
-pam_sm_setcred(pam_handle_t *pamh __unused, int flags __unused,
-    int argc __unused, const char *argv[] __unused)
-{
-
-	return (PAM_SUCCESS);
 }
 
 PAM_MODULE_ENTRY("pam_nologin");

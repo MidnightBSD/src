@@ -22,10 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
-.\" $FreeBSD: src/lib/libpam/modules/pam_nologin/pam_nologin.8,v 1.5 2001/08/26 18:05:35 markm Exp $
+.\" $FreeBSD: src/lib/libpam/modules/pam_nologin/pam_nologin.8,v 1.7 2007/06/14 13:07:06 yar Exp $
 .\"
-.Dd August 18, 2007
+.Dd June 10, 2007
 .Dt PAM_NOLOGIN 8
 .Os
 .Sh NAME
@@ -40,19 +39,16 @@
 .Sh DESCRIPTION
 The NoLogin service module for PAM,
 .Nm
-provides the same functionality for two PAM categories:
-authentication and account management.
+provides functionality for only one PAM category:
+account management.
 In terms of the
 .Ar module-type
-parameter, those are the
-.Dq Li auth
-and
+parameter, this is the
 .Dq Li account
-features.
-It also provides a null function for session management.
-.Ss NoLogin Authentication Module
-The NoLogin authentication component,
-.Fn pam_sm_authenticate ,
+feature.
+.Ss NoLogin Account Management Module
+The NoLogin account management component,
+.Fn pam_sm_acct_mgmt , 
 verifies whether logins are administratively disabled via
 .Xr nologin 5 .
 It returns success if the user's login class has an "ignorenologin"
@@ -86,13 +82,6 @@ These messages include
 reasons why the user's
 login attempt was declined.
 .El
-.Ss NoLogin Account Management Module
-The NoLogin account management component,
-.Fn pam_sm_acct_mgmt , 
-returns the same value as the NoLogin authentication component
-would return.
-This component can be used to provide the NoLogin functionality
-to services that skip PAM authentication.
 .Sh SEE ALSO
 .Xr syslog 3 ,
 .Xr login.conf 5 ,
