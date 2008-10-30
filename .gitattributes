@@ -19321,8 +19321,6 @@ lib/libthr/thread/thr_umtx.h -text
 lib/libthr/thread/thr_yield.c -text
 lib/libthread_db/Makefile -text
 lib/libthread_db/Symbol.map -text
-lib/libthread_db/arch/alpha/libc_r_md.c -text
-lib/libthread_db/arch/alpha/libpthread_md.c -text
 lib/libthread_db/arch/amd64/libc_r_md.c -text
 lib/libthread_db/arch/amd64/libpthread_md.c -text
 lib/libthread_db/arch/arm/libpthread_md.c -text
