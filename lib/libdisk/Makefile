@@ -1,11 +1,8 @@
+# $MidnightBSD$
 # $FreeBSD: src/lib/libdisk/Makefile,v 1.48 2006/10/09 05:12:54 kmacy Exp $
 
-.if ${MACHINE_ARCH} == "ia64"
-_open_disk=	open_ia64_disk.c
-.else
 _change	=	change.c
 _open_disk=	open_disk.c
-.endif
 
 LIB=	disk
 SRCS=	blocks.c ${_change} chunk.c create_chunk.c disk.c ${_open_disk} \
@@ -21,10 +18,6 @@ INCS=	libdisk.h
 WARNS?=	2
 
 CFLAGS+=	-I${.CURDIR}/../../sys/geom
-
-.if ${MACHINE} == "pc98"
-CFLAGS+=	-DPC98
-.endif
 
 CLEANFILES+=	tmp.c tst01 tst01.o
 NO_PROFILE=

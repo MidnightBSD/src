@@ -18486,7 +18486,6 @@ lib/libdisk/disk.c -text
 lib/libdisk/libdisk.3 -text
 lib/libdisk/libdisk.h -text
 lib/libdisk/open_disk.c -text
-lib/libdisk/open_ia64_disk.c -text
 lib/libdisk/rules.c -text
 lib/libdisk/tst01.c -text
 lib/libdisk/write_alpha_disk.c -text
@@ -18494,9 +18493,6 @@ lib/libdisk/write_amd64_disk.c -text
 lib/libdisk/write_arm_disk.c -text
 lib/libdisk/write_disk.c -text
 lib/libdisk/write_i386_disk.c -text
-lib/libdisk/write_ia64_disk.c -text
-lib/libdisk/write_pc98_disk.c -text
-lib/libdisk/write_powerpc_disk.c -text
 lib/libdisk/write_sparc64_disk.c -text
 lib/libedit/Makefile -text
 lib/libedit/TEST/test.c -text
