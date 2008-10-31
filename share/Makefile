@@ -1,46 +1,77 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/share/Makefile,v 1.33 2005/04/13 10:02:58 phk Exp $
+# $FreeBSD: src/share/Makefile,v 1.37 2007/06/26 19:40:03 remko Exp $
 # $MidnightBSD$
+
+.include <bsd.own.mk>
 
 # Do not include `info' in the SUBDIR list, it is handled separately.
 
-SUBDIR=	colldef \
+SUBDIR=	${_colldef} \
 	${_dict} \
 	${_doc} \
-	examples \
+	${_examples} \
 	${_isdn} \
-	man \
-	me \
+	${_man} \
+	${_me} \
 	misc \
 	mk \
-	mklocale \
-	monetdef \
-	msgdef \
-	numericdef \
+	${_mklocale} \
+	${_monetdef} \
+	${_msgdef} \
+	${_numericdef} \
 	${_sendmail} \
 	skel \
 	snmp \
 	sound \
-	syscons \
+	${_syscons} \
 	tabset \
 	termcap \
-	timedef \
-	zoneinfo
+	${_timedef} \
+	${_zoneinfo}
 
-.if !defined(NO_I4B)
+.if ${MK_LOCALES} != "no"
+_colldef =	colldef
+_mklocale =	mklocale
+_monetdef =	monetdef
+_msgdef =	msgdef
+_numericdef =	numericdef
+_timedef =	timedef
+.endif
+
+.if ${MK_SYSCONS} != "no"
+_syscons=	syscons
+.endif
+
+.if ${MK_MAN} != "no"
+_man=		man
+.endif
+
+.if ${MK_GROFF} != "no"
+_me=		me
+.endif
+
+.if ${MK_EXAMPLES} != "no"
+_examples=	examples
+.endif
+
+.if ${MK_I4B} != "no"
 _isdn=		isdn
 .endif
 
-.if !defined(NO_DICT)
+.if ${MK_DICT} != "no"
 _dict=	 	dict
 .endif
 
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 _sendmail=	 sendmail
 .endif
 
-.if !defined(NO_SHAREDOCS)
+.if ${MK_SHAREDOCS} != "no"
 _doc=		doc
+.endif
+
+.if ${MK_ZONEINFO} != "no"
+_zoneinfo=	zoneinfo
 .endif
 
 .include <bsd.subdir.mk>
