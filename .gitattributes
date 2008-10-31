@@ -16254,7 +16254,6 @@ include/nl_types.h -text
 include/nlist.h -text
 include/nss.h -text
 include/nsswitch.h -text
-include/objformat.h -text
 include/ohash.h -text
 include/paths.h -text
 include/printf.h -text

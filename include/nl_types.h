@@ -35,7 +35,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/include/nl_types.h,v 1.11.2.2 2006/02/01 12:24:39 stefanf Exp $
+ * $FreeBSD: src/include/nl_types.h,v 1.12 2006/01/26 20:53:40 stefanf Exp $
  */
 
 #ifndef _NL_TYPES_H_
@@ -97,10 +97,6 @@ typedef	__nl_item	nl_item;
 
 __BEGIN_DECLS
 nl_catd  catopen(const char *, int);
-/* Work-around for old <sys/cdefs.h> */
-#ifndef __format_arg
-#define	__format_arg(a)	__attribute__((__format_arg__(a)))
-#endif
 char    *catgets(nl_catd, int, int, const char *) __format_arg(4);
 int	 catclose(nl_catd);
 __END_DECLS

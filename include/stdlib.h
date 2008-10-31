@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stdlib.h	8.5 (Berkeley) 5/19/95
- * $FreeBSD: src/include/stdlib.h,v 1.57.2.1 2006/01/27 05:17:25 trhodes Exp $
+ * $FreeBSD: src/include/stdlib.h,v 1.65 2007/07/04 00:00:38 scf Exp $
  */
 
 #ifndef _STDLIB_H_
@@ -80,6 +80,7 @@ extern int __mb_cur_max;
 
 __BEGIN_DECLS
 void	 abort(void) __dead2;
+void	 abort2(const char *, int, void **) __dead2;
 int	 abs(int) __pure2;
 int	 atexit(void (*)(void));
 double	 atof(const char *);
@@ -157,10 +158,10 @@ void	 _Exit(int) __dead2;
  * research can be done.
  */
 #if __POSIX_VISIBLE /* >= ??? */
-/* int	 posix_memalign(void **, size_t, size_t); (ADV) */
+int	 posix_memalign(void **, size_t, size_t); /* (ADV) */
 int	 rand_r(unsigned *);			/* (TSF) */
 int	 setenv(const char *, const char *, int);
-void	 unsetenv(const char *);
+int	 unsetenv(const char *);
 #endif
 
 /*
@@ -196,7 +197,7 @@ long	 mrand48(void);
 long	 nrand48(unsigned short[3]);
 int	 posix_openpt(int);
 char	*ptsname(int);
-int	 putenv(const char *);
+int	 putenv(char *);
 long	 random(void);
 char	*realpath(const char *, char resolved_path[]);
 unsigned short
@@ -250,14 +251,14 @@ int	 cgetstr(char *, const char *, char **);
 int	 cgetustr(char *, const char *, char **);
 
 int	 daemon(int, int);
-char	*devname(int, int);
-char 	*devname_r(int, int, char *, int);
+char	*devname(__dev_t, __mode_t);
+char 	*devname_r(__dev_t, __mode_t, char *, int);
 int	 getloadavg(double [], int);
 __const char *
 	 getprogname(void);
 
 int	 heapsort(void *, size_t, size_t, int (*)(const void *, const void *));
-int     l64a_r(long, char *, int);
+int	 l64a_r(long, char *, int);
 int	 mergesort(void *, size_t, size_t, int (*)(const void *, const void *));
 void	 qsort_r(void *, size_t, size_t, void *,
 	    int (*)(void *, const void *, const void *));
@@ -271,7 +272,8 @@ int	 sradixsort(const unsigned char **, int, const unsigned char *,
 void	 sranddev(void);
 void	 srandomdev(void);
 long long
-	strtonum(const char*, long long, long long, const char **);
+	strtonum(const char *, long long, long long, const char **);
+
 /* Deprecated interfaces, to be removed in FreeBSD 6.0. */
 __int64_t
 	 strtoq(const char *, char **, int);

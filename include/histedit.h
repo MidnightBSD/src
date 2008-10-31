@@ -30,8 +30,8 @@
  * SUCH DAMAGE.
  *
  *	@(#)histedit.h	8.2 (Berkeley) 1/3/94
- *	$NetBSD: histedit.h,v 1.28 2005/07/14 15:00:58 christos Exp $
- * $FreeBSD: src/include/histedit.h,v 1.9.10.1 2005/10/09 03:44:00 delphij Exp $
+ *	$NetBSD: histedit.h,v 1.32 2007/06/10 20:20:28 christos Exp $
+ * $FreeBSD: src/include/histedit.h,v 1.12 2007/06/11 06:25:19 stefanf Exp $
  */
 
 /*
@@ -104,7 +104,7 @@ int		 el_parse(EditLine *, int, const char **);
  * Low level editline access functions
  */
 int		 el_set(EditLine *, int, ...);
-int		 el_get(EditLine *, int, void *);
+int		 el_get(EditLine *, int, ...);
 #if 0
 unsigned char	_el_fn_complete(EditLine *, int);
 #endif
@@ -130,8 +130,11 @@ unsigned char	_el_fn_complete(EditLine *, int);
 #define	EL_CLIENTDATA	14	/* , void *);			*/
 #define	EL_UNBUFFERED	15	/* , int);			*/
 #define	EL_PREP_TERM    16      /* , int);                      */
+#define	EL_GETTC	17	/* , const char *, ..., NULL);	*/
+#define	EL_GETFP	18	/* , int, FILE **)		*/
+#define	EL_SETFP	19	/* , int, FILE *)		*/
 
-#define EL_BUILTIN_GETCFN	(NULL)
+#define	EL_BUILTIN_GETCFN	(NULL)
 
 /*
  * Source named file or $PWD/.editrc or $HOME/.editrc
@@ -181,7 +184,7 @@ int		history(History *, HistEvent *, int, ...);
 
 #define	H_FUNC		 0	/* , UTSL		*/
 #define	H_SETSIZE	 1	/* , const int);	*/
-#define H_EVENT		 1	/* , const int);	*/
+#define	H_EVENT		 1	/* , const int);	*/
 #define	H_GETSIZE	 2	/* , void);		*/
 #define	H_FIRST		 3	/* , void);		*/
 #define	H_LAST		 4	/* , void);		*/

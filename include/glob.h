@@ -34,19 +34,25 @@
  * SUCH DAMAGE.
  *
  *	@(#)glob.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/include/glob.h,v 1.7 2002/07/17 04:58:09 mikeh Exp $
+ * $FreeBSD: src/include/glob.h,v 1.10 2006/05/22 05:57:39 ache Exp $
  */
 
 #ifndef _GLOB_H_
 #define	_GLOB_H_
 
 #include <sys/cdefs.h>
+#include <sys/_types.h>
+
+#ifndef	_SIZE_T_DECLARED
+typedef	__size_t	size_t;
+#define	_SIZE_T_DECLARED
+#endif
 
 struct stat;
 typedef struct {
-	int gl_pathc;		/* Count of total paths so far. */
-	int gl_matchc;		/* Count of paths matching pattern. */
-	int gl_offs;		/* Reserved at beginning of gl_pathv. */
+	size_t gl_pathc;	/* Count of total paths so far. */
+	size_t gl_matchc;	/* Count of paths matching pattern. */
+	size_t gl_offs;		/* Reserved at beginning of gl_pathv. */
 	int gl_flags;		/* Copy of flags parameter to glob. */
 	char **gl_pathv;	/* List of paths matching pattern. */
 				/* Copy of errfunc parameter to glob. */

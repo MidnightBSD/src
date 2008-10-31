@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/include/kenv.h,v 1.1 2002/04/17 13:06:32 mux Exp $
+ * $FreeBSD: src/include/kenv.h,v 1.2 2005/11/24 07:20:26 ru Exp $
  */
 
 #ifndef _KENV_H_
@@ -33,7 +33,7 @@
 #include <sys/kenv.h>
 
 __BEGIN_DECLS
-int kenv(int, char *, char *, int);
+int kenv(int, const char *, char *, int);
 __END_DECLS
 
 #endif /* !_KENV_H_ */
