@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.6 2008/10/02 02:01:50 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.7 2008/10/02 16:47:39 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -32,10 +32,10 @@ SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libkvm msun libmd \
 	${_libypclnt} libalias libbz2 libarchive ${_libatm} \
 	libbegemot ${_libbluetooth} libbsnmp \
 	libcalendar libcam libcompat libdevinfo libdevstat libdisk \
-	libedit libexpat libfetch libform libftpio libgeom ${_libgpib} \
+	libedit libexpat libfetch libftpio libgeom ${_libgpib} \
 	libipsec \
-	libipx libkiconv libmagic libmemstat libmenu ${_libmilter} ${_libmp} \
-	${_libncp} ${_libngatm} libopie libpam libpanel libpcap \
+	libipx libkiconv libmagic libmemstat ${_libmilter} ${_libmp} \
+	${_libncp} ${_libngatm} libopie libpam libpcap \
 	libpmc ${_libkse} ${_libsdp} ${_libsm} ${_libsmb} ${_libsmdb} \
 	${_libsmutil} libstand libtelnet ${_libthr} libthread_db libufs \
 	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz ${_bind} \
