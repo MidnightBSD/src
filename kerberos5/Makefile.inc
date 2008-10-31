@@ -1,11 +1,10 @@
-# $FreeBSD: src/kerberos5/Makefile.inc,v 1.26 2005/06/10 06:12:51 des Exp $
+# $FreeBSD: src/kerberos5/Makefile.inc,v 1.27 2006/07/28 06:33:27 yar Exp $
 
 NO_LINT=
 
 KRB5DIR=	${.CURDIR}/../../../crypto/heimdal
 
 CFLAGS+=	-DHAVE_CONFIG_H -I${.CURDIR}/../../include
-CFLAGS+=	-DINET6
 
 .if defined(WITH_OPENLDAP)
 OPENLDAPBASE?=	/usr/local

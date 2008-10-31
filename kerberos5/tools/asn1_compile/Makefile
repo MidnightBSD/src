@@ -1,4 +1,4 @@
-# $FreeBSD: src/kerberos5/tools/asn1_compile/Makefile,v 1.5.2.1 2005/11/16 07:53:16 ru Exp $
+# $FreeBSD: src/kerberos5/tools/asn1_compile/Makefile,v 1.7 2007/05/19 03:29:37 kan Exp $
 
 PROG=	asn1_compile
 NO_MAN=
@@ -8,7 +8,7 @@ SRCS=	gen.c \
 	gen_decode.c \
 	gen_encode.c \
 	gen_free.c \
-	gen_glue.c \
+	gen_glue-fixed.c \
 	gen_length.c \
 	hash.c \
 	emalloc.c \
@@ -39,6 +39,11 @@ roken.h: ../make-roken/make-roken
 
 ../make-roken/make-roken: .PHONY
 	cd ${.CURDIR}/../make-roken && ${MAKE}
+
+gen_glue-fixed.c: gen_glue.c
+	 sed -e '106s/"/"#ifdef __PARSE_UNITS_H__\\n/;'\
+	     -e '106s/",/\\n#endif\\n",/' ${.ALLSRC} > ${.TARGET}
+CLEANFILES+= gen_glue-fixed.c
 
 .include <bsd.prog.mk>
 

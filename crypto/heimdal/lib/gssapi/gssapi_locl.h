@@ -31,7 +31,8 @@
  * SUCH DAMAGE. 
  */
 
-/* $Id: gssapi_locl.h,v 1.1.1.2 2006-02-25 02:34:19 laffer1 Exp $ */
+/* $Id: gssapi_locl.h,v 1.1.1.3 2008-10-31 20:45:58 laffer1 Exp $ */
+/* $FreeBSD: src/crypto/heimdal/lib/gssapi/gssapi_locl.h,v 1.2 2006/01/02 11:28:42 dfr Exp $ */
 
 #ifndef GSSAPI_LOCL_H
 #define GSSAPI_LOCL_H
@@ -41,7 +42,7 @@
 #endif
 
 #include <krb5_locl.h>
-#include <gssapi.h>
+#include "gssapi.h"
 #include <assert.h>
 
 #include "arcfour.h"

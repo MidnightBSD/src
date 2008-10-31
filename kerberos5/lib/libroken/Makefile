@@ -1,6 +1,7 @@
-# $FreeBSD: src/kerberos5/lib/libroken/Makefile,v 1.16 2004/02/05 18:51:49 ru Exp $
+# $FreeBSD: src/kerberos5/lib/libroken/Makefile,v 1.17 2006/05/21 15:15:20 ume Exp $
 
 LIB=	roken
+SHLIB_MAJOR=	9
 INCS=	roken.h roken-common.h
 
 SRCS=	base64.c \

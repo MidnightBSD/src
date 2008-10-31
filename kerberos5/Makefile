@@ -1,4 +1,4 @@
-# $FreeBSD: src/kerberos5/Makefile,v 1.16 2004/01/31 08:15:52 ru Exp $
+# $FreeBSD: src/kerberos5/Makefile,v 1.17 2006/03/17 18:54:23 ru Exp $
 
 SUBDIR=	doc tools lib libexec usr.bin usr.sbin
 
@@ -21,11 +21,11 @@ kerberize:
 dekerberize:
 .for entry in ${KPROGS}
 	cd ${.CURDIR}/../${entry}; \
-	${MAKE} -DNO_KERBEROS cleandir; \
-	${MAKE} -DNO_KERBEROS obj; \
-	${MAKE} -DNO_KERBEROS depend; \
-	${MAKE} -DNO_KERBEROS all; \
-	${MAKE} -DNO_KERBEROS install
+	${MAKE} -DWITHOUT_KERBEROS cleandir; \
+	${MAKE} -DWITHOUT_KERBEROS obj; \
+	${MAKE} -DWITHOUT_KERBEROS depend; \
+	${MAKE} -DWITHOUT_KERBEROS all; \
+	${MAKE} -DWITHOUT_KERBEROS install
 .endfor
 
 .include <bsd.subdir.mk>

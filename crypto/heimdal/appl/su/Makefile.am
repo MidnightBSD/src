@@ -1,13 +1,9 @@
-# $Id: Makefile.am,v 1.1.1.2 2006-02-25 02:34:16 laffer1 Exp $
-# $FreeBSD: src/crypto/heimdal/appl/su/Makefile.am,v 1.2 2005/07/07 14:16:37 kensmith Exp $
+# $Id: Makefile.am,v 1.1.1.3 2008-10-31 20:45:58 laffer1 Exp $
+# $FreeBSD: src/crypto/heimdal/appl/su/Makefile.am,v 1.2.10.1 2007/10/29 21:39:03 peter Exp $
 
 include $(top_srcdir)/Makefile.am.common
 
 INCLUDES += $(INCLUDE_krb4) $(INCLUDE_des)
-
-.if defined(_FREEFALL_CONFIG)
-CFLAGS+=-D_FREEFALL_CONFIG
-.endif
 
 bin_PROGRAMS = su
 bin_SUIDS = su
