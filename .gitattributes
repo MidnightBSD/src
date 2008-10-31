@@ -22960,6 +22960,7 @@ share/mk/bsd.lib.mk -text
 share/mk/bsd.libnames.mk -text
 share/mk/bsd.links.mk -text
 share/mk/bsd.man.mk -text
+share/mk/bsd.mport.options.mk -text
 share/mk/bsd.nls.mk -text
 share/mk/bsd.obj.mk -text
 share/mk/bsd.own.mk -text

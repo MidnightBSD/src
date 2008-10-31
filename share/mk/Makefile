@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/Makefile,v 1.46.2.1 2006/01/25 13:22:58 harti Exp $
-# $MidnightBSD: src/share/mk/Makefile,v 1.3 2008/09/03 02:23:04 laffer1 Exp $
+# $MidnightBSD: src/share/mk/Makefile,v 1.4 2008/10/14 21:13:54 laffer1 Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
 
 FILES=	bsd.README
@@ -8,7 +8,7 @@ FILES+=	bsd.files.mk bsd.incs.mk bsd.info.mk bsd.init.mk
 FILES+=	bsd.kmod.mk
 FILES+=	bsd.lib.mk bsd.libnames.mk bsd.links.mk bsd.man.mk bsd.nls.mk
 FILES+=	bsd.obj.mk bsd.own.mk
-FILES+=	bsd.port.mk bsd.port.options.mk bsd.port.post.mk
+FILES+=	bsd.port.mk bsd.mport.options.mk bsd.port.post.mk
 FILES+=	bsd.port.pre.mk bsd.port.subdir.mk bsd.prog.mk
 FILES+=	bsd.snmpmod.mk bsd.subdir.mk bsd.sys.mk bsd.symver.mk
 FILES+=	sys.mk version_gen.awk
