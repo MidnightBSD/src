@@ -13651,7 +13651,6 @@ crypto/openssl/ChangeLog.0_9_7-stable_not-in-head -text
 crypto/openssl/ChangeLog.0_9_7-stable_not-in-head_FIPS -text
 crypto/openssl/Configure -text
 crypto/openssl/FAQ -text
-crypto/openssl/FREEBSD-Xlist -text
 crypto/openssl/INSTALL -text
 crypto/openssl/INSTALL.DJGPP -text
 crypto/openssl/INSTALL.MacOS -text
@@ -13728,8 +13727,6 @@ crypto/openssl/apps/demoCA/cacert.pem -text
 crypto/openssl/apps/demoCA/index.txt -text
 crypto/openssl/apps/demoCA/private/cakey.pem -text
 crypto/openssl/apps/demoCA/serial -text
-crypto/openssl/apps/der_chop -text
-crypto/openssl/apps/der_chop.in -text
 crypto/openssl/apps/dgst.c -text
 crypto/openssl/apps/dh.c -text
 crypto/openssl/apps/dh1024.pem -text
@@ -13870,8 +13867,6 @@ crypto/openssl/certs/vsign3.pem -text
 crypto/openssl/certs/vsignss.pem -text
 crypto/openssl/certs/vsigntca.pem -text
 crypto/openssl/certs/wellsfgo.pem -text
-crypto/openssl/comm.txt -text
-crypto/openssl/comms.txt -text
 crypto/openssl/config -text
 crypto/openssl/crypto/LPdir_nyi.c -text
 crypto/openssl/crypto/LPdir_unix.c -text
