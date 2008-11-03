@@ -13807,7 +13807,6 @@ crypto/openssl/apps/winrand.c -text
 crypto/openssl/apps/x509.c -text
 crypto/openssl/bugs/MS -text
 crypto/openssl/bugs/SSLv3 -text
-crypto/openssl/bugs/VC16.bug -text
 crypto/openssl/bugs/alpha.c -text
 crypto/openssl/bugs/dggccbug.c -text
 crypto/openssl/bugs/sgiccbug.c -text
