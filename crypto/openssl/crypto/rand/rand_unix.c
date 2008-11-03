@@ -56,7 +56,7 @@
  * [including the GNU Public Licence.]
  */
 /* ====================================================================
- * Copyright (c) 1998-2000 The OpenSSL Project.  All rights reserved.
+ * Copyright (c) 1998-2006 The OpenSSL Project.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -108,6 +108,7 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+#include <stdio.h>
 
 #define USE_SOCKETS
 #include "e_os.h"
@@ -115,14 +116,22 @@
 #include <openssl/rand.h>
 #include "rand_lcl.h"
 
-#if !(defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2) || defined(OPENSSL_SYS_VXWORKS))
+#if !(defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2) || defined(OPENSSL_SYS_VXWORKS) || defined(OPENSSL_SYS_NETWARE))
 
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/times.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#if defined(OPENSSL_SYS_LINUX) /* should actually be available virtually everywhere */
+# include <poll.h>
+#endif
+#include <limits.h>
+#ifndef FD_SETSIZE
+# define FD_SETSIZE (8*sizeof(fd_set))
+#endif
 
 #ifdef __OpenBSD__
 int RAND_poll(void)
@@ -141,7 +150,7 @@ int RAND_poll(void)
 
 	return 1;
 }
-#else
+#else /* !defined(__OpenBSD__) */
 int RAND_poll(void)
 {
 	unsigned long l;
@@ -151,9 +160,10 @@ int RAND_poll(void)
 	int n = 0;
 #endif
 #ifdef DEVRANDOM
-	static const char *randomfiles[] = { DEVRANDOM, NULL };
-	const char **randomfile = NULL;
+	static const char *randomfiles[] = { DEVRANDOM };
+	struct stat randomstats[sizeof(randomfiles)/sizeof(randomfiles[0])];
 	int fd;
+	size_t i;
 #endif
 #ifdef DEVRANDOM_EGD
 	static const char *egdsockets[] = { DEVRANDOM_EGD, NULL };
@@ -161,58 +171,113 @@ int RAND_poll(void)
 #endif
 
 #ifdef DEVRANDOM
+	memset(randomstats,0,sizeof(randomstats));
 	/* Use a random entropy pool device. Linux, FreeBSD and OpenBSD
 	 * have this. Use /dev/urandom if you can as /dev/random may block
 	 * if it runs out of random entries.  */
 
-	for (randomfile = randomfiles; *randomfile && n < ENTROPY_NEEDED; randomfile++)
+	for (i=0; i<sizeof(randomfiles)/sizeof(randomfiles[0]) && n < ENTROPY_NEEDED; i++)
 		{
-		if ((fd = open(*randomfile, O_RDONLY|O_NONBLOCK
+		if ((fd = open(randomfiles[i], O_RDONLY
+#ifdef O_NONBLOCK
+			|O_NONBLOCK
+#endif
+#ifdef O_BINARY
+			|O_BINARY
+#endif
 #ifdef O_NOCTTY /* If it happens to be a TTY (god forbid), do not make it
 		   our controlling tty */
 			|O_NOCTTY
 #endif
-#ifdef O_NOFOLLOW /* Fail if the file is a symbolic link */
-			|O_NOFOLLOW
-#endif
 			)) >= 0)
 			{
-			struct timeval t = { 0, 10*1000 }; /* Spend 10ms on
-							      each file. */
+			int usec = 10*1000; /* spend 10ms on each file */
 			int r;
-			fd_set fset;
+			size_t j;
+			struct stat *st=&randomstats[i];
+
+			/* Avoid using same input... Used to be O_NOFOLLOW
+			 * above, but it's not universally appropriate... */
+			if (fstat(fd,st) != 0)	{ close(fd); continue; }
+			for (j=0;j<i;j++)
+				{
+				if (randomstats[j].st_ino==st->st_ino &&
+				    randomstats[j].st_dev==st->st_dev)
+					break;
+				}
+			if (j<i)		{ close(fd); continue; }
 
 			do
 				{
-				FD_ZERO(&fset);
-				FD_SET(fd, &fset);
-				r = -1;
+				int try_read = 0;
 
-				if (select(fd+1,&fset,NULL,NULL,&t) < 0)
-					t.tv_usec=0;
-				else if (FD_ISSET(fd, &fset))
+#if defined(OPENSSL_SYS_LINUX)
+				/* use poll() */
+				struct pollfd pset;
+				
+				pset.fd = fd;
+				pset.events = POLLIN;
+				pset.revents = 0;
+
+				if (poll(&pset, 1, usec / 1000) < 0)
+					usec = 0;
+				else
+					try_read = (pset.revents & POLLIN) != 0;
+
+#else
+				/* use select() */
+				fd_set fset;
+				struct timeval t;
+				
+				t.tv_sec = 0;
+				t.tv_usec = usec;
+
+				if (FD_SETSIZE > 0 && fd >= FD_SETSIZE)
 					{
-					r=read(fd,(unsigned char *)tmpbuf+n,
-					       ENTROPY_NEEDED-n);
+					/* can't use select, so just try to read once anyway */
+					try_read = 1;
+					}
+				else
+					{
+					FD_ZERO(&fset);
+					FD_SET(fd, &fset);
+					
+					if (select(fd+1,&fset,NULL,NULL,&t) >= 0)
+						{
+						usec = t.tv_usec;
+						if (FD_ISSET(fd, &fset))
+							try_read = 1;
+						}
+					else
+						usec = 0;
+					}
+#endif
+				
+				if (try_read)
+					{
+					r = read(fd,(unsigned char *)tmpbuf+n, ENTROPY_NEEDED-n);
 					if (r > 0)
 						n += r;
 					}
-
-				/* Some Unixen will update t, some
-				   won't.  For those who won't, give
-				   up here, otherwise, we will do
+				else
+					r = -1;
+				
+				/* Some Unixen will update t in select(), some
+				   won't.  For those who won't, or if we
+				   didn't use select() in the first place,
+				   give up here, otherwise, we will do
 				   this once again for the remaining
 				   time. */
-				if (t.tv_usec == 10*1000)
-					t.tv_usec=0;
+				if (usec == 10*1000)
+					usec = 0;
 				}
-			while ((r > 0 || (errno == EINTR || errno == EAGAIN))
-				&& t.tv_usec != 0 && n < ENTROPY_NEEDED);
+			while ((r > 0 ||
+			       (errno == EINTR || errno == EAGAIN)) && usec != 0 && n < ENTROPY_NEEDED);
 
 			close(fd);
 			}
 		}
-#endif
+#endif /* defined(DEVRANDOM) */
 
 #ifdef DEVRANDOM_EGD
 	/* Use an EGD socket to read entropy from an EGD or PRNGD entropy
@@ -227,24 +292,24 @@ int RAND_poll(void)
 		if (r > 0)
 			n += r;
 		}
-#endif
+#endif /* defined(DEVRANDOM_EGD) */
 
 #if defined(DEVRANDOM) || defined(DEVRANDOM_EGD)
 	if (n > 0)
 		{
-		RAND_add(tmpbuf,sizeof tmpbuf,n);
+		RAND_add(tmpbuf,sizeof tmpbuf,(double)n);
 		OPENSSL_cleanse(tmpbuf,n);
 		}
 #endif
 
 	/* put in some default random data, we need more than just this */
 	l=curr_pid;
-	RAND_add(&l,sizeof(l),0);
+	RAND_add(&l,sizeof(l),0.0);
 	l=getuid();
-	RAND_add(&l,sizeof(l),0);
+	RAND_add(&l,sizeof(l),0.0);
 
 	l=time(NULL);
-	RAND_add(&l,sizeof(l),0);
+	RAND_add(&l,sizeof(l),0.0);
 
 #if defined(DEVRANDOM) || defined(DEVRANDOM_EGD)
 	return 1;
@@ -253,12 +318,13 @@ int RAND_poll(void)
 #endif
 }
 
-#endif
-#endif
+#endif /* defined(__OpenBSD__) */
+#endif /* !(defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_OS2) || defined(OPENSSL_SYS_VXWORKS) || defined(OPENSSL_SYS_NETWARE)) */
+
 
 #if defined(OPENSSL_SYS_VXWORKS)
 int RAND_poll(void)
-{
-    return 0;
-}
+	{
+	return 0;
+	}
 #endif

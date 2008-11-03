@@ -74,8 +74,6 @@
 #undef PROG
 #define PROG	dgst_main
 
-static HMAC_CTX hmac_ctx;
-
 int do_fp(BIO *out, unsigned char *buf, BIO *bp, int sep, int binout,
 	  EVP_PKEY *key, unsigned char *sigin, int siglen, const char *title,
 	  const char *file,BIO *bmd,const char *hmac_key);
@@ -103,6 +101,7 @@ int MAIN(int argc, char **argv)
 	EVP_PKEY *sigkey = NULL;
 	unsigned char *sigbuf = NULL;
 	int siglen = 0;
+	char *passargin = NULL, *passin = NULL;
 #ifndef OPENSSL_NO_ENGINE
 	char *engine=NULL;
 #endif
@@ -148,6 +147,12 @@ int MAIN(int argc, char **argv)
 			{
 			if (--argc < 1) break;
 			keyfile=*(++argv);
+			}
+		else if (!strcmp(*argv,"-passin"))
+			{
+			if (--argc < 1)
+				break;
+			passargin=*++argv;
 			}
 		else if (strcmp(*argv,"-verify") == 0)
 			{
@@ -232,10 +237,20 @@ int MAIN(int argc, char **argv)
 			LN_md4,LN_md4);
 		BIO_printf(bio_err,"-%3s to use the %s message digest algorithm\n",
 			LN_md2,LN_md2);
+#ifndef OPENSSL_NO_SHA
 		BIO_printf(bio_err,"-%3s to use the %s message digest algorithm\n",
 			LN_sha1,LN_sha1);
 		BIO_printf(bio_err,"-%3s to use the %s message digest algorithm\n",
 			LN_sha,LN_sha);
+#ifndef OPENSSL_NO_SHA256
+		BIO_printf(bio_err,"-%3s to use the %s message digest algorithm\n",
+			LN_sha256,LN_sha256);
+#endif
+#ifndef OPENSSL_NO_SHA512
+		BIO_printf(bio_err,"-%3s to use the %s message digest algorithm\n",
+			LN_sha512,LN_sha512);
+#endif
+#endif
 		BIO_printf(bio_err,"-%3s to use the %s message digest algorithm\n",
 			LN_mdc2,LN_mdc2);
 		BIO_printf(bio_err,"-%3s to use the %s message digest algorithm\n",
@@ -245,7 +260,7 @@ int MAIN(int argc, char **argv)
 		}
 
 #ifndef OPENSSL_NO_ENGINE
-	e = setup_engine(bio_err, engine, 0);
+        e = setup_engine(bio_err, engine, 0);
 #endif
 
 	in=BIO_new(BIO_s_file());
@@ -254,7 +269,13 @@ int MAIN(int argc, char **argv)
 		{
 		BIO_set_callback(in,BIO_debug_callback);
 		/* needed for windows 3.1 */
-		BIO_set_callback_arg(in,bio_err);
+		BIO_set_callback_arg(in,(char *)bio_err);
+		}
+
+	if(!app_passwd(bio_err, passargin, NULL, &passin, NULL))
+		{
+		BIO_printf(bio_err, "Error getting password\n");
+		goto end;
 		}
 
 	if ((in == NULL) || (bmd == NULL))
@@ -298,7 +319,7 @@ int MAIN(int argc, char **argv)
 			sigkey = load_pubkey(bio_err, keyfile, keyform, 0, NULL,
 				e, "key file");
 		else
-			sigkey = load_key(bio_err, keyfile, keyform, 0, NULL,
+			sigkey = load_key(bio_err, keyfile, keyform, 0, passin,
 				e, "key file");
 		if (!sigkey)
 			{
@@ -328,6 +349,8 @@ int MAIN(int argc, char **argv)
 			goto end;
 		}
 	}
+		
+
 
 	/* we use md as a filter, reading from 'in' */
 	if (!BIO_set_md(bmd,md))
@@ -384,6 +407,8 @@ end:
 		OPENSSL_free(buf);
 		}
 	if (in != NULL) BIO_free(in);
+	if (passin)
+		OPENSSL_free(passin);
 	BIO_free_all(out);
 	EVP_PKEY_free(sigkey);
 	if(sigbuf) OPENSSL_free(sigbuf);
@@ -399,13 +424,15 @@ int do_fp(BIO *out, unsigned char *buf, BIO *bp, int sep, int binout,
 	unsigned int len;
 	int i;
 	EVP_MD_CTX *md_ctx;
+	HMAC_CTX hmac_ctx;
 
 	if (hmac_key)
 		{
 		EVP_MD *md;
 
 		BIO_get_md(bmd,&md);
-		HMAC_Init(&hmac_ctx,hmac_key,strlen(hmac_key),md);
+		HMAC_CTX_init(&hmac_ctx);
+		HMAC_Init_ex(&hmac_ctx,hmac_key,strlen(hmac_key),md, NULL);
 		BIO_get_md_ctx(bmd,&md_ctx);
 		BIO_set_md_ctx(bmd,&hmac_ctx.md_ctx);
 		}
@@ -463,7 +490,7 @@ int do_fp(BIO *out, unsigned char *buf, BIO *bp, int sep, int binout,
 	else 
 		{
 		BIO_write(out,title,strlen(title));
-		for (i=0; (unsigned int)i<len; i++)
+		for (i=0; i<(int)len; i++)
 			{
 			if (sep && (i != 0))
 				BIO_printf(out, ":");

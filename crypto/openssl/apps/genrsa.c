@@ -56,6 +56,13 @@
  * [including the GNU Public Licence.]
  */
 
+#include <openssl/opensslconf.h>
+/* Until the key-gen callbacks are modified to use newer prototypes, we allow
+ * deprecated functions for openssl-internal code */
+#ifdef OPENSSL_NO_DEPRECATED
+#undef OPENSSL_NO_DEPRECATED
+#endif
+
 #ifndef OPENSSL_NO_RSA
 #include <stdio.h>
 #include <string.h>
@@ -75,17 +82,17 @@
 #undef PROG
 #define PROG genrsa_main
 
-static void MS_CALLBACK genrsa_cb(int p, int n, void *arg);
+static int MS_CALLBACK genrsa_cb(int p, int n, BN_GENCB *cb);
 
 int MAIN(int, char **);
 
 int MAIN(int argc, char **argv)
 	{
+	BN_GENCB cb;
 #ifndef OPENSSL_NO_ENGINE
 	ENGINE *e = NULL;
 #endif
 	int ret=1;
-	RSA *rsa=NULL;
 	int i,num=DEFBITS;
 	long l;
 	const EVP_CIPHER *enc=NULL;
@@ -97,8 +104,13 @@ int MAIN(int argc, char **argv)
 #endif
 	char *inrand=NULL;
 	BIO *out=NULL;
+	BIGNUM *bn = BN_new();
+	RSA *rsa = RSA_new();
+
+	if(!bn || !rsa) goto err;
 
 	apps_startup();
+	BN_GENCB_set(&cb, genrsa_cb, bio_err);
 
 	if (bio_err == NULL)
 		if ((bio_err=BIO_new(BIO_s_file())) != NULL)
@@ -156,6 +168,14 @@ int MAIN(int argc, char **argv)
 		else if (strcmp(*argv,"-aes256") == 0)
 			enc=EVP_aes_256_cbc();
 #endif
+#ifndef OPENSSL_NO_CAMELLIA
+		else if (strcmp(*argv,"-camellia128") == 0)
+			enc=EVP_camellia_128_cbc();
+		else if (strcmp(*argv,"-camellia192") == 0)
+			enc=EVP_camellia_192_cbc();
+		else if (strcmp(*argv,"-camellia256") == 0)
+			enc=EVP_camellia_256_cbc();
+#endif
 		else if (strcmp(*argv,"-passout") == 0)
 			{
 			if (--argc < 1) goto bad;
@@ -178,6 +198,10 @@ bad:
 #ifndef OPENSSL_NO_AES
 		BIO_printf(bio_err," -aes128, -aes192, -aes256\n");
 		BIO_printf(bio_err,"                 encrypt PEM output with cbc aes\n");
+#endif
+#ifndef OPENSSL_NO_CAMELLIA
+		BIO_printf(bio_err," -camellia128, -camellia192, -camellia256\n");
+		BIO_printf(bio_err,"                 encrypt PEM output with cbc camellia\n");
 #endif
 		BIO_printf(bio_err," -out file       output the key to 'file\n");
 		BIO_printf(bio_err," -passout arg    output file pass phrase source\n");
@@ -233,12 +257,12 @@ bad:
 
 	BIO_printf(bio_err,"Generating RSA private key, %d bit long modulus\n",
 		num);
-	rsa=RSA_generate_key(num,f4,genrsa_cb,bio_err);
+
+	if(!BN_set_word(bn, f4) || !RSA_generate_key_ex(rsa, num, bn, &cb))
+		goto err;
 		
 	app_RAND_write_file(NULL, bio_err);
 
-	if (rsa == NULL) goto err;
-	
 	/* We need to do the following for when the base number size is <
 	 * long, esp windows 3.1 :-(. */
 	l=0L;
@@ -262,8 +286,9 @@ bad:
 
 	ret=0;
 err:
-	if (rsa != NULL) RSA_free(rsa);
-	if (out != NULL) BIO_free_all(out);
+	if (bn) BN_free(bn);
+	if (rsa) RSA_free(rsa);
+	if (out) BIO_free_all(out);
 	if(passout) OPENSSL_free(passout);
 	if (ret != 0)
 		ERR_print_errors(bio_err);
@@ -271,7 +296,7 @@ err:
 	OPENSSL_EXIT(ret);
 	}
 
-static void MS_CALLBACK genrsa_cb(int p, int n, void *arg)
+static int MS_CALLBACK genrsa_cb(int p, int n, BN_GENCB *cb)
 	{
 	char c='*';
 
@@ -279,11 +304,12 @@ static void MS_CALLBACK genrsa_cb(int p, int n, void *arg)
 	if (p == 1) c='+';
 	if (p == 2) c='*';
 	if (p == 3) c='\n';
-	BIO_write((BIO *)arg,&c,1);
-	(void)BIO_flush((BIO *)arg);
+	BIO_write(cb->arg,&c,1);
+	(void)BIO_flush(cb->arg);
 #ifdef LINT
 	p=n;
 #endif
+	return 1;
 	}
 #else /* !OPENSSL_NO_RSA */
 

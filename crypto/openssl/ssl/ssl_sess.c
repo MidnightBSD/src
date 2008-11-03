@@ -65,7 +65,7 @@ static void SSL_SESSION_list_remove(SSL_CTX *ctx, SSL_SESSION *s);
 static void SSL_SESSION_list_add(SSL_CTX *ctx,SSL_SESSION *s);
 static int remove_session_lock(SSL_CTX *ctx, SSL_SESSION *c, int lck);
 
-SSL_SESSION *SSL_get_session(SSL *ssl)
+SSL_SESSION *SSL_get_session(const SSL *ssl)
 /* aka SSL_get0_session; gets 0 objects, just returns a copy of the pointer */
 	{
 	return(ssl->session);
@@ -98,7 +98,7 @@ int SSL_SESSION_set_ex_data(SSL_SESSION *s, int idx, void *arg)
 	return(CRYPTO_set_ex_data(&s->ex_data,idx,arg));
 	}
 
-void *SSL_SESSION_get_ex_data(SSL_SESSION *s, int idx)
+void *SSL_SESSION_get_ex_data(const SSL_SESSION *s, int idx)
 	{
 	return(CRYPTO_get_ex_data(&s->ex_data,idx));
 	}
@@ -118,12 +118,19 @@ SSL_SESSION *SSL_SESSION_new(void)
 	ss->verify_result = 1; /* avoid 0 (= X509_V_OK) just in case */
 	ss->references=1;
 	ss->timeout=60*5+4; /* 5 minute timeout by default */
-	ss->time=time(NULL);
+	ss->time=(unsigned long)time(NULL);
 	ss->prev=NULL;
 	ss->next=NULL;
 	ss->compress_meth=0;
 	CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL_SESSION, ss, &ss->ex_data);
 	return(ss);
+	}
+
+const unsigned char *SSL_SESSION_get_id(const SSL_SESSION *s, unsigned int *len)
+	{
+	if(len)
+		*len = s->session_id_length;
+	return s->session_id;
 	}
 
 /* Even with SSLv2, we have 16 bytes (128 bits) of session ID space. SSLv3/TLSv1
@@ -141,7 +148,7 @@ static int def_generate_session_id(const SSL *ssl, unsigned char *id,
 {
 	unsigned int retry = 0;
 	do
-		if(RAND_pseudo_bytes(id, *id_len) <= 0)
+		if (RAND_pseudo_bytes(id, *id_len) <= 0)
 			return 0;
 	while(SSL_has_matching_session_id(ssl, id, *id_len) &&
 		(++retry < MAX_SESS_ID_ATTEMPTS));
@@ -196,6 +203,11 @@ int ssl_get_new_session(SSL *s, int session)
 		else if (s->version == TLS1_VERSION)
 			{
 			ss->ssl_version=TLS1_VERSION;
+			ss->session_id_length=SSL3_SSL_SESSION_ID_LENGTH;
+			}
+		else if (s->version == DTLS1_VERSION)
+			{
+			ss->ssl_version=DTLS1_VERSION;
 			ss->session_id_length=SSL3_SSL_SESSION_ID_LENGTH;
 			}
 		else
@@ -377,7 +389,7 @@ int ssl_get_prev_session(SSL *s, unsigned char *session_id, int len)
 	CRYPTO_add(&ret->references,1,CRYPTO_LOCK_SSL_SESSION);
 #endif
 
-	if ((long)(ret->time+ret->timeout) < (long)time(NULL)) /* timeout */
+	if (ret->timeout < (long)(time(NULL) - ret->time)) /* timeout */
 		{
 		s->ctx->stats.sess_timeout++;
 		/* remove it from the cache */
@@ -568,7 +580,7 @@ int SSL_set_session(SSL *s, SSL_SESSION *session)
                 if (s->kssl_ctx && !s->kssl_ctx->client_princ &&
                     session->krb5_client_princ_len > 0)
                 {
-                    s->kssl_ctx->client_princ = (char *)malloc(session->krb5_client_princ_len + 1);
+                    s->kssl_ctx->client_princ = (char *)OPENSSL_malloc(session->krb5_client_princ_len + 1);
                     memcpy(s->kssl_ctx->client_princ,session->krb5_client_princ,
                             session->krb5_client_princ_len);
                     s->kssl_ctx->client_princ[session->krb5_client_princ_len] = '\0';
@@ -610,13 +622,13 @@ long SSL_SESSION_set_timeout(SSL_SESSION *s, long t)
 	return(1);
 	}
 
-long SSL_SESSION_get_timeout(SSL_SESSION *s)
+long SSL_SESSION_get_timeout(const SSL_SESSION *s)
 	{
 	if (s == NULL) return(0);
 	return(s->timeout);
 	}
 
-long SSL_SESSION_get_time(SSL_SESSION *s)
+long SSL_SESSION_get_time(const SSL_SESSION *s)
 	{
 	if (s == NULL) return(0);
 	return(s->time);
@@ -638,7 +650,7 @@ long SSL_CTX_set_timeout(SSL_CTX *s, long t)
 	return(l);
 	}
 
-long SSL_CTX_get_timeout(SSL_CTX *s)
+long SSL_CTX_get_timeout(const SSL_CTX *s)
 	{
 	if (s == NULL) return(0);
 	return(s->session_timeout);
@@ -751,5 +763,74 @@ static void SSL_SESSION_list_add(SSL_CTX *ctx, SSL_SESSION *s)
 		s->prev=(SSL_SESSION *)&(ctx->session_cache_head);
 		ctx->session_cache_head=s;
 		}
+	}
+
+void SSL_CTX_sess_set_new_cb(SSL_CTX *ctx,
+	int (*cb)(struct ssl_st *ssl,SSL_SESSION *sess))
+	{
+	ctx->new_session_cb=cb;
+	}
+
+int (*SSL_CTX_sess_get_new_cb(SSL_CTX *ctx))(SSL *ssl, SSL_SESSION *sess)
+	{
+	return ctx->new_session_cb;
+	}
+
+void SSL_CTX_sess_set_remove_cb(SSL_CTX *ctx,
+	void (*cb)(SSL_CTX *ctx,SSL_SESSION *sess))
+	{
+	ctx->remove_session_cb=cb;
+	}
+
+void (*SSL_CTX_sess_get_remove_cb(SSL_CTX *ctx))(SSL_CTX * ctx,SSL_SESSION *sess)
+	{
+	return ctx->remove_session_cb;
+	}
+
+void SSL_CTX_sess_set_get_cb(SSL_CTX *ctx,
+	SSL_SESSION *(*cb)(struct ssl_st *ssl,
+	         unsigned char *data,int len,int *copy))
+	{
+	ctx->get_session_cb=cb;
+	}
+
+SSL_SESSION * (*SSL_CTX_sess_get_get_cb(SSL_CTX *ctx))(SSL *ssl,
+	         unsigned char *data,int len,int *copy)
+	{
+	return ctx->get_session_cb;
+	}
+
+void SSL_CTX_set_info_callback(SSL_CTX *ctx, 
+	void (*cb)(const SSL *ssl,int type,int val))
+	{
+	ctx->info_callback=cb;
+	}
+
+void (*SSL_CTX_get_info_callback(SSL_CTX *ctx))(const SSL *ssl,int type,int val)
+	{
+	return ctx->info_callback;
+	}
+
+void SSL_CTX_set_client_cert_cb(SSL_CTX *ctx,
+	int (*cb)(SSL *ssl, X509 **x509, EVP_PKEY **pkey))
+	{
+	ctx->client_cert_cb=cb;
+	}
+
+int (*SSL_CTX_get_client_cert_cb(SSL_CTX *ctx))(SSL * ssl, X509 ** x509 , EVP_PKEY **pkey)
+	{
+	return ctx->client_cert_cb;
+	}
+
+void SSL_CTX_set_cookie_generate_cb(SSL_CTX *ctx,
+	int (*cb)(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len))
+	{
+	ctx->app_gen_cookie_cb=cb;
+	}
+
+void SSL_CTX_set_cookie_verify_cb(SSL_CTX *ctx,
+	int (*cb)(SSL *ssl, unsigned char *cookie, unsigned int cookie_len))
+	{
+	ctx->app_verify_cookie_cb=cb;
 	}
 

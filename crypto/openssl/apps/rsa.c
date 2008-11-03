@@ -56,6 +56,7 @@
  * [including the GNU Public Licence.]
  */
 
+#include <openssl/opensslconf.h>
 #ifndef OPENSSL_NO_RSA
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,6 +69,7 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 #include <openssl/pem.h>
+#include <openssl/bn.h>
 
 #undef PROG
 #define PROG	rsa_main
@@ -82,6 +84,9 @@
  * -aes128	- encrypt output if PEM format
  * -aes192	- encrypt output if PEM format
  * -aes256	- encrypt output if PEM format
+ * -camellia128 - encrypt output if PEM format
+ * -camellia192 - encrypt output if PEM format
+ * -camellia256 - encrypt output if PEM format
  * -text	- print a text version
  * -modulus	- print the RSA key modulus
  * -check	- verify key consistency
@@ -210,6 +215,10 @@ bad:
 		BIO_printf(bio_err," -aes128, -aes192, -aes256\n");
 		BIO_printf(bio_err,"                 encrypt PEM output with cbc aes\n");
 #endif
+#ifndef OPENSSL_NO_CAMELLIA
+		BIO_printf(bio_err," -camellia128, -camellia192, -camellia256\n");
+		BIO_printf(bio_err,"                 encrypt PEM output with cbc camellia\n");
+#endif
 		BIO_printf(bio_err," -text           print the key in text\n");
 		BIO_printf(bio_err," -noout          don't print key out\n");
 		BIO_printf(bio_err," -modulus        print the RSA key modulus\n");
@@ -307,7 +316,7 @@ bad:
 			BIO_printf(out,"RSA key ok\n");
 		else if (r == 0)
 			{
-			long err;
+			unsigned long err;
 
 			while ((err = ERR_peek_error()) != 0 &&
 				ERR_GET_LIB(err) == ERR_LIB_RSA &&

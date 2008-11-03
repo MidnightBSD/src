@@ -60,7 +60,7 @@
 #include "md4_locl.h"
 #include <openssl/opensslv.h>
 
-const char *MD4_version="MD4" OPENSSL_VERSION_PTEXT;
+const char MD4_version[]="MD4" OPENSSL_VERSION_PTEXT;
 
 /* Implemented from RFC1186 The MD4 Message-Digest Algorithm
  */
@@ -83,7 +83,7 @@ int MD4_Init(MD4_CTX *c)
 	}
 
 #ifndef md4_block_host_order
-void md4_block_host_order (MD4_CTX *c, const void *data, int num)
+void md4_block_host_order (MD4_CTX *c, const void *data, size_t num)
 	{
 	const MD4_LONG *X=data;
 	register unsigned MD32_REG_T A,B,C,D;
@@ -159,7 +159,7 @@ void md4_block_host_order (MD4_CTX *c, const void *data, int num)
 #ifdef X
 #undef X
 #endif
-void md4_block_data_order (MD4_CTX *c, const void *data_, int num)
+void md4_block_data_order (MD4_CTX *c, const void *data_, size_t num)
 	{
 	const unsigned char *data=data_;
 	register unsigned MD32_REG_T A,B,C,D,l;

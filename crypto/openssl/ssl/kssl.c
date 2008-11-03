@@ -68,10 +68,14 @@
 
 #include <openssl/opensslconf.h>
 
-#define _XOPEN_SOURCE /* glibc2 needs this to declare strptime() */
+#define _XOPEN_SOURCE 500 /* glibc2 needs this to declare strptime() */
 #include <time.h>
+#if 0 /* experimental */
 #undef _XOPEN_SOURCE /* To avoid clashes with anything else... */
+#endif
 #include <string.h>
+
+#define KRB5_PRIVATE	1
 
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
@@ -79,6 +83,10 @@
 #include <openssl/krb5_asn.h>
 
 #ifndef OPENSSL_NO_KRB5
+
+#ifndef ENOMEM
+#define ENOMEM KRB5KRB_ERR_GENERIC
+#endif
 
 /* 
  * When OpenSSL is built on Windows, we do not want to require that
@@ -289,7 +297,7 @@ load_krb5_dll(void)
 	HANDLE hKRB5_32;
     
 	krb5_loaded++;
-	hKRB5_32 = LoadLibrary("KRB5_32");
+	hKRB5_32 = LoadLibrary(TEXT("KRB5_32"));
 	if (!hKRB5_32)
 		return;
 
@@ -776,6 +784,25 @@ kssl_krb5_kt_get_entry(krb5_context context, krb5_keytab keytab,
         }
 #endif  /* OPENSSL_SYS_WINDOWS || OPENSSL_SYS_WIN32 */
 
+
+/* memory allocation functions for non-temporary storage
+ * (e.g. stuff that gets saved into the kssl context) */
+static void* kssl_calloc(size_t nmemb, size_t size)
+{
+	void* p;
+	
+	p=OPENSSL_malloc(nmemb*size);
+	if (p){
+		memset(p, 0, nmemb*size);
+	}
+	return p;
+}
+
+#define kssl_malloc(size) OPENSSL_malloc((size))
+#define kssl_realloc(ptr, size) OPENSSL_realloc(ptr, size)
+#define kssl_free(ptr) OPENSSL_free((ptr))
+
+
 char
 *kstring(char *string)
         {
@@ -932,7 +959,7 @@ print_krb5_data(char *label, krb5_data *kdata)
 	int i;
 
 	printf("%s[%d] ", label, kdata->length);
-	for (i=0; i < kdata->length; i++)
+	for (i=0; i < (int)kdata->length; i++)
                 {
 		if (0 &&  isprint((int) kdata->data[i]))
                         printf(	"%c ",  kdata->data[i]);
@@ -984,14 +1011,14 @@ print_krb5_keyblock(char *label, krb5_keyblock *keyblk)
 #ifdef KRB5_HEIMDAL
 	printf("%s\n\t[et%d:%d]: ", label, keyblk->keytype,
 					   keyblk->keyvalue->length);
-	for (i=0; i < keyblk->keyvalue->length; i++)
+	for (i=0; i < (int)keyblk->keyvalue->length; i++)
                 {
 		printf("%02x",(unsigned char *)(keyblk->keyvalue->contents)[i]);
 		}
 	printf("\n");
 #else
 	printf("%s\n\t[et%d:%d]: ", label, keyblk->enctype, keyblk->length);
-	for (i=0; i < keyblk->length; i++)
+	for (i=0; i < (int)keyblk->length; i++)
                 {
 		printf("%02x",keyblk->contents[i]);
 		}
@@ -1010,12 +1037,12 @@ print_krb5_princ(char *label, krb5_principal_data *princ)
 
 	printf("%s principal Realm: ", label);
 	if (princ == NULL)  return;
-	for (ui=0; ui < princ->realm.length; ui++)  putchar(princ->realm.data[ui]);
+	for (ui=0; ui < (int)princ->realm.length; ui++)  putchar(princ->realm.data[ui]);
 	printf(" (nametype %d) has %d strings:\n", princ->type,princ->length);
-	for (i=0; i < princ->length; i++)
+	for (i=0; i < (int)princ->length; i++)
                 {
 		printf("\t%d [%d]: ", i, princ->data[i].length);
-		for (uj=0; uj < princ->data[i].length; uj++)  {
+		for (uj=0; uj < (int)princ->data[i].length; uj++)  {
 			putchar(princ->data[i].data[uj]);
 			}
 		printf("\n");
@@ -1124,7 +1151,7 @@ kssl_cget_tkt(	/* UPDATE */	KSSL_CTX *kssl_ctx,
 	if (authenp)
                 {
 		krb5_data	krb5in_data;
-		unsigned char	*p;
+		const unsigned char	*p;
 		long		arlen;
 		KRB5_APREQBODY	*ap_req;
 
@@ -1293,7 +1320,7 @@ kssl_sget_tkt(	/* UPDATE */	KSSL_CTX		*kssl_ctx,
 	static krb5_auth_context	krb5auth_context = NULL;
 	krb5_ticket 			*krb5ticket = NULL;
 	KRB5_TKTBODY 			*asn1ticket = NULL;
-	unsigned char			*p;
+	const unsigned char		*p;
 	krb5_keytab 			krb5keytab = NULL;
 	krb5_keytab_entry		kt_entry;
 	krb5_principal			krb5server;
@@ -1540,7 +1567,7 @@ kssl_sget_tkt(	/* UPDATE */	KSSL_CTX		*kssl_ctx,
 KSSL_CTX	*
 kssl_ctx_new(void)
         {
-	return ((KSSL_CTX *) calloc(1, sizeof(KSSL_CTX)));
+	return ((KSSL_CTX *) kssl_calloc(1, sizeof(KSSL_CTX)));
         }
 
 
@@ -1554,13 +1581,13 @@ kssl_ctx_free(KSSL_CTX *kssl_ctx)
 
 	if (kssl_ctx->key)  		OPENSSL_cleanse(kssl_ctx->key,
 							      kssl_ctx->length);
-	if (kssl_ctx->key)  		free(kssl_ctx->key);
-	if (kssl_ctx->client_princ) 	free(kssl_ctx->client_princ);
-	if (kssl_ctx->service_host) 	free(kssl_ctx->service_host);
-	if (kssl_ctx->service_name) 	free(kssl_ctx->service_name);
-	if (kssl_ctx->keytab_file) 	free(kssl_ctx->keytab_file);
+	if (kssl_ctx->key)  		kssl_free(kssl_ctx->key);
+	if (kssl_ctx->client_princ) 	kssl_free(kssl_ctx->client_princ);
+	if (kssl_ctx->service_host) 	kssl_free(kssl_ctx->service_host);
+	if (kssl_ctx->service_name) 	kssl_free(kssl_ctx->service_name);
+	if (kssl_ctx->keytab_file) 	kssl_free(kssl_ctx->keytab_file);
 
-	free(kssl_ctx);
+	kssl_free(kssl_ctx);
 	return (KSSL_CTX *) NULL;
         }
 
@@ -1585,7 +1612,7 @@ kssl_ctx_setprinc(KSSL_CTX *kssl_ctx, int which,
         case KSSL_SERVER:	princ = &kssl_ctx->service_host;	break;
         default:		return KSSL_CTX_ERR;			break;
 		}
-	if (*princ)  free(*princ);
+	if (*princ)  kssl_free(*princ);
 
 	/* Add up all the entity->lengths */
 	length = 0;
@@ -1598,7 +1625,7 @@ kssl_ctx_setprinc(KSSL_CTX *kssl_ctx, int which,
 	/* Space for the ('@'+realm+NULL | NULL) */
 	length += ((realm)? realm->length + 2: 1);
 
-	if ((*princ = calloc(1, length)) == NULL)
+	if ((*princ = kssl_calloc(1, length)) == NULL)
 		return KSSL_CTX_ERR;
 	else
 		{
@@ -1641,7 +1668,7 @@ kssl_ctx_setstring(KSSL_CTX *kssl_ctx, int which, char *text)
         case KSSL_KEYTAB:	string = &kssl_ctx->keytab_file;	break;
         default:		return KSSL_CTX_ERR;			break;
 		}
-	if (*string)  free(*string);
+	if (*string)  kssl_free(*string);
 
 	if (!text)
                 {
@@ -1649,7 +1676,7 @@ kssl_ctx_setstring(KSSL_CTX *kssl_ctx, int which, char *text)
 		return KSSL_CTX_OK;
 		}
 
-	if ((*string = calloc(1, strlen(text) + 1)) == NULL)
+	if ((*string = kssl_calloc(1, strlen(text) + 1)) == NULL)
 		return KSSL_CTX_ERR;
 	else
 		strcpy(*string, text);
@@ -1673,7 +1700,7 @@ kssl_ctx_setkey(KSSL_CTX *kssl_ctx, krb5_keyblock *session)
 	if (kssl_ctx->key)
                 {
 		OPENSSL_cleanse(kssl_ctx->key, kssl_ctx->length);
-		free(kssl_ctx->key);
+		kssl_free(kssl_ctx->key);
 		}
 
 	if (session)
@@ -1699,7 +1726,7 @@ kssl_ctx_setkey(KSSL_CTX *kssl_ctx, krb5_keyblock *session)
 		}
 
 	if ((kssl_ctx->key =
-                (krb5_octet FAR *) calloc(1, kssl_ctx->length)) == NULL)
+                (krb5_octet FAR *) kssl_calloc(1, kssl_ctx->length)) == NULL)
                 {
 		kssl_ctx->length  = 0;
 		return KSSL_CTX_ERR;
@@ -1978,7 +2005,8 @@ krb5_error_code  kssl_check_authent(
 	EVP_CIPHER_CTX		ciph_ctx;
 	const EVP_CIPHER	*enc = NULL;
 	unsigned char		iv[EVP_MAX_IV_LENGTH];
-	unsigned char		*p, *unenc_authent;
+	const unsigned char	*p;
+	unsigned char		*unenc_authent;
 	int 			outl, unencbufsize;
 	struct tm		tm_time, *tm_l, *tm_g;
 	time_t			now, tl, tg, tr, tz_offset;

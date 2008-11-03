@@ -16,8 +16,8 @@ print <<'EOF';
 
 typedef struct {
 	int type;
-	char *name;
-	int (*func)();
+	const char *name;
+	int (*func)(int argc,char *argv[]);
 	} FUNCTION;
 
 FUNCTION functions[] = {
@@ -29,10 +29,16 @@ foreach (@ARGV)
 	$str="\t{FUNC_TYPE_GENERAL,\"$_\",${_}_main},\n";
 	if (($_ =~ /^s_/) || ($_ =~ /^ciphers$/))
 		{ print "#if !defined(OPENSSL_NO_SOCK) && !(defined(OPENSSL_NO_SSL2) && defined(OPENSSL_NO_SSL3))\n${str}#endif\n"; } 
+	elsif ( ($_ =~ /^speed$/))
+		{ print "#ifndef OPENSSL_NO_SPEED\n${str}#endif\n"; }
+	elsif ( ($_ =~ /^engine$/))
+		{ print "#ifndef OPENSSL_NO_ENGINE\n${str}#endif\n"; }
 	elsif ( ($_ =~ /^rsa$/) || ($_ =~ /^genrsa$/) || ($_ =~ /^rsautl$/)) 
 		{ print "#ifndef OPENSSL_NO_RSA\n${str}#endif\n";  }
 	elsif ( ($_ =~ /^dsa$/) || ($_ =~ /^gendsa$/) || ($_ =~ /^dsaparam$/))
 		{ print "#ifndef OPENSSL_NO_DSA\n${str}#endif\n"; }
+	elsif ( ($_ =~ /^ec$/) || ($_ =~ /^ecparam$/))
+		{ print "#ifndef OPENSSL_NO_EC\n${str}#endif\n";}
 	elsif ( ($_ =~ /^dh$/) || ($_ =~ /^gendh$/) || ($_ =~ /^dhparam$/))
 		{ print "#ifndef OPENSSL_NO_DH\n${str}#endif\n"; }
 	elsif ( ($_ =~ /^pkcs12$/))
@@ -51,6 +57,9 @@ foreach (
 	"aes-128-cbc", "aes-128-ecb",
 	"aes-192-cbc", "aes-192-ecb",
 	"aes-256-cbc", "aes-256-ecb",
+	"camellia-128-cbc", "camellia-128-ecb",
+	"camellia-192-cbc", "camellia-192-ecb",
+	"camellia-256-cbc", "camellia-256-ecb",
 	"base64",
 	"des", "des3", "desx", "idea", "rc4", "rc4-40",
 	"rc2", "bf", "cast", "rc5",
@@ -69,6 +78,7 @@ foreach (
 	$t=sprintf("\t{FUNC_TYPE_CIPHER,\"%s\",enc_main},\n",$_);
 	if    ($_ =~ /des/)  { $t="#ifndef OPENSSL_NO_DES\n${t}#endif\n"; }
 	elsif ($_ =~ /aes/)  { $t="#ifndef OPENSSL_NO_AES\n${t}#endif\n"; }
+	elsif ($_ =~ /camellia/)  { $t="#ifndef OPENSSL_NO_CAMELLIA\n${t}#endif\n"; }
 	elsif ($_ =~ /idea/) { $t="#ifndef OPENSSL_NO_IDEA\n${t}#endif\n"; }
 	elsif ($_ =~ /rc4/)  { $t="#ifndef OPENSSL_NO_RC4\n${t}#endif\n"; }
 	elsif ($_ =~ /rc2/)  { $t="#ifndef OPENSSL_NO_RC2\n${t}#endif\n"; }

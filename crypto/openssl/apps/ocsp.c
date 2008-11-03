@@ -64,6 +64,7 @@
 #include <openssl/ocsp.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <openssl/bn.h>
 
 /* Maximum leeway in validity period: default 5 minutes */
 #define MAX_VALIDITY_PERIOD	(5 * 60)
@@ -138,6 +139,7 @@ int MAIN(int argc, char **argv)
 	if (!load_config(bio_err, NULL))
 		goto end;
 	SSL_load_error_strings();
+	OpenSSL_add_ssl_algorithms();
 	args = argv + 1;
 	reqnames = sk_new_null();
 	ids = sk_OCSP_CERTID_new_null();
@@ -725,6 +727,11 @@ int MAIN(int argc, char **argv)
 			BIO_printf(bio_err, "SSL is disabled\n");
 			goto end;
 #endif
+			if (ctx == NULL)
+				{
+				BIO_printf(bio_err, "Error creating SSL context.\n");
+				goto end;
+				}
 			SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 			sbio = BIO_new_ssl(ctx, 1);
 			cbio = BIO_push(sbio, cbio);
@@ -784,7 +791,7 @@ int MAIN(int argc, char **argv)
 
 	if (i != OCSP_RESPONSE_STATUS_SUCCESSFUL)
 		{
-		BIO_printf(out, "Responder Error: %s (%ld)\n",
+		BIO_printf(out, "Responder Error: %s (%d)\n",
 				OCSP_response_status_str(i), i);
 		if (ignore_err)
 			goto redo_accept;
@@ -850,7 +857,7 @@ int MAIN(int argc, char **argv)
 
 		if(i <= 0)
 			{
-			BIO_printf(bio_err, "Response Verify Failure\n", i);
+			BIO_printf(bio_err, "Response Verify Failure\n");
 			ERR_print_errors(bio_err);
 			}
 		else
