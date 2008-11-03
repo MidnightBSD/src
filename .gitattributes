@@ -13661,6 +13661,8 @@ crypto/openssl/INSTALL.W32 -text
 crypto/openssl/INSTALL.W64 -text
 crypto/openssl/INSTALL.WCE -text
 crypto/openssl/LICENSE -text
+crypto/openssl/MIDNIGHTBSD-Xlist -text
+crypto/openssl/MIDNIGHTBSD-upgrade -text
 crypto/openssl/MacOS/GUSI_Init.cpp -text
 crypto/openssl/MacOS/GetHTTPS.src/CPStringUtils.cpp -text
 crypto/openssl/MacOS/GetHTTPS.src/CPStringUtils.hpp -text
