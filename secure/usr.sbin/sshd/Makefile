@@ -1,6 +1,8 @@
-# $MidnightBSD$
+# $MidnightBSD: src/secure/usr.sbin/sshd/Makefile,v 1.5 2008/04/06 06:34:28 laffer1 Exp $
 # $FreeBSD: src/secure/usr.sbin/sshd/Makefile,v 1.44 2005/06/07 09:31:28 des Exp $
 #
+
+.include <bsd.own.mk>
 
 PROG=	sshd
 SRCS=	sshd.c auth-rhosts.c auth-passwd.c auth-rsa.c auth-rh-rsa.c \
@@ -24,8 +26,14 @@ CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
 DPADD=	${LIBSSH} ${LIBUTIL} ${LIBZ} ${LIBWRAP} ${LIBPAM}
 LDADD=	-lssh -lutil -lz -lwrap ${MINUSLPAM}
 
-.if !defined(NO_KERBEROS)
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_H=1 -DKRB5 -DHEIMDAL
+.if ${MK_AUDIT} != "no"
+CFLAGS+= -DUSE_BSM_AUDIT
+DPADD+=  ${LIBBSM}
+LDADD+=  -lbsm
+.endif
+
+.if ${MK_KERBEROS_SUPPORT} != "no"
+CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
 DPADD+=	 ${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBROKEN}
 LDADD+=	 -lgssapi -lkrb5 -lasn1 -lcom_err -lroken
 .endif

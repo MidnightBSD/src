@@ -1,9 +1,12 @@
-# $FreeBSD: src/secure/lib/Makefile,v 1.33 2003/07/16 20:59:14 markm Exp $
+# $MidnightBSD$
+# $FreeBSD: src/secure/lib/Makefile,v 1.34 2006/03/17 18:54:31 ru Exp $
+
+.include <bsd.own.mk>
 
 SUBDIR= 
-.if !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 SUBDIR+=libcrypto libssl
-.if !defined(NO_OPENSSH)
+.if ${MK_OPENSSH} != "no"
 SUBDIR+=libssh
 .endif
 .endif

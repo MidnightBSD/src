@@ -21578,7 +21578,10 @@ secure/usr.bin/openssl/man/dgst.1 -text
 secure/usr.bin/openssl/man/dhparam.1 -text
 secure/usr.bin/openssl/man/dsa.1 -text
 secure/usr.bin/openssl/man/dsaparam.1 -text
+secure/usr.bin/openssl/man/ec.1 -text
+secure/usr.bin/openssl/man/ecparam.1 -text
 secure/usr.bin/openssl/man/enc.1 -text
+secure/usr.bin/openssl/man/errstr.1 -text
 secure/usr.bin/openssl/man/gendsa.1 -text
 secure/usr.bin/openssl/man/genrsa.1 -text
 secure/usr.bin/openssl/man/nseq.1 -text
@@ -21602,6 +21605,7 @@ secure/usr.bin/openssl/man/spkac.1 -text
 secure/usr.bin/openssl/man/verify.1 -text
 secure/usr.bin/openssl/man/version.1 -text
 secure/usr.bin/openssl/man/x509.1 -text
+secure/usr.bin/openssl/man/x509v3_config.1 -text
 secure/usr.bin/scp/Makefile -text
 secure/usr.bin/sftp/Makefile -text
 secure/usr.bin/ssh-add/Makefile -text

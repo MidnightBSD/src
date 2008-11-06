@@ -1,4 +1,6 @@
-# $FreeBSD: src/secure/Makefile.inc,v 1.24 2004/08/06 07:27:05 cperciva Exp $
+# $FreeBSD: src/secure/Makefile.inc,v 1.25 2006/03/17 18:54:31 ru Exp $
+
+.include <bsd.own.mk>
 
 .if exists(${.CURDIR}/../../lib/libcrypt/obj)
 CRYPTOBJDIR=	${.CURDIR}/../../lib/libcrypt/obj
@@ -6,10 +8,10 @@ CRYPTOBJDIR=	${.CURDIR}/../../lib/libcrypt/obj
 CRYPTOBJDIR=	${.CURDIR}/../../lib/libcrypt
 .endif
 
-.if !defined(MAKE_IDEA)
+.if ${MK_IDEA} == "no"
 CFLAGS+= -DNO_IDEA
 .endif
 
-.if !defined(NO_OPENSSH)
+.if ${MK_OPENSSH} != "no"
 SSHDIR=		${.CURDIR}/../../../crypto/openssh
 .endif

@@ -128,13 +128,13 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "DSAPARAM 1"
-.TH DSAPARAM 1 "2007-03-15" "0.9.8e" "OpenSSL"
+.IX Title "ECPARAM 1"
+.TH ECPARAM 1 "2007-03-15" "0.9.8e" "OpenSSL"
 .SH "NAME"
-dsaparam \- DSA parameter manipulation and generation
+ecparam \- EC parameter manipulation and generation
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-\&\fBopenssl dsaparam\fR
+\&\fBopenssl ecparam\fR
 [\fB\-inform DER|PEM\fR]
 [\fB\-outform DER|PEM\fR]
 [\fB\-in filename\fR]
@@ -142,21 +142,26 @@ dsaparam \- DSA parameter manipulation and generation
 [\fB\-noout\fR]
 [\fB\-text\fR]
 [\fB\-C\fR]
+[\fB\-check\fR]
+[\fB\-name arg\fR]
+[\fB\-list_curve\fR]
+[\fB\-conv_form arg\fR]
+[\fB\-param_enc arg\fR]
+[\fB\-no_seed\fR]
 [\fB\-rand file(s)\fR]
 [\fB\-genkey\fR]
 [\fB\-engine id\fR]
-[\fBnumbits\fR]
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-This command is used to manipulate or generate \s-1DSA\s0 parameter files.
+This command is used to manipulate or generate \s-1EC\s0 parameter files.
 .SH "OPTIONS"
 .IX Header "OPTIONS"
 .IP "\fB\-inform DER|PEM\fR" 4
 .IX Item "-inform DER|PEM"
-This specifies the input format. The \fB\s-1DER\s0\fR option uses an \s-1ASN1\s0 \s-1DER\s0 encoded
-form compatible with \s-1RFC2459\s0 (\s-1PKIX\s0) DSS-Parms that is a \s-1SEQUENCE\s0 consisting
-of p, q and g respectively. The \s-1PEM\s0 form is the default format: it consists
-of the \fB\s-1DER\s0\fR format base64 encoded with additional header and footer lines.
+This specifies the input format. The \fB\s-1DER\s0\fR option uses an \s-1ASN\s0.1 \s-1DER\s0 encoded
+form compatible with \s-1RFC\s0 3279 EcpkParameters. The \s-1PEM\s0 form is the default
+format: it consists of the \fB\s-1DER\s0\fR format base64 encoded with additional 
+header and footer lines.
 .IP "\fB\-outform DER|PEM\fR" 4
 .IX Item "-outform DER|PEM"
 This specifies the output format, the options have the same meaning as the 
@@ -164,8 +169,7 @@ This specifies the output format, the options have the same meaning as the
 .IP "\fB\-in filename\fR" 4
 .IX Item "-in filename"
 This specifies the input filename to read parameters from or standard input if
-this option is not specified. If the \fBnumbits\fR parameter is included then
-this option will be ignored.
+this option is not specified.
 .IP "\fB\-out filename\fR" 4
 .IX Item "-out filename"
 This specifies the output filename parameters to. Standard output is used
@@ -173,18 +177,50 @@ if this option is not present. The output filename should \fBnot\fR be the same
 as the input filename.
 .IP "\fB\-noout\fR" 4
 .IX Item "-noout"
-this option inhibits the output of the encoded version of the parameters.
+This option inhibits the output of the encoded version of the parameters.
 .IP "\fB\-text\fR" 4
 .IX Item "-text"
-this option prints out the \s-1DSA\s0 parameters in human readable form.
+This option prints out the \s-1EC\s0 parameters in human readable form.
 .IP "\fB\-C\fR" 4
 .IX Item "-C"
-this option converts the parameters into C code. The parameters can then
-be loaded by calling the \fB\f(BIget_dsaXXX()\fB\fR function.
+This option converts the \s-1EC\s0 parameters into C code. The parameters can then
+be loaded by calling the \fB\f(BIget_ec_group_XXX()\fB\fR function.
+.IP "\fB\-check\fR" 4
+.IX Item "-check"
+Validate the elliptic curve parameters.
+.IP "\fB\-name arg\fR" 4
+.IX Item "-name arg"
+Use the \s-1EC\s0 parameters with the specified 'short' name. Use \fB\-list_curves\fR
+to get a list of all currently implemented \s-1EC\s0 parameters.
+.IP "\fB\-list_curves\fR" 4
+.IX Item "-list_curves"
+If this options is specified \fBecparam\fR will print out a list of all
+currently implemented \s-1EC\s0 parameters names and exit.
+.IP "\fB\-conv_form\fR" 4
+.IX Item "-conv_form"
+This specifies how the points on the elliptic curve are converted
+into octet strings. Possible values are: \fBcompressed\fR (the default
+value), \fBuncompressed\fR and \fBhybrid\fR. For more information regarding
+the point conversion forms please read the X9.62 standard.
+\&\fBNote\fR Due to patent issues the \fBcompressed\fR option is disabled
+by default for binary curves and can be enabled by defining
+the preprocessor macro \fB\s-1OPENSSL_EC_BIN_PT_COMP\s0\fR at compile time.
+.IP "\fB\-param_enc arg\fR" 4
+.IX Item "-param_enc arg"
+This specifies how the elliptic curve parameters are encoded.
+Possible value are: \fBnamed_curve\fR, i.e. the ec parameters are
+specified by a \s-1OID\s0, or \fBexplicit\fR where the ec parameters are
+explicitly given (see \s-1RFC\s0 3279 for the definition of the 
+\&\s-1EC\s0 parameters structures). The default value is \fBnamed_curve\fR.
+\&\fBNote\fR the \fBimplicitlyCA\fR alternative ,as specified in \s-1RFC\s0 3279,
+is currently not implemented in OpenSSL.
+.IP "\fB\-no_seed\fR" 4
+.IX Item "-no_seed"
+This option inhibits that the 'seed' for the parameter generation
+is included in the ECParameters structure (see \s-1RFC\s0 3279).
 .IP "\fB\-genkey\fR" 4
 .IX Item "-genkey"
-this option will generate a \s-1DSA\s0 either using the specified or generated
-parameters.
+This option will generate a \s-1EC\s0 private key using the specified parameters.
 .IP "\fB\-rand file(s)\fR" 4
 .IX Item "-rand file(s)"
 a file or files containing random data used to seed the random number
@@ -192,11 +228,6 @@ generator, or an \s-1EGD\s0 socket (see \fIRAND_egd\fR\|(3)).
 Multiple files can be specified separated by a OS-dependent character.
 The separator is \fB;\fR for MS\-Windows, \fB,\fR for OpenVMS, and \fB:\fR for
 all others.
-.IP "\fBnumbits\fR" 4
-.IX Item "numbits"
-this option specifies that a parameter set should be generated of size
-\&\fBnumbits\fR. It must be the last option. If this option is included then
-the input file (if any) is ignored.
 .IP "\fB\-engine id\fR" 4
 .IX Item "-engine id"
 specifying an engine (by it's unique \fBid\fR string) will cause \fBreq\fR
@@ -205,16 +236,58 @@ thus initialising it if needed. The engine will then be set as the default
 for all available algorithms.
 .SH "NOTES"
 .IX Header "NOTES"
-\&\s-1PEM\s0 format \s-1DSA\s0 parameters use the header and footer lines:
+\&\s-1PEM\s0 format \s-1EC\s0 parameters use the header and footer lines:
 .PP
 .Vb 2
-\& -----BEGIN DSA PARAMETERS-----
-\& -----END DSA PARAMETERS-----
+\& -----BEGIN EC PARAMETERS-----
+\& -----END EC PARAMETERS-----
 .Ve
 .PP
-\&\s-1DSA\s0 parameter generation is a slow process and as a result the same set of
-\&\s-1DSA\s0 parameters is often used to generate several distinct keys.
+OpenSSL is currently not able to generate new groups and therefore
+\&\fBecparam\fR can only create \s-1EC\s0 parameters from known (named) curves. 
+.SH "EXAMPLES"
+.IX Header "EXAMPLES"
+To create \s-1EC\s0 parameters with the group 'prime192v1':
+.PP
+.Vb 1
+\&  openssl ecparam -out ec_param.pem -name prime192v1
+.Ve
+.PP
+To create \s-1EC\s0 parameters with explicit parameters:
+.PP
+.Vb 1
+\&  openssl ecparam -out ec_param.pem -name prime192v1 -param_enc explicit
+.Ve
+.PP
+To validate given \s-1EC\s0 parameters:
+.PP
+.Vb 1
+\&  openssl ecparam -in ec_param.pem -check
+.Ve
+.PP
+To create \s-1EC\s0 parameters and a private key:
+.PP
+.Vb 1
+\&  openssl ecparam -out ec_key.pem -name prime192v1 -genkey
+.Ve
+.PP
+To change the point encoding to 'compressed':
+.PP
+.Vb 1
+\&  openssl ecparam -in ec_in.pem -out ec_out.pem -conv_form compressed
+.Ve
+.PP
+To print out the \s-1EC\s0 parameters to standard output:
+.PP
+.Vb 1
+\&  openssl ecparam -in ec_param.pem -noout -text
+.Ve
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
-\&\fIgendsa\fR\|(1), \fIdsa\fR\|(1), \fIgenrsa\fR\|(1),
-\&\fIrsa\fR\|(1)
+\&\fIec\fR\|(1), \fIdsaparam\fR\|(1)
+.SH "HISTORY"
+.IX Header "HISTORY"
+The ecparam command was first introduced in OpenSSL 0.9.8.
+.SH "AUTHOR"
+.IX Header "AUTHOR"
+Nils Larsch for the OpenSSL project (http://www.openssl.org)

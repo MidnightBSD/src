@@ -1,7 +1,9 @@
-# $FreeBSD: src/secure/usr.sbin/Makefile,v 1.5 2000/10/24 16:04:51 gshapiro Exp $
+# $FreeBSD: src/secure/usr.sbin/Makefile,v 1.6 2006/03/17 18:54:32 ru Exp $
+
+.include <bsd.own.mk>
 
 SUBDIR= 
-.if !defined(NO_OPENSSH) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSH} != "no"
 SUBDIR+=sshd
 .endif
 

@@ -128,64 +128,40 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "NSEQ 1"
-.TH NSEQ 1 "2007-03-15" "0.9.8e" "OpenSSL"
+.IX Title "ERRSTR 1"
+.TH ERRSTR 1 "2007-03-15" "0.9.8e" "OpenSSL"
 .SH "NAME"
-nseq \- create or examine a netscape certificate sequence
+errstr \- lookup error codes
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-\&\fBopenssl\fR \fBnseq\fR
-[\fB\-in filename\fR]
-[\fB\-out filename\fR]
-[\fB\-toseq\fR]
+\&\fBopenssl errstr error_code\fR
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-The \fBnseq\fR command takes a file containing a Netscape certificate
-sequence and prints out the certificates contained in it or takes a
-file of certificates and converts it into a Netscape certificate
-sequence.
-.SH "COMMAND OPTIONS"
-.IX Header "COMMAND OPTIONS"
-.IP "\fB\-in filename\fR" 4
-.IX Item "-in filename"
-This specifies the input filename to read or standard input if this
-option is not specified.
-.IP "\fB\-out filename\fR" 4
-.IX Item "-out filename"
-specifies the output filename or standard output by default.
-.IP "\fB\-toseq\fR" 4
-.IX Item "-toseq"
-normally a Netscape certificate sequence will be input and the output
-is the certificates contained in it. With the \fB\-toseq\fR option the
-situation is reversed: a Netscape certificate sequence is created from
-a file of certificates.
-.SH "EXAMPLES"
-.IX Header "EXAMPLES"
-Output the certificates in a Netscape certificate sequence
+Sometimes an application will not load error message and only
+numerical forms will be available. The \fBerrstr\fR utility can be used to 
+display the meaning of the hex code. The hex code is the hex digits after the
+second colon.
+.SH "EXAMPLE"
+.IX Header "EXAMPLE"
+The error code:
 .PP
 .Vb 1
-\& openssl nseq -in nseq.pem -out certs.pem
+\& 27594:error:2006D080:lib(32):func(109):reason(128):bss_file.c:107:
 .Ve
 .PP
-Create a Netscape certificate sequence
+can be displayed with:
 .PP
 .Vb 1
-\& openssl nseq -in certs.pem -toseq -out nseq.pem
-.Ve
-.SH "NOTES"
-.IX Header "NOTES"
-The \fB\s-1PEM\s0\fR encoded form uses the same headers and footers as a certificate:
-.PP
-.Vb 2
-\& -----BEGIN CERTIFICATE-----
-\& -----END CERTIFICATE-----
+\& openssl errstr 2006D080
 .Ve
 .PP
-A Netscape certificate sequence is a Netscape specific form that can be sent
-to browsers as an alternative to the standard PKCS#7 format when several
-certificates are sent to the browser: for example during certificate enrollment.
-It is used by Netscape certificate server for example.
-.SH "BUGS"
-.IX Header "BUGS"
-This program needs a few more options: like allowing \s-1DER\s0 or \s-1PEM\s0 input and
-output files and allowing multiple certificate files to be used.
+to produce the error message:
+.PP
+.Vb 1
+\& error:2006D080:BIO routines:BIO_new_file:no such file
+.Ve
+.SH "SEE ALSO"
+.IX Header "SEE ALSO"
+\&\fIerr\fR\|(3),
+\&\fIERR_load_crypto_strings\fR\|(3),
+\&\fISSL_load_error_strings\fR\|(3)

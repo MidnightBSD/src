@@ -1,5 +1,5 @@
 # $MidnightBSD$
-# $FreeBSD: src/secure/usr.bin/openssl/Makefile,v 1.24 2005/02/25 06:04:12 nectar Exp $
+# $FreeBSD: src/secure/usr.bin/openssl/Makefile,v 1.25 2006/07/29 19:41:40 simon Exp $
 
 PROG=	openssl
 
@@ -14,7 +14,8 @@ LDADD=	-lssl -lcrypto
 CFLAGS+= -DMONOLITH -I${.CURDIR}
 
 SRCS+=	app_rand.c apps.c asn1pars.c ca.c ciphers.c crl.c crl2p7.c \
-	dgst.c dh.c dhparam.c dsa.c dsaparam.c enc.c engine.c errstr.c \
+	dgst.c dh.c dhparam.c dsa.c dsaparam.c ec.c ecparam.c enc.c \
+	engine.c errstr.c \
 	gendh.c gendsa.c genrsa.c nseq.c ocsp.c openssl.c passwd.c \
 	pkcs12.c pkcs7.c pkcs8.c prime.c rand.c req.c rsa.c rsautl.c s_cb.c \
 	s_client.c s_server.c s_socket.c s_time.c sess_id.c smime.c \
