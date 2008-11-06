@@ -1,20 +1,20 @@
-# $FreeBSD: src/secure/lib/libcrypto/Makefile.inc,v 1.40 2005/02/25 06:04:09 nectar Exp $
+# $FreeBSD: src/secure/lib/libcrypto/Makefile.inc,v 1.47 2007/05/09 19:37:00 gnn Exp $
+
+.include <bsd.own.mk>
 
 LCRYPTO_SRC=	${.CURDIR}/../../../crypto/openssl
 LCRYPTO_DOC=	${.CURDIR}/../../../crypto/openssl/doc
 
 CFLAGS+=	-DTERMIOS -DANSI_SOURCE
 CFLAGS+=	-I${LCRYPTO_SRC} -I${LCRYPTO_SRC}/crypto -I${.OBJDIR}
-CFLAGS+=	-DOPENSSL_THREADS
+CFLAGS+=	-DOPENSSL_THREADS -DDSO_DLFCN -DHAVE_DLFCN_H
 
-.if !defined(MAKE_IDEA)
+.if ${MK_IDEA} == "no"
 CFLAGS+=	-DOPENSSL_NO_IDEA
 .endif
 
-.if ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 CFLAGS+= -DL_ENDIAN
-.elif ${MACHINE_ARCH} == "alpha"
-# no ENDIAN stuff defined for alpha (64-bit)
 .endif
 
 MANDIR=	${SHAREDIR}/openssl/man/man
@@ -34,9 +34,9 @@ man-update:
 	@(sec=${manpage:E}; \
 	pod=${manpage:R}.pod; \
 	cp ${LCRYPTO_DOC}/${_docs}/$$pod .; \
-	pod2man --section=$$sec --release="0.9.7d" --center="OpenSSL" \
+	pod2man --section=$$sec --release="0.9.8e" --center="OpenSSL" \
 	  $$pod > ${.CURDIR}/man/${manpage}; \
-	rm $$pod; \
+	rm -f $$pod; \
 	${ECHO} ${manpage})
 .endfor
 

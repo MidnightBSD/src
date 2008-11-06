@@ -21287,6 +21287,16 @@ secure/lib/libcrypto/Makefile -text
 secure/lib/libcrypto/Makefile.asm -text
 secure/lib/libcrypto/Makefile.inc -text
 secure/lib/libcrypto/Makefile.man -text
+secure/lib/libcrypto/engines/Makefile -text
+secure/lib/libcrypto/engines/Makefile.inc -text
+secure/lib/libcrypto/engines/lib4758cca/Makefile -text
+secure/lib/libcrypto/engines/libaep/Makefile -text
+secure/lib/libcrypto/engines/libatalla/Makefile -text
+secure/lib/libcrypto/engines/libchil/Makefile -text
+secure/lib/libcrypto/engines/libcswift/Makefile -text
+secure/lib/libcrypto/engines/libnuron/Makefile -text
+secure/lib/libcrypto/engines/libsureware/Makefile -text
+secure/lib/libcrypto/engines/libubsec/Makefile -text
 secure/lib/libcrypto/i386/bf-586.s -text
 secure/lib/libcrypto/i386/bf-686.s -text
 secure/lib/libcrypto/i386/bn-586.s -text
@@ -21303,6 +21313,7 @@ secure/lib/libcrypto/man/ASN1_OBJECT_new.3 -text
 secure/lib/libcrypto/man/ASN1_STRING_length.3 -text
 secure/lib/libcrypto/man/ASN1_STRING_new.3 -text
 secure/lib/libcrypto/man/ASN1_STRING_print_ex.3 -text
+secure/lib/libcrypto/man/ASN1_generate_nconf.3 -text
 secure/lib/libcrypto/man/BIO_ctrl.3 -text
 secure/lib/libcrypto/man/BIO_f_base64.3 -text
 secure/lib/libcrypto/man/BIO_f_buffer.3 -text
@@ -21324,6 +21335,7 @@ secure/lib/libcrypto/man/BIO_s_null.3 -text
 secure/lib/libcrypto/man/BIO_s_socket.3 -text
 secure/lib/libcrypto/man/BIO_set_callback.3 -text
 secure/lib/libcrypto/man/BIO_should_retry.3 -text
+secure/lib/libcrypto/man/BN_BLINDING_new.3 -text
 secure/lib/libcrypto/man/BN_CTX_new.3 -text
 secure/lib/libcrypto/man/BN_CTX_start.3 -text
 secure/lib/libcrypto/man/BN_add.3 -text
@@ -21369,6 +21381,7 @@ secure/lib/libcrypto/man/ERR_load_strings.3 -text
 secure/lib/libcrypto/man/ERR_print_errors.3 -text
 secure/lib/libcrypto/man/ERR_put_error.3 -text
 secure/lib/libcrypto/man/ERR_remove_state.3 -text
+secure/lib/libcrypto/man/ERR_set_mark.3 -text
 secure/lib/libcrypto/man/EVP_BytesToKey.3 -text
 secure/lib/libcrypto/man/EVP_DigestInit.3 -text
 secure/lib/libcrypto/man/EVP_EncryptInit.3 -text
@@ -21379,8 +21392,10 @@ secure/lib/libcrypto/man/EVP_SealInit.3 -text
 secure/lib/libcrypto/man/EVP_SignInit.3 -text
 secure/lib/libcrypto/man/EVP_VerifyInit.3 -text
 secure/lib/libcrypto/man/OBJ_nid2obj.3 -text
+secure/lib/libcrypto/man/OPENSSL_Applink.3 -text
 secure/lib/libcrypto/man/OPENSSL_VERSION_NUMBER.3 -text
 secure/lib/libcrypto/man/OPENSSL_config.3 -text
+secure/lib/libcrypto/man/OPENSSL_ia32cap.3 -text
 secure/lib/libcrypto/man/OPENSSL_load_builtin_modules.3 -text
 secure/lib/libcrypto/man/OpenSSL_add_all_algorithms.3 -text
 secure/lib/libcrypto/man/PKCS12_create.3 -text
@@ -21436,6 +21451,7 @@ secure/lib/libcrypto/man/des.3 -text
 secure/lib/libcrypto/man/des_modes.3 -text
 secure/lib/libcrypto/man/dh.3 -text
 secure/lib/libcrypto/man/dsa.3 -text
+secure/lib/libcrypto/man/ecdsa.3 -text
 secure/lib/libcrypto/man/engine.3 -text
 secure/lib/libcrypto/man/err.3 -text
 secure/lib/libcrypto/man/evp.3 -text
@@ -21453,12 +21469,9 @@ secure/lib/libcrypto/man/sha.3 -text
 secure/lib/libcrypto/man/threads.3 -text
 secure/lib/libcrypto/man/ui.3 -text
 secure/lib/libcrypto/man/ui_compat.3 -text
-secure/lib/libcrypto/opensslconf-alpha.h -text
+secure/lib/libcrypto/man/x509.3 -text
 secure/lib/libcrypto/opensslconf-amd64.h -text
-secure/lib/libcrypto/opensslconf-arm.h -text
 secure/lib/libcrypto/opensslconf-i386.h -text
-secure/lib/libcrypto/opensslconf-ia64.h -text
-secure/lib/libcrypto/opensslconf-powerpc.h -text
 secure/lib/libcrypto/opensslconf-sparc64.h -text
 secure/lib/libssh/Makefile -text
 secure/lib/libssl/Makefile -text
