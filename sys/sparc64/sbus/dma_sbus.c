@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sbus/dma_sbus.c,v 1.1.2.1 2006/01/30 22:30:51 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sbus/dma_sbus.c,v 1.5 2007/01/20 14:06:01 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,6 +74,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sbus/dma_sbus.c,v 1.1.2.1 2006/01/30 22:30:5
 #include <sys/rman.h>
 
 #include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
@@ -87,12 +88,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sbus/dma_sbus.c,v 1.1.2.1 2006/01/30 22:30:5
 #include <sparc64/sbus/sbusvar.h>
 
 struct dma_devinfo {
-	char			*ddi_compat;	/* PROM compatible */
-	char			*ddi_model;	/* PROM model */
-	char			*ddi_name;	/* PROM name */
-	phandle_t		ddi_node;	/* PROM node */
-	char			*ddi_type;	/* PROM device_type */
-
+	struct ofw_bus_devinfo	ddi_obdinfo;
 	struct resource_list	ddi_rl;
 };
 
@@ -109,17 +105,15 @@ static device_attach_t dma_attach;
 static bus_print_child_t dma_print_child;
 static bus_probe_nomatch_t dma_probe_nomatch;
 static bus_get_resource_list_t dma_get_resource_list;
-static ofw_bus_get_compat_t dma_get_compat;
-static ofw_bus_get_model_t dma_get_model;
-static ofw_bus_get_name_t dma_get_name;
-static ofw_bus_get_node_t dma_get_node;
-static ofw_bus_get_type_t dma_get_type;
+static ofw_bus_get_devinfo_t dma_get_devinfo;
 
-static struct dma_devinfo *dma_setup_dinfo(device_t, phandle_t, char *);
+static struct dma_devinfo *dma_setup_dinfo(device_t, struct dma_softc *,
+    phandle_t);
 static void dma_destroy_dinfo(struct dma_devinfo *);
+static int dma_print_res(struct dma_devinfo *);
 
 static device_method_t dma_methods[] = {
-        /* Device interface */
+	/* Device interface */
 	DEVMETHOD(device_probe,		dma_probe),
 	DEVMETHOD(device_attach,	dma_attach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
@@ -139,11 +133,12 @@ static device_method_t dma_methods[] = {
 	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
 
 	/* ofw_bus interface */
-	DEVMETHOD(ofw_bus_get_compat,	dma_get_compat),
-	DEVMETHOD(ofw_bus_get_model,	dma_get_model),
-	DEVMETHOD(ofw_bus_get_name,	dma_get_name),
-	DEVMETHOD(ofw_bus_get_node,	dma_get_node),
-	DEVMETHOD(ofw_bus_get_type,	dma_get_type),
+	DEVMETHOD(ofw_bus_get_devinfo,	dma_get_devinfo),
+	DEVMETHOD(ofw_bus_get_compat,	ofw_bus_gen_get_compat),
+	DEVMETHOD(ofw_bus_get_model,	ofw_bus_gen_get_model),
+	DEVMETHOD(ofw_bus_get_name,	ofw_bus_gen_get_name),
+	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
+	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
 
 	{ 0, 0 }
 };
@@ -164,10 +159,10 @@ dma_probe(device_t dev)
 	name = ofw_bus_get_name(dev);
 	if (strcmp(name, "espdma") == 0 || strcmp(name, "dma") == 0 ||
 	    strcmp(name, "ledma") == 0) {
-                device_set_desc_copy(dev, name);
-                return (0);
+		device_set_desc_copy(dev, name);
+		return (0);
 	}
-        return (ENXIO);
+	return (ENXIO);
 }
 
 static int
@@ -178,7 +173,7 @@ dma_attach(device_t dev)
 	struct dma_devinfo *ddi;
 	device_t cdev;
 	const char *name;
-	char *cabletype, *cname;
+	char *cabletype;
 	uint32_t csr;
 	phandle_t child, node;
 	int error, burst, children;
@@ -233,8 +228,8 @@ dma_attach(device_t dev)
 	}
 
 	error = bus_dma_tag_create(
-	    NULL,			/* parent */
-	    PAGE_SIZE, 0,		/* alignment, boundary */
+	    bus_get_dma_tag(dev),	/* parent */
+	    1, 0,			/* alignment, boundary */
 	    BUS_SPACE_MAXADDR,		/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
@@ -263,40 +258,26 @@ dma_attach(device_t dev)
 	/* Attach children. */
 	children = 0;
 	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
-		if ((OF_getprop_alloc(child, "name", 1, (void **)&cname)) == -1)
+		if ((ddi = dma_setup_dinfo(dev, dsc, child)) == NULL)
 			continue;
-		if ((ddi = dma_setup_dinfo(dev, child, cname)) == NULL) {
-			device_printf(dev, "<%s>: incomplete\n", cname);
-			free(cname, M_OFWPROP);
-			continue;
-		}
 		if (children != 0) {
-			device_printf(dev, "<%s>: only one child per DMA "
-			    "channel supported\n", cname);
+			device_printf(dev,
+			    "<%s>: only one child per DMA channel supported\n",
+			    ddi->ddi_obdinfo.obd_name);
 			dma_destroy_dinfo(ddi);
-			free(cname, M_OFWPROP);
 			continue;
 		}
 		if ((cdev = device_add_child(dev, NULL, -1)) == NULL) {
 			device_printf(dev, "<%s>: device_add_child failed\n",
-			    cname);
+			    ddi->ddi_obdinfo.obd_name);
 			dma_destroy_dinfo(ddi);
-			free(cname, M_OFWPROP);
 			continue;
 		}
 		device_set_ivars(cdev, ddi);
 		children++;
 	}
-	error = bus_generic_attach(dev);
-	if (error != 0) {
-		device_printf(dev, "bus_generic_attach failed\n");
-		goto fail_lsi;
-	}
+	return (bus_generic_attach(dev));
 
-	return (0);
-
- fail_lsi:
-	lsi64854_detach(lsc);
  fail_lpdma:
 	bus_dma_tag_destroy(lsc->sc_parent_dmat);
  fail_lres:
@@ -305,30 +286,25 @@ dma_attach(device_t dev)
 }
 
 static struct dma_devinfo *
-dma_setup_dinfo(device_t dev, phandle_t node, char *name)
+dma_setup_dinfo(device_t dev, struct dma_softc *dsc, phandle_t node)
 {
-	struct dma_softc *dsc;
 	struct dma_devinfo *ddi;
 	struct sbus_regs *reg;
 	uint32_t base, iv, *intr;
 	int i, nreg, nintr, slot, rslot;
 
-	dsc = device_get_softc(dev);
-
 	ddi = malloc(sizeof(*ddi), M_DEVBUF, M_WAITOK | M_ZERO);
-	if (ddi == NULL)
+	if (ofw_bus_gen_setup_devinfo(&ddi->ddi_obdinfo, node) != 0) {
+		free(ddi, M_DEVBUF);
 		return (NULL);
+	}
 	resource_list_init(&ddi->ddi_rl);
-	ddi->ddi_name = name;
-	ddi->ddi_node = node;
-	OF_getprop_alloc(node, "compatible", 1, (void **)&ddi->ddi_compat);
-	OF_getprop_alloc(node, "device_type", 1, (void **)&ddi->ddi_type);
-	OF_getprop_alloc(node, "model", 1, (void **)&ddi->ddi_model);
 	slot = -1;
 	nreg = OF_getprop_alloc(node, "reg", sizeof(*reg), (void **)&reg);
 	if (nreg == -1) {
-		dma_destroy_dinfo(ddi);
-		return (NULL);
+		device_printf(dev, "<%s>: incomplete\n",
+		    ddi->ddi_obdinfo.obd_name);
+		goto fail;
 	}
 	for (i = 0; i < nreg; i++) {
 		base = reg[i].sbr_offset;
@@ -338,10 +314,10 @@ dma_setup_dinfo(device_t dev, phandle_t node, char *name)
 		} else
 			rslot = reg[i].sbr_slot;
 		if (slot != -1 && slot != rslot) {
-			device_printf(dev, "<%s>: multiple slots\n", name);
+			device_printf(dev, "<%s>: multiple slots\n",
+			    ddi->ddi_obdinfo.obd_name);
 			free(reg, M_OFWPROP);
-			dma_destroy_dinfo(ddi);
-			return (NULL);
+			goto fail;
 		}
 		slot = rslot;
 
@@ -351,9 +327,8 @@ dma_setup_dinfo(device_t dev, phandle_t node, char *name)
 	free(reg, M_OFWPROP);
 	if (slot != dsc->sc_slot) {
 		device_printf(dev, "<%s>: parent and child slot do not match\n",
-		    name);
-		dma_destroy_dinfo(ddi);
-		return (NULL);
+		    ddi->ddi_obdinfo.obd_name);
+		goto fail;
 	}
 
 	/*
@@ -378,6 +353,10 @@ dma_setup_dinfo(device_t dev, phandle_t node, char *name)
 		free(intr, M_OFWPROP);
 	}
 	return (ddi);
+
+ fail:
+	dma_destroy_dinfo(ddi);
+	return (NULL);
 }
 
 static void
@@ -385,27 +364,17 @@ dma_destroy_dinfo(struct dma_devinfo *dinfo)
 {
 
 	resource_list_free(&dinfo->ddi_rl);
-	if (dinfo->ddi_compat != NULL)
-		free(dinfo->ddi_compat, M_OFWPROP);
-	if (dinfo->ddi_model != NULL)
-		free(dinfo->ddi_model, M_OFWPROP);
-	if (dinfo->ddi_type != NULL)
-		free(dinfo->ddi_type, M_OFWPROP);
+	ofw_bus_gen_destroy_devinfo(&dinfo->ddi_obdinfo);
 	free(dinfo, M_DEVBUF);
 }
 
 static int
 dma_print_child(device_t dev, device_t child)
 {
-	struct dma_devinfo *ddi;
-	struct resource_list *rl;
 	int rv;
 
-	ddi = device_get_ivars(child);
-	rl = &ddi->ddi_rl;
 	rv = bus_print_child_header(dev, child);
-	rv += resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#lx");
-	rv += resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
+	rv += dma_print_res(device_get_ivars(child));
 	rv += bus_print_child_footer(dev, child);
 	return (rv);
 }
@@ -413,16 +382,13 @@ dma_print_child(device_t dev, device_t child)
 static void
 dma_probe_nomatch(device_t dev, device_t child)
 {
-	struct dma_devinfo *ddi;
-	struct resource_list *rl;
+	const char *type;
 
-	ddi = device_get_ivars(child);
-	rl = &ddi->ddi_rl;
-	device_printf(dev, "<%s>", ddi->ddi_name);
-	resource_list_print_type(rl, "mem", SYS_RES_MEMORY, "%#lx");
-        resource_list_print_type(rl, "irq", SYS_RES_IRQ, "%ld");
-        printf(" type %s (no driver attached)\n",
-            ddi->ddi_type != NULL ? ddi->ddi_type : "unknown");
+	device_printf(dev, "<%s>", ofw_bus_get_name(child));
+	dma_print_res(device_get_ivars(child));
+	type = ofw_bus_get_type(child);
+	printf(" type %s (no driver attached)\n",
+	    type != NULL ? type : "unknown");
 }
 
 static struct resource_list *
@@ -434,47 +400,23 @@ dma_get_resource_list(device_t dev, device_t child)
 	return (&ddi->ddi_rl);
 }
 
-static const char *
-dma_get_compat(device_t bus, device_t dev)
+static const struct ofw_bus_devinfo *
+dma_get_devinfo(device_t bus, device_t child)
 {
-	struct dma_devinfo *dinfo;
+	struct dma_devinfo *ddi;
 
-	dinfo = device_get_ivars(dev);
-	return (dinfo->ddi_compat);
+	ddi = device_get_ivars(child);
+	return (&ddi->ddi_obdinfo);
 }
 
-static const char *
-dma_get_model(device_t bus, device_t dev)
+static int
+dma_print_res(struct dma_devinfo *ddi)
 {
-	struct dma_devinfo *dinfo;
+	int rv;
 
-	dinfo = device_get_ivars(dev);
-	return (dinfo->ddi_model);
-}
-
-static const char *
-dma_get_name(device_t bus, device_t dev)
-{
-	struct dma_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->ddi_name);
-}
-
-static phandle_t
-dma_get_node(device_t bus, device_t dev)
-{
-	struct dma_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->ddi_node);
-}
-
-static const char *
-dma_get_type(device_t bus, device_t dev)
-{
-	struct dma_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->ddi_type);
+	rv = 0;
+	rv += resource_list_print_type(&ddi->ddi_rl, "mem", SYS_RES_MEMORY,
+	    "%#lx");
+	rv += resource_list_print_type(&ddi->ddi_rl, "irq", SYS_RES_IRQ, "%ld");
+	return (rv);
 }

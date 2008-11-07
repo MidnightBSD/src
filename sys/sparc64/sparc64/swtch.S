@@ -25,11 +25,13 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/swtch.S,v 1.33 2004/05/26 12:06:52 tmm Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/swtch.S,v 1.34 2007/01/19 11:15:33 marius Exp $");
 
 #include <machine/asmacros.h>
 #include <machine/asi.h>
+#include <machine/fsr.h>
 #include <machine/ktr.h>
+#include <machine/pcb.h>
 #include <machine/tstate.h>
 
 #include "assym.s"

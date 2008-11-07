@@ -37,8 +37,10 @@
  *
  *      from: @(#)trap.c        7.4 (Berkeley) 5/13/91
  * 	from: FreeBSD: src/sys/i386/i386/trap.c,v 1.197 2001/07/19
- * $FreeBSD: src/sys/sparc64/sparc64/trap.c,v 1.74 2005/04/12 23:18:54 jhb Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/trap.c,v 1.88 2007/06/04 21:38:48 attilio Exp $");
 
 #include "opt_ddb.h"
 #include "opt_ktr.h"
@@ -66,6 +68,7 @@
 #include <sys/uio.h>
 #include <sys/ktrace.h>
 #endif
+#include <security/audit/audit.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -75,7 +78,6 @@
 #include <vm/vm_map.h>
 #include <vm/vm_page.h>
 
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
@@ -164,7 +166,7 @@ const char *trap_msg[] = {
 	"kernel stack fault",
 };
 
-const int trap_sig[] = {
+static const int trap_sig[] = {
 	SIGILL,			/* reserved */
 	SIGILL,			/* instruction access exception */
 	SIGILL,			/* instruction access error */
@@ -230,9 +232,10 @@ trap(struct trapframe *tf)
 {
 	struct thread *td;
 	struct proc *p;
-	u_int sticks;
 	int error;
 	int sig;
+	register_t addr;
+	ksiginfo_t ksi;
 
 	td = PCPU_GET(curthread);
 
@@ -240,21 +243,24 @@ trap(struct trapframe *tf)
 	    trap_msg[tf->tf_type & ~T_KERNEL],
 	    (TRAPF_USERMODE(tf) ? "user" : "kernel"), rdpr(pil));
 
-	PCPU_LAZY_INC(cnt.v_trap);
+	PCPU_INC(cnt.v_trap);
 
 	if ((tf->tf_tstate & TSTATE_PRIV) == 0) {
 		KASSERT(td != NULL, ("trap: curthread NULL"));
 		KASSERT(td->td_proc != NULL, ("trap: curproc NULL"));
 
 		p = td->td_proc;
-		sticks = td->td_sticks;
+		td->td_pticks = 0;
 		td->td_frame = tf;
+		addr = tf->tf_tpc;
 		if (td->td_ucred != p->p_ucred)
 			cred_update_thread(td);
 
 		switch (tf->tf_type) {
 		case T_DATA_MISS:
 		case T_DATA_PROTECTION:
+			addr = tf->tf_sfar;
+			/* FALLTHROUGH */
 		case T_INSTRUCTION_MISS:
 			sig = trap_pfault(td, tf);
 			break;
@@ -284,10 +290,15 @@ trap(struct trapframe *tf)
 			if (debugger_on_signal &&
 			    (sig == 4 || sig == 10 || sig == 11))
 				kdb_enter("trapsig");
-			trapsignal(td, sig, tf->tf_type);
+			ksiginfo_init_trap(&ksi);
+			ksi.ksi_signo = sig;
+			ksi.ksi_code = (int)tf->tf_type; /* XXX not POSIX */
+			ksi.ksi_addr = (void *)addr;
+			ksi.ksi_trapno = (int)tf->tf_type;
+			trapsignal(td, &ksi);
 		}
 
-		userret(td, tf, sticks);
+		userret(td, tf);
 		mtx_assert(&Giant, MA_NOTOWNED);
  	} else {
 		KASSERT((tf->tf_type & T_KERNEL) != 0,
@@ -342,14 +353,13 @@ trap(struct trapframe *tf)
 			break;
 		case T_DATA_ERROR:
 			/*
-			 * handle PCI poke/peek as per UltraSPARC IIi
-			 * User's Manual 16.2.1.
+			 * Handle PCI poke/peek as per UltraSPARC IIi
+			 * User's Manual 16.2.1, modulo checking the
+			 * TPC as USIII CPUs generate a precise trap
+			 * instead of a special deferred one.
 			 */
-#define MEMBARSYNC_INST	((u_int32_t)0x8143e040)
 			if (tf->tf_tpc > (u_long)fas_nofault_begin &&
-			    tf->tf_tpc < (u_long)fas_nofault_end &&
-			    *(u_int32_t *)tf->tf_tpc == MEMBARSYNC_INST &&
-			    ((u_int32_t *)tf->tf_tpc)[-2] == MEMBARSYNC_INST) {
+			    tf->tf_tpc < (u_long)fas_nofault_end) {
 				cache_flush();
 				cache_enable();
 				tf->tf_tpc = (u_long)fas_fault;
@@ -357,7 +367,6 @@ trap(struct trapframe *tf)
 				error = 0;
 				break;
 			}
-#undef MEMBARSYNC_INST
 			error = 1;
 			break;
 		default:
@@ -496,7 +505,6 @@ syscall(struct trapframe *tf)
 	register_t args[8];
 	register_t *argp;
 	struct proc *p;
-	u_int sticks;
 	u_long code;
 	u_long tpc;
 	int reg;
@@ -510,19 +518,21 @@ syscall(struct trapframe *tf)
 
 	p = td->td_proc;
 
-	PCPU_LAZY_INC(cnt.v_syscall);
+	PCPU_INC(cnt.v_syscall);
 
 	narg = 0;
 	error = 0;
 	reg = 0;
 	regcnt = REG_MAXARGS;
 
-	sticks = td->td_sticks;
+	td->td_pticks = 0;
 	td->td_frame = tf;
 	if (td->td_ucred != p->p_ucred)
 		cred_update_thread(td);
+#ifdef KSE
 	if (p->p_flag & P_SA)
 		thread_user_enter(td);
+#endif
 	code = tf->tf_global[1];
 
 	/*
@@ -552,7 +562,7 @@ syscall(struct trapframe *tf)
   	else
  		callp = &p->p_sysent->sv_table[code];
 
-	narg = callp->sy_narg & SYF_ARGMASK;
+	narg = callp->sy_narg;
 
 	if (narg <= regcnt) {
 		argp = &tf->tf_out[reg];
@@ -570,17 +580,13 @@ syscall(struct trapframe *tf)
 	CTR5(KTR_SYSC, "syscall: td=%p %s(%#lx, %#lx, %#lx)", td,
 	    syscallnames[code], argp[0], argp[1], argp[2]);
 
-	/*
-	 * Try to run the syscall without the MP lock if the syscall
-	 * is MP safe.
-	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_lock(&Giant);
-
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSCALL))
 		ktrsyscall(code, narg, argp);
 #endif
+
+	td->td_syscalls++;
+
 	if (error == 0) {
 		td->td_retval[0] = 0;
 		td->td_retval[1] = 0;
@@ -589,7 +595,9 @@ syscall(struct trapframe *tf)
 
 		PTRACESTOP_SC(p, td, S_PT_SCE);
 
+		AUDIT_SYSCALL_ENTER(code, td);
 		error = (*callp->sy_call)(td, argp);
+		AUDIT_SYSCALL_EXIT(error, td);
 
 		CTR5(KTR_SYSC, "syscall: p=%p error=%d %s return %#lx %#lx ", p,
 		    error, syscallnames[code], td->td_retval[0],
@@ -631,16 +639,22 @@ syscall(struct trapframe *tf)
 	}
 
 	/*
-	 * Release Giant if we had to get it.  Don't use mtx_owned(),
-	 * we want to catch broken syscalls.
+	 * Check for misbehavior.
 	 */
-	if ((callp->sy_narg & SYF_MPSAFE) == 0)
-		mtx_unlock(&Giant);
+	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
+	KASSERT(td->td_critnest == 0,
+	    ("System call %s returning in a critical section",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???"));
+	KASSERT(td->td_locks == 0,
+	    ("System call %s returning with %d locks held",
+	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???",
+	    td->td_locks));
 
 	/*
 	 * Handle reschedule and other end-of-syscall issues
 	 */
-	userret(td, tf, sticks);
+	userret(td, tf);
 
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSRET))
@@ -654,9 +668,4 @@ syscall(struct trapframe *tf)
 	STOPEVENT(p, S_SCX, code);
 
 	PTRACESTOP_SC(p, td, S_PT_SCX);
-
-	WITNESS_WARN(WARN_PANIC, NULL, "System call %s returning",
-	    (code >= 0 && code < SYS_MAXSYSCALL) ? syscallnames[code] : "???");
-	mtx_assert(&sched_lock, MA_NOTOWNED);
-	mtx_assert(&Giant, MA_NOTOWNED);
 }

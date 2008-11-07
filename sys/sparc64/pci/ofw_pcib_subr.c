@@ -21,9 +21,10 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sparc64/pci/ofw_pcib_subr.c,v 1.4 2004/08/12 17:41:32 marius Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/pci/ofw_pcib_subr.c,v 1.8 2007/06/18 21:49:42 marius Exp $");
 
 #include "opt_ofw_pci.h"
 
@@ -50,27 +51,34 @@
 void
 ofw_pcib_gen_setup(device_t bridge)
 {
-	struct ofw_pcib_gen_softc *sc = device_get_softc(bridge);
-	u_int secbus;
+	struct ofw_pcib_gen_softc *sc;
+#ifndef SUN4V
+	int secbus;
 
+#endif
+	sc = device_get_softc(bridge);
 	sc->ops_pcib_sc.dev = bridge;
 	sc->ops_node = ofw_bus_get_node(bridge);
 	KASSERT(sc->ops_node != 0,
 	    ("ofw_pcib_gen_setup: no ofw pci parent bus!"));
 
 	/*
-	 * Setup the secondary bus number register, by allocating a new unique
-	 * bus number for it; the firmware preset does not always seem to be
-	 * correct.
+	 * Setup the secondary bus number register, if supported, by
+	 * allocating a new unique bus number for it; the firmware
+	 * preset does not always seem to be correct in that case.
 	 */
-	secbus = ofw_pci_alloc_busno(sc->ops_node);
-	pci_write_config(bridge, PCIR_PRIBUS_1, pci_get_bus(bridge), 1);
-	pci_write_config(bridge, PCIR_SECBUS_1, secbus, 1);
-	pci_write_config(bridge, PCIR_SUBBUS_1, secbus, 1);
-	sc->ops_pcib_sc.subbus = sc->ops_pcib_sc.secbus = secbus;
-	/* Notify parent bridges. */
-	OFW_PCI_ADJUST_BUSRANGE(device_get_parent(bridge), secbus);
+#ifndef SUN4V
+	secbus = OFW_PCI_ALLOC_BUSNO(bridge);
+	if (secbus != -1) {
+		pci_write_config(bridge, PCIR_PRIBUS_1, pci_get_bus(bridge), 1);
+		pci_write_config(bridge, PCIR_SECBUS_1, secbus, 1);
+		pci_write_config(bridge, PCIR_SUBBUS_1, secbus, 1);
+		sc->ops_pcib_sc.subbus = sc->ops_pcib_sc.secbus = secbus;
+		/* Notify parent bridges. */
+		OFW_PCI_ADJUST_BUSRANGE(device_get_parent(bridge), secbus);
+	}
 
+#endif
 	ofw_bus_setup_iinfo(sc->ops_node, &sc->ops_iinfo,
 	    sizeof(ofw_pci_intr_t));
 }
@@ -78,18 +86,19 @@ ofw_pcib_gen_setup(device_t bridge)
 int
 ofw_pcib_gen_route_interrupt(device_t bridge, device_t dev, int intpin)
 {
-	struct ofw_pcib_gen_softc *sc = device_get_softc(bridge);
-	struct ofw_bus_iinfo *ii = &sc->ops_iinfo;
+	struct ofw_pcib_gen_softc *sc;
+	struct ofw_bus_iinfo *ii;
 	struct ofw_pci_register reg;
-	device_t pbridge = device_get_parent(device_get_parent(bridge));
-	phandle_t node = ofw_bus_get_node(dev);
 	ofw_pci_intr_t pintr, mintr;
-	u_int8_t maskbuf[sizeof(reg) + sizeof(pintr)];
+	uint8_t maskbuf[sizeof(reg) + sizeof(pintr)];
 
+	sc = device_get_softc(bridge);
+	ii = &sc->ops_iinfo;
 	if (ii->opi_imapsz > 0) {
 		pintr = intpin;
-		if (ofw_bus_lookup_imap(node, ii, &reg, sizeof(reg), &pintr,
-		    sizeof(pintr), &mintr, sizeof(mintr), maskbuf)) {
+		if (ofw_bus_lookup_imap(ofw_bus_get_node(dev), ii, &reg,
+		    sizeof(reg), &pintr, sizeof(pintr), &mintr, sizeof(mintr),
+		    maskbuf)) {
 			/*
 			 * If we've found a mapping, return it and don't map
 			 * it again on higher levels - that causes problems
@@ -105,26 +114,29 @@ ofw_pcib_gen_route_interrupt(device_t bridge, device_t dev, int intpin)
 		return (pcib_route_interrupt(bridge, dev, intpin));
 	}
 	/* Try at the parent. */
-	return (PCIB_ROUTE_INTERRUPT(pbridge, bridge, intpin));
+	return (PCIB_ROUTE_INTERRUPT(device_get_parent(device_get_parent(
+	    bridge)), bridge, intpin));
 }
 
 phandle_t
 ofw_pcib_gen_get_node(device_t bridge, device_t dev)
 {
-	struct ofw_pcib_gen_softc *sc = device_get_softc(bridge);
+	struct ofw_pcib_gen_softc *sc;
 
+	sc = device_get_softc(bridge);
 	return (sc->ops_node);
 }
 
 void
 ofw_pcib_gen_adjust_busrange(device_t bridge, u_int subbus)
 {
-	struct ofw_pcib_gen_softc *sc = device_get_softc(bridge);
+	struct ofw_pcib_gen_softc *sc;
 
+	sc = device_get_softc(bridge);
 	if (subbus > sc->ops_pcib_sc.subbus) {
 #ifdef OFW_PCI_DEBUG
 		device_printf(bridge,
-		    "adjusting secondary bus number from %d to %d\n",
+		    "adjusting subordinate bus number from %d to %d\n",
 		    sc->ops_pcib_sc.subbus, subbus);
 #endif
 		pci_write_config(bridge, PCIR_SUBBUS_1, subbus, 1);

@@ -36,7 +36,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*	$FreeBSD: src/sys/sparc64/sbus/lsi64854var.h,v 1.5 2005/05/19 14:51:10 marius Exp $ */
+/*	$FreeBSD: src/sys/sparc64/sbus/lsi64854var.h,v 1.6 2006/01/31 12:50:02 marius Exp $ */
 
 struct lsi64854_softc {
 	device_t		sc_dev;
@@ -69,10 +69,8 @@ struct lsi64854_softc {
 			 int, size_t *);	/* DMA setup */
 	int	(*intr)(void *);		/* interrupt handler */
 
-	driver_intr_t	*sc_intrchain;		/* next handler in intr chain */
-	void		*sc_intrchainarg;	/* arg for next intr handler */
-
 	u_int 			sc_dmactl;
+	int			sc_dodrain;
 };
 
 #define L64854_GCSR(sc)	\
@@ -109,6 +107,3 @@ struct lsi64854_softc {
 
 int	lsi64854_attach(struct lsi64854_softc *);
 int	lsi64854_detach(struct lsi64854_softc *);
-int	lsi64854_scsi_intr(void *);
-int	lsi64854_enet_intr(void *);
-int	lsi64854_pp_intr(void *);

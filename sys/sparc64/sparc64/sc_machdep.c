@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/sc_machdep.c,v 1.2 2005/05/21 20:38:26 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/sc_machdep.c,v 1.3 2007/03/07 21:13:51 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -36,10 +36,9 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/sc_machdep.c,v 1.2 2005/05/21 20:38:
 #include <sys/limits.h>
 #include <sys/module.h>
 
-#include <dev/ofw/openfirm.h>
+#include <dev/ofw/ofw_bus.h>
 
 #include <machine/bus.h>
-#include <machine/nexusvar.h>
 
 #include <dev/syscons/syscons.h>
 
@@ -88,7 +87,7 @@ sc_probe(device_t dev)
 	int unit;
 
 	unit = device_get_unit(dev);
-	if (strcmp(nexus_get_name(dev), SC_DRIVER_NAME) != 0 ||
+	if (strcmp(ofw_bus_get_name(dev), SC_DRIVER_NAME) != 0 ||
 	    unit >= SC_MD_MAX)
 		return (ENXIO);
 

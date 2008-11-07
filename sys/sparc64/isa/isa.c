@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/isa/isa.c,v 1.16 2005/05/19 15:47:37 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/isa/isa.c,v 1.19 2007/02/23 12:19:05 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,11 +54,6 @@ __FBSDID("$FreeBSD: src/sys/sparc64/isa/isa.c,v 1.16 2005/05/19 15:47:37 marius 
 #include <sparc64/isa/ofw_isa.h>
 
 /* There can be only one ISA bus, so it is safe to use globals. */
-bus_space_tag_t isa_io_bt = NULL;
-bus_space_handle_t isa_io_hdl;
-bus_space_tag_t isa_mem_bt = NULL;
-bus_space_handle_t isa_mem_hdl;
-
 static u_int64_t isa_io_base;
 static u_int64_t isa_io_limit;
 static u_int64_t isa_mem_base;
@@ -139,21 +134,17 @@ isa_init(device_t dev)
 			/* This is probably always 0. */
 			isa_io_base = ISAB_RANGE_PHYS(&isab_ranges[i]);
 			isa_io_limit = isab_ranges[i].size;
-			isa_io_hdl = OFW_PCI_GET_BUS_HANDLE(bridge,
-			    SYS_RES_IOPORT, isa_io_base, &isa_io_bt);
 			break;
 		case ISAR_SPACE_MEM:
 			/* This is probably always 0. */
 			isa_mem_base = ISAB_RANGE_PHYS(&isab_ranges[i]);
 			isa_mem_limit = isab_ranges[i].size;
-			isa_mem_hdl = OFW_PCI_GET_BUS_HANDLE(bridge,
-			    SYS_RES_MEMORY, isa_mem_base, &isa_mem_bt);
 			break;
 		}
 	}
 }
 
-static struct {
+static const struct {
 	const char	*name;
 	uint32_t	id;
 } ofw_isa_pnp_map[] = {
@@ -164,6 +155,8 @@ static struct {
 	{ "flashprom",	0x0100ae4e }, /* SUN0001 */
 	{ "parallel",	0x0104d041 }, /* PNP0401 */
 	{ "serial",	0x0105d041 }, /* PNP0501 */
+	{ "i2c",	0x0200ae4e }, /* SUN0002 */
+	{ "rmc-comm",	0x0300ae4e }, /* SUN0003 */
 	{ "kb_ps2",	0x0303d041 }, /* PNP0303 */
 	{ "kdmouse",	0x030fd041 }, /* PNP0F03 */
 	{ "power",	0x0c0cd041 }, /* PNP0C0C */
@@ -213,6 +206,7 @@ isa_setup_children(device_t dev, phandle_t parent)
 		if (ofw_isa_pnp_map[i].name == NULL) {
 			printf("isa_setup_children: no PnP map entry for node "
 			    "0x%lx: %s\n", (unsigned long)node, name);
+			free(name, M_OFWPROP);
 			continue;
 		}
 
@@ -356,14 +350,10 @@ isa_alloc_resource(device_t bus, device_t child, int type, int *rid,
 		base = limit = 0;
 		switch (type) {
 		case SYS_RES_MEMORY:
-			if (isa_mem_bt == NULL)
-				return (NULL);
 			base = isa_mem_base;
 			limit = base + isa_mem_limit;
 			break;
 		case SYS_RES_IOPORT:
-			if (isa_io_bt == NULL)
-				return (NULL);
 			base = isa_io_base;
 			limit = base + isa_io_limit;
 			break;
@@ -397,8 +387,8 @@ isa_release_resource(device_t bus, device_t child, int type, int rid,
 
 int
 isa_setup_intr(device_t dev, device_t child,
-	       struct resource *irq, int flags,
-	       driver_intr_t *intr, void *arg, void **cookiep)
+	       struct resource *irq, int flags, driver_filter_t *filter, 
+	       driver_intr_t *intr, void *arg, void **cookiep)	       
 {
 
 	/*
@@ -407,8 +397,8 @@ isa_setup_intr(device_t dev, device_t child,
 	 * The interrupt had been routed before it was added to the
 	 * resource list of the child.
 	 */
-	return (BUS_SETUP_INTR(device_get_parent(dev), child, irq, flags, intr,
-	    arg, cookiep));
+	return (BUS_SETUP_INTR(device_get_parent(dev), child, irq, flags,
+	    filter, intr, arg, cookiep));
 }
 
 int

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/fhc/clkbrd.c,v 1.1 2005/03/19 01:04:48 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/fhc/clkbrd.c,v 1.3 2006/03/28 19:46:48 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -108,7 +108,6 @@ clkbrd_attach(device_t dev)
 	uint8_t r;
 
 	sc = device_get_softc(dev);
-	bzero(sc, sizeof(struct clkbrd_softc));
 	sc->sc_dev = dev;
 
 	for (i = CLKBRD_CF; i <= CLKBRD_CLKVER; i++) {
@@ -132,19 +131,20 @@ clkbrd_attach(device_t dev)
 	slots = 4;
 	r = bus_space_read_1(sc->sc_bt[CLKBRD_CLK], sc->sc_bh[CLKBRD_CLK],
 	    CLK_STS1);
-	switch (r & 0xc0) {
-	case 0x40:
+	switch (r & CLK_STS1_SLOTS_MASK) {
+	case CLK_STS1_SLOTS_16:
 		slots = 16;
 		break;
-	case 0xc0:
+	case CLK_STS1_SLOTS_8:
 		slots = 8;
 		break;
-	case 0x80:
+	case CLK_STS1_SLOTS_4:
 		if (sc->sc_flags & CLKBRD_HAS_CLKVER) {
 			r = bus_space_read_1(sc->sc_bt[CLKBRD_CLKVER],
-			    sc->sc_bh[CLKBRD_CLKVER], 0);
-			if (r != 0 && (r & 0x80) == 0)
-					slots = 5;
+			    sc->sc_bh[CLKBRD_CLKVER], CLKVER_SLOTS);
+			if (r != 0 &&
+			    (r & CLKVER_SLOTS_MASK) == CLKVER_SLOTS_PLUS)
+				slots = 5;
 		}
 	}
 

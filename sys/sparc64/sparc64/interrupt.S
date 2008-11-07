@@ -25,10 +25,11 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/interrupt.S,v 1.8 2005/04/16 15:05:56 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/interrupt.S,v 1.10 2007/01/19 11:15:33 marius Exp $");
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>
+#include <machine/intr_machdep.h>
 #include <machine/ktr.h>
 #include <machine/pstate.h>
 
@@ -152,16 +153,22 @@ END(intr_vector)
 ENTRY(intr_fast)
 	save	%sp, -CCFSZ, %sp
 
-1:	ldx	[PCPU(IRHEAD)], %l0
+	/*
+	 * Disable interrupts while we fiddle with the interrupt request lists
+	 * as interrupts at levels higher than what got us here aren't blocked.
+	 */
+1:	wrpr	%g0, PSTATE_NORMAL, %pstate
+
+	ldx	[PCPU(IRHEAD)], %l0
 	brnz,a,pt %l0, 2f
 	 nop
+
+	wrpr	%g0, PSTATE_KERNEL, %pstate
 
 	ret
 	 restore
 
-2:	wrpr	%g0, PSTATE_NORMAL, %pstate
-
-	ldx	[%l0 + IR_NEXT], %l1
+2:	ldx	[%l0 + IR_NEXT], %l1
 	brnz,pt	%l1, 3f
 	 stx	%l1, [PCPU(IRHEAD)]
 	PCPU_ADDR(IRHEAD, %l1)
@@ -170,6 +177,16 @@ ENTRY(intr_fast)
 3:	ldx	[%l0 + IR_FUNC], %o0
 	ldx	[%l0 + IR_ARG], %o1
 	lduw	[%l0 + IR_VEC], %o2
+
+	ldx	[PCPU(IRFREE)], %l1
+	stx	%l1, [%l0 + IR_NEXT]
+	stx	%l0, [PCPU(IRFREE)]
+
+	wrpr	%g0, PSTATE_KERNEL, %pstate
+
+	KASSERT(%o0, "intr_fast: ir_func null")
+	call	%o0
+	 mov	%o1, %o0
 
 	/* intrcnt[intr_countp[%o2]]++ */
 	SET(intrcnt, %l7, %l2)		/* %l2 = intrcnt */
@@ -183,14 +200,6 @@ ENTRY(intr_fast)
 	inc	%l2
 	stx	%l2, [%l7]
 
-	ldx	[PCPU(IRFREE)], %l1
-	stx	%l1, [%l0 + IR_NEXT]
-	stx	%l0, [PCPU(IRFREE)]
-
-	wrpr	%g0, PSTATE_KERNEL, %pstate
-
-	call	%o0
-	 mov	%o1, %o0
 	ba,a	%xcc, 1b
 	 nop
 END(intr_fast)

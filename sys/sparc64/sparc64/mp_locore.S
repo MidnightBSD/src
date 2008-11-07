@@ -25,12 +25,13 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_locore.S,v 1.7 2003/04/29 00:37:41 jake Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_locore.S,v 1.8 2007/01/19 11:15:33 marius Exp $");
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>
 #include <machine/ktr.h>
 #include <machine/pstate.h>
+#include <machine/smp.h>
 #include <machine/upa.h>
 
 #include "assym.s"

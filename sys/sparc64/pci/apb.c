@@ -29,9 +29,10 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/dev/pci/pci_pci.c,v 1.3 2000/12/13
- *
- * $FreeBSD: src/sys/sparc64/pci/apb.c,v 1.11 2005/04/28 03:33:46 marcel Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/pci/apb.c,v 1.14 2007/09/30 11:05:17 marius Exp $");
 
 /*
  * Support for the Sun APB (Advanced PCI Bridge) PCI-PCI bridge.
@@ -69,8 +70,8 @@
  */
 struct apb_softc {
 	struct ofw_pcib_gen_softc	sc_bsc;
-	u_int8_t	sc_iomap;
-	u_int8_t	sc_memmap;
+	uint8_t		sc_iomap;
+	uint8_t		sc_memmap;
 };
 
 static device_probe_t apb_probe;
@@ -111,12 +112,9 @@ static device_method_t apb_methods[] = {
 	{ 0, 0 }
 };
 
-static driver_t apb_driver = {
-	"pcib",
-	apb_methods,
-	sizeof(struct apb_softc),
-};
+static devclass_t pcib_devclass;
 
+DEFINE_CLASS_0(pcib, apb_driver, apb_methods, sizeof(struct apb_softc));
 DRIVER_MODULE(apb, pci, apb_driver, pcib_devclass, 0, 0);
 
 /* APB specific registers */
@@ -143,7 +141,7 @@ apb_probe(device_t dev)
 }
 
 static void
-apb_map_print(u_int8_t map, u_long scale)
+apb_map_print(uint8_t map, u_long scale)
 {
 	int i, first;
 
@@ -157,7 +155,7 @@ apb_map_print(u_int8_t map, u_long scale)
 }
 
 static int
-apb_checkrange(u_int8_t map, u_long scale, u_long start, u_long end)
+apb_checkrange(uint8_t map, u_long scale, u_long start, u_long end)
 {
 	int i, ei;
 
@@ -186,6 +184,8 @@ apb_attach(device_t dev)
 	ofw_pcib_gen_setup(dev);
 
 	if (bootverbose) {
+		device_printf(dev, "  domain            %d\n",
+		    sc->sc_bsc.ops_pcib_sc.domain);
 		device_printf(dev, "  secondary bus     %d\n",
 		    sc->sc_bsc.ops_pcib_sc.secbus);
 		device_printf(dev, "  subordinate bus   %d\n",

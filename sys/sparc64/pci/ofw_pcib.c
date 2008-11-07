@@ -29,9 +29,10 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/dev/pci/pci_pci.c,v 1.3 2000/12/13
- *
- * $FreeBSD: src/sys/sparc64/pci/ofw_pcib.c,v 1.4 2004/08/12 17:41:32 marius Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/pci/ofw_pcib.c,v 1.8 2007/06/18 21:46:07 marius Exp $");
 
 #include "opt_ofw_pci.h"
 
@@ -92,17 +93,16 @@ static device_method_t ofw_pcib_methods[] = {
 	{ 0, 0 }
 };
 
-static driver_t ofw_pcib_driver = {
-	"pcib",
-	ofw_pcib_methods,
-	sizeof(struct ofw_pcib_gen_softc),
-};
+static devclass_t pcib_devclass;
 
+DEFINE_CLASS_0(pcib, ofw_pcib_driver, ofw_pcib_methods,
+    sizeof(struct ofw_pcib_gen_softc));
 DRIVER_MODULE(ofw_pcib, pci, ofw_pcib_driver, pcib_devclass, 0, 0);
 
 static int
 ofw_pcib_probe(device_t dev)
 {
+
 	if ((pci_get_class(dev) == PCIC_BRIDGE) &&
 	    (pci_get_subclass(dev) == PCIS_BRIDGE_PCI) &&
 	    ofw_bus_get_node(dev) != 0) {
@@ -115,10 +115,9 @@ ofw_pcib_probe(device_t dev)
 static int
 ofw_pcib_attach(device_t dev)
 {
-	struct ofw_pcib_gen_softc *sc = device_get_softc(dev);
 
 	ofw_pcib_gen_setup(dev);
 	pcib_attach_common(dev);
-	device_add_child(dev, "pci", sc->ops_pcib_sc.secbus);
+	device_add_child(dev, "pci", -1);
 	return (bus_generic_attach(dev));
 }

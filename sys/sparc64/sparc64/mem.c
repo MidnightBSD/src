@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.15 2004/08/15 21:37:52 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.18 2007/05/20 13:06:45 marius Exp $");
 
 /*
  * Memory special file
@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.15 2004/08/15 21:37:52 mar
  * might cause illegal aliases to be created for the locked kernel page(s), so
  * it is not implemented.
  */
+#include "opt_global.h"
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -69,11 +70,12 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mem.c,v 1.15 2004/08/15 21:37:52 mar
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 
+#ifndef SUN4V
 #include <machine/cache.h>
+#endif
 #include <machine/md_var.h>
 #include <machine/pmap.h>
 #include <machine/tlb.h>
-#include <machine/upa.h>
 
 #include <machine/memdev.h>
 
@@ -92,7 +94,6 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 	vm_paddr_t pa;
 	vm_size_t cnt;
 	vm_page_t m;
-	int color;
 	int error;
 	int i;
 
@@ -134,14 +135,20 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 			}
 
 			if (m != NULL) {
-				if (ova == 0) {
+#ifndef SUN4V
+				if (ova == 0)
 					ova = kmem_alloc_wait(kernel_map,
 					    PAGE_SIZE * DCACHE_COLORS);
-				}
-				if ((color = m->md.color) == -1)
-					va = ova;
+				if (m->md.color != -1)
+					va = ova + m->md.color * PAGE_SIZE;
 				else
-					va = ova + color * PAGE_SIZE;
+					va = ova;
+#else
+				if (ova == 0)
+					ova = kmem_alloc_wait(kernel_map,
+					    PAGE_SIZE);
+				va = ova;
+#endif
 				pmap_qenter(va, &m, 1);
 				error = uiomove((void *)(va + off), cnt,
 				    uio);
@@ -178,7 +185,11 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 		/* else panic! */
 	}
 	if (ova != 0)
+#ifndef SUN4V
 		kmem_free_wakeup(kernel_map, ova, PAGE_SIZE * DCACHE_COLORS);
+#else
+		kmem_free_wakeup(kernel_map, ova, PAGE_SIZE);
+#endif
 	return (error);
 }
 

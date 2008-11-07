@@ -39,7 +39,7 @@
  * SUCH DAMAGE.
  *
  *      from:   @(#)pmap.c      7.7 (Berkeley)  5/12/91
- * $FreeBSD: src/sys/sparc64/sparc64/pmap.c,v 1.148.2.1 2005/11/13 21:45:48 alc Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/pmap.c,v 1.166.4.1 2008/01/19 18:15:06 kib Exp $
  */
 
 /*
@@ -108,13 +108,18 @@
 #define	PMAP_SHPGPERPROC	200
 #endif
 
+/* XXX */
+#include "opt_sched.h"
+#ifndef SCHED_4BSD
+#error "sparc64 only works with SCHED_4BSD which uses a global scheduler lock."
+#endif
+extern struct mtx sched_lock;
+
 /*
  * Virtual and physical address of message buffer.
  */
 struct msgbuf *msgbufp;
 vm_paddr_t msgbuf_phys;
-
-int pmap_pagedaemon_waken;
 
 /*
  * Map of physical memory reagions.
@@ -148,6 +153,16 @@ struct pmap kernel_pmap_store;
  * Allocate physical memory for use in pmap_bootstrap.
  */
 static vm_paddr_t pmap_bootstrap_alloc(vm_size_t size);
+
+/*
+ * Map the given physical page at the specified virtual address in the
+ * target pmap with the protection requested.  If specified the page
+ * will be wired down.
+ *
+ * The page queues and pmap must be locked.
+ */
+static void pmap_enter_locked(pmap_t pm, vm_offset_t va, vm_page_t m,
+    vm_prot_t prot, boolean_t wired);
 
 extern int tl1_immu_miss_patch_1[];
 extern int tl1_immu_miss_patch_2[];
@@ -295,6 +310,7 @@ pmap_bootstrap(vm_offset_t ekva)
 	qsort(mra, sz, sizeof (*mra), mr_cmp);
 	physsz = 0;
 	getenv_quad("hw.physmem", &physmem);
+	physmem = btoc(physmem);
 	for (i = 0, j = 0; i < sz; i++, j += 2) {
 		CTR2(KTR_PMAP, "start=%#lx size=%#lx", mra[i].mr_start,
 		    mra[i].mr_size);
@@ -591,16 +607,6 @@ pmap_init(void)
 }
 
 /*
- * Initialize the address space (zone) for the pv_entries.  Set a
- * high water mark so that the system can recover from excessive
- * numbers of pv entries.
- */
-void
-pmap_init2(void)
-{
-}
-
-/*
  * Extract the physical page address associated with the given
  * map/virtual_address pair.
  */
@@ -831,7 +837,7 @@ pmap_kenter(vm_offset_t va, vm_page_t m)
 	tp = tsb_kvtotte(va);
 	CTR4(KTR_PMAP, "pmap_kenter: va=%#lx pa=%#lx tp=%p data=%#lx",
 	    va, VM_PAGE_TO_PHYS(m), tp, tp->tte_data);
-	if (m->pc != DCACHE_COLOR(va)) {
+	if (DCACHE_COLOR(VM_PAGE_TO_PHYS(m)) != DCACHE_COLOR(va)) {
 		CTR6(KTR_CT2,
 	"pmap_kenter: off colour va=%#lx pa=%#lx o=%p oc=%#lx ot=%d pi=%#lx",
 		    va, VM_PAGE_TO_PHYS(m), m->object,
@@ -997,10 +1003,10 @@ pmap_pinit0(pmap_t pm)
 }
 
 /*
- * Initialize a preallocated and zeroed pmap structure, uch as one in a
+ * Initialize a preallocated and zeroed pmap structure, such as one in a
  * vmspace structure.
  */
-void
+int
 pmap_pinit(pmap_t pm)
 {
 	vm_page_t ma[TSB_PAGES];
@@ -1015,6 +1021,10 @@ pmap_pinit(pmap_t pm)
 	if (pm->pm_tsb == NULL) {
 		pm->pm_tsb = (struct tte *)kmem_alloc_nofault(kernel_map,
 		    TSB_BSIZE);
+		if (pm->pm_tsb == NULL) {
+			PMAP_LOCK_DESTROY(pm);
+			return (0);
+		}
 	}
 
 	/*
@@ -1027,12 +1037,8 @@ pmap_pinit(pmap_t pm)
 	for (i = 0; i < TSB_PAGES; i++) {
 		m = vm_page_grab(pm->pm_tsb_obj, i, VM_ALLOC_NOBUSY |
 		    VM_ALLOC_RETRY | VM_ALLOC_WIRED | VM_ALLOC_ZERO);
-
-		vm_page_lock_queues();
 		m->valid = VM_PAGE_BITS_ALL;
 		m->md.pmap = pm;
-		vm_page_unlock_queues();
-
 		ma[i] = m;
 	}
 	VM_OBJECT_UNLOCK(pm->pm_tsb_obj);
@@ -1042,6 +1048,7 @@ pmap_pinit(pmap_t pm)
 		pm->pm_context[i] = -1;
 	pm->pm_active = 0;
 	bzero(&pm->pm_stats, sizeof(pm->pm_stats));
+	return (1);
 }
 
 /*
@@ -1127,7 +1134,7 @@ pmap_remove_tte(struct pmap *pm, struct pmap *pm2, struct tte *tp,
 		if ((data & TD_WIRED) != 0)
 			pm->pm_stats.wired_count--;
 		if ((data & TD_PV) != 0) {
-			if ((data & TD_W) != 0 && pmap_track_modified(pm, va))
+			if ((data & TD_W) != 0)
 				vm_page_dirty(m);
 			if ((data & TD_REF) != 0)
 				vm_page_flag_set(m, PG_REFERENCED);
@@ -1194,8 +1201,7 @@ pmap_remove_all(vm_page_t m)
 			pm->pm_stats.wired_count--;
 		if ((tp->tte_data & TD_REF) != 0)
 			vm_page_flag_set(m, PG_REFERENCED);
-		if ((tp->tte_data & TD_W) != 0 &&
-		    pmap_track_modified(pm, va))
+		if ((tp->tte_data & TD_W) != 0)
 			vm_page_dirty(m);
 		tp->tte_data &= ~TD_V;
 		tlb_page_demap(pm, va);
@@ -1220,7 +1226,7 @@ pmap_protect_tte(struct pmap *pm, struct pmap *pm2, struct tte *tp,
 		m = PHYS_TO_VM_PAGE(TD_PA(data));
 		if ((data & TD_REF) != 0)
 			vm_page_flag_set(m, PG_REFERENCED);
-		if ((data & TD_W) != 0 && pmap_track_modified(pm, va))
+		if ((data & TD_W) != 0)
 			vm_page_dirty(m);
 	}
 	return (1);
@@ -1271,11 +1277,32 @@ void
 pmap_enter(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot,
 	   boolean_t wired)
 {
+
+	vm_page_lock_queues();
+	PMAP_LOCK(pm);
+	pmap_enter_locked(pm, va, m, prot, wired);
+	vm_page_unlock_queues();
+	PMAP_UNLOCK(pm);
+}
+
+/*
+ * Map the given physical page at the specified virtual address in the
+ * target pmap with the protection requested.  If specified the page
+ * will be wired down.
+ *
+ * The page queues and pmap must be locked.
+ */
+static void
+pmap_enter_locked(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot,
+    boolean_t wired)
+{
 	struct tte *tp;
 	vm_paddr_t pa;
 	u_long data;
 	int i;
 
+	mtx_assert(&vm_page_queue_mtx, MA_OWNED);
+	PMAP_LOCK_ASSERT(pm, MA_OWNED);
 	PMAP_STATS_INC(pmap_nenter);
 	pa = VM_PAGE_TO_PHYS(m);
 
@@ -1295,9 +1322,6 @@ pmap_enter(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot,
 	CTR6(KTR_PMAP,
 	    "pmap_enter: ctx=%p m=%p va=%#lx pa=%#lx prot=%#x wired=%d",
 	    pm->pm_context[PCPU_GET(cpuid)], m, va, pa, prot, wired);
-
-	vm_page_lock_queues();
-	PMAP_LOCK(pm);
 
 	/*
 	 * If there is an existing mapping, and the physical address has not
@@ -1336,8 +1360,8 @@ pmap_enter(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot,
 			if (wired) {
 				tp->tte_data |= TD_W;
 			}
-		} else if ((data & TD_W) != 0 &&
-		    pmap_track_modified(pm, va)) {
+			vm_page_flag_set(m, PG_WRITEABLE);
+		} else if ((data & TD_W) != 0) {
 			vm_page_dirty(m);
 		}
 
@@ -1376,8 +1400,10 @@ pmap_enter(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot,
 		data = TD_V | TD_8K | TD_PA(pa);
 		if (pm == kernel_pmap)
 			data |= TD_P;
-		if (prot & VM_PROT_WRITE)
+		if ((prot & VM_PROT_WRITE) != 0) {
 			data |= TD_SW;
+			vm_page_flag_set(m, PG_WRITEABLE);
+		}
 		if (prot & VM_PROT_EXECUTE) {
 			data |= TD_EXEC;
 			icache_page_inval(pa);
@@ -1396,23 +1422,46 @@ pmap_enter(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot,
 
 		tsb_tte_enter(pm, m, va, TS_8K, data);
 	}
-	vm_page_unlock_queues();
+}
+
+/*
+ * Maps a sequence of resident pages belonging to the same object.
+ * The sequence begins with the given page m_start.  This page is
+ * mapped at the given virtual address start.  Each subsequent page is
+ * mapped at a virtual address that is offset from start by the same
+ * amount as the page is offset from m_start within the object.  The
+ * last page in the sequence is the page with the largest offset from
+ * m_start that can be mapped at a virtual address less than the given
+ * virtual address end.  Not every virtual page between start and end
+ * is mapped; only those for which a resident page exists with the
+ * corresponding offset from m_start are mapped.
+ */
+void
+pmap_enter_object(pmap_t pm, vm_offset_t start, vm_offset_t end,
+    vm_page_t m_start, vm_prot_t prot)
+{
+	vm_page_t m;
+	vm_pindex_t diff, psize;
+
+	psize = atop(end - start);
+	m = m_start;
+	PMAP_LOCK(pm);
+	while (m != NULL && (diff = m->pindex - m_start->pindex) < psize) {
+		pmap_enter_locked(pm, start + ptoa(diff), m, prot &
+		    (VM_PROT_READ | VM_PROT_EXECUTE), FALSE);
+		m = TAILQ_NEXT(m, listq);
+	}
 	PMAP_UNLOCK(pm);
 }
 
-vm_page_t
-pmap_enter_quick(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot,
-    vm_page_t mpte)
+void
+pmap_enter_quick(pmap_t pm, vm_offset_t va, vm_page_t m, vm_prot_t prot)
 {
 
-	vm_page_busy(m);
-	vm_page_unlock_queues();
-	VM_OBJECT_UNLOCK(m->object);
-	pmap_enter(pm, va, m, prot & (VM_PROT_READ | VM_PROT_EXECUTE), FALSE);
-	VM_OBJECT_LOCK(m->object);
-	vm_page_lock_queues();
-	vm_page_wakeup(m);
-	return (NULL);
+	PMAP_LOCK(pm);
+	pmap_enter_locked(pm, va, m, prot & (VM_PROT_READ | VM_PROT_EXECUTE),
+	    FALSE);
+	PMAP_UNLOCK(pm);
 }
 
 void
@@ -1709,7 +1758,7 @@ pmap_page_exists_quick(pmap_t pm, vm_page_t m)
  * an entire address space.  Only works for the current pmap.
  */
 void
-pmap_remove_pages(pmap_t pm, vm_offset_t sva, vm_offset_t eva)
+pmap_remove_pages(pmap_t pm)
 {
 }
 
@@ -1721,31 +1770,14 @@ pmap_page_is_mapped(vm_page_t m)
 {
 	struct tte *tp;
 
-	mtx_assert(&vm_page_queue_mtx, MA_OWNED);
 	if ((m->flags & (PG_FICTITIOUS | PG_UNMANAGED)) != 0)
 		return (FALSE);
+	mtx_assert(&vm_page_queue_mtx, MA_OWNED);
 	TAILQ_FOREACH(tp, &m->md.tte_list, tte_link) {
 		if ((tp->tte_data & TD_PV) != 0)
 			return (TRUE);
 	}
 	return (FALSE);
-}
-
-/*
- * Lower the permission for all mappings to a given page.
- */
-void
-pmap_page_protect(vm_page_t m, vm_prot_t prot)
-{
-
-	KASSERT((m->flags & PG_FICTITIOUS) == 0,
-	    ("pmap_page_protect: fake page"));
-	if ((prot & VM_PROT_WRITE) == 0) {
-		if (prot & (VM_PROT_READ | VM_PROT_EXECUTE))
-			pmap_clear_write(m);
-		else
-			pmap_remove_all(m);
-	}
 }
 
 /*
@@ -1780,9 +1812,7 @@ pmap_ts_referenced(vm_page_t m)
 			tpn = TAILQ_NEXT(tp, tte_link);
 			TAILQ_REMOVE(&m->md.tte_list, tp, tte_link);
 			TAILQ_INSERT_TAIL(&m->md.tte_list, tp, tte_link);
-			if ((tp->tte_data & TD_PV) == 0 ||
-			    !pmap_track_modified(TTE_GET_PMAP(tp),
-			     TTE_GET_VA(tp)))
+			if ((tp->tte_data & TD_PV) == 0)
 				continue;
 			data = atomic_clear_long(&tp->tte_data, TD_REF);
 			if ((data & TD_REF) != 0 && ++count > 4)
@@ -1801,8 +1831,7 @@ pmap_is_modified(vm_page_t m)
 	if ((m->flags & (PG_FICTITIOUS | PG_UNMANAGED)) != 0)
 		return (FALSE);
 	TAILQ_FOREACH(tp, &m->md.tte_list, tte_link) {
-		if ((tp->tte_data & TD_PV) == 0 ||
-		    !pmap_track_modified(TTE_GET_PMAP(tp), TTE_GET_VA(tp)))
+		if ((tp->tte_data & TD_PV) == 0)
 			continue;
 		if ((tp->tte_data & TD_W) != 0)
 			return (TRUE);
@@ -1860,7 +1889,7 @@ pmap_clear_reference(vm_page_t m)
 }
 
 void
-pmap_clear_write(vm_page_t m)
+pmap_remove_write(vm_page_t m)
 {
 	struct tte *tp;
 	u_long data;
@@ -1874,9 +1903,7 @@ pmap_clear_write(vm_page_t m)
 			continue;
 		data = atomic_clear_long(&tp->tte_data, TD_SW | TD_W);
 		if ((data & TD_W) != 0) {
-			if (pmap_track_modified(TTE_GET_PMAP(tp),
-			    TTE_GET_VA(tp)))
-				vm_page_dirty(m);
+			vm_page_dirty(m);
 			tlb_page_demap(TTE_GET_PMAP(tp), TTE_GET_VA(tp));
 		}
 	}

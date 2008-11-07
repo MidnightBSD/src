@@ -40,7 +40,7 @@
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
  * 	from: FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.167 2001/07/12
- * $FreeBSD: src/sys/sparc64/sparc64/vm_machdep.c,v 1.74 2005/07/10 23:31:11 davidxu Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/vm_machdep.c,v 1.76 2007/09/15 18:47:01 alc Exp $
  */
 
 #include "opt_pmap.h"
@@ -171,7 +171,7 @@ cpu_set_upcall(struct thread *td, struct thread *td0)
 	pcb->pcb_pc = (u_long)fork_trampoline - 8;
 	pcb->pcb_sp = (u_long)fr - SPOFF;
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release the spin count in fork_exit(). */
 	td->td_md.md_spinlock_count = 1;
 	td->td_md.md_saved_pil = 0;
 }
@@ -298,7 +298,7 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	pcb2->pcb_sp = (u_long)fp - SPOFF;
 	pcb2->pcb_pc = (u_long)fork_trampoline - 8;
 
-	/* Setup to release sched_lock in fork_exit(). */
+	/* Setup to release the spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_pil = 0;
 
@@ -462,9 +462,9 @@ uma_small_alloc(uma_zone_t zone, int bytes, u_int8_t *flags, int wait)
 	*flags = UMA_SLAB_PRIV;
 
 	if ((wait & (M_NOWAIT|M_USE_RESERVE)) == M_NOWAIT)
-		pflags = VM_ALLOC_INTERRUPT;
+		pflags = VM_ALLOC_INTERRUPT | VM_ALLOC_WIRED;
 	else
-		pflags = VM_ALLOC_SYSTEM;
+		pflags = VM_ALLOC_SYSTEM | VM_ALLOC_WIRED;
 
 	if (wait & M_ZERO)
 		pflags |= VM_ALLOC_ZERO;
@@ -501,7 +501,7 @@ uma_small_free(void *mem, int size, u_int8_t flags)
 
 	PMAP_STATS_INC(uma_nsmall_free);
 	m = PHYS_TO_VM_PAGE(TLB_DIRECT_TO_PHYS((vm_offset_t)mem));
-	vm_page_lock_queues();
+	m->wire_count--;
 	vm_page_free(m);
-	vm_page_unlock_queues();
+	atomic_subtract_int(&cnt.v_wire_count, 1);
 }

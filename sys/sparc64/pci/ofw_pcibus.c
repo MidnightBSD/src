@@ -25,9 +25,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sparc64/pci/ofw_pcibus.c,v 1.6 2005/03/23 18:16:26 jmg Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/pci/ofw_pcibus.c,v 1.16.2.1 2007/12/04 21:40:47 marius Exp $");
 
 #include "opt_ofw_pci.h"
 
@@ -39,13 +40,15 @@
 #include <sys/pciio.h>
 
 #include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/ofw_pci.h>
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
 #include <machine/bus_common.h>
-#include <machine/cache.h>
+#ifndef SUN4V
 #include <machine/iommureg.h>
+#endif
 #include <machine/resource.h>
 
 #include <dev/pci/pcireg.h>
@@ -64,80 +67,38 @@ static void ofw_pcibus_setup_device(device_t, u_int, u_int, u_int);
 static device_probe_t ofw_pcibus_probe;
 static device_attach_t ofw_pcibus_attach;
 static pci_assign_interrupt_t ofw_pcibus_assign_interrupt;
-static ofw_bus_get_compat_t ofw_pcibus_get_compat;
-static ofw_bus_get_model_t ofw_pcibus_get_model;
-static ofw_bus_get_name_t ofw_pcibus_get_name;
-static ofw_bus_get_node_t ofw_pcibus_get_node;
-static ofw_bus_get_type_t ofw_pcibus_get_type;
+static ofw_bus_get_devinfo_t ofw_pcibus_get_devinfo;
 
 static device_method_t ofw_pcibus_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		ofw_pcibus_probe),
 	DEVMETHOD(device_attach,	ofw_pcibus_attach),
-	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	DEVMETHOD(device_suspend,	bus_generic_suspend),
-	DEVMETHOD(device_resume,	bus_generic_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	pci_print_child),
-	DEVMETHOD(bus_probe_nomatch,	pci_probe_nomatch),
-	DEVMETHOD(bus_read_ivar,	pci_read_ivar),
-	DEVMETHOD(bus_write_ivar,	pci_write_ivar),
-	DEVMETHOD(bus_driver_added,	pci_driver_added),
-	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
-	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
-
-	DEVMETHOD(bus_get_resource_list, pci_get_resource_list),
-	DEVMETHOD(bus_set_resource,	bus_generic_rl_set_resource),
-	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
-	DEVMETHOD(bus_delete_resource,	pci_delete_resource),
-	DEVMETHOD(bus_alloc_resource,	pci_alloc_resource),
-	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
-	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
-	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
-	DEVMETHOD(bus_child_pnpinfo_str, pci_child_pnpinfo_str_method),
-	DEVMETHOD(bus_child_location_str, pci_child_location_str_method),
 
 	/* PCI interface */
-	DEVMETHOD(pci_read_config,	pci_read_config_method),
-	DEVMETHOD(pci_write_config,	pci_write_config_method),
-	DEVMETHOD(pci_enable_busmaster,	pci_enable_busmaster_method),
-	DEVMETHOD(pci_disable_busmaster, pci_disable_busmaster_method),
-	DEVMETHOD(pci_enable_io,	pci_enable_io_method),
-	DEVMETHOD(pci_disable_io,	pci_disable_io_method),
-	DEVMETHOD(pci_get_powerstate,	pci_get_powerstate_method),
-	DEVMETHOD(pci_set_powerstate,	pci_set_powerstate_method),
 	DEVMETHOD(pci_assign_interrupt, ofw_pcibus_assign_interrupt),
 
 	/* ofw_bus interface */
-	DEVMETHOD(ofw_bus_get_compat,	ofw_pcibus_get_compat),
-	DEVMETHOD(ofw_bus_get_model,	ofw_pcibus_get_model),
-	DEVMETHOD(ofw_bus_get_name,	ofw_pcibus_get_name),
-	DEVMETHOD(ofw_bus_get_node,	ofw_pcibus_get_node),
-	DEVMETHOD(ofw_bus_get_type,	ofw_pcibus_get_type),
+	DEVMETHOD(ofw_bus_get_devinfo,	ofw_pcibus_get_devinfo),
+	DEVMETHOD(ofw_bus_get_compat,	ofw_bus_gen_get_compat),
+	DEVMETHOD(ofw_bus_get_model,	ofw_bus_gen_get_model),
+	DEVMETHOD(ofw_bus_get_name,	ofw_bus_gen_get_name),
+	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
+	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
 
 	{ 0, 0 }
 };
 
 struct ofw_pcibus_devinfo {
 	struct pci_devinfo	opd_dinfo;
-	char			*opd_compat;
-	char			*opd_model;
-	char			*opd_name;
-	char			*opd_type;
-	phandle_t		opd_node;
+	struct ofw_bus_devinfo	opd_obdinfo;
 };
 
-struct ofw_pcibus_softc {
-	phandle_t	ops_node;
-};
+static devclass_t pci_devclass;
 
-static driver_t ofw_pcibus_driver = {
-	"pci",
-	ofw_pcibus_methods,
-	sizeof(struct ofw_pcibus_softc),
-};
-
+DEFINE_CLASS_1(pci, ofw_pcibus_driver, ofw_pcibus_methods, 1 /* no softc */,
+    pci_driver);
 DRIVER_MODULE(ofw_pcibus, pcib, ofw_pcibus_driver, pci_devclass, 0, 0);
 MODULE_VERSION(ofw_pcibus, 1);
 MODULE_DEPEND(ofw_pcibus, pci, 1, 1, 1);
@@ -159,40 +120,44 @@ ofw_pcibus_probe(device_t dev)
 static void
 ofw_pcibus_setup_device(device_t bridge, u_int busno, u_int slot, u_int func)
 {
-	u_int lat, clnsz;
+	uint32_t reg;
 
 	/*
 	 * Initialize the latency timer register for busmaster devices to work
 	 * properly. This is another task which the firmware does not always
 	 * perform. The Min_Gnt register can be used to compute it's recommended
 	 * value: it contains the desired latency in units of 1/4 us. To
-	 * calculate the correct latency timer value, a bus clock of 33MHz and
-	 * no wait states should be assumed.
+	 * calculate the correct latency timer value, the clock frequency of
+	 * the bus (defaulting to 33Mhz) should be used and no wait states
+	 * should be assumed.
 	 */
-	lat = PCIB_READ_CONFIG(bridge, busno, slot, func, PCIR_MINGNT, 1) *
-	    33 / 4;
-	if (lat != 0) {
+	if (OF_getprop(ofw_bus_get_node(bridge), "clock-frequency", &reg,
+	    sizeof(reg)) == -1)
+		reg = 33000000;
+	reg = PCIB_READ_CONFIG(bridge, busno, slot, func, PCIR_MINGNT, 1) *
+	    reg / 1000000 / 4;
+	if (reg != 0) {
 #ifdef OFW_PCI_DEBUG
 		device_printf(bridge, "device %d/%d/%d: latency timer %d -> "
 		    "%d\n", busno, slot, func,
 		    PCIB_READ_CONFIG(bridge, busno, slot, func,
-			PCIR_LATTIMER, 1), lat);
+			PCIR_LATTIMER, 1), reg);
 #endif /* OFW_PCI_DEBUG */
 		PCIB_WRITE_CONFIG(bridge, busno, slot, func,
-		    PCIR_LATTIMER, min(lat, 255), 1);
+		    PCIR_LATTIMER, min(reg, 255), 1);
 	}
 
+#ifndef SUN4V
 	/*
 	 * Compute a value to write into the cache line size register.
 	 * The role of the streaming cache is unclear in write invalidate
 	 * transfers, so it is made sure that it's line size is always reached.
+	 * Generally, the cache line size is fixed at 64 bytes by Fireplane/
+	 * Safari, JBus and UPA.
 	 */
-	clnsz = max(cache.ec_linesize, STRBUF_LINESZ);
-	KASSERT((clnsz / STRBUF_LINESZ) * STRBUF_LINESZ == clnsz &&
-	    (clnsz / cache.ec_linesize) * cache.ec_linesize == clnsz &&
-	    (clnsz / 4) * 4 == clnsz, ("bogus cache line size %d", clnsz));
 	PCIB_WRITE_CONFIG(bridge, busno, slot, func, PCIR_CACHELNSZ,
-	    clnsz / 4, 1);
+	    STRBUF_LINESZ / sizeof(uint32_t), 1);
+#endif
 
 	/*
 	 * The preset in the intline register is usually wrong. Reset it to 255,
@@ -205,48 +170,57 @@ ofw_pcibus_setup_device(device_t bridge, u_int busno, u_int slot, u_int func)
 static int
 ofw_pcibus_attach(device_t dev)
 {
-	device_t pcib = device_get_parent(dev);
+	device_t pcib;
 	struct ofw_pci_register pcir;
 	struct ofw_pcibus_devinfo *dinfo;
 	phandle_t node, child;
-	char *cname;
-	u_int slot, busno, func;
+	u_int busno, domain, func, slot;
 
+	pcib = device_get_parent(dev);
+
+	domain = pcib_get_domain(dev);
 	/*
 	 * Ask the bridge for the bus number - in some cases, we need to
 	 * renumber buses, so the firmware information cannot be trusted.
 	 */
 	busno = pcib_get_bus(dev);
 	if (bootverbose)
-		device_printf(dev, "physical bus=%d\n", busno);
+		device_printf(dev, "domain=%d, physical bus=%d\n",
+		    domain, busno);
 
 	node = ofw_bus_get_node(dev);
-	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
-		if ((OF_getprop_alloc(child, "name", 1, (void **)&cname)) == -1)
-			continue;
 
-		if (OF_getprop(child, "reg", &pcir, sizeof(pcir)) == -1) {
-			device_printf(dev, "<%s>: incomplete\n", cname);
-			free(cname, M_OFWPROP);
+#ifndef SUN4V
+	/* Add the PCI side of the HOST-PCI bridge itself to the bus. */
+	if (strcmp(device_get_name(device_get_parent(pcib)), "nexus") == 0 &&
+	    (dinfo = (struct ofw_pcibus_devinfo *)pci_read_device(pcib,
+	    domain, busno, 0, 0, sizeof(*dinfo))) != NULL) {
+		if (ofw_bus_gen_setup_devinfo(&dinfo->opd_obdinfo, node) != 0)
+			pci_freecfg((struct pci_devinfo *)dinfo);
+		else
+			pci_add_child(dev, (struct pci_devinfo *)dinfo);
+	}
+#endif
+
+	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
+		if (OF_getprop(child, "reg", &pcir, sizeof(pcir)) == -1)
 			continue;
-		}
 		slot = OFW_PCI_PHYS_HI_DEVICE(pcir.phys_hi);
 		func = OFW_PCI_PHYS_HI_FUNCTION(pcir.phys_hi);
+		/* Some OFW device trees contain dupes. */
+		if (pci_find_dbsf(domain, busno, slot, func) != NULL)
+			continue;
 		ofw_pcibus_setup_device(pcib, busno, slot, func);
 		dinfo = (struct ofw_pcibus_devinfo *)pci_read_device(pcib,
-		    busno, slot, func, sizeof(*dinfo));
-		if (dinfo != NULL) {
-			dinfo->opd_name = cname;
-			dinfo->opd_node = child;
-			OF_getprop_alloc(child, "compatible", 1,
-			    (void **)&dinfo->opd_compat);
-			OF_getprop_alloc(child, "device_type", 1,
-			    (void **)&dinfo->opd_type);
-			OF_getprop_alloc(child, "model", 1,
-			    (void **)&dinfo->opd_model);
-			pci_add_child(dev, (struct pci_devinfo *)dinfo);
-		} else
-			free(cname, M_OFWPROP);
+		    domain, busno, slot, func, sizeof(*dinfo));
+		if (dinfo == NULL)
+			continue;
+		if (ofw_bus_gen_setup_devinfo(&dinfo->opd_obdinfo, child) !=
+		    0) {
+			pci_freecfg((struct pci_devinfo *)dinfo);
+			continue;
+		}
+		pci_add_child(dev, (struct pci_devinfo *)dinfo);
 	}
 
 	return (bus_generic_attach(dev));
@@ -255,15 +229,14 @@ ofw_pcibus_attach(device_t dev)
 static int
 ofw_pcibus_assign_interrupt(device_t dev, device_t child)
 {
-	struct ofw_pcibus_devinfo *dinfo = device_get_ivars(child);
-	pcicfgregs *cfg = &dinfo->opd_dinfo.cfg;
 	ofw_pci_intr_t intr;
 	int isz;
 
-	isz = OF_getprop(dinfo->opd_node, "interrupts", &intr, sizeof(intr));
+	isz = OF_getprop(ofw_bus_get_node(child), "interrupts", &intr,
+	    sizeof(intr));
 	if (isz != sizeof(intr)) {
 		/* No property; our best guess is the intpin. */
-		intr = cfg->intpin;
+		intr = pci_get_intpin(child);
 	} else if (intr >= 255) {
 		/*
 		 * A fully specified interrupt (including IGN), as present on
@@ -283,47 +256,11 @@ ofw_pcibus_assign_interrupt(device_t dev, device_t child)
 	return (PCIB_ROUTE_INTERRUPT(device_get_parent(dev), child, intr));
 }
 
-static const char *
-ofw_pcibus_get_compat(device_t bus, device_t dev)
-{
-	struct ofw_pcibus_devinfo *dinfo;
- 
-	dinfo = device_get_ivars(dev);
-	return (dinfo->opd_compat);
-}
- 
-static const char *
-ofw_pcibus_get_model(device_t bus, device_t dev)
+static const struct ofw_bus_devinfo *
+ofw_pcibus_get_devinfo(device_t bus, device_t dev)
 {
 	struct ofw_pcibus_devinfo *dinfo;
 
 	dinfo = device_get_ivars(dev);
-	return (dinfo->opd_model);
-}
-
-static const char *
-ofw_pcibus_get_name(device_t bus, device_t dev)
-{
-	struct ofw_pcibus_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->opd_name);
-}
-
-static phandle_t
-ofw_pcibus_get_node(device_t bus, device_t dev)
-{
-	struct ofw_pcibus_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->opd_node);
-}
-
-static const char *
-ofw_pcibus_get_type(device_t bus, device_t dev)
-{
-	struct ofw_pcibus_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->opd_type);
+	return (&dinfo->opd_obdinfo);
 }

@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2003 Jake Burkholder.
+ * Copyright (c) 2005 Marius Strobl <marius@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,17 +26,19 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/fhc/fhc.c,v 1.13 2005/06/05 10:16:27 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/fhc/fhc.c,v 1.18 2007/09/06 19:16:29 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/module.h>
 #include <sys/pcpu.h>
 
 #include <dev/led/led.h>
 #include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
@@ -45,60 +48,153 @@ __FBSDID("$FreeBSD: src/sys/sparc64/fhc/fhc.c,v 1.13 2005/06/05 10:16:27 marius 
 #include <sys/rman.h>
 
 #include <sparc64/fhc/fhcreg.h>
-#include <sparc64/fhc/fhcvar.h>
 #include <sparc64/sbus/ofw_sbus.h>
 
-struct fhc_clr {
-	driver_intr_t		*fc_func;
-	void			*fc_arg;
-	void			*fc_cookie;
-	bus_space_tag_t		fc_bt;
-	bus_space_handle_t	fc_bh;
-};
-
 struct fhc_devinfo {
-	char			*fdi_compat;
-	char			*fdi_model;
-	char			*fdi_name;
-	char			*fdi_type;
-	phandle_t		fdi_node;
+	struct ofw_bus_devinfo	fdi_obdinfo;
 	struct resource_list	fdi_rl;
 };
 
-static void fhc_intr_stub(void *);
-static void fhc_led_func(void *, int);
+struct fhc_softc {
+	struct resource		*sc_memres[FHC_NREG];
+	int			sc_nrange;
+	struct sbus_ranges	*sc_ranges;
+	int			sc_ign;
+	struct cdev		*sc_led_dev;
+};
 
-int
+static device_probe_t fhc_probe;
+static device_attach_t fhc_attach;
+static bus_print_child_t fhc_print_child;
+static bus_probe_nomatch_t fhc_probe_nomatch;
+static bus_setup_intr_t fhc_setup_intr;
+static bus_alloc_resource_t fhc_alloc_resource;
+static bus_get_resource_list_t fhc_get_resource_list;
+static ofw_bus_get_devinfo_t fhc_get_devinfo;
+
+static void fhc_intr_enable(void *);
+static void fhc_intr_disable(void *);
+static void fhc_intr_eoi(void *);
+static void fhc_led_func(void *, int);
+static int fhc_print_res(struct fhc_devinfo *);
+
+static device_method_t fhc_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		fhc_probe),
+	DEVMETHOD(device_attach,	fhc_attach),
+	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
+	DEVMETHOD(device_suspend,	bus_generic_suspend),
+	DEVMETHOD(device_resume,	bus_generic_resume),
+
+	/* Bus interface */
+	DEVMETHOD(bus_print_child,	fhc_print_child),
+	DEVMETHOD(bus_probe_nomatch,	fhc_probe_nomatch),
+	DEVMETHOD(bus_setup_intr,	fhc_setup_intr),
+	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
+	DEVMETHOD(bus_alloc_resource,	fhc_alloc_resource),
+	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
+	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
+	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
+	DEVMETHOD(bus_get_resource_list, fhc_get_resource_list),
+	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
+
+	/* ofw_bus interface */
+	DEVMETHOD(ofw_bus_get_devinfo,	fhc_get_devinfo),
+	DEVMETHOD(ofw_bus_get_compat,	ofw_bus_gen_get_compat),
+	DEVMETHOD(ofw_bus_get_model,	ofw_bus_gen_get_model),
+	DEVMETHOD(ofw_bus_get_name,	ofw_bus_gen_get_name),
+	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
+	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
+
+	{ NULL, NULL }
+};
+
+static driver_t fhc_driver = {
+	"fhc",
+	fhc_methods,
+	sizeof(struct fhc_softc),
+};
+
+static devclass_t fhc_devclass;
+
+DRIVER_MODULE(fhc, central, fhc_driver, fhc_devclass, 0, 0);
+DRIVER_MODULE(fhc, nexus, fhc_driver, fhc_devclass, 0, 0);
+
+static const struct intr_controller fhc_ic = {
+	fhc_intr_enable,
+	fhc_intr_disable,
+	fhc_intr_eoi
+};
+
+struct fhc_icarg {
+	struct fhc_softc	*fica_sc;
+	struct resource		*fica_memres;
+};
+
+static int
 fhc_probe(device_t dev)
 {
 
-	return (0);
+	if (strcmp(ofw_bus_get_name(dev), "fhc") == 0) {
+		device_set_desc(dev, "fhc");
+		return (0);
+	}
+	return (ENXIO);
 }
 
-int
+static int
 fhc_attach(device_t dev)
 {
 	char ledname[sizeof("boardXX")];
 	struct fhc_devinfo *fdi;
-	struct sbus_regs *reg;
+	struct fhc_icarg *fica;
 	struct fhc_softc *sc;
+	struct sbus_regs *reg;
 	phandle_t child;
 	phandle_t node;
-	bus_addr_t size;
-	bus_addr_t off;
 	device_t cdev;
+	uint32_t board;
 	uint32_t ctrl;
 	uint32_t *intr;
 	uint32_t iv;
 	char *name;
+	int central;
+	int error;
+	int i;
 	int nintr;
 	int nreg;
-	int i;
+	int rid;
 
 	sc = device_get_softc(dev);
-	node = sc->sc_node;
+	node = ofw_bus_get_node(dev);
 
-	device_printf(dev, "board %d, ", sc->sc_board);
+	central = 0;
+	if (strcmp(device_get_name(device_get_parent(dev)), "central") == 0)
+		central = 1;
+
+	for (i = 0; i < FHC_NREG; i++) {
+		rid = i;
+		sc->sc_memres[i] = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
+		    &rid, RF_ACTIVE);
+		if (sc->sc_memres[i] == NULL) {
+			device_printf(dev, "cannot allocate resource %d\n", i);
+			error = ENXIO;
+			goto fail_memres;
+		}
+	}
+
+	if (central != 0) {
+		board = bus_read_4(sc->sc_memres[FHC_INTERNAL], FHC_BSR);
+		board = ((board >> 16) & 0x1) | ((board >> 12) & 0xe);
+	} else {
+		if (OF_getprop(node, "board#", &board, sizeof(board)) == -1) {
+			device_printf(dev, "cannot get board number\n");
+			error = ENXIO;
+			goto fail_memres;
+		}
+	}
+
+	device_printf(dev, "board %d, ", board);
 	if (OF_getprop_alloc(node, "board-model", 1, (void **)&name) != -1) {
 		printf("model %s\n", name);
 		free(name, M_OFWPROP);
@@ -106,198 +202,201 @@ fhc_attach(device_t dev)
 		printf("model unknown\n");
 
 	for (i = FHC_FANFAIL; i <= FHC_TOD; i++) {
-		bus_space_write_4(sc->sc_bt[i], sc->sc_bh[i], FHC_ICLR, 0x0);
-		bus_space_read_4(sc->sc_bt[i], sc->sc_bh[i], FHC_ICLR);
+		bus_write_4(sc->sc_memres[i], FHC_ICLR, 0x0);
+		(void)bus_read_4(sc->sc_memres[i], FHC_ICLR);
 	}
 
-	sc->sc_ign = sc->sc_board << 1;
-	bus_space_write_4(sc->sc_bt[FHC_IGN], sc->sc_bh[FHC_IGN], 0x0,
-	    sc->sc_ign);
-	sc->sc_ign = bus_space_read_4(sc->sc_bt[FHC_IGN],
-	    sc->sc_bh[FHC_IGN], 0x0);
+	sc->sc_ign = board << 1;
+	bus_write_4(sc->sc_memres[FHC_IGN], 0x0, sc->sc_ign);
+	sc->sc_ign = bus_read_4(sc->sc_memres[FHC_IGN], 0x0);
 
-	ctrl = bus_space_read_4(sc->sc_bt[FHC_INTERNAL],
-	    sc->sc_bh[FHC_INTERNAL], FHC_CTRL);
-	if ((sc->sc_flags & FHC_CENTRAL) == 0)
+	ctrl = bus_read_4(sc->sc_memres[FHC_INTERNAL], FHC_CTRL);
+	if (central == 0)
 		ctrl |= FHC_CTRL_IXIST;
 	ctrl &= ~(FHC_CTRL_AOFF | FHC_CTRL_BOFF | FHC_CTRL_SLINE);
-	bus_space_write_4(sc->sc_bt[FHC_INTERNAL], sc->sc_bh[FHC_INTERNAL],
-	    FHC_CTRL, ctrl);
-	bus_space_read_4(sc->sc_bt[FHC_INTERNAL], sc->sc_bh[FHC_INTERNAL],
-	    FHC_CTRL);
+	bus_write_4(sc->sc_memres[FHC_INTERNAL], FHC_CTRL, ctrl);
+	(void)bus_read_4(sc->sc_memres[FHC_INTERNAL], FHC_CTRL);
 
 	sc->sc_nrange = OF_getprop_alloc(node, "ranges",
 	    sizeof(*sc->sc_ranges), (void **)&sc->sc_ranges);
 	if (sc->sc_nrange == -1) {
-		device_printf(dev, "can't get ranges\n");
-		return (ENXIO);
+		device_printf(dev, "cannot get ranges\n");
+		error = ENXIO;
+		goto fail_memres;
 	}
 
-	if ((sc->sc_flags & FHC_CENTRAL) == 0) {
-		snprintf(ledname, sizeof(ledname), "board%d", sc->sc_board);
+	/*
+	 * Apparently only the interrupt controller of boards hanging off
+	 * of central(4) is indented to be used, otherwise we would have
+	 * conflicts registering the interrupt controllers for all FHC
+	 * boards as the board number and thus the IGN isn't unique.
+	 */
+	if (central == 1) {
+		/*
+		 * Hunt through all the interrupt mapping regs and register
+		 * our interrupt controller for the corresponding interrupt
+		 * vectors.
+		 */
+		for (i = FHC_FANFAIL; i <= FHC_TOD; i++) {
+			fica = malloc(sizeof(*fica), M_DEVBUF, M_NOWAIT);
+			if (fica == NULL)
+				panic("%s: could not allocate interrupt "
+				    "controller argument", __func__);
+			fica->fica_sc = sc;
+			fica->fica_memres = sc->sc_memres[i];
+#ifdef FHC_DEBUG
+			device_printf(dev, "intr map %d: %#lx, clr: %#lx\n", i,
+			    (u_long)bus_read_4(fica->fica_memres, FHC_IMAP),
+			    (u_long)bus_read_4(fica->fica_memres, FHC_ICLR));
+#endif
+			/*
+			 * XXX we only pick the INO rather than the INR
+			 * from the IMR since the firmware may not provide
+			 * the IGN and the IGN is constant for all devices
+			 * on that FireHose controller.
+			 */
+			if (intr_controller_register(INTMAP_VEC(sc->sc_ign,
+			    INTINO(bus_read_4(fica->fica_memres, FHC_IMAP))),
+			    &fhc_ic, fica) != 0)
+				panic("%s: could not register interrupt "
+				    "controller for map %d", __func__, i);
+		}
+	} else {
+		snprintf(ledname, sizeof(ledname), "board%d", board);
 		sc->sc_led_dev = led_create(fhc_led_func, sc, ledname);
 	}
 
 	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
-		if ((OF_getprop_alloc(child, "name", 1, (void **)&name)) == -1)
+		fdi = malloc(sizeof(*fdi), M_DEVBUF, M_WAITOK | M_ZERO);
+		if (ofw_bus_gen_setup_devinfo(&fdi->fdi_obdinfo, child) != 0) {
+			free(fdi, M_DEVBUF);
 			continue;
-		cdev = device_add_child(dev, NULL, -1);
-		if (cdev != NULL) {
-			fdi = malloc(sizeof(*fdi), M_DEVBUF, M_WAITOK | M_ZERO);
-			if (fdi == NULL)
-				continue;
-			fdi->fdi_name = name;
-			fdi->fdi_node = child;
-			OF_getprop_alloc(child, "compatible", 1,
-			    (void **)&fdi->fdi_compat);
-			OF_getprop_alloc(child, "device_type", 1,
-			    (void **)&fdi->fdi_type);
-			OF_getprop_alloc(child, "model", 1,
-			    (void **)&fdi->fdi_model);
-			resource_list_init(&fdi->fdi_rl);
-			nreg = OF_getprop_alloc(child, "reg", sizeof(*reg),
-			    (void **)&reg);
-			if (nreg != -1) {
-				for (i = 0; i < nreg; i++) {
-					off = reg[i].sbr_offset;
-					size = reg[i].sbr_size;
-					resource_list_add(&fdi->fdi_rl,
-					    SYS_RES_MEMORY, i, off, off + size,
-					    size);
-				}
-				free(reg, M_OFWPROP);
-			}
+		}
+		nreg = OF_getprop_alloc(child, "reg", sizeof(*reg),
+		    (void **)&reg);
+		if (nreg == -1) {
+			device_printf(dev, "<%s>: incomplete\n",
+			    fdi->fdi_obdinfo.obd_name);
+			ofw_bus_gen_destroy_devinfo(&fdi->fdi_obdinfo);
+			free(fdi, M_DEVBUF);
+			continue;
+		}
+		resource_list_init(&fdi->fdi_rl);
+		for (i = 0; i < nreg; i++)
+			resource_list_add(&fdi->fdi_rl, SYS_RES_MEMORY, i,
+			    reg[i].sbr_offset, reg[i].sbr_offset +
+			    reg[i].sbr_size, reg[i].sbr_size);
+		free(reg, M_OFWPROP);
+		if (central == 1) {
 			nintr = OF_getprop_alloc(child, "interrupts",
 			    sizeof(*intr), (void **)&intr);
 			if (nintr != -1) {
 				for (i = 0; i < nintr; i++) {
-					iv = INTINO(intr[i]) |
-					    (sc->sc_ign << INTMAP_IGN_SHIFT);
+					iv = INTMAP_VEC(sc->sc_ign, intr[i]);
 					resource_list_add(&fdi->fdi_rl,
 					    SYS_RES_IRQ, i, iv, iv, 1);
 				}
 				free(intr, M_OFWPROP);
 			}
-			device_set_ivars(cdev, fdi);
-		} else
-			free(name, M_OFWPROP);
+		}
+		cdev = device_add_child(dev, NULL, -1);
+		if (cdev == NULL) {
+			device_printf(dev, "<%s>: device_add_child failed\n",
+			    fdi->fdi_obdinfo.obd_name);
+			resource_list_free(&fdi->fdi_rl);
+			ofw_bus_gen_destroy_devinfo(&fdi->fdi_obdinfo);
+			free(fdi, M_DEVBUF);
+			continue;
+		}
+		device_set_ivars(cdev, fdi);
 	}
 
 	return (bus_generic_attach(dev));
+
+ fail_memres:
+	for (i = 0; i < FHC_NREG; i++)
+		if (sc->sc_memres[i] != NULL)
+			bus_release_resource(dev, SYS_RES_MEMORY,
+			    rman_get_rid(sc->sc_memres[i]), sc->sc_memres[i]);
+ 	return (error);
 }
 
-int
+static int
 fhc_print_child(device_t dev, device_t child)
 {
-	struct fhc_devinfo *fdi;
 	int rv;
 
-	fdi = device_get_ivars(child);
 	rv = bus_print_child_header(dev, child);
-	rv += resource_list_print_type(&fdi->fdi_rl, "mem",
-	    SYS_RES_MEMORY, "%#lx");
-	rv += resource_list_print_type(&fdi->fdi_rl, "irq", SYS_RES_IRQ, "%ld");
+	rv += fhc_print_res(device_get_ivars(child));
 	rv += bus_print_child_footer(dev, child);
 	return (rv);
 }
 
-void
+static void
 fhc_probe_nomatch(device_t dev, device_t child)
 {
-	struct fhc_devinfo *fdi;
+	const char *type;
 
-	fdi = device_get_ivars(child);
-	device_printf(dev, "<%s>", fdi->fdi_name);
-	resource_list_print_type(&fdi->fdi_rl, "mem", SYS_RES_MEMORY, "%#lx");
-	resource_list_print_type(&fdi->fdi_rl, "irq", SYS_RES_IRQ, "%ld");
+	device_printf(dev, "<%s>", ofw_bus_get_name(child));
+	fhc_print_res(device_get_ivars(child));
+	type = ofw_bus_get_type(child);
 	printf(" type %s (no driver attached)\n",
-	    fdi->fdi_type != NULL ? fdi->fdi_type : "unknown");
-}
-
-int
-fhc_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
-    driver_intr_t *func, void *arg, void **cookiep)
-{
-	struct fhc_softc *sc;
-	struct fhc_clr *fc;
-	bus_space_tag_t bt;
-	bus_space_handle_t bh;
-	int error;
-	int i;
-	long vec;
-	uint32_t inr;
-
-	sc = device_get_softc(bus);
-	vec = rman_get_start(r);
-
-	bt = NULL;
-	bh = 0;
-	inr = 0;
-	for (i = FHC_FANFAIL; i <= FHC_TOD; i++) {
-		if (INTINO(bus_space_read_4(sc->sc_bt[i], sc->sc_bh[i],
-		    FHC_IMAP)) == INTINO(vec)){
-			bt = sc->sc_bt[i];
-			bh = sc->sc_bh[i];
-			inr = INTINO(vec) | (sc->sc_ign << INTMAP_IGN_SHIFT);
-			break;
-		}
-	}
-	if (inr == 0)
-		return (0);
-
-	fc = malloc(sizeof(*fc), M_DEVBUF, M_WAITOK | M_ZERO);
-	if (fc == NULL)
-		return (0);
-	fc->fc_func = func;
-	fc->fc_arg = arg;
-	fc->fc_bt = bt;
-	fc->fc_bh = bh;
-
-	bus_space_write_4(bt, bh, FHC_IMAP, inr);
-	bus_space_read_4(bt, bh, FHC_IMAP);
-
-	error = bus_generic_setup_intr(bus, child, r, flags, fhc_intr_stub,
-	    fc, cookiep);
-	if (error != 0) {
-		free(fc, M_DEVBUF);
-		return (error);
-	}
-	fc->fc_cookie = *cookiep;
-	*cookiep = fc;
-
-	bus_space_write_4(bt, bh, FHC_ICLR, 0x0);
-	bus_space_write_4(bt, bh, FHC_IMAP, INTMAP_ENABLE(inr, PCPU_GET(mid)));
-	bus_space_read_4(bt, bh, FHC_IMAP);
-
-	return (error);
-}
-
-int
-fhc_teardown_intr(device_t bus, device_t child, struct resource *r,
-    void *cookie)
-{
-	struct fhc_clr *fc;
-	int error;
-
-	fc = cookie;
-	error = bus_generic_teardown_intr(bus, child, r, fc->fc_cookie);
-	if (error != 0)
-		free(fc, M_DEVBUF);
-	return (error);
+	    type != NULL ? type : "unknown");
 }
 
 static void
-fhc_intr_stub(void *arg)
+fhc_intr_enable(void *arg)
 {
-	struct fhc_clr *fc = arg;
+	struct intr_vector *iv = arg;
+	struct fhc_icarg *fica = iv->iv_icarg;
 
-	fc->fc_func(fc->fc_arg);
-
-	bus_space_write_4(fc->fc_bt, fc->fc_bh, FHC_ICLR, 0x0);
-	bus_space_read_4(fc->fc_bt, fc->fc_bh, FHC_ICLR);
+	bus_write_4(fica->fica_memres, FHC_IMAP,
+	    INTMAP_ENABLE(iv->iv_vec, iv->iv_mid));
+	(void)bus_read_4(fica->fica_memres, FHC_IMAP);
 }
 
-struct resource *
+static void
+fhc_intr_disable(void *arg)
+{
+	struct intr_vector *iv = arg;
+	struct fhc_icarg *fica = iv->iv_icarg;
+
+	bus_write_4(fica->fica_memres, FHC_IMAP, iv->iv_vec);
+	(void)bus_read_4(fica->fica_memres, FHC_IMAP);
+}
+
+static void
+fhc_intr_eoi(void *arg)
+{
+	struct intr_vector *iv = arg;
+	struct fhc_icarg *fica = iv->iv_icarg;
+
+	bus_write_4(fica->fica_memres, FHC_ICLR, 0x0);
+	(void)bus_read_4(fica->fica_memres, FHC_ICLR);
+}
+
+static int
+fhc_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
+    driver_filter_t *filt, driver_intr_t *func, void *arg, void **cookiep)
+{
+	struct fhc_softc *sc;
+	u_long vec;
+
+	sc = device_get_softc(bus);
+	/*
+	 * Make sure the vector is fully specified and we registered
+	 * our interrupt controller for it.
+ 	 */
+	vec = rman_get_start(r);
+	if (INTIGN(vec) != sc->sc_ign || intr_vectors[vec].iv_ic != &fhc_ic) {
+		device_printf(bus, "invalid interrupt vector 0x%lx\n", vec);
+ 		return (EINVAL);
+ 	}
+	return (bus_generic_setup_intr(bus, child, r, flags, filt, func,
+	    arg, cookiep));
+}
+
+static struct resource *
 fhc_alloc_resource(device_t bus, device_t child, int type, int *rid,
     u_long start, u_long end, u_long count, u_int flags)
 {
@@ -318,13 +417,13 @@ fhc_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	rle = NULL;
 	rl = BUS_GET_RESOURCE_LIST(bus, child);
 	sc = device_get_softc(bus);
-	rle = resource_list_find(rl, type, *rid);
 	switch (type) {
 	case SYS_RES_IRQ:
 		return (resource_list_alloc(rl, bus, child, type, rid, start,
 		    end, count, flags));
 	case SYS_RES_MEMORY:
 		if (!passthrough) {
+			rle = resource_list_find(rl, type, *rid);
 			if (rle == NULL)
 				return (NULL);
 			if (rle->res != NULL)
@@ -356,13 +455,22 @@ fhc_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	return (res);
 }
 
-struct resource_list *
+static struct resource_list *
 fhc_get_resource_list(device_t bus, device_t child)
 {
 	struct fhc_devinfo *fdi;
 
 	fdi = device_get_ivars(child);
 	return (&fdi->fdi_rl);
+}
+
+static const struct ofw_bus_devinfo *
+fhc_get_devinfo(device_t bus, device_t child)
+{
+	struct fhc_devinfo *fdi;
+
+	fdi = device_get_ivars(child);
+	return (&fdi->fdi_obdinfo);
 }
 
 static void
@@ -373,60 +481,24 @@ fhc_led_func(void *arg, int onoff)
 
 	sc = (struct fhc_softc *)arg;
 
-	ctrl = bus_space_read_4(sc->sc_bt[FHC_INTERNAL],
-	    sc->sc_bh[FHC_INTERNAL], FHC_CTRL);
+	ctrl = bus_read_4(sc->sc_memres[FHC_INTERNAL], FHC_CTRL);
 	if (onoff)
 		ctrl |= FHC_CTRL_RLED;
 	else
 		ctrl &= ~FHC_CTRL_RLED;
 	ctrl &= ~(FHC_CTRL_AOFF | FHC_CTRL_BOFF | FHC_CTRL_SLINE);
-	bus_space_write_4(sc->sc_bt[FHC_INTERNAL], sc->sc_bh[FHC_INTERNAL],
-	    FHC_CTRL, ctrl);
-	bus_space_read_4(sc->sc_bt[FHC_INTERNAL], sc->sc_bh[FHC_INTERNAL],
-	    FHC_CTRL);
+	bus_write_4(sc->sc_memres[FHC_INTERNAL], FHC_CTRL, ctrl);
+	(void)bus_read_4(sc->sc_memres[FHC_INTERNAL], FHC_CTRL);
 }
 
-const char *
-fhc_get_compat(device_t bus, device_t dev)
-{   
-	struct fhc_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->fdi_compat);
-}
-
-const char *
-fhc_get_model(device_t bus, device_t dev)
+static int
+fhc_print_res(struct fhc_devinfo *fdi)
 {
-	struct fhc_devinfo *dinfo;
+	int rv;
 
-	dinfo = device_get_ivars(dev);
-	return (dinfo->fdi_model);
-}
-
-const char *
-fhc_get_name(device_t bus, device_t dev)
-{
-	struct fhc_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->fdi_name);
-}
-
-phandle_t
-fhc_get_node(device_t bus, device_t dev)
-{
-	struct fhc_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->fdi_node);
-}
-
-const char *
-fhc_get_type(device_t bus, device_t dev)
-{
-	struct fhc_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->fdi_type);
+	rv = 0;
+	rv += resource_list_print_type(&fdi->fdi_rl, "mem", SYS_RES_MEMORY,
+	    "%#lx");
+	rv += resource_list_print_type(&fdi->fdi_rl, "irq", SYS_RES_IRQ, "%ld");
+	return (rv);
 }

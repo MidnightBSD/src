@@ -25,7 +25,7 @@
  */
  
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/ofw_machdep.c,v 1.14 2005/05/21 20:17:01 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/ofw_machdep.c,v 1.16 2007/01/18 18:32:26 marius Exp $");
 
 /*
  * Some Open Firmware helper functions that are likely machine dependent.
@@ -244,11 +244,15 @@ OF_decode_addr(phandle_t node, int bank, int *space, bus_addr_t *addr)
 
 	/* Done with mapping. Return the bus space as used by FreeBSD. */
 	*addr = start;
+	if (OF_parent(lbus) == 0) {
+		*space = NEXUS_BUS_SPACE;
+		return (0);
+	}
 	if (OF_getprop(lbus, "name", name, sizeof(name)) == -1)
 		return (ENXIO);
 	name[sizeof(name) - 1] = '\0';
-	if (strcmp(name, "central") == 0) {
-		*space = UPA_BUS_SPACE;
+	if (strcmp(name, "central") == 0 || strcmp(name, "upa") == 0) {
+		*space = NEXUS_BUS_SPACE;
 		return (0);
 	} else if (strcmp(name, "pci") == 0) {
 		switch (cspace) {

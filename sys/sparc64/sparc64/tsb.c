@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  *	from BSDI: pmap.c,v 1.28.2.15 2000/04/27 03:10:31 cp Exp
- * $FreeBSD: src/sys/sparc64/sparc64/tsb.c,v 1.37 2005/02/12 03:48:54 alc Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/tsb.c,v 1.39 2007/06/03 19:39:38 alc Exp $
  */
 
 #include "opt_ddb.h"
@@ -117,7 +117,7 @@ tsb_tte_enter(pmap_t pm, vm_page_t m, vm_offset_t va, u_long sz, u_long data)
 	int b0;
 	int i;
 
-	if (m->pc != DCACHE_COLOR(va)) {
+	if (DCACHE_COLOR(VM_PAGE_TO_PHYS(m)) != DCACHE_COLOR(va)) {
 		CTR6(KTR_CT2,
 	"tsb_tte_enter: off colour va=%#lx pa=%#lx o=%p oc=%#lx ot=%d pi=%#lx",
 		    va, VM_PAGE_TO_PHYS(m), m->object,
@@ -192,9 +192,9 @@ enter:
  * Traverse the tsb of a pmap, calling the callback function for any tte entry
  * that has a virtual address between start and end. If this function returns 0,
  * tsb_foreach() terminates.
- * This is used by pmap_remove() and pmap_protect() in the case that the number
- * of pages in the range given to them reaches the dimensions of the tsb size as
- * an optimization.
+ * This is used by pmap_remove(), pmap_protect(), and pmap_copy() in the case
+ * that the number of pages in the range given to them reaches the
+ * dimensions of the tsb size as an optimization.
  */
 void
 tsb_foreach(pmap_t pm1, pmap_t pm2, vm_offset_t start, vm_offset_t end,
@@ -202,11 +202,20 @@ tsb_foreach(pmap_t pm1, pmap_t pm2, vm_offset_t start, vm_offset_t end,
 {
 	vm_offset_t va;
 	struct tte *tp;
-	int i;
+	struct tte *tsbp;
+	uintptr_t i;
+	uintptr_t n;
 
 	PMAP_STATS_INC(tsb_nforeach);
-	for (i = 0; i < TSB_SIZE; i++) {
-		tp = &pm1->pm_tsb[i];
+	if (pm1 == kernel_pmap) {
+		tsbp = tsb_kernel;
+		n = tsb_kernel_size / sizeof(struct tte);
+	} else {
+		tsbp = pm1->pm_tsb;
+		n = TSB_SIZE;
+	}
+	for (i = 0; i < n; i++) {
+		tp = &tsbp[i];
 		if ((tp->tte_data & TD_V) != 0) {
 			va = TTE_GET_VA(tp);
 			if (va >= start && va < end) {

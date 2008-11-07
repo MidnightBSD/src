@@ -5,9 +5,11 @@
  *
  * As long as the above copyright statement and this notice remain
  * unchanged, you can do what ever you want with this file.
- *
- * $FreeBSD: src/sys/sparc64/sparc64/identcpu.c,v 1.14 2005/01/07 02:29:23 imp Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/identcpu.c,v 1.17 2007/05/20 13:47:36 marius Exp $");
+
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -17,7 +19,7 @@
 #include <machine/md_var.h>
 #include <machine/ver.h>
 
-char machine[] = "sparc64";
+char machine[] = MACHINE;
 SYSCTL_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD,
     machine, 0, "Machine class");
 
@@ -26,6 +28,19 @@ SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD,
     cpu_model, 0, "Machine model");
 
 int cpu_impl;
+
+void setPQL2(int *const size, int *const ways);
+
+void
+setPQL2(int *const size, int *const ways)
+{
+#ifdef SUN4V
+/* XXX hardcoding is lame */
+	*size = 3*1024;
+	*ways = 12;
+#endif
+	return;
+}
 
 void
 cpu_identify(u_long vers, u_int freq, u_int id)
@@ -72,6 +87,15 @@ cpu_identify(u_long vers, u_int freq, u_int id)
 		break;
 	case CPU_IMPL_ULTRASPARCIIIi:
 		impls = "UltraSparc-IIIi";
+		break;
+	case CPU_IMPL_ULTRASPARCIV:
+		impls = "UltraSparc-IV";
+		break;
+	case CPU_IMPL_ULTRASPARCIVp:
+		impls = "UltraSparc-IV+";
+		break;
+	case CPU_IMPL_ULTRASPARCIIIip:
+		impls = "UltraSparc-IIIi+";
 		break;
 	default:
 		impls = NULL;

@@ -27,7 +27,7 @@
  *
  *	from: NetBSD: psychovar.h,v 1.6 2001/07/20 00:07:13 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/pci/psychovar.h,v 1.12.2.1 2006/01/23 16:21:30 marius Exp $
+ * $FreeBSD: src/sys/sparc64/pci/psychovar.h,v 1.16.2.1 2007/12/04 21:40:47 marius Exp $
  */
 
 #ifndef _SPARC64_PCI_PSYCHOVAR_H_
@@ -39,24 +39,21 @@
  */
 struct psycho_softc {
 	device_t			sc_dev;
-	vm_paddr_t			sc_basepaddr;
+
+	struct mtx			*sc_mtx;
 
 	/* Interrupt Group Number for this device */
-	int				sc_ign;
-
-	/* Our tags (from parent) */
-	bus_space_tag_t			sc_bustag;
-	bus_space_handle_t		sc_bushandle;
+	uint32_t			sc_ign;
 
 	bus_addr_t			sc_pcictl;
 
 	phandle_t			sc_node;	/* Firmware node */
-	int				sc_mode;
+	u_int				sc_mode;
 #define	PSYCHO_MODE_SABRE	1
 #define	PSYCHO_MODE_PSYCHO	2
 
 	/* Bus A or B of a psycho pair? */
-	int				sc_half;
+	u_int				sc_half;
 
 	struct iommu_state		*sc_is;
 
@@ -79,6 +76,8 @@ struct psycho_softc {
 
 	struct rman			sc_pci_mem_rman;
 	struct rman			sc_pci_io_rman;
+
+	uint8_t				sc_pci_hpbcfg[16];
 
 	SLIST_ENTRY(psycho_softc)	sc_link;
 };

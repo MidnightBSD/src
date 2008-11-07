@@ -28,7 +28,7 @@
  *
  *	from: NetBSD: psychoreg.h,v 1.8 2001/09/10 16:17:06 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/pci/ofw_pci.h,v 1.9 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/pci/ofw_pci.h,v 1.11 2007/06/18 21:49:42 marius Exp $
  */
 
 #ifndef _SPARC64_PCI_OFW_PCI_H_
@@ -36,16 +36,32 @@
 
 #include <machine/ofw_bus.h>
 
-typedef u_int32_t ofw_pci_intr_t;
+typedef uint32_t ofw_pci_intr_t;
 
 #include "ofw_pci_if.h"
 
 /* PCI range child spaces. XXX: are these MI? */
-#define	PCI_CS_CONFIG	0x00
-#define	PCI_CS_IO	0x01
-#define	PCI_CS_MEM32	0x02
-#define	PCI_CS_MEM64	0x03
+#define	OFW_PCI_CS_CONFIG	0x00
+#define	OFW_PCI_CS_IO	0x01
+#define	OFW_PCI_CS_MEM32	0x02
+#define	OFW_PCI_CS_MEM64	0x03
 
-u_int8_t ofw_pci_alloc_busno(phandle_t);
+struct ofw_pci_ranges {
+	uint32_t	cspace;
+	uint32_t	child_hi;
+	uint32_t	child_lo;
+	uint32_t	phys_hi;
+	uint32_t	phys_lo;
+	uint32_t	size_hi;
+	uint32_t	size_lo;
+};
+
+#define	OFW_PCI_RANGE_CHILD(r) \
+	(((uint64_t)(r)->child_hi << 32) | (uint64_t)(r)->child_lo)
+#define	OFW_PCI_RANGE_PHYS(r) \
+	(((uint64_t)(r)->phys_hi << 32) | (uint64_t)(r)->phys_lo)
+#define	OFW_PCI_RANGE_SIZE(r) \
+	(((uint64_t)(r)->size_hi << 32) | (uint64_t)(r)->size_lo)
+#define	OFW_PCI_RANGE_CS(r)	(((r)->cspace >> 24) & 0x03)
 
 #endif /* ! _SPARC64_PCI_OFW_PCI_H_ */

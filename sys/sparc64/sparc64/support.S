@@ -25,11 +25,16 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/support.S,v 1.29 2003/11/11 06:41:54 jake Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/support.S,v 1.32 2007/01/19 11:15:33 marius Exp $");
+
+#include <sys/errno.h>
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>
+#include <machine/fsr.h>
+#include <machine/intr_machdep.h>
 #include <machine/ktr.h>
+#include <machine/pcb.h>
 #include <machine/pstate.h>
 
 #include "assym.s"
@@ -402,8 +407,8 @@ fs_nofault_begin:
 	.set	susword, suword16
 	.set	suword, suword64
 
-	.globl	casuptr, fuptr, suptr
-	.set	casuptr, casuword64
+	.globl	casuword32, casuword, fuptr, suptr
+	.set	casuword, casuword64
 	.set	fuptr, fuword64
 	.set	suptr, suword64
 

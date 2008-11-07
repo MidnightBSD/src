@@ -96,9 +96,10 @@
  *	from: NetBSD: machdep.c,v 1.111 2001/09/15 07:13:40 eeh Exp
  *	and
  * 	from: FreeBSD: src/sys/i386/i386/busdma_machdep.c,v 1.24 2001/08/15
- *
- * $FreeBSD: src/sys/sparc64/sparc64/bus_machdep.c,v 1.43 2005/01/15 09:20:47 scottl Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/bus_machdep.c,v 1.46 2007/05/29 06:30:26 yongari Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -131,8 +132,8 @@ static void nexus_bus_barrier(bus_space_tag_t, bus_space_handle_t,
 
 /* ASI's for bus access. */
 int bus_type_asi[] = {
-	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* UPA */
-	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* SBUS */
+	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* nexus */
+	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* SBus */
 	ASI_PHYS_BYPASS_EC_WITH_EBIT_L,		/* PCI configuration space */
 	ASI_PHYS_BYPASS_EC_WITH_EBIT_L,		/* PCI memory space */
 	ASI_PHYS_BYPASS_EC_WITH_EBIT_L,		/* PCI I/O space */
@@ -140,8 +141,8 @@ int bus_type_asi[] = {
 };
 
 int bus_stream_asi[] = {
-	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* UPA */
-	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* SBUS */
+	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* nexus */
+	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* SBus */
 	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* PCI configuration space */
 	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* PCI memory space */
 	ASI_PHYS_BYPASS_EC_WITH_EBIT,		/* PCI I/O space */
@@ -189,14 +190,6 @@ dflt_lock(void *arg, bus_dma_lock_op_t op)
 }
 
 /*
- * Since there is no way for a device to obtain a dma tag from its parent
- * we use this kluge to handle different the different supported bus systems.
- * The sparc64_root_dma_tag is used as parent for tags that have none, so that
- * the correct methods will be used.
- */
-bus_dma_tag_t sparc64_root_dma_tag;
-
-/*
  * Allocate a device specific dma_tag.
  */
 int
@@ -206,23 +199,25 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
     int nsegments, bus_size_t maxsegsz, int flags, bus_dma_lock_t *lockfunc,
     void *lockfuncarg, bus_dma_tag_t *dmat)
 {
-	bus_dma_tag_t impptag;
 	bus_dma_tag_t newtag;
 
 	/* Return a NULL tag on failure */
 	*dmat = NULL;
 
+	/* Enforce the usage of BUS_GET_DMA_TAG(). */
+	if (parent == NULL)
+		panic("%s: parent DMA tag NULL", __func__);
+
 	newtag = (bus_dma_tag_t)malloc(sizeof(*newtag), M_DEVBUF, M_NOWAIT);
 	if (newtag == NULL)
 		return (ENOMEM);
 
-	impptag = parent != NULL ? parent : sparc64_root_dma_tag;
 	/*
 	 * The method table pointer and the cookie need to be taken over from
-	 * the parent or the root tag.
+	 * the parent.
 	 */
-	newtag->dt_cookie = impptag->dt_cookie;
-	newtag->dt_mt = impptag->dt_mt;
+	newtag->dt_cookie = parent->dt_cookie;
+	newtag->dt_mt = parent->dt_mt;
 
 	newtag->dt_parent = parent;
 	newtag->dt_alignment = alignment;
@@ -250,18 +245,14 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 	newtag->dt_segments = NULL;
 
 	/* Take into account any restrictions imposed by our parent tag */
-	if (parent != NULL) {
-		newtag->dt_lowaddr = ulmin(parent->dt_lowaddr,
-		    newtag->dt_lowaddr);
-		newtag->dt_highaddr = ulmax(parent->dt_highaddr,
-		    newtag->dt_highaddr);
-                if (newtag->dt_boundary == 0)
-                        newtag->dt_boundary = parent->dt_boundary;
-                else if (parent->dt_boundary != 0)            
-			newtag->dt_boundary = ulmin(parent->dt_boundary,
-			    newtag->dt_boundary);
-		atomic_add_int(&parent->dt_ref_count, 1);
-	}
+	newtag->dt_lowaddr = ulmin(parent->dt_lowaddr, newtag->dt_lowaddr);
+	newtag->dt_highaddr = ulmax(parent->dt_highaddr, newtag->dt_highaddr);
+	if (newtag->dt_boundary == 0)
+		newtag->dt_boundary = parent->dt_boundary;
+	else if (parent->dt_boundary != 0)
+		newtag->dt_boundary = ulmin(parent->dt_boundary,
+		    newtag->dt_boundary);
+	atomic_add_int(&parent->dt_ref_count, 1);
 
 	if (newtag->dt_boundary > 0)
 		newtag->dt_maxsegsz = ulmin(newtag->dt_maxsegsz,
@@ -381,6 +372,8 @@ _nexus_dmamap_load_buffer(bus_dma_tag_t dmat, void *buf, bus_size_t buflen,
 		 * Compute the segment size, and adjust counts.
 		 */
 		sgsize = PAGE_SIZE - ((u_long)curaddr & PAGE_MASK);
+		if (sgsize > dmat->dt_maxsegsz)
+			sgsize = dmat->dt_maxsegsz;
 		if (buflen < sgsize)
 			sgsize = buflen;
 
@@ -405,7 +398,7 @@ _nexus_dmamap_load_buffer(bus_dma_tag_t dmat, void *buf, bus_size_t buflen,
 			if (curaddr == lastaddr &&
 			    (segs[seg].ds_len + sgsize) <= dmat->dt_maxsegsz &&
 			    (dmat->dt_boundary == 0 ||
-			     (segs[seg].ds_addr & bmask) == (curaddr & bmask)))
+			    (segs[seg].ds_addr & bmask) == (curaddr & bmask)))
 				segs[seg].ds_len += sgsize;
 			else {
 				if (++seg >= dmat->dt_nsegments)
@@ -611,9 +604,9 @@ nexus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, bus_dmasync_op_t op)
 	 * Actually a #Sync is expensive.  We should optimize.
 	 */
 	if ((op & BUS_DMASYNC_PREREAD) || (op & BUS_DMASYNC_PREWRITE)) {
-		/* 
+		/*
 		 * Don't really need to do anything, but flush any pending
-		 * writes anyway. 
+		 * writes anyway.
 		 */
 		membar(Sync);
 	}
@@ -695,15 +688,15 @@ struct bus_dma_methods nexus_dma_methods = {
 struct bus_dma_tag nexus_dmatag = {
 	NULL,
 	NULL,
-	8,
+	1,
 	0,
-	0,
-	0x3ffffffff,
+	~0,
+	~0,
 	NULL,		/* XXX */
 	NULL,
-	0x3ffffffff,	/* XXX */
-	0xff,		/* XXX */
-	0xffffffff,	/* XXX */
+	~0,
+	~0,
+	~0,
 	0,
 	0,
 	0,
@@ -730,7 +723,7 @@ sparc64_bus_mem_map(bus_space_tag_t tag, bus_space_handle_t handle,
 	addr = (vm_offset_t)handle;
 	size = round_page(size);
 	if (size == 0) {
-		printf("sparc64_bus_map: zero size\n");
+		printf("%s: zero size\n", __func__);
 		return (EINVAL);
 	}
 	switch (tag->bst_type) {
@@ -751,8 +744,7 @@ sparc64_bus_mem_map(bus_space_tag_t tag, bus_space_handle_t handle,
 		sva = trunc_page(vaddr);
 	else {
 		if ((sva = kmem_alloc_nofault(kernel_map, size)) == 0)
-			panic("sparc64_bus_map: cannot allocate virtual "
-			    "memory");
+			panic("%s: cannot allocate virtual memory", __func__);
 	}
 
 	/* Preserve page offset. */
@@ -814,7 +806,7 @@ nexus_bus_barrier(bus_space_tag_t t, bus_space_handle_t h, bus_size_t offset,
     bus_size_t size, int flags)
 {
 
-	/* 
+	/*
 	 * We have lots of alternatives depending on whether we're
 	 * synchronizing loads with loads, loads with stores, stores
 	 * with loads, or stores with stores.  The only ones that seem
@@ -827,7 +819,7 @@ nexus_bus_barrier(bus_space_tag_t t, bus_space_handle_t h, bus_size_t offset,
 		membar(Sync);
 		break;
 	default:
-		panic("sparc64_bus_barrier: unknown flags");
+		panic("%s: unknown flags", __func__);
 	}
 	return;
 }
@@ -835,6 +827,6 @@ nexus_bus_barrier(bus_space_tag_t t, bus_space_handle_t h, bus_size_t offset,
 struct bus_space_tag nexus_bustag = {
 	NULL,				/* cookie */
 	NULL,				/* parent bus tag */
-	UPA_BUS_SPACE,			/* type */
+	NEXUS_BUS_SPACE,		/* type */
 	nexus_bus_barrier,		/* bus_space_barrier */
 };

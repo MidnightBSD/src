@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/central/central.c,v 1.8.2.1 2006/01/30 22:30:50 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/central/central.c,v 1.12 2007/03/07 21:13:50 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -35,11 +35,10 @@ __FBSDID("$FreeBSD: src/sys/sparc64/central/central.c,v 1.8.2.1 2006/01/30 22:30
 #include <sys/module.h>
 
 #include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
-#include <machine/nexusvar.h>
-#include <machine/ofw_upa.h>
 #include <machine/resource.h>
 
 #include <sys/rman.h>
@@ -47,16 +46,11 @@ __FBSDID("$FreeBSD: src/sys/sparc64/central/central.c,v 1.8.2.1 2006/01/30 22:30
 #include <sparc64/sbus/ofw_sbus.h>
 
 struct central_devinfo {
-	char			*cdi_compat;
-	char			*cdi_model;
-	char			*cdi_name;
-	char			*cdi_type;
-	phandle_t		cdi_node;
+	struct ofw_bus_devinfo	cdi_obdinfo;
 	struct resource_list	cdi_rl;
 };
 
 struct central_softc {
-	phandle_t		sc_node;
 	int			sc_nrange;
 	struct sbus_ranges	*sc_ranges;
 };
@@ -67,21 +61,19 @@ static bus_print_child_t central_print_child;
 static bus_probe_nomatch_t central_probe_nomatch;
 static bus_alloc_resource_t central_alloc_resource;
 static bus_get_resource_list_t central_get_resource_list;
-static ofw_bus_get_compat_t central_get_compat;
-static ofw_bus_get_model_t central_get_model;
-static ofw_bus_get_name_t central_get_name;
-static ofw_bus_get_node_t central_get_node;
-static ofw_bus_get_type_t central_get_type;
+static ofw_bus_get_devinfo_t central_get_devinfo;
+
+static int central_print_res(struct central_devinfo *);
 
 static device_method_t central_methods[] = {
-	/* Device interface. */
+	/* Device interface */
 	DEVMETHOD(device_probe,		central_probe),
 	DEVMETHOD(device_attach,	central_attach),
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
 	DEVMETHOD(device_suspend,	bus_generic_suspend),
 	DEVMETHOD(device_resume,	bus_generic_resume),
 
-	/* Bus interface. */
+	/* Bus interface */
 	DEVMETHOD(bus_print_child,	central_print_child),
 	DEVMETHOD(bus_probe_nomatch,	central_probe_nomatch),
 	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
@@ -94,11 +86,12 @@ static device_method_t central_methods[] = {
 	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
 
 	/* ofw_bus interface */
-	DEVMETHOD(ofw_bus_get_compat,	central_get_compat),
-	DEVMETHOD(ofw_bus_get_model,	central_get_model),
-	DEVMETHOD(ofw_bus_get_name,	central_get_name),
-	DEVMETHOD(ofw_bus_get_node,	central_get_node),
-	DEVMETHOD(ofw_bus_get_type,	central_get_type),
+	DEVMETHOD(ofw_bus_get_devinfo,	central_get_devinfo),
+	DEVMETHOD(ofw_bus_get_compat,	ofw_bus_gen_get_compat),
+	DEVMETHOD(ofw_bus_get_model,	ofw_bus_gen_get_model),
+	DEVMETHOD(ofw_bus_get_name,	ofw_bus_gen_get_name),
+	DEVMETHOD(ofw_bus_get_node,	ofw_bus_gen_get_node),
+	DEVMETHOD(ofw_bus_get_type,	ofw_bus_gen_get_type),
 
 	{ NULL, NULL }
 };
@@ -117,7 +110,7 @@ static int
 central_probe(device_t dev)
 {
 
-	if (strcmp(nexus_get_name(dev), "central") == 0) {
+	if (strcmp(ofw_bus_get_name(dev), "central") == 0) {
 		device_set_desc(dev, "central");
 		return (0);
 	}
@@ -132,16 +125,12 @@ central_attach(device_t dev)
 	struct central_softc *sc;
 	phandle_t child;
 	phandle_t node;
-	bus_addr_t size;
-	bus_addr_t off;
 	device_t cdev;
-	char *name;
 	int nreg;
 	int i;
 
 	sc = device_get_softc(dev);
-	node = nexus_get_node(dev);
-	sc->sc_node = node;
+	node = ofw_bus_get_node(dev);
 
 	sc->sc_nrange = OF_getprop_alloc(node, "ranges",
 	    sizeof(*sc->sc_ranges), (void **)&sc->sc_ranges);
@@ -151,37 +140,36 @@ central_attach(device_t dev)
 	}
 
 	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
-		if ((OF_getprop_alloc(child, "name", 1, (void **)&name)) == -1)
+		cdi = malloc(sizeof(*cdi), M_DEVBUF, M_WAITOK | M_ZERO);
+		if (ofw_bus_gen_setup_devinfo(&cdi->cdi_obdinfo, child) != 0) {
+			free(cdi, M_DEVBUF);
 			continue;
+		}
+		nreg = OF_getprop_alloc(child, "reg", sizeof(*reg),
+		    (void **)&reg);
+		if (nreg == -1) {
+			device_printf(dev, "<%s>: incomplete\n",
+			    cdi->cdi_obdinfo.obd_name);
+			ofw_bus_gen_destroy_devinfo(&cdi->cdi_obdinfo);
+			free(cdi, M_DEVBUF);
+			continue;
+		}
+		resource_list_init(&cdi->cdi_rl);
+		for (i = 0; i < nreg; i++)
+			resource_list_add(&cdi->cdi_rl, SYS_RES_MEMORY, i,
+			    reg[i].sbr_offset, reg[i].sbr_offset +
+			    reg[i].sbr_size, reg[i].sbr_size);
+    		free(reg, M_OFWPROP);
 		cdev = device_add_child(dev, NULL, -1);
-		if (cdev != NULL) {
-			cdi = malloc(sizeof(*cdi), M_DEVBUF, M_WAITOK | M_ZERO);
-			if (cdi == NULL)
-				continue;
-			cdi->cdi_name = name;
-			cdi->cdi_node = child;
-			OF_getprop_alloc(child, "compatible", 1,
-			    (void **)&cdi->cdi_compat);
-			OF_getprop_alloc(child, "device_type", 1,
-			    (void **)&cdi->cdi_type);
-			OF_getprop_alloc(child, "model", 1,
-			    (void **)&cdi->cdi_model);
-			resource_list_init(&cdi->cdi_rl);
-			nreg = OF_getprop_alloc(child, "reg", sizeof(*reg),
-			    (void **)&reg);
-			if (nreg != -1) {
-				for (i = 0; i < nreg; i++) {
-					off = reg[i].sbr_offset;
-					size = reg[i].sbr_size;
-					resource_list_add(&cdi->cdi_rl,
-					    SYS_RES_MEMORY, i, off, off + size,
-					    size);
-				}
-				free(reg, M_OFWPROP);
-			}
-			device_set_ivars(cdev, cdi);
-		} else
-			free(name, M_OFWPROP);
+		if (cdev == NULL) {
+			device_printf(dev, "<%s>: device_add_child failed\n",
+			    cdi->cdi_obdinfo.obd_name);
+			resource_list_free(&cdi->cdi_rl);
+			ofw_bus_gen_destroy_devinfo(&cdi->cdi_obdinfo);
+			free(cdi, M_DEVBUF);
+			continue;
+		}
+		device_set_ivars(cdev, cdi);
 	}
 
 	return (bus_generic_attach(dev));
@@ -190,13 +178,10 @@ central_attach(device_t dev)
 static int
 central_print_child(device_t dev, device_t child)
 {
-	struct central_devinfo *cdi;
 	int rv;
 
-	cdi = device_get_ivars(child);
 	rv = bus_print_child_header(dev, child);
-	rv += resource_list_print_type(&cdi->cdi_rl, "mem",
-	    SYS_RES_MEMORY, "%#lx");
+	rv += central_print_res(device_get_ivars(child));
 	rv += bus_print_child_footer(dev, child);
 	return (rv);
 }
@@ -204,13 +189,13 @@ central_print_child(device_t dev, device_t child)
 static void
 central_probe_nomatch(device_t dev, device_t child)
 {
-	struct central_devinfo *cdi;
+	const char *type;
 
-	cdi = device_get_ivars(child);
-	device_printf(dev, "<%s>", cdi->cdi_name);
-	resource_list_print_type(&cdi->cdi_rl, "mem", SYS_RES_MEMORY, "%#lx");
+	device_printf(dev, "<%s>", ofw_bus_get_name(child));
+	central_print_res(device_get_ivars(child));
+	type = ofw_bus_get_type(child);
 	printf(" type %s (no driver attached)\n",
-	    cdi->cdi_type != NULL ? cdi->cdi_type : "unknown");
+	    type != NULL ? type : "unknown");
 }
 
 static struct resource *
@@ -281,47 +266,19 @@ central_get_resource_list(device_t bus, device_t child)
 	return (&cdi->cdi_rl);
 }
 
-static const char *
-central_get_compat(device_t bus, device_t dev)
+static const struct ofw_bus_devinfo *
+central_get_devinfo(device_t bus, device_t child)
 {
-	struct central_devinfo *dinfo;
- 
-	dinfo = device_get_ivars(dev);
-	return (dinfo->cdi_compat);
-}
- 
-static const char *
-central_get_model(device_t bus, device_t dev)
-{
-	struct central_devinfo *dinfo;
+	struct central_devinfo *cdi;
 
-	dinfo = device_get_ivars(dev);
-	return (dinfo->cdi_model);
+	cdi = device_get_ivars(child);
+	return (&cdi->cdi_obdinfo);
 }
 
-static const char *
-central_get_name(device_t bus, device_t dev)
+static int
+central_print_res(struct central_devinfo *cdi)
 {
-	struct central_devinfo *dinfo;
 
-	dinfo = device_get_ivars(dev);
-	return (dinfo->cdi_name);
-}
-
-static phandle_t
-central_get_node(device_t bus, device_t dev)
-{
-	struct central_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->cdi_node);
-}
-
-static const char *
-central_get_type(device_t bus, device_t dev)
-{
-	struct central_devinfo *dinfo;
-
-	dinfo = device_get_ivars(dev);
-	return (dinfo->cdi_type);
+	return (resource_list_print_type(&cdi->cdi_rl, "mem", SYS_RES_MEMORY,
+	    "%#lx"));
 }

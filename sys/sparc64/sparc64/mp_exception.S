@@ -25,11 +25,12 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_exception.S,v 1.12 2003/06/19 05:27:04 jake Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/mp_exception.S,v 1.13 2007/01/19 11:15:33 marius Exp $");
 
 #include <machine/asi.h>
-#include <machine/ktr.h>
 #include <machine/asmacros.h>
+#include <machine/cache.h>
+#include <machine/ktr.h>
 #include <machine/pstate.h>
 
 #include "assym.s"

@@ -26,7 +26,7 @@
  *
  *	from: src/sys/i386/isa/prof_machdep.c,v 1.16 2000/07/04 11:25:19
  *
- * $FreeBSD: src/sys/sparc64/sparc64/prof_machdep.c,v 1.1 2002/07/29 00:45:13 jake Exp $
+ * $FreeBSD: src/sys/sparc64/sparc64/prof_machdep.c,v 1.2 2006/05/16 14:32:17 phk Exp $
  */
 
 #ifdef GUPROF
@@ -37,7 +37,6 @@
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 
-#include <machine/clock.h>
 #include <machine/profile.h>
 
 int	cputime_bias;
