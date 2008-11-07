@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_namei.c,v 1.1.2.1 2005/12/09 14:55:39 dumbbell Exp $
+ * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_namei.c,v 1.4 2007/06/10 04:54:42 mjacob Exp $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -13,7 +13,7 @@ static int	reiserfs_find_entry(struct reiserfs_node *dp,
     const char *name, int namelen,
     struct path * path_to_entry, struct reiserfs_dir_entry *de);
 
-MALLOC_DEFINE(M_REISERFSCOOKIES, "ReiserFS cookies",
+MALLOC_DEFINE(M_REISERFSCOOKIES, "reiserfs_cookies",
     "ReiserFS VOP_READDIR cookies");
 
 /* -------------------------------------------------------------------
@@ -409,7 +409,7 @@ set_de_item_location(struct reiserfs_dir_entry *de, struct path *path)
  * de_bh, de_ih, de_deh (points to first element of array), de_item_num
  * is set
  */
-inline void
+void
 set_de_name_and_namelen(struct reiserfs_dir_entry *de)
 {
 	struct reiserfs_de_head *deh = de->de_deh + de->de_entry_num;

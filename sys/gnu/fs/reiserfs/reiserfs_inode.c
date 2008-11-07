@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <dumbbell@FreeBSD.org>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_inode.c,v 1.1.2.1 2006/01/05 19:37:39 dumbbell Exp $
+ * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_inode.c,v 1.3 2007/03/13 01:50:25 tegge Exp $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -815,6 +815,14 @@ reiserfs_iget(
 	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, (struct mtx *)0, td);
 #endif
 
+	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL, td);
+	error = insmntque(vp, mp);
+	if (error != 0) {
+		free(ip, M_REISERFSNODE);
+		*vpp = NULL;
+		reiserfs_log(LOG_DEBUG, "insmntque FAILED\n");
+		return (error);
+	}
 	error = vfs_hash_insert(vp, key->on_disk_key.k_objectid, flags,
 	    td, vpp, NULL, NULL);
 	if (error || *vpp != NULL)

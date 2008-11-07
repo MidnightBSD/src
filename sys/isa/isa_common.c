@@ -58,7 +58,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isa/isa_common.c,v 1.42 2005/03/18 05:19:50 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/isa/isa_common.c,v 1.46 2007/04/17 15:14:23 jhb Exp $");
+
+#include "opt_isa.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -73,9 +75,6 @@ __FBSDID("$FreeBSD: src/sys/isa/isa_common.c,v 1.42 2005/03/18 05:19:50 imp Exp 
 
 #include <isa/isavar.h>
 #include <isa/isa_common.h>
-#ifdef __alpha__		/* XXX workaround a stupid warning */
-#include <alpha/isa/isavar.h>
-#endif
 
 static int	isa_print_child(device_t bus, device_t dev);
 
@@ -148,7 +147,7 @@ isa_find_memory(device_t child, struct isa_config *config,
 			     end = config->ic_mem[i].ir_end,
 			     align = config->ic_mem[i].ir_align;
 		     start + size - 1 <= end && start + size > start;
-		     start += align) {
+		     start += MAX(align, 1)) {
 			bus_set_resource(child, SYS_RES_MEMORY, i,
 					 start, size);
 			res[i] = bus_alloc_resource(child,
@@ -655,6 +654,10 @@ isa_print_all_resources(device_t dev)
 	retval += resource_list_print_type(rl, "drq", SYS_RES_DRQ, "%ld");
 	if (device_get_flags(dev))
 		retval += printf(" flags %#x", device_get_flags(dev));
+#ifdef ISAPNP
+	if (idev->id_vendorid)
+		retval += printf(" pnpid %s", pnp_eisaformat(idev->id_vendorid));
+#endif
 
 	return (retval);
 }
@@ -1059,6 +1062,29 @@ isa_pnp_probe(device_t dev, device_t child, struct isa_pnp_id *ids)
 	return (ENXIO);
 }
 
+static int
+isa_child_pnpinfo_str(device_t bus, device_t child, char *buf,
+    size_t buflen)
+{
+#ifdef ISAPNP
+	struct isa_device *idev = DEVTOISA(child);
+
+	if (idev->id_vendorid)
+		snprintf(buf, buflen, "pnpid=%s",
+		    pnp_eisaformat(idev->id_vendorid));
+#endif
+	return (0);
+}
+
+static int
+isa_child_location_str(device_t bus, device_t child, char *buf,
+    size_t buflen)
+{
+	/* Nothing here yet */
+	*buf = '\0';
+	return (0);
+}
+
 static device_method_t isa_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		isa_probe),
@@ -1087,6 +1113,8 @@ static device_method_t isa_methods[] = {
 	DEVMETHOD(bus_delete_resource,	bus_generic_rl_delete_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
 	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
+	DEVMETHOD(bus_child_pnpinfo_str, isa_child_pnpinfo_str),
+	DEVMETHOD(bus_child_location_str, isa_child_location_str),
 
 	/* ISA interface */
 	DEVMETHOD(isa_add_config,	isa_add_config),

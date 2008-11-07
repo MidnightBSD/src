@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_vfsops.c	8.8 (Berkeley) 4/18/94
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vfsops.c,v 1.151.2.4 2006/02/20 00:53:14 yar Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vfsops.c,v 1.165 2007/08/15 17:40:09 jhb Exp $
  */
 
 /*-
@@ -57,6 +57,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/namei.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/kernel.h>
 #include <sys/vnode.h>
@@ -91,11 +92,10 @@ static vfs_statfs_t		ext2_statfs;
 static vfs_sync_t		ext2_sync;
 static vfs_vget_t		ext2_vget;
 static vfs_fhtovp_t		ext2_fhtovp;
-static vfs_vptofh_t		ext2_vptofh;
 static vfs_mount_t		ext2_mount;
 
-MALLOC_DEFINE(M_EXT2NODE, "EXT2 node", "EXT2 vnode private part");
-static MALLOC_DEFINE(M_EXT2MNT, "EXT2 mount", "EXT2 mount structure");
+MALLOC_DEFINE(M_EXT2NODE, "ext2_node", "EXT2 vnode private part");
+static MALLOC_DEFINE(M_EXT2MNT, "ext2_mount", "EXT2 mount structure");
 
 static struct vfsops ext2fs_vfsops = {
 	.vfs_fhtovp =		ext2_fhtovp,
@@ -105,7 +105,6 @@ static struct vfsops ext2fs_vfsops = {
 	.vfs_sync =		ext2_sync,
 	.vfs_unmount =		ext2_unmount,
 	.vfs_vget =		ext2_vget,
-	.vfs_vptofh =		ext2_vptofh,
 };
 
 VFS_SET(ext2fs_vfsops, ext2fs, 0);
@@ -118,7 +117,10 @@ static int	ext2_check_sb_compat(struct ext2_super_block *es, struct cdev *dev,
 static int	compute_sb_data(struct vnode * devvp,
 		    struct ext2_super_block * es, struct ext2_sb_info * fs);
 
-static const char *ext2_opts[] = { "from", "export" };
+static const char *ext2_opts[] = { "from", "export", "union", "acls", "exec",
+    "noatime", "union", "suiddir", "multilabel", "nosymfollow",
+    "noclusterr", "noclusterw", "force", NULL };
+ 
 /*
  * VFS Operations.
  *
@@ -129,7 +131,6 @@ ext2_mount(mp, td)
 	struct mount *mp;
 	struct thread *td;
 {
-	struct export_args *export;
 	struct vfsoptlist *opts;
 	struct vnode *devvp;
 	struct ext2mount *ump = 0;
@@ -198,15 +199,16 @@ ext2_mount(mp, td)
 			 * If upgrade to read-write by non-root, then verify
 			 * that user has necessary permissions on the device.
 			 */
-			if (suser(td)) {
-				vn_lock(devvp, LK_EXCLUSIVE | LK_RETRY, td);
-				if ((error = VOP_ACCESS(devvp, VREAD | VWRITE,
-				    td->td_ucred, td)) != 0) {
-					VOP_UNLOCK(devvp, 0, td);
-					return (error);
-				}
+			vn_lock(devvp, LK_EXCLUSIVE | LK_RETRY, td);
+			error = VOP_ACCESS(devvp, VREAD | VWRITE,
+			    td->td_ucred, td);
+			if (error)
+				error = priv_check(td, PRIV_VFS_MOUNT_PERM);
+			if (error) {
 				VOP_UNLOCK(devvp, 0, td);
+				return (error);
 			}
+			VOP_UNLOCK(devvp, 0, td);
 			DROP_GIANT();
 			g_topology_lock();
 			error = g_access(ump->um_cp, 0, 1, 0);
@@ -231,15 +233,13 @@ ext2_mount(mp, td)
 			fs->s_es->s_state &= ~EXT2_VALID_FS;
 			ext2_sbupdate(ump, MNT_WAIT);
 			fs->s_rd_only = 0;
+			MNT_ILOCK(mp);
 			mp->mnt_flag &= ~MNT_RDONLY;
+			MNT_IUNLOCK(mp);
 		}
-		if (fspec == NULL) {
-			error = vfs_getopt(opts, "export", (void **)&export,
-			    &len);
-			if (error || len != sizeof(struct export_args))
-				return (EINVAL);
-				/* Process export requests. */
-			return (vfs_export(mp, export));
+		if (vfs_flagopt(opts, "export", NULL, 0)) {
+			/* Process export requests in vfs_mount.c. */
+			return (error);
 		}
 	}
 	/*
@@ -262,15 +262,18 @@ ext2_mount(mp, td)
 	/*
 	 * If mount by non-root, then verify that user has necessary
 	 * permissions on the device.
+	 *
+	 * XXXRW: VOP_ACCESS() enough?
 	 */
-	if (suser(td)) {
-		accessmode = VREAD;
-		if ((mp->mnt_flag & MNT_RDONLY) == 0)
-			accessmode |= VWRITE;
-		if ((error = VOP_ACCESS(devvp, accessmode, td->td_ucred, td)) != 0) {
-			vput(devvp);
-			return (error);
-		}
+	accessmode = VREAD;
+	if ((mp->mnt_flag & MNT_RDONLY) == 0)
+		accessmode |= VWRITE;
+	error = VOP_ACCESS(devvp, accessmode, td->td_ucred, td);
+	if (error)
+		error = priv_check(td, PRIV_VFS_MOUNT_PERM);
+	if (error) {
+		vput(devvp);
+		return (error);
 	}
 
 	if ((mp->mnt_flag & MNT_UPDATE) == 0) {
@@ -688,7 +691,9 @@ ext2_mountfs(devvp, mp, td)
 	mp->mnt_stat.f_fsid.val[0] = dev2udev(dev);
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
 	mp->mnt_maxsymlinklen = EXT2_MAXSYMLINKLEN;
+	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 	ump->um_mountp = mp;
 	ump->um_dev = dev;
 	ump->um_devvp = devvp;
@@ -776,7 +781,9 @@ ext2_unmount(mp, mntflags, td)
 	bsd_free(fs, M_EXT2MNT);
 	bsd_free(ump, M_EXT2MNT);
 	mp->mnt_data = (qaddr_t)0;
+	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 	return (error);
 }
 
@@ -947,8 +954,10 @@ ext2_vget(mp, ino, flags, vpp)
 	struct cdev *dev;
 	int i, error;
 	int used_blocks;
+	struct thread *td;
 
-	error = vfs_hash_get(mp, ino, flags, curthread, vpp, NULL, NULL);
+	td = curthread;
+	error = vfs_hash_get(mp, ino, flags, td, vpp, NULL, NULL);
 	if (error || *vpp != NULL)
 		return (error);
 
@@ -975,7 +984,14 @@ ext2_vget(mp, ino, flags, vpp)
 	ip->i_e2fs = fs = ump->um_e2fs;
 	ip->i_number = ino;
 
-	error = vfs_hash_insert(vp, ino, flags, curthread, vpp, NULL, NULL);
+	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL, td);
+	error = insmntque(vp, mp);
+	if (error != 0) {
+		free(ip, M_EXT2NODE);
+		*vpp = NULL;
+		return (error);
+	}
+	error = vfs_hash_insert(vp, ino, flags, td, vpp, NULL, NULL);
 	if (error || *vpp != NULL)
 		return (error);
 
@@ -1085,27 +1101,7 @@ ext2_fhtovp(mp, fhp, vpp)
 		return (ESTALE);
 	}
 	*vpp = nvp;
-	vnode_create_vobject_off(*vpp, 0, curthread);
-	return (0);
-}
-
-/*
- * Vnode pointer to File handle
- */
-/* ARGSUSED */
-static int
-ext2_vptofh(vp, fhp)
-	struct vnode *vp;
-	struct fid *fhp;
-{
-	struct inode *ip;
-	struct ufid *ufhp;
-
-	ip = VTOI(vp);
-	ufhp = (struct ufid *)fhp;
-	ufhp->ufid_len = sizeof(struct ufid);
-	ufhp->ufid_ino = ip->i_number;
-	ufhp->ufid_gen = ip->i_gen;
+	vnode_create_vobject(*vpp, 0, curthread);
 	return (0);
 }
 

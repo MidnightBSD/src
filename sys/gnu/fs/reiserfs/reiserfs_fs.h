@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_fs.h,v 1.2 2005/06/21 10:11:13 dumbbell Exp $
+ * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_fs.h,v 1.5 2006/11/06 13:41:58 rwatson Exp $
  */
 
 #ifndef _GNU_REISERFS_REISERFS_FS_H
@@ -18,6 +18,7 @@
 #include <sys/kernel.h>
 #include <sys/mount.h>
 #include <sys/namei.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/vnode.h>
 #include <sys/unistd.h>
@@ -1015,7 +1016,7 @@ struct path {
 
 #define	pos_in_item(path)	((path)->pos_in_item)
 
-#if (_MACHINE_ARCH == amd64)
+#ifdef __amd64__
 /* To workaround a bug in gcc. He generates a call to memset() which
  * is a inline function; this causes a compile time error. */
 #define	INITIALIZE_PATH(var)						\

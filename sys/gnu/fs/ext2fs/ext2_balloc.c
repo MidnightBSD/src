@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_balloc.c	8.4 (Berkeley) 9/23/93
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_balloc.c,v 1.21 2005/06/15 02:36:10 rodrigc Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_balloc.c,v 1.22 2005/12/05 11:58:33 ru Exp $
  */
 
 #include <sys/param.h>
@@ -159,7 +159,7 @@ ext2_debug("ext2_balloc called (%d, %d, %d)\n",
 	pref = 0;
 	if ((error = ext2_getlbns(vp, bn, indirs, &num)) != 0)
 		return(error);
-#if DIAGNOSTIC
+#ifdef DIAGNOSTIC
 	if (num < 1)
 		panic ("ext2_balloc: ext2_getlbns returned indirect block");
 #endif

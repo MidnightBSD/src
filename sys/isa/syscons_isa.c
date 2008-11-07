@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isa/syscons_isa.c,v 1.27 2005/05/14 09:10:01 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/isa/syscons_isa.c,v 1.29 2007/02/27 17:22:30 jhb Exp $");
 
 #include "opt_syscons.h"
 
@@ -61,6 +61,12 @@ __FBSDID("$FreeBSD: src/sys/isa/syscons_isa.c,v 1.27 2005/05/14 09:10:01 nyan Ex
 #include <dev/syscons/syscons.h>
 
 #include <isa/isavar.h>
+
+#include "opt_xbox.h"
+
+#ifdef XBOX
+#include <machine/xbox.h>
+#endif
 
 static devclass_t	sc_devclass;
 
@@ -104,7 +110,6 @@ static int
 scsuspend(device_t dev)
 {
 	int		retry = 10;
-	static int	dummy;
 	sc_softc_t	*sc;
 
 	sc = &main_softc;
@@ -122,7 +127,7 @@ scsuspend(device_t dev)
 		if (!sc->switch_in_progress) {
 			break;
 		}
-		tsleep(&dummy, 0, "scsuspend", 100);
+		pause("scsuspend", hz);
 	} while (retry--);
 
 	return (0);
@@ -201,6 +206,19 @@ sc_get_cons_priority(int *unit, int *flags)
 {
 	const char *at;
 	int u, f;
+
+#ifdef XBOX
+	/*
+	 * The XBox Loader does not support hints, which makes our initial
+	 * console probe fail. Therefore, if an XBox is found, we hardcode the
+	 * existence of the console, as it is always there anyway.
+	 */
+	if (arch_i386_is_xbox) {
+		*unit = 0;
+		*flags = SC_KERNEL_CONSOLE;
+		return CN_INTERNAL;
+	}
+#endif
 
 	*unit = -1;
 	for (u = 0; u < 16; u++) {

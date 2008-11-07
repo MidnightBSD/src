@@ -4,7 +4,7 @@
  * 
  * Ported to FreeBSD by Jean-Sébastien Pédron <jspedron@club-internet.fr>
  * 
- * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_vfsops.c,v 1.1.2.1 2005/09/30 06:26:42 delphij Exp $
+ * $FreeBSD: src/sys/gnu/fs/reiserfs/reiserfs_vfsops.c,v 1.9 2007/06/01 14:33:11 kib Exp $
  */
 
 #include <gnu/fs/reiserfs/reiserfs_fs.h>
@@ -26,7 +26,6 @@ static vfs_mount_t	reiserfs_mount;
 static vfs_root_t	reiserfs_root;
 static vfs_statfs_t	reiserfs_statfs;
 static vfs_unmount_t	reiserfs_unmount;
-static vfs_vptofh_t	reiserfs_vptofh;
 
 static int	reiserfs_mountfs(struct vnode *devvp, struct mount *mp,
 		    struct thread *td);
@@ -41,9 +40,9 @@ static int	get_root_node(struct reiserfs_mount *rmp,
 		    struct reiserfs_node **root);
 uint32_t	find_hash_out(struct reiserfs_mount *rmp);
 
-MALLOC_DEFINE(M_REISERFSMNT, "ReiserFS mount", "ReiserFS mount structure");
-MALLOC_DEFINE(M_REISERFSPATH, "ReiserFS path", "ReiserFS path structure");
-MALLOC_DEFINE(M_REISERFSNODE, "ReiserFS node", "ReiserFS vnode private part");
+MALLOC_DEFINE(M_REISERFSMNT, "reiserfs_mount", "ReiserFS mount structure");
+MALLOC_DEFINE(M_REISERFSPATH, "reiserfs_path", "ReiserFS path structure");
+MALLOC_DEFINE(M_REISERFSNODE, "reiserfs_node", "ReiserFS vnode private part");
 
 /* -------------------------------------------------------------------
  * VFS operations
@@ -79,7 +78,6 @@ reiserfs_mount(struct mount *mp, struct thread *td)
 	char *path, *fspec;
 	struct vnode *devvp;
 	struct vfsoptlist *opts;
-	struct export_args *export;
 	struct reiserfs_mount *rmp;
 	struct reiserfs_sb_info *sbi;
 	struct nameidata nd, *ndp = &nd;
@@ -104,9 +102,8 @@ reiserfs_mount(struct mount *mp, struct thread *td)
 	/* Handle MNT_UPDATE (mp->mnt_flag) */
 	if (mp->mnt_flag & MNT_UPDATE) {
 		/* For now, only NFS export is supported. */
-		error = vfs_getopt(opts, "export", (void **)&export, &len);
-		if (error == 0 && len == sizeof(*export) && export->ex_flags)
-			return (vfs_export(mp, export));
+		if (vfs_flagopt(opts, "export", NULL, 0))
+			return (0);
 	}
 
 	/* Not an update, or updating the name: look up the name
@@ -127,15 +124,15 @@ reiserfs_mount(struct mount *mp, struct thread *td)
 
 	/* If mount by non-root, then verify that user has necessary
 	 * permissions on the device. */
-	if (suser(td)) {
-		accessmode = VREAD;
-		if ((mp->mnt_flag & MNT_RDONLY) == 0)
-			accessmode |= VWRITE;
-		if ((error = VOP_ACCESS(devvp,
-		    accessmode, td->td_ucred, td)) != 0) {
-			vput(devvp);
-			return (error);
-		}
+	accessmode = VREAD;
+	if ((mp->mnt_flag & MNT_RDONLY) == 0)
+		accessmode |= VWRITE;
+	error = VOP_ACCESS(devvp, accessmode, td->td_ucred, td);
+	if (error)
+		error = priv_check(td, PRIV_VFS_MOUNT_PERM);
+	if (error) {
+		vput(devvp);
+		return (error);
 	}
 
 	if ((mp->mnt_flag & MNT_UPDATE) == 0) {
@@ -243,7 +240,9 @@ reiserfs_unmount(struct mount *mp, int mntflags, struct thread *td)
 	}
 
 	mp->mnt_data  = (qaddr_t)0;
+	MNT_ILOCK(mp);
 	mp->mnt_flag &= ~MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 
 	reiserfs_log(LOG_DEBUG, "done\n");
 	return (error);
@@ -377,30 +376,6 @@ reiserfs_fhtovp(struct mount *mp, struct fid *fhp, struct vnode **vpp)
 	return (0);
 }
 
-/*
- * Vnode pointer to File handle
- */
-static int
-reiserfs_vptofh(struct vnode *vp, struct fid *fhp)
-{
-	struct rfid *rfhp;
-	struct reiserfs_node *ip;
-
-	ip = VTOI(vp);
-	reiserfs_log(LOG_DEBUG,
-	    "fill *fhp with inode (dirid=%d, objectid=%d)\n",
-	    ip->i_ino, ip->i_number);
-
-	rfhp = (struct rfid *)fhp;
-	rfhp->rfid_len      = sizeof(struct rfid);
-	rfhp->rfid_dirid    = ip->i_ino;
-	rfhp->rfid_objectid = ip->i_number;
-	rfhp->rfid_gen      = ip->i_generation;
-
-	reiserfs_log(LOG_DEBUG, "return it\n");
-	return (0);
-}
-
 /* -------------------------------------------------------------------
  * Functions for the journal
  * -------------------------------------------------------------------*/
@@ -482,7 +457,7 @@ reiserfs_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td)
 	 * Open the device in read-only, 'cause we don't support write
 	 * for now
 	 */
-	error = VOP_OPEN(devvp, FREAD, FSCRED, td, -1);
+	error = VOP_OPEN(devvp, FREAD, FSCRED, td, NULL);
 	VOP_UNLOCK(devvp, 0, td);
 	if (error)
 		return (error);
@@ -626,7 +601,9 @@ reiserfs_mountfs(struct vnode *devvp, struct mount *mp, struct thread *td)
 	mp->mnt_data = (qaddr_t)rmp;
 	mp->mnt_stat.f_fsid.val[0] = dev2udev(dev);
 	mp->mnt_stat.f_fsid.val[1] = mp->mnt_vfc->vfc_typenum;
+	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_LOCAL;
+	MNT_IUNLOCK(mp);
 #if defined(si_mountpoint)
 	devvp->v_rdev->si_mountpoint = mp;
 #endif
@@ -1178,7 +1155,6 @@ static struct vfsops reiser_vfsops = {
 	.vfs_statfs	= reiserfs_statfs,
 	//.vfs_sync	= reiserfs_sync,
 	//.vfs_vget	= reiserfs_vget,
-	.vfs_vptofh	= reiserfs_vptofh,
 };
 
 VFS_SET(reiser_vfsops, reiserfs, VFCF_READONLY);

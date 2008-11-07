@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_inode.c	8.5 (Berkeley) 12/30/93
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_inode.c,v 1.56 2005/06/15 02:36:10 rodrigc Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_inode.c,v 1.58 2006/09/26 04:15:58 tegge Exp $
  */
 
 #include <sys/param.h>
@@ -92,7 +92,7 @@ ext2_update(vp, waitfor)
 	}
 	ext2_i2ei(ip, (struct ext2_inode *)((char *)bp->b_data +
 	    EXT2_INODE_SIZE * ino_to_fsbo(fs, ip->i_number)));
-	if (waitfor && (vp->v_mount->mnt_flag & MNT_ASYNC) == 0)
+	if (waitfor && (vp->v_mount->mnt_kern_flag & MNTK_ASYNC) == 0)
 		return (bwrite(bp));
 	else {
 		bdwrite(bp);
@@ -138,7 +138,7 @@ printf("ext2_truncate called %d to %d\n", VTOI(ovp)->i_number, length);
 	oip = VTOI(ovp);
 	if (ovp->v_type == VLNK &&
 	    oip->i_size < ovp->v_mount->mnt_maxsymlinklen) {
-#if DIAGNOSTIC
+#ifdef DIAGNOSTIC
 		if (length != 0)
 			panic("ext2_truncate: partial truncate of symlink");
 #endif
@@ -318,7 +318,7 @@ printf("ext2_truncate called %d to %d\n", VTOI(ovp)->i_number, length);
 		}
 	}
 done:
-#if DIAGNOSTIC
+#ifdef DIAGNOSTIC
 	for (level = SINGLE; level <= TRIPLE; level++)
 		if (newblks[NDADDR + level] != oip->i_ib[level])
 			panic("itrunc1");

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isa/pnpparse.c,v 1.14 2003/06/11 00:32:45 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/isa/pnpparse.c,v 1.15 2006/12/30 11:55:47 ceri Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -460,7 +460,7 @@ pnp_parse_resources(device_t dev, u_char *resources, int len, int ldn)
 				}
 				start = p + l;
 				if (ncfgs > MAXDEP) {
-					device_printf(parent, "too many dependant configs (%d)\n", MAXDEP);
+					device_printf(parent, "too many dependent configs (%d)\n", MAXDEP);
 					len = 0;
 					break;
 				}

@@ -4,7 +4,7 @@
  *  Aug 1995, Godmar Back (gback@cs.utah.edu)
  *  University of Utah, Department of Computer Science
  *
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_linux_ialloc.c,v 1.24 2005/06/16 06:51:38 imp Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_linux_ialloc.c,v 1.25 2005/12/04 10:06:05 ru Exp $
  */
 /*-
  *  linux/fs/ext2/ialloc.c
@@ -259,7 +259,7 @@ void ext2_free_inode (struct inode * inode)
 	unlock_super (DEVVP(inode));
 }
 
-#if linux
+#ifdef linux
 /*
  * This function increments the inode version number
  *

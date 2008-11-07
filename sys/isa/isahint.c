@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isa/isahint.c,v 1.16 2005/04/13 03:26:24 mdodd Exp $");
+__FBSDID("$FreeBSD: src/sys/isa/isahint.c,v 1.18 2006/07/08 16:50:10 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,21 +95,15 @@ isahint_identify(driver_t *driver, device_t parent)
 	 */
 	sprintf(buf, "isa%d", device_get_unit(parent));
 	i = 0;
-	while ((resource_find_match(&i, &dname, &dunit, "at", buf)) == 0) {
-		if (strcmp(dname, "atkbd") == 0)
-			continue;	/* old GENERIC kludge */
+	while (resource_find_match(&i, &dname, &dunit, "at", buf) == 0)
 		isahint_add_device(parent, dname, dunit);
-	}
 
 	/*
 	 * and isa?
 	 */
 	i = 0;
-	while ((resource_find_match(&i, &dname, &dunit, "at", "isa")) == 0) {
-		if (strcmp(dname, "atkbd") == 0)
-			continue;	/* old GENERIC kludge */
+	while (resource_find_match(&i, &dname, &dunit, "at", "isa") == 0)
 		isahint_add_device(parent, dname, dunit);
-	}
 }
 
 static device_method_t isahint_methods[] = {

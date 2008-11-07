@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/isa/vga_isa.c,v 1.33 2005/02/28 21:06:14 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/isa/vga_isa.c,v 1.34 2005/12/04 02:12:43 ru Exp $");
 
 #include "opt_vga.h"
 #include "opt_fb.h"
@@ -152,7 +152,7 @@ isavga_attach(device_t dev)
 	if (0 && bootverbose)
 		(*vidsw[sc->adp->va_index]->diag)(sc->adp, bootverbose);
 
-#if experimental
+#if 0 /* experimental */
 	device_add_child(dev, "fb", -1);
 	bus_generic_attach(dev);
 #endif

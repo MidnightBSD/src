@@ -38,7 +38,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ufs_lookup.c	8.6 (Berkeley) 4/1/94
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_lookup.c,v 1.50.2.1 2006/01/04 19:32:00 truckman Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_lookup.c,v 1.52 2005/12/05 11:58:33 ru Exp $
  */
 
 #include <sys/param.h>
@@ -765,7 +765,7 @@ ext2_direnter(ip, dvp, cnp)
 	int     DIRBLKSIZ = ip->i_e2fs->s_blocksize;
 
 
-#if DIAGNOSTIC
+#ifdef DIAGNOSTIC
 	if ((cnp->cn_flags & SAVENAME) == 0)
 		panic("direnter: missing name");
 #endif

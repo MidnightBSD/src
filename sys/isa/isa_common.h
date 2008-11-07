@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/isa/isa_common.h,v 1.13 2004/12/24 23:03:17 imp Exp $
+ * $FreeBSD: src/sys/isa/isa_common.h,v 1.15 2007/02/23 12:19:01 piso Exp $
  */
 
 /*
@@ -69,13 +69,11 @@ extern struct resource *isa_alloc_resource(device_t bus, device_t child,
 extern int isa_release_resource(device_t bus, device_t child,
     int type, int rid, struct resource *r);
 
-/* XXX alphe declares these elsewhere */
-#ifndef __alpha__
 extern int isa_setup_intr(device_t bus, device_t child, struct resource *r,
-    int flags, void (*ihand)(void *), void *arg, void **cookiep);
+    int flags, driver_filter_t *filter, void (*ihand)(void *), void *arg, 
+    void **cookiep);
 extern int isa_teardown_intr(device_t bus, device_t child, struct resource *r,
     void *cookie);
-#endif
 
 extern driver_t isa_driver;
 extern devclass_t isa_devclass;
