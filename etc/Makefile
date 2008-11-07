@@ -1,7 +1,7 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.13 2008/04/29 03:21:31 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.14 2008/05/16 21:40:36 laffer1 Exp $
 
 .if !defined(NO_SENDMAIL)
 SUBDIR=	sendmail
@@ -97,6 +97,7 @@ distribution:
 		${DESTDIR}/etc/master.passwd
 	cd ${.CURDIR}/bluetooth; ${MAKE} install
 	cd ${.CURDIR}/defaults; ${MAKE} install
+	cd ${.CURDIR}/gss; ${MAKE} install
 	cd ${.CURDIR}/periodic; ${MAKE} install
 	cd ${.CURDIR}/rc.d; ${MAKE} install
 	cd ${.CURDIR}/../share/termcap; ${MAKE} etc-termcap

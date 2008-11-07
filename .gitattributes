@@ -15547,6 +15547,9 @@ etc/fbtab -text
 etc/ftpusers -text
 etc/gettytab -text
 etc/group -text
+etc/gss/Makefile -text
+etc/gss/mech -text
+etc/gss/qop -text
 etc/hosts -text
 etc/hosts.allow -text
 etc/hosts.equiv -text
