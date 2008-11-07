@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/mtree/BSD.include.dist,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.include.dist,v 1.100.2.2 2005/11/16 10:50:10 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -95,15 +95,21 @@
         ..
     ..
     geom
+        cache
+        ..
         concat
         ..
         eli
         ..
         gate
         ..
+        journal
+        ..
         label
         ..
         mirror
+        ..
+        multipath
         ..
         nop
         ..
@@ -113,12 +119,16 @@
         ..
         stripe
         ..
+        virstor
+        ..
     ..
     gnu
         posix
         ..
     ..
     gpib
+    ..
+    gssapi
     ..
     isofs
         cd9660
@@ -207,6 +217,8 @@
     rpcsvc
     ..
     security
+        audit
+        ..
         mac_biba
         ..
         mac_bsdextended
@@ -217,6 +229,8 @@
         ..
         mac_partition
         ..
+    ..
+    ssp
     ..
     sys
     ..
