@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.root.dist,v 1.4 2007/10/13 01:56:50 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.root.dist,v 1.5 2007/10/13 01:57:57 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.root.dist,v 1.74 2005/05/30 20:51:13 rwatson Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -17,6 +17,8 @@
         ..
         modules
         ..
+        zfs
+        ..
     ..
     dev             mode=0555
     ..
@@ -28,6 +30,8 @@
         defaults
         ..
         gnats
+        ..
+        gss
         ..
         isdn            mode=0700
         ..
@@ -62,6 +66,8 @@
         ssl
             certs
             ..
+        ..
+        zfs
         ..
     ..
     lib
