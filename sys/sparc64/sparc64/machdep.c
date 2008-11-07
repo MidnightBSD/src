@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/machdep.c,v 1.125.2.2 2006/03/31 23:40:05 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/machdep.c,v 1.138.4.1 2008/01/19 18:15:06 kib Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -354,18 +354,26 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 	}
 
 	cache_init(child);
+	uma_set_align(cache.dc_linesize - 1);
 
+	cpu_block_copy = bcopy;
+	cpu_block_zero = bzero;
 	getenv_int("machdep.use_vis", &cpu_use_vis);
 	if (cpu_use_vis) {
-		cpu_block_copy = spitfire_block_copy;
-		cpu_block_zero = spitfire_block_zero;
-	} else {
-		cpu_block_copy = bcopy;
-		cpu_block_zero = bzero;
+		switch (cpu_impl) {
+		case CPU_IMPL_SPARC64:
+		case CPU_IMPL_ULTRASPARCI:
+		case CPU_IMPL_ULTRASPARCII:
+		case CPU_IMPL_ULTRASPARCIIi:
+		case CPU_IMPL_ULTRASPARCIIe:
+			cpu_block_copy = spitfire_block_copy;
+			cpu_block_zero = spitfire_block_zero;
+			break;
+		}
 	}
 
 #ifdef SMP
-	mp_tramp = mp_tramp_alloc();
+	mp_init();
 #endif
 
 	/*
@@ -391,7 +399,7 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 	/*
 	 * Initialize proc0 stuff (p_contested needs to be done early).
 	 */
-	proc_linkup(&proc0, &ksegrp0, &thread0);
+	proc_linkup0(&proc0, &thread0);
 	proc0.p_md.md_sigtramp = NULL;
 	proc0.p_md.md_utrap = NULL;
 	thread0.td_kstack = kstack0;
@@ -452,7 +460,7 @@ set_openfirm_callback(ofw_vec_t *vec)
 }
 
 void
-sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct trapframe *tf;
 	struct sigframe *sfp;
@@ -463,11 +471,13 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	struct proc *p;
 	int oonstack;
 	u_long sp;
+	int sig;
 
 	oonstack = 0;
 	td = curthread;
 	p = td->td_proc;
 	PROC_LOCK_ASSERT(p, MA_OWNED);
+	sig = ksi->ksi_signo;
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	tf = td->td_frame;
@@ -480,7 +490,7 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	/* Make sure we have a signal trampoline to return to. */
 	if (p->p_md.md_sigtramp == NULL) {
 		/*
-		 * No signal tramoline... kill the process.
+		 * No signal trampoline... kill the process.
 		 */
 		CTR0(KTR_SIG, "sendsig: no sigtramp");
 		printf("sendsig: %s is too old, rebuild it\n", p->p_comm);
@@ -514,13 +524,20 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 	/* Build the argument list for the signal handler. */
 	tf->tf_out[0] = sig;
-	tf->tf_out[1] = (register_t)&sfp->sf_si;
 	tf->tf_out[2] = (register_t)&sfp->sf_uc;
 	tf->tf_out[4] = (register_t)catcher;
-	/* Fill siginfo structure. */
-	sf.sf_si.si_signo = sig;
-	sf.sf_si.si_code = code;
-	sf.sf_si.si_addr = (void *)tf->tf_sfar;
+	if (SIGISMEMBER(psp->ps_siginfo, sig)) {
+		/* Signal handler installed with SA_SIGINFO. */
+		tf->tf_out[1] = (register_t)&sfp->sf_si;
+
+		/* Fill in POSIX parts. */
+		sf.sf_si = ksi->ksi_info;
+		sf.sf_si.si_signo = sig; /* maybe a translated signal */
+	} else {
+		/* Old FreeBSD-style arguments. */
+		tf->tf_out[1] = ksi->ksi_code;
+		tf->tf_out[3] = (register_t)ksi->ksi_addr;
+	}
 
 	/* Copy the sigframe out to the user's stack. */
 	if (rwindow_save(td) != 0 || copyout(&sf, sfp, sizeof(*sfp)) != 0 ||
@@ -544,25 +561,6 @@ sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 	PROC_LOCK(p);
 	mtx_lock(&psp->ps_mtx);
-}
-
-/*
- * Build siginfo_t for SA thread
- */
-void
-cpu_thread_siginfo(int sig, u_long code, siginfo_t *si)
-{
-	struct proc *p;
-	struct thread *td;
-
-	td = curthread;
-	p = td->td_proc;
-	PROC_LOCK_ASSERT(p, MA_OWNED);
-
-	bzero(si, sizeof(*si));
-	si->si_signo = sig;
-	si->si_code = code;
-	/* XXXKSE fill other fields */
 }
 
 #ifndef	_SYS_SYSPROTO_H_

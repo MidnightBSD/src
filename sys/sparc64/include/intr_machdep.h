@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/intr_machdep.h,v 1.13.10.1 2006/03/10 19:37:35 jhb Exp $
+ * $FreeBSD: src/sys/sparc64/include/intr_machdep.h,v 1.17 2007/09/06 19:16:29 marius Exp $
  */
 
 #ifndef	_MACHINE_INTR_MACHDEP_H_
@@ -39,7 +39,7 @@
 
 #define	IH_SHIFT	PTR_SHIFT
 #define	IQE_SHIFT	5
-#define	IV_SHIFT	5
+#define	IV_SHIFT	6
 
 #define	PIL_LOW		1	/* stray interrupts */
 #define	PIL_ITHREAD	2	/* interrupts that use ithreads */
@@ -49,12 +49,12 @@
 #define	PIL_FAST	13	/* fast interrupts */
 #define	PIL_TICK	14
 
+#ifndef LOCORE
+
 struct trapframe;
 
 typedef	void ih_func_t(struct trapframe *);
 typedef	void iv_func_t(void *);
-
-struct ithd;
 
 struct intr_request {
 	struct	intr_request *ir_next;
@@ -64,25 +64,40 @@ struct intr_request {
 	u_int	ir_pri;
 };
 
+struct intr_controller {
+	void	(*ic_enable)(void *);
+	void	(*ic_disable)(void *);
+	void	(*ic_eoi)(void *);
+};
+
 struct intr_vector {
 	iv_func_t *iv_func;
 	void	*iv_arg;
+	const struct	intr_controller *iv_ic;
+	void	*iv_icarg;
 	struct	intr_event *iv_event;
 	u_int	iv_pri;
 	u_int	iv_vec;
+	u_int	iv_mid;
+	u_int	iv_refcnt;
+	u_int	iv_pad[2];
 };
 
 extern ih_func_t *intr_handlers[];
 extern struct intr_vector intr_vectors[];
 
 void	intr_setup(int level, ih_func_t *ihf, int pri, iv_func_t *ivf,
-		   void *iva);
+	    void *iva);
 void	intr_init1(void);
 void	intr_init2(void);
-int	inthand_add(const char *name, int vec, void (*handler)(void *),
-    void *arg, int flags, void **cookiep);
+int	intr_controller_register(int vec, const struct intr_controller *ic,
+	    void *icarg);
+int	inthand_add(const char *name, int vec, int (*filt)(void *),
+	    void (*handler)(void *), void *arg, int flags, void **cookiep);
 int	inthand_remove(int vec, void *cookie);
 
 ih_func_t intr_fast;
 
-#endif
+#endif /* !LOCORE */
+
+#endif /* !_MACHINE_INTR_MACHDEP_H_ */

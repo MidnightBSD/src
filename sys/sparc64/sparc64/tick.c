@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tick.c,v 1.16.2.1 2006/03/31 23:38:29 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tick.c,v 1.22 2007/09/06 19:16:30 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: src/sys/sparc64/sparc64/tick.c,v 1.16.2.1 2006/03/31 23:38:2
 #include <sys/timetc.h>
 
 #include <machine/clock.h>
+#include <machine/cpu.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
 #include <machine/tick.h>
@@ -62,7 +63,14 @@ static int adjust_ticks = 0;
 SYSCTL_INT(_machdep_tick, OID_AUTO, adjust_ticks, CTLFLAG_RD, &adjust_ticks,
     0, "total number of tick interrupts with adjustment");
 
-static void tick_hardclock(struct clockframe *);
+static void tick_hardclock(struct trapframe *);
+
+static uint64_t
+tick_cputicks(void)
+{
+
+	return (rd(tick));
+}
 
 void
 cpu_initclocks(void)
@@ -73,20 +81,20 @@ cpu_initclocks(void)
 }
 
 static __inline void
-tick_process(struct clockframe *cf)
+tick_process(struct trapframe *tf)
 {
 
 	if (PCPU_GET(cpuid) == 0)
-		hardclock(cf);
+		hardclock(TRAPF_USERMODE(tf), TRAPF_PC(tf));
 	else
-		hardclock_process(cf);
+		hardclock_cpu(TRAPF_USERMODE(tf));
 	if (profprocs != 0)
-		profclock(cf);
-	statclock(cf);
+		profclock(TRAPF_USERMODE(tf), TRAPF_PC(tf));
+	statclock(TRAPF_USERMODE(tf));
 }
 
 static void
-tick_hardclock(struct clockframe *cf)
+tick_hardclock(struct trapframe *tf)
 {
 	u_long adj, s, tick, ref;
 	long delta;
@@ -99,6 +107,7 @@ tick_hardclock(struct clockframe *cf)
 	 * the past could be written in the worst case, causing hardclock to
 	 * stop.
 	 */
+	critical_enter();
 	adj = PCPU_GET(tickadj);
 	s = intr_disable();
 	tick = rd(tick);
@@ -108,7 +117,7 @@ tick_hardclock(struct clockframe *cf)
 	delta = tick - ref;
 	count = 0;
 	while (delta >= tick_increment) {
-		tick_process(cf);
+		tick_process(tf);
 		delta -= tick_increment;
 		ref += tick_increment;
 		if (adj != 0)
@@ -129,6 +138,7 @@ tick_hardclock(struct clockframe *cf)
 	}
 	PCPU_SET(tickref, ref);
 	PCPU_SET(tickadj, adj);
+	critical_exit();
 }
 
 void
@@ -148,6 +158,8 @@ tick_init(u_long clock)
 	 * handled.
 	 */
 	tick_stop();
+
+	set_cputicker(tick_cputicks, tick_freq, 0);
 }
 
 void
@@ -168,8 +180,7 @@ tick_start(void)
 		    tick_freq / TICK_GRACE);
 
 	if (PCPU_GET(cpuid) == 0)
-		intr_setup(PIL_TICK, (ih_func_t *)tick_hardclock, -1, NULL,
-		    NULL);
+		intr_setup(PIL_TICK, tick_hardclock, -1, NULL, NULL);
 
 	/*
 	 * Try to make the tick interrupts as synchronously as possible on
@@ -190,6 +201,6 @@ tick_stop(void)
 {
 
 	if (cpu_impl >= CPU_IMPL_ULTRASPARCIII)
-		wr(asr24, 1L << 63, 0);
+		wr(asr25, 1L << 63, 0);
 	wrtickcmpr(1L << 63, 0);
 }

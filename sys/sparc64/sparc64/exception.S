@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	BSDI $Id: exception.S,v 1.2 2007-01-13 17:37:21 laffer1 Exp $
+ *	BSDI $Id: exception.S,v 1.3 2008-11-07 18:38:40 laffer1 Exp $
  */
 /*-
  * Copyright (c) 2001 Jake Burkholder.
@@ -54,17 +54,23 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/exception.S,v 1.70.2.2.2.1 2006/04/25 19:37:03 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sparc64/sparc64/exception.S,v 1.75 2007/09/06 19:16:30 marius Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
 
 #include <machine/asi.h>
 #include <machine/asmacros.h>
+#include <machine/frame.h>
+#include <machine/fsr.h>
+#include <machine/intr_machdep.h>
 #include <machine/ktr.h>
+#include <machine/pcb.h>
 #include <machine/pstate.h>
 #include <machine/trap.h>
+#include <machine/tsb.h>
 #include <machine/tstate.h>
+#include <machine/utrap.h>
 #include <machine/wstate.h>
 
 #include "assym.s"
@@ -2324,18 +2330,12 @@ ENTRY(tl0_intr)
 	stx	%i6, [%sp + SPOFF + CCFSZ + TF_O6]
 	stx	%i7, [%sp + SPOFF + CCFSZ + TF_O7]
 
-	call	critical_enter
-	 nop
-
 	SET(intr_handlers, %l1, %l0)
 	sllx	%l3, IH_SHIFT, %l1
 	ldx	[%l0 + %l1], %l1
 	KASSERT(%l1, "tl0_intr: ih null")
 	call	%l1
 	 add	%sp, CCFSZ + SPOFF, %o0
-
-	call	critical_exit
-	 nop
 
 	/* %l3 contains PIL */
 	SET(intrcnt, %l1, %l2)
@@ -2841,18 +2841,12 @@ ENTRY(tl1_intr)
 	mov	%l5, PCPU_REG
 	wrpr	%g0, PSTATE_KERNEL, %pstate
 
-	call	critical_enter
-	 nop
-
 	SET(intr_handlers, %l5, %l4)
 	sllx	%l7, IH_SHIFT, %l5
 	ldx	[%l4 + %l5], %l5
 	KASSERT(%l5, "tl1_intr: ih null")
 	call	%l5
 	 add	%sp, CCFSZ + SPOFF, %o0
-
-	call	critical_exit
-	 nop
 
 	/* %l7 contains PIL */
 	SET(intrcnt, %l5, %l4)
