@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)reg.h	5.5 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/i386/include/reg.h,v 1.31 2005/05/31 09:43:04 dfr Exp $
+ * $FreeBSD: src/sys/i386/include/reg.h,v 1.33 2006/11/17 19:20:32 jhb Exp $
  */
 
 #ifndef _MACHINE_REG_H_
@@ -137,12 +137,24 @@ struct dbreg {
 				/* Index 7: debug control */
 };
 
-#define DBREG_DR7_EXEC      0x00      /* break on execute       */
-#define DBREG_DR7_WRONLY    0x01      /* break on write         */
-#define DBREG_DR7_RDWR      0x03      /* break on read or write */
-#define DBREG_DRX(d,x) ((d)->dr[(x)]) /* reference dr0 - dr7 by
-                                         register number */
+#define	DBREG_DR7_LOCAL_ENABLE	0x01
+#define	DBREG_DR7_GLOBAL_ENABLE	0x02
+#define	DBREG_DR7_LEN_1		0x00	/* 1 byte length          */
+#define	DBREG_DR7_LEN_2		0x01
+#define	DBREG_DR7_LEN_4		0x03
+#define	DBREG_DR7_EXEC		0x00	/* break on execute       */
+#define	DBREG_DR7_WRONLY	0x01	/* break on write         */
+#define	DBREG_DR7_RDWR		0x03	/* break on read or write */
+#define	DBREG_DR7_MASK(i)	(0xf << ((i) * 4 + 16) | 0x3 << (i) * 2)
+#define	DBREG_DR7_SET(i, len, access, enable)				\
+	(((len) << 2 | (access)) << ((i) * 4 + 16) | (enable) << (i) * 2)
+#define	DBREG_DR7_GD		0x2000
+#define	DBREG_DR7_ENABLED(d, i)	(((d) & 0x3 << (i) * 2) != 0)
+#define	DBREG_DR7_ACCESS(d, i)	((d) >> ((i) * 4 + 16) & 0x3)
+#define	DBREG_DR7_LEN(d, i)	((d) >> ((i) * 4 + 18) & 0x3)
 
+#define	DBREG_DRX(d,x)	((d)->dr[(x)])	/* reference dr0 - dr7 by
+					   register number */
 
 #ifdef _KERNEL
 /*

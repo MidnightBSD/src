@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004 Marcel Moolenaar
+ * Copyright (c) 2006 Peter Wemm
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,37 +23,23 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/kdb.h,v 1.4 2007/06/09 21:55:17 marcel Exp $
+ * $FreeBSD: src/sys/i386/include/minidump.h,v 1.1 2006/04/21 04:28:43 peter Exp $
  */
 
-#ifndef _MACHINE_KDB_H_
-#define _MACHINE_KDB_H_
+#ifndef	_MACHINE_MINIDUMP_H_
+#define	_MACHINE_MINIDUMP_H_ 1
 
-#include <machine/frame.h>
-#include <machine/psl.h>
+#define	MINIDUMP_MAGIC		"minidump FreeBSD/i386"
+#define	MINIDUMP_VERSION	1
 
-#define	KDB_STOPPEDPCB(pc)	&stoppcbs[pc->pc_cpuid]
+struct minidumphdr {
+	char magic[24];
+	uint32_t version;
+	uint32_t msgbufsize;
+	uint32_t bitmapsize;
+	uint32_t ptesize;
+	uint32_t kernbase;
+	uint32_t paemode;
+};
 
-static __inline void
-kdb_cpu_clear_singlestep(void)
-{
-	kdb_frame->tf_eflags &= ~PSL_T;
-}
-
-static __inline void
-kdb_cpu_set_singlestep(void)
-{
-	kdb_frame->tf_eflags |= PSL_T;
-}
-
-static __inline void
-kdb_cpu_sync_icache(unsigned char *addr, size_t size)
-{
-}
-
-static __inline void
-kdb_cpu_trap(int type, int code)
-{
-}
-
-#endif /* _MACHINE_KDB_H_ */
+#endif /* _MACHINE_MINIDUMP_H_ */

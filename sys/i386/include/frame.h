@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)frame.h	5.2 (Berkeley) 1/18/91
- * $FreeBSD: src/sys/i386/include/frame.h,v 1.25 2004/07/10 22:11:14 marcel Exp $
+ * $FreeBSD: src/sys/i386/include/frame.h,v 1.27 2005/12/22 22:16:07 jhb Exp $
  */
 
 #ifndef _MACHINE_FRAME_H_
@@ -96,60 +96,5 @@ struct trapframe_vm86 {
 	int	tf_vm86_fs;
 	int	tf_vm86_gs;
 };
-
-/* Interrupt stack frame */
-
-struct intrframe {
-	int	if_vec;
-	int	if_fs;
-	int	if_es;
-	int	if_ds;
-	int	if_edi;
-	int	if_esi;
-	int	if_ebp;
-	int	:32;
-	int	if_ebx;
-	int	if_edx;
-	int	if_ecx;
-	int	if_eax;
-	int	:32;		/* for compat with trap frame - trapno */
-	int	:32;		/* for compat with trap frame - err */
-	/* below portion defined in 386 hardware */
-	int	if_eip;
-	int	if_cs;
-	int	if_eflags;
-	/* below only when crossing rings (e.g. user to kernel) */
-	int	if_esp;
-	int	if_ss;
-};
-
-/* frame of clock (same as interrupt frame) */
-
-struct clockframe {
-	int	cf_vec;
-	int	cf_fs;
-	int	cf_es;
-	int	cf_ds;
-	int	cf_edi;
-	int	cf_esi;
-	int	cf_ebp;
-	int	:32;
-	int	cf_ebx;
-	int	cf_edx;
-	int	cf_ecx;
-	int	cf_eax;
-	int	:32;		/* for compat with trap frame - trapno */
-	int	:32;		/* for compat with trap frame - err */
-	/* below portion defined in 386 hardware */
-	int	cf_eip;
-	int	cf_cs;
-	int	cf_eflags;
-	/* below only when crossing rings (e.g. user to kernel) */
-	int	cf_esp;
-	int	cf_ss;
-};
-
-#define	CLOCK_TO_TRAPFRAME(frame) ((struct trapframe *)&(frame)->cf_fs)
-#define	INTR_TO_TRAPFRAME(frame) ((struct trapframe *)&(frame)->if_fs)
 
 #endif /* _MACHINE_FRAME_H_ */

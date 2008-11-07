@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)cpu.h	5.4 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/include/cpu.h,v 1.74 2004/11/16 20:42:31 jhb Exp $
+ * $FreeBSD: src/sys/i386/include/cpu.h,v 1.76 2006/05/11 17:29:24 phk Exp $
  */
 
 #ifndef _MACHINE_CPU_H_
@@ -58,29 +58,6 @@
 #define	TRAPF_USERMODE(framep) \
 	((ISPL((framep)->tf_cs) == SEL_UPL) || ((framep)->tf_eflags & PSL_VM))
 #define	TRAPF_PC(framep)	((framep)->tf_eip)
-
-#define	CLKF_USERMODE(framep) \
-	((ISPL((framep)->cf_cs) == SEL_UPL) || ((framep)->cf_eflags & PSL_VM))
-#define	CLKF_PC(framep)		((framep)->cf_eip)
-
-/*
- * CTL_MACHDEP definitions.
- */
-#define CPU_CONSDEV		1	/* dev_t: console terminal device */
-#define	CPU_ADJKERNTZ		2	/* int:	timezone offset	(seconds) */
-#define	CPU_DISRTCSET		3	/* int: disable resettodr() call */
-#define CPU_BOOTINFO		4	/* struct: bootinfo */
-#define	CPU_WALLCLOCK		5	/* int:	indicates wall CMOS clock */
-#define	CPU_MAXID		6	/* number of valid machdep ids */
-
-#define CTL_MACHDEP_NAMES { \
-	{ 0, 0 }, \
-	{ "console_device", CTLTYPE_STRUCT }, \
-	{ "adjkerntz", CTLTYPE_INT }, \
-	{ "disable_rtc_set", CTLTYPE_INT }, \
-	{ "bootinfo", CTLTYPE_STRUCT }, \
-	{ "wall_cmos_clock", CTLTYPE_INT }, \
-}
 
 #ifdef _KERNEL
 extern char	btext[];

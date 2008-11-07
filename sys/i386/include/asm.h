@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)DEFS.h	5.1 (Berkeley) 4/23/90
- * $FreeBSD: src/sys/i386/include/asm.h,v 1.13 2004/04/07 20:46:05 imp Exp $
+ * $FreeBSD: src/sys/i386/include/asm.h,v 1.14 2007/08/22 04:26:07 jkoshy Exp $
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -71,6 +71,7 @@
 
 #define _ENTRY(x)	_START_ENTRY; \
 			.globl CNAME(x); .type CNAME(x),@function; CNAME(x):
+#define	END(x)		.size x, . - x
 
 #ifdef PROF
 #define	ALTENTRY(x)	_ENTRY(x); \

@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/sys/i386/include/smp.h,v 1.82 2005/04/30 20:00:59 dwhite Exp $
+ * $FreeBSD: src/sys/i386/include/smp.h,v 1.90 2007/09/20 20:38:43 attilio Exp $
  *
  */
 
@@ -19,24 +19,11 @@
 
 #ifndef LOCORE
 
-/*
- * For sending values to POST displays.
- * XXX FIXME: where does this really belong, isa.h/isa.c perhaps?
- */
-extern int current_postcode;  /** XXX currently in mp_machdep.c */
-#define POSTCODE(X)	current_postcode = (X), \
-			outb(0x80, current_postcode)
-#define POSTCODE_LO(X)	current_postcode &= 0xf0, \
-			current_postcode |= ((X) & 0x0f), \
-			outb(0x80, current_postcode)
-#define POSTCODE_HI(X)	current_postcode &= 0x0f, \
-			current_postcode |= (((X) << 4) & 0xf0), \
-			outb(0x80, current_postcode)
-
 #include <sys/bus.h>
 #include <machine/frame.h>
 #include <machine/intr_machdep.h>
 #include <machine/apicvar.h>
+#include <machine/pcb.h>
 
 /* global data in mpboot.s */
 extern int			bootMP_size;
@@ -48,13 +35,22 @@ void	bootMP(void);
 extern int			mp_naps;
 extern int			boot_cpu_id;
 extern struct pcb		stoppcbs[];
-extern struct mtx		smp_tlb_mtx;
+extern int			cpu_apic_ids[];
+#ifdef COUNT_IPIS
+extern u_long *ipi_invltlb_counts[MAXCPU];
+extern u_long *ipi_invlrng_counts[MAXCPU];
+extern u_long *ipi_invlpg_counts[MAXCPU];
+extern u_long *ipi_invlcache_counts[MAXCPU];
+extern u_long *ipi_rendezvous_counts[MAXCPU];
+extern u_long *ipi_lazypmap_counts[MAXCPU];
+#endif
 
 /* IPI handlers */
 inthand_t
 	IDTVEC(invltlb),	/* TLB shootdowns - global */
 	IDTVEC(invlpg),		/* TLB shootdowns - 1 page */
 	IDTVEC(invlrng),	/* TLB shootdowns - page range */
+	IDTVEC(invlcache),	/* Write back and invalidate cache */
 	IDTVEC(ipi_intr_bitmap_handler), /* Bitmap based IPIs */ 
 	IDTVEC(cpustop),	/* CPU stops & waits to be restarted */
 	IDTVEC(rendezvous),	/* handle CPU rendezvous */
@@ -62,15 +58,17 @@ inthand_t
 
 /* functions in mp_machdep.c */
 void	cpu_add(u_int apic_id, char boot_cpu);
+void	cpustop_handler(void);
 void	init_secondary(void);
 void	ipi_selected(u_int cpus, u_int ipi);
 void	ipi_all(u_int ipi);
 void	ipi_all_but_self(u_int ipi);
 void	ipi_self(u_int ipi);
-void 	ipi_bitmap_handler(struct clockframe frame);
+void 	ipi_bitmap_handler(struct trapframe frame);
 u_int	mp_bootaddress(u_int);
 int	mp_grab_cpu_hlt(void);
 void	mp_topology(void);
+void	smp_cache_flush(void);
 void	smp_invlpg(vm_offset_t addr);
 void	smp_masked_invlpg(u_int mask, vm_offset_t addr);
 void	smp_invlpg_range(vm_offset_t startva, vm_offset_t endva);
@@ -79,9 +77,8 @@ void	smp_masked_invlpg_range(u_int mask, vm_offset_t startva,
 void	smp_invltlb(void);
 void	smp_masked_invltlb(u_int mask);
 
-#ifdef KDB_STOP_NMI
-int ipi_nmi_handler(void);
-void ipi_nmi_selected(u_int32_t cpus);
+#ifdef STOP_NMI
+int	ipi_nmi_handler(void);
 #endif
 
 #endif /* !LOCORE */

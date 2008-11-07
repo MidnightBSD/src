@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/i386/include/param.h,v 1.79 2004/11/20 02:29:49 das Exp $
+ * $FreeBSD: src/sys/i386/include/param.h,v 1.81 2006/01/09 06:05:56 imp Exp $
  */
 
 /*
@@ -49,14 +49,10 @@
 #define _ALIGN(p)	(((unsigned)(p) + _ALIGNBYTES) & ~_ALIGNBYTES)
 #endif
 
-#ifndef _MACHINE
-#define	_MACHINE	i386
-#endif
-#ifndef _MACHINE_ARCH
-#define	_MACHINE_ARCH	i386
-#endif
-
 #ifndef _NO_NAMESPACE_POLLUTION
+
+#define __HAVE_ACPI
+#define __PCI_REROUTE_INTERRUPT
 
 #ifndef _MACHINE_PARAM_H_
 #define	_MACHINE_PARAM_H_

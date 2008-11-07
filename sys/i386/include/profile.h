@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)profile.h	8.1 (Berkeley) 6/11/93
- * $FreeBSD: src/sys/i386/include/profile.h,v 1.40 2005/03/02 21:33:26 joerg Exp $
+ * $FreeBSD: src/sys/i386/include/profile.h,v 1.42 2006/10/28 11:03:03 bde Exp $
  */
 
 #ifndef _MACHINE_PROFILE_H_
@@ -61,7 +61,7 @@
 #define	MCOUNT_OVERHEAD(label)						\
 	__asm __volatile("pushl %0; call __mcount; popl %%ecx"		\
 			 :						\
-			 : "i" (profil)					\
+			 : "i" (label)					\
 			 : "ax", "dx", "cx", "memory")
 #define	MEXITCOUNT_OVERHEAD()						\
 	__asm __volatile("call .mexitcount; 1:"				\
@@ -134,11 +134,7 @@ mcount()								\
 	_mcount(frompc, selfpc);					\
 }
 #else /* !__GNUCLIKE_ASM */
-void									\
-#define	MCOUNT								\
-mcount()								\
-{									\
-}
+#define	MCOUNT
 #endif /* __GNUCLIKE_ASM */
 
 typedef	u_int	uintfptr_t;

@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/bus.h,v 1.13 2005/05/29 04:42:28 nyan Exp $
+ * $FreeBSD: src/sys/i386/include/bus.h,v 1.14 2005/12/05 11:58:33 ru Exp $
  */
 
 /*	$NetBSD: bus.h,v 1.12 1997/10/01 08:25:15 fvdl Exp $	*/
@@ -1084,7 +1084,7 @@ bus_space_barrier(bus_space_tag_t tag __unused, bus_space_handle_t bsh __unused,
 #endif
 }
 
-#if BUS_SPACE_NO_LEGACY
+#ifdef BUS_SPACE_NO_LEGACY
 #undef inb
 #undef outb
 #define inb(a) compiler_error

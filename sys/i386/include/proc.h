@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)proc.h	7.1 (Berkeley) 5/15/91
- * $FreeBSD: src/sys/i386/include/proc.h,v 1.25 2005/04/04 21:53:54 jhb Exp $
+ * $FreeBSD: src/sys/i386/include/proc.h,v 1.26 2007/05/20 22:03:57 jeff Exp $
  */
 
 #ifndef _MACHINE_PROC_H_
@@ -45,6 +45,8 @@ struct proc_ldt {
 
 /*
  * Machine-dependent part of the proc structure for i386.
+ * Table of MD locks:
+ *       t - Descriptor tables lock
  */
 struct mdthread {
 	int	md_spinlock_count;	/* (k) */
@@ -52,7 +54,7 @@ struct mdthread {
 };
 
 struct mdproc {
-	struct proc_ldt *md_ldt;	/* (j) per-process ldt */
+	struct proc_ldt *md_ldt;	/* (t) per-process ldt */
 };
 
 #ifdef	_KERNEL
@@ -60,6 +62,8 @@ struct mdproc {
 void 	set_user_ldt(struct mdproc *);
 struct 	proc_ldt *user_ldt_alloc(struct mdproc *, int);
 void 	user_ldt_free(struct thread *);
+
+extern struct mtx dt_lock;
 
 #endif	/* _KERNEL */
 

@@ -25,23 +25,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: mutex.h,v 1.1.1.2 2006-02-25 02:37:10 laffer1 Exp $
- * $FreeBSD: src/sys/i386/include/mutex.h,v 1.36 2002/03/28 15:14:23 jhb Exp $
+ *	from BSDI $Id: mutex.h,v 1.1.1.3 2008-11-07 16:49:01 laffer1 Exp $
+ * $FreeBSD: src/sys/i386/include/mutex.h,v 1.37 2006/05/19 18:53:50 sobomax Exp $
  */
 
 #ifndef _MACHINE_MUTEX_H_
 #define _MACHINE_MUTEX_H_
 
-#ifndef LOCORE
-
-#ifdef _KERNEL
-
-/* Global locks */
-extern struct mtx	clock_lock;
-
-#endif	/* _KERNEL */
-
-#else	/* !LOCORE */
+#ifdef LOCORE
 
 /*
  * Simple assembly macros to get and release mutexes.
@@ -71,5 +62,5 @@ extern struct mtx	clock_lock;
 	call _mtx_unlock_spin_flags ;					\
 	addl $0x10, %esp ;						\
 
-#endif	/* !LOCORE */
+#endif	/* LOCORE */
 #endif	/* __MACHINE_MUTEX_H */

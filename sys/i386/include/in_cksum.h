@@ -29,7 +29,7 @@
  *	from tahoe:	in_cksum.c	1.2	86/01/05
  *	from:		@(#)in_cksum.c	1.3 (Berkeley) 1/19/91
  *	from: Id: in_cksum.c,v 1.8 1995/12/03 18:35:19 bde Exp
- * $FreeBSD: src/sys/i386/include/in_cksum.h,v 1.17 2005/03/02 21:33:26 joerg Exp $
+ * $FreeBSD: src/sys/i386/include/in_cksum.h,v 1.17.10.1 2007/10/26 07:15:04 bz Exp $
  */
 
 #ifndef _MACHINE_IN_CKSUM_H_
@@ -92,9 +92,12 @@ static __inline u_short
 in_addword(u_short sum, u_short b)
 {
 	/* __volatile is necessary because the condition codes are used. */
-	__asm __volatile ("addw %1, %0" : "+r" (sum) : "r" (b));
-	__asm __volatile ("adcw $0, %0" : "+r" (sum));
-
+	__asm __volatile (
+		"addw %1, %0\n"
+		"adcw $0, %0"
+		: "+r" (sum)
+		: "r" (b)
+	);
 	return (sum);
 }
 
@@ -102,10 +105,14 @@ static __inline u_short
 in_pseudo(u_int sum, u_int b, u_int c)
 {
 	/* __volatile is necessary because the condition codes are used. */
-	__asm __volatile ("addl %1, %0" : "+r" (sum) : "g" (b));
-	__asm __volatile ("adcl %1, %0" : "+r" (sum) : "g" (c));
-	__asm __volatile ("adcl $0, %0" : "+r" (sum));
-
+	__asm __volatile (
+		"addl %1, %0\n"
+		"adcl %2, %0\n"
+		"adcl $0, %0"
+		: "+r" (sum)
+		: "g" (b),
+		  "g" (c)
+	);
 	sum = (sum & 0xffff) + (sum >> 16);
 	if (sum > 0xffff)
 		sum -= 0xffff;

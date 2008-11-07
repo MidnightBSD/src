@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/asmacros.h,v 1.26 2004/04/07 20:46:05 imp Exp $
+ * $FreeBSD: src/sys/i386/include/asmacros.h,v 1.30 2007/08/22 04:26:07 jkoshy Exp $
  */
 
 #ifndef _MACHINE_ASMACROS_H_
@@ -37,14 +37,12 @@
 /* XXX too much duplication in various asm*.h's. */
 
 /*
- * CNAME and HIDENAME manage the relationship between symbol names in C
+ * CNAME is used to manage the relationship between symbol names in C
  * and the equivalent assembly language names.  CNAME is given a name as
  * it would be used in a C program.  It expands to the equivalent assembly
- * language name.  HIDENAME is given an assembly-language name, and expands
- * to a possibly-modified form that will be invisible to C programs.
+ * language name.
  */
 #define CNAME(csym)		csym
-#define HIDENAME(asmsym)	.asmsym
 
 #define ALIGN_DATA	.p2align 2	/* 4 byte alignment, zero filled */
 #ifdef GPROF
@@ -59,11 +57,7 @@
 #define NON_GPROF_ENTRY(name)	GEN_ENTRY(name)
 #define NON_GPROF_RET		.byte 0xc3	/* opcode for `ret' */
 
-#ifdef LOCORE
-#define	PCPU(member)	%fs:PC_ ## member
-#define	PCPU_ADDR(member, reg)	movl %fs:PC_PRVSPACE,reg; \
-			addl $PC_ ## member,reg
-#endif
+#define	END(name)		.size name, . - name
 
 #ifdef GPROF
 /*
@@ -114,8 +108,12 @@
 #define FAKE_MCOUNT(caller)	pushl caller ; call __mcount ; popl %ecx
 #define MCOUNT			call __mcount
 #define MCOUNT_LABEL(name)	GEN_ENTRY(name) ; nop ; ALIGN_TEXT
-#define MEXITCOUNT		call HIDENAME(mexitcount)
+#ifdef GUPROF
+#define MEXITCOUNT		call .mexitcount
 #define ret			MEXITCOUNT ; NON_GPROF_RET
+#else
+#define MEXITCOUNT
+#endif
 
 #else /* !GPROF */
 /*
@@ -136,12 +134,47 @@
 
 #ifdef LOCORE
 /*
- * Convenience macros for declaring interrupt entry points and trap
- * stubs.
+ * Convenience macro for declaring interrupt entry points.
  */
 #define	IDTVEC(name)	ALIGN_TEXT; .globl __CONCAT(X,name); \
 			.type __CONCAT(X,name),@function; __CONCAT(X,name):
-#define	TRAP(a)		pushl $(a) ; jmp alltraps
+
+/*
+ * Macros to create and destroy a trap frame.
+ */
+#define	PUSH_FRAME							\
+	pushl	$0 ;		/* dummy error code */			\
+	pushl	$0 ;		/* dummy trap type */			\
+	pushal ;		/* 8 ints */				\
+	pushl	%ds ;		/* save data and extra segments ... */	\
+	pushl	%es ;							\
+	pushl	%fs
+	
+#define	POP_FRAME							\
+	popl	%fs ;							\
+	popl	%es ;							\
+	popl	%ds ;							\
+	popal ;								\
+	addl	$4+4,%esp
+
+/*
+ * Access per-CPU data.
+ */
+#define	PCPU(member)	%fs:PC_ ## member
+
+#define	PCPU_ADDR(member, reg)						\
+	movl %fs:PC_PRVSPACE, reg ;					\
+	addl $PC_ ## member, reg
+
+/*
+ * Setup the kernel segment registers.
+ */
+#define	SET_KERNEL_SREGS						\
+	movl	$KDSEL, %eax ;	/* reload with kernel's data segment */	\
+	movl	%eax, %ds ;						\
+	movl	%eax, %es ;						\
+	movl	$KPSEL, %eax ;	/* reload with per-CPU data segment */	\
+	movl	%eax, %fs
 
 #endif /* LOCORE */
 

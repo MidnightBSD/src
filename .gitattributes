@@ -27001,6 +27001,7 @@ sys/i386/include/limits.h -text
 sys/i386/include/md_var.h -text
 sys/i386/include/memdev.h -text
 sys/i386/include/metadata.h -text
+sys/i386/include/minidump.h -text
 sys/i386/include/mp_watchdog.h -text
 sys/i386/include/mptable.h -text
 sys/i386/include/mutex.h -text
@@ -27047,6 +27048,7 @@ sys/i386/include/ucontext.h -text
 sys/i386/include/varargs.h -text
 sys/i386/include/vm86.h -text
 sys/i386/include/vmparam.h -text
+sys/i386/include/xbox.h -text
 sys/i386/isa/atpic.c -text
 sys/i386/isa/atpic_vector.s -text
 sys/i386/isa/ccbque.h -text

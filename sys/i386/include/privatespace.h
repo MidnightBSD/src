@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) Peter Wemm <peter@netplex.com.au>
+ * Copyright (c) Peter Wemm
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/privatespace.h,v 1.3 2001/12/11 23:33:40 jhb Exp $
+ * $FreeBSD: src/sys/i386/include/privatespace.h,v 1.4 2006/05/12 22:38:53 peter Exp $
  */
 
 #ifndef _MACHINE_PRIVATESPACE_H_
