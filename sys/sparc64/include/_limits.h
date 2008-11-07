@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/sparc64/include/_limits.h,v 1.12 2005/01/07 02:29:21 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/_limits.h,v 1.14 2005/08/20 16:44:41 stefanf Exp $
  */
 
 #ifndef	_MACHINE__LIMITS_H_
@@ -73,12 +73,15 @@
 #define	__OFF_MAX	__LONG_MAX	/* max value for an off_t */
 #define	__OFF_MIN	__LONG_MIN	/* min value for an off_t */
 
-/* Quads and longs are the same on the alpha.  Ensure they stay in sync. */
+/* Quads and longs are the same size.  Ensure they stay in sync. */
 #define	__UQUAD_MAX	(__ULONG_MAX)	/* max value for a uquad_t */
 #define	__QUAD_MAX	(__LONG_MAX)	/* max value for a quad_t */
 #define	__QUAD_MIN	(__LONG_MIN)	/* min value for a quad_t */
 
 #define	__LONG_BIT	64
 #define	__WORD_BIT	32
+
+/* Minimum signal stack size. */
+#define	__MINSIGSTKSZ	(1024 * 4)
 
 #endif /* !_MACHINE__LIMITS_H_ */

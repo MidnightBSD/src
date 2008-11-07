@@ -33,14 +33,14 @@
  *	from: @(#)sbusreg.h	8.1 (Berkeley) 6/11/93
  *	from: NetBSD: iommureg.h,v 1.6 2001/07/20 00:07:13 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/include/iommureg.h,v 1.6 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/iommureg.h,v 1.8 2007/08/05 11:56:43 marius Exp $
  */
 
 #ifndef _MACHINE_IOMMUREG_H_
 #define _MACHINE_IOMMUREG_H_
 
 /*
- * UltraSPARC IOMMU registers, common to both the sbus and PCI
+ * UltraSPARC IOMMU registers, common to both the PCI and SBus
  * controllers.
  */
 
@@ -64,8 +64,7 @@
 #define STRBUF_EN		0x0000000000000001UL
 #define STRBUF_D		0x0000000000000002UL
 
-#define	IOMMU_BITS		34
-#define	IOMMU_MAXADDR		(1UL << IOMMU_BITS)
+#define	IOMMU_MAXADDR(bits)	((1UL << (bits)) - 1)
 
 /*
  * control register bits
@@ -121,7 +120,7 @@
 /* Accesses to same bus segment? */
 #define	IOTTE_LOCAL		0x0800000000000000UL
 /* Let's assume this is correct */
-#define IOTTE_PAMASK		0x000001ffffffe000UL
+#define IOTTE_PAMASK		0x000007ffffffe000UL
 /* Accesses to cacheable space */
 #define IOTTE_C			0x0000000000000010UL
 /* Writeable */
@@ -140,7 +139,7 @@
 #define	STRBUF_FLUSHSYNC_NBYTES	STRBUF_LINESZ
 
 /*
- * On sun4u each bus controller has a separate IOMMU.  The IOMMU has 
+ * On sun4u each bus controller has a separate IOMMU.  The IOMMU has
  * a TSB which must be page aligned and physically contiguous.  Mappings
  * can be of 8K IOMMU pages or 64K IOMMU pages.  We use 8K for compatibility
  * with the CPU's MMU.
@@ -168,7 +167,7 @@
 
 #define	IOTSB_BASESZ		(1024 << IOTTE_SHIFT)
 #define IOTSB_VEND		(~IO_PAGE_MASK)
-#define IOTSB_VSTART(sz)	(u_int)(IOTSB_VEND << ((sz) + 10)) 
+#define IOTSB_VSTART(sz)	(u_int)(IOTSB_VEND << ((sz) + 10))
 
 #define MAKEIOTTE(pa,w,c,s)						\
 	(((pa) & IOTTE_PAMASK) | ((w) ? IOTTE_W : 0) |			\

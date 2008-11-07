@@ -39,13 +39,15 @@
  *	from: @(#)cache.h	8.1 (Berkeley) 6/11/93
  *	from: NetBSD: cache.h,v 1.3 2000/08/01 00:28:02 eeh Exp
  *
- * $FreeBSD: src/sys/sparc64/include/cache.h,v 1.12 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/cache.h,v 1.13 2007/01/19 11:15:33 marius Exp $
  */
 
 #ifndef _MACHINE_CACHE_H_
 #define _MACHINE_CACHE_H_
 
+#ifndef LOCORE
 #include <dev/ofw/openfirm.h>
+#endif
 
 #define	DCACHE_COLOR_BITS	(1)
 #define	DCACHE_COLORS		(1 << DCACHE_COLOR_BITS)
@@ -71,6 +73,8 @@
 
 #define	IC_TAG_MASK	((1 << IC_TAG_BITS) - 1)
 #define	IC_VALID_MASK	((1 << IC_VALID_BITS) - 1)
+
+#ifndef LOCORE
 
 /*
  * Cache control information.
@@ -119,6 +123,8 @@ extern icache_page_inval_t *icache_page_inval;
 
 extern struct cacheinfo cache;
 
-#endif
+#endif /* KERNEL */
 
-#endif	/* !_MACHINE_CACHE_H_ */
+#endif /* !LOCORE */
+
+#endif /* !_MACHINE_CACHE_H_ */

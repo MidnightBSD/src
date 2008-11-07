@@ -23,17 +23,21 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/pcb.h,v 1.17 2004/07/10 19:56:00 marcel Exp $
+ * $FreeBSD: src/sys/sparc64/include/pcb.h,v 1.18 2007/01/19 11:15:33 marius Exp $
  */
 
 #ifndef	_MACHINE_PCB_H_
 #define	_MACHINE_PCB_H_
 
+#ifndef LOCORE
 #include <machine/frame.h>
+#endif
 
 #define	MAXWIN	8
 
 #define	PCB_FEF	(1 << 0)
+
+#ifndef LOCORE
 
 /* NOTE: pcb_ufp must be aligned on a 64 byte boundary. */
 struct pcb {
@@ -49,8 +53,10 @@ struct pcb {
 } __aligned(64);
 
 #ifdef _KERNEL
-void	makectx(struct trapframe *, struct pcb *);
+void	makectx(struct trapframe *tf, struct pcb *pcb);
 int	savectx(struct pcb *pcb);
 #endif
+
+#endif /* !LOCORE */
 
 #endif /* !_MACHINE_PCB_H_ */

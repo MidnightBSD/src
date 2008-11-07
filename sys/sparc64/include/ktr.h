@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: ktr.h,v 1.1.1.2 2006-02-25 02:37:45 laffer1 Exp $
- * $FreeBSD: src/sys/sparc64/include/ktr.h,v 1.5.12.1 2006/01/23 15:04:09 marius Exp $
+ *	from BSDI $Id: ktr.h,v 1.1.1.3 2008-11-07 17:03:06 laffer1 Exp $
+ * $FreeBSD: src/sys/sparc64/include/ktr.h,v 1.6 2005/12/06 16:38:08 marius Exp $
  */
 
 #ifndef _MACHINE_KTR_H_

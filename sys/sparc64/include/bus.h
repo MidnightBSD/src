@@ -69,7 +69,7 @@
  *	and
  *	from: FreeBSD: src/sys/alpha/include/bus.h,v 1.9 2001/01/09
  *
- * $FreeBSD: src/sys/sparc64/include/bus.h,v 1.37 2005/04/18 21:45:34 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/bus.h,v 1.41 2007/01/18 18:32:25 marius Exp $
  */
 
 #ifndef	_MACHINE_BUS_H_
@@ -84,12 +84,12 @@
 #include <machine/upa.h>
 
 /*
- * UPA and SBUS spaces are non-cached and big endian
+ * Nexus and SBus spaces are non-cached and big endian
  * (except for RAM and PROM)
  *
  * PCI spaces are non-cached and little endian
  */
-#define	UPA_BUS_SPACE		0
+#define	NEXUS_BUS_SPACE		0
 #define	SBUS_BUS_SPACE		1
 #define	PCI_CONFIG_BUS_SPACE	2
 #define	PCI_IO_BUS_SPACE	3
@@ -109,11 +109,6 @@ extern int bus_stream_asi[];
 #define BUS_SPACE_MAXADDR	0xFFFFFFFF
 
 #define BUS_SPACE_UNRESTRICTED	(~0)
-
-/*
- * Access methods for bus resources and address space.
- */
-typedef struct bus_space_tag	*bus_space_tag_t;
 
 struct bus_space_tag {
 	void		*bst_cookie;
@@ -318,7 +313,7 @@ bus_space_write_8(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
 
 static __inline void
 bus_space_write_multi_1(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
-    uint8_t *a, size_t c)
+    const uint8_t *a, size_t c)
 {
 
 	while (c-- > 0)
@@ -327,7 +322,7 @@ bus_space_write_multi_1(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
 
 static __inline void
 bus_space_write_multi_2(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
-    uint16_t *a, size_t c)
+    const uint16_t *a, size_t c)
 {
 
 	while (c-- > 0)
@@ -336,7 +331,7 @@ bus_space_write_multi_2(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
 
 static __inline void
 bus_space_write_multi_4(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
-    uint32_t *a, size_t c)
+    const uint32_t *a, size_t c)
 {
 
 	while (c-- > 0)
@@ -345,7 +340,7 @@ bus_space_write_multi_4(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
 
 static __inline void
 bus_space_write_multi_8(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
-    uint64_t *a, size_t c)
+    const uint64_t *a, size_t c)
 {
 
 	while (c-- > 0)
@@ -848,59 +843,6 @@ bus_space_peek_4(bus_space_tag_t t, bus_space_handle_t h, bus_size_t o,
 
 	__BUS_DEBUG_ACCESS(h, o, "peek", 4);
 	return (fasword32(bus_type_asi[t->bst_type], (caddr_t)(h + o), a));
-}
-
-/* Back-compat functions for old ISA drivers */
-extern bus_space_tag_t isa_io_bt;
-extern bus_space_handle_t isa_io_hdl;
-extern bus_space_tag_t isa_mem_bt;
-extern bus_space_handle_t isa_mem_hdl;
-
-#define inb(o)		bus_space_read_1(isa_io_bt, isa_io_hdl, o)
-#define inw(o)		bus_space_read_2(isa_io_bt, isa_io_hdl, o)
-#define inl(o)		bus_space_read_4(isa_io_bt, isa_io_hdl, o)
-#define outb(o, v)	bus_space_write_1(isa_io_bt, isa_io_hdl, o, v)
-#define outw(o, v)	bus_space_write_2(isa_io_bt, isa_io_hdl, o, v)
-#define outl(o, v)	bus_space_write_4(isa_io_bt, isa_io_hdl, o, v)
-
-#define readb(o)	bus_space_read_1(isa_mem_bt, isa_mem_hdl, o)
-#define readw(o)	bus_space_read_2(isa_mem_bt, isa_mem_hdl, o)
-#define readl(o)	bus_space_read_4(isa_mem_bt, isa_mem_hdl, o)
-#define writeb(o, v)	bus_space_write_1(isa_mem_bt, isa_mem_hdl, o, v)
-#define writew(o, v)	bus_space_write_2(isa_mem_bt, isa_mem_hdl, o, v)
-#define writel(o, v)	bus_space_write_4(isa_mem_bt, isa_mem_hdl, o, v)
-
-#define insb(o, a, c) \
-	bus_space_read_multi_1(isa_io_bt, isa_io_hdl, o, (void*)a, c)
-#define insw(o, a, c) \
-	bus_space_read_multi_2(isa_io_bt, isa_io_hdl, o, (void*)a, c)
-#define insl(o, a, c) \
-	bus_space_read_multi_4(isa_io_bt, isa_io_hdl, o, (void*)a, c)
-#define outsb(o, a, c) \
-	bus_space_write_multi_1(isa_io_bt, isa_io_hdl, o, (void*)a, c)
-#define outsw(o, a, c) \
-	bus_space_write_multi_2(isa_io_bt, isa_io_hdl, o, (void*)a, c)
-#define outsl(o, a, c) \
-	bus_space_write_multi_4(isa_io_bt, isa_io_hdl, o, (void*)a, c)
-
-#define memcpy_fromio(d, s, c) \
-	bus_space_read_region_1(isa_mem_bt, isa_mem_hdl, s, d, c)
-#define memcpy_toio(d, s, c) \
-	bus_space_write_region_1(isa_mem_bt, isa_mem_hdl, d, s, c)
-#define memcpy_io(d, s, c) \
-	bus_space_copy_region_1(isa_mem_bt, isa_mem_hdl, s, isa_mem_hdl, d, c)
-#define memset_io(d, v, c) \
-	bus_space_set_region_1(isa_mem_bt, isa_mem_hdl, d, v, c)
-#define memsetw_io(d, v, c) \
-	bus_space_set_region_2(isa_mem_bt, isa_mem_hdl, d, v, c)
-
-static __inline void
-memsetw(void *d, int val, size_t size)
-{
-    u_int16_t *sp = d;
-
-    while (size--)
-	*sp++ = val;
 }
 
 #include <machine/bus_dma.h>

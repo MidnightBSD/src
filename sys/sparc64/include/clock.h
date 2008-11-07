@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/clock.h,v 1.6 2002/10/05 20:14:49 mux Exp $
+ * $FreeBSD: src/sys/sparc64/include/clock.h,v 1.7 2006/10/02 12:59:58 phk Exp $
  */
 
 #ifndef	_MACHINE_CLOCK_H_
@@ -32,9 +32,6 @@
 extern u_long tick_increment;
 extern u_long tick_freq;
 extern u_long tick_MHz;
-
-extern int adjkerntz;
-extern int wall_cmos_clock;
 
 int	sysbeep(int, int);
 

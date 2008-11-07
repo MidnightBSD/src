@@ -23,13 +23,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/kdb.h,v 1.2 2005/01/07 02:29:22 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/kdb.h,v 1.4 2007/06/09 21:55:17 marcel Exp $
  */
 
 #ifndef _MACHINE_KDB_H_
 #define _MACHINE_KDB_H_
 
 #include <machine/cpufunc.h>
+
+#define	KDB_STOPPEDPCB(pc)	&stoppcbs[pc->pc_cpuid]
 
 static __inline void
 kdb_cpu_clear_singlestep(void)
@@ -38,6 +40,11 @@ kdb_cpu_clear_singlestep(void)
 
 static __inline void
 kdb_cpu_set_singlestep(void)
+{
+}
+
+static __inline void
+kdb_cpu_sync_icache(unsigned char *addr, size_t size)
 {
 }
 

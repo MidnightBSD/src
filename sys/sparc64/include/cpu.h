@@ -31,7 +31,7 @@
  *
  *	from: @(#)cpu.h 5.4 (Berkeley) 5/9/91
  *	from: FreeBSD: src/sys/i386/include/cpu.h,v 1.62 2001/06/29
- * $FreeBSD: src/sys/sparc64/include/cpu.h,v 1.15 2004/08/03 18:44:27 mux Exp $
+ * $FreeBSD: src/sys/sparc64/include/cpu.h,v 1.17 2006/05/11 17:29:25 phk Exp $
  */
 
 #ifndef	_MACHINE_CPU_H_
@@ -40,34 +40,12 @@
 #include <machine/frame.h>
 #include <machine/tstate.h>
 
-#define	CLKF_USERMODE(cfp)	TRAPF_USERMODE(&(cfp)->cf_tf)
-#define	CLKF_PC(cfp)		TRAPF_PC(&(cfp)->cf_tf)
-
 #define	TRAPF_PC(tfp)		((tfp)->tf_tpc)
 #define	TRAPF_USERMODE(tfp)	(((tfp)->tf_tstate & TSTATE_PRIV) == 0)
 
 #define	cpu_getstack(td)	((td)->td_frame->tf_sp)
 #define	cpu_setstack(td, sp)	((td)->td_frame->tf_sp = (sp))
 #define	cpu_spinwait()		/* nothing */
-
-/*
- * CTL_MACHDEP definitions.
- */
-#define CPU_CONSDEV		1	/* dev_t: console terminal device */
-#define	CPU_ADJKERNTZ		2	/* int:	timezone offset	(seconds) */
-#define	CPU_DISRTCSET		3	/* int: disable resettodr() call */
-#define CPU_BOOTINFO		4	/* struct: bootinfo */
-#define	CPU_WALLCLOCK		5	/* int:	indicates wall CMOS clock */
-#define	CPU_MAXID		6	/* number of valid machdep ids */
-
-#define CTL_MACHDEP_NAMES { \
-	{ 0, 0 }, \
-	{ "console_device", CTLTYPE_STRUCT }, \
-	{ "adjkerntz", CTLTYPE_INT }, \
-	{ "disable_rtc_set", CTLTYPE_INT }, \
-	{ "bootinfo", CTLTYPE_STRUCT }, \
-	{ "wall_cmos_clock", CTLTYPE_INT }, \
-}
 
 #ifdef _KERNEL
 

@@ -33,7 +33,7 @@
  *	from: hp300: @(#)pmap.h 7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h        7.4 (Berkeley) 5/12/91
  *	from: FreeBSD: src/sys/i386/include/pmap.h,v 1.70 2000/11/30
- * $FreeBSD: src/sys/sparc64/include/pmap.h,v 1.44 2005/02/18 15:37:34 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/pmap.h,v 1.47 2006/07/20 17:48:40 alc Exp $
  */
 
 #ifndef	_MACHINE_PMAP_H_
@@ -95,9 +95,7 @@ int	pmap_protect_tte(struct pmap *pm1, struct pmap *pm2, struct tte *tp,
 
 void	pmap_map_tsb(void);
 
-void	pmap_clear_write(vm_page_t m);
-
-#define	vtophys(va)	pmap_kextract(((vm_offset_t)(va)))
+#define	vtophys(va)	pmap_kextract((vm_offset_t)(va))
 
 extern	struct pmap kernel_pmap_store;
 #define	kernel_pmap	(&kernel_pmap_store)
@@ -106,15 +104,6 @@ extern	vm_offset_t virtual_avail;
 extern	vm_offset_t virtual_end;
 
 extern	vm_paddr_t msgbuf_phys;
-
-static __inline int
-pmap_track_modified(pmap_t pm, vm_offset_t va)
-{
-	if (pm == kernel_pmap)
-		return ((va < kmi.clean_sva) || (va >= kmi.clean_eva));
-	else
-		return (1);
-}
 
 #ifdef PMAP_STATS
 

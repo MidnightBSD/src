@@ -28780,6 +28780,7 @@ sys/sparc64/include/nexusvar.h -text
 sys/sparc64/include/ofw_bus.h -text
 sys/sparc64/include/ofw_machdep.h -text
 sys/sparc64/include/ofw_mem.h -text
+sys/sparc64/include/ofw_nexus.h -text
 sys/sparc64/include/ofw_upa.h -text
 sys/sparc64/include/param.h -text
 sys/sparc64/include/pcb.h -text

@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/globaldata.h,v 1.27 2001/04/27
- * $FreeBSD: src/sys/sparc64/include/pcpu.h,v 1.20 2005/04/16 14:57:38 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/pcpu.h,v 1.22 2007/06/04 21:38:47 attilio Exp $
  */
 
 #ifndef	_MACHINE_PCPU_H_
@@ -66,6 +66,13 @@ register struct pcb *curpcb __asm__(__XSTRING(PCB_REG));
 register struct pcpu *pcpup __asm__(__XSTRING(PCPU_REG));
 
 #define	PCPU_GET(member)	(pcpup->pc_ ## member)
+
+/*
+ * XXX The implementation of this operation should be made atomic
+ * with respect to preemption.
+ */
+#define	PCPU_ADD(member, value)	(pcpup->pc_ ## member += (value))
+#define	PCPU_INC(member)	PCPU_ADD(member, 1)
 #define	PCPU_PTR(member)	(&pcpup->pc_ ## member)
 #define	PCPU_SET(member,value)	(pcpup->pc_ ## member = (value))
 

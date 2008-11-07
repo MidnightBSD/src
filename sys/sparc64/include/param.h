@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/sparc64/include/param.h,v 1.19.2.1 2005/10/17 00:19:00 kris Exp $
+ * $FreeBSD: src/sys/sparc64/include/param.h,v 1.22 2006/12/18 07:28:59 kmacy Exp $
  */
 
 /*
@@ -44,13 +44,6 @@
 #endif
 #ifndef _ALIGN
 #define _ALIGN(p)	(((u_long)(p) + _ALIGNBYTES) & ~_ALIGNBYTES)
-#endif
-
-#ifndef _MACHINE
-#define	_MACHINE	sparc64
-#endif
-#ifndef _MACHINE_ARCH
-#define	_MACHINE_ARCH	sparc64
 #endif
 
 #ifndef _NO_NAMESPACE_POLLUTION
@@ -93,6 +86,14 @@
 #define	PAGE_SHIFT_4M	22
 #define	PAGE_SIZE_4M	(1L<<PAGE_SHIFT_4M)
 #define	PAGE_MASK_4M	(PAGE_SIZE_4M-1)
+
+#define	PAGE_SHIFT_32M	25
+#define	PAGE_SIZE_32M	(1L<<PAGE_SHIFT_32M)
+#define	PAGE_MASK_32M	(PAGE_SIZE_32M-1)
+
+#define	PAGE_SHIFT_256M	28
+#define	PAGE_SIZE_256M	(1L<<PAGE_SHIFT_256M)
+#define	PAGE_MASK_256M	(PAGE_SIZE_256M-1)
 
 #define PAGE_SHIFT_MIN	PAGE_SHIFT_8K
 #define PAGE_SIZE_MIN	PAGE_SIZE_8K

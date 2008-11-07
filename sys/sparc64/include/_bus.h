@@ -25,18 +25,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/_bus.h,v 1.1 2005/04/18 21:45:34 imp Exp $
+ * $FreeBSD: src/sys/sparc64/include/_bus.h,v 1.2 2006/06/13 19:18:09 marius Exp $
  */
 
 #ifndef SPARC64_INCLUDE__BUS_H
 #define SPARC64_INCLUDE__BUS_H
 
-/*
- * Bus address and size types
- */
-typedef	u_long		bus_space_handle_t;
-typedef int		bus_type_t;
-typedef u_long		bus_addr_t;
-typedef u_long		bus_size_t;
+typedef u_long bus_addr_t;
+typedef u_long bus_size_t;
+typedef u_long bus_space_handle_t;
+typedef struct bus_space_tag *bus_space_tag_t;
 
 #endif /* SPARC64_INCLUDE__BUS_H */

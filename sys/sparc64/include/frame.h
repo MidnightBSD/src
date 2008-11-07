@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/frame.h,v 1.15 2004/07/10 23:05:38 marcel Exp $
+ * $FreeBSD: src/sys/sparc64/include/frame.h,v 1.17 2007/01/19 11:15:33 marius Exp $
  */
 
 #ifndef	_MACHINE_FRAME_H_
@@ -32,6 +32,8 @@
 #define	RW_SHIFT	7
 #define	SPOFF		2047
 #define	BIAS		SPOFF		/* XXX - open/netbsd compat */
+
+#ifndef LOCORE
 
 /*
  * NOTE: keep this structure in sync with struct reg and struct mcontext.
@@ -56,15 +58,11 @@ struct trapframe {
 	uint64_t tf_pad[2];
 };
 #define	tf_sp	tf_out[6]
- 
+
 #define	TF_DONE(tf) do { \
 	tf->tf_tpc = tf->tf_tnpc; \
 	tf->tf_tnpc += 4; \
 } while (0)
-
-struct clockframe {
-	struct	trapframe cf_tf;
-};
 
 struct frame {
 	u_long	fr_local[8];
@@ -89,5 +87,7 @@ struct thread;
 
 int	rwindow_save(struct thread *td);
 int	rwindow_load(struct thread *td, struct trapframe *tf, int n);
+
+#endif /* !LOCORE */
 
 #endif /* !_MACHINE_FRAME_H_ */

@@ -25,7 +25,7 @@
  *
  *	from: FreeBSD: src/sys/i386/i386/busdma_machdep.c,v 1.25 2002/01/05
  *
- * $FreeBSD: src/sys/sparc64/include/bus_private.h,v 1.7 2004/06/28 04:04:43 scottl Exp $
+ * $FreeBSD: src/sys/sparc64/include/bus_private.h,v 1.8 2007/03/07 21:13:50 marius Exp $
  */
 
 #ifndef	_MACHINE_BUS_PRIVATE_H_
@@ -72,12 +72,5 @@ struct bus_dmamap {
 
 int sparc64_dma_alloc_map(bus_dma_tag_t dmat, bus_dmamap_t *mapp);
 void sparc64_dma_free_map(bus_dma_tag_t dmat, bus_dmamap_t map);
-
-/*
- * XXX: This is a kluge. It would be better to handle dma tags in a hierarchical
- * way, and have a BUS_GET_DMA_TAG(); however, since this is not currently the
- * case, save a root tag in the relevant bus attach function and use that.
- */
-extern bus_dma_tag_t sparc64_root_dma_tag;
 
 #endif /* !_MACHINE_BUS_PRIVATE_H_ */

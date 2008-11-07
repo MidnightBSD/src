@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/ver.h,v 1.5 2004/12/24 16:21:46 scottl Exp $
+ * $FreeBSD: src/sys/sparc64/include/ver.h,v 1.6 2007/05/20 13:47:36 marius Exp $
  */
 
 #ifndef	_MACHINE_VER_H_
@@ -62,13 +62,16 @@ extern int cpu_impl;
 extern char sparc64_model[];
 
 /* Known implementations. */
-#define	CPU_IMPL_SPARC64	0x01
-#define	CPU_IMPL_ULTRASPARCI	0x10
-#define	CPU_IMPL_ULTRASPARCII	0x11
-#define	CPU_IMPL_ULTRASPARCIIi	0x12
-#define	CPU_IMPL_ULTRASPARCIIe	0x13
-#define	CPU_IMPL_ULTRASPARCIII	0x14
-#define	CPU_IMPL_ULTRASPARCIIIp	0x15
-#define	CPU_IMPL_ULTRASPARCIIIi	0x16
+#define	CPU_IMPL_SPARC64		0x01
+#define	CPU_IMPL_ULTRASPARCI		0x10
+#define	CPU_IMPL_ULTRASPARCII		0x11
+#define	CPU_IMPL_ULTRASPARCIIi		0x12
+#define	CPU_IMPL_ULTRASPARCIIe		0x13
+#define	CPU_IMPL_ULTRASPARCIII		0x14
+#define	CPU_IMPL_ULTRASPARCIIIp		0x15
+#define	CPU_IMPL_ULTRASPARCIIIi		0x16
+#define	CPU_IMPL_ULTRASPARCIV		0x18
+#define	CPU_IMPL_ULTRASPARCIVp		0x19
+#define	CPU_IMPL_ULTRASPARCIIIip	0x22
 
 #endif /* !_MACHINE_VER_H_ */
