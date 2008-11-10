@@ -310,7 +310,7 @@
 /* #undef HAVE_ETC_DEFAULT_LOGIN */
 
 /* Define to 1 if you have the `EVP_sha256' function. */
-/* #undef HAVE_EVP_SHA256 */
+#define HAVE_EVP_SHA256 1
 
 /* Define if you have ut_exit in utmp.h */
 /* #undef HAVE_EXIT_IN_UTMP */
@@ -776,7 +776,7 @@
 /* #undef HAVE_SET_ID */
 
 /* Define to 1 if you have the `SHA256_Update' function. */
-/* #undef HAVE_SHA256_UPDATE */
+#define HAVE_SHA256_UPDATE 1
 
 /* Define to 1 if you have the <sha2.h> header file. */
 /* #undef HAVE_SHA2_H */
