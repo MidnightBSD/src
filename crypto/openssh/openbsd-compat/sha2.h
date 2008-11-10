@@ -110,7 +110,7 @@ char *SHA384_Data(const u_int8_t *, size_t, char *)
 	__attribute__((__bounded__(__minbytes__,3,SHA384_DIGEST_STRING_LENGTH)));
 #endif /* 0 */
 
-#ifdef 0
+#if 0
 void SHA512_Init(SHA512_CTX *);
 void SHA512_Transform(u_int64_t state[8], const u_int8_t [SHA512_BLOCK_LENGTH]);
 void SHA512_Update(SHA512_CTX *, const u_int8_t *, size_t)
