@@ -25893,6 +25893,14 @@ sys/dev/ips/ips_pci.c -text
 sys/dev/ipw/if_ipw.c -text
 sys/dev/ipw/if_ipwreg.h -text
 sys/dev/ipw/if_ipwvar.h -text
+sys/dev/iscsi/initiator/isc_cam.c -text
+sys/dev/iscsi/initiator/isc_sm.c -text
+sys/dev/iscsi/initiator/isc_soc.c -text
+sys/dev/iscsi/initiator/isc_subr.c -text
+sys/dev/iscsi/initiator/iscsi.c -text
+sys/dev/iscsi/initiator/iscsi.h -text
+sys/dev/iscsi/initiator/iscsi_subr.c -text
+sys/dev/iscsi/initiator/iscsivar.h -text
 sys/dev/isp/DriverManual.txt -text
 sys/dev/isp/Hardware.txt -text
 sys/dev/isp/isp.c -text
