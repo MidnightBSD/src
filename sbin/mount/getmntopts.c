@@ -33,14 +33,17 @@ static char sccsid[] = "@(#)getmntopts.c	8.3 (Berkeley) 3/29/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/mount/getmntopts.c,v 1.15 2004/11/25 16:14:27 delphij Exp $");
+__FBSDID("$FreeBSD: src/sbin/mount/getmntopts.c,v 1.18 2005/11/14 17:39:00 rodrigc Exp $");
 
 #include <sys/param.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
 
 #include <err.h>
 #include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
@@ -50,11 +53,8 @@ __FBSDID("$FreeBSD: src/sbin/mount/getmntopts.c,v 1.15 2004/11/25 16:14:27 delph
 int getmnt_silent = 0;
 
 void
-getmntopts(options, m0, flagp, altflagp)
-	const char *options;
-	const struct mntopt *m0;
-	int *flagp;
-	int *altflagp;
+getmntopts(const char *options, const struct mntopt *m0, int *flagp,
+	int *altflagp)
 {
 	const struct mntopt *m;
 	int negative, len;
@@ -105,9 +105,7 @@ getmntopts(options, m0, flagp, altflagp)
 }
 
 void
-rmslashes(rrpin, rrpout)
-	char *rrpin;
-	char *rrpout;
+rmslashes(char *rrpin, char *rrpout)
 {
 	char *rrpoutstart;
 
@@ -127,9 +125,7 @@ rmslashes(rrpin, rrpout)
 }
 
 void
-checkpath(path, resolved)
-	const char *path;
-	char *resolved;
+checkpath(const char *path, char *resolved)
 {
 	struct stat sb;
 
@@ -141,7 +137,8 @@ checkpath(path, resolved)
 }
 
 void
-build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val, int len)
+build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val,
+	    size_t len)
 {
 	int i;
 
@@ -157,8 +154,29 @@ build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val, int le
 	(*iov)[i].iov_len = strlen(name) + 1;
 	i++;
 	(*iov)[i].iov_base = val;
-	if (len < 0)
-		len = strlen(val) + 1;
-	(*iov)[i].iov_len = len;
+	if (len == (size_t)-1) {
+		if (val != NULL)
+			len = strlen(val) + 1;
+		else
+			len = 0;
+	}
+	(*iov)[i].iov_len = (int)len;
 	*iovlen = ++i;
+}
+
+/*
+ * This function is needed for compatibility with parameters
+ * which used to use the mount_argf() command for the old mount() syscall.
+ */
+void
+build_iovec_argf(struct iovec **iov, int *iovlen, const char *name,
+    const char *fmt, ...)
+{
+	va_list ap;
+	char val[255] = { 0 };
+
+	va_start(ap, fmt);
+	vsnprintf(val, sizeof(val), fmt, ap);  
+	va_end(ap);
+	build_iovec(iov, iovlen, name, strdup(val), (size_t)-1);
 }

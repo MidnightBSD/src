@@ -27,12 +27,12 @@
  * SUCH DAMAGE.
  *
  *	@(#)mntopts.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: src/sbin/mount/mntopts.h,v 1.26 2005/06/10 09:51:40 delphij Exp $
+ * $FreeBSD: src/sbin/mount/mntopts.h,v 1.29 2005/12/02 03:55:02 rodrigc Exp $
  */
 
 struct mntopt {
 	const char *m_option;	/* option name */
-	int m_inverse;		/* if a negative option, e.g. "dev" */
+	int m_inverse;		/* if a negative option, e.g. "atime" */
 	int m_flag;		/* bit to set, e.g. MNT_RDONLY */
 	int m_altloc;		/* 1 => set bit in altflags */
 };
@@ -40,7 +40,6 @@ struct mntopt {
 /* User-visible MNT_ flags. */
 #define MOPT_ASYNC		{ "async",	0, MNT_ASYNC, 0 }
 #define MOPT_NOATIME		{ "atime",	1, MNT_NOATIME, 0 }
-#define MOPT_NODEV		{ "dev",	1, MNT_NODEV, 0 }
 #define MOPT_NOEXEC		{ "exec",	1, MNT_NOEXEC, 0 }
 #define MOPT_NOSUID		{ "suid",	1, MNT_NOSUID, 0 }
 #define MOPT_NOSYMFOLLOW	{ "symfollow",  1, MNT_NOSYMFOLLOW, 0 }
@@ -79,7 +78,6 @@ struct mntopt {
 	MOPT_GROUPQUOTA,						\
 	MOPT_FSTAB_COMPAT,						\
 	MOPT_NOATIME,							\
-	MOPT_NODEV,							\
 	MOPT_NOEXEC,							\
 	MOPT_SUIDDIR,		/* must be before MOPT_NOSUID */	\
 	MOPT_NOSUID,							\
@@ -95,4 +93,5 @@ void getmntopts(const char *, const struct mntopt *, int *, int *);
 void rmslashes(char *, char *);
 void checkpath(const char *, char resolved_path[]);
 extern int getmnt_silent;
-void build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val, int len);
+void build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val, size_t len);
+void build_iovec_argf(struct iovec **iov, int *iovlen, const char *name, const char *fmt, ...);

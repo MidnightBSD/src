@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount.8	8.8 (Berkeley) 6/16/94
-.\" $FreeBSD: src/sbin/mount/mount.8,v 1.73.2.1 2006/01/13 20:05:59 pav Exp $
+.\" $FreeBSD: src/sbin/mount/mount.8,v 1.82.2.1 2007/12/06 08:08:04 jhb Exp $
 .\"
-.Dd November 26, 2004
+.Dd July 12, 2006
 .Dt MOUNT 8
 .Os
 .Sh NAME
@@ -36,26 +36,26 @@
 .Nd mount file systems
 .Sh SYNOPSIS
 .Nm
-.Op Fl adfpruvw
+.Op Fl adflpruvw
 .Op Fl F Ar fstab
 .Op Fl o Ar options
-.Op Fl t Ar ufs | external_type
+.Op Fl t Cm ufs | Ar external_type
 .Nm
 .Op Fl dfpruvw
 .Ar special | node
 .Nm
 .Op Fl dfpruvw
 .Op Fl o Ar options
-.Op Fl t Ar ufs | external_type
+.Op Fl t Cm ufs | Ar external_type
 .Ar special node
 .Sh DESCRIPTION
 The
 .Nm
 utility calls the
-.Xr mount 2
+.Xr nmount 2
 system call to prepare and graft a
-.Ar "special device"
-or the remote node (rhost:path) on to the file system tree at the point
+.Ar special
+device or the remote node (rhost:path) on to the file system tree at the point
 .Ar node .
 If either
 .Ar special
@@ -77,8 +77,13 @@ All the file systems described in
 .Xr fstab 5
 are mounted.
 Exceptions are those marked as
-.Dq noauto ,
-excluded by the
+.Dq Li noauto ,
+those marked as
+.Dq Li late
+(unless the
+.Fl l
+option was specified),
+those excluded by the
 .Fl t
 flag (see below), or if they are already mounted (except the
 root file system which is always remounted to preserve
@@ -101,6 +106,11 @@ a file system mount status from read-write to read-only.
 Also
 forces the R/W mount of an unclean file system (dangerous; use with
 caution).
+.It Fl l
+When used in conjunction with the
+.Fl a
+option, also mount those file systems which are marked as
+.Dq Li late .
 .It Fl o
 Options are specified with a
 .Fl o
@@ -121,9 +131,12 @@ All
 to the file system should be done asynchronously.
 This is a
 .Em dangerous
-flag to set,
-and should not be used unless you are prepared to recreate the file
-system should your system crash.
+flag to set, since it does not guarantee that the file system structure
+on the disk will remain consistent.
+For this reason, the
+.Cm async
+flag should be used sparingly, and only when some data recovery
+mechanism is present.
 .It Cm current
 When used with the
 .Fl u
@@ -142,6 +155,14 @@ When used with the
 flag, this is the same as specifying all the options listed in the
 .Xr fstab 5
 file for the file system.
+.It Cm late
+This file system should be skipped when
+.Nm
+is run with the
+.Fl a
+flag but without the
+.Fl l
+flag.
 .It Cm multilabel
 Enable multi-label Mandatory Access Control, or MAC, on the specified file
 system.
@@ -200,10 +221,6 @@ on the mounted file system.
 The same as
 .Fl r ;
 mount the file system read-only (even the super-user may not write it).
-.It Cm sync
-All
-.Tn I/O
-to the file system should be done synchronously.
 .It Cm snapshot
 This option allows a snapshot of the specified file system to be taken.
 The
@@ -289,6 +306,10 @@ Only UFS file systems support this option.
 See
 .Xr chmod 2
 for more information.
+.It Cm sync
+All
+.Tn I/O
+to the file system should be done synchronously.
 .It Cm update
 The same as
 .Fl u ;
@@ -347,12 +368,12 @@ The same as the
 argument to the
 .Fl o
 option.
-.It Fl t Ar ufs | external_type
+.It Fl t Cm ufs | Ar external_type
 The argument following the
 .Fl t
 is used to indicate the file system type.
 The type
-.Ar ufs
+.Cm ufs
 is the default.
 The
 .Fl t
@@ -361,7 +382,7 @@ to indicate that the actions should only be taken on
 file systems of the specified type.
 More than one type may be specified in a comma separated list.
 The list of file system types can be prefixed with
-.Dq no
+.Dq Li no
 to specify the file system types for which action should
 .Em not
 be taken.
@@ -377,13 +398,38 @@ mounts all file systems except those of type
 and
 .Tn NULLFS .
 .Pp
-If the type is not one of the internally known types,
+The default behavior of
 .Nm
-will attempt to execute a program in
+is to pass the
+.Fl t
+option directly to the
+.Xr nmount 2
+system call in the
+.Li fstype
+option.
+.Pp
+However, for the following file system types:
+.Cm cd9660 ,
+.Cm mfs ,
+.Cm msdosfs ,
+.Cm nfs ,
+.Cm nfs4 ,
+.Cm ntfs ,
+.Cm nwfs ,
+.Cm nullfs ,
+.Cm portalfs ,
+.Cm smbfs ,
+.Cm udf ,
+and
+.Cm unionfs ,
+.Nm
+will not call
+.Xr nmount 2
+directly and will instead attempt to execute a program in
 .Pa /sbin/mount_ Ns Sy XXX
 where
 .Sy XXX
-is replaced by the type name.
+is replaced by the file system type name.
 For example, nfs file systems are mounted by the program
 .Pa /sbin/mount_nfs .
 .Pp
@@ -449,24 +495,20 @@ support for a particular file system might be provided either on a static
 .Sh SEE ALSO
 .Xr getfacl 1 ,
 .Xr setfacl 1 ,
-.Xr mount 2 ,
+.Xr nmount 2 ,
 .Xr acl 3 ,
 .Xr mac 4 ,
+.Xr ext2fs 5 ,
 .Xr fstab 5 ,
+.Xr procfs 5 ,
 .Xr kldload 8 ,
 .Xr mount_cd9660 8 ,
-.Xr mount_devfs 8 ,
-.Xr mount_ext2fs 8 ,
-.Xr mount_fdescfs 8 ,
-.Xr mount_linprocfs 8 ,
 .Xr mount_msdosfs 8 ,
 .Xr mount_nfs 8 ,
 .Xr mount_ntfs 8 ,
 .Xr mount_nullfs 8 ,
 .Xr mount_nwfs 8 ,
 .Xr mount_portalfs 8 ,
-.Xr mount_procfs 8 ,
-.Xr mount_reiserfs 8 ,
 .Xr mount_smbfs 8 ,
 .Xr mount_std 8 ,
 .Xr mount_udf 8 ,
