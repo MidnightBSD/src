@@ -25,8 +25,9 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man3/pthread_schedparam.3,v 1.9 2004/01/15 15:59:00 ru Exp $
-.Dd May 1, 2000
+.\" $FreeBSD: src/share/man/man3/pthread_schedparam.3,v 1.11.2.1 2007/10/23 12:53:03 ru Exp $
+.\"
+.Dd October 16, 2006
 .Dt PTHREAD_SCHEDPARAM 3
 .Os
 .Sh NAME
@@ -34,9 +35,7 @@
 .Nm pthread_getschedparam
 .Nd thread scheduling parameter manipulation
 .Sh LIBRARY
-.Lb libc_r
 .Lb libpthread
-.Lb libthr
 .Sh SYNOPSIS
 .In pthread.h
 .Ft int
@@ -51,15 +50,18 @@ and
 functions set and get the scheduling parameters of individual threads.
 The scheduling policy for a thread can either be
 .Dv SCHED_FIFO
-(first in, first out) or
+(first in, first out),
 .Dv SCHED_RR
-(round-robin).
-The thread priority (accessed via
+(round-robin), or
+.Dv SCHED_OTHER
+(timesharing).
+Valid thread priorities (accessed via
 .Va param->sched_priority )
-must be at least
-.Dv PTHREAD_MIN_PRIORITY
-and no more than
-.Dv PTHREAD_MAX_PRIORITY .
+must be within the range returned by the
+.Xr sched_get_priority_min 2
+and
+.Xr sched_get_priority_max 2
+system calls.
 .Sh RETURN VALUES
 If successful, these functions return 0.
 Otherwise, an error number is returned to indicate the error.
@@ -70,12 +72,12 @@ function will fail if:
 .Bl -tag -width Er
 .It Bq Er EINVAL
 Invalid value for
-.Va policy .
+.Fa policy .
 .It Bq Er ENOTSUP
 Invalid value for scheduling parameters.
 .It Bq Er ESRCH
 Non-existent thread
-.Va thread .
+.Fa thread .
 .El
 .Pp
 The
@@ -84,12 +86,15 @@ function will fail if:
 .Bl -tag -width Er
 .It Bq Er ESRCH
 Non-existent thread
-.Va thread .
+.Fa thread .
 .El
+.Sh SEE ALSO
+.Xr sched_get_priority_max 2 ,
+.Xr sched_get_priority_min 2
 .Sh STANDARDS
 The
 .Fn pthread_setschedparam
 and
 .Fn pthread_getschedparam
 functions conform to
-.St -susv2
+.St -susv2 .

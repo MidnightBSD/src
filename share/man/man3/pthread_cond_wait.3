@@ -25,18 +25,16 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man3/pthread_cond_wait.3,v 1.18 2004/01/15 15:59:00 ru Exp $
+.\" $FreeBSD: src/share/man/man3/pthread_cond_wait.3,v 1.21.2.1 2007/10/23 12:53:03 ru Exp $
 .\"
-.Dd July 28, 1998
+.Dd February 16, 2006
 .Dt PTHREAD_COND_WAIT 3
 .Os
 .Sh NAME
 .Nm pthread_cond_wait
 .Nd wait on a condition variable
 .Sh LIBRARY
-.Lb libc_r
 .Lb libpthread
-.Lb libthr
 .Sh SYNOPSIS
 .In pthread.h
 .Ft int
@@ -47,7 +45,7 @@ The
 function atomically blocks the current thread waiting on the condition
 variable specified by
 .Fa cond ,
-and unblocks the mutex specified by
+and releases the mutex specified by
 .Fa mutex .
 The waiting thread unblocks only after another thread calls
 .Xr pthread_cond_signal 3 ,
@@ -73,6 +71,10 @@ The value specified by
 or the value specified by
 .Fa mutex
 is invalid.
+.It Bq Er EPERM
+The specified 
+.Fa mutex 
+was not locked by the calling thread.
 .El
 .Sh SEE ALSO
 .Xr pthread_cond_broadcast 3 ,

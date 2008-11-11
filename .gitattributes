@@ -22362,7 +22362,9 @@ share/man/man3/pthread_suspend_all_np.3 -text
 share/man/man3/pthread_suspend_np.3 -text
 share/man/man3/pthread_switch_add_np.3 -text
 share/man/man3/pthread_testcancel.3 -text
+share/man/man3/pthread_yield.3 -text
 share/man/man3/queue.3 -text
+share/man/man3/siginfo.3 -text
 share/man/man3/stdarg.3 -text
 share/man/man3/sysexits.3 -text
 share/man/man3/tgmath.3 -text
