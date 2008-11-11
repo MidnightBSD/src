@@ -23,6 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/sbin/ldconfig/elfhints.c,v 1.8 2001/05/02 23:56:18 obrien Exp $
  */
 
