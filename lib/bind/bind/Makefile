@@ -1,5 +1,7 @@
-# $MidnightBSD: src/lib/bind/bind/Makefile,v 1.4 2008/04/19 01:06:51 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/bind/Makefile,v 1.5 2008/04/27 23:16:34 laffer1 Exp $
 # $FreeBSD: src/lib/bind/bind/Makefile,v 1.4.4.1 2005/11/16 07:59:49 ru Exp $
+
+#.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -67,7 +69,7 @@ SRCS+=		herror.c mtctxres.c res_comp.c \
 DPADD=		${PTHREAD_DPADD}
 LDADD=		${PTHREAD_LDADD}
 
-#.if defined(WITH_BIND_LIBS)
+#.if ${MK_BIND_LIBS} != "no"
 #INCS=		${SRCDIR}/include/isc/assertions.h \
 #		${SRCDIR}/include/isc/ctl.h \
 #		${SRCDIR}/include/isc/dst.h \
