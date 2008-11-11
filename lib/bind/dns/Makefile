@@ -1,5 +1,7 @@
-# $MIdnightBSD$
+# $MidnightBSD$
 # $FreeBSD: src/lib/bind/dns/Makefile,v 1.5.2.1 2005/11/16 07:59:49 ru Exp $
+
+.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -42,7 +44,7 @@ CFLAGS+=	-I${BIND_DIR}/lib/isc/${ISC_ATOMIC_ARCH}/include
 DPADD=		${CRYPTO_DPADD} ${PTHREAD_DPADD}
 LDADD=		${CRYPTO_LDADD} ${PTHREAD_LDADD}
 
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 DNSINCS=	${SRCDIR}/include/dns/acache.h \
 		${SRCDIR}/include/dns/acl.h \
 		${SRCDIR}/include/dns/adb.h \

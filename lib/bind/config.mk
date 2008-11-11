@@ -1,5 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/bind/config.mk,v 1.3 2008/04/28 01:23:10 laffer1 Exp $
 # $FreeBSD: src/lib/bind/config.mk,v 1.14.2.1 2005/07/30 07:56:25 des Exp $
+
+.include <bsd.own.mk>
 
 # BIND version number
 .if defined(BIND_DIR) && exists(${BIND_DIR}/version)
@@ -17,7 +19,7 @@ CFLAGS+=	-D_REENTRANT -D_THREAD_SAFE
 CFLAGS+=	-DLIBINTERFACE=${LIBINTERFACE}
 CFLAGS+=	-DLIBREVISION=${LIBREVISION}
 CFLAGS+=	-DLIBAGE=${LIBAGE}
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 SHLIB_MAJOR=	${LIBINTERFACE}
 SHLIB_MINOR=	${LIBINTERFACE}
 .else
@@ -26,17 +28,17 @@ INTERNALLIB=
 .endif
 
 # GSSAPI support is incomplete in 9.3.0
-#.if !defined(NO_KERBEROS)
+#.if ${MK_KERBEROS} != "no"
 #CFLAGS+=	-DGSSAPI
 #.endif
 
 # Enable IPv6 support if available
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=	-DWANT_IPV6
 .endif
 
 # Enable crypto if available
-.if !defined(NO_CRYPT)
+.if ${MK_OPENSSL} != "no"
 CFLAGS+=	-DOPENSSL
 .endif
 
@@ -44,7 +46,7 @@ CFLAGS+=	-DOPENSSL
 CFLAGS+=	-DUSE_MD5
 
 # Endianness
-.if ${MACHINE_ARCH} == "powerpc" || ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE_ARCH} == "sparc64"
 CFLAGS+=	-DWORDS_BIGENDIAN
 .endif
 
@@ -69,7 +71,7 @@ ISC_ATOMIC_ARCH=	${MACHINE_ARCH}
 .endif
 
 # Link against BIND libraries
-.if !defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 LIBBIND9=	${LIB_BIND_REL}/bind9/libbind9.a
 CFLAGS+=	-I${BIND_DIR}/lib/bind9/include
 LIBDNS=		${LIB_BIND_REL}/dns/libdns.a
@@ -92,14 +94,14 @@ CFLAGS+=	-I${BIND_DIR}/lib/lwres/unix/include \
 .endif
 BIND_DPADD=	${LIBBIND9} ${LIBDNS} ${LIBISCCC} ${LIBISCCFG} \
 		${LIBISC} ${LIBLWRES}
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 BIND_LDADD=	-lbind9 -ldns -lisccc -lisccfg -lisc -llwres
 .else
 BIND_LDADD=	${BIND_DPADD}
 .endif
 
 # Link against crypto library
-.if !defined(NO_CRYPT)
+.if ${MK_OPENSSL} != "no"
 CRYPTO_DPADD=	${LIBCRYPTO}
 CRYPTO_LDADD=	-lcrypto
 .endif

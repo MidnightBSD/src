@@ -1,5 +1,7 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/bind/isc/Makefile,v 1.3 2008/04/28 00:03:14 laffer1 Exp $
 # $FreeBSD: src/lib/bind/isc/Makefile,v 1.8 2007/06/02 23:19:56 dougb Exp $
+
+.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -43,7 +45,7 @@ CFLAGS+=	-I${SRCDIR}/${ISC_ATOMIC_ARCH}/include
 DPADD=		${PTHREAD_DPADD}
 LDADD=		${PTHREAD_LDADD}
 
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/assertions.h \
 		${SRCDIR}/include/isc/base64.h \

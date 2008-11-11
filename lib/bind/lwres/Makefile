@@ -1,5 +1,7 @@
-# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.3 2008/04/28 00:59:56 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.4 2008/04/28 02:30:00 laffer1 Exp $
 # $FreeBSD: src/lib/bind/lwres/Makefile,v 1.7.2.1 2005/11/16 07:59:50 ru Exp $
+
+.include <bsd.own.mk>
 
 BIND_DIR=	${.CURDIR}/../../../contrib/bind9
 LIB_BIND_REL=	..
@@ -7,7 +9,7 @@ LIB_BIND_DIR=	${.CURDIR}/${LIB_BIND_REL}
 SRCDIR=		${BIND_DIR}/lib/lwres
 
 # Unlike other BIND libs, this should be installed unless the user says NO.
-.if !defined(NO_BIND_LIBS_LWRES)
+.if ${MK_BIND_LIBS_LWRES) != "no"
 WITH_BIND_LIBS=
 .endif
 
@@ -32,7 +34,7 @@ CFLAGS+=	-I${LIB_BIND_DIR}/isc
 DPADD=		${PTHREAD_DPADD}
 LDADD=		${PTHREAD_LDADD}
 
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 MAN=		lwres.3 lwres_buffer.3 lwres_config.3 lwres_context.3 \
 		lwres_gabn.3 lwres_gai_strerror.3 lwres_getaddrinfo.3 \
 		lwres_gethostent.3 lwres_getipnode.3 lwres_getnameinfo.3 \
