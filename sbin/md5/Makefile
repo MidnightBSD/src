@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/9/93
 # $FreeBSD: src/sbin/md5/Makefile,v 1.10 2005/03/09 19:23:04 cperciva Exp $
+# $MidnightBSD$
 
 PROG=	md5
 

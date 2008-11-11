@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/md5/md5.c,v 1.34 2005/03/09 19:23:04 cperciva Exp $");
+__FBSDID("$FreeBSD: src/sbin/md5/md5.c,v 1.35 2006/01/17 15:35:57 phk Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -61,7 +61,7 @@ typedef struct Algorithm_t {
 	DIGEST_Init *Init;
 	DIGEST_Update *Update;
 	DIGEST_End *End;
-	char *(*Data)(const unsigned char *, unsigned int, char *);
+	char *(*Data)(const void *, unsigned int, char *);
 	char *(*File)(const char *, char *);
 } Algorithm_t;
 
