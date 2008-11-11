@@ -1,6 +1,8 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.7 2008/08/17 03:26:36 laffer1 Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.8 2008/11/11 22:38:38 laffer1 Exp $
+
+.include <bsd.own.mk>
 
 SUBDIR= cat \
 	chflags \
