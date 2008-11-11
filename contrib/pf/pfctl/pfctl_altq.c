@@ -1,4 +1,4 @@
-/*	$OpenBSD: pfctl_altq.c,v 1.86 2005/02/28 14:04:51 henning Exp $	*/
+/*	$OpenBSD: pfctl_altq.c,v 1.91 2006/11/28 00:08:50 henning Exp $	*/
 
 /*
  * Copyright (c) 2002
@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/pf/pfctl/pfctl_altq.c,v 1.7 2005/05/03 16:55:20 mlaier Exp $");
+__FBSDID("$FreeBSD: src/contrib/pf/pfctl/pfctl_altq.c,v 1.9 2007/07/03 12:30:02 mlaier Exp $");
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -100,21 +100,6 @@ pfaltq_store(struct pf_altq *a)
 	TAILQ_INSERT_TAIL(&altqs, altq, entries);
 }
 
-void
-pfaltq_free(struct pf_altq *a)
-{
-	struct pf_altq	*altq;
-
-	TAILQ_FOREACH(altq, &altqs, entries) {
-		if (strncmp(a->ifname, altq->ifname, IFNAMSIZ) == 0 &&
-		    strncmp(a->qname, altq->qname, PF_QNAME_SIZE) == 0) {
-			TAILQ_REMOVE(&altqs, altq, entries);
-			free(altq);
-			return;
-		}
-	}
-}
-
 struct pf_altq *
 pfaltq_lookup(const char *ifname)
 {
@@ -164,7 +149,7 @@ print_altq(const struct pf_altq *a, unsigned level, struct node_queue_bw *bw,
 	struct node_queue_opt *qopts)
 {
 	if (a->qname[0] != 0) {
-		print_queue(a, level, bw, 0, qopts);
+		print_queue(a, level, bw, 1, qopts);
 		return;
 	}
 
@@ -249,8 +234,8 @@ eval_pfaltq(struct pfctl *pf, struct pf_altq *pa, struct node_queue_bw *bw,
 #else
 		if ((rate = getifspeed(pa->ifname)) == 0) {
 #endif
-			fprintf(stderr, "cannot determine interface bandwidth "
-			    "for %s, specify an absolute bandwidth\n",
+			fprintf(stderr, "interface %s does not know its bandwidth, "
+			    "please specify an absolute bandwidth\n",
 			    pa->ifname);
 			errors++;
 		} else if ((pa->ifbandwidth = eval_bwspec(bw, rate)) == 0)
@@ -501,10 +486,7 @@ cbq_compute_idletime(struct pfctl *pf, struct pf_altq *pa)
 		maxidle = ptime * maxidle;
 	else
 		maxidle = ptime * maxidle_s;
-	if (minburst)
-		offtime = cptime * (1.0 + 1.0/(1.0 - g) * (1.0 - gtom) / gtom);
-	else
-		offtime = cptime;
+	offtime = cptime * (1.0 + 1.0/(1.0 - g) * (1.0 - gtom) / gtom);
 	minidle = -((double)opts->maxpktsize * (double)nsPerByte);
 
 	/* scale parameters */
@@ -709,8 +691,8 @@ eval_pfqueue_hfsc(struct pfctl *pf, struct pf_altq *pa)
 	}
 
 	if ((opts->rtsc_m1 < opts->rtsc_m2 && opts->rtsc_m1 != 0) ||
-	    (opts->rtsc_m1 < opts->rtsc_m2 && opts->rtsc_m1 != 0) ||
-	    (opts->rtsc_m1 < opts->rtsc_m2 && opts->rtsc_m1 != 0)) {
+	    (opts->lssc_m1 < opts->lssc_m2 && opts->lssc_m1 != 0) ||
+	    (opts->ulsc_m1 < opts->ulsc_m2 && opts->ulsc_m1 != 0)) {
 		warnx("m1 must be zero for convex curve: %s", pa->qname);
 		return (-1);
 	}

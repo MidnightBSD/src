@@ -1,4 +1,4 @@
-.\"	$OpenBSD: pfsync.4,v 1.22 2005/02/24 15:53:17 jmc Exp $
+.\"	$OpenBSD: pfsync.4,v 1.24 2006/10/23 07:05:49 jmc Exp $
 .\"
 .\" Copyright (c) 2002 Michael Shalayeff
 .\" Copyright (c) 2003-2004 Ryan McBride
@@ -24,9 +24,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/contrib/pf/man/pfsync.4,v 1.5.2.3 2005/10/08 03:32:53 yar Exp $
+.\" $FreeBSD: src/contrib/pf/man/pfsync.4,v 1.10 2007/07/03 12:30:01 mlaier Exp $
 .\"
-.Dd February 23, 2005
+.Dd June 6, 2006
 .Dt PFSYNC 4
 .Os
 .Sh NAME
@@ -103,6 +103,9 @@ interface:
 .Bd -literal -offset indent
 # ifconfig pfsync0 syncdev fxp0
 .Ed
+.Pp
+It is important that the underlying synchronisation interface is up
+and has an IP address assigned.
 .Pp
 By default, state change messages are sent out on the synchronisation
 interface using IP multicast packets.
@@ -206,7 +209,7 @@ The following should be added to the top of
 .Pa /etc/pf.conf :
 .Bd -literal -offset indent
 pass quick on { sis2 } proto pfsync
-pass on { sis0 sis1 } proto carp keep state
+pass on { sis0 sis1 } proto carp
 .Ed
 .Pp
 If it is preferable that one firewall handle the traffic,
@@ -245,6 +248,9 @@ yet.
 .Xr pf.conf 5 ,
 .Xr protocols 5 ,
 .Xr rc.conf 5
+.Xr ifconfig 8 ,
+.Xr ifstated 8 ,
+.Xr tcpdump 8
 .Sh HISTORY
 The
 .Nm
