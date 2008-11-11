@@ -1,19 +1,20 @@
+# $MidnightBSD$
 # $FreeBSD: src/cddl/usr.sbin/zdb/Makefile,v 1.4 2007/10/01 18:17:23 ru Exp $
 
-.PATH: ${.CURDIR}/../../../contrib/opensolaris/cmd/zdb
+.PATH: ${.CURDIR}/../../contrib/opensolaris/cmd/zdb
 
 PROG=	zdb
 MAN=	zdb.8
 SRCS=	zdb.c zdb_il.c
 
-CFLAGS+= -I${.CURDIR}/../../../sys/compat/opensolaris
-CFLAGS+= -I${.CURDIR}/../../../compat/opensolaris/include
-CFLAGS+= -I${.CURDIR}/../../../compat/opensolaris/lib/libumem
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/lib/libzpool/common
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common
-CFLAGS+= -I${.CURDIR}/../../../sys/contrib/opensolaris/uts/common/sys
-CFLAGS+= -I${.CURDIR}/../../../contrib/opensolaris/head
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
+CFLAGS+= -I${.CURDIR}/../../compat/opensolaris/include
+CFLAGS+= -I${.CURDIR}/../../compat/opensolaris/lib/libumem
+CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/lib/libzpool/common
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/fs/zfs
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/contrib/opensolaris/uts/common/sys
+CFLAGS+= -I${.CURDIR}/../../contrib/opensolaris/head
 CFLAGS+= -I${.CURDIR}/../../lib/libumem
 
 DPADD=	${LIBM} ${LIBNVPAIR} ${LIBUMEM} ${LIBZPOOL} \
