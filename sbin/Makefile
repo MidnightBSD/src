@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/sbin/Makefile,v 1.6 2008/11/11 21:29:36 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -116,6 +116,7 @@ _rtsol=		rtsol
 .if ${MACHINE} == "i386"
 _fdisk=		fdisk
 _sconfig=	sconfig
+.endif
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
