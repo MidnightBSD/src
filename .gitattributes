@@ -20174,7 +20174,6 @@ libexec/fingerd/Makefile -text
 libexec/fingerd/fingerd.8 -text
 libexec/fingerd/fingerd.c -text
 libexec/fingerd/pathnames.h -text
-libexec/ftp-proxy/Makefile -text
 libexec/ftpd/Makefile -text
 libexec/ftpd/config.h -text
 libexec/ftpd/extern.h -text
@@ -20332,6 +20331,7 @@ libexec/talkd/talkd.8 -text
 libexec/talkd/talkd.c -text
 libexec/tcpd/Makefile -text
 libexec/telnetd/Makefile -text
+libexec/tftp-proxy/Makefile -text
 libexec/tftpd/Makefile -text
 libexec/tftpd/tftpd.8 -text
 libexec/tftpd/tftpd.c -text

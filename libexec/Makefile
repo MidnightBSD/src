@@ -1,12 +1,13 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: src/libexec/Makefile,v 1.75 2005/06/10 20:52:35 nectar Exp $
+# $FreeBSD: src/libexec/Makefile,v 1.77 2007/07/03 12:46:04 mlaier Exp $
+
+.include <bsd.own.mk>
 
 SUBDIR=	atrun \
 	bootpd \
 	comsat \
 	fingerd \
 	ftpd \
-	${_ftp-proxy} \
 	getty \
 	lukemftpd \
 	${_mail.local} \
@@ -30,27 +31,28 @@ SUBDIR=	atrun \
 	tcpd \
 	telnetd \
 	tftpd \
+	${_tftp-proxy} \
 	${_ypxfr}
 
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 _mknetid=	mknetid
 _ypxfr=		ypxfr
 .endif
 
-.if !defined(NO_PF)
-_ftp-proxy=	ftp-proxy
+.if ${MK_PF} != "no"
+_tftp-proxy=	tftp-proxy
 .endif
 
 .if !defined(NO_PIC)
 _rtld-elf=	rtld-elf
 .endif
 
-.if !defined(NO_RCMDS)
+.if ${MK_RCMDS} != "no"
 _rlogind=	rlogind
 _rshd=		rshd
 .endif
 
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 _mail.local=	mail.local
 _smrsh=	smrsh
 .endif

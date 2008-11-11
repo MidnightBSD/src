@@ -1,3 +1,5 @@
+/* $FreeBSD: src/lib/bind/bind/port_before.h,v 1.4.2.1 2007/12/07 08:31:23 dougb Exp $ */
+
 #ifndef port_before_h
 #define port_before_h
 #include <config.h>
@@ -34,21 +36,21 @@ struct timespec {
 
 #define DO_PTHREADS 1
 #define GETGROUPLIST_ARGS const char *name, gid_t basegid, gid_t *groups, int *ngroups
-#define GETNETBYADDR_ADDR_T long
+#define GETNETBYADDR_ADDR_T unsigned long int
 #define SETPWENT_VOID 1
 #undef SETGRENT_VOID
 
-#define NET_R_ARGS char *buf, int buflen
-#define NET_R_BAD NULL
+#define NET_R_ARGS char *buf, size_t buflen, struct netent **answerp, int *h_errnop
+#define NET_R_BAD ERANGE
 #define NET_R_COPY buf, buflen
-#define NET_R_COPY_ARGS NET_R_ARGS
+#define NET_R_COPY_ARGS char *buf, size_t buflen
 #define NET_R_END_RESULT(x) /*empty*/
 #define NET_R_END_RETURN void
 #undef NET_R_ENT_ARGS /*empty*/
-#define NET_R_OK nptr
-#define NET_R_RETURN struct netent *
+#define NET_R_OK 0
+#define NET_R_RETURN int
 #undef NET_R_SET_RESULT /*empty*/
-#undef NET_R_SETANSWER
+#define NET_R_SETANSWER 1
 #define NET_R_SET_RETURN void
 #undef NETENT_DATA
 
@@ -62,17 +64,17 @@ struct timespec {
 
 
 
-#define HOST_R_ARGS char *buf, int buflen, int *h_errnop
-#define HOST_R_BAD NULL
+#define HOST_R_ARGS char *buf, size_t buflen, struct hostent **answerp, int *h_errnop
+#define HOST_R_BAD ERANGE
 #define HOST_R_COPY buf, buflen
 #define HOST_R_COPY_ARGS char *buf, int buflen
 #define HOST_R_END_RESULT(x) /*empty*/
 #define HOST_R_END_RETURN void
 #undef HOST_R_ENT_ARGS /*empty*/
 #define HOST_R_ERRNO *h_errnop = h_errno
-#define HOST_R_OK hptr
-#define HOST_R_RETURN struct hostent *
-#undef HOST_R_SETANSWER
+#define HOST_R_OK 0
+#define HOST_R_RETURN int
+#define HOST_R_SETANSWER 1
 #undef HOST_R_SET_RESULT
 #define HOST_R_SET_RETURN void
 #undef HOSTENT_DATA
@@ -90,17 +92,17 @@ struct timespec {
 #define NGR_R_SET_RETURN void
 
 
-#define PROTO_R_ARGS char *buf, int buflen
-#define PROTO_R_BAD NULL
+#define PROTO_R_ARGS char *buf, size_t buflen, struct protoent **answerp
+#define PROTO_R_BAD ERANGE
 #define PROTO_R_COPY buf, buflen
-#define PROTO_R_COPY_ARGS PROTO_R_ARGS
+#define PROTO_R_COPY_ARGS char *buf, size_t buflen
 #define PROTO_R_END_RESULT(x) /*empty*/
 #define PROTO_R_END_RETURN void
 #undef PROTO_R_ENT_ARGS /*empty*/
 #undef PROTO_R_ENT_UNUSED
-#define PROTO_R_OK pptr
-#undef PROTO_R_SETANSWER
-#define PROTO_R_RETURN struct protoent *
+#define PROTO_R_OK 0
+#define PROTO_R_SETANSWER 1
+#define PROTO_R_RETURN int
 #undef PROTO_R_SET_RESULT
 #define PROTO_R_SET_RETURN void
 #undef PROTOENT_DATA
@@ -117,17 +119,17 @@ struct timespec {
 #undef PASS_R_SET_RESULT /*empty*/
 #define PASS_R_SET_RETURN void
 
-#define SERV_R_ARGS char *buf, int buflen
-#define SERV_R_BAD NULL
+#define SERV_R_ARGS char *buf, size_t buflen, struct servent **answerp
+#define SERV_R_BAD ERANGE
 #define SERV_R_COPY buf, buflen
-#define SERV_R_COPY_ARGS SERV_R_ARGS
+#define SERV_R_COPY_ARGS char *buf, size_t buflen
 #define SERV_R_END_RESULT(x) /*empty*/
 #define SERV_R_END_RETURN void 
 #undef SERV_R_ENT_ARGS /*empty*/
 #undef SERV_R_ENT_UNUSED /*empty*/
-#define SERV_R_OK sptr
-#undef SERV_R_SETANSWER
-#define SERV_R_RETURN struct servent *
+#define SERV_R_OK (0)
+#define SERV_R_SETANSWER 1
+#define SERV_R_RETURN int
 #undef SERV_R_SET_RESULT
 #define SERV_R_SET_RETURN void
 
