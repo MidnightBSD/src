@@ -1,12 +1,13 @@
-# Makefile for libdialog
 # $MidnightBSD$
-# $FreeBSD: src/gnu/lib/libdialog/Makefile,v 1.42.2.1 2005/07/22 17:29:01 kensmith Exp $
+# $FreeBSD: src/gnu/lib/libdialog/Makefile,v 1.45 2007/06/18 18:47:52 rafan Exp $
+
+.include <bsd.own.mk>
 
 LIB=    dialog
 INCS=	dialog.h
 MAN=	dialog.3
 
-SHLIB_MAJOR= 5
+SHLIB_MAJOR= 6
 SRCS=   kernel.c rc.c checklist.c inputbox.c menubox.c msgbox.c \
 	lineedit.c radiolist.c textbox.c yesno.c prgbox.c raw_popen.c \
 	fselect.c ui_objects.c dir.c notify.c help.c gauge.c tree.c
@@ -21,7 +22,7 @@ CFLAGS+= -I${.CURDIR} -Wall -Wstrict-prototypes -DLOCALE
 DPADD=	${LIBNCURSES}
 LDADD=	-lncurses
 
-.if !defined(NO_HTML)
+.if ${MK_HTML} != "no"
 FILES=	${EXAMPLES:C;^;${.CURDIR}/TESTS/;}
 FILESDIR= ${SHAREDIR}/examples/libdialog
 .endif
