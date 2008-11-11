@@ -1,6 +1,9 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
-# $FreeBSD: src/sbin/Makefile,v 1.156.2.1 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/sbin/Makefile,v 1.4 2008/02/22 02:53:02 laffer1 Exp $
+# $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
+# $MidnightBSD$
+
+.include <bsd.own.mk>
+
 # XXX MISSING:		icheck ncheck
 
 SUBDIR=	adjkerntz \
@@ -33,17 +36,17 @@ SUBDIR=	adjkerntz \
 	gpt \
 	growfs \
 	gvinum \
+	idmapd \
 	ifconfig \
 	init \
-	${_ip6fw} \
 	${_ipf} \
 	ipfw \
+	iscontrol \
 	kldconfig \
 	kldload \
 	kldstat \
 	kldunload \
 	ldconfig \
-	${_mca} \
 	md5 \
 	mdconfig \
 	mdmfs \
@@ -51,14 +54,10 @@ SUBDIR=	adjkerntz \
 	mksnap_ffs \
 	mount \
 	mount_cd9660 \
-	mount_ext2fs \
 	mount_msdosfs \
 	mount_nfs \
-	mount_nfs4 \
 	mount_ntfs \
 	mount_nullfs \
-	mount_reiserfs \
-	mount_std \
 	mount_udf \
 	mount_unionfs \
 	natd \
@@ -73,10 +72,11 @@ SUBDIR=	adjkerntz \
 	quotacheck \
 	rcorder \
 	reboot \
+	recoverdisk \
 	restore \
 	route \
 	routed \
-	rtsol \
+	${_rtsol} \
 	savecore \
 	${_sconfig} \
 	setkey \
@@ -90,44 +90,36 @@ SUBDIR=	adjkerntz \
 	tunefs \
 	umount \
 
-.if !defined(NO_ATM)
+.if ${MK_ATM} != "no"
 _atm=		atm
 .endif
 
-.if !defined(NO_CXX)
+.if ${MK_CXX} != "no"
 _devd=		devd
 .endif
 
-.if !defined(NO_IPFILTER)
+.if ${MK_IPFILTER} != "no"
 _ipf=		ipf
 .endif
 
-.if !defined(NO_PF)
+.if ${MK_PF} != "no"
 _pfctl=		pfctl
 _pflogd=	pflogd
 .endif
 
-.if !defined(NO_INET6)
-_ip6fw=		ip6fw
+.if ${MK_INET6} != "no"
 _ping6=		ping6
+_rtsol=		rtsol
 .endif
 
 .if ${MACHINE_ARCH} == "i386"
 .if ${MACHINE} == "i386"
 _fdisk=		fdisk
-.elif ${MACHINE} == "pc98"
-_fdisk_pc98=	fdisk_pc98
-.endif
 _sconfig=	sconfig
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
 _fdisk=		fdisk
-.endif
-
-.if ${MACHINE_ARCH} == "ia64"
-_fdisk=		fdisk
-_mca=		mca
 .endif
 
 .include <bsd.subdir.mk>

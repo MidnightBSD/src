@@ -21111,8 +21111,6 @@ sbin/ldconfig/elfhints.c -text
 sbin/ldconfig/ldconfig.8 -text
 sbin/ldconfig/ldconfig.c -text
 sbin/ldconfig/ldconfig.h -text
-sbin/mca/Makefile -text
-sbin/mca/mca.c -text
 sbin/md5/Makefile -text
 sbin/md5/md5.1 -text
 sbin/md5/md5.c -text
@@ -21233,6 +21231,9 @@ sbin/reboot/nextboot.8 -text
 sbin/reboot/nextboot.sh -text
 sbin/reboot/reboot.8 -text
 sbin/reboot/reboot.c -text
+sbin/recoverdisk/Makefile -text
+sbin/recoverdisk/recoverdisk.1 -text
+sbin/recoverdisk/recoverdisk.c -text
 sbin/restore/Makefile -text
 sbin/restore/dirs.c -text
 sbin/restore/extern.h -text

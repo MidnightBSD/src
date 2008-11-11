@@ -1,13 +1,11 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/27/94
-#
-# $FreeBSD: src/sbin/idmapd/Makefile,v 1.3 2005/01/28 16:08:06 ru Exp $
+# $FreeBSD: src/sbin/idmapd/Makefile,v 1.4 2006/10/15 13:51:49 ceri Exp $
+# $MidnightBSD$
 
 PROG=	idmapd
 MAN=	idmapd.8
 
-CFLAGS+= -DNFS -I/usr/src/sys
+CFLAGS+= -DNFS -I${.CURDIR}/../../sys
 WARNS?=	2
-
-.PATH:
 
 .include <bsd.prog.mk>
