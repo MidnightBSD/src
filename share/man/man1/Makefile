@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/man/man1/Makefile,v 1.17 2004/01/20 10:27:22 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/man/man1/Makefile,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 
 MAN=	builtin.1 intro.1
 
@@ -76,6 +76,7 @@ MLINKS=	builtin.1 alias.1 \
 	builtin.1 switch.1 \
 	builtin.1 telltc.1 \
 	builtin.1 then.1 \
+	builtin.1 times.1 \
 	builtin.1 trap.1 \
 	builtin.1 type.1 \
 	builtin.1 ulimit.1 \
