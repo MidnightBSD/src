@@ -24464,6 +24464,7 @@ sys/cddl/contrib/opensolaris/uts/common/sys/dkio.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/dklabel.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/errorq.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/feature_tests.h -text
+sys/cddl/contrib/opensolaris/uts/common/sys/fs/zfs.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/gfs.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/isa_defs.h -text
 sys/cddl/contrib/opensolaris/uts/common/sys/list.h -text
