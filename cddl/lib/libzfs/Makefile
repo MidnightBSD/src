@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/cddl/lib/libzfs/Makefile,v 1.2 2008/10/15 19:10:20 laffer1 Exp $
 # $FreeBSD: src/cddl/lib/libzfs/Makefile,v 1.3 2007/05/06 01:39:38 pjd Exp $
 
 .PATH: ${.CURDIR}/../../../cddl/compat/opensolaris/misc
@@ -32,7 +32,7 @@ SRCS+=	zfs_namecheck.c \
 CFLAGS+= -DZFS_NO_ACL
 CFLAGS+= -I${.CURDIR}/../../../sbin/mount
 CFLAGS+= -I${.CURDIR}/../../../cddl/lib/libumem
-CFLAGS+= -I${.CURDIR}/../../../cddl/sys/compat/opensolaris
+CFLAGS+= -I${.CURDIR}/../../../sys/cddl/compat/opensolaris
 CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/include
 CFLAGS+= -I${.CURDIR}/../../../cddl/compat/opensolaris/lib/libumem
 CFLAGS+= -I${.CURDIR}/../../../cddl/contrib/opensolaris/lib/libzpool/common
