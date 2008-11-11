@@ -20,12 +20,14 @@
 # Copies of this Software may be made, however, the above copyright
 # notice must be reproduced on all copies.
 #
-#	@(#) $Id: Makefile,v 1.1.1.2 2006-02-25 02:35:20 laffer1 Exp $
-# $FreeBSD: src/sbin/atm/Makefile,v 1.5 2003/08/18 15:32:16 obrien Exp $
+#	@(#) $Id: Makefile,v 1.1.1.3 2008-11-11 22:08:20 laffer1 Exp $
+# $FreeBSD: src/sbin/atm/Makefile,v 1.6 2007/07/14 21:49:22 rwatson Exp $
 
-SUBDIR=	atm \
-	atmconfig \
-	fore_dnld \
-	ilmid
+SUBDIR=	atmconfig
+
+# Disabled in 7.0 as netatm is not MPSAFE.
+#	atm \
+#	fore_dnld \
+#	ilmid
 
 .include <bsd.subdir.mk>

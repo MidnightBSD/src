@@ -27,7 +27,7 @@
  * Author: Hartmut Brandt <harti@freebsd.org>
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/atm/atmconfig/diag.c,v 1.6 2004/07/28 16:34:42 harti Exp $");
+__FBSDID("$FreeBSD: src/sbin/atm/atmconfig/diag.c,v 1.8 2007/04/14 16:09:23 maxim Exp $");
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -868,7 +868,7 @@ diagif_fetch_vcc(struct diagif *aif, int fd)
 		return;
 
 	strncpy(ifr.ifr_name, aif->ifname, IFNAMSIZ);
-	ifr.ifr_name[IFNAMSIZ] = '\0';
+	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
 	aif->vtab = malloc(sizeof(*aif->vtab) + sizeof(aif->vtab->vccs[0]) *
 	    aif->mib.max_vccs);
@@ -889,16 +889,16 @@ print_channel(const struct diagif *aif)
 	const struct atmio_vcc *v;
 
 	static const char *const aal_tab[] = {
-		[ATMIO_AAL_0] "0",
-		[ATMIO_AAL_34] "3/4",
-		[ATMIO_AAL_5] "5",
-		[ATMIO_AAL_RAW] "raw",
+		[ATMIO_AAL_0] = "0",
+		[ATMIO_AAL_34] = "3/4",
+		[ATMIO_AAL_5] = "5",
+		[ATMIO_AAL_RAW] = "raw",
 	};
 	static const char *const traffic_tab[] = {
-		[ATMIO_TRAFFIC_UBR] "ubr",
-		[ATMIO_TRAFFIC_CBR] "cbr",
-		[ATMIO_TRAFFIC_ABR] "abr",
-		[ATMIO_TRAFFIC_VBR] "vbr",
+		[ATMIO_TRAFFIC_UBR] = "ubr",
+		[ATMIO_TRAFFIC_CBR] = "cbr",
+		[ATMIO_TRAFFIC_ABR] = "abr",
+		[ATMIO_TRAFFIC_VBR] = "vbr",
 	};
 
 	for (v = aif->vtab->vccs; v < &aif->vtab->vccs[aif->vtab->count]; v++) {
