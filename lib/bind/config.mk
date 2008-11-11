@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/bind/config.mk,v 1.3 2008/04/28 01:23:10 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/config.mk,v 1.4 2008/11/11 16:49:45 laffer1 Exp $
 # $FreeBSD: src/lib/bind/config.mk,v 1.14.2.1 2005/07/30 07:56:25 des Exp $
 
 .include <bsd.own.mk>
@@ -71,7 +71,7 @@ ISC_ATOMIC_ARCH=	${MACHINE_ARCH}
 .endif
 
 # Link against BIND libraries
-.if ${MK_BIND_LIBS} != "no"
+.if ${MK_BIND_LIBS} == "no"
 LIBBIND9=	${LIB_BIND_REL}/bind9/libbind9.a
 CFLAGS+=	-I${BIND_DIR}/lib/bind9/include
 LIBDNS=		${LIB_BIND_REL}/dns/libdns.a
