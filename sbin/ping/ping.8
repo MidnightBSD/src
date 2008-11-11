@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)ping.8	8.2 (Berkeley) 12/11/93
-.\" $FreeBSD: src/sbin/ping/ping.8,v 1.51.8.1 2005/08/19 09:29:25 glebius Exp $
+.\" $FreeBSD: src/sbin/ping/ping.8,v 1.54 2006/04/05 12:30:42 glebius Exp $
 .\"
-.Dd August 15, 2005
+.Dd April 4, 2006
 .Dt PING 8
 .Os
 .Sh NAME
@@ -52,6 +52,7 @@ packets to network hosts
 .Op Fl S Ar src_addr
 .Op Fl s Ar packetsize
 .Op Fl t Ar timeout
+.Op Fl W Ar waittime
 .Op Fl z Ar tos
 .Ar host
 .Nm
@@ -68,6 +69,7 @@ packets to network hosts
 .Op Fl s Ar packetsize
 .Op Fl T Ar ttl
 .Op Fl t Ar timeout
+.Op Fl W Ar waittime
 .Op Fl z Ar tos
 .Ar mcast-group
 .Sh DESCRIPTION
@@ -149,17 +151,18 @@ This can be very hard on a network and should be used with caution.
 Specify the maximum size of
 .Tn ICMP
 payload when sending sweeping pings.
-This option is required for ping sweeps. 
+This option is required for ping sweeps.
 .It Fl g Ar sweepminsize
 Specify the size of
 .Tn ICMP
-payload to start with when sending sweeping pings. 
+payload to start with when sending sweeping pings.
 The default value is 0.
 .It Fl h Ar sweepincrsize
 Specify the number of bytes to increment the size of
 .Tn ICMP
 payload after
-each sweep when sending sweeping pings. The default value is 1.
+each sweep when sending sweeping pings.
+The default value is 1.
 .It Fl I Ar iface
 Source multicast packets with the given interface address.
 This flag only applies if the ping destination is a multicast address.
@@ -305,6 +308,10 @@ Verbose output.
 packets other than
 .Tn ECHO_RESPONSE
 that are received are listed.
+.It Fl W Ar waittime
+Time in milliseconds to wait for a reply for each packet sent.
+If a reply arrives later, the packet is not printed as replied, but
+considered as replied when calculating statistics.
 .It Fl z Ar tos
 Use the specified type of service.
 .El

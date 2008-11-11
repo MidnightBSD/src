@@ -1,9 +1,9 @@
-# $FreeBSD: src/sbin/ping6/Makefile,v 1.12 2005/01/08 22:56:08 trhodes Exp $
+# $FreeBSD: src/sbin/ping6/Makefile,v 1.15 2007/07/05 08:56:45 bz Exp $
 
 PROG=	ping6
 MAN=	ping6.8
 
-CFLAGS+=-DINET6 -DIPSEC -DKAME_SCOPEID -DUSE_RFC2292BIS \
+CFLAGS+=-DIPSEC -DKAME_SCOPEID -DUSE_RFC2292BIS \
 	-DHAVE_POLL_H -DHAVE_ARC4RANDOM
 WARNS?=	2
 
