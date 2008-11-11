@@ -1,6 +1,9 @@
 #
-# $FreeBSD: src/rescue/librescue/Makefile,v 1.6 2004/11/13 20:40:29 bz Exp $
+# $FreeBSD: src/rescue/librescue/Makefile,v 1.9 2006/07/27 12:28:05 yar Exp $
 # $MidnightBSD$
+#
+
+.include <bsd.own.mk>
 
 # Certain library entries have hard-coded references to
 # /bin, /sbin, etc, that require those entries to be
@@ -24,16 +27,20 @@ CFLAGS+=	-DRESCUE
 # libc/db/Makefile.inc
 CFLAGS+=	-D__DBINTERFACE_PRIVATE
 # libc/net/Makefile.inc & libutil/Makefile
+.if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=	-DINET6
+.endif
 # libc/regex/Makefile.inc & libc/regex/grot/Makefile
 CFLAGS+=	-DPOSIX_MISTAKE
 # libc/rpc/Makefile.inc
 CFLAGS+=	-DBROKEN_DES -DPORTMAP -DDES_BUILTIN
 # libc/Makefile
-.if !defined(NO_NIS)
+.if ${MK_NIS} != "no"
 CFLAGS+=       -DYP
 .endif
+.if ${MK_HESIOD} != "no"
 CFLAGS+=       -DHESIOD
+.endif
 CFLAGS+=	-I${.CURDIR}/../../lib/libc/include
 
 .include <bsd.lib.mk>

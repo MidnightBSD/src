@@ -1,4 +1,4 @@
-$MidnightBSD$
+$MidnightBSD: src/rescue/README,v 1.2 2006/08/14 11:00:08 laffer1 Exp $
 
 The /rescue build system here has three goals:
 
@@ -24,14 +24,13 @@ to conditionally compile out features to reduce executable size.
 3) Produce a toolkit suitable for small distributions.
 
 Install /rescue on a CD or CompactFlash disk, and symlink /bin and
-/sbin to /rescue to produce a small and fairly complete FreeBSD
+/sbin to /rescue to produce a small and fairly complete MidnightBSD
 system.
 
 These tools have one big disadvantage: being statically linked, they
 cannot use some advanced library functions that rely on dynamic
 linking.  In particular, nsswitch, locales, and pam are likely to all
 rely on dynamic linking in the near future.
-
 
 To compile:
 
