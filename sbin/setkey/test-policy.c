@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/setkey/test-policy.c,v 1.1.38.1 2005/12/15 23:30:11 pjd Exp $
+ * $FreeBSD: src/sbin/setkey/test-policy.c,v 1.2 2007/07/01 12:08:06 gnn Exp $
  */
 
 #include <sys/types.h>
@@ -34,11 +34,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet6/in6.h>
-#include <netkey/keyv2.h>
+#include <netipsec/ipsec.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <netinet6/ipsec.h>
 
 char *requests[] = {
 "must_error",		/* must be error */

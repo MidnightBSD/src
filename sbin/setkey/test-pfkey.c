@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sbin/setkey/test-pfkey.c,v 1.2.18.1 2005/12/15 23:30:11 pjd Exp $	*/
+/*	$FreeBSD: src/sbin/setkey/test-pfkey.c,v 1.3 2007/07/01 12:08:06 gnn Exp $	*/
 /*	$KAME: test-pfkey.c,v 1.4 2000/06/07 00:29:14 itojun Exp $	*/
 
 /*
@@ -36,9 +36,9 @@
 #include <net/route.h>
 #include <net/pfkeyv2.h>
 #include <netinet/in.h>
-#include <netkey/keydb.h>
-#include <netkey/key_var.h>
-#include <netkey/key_debug.h>
+#include <netipsec/keydb.h>
+#include <netipsec/key_var.h>
+#include <netipsec/key_debug.h>
 
 #include <stdio.h>
 #include <stdlib.h>

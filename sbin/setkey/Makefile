@@ -25,11 +25,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sbin/setkey/Makefile,v 1.12.2.1 2005/12/15 23:30:11 pjd Exp $
+# $FreeBSD: src/sbin/setkey/Makefile,v 1.14 2007/07/01 12:08:06 gnn Exp $
+
+.include <bsd.own.mk>
 
 PROG=	setkey
 MAN=	setkey.8
 SRCS=	setkey.c parse.y token.l
+WARNS?=	1
 
 CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../../lib/libipsec
 YFLAGS=	-d
@@ -41,13 +44,17 @@ CLEANFILES=	y.tab.c y.tab.h key_test.o keytest
 
 # libpfkey
 # ipsec_strerror.c is for avoiding shlib reference to non-exported function.
-.PATH: ${.CURDIR}/../../lib/libipsec ${.CURDIR}/../../sys/netkey
+.PATH: ${.CURDIR}/../../lib/libipsec ${.CURDIR}/../../sys/netipsec
 SRCS+= pfkey.c pfkey_dump.c key_debug.c ipsec_strerror.c
-CFLAGS+= -I${.CURDIR}/../../lib/libipsec -I${.CURDIR}/../../sys/netkey
+CFLAGS+= -I${.CURDIR}/../../lib/libipsec -I${.CURDIR}/../../sys/netipsec
 
 SRCS+=	y.tab.h
 y.tab.h: parse.y
-CFLAGS+= -DIPSEC_DEBUG -DINET6 -DYY_NO_UNPUT -I.
+CFLAGS+= -DIPSEC_DEBUG -DYY_NO_UNPUT
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+CFLAGS+= -I.
 DPADD+=	${LIBIPSEC}
 LDADD+=	-lipsec
 CLEANFILES+=	scriptdump y.tab.h
@@ -55,8 +62,6 @@ CLEANFILES+=	scriptdump y.tab.h
 #SCRIPTS= scriptdump
 
 LOCALPREFIX=	/usr
-
-WARNS=	1
 
 scriptdump: scriptdump.pl
 	sed -e 's#@LOCALPREFIX@#${LOCALPREFIX}#' < $> > scriptdump

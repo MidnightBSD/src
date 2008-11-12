@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sbin/setkey/setkey.c,v 1.6.14.1 2005/12/15 23:30:11 pjd Exp $	*/
+/*	$FreeBSD: src/sbin/setkey/setkey.c,v 1.7 2007/07/01 12:08:06 gnn Exp $	*/
 /*	$KAME: setkey.c,v 1.28 2003/06/27 07:15:45 itojun Exp $	*/
 
 /*
@@ -38,9 +38,9 @@
 #include <net/route.h>
 #include <netinet/in.h>
 #include <net/pfkeyv2.h>
-#include <netkey/keydb.h>
-#include <netkey/key_debug.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/keydb.h>
+#include <netipsec/key_debug.h>
+#include <netipsec/ipsec.h>
 
 #include <stdio.h>
 #include <stdlib.h>

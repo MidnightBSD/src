@@ -1,5 +1,5 @@
-/*	$FreeBSD: src/sbin/setkey/parse.y,v 1.8.2.1 2005/12/15 23:30:11 pjd Exp $	*/
-/*	$KAME: parse.y,v 1.82 2004/04/15 08:03:57 sakane Exp $	*/
+/*	$FreeBSD: src/sbin/setkey/parse.y,v 1.9 2007/07/01 12:08:06 gnn Exp $	*/
+/*	$KAME: parse.y,v 1.83 2004/05/18 08:48:23 sakane Exp $	*/
 
 /*
  * Copyright (C) 1995, 1996, 1997, 1998, and 1999 WIDE Project.
@@ -38,8 +38,8 @@
 #include <net/route.h>
 #include <netinet/in.h>
 #include <net/pfkeyv2.h>
-#include <netkey/key_var.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/key_var.h>
+#include <netipsec/ipsec.h>
 #include <arpa/inet.h>
 
 #include <string.h>

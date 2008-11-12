@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sbin/setkey/token.l,v 1.11.12.1 2005/12/15 23:30:11 pjd Exp $	*/
+/*	$FreeBSD: src/sbin/setkey/token.l,v 1.13 2007/07/01 12:08:06 gnn Exp $	*/
 /*	$KAME: token.l,v 1.43 2003/07/25 09:35:28 itojun Exp $	*/
 
 /*
@@ -36,10 +36,10 @@
 #include <sys/socket.h>
 #include <net/route.h>
 #include <net/pfkeyv2.h>
-#include <netkey/keydb.h>
-#include <netkey/key_debug.h>
+#include <netipsec/keydb.h>
+#include <netipsec/key_debug.h>
 #include <netinet/in.h>
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 
 #include <stdlib.h>
 #include <limits.h>
@@ -167,6 +167,7 @@ tcp		{ yylval.num = 0; return(PR_TCP); }
 <S_ENCALG>des-32iv	{ yylval.num = SADB_EALG_DESCBC; BEGIN INITIAL; return(ALG_ENC_DES32IV); }
 <S_ENCALG>rijndael-cbc	{ yylval.num = SADB_X_EALG_RIJNDAELCBC; BEGIN INITIAL; return(ALG_ENC); }
 <S_ENCALG>aes-ctr	{ yylval.num = SADB_X_EALG_AESCTR; BEGIN INITIAL; return(ALG_ENC); }
+<S_ENCALG>camellia-cbc	{ yylval.num = SADB_X_EALG_CAMELLIACBC; BEGIN INITIAL; return(ALG_ENC); }
 
 	/* compression algorithms */
 {hyphen}C	{ return(F_COMP); }
