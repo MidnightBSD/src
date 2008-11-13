@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/loader/main.c,v 1.31.2.1 2006/02/14 06:20:16 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/loader/main.c,v 1.40.2.1 2007/11/01 18:19:18 jhb Exp $");
 
 /*
  * MD bootstrap main() and assorted miscellaneous
@@ -72,6 +72,9 @@ extern	char bootprog_name[], bootprog_rev[], bootprog_date[], bootprog_maker[];
 /* XXX debugging */
 extern char end[];
 
+static void *heap_top;
+static void *heap_bottom;
+
 int
 main(void)
 {
@@ -88,7 +91,15 @@ main(void)
      */
     bios_getmem();
 
-    setheap((void *)end, (void *)bios_basemem);
+#if defined(LOADER_BZIP2_SUPPORT) || defined(LOADER_FIREWIRE_SUPPORT)
+    heap_top = PTOV(memtop_copyin);
+    memtop_copyin -= 0x300000;
+    heap_bottom = PTOV(memtop_copyin);
+#else
+    heap_top = (void *)bios_basemem;
+    heap_bottom = (void *)end;
+#endif
+    setheap(heap_bottom, heap_top);
 
     /* 
      * XXX Chicken-and-egg problem; we want to have console output early, but some
@@ -144,6 +155,9 @@ main(void)
     /* detect ACPI for future reference */
     biosacpi_detect();
 
+    /* detect SMBIOS for future reference */
+    smbios_detect();
+
     printf("\n");
     printf("%s, Revision %s\n", bootprog_name, bootprog_rev);
     printf("(%s, %s)\n", bootprog_maker, bootprog_date);
@@ -177,7 +191,7 @@ static void
 extract_currdev(void)
 {
     struct i386_devdesc	new_currdev;
-    int			major, biosdev = -1;
+    int			biosdev = -1;
 
     /* Assume we are booting from a BIOS disk by default */
     new_currdev.d_dev = &biosdisk;
@@ -187,11 +201,11 @@ extract_currdev(void)
         if ((kargs->bootflags & KARGS_FLAGS_CD) != 0) {
 	    /* we are booting from a CD with cdboot */
 	    new_currdev.d_dev = &bioscd;
-	    new_currdev.d_kind.bioscd.unit = bc_bios2unit(initial_bootdev);
+	    new_currdev.d_unit = bc_bios2unit(initial_bootdev);
 	} else if ((kargs->bootflags & KARGS_FLAGS_PXE) != 0) {
 	    /* we are booting from pxeldr */
 	    new_currdev.d_dev = &pxedisk;
-	    new_currdev.d_kind.netif.unit = 0;
+	    new_currdev.d_unit = 0;
 	} else {
 	    /* we don't know what our boot device is */
 	    new_currdev.d_kind.biosdisk.slice = -1;
@@ -204,15 +218,13 @@ extract_currdev(void)
 	new_currdev.d_kind.biosdisk.partition = 0;
 	biosdev = -1;
     } else {
-	new_currdev.d_kind.biosdisk.slice = (B_ADAPTOR(initial_bootdev) << 4) +
-					     B_CONTROLLER(initial_bootdev) - 1;
+	new_currdev.d_kind.biosdisk.slice = B_SLICE(initial_bootdev) - 1;
 	new_currdev.d_kind.biosdisk.partition = B_PARTITION(initial_bootdev);
 	biosdev = initial_bootinfo->bi_bios_dev;
-	major = B_TYPE(initial_bootdev);
 
 	/*
 	 * If we are booted by an old bootstrap, we have to guess at the BIOS
-	 * unit number.  We will loose if there is more than one disk type
+	 * unit number.  We will lose if there is more than one disk type
 	 * and we are not booting from the lowest-numbered disk type 
 	 * (ie. SCSI when IDE also exists).
 	 */
@@ -226,10 +238,10 @@ extract_currdev(void)
      * which one we booted off of, just use disk0: as a reasonable default.
      */
     if ((new_currdev.d_type == biosdisk.dv_type) &&
-	((new_currdev.d_kind.biosdisk.unit = bd_bios2unit(biosdev)) == -1)) {
+	((new_currdev.d_unit = bd_bios2unit(biosdev)) == -1)) {
 	printf("Can't work out which disk we are booting from.\n"
 	       "Guessed BIOS device 0x%x not found by probes, defaulting to disk0:\n", biosdev);
-	new_currdev.d_kind.biosdisk.unit = 0;
+	new_currdev.d_unit = 0;
     }
     env_setenv("currdev", EV_VOLATILE, i386_fmtdev(&new_currdev),
 	       i386_setcurrdev, env_nounset);
@@ -266,7 +278,8 @@ static int
 command_heap(int argc, char *argv[])
 {
     mallocstats();
-    printf("heap base at %p, top at %p\n", end, sbrk(0));
+    printf("heap base at %p, top at %p, upper limit at %p\n", heap_bottom,
+      sbrk(0), heap_top);
     return(CMD_OK);
 }
 

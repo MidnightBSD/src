@@ -24181,6 +24181,12 @@ sys/boot/i386/kgzldr/kgzldr.h -text
 sys/boot/i386/kgzldr/lib.c -text
 sys/boot/i386/kgzldr/sio.s -text
 sys/boot/i386/kgzldr/start.s -text
+sys/boot/i386/libfirewire/Makefile -text
+sys/boot/i386/libfirewire/dconsole.c -text
+sys/boot/i386/libfirewire/firewire.c -text
+sys/boot/i386/libfirewire/fwohci.c -text
+sys/boot/i386/libfirewire/fwohci.h -text
+sys/boot/i386/libfirewire/fwohcireg.h -text
 sys/boot/i386/libi386/Makefile -text
 sys/boot/i386/libi386/amd64_tramp.S -text
 sys/boot/i386/libi386/biosacpi.c -text

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/loader/conf.c,v 1.25 2004/08/29 00:48:42 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/loader/conf.c,v 1.26 2007/05/29 14:35:57 simokawa Exp $");
 
 #include <stand.h>
 #include <bootstrap.h>
@@ -46,12 +46,19 @@ __FBSDID("$FreeBSD: src/sys/boot/i386/loader/conf.c,v 1.25 2004/08/29 00:48:42 i
 #error "Cannot have both tftp and nfs support yet."
 #endif
 
+#if defined(LOADER_FIREWIRE_SUPPORT)
+extern struct devsw fwohci;
+#endif
+
 /* Exported for libstand */
 struct devsw *devsw[] = {
     &bioscd,
     &biosdisk,
 #if defined(LOADER_NFS_SUPPORT) || defined(LOADER_TFTP_SUPPORT)
     &pxedisk,
+#endif
+#if defined(LOADER_FIREWIRE_SUPPORT)
+    &fwohci,
 #endif
     NULL
 };
@@ -103,11 +110,17 @@ struct file_format *file_formats[] = {
  */
 extern struct console vidconsole;
 extern struct console comconsole;
+#if defined(LOADER_FIREWIRE_SUPPORT)
+extern struct console dconsole;
+#endif
 extern struct console nullconsole;
 
 struct console *consoles[] = {
     &vidconsole,
     &comconsole,
+#if defined(LOADER_FIREWIRE_SUPPORT)
+    &dconsole,
+#endif
     &nullconsole,
     NULL
 };
