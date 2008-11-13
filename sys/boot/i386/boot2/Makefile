@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/i386/boot2/Makefile,v 1.58 2005/03/15 18:43:36 obrien Exp $
+# $FreeBSD: src/sys/boot/i386/boot2/Makefile,v 1.60 2007/05/19 05:07:47 kan Exp $
 
 FILES=		boot boot1 boot2
 
@@ -36,7 +36,8 @@ CFLAGS=	-Os \
 	-I${.CURDIR}/../btx/lib -I. \
 	-Wall -Waggregate-return -Wbad-function-cast -Wcast-align \
 	-Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
-	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings
+	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings \
+	-Winline --param max-inline-insns-single=100
 
 LDFLAGS=-static -N --gc-sections
 

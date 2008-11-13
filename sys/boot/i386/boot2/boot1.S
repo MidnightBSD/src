@@ -12,7 +12,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: src/sys/boot/i386/boot2/boot1.S,v 1.30 2004/08/28 08:32:23 yar Exp $
+ * $FreeBSD: src/sys/boot/i386/boot2/boot1.S,v 1.31 2006/04/11 20:09:42 jhb Exp $
  */
 
 /* Memory Locations */
@@ -212,7 +212,7 @@ seta20.2:	inb $0x64,%al			# Get status
 		jnz seta20.2			# Yes
 		movb $0xdf,%al			# Enable
 		outb %al,$0x60			#  A20
-seta20.3:	sti				# Enable interupts
+seta20.3:	sti				# Enable interrupts
 
 		jmp start+MEM_JMP-MEM_ORG	# Start BTX
 
