@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/ofw/libofw/libofw.h,v 1.10.2.1 2005/11/30 13:19:03 marius Exp $
+ * $FreeBSD: src/sys/boot/ofw/libofw/libofw.h,v 1.12 2006/11/02 01:23:18 marcel Exp $
  */
 
 #include "openfirm.h"
@@ -31,6 +31,7 @@
 struct ofw_devdesc {
 	struct devsw	*d_dev;
 	int		d_type;
+	int		d_unit;
 	ihandle_t	d_handle;
 	char		d_path[256];
 };

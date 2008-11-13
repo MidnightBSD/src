@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/ofw/libofw/ofw_copy.c,v 1.15 2005/05/19 07:21:46 grehan Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/ofw/libofw/ofw_copy.c,v 1.16 2005/07/22 23:22:29 grehan Exp $");
 
 /*
  * MD primitives supporting placement of module data 
@@ -39,6 +39,8 @@ __FBSDID("$FreeBSD: src/sys/boot/ofw/libofw/ofw_copy.c,v 1.15 2005/05/19 07:21:4
 #define	READIN_BUF	(4 * 1024)
 #define	PAGE_SIZE	0x1000
 #define	PAGE_MASK	0x0fff
+#define MAPMEM_PAGE_INC 16
+
 
 #define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))
 
@@ -76,10 +78,10 @@ ofw_mapmem(vm_offset_t dest, const size_t len)
 
 	/*
 	 * To avoid repeated mappings on small allocations,
-	 * never map anything less than 16 pages at a time
+	 * never map anything less than MAPMEM_PAGE_INC pages at a time
 	 */
-	if ((nlen + resid) < PAGE_SIZE*8) {
-		dlen = PAGE_SIZE*8;
+	if ((nlen + resid) < PAGE_SIZE*MAPMEM_PAGE_INC) {
+		dlen = PAGE_SIZE*MAPMEM_PAGE_INC;
 	} else
 		dlen = roundup(nlen + resid, PAGE_SIZE);
 

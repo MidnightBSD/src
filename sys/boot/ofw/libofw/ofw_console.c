@@ -27,14 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/ofw/libofw/ofw_console.c,v 1.10.2.1 2005/11/30 13:13:53 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/ofw/libofw/ofw_console.c,v 1.12 2007/06/17 00:17:15 marius Exp $");
 
 #include <sys/types.h>
 
 #include "bootstrap.h"
 #include "openfirm.h"
-
-int console;
 
 static void ofw_cons_probe(struct console *cp);
 static int ofw_cons_init(int);
@@ -59,10 +57,7 @@ struct console ofwconsole = {
 static void
 ofw_cons_probe(struct console *cp)
 {
-	phandle_t chosen;
 
-	if ((chosen = OF_finddevice("/chosen")) == -1)
-		OF_exit();
 	OF_getprop(chosen, "stdin", &stdin, sizeof(stdin));
 	OF_getprop(chosen, "stdout", &stdout, sizeof(stdout));
 	cp->c_flags |= C_PRESENTIN|C_PRESENTOUT;

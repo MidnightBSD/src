@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/ofw/libofw/devicename.c,v 1.15.8.1 2005/11/30 13:24:53 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/ofw/libofw/devicename.c,v 1.16 2005/10/25 12:49:56 marius Exp $");
 
 #include <stand.h>
 #include "libofw.h"

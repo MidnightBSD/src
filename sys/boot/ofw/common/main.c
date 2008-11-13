@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/ofw/common/main.c,v 1.7 2004/08/16 15:45:24 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/ofw/common/main.c,v 1.9 2007/06/17 00:17:15 marius Exp $");
 
 #include <stand.h>
 #include "openfirm.h"
@@ -41,7 +41,6 @@ extern char bootprog_rev[];
 extern char bootprog_date[];
 extern char bootprog_maker[];
 
-phandle_t	chosen;
 u_int32_t	acells;
 
 static char bootargs[128];
@@ -64,24 +63,22 @@ init_heap(void)
 uint64_t
 memsize(void)
 {
-	ihandle_t	meminstance;
-	phandle_t	memory;
+	phandle_t	memoryp;
 	struct ofw_reg	reg[4];
 	struct ofw_reg2	reg2[8];
 	int		i;
 	u_int64_t	sz, memsz;
 
-	OF_getprop(chosen, "memory", &meminstance, sizeof(meminstance));
-	memory = OF_instance_to_package(meminstance);
+	memoryp = OF_instance_to_package(memory);
 
 	if (acells == 1) {
-		sz = OF_getprop(memory, "reg", &reg, sizeof(reg));
+		sz = OF_getprop(memoryp, "reg", &reg, sizeof(reg));
 		sz /= sizeof(struct ofw_reg);
 
 		for (i = 0, memsz = 0; i < sz; i++)
 			memsz += reg[i].size;
 	} else if (acells == 2) {
-		sz = OF_getprop(memory, "reg", &reg2, sizeof(reg2));
+		sz = OF_getprop(memoryp, "reg", &reg2, sizeof(reg2));
 		sz /= sizeof(struct ofw_reg2);
 
 		for (i = 0, memsz = 0; i < sz; i++)
@@ -107,7 +104,6 @@ main(int (*openfirm)(void *))
 	OF_init(openfirm);
 
 	root = OF_finddevice("/");
-	chosen = OF_finddevice("/chosen");
 
 	acells = 1;
 	OF_getprop(root, "#address-cells", &acells, sizeof(acells));
@@ -123,11 +119,6 @@ main(int (*openfirm)(void *))
 	 * safe.
 	 */
 	init_heap();
-
-	/*
-	 * Initialise the block cache
-	 */
-	bcache_init(32, 512);		/* 16k XXX tune this */
 
 	/*
 	 * March through the device switch probing for things.

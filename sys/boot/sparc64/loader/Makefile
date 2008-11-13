@@ -1,4 +1,6 @@
-# $FreeBSD: src/sys/boot/sparc64/loader/Makefile,v 1.19 2004/12/21 12:32:15 ru Exp $
+# $FreeBSD: src/sys/boot/sparc64/loader/Makefile,v 1.20 2006/03/17 18:54:36 ru Exp $
+
+.include <bsd.own.mk>
 
 PROG=		loader
 NEWVERSWHAT=	"bootstrap loader" sparc64
@@ -41,7 +43,7 @@ CFLAGS+=	-DLOADER_NFS_SUPPORT
 CFLAGS+=	-DLOADER_TFTP_SUPPORT
 .endif
 
-.if !defined(NO_FORTH)
+.if ${MK_FORTH} != "no"
 # Enable BootForth
 BOOT_FORTH=	yes
 CFLAGS+=	-DBOOT_FORTH -I${.CURDIR}/../../ficl -I${.CURDIR}/../../ficl/sparc64

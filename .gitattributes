@@ -24226,6 +24226,14 @@ sys/boot/i386/mbr/mbr.s -text
 sys/boot/i386/pxeldr/Makefile -text
 sys/boot/i386/pxeldr/pxeboot.8 -text
 sys/boot/i386/pxeldr/pxeldr.S -text
+sys/boot/ia64/common/Makefile -text
+sys/boot/ia64/common/autoload.c -text
+sys/boot/ia64/common/bootinfo.c -text
+sys/boot/ia64/common/copy.c -text
+sys/boot/ia64/common/devicename.c -text
+sys/boot/ia64/common/exec.c -text
+sys/boot/ia64/common/libia64.h -text
+sys/boot/ia64/ski/skimd.c -text
 sys/boot/ofw/Makefile -text
 sys/boot/ofw/common/Makefile.inc -text
 sys/boot/ofw/common/main.c -text
