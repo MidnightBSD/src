@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/contrib/netcat/netcat.c,v 1.2 2007/10/23 17:52:49 laffer1 Exp $
  */
 
 /*
@@ -42,7 +42,7 @@
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #ifdef IPSEC
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 #endif
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
