@@ -1,4 +1,6 @@
-# $FreeBSD: src/sys/boot/i386/loader/Makefile,v 1.81.2.1 2005/10/30 14:37:02 scottl Exp $
+# $FreeBSD: src/sys/boot/i386/loader/Makefile,v 1.85 2007/05/29 14:35:57 simokawa Exp $
+
+.include <bsd.own.mk>
 
 PROG=		loader.sym
 INTERNALPROG=
@@ -7,6 +9,12 @@ NEWVERSWHAT=	"bootstrap loader" i386
 # architecture-specific loader code
 SRCS=		main.c conf.c vers.c
 
+# Put LOADER_FIREWIRE_SUPPORT=yes in /etc/make.conf for FireWire/dcons support
+.if defined(LOADER_FIREWIRE_SUPPORT)
+CFLAGS+=	-DLOADER_FIREWIRE_SUPPORT
+LIBFIREWIRE=	${.OBJDIR}/../libfirewire/libfirewire.a
+.endif
+
 # Enable PXE TFTP or NFS support, not both.
 .if defined(LOADER_TFTP_SUPPORT)
 CFLAGS+=	-DLOADER_TFTP_SUPPORT
@@ -14,11 +22,14 @@ CFLAGS+=	-DLOADER_TFTP_SUPPORT
 CFLAGS+=	-DLOADER_NFS_SUPPORT
 .endif
 
+# Include bcache code.
+HAVE_BCACHE=	yes
+
 # Enable PnP and ISA-PnP code.
 HAVE_PNP=	yes
 HAVE_ISABUS=	yes
 
-.if !defined(NO_FORTH)
+.if ${MK_FORTH} != "no"
 # Enable BootForth
 BOOT_FORTH=	yes
 CFLAGS+=	-DBOOT_FORTH -I${.CURDIR}/../../ficl -I${.CURDIR}/../../ficl/i386
@@ -85,8 +96,8 @@ FILES+=	loader.rc
 # XXX crt0.o needs to be first for pxeboot(8) to work
 OBJS=	${BTXCRT} 
 
-DPADD=	${LIBFICL} ${LIBI386} ${LIBSTAND}
-LDADD=	${LIBFICL} ${LIBI386} -lstand
+DPADD=	${LIBFICL} ${LIBFIREWIRE} ${LIBI386} ${LIBSTAND}
+LDADD=	${LIBFICL} ${LIBFIREWIRE} ${LIBI386} -lstand
 
 .include <bsd.prog.mk>
 
