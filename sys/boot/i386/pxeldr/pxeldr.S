@@ -13,7 +13,7 @@
  * purpose.
  *
  * $MidnightBSD$
- * $FreeBSD: src/sys/boot/i386/pxeldr/pxeldr.S,v 1.13 2004/05/14 20:29:30 ru Exp $
+ * $FreeBSD: src/sys/boot/i386/pxeldr/pxeldr.S,v 1.15 2006/09/05 19:28:03 ru Exp $
  */
 
 /*
@@ -25,6 +25,8 @@
  * /boot/loader to be booted over the network via PXE w/o having to write a
  * separate PXE-aware client just to load the loader.
  */
+
+#include <sys/reboot.h>
 
 /*
  * Memory locations.
@@ -53,10 +55,6 @@
  */
 		.set KARGS_FLAGS_PXE,0x2	# flag to indicate booting from
 						#  PXE loader
-/*
- * Boot howto bits
- */
-		.set RB_SERIAL,0x1000		# serial console
 /*
  * Segment selectors.
  */
@@ -120,11 +118,11 @@ start:		cld				# string ops inc
 #ifdef PROBE_KEYBOARD
 /*
  * Look at the BIOS data area to see if we have an enhanced keyboard.  If not,
- * set the RBX_SERIAL bit in the howto byte.
+ * set the RBX_DUAL and RBX_SERIAL bits in the howto byte.
  */
 		testb $KEYBOARD_BIT, MEM_BIOS_KEYBOARD # keyboard present?
 		jnz keyb			# yes, so skip
-		orl $RB_SERIAL, (%bx)		# enable serial console
+		orl $(RB_MULTIPLE | RB_SERIAL), (%bx) # enable serial console
 keyb:
 #endif
 /*
@@ -228,13 +226,17 @@ putc:		movw $0x7,%bx			# attribute for output
 		jmp putstr			# keep looping
 
 /*
- * Enable A20
+ * Enable A20. Put an upper limit on the amount of time we wait for the
+ * keyboard controller to get ready (65K x ISA access time). If
+ * we wait more than that amount, the hardware is probably
+ * legacy-free and simply doesn't have a keyboard controller.
+ * Thus, the A20 line is already enabled.
  */
 seta20: 	cli				# Disable interrupts
 		xor %cx,%cx			# Clear
 seta20.1:	inc %cx				# Increment, overflow?
 		jz seta20.3			# Yes
-		inb $0x64,%al			# Get Status
+		inb $0x64,%al			# Get status
 		testb $0x2,%al			# Busy?
 		jnz seta20.1			# Yes
 		movb $0xd1,%al			# Command: Write
