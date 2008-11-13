@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/elf32_freebsd.c,v 1.14 2004/08/29 00:48:41 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/elf32_freebsd.c,v 1.17 2006/11/02 17:28:38 ru Exp $");
 
 #include <sys/param.h>
 #include <sys/exec.h>
@@ -46,7 +46,7 @@ struct file_format i386_elf = { elf32_loadfile, elf32_exec };
 struct file_format i386_elf_obj = { elf32_obj_loadfile, elf32_obj_exec };
 
 /*
- * There is an a.out kernel and one or more a.out modules loaded.  
+ * There is an ELF kernel and one or more ELF modules loaded.  
  * We wish to start executing the kernel image, so make such 
  * preparations as are required, and do so.
  */

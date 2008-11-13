@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/bioscd.c,v 1.8 2005/05/20 13:14:18 charnier Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/bioscd.c,v 1.9.2.1 2007/11/01 18:19:18 jhb Exp $");
 
 /*
  * BIOS CD device handling for CD's that have been booted off of via no
@@ -195,7 +195,7 @@ bc_open(struct open_file *f, ...)
 	va_start(ap, f);
 	dev = va_arg(ap, struct i386_devdesc *);
 	va_end(ap);
-	if (dev->d_kind.bioscd.unit >= nbcinfo) {
+	if (dev->d_unit >= nbcinfo) {
 		DEBUG("attempt to open nonexistent disk");
 		return(ENXIO);
 	}
@@ -230,7 +230,7 @@ bc_strategy(void *devdata, int rw, daddr_t dblk, size_t size, char *buf,
 	if (rw != F_READ)
 		return(EROFS);
 	dev = (struct i386_devdesc *)devdata;
-	unit = dev->d_kind.bioscd.unit;
+	unit = dev->d_unit;
 	blks = size / BIOSCD_SECSIZE;
 	if (dblk % (BIOSCD_SECSIZE / DEV_BSIZE) != 0)
 		return (EINVAL);
@@ -331,7 +331,7 @@ bc_getdev(struct i386_devdesc *dev)
     int major;
     int rootdev;
 
-    unit = dev->d_kind.bioscd.unit;
+    unit = dev->d_unit;
     biosdev = bc_unit2bios(unit);
     DEBUG("unit %d BIOS device %d", unit, biosdev);
     if (biosdev == -1)				/* not a BIOS device */
@@ -350,7 +350,7 @@ bc_getdev(struct i386_devdesc *dev)
     unit = 0;	/* XXX */
 
     /* XXX: Assume partition 'a'. */
-    rootdev = MAKEBOOTDEV(major, 0, 0, unit, 0);
+    rootdev = MAKEBOOTDEV(major, 0, unit, 0);
     DEBUG("dev is 0x%x\n", rootdev);
     return(rootdev);
 }

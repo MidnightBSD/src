@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biospci.c,v 1.5 2004/10/22 14:56:23 simokawa Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biospci.c,v 1.6 2006/09/29 20:27:41 ru Exp $");
 
 /*
  * PnP enumerator using the PCI BIOS.
@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biospci.c,v 1.5 2004/10/22 14:56:2
 #include <bootstrap.h>
 #include <isapnp.h>
 #include <btxv86.h>
+#include "libi386.h"
 
 /*
  * Stupid PCI BIOS interface doesn't let you simply enumerate everything

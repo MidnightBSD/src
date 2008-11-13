@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/elf64_freebsd.c,v 1.15 2004/08/29 00:48:41 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/elf64_freebsd.c,v 1.17 2006/10/26 20:04:22 ru Exp $");
 
 #define __ELF_WORD_SIZE 64
 #include <sys/param.h>
@@ -61,10 +61,10 @@ extern p2_entry_t PT2[];
 u_int32_t entry_hi;
 u_int32_t entry_lo;
 
-extern amd64_tramp();
+extern void amd64_tramp();
 
 /*
- * There is an a.out kernel and one or more a.out modules loaded.  
+ * There is an ELF kernel and one or more ELF modules loaded.  
  * We wish to start executing the kernel image, so make such 
  * preparations as are required, and do so.
  */

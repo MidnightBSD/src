@@ -24206,6 +24206,7 @@ sys/boot/i386/libi386/pread.c -text
 sys/boot/i386/libi386/pxe.c -text
 sys/boot/i386/libi386/pxe.h -text
 sys/boot/i386/libi386/pxetramp.s -text
+sys/boot/i386/libi386/smbios.c -text
 sys/boot/i386/libi386/time.c -text
 sys/boot/i386/libi386/vidconsole.c -text
 sys/boot/i386/loader/Makefile -text

@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/comconsole.c,v 1.10.10.1 2006/01/27 01:36:24 emaste Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/comconsole.c,v 1.11 2005/08/18 01:39:43 iedowse Exp $");
 
 #include <stand.h>
 #include <bootstrap.h>

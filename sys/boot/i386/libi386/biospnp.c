@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biospnp.c,v 1.9 2003/08/25 23:28:31 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biospnp.c,v 1.10 2005/12/19 09:00:11 sobomax Exp $");
 
 /*
  * PnP BIOS enumerator.
@@ -165,7 +165,7 @@ biospnp_enumerate(void)
     if (biospnp_init())
 	return;
 
-    devNodeBuffer = (struct pnp_devNode *)malloc(pnp_NodeSize);
+    devNodeBuffer = (struct pnp_devNode *)alloca(pnp_NodeSize);
     Node = 0;
     count = 1000;
     while((Node != 0xff) && (count-- > 0)) {

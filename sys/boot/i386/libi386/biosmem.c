@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biosmem.c,v 1.7 2003/08/25 23:28:31 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biosmem.c,v 1.8 2005/12/21 02:17:58 sobomax Exp $");
 
 /*
  * Obtain memory configuration information from the BIOS
@@ -34,7 +34,7 @@ __FBSDID("$FreeBSD: src/sys/boot/i386/libi386/biosmem.c,v 1.7 2003/08/25 23:28:3
 #include "libi386.h"
 #include "btxv86.h"
 
-vm_offset_t	memtop;
+vm_offset_t	memtop, memtop_copyin;
 u_int32_t	bios_basemem, bios_extmem;
 
 #define SMAPSIG	0x534D4150
@@ -101,7 +101,7 @@ bios_getmem(void)
     }
 
     /* Set memtop to actual top of memory */
-    memtop = 0x100000 + bios_extmem;
+    memtop = memtop_copyin = 0x100000 + bios_extmem;
 
 }    
 

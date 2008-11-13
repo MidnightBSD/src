@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/bootinfo64.c,v 1.36 2003/08/25 23:28:31 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/bootinfo64.c,v 1.37 2006/09/29 20:27:41 ru Exp $");
 
 #include <stand.h>
 #include <sys/param.h>
@@ -143,9 +143,7 @@ bi_load64(char *args, vm_offset_t *modulep, vm_offset_t *kernendp)
     u_int64_t			envp;
     vm_offset_t			size;
     char			*rootdevname;
-    int				i, howto;
-    char			*kernelname;
-    const char			*kernelpath;
+    int				howto;
 
     howto = bi_getboothowto(args);
 

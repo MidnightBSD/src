@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/i386/libi386/libi386.h,v 1.20.2.1 2006/02/14 06:20:15 ru Exp $
+ * $FreeBSD: src/sys/boot/i386/libi386/libi386.h,v 1.27 2006/11/02 01:23:17 marcel Exp $
  */
 
 
@@ -36,24 +36,19 @@ struct i386_devdesc
 {
     struct devsw	*d_dev;
     int			d_type;
+    int			d_unit;
     union 
     {
 	struct 
 	{
-	    int		unit;
+	    void	*data;
 	    int		slice;
 	    int		partition;
-	    void	*data;
 	} biosdisk;
 	struct
 	{
-	    int		unit;
 	    void	*data;
 	} bioscd;
-	struct 
-	{
-	    int		unit;		/* XXX net layer lives over these? */
-	} netif;
     } d_kind;
 };
 
@@ -91,15 +86,18 @@ void	bios_getsmap(void);
 void	bios_getmem(void);
 extern u_int32_t	bios_basemem;				/* base memory in bytes */
 extern u_int32_t	bios_extmem;				/* extended memory in bytes */
-extern vm_offset_t	memtop;
+extern vm_offset_t	memtop;		/* last address of physical memory + 1 */
+extern vm_offset_t	memtop_copyin;	/* memtop less heap size for the cases */
+					/*  when heap is at the top of extended memory */
+					/*  for other cases - just the same as memtop */
 
-int biospci_find_devclass(uint32_t class, int index);
-int biospci_write_config(uint32_t locator, int offset, int width, int val);
+int biospci_find_devclass(uint32_t class, int index, uint32_t *locator);
+int biospci_write_config(uint32_t locator, int offset, int width, uint32_t val);
 int biospci_read_config(uint32_t locator, int offset, int width, uint32_t *val);
 
-void	biosacpi_detect();
+void	biosacpi_detect(void);
 
-void	gateA20(void);
+void	smbios_detect(void);
 
 int	i386_autoload(void);
 

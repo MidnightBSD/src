@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/i386_copy.c,v 1.10 2003/08/25 23:28:31 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/i386/libi386/i386_copy.c,v 1.12 2005/12/21 02:17:58 sobomax Exp $");
 
 /*
  * MD primitives supporting placement of module data 
@@ -36,8 +36,6 @@ __FBSDID("$FreeBSD: src/sys/boot/i386/libi386/i386_copy.c,v 1.10 2003/08/25 23:2
 
 #include "libi386.h"
 #include "btxv86.h"
-
-#define READIN_BUF	(16 * 1024)
 
 ssize_t
 i386_copyin(const void *src, vm_offset_t dest, const size_t len)
@@ -67,25 +65,11 @@ i386_copyout(const vm_offset_t src, void *dest, const size_t len)
 ssize_t
 i386_readin(const int fd, vm_offset_t dest, const size_t len)
 {
-    void	*buf;
-    size_t	resid, chunk, get;
-    ssize_t	got;
 
-    if (dest + len >= memtop)
-	return(0);
-
-    chunk = min(READIN_BUF, len);
-    buf = malloc(chunk);
-    if (buf == NULL)
-	return(0);
-
-    for (resid = len; resid > 0; resid -= got, dest += got) {
-	get = min(chunk, resid);
-	got = read(fd, buf, get);
-	if (got <= 0)
-	    break;
-	bcopy(buf, PTOV(dest), (size_t)got);
+    if (dest + len >= memtop_copyin) {
+	errno = EFBIG;
+	return(-1);
     }
-    free(buf);
-    return(len - resid);
+
+    return (read(fd, PTOV(dest), len));
 }
