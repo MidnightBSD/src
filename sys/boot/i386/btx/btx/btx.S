@@ -13,7 +13,7 @@
  * purpose.
  *
  * $MidnightBSD$
- * $FreeBSD: /repoman/r/ncvs/src/sys/boot/i386/btx/btx/btx.S,v 1.43 2006/10/05 15:30:51 jhb Exp $
+ * $FreeBSD: src/sys/boot/i386/btx/btx/btx.S,v 1.44 2006/12/06 17:45:35 jhb Exp $
  */
 
 /*
@@ -500,6 +500,8 @@ v86mon.4:	cmpb $0xfa,%al			# CLI?
 		je v86cli			# Yes
 		cmpb $0xfb,%al			# STI?
 		je v86sti			# Yes
+		cmpb $0xcc,%al			# INT3?
+		je v86mon.7			# Yes, ignore
 		movzwl 0x38(%ebp),%ebx		# Load V86 SS
 		shll $0x4,%ebx			# To offset
 		pushl %ebx			# Save
