@@ -1,6 +1,6 @@
 set -e
 
-# $FreeBSD: src/usr.bin/kdump/mkioctls,v 1.37 2004/06/16 23:39:33 mlaier Exp $
+# $FreeBSD: src/usr.bin/kdump/mkioctls,v 1.39 2007/07/14 21:49:24 rwatson Exp $
 
 if [ "x$1" = "x-s" ]; then
 	use_switch=1
@@ -38,15 +38,17 @@ BEGIN {
 	print "#include <sys/socket.h>"
 	print "#include <sys/time.h>"
 	print "#include <sys/tty.h>"
+	print "#include <bsm/audit.h>"
 	print "#include <net/ethernet.h>"
 	print "#include <net/if.h>"
 	print "#include <net/if_var.h>"
 	print "#include <net/pfvar.h>"
 	print "#include <net/route.h>"
-	print "#include <netatm/atm.h>"
-	print "#include <netatm/atm_if.h>"
-	print "#include <netatm/atm_sap.h>"
-	print "#include <netatm/atm_sys.h>"
+# Disabled in 7.0 as netatm is not MPSAFE.
+#	print "#include <netatm/atm.h>"
+#	print "#include <netatm/atm_if.h>"
+#	print "#include <netatm/atm_sap.h>"
+#	print "#include <netatm/atm_sys.h>"
 	print "#include <netinet/in.h>"
 	print "#include <netinet/ip_mroute.h>"
 	print "#include <netinet6/in6_var.h>"

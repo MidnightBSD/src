@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)kdump.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/kdump/kdump.c,v 1.26.2.2 2006/02/14 03:28:31 rwatson Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/kdump/kdump.c,v 1.37.2.1.2.1 2008/01/12 00:07:50 jhb Exp $");
 
 #define _KERNEL
 extern int errno;
@@ -57,7 +57,8 @@ extern int errno;
 #include <sys/uio.h>
 #include <sys/ktrace.h>
 #include <sys/ioctl.h>
-#include <sys/ptrace.h>
+#include <sys/socket.h>
+#include <dlfcn.h>
 #include <err.h>
 #include <locale.h>
 #include <stdio.h>
@@ -66,6 +67,7 @@ extern int errno;
 #include <unistd.h>
 #include <vis.h>
 #include "ktrace.h"
+#include "kdump_subr.h"
 
 int fread_tail(void *, int, int);
 void dumpheader(struct ktr_header *);
@@ -253,7 +255,7 @@ dumpheader(struct ktr_header *kth)
 		type = "PSIG";
 		break;
 	case KTR_CSW:
-		type = "CSW";
+		type = "CSW ";
 		break;
 	case KTR_USER:
 		type = "USER";
@@ -300,12 +302,6 @@ dumpheader(struct ktr_header *kth)
 #undef KTRACE
 int nsyscalls = sizeof (syscallnames) / sizeof (syscallnames[0]);
 
-static const char *ptrace_ops[] = {
-	"PT_TRACE_ME",	"PT_READ_I",	"PT_READ_D",	"PT_READ_U",
-	"PT_WRITE_I",	"PT_WRITE_D",	"PT_WRITE_U",	"PT_CONTINUE",
-	"PT_KILL",	"PT_STEP",	"PT_ATTACH",	"PT_DETACH",
-};
-
 void
 ktrsyscall(struct ktr_syscall *ktr)
 {
@@ -320,14 +316,20 @@ ktrsyscall(struct ktr_syscall *ktr)
 	if (narg) {
 		char c = '(';
 		if (fancy) {
+
+#define print_number(i,n,c) do {                      \
+	if (decimal)                                  \
+		(void)printf("%c%ld", c, (long)*i);   \
+	else                                          \
+		(void)printf("%c%#lx", c, (long)*i);  \
+	i++;                                          \
+	n--;                                          \
+	c = ',';                                      \
+	} while (0);
+
 			if (ktr->ktr_code == SYS_ioctl) {
 				const char *cp;
-				if (decimal)
-					(void)printf("(%ld", (long)*ip);
-				else
-					(void)printf("(%#lx", (long)*ip);
-				ip++;
-				narg--;
+				print_number(ip,narg,c);
 				if ((cp = ioctlname(*ip)) != NULL)
 					(void)printf(",%s", cp);
 				else {
@@ -340,48 +342,436 @@ ktrsyscall(struct ktr_syscall *ktr)
 				ip++;
 				narg--;
 			} else if (ktr->ktr_code == SYS_ptrace) {
-				if ((size_t)*ip < sizeof(ptrace_ops) /
-				    sizeof(ptrace_ops[0]) && *ip >= 0)
-					(void)printf("(%s", ptrace_ops[*ip]);
-#ifdef PT_GETREGS
-				else if (*ip == PT_GETREGS)
-					(void)printf("(%s", "PT_GETREGS");
-#endif
-#ifdef PT_SETREGS
-				else if (*ip == PT_SETREGS)
-					(void)printf("(%s", "PT_SETREGS");
-#endif
-#ifdef PT_GETFPREGS
-				else if (*ip == PT_GETFPREGS)
-					(void)printf("(%s", "PT_GETFPREGS");
-#endif
-#ifdef PT_SETFPREGS
-				else if (*ip == PT_SETFPREGS)
-					(void)printf("(%s", "PT_SETFPREGS");
-#endif
-#ifdef PT_GETDBREGS
-				else if (*ip == PT_GETDBREGS)
-					(void)printf("(%s", "PT_GETDBREGS");
-#endif
-#ifdef PT_SETDBREGS
-				else if (*ip == PT_SETDBREGS)
-					(void)printf("(%s", "PT_SETDBREGS");
-#endif
-				else
-					(void)printf("(%ld", (long)*ip);
+				(void)putchar('(');
+				ptraceopname ((int)*ip);
 				c = ',';
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_access ||
+				   ktr->ktr_code == SYS_eaccess) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				accessmodename ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_open) {
+				int	flags;
+				int	mode;
+				print_number(ip,narg,c);
+				flags = *ip;
+				mode = *++ip;
+				(void)putchar(',');
+				flagsandmodename (flags, mode, decimal);
+				ip++;
+				narg-=2;
+			} else if (ktr->ktr_code == SYS_wait4) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				wait4optname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_chmod ||
+				   ktr->ktr_code == SYS_fchmod ||
+				   ktr->ktr_code == SYS_lchmod) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				modename ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_mknod) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				modename ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_getfsstat) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				getfsstatflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_mount) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				mountflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_unmount) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				mountflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_recvmsg ||
+				   ktr->ktr_code == SYS_sendmsg) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				sendrecvflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_recvfrom ||
+				   ktr->ktr_code == SYS_sendto) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				sendrecvflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_chflags ||
+				   ktr->ktr_code == SYS_fchflags ||
+				   ktr->ktr_code == SYS_lchflags) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				modename((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_kill) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				signame((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_reboot) {
+				(void)putchar('(');
+				rebootoptname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_umask) {
+				(void)putchar('(');
+				modename((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_msync) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				msyncflagsname((int)*ip);
+				ip++;
+				narg--;
+#ifdef SYS_freebsd6_mmap
+			} else if (ktr->ktr_code == SYS_freebsd6_mmap) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				mmapprotname ((int)*ip);
+				(void)putchar(',');
+				ip++;
+				narg--;
+				mmapflagsname ((int)*ip);
+				ip++;
+				narg--;
+#endif
+			} else if (ktr->ktr_code == SYS_mmap) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				mmapprotname ((int)*ip);
+				(void)putchar(',');
+				ip++;
+				narg--;
+				mmapflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_mprotect) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				mmapprotname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_madvise) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				madvisebehavname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_setpriority) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				prioname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_fcntl) {
+				int cmd;
+				int arg;
+				print_number(ip,narg,c);
+				cmd = *ip;
+				arg = *++ip;
+				(void)putchar(',');
+				fcntlcmdname(cmd, arg, decimal);
+				ip++;
+				narg-=2;
+			} else if (ktr->ktr_code == SYS_socket) {
+				int sockdomain;
+				(void)putchar('(');
+				sockdomain=(int)*ip;
+				sockdomainname(sockdomain);
+				ip++;
+				narg--;
+				(void)putchar(',');
+				socktypename((int)*ip);
+				ip++;
+				narg--;
+				if (sockdomain == PF_INET ||
+				    sockdomain == PF_INET6) {
+					(void)putchar(',');
+					sockipprotoname((int)*ip);
+					ip++;
+					narg--;
+				}
+				c = ',';
+			} else if (ktr->ktr_code == SYS_setsockopt ||
+				   ktr->ktr_code == SYS_getsockopt) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				sockoptlevelname((int)*ip, decimal);
+				if ((int)*ip == SOL_SOCKET) {
+					ip++;
+					narg--;
+					(void)putchar(',');
+					sockoptname((int)*ip);
+				}
+				ip++;
+				narg--;
+#ifdef SYS_freebsd6_lseek
+			} else if (ktr->ktr_code == SYS_freebsd6_lseek) {
+				print_number(ip,narg,c);
+				/* Hidden 'pad' argument, not in lseek(2) */
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				whencename ((int)*ip);
+				ip++;
+				narg--;
+#endif
+			} else if (ktr->ktr_code == SYS_lseek) {
+				print_number(ip,narg,c);
+				/* Hidden 'pad' argument, not in lseek(2) */
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				whencename ((int)*ip);
+				ip++;
+				narg--;
+
+			} else if (ktr->ktr_code == SYS_flock) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				flockname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_mkfifo ||
+				   ktr->ktr_code == SYS_mkdir) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				modename((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_shutdown) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				shutdownhowname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_socketpair) {
+				(void)putchar('(');
+				sockdomainname((int)*ip);
+				ip++;
+				narg--;
+				(void)putchar(',');
+				socktypename((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS_getrlimit ||
+				   ktr->ktr_code == SYS_setrlimit) {
+				(void)putchar('(');
+				rlimitname((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS_quotactl) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				quotactlname((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS_nfssvc) {
+				(void)putchar('(');
+				nfssvcname((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS_rtprio) {
+				(void)putchar('(');
+				rtprioname((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS___semctl) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				semctlname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_semget) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				semgetname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_msgctl) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				shmctlname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_shmat) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				shmatname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_shmctl) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				shmctlname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_minherit) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				minheritname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_rfork) {
+				(void)putchar('(');
+				rforkname((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS_lio_listio) {
+				(void)putchar('(');
+				lio_listioname((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS_mlockall) {
+				(void)putchar('(');
+				mlockallname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_sched_setscheduler) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				schedpolicyname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_sched_get_priority_max ||
+				   ktr->ktr_code == SYS_sched_get_priority_min) {
+				(void)putchar('(');
+				schedpolicyname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_sendfile) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				sendfileflagsname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_kldsym) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				kldsymcmdname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_sigprocmask) {
+				(void)putchar('(');
+				sigprocmaskhowname((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS___acl_get_file ||
+				   ktr->ktr_code == SYS___acl_set_file ||
+				   ktr->ktr_code == SYS___acl_get_fd ||
+				   ktr->ktr_code == SYS___acl_set_fd ||
+				   ktr->ktr_code == SYS___acl_delete_file ||
+				   ktr->ktr_code == SYS___acl_delete_fd ||
+				   ktr->ktr_code == SYS___acl_aclcheck_file ||
+				   ktr->ktr_code == SYS___acl_aclcheck_fd ||
+				   ktr->ktr_code == SYS___acl_get_link ||
+				   ktr->ktr_code == SYS___acl_set_link ||
+				   ktr->ktr_code == SYS___acl_delete_link ||
+				   ktr->ktr_code == SYS___acl_aclcheck_link) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				acltypename((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_sigaction) {
+				(void)putchar('(');
+				signame((int)*ip);
+				ip++;
+				narg--;
+				c = ',';
+			} else if (ktr->ktr_code == SYS_extattrctl) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				extattrctlname((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_nmount) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				mountflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_kse_thr_interrupt) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				ksethrcmdname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_thr_create) {
+				print_number(ip,narg,c);
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				thrcreateflagsname ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_thr_kill) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				signame ((int)*ip);
+				ip++;
+				narg--;
+			} else if (ktr->ktr_code == SYS_kldunloadf) {
+				print_number(ip,narg,c);
+				(void)putchar(',');
+				kldunloadfflagsname ((int)*ip);
 				ip++;
 				narg--;
 			}
 		}
 		while (narg) {
-			if (decimal)
-				(void)printf("%c%ld", c, (long)*ip);
-			else
-				(void)printf("%c%#lx", c, (long)*ip);
-			c = ',';
-			ip++;
-			narg--;
+			print_number(ip,narg,c);
 		}
 		(void)putchar(')');
 	}
@@ -571,7 +961,10 @@ const char *signames[] = {
 void
 ktrpsig(struct ktr_psig *psig)
 {
-	(void)printf("SIG%s ", signames[psig->signo]);
+	if (psig->signo > 0 && psig->signo < NSIG)
+		(void)printf("SIG%s ", signames[psig->signo]);
+	else
+		(void)printf("SIG %d ", psig->signo);
 	if (psig->action == SIG_DFL)
 		(void)printf("SIG_DFL\n");
 	else {
@@ -587,9 +980,145 @@ ktrcsw(struct ktr_csw *cs)
 		cs->user ? "user" : "kernel");
 }
 
+#define	UTRACE_DLOPEN_START		1
+#define	UTRACE_DLOPEN_STOP		2
+#define	UTRACE_DLCLOSE_START		3
+#define	UTRACE_DLCLOSE_STOP		4
+#define	UTRACE_LOAD_OBJECT		5
+#define	UTRACE_UNLOAD_OBJECT		6
+#define	UTRACE_ADD_RUNDEP		7
+#define	UTRACE_PRELOAD_FINISHED		8
+#define	UTRACE_INIT_CALL		9
+#define	UTRACE_FINI_CALL		10
+
+struct utrace_rtld {
+	char sig[4];				/* 'RTLD' */
+	int event;
+	void *handle;
+	void *mapbase;
+	size_t mapsize;
+	int refcnt;
+	char name[MAXPATHLEN];
+};
+
+void
+ktruser_rtld(int len, unsigned char *p)
+{
+	struct utrace_rtld *ut = (struct utrace_rtld *)p;
+	void *parent;
+	int mode;
+
+	switch (ut->event) {
+	case UTRACE_DLOPEN_START:
+		mode = ut->refcnt;
+		printf("dlopen(%s, ", ut->name);
+		switch (mode & RTLD_MODEMASK) {
+		case RTLD_NOW:
+			printf("RTLD_NOW");
+			break;
+		case RTLD_LAZY:
+			printf("RTLD_LAZY");
+			break;
+		default:
+			printf("%#x", mode & RTLD_MODEMASK);
+		}
+		if (mode & RTLD_GLOBAL)
+			printf(" | RTLD_GLOBAL");
+		if (mode & RTLD_TRACE)
+			printf(" | RTLD_TRACE");
+		if (mode & ~(RTLD_MODEMASK | RTLD_GLOBAL | RTLD_TRACE))
+			printf(" | %#x", mode &
+			    ~(RTLD_MODEMASK | RTLD_GLOBAL | RTLD_TRACE));
+		printf(")\n");
+		break;
+	case UTRACE_DLOPEN_STOP:
+		printf("%p = dlopen(%s) ref %d\n", ut->handle, ut->name,
+		    ut->refcnt);
+		break;
+	case UTRACE_DLCLOSE_START:
+		printf("dlclose(%p) (%s, %d)\n", ut->handle, ut->name,
+		    ut->refcnt);
+		break;
+	case UTRACE_DLCLOSE_STOP:
+		printf("dlclose(%p) finished\n", ut->handle);
+		break;
+	case UTRACE_LOAD_OBJECT:
+		printf("RTLD: loaded   %p @ %p - %p (%s)\n", ut->handle,
+		    ut->mapbase, (char *)ut->mapbase + ut->mapsize - 1,
+		    ut->name);
+		break;
+	case UTRACE_UNLOAD_OBJECT:
+		printf("RTLD: unloaded %p @ %p - %p (%s)\n", ut->handle,
+		    ut->mapbase, (char *)ut->mapbase + ut->mapsize - 1,
+		    ut->name);
+		break;
+	case UTRACE_ADD_RUNDEP:
+		parent = ut->mapbase;
+		printf("RTLD: %p now depends on %p (%s, %d)\n", parent,
+		    ut->handle, ut->name, ut->refcnt);
+		break;
+	case UTRACE_PRELOAD_FINISHED:
+		printf("RTLD: LD_PRELOAD finished\n");
+		break;
+	case UTRACE_INIT_CALL:
+		printf("RTLD: init %p for %p (%s)\n", ut->mapbase, ut->handle,
+		    ut->name);
+		break;
+	case UTRACE_FINI_CALL:
+		printf("RTLD: fini %p for %p (%s)\n", ut->mapbase, ut->handle,
+		    ut->name);
+		break;
+	default:
+		p += 4;
+		len -= 4;
+		printf("RTLD: %d ", len);
+		while (len--)
+			if (decimal)
+				printf(" %d", *p++);
+			else
+				printf(" %02x", *p++);
+		printf("\n");
+	}
+}
+
+struct utrace_malloc {
+	void *p;
+	size_t s;
+	void *r;
+};
+
+void
+ktruser_malloc(int len, unsigned char *p)
+{
+	struct utrace_malloc *ut = (struct utrace_malloc *)p;
+
+	if (ut->p == NULL) {
+		if (ut->s == 0 && ut->r == NULL)
+			printf("malloc_init()\n");
+		else
+			printf("%p = malloc(%zu)\n", ut->r, ut->s);
+	} else {
+		if (ut->s == 0)
+			printf("free(%p)\n", ut->p);
+		else
+			printf("%p = realloc(%p, %zu)\n", ut->r, ut->p, ut->s);
+	}
+}
+
 void
 ktruser(int len, unsigned char *p)
 {
+
+	if (len >= 8 && bcmp(p, "RTLD", 4) == 0) {
+		ktruser_rtld(len, p);
+		return;
+	}
+
+	if (len == sizeof(struct utrace_malloc)) {
+		ktruser_malloc(len, p);
+		return;
+	}
+
 	(void)printf("%d ", len);
 	while (len--)
 		if (decimal)
@@ -597,7 +1126,6 @@ ktruser(int len, unsigned char *p)
 		else
 			(void)printf(" %02x", *p++);
 	(void)printf("\n");
-		
 }
 
 void
