@@ -38,11 +38,12 @@ static char sccsid[] = "From: @(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/route.c,v 1.76 2005/05/13 16:31:10 ume Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/netstat/route.c,v 1.82 2007/07/16 17:15:55 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <sys/time.h>
 
 #include <net/ethernet.h>
@@ -67,9 +68,9 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/route.c,v 1.76 2005/05/13 16:31:10 ume E
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 #include <unistd.h>
 #include <err.h>
-#include <time.h>
 #include "netstat.h"
 
 #define kget(p, d) (kread((u_long)(p), (char *)&(d), sizeof (d)))
@@ -118,6 +119,8 @@ struct	radix_node_head *rt_tables[AF_MAX+1];
 
 int	NewTree = 0;
 
+struct	timespec uptime;
+
 static struct sockaddr *kgetsa (struct sockaddr *);
 static void size_cols (int ef, struct radix_node *rn);
 static void size_cols_tree (struct radix_node *rn);
@@ -132,7 +135,6 @@ static const char *fmt_sockaddr (struct sockaddr *sa, struct sockaddr *mask,
 static void p_flags (int, const char *);
 static const char *fmt_flags(int f);
 static void p_rtentry (struct rtentry *);
-static u_long forgemask (u_long);
 static void domask (char *, u_long, u_long);
 
 /*
@@ -143,6 +145,14 @@ routepr(u_long rtree)
 {
 	struct radix_node_head *rnh, head;
 	int i;
+
+	/*
+	 * Since kernel & userland use different timebase
+	 * (time_uptime vs time_second) and we are reading kernel memory
+	 * directly we should do rt_rmx.rmx_expire --> expire_time conversion.
+	 */
+	if (clock_gettime(CLOCK_UPTIME, &uptime) < 0)
+		err(EX_OSERR, "clock_gettime() failed");
 
 	printf("Routing tables\n");
 
@@ -334,7 +344,7 @@ size_cols_rtentry(struct rtentry *rt)
 			time_t expire_time;
 
 			if ((expire_time =
-			    rt->rt_rmx.rmx_expire - time(NULL)) > 0) {
+			    rt->rt_rmx.rmx_expire - uptime.tv_sec) > 0) {
 				len = snprintf(buffer, sizeof(buffer), "%d",
 					       (int)expire_time);
 				wid_expire = MAX(len, wid_expire);
@@ -632,7 +642,7 @@ fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags)
 	case AF_NETGRAPH:
 	    {
 		strlcpy(workbuf, ((struct sockaddr_ng *)sa)->sg_data,
-			sizeof(workbuf));
+		        sizeof(workbuf));
 		cp = workbuf;
 		break;
 	    }
@@ -754,7 +764,7 @@ p_rtentry(struct rtentry *rt)
 			time_t expire_time;
 
 			if ((expire_time =
-			    rt->rt_rmx.rmx_expire - time((time_t *)0)) > 0)
+			    rt->rt_rmx.rmx_expire - uptime.tv_sec) > 0)
 				printf(" %*d", wid_expire, (int)expire_time);
 		}
 		if (rt->rt_nodes[0].rn_dupedkey)
@@ -791,26 +801,18 @@ routename(u_long in)
 	return (line);
 }
 
-static u_long
-forgemask(u_long a)
-{
-	u_long m;
-
-	if (IN_CLASSA(a))
-		m = IN_CLASSA_NET;
-	else if (IN_CLASSB(a))
-		m = IN_CLASSB_NET;
-	else
-		m = IN_CLASSC_NET;
-	return (m);
-}
+#define	NSHIFT(m) (							\
+	(m) == IN_CLASSA_NET ? IN_CLASSA_NSHIFT :			\
+	(m) == IN_CLASSB_NET ? IN_CLASSB_NSHIFT :			\
+	(m) == IN_CLASSC_NET ? IN_CLASSC_NSHIFT :			\
+	0)
 
 static void
 domask(char *dst, u_long addr, u_long mask)
 {
 	int b, i;
 
-	if (!mask || (forgemask(addr) == mask)) {
+	if (mask == 0 || (!numeric_addr && NSHIFT(mask) != 0)) {
 		*dst = '\0';
 		return;
 	}
@@ -843,27 +845,16 @@ netname(u_long in, u_long mask)
 	char *cp = 0;
 	static char line[MAXHOSTNAMELEN];
 	struct netent *np = 0;
-	u_long dmask;
 	u_long i;
 
-#define	NSHIFT(m) (							\
-	(m) == IN_CLASSA_NET ? IN_CLASSA_NSHIFT :			\
-	(m) == IN_CLASSB_NET ? IN_CLASSB_NSHIFT :			\
-	(m) == IN_CLASSC_NET ? IN_CLASSC_NSHIFT :			\
-	0)
-
 	i = ntohl(in);
-	dmask = forgemask(i);
 	if (!numeric_addr && i) {
 		np = getnetbyaddr(i >> NSHIFT(mask), AF_INET);
-		if (np == NULL && mask == 0)
-			np = getnetbyaddr(i >> NSHIFT(dmask), AF_INET);
 		if (np != NULL) {
 			cp = np->n_name;
 			trimdomain(cp, strlen(cp));
 		}
 	}
-#undef NSHIFT
 	if (cp != NULL) {
 		strncpy(line, cp, sizeof(line) - 1);
 		line[sizeof(line) - 1] = '\0';
@@ -873,6 +864,8 @@ netname(u_long in, u_long mask)
 	domask(line + strlen(line), i, mask);
 	return (line);
 }
+
+#undef NSHIFT
 
 #ifdef INET6
 const char *

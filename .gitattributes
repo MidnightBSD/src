@@ -31200,6 +31200,7 @@ usr.bin/netstat/netstat.1 -text
 usr.bin/netstat/netstat.h -text
 usr.bin/netstat/pfkey.c -text
 usr.bin/netstat/route.c -text
+usr.bin/netstat/sctp.c -text
 usr.bin/netstat/unix.c -text
 usr.bin/newgrp/Makefile -text
 usr.bin/newgrp/newgrp.1 -text

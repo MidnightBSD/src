@@ -40,13 +40,13 @@ static char sccsid[] = "@(#)mbuf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.42.8.6 2006/03/01 20:54:21 andre Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/netstat/mbuf.c,v 1.3 2007/02/12 18:49:10 laffer1 Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/netstat/mbuf.c,v 1.53 2007/07/16 17:15:55 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/mbuf.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <sys/sysctl.h>
 
 #include <err.h>
@@ -66,24 +66,23 @@ mbpr(void *kvmd, u_long mbaddr)
 {
 	struct memory_type_list *mtlp;
 	struct memory_type *mtp;
-	u_int64_t mbuf_count, mbuf_bytes, mbuf_free, mbuf_failures, mbuf_size;
-	u_int64_t cluster_count, cluster_bytes, cluster_limit, cluster_free;
-	u_int64_t cluster_failures, cluster_size;
-	u_int64_t packet_count, packet_bytes, packet_free, packet_failures;
-	u_int64_t tag_count, tag_bytes;
-	u_int64_t jumbop_count, jumbop_bytes, jumbop_limit, jumbop_free;
-	u_int64_t jumbop_failures, jumbop_size;
-	u_int64_t jumbo9_count, jumbo9_bytes, jumbo9_limit, jumbo9_free;
-	u_int64_t jumbo9_failures, jumbo9_size;
-	u_int64_t jumbo16_count, jumbo16_bytes, jumbo16_limit, jumbo16_free;
-	u_int64_t jumbo16_failures, jumbo16_size;
-	u_int64_t bytes_inuse, bytes_incache, bytes_total;
+	uintmax_t mbuf_count, mbuf_bytes, mbuf_free, mbuf_failures, mbuf_size;
+	uintmax_t cluster_count, cluster_bytes, cluster_limit, cluster_free;
+	uintmax_t cluster_failures, cluster_size;
+	uintmax_t packet_count, packet_bytes, packet_free, packet_failures;
+	uintmax_t tag_count, tag_bytes;
+	uintmax_t jumbop_count, jumbop_bytes, jumbop_limit, jumbop_free;
+	uintmax_t jumbop_failures, jumbop_size;
+	uintmax_t jumbo9_count, jumbo9_bytes, jumbo9_limit, jumbo9_free;
+	uintmax_t jumbo9_failures, jumbo9_size;
+	uintmax_t jumbo16_count, jumbo16_bytes, jumbo16_limit, jumbo16_free;
+	uintmax_t jumbo16_failures, jumbo16_size;
+	uintmax_t bytes_inuse, bytes_incache, bytes_total;
 	int nsfbufs, nsfbufspeak, nsfbufsused;
 	struct mbstat mbstat;
 	size_t mlen;
-	int error, live;
+	int error;
 
-	live = (kvmd == NULL);
 	mtlp = memstat_mtl_alloc();
 	if (mtlp == NULL) {
 		warn("memstat_mtl_alloc");

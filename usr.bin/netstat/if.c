@@ -10,7 +10,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,12 +38,12 @@ static char sccsid[] = "@(#)if.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/if.c,v 1.58.8.5 2005/11/16 08:27:46 ru Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/netstat/if.c,v 1.3 2007/03/20 21:24:40 laffer1 Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/netstat/if.c,v 1.69 2007/07/16 17:15:54 jhb Exp $");
 
 #include <sys/types.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
 
@@ -47,7 +51,6 @@ __MBSDID("$MidnightBSD: src/usr.bin/netstat/if.c,v 1.3 2007/03/20 21:24:40 laffe
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
-#include <net/bridge.h>
 #include <net/ethernet.h>
 #include <net/pfvar.h>
 #include <net/if_pfsync.h>
@@ -72,72 +75,33 @@ __MBSDID("$MidnightBSD: src/usr.bin/netstat/if.c,v 1.3 2007/03/20 21:24:40 laffe
 #define	YES	1
 #define	NO	0
 
-static void sidewaysintpr (u_int, u_long);
-static void catchalarm (int);
+static void sidewaysintpr(int, u_long);
+static void catchalarm(int);
 
 #ifdef INET6
 static char ntop_buf[INET6_ADDRSTRLEN];		/* for inet_ntop() */
-static int bdg_done;
 #endif
-
-/* print bridge statistics */
-void
-bdg_stats(u_long dummy __unused, const char *name, int af1 __unused)
-{
-    int i;
-    size_t slen ;
-    struct bdg_stats s ;
-    int mib[4] ;
-
-    slen = sizeof(s);
-
-    mib[0] = CTL_NET ;
-    mib[1] = PF_LINK ;
-    mib[2] = IFT_ETHER ;
-    mib[3] = PF_BDG ;
-    if (sysctl(mib,4, &s,&slen,NULL,0)==-1)
-	return ; /* no bridging */
-#ifdef INET6
-    if (bdg_done != 0)
-	return;
-    else
-	bdg_done = 1;
-#endif
-    printf("-- Bridging statistics (%s) --\n", name) ;
-    printf(
-"Name          In      Out  Forward     Drop    Bcast    Mcast    Local  Unknown\n");
-    for (i = 0 ; i < 16 ; i++) {
-	if (s.s[i].name[0])
-	printf("%-6s %9ld%9ld%9ld%9ld%9ld%9ld%9ld%9ld\n",
-	  s.s[i].name,
-	  s.s[i].p_in[(int)BDG_IN],
-	  s.s[i].p_in[(int)BDG_OUT],
-	  s.s[i].p_in[(int)BDG_FORWARD],
-	  s.s[i].p_in[(int)BDG_DROP],
-	  s.s[i].p_in[(int)BDG_BCAST],
-	  s.s[i].p_in[(int)BDG_MCAST],
-	  s.s[i].p_in[(int)BDG_LOCAL],
-	  s.s[i].p_in[(int)BDG_UNKNOWN] );
-    }
-}
 
 /* 
  * Dump pfsync statistics structure.
  */
 void
-pfsync_stats(u_long off __unused, const char *name, int af1 __unused)
+pfsync_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct pfsyncstats pfsyncstat, zerostat;
 	size_t len = sizeof(struct pfsyncstats);
 
-	if (zflag)
-		memset(&zerostat, 0, len);
-	if (sysctlbyname("net.inet.pfsync.stats", &pfsyncstat, &len,
-	    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
-		if (errno != ENOENT)
-			warn("sysctl: net.inet.pfsync.stats");
-		return;
-	}
+	if (live) {
+		if (zflag)
+			memset(&zerostat, 0, len);
+		if (sysctlbyname("net.inet.pfsync.stats", &pfsyncstat, &len,
+		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
+			if (errno != ENOENT)
+				warn("sysctl: net.inet.pfsync.stats");
+			return;
+		}
+	} else
+		kread(off, &pfsyncstat, len);
 
 	printf("%s:\n", name);
 
@@ -172,11 +136,22 @@ pfsync_stats(u_long off __unused, const char *name, int af1 __unused)
 static void
 show_stat(const char *fmt, int width, u_long value, short showvalue)
 {
+	const char *lsep, *rsep;
 	char newfmt[32];
 
+	lsep = "";
+	if (strncmp(fmt, "LS", 2) == 0) {
+		lsep = " ";
+		fmt += 2;
+	}
+	rsep = " ";
+	if (strncmp(fmt, "NRS", 3) == 0) {
+		rsep = "";
+		fmt += 3;
+	}
 	if (showvalue == 0) {
 		/* Print just dash. */
-		sprintf(newfmt, "%%%ds ", width);
+		sprintf(newfmt, "%s%%%ds%s", lsep, width, rsep);
 		printf(newfmt, "-");
 		return;
 	}
@@ -187,11 +162,11 @@ show_stat(const char *fmt, int width, u_long value, short showvalue)
 		/* Format in human readable form. */
 		humanize_number(buf, sizeof(buf), (int64_t)value, "",
 		    HN_AUTOSCALE, HN_NOSPACE | HN_DECIMAL);
-		sprintf(newfmt, "%%%ds ", width);
+		sprintf(newfmt, "%s%%%ds%s", lsep, width, rsep);
 		printf(newfmt, buf);
 	} else {
 		/* Construct the format string. */
-		sprintf(newfmt, "%%%d%s ", width, fmt);
+		sprintf(newfmt, "%s%%%d%s%s", lsep, width, fmt, rsep);
 		printf(newfmt, value);
 	}
 }
@@ -200,7 +175,7 @@ show_stat(const char *fmt, int width, u_long value, short showvalue)
  * Print a description of the network interfaces.
  */
 void
-intpr(int _interval, u_long ifnetaddr, void (*pfunc)(char *))
+intpr(int interval1, u_long ifnetaddr, void (*pfunc)(char *))
 {
 	struct ifnet ifnet;
 	struct ifnethead ifnethead;
@@ -235,8 +210,8 @@ intpr(int _interval, u_long ifnetaddr, void (*pfunc)(char *))
 		printf("ifnet: symbol not defined\n");
 		return;
 	}
-	if (_interval) {
-		sidewaysintpr((unsigned)_interval, ifnetaddr);
+	if (interval1) {
+		sidewaysintpr(interval1, ifnetaddr);
 		return;
 	}
 	if (kread(ifnetaddr, (char *)&ifnethead, sizeof ifnethead))
@@ -455,14 +430,13 @@ intpr(int _interval, u_long ifnetaddr, void (*pfunc)(char *))
 		if (bflag)
 			show_stat("lu", 10, obytes, link_layer|network_layer);
 
-		show_stat("lu", 5, collisions, link_layer);
+		show_stat("NRSlu", 5, collisions, link_layer);
 		if (tflag)
-			show_stat("d", 4, timer, link_layer);
-
+			show_stat("LSd", 4, timer, link_layer);
 		if (dflag)
-			show_stat("d", 4, drops, link_layer);
-
+			show_stat("LSd", 4, drops, link_layer);
 		putchar('\n');
+
 		if (aflag && ifaddrfound) {
 			/*
 			 * Print family's multicast addresses
@@ -550,17 +524,18 @@ u_char	signalled;			/* set if alarm goes off "early" */
 
 /*
  * Print a running summary of interface statistics.
- * Repeat display every interval seconds, showing statistics
- * collected over that interval.  Assumes that interval is non-zero.
+ * Repeat display every interval1 seconds, showing statistics
+ * collected over that interval.  Assumes that interval1 is non-zero.
  * First line printed at top of screen is always cumulative.
  * XXX - should be rewritten to use ifmib(4).
  */
 static void
-sidewaysintpr(unsigned interval1, u_long off)
+sidewaysintpr(int interval1, u_long off)
 {
 	struct ifnet ifnet;
 	u_long firstifnet;
 	struct ifnethead ifnethead;
+	struct itimerval interval_it;
 	struct iftot *iftot, *ip, *ipn, *total, *sum, *interesting;
 	int line;
 	int oldmask, first;
@@ -613,7 +588,10 @@ sidewaysintpr(unsigned interval1, u_long off)
 
 	(void)signal(SIGALRM, catchalarm);
 	signalled = NO;
-	(void)alarm(interval1);
+	interval_it.it_interval.tv_sec = interval1;
+	interval_it.it_interval.tv_usec = 0;
+	interval_it.it_value = interval_it.it_interval;
+	setitimer(ITIMER_REAL, &interval_it, NULL);
 	first = 1;
 banner:
 	printf("%17s %14s %16s", "input",
@@ -640,9 +618,10 @@ loop:
 			show_stat("lu", 10, ifnet.if_opackets - ip->ift_op, 1);
 			show_stat("lu", 5, ifnet.if_oerrors - ip->ift_oe, 1);
 			show_stat("lu", 10, ifnet.if_obytes - ip->ift_ob, 1);
-			show_stat("lu", 5, ifnet.if_collisions - ip->ift_co, 1);
+			show_stat("NRSlu", 5, 
+			    ifnet.if_collisions - ip->ift_co, 1);
 			if (dflag)
-				show_stat("u", 5,
+				show_stat("LSu", 5,
 				    ifnet.if_snd.ifq_drops - ip->ift_dr, 1);
 		}
 		ip->ift_ip = ifnet.if_ipackets;
@@ -686,9 +665,9 @@ loop:
 			show_stat("lu", 10, sum->ift_op - total->ift_op, 1);
 			show_stat("lu", 5, sum->ift_oe - total->ift_oe, 1);
 			show_stat("lu", 10, sum->ift_ob - total->ift_ob, 1);
-			show_stat("lu", 5, sum->ift_co - total->ift_co, 1);
+			show_stat("NRSlu", 5, sum->ift_co - total->ift_co, 1);
 			if (dflag)
-				show_stat("u", 5,
+				show_stat("LSu", 5,
 				    sum->ift_dr - total->ift_dr, 1);
 		}
 		*total = *sum;
@@ -697,12 +676,10 @@ loop:
 		putchar('\n');
 	fflush(stdout);
 	oldmask = sigblock(sigmask(SIGALRM));
-	if (! signalled) {
+	while (!signalled)
 		sigpause(0);
-	}
-	sigsetmask(oldmask);
 	signalled = NO;
-	(void)alarm(interval1);
+	sigsetmask(oldmask);
 	line++;
 	first = 0;
 	if (line == 21)
@@ -713,8 +690,8 @@ loop:
 }
 
 /*
- * Called if an interval expires before sidewaysintpr has completed a loop.
- * Sets a flag to not wait for the alarm.
+ * Set a flag to indicate that a signal from the periodic itimer has been
+ * caught.
  */
 static void
 catchalarm(int signo __unused)

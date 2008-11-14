@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)inet6.c	8.4 (Berkeley) 4/20/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/inet6.c,v 1.25 2004/07/28 16:03:12 stefanf Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/netstat/inet6.c,v 1.29 2007/07/16 17:15:54 jhb Exp $");
 
 #ifdef INET6
 #include <sys/param.h>
@@ -66,8 +66,10 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/inet6.c,v 1.25 2004/07/28 16:03:12 stefa
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include <err.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include "netstat.h"
@@ -75,7 +77,6 @@ __FBSDID("$FreeBSD: src/usr.bin/netstat/inet6.c,v 1.25 2004/07/28 16:03:12 stefa
 struct	socket sockb;
 
 char	*inet6name(struct in6_addr *);
-const char *pluralies(uintmax_t);
 
 static char ntop_buf[INET6_ADDRSTRLEN];
 
@@ -361,22 +362,24 @@ static char *srcrule_str[] = {
  * Dump IP6 statistics structure.
  */
 void
-ip6_stats(u_long off __unused, const char *name, int af1 __unused)
+ip6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct ip6stat ip6stat;
 	int first, i;
-	int mib[4];
 	size_t len;
 
-	mib[0] = CTL_NET;
-	mib[1] = PF_INET6;
-	mib[2] = IPPROTO_IPV6;
-	mib[3] = IPV6CTL_STATS;
-
 	len = sizeof ip6stat;
-	memset(&ip6stat, 0, len);
-	if (sysctl(mib, 4, &ip6stat, &len, (void *)0, 0) < 0)
-		return;
+	if (live) {
+		memset(&ip6stat, 0, len);
+		if (sysctlbyname("net.inet6.ip6.stats", &ip6stat, &len, NULL,
+		    0) < 0) {
+			if (errno != ENOENT)
+				warn("sysctl: net.inet6.ip6.stats");
+			return;
+		}
+	} else
+		kread(off, &ip6stat, len);
+
 	printf("%s:\n", name);
 
 #define	p(f, m) if (ip6stat.f || sflag <= 1) \
@@ -514,7 +517,8 @@ ip6_stats(u_long off __unused, const char *name, int af1 __unused)
 	printf("\tSource addresses selection rule applied:\n");
 	for (i = 0; i < 16; i++) {
 		if (ip6stat.ip6s_sources_rule[i])
-			printf("\t\t%ju %s\n", ip6stat.ip6s_sources_rule[i],
+			printf("\t\t%ju %s\n",
+			       (uintmax_t)ip6stat.ip6s_sources_rule[i],
 			       srcrule_str[i]);
 	}
 #undef p
@@ -840,22 +844,24 @@ static	const char *icmp6names[] = {
  * Dump ICMP6 statistics.
  */
 void
-icmp6_stats(u_long off __unused, const char *name, int af1 __unused)
+icmp6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct icmp6stat icmp6stat;
 	int i, first;
-	int mib[4];
 	size_t len;
 
-	mib[0] = CTL_NET;
-	mib[1] = PF_INET6;
-	mib[2] = IPPROTO_ICMPV6;
-	mib[3] = ICMPV6CTL_STATS;
-
 	len = sizeof icmp6stat;
-	memset(&icmp6stat, 0, len);
-	if (sysctl(mib, 4, &icmp6stat, &len, (void *)0, 0) < 0)
-		return;
+	if (live) {
+		memset(&icmp6stat, 0, len);
+		if (sysctlbyname("net.inet6.icmp6.stats", &icmp6stat, &len,
+		    NULL, 0) < 0) {
+			if (errno != ENOENT)
+				warn("sysctl: net.inet6.icmp6.stats");
+			return;
+		}
+	} else
+		kread(off, &icmp6stat, len);
+
 	printf("%s:\n", name);
 
 #define	p(f, m) if (icmp6stat.f || sflag <= 1) \
@@ -992,14 +998,26 @@ icmp6_ifstats(char *ifname)
  * Dump PIM statistics structure.
  */
 void
-pim6_stats(u_long off __unused, const char *name, int af1 __unused)
+pim6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
-	struct pim6stat pim6stat;
+	struct pim6stat pim6stat, zerostat;
+	size_t len = sizeof pim6stat;
 
-	if (off == 0)
-		return;
-	if (kread(off, (char *)&pim6stat, sizeof(pim6stat)))
-		return;
+	if (live) {
+		if (zflag)
+			memset(&zerostat, 0, len);
+		if (sysctlbyname("net.inet6.pim.stats", &pim6stat, &len,
+		    zflag ? &zerostat : NULL, zflag ? len : 0) < 0) {
+			if (errno != ENOENT)
+				warn("sysctl: net.inet6.pim.stats");
+			return;
+		}
+	} else {
+		if (off == 0)
+			return;
+		kread(off, &pim6stat, len);
+	}
+
 	printf("%s:\n", name);
 
 #define	p(f, m) if (pim6stat.f || sflag <= 1) \
@@ -1018,22 +1036,22 @@ pim6_stats(u_long off __unused, const char *name, int af1 __unused)
  * Dump raw ip6 statistics structure.
  */
 void
-rip6_stats(u_long off __unused, const char *name, int af1 __unused)
+rip6_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct rip6stat rip6stat;
 	u_quad_t delivered;
-	int mib[4];
-	size_t l;
+	size_t len;
 
-	mib[0] = CTL_NET;
-	mib[1] = PF_INET6;
-	mib[2] = IPPROTO_IPV6;
-	mib[3] = IPV6CTL_RIP6STATS;
-	l = sizeof(rip6stat);
-	if (sysctl(mib, 4, &rip6stat, &l, NULL, 0) < 0) {
-		perror("Warning: sysctl(net.inet6.ip6.rip6stats)");
-		return;
-	}
+	len = sizeof(rip6stat);
+	if (live) {
+		if (sysctlbyname("net.inet6.ip6.rip6stats", &rip6stat, &len,
+		    NULL, 0) < 0) {
+			if (errno != ENOENT)
+				warn("sysctl: net.inet6.ip6.rip6stats");
+			return;
+		}
+	} else
+		kread(off, &rip6stat, len);
 
 	printf("%s:\n", name);
 

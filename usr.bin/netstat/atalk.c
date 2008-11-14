@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)atalk.c	1.1 (Whistle) 6/6/96";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/netstat/atalk.c,v 1.24 2004/07/26 20:18:11 charnier Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/netstat/atalk.c,v 1.26 2007/07/16 17:15:54 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -75,12 +75,12 @@ static	int first = 1;
 static const char *
 at_pr_net(struct sockaddr_at *sat, int numeric)
 {
-	static	char mybuf[50];
+static	char mybuf[50];
 
-	if (numeric == 0) {
+	if (!numeric) {
 		switch(sat->sat_addr.s_net) {
 		case 0xffff:
-			return("????");
+			return "????";
 		case ATADDR_ANYNET:
 			return("*");
 		}
@@ -92,7 +92,7 @@ at_pr_net(struct sockaddr_at *sat, int numeric)
 static const char *
 at_pr_host(struct sockaddr_at *sat, int numeric)
 {
-	static	char mybuf[50];
+static	char mybuf[50];
 
 	if (!numeric) {
 		switch(sat->sat_addr.s_node) {
@@ -217,7 +217,8 @@ atalk_print2(struct sockaddr *sa, struct sockaddr *mask, int what)
 }
 
 void
-atalkprotopr(u_long off __unused, const char *name, int af1 __unused)
+atalkprotopr(u_long off __unused, const char *name, int af1 __unused,
+    int proto __unused)
 {
 	struct ddpcb *this, *next;
 
@@ -266,7 +267,8 @@ atalkprotopr(u_long off __unused, const char *name, int af1 __unused)
  * Dump DDP statistics structure.
  */
 void
-ddp_stats(u_long off __unused, const char *name, int af1 __unused)
+ddp_stats(u_long off __unused, const char *name, int af1 __unused,
+    int proto __unused)
 {
 	struct ddpstat ddpstat;
 

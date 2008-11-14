@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.bin/netstat/pfkey.c,v 1.1.2.1 2006/01/05 03:47:24 kbyanc Exp $	*/
+/*	$FreeBSD: src/usr.bin/netstat/pfkey.c,v 1.5 2007/07/16 17:15:55 jhb Exp $	*/
 /*	$NetBSD: inet.c,v 1.35.2.1 1999/04/29 14:57:08 perry Exp $	*/
 /*	$KAME: ipsec.c,v 1.25 2001/03/12 09:04:39 itojun Exp $	*/
 
@@ -70,20 +70,17 @@
 static char sccsid[] = "@(#)inet.c	8.5 (Berkeley) 5/24/95";
 */
 static const char rcsid[] =
-  "$FreeBSD: src/usr.bin/netstat/pfkey.c,v 1.1.2.1 2006/01/05 03:47:24 kbyanc Exp $";
+  "$FreeBSD: src/usr.bin/netstat/pfkey.c,v 1.5 2007/07/16 17:15:55 jhb Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
+#include <sys/socketvar.h>
 
 #include <netinet/in.h>
 
-#if defined(IPSEC) && !defined(FAST_IPSEC)
-#include <netkey/keysock.h>
-#endif
-
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 #include <netipsec/keysock.h>
 #endif
 
@@ -120,7 +117,8 @@ pfkey_msgtype_names(int x)
 }
 
 void
-pfkey_stats(u_long off, const char *name, int family __unused)
+pfkey_stats(u_long off, const char *name, int family __unused,
+    int proto __unused)
 {
 	struct pfkeystat pfkeystat;
 	unsigned first, type;

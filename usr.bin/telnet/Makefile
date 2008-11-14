@@ -1,4 +1,6 @@
-# $FreeBSD: src/usr.bin/telnet/Makefile,v 1.28 2005/06/10 06:12:51 des Exp $
+# $FreeBSD: src/usr.bin/telnet/Makefile,v 1.33 2007/07/05 08:56:45 bz Exp $
+
+.include <bsd.own.mk>
 
 TELNETDIR=	${.CURDIR}/../../contrib/telnet
 .PATH:		${TELNETDIR}/telnet
@@ -11,13 +13,17 @@ SRCS=		commands.c main.c network.c ring.c sys_bsd.c \
 CFLAGS+=	-DKLUDGELINEMODE -DUSE_TERMIO -DENV_HACK -DOPIE \
 		-I${TELNETDIR} -I${TELNETDIR}/libtelnet/
 
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=	-DINET6
+.endif
+
 LIBTELNET=	${.OBJDIR}/../../lib/libtelnet/libtelnet.a
 
 DPADD=		${LIBTERMCAP} ${LIBTELNET}
 LDADD=		-ltermcap ${LIBTELNET}
 
 .if !defined(RELEASE_CRUNCH)
-CFLAGS+=	-DINET6 -DIPSEC
+CFLAGS+=	-DIPSEC
 DPADD+=		${LIBIPSEC}
 LDADD+=		-lipsec
 .else
@@ -27,16 +33,17 @@ CFLAGS+=	-DHAS_CGETENT
 .endif
 
 .if !defined(RELEASE_CRUNCH)
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 SRCS+=		authenc.c 
 CFLAGS+=	-DENCRYPTION -DAUTHENTICATION -DIPSEC
 DPADD+=		${LIBMP} ${LIBCRYPTO} ${LIBCRYPT} ${LIBIPSEC} ${LIBPAM}
 LDADD+=		-lmp -lcrypto -lcrypt -lipsec ${MINUSLPAM}
-.if !defined(NO_KERBEROS)
+.endif
+
+.if ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+=	-DKRB5 -DFORWARD -Dnet_write=telnet_net_write
 DPADD+=		${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBROKEN}
 LDADD+=		-lkrb5 -lasn1 -lcom_err -lroken
-.endif
 .endif
 .endif
 
