@@ -27,7 +27,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/acpi/acpidump/acpidump.8,v 1.23 2005/02/14 16:32:32 njl Exp $
+.\" $FreeBSD: src/usr.sbin/acpi/acpidump/acpidump.8,v 1.24 2007/03/14 22:55:30 njl Exp $
 .\"
 .Dd February 14, 2005
 .Dt ACPIDUMP 8
@@ -145,6 +145,12 @@ Store the DSDT data block from physical memory into the specified file.
 .It Pa /dev/mem
 .El
 .Sh EXAMPLES
+If a developer requests a copy of your ASL, please use the following
+command to dump all tables and compress the result.
+.Bd -literal -offset indent
+# acpidump -dt | gzip -c9 > my_computer.asl.gz
+.Ed
+.Pp
 This example dumps the DSDT from physical memory to foo.dsdt.
 It also prints the contents of various system tables and disassembles
 the AML contained in the DSDT to stdout, redirecting the output

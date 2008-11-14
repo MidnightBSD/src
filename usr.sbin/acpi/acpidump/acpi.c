@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/usr.sbin/acpi/acpidump/acpi.c,v 1.31 2005/02/14 11:21:48 scottl Exp $
+ *	$FreeBSD: src/usr.sbin/acpi/acpidump/acpi.c,v 1.32 2007/03/27 17:03:52 takawata Exp $
  */
 
 #include <sys/param.h>
@@ -344,7 +344,8 @@ acpi_handle_hpet(struct ACPIsdt *sdp)
 	acpi_print_sdt(sdp);
 	hpetp = (struct HPETbody *) sdp->body;
 	printf("\tHPET Number=%d\n", hpetp->hpet_number);
-	printf("\tADDR=0x%08x\n", hpetp->base_addr);
+	printf("\tADDR=");
+	acpi_print_gas(&hpetp->genaddr);
 	printf("\tHW Rev=0x%x\n", hpetp->block_hwrev);
 	printf("\tComparitors=%d\n", hpetp->block_comparitors);
 	printf("\tCounter Size=%d\n", hpetp->block_counter_size);

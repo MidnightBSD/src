@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/usr.sbin/acpi/acpidump/acpidump.c,v 1.11 2004/10/05 20:45:05 njl Exp $
+ *	$FreeBSD: src/usr.sbin/acpi/acpidump/acpidump.c,v 1.12 2007/03/14 22:55:30 njl Exp $
  */
 
 #include <sys/param.h>
@@ -46,6 +46,8 @@ usage(const char *progname)
 
 	fprintf(stderr, "usage: %s [-d] [-t] [-h] [-v] [-f dsdt_input] "
 			"[-o dsdt_output]\n", progname);
+	fprintf(stderr, "To send ASL:\n\t%s -dt | gzip -c9 > foo.asl.gz\n",
+	    progname);
 	exit(1);
 }
 
