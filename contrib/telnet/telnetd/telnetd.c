@@ -37,7 +37,7 @@ static const char sccsid[] = "@(#)telnetd.c	8.4 (Berkeley) 5/30/95";
 #endif
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/telnet/telnetd/telnetd.c,v 1.28 2005/05/21 15:28:42 ume Exp $");
+__FBSDID("$FreeBSD: src/contrib/telnet/telnetd/telnetd.c,v 1.29 2006/09/26 21:46:11 ru Exp $");
 
 #include "telnetd.h"
 #include "pathnames.h"
@@ -1168,7 +1168,7 @@ interrupt(void)
 	ptyflush();	/* half-hearted */
 
 #ifdef	TCSIG
-	(void) ioctl(pty, TCSIG, (char *)SIGINT);
+	(void) ioctl(pty, TCSIG, SIGINT);
 #else	/* TCSIG */
 	init_termbuf();
 	*pfrontp++ = slctab[SLC_IP].sptr ?
@@ -1186,7 +1186,7 @@ sendbrk(void)
 {
 	ptyflush();	/* half-hearted */
 #ifdef	TCSIG
-	(void) ioctl(pty, TCSIG, (char *)SIGQUIT);
+	(void) ioctl(pty, TCSIG, SIGQUIT);
 #else	/* TCSIG */
 	init_termbuf();
 	*pfrontp++ = slctab[SLC_ABORT].sptr ?
@@ -1200,7 +1200,7 @@ sendsusp(void)
 #ifdef	SIGTSTP
 	ptyflush();	/* half-hearted */
 # ifdef	TCSIG
-	(void) ioctl(pty, TCSIG, (char *)SIGTSTP);
+	(void) ioctl(pty, TCSIG, SIGTSTP);
 # else	/* TCSIG */
 	*pfrontp++ = slctab[SLC_SUSP].sptr ?
 			(unsigned char)*slctab[SLC_SUSP].sptr : '\032';
@@ -1217,7 +1217,7 @@ recv_ayt(void)
 {
 #if	defined(SIGINFO) && defined(TCSIG)
 	if (slctab[SLC_AYT].sptr && *slctab[SLC_AYT].sptr != _POSIX_VDISABLE) {
-		(void) ioctl(pty, TCSIG, (char *)SIGINFO);
+		(void) ioctl(pty, TCSIG, SIGINFO);
 		return;
 	}
 #endif

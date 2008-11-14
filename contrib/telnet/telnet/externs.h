@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)externs.h	8.3 (Berkeley) 5/30/95
- *	$FreeBSD: src/contrib/telnet/telnet/externs.h,v 1.10 2003/05/11 18:17:00 markm Exp $
+ *	$FreeBSD: src/contrib/telnet/telnet/externs.h,v 1.11 2007/07/01 12:08:04 gnn Exp $
  */
 
 #ifndef	BSD
@@ -72,7 +72,7 @@ typedef unsigned char cc_t;
 #include <string.h>
 
 #if defined(IPSEC)
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 #if defined(IPSEC_POLICY_IPSEC)
 extern char *ipsec_policy_in;
 extern char *ipsec_policy_out;
