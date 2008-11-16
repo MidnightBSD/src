@@ -33496,10 +33496,6 @@ usr.sbin/tzsetup/tzsetup.c -text
 usr.sbin/ugidfw/Makefile -text
 usr.sbin/ugidfw/ugidfw.8 -text
 usr.sbin/ugidfw/ugidfw.c -text
-usr.sbin/usbd/Makefile -text
-usr.sbin/usbd/usbd.8 -text
-usr.sbin/usbd/usbd.c -text
-usr.sbin/usbd/usbd.conf.5 -text
 usr.sbin/usbdevs/Makefile -text
 usr.sbin/usbdevs/usbdevs.8 -text
 usr.sbin/usbdevs/usbdevs.c -text
