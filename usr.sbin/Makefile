@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.10 2008/11/16 21:58:06 laffer1 Exp $
 
 # XXX MISSING:		mkproto
 SUBDIR=	ac \
@@ -170,9 +170,9 @@ SUBDIR=	ac \
 	${_usbdevs} \
 	vidcontrol \
 	vipw \
-	vnconfig \
 	watch \
 	watchdogd \
+	wlandebug \
 	${_wlconfig} \
 	wpa \
 	${_ypbind} \
