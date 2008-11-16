@@ -34,7 +34,7 @@
 //	  - devd.conf needs more details on the supported statements.
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/devd/devd.cc,v 1.22.2.5 2005/12/19 03:33:05 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/sbin/devd/devd.cc,v 1.33 2006/09/17 22:49:26 ru Exp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -110,11 +110,7 @@ event_proc::event_proc() : _prio(-1)
 
 event_proc::~event_proc()
 {
-	vector<eps *>::const_iterator i;
-
-	for (i = _epsvec.begin(); i != _epsvec.end(); i++)
-		delete *i;
-	_epsvec.clear();
+	delete_and_clear(_epsvec);
 }
 
 void
@@ -173,7 +169,7 @@ match::match(config &c, const char *var, const char *re)
 	_re = "^";
 	_re.append(c.expand_string(string(re)));
 	_re.append("$");
-	regcomp(&_regex, _re.c_str(), REG_EXTENDED | REG_NOSUB);
+	regcomp(&_regex, _re.c_str(), REG_EXTENDED | REG_NOSUB | REG_ICASE);
 }
 
 match::~match()
@@ -199,7 +195,7 @@ match::do_match(config &c)
 #include <net/if.h>
 #include <net/if_media.h>
 
-media::media(config &c, const char *var, const char *type)
+media::media(config &, const char *var, const char *type)
 	: _var(var), _type(-1)
 {
 	static struct ifmedia_description media_types[] = {
@@ -382,7 +378,7 @@ config::open_pidfile()
 	pfh = pidfile_open(_pidfile.c_str(), 0600, &otherpid);
 	if (pfh == NULL) {
 		if (errno == EEXIST)
-			 errx(1, "devd already running, pid: %d", (int)otherpid);
+			errx(1, "devd already running, pid: %d", (int)otherpid);
 		warn("cannot open pid file");
 	}
 }
@@ -390,14 +386,16 @@ config::open_pidfile()
 void
 config::write_pidfile()
 {
+	
 	pidfile_write(pfh);
 }
-  	 
+
 void
 config::remove_pidfile()
 {
+	
 	pidfile_remove(pfh);
-} 	 
+}
 
 void
 config::add_attach(int prio, event_proc *p)
@@ -604,7 +602,7 @@ config::find_and_execute(char type)
 {
 	vector<event_proc *> *l;
 	vector<event_proc *>::const_iterator i;
-	char *s;
+	const char *s;
 
 	switch (type) {
 	default:
@@ -904,7 +902,7 @@ gensighand(int)
 static void
 usage()
 {
-	fprintf(stderr, "usage: %s [-Ddn]\n", getprogname());
+	fprintf(stderr, "usage: %s [-Ddn] [-f file]\n", getprogname());
 	exit(1);
 }
 
