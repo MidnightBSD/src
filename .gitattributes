@@ -32557,6 +32557,9 @@ usr.sbin/ip6addrctl/Makefile -text
 usr.sbin/ip6addrctl/ip6addrctl.8 -text
 usr.sbin/ip6addrctl/ip6addrctl.c -text
 usr.sbin/ip6addrctl/ip6addrctl.conf.sample -text
+usr.sbin/ipfwpcap/Makefile -text
+usr.sbin/ipfwpcap/ipfwpcap.8 -text
+usr.sbin/ipfwpcap/ipfwpcap.c -text
 usr.sbin/jail/Makefile -text
 usr.sbin/jail/jail.8 -text
 usr.sbin/jail/jail.c -text
@@ -32618,6 +32621,9 @@ usr.sbin/kldxref/kldxref.c -text
 usr.sbin/lastlogin/Makefile -text
 usr.sbin/lastlogin/lastlogin.8 -text
 usr.sbin/lastlogin/lastlogin.c -text
+usr.sbin/lmcconfig/Makefile -text
+usr.sbin/lmcconfig/lmcconfig.8 -text
+usr.sbin/lmcconfig/lmcconfig.c -text
 usr.sbin/lpr/Makefile -text
 usr.sbin/lpr/Makefile.inc -text
 usr.sbin/lpr/SMM.doc/0.t -text
