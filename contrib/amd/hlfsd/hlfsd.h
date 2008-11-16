@@ -38,8 +38,8 @@
  *
  *      %W% (Berkeley) %G%
  *
- * $Id: hlfsd.h,v 1.1.1.2 2006-02-25 02:32:01 laffer1 Exp $
- * $FreeBSD: src/contrib/amd/hlfsd/hlfsd.h,v 1.4 2004/07/06 13:16:46 mbr Exp $
+ * $Id: hlfsd.h,v 1.1.1.3 2008-11-16 21:57:03 laffer1 Exp $
+ * $FreeBSD: src/contrib/amd/hlfsd/hlfsd.h,v 1.5 2007/04/06 15:51:35 kan Exp $
  *
  * HLFSD was written at Columbia University Computer Science Department, by
  * Erez Zadok <ezk@cs.columbia.edu> and Alexander Dupuy <dupuy@cs.columbia.edu>
@@ -143,7 +143,6 @@ extern char *homedir(int, int);
 extern char *mailbox(int, char *);
 extern char *passwdfile;
 extern char *slinkname;
-extern char mboxfile[];
 extern gid_t hlfs_gid;
 extern int cache_interval;
 extern int noverify;
