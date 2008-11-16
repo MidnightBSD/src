@@ -1,5 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
+# $MidnightBSD$
 
 # XXX MISSING:		mkproto
 SUBDIR=	ac \
@@ -153,7 +154,7 @@ SUBDIR=	ac \
 	snapinfo \
 	${_spkrtest} \
 	spray \
-	${_sysinstall} \
+	sysinstall
 	syslogd \
 	tcpdchk \
 	tcpdmatch \
@@ -183,20 +184,23 @@ SUBDIR=	ac \
 	zic \
 	${_zzz}
 
-.if ${MACHINE_ARCH} != "arm"
-_sysinstall=	sysinstall
+# Disabled in 7.0 as netatm is not MPSAFE.
+#.if ${MK_ATM} != "no"
+#_atm=		atm
+#.endif
+
+.if ${MK_AUDIT} != "no"
+_audit=		audit
+_auditd=	auditd
+_auditreduce=	auditreduce
+_praudit=	praudit
 .endif
 
-.if !defined(NO_ATM)
-_atm=		atm
-.endif
-
-.if !defined(NO_BIND)
-.if !defined(NO_BIND_DNSSEC) && !defined(NO_CRYPT)
+.if ${MK_BIND_DNSSEC} != "no" && ${MK_OPENSSL} != "no"
 _dnssec-keygen=		dnssec-keygen
 _dnssec-signzone=	dnssec-signzone
 .endif
-.if !defined(NO_BIND_NAMED)
+.if ${MK_BIND_NAMED} != "no"
 _named=			named
 _named-checkconf=	named-checkconf
 _named-checkzone=	named-checkzone
@@ -204,24 +208,37 @@ _named.reload=		named.reload
 _rndc=			rndc
 _rndc-confgen=		rndc-confgen
 .endif
-.endif
 
-.if !defined(NO_BLUETOOTH)
+.if ${MK_BLUETOOTH} != "no"
 _bluetooth=	bluetooth
 .endif
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_OPENSSL} != "no"
 _keyserv=	keyserv
 .endif
 
-.if !defined(NO_INET6)
+.if ${MK_PF} != "no"
+_ftp-proxy=	ftp-proxy
+.endif
+
+.if ${MK_INET6} != "no"
+_faithd=	faithd
+_ip6addrctl=	ip6addrctl
 _mld6query=	mld6query
+_ndp=		ndp
 _rip6query=	rip6query
 _route6d=	route6d
+_rrenumd=	rrenumd
+_rtadvd=	rtadvd
+_rtsold=	rtsold
 _traceroute6=	traceroute6
 .endif
 
-.if !defined(NO_NIS)
+.if ${MK_IPX} != "no"
+_IPXrouted=	IPXrouted
+.endif
+
+.if ${MK_NIS} != "no"
 _rpc.yppasswdd=	rpc.yppasswdd
 _rpc.ypupdated=	rpc.ypupdated
 _rpc.ypxfrd=	rpc.ypxfrd
@@ -233,15 +250,25 @@ _ypserv=	ypserv
 _ypset=		ypset
 .endif
 
-.if !defined(NO_PF) && !defined(NO_AUTHPF)
+.if ${MK_AUTHPF} != "no"
 _authpf=	authpf
 .endif
 
-.if !defined(NO_LPR)
+.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
+_pppctl=	pppctl
+.endif
+
+.if ${MK_LPR} != "no"
 _lpr=		lpr
 .endif
 
-.if !defined(NO_SENDMAIL)
+.if ${MK_NS_CACHING} != "no"
+.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
+_nscd=		nscd
+.endif
+.endif
+
+.if ${MK_SENDMAIL} != "no"
 _editmap=	editmap
 _mailstats=	mailstats
 _makemap=	makemap
@@ -249,13 +276,8 @@ _praliases=	praliases
 _sendmail=	sendmail
 .endif
 
-.if !defined(NO_USB)
-_usbd=		usbd
+.if ${MK_USB} != "no"
 _usbdevs=	usbdevs
-.endif
-
-.if ${MACHINE_ARCH} == "arm"
-_kgmon=		kgmon
 .endif
 
 .if ${MACHINE_ARCH} == "i386"
@@ -263,38 +285,35 @@ _apm=		apm
 _apmd=		apmd
 _asf=		asf
 _btxld=		btxld
-.if !defined(NO_I4B)
+.if ${MK_I4B} != "no"
 _i4b=		i4b
 .endif
 _kgmon=		kgmon
 _kgzip=		kgzip
 _lptcontrol=	lptcontrol
+.if ${MK_NCP} != "no"
 _mount_nwfs=	mount_nwfs
+.endif
 _mount_smbfs=	mount_smbfs
 _mptable=	mptable
 _ndiscvt=	ndiscvt
 _pnpinfo=	pnpinfo
-.if !defined(NO_LIBPTHREAD)
-_pppctl=	pppctl
-.endif
 _sicontrol=	sicontrol
 _spkrtest=	spkrtest
 _zzz=		zzz
-.if ${MACHINE} == "i386" 
-.if !defined(NO_ACPI)
+.if ${MK_ACPI} != "no"
 _acpi=		acpi
 .endif
 _arlcontrol=	arlcontrol
 _boot0cfg=	boot0cfg
 _wlconfig=	wlconfig
 .endif
-.endif
 
 # kgzip: builds, but missing support files
 # mptable: broken (not 64 bit clean)
 # pnpinfo: crashes (not really useful anyway)
 .if ${MACHINE_ARCH} == "amd64"
-.if !defined(NO_ACPI)
+.if ${MK_ACPI} != "no"
 _acpi=		acpi
 .endif
 _asf=		asf
@@ -302,35 +321,20 @@ _boot0cfg=	boot0cfg
 _btxld=		btxld
 _kgmon=		kgmon
 _lptcontrol=	lptcontrol
+.if ${MK_NCP} != "no"
 _mount_nwfs=	mount_nwfs
+.endif
 _mount_smbfs=	mount_smbfs
 _mptable=	mptable
 _ndiscvt=	ndiscvt
-.if !defined(NO_LIBPTHREAD)
-_pppctl=	pppctl
-.endif
 _sicontrol=	sicontrol
 _spkrtest=	spkrtest
-_zzz=		zzz
-.endif
-
-.if ${MACHINE_ARCH} == "ia64"
-.if !defined(NO_ACPI)
-_acpi=		acpi
-.endif
-_kgmon=		kgmon
-.if !defined(NO_LIBPTHREAD)
-_pppctl=	pppctl
-.endif
 _zzz=		zzz
 .endif
 
 .if ${MACHINE_ARCH} == "sparc64"
 _eeprom=	eeprom
 _ofwdump=	ofwdump
-.if !defined(NO_LIBC_R)
-_pppctl=	pppctl
-.endif
 .endif
 
 .include <bsd.subdir.mk>
