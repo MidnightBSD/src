@@ -1,6 +1,8 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.13 2008/11/16 22:12:28 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.14 2008/11/16 22:16:40 laffer1 Exp $
+
+.include <bsd.own.mk>
 
 # XXX MISSING:		mkproto
 SUBDIR=	ac \
