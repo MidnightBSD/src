@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.14 2008/11/16 22:16:40 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.15 2008/11/17 19:00:18 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -17,6 +17,9 @@ SUBDIR=	ac \
 	arp \
 	${_asf} \
 	${_atm} \
+	${_audit} \
+	${_auditd} \
+	${_auditreduce} \
 	${_authpf} \
 	${_bluetooth} \
 	${_boot0cfg} \
@@ -43,15 +46,15 @@ SUBDIR=	ac \
 	${_editmap} \
 	edquota \
 	${_eeprom} \
-	${_elf2exe} \
 	extattr \
 	extattrctl \
-	faithd \
+	${_faithd} \
 	fdcontrol \
 	fdformat \
 	fdread \
 	fdwrite \
 	flowctl \
+	${_ftp-proxy}
 	fwcontrol \
 	getfmac \
 	getpmac \
@@ -60,8 +63,9 @@ SUBDIR=	ac \
 	ifmcstat \
 	inetd \
 	iostat \
-	ip6addrctl \
-	IPXrouted \
+	${_ip6addrctl} \
+	ipfwpcap \
+	${_IPXrouted} \
 	jail \
 	jexec \
 	jls \
@@ -72,6 +76,7 @@ SUBDIR=	ac \
 	${_kgzip} \
 	kldxref \
 	lastlogin \
+	lmcconfig \
 	${_lpr} \
 	${_lptcontrol} \
 	${_mailstats} \

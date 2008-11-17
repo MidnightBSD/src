@@ -32378,9 +32378,6 @@ usr.sbin/eeprom/eeprom.8 -text
 usr.sbin/eeprom/eeprom.c -text
 usr.sbin/eeprom/ofw_options.c -text
 usr.sbin/eeprom/ofw_options.h -text
-usr.sbin/elf2exe/Makefile -text
-usr.sbin/elf2exe/elf2exe.8 -text
-usr.sbin/elf2exe/elf2exe.c -text
 usr.sbin/extattr/Makefile -text
 usr.sbin/extattr/rmextattr.8 -text
 usr.sbin/extattr/rmextattr.c -text
