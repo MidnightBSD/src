@@ -32063,6 +32063,9 @@ usr.sbin/atm/scspd/scsp_timer.c -text
 usr.sbin/atm/scspd/scsp_var.h -text
 usr.sbin/atm/scspd/scspd.8 -text
 usr.sbin/atm/scspd/scspd.c -text
+usr.sbin/audit/Makefile -text
+usr.sbin/auditd/Makefile -text
+usr.sbin/auditreduce/Makefile -text
 usr.sbin/authpf/Makefile -text
 usr.sbin/bluetooth/Makefile -text
 usr.sbin/bluetooth/Makefile.inc -text
@@ -32411,6 +32414,10 @@ usr.sbin/fdwrite/fdwrite.c -text
 usr.sbin/flowctl/Makefile -text
 usr.sbin/flowctl/flowctl.8 -text
 usr.sbin/flowctl/flowctl.c -text
+usr.sbin/ftp-proxy/Makefile -text
+usr.sbin/ftp-proxy/Makefile.inc -text
+usr.sbin/ftp-proxy/ftp-proxy/Makefile -text
+usr.sbin/ftp-proxy/libevent/Makefile -text
 usr.sbin/fwcontrol/Makefile -text
 usr.sbin/fwcontrol/fwcontrol.8 -text
 usr.sbin/fwcontrol/fwcontrol.c -text
@@ -33201,6 +33208,7 @@ usr.sbin/pppstats/Makefile -text
 usr.sbin/pppstats/pppstats.8 -text
 usr.sbin/pppstats/pppstats.c -text
 usr.sbin/praliases/Makefile -text
+usr.sbin/praudit/Makefile -text
 usr.sbin/procctl/Makefile -text
 usr.sbin/procctl/procctl.8 -text
 usr.sbin/procctl/procctl.c -text
