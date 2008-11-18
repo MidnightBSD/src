@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx_pci.c,v 1.34.2.2 2005/11/04 17:47:17 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx_pci.c,v 1.37 2007/02/23 12:18:59 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -148,7 +148,7 @@ vx_pci_attach(device_t dev)
 		goto bad;
 
 	if (bus_setup_intr(dev, sc->vx_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    vx_intr, sc, &sc->vx_intrhand))
+	    NULL, vx_intr, sc, &sc->vx_intrhand))
 		goto bad_mtx;
 
 	/* defect check for 3C590 */

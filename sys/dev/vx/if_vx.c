@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx.c,v 1.56.2.3 2005/11/04 17:45:20 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/vx/if_vx.c,v 1.60 2005/11/11 16:04:56 ru Exp $");
 
 /*
  * Created from if_ep.c driver by Fred Gray (fgray@rice.edu) to support
@@ -68,7 +68,7 @@ __FBSDID("$FreeBSD: src/sys/dev/vx/if_vx.c,v 1.56.2.3 2005/11/04 17:45:20 jhb Ex
 #include <net/if.h>
 
 #include <net/ethernet.h>
-#include <net/if_arp.h>
+#include <net/if_dl.h>
 #include <net/if_types.h>
 
 #include <machine/bus.h>
@@ -232,7 +232,7 @@ vx_init_locked(struct vx_softc *sc)
 	GO_WINDOW(2);
 
 	for (i = 0; i < 6; i++)	/* Reload the ether_addr. */
-		CSR_WRITE_1(sc, VX_W2_ADDR_0 + i, IFP2ENADDR(sc->vx_ifp)[i]);
+		CSR_WRITE_1(sc, VX_W2_ADDR_0 + i, IF_LLADDR(sc->vx_ifp)[i]);
 
 	CSR_WRITE_2(sc, VX_COMMAND, RX_RESET);
 	VX_BUSY_WAIT;
@@ -756,7 +756,7 @@ again:
 
 	if (!(ifp->if_flags & IFF_PROMISC)
 	    && (eh->ether_dhost[0] & 1) == 0	/* !mcast and !bcast */
-	    && bcmp(eh->ether_dhost, IFP2ENADDR(sc->vx_ifp),
+	    && bcmp(eh->ether_dhost, IF_LLADDR(sc->vx_ifp),
 	    ETHER_ADDR_LEN) != 0) {
 		m_freem(m);
 		return;
