@@ -25979,6 +25979,8 @@ sys/dev/led/led.c -text
 sys/dev/led/led.h -text
 sys/dev/lge/if_lge.c -text
 sys/dev/lge/if_lgereg.h -text
+sys/dev/lmc/if_lmc.c -text
+sys/dev/lmc/if_lmc.h -text
 sys/dev/lnc/if_lnc.c -text
 sys/dev/lnc/if_lnc_cbus.c -text
 sys/dev/lnc/if_lnc_isa.c -text
