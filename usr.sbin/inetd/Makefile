@@ -1,5 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/inetd/Makefile,v 1.29 2003/10/30 22:56:44 peter Exp $
+# $FreeBSD: src/usr.sbin/inetd/Makefile,v 1.37 2007/07/05 08:56:46 bz Exp $
+
+.include <bsd.own.mk>
 
 PROG=	inetd
 MAN=	inetd.8
@@ -10,11 +12,16 @@ WARNS?=	2
 CFLAGS+= -DLOGIN_CAP
 #CFLAGS+= -DSANITY_CHECK
 
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+
 DPADD=	${LIBUTIL} ${LIBWRAP}
 LDADD=	-lutil -lwrap
 
+# XXX for src/release/picobsd
 .if !defined(RELEASE_CRUNCH)
-CFLAGS+= -DINET6 -DIPSEC
+CFLAGS+= -DIPSEC
 DPADD+=	${LIBIPSEC}
 LDADD+=	-lipsec
 .endif

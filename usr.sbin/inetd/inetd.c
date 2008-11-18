@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)from: inetd.c	8.4 (Berkeley) 4/13/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.129.2.1 2006/01/15 17:50:36 delphij Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.136 2007/07/01 12:08:08 gnn Exp $");
 
 /*
  * Inetd - Internet super-server
@@ -69,7 +69,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.129.2.1 2006/01/15 17:50:36 d
  *					or name a tcpmux service 
  *					or specify a unix domain socket
  *	socket type			stream/dgram/raw/rdm/seqpacket
- *	protocol			tcp[4][6][/faith,ttcp], udp[4][6], unix
+ *	protocol			tcp[4][6][/faith], udp[4][6], unix
  *	wait/nowait			single-threaded/multi-threaded
  *	user				user to run daemon as
  *	server program			full path name
@@ -144,7 +144,7 @@ __FBSDID("$FreeBSD: src/usr.sbin/inetd/inetd.c,v 1.129.2.1 2006/01/15 17:50:36 d
 #include "pathnames.h"
 
 #ifdef IPSEC
-#include <netinet6/ipsec.h>
+#include <netipsec/ipsec.h>
 #ifndef IPSEC_POLICY_IPSEC	/* no ipsec support on old ipsec */
 #undef IPSEC
 #endif
@@ -1301,10 +1301,6 @@ setsockopt(fd, SOL_SOCKET, opt, (char *)&on, sizeof (on))
 			syslog(LOG_ERR, "setsockopt (IPV6_V6ONLY): %m");
 	}
 #undef turnon
-	if (sep->se_type == TTCP_TYPE)
-		if (setsockopt(sep->se_fd, IPPROTO_TCP, TCP_NOPUSH,
-		    (char *)&on, sizeof (on)) < 0)
-			syslog(LOG_ERR, "setsockopt (TCP_NOPUSH): %m");
 #ifdef IPV6_FAITH
 	if (sep->se_type == FAITH_TYPE) {
 		if (setsockopt(sep->se_fd, IPPROTO_IPV6, IPV6_FAITH, &on,
@@ -1746,9 +1742,7 @@ more:
 	if (strncmp(arg, "tcp", 3) == 0) {
 		sep->se_proto = newstr(strsep(&arg, "/"));
 		if (arg != NULL) {
-			if (strcmp(arg, "ttcp") == 0)
-				sep->se_type = TTCP_TYPE;
-			else if (strcmp(arg, "faith") == 0)
+			if (strcmp(arg, "faith") == 0)
 				sep->se_type = FAITH_TYPE;
 		}
 	} else {
@@ -2228,6 +2222,7 @@ cpmip(const struct servtab *sep, int ctrl)
 	 */
 
 	if (sep->se_maxcpm > 0 && 
+	   (sep->se_family == AF_INET || sep->se_family == AF_INET6) &&
 	    getpeername(ctrl, (struct sockaddr *)&rss, &rssLen) == 0 ) {
 		time_t t = time(NULL);
 		int hv = 0xABC3D20F;
