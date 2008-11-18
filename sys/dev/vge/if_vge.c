@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/vge/if_vge.c,v 1.14.2.8 2006/09/05 07:06:15 mr Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/vge/if_vge.c,v 1.31 2007/03/04 03:38:08 csjp Exp $");
 
 /*
  * VIA Networking Technologies VT612x PCI gigabit ethernet NIC driver.
@@ -120,7 +120,7 @@ MODULE_DEPEND(vge, pci, 1, 1, 1);
 MODULE_DEPEND(vge, ether, 1, 1, 1);
 MODULE_DEPEND(vge, miibus, 1, 1, 1);
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 #include <dev/vge/if_vgereg.h>
@@ -185,9 +185,6 @@ static void vge_miibus_statchg	(device_t);
 
 static void vge_cam_clear	(struct vge_softc *);
 static int vge_cam_set		(struct vge_softc *, uint8_t *);
-#if __FreeBSD_version < 502113
-static uint32_t vge_mchash	(uint8_t *);
-#endif
 static void vge_setmulti	(struct vge_softc *);
 static void vge_reset		(struct vge_softc *);
 
@@ -541,31 +538,6 @@ fail:
 	return (error);
 }
 
-#if __FreeBSD_version < 502113
-static uint32_t
-vge_mchash(addr)
-        uint8_t			*addr;
-{
-	uint32_t		crc, carry;
-	int			idx, bit;
-	uint8_t			data;
-
-	/* Compute CRC for the address value. */
-	crc = 0xFFFFFFFF; /* initial value */
-
-	for (idx = 0; idx < 6; idx++) {
-		for (data = *addr++, bit = 0; bit < 8; bit++, data >>= 1) {
-			carry = ((crc & 0x80000000) ? 1 : 0) ^ (data & 0x01);
-			crc <<= 1;
-			if (carry)
-				crc = (crc ^ 0x04c11db6) | carry;
-		}
-	}
-
-	return(crc);
-}
-#endif
-
 /*
  * Program the multicast filter. We use the 64-entry CAM filter
  * for perfect filtering. If there's more than 64 multicast addresses,
@@ -615,13 +587,8 @@ vge_setmulti(sc)
 		TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_addr->sa_family != AF_LINK)
 				continue;
-#if __FreeBSD_version < 502113
-			h = vge_mchash(LLADDR((struct sockaddr_dl *)
-			    ifma->ifma_addr)) >> 26;
-#else
 			h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
 			    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-#endif
 			if (h < 32)
 				hashes[0] |= (1 << h);
 			else
@@ -1005,10 +972,6 @@ vge_attach(dev)
 
 	sc->vge_unit = unit;
 
-#if __FreeBSD_version < 502113
-	printf("vge%d: Ethernet address: %6D\n", unit, eaddr, ":");
-#endif
-
 	/*
 	 * Allocate the parent bus DMA tag appropriate for PCI.
 	 */
@@ -1061,7 +1024,9 @@ vge_attach(dev)
 #endif
 	ifp->if_watchdog = vge_watchdog;
 	ifp->if_init = vge_init;
-	ifp->if_snd.ifq_maxlen = VGE_IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, VGE_IFQ_MAXLEN);
+	ifp->if_snd.ifq_drv_maxlen = VGE_IFQ_MAXLEN;
+	IFQ_SET_READY(&ifp->if_snd);
 
 	TASK_INIT(&sc->vge_txtask, 0, vge_tx_task, ifp);
 
@@ -1072,7 +1037,7 @@ vge_attach(dev)
 
 	/* Hook interrupt last to avoid having to lock softc */
 	error = bus_setup_intr(dev, sc->vge_irq, INTR_TYPE_NET|INTR_MPSAFE,
-	    vge_intr, sc, &sc->vge_intrhand);
+	    NULL, vge_intr, sc, &sc->vge_intrhand);
 
 	if (error) {
 		printf("vge%d: couldn't set up irq\n", unit);
@@ -1129,8 +1094,6 @@ vge_detach(dev)
 		ifp->if_flags &= ~IFF_UP;
 		ether_ifdetach(ifp);
 	}
-	if (ifp)
-		if_free(ifp);
 	if (sc->vge_miibus)
 		device_delete_child(dev, sc->vge_miibus);
 	bus_generic_detach(dev);
@@ -1142,6 +1105,8 @@ vge_detach(dev)
 	if (sc->vge_res)
 		bus_release_resource(dev, SYS_RES_MEMORY,
 		    VGE_PCI_LOMEM, sc->vge_res);
+	if (ifp)
+		if_free(ifp);
 
 	/* Unload and free the RX DMA ring memory and map */
 
@@ -1490,10 +1455,14 @@ vge_rxeof(sc)
 		}
 
 		if (rxstat & VGE_RDSTS_VTAG) {
-			VLAN_INPUT_TAG_NEW(ifp, m,
-			    ntohs((rxctl & VGE_RDCTL_VLANID)));
-			if (m == NULL)
-				continue;
+			/*
+			 * The 32-bit rxctl register is stored in little-endian.
+			 * However, the 16-bit vlan tag is stored in big-endian,
+			 * so we have to byte swap it.
+			 */
+			m->m_pkthdr.ether_vtag =
+			    bswap16(rxctl & VGE_RDCTL_VLANID);
+			m->m_flags |= M_VLANTAG;
 		}
 
 		VGE_UNLOCK(sc);
@@ -1604,11 +1573,7 @@ vge_tick(xsc)
 			sc->vge_link = 1;
 			if_link_state_change(sc->vge_ifp,
 			    LINK_STATE_UP);
-#if __FreeBSD_version < 502114
-			if (ifp->if_snd.ifq_head != NULL)
-#else
 			if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-#endif
 				taskqueue_enqueue(taskqueue_swi,
 				    &sc->vge_txtask);
 		}
@@ -1633,11 +1598,7 @@ vge_poll (struct ifnet *ifp, enum poll_cmd cmd, int count)
 	vge_rxeof(sc);
 	vge_txeof(sc);
 
-#if __FreeBSD_version < 502114
-	if (ifp->if_snd.ifq_head != NULL)
-#else
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-#endif
 		taskqueue_enqueue(taskqueue_swi, &sc->vge_txtask);
 
 	if (cmd == POLL_AND_CHECK_STATUS) { /* also check status register */
@@ -1737,11 +1698,7 @@ vge_intr(arg)
 
 	VGE_UNLOCK(sc);
 
-#if __FreeBSD_version < 502114
-	if (ifp->if_snd.ifq_head != NULL)
-#else
 	if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
-#endif
 		taskqueue_enqueue(taskqueue_swi, &sc->vge_txtask);
 
 	return;
@@ -1757,7 +1714,6 @@ vge_encap(sc, m_head, idx)
 	struct vge_dmaload_arg	arg;
 	bus_dmamap_t		map;
 	int			error;
-	struct m_tag		*mtag;
 
 	if (sc->vge_ldata.vge_tx_free <= 2)
 		return (EFBIG);
@@ -1816,10 +1772,9 @@ vge_encap(sc, m_head, idx)
 	 * Set up hardware VLAN tagging.
 	 */
 
-	mtag = VLAN_OUTPUT_TAG(sc->vge_ifp, m_head);
-	if (mtag != NULL)
+	if (m_head->m_flags & M_VLANTAG)
 		sc->vge_ldata.vge_tx_list[idx].vge_ctl |=
-		    htole32(htons(VLAN_TAG_VALUE(mtag)) | VGE_TDCTL_VTAG);
+		    htole32(m_head->m_pkthdr.ether_vtag | VGE_TDCTL_VTAG);
 
 	sc->vge_ldata.vge_tx_list[idx].vge_sts |= htole32(VGE_TDSTS_OWN);
 
@@ -1859,11 +1814,7 @@ vge_start(ifp)
 		return;
 	}
 
-#if __FreeBSD_version < 502114
-	if (ifp->if_snd.ifq_head == NULL) {
-#else
 	if (IFQ_DRV_IS_EMPTY(&ifp->if_snd)) {
-#endif
 		VGE_UNLOCK(sc);
 		return;
 	}
@@ -1876,20 +1827,12 @@ vge_start(ifp)
 
 
 	while (sc->vge_ldata.vge_tx_mbuf[idx] == NULL) {
-#if __FreeBSD_version < 502114
-		IF_DEQUEUE(&ifp->if_snd, m_head);
-#else
 		IFQ_DRV_DEQUEUE(&ifp->if_snd, m_head);
-#endif
 		if (m_head == NULL)
 			break;
 
 		if (vge_encap(sc, m_head, idx)) {
-#if __FreeBSD_version >= 502114
 			IFQ_DRV_PREPEND(&ifp->if_snd, m_head);
-#else
-			IF_PREPEND(&ifp->if_snd, m_head);
-#endif
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 			break;
 		}
@@ -1904,7 +1847,7 @@ vge_start(ifp)
 		 * If there's a BPF listener, bounce a copy of this frame
 		 * to him.
 		 */
-		BPF_MTAP(ifp, m_head);
+		ETHER_BPF_MTAP(ifp, m_head);
 	}
 
 	if (idx == sc->vge_ldata.vge_tx_prodidx) {
@@ -1971,7 +1914,7 @@ vge_init(xsc)
 
 	/* Set our station address */
 	for (i = 0; i < ETHER_ADDR_LEN; i++)
-		CSR_WRITE_1(sc, VGE_PAR0 + i, IFP2ENADDR(sc->vge_ifp)[i]);
+		CSR_WRITE_1(sc, VGE_PAR0 + i, IF_LLADDR(sc->vge_ifp)[i]);
 
 	/*
 	 * Set receive FIFO threshold. Also allow transmission and
