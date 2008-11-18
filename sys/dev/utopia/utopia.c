@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/utopia/utopia.c,v 1.11 2005/06/22 06:51:52 harti Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/utopia/utopia.c,v 1.11.10.1 2007/12/06 09:53:42 philip Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -444,10 +444,9 @@ utopia_sysctl_stats(SYSCTL_HANDLER_ARGS)
 	UTP_UNLOCK(utp);
 
 	error = SYSCTL_OUT(req, val, sizeof(utp->stats));
-	free(val, M_TEMP);
-
 	if (error && req->newptr != NULL)
 		bcopy(val, &utp->stats, sizeof(utp->stats));
+	free(val, M_TEMP);
 
 	/* ignore actual new value */
 
