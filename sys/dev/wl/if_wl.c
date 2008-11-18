@@ -173,8 +173,7 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/wl/if_wl.c,v 1.66.2.2 2005/08/25 05:01:18 rwatson Exp $");
-
+__FBSDID("$FreeBSD: src/sys/dev/wl/if_wl.c,v 1.76 2007/03/21 03:38:36 nyan Exp $");
 
 /*
  * NOTE:
@@ -198,6 +197,7 @@ __FBSDID("$FreeBSD: src/sys/dev/wl/if_wl.c,v 1.66.2.2 2005/08/25 05:01:18 rwatso
 #include <sys/module.h>
 #include <sys/sockio.h>
 #include <sys/mbuf.h>
+#include <sys/priv.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
 #include <machine/bus.h>
@@ -462,7 +462,6 @@ errexit:
     return (error);
 }
 
-
 /*
  * wlattach:
  *
@@ -574,7 +573,7 @@ wlattach(device_t device)
 	printf(", Freq %d MHz",sc->freq24); 		/* 2.4 Gz       */
     printf("\n");                                       /* 2.4 Gz       */
 
-    bus_setup_intr(device, sc->res_irq, INTR_TYPE_NET, wlintr, sc, &sc->intr_cookie);
+    bus_setup_intr(device, sc->res_irq, INTR_TYPE_NET, NULL, wlintr, sc, &sc->intr_cookie);
 
     if (bootverbose)
 	wldump(sc);
@@ -590,7 +589,6 @@ wldetach(device_t device)
 
     ifp = sc->ifp;
     ether_ifdetach(ifp);
-    if_free(ifp);
 
     WL_LOCK(sc);
 
@@ -608,6 +606,7 @@ wldetach(device_t device)
     bus_generic_detach(device);
     wl_deallocate_resources(device);
     WL_UNLOCK(sc);
+    if_free(ifp);
     mtx_destroy(&sc->wl_mtx);
     return (0);
 }
@@ -640,15 +639,11 @@ wl_deallocate_resources(device_t device)
     struct wl_softc *sc = device_get_softc(device);
 
     if (sc->res_irq != 0) {
-	bus_deactivate_resource(device, SYS_RES_IRQ,
-	    sc->rid_irq, sc->res_irq);
 	bus_release_resource(device, SYS_RES_IRQ,
 	    sc->rid_irq, sc->res_irq);
 	sc->res_irq = 0;
     }
     if (sc->res_ioport != 0) {
-	bus_deactivate_resource(device, SYS_RES_IOPORT,
-	    sc->rid_ioport, sc->res_ioport);
 	bus_release_resource(device, SYS_RES_IOPORT,
 	    sc->rid_ioport, sc->res_ioport);
 	sc->res_ioport = 0;
@@ -1193,7 +1188,7 @@ wlread(struct wl_softc *sc, u_short fd_p)
 #endif
 	&&
 	(eh->ether_dhost[0] & 1) == 0 && /* !mcast and !bcast */
-	bcmp(eh->ether_dhost, &IFP2ENADDR(sc->ifp),
+	bcmp(eh->ether_dhost, IF_LLADDR(sc->ifp),
 	     sizeof(eh->ether_dhost)) != 0 ) {
       m_freem(m);
       return 1;
@@ -1312,7 +1307,7 @@ wlioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	/* pointer to buffer in user space */
 	up = (void *)ifr->ifr_data;
 	/* work out if they're root */
-	isroot = (suser(td) == 0);
+	isroot = (priv_check(td, PRIV_NET80211_GETKEY) == 0);
 	
 	for (i = 0; i < 0x40; i++) {
 	    /* don't hand the DES key out to non-root users */
@@ -1329,7 +1324,7 @@ wlioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	/* copy the PSA in from the caller; we only copy _some_ values */
     case SIOCSWLPSA:
 	/* root only */
-	if ((error = suser(td)))
+	if ((error = priv_check(td, PRIV_DRIVER)))
 	    break;
 	error = EINVAL;	/* assume the worst */
 	/* pointer to buffer in user space containing data */
@@ -1385,7 +1380,7 @@ wlioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	 */
     case SIOCSWLCNWID:
 	/* root only */
-	if ((error = suser(td)))
+	if ((error = priv_check(td, PRIV_DRIVER)))
 	    break;
 	if (!(ifp->if_flags & IFF_UP)) {
 	    error = EIO;	/* only allowed while up */
@@ -1403,7 +1398,7 @@ wlioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	/* copy the EEPROM in 2.4 Gz WaveMODEM  out to the caller */
     case SIOCGWLEEPROM:
 	/* root only */
-	if ((error = suser(td)))
+	if ((error = priv_check(td, PRIV_DRIVER)))
 	    break;
 	/* pointer to buffer in user space */
 	up = (void *)ifr->ifr_data;
@@ -1430,7 +1425,7 @@ wlioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	/* zero (Delete) the wl cache */
     case SIOCDWLCACHE:
 	/* root only */
-	if ((error = suser(td)))
+	if ((error = priv_check(td, PRIV_DRIVER)))
 	    break;
 	wl_cache_zero(sc);
 	break;
@@ -2143,7 +2138,7 @@ wlconfig(struct wl_softc *sc)
     outw(PIOP1(base), 0);				/* ac_status */
     outw(PIOP1(base), AC_IASETUP|AC_CW_EL);		/* ac_command */
     outw(PIOR1(base), OFFSET_CU + 6);
-    outsw(PIOP1(base), IFP2ENADDR(sc->ifp), WAVELAN_ADDR_SIZE/2);
+    outsw(PIOP1(base), IF_LLADDR(sc->ifp), WAVELAN_ADDR_SIZE/2);
 
     if (wlcmd(sc, "config()-address") == 0)
 	return(0);

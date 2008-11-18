@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/watchdog/watchdog.c,v 1.2 2004/06/16 09:47:02 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/watchdog/watchdog.c,v 1.5 2007/03/27 21:03:36 n_hibma Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,9 +55,18 @@ wd_ioctl(struct cdev *dev __unused, u_long cmd, caddr_t data,
 		return (EINVAL);
 	if ((u & (WD_ACTIVE | WD_PASSIVE)) == (WD_ACTIVE | WD_PASSIVE))
 		return (EINVAL);
-	if ((u & WD_INTERVAL) == WD_TO_NEVER)
+	if ((u & (WD_ACTIVE | WD_PASSIVE)) == 0 && (u & WD_INTERVAL) > 0)
+		return (EINVAL);
+	if (u & WD_PASSIVE)
+		return (ENOSYS);	/* XXX Not implemented yet */
+	if ((u & WD_INTERVAL) == WD_TO_NEVER) {
 		u = 0;
-	error = EOPNOTSUPP;
+		/* Assume all is well; watchdog signals failure. */
+		error = 0;
+	} else {
+		/* Assume no watchdog available; watchdog flags success */
+		error = EOPNOTSUPP;
+	}
 	EVENTHANDLER_INVOKE(watchdog_list, u, &error);
 	return (error);
 }

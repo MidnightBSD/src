@@ -31,7 +31,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/wi/if_wivar.h,v 1.25.2.1 2005/10/05 13:13:46 avatar Exp $
+ * $FreeBSD: src/sys/dev/wi/if_wivar.h,v 1.31 2007/06/11 03:36:53 sam Exp $
  */
 
 #if 0
@@ -70,9 +70,8 @@ struct wi_softc	{
 					const struct ieee80211_key *,
 					ieee80211_keyix *, ieee80211_keyix *);
 	device_t		sc_dev;
-#if __FreeBSD_version >= 500000
 	struct mtx		sc_mtx;
-#endif
+	struct callout		sc_watchdog;
 	int			sc_unit;
 	int			wi_gone;
 	int			sc_enabled;
@@ -101,6 +100,7 @@ struct wi_softc	{
 	bus_space_handle_t	wi_bmemhandle;
 	bus_space_tag_t		wi_bmemtag;
 	void *			wi_intrhand;
+	struct ieee80211_channel *wi_channel;
 	int			wi_io_addr;
 	int			wi_cmd_count;
 
@@ -109,7 +109,7 @@ struct wi_softc	{
 	int			sc_if_flags;
 	int			sc_bap_id;
 	int			sc_bap_off;
-
+	
 	u_int16_t		sc_procframe;
 	u_int16_t		sc_portnum;
 
@@ -129,6 +129,7 @@ struct wi_softc	{
 	int			sc_nodelen;
 	char			sc_nodename[IEEE80211_NWID_LEN];
 	char			sc_net_name[IEEE80211_NWID_LEN];
+	uint8_t			sc_hintmacaddr[IEEE80211_ADDR_LEN];
 
 	int			sc_buflen;		/* TX buffer size */
 	int			sc_ntxbuf;
@@ -201,6 +202,13 @@ struct wi_softc	{
 #define	WI_FLAGS_BUG_AUTOINC		0x0100
 #define	WI_FLAGS_HAS_FRAGTHR		0x0200
 #define	WI_FLAGS_HAS_DBMADJUST		0x0400
+#define WI_FLAGS_SCANNING               0x0800
+
+
+/* driver-specific node state */
+struct wi_node {
+	struct ieee80211_node ni;	/* base class */
+};
 
 struct wi_card_ident {
 	u_int16_t	card_id;
@@ -219,21 +227,9 @@ struct wi_card_ident {
 #define	WI_RSSI_TO_DBM(sc, rssi) (MIN((sc)->sc_max_rssi, \
     MAX((sc)->sc_min_rssi, (rssi))) - (sc)->sc_dbm_offset)
 
-#if __FreeBSD_version < 500000
-/*
- * Various compat hacks/kludges
- */
-#define le16toh(x) (x)
-#define htole16(x) (x)
-#define ifaddr_byindex(idx) ifnet_addrs[(idx) - 1];
-#define	WI_LOCK_DECL()		int s
-#define	WI_LOCK(_sc)		s = splimp()
-#define	WI_UNLOCK(_sc)		splx(s)
-#else
-#define	WI_LOCK_DECL()
 #define	WI_LOCK(_sc) 		mtx_lock(&(_sc)->sc_mtx)
 #define	WI_UNLOCK(_sc)		mtx_unlock(&(_sc)->sc_mtx)
-#endif
+#define	WI_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->sc_mtx, MA_OWNED)
 
 int	wi_attach(device_t);
 int	wi_detach(device_t);

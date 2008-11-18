@@ -26288,6 +26288,10 @@ sys/dev/sio/sio_pci.c -text
 sys/dev/sio/sio_puc.c -text
 sys/dev/sio/sioreg.h -text
 sys/dev/sio/siovar.h -text
+sys/dev/sk/if_sk.c -text
+sys/dev/sk/if_skreg.h -text
+sys/dev/sk/xmaciireg.h -text
+sys/dev/sk/yukonreg.h -text
 sys/dev/smbus/smb.c -text
 sys/dev/smbus/smb.h -text
 sys/dev/smbus/smbconf.c -text
@@ -26419,6 +26423,8 @@ sys/dev/stg/tmc18c30_pci.c -text
 sys/dev/stg/tmc18c30_subr.c -text
 sys/dev/stg/tmc18c30reg.h -text
 sys/dev/stg/tmc18c30var.h -text
+sys/dev/stge/if_stge.c -text
+sys/dev/stge/if_stgereg.h -text
 sys/dev/streams/streams.c -text
 sys/dev/sx/cd1865.h -text
 sys/dev/sx/sx.c -text
@@ -26469,6 +26475,10 @@ sys/dev/tdfx/tdfx_pci.h -text
 sys/dev/tdfx/tdfx_vars.h -text
 sys/dev/tga/tga_pci.c -text
 sys/dev/tga/tga_pci.h -text
+sys/dev/ti/if_ti.c -text
+sys/dev/ti/if_tireg.h -text
+sys/dev/ti/ti_fw.h -text
+sys/dev/ti/ti_fw2.h -text
 sys/dev/trm/trm.c -text
 sys/dev/trm/trm.h -text
 sys/dev/twa/tw_cl.h -text
@@ -26642,6 +26652,9 @@ sys/dev/wi/spectrum24t_cf.h -text
 sys/dev/wl/if_wl.c -text
 sys/dev/wl/if_wl.h -text
 sys/dev/wl/if_wl_i82586.h -text
+sys/dev/wpi/if_wpi.c -text
+sys/dev/wpi/if_wpireg.h -text
+sys/dev/wpi/if_wpivar.h -text
 sys/dev/xe/if_xe.c -text
 sys/dev/xe/if_xe_pccard.c -text
 sys/dev/xe/if_xereg.h -text

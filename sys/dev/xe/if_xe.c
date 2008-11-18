@@ -57,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/xe/if_xe.c,v 1.55.2.3 2005/09/17 04:01:05 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/xe/if_xe.c,v 1.64 2007/02/23 12:18:59 piso Exp $");
 
 /*		
  * FreeBSD device driver for Xircom CreditCard PCMCIA Ethernet adapters.  The
@@ -289,7 +289,7 @@ xe_attach (device_t dev)
   }
   if (scp->ce2) {
     XE_SELECT_PAGE(0x45);
-    DEVPRINTF(1, (dev, "CE2 version = 0x%#02x\n", XE_INB(XE_REV)));
+    DEVPRINTF(1, (dev, "CE2 version = 0x%02x\n", XE_INB(XE_REV)));
   }
 
   /* Attach the interface */
@@ -373,7 +373,7 @@ xe_init(void *xscp) {
   /* Put MAC address in first 'individual address' register */
   XE_SELECT_PAGE(0x50);
   for (i = 0; i < 6; i++)
-    XE_OUTB(0x08 + i, IFP2ENADDR(scp->ifp)[scp->mohawk ? 5 - i : i]);
+    XE_OUTB(0x08 + i, IF_LLADDR(scp->ifp)[scp->mohawk ? 5 - i : i]);
 
   /* Set up multicast addresses */
   xe_set_multicast(scp);
@@ -1309,7 +1309,7 @@ xe_set_multicast(struct xe_softc *scp) {
   else if (count < 10) {
     /* Full in any unused Individual Addresses with our MAC address */
     for (i = count + 1; i < 10; i++)
-      xe_set_addr(scp, (u_int8_t *)(&IFP2ENADDR(scp->ifp)), i);
+      xe_set_addr(scp, IF_LLADDR(scp->ifp), i);
     /* Enable Individual Address matching only */
     XE_SELECT_PAGE(0x42);
     XE_OUTB(XE_SWC1, (XE_INB(XE_SWC1) & ~XE_SWC1_ALLMULTI) | XE_SWC1_IA_ENABLE);
@@ -1925,8 +1925,8 @@ xe_activate(device_t dev)
 		xe_deactivate(dev);
 		return ENOMEM;
 	}
-	if ((err = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET, xe_intr, sc,
-	    &sc->intrhand)) != 0) {
+	if ((err = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET, NULL, 
+	    xe_intr, sc, &sc->intrhand)) != 0) {
 		xe_deactivate(dev);
 		return err;
 	}

@@ -23,8 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: if_xereg.h,v 1.1.1.2 2006-02-25 02:37:02 laffer1 Exp $
- * $FreeBSD: src/sys/dev/xe/if_xereg.h,v 1.6 2003/10/14 22:51:35 rsm Exp $
+ *	$Id: if_xereg.h,v 1.1.1.3 2008-11-18 16:48:50 laffer1 Exp $
+ * $FreeBSD: src/sys/dev/xe/if_xereg.h,v 1.7 2005/10/06 08:30:40 pjd Exp $
  */
 #ifndef DEV_XE_IF_XEREG_H
 #define DEV_XE_IF_XEREG_H
@@ -568,7 +568,7 @@
  * for (i = 0; i < 6; i++) {
  *   current = mcast_addr[i];
  *   for (k = 1; k <= 8; k++) {
- *     if (crc & 0x80000000);
+ *     if (crc & 0x80000000)
  *       crc31 = 0x01;
  *     else
  *       crc31 = 0;

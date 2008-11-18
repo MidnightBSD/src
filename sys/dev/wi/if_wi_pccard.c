@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/wi/if_wi_pccard.c,v 1.57 2005/07/10 02:00:35 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/wi/if_wi_pccard.c,v 1.59 2005/10/14 15:06:16 imp Exp $");
 
 #include "opt_wi.h"
 
@@ -81,19 +81,12 @@ __FBSDID("$FreeBSD: src/sys/dev/wi/if_wi_pccard.c,v 1.57 2005/07/10 02:00:35 imp
 static int wi_pccard_probe(device_t);
 static int wi_pccard_attach(device_t);
 
-static int wi_pccard_match(device_t);
-
 static device_method_t wi_pccard_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
+	DEVMETHOD(device_probe,		wi_pccard_probe),
+	DEVMETHOD(device_attach,	wi_pccard_attach),
 	DEVMETHOD(device_detach,	wi_detach),
 	DEVMETHOD(device_shutdown,	wi_shutdown),
-
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	wi_pccard_match),
-	DEVMETHOD(card_compat_probe,	wi_pccard_probe),
-	DEVMETHOD(card_compat_attach,	wi_pccard_attach),
 
 	{ 0, 0 }
 };
@@ -113,6 +106,7 @@ static const struct pccard_product wi_pccard_products[] = {
 	PCMCIA_CARD(ACTIONTEC, PRISM),
 	PCMCIA_CARD(ADAPTEC2, ANW8030),
 	PCMCIA_CARD(ADDTRON, AWP100),
+	PCMCIA_CARD(AIRVAST, WN_100B),
 	PCMCIA_CARD(AIRVAST, WN_100),
 	PCMCIA_CARD(ALLIEDTELESIS, WR211PCM),
 	PCMCIA_CARD(ARTEM, ONAIR),
@@ -132,6 +126,7 @@ static const struct pccard_product wi_pccard_products[] = {
 	PCMCIA_CARD(DLINK, DWL650H),
 	PCMCIA_CARD(ELSA, XI300_IEEE),
 	PCMCIA_CARD(ELSA, XI325_IEEE),
+	PCMCIA_CARD(ELSA, XI330_IEEE),
 	PCMCIA_CARD(ELSA, XI800_IEEE),
 	PCMCIA_CARD(ELSA, WIFI_FLASH),
 	PCMCIA_CARD(EMTAC, WLAN),
@@ -163,8 +158,7 @@ static const struct pccard_product wi_pccard_products[] = {
 };
 
 static int
-wi_pccard_match(dev)
-	device_t	dev;
+wi_pccard_probe(device_t dev)
 {
 	const struct pccard_product *pp;
 	u_int32_t fcn = PCCARD_FUNCTION_UNSPEC;
@@ -186,12 +180,13 @@ wi_pccard_match(dev)
 	return (ENXIO);
 }
 
+
 static int
-wi_pccard_probe(dev)
-	device_t	dev;
+wi_pccard_attach(device_t dev)
 {
 	struct wi_softc	*sc;
 	int		error;
+	uint32_t	vendor, product;
 
 	sc = device_get_softc(dev);
 	sc->wi_gone = 0;
@@ -204,25 +199,6 @@ wi_pccard_probe(dev)
 	/* Make sure interrupts are disabled. */
 	CSR_WRITE_2(sc, WI_INT_EN, 0);
 	CSR_WRITE_2(sc, WI_EVENT_ACK, 0xFFFF);
-
-	wi_free(dev);
-
-	return (0);
-}
-
-static int
-wi_pccard_attach(device_t dev)
-{
-	int			error;
-	uint32_t		vendor;
-	uint32_t		product;
-	int			retval;
-
-	error = wi_alloc(dev, 0);
-	if (error) {
-		device_printf(dev, "wi_alloc() failed! (%d)\n", error);
-		return (error);
-	}
 
 	/*
 	 * The cute little Symbol LA4100-series CF cards need to have
@@ -246,8 +222,9 @@ wi_pccard_attach(device_t dev)
 		return (ENXIO);
 #endif
 	}
-	retval = wi_attach(dev);
-	if (retval != 0)
+	pccard_get_ether(dev, sc->sc_hintmacaddr);
+	error = wi_attach(dev);
+	if (error != 0)
 		wi_free(dev);
-	return (retval);
+	return (error);
 }

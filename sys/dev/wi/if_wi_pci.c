@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/wi/if_wi_pci.c,v 1.25.2.1 2005/08/25 05:01:17 rwatson Exp $
+ * $FreeBSD: src/sys/dev/wi/if_wi_pci.c,v 1.27 2006/05/16 14:36:33 phk Exp $
  */
 
 /*
@@ -49,7 +49,6 @@
 
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <machine/clock.h>
 #include <sys/rman.h>
 
 #include <dev/pci/pcireg.h>

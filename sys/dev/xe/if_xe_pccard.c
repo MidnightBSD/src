@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/xe/if_xe_pccard.c,v 1.26.2.2 2005/09/17 04:01:05 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/xe/if_xe_pccard.c,v 1.32 2005/09/19 03:10:21 imp Exp $");
 
 /* xe pccard interface driver */
 
@@ -328,8 +328,8 @@ xe_pccard_detach(device_t dev)
 
 	sc->ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	ether_ifdetach(sc->ifp);
-	if_free(sc->ifp);
 	xe_deactivate(dev);
+	if_free(sc->ifp);
 	return (0);
 }
 

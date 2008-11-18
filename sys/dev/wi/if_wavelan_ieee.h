@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/wi/if_wavelan_ieee.h,v 1.19 2005/01/06 01:43:33 imp Exp $
+ * $FreeBSD: src/sys/dev/wi/if_wavelan_ieee.h,v 1.21 2007/07/11 21:25:48 thompsa Exp $
  */
 
 #ifndef _IF_WAVELAN_IEEE_H
@@ -59,11 +59,13 @@
  */
 #define WI_MAX_DATALEN	512
 
+#if 0
 struct wi_req {
 	u_int16_t	wi_len;
 	u_int16_t	wi_type;
 	u_int16_t	wi_val[WI_MAX_DATALEN];
 };
+#endif
 
 /*
  * Private LTV records (interpreted only by the driver). This is
@@ -226,6 +228,7 @@ struct wi_counters {
 #define WI_RID_P2_CRYPT_KEY2	0xFC26
 #define WI_RID_P2_CRYPT_KEY3	0xFC27
 #define WI_RID_P2_ENCRYPTION	0xFC28
+#define WI_RID_ALT_RETRY_CNT	0xFC32
 #define	 PRIVACY_INVOKED	0x01
 #define	 EXCLUDE_UNENCRYPTED	0x02
 #define	 HOST_ENCRYPT		0x10
@@ -466,7 +469,7 @@ struct wi_rx_frame {
 	u_int8_t	wi_src_addr[6];
 	u_int16_t	wi_len;
 };
-#define WI_DATA_HDRLEN		0x44
+#define WI_DATA_HDRLEN		0x3C
 #define WI_MGMT_HDRLEN		0x3C
 #define WI_CTL_HDRLEN		0x3C
 

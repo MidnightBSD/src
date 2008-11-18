@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/wds/wd7000.c,v 1.9 2005/01/06 01:43:33 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/wds/wd7000.c,v 1.14 2007/06/17 05:55:53 scottl Exp $");
 
 /* All bugs are subject to removal without further notice */
 
@@ -132,6 +132,7 @@ __FBSDID("$FreeBSD: src/sys/dev/wds/wd7000.c,v 1.9 2005/01/06 01:43:33 imp Exp $
 #include <sys/errno.h>
 #include <sys/kernel.h>
 #include <sys/assym.h>
+#include <sys/malloc.h>
 
 #include <sys/bio.h>
 #include <sys/buf.h>
@@ -144,7 +145,6 @@ __FBSDID("$FreeBSD: src/sys/dev/wds/wd7000.c,v 1.9 2005/01/06 01:43:33 imp Exp $
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
 
-#include <machine/clock.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -401,6 +401,8 @@ static driver_t wds_isa_driver = {
 static devclass_t wds_devclass;
 
 DRIVER_MODULE(wds, isa, wds_isa_driver, wds_devclass, 0, 0);
+MODULE_DEPEND(wds, isa, 1, 1, 1);
+MODULE_DEPEND(wds, cam, 1, 1, 1);
 
 #if WDS_ENABLE_SMALLOG==1
 #define SMALLOGSIZ	512
@@ -541,7 +543,7 @@ wds_attach(device_t dev)
 	if (wp->intr_r == NULL)
 		goto bad;
 	error = bus_setup_intr(dev, wp->intr_r, INTR_TYPE_CAM | INTR_ENTROPY,
-			       (driver_intr_t *)wds_intr, (void *)wp,
+			       NULL, (driver_intr_t *)wds_intr, (void *)wp,
 			       &wp->intr_cookie);
 	if (error)
 		goto bad;
@@ -605,14 +607,14 @@ wds_attach(device_t dev)
 		goto bad;
 
 	sim = cam_sim_alloc(wds_action, wds_poll, "wds", (void *) wp,
-			    wp->unit, 1, 1, devq);
+			    wp->unit, &Giant, 1, 1, devq);
 	if (sim == NULL) {
 		cam_simq_free(devq);
 		goto bad;
 	}
 	wp->sim = sim;
 
-	if (xpt_bus_register(sim, 0) != CAM_SUCCESS) {
+	if (xpt_bus_register(sim, dev, 0) != CAM_SUCCESS) {
 		cam_sim_free(sim, /* free_devq */ TRUE);
 		goto bad;
 	}

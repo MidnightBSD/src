@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/wi/if_wireg.h,v 1.44 2005/01/06 01:43:33 imp Exp $
+ * $FreeBSD: src/sys/dev/wi/if_wireg.h,v 1.45 2006/08/05 04:58:25 sam Exp $
  */
 
 #define WI_DELAY	5
@@ -496,6 +496,7 @@ struct wi_pcf {
 #define WI_PORTTYPE_BSS		0x1
 #define WI_PORTTYPE_WDS		0x2
 #define WI_PORTTYPE_ADHOC	0x3
+#define WI_PORTTYPE_APSILENT	0x5
 #define	WI_PORTTYPE_HOSTAP	0x6
 
 /*
