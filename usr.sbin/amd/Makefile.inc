@@ -1,6 +1,6 @@
 # ex:ts=8
 #
-# $FreeBSD: src/usr.sbin/amd/Makefile.inc,v 1.11 2004/11/13 20:40:31 bz Exp $
+# $FreeBSD: src/usr.sbin/amd/Makefile.inc,v 1.14 2006/03/21 09:00:51 ru Exp $
 #
 # Makefile for amd
 # 	This file is under a "BSD" copyright (c) by David O'Brien 1998.
@@ -8,6 +8,8 @@
 #	$NetBSD: Makefile.inc,v 1.10 1998/08/08 22:33:27 christos Exp $
 #	Portions derived from amd/libamu/Makefile
 #	$NetBSD: Makefile,v 1.8 1998/08/08 22:33:37 christos Exp $
+
+.include <bsd.own.mk>
 
 CFLAGS+= -I. -I${.CURDIR} 
 CFLAGS+= -I${.CURDIR}/../include
@@ -17,8 +19,12 @@ CFLAGS+= -I${.OBJDIR}/../include
 CFLAGS+= -I${.CURDIR}/../../../contrib/amd/include
 CFLAGS+= -I${.CURDIR}/../../../contrib/amd
 CFLAGS+= -DHAVE_CONFIG_H
-.if defined(NO_NIS)
+.if ${MK_NIS} == "no"
 CFLAGS+= -DHAVE_LOCALCONFIG_H
+.endif
+
+.if ${MK_HESIOD} != "no"
+CFLAGS+= -DYES_HESIOD
 .endif
 
 CFLAGS+= -DHOST_CPU=\"${MACHINE_ARCH}\" -DHOST_ARCH=\"${MACHINE_ARCH}\"

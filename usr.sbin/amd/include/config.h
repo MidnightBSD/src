@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.sbin/amd/include/config.h,v 1.30 2004/07/15 13:24:44 mbr Exp $
+ * $FreeBSD: src/usr.sbin/amd/include/config.h,v 1.31 2005/08/06 16:52:30 phk Exp $
  *
  * portions derived from
  *      $NetBSD: config.h,v 1.11 1998/08/08 22:33:37 christos Exp $
@@ -388,6 +388,7 @@
 /* Define to 1 if you have the `hasmntopt' function. */
 /* #undef HAVE_HASMNTOPT */
 
+#ifdef YES_HESIOD
 /* Define to 1 if you have the <hesiod.h> header file. */
 #define HAVE_HESIOD_H 1
 
@@ -402,6 +403,24 @@
 
 /* Define to 1 if you have the `hes_init' function. */
 #define HAVE_HES_INIT 1
+
+#else /* YES_HESIOD */
+/* Define to 1 if you have the <hesiod.h> header file. */
+#undef HAVE_HESIOD_H 
+
+/* Define to 1 if you have the `hesiod_init' function. */
+#undef HAVE_HESIOD_INIT 
+
+/* Define to 1 if you have the `hesiod_reload' function. */
+/* #undef HAVE_HESIOD_RELOAD */
+
+/* Define to 1 if you have the `hesiod_to_bind' function. */
+#undef HAVE_HESIOD_TO_BIND 
+
+/* Define to 1 if you have the `hes_init' function. */
+#undef HAVE_HES_INIT 
+
+#endif
 
 /* Define to 1 if you have the <hsfs/hsfs.h> header file. */
 /* #undef HAVE_HSFS_HSFS_H */
@@ -496,8 +515,12 @@
 /* Define if have file maps (everyone should have it!) */
 #define HAVE_MAP_FILE 1
 
+#ifdef YES_HESIOD
 /* Define if have HESIOD maps */
 #define HAVE_MAP_HESIOD 1
+#else
+#undef HAVE_MAP_HESIOD
+#endif
 
 /* Define if have LDAP maps */
 /* #undef HAVE_MAP_LDAP */
