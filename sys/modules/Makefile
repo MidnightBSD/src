@@ -1,8 +1,7 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.11.2.1 2008/07/01 00:36:30 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.12 2008/07/01 00:52:01 laffer1 Exp $
 
-# oldcard -- specialized use for debugging only.
-# owi -- totally unsupported for debugging only.
+.include <bsd.own.mk>
 
 SUBDIR=	${_3dfx} \
 	${_3dfx_linux} \
@@ -18,7 +17,7 @@ SUBDIR=	${_3dfx} \
 	aio \
 	${_amd} \
 	amr \
-	an \
+	${_an} \
 	${_aout} \
 	${_apm} \
 	${_ar} \
@@ -27,11 +26,11 @@ SUBDIR=	${_3dfx} \
 	${_arl} \
 	${_asr} \
 	ata \
-	ath \
+	${_ath} \
 	${_ath_hal} \
-	ath_rate_amrr \
-	ath_rate_onoe \
-	ath_rate_sample \
+	${_ath_rate_amrr} \
+	${_ath_rate_onoe} \
+	${_ath_rate_sample} \
 	aue \
 	${_auxio} \
 	${_awi} \
@@ -41,7 +40,7 @@ SUBDIR=	${_3dfx} \
 	bge \
 	${_bios} \
 	${_bktr} \
-	bridge \
+	bridgestp \
 	cam \
 	${_canbepm} \
 	${_canbus} \
@@ -56,6 +55,7 @@ SUBDIR=	${_3dfx} \
 	coda \
 	coda5 \
 	${_coff} \
+	${_coretemp} \
 	${_cp} \
 	${_cpufreq} \
 	${_crypto} \
@@ -63,6 +63,7 @@ SUBDIR=	${_3dfx} \
 	${_cs} \
 	${_ctau} \
 	cue \
+	cxgb \
 	${_cx} \
 	dc \
 	dcons \
@@ -73,7 +74,6 @@ SUBDIR=	${_3dfx} \
 	${_drm} \
 	dummynet \
 	${_ed} \
-	${_el} \
 	${_elink} \
 	${_em} \
 	en \
@@ -88,14 +88,16 @@ SUBDIR=	${_3dfx} \
 	firewire \
 	firmware \
 	fxp \
-	${_gem} \
+	gem \
 	geom \
-	harp \
+	${_harp} \
 	hatm \
 	${_hfa} \
 	hifn \
 	hme \
+	${_hptiop} \
 	${_hptmv} \
+	${_hptrr} \
 	hwpmc \
 	${_i2c} \
 	${_ibcs2} \
@@ -105,10 +107,12 @@ SUBDIR=	${_3dfx} \
 	${_ie} \
 	if_bridge \
 	if_disc \
+	if_edsc \
 	if_ef \
 	if_faith \
 	if_gif \
 	if_gre \
+	if_lagg \
 	${_if_ndis} \
 	if_ppp \
 	if_sl \
@@ -118,16 +122,20 @@ SUBDIR=	${_3dfx} \
 	if_vlan \
 	${_iir} \
 	${_io} \
-	ip6fw \
 	ipdivert \
 	${_ipfilter} \
 	ipfw \
 	ip_mroute_mod \
+	${_ipmi} \
 	${_ips} \
-	ipw \
+	${_ipw} \
+	${_ipwfw} \
+	iscsi \
 	isp \
 	ispfw \
-	iwi \
+	${_iwi} \
+	${_iwifw} \
+	${_ixgb} \
 	joy \
 	kbdmux \
 	kue \
@@ -138,8 +146,9 @@ SUBDIR=	${_3dfx} \
 	libmbpool \
 	libmchain \
 	${_linprocfs} \
+	${_linsysfs} \
 	${_linux} \
-	${_lnc} \
+	lmc \
 	lpt \
 	mac_biba \
 	mac_bsdextended \
@@ -160,15 +169,18 @@ SUBDIR=	${_3dfx} \
 	mlx \
 	${_mly} \
 	mpt \
+	mqueue \
 	msdosfs \
 	msdosfs_iconv \
 	${_mse} \
 	msk \
+	mxge \
 	my \
 	${_ncp} \
 	${_ncv} \
 	${_ndis} \
 	netgraph \
+	${_nfe} \
 	nfsclient \
 	nfsserver \
 	nge \
@@ -176,11 +188,12 @@ SUBDIR=	${_3dfx} \
 	${_nsp} \
 	ntfs \
 	ntfs_iconv \
+	${_nxge} \
 	nullfs \
 	${_nve} \
+	${_nvram} \
 	${_nwfs} \
 	${_oltr} \
-	${_osf1} \
 	${_padlock} \
 	patm \
 	${_pccard} \
@@ -193,12 +206,13 @@ SUBDIR=	${_3dfx} \
 	${_pmc} \
 	portalfs \
 	ppbus \
+	ppc \
 	ppi \
 	pps \
 	procfs \
 	pseudofs \
 	${_pst} \
-	${_puc} \
+	puc \
 	ral \
 	${_random} \
 	${_ray} \
@@ -209,12 +223,15 @@ SUBDIR=	${_3dfx} \
 	rl \
 	rp \
 	rue \
+	rum \
 	${_s3} \
 	${_safe} \
 	${_sbni} \
 	sbsh \
+	scc \
 	scd \
 	${_scsi_low} \
+	sem \
 	sf \
 	${_sio} \
 	sis \
@@ -230,18 +247,21 @@ SUBDIR=	${_3dfx} \
 	${_sr} \
 	ste \
 	${_stg} \
+	stge \
 	${_streams} \
 	sym \
 	${_syscons} \
 	sysvipc \
 	ti \
 	tl \
+	${_tmpfs} \
 	trm \
 	${_twa} \
 	twe \
 	tx \
 	txp \
-	${_uart} \
+	uark \
+	uart \
 	ubsa \
 	ubsec \
 	ubser \
@@ -253,6 +273,7 @@ SUBDIR=	${_3dfx} \
 	udf_iconv \
 	ufm \
 	${_ufs} \
+	ufoma \
 	uftdi \
 	ugen \
 	uhid \
@@ -280,26 +301,37 @@ SUBDIR=	${_3dfx} \
 	wb \
 	${_wi} \
 	wlan \
+	wlan_scan_ap \
+	wlan_scan_sta \
 	wlan_acl \
+	wlan_amrr \
 	wlan_ccmp \
 	wlan_tkip \
 	wlan_wep \
 	wlan_xauth \
+	${_wpi} \
+	${_wpifw} \
 	${_xe} \
+	xfs \
 	xl \
-	zlib
+	${_zfs} \
+	zlib \
+	zyd
 
-.if ${MACHINE_ARCH} != "powerpc"
 _syscons=	syscons
 _uart=		uart
 _vpo=		vpo
-.endif
 
 .if defined(ALL_MODULES)
 _ufs=		ufs
 .endif
 
-.if !defined(NO_CRYPT) || defined(ALL_MODULES)
+# Disabled in 7.0 as netatm is not MPSAFE.
+#if ${MK_ATM} != "no"
+#_harp=		harp
+#.endif
+
+.if ${MK_CRYPT} != "no" || defined(ALL_MODULES)
 .if exists(${.CURDIR}/../opencrypto)
 _crypto=	crypto
 _cryptodev=	cryptodev
@@ -309,11 +341,11 @@ _random=	random
 .endif
 .endif
 
-.if !defined(NO_IPFILTER) || defined(ALL_MODULES)
+.if ${MK_IPFILTER} != "no" || defined(ALL_MODULES)
 _ipfilter=	ipfilter
 .endif
 
-.if !defined(NO_PF) || defined(ALL_MODULES)
+.if ${MK_PF} != "no" || defined(ALL_MODULES)
 _pf=		pf
 _pflog=		pflog
 .endif
@@ -326,11 +358,16 @@ _3dfx_linux=	3dfx_linux
 _agp=		agp
 _aic=		aic
 _amd=		amd
+_an=		an
 _aout=		aout
 _apm=		apm
 _ar=		ar
 _arcnet=	arcnet
+_ath=		ath
 _ath_hal=	ath_hal
+_ath_rate_amrr=	ath_rate_amrr
+_ath_rate_onoe=	ath_rate_onoe
+_ath_rate_sample=ath_rate_sample
 _awi=		awi
 _bktr=		bktr
 _cardbus=	cardbus
@@ -339,6 +376,7 @@ _ce=		ce
 _coff=		coff
 _cp=		cp
 _cpufreq=	cpufreq
+_cs=		cs
 _digi=		digi
 _drm=		drm
 _ed=		ed
@@ -348,27 +386,30 @@ _ep=		ep
 _exca=		exca
 _ext2fs=	ext2fs
 _fe=		fe
-_hfa=		hfa
+#_hfa=		hfa #not mpsafe
 _i2c=		i2c
 _ibcs2=		ibcs2
 _ie=		ie
 _if_ndis=	if_ndis
 _io=		io
 _linprocfs=	linprocfs
+_linsysfs=	linsysfs
 _linux=		linux
-_lnc=		lnc
 _mse=		mse
+.if ${MK_NCP} != "no"
 _ncp=		ncp
+.endif
 _ncv=		ncv
 _ndis=		ndis
 _nsp=		nsp
+.if ${MK_NCP} != "no"
 _nwfs=		nwfs
+.endif
 _oltr=		oltr
 _pccard=	pccard
 _pcfclock=	pcfclock
 _pecoff=	pecoff
 _pst=		pst
-_puc=		puc
 _ray=		ray
 _safe=		safe
 _sbni=		sbni
@@ -382,9 +423,12 @@ _sppp=		sppp
 _sr=		sr
 _stg=		stg
 _streams=	streams
+_tmpfs=		tmpfs
 _wi=		wi
 _xe=		xe
-.if ${MACHINE} == "i386"
+.if ${MK_ZFS} != "no" || defined(ALL_MODULES)
+_zfs=		zfs
+.endif
 _aac=		aac
 _acpi=		acpi
 _ahb=		ahb
@@ -394,21 +438,33 @@ _asr=		asr
 _bios=		bios
 _ciss=		ciss
 _cm=		cm
-_cs=		cs
+_coretemp=	coretemp
 _ctau=		ctau
 _cx=		cx
 _dpt=		dpt
-_el=		el
 _ex=		ex
+_hptiop=	hptiop
 _hptmv=		hptmv
+_hptrr=		hptrr
 _ichwd=		ichwd
 _ida=		ida
-_idt=		idt
+#_idt=		idt # not mpsafe
 _iir=		iir
+_ipmi=		ipmi
 _ips=		ips
+_ipw=		ipw
+_ipwfw=		ipwfw
+_iwi=		iwi
+_iwifw=		iwifw
+_ixgb=		ixgb
 _mly=		mly
+_nfe=		nfe
 _nve=		nve
-.if !defined(NO_CRYPT) || defined(ALL_MODULES)
+_nvram=		nvram
+_nxge=		nxge
+_wpi=		wpi
+_wpifw=		wpifw
+.if ${MK_CRYPT} != "no" || defined(ALL_MODULES)
 .if exists(${.CURDIR}/../crypto/via)
 _padlock=	padlock
 .endif
@@ -416,91 +472,79 @@ _padlock=	padlock
 _s3=		s3
 _twa=		twa
 _vesa=		vesa
-.elif ${MACHINE} == "pc98"
-_canbepm=	canbepm
-_canbus=	canbus
-_pmc=		pmc
-_snc=		snc
-.endif
 .endif
 
 .if ${MACHINE_ARCH} == "amd64"
 _aac=		aac
-#_acpi=		acpi		# doesn't work on amd64 yet
+_acpi=		acpi
 _agp=		agp
+_an=		an
 _arcmsr=	arcmsr
+_ath=		ath
 _ath_hal=	ath_hal
+_ath_rate_amrr=	ath_rate_amrr
+_ath_rate_onoe=	ath_rate_onoe
+_ath_rate_sample=ath_rate_sample
+_cardbus=	cardbus
+_cbb=		cbb
 _ciss=		ciss
+_coretemp=	coretemp
 _cpufreq=	cpufreq
 _digi=		digi
 _drm=		drm
+_ed=		ed
 _em=		em
+_exca=		exca
 _ext2fs=	ext2fs
+_hptiop=	hptiop
 _hptmv=		hptmv
+_hptrr=		hptrr
 _i2c=		i2c
 _ichwd=		ichwd
 _ida=		ida
 _if_ndis=	if_ndis
 _iir=		iir
 _io=		io
+_ipmi=		ipmi
 _ips=		ips
-#_lnc=		lnc
+_ipw=		ipw
+_ipwfw=		ipwfw
+_ixgb=		ixgb
+_linprocfs=	linprocfs
+_linsysfs=	linsysfs
+_linux=		linux
 _mly=		mly
 _ndis=		ndis
+_nfe=		nfe
 _nve=		nve
+_nvram=		nvram
+_nxge=		nxge
+_pccard=	pccard
 _safe=		safe
 _scsi_low=	scsi_low
 _smbfs=		smbfs
 _sound=		sound
 _speaker=	speaker
 _sppp=		sppp
+_tmpfs=		tmpfs
 _twa=		twa
-.endif
-
-.if ${MACHINE_ARCH} == "ia64"
-# Modules not enabled on ia64 (as compared to i386) include:
-#	aac acpi aout apm atspeaker drm ibcs2 linprocfs linux ncv
-#	nsp oltr pecoff s3 sbni stg vesa
-# acpi is not enabled because it is broken as a module on ia64
-_aic=		aic
-#_ar=		ar	not 64-bit clean
-_arcnet=	arcnet
-_asr=		asr
-_bktr=		bktr
-_cardbus=	cardbus
-_cbb=		cbb
-_ciss=		ciss
-_cm=		cm
-_coff=		coff
-_cpufreq=	cpufreq
-_el=		el
-_em=		em
-_ep=		ep
-_exca=		exca
-_fe=		fe
-_hfa=		hfa
-_iir=		iir
-_mly=		mly
-_pccard=	pccard
-_scsi_low=	scsi_low
-_smbfs=		smbfs
-_sound=		sound
-_splash=	splash
-_sppp=		sppp
-#_sr=		sr		not 64bit clean
-_streams=	streams
 _wi=		wi
-_xe=		xe
+_wpi=		wpi
+_wpifw=		wpifw
+.if ${MK_ZFS} != "no" || defined(ALL_MODULES)
+_zfs=		zfs
 .endif
-
-.if ${MACHINE_ARCH} == "powerpc"
-_gem=		gem
 .endif
 
 .if ${MACHINE_ARCH} == "sparc64"
+_ath=		ath
+_ath_hal=	ath_hal
+_ath_rate_amrr=	ath_rate_amrr
+_ath_rate_onoe=	ath_rate_onoe
+_ath_rate_sample=ath_rate_sample
 _auxio=		auxio
 _em=		em
-_gem=		gem
+_i2c=		i2c
 _sound=		sound
 .endif
 
