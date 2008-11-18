@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.16 2008/11/17 23:25:28 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.17 2008/11/18 00:14:05 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -54,7 +54,7 @@ SUBDIR=	ac \
 	fdread \
 	fdwrite \
 	flowctl \
-	${_ftp-proxy}
+	${_ftp-proxy} \
 	fwcontrol \
 	getfmac \
 	getpmac \
