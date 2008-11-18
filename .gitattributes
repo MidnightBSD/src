@@ -27739,6 +27739,7 @@ sys/modules/cm/Makefile -text
 sys/modules/coda/Makefile -text
 sys/modules/coda5/Makefile -text
 sys/modules/coff/Makefile -text
+sys/modules/coretemp/Makefile -text
 sys/modules/cp/Makefile -text
 sys/modules/cpufreq/Makefile -text
 sys/modules/crypto/Makefile -text
@@ -27840,9 +27841,11 @@ sys/modules/i2c/controllers/Makefile -text
 sys/modules/i2c/controllers/Makefile.inc -text
 sys/modules/i2c/controllers/alpm/Makefile -text
 sys/modules/i2c/controllers/amdpm/Makefile -text
+sys/modules/i2c/controllers/amdsmb/Makefile -text
 sys/modules/i2c/controllers/ichsmb/Makefile -text
 sys/modules/i2c/controllers/intpm/Makefile -text
 sys/modules/i2c/controllers/lpbb/Makefile -text
+sys/modules/i2c/controllers/nfsmb/Makefile -text
 sys/modules/i2c/controllers/pcf/Makefile -text
 sys/modules/i2c/controllers/viapm/Makefile -text
 sys/modules/i2c/if_ic/Makefile -text
@@ -27906,6 +27909,7 @@ sys/modules/libmbpool/Makefile -text
 sys/modules/libmchain/Makefile -text
 sys/modules/linprocfs/Makefile -text
 sys/modules/linux/Makefile -text
+sys/modules/lmc/Makefile -text
 sys/modules/lnc/Makefile -text
 sys/modules/lpt/Makefile -text
 sys/modules/mac_biba/Makefile -text
@@ -27927,6 +27931,7 @@ sys/modules/mii/Makefile -text
 sys/modules/mlx/Makefile -text
 sys/modules/mly/Makefile -text
 sys/modules/mpt/Makefile -text
+sys/modules/mqueue/Makefile -text
 sys/modules/msdosfs/Makefile -text
 sys/modules/msdosfs_iconv/Makefile -text
 sys/modules/mse/Makefile -text
@@ -28000,6 +28005,7 @@ sys/modules/netgraph/tee/Makefile -text
 sys/modules/netgraph/tty/Makefile -text
 sys/modules/netgraph/vjc/Makefile -text
 sys/modules/netgraph/vlan/Makefile -text
+sys/modules/nfe/Makefile -text
 sys/modules/nfs4client/Makefile -text
 sys/modules/nfsclient/Makefile -text
 sys/modules/nfsserver/Makefile -text
@@ -28178,7 +28184,9 @@ sys/modules/wlan_tkip/Makefile -text
 sys/modules/wlan_wep/Makefile -text
 sys/modules/wlan_xauth/Makefile -text
 sys/modules/xe/Makefile -text
+sys/modules/xfs/Makefile -text
 sys/modules/xl/Makefile -text
+sys/modules/zfs/Makefile -text
 sys/modules/zlib/Makefile -text
 sys/net/bpf.c -text
 sys/net/bpf.h -text
