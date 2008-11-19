@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.include.dist,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.include.dist,v 1.3 2008/11/07 22:40:30 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.include.dist,v 1.100.2.2 2005/11/16 10:50:10 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -49,6 +49,8 @@
         ..
         iicbus
         ..
+        lmc
+        ..
         ofw
         ..
         pbio
@@ -62,6 +64,8 @@
         usb
         ..
         utopia
+        ..
+        vkbd
         ..
         wi
         ..
@@ -129,6 +133,8 @@
     gpib
     ..
     gssapi
+    ..
+    i4b
     ..
     isofs
         cd9660
