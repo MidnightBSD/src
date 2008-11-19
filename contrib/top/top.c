@@ -13,7 +13,7 @@ char *copyright =
  *  Copyright (c) 1994, 1995, William LeFebvre, Argonne National Laboratory
  *  Copyright (c) 1996, William LeFebvre, Group sys Consulting
  *
- * $FreeBSD: src/contrib/top/top.c,v 1.19 2006/04/19 12:19:06 ru Exp $
+ * $FreeBSD: src/contrib/top/top.c,v 1.23 2007/05/04 15:42:58 rafan Exp $
  */
 
 /*
@@ -64,6 +64,8 @@ extern char *optarg;
 
 /* imported from screen.c */
 extern int overstrike;
+
+static int fmt_flags = 0;
 
 /* signal handling routines */
 sigret_t leave();
@@ -193,9 +195,9 @@ char *argv[];
     fd_set readfds;
 
 #ifdef ORDER
-    static char command_chars[] = "\f qh?en#sdkriIutHmSCo";
+    static char command_chars[] = "\f qh?en#sdkriIutHmSCajo";
 #else
-    static char command_chars[] = "\f qh?en#sdkriIutHmSC";
+    static char command_chars[] = "\f qh?en#sdkriIutHmSCaj";
 #endif
 /* these defines enumerate the "strchr"s of the commands in command_chars */
 #define CMD_redraw	0
@@ -219,8 +221,10 @@ char *argv[];
 #define CMD_viewtog	17
 #define CMD_viewsys	18
 #define	CMD_wcputog	19
+#define	CMD_showargs	20
+#define	CMD_jidtog	21
 #ifdef ORDER
-#define CMD_order       20
+#define CMD_order       22
 #endif
 
     /* set the buffer for stdout */
@@ -252,6 +256,7 @@ char *argv[];
     ps.uid     = -1;
     ps.thread  = No;
     ps.wcpu    = 1;
+    ps.jail    = No;
     ps.command = NULL;
 
     /* get preset options from the environment */
@@ -277,7 +282,7 @@ char *argv[];
 	    optind = 1;
 	}
 
-	while ((i = getopt(ac, av, "CSIHbinquvs:d:U:m:o:t")) != EOF)
+	while ((i = getopt(ac, av, "CSIHabijnquvs:d:U:m:o:t")) != EOF)
 	{
 	    switch(i)
 	    {
@@ -314,6 +319,10 @@ char *argv[];
 	      case 'n':			/* batch, or non-interactive */
 	      case 'b':
 		interactive = No;
+		break;
+
+	      case 'a':
+		fmt_flags ^= FMT_SHOWARGS;
 		break;
 
 	      case 'd':			/* number of displays to show */
@@ -394,10 +403,14 @@ char *argv[];
 		ps.thread = !ps.thread;
 		break;
 
+	      case 'j':
+		ps.jail = !ps.jail;
+		break;
+
 	      default:
 		fprintf(stderr,
 "Top version %s\n"
-"Usage: %s [-bCHIinqStuv] [-d count] [-m io | cpu] [-o field] [-s time]\n"
+"Usage: %s [-abCHIijnqStuv] [-d count] [-m io | cpu] [-o field] [-s time]\n"
 "       [-U username] [number]\n",
 			version_string(), myname);
 		exit(1);
@@ -651,7 +664,8 @@ restart:
 	    /* now show the top "n" processes. */
 	    for (i = 0; i < active_procs; i++)
 	    {
-		(*d_process)(i, format_next_process(processes, get_userid));
+		(*d_process)(i, format_next_process(processes, get_userid,
+			     fmt_flags));
 	    }
 	}
 	else
@@ -1020,6 +1034,9 @@ restart:
 			    case CMD_viewsys:
 				ps.system = !ps.system;
 				break;
+			    case CMD_showargs:
+				fmt_flags ^= FMT_SHOWARGS;
+				break;
 #ifdef ORDER
 			    case CMD_order:
 				new_message(MT_standout,
@@ -1044,6 +1061,15 @@ restart:
 				}
 				break;
 #endif
+			    case CMD_jidtog:
+				ps.jail = !ps.jail;
+				new_message(MT_standout | MT_delayed,
+				    " %sisplaying jail ID.",
+				    ps.jail ? "D" : "Not d");
+				header_text = format_header(uname_field);
+				reset_display();
+				putchar('\r');
+				break;
 	    
 			    default:
 				new_message(MT_standout, " BAD CASE IN SWITCH!");

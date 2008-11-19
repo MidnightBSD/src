@@ -1,6 +1,6 @@
 .\" NOTE:  changes to the manual page for "top" should be made in the
 .\"        file "top.X" and NOT in the file "top.1".
-.\" $FreeBSD: src/contrib/top/top.X,v 1.16 2006/05/16 15:27:43 keramida Exp $
+.\" $FreeBSD: src/contrib/top/top.X,v 1.20 2007/05/04 15:42:58 rafan Exp $
 .nr N %topn%
 .nr D %delay%
 .TH TOP 1 Local
@@ -10,7 +10,7 @@ top \- display and update information about the top cpu processes
 .SH SYNOPSIS
 .B top
 [
-.B \-bCHIinqStuv
+.B \-abCHIijnqStuv
 ] [
 .BI \-d count
 ] [
@@ -78,6 +78,12 @@ the \*(lqWCPU\*(rq column respectively.
 Show system processes in the display.  Normally, system processes such as
 the pager and the swapper are not shown.  This option makes them visible.
 .TP
+.B \-a
+Display command names derived from the argv[] vector, rather than real
+executable name. It's useful when you want to watch applications, that
+puts their status information there. If the real name differs from argv[0],
+it will be displayed in parenthesis.
+.TP
 .B \-b
 Use \*(lqbatch\*(rq mode.  In this mode, all input from the terminal is
 ignored.  Interrupt characters (such as ^C and ^\e) still have an effect.
@@ -95,6 +101,11 @@ intelligent terminal.
 .B \-I
 Do not display idle processes.
 By default, top displays both active and idle processes.
+.TP
+.B \-j
+Display the
+.IR jail (8)
+ID.
 .TP
 .B \-t
 Do not display the
@@ -244,6 +255,9 @@ Change the number of seconds to delay between displays
 .B S
 Toggle the display of system processes.
 .TP
+.B a
+Toggle the display of process titles.
+.TP
 .B k
 Send a signal (\*(lqkill\*(rq by default) to a list of processes.  This
 acts similarly to the command
@@ -277,6 +291,11 @@ command.
 .BR I )
 Toggle the display of idle processes.
 .TP
+.B j
+Toggle the display of
+.IR jail (8)
+ID.
+.TP
 .B t
 Toggle the display of the
 .I top
@@ -302,8 +321,11 @@ It also includes information about physical and virtual memory allocation.
 The remainder of the screen displays information about individual
 processes.  This display is similar in spirit to
 .IR ps (1)
-but it is not exactly the same.  PID is the process id, USERNAME is the name
-of the process's owner (if
+but it is not exactly the same.  PID is the process id, 
+JID, when displayed, is the 
+.IR jail (8)
+ID corresponding to the process,
+USERNAME is the name of the process's owner (if
 .B \-u
 is specified, a UID column will be substituted for USERNAME),
 PRI is the current priority of the process,
