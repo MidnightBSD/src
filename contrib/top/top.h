@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/contrib/top/top.h,v 1.3 2004/07/01 09:12:38 alfred Exp $
+ * $FreeBSD: src/contrib/top/top.h,v 1.4 2007/04/14 10:16:51 stas Exp $
  */
 /*
  *  Top - a top users display for Berkeley Unix
@@ -38,5 +38,10 @@ char *version_string();
 #define NUM_AVERAGES    3
 
 enum displaymodes { DISP_CPU = 0, DISP_IO, DISP_MAX };
+
+/*
+ * Format modifiers
+ */
+#define FMT_SHOWARGS 0x00000001
 
 extern enum displaymodes displaymode;
