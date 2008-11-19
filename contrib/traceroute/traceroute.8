@@ -13,8 +13,8 @@
 .\" IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 .\" WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 .\"
-.\"	$Id: traceroute.8,v 1.1.1.2 2006-02-25 02:34:12 laffer1 Exp $
-.\"	$FreeBSD: src/contrib/traceroute/traceroute.8,v 1.11 2005/04/12 15:16:32 thomas Exp $
+.\"	$Id: traceroute.8,v 1.1.1.3 2008-11-19 22:13:33 laffer1 Exp $
+.\"	$FreeBSD: src/contrib/traceroute/traceroute.8,v 1.16 2006/10/15 17:44:49 dwmalone Exp $
 .\"
 .TH TRACEROUTE 8 "21 September 2000"
 .UC 6
@@ -24,7 +24,7 @@ traceroute \- print the route packets take to network host
 .na
 .B traceroute
 [
-.B \-dFISdnrvx
+.B \-dDeFISnrvx
 ] [
 .B \-f
 .I first_ttl
@@ -98,6 +98,11 @@ name.
 .PP
 Other options are:
 .TP
+.B \-e
+Firewall evasion mode.
+Use fixed destination ports for UDP and TCP probes.
+The destination port does NOT increment with each packet sent.
+.TP
 .B \-f
 Set the initial time-to-live used in the first outgoing probe packet.
 .TP
@@ -106,6 +111,18 @@ Set the "don't fragment" bit.
 .TP
 .B \-d
 Enable socket level debugging.
+.TP
+.B \-D
+When an ICMP response to our probe datagram is received,
+print the differences between the transmitted packet and
+the packet quoted by the ICMP response.
+A key showing the location of fields within the transmitted packet is printed,
+followed by the original packet in hex,
+followed by the quoted packet in hex.
+Bytes that are unchanged in the quoted packet are shown as underscores.
+Note,
+the IP checksum and the TTL of the quoted packet are not expected to match.
+By default, only one probe per hop is sent with this option.
 .TP
 .B \-g
 Specify a loose source route gateway (8 maximum).
@@ -158,7 +175,11 @@ listening on a port in the default range, this option can be used
 to pick an unused port range.
 .TP
 .B \-q
-Set the number of probes per hop (default is 3).
+Set the number of probes per hop (default is 3,
+unless
+.B -D
+is specified,
+when it is 1).
 .TP
 .B \-r
 Bypass the normal routing tables and send directly to a host on an attached
@@ -277,7 +298,7 @@ traceroute to nis.nsf.net (35.1.1.48), 64 hops max, 38 byte packet
 .RE
 
 Note that lines 2 & 3 are the same.  This is due to a buggy
-kernel on the 2nd hop system \- lbl-csam.arpa \- that forwards
+kernel on the 2nd hop system \- lilac-dmc.Berkeley.EDU \- that forwards
 packets with a zero ttl (a bug in the distributed version
 of 4.3BSD).  Note that you have to guess what path
 the packets are taking cross-country since the NSFNet (129.140)
@@ -367,6 +388,20 @@ or
 (source route failed),
 .B !F\-<pmtu>
 (fragmentation needed \- the RFC1191 Path MTU Discovery value is displayed),
+.B !U
+or
+.B !W
+(destination network/host unknown),
+.B !I
+(source host is isolated),
+.B !A
+(communication with destination network administratively prohibited),
+.B !Z
+(communication with destination host administratively prohibited),
+.B !Q
+(for this ToS the destination network is unreachable),
+.B !T
+(for this ToS the destination host is unreachable),
 .B !X
 (communication administratively prohibited),
 .B !V
