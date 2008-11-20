@@ -65,7 +65,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/savecore/savecore.c,v 1.75.2.2 2005/10/08 17:56:00 maxim Exp $");
+__FBSDID("$FreeBSD: src/sbin/savecore/savecore.c,v 1.78 2007/05/28 09:48:25 kevlo Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -406,6 +407,12 @@ DoFile(const char *savedir, const char *device)
 	(void)umask(oumask);
 
 	info = fdopen(fdinfo, "w");
+
+	if (info == NULL) {
+		syslog(LOG_ERR, "fdopen failed: %m");
+		nerr++;
+		goto closefd;
+	}
 
 	if (verbose)
 		printheader(stdout, &kdhl, device, bounds, status);
