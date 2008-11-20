@@ -1,24 +1,33 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 #	$FreeBSD: src/lib/libutil/Makefile,v 1.56.8.2 2006/01/15 17:50:35 delphij Exp $
-# 	$MidnightBSD$
+# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.3 2008/05/17 06:39:48 laffer1 Exp $
+
+.include <bsd.own.mk>
 
 LIB=	util
-SHLIB_MAJOR= 6
+SHLIB_MAJOR= 7
 SHLIBDIR?= /lib
-CFLAGS+=-DLIBC_SCCS -I${.CURDIR} -I${.CURDIR}/../libc/gen/
-CFLAGS+=-DINET6
-SRCS=	_secure_path.c auth.c efun.c fparseln.c humanize_number.c kld.c login.c \
+SRCS=	_secure_path.c auth.c expand_number.c flopen.c efun.c fparseln.c \ 
+	humanize_number.c kld.c login.c \
 	login_auth.c login_cap.c login_class.c login_crypt.c login_ok.c \
 	login_times.c login_tty.c logout.c logwtmp.c \
 	pidfile.c property.c pty.c pw_util.c realhostname.c stub.c \
 	trimdomain.c uucplock.c
 INCS=	libutil.h login_cap.h
 
+CFLAGS+= -DLIBC_SCCS
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+
+CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../libc/gen/
+
 MAN+=	kld.3 login.3 login_auth.3 login_tty.3 logout.3 logwtmp.3 pty.3 \
 	login_cap.3 login_class.3 login_times.3 login_ok.3 \
 	_secure_path.3 uucplock.3 property.3 auth.3 realhostname.3 \
 	realhostname_sa.3 trimdomain.3 fparseln.3 humanize_number.3 \
-	pidfile.3 efun.3
+	pidfile.3 efun.3 expand_number.3 flopen.3
 MAN+=	login.conf.5 auth.conf.5
 MLINKS+= property.3 properties_read.3  property.3 properties_free.3
 MLINKS+= property.3 property_find.3
