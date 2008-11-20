@@ -31,6 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/sbin/ccdconfig/pathnames.h,v 1.2 2003/01/17 14:53:53 phk Exp $
  */
 
