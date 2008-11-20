@@ -25195,8 +25195,10 @@ sys/contrib/pf/net/if_pfsync.h -text
 sys/contrib/pf/net/pf.c -text
 sys/contrib/pf/net/pf_if.c -text
 sys/contrib/pf/net/pf_ioctl.c -text
+sys/contrib/pf/net/pf_mtag.h -text
 sys/contrib/pf/net/pf_norm.c -text
 sys/contrib/pf/net/pf_osfp.c -text
+sys/contrib/pf/net/pf_ruleset.c -text
 sys/contrib/pf/net/pf_subr.c -text
 sys/contrib/pf/net/pf_table.c -text
 sys/contrib/pf/net/pfvar.h -text
