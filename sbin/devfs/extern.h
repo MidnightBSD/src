@@ -23,6 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/sbin/devfs/extern.h,v 1.3 2004/06/02 23:02:31 stefanf Exp $
  */
 

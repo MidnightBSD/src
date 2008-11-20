@@ -25,6 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  * $FreeBSD: src/sbin/devd/devd.h,v 1.5 2005/07/10 03:37:15 imp Exp $
  */
 

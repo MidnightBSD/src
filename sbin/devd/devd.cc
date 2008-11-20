@@ -35,6 +35,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sbin/devd/devd.cc,v 1.33 2006/09/17 22:49:26 ru Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/socket.h>

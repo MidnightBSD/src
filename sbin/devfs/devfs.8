@@ -23,9 +23,10 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/devfs/devfs.8,v 1.15 2005/06/14 11:24:55 ru Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: src/sbin/devfs/devfs.8,v 1.18 2006/12/29 22:45:12 danger Exp $
 .\"
-.Dd July 1, 2002
+.Dd November 5, 2006
 .Dt DEVFS 8
 .Os
 .Sh NAME
@@ -237,7 +238,21 @@ or when using one of the apply commands.
 .Sh FILES
 .Bl -tag -compact
 .It Pa /etc/defaults/devfs.rules
+Default
+.Nm
+configuration file.
 .It Pa /etc/devfs.rules
+Local
+.Nm
+configuration file.
+.It Pa /etc/devfs.conf
+Boot-time
+.Nm
+configuration file.
+.It Pa /usr/share/examples/etc/devfs.conf
+Example boot-time
+.Nm
+configuration file.
 .El
 .Sh EXAMPLES
 When the system boots,
@@ -348,6 +363,8 @@ but ruleset 10 may already have rules with non-conflicting numbers
 .Xr jail 2 ,
 .Xr glob 3 ,
 .Xr devfs 5 ,
+.Xr devfs.conf 5 ,
+.Xr devfs.rules 5 ,
 .Xr chown 8 ,
 .Xr jail 8 ,
 .Xr mknod 8

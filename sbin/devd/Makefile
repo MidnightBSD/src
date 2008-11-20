@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sbin/devd/Makefile,v 1.8 2006/01/30 22:50:13 pjd Exp $
 
 PROG_CXX=devd
