@@ -37,12 +37,18 @@ static const char copyright[] =
 	The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 
+
+#include <sys/cdefs.h>
+__MBSDID("$MidnightBSD$");
+
 #ifndef lint
 #if 0
 static char sccsid[] = "@(#)fingerd.c	8.1 (Berkeley) 6/4/93";
 #endif
+#if 0
 static const char rcsid[] =
   "$FreeBSD: src/libexec/fingerd/fingerd.c,v 1.25 2005/02/14 17:42:57 stefanf Exp $";
+#endif
 #endif /* not lint */
 
 #include <sys/types.h>
