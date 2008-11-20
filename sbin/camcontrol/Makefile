@@ -1,4 +1,5 @@
-# $FreeBSD: src/sbin/camcontrol/Makefile,v 1.16 2004/05/14 13:31:21 cognet Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sbin/camcontrol/Makefile,v 1.17 2007/09/08 20:24:12 ken Exp $
 
 PROG=	camcontrol
 SRCS=	camcontrol.c util.c
@@ -7,13 +8,9 @@ SRCS+=	modeedit.c
 .else
 CFLAGS+= -DMINIMALISTIC
 .endif
-.if ${MACHINE_ARCH} == "arm"
-WARNS?= 3
-.else
 WARNS?=	6
-.endif
-DPADD=	${LIBCAM} ${LIBSBUF}
-LDADD=	-lcam -lsbuf
+DPADD=	${LIBCAM} ${LIBSBUF} ${LIBUTIL}
+LDADD=	-lcam -lsbuf -lutil
 MAN=	camcontrol.8
 
 .include <bsd.prog.mk>

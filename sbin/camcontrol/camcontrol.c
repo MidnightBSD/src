@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 1998, 1999, 2000, 2001, 2002, 2005 Kenneth D. Merry
+ * Copyright (c) 1997-2007 Kenneth D. Merry
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/camcontrol/camcontrol.c,v 1.53 2005/03/26 05:34:54 ken Exp $");
+__FBSDID("$FreeBSD: src/sbin/camcontrol/camcontrol.c,v 1.58 2007/09/08 20:24:12 ken Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/ioctl.h>
 #include <sys/stdint.h>
@@ -40,6 +41,7 @@ __FBSDID("$FreeBSD: src/sbin/camcontrol/camcontrol.c,v 1.53 2005/03/26 05:34:54 
 #include <fcntl.h>
 #include <ctype.h>
 #include <err.h>
+#include <libutil.h>
 
 #include <cam/cam.h>
 #include <cam/cam_debug.h>
@@ -69,6 +71,8 @@ typedef enum {
 	CAM_CMD_TAG		= 0x0000000e,
 	CAM_CMD_RATE		= 0x0000000f,
 	CAM_CMD_DETACH		= 0x00000010,
+	CAM_CMD_REPORTLUNS	= 0x00000011,
+	CAM_CMD_READCAP		= 0x00000012
 } cam_cmdmask;
 
 typedef enum {
@@ -127,6 +131,8 @@ struct camcontrol_opts option_table[] = {
 	{"stop", CAM_CMD_STARTSTOP, CAM_ARG_NONE, NULL},
 	{"load", CAM_CMD_STARTSTOP, CAM_ARG_START_UNIT | CAM_ARG_EJECT, NULL},
 	{"eject", CAM_CMD_STARTSTOP, CAM_ARG_EJECT, NULL},
+	{"reportluns", CAM_CMD_REPORTLUNS, CAM_ARG_NONE, "clr:"},
+	{"readcapacity", CAM_CMD_READCAP, CAM_ARG_NONE, "bhHNqs"},
 #endif /* MINIMALISTIC */
 	{"rescan", CAM_CMD_RESCAN, CAM_ARG_NONE, NULL},
 	{"reset", CAM_CMD_RESET, CAM_ARG_NONE, NULL},
@@ -203,6 +209,10 @@ static int ratecontrol(struct cam_device *device, int retry_count,
 		       int timeout, int argc, char **argv, char *combinedopt);
 static int scsiformat(struct cam_device *device, int argc, char **argv,
 		      char *combinedopt, int retry_count, int timeout);
+static int scsireportluns(struct cam_device *device, int argc, char **argv,
+			  char *combinedopt, int retry_count, int timeout);
+static int scsireadcapacity(struct cam_device *device, int argc, char **argv,
+			    char *combinedopt, int retry_count, int timeout);
 #endif /* MINIMALISTIC */
 
 camcontrol_optret
@@ -845,8 +855,8 @@ scsiserial(struct cam_device *device, int retry_count, int timeout)
 static int
 scsixferrate(struct cam_device *device)
 {
-	u_int32_t freq;
-	u_int32_t speed;
+	u_int32_t freq = 0;
+	u_int32_t speed = 0;
 	union ccb *ccb;
 	u_int mb;
 	int retval = 0;
@@ -862,7 +872,7 @@ scsixferrate(struct cam_device *device)
 	      sizeof(struct ccb_trans_settings) - sizeof(struct ccb_hdr));
 
 	ccb->ccb_h.func_code = XPT_GET_TRAN_SETTINGS;
-	ccb->cts.flags = CCB_TRANS_CURRENT_SETTINGS;
+	ccb->cts.type = CTS_TYPE_CURRENT_SETTINGS;
 
 	if (((retval = cam_send_ccb(device, ccb)) < 0)
 	 || ((ccb->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP)) {
@@ -883,10 +893,49 @@ scsixferrate(struct cam_device *device)
 
 	}
 
-	if (((ccb->cts.valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0)
-	 && (ccb->cts.sync_offset != 0)) {
-		freq = scsi_calc_syncsrate(ccb->cts.sync_period);
-		speed = freq;
+	if (ccb->cts.transport == XPORT_SPI) {
+		struct ccb_trans_settings_spi *spi =
+		    &ccb->cts.xport_specific.spi;
+
+		if ((spi->valid & CTS_SPI_VALID_SYNC_RATE) != 0) {
+			freq = scsi_calc_syncsrate(spi->sync_period);
+			speed = freq;
+		}
+
+		fprintf(stdout, "%s%d: ", device->device_name,
+			device->dev_unit_num);
+
+		if ((spi->valid & CTS_SPI_VALID_BUS_WIDTH) != 0) {
+			speed *= (0x01 << spi->bus_width);
+		}
+
+		mb = speed / 1000;
+
+		if (mb > 0) 
+			fprintf(stdout, "%d.%03dMB/s transfers ",
+				mb, speed % 1000);
+		else
+			fprintf(stdout, "%dKB/s transfers ",
+				speed);
+
+		if (((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) != 0)
+		 && (spi->sync_offset != 0))
+			fprintf(stdout, "(%d.%03dMHz, offset %d", freq / 1000,
+				freq % 1000, spi->sync_offset);
+
+		if (((spi->valid & CTS_SPI_VALID_BUS_WIDTH) != 0)
+		 && (spi->bus_width > 0)) {
+			if (((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) != 0)
+			 && (spi->sync_offset != 0)) {
+				fprintf(stdout, ", ");
+			} else {
+				fprintf(stdout, " (");
+			}
+			fprintf(stdout, "%dbit)", 8 * (0x01 << spi->bus_width));
+		} else if (((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) != 0)
+		 && (spi->sync_offset != 0)) {
+			fprintf(stdout, ")");
+		}
 	} else {
 		struct ccb_pathinq cpi;
 
@@ -897,46 +946,27 @@ scsixferrate(struct cam_device *device)
 
 		speed = cpi.base_transfer_speed;
 		freq = 0;
+
+		mb = speed / 1000;
+
+		if (mb > 0) 
+			fprintf(stdout, "%d.%03dMB/s transfers ",
+				mb, speed % 1000);
+		else
+			fprintf(stdout, "%dKB/s transfers ",
+				speed);
 	}
 
-	fprintf(stdout, "%s%d: ", device->device_name,
-		device->dev_unit_num);
-
-	if ((ccb->cts.valid & CCB_TRANS_BUS_WIDTH_VALID) != 0)
-		speed *= (0x01 << device->bus_width);
-
-	mb = speed / 1000;
-
-	if (mb > 0) 
-		fprintf(stdout, "%d.%03dMB/s transfers ",
-			mb, speed % 1000);
-	else
-		fprintf(stdout, "%dKB/s transfers ",
-			speed);
-
-	if (((ccb->cts.valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0)
-	 && (ccb->cts.sync_offset != 0))
-                fprintf(stdout, "(%d.%03dMHz, offset %d", freq / 1000,
-			freq % 1000, ccb->cts.sync_offset);
-
-	if (((ccb->cts.valid & CCB_TRANS_BUS_WIDTH_VALID) != 0)
-	 && (ccb->cts.bus_width > 0)) {
-		if (((ccb->cts.valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0)
-		 && (ccb->cts.sync_offset != 0)) {
-			fprintf(stdout, ", ");
-		} else {
-			fprintf(stdout, " (");
+	if (ccb->cts.protocol == PROTO_SCSI) {
+		struct ccb_trans_settings_scsi *scsi =
+		    &ccb->cts.proto_specific.scsi;
+		if (scsi->valid & CTS_SCSI_VALID_TQ) {
+			if (scsi->flags & CTS_SCSI_FLAGS_TAG_ENB) {
+				fprintf(stdout, ", Command Queueing Enabled");
+			}
 		}
-		fprintf(stdout, "%dbit)", 8 * (0x01 << ccb->cts.bus_width));
-	} else if (((ccb->cts.valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0)
-		&& (ccb->cts.sync_offset != 0)) {
-		fprintf(stdout, ")");
 	}
 
-	if (((ccb->cts.valid & CCB_TRANS_TQ_VALID) != 0)
-	 && (ccb->cts.flags & CCB_TRANS_TAG_ENB))
-                fprintf(stdout, ", Tagged Queueing Enabled");
- 
         fprintf(stdout, "\n");
 
 xferrate_bailout:
@@ -1034,7 +1064,7 @@ rescan_or_reset_bus(int bus, int rescan)
 	retval = 0;
 
 	if ((fd = open(XPT_DEVICE, O_RDWR)) < 0) {
-		warnx("error opening tranport layer device %s", XPT_DEVICE);
+		warnx("error opening transport layer device %s", XPT_DEVICE);
 		warn("%s", XPT_DEVICE);
 		return(1);
 	}
@@ -1220,7 +1250,7 @@ scanlun_or_reset_dev(int bus, int target, int lun, int scan)
 
 	if (scan) {
 		if ((fd = open(XPT_DEVICE, O_RDWR)) < 0) {
-			warnx("error opening tranport layer device %s\n",
+			warnx("error opening transport layer device %s\n",
 			    XPT_DEVICE);
 			warn("%s", XPT_DEVICE);
 			return(1);
@@ -2255,36 +2285,51 @@ cts_print(struct cam_device *device, struct ccb_trans_settings *cts)
 
 	cam_path_string(device, pathstr, sizeof(pathstr));
 
-	if ((cts->valid & CCB_TRANS_SYNC_RATE_VALID) != 0) {
+	if (cts->transport == XPORT_SPI) {
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
 
-		fprintf(stdout, "%ssync parameter: %d\n", pathstr,
-			cts->sync_period);
+		if ((spi->valid & CTS_SPI_VALID_SYNC_RATE) != 0) {
 
-		if (cts->sync_offset != 0) {
-			u_int freq;
+			fprintf(stdout, "%ssync parameter: %d\n", pathstr,
+				spi->sync_period);
 
-			freq = scsi_calc_syncsrate(cts->sync_period);
-			fprintf(stdout, "%sfrequency: %d.%03dMHz\n", pathstr,
-				freq / 1000, freq % 1000);
+			if (spi->sync_offset != 0) {
+				u_int freq;
+
+				freq = scsi_calc_syncsrate(spi->sync_period);
+				fprintf(stdout, "%sfrequency: %d.%03dMHz\n",
+					pathstr, freq / 1000, freq % 1000);
+			}
+		}
+
+		if (spi->valid & CTS_SPI_VALID_SYNC_OFFSET) {
+			fprintf(stdout, "%soffset: %d\n", pathstr,
+			    spi->sync_offset);
+		}
+
+		if (spi->valid & CTS_SPI_VALID_BUS_WIDTH) {
+			fprintf(stdout, "%sbus width: %d bits\n", pathstr,
+				(0x01 << spi->bus_width) * 8);
+		}
+
+		if (spi->valid & CTS_SPI_VALID_DISC) {
+			fprintf(stdout, "%sdisconnection is %s\n", pathstr,
+				(spi->flags & CTS_SPI_FLAGS_DISC_ENB) ?
+				"enabled" : "disabled");
 		}
 	}
 
-	if (cts->valid & CCB_TRANS_SYNC_OFFSET_VALID)
-		fprintf(stdout, "%soffset: %d\n", pathstr, cts->sync_offset);
+	if (cts->protocol == PROTO_SCSI) {
+		struct ccb_trans_settings_scsi *scsi=
+		    &cts->proto_specific.scsi;
 
-	if (cts->valid & CCB_TRANS_BUS_WIDTH_VALID)
-		fprintf(stdout, "%sbus width: %d bits\n", pathstr,
-			(0x01 << cts->bus_width) * 8);
-
-	if (cts->valid & CCB_TRANS_DISC_VALID)
-		fprintf(stdout, "%sdisconnection is %s\n", pathstr,
-			(cts->flags & CCB_TRANS_DISC_ENB) ? "enabled" :
-			"disabled");
-
-	if (cts->valid & CCB_TRANS_TQ_VALID)
-		fprintf(stdout, "%stagged queueing is %s\n", pathstr,
-			(cts->flags & CCB_TRANS_TAG_ENB) ? "enabled" :
-			"disabled");
+		if (scsi->valid & CTS_SCSI_VALID_TQ) {
+			fprintf(stdout, "%stagged queueing is %s\n", pathstr,
+				(scsi->flags & CTS_SCSI_FLAGS_TAG_ENB) ?
+				"enabled" : "disabled");
+		}
+	}
 
 }
 
@@ -2496,9 +2541,9 @@ get_print_cts(struct cam_device *device, int user_settings, int quiet,
 	ccb->ccb_h.func_code = XPT_GET_TRAN_SETTINGS;
 
 	if (user_settings == 0)
-		ccb->cts.flags = CCB_TRANS_CURRENT_SETTINGS;
+		ccb->cts.type = CTS_TYPE_CURRENT_SETTINGS;
 	else
-		ccb->cts.flags = CCB_TRANS_USER_SETTINGS;
+		ccb->cts.type = CTS_TYPE_USER_SETTINGS;
 
 	if (cam_send_ccb(device, ccb) < 0) {
 		perror("error sending XPT_GET_TRAN_SETTINGS CCB");
@@ -2672,16 +2717,27 @@ ratecontrol(struct cam_device *device, int retry_count, int timeout,
 		cpi_print(&cpi);
 
 	if (change_settings) {
-		if (disc_enable != -1) {
-			ccb->cts.valid |= CCB_TRANS_DISC_VALID;
-			if (disc_enable == 0)
-				ccb->cts.flags &= ~CCB_TRANS_DISC_ENB;
-			else
-				ccb->cts.flags |= CCB_TRANS_DISC_ENB;
-		} else
-			ccb->cts.valid &= ~CCB_TRANS_DISC_VALID;
+		int didsettings = 0;
+		struct ccb_trans_settings_spi *spi = NULL;
+		struct ccb_trans_settings_scsi *scsi = NULL;
 
-		if (tag_enable != -1) {
+		if (ccb->cts.transport == XPORT_SPI) {
+			spi = &ccb->cts.xport_specific.spi;
+			spi->valid = 0;
+		}
+		if (ccb->cts.protocol == PROTO_SCSI) {
+			scsi = &ccb->cts.proto_specific.scsi;
+			scsi->valid = 0;
+		}
+		if (spi && disc_enable != -1) {
+			spi->valid |= CTS_SPI_VALID_DISC;
+			if (disc_enable == 0)
+				spi->flags &= ~CTS_SPI_FLAGS_DISC_ENB;
+			else
+				spi->flags |= CTS_SPI_FLAGS_DISC_ENB;
+		}
+
+		if (scsi && tag_enable != -1) {
 			if ((cpi.hba_inquiry & PI_TAG_ABLE) == 0) {
 				warnx("HBA does not support tagged queueing, "
 				      "so you cannot modify tag settings");
@@ -2689,16 +2745,16 @@ ratecontrol(struct cam_device *device, int retry_count, int timeout,
 				goto ratecontrol_bailout;
 			}
 
-			ccb->cts.valid |= CCB_TRANS_TQ_VALID;
+			scsi->valid |= CTS_SCSI_VALID_TQ;
 
 			if (tag_enable == 0)
-				ccb->cts.flags &= ~CCB_TRANS_TAG_ENB;
+				scsi->flags &= ~CTS_SCSI_FLAGS_TAG_ENB;
 			else
-				ccb->cts.flags |= CCB_TRANS_TAG_ENB;
-		} else
-			ccb->cts.valid &= ~CCB_TRANS_TQ_VALID;
+				scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
+			didsettings++;
+		}
 
-		if (offset != -1) {
+		if (spi && offset != -1) {
 			if ((cpi.hba_inquiry & PI_SDTR_ABLE) == 0) {
 				warnx("HBA at %s%d is not cable of changing "
 				      "offset", cpi.dev_name,
@@ -2706,12 +2762,12 @@ ratecontrol(struct cam_device *device, int retry_count, int timeout,
 				retval = 1;
 				goto ratecontrol_bailout;
 			}
-			ccb->cts.valid |= CCB_TRANS_SYNC_OFFSET_VALID;
-			ccb->cts.sync_offset = offset;
-		} else
-			ccb->cts.valid &= ~CCB_TRANS_SYNC_OFFSET_VALID;
+			spi->valid |= CTS_SPI_VALID_SYNC_OFFSET;
+			spi->sync_offset = offset;
+			didsettings++;
+		}
 
-		if (syncrate != -1) {
+		if (spi && syncrate != -1) {
 			int prelim_sync_period;
 			u_int freq;
 
@@ -2723,7 +2779,7 @@ ratecontrol(struct cam_device *device, int retry_count, int timeout,
 				goto ratecontrol_bailout;
 			}
 
-			ccb->cts.valid |= CCB_TRANS_SYNC_RATE_VALID;
+			spi->valid |= CTS_SPI_VALID_SYNC_RATE;
 
 			/*
 			 * The sync rate the user gives us is in MHz.
@@ -2741,12 +2797,12 @@ ratecontrol(struct cam_device *device, int retry_count, int timeout,
 			else
 				prelim_sync_period = 10000000 / syncrate;
 
-			ccb->cts.sync_period =
+			spi->sync_period =
 				scsi_calc_syncparam(prelim_sync_period);
 
-			freq = scsi_calc_syncsrate(ccb->cts.sync_period);
-		} else
-			ccb->cts.valid &= ~CCB_TRANS_SYNC_RATE_VALID;
+			freq = scsi_calc_syncsrate(spi->sync_period);
+			didsettings++;
+		}
 
 		/*
 		 * The bus_width argument goes like this:
@@ -2757,7 +2813,7 @@ ratecontrol(struct cam_device *device, int retry_count, int timeout,
 		 * command line right by 4, you should get the correct
 		 * number.
 		 */
-		if (bus_width != -1) {
+		if (spi && bus_width != -1) {
 
 			/*
 			 * We might as well validate things here with a
@@ -2783,11 +2839,14 @@ ratecontrol(struct cam_device *device, int retry_count, int timeout,
 				goto ratecontrol_bailout;
 			}
 
-			ccb->cts.valid |= CCB_TRANS_BUS_WIDTH_VALID;
-			ccb->cts.bus_width = bus_width >> 4;
-		} else
-			ccb->cts.valid &= ~CCB_TRANS_BUS_WIDTH_VALID;
+			spi->valid |= CTS_SPI_VALID_BUS_WIDTH;
+			spi->bus_width = bus_width >> 4;
+			didsettings++;
+		}
 
+		if  (didsettings == 0) {
+			goto ratecontrol_bailout;
+		}
 		ccb->ccb_h.func_code = XPT_SET_TRAN_SETTINGS;
 
 		if (cam_send_ccb(device, ccb) < 0) {
@@ -3152,6 +3211,459 @@ scsiformat_bailout:
 
 	return(error);
 }
+
+static int
+scsireportluns(struct cam_device *device, int argc, char **argv,
+	       char *combinedopt, int retry_count, int timeout)
+{
+	union ccb *ccb;
+	int c, countonly, lunsonly;
+	struct scsi_report_luns_data *lundata;
+	int alloc_len;
+	uint8_t report_type;
+	uint32_t list_len, i, j;
+	int retval;
+
+	retval = 0;
+	lundata = NULL;
+	report_type = RPL_REPORT_DEFAULT;
+	ccb = cam_getccb(device);
+
+	if (ccb == NULL) {
+		warnx("%s: error allocating ccb", __func__);
+		return (1);
+	}
+
+	bzero(&(&ccb->ccb_h)[1],
+	      sizeof(struct ccb_scsiio) - sizeof(struct ccb_hdr));
+
+	countonly = 0;
+	lunsonly = 0;
+
+	while ((c = getopt(argc, argv, combinedopt)) != -1) {
+		switch (c) {
+		case 'c':
+			countonly++;
+			break;
+		case 'l':
+			lunsonly++;
+			break;
+		case 'r':
+			if (strcasecmp(optarg, "default") == 0)
+				report_type = RPL_REPORT_DEFAULT;
+			else if (strcasecmp(optarg, "wellknown") == 0)
+				report_type = RPL_REPORT_WELLKNOWN;
+			else if (strcasecmp(optarg, "all") == 0)
+				report_type = RPL_REPORT_ALL;
+			else {
+				warnx("%s: invalid report type \"%s\"",
+				      __func__, optarg);
+				retval = 1;
+				goto bailout;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+	if ((countonly != 0)
+	 && (lunsonly != 0)) {
+		warnx("%s: you can only specify one of -c or -l", __func__);
+		retval = 1;
+		goto bailout;
+	}
+	/*
+	 * According to SPC-4, the allocation length must be at least 16
+	 * bytes -- enough for the header and one LUN.
+	 */
+	alloc_len = sizeof(*lundata) + 8;
+
+retry:
+
+	lundata = malloc(alloc_len);
+
+	if (lundata == NULL) {
+		warn("%s: error mallocing %d bytes", __func__, alloc_len);
+		retval = 1;
+		goto bailout;
+	}
+
+	scsi_report_luns(&ccb->csio,
+			 /*retries*/ retry_count,
+			 /*cbfcnp*/ NULL,
+			 /*tag_action*/ MSG_SIMPLE_Q_TAG,
+			 /*select_report*/ report_type,
+			 /*rpl_buf*/ lundata,
+			 /*alloc_len*/ alloc_len,
+			 /*sense_len*/ SSD_FULL_SIZE,
+			 /*timeout*/ timeout ? timeout : 5000);
+
+	/* Disable freezing the device queue */
+	ccb->ccb_h.flags |= CAM_DEV_QFRZDIS;
+
+	if (arglist & CAM_ARG_ERR_RECOVER)
+		ccb->ccb_h.flags |= CAM_PASS_ERR_RECOVER;
+
+	if (cam_send_ccb(device, ccb) < 0) {
+		warn("error sending REPORT LUNS command");
+
+		if (arglist & CAM_ARG_VERBOSE)
+			cam_error_print(device, ccb, CAM_ESF_ALL,
+					CAM_EPF_ALL, stderr);
+
+		retval = 1;
+		goto bailout;
+	}
+
+	if ((ccb->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
+		cam_error_print(device, ccb, CAM_ESF_ALL, CAM_EPF_ALL, stderr);
+		retval = 1;
+		goto bailout;
+	}
+
+
+	list_len = scsi_4btoul(lundata->length);
+
+	/*
+	 * If we need to list the LUNs, and our allocation
+	 * length was too short, reallocate and retry.
+	 */
+	if ((countonly == 0)
+	 && (list_len > (alloc_len - sizeof(*lundata)))) {
+		alloc_len = list_len + sizeof(*lundata);
+		free(lundata);
+		goto retry;
+	}
+
+	if (lunsonly == 0)
+		fprintf(stdout, "%u LUN%s found\n", list_len / 8,
+			((list_len / 8) > 1) ? "s" : "");
+
+	if (countonly != 0)
+		goto bailout;
+
+	for (i = 0; i < (list_len / 8); i++) {
+		int no_more;
+
+		no_more = 0;
+		for (j = 0; j < sizeof(lundata->luns[i].lundata); j += 2) {
+			if (j != 0)
+				fprintf(stdout, ",");
+			switch (lundata->luns[i].lundata[j] &
+				RPL_LUNDATA_ATYP_MASK) {
+			case RPL_LUNDATA_ATYP_PERIPH:
+				if ((lundata->luns[i].lundata[j] &
+				    RPL_LUNDATA_PERIPH_BUS_MASK) != 0)
+					fprintf(stdout, "%d:", 
+						lundata->luns[i].lundata[j] &
+						RPL_LUNDATA_PERIPH_BUS_MASK);
+				else if ((j == 0)
+				      && ((lundata->luns[i].lundata[j+2] &
+					  RPL_LUNDATA_PERIPH_BUS_MASK) == 0))
+					no_more = 1;
+
+				fprintf(stdout, "%d",
+					lundata->luns[i].lundata[j+1]);
+				break;
+			case RPL_LUNDATA_ATYP_FLAT: {
+				uint8_t tmplun[2];
+				tmplun[0] = lundata->luns[i].lundata[j] &
+					RPL_LUNDATA_FLAT_LUN_MASK;
+				tmplun[1] = lundata->luns[i].lundata[j+1];
+
+				fprintf(stdout, "%d", scsi_2btoul(tmplun));
+				no_more = 1;
+				break;
+			}
+			case RPL_LUNDATA_ATYP_LUN:
+				fprintf(stdout, "%d:%d:%d",
+					(lundata->luns[i].lundata[j+1] &
+					RPL_LUNDATA_LUN_BUS_MASK) >> 5,
+					lundata->luns[i].lundata[j] &
+					RPL_LUNDATA_LUN_TARG_MASK,
+					lundata->luns[i].lundata[j+1] &
+					RPL_LUNDATA_LUN_LUN_MASK);
+				break;
+			case RPL_LUNDATA_ATYP_EXTLUN: {
+				int field_len, field_len_code, eam_code;
+
+				eam_code = lundata->luns[i].lundata[j] &
+					RPL_LUNDATA_EXT_EAM_MASK;
+				field_len_code = (lundata->luns[i].lundata[j] &
+					RPL_LUNDATA_EXT_LEN_MASK) >> 4;
+				field_len = field_len_code * 2;
+		
+				if ((eam_code == RPL_LUNDATA_EXT_EAM_WK)
+				 && (field_len_code == 0x00)) {
+					fprintf(stdout, "%d",
+						lundata->luns[i].lundata[j+1]);
+				} else if ((eam_code ==
+					    RPL_LUNDATA_EXT_EAM_NOT_SPEC)
+					&& (field_len_code == 0x03)) {
+					uint8_t tmp_lun[8];
+
+					/*
+					 * This format takes up all 8 bytes.
+					 * If we aren't starting at offset 0,
+					 * that's a bug.
+					 */
+					if (j != 0) {
+						fprintf(stdout, "Invalid "
+							"offset %d for "
+							"Extended LUN not "
+							"specified format", j);
+						no_more = 1;
+						break;
+					}
+					bzero(tmp_lun, sizeof(tmp_lun));
+					bcopy(&lundata->luns[i].lundata[j+1],
+					      &tmp_lun[1], sizeof(tmp_lun) - 1);
+					fprintf(stdout, "%#jx",
+					       (intmax_t)scsi_8btou64(tmp_lun));
+					no_more = 1;
+				} else {
+					fprintf(stderr, "Unknown Extended LUN"
+						"Address method %#x, length "
+						"code %#x", eam_code,
+						field_len_code);
+					no_more = 1;
+				}
+				break;
+			}
+			default:
+				fprintf(stderr, "Unknown LUN address method "
+					"%#x\n", lundata->luns[i].lundata[0] &
+					RPL_LUNDATA_ATYP_MASK);
+				break;
+			}
+			/*
+			 * For the flat addressing method, there are no
+			 * other levels after it.
+			 */
+			if (no_more != 0)
+				break;
+		}
+		fprintf(stdout, "\n");
+	}
+
+bailout:
+
+	cam_freeccb(ccb);
+
+	free(lundata);
+
+	return (retval);
+}
+
+static int
+scsireadcapacity(struct cam_device *device, int argc, char **argv,
+		 char *combinedopt, int retry_count, int timeout)
+{
+	union ccb *ccb;
+	int blocksizeonly, humanize, numblocks, quiet, sizeonly, baseten;
+	struct scsi_read_capacity_data rcap;
+	struct scsi_read_capacity_data_long rcaplong;
+	uint64_t maxsector;
+	uint32_t block_len;
+	int retval;
+	int c;
+
+	blocksizeonly = 0;
+	humanize = 0;
+	numblocks = 0;
+	quiet = 0;
+	sizeonly = 0;
+	baseten = 0;
+	retval = 0;
+
+	ccb = cam_getccb(device);
+
+	if (ccb == NULL) {
+		warnx("%s: error allocating ccb", __func__);
+		return (1);
+	}
+
+	bzero(&(&ccb->ccb_h)[1],
+	      sizeof(struct ccb_scsiio) - sizeof(struct ccb_hdr));
+
+	while ((c = getopt(argc, argv, combinedopt)) != -1) {
+		switch (c) {
+		case 'b':
+			blocksizeonly++;
+			break;
+		case 'h':
+			humanize++;
+			baseten = 0;
+			break;
+		case 'H':
+			humanize++;
+			baseten++;
+			break;
+		case 'N':
+			numblocks++;
+			break;
+		case 'q':
+			quiet++;
+			break;
+		case 's':
+			sizeonly++;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if ((blocksizeonly != 0)
+	 && (numblocks != 0)) {
+		warnx("%s: you can only specify one of -b or -N", __func__);
+		retval = 1;
+		goto bailout;
+	}
+
+	if ((blocksizeonly != 0)
+	 && (sizeonly != 0)) {
+		warnx("%s: you can only specify one of -b or -s", __func__);
+		retval = 1;
+		goto bailout;
+	}
+
+	if ((humanize != 0)
+	 && (quiet != 0)) {
+		warnx("%s: you can only specify one of -h/-H or -q", __func__);
+		retval = 1;
+		goto bailout;
+	}
+
+	if ((humanize != 0)
+	 && (blocksizeonly != 0)) {
+		warnx("%s: you can only specify one of -h/-H or -b", __func__);
+		retval = 1;
+		goto bailout;
+	}
+
+	scsi_read_capacity(&ccb->csio,
+			   /*retries*/ retry_count,
+			   /*cbfcnp*/ NULL,
+			   /*tag_action*/ MSG_SIMPLE_Q_TAG,
+			   &rcap,
+			   SSD_FULL_SIZE,
+			   /*timeout*/ timeout ? timeout : 5000);
+
+	/* Disable freezing the device queue */
+	ccb->ccb_h.flags |= CAM_DEV_QFRZDIS;
+
+	if (arglist & CAM_ARG_ERR_RECOVER)
+		ccb->ccb_h.flags |= CAM_PASS_ERR_RECOVER;
+
+	if (cam_send_ccb(device, ccb) < 0) {
+		warn("error sending READ CAPACITY command");
+
+		if (arglist & CAM_ARG_VERBOSE)
+			cam_error_print(device, ccb, CAM_ESF_ALL,
+					CAM_EPF_ALL, stderr);
+
+		retval = 1;
+		goto bailout;
+	}
+
+	if ((ccb->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
+		cam_error_print(device, ccb, CAM_ESF_ALL, CAM_EPF_ALL, stderr);
+		retval = 1;
+		goto bailout;
+	}
+
+	maxsector = scsi_4btoul(rcap.addr);
+	block_len = scsi_4btoul(rcap.length);
+
+	/*
+	 * A last block of 2^32-1 means that the true capacity is over 2TB,
+	 * and we need to issue the long READ CAPACITY to get the real
+	 * capacity.  Otherwise, we're all set.
+	 */
+	if (maxsector != 0xffffffff)
+		goto do_print;
+
+	scsi_read_capacity_16(&ccb->csio,
+			      /*retries*/ retry_count,
+			      /*cbfcnp*/ NULL,
+			      /*tag_action*/ MSG_SIMPLE_Q_TAG,
+			      /*lba*/ 0,
+			      /*reladdr*/ 0,
+			      /*pmi*/ 0,
+			      &rcaplong,
+			      /*sense_len*/ SSD_FULL_SIZE,
+			      /*timeout*/ timeout ? timeout : 5000);
+
+	/* Disable freezing the device queue */
+	ccb->ccb_h.flags |= CAM_DEV_QFRZDIS;
+
+	if (arglist & CAM_ARG_ERR_RECOVER)
+		ccb->ccb_h.flags |= CAM_PASS_ERR_RECOVER;
+
+	if (cam_send_ccb(device, ccb) < 0) {
+		warn("error sending READ CAPACITY (16) command");
+
+		if (arglist & CAM_ARG_VERBOSE)
+			cam_error_print(device, ccb, CAM_ESF_ALL,
+					CAM_EPF_ALL, stderr);
+
+		retval = 1;
+		goto bailout;
+	}
+
+	if ((ccb->ccb_h.status & CAM_STATUS_MASK) != CAM_REQ_CMP) {
+		cam_error_print(device, ccb, CAM_ESF_ALL, CAM_EPF_ALL, stderr);
+		retval = 1;
+		goto bailout;
+	}
+
+	maxsector = scsi_8btou64(rcaplong.addr);
+	block_len = scsi_4btoul(rcaplong.length);
+
+do_print:
+	if (blocksizeonly == 0) {
+		/*
+		 * Humanize implies !quiet, and also implies numblocks.
+		 */
+		if (humanize != 0) {
+			char tmpstr[6];
+			int64_t tmpbytes;
+			int ret;
+
+			tmpbytes = (maxsector + 1) * block_len;
+			ret = humanize_number(tmpstr, sizeof(tmpstr),
+					      tmpbytes, "", HN_AUTOSCALE,
+					      HN_B | HN_DECIMAL |
+					      ((baseten != 0) ?
+					      HN_DIVISOR_1000 : 0));
+			if (ret == -1) {
+				warnx("%s: humanize_number failed!", __func__);
+				retval = 1;
+				goto bailout;
+			}
+			fprintf(stdout, "Device Size: %s%s", tmpstr,
+				(sizeonly == 0) ?  ", " : "\n");
+		} else if (numblocks != 0) {
+			fprintf(stdout, "%s%ju%s", (quiet == 0) ?
+				"Blocks: " : "", (uintmax_t)maxsector + 1,
+				(sizeonly == 0) ? ", " : "\n");
+		} else {
+			fprintf(stdout, "%s%ju%s", (quiet == 0) ?
+				"Last Block: " : "", (uintmax_t)maxsector,
+				(sizeonly == 0) ? ", " : "\n");
+		}
+	}
+	if (sizeonly == 0)
+		fprintf(stdout, "%s%u%s\n", (quiet == 0) ?
+			"Block Length: " : "", block_len, (quiet == 0) ?
+			" bytes" : "");
+bailout:
+	cam_freeccb(ccb);
+
+	return (retval);
+}
+
 #endif /* MINIMALISTIC */
 
 void 
@@ -3164,6 +3676,9 @@ usage(int verbose)
 "        camcontrol periphlist [dev_id][-n dev_name] [-u unit]\n"
 "        camcontrol tur        [dev_id][generic args]\n"
 "        camcontrol inquiry    [dev_id][generic args] [-D] [-S] [-R]\n"
+"        camcontrol reportluns [dev_id][generic args] [-c] [-l] [-r report]\n"
+"        camcontrol readcap    [dev_id][generic args] [-b] [-h] [-H] [-N]\n"
+"                              [-q] [-s]\n"
 "        camcontrol start      [dev_id][generic args]\n"
 "        camcontrol stop       [dev_id][generic args]\n"
 "        camcontrol load       [dev_id][generic args]\n"
@@ -3196,6 +3711,8 @@ usage(int verbose)
 "periphlist  list all CAM peripheral drivers attached to a device\n"
 "tur         send a test unit ready to the named device\n"
 "inquiry     send a SCSI inquiry command to the named device\n"
+"reportluns  send a SCSI report luns command to the device\n"
+"readcap     send a SCSI read capacity command to the device\n"
 "start       send a Start Unit command to the device\n"
 "stop        send a Stop Unit command to the device\n"
 "load        send a Start Unit command to the device with the load bit set\n"
@@ -3236,6 +3753,17 @@ usage(int verbose)
 "-D                get the standard inquiry data\n"
 "-S                get the serial number\n"
 "-R                get the transfer rate, etc.\n"
+"reportluns arguments:\n"
+"-c                only report a count of available LUNs\n"
+"-l                only print out luns, and not a count\n"
+"-r <reporttype>   specify \"default\", \"wellknown\" or \"all\"\n"
+"readcap arguments\n"
+"-b                only report the blocksize\n"
+"-h                human readable device size, base 2\n"
+"-H                human readable device size, base 10\n"
+"-N                print the number of blocks instead of last block\n"
+"-q                quiet, print numbers only\n"
+"-s                only report the last block/device size\n"
 "cmd arguments:\n"
 "-c cdb [args]     specify the SCSI CDB\n"
 "-i len fmt        specify input data and input data format\n"
@@ -3546,6 +4074,16 @@ main(int argc, char **argv)
 		case CAM_CMD_FORMAT:
 			error = scsiformat(cam_dev, argc, argv,
 					   combinedopt, retry_count, timeout);
+			break;
+		case CAM_CMD_REPORTLUNS:
+			error = scsireportluns(cam_dev, argc, argv,
+					       combinedopt, retry_count,
+					       timeout);
+			break;
+		case CAM_CMD_READCAP:
+			error = scsireadcapacity(cam_dev, argc, argv,
+						 combinedopt, retry_count,
+						 timeout);
 			break;
 #endif /* MINIMALISTIC */
 		case CAM_CMD_USAGE:

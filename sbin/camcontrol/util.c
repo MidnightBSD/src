@@ -45,6 +45,7 @@
  */
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sbin/camcontrol/util.c,v 1.10 2003/08/05 09:19:07 johan Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/stdint.h>
 #include <sys/types.h>
