@@ -23,7 +23,6 @@ LDFLAGS+=	-shared -Wl,-Bsymbolic
 DPADD=		${LIBC_PIC}
 LDADD=		-lc_pic
 
-.if ${MACHINE_ARCH} != "ia64"
 .if ${MK_SYMVER} == "yes"
 LIBCDIR=	${.CURDIR}/../../lib/libc
 VERSION_DEF=	${LIBCDIR}/Versions.def
@@ -35,7 +34,6 @@ ${PROG}:	${VERSION_MAP}
 
 .if exists(${.CURDIR}/${MACHINE_ARCH}/Symbol.map)
 SYMBOL_MAPS+=	${.CURDIR}/${MACHINE_ARCH}/Symbol.map
-.endif
 .endif
 .endif
 
