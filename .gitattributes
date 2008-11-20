@@ -20347,6 +20347,7 @@ libexec/rtld-aout/shlib.h -text
 libexec/rtld-aout/support.c -text
 libexec/rtld-aout/support.h -text
 libexec/rtld-elf/Makefile -text
+libexec/rtld-elf/Symbol.map -text
 libexec/rtld-elf/alpha/Makefile.inc -text
 libexec/rtld-elf/alpha/ld.so.script -text
 libexec/rtld-elf/alpha/reloc.c -text
@@ -20364,6 +20365,7 @@ libexec/rtld-elf/arm/rtld_start.S -text
 libexec/rtld-elf/debug.c -text
 libexec/rtld-elf/debug.h -text
 libexec/rtld-elf/i386/Makefile.inc -text
+libexec/rtld-elf/i386/Symbol.map -text
 libexec/rtld-elf/i386/elf_rtld.x -text
 libexec/rtld-elf/i386/reloc.c -text
 libexec/rtld-elf/i386/rtld_machdep.h -text

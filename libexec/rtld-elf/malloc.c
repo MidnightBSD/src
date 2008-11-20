@@ -33,7 +33,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 /*static char *sccsid = "from: @(#)malloc.c	5.11 (Berkeley) 2/23/91";*/
-static char *rcsid = "$FreeBSD: src/libexec/rtld-elf/malloc.c,v 1.10 2003/08/22 02:22:59 imp Exp $";
+static char *rcsid = "$FreeBSD: src/libexec/rtld-elf/malloc.c,v 1.11 2006/01/12 07:28:21 jasone Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -234,6 +234,22 @@ malloc(nbytes)
   	*(u_short *)((caddr_t)(op + 1) + op->ov_size) = RMAGIC;
 #endif
   	return ((char *)(op + 1));
+}
+
+void *
+calloc(size_t num, size_t size)
+{
+	void *ret;
+
+	if (size != 0 && (num * size) / size != num) {
+		/* size_t overflow. */
+		return (NULL);
+	}
+
+	if ((ret = malloc(num * size)) != NULL)
+		memset(ret, 0, num * size);
+
+	return (ret);
 }
 
 /*

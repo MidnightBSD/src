@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/powerpc/reloc.c,v 1.5 2004/11/02 09:47:01 ssouhlal Exp $
+ * $FreeBSD: src/libexec/rtld-elf/powerpc/reloc.c,v 1.8 2007/07/15 22:52:15 marcel Exp $
  */
 
 #include <sys/param.h>
@@ -71,6 +71,7 @@ do_copy_relocations(Obj_Entry *dstobj)
 		const void *srcaddr;
 		const Elf_Sym *srcsym = NULL;
 		Obj_Entry *srcobj;
+		const Ver_Entry *ve;
 
 		if (ELF_R_TYPE(rela->r_info) != R_PPC_COPY) {
 			continue;
@@ -81,10 +82,11 @@ do_copy_relocations(Obj_Entry *dstobj)
 		name = dstobj->strtab + dstsym->st_name;
 		hash = elf_hash(name);
 		size = dstsym->st_size;
+		ve = fetch_ventry(dstobj, ELF_R_SYM(rela->r_info));
 
 		for (srcobj = dstobj->next;  srcobj != NULL;
 		     srcobj = srcobj->next) {
-			if ((srcsym = symlook_obj(name, hash, srcobj, false))
+			if ((srcsym = symlook_obj(name, hash, srcobj, ve, 0))
 			    != NULL) {
 				break;
 			}
@@ -242,7 +244,7 @@ reloc_nonplt_object(Obj_Entry *obj_rtld, Obj_Entry *obj, const Elf_Rela *rela,
 
 		*(Elf_Addr **)where = *where * sizeof(Elf_Addr)
 		    + (Elf_Addr *)(def->st_value + rela->r_addend 
-		    + defobj->tlsoffset - TLS_TP_OFFSET - TLS_TCB_SIZE);
+		    + defobj->tlsoffset - TLS_TP_OFFSET);
 		
 		break;
 		
@@ -284,8 +286,12 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld)
 	 * The dynamic loader may be called from a thread, we have
 	 * limited amounts of stack available so we cannot use alloca().
 	 */
-	cache = mmap(NULL, bytes, PROT_READ|PROT_WRITE, MAP_ANON, -1, 0);
-	if (cache == MAP_FAILED)
+	if (obj != obj_rtld) {
+		cache = mmap(NULL, bytes, PROT_READ|PROT_WRITE, MAP_ANON,
+		    -1, 0);
+		if (cache == MAP_FAILED)
+			cache = NULL;
+	} else
 		cache = NULL;
 
 	/*
@@ -556,7 +562,7 @@ allocate_initial_tls(Obj_Entry *list)
 
 	tls_static_space = tls_last_offset + tls_last_size + RTLD_STATIC_TLS_EXTRA;
 
-	_tp = (Elf_Addr **) ((char *) allocate_tls(list, 0, 8, 8) 
+	_tp = (Elf_Addr **) ((char *) allocate_tls(list, NULL, TLS_TCB_SIZE, 8) 
 	    + TLS_TP_OFFSET + TLS_TCB_SIZE);
 
 	/*

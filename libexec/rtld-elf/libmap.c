@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/libexec/rtld-elf/libmap.c,v 1.14 2005/02/04 02:46:41 mdodd Exp $
+ * $FreeBSD: src/libexec/rtld-elf/libmap.c,v 1.15 2006/01/31 06:08:28 peter Exp $
  */
 
 #include <stdio.h>
@@ -263,14 +263,12 @@ lm_findn (const char *p, const char *f, const int n)
 {
 	char pathbuf[64], *s, *t;
 
-	if (n < sizeof(pathbuf) - 1) {
-		memcpy(pathbuf, f, n);
-		pathbuf[n] = '\0';
+	if (n < sizeof(pathbuf) - 1)
 		s = pathbuf;
-	} else {
+	else
 		s = xmalloc(n + 1);
-		strcpy(s, f);
-	}
+	memcpy(s, f, n);
+	s[n] = '\0';
 	t = lm_find(p, s);
 	if (s != pathbuf)
 		free(s);

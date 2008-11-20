@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/i386/reloc.c,v 1.18 2005/06/29 23:15:36 peter Exp $
+ * $FreeBSD: src/libexec/rtld-elf/i386/reloc.c,v 1.20 2006/03/28 06:09:24 davidxu Exp $
  */
 
 /*
@@ -74,6 +74,7 @@ do_copy_relocations(Obj_Entry *dstobj)
 	    size_t size;
 	    const void *srcaddr;
 	    const Elf_Sym *srcsym;
+	    const Ver_Entry *ve;
 	    Obj_Entry *srcobj;
 
 	    dstaddr = (void *) (dstobj->relocbase + rel->r_offset);
@@ -81,9 +82,10 @@ do_copy_relocations(Obj_Entry *dstobj)
 	    name = dstobj->strtab + dstsym->st_name;
 	    hash = elf_hash(name);
 	    size = dstsym->st_size;
+	    ve = fetch_ventry(dstobj, ELF_R_SYM(rel->r_info));
 
 	    for (srcobj = dstobj->next;  srcobj != NULL;  srcobj = srcobj->next)
-		if ((srcsym = symlook_obj(name, hash, srcobj, false)) != NULL)
+		if ((srcsym = symlook_obj(name, hash, srcobj, ve, 0)) != NULL)
 		    break;
 
 	    if (srcobj == NULL) {
@@ -334,7 +336,7 @@ allocate_initial_tls(Obj_Entry *objs)
      * use.
      */
     tls_static_space = tls_last_offset + RTLD_STATIC_TLS_EXTRA;
-    tls = allocate_tls(objs, NULL, 2*sizeof(Elf_Addr), sizeof(Elf_Addr));
+    tls = allocate_tls(objs, NULL, 3*sizeof(Elf_Addr), sizeof(Elf_Addr));
     i386_set_gsbase(tls);
 }
 

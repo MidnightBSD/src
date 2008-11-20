@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/amd64/reloc.c,v 1.15.8.1 2005/12/30 22:13:56 marcel Exp $
+ * $FreeBSD: src/libexec/rtld-elf/amd64/reloc.c,v 1.18 2006/03/28 06:09:24 davidxu Exp $
  */
 
 /*
@@ -74,15 +74,17 @@ do_copy_relocations(Obj_Entry *dstobj)
 	    const void *srcaddr;
 	    const Elf_Sym *srcsym;
 	    Obj_Entry *srcobj;
+	    const Ver_Entry *ve;
 
 	    dstaddr = (void *) (dstobj->relocbase + rela->r_offset);
 	    dstsym = dstobj->symtab + ELF_R_SYM(rela->r_info);
 	    name = dstobj->strtab + dstsym->st_name;
 	    hash = elf_hash(name);
 	    size = dstsym->st_size;
+	    ve = fetch_ventry(dstobj, ELF_R_SYM(rela->r_info));
 
 	    for (srcobj = dstobj->next;  srcobj != NULL;  srcobj = srcobj->next)
-		if ((srcsym = symlook_obj(name, hash, srcobj, false)) != NULL)
+		if ((srcsym = symlook_obj(name, hash, srcobj, ve, 0)) != NULL)
 		    break;
 
 	    if (srcobj == NULL) {
@@ -382,7 +384,7 @@ allocate_initial_tls(Obj_Entry *objs)
      */
     tls_static_space = tls_last_offset + RTLD_STATIC_TLS_EXTRA;
     amd64_set_fsbase(allocate_tls(objs, 0,
-				  2*sizeof(Elf_Addr), sizeof(Elf_Addr)));
+				  3*sizeof(Elf_Addr), sizeof(Elf_Addr)));
 }
 
 void *__tls_get_addr(tls_index *ti)

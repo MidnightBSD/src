@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *	from: FreeBSD: src/libexec/rtld-elf/sparc64/lockdflt.c,v 1.3 2002/10/09
- * $FreeBSD: src/libexec/rtld-elf/rtld_lock.c,v 1.3 2004/11/16 20:45:51 jhb Exp $
+ * $FreeBSD: src/libexec/rtld-elf/rtld_lock.c,v 1.4 2007/04/03 18:28:13 kan Exp $
  */
 
 /*
@@ -54,7 +54,7 @@
 #define RC_INCR		0x2	/* Adjusts count of readers desiring lock */
 
 typedef struct Struct_Lock {
-	volatile int lock;
+	volatile u_int lock;
 	void *base;
 } Lock;
 

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/ia64/reloc.c,v 1.15.8.2 2006/01/28 18:40:54 marcel Exp $
+ * $FreeBSD: src/libexec/rtld-elf/ia64/reloc.c,v 1.21 2006/09/01 06:07:26 marcel Exp $
  */
 
 /*
@@ -594,7 +594,7 @@ init_pltgot(Obj_Entry *obj)
 void
 allocate_initial_tls(Obj_Entry *list)
 {
-    register Elf_Addr** tp __asm__("r13");
+    void *tpval;
 
     /*
      * Fix the size of the static TLS block by using the maximum
@@ -603,7 +603,8 @@ allocate_initial_tls(Obj_Entry *list)
      */
     tls_static_space = tls_last_offset + tls_last_size + RTLD_STATIC_TLS_EXTRA;
 
-    tp = allocate_tls(list, 0, 16, 16);
+    tpval = allocate_tls(list, NULL, TLS_TCB_SIZE, 16);
+    __asm __volatile("mov r13 = %0" :: "r"(tpval));
 }
 
 void *__tls_get_addr(unsigned long module, unsigned long offset)

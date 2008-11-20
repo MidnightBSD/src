@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/i386/rtld_machdep.h,v 1.10 2004/08/03 08:50:59 dfr Exp $
+ * $FreeBSD: src/libexec/rtld-elf/i386/rtld_machdep.h,v 1.11 2006/03/28 18:28:07 des Exp $
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -46,8 +46,10 @@ reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 	      const struct Struct_Obj_Entry *obj,
 	      const struct Struct_Obj_Entry *refobj, const Elf_Rel *rel)
 {
+#ifdef dbg
     dbg("reloc_jmpslot: *%p = %p", (void *)(where),
 	(void *)(target));
+#endif
     (*(Elf_Addr *)(where) = (Elf_Addr)(target));
     return target;
 }

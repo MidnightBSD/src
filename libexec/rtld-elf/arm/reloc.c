@@ -1,7 +1,7 @@
 /*	$NetBSD: mdreloc.c,v 1.23 2003/07/26 15:04:38 mrg Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/libexec/rtld-elf/arm/reloc.c,v 1.3 2004/09/28 14:43:12 cognet Exp $");
+__FBSDID("$FreeBSD: src/libexec/rtld-elf/arm/reloc.c,v 1.4 2005/12/18 19:43:32 kan Exp $");
 #include <sys/param.h>
 #include <sys/mman.h>
 
@@ -41,15 +41,17 @@ do_copy_relocations(Obj_Entry *dstobj)
 			const void *srcaddr;
 			const Elf_Sym *srcsym;
 			Obj_Entry *srcobj;
+			const Ver_Entry *ve;
 			
 			dstaddr = (void *) (dstobj->relocbase + rel->r_offset);
 			dstsym = dstobj->symtab + ELF_R_SYM(rel->r_info);
 			name = dstobj->strtab + dstsym->st_name;
 			hash = elf_hash(name);
 			size = dstsym->st_size;
+			ve = fetch_ventry(dstobj, ELF_R_SYM(rel->r_info));
 			
 			for (srcobj = dstobj->next;  srcobj != NULL;  srcobj = srcobj->next)
-				if ((srcsym = symlook_obj(name, hash, srcobj, false)) != NULL)
+				if ((srcsym = symlook_obj(name, hash, srcobj, ve, 0)) != NULL)
 					break;
 			
 			if (srcobj == NULL) {

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/libexec/rtld-elf/map_object.c,v 1.16 2005/02/27 12:55:40 dfr Exp $
+ * $FreeBSD: src/libexec/rtld-elf/map_object.c,v 1.18 2007/04/03 18:31:20 kan Exp $
  */
 
 #include <sys/param.h>
@@ -61,7 +61,6 @@ map_object(int fd, const char *path, const struct stat *sb)
     Elf_Phdr **segs;
     int nsegs;
     Elf_Phdr *phdyn;
-    Elf_Phdr *phphdr;
     Elf_Phdr *phinterp;
     Elf_Phdr *phtls;
     caddr_t mapbase;
@@ -79,7 +78,8 @@ map_object(int fd, const char *path, const struct stat *sb)
     Elf_Addr clear_vaddr;
     caddr_t clear_addr;
     caddr_t clear_page;
-    size_t nclear;
+    Elf_Addr phdr_vaddr;
+    size_t nclear, phsize;
     Elf_Addr bss_vaddr;
     Elf_Addr bss_vlimit;
     caddr_t bss_addr;
@@ -95,9 +95,11 @@ map_object(int fd, const char *path, const struct stat *sb)
      * in that order.
      */
     phdr = (Elf_Phdr *) ((char *)hdr + hdr->e_phoff);
+    phsize  = hdr->e_phnum * sizeof (phdr[0]);
     phlimit = phdr + hdr->e_phnum;
     nsegs = -1;
-    phdyn = phphdr = phinterp = phtls = NULL;
+    phdyn = phinterp = phtls = NULL;
+    phdr_vaddr = 0;
     segs = alloca(sizeof(segs[0]) * hdr->e_phnum);
     while (phdr < phlimit) {
 	switch (phdr->p_type) {
@@ -108,7 +110,7 @@ map_object(int fd, const char *path, const struct stat *sb)
 
 	case PT_LOAD:
 	    segs[++nsegs] = phdr;
-    	    if (segs[nsegs]->p_align < PAGE_SIZE) {
+    	    if ((segs[nsegs]->p_align & (PAGE_SIZE - 1)) != 0) {
 		_rtld_error("%s: PT_LOAD segment %d not page-aligned",
 		    path, nsegs);
 		return NULL;
@@ -116,7 +118,8 @@ map_object(int fd, const char *path, const struct stat *sb)
 	    break;
 
 	case PT_PHDR:
-	    phphdr = phdr;
+	    phdr_vaddr = phdr->p_vaddr;
+	    phsize = phdr->p_memsz;
 	    break;
 
 	case PT_DYNAMIC:
@@ -211,6 +214,11 @@ map_object(int fd, const char *path, const struct stat *sb)
 		return NULL;
 	    }
 	}
+	if (phdr_vaddr == 0 && data_offset <= hdr->e_phoff &&
+	  (data_vlimit - data_vaddr + data_offset) >=
+	  (hdr->e_phoff + hdr->e_phnum * sizeof (Elf_Phdr))) {
+	    phdr_vaddr = data_vaddr + hdr->e_phoff - data_offset;
+	}
     }
 
     obj = obj_new();
@@ -227,10 +235,19 @@ map_object(int fd, const char *path, const struct stat *sb)
     obj->dynamic = (const Elf_Dyn *) (obj->relocbase + phdyn->p_vaddr);
     if (hdr->e_entry != 0)
 	obj->entry = (caddr_t) (obj->relocbase + hdr->e_entry);
-    if (phphdr != NULL) {
-	obj->phdr = (const Elf_Phdr *) (obj->relocbase + phphdr->p_vaddr);
-	obj->phsize = phphdr->p_memsz;
+    if (phdr_vaddr != 0) {
+	obj->phdr = (const Elf_Phdr *) (obj->relocbase + phdr_vaddr);
+    } else {
+	obj->phdr = malloc(phsize);
+	if (obj->phdr == NULL) {
+	    obj_free(obj);
+	    _rtld_error("%s: cannot allocate program header", path);
+	     return NULL;
+	}
+	memcpy((char *)obj->phdr, (char *)hdr + hdr->e_phoff, phsize);
+	obj->phdr_alloc = true;
     }
+    obj->phsize = phsize;
     if (phinterp != NULL)
 	obj->interp = (const char *) (obj->relocbase + phinterp->p_vaddr);
     if (phtls != NULL) {
@@ -305,14 +322,17 @@ obj_free(Obj_Entry *obj)
 {
     Objlist_Entry *elm;
 
-    if (obj->tls_done) {
+    if (obj->tls_done)
 	free_tls_offset(obj);
-    }
-    free(obj->path);
     while (obj->needed != NULL) {
 	Needed_Entry *needed = obj->needed;
 	obj->needed = needed->next;
 	free(needed);
+    }
+    while (!STAILQ_EMPTY(&obj->names)) {
+	Name_Entry *entry = STAILQ_FIRST(&obj->names);
+	STAILQ_REMOVE_HEAD(&obj->names, link);
+	free(entry);
     }
     while (!STAILQ_EMPTY(&obj->dldags)) {
 	elm = STAILQ_FIRST(&obj->dldags);
@@ -324,8 +344,16 @@ obj_free(Obj_Entry *obj)
 	STAILQ_REMOVE_HEAD(&obj->dagmembers, link);
 	free(elm);
     }
-    free(obj->origin_path);
-    free(obj->priv);
+    if (obj->vertab)
+	free(obj->vertab);
+    if (obj->origin_path)
+	free(obj->origin_path);
+    if (obj->priv)
+	free(obj->priv);
+    if (obj->path)
+	free(obj->path);
+    if (obj->phdr_alloc)
+	free((void *)obj->phdr);
     free(obj);
 }
 
@@ -337,6 +365,7 @@ obj_new(void)
     obj = CNEW(Obj_Entry);
     STAILQ_INIT(&obj->dldags);
     STAILQ_INIT(&obj->dagmembers);
+    STAILQ_INIT(&obj->names);
     return obj;
 }
 
