@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/misc/subr.c,v 1.3.8.3 2006/04/05 22:20:43 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/misc/subr.c,v 1.7 2007/01/25 11:35:27 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -387,4 +387,30 @@ gctl_get_ascii(struct gctl_req *req, const char *pfmt, ...)
 	p = gctl_get_param(req, 0, pfmt, ap);
 	va_end(ap);
 	return (p);
+}
+
+int
+gctl_change_param(struct gctl_req *req, const char *name, int len,
+    const void *value)
+{
+	struct gctl_req_arg *ap;
+	unsigned i;
+
+	if (req == NULL || req->error != NULL)
+		return (EDOOFUS);
+	for (i = 0; i < req->narg; i++) {
+		ap = &req->arg[i];
+		if (strcmp(ap->name, name) != 0)
+			continue;
+		ap->value = __DECONST(void *, value);
+		if (len >= 0) {
+			ap->flag &= ~GCTL_PARAM_ASCII;
+			ap->len = len;
+		} else if (len < 0) {
+			ap->flag |= GCTL_PARAM_ASCII;
+			ap->len = strlen(value) + 1;
+		}
+		return (0);
+	}
+	return (ENOENT);
 }

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/geom/misc/subr.h,v 1.3.8.3 2006/04/05 22:20:43 pjd Exp $
+ * $FreeBSD: src/sbin/geom/misc/subr.h,v 1.8 2007/01/25 11:35:27 pjd Exp $
  */
 
 #ifndef _SUBR_H_
@@ -41,8 +41,10 @@ int g_metadata_read(const char *name, u_char *md, size_t size,
 int g_metadata_store(const char *name, u_char *md, size_t size);
 int g_metadata_clear(const char *name, const char *magic);
 
-void gctl_error(struct gctl_req *req, const char *error, ...);
-int gctl_get_int(struct gctl_req *req, const char *pfmt, ...);
-intmax_t gctl_get_intmax(struct gctl_req *req, const char *pfmt, ...);
-const char *gctl_get_ascii(struct gctl_req *req, const char *pfmt, ...);
+void gctl_error(struct gctl_req *req, const char *error, ...) __printflike(2, 3);
+int gctl_get_int(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
+intmax_t gctl_get_intmax(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
+const char *gctl_get_ascii(struct gctl_req *req, const char *pfmt, ...) __printflike(2, 3);
+int gctl_change_param(struct gctl_req *req, const char *name, int len,
+    const void *value);
 #endif	/* !_SUBR_H_ */
