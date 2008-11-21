@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/natd/natd.c,v 1.49 2005/05/02 10:13:38 delphij Exp $");
+__FBSDID("$FreeBSD: src/sbin/natd/natd.c,v 1.50 2006/09/26 23:26:51 piso Exp $");
 
 #define SYSLOG_NAMES
 
@@ -970,7 +970,8 @@ void Warn (const char* msg)
 
 static void RefreshAddr (int sig __unused)
 {
-	if (mip->ifName)
+	LibAliasRefreshModules();
+	if (mip != NULL && mip->ifName != NULL)
 		mip->assignAliasAddr = 1;
 }
 

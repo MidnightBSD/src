@@ -1,15 +1,15 @@
-#	$FreeBSD: src/sbin/ipf/ipf/Makefile,v 1.3 2005/05/16 16:22:55 darrenr Exp $
+# $FreeBSD: src/sbin/ipf/ipf/Makefile,v 1.6 2006/09/10 08:58:46 obrien Exp $
 
 PROG=		ipf
-SRCS=		ipf.c ipfcomp.c ipf_y.c ipf_l.c bpf_filter.c
+SRCS=		${GENHDRS} ipf.c ipfcomp.c ipf_y.c ipf_l.c bpf_filter.c
 MAN=		ipf.8 ipf.4 ipf.5 ipl.4
 MLINKS=		ipl.4 ipfilter.4 ipf.5 ipf.conf.5 ipf.5 ipf6.conf.5
 CFLAGS+=	-I. -DIPFILTER_BPF
 
-DPSRCS+=	ipf_l.h ipf_y.h
+GENHDRS=	ipf_l.h ipf_y.h
+DPSRCS+=	${GENHDRS}
 
-CLEANFILES+=	ipf_y.c ipf_y.h
-CLEANFILES+=	ipf_l.c ipf_l.h
+CLEANFILES+=	${GENHDRS} ipf_y.c ipf_l.c
 
 ipf_y.c: ipf_y.y
 	${YACC} -d ${.ALLSRC}
@@ -35,6 +35,7 @@ ipf_l.h: lexer.h
 LIBIPF_SRCS!=	cd ${.CURDIR}/../libipf && ${MAKE} -V SRCS
 SRCS+=	${LIBIPF_SRCS}
 .else
+DPADD+=	${LIBPCAP}
 LDADD+=	-lpcap
 .endif
 

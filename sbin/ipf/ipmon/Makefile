@@ -1,15 +1,15 @@
-#	$FreeBSD: src/sbin/ipf/ipmon/Makefile,v 1.2 2005/04/28 16:26:34 darrenr Exp $
+#	$FreeBSD: src/sbin/ipf/ipmon/Makefile,v 1.3 2006/09/10 08:58:47 obrien Exp $
 
 PROG=		ipmon
-SRCS=		ipmon.c ipmon_y.c ipmon_l.c
+SRCS=		${GENHDRS} ipmon.c ipmon_y.c ipmon_l.c
 MAN=		ipmon.8
 
 CFLAGS+=	-DLOGFAC=LOG_LOCAL0 -I.
 
-DPSRCS+=	ipmon_l.h ipmon_y.h
+GENHDRS+=	ipmon_l.h ipmon_y.h
+DPSRCS+=	${GENHDRS}
 
-CLEANFILES+=	ipmon_y.c ipmon_y.h
-CLEANFILES+=	ipmon_l.c ipmon_l.h
+CLEANFILES+=	${GENHDRS} ipmon_y.c ipmon_l.c
 
 ipmon_y.c: ipmon_y.y
 	${YACC} -d ${.ALLSRC}
