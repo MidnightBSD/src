@@ -1,7 +1,7 @@
 .\"
-.\" $FreeBSD: src/sbin/ipfw/ipfw.8,v 1.175.2.6 2006/03/09 09:18:36 ume Exp $
+.\" $FreeBSD: src/sbin/ipfw/ipfw.8,v 1.203.2.1 2007/11/29 18:42:15 maxim Exp $
 .\"
-.Dd January 16, 2006
+.Dd August 5, 2007
 .Dt IPFW 8
 .Os
 .Sh NAME
@@ -14,15 +14,17 @@
 .Ar rule
 .Nm
 .Op Fl acdefnNStT
+.Op Cm set Ar N
 .Brq Cm list | show
 .Op Ar rule | first-last ...
 .Nm
 .Op Fl f | q
+.Op Cm set Ar N
 .Cm flush
 .Nm
 .Op Fl q
+.Op Cm set Ar N
 .Brq Cm delete | zero | resetlog
-.Op Cm set
 .Op Ar number ...
 .Nm
 .Cm enable
@@ -61,6 +63,12 @@
 .Brq Cm pipe | queue
 .Brq Cm delete | list | show
 .Op Ar number ...
+.Pp
+.Nm
+.Cm nat
+.Ar number
+.Cm config
+.Ar config-options
 .Pp
 .Nm
 .Op Fl cfnNqS
@@ -233,6 +241,8 @@ commands in a script
 or by processing a file of many
 .Nm
 rules across a remote login session.
+It also stops a table add or delete
+from failing if the entry already exists or is not present.
 If a
 .Cm flush
 is performed in normal (verbose) mode (with the default kernel
@@ -326,12 +336,12 @@ have this picture in mind in order to design a correct ruleset.
        |                       |
        +----------->-----------+
        ^                       V
- [ip(6)_input]           [ip(6)_output]     net.inet.ip.fw.enable=1
+ [ip(6)_input]           [ip(6)_output]     net.inet(6).ip(6).fw.enable=1
        |                       |
        ^                       V
  [ether_demux]        [ether_output_frame]  net.link.ether.ipfw=1
        |                       |
-       +-->--[bdg_forward]-->--+            net.link.ether.bridge_ipfw=1
+       +-->--[bdg_forward]-->--+            net.link.bridge.ipfw=1
        ^                       V
        |      to devices       |
 .Ed
@@ -412,14 +422,19 @@ The format of
 .Nm
 rules is the following:
 .Bd -ragged -offset indent
+.Bk -words
 .Op Ar rule_number
 .Op Cm set Ar set_number
 .Op Cm prob Ar match_probability
-.br
-.Ar "   " action
+.Ar action
 .Op Cm log Op Cm logamount Ar number
 .Op Cm altq Ar queue
+.Oo
+.Bro Cm tag | untag
+.Brc Ar number
+.Oc
 .Ar body
+.Ek
 .Ed
 .Pp
 where the body of the rule specifies which information is used
@@ -443,7 +458,7 @@ Time To Live
 .It IP options
 .It IPv6 Extension headers
 Fragmentation, Hop-by-Hop options,
-source routing, IPSec options.
+Routing Headers, Source routing rthdr0, Mobile IPv6 rthdr2, IPSec options.
 .It IPv6 Flow-ID
 .It Misc. TCP header fields
 TCP flags (SYN, FIN, ACK, RST, etc.),
@@ -550,6 +565,54 @@ command.
 Note: logging is done after all other packet matching conditions
 have been successfully verified, and before performing the final
 action (accept, deny, etc.) on the packet.
+.It Cm tag Ar number
+When a packet matches a rule with the
+.Cm tag
+keyword, the numeric tag for the given
+.Ar number
+in the range 1..65534 will be attached to the packet.
+The tag acts as an internal marker (it is not sent out over
+the wire) that can be used to identify these packets later on.
+This can be used, for example, to provide trust between interfaces
+and to start doing policy-based filtering.
+A packet can have mutiple tags at the same time.
+Tags are "sticky", meaning once a tag is applied to a packet by a
+matching rule it exists until explicit removal.
+Tags are kept with the packet everywhere within the kernel, but are
+lost when packet leaves the kernel, for example, on transmitting
+packet out to the network or sending packet to a
+.Xr divert 4
+socket.
+.Pp
+To check for previously applied tags, use the
+.Cm tagged
+rule option.
+To delete previously applied tag, use the
+.Cm untag
+keyword.
+.Pp
+Note: since tags are kept with the packet everywhere in kernelspace,
+they can be set and unset anywhere in kernel network subsystem
+(using
+.Xr mbuf_tags 9
+facility), not only by means of
+.Xr ipfw 4
+.Cm tag
+and
+.Cm untag
+keywords.
+For example, there can be a specialized
+.Xr netgraph 4
+node doing traffic analyzing and tagging for later inspecting
+in firewall.
+.It Cm untag Ar number
+When a packet matches a rule with the
+.Cm untag
+keyword, the tag with the number
+.Ar number
+is searched among the tags attached to this packet and,
+if found, removed from it.
+Other tags bound to packet, if present, are left untouched.
 .It Cm altq Ar queue
 When a packet matches a rule with the
 .Cm altq
@@ -631,10 +694,14 @@ Divert packets that match this rule to the
 socket bound to port
 .Ar port .
 The search terminates.
-.It Cm fwd | forward Ar ipaddr Ns Op , Ns Ar port
+.It Cm fwd | forward Ar ipaddr | tablearg Ns Op , Ns Ar port
 Change the next-hop on matching packets to
 .Ar ipaddr ,
 which can be an IP address or a host name.
+The next hop can also be supplied by the last table
+looked up for the packet by using the
+.Cm tablearg
+keyword instead of an explicit address.
 The search terminates if this rule matches.
 .Pp
 If
@@ -674,14 +741,13 @@ To enable
 .Cm fwd
 a custom kernel needs to be compiled with the option
 .Cd "options IPFIREWALL_FORWARD" .
-With the additional option
-.Cd "options IPFIREWALL_FORWARD_EXTENDED"
-all safeguards are removed and it also makes it possible to redirect
-packets destined to locally configured IP addresses.
-Please note that such rules apply to locally generated packets as
-well and great care is required to ensure proper behaviour for
-automatically generated packets like ICMP message size exceeded
-and others.
+.It Cm nat Ar nat_nr
+Pass packet to a
+nat instance
+(for network address translation, address redirect, etc.):
+see the
+.Sx NETWORK ADDRESS TRANSLATION (NAT)
+Section for further information.
 .It Cm pipe Ar pipe_nr
 Pass packet to a
 .Xr dummynet 4
@@ -869,7 +935,7 @@ The second format
 with multiple addresses) is provided for convenience only and
 its use is discouraged.
 .It Ar addr : Oo Cm not Oc Bro
-.Cm any | me | me6
+.Cm any | me | me6 |
 .Cm table Ns Pq Ar number Ns Op , Ns Ar value
 .Ar | addr-list | addr-set
 .Brc
@@ -900,20 +966,20 @@ Hostnames are resolved at the time the rule is added to the firewall list.
 .It Ar addr Ns / Ns Ar masklen
 Matches all addresses with base
 .Ar addr
-(specified as an IP address or a hostname)
+(specified as an IP address, a network number, or a hostname)
 and mask width of
 .Cm masklen
 bits.
-As an example, 1.2.3.4/25 will match
+As an example, 1.2.3.4/25 or 1.2.3.0/25 will match
 all IP numbers from 1.2.3.0 to 1.2.3.127 .
 .It Ar addr Ns : Ns Ar mask
 Matches all addresses with base
 .Ar addr
-(specified as an IP address or a hostname)
+(specified as an IP address, a network number, or a hostname)
 and the mask of
 .Ar mask ,
 specified as a dotted quad.
-As an example, 1.2.3.4:255.0.255.0 will match
+As an example, 1.2.3.4:255.0.255.0 or 1.0.3.0:255.0.255.0 will match
 1.*.3.*.
 This form is advised only for non-contiguous
 masks.
@@ -926,7 +992,7 @@ error-prone.
 .It Ar list : Bro Ar num | num-num Brc Ns Op Ns , Ns Ar list
 Matches all addresses with base address
 .Ar addr
-(specified as an IP address or a hostname)
+(specified as an IP address, a network number, or a hostname)
 and whose last byte is in the list between braces { } .
 Note that there must be no spaces between braces and
 numbers (spaces after commas are allowed).
@@ -946,6 +1012,7 @@ bitmask, it takes constant time and dramatically reduces
 the complexity of rulesets.
 .br
 As an example, an address specified as 1.2.3.4/24{128,35-55,89}
+or 1.2.3.0/24{128,35-55,89}
 will match the following IP addresses:
 .br
 1.2.3.128, 1.2.3.35 to 1.2.3.55, 1.2.3.89 .
@@ -1060,8 +1127,12 @@ Fragment,
 .Pq Cm frag ,
 Hop-to-hop options
 .Pq Cm hopopt ,
-Source routing
+any type of Routing Header
 .Pq Cm route ,
+Source routing Routing Header Type 0
+.Pq Cm rthdr0 ,
+Mobile IPv6 Routing Header Type 2
+.Pq Cm rthdr2 ,
 Destination options
 .Pq Cm dstopt ,
 IPSec authentication headers
@@ -1085,14 +1156,10 @@ Matches all TCP or UDP packets sent by or received for a
 A
 .Ar group
 may be specified by name or number.
-This option should be used only if debug.mpsafenet=0 to avoid possible
-deadlocks due to layering violations in its implementation.
 .It Cm jail Ar prisonID
 Matches all TCP or UDP packets sent by or received for the
 jail whos prison ID is
 .Ar prisonID .
-This option should be used only if debug.mpsafenet=0 to avoid possible
-deadlocks due to layering violations in its implementation.
 .It Cm icmptypes Ar types
 Matches ICMP packets whose ICMP type is in the list
 .Ar types .
@@ -1184,7 +1251,7 @@ Matches IPv4 packets whose precedence field is equal to
 .It Cm ipsec
 Matches packets that have IPSEC history associated with them
 (i.e., the packet comes encapsulated in IPSEC, the kernel
-has IPSEC support and IPSEC_FILTERGIF option, and can correctly
+has IPSEC support and IPSEC_FILTERTUNNEL option, and can correctly
 decapsulate it).
 .Pp
 Note that specifying
@@ -1360,6 +1427,15 @@ specified as an argument.
 .It Cm src-port Ar ports
 Matches IP packets whose source port is one of the port(s)
 specified as argument.
+.It Cm tagged Ar tag-list
+Matches packets whose tags are included in
+.Ar tag-list ,
+which is either a single value or a list of values or ranges
+specified in the same way as
+.Ar ports .
+Tags can be applied to the packet using
+.Cm tag
+rule action parameter (see it's description for details on tags).
 .It Cm tcpack Ar ack
 TCP packets only.
 Match if the TCP header acknowledgment number field is set to
@@ -1428,8 +1504,6 @@ Match all TCP or UDP packets sent by or received for a
 A
 .Ar user
 may be matched by name or identification number.
-This option should be used only if debug.mpsafenet=0 to avoid possible
-deadlocks due to layering violations in its implementation.
 .It Cm verrevpath
 For incoming packets,
 a routing table lookup is done on the packet's source address.
@@ -1525,12 +1599,21 @@ Lookup tables currently support IPv4 addresses only.
 The
 .Cm tablearg
 feature provides the ability to use a value, looked up in the table, as
-the argument for a rule action.
+the argument for a rule action, action parameter or rule option.
 This can significantly reduce number of rules in some configurations.
 The
 .Cm tablearg
 argument can be used with the following actions:
-.Cm pipe , queue, divert, tee, netgraph, ngtee .
+.Cm pipe , queue, divert, tee, netgraph, ngtee, fwd
+action parameters:
+.Cm tag, untag,
+rule options:
+.Cm limit, tagged.
+.Pp
+When used with
+.Cm fwd
+it is possible to supply table entries with values
+that are in the form of IP addresses or hostnames.
 See the
 .Sx EXAMPLES
 Section for example usage of tables and the tablearg keyword.
@@ -1597,7 +1680,7 @@ operation comes through the
 and
 .Cm limit
 options of
-.Nm rules.
+.Nm rules .
 .Pp
 Dynamic rules are created when a packet matches a
 .Cm keep-state
@@ -1884,8 +1967,7 @@ thresholds are in bytes (defaults to 1500, must be greater than zero).
 .El
 .Pp
 When used with IPv6 data, dummynet currently has several limitations.
-First, debug.mpsafenet=0 must be set.
-Second, the information necessicary to route link-local packets to an
+Information necessary to route link-local packets to an
 interface is not avalable after processing by dummynet so those packets
 are dropped in the output path.
 Care should be taken to insure that link-local packets are not passed to
@@ -1965,6 +2047,59 @@ diverted to that port.
 If no socket is bound to the destination port, or if the divert module is
 not loaded, or if the kernel was not compiled with divert socket support,
 the packets are dropped.
+.Sh NETWORK ADDRESS TRANSLATION (NAT)
+The nat configuration command is the following:
+.Bd -ragged -offset indent
+.Bk -words
+.Cm nat 
+.Ar nat_number 
+.Cm config 
+.Ar nat-configuration
+.Ek
+.Ed
+.Pp
+.
+The following parameters can be configured:
+.Bl -tag -width indent
+.It Cm ip Ar ip_address
+Define an ip address to use for aliasing.
+.It Cm if Ar nic
+Use ip addres of NIC for aliasing, dynamically changing
+it if NIC's ip address change.
+.It Cm log
+Enable logging on this nat instance.
+.It Cm deny_in
+Deny any incoming connection from outside world.
+.It Cm same_ports
+Try to leave the alias port numbers unchanged from
+the actual local port numbers.
+.It Cm unreg_only
+Traffic on the local network not originating from an
+unregistered address spaces will be ignored.
+.It Cm reset
+Reset table of the packet aliasing engine on address change.
+.It Cm reverse
+Reverse the way libalias handles aliasing.
+.It Cm proxy_only
+Obey transparent proxy rules only, packet aliasing is not performed.
+.El
+.Pp
+To let the packet continue after being (de)aliased, set the sysctl variable
+.Em net.inet.ip.fw.one_pass 
+to 0.
+For more information about aliasing modes, refer to
+.Xr libalias 3
+.
+See Section
+.Sx EXAMPLES
+for some examples about nat usage.
+.Sh REDIRECT AND LSNAT SUPPORT IN IPFW
+Redirect and LSNAT support follow closely the syntax used in
+.Xr natd 8
+. 
+See Section
+.Sx EXAMPLES
+for some examples on how to do redirect and lsnat.
 .Sh SYSCTL VARIABLES
 A set of
 .Xr sysctl 8
@@ -2049,6 +2184,8 @@ The firewall enforces that.
 Enables the firewall.
 Setting this variable to 0 lets you run your machine without
 firewall even if compiled in.
+.It Em net.inet6.ip6.fw.enable : No 1
+provides the same functionality as above for the IPv6 case.
 .It Em net.inet.ip.fw.one_pass : No 1
 When set, the packet exiting from the
 .Xr dummynet 4
@@ -2067,7 +2204,7 @@ If enabled packets with unknown IPv6 Extension Headers will be denied.
 Controls whether layer-2 packets are passed to
 .Nm .
 Default is no.
-.It Em net.link.ether.bridge_ipfw : No 0
+.It Em net.link.bridge.ipfw : No 0
 Controls whether bridged packets are passed to
 .Nm .
 Default is no.
@@ -2319,7 +2456,16 @@ Then we classify traffic using a single rule:
 .Dl "ipfw table 1 add 192.168.0.0/27 4"
 .Dl "ipfw table 1 add 192.168.0.2 1"
 .Dl "..."
-.Dl "ipfw pipe tablearg ip from table(1) to any"
+.Dl "ipfw add pipe tablearg ip from table(1) to any"
+.Pp
+Using the
+.Cm fwd
+action, the table entries may include hostnames and IP addresses.
+.Pp
+.Dl "ipfw table 1 add 192.168.2.0/24 10.23.2.1"
+.Dl "ipfw table 1 add 192.168.0.0/27 router1.dmz"
+.Dl "..."
+.Dl "ipfw add 100 fwd tablearg ip from any to table(1)"
 .Ss SETS OF RULES
 To add a set of rules atomically, e.g.\& set 18:
 .Pp
@@ -2342,13 +2488,78 @@ terminates, and your ruleset will be left active.
 Otherwise, e.g.\& if
 you cannot access your box, the ruleset will be disabled after
 the sleep terminates thus restoring the previous situation.
+.Pp
+To show rules of the specific set:
+.Pp
+.Dl "ipfw set 18 show"
+.Pp
+To show rules of the disabled set:
+.Pp
+.Dl "ipfw -S set 18 show"
+.Pp
+To clear a specific rule counters of the specific set:
+.Pp
+.Dl "ipfw set 18 zero NN"
+.Pp
+To delete a specific rule of the specific set:
+.Pp
+.Dl "ipfw set 18 delete NN"
+.Ss NAT, REDIRECT AND LSNAT
+First redirect all the traffic to nat instance 123:
+.Pp
+.Dl "ipfw add nat 123 all from any to any"
+.Pp
+Then to configure nat instance 123 to alias all the outgoing traffic with ip
+192.168.0.123, blocking all incoming connections, trying to keep
+same ports on both sides, clearing aliasing table on address change 
+and keeping a log of traffic/link statistics:
+.Pp
+.Dl "ipfw nat 123 config ip 192.168.0.123 log deny_in reset same_ports"
+.Pp
+Or to change address of instance 123, aliasing table will be cleared (see
+reset option):
+.Pp
+.Dl "ipfw nat 123 config ip 10.0.0.1"
+.Pp
+To see configuration of nat instance 123:
+.Pp
+.Dl "ipfw nat 123 show config"
+.Pp
+To show logs of all the instances in range 111-999:
+.Pp
+.Dl "ipfw nat 111-999 show"
+.Pp
+To see configurations of all instances:
+.Pp
+.Dl "ipfw nat show config"
+.Pp
+Or a redirect rule with mixed modes could looks like:
+.Pp
+.Dl "ipfw nat 123 config redirect_addr 10.0.0.1 10.0.0.66"
+.Dl "			 redirect_port tcp 192.168.0.1:80 500"
+.Dl "			 redirect_proto udp 192.168.1.43 192.168.1.1"
+.Dl "			 redirect_addr 192.168.0.10,192.168.0.11"
+.Dl "			 	    10.0.0.100	# LSNAT"
+.Dl "			 redirect_port tcp 192.168.0.1:80,192.168.0.10:22" 
+.Dl "			 	    500		# LSNAT"
+.Pp
+or it could be splitted in:
+.Pp
+.Dl "ipfw nat 1 config redirect_addr 10.0.0.1 10.0.0.66"
+.Dl "ipfw nat 2 config redirect_port tcp 192.168.0.1:80 500"
+.Dl "ipfw nat 3 config redirect_proto udp 192.168.1.43 192.168.1.1"
+.Dl "ipfw nat 4 config redirect_addr 192.168.0.10,192.168.0.11,192.168.0.12" 
+.Dl "				         10.0.0.100"
+.Dl "ipfw nat 5 config redirect_port tcp"
+.Dl "			192.168.0.1:80,192.168.0.10:22,192.168.0.20:25 500"
+.Pp
 .Sh SEE ALSO
 .Xr cpp 1 ,
 .Xr m4 1 ,
 .Xr altq 4 ,
-.Xr bridge 4 ,
 .Xr divert 4 ,
 .Xr dummynet 4 ,
+.Xr if_bridge 4 ,
 .Xr ip 4 ,
 .Xr ipfirewall 4 ,
 .Xr ng_ipfw 4 ,
@@ -2383,12 +2594,15 @@ API based upon code written by
 .An Daniel Boulet
 for BSDI.
 .Pp
+.An -nosplit
+In-kernel NAT support written by
+.An Paolo Pisati Aq piso@FreeBSD.org
+as part of a Summer of Code 2005 project.
+.Pp
 Work on
 .Xr dummynet 4
 traffic shaper supported by Akamba Corp.
 .Sh BUGS
-Use of dummynet with IPv6 requires that debug.mpsafenet be set to 0.
-.Pp
 The syntax has grown over the years and sometimes it might be confusing.
 Unfortunately, backward compatibility prevents cleaning up mistakes
 made in the definition of the syntax.
@@ -2432,6 +2646,13 @@ be as expected if the associated process calls
 .Xr setuid 2
 or similar system calls.
 .Pp
-Rules which use uid, gid or jail based matching should be used only
-if debug.mpsafenet=0 to avoid possible deadlocks due to layering
-violations in its implementation.
+Rule syntax is subject to the command line environment and some patterns
+may need to be escaped with the backslash character
+or quoted appropriately.
+.Pp
+Due to the architecture of 
+.Xr libalias 3 , 
+ipfw nat is not compatible with the tcp segmentation offloading
+(TSO). Thus, to reliably nat your network traffic, please disable TSO
+on your NICs using
+.Xr ifconfig 8 .

@@ -17,7 +17,7 @@
  *
  * NEW command line interface for IP firewall facility
  *
- * $FreeBSD: src/sbin/ipfw/ipfw2.c,v 1.76.2.6 2006/03/09 09:18:37 ume Exp $
+ * $FreeBSD: src/sbin/ipfw/ipfw2.c,v 1.108.4.1 2008/01/28 17:44:30 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -47,7 +47,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#define IPFW_INTERNAL	/* Access to protected structures in ip_fw.h. */
+
+#include <net/ethernet.h>
 #include <net/if.h>
+#include <net/if_dl.h>
 #include <net/pfvar.h>
 #include <net/route.h> /* def. of struct route */
 #include <netinet/in.h>
@@ -59,17 +63,20 @@
 #include <netinet/ip_dummynet.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include <alias.h>
 
 int
 		do_resolv,		/* Would try to resolve all */
 		do_time,		/* Show time stamps */
 		do_quiet,		/* Be quiet in add and flush */
 		do_pipe,		/* this cmd refers to a pipe */
+	        do_nat, 		/* Nat configuration. */
 		do_sort,		/* field to sort results (0 = no) */
 		do_dynamic,		/* display dynamic rules */
 		do_expired,		/* display expired dynamic rules */
 		do_compact,		/* show rules in compact mode */
 		do_force,		/* do not ask for confirmation */
+		use_set,		/* work with specified set number */
 		show_sets,		/* display rule sets */
 		test_only,		/* only check syntax */
 		comment_only,		/* only print action and comment */
@@ -81,6 +88,44 @@ int
  * arguments.
  */
 #define NEED1(msg)      {if (!ac) errx(EX_USAGE, msg);}
+
+#define GET_UINT_ARG(arg, min, max, tok, s_x) do {			\
+	if (!ac)							\
+		errx(EX_USAGE, "%s: missing argument", match_value(s_x, tok)); \
+	if (_substrcmp(*av, "tablearg") == 0) {				\
+		arg = IP_FW_TABLEARG;					\
+		break;							\
+	}								\
+									\
+	{								\
+	long val;							\
+	char *end;							\
+									\
+	val = strtol(*av, &end, 10);					\
+									\
+	if (!isdigit(**av) || *end != '\0' || (val == 0 && errno == EINVAL)) \
+		errx(EX_DATAERR, "%s: invalid argument: %s",		\
+		    match_value(s_x, tok), *av);			\
+									\
+	if (errno == ERANGE || val < min || val > max)			\
+		errx(EX_DATAERR, "%s: argument is out of range (%u..%u): %s", \
+		    match_value(s_x, tok), min, max, *av);		\
+									\
+	if (val == IP_FW_TABLEARG)					\
+		errx(EX_DATAERR, "%s: illegal argument value: %s",	\
+		    match_value(s_x, tok), *av);			\
+	arg = val;							\
+	}								\
+} while (0)
+
+#define PRINT_UINT_ARG(str, arg) do {					\
+	if (str != NULL)						\
+		printf("%s",str);					\
+	if (arg == IP_FW_TABLEARG)					\
+		printf("tablearg");					\
+	else								\
+		printf("%u", (uint32_t)arg);				\
+} while (0)
 
 /*
  * _s_x is a structure that stores a string <-> token pairs, used in
@@ -209,10 +254,14 @@ enum tokens {
 	TOK_RESET,
 	TOK_UNREACH,
 	TOK_CHECKSTATE,
+	TOK_NAT,
 
 	TOK_ALTQ,
 	TOK_LOG,
+	TOK_TAG,
+	TOK_UNTAG,
 
+	TOK_TAGGED,
 	TOK_UID,
 	TOK_GID,
 	TOK_JAIL,
@@ -268,6 +317,18 @@ enum tokens {
 	TOK_DROPTAIL,
 	TOK_PROTO,
 	TOK_WEIGHT,
+	TOK_IP,
+	TOK_IF,
+ 	TOK_ALOG,
+ 	TOK_DENY_INC,
+ 	TOK_SAME_PORTS,
+ 	TOK_UNREG_ONLY,
+ 	TOK_RESET_ADDR,
+ 	TOK_ALIAS_REV,
+ 	TOK_PROXY_ONLY,
+	TOK_REDIR_ADDR,
+	TOK_REDIR_PORT,
+	TOK_REDIR_PROTO,	
 
 	TOK_IPV6,
 	TOK_FLOWID,
@@ -310,6 +371,22 @@ struct _s_x dummynet_params[] = {
 	{ NULL, 0 }	/* terminator */
 };
 
+struct _s_x nat_params[] = {
+	{ "ip",	                TOK_IP },
+	{ "if",	                TOK_IF },
+ 	{ "log",                TOK_ALOG },
+ 	{ "deny_in",	        TOK_DENY_INC },
+ 	{ "same_ports",	        TOK_SAME_PORTS },
+ 	{ "unreg_only",	        TOK_UNREG_ONLY },
+ 	{ "reset",	        TOK_RESET_ADDR },
+ 	{ "reverse",	        TOK_ALIAS_REV },	
+ 	{ "proxy_only",	        TOK_PROXY_ONLY },
+	{ "redirect_addr",	TOK_REDIR_ADDR },
+	{ "redirect_port",	TOK_REDIR_PORT },
+	{ "redirect_proto",	TOK_REDIR_PROTO },
+ 	{ NULL, 0 }	/* terminator */
+};
+
 struct _s_x rule_actions[] = {
 	{ "accept",		TOK_ACCEPT },
 	{ "pass",		TOK_ACCEPT },
@@ -334,16 +411,20 @@ struct _s_x rule_actions[] = {
 	{ "unreach",		TOK_UNREACH },
 	{ "check-state",	TOK_CHECKSTATE },
 	{ "//",			TOK_COMMENT },
+	{ "nat",                TOK_NAT },
 	{ NULL, 0 }	/* terminator */
 };
 
 struct _s_x rule_action_params[] = {
 	{ "altq",		TOK_ALTQ },
 	{ "log",		TOK_LOG },
+	{ "tag",		TOK_TAG },
+	{ "untag",		TOK_UNTAG },
 	{ NULL, 0 }	/* terminator */
 };
 
 struct _s_x rule_options[] = {
+	{ "tagged",		TOK_TAGGED },
 	{ "uid",		TOK_UID },
 	{ "gid",		TOK_GID },
 	{ "jail",		TOK_JAIL },
@@ -449,7 +530,9 @@ do_cmd(int optname, void *optval, uintptr_t optlen)
 
 	if (optname == IP_FW_GET || optname == IP_DUMMYNET_GET ||
 	    optname == IP_FW_ADD || optname == IP_FW_TABLE_LIST ||
-	    optname == IP_FW_TABLE_GETSIZE)
+	    optname == IP_FW_TABLE_GETSIZE || 
+	    optname == IP_FW_NAT_GET_CONFIG || 
+	    optname == IP_FW_NAT_GET_LOG)
 		i = getsockopt(s, IPPROTO_IP, optname, optval,
 			(socklen_t *)optlen);
 	else
@@ -572,6 +655,7 @@ struct _s_x _port_name[] = {
 	{"ipttl",	O_IPTTL},
 	{"mac-type",	O_MAC_TYPE},
 	{"tcpdatalen",	O_TCPDATALEN},
+	{"tagged",	O_TAGGED},
 	{NULL,		0}
 };
 
@@ -586,8 +670,6 @@ print_newports(ipfw_insn_u16 *cmd, int proto, int opcode)
 	int i;
 	char const *sep;
 
-	if (cmd->o.len & F_NOT)
-		printf(" not");
 	if (opcode != 0) {
 		sep = match_value(_port_name, opcode);
 		if (sep == NULL)
@@ -785,30 +867,39 @@ fill_newports(ipfw_insn_u16 *cmd, char *av, int proto)
 
 	while (*s) {
 		a = strtoport(av, &s, 0, proto);
-		if (s == av) /* no parameter */
-			break;
-		if (*s == '-') { /* a range */
-			av = s+1;
+		if (s == av) 			/* empty or invalid argument */
+			return (0);
+
+		switch (*s) {
+		case '-':			/* a range */
+			av = s + 1;
 			b = strtoport(av, &s, 0, proto);
-			if (s == av) /* no parameter */
-				break;
+			/* Reject expressions like '1-abc' or '1-2-3'. */
+			if (s == av || (*s != ',' && *s != '\0'))
+				return (0);
 			p[0] = a;
 			p[1] = b;
-		} else if (*s == ',' || *s == '\0' )
+			break;
+		case ',':			/* comma separated list */
+		case '\0':
 			p[0] = p[1] = a;
-		else 	/* invalid separator */
-			errx(EX_DATAERR, "invalid separator <%c> in <%s>\n",
+			break;
+		default:
+			warnx("port list: invalid separator <%c> in <%s>",
 				*s, av);
+			return (0);
+		}
+
 		i++;
 		p += 2;
-		av = s+1;
+		av = s + 1;
 	}
 	if (i > 0) {
-		if (i+1 > F_LEN_MASK)
+		if (i + 1 > F_LEN_MASK)
 			errx(EX_DATAERR, "too many ports/ranges\n");
-		cmd->o.len |= i+1; /* leave F_NOT and F_OR untouched */
+		cmd->o.len |= i + 1;	/* leave F_NOT and F_OR untouched */
 	}
-	return i;
+	return (i);
 }
 
 static struct _s_x icmpcodes[] = {
@@ -1152,7 +1243,7 @@ fill_icmp6types(ipfw_insn_icmp6 *cmd, char *av)
 {
        uint8_t type;
 
-       cmd->d[0] = 0;
+       bzero(cmd, sizeof(*cmd));
        while (*av) {
            if (*av == ',')
                av++;
@@ -1212,6 +1303,8 @@ static struct _s_x ext6hdrcodes[] = {
        { "dstopt",     EXT_DSTOPTS },
        { "ah",         EXT_AH },
        { "esp",        EXT_ESP },
+       { "rthdr0",     EXT_RTHDR0 },
+       { "rthdr2",     EXT_RTHDR2 },
        { NULL,         0 }
 };
 
@@ -1252,6 +1345,14 @@ fill_ext6hdr( ipfw_insn *cmd, char *av)
                cmd->arg1 |= EXT_ESP;
                break;
 
+           case EXT_RTHDR0:
+               cmd->arg1 |= EXT_RTHDR0;
+               break;
+
+           case EXT_RTHDR2:
+               cmd->arg1 |= EXT_RTHDR2;
+               break;
+
            default:
                errx( EX_DATAERR, "invalid option for ipv6 exten header" );
                break;
@@ -1280,6 +1381,14 @@ print_ext6hdr( ipfw_insn *cmd )
        }
        if (cmd->arg1 & EXT_ROUTING ) {
            printf("%crouting options", sep);
+           sep = ',';
+       }
+       if (cmd->arg1 & EXT_RTHDR0 ) {
+           printf("%crthdr0", sep);
+           sep = ',';
+       }
+       if (cmd->arg1 & EXT_RTHDR2 ) {
+           printf("%crthdr2", sep);
            sep = ',';
        }
        if (cmd->arg1 & EXT_DSTOPTS ) {
@@ -1311,10 +1420,8 @@ print_ext6hdr( ipfw_insn *cmd )
 #define	HAVE_PROTO	0x0001
 #define	HAVE_SRCIP	0x0002
 #define	HAVE_DSTIP	0x0004
-#define	HAVE_MAC	0x0008
-#define	HAVE_MACTYPE	0x0010
-#define	HAVE_PROTO4	0x0040
-#define	HAVE_PROTO6	0x0080
+#define	HAVE_PROTO4	0x0008
+#define	HAVE_PROTO6	0x0010
 #define	HAVE_OPTIONS	0x8000
 
 #define	HAVE_IP		(HAVE_PROTO | HAVE_SRCIP | HAVE_DSTIP)
@@ -1326,16 +1433,6 @@ show_prerequisites(int *flags, int want, int cmd)
 	if ( (*flags & HAVE_IP) == HAVE_IP)
 		*flags |= HAVE_OPTIONS;
 
-	if ( (*flags & (HAVE_MAC|HAVE_MACTYPE|HAVE_OPTIONS)) == HAVE_MAC &&
-	     cmd != O_MAC_TYPE) {
-		/*
-		 * mac-type was optimized out by the compiler,
-		 * restore it
-		 */
-		printf(" any");
-		*flags |= HAVE_MACTYPE | HAVE_OPTIONS;
-		return;
-	}
 	if ( !(*flags & HAVE_OPTIONS)) {
 		if ( !(*flags & HAVE_PROTO) && (want & HAVE_PROTO))
 			if ( (*flags & HAVE_PROTO4))
@@ -1358,7 +1455,7 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 {
 	static int twidth = 0;
 	int l;
-	ipfw_insn *cmd;
+	ipfw_insn *cmd, *tagptr = NULL;
 	char *comment = NULL;	/* ptr to comment if we have one */
 	int proto = 0;		/* default */
 	int flags = 0;	/* prerequisites */
@@ -1459,34 +1556,43 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 				print_unreach6_code(cmd->arg1);
 			break;
 
-#define	PRINT_WITH_ARG(o)						\
-			if (cmd->arg1 == IP_FW_TABLEARG)		\
-				printf("%s tablearg", (o));		\
-			else						\
-				printf("%s %u", (o), cmd->arg1);	\
+		case O_SKIPTO:
+			PRINT_UINT_ARG("skipto ", cmd->arg1);
 			break;
 
-		case O_SKIPTO:
-			PRINT_WITH_ARG("skipto");
 		case O_PIPE:
-			PRINT_WITH_ARG("pipe");
+			PRINT_UINT_ARG("pipe ", cmd->arg1);
+			break;
+
 		case O_QUEUE:
-			PRINT_WITH_ARG("queue");
+			PRINT_UINT_ARG("queue ", cmd->arg1);
+			break;
+
 		case O_DIVERT:
-			PRINT_WITH_ARG("divert");
+			PRINT_UINT_ARG("divert ", cmd->arg1);
+			break;
+
 		case O_TEE:
-			PRINT_WITH_ARG("tee");
+			PRINT_UINT_ARG("tee ", cmd->arg1);
+			break;
+
 		case O_NETGRAPH:
-			PRINT_WITH_ARG("netgraph");
+			PRINT_UINT_ARG("netgraph ", cmd->arg1);
+			break;
+
 		case O_NGTEE:
-			PRINT_WITH_ARG("ngtee");
-#undef PRINT_WITH_ARG
+			PRINT_UINT_ARG("ngtee ", cmd->arg1);
+			break;
 
 		case O_FORWARD_IP:
 		    {
 			ipfw_insn_sa *s = (ipfw_insn_sa *)cmd;
 
-			printf("fwd %s", inet_ntoa(s->sa.sin_addr));
+			if (s->sa.sin_addr.s_addr == INADDR_ANY) {
+				printf("fwd tablearg");
+			} else {
+				printf("fwd %s", inet_ntoa(s->sa.sin_addr));
+			}
 			if (s->sa.sin_port)
 				printf(",%d", s->sa.sin_port);
 		    }
@@ -1500,6 +1606,14 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 			altqptr = (ipfw_insn_altq *)cmd;
 			break;
 
+		case O_TAG:
+			tagptr = cmd;
+			break;
+
+		case O_NAT:
+ 			printf("nat %u", cmd->arg1);
+ 			break;
+			
 		default:
 			printf("** unrecognized action %d len %d ",
 				cmd->opcode, cmd->len);
@@ -1519,6 +1633,12 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 			printf(" altq ?<%u>", altqptr->qid);
 		else
 			printf(" altq %s", qname);
+	}
+	if (tagptr) {
+		if (tagptr->len & F_NOT)
+			PRINT_UINT_ARG(" untag ", tagptr->arg1);
+		else
+			PRINT_UINT_ARG(" tag ", tagptr->arg1);
 	}
 
 	/*
@@ -1567,28 +1687,6 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 
 		case O_PROBE_STATE:
 			break; /* no need to print anything here */
-
-		case O_MACADDR2: {
-			ipfw_insn_mac *m = (ipfw_insn_mac *)cmd;
-
-			if ((cmd->len & F_OR) && !or_block)
-				printf(" {");
-			if (cmd->len & F_NOT)
-				printf(" not");
-			printf(" MAC");
-			flags |= HAVE_MAC;
-			print_mac(m->addr, m->mask);
-			print_mac(m->addr + 6, m->mask + 6);
-			}
-			break;
-
-		case O_MAC_TYPE:
-			if ((cmd->len & F_OR) && !or_block)
-				printf(" {");
-			print_newports((ipfw_insn_u16 *)cmd, IPPROTO_ETHERTYPE,
-				(flags & HAVE_OPTIONS) ? cmd->opcode : 0);
-			flags |= HAVE_MAC | HAVE_MACTYPE | HAVE_OPTIONS;
-			break;
 
 		case O_IP_SRC:
 		case O_IP_SRC_LOOKUP:
@@ -1657,6 +1755,8 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 			show_prerequisites(&flags, HAVE_PROTO|HAVE_SRCIP, 0);
 			if ((cmd->len & F_OR) && !or_block)
 				printf(" {");
+			if (cmd->len & F_NOT)
+				printf(" not");
 			print_newports((ipfw_insn_u16 *)cmd, proto,
 				(flags & HAVE_OPTIONS) ? cmd->opcode : 0);
 			break;
@@ -1697,6 +1797,21 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 			if (cmd->len & F_NOT && cmd->opcode != O_IN)
 				printf(" not");
 			switch(cmd->opcode) {
+			case O_MACADDR2: {
+				ipfw_insn_mac *m = (ipfw_insn_mac *)cmd;
+
+				printf(" MAC");
+				print_mac(m->addr, m->mask);
+				print_mac(m->addr + 6, m->mask + 6);
+				}
+				break;
+
+			case O_MAC_TYPE:
+				print_newports((ipfw_insn_u16 *)cmd,
+						IPPROTO_ETHERTYPE, cmd->opcode);
+				break;
+
+
 			case O_FRAG:
 				printf(" frag");
 				break;
@@ -1872,8 +1987,7 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 				printf(" keep-state");
 				break;
 
-			case O_LIMIT:
-			    {
+			case O_LIMIT: {
 				struct _s_x *p = limit_masks;
 				ipfw_insn_limit *c = (ipfw_insn_limit *)cmd;
 				uint8_t x = c->limit_mask;
@@ -1886,9 +2000,9 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 						printf("%s%s", comma, p->s);
 						comma = ",";
 					}
-				printf(" %d", c->conn_limit);
-			    }
+				PRINT_UINT_ARG(" ", c->conn_limit);
 				break;
+			}
 
 			case O_IP6:
 				printf(" ip6");
@@ -1904,6 +2018,14 @@ show_ipfw(struct ip_fw *rule, int pcwidth, int bcwidth)
 
 			case O_EXT_HDR:
 				print_ext6hdr( (ipfw_insn *) cmd );
+				break;
+
+			case O_TAGGED:
+				if (F_LEN(cmd) == 1)
+					PRINT_UINT_ARG(" tagged ", cmd->arg1);
+				else
+					print_newports((ipfw_insn_u16 *)cmd, 0,
+					    O_TAGGED);
 				break;
 
 			default:
@@ -1931,6 +2053,7 @@ show_dyn_ipfw(ipfw_dyn_rule *d, int pcwidth, int bcwidth)
 	struct protoent *pe;
 	struct in_addr a;
 	uint16_t rulenum;
+	char buf[INET6_ADDRSTRLEN];
 
 	if (!do_expired) {
 		if (!d->expire && !(d->dyn_type == O_LIMIT_PARENT))
@@ -1959,11 +2082,20 @@ show_dyn_ipfw(ipfw_dyn_rule *d, int pcwidth, int bcwidth)
 	else
 		printf(" proto %u", d->id.proto);
 
-	a.s_addr = htonl(d->id.src_ip);
-	printf(" %s %d", inet_ntoa(a), d->id.src_port);
+	if (d->id.addr_type == 4) {
+		a.s_addr = htonl(d->id.src_ip);
+		printf(" %s %d", inet_ntoa(a), d->id.src_port);
 
-	a.s_addr = htonl(d->id.dst_ip);
-	printf(" <-> %s %d", inet_ntoa(a), d->id.dst_port);
+		a.s_addr = htonl(d->id.dst_ip);
+		printf(" <-> %s %d", inet_ntoa(a), d->id.dst_port);
+	} else if (d->id.addr_type == 6) {
+		printf(" %s %d", inet_ntop(AF_INET6, &d->id.src_ip6, buf,
+		    sizeof(buf)), d->id.src_port);
+		printf(" <-> %s %d", inet_ntop(AF_INET6, &d->id.dst_ip6, buf,
+		    sizeof(buf)), d->id.dst_port);
+	} else
+		printf(" UNKNOWN <-> UNKNOWN\n");
+	
 	printf("\n");
 }
 
@@ -2157,7 +2289,7 @@ list_pipes(void *data, uint nbytes, int ac, char *av[])
 		char buf[30];
 		char prefix[80];
 
-		if (p->next.sle_next != (struct dn_pipe *)DN_IS_PIPE)
+		if (SLIST_NEXT(p, next) != (struct dn_pipe *)DN_IS_PIPE)
 			break;	/* done with pipes, now queues */
 
 		/*
@@ -2196,7 +2328,7 @@ list_pipes(void *data, uint nbytes, int ac, char *av[])
 	for (fs = next; nbytes >= sizeof *fs; fs = next) {
 		char prefix[80];
 
-		if (fs->next.sle_next != (struct dn_flow_set *)DN_IS_QUEUE)
+		if (SLIST_NEXT(fs, next) != (struct dn_flow_set *)DN_IS_QUEUE)
 			break;
 		l = sizeof(*fs) + fs->rq_elements * sizeof(*q);
 		next = (char *)fs + l;
@@ -2369,6 +2501,7 @@ list(int ac, char *av[], int show_counters)
 	u_long rnum, last;
 	char *endptr;
 	int seen = 0;
+	uint8_t set;
 
 	const int ocmd = do_pipe ? IP_DUMMYNET_GET : IP_FW_GET;
 	int nalloc = 1024;	/* start somewhere... */
@@ -2423,6 +2556,10 @@ list(int ac, char *av[], int show_counters)
 	bcwidth = pcwidth = 0;
 	if (show_counters) {
 		for (n = 0, r = data; n < nstat; n++, r = NEXT(r)) {
+			/* skip rules from another set */
+			if (use_set && r->set != use_set - 1)
+				continue;
+
 			/* packet counter */
 			width = snprintf(NULL, 0, "%llu",
 			    align_uint64(&r->pcnt));
@@ -2438,6 +2575,13 @@ list(int ac, char *av[], int show_counters)
 	}
 	if (do_dynamic && ndyn) {
 		for (n = 0, d = dynrules; n < ndyn; n++, d++) {
+			if (use_set) {
+				/* skip rules from another set */
+				bcopy((char *)&d->rule + sizeof(uint16_t),
+				      &set, sizeof(uint8_t));
+				if (set != use_set - 1)
+					continue;
+			}
 			width = snprintf(NULL, 0, "%llu",
 			    align_uint64(&d->pcnt));
 			if (width > pcwidth)
@@ -2451,13 +2595,23 @@ list(int ac, char *av[], int show_counters)
 	}
 	/* if no rule numbers were specified, list all rules */
 	if (ac == 0) {
-		for (n = 0, r = data; n < nstat; n++, r = NEXT(r) )
+		for (n = 0, r = data; n < nstat; n++, r = NEXT(r)) {
+			if (use_set && r->set != use_set - 1)
+				continue;
 			show_ipfw(r, pcwidth, bcwidth);
+		}
 
 		if (do_dynamic && ndyn) {
 			printf("## Dynamic rules (%d):\n", ndyn);
-			for (n = 0, d = dynrules; n < ndyn; n++, d++)
+			for (n = 0, d = dynrules; n < ndyn; n++, d++) {
+				if (use_set) {
+					bcopy((char *)&d->rule + sizeof(uint16_t),
+					      &set, sizeof(uint8_t));
+					if (set != use_set - 1)
+						continue;
+				}
 				show_dyn_ipfw(d, pcwidth, bcwidth);
+		}
 		}
 		goto done;
 	}
@@ -2477,6 +2631,8 @@ list(int ac, char *av[], int show_counters)
 		for (n = seen = 0, r = data; n < nstat; n++, r = NEXT(r) ) {
 			if (r->rulenum > last)
 				break;
+			if (use_set && r->set != use_set - 1)
+				continue;
 			if (r->rulenum >= rnum && r->rulenum <= last) {
 				show_ipfw(r, pcwidth, bcwidth);
 				seen = 1;
@@ -2505,6 +2661,12 @@ list(int ac, char *av[], int show_counters)
 				bcopy(&d->rule, &rulenum, sizeof(rulenum));
 				if (rulenum > rnum)
 					break;
+				if (use_set) {
+					bcopy((char *)&d->rule + sizeof(uint16_t),
+					      &set, sizeof(uint8_t));
+					if (set != use_set - 1)
+						continue;
+				}
 				if (r->rulenum >= rnum && r->rulenum <= last)
 					show_dyn_ipfw(d, pcwidth, bcwidth);
 			}
@@ -2539,13 +2701,17 @@ help(void)
 "add [num] [set N] [prob x] RULE-BODY\n"
 "{pipe|queue} N config PIPE-BODY\n"
 "[pipe|queue] {zero|delete|show} [N{,N}]\n"
+"nat N config {ip IPADDR|if IFNAME|log|deny_in|same_ports|unreg_only|reset|\n"
+"		reverse|proxy_only|redirect_addr linkspec|\n"
+"		redirect_port linkspec|redirect_proto linkspec}\n"
 "set [disable N... enable N...] | move [rule] X to Y | swap X Y | show\n"
+"set N {show|list|zero|resetlog|delete} [N{,N}] | flush\n"
 "table N {add ip[/bits] [value] | delete ip[/bits] | flush | list}\n"
 "\n"
 "RULE-BODY:	check-state [PARAMS] | ACTION [PARAMS] ADDR [OPTION_LIST]\n"
 "ACTION:	check-state | allow | count | deny | unreach{,6} CODE |\n"
 "               skipto N | {divert|tee} PORT | forward ADDR |\n"
-"               pipe N | queue N\n"
+"               pipe N | queue N | nat N\n"
 "PARAMS: 	[log [logamount LOGLIMIT]] [altq QUEUE_NAME]\n"
 "ADDR:		[ MAC dst src ether_type ] \n"
 "		[ ip from IPADDR [ PORT ] to IPADDR [ PORTLIST ] ]\n"
@@ -2631,13 +2797,17 @@ fill_ip(ipfw_insn_ip *cmd, char *av)
 	 * ',' indicating another address follows, '{' indicating a
 	 * set of addresses of unspecified size.
 	 */
-	char *p = strpbrk(av, "/:,{");
+	char *t = NULL, *p = strpbrk(av, "/:,{");
 	int masklen;
-	char md;
+	char md, nd;
 
 	if (p) {
 		md = *p;
 		*p++ = '\0';
+		if ((t = strpbrk(p, ",{")) != NULL) {
+			nd = *t;
+			*t = '\0';
+		}
 	} else
 		md = '\0';
 
@@ -2671,6 +2841,8 @@ fill_ip(ipfw_insn_ip *cmd, char *av)
 		break;
 	}
 	d[0] &= d[1];		/* mask base address with mask */
+	if (t)
+		*t = nd;
 	/* find next separator */
 	if (p)
 		p = strpbrk(p, ",{");
@@ -2769,6 +2941,8 @@ fill_ip(ipfw_insn_ip *cmd, char *av)
 	len += 2;	/* two words... */
 	d += 2;
     } /* end while */
+    if (len + 1 > F_LEN_MASK)
+	errx(EX_DATAERR, "address list too long");
     cmd->o.len |= len+1;
 }
 
@@ -2920,6 +3094,8 @@ fill_ip6(ipfw_insn_ip6 *cmd, char *av)
 	 * Total length of the command, remember that 1 is the size of
 	 * the base command.
 	 */
+	if (len + 1 > F_LEN_MASK)
+		errx(EX_DATAERR, "address list too long");
 	cmd->o.len |= len+1;
 	free(av);
 	return (1);
@@ -3047,6 +3223,11 @@ delete(int ac, char *av[])
 	av++; ac--;
 	NEED1("missing rule specification");
 	if (ac > 0 && _substrcmp(*av, "set") == 0) {
+		/* Do not allow using the following syntax:
+		 *	ipfw set N delete set M
+		 */
+		if (use_set)
+			errx(EX_DATAERR, "invalid syntax");
 		do_set = 1;	/* delete set */
 		ac--; av++;
 	}
@@ -3054,7 +3235,13 @@ delete(int ac, char *av[])
 	/* Rule number */
 	while (ac && isdigit(**av)) {
 		i = atoi(*av); av++; ac--;
-		if (do_pipe) {
+		if (do_nat) {
+			exitval = do_cmd(IP_FW_NAT_DEL, &i, sizeof i);
+			if (exitval) {
+				exitval = EX_UNAVAILABLE;
+				warn("rule %u not available", i);
+			}
+ 		} else if (do_pipe) {
 			if (do_pipe == 1)
 				p.pipe_nr = i;
 			else
@@ -3066,6 +3253,10 @@ delete(int ac, char *av[])
 				    do_pipe == 1 ? p.pipe_nr : p.fs.fs_nr);
 			}
 		} else {
+			if (use_set)
+				rulenum = (i & 0xffff) | (5 << 24) |
+				    ((use_set - 1) << 16);
+			else
 			rulenum =  (i & 0xffff) | (do_set << 24);
 			i = do_cmd(IP_FW_DEL, &rulenum, sizeof rulenum);
 			if (i) {
@@ -3101,6 +3292,769 @@ fill_iface(ipfw_insn_if *cmd, char *arg)
 		cmd->p.glob = strpbrk(arg, "*?[") != NULL ? 1 : 0;
 	} else if (!inet_aton(arg, &cmd->p.ip))
 		errx(EX_DATAERR, "bad ip address ``%s''", arg);
+}
+
+/* 
+ * Search for interface with name "ifn", and fill n accordingly:
+ *
+ * n->ip        ip address of interface "ifn"
+ * n->if_name   copy of interface name "ifn"
+ */
+static void
+set_addr_dynamic(const char *ifn, struct cfg_nat *n)
+{
+	size_t needed;
+	int mib[6];
+	char *buf, *lim, *next;
+	struct if_msghdr *ifm;
+	struct ifa_msghdr *ifam;
+	struct sockaddr_dl *sdl;
+	struct sockaddr_in *sin;
+	int ifIndex, ifMTU;
+
+	mib[0] = CTL_NET;
+	mib[1] = PF_ROUTE;
+	mib[2] = 0;
+	mib[3] = AF_INET;	
+	mib[4] = NET_RT_IFLIST;
+	mib[5] = 0;		
+/*
+ * Get interface data.
+ */
+	if (sysctl(mib, 6, NULL, &needed, NULL, 0) == -1)
+		err(1, "iflist-sysctl-estimate");
+	if ((buf = malloc(needed)) == NULL)
+		errx(1, "malloc failed");
+	if (sysctl(mib, 6, buf, &needed, NULL, 0) == -1)
+		err(1, "iflist-sysctl-get");
+	lim = buf + needed;
+/*
+ * Loop through interfaces until one with
+ * given name is found. This is done to
+ * find correct interface index for routing
+ * message processing.
+ */
+	ifIndex	= 0;
+	next = buf;
+	while (next < lim) {
+		ifm = (struct if_msghdr *)next;
+		next += ifm->ifm_msglen;
+		if (ifm->ifm_version != RTM_VERSION) {
+			if (verbose)
+				warnx("routing message version %d "
+				    "not understood", ifm->ifm_version);
+			continue;
+		}
+		if (ifm->ifm_type == RTM_IFINFO) {
+			sdl = (struct sockaddr_dl *)(ifm + 1);
+			if (strlen(ifn) == sdl->sdl_nlen &&
+			    strncmp(ifn, sdl->sdl_data, sdl->sdl_nlen) == 0) {
+				ifIndex = ifm->ifm_index;
+				ifMTU = ifm->ifm_data.ifi_mtu;
+				break;
+			}
+		}
+	}
+	if (!ifIndex)
+		errx(1, "unknown interface name %s", ifn);
+/*
+ * Get interface address.
+ */
+	sin = NULL;
+	while (next < lim) {
+		ifam = (struct ifa_msghdr *)next;
+		next += ifam->ifam_msglen;
+		if (ifam->ifam_version != RTM_VERSION) {
+			if (verbose)
+				warnx("routing message version %d "
+				    "not understood", ifam->ifam_version);
+			continue;
+		}
+		if (ifam->ifam_type != RTM_NEWADDR)
+			break;
+		if (ifam->ifam_addrs & RTA_IFA) {
+			int i;
+			char *cp = (char *)(ifam + 1);
+
+			for (i = 1; i < RTA_IFA; i <<= 1) {
+				if (ifam->ifam_addrs & i)
+					cp += SA_SIZE((struct sockaddr *)cp);
+			}
+			if (((struct sockaddr *)cp)->sa_family == AF_INET) {
+				sin = (struct sockaddr_in *)cp;
+				break;
+			}
+		}
+	}
+	if (sin == NULL)
+		errx(1, "%s: cannot get interface address", ifn);
+
+	n->ip = sin->sin_addr;
+	strncpy(n->if_name, ifn, IF_NAMESIZE);
+
+	free(buf);
+}
+
+/* 
+ * XXX - The following functions, macros and definitions come from natd.c:
+ * it would be better to move them outside natd.c, in a file 
+ * (redirect_support.[ch]?) shared by ipfw and natd, but for now i can live 
+ * with it.
+ */
+
+/*
+ * Definition of a port range, and macros to deal with values.
+ * FORMAT:  HI 16-bits == first port in range, 0 == all ports.
+ *          LO 16-bits == number of ports in range
+ * NOTES:   - Port values are not stored in network byte order.
+ */
+
+#define port_range u_long
+
+#define GETLOPORT(x)     ((x) >> 0x10)
+#define GETNUMPORTS(x)   ((x) & 0x0000ffff)
+#define GETHIPORT(x)     (GETLOPORT((x)) + GETNUMPORTS((x)))
+
+/* Set y to be the low-port value in port_range variable x. */
+#define SETLOPORT(x,y)   ((x) = ((x) & 0x0000ffff) | ((y) << 0x10))
+
+/* Set y to be the number of ports in port_range variable x. */
+#define SETNUMPORTS(x,y) ((x) = ((x) & 0xffff0000) | (y))
+
+static void 
+StrToAddr (const char* str, struct in_addr* addr)
+{
+	struct hostent* hp;
+
+	if (inet_aton (str, addr))
+		return;
+
+	hp = gethostbyname (str);
+	if (!hp)
+		errx (1, "unknown host %s", str);
+
+	memcpy (addr, hp->h_addr, sizeof (struct in_addr));
+}
+
+static int 
+StrToPortRange (const char* str, const char* proto, port_range *portRange)
+{
+	char*           sep;
+	struct servent*	sp;
+	char*		end;
+	u_short         loPort;
+	u_short         hiPort;
+	
+	/* First see if this is a service, return corresponding port if so. */
+	sp = getservbyname (str,proto);
+	if (sp) {
+	        SETLOPORT(*portRange, ntohs(sp->s_port));
+		SETNUMPORTS(*portRange, 1);
+		return 0;
+	}
+	        
+	/* Not a service, see if it's a single port or port range. */
+	sep = strchr (str, '-');
+	if (sep == NULL) {
+	        SETLOPORT(*portRange, strtol(str, &end, 10));
+		if (end != str) {
+		        /* Single port. */
+		        SETNUMPORTS(*portRange, 1);
+			return 0;
+		}
+
+		/* Error in port range field. */
+		errx (EX_DATAERR, "%s/%s: unknown service", str, proto);
+	}
+
+	/* Port range, get the values and sanity check. */
+	sscanf (str, "%hu-%hu", &loPort, &hiPort);
+	SETLOPORT(*portRange, loPort);
+	SETNUMPORTS(*portRange, 0);	/* Error by default */
+	if (loPort <= hiPort)
+	        SETNUMPORTS(*portRange, hiPort - loPort + 1);
+
+	if (GETNUMPORTS(*portRange) == 0)
+	        errx (EX_DATAERR, "invalid port range %s", str);
+
+	return 0;
+}
+
+static int 
+StrToProto (const char* str)
+{
+	if (!strcmp (str, "tcp"))
+		return IPPROTO_TCP;
+
+	if (!strcmp (str, "udp"))
+		return IPPROTO_UDP;
+
+	errx (EX_DATAERR, "unknown protocol %s. Expected tcp or udp", str);
+}
+
+static int 
+StrToAddrAndPortRange (const char* str, struct in_addr* addr, char* proto, 
+		       port_range *portRange)
+{
+	char*	ptr;
+
+	ptr = strchr (str, ':');
+	if (!ptr)
+		errx (EX_DATAERR, "%s is missing port number", str);
+
+	*ptr = '\0';
+	++ptr;
+
+	StrToAddr (str, addr);
+	return StrToPortRange (ptr, proto, portRange);
+}
+
+/* End of stuff taken from natd.c. */
+
+#define INC_ARGCV() do {        \
+	(*_av)++;               \
+	(*_ac)--;               \
+	av = *_av;              \
+	ac = *_ac;              \
+} while(0)
+
+/* 
+ * The next 3 functions add support for the addr, port and proto redirect and 
+ * their logic is loosely based on SetupAddressRedirect(), SetupPortRedirect() 
+ * and SetupProtoRedirect() from natd.c.
+ *
+ * Every setup_* function fills at least one redirect entry 
+ * (struct cfg_redir) and zero or more server pool entry (struct cfg_spool) 
+ * in buf.
+ * 
+ * The format of data in buf is:
+ * 
+ *
+ *     cfg_nat    cfg_redir    cfg_spool    ......  cfg_spool 
+ *
+ *    -------------------------------------        ------------
+ *   |          | .....X ... |          |         |           |  .....
+ *    ------------------------------------- ...... ------------
+ *                     ^          
+ *                spool_cnt       n=0       ......   n=(X-1)
+ *
+ * len points to the amount of available space in buf
+ * space counts the memory consumed by every function
+ *
+ * XXX - Every function get all the argv params so it 
+ * has to check, in optional parameters, that the next
+ * args is a valid option for the redir entry and not 
+ * another token. Only redir_port and redir_proto are 
+ * affected by this.
+ */
+
+static int
+setup_redir_addr(char *spool_buf, int len,
+		 int *_ac, char ***_av) 
+{
+	char **av, *sep; /* Token separator. */
+	/* Temporary buffer used to hold server pool ip's. */
+	char tmp_spool_buf[NAT_BUF_LEN]; 
+	int ac, i, space, lsnat;
+	struct cfg_redir *r;	
+	struct cfg_spool *tmp;		
+
+	av = *_av;
+	ac = *_ac;
+	space = 0;
+	lsnat = 0;
+	if (len >= SOF_REDIR) {
+		r = (struct cfg_redir *)spool_buf;
+		/* Skip cfg_redir at beginning of buf. */
+		spool_buf = &spool_buf[SOF_REDIR];
+		space = SOF_REDIR;
+		len -= SOF_REDIR;
+	} else 
+		goto nospace; 
+	r->mode = REDIR_ADDR;
+	/* Extract local address. */
+	if (ac == 0) 
+		errx(EX_DATAERR, "redirect_addr: missing local address");
+	sep = strchr(*av, ',');
+	if (sep) {		/* LSNAT redirection syntax. */
+		r->laddr.s_addr = INADDR_NONE;
+		/* Preserve av, copy spool servers to tmp_spool_buf. */
+		strncpy(tmp_spool_buf, *av, strlen(*av)+1);
+		lsnat = 1;
+	} else 
+		StrToAddr(*av, &r->laddr);		
+	INC_ARGCV();
+
+	/* Extract public address. */
+	if (ac == 0) 
+		errx(EX_DATAERR, "redirect_addr: missing public address");
+	StrToAddr(*av, &r->paddr);
+	INC_ARGCV();
+
+	/* Setup LSNAT server pool. */
+	if (sep) {
+		sep = strtok(tmp_spool_buf, ",");		
+		while (sep != NULL) {
+			tmp = (struct cfg_spool *)spool_buf;		
+			if (len < SOF_SPOOL)
+				goto nospace;
+			len -= SOF_SPOOL;
+			space += SOF_SPOOL;			
+			StrToAddr(sep, &tmp->addr);
+			tmp->port = ~0;
+			r->spool_cnt++;
+			/* Point to the next possible cfg_spool. */
+			spool_buf = &spool_buf[SOF_SPOOL];
+			sep = strtok(NULL, ",");
+		}
+	}
+	return(space);
+nospace:
+	errx(EX_DATAERR, "redirect_addr: buf is too small\n");
+}
+
+static int
+setup_redir_port(char *spool_buf, int len,
+		 int *_ac, char ***_av) 
+{
+	char **av, *sep, *protoName;
+	char tmp_spool_buf[NAT_BUF_LEN];
+	int ac, space, lsnat;
+	struct cfg_redir *r;
+	struct cfg_spool *tmp;
+	u_short numLocalPorts;
+	port_range portRange;	
+
+	av = *_av;
+	ac = *_ac;
+	space = 0;
+	lsnat = 0;
+	numLocalPorts = 0;	
+
+	if (len >= SOF_REDIR) {
+		r = (struct cfg_redir *)spool_buf;
+		/* Skip cfg_redir at beginning of buf. */
+		spool_buf = &spool_buf[SOF_REDIR];
+		space = SOF_REDIR;
+		len -= SOF_REDIR;
+	} else 
+		goto nospace; 
+	r->mode = REDIR_PORT;
+	/*
+	 * Extract protocol.
+	 */
+	if (ac == 0)
+		errx (EX_DATAERR, "redirect_port: missing protocol");
+	r->proto = StrToProto(*av);
+	protoName = *av;	
+	INC_ARGCV();
+
+	/*
+	 * Extract local address.
+	 */
+	if (ac == 0)
+		errx (EX_DATAERR, "redirect_port: missing local address");
+
+	sep = strchr(*av, ',');
+	/* LSNAT redirection syntax. */
+	if (sep) {
+		r->laddr.s_addr = INADDR_NONE;
+		r->lport = ~0;
+		numLocalPorts = 1;
+		/* Preserve av, copy spool servers to tmp_spool_buf. */
+		strncpy(tmp_spool_buf, *av, strlen(*av)+1);
+		lsnat = 1;
+	} else {
+		if (StrToAddrAndPortRange (*av, &r->laddr, protoName, 
+		    &portRange) != 0)
+			errx(EX_DATAERR, "redirect_port:"
+			    "invalid local port range");
+
+		r->lport = GETLOPORT(portRange);
+		numLocalPorts = GETNUMPORTS(portRange);
+	}
+	INC_ARGCV();	
+
+	/*
+	 * Extract public port and optionally address.
+	 */
+	if (ac == 0)
+		errx (EX_DATAERR, "redirect_port: missing public port");
+
+	sep = strchr (*av, ':');
+	if (sep) {
+	        if (StrToAddrAndPortRange (*av, &r->paddr, protoName, 
+		    &portRange) != 0)
+		        errx(EX_DATAERR, "redirect_port:" 
+			    "invalid public port range");
+	} else {
+		r->paddr.s_addr = INADDR_ANY;
+		if (StrToPortRange (*av, protoName, &portRange) != 0)
+		        errx(EX_DATAERR, "redirect_port:"
+			    "invalid public port range");
+	}
+
+	r->pport = GETLOPORT(portRange);
+	r->pport_cnt = GETNUMPORTS(portRange);
+	INC_ARGCV();
+
+	/*
+	 * Extract remote address and optionally port.
+	 */	
+	/* 
+	 * NB: isalpha(**av) => we've to check that next parameter is really an
+	 * option for this redirect entry, else stop here processing arg[cv].
+	 */
+	if (ac != 0 && !isalpha(**av)) { 
+		sep = strchr (*av, ':');
+		if (sep) {
+		        if (StrToAddrAndPortRange (*av, &r->raddr, protoName, 
+			    &portRange) != 0)
+				errx(EX_DATAERR, "redirect_port:"
+				    "invalid remote port range");
+		} else {
+		        SETLOPORT(portRange, 0);
+			SETNUMPORTS(portRange, 1);
+			StrToAddr (*av, &r->raddr);
+		}
+		INC_ARGCV();
+	} else {
+		SETLOPORT(portRange, 0);
+		SETNUMPORTS(portRange, 1);
+		r->raddr.s_addr = INADDR_ANY;
+	}
+	r->rport = GETLOPORT(portRange);
+	r->rport_cnt = GETNUMPORTS(portRange);
+
+	/* 
+	 * Make sure port ranges match up, then add the redirect ports.
+	 */
+	if (numLocalPorts != r->pport_cnt)
+	        errx(EX_DATAERR, "redirect_port:"
+		    "port ranges must be equal in size");
+
+	/* Remote port range is allowed to be '0' which means all ports. */
+	if (r->rport_cnt != numLocalPorts && 
+	    (r->rport_cnt != 1 || r->rport != 0))
+	        errx(EX_DATAERR, "redirect_port: remote port must"
+		    "be 0 or equal to local port range in size");
+
+	/*
+	 * Setup LSNAT server pool.
+	 */
+	if (lsnat) {
+		sep = strtok(tmp_spool_buf, ",");
+		while (sep != NULL) {
+			tmp = (struct cfg_spool *)spool_buf;
+			if (len < SOF_SPOOL)
+				goto nospace;
+			len -= SOF_SPOOL;
+			space += SOF_SPOOL;
+			if (StrToAddrAndPortRange(sep, &tmp->addr, protoName, 
+			    &portRange) != 0)
+				errx(EX_DATAERR, "redirect_port:"
+				    "invalid local port range");
+			if (GETNUMPORTS(portRange) != 1)
+				errx(EX_DATAERR, "redirect_port: local port"
+				    "must be single in this context");
+			tmp->port = GETLOPORT(portRange);
+			r->spool_cnt++;	
+			/* Point to the next possible cfg_spool. */
+			spool_buf = &spool_buf[SOF_SPOOL];
+			sep = strtok(NULL, ",");
+		}
+	}
+	return (space);
+nospace:
+	errx(EX_DATAERR, "redirect_port: buf is too small\n");
+}
+
+static int
+setup_redir_proto(char *spool_buf, int len,
+		 int *_ac, char ***_av) 
+{
+	char **av;
+	int ac, i, space;
+	struct protoent *protoent;
+	struct cfg_redir *r;
+	
+	av = *_av;
+	ac = *_ac;
+	if (len >= SOF_REDIR) {
+		r = (struct cfg_redir *)spool_buf;
+		/* Skip cfg_redir at beginning of buf. */
+		spool_buf = &spool_buf[SOF_REDIR];
+		space = SOF_REDIR;
+		len -= SOF_REDIR;
+	} else 
+		goto nospace;
+	r->mode = REDIR_PROTO;
+	/*
+	 * Extract protocol.
+	 */	
+	if (ac == 0)
+		errx(EX_DATAERR, "redirect_proto: missing protocol");
+
+	protoent = getprotobyname(*av);
+	if (protoent == NULL)
+		errx(EX_DATAERR, "redirect_proto: unknown protocol %s", *av);
+	else
+		r->proto = protoent->p_proto;
+
+	INC_ARGCV();
+	
+	/*
+	 * Extract local address.
+	 */
+	if (ac == 0)
+		errx(EX_DATAERR, "redirect_proto: missing local address");
+	else
+		StrToAddr(*av, &r->laddr);
+
+	INC_ARGCV();
+	
+	/*
+	 * Extract optional public address.
+	 */
+	if (ac == 0) {
+		r->paddr.s_addr = INADDR_ANY;		
+		r->raddr.s_addr = INADDR_ANY;	
+	} else {
+		/* see above in setup_redir_port() */
+		if (!isalpha(**av)) {
+			StrToAddr(*av, &r->paddr);			
+			INC_ARGCV();
+		
+			/*
+			 * Extract optional remote address.
+			 */	
+			/* see above in setup_redir_port() */
+			if (ac!=0 && !isalpha(**av)) {
+				StrToAddr(*av, &r->raddr);
+				INC_ARGCV();
+			}
+		}		
+	}
+	return (space);
+nospace:
+	errx(EX_DATAERR, "redirect_proto: buf is too small\n");
+}
+
+static void
+show_nat(int ac, char **av);
+
+static void
+print_nat_config(char *buf) {
+	struct cfg_nat *n;
+	int i, cnt, flag, off;
+	struct cfg_redir *t;
+	struct cfg_spool *s;
+	struct protoent *p;
+
+	n = (struct cfg_nat *)buf;
+	flag = 1;
+	off  = sizeof(*n);
+	printf("ipfw nat %u config", n->id);
+	if (strlen(n->if_name) != 0)
+		printf(" if %s", n->if_name);
+	else if (n->ip.s_addr != 0)
+		printf(" ip %s", inet_ntoa(n->ip));
+	while (n->mode != 0) {
+		if (n->mode & PKT_ALIAS_LOG) {
+			printf(" log");
+			n->mode &= ~PKT_ALIAS_LOG;
+		} else if (n->mode & PKT_ALIAS_DENY_INCOMING) {
+			printf(" deny_in");
+			n->mode &= ~PKT_ALIAS_DENY_INCOMING;
+		} else if (n->mode & PKT_ALIAS_SAME_PORTS) {
+			printf(" same_ports");
+			n->mode &= ~PKT_ALIAS_SAME_PORTS;
+		} else if (n->mode & PKT_ALIAS_UNREGISTERED_ONLY) {
+			printf(" unreg_only");
+			n->mode &= ~PKT_ALIAS_UNREGISTERED_ONLY;
+		} else if (n->mode & PKT_ALIAS_RESET_ON_ADDR_CHANGE) {
+			printf(" reset");
+			n->mode &= ~PKT_ALIAS_RESET_ON_ADDR_CHANGE;
+		} else if (n->mode & PKT_ALIAS_REVERSE) {
+			printf(" reverse");
+			n->mode &= ~PKT_ALIAS_REVERSE;
+		} else if (n->mode & PKT_ALIAS_PROXY_ONLY) {
+			printf(" proxy_only");
+			n->mode &= ~PKT_ALIAS_PROXY_ONLY;
+		}
+	}
+	/* Print all the redirect's data configuration. */
+	for (cnt = 0; cnt < n->redir_cnt; cnt++) {
+		t = (struct cfg_redir *)&buf[off];
+		off += SOF_REDIR;
+		switch (t->mode) {
+		case REDIR_ADDR:
+			printf(" redirect_addr");
+			if (t->spool_cnt == 0)
+				printf(" %s", inet_ntoa(t->laddr));
+			else
+				for (i = 0; i < t->spool_cnt; i++) {
+					s = (struct cfg_spool *)&buf[off];
+					if (i)
+						printf(",");
+					else 
+						printf(" ");
+					printf("%s", inet_ntoa(s->addr));
+					off += SOF_SPOOL;
+				}
+			printf(" %s", inet_ntoa(t->paddr));
+			break;
+		case REDIR_PORT:
+			p = getprotobynumber(t->proto);
+			printf(" redirect_port %s ", p->p_name);
+			if (!t->spool_cnt) {
+				printf("%s:%u", inet_ntoa(t->laddr), t->lport);
+				if (t->pport_cnt > 1)
+					printf("-%u", t->lport + 
+					    t->pport_cnt - 1);
+			} else
+				for (i=0; i < t->spool_cnt; i++) {
+					s = (struct cfg_spool *)&buf[off];
+					if (i)
+						printf(",");
+					printf("%s:%u", inet_ntoa(s->addr), 
+					    s->port);
+					off += SOF_SPOOL;
+				}
+
+			printf(" ");
+			if (t->paddr.s_addr)
+				printf("%s:", inet_ntoa(t->paddr)); 
+			printf("%u", t->pport);
+			if (!t->spool_cnt && t->pport_cnt > 1)
+				printf("-%u", t->pport + t->pport_cnt - 1);
+
+			if (t->raddr.s_addr) {
+				printf(" %s", inet_ntoa(t->raddr));
+				if (t->rport) {
+					printf(":%u", t->rport);
+					if (!t->spool_cnt && t->rport_cnt > 1)
+						printf("-%u", t->rport + 
+						    t->rport_cnt - 1);
+				}
+			}
+			break;
+		case REDIR_PROTO:
+			p = getprotobynumber(t->proto);
+			printf(" redirect_proto %s %s", p->p_name, 
+			    inet_ntoa(t->laddr));
+			if (t->paddr.s_addr != 0) {
+				printf(" %s", inet_ntoa(t->paddr));
+				if (t->raddr.s_addr)
+					printf(" %s", inet_ntoa(t->raddr));
+			}
+			break;
+		default:
+			errx(EX_DATAERR, "unknown redir mode");
+			break;
+		}
+	}
+	printf("\n");
+}
+
+static void
+config_nat(int ac, char **av)
+{
+	struct cfg_nat *n;              /* Nat instance configuration. */
+	struct in_addr ip;
+	int i, len, off, tok;
+	char *id, buf[NAT_BUF_LEN]; 	/* Buffer for serialized data. */
+	
+	len = NAT_BUF_LEN;
+	/* Offset in buf: save space for n at the beginning. */
+	off = sizeof(*n);
+	memset(buf, 0, sizeof(buf));
+	n = (struct cfg_nat *)buf;
+
+	av++; ac--;
+	/* Nat id. */
+	if (ac && isdigit(**av)) {
+		id = *av;
+		i = atoi(*av); 
+		ac--; av++;		
+		n->id = i;
+	} else 
+		errx(EX_DATAERR, "missing nat id");
+	if (ac == 0) 
+		errx(EX_DATAERR, "missing option");
+
+	while (ac > 0) {
+		tok = match_token(nat_params, *av);
+		ac--; av++;
+		switch (tok) {
+		case TOK_IP:
+			if (ac == 0) 
+				errx(EX_DATAERR, "missing option");
+			if (!inet_aton(av[0], &(n->ip)))
+				errx(EX_DATAERR, "bad ip address ``%s''", 
+				    av[0]);
+			ac--; av++;
+			break;	    
+		case TOK_IF:
+			set_addr_dynamic(av[0], n);
+			ac--; av++;
+			break;
+		case TOK_ALOG:
+			n->mode |= PKT_ALIAS_LOG;
+			break;
+		case TOK_DENY_INC:
+			n->mode |= PKT_ALIAS_DENY_INCOMING;
+			break;
+		case TOK_SAME_PORTS:
+			n->mode |= PKT_ALIAS_SAME_PORTS;
+			break;
+		case TOK_UNREG_ONLY:
+			n->mode |= PKT_ALIAS_UNREGISTERED_ONLY;
+			break;
+		case TOK_RESET_ADDR:
+			n->mode |= PKT_ALIAS_RESET_ON_ADDR_CHANGE;
+			break;
+		case TOK_ALIAS_REV:
+			n->mode |= PKT_ALIAS_REVERSE;
+			break;
+		case TOK_PROXY_ONLY:
+			n->mode |= PKT_ALIAS_PROXY_ONLY;
+			break;
+			/* 
+			 * All the setup_redir_* functions work directly in the final 
+			 * buffer, see above for details.
+			 */
+		case TOK_REDIR_ADDR:
+		case TOK_REDIR_PORT:
+		case TOK_REDIR_PROTO:
+			switch (tok) {
+			case TOK_REDIR_ADDR:
+				i = setup_redir_addr(&buf[off], len, &ac, &av);
+				break;			  
+			case TOK_REDIR_PORT:
+				i = setup_redir_port(&buf[off], len, &ac, &av);
+				break;			  
+			case TOK_REDIR_PROTO:
+				i = setup_redir_proto(&buf[off], len, &ac, &av);
+				break;
+			}
+			n->redir_cnt++;
+			off += i;
+			len -= i;
+			break;
+		default:
+			errx(EX_DATAERR, "unrecognised option ``%s''", av[-1]);
+		}
+	}
+
+	i = do_cmd(IP_FW_NAT_CFG, buf, off);
+	if (i)
+		err(1, "setsockopt(%s)", "IP_FW_NAT_CFG");
+
+	/* After every modification, we show the resultant rule. */
+	int _ac = 3;
+	char *_av[] = {"show", "config", id};
+	show_nat(_ac, _av);
 }
 
 static void
@@ -3334,7 +4288,8 @@ end_mask:
 				end++;
 				p.bandwidth *= 1000000;
 			    }
-			    if (*end == 'B' ||
+			    if ((*end == 'B' &&
+				  _substrcmp2(end, "Bi", "Bit/s") != 0) ||
 			        _substrcmp2(end, "by", "bytes") == 0)
 				p.bandwidth *= 8;
 			    if (p.bandwidth < 0)
@@ -3462,36 +4417,50 @@ end_mask:
 }
 
 static void
-get_mac_addr_mask(char *p, uint8_t *addr, uint8_t *mask)
+get_mac_addr_mask(const char *p, uint8_t *addr, uint8_t *mask)
 {
 	int i, l;
+	char *ap, *ptr, *optr;
+	struct ether_addr *mac;
+	const char *macset = "0123456789abcdefABCDEF:";
 
-	for (i=0; i<6; i++)
-		addr[i] = mask[i] = 0;
-	if (strcmp(p, "any") == 0)
+	if (strcmp(p, "any") == 0) {
+		for (i = 0; i < ETHER_ADDR_LEN; i++)
+			addr[i] = mask[i] = 0;
 		return;
-
-	for (i=0; *p && i<6;i++, p++) {
-		addr[i] = strtol(p, &p, 16);
-		if (*p != ':') /* we start with the mask */
-			break;
 	}
-	if (*p == '/') { /* mask len */
-		l = strtol(p+1, &p, 0);
-		for (i=0; l>0; l -=8, i++)
-			mask[i] = (l >=8) ? 0xff : (~0) << (8-l);
-	} else if (*p == '&') { /* mask */
-		for (i=0, p++; *p && i<6;i++, p++) {
-			mask[i] = strtol(p, &p, 16);
-			if (*p != ':')
-				break;
+
+	optr = ptr = strdup(p);
+	if ((ap = strsep(&ptr, "&/")) != NULL && *ap != 0) {
+		l = strlen(ap);
+		if (strspn(ap, macset) != l || (mac = ether_aton(ap)) == NULL)
+			errx(EX_DATAERR, "Incorrect MAC address");
+		bcopy(mac, addr, ETHER_ADDR_LEN);
+	} else
+		errx(EX_DATAERR, "Incorrect MAC address");
+
+	if (ptr != NULL) { /* we have mask? */
+		if (p[ptr - optr - 1] == '/') { /* mask len */
+			l = strtol(ptr, &ap, 10);
+			if (*ap != 0 || l > ETHER_ADDR_LEN * 8 || l < 0)
+				errx(EX_DATAERR, "Incorrect mask length");
+			for (i = 0; l > 0 && i < ETHER_ADDR_LEN; l -= 8, i++)
+				mask[i] = (l >= 8) ? 0xff: (~0) << (8 - l);
+		} else { /* mask */
+			l = strlen(ptr);
+			if (strspn(ptr, macset) != l ||
+			    (mac = ether_aton(ptr)) == NULL)
+				errx(EX_DATAERR, "Incorrect mask");
+			bcopy(mac, mask, ETHER_ADDR_LEN);
 		}
-	} else if (*p == '\0') {
-		for (i=0; i<6; i++)
+	} else { /* default mask: ff:ff:ff:ff:ff:ff */
+		for (i = 0; i < ETHER_ADDR_LEN; i++)
 			mask[i] = 0xff;
 	}
-	for (i=0; i<6; i++)
+	for (i = 0; i < ETHER_ADDR_LEN; i++)
 		addr[i] &= mask[i];
+
+	free(optr);
 }
 
 /*
@@ -3566,7 +4535,8 @@ add_mac(ipfw_insn *cmd, int ac, char *av[])
 
 	mac = (ipfw_insn_mac *)cmd;
 	get_mac_addr_mask(av[0], mac->addr, mac->mask);	/* dst */
-	get_mac_addr_mask(av[1], &(mac->addr[6]), &(mac->mask[6])); /* src */
+	get_mac_addr_mask(av[1], &(mac->addr[ETHER_ADDR_LEN]),
+	    &(mac->mask[ETHER_ADDR_LEN])); /* src */
 	return cmd;
 }
 
@@ -3695,36 +4665,52 @@ static ipfw_insn *
 add_src(ipfw_insn *cmd, char *av, u_char proto)
 {
 	struct in6_addr a;
+	char *host, *ch;
+	ipfw_insn *ret = NULL;
+
+	if ((host = strdup(av)) == NULL)
+		return NULL;
+	if ((ch = strrchr(host, '/')) != NULL)
+		*ch = '\0';
 
 	if (proto == IPPROTO_IPV6  || strcmp(av, "me6") == 0 ||
-	    inet_pton(AF_INET6, av, &a))
-		return add_srcip6(cmd, av);
+	    inet_pton(AF_INET6, host, &a))
+		ret = add_srcip6(cmd, av);
 	/* XXX: should check for IPv4, not !IPv6 */
-	if (proto == IPPROTO_IP || strcmp(av, "me") == 0 ||
-	    !inet_pton(AF_INET6, av, &a))
-		return add_srcip(cmd, av);
-	if (strcmp(av, "any") != 0)
-		return cmd;
+	if (ret == NULL && (proto == IPPROTO_IP || strcmp(av, "me") == 0 ||
+	    !inet_pton(AF_INET6, host, &a)))
+		ret = add_srcip(cmd, av);
+	if (ret == NULL && strcmp(av, "any") != 0)
+		ret = cmd;
 
-	return NULL;
+	free(host);
+	return ret;
 }
 
 static ipfw_insn *
 add_dst(ipfw_insn *cmd, char *av, u_char proto)
 {
 	struct in6_addr a;
+	char *host, *ch;
+	ipfw_insn *ret = NULL;
+
+	if ((host = strdup(av)) == NULL)
+		return NULL;
+	if ((ch = strrchr(host, '/')) != NULL)
+		*ch = '\0';
 
 	if (proto == IPPROTO_IPV6  || strcmp(av, "me6") == 0 ||
-	    inet_pton(AF_INET6, av, &a))
-		return add_dstip6(cmd, av);
+	    inet_pton(AF_INET6, host, &a))
+		ret = add_dstip6(cmd, av);
 	/* XXX: should check for IPv4, not !IPv6 */
-	if (proto == IPPROTO_IP || strcmp(av, "me") == 0 ||
-	    !inet_pton(AF_INET6, av, &a))
-		return add_dstip(cmd, av);
-	if (strcmp(av, "any") != 0)
-		return cmd;
+	if (ret == NULL && (proto == IPPROTO_IP || strcmp(av, "me") == 0 ||
+	    !inet_pton(AF_INET6, host, &a)))
+		ret = add_dstip(cmd, av);
+	if (ret == NULL && strcmp(av, "any") != 0)
+		ret = cmd;
 
-	return NULL;
+	free(host);
+	return ret;
 }
 
 /*
@@ -3759,7 +4745,7 @@ add(int ac, char *av[])
 	 * various flags used to record that we entered some fields.
 	 */
 	ipfw_insn *have_state = NULL;	/* check-state or keep-state */
-	ipfw_insn *have_log = NULL, *have_altq = NULL;
+	ipfw_insn *have_log = NULL, *have_altq = NULL, *have_tag = NULL;
 	size_t len;
 
 	int i;
@@ -3860,11 +4846,9 @@ add(int ac, char *av[])
 		break;
 
 	case TOK_QUEUE:
-		action->len = F_INSN_SIZE(ipfw_insn_pipe);
 		action->opcode = O_QUEUE;
 		goto chkarg;
 	case TOK_PIPE:
-		action->len = F_INSN_SIZE(ipfw_insn_pipe);
 		action->opcode = O_PIPE;
 		goto chkarg;
 	case TOK_SKIPTO:
@@ -3930,17 +4914,27 @@ chkarg:
 				    "illegal forwarding port ``%s''", s);
 			p->sa.sin_port = (u_short)i;
 		}
-		lookup_host(*av, &(p->sa.sin_addr));
-		}
+		if (_substrcmp(*av, "tablearg") == 0) 
+			p->sa.sin_addr.s_addr = INADDR_ANY;
+		else
+			lookup_host(*av, &(p->sa.sin_addr));
 		ac--; av++;
 		break;
-
+	    }
 	case TOK_COMMENT:
 		/* pretend it is a 'count' rule followed by the comment */
 		action->opcode = O_COUNT;
 		ac++; av--;	/* go back... */
 		break;
 
+	case TOK_NAT:
+ 		action->opcode = O_NAT;
+ 		action->len = F_INSN_SIZE(ipfw_insn_nat);
+ 		NEED1("missing nat number");
+ 	        action->arg1 = strtoul(*av, NULL, 10);
+ 		ac--; av++;
+ 		break;
+		
 	default:
 		errx(EX_DATAERR, "invalid action %s\n", av[-1]);
 	}
@@ -4001,6 +4995,20 @@ chkarg:
 			ac--; av++;
 		    }
 			break;
+
+		case TOK_TAG:
+		case TOK_UNTAG: {
+			uint16_t tag;
+
+			if (have_tag)
+				errx(EX_USAGE, "tag and untag cannot be "
+				    "specified more than once");
+			GET_UINT_ARG(tag, 1, 65534, i, rule_action_params);
+			have_tag = cmd;
+			fill_cmd(cmd, O_TAG, (i == TOK_TAG) ? 0: F_NOT, tag);
+			ac--; av++;
+			break;
+		}
 
 		default:
 			abort();
@@ -4445,39 +5453,38 @@ read_options:
 			fill_cmd(cmd, O_KEEP_STATE, 0, 0);
 			break;
 
-		case TOK_LIMIT:
-			if (open_par)
-				errx(EX_USAGE, "limit cannot be part "
-				    "of an or block");
-			if (have_state)
-				errx(EX_USAGE, "only one of keep-state "
-					"and limit is allowed");
-			NEED1("limit needs mask and # of connections");
-			have_state = cmd;
-		    {
+		case TOK_LIMIT: {
 			ipfw_insn_limit *c = (ipfw_insn_limit *)cmd;
+			int val;
+
+			if (open_par)
+				errx(EX_USAGE,
+				    "limit cannot be part of an or block");
+			if (have_state)
+				errx(EX_USAGE, "only one of keep-state and "
+				    "limit is allowed");
+			have_state = cmd;
 
 			cmd->len = F_INSN_SIZE(ipfw_insn_limit);
 			cmd->opcode = O_LIMIT;
-			c->limit_mask = 0;
-			c->conn_limit = 0;
-			for (; ac >1 ;) {
-				int val;
+			c->limit_mask = c->conn_limit = 0;
 
-				val = match_token(limit_masks, *av);
-				if (val <= 0)
+			while (ac > 0) {
+				if ((val = match_token(limit_masks, *av)) <= 0)
 					break;
 				c->limit_mask |= val;
 				ac--; av++;
 			}
-			c->conn_limit = atoi(*av);
-			if (c->conn_limit == 0)
-				errx(EX_USAGE, "limit: limit must be >0");
+
 			if (c->limit_mask == 0)
-				errx(EX_USAGE, "missing limit mask");
+				errx(EX_USAGE, "limit: missing limit mask");
+
+			GET_UINT_ARG(c->conn_limit, 1, 65534, TOK_LIMIT,
+			    rule_options);
+
 			ac--; av++;
-		    }
 			break;
+		}
 
 		case TOK_PROTO:
 			NEED1("missing protocol");
@@ -4591,6 +5598,22 @@ read_options:
 			ac = 0;
 			break;
 
+		case TOK_TAGGED:
+			if (ac > 0 && strpbrk(*av, "-,")) {
+				if (!add_ports(cmd, *av, 0, O_TAGGED))
+					errx(EX_DATAERR, "tagged: invalid tag"
+					    " list: %s", *av);
+			}
+			else {
+				uint16_t tag;
+
+				GET_UINT_ARG(tag, 1, 65534, TOK_TAGGED,
+				    rule_options);
+				fill_cmd(cmd, O_TAGGED, 0, tag);
+			}
+			ac--; av++;
+			break;
+
 		default:
 			errx(EX_USAGE, "unrecognised option [%d] %s\n", i, s);
 		}
@@ -4627,9 +5650,8 @@ done:
 		fill_cmd(dst, O_PROBE_STATE, 0, 0);
 		dst = next_cmd(dst);
 	}
-	/*
-	 * copy all commands but O_LOG, O_KEEP_STATE, O_LIMIT, O_ALTQ
-	 */
+
+	/* copy all commands but O_LOG, O_KEEP_STATE, O_LIMIT, O_ALTQ, O_TAG */
 	for (src = (ipfw_insn *)cmdbuf; src != cmd; src += i) {
 		i = F_LEN(src);
 
@@ -4638,6 +5660,7 @@ done:
 		case O_KEEP_STATE:
 		case O_LIMIT:
 		case O_ALTQ:
+		case O_TAG:
 			break;
 		default:
 			bcopy(src, dst, i * sizeof(uint32_t));
@@ -4658,9 +5681,7 @@ done:
 	 */
 	rule->act_ofs = dst - rule->cmd;
 
-	/*
-	 * put back O_LOG, O_ALTQ if necessary
-	 */
+	/* put back O_LOG, O_ALTQ, O_TAG if necessary */
 	if (have_log) {
 		i = F_LEN(have_log);
 		bcopy(have_log, dst, i * sizeof(uint32_t));
@@ -4669,6 +5690,11 @@ done:
 	if (have_altq) {
 		i = F_LEN(have_altq);
 		bcopy(have_altq, dst, i * sizeof(uint32_t));
+		dst += i;
+	}
+	if (have_tag) {
+		i = F_LEN(have_tag);
+		bcopy(have_tag, dst, i * sizeof(uint32_t));
 		dst += i;
 	}
 	/*
@@ -4691,9 +5717,10 @@ done:
 static void
 zero(int ac, char *av[], int optname /* IP_FW_ZERO or IP_FW_RESETLOG */)
 {
-	int rulenum;
+	uint32_t arg, saved_arg;
 	int failed = EX_OK;
 	char const *name = optname == IP_FW_ZERO ?  "ZERO" : "RESETLOG";
+	char const *errstr;
 
 	av++; ac--;
 
@@ -4711,15 +5738,21 @@ zero(int ac, char *av[], int optname /* IP_FW_ZERO or IP_FW_RESETLOG */)
 	while (ac) {
 		/* Rule number */
 		if (isdigit(**av)) {
-			rulenum = atoi(*av);
+			arg = strtonum(*av, 0, 0xffff, &errstr);
+			if (errstr)
+				errx(EX_DATAERR,
+				    "invalid rule number %s\n", *av);
+			saved_arg = arg;
+			if (use_set)
+				arg |= (1 << 24) | ((use_set - 1) << 16);
 			av++;
 			ac--;
-			if (do_cmd(optname, &rulenum, sizeof rulenum)) {
+			if (do_cmd(optname, &arg, sizeof(arg))) {
 				warn("rule %u: setsockopt(IP_FW_%s)",
-				    rulenum, name);
+				    saved_arg, name);
 				failed = EX_UNAVAILABLE;
 			} else if (!do_quiet)
-				printf("Entry %d %s.\n", rulenum,
+				printf("Entry %d %s.\n", saved_arg,
 				    optname == IP_FW_ZERO ?
 					"cleared" : "logging count reset");
 		} else {
@@ -4750,7 +5783,12 @@ flush(int force)
 		if (c == 'N')	/* user said no */
 			return;
 	}
-	if (do_cmd(cmd, NULL, 0) < 0)
+	/* `ipfw set N flush` - is the same that `ipfw delete set N` */
+	if (use_set) {
+		uint32_t arg = ((use_set - 1) & 0xffff) | (1 << 24);
+		if (do_cmd(IP_FW_DEL, &arg, sizeof(arg)) < 0)
+			err(EX_UNAVAILABLE, "setsockopt(IP_FW_DEL)");
+	} else if (do_cmd(cmd, NULL, 0) < 0)
 		err(EX_UNAVAILABLE, "setsockopt(IP_%s_FLUSH)",
 		    do_pipe ? "DUMMYNET" : "FW");
 	if (!do_quiet)
@@ -4811,14 +5849,37 @@ table_handler(int ac, char *av[])
 		if (lookup_host(*av, (struct in_addr *)&ent.addr) != 0)
 			errx(EX_NOHOST, "hostname ``%s'' unknown", *av);
 		ac--; av++;
-		if (do_add && ac)
-			ent.value = strtoul(*av, NULL, 0);
-		else
+		if (do_add && ac) {
+			unsigned int tval;
+			/* isdigit is a bit of a hack here.. */
+			if (strchr(*av, (int)'.') == NULL && isdigit(**av))  {
+				ent.value = strtoul(*av, NULL, 0);
+			} else {
+		        	if (lookup_host(*av, (struct in_addr *)&tval) == 0) {
+					/* The value must be stored in host order	 *
+					 * so that the values < 65k can be distinguished */
+		       			ent.value = ntohl(tval); 
+				} else {
+					errx(EX_NOHOST, "hostname ``%s'' unknown", *av);
+				}
+			}
+		} else
 			ent.value = 0;
 		if (do_cmd(do_add ? IP_FW_TABLE_ADD : IP_FW_TABLE_DEL,
-		    &ent, sizeof(ent)) < 0)
-			err(EX_OSERR, "setsockopt(IP_FW_TABLE_%s)",
-			    do_add ? "ADD" : "DEL");
+		    &ent, sizeof(ent)) < 0) {
+			/* If running silent, don't bomb out on these errors. */
+			if (!(do_quiet && (errno == (do_add ? EEXIST : ESRCH))))
+				err(EX_OSERR, "setsockopt(IP_FW_TABLE_%s)",
+				    do_add ? "ADD" : "DEL");
+			/* In silent mode, react to a failed add by deleting */
+			if (do_add) {
+				do_cmd(IP_FW_TABLE_DEL, &ent, sizeof(ent));
+				if (do_cmd(IP_FW_TABLE_ADD,
+				    &ent, sizeof(ent)) < 0)
+					err(EX_OSERR,
+				            "setsockopt(IP_FW_TABLE_ADD)");
+			}
+		}
 	} else if (_substrcmp(*av, "flush") == 0) {
 		if (do_cmd(IP_FW_TABLE_FLUSH, &ent.tbl, sizeof(ent.tbl)) < 0)
 			err(EX_OSERR, "setsockopt(IP_FW_TABLE_FLUSH)");
@@ -4835,12 +5896,99 @@ table_handler(int ac, char *av[])
 		if (do_cmd(IP_FW_TABLE_LIST, tbl, (uintptr_t)&l) < 0)
 			err(EX_OSERR, "getsockopt(IP_FW_TABLE_LIST)");
 		for (a = 0; a < tbl->cnt; a++) {
-			printf("%s/%u %u\n",
-			    inet_ntoa(*(struct in_addr *)&tbl->ent[a].addr),
-			    tbl->ent[a].masklen, tbl->ent[a].value);
+			/* Heuristic to print it the right way */
+			/* values < 64k are printed as numbers */
+			unsigned int tval;
+			tval = tbl->ent[a].value;
+			if (tval > 0xffff) {
+			    char tbuf[128];
+			    strncpy(tbuf, inet_ntoa(*(struct in_addr *)
+				&tbl->ent[a].addr), 127);
+			    /* inet_ntoa expects host order */
+			    tval = htonl(tval);
+			    printf("%s/%u %s\n", tbuf, tbl->ent[a].masklen,
+			        inet_ntoa(*(struct in_addr *)&tval));
+			} else {
+			    printf("%s/%u %u\n",
+			        inet_ntoa(*(struct in_addr *)&tbl->ent[a].addr),
+			        tbl->ent[a].masklen, tbl->ent[a].value);
+			}
 		}
 	} else
 		errx(EX_USAGE, "invalid table command %s", *av);
+}
+
+static void
+show_nat(int ac, char **av) {
+	struct cfg_nat *n;
+	struct cfg_redir *e;
+	int cmd, i, nbytes, do_cfg, do_rule, frule, lrule, nalloc, size;
+	int nat_cnt, r;
+	uint8_t *data, *p;
+	char **lav, *endptr;
+
+	do_rule = 0;
+	nalloc = 1024;
+	size = 0;
+	data = NULL;
+	ac--; av++;
+
+	/* Parse parameters. */
+	for (cmd = IP_FW_NAT_GET_LOG, do_cfg = 0; ac != 0; ac--, av++) {
+		if (!strncmp(av[0], "config", strlen(av[0]))) {
+			cmd = IP_FW_NAT_GET_CONFIG, do_cfg = 1; 
+			continue;
+		}
+		/* Convert command line rule #. */
+		frule = lrule = strtoul(av[0], &endptr, 10);
+		if (*endptr == '-')
+			lrule = strtoul(endptr+1, &endptr, 10);
+		if (lrule == 0)			
+			err(EX_USAGE, "invalid rule number: %s", av[0]);
+		do_rule = 1;
+	}
+
+	nbytes = nalloc;
+	while (nbytes >= nalloc) {
+		nalloc = nalloc * 2;
+		nbytes = nalloc;
+		if ((data = realloc(data, nbytes)) == NULL)
+			err(EX_OSERR, "realloc");
+		if (do_cmd(cmd, data, (uintptr_t)&nbytes) < 0)
+			err(EX_OSERR, "getsockopt(IP_FW_GET_%s)",
+			    (cmd == IP_FW_NAT_GET_LOG) ? "LOG" : "CONFIG");
+	}
+	if (nbytes == 0)
+		exit(0); 
+	if (do_cfg) {
+		nat_cnt = *((int *)data);
+		for (i = sizeof(nat_cnt); nat_cnt; nat_cnt--) {
+			n = (struct cfg_nat *)&data[i];
+			if (do_rule) {
+				if (!(frule <= n->id && lrule >= n->id))
+					continue;
+			}
+			print_nat_config(&data[i]);
+			i += sizeof(struct cfg_nat);
+			e = (struct cfg_redir *)&data[i];
+			if (e->mode == REDIR_ADDR || e->mode == REDIR_PORT ||
+			    e->mode == REDIR_PROTO)
+				i += sizeof(struct cfg_redir) + e->spool_cnt * 
+				    sizeof(struct cfg_spool);
+		}
+	} else {
+		for (i = 0; 1; i += LIBALIAS_BUF_SIZE + sizeof(int)) {
+			p = &data[i];
+			if (p == data + nbytes)
+				break;
+			bcopy(p, &r, sizeof(int));
+			if (do_rule) {
+				if (!(frule <= r && lrule >= r))
+					continue;
+			}
+			printf("nat %u: %s\n", r, p+sizeof(int));
+		}
+	}
 }
 
 /*
@@ -4851,6 +5999,7 @@ static int
 ipfw_main(int oldac, char **oldav)
 {
 	int ch, ac, save_ac;
+	const char *errstr;
 	char **av, **save_av;
 	int do_acct = 0;		/* Show packet/byte count */
 
@@ -5031,58 +6180,83 @@ ipfw_main(int oldac, char **oldav)
 	}
 
 	/*
-	 * optional: pipe or queue
+	 * Optional: pipe, queue or nat.
 	 */
+	do_nat = 0;
 	do_pipe = 0;
-	if (_substrcmp(*av, "pipe") == 0)
+	if (!strncmp(*av, "nat", strlen(*av)))
+ 	        do_nat = 1;
+ 	else if (!strncmp(*av, "pipe", strlen(*av)))
 		do_pipe = 1;
 	else if (_substrcmp(*av, "queue") == 0)
 		do_pipe = 2;
-	if (do_pipe) {
+	else if (!strncmp(*av, "set", strlen(*av))) {
+		if (ac > 1 && isdigit(av[1][0])) {
+			use_set = strtonum(av[1], 0, RESVD_SET, &errstr);
+			if (errstr)
+				errx(EX_DATAERR,
+				    "invalid set number %s\n", av[1]);
+			ac -= 2; av += 2; use_set++;
+		}
+	}
+
+	if (do_pipe || do_nat) {
 		ac--;
 		av++;
 	}
 	NEED1("missing command");
 
 	/*
-	 * For pipes and queues we normally say 'pipe NN config'
-	 * but the code is easier to parse as 'pipe config NN'
+	 * For pipes, queues and nats we normally say 'nat|pipe NN config'
+	 * but the code is easier to parse as 'nat|pipe config NN'
 	 * so we swap the two arguments.
 	 */
-	if (do_pipe > 0 && ac > 1 && isdigit(*av[0])) {
+	if ((do_pipe || do_nat) && ac > 1 && isdigit(*av[0])) {
 		char *p = av[0];
 
 		av[0] = av[1];
 		av[1] = p;
 	}
 
-	if (_substrcmp(*av, "add") == 0)
-		add(ac, av);
-	else if (do_pipe && _substrcmp(*av, "config") == 0)
-		config_pipe(ac, av);
-	else if (_substrcmp(*av, "delete") == 0)
-		delete(ac, av);
-	else if (_substrcmp(*av, "flush") == 0)
-		flush(do_force);
-	else if (_substrcmp(*av, "zero") == 0)
-		zero(ac, av, IP_FW_ZERO);
-	else if (_substrcmp(*av, "resetlog") == 0)
-		zero(ac, av, IP_FW_RESETLOG);
-	else if (_substrcmp(*av, "print") == 0 ||
-	         _substrcmp(*av, "list") == 0)
-		list(ac, av, do_acct);
-	else if (_substrcmp(*av, "set") == 0)
-		sets_handler(ac, av);
-	else if (_substrcmp(*av, "table") == 0)
-		table_handler(ac, av);
-	else if (_substrcmp(*av, "enable") == 0)
-		sysctl_handler(ac, av, 1);
-	else if (_substrcmp(*av, "disable") == 0)
-		sysctl_handler(ac, av, 0);
-	else if (_substrcmp(*av, "show") == 0)
-		list(ac, av, 1 /* show counters */);
-	else
-		errx(EX_USAGE, "bad command `%s'", *av);
+	int try_next = 0;
+	if (use_set == 0) {
+		if (_substrcmp(*av, "add") == 0)
+			add(ac, av);
+		else if (do_nat && _substrcmp(*av, "show") == 0)
+ 			show_nat(ac, av);
+		else if (do_pipe && _substrcmp(*av, "config") == 0)
+			config_pipe(ac, av);
+		else if (do_nat && _substrcmp(*av, "config") == 0)
+ 			config_nat(ac, av);
+			else if (_substrcmp(*av, "set") == 0)
+				sets_handler(ac, av);
+			else if (_substrcmp(*av, "table") == 0)
+				table_handler(ac, av);
+			else if (_substrcmp(*av, "enable") == 0)
+				sysctl_handler(ac, av, 1);
+			else if (_substrcmp(*av, "disable") == 0)
+				sysctl_handler(ac, av, 0);
+			else
+				try_next = 1;
+	}
+
+	if (use_set || try_next) {
+		if (_substrcmp(*av, "delete") == 0)
+			delete(ac, av);
+		else if (_substrcmp(*av, "flush") == 0)
+			flush(do_force);
+		else if (_substrcmp(*av, "zero") == 0)
+			zero(ac, av, IP_FW_ZERO);
+		else if (_substrcmp(*av, "resetlog") == 0)
+			zero(ac, av, IP_FW_RESETLOG);
+		else if (_substrcmp(*av, "print") == 0 ||
+		         _substrcmp(*av, "list") == 0)
+			list(ac, av, do_acct);
+		else if (_substrcmp(*av, "show") == 0)
+			list(ac, av, 1 /* show counters */);
+		else
+			errx(EX_USAGE, "bad command `%s'", *av);
+	}
 
 	/* Free memory allocated in the argument parsing. */
 	free_args(save_ac, save_av);
@@ -5129,6 +6303,8 @@ ipfw_readfile(int ac, char *av[])
 			 */
 			av += optind - 1;
 			ac -= optind - 1;
+			if (ac < 2)
+				errx(EX_USAGE, "no filename argument");
 			av[ac-1] = NULL;
 			fprintf(stderr, "command is %s\n", av[0]);
 			break;
