@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/core/geom.8,v 1.17.2.1 2006/01/31 12:39:26 pjd Exp $
+.\" $FreeBSD: src/sbin/geom/core/geom.8,v 1.19 2007/09/23 07:34:22 pjd Exp $
 .\"
 .Dd May 21, 2004
 .Dt GEOM 8
@@ -123,6 +123,8 @@ RAID3
 SHSEC
 .It
 STRIPE
+.It
+VIRSTOR
 .El
 .Sh ENVIRONMENT
 The following environment variables affect the execution of
@@ -161,7 +163,8 @@ geom md unload
 .Xr gnop 8 ,
 .Xr graid3 8 ,
 .Xr gshsec 8 ,
-.Xr gstripe 8
+.Xr gstripe 8 ,
+.Xr gvirstor 8
 .Sh HISTORY
 The
 .Nm

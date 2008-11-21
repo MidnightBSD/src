@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/core/geom.c,v 1.22.2.3.2.1 2006/04/13 06:36:26 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/core/geom.c,v 1.32 2007/09/21 10:00:05 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -69,19 +69,20 @@ static void std_load(struct gctl_req *req, unsigned flags);
 static void std_unload(struct gctl_req *req, unsigned flags);
 
 struct g_command std_commands[] = {
-	{ "help", 0, std_help, G_NULL_OPTS, NULL },
-	{ "list", 0, std_list, G_NULL_OPTS,
+	{ "help", 0, std_help, G_NULL_OPTS, NULL, NULL },
+	{ "list", 0, std_list, G_NULL_OPTS, NULL, 
 	    "[name ...]"
 	},
 	{ "status", 0, std_status,
 	    {
-		{ 's', "script", NULL, G_TYPE_NONE },
+		{ 's', "script", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-s] [name ...]"
+	    NULL, "[-s] [name ...]"
 	},
-	{ "load", G_FLAG_VERBOSE | G_FLAG_LOADKLD, std_load, G_NULL_OPTS, NULL },
-	{ "unload", G_FLAG_VERBOSE, std_unload, G_NULL_OPTS, NULL },
+	{ "load", G_FLAG_VERBOSE | G_FLAG_LOADKLD, std_load, G_NULL_OPTS,
+	    NULL, NULL },
+	{ "unload", G_FLAG_VERBOSE, std_unload, G_NULL_OPTS, NULL, NULL },
 	G_CMD_SENTINEL
 };
 
@@ -102,16 +103,18 @@ usage_command(struct g_command *cmd, const char *prefix)
 		opt = &cmd->gc_options[i];
 		if (opt->go_name == NULL)
 			break;
-		if (opt->go_val != NULL || opt->go_type == G_TYPE_NONE)
+		if (opt->go_val != NULL || G_OPT_TYPE(opt) == G_TYPE_BOOL)
 			fprintf(stderr, " [");
 		else
 			fprintf(stderr, " ");
 		fprintf(stderr, "-%c", opt->go_char);
-		if (opt->go_type != G_TYPE_NONE)
+		if (G_OPT_TYPE(opt) != G_TYPE_BOOL)
 			fprintf(stderr, " %s", opt->go_name);
-		if (opt->go_val != NULL || opt->go_type == G_TYPE_NONE)
+		if (opt->go_val != NULL || G_OPT_TYPE(opt) == G_TYPE_BOOL)
 			fprintf(stderr, "]");
 	}
+	if (cmd->gc_argname)
+		fprintf(stderr, " %s", cmd->gc_argname);
 	fprintf(stderr, "\n");
 }
 
@@ -218,12 +221,10 @@ static void
 set_option(struct gctl_req *req, struct g_option *opt, const char *val)
 {
 
-	if (opt->go_type == G_TYPE_NUMBER) {
+	if (G_OPT_TYPE(opt) == G_TYPE_NUMBER) {
 		intmax_t number;
 
-		errno = 0;
-		number = strtoimax(optarg, NULL, 0);
-		if (errno != 0) {
+		if (expand_number(val, &number) == -1) {
 			err(EXIT_FAILURE, "Invalid value for '%c' argument.",
 			    opt->go_char);
 		}
@@ -233,9 +234,9 @@ set_option(struct gctl_req *req, struct g_option *opt, const char *val)
 		*(intmax_t *)opt->go_val = number;
 
 		gctl_ro_param(req, opt->go_name, sizeof(intmax_t), opt->go_val);
-	} else if (opt->go_type == G_TYPE_STRING) {
-		gctl_ro_param(req, opt->go_name, -1, optarg);
-	} else /* if (opt->go_type == G_TYPE_NONE) */ {
+	} else if (G_OPT_TYPE(opt) == G_TYPE_STRING) {
+		gctl_ro_param(req, opt->go_name, -1, val);
+	} else if (G_OPT_TYPE(opt) == G_TYPE_BOOL) {
 		opt->go_val = malloc(sizeof(int));
 		if (opt->go_val == NULL)
 			errx(EXIT_FAILURE, "No memory.");
@@ -243,6 +244,8 @@ set_option(struct gctl_req *req, struct g_option *opt, const char *val)
 
 		gctl_ro_param(req, opt->go_name, sizeof(int),
 		    opt->go_val);
+	} else {
+		assert(!"Invalid type");
 	}
 }
 
@@ -267,8 +270,10 @@ parse_arguments(struct g_command *cmd, struct gctl_req *req, int *argc,
 		opt = &cmd->gc_options[i];
 		if (opt->go_name == NULL)
 			break;
+		assert(G_OPT_TYPE(opt) != 0);
+		assert((opt->go_type & ~G_TYPE_MASK) == 0);
 		strlcatf(opts, sizeof(opts), "%c", opt->go_char);
-		if (opt->go_type != G_TYPE_NONE)
+		if (G_OPT_TYPE(opt) != G_TYPE_BOOL)
 			strlcat(opts, ":", sizeof(opts));
 	}
 
@@ -287,13 +292,12 @@ parse_arguments(struct g_command *cmd, struct gctl_req *req, int *argc,
 		if (opt == NULL)
 			usage();
 		if (G_OPT_ISDONE(opt)) {
-			fprintf(stderr, "Flag '%c' specified twice.\n",
-			    opt->go_char);
+			warnx("Option '%c' specified twice.", opt->go_char);
 			usage();
 		}
 		G_OPT_DONE(opt);
 
-		if (opt->go_type == G_TYPE_NONE)
+		if (G_OPT_TYPE(opt) == G_TYPE_BOOL)
 			set_option(req, opt, "1");
 		else
 			set_option(req, opt, optarg);
@@ -311,34 +315,46 @@ parse_arguments(struct g_command *cmd, struct gctl_req *req, int *argc,
 		if (G_OPT_ISDONE(opt))
 			continue;
 
-		if (opt->go_type == G_TYPE_NONE) {
+		if (G_OPT_TYPE(opt) == G_TYPE_BOOL) {
 			assert(opt->go_val == NULL);
 			set_option(req, opt, "0");
 		} else {
 			if (opt->go_val == NULL) {
-				fprintf(stderr, "Flag '%c' not specified.\n",
+				warnx("Option '%c' not specified.",
 				    opt->go_char);
 				usage();
 			} else {
-				if (opt->go_type == G_TYPE_NUMBER) {
+				if (G_OPT_TYPE(opt) == G_TYPE_NUMBER) {
 					gctl_ro_param(req, opt->go_name,
 					    sizeof(intmax_t), opt->go_val);
-				} else /* if (opt->go_type == G_TYPE_STRING)*/ {
-					gctl_ro_param(req, opt->go_name, -1,
-					    opt->go_val);
+				} else if (G_OPT_TYPE(opt) == G_TYPE_STRING) {
+					if (cmd->gc_argname == NULL ||
+					    opt->go_val == NULL ||
+					    *(char *)opt->go_val != '\0')
+						gctl_ro_param(req, opt->go_name,
+						    -1, opt->go_val);
+				} else {
+					assert(!"Invalid type");
 				}
 			}
 		}
 	}
-	/*
-	 * Add rest of given arguments.
-	 */
-	gctl_ro_param(req, "nargs", sizeof(int), argc);
-	for (i = 0; i < (unsigned)*argc; i++) {
-		char argname[16];
 
-		snprintf(argname, sizeof(argname), "arg%u", i);
-		gctl_ro_param(req, argname, -1, (*argv)[i]);
+	if (cmd->gc_argname == NULL) {
+		/*
+		 * Add rest of given arguments.
+		 */
+		gctl_ro_param(req, "nargs", sizeof(int), argc);
+		for (i = 0; i < (unsigned)*argc; i++) {
+			char argname[16];
+
+			snprintf(argname, sizeof(argname), "arg%u", i);
+			gctl_ro_param(req, argname, -1, (*argv)[i]);
+		}
+	} else {
+		if (*argc != 1)
+			usage();
+		gctl_ro_param(req, cmd->gc_argname, -1, (*argv)[0]);
 	}
 }
 
@@ -406,12 +422,11 @@ run_command(int argc, char *argv[])
 		/* Now, try to find a standard command. */
 		cmd = find_command(argv[0], GEOM_STD_CMDS);
 		if (cmd == NULL) {
-			fprintf(stderr, "Unknown command: %s\n", argv[0]);
+			warnx("Unknown command: %s.", argv[0]);
 			usage();
 		}
 		if (!std_available(cmd->gc_name)) {
-			fprintf(stderr, "Command '%s' not available.\n",
-			    argv[0]);
+			warnx("Command '%s' not available.", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -437,7 +452,7 @@ run_command(int argc, char *argv[])
 		errstr = gctl_issue(req);
 	}
 	if (errstr != NULL && errstr[0] != '\0') {
-		fprintf(stderr, "%s\n", errstr);
+		warnx("%s", errstr);
 		if (strncmp(errstr, "warning: ", strlen("warning: ")) != 0) {
 			gctl_free(req);
 			exit(EXIT_FAILURE);
@@ -486,8 +501,7 @@ load_library(void)
 		errx(EXIT_FAILURE, "Cannot open library: %s.", dlerror());
 	lib_version = dlsym(dlh, "lib_version");
 	if (lib_version == NULL) {
-		fprintf(stderr, "Cannot find symbol %s: %s.\n", "lib_version",
-		    dlerror());
+		warnx("Cannot find symbol %s: %s.", "lib_version", dlerror());
 		dlclose(dlh);
 		exit(EXIT_FAILURE);
 	}
@@ -498,15 +512,14 @@ load_library(void)
 	}
 	version = dlsym(dlh, "version");
 	if (version == NULL) {
-		fprintf(stderr, "Cannot find symbol %s: %s.\n", "version",
-		    dlerror());
+		warnx("Cannot find symbol %s: %s.", "version", dlerror());
 		dlclose(dlh);
 		exit(EXIT_FAILURE);
 	}
 	class_commands = dlsym(dlh, "class_commands");
 	if (class_commands == NULL) {
-		fprintf(stderr, "Cannot find symbol %s: %s.\n",
-		    "class_commands", dlerror());
+		warnx("Cannot find symbol %s: %s.", "class_commands",
+		    dlerror());
 		dlclose(dlh);
 		exit(EXIT_FAILURE);
 	}
@@ -688,10 +701,8 @@ std_list_available(void)
 	int error;
 
 	error = geom_gettree(&mesh);
-	if (error != 0) {
-		fprintf(stderr, "Cannot get GEOM tree: %s.\n", strerror(error));
-		exit(EXIT_FAILURE);
-	}
+	if (error != 0)
+		errc(EXIT_FAILURE, error, "Cannot get GEOM tree");
 	classp = find_class(&mesh, gclass_name);
 	geom_deletetree(&mesh);
 	if (classp != NULL)
@@ -709,15 +720,12 @@ std_list(struct gctl_req *req, unsigned flags __unused)
 	int error, i, nargs;
 
 	error = geom_gettree(&mesh);
-	if (error != 0) {
-		fprintf(stderr, "Cannot get GEOM tree: %s.\n", strerror(error));
-		exit(EXIT_FAILURE);
-	}
+	if (error != 0)
+		errc(EXIT_FAILURE, error, "Cannot get GEOM tree");
 	classp = find_class(&mesh, gclass_name);
 	if (classp == NULL) {
 		geom_deletetree(&mesh);
-		fprintf(stderr, "Class %s not found.\n", gclass_name);
-		return;
+		errx(EXIT_FAILURE, "Class %s not found.", gclass_name);
 	}
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs > 0) {
@@ -727,7 +735,7 @@ std_list(struct gctl_req *req, unsigned flags __unused)
 			if (gp != NULL)
 				list_one_geom(gp);
 			else
-				fprintf(stderr, "No such geom: %s.\n", name);
+				errx(EXIT_FAILURE, "No such geom: %s.", name);
 		}
 	} else {
 		LIST_FOREACH(gp, &classp->lg_geom, lg_geom) {
@@ -847,15 +855,11 @@ std_status(struct gctl_req *req, unsigned flags __unused)
 	int error, i, n, nargs, script;
 
 	error = geom_gettree(&mesh);
-	if (error != 0) {
-		fprintf(stderr, "Cannot get GEOM tree: %s.\n", strerror(error));
-		exit(EXIT_FAILURE);
-	}
+	if (error != 0)
+		errc(EXIT_FAILURE, error, "Cannot get GEOM tree");
 	classp = find_class(&mesh, gclass_name);
-	if (classp == NULL) {
-		fprintf(stderr, "Class %s not found.\n", gclass_name);
-		goto end;
-	}
+	if (classp == NULL)
+		errx(EXIT_FAILURE, "Class %s not found.", gclass_name);
 	nargs = gctl_get_int(req, "nargs");
 	script = gctl_get_int(req, "script");
 	name_len = strlen("Name");
@@ -865,7 +869,7 @@ std_status(struct gctl_req *req, unsigned flags __unused)
 			name = gctl_get_ascii(req, "arg%d", i);
 			gp = find_geom(classp, name);
 			if (gp == NULL)
-				fprintf(stderr, "No such geom: %s.\n", name);
+				errx(EXIT_FAILURE, "No such geom: %s.", name);
 			else {
 				status_update_len(gp, &name_len, &status_len);
 				n++;
