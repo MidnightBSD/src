@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/concat/geom_concat.c,v 1.8.2.2 2006/03/01 17:55:28 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/concat/geom_concat.c,v 1.13 2007/05/15 20:25:16 marcel Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -51,35 +51,35 @@ static void concat_dump(struct gctl_req *req);
 static void concat_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
-	{ "clear", G_FLAG_VERBOSE, concat_main, G_NULL_OPTS,
+	{ "clear", G_FLAG_VERBOSE, concat_main, G_NULL_OPTS, NULL,
 	    "[-v] prov ..."
 	},
 	{ "create", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL, G_NULL_OPTS,
-	    "[-v] name prov ..."
+	    NULL, "[-v] name prov ..."
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
-	{ "dump", 0, concat_main, G_NULL_OPTS,
+	{ "dump", 0, concat_main, G_NULL_OPTS, NULL,
 	    "prov ..."
 	},
 	{ "label", G_FLAG_VERBOSE | G_FLAG_LOADKLD, concat_main,
 	    {
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-hv] name prov ..."
+	    NULL, "[-hv] name prov ..."
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };

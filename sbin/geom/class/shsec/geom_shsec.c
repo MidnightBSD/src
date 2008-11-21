@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/shsec/geom_shsec.c,v 1.5.2.2 2006/04/05 22:20:43 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/shsec/geom_shsec.c,v 1.10 2007/05/15 20:25:17 marcel Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -52,25 +52,25 @@ static void shsec_dump(struct gctl_req *req);
 static void shsec_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
-	{ "clear", G_FLAG_VERBOSE, shsec_main, G_NULL_OPTS,
+	{ "clear", G_FLAG_VERBOSE, shsec_main, G_NULL_OPTS, NULL,
 	    "[-v] prov ..."
 	},
-	{ "dump", 0, shsec_main, G_NULL_OPTS,
+	{ "dump", 0, shsec_main, G_NULL_OPTS, NULL,
 	    "prov ..."
 	},
 	{ "label", G_FLAG_VERBOSE | G_FLAG_LOADKLD, shsec_main,
 	    {
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-hv] name prov prov ..."
+	    NULL, "[-hv] name prov prov ..."
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/mirror/geom_mirror.c,v 1.10.2.2 2006/03/20 15:48:55 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/mirror/geom_mirror.c,v 1.17 2007/05/15 20:25:16 marcel Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -56,64 +56,67 @@ static void mirror_dump(struct gctl_req *req);
 static void mirror_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
-	{ "activate", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS,
+	{ "activate", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS, NULL,
 	    "[-v] name prov ..."
 	},
-	{ "clear", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS,
+	{ "clear", G_FLAG_VERBOSE, mirror_main, G_NULL_OPTS, NULL,
 	    "[-v] prov ..."
 	},
 	{ "configure", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'a', "autosync", NULL, G_TYPE_NONE },
+		{ 'a', "autosync", NULL, G_TYPE_BOOL },
 		{ 'b', "balance", configure_balance, G_TYPE_STRING },
-		{ 'd', "dynamic", NULL, G_TYPE_NONE },
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
-		{ 'n', "noautosync", NULL, G_TYPE_NONE },
+		{ 'd', "dynamic", NULL, G_TYPE_BOOL },
+		{ 'f', "failsync", NULL, G_TYPE_BOOL },
+		{ 'F', "nofailsync", NULL, G_TYPE_BOOL },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
+		{ 'n', "noautosync", NULL, G_TYPE_BOOL },
 		{ 's', "slice", &configure_slice, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-adhnv] [-b balance] [-s slice] name"
+	    NULL, "[-adfFhnv] [-b balance] [-s slice] name"
 	},
-	{ "deactivate", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	{ "deactivate", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
 	    "[-v] name prov ..."
 	},
-	{ "dump", 0, mirror_main, G_NULL_OPTS,
+	{ "dump", 0, mirror_main, G_NULL_OPTS, NULL,
 	    "prov ..."
 	},
-	{ "forget", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	{ "forget", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
 	    "name ..."
 	},
 	{ "label", G_FLAG_VERBOSE, mirror_main,
 	    {
 		{ 'b', "balance", label_balance, G_TYPE_STRING },
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
-		{ 'n', "noautosync", NULL, G_TYPE_NONE },
+		{ 'F', "nofailsync", NULL, G_TYPE_BOOL },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
+		{ 'n', "noautosync", NULL, G_TYPE_BOOL },
 		{ 's', "slice", &label_slice, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-hnv] [-b balance] [-s slice] name prov ..."
+	    NULL, "[-Fhnv] [-b balance] [-s slice] name prov ..."
 	},
 	{ "insert", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
-		{ 'i', "inactive", NULL, G_TYPE_NONE },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
+		{ 'i', "inactive", NULL, G_TYPE_BOOL },
 		{ 'p', "priority", &insert_priority, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-hiv] [-p priority] name prov ..."
+	    NULL, "[-hiv] [-p priority] name prov ..."
 	},
-	{ "rebuild", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	{ "rebuild", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
 	    "[-v] name prov ..."
 	},
-	{ "remove", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	{ "remove", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
 	    "[-v] name prov ..."
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };
@@ -154,7 +157,7 @@ mirror_label(struct gctl_req *req)
 	unsigned sectorsize;
 	off_t mediasize;
 	intmax_t val;
-	int error, i, nargs, bal, hardcode, noautosync;
+	int error, i, nargs, bal, hardcode;
 
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs < 2) {
@@ -182,9 +185,10 @@ mirror_label(struct gctl_req *req)
 		return;
 	}
 	md.md_balance = bal;
-	noautosync = gctl_get_int(req, "noautosync");
-	if (noautosync)
+	if (gctl_get_int(req, "noautosync"))
 		md.md_mflags |= G_MIRROR_DEVICE_FLAG_NOAUTOSYNC;
+	if (gctl_get_int(req, "nofailsync"))
+		md.md_mflags |= G_MIRROR_DEVICE_FLAG_NOFAILSYNC;
 	hardcode = gctl_get_int(req, "hardcode");
 
 	/*
@@ -215,6 +219,7 @@ mirror_label(struct gctl_req *req)
 	}
 	md.md_mediasize = mediasize;
 	md.md_sectorsize = sectorsize;
+	md.md_mediasize -= (md.md_mediasize % md.md_sectorsize);
 
 	/*
 	 * Clear last sector first, to spoil all components if device exists.

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/stripe/geom_stripe.c,v 1.11.2.2 2006/04/05 22:20:43 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/stripe/geom_stripe.c,v 1.16 2007/05/24 09:21:20 ru Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -54,7 +54,7 @@ static void stripe_dump(struct gctl_req *req);
 static void stripe_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
-	{ "clear", G_FLAG_VERBOSE, stripe_main, G_NULL_OPTS,
+	{ "clear", G_FLAG_VERBOSE, stripe_main, G_NULL_OPTS, NULL,
 	    "[-v] prov ..."
 	},
 	{ "create", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL,
@@ -62,32 +62,32 @@ struct g_command class_commands[] = {
 		{ 's', "stripesize", &default_stripesize, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-hv] [-s stripesize] name prov prov ..."
+	    NULL, "[-hv] [-s stripesize] name prov prov ..."
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
-	{ "dump", 0, stripe_main, G_NULL_OPTS,
-	    "dump prov ..."
+	{ "dump", 0, stripe_main, G_NULL_OPTS, NULL,
+	    "prov ..."
 	},
 	{ "label", G_FLAG_VERBOSE | G_FLAG_LOADKLD, stripe_main,
 	    {
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
 		{ 's', "stripesize", &default_stripesize, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-hv] [-s stripesize] name prov prov ..."
+	    NULL, "[-hv] [-s stripesize] name prov prov ..."
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };

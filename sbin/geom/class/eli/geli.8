@@ -1,4 +1,4 @@
-.\" Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+.\" Copyright (c) 2005-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,10 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/class/eli/geli.8,v 1.2.2.5 2006/03/01 17:52:15 pjd Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD: src/sbin/geom/class/eli/geli.8,v 1.22 2007/09/01 06:33:01 pjd Exp $
 .\"
-.Dd February 11, 2006
+.Dd September 16, 2006
 .Dt GELI 8
 .Os
 .Sh NAME
@@ -53,7 +52,8 @@ utility:
 .Nm
 .Cm init
 .Op Fl bPv
-.Op Fl a Ar algo
+.Op Fl a Ar aalgo
+.Op Fl e Ar ealgo
 .Op Fl i Ar iterations
 .Op Fl K Ar newkeyfile
 .Op Fl l Ar keylen
@@ -64,7 +64,7 @@ utility:
 .Cm init
 .Nm
 .Cm attach
-.Op Fl dpv
+.Op Fl dprv
 .Op Fl k Ar keyfile
 .Ar prov
 .Nm
@@ -77,9 +77,14 @@ utility:
 .Nm
 .Cm onetime
 .Op Fl d
-.Op Fl a Ar algo
+.Op Fl a Ar aalgo
+.Op Fl e Ar ealgo
 .Op Fl l Ar keylen
 .Op Fl s Ar sectorsize
+.Ar prov ...
+.Nm
+.Cm configure
+.Op Fl bB
 .Ar prov ...
 .Nm
 .Cm setkey
@@ -141,9 +146,20 @@ will make use of it automatically.
 .It
 Supports many cryptographic algorithms (currently
 .Nm AES ,
-.Nm Blowfish
+.Nm Blowfish ,
+.Nm Camellia
 and
 .Nm 3DES ) .
+.It
+Can optionally perform data authentication (integrity verification) utilizing
+one of the following algorithms:
+.Nm HMAC/MD5 ,
+.Nm HMAC/SHA1 ,
+.Nm HMAC/RIPEMD160 ,
+.Nm HMAC/SHA256 ,
+.Nm HMAC/SHA384
+or
+.Nm HMAC/SHA512 .
 .It
 Can create a key from a couple of components (user entered passphrase, random
 bits from a file, etc.).
@@ -152,7 +168,7 @@ Allows to encrypt the root partition - the user will be asked for the
 passphrase before the root file system is mounted.
 .It
 The passphrase of the user is strengthened with:
-.Rs 
+.Rs
 .%A B. Kaliski
 .%T "PKCS #5: Password-Based Cryptography Specification, Version 2.0."
 .%R RFC
@@ -164,7 +180,7 @@ Allows to use two independent keys (e.g.
 and
 .Qq "company key" ) .
 .It
-It is fast - 
+It is fast -
 .Nm
 performs simple sector-to-sector encryption.
 .It
@@ -178,24 +194,42 @@ the file systems).
 .It
 Allows to attach a provider with a random, one-time key - useful for swap
 partitions and temporary file systems.
+.It
+Allows to verify data integrity (data authentication).
 .El
 .Pp
 The first argument to
 .Nm
 indicates an action to be performed:
-.Bl -tag -width ".Cm onetime"
+.Bl -tag -width ".Cm configure"
 .It Cm init
 Initialize provider which needs to be encrypted.
 Here you can set up the cryptographic algorithm to use, key length, etc.
 The last provider's sector is used to store metadata.
 .Pp
 Additional options include:
-.Bl -tag -width ".Fl a Ar algo"
-.It Fl a Ar algo
+.Bl -tag -width ".Fl a Ar aalgo"
+.It Fl a Ar aalgo
+Enable data integrity verification (authentication) using the given algorithm.
+This will reduce size of available storage and also reduce speed.
+For example, when using 4096 bytes sector and
+.Nm HMAC/SHA256
+algorithm, 89% of the original provider storage will be available for use.
+Currently supported algorithms are:
+.Nm HMAC/MD5 ,
+.Nm HMAC/SHA1 ,
+.Nm HMAC/RIPEMD160 ,
+.Nm HMAC/SHA256 ,
+.Nm HMAC/SHA384
+and
+.Nm HMAC/SHA512 .
+If the option is not given, there will be no authentication, only encryption.
+.It Fl e Ar ealgo
 Encryption algorithm to use.
 Currently supported algorithms are:
 .Nm AES ,
-.Nm Blowfish
+.Nm Blowfish ,
+.Nm Camellia
 and
 .Nm 3DES .
 The default is
@@ -228,7 +262,9 @@ If not given, the default key length for the given algorithm is used, which is:
 128 for
 .Nm AES ,
 128 for
-.Nm Blowfish
+.Nm Blowfish ,
+128 for
+.Nm Camellia
 and 192 for
 .Nm 3DES .
 .It Fl s Ar sectorsize
@@ -260,6 +296,9 @@ Probably a better choice is the
 option for the
 .Cm detach
 subcommand.
+.It Fl r
+Attach read-only provider.
+It will not be opened for writing.
 .It Fl k Ar keyfile
 Specifies a file which contains part of the key.
 For more information see the description of the
@@ -290,8 +329,13 @@ Attach the given providers with random, one-time keys.
 The command can be used to encrypt swap partitions or temporary file systems.
 .Pp
 Additional options include:
-.Bl -tag -width ".Fl a Ar algo"
-.It Fl a Ar algo
+.Bl -tag -width ".Fl a Ar aalgo"
+.It Fl a Ar aalgo
+Enable data integrity verification (authentication).
+For more information, see the description of the
+.Cm init
+subcommand.
+.It Fl e Ar ealgo
 Encryption algorithm to use.
 For more information, see the description of the
 .Cm init
@@ -314,6 +358,19 @@ Change decrypted provider's sector size.
 For more information, see the description of the
 .Cm init
 subcommand.
+.El
+.It Cm configure
+Change configuration of the given providers.
+.Pp
+Additional options include:
+.Bl -tag -width ".Fl b"
+.It Fl b
+Set the BOOT flag on the given providers.
+For more information, see the description of the
+.Cm init
+subcommand.
+.It Fl B
+Remove the BOOT flag from the given providers.
 .El
 .It Cm setkey
 Change or setup (if not yet initialized) selected key.
@@ -378,6 +435,9 @@ It will destroy all keys on the given provider and will detach it forcibly
 (if it is attached).
 This is absolutely a one-way command - if you do not have a metadata
 backup, your data is gone for good.
+In case the provider was attached with the
+.Fl r
+flag, the keys will not be destroyed, only the provider will be detached.
 .Bl -tag -width ".Fl a Ar algo"
 .It Fl a
 If specified, all currently attached providers will be killed.
@@ -416,6 +476,8 @@ variables can be used to control the behavior of the
 .Nm ELI
 GEOM class.
 The default value is shown next to each variable.
+All variables can also be set in
+.Pa /boot/loader.conf .
 .Bl -tag -width indent
 .It Va kern.geom.eli.debug : No 0
 Debug level of the
@@ -425,8 +487,6 @@ This can be set to a number between 0 and 3 inclusive.
 If set to 0, minimal debug information is printed.
 If set to 3, the
 maximum amount of debug information is printed.
-This variable could be set in
-.Pa /boot/loader.conf .
 .It Va kern.geom.eli.tries : No 3
 Number of times a user is asked for the passphrase.
 This is only used for providers which should be attached on boot
@@ -452,8 +512,11 @@ cryptography.
 Its purpose is to increase performance on SMP systems.
 If hardware acceleration is available, only one thread will be started.
 If set to 0, CPU-bound thread will be started for every active CPU.
-This variable could be set in
-.Pa /boot/loader.conf .
+.It Va kern.geom.eli.batch : No 0
+When set to 1, can speed-up crypto operations by using batching.
+Batching allows to reduce number of interrupts by responding on a group of
+crypto requests with one interrupt.
+The crypto card and the driver has to support this feature.
 .El
 .Sh EXIT STATUS
 Exit status is 0 on success, and 1 if the command fails.
@@ -509,7 +572,7 @@ Reenter new passphrase:
 Encrypted swap partition setup:
 .Bd -literal -offset indent
 # dd if=/dev/random of=/dev/ad0s1b bs=1m
-# geli onetime -d -a 3des ad0s1b
+# geli onetime -d -e 3des ad0s1b
 # swapon /dev/ad0s1b.eli
 .Ed
 .Pp
@@ -547,6 +610,39 @@ geli_da1s3a_keyfile0_load="YES"
 geli_da1s3a_keyfile0_type="da1s3a:geli_keyfile0"
 geli_da1s3a_keyfile0_name="/boot/keys/da1s3a.key"
 .Ed
+.Pp
+Not only configure encryption, but also data integrity verification using
+.Nm HMAC/SHA256 .
+.Bd -literal -offset indent
+# geli init -a hmac/sha256 -s 4096 /dev/da0
+Enter new passphrase:
+Reenter new passphrase:
+# geli attach /dev/da0
+Enter passphrase:
+# dd if=/dev/random of=/dev/da0.eli bs=1m
+# newfs /dev/da0.eli
+# mount /dev/da0.eli /mnt/secret
+.Ed
+.Sh DATA AUTHENTICATION
+.Nm
+can verify data integrity when an authentication algorithm is specified.
+When data corruption/modification is detected,
+.Nm
+will not return any data, but instead will return an error
+.Pq Er EINVAL .
+The offset and size of the corrupted data will be printed on the console.
+It is important to know against which attacks
+.Nm
+provides protection for your data.
+If data is modified in-place or copied from one place on the disk
+to another even without modification,
+.Nm
+should be able to detect such a change.
+If an attacker can remember the encrypted data, he can overwrite any future
+changes with the data he owns without notice.
+In other words
+.Nm
+will not protect your data against replay attacks.
 .Sh SEE ALSO
 .Xr crypto 4 ,
 .Xr gbde 4 ,
@@ -560,5 +656,9 @@ The
 .Nm
 utility appeared in
 .Fx 6.0 .
+Support for 
+.Nm Camellia
+block cipher is implemented by Yoshisato Yanagisawa in
+.Fx 7.0 .
 .Sh AUTHORS
 .An Pawel Jakub Dawidek Aq pjd@FreeBSD.org

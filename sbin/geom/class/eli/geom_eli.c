@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/eli/geom_eli.c,v 1.1.2.7 2006/03/01 17:52:15 pjd Exp $");
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sbin/geom/class/eli/geom_eli.c,v 1.24 2007/05/15 20:25:16 marcel Exp $");
 
 #include <stdio.h>
 #include <stdint.h>
@@ -55,7 +54,8 @@ __MBSDID("$MidnightBSD$");
 uint32_t lib_version = G_LIB_VERSION;
 uint32_t version = G_ELI_VERSION;
 
-static char algo[] = "aes";
+static char aalgo[] = "none";
+static char ealgo[] = "aes";
 static intmax_t keylen = 0;
 static intmax_t keyno = -1;
 static intmax_t iterations = -1;
@@ -65,6 +65,7 @@ static char keyfile[] = "", newkeyfile[] = "";
 static void eli_main(struct gctl_req *req, unsigned flags);
 static void eli_init(struct gctl_req *req);
 static void eli_attach(struct gctl_req *req);
+static void eli_configure(struct gctl_req *req);
 static void eli_setkey(struct gctl_req *req);
 static void eli_delkey(struct gctl_req *req);
 static void eli_kill(struct gctl_req *req);
@@ -76,12 +77,13 @@ static void eli_dump(struct gctl_req *req);
 /*
  * Available commands:
  *
- * init [-bhPv] [-a algo] [-i iterations] [-l keylen] [-K newkeyfile] prov
+ * init [-bhPv] [-a aalgo] [-e ealgo] [-i iterations] [-l keylen] [-K newkeyfile] prov
  * label - alias for 'init'
- * attach [-dpv] [-k keyfile] prov
+ * attach [-dprv] [-k keyfile] prov
  * detach [-fl] prov ...
  * stop - alias for 'detach'
- * onetime [-d] [-a algo] [-l keylen] prov ...
+ * onetime [-d] [-a aalgo] [-e ealgo] [-l keylen] prov ...
+ * configure [-bB] prov ...
  * setkey [-pPv] [-n keyno] [-k keyfile] [-K newkeyfile] prov
  * delkey [-afv] [-n keyno] prov
  * kill [-av] [prov ...]
@@ -93,64 +95,76 @@ static void eli_dump(struct gctl_req *req);
 struct g_command class_commands[] = {
 	{ "init", G_FLAG_VERBOSE, eli_main,
 	    {
-		{ 'a', "algo", algo, G_TYPE_STRING },
-		{ 'b', "boot", NULL, G_TYPE_NONE },
+		{ 'a', "aalgo", aalgo, G_TYPE_STRING },
+		{ 'b', "boot", NULL, G_TYPE_BOOL },
+		{ 'e', "ealgo", ealgo, G_TYPE_STRING },
 		{ 'i', "iterations", &iterations, G_TYPE_NUMBER },
 		{ 'K', "newkeyfile", newkeyfile, G_TYPE_STRING },
 		{ 'l', "keylen", &keylen, G_TYPE_NUMBER },
-		{ 'P', "nonewpassphrase", NULL, G_TYPE_NONE },
+		{ 'P', "nonewpassphrase", NULL, G_TYPE_BOOL },
 		{ 's', "sectorsize", &sectorsize, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-bPv] [-a algo] [-i iterations] [-l keylen] [-K newkeyfile] [-s sectorsize] prov"
+	    NULL, "[-bPv] [-a aalgo] [-e ealgo] [-i iterations] [-l keylen] [-K newkeyfile] [-s sectorsize] prov"
 	},
 	{ "label", G_FLAG_VERBOSE, eli_main,
 	    {
-		{ 'a', "algo", algo, G_TYPE_STRING },
-		{ 'b', "boot", NULL, G_TYPE_NONE },
+		{ 'a', "aalgo", aalgo, G_TYPE_STRING },
+		{ 'b', "boot", NULL, G_TYPE_BOOL },
+		{ 'e', "ealgo", ealgo, G_TYPE_STRING },
 		{ 'i', "iterations", &iterations, G_TYPE_NUMBER },
 		{ 'K', "newkeyfile", newkeyfile, G_TYPE_STRING },
 		{ 'l', "keylen", &keylen, G_TYPE_NUMBER },
-		{ 'P', "nonewpassphrase", NULL, G_TYPE_NONE },
+		{ 'P', "nonewpassphrase", NULL, G_TYPE_BOOL },
 		{ 's', "sectorsize", &sectorsize, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "- an alias for 'init'"
+	    NULL, "- an alias for 'init'"
 	},
 	{ "attach", G_FLAG_VERBOSE | G_FLAG_LOADKLD, eli_main,
 	    {
-		{ 'd', "detach", NULL, G_TYPE_NONE },
+		{ 'd', "detach", NULL, G_TYPE_BOOL },
 		{ 'k', "keyfile", keyfile, G_TYPE_STRING },
-		{ 'p', "nopassphrase", NULL, G_TYPE_NONE },
+		{ 'p', "nopassphrase", NULL, G_TYPE_BOOL },
+		{ 'r', "readonly", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-dpv] [-k keyfile] prov"
+	    NULL, "[-dprv] [-k keyfile] prov"
 	},
 	{ "detach", 0, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
-		{ 'l', "last", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
+		{ 'l', "last", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fl] prov ..."
+	    NULL, "[-fl] prov ..."
 	},
 	{ "stop", 0, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
-		{ 'l', "last", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
+		{ 'l', "last", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "- an alias for 'detach'"
+	    NULL, "- an alias for 'detach'"
 	},
 	{ "onetime", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL,
 	    {
-		{ 'a', "algo", algo, G_TYPE_STRING },
-		{ 'd', "detach", NULL, G_TYPE_NONE },
+		{ 'a', "aalgo", aalgo, G_TYPE_STRING },
+		{ 'd', "detach", NULL, G_TYPE_BOOL },
+		{ 'e', "ealgo", ealgo, G_TYPE_STRING },
 		{ 'l', "keylen", &keylen, G_TYPE_NUMBER },
 		{ 's', "sectorsize", &sectorsize, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-d] [-a algo] [-l keylen] [-s sectorsize] prov ..."
+	    NULL, "[-d] [-a aalgo] [-e ealgo] [-l keylen] [-s sectorsize] prov ..."
+	},
+	{ "configure", G_FLAG_VERBOSE, eli_main,
+	    {
+		{ 'b', "boot", NULL, G_TYPE_BOOL },
+		{ 'B', "noboot", NULL, G_TYPE_BOOL },
+		G_OPT_SENTINEL
+	    },
+	    NULL, "[-bB] prov ..."
 	},
 	{ "setkey", G_FLAG_VERBOSE, eli_main,
 	    {
@@ -158,38 +172,38 @@ struct g_command class_commands[] = {
 		{ 'k', "keyfile", keyfile, G_TYPE_STRING },
 		{ 'K', "newkeyfile", newkeyfile, G_TYPE_STRING },
 		{ 'n', "keyno", &keyno, G_TYPE_NUMBER },
-		{ 'p', "nopassphrase", NULL, G_TYPE_NONE },
-		{ 'P', "nonewpassphrase", NULL, G_TYPE_NONE },
+		{ 'p', "nopassphrase", NULL, G_TYPE_BOOL },
+		{ 'P', "nonewpassphrase", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-pPv] [-n keyno] [-i iterations] [-k keyfile] [-K newkeyfile] prov"
+	    NULL, "[-pPv] [-n keyno] [-i iterations] [-k keyfile] [-K newkeyfile] prov"
 	},
 	{ "delkey", G_FLAG_VERBOSE, eli_main,
 	    {
-		{ 'a', "all", NULL, G_TYPE_NONE },
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'a', "all", NULL, G_TYPE_BOOL },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		{ 'n', "keyno", &keyno, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-afv] [-n keyno] prov"
+	    NULL, "[-afv] [-n keyno] prov"
 	},
 	{ "kill", G_FLAG_VERBOSE, eli_main,
 	    {
-		{ 'a', "all", NULL, G_TYPE_NONE },
+		{ 'a', "all", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-av] [prov ...]"
+	    NULL, "[-av] [prov ...]"
 	},
-	{ "backup", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS,
+	{ "backup", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS, NULL,
 	    "[-v] prov file"
 	},
-	{ "restore", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS,
+	{ "restore", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS, NULL,
 	    "[-v] file prov"
 	},
-	{ "clear", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS,
+	{ "clear", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS, NULL,
 	    "[-v] prov ..."
 	},
-	{ "dump", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS,
+	{ "dump", G_FLAG_VERBOSE, eli_main, G_NULL_OPTS, NULL,
 	    "[-v] prov ..."
 	},
 	G_CMD_SENTINEL
@@ -238,6 +252,8 @@ eli_main(struct gctl_req *req, unsigned flags)
 		eli_init(req);
 	else if (strcmp(name, "attach") == 0)
 		eli_attach(req);
+	else if (strcmp(name, "configure") == 0)
+		eli_configure(req);
 	else if (strcmp(name, "setkey") == 0)
 		eli_setkey(req);
 	else if (strcmp(name, "delkey") == 0)
@@ -390,7 +406,7 @@ eli_genkey(struct gctl_req *req, struct g_eli_metadata *md, unsigned char *key,
 			}
 		}
 		/*
-		 * If md_iterations is equal to 0, user don't want PKCS5v2.
+		 * If md_iterations is equal to 0, user don't want PKCS#5v2.
 		 */
 		if (md->md_iterations == 0) {
 			g_eli_crypto_hmac_update(&ctx, md->md_salt,
@@ -506,7 +522,7 @@ eli_init(struct gctl_req *req)
 
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs != 1) {
-		gctl_error(req, "Too few arguments.");
+		gctl_error(req, "Invalid number of arguments.");
 		return;
 	}
 	prov = gctl_get_ascii(req, "arg0");
@@ -524,16 +540,44 @@ eli_init(struct gctl_req *req)
 	md.md_flags = 0;
 	if (gctl_get_int(req, "boot"))
 		md.md_flags |= G_ELI_FLAG_BOOT;
-	str = gctl_get_ascii(req, "algo");
-	md.md_algo = g_eli_str2algo(str);
-	if (md.md_algo < CRYPTO_ALGORITHM_MIN ||
-	    md.md_algo > CRYPTO_ALGORITHM_MAX) {
-		gctl_error(req, "Invalid encryption algorithm.");
-		return;
+	md.md_ealgo = CRYPTO_ALGORITHM_MIN - 1;
+	str = gctl_get_ascii(req, "aalgo");
+	if (strcmp(str, "none") != 0) {
+		md.md_aalgo = g_eli_str2aalgo(str);
+		if (md.md_aalgo >= CRYPTO_ALGORITHM_MIN &&
+		    md.md_aalgo <= CRYPTO_ALGORITHM_MAX) {
+			md.md_flags |= G_ELI_FLAG_AUTH;
+		} else {
+			/*
+			 * For backward compatibility, check if the -a option
+			 * was used to provide encryption algorithm.
+			 */
+			md.md_ealgo = g_eli_str2ealgo(str);
+			if (md.md_ealgo < CRYPTO_ALGORITHM_MIN ||
+			    md.md_ealgo > CRYPTO_ALGORITHM_MAX) {
+				gctl_error(req,
+				    "Invalid authentication algorithm.");
+				return;
+			} else {
+				fprintf(stderr, "warning: The -e option, not "
+				    "the -a option is now used to specify "
+				    "encryption algorithm to use.\n");
+			}
+		}
+	}
+	if (md.md_ealgo < CRYPTO_ALGORITHM_MIN ||
+	    md.md_ealgo > CRYPTO_ALGORITHM_MAX) {
+		str = gctl_get_ascii(req, "ealgo");
+		md.md_ealgo = g_eli_str2ealgo(str);
+		if (md.md_ealgo < CRYPTO_ALGORITHM_MIN ||
+		    md.md_ealgo > CRYPTO_ALGORITHM_MAX) {
+			gctl_error(req, "Invalid encryption algorithm.");
+			return;
+		}
 	}
 	val = gctl_get_intmax(req, "keylen");
 	md.md_keylen = val;
-	md.md_keylen = g_eli_keylen(md.md_algo, md.md_keylen);
+	md.md_keylen = g_eli_keylen(md.md_ealgo, md.md_keylen);
 	if (md.md_keylen == 0) {
 		gctl_error(req, "Invalid key length.");
 		return;
@@ -565,6 +609,10 @@ eli_init(struct gctl_req *req)
 			gctl_error(req, "Invalid sector size.");
 			return;
 		}
+		if (val > sysconf(_SC_PAGE_SIZE)) {
+			gctl_error(req, "warning: Using sectorsize bigger than "
+			    "the page size!");
+		}
 		md.md_sectorsize = val;
 	}
 
@@ -580,7 +628,7 @@ eli_init(struct gctl_req *req)
 	}
 
 	/* Encrypt the first and the only Master Key. */
-	error = g_eli_mkey_encrypt(md.md_algo, key, md.md_keylen, md.md_mkeys);
+	error = g_eli_mkey_encrypt(md.md_ealgo, key, md.md_keylen, md.md_mkeys);
 	bzero(key, sizeof(key));
 	if (error != 0) {
 		bzero(&md, sizeof(md));
@@ -612,7 +660,7 @@ eli_attach(struct gctl_req *req)
 
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs != 1) {
-		gctl_error(req, "Too few arguments.");
+		gctl_error(req, "Invalid number of arguments.");
 		return;
 	}
 	prov = gctl_get_ascii(req, "arg0");
@@ -628,26 +676,96 @@ eli_attach(struct gctl_req *req)
 	gctl_ro_param(req, "key", sizeof(key), key);
 	if (gctl_issue(req) == NULL) {
 		if (verbose)
-			printf("Attched to %s.\n", prov);
+			printf("Attached to %s.\n", prov);
 	}
 	bzero(key, sizeof(key));
+}
+
+static void
+eli_configure_detached(struct gctl_req *req, const char *prov, int boot)
+{
+	struct g_eli_metadata md;
+
+	if (eli_metadata_read(req, prov, &md) == -1)
+		return;
+
+	if (boot && (md.md_flags & G_ELI_FLAG_BOOT)) {
+		if (verbose)
+			printf("BOOT flag already configured for %s.\n", prov);
+	} else if (!boot && !(md.md_flags & G_ELI_FLAG_BOOT)) {
+		if (verbose)
+			printf("BOOT flag not configured for %s.\n", prov);
+	} else {
+		if (boot)
+			md.md_flags |= G_ELI_FLAG_BOOT;
+		else
+			md.md_flags &= ~G_ELI_FLAG_BOOT;
+		eli_metadata_store(req, prov, &md);
+	}
+	bzero(&md, sizeof(md));
+}
+
+static void
+eli_configure(struct gctl_req *req)
+{
+	const char *prov;
+	int i, nargs, boot, noboot;
+
+	nargs = gctl_get_int(req, "nargs");
+	if (nargs == 0) {
+		gctl_error(req, "Too few arguments.");
+		return;
+	}
+
+	boot = gctl_get_int(req, "boot");
+	noboot = gctl_get_int(req, "noboot");
+
+	if (boot && noboot) {
+		gctl_error(req, "Options -b and -B are mutually exclusive.");
+		return;
+	}
+	if (!boot && !noboot) {
+		gctl_error(req, "No option given.");
+		return;
+	}
+
+	/* First attached providers. */
+	gctl_issue(req);
+	/* Now the rest. */
+	for (i = 0; i < nargs; i++) {
+		prov = gctl_get_ascii(req, "arg%d", i);
+		if (!eli_is_attached(prov))
+			eli_configure_detached(req, prov, boot);
+	}
 }
 
 static void
 eli_setkey_attached(struct gctl_req *req, struct g_eli_metadata *md)
 {
 	unsigned char key[G_ELI_USERKEYLEN];
-	intmax_t val;
+	intmax_t val, old = 0;
+	int error;
 
 	val = gctl_get_intmax(req, "iterations");
 	/* Check if iterations number should be changed. */
 	if (val != -1)
 		md->md_iterations = val;
+	else
+		old = md->md_iterations;
 
 	/* Generate key for Master Key encryption. */
 	if (eli_genkey(req, md, key, 1) == NULL) {
 		bzero(key, sizeof(key));
 		return;
+	}
+	/*
+	 * If number of iterations has changed, but wasn't given as a
+	 * command-line argument, update the request.
+	 */
+	if (val == -1 && md->md_iterations != old) {
+		error = gctl_change_param(req, "iterations", sizeof(intmax_t),
+		    &md->md_iterations);
+		assert(error == 0);
 	}
 
 	gctl_ro_param(req, "key", sizeof(key), key);
@@ -734,7 +852,7 @@ eli_setkey_detached(struct gctl_req *req, const char *prov,
 	}
 
 	/* Encrypt the Master-Key with the new key. */
-	error = g_eli_mkey_encrypt(md->md_algo, key, md->md_keylen, mkeydst);
+	error = g_eli_mkey_encrypt(md->md_ealgo, key, md->md_keylen, mkeydst);
 	bzero(key, sizeof(key));
 	if (error != 0) {
 		bzero(md, sizeof(*md));
@@ -757,7 +875,7 @@ eli_setkey(struct gctl_req *req)
 
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs != 1) {
-		gctl_error(req, "Too few arguments.");
+		gctl_error(req, "Invalid number of arguments.");
 		return;
 	}
 	prov = gctl_get_ascii(req, "arg0");
@@ -831,7 +949,7 @@ eli_delkey(struct gctl_req *req)
 
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs != 1) {
-		gctl_error(req, "Too few arguments.");
+		gctl_error(req, "Invalid number of arguments.");
 		return;
 	}
 	prov = gctl_get_ascii(req, "arg0");
@@ -887,25 +1005,21 @@ eli_kill(struct gctl_req *req)
 	 * How '-a' option combine with a list of providers:
 	 * Delete Master Keys from all attached providers:
 	 * geli kill -a
-	 * Delete Master Keys from all attached provider and from
+	 * Delete Master Keys from all attached providers and from
 	 * detached da0 and da1:
 	 * geli kill -a da0 da1
 	 * Delete Master Keys from (attached or detached) da0 and da1:
 	 * geli kill da0 da1
 	 */
 
-	/*
-	 * First attached providers.
-	 */
-	gctl_issue(req);
-	/*
-	 * Now the rest.
-	 */
+	/* First detached providers. */
 	for (i = 0; i < nargs; i++) {
 		prov = gctl_get_ascii(req, "arg%d", i);
 		if (!eli_is_attached(prov))
 			eli_kill_detached(req, prov);
 	}
+	/* Now attached providers. */
+	gctl_issue(req);
 }
 
 static void
@@ -939,7 +1053,7 @@ eli_backup(struct gctl_req *req)
 	}
 	if (provfd == -1) {
 		gctl_error(req, "Cannot open %s: %s.", prov, strerror(errno));
-		return;
+		goto out;
 	}
 	filefd = open(file, O_WRONLY | O_TRUNC | O_CREAT, 0600);
 	if (filefd == -1) {
@@ -952,13 +1066,13 @@ eli_backup(struct gctl_req *req)
 	if (mediasize == 0 || secsize == 0) {
 		gctl_error(req, "Cannot get informations about %s: %s.", prov,
 		    strerror(errno));
-		return;
+		goto out;
 	}
 
 	sector = malloc(secsize);
 	if (sector == NULL) {
 		gctl_error(req, "Cannot allocate memory.");
-		return;
+		goto out;
 	}
 
 	/* Read metadata from the provider. */
@@ -1025,7 +1139,7 @@ eli_restore(struct gctl_req *req)
 	}
 	if (provfd == -1) {
 		gctl_error(req, "Cannot open %s: %s.", prov, strerror(errno));
-		return;
+		goto out;
 	}
 
 	mediasize = g_get_mediasize(prov);
@@ -1033,13 +1147,13 @@ eli_restore(struct gctl_req *req)
 	if (mediasize == 0 || secsize == 0) {
 		gctl_error(req, "Cannot get informations about %s: %s.", prov,
 		    strerror(errno));
-		return;
+		goto out;
 	}
 
 	sector = malloc(secsize);
 	if (sector == NULL) {
 		gctl_error(req, "Cannot allocate memory.");
-		return;
+		goto out;
 	}
 
 	/* Read metadata from the backup file. */
@@ -1053,7 +1167,7 @@ eli_restore(struct gctl_req *req)
 		gctl_error(req, "MD5 hash mismatch: not a geli backup file?");
 		goto out;
 	}
-	/* Read metadata from the provider. */
+	/* Write metadata from the provider. */
 	if (pwrite(provfd, sector, secsize, mediasize - secsize) !=
 	    (ssize_t)secsize) {
 		gctl_error(req, "Cannot write metadata: %s.", strerror(errno));

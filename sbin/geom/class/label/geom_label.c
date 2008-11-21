@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/label/geom_label.c,v 1.6.2.2 2006/04/05 22:20:43 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/label/geom_label.c,v 1.10 2007/05/15 20:25:16 marcel Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -50,31 +50,31 @@ static void label_dump(struct gctl_req *req);
 static void label_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
-	{ "clear", G_FLAG_VERBOSE, label_main, G_NULL_OPTS,
+	{ "clear", G_FLAG_VERBOSE, label_main, G_NULL_OPTS, NULL,
 	    "[-v] dev ..."
 	},
 	{ "create", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL, G_NULL_OPTS,
-	    "[-v] name dev"
+	    NULL, "[-v] name dev"
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
-	{ "dump", 0, label_main, G_NULL_OPTS,
+	{ "dump", 0, label_main, G_NULL_OPTS, NULL,
 	    "dev ..."
 	},
 	{ "label", G_FLAG_VERBOSE | G_FLAG_LOADKLD, label_main, G_NULL_OPTS,
-	    "[-v] name dev"
+	    NULL, "[-v] name dev"
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };

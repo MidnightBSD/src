@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/geom/class/raid3/geom_raid3.c,v 1.11.2.4 2006/03/20 15:50:01 pjd Exp $");
+__FBSDID("$FreeBSD: src/sbin/geom/class/raid3/geom_raid3.c,v 1.20 2007/05/15 20:25:17 marcel Exp $");
 
 #include <sys/param.h>
 #include <errno.h>
@@ -51,45 +51,48 @@ static void raid3_dump(struct gctl_req *req);
 static void raid3_label(struct gctl_req *req);
 
 struct g_command class_commands[] = {
-	{ "clear", G_FLAG_VERBOSE, raid3_main, G_NULL_OPTS,
+	{ "clear", G_FLAG_VERBOSE, raid3_main, G_NULL_OPTS, NULL,
 	    "[-v] prov ..."
 	},
 	{ "configure", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'a', "autosync", NULL, G_TYPE_NONE },
-		{ 'd', "dynamic", NULL, G_TYPE_NONE },
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
-		{ 'n', "noautosync", NULL, G_TYPE_NONE },
-		{ 'r', "round_robin", NULL, G_TYPE_NONE },
-		{ 'R', "noround_robin", NULL, G_TYPE_NONE },
-		{ 'w', "verify", NULL, G_TYPE_NONE },
-		{ 'W', "noverify", NULL, G_TYPE_NONE },
+		{ 'a', "autosync", NULL, G_TYPE_BOOL },
+		{ 'd', "dynamic", NULL, G_TYPE_BOOL },
+		{ 'f', "failsync", NULL, G_TYPE_BOOL },
+		{ 'F', "nofailsync", NULL, G_TYPE_BOOL },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
+		{ 'n', "noautosync", NULL, G_TYPE_BOOL },
+		{ 'r', "round_robin", NULL, G_TYPE_BOOL },
+		{ 'R', "noround_robin", NULL, G_TYPE_BOOL },
+		{ 'w', "verify", NULL, G_TYPE_BOOL },
+		{ 'W', "noverify", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-adhnrRvwW] name"
+	    NULL, "[-adfFhnrRvwW] name"
 	},
-	{ "dump", 0, raid3_main, G_NULL_OPTS,
+	{ "dump", 0, raid3_main, G_NULL_OPTS, NULL,
 	    "prov ..."
 	},
 	{ "insert", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
 		{ 'n', "number", NULL, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-hv] <-n number> name prov"
+	    NULL, "[-hv] <-n number> name prov"
 	},
 	{ "label", G_FLAG_VERBOSE, raid3_main,
 	    {
-		{ 'h', "hardcode", NULL, G_TYPE_NONE },
-		{ 'n', "noautosync", NULL, G_TYPE_NONE },
-		{ 'r', "round_robin", NULL, G_TYPE_NONE },
-		{ 'w', "verify", NULL, G_TYPE_NONE },
+		{ 'h', "hardcode", NULL, G_TYPE_BOOL },
+		{ 'F', "nofailsync", NULL, G_TYPE_BOOL },
+		{ 'n', "noautosync", NULL, G_TYPE_BOOL },
+		{ 'r', "round_robin", NULL, G_TYPE_BOOL },
+		{ 'w', "verify", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-hnrvw] name prov prov prov ..."
+	    NULL, "[-hFnrvw] name prov prov prov ..."
 	},
-	{ "rebuild", G_FLAG_VERBOSE, NULL, G_NULL_OPTS,
+	{ "rebuild", G_FLAG_VERBOSE, NULL, G_NULL_OPTS, NULL,
 	    "[-v] name prov"
 	},
 	{ "remove", G_FLAG_VERBOSE, NULL,
@@ -97,14 +100,14 @@ struct g_command class_commands[] = {
 		{ 'n', "number", NULL, G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-v] <-n number> name"
+	    NULL, "[-v] <-n number> name"
 	},
 	{ "stop", G_FLAG_VERBOSE, NULL,
 	    {
-		{ 'f', "force", NULL, G_TYPE_NONE },
+		{ 'f', "force", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-fv] name ..."
+	    NULL, "[-fv] name ..."
 	},
 	G_CMD_SENTINEL
 };
@@ -142,7 +145,8 @@ raid3_label(struct gctl_req *req)
 	const char *str;
 	unsigned sectorsize, ssize;
 	off_t mediasize, msize;
-	int error, i, nargs, hardcode, noautosync, round_robin, verify;
+	int hardcode, round_robin, verify;
+	int error, i, nargs;
 
 	nargs = gctl_get_int(req, "nargs");
 	if (nargs < 4) {
@@ -165,9 +169,10 @@ raid3_label(struct gctl_req *req)
 	md.md_genid = 0;
 	md.md_syncid = 1;
 	md.md_sync_offset = 0;
-	noautosync = gctl_get_int(req, "noautosync");
-	if (noautosync)
+	if (gctl_get_int(req, "noautosync"))
 		md.md_mflags |= G_RAID3_DEVICE_FLAG_NOAUTOSYNC;
+	if (gctl_get_int(req, "nofailsync"))
+		md.md_mflags |= G_RAID3_DEVICE_FLAG_NOFAILSYNC;
 	round_robin = gctl_get_int(req, "round_robin");
 	if (round_robin)
 		md.md_mflags |= G_RAID3_DEVICE_FLAG_ROUND_ROBIN;
@@ -205,6 +210,7 @@ raid3_label(struct gctl_req *req)
 	}
 	md.md_mediasize = mediasize * (nargs - 2);
 	md.md_sectorsize = sectorsize * (nargs - 2);
+	md.md_mediasize -= (md.md_mediasize % md.md_sectorsize);
 
 	/*
 	 * Clear last sector first, to spoil all components if device exists.
