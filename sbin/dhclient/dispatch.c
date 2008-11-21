@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/dispatch.c,v 1.1.1.1.2.1 2005/09/10 17:01:16 brooks Exp $");
+__FBSDID("$FreeBSD: src/sbin/dhclient/dispatch.c,v 1.2.2.1 2007/12/10 17:49:16 jkim Exp $");
 
 #include "dhcpd.h"
 
@@ -295,7 +295,7 @@ interface_status(struct interface_info *ifinfo)
 	memset(&ifr, 0, sizeof(ifr));
 	strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(ifsock, SIOCGIFFLAGS, &ifr) < 0) {
-		warning("ioctl(SIOCGIFFLAGS) on %s: %m", ifname);
+		syslog(LOG_ERR, "ioctl(SIOCGIFFLAGS) on %s: %m", ifname);
 		goto inactive;
 	}
 
@@ -313,7 +313,7 @@ interface_status(struct interface_info *ifinfo)
 	strlcpy(ifmr.ifm_name, ifname, sizeof(ifmr.ifm_name));
 	if (ioctl(ifsock, SIOCGIFMEDIA, (caddr_t)&ifmr) < 0) {
 		if (errno != EINVAL) {
-			debug("ioctl(SIOCGIFMEDIA) on %s: %m",
+			syslog(LOG_DEBUG, "ioctl(SIOCGIFMEDIA) on %s: %m",
 			    ifname);
 
 			ifinfo->noifmedia = 1;
@@ -329,6 +329,7 @@ interface_status(struct interface_info *ifinfo)
 	if (ifmr.ifm_status & IFM_AVALID) {
 		switch (ifmr.ifm_active & IFM_NMASK) {
 		case IFM_ETHER:
+		case IFM_IEEE80211:
 			if (ifmr.ifm_status & IFM_ACTIVE)
 				goto active;
 			else
@@ -479,7 +480,7 @@ interface_link_status(char *ifname)
 	if (ioctl(sock, SIOCGIFMEDIA, (caddr_t)&ifmr) == -1) {
 		/* EINVAL -> link state unknown. treat as active */
 		if (errno != EINVAL)
-			debug("ioctl(SIOCGIFMEDIA) on %s: %m",
+			syslog(LOG_DEBUG, "ioctl(SIOCGIFMEDIA) on %s: %m",
 			    ifname);
 		close(sock);
 		return (1);
@@ -487,7 +488,9 @@ interface_link_status(char *ifname)
 	close(sock);
 
 	if (ifmr.ifm_status & IFM_AVALID) {
-		if ((ifmr.ifm_active & IFM_NMASK) == IFM_ETHER) {
+		switch (ifmr.ifm_active & IFM_NMASK) {
+		case IFM_ETHER:
+		case IFM_IEEE80211:
 			if (ifmr.ifm_status & IFM_ACTIVE)
 				return (1);
 			else

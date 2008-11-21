@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/ifconfig/ifpfsync.c,v 1.3 2005/05/03 16:59:14 mlaier Exp $
+ * $FreeBSD: src/sbin/ifconfig/ifpfsync.c,v 1.4 2006/06/06 11:21:08 glebius Exp $
  */
 
 #include <sys/types.h>
@@ -173,13 +173,18 @@ pfsync_status(int s)
 	if (ioctl(s, SIOCGETPFSYNC, (caddr_t)&ifr) == -1)
 		return;
 
-	if (preq.pfsyncr_syncdev[0] != '\0') {
-		printf("\tpfsync: syncdev: %s ", preq.pfsyncr_syncdev);
-		if (preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
-			printf("syncpeer: %s ",
-			    inet_ntoa(preq.pfsyncr_syncpeer));
+	if (preq.pfsyncr_syncdev[0] != '\0' ||
+	    preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
+			printf("\t");
+
+	if (preq.pfsyncr_syncdev[0] != '\0')
+		printf("pfsync: syncdev: %s ", preq.pfsyncr_syncdev);
+	if (preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
+		printf("syncpeer: %s ", inet_ntoa(preq.pfsyncr_syncpeer));
+
+	if (preq.pfsyncr_syncdev[0] != '\0' ||
+	    preq.pfsyncr_syncpeer.s_addr != INADDR_PFSYNC_GROUP)
 		printf("maxupd: %d\n", preq.pfsyncr_maxupdates);
-	}
 }
 
 static struct cmd pfsync_cmds[] = {

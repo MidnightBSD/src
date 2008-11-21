@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/clparse.c,v 1.1.1.1.2.1 2005/09/10 17:01:16 brooks Exp $");
+__FBSDID("$FreeBSD: src/sbin/dhclient/clparse.c,v 1.3 2007/02/09 17:50:26 emaste Exp $");
 
 #include "dhcpd.h"
 #include "dhctoken.h"
@@ -89,6 +89,8 @@ read_client_conf(void)
 	    [top_level_config.requested_option_count++] = DHO_BROADCAST_ADDRESS;
 	top_level_config.requested_options
 	    [top_level_config.requested_option_count++] = DHO_TIME_OFFSET;
+	top_level_config.requested_options
+	    [top_level_config.requested_option_count++] = DHO_CLASSLESS_ROUTES;
 	top_level_config.requested_options
 	    [top_level_config.requested_option_count++] = DHO_ROUTERS;
 	top_level_config.requested_options

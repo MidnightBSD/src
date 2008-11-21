@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/dhclient.c,v 1.6.2.4 2006/01/24 05:59:27 brooks Exp $");
+__FBSDID("$FreeBSD: src/sbin/dhclient/dhclient.c,v 1.21 2007/02/09 17:50:26 emaste Exp $");
 
 #include "dhcpd.h"
 #include "privsep.h"
@@ -115,6 +115,7 @@ struct sockaddr	*get_ifa(char *, int);
 void		 routehandler(struct protocol *);
 void		 usage(void);
 int		 check_option(struct client_lease *l, int option);
+int		 check_classless_option(unsigned char *data, int len);
 int		 ipv4addrs(char * buf);
 int		 res_hnok(const char *dn);
 int		 check_search(const char *srch);
@@ -1461,38 +1462,38 @@ make_discover(struct interface_info *ip, struct client_lease *lease)
 			    ip->client->config->send_options[i].len;
 			options[i]->timeout = 0xFFFFFFFF;
 		}
+		
+	/* send host name if not set via config file. */
+	char hostname[_POSIX_HOST_NAME_MAX+1];
+	if (!options[DHO_HOST_NAME]) {
+		if (gethostname(hostname, sizeof(hostname)) == 0) {
+			size_t len;
+			char* posDot = strchr(hostname, '.');
+			if (posDot != NULL)
+				len = posDot - hostname;
+			else
+				len = strlen(hostname);
+			options[DHO_HOST_NAME] = &option_elements[DHO_HOST_NAME];
+			options[DHO_HOST_NAME]->value = hostname;
+			options[DHO_HOST_NAME]->len = len;
+			options[DHO_HOST_NAME]->buf_size = len;
+			options[DHO_HOST_NAME]->timeout = 0xFFFFFFFF;
+		}
+	}
 
-		/* send host name if not set via config file. */
-  	        char hostname[_POSIX_HOST_NAME_MAX+1];
-  	        if (!options[DHO_HOST_NAME]) {
-  	                 if (gethostname(hostname, sizeof(hostname)) == 0) {
-  	                         size_t len;
-  	                         char* posDot = strchr(hostname, '.');
-  	                         if (posDot != NULL)
-  	                                 len = posDot - hostname;
-  	                         else
-  	                                 len = strlen(hostname);
-  	                         options[DHO_HOST_NAME] = &option_elements[DHO_HOST_NAME];
-  	                         options[DHO_HOST_NAME]->value = hostname;
-  	                         options[DHO_HOST_NAME]->len = len;
-  	                         options[DHO_HOST_NAME]->buf_size = len;
-  	                         options[DHO_HOST_NAME]->timeout = 0xFFFFFFFF;
-  	                 }
-  	        }
-  	 
-  	        /* set unique client identifier */
-  	        char client_ident[sizeof(struct hardware)];
-  	        if (!options[DHO_DHCP_CLIENT_IDENTIFIER]) {
-  	                 int hwlen = (ip->hw_address.hlen < sizeof(client_ident)-1) ?
-  	                                 ip->hw_address.hlen : sizeof(client_ident)-1;
-  	                 client_ident[0] = ip->hw_address.htype;
-  	                 memcpy(&client_ident[1], ip->hw_address.haddr, hwlen);
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER] = &option_elements[DHO_DHCP_CLIENT_IDENTIFIER];
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->value = client_ident;
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->len = hwlen+1;
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->buf_size = hwlen+1;
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->timeout = 0xFFFFFFFF;
-  	         }
+	/* set unique client identifier */
+	char client_ident[sizeof(struct hardware)];
+	if (!options[DHO_DHCP_CLIENT_IDENTIFIER]) {
+		int hwlen = (ip->hw_address.hlen < sizeof(client_ident)-1) ?
+				ip->hw_address.hlen : sizeof(client_ident)-1;
+		client_ident[0] = ip->hw_address.htype;
+		memcpy(&client_ident[1], ip->hw_address.haddr, hwlen); 
+		options[DHO_DHCP_CLIENT_IDENTIFIER] = &option_elements[DHO_DHCP_CLIENT_IDENTIFIER];
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->value = client_ident;
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->len = hwlen+1;
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->buf_size = hwlen+1;
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->timeout = 0xFFFFFFFF;
+	}
 
 	/* Set up the option buffer... */
 	ip->client->packet_length = cons_options(NULL, &ip->client->packet, 0,
@@ -1585,38 +1586,38 @@ make_request(struct interface_info *ip, struct client_lease * lease)
 			    ip->client->config->send_options[i].len;
 			options[i]->timeout = 0xFFFFFFFF;
 		}
+		
+	/* send host name if not set via config file. */
+	char hostname[_POSIX_HOST_NAME_MAX+1];
+	if (!options[DHO_HOST_NAME]) {
+		if (gethostname(hostname, sizeof(hostname)) == 0) {
+			size_t len;
+			char* posDot = strchr(hostname, '.');
+			if (posDot != NULL)
+				len = posDot - hostname;
+			else
+				len = strlen(hostname);
+			options[DHO_HOST_NAME] = &option_elements[DHO_HOST_NAME];
+			options[DHO_HOST_NAME]->value = hostname;
+			options[DHO_HOST_NAME]->len = len;
+			options[DHO_HOST_NAME]->buf_size = len;
+			options[DHO_HOST_NAME]->timeout = 0xFFFFFFFF;
+		}
+	}
 
-	 /* send host name if not set via config file. */
-  	         char hostname[_POSIX_HOST_NAME_MAX+1];
-  	         if (!options[DHO_HOST_NAME]) {
-  	                 if (gethostname(hostname, sizeof(hostname)) == 0) {
-  	                         size_t len;
-  	                         char* posDot = strchr(hostname, '.');
-  	                         if (posDot != NULL)
-  	                                 len = posDot - hostname;
-  	                         else
-  	                                 len = strlen(hostname);
-  	                         options[DHO_HOST_NAME] = &option_elements[DHO_HOST_NAME];
-  	                         options[DHO_HOST_NAME]->value = hostname;
-  	                         options[DHO_HOST_NAME]->len = len;
-  	                         options[DHO_HOST_NAME]->buf_size = len;
-  	                         options[DHO_HOST_NAME]->timeout = 0xFFFFFFFF;
-  	                 }
-  	         }
-  	 
-  	         /* set unique client identifier */
-  	         char client_ident[sizeof(struct hardware)];
-  	         if (!options[DHO_DHCP_CLIENT_IDENTIFIER]) {
-  	                 int hwlen = (ip->hw_address.hlen < sizeof(client_ident)-1) ?
-  	                                 ip->hw_address.hlen : sizeof(client_ident)-1;
-  	                 client_ident[0] = ip->hw_address.htype;
-  	                 memcpy(&client_ident[1], ip->hw_address.haddr, hwlen);
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER] = &option_elements[DHO_DHCP_CLIENT_IDENTIFIER];
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->value = client_ident;
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->len = hwlen+1;
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->buf_size = hwlen+1;
-  	                 options[DHO_DHCP_CLIENT_IDENTIFIER]->timeout = 0xFFFFFFFF;
-  	         }
+	/* set unique client identifier */
+	char client_ident[sizeof(struct hardware)];
+	if (!options[DHO_DHCP_CLIENT_IDENTIFIER]) {
+		int hwlen = (ip->hw_address.hlen < sizeof(client_ident)-1) ?
+				ip->hw_address.hlen : sizeof(client_ident)-1;
+		client_ident[0] = ip->hw_address.htype;
+		memcpy(&client_ident[1], ip->hw_address.haddr, hwlen); 
+		options[DHO_DHCP_CLIENT_IDENTIFIER] = &option_elements[DHO_DHCP_CLIENT_IDENTIFIER];
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->value = client_ident;
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->len = hwlen+1;
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->buf_size = hwlen+1;
+		options[DHO_DHCP_CLIENT_IDENTIFIER]->timeout = 0xFFFFFFFF;
+	}
 
 	/* Set up the option buffer... */
 	ip->client->packet_length = cons_options(NULL, &ip->client->packet, 0,
@@ -2318,7 +2319,6 @@ check_option(struct client_lease *l, int option)
 			    sbuf, opbuf);
 			l->options[option].len = 0;
 			free(l->options[option].data);
-			return (0);
 		}
 		return (1);
 	case DHO_DOMAIN_NAME:
@@ -2375,10 +2375,77 @@ check_option(struct client_lease *l, int option)
 	case DHO_DHCP_USER_CLASS_ID:
 	case DHO_END:
 		return (1);
+	case DHO_CLASSLESS_ROUTES:
+		return (check_classless_option(l->options[option].data,
+		    l->options[option].len));
 	default:
 		warning("unknown dhcp option value 0x%x", option);
 		return (unknown_ok);
 	}
+}
+
+/* RFC 3442 The Classless Static Routes option checks */
+int
+check_classless_option(unsigned char *data, int len)
+{
+	int i = 0;
+	unsigned char width;
+	in_addr_t addr, mask;
+
+	if (len < 5) {
+		warning("Too small length: %d", len);
+		return (0);
+	}
+	while(i < len) {
+		width = data[i++];
+		if (width == 0) {
+			i += 4;
+			continue;
+		} else if (width < 9) {
+			addr =  (in_addr_t)(data[i] 	<< 24);
+			i += 1;
+		} else if (width < 17) {
+			addr =  (in_addr_t)(data[i] 	<< 24) +
+				(in_addr_t)(data[i + 1]	<< 16);
+			i += 2;
+		} else if (width < 25) {
+			addr =  (in_addr_t)(data[i] 	<< 24) +
+				(in_addr_t)(data[i + 1]	<< 16) +
+				(in_addr_t)(data[i + 2]	<< 8);
+			i += 3;
+		} else if (width < 33) {
+			addr =  (in_addr_t)(data[i] 	<< 24) +
+				(in_addr_t)(data[i + 1]	<< 16) +
+				(in_addr_t)(data[i + 2]	<< 8)  +
+				data[i + 3];
+			i += 4;
+		} else {
+			warning("Incorrect subnet width: %d", width);
+			return (0);
+		}
+		mask = (in_addr_t)(~0) << (32 - width);
+		addr = ntohl(addr);
+		mask = ntohl(mask);
+
+		/*
+		 * From RFC 3442:
+		 * ... After deriving a subnet number and subnet mask
+		 * from each destination descriptor, the DHCP client
+		 * MUST zero any bits in the subnet number where the
+		 * corresponding bit in the mask is zero...
+		 */
+		if ((addr & mask) != addr) {
+			addr &= mask;
+			data[i - 1] = (unsigned char)(
+				(addr >> (((32 - width)/8)*8)) & 0xFF);
+		} 
+		i += 4;
+	}
+	if (i > len) {
+		warning("Incorrect data length: %d (must be %d)", len, i);
+		return (0);
+	}
+	return (1);
 }
 
 int

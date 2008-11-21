@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     From: @(#)ifconfig.8	8.3 (Berkeley) 1/5/94
-.\" $FreeBSD: src/sbin/ifconfig/ifconfig.8,v 1.95.2.14 2006/03/10 22:05:53 sam Exp $
+.\" $FreeBSD: src/sbin/ifconfig/ifconfig.8,v 1.142.2.1 2007/11/11 17:45:56 sam Exp $
 .\"
-.Dd February 27, 2006
+.Dd October 31, 2007
 .Dt IFCONFIG 8
 .Os
 .Sh NAME
@@ -39,6 +39,7 @@
 .Op Fl L
 .Op Fl k
 .Op Fl m
+.Op Fl n
 .Ar interface
 .Op Cm create
 .Op Ar address_family
@@ -71,6 +72,8 @@
 .Op Fl u
 .Op Fl v
 .Op Fl C
+.Nm
+.Op Fl g Ar groupname
 .Sh DESCRIPTION
 The
 .Nm
@@ -178,6 +181,8 @@ parameter is a string of the form
 .Dq name unit ,
 for example,
 .Dq Li ed0 .
+.It Ar groupname
+List the interfaces in the given group.
 .El
 .Pp
 The following parameters may be set with
@@ -262,6 +267,22 @@ the system will not attempt to
 transmit messages through that interface.
 If possible, the interface will be reset to disable reception as well.
 This action does not automatically disable routes using the interface.
+.It Cm group Ar group-name
+Assign the interface to a
+.Dq group .
+Any interface can be in multiple groups.
+.Pp
+Cloned interfaces are members of their interface family group by default.
+For example, a PPP interface such as
+.Em ppp0
+is a member of the PPP interface family group,
+.Em ppp .
+.\" The interface(s) the default route(s) point to are members of the
+.\" .Em egress
+.\" interface group.
+.It Cm -group Ar group-name
+Remove the interface from the given
+.Dq group .
 .It Cm eui64
 (Inet6 only.)
 Fill interface index
@@ -322,6 +343,11 @@ this directive is used to select between 802.11a
 and 802.11g
 .Pq Cm 11g
 operating modes.
+.It Cm inst Ar minst , Cm instance Ar minst
+Set the media instance to
+.Ar minst .
+This is useful for devices which have multiple physical layer interfaces
+.Pq PHYs .
 .It Cm name Ar name
 Set the interface name to
 .Ar name .
@@ -336,6 +362,31 @@ support, the exact level of offloading varies between drivers.
 If the driver supports user-configurable checksum offloading,
 disable receive (or transmit) checksum offloading on the interface.
 These settings may not always be independent of each other.
+.It Cm tso
+If the driver supports
+.Xr tcp 4
+segmentation offloading, enable TSO on the interface.
+Some drivers may not be able to support TSO for
+.Xr ip 4
+and
+.Xr ip6 4
+packets, so they may enable only one of them.
+.It Fl tso
+If the driver supports
+.Xr tcp 4
+segmentation offloading, disable TSO on the interface.
+It will always disable TSO for
+.Xr ip 4
+and
+.Xr ip6 4 .
+.It Cm lro
+If the driver supports
+.Xr tcp 4
+large receive offloading, enable LRO on the interface.
+.It Fl lro
+If the driver supports
+.Xr tcp 4
+large receive offloading, disable LRO on the interface.
 .It Cm vlanmtu , vlanhwtag
 If the driver offers user-configurable VLAN support, enable
 reception of extended frames or tag processing in hardware,
@@ -390,7 +441,7 @@ default 0.
 The routing metric is used by the routing protocol
 .Pq Xr routed 8 .
 Higher metrics have the effect of making a route
-less favorable; metrics are counted as addition hops
+less favorable; metrics are counted as additional hops
 to the destination network or host.
 .It Cm mtu Ar n
 Set the maximum transmission unit of the interface to
@@ -549,13 +600,67 @@ modes are only useful when using an authentication service
 (a supplicant for client operation or an authenticator when
 operating as an access point).
 Modes are case insensitive.
+.It Cm bgscan
+Enable background scanning when operating as a station.
+Background scanning is a technique whereby a station associated to
+an access point will temporarily leave the channel to scan for
+neighboring stations.
+This allows a station to maintain a cache of nearby access points
+so that roaming between access points can be done without
+a lengthy scan operation.
+Background scanning is done only when a station is not busy and
+any outbound traffic will cancel a scan operation.
+Background scanning should never cause packets to be lost though
+there may be some small latency if outbound traffic interrupts a
+scan operation.
+By default background scanning is enabled if the device is capable.
+To disable background scanning, use
+.Fl bgscan .
+Background scanning is controlled by the
+.Cm bgscanidle
+and
+.Cm bgscanintvl
+parameters.
+Background scanning must be enabled for roaming; this is an artifact
+of the current implementation and may not be required in the future.
+.It Cm bgscanidle Ar idletime
+Set the minimum time a station must be idle (not transmitting or
+receiving frames) before a background scan is initiated.
+The
+.Ar idletime
+parameter is specified in milliseconds.
+By default a station must be idle at least 250 milliseconds before
+a background scan is initiated.
+The idle time may not be set to less than 100 milliseconds.
+.It Cm bgscanintvl Ar interval
+Set the interval at which background scanning is attempted.
+The
+.Ar interval
+parameter is specified in seconds.
+By default a background scan is considered every 300 seconds (5 minutes).
+The 
+.Ar interval
+may not be set to less than 15 seconds.
 .It Cm bintval Ar interval
 Set the interval at which beacon frames are sent when operating in
 ad-hoc or ap mode.
 The
 .Ar interval
-parameter is specified in TU's (1/1024 msecs).
+parameter is specified in TU's (1024 usecs).
 By default beacon frames are transmitted every 100 TU's.
+.It Cm bmissthreshold Ar count
+Set the number of consecutive missed beacons at which the station
+will attempt to roam (i.e., search for a new access point).
+The
+.Ar count
+parameter must be in the range 1 to 255; though the
+upper bound may be reduced according to device capabilities.
+The default threshold is 7 consecutive missed beacons; but
+this may be overridden by the device driver.
+Another name for the
+.Cm bmissthreshold
+parameter is
+.Cm bmiss .
 .It Cm bssid Ar address
 Specify the MAC address of the access point to use when operating
 as a station in a BSS network.
@@ -565,7 +670,7 @@ To disable a previously selected access point, supply
 or
 .Cm -
 for the address.
-This option is useful when more than one access points have the same SSID.
+This option is useful when more than one access point uses the same SSID.
 Another name for the
 .Cm bssid
 parameter is
@@ -608,6 +713,54 @@ Some
 adaptors ignore this setting unless you are in ad-hoc mode.
 Alternatively the frequency, in megahertz, may be specified
 instead of the channel number.
+.Pp
+When there are several ways to use a channel the channel
+number/frequency may be appended with attributes to clarify.
+For example, if a device is capable of operating on channel 6
+with 802.11n and 802.11g then one can specify that g-only use
+should be used by specifying ``6:g''.
+Similarly the channel width can be specified by appending it
+with ``/''; e.g. ``6/40'' specifies a 40MHz wide channel,
+These attributes can be combined as in: ``6:ht/40''.
+The full set of flags specified following a `:'' are:
+.Cm a
+(802.11a),
+.Cm b
+(802.11b),
+.Cm d
+(Atheros Dynamic Turbo mode),
+.Cm g
+(802.11g),
+.Cm h
+or
+.Cm n
+(802.11n aka HT),
+.Cm s
+(Atheros Static Turbo mode),
+and
+.Cm t
+(Atheros Dynamic Turbo mode, or appended to ``st'' and ``dt'').
+The full set of channel widths following a '/' are:
+.Cm 5 
+(5MHz aka quarter-rate channel),
+.Cm 10 
+(10MHz aka half-rate channel),
+.Cm 20 
+(20MHz mostly for use in specifying ht20),
+and
+.Cm 40 
+(40MHz mostly for use in specifying ht40),
+In addition,
+a 40MHz HT channel specification may include the location
+of the extension channel by appending ``+'' or ``-'' for above and below,
+respectively; e.g. ``2437:ht/40+'' specifies 40MHz wide HT operation 
+with the center channel at frequency 2437 and the extension channel above.
+.It Cm doth
+Enable inclusion of an 802.11h country information element in beacon
+frames transmitted when operating as an access point.
+By default 802.11h is enabled if the device is capable.
+To disable 802.11h use
+.Fl doth .
 .It Cm deftxkey Ar index
 Set the default key to use for transmission.
 Typically this is only set when using WEP encryption.
@@ -624,6 +777,23 @@ The
 specifies the number of beacon intervals between DTIM
 and must be in the range 1 to 15.
 By default DTIM is 1 (i.e., DTIM occurs at each beacon).
+.It Cm dturbo
+Enable the use of Atheros Dynamic Turbo mode when communicating with
+another Dynamic Turbo-capable station.
+Dynamic Turbo mode is an Atheros-specific mechanism by which
+stations switch between normal 802.11 operation and a ``boosted''
+mode in which a 40MHz wide channel is used for communication.
+Stations using Dynamic Turbo mode operate boosted only when the
+channel is free of non-dturbo stations; when a non-dturbo station
+is identified on the channel all stations will automatically drop
+back to normal operation.
+By default, Dynamic Turbo mode is not enabled, even if the device is capable.
+Note that turbo mode (dynamic or static) is only allowed on some
+channels depending on the regulatory constraints; use the
+.Cm list chan
+command to identify the channels where turbo mode may be used.
+To disable Dynamic Turbo mode use
+.Fl dturbo .
 .It Cm fragthreshold Ar length
 Set the threshold for which transmitted frames are broken into fragments.
 The
@@ -646,6 +816,19 @@ By default, the SSID is included in beacon frames and
 undirected probe request frames are answered.
 To re-enable the broadcast of the SSID etc., use
 .Fl hidessid .
+.It Cm ff
+Enable the use of Atheros Fast Frames when communicating with
+another Fast Frames-capable station.
+Fast Frames are an encapsulation technique by which two 802.3
+frames are transmitted in a single 802.11 frame.
+This can noticeably improve throughput but requires that the
+receiving station understand how to decapsulate the frame.
+Fast frame use is negotiated using the Atheros 802.11 vendor-specific
+protocol extension so enabling use is safe when communicating with
+non-Atheros devices.
+By default, use of fast frames is enabled if the device is capable.
+To explicitly disable fast frames, use
+.Fl ff .
 .It Cm list active
 Display the list of channels available for use taking into account
 any restrictions set with the
@@ -669,7 +852,8 @@ mode.
 Channels identified as
 .Ql 11a Turbo
 may be used only for Atheros' Static Turbo mode
-.Pq specified with Cm mediaopt turbo .
+(specified with
+. Cm mediaopt turbo ) .
 Channels marked with a
 .Ql *
 have a regulatory constraint that they be passively scanned.
@@ -679,6 +863,9 @@ typically by hearing a beacon frame from an access point operating
 on the channel.
 .Cm list freq
 is another way of requesting this information.
+By default a compacted list of channels is displayed; if the
+.Fl v
+option is specified then all channels are shown.
 .It Cm list mac
 Display the current MAC Access Control List state.
 Each address is prefixed with a character that indicates the
@@ -693,10 +880,15 @@ indicates the address is present but the current policy open
 .It Cm list scan
 Display the access points and/or ad-hoc neighbors
 located in the vicinity.
+The
+.Fl v
+flag may be used to display long SSIDs.
+.Fl v
+also causes received information elements to be displayed symbolicaly.
 This information may be updated automatically by the adaptor
 and/or with a
 .Cm scan
-request.
+request or through background scanning.
 .Cm list ap
 is another way of requesting this information.
 .It Cm list sta
@@ -704,6 +896,38 @@ When operating as an access point display the stations that are
 currently associated.
 When operating in ad-hoc mode display stations identified as
 neighbors in the IBSS.
+When operating in station mode display the access point.
+Capabilities advertised by the stations are described under
+the
+.Cm scan
+request.
+Depending on the capabilities of the stations the following
+flags can be included in the output:
+.Bl -tag -width 3n
+.It Li A
+Authorized.
+Indicates that the station is permitted to send/receive data frames.
+.It Li E
+Extended Rate Phy (ERP).
+Indicates that the station is operating in an 802.11g network
+using extended transmit rates.
+.It Li H
+High Throughput (HT).
+Indicates that the station is using MCS to send/receive frames.
+.It Li P
+Power Save.
+Indicates that the station is operating in power save mode.
+.It Li Q
+Quality of Service (QoS).
+Indicates that the station is using QoS encapsulation for
+data frame.
+QoS encapsulation is enabled only when WME mode is enabled.
+.El
+.Pp
+By default information elements received from associated stations
+are displayed in a short form; the
+.Fl v
+flag causes this information to be displayed symbolicaly.
 .It Cm list wme
 Display the current parameters to use when operating in WME mode.
 When WME mode is enabled for an adaptor this information will be
@@ -714,7 +938,7 @@ See the description of the
 directive for information on the various parameters.
 .It Cm mcastrate Ar rate
 Set the rate for transmitting multicast/broadcast frames.
-Rates are specified as megabits/second in decimal; e.g. 5.5 for 5.5 Mb/s.
+Rates are specified as megabits/second in decimal; e.g.\& 5.5 for 5.5 Mb/s.
 This rate should be valid for the current operating conditions;
 if an invalid rate is specified drivers are free to chose an
 appropriate rate.
@@ -724,15 +948,15 @@ When operating as a client, the station will conserve power by
 periodically turning off the radio and listening for
 messages from the access point telling it there are packets waiting.
 The station must then retrieve the packets.
-When operating as an access point, the station must honor power
-save operation of associated clients.
-Not all devices support power save operation, either as a client
-or as an access point.
+Not all devices support power save operation as a client.
+The 802.11 specification requires that all access points support
+power save but some drivers do not.
 Use
 .Fl powersave
-to disable powersave operation.
+to disable powersave operation when operating as a client.
 .It Cm powersavesleep Ar sleep
-Set the desired max powersave sleep time in milliseconds.
+Set the desired max powersave sleep time in TU's (1024 usecs).
+By default the max powersave sleep time is 100 TU's.
 .It Cm protmode Ar technique
 For interfaces operating in 802.11g, use the specified
 .Ar technique
@@ -744,6 +968,9 @@ and
 .Cm rtscts
 (RTS/CTS).
 Technique names are case insensitive.
+Not all devices support
+.Cm cts
+as a protection technique.
 .It Cm pureg
 When operating as an access point in 802.11g mode allow only
 11g-capable stations to associate (11b-only stations are not
@@ -766,8 +993,81 @@ argument may be one of
 By default, the device is left to handle this if it is
 capable; otherwise, the operating system will automatically
 attempt to reestablish communication.
-Manual mode is mostly useful when an application wants to
-control the selection of an access point.
+Manual mode is used by applications such as
+.Xr wpa_supplicant 8
+that want to control the selection of an access point.
+.It Cm roam:rssi11a Ar rssi
+Set the threshold for controlling roaming when operating in an
+802.11a BSS.
+The
+.Ar rssi
+parameter specifies the receive signal strength in dBm units
+at which roaming should be considered.
+If the current rssi drops below this setting and background scanning
+is enabled, then the system will check if a more desirable access point is
+available and switch over to it.
+The current scan cache contents are used if they are considered
+valid according to the
+.Cm scanvalid
+parameter; otherwise a background scan operation is triggered before
+any selection occurs.
+By default
+.Ar rssi
+is set to 7 dBm.
+.It Cm roam:rssi11b Ar rssi
+Set the threshold for controlling roaming when operating in an
+802.11b-only BSS.
+See 
+.Cm roam:rssi11a
+for a description of this parameter.
+By default
+.Ar rssi
+is set to 7 dBm.
+.It Cm roam:rssi11g Ar rssi
+Set the threshold for controlling roaming when operating in a
+(mixed) 802.11g BSS.
+See 
+.Cm roam:rssi11a
+for a description of this parameter.
+By default
+.Ar rssi
+is set to 7 dBm.
+.It Cm roam:rate11a Ar rate
+Set the threshold for controlling roaming when operating in an
+802.11a BSS.
+The
+.Ar rate
+parameter specifies the transmit rate in megabits
+at which roaming should be considered.
+If the current transmit rate drops below this setting and background scanning
+is enabled, then the system will check if a more desirable access point is
+available and switch over to it.
+The current scan cache contents are used if they are considered
+valid according to the
+.Cm scanvalid
+parameter; otherwise a background scan operation is triggered before
+any selection occurs.
+By default
+.Ar rate
+is set to 12 Mb/s.
+.It Cm roam:rate11b Ar rate
+Set the threshold for controlling roaming when operating in an
+802.11b-only BSS.
+See 
+.Cm roam:rate11a
+for a description of this parameter.
+By default
+.Ar rate
+is set to 1 Mb/s.
+.It Cm roam:rate11g Ar rate
+Set the threshold for controlling roaming when operating in a
+(mixed) 802.11g BSS.
+See 
+.Cm roam:rate11a
+for a description of this parameter.
+By default
+.Ar rate
+is set to 5 Mb/s.
 .It Cm rtsthreshold Ar length
 Set the threshold for which
 transmitted frames are preceded by transmission of an
@@ -801,6 +1101,20 @@ Only the super-user can initiate a scan.
 Depending on the capabilities of the APs, the following
 flags can be included in the output:
 .Bl -tag -width 3n
+.It Li A
+Channel Agility.
+Indicates that the station support channel hopping as described by the
+IEEE 802.11b specification.
+.It Li B
+Packet Binary Convolution Code (PBCC).
+A modulation alternative to the standard OFDM method.
+.It Dv C
+Pollreq
+.It Dv c
+Pollable
+.It Dv D
+Direct Sequence Spread Spectrum (DSSSOFDM).
+Indicates the the station supports DSSS modulation.
 .It Li E
 Extended Service Set (ESS).
 Indicates that the station is part of an infrastructure network
@@ -816,6 +1130,10 @@ exchanged within the BSS.
 This means that this BSS requires the station to
 use cryptographic means such as WEP, TKIP or AES-CCMP to
 encrypt/decrypt data frames being exchanged with others.
+.It Dv R
+Robust Security Network (RSN).
+Indicates that the station supports the IEEE 802.11i authentication
+and key management protocol.
 .It Li S
 Short Preamble.
 Indicates that the network is using short preambles (defined
@@ -827,14 +1145,50 @@ Short slot time.
 Indicates that the network is using a short slot time.
 .El
 .Pp
+Interesting information elements captured from the neighboring
+stations are displayed at the end of each row.
+Possible elements are:
+.Cm WME
+(station supports WME),
+.Cm WPA
+(station supports WPA),
+.Cm RSN
+(station supports 802.11i/RSN),
+.Cm HT
+(station supports 802.11n/HT communication),
+.Cm ATH
+(station supoprts Atheros protocol extensions),
+.Cm VEN
+(station supports unknown vendor-specific extensions).
+If the
+.Fl v
+flag is used the information element contents will be shown.
+.Pp
 The
 .Cm list scan
 request can be used to show recent scan results without
 initiating a new scan.
+.Pp
+The
+.Fl v
+flag may be used to prevent the shortening of long SSIDs.
+.It Cm scanvalid Ar threshold
+Set the maximum time the scan cache contents are considered valid;
+i.e. will be used without first triggering a scan operation to
+refresh the data.
+The
+.Ar threshold
+parameter is specified in seconds and defaults to 60 seconds.
+The minimum setting for
+.Ar threshold
+is 10 seconds.
+One should take care setting this threshold; if it is set too low
+then attempts to roam to another access point may trigger unnecessary
+background scan operations.
 .It Cm stationname Ar name
 Set the name of this station.
-It appears that the station name is not really part of the IEEE 802.11
-protocol though all interfaces seem to support it.
+The station name is not part of the IEEE 802.11
+protocol though some interfaces support it.
 As such it only
 seems to be meaningful to identical or virtually identical equipment.
 Setting the station name is identical in syntax to setting the SSID.
@@ -842,9 +1196,7 @@ Setting the station name is identical in syntax to setting the SSID.
 Set the power used to transmit frames.
 The
 .Ar power
-argument
-is a unitless value in the range 0 to 100 that is interpreted
-by drivers to derive a device-specific value.
+argument is specified in .5 dBm units.
 Out of range values are truncated.
 Typically only a few discreet power settings are available and
 the driver will use the setting closest to the specified value.
@@ -1146,6 +1498,28 @@ This is the default for all interfaces added to a bridge.
 Clear the
 .Dq learning
 attribute on a member interface.
+.It Cm sticky Ar interface
+Mark an interface as a
+.Dq sticky
+interface.
+Dynamically learned address entries are treated at static once entered into
+the cache.
+Sticky entries are never aged out of the cache or replaced, even if the
+address is seen on a different interface.
+.It Cm -sticky Ar interface
+Clear the
+.Dq sticky
+attribute on a member interface.
+.It Cm private Ar interface
+Mark an interface as a
+.Dq private
+interface.
+A private interface does not forward any traffic to any other port that is also
+a private interface.
+.It Cm -private Ar interface
+Clear the
+.Dq private
+attribute on a member interface.
 .It Cm span Ar interface
 Add the interface named by
 .Ar interface
@@ -1168,38 +1542,104 @@ Spanning Tree is used to detect and remove loops in a network topology.
 Disable Spanning Tree protocol on
 .Ar interface .
 This is the default for all interfaces added to a bridge.
+.It Cm edge Ar interface
+Set
+.Ar interface
+as an edge port.
+An edge port connects directly to end stations cannot create bridging
+loops in the network, this allows it to transition straight to forwarding.
+.It Cm -edge Ar interface
+Disable edge status on
+.Ar interface .
+.It Cm autoedge Ar interface
+Allow
+.Ar interface
+to automatically detect edge status.
+This is the default for all interfaces added to a bridge.
+.It Cm -autoedge Ar interface
+Disable automatic edge status on
+.Ar interface .
+.It Cm ptp Ar interface
+Set the
+.Ar interface
+as a point to point link.
+This is required for straight transitions to forwarding and
+should be enabled on a direct link to another RSTP capable switch.
+.It Cm -ptp Ar interface
+Disable point to point link status on
+.Ar interface .
+This should be disabled for a half duplex link and for an interface
+connected to a shared network segment,
+like a hub or a wireless network.
+.It Cm autoptp Ar interface
+Automatically detect the point to point status on
+.Ar interface
+by checking the full duplex link status.
+This is the default for interfaces added to the bridge.
+.It Cm -autoptp Ar interface
+Disable automatic point to point link detection on
+.Ar interface .
 .It Cm maxage Ar seconds
 Set the time that a Spanning Tree protocol configuration is valid.
 The default is 20 seconds.
-The minimum is 1 second and the maximum is 255 seconds.
+The minimum is 6 seconds and the maximum is 40 seconds.
 .It Cm fwddelay Ar seconds
 Set the time that must pass before an interface begins forwarding
 packets when Spanning Tree is enabled.
 The default is 15 seconds.
-The minimum is 1 second and the maximum is 255 seconds.
+The minimum is 4 seconds and the maximum is 30 seconds.
 .It Cm hellotime Ar seconds
 Set the time between broadcasting of Spanning Tree protocol
 configuration messages.
+The hello time may only be changed when operating in legacy stp mode.
 The default is 2 seconds.
-The minimum is 1 second and the maximum is 255 seconds.
+The minimum is 1 second and the maximum is 2 seconds.
 .It Cm priority Ar value
 Set the bridge priority for Spanning Tree.
 The default is 32768.
-The minimum is 0 and the maximum is 65536.
+The minimum is 0 and the maximum is 61440.
+.It Cm proto Ar value
+Set the Spanning Tree protocol.
+The default is rstp.
+The available options are stp and rstp.
+.It Cm holdcnt Ar value
+Set the transmit hold count for Spanning Tree.
+This is the number of packets transmitted before being rate limited.
+The default is 6.
+The minimum is 1 and the maximum is 10.
 .It Cm ifpriority Ar interface Ar value
 Set the Spanning Tree priority of
 .Ar interface
 to
 .Ar value .
 The default is 128.
-The minimum is 0 and the maximum is 255.
+The minimum is 0 and the maximum is 240.
 .It Cm ifpathcost Ar interface Ar value
 Set the Spanning Tree path cost of
 .Ar interface
 to
 .Ar value .
-The default is 55.
-The minimum is 0 and the maximum is 65535.
+The default is calculated from the link speed.
+To change a previously selected path cost back to automatic, set the
+cost to 0.
+The minimum is 1 and the maximum is 200000000.
+.El
+.Pp
+The following parameters are specific to lagg interfaces:
+.Bl -tag -width indent
+.It Cm laggport Ar interface
+Add the interface named by
+.Ar interface
+as a port of the aggregation interface.
+.It Cm -laggport Ar interface
+Remove the interface named by
+.Ar interface
+from the aggregation interface.
+.It Cm laggproto Ar proto
+Set the aggregation protocol.
+The default is failover.
+The available options are failover, fec, lacp, loadbalance, roundrobin and
+none.
 .El
 .Pp
 The following parameters are specific to IP tunnel interfaces,
@@ -1231,7 +1671,7 @@ interfaces:
 .It Cm maxupd Ar n
 Set the maximum number of updates for a single state which
 can be collapsed into one.
-This is an 8-bit number; the default value is 128. 
+This is an 8-bit number; the default value is 128.
 .El
 .Pp
 The following parameters are specific to
@@ -1397,11 +1837,74 @@ For example, the values of 802.11 WEP keys will be printed, if accessible to
 the current user.
 This information is not printed by default, as it may be considered
 sensitive.
+.Pp 
+If the network interface driver is not present in the kernel then
+.Nm
+will attempt to load it.
+The
+.Fl n
+flag disables this behavior.
 .Pp
 Only the super-user may modify the configuration of a network interface.
 .Sh NOTES
 The media selection system is relatively new and only some drivers support
 it (or have need for it).
+.Sh EXAMPLES
+Assign the IPv4 address
+.Li 192.0.2.10 ,
+with a network mask of
+.Li 255.255.255.0 ,
+to the interface
+.Li fxp0 :
+.Dl # ifconfig fxp0 inet 192.0.2.10 netmask 255.255.255.0
+.Pp
+Add the IPv4 address
+.Li 192.0.2.45 ,
+with the CIDR network prefix
+.Li /28 ,
+to the interface
+.Li ed0 ,
+using
+.Cm add
+as a synonym for the canonical form of the option
+.Cm alias :
+.Dl # ifconfig ed0 inet 192.0.2.45/28 add
+.Pp
+Remove the IPv4 address
+.Li 192.0.2.45
+from the interface
+.Li ed0 :
+.Dl # ifconfig ed0 inet 192.0.2.45 -alias
+.Pp
+Add the IPv6 address
+.Li 2001:DB8:DBDB::123/48
+to the interface
+.Li em0 :
+.Dl # ifconfig em0 inet6 2001:db8:bdbd::123 prefixlen 48 alias
+Note that lower case hexadecimal IPv6 addresses are acceptable.
+.Pp
+Remove the IPv6 address added in the above example,
+using the
+.Li /
+character as shorthand for the network prefix,
+and using
+.Cm delete
+as a synonym for the canonical form of the option
+.Fl alias :
+.Dl # ifconfig em0 inet6 2001:db8:bdbd::123/48 delete
+.Pp
+Configure the interface
+.Li xl0 ,
+to use 100baseTX, full duplex Ethernet media options:
+.Dl # ifconfig xl0 media 100baseTX mediaopt full-duplex
+.Pp
+Create the software network interface
+.Li gif1 :
+.Dl # ifconfig gif1 create
+.Pp
+Destroy the software network interface
+.Li gif1 :
+.Dl # ifconfig gif1 destroy
 .Sh DIAGNOSTICS
 Messages indicating the specified interface does not exist, the
 requested address is unknown, or the user is not privileged and
@@ -1433,5 +1936,5 @@ to 0.
 .Pp
 If you delete such an address using
 .Nm ,
-the kernel may act very oddly.
+the kernel may act very odd.
 Do this at your own risk.

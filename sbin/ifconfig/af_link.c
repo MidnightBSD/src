@@ -29,19 +29,19 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/af_link.c,v 1.2 2004/12/31 19:46:27 sam Exp $";
+  "$FreeBSD: src/sbin/ifconfig/af_link.c,v 1.4 2007/02/24 23:55:46 sam Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#include <net/route.h>		/* for RTX_IFA */
 
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ifaddrs.h>
 
 #include <net/if_dl.h>
 #include <net/if_types.h>
@@ -52,16 +52,16 @@ static const char rcsid[] =
 static struct ifreq link_ridreq;
 
 static void
-link_status(int s __unused, const struct rt_addrinfo *info)
+link_status(int s __unused, const struct ifaddrs *ifa)
 {
-	const struct sockaddr_dl *sdl =
-		(const struct sockaddr_dl *) info->rti_info[RTAX_IFA];
+	/* XXX no const 'cuz LLADDR is defined wrong */
+	struct sockaddr_dl *sdl = (struct sockaddr_dl *) ifa->ifa_addr;
 
 	if (sdl != NULL && sdl->sdl_alen > 0) {
 		if (sdl->sdl_type == IFT_ETHER &&
 		    sdl->sdl_alen == ETHER_ADDR_LEN)
 			printf("\tether %s\n",
-			    ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
+			    ether_ntoa((struct ether_addr *)LLADDR(sdl)));
 		else {
 			int n = sdl->sdl_nlen > 0 ? sdl->sdl_nlen + 1 : 0;
 
@@ -79,7 +79,7 @@ link_getaddr(const char *addr, int which)
 
 	if (which != ADDR)
 		errx(1, "can't set link-level netmask or broadcast");
-	if ((temp = malloc(strlen(addr) + 1)) == NULL)
+	if ((temp = malloc(strlen(addr) + 2)) == NULL)
 		errx(1, "malloc failed");
 	temp[0] = ':';
 	strcpy(temp + 1, addr);

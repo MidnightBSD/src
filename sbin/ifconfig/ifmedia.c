@@ -1,5 +1,5 @@
 /*	$NetBSD: ifconfig.c,v 1.34 1997/04/21 01:17:58 lukem Exp $	*/
-/* $FreeBSD: src/sbin/ifconfig/ifmedia.c,v 1.19 2005/01/27 16:40:12 ambrisko Exp $ */
+/* $FreeBSD: src/sbin/ifconfig/ifmedia.c,v 1.25 2007/06/11 03:56:33 sam Exp $ */
 
 /*
  * Copyright (c) 1997 Jason R. Thorpe.
@@ -146,6 +146,7 @@ media_status(int s)
 		printf("\tstatus: ");
 		switch (IFM_TYPE(ifmr.ifm_active)) {
 		case IFM_ETHER:
+		case IFM_ATM:
 			if (ifmr.ifm_status & IFM_ACTIVE)
 				printf("active");
 			else
@@ -158,13 +159,6 @@ media_status(int s)
 				printf("inserted");
 			else
 				printf("no ring");
-			break;
-
-		case IFM_ATM:
-			if (ifmr.ifm_status & IFM_ACTIVE)
-				printf("active");
-			else
-				printf("no carrier");
 			break;
 
 		case IFM_IEEE80211:
@@ -190,8 +184,8 @@ media_status(int s)
 	free(media_list);
 }
 
-static struct ifmediareq *
-getifmediastate(int s)
+struct ifmediareq *
+ifmedia_getstate(int s)
 {
 	static struct ifmediareq *ifmr = NULL;
 	int *mwords;
@@ -254,9 +248,8 @@ setmedia(const char *val, int d, int s, const struct afswtch *afp)
 {
 	struct ifmediareq *ifmr;
 	int subtype;
-	
 
-	ifmr = getifmediastate(s);
+	ifmr = ifmedia_getstate(s);
 
 	/*
 	 * We are primarily concerned with the top-level type.
@@ -301,7 +294,7 @@ domediaopt(const char *val, int clear, int s)
 	struct ifmediareq *ifmr;
 	int options;
 
-	ifmr = getifmediastate(s);
+	ifmr = ifmedia_getstate(s);
 
 	options = get_media_options(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
@@ -309,13 +302,35 @@ domediaopt(const char *val, int clear, int s)
 	ifr.ifr_media = ifmr->ifm_current;
 	if (clear)
 		ifr.ifr_media &= ~options;
-	else
+	else {
+		if (options & IFM_HDX) {
+			ifr.ifr_media &= ~IFM_FDX;
+			options &= ~IFM_HDX;
+		}
 		ifr.ifr_media |= options;
-
+	}
 	ifmr->ifm_current = ifr.ifr_media;
 	callback_register(setifmediacallback, (void *)ifmr);
 }
 
+static void
+setmediainst(const char *val, int d, int s, const struct afswtch *afp)
+{
+	struct ifmediareq *ifmr;
+	int inst;
+
+	ifmr = ifmedia_getstate(s);
+
+	inst = atoi(val);
+	if (inst < 0 || inst > IFM_INST_MAX)
+		errx(1, "invalid media instance: %s", val);
+
+	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
+	ifr.ifr_media = (ifmr->ifm_current & ~IFM_IMASK) | inst << IFM_ISHIFT;
+
+	ifmr->ifm_current = ifr.ifr_media;
+	callback_register(setifmediacallback, (void *)ifmr);
+}
 
 static void
 setmediamode(const char *val, int d, int s, const struct afswtch *afp)
@@ -323,7 +338,7 @@ setmediamode(const char *val, int d, int s, const struct afswtch *afp)
 	struct ifmediareq *ifmr;
 	int mode;
 
-	ifmr = getifmediastate(s);
+	ifmr = ifmedia_getstate(s);
 
 	mode = get_media_mode(IFM_TYPE(ifmr->ifm_ulist[0]), val);
 
@@ -692,14 +707,11 @@ print_media_word(int ifmw, int print_toptype)
 
 	/* Find subtype. */
 	desc = get_subtype_desc(ifmw, ttos);
-	if (desc != NULL)
-		goto got_subtype;
+	if (desc == NULL) {
+		printf("<unknown subtype>");
+		return;
+	}
 
-	/* Falling to here means unknown subtype. */
-	printf("<unknown subtype>");
-	return;
-
- got_subtype:
 	if (print_toptype)
 		putchar(' ');
 
@@ -726,6 +738,9 @@ print_media_word(int ifmw, int print_toptype)
 		}
 	}
 	printf("%s", seen_option ? ">" : "");
+
+	if (print_toptype && IFM_INST(ifmw) != 0)
+		printf(" instance %d", IFM_INST(ifmw));
 }
 
 static void
@@ -750,14 +765,11 @@ print_media_word_ifconfig(int ifmw)
 
 	/* Find subtype. */
 	desc = get_subtype_desc(ifmw, ttos);
-	if (desc != NULL)
-		goto got_subtype;
+	if (desc == NULL) {
+		printf("<unknown subtype>");
+		return;
+	}
 
-	/* Falling to here means unknown subtype. */
-	printf("<unknown subtype>");
-	return;
-
- got_subtype:
 	printf("media %s", desc->ifmt_string);
 
 	desc = get_mode_desc(ifmw, ttos);
@@ -775,6 +787,9 @@ print_media_word_ifconfig(int ifmw)
 			}
 		}
 	}
+
+	if (IFM_INST(ifmw) != 0)
+		printf(" instance %d", IFM_INST(ifmw));
 }
 
 /**********************************************************************
@@ -786,6 +801,8 @@ static struct cmd media_cmds[] = {
 	DEF_CMD_ARG("mode",	setmediamode),
 	DEF_CMD_ARG("mediaopt",	setmediaopt),
 	DEF_CMD_ARG("-mediaopt",unsetmediaopt),
+	DEF_CMD_ARG("inst",	setmediainst),
+	DEF_CMD_ARG("instance",	setmediainst),
 };
 static struct afswtch af_media = {
 	.af_name	= "af_media",

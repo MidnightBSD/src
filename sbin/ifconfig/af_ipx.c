@@ -29,22 +29,21 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/ifconfig/af_ipx.c,v 1.1 2004/12/08 19:18:07 sam Exp $";
+  "$FreeBSD: src/sbin/ifconfig/af_ipx.c,v 1.4 2007/06/13 18:07:59 rwatson Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#include <net/route.h>
 
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ifaddrs.h>
 
 #include <net/if_var.h>
-#define	IPXIP
 #define IPTUNNEL
 #include <netipx/ipx.h>
 #include <netipx/ipx_if.h>
@@ -55,19 +54,19 @@ static struct ifaliasreq ipx_addreq;
 static struct ifreq ipx_ridreq;
 
 static void
-ipx_status(int s __unused, const struct rt_addrinfo * info)
+ipx_status(int s __unused, const struct ifaddrs *ifa)
 {
 	struct sockaddr_ipx *sipx, null_sipx;
 
-	sipx = (struct sockaddr_ipx *)info->rti_info[RTAX_IFA];
+	sipx = (struct sockaddr_ipx *)ifa->ifa_addr;
 	if (sipx == NULL)
 		return;
 
 	printf("\tipx %s ", ipx_ntoa(sipx->sipx_addr));
 
-	if (flags & IFF_POINTOPOINT) {
-		sipx = (struct sockaddr_ipx *)info->rti_info[RTAX_BRD];
-		if (!sipx) {
+	if (ifa->ifa_flags & IFF_POINTOPOINT) {
+		sipx = (struct sockaddr_ipx *)ifa->ifa_dstaddr;
+		if (sipx == NULL) {
 			memset(&null_sipx, 0, sizeof(null_sipx));
 			sipx = &null_sipx;
 		}
@@ -97,16 +96,7 @@ ipx_getaddr(const char *addr, int which)
 static void
 ipx_postproc(int s, const struct afswtch *afp)
 {
-	if (setipdst) {
-		struct ipxip_req rq;
-		int size = sizeof(rq);
 
-		rq.rq_ipx = ipx_addreq.ifra_addr;
-		rq.rq_ip = ipx_addreq.ifra_dstaddr;
-
-		if (setsockopt(s, 0, SO_IPXIP_ROUTE, &rq, size) < 0)
-			Perror("Encapsulation Routing");
-	}
 }
 
 static struct afswtch af_ipx = {

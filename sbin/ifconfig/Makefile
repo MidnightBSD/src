@@ -1,5 +1,7 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/sbin/ifconfig/Makefile,v 1.29 2005/06/05 03:32:51 thompsa Exp $
+# $FreeBSD: src/sbin/ifconfig/Makefile,v 1.33 2007/04/17 00:35:09 thompsa Exp $
+
+.include <bsd.own.mk>
 
 PROG=	ifconfig
 
@@ -24,11 +26,13 @@ SRCS+=	ifvlan.c		# SIOC[GS]ETVLAN support
 SRCS+=	ifieee80211.c		# SIOC[GS]IEEE80211 support
 
 SRCS+=	ifcarp.c		# SIOC[GS]VH support
+SRCS+=	ifgroup.c		# ...
 SRCS+=	ifpfsync.c		# pfsync(4) support
 
 SRCS+=	ifbridge.c		# bridge support
+SRCS+=	iflagg.c		# lagg support
 
-.if !defined(RELEASE_CRUNCH)
+.if ${MK_IPX_SUPPORT} != "no" && !defined(RELEASE_CRUNCH)
 SRCS+=	af_ipx.c		# IPX support
 DPADD=	${LIBIPX}
 LDADD=	-lipx

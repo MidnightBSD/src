@@ -31,7 +31,7 @@
  *
  * so there!
  *
- * $FreeBSD: src/sbin/ifconfig/ifconfig.h,v 1.16.2.1 2005/07/21 12:25:40 rwatson Exp $
+ * $FreeBSD: src/sbin/ifconfig/ifconfig.h,v 1.21 2007/06/13 18:07:59 rwatson Exp $
  */
 
 #define	__constructor	__attribute__((constructor))
@@ -72,7 +72,7 @@ void	callback_register(callback_func *, void *);
 #define	DEF_CMD_OPTARG(name, func)	{ name, OPTARG, { .c_func = func } }
 #define	DEF_CMD_ARG2(name, func)	{ name, NEXTARG2, { .c_func2 = func } }
 
-struct rt_addrinfo;
+struct ifaddrs;
 struct addrinfo;
 
 enum {
@@ -94,7 +94,7 @@ struct afswtch {
 	 * is defined then it is invoked after all address status
 	 * is presented.
 	 */
-	void		(*af_status)(int, const struct rt_addrinfo *);
+	void		(*af_status)(int, const struct ifaddrs *);
 	void		(*af_other_status)(int);
 					/* parse address method */
 	void		(*af_getaddr)(const char *, int);
@@ -127,17 +127,21 @@ extern	char name[IFNAMSIZ];	/* name of interface */
 extern	int allmedia;
 extern	int supmedia;
 extern	int printkeys;
-extern	int printname;
-extern	int flags;
 extern	int newaddr;
 extern	int verbose;
-extern	int setipdst;
 
 void	setifcap(const char *, int value, int s, const struct afswtch *);
 
 void	Perror(const char *cmd);
 void	printb(const char *s, unsigned value, const char *bits);
 
-void	ifmaybeload(char *name);
+void	ifmaybeload(const char *name);
 
-void	clone_create(void);
+typedef void clone_callback_func(int, struct ifreq *);
+void	clone_setcallback(clone_callback_func *);
+
+/*
+ * XXX expose this so modules that neeed to know of any pending
+ * operations on ifmedia can avoid cmd line ordering confusion.
+ */
+struct ifmediareq *ifmedia_getstate(int s);

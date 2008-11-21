@@ -21121,7 +21121,9 @@ sbin/ifconfig/ifclone.c -text
 sbin/ifconfig/ifconfig.8 -text
 sbin/ifconfig/ifconfig.c -text
 sbin/ifconfig/ifconfig.h -text
+sbin/ifconfig/ifgroup.c -text
 sbin/ifconfig/ifieee80211.c -text
+sbin/ifconfig/iflagg.c -text
 sbin/ifconfig/ifmac.c -text
 sbin/ifconfig/ifmedia.c -text
 sbin/ifconfig/ifpfsync.c -text

@@ -1,5 +1,5 @@
 /*	$OpenBSD: dhcp.h,v 1.5 2004/05/04 15:49:49 deraadt Exp $	*/
-/*	$FreeBSD: src/sbin/dhclient/dhcp.h,v 1.2 2005/06/30 05:50:52 brooks Exp $	*/
+/*	$FreeBSD: src/sbin/dhclient/dhcp.h,v 1.3 2007/02/09 17:50:26 emaste Exp $	*/
 
 /* Protocol structures... */
 
@@ -162,6 +162,7 @@ struct dhcp_packet {
 #define DHO_FINGER_SERVER		73
 #define DHO_IRC_SERVER			74
 #define DHO_DHCP_USER_CLASS_ID		77
+#define DHO_CLASSLESS_ROUTES		121
 #define DHO_END				255
 
 /* DHCP message types. */

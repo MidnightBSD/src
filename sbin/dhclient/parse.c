@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/dhclient/parse.c,v 1.2.2.1 2005/09/10 17:01:16 brooks Exp $");
+__FBSDID("$FreeBSD: src/sbin/dhclient/parse.c,v 1.3 2005/08/23 23:59:55 brooks Exp $");
 
 #include "dhcpd.h"
 #include "dhctoken.h"
@@ -129,10 +129,8 @@ parse_string(FILE *cfile)
 		error("no memory for string %s.", val);
 	strlcpy(s, val, strlen(val) + 1);
 
-	if (!parse_semi(cfile)) {
-		free(s);
+	if (!parse_semi(cfile))
 		return (NULL);
-	}
 	return (s);
 }
 
