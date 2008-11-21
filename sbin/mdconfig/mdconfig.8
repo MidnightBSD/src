@@ -39,9 +39,9 @@
 .\"     @(#)vnconfig.8	8.1 (Berkeley) 6/5/93
 .\" from: src/usr.sbin/vnconfig/vnconfig.8,v 1.19 2000/12/27 15:30:29
 .\"
-.\" $FreeBSD: src/sbin/mdconfig/mdconfig.8,v 1.33 2005/01/22 20:02:01 pjd Exp $
+.\" $FreeBSD: src/sbin/mdconfig/mdconfig.8,v 1.37.2.1 2007/12/02 08:47:28 remko Exp $
 .\"
-.Dd November 6, 2004
+.Dd November 28, 2007
 .Dt MDCONFIG 8
 .Os
 .Sh NAME
@@ -98,10 +98,22 @@ A file specified with
 .Fl f Ar file
 becomes the backingstore for this memory disk.
 .It Cm swap
-Swap space is used to back this memory disk.
+Storage for this type of memory disk is allocated from buffer
+memory.
+Pages get pushed out to the swap when the system is under memory
+pressure, otherwise they stay in the operating memory.
+Using
+.Cm swap
+backing is generally preferable over
+.Cm malloc
+backing.
 .El
 .It Fl f Ar file
-Filename to use for the vnode type memory disk.
+Filename to use for the vnode type memory disk. Options
+.Fl a
+and
+.Fl t Ar vnode
+are implied if not specified.
 .It Fl l
 List configured devices.
 If given with
@@ -118,7 +130,11 @@ is the number of 512 byte sectors unless suffixed with a
 or
 .Cm t
 which
-denotes byte, kilobyte, megabyte, gigabyte and terabyte respectively.
+denotes byte, kilobyte, megabyte, gigabyte and terabyte respectively. Options
+.Fl a
+and
+.Fl t Ar swap
+are implied if not specified.
 .It Fl S Ar sectorsize
 Sectorsize to use for malloc backed device.
 .It Fl x Ar sectors/track
@@ -195,13 +211,23 @@ mount /dev/md10 /tmp
 chmod 1777 /tmp
 .Ed
 .Pp
-To create a 5MB file-backed disk:
+To create a 5MB file-backed disk (
+.Fl -a
+and
+.Fl -t Ar vnode
+are implied):
 .Bd -literal -offset indent
 dd if=/dev/zero of=somebackingfile bs=1k count=5k
-mdconfig -a -t vnode -f somebackingfile -u 0
+mdconfig -f somebackingfile -u 0
 bsdlabel -w md0 auto
 newfs md0c
 mount /dev/md0c /mnt
+.Ed
+.Pp
+To mount an ISO 9660 CD image file:
+.Bd -literal -offset indent
+mdconfig -a -t vnode -u 10 -f cdimage.iso
+mount_cd9660 /dev/md10 /mnt
 .Ed
 .Sh SEE ALSO
 .Xr md 4 ,
