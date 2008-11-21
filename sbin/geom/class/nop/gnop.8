@@ -1,4 +1,4 @@
-.\" Copyright (c) 2004-2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+.\" Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/geom/class/nop/gnop.8,v 1.18.2.1 2006/01/17 09:11:30 pjd Exp $
+.\" $FreeBSD: src/sbin/geom/class/nop/gnop.8,v 1.21.2.1 2007/12/18 20:13:43 brueffer Exp $
 .\"
-.Dd May 21, 2004
+.Dd September 8, 2006
 .Dt GNOP 8
 .Os
 .Sh NAME
@@ -34,15 +34,19 @@
 .Nm
 .Cm create
 .Op Fl v
-.Op Fl f Ar failprob
+.Op Fl e Ar error
 .Op Fl o Ar offset
+.Op Fl r Ar rfailprob
 .Op Fl s Ar size
 .Op Fl S Ar secsize
+.Op Fl w Ar wfailprob
 .Ar dev ...
 .Nm
 .Cm configure
 .Op Fl v
-.Op Fl f Ar failprob
+.Op Fl e Ar error
+.Op Fl r Ar rfailprob
+.Op Fl w Ar wfailprob
 .Ar prov ...
 .Nm
 .Cm destroy
@@ -67,9 +71,9 @@ utility is used for setting up transparent providers on existing ones.
 Its main purpose is testing other GEOM classes, as it allows forced provider
 removal and I/O error simulation with a given probability.
 It also gathers the following statistics: number of read requests, number of
-write requests, number of read bytes and number of wrote bytes.
+write requests, number of bytes read and number of bytes written.
 In addition, it can be used as a good starting point for implementing new GEOM
-class.
+classes.
 .Pp
 The first argument to
 .Nm
@@ -104,17 +108,21 @@ See
 .El
 .Pp
 Additional options:
-.Bl -tag -width ".Fl f Ar failprob"
+.Bl -tag -width ".Fl r Ar rfailprob"
+.It Fl e Ar error
+Specifies the error number to return on failure.
 .It Fl f
 Force the removal of the specified provider.
-.It Fl f Ar failprob
-Specifies failure probability in percentage.
 .It Fl o Ar offset
 Where to begin on the original provider.
+.It Fl r Ar rfailprob
+Specifies read failure probability in percent.
 .It Fl s Ar size
 Size of the transparent provider.
 .It Fl S Ar secsize
 Sector size of the transparent provider.
+.It Fl w Ar wfailprob
+Specifies write failure probability in percent.
 .It Fl v
 Be more verbose.
 .El
@@ -145,10 +153,11 @@ gnop create -v -f 50 da0
 gnop destroy -v da0.nop
 .Ed
 .Pp
-The traffic statistics for the given transparent providers we can get with
+The traffic statistics for the given transparent providers can be obtained
+with the
 .Cm list
 command.
-Example below shows how can we obtain number of bytes written with
+The example below shows the number of bytes written with
 .Xr newfs 8 :
 .Bd -literal -offset indent
 gnop create da0

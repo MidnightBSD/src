@@ -1,14 +1,21 @@
-# $FreeBSD: src/sbin/geom/class/Makefile,v 1.5.2.3 2005/09/14 21:21:45 marius Exp $
+# $FreeBSD: src/sbin/geom/class/Makefile,v 1.16 2007/09/23 07:34:22 pjd Exp $
 
-SUBDIR=	concat
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.include <bsd.own.mk>
+
+SUBDIR=	cache
+SUBDIR+=concat
+.if ${MK_OPENSSL} != "no"
 SUBDIR+=eli
 .endif
+SUBDIR+=journal
 SUBDIR+=label
 SUBDIR+=mirror
+SUBDIR+=multipath
 SUBDIR+=nop
+SUBDIR+=part
 SUBDIR+=raid3
 SUBDIR+=shsec
 SUBDIR+=stripe
+SUBDIR+=virstor
 
 .include <bsd.subdir.mk>
