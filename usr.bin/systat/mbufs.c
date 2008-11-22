@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/mbufs.c,v 1.18 2005/04/09 14:31:41 stefanf Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/systat/mbufs.c,v 1.20 2006/07/24 01:49:24 rwatson Exp $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)mbufs.c	8.1 (Berkeley) 6/6/93";
@@ -63,7 +63,6 @@ static struct mtnames {
 	{ MT_DATA, 	"data"},
 	{ MT_HEADER,	"headers"},
 	{ MT_SONAME,	"socknames"},
-	{ MT_FTABLE,	"frags"},
 	{ MT_CONTROL,	"control"},
 	{ MT_OOBDATA,	"oobdata"}
 };
@@ -72,7 +71,7 @@ static struct mtnames {
 WINDOW *
 openmbufs()
 {
-	return (subwin(stdscr, LINES-5-1, 0, 5, 0));
+	return (subwin(stdscr, LINES-3-1, 0, MAINWIN_ROW, 0));
 }
 
 void

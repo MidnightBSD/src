@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/systat/cmdtab.c,v 1.9 2003/08/01 20:28:20 dwmalone Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/systat/cmdtab.c,v 1.10 2006/04/30 04:26:46 bde Exp $");
 
 #ifdef lint
 static const char sccsid[] = "@(#)cmdtab.c	8.1 (Berkeley) 6/6/93";
@@ -78,7 +78,7 @@ struct	cmdtab cmdtab[] = {
 #endif
 	{ "tcp",	showtcp,	fetchtcp,	labeltcp,
 	  inittcp,	opentcp,	closetcp,	cmdmode,
-	  resettcp,	0 },
+	  resettcp,	CF_LOADAV },
 	{ "ifstat",	showifstat,	fetchifstat,	labelifstat,
 	  initifstat,	openifstat,	closeifstat,	cmdifstat,
 	  0,		CF_LOADAV },

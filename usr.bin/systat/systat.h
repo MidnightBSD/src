@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	From: @(#)systat.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/systat/systat.h,v 1.6 2001/12/12 00:13:37 markm Exp $
+ * $FreeBSD: src/usr.bin/systat/systat.h,v 1.8 2006/04/30 04:47:23 bde Exp $
  */
 
 #include <curses.h>
@@ -49,18 +49,20 @@ struct  cmdtab {
 	char	c_flags;		/* see below */
 };
 
-/* 
+/*
  * If we are started with privileges, use a kmem interface for netstat handling,
  * otherwise use sysctl.
  * In case of many open sockets, the sysctl handling might become slow.
  */
-extern int use_kvm; 
+extern int use_kvm;
 
 #define	CF_INIT		0x1		/* been initialized */
 #define	CF_LOADAV	0x2		/* display w/ load average */
 
 #define	TCP	0x1
 #define	UDP	0x2
+
+#define	MAINWIN_ROW	3		/* top row for the main/lower window */
 
 #define GETSYSCTL(name, var) getsysctl(name, &(var), sizeof(var))
 #define KREAD(addr, buf, len)  kvm_ckread((addr), (buf), (len))

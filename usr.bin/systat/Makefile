@@ -1,12 +1,19 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.bin/systat/Makefile,v 1.15 2004/02/04 10:20:43 ru Exp $
+# $FreeBSD: src/usr.bin/systat/Makefile,v 1.18 2006/11/27 21:30:38 yar Exp $
+
+.include <bsd.own.mk>
 
 PROG=	systat
 SRCS=	cmds.c cmdtab.c devs.c fetch.c iostat.c keyboard.c main.c \
-	mbufs.c netcmds.c netstat.c pigs.c swap.c icmp.c icmp6.c \
-	mode.c ip.c ip6.c tcp.c \
+	mbufs.c netcmds.c netstat.c pigs.c swap.c icmp.c \
+	mode.c ip.c tcp.c \
 	vmstat.c convtbl.c ifcmds.c ifstat.c
-CFLAGS+=-DINET6
+
+.if ${MK_INET6_SUPPORT} != "no"
+SRCS+=	icmp6.c ip6.c
+CFLAGS+= -DINET6
+.endif
+
 DPADD=	${LIBCURSES} ${LIBM} ${LIBDEVSTAT} ${LIBKVM}
 LDADD=	-lcurses -lm -ldevstat -lkvm
 

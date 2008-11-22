@@ -41,7 +41,7 @@ static const char rcsid[] =
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/systat/tcp.c,v 1.9 2004/02/25 13:26:53 bde Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/systat/tcp.c,v 1.14 2007/06/15 18:12:58 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -70,26 +70,27 @@ static struct tcpstat curstat, initstat, oldstat;
 /*-
 --0         1         2         3         4         5         6         7
 --0123456789012345678901234567890123456789012345678901234567890123456789012345
-01          TCP Connections                    TCP Packets
-02999999999 connections initiated    999999999 total packets sent
-03999999999 connections accepted     999999999 - data
-04999999999 connections established  999999999 - data (retransmit)
-05999999999 connections dropped      999999999 - ack-only
-06999999999 - in embryonic state     999999999 - window probes
-07999999999 - on retransmit timeout  999999999 - window updates
-08999999999 - by keepalive           999999999 - urgent data only
-09999999999 - from listen queue      999999999 - control
-10                                   999999999 - resends by PMTU discovery
-11          TCP Timers               999999999 total packets received
-12999999999 potential rtt updates    999999999 - in sequence
-13999999999 - successful             999999999 - completely duplicate
-14999999999 delayed acks sent        999999999 - with some duplicate data
-15999999999 retransmit timeouts      999999999 - out-of-order
-16999999999 persist timeouts         999999999 - duplicate acks
-17999999999 keepalive probes         999999999 - acks
-18999999999 - timeouts               999999999 - window probes
-19                                   999999999 - window updates
-20                                   999999999 - bad checksum
+00             TCP Connections                       TCP Packets
+01999999999999 connections initiated    999999999999 total packets sent
+02999999999999 connections accepted     999999999999 - data
+03999999999999 connections established  999999999999 - data (retransmit by dupack)
+04999999999999 connections dropped      999999999999 - data (retransmit by sack)
+05999999999999 - in embryonic state     999999999999 - ack-only
+06999999999999 - on retransmit timeout  999999999999 - window probes
+07999999999999 - by keepalive           999999999999 - window updates
+08999999999999 - from listen queue      999999999999 - urgent data only
+09                                      999999999999 - control
+10                                      999999999999 - resends by PMTU discovery
+11             TCP Timers               999999999999 total packets received
+12999999999999 potential rtt updates    999999999999 - in sequence
+13999999999999 - successful             999999999999 - completely duplicate
+14999999999999 delayed acks sent        999999999999 - with some duplicate data
+15999999999999 retransmit timeouts      999999999999 - out-of-order
+16999999999999 persist timeouts         999999999999 - duplicate acks
+17999999999999 keepalive probes         999999999999 - acks
+18999999999999 - timeouts               999999999999 - window probes
+19                                      999999999999 - window updates
+20                                      999999999999 - bad checksum
 --0123456789012345678901234567890123456789012345678901234567890123456789012345
 --0         1         2         3         4         5         6         7
 */
@@ -97,8 +98,7 @@ static struct tcpstat curstat, initstat, oldstat;
 WINDOW *
 opentcp(void)
 {
-
-	return (stdscr);
+	return (subwin(stdscr, LINES-3-1, 0, MAINWIN_ROW, 0));
 }
 
 void
@@ -109,34 +109,36 @@ closetcp(w)
 		return;
 	wclear(w);
 	wrefresh(w);
+	delwin(w);
 }
 
 void
 labeltcp(void)
 {
 	wmove(wnd, 0, 0); wclrtoeol(wnd);
-#define L(row, str) mvwprintw(wnd, row, 10, str)
-#define R(row, str) mvwprintw(wnd, row, 45, str);
-	L(1, "TCP Connections");		R(1, "TCP Packets");
-	L(2, "connections initiated");		R(2, "total packets sent");
-	L(3, "connections accepted");		R(3, "- data");
-	L(4, "connections established");	R(4, "- data (retransmit)");
-	L(5, "connections dropped");		R(5, "- ack-only");
-	L(6, "- in embryonic state");		R(6, "- window probes");
-	L(7, "- on retransmit timeout");	R(7, "- window updates");
-	L(8, "- by keepalive");			R(8, "- urgent data only");
-	L(9, "- from listen queue");		R(9, "- control");
-	R(10, "- resends by PMTU discovery");
-	L(11, "TCP Timers");		R(11, "total packets received");
+#define L(row, str) mvwprintw(wnd, row, 13, str)
+#define R(row, str) mvwprintw(wnd, row, 51, str);
+	L(0, "TCP Connections");		R(0, "TCP Packets");
+	L(1, "connections initiated");		R(1, "total packets sent");
+	L(2, "connections accepted");		R(2, "- data");
+	L(3, "connections established");	R(3, "- data (retransmit by dupack)");
+	L(4, "connections dropped");		R(4, "- data (retransmit by sack)");
+	L(5, "- in embryonic state");		R(5, "- ack-only");
+	L(6, "- on retransmit timeout");	R(6, "- window probes");
+	L(7, "- by keepalive");			R(7, "- window updates");
+	L(8, "- from listen queue");		R(8, "- urgent data only");
+						R(9, "- control");
+						R(10, "- resends by PMTU discovery");
+	L(11, "TCP Timers");			R(11, "total packets received");
 	L(12, "potential rtt updates");		R(12, "- in sequence");
-	L(13, "- successful");		R(13, "- completely duplicate");
-	L(14, "delayed acks sent");	R(14, "- with some duplicate data");
-	L(15, "retransmit timeouts");	R(15, "- out-of-order");
-	L(16, "persist timeouts");	R(16, "- duplicate acks");
-	L(17, "keepalive probes");	R(17, "- acks");
-	L(18, "- timeouts");		R(18, "- window probes");
-	R(19, "- window updates");
-	R(20, "- bad checksum");
+	L(13, "- successful");			R(13, "- completely duplicate");
+	L(14, "delayed acks sent");		R(14, "- with some duplicate data");
+	L(15, "retransmit timeouts");		R(15, "- out-of-order");
+	L(16, "persist timeouts");		R(16, "- duplicate acks");
+	L(17, "keepalive probes");		R(17, "- acks");
+	L(18, "- timeouts");			R(18, "- window probes");
+						R(19, "- window updates");
+						R(20, "- bad checksum");
 #undef L
 #undef R
 }
@@ -183,7 +185,7 @@ domode(struct tcpstat *ret)
 	DO(tcps_sndpack);
 	DO(tcps_sndbyte);
 	DO(tcps_sndrexmitpack);
-	DO(tcps_sndrexmitbyte);
+	DO(tcps_sack_rexmits);
 	DO(tcps_sndacks);
 	DO(tcps_sndprobe);
 	DO(tcps_sndurg);
@@ -227,7 +229,7 @@ domode(struct tcpstat *ret)
 	DO(tcps_listendrop);
 #undef DO
 }
-	
+
 void
 showtcp(void)
 {
@@ -237,19 +239,20 @@ showtcp(void)
 	domode(&stats);
 
 #define DO(stat, row, col) \
-	mvwprintw(wnd, row, col, "%9lu", stats.stat)
+	mvwprintw(wnd, row, col, "%12lu", stats.stat)
 #define	L(row, stat) DO(stat, row, 0)
-#define	R(row, stat) DO(stat, row, 35)
-	L(2, tcps_connattempt);		R(2, tcps_sndtotal);
-	L(3, tcps_accepts);		R(3, tcps_sndpack);
-	L(4, tcps_connects);		R(4, tcps_sndrexmitpack);
-	L(5, tcps_drops);		R(5, tcps_sndacks);
-	L(6, tcps_conndrops);		R(6, tcps_sndprobe);
-	L(7, tcps_timeoutdrop);		R(7, tcps_sndwinup);
-	L(8, tcps_keepdrops);		R(8, tcps_sndurg);
-	L(9, tcps_listendrop);		R(9, tcps_sndctrl);
-	R(10, tcps_mturesent);
-	R(11, tcps_rcvtotal);
+#define	R(row, stat) DO(stat, row, 38)
+	L(1, tcps_connattempt);		R(1, tcps_sndtotal);
+	L(2, tcps_accepts);		R(2, tcps_sndpack);
+	L(3, tcps_connects);		R(3, tcps_sndrexmitpack);
+	L(4, tcps_drops);		R(4, tcps_sack_rexmits);
+	L(5, tcps_conndrops);		R(5, tcps_sndacks);
+	L(6, tcps_timeoutdrop);		R(6, tcps_sndprobe);
+	L(7, tcps_keepdrops);		R(7, tcps_sndwinup);
+	L(8, tcps_listendrop);		R(8, tcps_sndurg);
+					R(9, tcps_sndctrl);
+					R(10, tcps_mturesent);
+					R(11, tcps_rcvtotal);
 	L(12, tcps_segstimed);		R(12, tcps_rcvpack);
 	L(13, tcps_rttupdated);		R(13, tcps_rcvduppack);
 	L(14, tcps_delack);		R(14, tcps_rcvpartduppack);
@@ -257,8 +260,8 @@ showtcp(void)
 	L(16, tcps_persisttimeo);	R(16, tcps_rcvdupack);
 	L(17, tcps_keepprobe);		R(17, tcps_rcvackpack);
 	L(18, tcps_keeptimeo);		R(18, tcps_rcvwinprobe);
-	R(19, tcps_rcvwinupd);
-	R(20, tcps_rcvbadsum);
+					R(19, tcps_rcvwinupd);
+					R(20, tcps_rcvbadsum);
 #undef DO
 #undef L
 #undef R
