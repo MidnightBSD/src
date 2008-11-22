@@ -31090,6 +31090,7 @@ usr.bin/lastcomm/Makefile -text
 usr.bin/lastcomm/lastcomm.1 -text
 usr.bin/lastcomm/lastcomm.c -text
 usr.bin/lastcomm/pathnames.h -text
+usr.bin/lastcomm/readrec.c -text
 usr.bin/ldd/Makefile -text
 usr.bin/ldd/extern.h -text
 usr.bin/ldd/ldd.1 -text
