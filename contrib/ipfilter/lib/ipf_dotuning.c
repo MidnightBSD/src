@@ -1,4 +1,12 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/ipf_dotuning.c,v 1.4 2005/06/23 14:19:02 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/ipf_dotuning.c,v 1.5 2007/06/04 02:54:32 darrenr Exp $	*/
+
+/*
+ * Copyright (C) 2003-2005 by Darren Reed.
+ * 
+ * See the IPFILTER.LICENCE file for details on licencing.  
+ *   
+ * $Id: ipf_dotuning.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $ 
+ */     
 
 #include "ipf.h"
 #include "netinet/ipl.h"

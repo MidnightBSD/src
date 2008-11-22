@@ -1,7 +1,7 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/printnat.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/printnat.c,v 1.4.2.1 2007/10/31 05:00:35 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2002-2005 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
@@ -13,10 +13,8 @@
 
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)Id: printnat.c,v 1.22.2.8 2005/01/12 03:39:04 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: printnat.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $";
 #endif
-
-static void printproto __P((ipnat_t *, struct protoent *));
 
 /*
  * Print out a NAT rule
@@ -50,10 +48,16 @@ int opts;
 		break;
 	}
 
-	printf(" %s", np->in_ifnames[0]);
+	if (!strcmp(np->in_ifnames[0], "-"))
+		printf(" \"%s\"", np->in_ifnames[0]);
+	else
+		printf(" %s", np->in_ifnames[0]);
 	if ((np->in_ifnames[1][0] != '\0') &&
 	    (strncmp(np->in_ifnames[0], np->in_ifnames[1], LIFNAMSIZ) != 0)) {
-		printf(",%s ", np->in_ifnames[1]);
+		if (!strcmp(np->in_ifnames[1], "-"))
+			printf(",\"%s\"", np->in_ifnames[1]);
+		else
+			printf(",%s", np->in_ifnames[1]);
 	}
 	putchar(' ');
 
@@ -102,13 +106,16 @@ int opts;
 		printf(" -> %s", inet_ntoa(np->in_in[0].in4));
 		if (np->in_flags & IPN_SPLIT)
 			printf(",%s", inet_ntoa(np->in_in[1].in4));
+		else if (np->in_inmsk == 0 && np->in_inip == 0)
+			printf("/0");
 		if (np->in_flags & IPN_TCPUDP) {
 			if ((np->in_flags & IPN_FIXEDDPORT) != 0)
 				printf(" port = %d", ntohs(np->in_pnext));
 			else
 				printf(" port %d", ntohs(np->in_pnext));
 		}
-		printproto(np, pr);
+		putchar(' ');
+		printproto(pr, np->in_p, np);
 		if (np->in_flags & IPN_ROUNDR)
 			printf(" round-robin");
 		if (np->in_flags & IPN_FRAG)
@@ -129,6 +136,8 @@ int opts;
 		if (opts & OPT_DEBUG)
 			printf("\tpmax %u\n", np->in_pmax);
 	} else {
+		int protoprinted = 0;
+
 		if (!(np->in_flags & IPN_FILTER)) {
 			printf("%s/", inet_ntoa(np->in_in[0].in4));
 			bits = count4bits(np->in_inmsk);
@@ -164,10 +173,8 @@ int opts;
 			}
 			printf(" %.*s/", (int)sizeof(np->in_plabel),
 				np->in_plabel);
-			if (pr != NULL)
-				fputs(pr->p_name, stdout);
-			else
-				printf("%d", np->in_p);
+			printproto(pr, np->in_p, NULL);
+			protoprinted = 1;
 		} else if (np->in_redir == NAT_MAPBLK) {
 			if ((np->in_pmin == 0) &&
 			    (np->in_flags & IPN_AUTOPORTMAP))
@@ -178,11 +185,12 @@ int opts;
 				printf("\n\tip modulous %d", np->in_pmax);
 		} else if (np->in_pmin || np->in_pmax) {
 			if (np->in_flags & IPN_ICMPQUERY) {
-				printf(" icmpidmap");
+				printf(" icmpidmap ");
 			} else {
-				printf(" portmap");
+				printf(" portmap ");
 			}
-			printproto(np, pr);
+			printproto(pr, np->in_p, np);
+			protoprinted = 1;
 			if (np->in_flags & IPN_AUTOPORTMAP) {
 				printf(" auto");
 				if (opts & OPT_DEBUG)
@@ -194,8 +202,7 @@ int opts;
 				printf(" %d:%d", ntohs(np->in_pmin),
 				       ntohs(np->in_pmax));
 			}
-		} else if (np->in_flags & IPN_TCPUDP || np->in_p)
-			printproto(np, pr);
+		}
 
 		if (np->in_flags & IPN_FRAG)
 			printf(" frag");
@@ -206,6 +213,10 @@ int opts;
 			printf(" mssclamp %d", np->in_mssclamp);
 		if (np->in_tag.ipt_tag[0] != '\0')
 			printf(" tag %s", np->in_tag.ipt_tag);
+		if (!protoprinted && (np->in_flags & IPN_TCPUDP || np->in_p)) {
+			putchar(' ');
+			printproto(pr, np->in_p, np);
+		}
 		printf("\n");
 		if (opts & OPT_DEBUG) {
 			struct in_addr nip;
@@ -226,22 +237,4 @@ int opts;
 		printf("\ttqehead %p/%p comment %p\n",
 			np->in_tqehead[0], np->in_tqehead[1], np->in_comment);
 	}
-}
-
-static void printproto(np, pr)
-ipnat_t *np;
-struct protoent *pr;
-{
-	if ((np->in_flags & IPN_TCPUDP) == IPN_TCPUDP)
-		printf(" tcp/udp");
-	else if (np->in_flags & IPN_TCP)
-		printf(" tcp");
-	else if (np->in_flags & IPN_UDP)
-		printf(" udp");
-	else if (np->in_flags & IPN_ICMPQUERY)
-		printf(" icmp");
-	else if (pr != NULL)
-		printf(" %s", pr->p_name);
-	else
-		printf(" %d", np->in_p);
 }

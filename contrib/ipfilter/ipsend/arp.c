@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/arp.c,v 1.2 2005/04/25 18:20:10 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/ipsend/arp.c,v 1.4 2007/06/04 02:54:31 darrenr Exp $	*/
 
 /*
  * arp.c (C) 1995-1998 Darren Reed
@@ -7,20 +7,23 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)arp.c	1.4 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)Id: arp.c,v 2.8 2003/12/01 02:01:15 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: arp.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>
-#if !defined(ultrix) && !defined(hpux) && !defined(__hpux) && !defined(__osf__)
-#include <sys/sockio.h>
+#if !defined(ultrix) && !defined(hpux) && !defined(__hpux) && !defined(__osf__) && !defined(_AIX51)
+# include <sys/sockio.h>
 #endif
 #include <sys/ioctl.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
+#ifdef __osf__
+# include "radix_ipf_local.h"
+#endif
 #include <net/if.h>
 #include <netinet/if_ether.h>
 #ifndef	ultrix
-#include <net/if_arp.h>
+# include <net/if_arp.h>
 #endif
 #include <netinet/in.h>
 #include <netinet/ip.h>

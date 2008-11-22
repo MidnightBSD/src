@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/lsock.c,v 1.2 2005/04/25 18:20:11 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/ipsend/lsock.c,v 1.4 2006/08/16 12:23:01 guido Exp $	*/
 
 /*
  * lsock.c (C) 1995-1998 Darren Reed
@@ -8,7 +8,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)lsock.c	1.2 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)Id: lsock.c,v 2.3 2001/06/09 17:09:26 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: lsock.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 #include <stdio.h>
 #include <unistd.h>
@@ -227,6 +227,8 @@ struct	in_addr	gwip;
 	ti->ti_sport = lsin.sin_port;
 	printf("sport %d\n", ntohs(lsin.sin_port));
 	nfd = initdevice(dev, 0);
+	if (nfd == -1)
+		return -1;
 
 	if (!(s = find_tcp(fd, ti)))
 		return -1;

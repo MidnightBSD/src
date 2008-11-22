@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/44arp.c,v 1.2 2005/04/25 18:20:10 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/ipsend/44arp.c,v 1.3 2007/06/04 02:54:31 darrenr Exp $	*/
 
 /*
  * Based upon 4.4BSD's /usr/sbin/arp
@@ -16,7 +16,9 @@
 #if defined(__FreeBSD__)
 # include "radix_ipf.h"
 #endif
-#include <net/route.h>
+#ifndef __osf__
+# include <net/route.h>
+#endif
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
 #include <arpa/inet.h>

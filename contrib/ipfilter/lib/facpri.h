@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/facpri.h,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/facpri.h,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1999-2001 by Darren Reed.
+ * Copyright (C) 2000-2001 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: facpri.h,v 1.3 2001/06/09 17:19:50 darrenr Exp
+ * $Id: facpri.h,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
  */
 
 #ifndef	__FACPRI_H__

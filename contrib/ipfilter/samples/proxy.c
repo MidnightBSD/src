@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/samples/proxy.c,v 1.2 2005/04/25 18:20:15 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/samples/proxy.c,v 1.4 2006/08/16 12:23:02 guido Exp $	*/
 
 /*
  * Sample transparent proxy program.
@@ -57,7 +57,6 @@ char *argv[];
 	struct	sockaddr_in	sin, sloc, sout;
 	ipfobj_t	obj;
 	natlookup_t	natlook;
-	natlookup_t	*natlookp = &natlook;
 	char	buffer[512];
 	int	namelen, fd, n;
 
@@ -94,8 +93,8 @@ char *argv[];
 	natlook.nl_outip = sin.sin_addr;
 	natlook.nl_inip = sloc.sin_addr;
 	natlook.nl_flags = IPN_TCP;
-	natlook.nl_outport = ntohs(sin.sin_port);
-	natlook.nl_inport = ntohs(sloc.sin_port);
+	natlook.nl_outport = sin.sin_port;
+	natlook.nl_inport = sloc.sin_port;
 
 	/*
 	 * Open the NAT device and lookup the mapping pair.

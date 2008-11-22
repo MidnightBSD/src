@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/remove_poolnode.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/remove_poolnode.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
 
 /*
- * Copyright (C) 2002 by Darren Reed.
+ * Copyright (C) 2003 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: remove_poolnode.c,v 1.3 2003/11/22 10:14:36 darrenr Exp
+ * $Id: remove_poolnode.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $
  */
 
 #include <fcntl.h>

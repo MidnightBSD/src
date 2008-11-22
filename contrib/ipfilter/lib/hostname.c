@@ -1,5 +1,12 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/hostname.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/hostname.c,v 1.3 2007/06/04 02:54:32 darrenr Exp $	*/
 
+/*
+ * Copyright (C) 2002-2003 by Darren Reed.
+ * 
+ * See the IPFILTER.LICENCE file for details on licencing.  
+ *   
+ * $Id: hostname.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $ 
+ */     
 
 #include "ipf.h"
 
@@ -11,6 +18,8 @@ void *ip;
 	struct hostent *hp;
 	struct in_addr ipa;
 	struct netent *np;
+
+	memset(&ipa, 0, sizeof(ipa));	/* XXX gcc */
 
 	if (v == 4) {
 		ipa.s_addr = *(u_32_t *)ip;

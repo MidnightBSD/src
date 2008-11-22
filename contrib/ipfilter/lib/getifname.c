@@ -1,4 +1,12 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/getifname.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/getifname.c,v 1.3 2007/06/04 02:54:32 darrenr Exp $	*/
+
+/*
+ * Copyright (C) 2002-2004 by Darren Reed.
+ * 
+ * See the IPFILTER.LICENCE file for details on licencing.  
+ *   
+ * $Id: getifname.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $ 
+ */     
 
 #include "ipf.h"
 
@@ -8,6 +16,7 @@
  * Given a pointer to an interface in the kernel, return a pointer to a
  * string which is the interface name.
  */
+#if 0
 char *getifname(ptr)
 struct ifnet *ptr;
 {
@@ -74,3 +83,10 @@ struct ifnet *ptr;
 # endif
 #endif
 }
+#else
+char *getifname(ptr)
+struct ifnet *ptr;
+{
+	return "X";
+}
+#endif

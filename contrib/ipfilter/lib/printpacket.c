@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/printpacket.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/printpacket.c,v 1.4.2.1 2007/10/31 05:00:35 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2000-2005 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: printpacket.c,v 1.12.4.1 2005/02/21 05:09:24 darrenr Exp
+ * $Id: printpacket.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $
  */
 
 #include "ipf.h"
@@ -43,6 +43,7 @@ struct ip *ip;
 			putchar(' ');
 		}
 		putchar('\n');
+		putchar('\n');
 		return;
 	}
 
@@ -52,9 +53,10 @@ struct ip *ip;
 	}
 
 	tcp = (struct tcphdr *)((char *)ip + (IP_HL(ip) << 2));
-	printf("ip %d(%d) %d", ntohs(ip->ip_len), IP_HL(ip) << 2, ip->ip_p);
+	printf("ip #%d %d(%d) %d", ntohs(ip->ip_id), ntohs(ip->ip_len),
+	       IP_HL(ip) << 2, ip->ip_p);
 	if (off & IP_OFFMASK)
-		printf(" @%d", off << 3);
+		printf(" @%d", (off & IP_OFFMASK) << 3);
 	printf(" %s", inet_ntoa(ip->ip_src));
 	if (!(off & IP_OFFMASK))
 		if (ip->ip_p == IPPROTO_TCP || ip->ip_p == IPPROTO_UDP)

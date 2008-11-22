@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/ip.c,v 1.2 2005/04/25 18:20:10 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/ipsend/ip.c,v 1.4 2007/06/04 02:54:31 darrenr Exp $	*/
 
 /*
  * ip.c (C) 1995-1998 Darren Reed
@@ -7,12 +7,15 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "%W% %G% (C)1995";
-static const char rcsid[] = "@(#)Id: ip.c,v 2.8.2.1 2004/10/19 12:31:48 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ip.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
 #include <netinet/in_systm.h>
 #include <sys/socket.h>
+#ifdef __osf__
+# include "radix_ipf_local.h"
+#endif
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>

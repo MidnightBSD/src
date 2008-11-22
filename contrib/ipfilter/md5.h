@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/md5.h,v 1.2 2005/04/25 18:20:08 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/md5.h,v 1.2.10.1 2007/10/31 05:00:34 darrenr Exp $	*/
 
 /*
  ***********************************************************************
@@ -39,7 +39,7 @@
  ***********************************************************************
  */
 
-#ifndef __MD5_INCLUDE__
+#if !defined(__MD5_INCLUDE__) && !defined(_SYS_MD5_H)
 
 #ifndef __P
 # ifdef __STDC__

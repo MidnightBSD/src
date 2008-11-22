@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipmon.h,v 1.2 2005/04/25 18:20:08 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/ipmon.h,v 1.4 2006/08/16 12:23:01 guido Exp $	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.
@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ip_fil.h	1.35 6/5/96
- * Id: ipmon.h,v 2.8 2003/07/25 22:16:20 darrenr Exp
+ * $Id: ipmon.h,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
  */
 
 
@@ -94,3 +94,4 @@ extern	int	load_config __P((char *));
 extern	void	dumphex __P((FILE *, int, char *, int));
 extern	int	check_action __P((char *, char *, int, int));
 extern	char	*getword __P((int));
+extern	int	fac_findname __P((char *));

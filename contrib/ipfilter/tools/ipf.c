@@ -1,7 +1,7 @@
-/*	$FreeBSD: src/contrib/ipfilter/tools/ipf.c,v 1.2 2005/04/25 18:20:15 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/tools/ipf.c,v 1.6 2007/06/04 02:54:34 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2001-2006 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
@@ -21,7 +21,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipf.c	1.23 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)Id: ipf.c,v 1.35.2.3 2004/12/15 18:27:17 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ipf.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
 #endif
 
 #if !defined(__SVR4) && defined(__GNUC__)
@@ -198,7 +198,7 @@ static void closedevice()
 
 static	int	get_flags()
 {
-	int i;
+	int i = 0;
 
 	if ((opendevice(ipfname, 1) != -2) &&
 	    (ioctl(fd, SIOCGETFF, &i) == -1)) {
@@ -344,11 +344,13 @@ char	*arg;
 
 	if (!arg || !*arg)
 		return;
-	if (!strcmp(arg, "s") || !strcmp(arg, "S")) {
+	if (!strcmp(arg, "s") || !strcmp(arg, "S") || ISDIGIT(*arg)) {
 		if (*arg == 'S')
 			fl = 0;
-		else
+		else if (*arg == 's')
 			fl = 1;
+		else
+			fl = atoi(arg);
 		rem = fl;
 
 		closedevice();
@@ -370,7 +372,7 @@ char	*arg;
 		}
 		if ((opts & (OPT_DONOTHING|OPT_VERBOSE)) == OPT_VERBOSE) {
 			printf("remove flags %s (%d)\n", arg, rem);
-			printf("removed %d filter rules\n", fl);
+			printf("removed %d entries\n", fl);
 		}
 		closedevice();
 		return;
@@ -453,15 +455,21 @@ void ipf_frsync()
 
 void zerostats()
 {
+	ipfobj_t	obj;
 	friostat_t	fio;
-	friostat_t	*fiop = &fio;
+
+	obj.ipfo_rev = IPFILTER_VERSION;
+	obj.ipfo_type = IPFOBJ_IPFSTAT;
+	obj.ipfo_size = sizeof(fio);
+	obj.ipfo_ptr = &fio;
+	obj.ipfo_offset = 0;
 
 	if (opendevice(ipfname, 1) != -2) {
-		if (ioctl(fd, SIOCFRZST, &fiop) == -1) {
+		if (ioctl(fd, SIOCFRZST, &obj) == -1) {
 			perror("ioctl(SIOCFRZST)");
 			exit(-1);
 		}
-		showstats(fiop);
+		showstats(&fio);
 	}
 
 }

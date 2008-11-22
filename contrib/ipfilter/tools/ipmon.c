@@ -1,7 +1,7 @@
-/*	$FreeBSD: src/contrib/ipfilter/tools/ipmon.c,v 1.4 2005/05/24 21:25:32 cognet Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/tools/ipmon.c,v 1.7.2.1 2007/10/31 05:00:37 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001, 2003 by Darren Reed.
+ * Copyright (C) 2001-2006 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
@@ -78,7 +78,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipmon.c	1.21 6/5/96 (C)1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)Id: ipmon.c,v 1.33.2.8 2004/12/09 19:41:26 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ipmon.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
 #endif
 
 
@@ -191,6 +191,7 @@ static	char	*conf_file = NULL;
 #ifndef	LOGFAC
 #define	LOGFAC	LOG_LOCAL0
 #endif
+int	logfac = LOGFAC;
 
 
 static icmp_subtype_t icmpunreachnames[] = {
@@ -420,6 +421,14 @@ static void init_tabs()
 			    p->p_name != NULL && protocols[p->p_proto] == NULL)
 				protocols[p->p_proto] = strdup(p->p_name);
 		endprotoent();
+#if defined(_AIX51)
+		if (protocols[0])
+			free(protocols[0]);
+		if (protocols[252])
+			free(protocols[252]);
+		protocols[0] = "ip";
+		protocols[252] = NULL;
+#endif
 	}
 
 	if (udp_ports != NULL) {
@@ -642,10 +651,10 @@ int	len;
 		if (j && !(j & 0xf)) {
 			*t++ = '\n';
 			*t = '\0';
-			if (!(dopts & OPT_SYSLOG))
-				fputs(hline, log);
-			else
+			if ((dopts & OPT_SYSLOG))
 				syslog(LOG_INFO, "%s", hline);
+			else if (log != NULL)
+				fputs(hline, log);
 			t = (u_char *)hline;
 			*t = '\0';
 		}
@@ -678,11 +687,12 @@ int	len;
 		*t++ = '\n';
 		*t = '\0';
 	}
-	if (!(dopts & OPT_SYSLOG)) {
+	if ((dopts & OPT_SYSLOG) != 0)
+		syslog(LOG_INFO, "%s", hline);
+	else if (log != NULL) {
 		fputs(hline, log);
 		fflush(log);
-	} else
-		syslog(LOG_INFO, "%s", hline);
+	}
 }
 
 
@@ -742,6 +752,8 @@ int	blen;
 		strcpy(t, "NAT:MAPBLOCK ");
 	else if (nl->nl_type == NL_CLONE)
 		strcpy(t, "NAT:CLONE ");
+	else if (nl->nl_type == NL_DESTROY)
+		strcpy(t, "NAT:DESTROY ");
 	else
 		sprintf(t, "Type: %d ", nl->nl_type);
 	t += strlen(t);
@@ -754,8 +766,9 @@ int	blen;
 	(void) sprintf(t, "%s,%s ", HOSTNAME_V4(res, nl->nl_outip),
 		portname(res, proto, (u_int)nl->nl_outport));
 	t += strlen(t);
-	(void) sprintf(t, "[%s,%s]", HOSTNAME_V4(res, nl->nl_origip),
-		portname(res, proto, (u_int)nl->nl_origport));
+	(void) sprintf(t, "[%s,%s PR %s]", HOSTNAME_V4(res, nl->nl_origip),
+		portname(res, proto, (u_int)nl->nl_origport),
+		getproto(nl->nl_p));
 	t += strlen(t);
 	if (nl->nl_type == NL_EXPIRE) {
 #ifdef	USE_QUAD_T
@@ -776,7 +789,7 @@ int	blen;
 	*t++ = '\0';
 	if (opts & OPT_SYSLOG)
 		syslog(LOG_INFO, "%s", line);
-	else
+	else if (log != NULL)
 		(void) fprintf(log, "%s", line);
 }
 
@@ -807,27 +820,49 @@ int	blen;
 	(void) sprintf(t, ".%-.6ld ", ipl->ipl_usec);
 	t += strlen(t);
 
-	if (sl->isl_type == ISL_NEW)
+	switch (sl->isl_type)
+	{
+	case ISL_NEW :
 		strcpy(t, "STATE:NEW ");
-	else if (sl->isl_type == ISL_CLONE)
+		break;
+
+	case ISL_CLONE :
 		strcpy(t, "STATE:CLONED ");
-	else if (sl->isl_type == ISL_EXPIRE) {
+		break;
+
+	case ISL_EXPIRE :
 		if ((sl->isl_p == IPPROTO_TCP) &&
 		    (sl->isl_state[0] > IPF_TCPS_ESTABLISHED ||
 		     sl->isl_state[1] > IPF_TCPS_ESTABLISHED))
 			strcpy(t, "STATE:CLOSE ");
 		else
 			strcpy(t, "STATE:EXPIRE ");
-	} else if (sl->isl_type == ISL_FLUSH)
+		break;
+
+	case ISL_FLUSH :
 		strcpy(t, "STATE:FLUSH ");
-	else if (sl->isl_type == ISL_INTERMEDIATE)
+		break;
+
+	case ISL_INTERMEDIATE :
 		strcpy(t, "STATE:INTERMEDIATE ");
-	else if (sl->isl_type == ISL_REMOVE)
+		break;
+
+	case ISL_REMOVE :
 		strcpy(t, "STATE:REMOVE ");
-	else if (sl->isl_type == ISL_KILLED)
+		break;
+
+	case ISL_KILLED :
 		strcpy(t, "STATE:KILLED ");
-	else
+		break;
+
+	case ISL_UNLOAD :
+		strcpy(t, "STATE:UNLOAD ");
+		break;
+
+	default :
 		sprintf(t, "Type: %d ", sl->isl_type);
+		break;
+	}
 	t += strlen(t);
 
 	proto = getproto(sl->isl_p);
@@ -893,7 +928,7 @@ int	blen;
 	*t++ = '\0';
 	if (opts & OPT_SYSLOG)
 		syslog(LOG_INFO, "%s", line);
-	else
+	else if (log != NULL)
 		(void) fprintf(log, "%s", line);
 }
 
@@ -970,7 +1005,10 @@ int	blen;
 	ipflog_t *ipf;
 	iplog_t	*ipl;
 #ifdef	USE_INET6
+	struct ip6_ext *ehp;
+	u_short ehl;
 	ip6_t *ip6;
+	int go;
 #endif
 
 	ipl = (iplog_t *)buf;
@@ -1024,11 +1062,7 @@ int	blen;
 	(void) sprintf(t, "%*.*s%u", len, len, ipf->fl_ifname, ipf->fl_unit);
 	t += strlen(t);
 #endif
-#if (defined(__sgi) || defined(__powerpc__) || defined(__arm__))
-	if ((ipf->fl_group[0] == 255) && (ipf->fl_group[1] == '\0'))
-#else
-	if ((ipf->fl_group[0] == -1) && (ipf->fl_group[1] == '\0'))
-#endif
+	if ((ipf->fl_group[0] == (char)~0) && (ipf->fl_group[1] == '\0'))
 		strcat(t, " @-1:");
 	else if (ipf->fl_group[0] == '\0')
 		(void) strcpy(t, " @0:");
@@ -1083,6 +1117,29 @@ int	blen;
 		s = (u_32_t *)&ip6->ip6_src;
 		d = (u_32_t *)&ip6->ip6_dst;
 		plen = hl + ntohs(ip6->ip6_plen);
+		go = 1;
+		ehp = (struct ip6_ext *)((char *)ip6 + hl);
+		while (go == 1) {
+			switch (p)
+			{
+			case IPPROTO_HOPOPTS :
+			case IPPROTO_MOBILITY :
+			case IPPROTO_DSTOPTS :
+			case IPPROTO_ROUTING :
+			case IPPROTO_AH :
+				p = ehp->ip6e_nxt;
+				ehl = 8 + (ehp->ip6e_len << 3);
+				hl += ehl;
+				ehp = (struct ip6_ext *)((char *)ehp + ehl);
+				break;
+			case IPPROTO_FRAGMENT :
+				hl += sizeof(struct ip6_frag);
+				/* FALLTHROUGH */
+			default :
+				go = 0;
+				break;
+			}
+		}
 #else
 		sprintf(t, "ipv6");
 		goto printipflog;
@@ -1298,8 +1355,9 @@ printipflog:
 	if (defaction == 0) {
 		if (opts & OPT_SYSLOG)
 			syslog(lvl, "%s", line);
-		else
+		else if (log != NULL)
 			(void) fprintf(log, "%s", line);
+
 		if (opts & OPT_HEXHDR)
 			dumphex(log, opts, buf,
 				sizeof(iplog_t) + sizeof(*ipf));
@@ -1362,11 +1420,12 @@ FILE *log;
 	(void) close(fd);
 
 	if (flushed) {
-		if (opts & OPT_SYSLOG)
+		if (opts & OPT_SYSLOG) {
 			syslog(LOG_INFO, "%d bytes flushed from log\n",
 				flushed);
-		else if (log != stdout)
+		} else if ((log != stdout) && (log != NULL)) {
 			fprintf(log, "%d bytes flushed from log\n", flushed);
+		}
 	}
 }
 
@@ -1424,7 +1483,8 @@ char *argv[];
 	iplfile[1] = IPNAT_NAME;
 	iplfile[2] = IPSTATE_NAME;
 
-	while ((c = getopt(argc, argv, "?abB:C:Df:FhnN:o:O:pP:sS:tvxX")) != -1)
+	while ((c = getopt(argc, argv,
+			   "?abB:C:Df:FhL:nN:o:O:pP:sS:tvxX")) != -1)
 		switch (c)
 		{
 		case 'a' :
@@ -1456,6 +1516,15 @@ char *argv[];
 			flushlogs(iplfile[1], log);
 			flushlogs(iplfile[2], log);
 			break;
+		case 'L' :
+			logfac = fac_findname(optarg);
+			if (logfac == -1) {
+				fprintf(stderr,
+					"Unknown syslog facility '%s'\n",
+					 optarg);
+				exit(1);
+			}
+			break;
 		case 'n' :
 			opts |= OPT_RESOLVE;
 			break;
@@ -1486,7 +1555,7 @@ char *argv[];
 				s = argv[0];
 			else
 				s++;
-			openlog(s, LOG_NDELAY|LOG_PID, LOGFAC);
+			openlog(s, LOG_NDELAY|LOG_PID, logfac);
 			s = NULL;
 			opts |= OPT_SYSLOG;
 			log = NULL;
@@ -1581,8 +1650,8 @@ char *argv[];
 #endif /* !BSD */
 		close(0);
 		close(1);
+		write_pid(pidfile);
 	}
-	write_pid(pidfile);
 
 	signal(SIGHUP, handlehup);
 
@@ -1611,6 +1680,7 @@ char *argv[];
 			if (!tr)
 				continue;
 			nr += tr;
+			n = 0;
 
 			tr = read_log(fd[i], &n, buf, sizeof(buf));
 			if (donehup) {
@@ -1618,7 +1688,8 @@ char *argv[];
 					fclose(log);
 					log = fp;
 				}
-				if (binarylogfile && (fp = fopen(binarylogfile, "a"))) {
+				if (binarylogfile &&
+				    (fp = fopen(binarylogfile, "a"))) {
 					fclose(binarylog);
 					binarylog = fp;
 				}
@@ -1640,7 +1711,7 @@ char *argv[];
 			case 1 :
 				if (opts & OPT_SYSLOG)
 					syslog(LOG_CRIT, "aborting logging\n");
-				else
+				else if (log != NULL)
 					fprintf(log, "aborting logging\n");
 				doread = 0;
 				break;

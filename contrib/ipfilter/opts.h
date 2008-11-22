@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/opts.h,v 1.2 2005/04/25 18:20:08 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/opts.h,v 1.3 2005/12/30 11:52:22 guido Exp $	*/
 
 /*
  * Copyright (C) 2000 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: opts.h,v 2.12 2003/08/14 14:24:27 darrenr Exp
+ * $Id: opts.h,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
  */
 
 #ifndef	__OPTS_H__

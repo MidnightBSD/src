@@ -5,8 +5,8 @@
 # provided that this notice is preserved and due credit is given
 # to the original author and the contributors.
 #
-# $FreeBSD: src/contrib/ipfilter/Makefile,v 1.4 2005/04/25 18:20:08 darrenr Exp $
-# Id: Makefile,v 2.76.2.13 2004/11/08 18:42:40 darrenr Exp
+# $FreeBSD: src/contrib/ipfilter/Makefile,v 1.7.2.1 2007/10/31 05:00:34 darrenr Exp $
+# Id: Makefile,v 2.76.2.24 2007/09/26 10:04:03 darrenr Exp $
 #
 SHELL=/bin/sh
 BINDEST=/usr/local/bin
@@ -132,9 +132,7 @@ all:
 	@echo "openbsd	- compile for OpenBSD"
 	@echo "freebsd20	- compile for FreeBSD 2.0, 2.1 or earlier"
 	@echo "freebsd22	- compile for FreeBSD-2.2 or greater"
-	@echo "freebsd3	- compile for FreeBSD-3.x"
-	@echo "freebsd4	- compile for FreeBSD-4.x"
-	@echo "freebsd5 - compile for FreeBSD-5.x"
+	@echo "freebsd  - compile for all other versions of FreeBSD"
 	@echo "bsd	- compile for generic 4.4BSD systems"
 	@echo "bsdi	- compile for BSD/OS"
 	@echo "irix	- compile for SGI IRIX"
@@ -151,6 +149,7 @@ retest:
 	else echo test directory not present, sorry; fi
 
 include:
+	-mkdir -p net netinet
 	if [ ! -f netinet/done ] ; then \
 		(cd netinet; ln -s ../*.h .; ln -s ../ip_*_pxy.c .;); \
 		(cd netinet; ln -s ../ipsend/tcpip.h tcpip.h); \
@@ -165,6 +164,9 @@ include:
 sunos solaris: include
 	MAKE="$(MAKE)" MAKEFLAGS="$(MAKEFLAGS)" BPFILTER=$(BPFILTER) \
 		CC="$(CC)" DEBUG="$(DEBUG)" ./buildsunos
+
+freebsd:
+	make freebsd`uname -r|cut -c1`
 
 freebsd22: include
 	make setup "TARGOS=BSD" "CPUDIR=$(CPUDIR)"
@@ -187,11 +189,20 @@ freebsd22: include
 	fi
 	make freebsd20
 
-freebsd5: include
+freebsd5 freebsd6 freebsd7: include
 	if [ x$(INET6) = x ] ; then \
 		echo "#undef INET6" > opt_inet6.h; \
 	else \
 		echo "#define INET6" > opt_inet6.h; \
+	fi
+	if [ "x$(IPFBPF)" = "x" ] ; then \
+		echo "#undef NBPF" > opt_bpf.h; \
+		echo "#undef NBPFILTER" > opt_bpf.h; \
+		echo "#undef DEV_BPF" > opt_bpf.h; \
+	else \
+		echo "#define NBPF" > opt_bpf.h; \
+		echo "#define NBPFILTER" > opt_bpf.h; \
+		echo "#define DEV_BPF" > opt_bpf.h; \
 	fi
 	if [ x$(ENABLE_PFIL) = x ] ; then \
 		echo "#undef PFIL_HOOKS" > opt_pfil.h; \
@@ -220,6 +231,15 @@ freebsd3 freebsd30: include
 
 netbsd: include
 	make setup "TARGOS=BSD" "CPUDIR=$(CPUDIR)"
+	@if [ ! -d /sys -o ! -d /sys/arch ] ; then \
+		echo "*****************************************************"; \
+		echo "*                                                   *"; \
+		echo "* Please extract source code to create /sys and     *";\
+		echo "* /sys/arch and run 'config GENERIC'                *"; \
+		echo "*                                                   *"; \
+		echo "*****************************************************"; \
+		exit 1; \
+	fi
 	(cd BSD/$(CPUDIR); make build TOP=../.. $(MFLAGS) 'DLKM=-D_LKM' "ML=mln_ipl.c" LKMR= "MLR=mln_rule.o"; cd ..)
 	(cd BSD/$(CPUDIR); make -f Makefile.ipsend build TOP=../.. $(MFLAGS); cd ..)
 
@@ -237,6 +257,11 @@ osf tru64: null include
 	make setup "TARGOS=OSF" "CPUDIR=`OSF/cpurev`"
 	(cd OSF/`OSF/cpurev`; make build TRU64=`uname -v` TOP=../.. "DEBUG=-g" $(MFLAGS) "MACHASSERT=$(MACHASSERT)" "OSREV=`../cpurev`"; cd ..)
 	(cd OSF/`OSF/cpurev`; make -f Makefile.ipsend build TRU64=`uname -v` TOP=../.. $(MFLAGS) "OSREV=`../cpurev`"; cd ..)
+
+aix: null include
+	make setup "TARGOS=AIX" "CPUDIR=`AIX/cpurev`"
+	(cd AIX/`AIX/cpurev`; make build AIX=`uname -v` TOP=../.. "DEBUG=-g" $(MFLAGS) "OSREV=`../cpurev`" BITS=`../bootbits.sh`; cd ..)
+#	(cd AIX/`AIX/cpurev`; make -f Makefile.ipsend build AIX=`uname -v` TOP=../.. $(MFLAGS) "OSREV=`../cpurev`"; cd ..)
 
 bsd: include
 	make setup "TARGOS=BSD" "CPUDIR=$(CPUDIR)"
@@ -278,6 +303,7 @@ clean: clean-include
 	(cd HPUX; $(MAKE) BITS=32 TOP=.. clean)
 	(cd Linux; $(MAKE) TOP=.. clean)
 	(cd OSF; $(MAKE) TOP=.. clean)
+	(cd AIX; $(MAKE) TOP=.. clean)
 	if [ "`uname -s`" = "IRIX" ]; then (cd IRIX; $(MAKE) clean); fi
 	[ -d test ] && (cd test; $(MAKE) clean)
 	(cd ipsend; $(MAKE) clean)
@@ -295,6 +321,9 @@ clean-hpux: clean-include
 
 clean-osf: clean-include
 	(cd OSF; make clean)
+
+clean-aix: clean-include
+	(cd AIX; make clean)
 
 clean-linux: clean-include
 	(cd Linux; make clean)
@@ -323,12 +352,8 @@ sunos4 solaris1:
 	(cd SunOS4; make -f Makefile.ipsend build "CC=$(CC)" TOP=.. $(DEST) $(MFLAGS); cd ..)
 
 sunos5 solaris2: null
-	(cd SunOS5/$(CPUDIR); $(MAKE) build TOP=../.. "CC=$(CC)" $(DEST) $(MFLAGS) "SOLARIS2=$(SOLARIS2)" "CPU=-Dsparc -D__sparc__"; cd ..)
+	(cd SunOS5/$(CPUDIR); $(MAKE) build TOP=../.. "CC=$(CC)" $(DEST) $(MFLAGS) "SOLARIS2=$(SOLARIS2)"; cd ..)
 	(cd SunOS5/$(CPUDIR); $(MAKE) -f Makefile.ipsend build TOP=../.. "CC=$(CC)" $(DEST) $(MFLAGS); cd ..)
-
-sunos5x86 solaris2x86: null
-	(cd SunOS5/$(CPUDIR); make build TOP=../.. "CC=$(CC)" $(DEST) $(MFLAGS) "SOLARIS2=$(SOLARIS2)" "CPU=-Di86pc -Di386 -D__i386__"; cd ..)
-	(cd SunOS5/$(CPUDIR); make -f Makefile.ipsend build TOP=../.. "CC=$(CC)" $(DEST) $(MFLAGS); cd ..)
 
 linux: include
 	(cd Linux; make build LINUX=$(LINUX) TOP=.. "DEBUG=-g" "CC=$(CC)" $(MFLAGS) OBJ=$(CPUDIR) LINUXKERNEL=$(LINUXKERNEL); cd ..)
@@ -346,7 +371,11 @@ install-sunos4: solaris
 	(cd SunOS4; $(MAKE) CPU=$(CPU) TOP=.. install)
 
 install-sunos5: solaris null
-	(cd SunOS5; $(MAKE) CPU=$(CPU) TOP=.. install)
+	(cd SunOS5; $(MAKE) TOP=.. install)
+
+install-aix:
+	(cd AIX/`AIX/cpurev`; make install "TOP=../.." $(MFLAGS); cd ..)
+#	(cd AIX/`AIX/cpurev`; make -f Makefile.ipsend INSTALL=$(INSTALL) install "TOP=../.." $(MFLAGS); cd ..)
 
 install-hpux: hpux
 	(cd HPUX/`HPUX/cpurev`; $(MAKE) CPU=$(CPU) TOP=../.. "BITS=`getconf KERNEL_BITS`" install)
@@ -356,7 +385,6 @@ install-irix: irix
 
 install-osf install-tru64:
 	(cd OSF/`OSF/cpurev`; make install "TOP=../.." $(MFLAGS); cd ..)
-	(cd OSF/`OSF/cpurev`; make -f Makefile.ipsend INSTALL=$(INSTALL) install "TOP=../.." $(MFLAGS); cd ..)
 
 do-cvs:
 	find . -type d -name CVS -print | xargs /bin/rm -rf
@@ -379,3 +407,4 @@ mdb:
 	       -DIPFILTER_SCAN -DIPFILTER_LKM -DSOLARIS2=10 -n ipf_mdb -k \
 	       -I/home/dr146992/pfil -I/home/dr146992/ipf -f \
 	       /usr/include/netinet/in_systm.h,/usr/include/sys/ethernet.h,/usr/include/netinet/in.h,/usr/include/netinet/ip.h,/usr/include/netinet/ip_var.h,/usr/include/netinet/tcp.h,/usr/include/netinet/tcpip.h,/usr/include/netinet/ip_icmp.h,/usr/include/netinet/udp.h,ip_compat.h,ip_fil.h,ip_nat.h,ip_state.h,ip_proxy.h,ip_scan.h
+

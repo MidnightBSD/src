@@ -1,7 +1,7 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/kmem.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/kmem.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2000-2005 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
@@ -18,7 +18,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/file.h>
-#if !defined(__sgi) && !defined(__hpux) && !defined(__osf__) && !defined(linux)
+#if !defined(__sgi) && !defined(__hpux) && !defined(__osf__) && !defined(linux) && !defined(_AIX51)
 #include <kvm.h>
 #endif
 #include <fcntl.h>
@@ -44,12 +44,13 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)kmem.c	1.4 1/12/96 (C) 1992 Darren Reed";
-static const char rcsid[] = "@(#)Id: kmem.c,v 1.16.2.1 2004/06/20 10:25:58 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: kmem.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 
 
 
-#if !defined(__sgi) && !defined(__hpux) && !defined(__osf__) && !defined(linux)
+#if !defined(__sgi) && !defined(__hpux) && !defined(__osf__) && \
+    !defined(linux) && !defined(_AIX51)
 /*
  * For all platforms where there is a libkvm and a kvm_t, we use that...
  */

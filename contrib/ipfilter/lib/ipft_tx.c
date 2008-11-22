@@ -1,15 +1,15 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/ipft_tx.c,v 1.3 2005/04/26 14:27:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/ipft_tx.c,v 1.6.2.1 2007/10/31 05:00:35 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1995-2001 by Darren Reed.
+ * Copyright (C) 2000-2006 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: ipft_tx.c,v 1.15.2.2 2004/12/09 19:41:21 darrenr Exp
+ * $Id: ipft_tx.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipft_tx.c	1.7 6/5/96 (C) 1993 Darren Reed";
-static const char rcsid[] = "@(#)Id: ipft_tx.c,v 1.15.2.2 2004/12/09 19:41:21 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ipft_tx.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 
 #include <ctype.h>
@@ -75,36 +75,15 @@ int	*resolved;
 static	u_short	tx_portnum(name)
 char	*name;
 {
-	struct	servent	*sp, *sp2;
-	u_short	p1 = 0;
+	struct	servent	*sp;
 
 	if (ISDIGIT(*name))
 		return (u_short)atoi(name);
-	if (!tx_proto)
-		tx_proto = "tcp/udp";
-	if (strcasecmp(tx_proto, "tcp/udp")) {
-		sp = getservbyname(name, tx_proto);
-		if (sp)
-			return ntohs(sp->s_port);
-		(void) fprintf(stderr, "unknown service \"%s\".\n", name);
-		return 0;
-	}
-	sp = getservbyname(name, "tcp");
+	sp = getservbyname(name, tx_proto);
 	if (sp)
-		p1 = sp->s_port;
-	sp2 = getservbyname(name, "udp");
-	if (!sp || !sp2) {
-		(void) fprintf(stderr, "unknown tcp/udp service \"%s\".\n",
-			name);
-		return 0;
-	}
-	if (p1 != sp2->s_port) {
-		(void) fprintf(stderr, "%s %d/tcp is a different port to ",
-			name, p1);
-		(void) fprintf(stderr, "%s %d/udp\n", name, sp->s_port);
-		return 0;
-	}
-	return ntohs(p1);
+		return ntohs(sp->s_port);
+	(void) fprintf(stderr, "unknown service \"%s\".\n", name);
+	return 0;
 }
 
 
@@ -150,6 +129,7 @@ int	cnt, *dir;
 {
 	register char *s;
 	char	line[513];
+	ip_t	*ip;
 
 	*ifn = NULL;
 	while (fgets(line, sizeof(line)-1, tfp)) {
@@ -161,17 +141,17 @@ int	cnt, *dir;
 			*s = '\0';
 		if (!*line)
 			continue;
-		if (!(opts & OPT_BRIEF))
+		if ((opts & OPT_DEBUG) != 0)
 			printf("input: %s\n", line);
 		*ifn = NULL;
 		*dir = 0;
-		if (!parseline(line, (ip_t *)buf, ifn, dir))
-#if 0
-			return sizeof(ip_t) + sizeof(tcphdr_t);
-#else
-			return sizeof(ip_t);
-#endif
+		if (!parseline(line, (ip_t *)buf, ifn, dir)) {
+			ip = (ip_t *)buf;
+			return ntohs(ip->ip_len);
+		}
 	}
+	if (feof(tfp))
+		return 0;
 	return -1;
 }
 
@@ -279,33 +259,51 @@ int	*out;
 	}
 	ip->ip_dst.s_addr = tx_hostnum(*cpp, &r);
 	cpp++;
-	if (*cpp && ip->ip_p == IPPROTO_TCP) {
-		char	*s, *t;
+	if (ip->ip_p == IPPROTO_TCP) {
+		if (*cpp != NULL) {
+			char	*s, *t;
 
-		tcp->th_flags = 0;
-		for (s = *cpp; *s; s++)
-			if ((t  = strchr(myflagset, *s)))
-				tcp->th_flags |= myflags[t - myflagset];
-		if (tcp->th_flags)
-			cpp++;
-		if (tcp->th_flags == 0)
-			abort();
+			tcp->th_flags = 0;
+			for (s = *cpp; *s; s++)
+				if ((t  = strchr(myflagset, *s)))
+					tcp->th_flags |= myflags[t-myflagset];
+			if (tcp->th_flags)
+				cpp++;
+		}
+
 		if (tcp->th_flags & TH_URG)
 			tcp->th_urp = htons(1);
+
+		if (*cpp && !strncasecmp(*cpp, "seq=", 4)) {
+			tcp->th_seq = htonl(atoi(*cpp + 4));
+			cpp++;
+		}
+
+		if (*cpp && !strncasecmp(*cpp, "ack=", 4)) {
+			tcp->th_ack = htonl(atoi(*cpp + 4));
+			cpp++;
+		}
 	} else if (*cpp && ip->ip_p == IPPROTO_ICMP) {
 		extern	char	*tx_icmptypes[];
 		char	**s, *t;
 		int	i;
 
+		t = strchr(*cpp, ',');
+		if (t != NULL)
+			*t = '\0';
+
 		for (s = tx_icmptypes, i = 0; !*s || strcmp(*s, "END");
-		     s++, i++)
-			if (*s && !strncasecmp(*cpp, *s, strlen(*s))) {
+		     s++, i++) {
+			if (*s && !strcasecmp(*cpp, *s)) {
 				ic->icmp_type = i;
-				if ((t = strchr(*cpp, ',')))
-					ic->icmp_code = atoi(t+1);
+				if (t != NULL)
+					ic->icmp_code = atoi(t + 1);
 				cpp++;
 				break;
 			}
+		}
+		if (t != NULL)
+			*t = ',';
 	}
 
 	if (*cpp && !strcasecmp(*cpp, "opt")) {

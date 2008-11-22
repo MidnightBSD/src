@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/buildopts.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/buildopts.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2000-2002 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: buildopts.c,v 1.6 2002/01/28 06:50:45 darrenr Exp
+ * $Id: buildopts.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
  */
 
 #include "ipf.h"

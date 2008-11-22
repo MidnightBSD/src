@@ -1,13 +1,15 @@
-.\" $FreeBSD: src/contrib/ipfilter/man/ipmon.8,v 1.15 2005/04/25 18:20:14 darrenr Exp $
+.\" $FreeBSD: src/contrib/ipfilter/man/ipmon.8,v 1.18 2007/06/04 02:54:34 darrenr Exp $
 .TH ipmon 8
 .SH NAME
 ipmon \- monitors /dev/ipl for logged packets
 .SH SYNOPSIS
 .B ipmon
 [
-.B \-abDFhnpstvxX
+.B \-abBDFhnpstvxX
 ] [
 .B "\-N <device>"
+] [
+.B "\-L <facility>"
 ] [
 .B "\-o [NSI]"
 ] [
@@ -72,6 +74,9 @@ unreachable message.
 In order for \fBipmon\fP to properly work, the kernel option
 \fBIPFILTER_LOG\fP must be turned on in your kernel.  Please see
 \fBoptions(4)\fP for more details.
+.LP
+\fBipmon\fP reopens its log file(s) and rereads its configuration file
+when it receives a SIGHUP signal.
 .SH OPTIONS
 .TP
 .B \-a
@@ -81,6 +86,11 @@ are displayed to the same output 'device' (stderr or syslog).
 .B \-b
 For rules which log the body of a packet, generate hex output representing
 the packet contents after the headers.
+.TP
+.B \-B <binarylogfilename>
+Enable logging of the raw, unformatted binary data to the specified
+\fI<binarylogfilename>\fP file.  This can be read, later, using \fBipmon\fP
+with the \fB-f\fP option.
 .TP
 .B \-D
 Cause ipmon to turn itself into a daemon.  Using subshells or backgrounding
@@ -93,6 +103,10 @@ for normal IP Filter log records.
 .B \-F
 Flush the current packet log buffer.  The number of bytes flushed is displayed,
 even should the result be zero.
+.TP
+.B \-L <facility>
+Using this option allows you to change the default syslog facility that
+ipmon uses for syslog messages.  The default is local0.
 .TP
 .B \-n
 IP addresses and port numbers will be mapped, where possible, back into

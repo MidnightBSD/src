@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/v6optvalue.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/v6optvalue.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2003 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: v6optvalue.c,v 1.1 2003/04/26 04:55:58 darrenr Exp
+ * $Id: v6optvalue.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $
  */
 #include "ipf.h"
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsend/iptests.c,v 1.10 2005/04/25 18:20:11 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/ipsend/iptests.c,v 1.13.2.1 2007/10/31 05:00:35 darrenr Exp $	*/
 
 /*
  * Copyright (C) 1993-1998 by Darren Reed.
@@ -8,12 +8,23 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "%W% %G% (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)Id: iptests.c,v 2.8.2.3 2004/04/16 23:33:04 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: iptests.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
+#if defined(__NetBSD__) && defined(__vax__)
+/*
+ * XXX need to declare boolean_t for _KERNEL <sys/files.h>
+ * which ends up including <sys/device.h> for vax.  See PR#32907
+ * for further details.
+ */
+typedef	int	boolean_t;
+#endif
 #include <sys/time.h>
 #if !defined(__osf__)
+# ifdef __NetBSD__ 
+#  include <machine/lock.h>
+# endif
 # define _KERNEL
 # define KERNEL
 # if !defined(solaris) && !defined(linux) && !defined(__sgi) && !defined(hpux)
@@ -32,7 +43,7 @@ static const char rcsid[] = "@(#)Id: iptests.c,v 2.8.2.3 2004/04/16 23:33:04 dar
 # include <sys/proc.h>
 #endif
 #if !defined(ultrix) && !defined(hpux) && !defined(linux) && \
-    !defined(__sgi) && !defined(__osf__)
+    !defined(__sgi) && !defined(__osf__) && !defined(_AIX51)
 # include <kvm.h>
 #endif
 #ifndef	ultrix
@@ -55,6 +66,9 @@ static const char rcsid[] = "@(#)Id: iptests.c,v 2.8.2.3 2004/04/16 23:33:04 dar
 #include <sys/socket.h>
 #ifdef __hpux
 # define _NET_ROUTE_INCLUDED
+#endif
+#ifdef __osf__
+# include "radix_ipf_local.h"
 #endif
 #include <net/if.h>
 #if defined(linux) && (LINUX >= 0200)
@@ -136,7 +150,10 @@ int	ptest;
 	u->uh_ulen = htons(sizeof(*u) + 4);
 	ip->ip_len = sizeof(*ip) + ntohs(u->uh_ulen);
 	len = ip->ip_len;
+
 	nfd = initdevice(dev, 1);
+	if (nfd == -1)
+		return;
 
 	if (!ptest || (ptest == 1)) {
 		/*
@@ -470,11 +487,14 @@ int	ptest;
 	int	nfd;
 	u_char	*s;
 
-	s = (u_char *)(ip + 1);
+
 	nfd = initdevice(dev, 1);
+	if (nfd == -1)
+		return;
 
 	IP_HL_A(ip, 6);
 	ip->ip_len = IP_HL(ip) << 2;
+	s = (u_char *)(ip + 1);
 	s[IPOPT_OPTVAL] = IPOPT_NOP;
 	s++;
 	if (!ptest || (ptest == 1)) {
@@ -574,7 +594,10 @@ int	ptest;
 	ip->ip_sum = 0;
 	ip->ip_len = sizeof(*ip) + sizeof(*icp);
 	icp = (struct icmp *)((char *)ip + (IP_HL(ip) << 2));
+
 	nfd = initdevice(dev, 1);
+	if (nfd == -1)
+		return;
 
 	if (!ptest || (ptest == 1)) {
 		/*
@@ -773,7 +796,10 @@ int	ptest;
 	u->uh_sport = htons(1);
 	u->uh_dport = htons(1);
 	u->uh_ulen = htons(sizeof(*u) + 4);
+
 	nfd = initdevice(dev, 1);
+	if (nfd == -1)
+		return;
 
 	if (!ptest || (ptest == 1)) {
 		/*
@@ -936,7 +962,10 @@ int	ptest;
 	t->th_seq = htonl(1);
 	t->th_ack = 0;
 	ip->ip_len = sizeof(ip_t) + sizeof(tcphdr_t);
+
 	nfd = initdevice(dev, 1);
+	if (nfd == -1)
+		return;
 
 	if (!ptest || (ptest == 1)) {
 		/*
@@ -1071,7 +1100,8 @@ int	ptest;
 	struct tcpcb *tcbp, tcb;
 	struct tcpiphdr ti;
 	struct sockaddr_in sin;
-	int fd, slen;
+	int fd;
+	socklen_t slen;
 
 	bzero((char *)&sin, sizeof(sin));
 
@@ -1281,6 +1311,9 @@ int	ptest;
 	u->uh_sum = 0;
 
 	nfd = initdevice(dev, 1);
+	if (nfd == -1)
+		return;
+
 	u->uh_ulen = htons(7168);
 
 	printf("6. Exhaustive mbuf test.\n");
@@ -1350,6 +1383,9 @@ int	ptest;
 	u_char	*s;
 
 	nfd = initdevice(dev, 1);
+	if (nfd == -1)
+		return;
+
 	pip = (ip_t *)tbuf;
 
 	srand(time(NULL) ^ (getpid() * getppid()));

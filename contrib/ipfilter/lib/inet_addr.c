@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/inet_addr.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/inet_addr.c,v 1.3 2005/12/30 11:52:23 guido Exp $	*/
 
 /*
  * ++Copyright++ 1983, 1990, 1993
@@ -57,7 +57,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)inet_addr.c	8.1 (Berkeley) 6/17/93";
-static const char rcsid[] = "@(#)Id: inet_addr.c,v 1.8.2.3 2004/12/09 19:41:20 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: inet_addr.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/param.h>

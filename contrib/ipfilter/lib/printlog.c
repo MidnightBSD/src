@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/printlog.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/printlog.c,v 1.5 2007/06/04 02:54:32 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2000-2005 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: printlog.c,v 1.6 2002/01/28 06:50:47 darrenr Exp
+ * $Id: printlog.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $
  */
 
 #include "ipf.h"
@@ -27,18 +27,12 @@ frentry_t *fp;
 		printf(" or-block");
 	if (fp->fr_loglevel != 0xffff) {
 		printf(" level ");
-		if (fp->fr_loglevel & LOG_FACMASK) {
-			s = fac_toname(fp->fr_loglevel);
-			if (s == NULL)
-				s = "!!!";
-		} else
-			s = "";
+		s = fac_toname(fp->fr_loglevel);
+		if (s == NULL || *s == '\0')
+			s = "!!!";
 		u = pri_toname(fp->fr_loglevel);
-		if (u == NULL)
+		if (u == NULL || *u == '\0')
 			u = "!!!";
-		if (*s)
-			printf("%s.%s", s, u);
-		else
-			printf("%s", u);
+		printf("%s.%s", s, u);
 	}
 }

@@ -3,10 +3,13 @@
 #
 # See the IPFILTER.LICENCE file for details on licencing.
 #
+# $FreeBSD: src/contrib/ipfilter/man/Makefile,v 1.2 2006/02/27 11:22:20 darrenr Exp $
+#
 
 all:
 
 install:
+	$(INSTALL) -m 0644 -c -o root -g bin mkfilters.1 $(MANDIR)/man1
 	$(INSTALL) -m 0644 -c -o root -g bin ipftest.1 $(MANDIR)/man1
 	$(INSTALL) -m 0644 -c -o root -g bin ipnat.8 $(MANDIR)/man8
 	$(INSTALL) -m 0644 -c -o root -g bin ipf.4 $(MANDIR)/man4

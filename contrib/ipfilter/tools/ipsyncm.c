@@ -1,13 +1,13 @@
-/*	$FreeBSD: src/contrib/ipfilter/tools/ipsyncm.c,v 1.2 2005/04/25 18:20:15 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/tools/ipsyncm.c,v 1.5 2007/06/04 02:54:34 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2001-2006 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)Id: ipsyncm.c,v 1.4.2.2 2005/01/08 14:31:46 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ipsyncm.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
 #endif
 #include <sys/types.h>
 #include <sys/time.h>
@@ -22,7 +22,7 @@ static const char rcsid[] = "@(#)Id: ipsyncm.c,v 1.4.2.2 2005/01/08 14:31:46 dar
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <strings.h>
+#include <string.h>
 #include <syslog.h>
 #include <signal.h>
 
@@ -34,6 +34,7 @@ static const char rcsid[] = "@(#)Id: ipsyncm.c,v 1.4.2.2 2005/01/08 14:31:46 dar
 
 
 int	main __P((int, char *[]));
+void	usage __P((const char *));
 
 int	terminate = 0;
 
@@ -41,10 +42,12 @@ void usage(const char *progname) {
 	fprintf(stderr, "Usage: %s <destination IP> <destination port>\n", progname);
 }
 
+#if 0
 static void handleterm(int sig)
 {
 	terminate = sig;
 }
+#endif
 
  
 /* should be large enough to hold header + any datatype */
@@ -117,7 +120,7 @@ char *argv[];
 			goto tryagain;
 		}
 
-		syslog(LOG_INFO, "Established connection to %s",
+		syslog(LOG_INFO, "Sending data to %s",
 		       inet_ntoa(sin.sin_addr));
 	
 		inbuf = 0;	

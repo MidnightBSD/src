@@ -1,5 +1,10 @@
-/*	$FreeBSD: src/contrib/ipfilter/tools/ipscan_y.y,v 1.2 2005/04/25 18:20:15 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/tools/ipscan_y.y,v 1.3 2007/06/04 02:54:34 darrenr Exp $	*/
 
+/*
+ * Copyright (C) 2001-2004 by Darren Reed.
+ *
+ * See the IPFILTER.LICENCE file for details on licencing.
+ */
 %{
 #include <sys/types.h>
 #include <sys/ioctl.h>
@@ -94,6 +99,7 @@ assign:	YY_STR assigning YY_STR
 						  resetlexer();
 						  free($1);
 						  free($3);
+						  yyvarnext = 0;
 						}
 	;
 

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/snoop.h,v 1.2 2005/04/25 18:20:08 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/snoop.h,v 1.3 2005/12/30 11:52:22 guido Exp $	*/
 
 /*
  * Copyright (C) 1993-2001 by Darren Reed.
@@ -11,7 +11,7 @@
 
 /*
  * written to comply with the RFC (1761) from Sun.
- * Id: snoop.h,v 2.3 2001/06/09 17:09:23 darrenr Exp
+ * $Id: snoop.h,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
  */
 struct	snoophdr	{
 	char	s_id[8];

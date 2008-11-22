@@ -1,11 +1,11 @@
-/*	$FreeBSD: src/contrib/ipfilter/lib/v6ionames.c,v 1.2 2005/04/25 18:20:12 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/lib/v6ionames.c,v 1.4 2007/06/04 02:54:32 darrenr Exp $	*/
 
 /*
- * Copyright (C) 1993-2001 by Darren Reed.
+ * Copyright (C) 2003-2005 by Darren Reed.
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  *
- * Id: v6ionames.c,v 1.1.4.1 2005/01/02 13:08:49 darrenr Exp
+ * $Id: v6ionames.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $
  */
 #include "ipf.h"
 
@@ -21,6 +21,7 @@ struct	ipopt_names	v6ionames[] ={
 	{ IPPROTO_AH,		0x000020,	0,	"ah" },
 	{ IPPROTO_NONE,		0x000040,	0,	"none" },	
 	{ IPPROTO_DSTOPTS,	0x000080,	0,	"dstopts" },
+	{ IPPROTO_MOBILITY,	0x000100,	0,	"mobility" },
 	{ 0, 			0,		0,	(char *)NULL }
 };
 

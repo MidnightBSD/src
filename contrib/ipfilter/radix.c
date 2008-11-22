@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/radix.c,v 1.2 2005/04/25 18:20:08 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/radix.c,v 1.4.2.1 2007/10/31 05:00:34 darrenr Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1993
@@ -76,8 +76,14 @@ void panic __P((char *str));
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <net/if.h>
+#ifdef SOLARIS2
+# define _RADIX_H_
+#endif
 #include "netinet/ip_compat.h"
 #include "netinet/ip_fil.h"
+#ifdef SOLARIS2
+# undef _RADIX_H_
+#endif
 /* END OF INCLUDES */
 #include "radix_ipf.h"
 #ifndef min
@@ -103,6 +109,12 @@ static int rn_lexobetter __P((void *, void *));
 static struct radix_mask *rn_new_radix_mask __P((struct radix_node *,
     struct radix_mask *));
 static int rn_freenode __P((struct radix_node *, void *));
+#if defined(AIX) && !defined(_KERNEL)
+struct radix_node *rn_match __P((void *, struct radix_node_head *));
+struct radix_node *rn_addmask __P((int, int, void *));
+#define	FreeS(x, y)	KFREES(x, y)
+#define	Bcopy(x, y, z)	bcopy(x, y, z)
+#endif
 
 /*
  * The data structure for the keys is a radix tree with one way
@@ -133,7 +145,7 @@ static int rn_freenode __P((struct radix_node *, void *));
  * node as high in the tree as we can go.
  *
  * The present version of the code makes use of normal routes in short-
- * circuiting an explict mask and compare operation when testing whether
+ * circuiting an explicit mask and compare operation when testing whether
  * a key satisfies a normal route, and also in remembering the unique leaf
  * that governs a subtree.
  */

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/samples/relay.c,v 1.3 2005/04/26 15:18:45 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/samples/relay.c,v 1.4 2005/12/30 11:52:25 guido Exp $	*/
 
 /*
  * Sample program to be used as a transparent proxy.
@@ -18,9 +18,9 @@
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <net/if.h>
-#include "ip_compat.h"
-#include "ip_fil.h"
-#include "ip_nat.h"
+#include "netinet/ip_compat.h"
+#include "netinet/ip_fil.h"
+#include "netinet/ip_nat.h"
 #include "netinet/ipl.h"
 
 #define	RELAY_BUFSZ	8192

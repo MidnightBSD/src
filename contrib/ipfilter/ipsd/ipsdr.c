@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/contrib/ipfilter/ipsd/ipsdr.c,v 1.2 2005/04/25 18:20:10 darrenr Exp $	*/
+/*	$FreeBSD: src/contrib/ipfilter/ipsd/ipsdr.c,v 1.3 2005/12/30 11:52:23 guido Exp $	*/
 
 /*
  * (C)opyright 1995-1998 Darren Reed.
@@ -35,7 +35,7 @@
 
 #ifndef	lint
 static const char sccsid[] = "@(#)ipsdr.c	1.3 12/3/95 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)Id: ipsdr.c,v 2.2 2001/06/09 17:09:25 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ipsdr.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 
 extern	char	*optarg;

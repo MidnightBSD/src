@@ -1,4 +1,4 @@
-/* $FreeBSD: src/contrib/ipfilter/ipsend/ipsend.c,v 1.12 2005/04/25 18:20:11 darrenr Exp $ */
+/* $FreeBSD: src/contrib/ipfilter/ipsend/ipsend.c,v 1.14 2006/08/16 12:23:01 guido Exp $ */
 /*
  * ipsend.c (C) 1995-1998 Darren Reed
  *
@@ -6,7 +6,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipsend.c	1.5 12/10/95 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)Id: ipsend.c,v 2.8.2.2 2004/11/13 16:50:10 darrenr Exp";
+static const char rcsid[] = "@(#)$Id: ipsend.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -155,6 +155,8 @@ struct in_addr gwip;
 	int wfd;
 
 	wfd = initdevice(dev, 5);
+	if (wfd == -1)
+		return -1;
 	return send_packet(wfd, mtu, ip, gwip);
 }
 
