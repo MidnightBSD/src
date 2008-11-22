@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kiconv.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/lib/smb/kiconv.c,v 1.3.2.1 2005/09/08 15:46:38 imura Exp $
+ * $Id: kiconv.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $FreeBSD: src/contrib/smbfs/lib/smb/kiconv.c,v 1.4 2005/08/24 12:38:26 imura Exp $
  */
 
 #include <sys/types.h>

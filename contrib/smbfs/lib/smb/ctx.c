@@ -29,8 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ctx.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
- * $FreeBSD: src/contrib/smbfs/lib/smb/ctx.c,v 1.4.2.1 2005/11/22 02:01:00 bp Exp $
+ * $Id: ctx.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $FreeBSD: src/contrib/smbfs/lib/smb/ctx.c,v 1.7 2005/10/02 08:32:48 bp Exp $
  */
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -125,7 +125,7 @@ smb_ctx_init(struct smb_ctx *ctx, int argc, char *argv[],
 				return error;
 			break;
 		    case 'L':
-			error = nls_setlocale(optarg);
+			error = nls_setlocale(arg);
 			if (error)
 				break;
 			break;
@@ -544,7 +544,7 @@ smb_ctx_resolve(struct smb_ctx *ctx)
 		return error;
 	if (ssn->ioc_servercs[0] != 0) {
 		error = kiconv_add_xlat16_cspairs
-			(ssn->ioc_localcs, ssn->ioc_servercs);
+			(ssn->ioc_servercs, ssn->ioc_localcs);
 		if (error) return error;
 	}
 	if (ctx->ct_srvaddr) {

@@ -29,8 +29,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: print.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $Id: print.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/contrib/smbfs/smbutil/print.c,v 1.2 2006/08/11 12:35:22 keramida Exp $");
+
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
@@ -145,7 +149,7 @@ void
 print_usage(void)
 {
 	printf(
-	"usage: smbutil print [connection optinons] //user@server/share\n"
+	"usage: smbutil print [connection options] //user@server/share\n"
 	);
 	exit(1);
 }

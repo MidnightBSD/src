@@ -29,11 +29,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: nb_name.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $Id: nb_name.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/contrib/smbfs/lib/smb/nb_name.c,v 1.2 2005/09/19 08:07:18 imura Exp $");
+
 #include <sys/param.h>
+#include <sys/endian.h>
 #include <sys/socket.h>
-#include <sys/mchain.h>		/* for endiand macros */
 
 #include <ctype.h>
 #include <err.h>
@@ -139,7 +143,7 @@ nb_encname_len(const char *str)
 	return len;
 }
 
-#define	NBENCODE(c)	(htoles((u_short)(((u_char)(c) >> 4) | \
+#define	NBENCODE(c)	(htole16((u_short)(((u_char)(c) >> 4) | \
 			 (((u_char)(c) & 0xf) << 8)) + 0x4141))
 
 static void

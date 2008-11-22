@@ -29,7 +29,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: smb_lib.h,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $Id: smb_lib.h,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
+ * $FreeBSD: src/contrib/smbfs/include/netsmb/smb_lib.h,v 1.3 2005/10/02 08:32:48 bp Exp $
  */
 #ifndef _NETSMB_SMB_LIB_H_
 #define _NETSMB_SMB_LIB_H_
@@ -79,20 +80,16 @@
 #define setdbe(buf,ofs,val) getdle(buf,ofs)=htonl(val)
 
 #else	/* (BYTE_ORDER == LITTLE_ENDIAN) */
-#error "Macros for Big-Endians are incomplete"
-#define getwle(buf,ofs) ((u_int16_t)(getb(buf, ofs) | (getb(buf, ofs + 1) << 8)))
-#define getdle(buf,ofs) ((u_int32_t)(getb(buf, ofs) | \
-				    (getb(buf, ofs + 1) << 8) | \
-				    (getb(buf, ofs + 2) << 16) | \
-				    (getb(buf, ofs + 3) << 24)))
-#define getwbe(buf,ofs) (*((u_int16_t*)(&((u_int8_t*)(buf))[ofs])))
-#define getdbe(buf,ofs) (*((u_int32_t*)(&((u_int8_t*)(buf))[ofs])))
-/*
-#define setwle(buf,ofs,val) getwle(buf,ofs)=val
-#define setdle(buf,ofs,val) getdle(buf,ofs)=val
-*/
-#define setwbe(buf,ofs,val) getwle(buf,ofs)=val
-#define setdbe(buf,ofs,val) getdle(buf,ofs)=val
+
+#define getwbe(buf,ofs)	(*((u_int16_t*)(&((u_int8_t*)(buf))[ofs])))
+#define getdbe(buf,ofs)	(*((u_int32_t*)(&((u_int8_t*)(buf))[ofs])))
+#define getwle(buf,ofs)	(bswap16(getwbe(buf,ofs)))
+#define getdle(buf,ofs)	(bswap32(getdbe(buf,ofs)))
+
+#define setwbe(buf,ofs,val) getwbe(buf,ofs)=val
+#define setwle(buf,ofs,val) getwbe(buf,ofs)=bswap16(val)
+#define setdbe(buf,ofs,val) getdbe(buf,ofs)=val
+#define setdle(buf,ofs,val) getdbe(buf,ofs)=bswap32(val)
 
 #endif	/* (BYTE_ORDER == LITTLE_ENDIAN) */
 

@@ -29,8 +29,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: view.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $Id: view.c,v 1.1.1.3 2008-11-22 17:34:20 laffer1 Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/contrib/smbfs/smbutil/view.c,v 1.3 2006/08/11 12:35:22 keramida Exp $");
+
+#include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
@@ -43,8 +48,6 @@
 #include <sysexits.h>
 
 #include <cflib.h>
-
-#include <sys/mchain.h>
 
 #include <netsmb/smb_lib.h>
 #include <netsmb/smb_conn.h>
@@ -113,7 +116,7 @@ cmd_view(int argc, char *argv[])
 		exit(1);
 	}
 	for (ep = rpbuf, i = 0; i < entries; i++, ep++) {
-		type = letohs(ep->shi1_type);
+		type = le16toh(ep->shi1_type);
 
 		cp = (char*)rpbuf + ep->shi1_remark;
 		printf("%-12s %-10s %s\n", ep->shi1_netname,
@@ -130,7 +133,7 @@ void
 view_usage(void)
 {
 	printf(
-	"usage: smbutil view [connection optinons] //[user@]server\n"
+	"usage: smbutil view [connection options] //[user@]server\n"
 	);
 	exit(1);
 }
