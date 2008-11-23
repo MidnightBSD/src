@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_file.c,v 1.12 2005/05/20 12:57:01 charnier Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_file.c,v 1.13 2007/01/20 21:35:11 rodrigc Exp $");
 
 #include <errno.h>
 #include <fcntl.h>
@@ -46,12 +46,8 @@ __FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_file.c,v 1.12 2005/05/20 12:5
 
 #include "portald.h"
 
-int portal_file(pcr, key, v, so, fdp)
-struct portal_cred *pcr;
-char *key;
-char **v;
-int so;
-int *fdp;
+int portal_file(struct portal_cred *pcr,
+    char *key, char **v, int so __unused, int *fdp)
 {
 	int fd;
 	char pbuf[MAXPATHLEN];

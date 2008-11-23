@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_exec.c,v 1.7 2004/08/07 04:27:50 imp Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_exec.c,v 1.8 2007/01/20 21:35:11 rodrigc Exp $");
 
 #include <errno.h>
 #include <sys/types.h>
@@ -42,12 +42,8 @@ __FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_exec.c,v 1.7 2004/08/07 04:27
 
 #include "portald.h"
 
-int portal_exec(pcr, key, v, so, fdp)
-struct portal_cred *pcr;
-char *key;
-char **v;
-int so;
-int *fdp;
+int portal_exec(struct portal_cred *pcr __unused, char *key __unused,
+    char **v __unused, int so __unused, int *fdp __unused)
 {
 	return (ENOEXEC);
 }

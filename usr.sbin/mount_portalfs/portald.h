@@ -32,7 +32,7 @@
  *
  *	@(#)portald.h	8.1 (Berkeley) 6/5/93
  *
- * $FreeBSD: src/usr.sbin/mount_portalfs/portald.h,v 1.10 2005/03/11 08:39:58 dds Exp $
+ * $FreeBSD: src/usr.sbin/mount_portalfs/portald.h,v 1.11 2007/01/20 21:35:11 rodrigc Exp $
  */
 
 #include <sys/cdefs.h>
@@ -54,7 +54,7 @@ struct qelem {
 
 typedef struct provider provider;
 struct provider {
-	char *pr_match;
+	const char *pr_match;
 	int (*pr_func)(struct portal_cred *,
 				char *key, char **v, int so, int *fdp);
 };

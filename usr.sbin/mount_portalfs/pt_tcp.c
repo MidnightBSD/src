@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_tcp.c,v 1.12 2004/08/07 04:27:50 imp Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_tcp.c,v 1.13 2007/01/20 21:35:11 rodrigc Exp $");
 
 #include <errno.h>
 #include <stdlib.h>
@@ -57,12 +57,8 @@ __FBSDID("$FreeBSD: src/usr.sbin/mount_portalfs/pt_tcp.c,v 1.12 2004/08/07 04:27
  * Some trailing suffix values have special meanings.
  * An unrecognized suffix is an error.
  */
-int portal_tcp(pcr, key, v, kso, fdp)
-	struct portal_cred *pcr;
-	char *key;
-	char **v;
-	int kso;
-	int *fdp;
+int portal_tcp(struct portal_cred *pcr, char *key, char **v,
+    int kso __unused, int *fdp)
 {
 	char host[MAXHOSTNAMELEN];
 	char port[MAXHOSTNAMELEN];
@@ -78,7 +74,7 @@ int portal_tcp(pcr, key, v, kso, fdp)
 	struct sockaddr_in sain;
 
 	q = strchr(p, '/');
-	if (q == 0 || q - p >= sizeof(host))
+	if (q == 0 || q - p >= (int)sizeof(host))
 		return (EINVAL);
 	*q = '\0';
 	strcpy(host, p);

@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/mount_smbfs/Makefile,v 1.7 2005/05/04 15:05:46 takawata Exp $
+# $FreeBSD: src/usr.sbin/mount_smbfs/Makefile,v 1.8 2005/11/16 02:47:12 rodrigc Exp $
 
 PROG=	mount_smbfs
 SRCS=	mount_smbfs.c getmntopts.c
@@ -18,5 +18,6 @@ DPADD=	${LIBSMB} ${LIBKICONV}
 NO_SHARED?=	NO
 
 .PATH:	${CONTRIBDIR}/mount_smbfs
+.PATH:  ${MOUNTDIR}
 
 .include <bsd.prog.mk>

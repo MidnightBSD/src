@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mountd.8	8.4 (Berkeley) 4/28/95
-.\" $FreeBSD: src/usr.sbin/mountd/mountd.8,v 1.27 2004/08/07 04:27:51 imp Exp $
+.\" $FreeBSD: src/usr.sbin/mountd/mountd.8,v 1.30 2007/02/03 00:15:46 pjd Exp $
 .\"
-.Dd April 28, 1995
+.Dd February 3, 2007
 .Dt MOUNTD 8
 .Os
 .Sh NAME
@@ -40,7 +40,7 @@ mount requests
 .Nm
 .Op Fl 2dlnr
 .Op Fl p Ar port
-.Op Ar exportsfile
+.Op Ar exportsfile ...
 .Sh DESCRIPTION
 The
 .Nm
@@ -64,6 +64,9 @@ version 2
 protocol to mount file systems from this server.
 .It Fl d
 Output debugging information.
+.Nm
+will not detach from the controlling terminal and will print
+debugging messages to stderr.
 .It Fl l
 Cause all succeeded
 .Nm
@@ -103,6 +106,7 @@ flag.
 .It Ar exportsfile
 Specify an alternate location
 for the exports file.
+More than one exports file can be specified.
 .El
 .Pp
 When

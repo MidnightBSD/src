@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/mount_nwfs/mount_nwfs.c,v 1.8 2003/07/25 20:56:57 peter Exp $
+ * $FreeBSD: src/usr.sbin/mount_nwfs/mount_nwfs.c,v 1.9 2006/05/11 17:23:57 phk Exp $
  */
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -81,7 +81,6 @@ main(int argc, char *argv[]) {
 	time_t ltime;
 	int opt, error, mntflags, nlsopt, wall_clock;
 	size_t len;
-	int mib[2];
 	char *p, *p1, tmp[1024];
 	u_char *pv;
 
@@ -309,10 +308,8 @@ main(int argc, char *argv[]) {
 /*	}*/
 	mdata.nls.opt = nlsopt;
 
-	mib[0] = CTL_MACHDEP;
-	mib[1] = CPU_WALLCLOCK;
 	len = sizeof(wall_clock);
-	if (sysctl(mib, 2, &wall_clock, &len, NULL, 0) == -1)
+	if (sysctlbyname("machdep.wall_cmos_clock", &wall_clock, &len, NULL, 0) == -1)
 		err(EX_OSERR, "get wall_clock");
 	if (wall_clock == 0) {
 		time(&ltime);
