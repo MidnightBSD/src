@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile,v 1.5.6.3 2006/03/31 12:43:39 glebius Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_mibII/Makefile,v 1.8 2006/02/27 20:46:34 ru Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
@@ -21,3 +21,7 @@ INCS=	snmp_${MOD}.h
 BMIBS=	BEGEMOT-IP-MIB.txt BEGEMOT-MIB2-MIB.txt
 
 .include <bsd.snmpmod.mk>
+
+smilint:
+	env SMIPATH=/usr/share/snmp/mibs:/usr/local/share/snmp/mibs \
+	    smilint -c /dev/null -l6 -i group-membership ${BMIBS:C/^/${CONTRIB}\/snmp_mibII\//}
