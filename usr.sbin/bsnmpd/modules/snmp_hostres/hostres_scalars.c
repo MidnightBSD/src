@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_scalars.c,v 1.4.2.1 2006/01/27 16:27:34 harti Exp $
+ * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_scalars.c,v 1.4 2006/01/12 07:44:40 harti Exp $
  */
 
 /*

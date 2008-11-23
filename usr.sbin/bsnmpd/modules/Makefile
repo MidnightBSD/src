@@ -1,12 +1,15 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/Makefile,v 1.8.2.1 2006/01/27 16:27:34 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/Makefile,v 1.15 2006/12/29 19:24:51 bz Exp $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../../contrib/bsnmp/snmpd
 
-.if !defined(NO_ATM)
+.if ${MK_ATM} != "no"
 _snmp_atm= snmp_atm
 .endif
 
 SUBDIR=	${_snmp_atm} \
+	snmp_bridge \
 	snmp_hostres \
 	snmp_mibII \
 	snmp_netgraph \

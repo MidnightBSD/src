@@ -25,7 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/Makefile,v 1.3.2.1 2006/01/27 16:27:34 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/Makefile,v 1.3 2006/01/26 10:13:32 harti Exp $
 #
 
 LPRSRC=	${.CURDIR}/../../../lpr/common_source

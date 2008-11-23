@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_network_tbl.c,v 1.2.2.1 2006/01/27 16:27:34 harti Exp $
+ * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_network_tbl.c,v 1.3 2006/07/14 09:07:56 harti Exp $
  */
 
 /*
@@ -67,7 +67,7 @@ struct network_entry {
 	int32_t		index;
 	int32_t		ifIndex;
 	TAILQ_ENTRY(network_entry) link;
-#define HR_NETWORK_FOUND		0x001
+#define	HR_NETWORK_FOUND		0x001
 	uint32_t	flags;
 
 };
@@ -172,7 +172,7 @@ network_get_interfaces(void)
 		}
 		HRDBG("%s found in hrDeviceTable", dname);
 
-		dev->type = OIDX_hrDeviceNetwork_c;
+		dev->type = &OIDX_hrDeviceNetwork_c;
 		dev->flags |= HR_DEVICE_IMMUTABLE;
 
 		free(dname);

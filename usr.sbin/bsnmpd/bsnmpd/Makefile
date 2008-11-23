@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/bsnmpd/bsnmpd/Makefile,v 1.11.2.1 2006/01/20 16:34:36 harti Exp $
+# $FreeBSD: src/usr.sbin/bsnmpd/bsnmpd/Makefile,v 1.16 2006/11/08 10:36:57 harti Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 
@@ -10,7 +10,8 @@ SRCS=	main.c action.c config.c export.c trap.c trans_udp.c trans_lsock.c
 SRCS+=	oid.h tree.c tree.h
 XSYM=	snmpMIB begemotSnmpdModuleTable begemotSnmpd begemotTrapSinkTable \
 	sysUpTime snmpTrapOID coldStart authenticationFailure \
-	begemotSnmpdTransUdp begemotSnmpdTransLsock begemotSnmpdLocalPortTable
+	begemotSnmpdTransUdp begemotSnmpdTransLsock begemotSnmpdLocalPortTable \
+	freeBSDVersion
 CLEANFILES= oid.h tree.c tree.h
 MAN=	bsnmpd.1 snmpmod.3
 WARNS?=	6
@@ -25,14 +26,14 @@ DEFSDIR= ${SHAREDIR}/snmp/defs
 
 CFLAGS+= -I${CONTRIB}/lib -I${CONTRIB}/snmpd -I. -DUSE_LIBBEGEMOT
 CFLAGS+= -DUSE_TCPWRAPPERS -DQUADFMT='"llu"' -DQUADXFMT='"llx"'
-CFLAGS+= -DHAVE_STDINT_H -DHAVE_INTTYPES_H
-DPADD=	${LIBBEGEMOT} ${LIBBSNMP}
+CFLAGS+= -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DHAVE_ERR_H -DHAVE_STRLCPY
+DPADD=	${LIBBEGEMOT} ${LIBBSNMP} ${LIBWRAP}
 LDADD=	-lbegemot -lbsnmp -lwrap
 
 LDFLAGS= -export-dynamic
 
-oid.h: tree.def
-	gensnmptree -e ${XSYM} < ${.ALLSRC} > ${.TARGET}
+oid.h: tree.def Makefile
+	gensnmptree -e ${XSYM} < ${.ALLSRC:M*.def} > ${.TARGET}
 
 .ORDER: tree.c tree.h
 tree.c tree.h: tree.def

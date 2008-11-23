@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_printer_tbl.c,v 1.2.2.1 2006/01/27 16:27:34 harti Exp $
+ * $FreeBSD: src/usr.sbin/bsnmpd/modules/snmp_hostres/hostres_printer_tbl.c,v 1.3 2006/07/14 09:07:56 harti Exp $
  */
 
 /*
@@ -73,7 +73,7 @@ struct printer_entry {
 	int32_t		status;  /* values from PrinterStatus enum above */
 	u_char		detectedErrorState[2];
 	TAILQ_ENTRY(printer_entry) link;
-#define HR_PRINTER_FOUND		0x001
+#define	HR_PRINTER_FOUND		0x001
 	uint32_t	flags;
 
 };
@@ -240,8 +240,8 @@ handle_printer(struct printer *pp)
 		return;
 	}
 	HRDBG("%s found in hrDeviceTable", pp->lp);
+	dev_entry->type = &OIDX_hrDevicePrinter_c;
 
-	dev_entry->type = OIDX_hrDevicePrinter_c;
 	dev_entry->flags |= HR_DEVICE_IMMUTABLE;
 
 	/* Then check hrPrinterTable for this device */
