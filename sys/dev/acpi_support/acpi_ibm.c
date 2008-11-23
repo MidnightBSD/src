@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_ibm.c,v 1.7.2.2 2005/11/10 11:22:11 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_ibm.c,v 1.14.2.1 2007/11/02 18:54:09 jhb Exp $");
 
 /*
  * Driver for extra ACPI-controlled gadgets found on IBM ThinkPad laptops.
@@ -64,8 +64,9 @@ ACPI_MODULE_NAME("IBM")
 #define ACPI_IBM_METHOD_BLUETOOTH	8
 #define ACPI_IBM_METHOD_WLAN		9
 #define ACPI_IBM_METHOD_FANSPEED	10
-#define ACPI_IBM_METHOD_FANSTATUS	11
-#define ACPI_IBM_METHOD_THERMAL		12
+#define ACPI_IBM_METHOD_FANLEVEL	11
+#define ACPI_IBM_METHOD_FANSTATUS	12
+#define ACPI_IBM_METHOD_THERMAL		13
 
 /* Hotkeys/Buttons */
 #define IBM_RTC_HOTKEY1			0x64
@@ -94,6 +95,8 @@ ACPI_MODULE_NAME("IBM")
 #define   IBM_EC_MASK_VOL		0xf
 #define   IBM_EC_MASK_MUTE		(1 << 6)
 #define IBM_EC_FANSTATUS		0x2F
+#define   IBM_EC_MASK_FANLEVEL		0x3f
+#define   IBM_EC_MASK_FANDISENGAGED	(1 << 6)
 #define   IBM_EC_MASK_FANSTATUS		(1 << 7)
 #define IBM_EC_FANSPEED			0x84
 
@@ -229,10 +232,16 @@ static struct {
 		.access		= CTLTYPE_INT | CTLFLAG_RD
 	},
 	{
+		.name		= "fan_level",
+		.method		= ACPI_IBM_METHOD_FANLEVEL,
+		.description	= "Fan level",
+		.access		= CTLTYPE_INT | CTLFLAG_RW
+	},
+	{
 		.name		= "fan",
 		.method		= ACPI_IBM_METHOD_FANSTATUS,
 		.description	= "Fan enable",
-		.access		= CTLTYPE_INT | CTLFLAG_RD
+		.access		= CTLTYPE_INT | CTLFLAG_RW
 	},
 
 	{ NULL, 0, NULL, 0 }
@@ -276,7 +285,7 @@ static devclass_t acpi_ibm_devclass;
 DRIVER_MODULE(acpi_ibm, acpi, acpi_ibm_driver, acpi_ibm_devclass,
 	      0, 0);
 MODULE_DEPEND(acpi_ibm, acpi, 1, 1, 1);
-static char    *ibm_ids[] = {"IBM0057", "IBM0068", NULL};
+static char    *ibm_ids[] = {"IBM0068", NULL};
 
 static void
 ibm_led(void *softc, int onoff)
@@ -291,8 +300,7 @@ ibm_led(void *softc, int onoff)
 	sc->led_busy = 1;
 	sc->led_state = onoff;
 
-	AcpiOsQueueForExecution(OSD_PRIORITY_LO,
-	    (void *)ibm_led_task, sc);
+	AcpiOsExecute(OSL_NOTIFY_HANDLER, (void *)ibm_led_task, sc);
 }
 
 static void
@@ -404,7 +412,7 @@ acpi_ibm_attach(device_t dev)
 
 	/* Hook up light to led(4) */
 	if (sc->light_set_supported)
-		sc->led_dev = led_create(ibm_led, sc, "thinklight");
+		sc->led_dev = led_create_state(ibm_led, sc, "thinklight", sc->light_val);
 
 	return (0);
 }
@@ -590,6 +598,22 @@ acpi_ibm_sysctl_get(struct acpi_ibm_softc *sc, int method)
 		}
 		break;
 
+	case ACPI_IBM_METHOD_FANLEVEL:
+		/*
+		 * The IBM_EC_FANSTATUS register works as follows:
+		 * Bit 0-5 indicate the level at which the fan operates. Only
+		 *       values between 0 and 7 have an effect. Everything
+		 *       above 7 is treated the same as level 7
+		 * Bit 6 overrides the fan speed limit if set to 1
+		 * Bit 7 indicates at which mode the fan operates:
+		 *       manual (0) or automatic (1)
+		 */
+		if (!sc->fan_handle) {
+			ACPI_EC_READ(sc->ec_dev, IBM_EC_FANSTATUS, &val_ec, 1);
+			val = val_ec & IBM_EC_MASK_FANLEVEL;
+		}
+		break;
+
 	case ACPI_IBM_METHOD_FANSTATUS:
 		if (!sc->fan_handle) {
 			ACPI_EC_READ(sc->ec_dev, IBM_EC_FANSTATUS, &val_ec, 1);
@@ -731,6 +755,32 @@ acpi_ibm_sysctl_set(struct acpi_ibm_softc *sc, int method, int arg)
 		val = (arg == 1) ? sc->wlan_bt_flags | IBM_NAME_MASK_BT : sc->wlan_bt_flags & (~IBM_NAME_MASK_BT);
 		return acpi_SetInteger(sc->handle, IBM_NAME_WLAN_BT_SET, val);
 		break;
+
+	case ACPI_IBM_METHOD_FANLEVEL:
+		if (arg < 0 || arg > 7)
+			return (EINVAL);
+
+		if (!sc->fan_handle) {
+			/* Read the current fanstatus */
+			ACPI_EC_READ(sc->ec_dev, IBM_EC_FANSTATUS, &val_ec, 1);
+			val = val_ec & (~IBM_EC_MASK_FANLEVEL);
+
+			return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_FANSTATUS, val | arg, 1);
+		}
+		break;
+
+	case ACPI_IBM_METHOD_FANSTATUS:
+		if (arg < 0 || arg > 1)
+			return (EINVAL);
+
+		if (!sc->fan_handle) {
+			/* Read the current fanstatus */
+			ACPI_EC_READ(sc->ec_dev, IBM_EC_FANSTATUS, &val_ec, 1);
+
+			return ACPI_EC_WRITE(sc->ec_dev, IBM_EC_FANSTATUS,
+				(arg == 1) ? (val_ec | IBM_EC_MASK_FANSTATUS) : (val_ec & (~IBM_EC_MASK_FANSTATUS)), 1);
+		}
+		break;
 	}
 
 	return (0);
@@ -760,7 +810,8 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 
 	case ACPI_IBM_METHOD_THINKLIGHT:
 		sc->cmos_handle = NULL;
-		sc->light_get_supported = ACPI_SUCCESS(acpi_GetInteger(sc->ec_handle, IBM_NAME_KEYLIGHT, &dummy));
+		sc->light_get_supported = ACPI_SUCCESS(acpi_GetInteger(
+		    sc->ec_handle, IBM_NAME_KEYLIGHT, &sc->light_val));
 
 		if ((ACPI_SUCCESS(AcpiGetHandle(sc->handle, "\\UCMS", &sc->light_handle)) ||
 		     ACPI_SUCCESS(AcpiGetHandle(sc->handle, "\\CMOS", &sc->light_handle)) ||
@@ -781,12 +832,15 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 		sc->light_set_supported = (sc->light_handle &&
 		    ACPI_FAILURE(AcpiGetHandle(sc->ec_handle, "LEDB", &ledb_handle)));
 
-		if (sc->light_get_supported || sc->light_set_supported) {
+		if (sc->light_get_supported)
+			return (TRUE);
+
+		if (sc->light_set_supported) {
 			sc->light_val = 0;
 			return (TRUE);
 		}
-		else
-			return (FALSE);
+
+		return (FALSE);
 
 	case ACPI_IBM_METHOD_BLUETOOTH:
 	case ACPI_IBM_METHOD_WLAN:
@@ -804,6 +858,7 @@ acpi_ibm_sysctl_init(struct acpi_ibm_softc *sc, int method)
 		     ACPI_SUCCESS(AcpiGetHandle(sc->handle, "\\FSPD", &sc->fan_handle)));
 		return (TRUE);
 
+	case ACPI_IBM_METHOD_FANLEVEL:
 	case ACPI_IBM_METHOD_FANSTATUS:
 		/* 
 		 * Fan status is only supported on those models,
@@ -867,9 +922,8 @@ acpi_ibm_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 
 	ACPI_FUNCTION_TRACE_U32((char *)(uintptr_t)__func__, notify);
 
-	printf("IBM:NOTIFY:%x\n", notify);
 	if (notify != 0x80)
-		printf("Unknown notify\n");
+		device_printf(dev, "Unknown notify\n");
 
 	for (;;) {
 		acpi_GetInteger(acpi_get_handle(dev), IBM_NAME_EVENTS_GET, &event);
@@ -877,14 +931,13 @@ acpi_ibm_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 		if (event == 0)
 			break;
 
-		printf("notify:%x\n", event);
 
 		type = (event >> 12) & 0xf;
 		arg = event & 0xfff;
 		switch (type) {
 		case 1:
 			if (!(sc->events_availmask & (1 << (arg - 1)))) {
-				printf("Unknown key %d\n", arg);
+				device_printf(dev, "Unknown key %d\n", arg);
 				break;
 			}
 

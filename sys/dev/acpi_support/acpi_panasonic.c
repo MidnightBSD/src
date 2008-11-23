@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_panasonic.c,v 1.8.2.1 2005/11/10 11:22:11 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_panasonic.c,v 1.13 2007/06/17 04:40:33 mjacob Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -79,6 +79,7 @@ typedef int hkey_fn_t(ACPI_HANDLE, int, UINT32 *);
 static int	acpi_panasonic_probe(device_t dev);
 static int	acpi_panasonic_attach(device_t dev);
 static int	acpi_panasonic_detach(device_t dev);
+static void	acpi_panasonic_shutdown(device_t dev);
 static int	acpi_panasonic_sysctl(SYSCTL_HANDLER_ARGS);
 static ACPI_INTEGER acpi_panasonic_sinf(ACPI_HANDLE h, ACPI_INTEGER index);
 static void	acpi_panasonic_sset(ACPI_HANDLE h, ACPI_INTEGER index,
@@ -114,6 +115,7 @@ static device_method_t acpi_panasonic_methods[] = {
 	DEVMETHOD(device_probe,		acpi_panasonic_probe),
 	DEVMETHOD(device_attach,	acpi_panasonic_attach),
 	DEVMETHOD(device_detach,	acpi_panasonic_detach),
+	DEVMETHOD(device_shutdown,	acpi_panasonic_shutdown),
 
 	{0, 0}
 };
@@ -181,7 +183,7 @@ acpi_panasonic_attach(device_t dev)
 	}
 #endif
 
-        /* Handle notifies */
+	/* Handle notifies */
 	status = AcpiInstallNotifyHandler(sc->handle, ACPI_DEVICE_NOTIFY,
 	    acpi_panasonic_notify, sc);
 	if (ACPI_FAILURE(status)) {
@@ -218,6 +220,18 @@ acpi_panasonic_detach(device_t dev)
 	return (0);
 }
 
+static void
+acpi_panasonic_shutdown(device_t dev)
+{
+	struct acpi_panasonic_softc *sc;
+	int mute;
+
+	/* Mute the main audio during reboot to prevent static burst to speaker. */
+	sc = device_get_softc(dev);
+	mute = 1;
+	hkey_sound_mute(sc->handle, HKEY_SET, &mute);
+}
+
 static int
 acpi_panasonic_sysctl(SYSCTL_HANDLER_ARGS)
 {
@@ -230,7 +244,7 @@ acpi_panasonic_sysctl(SYSCTL_HANDLER_ARGS)
 	function = oidp->oid_arg2;
 	handler = sysctl_table[function].handler;
 
-        /* Get the current value from the appropriate function. */
+	/* Get the current value from the appropriate function. */
 	ACPI_SERIAL_BEGIN(panasonic);
 	error = handler(sc->handle, HKEY_GET, &arg);
 	if (error != 0)
@@ -413,7 +427,10 @@ static void
 acpi_panasonic_hkey_action(struct acpi_panasonic_softc *sc, ACPI_HANDLE h,
     UINT32 key)
 {
+	struct acpi_softc *acpi_sc;
 	int arg, max, min;
+
+	acpi_sc = acpi_device_get_parent_softc(sc->dev);
 
 	ACPI_SERIAL_ASSERT(panasonic);
 	switch (key) {
@@ -450,6 +467,10 @@ acpi_panasonic_hkey_action(struct acpi_panasonic_softc *sc, ACPI_HANDLE h,
 			arg = 1;
 		hkey_sound_mute(h, HKEY_SET, &arg);
 		break;
+	case 7:
+		/* Suspend. */
+		acpi_event_sleep_button_sleep(acpi_sc);
+		break;
 	}
 }
 
@@ -457,7 +478,7 @@ static void
 acpi_panasonic_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 {
 	struct acpi_panasonic_softc *sc;
-	UINT32 key;
+	UINT32 key = 0;
 
 	sc = (struct acpi_panasonic_softc *)context;
 

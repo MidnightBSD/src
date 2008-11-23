@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_asus.c,v 1.24.2.1 2005/11/10 11:22:11 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_asus.c,v 1.30 2007/06/02 21:10:00 philip Exp $");
 
 /*
  * Driver for extra ACPI-controlled gadgets (hotkeys, leds, etc) found on
@@ -143,6 +143,42 @@ static struct acpi_asus_model acpi_asus_models[] = {
 		.brn_get	= "GPLV",
 		.brn_set	= "SPLV",
 		.disp_get	= "\\INFB",
+		.disp_set	= "SDSP"
+	},
+	{
+		.name           = "A3N",
+		.mled_set       = "MLED",
+		.bled_set       = "BLED",
+		.wled_set       = "WLED",
+		.lcd_get        = NULL,
+		.lcd_set        = "\\_SB.PCI0.SBRG.EC0._Q10",
+		.brn_set        = "SPLV",
+		.brn_get        = "SDSP",
+		.disp_set       = "SDSP",
+		.disp_get       = "\\_SB.PCI0.P0P3.VGA.GETD"
+	},
+	{
+		.name		= "A4D",
+		.mled_set	= "MLED",
+		.brn_up		= "\\_SB_.PCI0.SBRG.EC0._Q0E",
+		.brn_dn		= "\\_SB_.PCI0.SBRG.EC0._Q0F",
+		.brn_get	= "GPLV",
+		.brn_set	= "SPLV",
+#ifdef notyet
+		.disp_get	= "\\_SB_.PCI0.SBRG.EC0._Q10",
+		.disp_set	= "\\_SB_.PCI0.SBRG.EC0._Q11"
+#endif
+	},
+	{
+		.name		= "A6V",
+		.bled_set	= "BLED",
+		.mled_set	= "MLED",
+		.wled_set	= "WLED",
+		.lcd_get	= NULL,
+		.lcd_set	= "\\_SB.PCI0.SBRG.EC0._Q10",
+		.brn_get	= "GPLV",
+		.brn_set	= "SPLV",
+		.disp_get	= "\\_SB.PCI0.P0P3.VGA.GETD",
 		.disp_set	= "SDSP"
 	},
 	{
@@ -287,6 +323,16 @@ static struct acpi_asus_model acpi_asus_models[] = {
 		.disp_get	= "\\_SB.PCI0.P0P1.VGA.GETD",
 		.disp_set	= "SDSP"
 	},
+	{
+		.name		= "W5A",
+		.bled_set	= "BLED",
+		.lcd_get	= "\\BKLT",
+		.lcd_set	= "\\_SB.PCI0.SBRG.EC0._Q10",
+		.brn_get	= "GPLV",
+		.brn_set	= "SPLV",
+		.disp_get	= "\\_SB.PCI0.P0P2.VGA.GETD",
+		.disp_set	= "SDSP"
+	},
 
 	{ .name = NULL }
 };
@@ -409,7 +455,7 @@ acpi_asus_probe(device_t dev)
 		ACPI_STATUS		status;
 		ACPI_TABLE_HEADER	th;
 
-		status = AcpiGetTableHeader(ACPI_TABLE_DSDT, 1, &th);
+		status = AcpiGetTableHeader(ACPI_SIG_DSDT, 0, &th);
 		if (ACPI_FAILURE(status)) {
 			device_printf(dev, "Unsupported (Samsung?) laptop\n");
 			AcpiOsFree(Buf.Pointer);
@@ -686,8 +732,7 @@ acpi_asus_led(struct acpi_asus_led *led, int state)
 	led->busy = 1;
 	led->state = state;
 
-	AcpiOsQueueForExecution(OSD_PRIORITY_LO,
-	    (void *)acpi_asus_led_task, led);
+	AcpiOsExecute(OSL_NOTIFY_HANDLER, (void *)acpi_asus_led_task, led);
 }
 
 static int

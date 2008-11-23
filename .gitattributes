@@ -25358,6 +25358,7 @@ sys/dev/aac/aac_pci.c -text
 sys/dev/aac/aac_tables.h -text
 sys/dev/aac/aacreg.h -text
 sys/dev/aac/aacvar.h -text
+sys/dev/acpi_support/acpi_aiboost.c -text
 sys/dev/acpi_support/acpi_asus.c -text
 sys/dev/acpi_support/acpi_fujitsu.c -text
 sys/dev/acpi_support/acpi_ibm.c -text

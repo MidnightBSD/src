@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_sony.c,v 1.8.2.1 2005/11/10 11:22:11 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_sony.c,v 1.10 2006/11/01 03:45:24 kevlo Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -67,8 +67,8 @@ static struct acpi_sony_name_list
 	{ "cmi", "GCMI", "SCMI", "????"},
 #endif
 	{ "wdp", "GWDP", NULL, "?????"},
-	{ "cdp", "GCDP", "CDPW", "??????"},  /*shares [\GL03]&0x8 flag*/
-	{NULL, NULL,NULL}
+	{ "cdp", "GCDP", "CDPW", "CD Power"},  /*shares [\GL03]&0x8 flag*/
+	{ NULL, NULL, NULL }
 };
 
 static int	acpi_sony_probe(device_t dev);
