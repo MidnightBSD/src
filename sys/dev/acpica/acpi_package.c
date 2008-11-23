@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_package.c,v 1.6.2.2 2005/11/07 09:53:22 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_package.c,v 1.9 2007/01/07 21:53:42 njl Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -104,7 +104,7 @@ acpi_PkgStr(ACPI_OBJECT *res, int idx, void *dst, size_t size)
 
 int
 acpi_PkgGas(device_t dev, ACPI_OBJECT *res, int idx, int *type, int *rid,
-    struct resource **dst)
+    struct resource **dst, u_int flags)
 {
     ACPI_GENERIC_ADDRESS gas;
     ACPI_OBJECT *obj;
@@ -116,7 +116,7 @@ acpi_PkgGas(device_t dev, ACPI_OBJECT *res, int idx, int *type, int *rid,
 
     memcpy(&gas, obj->Buffer.Pointer + 3, sizeof(gas));
 
-    return (acpi_bus_alloc_gas(dev, type, rid, &gas, dst));
+    return (acpi_bus_alloc_gas(dev, type, rid, &gas, dst, flags));
 }
 
 ACPI_HANDLE

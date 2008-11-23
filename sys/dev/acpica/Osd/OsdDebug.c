@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdDebug.c,v 1.9.2.2 2005/11/07 09:53:23 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdDebug.c,v 1.13 2007/03/22 18:16:41 jkim Exp $");
 
 #include "opt_ddb.h"
 #include <sys/param.h>
@@ -62,14 +62,6 @@ AcpiOsGetLine(char *Buffer)
 #endif /* DDB */
 }
 
-void
-AcpiOsDbgAssert(void *FailedAssertion, void *FileName, UINT32 LineNumber,
-    char *Message)
-{
-    printf("ACPI: %s:%d - %s\n", (char *)FileName, LineNumber, Message);
-    printf("ACPI: assertion  %s\n", (char *)FailedAssertion);
-}
-
 ACPI_STATUS
 AcpiOsSignal(UINT32 Function, void *Info)
 {
@@ -78,9 +70,11 @@ AcpiOsSignal(UINT32 Function, void *Info)
     switch (Function) {
     case ACPI_SIGNAL_FATAL:
 	fatal = (ACPI_SIGNAL_FATAL_INFO *)Info;
-	printf("ACPI fatal signal, type 0x%x  code 0x%x  argument 0x%x",
+	printf("ACPI fatal signal, type 0x%x code 0x%x argument 0x%x",
 	      fatal->Type, fatal->Code, fatal->Argument);
+#ifdef ACPI_DEBUG
 	kdb_enter("AcpiOsSignal");
+#endif
 	break;
 
     case ACPI_SIGNAL_BREAKPOINT:

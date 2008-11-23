@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_throttle.c,v 1.7.2.1 2005/11/07 09:53:23 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_throttle.c,v 1.11 2007/03/22 18:16:40 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -141,7 +141,7 @@ acpi_throttle_identify(driver_t *driver, device_t parent)
 	handle = acpi_get_handle(parent);
 	if (handle == NULL)
 		return;
-	if (AcpiGbl_FADT->DutyWidth == 0 ||
+	if (AcpiGbl_FADT.DutyWidth == 0 ||
 	    acpi_get_type(parent) != ACPI_TYPE_PROCESSOR)
 		return;
 
@@ -242,8 +242,8 @@ acpi_throttle_evaluate(struct acpi_throttle_softc *sc)
 
 	/* Get throttling parameters from the FADT.  0 means not supported. */
 	if (device_get_unit(sc->cpu_dev) == 0) {
-		cpu_duty_offset = AcpiGbl_FADT->DutyOffset;
-		cpu_duty_width = AcpiGbl_FADT->DutyWidth;
+		cpu_duty_offset = AcpiGbl_FADT.DutyOffset;
+		cpu_duty_width = AcpiGbl_FADT.DutyWidth;
 	}
 	if (cpu_duty_width == 0 || (thr_quirks & CPU_QUIRK_NO_THROTTLE) != 0)
 		return (ENXIO);
@@ -278,7 +278,7 @@ acpi_throttle_evaluate(struct acpi_throttle_softc *sc)
 		}
 		memcpy(&gas, obj.Buffer.Pointer + 3, sizeof(gas));
 		acpi_bus_alloc_gas(sc->cpu_dev, &sc->cpu_p_type, &thr_rid,
-		    &gas, &sc->cpu_p_cnt);
+		    &gas, &sc->cpu_p_cnt, 0);
 		if (sc->cpu_p_cnt != NULL && bootverbose) {
 			device_printf(sc->cpu_dev, "P_CNT from _PTC %#jx\n",
 			    gas.Address);
@@ -295,10 +295,10 @@ acpi_throttle_evaluate(struct acpi_throttle_softc *sc)
 		if (sc->cpu_p_blk_len < 4)
 			return (ENXIO);
 		gas.Address = sc->cpu_p_blk;
-		gas.AddressSpaceId = ACPI_ADR_SPACE_SYSTEM_IO;
-		gas.RegisterBitWidth = 32;
+		gas.SpaceId = ACPI_ADR_SPACE_SYSTEM_IO;
+		gas.BitWidth = 32;
 		acpi_bus_alloc_gas(sc->cpu_dev, &sc->cpu_p_type, &thr_rid,
-		    &gas, &sc->cpu_p_cnt);
+		    &gas, &sc->cpu_p_cnt, 0);
 		if (sc->cpu_p_cnt != NULL) {
 			if (bootverbose)
 				device_printf(sc->cpu_dev,

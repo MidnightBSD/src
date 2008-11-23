@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_button.c,v 1.30.2.1 2005/11/07 09:53:22 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_button.c,v 1.32 2007/03/22 18:16:40 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -248,12 +248,10 @@ acpi_button_notify_handler(ACPI_HANDLE h, UINT32 notify, void *context)
     sc = (struct acpi_button_softc *)context;
     switch (notify) {
     case ACPI_NOTIFY_BUTTON_PRESSED_FOR_SLEEP:
-	AcpiOsQueueForExecution(OSD_PRIORITY_LO,
-				acpi_button_notify_sleep, sc);
+	AcpiOsExecute(OSL_NOTIFY_HANDLER, acpi_button_notify_sleep, sc);
 	break;   
     case ACPI_NOTIFY_BUTTON_PRESSED_FOR_WAKEUP:
-	AcpiOsQueueForExecution(OSD_PRIORITY_LO,
-				acpi_button_notify_wakeup, sc);
+	AcpiOsExecute(OSL_NOTIFY_HANDLER, acpi_button_notify_wakeup, sc);
 	break;   
     default:
 	device_printf(sc->button_dev, "unknown notify %#x\n", notify);

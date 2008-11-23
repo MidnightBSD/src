@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_cmbat.c,v 1.39.2.4 2005/11/26 07:37:40 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_cmbat.c,v 1.46 2007/03/22 18:16:40 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -149,7 +149,7 @@ acpi_cmbat_attach(device_t dev)
     AcpiInstallNotifyHandler(handle, ACPI_ALL_NOTIFY,
 	acpi_cmbat_notify_handler, dev);
 
-    AcpiOsQueueForExecution(OSD_PRIORITY_LO, acpi_cmbat_init_battery, dev);
+    AcpiOsExecute(OSL_NOTIFY_HANDLER, acpi_cmbat_init_battery, dev);
 
     return (0);
 }
@@ -157,7 +157,10 @@ acpi_cmbat_attach(device_t dev)
 static int
 acpi_cmbat_detach(device_t dev)
 {
+    ACPI_HANDLE	handle;
 
+    handle = acpi_get_handle(dev);
+    AcpiRemoveNotifyHandler(handle, ACPI_ALL_NOTIFY, acpi_cmbat_notify_handler);
     acpi_battery_remove(dev);
     return (0);
 }
@@ -166,7 +169,7 @@ static int
 acpi_cmbat_resume(device_t dev)
 {
 
-    AcpiOsQueueForExecution(OSD_PRIORITY_LO, acpi_cmbat_init_battery, dev);
+    AcpiOsExecute(OSL_NOTIFY_HANDLER, acpi_cmbat_init_battery, dev);
     return (0);
 }
 
@@ -194,7 +197,7 @@ acpi_cmbat_notify_handler(ACPI_HANDLE h, UINT32 notify, void *context)
 	 * Queue a callback to get the current battery info from thread
 	 * context.  It's not safe to block in a notify handler.
 	 */
-	AcpiOsQueueForExecution(OSD_PRIORITY_LO, acpi_cmbat_get_bif_task, dev);
+	AcpiOsExecute(OSL_NOTIFY_HANDLER, acpi_cmbat_get_bif_task, dev);
 	break;
     }
 
@@ -435,6 +438,10 @@ acpi_cmbat_init_battery(void *arg)
      * to wait a while.
      */
     for (retry = 0; retry < ACPI_CMBAT_RETRY_MAX; retry++, AcpiOsSleep(10000)) {
+	/* batteries on DOCK can be ejected w/ DOCK during retrying */
+	if (!device_is_attached(dev))
+	    return;
+
 	if (!acpi_BatteryIsPresent(dev))
 	    continue;
 

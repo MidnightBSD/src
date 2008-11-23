@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_timer.c,v 1.38.2.1 2005/11/07 09:53:23 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_timer.c,v 1.42 2007/07/30 15:21:26 njl Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -96,7 +96,7 @@ static struct timecounter acpi_timer_timecounter = {
 	0,				/* no default counter_mask */
 	0,				/* no default frequency */
 	"ACPI",				/* name */
-	1000				/* quality */
+	-1				/* quality (chosen later) */
 };
 
 static u_int
@@ -119,7 +119,7 @@ acpi_timer_identify(driver_t *driver, device_t parent)
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
     if (acpi_disabled("timer") || (acpi_quirks & ACPI_Q_TIMER) ||
-	AcpiGbl_FADT == NULL || acpi_timer_dev)
+	acpi_timer_dev)
 	return_VOID;
 
     if ((dev = BUS_ADD_CHILD(parent, 0, "acpi_timer", 0)) == NULL) {
@@ -129,10 +129,10 @@ acpi_timer_identify(driver_t *driver, device_t parent)
     acpi_timer_dev = dev;
 
     rid = 0;
-    rtype = AcpiGbl_FADT->XPmTmrBlk.AddressSpaceId ?
+    rtype = AcpiGbl_FADT.XPmTimerBlock.SpaceId ?
 	SYS_RES_IOPORT : SYS_RES_MEMORY;
-    rlen = AcpiGbl_FADT->PmTmLen;
-    rstart = AcpiGbl_FADT->XPmTmrBlk.Address;
+    rlen = AcpiGbl_FADT.PmTimerLength;
+    rstart = AcpiGbl_FADT.XPmTimerBlock.Address;
     if (bus_set_resource(dev, rtype, rid, rstart, rlen))
 	device_printf(dev, "couldn't set resource (%s 0x%lx+0x%lx)\n",
 	    (rtype == SYS_RES_IOPORT) ? "port" : "mem", rstart, rlen);
@@ -151,18 +151,18 @@ acpi_timer_probe(device_t dev)
 	return (ENXIO);
 
     rid = 0;
-    rtype = AcpiGbl_FADT->XPmTmrBlk.AddressSpaceId ?
+    rtype = AcpiGbl_FADT.XPmTimerBlock.SpaceId ?
 	SYS_RES_IOPORT : SYS_RES_MEMORY;
     acpi_timer_reg = bus_alloc_resource_any(dev, rtype, &rid, RF_ACTIVE);
     if (acpi_timer_reg == NULL) {
 	device_printf(dev, "couldn't allocate resource (%s 0x%lx)\n",
 	    (rtype == SYS_RES_IOPORT) ? "port" : "mem",
-	    (u_long)AcpiGbl_FADT->XPmTmrBlk.Address);
+	    (u_long)AcpiGbl_FADT.XPmTimerBlock.Address);
 	return (ENXIO);
     }
     acpi_timer_bsh = rman_get_bushandle(acpi_timer_reg);
     acpi_timer_bst = rman_get_bustag(acpi_timer_reg);
-    if (AcpiGbl_FADT->TmrValExt != 0)
+    if (AcpiGbl_FADT.Flags & ACPI_FADT_32BIT_TIMER)
 	acpi_timer_timecounter.tc_counter_mask = 0xffffffff;
     else
 	acpi_timer_timecounter.tc_counter_mask = 0x00ffffff;
@@ -185,14 +185,16 @@ acpi_timer_probe(device_t dev)
     if (j == 10) {
 	acpi_timer_timecounter.tc_name = "ACPI-fast";
 	acpi_timer_timecounter.tc_get_timecount = acpi_timer_get_timecount;
+	acpi_timer_timecounter.tc_quality = 1000;
     } else {
 	acpi_timer_timecounter.tc_name = "ACPI-safe";
 	acpi_timer_timecounter.tc_get_timecount = acpi_timer_get_timecount_safe;
+	acpi_timer_timecounter.tc_quality = 850;
     }
     tc_init(&acpi_timer_timecounter);
 
     sprintf(desc, "%d-bit timer at 3.579545MHz",
-	AcpiGbl_FADT->TmrValExt ? 32 : 24);
+	(AcpiGbl_FADT.Flags & ACPI_FADT_32BIT_TIMER) ? 32 : 24);
     device_set_desc_copy(dev, desc);
 
     /* Release the resource, we'll allocate it again during attach. */
@@ -208,7 +210,7 @@ acpi_timer_attach(device_t dev)
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
     rid = 0;
-    rtype = AcpiGbl_FADT->XPmTmrBlk.AddressSpaceId ?
+    rtype = AcpiGbl_FADT.XPmTimerBlock.SpaceId ?
 	SYS_RES_IOPORT : SYS_RES_MEMORY;
     acpi_timer_reg = bus_alloc_resource_any(dev, rtype, &rid, RF_ACTIVE);
     if (acpi_timer_reg == NULL)
@@ -262,7 +264,7 @@ acpi_timer_sysctl_freq(SYSCTL_HANDLER_ARGS)
     if (acpi_timer_timecounter.tc_frequency == 0)
 	return (EOPNOTSUPP);
     freq = acpi_timer_frequency;
-    error = sysctl_handle_int(oidp, &freq, sizeof(freq), req);
+    error = sysctl_handle_int(oidp, &freq, 0, req);
     if (error == 0 && req->newptr != NULL) {
 	acpi_timer_frequency = freq;
 	acpi_timer_timecounter.tc_frequency = acpi_timer_frequency;

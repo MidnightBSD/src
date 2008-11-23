@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_pci.c,v 1.12.2.1 2005/11/07 09:53:23 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_pci.c,v 1.17 2007/05/02 17:50:35 jhb Exp $");
 
 #include "opt_acpi.h"
 
@@ -93,16 +93,19 @@ static device_method_t acpi_pcib_pci_methods[] = {
     DEVMETHOD(pcib_read_config,		pcib_read_config),
     DEVMETHOD(pcib_write_config,	pcib_write_config),
     DEVMETHOD(pcib_route_interrupt,	acpi_pcib_pci_route_interrupt),
+    DEVMETHOD(pcib_alloc_msi,		pcib_alloc_msi),
+    DEVMETHOD(pcib_release_msi,		pcib_release_msi),
+    DEVMETHOD(pcib_alloc_msix,		pcib_alloc_msix),
+    DEVMETHOD(pcib_release_msix,	pcib_release_msix),
+    DEVMETHOD(pcib_map_msi,		pcib_map_msi),
 
     {0, 0}
 };
 
-static driver_t acpi_pcib_pci_driver = {
-    "pcib",
-    acpi_pcib_pci_methods,
-    sizeof(struct acpi_pcib_softc),
-};
+static devclass_t pcib_devclass;
 
+DEFINE_CLASS_0(pcib, acpi_pcib_pci_driver, acpi_pcib_pci_methods,
+    sizeof(struct acpi_pcib_softc));
 DRIVER_MODULE(acpi_pcib, pci, acpi_pcib_pci_driver, pcib_devclass, 0, 0);
 MODULE_DEPEND(acpi_pcib, acpi, 1, 1, 1);
 

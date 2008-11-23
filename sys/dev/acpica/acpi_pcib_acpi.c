@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_acpi.c,v 1.47.2.2 2005/11/07 09:53:22 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pcib_acpi.c,v 1.55 2007/09/30 11:05:14 marius Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -74,6 +74,12 @@ static void		acpi_pcib_write_config(device_t dev, int bus, int slot,
 			    int func, int reg, uint32_t data, int bytes);
 static int		acpi_pcib_acpi_route_interrupt(device_t pcib,
 			    device_t dev, int pin);
+static int		acpi_pcib_alloc_msi(device_t pcib, device_t dev,
+			    int count, int maxcount, int *irqs);
+static int		acpi_pcib_map_msi(device_t pcib, device_t dev,
+			    int irq, uint64_t *addr, uint32_t *data);
+static int		acpi_pcib_alloc_msix(device_t pcib, device_t dev,
+			    int *irq);
 static struct resource *acpi_pcib_acpi_alloc_resource(device_t dev,
 			    device_t child, int type, int *rid,
 			    u_long start, u_long end, u_long count,
@@ -103,16 +109,19 @@ static device_method_t acpi_pcib_acpi_methods[] = {
     DEVMETHOD(pcib_read_config,		acpi_pcib_read_config),
     DEVMETHOD(pcib_write_config,	acpi_pcib_write_config),
     DEVMETHOD(pcib_route_interrupt,	acpi_pcib_acpi_route_interrupt),
+    DEVMETHOD(pcib_alloc_msi,		acpi_pcib_alloc_msi),
+    DEVMETHOD(pcib_release_msi,		pcib_release_msi),
+    DEVMETHOD(pcib_alloc_msix,		acpi_pcib_alloc_msix),
+    DEVMETHOD(pcib_release_msix,	pcib_release_msix),
+    DEVMETHOD(pcib_map_msi,		acpi_pcib_map_msi),
 
     {0, 0}
 };
 
-static driver_t acpi_pcib_acpi_driver = {
-    "pcib",
-    acpi_pcib_acpi_methods,
-    sizeof(struct acpi_hpcib_softc),
-};
+static devclass_t pcib_devclass;
 
+DEFINE_CLASS_0(pcib, acpi_pcib_acpi_driver, acpi_pcib_acpi_methods,
+    sizeof(struct acpi_hpcib_softc));
 DRIVER_MODULE(acpi_pcib, acpi, acpi_pcib_acpi_driver, pcib_devclass, 0, 0);
 MODULE_DEPEND(acpi_pcib, acpi, 1, 1, 1);
 
@@ -250,6 +259,9 @@ acpi_pcib_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
     struct acpi_hpcib_softc	*sc = device_get_softc(dev);
 
     switch (which) {
+    case PCIB_IVAR_DOMAIN:
+	*result = 0;
+	return (0);
     case PCIB_IVAR_BUS:
 	*result = sc->ap_bus;
 	return (0);
@@ -269,6 +281,8 @@ acpi_pcib_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
     struct acpi_hpcib_softc	*sc = device_get_softc(dev);
 
     switch (which) {
+    case PCIB_IVAR_DOMAIN:
+	return (EINVAL);
     case PCIB_IVAR_BUS:
 	sc->ap_bus = value;
 	return (0);
@@ -302,6 +316,36 @@ acpi_pcib_acpi_route_interrupt(device_t pcib, device_t dev, int pin)
     struct acpi_hpcib_softc *sc = device_get_softc(pcib);
 
     return (acpi_pcib_route_interrupt(pcib, dev, pin, &sc->ap_prt));
+}
+
+static int
+acpi_pcib_alloc_msi(device_t pcib, device_t dev, int count, int maxcount,
+    int *irqs)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSI(device_get_parent(bus), dev, count, maxcount,
+	    irqs));
+}
+
+static int
+acpi_pcib_alloc_msix(device_t pcib, device_t dev, int *irq)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSIX(device_get_parent(bus), dev, irq));
+}
+
+static int
+acpi_pcib_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
+    uint32_t *data)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_MAP_MSI(device_get_parent(bus), dev, irq, addr, data));
 }
 
 static u_long acpi_host_mem_start = 0x80000000;

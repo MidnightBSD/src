@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/acpica/acpivar.h,v 1.95.2.1 2005/07/29 16:27:07 njl Exp $
+ * $FreeBSD: src/sys/dev/acpica/acpivar.h,v 1.108 2007/10/09 07:48:07 njl Exp $
  */
 
 #ifndef _ACPIVAR_H_
@@ -36,17 +36,20 @@
 #include "acpi_if.h"
 #include "bus_if.h"
 #include <sys/eventhandler.h>
-#include <sys/sysctl.h>
+#include <sys/ktr.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/selinfo.h>
 #include <sys/sx.h>
+#include <sys/sysctl.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
 
+struct apm_clone_data;
 struct acpi_softc {
     device_t		acpi_dev;
-    struct cdev *acpi_dev_t;
+    struct cdev		*acpi_dev_t;
 
     struct resource	*acpi_irq;
     int			acpi_irq_rid;
@@ -67,24 +70,46 @@ struct acpi_softc {
 
     int			acpi_sleep_delay;
     int			acpi_s4bios;
-    int			acpi_disable_on_poweroff;
+    int			acpi_do_disable;
     int			acpi_verbose;
+    int			acpi_handle_reboot;
 
     bus_dma_tag_t	acpi_waketag;
     bus_dmamap_t	acpi_wakemap;
     vm_offset_t		acpi_wakeaddr;
     vm_paddr_t		acpi_wakephys;
+
+    int			acpi_next_sstate;	/* Next suspend Sx state. */
+    struct apm_clone_data *acpi_clone;		/* Pseudo-dev for devd(8). */
+    STAILQ_HEAD(,apm_clone_data) apm_cdevs;	/* All apm/apmctl/acpi cdevs. */
+    struct callout	susp_force_to;		/* Force suspend if no acks. */
 };
 
 struct acpi_device {
     /* ACPI ivars */
     ACPI_HANDLE			ad_handle;
-    int				ad_magic;
+    uintptr_t			ad_magic;
     void			*ad_private;
     int				ad_flags;
 
     /* Resources */
     struct resource_list	ad_rl;
+};
+
+/* Track device (/dev/{apm,apmctl} and /dev/acpi) notification status. */
+struct apm_clone_data {
+    STAILQ_ENTRY(apm_clone_data) entries;
+    struct cdev 	*cdev;
+    int			flags;
+#define	ACPI_EVF_NONE	0	/* /dev/apm semantics */
+#define	ACPI_EVF_DEVD	1	/* /dev/acpi is handled via devd(8) */
+#define	ACPI_EVF_WRITE	2	/* Device instance is opened writable. */
+    int			notify_status;
+#define	APM_EV_NONE	0	/* Device not yet aware of pending sleep. */
+#define	APM_EV_NOTIFIED	1	/* Device saw next sleep state. */
+#define	APM_EV_ACKED	2	/* Device agreed sleep can occur. */
+    struct acpi_softc	*acpi_sc;
+    struct selinfo	sel_read;
 };
 
 #define ACPI_PRW_MAX_POWERRES	8
@@ -225,7 +250,7 @@ static __inline void varp ## _set_ ## var(device_t dev, type t)	\
 }
 
 __ACPI_BUS_ACCESSOR(acpi, handle, ACPI, HANDLE, ACPI_HANDLE)
-__ACPI_BUS_ACCESSOR(acpi, magic, ACPI, MAGIC, int)
+__ACPI_BUS_ACCESSOR(acpi, magic, ACPI, MAGIC, uintptr_t)
 __ACPI_BUS_ACCESSOR(acpi, private, ACPI, PRIVATE, void *)
 __ACPI_BUS_ACCESSOR(acpi, flags, ACPI, FLAGS, int)
 
@@ -302,6 +327,8 @@ ACPI_STATUS	acpi_AppendBufferResource(ACPI_BUFFER *buf,
 		    ACPI_RESOURCE *res);
 ACPI_STATUS	acpi_OverrideInterruptLevel(UINT32 InterruptNumber);
 ACPI_STATUS	acpi_SetIntrModel(int model);
+int		acpi_ReqSleepState(struct acpi_softc *sc, int state);
+int		acpi_AckSleepState(struct apm_clone_data *clone, int error);
 ACPI_STATUS	acpi_SetSleepState(struct acpi_softc *sc, int state);
 int		acpi_wake_init(device_t dev, int type);
 int		acpi_wake_set_enable(device_t dev, int enable);
@@ -310,7 +337,8 @@ ACPI_STATUS	acpi_Startup(void);
 void		acpi_UserNotify(const char *subsystem, ACPI_HANDLE h,
 		    uint8_t notify);
 int		acpi_bus_alloc_gas(device_t dev, int *type, int *rid,
-		    ACPI_GENERIC_ADDRESS *gas, struct resource **res);
+		    ACPI_GENERIC_ADDRESS *gas, struct resource **res,
+		    u_int flags);
 
 struct acpi_parse_resource_set {
     void	(*set_init)(device_t dev, void *arg, void **context);
@@ -323,13 +351,15 @@ struct acpi_parse_resource_set {
 		    uint32_t length);
     void	(*set_memoryrange)(device_t dev, void *context, uint32_t low,
 		    uint32_t high, uint32_t length, uint32_t align);
-    void	(*set_irq)(device_t dev, void *context, u_int32_t *irq,
+    void	(*set_irq)(device_t dev, void *context, u_int8_t *irq,
 		    int count, int trig, int pol);
-    void	(*set_drq)(device_t dev, void *context, u_int32_t *drq,
+    void	(*set_ext_irq)(device_t dev, void *context, u_int32_t *irq,
+		    int count, int trig, int pol);
+    void	(*set_drq)(device_t dev, void *context, u_int8_t *drq,
 		    int count);
-    void	(*set_start_dependant)(device_t dev, void *context,
+    void	(*set_start_dependent)(device_t dev, void *context,
 		    int preference);
-    void	(*set_end_dependant)(device_t dev, void *context);
+    void	(*set_end_dependent)(device_t dev, void *context);
 };
 
 extern struct	acpi_parse_resource_set acpi_res_parse_set;
@@ -414,11 +444,24 @@ int		acpi_PkgInt(ACPI_OBJECT *res, int idx, ACPI_INTEGER *dst);
 int		acpi_PkgInt32(ACPI_OBJECT *res, int idx, uint32_t *dst);
 int		acpi_PkgStr(ACPI_OBJECT *res, int idx, void *dst, size_t size);
 int		acpi_PkgGas(device_t dev, ACPI_OBJECT *res, int idx, int *type,
-		    int *rid, struct resource **dst);
+		    int *rid, struct resource **dst, u_int flags);
 ACPI_HANDLE	acpi_GetReference(ACPI_HANDLE scope, ACPI_OBJECT *obj);
 
+/*
+ * Base level for BUS_ADD_CHILD.  Special devices are added at orders less
+ * than this, and normal devices at or above this level.  This keeps the
+ * probe order sorted so that things like sysresource are available before
+ * their children need them.
+ */
+#define	ACPI_DEV_BASE_ORDER	10
+
 /* Default number of task queue threads to start. */
+#ifndef ACPI_MAX_THREADS
 #define ACPI_MAX_THREADS	3
+#endif
+
+/* Use the device logging level for ktr(4). */
+#define	KTR_ACPI		KTR_DEV
 
 #endif /* _KERNEL */
 #endif /* !_ACPIVAR_H_ */

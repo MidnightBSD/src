@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_battery.c,v 1.12.2.4 2005/11/24 05:29:15 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_battery.c,v 1.25.4.1 2008/01/23 00:15:22 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -167,11 +167,12 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 	    dev_idx = i;
 
 	/*
-	 * Be sure we can get various info from the battery.  Note that we
-	 * can't check acpi_BatteryIsPresent() because smart batteries only
+	 * Be sure we can get various info from the battery.  Note that
+	 * acpi_BatteryIsPresent() is not enough because smart batteries only
 	 * return that the device is present.
 	 */
-	if (ACPI_BATT_GET_STATUS(batt_dev, &bst[i]) != 0 ||
+	if (!acpi_BatteryIsPresent(batt_dev) ||
+	    ACPI_BATT_GET_STATUS(batt_dev, &bst[i]) != 0 ||
 	    ACPI_BATT_GET_INFO(batt_dev, bif) != 0)
 	    continue;
 
@@ -192,9 +193,11 @@ acpi_battery_get_battinfo(device_t dev, struct acpi_battinfo *battinfo)
 
 	/*
 	 * If the battery info is in terms of mA, convert to mW by
-	 * multiplying by the design voltage.
+	 * multiplying by the design voltage.  If the design voltage
+	 * is 0 (due to some error reading the battery), skip this
+	 * conversion.
 	 */
-	if (bif->units == ACPI_BIF_UNITS_MA) {
+	if (bif->units == ACPI_BIF_UNITS_MA && bif->dvol != 0) {
 	    bst[i].rate = (bst[i].rate * bif->dvol) / 1000;
 	    bst[i].cap = (bst[i].cap * bif->dvol) / 1000;
 	    bif->lfcap = (bif->lfcap * bif->dvol) / 1000;
@@ -483,7 +486,7 @@ acpi_battery_init(void)
 	NULL, 0, acpi_battery_units_sysctl, "I", "number of batteries");
     SYSCTL_ADD_INT(&acpi_battery_sysctl_ctx,
 	SYSCTL_CHILDREN(acpi_battery_sysctl_tree),
-	OID_AUTO, "info_expire", CTLFLAG_RD | CTLFLAG_RW,
+	OID_AUTO, "info_expire", CTLFLAG_RW,
 	&acpi_battery_info_expire, 0,
 	"time in seconds until info is refreshed");
 

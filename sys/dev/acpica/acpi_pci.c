@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pci.c,v 1.26.2.1 2005/11/07 09:53:22 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_pci.c,v 1.31.2.1 2007/10/31 16:10:12 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -83,50 +83,21 @@ static device_method_t acpi_pci_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		acpi_pci_probe),
 	DEVMETHOD(device_attach,	acpi_pci_attach),
-	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
-	DEVMETHOD(device_suspend,	pci_suspend),
-	DEVMETHOD(device_resume,	pci_resume),
 
 	/* Bus interface */
-	DEVMETHOD(bus_print_child,	pci_print_child),
-	DEVMETHOD(bus_probe_nomatch,	pci_probe_nomatch),
 	DEVMETHOD(bus_read_ivar,	acpi_pci_read_ivar),
 	DEVMETHOD(bus_write_ivar,	acpi_pci_write_ivar),
-	DEVMETHOD(bus_driver_added,	pci_driver_added),
-	DEVMETHOD(bus_setup_intr,	bus_generic_setup_intr),
-	DEVMETHOD(bus_teardown_intr,	bus_generic_teardown_intr),
-
-	DEVMETHOD(bus_get_resource_list,pci_get_resource_list),
-	DEVMETHOD(bus_set_resource,	bus_generic_rl_set_resource),
-	DEVMETHOD(bus_get_resource,	bus_generic_rl_get_resource),
-	DEVMETHOD(bus_delete_resource,	pci_delete_resource),
-	DEVMETHOD(bus_alloc_resource,	pci_alloc_resource),
-	DEVMETHOD(bus_release_resource,	bus_generic_rl_release_resource),
-	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
-	DEVMETHOD(bus_deactivate_resource, bus_generic_deactivate_resource),
-	DEVMETHOD(bus_child_pnpinfo_str, pci_child_pnpinfo_str_method),
 	DEVMETHOD(bus_child_location_str, acpi_pci_child_location_str_method),
 
 	/* PCI interface */
-	DEVMETHOD(pci_read_config,	pci_read_config_method),
-	DEVMETHOD(pci_write_config,	pci_write_config_method),
-	DEVMETHOD(pci_enable_busmaster,	pci_enable_busmaster_method),
-	DEVMETHOD(pci_disable_busmaster, pci_disable_busmaster_method),
-	DEVMETHOD(pci_enable_io,	pci_enable_io_method),
-	DEVMETHOD(pci_disable_io,	pci_disable_io_method),
-	DEVMETHOD(pci_get_powerstate,	pci_get_powerstate_method),
 	DEVMETHOD(pci_set_powerstate,	acpi_pci_set_powerstate_method),
-	DEVMETHOD(pci_assign_interrupt, pci_assign_interrupt_method),
 
 	{ 0, 0 }
 };
 
-static driver_t acpi_pci_driver = {
-	"pci",
-	acpi_pci_methods,
-	0,			/* no softc */
-};
+static devclass_t pci_devclass;
 
+DEFINE_CLASS_1(pci, acpi_pci_driver, acpi_pci_methods, 0, pci_driver);
 DRIVER_MODULE(acpi_pci, pcib, acpi_pci_driver, pci_devclass, 0, 0);
 MODULE_DEPEND(acpi_pci, acpi, 1, 1, 1);
 MODULE_DEPEND(acpi_pci, pci, 1, 1, 1);
@@ -237,8 +208,19 @@ acpi_pci_update_device(ACPI_HANDLE handle, device_t pci_child)
 	 */
 	child = acpi_get_device(handle);
 	if (child != NULL) {
-		KASSERT(!device_is_alive(child), ("%s: deleting alive child %s",
-		    __func__, device_get_nameunit(child)));
+		if (device_is_alive(child)) {
+			/*
+			 * The TabletPC TC1000 has a second PCI-ISA bridge
+			 * that has a _HID for an acpi_sysresource device.
+			 * In that case, leave ACPI-CA's device data pointing
+			 * at the ACPI-enumerated device.
+			 */
+			device_printf(child,
+			    "Conflicts with PCI device %d:%d:%d\n",
+			    pci_get_bus(pci_child), pci_get_slot(pci_child),
+			    pci_get_function(pci_child));
+			return;
+		}
 		KASSERT(device_get_parent(child) ==
 		    devclass_get_device(devclass_find("acpi"), 0),
 		    ("%s: child (%s)'s parent is not acpi0", __func__,
@@ -304,17 +286,19 @@ acpi_pci_probe(device_t dev)
 static int
 acpi_pci_attach(device_t dev)
 {
-	int busno;
+	int busno, domain;
 
 	/*
 	 * Since there can be multiple independantly numbered PCI
-	 * busses on some large alpha systems, we can't use the unit
-	 * number to decide what bus we are probing. We ask the parent 
-	 * pcib what our bus number is.
+	 * busses on systems with multiple PCI domains, we can't use
+	 * the unit number to decide which bus we are probing. We ask
+	 * the parent pcib what our domain and bus numbers are.
 	 */
+	domain = pcib_get_domain(dev);
 	busno = pcib_get_bus(dev);
 	if (bootverbose)
-		device_printf(dev, "physical bus=%d\n", busno);
+		device_printf(dev, "domain=%d, physical bus=%d\n",
+		    domain, busno);
 
 	/*
 	 * First, PCI devices are added as in the normal PCI bus driver.
@@ -326,7 +310,7 @@ acpi_pci_attach(device_t dev)
 	 * pci_add_children() doesn't find.  We currently just ignore
 	 * these devices.
 	 */
-	pci_add_children(dev, busno, sizeof(struct acpi_pci_devinfo));
+	pci_add_children(dev, domain, busno, sizeof(struct acpi_pci_devinfo));
 	AcpiWalkNamespace(ACPI_TYPE_DEVICE, acpi_get_handle(dev), 1,
 	    acpi_pci_save_handle, dev, NULL);
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_powerres.c,v 1.28.2.1 2005/11/07 09:53:23 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_powerres.c,v 1.30 2006/04/21 19:06:29 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -247,7 +247,7 @@ acpi_pwr_register_consumer(ACPI_HANDLE consumer)
     ACPI_SERIAL_ASSERT(powerres);
 
     /* Check to see whether we know about this consumer already */
-    if ((pc = acpi_pwr_find_consumer(consumer)) != NULL)
+    if (acpi_pwr_find_consumer(consumer) != NULL)
 	return_ACPI_STATUS (AE_OK);
     
     /* Allocate a new power consumer */

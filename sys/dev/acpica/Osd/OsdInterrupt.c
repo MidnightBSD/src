@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdInterrupt.c,v 1.19.2.2 2005/11/07 09:53:23 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdInterrupt.c,v 1.22 2007/02/23 12:18:29 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -86,7 +86,7 @@ AcpiOsInstallInterruptHandler(UINT32 InterruptNumber,
 	goto error;
     }
     if (bus_setup_intr(sc->acpi_dev, sc->acpi_irq, INTR_TYPE_MISC|INTR_MPSAFE,
-	(driver_intr_t *)ServiceRoutine, Context, &sc->acpi_irq_handle)) {
+	NULL, (driver_intr_t *)ServiceRoutine, Context, &sc->acpi_irq_handle)) {
 	device_printf(sc->acpi_dev, "could not set up interrupt\n");
 	goto error;
     }

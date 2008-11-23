@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/acpica/acpiio.h,v 1.14.2.2 2005/11/05 23:55:56 njl Exp $
+ * $FreeBSD: src/sys/dev/acpica/acpiio.h,v 1.17 2007/06/21 22:50:37 njl Exp $
  */
 
 #ifndef _ACPIIO_H_
@@ -33,7 +33,13 @@
 /*
  * Core ACPI subsystem ioctls
  */
-#define ACPIIO_SETSLPSTATE	_IOW('P', 3, int)
+#define ACPIIO_SETSLPSTATE	_IOW('P', 3, int) /* DEPRECATED */
+
+/* Request S1-5 sleep state. User is notified and then sleep proceeds. */
+#define ACPIIO_REQSLPSTATE	_IOW('P', 4, int)
+
+/* Allow suspend to continue (0) or abort it (errno). */
+#define ACPIIO_ACKSLPSTATE	_IOW('P', 5, int)
 
 struct acpi_battinfo {
     int	 cap;				/* percent */

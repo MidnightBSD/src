@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_perf.c,v 1.21.2.2 2005/12/19 11:19:26 bruno Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_perf.c,v 1.26 2007/03/22 18:16:40 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -191,7 +191,7 @@ acpi_perf_probe(device_t dev)
 	pkg = (ACPI_OBJECT *)buf.Pointer;
 	if (ACPI_PKG_VALID(pkg, 2)) {
 		rid = 0;
-		error = acpi_PkgGas(dev, pkg, 0, &type, &rid, &res);
+		error = acpi_PkgGas(dev, pkg, 0, &type, &rid, &res, 0);
 		switch (error) {
 		case 0:
 			bus_release_resource(dev, type, rid, res);
@@ -221,7 +221,7 @@ acpi_perf_attach(device_t dev)
 	sc->px_curr_state = CPUFREQ_VAL_UNKNOWN;
 	if (acpi_perf_evaluate(dev) != 0)
 		return (ENXIO);
-	AcpiOsQueueForExecution(OSD_PRIORITY_LO, acpi_px_startup, NULL);
+	AcpiOsExecute(OSL_NOTIFY_HANDLER, acpi_px_startup, NULL);
 	if (!sc->info_only)
 		cpufreq_register(dev);
 
@@ -299,6 +299,12 @@ acpi_perf_evaluate(device_t dev)
 		    sc->px_states[count].core_freq >= 0xffff)
 			continue;
 
+		/* Check for duplicate entries */
+		if (count > 0 &&
+		    sc->px_states[count - 1].core_freq ==
+			sc->px_states[count].core_freq)
+			continue;
+
 		count++;
 	}
 	sc->px_count = count;
@@ -323,7 +329,7 @@ acpi_perf_evaluate(device_t dev)
 	}
 
 	error = acpi_PkgGas(sc->dev, pkg, 0, &sc->perf_ctrl_type, &sc->px_rid,
-	    &sc->perf_ctrl);
+	    &sc->perf_ctrl, 0);
 	if (error) {
 		/*
 		 * If the register is of type FFixedHW, we can only return
@@ -339,7 +345,7 @@ acpi_perf_evaluate(device_t dev)
 	sc->px_rid++;
 
 	error = acpi_PkgGas(sc->dev, pkg, 1, &sc->perf_sts_type, &sc->px_rid,
-	    &sc->perf_status);
+	    &sc->perf_status, 0);
 	if (error) {
 		if (error == EOPNOTSUPP) {
 			sc->info_only = TRUE;
@@ -387,10 +393,10 @@ acpi_px_startup(void *arg)
 {
 
 	/* Signal to the platform that we are taking over CPU control. */
-	if (AcpiGbl_FADT->PstateCnt == 0)
+	if (AcpiGbl_FADT.PstateControl == 0)
 		return;
 	ACPI_LOCK(acpi);
-	AcpiOsWritePort(AcpiGbl_FADT->SmiCmd, AcpiGbl_FADT->PstateCnt, 8);
+	AcpiOsWritePort(AcpiGbl_FADT.SmiCommand, AcpiGbl_FADT.PstateControl, 8);
 	ACPI_UNLOCK(acpi);
 }
 

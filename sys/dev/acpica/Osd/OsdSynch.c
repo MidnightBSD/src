@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdSynch.c,v 1.22.8.2 2005/11/07 09:53:23 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdSynch.c,v 1.32 2007/03/26 23:04:02 jkim Exp $");
 
 #include <contrib/dev/acpica/acpi.h>
 
@@ -62,10 +62,12 @@ struct acpi_semaphore {
     UINT32	as_timeouts;
 };
 
+/* Default number of maximum pending threads. */
 #ifndef ACPI_NO_SEMAPHORES
 #ifndef ACPI_SEMAPHORES_MAX_PENDING
 #define ACPI_SEMAPHORES_MAX_PENDING	4
 #endif
+
 static int	acpi_semaphore_debug = 0;
 TUNABLE_INT("debug.acpi_semaphore_debug", &acpi_semaphore_debug);
 SYSCTL_DECL(_debug_acpi);
@@ -75,7 +77,7 @@ SYSCTL_INT(_debug_acpi, OID_AUTO, semaphore_debug, CTLFLAG_RW,
 
 ACPI_STATUS
 AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits,
-    ACPI_HANDLE *OutHandle)
+    ACPI_SEMAPHORE *OutHandle)
 {
 #ifndef ACPI_NO_SEMAPHORES
     struct acpi_semaphore	*as;
@@ -108,7 +110,7 @@ AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits,
 }
 
 ACPI_STATUS
-AcpiOsDeleteSemaphore(ACPI_HANDLE Handle)
+AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 {
 #ifndef ACPI_NO_SEMAPHORES
     struct acpi_semaphore *as = (struct acpi_semaphore *)Handle;
@@ -129,7 +131,7 @@ AcpiOsDeleteSemaphore(ACPI_HANDLE Handle)
  * use getmicrotime() to correctly adjust the timeout after being woken up.
  */
 ACPI_STATUS
-AcpiOsWaitSemaphore(ACPI_HANDLE Handle, UINT32 Units, UINT16 Timeout)
+AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)
 {
 #ifndef ACPI_NO_SEMAPHORES
     ACPI_STATUS			result;
@@ -195,7 +197,7 @@ AcpiOsWaitSemaphore(ACPI_HANDLE Handle, UINT32 Units, UINT16 Timeout)
 	    break;
 	}
 
-	/* limit number of pending treads */
+	/* limit number of pending threads */
 	if (as->as_pendings >= ACPI_SEMAPHORES_MAX_PENDING) {
 	    result = AE_TIME;
 	    break;
@@ -257,8 +259,8 @@ AcpiOsWaitSemaphore(ACPI_HANDLE Handle, UINT32 Units, UINT16 Timeout)
 	    tmo = 1;
 
 	if (acpi_semaphore_debug) {
-	    printf("%s: Wakeup timeleft(%lu, %lu), tmo %u, sem %p, thread %d\n",
-		__func__, timelefttv.tv_sec, timelefttv.tv_usec, tmo, as,
+	    printf("%s: Wakeup timeleft(%jd, %lu), tmo %u, sem %p, thread %d\n",
+		__func__, (intmax_t)timelefttv.tv_sec, timelefttv.tv_usec, tmo, as,
 		AcpiOsGetThreadId());
 	}
     }
@@ -288,7 +290,7 @@ AcpiOsWaitSemaphore(ACPI_HANDLE Handle, UINT32 Units, UINT16 Timeout)
 }
 
 ACPI_STATUS
-AcpiOsSignalSemaphore(ACPI_HANDLE Handle, UINT32 Units)
+AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
 {
 #ifndef ACPI_NO_SEMAPHORES
     struct acpi_semaphore	*as = (struct acpi_semaphore *)Handle;
@@ -320,30 +322,44 @@ AcpiOsSignalSemaphore(ACPI_HANDLE Handle, UINT32 Units)
     return_ACPI_STATUS (AE_OK);
 }
 
+/* Combined mutex + mutex name storage since the latter must persist. */
+struct acpi_spinlock {
+    struct mtx	lock;
+    char	name[32];
+};
+
 ACPI_STATUS
-AcpiOsCreateLock (ACPI_HANDLE *OutHandle)
+AcpiOsCreateLock (ACPI_SPINLOCK *OutHandle)
 {
-    struct mtx *m;
+    struct acpi_spinlock *h;
 
     if (OutHandle == NULL)
 	return (AE_BAD_PARAMETER);
-    m = malloc(sizeof(*m), M_ACPISEM, M_NOWAIT | M_ZERO);
-    if (m == NULL)
+    h = malloc(sizeof(*h), M_ACPISEM, M_NOWAIT | M_ZERO);
+    if (h == NULL)
 	return (AE_NO_MEMORY);
 
-    mtx_init(m, "acpica subsystem lock", NULL, MTX_DEF);
-    *OutHandle = (ACPI_HANDLE)m;
+    /* Build a unique name based on the address of the handle. */
+    if (OutHandle == &AcpiGbl_GpeLock)
+	snprintf(h->name, sizeof(h->name), "acpi subsystem GPE lock");
+    else if (OutHandle == &AcpiGbl_HardwareLock)
+	snprintf(h->name, sizeof(h->name), "acpi subsystem HW lock");
+    else
+	snprintf(h->name, sizeof(h->name), "acpi subsys %p", OutHandle);
+    mtx_init(&h->lock, h->name, NULL, MTX_DEF);
+    *OutHandle = (ACPI_SPINLOCK)h;
     return (AE_OK);
 }
 
 void
-AcpiOsDeleteLock (ACPI_HANDLE Handle)
+AcpiOsDeleteLock (ACPI_SPINLOCK Handle)
 {
-    struct mtx *m = (struct mtx *)Handle;
+    struct acpi_spinlock *h = (struct acpi_spinlock *)Handle;
 
     if (Handle == NULL)
         return;
-    mtx_destroy(m);
+    mtx_destroy(&h->lock);
+    free(h, M_ACPISEM);
 }
 
 /*
@@ -351,24 +367,25 @@ AcpiOsDeleteLock (ACPI_HANDLE Handle)
  * (and thus can't block) but since we have ithreads, we don't worry
  * about potentially blocking.
  */
-void
-AcpiOsAcquireLock (ACPI_HANDLE Handle, UINT32 Flags)
+ACPI_NATIVE_UINT
+AcpiOsAcquireLock (ACPI_SPINLOCK Handle)
 {
-    struct mtx *m = (struct mtx *)Handle;
+    struct acpi_spinlock *h = (struct acpi_spinlock *)Handle;
 
     if (Handle == NULL)
-	return;
-    mtx_lock(m);
+	return (0);
+    mtx_lock(&h->lock);
+    return (0);
 }
 
 void
-AcpiOsReleaseLock (ACPI_HANDLE Handle, UINT32 Flags)
+AcpiOsReleaseLock (ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
 {
-    struct mtx *m = (struct mtx *)Handle;
+    struct acpi_spinlock *h = (struct acpi_spinlock *)Handle;
 
     if (Handle == NULL)
 	return;
-    mtx_unlock(m);
+    mtx_unlock(&h->lock);
 }
 
 /* Section 5.2.9.1:  global lock acquire/release functions */

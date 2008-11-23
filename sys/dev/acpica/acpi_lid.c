@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_lid.c,v 1.27.2.1 2005/11/07 09:53:22 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_lid.c,v 1.29 2007/03/22 18:16:40 jkim Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -184,8 +184,8 @@ acpi_lid_notify_handler(ACPI_HANDLE h, UINT32 notify, void *context)
     sc = (struct acpi_lid_softc *)context;
     switch (notify) {
     case ACPI_NOTIFY_STATUS_CHANGED:
-	AcpiOsQueueForExecution(OSD_PRIORITY_LO,
-				acpi_lid_notify_status_changed, sc);
+	AcpiOsExecute(OSL_NOTIFY_HANDLER,
+		      acpi_lid_notify_status_changed, sc);
 	break;
     default:
 	device_printf(sc->lid_dev, "unknown notify %#x\n", notify);

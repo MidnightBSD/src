@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.1.2.3 2006/01/16 09:13:53 bruno Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/acpi_smbat.c,v 1.5 2006/02/21 03:16:58 njl Exp $");
 
 #include "opt_acpi.h"
 #include <sys/param.h>
@@ -134,9 +134,7 @@ acpi_smbat_attach(device_t dev)
 static int
 acpi_smbat_shutdown(device_t dev)
 {
-	struct acpi_smbat_softc *sc;
 
-	sc = device_get_softc(dev);
 	acpi_battery_remove(dev);
 	return (0);
 }

@@ -25378,7 +25378,10 @@ sys/dev/acpica/acpi_battery.c -text
 sys/dev/acpica/acpi_button.c -text
 sys/dev/acpica/acpi_cmbat.c -text
 sys/dev/acpica/acpi_cpu.c -text
+sys/dev/acpica/acpi_dock.c -text
 sys/dev/acpica/acpi_ec.c -text
+sys/dev/acpica/acpi_hpet.c -text
+sys/dev/acpica/acpi_hpet.h -text
 sys/dev/acpica/acpi_if.m -text
 sys/dev/acpica/acpi_isab.c -text
 sys/dev/acpica/acpi_lid.c -text
