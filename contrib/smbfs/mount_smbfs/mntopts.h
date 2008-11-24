@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,37 +27,33 @@
  * SUCH DAMAGE.
  *
  *	@(#)mntopts.h	8.7 (Berkeley) 3/29/95
- *	$Id: mntopts.h,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $FreeBSD: src/sbin/mount/mntopts.h,v 1.29 2005/12/02 03:55:02 rodrigc Exp $
  */
 
 struct mntopt {
 	const char *m_option;	/* option name */
-	int m_inverse;		/* if a negative option, e.g. "dev" */
+	int m_inverse;		/* if a negative option, e.g. "atime" */
 	int m_flag;		/* bit to set, e.g. MNT_RDONLY */
 	int m_altloc;		/* 1 => set bit in altflags */
 };
 
 /* User-visible MNT_ flags. */
 #define MOPT_ASYNC		{ "async",	0, MNT_ASYNC, 0 }
-#ifndef APPLE
 #define MOPT_NOATIME		{ "atime",	1, MNT_NOATIME, 0 }
-#endif
-#define MOPT_NODEV		{ "dev",	1, MNT_NODEV, 0 }
 #define MOPT_NOEXEC		{ "exec",	1, MNT_NOEXEC, 0 }
 #define MOPT_NOSUID		{ "suid",	1, MNT_NOSUID, 0 }
-#ifndef APPLE
 #define MOPT_NOSYMFOLLOW	{ "symfollow",  1, MNT_NOSYMFOLLOW, 0 }
-#endif
 #define MOPT_RDONLY		{ "rdonly",	0, MNT_RDONLY, 0 }
 #define MOPT_SYNC		{ "sync",	0, MNT_SYNCHRONOUS, 0 }
 #define MOPT_UNION		{ "union",	0, MNT_UNION, 0 }
 #define MOPT_USERQUOTA		{ "userquota",	0, 0, 0 }
 #define MOPT_GROUPQUOTA		{ "groupquota",	0, 0, 0 }
-#ifndef APPLE
 #define MOPT_NOCLUSTERR		{ "clusterr",	1, MNT_NOCLUSTERR, 0 }
 #define MOPT_NOCLUSTERW		{ "clusterw",	1, MNT_NOCLUSTERW, 0 }
 #define MOPT_SUIDDIR		{ "suiddir",	0, MNT_SUIDDIR, 0 }
-#endif
+#define MOPT_SNAPSHOT		{ "snapshot",	0, MNT_SNAPSHOT, 0 }
+#define MOPT_MULTILABEL		{ "multilabel",	0, MNT_MULTILABEL, 0 }
+#define MOPT_ACLS		{ "acls",	0, MNT_ACLS, 0 }
 
 /* Control flags. */
 #define MOPT_FORCE		{ "force",	0, MNT_FORCE, 0 }
@@ -72,29 +64,20 @@ struct mntopt {
 /* This is parsed by mount(8), but is ignored by specific mount_*(8)s. */
 #define MOPT_AUTO		{ "auto",	0, 0, 0 }
 
+/* A handy macro as terminator of MNT_ array. */
+#define MOPT_END		{ NULL,		0, 0, 0 }
+
 #define MOPT_FSTAB_COMPAT						\
 	MOPT_RO,							\
 	MOPT_RW,							\
 	MOPT_AUTO
 
 /* Standard options which all mounts can understand. */
-#ifdef APPLE
-#define MOPT_STDOPTS							\
-	MOPT_USERQUOTA,							\
-	MOPT_GROUPQUOTA,						\
-	MOPT_FSTAB_COMPAT,						\
-	MOPT_NODEV,							\
-	MOPT_NOEXEC,							\
-	MOPT_NOSUID,							\
-	MOPT_RDONLY,							\
-	MOPT_UNION
-#else
 #define MOPT_STDOPTS							\
 	MOPT_USERQUOTA,							\
 	MOPT_GROUPQUOTA,						\
 	MOPT_FSTAB_COMPAT,						\
 	MOPT_NOATIME,							\
-	MOPT_NODEV,							\
 	MOPT_NOEXEC,							\
 	MOPT_SUIDDIR,		/* must be before MOPT_NOSUID */	\
 	MOPT_NOSUID,							\
@@ -102,8 +85,13 @@ struct mntopt {
 	MOPT_RDONLY,							\
 	MOPT_UNION,							\
 	MOPT_NOCLUSTERR,						\
-	MOPT_NOCLUSTERW
-#endif /* APPLE */
+	MOPT_NOCLUSTERW,						\
+	MOPT_MULTILABEL,						\
+	MOPT_ACLS
 
-void getmntopts __P((const char *, const struct mntopt *, int *, int *));
+void getmntopts(const char *, const struct mntopt *, int *, int *);
+void rmslashes(char *, char *);
+void checkpath(const char *, char resolved_path[]);
 extern int getmnt_silent;
+void build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val, size_t len);
+void build_iovec_argf(struct iovec **iov, int *iovlen, const char *name, const char *fmt, ...);
