@@ -21878,6 +21878,10 @@ share/doc/IPv6/IMPLEMENTATION -text
 share/doc/IPv6/Makefile -text
 share/doc/Makefile -text
 share/doc/bind9/Makefile -text
+share/doc/legal/Makefile -text
+share/doc/legal/intel_ipw/Makefile -text
+share/doc/legal/intel_iwi/Makefile -text
+share/doc/legal/intel_wpi/Makefile -text
 share/doc/papers/Makefile -text
 share/doc/papers/beyond4.3/Makefile -text
 share/doc/papers/beyond4.3/beyond43.ms -text
