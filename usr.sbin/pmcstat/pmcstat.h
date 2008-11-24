@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005, Joseph Koshy
+ * Copyright (c) 2005-2007, Joseph Koshy
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/pmcstat/pmcstat.h,v 1.2 2005/07/09 17:08:46 jkoshy Exp $
+ * $FreeBSD: src/usr.sbin/pmcstat/pmcstat.h,v 1.5 2007/04/27 12:09:31 jkoshy Exp $
  */
 
 #ifndef	_PMCSTAT_H_
 #define	_PMCSTAT_H_
 
-#define	FLAG_HAS_PID			0x00000001	/* explicit pid */
+#define	FLAG_HAS_TARGET			0x00000001	/* process target */
 #define	FLAG_HAS_WAIT_INTERVAL		0x00000002	/* -w secs */
 #define	FLAG_HAS_OUTPUT_LOGFILE		0x00000004	/* -O file or pipe */
 #define	FLAG_HAS_COMMANDLINE		0x00000008	/* command */
@@ -54,6 +54,10 @@
 #define	WRITEPIPEFD			1
 #define	NPIPEFD				2
 
+#define	NSOCKPAIRFD			2
+#define	PARENTSOCKET			0
+#define	CHILDSOCKET			1
+
 #define	PMCSTAT_OPEN_FOR_READ		0
 #define	PMCSTAT_OPEN_FOR_WRITE		1
 #define	PMCSTAT_DEFAULT_NW_HOST		"localhost"
@@ -77,51 +81,63 @@ enum pmcstat_state {
 
 struct pmcstat_ev {
 	STAILQ_ENTRY(pmcstat_ev) ev_next;
-	char	       *ev_spec;  /* event specification */
-	char	       *ev_name;  /* (derived) event name */
-	enum pmc_mode	ev_mode;  /* desired mode */
 	int		ev_count; /* associated count if in sampling mode */
-	int		ev_cpu;	  /* specific cpu if requested */
-	int		ev_flags; /* PMC_F_* */
+	uint32_t	ev_cpu;	  /* cpus for this event */
 	int		ev_cumulative;  /* show cumulative counts */
-	int		ev_fieldwidth;  /* print width */
+	int		ev_flags; /* PMC_F_* */
 	int		ev_fieldskip;   /* #leading spaces */
-	pmc_value_t	ev_saved; /* saved value for incremental counts */
+	int		ev_fieldwidth;  /* print width */
+	enum pmc_mode	ev_mode;  /* desired mode */
+	char	       *ev_name;  /* (derived) event name */
 	pmc_id_t	ev_pmcid; /* allocated ID */
+	pmc_value_t	ev_saved; /* for incremental counts */
+	char	       *ev_spec;  /* event specification */
+};
+
+struct pmcstat_target {
+	SLIST_ENTRY(pmcstat_target) pt_next;
+	pid_t		pt_pid;
 };
 
 struct pmcstat_args {
 	int	pa_flags;		/* argument flags */
 	int	pa_required;		/* required features */
-	pid_t	pa_pid;			/* attached to pid */
+	int	pa_verbosity;		/* verbosity level */
 	FILE	*pa_printfile;		/* where to send printed output */
 	int	pa_logfd;		/* output log file */
 	char	*pa_inputpath;		/* path to input log */
 	char	*pa_outputpath;		/* path to output log */
 	void	*pa_logparser;		/* log file parser */
-	const char	*pa_kernel;	/* pathname of the kernel */
+	const char	*pa_fsroot;	/* FS root where executables reside */
+	char	*pa_kernel;		/* pathname of the kernel */
 	const char	*pa_samplesdir;	/* directory for profile files */
+	const char	*pa_mapfilename;/* mapfile name */
 	double	pa_interval;		/* printing interval in seconds */
 	int	pa_argc;
 	char	**pa_argv;
-	STAILQ_HEAD(, pmcstat_ev) pa_head;
+	STAILQ_HEAD(, pmcstat_ev) pa_events;
+	SLIST_HEAD(, pmcstat_target) pa_targets;
 } args;
 
 /* Function prototypes */
+void	pmcstat_attach_pmcs(struct pmcstat_args *_a);
 void	pmcstat_cleanup(struct pmcstat_args *_a);
+void	pmcstat_clone_event_descriptor(struct pmcstat_args *_a,
+    struct pmcstat_ev *_ev, uint32_t _cpumask);
 int	pmcstat_close_log(struct pmcstat_args *_a);
+void	pmcstat_create_process(struct pmcstat_args *_a);
+void	pmcstat_find_targets(struct pmcstat_args *_a, const char *_arg);
 void	pmcstat_initialize_logging(struct pmcstat_args *_a);
-int	pmcstat_open(const char *_p, int _mode);
+void	pmcstat_kill_process(struct pmcstat_args *_a);
+int	pmcstat_open_log(const char *_p, int _mode);
 void	pmcstat_print_counters(struct pmcstat_args *_a);
 void	pmcstat_print_headers(struct pmcstat_args *_a);
 void	pmcstat_print_pmcs(struct pmcstat_args *_a);
-void	pmcstat_setup_process(struct pmcstat_args *_a);
 void	pmcstat_show_usage(void);
-void	pmcstat_shutdown_logging(void);
+void	pmcstat_shutdown_logging(struct pmcstat_args *_a);
 void	pmcstat_start_pmcs(struct pmcstat_args *_a);
-void	pmcstat_start_process(struct pmcstat_args *_a);
+void	pmcstat_start_process(void);
 int	pmcstat_process_log(struct pmcstat_args *_a);
-int	pmcstat_print_log(struct pmcstat_args *_a);
-int	pmcstat_convert_log(struct pmcstat_args *_a);
+uint32_t pmcstat_get_cpumask(const char *_a);
 
 #endif	/* _PMCSTAT_H_ */

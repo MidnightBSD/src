@@ -1,4 +1,4 @@
-.\" Copyright (c) 2003 Joseph Koshy.  All rights reserved.
+.\" Copyright (c) 2003-2007 Joseph Koshy.  All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -21,9 +21,9 @@
 .\" out of the use of this software, even if advised of the possibility of
 .\" such damage.
 .\"
-.\" $FreeBSD: src/usr.sbin/pmcstat/pmcstat.8,v 1.5.2.1 2005/07/17 19:32:27 rwatson Exp $
+.\" $FreeBSD: src/usr.sbin/pmcstat/pmcstat.8,v 1.12 2007/04/27 12:09:31 jkoshy Exp $
 .\"
-.Dd July 1, 2005
+.Dd April 23, 2007
 .Os
 .Dt PMCSTAT 8
 .Sh NAME
@@ -34,20 +34,24 @@
 .Op Fl C
 .Op Fl D Ar pathname
 .Op Fl E
+.Op Fl M Ar mapfilename
 .Op Fl O Ar logfilename
 .Op Fl P Ar event-spec
 .Op Fl R Ar logfilename
 .Op Fl S Ar event-spec
 .Op Fl W
-.Op Fl c Ar cpu
+.Op Fl c Ar cpu-spec
 .Op Fl d
 .Op Fl g
-.Op Fl k Ar kernelfile
+.Op Fl k Ar kerneldir
 .Op Fl n Ar rate
 .Op Fl o Ar outputfile
 .Op Fl p Ar event-spec
+.Op Fl q
+.Op Fl r Ar fsroot
 .Op Fl s Ar event-spec
-.Op Fl t Ar pid
+.Op Fl t Ar process-spec
+.Op Fl v
 .Op Fl w Ar secs
 .Op Ar command Op Ar args
 .Sh DESCRIPTION
@@ -59,18 +63,21 @@ utility measures system performance using the facilities provided by
 The
 .Nm
 utility can measure both hardware events seen by the system as a
-whole, and those seen when a specified process is executing on the
-system's CPUs.
-If a specific process is being targeted (for example,
+whole, and those seen when a specified set of processes are executing
+on the system's CPUs.
+If a specific set of processes is being targeted (for example,
 if the
-.Fl t Ar pid
+.Fl t Ar process-spec
 option is specified, or if a command line is specified using
 .Ar command ) ,
-then measurement occurs till the target process exits or
-the
+then measurement occurs till
+.Ar command
+exits, or till all target processes specified by the
+.Fl t Ar process-spec
+options exit, or till the
 .Nm
 utility is interrupted by the user.
-If a specific process is not targeted for measurement, then
+If a specific set of processes is not targeted for measurement, then
 .Nm
 will perform system-wide measurements till interrupted by the
 user.
@@ -116,11 +123,45 @@ complex pipeline of processes when used in conjunction with the
 .Fl d
 option.
 The default is to not to enable per-process tracking.
+.It Fl M Ar mapfilename
+Write the mapping between executable objects encountered in the event
+log and the abbreviated pathnames used for
+.Xr gprof 1
+profiles to file
+.Ar mapfilename .
+If this option is not specified, mapping information is not written.
+Argument
+.Ar mapfilename
+may be a
+.Dq Li -
+in which case this mapping information is sent to the output
+file configured by the
+.Fl o
+option.
 .It Fl O Ar logfilename
 Send logging output to file
 .Ar logfilename .
-If this option is not specified and one of the logging options
-is requested, then
+If
+.Ar logfilename
+is of the form
+.Ar hostname Ns : Ns Ar port ,
+where
+.Ar hostname
+does not start with a
+.Ql \&.
+or a
+.Ql / ,
+then
+.Nm
+will open a network socket to host
+.Ar hostname
+on port
+.Ar port .
+.Pp
+If the
+.Fl O
+option is not specified and one of the logging options is requested,
+then
 .Nm
 will print a textual form of the logged events to the configured
 output file.
@@ -142,11 +183,16 @@ This is an experimental feature intended to help analyse the
 dynamic behaviour of processes in the system.
 It may incur substantial overhead if enabled.
 The default is for this feature to be disabled.
-.It Fl c Ar cpu
-Set the cpu for subsequent system mode PMCs specified on the
+.It Fl c Ar cpu-spec
+Set the cpus for subsequent system mode PMCs specified on the
 command line to
-.Ar cpu .
-The default is to allocate system mode PMCs on CPU zero.
+.Ar cpu-spec .
+Argument
+.Ar cpu-spec
+is a comma separated list of CPU numbers, or the literal
+.Sq *
+denoting all CPUs.
+The default is to allocate system mode PMCs on all CPUs.
 .It Fl d
 Toggle between process mode PMCs measuring events for the target
 process' current and future children or only measuring events for
@@ -159,11 +205,14 @@ A separate profile file is generated for each executable object
 encountered.
 Profile files are placed in sub-directories named by their PMC
 event name.
-.It Fl k Ar kernelfile
-Set the pathname of the kernel to argument
-.Ar kernelfile .
+.It Fl k Ar kerneldir
+Set the pathname of the kernel directory to argument
+.Ar kerneldir .
+This directory specifies where
+.Nm
+should look for the kernel and its modules.
 The default is
-.Pa /boot/kernel/kernel .
+.Pa /boot/kernel .
 .It Fl n Ar rate
 Set the default sampling rate for subsequent sampling mode
 PMCs specified on the command line.
@@ -179,16 +228,27 @@ The default is to send output to
 Allocate a process mode counting PMC measuring hardware events
 specified in
 .Ar event-spec .
+.It Fl q
+Decrease verbosity.
+.It Fl r Ar fsroot
+Set the top of the filesystem hierarchy under which executables
+are located to argument
+.Ar fsroot .
+The default is
+.Pa / .
 .It Fl s Ar event-spec
 Allocate a system mode counting PMC measuring hardware events
 specified in
 .Ar event-spec .
-.It Fl t Ar pid
-Attach all process mode PMCs allocated to the process with PID
-.Ar pid .
-The option is not allowed in conjunction with specifying a
-command using
-.Ar command .
+.It Fl t Ar process-spec
+Attach process mode PMCs to the processes named by argument
+.Ar process-spec .
+Argument
+.Ar process-spec
+may be a non-negative integer denoting a specific process id, or a
+regular expression for selecting processes based on their command names.
+.It Fl v
+Increase verbosity.
 .It Fl w Ar secs
 Print the values of all counting mode PMCs every
 .Ar secs
@@ -217,9 +277,24 @@ and measure the number of data cache misses suffered
 by it and its children every 12 seconds on an AMD Athlon, use:
 .Dl "pmcstat -d -w 12 -p k7-dc-misses mozilla"
 .Pp
-To collect a system-wide samples driven by processor instructions executed
+To measure processor instructions retired for all processes named
+.Dq emacs
 use:
+.Dl "pmcstat -t '^emacs$' -p instructions"
+.Pp
+To count instruction tlb-misses on CPUs 0 and 2 on a Intel
+Pentium Pro/Pentium III SMP system use:
+.Dl "pmcstat -c 0,2 -s p6-itlb-miss"
+.Pp
+To perform system-wide sampling on all configured processors
+based on processor instructions retired use:
 .Dl "pmcstat -S instructions -O /tmp/sample.out"
+.Pp
+To send the generated event log to a remote machine use:
+.Dl "pmcstat -S instructions -O remotehost:port"
+On the remote machine, the sample log can be collected using
+.Xr nc 1 :
+.Dl "nc -l remotehost port > /tmp/sample.out"
 .Pp
 To generate
 .Xr gprof 1
@@ -229,6 +304,7 @@ compatible flat profiles from a sample file use:
 .Ex -std
 .Sh SEE ALSO
 .Xr gprof 1 ,
+.Xr nc 1 ,
 .Xr execvp 3 ,
 .Xr pmc 3 ,
 .Xr pmclog 3 ,
@@ -244,3 +320,9 @@ It is
 .Ud
 .Sh AUTHORS
 .An Joseph Koshy Aq jkoshy@FreeBSD.org
+.Sh BUGS
+The
+.Nm
+utility cannot yet analyse
+.Xr hwpmc 4
+logs generated by non-native architectures.
