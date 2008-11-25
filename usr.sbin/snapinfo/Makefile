@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/snapinfo/Makefile,v 1.1.2.1 2006/03/17 05:08:16 delphij Exp $
+# $FreeBSD: src/usr.sbin/snapinfo/Makefile,v 1.1 2005/07/20 18:59:25 marks Exp $
 #
 
 PROG=	snapinfo

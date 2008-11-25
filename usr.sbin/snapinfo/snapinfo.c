@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/snapinfo/snapinfo.c,v 1.1.2.1 2006/03/17 05:08:16 delphij Exp $
+ * $FreeBSD: src/usr.sbin/snapinfo/snapinfo.c,v 1.3 2007/03/16 12:36:54 pjd Exp $
  *
  */
 
@@ -42,7 +42,7 @@
 void	find_inum(char *path);
 void	usage(void);
 int	compare_function(const char *, const struct stat *, int, struct FTW *);
-int	find_snapshot(char *path);
+int	find_snapshot(struct statfs *sfs);
 
 int verbose;
 int cont_search;
@@ -81,40 +81,44 @@ main(int argc, char **argv)
 		usage();
 
 	if (!all) {
-		path = *argv;
+		char resolved[PATH_MAX];
 
-		if (strrchr(path, '/') == NULL ||	/* is absolute path */
-		    (stat(path, &st) == -1) || 		/* is it stat'able */
-		    !(st.st_mode & S_IFDIR))  		/* is it a directory */
+		path = *argv;
+		/*
+		 * mount(8) use realpath(3) before mounting file system,
+		 * so let's do the same with the given path.
+		 */
+		if (realpath(path, resolved) == NULL ||	/* can create full path */
+		    stat(resolved, &st) == -1 ||	/* is it stat'able */
+		    !S_ISDIR(st.st_mode)) {		/* is it a directory */
 			usage();
+		}
+		path = resolved;
 	}
 
 	fscount = getmntinfo(&mntbuf, MNT_WAIT);
 	for (n = 0; n < fscount; n++) {
 		if (!strncmp(mntbuf[n].f_fstypename, "ufs", 3)) {
-			if (all)
-				path = mntbuf[n].f_mntonname;
-			else if (strcmp(path, mntbuf[n].f_mntonname))
-				continue;
-
-			find_snapshot(path);
-			done++;
+			if (all || strcmp(path, mntbuf[n].f_mntonname) == 0) {
+				find_snapshot(&mntbuf[n]);
+				done++;
+			}
 		}
 	}
 
-	if (!done)
+	if (done == 0)
 		usage();
 
 	return (0);
 }
 
 int
-find_snapshot(char *path)
+find_snapshot(struct statfs *sfs)
 {
 	struct uufsd disk;
 	int j, snapcount = 0;
 
-	if (ufs_disk_fillout(&disk, path) == -1)
+	if (ufs_disk_fillout(&disk, sfs->f_mntfromname) == -1)
 		perror("ufs_disk_fillout");
 
 	if (verbose)
@@ -123,7 +127,7 @@ find_snapshot(char *path)
 	for (j = 0; j < FSMAXSNAP; j++) {
 		if (disk.d_fs.fs_snapinum[j]) {
 			inode = disk.d_fs.fs_snapinum[j];
-			find_inum(path);
+			find_inum(sfs->f_mntonname);
 			snapcount++;
 		}
 	}
