@@ -10,10 +10,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -31,31 +27,34 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
 #if 0
+#ifndef lint
 static char sccsid[] = "@(#)getmntopts.c	8.3 (Berkeley) 3/29/95";
-#else
-static const char rcsid[] =
-	"$Id: getmntopts.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $";
-#endif
 #endif /* not lint */
+#endif
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sbin/mount/getmntopts.c,v 1.18 2005/11/14 17:39:00 rodrigc Exp $");
 
 #include <sys/param.h>
+#include <sys/mount.h>
+#include <sys/stat.h>
+#include <sys/uio.h>
 
 #include <err.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sysexits.h>
 
 #include "mntopts.h"
 
 int getmnt_silent = 0;
 
 void
-getmntopts(options, m0, flagp, altflagp)
-	const char *options;
-	const struct mntopt *m0;
-	int *flagp;
-	int *altflagp;
+getmntopts(const char *options, const struct mntopt *m0, int *flagp,
+	int *altflagp)
 {
 	const struct mntopt *m;
 	int negative, len;
@@ -79,17 +78,15 @@ getmntopts(options, m0, flagp, altflagp)
 		 * ignore the assignment as it's handled elsewhere
 		 */
 		p = strchr(opt, '=');
-		if (p)
+		if (p != NULL)
 			 *++p = '\0';
 
 		/* Scan option table. */
 		for (m = m0; m->m_option != NULL; ++m) {
 			len = strlen(m->m_option);
 			if (strncasecmp(opt, m->m_option, len) == 0)
-				if (   m->m_option[len]	== '\0'
-				    || m->m_option[len]	== '='
-				   )
-				break;
+				if (opt[len] == '\0' || opt[len] == '=')
+					break;
 		}
 
 		/* Save flag, or fail if option is not recognized. */
@@ -105,4 +102,81 @@ getmntopts(options, m0, flagp, altflagp)
 	}
 
 	free(optbuf);
+}
+
+void
+rmslashes(char *rrpin, char *rrpout)
+{
+	char *rrpoutstart;
+
+	*rrpout = *rrpin;
+	for (rrpoutstart = rrpout; *rrpin != '\0'; *rrpout++ = *rrpin++) {
+
+		/* skip all double slashes */
+		while (*rrpin == '/' && *(rrpin + 1) == '/')
+			 rrpin++;
+	}
+
+	/* remove trailing slash if necessary */
+	if (rrpout - rrpoutstart > 1 && *(rrpout - 1) == '/')
+		*(rrpout - 1) = '\0';
+	else
+		*rrpout = '\0';
+}
+
+void
+checkpath(const char *path, char *resolved)
+{
+	struct stat sb;
+
+	if (realpath(path, resolved) != NULL && stat(resolved, &sb) == 0) {
+		if (!S_ISDIR(sb.st_mode)) 
+			errx(EX_USAGE, "%s: not a directory", resolved);
+	} else
+		errx(EX_USAGE, "%s: %s", resolved, strerror(errno));
+}
+
+void
+build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val,
+	    size_t len)
+{
+	int i;
+
+	if (*iovlen < 0)
+		return;
+	i = *iovlen;
+	*iov = realloc(*iov, sizeof **iov * (i + 2));
+	if (*iov == NULL) {
+		*iovlen = -1;
+		return;
+	}
+	(*iov)[i].iov_base = strdup(name);
+	(*iov)[i].iov_len = strlen(name) + 1;
+	i++;
+	(*iov)[i].iov_base = val;
+	if (len == (size_t)-1) {
+		if (val != NULL)
+			len = strlen(val) + 1;
+		else
+			len = 0;
+	}
+	(*iov)[i].iov_len = (int)len;
+	*iovlen = ++i;
+}
+
+/*
+ * This function is needed for compatibility with parameters
+ * which used to use the mount_argf() command for the old mount() syscall.
+ */
+void
+build_iovec_argf(struct iovec **iov, int *iovlen, const char *name,
+    const char *fmt, ...)
+{
+	va_list ap;
+	char val[255] = { 0 };
+
+	va_start(ap, fmt);
+	vsnprintf(val, sizeof(val), fmt, ap);  
+	va_end(ap);
+	build_iovec(iov, iovlen, name, strdup(val), (size_t)-1);
 }
