@@ -1,6 +1,6 @@
-# $FreeBSD: src/sys/modules/coda/Makefile,v 1.16 2004/09/01 06:51:43 ru Exp $
+# $FreeBSD: src/sys/modules/coda/Makefile,v 1.17 2007/07/12 21:04:58 rwatson Exp $
 
-.PATH: ${.CURDIR}/../../coda
+.PATH: ${.CURDIR}/../../fs/coda
 
 KMOD=	coda
 SRCS=	vnode_if.h \
