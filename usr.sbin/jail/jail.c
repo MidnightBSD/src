@@ -8,10 +8,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/jail/jail.c,v 1.20.2.1 2006/01/30 00:38:37 philip Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/jail/jail.c,v 1.25 2006/05/12 15:14:43 matteo Exp $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
+#include <sys/sysctl.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -54,17 +55,19 @@ main(int argc, char **argv)
 	struct passwd *pwd = NULL;
 	struct in_addr in;
 	gid_t groups[NGROUPS];
-	int ch, i, iflag, Jflag, lflag, ngroups, uflag, Uflag;
-	char path[PATH_MAX], *username, *JidFile;
+	int ch, i, iflag, Jflag, lflag, ngroups, securelevel, uflag, Uflag;
+	char path[PATH_MAX], *ep, *username, *JidFile;
 	static char *cleanenv;
 	const char *shell, *p = NULL;
+	long ltmp;
 	FILE *fp;
 
 	iflag = Jflag = lflag = uflag = Uflag = 0;
+	securelevel = -1;
 	username = JidFile = cleanenv = NULL;
 	fp = NULL;
 
-	while ((ch = getopt(argc, argv, "ilu:U:J:")) != -1) {
+	while ((ch = getopt(argc, argv, "ils:u:U:J:")) != -1) {
 		switch (ch) {
 		case 'i':
 			iflag = 1;
@@ -72,6 +75,12 @@ main(int argc, char **argv)
 		case 'J':
 			JidFile = optarg;
 			Jflag = 1;
+			break;
+		case 's':
+			ltmp = strtol(optarg, &ep, 0);
+			if (*ep || ep == optarg || ltmp > INT_MAX || !ltmp)
+				errx(1, "invalid securelevel: `%s'", optarg);
+			securelevel = ltmp;
 			break;
 		case 'u':
 			username = optarg;
@@ -130,6 +139,11 @@ main(int argc, char **argv)
 			errx(1, "Could not write JidFile: %s", JidFile);
 		}
 	}
+	if (securelevel > 0) {
+		if (sysctlbyname("kern.securelevel", NULL, 0, &securelevel,
+		    sizeof(securelevel)))
+			err(1, "Can not set securelevel to %d", securelevel);
+	}
 	if (username != NULL) {
 		if (Uflag)
 			GET_USER_INFO;
@@ -142,7 +156,7 @@ main(int argc, char **argv)
 		if (setgid(pwd->pw_gid) != 0)
 			err(1, "setgid");
 		if (setusercontext(lcap, pwd, pwd->pw_uid,
-		    LOGIN_SETALL & ~LOGIN_SETGROUP) != 0)
+		    LOGIN_SETALL & ~LOGIN_SETGROUP & ~LOGIN_SETLOGIN) != 0)
 			err(1, "setusercontext");
 		login_close(lcap);
 	}
@@ -168,8 +182,9 @@ static void
 usage(void)
 {
 
-	(void)fprintf(stderr, "%s%s\n",
-	     "usage: jail [-i] [-J jid_file] [-l -u username | -U username]",
+	(void)fprintf(stderr, "%s%s%s\n",
+	     "usage: jail [-i] [-J jid_file] [-s securelevel] [-l -u ",
+	     "username | -U username]",
 	     " path hostname ip-number command ...");
 	exit(1);
 }

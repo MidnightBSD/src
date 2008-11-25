@@ -31,9 +31,9 @@
 .\" this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
 .\" ----------------------------------------------------------------------------
 .\"
-.\" $FreeBSD: src/usr.sbin/jail/jail.8,v 1.67.2.4 2006/01/30 00:38:37 philip Exp $
+.\" $FreeBSD: src/usr.sbin/jail/jail.8,v 1.84 2007/04/05 21:17:52 pjd Exp $
 .\"
-.Dd August 7, 2005
+.Dd April 5, 2007
 .Dt JAIL 8
 .Os
 .Sh NAME
@@ -43,6 +43,7 @@
 .Nm
 .Op Fl i
 .Op Fl J Ar jid_file
+.Op Fl s Ar securelevel
 .Op Fl l u Ar username | Fl U Ar username
 .Ar path hostname ip-number command ...
 .Sh DESCRIPTION
@@ -55,7 +56,9 @@ The options are as follows:
 .It Fl i
 Output the jail identifier of the newly created jail.
 .It Fl J Ar jid_file
-Write a JidFile, like a PidFile, containing jailid, path, hostname, ip and
+Write a
+.Ar jid_file
+file, containing jail identifier, path, hostname, IP and
 command used to start the jail.
 .It Fl l
 Run program in the clean environment.
@@ -73,6 +76,10 @@ is set to the target login.
 is imported from the current environment.
 The environment variables from the login class capability database for the
 target login are also set.
+.It Fl s Ar securelevel
+Sets the
+.Va kern.securelevel
+sysctl variable to the specified value inside the newly created jail.
 .It Fl u Ar username
 The user name from host environment as whom the
 .Ar command
@@ -114,17 +121,18 @@ Please see the
 man page for further details.
 .Sh EXAMPLES
 .Ss "Setting up a Jail Directory Tree"
-This example shows how to set up a jail directory tree
-containing an entire
+To set up a jail directory tree containing an entire
 .Fx
-distribution:
+distribution, the following
+.Xr sh 1
+command script can be used:
 .Bd -literal
 D=/here/is/the/jail
 cd /usr/src
 mkdir -p $D
 make world DESTDIR=$D
 make distribution DESTDIR=$D
-mount_devfs devfs $D/dev
+mount -t devfs devfs $D/dev
 .Ed
 .Pp
 NOTE: It is important that only appropriate device nodes in devfs be
@@ -135,6 +143,8 @@ See
 .Xr devfs 8
 for information on how to use devfs rules to limit access to entries
 in the per-jail devfs.
+A simple devfs ruleset for jails is available as ruleset #4 in
+.Pa /etc/defaults/devfs.rules .
 .Pp
 In many cases this example would put far more in the jail than needed.
 In the other extreme case a jail might contain only one file:
@@ -153,7 +163,7 @@ Do what was described in
 to build the jail directory tree.
 For the sake of this example, we will
 assume you built it in
-.Pa /data/jail/192.168.11.100 ,
+.Pa /data/jail/192.0.2.100 ,
 named for the jailed IP address.
 Substitute below as needed with your
 own directory, IP address, and hostname.
@@ -179,11 +189,11 @@ Add the following to
 in the host environment:
 .Bd -literal -offset indent
 sendmail_enable="NO"
-inetd_flags="-wW -a 192.168.11.23"
+inetd_flags="-wW -a 192.0.2.23"
 rpcbind_enable="NO"
 .Ed
 .Pp
-.Li 192.168.11.23
+.Li 192.0.2.23
 is the native IP address for the host system, in this example.
 Daemons that run out of
 .Xr inetd 8
@@ -252,7 +262,7 @@ or for running a virtual server.
 .Pp
 Start a shell in the jail:
 .Pp
-.Dl "jail /data/jail/192.168.11.100 testhostname 192.168.11.100 /bin/sh"
+.Dl "jail /data/jail/192.0.2.100 testhostname 192.0.2.100 /bin/sh"
 .Pp
 Assuming no errors, you will end up with a shell prompt within the jail.
 You can now run
@@ -305,7 +315,7 @@ If you are not using a virtual server, you may wish to modify
 .Xr syslogd 8
 in the host environment to listen on the syslog socket in the jail
 environment; in this example, the syslog socket would be stored in
-.Pa /data/jail/192.168.11.100/var/run/log .
+.Pa /data/jail/192.0.2.100/var/run/log .
 .Pp
 Exit from the shell, and the jail will be shut down.
 .Ss "Starting the Jail"
@@ -332,9 +342,9 @@ may be a good idea.
 If you do decide to set this variable,
 it must be set before starting any jails, and once each boot.
 .Bd -literal -offset indent
-ifconfig ed0 inet alias 192.168.11.100/32
-mount -t procfs proc /data/jail/192.168.11.100/proc
-jail /data/jail/192.168.11.100 testhostname 192.168.11.100 \\
+ifconfig ed0 inet alias 192.0.2.100/32
+mount -t procfs proc /data/jail/192.0.2.100/proc
+jail /data/jail/192.0.2.100 testhostname 192.0.2.100 \\
 	/bin/sh /etc/rc
 .Ed
 .Pp
@@ -536,7 +546,31 @@ or clear system file flags; if non-zero, such users are treated as
 privileged, and may manipulate system file flags subject to the usual
 constraints on
 .Va kern.securelevel .
+.It Va security.jail.mount_allowed
+This MIB entry determines if a privileged user inside a jail will be
+able to mount and unmount file system types marked as jail-friendly.
+The
+.Xr lsvfs 1
+command can be used to find file system types available for mount from within
+a jail.
+This functionality is disabled by default, but can be enabled by setting this
+MIB entry to 1.
 .El
+.Pp
+The read-only sysctl variable
+.Va security.jail.jailed
+can be used to determine if a process is running inside a jail (value
+is one) or not (value is zero).
+.Pp
+The
+.Va security.jail.list
+MIB entry is read-only and it returns an array of
+.Vt "struct xprison"
+defined in
+.In sys/jail.h .
+It is recommended to use the
+.Xr jls 8
+utility to see current active list of jails.
 .Pp
 There are currently two MIB related variables that have per-jail settings.
 Changes to these variables by a jailed process do not effect the host
@@ -547,6 +581,7 @@ and
 .Va kern.hostname .
 .Sh SEE ALSO
 .Xr killall 1 ,
+.Xr lsvfs 1 ,
 .Xr newaliases 1 ,
 .Xr pgrep 1 ,
 .Xr pkill 1 ,
@@ -562,7 +597,7 @@ and
 .Xr inetd 8 ,
 .Xr jexec 8 ,
 .Xr jls 8 ,
-.Xr mount_devfs 8 ,
+.Xr mount 8 ,
 .Xr named 8 ,
 .Xr reboot 8 ,
 .Xr rpcbind 8 ,

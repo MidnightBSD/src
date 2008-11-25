@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/jexec/jexec.8,v 1.2 2003/05/31 18:24:40 ru Exp $
+.\" $FreeBSD: src/usr.sbin/jexec/jexec.8,v 1.4 2006/09/29 17:57:02 ru Exp $
 .\"
-.Dd April 8, 2003
+.Dd April 19, 2006
 .Dt JEXEC 8
 .Os
 .Sh NAME
@@ -33,6 +33,7 @@
 .Nd "execute a command inside an existing jail"
 .Sh SYNOPSIS
 .Nm
+.Op Fl u Ar username | Fl U Ar username
 .Ar jid command ...
 .Sh DESCRIPTION
 The
@@ -41,6 +42,18 @@ utility executes
 .Ar command
 inside the jail identified by
 .Ar jid .
+.Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl u Ar username
+The user name from host environment as whom the
+.Ar command
+should run.
+.It Fl U Ar username
+The user name from jailed environment as whom the
+.Ar command
+should run.
+.El
 .Sh SEE ALSO
 .Xr jail_attach 2 ,
 .Xr jail 8 ,
