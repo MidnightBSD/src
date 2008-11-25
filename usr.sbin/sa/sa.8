@@ -27,9 +27,10 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/sa/sa.8,v 1.19 2005/02/13 23:45:53 ru Exp $
+.\" $MidnightBSD$
+.\" $FreeBSD: src/usr.sbin/sa/sa.8,v 1.20 2007/05/18 12:36:10 dds Exp $
 .\"
-.Dd February 25, 1994
+.Dd November 24, 2008
 .Dt SA 8
 .Os
 .Sh NAME
@@ -38,6 +39,8 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl abcdDfijkKlmnqrstu
+.Op Fl P Ar file
+.Op Fl U Ar file
 .Op Fl v Ar cutoff
 .Op Ar
 .Sh DESCRIPTION
@@ -143,6 +146,12 @@ Separate system and user time; normally they are combined.
 Print per-user statistics rather than per-command statistics.
 .It Fl n
 Sort by number of calls.
+.It Fl P Ar file
+Use the specified
+.Ar file
+for accessing the per-command accounting summary database,
+instead of the default
+.Pa /var/account/savacct .
 .It Fl q
 Create no output other than error messages.
 .It Fl r
@@ -155,6 +164,12 @@ For each command, report the ratio of real time to the sum
 of user and system cpu times.
 If the cpu time is too small to report, ``*ignore*'' appears in
 this field.
+.It Fl U Ar file
+Use the specified
+.Ar file
+for accessing the per-user accounting summary database,
+instead of the default
+.Pa /var/account/usracct .
 .It Fl u
 Superseding all other flags, for each entry
 in the accounting file, print the user ID, total seconds of cpu usage,

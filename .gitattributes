@@ -33565,6 +33565,7 @@ usr.sbin/rwhod/Makefile -text
 usr.sbin/rwhod/rwhod.8 -text
 usr.sbin/rwhod/rwhod.c -text
 usr.sbin/sa/Makefile -text
+usr.sbin/sa/db.c -text
 usr.sbin/sa/extern.h -text
 usr.sbin/sa/main.c -text
 usr.sbin/sa/pathnames.h -text
