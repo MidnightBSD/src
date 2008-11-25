@@ -1,14 +1,11 @@
-# $FreeBSD: src/sys/modules/acpi/Makefile,v 1.48 2005/03/18 08:48:10 philip Exp $
+# $FreeBSD: src/sys/modules/acpi/Makefile,v 1.53 2007/03/22 18:16:42 jkim Exp $
 
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "ia64"
-.error "ACPI can only be compiled into the kernel on the amd64 and ia64 platforms"
+.if ${MACHINE} == "i386"
+SUBDIR=		acpi
 .endif
 
-.if ${MACHINE} != "i386"
-.error "The ACPI module is only for i386"
-.endif
-
-SUBDIR= acpi acpi_asus acpi_fujitsu acpi_ibm acpi_panasonic acpi_sony \
-	acpi_toshiba acpi_video
+SUBDIR+=	acpi_aiboost acpi_asus acpi_fujitsu acpi_ibm		\
+		acpi_panasonic acpi_sony acpi_toshiba acpi_video	\
+		acpi_dock
 
 .include <bsd.subdir.mk>
