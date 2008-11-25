@@ -28,6 +28,7 @@
  *
  *	From: @(#)pathnames.h	8.1 (Berkeley) 6/6/93
  *	$FreeBSD: src/usr.sbin/sliplogin/pathnames.h,v 1.4 2004/08/07 04:28:55 imp Exp $
+ *	$MidnightBSD$
  */
 
 #ifndef COMPAT

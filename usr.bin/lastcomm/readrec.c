@@ -27,6 +27,7 @@
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/lastcomm/readrec.c,v 1.1 2007/05/22 06:51:37 dds Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>

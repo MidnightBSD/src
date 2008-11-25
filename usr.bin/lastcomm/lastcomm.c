@@ -44,6 +44,7 @@ static char sccsid[] = "@(#)lastcomm.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/lastcomm/lastcomm.c,v 1.27 2007/05/22 06:51:37 dds Exp $");
+__MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
 #include <sys/stat.h>

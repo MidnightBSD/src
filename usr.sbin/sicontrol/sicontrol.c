@@ -1,4 +1,4 @@
-/*
+/*-
  * Device driver for Specialix range (SLXOS) of serial line multiplexors.
  *	SLXOS configuration and debug interface
  *
@@ -24,6 +24,8 @@
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
+ *
+ * $MidnightBSD$
  */
 
 #ifndef lint

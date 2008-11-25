@@ -30,6 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
+ * $MidnightBSD$
  *	@(#)pathnames.h	8.1 (Berkeley) 6/6/93
  */
 
