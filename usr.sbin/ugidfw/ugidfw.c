@@ -30,10 +30,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ugidfw/ugidfw.c,v 1.4.2.1 2005/07/27 12:45:36 avatar Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/ugidfw/ugidfw.c,v 1.6 2006/04/23 17:06:18 dwmalone Exp $");
 
 #include <sys/param.h>
 #include <sys/errno.h>
+#include <sys/mount.h>
 #include <sys/time.h>
 #include <sys/sysctl.h>
 
