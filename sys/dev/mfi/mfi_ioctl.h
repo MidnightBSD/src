@@ -25,8 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_ioctl.h,v 1.1.2.1 2006/04/04 03:24:48 scottl Exp $");
-__MBSDID("$MidnightBSD");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_ioctl.h,v 1.5 2007/05/10 15:33:41 scottl Exp $");
+
+#if defined(__amd64__) /* Assume amd64 wants 32 bit Linux */
+struct iovec32 {
+	u_int32_t	iov_base;
+	int		iov_len;
+};
+#endif
 
 #define MFIQ_FREE	0
 #define MFIQ_BIO	1
@@ -44,5 +50,78 @@ union mfi_statrequest {
 	struct mfi_qstat	ms_qstat;
 };
 
+#define MAX_IOCTL_SGE	16
+
+struct mfi_ioc_packet {
+	uint16_t	mfi_adapter_no;
+	uint16_t	mfi_pad1;
+	uint32_t	mfi_sgl_off;
+	uint32_t	mfi_sge_count;
+	uint32_t	mfi_sense_off;
+	uint32_t	mfi_sense_len;
+	union {
+		uint8_t raw[128];
+		struct mfi_frame_header hdr;
+	} mfi_frame;
+
+	struct iovec mfi_sgl[MAX_IOCTL_SGE];
+} __packed;
+
+struct mfi_ioc_aen {
+	uint16_t	aen_adapter_no;
+	uint16_t	aen_pad1;
+	uint32_t	aen_seq_num;
+	uint32_t	aen_class_locale;
+} __packed;
+
+#define MFI_CMD		_IOWR('M', 1, struct mfi_ioc_packet)
+#define MFI_SET_AEN	_IOW('M', 3, struct mfi_ioc_aen)
+
+#define MAX_LINUX_IOCTL_SGE	16
+
+struct mfi_linux_ioc_packet {
+	uint16_t	lioc_adapter_no;
+	uint16_t	lioc_pad1;
+	uint32_t	lioc_sgl_off;
+	uint32_t	lioc_sge_count;
+	uint32_t	lioc_sense_off;
+	uint32_t	lioc_sense_len;
+	union {
+		uint8_t raw[128];
+		struct mfi_frame_header hdr;
+	} lioc_frame;
+
+#if defined(__amd64__) /* Assume amd64 wants 32 bit Linux */
+	struct iovec32 lioc_sgl[MAX_LINUX_IOCTL_SGE];
+#else
+	struct iovec lioc_sgl[MAX_LINUX_IOCTL_SGE];
+#endif
+} __packed;
+
 #define MFIIO_STATS	_IOWR('Q', 101, union mfi_statrequest)
 
+struct mfi_linux_ioc_aen {
+	uint16_t	laen_adapter_no;
+	uint16_t	laen_pad1;
+	uint32_t	laen_seq_num;
+	uint32_t	laen_class_locale;
+} __packed;
+
+struct mfi_query_disk {
+	uint8_t	array_id;
+	uint8_t	present;
+	uint8_t	open;
+	uint8_t reserved;	/* reserved for future use */
+	char	devname[SPECNAMELEN + 1];
+} __packed;
+
+#define MFIIO_QUERY_DISK	_IOWR('Q', 102, struct mfi_query_disk)
+
+/*
+ * Create a second set so the FreeBSD native ioctl doesn't
+ * conflict in FreeBSD ioctl handler.  Translate in mfi_linux.c.
+ */
+#define MFI_LINUX_CMD		0xc1144d01
+#define MFI_LINUX_SET_AEN	0x400c4d03
+#define MFI_LINUX_CMD_2		0xc1144d02
+#define MFI_LINUX_SET_AEN_2	0x400c4d04

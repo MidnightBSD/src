@@ -25,16 +25,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_disk.c,v 1.2.2.1 2006/04/04 03:24:48 scottl Exp $");
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_disk.c,v 1.7 2007/08/13 19:29:17 jhb Exp $");
 
 #include "opt_mfi.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/selinfo.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
+#include <sys/uio.h>
 
 #include <sys/bio.h>
 #include <sys/bus.h>
@@ -64,15 +65,6 @@ static dumper_t		mfi_disk_dump;
 
 static devclass_t	mfi_disk_devclass;
 
-struct mfi_disk {
-	device_t	ld_dev;
-	int		ld_id;
-	int		ld_unit;
-	struct mfi_softc *ld_controller;
-	struct mfi_ld	*ld_ld;
-	struct disk	*ld_disk;
-};
-
 static device_method_t mfi_disk_methods[] = {
 	DEVMETHOD(device_probe,		mfi_disk_probe),
 	DEVMETHOD(device_attach,	mfi_disk_attach),
@@ -99,31 +91,48 @@ static int
 mfi_disk_attach(device_t dev)
 {
 	struct mfi_disk *sc;
-	struct mfi_ld *ld;
+	struct mfi_ld_info *ld_info;
 	uint64_t sectors;
 	uint32_t secsize;
+	char *state;
 
 	sc = device_get_softc(dev);
-	ld = device_get_ivars(dev);
+	ld_info = device_get_ivars(dev);
 
 	sc->ld_dev = dev;
-	sc->ld_id = ld->ld_id;
+	sc->ld_id = ld_info->ld_config.properties.ld.v.target_id;
 	sc->ld_unit = device_get_unit(dev);
-	sc->ld_ld = device_get_ivars(dev);
+	sc->ld_info = ld_info;
 	sc->ld_controller = device_get_softc(device_get_parent(dev));
+	sc->ld_flags = 0;
 
-	sectors = sc->ld_ld->ld_sectors;
-	secsize = sc->ld_ld->ld_secsize;
-	if (secsize != MFI_SECTOR_LEN) {
-		device_printf(sc->ld_dev, "Reported sector length %d is not "
-		    "512, aborting\n", secsize);
-		free(sc->ld_ld, M_MFIBUF);
-		return (EINVAL);
+	sectors = ld_info->size;
+	secsize = MFI_SECTOR_LEN;
+	mtx_lock(&sc->ld_controller->mfi_io_lock);
+	TAILQ_INSERT_TAIL(&sc->ld_controller->mfi_ld_tqh, sc, ld_link);
+	mtx_unlock(&sc->ld_controller->mfi_io_lock);
+
+	switch (ld_info->ld_config.params.state) {
+	case MFI_LD_STATE_OFFLINE:
+		state = "offline";
+		break;
+	case MFI_LD_STATE_PARTIALLY_DEGRADED:
+		state = "partially degraded";
+		break;
+	case MFI_LD_STATE_DEGRADED:
+		state = "degraded";
+		break;
+	case MFI_LD_STATE_OPTIMAL:
+		state = "optimal";
+		break;
+	default:
+		state = "unknown";
+		break;
 	}
-	TAILQ_INSERT_TAIL(&sc->ld_controller->mfi_ld_tqh, ld, ld_link);
-
-	device_printf(dev, "%juMB (%ju sectors) RAID\n",
-	    sectors / (1024 * 1024 / secsize), sectors);
+	device_printf(dev, "%juMB (%ju sectors) RAID volume '%s' is %s\n",
+		      sectors / (1024 * 1024 / secsize), sectors,
+		      ld_info->ld_config.properties.name,
+		      state);
 
 	sc->ld_disk = disk_alloc();
 	sc->ld_disk->d_drv1 = sc;
@@ -155,25 +164,77 @@ mfi_disk_detach(device_t dev)
 
 	sc = device_get_softc(dev);
 
-	if (sc->ld_disk->d_flags & DISKFLAG_OPEN)
+	mtx_lock(&sc->ld_controller->mfi_io_lock);
+	if (((sc->ld_disk->d_flags & DISKFLAG_OPEN) ||
+	    (sc->ld_flags & MFI_DISK_FLAGS_OPEN)) &&
+	    (sc->ld_controller->mfi_keep_deleted_volumes ||
+	    sc->ld_controller->mfi_detaching)) {
+		mtx_unlock(&sc->ld_controller->mfi_io_lock);
 		return (EBUSY);
+	}
+	mtx_unlock(&sc->ld_controller->mfi_io_lock);
 
 	disk_destroy(sc->ld_disk);
+	mtx_lock(&sc->ld_controller->mfi_io_lock);
+	TAILQ_REMOVE(&sc->ld_controller->mfi_ld_tqh, sc, ld_link);
+	mtx_unlock(&sc->ld_controller->mfi_io_lock);
+	free(sc->ld_info, M_MFIBUF);
 	return (0);
 }
 
 static int
 mfi_disk_open(struct disk *dp)
 {
+	struct mfi_disk *sc;
+	int error;
 
-	return (0);
+	sc = dp->d_drv1;
+	mtx_lock(&sc->ld_controller->mfi_io_lock);
+	if (sc->ld_flags & MFI_DISK_FLAGS_DISABLED)
+		error = ENXIO;
+	else {
+		sc->ld_flags |= MFI_DISK_FLAGS_OPEN;
+		error = 0;
+	}
+	mtx_unlock(&sc->ld_controller->mfi_io_lock);
+
+	return (error);
 }
 
 static int
 mfi_disk_close(struct disk *dp)
 {
+	struct mfi_disk *sc;
+
+	sc = dp->d_drv1;
+	mtx_lock(&sc->ld_controller->mfi_io_lock);
+	sc->ld_flags &= ~MFI_DISK_FLAGS_OPEN;
+	mtx_unlock(&sc->ld_controller->mfi_io_lock);
 
 	return (0);
+}
+
+int
+mfi_disk_disable(struct mfi_disk *sc)
+{
+
+	mtx_assert(&sc->ld_controller->mfi_io_lock, MA_OWNED);
+	if (sc->ld_flags & MFI_DISK_FLAGS_OPEN) {
+		if (sc->ld_controller->mfi_delete_busy_volumes)
+			return (0);
+		device_printf(sc->ld_dev, "Unable to delete busy device\n");
+		return (EBUSY);
+	}
+	sc->ld_flags |= MFI_DISK_FLAGS_DISABLED;
+	return (0);
+}
+
+void
+mfi_disk_enable(struct mfi_disk *sc)
+{
+
+	mtx_assert(&sc->ld_controller->mfi_io_lock, MA_OWNED);
+	sc->ld_flags &= ~MFI_DISK_FLAGS_DISABLED;
 }
 
 static void
@@ -234,7 +295,7 @@ mfi_disk_dump(void *arg, void *virt, vm_offset_t phys, off_t offset, size_t len)
 
 	if (len > 0) {
 		if ((error = mfi_dump_blocks(parent_sc, sc->ld_id, offset /
-		    sc->ld_ld->ld_secsize, virt, len)) != 0)
+		    MFI_SECTOR_LEN, virt, len)) != 0)
 			return (error);
 	} else {
 		/* mfi_sync_cache(parent_sc, sc->ld_id); */

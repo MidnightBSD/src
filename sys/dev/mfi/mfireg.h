@@ -23,13 +23,38 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/*-
+ * Copyright (c) 2007 LSI Corp.
+ * Copyright (c) 2007 Rajesh Prabhakaran.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
 
 #ifndef _MFIREG_H
 #define _MFIREG_H
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfireg.h,v 1.1.2.1 2006/04/04 03:24:48 scottl Exp $");
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfireg.h,v 1.10.4.1 2008/02/04 14:54:21 ambrisko Exp $");
 
 /*
  * MegaRAID SAS MFI firmware definitions
@@ -56,6 +81,17 @@ __MBSDID("$MidnightBSD$");
 #define MFI_OMSK	0x34	/* Outbound interrupt mask */
 #define MFI_IQP		0x40	/* Inbound queue port */
 #define MFI_OQP		0x44	/* Outbound queue port */
+
+/*
+ * 1078 specific related register
+ */
+#define MFI_ODR0	0x9c 		/* outbound doorbell register0 */
+#define MFI_ODCR0	0xa0 		/* outbound doorbell clear register0  */
+#define MFI_OSP0	0xb0 		/* outbound scratch pad0  */
+#define MFI_1078_EIM	0x80000004 	/* 1078 enable intrrupt mask  */
+#define MFI_RMI		0x2 		/* reply message interrupt  */       
+#define MFI_1078_RM	0x80000000 	/* reply 1078 message interrupt  */
+#define MFI_ODC		0x4 		/* outbound doorbell change interrupt */
 
 /* Bits for MFI_OSTS */
 #define MFI_OSTS_INTR_VALID	0x00000002
@@ -102,12 +138,21 @@ typedef enum {
 /* Direct commands */
 typedef enum {
 	MFI_DCMD_CTRL_GETINFO =		0x01010000,
+	MFI_DCMD_CTRL_MFC_DEFAULTS_GET =0x010e0201,
+	MFI_DCMD_CTRL_MFC_DEFAULTS_SET =0x010e0202,
 	MFI_DCMD_CTRL_FLUSHCACHE =	0x01101000,
 	MFI_DCMD_CTRL_SHUTDOWN =	0x01050000,
 	MFI_DCMD_CTRL_EVENT_GETINFO =	0x01040100,
 	MFI_DCMD_CTRL_EVENT_GET =	0x01040300,
 	MFI_DCMD_CTRL_EVENT_WAIT =	0x01040500,
+	MFI_DCMD_LD_GET_LIST =		0x03010000,
+	MFI_DCMD_LD_GET_INFO =		0x03020000,
 	MFI_DCMD_LD_GET_PROP =		0x03030000,
+	MFI_DCMD_LD_SET_PROP =		0x03040000,
+	MFI_DCMD_LD_DELETE =		0x03090000,
+	MFI_DCMD_CFG_READ =		0x04010000,
+	MFI_DCMD_CFG_ADD =		0x04020000,
+	MFI_DCMD_CFG_CLEAR =		0x04030000,
 	MFI_DCMD_CLUSTER =		0x08000000,
 	MFI_DCMD_CLUSTER_RESET_ALL =	0x08010100,
 	MFI_DCMD_CLUSTER_RESET_LD =	0x08010200
@@ -121,7 +166,7 @@ typedef enum {
 #define MFI_SHUTDOWN_SPINDOWN	0x01
 
 /*
- * MFI Frmae flags
+ * MFI Frame flags
  */
 #define MFI_FRAME_POST_IN_REPLY_QUEUE		0x0000
 #define MFI_FRAME_DONT_POST_IN_REPLY_QUEUE	0x0001
@@ -219,28 +264,44 @@ typedef enum {
 } mfi_evt_locale_t;
 
 typedef enum {
-        MR_EVT_ARGS_NONE =		0x00,
-        MR_EVT_ARGS_CDB_SENSE,
-        MR_EVT_ARGS_LD,
-        MR_EVT_ARGS_LD_COUNT,
-        MR_EVT_ARGS_LD_LBA,
-        MR_EVT_ARGS_LD_OWNER,
-        MR_EVT_ARGS_LD_LBA_PD_LBA,
-        MR_EVT_ARGS_LD_PROG,
-        MR_EVT_ARGS_LD_STATE,
-        MR_EVT_ARGS_LD_STRIP,
-        MR_EVT_ARGS_PD,
-        MR_EVT_ARGS_PD_ERR,
-        MR_EVT_ARGS_PD_LBA,
-        MR_EVT_ARGS_PD_LBA_LD,
-        MR_EVT_ARGS_PD_PROG,
-        MR_EVT_ARGS_PD_STATE,
-        MR_EVT_ARGS_PCI,
-        MR_EVT_ARGS_RATE,
-        MR_EVT_ARGS_STR,
-        MR_EVT_ARGS_TIME,
-        MR_EVT_ARGS_ECC
+	MR_EVT_ARGS_NONE =		0x00,
+	MR_EVT_ARGS_CDB_SENSE,
+	MR_EVT_ARGS_LD,
+	MR_EVT_ARGS_LD_COUNT,
+	MR_EVT_ARGS_LD_LBA,
+	MR_EVT_ARGS_LD_OWNER,
+	MR_EVT_ARGS_LD_LBA_PD_LBA,
+	MR_EVT_ARGS_LD_PROG,
+	MR_EVT_ARGS_LD_STATE,
+	MR_EVT_ARGS_LD_STRIP,
+	MR_EVT_ARGS_PD,
+	MR_EVT_ARGS_PD_ERR,
+	MR_EVT_ARGS_PD_LBA,
+	MR_EVT_ARGS_PD_LBA_LD,
+	MR_EVT_ARGS_PD_PROG,
+	MR_EVT_ARGS_PD_STATE,
+	MR_EVT_ARGS_PCI,
+	MR_EVT_ARGS_RATE,
+	MR_EVT_ARGS_STR,
+	MR_EVT_ARGS_TIME,
+	MR_EVT_ARGS_ECC
 } mfi_evt_args;
+
+typedef enum {
+	MR_LD_CACHE_WRITE_BACK =	0x01,
+	MR_LD_CACHE_WRITE_ADAPTIVE =	0x02,
+	MR_LD_CACHE_READ_AHEAD =	0x04,
+	MR_LD_CACHE_READ_ADAPTIVE =	0x08,
+	MR_LD_CACHE_WRITE_CACHE_BAD_BBU=0x10,
+	MR_LD_CACHE_ALLOW_WRITE_CACHE =	0x20,
+	MR_LD_CACHE_ALLOW_READ_CACHE =	0x40
+} mfi_ld_cache;
+
+typedef enum {
+	MR_PD_CACHE_UNCHANGED  =	0,
+	MR_PD_CACHE_ENABLE =		1,
+	MR_PD_CACHE_DISABLE =		2
+} mfi_pd_cache;
 
 /*
  * Other propertities and definitions
@@ -256,7 +317,8 @@ typedef enum {
 #define MFI_FRAME_SIZE		64
 #define MFI_MBOX_SIZE		12
 
-#define MFI_POLL_TIMEOUT_SECS	10
+/* Firmware flashing can take 40s */
+#define MFI_POLL_TIMEOUT_SECS	50
 
 /* Allow for speedier math calculations */
 #define MFI_SECTOR_LEN		512
@@ -290,6 +352,8 @@ struct mfi_frame_header {
 	uint32_t	context;
 	uint32_t	pad0;
 	uint16_t	flags;
+#define MFI_FRAME_DATAOUT	0x08
+#define MFI_FRAME_DATAIN	0x10
 	uint16_t	timeout;
 	uint32_t	data_len;
 } __packed;
@@ -454,6 +518,51 @@ struct mfi_info_component {
 	char		 build_time[16];
 } __packed;
 
+/* Controller default settings */
+struct mfi_defaults {
+	uint64_t	sas_addr;
+	uint8_t		phy_polarity;
+	uint8_t		background_rate;
+	uint8_t		stripe_size;
+	uint8_t		flush_time;
+	uint8_t		write_back;
+	uint8_t		read_ahead;
+	uint8_t		cache_when_bbu_bad;
+	uint8_t		cached_io;
+	uint8_t		smart_mode;
+	uint8_t		alarm_disable;
+	uint8_t		coercion;
+	uint8_t		zrc_config;
+	uint8_t		dirty_led_shows_drive_activity;
+	uint8_t		bios_continue_on_error;
+	uint8_t		spindown_mode;
+	uint8_t		allowed_device_types;
+	uint8_t		allow_mix_in_enclosure;
+	uint8_t		allow_mix_in_ld;
+	uint8_t		allow_sata_in_cluster;
+	uint8_t		max_chained_enclosures;
+	uint8_t		disable_ctrl_r;
+	uint8_t		enabel_web_bios;
+	uint8_t		phy_polarity_split;
+	uint8_t		direct_pd_mapping;
+	uint8_t		bios_enumerate_lds;
+	uint8_t		restored_hot_spare_on_insertion;
+	uint8_t		expose_enclosure_devices;
+	uint8_t		maintain_pd_fail_history;
+	uint8_t		resv[28];
+} __packed;
+
+/* Controller default settings */
+struct mfi_bios_data {
+	uint16_t	boot_target_id;
+	uint8_t		do_not_int_13;
+	uint8_t		continue_on_error;
+	uint8_t		verbose;
+	uint8_t		geometry;
+	uint8_t		expose_all_drives;
+	uint8_t		reserved[56];
+	uint8_t		check_sum;
+} __packed;
 
 /* SAS (?) controller info, returned from MFI_DCMD_CTRL_GETINFO. */
 struct mfi_ctrl_info {
@@ -509,7 +618,7 @@ struct mfi_ctrl_info {
 #define MFI_INFO_RAID_6		0x10
 
 	uint32_t		adapter_ops;
-#define MFI_INFO_AOPS_RBLD_RATE		0x0001		
+#define MFI_INFO_AOPS_RBLD_RATE		0x0001
 #define MFI_INFO_AOPS_CC_RATE		0x0002
 #define MFI_INFO_AOPS_BGI_RATE		0x0004
 #define MFI_INFO_AOPS_RECON_RATE	0x0008
@@ -556,5 +665,419 @@ struct mfi_ctrl_info {
 	char			package_version[0x60];
 	uint8_t			pad[0x800 - 0x6a0];
 } __packed;
+
+/* keep track of an event. */
+union mfi_evt {
+	struct {
+		uint16_t	locale;
+		uint8_t		reserved;
+		int8_t		class;
+	} members;
+	uint32_t		word;
+} __packed;
+
+/* event log state. */
+struct mfi_evt_log_state {
+	uint32_t		newest_seq_num;
+	uint32_t		oldest_seq_num;
+	uint32_t		clear_seq_num;
+	uint32_t		shutdown_seq_num;
+	uint32_t		boot_seq_num;
+} __packed;
+
+struct mfi_progress {
+	uint16_t		progress;
+	uint16_t		elapsed_seconds;
+} __packed;
+
+struct mfi_evt_ld {
+	uint16_t		target_id;
+	uint8_t			ld_index;
+	uint8_t			reserved;
+} __packed;
+
+struct mfi_evt_pd {
+	uint16_t		device_id;
+	uint8_t			enclosure_index;
+	uint8_t			slot_number;
+} __packed;
+
+/* SAS (?) event detail, returned from MFI_DCMD_CTRL_EVENT_WAIT. */
+struct mfi_evt_detail {
+	uint32_t		seq;
+	uint32_t		time;
+	uint32_t		code;
+	union mfi_evt		class;
+	uint8_t			arg_type;
+	uint8_t			reserved1[15];
+
+	union {
+		struct {
+			struct mfi_evt_pd	pd;
+			uint8_t			cdb_len;
+			uint8_t			sense_len;
+			uint8_t			reserved[2];
+			uint8_t			cdb[16];
+			uint8_t			sense[64];
+		} cdb_sense;
+
+		struct mfi_evt_ld		ld;
+
+		struct {
+			struct mfi_evt_ld	ld;
+			uint64_t		count;
+		} ld_count;
+
+		struct {
+			uint64_t		lba;
+			struct mfi_evt_ld	ld;
+		} ld_lba;
+
+		struct {
+			struct mfi_evt_ld	ld;
+			uint32_t		pre_owner;
+			uint32_t		new_owner;
+		} ld_owner;
+
+		struct {
+			uint64_t		ld_lba;
+			uint64_t		pd_lba;
+			struct mfi_evt_ld	ld;
+			struct mfi_evt_pd	pd;
+		} ld_lba_pd_lba;
+
+		struct {
+			struct mfi_evt_ld	ld;
+			struct mfi_progress	prog;
+		} ld_prog;
+
+		struct {
+			struct mfi_evt_ld	ld;
+			uint32_t		prev_state;
+			uint32_t		new_state;
+		} ld_state;
+
+		struct {
+			uint64_t		strip;
+			struct mfi_evt_ld	ld;
+		} ld_strip;
+
+		struct mfi_evt_pd		pd;
+
+		struct {
+			struct mfi_evt_pd	pd;
+			uint32_t		err;
+		} pd_err;
+
+		struct {
+			uint64_t		lba;
+			struct mfi_evt_pd	pd;
+		} pd_lba;
+
+		struct {
+			uint64_t		lba;
+			struct mfi_evt_pd	pd;
+			struct mfi_evt_ld	ld;
+		} pd_lba_ld;
+
+		struct {
+			struct mfi_evt_pd	pd;
+			struct mfi_progress	prog;
+		} pd_prog;
+
+		struct {
+			struct mfi_evt_pd	ld;
+			uint32_t		prev_state;
+			uint32_t		new_state;
+		} pd_state;
+
+		struct {
+			uint16_t		venderId;
+			uint16_t		deviceId;
+			uint16_t		subVenderId;
+			uint16_t		subDeviceId;
+		} pci;
+
+		uint32_t			rate;
+
+		char				str[96];
+
+		struct {
+			uint32_t		rtc;
+			uint16_t		elapsedSeconds;
+		} time;
+
+		struct {
+			uint32_t		ecar;
+			uint32_t		elog;
+			char			str[64];
+		} ecc;
+
+		uint8_t		b[96];
+		uint16_t	s[48];
+		uint32_t	w[24];
+		uint64_t	d[12];
+	} args;
+
+	char description[128];
+} __packed;
+
+struct mfi_evt_list {
+	uint32_t		count;
+	uint32_t		reserved;
+	struct mfi_evt_detail	event[1];
+} __packed;
+
+union mfi_pd_ref {
+	struct {
+		uint16_t	device_id;
+		uint16_t	seq_num;
+	} v;
+	uint32_t	ref;
+} __packed;
+
+union mfi_pd_ddf_type {
+	struct {
+		union {
+			struct {
+				uint16_t	forced_pd_guid	: 1;
+				uint16_t	in_vd		: 1;
+				uint16_t	is_global_spare	: 1;
+				uint16_t	is_spare	: 1;
+				uint16_t	is_foreign	: 1;
+				uint16_t	reserved	: 7;
+				uint16_t	intf		: 4;
+			} pd_type;
+			uint16_t	type;
+		} v;
+		uint16_t		reserved;
+	} ddf;
+	struct {
+		uint32_t		reserved;
+	} non_disk;
+	uint32_t			type;
+} __packed;
+
+struct mfi_pd_progress {
+	struct {
+		uint32_t		rbld	: 1;
+		uint32_t		patrol	: 1;
+		uint32_t		clear	: 1;
+		uint32_t		reserved: 29;
+	} active;
+	struct mfi_progress		rbld;
+	struct mfi_progress		patrol;
+	struct mfi_progress		clear;
+	struct mfi_progress		reserved[4];
+} __packed;
+
+struct mfi_pd_info {
+	union mfi_pd_ref		ref;
+	uint8_t				inquiry_data[96];
+	uint8_t				vpd_page83[64];
+	uint8_t				not_supported;
+	uint8_t				scsi_dev_type;
+	uint8_t				connected_port_bitmap;
+	uint8_t				device_speed;
+	uint32_t			media_err_count;
+	uint32_t			other_err_count;
+	uint32_t			pred_fail_count;
+	uint32_t			last_pred_fail_event_seq_num;
+	uint16_t			fw_state;
+	uint8_t				disable_for_removal;
+	uint8_t				link_speed;
+	union mfi_pd_ddf_type		state;
+	struct {
+		uint8_t			count;
+		uint8_t			is_path_broken;
+		uint8_t			reserved[6];
+		uint64_t		sas_addr[4];
+	} path_info;
+	uint64_t			raw_size;
+	uint64_t			non_coerced_size;
+	uint64_t			coerced_size;
+	uint16_t			encl_device_id;
+	uint8_t				encl_index;
+	uint8_t				slot_number;
+	struct mfi_pd_progress		prog_info;
+	uint8_t				bad_block_table_full;
+	uint8_t				unusable_in_current_config;
+	uint8_t				vpd_page83_ext[64];
+	uint8_t				reserved[512-358];
+} __packed;
+
+struct mfi_pd_address {
+	uint16_t		device_id;
+	uint16_t		encl_device_id;
+	uint8_t			encl_index;
+	uint8_t			slot_number;
+	uint8_t			scsi_dev_type;
+	uint8_t			connect_port_bitmap;
+	uint64_t		sas_addr[2];
+} __packed;
+
+struct mfi_pd_list {
+	uint32_t		size;
+	uint32_t		count;
+	uint8_t			data;
+	/*
+	struct mfi_pd_address	addr[];
+	*/
+} __packed;
+
+union mfi_ld_ref {
+	struct {
+		uint8_t		target_id;
+		uint8_t		reserved;
+		uint16_t	seq;
+	} v;
+	uint32_t		ref;
+} __packed;
+
+struct mfi_ld_list {
+	uint32_t		ld_count;
+	uint32_t		reserved1;
+	struct {
+		union mfi_ld_ref	ld;
+		uint8_t		state;
+		uint8_t		reserved2[3];
+		uint64_t	size;
+	} ld_list[MFI_MAX_LD];
+} __packed;
+
+enum mfi_ld_access {
+	MFI_LD_ACCESS_RW =	0,
+	MFI_LD_ACCSSS_RO = 	2,
+	MFI_LD_ACCESS_BLOCKED =	3,
+};
+#define MFI_LD_ACCESS_MASK	3
+
+enum mfi_ld_state {
+	MFI_LD_STATE_OFFLINE =			0,
+	MFI_LD_STATE_PARTIALLY_DEGRADED =	1,
+	MFI_LD_STATE_DEGRADED =			2,
+	MFI_LD_STATE_OPTIMAL =			3
+};
+
+struct mfi_ld_props {
+	union mfi_ld_ref	ld;
+	char			name[16];
+	uint8_t			default_cache_policy;
+	uint8_t			access_policy;
+	uint8_t			disk_cache_policy;
+	uint8_t			current_cache_policy;
+	uint8_t			no_bgi;
+	uint8_t			reserved[7];
+} __packed;
+
+struct mfi_ld_params {
+	uint8_t			primary_raid_level;
+	uint8_t			raid_level_qualifier;
+	uint8_t			secondary_raid_level;
+	uint8_t			stripe_size;
+	uint8_t			num_drives;
+	uint8_t			span_depth;
+	uint8_t			state;
+	uint8_t			init_state;
+	uint8_t			is_consistent;
+	uint8_t			reserved[23];
+} __packed;
+
+struct mfi_ld_progress {
+	uint32_t		active;
+#define	MFI_LD_PROGRESS_CC	(1<<0)
+#define	MFI_LD_PROGRESS_BGI	(1<<1)
+#define	MFI_LD_PROGRESS_FGI	(1<<2)
+#define	MFI_LD_PORGRESS_RECON	(1<<3)
+	struct mfi_progress	cc;
+	struct mfi_progress	bgi;
+	struct mfi_progress	fgi;
+	struct mfi_progress	recon;
+	struct mfi_progress	reserved[4];
+} __packed;
+
+struct mfi_span {
+	uint64_t		start_block;
+	uint64_t		num_blocks;
+	uint16_t		array_ref;
+	uint8_t			reserved[6];
+} __packed;
+
+#define	MFI_MAX_SPAN_DEPTH	8
+struct mfi_ld_config {
+	struct mfi_ld_props	properties;
+	struct mfi_ld_params	params;
+	struct mfi_span		span[MFI_MAX_SPAN_DEPTH];
+} __packed;
+
+struct mfi_ld_info {
+	struct mfi_ld_config	ld_config;
+	uint64_t		size;
+	struct mfi_ld_progress	progress;
+	uint16_t		cluster_owner;
+	uint8_t			reconstruct_active;
+	uint8_t			reserved1[1];
+	uint8_t			vpd_page83[64];
+	uint8_t			reserved2[16];
+} __packed;
+
+union mfi_spare_type {
+	struct {
+		uint8_t		is_dedicate		:1;
+		uint8_t		is_revertable		:1;
+		uint8_t		is_encl_affinity	:1;
+		uint8_t		reserved		:5;
+	} v;
+	uint8_t		type;
+} __packed;
+
+#define MAX_ARRAYS 16
+struct mfi_spare {
+	union mfi_pd_ref	ref;
+	union mfi_spare_type	spare_type;
+	uint8_t			reserved[2];
+	uint8_t			array_count;
+	uint16_t		array_refd[MAX_ARRAYS];
+} __packed;
+
+#define MAX_ROW_SIZE 32
+struct mfi_array {
+	uint64_t			size;
+	uint8_t				num_drives;
+	uint8_t				reserved;
+	uint16_t			array_ref;
+	uint8_t				pad[20];
+	struct {
+		union mfi_pd_ref	ref;
+		uint16_t		fw_state;
+		struct {
+			uint8_t		pd;
+			uint8_t		slot;
+		} encl;
+	} pd[MAX_ROW_SIZE];
+} __packed;
+
+struct mfi_config_data {
+	uint32_t		size;
+	uint16_t		array_count;
+	uint16_t		array_size;
+	uint16_t		log_drv_count;
+	uint16_t		log_drv_size;
+	uint16_t		spares_count;
+	uint16_t		spares_size;
+	uint8_t			reserved[16];
+	uint8_t			data;
+	/*
+	struct mfi_array	array[];
+	struct mfi_ld_config	ld[];
+	struct mfi_spare	spare[];
+	*/
+} __packed;
+
+#define MFI_SCSI_MAX_TARGETS	128
+#define MFI_SCSI_MAX_LUNS	8
+#define MFI_SCSI_INITIATOR_ID	255
+#define MFI_SCSI_MAX_CMDS	8
+#define MFI_SCSI_MAX_CDB_LEN	16
 
 #endif /* _MFIREG_H */

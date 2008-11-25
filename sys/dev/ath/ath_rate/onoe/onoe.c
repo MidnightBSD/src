@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,13 +12,6 @@
  *    similar to the "NO WARRANTY" disclaimer below ("Disclaimer") and any
  *    redistribution must be conditioned upon including a substantially
  *    similar Disclaimer requirement for further binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * NO WARRANTY
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -35,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/onoe/onoe.c,v 1.8.2.3 2006/02/24 19:51:11 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/onoe/onoe.c,v 1.15 2007/07/27 11:59:55 rwatson Exp $");
 
 /*
  * Atsushi Onoe's rate control algorithm.
@@ -159,16 +152,17 @@ ath_rate_setupxtxdesc(struct ath_softc *sc, struct ath_node *an,
 
 void
 ath_rate_tx_complete(struct ath_softc *sc, struct ath_node *an,
-	const struct ath_desc *ds, const struct ath_desc *ds0)
+	const struct ath_buf *bf)
 {
 	struct onoe_node *on = ATH_NODE_ONOE(an);
+	const struct ath_tx_status *ts = &bf->bf_status.ds_txstat;
 
-	if (ds->ds_txstat.ts_status == 0)
+	if (ts->ts_status == 0)
 		on->on_tx_ok++;
 	else
 		on->on_tx_err++;
-	on->on_tx_retr += ds->ds_txstat.ts_shortretry
-			+ ds->ds_txstat.ts_longretry;
+	on->on_tx_retr += ts->ts_shortretry
+			+ ts->ts_longretry;
 }
 
 void
@@ -280,27 +274,27 @@ ath_rate_ctl_start(struct ath_softc *sc, struct ieee80211_node *ni)
 			/* NB: the rate set is assumed sorted */
 			for (; srate >= 0 && RATE(srate) > 72; srate--)
 				;
-			KASSERT(srate >= 0, ("bogus rate set"));
 		}
 	} else {
 		/*
-		 * A fixed rate is to be used; ic_fixed_rate is an
-		 * index into the supported rate set.  Convert this
+		 * A fixed rate is to be used; ic_fixed_rate is the
+		 * IEEE code for this rate (sans basic bit).  Convert this
 		 * to the index into the negotiated rate set for
 		 * the node.  We know the rate is there because the
 		 * rate set is checked when the station associates.
 		 */
-		const struct ieee80211_rateset *rs =
-			&ic->ic_sup_rates[ic->ic_curmode];
-		int r = rs->rs_rates[ic->ic_fixed_rate] & IEEE80211_RATE_VAL;
 		/* NB: the rate set is assumed sorted */
 		srate = ni->ni_rates.rs_nrates - 1;
-		for (; srate >= 0 && RATE(srate) != r; srate--)
+		for (; srate >= 0 && RATE(srate) != ic->ic_fixed_rate; srate--)
 			;
-		KASSERT(srate >= 0,
-			("fixed rate %d not in rate set", ic->ic_fixed_rate));
 	}
-	ath_rate_update(sc, ni, srate);
+	/*
+	 * The selected rate may not be available due to races
+	 * and mode settings.  Also orphaned nodes created in
+	 * adhoc mode may not have any rate set so this lookup
+	 * can fail.  This is not fatal.
+	 */
+	ath_rate_update(sc, ni, srate < 0 ? 0 : srate);
 #undef RATE
 }
 
@@ -484,7 +478,7 @@ ath_rate_attach(struct ath_softc *sc)
 	if (osc == NULL)
 		return NULL;
 	osc->arc.arc_space = sizeof(struct onoe_node);
-	callout_init(&osc->timer, debug_mpsafenet ? CALLOUT_MPSAFE : 0);
+	callout_init(&osc->timer, CALLOUT_MPSAFE);
 	ath_rate_sysctlattach(sc);
 
 	return &osc->arc;

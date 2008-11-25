@@ -23,10 +23,35 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+/*-
+ * Copyright (c) 2007 LSI Corp.
+ * Copyright (c) 2007 Rajesh Prabhakaran.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_pci.c,v 1.1.2.1 2006/04/04 03:24:48 scottl Exp $");
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sys/dev/mfi/mfi_pci.c,v 1.9 2007/08/25 23:58:45 scottl Exp $");
 
 /* PCI/PCI-X/PCIe bus interface for the LSI MegaSAS controllers */
 
@@ -35,11 +60,13 @@ __MBSDID("$MidnightBSD$");
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/selinfo.h>
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/bio.h>
 #include <sys/malloc.h>
+#include <sys/uio.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -87,8 +114,10 @@ struct mfi_ident {
 	int		flags;
 	const char	*desc;
 } mfi_identifiers[] = {
-	{0x1000, 0x0411, 0xffff, 0xffff, 0, "LSI MegaSAS 1064R"},
-	{0x1028, 0x0015, 0xffff, 0xffff, 0, "Dell PERC 5/i"},
+	{0x1000, 0x0411, 0xffff, 0xffff, MFI_FLAGS_1064R, "LSI MegaSAS 1064R"}, /* Brocton IOP */
+	{0x1000, 0x0413, 0xffff, 0xffff, MFI_FLAGS_1064R, "LSI MegaSAS 1064R"}, /* Verde ZCR */
+	{0x1028, 0x0015, 0xffff, 0xffff, MFI_FLAGS_1064R, "Dell PERC 5/i"},
+	{0x1000, 0x0060, 0xffff, 0xffff, MFI_FLAGS_1078,  "LSI MegaSAS 1078"},
 	{0, 0, 0, 0, 0, NULL}
 };
 
@@ -193,21 +222,29 @@ static int
 mfi_pci_detach(device_t dev)
 {
 	struct mfi_softc *sc;
-	struct mfi_ld *ld;
+	struct mfi_disk *ld;
 	int error;
 
 	sc = device_get_softc(dev);
 
-	if ((sc->mfi_flags & MFI_FLAGS_OPEN) != 0)
+	sx_xlock(&sc->mfi_config_lock);
+	mtx_lock(&sc->mfi_io_lock);
+	if ((sc->mfi_flags & MFI_FLAGS_OPEN) != 0) {
+		mtx_unlock(&sc->mfi_io_lock);
+		sx_xunlock(&sc->mfi_config_lock);
 		return (EBUSY);
-
-        while ((ld = TAILQ_FIRST(&sc->mfi_ld_tqh)) != NULL) {
-                error = device_delete_child(dev, ld->ld_disk);
-		if (error)
-			return (error);
-		TAILQ_REMOVE(&sc->mfi_ld_tqh, ld, ld_link);
-		free(ld, M_MFIBUF);
 	}
+	sc->mfi_detaching = 1;
+	mtx_unlock(&sc->mfi_io_lock);
+
+	while ((ld = TAILQ_FIRST(&sc->mfi_ld_tqh)) != NULL) {
+		if ((error = device_delete_child(dev, ld->ld_dev)) != 0) {
+			sc->mfi_detaching = 0;
+			sx_xunlock(&sc->mfi_config_lock);
+			return (error);
+		}
+	}
+	sx_xunlock(&sc->mfi_config_lock);
 
 	EVENTHANDLER_DEREGISTER(shutdown_final, sc->mfi_eh);
 

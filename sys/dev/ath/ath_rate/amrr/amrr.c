@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/amrr/amrr.c,v 1.8.2.3 2006/02/24 19:51:11 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ath/ath_rate/amrr/amrr.c,v 1.14 2007/07/27 11:59:55 rwatson Exp $");
 
 /*
  * AMRR rate control. See:
@@ -142,11 +142,12 @@ ath_rate_setupxtxdesc(struct ath_softc *sc, struct ath_node *an,
 
 void
 ath_rate_tx_complete(struct ath_softc *sc, struct ath_node *an,
-	const struct ath_desc *ds, const struct ath_desc *ds0)
+	const struct ath_buf *bf)
 {
 	struct amrr_node *amn = ATH_NODE_AMRR(an);
-	int sr = ds->ds_txstat.ts_shortretry;
-	int lr = ds->ds_txstat.ts_longretry;
+	const struct ath_tx_status *ts = &bf->bf_status.ds_txstat;
+	int sr = ts->ts_shortretry;
+	int lr = ts->ts_longretry;
 	int retry_count = sr + lr;
 
 	amn->amn_tx_try0_cnt++;
@@ -296,27 +297,27 @@ ath_rate_ctl_start(struct ath_softc *sc, struct ieee80211_node *ni)
 			/* NB: the rate set is assumed sorted */
 			for (; srate >= 0 && RATE(srate) > 72; srate--)
 				;
-			KASSERT(srate >= 0, ("bogus rate set"));
 		}
 	} else {
 		/*
-		 * A fixed rate is to be used; ic_fixed_rate is an
-		 * index into the supported rate set.  Convert this
+		 * A fixed rate is to be used; ic_fixed_rate is the
+		 * IEEE code for this rate (sans basic bit).  Convert this
 		 * to the index into the negotiated rate set for
 		 * the node.  We know the rate is there because the
 		 * rate set is checked when the station associates.
 		 */
-		const struct ieee80211_rateset *rs =
-			&ic->ic_sup_rates[ic->ic_curmode];
-		int r = rs->rs_rates[ic->ic_fixed_rate] & IEEE80211_RATE_VAL;
 		/* NB: the rate set is assumed sorted */
 		srate = ni->ni_rates.rs_nrates - 1;
-		for (; srate >= 0 && RATE(srate) != r; srate--)
+		for (; srate >= 0 && RATE(srate) != ic->ic_fixed_rate; srate--)
 			;
-		KASSERT(srate >= 0,
-			("fixed rate %d not in rate set", ic->ic_fixed_rate));
 	}
-	ath_rate_update(sc, ni, srate);
+	/*
+	 * The selected rate may not be available due to races
+	 * and mode settings.  Also orphaned nodes created in
+	 * adhoc mode may not have any rate set so this lookup
+	 * can fail.  This is not fatal.
+	 */
+	ath_rate_update(sc, ni, srate < 0 ? 0 : srate);
 #undef RATE
 }
 
@@ -503,7 +504,7 @@ ath_rate_attach(struct ath_softc *sc)
 	if (asc == NULL)
 		return NULL;
 	asc->arc.arc_space = sizeof(struct amrr_node);
-	callout_init(&asc->timer, debug_mpsafenet ? CALLOUT_MPSAFE : 0);
+	callout_init(&asc->timer, CALLOUT_MPSAFE);
 	ath_rate_sysctlattach(sc);
 
 	return &asc->arc;

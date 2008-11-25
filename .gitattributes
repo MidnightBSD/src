@@ -25603,6 +25603,8 @@ sys/dev/ata/atapi-fd.c -text
 sys/dev/ata/atapi-fd.h -text
 sys/dev/ata/atapi-tape.c -text
 sys/dev/ata/atapi-tape.h -text
+sys/dev/ath/ah_osdep.c -text
+sys/dev/ath/ah_osdep.h -text
 sys/dev/ath/ath_rate/amrr/amrr.c -text
 sys/dev/ath/ath_rate/amrr/amrr.h -text
 sys/dev/ath/ath_rate/onoe/onoe.c -text
@@ -26225,8 +26227,11 @@ sys/dev/md/md.c -text
 sys/dev/mem/memdev.c -text
 sys/dev/mem/memutil.c -text
 sys/dev/mfi/mfi.c -text
+sys/dev/mfi/mfi_cam.c -text
+sys/dev/mfi/mfi_debug.c -text
 sys/dev/mfi/mfi_disk.c -text
 sys/dev/mfi/mfi_ioctl.h -text
+sys/dev/mfi/mfi_linux.c -text
 sys/dev/mfi/mfi_pci.c -text
 sys/dev/mfi/mfireg.h -text
 sys/dev/mfi/mfivar.h -text
