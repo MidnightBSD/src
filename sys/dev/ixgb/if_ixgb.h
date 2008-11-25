@@ -30,7 +30,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
-/*$FreeBSD: src/sys/dev/ixgb/if_ixgb.h,v 1.7 2005/06/10 16:49:11 brooks Exp $*/
+/*$FreeBSD: src/sys/dev/ixgb/if_ixgb.h,v 1.9 2006/05/16 14:36:27 phk Exp $*/
 
 #ifndef _IXGB_H_DEFINED_
 #define _IXGB_H_DEFINED_
@@ -67,7 +67,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <machine/bus.h>
 #include <sys/rman.h>
 #include <machine/resource.h>
-#include <machine/clock.h>
 #if __FreeBSD_version >= 502000
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -78,7 +77,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <sys/proc.h>
 #include <sys/sysctl.h>
 #include <sys/endian.h>
-#include "opt_bdg.h"
 
 #include <dev/ixgb/ixgb_hw.h>
 #include <dev/ixgb/ixgb_ee.h>

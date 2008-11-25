@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$FreeBSD: src/sys/dev/ixgb/if_ixgb_osdep.h,v 1.3 2005/03/27 16:38:08 mux Exp $*/
+/*$FreeBSD: src/sys/dev/ixgb/if_ixgb_osdep.h,v 1.4 2006/05/16 14:36:27 phk Exp $*/
 
 #ifndef _FREEBSD_OS_H_
 #define _FREEBSD_OS_H_
@@ -48,7 +48,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <machine/bus.h>
 #include <sys/rman.h>
 #include <machine/resource.h>
-#include <machine/clock.h>
 #if __FreeBSD_version >= 502000
         #include <dev/pci/pcivar.h>
         #include <dev/pci/pcireg.h>

@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 
-/*$FreeBSD: src/sys/dev/ixgb/if_ixgb.c,v 1.10.2.6 2006/01/13 19:21:44 glebius Exp $*/
+/*$FreeBSD: src/sys/dev/ixgb/if_ixgb.c,v 1.22 2007/03/04 03:38:07 csjp Exp $*/
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -390,10 +390,11 @@ ixgb_detach(device_t dev)
 	ether_ifdetach(adapter->ifp, ETHER_BPF_SUPPORTED);
 #else
 	ether_ifdetach(adapter->ifp);
-	if_free(adapter->ifp);
 #endif
 	ixgb_free_pci_resources(adapter);
-
+#if __FreeBSD_version >= 500000
+	if_free(adapter->ifp);
+#endif
 
 	/* Free Transmit Descriptor ring */
 	if (adapter->tx_desc_base) {
@@ -474,7 +475,7 @@ ixgb_start_locked(struct ifnet * ifp)
 		if (ifp->if_bpf)
 			bpf_mtap(ifp, m_head);
 #else
-		BPF_MTAP(ifp, m_head);
+		ETHER_BPF_MTAP(ifp, m_head);
 #endif
 		/* Set timeout in case hardware has problems transmitting */
 		ifp->if_timer = IXGB_TX_TIMEOUT;
@@ -664,7 +665,7 @@ ixgb_init_locked(struct adapter *adapter)
 	ixgb_stop(adapter);
 
 	/* Get the latest mac address, User can use a LAA */
-	bcopy(IFP2ENADDR(adapter->ifp), adapter->hw.curr_mac_addr,
+	bcopy(IF_LLADDR(adapter->ifp), adapter->hw.curr_mac_addr,
 	      IXGB_ETH_LENGTH_OF_ADDRESS);
 
 	/* Initialize the hardware */
@@ -696,7 +697,7 @@ ixgb_init_locked(struct adapter *adapter)
 	}
 	ixgb_initialize_receive_unit(adapter);
 
-	/* Don't loose promiscuous settings */
+	/* Don't lose promiscuous settings */
 	ixgb_set_promisc(adapter);
 
 	ifp = adapter->ifp;
@@ -925,8 +926,6 @@ ixgb_encap(struct adapter * adapter, struct mbuf * m_head)
 
 #if __FreeBSD_version < 500000
 	struct ifvlan  *ifv = NULL;
-#else
-	struct m_tag   *mtag;
 #endif
 	bus_dma_segment_t segs[IXGB_MAX_SCATTER];
 	bus_dmamap_t	map;
@@ -980,7 +979,7 @@ ixgb_encap(struct adapter * adapter, struct mbuf * m_head)
 	    m_head->m_pkthdr.rcvif != NULL &&
 	    m_head->m_pkthdr.rcvif->if_type == IFT_L2VLAN)
 		ifv = m_head->m_pkthdr.rcvif->if_softc;
-#else
+#elseif __FreeBSD_version < 700000
 	mtag = VLAN_OUTPUT_TAG(ifp, m_head);
 #endif
 	i = adapter->next_avail_tx_desc;
@@ -1004,10 +1003,13 @@ ixgb_encap(struct adapter * adapter, struct mbuf * m_head)
 	if (ifv != NULL) {
 		/* Set the vlan id */
 		current_tx_desc->vlan = ifv->ifv_tag;
-#else
+#elseif __FreeBSD_version < 700000
 	if (mtag != NULL) {
 		/* Set the vlan id */
 		current_tx_desc->vlan = VLAN_TAG_VALUE(mtag);
+#else
+	if (m_head->m_flags & M_VLANTAG) {
+		current_tx_desc->vlan = m_head->m_pkthdr.ether_vtag;
 #endif
 
 		/* Tell hardware to add tag */
@@ -1266,7 +1268,7 @@ ixgb_allocate_pci_resources(struct adapter * adapter)
 	}
 	if (bus_setup_intr(dev, adapter->res_interrupt,
 			   INTR_TYPE_NET | INTR_MPSAFE,
-			   (void (*) (void *))ixgb_intr, adapter,
+			   NULL, (void (*) (void *))ixgb_intr, adapter,
 			   &adapter->int_handler_tag)) {
 		printf("ixgb%d: Error registering interrupt handler!\n",
 		       adapter->unit);
@@ -2143,16 +2145,24 @@ ixgb_process_receive_interrupts(struct adapter * adapter, int count)
 						      adapter->fmp);
 
 				if (current_desc->status & IXGB_RX_DESC_STATUS_VP)
-					VLAN_INPUT_TAG_NEW(eh, adapter->fmp,
+					VLAN_INPUT_TAG(eh, adapter->fmp,
 						     current_desc->special);
 				else
 					ether_input(ifp, eh, adapter->fmp);
 #else
 				ixgb_receive_checksum(adapter, current_desc,
 						      adapter->fmp);
+#if __FreeBSD_version < 700000
 				if (current_desc->status & IXGB_RX_DESC_STATUS_VP)
-					VLAN_INPUT_TAG_NEW(ifp, adapter->fmp,
+					VLAN_INPUT_TAG(ifp, adapter->fmp,
 						       current_desc->special);
+#else
+				if (current_desc->status & IXGB_RX_DESC_STATUS_VP) {
+					adapter->fmp->m_pkthdr.ether_vtag =
+					    current_desc->special;
+					adapter->fmp->m_flags |= M_VLANTAG;
+				}
+#endif
 
 				if (adapter->fmp != NULL) {
 					IXGB_UNLOCK(adapter);
