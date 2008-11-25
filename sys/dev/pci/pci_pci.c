@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pci/pci_pci.c,v 1.37.2.1 2006/05/22 23:38:08 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pci/pci_pci.c,v 1.50 2007/09/30 11:05:15 marius Exp $");
 
 /*
  * PCI:PCI bridge support.
@@ -79,19 +79,46 @@ static device_method_t pcib_methods[] = {
     DEVMETHOD(pcib_read_config,		pcib_read_config),
     DEVMETHOD(pcib_write_config,	pcib_write_config),
     DEVMETHOD(pcib_route_interrupt,	pcib_route_interrupt),
+    DEVMETHOD(pcib_alloc_msi,		pcib_alloc_msi),
+    DEVMETHOD(pcib_release_msi,		pcib_release_msi),
+    DEVMETHOD(pcib_alloc_msix,		pcib_alloc_msix),
+    DEVMETHOD(pcib_release_msix,	pcib_release_msix),
+    DEVMETHOD(pcib_map_msi,		pcib_map_msi),
 
     { 0, 0 }
 };
 
-static driver_t pcib_driver = {
-    "pcib",
-    pcib_methods,
-    sizeof(struct pcib_softc),
-};
+static devclass_t pcib_devclass;
 
-devclass_t pcib_devclass;
-
+DEFINE_CLASS_0(pcib, pcib_driver, pcib_methods, sizeof(struct pcib_softc));
 DRIVER_MODULE(pcib, pci, pcib_driver, pcib_devclass, 0, 0);
+
+/*
+ * Is the prefetch window open (eg, can we allocate memory in it?)
+ */
+static int
+pcib_is_prefetch_open(struct pcib_softc *sc)
+{
+	return (sc->pmembase > 0 && sc->pmembase < sc->pmemlimit);
+}
+
+/*
+ * Is the nonprefetch window open (eg, can we allocate memory in it?)
+ */
+static int
+pcib_is_nonprefetch_open(struct pcib_softc *sc)
+{
+	return (sc->membase > 0 && sc->membase < sc->memlimit);
+}
+
+/*
+ * Is the io window open (eg, can we allocate ports in it?)
+ */
+static int
+pcib_is_io_open(struct pcib_softc *sc)
+{
+	return (sc->iobase > 0 && sc->iobase < sc->iolimit);
+}
 
 /*
  * Generic device interface
@@ -120,6 +147,7 @@ pcib_attach_common(device_t dev)
      * Get current bridge configuration.
      */
     sc->command   = pci_read_config(dev, PCIR_COMMAND, 1);
+    sc->domain    = pci_get_domain(dev);
     sc->secbus    = pci_read_config(dev, PCIR_SECBUS_1, 1);
     sc->subbus    = pci_read_config(dev, PCIR_SUBBUS_1, 1);
     sc->secstat   = pci_read_config(dev, PCIR_SECSTAT_1, 2);
@@ -153,10 +181,10 @@ pcib_attach_common(device_t dev)
     if (sc->command & PCIM_CMD_MEMEN) {
 	sc->membase   = PCI_PPBMEMBASE(0, pci_read_config(dev, PCIR_MEMBASE_1, 2));
 	sc->memlimit  = PCI_PPBMEMLIMIT(0, pci_read_config(dev, PCIR_MEMLIMIT_1, 2));
-	sc->pmembase  = PCI_PPBMEMBASE((pci_addr_t)pci_read_config(dev, PCIR_PMBASEH_1, 4),
-				       pci_read_config(dev, PCIR_PMBASEL_1, 2));
-	sc->pmemlimit = PCI_PPBMEMLIMIT((pci_addr_t)pci_read_config(dev, PCIR_PMLIMITH_1, 4),
-					pci_read_config(dev, PCIR_PMLIMITL_1, 2));
+	sc->pmembase  = PCI_PPBMEMBASE(pci_read_config(dev, PCIR_PMBASEH_1, 4),
+	    pci_read_config(dev, PCIR_PMBASEL_1, 2));
+	sc->pmemlimit = PCI_PPBMEMLIMIT(pci_read_config(dev, PCIR_PMLIMITH_1, 4),
+	    pci_read_config(dev, PCIR_PMLIMITL_1, 2));
     }
 
     /*
@@ -214,6 +242,9 @@ pcib_attach_common(device_t dev)
 	}
     }
 
+    if (pci_msi_device_blacklisted(dev))
+	sc->flags |= PCIB_DISABLE_MSI;
+
     /*
      * Intel 815, 845 and other chipsets say they are PCI-PCI bridges,
      * but have a ProgIF of 0x80.  The 82801 family (AA, AB, BAM/CAM,
@@ -223,15 +254,22 @@ pcib_attach_common(device_t dev)
      * parts as subtractive.
      */
     if ((pci_get_devid(dev) & 0xff00ffff) == 0x24008086 ||
-      pci_read_config(dev, PCIR_PROGIF, 1) == 1)
+      pci_read_config(dev, PCIR_PROGIF, 1) == PCIP_BRIDGE_PCI_SUBTRACTIVE)
 	sc->flags |= PCIB_SUBTRACTIVE;
 	
     if (bootverbose) {
+	device_printf(dev, "  domain            %d\n", sc->domain);
 	device_printf(dev, "  secondary bus     %d\n", sc->secbus);
 	device_printf(dev, "  subordinate bus   %d\n", sc->subbus);
 	device_printf(dev, "  I/O decode        0x%x-0x%x\n", sc->iobase, sc->iolimit);
-	device_printf(dev, "  memory decode     0x%x-0x%x\n", sc->membase, sc->memlimit);
-	device_printf(dev, "  prefetched decode 0x%x-0x%x\n", sc->pmembase, sc->pmemlimit);
+	if (pcib_is_nonprefetch_open(sc))
+	    device_printf(dev, "  memory decode     0x%jx-0x%jx\n",
+	      (uintmax_t)sc->membase, (uintmax_t)sc->memlimit);
+	if (pcib_is_prefetch_open(sc))
+	    device_printf(dev, "  prefetched decode 0x%jx-0x%jx\n",
+	      (uintmax_t)sc->pmembase, (uintmax_t)sc->pmemlimit);
+	else
+	    device_printf(dev, "  no prefetched decode\n");
 	if (sc->flags & PCIB_SUBTRACTIVE)
 	    device_printf(dev, "  Subtractively decoded bridge.\n");
     }
@@ -273,6 +311,9 @@ pcib_read_ivar(device_t dev, device_t child, int which, uintptr_t *result)
     struct pcib_softc	*sc = device_get_softc(dev);
     
     switch (which) {
+    case PCIB_IVAR_DOMAIN:
+	*result = sc->domain;
+	return(0);
     case PCIB_IVAR_BUS:
 	*result = sc->secbus;
 	return(0);
@@ -286,38 +327,13 @@ pcib_write_ivar(device_t dev, device_t child, int which, uintptr_t value)
     struct pcib_softc	*sc = device_get_softc(dev);
 
     switch (which) {
+    case PCIB_IVAR_DOMAIN:
+	return(EINVAL);
     case PCIB_IVAR_BUS:
 	sc->secbus = value;
-	break;
+	return(0);
     }
     return(ENOENT);
-}
-
-/*
- * Is the prefetch window open (eg, can we allocate memory in it?)
- */
-static int
-pcib_is_prefetch_open(struct pcib_softc *sc)
-{
-	return (sc->pmembase > 0 && sc->pmembase < sc->pmemlimit);
-}
-
-/*
- * Is the nonprefetch window open (eg, can we allocate memory in it?)
- */
-static int
-pcib_is_nonprefetch_open(struct pcib_softc *sc)
-{
-	return (sc->membase > 0 && sc->membase < sc->memlimit);
-}
-
-/*
- * Is the io window open (eg, can we allocate ports in it?)
- */
-static int
-pcib_is_io_open(struct pcib_softc *sc)
-{
-	return (sc->iobase > 0 && sc->iobase < sc->iolimit);
 }
 
 /*
@@ -329,11 +345,18 @@ pcib_alloc_resource(device_t dev, device_t child, int type, int *rid,
     u_long start, u_long end, u_long count, u_int flags)
 {
 	struct pcib_softc	*sc = device_get_softc(dev);
+	const char *name, *suffix;
 	int ok;
 
 	/*
 	 * Fail the allocation for this range if it's not supported.
 	 */
+	name = device_get_nameunit(child);
+	if (name == NULL) {
+		name = "";
+		suffix = "";
+	} else
+		suffix = " ";
 	switch (type) {
 	case SYS_RES_IOPORT:
 		ok = 0;
@@ -374,16 +397,15 @@ pcib_alloc_resource(device_t dev, device_t child, int type, int *rid,
 			ok = 0;
 		}
 		if (!ok) {
-			device_printf(dev, "%s requested unsupported I/O "
+			device_printf(dev, "%s%srequested unsupported I/O "
 			    "range 0x%lx-0x%lx (decoding 0x%x-0x%x)\n",
-			    device_get_nameunit(child), start, end,
-			    sc->iobase, sc->iolimit);
+			    name, suffix, start, end, sc->iobase, sc->iolimit);
 			return (NULL);
 		}
 		if (bootverbose)
 			device_printf(dev,
-			    "%s requested I/O range 0x%lx-0x%lx: in range\n",
-			    device_get_nameunit(child), start, end);
+			    "%s%srequested I/O range 0x%lx-0x%lx: in range\n",
+			    name, suffix, start, end);
 		break;
 
 	case SYS_RES_MEMORY:
@@ -449,17 +471,17 @@ pcib_alloc_resource(device_t dev, device_t child, int type, int *rid,
 		}
 		if (!ok && bootverbose)
 			device_printf(dev,
-			    "%s requested unsupported memory range "
-			    "0x%lx-0x%lx (decoding 0x%x-0x%x, 0x%x-0x%x)\n",
-			    device_get_nameunit(child), start, end,
-			    sc->membase, sc->memlimit, sc->pmembase,
-			    sc->pmemlimit);
+			    "%s%srequested unsupported memory range %#lx-%#lx "
+			    "(decoding %#jx-%#jx, %#jx-%#jx)\n",
+			    name, suffix, start, end,
+			    (uintmax_t)sc->membase, (uintmax_t)sc->memlimit,
+			    (uintmax_t)sc->pmembase, (uintmax_t)sc->pmemlimit);
 		if (!ok)
 			return (NULL);
 		if (bootverbose)
-			device_printf(dev,"%s requested memory range "
+			device_printf(dev,"%s%srequested memory range "
 			    "0x%lx-0x%lx: good\n",
-			    device_get_nameunit(child), start, end);
+			    name, suffix, start, end);
 		break;
 
 	default:
@@ -530,6 +552,64 @@ pcib_route_interrupt(device_t pcib, device_t dev, int pin)
 	    pci_get_slot(dev), 'A' + pin - 1, intnum);
     }
     return(intnum);
+}
+
+/* Pass request to alloc MSI/MSI-X messages up to the parent bridge. */
+int
+pcib_alloc_msi(device_t pcib, device_t dev, int count, int maxcount, int *irqs)
+{
+	struct pcib_softc *sc = device_get_softc(pcib);
+	device_t bus;
+
+	if (sc->flags & PCIB_DISABLE_MSI)
+		return (ENXIO);
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSI(device_get_parent(bus), dev, count, maxcount,
+	    irqs));
+}
+
+/* Pass request to release MSI/MSI-X messages up to the parent bridge. */
+int
+pcib_release_msi(device_t pcib, device_t dev, int count, int *irqs)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_RELEASE_MSI(device_get_parent(bus), dev, count, irqs));
+}
+
+/* Pass request to alloc an MSI-X message up to the parent bridge. */
+int
+pcib_alloc_msix(device_t pcib, device_t dev, int *irq)
+{
+	struct pcib_softc *sc = device_get_softc(pcib);
+	device_t bus;
+
+	if (sc->flags & PCIB_DISABLE_MSI)
+		return (ENXIO);
+	bus = device_get_parent(pcib);
+	return (PCIB_ALLOC_MSIX(device_get_parent(bus), dev, irq));
+}
+
+/* Pass request to release an MSI-X message up to the parent bridge. */
+int
+pcib_release_msix(device_t pcib, device_t dev, int irq)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_RELEASE_MSIX(device_get_parent(bus), dev, irq));
+}
+
+/* Pass request to map MSI/MSI-X message up to parent bridge. */
+int
+pcib_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
+    uint32_t *data)
+{
+	device_t bus;
+
+	bus = device_get_parent(pcib);
+	return (PCIB_MAP_MSI(device_get_parent(bus), dev, irq, addr, data));
 }
 
 /*

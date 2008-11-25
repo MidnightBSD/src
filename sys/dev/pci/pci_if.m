@@ -23,12 +23,21 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/dev/pci/pci_if.m,v 1.7 2005/01/06 01:43:05 imp Exp $
+# $FreeBSD: src/sys/dev/pci/pci_if.m,v 1.12 2007/05/02 17:50:35 jhb Exp $
 #
 
 #include <sys/bus.h>
 
 INTERFACE pci;
+
+CODE {
+	static int
+	null_msi_count(device_t dev, device_t child)
+	{
+		return (0);
+	}
+};
+
 
 METHOD u_int32_t read_config {
 	device_t	dev;
@@ -54,6 +63,19 @@ METHOD int set_powerstate {
 	device_t	dev;
 	device_t	child;
 	int		state;
+};
+
+METHOD int get_vpd_ident {
+	device_t	dev;
+	device_t	child;
+	const char	**identptr;
+};
+
+METHOD int get_vpd_readonly {
+	device_t	dev;
+	device_t	child;
+	const char	*kw;
+	const char	**vptr;
 };
 
 METHOD int enable_busmaster {
@@ -82,3 +104,44 @@ METHOD int assign_interrupt {
 	device_t	dev;
 	device_t	child;
 };
+
+METHOD int find_extcap {
+	device_t	dev;
+	device_t	child;
+	int		capability;
+	int		*capreg;
+};
+
+METHOD int alloc_msi {
+	device_t	dev;
+	device_t	child;
+	int		*count;
+};
+
+METHOD int alloc_msix {
+	device_t	dev;
+	device_t	child;
+	int		*count;
+};
+
+METHOD int remap_msix {
+	device_t	dev;
+	device_t	child;
+	int		count;
+	const u_int	*vectors;
+};
+
+METHOD int release_msi {
+	device_t	dev;
+	device_t	child;
+};
+
+METHOD int msi_count {
+	device_t	dev;
+	device_t	child;
+} DEFAULT null_msi_count;
+
+METHOD int msix_count {
+	device_t	dev;
+	device_t	child;
+} DEFAULT null_msi_count;

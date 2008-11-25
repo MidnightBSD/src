@@ -25,21 +25,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.14.2.1 2006/01/30 18:38:08 imp Exp $
+ * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.25 2007/09/30 11:05:15 marius Exp $
  *
  */
 
 #ifndef _PCI_PRIVATE_H_
-#define _PCI_PRIVATE_H_
+#define	_PCI_PRIVATE_H_
 
 /*
  * Export definitions of the pci bus so that we can more easily share
- * it with "subclass" busses.  A more generic subclassing mechanism would
- * be nice, but is not present in the tree at this time.
+ * it with "subclass" busses.
  */
-extern devclass_t pci_devclass;
+DECLARE_CLASS(pci_driver);
 
-void		pci_add_children(device_t dev, int busno, size_t dinfo_size);
+void		pci_add_children(device_t dev, int domain, int busno,
+		    size_t dinfo_size);
 void		pci_add_child(device_t bus, struct pci_devinfo *dinfo);
 void		pci_add_resources(device_t bus, device_t dev, int force,
 		    uint32_t prefetchmask);
@@ -50,6 +50,15 @@ int		pci_read_ivar(device_t dev, device_t child, int which,
 		    uintptr_t *result);
 int		pci_write_ivar(device_t dev, device_t child, int which,
 		    uintptr_t value);
+int		pci_setup_intr(device_t dev, device_t child,
+		    struct resource *irq, int flags, driver_filter_t *filter,
+		    driver_intr_t *intr, void *arg, void **cookiep);
+int		pci_teardown_intr(device_t dev, device_t child,
+		    struct resource *irq, void *cookie);
+int		pci_get_vpd_ident_method(device_t dev, device_t child,
+		    const char **identptr);
+int		pci_get_vpd_readonly_method(device_t dev, device_t child,
+		    const char *kw, const char **vptr);
 int		pci_set_powerstate_method(device_t dev, device_t child,
 		    int state);
 int		pci_get_powerstate_method(device_t dev, device_t child);
@@ -61,13 +70,22 @@ int		pci_enable_busmaster_method(device_t dev, device_t child);
 int		pci_disable_busmaster_method(device_t dev, device_t child);
 int		pci_enable_io_method(device_t dev, device_t child, int space);
 int		pci_disable_io_method(device_t dev, device_t child, int space);
+int		pci_find_extcap_method(device_t dev, device_t child,
+		    int capability, int *capreg);
+int		pci_alloc_msi_method(device_t dev, device_t child, int *count);
+int		pci_alloc_msix_method(device_t dev, device_t child, int *count);
+int		pci_remap_msix_method(device_t dev, device_t child,
+		    int count, const u_int *vectors);
+int		pci_release_msi_method(device_t dev, device_t child);
+int		pci_msi_count_method(device_t dev, device_t child);
+int		pci_msix_count_method(device_t dev, device_t child);
 struct resource	*pci_alloc_resource(device_t dev, device_t child, 
 		    int type, int *rid, u_long start, u_long end, u_long count,
 		    u_int flags);
 void		pci_delete_resource(device_t dev, device_t child, 
 		    int type, int rid);
 struct resource_list *pci_get_resource_list (device_t dev, device_t child);
-struct pci_devinfo *pci_read_device(device_t pcib, int b, int s, int f,
+struct pci_devinfo *pci_read_device(device_t pcib, int d, int b, int s, int f,
 		    size_t size);
 void		pci_print_verbose(struct pci_devinfo *dinfo);
 int		pci_freecfg(struct pci_devinfo *dinfo);
@@ -78,6 +96,17 @@ int		pci_child_pnpinfo_str_method(device_t cbdev, device_t child,
 int		pci_assign_interrupt_method(device_t dev, device_t child);
 int		pci_resume(device_t dev);
 int		pci_suspend(device_t dev);
+
+/** Restore the config register state.  The state must be previously
+ * saved with pci_cfg_save.  However, the pci bus driver takes care of
+ * that.  This function will also return the device to PCI_POWERSTATE_D0
+ * if it is currently in a lower power mode.
+ */
 void		pci_cfg_restore(device_t, struct pci_devinfo *);
+
+/** Save the config register state.  Optionally set the power state to D3
+ * if the third argument is non-zero.
+ */
 void		pci_cfg_save(device_t, struct pci_devinfo *, int);
+
 #endif /* _PCI_PRIVATE_H_ */

@@ -26410,6 +26410,7 @@ sys/dev/pcf/pcf_isa.c -text
 sys/dev/pcf/pcfvar.h -text
 sys/dev/pci/eisa_pci.c -text
 sys/dev/pci/fixup_pci.c -text
+sys/dev/pci/hostb_pci.c -text
 sys/dev/pci/ignore_pci.c -text
 sys/dev/pci/isa_pci.c -text
 sys/dev/pci/pci.c -text
@@ -26421,6 +26422,7 @@ sys/dev/pci/pcib_if.m -text
 sys/dev/pci/pcib_private.h -text
 sys/dev/pci/pcireg.h -text
 sys/dev/pci/pcivar.h -text
+sys/dev/pci/vga_pci.c -text
 sys/dev/pdq/if_fea.c -text
 sys/dev/pdq/if_fpa.c -text
 sys/dev/pdq/pdq.c -text

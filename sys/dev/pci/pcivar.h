@@ -23,33 +23,28 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pci/pcivar.h,v 1.66.2.1 2006/01/30 18:34:41 imp Exp $
+ * $FreeBSD: src/sys/dev/pci/pcivar.h,v 1.80 2007/09/30 11:05:15 marius Exp $
  *
  */
 
 #ifndef _PCIVAR_H_
-#define _PCIVAR_H_
+#define	_PCIVAR_H_
 
 #include <sys/queue.h>
 
 /* some PCI bus constants */
 
-#define PCI_BUSMAX	255	/* highest supported bus number */
-#define PCI_SLOTMAX	31	/* highest supported slot number */
-#define PCI_FUNCMAX	7	/* highest supported function number */
-#define PCI_REGMAX	255	/* highest supported config register addr. */
+#define	PCI_DOMAINMAX	65535	/* highest supported domain number */
+#define	PCI_BUSMAX	255	/* highest supported bus number */
+#define	PCI_SLOTMAX	31	/* highest supported slot number */
+#define	PCI_FUNCMAX	7	/* highest supported function number */
+#define	PCI_REGMAX	255	/* highest supported config register addr. */
 
-#define PCI_MAXMAPS_0	6	/* max. no. of memory/port maps */
-#define PCI_MAXMAPS_1	2	/* max. no. of maps for PCI to PCI bridge */
-#define PCI_MAXMAPS_2	1	/* max. no. of maps for CardBus bridge */
+#define	PCI_MAXMAPS_0	6	/* max. no. of memory/port maps */
+#define	PCI_MAXMAPS_1	2	/* max. no. of maps for PCI to PCI bridge */
+#define	PCI_MAXMAPS_2	1	/* max. no. of maps for CardBus bridge */
 
-/* pci_addr_t covers this system's PCI bus address space: 32 or 64 bit */
-
-#ifdef PCI_A64
-typedef uint64_t pci_addr_t;	/* uint64_t for system with 64bit addresses */
-#else
-typedef uint32_t pci_addr_t;	/* uint64_t for system with 64bit addresses */
-#endif
+typedef uint64_t pci_addr_t;
 
 /* Interesting values for PCI power management */
 struct pcicfg_pp {
@@ -59,11 +54,65 @@ struct pcicfg_pp {
     uint8_t	pp_data;	/* config space address of PCI power data reg */
 };
  
+struct vpd_readonly {
+    char	keyword[2];
+    char	*value;
+};
+
+struct vpd_write {
+    char	keyword[2];
+    char	*value;
+    int 	start;
+    int 	len;
+};
+
+struct pcicfg_vpd {
+    uint8_t	vpd_reg;	/* base register, + 2 for addr, + 4 data */
+    char	vpd_cached;
+    char	*vpd_ident;	/* string identifier */
+    int 	vpd_rocnt;
+    struct vpd_readonly *vpd_ros;
+    int 	vpd_wcnt;
+    struct vpd_write *vpd_w;
+};
+
 /* Interesting values for PCI MSI */
 struct pcicfg_msi {
     uint16_t	msi_ctrl;	/* Message Control */
+    uint8_t	msi_location;	/* Offset of MSI capability registers. */
     uint8_t	msi_msgnum;	/* Number of messages */
-    uint16_t	msi_data;	/* Location of MSI data word */
+    int		msi_alloc;	/* Number of allocated messages. */
+    uint64_t	msi_addr;	/* Contents of address register. */
+    uint16_t	msi_data;	/* Contents of data register. */
+    u_int	msi_handlers;
+};
+
+/* Interesting values for PCI MSI-X */
+struct msix_vector {
+    uint64_t	mv_address;	/* Contents of address register. */
+    uint32_t	mv_data;	/* Contents of data register. */
+    int		mv_irq;
+};
+
+struct msix_table_entry {
+    u_int	mte_vector;	/* 1-based index into msix_vectors array. */
+    u_int	mte_handlers;
+};
+
+struct pcicfg_msix {
+    uint16_t	msix_ctrl;	/* Message Control */
+    uint16_t	msix_msgnum;	/* Number of messages */
+    uint8_t	msix_location;	/* Offset of MSI-X capability registers. */
+    uint8_t	msix_table_bar;	/* BAR containing vector table. */
+    uint8_t	msix_pba_bar;	/* BAR containing PBA. */
+    uint32_t	msix_table_offset;
+    uint32_t	msix_pba_offset;
+    int		msix_alloc;	/* Number of allocated vectors. */
+    int		msix_table_len;	/* Length of virtual table. */
+    struct msix_table_entry *msix_table; /* Virtual table. */
+    struct msix_vector *msix_vectors;	/* Array of allocated vectors. */
+    struct resource *msix_table_res;	/* Resource containing vector table. */
+    struct resource *msix_pba_res;	/* Resource containing PBA. */
 };
 
 /* config header information common to all header types */
@@ -98,26 +147,23 @@ typedef struct pcicfg {
     uint8_t	mfdev;		/* multi-function device (from hdrtype reg) */
     uint8_t	nummaps;	/* actual number of PCI maps used */
 
+    uint32_t	domain;		/* PCI domain */
     uint8_t	bus;		/* config space bus address */
     uint8_t	slot;		/* config space slot address */
     uint8_t	func;		/* config space function number */
 
     struct pcicfg_pp pp;	/* pci power management */
+    struct pcicfg_vpd vpd;	/* pci vital product data */
     struct pcicfg_msi msi;	/* pci msi */
+    struct pcicfg_msix msix;	/* pci msi-x */
 } pcicfgregs;
 
 /* additional type 1 device config header information (PCI to PCI bridge) */
 
-#ifdef PCI_A64
-#define PCI_PPBMEMBASE(h,l)  ((((pci_addr_t)(h) << 32) + ((l)<<16)) & ~0xfffff)
-#define PCI_PPBMEMLIMIT(h,l) ((((pci_addr_t)(h) << 32) + ((l)<<16)) | 0xfffff)
-#else
-#define PCI_PPBMEMBASE(h,l)  (((l)<<16) & ~0xfffff)
-#define PCI_PPBMEMLIMIT(h,l) (((l)<<16) | 0xfffff)
-#endif /* PCI_A64 */
-
-#define PCI_PPBIOBASE(h,l)   ((((h)<<16) + ((l)<<8)) & ~0xfff)
-#define PCI_PPBIOLIMIT(h,l)  ((((h)<<16) + ((l)<<8)) | 0xfff)
+#define	PCI_PPBMEMBASE(h,l)  ((((pci_addr_t)(h) << 32) + ((l)<<16)) & ~0xfffff)
+#define	PCI_PPBMEMLIMIT(h,l) ((((pci_addr_t)(h) << 32) + ((l)<<16)) | 0xfffff)
+#define	PCI_PPBIOBASE(h,l)   ((((h)<<16) + ((l)<<8)) & ~0xfff)
+#define	PCI_PPBIOLIMIT(h,l)  ((((h)<<16) + ((l)<<8)) | 0xfff)
 
 typedef struct {
     pci_addr_t	pmembase;	/* base address of prefetchable memory */
@@ -168,8 +214,8 @@ struct pci_devinfo {
  * Define pci-specific resource flags for accessing memory via dense
  * or bwx memory spaces. These flags are ignored on i386.
  */
-#define PCI_RF_DENSE	0x10000
-#define PCI_RF_BWX	0x20000
+#define	PCI_RF_DENSE	0x10000
+#define	PCI_RF_BWX	0x20000
 
 enum pci_device_ivars {
     PCI_IVAR_SUBVENDOR,
@@ -183,6 +229,7 @@ enum pci_device_ivars {
     PCI_IVAR_REVID,
     PCI_IVAR_INTPIN,
     PCI_IVAR_IRQ,
+    PCI_IVAR_DOMAIN,
     PCI_IVAR_BUS,
     PCI_IVAR_SLOT,
     PCI_IVAR_FUNCTION,
@@ -197,7 +244,7 @@ enum pci_device_ivars {
 /*
  * Simplified accessors for pci devices
  */
-#define PCI_ACCESSOR(var, ivar, type)					\
+#define	PCI_ACCESSOR(var, ivar, type)					\
 	__BUS_ACCESSOR(pci, var, PCI, ivar, type)
 
 PCI_ACCESSOR(subvendor,		SUBVENDOR,	uint16_t)
@@ -211,6 +258,7 @@ PCI_ACCESSOR(progif,		PROGIF,		uint8_t)
 PCI_ACCESSOR(revid,		REVID,		uint8_t)
 PCI_ACCESSOR(intpin,		INTPIN,		uint8_t)
 PCI_ACCESSOR(irq,		IRQ,		uint8_t)
+PCI_ACCESSOR(domain,		DOMAIN,		uint32_t)
 PCI_ACCESSOR(bus,		BUS,		uint8_t)
 PCI_ACCESSOR(slot,		SLOT,		uint8_t)
 PCI_ACCESSOR(function,		FUNCTION,	uint8_t)
@@ -244,12 +292,14 @@ pci_write_config(device_t dev, int reg, uint32_t val, int width)
 
 /*typedef enum pci_device_ivars pcib_device_ivars;*/
 enum pcib_device_ivars {
+	PCIB_IVAR_DOMAIN,
 	PCIB_IVAR_BUS
 };
 
-#define PCIB_ACCESSOR(var, ivar, type)					 \
+#define	PCIB_ACCESSOR(var, ivar, type)					 \
     __BUS_ACCESSOR(pcib, var, PCIB, ivar, type)
 
+PCIB_ACCESSOR(domain,		DOMAIN,		uint32_t)
 PCIB_ACCESSOR(bus,		BUS,		uint32_t)
 
 #undef PCIB_ACCESSOR
@@ -259,8 +309,8 @@ PCIB_ACCESSOR(bus,		BUS,		uint32_t)
  * on i386 or other platforms should be mapped out in the MD pcireadconf
  * code and not here, since the only MI invalid IRQ is 255.
  */
-#define PCI_INVALID_IRQ		255
-#define PCI_INTERRUPT_VALID(x)	((x) != PCI_INVALID_IRQ)
+#define	PCI_INVALID_IRQ		255
+#define	PCI_INTERRUPT_VALID(x)	((x) != PCI_INVALID_IRQ)
 
 /*
  * Convenience functions.
@@ -292,6 +342,18 @@ pci_disable_io(device_t dev, int space)
     return(PCI_DISABLE_IO(device_get_parent(dev), dev, space));
 }
 
+static __inline int
+pci_get_vpd_ident(device_t dev, const char **identptr)
+{
+    return(PCI_GET_VPD_IDENT(device_get_parent(dev), dev, identptr));
+}
+
+static __inline int
+pci_get_vpd_readonly(device_t dev, const char *kw, const char **identptr)
+{
+    return(PCI_GET_VPD_READONLY(device_get_parent(dev), dev, kw, identptr));
+}
+
 /*
  * Check if the address range falls within the VGA defined address range(s)
  */
@@ -317,19 +379,19 @@ pci_is_vga_memory_range(u_long start, u_long end)
  *	power from the system and delivering full functionality to the user.
  * D1	Class-specific low-power state in which device context may or may not
  *	be lost.  Buses in D1 cannot do anything to the bus that would force
- *	devices on that bus to loose context.
+ *	devices on that bus to lose context.
  * D2	Class-specific low-power state in which device context may or may
  *	not be lost.  Attains greater power savings than D1.  Buses in D2
- *	can cause devices on that bus to loose some context.  Devices in D2
+ *	can cause devices on that bus to lose some context.  Devices in D2
  *	must be prepared for the bus to be in D2 or higher.
  * D3	State in which the device is off and not running.  Device context is
  *	lost.  Power can be removed from the device.
  */
-#define PCI_POWERSTATE_D0	0
-#define PCI_POWERSTATE_D1	1
-#define PCI_POWERSTATE_D2	2
-#define PCI_POWERSTATE_D3	3
-#define PCI_POWERSTATE_UNKNOWN	-1
+#define	PCI_POWERSTATE_D0	0
+#define	PCI_POWERSTATE_D1	1
+#define	PCI_POWERSTATE_D2	2
+#define	PCI_POWERSTATE_D3	3
+#define	PCI_POWERSTATE_UNKNOWN	-1
 
 static __inline int
 pci_set_powerstate(device_t dev, int state)
@@ -343,17 +405,63 @@ pci_get_powerstate(device_t dev)
     return PCI_GET_POWERSTATE(device_get_parent(dev), dev);
 }
 
-#if 0
-/* depends on ACPI import */
 static __inline int
 pci_find_extcap(device_t dev, int capability, int *capreg)
 {
     return PCI_FIND_EXTCAP(device_get_parent(dev), dev, capability, capreg);
 }
-#endif
+
+static __inline int
+pci_alloc_msi(device_t dev, int *count)
+{
+    return (PCI_ALLOC_MSI(device_get_parent(dev), dev, count));
+}
+
+static __inline int
+pci_alloc_msix(device_t dev, int *count)
+{
+    return (PCI_ALLOC_MSIX(device_get_parent(dev), dev, count));
+}
+
+static __inline int
+pci_remap_msix(device_t dev, int count, const u_int *vectors)
+{
+    return (PCI_REMAP_MSIX(device_get_parent(dev), dev, count, vectors));
+}
+
+static __inline int
+pci_release_msi(device_t dev)
+{
+    return (PCI_RELEASE_MSI(device_get_parent(dev), dev));
+}
+
+static __inline int
+pci_msi_count(device_t dev)
+{
+    return (PCI_MSI_COUNT(device_get_parent(dev), dev));
+}
+
+static __inline int
+pci_msix_count(device_t dev)
+{
+    return (PCI_MSIX_COUNT(device_get_parent(dev), dev));
+}
 
 device_t pci_find_bsf(uint8_t, uint8_t, uint8_t);
+device_t pci_find_dbsf(uint32_t, uint8_t, uint8_t, uint8_t);
 device_t pci_find_device(uint16_t, uint16_t);
+
+/*
+ * Can be used by MD code to request the PCI bus to re-map an MSI or
+ * MSI-X message.
+ */
+int	pci_remap_msi_irq(device_t dev, u_int irq);
+
+/* Can be used by drivers to manage the MSI-X table. */
+int	pci_pending_msix(device_t dev, u_int index);
+
+int	pci_msi_device_blacklisted(device_t dev);
+
 #endif	/* _SYS_BUS_H_ */
 
 /*

@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/dev/pci/pcib_if.m,v 1.7 2005/04/13 19:10:27 imp Exp $
+# $FreeBSD: src/sys/dev/pci/pcib_if.m,v 1.11 2007/05/02 17:50:35 jhb Exp $
 #
 
 #include <sys/bus.h>
@@ -84,7 +84,63 @@ METHOD void write_config {
 # a device's interrupt register.
 #
 METHOD int route_interrupt {
-	device_t pcib;
-	device_t dev;
-	int pin;
+	device_t	pcib;
+	device_t	dev;
+	int		pin;
 } DEFAULT null_route_interrupt;
+
+#
+# Allocate 'count' MSI messsages mapped onto 'count' IRQs.  'irq' points
+# to an array of at least 'count' ints.  The max number of messages this
+# device supports is included so that the MD code can take that into
+# account when assigning resources so that the proper number of low bits
+# are clear in the resulting message data value.
+#
+METHOD int alloc_msi {
+	device_t	pcib;
+	device_t	dev;
+	int		count;
+	int		maxcount;
+	int		*irqs;
+};
+
+#
+# Release 'count' MSI messages mapped onto 'count' IRQs stored in the
+# array pointed to by 'irqs'.
+#
+METHOD int release_msi {
+	device_t	pcib;
+	device_t	dev;
+	int		count;
+	int		*irqs;
+};
+
+#
+# Allocate a single MSI-X message mapped onto '*irq'.
+#
+METHOD int alloc_msix {
+	device_t	pcib;
+	device_t	dev;
+	int		*irq;
+};
+
+#
+# Release a single MSI-X message mapped onto 'irq'.
+#
+METHOD int release_msix {
+	device_t	pcib;
+	device_t	dev;
+	int		irq;
+};
+
+#
+# Determine the MSI/MSI-X message address and data for 'irq'.  The address
+# is returned in '*addr', and the data in '*data'.
+#
+METHOD int map_msi {
+	device_t	pcib;
+	device_t	dev;
+	int		irq;
+	uint64_t	*addr;
+	uint32_t	*data;
+};
