@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2002-2007 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -12,13 +12,6 @@
  *    similar to the "NO WARRANTY" disclaimer below ("Disclaimer") and any
  *    redistribution must be conditioned upon including a substantially
  *    similar Disclaimer requirement for further binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * NO WARRANTY
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -35,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ath/if_ath_pci.c,v 1.12 2005/03/05 19:06:12 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ath/if_ath_pci.c,v 1.19 2007/06/06 15:49:15 sam Exp $");
 
 /*
  * PCI/Cardbus front-end for the Atheros Wireless LAN controller driver.
@@ -148,8 +141,9 @@ ath_pci_attach(device_t dev)
 		device_printf(dev, "cannot map register space\n");
 		goto bad;
 	}
-	sc->sc_st = rman_get_bustag(psc->sc_sr);
-	sc->sc_sh = rman_get_bushandle(psc->sc_sr);
+	/* XXX uintptr_t is a bandaid for ia64; to be fixed */
+	sc->sc_st = (HAL_BUS_TAG)(uintptr_t) rman_get_bustag(psc->sc_sr);
+	sc->sc_sh = (HAL_BUS_HANDLE) rman_get_bushandle(psc->sc_sr);
 	/*
 	 * Mark device invalid so any interrupts (shared or otherwise)
 	 * that arrive before the HAL is setup are discarded.
@@ -168,7 +162,7 @@ ath_pci_attach(device_t dev)
 	}
 	if (bus_setup_intr(dev, psc->sc_irq,
 			   INTR_TYPE_NET | INTR_MPSAFE,
-			   ath_intr, sc, &psc->sc_ih)) {
+			   NULL, ath_intr, sc, &psc->sc_ih)) {
 		device_printf(dev, "could not establish interrupt\n");
 		goto bad2;
 	}
@@ -176,14 +170,14 @@ ath_pci_attach(device_t dev)
 	/*
 	 * Setup DMA descriptor area.
 	 */
-	if (bus_dma_tag_create(NULL,			/* parent */
+	if (bus_dma_tag_create(bus_get_dma_tag(dev),	/* parent */
 			       1, 0,			/* alignment, bounds */
 			       BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 			       BUS_SPACE_MAXADDR,	/* highaddr */
 			       NULL, NULL,		/* filter, filterarg */
 			       0x3ffff,			/* maxsize XXX */
 			       ATH_MAX_SCATTER,		/* nsegments */
-			       BUS_SPACE_MAXADDR,	/* maxsegsize */
+			       0x3ffff,			/* maxsegsize XXX */
 			       BUS_DMA_ALLOCNOW,	/* flags */
 			       NULL,			/* lockfunc */
 			       NULL,			/* lockarg */
@@ -195,8 +189,8 @@ ath_pci_attach(device_t dev)
 	ATH_LOCK_INIT(sc);
 
 	error = ath_attach(pci_get_device(dev), sc);
-	if (error == 0)
-		return error;
+	if (error == 0)					/* success */
+		return 0;
 
 	ATH_LOCK_DESTROY(sc);
 	bus_dma_tag_destroy(sc->sc_dmat);

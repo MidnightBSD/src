@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2004-2005 Sam Leffler, Errno Consulting
+ * Copyright (c) 2004-2007 Sam Leffler, Errno Consulting
  * Copyright (c) 2004 Video54 Technologies, Inc.
  * All rights reserved.
  *
@@ -8,18 +8,11 @@
  * are met:
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer,
-    without modification.
+ *    without modification.
  * 2. Redistributions in binary form must reproduce at minimum a disclaimer
  *    similar to the "NO WARRANTY" disclaimer below ("Disclaimer") and any
  *    redistribution must be conditioned upon including a substantially
  *    similar Disclaimer requirement for further binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
  *
  * NO WARRANTY
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -34,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
  *
- * $FreeBSD: src/sys/dev/ath/if_athrate.h,v 1.4 2005/04/02 18:54:30 sam Exp $
+ * $FreeBSD: src/sys/dev/ath/if_athrate.h,v 1.6 2007/06/06 15:49:15 sam Exp $
  */
 #ifndef _ATH_RATECTRL_H_
 #define _ATH_RATECTRL_H_
@@ -135,6 +128,7 @@ void	ath_rate_setupxtxdesc(struct ath_softc *, struct ath_node *,
  * for packets that were successfully sent and for those that
  * failed (consult the descriptor for details).
  */
+struct ath_buf;
 void	ath_rate_tx_complete(struct ath_softc *, struct ath_node *,
-		const struct ath_desc *last, const struct ath_desc *first);
+		const struct ath_buf *);
 #endif /* _ATH_RATECTRL_H_ */
