@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/wpa/hostapd_cli/Makefile,v 1.2.2.1 2006/03/24 01:43:18 sam Exp $
+# $FreeBSD: src/usr.sbin/wpa/hostapd_cli/Makefile,v 1.4 2007/07/09 16:26:48 sam Exp $
 
 CONTRIB=	${.CURDIR}/../../../contrib
 HOSTAPD_DISTDIR?= ${CONTRIB}/hostapd
@@ -8,6 +8,9 @@ WPA_SUPPLICANT_DISTDIR?= ${CONTRIB}/wpa_supplicant
 
 PROG=	hostapd_cli
 SRCS=	hostapd_cli.c wpa_ctrl.c
+
+CFLAGS+= -DCONFIG_CTRL_IFACE
+CFLAGS+= -DCONFIG_CTRL_IFACE_UNIX
 
 MAN=	hostapd_cli.8
 

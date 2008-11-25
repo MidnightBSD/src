@@ -11,7 +11,7 @@
  *
  * See README and COPYING for more details.
  *
- * $FreeBSD: src/usr.sbin/wpa/wpa_supplicant/driver_freebsd.c,v 1.5.2.4 2006/03/24 01:43:18 sam Exp $
+ * $FreeBSD: src/usr.sbin/wpa/wpa_supplicant/driver_freebsd.c,v 1.14.2.1 2007/11/08 05:52:24 thompsa Exp $
  */
 
 #include <stdlib.h>
@@ -96,7 +96,6 @@ set80211param(struct wpa_driver_bsd_data *drv, int op, int arg)
 	ireq.i_val = arg;
 
 	if (ioctl(drv->sock, SIOCS80211, &ireq) < 0) {
-		perror("ioctl[SIOCS80211]");
 		fprintf(stderr, "ioctl[SIOCS80211, op %u, arg 0x%x]: %s\n",
 			op, arg, strerror(errno));
 		return -1;
@@ -114,7 +113,6 @@ get80211param(struct wpa_driver_bsd_data *drv, int op)
 	ireq.i_type = op;
 
 	if (ioctl(drv->sock, SIOCG80211, &ireq) < 0) {
-		perror("ioctl[SIOCG80211]");
 		fprintf(stderr, "ioctl[SIOCG80211, op %u]: %s\n",
 			op, strerror(errno));
 		return -1;
@@ -319,6 +317,7 @@ wpa_driver_bsd_set_key(void *priv, wpa_alg alg,
 		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
 	wk.ik_keylen = key_len;
 	memcpy(&wk.ik_keyrsc, seq, seq_len);
+	wk.ik_keyrsc = le64toh(wk.ik_keyrsc);
 	memcpy(wk.ik_keydata, key, key_len);
 
 	return set80211var(drv, IEEE80211_IOC_WPAKEY, &wk, sizeof(wk));
@@ -431,6 +430,9 @@ wpa_driver_bsd_set_auth_alg(void *priv, int auth_alg)
 		authmode = IEEE80211_AUTH_SHARED;
 	else
 		authmode = IEEE80211_AUTH_OPEN;
+
+	wpa_printf(MSG_DEBUG, "%s alg 0x%x authmode %u",
+		__func__, auth_alg, authmode);
 
 	return set80211param(drv, IEEE80211_IOC_AUTHMODE, authmode);
 }
@@ -585,7 +587,7 @@ wpa_scan_result_compar(const void *a, const void *b)
 }
 
 static int
-getmaxrate(uint8_t rates[15], uint8_t nrates)
+getmaxrate(const uint8_t rates[15], uint8_t nrates)
 {
 	int i, maxrate = -1;
 
@@ -619,8 +621,8 @@ wpa_driver_bsd_get_scan_results(void *priv,
 #define	min(a,b)	((a)>(b)?(b):(a))
 	struct wpa_driver_bsd_data *drv = priv;
 	uint8_t buf[24*1024];
-	uint8_t *cp, *vp;
-	struct ieee80211req_scan_result *sr;
+	const uint8_t *cp, *vp;
+	const struct ieee80211req_scan_result *sr;
 	struct wpa_scan_result *wsr;
 	int len, ielen;
 
@@ -632,7 +634,7 @@ wpa_driver_bsd_get_scan_results(void *priv,
 	cp = buf;
 	wsr = results;
 	while (len >= sizeof(struct ieee80211req_scan_result)) {
-		sr = (struct ieee80211req_scan_result *) cp;
+		sr = (const struct ieee80211req_scan_result *) cp;
 		memcpy(wsr->bssid, sr->isr_bssid, IEEE80211_ADDR_LEN);
 		wsr->ssid_len = sr->isr_ssid_len;
 		wsr->freq = sr->isr_freq;
@@ -641,7 +643,7 @@ wpa_driver_bsd_get_scan_results(void *priv,
 		wsr->level = 0;		/* XXX? */
 		wsr->caps = sr->isr_capinfo;
 		wsr->maxrate = getmaxrate(sr->isr_rates, sr->isr_nrates);
-		vp = (u_int8_t *)(sr+1);
+		vp = ((u_int8_t *)sr) + sr->isr_ie_off;
 		memcpy(wsr->ssid, vp, sr->isr_ssid_len);
 		if (sr->isr_ie_len > 0) {
 			vp += sr->isr_ssid_len;
@@ -685,6 +687,7 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 #define	GETPARAM(drv, param, v) \
 	(((v) = get80211param(drv, param)) != -1)
 	struct wpa_driver_bsd_data *drv;
+	int flags;
 
 	drv = malloc(sizeof(*drv));
 	if (drv == NULL)
@@ -705,14 +708,22 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 	drv->sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->sock < 0)
 		goto fail1;
+	drv->ctx = ctx;
+	strncpy(drv->ifname, ifname, sizeof(drv->ifname));
+
+	/*
+	 * Mark the interface as down to ensure wpa_supplicant has exclusive
+	 * access to the net80211 state machine, do this before opening the
+	 * route socket to avoid a false event that the interface disappeared.
+	 */
+	if (getifflags(drv, &flags) == 0)
+		(void) setifflags(drv, flags &~ IFF_UP);
+
 	drv->route = socket(PF_ROUTE, SOCK_RAW, 0);
 	if (drv->route < 0)
 		goto fail;
 	eloop_register_read_sock(drv->route,
 		wpa_driver_bsd_event_receive, ctx, drv);
-
-	drv->ctx = ctx;
-	strncpy(drv->ifname, ifname, sizeof(drv->ifname));
 
 	if (!GETPARAM(drv, IEEE80211_IOC_ROAMING, drv->prev_roaming)) {
 		wpa_printf(MSG_DEBUG, "%s: failed to get roaming state: %s",

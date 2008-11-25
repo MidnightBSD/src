@@ -33800,6 +33800,8 @@ usr.sbin/wpa/ndis_events/ndis_events.8 -text
 usr.sbin/wpa/ndis_events/ndis_events.c -text
 usr.sbin/wpa/wpa_cli/Makefile -text
 usr.sbin/wpa/wpa_cli/wpa_cli.8 -text
+usr.sbin/wpa/wpa_passphrase/Makefile -text
+usr.sbin/wpa/wpa_passphrase/wpa_passphrase.8 -text
 usr.sbin/wpa/wpa_supplicant/Makefile -text
 usr.sbin/wpa/wpa_supplicant/Packet32.c -text
 usr.sbin/wpa/wpa_supplicant/Packet32.h -text

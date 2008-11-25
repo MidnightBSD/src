@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/wpa/hostapd/hostapd.8,v 1.2 2005/06/27 06:40:43 ru Exp $
+.\" $FreeBSD: src/usr.sbin/wpa/hostapd/hostapd.8,v 1.2.10.1 2007/11/06 18:13:25 simon Exp $
 .\"
-.Dd June 16, 2005
+.Dd October 26, 2007
 .Dt HOSTAPD 8
 .Os
 .Sh NAME
@@ -33,6 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl BdhKtv
+.Op Fl P Ar pidfile
 .Ar config-file ...
 .Sh DESCRIPTION
 The
@@ -102,6 +103,9 @@ Detach from the controlling terminal and run as a daemon process
 in the background.
 .It Fl K
 Include key information in debugging output.
+.It Fl P Ar pidfile
+Store PID in
+.Ar pidfile .
 .El
 .Sh SEE ALSO
 .Xr ath 4 ,
