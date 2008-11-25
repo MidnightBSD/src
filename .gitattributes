@@ -26284,6 +26284,14 @@ sys/dev/mly/mly_tables.h -text
 sys/dev/mly/mlyio.h -text
 sys/dev/mly/mlyreg.h -text
 sys/dev/mly/mlyvar.h -text
+sys/dev/mmc/bridge.h -text
+sys/dev/mmc/mmc.c -text
+sys/dev/mmc/mmcbr_if.m -text
+sys/dev/mmc/mmcbrvar.h -text
+sys/dev/mmc/mmcbus_if.m -text
+sys/dev/mmc/mmcreg.h -text
+sys/dev/mmc/mmcsd.c -text
+sys/dev/mmc/mmcvar.h -text
 sys/dev/mpt/mpilib/mpi.h -text
 sys/dev/mpt/mpilib/mpi_cnfg.h -text
 sys/dev/mpt/mpilib/mpi_fc.h -text
