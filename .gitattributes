@@ -26477,6 +26477,13 @@ sys/dev/ral/if_ralrate.c -text
 sys/dev/ral/if_ralrate.h -text
 sys/dev/ral/if_ralreg.h -text
 sys/dev/ral/if_ralvar.h -text
+sys/dev/ral/rt2560.c -text
+sys/dev/ral/rt2560reg.h -text
+sys/dev/ral/rt2560var.h -text
+sys/dev/ral/rt2661.c -text
+sys/dev/ral/rt2661_ucode.h -text
+sys/dev/ral/rt2661reg.h -text
+sys/dev/ral/rt2661var.h -text
 sys/dev/random/harvest.c -text
 sys/dev/random/hash.c -text
 sys/dev/random/hash.h -text
