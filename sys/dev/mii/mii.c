@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/mii/mii.c,v 1.26.2.1 2006/03/17 20:17:43 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/mii.c,v 1.29 2007/05/01 18:21:24 marcel Exp $");
 
 /*
  * MII bus layer, glues MII-capable network interface drivers to sharable
@@ -64,6 +64,7 @@ MODULE_VERSION(miibus, 1);
 
 #include "miibus_if.h"
 
+static int miibus_print_child(device_t dev, device_t child);
 static int miibus_child_location_str(device_t bus, device_t child, char *buf,
     size_t buflen);
 static int miibus_child_pnpinfo_str(device_t bus, device_t child, char *buf,
@@ -82,7 +83,7 @@ static device_method_t miibus_methods[] = {
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
 
 	/* bus interface */
-	DEVMETHOD(bus_print_child,	bus_generic_print_child),
+	DEVMETHOD(bus_print_child,	miibus_print_child),
 	DEVMETHOD(bus_driver_added,	bus_generic_driver_added),
 	DEVMETHOD(bus_child_pnpinfo_str, miibus_child_pnpinfo_str),
 	DEVMETHOD(bus_child_location_str, miibus_child_location_str),
@@ -103,6 +104,11 @@ driver_t miibus_driver = {
 	"miibus",
 	miibus_methods,
 	sizeof(struct mii_data)
+};
+
+struct miibus_ivars {
+	ifm_change_cb_t	ifmedia_upd;
+	ifm_stat_cb_t	ifmedia_sts;
 };
 
 /*
@@ -165,9 +171,7 @@ miibus_probe(device_t dev)
 int
 miibus_attach(device_t dev)
 {
-	void			**v;
-	ifm_change_cb_t		ifmedia_upd;
-	ifm_stat_cb_t		ifmedia_sts;
+	struct miibus_ivars	*ivars;
 	struct mii_data		*mii;
 
 	mii = device_get_softc(dev);
@@ -176,10 +180,9 @@ miibus_attach(device_t dev)
 	 * XXX: EVIL HACK!
 	 */
 	mii->mii_ifp = *(struct ifnet**)device_get_softc(device_get_parent(dev));
-	v = device_get_ivars(dev);
-	ifmedia_upd = v[0];
-	ifmedia_sts = v[1];
-	ifmedia_init(&mii->mii_media, IFM_IMASK, ifmedia_upd, ifmedia_sts);
+	ivars = device_get_ivars(dev);
+	ifmedia_init(&mii->mii_media, IFM_IMASK, ivars->ifmedia_upd,
+	    ivars->ifmedia_sts);
 	bus_generic_attach(dev);
 
 	return(0);
@@ -196,6 +199,20 @@ miibus_detach(device_t dev)
 	mii->mii_ifp = NULL;
 
 	return(0);
+}
+
+static int
+miibus_print_child(device_t dev, device_t child)
+{
+	struct mii_attach_args *ma;
+	int retval;
+
+	ma = device_get_ivars(child);
+	retval = bus_print_child_header(dev, child);
+	retval += printf(" PHY %d", ma->mii_phyno);
+	retval += bus_print_child_footer(dev, child);
+
+	return (retval);
 }
 
 static int
@@ -309,17 +326,16 @@ int
 mii_phy_probe(device_t dev, device_t *child, ifm_change_cb_t ifmedia_upd,
     ifm_stat_cb_t ifmedia_sts)
 {
-	void			**v;
+	struct miibus_ivars	*ivars;
 	int			bmsr, i;
 
-	v = malloc(sizeof(vm_offset_t) * 2, M_DEVBUF, M_NOWAIT);
-	if (v == 0) {
+	ivars = malloc(sizeof(*ivars), M_DEVBUF, M_NOWAIT);
+	if (ivars == NULL)
 		return (ENOMEM);
-	}
-	v[0] = ifmedia_upd;
-	v[1] = ifmedia_sts;
+	ivars->ifmedia_upd = ifmedia_upd;
+	ivars->ifmedia_sts = ifmedia_sts;
 	*child = device_add_child(dev, "miibus", -1);
-	device_set_ivars(*child, v);
+	device_set_ivars(*child, ivars);
 
 	for (i = 0; i < MII_NPHY; i++) {
 		bmsr = MIIBUS_READREG(dev, i, MII_BMSR);
