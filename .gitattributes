@@ -26249,8 +26249,13 @@ sys/dev/mii/dcphy.c -text
 sys/dev/mii/e1000phy.c -text
 sys/dev/mii/e1000phyreg.h -text
 sys/dev/mii/exphy.c -text
+sys/dev/mii/gentbi.c -text
+sys/dev/mii/icsphy.c -text
+sys/dev/mii/icsphyreg.h -text
 sys/dev/mii/inphy.c -text
 sys/dev/mii/inphyreg.h -text
+sys/dev/mii/ip1000phy.c -text
+sys/dev/mii/ip1000phyreg.h -text
 sys/dev/mii/lxtphy.c -text
 sys/dev/mii/lxtphyreg.h -text
 sys/dev/mii/mii.c -text
@@ -26271,6 +26276,7 @@ sys/dev/mii/qsphyreg.h -text
 sys/dev/mii/rgephy.c -text
 sys/dev/mii/rgephyreg.h -text
 sys/dev/mii/rlphy.c -text
+sys/dev/mii/rlswitch.c -text
 sys/dev/mii/ruephy.c -text
 sys/dev/mii/ruephyreg.h -text
 sys/dev/mii/tdkphy.c -text
@@ -26445,6 +26451,9 @@ sys/dev/ppbus/vpo.c -text
 sys/dev/ppbus/vpoio.c -text
 sys/dev/ppbus/vpoio.h -text
 sys/dev/ppc/ppc.c -text
+sys/dev/ppc/ppc_acpi.c -text
+sys/dev/ppc/ppc_isa.c -text
+sys/dev/ppc/ppc_pci.c -text
 sys/dev/ppc/ppc_puc.c -text
 sys/dev/ppc/ppcreg.h -text
 sys/dev/ppc/ppcvar.h -text

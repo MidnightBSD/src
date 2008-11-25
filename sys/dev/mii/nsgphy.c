@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/nsgphy.c,v 1.19 2005/01/06 01:42:56 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/nsgphy.c,v 1.24 2006/12/02 15:32:33 marius Exp $");
 
 /*
  * Driver for the National Semiconductor DP83891 and DP83861
@@ -60,8 +60,6 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/nsgphy.c,v 1.19 2005/01/06 01:42:56 imp Exp 
 #include <sys/module.h>
 #include <sys/socket.h>
 #include <sys/bus.h>
-
-#include <machine/clock.h>
 
 #include <net/if.h>
 #include <net/if_media.h>
@@ -94,37 +92,22 @@ static driver_t nsgphy_driver = {
 	sizeof(struct mii_softc)
 };
 
-
 DRIVER_MODULE(nsgphy, miibus, nsgphy_driver, nsgphy_devclass, 0, 0);
 
 static int	nsgphy_service(struct mii_softc *, struct mii_data *,int);
 static void	nsgphy_status(struct mii_softc *);
 
-const struct mii_phydesc gphyters[] = {
-	{ MII_OUI_NATSEMI,		MII_MODEL_NATSEMI_DP83861,
-	  MII_STR_NATSEMI_DP83861 },
-
-	{ MII_OUI_NATSEMI,		MII_MODEL_NATSEMI_DP83891,
-	  MII_STR_NATSEMI_DP83891 },
-
-	{ 0,				0,
-	  NULL },
+static const struct mii_phydesc nsgphys[] = {
+	MII_PHY_DESC(NATSEMI, DP83861),
+	MII_PHY_DESC(NATSEMI, DP83891),
+	MII_PHY_END
 };
 
 static int
 nsgphy_probe(device_t dev)
 {
-	struct mii_attach_args *ma;
-	const struct mii_phydesc *mpd;
 
-	ma = device_get_ivars(dev);
-	mpd = mii_phy_match(ma, gphyters);
-	if (mpd != NULL) {
-		device_set_desc(dev, mpd->mpd_name);
-		return(0);
-	}
-
-	return(ENXIO);
+	return (mii_phy_dev_probe(dev, nsgphys, BUS_PROBE_DEFAULT));
 }
 
 static int
@@ -147,7 +130,6 @@ nsgphy_attach(device_t dev)
 	sc->mii_phy = ma->mii_phyno;
 	sc->mii_service = nsgphy_service;
 	sc->mii_pdata = mii;
-	sc->mii_anegticks = 5;
 
 	mii->mii_instance++;
 
@@ -160,7 +142,7 @@ nsgphy_attach(device_t dev)
 	printf("\n");
 
 	MIIBUS_MEDIAINIT(sc->mii_dev);
-	return(0);
+	return (0);
 }
 
 static int

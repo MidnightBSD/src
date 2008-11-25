@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/xmphy.c,v 1.17 2005/01/06 01:42:56 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/xmphy.c,v 1.21 2006/12/02 19:36:25 marius Exp $");
 
 /*
  * driver for the XaQti XMAC II's internal PHY. This is sort of
@@ -83,32 +83,21 @@ static int	xmphy_service(struct mii_softc *, struct mii_data *, int);
 static void	xmphy_status(struct mii_softc *);
 static int	xmphy_mii_phy_auto(struct mii_softc *);
 
+static const struct mii_phydesc xmphys[] = {
+	{ MII_OUI_xxXAQTI, MII_MODEL_XAQTI_XMACII, MII_STR_XAQTI_XMACII },
+	MII_PHY_DESC(JATO, BASEX),
+	MII_PHY_END
+};
+
 static int
-xmphy_probe(dev)
-	device_t		dev;
+xmphy_probe(device_t dev)
 {
-	struct mii_attach_args *ma;
 
-	ma = device_get_ivars(dev);
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_xxXAQTI &&
-	    MII_MODEL(ma->mii_id2) == MII_MODEL_XAQTI_XMACII) {
-		device_set_desc(dev, MII_STR_XAQTI_XMACII);
-		return(0);
-	}
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_JATO &&
-	    MII_MODEL(ma->mii_id2) == MII_MODEL_JATO_BASEX) {
-		device_set_desc(dev, MII_STR_JATO_BASEX);
-		return(0);
-	}
-
-	return(ENXIO);
+	return (mii_phy_dev_probe(dev, xmphys, BUS_PROBE_DEFAULT));
 }
 
 static int
-xmphy_attach(dev)
-	device_t		dev;
+xmphy_attach(device_t dev)
 {
 	struct mii_softc *sc;
 	struct mii_attach_args *ma;
@@ -155,14 +144,11 @@ xmphy_attach(dev)
 #undef PRINT
 
 	MIIBUS_MEDIAINIT(sc->mii_dev);
-	return(0);
+	return (0);
 }
 
 static int
-xmphy_service(sc, mii, cmd)
-	struct mii_softc *sc;
-	struct mii_data *mii;
-	int cmd;
+xmphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int reg;
@@ -253,14 +239,14 @@ xmphy_service(sc, mii, cmd)
 		/*
 		 * Only retry autonegotiation every 5 seconds.
 		 */
-		if (++sc->mii_ticks <= 5)
+		if (++sc->mii_ticks <= MII_ANEGTICKS)
 			break;
-		
+
 		sc->mii_ticks = 0;
 
 		mii_phy_reset(sc);
 		xmphy_mii_phy_auto(sc);
-		return(0);
+		return (0);
 	}
 
 	/* Update the media status. */
@@ -272,8 +258,7 @@ xmphy_service(sc, mii, cmd)
 }
 
 static void
-xmphy_status(sc)
-	struct mii_softc *sc;
+xmphy_status(struct mii_softc *sc)
 {
 	struct mii_data *mii = sc->mii_pdata;
 	int bmsr, bmcr, anlpar;
@@ -321,14 +306,10 @@ xmphy_status(sc)
 		mii->mii_media_active |= IFM_FDX;
 	else
 		mii->mii_media_active |= IFM_HDX;
-
-	return;
 }
 
-
 static int
-xmphy_mii_phy_auto(mii)
-	struct mii_softc *mii;
+xmphy_mii_phy_auto(struct mii_softc *mii)
 {
 	int anar = 0;
 

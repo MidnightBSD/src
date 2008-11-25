@@ -68,7 +68,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/qsphy.c,v 1.14 2005/01/06 01:42:56 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/qsphy.c,v 1.18 2006/12/02 15:32:33 marius Exp $");
 
 /*
  * driver for Quality Semiconductor's QS6612 ethernet 10/100 PHY
@@ -120,26 +120,20 @@ static int	qsphy_service(struct mii_softc *, struct mii_data *, int);
 static void	qsphy_reset(struct mii_softc *);
 static void	qsphy_status(struct mii_softc *);
 
+static const struct mii_phydesc qsphys[] = {
+	MII_PHY_DESC(QUALSEMI, QS6612),
+	MII_PHY_END
+};
+
 static int
-qsphy_probe(dev)
-	device_t		dev;
+qsphy_probe(device_t dev)
 {
-	struct mii_attach_args *ma;
 
-	ma = device_get_ivars(dev);
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_QUALSEMI &&
-	    MII_MODEL(ma->mii_id2) == MII_MODEL_QUALSEMI_QS6612) {
-		device_set_desc(dev, MII_STR_QUALSEMI_QS6612);
-	} else 
-		return (ENXIO);
-
-	return (0);
+	return (mii_phy_dev_probe(dev, qsphys, BUS_PROBE_DEFAULT));
 }
 
 static int
-qsphy_attach(dev)
-	device_t		dev;
+qsphy_attach(device_t dev)
 {
 	struct mii_softc *sc;
 	struct mii_attach_args *ma;
@@ -155,16 +149,15 @@ qsphy_attach(dev)
 	sc->mii_phy = ma->mii_phyno;
 	sc->mii_service = qsphy_service;
 	sc->mii_pdata = mii;
-	sc->mii_flags |= MIIF_NOISOLATE;
-
-	qsphy_reset(sc);
 
 	mii->mii_instance++;
+
+	qsphy_reset(sc);
 
 	sc->mii_capabilities =
 	    PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
 	device_printf(dev, " ");
-	mii_add_media(sc);
+	mii_phy_add_media(sc);
 	printf("\n");
 
 	MIIBUS_MEDIAINIT(sc->mii_dev);
@@ -172,10 +165,7 @@ qsphy_attach(dev)
 }
 
 static int
-qsphy_service(sc, mii, cmd)
-	struct mii_softc *sc;
-	struct mii_data *mii;
-	int cmd;
+qsphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int reg;
@@ -204,25 +194,7 @@ qsphy_service(sc, mii, cmd)
 		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
 			break;
 
-		switch (IFM_SUBTYPE(ife->ifm_media)) {
-		case IFM_AUTO:
-			/*
-			 * If we're already in auto mode, just return.
-			 */
-			if (PHY_READ(sc, MII_BMCR) & BMCR_AUTOEN)
-				return (0);
-
-			(void) mii_phy_auto(sc);
-			break;
-
-		default:
-			/*
-			 * BMCR data is stored in the ifmedia entry.
-			 */
-			PHY_WRITE(sc, MII_ANAR,
-			    mii_anar(ife->ifm_media));
-			PHY_WRITE(sc, MII_BMCR, ife->ifm_data);
-		}
+		mii_phy_setmedia(sc);
 		break;
 
 	case MII_TICK:
@@ -231,12 +203,6 @@ qsphy_service(sc, mii, cmd)
 		 */
 		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
 			return (0);
-
-		/*
-		 * Only used for autonegotiation.
-		 */
-		if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO)
-			break;
 
 		/*
 		 * This PHY's autonegotiation doesn't need to be kicked.
@@ -253,8 +219,7 @@ qsphy_service(sc, mii, cmd)
 }
 
 static void
-qsphy_status(sc)
-	struct mii_softc *sc;
+qsphy_status(struct mii_softc *sc)
 {
 	struct mii_data *mii = sc->mii_pdata;
 	int bmsr, bmcr, pctl;
@@ -305,8 +270,7 @@ qsphy_status(sc)
 }
 
 static void
-qsphy_reset(sc)
-	struct mii_softc *sc;
+qsphy_reset(struct mii_softc *sc)
 {
 
 	mii_phy_reset(sc);

@@ -1,7 +1,5 @@
 /*-
  * Copyright (c) 2006 Marcel Moolenaar
- * Copyright (c) 1997-2000 Nicolas Souchu
- * Copyright (c) 2001 Alcove - Nicolas Souchu
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppc/ppc_puc.c,v 1.5 2006/04/28 21:21:52 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppc/ppc_pci.c,v 1.1 2006/04/24 23:31:51 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -36,7 +34,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ppc/ppc_puc.c,v 1.5 2006/04/28 21:21:52 marcel E
 
 #include <machine/bus.h>
 
-#include <dev/puc/puc_bus.h>
+#include <dev/pci/pcivar.h>
 
 #include <dev/ppbus/ppbconf.h>
 #include <dev/ppbus/ppb_msq.h>
@@ -45,11 +43,11 @@ __FBSDID("$FreeBSD: src/sys/dev/ppc/ppc_puc.c,v 1.5 2006/04/28 21:21:52 marcel E
 
 #include "ppbus_if.h"
 
-static int ppc_puc_probe(device_t dev);
+static int ppc_pci_probe(device_t dev);
 
-static device_method_t ppc_puc_methods[] = {
+static device_method_t ppc_pci_methods[] = {
 	/* device interface */
-	DEVMETHOD(device_probe,		ppc_puc_probe),
+	DEVMETHOD(device_probe,		ppc_pci_probe),
 	DEVMETHOD(device_attach,	ppc_attach),
 	DEVMETHOD(device_detach,	ppc_detach),
 
@@ -71,26 +69,42 @@ static device_method_t ppc_puc_methods[] = {
 	{ 0, 0 }
 };
 
-static driver_t ppc_puc_driver = {
+static driver_t ppc_pci_driver = {
 	ppc_driver_name,
-	ppc_puc_methods,
+	ppc_pci_methods,
 	sizeof(struct ppc_data),
 };
 
+struct pci_id {
+	uint32_t	type;
+	const char	*desc;
+	int		rid;
+};
+
+static struct pci_id pci_ids[] = {
+	{ 0x1020131f, "SIIG Cyber Parallel PCI (10x family)", 0x18 },
+	{ 0x2020131f, "SIIG Cyber Parallel PCI (20x family)", 0x10 },
+	{ 0x80001407, "Lava Computers 2SP-PCI parallel port", 0x10 },
+	{ 0x84031415, "Oxford Semiconductor OX12PCI840 Parallel port", 0x10 },
+	{ 0x95131415, "Oxford Semiconductor OX16PCI954 Parallel port", 0x10 },
+	{ 0x98059710, "NetMos NM9805 1284 Printer port", 0x10 },
+	{ 0xffff }
+};
+
 static int
-ppc_puc_probe(device_t dev)
+ppc_pci_probe(device_t dev)
 {
-	device_t parent;
-	uintptr_t type;
+	struct pci_id *id;
+	uint32_t type;
 
-	parent = device_get_parent(dev);
-	if (BUS_READ_IVAR(parent, dev, PUC_IVAR_TYPE, &type))
+	type = pci_get_devid(dev);
+	id = pci_ids;
+	while (id->type != 0xffff && id->type != type)
+		id++;
+	if (id->type == 0xffff)
 		return (ENXIO);
-	if (type != PUC_TYPE_PARALLEL)
-		return (ENXIO);
-
-	device_set_desc(dev, "Parallel port");
-	return (ppc_probe(dev, 0));
+	device_set_desc(dev, id->desc);
+	return (ppc_probe(dev, id->rid));
 }
 
-DRIVER_MODULE(ppc, puc, ppc_puc_driver, ppc_devclass, 0, 0);
+DRIVER_MODULE(ppc, pci, ppc_pci_driver, ppc_devclass, 0, 0);

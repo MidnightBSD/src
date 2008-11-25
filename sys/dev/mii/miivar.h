@@ -36,7 +36,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mii/miivar.h,v 1.15 2002/05/04 11:00:30 phk Exp $
+ * $FreeBSD: src/sys/dev/mii/miivar.h,v 1.21 2007/01/13 00:14:45 marius Exp $
  */
 
 #ifndef _DEV_MII_MIIVAR_H_
@@ -138,6 +138,11 @@ typedef struct mii_softc mii_softc_t;
 #define	MIIF_IS_1000X	0x0080		/* is a 1000BASE-X device */
 #define	MIIF_DOPAUSE	0x0100		/* advertise PAUSE capability */
 #define	MIIF_IS_HPNA	0x0200		/* is a HomePNA device */
+#define	MIIF_FORCEANEG	0x0400		/* force auto-negotiation */
+
+/* Default mii_anegticks values */
+#define	MII_ANEGTICKS		5
+#define	MII_ANEGTICKS_GIGE	17
 
 #define	MIIF_INHERIT_MASK	(MIIF_NOISOLATE|MIIF_NOLOOP|MIIF_AUTOTSLEEP)
 
@@ -161,6 +166,9 @@ struct mii_phydesc {
 	u_int32_t mpd_model;		/* the PHY's model */
 	const char *mpd_name;		/* the PHY's name */
 };
+#define MII_PHY_DESC(a, b) { MII_OUI_ ## a, MII_MODEL_ ## a ## _ ## b, \
+	MII_STR_ ## a ## _ ## b }
+#define MII_PHY_END	{ 0, 0, NULL }
 
 /*
  * An array of these structures map MII media types to BMCR/ANAR settings.
@@ -207,8 +215,6 @@ int	mii_phy_probe(device_t, device_t *, ifm_change_cb_t, ifm_stat_cb_t);
 void	mii_add_media(struct mii_softc *);
 void	mii_phy_add_media(struct mii_softc *);
 
-int	mii_media_from_bmcr(int);
-
 int	mii_phy_auto(struct mii_softc *);
 int	mii_phy_detach(device_t dev);
 void	mii_phy_down(struct mii_softc *);
@@ -217,7 +223,11 @@ void	mii_phy_setmedia(struct mii_softc *sc);
 void	mii_phy_update(struct mii_softc *, int);
 int	mii_phy_tick(struct mii_softc *);
 
-const struct mii_phydesc * mii_phy_match(const struct mii_attach_args *ma, const struct mii_phydesc *mpd);
+const struct mii_phydesc * mii_phy_match(const struct mii_attach_args *ma,
+    const struct mii_phydesc *mpd);
+const struct mii_phydesc * mii_phy_match_gen(const struct mii_attach_args *ma,
+    const struct mii_phydesc *mpd, size_t endlen);
+int mii_phy_dev_probe(device_t dev, const struct mii_phydesc *mpd, int mrv);
 
 void	ukphy_status(struct mii_softc *);
 #endif /* _KERNEL */

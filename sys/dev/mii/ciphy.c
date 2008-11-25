@@ -28,12 +28,10 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/mii/ciphy.c,v 1.2 2005/01/06 01:42:55 imp Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/ciphy.c,v 1.2 2005/01/06 01:42:55 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/ciphy.c,v 1.9 2007/06/06 06:55:49 yongari Exp $");
 
 /*
  * Driver for the Cicada CS8201 10/100/1000 copper PHY.
@@ -45,8 +43,6 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/ciphy.c,v 1.2 2005/01/06 01:42:55 imp Exp $"
 #include <sys/module.h>
 #include <sys/socket.h>
 #include <sys/bus.h>
-
-#include <machine/clock.h>
 
 #include <net/if.h>
 #include <net/if_arp.h>
@@ -91,38 +87,23 @@ static void	ciphy_status(struct mii_softc *);
 static void	ciphy_reset(struct mii_softc *);
 static void	ciphy_fixup(struct mii_softc *);
 
+static const struct mii_phydesc ciphys[] = {
+	MII_PHY_DESC(CICADA, CS8201),
+	MII_PHY_DESC(CICADA, CS8201A),
+	MII_PHY_DESC(CICADA, CS8201B),
+	MII_PHY_DESC(VITESSE, VSC8601),
+	MII_PHY_END
+};
+
 static int
-ciphy_probe(dev)
-	device_t		dev;
+ciphy_probe(device_t dev)
 {
-	struct mii_attach_args *ma;
 
-	ma = device_get_ivars(dev);
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_CICADA &&
-	    MII_MODEL(ma->mii_id2) == MII_MODEL_CICADA_CS8201) {
-		device_set_desc(dev, MII_STR_CICADA_CS8201);
-		return(0);
-	}
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_CICADA &&
-	    MII_MODEL(ma->mii_id2) == MII_MODEL_CICADA_CS8201A) {
-		device_set_desc(dev, MII_STR_CICADA_CS8201A);
-		return(0);
-	}
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_CICADA &&
-	    MII_MODEL(ma->mii_id2) == MII_MODEL_CICADA_CS8201B) {
-		device_set_desc(dev, MII_STR_CICADA_CS8201B);
-		return(0);
-	}
-
-	return(ENXIO);
+	return (mii_phy_dev_probe(dev, ciphys, BUS_PROBE_DEFAULT));
 }
 
 static int
-ciphy_attach(dev)
-	device_t		dev;
+ciphy_attach(device_t dev)
 {
 	struct mii_softc *sc;
 	struct mii_attach_args *ma;
@@ -153,14 +134,11 @@ ciphy_attach(dev)
 	printf("\n");
 
 	MIIBUS_MEDIAINIT(sc->mii_dev);
-	return(0);
+	return (0);
 }
 
 static int
-ciphy_service(sc, mii, cmd)
-	struct mii_softc *sc;
-	struct mii_data *mii;
-	int cmd;
+ciphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int reg, speed, gig;
@@ -224,7 +202,7 @@ setit:
 			PHY_WRITE(sc, CIPHY_MII_BMCR, speed);
 			PHY_WRITE(sc, CIPHY_MII_ANAR, CIPHY_SEL_TYPE);
 
-			if (IFM_SUBTYPE(ife->ifm_media) != IFM_1000_T) 
+			if (IFM_SUBTYPE(ife->ifm_media) != IFM_1000_T)
 				break;
 
 			PHY_WRITE(sc, CIPHY_MII_1000CTL, gig);
@@ -287,9 +265,9 @@ setit:
 		/*
 		 * Only retry autonegotiation every 5 seconds.
 		 */
-		if (++sc->mii_ticks <= 5/*10*/)
+		if (++sc->mii_ticks <= MII_ANEGTICKS)
 			break;
-		
+
 		sc->mii_ticks = 0;
 		mii_phy_auto(sc);
 		return (0);
@@ -302,7 +280,7 @@ setit:
 	 * Callback if something changed. Note that we need to poke
 	 * apply fixups for certain PHY revs.
 	 */
-	if (sc->mii_media_active != mii->mii_media_active || 
+	if (sc->mii_media_active != mii->mii_media_active ||
 	    sc->mii_media_status != mii->mii_media_status ||
 	    cmd == MII_MEDIACHG) {
 		ciphy_fixup(sc);
@@ -312,8 +290,7 @@ setit:
 }
 
 static void
-ciphy_status(sc)
-	struct mii_softc *sc;
+ciphy_status(struct mii_softc *sc)
 {
 	struct mii_data *mii = sc->mii_pdata;
 	int bmsr, bmcr;
@@ -358,17 +335,14 @@ ciphy_status(sc)
 
 	if (bmsr & CIPHY_AUXCSR_FDX)
 		mii->mii_media_active |= IFM_FDX;
-
-	return;
 }
 
 static void
 ciphy_reset(struct mii_softc *sc)
 {
+
 	mii_phy_reset(sc);
 	DELAY(1000);
-
-	return;
 }
 
 #define PHY_SETBIT(x, y, z) \
@@ -381,10 +355,27 @@ ciphy_fixup(struct mii_softc *sc)
 {
 	uint16_t		model;
 	uint16_t		status, speed;
+	uint16_t		val;
 
 	model = MII_MODEL(PHY_READ(sc, CIPHY_MII_PHYIDR2));
 	status = PHY_READ(sc, CIPHY_MII_AUXCSR);
 	speed = status & CIPHY_AUXCSR_SPEED;
+
+	if (strcmp(device_get_name(device_get_parent(sc->mii_dev)),
+	    "nfe") == 0) {
+		/* need to set for 2.5V RGMII for NVIDIA adapters */
+		val = PHY_READ(sc, CIPHY_MII_ECTL1);
+		val &= ~(CIPHY_ECTL1_IOVOL | CIPHY_ECTL1_INTSEL);
+		val |= (CIPHY_IOVOL_2500MV | CIPHY_INTSEL_RGMII);
+		PHY_WRITE(sc, CIPHY_MII_ECTL1, val);
+		/* From Linux. */
+		val = PHY_READ(sc, CIPHY_MII_AUXCSR);
+		val |= CIPHY_AUXCSR_MDPPS;
+		PHY_WRITE(sc, CIPHY_MII_AUXCSR, val);
+		val = PHY_READ(sc, CIPHY_MII_10BTCSR);
+		val |= CIPHY_10BTCSR_ECHO;
+		PHY_WRITE(sc, CIPHY_MII_10BTCSR, val);
+	}
 
 	switch (model) {
 	case MII_MODEL_CICADA_CS8201:
@@ -423,11 +414,11 @@ ciphy_fixup(struct mii_softc *sc)
 		}
 
 		break;
+	case MII_MODEL_VITESSE_VSC8601:
+		break;
 	default:
 		device_printf(sc->mii_dev, "unknown CICADA PHY model %x\n",
 		    model);
 		break;
 	}
-
-	return;
 }

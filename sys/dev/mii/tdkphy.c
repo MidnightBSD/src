@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.16 2005/01/06 01:42:56 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.22 2006/12/02 20:16:45 marius Exp $");
 
 /*
  * Driver for the TDK 78Q2120 MII
@@ -38,9 +38,9 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.16 2005/01/06 01:42:56 imp Exp 
  */
 
 /*
- * The TDK 78Q2120 is found on some Xircom X3201 based cardbus cards.  It's just
- * like any other normal phy, except it does auto negotiation in a different
- * way.
+ * The TDK 78Q2120 is found on some Xircom X3201 based cardbus cards,
+ * also spotted on some 3C575 cards.  It's just like any other normal
+ * phy, except it does auto negotiation in a different way.
  */
 
 #include <sys/param.h>
@@ -54,8 +54,6 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.16 2005/01/06 01:42:56 imp Exp 
 #include <net/if.h>
 #include <net/if_media.h>
 
-#include <machine/clock.h>
-
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
 #include "miidevs.h"
@@ -63,13 +61,6 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/tdkphy.c,v 1.16 2005/01/06 01:42:56 imp Exp 
 #include <dev/mii/tdkphyreg.h>
 
 #include "miibus_if.h"
-
-#if 0
-#if !defined(lint)
-static const char rcsid[] =
-  "$Id: tdkphy.c,v 1.1.1.2 2006-02-25 02:36:48 laffer1 Exp $";
-#endif
-#endif
 
 static int tdkphy_probe(device_t);
 static int tdkphy_attach(device_t);
@@ -96,17 +87,16 @@ DRIVER_MODULE(tdkphy, miibus, tdkphy_driver, tdkphy_devclass, 0, 0);
 static int tdkphy_service(struct mii_softc *, struct mii_data *, int);
 static void tdkphy_status(struct mii_softc *);
 
+static const struct mii_phydesc tdkphys[] = {
+	MII_PHY_DESC(TDK, 78Q2120),
+	MII_PHY_END
+};
+
 static int
 tdkphy_probe(device_t dev)
 {
-        struct mii_attach_args *ma;
-        ma = device_get_ivars(dev);
- 	if ((MII_OUI(ma->mii_id1, ma->mii_id2) != MII_OUI_TDK ||
-	     MII_MODEL(ma->mii_id2) != MII_MODEL_TDK_78Q2120))
-		return (ENXIO);
 
-	device_set_desc(dev, MII_STR_TDK_78Q2120);
-	return (0);
+	return (mii_phy_dev_probe(dev, tdkphys, BUS_PROBE_DEFAULT));
 }
 
 static int
@@ -133,29 +123,21 @@ tdkphy_attach(device_t dev)
 
 	mii->mii_instance++;
 
-	sc->mii_flags |= MIIF_NOISOLATE;
-
-#define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
-
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_NONE, 0, sc->mii_inst),
-	    BMCR_ISO);
-#if 0
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    BMCR_LOOP|BMCR_S100);
-#endif
+	/*
+	 * Apparently, we can't do loopback on this PHY.
+	 */
+	sc->mii_flags |= MIIF_NOLOOP;
 
 	mii_phy_reset(sc);
 
 	sc->mii_capabilities =
 	    PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
 	device_printf(dev, " ");
-	mii_add_media(sc);
+	mii_phy_add_media(sc);
 	printf("\n");
-#undef ADD
 
 	MIIBUS_MEDIAINIT(sc->mii_dev);
-
-	return(0);
+	return (0);
 }
 
 static int
@@ -190,28 +172,7 @@ tdkphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
 			break;
 
-		switch (IFM_SUBTYPE(ife->ifm_media)) {
-		case IFM_AUTO:
-			/*
-			 * If we're already in auto mode, just return.
-			 */
-			if (PHY_READ(sc, MII_BMCR) & BMCR_AUTOEN)
-				return (0);
-			(void) mii_phy_auto(sc);
-			break;
-		case IFM_100_T4:
-			/*
-			 * Not supported on MII
-			 */
-			return (EINVAL);
-		default:
-			/*
-			 * BMCR data is stored in the ifmedia entry.
-			 */
-			PHY_WRITE(sc, MII_ANAR,
-			    mii_anar(ife->ifm_media));
-			PHY_WRITE(sc, MII_BMCR, ife->ifm_data);
-		}
+		mii_phy_setmedia(sc);
 		break;
 
 	case MII_TICK:
@@ -241,6 +202,7 @@ static void
 tdkphy_status(struct mii_softc *phy)
 {
 	struct mii_data *mii = phy->mii_pdata;
+	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int bmsr, bmcr, anlpar, diag;
 
 	mii->mii_media_status = IFM_AVALID;
@@ -307,7 +269,6 @@ tdkphy_status(struct mii_softc *phy)
 					mii->mii_media_active |= IFM_10_T;
 			}
 		}
-	} else {
-		mii->mii_media_active = mii_media_from_bmcr(bmcr);
-	}
+	} else
+		mii->mii_media_active = ife->ifm_media;
 }

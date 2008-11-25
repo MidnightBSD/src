@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/mii_physubr.c,v 1.22 2005/02/15 06:02:34 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/mii_physubr.c,v 1.29 2007/01/13 00:14:45 marius Exp $");
 
 /*
  * Subroutines common to all PHYs.
@@ -51,7 +51,6 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/mii_physubr.c,v 1.22 2005/02/15 06:02:34 imp
 #include <sys/errno.h>
 #include <sys/module.h>
 #include <sys/bus.h>
-
 
 #include <net/if.h>
 #include <net/if_media.h>
@@ -114,7 +113,8 @@ mii_phy_setmedia(struct mii_softc *sc)
 	int bmcr, anar, gtcr;
 
 	if (IFM_SUBTYPE(ife->ifm_media) == IFM_AUTO) {
-		if ((PHY_READ(sc, MII_BMCR) & BMCR_AUTOEN) == 0)
+		if ((PHY_READ(sc, MII_BMCR) & BMCR_AUTOEN) == 0 ||
+		    (sc->mii_flags & MIIF_FORCEANEG))
 			(void) mii_phy_auto(sc);
 		return;
 	}
@@ -213,26 +213,29 @@ mii_phy_tick(struct mii_softc *sc)
 	 * status so we can generate an announcement if the status
 	 * changes.
 	 */
-	if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO)
+	if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO) {
+		sc->mii_ticks = 0;	/* reset autonegotiation timer. */
 		return (0);
+	}
 
 	/* Read the status register twice; BMSR_LINK is latch-low. */
 	reg = PHY_READ(sc, MII_BMSR) | PHY_READ(sc, MII_BMSR);
 	if (reg & BMSR_LINK) {
-		/*
-		 * See above.
-		 */
+		sc->mii_ticks = 0;	/* reset autonegotiation timer. */
+		/* See above. */
 		return (0);
 	}
 
-	/*
-	 * Only retry autonegotiation every N seconds.
-	 */
-	if (sc->mii_anegticks == 0) {
-		sc->mii_anegticks = 17;
+	/* Announce link loss right after it happens */
+	if (sc->mii_ticks++ == 0)
 		return (0);
-	}
-	if (++sc->mii_ticks <= sc->mii_anegticks)
+
+	/* XXX: use default value if phy driver did not set mii_anegticks */
+	if (sc->mii_anegticks == 0)
+		sc->mii_anegticks = MII_ANEGTICKS_GIGE;
+
+	/* Only retry autonegotiation every mii_anegticks ticks. */
+	if (sc->mii_ticks <= sc->mii_anegticks)
 		return (EJUSTRETURN);
 
 	sc->mii_ticks = 0;
@@ -244,6 +247,7 @@ mii_phy_tick(struct mii_softc *sc)
 void
 mii_phy_reset(struct mii_softc *sc)
 {
+	struct ifmedia_entry *ife = sc->mii_pdata->mii_media.ifm_cur;
 	int reg, i;
 
 	if (sc->mii_flags & MIIF_NOISOLATE)
@@ -254,14 +258,17 @@ mii_phy_reset(struct mii_softc *sc)
 
 	/* Wait 100ms for it to complete. */
 	for (i = 0; i < 100; i++) {
-		reg = PHY_READ(sc, MII_BMCR); 
+		reg = PHY_READ(sc, MII_BMCR);
 		if ((reg & BMCR_RESET) == 0)
 			break;
 		DELAY(1000);
 	}
 
-	if (sc->mii_inst != 0 && ((sc->mii_flags & MIIF_NOISOLATE) == 0))
-		PHY_WRITE(sc, MII_BMCR, reg | BMCR_ISO);
+	if ((sc->mii_flags & MIIF_NOISOLATE) == 0) {
+		if ((ife == NULL && sc->mii_inst != 0) ||
+		    (ife != NULL && IFM_INST(ife->ifm_media) != sc->mii_inst))
+			PHY_WRITE(sc, MII_BMCR, reg | BMCR_ISO);
+	}
 }
 
 void
@@ -314,24 +321,6 @@ mii_anar(int media)
 		rv = 0;
 		break;
 	}
-
-	return (rv);
-}
-
-/*
- * Given a BMCR value, return the corresponding ifmedia word.
- */
-int
-mii_media_from_bmcr(int bmcr)
-{
-	int rv = IFM_ETHER;
-
-	if (bmcr & BMCR_S100)
-		rv |= IFM_100_TX;
-	else
-		rv |= IFM_10_T;
-	if (bmcr & BMCR_FDX)
-		rv |= IFM_FDX;
 
 	return (rv);
 }
@@ -409,6 +398,15 @@ mii_phy_add_media(struct mii_softc *sc)
 	struct mii_data *mii = sc->mii_pdata;
 	const char *sep = "";
 
+	if ((sc->mii_capabilities & BMSR_MEDIAMASK) == 0 &&
+	    (sc->mii_extcapabilities & EXTSR_MEDIAMASK) == 0) {
+		printf("no media present");
+		return;
+	}
+
+	/* Set aneg timer for 10/100 media. Gigabit media handled below. */
+	sc->mii_anegticks = MII_ANEGTICKS;
+
 #define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
 #define	PRINT(s)	printf("%s%s", sep, s); sep = ", "
 
@@ -461,20 +459,16 @@ mii_phy_add_media(struct mii_softc *sc)
 		/*
 		 * XXX Right now only handle 1000SX and 1000TX.  Need
 		 * XXX to handle 1000LX and 1000CX some how.
-		 *
-		 * Note since it can take 5 seconds to auto-negotiate
-		 * a gigabit link, we make anegticks 10 seconds for
-		 * all the gigabit media types.
 		 */
 		if (sc->mii_extcapabilities & EXTSR_1000XHDX) {
-			sc->mii_anegticks = 17;
+			sc->mii_anegticks = MII_ANEGTICKS_GIGE;
 			sc->mii_flags |= MIIF_IS_1000X;
 			ADD(IFM_MAKEWORD(IFM_ETHER, IFM_1000_SX, 0,
 			    sc->mii_inst), MII_MEDIA_1000_X);
 			PRINT("1000baseSX");
 		}
 		if (sc->mii_extcapabilities & EXTSR_1000XFDX) {
-			sc->mii_anegticks = 17;
+			sc->mii_anegticks = MII_ANEGTICKS_GIGE;
 			sc->mii_flags |= MIIF_IS_1000X;
 			ADD(IFM_MAKEWORD(IFM_ETHER, IFM_1000_SX, IFM_FDX,
 			    sc->mii_inst), MII_MEDIA_1000_X_FDX);
@@ -490,7 +484,7 @@ mii_phy_add_media(struct mii_softc *sc)
 		 * All 1000baseT PHYs have a 1000baseT control register.
 		 */
 		if (sc->mii_extcapabilities & EXTSR_1000THDX) {
-			sc->mii_anegticks = 17;
+			sc->mii_anegticks = MII_ANEGTICKS_GIGE;
 			sc->mii_flags |= MIIF_HAVE_GTCR;
 			mii->mii_media.ifm_mask |= IFM_ETH_MASTER;
 			ADD(IFM_MAKEWORD(IFM_ETHER, IFM_1000_T, 0,
@@ -498,7 +492,7 @@ mii_phy_add_media(struct mii_softc *sc)
 			PRINT("1000baseT");
 		}
 		if (sc->mii_extcapabilities & EXTSR_1000TFDX) {
-			sc->mii_anegticks = 17;
+			sc->mii_anegticks = MII_ANEGTICKS_GIGE;
 			sc->mii_flags |= MIIF_HAVE_GTCR;
 			mii->mii_media.ifm_mask |= IFM_ETH_MASTER;
 			ADD(IFM_MAKEWORD(IFM_ETHER, IFM_1000_T, IFM_FDX,
@@ -530,13 +524,35 @@ mii_phy_detach(device_t dev)
 }
 
 const struct mii_phydesc *
-mii_phy_match(const struct mii_attach_args *ma, const struct mii_phydesc *mpd)
+mii_phy_match_gen(const struct mii_attach_args *ma,
+  const struct mii_phydesc *mpd, size_t len)
 {
 
-	for (; mpd->mpd_name != NULL; mpd++) {
+	for (; mpd->mpd_name != NULL;
+	     mpd = (const struct mii_phydesc *) ((const char *) mpd + len)) {
 		if (MII_OUI(ma->mii_id1, ma->mii_id2) == mpd->mpd_oui &&
 		    MII_MODEL(ma->mii_id2) == mpd->mpd_model)
 			return (mpd);
 	}
 	return (NULL);
+}
+
+const struct mii_phydesc *
+mii_phy_match(const struct mii_attach_args *ma, const struct mii_phydesc *mpd)
+{
+
+	return (mii_phy_match_gen(ma, mpd, sizeof(struct mii_phydesc)));
+}
+
+int
+mii_phy_dev_probe(device_t dev, const struct mii_phydesc *mpd, int mrv)
+{
+
+	mpd = mii_phy_match(device_get_ivars(dev), mpd);
+	if (mpd != NULL) {
+		device_set_desc(dev, mpd->mpd_name);
+		return (mrv);
+	}
+
+	return (ENXIO);
 }

@@ -31,12 +31,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/amphy.c,v 1.17 2005/01/06 01:42:55 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/amphy.c,v 1.22 2007/01/12 22:27:46 marius Exp $");
 
 /*
  * driver for AMD AM79c873 PHYs
- * This driver also works for the Davicom DM9101 PHY, which appears to
- * be an AM79c873 workalike.
+ * This driver also works for Davicom DM910{1,2} PHYs, which appear
+ * to be AM79c873 workalikes.
  */
 
 #include <sys/param.h>
@@ -82,31 +82,22 @@ DRIVER_MODULE(amphy, miibus, amphy_driver, amphy_devclass, 0, 0);
 static int	amphy_service(struct mii_softc *, struct mii_data *, int);
 static void	amphy_status(struct mii_softc *);
 
+static const struct mii_phydesc amphys[] = {
+	MII_PHY_DESC(DAVICOM, DM9102),
+	MII_PHY_DESC(xxAMD, 79C873),
+	MII_PHY_DESC(xxDAVICOM, DM9101),
+	MII_PHY_END
+};
+
 static int
-amphy_probe(dev)
-	device_t		dev;
+amphy_probe(device_t dev)
 {
-	struct mii_attach_args *ma;
 
-	ma = device_get_ivars(dev);
-
-	if ((MII_OUI(ma->mii_id1, ma->mii_id2) != MII_OUI_xxAMD ||
-	    MII_MODEL(ma->mii_id2) != MII_MODEL_xxAMD_79C873) &&
-	    (MII_OUI(ma->mii_id1, ma->mii_id2) != MII_OUI_xxDAVICOM ||
-	    MII_MODEL(ma->mii_id2) != MII_MODEL_xxDAVICOM_DM9101))
-		return(ENXIO);
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_xxAMD)
-		device_set_desc(dev, MII_STR_xxAMD_79C873);
-	else if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_xxDAVICOM)
-		device_set_desc(dev, MII_STR_xxDAVICOM_DM9101);
-
-	return(0);
+	return (mii_phy_dev_probe(dev, amphys, BUS_PROBE_DEFAULT));
 }
 
 static int
-amphy_attach(dev)
-	device_t		dev;
+amphy_attach(device_t dev)
 {
 	struct mii_softc *sc;
 	struct mii_attach_args *ma;
@@ -123,16 +114,13 @@ amphy_attach(dev)
 	sc->mii_service = amphy_service;
 	sc->mii_pdata = mii;
 
-	sc->mii_flags |= MIIF_NOISOLATE;
 	mii->mii_instance++;
 
 #define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
 
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_NONE, 0, sc->mii_inst),
-	    BMCR_ISO);
 #if 0
 	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    BMCR_LOOP|BMCR_S100);
+	    MII_MEDIA_100_TX);
 #endif
 
 	mii_phy_reset(sc);
@@ -140,18 +128,15 @@ amphy_attach(dev)
 	sc->mii_capabilities =
 	    PHY_READ(sc, MII_BMSR) & ma->mii_capmask;
 	device_printf(dev, " ");
-	mii_add_media(sc);
+	mii_phy_add_media(sc);
 	printf("\n");
 #undef ADD
 	MIIBUS_MEDIAINIT(sc->mii_dev);
-	return(0);
+	return (0);
 }
 
 static int
-amphy_service(sc, mii, cmd)
-	struct mii_softc *sc;
-	struct mii_data *mii;
-	int cmd;
+amphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int reg;
@@ -182,28 +167,7 @@ amphy_service(sc, mii, cmd)
 		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
 			break;
 
-		switch (IFM_SUBTYPE(ife->ifm_media)) {
-		case IFM_AUTO:
-			/*
-			 * If we're already in auto mode, just return.
-			 */
-			if (PHY_READ(sc, MII_BMCR) & BMCR_AUTOEN)
-				return (0);
-			(void) mii_phy_auto(sc);
-			break;
-		case IFM_100_T4:
-			/*
-			 * XXX Not supported as a manual setting right now.
-			 */
-			return (EINVAL);
-		default:
-			/*
-			 * BMCR data is stored in the ifmedia entry.
-			 */
-			PHY_WRITE(sc, MII_ANAR,
-			    mii_anar(ife->ifm_media));
-			PHY_WRITE(sc, MII_BMCR, ife->ifm_data);
-		}
+		mii_phy_setmedia(sc);
 		break;
 
 	case MII_TICK:
@@ -226,10 +190,10 @@ amphy_service(sc, mii, cmd)
 }
 
 static void
-amphy_status(sc)
-	struct mii_softc *sc;
+amphy_status(struct mii_softc *sc)
 {
 	struct mii_data *mii = sc->mii_pdata;
+	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int bmsr, bmcr, par, anlpar;
 
 	mii->mii_media_status = IFM_AVALID;
@@ -292,5 +256,5 @@ amphy_status(sc)
 		else if (par & DSCSR_10HDX)
 			mii->mii_media_active |= IFM_10_T;
 	} else
-		mii->mii_media_active = mii_media_from_bmcr(bmcr);
+		mii->mii_media_active = ife->ifm_media;
 }

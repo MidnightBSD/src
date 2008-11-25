@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppc/ppc.c,v 1.45 2005/04/12 23:32:26 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppc/ppc.c,v 1.57 2007/03/21 03:38:36 nyan Exp $");
 
 #include "opt_ppc.h"
 
@@ -37,16 +37,15 @@ __FBSDID("$FreeBSD: src/sys/dev/ppc/ppc.c,v 1.45 2005/04/12 23:32:26 imp Exp $")
 #include <sys/bus.h>
 #include <sys/malloc.h>
   
-#include <vm/vm.h>
-#include <vm/pmap.h>
-#include <machine/clock.h>
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <machine/vmparam.h>
 #include <sys/rman.h>
 
-#include <isa/isareg.h>
-#include <isa/isavar.h>
+#ifdef __i386__
+#include <vm/vm.h>
+#include <vm/pmap.h>
+#include <machine/vmparam.h>
+#endif
 
 #include <dev/ppbus/ppbconf.h>
 #include <dev/ppbus/ppb_msq.h>
@@ -56,46 +55,23 @@ __FBSDID("$FreeBSD: src/sys/dev/ppc/ppc.c,v 1.45 2005/04/12 23:32:26 imp Exp $")
 
 #include "ppbus_if.h"
 
-static int ppc_isa_probe(device_t dev);
-
 static void ppcintr(void *arg);
+
+#define	IO_LPTSIZE_EXTENDED	8	/* "Extended" LPT controllers */
+#define	IO_LPTSIZE_NORMAL	4	/* "Normal" LPT controllers */
 
 #define LOG_PPC(function, ppc, string) \
 		if (bootverbose) printf("%s: %s\n", function, string)
 
+#if defined(__i386__) && defined(PC98)
+#define	PC98_IEEE_1284_DISABLE	0x100
+#define	PC98_IEEE_1284_PORT	0x140
+#endif
 
 #define DEVTOSOFTC(dev) ((struct ppc_data *)device_get_softc(dev))
 
 devclass_t ppc_devclass;
-  
-static device_method_t ppc_methods[] = {
-	/* device interface */
-	DEVMETHOD(device_probe,         ppc_isa_probe),
-	DEVMETHOD(device_attach,        ppc_attach),
-
-	/* bus interface */
-	DEVMETHOD(bus_read_ivar,	ppc_read_ivar),
-	DEVMETHOD(bus_setup_intr,	ppc_setup_intr),
-	DEVMETHOD(bus_teardown_intr,	ppc_teardown_intr),
-	DEVMETHOD(bus_alloc_resource,   bus_generic_alloc_resource),
-
-	/* ppbus interface */
-	DEVMETHOD(ppbus_io,		ppc_io),
-	DEVMETHOD(ppbus_exec_microseq,	ppc_exec_microseq),
-	DEVMETHOD(ppbus_reset_epp,	ppc_reset_epp),
-	DEVMETHOD(ppbus_setmode,	ppc_setmode),
-	DEVMETHOD(ppbus_ecp_sync,	ppc_ecp_sync),
-	DEVMETHOD(ppbus_read,		ppc_read),
-	DEVMETHOD(ppbus_write,		ppc_write),
-
-        { 0, 0 }
-  };
-  
-static driver_t ppc_driver = {
-	"ppc",
-	ppc_methods,
-	sizeof(struct ppc_data),
-};
+const char ppc_driver_name[] = "ppc";
 
 static char *ppc_models[] = {
 	"SMC-like", "SMC FDC37C665GT", "SMC FDC37C666GT", "PC87332", "PC87306",
@@ -1417,8 +1393,7 @@ ppc_exec_microseq(device_t dev, struct ppb_microseq **p_msq)
 
 		case MS_OP_ADELAY:
 			if (mi->arg[0].i)
-				tsleep(NULL, PPBPRI, "ppbdelay",
-						mi->arg[0].i * (hz/1000));
+				pause("ppbdelay", mi->arg[0].i * (hz/1000));
 			INCR_PC;
 			break;
 
@@ -1548,7 +1523,7 @@ ppcintr(void *arg)
 	ctr = r_ctr(ppc);
 	ecr = r_ecr(ppc);
 
-#if PPC_DEBUG > 1
+#if defined(PPC_DEBUG) && PPC_DEBUG > 1
 		printf("![%x/%x/%x]", ctr, ecr, str);
 #endif
 
@@ -1591,12 +1566,7 @@ ppcintr(void *arg)
 #ifdef PPC_DEBUG
 				printf("d");
 #endif
-				isa_dmadone(
-					ppc->ppc_dmaflags,
-					ppc->ppc_dmaddr,
-					ppc->ppc_dmacnt,
-					ppc->ppc_dmachan);
-
+				ppc->ppc_dmadone(ppc);
 				ppc->ppc_dmastat = PPC_DMA_COMPLETE;
 
 				/* wakeup the waiting process */
@@ -1618,163 +1588,10 @@ ppc_read(device_t dev, char *buf, int len, int mode)
 	return (EINVAL);
 }
 
-/*
- * Call this function if you want to send data in any advanced mode
- * of your parallel port: FIFO, DMA
- *
- * If what you want is not possible (no ECP, no DMA...),
- * EINVAL is returned
- */
 int
 ppc_write(device_t dev, char *buf, int len, int how)
 {
-	struct ppc_data *ppc = DEVTOSOFTC(dev);
-	char ecr, ecr_sav, ctr, ctr_sav;
-	int s, error = 0;
-	int spin;
-
-#ifdef PPC_DEBUG
-	printf("w");
-#endif
-
-	ecr_sav = r_ecr(ppc);
-	ctr_sav = r_ctr(ppc);
-
-	/*
-	 * Send buffer with DMA, FIFO and interrupts
-	 */
-	if ((ppc->ppc_avm & PPB_ECP) && (ppc->ppc_registered)) {
-
-	    if (ppc->ppc_dmachan > 0) {
-
-		/* byte mode, no intr, no DMA, dir=0, flush fifo
-		 */
-		ecr = PPC_ECR_STD | PPC_DISABLE_INTR;
-		w_ecr(ppc, ecr);
-
-		/* disable nAck interrupts */
-		ctr = r_ctr(ppc);
-		ctr &= ~IRQENABLE;
-		w_ctr(ppc, ctr);
-
-		ppc->ppc_dmaflags = 0;
-		ppc->ppc_dmaddr = (caddr_t)buf;
-		ppc->ppc_dmacnt = (u_int)len;
-
-		switch (ppc->ppc_mode) {
-		case PPB_COMPATIBLE:
-			/* compatible mode with FIFO, no intr, DMA, dir=0 */
-			ecr = PPC_ECR_FIFO | PPC_DISABLE_INTR | PPC_ENABLE_DMA;
-			break;
-		case PPB_ECP:
-			ecr = PPC_ECR_ECP | PPC_DISABLE_INTR | PPC_ENABLE_DMA;
-			break;
-		default:
-			error = EINVAL;
-			goto error;
-		}
-
-		w_ecr(ppc, ecr);
-		ecr = r_ecr(ppc);
-
-		/* enter splhigh() not to be preempted
-		 * by the dma interrupt, we may miss
-		 * the wakeup otherwise
-		 */
-		s = splhigh();
-
-		ppc->ppc_dmastat = PPC_DMA_INIT;
-
-		/* enable interrupts */
-		ecr &= ~PPC_SERVICE_INTR;
-		ppc->ppc_irqstat = PPC_IRQ_DMA;
-		w_ecr(ppc, ecr);
-
-		isa_dmastart(
-			ppc->ppc_dmaflags,
-			ppc->ppc_dmaddr,
-			ppc->ppc_dmacnt,
-			ppc->ppc_dmachan);
-#ifdef PPC_DEBUG
-		printf("s%d", ppc->ppc_dmacnt);
-#endif
-		ppc->ppc_dmastat = PPC_DMA_STARTED;
-
-		/* Wait for the DMA completed interrupt. We hope we won't
-		 * miss it, otherwise a signal will be necessary to unlock the
-		 * process.
-		 */
-		do {
-			/* release CPU */
-			error = tsleep(ppc,
-				PPBPRI | PCATCH, "ppcdma", 0);
-
-		} while (error == EWOULDBLOCK);
-
-		splx(s);
-
-		if (error) {
-#ifdef PPC_DEBUG
-			printf("i");
-#endif
-			/* stop DMA */
-			isa_dmadone(
-				ppc->ppc_dmaflags, ppc->ppc_dmaddr,
-				ppc->ppc_dmacnt, ppc->ppc_dmachan);
-
-			/* no dma, no interrupt, flush the fifo */
-			w_ecr(ppc, PPC_ECR_RESET);
-
-			ppc->ppc_dmastat = PPC_DMA_INTERRUPTED;
-			goto error;
-		}
-
-		/* wait for an empty fifo */
-		while (!(r_ecr(ppc) & PPC_FIFO_EMPTY)) {
-
-			for (spin=100; spin; spin--)
-				if (r_ecr(ppc) & PPC_FIFO_EMPTY)
-					goto fifo_empty;
-#ifdef PPC_DEBUG
-			printf("Z");
-#endif
-			error = tsleep(ppc, PPBPRI | PCATCH, "ppcfifo", hz/100);
-			if (error != EWOULDBLOCK) {
-#ifdef PPC_DEBUG
-				printf("I");
-#endif
-				/* no dma, no interrupt, flush the fifo */
-				w_ecr(ppc, PPC_ECR_RESET);
-
-				ppc->ppc_dmastat = PPC_DMA_INTERRUPTED;
-				error = EINTR;
-				goto error;
-			}
-		}
-
-fifo_empty:
-		/* no dma, no interrupt, flush the fifo */
-		w_ecr(ppc, PPC_ECR_RESET);
-
-	    } else
-		error = EINVAL;			/* XXX we should FIFO and
-						 * interrupts */
-	} else
-		error = EINVAL;
-
-error:
-
-	/* PDRQ must be kept unasserted until nPDACK is
-	 * deasserted for a minimum of 350ns (SMC datasheet)
-	 *
-	 * Consequence may be a FIFO that never empty
-	 */
-	DELAY(1);
-
-	w_ecr(ppc, ecr_sav);
-	w_ctr(ppc, ctr_sav);
-
-	return (error);
+	return (EINVAL);
 }
 
 void
@@ -1807,34 +1624,15 @@ ppc_setmode(device_t dev, int mode)
 	return (ENXIO);
 }
 
-static struct isa_pnp_id lpc_ids[] = {
-	{ 0x0004d041, "Standard parallel printer port" }, /* PNP0400 */
-	{ 0x0104d041, "ECP parallel printer port" }, /* PNP0401 */
-	{ 0 }
-};
-
-static int
-ppc_isa_probe(device_t dev)
-{
-	device_t parent;
-	int error;
-
-	parent = device_get_parent(dev);
-
-	error = ISA_PNP_PROBE(parent, dev, lpc_ids);
-	if (error == ENXIO)
-		return (ENXIO);
-	else if (error != 0)	/* XXX shall be set after detection */
-		device_set_desc(dev, "Parallel port");
-
-	return(ppc_probe(dev));
-}
-		
 int
-ppc_probe(device_t dev)
+ppc_probe(device_t dev, int rid)
 {
 #ifdef __i386__
 	static short next_bios_ppc = 0;
+#ifdef PC98
+	unsigned int pc98_ieee_mode = 0x00;
+	unsigned int tmp;
+#endif
 #endif
 	struct ppc_data *ppc;
 	int error;
@@ -1846,17 +1644,27 @@ ppc_probe(device_t dev)
 	ppc = DEVTOSOFTC(dev);
 	bzero(ppc, sizeof(struct ppc_data));
 
-	ppc->rid_irq = ppc->rid_drq = ppc->rid_ioport = 0;
-	ppc->res_irq = ppc->res_drq = ppc->res_ioport = 0;
+	ppc->rid_ioport = rid;
 
 	/* retrieve ISA parameters */
-	error = bus_get_resource(dev, SYS_RES_IOPORT, 0, &port, NULL);
+	error = bus_get_resource(dev, SYS_RES_IOPORT, rid, &port, NULL);
 
 #ifdef __i386__
 	/*
 	 * If port not specified, use bios list.
 	 */
 	if (error) {
+#ifdef PC98
+		if (next_bios_ppc == 0) {
+			/* Use default IEEE-1284 port of NEC PC-98x1 */
+			port = PC98_IEEE_1284_PORT;
+			next_bios_ppc += 1;
+			if (bootverbose)
+				device_printf(dev,
+				    "parallel port found at 0x%x\n",
+				    (int) port);
+		}
+#else
 		if((next_bios_ppc < BIOS_MAX_PPC) &&
 				(*(BIOS_PORTS+next_bios_ppc) != 0) ) {
 			port = *(BIOS_PORTS+next_bios_ppc++);
@@ -1867,17 +1675,9 @@ ppc_probe(device_t dev)
 			device_printf(dev, "parallel port not found.\n");
 			return ENXIO;
 		}
-		bus_set_resource(dev, SYS_RES_IOPORT, 0, port,
+#endif	/* PC98 */
+		bus_set_resource(dev, SYS_RES_IOPORT, rid, port,
 				 IO_LPTSIZE_EXTENDED);
-	}
-#endif
-#ifdef __alpha__
-	/*
-	 * There isn't a bios list on alpha. Put it in the usual place.
-	 */
-	if (error) {
-		bus_set_resource(dev, SYS_RES_IOPORT, 0, 0x3bc,
-				 IO_LPTSIZE_NORMAL);
 	}
 #endif
 
@@ -1935,6 +1735,30 @@ ppc_probe(device_t dev)
 
 	ppc->ppc_type = PPC_TYPE_GENERIC;
 
+#if defined(__i386__) && defined(PC98)
+	/*
+	 * IEEE STD 1284 Function Check and Enable
+	 * for default IEEE-1284 port of NEC PC-98x1
+	 */
+	if (ppc->ppc_base == PC98_IEEE_1284_PORT &&
+	    !(ppc->ppc_flags & PC98_IEEE_1284_DISABLE)) {
+		tmp = inb(ppc->ppc_base + PPC_1284_ENABLE);
+		pc98_ieee_mode = tmp;
+		if ((tmp & 0x10) == 0x10) {
+			outb(ppc->ppc_base + PPC_1284_ENABLE, tmp & ~0x10);
+			tmp = inb(ppc->ppc_base + PPC_1284_ENABLE);
+			if ((tmp & 0x10) == 0x10)
+				goto error;
+		} else {
+			outb(ppc->ppc_base + PPC_1284_ENABLE, tmp | 0x10);
+			tmp = inb(ppc->ppc_base + PPC_1284_ENABLE);
+			if ((tmp & 0x10) != 0x10)
+				goto error;
+		}
+		outb(ppc->ppc_base + PPC_1284_ENABLE, pc98_ieee_mode | 0x10);
+	}
+#endif
+
 	/*
 	 * Try to detect the chipset and its mode.
 	 */
@@ -1944,19 +1768,21 @@ ppc_probe(device_t dev)
 	return (0);
 
 error:
+#if defined(__i386__) && defined(PC98)
+	if (ppc->ppc_base == PC98_IEEE_1284_PORT &&
+	    !(ppc->ppc_flags & PC98_IEEE_1284_DISABLE)) {
+		outb(ppc->ppc_base + PPC_1284_ENABLE, pc98_ieee_mode);
+	}
+#endif
 	if (ppc->res_irq != 0) {
 		bus_release_resource(dev, SYS_RES_IRQ, ppc->rid_irq,
 				     ppc->res_irq);
 	}
 	if (ppc->res_ioport != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IOPORT, ppc->rid_ioport,
-					ppc->res_ioport);
 		bus_release_resource(dev, SYS_RES_IOPORT, ppc->rid_ioport,
 				     ppc->res_ioport);
 	}
 	if (ppc->res_drq != 0) {
-		bus_deactivate_resource(dev, SYS_RES_DRQ, ppc->rid_drq,
-					ppc->res_drq);
 		bus_release_resource(dev, SYS_RES_DRQ, ppc->rid_drq,
 				     ppc->res_drq);
 	}
@@ -1969,7 +1795,6 @@ ppc_attach(device_t dev)
 	struct ppc_data *ppc = DEVTOSOFTC(dev);
 
 	device_t ppbus;
-	device_t parent = device_get_parent(dev);
 
 	device_printf(dev, "%s chipset (%s) in %s mode%s\n",
 		      ppc_models[ppc->ppc_model], ppc_avms[ppc->ppc_avm],
@@ -1979,12 +1804,6 @@ ppc_attach(device_t dev)
 	if (ppc->ppc_fifo)
 		device_printf(dev, "FIFO with %d/%d/%d bytes threshold\n",
 			      ppc->ppc_fifo, ppc->ppc_wthr, ppc->ppc_rthr);
-
-	if ((ppc->ppc_avm & PPB_ECP) && (ppc->ppc_dmachan > 0)) {
-		/* acquire the DMA channel forever */	/* XXX */
-		isa_dma_acquire(ppc->ppc_dmachan);
-		isa_dmainit(ppc->ppc_dmachan, 1024); /* nlpt.BUFSIZE */
-	}
 
 	/* add ppbus as a child of this isa to parallel bridge */
 	ppbus = device_add_child(dev, "ppbus", -1);
@@ -1997,12 +1816,48 @@ ppc_attach(device_t dev)
 	/* register the ppc interrupt handler as default */
 	if (ppc->res_irq) {
 		/* default to the tty mask for registration */	/* XXX */
-		if (BUS_SETUP_INTR(parent, dev, ppc->res_irq, INTR_TYPE_TTY,
-					    ppcintr, dev, &ppc->intr_cookie) == 0) {
+		if (bus_setup_intr(dev, ppc->res_irq, INTR_TYPE_TTY,
+		    NULL, ppcintr, dev, &ppc->intr_cookie) == 0) {
 
 			/* remember the ppcintr is registered */
 			ppc->ppc_registered = 1;
 		}
+	}
+
+	return (0);
+}
+
+int
+ppc_detach(device_t dev)
+{
+	struct ppc_data *ppc = DEVTOSOFTC(dev);
+	device_t *children;
+	int nchildren, i;
+
+	if (ppc->res_irq == 0) {
+		return (ENXIO);
+	}
+
+	/* detach & delete all children */
+	if (!device_get_children(dev, &children, &nchildren)) {
+		for (i = 0; i < nchildren; i++)
+			if (children[i])
+				device_delete_child(dev, children[i]);
+		free(children, M_TEMP);
+	}
+
+	if (ppc->res_irq != 0) {
+		bus_teardown_intr(dev, ppc->res_irq, ppc->intr_cookie);
+		bus_release_resource(dev, SYS_RES_IRQ, ppc->rid_irq,
+				     ppc->res_irq);
+	}
+	if (ppc->res_ioport != 0) {
+		bus_release_resource(dev, SYS_RES_IOPORT, ppc->rid_ioport,
+				     ppc->res_ioport);
+	}
+	if (ppc->res_drq != 0) {
+		bus_release_resource(dev, SYS_RES_DRQ, ppc->rid_drq,
+				     ppc->res_drq);
 	}
 
 	return (0);
@@ -2099,7 +1954,7 @@ ppc_read_ivar(device_t bus, device_t dev, int index, uintptr_t *val)
  */
 int
 ppc_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
-			void (*ihand)(void *), void *arg, void **cookiep)
+    driver_filter_t *filt, void (*ihand)(void *), void *arg, void **cookiep)
 {
 	int error;
 	struct ppc_data *ppc = DEVTOSOFTC(bus);
@@ -2119,9 +1974,12 @@ ppc_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
 		ppc->ppc_registered = 0;
 	}
 
-	/* pass registration to the upper layer, ignore the incoming resource */
+	/* 
+	 * pass registration to the upper layer, ignore the incoming 
+	 * resource 
+	 */
 	return (BUS_SETUP_INTR(device_get_parent(bus), child,
-			       r, flags, ihand, arg, cookiep));
+	    r, flags, filt, ihand, arg, cookiep));
 }
 
 /*
@@ -2142,7 +2000,7 @@ ppc_teardown_intr(device_t bus, device_t child, struct resource *r, void *ih)
 	/* default to the tty mask for registration */		/* XXX */
 	if (ppc->ppc_irq &&
 		!(error = BUS_SETUP_INTR(parent, bus, ppc->res_irq,
-			INTR_TYPE_TTY, ppcintr, bus, &ppc->intr_cookie))) {
+			INTR_TYPE_TTY, NULL, ppcintr, bus, &ppc->intr_cookie))) {
 
 		/* remember the ppcintr is registered */
 		ppc->ppc_registered = 1;
@@ -2151,5 +2009,4 @@ ppc_teardown_intr(device_t bus, device_t child, struct resource *r, void *ih)
 	return (error);
 }
 
-DRIVER_MODULE(ppc, isa, ppc_driver, ppc_devclass, 0, 0);
-DRIVER_MODULE(ppc, acpi, ppc_driver, ppc_devclass, 0, 0);
+MODULE_DEPEND(ppc, ppbus, 1, 1, 1);

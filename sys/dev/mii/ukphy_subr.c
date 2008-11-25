@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/ukphy_subr.c,v 1.8 2004/05/29 18:09:10 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/ukphy_subr.c,v 1.9 2006/05/19 03:51:42 yongari Exp $");
 
 /*
  * Subroutines shared by the ukphy driver and other PHY drivers.
@@ -67,7 +67,7 @@ ukphy_status(struct mii_softc *phy)
 {
 	struct mii_data *mii = phy->mii_pdata;
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
-	int bmsr, bmcr, anlpar;
+	int bmsr, bmcr, anlpar, gtcr, gtsr;
 
 	mii->mii_media_status = IFM_AVALID;
 	mii->mii_media_active = IFM_ETHER;
@@ -99,7 +99,20 @@ ukphy_status(struct mii_softc *phy)
 		}
 
 		anlpar = PHY_READ(phy, MII_ANAR) & PHY_READ(phy, MII_ANLPAR);
-		if (anlpar & ANLPAR_T4)
+		if ((phy->mii_flags & MIIF_HAVE_GTCR) != 0 &&
+		    (phy->mii_extcapabilities &
+		    (EXTSR_1000THDX | EXTSR_1000TFDX)) != 0) {
+			gtcr = PHY_READ(phy, MII_100T2CR);
+			gtsr = PHY_READ(phy, MII_100T2SR);
+		} else
+			gtcr = gtsr = 0;
+
+		if ((gtcr & GTCR_ADV_1000TFDX) && (gtsr & GTSR_LP_1000TFDX))
+			mii->mii_media_active |= IFM_1000_T|IFM_FDX;
+		else if ((gtcr & GTCR_ADV_1000THDX) &&
+		    (gtsr & GTSR_LP_1000THDX))
+			mii->mii_media_active |= IFM_1000_T;
+		else if (anlpar & ANLPAR_T4)
 			mii->mii_media_active |= IFM_100_T4;
 		else if (anlpar & ANLPAR_TX_FD)
 			mii->mii_media_active |= IFM_100_TX|IFM_FDX;

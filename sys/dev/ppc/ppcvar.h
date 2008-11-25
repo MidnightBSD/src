@@ -24,12 +24,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ppc/ppcvar.h,v 1.2 2005/01/06 01:43:07 imp Exp $
+ * $FreeBSD: src/sys/dev/ppc/ppcvar.h,v 1.5 2007/02/23 12:18:50 piso Exp $
  *
  */
 
-int ppc_probe(device_t dev);
+int ppc_probe(device_t dev, int rid);
 int ppc_attach(device_t dev);
+int ppc_detach(device_t dev);
 int ppc_read_ivar(device_t bus, device_t dev, int index, uintptr_t *val);
 
 int ppc_read(device_t, char *, int, int);
@@ -39,10 +40,11 @@ u_char ppc_io(device_t, int, u_char *, int, u_char);
 int ppc_exec_microseq(device_t, struct ppb_microseq **);
 
 int ppc_setup_intr(device_t, device_t, struct resource *, int,
-		void (*)(void *), void *, void **);
+		driver_filter_t *filt, void (*)(void *), void *, void **);
 int ppc_teardown_intr(device_t, device_t, struct resource *, void *);
 void ppc_reset_epp(device_t);
 void ppc_ecp_sync(device_t);
 int ppc_setmode(device_t, int);
 
-extern	devclass_t	ppc_devclass;
+extern devclass_t ppc_devclass;
+extern const char ppc_driver_name[];

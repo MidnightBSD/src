@@ -67,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/tlphy.c,v 1.18 2005/01/06 01:42:56 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/tlphy.c,v 1.22 2006/12/02 19:36:25 marius Exp $");
 
 /*
  * Driver for Texas Instruments's ThunderLAN PHYs
@@ -127,32 +127,28 @@ static int	tlphy_auto(struct tlphy_softc *);
 static void	tlphy_acomp(struct tlphy_softc *);
 static void	tlphy_status(struct tlphy_softc *);
 
+static const struct mii_phydesc tlphys[] = {
+	MII_PHY_DESC(xxTI, TLAN10T),
+	MII_PHY_END
+};
+
 static int
-tlphy_probe(dev)
-	device_t		dev;
+tlphy_probe(device_t dev)
 {
-	struct mii_attach_args *ma;       
 
-	ma = device_get_ivars(dev);
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) != MII_OUI_xxTI ||
-	    MII_MODEL(ma->mii_id2) != MII_MODEL_xxTI_TLAN10T)
-		return (ENXIO);
-
-	device_set_desc(dev, MII_STR_xxTI_TLAN10T);
-
-	return (0);
+	return (mii_phy_dev_probe(dev, tlphys, BUS_PROBE_DEFAULT));
 }
 
 static int
-tlphy_attach(dev)
-	device_t		dev;
+tlphy_attach(device_t dev)
 {
+	device_t *devlist;
 	struct tlphy_softc *sc;
+	struct mii_softc *other;
 	struct mii_attach_args *ma;
 	struct mii_data *mii;
 	const char *sep = "";
-	int capmask = 0xFFFFFFFF;
+	int capmask, devs, i;
 
 	sc = device_get_softc(dev);
 	ma = device_get_ivars(dev);
@@ -165,11 +161,8 @@ tlphy_attach(dev)
 	sc->sc_mii.mii_service = tlphy_service;
 	sc->sc_mii.mii_pdata = mii;
 
+	capmask = 0xFFFFFFFF;
 	if (mii->mii_instance) {
-		struct mii_softc	*other;
-		device_t		*devlist;
-		int			devs, i;
-
 		device_get_children(sc->sc_mii.mii_dev, &devlist, &devs);
 		for (i = 0; i < devs; i++) {
 			if (strcmp(device_get_name(devlist[i]), "tlphy")) {
@@ -222,14 +215,11 @@ tlphy_attach(dev)
 #undef ADD
 #undef PRINT
 	MIIBUS_MEDIAINIT(sc->sc_mii.mii_dev);
-	return(0);
+	return (0);
 }
 
 static int
-tlphy_service(self, mii, cmd)
-	struct mii_softc *self;
-	struct mii_data *mii;
-	int cmd;
+tlphy_service(struct mii_softc *self, struct mii_data *mii, int cmd)
 {
 	struct tlphy_softc *sc = (struct tlphy_softc *)self;
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
@@ -257,7 +247,7 @@ tlphy_service(self, mii, cmd)
 			PHY_WRITE(&sc->sc_mii, MII_BMCR, reg | BMCR_ISO);
 			return (0);
 		}
-		
+
 		/*
 		 * If the interface is not up, don't do anything.
 		 */
@@ -322,7 +312,7 @@ tlphy_service(self, mii, cmd)
 		/*
 		 * Only retry autonegotiation every 5 seconds.
 		 */
-		if (++sc->sc_mii.mii_ticks <= 5)
+		if (++sc->sc_mii.mii_ticks <= MII_ANEGTICKS)
 			break;
 
 		sc->sc_mii.mii_ticks = 0;
@@ -340,8 +330,7 @@ tlphy_service(self, mii, cmd)
 }
 
 static void
-tlphy_status(sc)
-	struct tlphy_softc *sc;
+tlphy_status(struct tlphy_softc *sc)
 {
 	struct mii_data *mii = sc->sc_mii.mii_pdata;
 	int bmsr, bmcr, tlctrl;
@@ -352,7 +341,7 @@ tlphy_status(sc)
 	bmcr = PHY_READ(&sc->sc_mii, MII_BMCR);
 	if (bmcr & BMCR_ISO) {
 		mii->mii_media_active |= IFM_NONE;
-		mii->mii_media_status = 0;  
+		mii->mii_media_status = 0;
 		return;
 	}
 
@@ -365,7 +354,7 @@ tlphy_status(sc)
 
 	bmsr = PHY_READ(&sc->sc_mii, MII_BMSR) |
 	    PHY_READ(&sc->sc_mii, MII_BMSR);
-	if (bmsr & BMSR_LINK)   
+	if (bmsr & BMSR_LINK)
 		mii->mii_media_status |= IFM_ACTIVE;
 
 	if (bmcr & BMCR_LOOP)
@@ -383,8 +372,7 @@ tlphy_status(sc)
 }
 
 static int
-tlphy_auto(sc)
-	struct tlphy_softc *sc;
+tlphy_auto(struct tlphy_softc *sc)
 {
 	int error;
 
@@ -410,8 +398,7 @@ tlphy_auto(sc)
 }
 
 static void
-tlphy_acomp(sc)
-	struct tlphy_softc *sc;
+tlphy_acomp(struct tlphy_softc *sc)
 {
 	int aner, anlpar;
 

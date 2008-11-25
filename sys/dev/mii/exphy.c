@@ -67,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/exphy.c,v 1.19 2005/01/06 01:42:56 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/exphy.c,v 1.23 2007/01/12 23:17:43 marius Exp $");
 
 /*
  * driver for 3Com internal PHYs
@@ -114,42 +114,31 @@ DRIVER_MODULE(xlphy, miibus, exphy_driver, exphy_devclass, 0, 0);
 static int	exphy_service(struct mii_softc *, struct mii_data *, int);
 static void	exphy_reset(struct mii_softc *);
 
+/*
+ * Some 3Com internal PHYs report zero for OUI and model, others use
+ * actual values.
+ * Note that the 3Com internal PHYs having OUI 0x105a and model 0 are
+ * handled fine by ukphy(4); they can be isolated and don't require
+ * special treatment after reset.
+ */
+static const struct mii_phydesc exphys[] = {
+	{ 0, 0, "3Com internal media interface" },
+	MII_PHY_DESC(BROADCOM, 3C905C),
+	MII_PHY_END
+};
+	
 static int
-exphy_probe(dev)
-	device_t		dev;
+exphy_probe(device_t dev)
 {
-	struct mii_attach_args *ma;
-	device_t		parent;
 
-	ma = device_get_ivars(dev);
-	parent = device_get_parent(device_get_parent(dev));
-
-	/*
-	 * Argh, 3Com PHY reports oui == 0 model == 0!
-	 */
-	if ((MII_OUI(ma->mii_id1, ma->mii_id2) != 0 ||
-	    MII_MODEL(ma->mii_id2) != 0) &&
-	    (MII_OUI(ma->mii_id1, ma->mii_id2) != MII_OUI_BROADCOM ||
-	    MII_MODEL(ma->mii_id2) != MII_MODEL_BROADCOM_3C905C))
-		return (ENXIO);
-
-	/*
-	 * Make sure the parent is an `ex'.
-	 */
-	if (strcmp(device_get_name(parent), "xl") != 0)
-		return (ENXIO);
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == 0)
-		device_set_desc(dev, "3Com internal media interface");
-	else
-		device_set_desc(dev, MII_STR_BROADCOM_3C905C);
-
-	return (0);
+	if (strcmp(device_get_name(device_get_parent(device_get_parent(dev))),
+	    "xl") == 0)
+		return (mii_phy_dev_probe(dev, exphys, BUS_PROBE_DEFAULT));
+	return (ENXIO);
 }
 
 static int
-exphy_attach(dev)
-	device_t		dev;
+exphy_attach(device_t dev)
 {
 	struct mii_softc *sc;
 	struct mii_attach_args *ma;
@@ -166,7 +155,7 @@ exphy_attach(dev)
 	 */
 	if (mii->mii_instance != 0) {
 		device_printf(dev, "ignoring this PHY, non-zero instance\n");
-		return(ENXIO);
+		return (ENXIO);
 	}
 
 	LIST_INSERT_HEAD(&mii->mii_phys, sc, mii_list);
@@ -181,13 +170,8 @@ exphy_attach(dev)
 
 #define	ADD(m, c)	ifmedia_add(&mii->mii_media, (m), (c), NULL)
 
-#if 0 /* See above. */
-	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_NONE, 0, sc->mii_inst),
-	    BMCR_ISO);
-#endif
-
 	ADD(IFM_MAKEWORD(IFM_ETHER, IFM_100_TX, IFM_LOOP, sc->mii_inst),
-	    BMCR_LOOP|BMCR_S100);
+	    MII_MEDIA_100_TX);
 
 	exphy_reset(sc);
 
@@ -198,14 +182,11 @@ exphy_attach(dev)
 	printf("\n");
 #undef ADD
 	MIIBUS_MEDIAINIT(sc->mii_dev);
-	return(0);
+	return (0);
 }
 
 static int
-exphy_service(sc, mii, cmd)
-	struct mii_softc *sc;
-	struct mii_data *mii;
-	int cmd;
+exphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 
@@ -235,12 +216,6 @@ exphy_service(sc, mii, cmd)
 		 */
 		if ((mii->mii_ifp->if_flags & IFF_UP) == 0)
 			return (0);
-
-		/*
-		 * Only used for autonegotiation.
-		 */
-		if (IFM_SUBTYPE(ife->ifm_media) != IFM_AUTO)
-			break;
 
 		/*
 		 * The 3Com PHY's autonegotiation doesn't need to be

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mii/pnaphy.c,v 1.15 2005/01/06 01:42:56 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mii/pnaphy.c,v 1.18 2006/12/02 15:32:33 marius Exp $");
 
 /*
  * driver for homePNA PHYs
@@ -53,7 +53,6 @@ __FBSDID("$FreeBSD: src/sys/dev/mii/pnaphy.c,v 1.15 2005/01/06 01:42:56 imp Exp 
 
 #include <net/if.h>
 #include <net/if_media.h>
-
 
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
@@ -85,27 +84,20 @@ DRIVER_MODULE(pnaphy, miibus, pnaphy_driver, pnaphy_devclass, 0, 0);
 
 static int	pnaphy_service(struct mii_softc *, struct mii_data *,int);
 
+static const struct mii_phydesc pnaphys[] = {
+	MII_PHY_DESC(AMD, 79c978),
+	MII_PHY_END
+};
+
 static int
-pnaphy_probe(dev)
-	device_t		dev;
+pnaphy_probe(device_t dev)
 {
 
-	struct mii_attach_args	*ma;
-
-	ma = device_get_ivars(dev);
-
-	if (MII_OUI(ma->mii_id1, ma->mii_id2) == MII_OUI_AMD &&
-	    MII_MODEL(ma->mii_id2) == MII_MODEL_AMD_79c978) {
-		device_set_desc(dev, MII_STR_AMD_79c978);
-		return(0);
-	}
-
-	return(ENXIO);
+	return (mii_phy_dev_probe(dev, pnaphys, BUS_PROBE_DEFAULT));
 }
 
 static int
-pnaphy_attach(dev)
-	device_t		dev;
+pnaphy_attach(device_t dev)
 {
 	struct mii_softc *sc;
 	struct mii_attach_args *ma;
@@ -151,14 +143,11 @@ pnaphy_attach(dev)
 
 	MIIBUS_MEDIAINIT(sc->mii_dev);
 
-	return(0);
+	return (0);
 }
 
 static int
-pnaphy_service(sc, mii, cmd)
-	struct mii_softc *sc;
-	struct mii_data *mii;
-	int cmd;
+pnaphy_service(struct mii_softc *sc, struct mii_data *mii, int cmd)
 {
 	struct ifmedia_entry *ife = mii->mii_media.ifm_cur;
 	int reg;
