@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/mcount.c,v 1.23 2004/08/27 19:42:35 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/libkern/mcount.c,v 1.24 2007/06/13 06:17:48 bde Exp $");
 
 #include <sys/param.h>
 #include <sys/gmon.h>
@@ -268,18 +268,23 @@ mexitcount(selfpc)
 	}
 }
 
+#ifndef __GNUCLIKE_ASM
+#error "This file uses null asms to prevent timing loops being optimized away."
+#endif
+
 void
 empty_loop()
 {
 	int i;
 
 	for (i = 0; i < CALIB_SCALE; i++)
-		;
+		__asm __volatile("");
 }
 
 void
 nullfunc()
 {
+	__asm __volatile("");
 }
 
 void

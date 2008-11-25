@@ -1,6 +1,9 @@
 /*-
- * Copyright (c) 1988, 1993
+ * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Chris Torek.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,6 +13,10 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -28,32 +35,29 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/rindex.c,v 1.12 2007/04/10 21:42:12 wkoszek Exp $");
+__FBSDID("$FreeBSD: src/sys/libkern/strstr.c,v 1.1 2006/08/12 15:28:39 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
 
 /*
- * rindex() is also present as the strrchr() in the kernel; it does exactly the
- * same thing as it's userland equivalent.
+ * Find the first occurrence of find in s.
  */
 char *
-rindex(p, ch)
-	const char *p;
-	int ch;
+strstr(const char *s, const char *find)
 {
-	union {
-		const char *cp;
-		char *p;
-	} u;
-	char *save;
+	char c, sc;
+	size_t len;
 
-	u.cp = p;
-	for (save = NULL;; ++u.p) {
-		if (*u.p == ch)
-			save = u.p;
-		if (*u.p == '\0')
-			return(save);
+	if ((c = *find++) != 0) {
+		len = strlen(find);
+		do {
+			do {
+				if ((sc = *s++) == 0)
+					return (NULL);
+			} while (sc != c);
+		} while (strncmp(s, find, len) != 0);
+		s--;
 	}
-	/* NOTREACHED */
+	return (__DECONST(char *, s));
 }

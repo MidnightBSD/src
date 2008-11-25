@@ -28,11 +28,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/index.c,v 1.9 2004/04/07 20:46:10 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/libkern/index.c,v 1.10 2007/04/10 21:42:12 wkoszek Exp $");
 
 #include <sys/param.h>
 #include <sys/libkern.h>
 
+/*
+ * index() is also present as the strchr() in the kernel; it does exactly the
+ * same thing as it's userland equivalent.
+ */
 char *
 index(p, ch)
 	const char *p;

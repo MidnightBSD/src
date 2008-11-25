@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/libkern/iconv.c,v 1.9.2.1 2005/09/08 15:46:38 imura Exp $");
+__FBSDID("$FreeBSD: src/sys/libkern/iconv.c,v 1.12 2005/10/31 15:41:26 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -47,8 +47,8 @@ SYSCTL_DECL(_kern_iconv);
 
 SYSCTL_NODE(_kern, OID_AUTO, iconv, CTLFLAG_RW, NULL, "kernel iconv interface");
 
-MALLOC_DEFINE(M_ICONV, "ICONV", "ICONV structures");
-MALLOC_DEFINE(M_ICONVDATA, "ICONV data", "ICONV data");
+MALLOC_DEFINE(M_ICONV, "iconv", "ICONV structures");
+MALLOC_DEFINE(M_ICONVDATA, "iconv_data", "ICONV data");
 
 MODULE_VERSION(libiconv, 2);
 
@@ -464,8 +464,7 @@ iconv_convstr(void *handle, char *dst, const char *src)
 		strcpy(dst, src);
 		return dst;
 	}
-	inlen = strlen(src);
-	outlen = inlen * 3;
+	inlen = outlen = strlen(src);
 	error = iconv_conv(handle, NULL, NULL, &p, &outlen);
 	if (error)
 		return NULL;
@@ -490,8 +489,7 @@ iconv_convmem(void *handle, void *dst, const void *src, int size)
 		memcpy(dst, src, size);
 		return dst;
 	}
-	inlen = size;
-	outlen = inlen * 3;
+	inlen = outlen = size;
 	error = iconv_conv(handle, NULL, NULL, &d, &outlen);
 	if (error)
 		return NULL;

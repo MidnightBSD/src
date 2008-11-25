@@ -27893,6 +27893,7 @@ sys/libkern/index.c -text
 sys/libkern/inet_ntoa.c -text
 sys/libkern/lshrdi3.c -text
 sys/libkern/mcount.c -text
+sys/libkern/memset.c -text
 sys/libkern/moddi3.c -text
 sys/libkern/qdivrem.c -text
 sys/libkern/qsort.c -text
@@ -27914,6 +27915,7 @@ sys/libkern/strncmp.c -text
 sys/libkern/strncpy.c -text
 sys/libkern/strsep.c -text
 sys/libkern/strspn.c -text
+sys/libkern/strstr.c -text
 sys/libkern/strtol.c -text
 sys/libkern/strtoq.c -text
 sys/libkern/strtoul.c -text
