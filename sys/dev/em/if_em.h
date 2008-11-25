@@ -1,6 +1,6 @@
 /**************************************************************************
 
-Copyright (c) 2001-2006, Intel Corporation
+Copyright (c) 2001-2007, Intel Corporation
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,13 +30,17 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
-
-/*$FreeBSD: /repoman/r/ncvs/src/sys/dev/em/if_em.h,v 1.32.2.3 2006/08/08 09:20:26 glebius Exp $*/
+/* $FreeBSD: src/sys/dev/em/if_em.h,v 1.62.2.1 2007/11/28 23:24:38 jfv Exp $ */
 
 #ifndef _EM_H_DEFINED_
 #define _EM_H_DEFINED_
 
 /* Tunables */
+
+/* Set FAST handling on by default */
+#if __FreeBSD_version > 700000
+#define EM_FAST_IRQ
+#endif
 
 /*
  * EM_TXD: Maximum number of Transmit Descriptors
@@ -48,7 +52,7 @@ POSSIBILITY OF SUCH DAMAGE.
  *   descriptor is 16 bytes.
  *   Since TDLEN should be multiple of 128bytes, the number of transmit
  *   desscriptors should meet the following condition.
- *      (num_tx_desc * sizeof(struct em_tx_desc)) % 128 == 0
+ *      (num_tx_desc * sizeof(struct e1000_tx_desc)) % 128 == 0
  */
 #define EM_MIN_TXD		80
 #define EM_MAX_TXD_82543	256
@@ -66,12 +70,12 @@ POSSIBILITY OF SUCH DAMAGE.
  *   descriptor. The maximum MTU size is 16110.
  *   Since TDLEN should be multiple of 128bytes, the number of transmit
  *   desscriptors should meet the following condition.
- *      (num_tx_desc * sizeof(struct em_tx_desc)) % 128 == 0
+ *      (num_tx_desc * sizeof(struct e1000_tx_desc)) % 128 == 0
  */
 #define EM_MIN_RXD		80
 #define EM_MAX_RXD_82543	256
 #define EM_MAX_RXD		4096
-#define EM_DEFAULT_RXD		EM_MAX_RXD_82543
+#define EM_DEFAULT_RXD	EM_MAX_RXD_82543
 
 /*
  * EM_TIDV - Transmit Interrupt Delay Value
@@ -86,7 +90,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #define EM_TIDV                         64
 
 /*
- * EM_TADV - Transmit Absolute Interrupt Delay Value (Not valid for 82542/82543/82544)
+ * EM_TADV - Transmit Absolute Interrupt Delay Value
+ * (Not valid for 82542/82543/82544)
  * Valid Range: 0-65535 (0=off)
  * Default Value: 64
  *   This value, in units of 1.024 microseconds, limits the delay in which a
@@ -112,10 +117,10 @@ POSSIBILITY OF SUCH DAMAGE.
  *
  *   CAUTION: When setting EM_RDTR to a value other than 0, adapters
  *            may hang (stop transmitting) under certain network conditions.
- *            If this occurs a WATCHDOG message is logged in the system event log.
- *            In addition, the controller is automatically reset, restoring the
- *            network connection. To eliminate the potential for the hang
- *            ensure that EM_RDTR is set to 0.
+ *            If this occurs a WATCHDOG message is logged in the system
+ *            event log. In addition, the controller is automatically reset,
+ *            restoring the network connection. To eliminate the potential
+ *            for the hang ensure that EM_RDTR is set to 0.
  */
 #define EM_RDTR                         0
 
@@ -133,20 +138,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #define EM_RADV                         64
 
 /*
- * Inform the stack about transmit checksum offload capabilities.
- */
-#define EM_CHECKSUM_FEATURES            (CSUM_TCP | CSUM_UDP)
-
-/*
  * This parameter controls the duration of transmit watchdog timer.
  */
-#define EM_TX_TIMEOUT                   5    /* set to 5 seconds */
+#define EM_TX_TIMEOUT                   5
 
 /*
  * This parameter controls when the driver calls the routine to reclaim
  * transmit descriptors.
  */
-#define EM_TX_CLEANUP_THRESHOLD		(adapter->num_tx_desc / 8)
+#define EM_TX_CLEANUP_THRESHOLD	(adapter->num_tx_desc / 8)
+#define EM_TX_OP_THRESHOLD	(adapter->num_tx_desc / 32)
 
 /*
  * This parameter controls whether or not autonegotation is enabled.
@@ -163,35 +164,39 @@ POSSIBILITY OF SUCH DAMAGE.
  */
 #define WAIT_FOR_AUTO_NEG_DEFAULT       0
 
-/*
- * EM_MASTER_SLAVE is only defined to enable a workaround for a known compatibility issue
- * with 82541/82547 devices and some switches.  See the "Known Limitations" section of
- * the README file for a complete description and a list of affected switches.
- *
- *              0 = Hardware default
- *              1 = Master mode
- *              2 = Slave mode
- *              3 = Auto master/slave
- */
-/* #define EM_MASTER_SLAVE      2 */
-
 /* Tunables -- End */
 
-#define AUTONEG_ADV_DEFAULT             (ADVERTISE_10_HALF | ADVERTISE_10_FULL | \
-                                         ADVERTISE_100_HALF | ADVERTISE_100_FULL | \
-                                         ADVERTISE_1000_FULL)
+#define AUTONEG_ADV_DEFAULT	(ADVERTISE_10_HALF | ADVERTISE_10_FULL | \
+				ADVERTISE_100_HALF | ADVERTISE_100_FULL | \
+				ADVERTISE_1000_FULL)
 
+#define AUTO_ALL_MODES		0
+
+/* PHY master/slave setting */
+#define EM_MASTER_SLAVE		e1000_ms_hw_default
+
+/*
+ * Micellaneous constants
+ */
 #define EM_VENDOR_ID                    0x8086
-#define EM_FLASH			0x0014	/* Flash memory on ICH8 */
+#define EM_FLASH                        0x0014 
 
 #define EM_JUMBO_PBA                    0x00000028
 #define EM_DEFAULT_PBA                  0x00000030
 #define EM_SMARTSPEED_DOWNSHIFT         3
 #define EM_SMARTSPEED_MAX               15
+#define EM_MAX_INTR			10
 
 #define MAX_NUM_MULTICAST_ADDRESSES     128
 #define PCI_ANY_ID                      (~0U)
 #define ETHER_ALIGN                     2
+#define EM_FC_PAUSE_TIME		0x0680
+#define EM_EEPROM_APME			0x400;
+
+/* Code compatilbility between 6 and 7 */
+#ifndef ETHER_BPF_MTAP
+#define ETHER_BPF_MTAP			BPF_MTAP
+#endif
 
 /*
  * TDBA/RDBA should be aligned on 16 byte boundary. But TDLEN/RDLEN should be
@@ -201,6 +206,18 @@ POSSIBILITY OF SUCH DAMAGE.
 #define EM_DBA_ALIGN			128
 
 #define SPEED_MODE_BIT (1<<21)		/* On PCI-E MACs only */
+
+/* PCI Config defines */
+#define EM_BAR_TYPE(v)		((v) & EM_BAR_TYPE_MASK)
+#define EM_BAR_TYPE_MASK	0x00000001
+#define EM_BAR_TYPE_MMEM	0x00000000
+#define EM_BAR_TYPE_IO		0x00000001
+#define EM_BAR_TYPE_FLASH	0x0014 
+#define EM_BAR_MEM_TYPE(v)	((v) & EM_BAR_MEM_TYPE_MASK)
+#define EM_BAR_MEM_TYPE_MASK	0x00000006
+#define EM_BAR_MEM_TYPE_32BIT	0x00000000
+#define EM_BAR_MEM_TYPE_64BIT	0x00000004
+#define EM_MSIX_BAR		3	/* On 82575 */
 
 /* Defines for printing debug information */
 #define DEBUG_INIT  0
@@ -217,67 +234,68 @@ POSSIBILITY OF SUCH DAMAGE.
 #define HW_DEBUGOUT1(S, A)          if (DEBUG_HW) printf(S "\n", A)
 #define HW_DEBUGOUT2(S, A, B)       if (DEBUG_HW) printf(S "\n", A, B)
 
+#define EM_MAX_SCATTER		64
+#define EM_TSO_SIZE		(65535 + sizeof(struct ether_vlan_header))
+#define EM_TSO_SEG_SIZE		4096	/* Max dma segment size */
+#define ETH_ZLEN		60
+#define ETH_ADDR_LEN		6
+#define CSUM_OFFLOAD		7	/* Offload bits in mbuf flag */
 
-/* Supported RX Buffer Sizes */
-#define EM_RXBUFFER_2048        2048
-#define EM_RXBUFFER_4096        4096
-#define EM_RXBUFFER_8192        8192
-#define EM_RXBUFFER_16384      16384
+struct adapter;
 
-#define EM_MAX_SCATTER            64
-
-typedef enum _XSUM_CONTEXT_T {
-	OFFLOAD_NONE,
-	OFFLOAD_TCP_IP,
-	OFFLOAD_UDP_IP
-} XSUM_CONTEXT_T;
-
-struct adapter adapter;		/* XXX: ugly forward declaration */
 struct em_int_delay_info {
-	struct adapter *adapter;	/* XXX: ugly pointer */
-	int offset;		/* Register offset to read/write */
-	int value;		/* Current value in usecs */
+	struct adapter *adapter;	/* Back-pointer to the adapter struct */
+	int offset;			/* Register offset to read/write */
+	int value;			/* Current value in usecs */
 };
 
 /*
  * Bus dma allocation structure used by
- * em_dma_malloc() and em_dma_free().
+ * e1000_dma_malloc and e1000_dma_free.
  */
 struct em_dma_alloc {
-	bus_addr_t		dma_paddr;
-	caddr_t			dma_vaddr;
-	bus_dma_tag_t		dma_tag;
-	bus_dmamap_t		dma_map;
-	bus_dma_segment_t	dma_seg;
-	int			dma_nseg;
+        bus_addr_t              dma_paddr;
+        caddr_t                 dma_vaddr;
+        bus_dma_tag_t           dma_tag;
+        bus_dmamap_t            dma_map;
+        bus_dma_segment_t       dma_seg;
+        int                     dma_nseg;
 };
 
-/* Driver softc. */
+/* Our adapter structure */
 struct adapter {
 	struct ifnet	*ifp;
-	struct em_hw	hw;
+	struct e1000_hw	hw;
 
 	/* FreeBSD operating-system-specific structures. */
-	struct em_osdep osdep;
+	struct e1000_osdep osdep;
 	struct device	*dev;
 	struct resource *res_memory;
 	struct resource *flash_mem;
+	struct resource *msix_mem;
 	struct resource	*res_ioport;
 	struct resource	*res_interrupt;
 	void		*int_handler_tag;
 	struct ifmedia	media;
 	struct callout	timer;
 	struct callout	tx_fifo_timer;
+	int		watchdog_timer;
 	int		io_rid;
+	int		msi;
 	int		if_flags;
-	struct mtx	mtx;
+	int		max_frame_size;
+	int		min_frame_size;
+	struct mtx	core_mtx;
+	struct mtx	tx_mtx;
 	int		em_insert_vlan_header;
-	struct task	link_task;
-	struct task	rxtx_task;
-	struct taskqueue *tq;		/* private task queue */
+	struct task     link_task;
+	struct task     rxtx_task;
+	struct taskqueue *tq;           /* private task queue */
+	/* Management and WOL features */
+	int		wol;
+	int		has_manage;
 
 	/* Info about the board itself */
-	uint32_t	part_num;
 	uint8_t		link_active;
 	uint16_t	link_speed;
 	uint16_t	link_duplex;
@@ -286,8 +304,6 @@ struct adapter {
 	struct em_int_delay_info tx_abs_int_delay;
 	struct em_int_delay_info rx_int_delay;
 	struct em_int_delay_info rx_abs_int_delay;
-
-	XSUM_CONTEXT_T  active_checksum_context;
 
 	/*
 	 * Transmit definitions
@@ -299,14 +315,21 @@ struct adapter {
 	 * The number of remaining tx_desc is num_tx_desc_avail.
 	 */
 	struct em_dma_alloc	txdma;		/* bus_dma glue for tx desc */
-	struct em_tx_desc	*tx_desc_base;
+	struct e1000_tx_desc	*tx_desc_base;
 	uint32_t		next_avail_tx_desc;
-	uint32_t		oldest_used_tx_desc;
+	uint32_t		next_tx_to_clean;
 	volatile uint16_t	num_tx_desc_avail;
         uint16_t		num_tx_desc;
         uint32_t		txd_cmd;
 	struct em_buffer	*tx_buffer_area;
 	bus_dma_tag_t		txtag;		/* dma tag for tx */
+	uint32_t	   	tx_tso;		/* last tx was tso */
+
+	/*
+	 * Transmit function pointer:
+	 *      legacy or advanced (82575 and later)
+	 */
+	int (*em_xmit) (struct adapter *adapter, struct mbuf **m_headp);
 
 	/* 
 	 * Receive definitions
@@ -317,7 +340,7 @@ struct adapter {
 	 * The next pair to check on receive is at offset next_rx_desc_to_check
 	 */
 	struct em_dma_alloc	rxdma;		/* bus_dma glue for rx desc */
-	struct em_rx_desc	*rx_desc_base;
+	struct e1000_rx_desc	*rx_desc_base;
 	uint32_t		next_rx_desc_to_check;
 	uint32_t		rx_buffer_len;
 	uint16_t		num_rx_desc;
@@ -326,11 +349,15 @@ struct adapter {
 	bus_dma_tag_t		rxtag;
 	bus_dmamap_t		rx_sparemap;
 
-	/* First/last mbuf pointers, for collecting multisegment RX packets. */
+	/*
+	 * First/last mbuf pointers, for
+	 * collecting multisegment RX packets.
+	 */
 	struct mbuf	       *fmp;
 	struct mbuf	       *lmp;
 
 	/* Misc stats maintained by the driver */
+	unsigned long	dropped_pkts;
 	unsigned long	mbuf_alloc_failed;
 	unsigned long	mbuf_cluster_failed;
 	unsigned long	no_tx_desc_avail1;
@@ -359,7 +386,7 @@ struct adapter {
 	boolean_t       pcix_82544;
 	boolean_t       in_detach;
 
-	struct em_hw_stats stats;
+	struct e1000_hw_stats stats;
 };
 
 /* ******************************************************************************
@@ -379,6 +406,7 @@ typedef struct _em_vendor_info_t {
 
 
 struct em_buffer {
+	int		next_eop;  /* Index of the desc to watch */
         struct mbuf    *m_head;
         bus_dmamap_t    map;         /* bus_dma map for packet */
 };
@@ -386,21 +414,27 @@ struct em_buffer {
 /* For 82544 PCIX  Workaround */
 typedef struct _ADDRESS_LENGTH_PAIR
 {
-    u_int64_t   address;
-    u_int32_t   length;
+	uint64_t   address;
+	uint32_t   length;
 } ADDRESS_LENGTH_PAIR, *PADDRESS_LENGTH_PAIR;
 
 typedef struct _DESCRIPTOR_PAIR
 {
-    ADDRESS_LENGTH_PAIR descriptor[4];
-    u_int32_t   elements;
+	ADDRESS_LENGTH_PAIR descriptor[4];
+	uint32_t   elements;
 } DESC_ARRAY, *PDESC_ARRAY;
 
-#define	EM_LOCK_INIT(_sc, _name) \
-	mtx_init(&(_sc)->mtx, _name, MTX_NETWORK_LOCK, MTX_DEF)
-#define	EM_LOCK_DESTROY(_sc)	mtx_destroy(&(_sc)->mtx)
-#define	EM_LOCK(_sc)		mtx_lock(&(_sc)->mtx)
-#define	EM_UNLOCK(_sc)		mtx_unlock(&(_sc)->mtx)
-#define	EM_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->mtx, MA_OWNED)
+#define	EM_CORE_LOCK_INIT(_sc, _name) \
+	mtx_init(&(_sc)->core_mtx, _name, "EM Core Lock", MTX_DEF)
+#define	EM_TX_LOCK_INIT(_sc, _name) \
+	mtx_init(&(_sc)->tx_mtx, _name, "EM TX Lock", MTX_DEF)
+#define	EM_CORE_LOCK_DESTROY(_sc)	mtx_destroy(&(_sc)->core_mtx)
+#define	EM_TX_LOCK_DESTROY(_sc)		mtx_destroy(&(_sc)->tx_mtx)
+#define	EM_CORE_LOCK(_sc)		mtx_lock(&(_sc)->core_mtx)
+#define	EM_TX_LOCK(_sc)			mtx_lock(&(_sc)->tx_mtx)
+#define	EM_CORE_UNLOCK(_sc)		mtx_unlock(&(_sc)->core_mtx)
+#define	EM_TX_UNLOCK(_sc)		mtx_unlock(&(_sc)->tx_mtx)
+#define	EM_CORE_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->core_mtx, MA_OWNED)
+#define	EM_TX_LOCK_ASSERT(_sc)		mtx_assert(&(_sc)->tx_mtx, MA_OWNED)
 
 #endif /* _EM_H_DEFINED_ */
