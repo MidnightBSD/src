@@ -33,16 +33,30 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGES.
 #
-# $FreeBSD: src/sys/modules/ath_rate_sample/Makefile,v 1.1 2005/03/11 01:39:57 sam Exp $
+# $FreeBSD: src/sys/modules/ath_rate_sample/Makefile,v 1.4 2007/01/28 04:36:05 sam Exp $
 #
 
 .PATH: ${.CURDIR}/../../dev/ath/ath_rate/sample
 
 KMOD=	ath_rate
 SRCS=	sample.c
-SRCS+=	opt_bdg.h device_if.h bus_if.h pci_if.h opt_inet.h
+SRCS+=	device_if.h bus_if.h pci_if.h opt_inet.h opt_ah.h
 
 HAL=	${.CURDIR}/../../contrib/dev/ath
-CFLAGS+=  -I. -I${HAL}/freebsd -I${HAL}
+CFLAGS+=  -I. -I${.CURDIR}/../../dev/ath -I${HAL}
+
+# patch for hal naming difference
+.if ${MACHINE_ARCH} == "amd64"
+ATH_MODULE_ARCH=x86_64
+.elif ${MACHINE_ARCH} == "sparc64"
+ATH_MODULE_ARCH=sparc64-be
+.elif ${MACHINE_ARCH} == "powerpc"
+ATH_MODULE_ARCH=powerpc-be
+.else
+ATH_MODULE_ARCH=${MACHINE_ARCH}
+.endif
+
+opt_ah.h: ${HAL}/public/${ATH_MODULE_ARCH}-elf.opt_ah.h
+	cp ${HAL}/public/${ATH_MODULE_ARCH}-elf.opt_ah.h ${.TARGET}
 
 .include <bsd.kmod.mk>
