@@ -26208,6 +26208,16 @@ sys/dev/iir/iir.h -text
 sys/dev/iir/iir_ctrl.c -text
 sys/dev/iir/iir_pci.c -text
 sys/dev/io/iodev.c -text
+sys/dev/ipmi/ipmi.c -text
+sys/dev/ipmi/ipmi_acpi.c -text
+sys/dev/ipmi/ipmi_isa.c -text
+sys/dev/ipmi/ipmi_kcs.c -text
+sys/dev/ipmi/ipmi_pci.c -text
+sys/dev/ipmi/ipmi_smbios.c -text
+sys/dev/ipmi/ipmi_smbus.c -text
+sys/dev/ipmi/ipmi_smic.c -text
+sys/dev/ipmi/ipmi_ssif.c -text
+sys/dev/ipmi/ipmivars.h -text
 sys/dev/ips/ips.c -text
 sys/dev/ips/ips.h -text
 sys/dev/ips/ips_commands.c -text
