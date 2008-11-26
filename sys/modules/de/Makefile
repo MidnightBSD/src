@@ -1,9 +1,9 @@
-# $FreeBSD: src/sys/modules/de/Makefile,v 1.3.8.1 2005/12/27 02:39:44 delphij Exp $
+# $FreeBSD: src/sys/modules/de/Makefile,v 1.7 2006/02/26 17:51:22 imp Exp $
 
-.PATH: ${.CURDIR}/../../pci
+.PATH: ${.CURDIR}/../../dev/de
 
 KMOD=	if_de
-SRCS=	if_de.c opt_bdg.h opt_ddb.h device_if.h bus_if.h pci_if.h
+SRCS=	if_de.c opt_ddb.h device_if.h bus_if.h pci_if.h
 
 # Compile-time options.
 
@@ -12,9 +12,5 @@ SRCS=	if_de.c opt_bdg.h opt_ddb.h device_if.h bus_if.h pci_if.h
 
 #  Enable performance statistics:
 #CFLAGS+=	-DTULIP_PERFSTATS
-
-#  Enable the use of a software interrupt to alleviate the occurrence of
-#  interrupt livelock when under heavy load:
-#CFLAGS+=	-DTULIP_USE_SOFTINTR
 
 .include <bsd.kmod.mk>
