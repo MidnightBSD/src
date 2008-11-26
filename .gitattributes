@@ -26545,6 +26545,15 @@ sys/dev/sbni/if_sbnireg.h -text
 sys/dev/sbni/if_sbnivar.h -text
 sys/dev/sbsh/if_sbsh.c -text
 sys/dev/sbsh/if_sbshreg.h -text
+sys/dev/scc/scc_bfe.h -text
+sys/dev/scc/scc_bfe_ebus.c -text
+sys/dev/scc/scc_bfe_macio.c -text
+sys/dev/scc/scc_bfe_sbus.c -text
+sys/dev/scc/scc_bus.h -text
+sys/dev/scc/scc_core.c -text
+sys/dev/scc/scc_dev_sab82532.c -text
+sys/dev/scc/scc_dev_z8530.c -text
+sys/dev/scc/scc_if.m -text
 sys/dev/scd/scd.c -text
 sys/dev/scd/scd_isa.c -text
 sys/dev/scd/scdreg.h -text
