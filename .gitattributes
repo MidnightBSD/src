@@ -25691,6 +25691,7 @@ sys/dev/cm/smc90cx6var.h -text
 sys/dev/cnw/if_cnw.c -text
 sys/dev/cnw/if_cnwioctl.h -text
 sys/dev/cnw/if_cnwreg.h -text
+sys/dev/coretemp/coretemp.c -text
 sys/dev/cp/cpddk.c -text
 sys/dev/cp/cpddk.h -text
 sys/dev/cp/if_cp.c -text
