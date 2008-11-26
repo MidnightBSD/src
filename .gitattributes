@@ -24776,6 +24776,7 @@ sys/compat/ia32/ia32_signal.h -text
 sys/compat/ia32/ia32_sysvec.c -text
 sys/compat/ia32/ia32_util.h -text
 sys/compat/linprocfs/linprocfs.c -text
+sys/compat/linsysfs/linsysfs.c -text
 sys/compat/linux/linux_emul.c -text
 sys/compat/linux/linux_emul.h -text
 sys/compat/linux/linux_file.c -text
