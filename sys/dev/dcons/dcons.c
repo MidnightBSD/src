@@ -31,14 +31,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons.c,v 1.1.1.2 2006-02-25 02:36:22 laffer1 Exp $
- * $FreeBSD: src/sys/dev/dcons/dcons.c,v 1.20 2005/01/06 01:42:34 imp Exp $
+ * $Id: dcons.c,v 1.1.1.3 2008-11-26 15:45:16 laffer1 Exp $
+ * $FreeBSD: src/sys/dev/dcons/dcons.c,v 1.21 2007/05/25 05:00:39 simokawa Exp $
  */
 
 #include <sys/param.h>
 
 #if defined(__DragonFly__) || defined(_BOOT)
 #include "dcons.h"
+#if defined(_BOOT)
+#include "stand.h"
+#endif
 #else
 #include <dev/dcons/dcons.h>
 #endif

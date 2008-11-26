@@ -31,8 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons.h,v 1.1.1.2 2006-02-25 02:36:22 laffer1 Exp $
- * $FreeBSD: src/sys/dev/dcons/dcons.h,v 1.5 2005/01/06 01:42:34 imp Exp $
+ * $Id: dcons.h,v 1.1.1.3 2008-11-26 15:45:16 laffer1 Exp $
+ * $FreeBSD: src/sys/dev/dcons/dcons.h,v 1.6 2007/06/08 04:33:25 simokawa Exp $
  */
 
 #if defined(_KERNEL) || defined(_BOOT)
@@ -65,6 +65,8 @@ struct dcons_buf {
 #define DCONS_CSR_VAL_VER	0x64636f /* "dco" */
 #define DCONS_CSR_KEY_HI	0x3a
 #define DCONS_CSR_KEY_LO	0x3b
+#define DCONS_CSR_KEY_RESET_HI	0x3c
+#define DCONS_CSR_KEY_RESET_LO	0x3d
 
 #define	DCONS_HEADER_SIZE sizeof(struct dcons_buf)
 #define DCONS_MAKE_PTR(x)	htonl(((x)->gen << DCONS_GEN_SHIFT) | (x)->pos)
@@ -88,6 +90,7 @@ struct dcons_ch {
 #define STATE0		0
 #define STATE1		1
 #define STATE2		2
+#define STATE3		3
 
 #if defined(_KERNEL) || defined(_BOOT)
 struct dcons_softc {

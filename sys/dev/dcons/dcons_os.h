@@ -31,8 +31,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/dcons/dcons_os.h,v 1.2 2005/01/06 01:42:34 imp Exp $
+ * $FreeBSD: src/sys/dev/dcons/dcons_os.h,v 1.3 2007/06/08 00:54:44 simokawa Exp $
  */
+
+
+typedef void (*dcons_poll_fn)(void *, int);
+EVENTHANDLER_DECLARE(dcons_poll, dcons_poll_fn);
 
 struct dcons_global {
 	struct consdev *cdev;

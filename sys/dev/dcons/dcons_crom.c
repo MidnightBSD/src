@@ -31,8 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dcons_crom.c,v 1.1.1.2 2006-02-25 02:36:22 laffer1 Exp $
- * $FreeBSD: src/sys/dev/dcons/dcons_crom.c,v 1.6 2005/01/06 01:42:34 imp Exp $
+ * $Id: dcons_crom.c,v 1.1.1.3 2008-11-26 15:45:16 laffer1 Exp $
+ * $FreeBSD: src/sys/dev/dcons/dcons_crom.c,v 1.9 2007/06/08 04:33:25 simokawa Exp $
  */
 
 #include <sys/param.h>
@@ -62,10 +62,18 @@
 
 #include <sys/cons.h>
 
+#define EXPOSE_IDT_ADDR 1
+
+#if (defined(__i386__) || defined(__amd64__)) && defined(EXPOSE_IDT_ADDR)
+#include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/pmap.h>
+#include <machine/segments.h> /* for idt */
+#endif
 static bus_addr_t dcons_paddr;
 
 #if __FreeBSD_version >= 500000
-static int force_console = 1;
+static int force_console = 0;
 TUNABLE_INT("hw.firewire.dcons_crom.force_console", &force_console);
 #endif
 
@@ -84,6 +92,7 @@ struct dcons_crom_softc {
 	bus_dma_tag_t dma_tag;
 	bus_dmamap_t dma_map;
 	bus_addr_t bus_addr;
+	eventhandler_tag ehand;
 };
 
 static void
@@ -107,6 +116,19 @@ dcons_crom_probe(device_t dev)
 }
 
 #ifndef NEED_NEW_DRIVER
+#if (defined(__i386__) || defined(__amd64__)) && defined(EXPOSE_IDT_ADDR)
+static void
+dcons_crom_expose_idt(struct dcons_crom_softc *sc)
+{
+	static off_t idt_paddr;
+
+	/* XXX */
+	idt_paddr = (char *)idt - (char *)KERNBASE;
+
+	crom_add_entry(&sc->unit, DCONS_CSR_KEY_RESET_HI, ADDR_HI(idt_paddr));
+	crom_add_entry(&sc->unit, DCONS_CSR_KEY_RESET_LO, ADDR_LO(idt_paddr));
+}
+#endif
 static void
 dcons_crom_post_busreset(void *arg)
 {
@@ -127,6 +149,9 @@ dcons_crom_post_busreset(void *arg)
 	crom_add_simple_text(src, &sc->unit, &sc->ver, "dcons");
 	crom_add_entry(&sc->unit, DCONS_CSR_KEY_HI, ADDR_HI(dcons_paddr));
 	crom_add_entry(&sc->unit, DCONS_CSR_KEY_LO, ADDR_LO(dcons_paddr));
+#if (defined(__i386__) || defined(__amd64__)) && defined(EXPOSE_IDT_ADDR)
+	dcons_crom_expose_idt(sc);
+#endif
 }
 #endif
 
@@ -162,6 +187,14 @@ dmamap_cb(void *arg, bus_dma_segment_t *segments, int seg, int error)
 	if (force_console)
 		cnselect(dcons_conf->cdev);
 #endif
+}
+
+static void
+dcons_crom_poll(void *p, int arg)
+{
+	struct dcons_crom_softc *sc = (struct dcons_crom_softc *) p;
+
+	sc->fd.fc->poll(sc->fd.fc, -1, -1);
 }
 
 static int
@@ -200,6 +233,8 @@ dcons_crom_attach(device_t dev)
 	bus_dmamap_load(sc->dma_tag, sc->dma_map,
 	    (void *)dcons_conf->buf, dcons_conf->size,
 	    dmamap_cb, sc, 0);
+	sc->ehand = EVENTHANDLER_REGISTER(dcons_poll, dcons_crom_poll,
+			 (void *)sc, 0);
 	return (0);
 #endif
 }
@@ -211,6 +246,9 @@ dcons_crom_detach(device_t dev)
 
         sc = (struct dcons_crom_softc *) device_get_softc(dev);
 	sc->fd.post_busreset = NULL;
+
+	if (sc->ehand)
+		EVENTHANDLER_DEREGISTER(dcons_poll, sc->ehand);
 
 	/* XXX */
 	if (dcons_conf->dma_tag == sc->dma_tag)

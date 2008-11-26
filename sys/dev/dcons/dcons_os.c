@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/dcons/dcons_os.c,v 1.6 2005/01/06 01:42:34 imp Exp $
+ * $FreeBSD: src/sys/dev/dcons/dcons_os.c,v 1.19 2007/08/17 05:32:39 simokawa Exp $
  */
 
 #include <sys/param.h>
@@ -48,6 +48,7 @@
 #include <sys/consio.h>
 #include <sys/tty.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/ucred.h>
 
@@ -70,9 +71,12 @@
 #include <vm/vm_param.h>
 #include <vm/pmap.h>
 
-#include "opt_ddb.h"
 #include "opt_comconsole.h"
 #include "opt_dcons.h"
+#include "opt_kdb.h"
+#include "opt_gdb.h"
+#include "opt_ddb.h"
+
 
 #ifndef DCONS_POLL_HZ
 #define DCONS_POLL_HZ	100
@@ -171,28 +175,26 @@ static int	dcons_drv_init(int);
 
 static cn_probe_t	dcons_cnprobe;
 static cn_init_t	dcons_cninit;
+static cn_term_t	dcons_cnterm;
 static cn_getc_t	dcons_cngetc;
-static cn_checkc_t 	dcons_cncheckc;
 static cn_putc_t	dcons_cnputc;
 
-CONS_DRIVER(dcons, dcons_cnprobe, dcons_cninit, NULL, dcons_cngetc,
-    dcons_cncheckc, dcons_cnputc, NULL);
+CONSOLE_DRIVER(dcons);
 
-#if __FreeBSD_version >= 502122
+#if defined(GDB) && (__FreeBSD_version >= 502122)
 static gdb_probe_f dcons_dbg_probe;
 static gdb_init_f dcons_dbg_init;
 static gdb_term_f dcons_dbg_term;
 static gdb_getc_f dcons_dbg_getc;
-static gdb_checkc_f dcons_dbg_checkc;
 static gdb_putc_f dcons_dbg_putc;
 
 GDB_DBGPORT(dcons, dcons_dbg_probe, dcons_dbg_init, dcons_dbg_term,
-    dcons_dbg_checkc, dcons_dbg_getc, dcons_dbg_putc);
+    dcons_dbg_getc, dcons_dbg_putc);
 
 extern struct gdb_dbgport *gdb_cur;
 #endif
 
-#if (KDB || DDB) && ALT_BREAK_TO_DEBUGGER
+#if (defined(GDB) || defined(DDB)) && defined(ALT_BREAK_TO_DEBUGGER)
 static int
 dcons_check_break(struct dcons_softc *dc, int c)
 {
@@ -202,12 +204,14 @@ dcons_check_break(struct dcons_softc *dc, int c)
 #if __FreeBSD_version >= 502122
 	if (kdb_alt_break(c, &dc->brk_state)) {
 		if ((dc->flags & DC_GDB) != 0) {
+#ifdef GDB
 			if (gdb_cur == &dcons_gdb_dbgport) {
 				kdb_dbbe_select("gdb");
-				breakpoint();
+				kdb_enter("Break sequence on dcons gdb port");
 			}
+#endif
 		} else
-			breakpoint();
+			kdb_enter("Break sequence on dcons console port");
 	}
 #else
 	switch (dc->brk_state) {
@@ -237,7 +241,7 @@ dcons_check_break(struct dcons_softc *dc, int c)
 #endif
 
 static int
-dcons_os_checkc(struct dcons_softc *dc)
+dcons_os_checkc_nopoll(struct dcons_softc *dc)
 {
 	int c;
 
@@ -253,6 +257,14 @@ dcons_os_checkc(struct dcons_softc *dc)
 }
 
 static int
+dcons_os_checkc(struct dcons_softc *dc)
+{
+	EVENTHANDLER_INVOKE(dcons_poll, 0);
+	return (dcons_os_checkc_nopoll(dc));
+}
+
+#if defined(GDB) || !defined(CONS_NODEV)
+static int
 dcons_os_getc(struct dcons_softc *dc)
 {
 	int c;
@@ -261,6 +273,7 @@ dcons_os_getc(struct dcons_softc *dc)
 
 	return (c & 0xff);
 } 
+#endif
 
 static void
 dcons_os_putc(struct dcons_softc *dc, int c)
@@ -283,7 +296,7 @@ dcons_open(DEV dev, int flag, int mode, THREAD *td)
 	if (unit != 0)
 		return (ENXIO);
 
-	tp = dev->si_tty = ttymalloc(dev->si_tty);
+	tp = dev->si_tty;
 	tp->t_oproc = dcons_tty_start;
 	tp->t_param = dcons_tty_param;
 	tp->t_stop = nottystop;
@@ -295,8 +308,8 @@ dcons_open(DEV dev, int flag, int mode, THREAD *td)
 	if ((tp->t_state & TS_ISOPEN) == 0) {
 		tp->t_state |= TS_CARR_ON;
 		ttyconsolemode(tp, 0);
-		ttsetwater(tp);
-	} else if ((tp->t_state & TS_XCLUDE) && suser(td)) {
+	} else if ((tp->t_state & TS_XCLUDE) &&
+	    priv_check(td, PRIV_TTY_EXCLUSIVE)) {
 		splx(s);
 		return (EBUSY);
 	}
@@ -401,7 +414,7 @@ dcons_timeout(void *v)
 	for (i = 0; i < DCONS_NPORT; i ++) {
 		dc = &sc[i];
 		tp = ((DEV)dc->dev)->si_tty;
-		while ((c = dcons_os_checkc(dc)) != -1)
+		while ((c = dcons_os_checkc_nopoll(dc)) != -1)
 			if (tp->t_state & TS_ISOPEN)
 #if __FreeBSD_version < 502113
 				(*linesw[tp->t_line].l_rint)(c, tp);
@@ -445,15 +458,14 @@ dcons_cninit(struct consdev *cp)
 		= (void *)&sc[DCONS_CON]; /* share port0 with unit0 */
 }
 
+static void
+dcons_cnterm(struct consdev *cp)
+{
+}
+
 #if CONS_NODEV
 static int
 dcons_cngetc(struct consdev *cp)
-{
-	struct dcons_softc *dc = (struct dcons_softc *)cp->cn_arg;
-	return (dcons_os_getc(dc));
-}
-static int
-dcons_cncheckc(struct consdev *cp)
 {
 	struct dcons_softc *dc = (struct dcons_softc *)cp->cn_arg;
 	return (dcons_os_checkc(dc));
@@ -550,7 +562,7 @@ ok:
 	dcons_buf = dg.buf;
 
 #if __FreeBSD_version < 502122
-#if DDB && DCONS_FORCE_GDB
+#if defined(DDB) && DCONS_FORCE_GDB
 #if CONS_NODEV
 	gdbconsdev.cn_arg = (void *)&sc[DCONS_GDB];
 #if __FreeBSD_version >= 501109
@@ -585,7 +597,7 @@ dcons_attach_port(int port, char *name, int flags)
 	dev = make_dev(&dcons_cdevsw, port,
 			UID_ROOT, GID_WHEEL, 0600, name);
 	dc->dev = (void *)dev;
-	tp = ttymalloc(NULL);
+	tp = ttyalloc();
 
 	dev->si_drv1 = (void *)dc;
 	dev->si_tty = tp;
@@ -679,7 +691,7 @@ dcons_modevent(module_t mode, int type, void *data)
 		printf("dcons: unload\n");
 		callout_stop(&dcons_callout);
 #if __FreeBSD_version < 502122
-#if DDB && DCONS_FORCE_GDB
+#if defined(DDB) && DCONS_FORCE_GDB
 #if CONS_NODEV
 		gdb_arg = NULL;
 #else
@@ -698,7 +710,9 @@ dcons_modevent(module_t mode, int type, void *data)
 
 		break;
 	case MOD_SHUTDOWN:
+#if 0		/* Keep connection after halt */
 		dg.buf->magic = 0;
+#endif
 		break;
 	default:
 		err = EOPNOTSUPP;
@@ -707,13 +721,17 @@ dcons_modevent(module_t mode, int type, void *data)
 	return(err);
 }
 
-#if __FreeBSD_version >= 502122
+#if defined(GDB) && (__FreeBSD_version >= 502122)
 /* Debugger interface */
 
 static int
 dcons_dbg_probe(void)
 {
-	return(DCONS_FORCE_GDB);
+	int dcons_gdb;
+
+	if (getenv_int("dcons_gdb", &dcons_gdb) == 0)
+		return (-1);
+	return (dcons_gdb);
 }
 
 static void
@@ -731,13 +749,6 @@ dcons_dbg_putc(int c)
 {
 	struct dcons_softc *dc = &sc[DCONS_GDB];
 	dcons_os_putc(dc, c);
-}
-
-static int
-dcons_dbg_checkc(void)
-{
-	struct dcons_softc *dc = &sc[DCONS_GDB];
-	return (dcons_os_checkc(dc));
 }
 
 static int
