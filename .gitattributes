@@ -25364,6 +25364,9 @@ sys/crypto/blowfish/bf_locl.h -text
 sys/crypto/blowfish/bf_pi.h -text
 sys/crypto/blowfish/bf_skey.c -text
 sys/crypto/blowfish/blowfish.h -text
+sys/crypto/camellia/camellia-api.c -text
+sys/crypto/camellia/camellia.c -text
+sys/crypto/camellia/camellia.h -text
 sys/crypto/des/arch/i386/des_enc.S -text
 sys/crypto/des/des.h -text
 sys/crypto/des/des_ecb.c -text
@@ -25388,6 +25391,9 @@ sys/crypto/sha1.h -text
 sys/crypto/sha2/sha2.c -text
 sys/crypto/sha2/sha2.h -text
 sys/crypto/via/padlock.c -text
+sys/crypto/via/padlock.h -text
+sys/crypto/via/padlock_cipher.c -text
+sys/crypto/via/padlock_hash.c -text
 sys/ddb/db_access.c -text
 sys/ddb/db_access.h -text
 sys/ddb/db_break.c -text
