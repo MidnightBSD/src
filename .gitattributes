@@ -28137,15 +28137,18 @@ sys/modules/geom/Makefile.inc -text
 sys/modules/geom/geom_apple/Makefile -text
 sys/modules/geom/geom_bde/Makefile -text
 sys/modules/geom/geom_bsd/Makefile -text
+sys/modules/geom/geom_cache/Makefile -text
 sys/modules/geom/geom_ccd/Makefile -text
 sys/modules/geom/geom_concat/Makefile -text
 sys/modules/geom/geom_eli/Makefile -text
 sys/modules/geom/geom_fox/Makefile -text
 sys/modules/geom/geom_gate/Makefile -text
 sys/modules/geom/geom_gpt/Makefile -text
+sys/modules/geom/geom_journal/Makefile -text
 sys/modules/geom/geom_label/Makefile -text
 sys/modules/geom/geom_mbr/Makefile -text
 sys/modules/geom/geom_mirror/Makefile -text
+sys/modules/geom/geom_multipath/Makefile -text
 sys/modules/geom/geom_nop/Makefile -text
 sys/modules/geom/geom_pc98/Makefile -text
 sys/modules/geom/geom_raid3/Makefile -text
@@ -28154,6 +28157,7 @@ sys/modules/geom/geom_stripe/Makefile -text
 sys/modules/geom/geom_sunlabel/Makefile -text
 sys/modules/geom/geom_uzip/Makefile -text
 sys/modules/geom/geom_vinum/Makefile -text
+sys/modules/geom/geom_virstor/Makefile -text
 sys/modules/geom/geom_vol_ffs/Makefile -text
 sys/modules/geom/geom_zero/Makefile -text
 sys/modules/harp/Makefile -text

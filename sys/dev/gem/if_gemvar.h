@@ -25,7 +25,7 @@
  *
  *	from: NetBSD: gemvar.h,v 1.8 2002/05/15 02:36:12 matt Exp
  *
- * $FreeBSD: src/sys/dev/gem/if_gemvar.h,v 1.10.2.1 2005/10/05 22:08:17 marius Exp $
+ * $FreeBSD: src/sys/dev/gem/if_gemvar.h,v 1.15 2007/09/26 21:14:17 marius Exp $
  */
 
 #ifndef	_IF_GEMVAR_H
@@ -58,9 +58,8 @@
  * Receive descriptor list size.  We have one Rx buffer per incoming
  * packet, so this logic is a little simpler.
  */
-#define	GEM_NRXDESC		128
+#define	GEM_NRXDESC		256
 #define	GEM_NRXDESC_MASK	(GEM_NRXDESC - 1)
-#define	GEM_PREVRX(x)		((x - 1) & GEM_NRXDESC_MASK)
 #define	GEM_NEXTRX(x)		((x + 1) & GEM_NRXDESC_MASK)
 
 /*
@@ -104,12 +103,6 @@ struct gem_txsoft {
 
 STAILQ_HEAD(gem_txsq, gem_txsoft);
 
-/* Argument structure for busdma callback */
-struct gem_txdma {
-	struct gem_softc *txd_sc;
-	struct gem_txsoft	*txd_txs;
-};
-
 /*
  * Software state for receive jobs.
  */
@@ -124,34 +117,41 @@ struct gem_rxsoft {
  */
 struct gem_softc {
 	struct ifnet	*sc_ifp;
+	struct mtx	sc_mtx;
 	device_t	sc_miibus;
 	struct mii_data	*sc_mii;	/* MII media control */
 	device_t	sc_dev;		/* generic device information */
-	u_char		sc_enaddr[6];
+	u_char		sc_enaddr[ETHER_ADDR_LEN];
 	struct callout	sc_tick_ch;	/* tick callout */
 	struct callout	sc_rx_ch;	/* delayed rx callout */
+	int		sc_wdog_timer;	/* watchdog timer */
 
-	/* The following bus handles are to be provided by the bus front-end */
-	bus_space_tag_t	sc_bustag;	/* bus tag */
+	void		*sc_ih;
+	struct resource *sc_res[2];
 	bus_dma_tag_t	sc_pdmatag;	/* parent bus dma tag */
 	bus_dma_tag_t	sc_rdmatag;	/* RX bus dma tag */
 	bus_dma_tag_t	sc_tdmatag;	/* TX bus dma tag */
 	bus_dma_tag_t	sc_cdmatag;	/* control data bus dma tag */
 	bus_dmamap_t	sc_dmamap;	/* bus dma handle */
-	bus_space_handle_t sc_h;	/* bus space handle for all regs */
 
-	int		sc_phys[2];	/* MII instance -> PHY map */
+	int		sc_phyad;	/* addr. of PHY to use or -1 for any */
 
-	int		sc_mif_config;	/* Selected MII reg setting */
-
-	int		sc_pci;		/* XXXXX -- PCI buses are LE. */
 	u_int		sc_variant;	/* which GEM are we dealing with? */
 #define	GEM_UNKNOWN		0	/* don't know */
-#define	GEM_SUN_GEM		1	/* Sun GEM variant */
-#define	GEM_APPLE_GMAC		2	/* Apple GMAC variant */
+#define	GEM_SUN_GEM		1	/* Sun GEM */
+#define	GEM_SUN_ERI		2	/* Sun ERI */
+#define	GEM_APPLE_GMAC		3	/* Apple GMAC */
+#define	GEM_APPLE_K2_GMAC	4	/* Apple K2 GMAC */
+
+#define	GEM_IS_APPLE(sc)						\
+	((sc)->sc_variant == GEM_APPLE_GMAC ||				\
+	(sc)->sc_variant == GEM_APPLE_K2_GMAC)
 
 	u_int		sc_flags;	/* */
-#define	GEM_GIGABIT		0x0001	/* has a gigabit PHY */
+#define	GEM_INITED	(1 << 0)	/* reset persistent regs initialized */
+#define	GEM_LINK	(1 << 1)	/* link is up */
+#define	GEM_PCI		(1 << 2)	/* XXX PCI busses are little-endian */
+#define	GEM_SERDES	(1 << 3)	/* use the SERDES */
 
 	/*
 	 * Ring buffer DMA stuff.
@@ -174,32 +174,31 @@ struct gem_softc {
 #define	sc_txdescs	sc_control_data->gcd_txdescs
 #define	sc_rxdescs	sc_control_data->gcd_rxdescs
 
-	int		sc_txfree;		/* number of free Tx descriptors */
-	int		sc_txnext;		/* next ready Tx descriptor */
-	int		sc_txwin;		/* Tx descriptors since last Tx int */
+	int		sc_txfree;	/* number of free Tx descriptors */
+	int		sc_txnext;	/* next ready Tx descriptor */
+	int		sc_txwin;	/* Tx descriptors since last Tx int */
 
 	struct gem_txsq	sc_txfreeq;	/* free Tx descsofts */
 	struct gem_txsq	sc_txdirtyq;	/* dirty Tx descsofts */
 
-	int		sc_rxptr;		/* next ready RX descriptor/descsoft */
-	int		sc_rxfifosize;		/* Rx FIFO size (bytes) */
+	int		sc_rxptr;	/* next ready RX descriptor/descsoft */
+	int		sc_rxfifosize;	/* Rx FIFO size (bytes) */
 
 	/* ========== */
-	int		sc_inited;
-	int		sc_debug;
 	int		sc_ifflags;
-
-	struct mtx	sc_mtx;
+	int		sc_csum_features;
 };
 
-#define	GEM_DMA_READ(sc, v)	(((sc)->sc_pci) ? le64toh(v) : be64toh(v))
-#define	GEM_DMA_WRITE(sc, v)	(((sc)->sc_pci) ? htole64(v) : htobe64(v))
+#define	GEM_DMA_READ(sc, v)						\
+	((((sc)->sc_flags & GEM_PCI) != 0) ? le64toh(v) : be64toh(v))
+#define	GEM_DMA_WRITE(sc, v)						\
+	((((sc)->sc_flags & GEM_PCI) != 0) ? htole64(v) : htobe64(v))
 
 #define	GEM_CDTXADDR(sc, x)	((sc)->sc_cddma + GEM_CDTXOFF((x)))
 #define	GEM_CDRXADDR(sc, x)	((sc)->sc_cddma + GEM_CDRXOFF((x)))
 
 #define	GEM_CDSYNC(sc, ops)						\
-	bus_dmamap_sync((sc)->sc_cdmatag, (sc)->sc_cddmamap, (ops));	\
+	bus_dmamap_sync((sc)->sc_cdmatag, (sc)->sc_cddmamap, (ops));
 
 #define	GEM_INIT_RXDESC(sc, x)						\
 do {									\
@@ -212,7 +211,19 @@ do {									\
 	    GEM_DMA_WRITE((sc), __rxs->rxs_paddr);			\
 	__rxd->gd_flags =						\
 	    GEM_DMA_WRITE((sc),						\
-			(((__m->m_ext.ext_size)<<GEM_RD_BUFSHIFT)	\
+			(((__m->m_ext.ext_size) << GEM_RD_BUFSHIFT)	\
+				& GEM_RD_BUFSIZE) | GEM_RD_OWN);	\
+} while (0)
+
+#define	GEM_UPDATE_RXDESC(sc, x)					\
+do {									\
+	struct gem_rxsoft *__rxs = &sc->sc_rxsoft[(x)];			\
+	struct gem_desc *__rxd = &sc->sc_rxdescs[(x)];			\
+	struct mbuf *__m = __rxs->rxs_mbuf;				\
+									\
+	__rxd->gd_flags =						\
+	    GEM_DMA_WRITE((sc),						\
+			(((__m->m_ext.ext_size) << GEM_RD_BUFSHIFT)	\
 				& GEM_RD_BUFSIZE) | GEM_RD_OWN);	\
 } while (0)
 
@@ -235,14 +246,11 @@ void	gem_intr(void *);
 int	gem_mediachange(struct ifnet *);
 void	gem_mediastatus(struct ifnet *, struct ifmediareq *);
 
-void	gem_reset(struct gem_softc *);
-
 /* MII methods & callbacks */
 int	gem_mii_readreg(device_t, int, int);
 int	gem_mii_writereg(device_t, int, int, int);
 void	gem_mii_statchg(device_t);
 
 #endif /* _KERNEL */
-
 
 #endif
