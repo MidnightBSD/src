@@ -1,12 +1,15 @@
-# $FreeBSD: src/sys/modules/ipfw/Makefile,v 1.21.2.1 2006/02/11 08:19:37 ume Exp $
+# $FreeBSD: src/sys/modules/ipfw/Makefile,v 1.26 2007/07/03 12:46:06 mlaier Exp $
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../netinet
 
 KMOD=	ipfw
 SRCS=	ip_fw2.c ip_fw_pfil.c
-SRCS+=	opt_inet6.h opt_ipsec.h
+SRCS+=	opt_inet6.h opt_ipsec.h opt_mac.h
 
 CFLAGS+= -DIPFIREWALL
+CFLAGS+= -I${.CURDIR}/../../contrib/pf
 #
 #If you want it verbose
 #CFLAGS+= -DIPFIREWALL_VERBOSE
@@ -17,7 +20,7 @@ CFLAGS+= -DIPFIREWALL
 #
 
 .if !defined(KERNBUILDDIR)
-.if !defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} != "no"
 opt_inet6.h:
 	echo "#define INET6 1" > ${.TARGET}
 .endif
