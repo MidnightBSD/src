@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptmv/hptproc.c,v 1.5.2.1 2005/10/06 18:47:57 delphij Exp $
+ * $FreeBSD: src/sys/dev/hptmv/hptproc.c,v 1.7 2005/12/04 02:12:41 ru Exp $
  */
 /*
  * hptproc.c  sysctl support
@@ -233,7 +233,7 @@ loop:
 #endif
 #endif
 	if (0) {} /* just to compile */
-#if DBGUG
+#ifdef DEBUG
 	else if (length>=9 && strncmp(buffer, "dbglevel ", 9)==0) {
 	    	buffer+=9;
 		length-=9;

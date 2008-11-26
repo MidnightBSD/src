@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hme/if_hme_sbus.c,v 1.17 2005/06/10 16:49:10 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hme/if_hme_sbus.c,v 1.18 2007/02/23 12:18:42 piso Exp $");
 
 /*
  * SBus front-end device driver for the HME ethernet device.
@@ -269,7 +269,7 @@ hme_sbus_attach(device_t dev)
 	}
 
 	if ((error = bus_setup_intr(dev, hsc->hsc_ires, INTR_TYPE_NET |
-	    INTR_MPSAFE, hme_intr, sc, &hsc->hsc_ih)) != 0) {
+	    INTR_MPSAFE, NULL, hme_intr, sc, &hsc->hsc_ih)) != 0) {
 		device_printf(dev, "couldn't establish interrupt\n");
 		hme_detach(sc);
 		goto fail_ires;

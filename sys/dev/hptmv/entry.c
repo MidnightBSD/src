@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptmv/entry.c,v 1.8.2.1 2005/10/06 18:47:57 delphij Exp $
+ * $FreeBSD: src/sys/dev/hptmv/entry.c,v 1.17 2007/06/17 05:55:50 scottl Exp $
  */
  
 #include <sys/param.h>
@@ -50,7 +50,6 @@
 #else 
 #include <pci/pcireg.h>
 #include <pci/pcivar.h>
-#include <machine/clock.h>
 #include <sys/wait.h>
 #include <sys/sysproto.h>
 #endif
@@ -159,7 +158,7 @@ static ST_HPT_DPC DpcQueue[MAX_DPC];
 static int DpcQueue_First=0;
 static int DpcQueue_Last = 0;
 
-char DRIVER_VERSION[] = "v1.12 (" __DATE__ " " __TIME__ ")";
+char DRIVER_VERSION[] = "v1.12";
 
 #if (__FreeBSD_version >= 500000)
 static struct mtx driver_lock;
@@ -167,12 +166,12 @@ intrmask_t lock_driver()
 {
 
 	intrmask_t spl = 0;
-	mtx_lock_spin(&driver_lock);
+	mtx_lock(&driver_lock);
 	return spl;
 }
 void unlock_driver(intrmask_t spl)
 {
-	mtx_unlock_spin(&driver_lock);
+	mtx_unlock(&driver_lock);
 }
 #else 
 static int driver_locked = 0;
@@ -1169,7 +1168,7 @@ dmamap_put(PBUS_DMAMAP p)
 #if __FreeBSD_version >= 500000
 static void hpt_init(void *dummy)
 {
-	mtx_init(&driver_lock, "hptlock", NULL, MTX_SPIN);
+	mtx_init(&driver_lock, "hptlock", NULL, MTX_DEF);
 }
 SYSINIT(hptinit, SI_SUB_CONFIGURE, SI_ORDER_FIRST, hpt_init, NULL);
 #endif
@@ -1183,8 +1182,6 @@ init_adapter(IAL_ADAPTER_T *pAdapter)
 	int i, channel, rid;
 
 	PVDevice pVDev;
-
-	intrmask_t oldspl = lock_driver();
 
 	pAdapter->next = 0;
 
@@ -1226,7 +1223,6 @@ init_adapter(IAL_ADAPTER_T *pAdapter)
 	if (hptmv_allocate_edma_queues(pAdapter))
 	{
 		MV_ERROR("RR182x: Failed to allocate memory for EDMA queues\n");
-		unlock_driver(oldspl);
 		return ENOMEM;
 	}
 
@@ -1239,7 +1235,6 @@ init_adapter(IAL_ADAPTER_T *pAdapter)
 	{
 		MV_ERROR("RR182x: Failed to remap memory space\n");
 		hptmv_free_edma_queues(pAdapter);
-		unlock_driver(oldspl);
 		return ENXIO;
 	}
 	else
@@ -1269,7 +1264,6 @@ init_adapter(IAL_ADAPTER_T *pAdapter)
 unregister:
 		bus_release_resource(pAdapter->hpt_dev, SYS_RES_MEMORY, rid, pAdapter->mem_res);
 		hptmv_free_edma_queues(pAdapter);
-		unlock_driver(oldspl);
 		return ENXIO;
 	}
 	pAdapter->ver_601 = pMvSataAdapter->pcbVersion;
@@ -1412,7 +1406,6 @@ unregister:
 #endif
 
 	mvSataUnmaskAdapterInterrupt(pMvSataAdapter);
-	unlock_driver(oldspl);
 	return 0;
 }
 
@@ -1936,7 +1929,7 @@ hpt_attach(device_t dev)
 		return(ENXIO);
 	}
 
-	if(bus_setup_intr(pAdapter->hpt_dev, pAdapter->hpt_irq, INTR_TYPE_CAM, hpt_intr, pAdapter, &pAdapter->hpt_intr))
+	if(bus_setup_intr(pAdapter->hpt_dev, pAdapter->hpt_irq, INTR_TYPE_CAM, NULL, hpt_intr, pAdapter, &pAdapter->hpt_intr))
 	{
 		hpt_printk(("can't set up interrupt\n"));
 		free(pAdapter, M_DEVBUF);
@@ -1967,12 +1960,13 @@ hpt_attach(device_t dev)
 	 * Construct our SIM entry
 	 */
 	if ((hpt_vsim = cam_sim_alloc(hpt_action, hpt_poll, __str(PROC_DIR_NAME),
-			pAdapter, device_get_unit(pAdapter->hpt_dev), /*untagged*/1, /*tagged*/8,  devq)) == NULL)	{
+			pAdapter, device_get_unit(pAdapter->hpt_dev),
+			&Giant, /*untagged*/1, /*tagged*/8,  devq)) == NULL)	{
 		cam_simq_free(devq);
 		return ENOMEM;
 	}
 
-	if(xpt_bus_register(hpt_vsim, 0) != CAM_SUCCESS)
+	if(xpt_bus_register(hpt_vsim, dev, 0) != CAM_SUCCESS)
 	{
 		cam_sim_free(hpt_vsim, /*free devq*/ TRUE);
 		hpt_vsim = NULL;
@@ -2364,7 +2358,7 @@ static void hpt_worker_thread(void)
 #if (__FreeBSD_version < 500000)
 			YIELD_THREAD;
 #else 
-			tsleep((caddr_t)hpt_worker_thread, PPAUSE, "sched", 1); 
+			pause("sched", 1);
 #endif
 			if (SIGISMEMBER(curproc->p_siglist, SIGSTOP)) {
 				/* abort rebuilding process. */
@@ -2398,7 +2392,7 @@ static void hpt_worker_thread(void)
 /*
 #ifdef DEBUG
 		if (SIGISMEMBER(curproc->p_siglist, SIGSTOP))
-			tsleep((caddr_t)hpt_worker_thread, PPAUSE, "hptrdy", 2*hz);
+			pause("hptrdy", 2*hz);
 #endif
 */
 	#if (__FreeBSD_version >= 500043)
@@ -2406,7 +2400,7 @@ static void hpt_worker_thread(void)
 	#else 
 		kproc_suspend_loop(curproc);
 	#endif
-		tsleep((caddr_t)hpt_worker_thread, PPAUSE, "hptrdy", 2*hz);  /* wait for something to do */
+		pause("hptrdy", 2*hz);  /* wait for something to do */
 	}
 }
 

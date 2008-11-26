@@ -23,12 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptmv/mvOs.h,v 1.3.2.1 2005/10/06 18:47:58 delphij Exp $
+ * $FreeBSD: src/sys/dev/hptmv/mvOs.h,v 1.5 2005/12/04 02:12:41 ru Exp $
  */
 #ifndef __INCmvOsBsdh
 #define __INCmvOsBsdh
 
-#if DBG
+#ifdef DBG
 #define MV_DEBUG_LOG
 #endif
 
@@ -131,7 +131,7 @@ int mvLogMsg(MV_U8, MV_CHAR_PTR, ...);
 /*************************************************************************
  * Debug support
  *************************************************************************/
-#if DEBUG
+#ifdef DEBUG
 #define HPT_ASSERT(x) do { if (!(x)) { \
 						printf("ASSERT fail at %s line %d", __FILE__, __LINE__); \
 						while (1); \

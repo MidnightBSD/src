@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptmv/osbsd.h,v 1.4.2.1 2005/10/06 18:47:58 delphij Exp $
+ * $FreeBSD: src/sys/dev/hptmv/osbsd.h,v 1.6 2006/04/30 16:44:41 scottl Exp $
  */
 #ifndef _OSBSD_H_
 #define _OSBSD_H_
@@ -57,7 +57,6 @@
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/cam_periph.h>
-#include <cam/cam_xpt_periph.h>
 
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>

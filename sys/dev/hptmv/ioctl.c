@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/hptmv/ioctl.c,v 1.4.2.1 2005/10/06 18:47:58 delphij Exp $
+ * $FreeBSD: src/sys/dev/hptmv/ioctl.c,v 1.8 2007/05/21 09:26:47 mjacob Exp $
  */
 /*
  * ioctl.c   ioctl interface implementation
@@ -77,13 +77,16 @@ get_disk_location(PDevice pDev, int *controller, int *channel)
 	IAL_ADAPTER_T *pAdapTemp;
 	int i, j;
 
-    for (i=1, pAdapTemp = gIal_Adapter; pAdapTemp; pAdapTemp = pAdapTemp->next, i++) {
-    	for (j=0; j<MV_SATA_CHANNELS_NUM; j++)
-    		if (pDev==&pAdapTemp->VDevices[j].u.disk) {
-    			*controller = i;
-    			*channel = j;
-    			return;
-    		}
+	*controller = *channel = 0;
+
+	for (i=1, pAdapTemp = gIal_Adapter; pAdapTemp; pAdapTemp = pAdapTemp->next, i++) {
+		for (j=0; j<MV_SATA_CHANNELS_NUM; j++) {
+			if (pDev == &pAdapTemp->VDevices[j].u.disk) {
+				*controller = i;
+				*channel = j;
+				return;
+			}
+		}
 	}
 }
 
@@ -206,7 +209,7 @@ lock_driver_idle(IAL_ADAPTER_T *pAdapter)
 #if (__FreeBSD_version < 500000)
 		YIELD_THREAD;
 #else 
-		tsleep(lock_driver_idle, PPAUSE, "switch", 1);
+		pause("switch", 1);
 #endif
 		oldspl = lock_driver();
 	}
@@ -421,7 +424,7 @@ int Kernel_DeviceIoControl(_VBUS_ARG
 						unlock_driver(oldspl);
 						while (!pArray->u.array.rf_rebuilding)
 						{
-							tsleep((caddr_t)Kernel_DeviceIoControl, PPAUSE, "pause", 1);
+							pause("pause", 1);
 							if ( timeout >= hz*3)
 								break;
 							timeout ++;
@@ -486,7 +489,7 @@ hpt_set_array_state(DEVICEID idArray, DWORD state)
 
 			while (!pVDevice->u.array.rf_rebuilding)
 			{
-				tsleep((caddr_t)hpt_set_array_state, PPAUSE, "pause", 1);
+				pause("pause", 1);
 				if ( timeout >= hz*20)
 					break;
 				timeout ++;
@@ -511,7 +514,7 @@ hpt_set_array_state(DEVICEID idArray, DWORD state)
 			
 			while (pVDevice->u.array.rf_abort_rebuild)
 			{
-				tsleep((caddr_t)hpt_set_array_state, PPAUSE, "pause", 1);
+				pause("pause", 1);
 				if ( timeout >= hz*20)
 					break;
 				timeout ++;
@@ -535,7 +538,7 @@ hpt_set_array_state(DEVICEID idArray, DWORD state)
 			
 			while (!pVDevice->u.array.rf_verifying)
 			{
-				tsleep((caddr_t)hpt_set_array_state, PPAUSE, "pause", 1);
+				pause("pause", 1);
 				if ( timeout >= hz*20)
 					break;
 				timeout ++;
@@ -554,7 +557,7 @@ hpt_set_array_state(DEVICEID idArray, DWORD state)
 			
 			while (pVDevice->u.array.rf_abort_rebuild)
 			{
-				tsleep((caddr_t)hpt_set_array_state, PPAUSE, "pause", 1);
+				pause("pause", 1);
 				if ( timeout >= hz*80)
 					break;
 				timeout ++;
@@ -575,7 +578,7 @@ hpt_set_array_state(DEVICEID idArray, DWORD state)
 			
 			while (!pVDevice->u.array.rf_initializing)
 			{
-				tsleep((caddr_t)hpt_set_array_state, PPAUSE, "pause", 1);
+				pause("pause", 1);
 				if ( timeout >= hz*80)
 					break;
 				timeout ++;
@@ -594,7 +597,7 @@ hpt_set_array_state(DEVICEID idArray, DWORD state)
 			
 			while (pVDevice->u.array.rf_abort_rebuild)
 			{
-				tsleep((caddr_t)hpt_set_array_state, PPAUSE, "pause", 1);
+				pause("pause", 1);
 				if ( timeout >= hz*80)
 					break;
 				timeout ++;
@@ -949,7 +952,7 @@ fail:
 #if (__FreeBSD_version < 500000)		
 		YIELD_THREAD; 
 #else 
-		tsleep(hpt_rebuild_data_block, PPAUSE, "switch", 1);
+		pause("switch", 1);
 #endif
 		oldspl = lock_driver();
 	}
