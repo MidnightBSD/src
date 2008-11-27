@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:37:24 laffer1 Exp $
-# $FreeBSD: src/sys/modules/netgraph/bluetooth/ubt/Makefile,v 1.7 2004/12/29 08:44:19 imp Exp $
+# $Id: Makefile,v 1.1.1.3 2008-11-27 13:51:53 laffer1 Exp $
+# $FreeBSD: src/sys/modules/netgraph/bluetooth/ubt/Makefile,v 1.8 2006/02/18 23:49:27 yar Exp $
 
 .PATH: ${.CURDIR}/../../../../netgraph/bluetooth/drivers/ubt
 
@@ -10,4 +10,3 @@ KMOD=		ng_ubt
 SRCS=		ng_ubt.c bus_if.h device_if.h opt_usb.h usbdevs.h
 
 .include <bsd.kmod.mk>
-

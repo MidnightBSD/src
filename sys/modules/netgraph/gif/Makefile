@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/netgraph/gif/Makefile,v 1.2.14.1 2006/02/10 00:38:04 yar Exp $
+# $FreeBSD: src/sys/modules/netgraph/gif/Makefile,v 1.3 2005/10/14 23:30:12 yar Exp $
 
 KMOD=	ng_gif
 SRCS= 	ng_gif.c opt_inet.h opt_inet6.h

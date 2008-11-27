@@ -26433,6 +26433,15 @@ sys/dev/mse/mse_isa.c -text
 sys/dev/mse/msevar.h -text
 sys/dev/msk/if_msk.c -text
 sys/dev/msk/if_mskreg.h -text
+sys/dev/mxge/eth_z8e.h -text
+sys/dev/mxge/ethp_z8e.h -text
+sys/dev/mxge/if_mxge.c -text
+sys/dev/mxge/if_mxge_var.h -text
+sys/dev/mxge/mcp_gen_header.h -text
+sys/dev/mxge/mxge_eth_z8e.c -text
+sys/dev/mxge/mxge_ethp_z8e.c -text
+sys/dev/mxge/mxge_lro.c -text
+sys/dev/mxge/mxge_mcp.h -text
 sys/dev/my/if_my.c -text
 sys/dev/my/if_myreg.h -text
 sys/dev/ncv/ncr53c500.c -text
@@ -28346,7 +28355,9 @@ sys/modules/netgraph/bluetooth/ubt/Makefile -text
 sys/modules/netgraph/bluetooth/ubtbcmfw/Makefile -text
 sys/modules/netgraph/bpf/Makefile -text
 sys/modules/netgraph/bridge/Makefile -text
+sys/modules/netgraph/car/Makefile -text
 sys/modules/netgraph/cisco/Makefile -text
+sys/modules/netgraph/deflate/Makefile -text
 sys/modules/netgraph/device/Makefile -text
 sys/modules/netgraph/echo/Makefile -text
 sys/modules/netgraph/eiface/Makefile -text
@@ -28372,6 +28383,7 @@ sys/modules/netgraph/one2many/Makefile -text
 sys/modules/netgraph/ppp/Makefile -text
 sys/modules/netgraph/pppoe/Makefile -text
 sys/modules/netgraph/pptpgre/Makefile -text
+sys/modules/netgraph/pred1/Makefile -text
 sys/modules/netgraph/rfc1490/Makefile -text
 sys/modules/netgraph/sample/Makefile -text
 sys/modules/netgraph/socket/Makefile -text
@@ -28380,6 +28392,7 @@ sys/modules/netgraph/split/Makefile -text
 sys/modules/netgraph/sppp/Makefile -text
 sys/modules/netgraph/sync_ar/Makefile -text
 sys/modules/netgraph/sync_sr/Makefile -text
+sys/modules/netgraph/tag/Makefile -text
 sys/modules/netgraph/tcpmss/Makefile -text
 sys/modules/netgraph/tee/Makefile -text
 sys/modules/netgraph/tty/Makefile -text

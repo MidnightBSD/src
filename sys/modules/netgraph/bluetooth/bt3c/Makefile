@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:37:23 laffer1 Exp $
-# $FreeBSD: src/sys/modules/netgraph/bluetooth/bt3c/Makefile,v 1.6 2004/05/26 00:53:05 imp Exp $
+# $Id: Makefile,v 1.1.1.3 2008-11-27 13:51:53 laffer1 Exp $
+# $FreeBSD: src/sys/modules/netgraph/bluetooth/bt3c/Makefile,v 1.7 2006/02/18 23:49:27 yar Exp $
 
 .PATH: ${.CURDIR}/../../../../netgraph/bluetooth/drivers/bt3c
 
@@ -10,4 +10,3 @@ KMOD=		ng_bt3c
 SRCS=		ng_bt3c_pccard.c bus_if.h card_if.h device_if.h pccarddevs.h
 
 .include <bsd.kmod.mk>
-

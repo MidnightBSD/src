@@ -1,5 +1,5 @@
 # $Whistle: Makefile,v 1.1 1999/12/08 20:20:39 archie Exp $
-# $FreeBSD: src/sys/modules/netgraph/mppc/Makefile,v 1.12.12.1 2006/02/10 00:38:04 yar Exp $
+# $FreeBSD: src/sys/modules/netgraph/mppc/Makefile,v 1.14 2006/08/14 13:28:53 des Exp $
 
 KMOD=	ng_mppc
 SRCS= 	ng_mppc.c opt_netgraph.h
@@ -20,7 +20,7 @@ SRCS+= sha1.c
 
 .if !defined(KERNBUILDDIR)
 opt_netgraph.h:
-	touch ${.TARGET}
+	:> ${.TARGET}
 .if ${NETGRAPH_MPPC_COMPRESSION} > 0
 	echo "#define NETGRAPH_MPPC_COMPRESSION 1" >> ${.TARGET}
 .endif

@@ -1,13 +1,14 @@
-# $FreeBSD: src/sys/modules/netgraph/atm/Makefile,v 1.5 2004/08/12 14:58:46 harti Exp $
+# $FreeBSD: src/sys/modules/netgraph/atm/Makefile,v 1.7 2007/07/14 21:49:23 rwatson Exp $
 
 SUBDIR=			\
 	atm 		\
 	atmbase		\
-	atmpif		\
 	ccatm		\
 	sscfu		\
 	sscop		\
 	uni
 
-.include <bsd.subdir.mk>
+# atmpif disabled due to non-MPSAFEty in 7.0
+#	atmpif		\
 
+.include <bsd.subdir.mk>

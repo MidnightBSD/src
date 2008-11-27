@@ -1,5 +1,5 @@
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:37:23 laffer1 Exp $
-# $FreeBSD: src/sys/modules/netgraph/bluetooth/Makefile,v 1.2 2003/05/10 21:44:37 julian Exp $
+# $Id: Makefile,v 1.1.1.3 2008-11-27 13:51:53 laffer1 Exp $
+# $FreeBSD: src/sys/modules/netgraph/bluetooth/Makefile,v 1.5 2007/08/13 17:19:28 emax Exp $
 
 SUBDIR=	\
 	bluetooth \
@@ -12,4 +12,3 @@ SUBDIR=	\
 	ubtbcmfw
 
 .include <bsd.subdir.mk>
-
