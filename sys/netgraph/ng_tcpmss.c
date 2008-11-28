@@ -29,7 +29,7 @@
  * This software includes fragments of the following programs:
  *	tcpmssd		Ruslan Ermilov <ru@FreeBSD.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_tcpmss.c,v 1.2.2.1 2006/03/18 22:00:37 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_tcpmss.c,v 1.4 2007/01/15 05:01:31 glebius Exp $
  */
 
 /*
@@ -315,6 +315,7 @@ ng_tcpmss_rcvdata(hook_p hook, item_p item)
 
 	/* Check mbuf packet size and arrange for IP+TCP header */
 	M_CHECK(iphlen - sizeof(struct ip) + sizeof(struct tcphdr));
+	ip = mtod(m, struct ip *);
 	tcp = (struct tcphdr *)((caddr_t )ip + iphlen);
 
 	/* Check TCP header length. */
@@ -330,6 +331,8 @@ ng_tcpmss_rcvdata(hook_p hook, item_p item)
 	priv->stats.SYNPkts++;
 
 	M_CHECK(tcphlen - sizeof(struct tcphdr));
+	ip = mtod(m, struct ip *);
+	tcp = (struct tcphdr *)((caddr_t )ip + iphlen);
 
 #undef	M_CHECK
 

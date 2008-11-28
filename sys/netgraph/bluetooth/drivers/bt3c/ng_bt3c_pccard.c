@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bt3c_pccard.c,v 1.2 2007-01-07 19:04:00 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_pccard.c,v 1.12.2.1 2006/03/10 19:37:34 jhb Exp $
+ * $Id: ng_bt3c_pccard.c,v 1.3 2008-11-28 16:32:32 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_pccard.c,v 1.20 2007/02/23 12:19:02 piso Exp $
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *
@@ -81,7 +81,6 @@ static ng_rcvmsg_t	ng_bt3c_rcvmsg;
 static ng_rcvdata_t	ng_bt3c_rcvdata;
 
 /* PCMCIA driver methods */
-static int	bt3c_pccard_match	(device_t);
 static int	bt3c_pccard_probe	(device_t);
 static int	bt3c_pccard_attach	(device_t);
 static int	bt3c_pccard_detach	(device_t);
@@ -97,30 +96,30 @@ static void	bt3c_download_firmware	(bt3c_softc_p, char const *, int);
 
 #define	bt3c_set_address(sc, address) \
 do { \
-	outb(rman_get_start((sc)->iobase) + BT3C_ADDR_L, ((address) & 0xff)); \
-	outb(rman_get_start((sc)->iobase) + BT3C_ADDR_H, (((address) >> 8) & 0xff)); \
+	bus_space_write_1((sc)->iot, (sc)->ioh, BT3C_ADDR_L, ((address) & 0xff)); \
+	bus_space_write_1((sc)->iot, (sc)->ioh, BT3C_ADDR_H, (((address) >> 8) & 0xff)); \
 } while (0)
 
 #define	bt3c_read_data(sc, data) \
 do { \
-	(data)  = inb(rman_get_start((sc)->iobase) + BT3C_DATA_L); \
-	(data) |= ((inb(rman_get_start((sc)->iobase) + BT3C_DATA_H) & 0xff) << 8); \
+	(data)  = bus_space_read_1((sc)->iot, (sc)->ioh, BT3C_DATA_L); \
+	(data) |= ((bus_space_read_1((sc)->iot, (sc)->ioh, BT3C_DATA_H) & 0xff) << 8); \
 } while (0)
 
 #define	bt3c_write_data(sc, data) \
 do { \
-	outb(rman_get_start((sc)->iobase) + BT3C_DATA_L, ((data) & 0xff)); \
-	outb(rman_get_start((sc)->iobase) + BT3C_DATA_H, (((data) >> 8) & 0xff)); \
+	bus_space_write_1((sc)->iot, (sc)->ioh, BT3C_DATA_L, ((data) & 0xff)); \
+	bus_space_write_1((sc)->iot, (sc)->ioh, BT3C_DATA_H, (((data) >> 8) & 0xff)); \
 } while (0)
 
 #define	bt3c_read_control(sc, data) \
 do { \
-	(data) = inb(rman_get_start((sc)->iobase) + BT3C_CONTROL); \
+	(data) = bus_space_read_1((sc)->iot, (sc)->ioh, BT3C_CONTROL); \
 } while (0)
 
 #define	bt3c_write_control(sc, data) \
 do { \
-	outb(rman_get_start((sc)->iobase) + BT3C_CONTROL, (data)); \
+	bus_space_write_1((sc)->iot, (sc)->ioh, BT3C_CONTROL, (data)); \
 } while (0)
 
 #define bt3c_read(sc, address, data) \
@@ -583,11 +582,11 @@ out:
  ****************************************************************************/
 
 /*
- * PC-Card (PCMCIA) match routine
+ * PC Card (PCMCIA) probe routine
  */
 
 static int
-bt3c_pccard_match(device_t dev)
+bt3c_pccard_probe(device_t dev)
 {
 	static struct pccard_product const	bt3c_pccard_products[] = {
 		PCMCIA_CARD(3COM, 3CRWB609),
@@ -604,31 +603,16 @@ bt3c_pccard_match(device_t dev)
 	device_set_desc(dev, pp->pp_name);
 
 	return (0);
-} /* bt3c_pccacd_match */
+} /* bt3c_pccard_probe */
 
 /*
- * PC-Card (PCMCIA) probe routine
- * XXX FIXME
- */
-
-static int
-bt3c_pccard_probe(device_t dev)
-{
-	return (0);
-} /* bt3c_pccacd_probe */
-
-/*
- * PC-Card (PCMCIA) attach routine
+ * PC Card (PCMCIA) attach routine
  */
 
 static int
 bt3c_pccard_attach(device_t dev)
 {
-	bt3c_softc_p	sc = NULL;
-
-	sc = (bt3c_softc_p) malloc(sizeof(*sc), M_BT3C, M_NOWAIT|M_ZERO);
-	if (sc == NULL)
-		return (ENOMEM);
+	bt3c_softc_p	sc = (bt3c_softc_p) device_get_softc(dev);
 
 	/* Allocate I/O ports */
 	sc->iobase_rid = 0;
@@ -638,6 +622,8 @@ bt3c_pccard_attach(device_t dev)
 		device_printf(dev, "Could not allocate I/O ports\n");
 		goto bad;
 	}
+	sc->iot = rman_get_bustag(sc->iobase);
+	sc->ioh = rman_get_bushandle(sc->iobase);
 
 	/* Allocate IRQ */
 	sc->irq_rid = 0;
@@ -649,7 +635,7 @@ bt3c_pccard_attach(device_t dev)
 	}
 
 	sc->irq_cookie = NULL;
-	if (bus_setup_intr(dev, sc->irq, INTR_TYPE_TTY, bt3c_intr, sc,
+	if (bus_setup_intr(dev, sc->irq, INTR_TYPE_TTY, NULL, bt3c_intr, sc,
 			&sc->irq_cookie) != 0) {
 		device_printf(dev, "Could not setup ISR\n");
 		goto bad;
@@ -689,7 +675,6 @@ bt3c_pccard_attach(device_t dev)
 	sc->want = 1;
 
 	NG_NODE_SET_PRIVATE(sc->node, sc);
- 	device_set_softc(dev, sc);
 
 	return (0);
 bad:
@@ -717,13 +702,11 @@ bad:
 		sc->iobase_rid = 0;
 	}
 
-	free(sc, M_BT3C);
-
 	return (ENXIO);
 } /* bt3c_pccacd_attach */
 
 /*
- * PC-Card (PCMCIA) detach routine
+ * PC Card (PCMCIA) detach routine
  */
 
 static int
@@ -733,8 +716,6 @@ bt3c_pccard_detach(device_t dev)
 
 	if (sc == NULL)
 		return (0);
-
-	device_set_softc(dev, NULL);
 
 	swi_remove(sc->ith);
 	sc->ith = NULL;
@@ -761,9 +742,6 @@ bt3c_pccard_detach(device_t dev)
 
 	mtx_destroy(&sc->inq.ifq_mtx);
 	mtx_destroy(&sc->outq.ifq_mtx);
-
-	bzero(sc, sizeof(*sc));
-	free(sc, M_BT3C);
 
 	return (0);
 } /* bt3c_pccacd_detach */
@@ -1194,26 +1172,22 @@ bt3c_download_firmware(bt3c_softc_p sc, char const *firmware, int firmware_size)
  ****************************************************************************/
 
 /*
- * PC-Card (PCMCIA) driver
+ * PC Card (PCMCIA) driver
  */
 
 static device_method_t	bt3c_pccard_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
+	DEVMETHOD(device_probe,		bt3c_pccard_probe),
+	DEVMETHOD(device_attach,	bt3c_pccard_attach),
 	DEVMETHOD(device_detach,	bt3c_pccard_detach),
 
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	bt3c_pccard_match),
-	DEVMETHOD(card_compat_probe,	bt3c_pccard_probe),
-        DEVMETHOD(card_compat_attach,	bt3c_pccard_attach),
 	{ 0, 0 }
 };
 
 static driver_t		bt3c_pccard_driver = {
 	NG_BT3C_NODE_TYPE,
 	bt3c_pccard_methods,
-	0
+	sizeof(bt3c_softc_t)
 };
 
 static devclass_t	bt3c_devclass;
