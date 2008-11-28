@@ -30,13 +30,13 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/atm/ccatm/ng_ccatm.c,v 1.2 2005/01/07 01:45:41 imp Exp $
+ * $FreeBSD: src/sys/netgraph/atm/ccatm/ng_ccatm.c,v 1.3 2006/09/30 12:37:43 netchild Exp $
  *
  * ATM call control and API
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/ccatm/ng_ccatm.c,v 1.2 2005/01/07 01:45:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/atm/ccatm/ng_ccatm.c,v 1.3 2006/09/30 12:37:43 netchild Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -879,6 +879,7 @@ ng_ccatm_disconnect(hook_p hook)
 	node_p node = NG_HOOK_NODE(hook);
 	struct ccnode *priv = NG_NODE_PRIVATE(node);
 	struct cchook *hd = NG_HOOK_PRIVATE(hook);
+	struct ccdata *cc;
 
 	if (hook == priv->dump) {
 		priv->dump = NULL;
@@ -893,12 +894,14 @@ ng_ccatm_disconnect(hook_p hook)
 		else
 			cc_user_destroy(hd->inst);
 
+		cc = hd->node->data;
+
 		free(hd, M_NG_CCATM);
 		NG_HOOK_SET_PRIVATE(hook, NULL);
 
 		priv->hook_cnt--;
 
-		cc_work(hd->node->data);
+		cc_work(cc);
 	}
 
 	/*

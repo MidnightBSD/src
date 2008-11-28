@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_hci.h,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_hci.h,v 1.6 2005/01/07 01:45:43 imp Exp $
+ * $Id: ng_hci.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_hci.h,v 1.7 2006/05/17 00:13:06 emax Exp $
  */
 
 /*
@@ -603,6 +603,8 @@ typedef u_int16_t	ng_hci_node_packet_mask_ep;
 #define NGM_HCI_NODE_GET_ROLE_SWITCH		118 /* HCI -> User */
 #define NGM_HCI_NODE_SET_ROLE_SWITCH		119 /* User -> HCI */
 typedef u_int16_t	ng_hci_node_role_switch_ep;
+
+#define	NGM_HCI_NODE_LIST_NAMES			200 /* HCI -> User */
 
 /**************************************************************************
  **************************************************************************

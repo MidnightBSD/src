@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/uni/ng_uni.c,v 1.4 2005/01/07 01:45:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/atm/uni/ng_uni.c,v 1.6 2005/10/31 15:41:26 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -60,8 +60,8 @@ __FBSDID("$FreeBSD: src/sys/netgraph/atm/uni/ng_uni.c,v 1.4 2005/01/07 01:45:41 
 #include <netgraph/atm/ng_sscfu.h>
 #include <netgraph/atm/ng_uni.h>
 
-MALLOC_DEFINE(M_NG_UNI, "netgraph_uni", "netgraph uni node");
-MALLOC_DEFINE(M_UNI, "netgraph uni", "uni protocol data");
+MALLOC_DEFINE(M_NG_UNI, "netgraph_uni_node", "netgraph uni node");
+MALLOC_DEFINE(M_UNI, "netgraph_uni_data", "uni protocol data");
 
 MODULE_DEPEND(ng_uni, ngatmbase, 1, 1, 1);
 
@@ -499,7 +499,7 @@ ng_uni_disconnect(hook_p hook)
 	else if(hook == priv->upper)
 		priv->upper = NULL;
 	else
-		printf("%s: bogus hook %s\n", __FUNCTION__, NG_HOOK_NAME(hook));
+		printf("%s: bogus hook %s\n", __func__, NG_HOOK_NAME(hook));
 
 	if (NG_NODE_NUMHOOKS(node) == 0) {
 		if (NG_NODE_IS_VALID(node))
@@ -543,7 +543,7 @@ ng_uni_rcvupper(hook_p hook, item_p item)
 	m_freem(m);
 
 	if (uni_msg_len(msg) < sizeof(arg)) {
-		printf("%s: packet too short\n", __FUNCTION__);
+		printf("%s: packet too short\n", __func__);
 		uni_msg_destroy(msg);
 		return (EINVAL);
 	}
@@ -552,7 +552,7 @@ ng_uni_rcvupper(hook_p hook, item_p item)
 	msg->b_rptr += sizeof(arg);
 
 	if (arg.sig >= UNIAPI_MAXSIG) {
-		printf("%s: bogus signal\n", __FUNCTION__);
+		printf("%s: bogus signal\n", __func__);
 		uni_msg_destroy(msg);
 		return (EINVAL);
 	}
@@ -683,7 +683,7 @@ ng_uni_rcvlower(hook_p hook __unused, item_p item)
 
 	if (uni_msg_len(msg) < sizeof(arg)) {
 		uni_msg_destroy(msg);
-		printf("%s: packet too short\n", __FUNCTION__);
+		printf("%s: packet too short\n", __func__);
 		return (EINVAL);
 	}
 	bcopy(msg->b_rptr, &arg, sizeof(arg));
@@ -691,7 +691,7 @@ ng_uni_rcvlower(hook_p hook __unused, item_p item)
 
 	if (arg.sig > SAAL_UDATA_indication) {
 		uni_msg_destroy(msg);
-		printf("%s: bogus signal\n", __FUNCTION__);
+		printf("%s: bogus signal\n", __func__);
 		return (EINVAL);
 	}
 

@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_socket.h,v 1.6 2005/01/07 01:45:39 imp Exp $
+ * $FreeBSD: src/sys/netgraph/ng_socket.h,v 1.7 2006/10/17 11:03:55 glebius Exp $
  * $Whistle: ng_socket.h,v 1.5 1999/01/20 00:22:14 archie Exp $
  */
 
@@ -58,13 +58,11 @@ enum {
 	NGM_SOCK_CMD_LINGER		/* Keep socket even if 0 hooks */
 };
 
-
-
 /* Netgraph version of struct sockaddr */
 struct sockaddr_ng {
-	u_char  sg_len;		/* total length */
-	u_char  sg_family;	/* address family */
-	char    sg_data[14];	/* actually longer; address value */
+	unsigned char	sg_len;		/* total length */
+	sa_family_t	sg_family;	/* address family */
+	char		sg_data[14];	/* actually longer; address value */
 };
 
 #endif /* _NETGRAPH_NG_SOCKET_H_ */

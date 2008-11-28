@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_l2cap_raw.c,v 1.1.1.2 2006-02-25 02:37:35 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap_raw.c,v 1.14.2.2 2005/08/29 17:00:54 emax Exp $
+ * $Id: ng_btsocket_l2cap_raw.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap_raw.c,v 1.20 2006/11/06 13:42:04 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -43,6 +43,7 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
@@ -572,11 +573,19 @@ ng_btsocket_l2cap_raw_init(void)
  * Abort connection on socket
  */
 
-int
+void
 ng_btsocket_l2cap_raw_abort(struct socket *so)
 {
-	return (ng_btsocket_l2cap_raw_detach(so));
+
+	(void)ng_btsocket_l2cap_raw_disconnect(so);
 } /* ng_btsocket_l2cap_raw_abort */
+
+void
+ng_btsocket_l2cap_raw_close(struct socket *so)
+{
+
+	(void)ng_btsocket_l2cap_raw_disconnect(so);
+} /* ng_btsocket_l2cap_raw_close */
 
 /*
  * Create and attach new socket
@@ -612,7 +621,7 @@ ng_btsocket_l2cap_raw_attach(struct socket *so, int proto, struct thread *td)
 	so->so_pcb = (caddr_t) pcb;
 	pcb->so = so;
 
-	if (suser(td) == 0)
+	if (priv_check(td, PRIV_NETBLUETOOTH_RAW) == 0)
 		pcb->flags |= NG_BTSOCKET_L2CAP_RAW_PRIVILEGED;
 
 	mtx_init(&pcb->pcb_mtx, "btsocks_l2cap_raw_pcb_mtx", NULL, MTX_DEF);
@@ -1094,15 +1103,14 @@ ng_btsocket_l2cap_raw_control(struct socket *so, u_long cmd, caddr_t data,
  * Detach and destroy socket
  */
 
-int
+void
 ng_btsocket_l2cap_raw_detach(struct socket *so)
 {
 	ng_btsocket_l2cap_raw_pcb_p	pcb = so2l2cap_raw_pcb(so);
 
-	if (pcb == NULL)
-		return (EINVAL);
+	KASSERT(pcb != NULL, ("nt_btsocket_l2cap_raw_detach: pcb == NULL"));
 	if (ng_btsocket_l2cap_raw_node == NULL) 
-		return (EINVAL);
+		return;
 
 	mtx_lock(&ng_btsocket_l2cap_raw_sockets_mtx);
 	mtx_lock(&pcb->pcb_mtx);
@@ -1117,12 +1125,7 @@ ng_btsocket_l2cap_raw_detach(struct socket *so)
 	bzero(pcb, sizeof(*pcb));
 	FREE(pcb, M_NETGRAPH_BTSOCKET_L2CAP_RAW);
 
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
 	so->so_pcb = NULL;
-	sotryfree(so);
-
-	return (0);
 } /* ng_btsocket_l2cap_raw_detach */
 
 /*

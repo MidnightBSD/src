@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_nat.c,v 1.4 2005/06/27 07:39:13 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_nat.c,v 1.10 2007/05/22 12:20:05 mav Exp $
  */
 
 #include <sys/param.h>
@@ -56,7 +56,15 @@ static ng_newhook_t	ng_nat_newhook;
 static ng_rcvdata_t	ng_nat_rcvdata;
 static ng_disconnect_t	ng_nat_disconnect;
 
-static struct mbuf * m_megapullup(struct mbuf *, int);
+static unsigned int	ng_nat_translate_flags(unsigned int x);
+
+/* Parse type for struct ng_nat_mode. */
+static const struct ng_parse_struct_field ng_nat_mode_fields[]
+	= NG_NAT_MODE_INFO;
+static const struct ng_parse_type ng_nat_mode_type = {
+	&ng_parse_struct_type,
+	ng_nat_mode_fields
+};
 
 /* List of commands and how to convert arguments to/from ASCII. */
 static const struct ng_cmdlist ng_nat_cmdlist[] = {
@@ -64,6 +72,20 @@ static const struct ng_cmdlist ng_nat_cmdlist[] = {
 	  NGM_NAT_COOKIE,
 	  NGM_NAT_SET_IPADDR,
 	  "setaliasaddr",
+	  &ng_parse_ipaddr_type,
+	  NULL
+	},
+	{
+	  NGM_NAT_COOKIE,
+	  NGM_NAT_SET_MODE,
+	  "setmode",
+	  &ng_nat_mode_type,
+	  NULL
+	},
+	{
+	  NGM_NAT_COOKIE,
+	  NGM_NAT_SET_TARGET,
+	  "settarget",
 	  &ng_parse_ipaddr_type,
 	  NULL
 	},
@@ -86,17 +108,17 @@ NETGRAPH_INIT(nat, &typestruct);
 MODULE_DEPEND(ng_nat, libalias, 1, 1, 1);
 
 /* Information we store for each node. */
-struct ng_priv_priv {
+struct ng_nat_priv {
 	node_p		node;		/* back pointer to node */
 	hook_p		in;		/* hook for demasquerading */
 	hook_p		out;		/* hook for masquerading */
 	struct libalias	*lib;		/* libalias handler */
 	uint32_t	flags;		/* status flags */
 };
-typedef struct ng_priv_priv *priv_p;
+typedef struct ng_nat_priv *priv_p;
 
 /* Values of flags */
-#define	NGNAT_READY		0x1	/* We have everything to work */
+#define	NGNAT_CONNECTED		0x1	/* We have both hooks connected */
 #define	NGNAT_ADDR_DEFINED	0x2	/* NGM_NAT_SET_IPADDR happened */
 
 static int
@@ -147,9 +169,8 @@ ng_nat_newhook(node_p node, hook_p hook, const char *name)
 		return (EINVAL);
 
 	if (priv->out != NULL &&
-	    priv->in != NULL &&
-	    priv->flags & NGNAT_ADDR_DEFINED)
-		priv->flags |= NGNAT_READY;
+	    priv->in != NULL)
+		priv->flags |= NGNAT_CONNECTED;
 
 	return(0);
 }
@@ -179,9 +200,36 @@ ng_nat_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			LibAliasSetAddress(priv->lib, *ia);
 
 			priv->flags |= NGNAT_ADDR_DEFINED;
-			if (priv->out != NULL &&
-			    priv->in != NULL)
-				priv->flags |= NGNAT_READY;
+		    }
+			break;
+		case NGM_NAT_SET_MODE:
+		    {
+			struct ng_nat_mode *const mode = 
+			    (struct ng_nat_mode *)msg->data;
+
+			if (msg->header.arglen < sizeof(*mode)) {
+				error = EINVAL;
+				break;
+			}
+			
+			if (LibAliasSetMode(priv->lib, 
+			    ng_nat_translate_flags(mode->flags),
+			    ng_nat_translate_flags(mode->mask)) < 0) {
+				error = ENOMEM;
+				break;
+			}
+		    }
+			break;
+		case NGM_NAT_SET_TARGET:
+		    {
+			struct in_addr *const ia = (struct in_addr *)msg->data;
+
+			if (msg->header.arglen < sizeof(*ia)) {
+				error = EINVAL;
+				break;
+			}
+
+			LibAliasSetTarget(priv->lib, *ia);
 		    }
 			break;
 		default:
@@ -208,10 +256,15 @@ ng_nat_rcvdata(hook_p hook, item_p item )
 	int rval, error = 0;
 	char *c;
 
-	if (!(priv->flags & NGNAT_READY)) {
+	/* We have no required hooks. */
+	if (!(priv->flags & NGNAT_CONNECTED)) {
 		NG_FREE_ITEM(item);
 		return (ENXIO);
 	}
+
+	/* We have no alias address yet to do anything. */
+	if (!(priv->flags & NGNAT_ADDR_DEFINED))
+		goto send;
 
 	m = NGI_M(item);
 
@@ -231,7 +284,8 @@ ng_nat_rcvdata(hook_p hook, item_p item )
 
 	if (hook == priv->in) {
 		rval = LibAliasIn(priv->lib, c, MCLBYTES);
-		if (rval != PKT_ALIAS_OK) {
+		if (rval != PKT_ALIAS_OK &&
+		    rval != PKT_ALIAS_FOUND_HEADER_FRAGMENT) {
 			NG_FREE_ITEM(item);
 			return (EINVAL);
 		}
@@ -248,7 +302,8 @@ ng_nat_rcvdata(hook_p hook, item_p item )
 
 	if ((ip->ip_off & htons(IP_OFFMASK)) == 0 &&
 	    ip->ip_p == IPPROTO_TCP) {
-		struct tcphdr 	*th = (struct tcphdr *)(ip + 1);
+		struct tcphdr *th = (struct tcphdr *)((caddr_t)ip +
+		    (ip->ip_hl << 2));
 
 		/*
 		 * Here is our terrible HACK.
@@ -288,6 +343,7 @@ ng_nat_rcvdata(hook_p hook, item_p item )
 		}
 	}
 
+send:
 	if (hook == priv->in)
 		NG_FWD_ITEM_HOOK(error, item, priv->out);
 	else
@@ -314,7 +370,7 @@ ng_nat_disconnect(hook_p hook)
 {
 	const priv_p priv = NG_NODE_PRIVATE(NG_HOOK_NODE(hook));
 
-	priv->flags &= ~NGNAT_READY;
+	priv->flags &= ~NGNAT_CONNECTED;
 
 	if (hook == priv->out)
 		priv->out = NULL;
@@ -327,36 +383,25 @@ ng_nat_disconnect(hook_p hook)
 	return (0);
 }
 
-/*
- * m_megapullup() function is a big hack.
- *
- * It allocates an mbuf with cluster and copies the whole
- * chain into cluster, so that it is all contigous and the
- * whole packet can be accessed via char pointer.
- *
- * This is required, because libalias doesn't have idea
- * about mbufs.
- */
-static struct mbuf *
-m_megapullup(struct mbuf *m, int len)
+static unsigned int
+ng_nat_translate_flags(unsigned int x)
 {
-	struct mbuf *mcl;
-	caddr_t cp;
+	unsigned int	res = 0;
+	
+	if (x & NG_NAT_LOG)
+		res |= PKT_ALIAS_LOG;
+	if (x & NG_NAT_DENY_INCOMING)
+		res |= PKT_ALIAS_DENY_INCOMING;
+	if (x & NG_NAT_SAME_PORTS)
+		res |= PKT_ALIAS_SAME_PORTS;
+	if (x & NG_NAT_UNREGISTERED_ONLY)
+		res |= PKT_ALIAS_UNREGISTERED_ONLY;
+	if (x & NG_NAT_RESET_ON_ADDR_CHANGE)
+		res |= PKT_ALIAS_RESET_ON_ADDR_CHANGE;
+	if (x & NG_NAT_PROXY_ONLY)
+		res |= PKT_ALIAS_PROXY_ONLY;
+	if (x & NG_NAT_REVERSE)
+		res |= PKT_ALIAS_REVERSE;
 
-	if (len > MCLBYTES)
-		goto bad;
-
-	if ((mcl = m_getcl(M_DONTWAIT, MT_DATA, M_PKTHDR)) == NULL)
-		goto bad;
-
-	cp = mtod(mcl, caddr_t);
-	m_copydata(m, 0, len, cp);
-	m_move_pkthdr(mcl, m);
-	mcl->m_len = mcl->m_pkthdr.len;
-	m_freem(m);
-
-	return (mcl);
-bad:
-	m_freem(m);
-	return (NULL);
+	return (res);
 }

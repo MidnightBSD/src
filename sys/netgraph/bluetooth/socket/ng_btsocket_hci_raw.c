@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_hci_raw.c,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_hci_raw.c,v 1.17.2.1 2005/08/29 17:00:54 emax Exp $
+ * $Id: ng_btsocket_hci_raw.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_hci_raw.c,v 1.23 2006/11/06 13:42:04 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -44,6 +44,7 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
@@ -257,7 +258,8 @@ ng_btsocket_hci_raw_node_rcvmsg(node_p node, item_p item, hook_p lasthook)
 	 */
 
 	if (msg != NULL &&
-	    msg->header.typecookie == NGM_HCI_COOKIE &&
+	    (msg->header.typecookie == NGM_HCI_COOKIE ||
+	     msg->header.typecookie == NGM_GENERIC_COOKIE) &&
 	    msg->header.flags & NGF_RESP) {
 		if (msg->header.token == 0) {
 			NG_FREE_ITEM(item);
@@ -872,11 +874,15 @@ ng_btsocket_hci_raw_init(void)
  * Abort connection on socket
  */
 
-int
+void
 ng_btsocket_hci_raw_abort(struct socket *so)
 {
-	return (ng_btsocket_hci_raw_detach(so));
 } /* ng_btsocket_hci_raw_abort */
+
+void
+ng_btsocket_hci_raw_close(struct socket *so)
+{
+} /* ng_btsocket_hci_raw_close */
 
 /*
  * Create new raw HCI socket
@@ -911,7 +917,7 @@ ng_btsocket_hci_raw_attach(struct socket *so, int proto, struct thread *td)
 	so->so_pcb = (caddr_t) pcb;
 	pcb->so = so;
 
-	if (suser(td) == 0)
+	if (priv_check(td, PRIV_NETBLUETOOTH_RAW) == 0)
 		pcb->flags |= NG_BTSOCKET_HCI_RAW_PRIVILEGED;
 
 	/*
@@ -1307,6 +1313,68 @@ ng_btsocket_hci_raw_control(struct socket *so, u_long cmd, caddr_t data,
 			error = EPERM;
 		} break;
 
+	case SIOC_HCI_RAW_NODE_LIST_NAMES: {
+		struct ng_btsocket_hci_raw_node_list_names	*nl =
+			(struct ng_btsocket_hci_raw_node_list_names *) data;
+		struct nodeinfo					*ni = nl->names;
+
+		if (nl->num_names == 0) {
+			error = EINVAL;
+			break;
+		}
+
+		NG_MKMESSAGE(msg, NGM_GENERIC_COOKIE, NGM_LISTNAMES,
+			0, M_NOWAIT);
+		if (msg == NULL) {
+			error = ENOMEM;
+			break;
+		}
+		ng_btsocket_hci_raw_get_token(&msg->header.token);
+		pcb->token = msg->header.token;
+		pcb->msg = NULL;
+
+		NG_SEND_MSG_PATH(error, ng_btsocket_hci_raw_node, msg, ".:", 0);
+		if (error != 0) {
+			pcb->token = 0;
+			break;
+		}
+
+		error = msleep(&pcb->msg, &pcb->pcb_mtx,
+				PZERO|PCATCH, "hcictl",
+				ng_btsocket_hci_raw_ioctl_timeout * hz);
+		pcb->token = 0;
+
+		if (error != 0)
+			break;
+
+		if (pcb->msg != NULL && pcb->msg->header.cmd == NGM_LISTNAMES) {
+			/* Return data back to user space */
+			struct namelist	*nl1 = (struct namelist *) pcb->msg->data;
+			struct nodeinfo	*ni1 = &nl1->nodeinfo[0];
+
+			while (nl->num_names > 0 && nl1->numnames > 0) {
+				if (strcmp(ni1->type, NG_HCI_NODE_TYPE) == 0) {
+					error = copyout((caddr_t) ni1,
+							(caddr_t) ni,
+							sizeof(*ni));
+					if (error != 0)
+						break;
+
+					nl->num_names --;
+					ni ++;
+				}
+
+				nl1->numnames --;
+				ni1 ++;
+			}
+
+			nl->num_names = ni - nl->names;
+		} else
+			error = EINVAL;
+
+		NG_FREE_MSG(pcb->msg); /* checks for != NULL */
+		} break;
+
 	default:
 		error = EINVAL;
 		break;
@@ -1399,15 +1467,15 @@ ng_btsocket_hci_raw_ctloutput(struct socket *so, struct sockopt *sopt)
  * Detach raw HCI socket
  */
 
-int
+void
 ng_btsocket_hci_raw_detach(struct socket *so)
 {
 	ng_btsocket_hci_raw_pcb_p	pcb = so2hci_raw_pcb(so);
 
-	if (pcb == NULL)
-		return (EINVAL);
+	KASSERT(pcb != NULL, ("ng_btsocket_hci_raw_detach: pcb == NULL"));
+
 	if (ng_btsocket_hci_raw_node == NULL)
-		return (EINVAL);
+		return;
 
 	mtx_lock(&ng_btsocket_hci_raw_sockets_mtx);
 	mtx_lock(&pcb->pcb_mtx);
@@ -1422,12 +1490,7 @@ ng_btsocket_hci_raw_detach(struct socket *so)
 	bzero(pcb, sizeof(*pcb));
 	FREE(pcb, M_NETGRAPH_BTSOCKET_HCI_RAW);
 
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
 	so->so_pcb = NULL;
-	sotryfree(so);
-
-	return (0);
 } /* ng_btsocket_hci_raw_detach */
 
 /*

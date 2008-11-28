@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket.c,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket.c,v 1.11.2.1 2005/11/16 10:31:22 ru Exp $
+ * $Id: ng_btsocket.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket.c,v 1.13 2006/07/21 17:11:13 rwatson Exp $
  */
 
 #include <sys/param.h>
@@ -74,6 +74,7 @@ static struct pr_usrreqs	ng_btsocket_hci_raw_usrreqs = {
 	.pru_send =		ng_btsocket_hci_raw_send,
 	.pru_shutdown =		NULL,
 	.pru_sockaddr =		ng_btsocket_hci_raw_sockaddr,
+	.pru_close =		ng_btsocket_hci_raw_close,
 };
 
 /*
@@ -92,6 +93,7 @@ static struct pr_usrreqs	ng_btsocket_l2cap_raw_usrreqs = {
 	.pru_send =		ng_btsocket_l2cap_raw_send,
 	.pru_shutdown =		NULL,
 	.pru_sockaddr =		ng_btsocket_l2cap_raw_sockaddr,
+	.pru_close =		ng_btsocket_l2cap_raw_close,
 };
 
 /*
@@ -112,6 +114,7 @@ static struct pr_usrreqs	ng_btsocket_l2cap_usrreqs = {
 	.pru_send =		ng_btsocket_l2cap_send,
 	.pru_shutdown =		NULL,
 	.pru_sockaddr =		ng_btsocket_l2cap_sockaddr,
+	.pru_close =		ng_btsocket_l2cap_close,
 };
 
 /*
@@ -132,6 +135,7 @@ static struct pr_usrreqs	ng_btsocket_rfcomm_usrreqs = {
 	.pru_send =		ng_btsocket_rfcomm_send,
 	.pru_shutdown =		NULL,
 	.pru_sockaddr =		ng_btsocket_rfcomm_sockaddr,
+	.pru_close =		ng_btsocket_rfcomm_close,
 };
 
 /* 

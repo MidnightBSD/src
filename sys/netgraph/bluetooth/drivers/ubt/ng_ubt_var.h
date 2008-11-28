@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_ubt_var.h,v 1.1.1.2 2006-02-25 02:37:33 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/drivers/ubt/ng_ubt_var.h,v 1.5 2005/01/07 01:45:42 imp Exp $
+ * $Id: ng_ubt_var.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/drivers/ubt/ng_ubt_var.h,v 1.7 2006/09/07 23:38:09 emax Exp $
  */
 
 #ifndef _NG_UBT_VAR_H_
@@ -41,7 +41,7 @@
 			(m) = m_pullup((m), (s)); \
 		if ((m) == NULL) \
 			NG_UBT_ALERT("%s: %s - m_pullup(%d) failed\n", \
-				__func__, USBDEVNAME(sc->sc_dev), (s)); \
+				__func__, device_get_nameunit(sc->sc_dev), (s)); \
 	} while (0)
 
 /* Debug printf's */
@@ -82,7 +82,7 @@ struct ubt_softc {
 #define NG_UBT_STAT_RESET(s)		bzero(&(s), sizeof((s)))
 
 	/* USB device specific */
-	USBBASEDEVICE		 sc_dev;	/* pointer back to USB device */
+	device_t		 sc_dev;	/* pointer back to USB device */
 	usbd_device_handle	 sc_udev;	/* USB device handle */
 
 	usbd_interface_handle	 sc_iface0;	/* USB interface 0 */

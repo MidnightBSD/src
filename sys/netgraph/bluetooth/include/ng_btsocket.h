@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket.h,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_btsocket.h,v 1.7 2005/01/07 01:45:43 imp Exp $
+ * $Id: ng_btsocket.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_btsocket.h,v 1.8 2006/05/17 00:13:06 emax Exp $
  */
 
 #ifndef _NETGRAPH_BTSOCKET_H_
@@ -188,6 +188,15 @@ struct ng_btsocket_hci_raw_node_role_switch {
 #define SIOC_HCI_RAW_NODE_SET_ROLE_SWITCH \
 	_IOWR('b', NGM_HCI_NODE_SET_ROLE_SWITCH, \
 		struct ng_btsocket_hci_raw_node_role_switch)
+
+/* Get list of HCI node names */
+struct ng_btsocket_hci_raw_node_list_names {
+	u_int32_t	 num_names;
+	struct nodeinfo	*names;
+};
+#define SIOC_HCI_RAW_NODE_LIST_NAMES \
+	_IOWR('b', NGM_HCI_NODE_LIST_NAMES, \
+		struct ng_btsocket_hci_raw_node_list_names)
 
 /*
  * XXX FIXME: probably does not belong here

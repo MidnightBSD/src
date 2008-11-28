@@ -38,7 +38,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_vjc.c,v 1.25 2005/01/07 01:45:39 imp Exp $
+ * $FreeBSD: src/sys/netgraph/ng_vjc.c,v 1.26 2005/12/04 00:25:03 ru Exp $
  * $Whistle: ng_vjc.c,v 1.17 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -109,12 +109,10 @@ static const struct ng_parse_type ng_vjc_config_type = {
 
 /* Parse type for the 'last_cs' and 'cs_next' fields in struct slcompress,
    which are pointers converted to integer indices, so parse them that way. */
-#if _MACHINE_ARCH == i386
+#ifndef __LP64__
 #define NG_VJC_TSTATE_PTR_TYPE	&ng_parse_uint32_type
-#elif _MACHINE_ARCH == alpha
-#define NG_VJC_TSTATE_PTR_TYPE	&ng_parse_uint64_type
 #else
-#error Unspported _MACHINE_ARCH
+#define NG_VJC_TSTATE_PTR_TYPE	&ng_parse_uint64_type
 #endif
 
 /* Parse type for the 'cs_hdr' field in a struct cstate. Ideally we would

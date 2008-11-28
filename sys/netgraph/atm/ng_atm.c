@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/ng_atm.c,v 1.14 2005/06/10 16:49:21 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/atm/ng_atm.c,v 1.15 2005/08/10 06:25:40 obrien Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1262,18 +1262,18 @@ ng_atm_attach(struct ifnet *ifp)
 	node_p node;
 	struct priv *priv;
 
-	KASSERT(IFP2NG(ifp) == 0, ("%s: node alreay exists?", __FUNCTION__));
+	KASSERT(IFP2NG(ifp) == 0, ("%s: node alreay exists?", __func__));
 
 	if (ng_make_node_common(&ng_atm_typestruct, &node) != 0) {
 		log(LOG_ERR, "%s: can't create node for %s\n",
-		    __FUNCTION__, ifp->if_xname);
+		    __func__, ifp->if_xname);
 		return;
 	}
 
 	priv = malloc(sizeof(*priv), M_NETGRAPH, M_NOWAIT | M_ZERO);
 	if (priv == NULL) {
 		log(LOG_ERR, "%s: can't allocate memory for %s\n",
-		    __FUNCTION__, ifp->if_xname);
+		    __func__, ifp->if_xname);
 		NG_NODE_UNREF(node);
 		return;
 	}
@@ -1284,7 +1284,7 @@ ng_atm_attach(struct ifnet *ifp)
 
 	if (ng_name_node(node, ifp->if_xname) != 0) {
 		log(LOG_WARNING, "%s: can't name node %s\n",
-		    __FUNCTION__, ifp->if_xname);
+		    __func__, ifp->if_xname);
 	}
 }
 

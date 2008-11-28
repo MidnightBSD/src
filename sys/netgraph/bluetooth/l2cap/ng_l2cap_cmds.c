@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_l2cap_cmds.c,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/l2cap/ng_l2cap_cmds.c,v 1.5.2.1 2005/09/03 03:34:23 emax Exp $
+ * $Id: ng_l2cap_cmds.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/l2cap/ng_l2cap_cmds.c,v 1.7 2007/03/28 21:25:56 emax Exp $
  */
 
 #include <sys/param.h>
@@ -90,7 +90,17 @@ ng_l2cap_con_wakeup(ng_l2cap_con_p con)
 	case NG_L2CAP_DISCON_RSP:
 	case NG_L2CAP_ECHO_RSP:
 	case NG_L2CAP_INFO_RSP:
-		ng_l2cap_lp_send(con, NG_L2CAP_SIGNAL_CID, m);
+		/*
+		 * Do not check return ng_l2cap_lp_send() value, because
+		 * in these cases we do not really have a graceful way out.
+		 * ECHO and INFO responses are internal to the stack and not
+		 * visible to user. REJect is just being nice to remote end
+		 * (otherwise remote end will timeout anyway). DISCON is
+		 * probably most interesting here, however, if it fails
+		 * there is nothing we can do anyway.
+		 */
+
+		(void) ng_l2cap_lp_send(con, NG_L2CAP_SIGNAL_CID, m);
 		ng_l2cap_unlink_cmd(cmd);
 		ng_l2cap_free_cmd(cmd);
 		break;

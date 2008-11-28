@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ubtbcmfw.c,v 1.1.1.2 2006-02-25 02:37:33 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/drivers/ubtbcmfw/ubtbcmfw.c,v 1.10 2005/01/07 01:45:42 imp Exp $
+ * $Id: ubtbcmfw.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/drivers/ubtbcmfw/ubtbcmfw.c,v 1.18 2007/06/23 04:34:38 imp Exp $
  */
 
 #include <sys/param.h>
@@ -62,7 +62,7 @@
 #define UBTBCMFW_BULK_OUT	UE_GET_ADDR(UBTBCMFW_BULK_OUT_EP)
 
 struct ubtbcmfw_softc {
-	USBBASEDEVICE		sc_dev;			/* base device */
+	device_t		sc_dev;			/* base device */
 	usbd_device_handle	sc_udev;		/* USB device handle */
 	struct cdev *sc_ctrl_dev;		/* control device */
 	struct cdev *sc_intr_in_dev;		/* interrupt device */
@@ -88,14 +88,14 @@ typedef struct ubtbcmfw_softc	*ubtbcmfw_softc_p;
 #define UBTBCMFW_MINOR(u, e)	(((u) << 4) | (e))
 #define UBTBCMFW_BSIZE		1024
 
-Static d_open_t		ubtbcmfw_open;
-Static d_close_t	ubtbcmfw_close;
-Static d_read_t		ubtbcmfw_read;
-Static d_write_t	ubtbcmfw_write;
-Static d_ioctl_t	ubtbcmfw_ioctl;
-Static d_poll_t		ubtbcmfw_poll;
+static d_open_t		ubtbcmfw_open;
+static d_close_t	ubtbcmfw_close;
+static d_read_t		ubtbcmfw_read;
+static d_write_t	ubtbcmfw_write;
+static d_ioctl_t	ubtbcmfw_ioctl;
+static d_poll_t		ubtbcmfw_poll;
 
-Static struct cdevsw	ubtbcmfw_cdevsw = {
+static struct cdevsw	ubtbcmfw_cdevsw = {
 	.d_version =	D_VERSION,
 	.d_flags =	D_NEEDGIANT,
 	.d_open =	ubtbcmfw_open,
@@ -111,7 +111,28 @@ Static struct cdevsw	ubtbcmfw_cdevsw = {
  * Module
  */
 
-USB_DECLARE_DRIVER(ubtbcmfw);
+static device_probe_t ubtbcmfw_match;
+static device_attach_t ubtbcmfw_attach;
+static device_detach_t ubtbcmfw_detach;
+
+static device_method_t ubtbcmfw_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		ubtbcmfw_match),
+	DEVMETHOD(device_attach,	ubtbcmfw_attach),
+	DEVMETHOD(device_detach,	ubtbcmfw_detach),
+
+	{ 0, 0 }
+};
+
+static driver_t ubtbcmfw_driver = {
+	"ubtbcmfw",
+	ubtbcmfw_methods,
+	sizeof(struct ubtbcmfw_softc)
+};
+
+static devclass_t ubtbcmfw_devclass;
+
+MODULE_DEPEND(ubtbcmfw, usb, 1, 1, 1);
 DRIVER_MODULE(ubtbcmfw, uhub, ubtbcmfw_driver, ubtbcmfw_devclass,
 	      usbd_driver_load, 0);
 
@@ -119,11 +140,11 @@ DRIVER_MODULE(ubtbcmfw, uhub, ubtbcmfw_driver, ubtbcmfw_devclass,
  * Probe for a USB Bluetooth device
  */
 
-USB_MATCH(ubtbcmfw)
+static int
+ubtbcmfw_match(device_t self)
 {
 #define	USB_PRODUCT_BROADCOM_BCM2033NF	0x2033
-
-	USB_MATCH_START(ubtbcmfw, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 
 	if (uaa->iface != NULL)
 		return (UMATCH_NONE);
@@ -140,17 +161,16 @@ USB_MATCH(ubtbcmfw)
  * Attach the device
  */
 
-USB_ATTACH(ubtbcmfw)
+static int
+ubtbcmfw_attach(device_t self)
 {
-	USB_ATTACH_START(ubtbcmfw, sc, uaa);
+	struct ubtbcmfw_softc *sc = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usbd_interface_handle	iface;
 	usbd_status		err;
-	char			devinfo[1024];
 
+	sc->sc_dev = self;
 	sc->sc_udev = uaa->device;
-	usbd_devinfo(sc->sc_udev, 0, devinfo);
-	USB_ATTACH_SETUP;
-	printf("%s: %s\n", USBDEVNAME(sc->sc_dev), devinfo);
 
 	sc->sc_ctrl_dev = sc->sc_intr_in_dev = sc->sc_bulk_out_dev = NULL;
 	sc->sc_intr_in_pipe = sc->sc_bulk_out_pipe = NULL;
@@ -159,7 +179,7 @@ USB_ATTACH(ubtbcmfw)
 	err = usbd_set_config_no(sc->sc_udev, UBTBCMFW_CONFIG_NO, 1);
 	if (err) {
 		printf("%s: setting config no failed. %s\n",
-			USBDEVNAME(sc->sc_dev), usbd_errstr(err));
+			device_get_nameunit(sc->sc_dev), usbd_errstr(err));
 		goto bad;
 	}
 
@@ -167,7 +187,7 @@ USB_ATTACH(ubtbcmfw)
 			&iface);
 	if (err) {
 		printf("%s: getting interface handle failed. %s\n",
-			USBDEVNAME(sc->sc_dev), usbd_errstr(err));
+			device_get_nameunit(sc->sc_dev), usbd_errstr(err));
 		goto bad;
 	}
 
@@ -176,7 +196,7 @@ USB_ATTACH(ubtbcmfw)
 			&sc->sc_intr_in_pipe);
 	if (err) {
 		printf("%s: open intr in failed. %s\n",
-			USBDEVNAME(sc->sc_dev), usbd_errstr(err));
+			device_get_nameunit(sc->sc_dev), usbd_errstr(err));
 		goto bad;
 	}
 
@@ -184,43 +204,42 @@ USB_ATTACH(ubtbcmfw)
 			&sc->sc_bulk_out_pipe);
 	if (err) {
 		printf("%s: open bulk out failed. %s\n",
-			USBDEVNAME(sc->sc_dev), usbd_errstr(err));
+			device_get_nameunit(sc->sc_dev), usbd_errstr(err));
 		goto bad;
 	}
 
 	/* Create device nodes */
 	sc->sc_ctrl_dev = make_dev(&ubtbcmfw_cdevsw,
-		UBTBCMFW_MINOR(USBDEVUNIT(sc->sc_dev), 0),
+		UBTBCMFW_MINOR(device_get_unit(sc->sc_dev), 0),
 		UID_ROOT, GID_OPERATOR, 0644,
-		"%s", USBDEVNAME(sc->sc_dev));
+		"%s", device_get_nameunit(sc->sc_dev));
 
 	sc->sc_intr_in_dev = make_dev(&ubtbcmfw_cdevsw,
-		UBTBCMFW_MINOR(USBDEVUNIT(sc->sc_dev), UBTBCMFW_INTR_IN),
+		UBTBCMFW_MINOR(device_get_unit(sc->sc_dev), UBTBCMFW_INTR_IN),
 		UID_ROOT, GID_OPERATOR, 0644,
-		"%s.%d", USBDEVNAME(sc->sc_dev), UBTBCMFW_INTR_IN);
+		"%s.%d", device_get_nameunit(sc->sc_dev), UBTBCMFW_INTR_IN);
 
 	sc->sc_bulk_out_dev = make_dev(&ubtbcmfw_cdevsw,
-		UBTBCMFW_MINOR(USBDEVUNIT(sc->sc_dev), UBTBCMFW_BULK_OUT),
+		UBTBCMFW_MINOR(device_get_unit(sc->sc_dev), UBTBCMFW_BULK_OUT),
 		UID_ROOT, GID_OPERATOR, 0644,
-		"%s.%d", USBDEVNAME(sc->sc_dev), UBTBCMFW_BULK_OUT);
+		"%s.%d", device_get_nameunit(sc->sc_dev), UBTBCMFW_BULK_OUT);
 
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 bad:
 	ubtbcmfw_detach(self);  
-        
-        USB_ATTACH_ERROR_RETURN;
+	return ENXIO;
 }
 
 /*
  * Detach the device
  */
 
-USB_DETACH(ubtbcmfw)
+static int
+ubtbcmfw_detach(device_t self)
 {
-	USB_DETACH_START(ubtbcmfw, sc);
+	struct ubtbcmfw_softc *sc = device_get_softc(self);
 
 	sc->sc_dying = 1;
-
 	if (-- sc->sc_refcnt >= 0) {
 		if (sc->sc_intr_in_pipe != NULL) 
 			usbd_abort_pipe(sc->sc_intr_in_pipe);
@@ -228,7 +247,7 @@ USB_DETACH(ubtbcmfw)
 		if (sc->sc_bulk_out_pipe != NULL) 
 			usbd_abort_pipe(sc->sc_bulk_out_pipe);
 
-		usb_detach_wait(USBDEV(sc->sc_dev));
+		usb_detach_wait(sc->sc_dev);
 	}
 
 	/* Destroy device nodes */
@@ -266,14 +285,16 @@ USB_DETACH(ubtbcmfw)
  * XXX FIXME softc locking
  */
 
-Static int
-ubtbcmfw_open(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
+static int
+ubtbcmfw_open(struct cdev *dev, int flag, int mode, struct thread *p)
 {
 	ubtbcmfw_softc_p	sc = NULL;
 	int			error = 0;
 
 	/* checks for sc != NULL */
-	USB_GET_SC_OPEN(ubtbcmfw, UBTBCMFW_UNIT(dev), sc);
+	sc = devclass_get_softc(ubtbcmfw_devclass, UBTBCMFW_UNIT(dev));
+	if (sc == NULL)
+		return (ENXIO);
 	if (sc->sc_dying)
 		return (ENXIO);
 
@@ -318,12 +339,12 @@ ubtbcmfw_open(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
  * XXX FIXME softc locking
  */
 
-Static int
-ubtbcmfw_close(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
+static int
+ubtbcmfw_close(struct cdev *dev, int flag, int mode, struct thread *p)
 {
 	ubtbcmfw_softc_p	sc = NULL;
 
-	USB_GET_SC(ubtbcmfw, UBTBCMFW_UNIT(dev), sc);
+	sc = devclass_get_softc(ubtbcmfw_devclass, UBTBCMFW_UNIT(dev));
 	if (sc == NULL)
 		return (ENXIO);
 
@@ -355,7 +376,7 @@ ubtbcmfw_close(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
  * XXX FIXME softc locking
  */
 
-Static int
+static int
 ubtbcmfw_read(struct cdev *dev, struct uio *uio, int flag)
 {
 	ubtbcmfw_softc_p	sc = NULL;
@@ -364,7 +385,7 @@ ubtbcmfw_read(struct cdev *dev, struct uio *uio, int flag)
 	usbd_status		err;
 	int			n, tn, error = 0;
 
-	USB_GET_SC(ubtbcmfw, UBTBCMFW_UNIT(dev), sc);
+	sc = devclass_get_softc(ubtbcmfw_devclass, UBTBCMFW_UNIT(dev));
 	if (sc == NULL || sc->sc_dying)
 		return (ENXIO);
 
@@ -409,7 +430,7 @@ ubtbcmfw_read(struct cdev *dev, struct uio *uio, int flag)
 	usbd_free_xfer(xfer);
 
 	if (-- sc->sc_refcnt < 0)
-		usb_detach_wakeup(USBDEV(sc->sc_dev));
+		usb_detach_wakeup(sc->sc_dev);
 
 	return (error);
 }
@@ -419,7 +440,7 @@ ubtbcmfw_read(struct cdev *dev, struct uio *uio, int flag)
  * XXX FIXME softc locking
  */
 
-Static int
+static int
 ubtbcmfw_write(struct cdev *dev, struct uio *uio, int flag)
 {
 	ubtbcmfw_softc_p	sc = NULL;
@@ -428,7 +449,7 @@ ubtbcmfw_write(struct cdev *dev, struct uio *uio, int flag)
 	usbd_status		err;
 	int			n, error = 0;
 
-	USB_GET_SC(ubtbcmfw, UBTBCMFW_UNIT(dev), sc);
+	sc = devclass_get_softc(ubtbcmfw_devclass, UBTBCMFW_UNIT(dev));
 	if (sc == NULL || sc->sc_dying)
 		return (ENXIO);
 
@@ -474,7 +495,7 @@ ubtbcmfw_write(struct cdev *dev, struct uio *uio, int flag)
 	usbd_free_xfer(xfer);
 
 	if (-- sc->sc_refcnt < 0)
-		usb_detach_wakeup(USBDEV(sc->sc_dev));
+		usb_detach_wakeup(sc->sc_dev);
 
 	return (error);
 }
@@ -484,13 +505,14 @@ ubtbcmfw_write(struct cdev *dev, struct uio *uio, int flag)
  * XXX FIXME softc locking
  */
 
-Static int
-ubtbcmfw_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, usb_proc_ptr p)
+static int
+ubtbcmfw_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag,
+  struct thread *p)
 {
 	ubtbcmfw_softc_p	sc = NULL;
 	int			error = 0;
 
-	USB_GET_SC(ubtbcmfw, UBTBCMFW_UNIT(dev), sc);
+	sc = devclass_get_softc(ubtbcmfw_devclass, UBTBCMFW_UNIT(dev));
 	if (sc == NULL || sc->sc_dying)
 		return (ENXIO);
 
@@ -511,7 +533,7 @@ ubtbcmfw_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, usb_proc_pt
 	}
 
 	if (-- sc->sc_refcnt < 0)
-		usb_detach_wakeup(USBDEV(sc->sc_dev));
+		usb_detach_wakeup(sc->sc_dev);
 
 	return (error);
 }
@@ -521,13 +543,13 @@ ubtbcmfw_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, usb_proc_pt
  * XXX FIXME softc locking
  */
 
-Static int
-ubtbcmfw_poll(struct cdev *dev, int events, usb_proc_ptr p)
+static int
+ubtbcmfw_poll(struct cdev *dev, int events, struct thread *p)
 {
 	ubtbcmfw_softc_p	sc = NULL;
 	int			revents = 0;
 
-	USB_GET_SC(ubtbcmfw, UBTBCMFW_UNIT(dev), sc);
+	sc = devclass_get_softc(ubtbcmfw_devclass, UBTBCMFW_UNIT(dev));
 	if (sc == NULL)
 		return (ENXIO);
 
@@ -553,4 +575,3 @@ ubtbcmfw_poll(struct cdev *dev, int events, usb_proc_ptr p)
 
 	return (revents);
 }
-

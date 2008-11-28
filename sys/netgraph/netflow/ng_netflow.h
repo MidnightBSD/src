@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *	 $SourceForge: ng_netflow.h,v 1.26 2004/09/04 15:44:55 glebius Exp $
- *	 $FreeBSD: src/sys/netgraph/netflow/ng_netflow.h,v 1.7.2.2 2006/02/16 12:37:14 glebius Exp $
+ *	 $FreeBSD: src/sys/netgraph/netflow/ng_netflow.h,v 1.10 2007/03/28 13:59:13 glebius Exp $
  */
 
 #ifndef	_NG_NETFLOW_H_
@@ -34,7 +34,7 @@
 #define NG_NETFLOW_NODE_TYPE	"netflow"
 #define NGM_NETFLOW_COOKIE	1137078102
 
-#define	NG_NETFLOW_MAXIFACES	2048
+#define	NG_NETFLOW_MAXIFACES	USHRT_MAX
 
 /* Hook names */
 

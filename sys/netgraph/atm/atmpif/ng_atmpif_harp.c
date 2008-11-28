@@ -33,7 +33,7 @@
  *
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/atmpif/ng_atmpif_harp.c,v 1.4 2005/06/10 16:49:21 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/atm/atmpif/ng_atmpif_harp.c,v 1.5 2005/08/10 06:25:40 obrien Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -836,7 +836,7 @@ vatmpif_harp_recv_drain(Vatmpif_unit *vup, KBuffer *m,
 
 	if (IS_VATMPIF_DEBUG_PACKET(vup))
 		atm_dev_pdu_print((Cmn_unit *)vup, (Cmn_vcc *)vvp, m,
-		    __FUNCTION__);
+		    __func__);
 
 	/*
 	 * Get packet PDU length

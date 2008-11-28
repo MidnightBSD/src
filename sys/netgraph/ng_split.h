@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_split.h,v 1.4.2.1 2005/11/16 10:01:27 ru Exp $
+ * $FreeBSD: src/sys/netgraph/ng_split.h,v 1.5 2005/10/25 20:56:12 ru Exp $
  *
  */
 

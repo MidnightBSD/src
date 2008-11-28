@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_pppoe.h,v 1.21.2.2 2006/01/31 15:36:11 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_pppoe.h,v 1.24 2006/08/09 09:56:58 glebius Exp $
  * $Whistle: ng_pppoe.h,v 1.7 1999/10/16 10:16:43 julian Exp $
  */
 
@@ -85,8 +85,9 @@ enum cmd {
 	NGM_PPPOE_ACNAME   = 9,	/* AC_NAME for informational purposes */
 	NGM_PPPOE_GET_STATUS = 10, /* data in/out */
 	NGM_PPPOE_SESSIONID  = 11,  /* Session_ID for informational purposes */
-	NGM_PPPOE_SETMODE  = 12, /* set to standard or 3Com mode */
+	NGM_PPPOE_SETMODE  = 12, /* set to standard or compat modes */
 	NGM_PPPOE_GETMODE  = 13, /* see current mode */
+	NGM_PPPOE_SETENADDR = 14, /* set Ethernet address */
 };
 
 /***********************

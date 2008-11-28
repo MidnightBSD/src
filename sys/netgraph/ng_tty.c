@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_tty.c,v 1.34.2.1 2005/10/09 00:19:28 tanimura Exp $
+ * $FreeBSD: src/sys/netgraph/ng_tty.c,v 1.37 2006/11/06 13:42:03 rwatson Exp $
  * $Whistle: ng_tty.c,v 1.21 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -66,6 +66,7 @@
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
+#include <sys/priv.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
 #include <sys/tty.h>
@@ -189,7 +190,8 @@ ngt_open(struct cdev *dev, struct tty *tp)
 	int error;
 
 	/* Super-user only */
-	if ((error = suser(td)))
+	error = priv_check(td, PRIV_NETGRAPH_TTY);
+	if (error)
 		return (error);
 
 	/* Initialize private struct */
@@ -445,8 +447,7 @@ ngt_start(struct tty *tp)
 
 	/* Call output process whether or not there is any output. We are
 	 * being called in lieu of ttstart and must do what it would. */
-	if (tp->t_oproc != NULL)
-		(*tp->t_oproc) (tp);
+	tt_oproc(tp);
 
 	/* This timeout is needed for operation on a pseudo-tty, because the
 	 * pty code doesn't call pppstart after it has drained the t_outq. */

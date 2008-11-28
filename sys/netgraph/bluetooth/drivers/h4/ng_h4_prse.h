@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_h4_prse.h,v 1.1.1.2 2006-02-25 02:37:33 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/drivers/h4/ng_h4_prse.h,v 1.4 2005/01/07 01:45:42 imp Exp $
+ * $Id: ng_h4_prse.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/drivers/h4/ng_h4_prse.h,v 1.5 2007/08/13 17:19:28 emax Exp $
  */
 
 /***************************************************************************

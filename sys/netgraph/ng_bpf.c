@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_bpf.c,v 1.19 2005/01/07 01:45:39 imp Exp $
+ * $FreeBSD: src/sys/netgraph/ng_bpf.c,v 1.22 2007/07/26 18:15:02 mav Exp $
  * $Whistle: ng_bpf.c,v 1.3 1999/12/03 20:30:23 archie Exp $
  */
 
@@ -54,6 +54,8 @@
  * Each hook also keeps statistics about how many packets have matched, etc.
  */
 
+#include "opt_bpf.h"
+
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/errno.h>
@@ -62,6 +64,9 @@
 #include <sys/mbuf.h>
 
 #include <net/bpf.h>
+#ifdef BPF_JITTER
+#include <net/bpf_jitter.h>
+#endif
 
 #include <netgraph/ng_message.h>
 #include <netgraph/netgraph.h>
@@ -83,6 +88,9 @@ struct ng_bpf_hookinfo {
 	node_p			node;
 	hook_p			hook;
 	struct ng_bpf_hookprog	*prog;
+#ifdef BPF_JITTER
+	bpf_jit_filter		*jit_prog;
+#endif
 	struct ng_bpf_hookstat	stats;
 };
 typedef struct ng_bpf_hookinfo *hinfo_p;
@@ -374,7 +382,7 @@ ng_bpf_rcvdata(hook_p hook, item_p item)
 	const hinfo_p hip = NG_HOOK_PRIVATE(hook);
 	int totlen;
 	int needfree = 0, error = 0;
-	u_char *data, buf[256];
+	u_char *data;
 	hinfo_p dhip;
 	hook_p dest;
 	u_int len;
@@ -390,24 +398,36 @@ ng_bpf_rcvdata(hook_p hook, item_p item)
 
 	/* Need to put packet in contiguous memory for bpf */
 	if (m->m_next != NULL) {
-		if (totlen > sizeof(buf)) {
+		if (totlen > MHLEN) {
 			MALLOC(data, u_char *, totlen, M_NETGRAPH_BPF, M_NOWAIT);
 			if (data == NULL) {
 				NG_FREE_ITEM(item);
 				return (ENOMEM);
 			}
 			needfree = 1;
-		} else
-			data = buf;
-		m_copydata(m, 0, totlen, (caddr_t)data);
+			m_copydata(m, 0, totlen, (caddr_t)data);
+		} else {
+			NGI_M(item) = m = m_pullup(m, totlen);
+			if (m == NULL) {
+				NG_FREE_ITEM(item);
+				return (ENOBUFS);
+			}
+			data = mtod(m, u_char *);
+		}
 	} else
 		data = mtod(m, u_char *);
 
 	/* Run packet through filter */
 	if (totlen == 0)
 		len = 0;	/* don't call bpf_filter() with totlen == 0! */
-	else
+	else {
+#ifdef BPF_JITTER
+		if (bpf_jitter_enable != 0 && hip->jit_prog != NULL)
+			len = (*(hip->jit_prog->func))(data, totlen, totlen);
+		else
+#endif
 		len = bpf_filter(hip->prog->bpf_prog, data, totlen, totlen);
+	}
 	if (needfree)
 		FREE(data, M_NETGRAPH_BPF);
 
@@ -461,6 +481,10 @@ ng_bpf_disconnect(hook_p hook)
 
 	KASSERT(hip != NULL, ("%s: null info", __func__));
 	FREE(hip->prog, M_NETGRAPH_BPF);
+#ifdef BPF_JITTER
+	if (hip->jit_prog != NULL)
+		bpf_destroy_jit_filter(hip->jit_prog);
+#endif
 	bzero(hip, sizeof(*hip));
 	FREE(hip, M_NETGRAPH_BPF);
 	NG_HOOK_SET_PRIVATE(hook, NULL);			/* for good measure */
@@ -483,6 +507,9 @@ ng_bpf_setprog(hook_p hook, const struct ng_bpf_hookprog *hp0)
 {
 	const hinfo_p hip = NG_HOOK_PRIVATE(hook);
 	struct ng_bpf_hookprog *hp;
+#ifdef BPF_JITTER
+	bpf_jit_filter *jit_prog;
+#endif
 	int size;
 
 	/* Check program for validity */
@@ -495,11 +522,18 @@ ng_bpf_setprog(hook_p hook, const struct ng_bpf_hookprog *hp0)
 	if (hp == NULL)
 		return (ENOMEM);
 	bcopy(hp0, hp, size);
+#ifdef BPF_JITTER
+	jit_prog = bpf_jitter(hp->bpf_prog, hp->bpf_prog_len);
+#endif
 
 	/* Free previous program, if any, and assign new one */
 	if (hip->prog != NULL)
 		FREE(hip->prog, M_NETGRAPH_BPF);
 	hip->prog = hp;
+#ifdef BPF_JITTER
+	if (hip->jit_prog != NULL)
+		bpf_destroy_jit_filter(hip->jit_prog);
+	hip->jit_prog = jit_prog;
+#endif
 	return (0);
 }
-

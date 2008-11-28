@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_l2cap.h,v 1.1.1.2 2006-02-25 02:37:34 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_btsocket_l2cap.h,v 1.4 2005/01/07 01:45:43 imp Exp $
+ * $Id: ng_btsocket_l2cap.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/include/ng_btsocket_l2cap.h,v 1.8 2006/07/21 17:11:13 rwatson Exp $
  */
 
 #ifndef _NETGRAPH_BTSOCKET_L2CAP_H_
@@ -92,7 +92,8 @@ typedef struct ng_btsocket_l2cap_raw_pcb *	ng_btsocket_l2cap_raw_pcb_p;
 #ifdef _KERNEL
 
 void ng_btsocket_l2cap_raw_init       (void);
-int  ng_btsocket_l2cap_raw_abort      (struct socket *);
+void ng_btsocket_l2cap_raw_abort      (struct socket *);
+void ng_btsocket_l2cap_raw_close      (struct socket *);
 int  ng_btsocket_l2cap_raw_attach     (struct socket *, int, struct thread *);
 int  ng_btsocket_l2cap_raw_bind       (struct socket *, struct sockaddr *,
                                        struct thread *);
@@ -100,7 +101,7 @@ int  ng_btsocket_l2cap_raw_connect    (struct socket *, struct sockaddr *,
                                        struct thread *);
 int  ng_btsocket_l2cap_raw_control    (struct socket *, u_long, caddr_t,
                                        struct ifnet *, struct thread *);
-int  ng_btsocket_l2cap_raw_detach     (struct socket *);
+void ng_btsocket_l2cap_raw_detach     (struct socket *);
 int  ng_btsocket_l2cap_raw_disconnect (struct socket *);
 int  ng_btsocket_l2cap_raw_peeraddr   (struct socket *, struct sockaddr **);
 int  ng_btsocket_l2cap_raw_send       (struct socket *, int, struct mbuf *,
@@ -183,7 +184,8 @@ typedef struct ng_btsocket_l2cap_pcb *	ng_btsocket_l2cap_pcb_p;
 #ifdef _KERNEL
 
 void ng_btsocket_l2cap_init       (void);
-int  ng_btsocket_l2cap_abort      (struct socket *);
+void ng_btsocket_l2cap_abort      (struct socket *);
+void ng_btsocket_l2cap_close      (struct socket *);
 int  ng_btsocket_l2cap_accept     (struct socket *, struct sockaddr **);
 int  ng_btsocket_l2cap_attach     (struct socket *, int, struct thread *);
 int  ng_btsocket_l2cap_bind       (struct socket *, struct sockaddr *,
@@ -193,9 +195,9 @@ int  ng_btsocket_l2cap_connect    (struct socket *, struct sockaddr *,
 int  ng_btsocket_l2cap_control    (struct socket *, u_long, caddr_t,
                                    struct ifnet *, struct thread *);
 int  ng_btsocket_l2cap_ctloutput  (struct socket *, struct sockopt *);
-int  ng_btsocket_l2cap_detach     (struct socket *);
+void ng_btsocket_l2cap_detach     (struct socket *);
 int  ng_btsocket_l2cap_disconnect (struct socket *);
-int  ng_btsocket_l2cap_listen     (struct socket *, struct thread *);
+int  ng_btsocket_l2cap_listen     (struct socket *, int, struct thread *);
 int  ng_btsocket_l2cap_peeraddr   (struct socket *, struct sockaddr **);
 int  ng_btsocket_l2cap_send       (struct socket *, int, struct mbuf *,
                                    struct sockaddr *, struct mbuf *,

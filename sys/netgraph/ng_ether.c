@@ -39,7 +39,7 @@
  * Authors: Archie Cobbs <archie@freebsd.org>
  *	    Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_ether.c,v 1.49.2.5 2006/01/21 10:07:25 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_ether.c,v 1.62 2007/03/20 00:36:10 bms Exp $
  */
 
 /*
@@ -55,7 +55,6 @@
 #include <sys/syslog.h>
 #include <sys/socket.h>
 
-#include <net/bridge.h>
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
@@ -302,7 +301,6 @@ ng_ether_attach(struct ifnet *ifp)
 	NG_NODE_SET_PRIVATE(node, priv);
 	priv->ifp = ifp;
 	IFP2NG(ifp) = node;
-	priv->autoSrcAddr = 1;
 	priv->hwassist = ifp->if_hwassist;
 
 	/* Try to give the node the same name as the interface */
@@ -448,7 +446,7 @@ ng_ether_rcvmsg(node_p node, item_p item, hook_p lasthook)
 				error = ENOMEM;
 				break;
 			}
-			bcopy(IFP2ENADDR(priv->ifp),
+			bcopy(IF_LLADDR(priv->ifp),
 			    resp->data, ETHER_ADDR_LEN);
 			break;
 		case NGM_ETHER_SET_ENADDR:
@@ -503,7 +501,7 @@ ng_ether_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		case NGM_ETHER_ADD_MULTI:
 		    {
 			struct sockaddr_dl sa_dl;
-			struct ifmultiaddr *ifm;
+			struct ifmultiaddr *ifma;
 
 			if (msg->header.arglen != ETHER_ADDR_LEN) {
 				error = EINVAL;
@@ -515,8 +513,23 @@ ng_ether_rcvmsg(node_p node, item_p item, hook_p lasthook)
 			sa_dl.sdl_alen = ETHER_ADDR_LEN;
 			bcopy((void *)msg->data, LLADDR(&sa_dl),
 			    ETHER_ADDR_LEN);
-			error = if_addmulti(priv->ifp,
-			    (struct sockaddr *)&sa_dl, &ifm);
+			/*
+			 * Netgraph is only permitted to join groups once
+			 * via the if_addmulti() KPI, because it cannot hold
+			 * struct ifmultiaddr * between calls. It may also
+			 * lose a race while we check if the membership
+			 * already exists.
+			 */
+			IF_ADDR_LOCK(priv->ifp);
+			ifma = if_findmulti(priv->ifp,
+			    (struct sockaddr *)&sa_dl);
+			IF_ADDR_UNLOCK(priv->ifp);
+			if (ifma != NULL) {
+				error = EADDRINUSE;
+			} else {
+				error = if_addmulti(priv->ifp,
+				    (struct sockaddr *)&sa_dl, &ifma);
+			}
 			break;
 		    }
 		case NGM_ETHER_DEL_MULTI:
@@ -611,7 +624,7 @@ ng_ether_rcv_lower(node_p node, struct mbuf *m)
 			return (ENOBUFS);
 
 		/* Overwrite source MAC address */
-		bcopy(IFP2ENADDR(ifp),
+		bcopy(IF_LLADDR(ifp),
 		    mtod(m, struct ether_header *)->ether_shost,
 		    ETHER_ADDR_LEN);
 	}
@@ -639,10 +652,6 @@ ng_ether_rcv_upper(node_p node, struct mbuf *m)
 		return (ENOBUFS);
 
 	m->m_pkthdr.rcvif = ifp;
-
-	if (BDG_ACTIVE(priv->ifp) )
-		if ((m = bridge_in_ptr(priv->ifp, m)) == NULL)
-			return (0);
 
 	/* Pass the packet to the bridge, it may come back to us */
 	if (ifp->if_bridge) {

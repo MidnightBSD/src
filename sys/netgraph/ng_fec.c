@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_fec.c,v 1.18.2.3 2005/11/16 10:13:34 ru Exp $
+ * $FreeBSD: src/sys/netgraph/ng_fec.c,v 1.30 2007/05/18 15:05:49 dwmalone Exp $
  */
 /*-
  * Copyright (c) 1996-1999 Whistle Communications, Inc.
@@ -102,8 +102,8 @@
 #include <sys/queue.h>
 
 #include <net/if.h>
+#include <net/if_dl.h>
 #include <net/if_types.h>
-#include <net/if_arp.h>
 #include <net/if_media.h>
 #include <net/bpf.h>
 #include <net/ethernet.h>
@@ -149,7 +149,13 @@ struct ng_fec_portlist {
 	int			fec_idx;
 	int			fec_ifstat;
 	struct ether_addr	fec_mac;
+	SLIST_HEAD(__mclhd, ng_fec_mc)	fec_mc_head;
 	TAILQ_ENTRY(ng_fec_portlist) fec_list;
+};
+
+struct ng_fec_mc {
+	struct ifmultiaddr      *mc_ifma;
+	SLIST_ENTRY(ng_fec_mc)    mc_entries;
 };
 
 struct ng_fec_bundle {
@@ -195,6 +201,7 @@ static int	ng_fec_output(struct ifnet *ifp, struct mbuf *m0,
 static void	ng_fec_tick(void *arg);
 static int	ng_fec_addport(struct ng_fec_private *priv, char *iface);
 static int	ng_fec_delport(struct ng_fec_private *priv, char *iface);
+static int	ng_fec_ether_cmdmulti(struct ifnet *trifp, struct ng_fec_portlist *p, int set);
 
 #ifdef DEBUG
 static void	ng_fec_print_ioctl(struct ifnet *ifp, int cmd, caddr_t data);
@@ -294,7 +301,7 @@ ng_fec_get_unit(int *unit)
 	}
 	bit = ffs(ng_fec_units[index]) - 1;
 	KASSERT(bit >= 0 && bit <= UNITS_BITSPERWORD - 1,
-	    ("%s: word=%d bit=%d", __FUNCTION__, ng_fec_units[index], bit));
+	    ("%s: word=%d bit=%d", __func__, ng_fec_units[index], bit));
 	ng_fec_units[index] &= ~(1 << bit);
 	*unit = (index * UNITS_BITSPERWORD) + bit;
 	ng_units_in_use++;
@@ -314,9 +321,9 @@ ng_fec_free_unit(int unit)
 	bit = unit % UNITS_BITSPERWORD;
 	mtx_lock(&ng_fec_mtx);
 	KASSERT(index < ng_fec_units_len,
-	    ("%s: unit=%d len=%d", __FUNCTION__, unit, ng_fec_units_len));
+	    ("%s: unit=%d len=%d", __func__, unit, ng_fec_units_len));
 	KASSERT((ng_fec_units[index] & (1 << bit)) == 0,
-	    ("%s: unit=%d is free", __FUNCTION__, unit));
+	    ("%s: unit=%d is free", __func__, unit));
 	ng_fec_units[index] |= (1 << bit);
 	/*
 	 * XXX We could think about reducing the size of ng_fec_units[]
@@ -411,18 +418,21 @@ ng_fec_addport(struct ng_fec_private *priv, char *iface)
 	 * by extension, all the other ports in the bundle).
 	 */
 	if (b->fec_ifcnt == 0)
-		if_setlladdr(ifp, IFP2ENADDR(bifp), ETHER_ADDR_LEN);
+		if_setlladdr(ifp, IF_LLADDR(bifp), ETHER_ADDR_LEN);
 
 	b->fec_btype = FEC_BTYPE_MAC;
 	new->fec_idx = b->fec_ifcnt;
 	b->fec_ifcnt++;
 
+	/* Initialise the list of multicast addresses that we own. */
+	SLIST_INIT(&new->fec_mc_head);
+
 	/* Save the real MAC address. */
-	bcopy(IFP2ENADDR(bifp),
+	bcopy(IF_LLADDR(bifp),
 	    (char *)&new->fec_mac, ETHER_ADDR_LEN);
 
 	/* Set up phony MAC address. */
-	if_setlladdr(bifp, IFP2ENADDR(ifp), ETHER_ADDR_LEN);
+	if_setlladdr(bifp, IF_LLADDR(ifp), ETHER_ADDR_LEN);
 
 	/* Save original input vector */
 	new->fec_if_input = bifp->if_input;
@@ -438,6 +448,9 @@ ng_fec_addport(struct ng_fec_private *priv, char *iface)
 	new->fec_if = bifp;
 	new->fec_ifstat = -1;
 	TAILQ_INSERT_TAIL(&b->ng_fec_ports, new, fec_list);
+
+	/* Add multicast addresses to this port. */
+	ng_fec_ether_cmdmulti(ifp, new, 1);
 
 	return(0);
 }
@@ -507,9 +520,70 @@ ng_fec_delport(struct ng_fec_private *priv, char *iface)
 	return(0);
 }
 
+static int
+ng_fec_ether_cmdmulti(struct ifnet *trifp, struct ng_fec_portlist *p, int set)
+{
+	struct ifnet *ifp = p->fec_if;
+	struct ng_fec_mc *mc;
+	struct ifmultiaddr *ifma, *rifma = NULL;
+	struct sockaddr_dl sdl;
+	int error;
+
+	bzero((char *)&sdl, sizeof(sdl));
+	sdl.sdl_len = sizeof(sdl);
+	sdl.sdl_family = AF_LINK;
+	sdl.sdl_type = IFT_ETHER;
+	sdl.sdl_alen = ETHER_ADDR_LEN;
+	sdl.sdl_index = ifp->if_index;
+
+	if (set) {
+		TAILQ_FOREACH(ifma, &trifp->if_multiaddrs, ifma_link) {
+			if (ifma->ifma_addr->sa_family != AF_LINK)
+				continue;
+			bcopy(LLADDR((struct sockaddr_dl *)ifma->ifma_addr),
+			    LLADDR(&sdl), ETHER_ADDR_LEN);
+
+			error = if_addmulti(ifp, (struct sockaddr *)&sdl, &rifma);
+			if (error)
+				return (error);
+			mc = malloc(sizeof(struct ng_fec_mc), M_DEVBUF, M_NOWAIT);
+			if (mc == NULL)
+				return (ENOMEM);
+			mc->mc_ifma = rifma;
+			SLIST_INSERT_HEAD(&p->fec_mc_head, mc, mc_entries);
+		}
+	} else {
+		while ((mc = SLIST_FIRST(&p->fec_mc_head)) != NULL) {
+			SLIST_REMOVE(&p->fec_mc_head, mc, ng_fec_mc, mc_entries);
+			if_delmulti_ifma(mc->mc_ifma);
+			free(mc, M_DEVBUF);
+		}
+	}
+	return (0);
+}
+
+static int
+ng_fec_ether_setmulti(struct ifnet *ifp)
+{
+	struct ng_fec_private	*priv;
+	struct ng_fec_bundle	*b;
+	struct ng_fec_portlist	*p;
+
+	priv = ifp->if_softc;
+	b = &priv->fec_bundle;
+
+	TAILQ_FOREACH(p, &b->ng_fec_ports, fec_list) {
+		/* First, remove any existing filter entries. */
+		ng_fec_ether_cmdmulti(ifp, p, 0);
+		/* copy all addresses from the fec interface to the port */
+		ng_fec_ether_cmdmulti(ifp, p, 1);
+	}
+	return (0);
+}
+
 /*
  * Pass an ioctl command down to all the underyling interfaces in a
- * bundle. Used for setting multicast filters and flags.
+ * bundle. Used for setting flags.
  */
 
 static int 
@@ -694,8 +768,26 @@ ng_fec_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	/* These two are mostly handled at a higher layer */
 	case SIOCSIFADDR:
 	case SIOCGIFADDR:
-	case SIOCSIFMTU:
 		error = ether_ioctl(ifp, command, data);
+		break;
+
+	case SIOCSIFMTU:
+		if (ifr->ifr_mtu >= NG_FEC_MTU_MIN &&
+		    ifr->ifr_mtu <= NG_FEC_MTU_MAX) {
+			struct ng_fec_portlist *p;
+			struct ifnet *bifp;
+
+			TAILQ_FOREACH(p, &b->ng_fec_ports, fec_list) {
+				bifp = p->fec_if;
+				error = (*bifp->if_ioctl)(bifp, SIOCSIFMTU,
+				    data);
+				if (error != 0)
+					break;
+			}
+			if (error == 0)
+				ifp->if_mtu = ifr->ifr_mtu;
+		} else
+			error = EINVAL;
 		break;
 
 	/* Set flags */
@@ -734,7 +826,7 @@ ng_fec_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
-		ng_fec_setport(ifp, command, data);
+		ng_fec_ether_setmulti(ifp);
 		error = 0;
 		break;
 	case SIOCGIFMEDIA:
@@ -808,9 +900,15 @@ ng_fec_input(struct ifnet *ifp, struct mbuf *m0)
 
 	/* Convince the system that this is our frame. */
 	m0->m_pkthdr.rcvif = bifp;
-	bifp->if_ipackets++;
-	bifp->if_ibytes += m0->m_pkthdr.len + sizeof(struct ether_header);
 
+	/*
+	 * Count bytes on an individual interface in a bundle.
+	 * The bytes will also be added to the aggregate interface
+	 * once we call ether_input().
+	 */
+	ifp->if_ibytes += m0->m_pkthdr.len;
+
+	bifp->if_ipackets++;
 	(*bifp->if_input)(bifp, m0);
 
 	return;
@@ -1093,6 +1191,7 @@ ng_fec_constructor(node_p node)
 	char ifname[NG_FEC_FEC_NAME_MAX + 1];
 	struct ifnet *ifp;
 	priv_p priv;
+	const uint8_t eaddr[ETHER_ADDR_LEN] = {0, 0, 0, 0, 0, 0};
 	struct ng_fec_bundle *b;
 	int error = 0;
 
@@ -1143,7 +1242,7 @@ ng_fec_constructor(node_p node)
 		log(LOG_WARNING, "%s: can't acquire netgraph name\n", ifname);
 
 	/* Attach the interface */
-	ether_ifattach(ifp, IFP2ENADDR(priv->ifp));
+	ether_ifattach(ifp, eaddr);
 	callout_handle_init(&priv->fec_ch);
 
 	/* Override output method with our own */
@@ -1230,6 +1329,7 @@ ng_fec_shutdown(node_p node)
 
 	while (!TAILQ_EMPTY(&b->ng_fec_ports)) {
 		p = TAILQ_FIRST(&b->ng_fec_ports);
+		ng_fec_ether_cmdmulti(priv->ifp, p, 0);
 		ng_fec_delport(priv, p->fec_if->if_xname);
 	}
 

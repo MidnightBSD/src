@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_l2cap.c,v 1.1.1.2 2006-02-25 02:37:35 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c,v 1.16 2005/02/21 21:58:16 rwatson Exp $
+ * $Id: ng_btsocket_l2cap.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_l2cap.c,v 1.24.2.1 2007/11/05 17:48:23 emax Exp $
  */
 
 #include <sys/param.h>
@@ -147,26 +147,26 @@ SYSCTL_INT(_net_bluetooth_l2cap_sockets_seq, OID_AUTO, queue_drops,
  */
 
 static int ng_btsocket_l2cap_process_l2ca_con_req_rsp
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 static int ng_btsocket_l2cap_process_l2ca_con_rsp_rsp
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 static int ng_btsocket_l2cap_process_l2ca_con_ind
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 
 static int ng_btsocket_l2cap_process_l2ca_cfg_req_rsp
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 static int ng_btsocket_l2cap_process_l2ca_cfg_rsp_rsp
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 static int ng_btsocket_l2cap_process_l2ca_cfg_ind
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 
 static int ng_btsocket_l2cap_process_l2ca_discon_rsp
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 static int ng_btsocket_l2cap_process_l2ca_discon_ind
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 
 static int ng_btsocket_l2cap_process_l2ca_write_rsp
-	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p, struct socket **);
+	(struct ng_mesg *, ng_btsocket_l2cap_rtentry_p);
 
 /*
  * Send L2CA_xxx messages to the lower layer
@@ -386,7 +386,7 @@ ng_btsocket_l2cap_node_rcvdata(hook_p hook, item_p item)
 
 static int
 ng_btsocket_l2cap_process_l2ca_con_req_rsp(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_con_op	*op = NULL;
 	ng_btsocket_l2cap_pcb_t	*pcb = NULL;
@@ -453,9 +453,6 @@ ng_btsocket_l2cap_process_l2ca_con_req_rsp(struct ng_mesg *msg,
 			/* ... and close the socket */
 			pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 			soisdisconnected(pcb->so);
-
-			if (pcb->so->so_state & SS_NOFDREF)
-				*sop = pcb->so;
 		} else {
 			pcb->cfg_state = NG_BTSOCKET_L2CAP_CFG_IN_SENT;
 			pcb->state = NG_BTSOCKET_L2CAP_CONFIGURING;
@@ -472,9 +469,6 @@ ng_btsocket_l2cap_process_l2ca_con_req_rsp(struct ng_mesg *msg,
 		pcb->so->so_error = ng_btsocket_l2cap_result2errno(op->result);
 		pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 		soisdisconnected(pcb->so); 
-
-		if (pcb->so->so_state & SS_NOFDREF)
-			*sop = pcb->so;
 	}
 
 	mtx_unlock(&pcb->pcb_mtx);
@@ -489,7 +483,7 @@ ng_btsocket_l2cap_process_l2ca_con_req_rsp(struct ng_mesg *msg,
 
 static int
 ng_btsocket_l2cap_process_l2ca_con_rsp_rsp(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_con_rsp_op	*op = NULL;
 	ng_btsocket_l2cap_pcb_t		*pcb = NULL;
@@ -535,9 +529,6 @@ ng_btsocket_l2cap_process_l2ca_con_rsp_rsp(struct ng_mesg *msg,
 		pcb->so->so_error = ng_btsocket_l2cap_result2errno(op->result);
 		pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 		soisdisconnected(pcb->so);
-
-		if (pcb->so->so_state & SS_NOFDREF)
-			*sop = pcb->so;
 	} else {
 		/* Move to CONFIGURING state and wait for CONFIG_IND */
 		pcb->cfg_state = 0;
@@ -559,7 +550,7 @@ ng_btsocket_l2cap_process_l2ca_con_rsp_rsp(struct ng_mesg *msg,
 
 static int
 ng_btsocket_l2cap_process_l2ca_con_ind(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_con_ind_ip	*ip = NULL;
 	ng_btsocket_l2cap_pcb_t		*pcb = NULL, *pcb1 = NULL;
@@ -646,9 +637,6 @@ respond:
 			pcb1->so->so_error = error;
 			pcb1->state = NG_BTSOCKET_L2CAP_CLOSED;
 			soisdisconnected(pcb1->so);
-
-			if (pcb1->so->so_state & SS_NOFDREF)
-				*sop = pcb1->so;
 		} else {
 			pcb1->state = NG_BTSOCKET_L2CAP_CONNECTING;
 			soisconnecting(pcb1->so);
@@ -673,7 +661,7 @@ respond:
 
 static int
 ng_btsocket_l2cap_process_l2ca_cfg_req_rsp(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_cfg_op	*op = NULL;
 	ng_btsocket_l2cap_pcb_p	 pcb = NULL;
@@ -776,9 +764,6 @@ ng_btsocket_l2cap_process_l2ca_cfg_req_rsp(struct ng_mesg *msg,
 		/* ... and close the socket */
 		pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 		soisdisconnected(pcb->so);
-
-		if (pcb->so->so_state & SS_NOFDREF)
-			*sop = pcb->so;
 	}
 
 	mtx_unlock(&pcb->pcb_mtx);
@@ -793,7 +778,7 @@ ng_btsocket_l2cap_process_l2ca_cfg_req_rsp(struct ng_mesg *msg,
 
 static int
 ng_btsocket_l2cap_process_l2ca_cfg_rsp_rsp(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_cfg_rsp_op	*op = NULL;
 	ng_btsocket_l2cap_pcb_t		*pcb = NULL;
@@ -876,9 +861,6 @@ disconnect:
 	pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 	soisdisconnected(pcb->so);
 
-	if (pcb->so->so_state & SS_NOFDREF)
-		*sop = pcb->so;
-
 	mtx_unlock(&pcb->pcb_mtx);
 	mtx_unlock(&ng_btsocket_l2cap_sockets_mtx);
 
@@ -891,7 +873,7 @@ disconnect:
 
 static int
 ng_btsocket_l2cap_process_l2ca_cfg_ind(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_cfg_ind_ip	*ip = NULL;
 	ng_btsocket_l2cap_pcb_t		*pcb = NULL;
@@ -959,9 +941,6 @@ ng_btsocket_l2cap_process_l2ca_cfg_ind(struct ng_mesg *msg,
 			/* ... and close the socket */
 			pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 			soisdisconnected(pcb->so);
-
-			if (pcb->so->so_state & SS_NOFDREF)
-				*sop = pcb->so;
 		} else
 			pcb->cfg_state |= NG_BTSOCKET_L2CAP_CFG_OUT_SENT;
 	}
@@ -978,7 +957,7 @@ ng_btsocket_l2cap_process_l2ca_cfg_ind(struct ng_mesg *msg,
 
 static int
 ng_btsocket_l2cap_process_l2ca_discon_rsp(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_discon_op	*op = NULL;
 	ng_btsocket_l2cap_pcb_t	*pcb = NULL;
@@ -1021,9 +1000,6 @@ ng_btsocket_l2cap_process_l2ca_discon_rsp(struct ng_mesg *msg,
 
 		pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 		soisdisconnected(pcb->so);
-
-		if (pcb->so->so_state & SS_NOFDREF)
-			*sop = pcb->so;
 	}
 
 	mtx_unlock(&pcb->pcb_mtx);
@@ -1038,7 +1014,7 @@ ng_btsocket_l2cap_process_l2ca_discon_rsp(struct ng_mesg *msg,
 
 static int
 ng_btsocket_l2cap_process_l2ca_discon_ind(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_discon_ind_ip	*ip = NULL;
 	ng_btsocket_l2cap_pcb_t		*pcb = NULL;
@@ -1082,9 +1058,6 @@ ng_btsocket_l2cap_process_l2ca_discon_ind(struct ng_mesg *msg,
 	pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 	soisdisconnected(pcb->so);
 
-	if (pcb->so->so_state & SS_NOFDREF)
-		*sop = pcb->so;
-
 	mtx_unlock(&pcb->pcb_mtx);
 	mtx_unlock(&ng_btsocket_l2cap_sockets_mtx);
 
@@ -1097,7 +1070,7 @@ ng_btsocket_l2cap_process_l2ca_discon_ind(struct ng_mesg *msg,
 
 static int 
 ng_btsocket_l2cap_process_l2ca_write_rsp(struct ng_mesg *msg,
-		ng_btsocket_l2cap_rtentry_p rt, struct socket **sop)
+		ng_btsocket_l2cap_rtentry_p rt)
 {
 	ng_l2cap_l2ca_write_op	*op = NULL;
 	ng_btsocket_l2cap_pcb_t	*pcb = NULL;
@@ -1624,8 +1597,7 @@ ng_btsocket_l2cap_default_msg_input(struct ng_mesg *msg, hook_p hook)
 static void
 ng_btsocket_l2cap_l2ca_msg_input(struct ng_mesg *msg, hook_p hook)
 {
-	ng_btsocket_l2cap_rtentry_p	 rt = NULL;
-	struct socket			*so = NULL;
+	ng_btsocket_l2cap_rtentry_p	rt = NULL;
 
 	if (hook == NULL) {
 		NG_BTSOCKET_L2CAP_ALERT(
@@ -1642,39 +1614,39 @@ ng_btsocket_l2cap_l2ca_msg_input(struct ng_mesg *msg, hook_p hook)
 
 	switch (msg->header.cmd) {
 	case NGM_L2CAP_L2CA_CON: /* L2CA_Connect response */
-		ng_btsocket_l2cap_process_l2ca_con_req_rsp(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_con_req_rsp(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_CON_RSP: /* L2CA_ConnectRsp response */
-		ng_btsocket_l2cap_process_l2ca_con_rsp_rsp(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_con_rsp_rsp(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_CON_IND: /* L2CA_Connect indicator */
-		ng_btsocket_l2cap_process_l2ca_con_ind(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_con_ind(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_CFG: /* L2CA_Config response */
-		ng_btsocket_l2cap_process_l2ca_cfg_req_rsp(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_cfg_req_rsp(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_CFG_RSP: /* L2CA_ConfigRsp response */
-		ng_btsocket_l2cap_process_l2ca_cfg_rsp_rsp(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_cfg_rsp_rsp(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_CFG_IND: /* L2CA_Config indicator */
-		ng_btsocket_l2cap_process_l2ca_cfg_ind(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_cfg_ind(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_DISCON: /* L2CA_Disconnect response */
-		ng_btsocket_l2cap_process_l2ca_discon_rsp(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_discon_rsp(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_DISCON_IND: /* L2CA_Disconnect indicator */
-		ng_btsocket_l2cap_process_l2ca_discon_ind(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_discon_ind(msg, rt);
 		break;
 
 	case NGM_L2CAP_L2CA_WRITE: /* L2CA_Write response */
-		ng_btsocket_l2cap_process_l2ca_write_rsp(msg, rt, &so);
+		ng_btsocket_l2cap_process_l2ca_write_rsp(msg, rt);
 		break;
 
 	/* XXX FIXME add other L2CA messages */
@@ -1686,9 +1658,6 @@ ng_btsocket_l2cap_l2ca_msg_input(struct ng_mesg *msg, hook_p hook)
 	}
 drop:
 	NG_FREE_MSG(msg);
-
-	if (so != NULL)
-		ng_btsocket_l2cap_detach(so);
 } /* ng_btsocket_l2cap_l2ca_msg_input */
 
 /*
@@ -1793,30 +1762,9 @@ ng_btsocket_l2cap_rtclean(void *context, int pending)
 			pcb->token = 0;
 			pcb->cid = 0;
 			pcb->rt = NULL;
-
-			if (pcb->so->so_state & SS_NOFDREF) {
-				struct socket	*so = pcb->so;
-
-				LIST_REMOVE(pcb, next);
-
-				mtx_unlock(&pcb->pcb_mtx);
-
-				mtx_destroy(&pcb->pcb_mtx);
-				bzero(pcb, sizeof(*pcb));
-				FREE(pcb, M_NETGRAPH_BTSOCKET_L2CAP);
-
-				soisdisconnected(so);
-				ACCEPT_LOCK();
-				SOCK_LOCK(so);
-				so->so_pcb = NULL;
-				sotryfree(so);
-
-				goto next;
-			}
 		}
 
 		mtx_unlock(&pcb->pcb_mtx);
-next:
 		pcb = pcb_next;
 	}
 
@@ -1912,13 +1860,20 @@ ng_btsocket_l2cap_init(void)
  * Abort connection on socket
  */
 
-int
+void
 ng_btsocket_l2cap_abort(struct socket *so)
 {
 	so->so_error = ECONNABORTED;
 
-	return (ng_btsocket_l2cap_detach(so));
+	(void)ng_btsocket_l2cap_disconnect(so);
 } /* ng_btsocket_l2cap_abort */
+
+void
+ng_btsocket_l2cap_close(struct socket *so)
+{
+
+	(void)ng_btsocket_l2cap_disconnect(so);
+} /* ng_btsocket_l2cap_close */
 
 /*
  * Accept connection on socket. Nothing to do here, socket must be connected
@@ -2019,10 +1974,10 @@ ng_btsocket_l2cap_attach(struct socket *so, int proto, struct thread *td)
 	 * 2) When we need to accept new incomming connection and call 
 	 *    sonewconn()
 	 *
-	 * In the first case we must aquire ng_btsocket_l2cap_sockets_mtx.
+	 * In the first case we must acquire ng_btsocket_l2cap_sockets_mtx.
 	 * In the second case we hold ng_btsocket_l2cap_sockets_mtx already.
 	 * So we now need to distinguish between these cases. From reading
-	 * /sys/kern/uipc_socket2.c we can find out that sonewconn() calls
+	 * /sys/kern/uipc_socket.c we can find out that sonewconn() calls
 	 * pru_attach with proto == 0 and td == NULL. For now use this fact
 	 * to figure out if we were called from socket() or from sonewconn().
 	 */
@@ -2273,8 +2228,10 @@ ng_btsocket_l2cap_ctloutput(struct socket *so, struct sockopt *sopt)
 		 * channel?
 		 */
 
-		if (pcb->state != NG_BTSOCKET_L2CAP_CLOSED)
-			return (EACCES);
+		if (pcb->state != NG_BTSOCKET_L2CAP_CLOSED) {
+			error = EACCES;
+			break;
+		}
 
 		switch (sopt->sopt_name) {
 		case SO_L2CAP_IMTU: /* set incoming MTU */
@@ -2316,15 +2273,15 @@ ng_btsocket_l2cap_ctloutput(struct socket *so, struct sockopt *sopt)
  * Detach and destroy socket
  */
 
-int
+void
 ng_btsocket_l2cap_detach(struct socket *so)
 {
 	ng_btsocket_l2cap_pcb_p	pcb = so2l2cap_pcb(so);
 
-	if (pcb == NULL)
-		return (EINVAL);
+	KASSERT(pcb != NULL, ("ng_btsocket_l2cap_detach: pcb == NULL"));
+
 	if (ng_btsocket_l2cap_node == NULL) 
-		return (EINVAL);
+		return;
 
 	mtx_lock(&ng_btsocket_l2cap_sockets_mtx);
 	mtx_lock(&pcb->pcb_mtx);
@@ -2350,12 +2307,7 @@ ng_btsocket_l2cap_detach(struct socket *so)
 	FREE(pcb, M_NETGRAPH_BTSOCKET_L2CAP);
 
 	soisdisconnected(so);
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
 	so->so_pcb = NULL;
-	sotryfree(so);
-
-	return (0);
 } /* ng_btsocket_l2cap_detach */
 
 /*
@@ -2406,7 +2358,7 @@ ng_btsocket_l2cap_disconnect(struct socket *so)
  */
 
 int
-ng_btsocket_l2cap_listen(struct socket *so, struct thread *td)
+ng_btsocket_l2cap_listen(struct socket *so, int backlog, struct thread *td)
 {
 	ng_btsocket_l2cap_pcb_p	pcb = so2l2cap_pcb(so);
 	int error;
@@ -2424,10 +2376,10 @@ ng_btsocket_l2cap_listen(struct socket *so, struct thread *td)
 		goto out;
 	}
 	if (pcb->psm == 0) {
-		error = EDESTADDRREQ;
+		error = EADDRNOTAVAIL;
 		goto out;
 	}
-	solisten_proto(so);
+	solisten_proto(so, backlog);
 out:
 	SOCK_UNLOCK(so);
 	return (error);
@@ -2727,8 +2679,7 @@ ng_btsocket_l2cap_untimeout(ng_btsocket_l2cap_pcb_p pcb)
 static void
 ng_btsocket_l2cap_process_timeout(void *xpcb)
 {
-	ng_btsocket_l2cap_pcb_p	 pcb = (ng_btsocket_l2cap_pcb_p) xpcb;
-	struct socket		*so = NULL;
+	ng_btsocket_l2cap_pcb_p	pcb = (ng_btsocket_l2cap_pcb_p) xpcb;
 
 	mtx_lock(&pcb->pcb_mtx);
 
@@ -2745,9 +2696,6 @@ ng_btsocket_l2cap_process_timeout(void *xpcb)
 		/* ... and close the socket */
 		pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 		soisdisconnected(pcb->so);
-
-		if (pcb->so->so_state & SS_NOFDREF)
-			so = pcb->so;
 		break;
 
 	case NG_BTSOCKET_L2CAP_OPEN:
@@ -2760,9 +2708,6 @@ ng_btsocket_l2cap_process_timeout(void *xpcb)
 		/* Disconnect timeout - disconnect the socket anyway */
 		pcb->state = NG_BTSOCKET_L2CAP_CLOSED;
 		soisdisconnected(pcb->so);
-
-		if (pcb->so->so_state & SS_NOFDREF)
-			so = pcb->so;
 		break;
 
 	default:
@@ -2772,9 +2717,6 @@ ng_btsocket_l2cap_process_timeout(void *xpcb)
 	}
 
 	mtx_unlock(&pcb->pcb_mtx);
-
-	if (so != NULL)
-		ng_btsocket_l2cap_detach(so);
 } /* ng_btsocket_l2cap_process_timeout */
 
 /*

@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_iface.c,v 1.43.2.2 2005/11/09 11:36:07 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_iface.c,v 1.47 2006/06/02 23:14:40 sam Exp $
  * $Whistle: ng_iface.c,v 1.33 1999/11/01 09:24:51 julian Exp $
  */
 
@@ -418,7 +418,7 @@ static void
 ng_iface_bpftap(struct ifnet *ifp, struct mbuf *m, sa_family_t family)
 {
 	KASSERT(family != AF_UNSPEC, ("%s: family=AF_UNSPEC", __func__));
-	if (ifp->if_bpf != NULL) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		int32_t family4 = (int32_t)family;
 		bpf_mtap2(ifp->if_bpf, &family4, sizeof(family4), m);
 	}

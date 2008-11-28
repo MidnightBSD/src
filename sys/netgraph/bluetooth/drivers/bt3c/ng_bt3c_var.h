@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bt3c_var.h,v 1.1.1.2 2006-02-25 02:37:33 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_var.h,v 1.3 2005/01/07 01:45:42 imp Exp $
+ * $Id: ng_bt3c_var.h,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/drivers/bt3c/ng_bt3c_var.h,v 1.4 2006/07/05 17:18:47 emax Exp $
  *
  * XXX XXX XX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX 
  *
@@ -63,6 +63,8 @@ struct bt3c_softc {
 	device_t		 dev;		/* pointer back to device */
 	int			 iobase_rid;	/* iobase RID */
 	struct resource		*iobase;	/* iobase */
+	bus_space_tag_t		 iot;		/* I/O tag */
+	bus_space_handle_t	 ioh;		/* I/O handle */
 	int			 irq_rid;       /* irq RID */
 	struct resource		*irq;		/* irq */
 	void			*irq_cookie;	/* irq cookie */

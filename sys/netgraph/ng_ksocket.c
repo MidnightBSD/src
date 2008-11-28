@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_ksocket.c,v 1.55.2.3 2006/02/24 11:23:05 ru Exp $
+ * $FreeBSD: src/sys/netgraph/ng_ksocket.c,v 1.60 2007/02/09 12:35:29 bms Exp $
  * $Whistle: ng_ksocket.c,v 1.1 1999/11/16 20:04:40 archie Exp $
  */
 
@@ -919,8 +919,11 @@ ng_ksocket_rcvdata(hook_p hook, item_p item)
 	    (stag->id == NG_NODE_ID(node) || stag->id == 0))
 		sa = &stag->sa;
 
+	/* Reset specific mbuf flags to prevent addressing problems. */
+	m->m_flags &= ~(M_BCAST|M_MCAST);
+
 	/* Send packet */
-	error = (*so->so_proto->pr_usrreqs->pru_sosend)(so, sa, 0, m, 0, 0, td);
+	error = sosend(so, sa, 0, m, 0, 0, td);
 
 	return (error);
 }
@@ -1101,9 +1104,8 @@ ng_ksocket_incoming2(node_p node, hook_p hook, void *arg1, int waitflag)
 		struct mbuf *n;
 
 		/* Try to get next packet from socket */
-		if ((error = (*so->so_proto->pr_usrreqs->pru_soreceive)
-		    (so, (so->so_state & SS_ISCONNECTED) ? NULL : &sa,
-		    &auio, &m, (struct mbuf **)0, &flags)) != 0)
+		if ((error = soreceive(so, (so->so_state & SS_ISCONNECTED) ?
+		    NULL : &sa, &auio, &m, (struct mbuf **)0, &flags)) != 0)
 			break;
 
 		/* See if we got anything */

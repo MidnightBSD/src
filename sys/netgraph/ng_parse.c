@@ -38,7 +38,7 @@
  * Author: Archie Cobbs <archie@freebsd.org>
  *
  * $Whistle: ng_parse.c,v 1.3 1999/11/29 01:43:48 archie Exp $
- * $FreeBSD: src/sys/netgraph/ng_parse.c,v 1.25.2.2 2006/01/21 10:15:00 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_parse.c,v 1.30 2007/06/23 00:02:20 mjacob Exp $
  */
 
 #include <sys/types.h>
@@ -84,9 +84,9 @@ struct int64_temp {
 };
 
 #define INT8_ALIGNMENT		1
-#define INT16_ALIGNMENT		((int)&((struct int16_temp *)0)->y)
-#define INT32_ALIGNMENT		((int)&((struct int32_temp *)0)->y)
-#define INT64_ALIGNMENT		((int)&((struct int64_temp *)0)->y)
+#define INT16_ALIGNMENT		((size_t)&((struct int16_temp *)0)->y)
+#define INT32_ALIGNMENT		((size_t)&((struct int32_temp *)0)->y)
+#define INT64_ALIGNMENT		((size_t)&((struct int64_temp *)0)->y)
 
 /* Output format for integral types */
 #define INT_UNSIGNED		0

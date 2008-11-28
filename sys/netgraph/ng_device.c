@@ -27,7 +27,7 @@
  * This node presents a /dev/ngd%d device that interfaces to an other
  * netgraph node.
  *
- * $FreeBSD: src/sys/netgraph/ng_device.c,v 1.21 2005/05/04 18:55:02 emax Exp $
+ * $FreeBSD: src/sys/netgraph/ng_device.c,v 1.22 2006/11/02 17:37:21 andre Exp $
  *
  */
 
@@ -466,7 +466,7 @@ ngdwrite(struct cdev *dev, struct uio *uio, int flag)
 	if (uio->uio_resid < 0 || uio->uio_resid > IP_MAXPACKET)
 		return (EIO);
 
-	if ((m = m_uiotombuf(uio, M_DONTWAIT, 0, 0)) == NULL)
+	if ((m = m_uiotombuf(uio, M_DONTWAIT, 0, 0, M_PKTHDR)) == NULL)
 		return (ENOBUFS);
 
 	NG_SEND_DATA_ONLY(error, priv->hook, m);

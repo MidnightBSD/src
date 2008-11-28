@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_btsocket_rfcomm.c,v 1.1.1.2 2006-02-25 02:37:35 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_rfcomm.c,v 1.17 2005/04/06 18:55:58 emax Exp $
+ * $Id: ng_btsocket_rfcomm.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/socket/ng_btsocket_rfcomm.c,v 1.26.2.1 2007/11/07 17:37:18 emax Exp $
  */
 
 #include <sys/param.h>
@@ -165,10 +165,8 @@ static int ng_btsocket_rfcomm_send_credits
 
 static int ng_btsocket_rfcomm_pcb_send
 	(ng_btsocket_rfcomm_pcb_p pcb, int limit);
-static int ng_btsocket_rfcomm_pcb_kill
+static void ng_btsocket_rfcomm_pcb_kill
 	(ng_btsocket_rfcomm_pcb_p pcb, int error);
-static ng_btsocket_rfcomm_pcb_p ng_btsocket_rfcomm_pcb_by_channel
-	(bdaddr_p src, int channel);
 static ng_btsocket_rfcomm_pcb_p ng_btsocket_rfcomm_pcb_by_dlci
 	(ng_btsocket_rfcomm_session_p s, int dlci);
 static ng_btsocket_rfcomm_pcb_p ng_btsocket_rfcomm_pcb_listener
@@ -343,13 +341,20 @@ ng_btsocket_rfcomm_init(void)
  * Abort connection on socket
  */
 
-int
+void
 ng_btsocket_rfcomm_abort(struct socket *so)
 {
-	so->so_error = ECONNABORTED;
 
-	return (ng_btsocket_rfcomm_detach(so));
+	so->so_error = ECONNABORTED;
+	(void)ng_btsocket_rfcomm_disconnect(so);
 } /* ng_btsocket_rfcomm_abort */
+
+void
+ng_btsocket_rfcomm_close(struct socket *so)
+{
+
+	(void)ng_btsocket_rfcomm_disconnect(so);
+} /* ng_btsocket_rfcomm_close */
 
 /*
  * Accept connection on socket. Nothing to do here, socket must be connected
@@ -433,7 +438,7 @@ int
 ng_btsocket_rfcomm_bind(struct socket *so, struct sockaddr *nam, 
 		struct thread *td)
 {
-	ng_btsocket_rfcomm_pcb_t	*pcb = so2rfcomm_pcb(so);
+	ng_btsocket_rfcomm_pcb_t	*pcb = so2rfcomm_pcb(so), *pcb1;
 	struct sockaddr_rfcomm		*sa = (struct sockaddr_rfcomm *) nam;
 
 	if (pcb == NULL)
@@ -448,12 +453,30 @@ ng_btsocket_rfcomm_bind(struct socket *so, struct sockaddr *nam,
 		return (EINVAL);
 	if (sa->rfcomm_channel > 30)
 		return (EINVAL);
-	if (sa->rfcomm_channel != 0 &&
-	    ng_btsocket_rfcomm_pcb_by_channel(&sa->rfcomm_bdaddr, sa->rfcomm_channel) != NULL)
-		return (EADDRINUSE);
+
+	mtx_lock(&pcb->pcb_mtx);
+
+	if (sa->rfcomm_channel != 0) {
+		mtx_lock(&ng_btsocket_rfcomm_sockets_mtx);
+
+		LIST_FOREACH(pcb1, &ng_btsocket_rfcomm_sockets, next) {
+			if (pcb1->channel == sa->rfcomm_channel &&
+			    bcmp(&pcb1->src, &sa->rfcomm_bdaddr,
+					sizeof(pcb1->src)) == 0) {
+				mtx_unlock(&ng_btsocket_rfcomm_sockets_mtx);
+				mtx_unlock(&pcb->pcb_mtx);
+
+				return (EADDRINUSE);
+			}
+		}
+
+		mtx_unlock(&ng_btsocket_rfcomm_sockets_mtx);
+	}
 
 	bcopy(&sa->rfcomm_bdaddr, &pcb->src, sizeof(pcb->src));
 	pcb->channel = sa->rfcomm_channel;
+
+	mtx_unlock(&pcb->pcb_mtx);
 
 	return (0);
 } /* ng_btsocket_rfcomm_bind */
@@ -674,13 +697,12 @@ ng_btsocket_rfcomm_ctloutput(struct socket *so, struct sockopt *sopt)
  * Detach and destroy socket
  */
 
-int
+void
 ng_btsocket_rfcomm_detach(struct socket *so)
 {
 	ng_btsocket_rfcomm_pcb_p	pcb = so2rfcomm_pcb(so);
 
-	if (pcb == NULL)
-		return (EINVAL);
+	KASSERT(pcb != NULL, ("ng_btsocket_rfcomm_detach: pcb == NULL"));
 
 	mtx_lock(&pcb->pcb_mtx);
 
@@ -726,12 +748,7 @@ ng_btsocket_rfcomm_detach(struct socket *so)
 	FREE(pcb, M_NETGRAPH_BTSOCKET_RFCOMM);
 
 	soisdisconnected(so);
-	ACCEPT_LOCK();
-	SOCK_LOCK(so);
 	so->so_pcb = NULL;
-	sotryfree(so);
-
-	return (0);
 } /* ng_btsocket_rfcomm_detach */
 
 /*
@@ -773,11 +790,10 @@ ng_btsocket_rfcomm_disconnect(struct socket *so)
 		ng_btsocket_rfcomm_task_wakeup();
 		break;
 
-/*
- * 	case NG_BTSOCKET_RFCOMM_DLC_CLOSED:
- *	case NG_BTSOCKET_RFCOMM_DLC_W4_CONNECT:
- *	case NG_BTSOCKET_RFCOMM_DLC_DISCONNECTING:
- */
+	case NG_BTSOCKET_RFCOMM_DLC_CLOSED:
+	case NG_BTSOCKET_RFCOMM_DLC_W4_CONNECT:
+		break;
+
 	default:
 		panic("%s: Invalid DLC state=%d, flags=%#x\n",
 			__func__, pcb->state, pcb->flags);
@@ -794,18 +810,45 @@ ng_btsocket_rfcomm_disconnect(struct socket *so)
  */
 
 int
-ng_btsocket_rfcomm_listen(struct socket *so, struct thread *td)
+ng_btsocket_rfcomm_listen(struct socket *so, int backlog, struct thread *td)
 {
-	ng_btsocket_rfcomm_pcb_p	 pcb = so2rfcomm_pcb(so);
+	ng_btsocket_rfcomm_pcb_p	 pcb = so2rfcomm_pcb(so), pcb1;
 	ng_btsocket_rfcomm_session_p	 s = NULL;
 	struct socket			*l2so = NULL;
-	int				 error;
-	int				 socreate_error;
+	int				 error, socreate_error, usedchannels;
 
 	if (pcb == NULL)
 		return (EINVAL);
-	if (pcb->channel < 1 || pcb->channel > 30)
-		return (EDESTADDRREQ);
+	if (pcb->channel > 30)
+		return (EADDRNOTAVAIL);
+
+	usedchannels = 0;
+
+	mtx_lock(&pcb->pcb_mtx);
+
+	if (pcb->channel == 0) {
+		mtx_lock(&ng_btsocket_rfcomm_sockets_mtx);
+
+		LIST_FOREACH(pcb1, &ng_btsocket_rfcomm_sockets, next)
+			if (pcb1->channel != 0 &&
+			    bcmp(&pcb1->src, &pcb->src, sizeof(pcb->src)) == 0)
+				usedchannels |= (1 << (pcb1->channel - 1));
+
+		for (pcb->channel = 30; pcb->channel > 0; pcb->channel --)
+			if (!(usedchannels & (1 << (pcb->channel - 1))))
+				break;
+
+		if (pcb->channel == 0) {
+			mtx_unlock(&ng_btsocket_rfcomm_sockets_mtx);
+			mtx_unlock(&pcb->pcb_mtx);
+
+			return (EADDRNOTAVAIL);
+		}
+
+		mtx_unlock(&ng_btsocket_rfcomm_sockets_mtx);
+	}
+
+	mtx_unlock(&pcb->pcb_mtx);
 
 	/*
 	 * XXX FIXME - This is FUBAR. socreate() will call soalloc(1), i.e.
@@ -827,6 +870,7 @@ ng_btsocket_rfcomm_listen(struct socket *so, struct thread *td)
 	mtx_lock(&ng_btsocket_rfcomm_sessions_mtx);
 	SOCK_LOCK(so);
 	error = solisten_proto_check(so);
+	SOCK_UNLOCK(so);
 	if (error != 0)
 		goto out;
 
@@ -858,9 +902,10 @@ ng_btsocket_rfcomm_listen(struct socket *so, struct thread *td)
 			goto out;
 		l2so = NULL;
 	}
-	solisten_proto(so);
-out:
+	SOCK_LOCK(so);
+	solisten_proto(so, backlog);
 	SOCK_UNLOCK(so);
+out:
 	mtx_unlock(&ng_btsocket_rfcomm_sessions_mtx);
 	/*
 	 * If we still have an l2so reference here, it's unneeded, so release
@@ -1160,9 +1205,8 @@ ng_btsocket_rfcomm_connect_ind(ng_btsocket_rfcomm_session_p s, int channel)
 static void
 ng_btsocket_rfcomm_connect_cfm(ng_btsocket_rfcomm_session_p s)
 {
-	ng_btsocket_rfcomm_pcb_p	 pcb = NULL, pcb_next = NULL;
-	struct socket			*so = NULL;
-	int				 error;
+	ng_btsocket_rfcomm_pcb_p	pcb = NULL, pcb_next = NULL;
+	int				error;
 
 	mtx_assert(&s->session_mtx, MA_OWNED);
 
@@ -1186,17 +1230,12 @@ ng_btsocket_rfcomm_connect_cfm(ng_btsocket_rfcomm_session_p s)
 			error = ng_btsocket_rfcomm_send_pn(pcb);
 			if (error == 0)
 				pcb->state = NG_BTSOCKET_RFCOMM_DLC_CONFIGURING;
-			else if (ng_btsocket_rfcomm_pcb_kill(pcb, error))
-				so = pcb->so;
-			else 
-				so = NULL;
+			else
+				ng_btsocket_rfcomm_pcb_kill(pcb, error);
 		}
 
 		mtx_unlock(&pcb->pcb_mtx);
 		pcb = pcb_next;
-
-		if (so != NULL)
-			ng_btsocket_rfcomm_detach(so);
 	}
 } /* ng_btsocket_rfcomm_connect_cfm */
 
@@ -1219,7 +1258,8 @@ ng_btsocket_rfcomm_session_create(ng_btsocket_rfcomm_session_p *sp,
 	ng_btsocket_rfcomm_session_p	s = NULL;
 	struct sockaddr_l2cap		l2sa;
 	struct sockopt			l2sopt;
-	int				mtu, error;
+	int				error;
+	u_int16_t			mtu;
 
 	mtx_assert(&ng_btsocket_rfcomm_sessions_mtx, MA_OWNED);
 
@@ -1557,8 +1597,8 @@ ng_btsocket_rfcomm_session_receive(ng_btsocket_rfcomm_session_p s)
 		flags = MSG_DONTWAIT;
 
 		m = NULL;
-		error = (*s->l2so->so_proto->pr_usrreqs->pru_soreceive)(s->l2so,
-				NULL, &uio, &m, (struct mbuf **) NULL, &flags);
+		error = soreceive(s->l2so, NULL, &uio, &m,
+		    (struct mbuf **) NULL, &flags);
 		if (error != 0) {
 			if (error == EWOULDBLOCK)
 				return (0); /* XXX can happen? */
@@ -1609,9 +1649,8 @@ ng_btsocket_rfcomm_session_send(ng_btsocket_rfcomm_session_p s)
 			return (0); /* we are done */
 
 		/* Call send function on the L2CAP socket */
-		error = (*s->l2so->so_proto->pr_usrreqs->pru_sosend)
-				(s->l2so, NULL, NULL, m, NULL, 0,
-				 curthread /* XXX */);
+		error = (*s->l2so->so_proto->pr_usrreqs->pru_send)(s->l2so,
+				0, m, NULL, NULL, curthread /* XXX */);
 		if (error != 0) {
 			NG_BTSOCKET_RFCOMM_ERR(
 "%s: Could not send data to L2CAP socket, error=%d\n", __func__, error);
@@ -1631,9 +1670,8 @@ ng_btsocket_rfcomm_session_send(ng_btsocket_rfcomm_session_p s)
 static void
 ng_btsocket_rfcomm_session_clean(ng_btsocket_rfcomm_session_p s)
 {
-	ng_btsocket_rfcomm_pcb_p	 pcb = NULL, pcb_next = NULL;
-	struct socket			*so = NULL;
-	int				 error;
+	ng_btsocket_rfcomm_pcb_p	pcb = NULL, pcb_next = NULL;
+	int				error;
 
 	mtx_assert(&s->session_mtx, MA_OWNED);
 
@@ -1655,16 +1693,10 @@ ng_btsocket_rfcomm_session_clean(ng_btsocket_rfcomm_session_p s)
 		else
 			error = ECONNREFUSED;
 
-		if (ng_btsocket_rfcomm_pcb_kill(pcb, error))
-			so = pcb->so;
-		else
-			so = NULL;
+		ng_btsocket_rfcomm_pcb_kill(pcb, error);
 
 		mtx_unlock(&pcb->pcb_mtx);
 		pcb = pcb_next;
-
-		if (so != NULL)
-			ng_btsocket_rfcomm_detach(so);
 	}
 } /* ng_btsocket_rfcomm_session_clean */
 
@@ -1675,9 +1707,8 @@ ng_btsocket_rfcomm_session_clean(ng_btsocket_rfcomm_session_p s)
 static void
 ng_btsocket_rfcomm_session_process_pcb(ng_btsocket_rfcomm_session_p s)
 {
-	ng_btsocket_rfcomm_pcb_p	 pcb = NULL, pcb_next = NULL;
-	struct socket			*so = NULL;
-	int				 error;
+	ng_btsocket_rfcomm_pcb_p	pcb = NULL, pcb_next = NULL;
+	int				error;
 
 	mtx_assert(&s->session_mtx, MA_OWNED);
 
@@ -1687,8 +1718,6 @@ ng_btsocket_rfcomm_session_process_pcb(ng_btsocket_rfcomm_session_p s)
 	 */
 
 	for (pcb = LIST_FIRST(&s->dlcs); pcb != NULL; ) {
-		so = NULL;
-
 		mtx_lock(&pcb->pcb_mtx);
 		pcb_next = LIST_NEXT(pcb, session_next);
 
@@ -1700,12 +1729,10 @@ ng_btsocket_rfcomm_session_process_pcb(ng_btsocket_rfcomm_session_p s)
 		 */
 
 		case NG_BTSOCKET_RFCOMM_DLC_W4_CONNECT:
-			if (pcb->flags & NG_BTSOCKET_RFCOMM_DLC_DETACHED) {
-				if (ng_btsocket_rfcomm_pcb_kill(pcb, 0))
-					so = pcb->so;
-			} else if (pcb->flags & NG_BTSOCKET_RFCOMM_DLC_TIMEDOUT)
-				if (ng_btsocket_rfcomm_pcb_kill(pcb, ETIMEDOUT))
-					so = pcb->so;
+			if (pcb->flags & NG_BTSOCKET_RFCOMM_DLC_DETACHED)
+				ng_btsocket_rfcomm_pcb_kill(pcb, 0);
+			else if (pcb->flags & NG_BTSOCKET_RFCOMM_DLC_TIMEDOUT)
+				ng_btsocket_rfcomm_pcb_kill(pcb, ETIMEDOUT);
 			break;
 
 		/*
@@ -1717,8 +1744,7 @@ ng_btsocket_rfcomm_session_process_pcb(ng_btsocket_rfcomm_session_p s)
 		case NG_BTSOCKET_RFCOMM_DLC_CONFIGURING:
 		case NG_BTSOCKET_RFCOMM_DLC_CONNECTING:
 			if (pcb->flags & NG_BTSOCKET_RFCOMM_DLC_TIMEDOUT)
-				if (ng_btsocket_rfcomm_pcb_kill(pcb, ETIMEDOUT))
-					so = pcb->so;
+				ng_btsocket_rfcomm_pcb_kill(pcb, ETIMEDOUT);
 			break;
 
 		/*
@@ -1733,8 +1759,7 @@ ng_btsocket_rfcomm_session_process_pcb(ng_btsocket_rfcomm_session_p s)
 		case NG_BTSOCKET_RFCOMM_DLC_CONNECTED:
 			error = ng_btsocket_rfcomm_pcb_send(pcb, ALOT);
 			if (error != 0)
-				if (ng_btsocket_rfcomm_pcb_kill(pcb, error))
-					so = pcb->so;
+				ng_btsocket_rfcomm_pcb_kill(pcb, error);
 			break;
 
 		/*
@@ -1753,11 +1778,10 @@ ng_btsocket_rfcomm_session_process_pcb(ng_btsocket_rfcomm_session_p s)
 						pcb->dlci);
 				if (error == 0)
 					ng_btsocket_rfcomm_timeout(pcb);
-				else if (ng_btsocket_rfcomm_pcb_kill(pcb,error))
-					so = pcb->so;
+				else
+					ng_btsocket_rfcomm_pcb_kill(pcb, error);
 			} else if (pcb->flags & NG_BTSOCKET_RFCOMM_DLC_TIMEDOUT)
-				if (ng_btsocket_rfcomm_pcb_kill(pcb, ETIMEDOUT))
-					so = pcb->so;
+				ng_btsocket_rfcomm_pcb_kill(pcb, ETIMEDOUT);
 			break;
 		
 /*		case NG_BTSOCKET_RFCOMM_DLC_CLOSED: */
@@ -1769,9 +1793,6 @@ ng_btsocket_rfcomm_session_process_pcb(ng_btsocket_rfcomm_session_p s)
 
 		mtx_unlock(&pcb->pcb_mtx);
 		pcb = pcb_next;
-
-		if (so != NULL)
-			ng_btsocket_rfcomm_detach(so);
 	}
 } /* ng_btsocket_rfcomm_session_process_pcb */
 
@@ -1954,9 +1975,8 @@ ng_btsocket_rfcomm_receive_frame(ng_btsocket_rfcomm_session_p s,
 static int
 ng_btsocket_rfcomm_receive_sabm(ng_btsocket_rfcomm_session_p s, int dlci)
 {
-	ng_btsocket_rfcomm_pcb_p	 pcb = NULL;
-	struct socket			*so = NULL;
-	int				 error = 0;
+	ng_btsocket_rfcomm_pcb_p	pcb = NULL;
+	int				error = 0;
 
 	mtx_assert(&s->session_mtx, MA_OWNED);
 
@@ -2027,13 +2047,10 @@ ng_btsocket_rfcomm_receive_sabm(ng_btsocket_rfcomm_session_p s, int dlci)
 		if (error == 0) {
 			pcb->state = NG_BTSOCKET_RFCOMM_DLC_CONNECTED;
 			soisconnected(pcb->so);
-		} else if (ng_btsocket_rfcomm_pcb_kill(pcb, error))
-			so = pcb->so;
+		} else
+			ng_btsocket_rfcomm_pcb_kill(pcb, error);
 
 		mtx_unlock(&pcb->pcb_mtx);
-
-		if (so != NULL)
-			ng_btsocket_rfcomm_detach(so);
 
 		return (error);
 	}
@@ -2056,13 +2073,10 @@ ng_btsocket_rfcomm_receive_sabm(ng_btsocket_rfcomm_session_p s, int dlci)
 		if (error == 0) {
 			pcb->state = NG_BTSOCKET_RFCOMM_DLC_CONNECTED;
 			soisconnected(pcb->so);
-		} else if (ng_btsocket_rfcomm_pcb_kill(pcb, error))
-			so = pcb->so;
+		} else
+			ng_btsocket_rfcomm_pcb_kill(pcb, error);
 
 		mtx_unlock(&pcb->pcb_mtx);
-
-		if (so != NULL)
-			ng_btsocket_rfcomm_detach(so);
 	} else
 		/* Nobody is listen()ing on the requested DLCI */
 		error = ng_btsocket_rfcomm_send_command(s,RFCOMM_FRAME_DM,dlci);
@@ -2102,8 +2116,7 @@ ng_btsocket_rfcomm_receive_disc(ng_btsocket_rfcomm_session_p s, int dlci)
 	} else {
 		pcb = ng_btsocket_rfcomm_pcb_by_dlci(s, dlci);
 		if (pcb != NULL) {
-			struct socket	*so = NULL;
-			int		 err;
+			int	err;
 
 			mtx_lock(&pcb->pcb_mtx);
 
@@ -2119,13 +2132,9 @@ ng_btsocket_rfcomm_receive_disc(ng_btsocket_rfcomm_session_p s, int dlci)
 			else
 				err = ECONNREFUSED;
 
-			if (ng_btsocket_rfcomm_pcb_kill(pcb, err))
-				so = pcb->so;
+			ng_btsocket_rfcomm_pcb_kill(pcb, err);
 
 			mtx_unlock(&pcb->pcb_mtx);
-
-			if (so != NULL)
-				ng_btsocket_rfcomm_detach(so);
 		} else {
 			NG_BTSOCKET_RFCOMM_WARN(
 "%s: Got DISC for non-existing dlci=%d\n", __func__, dlci);
@@ -2182,8 +2191,6 @@ ng_btsocket_rfcomm_receive_ua(ng_btsocket_rfcomm_session_p s, int dlci)
 	/* Check if we have this DLCI */
 	pcb = ng_btsocket_rfcomm_pcb_by_dlci(s, dlci);
 	if (pcb != NULL) {
-		struct socket	*so = NULL;
-
 		mtx_lock(&pcb->pcb_mtx);
 
 		NG_BTSOCKET_RFCOMM_INFO(
@@ -2202,8 +2209,7 @@ ng_btsocket_rfcomm_receive_ua(ng_btsocket_rfcomm_session_p s, int dlci)
 			break;
 
 		case NG_BTSOCKET_RFCOMM_DLC_DISCONNECTING:
-			if (ng_btsocket_rfcomm_pcb_kill(pcb, 0))
-				so = pcb->so;
+			ng_btsocket_rfcomm_pcb_kill(pcb, 0);
 			break;
 
 		default:
@@ -2215,9 +2221,6 @@ ng_btsocket_rfcomm_receive_ua(ng_btsocket_rfcomm_session_p s, int dlci)
 		}
 
 		mtx_unlock(&pcb->pcb_mtx);
-
-		if (so != NULL)
-			ng_btsocket_rfcomm_detach(so);
 	} else {
 		NG_BTSOCKET_RFCOMM_WARN(
 "%s: Got UA for non-existing dlci=%d\n", __func__, dlci);
@@ -2252,8 +2255,6 @@ ng_btsocket_rfcomm_receive_dm(ng_btsocket_rfcomm_session_p s, int dlci)
 	} else {
 		pcb = ng_btsocket_rfcomm_pcb_by_dlci(s, dlci);
 		if (pcb != NULL) {
-			struct socket	*so = NULL;
-
 			mtx_lock(&pcb->pcb_mtx);
 
 			NG_BTSOCKET_RFCOMM_INFO(
@@ -2265,13 +2266,9 @@ ng_btsocket_rfcomm_receive_dm(ng_btsocket_rfcomm_session_p s, int dlci)
 			else
 				error = ECONNREFUSED;
 
-			if (ng_btsocket_rfcomm_pcb_kill(pcb, error))
-				so = pcb->so;
+			ng_btsocket_rfcomm_pcb_kill(pcb, error);
 
 			mtx_unlock(&pcb->pcb_mtx);
-
-			if (so != NULL)
-				ng_btsocket_rfcomm_detach(so);
 		} else
 			NG_BTSOCKET_RFCOMM_WARN(
 "%s: Got DM for non-existing dlci=%d\n", __func__, dlci);
@@ -2880,8 +2877,6 @@ ng_btsocket_rfcomm_receive_pn(ng_btsocket_rfcomm_session_p s, struct mbuf *m0)
 		pcb = ng_btsocket_rfcomm_connect_ind(s,
 				RFCOMM_SRVCHANNEL(pn->dlci));
 		if (pcb != NULL) {
-			struct socket	*so = NULL;
-
 			mtx_lock(&pcb->pcb_mtx);
 
 			pcb->dlci = pn->dlci;
@@ -2906,13 +2901,10 @@ ng_btsocket_rfcomm_receive_pn(ng_btsocket_rfcomm_session_p s, struct mbuf *m0)
 				ng_btsocket_rfcomm_timeout(pcb);
 				pcb->state = NG_BTSOCKET_RFCOMM_DLC_CONNECTING;
 				soisconnecting(pcb->so);
-			} else if (ng_btsocket_rfcomm_pcb_kill(pcb, error))
-				so = pcb->so;
+			} else
+				ng_btsocket_rfcomm_pcb_kill(pcb, error);
 
 			mtx_unlock(&pcb->pcb_mtx);
-
-			if (so != NULL)
-				ng_btsocket_rfcomm_detach(so);
 		} else {
 			/* Nobody is listen()ing on this channel */
 			error = ng_btsocket_rfcomm_send_command(s,
@@ -3320,7 +3312,7 @@ ng_btsocket_rfcomm_pcb_send(ng_btsocket_rfcomm_pcb_p pcb, int limit)
  * Caller must hold pcb->pcb_mtx and pcb->session->session_mtx
  */
 
-static int
+static void
 ng_btsocket_rfcomm_pcb_kill(ng_btsocket_rfcomm_pcb_p pcb, int error)
 {
 	ng_btsocket_rfcomm_session_p	s = pcb->session;
@@ -3389,30 +3381,7 @@ ng_btsocket_rfcomm_pcb_kill(ng_btsocket_rfcomm_pcb_p pcb, int error)
 
 		ng_btsocket_rfcomm_task_wakeup();
 	}
-
-	return (pcb->so->so_state & SS_NOFDREF);
 } /* ng_btsocket_rfcomm_pcb_kill */
-
-/*
- * Look for RFCOMM socket with given channel and source address
- */
-
-static ng_btsocket_rfcomm_pcb_p
-ng_btsocket_rfcomm_pcb_by_channel(bdaddr_p src, int channel)
-{
-	ng_btsocket_rfcomm_pcb_p	pcb = NULL;
-
-	mtx_lock(&ng_btsocket_rfcomm_sockets_mtx);
-
-	LIST_FOREACH(pcb, &ng_btsocket_rfcomm_sockets, next)
-		if (pcb->channel == channel &&
-		    bcmp(&pcb->src, src, sizeof(*src)) == 0)
-			break;
-
-	mtx_unlock(&ng_btsocket_rfcomm_sockets_mtx);
-
-	return (pcb);
-} /* ng_btsocket_rfcomm_pcb_by_channel */
 
 /*
  * Look for given dlci for given RFCOMM session. Caller must hold s->session_mtx

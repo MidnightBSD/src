@@ -37,7 +37,7 @@
  *
  * Author: Julian Elischer <julian@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_socket.c,v 1.67.2.4 2005/11/25 14:26:40 glebius Exp $
+ * $FreeBSD: src/sys/netgraph/ng_socket.c,v 1.82.2.1 2007/10/28 17:48:47 mav Exp $
  * $Whistle: ng_socket.c,v 1.28 1999/11/01 09:24:52 julian Exp $
  */
 
@@ -51,22 +51,19 @@
 
 #include <sys/param.h>
 #include <sys/domain.h>
-#include <sys/errno.h>
-#include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/protosw.h>
 #include <sys/queue.h>
-#include <sys/signalvar.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include <sys/sx.h>
+#include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
-#include <sys/systm.h>
 #ifdef NOTYET
 #include <sys/vnode.h>
 #endif
@@ -124,14 +121,13 @@ static int	ng_attach_cntl(struct socket *so);
 static int	ng_attach_common(struct socket *so, int type);
 static void	ng_detach_common(struct ngpcb *pcbp, int type);
 static void	ng_socket_free_priv(struct ngsock *priv);
-/*static int	ng_internalize(struct mbuf *m, struct thread *p); */
-
+#ifdef NOTYET
+static int	ng_internalize(struct mbuf *m, struct thread *p);
+#endif
 static int	ng_connect_data(struct sockaddr *nam, struct ngpcb *pcbp);
 static int	ng_bind(struct sockaddr *nam, struct ngpcb *pcbp);
 
 static int	ngs_mod_event(module_t mod, int event, void *data);
-static int	ship_msg(struct ngpcb *pcbp, struct ng_mesg *msg,
-			struct sockaddr_ng *addr);
 static void	ng_socket_item_applied(void *context, int error);
 
 /* Netgraph type descriptor */
@@ -157,11 +153,6 @@ static u_long ngpdg_recvspace = 20 * 1024;
 SYSCTL_INT(_net_graph, OID_AUTO, recvspace, CTLFLAG_RW,
     &ngpdg_recvspace , 0, "Maximum space for incoming Netgraph datagrams");
 
-/* List of all sockets */
-static LIST_HEAD(, ngpcb) ngsocklist;
-
-static struct mtx	ngsocketlist_mtx;
-
 #define sotongpcb(so) ((struct ngpcb *)(so)->so_pcb)
 
 /* If getting unexplained errors returned, set this to "kdb_enter("X"); */
@@ -177,23 +168,23 @@ static int
 ngc_attach(struct socket *so, int proto, struct thread *td)
 {
 	struct ngpcb *const pcbp = sotongpcb(so);
+	int error;
 
-	if (suser(td))
-		return (EPERM);
+	error = priv_check(td, PRIV_NETGRAPH_CONTROL);
+	if (error)
+		return (error);
 	if (pcbp != NULL)
 		return (EISCONN);
 	return (ng_attach_cntl(so));
 }
 
-static int
+static void
 ngc_detach(struct socket *so)
 {
 	struct ngpcb *const pcbp = sotongpcb(so);
 
-	if (pcbp == NULL)
-		return (EINVAL);
+	KASSERT(pcbp != NULL, ("ngc_detach: pcbp == NULL"));
 	ng_detach_common(pcbp, NG_CONTROL);
-	return (0);
 }
 
 static int
@@ -208,11 +199,8 @@ ngc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	item_p item;
 	char *path = NULL;
 	int len, error = 0;
+	struct ng_apply_info apply;
 
-	if (pcbp == NULL) {
-		error = EINVAL;
-		goto release;
-	}
 #ifdef	NOTYET
 	if (control && (error = ng_internalize(control, td))) {
 		if (pcbp->sockdata == NULL) {
@@ -227,38 +215,37 @@ ngc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	}
 #endif	/* NOTYET */
 
-	/* Require destination as there may be >= 1 hooks on this node */
+	/* Require destination as there may be >= 1 hooks on this node. */
 	if (addr == NULL) {
 		error = EDESTADDRREQ;
 		goto release;
 	}
 
-	/* Allocate an expendable buffer for the path, chop off
-	 * the sockaddr header, and make sure it's NUL terminated */
+	/*
+	 * Allocate an expendable buffer for the path, chop off
+	 * the sockaddr header, and make sure it's NUL terminated.
+	 */
 	len = sap->sg_len - 2;
-	MALLOC(path, char *, len + 1, M_NETGRAPH_PATH, M_WAITOK);
-	if (path == NULL) {
-		error = ENOMEM;
-		goto release;
-	}
+	path = malloc(len + 1, M_NETGRAPH_PATH, M_WAITOK);
 	bcopy(sap->sg_data, path, len);
 	path[len] = '\0';
 
-	/* Move the actual message out of mbufs into a linear buffer.
-	 * Start by adding up the size of the data. (could use mh_len?) */
+	/*
+	 * Move the actual message out of mbufs into a linear buffer.
+	 * Start by adding up the size of the data. (could use mh_len?)
+	 */
 	for (len = 0, m0 = m; m0 != NULL; m0 = m0->m_next)
 		len += m0->m_len;
 
-	/* Move the data into a linear buffer as well. Messages are not
-	 * delivered in mbufs. */
-	MALLOC(msg, struct ng_mesg *, len + 1, M_NETGRAPH_MSG, M_WAITOK);
-	if (msg == NULL) {
-		error = ENOMEM;
-		goto release;
-	}
+	/*
+	 * Move the data into a linear buffer as well.
+	 * Messages are not delivered in mbufs.
+	 */
+	msg = malloc(len + 1, M_NETGRAPH_MSG, M_WAITOK);
 	m_copydata(m, 0, len, (char *)msg);
 
 	if (msg->header.version != NG_VERSION) {
+		free(msg, M_NETGRAPH_MSG);
 		error = EINVAL;
 		goto release;
 	}
@@ -276,39 +263,31 @@ ngc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 
 		if ((type = ng_findtype(mkp->type)) == NULL) {
 			char filename[NG_TYPESIZ + 3];
-			linker_file_t lf;
+			int fileid;
 
 			/* Not found, try to load it as a loadable module. */
 			snprintf(filename, sizeof(filename), "ng_%s",
 			    mkp->type);
-			mtx_lock(&Giant);
-			error = linker_load_module(NULL, filename, NULL, NULL,
-			    &lf);
-			mtx_unlock(&Giant);
+			error = kern_kldload(curthread, filename, &fileid);
 			if (error != 0) {
-				FREE(msg, M_NETGRAPH_MSG);
+				free(msg, M_NETGRAPH_MSG);
 				goto release;
 			}
-			lf->userrefs++;
 
 			/* See if type has been loaded successfully. */
 			if ((type = ng_findtype(mkp->type)) == NULL) {
-				FREE(msg, M_NETGRAPH_MSG);
+				free(msg, M_NETGRAPH_MSG);
+				(void)kern_kldunload(curthread, fileid,
+				    LINKER_UNLOAD_NORMAL);
 				error =  ENXIO;
 				goto release;
 			}
 		}
 	}
 
-	if ((item = ng_package_msg(msg, M_WAITOK)) == NULL) {
-		error = ENOMEM;
-#ifdef TRACE_MESSAGES
-		printf("ng_package_msg: err=%d\n", error);
-#endif
-		goto release;
-	}
-	if ((error = ng_address_path((pcbp->sockdata->node), item,
-	    path, 0)) != 0) {
+	item = ng_package_msg(msg, M_WAITOK);
+	if ((error = ng_address_path((pcbp->sockdata->node), item, path, 0))
+	    != 0) {
 #ifdef TRACE_MESSAGES
 		printf("ng_address_path: errx=%d\n", error);
 #endif
@@ -334,25 +313,25 @@ ngc_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	 * If ng_snd_item() has queued item, we sleep until
 	 * callback wakes us up.
 	 */
-	item->apply = ng_socket_item_applied;
-	item->context = priv;
+	bzero(&apply, sizeof(apply));
+	apply.apply = ng_socket_item_applied;
+	apply.context = priv;
+	item->apply = &apply;
 	priv->error = -1;
 
-	error = ng_snd_item(item, NG_PROGRESS);
+	error = ng_snd_item(item, 0);
 
-	if (error == EINPROGRESS) { 
-		mtx_lock(&priv->mtx);
-		if (priv->error == -1)
-			msleep(priv, &priv->mtx, 0, "ngsock", 0);
-		mtx_unlock(&priv->mtx);
-		KASSERT(priv->error != -1,
-		    ("ng_socket: priv->error wasn't updated"));
-		error = priv->error;
-	}
+	mtx_lock(&priv->mtx);
+	if (priv->error == -1)
+		msleep(priv, &priv->mtx, 0, "ngsock", 0);
+	mtx_unlock(&priv->mtx);
+	KASSERT(priv->error != -1,
+	    ("ng_socket: priv->error wasn't updated"));
+	error = priv->error;
 
 release:
 	if (path != NULL)
-		FREE(path, M_NETGRAPH_PATH);
+		free(path, M_NETGRAPH_PATH);
 	if (control != NULL)
 		m_freem(control);
 	if (m != NULL)
@@ -373,11 +352,11 @@ ngc_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 static int
 ngc_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
 {
-printf(" program tried to connect control socket to remote node\n ");
 	/*
 	 * At this time refuse to do this.. it used to
 	 * do something but it was undocumented and not used.
 	 */
+	printf("program tried to connect control socket to remote node\n");
 	return (EINVAL);
 }
 
@@ -395,15 +374,13 @@ ngd_attach(struct socket *so, int proto, struct thread *td)
 	return (ng_attach_data(so));
 }
 
-static int
+static void
 ngd_detach(struct socket *so)
 {
 	struct ngpcb *const pcbp = sotongpcb(so);
 
-	if (pcbp == NULL)
-		return (EINVAL);
+	KASSERT(pcbp != NULL, ("ngd_detach: pcbp == NULL"));
 	ng_detach_common(pcbp, NG_DATA);
-	return (0);
 }
 
 static int
@@ -412,7 +389,7 @@ ngd_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 {
 	struct ngpcb *const pcbp = sotongpcb(so);
 	struct sockaddr_ng *const sap = (struct sockaddr_ng *) addr;
-	int     len, error;
+	int	len, error;
 	hook_p  hook = NULL;
 	char	hookname[NG_HOOKSIZ];
 
@@ -440,7 +417,7 @@ ngd_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 			goto release;
 		}
 		/*
-		 * if exactly one hook exists, just use it.
+		 * If exactly one hook exists, just use it.
 		 * Special case to allow write(2) to work on an ng_socket.
 		 */
 		hook = LIST_FIRST(&pcbp->sockdata->node->nd_hooks);
@@ -458,18 +435,15 @@ ngd_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 		hookname[len] = '\0';
 
 		/* Find the correct hook from 'hookname' */
-		LIST_FOREACH(hook, &pcbp->sockdata->node->nd_hooks, hk_hooks) {
-			if (strcmp(hookname, NG_HOOK_NAME(hook)) == 0) {
-				break;
-			}
-		}
+		hook = ng_findhook(pcbp->sockdata->node, hookname);
 		if (hook == NULL) {
 			error = EHOSTUNREACH;
+			goto release;
 		}
 	}
 
-	/* Send data (OK if hook is NULL) */
-	NG_SEND_DATA_ONLY(error, hook, m);	/* makes m NULL */
+	/* Send data. */
+	NG_SEND_DATA_FLAGS(error, hook, m, NG_WAITOK);
 
 release:
 	if (control != NULL)
@@ -493,7 +467,7 @@ ngd_connect(struct socket *so, struct sockaddr *nam, struct thread *td)
  * Used for both data and control sockets
  */
 static int
-ng_setsockaddr(struct socket *so, struct sockaddr **addr)
+ng_getsockaddr(struct socket *so, struct sockaddr **addr)
 {
 	struct ngpcb *pcbp;
 	struct sockaddr_ng *sg;
@@ -547,14 +521,11 @@ ng_attach_cntl(struct socket *so)
 	int error;
 
 	/* Allocate node private info */
-	MALLOC(priv, struct ngsock *,
-	    sizeof(*priv), M_NETGRAPH_SOCK, M_WAITOK | M_ZERO);
-	if (priv == NULL)
-		return (ENOMEM);
+	priv = malloc(sizeof(*priv), M_NETGRAPH_SOCK, M_WAITOK | M_ZERO);
 
 	/* Setup protocol control block */
 	if ((error = ng_attach_common(so, NG_CONTROL)) != 0) {
-		FREE(priv, M_NETGRAPH_SOCK);
+		free(priv, M_NETGRAPH_SOCK);
 		return (error);
 	}
 	pcbp = sotongpcb(so);
@@ -569,7 +540,7 @@ ng_attach_cntl(struct socket *so)
 
 	/* Make the generic node components */
 	if ((error = ng_make_node_common(&typestruct, &priv->node)) != 0) {
-		FREE(priv, M_NETGRAPH_SOCK);
+		free(priv, M_NETGRAPH_SOCK);
 		ng_detach_common(pcbp, NG_CONTROL);
 		return (error);
 	}
@@ -585,7 +556,7 @@ ng_attach_cntl(struct socket *so)
 static int
 ng_attach_data(struct socket *so)
 {
-	return(ng_attach_common(so, NG_DATA));
+	return (ng_attach_common(so, NG_DATA));
 }
 
 /*
@@ -598,25 +569,19 @@ ng_attach_common(struct socket *so, int type)
 	struct ngpcb *pcbp;
 	int error;
 
-	/* Standard socket setup stuff */
+	/* Standard socket setup stuff. */
 	error = soreserve(so, ngpdg_sendspace, ngpdg_recvspace);
 	if (error)
 		return (error);
 
-	/* Allocate the pcb */
-	MALLOC(pcbp, struct ngpcb *, sizeof(*pcbp), M_PCB, M_WAITOK | M_ZERO);
-	if (pcbp == NULL)
-		return (ENOMEM);
+	/* Allocate the pcb. */
+	pcbp = malloc(sizeof(struct ngpcb), M_PCB, M_WAITOK | M_ZERO);
 	pcbp->type = type;
 
-	/* Link the pcb and the socket */
-	so->so_pcb = (caddr_t) pcbp;
+	/* Link the pcb and the socket. */
+	so->so_pcb = (caddr_t)pcbp;
 	pcbp->ng_socket = so;
 
-	/* Add the socket to linked list */
-	mtx_lock(&ngsocketlist_mtx);
-	LIST_INSERT_HEAD(&ngsocklist, pcbp, socks);
-	mtx_unlock(&ngsocketlist_mtx);
 	return (0);
 }
 
@@ -650,10 +615,7 @@ ng_detach_common(struct ngpcb *pcbp, int which)
 	}
 
 	pcbp->ng_socket->so_pcb = NULL;
-	mtx_lock(&ngsocketlist_mtx);
-	LIST_REMOVE(pcbp, socks);
-	mtx_unlock(&ngsocketlist_mtx);
-	FREE(pcbp, M_PCB);
+	free(pcbp, M_PCB);
 }
 
 /*
@@ -668,7 +630,7 @@ ng_socket_free_priv(struct ngsock *priv)
 
 	if (priv->refs == 0) {
 		mtx_destroy(&priv->mtx);
-		FREE(priv, M_NETGRAPH_SOCK);
+		free(priv, M_NETGRAPH_SOCK);
 		return;
 	}
 
@@ -758,21 +720,20 @@ ng_connect_data(struct sockaddr *nam, struct ngpcb *pcbp)
 	int error;
 	item_p item;
 
-	/* If we are already connected, don't do it again */
+	/* If we are already connected, don't do it again. */
 	if (pcbp->sockdata != NULL)
 		return (EISCONN);
 
-	/* Find the target (victim) and check it doesn't already have a data
-	 * socket. Also check it is a 'socket' type node.
-	 * Use ng_package_data() and address_path() to do this.
+	/*
+	 * Find the target (victim) and check it doesn't already have
+	 * a data socket. Also check it is a 'socket' type node.
+	 * Use ng_package_data() and ng_address_path() to do this.
 	 */
 
 	sap = (struct sockaddr_ng *) nam;
-	/* The item will hold the node reference */
+	/* The item will hold the node reference. */
 	item = ng_package_data(NULL, NG_WAITOK);
-	if (item == NULL) {
-		return (ENOMEM);
-	}
+
 	if ((error = ng_address_path(NULL, item,  sap->sg_data, 0)))
 		return (error); /* item is freed on failure */
 
@@ -818,50 +779,13 @@ ng_bind(struct sockaddr *nam, struct ngpcb *pcbp)
 		TRAP_ERROR;
 		return (EINVAL);
 	}
-	if ((sap->sg_len < 4)
-	||  (sap->sg_len > (NG_NODESIZ + 2))
-	||  (sap->sg_data[0] == '\0')
-	||  (sap->sg_data[sap->sg_len - 3] != '\0')) {
+	if ((sap->sg_len < 4) || (sap->sg_len > (NG_NODESIZ + 2)) ||
+	    (sap->sg_data[0] == '\0') ||
+	    (sap->sg_data[sap->sg_len - 3] != '\0')) {
 		TRAP_ERROR;
 		return (EINVAL);
 	}
 	return (ng_name_node(priv->node, sap->sg_data));
-}
-
-/*
- * Take a message and pass it up to the control socket associated
- * with the node.
- */
-static int
-ship_msg(struct ngpcb *pcbp, struct ng_mesg *msg, struct sockaddr_ng *addr)
-{
-	struct socket *const so = pcbp->ng_socket;
-	struct mbuf *mdata;
-	int msglen;
-	int error = 0;
-
-	/* Copy the message itself into an mbuf chain */
-	msglen = sizeof(struct ng_mesg) + msg->header.arglen;
-	mdata = m_devget((caddr_t) msg, msglen, 0, NULL, NULL);
-
-	/* Here we free the message, as we are the end of the line.
-	 * We need to do that regardless of whether we got mbufs. */
-	NG_FREE_MSG(msg);
-
-	if (mdata == NULL) {
-		TRAP_ERROR;
-		return (ENOBUFS);
-	}
-
-	/* Send it up to the socket */
-	if (sbappendaddr(&so->so_rcv,
-	    (struct sockaddr *) addr, mdata, NULL) == 0) {
-		TRAP_ERROR;
-		m_freem(mdata);
-		error = so->so_error = ENOBUFS;
-	}
-	sorwakeup(so);
-	return (error);
 }
 
 /***************************************************************
@@ -888,8 +812,8 @@ ngs_newhook(node_p node, hook_p hook, const char *name)
 	return (0);
 }
 
-/* 
- * if only one hook, allow read(2) and write(2) to work.
+/*
+ * If only one hook, allow read(2) and write(2) to work.
  */
 static int
 ngs_connect(hook_p hook)
@@ -897,13 +821,11 @@ ngs_connect(hook_p hook)
 	node_p node = NG_HOOK_NODE(hook);
 	struct ngsock *priv = NG_NODE_PRIVATE(node);
 
-	if ((priv->datasock)
-	&&  (priv->datasock->ng_socket)) {
-		if (NG_NODE_NUMHOOKS(node) == 1) {
+	if ((priv->datasock) && (priv->datasock->ng_socket)) {
+		if (NG_NODE_NUMHOOKS(node) == 1)
 			priv->datasock->ng_socket->so_state |= SS_ISCONNECTED;
-		} else {
+		else
 			priv->datasock->ng_socket->so_state &= ~SS_ISCONNECTED;
-		}
 	}
 	return (0);
 }
@@ -917,22 +839,27 @@ ngs_rcvmsg(node_p node, item_p item, hook_p lasthook)
 {
 	struct ngsock *const priv = NG_NODE_PRIVATE(node);
 	struct ngpcb *const pcbp = priv->ctlsock;
-	struct sockaddr_ng *addr;
+	struct socket *so;
+	struct sockaddr_ng addr;
+	struct ng_mesg *msg;
+	struct mbuf *m;
+	ng_ID_t	retaddr = NGI_RETADDR(item);
 	int addrlen;
 	int error = 0;
-	struct	ng_mesg *msg;
-	ng_ID_t	retaddr = NGI_RETADDR(item);
-	char	retabuf[32];
 
 	NGI_GET_MSG(item, msg);
-	NG_FREE_ITEM(item); /* we have all we need */
+	NG_FREE_ITEM(item);
 
-	/* Only allow mesgs to be passed if we have the control socket.
-	 * Data sockets can only support the generic messages. */
+	/*
+	 * Only allow mesgs to be passed if we have the control socket.
+	 * Data sockets can only support the generic messages.
+	 */
 	if (pcbp == NULL) {
 		TRAP_ERROR;
+		NG_FREE_MSG(msg);
 		return (EINVAL);
 	}
+	so = pcbp->ng_socket;
 
 #ifdef TRACE_MESSAGES
 	printf("[%x]:---------->[socket]: c=<%d>cmd=%x(%s) f=%x #%d\n",
@@ -955,27 +882,47 @@ ngs_rcvmsg(node_p node, item_p item, hook_p lasthook)
 		default:
 			error = EINVAL;		/* unknown command */
 		}
-		/* Free the message and return */
+		/* Free the message and return. */
 		NG_FREE_MSG(msg);
-		return(error);
-
+		return (error);
 	}
-	/* Get the return address into a sockaddr */
-	sprintf(retabuf,"[%x]:", retaddr);
-	addrlen = strlen(retabuf);
-	MALLOC(addr, struct sockaddr_ng *, addrlen + 4, M_NETGRAPH_PATH, M_NOWAIT);
-	if (addr == NULL) {
+
+	/* Get the return address into a sockaddr. */
+	bzero(&addr, sizeof(addr));
+	addr.sg_len = sizeof(addr);
+	addr.sg_family = AF_NETGRAPH;
+	addrlen = snprintf((char *)&addr.sg_data, sizeof(addr.sg_data),
+	    "[%x]:", retaddr);
+	if (addrlen < 0 || addrlen > sizeof(addr.sg_data)) {
+		printf("%s: snprintf([%x]) failed - %d\n", __func__, retaddr,
+		    addrlen);
+		NG_FREE_MSG(msg);
+		return (EINVAL);
+	}
+
+	/* Copy the message itself into an mbuf chain. */
+	m = m_devget((caddr_t)msg, sizeof(struct ng_mesg) + msg->header.arglen,
+	    0, NULL, NULL);
+
+	/*
+	 * Here we free the message. We need to do that
+	 * regardless of whether we got mbufs.
+	 */
+	NG_FREE_MSG(msg);
+
+	if (m == NULL) {
 		TRAP_ERROR;
-		return (ENOMEM);
+		return (ENOBUFS);
 	}
-	addr->sg_len = addrlen + 3;
-	addr->sg_family = AF_NETGRAPH;
-	bcopy(retabuf, addr->sg_data, addrlen);
-	addr->sg_data[addrlen] = '\0';
 
-	/* Send it up */
-	error = ship_msg(pcbp, msg, addr);
-	FREE(addr, M_NETGRAPH_PATH);
+	/* Send it up to the socket. */
+	if (sbappendaddr(&so->so_rcv, (struct sockaddr *)&addr, m, NULL) == 0) {
+		TRAP_ERROR;
+		m_freem(m);
+		error = so->so_error = ENOBUFS;
+	}
+	sorwakeup(so);
+	
 	return (error);
 }
 
@@ -995,7 +942,8 @@ ngs_rcvdata(hook_p hook, item_p item)
 
 	NGI_GET_M(item, m);
 	NG_FREE_ITEM(item);
-	/* If there is no data socket, black-hole it */
+
+	/* If there is no data socket, black-hole it. */
 	if (pcbp == NULL) {
 		NG_FREE_M(m);
 		return (0);
@@ -1010,8 +958,8 @@ ngs_rcvdata(hook_p hook, item_p item)
 	bcopy(NG_HOOK_NAME(hook), addr->sg_data, addrlen);
 	addr->sg_data[addrlen] = '\0';
 
-	/* Try to tell the socket which hook it came in on */
-	if (sbappendaddr(&so->so_rcv, (struct sockaddr *) addr, m, NULL) == 0) {
+	/* Try to tell the socket which hook it came in on. */
+	if (sbappendaddr(&so->so_rcv, (struct sockaddr *)addr, m, NULL) == 0) {
 		m_freem(m);
 		TRAP_ERROR;
 		return (ENOBUFS);
@@ -1032,20 +980,17 @@ ngs_disconnect(hook_p hook)
 	node_p node = NG_HOOK_NODE(hook);
 	struct ngsock *const priv = NG_NODE_PRIVATE(node);
 
-	if ((priv->datasock)
-	&&  (priv->datasock->ng_socket)) {
-		if (NG_NODE_NUMHOOKS(node) == 1) {
+	if ((priv->datasock) && (priv->datasock->ng_socket)) {
+		if (NG_NODE_NUMHOOKS(node) == 1)
 			priv->datasock->ng_socket->so_state |= SS_ISCONNECTED;
-		} else {
+		else
 			priv->datasock->ng_socket->so_state &= ~SS_ISCONNECTED;
-		}
 	}
 
-	if ((priv->flags & NGS_FLAG_NOLINGER )
-	&& (NG_NODE_NUMHOOKS(node) == 0)
-	&& (NG_NODE_IS_VALID(node))) {
+	if ((priv->flags & NGS_FLAG_NOLINGER) &&
+	    (NG_NODE_NUMHOOKS(node) == 0) && (NG_NODE_IS_VALID(node)))
 		ng_rmnode_self(node);
-	}
+
 	return (0);
 }
 
@@ -1095,6 +1040,8 @@ dummy_disconnect(struct socket *so)
 }
 /*
  * Control and data socket type descriptors
+ *
+ * XXXRW: Perhaps _close should do something?
  */
 
 static struct pr_usrreqs ngc_usrreqs = {
@@ -1107,7 +1054,8 @@ static struct pr_usrreqs ngc_usrreqs = {
 	.pru_peeraddr =		NULL,
 	.pru_send =		ngc_send,
 	.pru_shutdown =		NULL,
-	.pru_sockaddr =		ng_setsockaddr,
+	.pru_sockaddr =		ng_getsockaddr,
+	.pru_close =		NULL,
 };
 
 static struct pr_usrreqs ngd_usrreqs = {
@@ -1120,7 +1068,8 @@ static struct pr_usrreqs ngd_usrreqs = {
 	.pru_peeraddr =		NULL,
 	.pru_send =		ngd_send,
 	.pru_shutdown =		NULL,
-	.pru_sockaddr =		ng_setsockaddr,
+	.pru_sockaddr =		ng_getsockaddr,
+	.pru_close =		NULL,
 };
 
 /*
@@ -1154,7 +1103,7 @@ struct domain ngdomain = {
 };
 
 /*
- * Handle loading and unloading for this node type
+ * Handle loading and unloading for this node type.
  * This is to handle auxiliary linkages (e.g protocol domain addition).
  */
 static int
@@ -1164,24 +1113,15 @@ ngs_mod_event(module_t mod, int event, void *data)
 
 	switch (event) {
 	case MOD_LOAD:
-		mtx_init(&ngsocketlist_mtx, "ng_socketlist", NULL, MTX_DEF);
-		/* Register protocol domain */
+		/* Register protocol domain. */
 		net_add_domain(&ngdomain);
 		break;
 	case MOD_UNLOAD:
-		/* Insure there are no open netgraph sockets */
-		if (!LIST_EMPTY(&ngsocklist)) {
-			error = EBUSY;
-			break;
-		}
-
 #ifdef NOTYET
-		if ((LIST_EMPTY(&ngsocklist)) && (typestruct.refs == 0)) {
 		/* Unregister protocol domain XXX can't do this yet.. */
-			if ((error = net_rm_domain(&ngdomain)) != 0)
-				break;
-			mtx_destroy(&ngsocketlist_mtx);
-		} else
+		if ((error = net_rm_domain(&ngdomain)) != 0)
+			break;
+		else
 #endif
 			error = EBUSY;
 		break;

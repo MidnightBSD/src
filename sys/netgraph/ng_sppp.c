@@ -17,7 +17,7 @@
  * Cronyx Id: ng_sppp.c,v 1.1.2.10 2004/03/01 15:17:21 rik Exp $
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/ng_sppp.c,v 1.8.2.2 2006/02/01 04:50:07 rik Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/ng_sppp.c,v 1.11 2006/12/29 13:59:50 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -219,8 +219,7 @@ ng_sppp_start (struct ifnet *ifp)
 	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 
 	while ((m = sppp_dequeue (ifp)) != NULL) {
-		if (ifp->if_bpf)
-			BPF_MTAP (ifp, m);
+		BPF_MTAP (ifp, m);
 		len = m->m_pkthdr.len;
 		
 		NG_SEND_DATA_ONLY (error, priv->hook, m);
@@ -382,8 +381,7 @@ ng_sppp_rcvdata (hook_p hook, item_p item)
 	m->m_pkthdr.rcvif = SP2IFP(pp);
 
 	/* Berkeley packet filter */
-	if (SP2IFP(pp)->if_bpf)
-		BPF_MTAP (SP2IFP(pp), m);
+	BPF_MTAP (SP2IFP(pp), m);
 
 	/* Send packet */
 	sppp_input (SP2IFP(pp), m);

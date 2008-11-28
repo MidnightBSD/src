@@ -28,11 +28,12 @@
  */
 
 static const char rcs_id[] =
-    "@(#) $FreeBSD: src/sys/netgraph/netflow/ng_netflow.c,v 1.9.2.3 2006/01/21 10:11:01 glebius Exp $";
+    "@(#) $FreeBSD: src/sys/netgraph/netflow/ng_netflow.c,v 1.14 2007/03/28 13:59:13 glebius Exp $";
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/limits.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/syslog.h>
@@ -42,6 +43,7 @@ static const char rcs_id[] =
 #include <net/ethernet.h>
 #include <net/if_arp.h>
 #include <net/if_var.h>
+#include <net/if_vlan_var.h>
 #include <net/bpf.h>
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -514,6 +516,19 @@ ng_netflow_rcvdata (hook_p hook, item_p item)
 			eh = mtod(m, struct ether_header *);
 			ip = (struct ip *)(eh + 1);
 			break;
+		case ETHERTYPE_VLAN:
+		    {
+			struct ether_vlan_header *evh;
+
+			M_CHECK(sizeof(struct ether_vlan_header) -
+			    sizeof(struct ether_header));
+			evh = mtod(m, struct ether_vlan_header *);
+			if (ntohs(evh->evl_proto) == ETHERTYPE_IP) {
+				M_CHECK(sizeof(struct ip));
+				ip = (struct ip *)(evh + 1);
+				break;
+			}
+		    }
 		default:
 			goto bypass;	/* pass this frame */
 		}
@@ -551,7 +566,21 @@ ng_netflow_rcvdata (hook_p hook, item_p item)
 		struct ether_header *eh;
 
 		eh = mtod(m, struct ether_header *);
-		ip = (struct ip *)(eh + 1);
+		switch (ntohs(eh->ether_type)) {
+		case ETHERTYPE_IP:
+			ip = (struct ip *)(eh + 1);
+			break;
+		case ETHERTYPE_VLAN:
+		    {
+			struct ether_vlan_header *evh;
+
+			evh = mtod(m, struct ether_vlan_header *);
+			ip = (struct ip *)(evh + 1);
+			break;
+		     }
+		default:
+			panic("ng_netflow entered deadcode");
+		}
 		break;
 	     }
 	case DLT_RAW:

@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ng_bluetooth.c,v 1.1.1.2 2006-02-25 02:37:33 laffer1 Exp $
- * $FreeBSD: src/sys/netgraph/bluetooth/common/ng_bluetooth.c,v 1.6 2005/04/08 05:13:53 peter Exp $
+ * $Id: ng_bluetooth.c,v 1.1.1.3 2008-11-28 16:30:53 laffer1 Exp $
+ * $FreeBSD: src/sys/netgraph/bluetooth/common/ng_bluetooth.c,v 1.7 2007/06/04 18:25:07 dwmalone Exp $
  */
 
 #include <sys/param.h>
@@ -72,7 +72,7 @@ bluetooth_set_hci_command_timeout_value(SYSCTL_HANDLER_ARGS)
 	int		error;
 
 	value = bluetooth_hci_command_timeout_value;
-	error = sysctl_handle_int(oidp, &value, sizeof(value), req);
+	error = sysctl_handle_int(oidp, &value, 0, req);
 	if (error == 0 && req->newptr != NULL) {
 		if (value > 0)
 			bluetooth_hci_command_timeout_value = value;
@@ -96,7 +96,7 @@ bluetooth_set_hci_connect_timeout_value(SYSCTL_HANDLER_ARGS)
 	int		error;
 
 	value = bluetooth_hci_connect_timeout_value;
-	error = sysctl_handle_int(oidp, &value, sizeof(value), req);
+	error = sysctl_handle_int(oidp, &value, 0, req);
 	if (error == 0 && req->newptr != NULL) {
 		if (0 < value && value <= bluetooth_l2cap_rtx_timeout_value)
 			bluetooth_hci_connect_timeout_value = value;
@@ -131,7 +131,7 @@ bluetooth_set_l2cap_rtx_timeout_value(SYSCTL_HANDLER_ARGS)
 	int		error;
 
 	value = bluetooth_l2cap_rtx_timeout_value;
-	error = sysctl_handle_int(oidp, &value, sizeof(value), req);
+	error = sysctl_handle_int(oidp, &value, 0, req);
 	if (error == 0 && req->newptr != NULL) {
 		if (bluetooth_hci_connect_timeout_value <= value &&
 		    value <= bluetooth_l2cap_ertx_timeout_value)
@@ -156,7 +156,7 @@ bluetooth_set_l2cap_ertx_timeout_value(SYSCTL_HANDLER_ARGS)
 	int		error;
 
 	value = bluetooth_l2cap_ertx_timeout_value;
-	error = sysctl_handle_int(oidp, &value, sizeof(value), req);
+	error = sysctl_handle_int(oidp, &value, 0, req);
 	if (error == 0 && req->newptr != NULL) {
 		if (value >= bluetooth_l2cap_rtx_timeout_value)
 			bluetooth_l2cap_ertx_timeout_value = value;

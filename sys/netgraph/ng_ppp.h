@@ -37,7 +37,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/netgraph/ng_ppp.h,v 1.12 2005/02/10 02:43:26 archie Exp $
+ * $FreeBSD: src/sys/netgraph/ng_ppp.h,v 1.14 2007/08/01 20:49:35 mav Exp $
  * $Whistle: ng_ppp.h,v 1.8 1999/01/25 02:40:02 archie Exp $
  */
 
@@ -47,6 +47,9 @@
 /* Node type name and magic cookie */
 #define NG_PPP_NODE_TYPE	"ppp"
 #define NGM_PPP_COOKIE		940897795
+
+/* 64bit stats presence flag */
+#define NG_PPP_STATS64
 
 /* Maximum number of supported links */
 #define NG_PPP_MAX_LINKS	16
@@ -75,6 +78,20 @@
 
 #define NG_PPP_HOOK_LINK_PREFIX	"link"		/* append decimal link number */
 
+/* Compress hook operation modes */
+enum {
+	NG_PPP_COMPRESS_NONE = 0,	/* compression disabled */
+	NG_PPP_COMPRESS_SIMPLE,		/* original operation mode */
+	NG_PPP_COMPRESS_FULL,		/* compressor returns proto */
+};
+
+/* Decompress hook operation modes */
+enum {
+	NG_PPP_DECOMPRESS_NONE = 0,	/* decompression disabled */
+	NG_PPP_DECOMPRESS_SIMPLE,	/* original operation mode */
+	NG_PPP_DECOMPRESS_FULL,		/* forward any packet to decompressor */
+};
+
 /* Netgraph commands */
 enum {
 	NGM_PPP_SET_CONFIG = 1,		/* takes struct ng_ppp_node_conf */
@@ -83,6 +100,8 @@ enum {
 	NGM_PPP_GET_LINK_STATS,		/* takes link #, returns stats struct */
 	NGM_PPP_CLR_LINK_STATS,		/* takes link #, clears link stats */
 	NGM_PPP_GETCLR_LINK_STATS,	/* takes link #, returns & clrs stats */
+	NGM_PPP_GET_LINK_STATS64,	/* takes link #, returns stats64 struct */
+	NGM_PPP_GETCLR_LINK_STATS64,	/* takes link #, returns stats64 & clrs */
 };
 
 /* Multi-link sequence number state (for debugging) */
@@ -195,6 +214,31 @@ struct ng_ppp_link_stat {
 	  { "runts",		&ng_parse_uint32_type	},	\
 	  { "dupFragments",	&ng_parse_uint32_type	},	\
 	  { "dropFragments",	&ng_parse_uint32_type	},	\
+	  { NULL }						\
+}
+
+/* Statistics struct for a link (or the bundle if NG_PPP_BUNDLE_LINKNUM) */
+struct ng_ppp_link_stat64 {
+	u_int64_t xmitFrames;		/* xmit frames on link */
+	u_int64_t xmitOctets;		/* xmit octets on link */
+	u_int64_t recvFrames;		/* recv frames on link */
+	u_int64_t recvOctets;		/* recv octets on link */
+	u_int64_t badProtos;		/* frames rec'd with bogus protocol */
+	u_int64_t runts;		/* Too short MP fragments */
+	u_int64_t dupFragments;		/* MP frames with duplicate seq # */
+	u_int64_t dropFragments;	/* MP fragments we had to drop */
+};
+
+/* Keep this in sync with the above structure definition */
+#define NG_PPP_STATS64_TYPE_INFO	{			\
+	  { "xmitFrames",	&ng_parse_uint64_type	},	\
+	  { "xmitOctets",	&ng_parse_uint64_type	},	\
+	  { "recvFrames",	&ng_parse_uint64_type	},	\
+	  { "recvOctets",	&ng_parse_uint64_type	},	\
+	  { "badProtos",	&ng_parse_uint64_type	},	\
+	  { "runts",		&ng_parse_uint64_type	},	\
+	  { "dupFragments",	&ng_parse_uint64_type	},	\
+	  { "dropFragments",	&ng_parse_uint64_type	},	\
 	  { NULL }						\
 }
 

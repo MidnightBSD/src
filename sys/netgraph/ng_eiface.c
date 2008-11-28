@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/netgraph/ng_eiface.c,v 1.32.2.4 2006/02/14 06:21:47 ru Exp $
+ * $FreeBSD: src/sys/netgraph/ng_eiface.c,v 1.39 2007/07/26 10:54:33 glebius Exp $
  */
 
 #include <sys/param.h>
@@ -145,7 +145,7 @@ ng_eiface_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		 * If the interface is marked up and stopped, then start it.
 		 * If it is marked down and running, then stop it.
 		 */
-		if (ifr->ifr_flags & IFF_UP) {
+		if (ifp->if_flags & IFF_UP) {
 			if (!(ifp->if_drv_flags & IFF_DRV_RUNNING)) {
 				ifp->if_drv_flags &= ~(IFF_DRV_OACTIVE);
 				ifp->if_drv_flags |= IFF_DRV_RUNNING;
@@ -234,6 +234,12 @@ ng_eiface_start2(node_p node, hook_p hook, void *arg1, int arg2)
 		 */
 		BPF_MTAP(ifp, m);
 
+		if (ifp->if_flags & IFF_MONITOR) {
+			ifp->if_ipackets++;
+			m_freem(m);
+			continue;
+		}
+
 		/*
 		 * Send packet; if hook is not connected, mbuf will get
 		 * freed.
@@ -277,7 +283,8 @@ ng_eiface_start(struct ifnet *ifp)
 
 	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 
-	ng_send_fn(priv->node, NULL, &ng_eiface_start2, ifp, 0);
+	if (ng_send_fn(priv->node, NULL, &ng_eiface_start2, ifp, 0) != 0)
+		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 }
 
 #ifdef DEBUG

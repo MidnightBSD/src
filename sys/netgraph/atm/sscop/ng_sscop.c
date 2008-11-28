@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netgraph/atm/sscop/ng_sscop.c,v 1.3 2005/01/07 01:45:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/netgraph/atm/sscop/ng_sscop.c,v 1.4 2005/08/10 06:25:40 obrien Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: src/sys/netgraph/atm/sscop/ng_sscop.c,v 1.3 2005/01/07 01:45
 #include <netgraph/atm/sscop/ng_sscop_cust.h>
 #include <netnatm/saal/sscop.h>
 
-#define DDD printf("%s: %d\n", __FUNCTION__, __LINE__)
+#define DDD printf("%s: %d\n", __func__, __LINE__)
 
 #ifdef SSCOP_DEBUG
 #define VERBOSE(P,M,F)							\
