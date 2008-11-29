@@ -1,5 +1,5 @@
 /* $NetBSD: awivar.h,v 1.20 2004/01/15 09:39:15 onoe Exp $ */
-/* $FreeBSD: src/sys/dev/awi/awivar.h,v 1.12 2005/06/10 16:49:05 brooks Exp $ */
+/* $FreeBSD: src/sys/dev/awi/awivar.h,v 1.14 2007/06/11 03:36:51 sam Exp $ */
 
 /*-
  * Copyright (c) 1999,2000,2001 The NetBSD Foundation, Inc.
@@ -76,6 +76,7 @@ struct awi_chanset {
 struct awi_softc {
 #ifdef __NetBSD__
 	struct device		sc_dev;
+	void			(*sc_power)(struct awi_softc *, int);
 #endif
 #ifdef __FreeBSD__
 	struct arpcom		sc_arp;
@@ -86,13 +87,12 @@ struct awi_softc {
 	u_char			sc_banner[AWI_BANNER_LEN];
 	int			(*sc_enable)(struct awi_softc *);
 	void			(*sc_disable)(struct awi_softc *);
-	void			(*sc_power)(struct awi_softc *, int);
 
 	int			(*sc_newstate)(struct ieee80211com *,
 				    enum ieee80211_state, int);
 	void			(*sc_recv_mgmt)(struct ieee80211com *,
 				    struct mbuf *, struct ieee80211_node *,
-				    int, int, u_int32_t);
+				    int, int, int, u_int32_t);
 	int			(*sc_send_mgmt)(struct ieee80211com *,
 				    struct ieee80211_node *, int, int);
 

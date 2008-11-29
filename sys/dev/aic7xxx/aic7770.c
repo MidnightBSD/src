@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic7770.c,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
+ * $Id: aic7770.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  */
 
 #ifdef __linux__
@@ -46,7 +46,7 @@
 #include "aic7xxx_93cx6.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic7770.c,v 1.18 2005/01/06 01:42:25 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic7770.c,v 1.19 2007/04/17 06:26:24 scottl Exp $");
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aic7xxx_93cx6.h>
@@ -126,7 +126,6 @@ aic7770_find_device(uint32_t id)
 int
 aic7770_config(struct ahc_softc *ahc, struct aic7770_identity *entry, u_int io)
 {
-	u_long	l;
 	int	error;
 	int	have_seeprom;
 	u_int	hostconf;
@@ -254,7 +253,7 @@ aic7770_config(struct ahc_softc *ahc, struct aic7770_identity *entry, u_int io)
 	if (error != 0)
 		return (error);
 
-	ahc_list_lock(&l);
+	ahc_lock(ahc);
 	/*
 	 * Link this softc in with all other ahc instances.
 	 */
@@ -265,7 +264,7 @@ aic7770_config(struct ahc_softc *ahc, struct aic7770_identity *entry, u_int io)
 	 */
 	ahc_outb(ahc, BCTL, ENABLE);
 
-	ahc_list_unlock(&l);
+	ahc_unlock(ahc);
 
 	return (0);
 }

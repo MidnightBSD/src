@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/adw_pci.c,v 1.23 2005/05/29 04:42:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/advansys/adw_pci.c,v 1.25 2006/12/11 18:28:29 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,7 +107,7 @@ struct adw_pci_identity adw_pci_ident_table[] =
 		&adw_asc38C0800_mcode_data,
 		&adw_asc38C0800_default_eeprom
 	},
-#if NOTYET
+#ifdef NOTYET
 	/* XXX Disabled until I have hardware to test with */
 	/* asc38C1600 based controllers */
 	{
@@ -146,6 +146,7 @@ static driver_t adw_pci_driver = {
 static devclass_t adw_devclass;
 
 DRIVER_MODULE(adw, pci, adw_pci_driver, adw_devclass, 0, 0);
+MODULE_DEPEND(adw, pci, 1, 1, 1);
 
 static __inline u_int64_t
 adw_compose_id(u_int device, u_int vendor, u_int subdevice, u_int subvendor)

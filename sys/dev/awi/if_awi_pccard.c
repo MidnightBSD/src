@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/awi/if_awi_pccard.c,v 1.21 2005/06/24 14:36:51 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/awi/if_awi_pccard.c,v 1.25 2007/02/23 12:18:33 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -81,7 +81,6 @@ static const struct pccard_product awi_pccard_products[] = {
 	{ NULL }
 };
 
-static int awi_pccard_match(device_t);
 static int awi_pccard_probe(device_t);
 static int awi_pccard_attach(device_t);
 static int awi_pccard_detach(device_t);
@@ -90,7 +89,7 @@ static int awi_pccard_enable(struct awi_softc *);
 static void awi_pccard_disable(struct awi_softc *);
 
 static int
-awi_pccard_match(device_t dev)
+awi_pccard_probe(device_t dev)
 {
 	const struct pccard_product *pp;
 
@@ -107,7 +106,7 @@ awi_pccard_match(device_t dev)
  * Initialize the device - called from Slot manager.
  */
 static int
-awi_pccard_probe(device_t dev)
+awi_pccard_attach(device_t dev)
 {
 	struct awi_pccard_softc *psc = device_get_softc(dev);
 	struct awi_softc *sc = &psc->sc_awi;
@@ -132,29 +131,14 @@ awi_pccard_probe(device_t dev)
 		error = ENXIO;
 	} else
 		device_set_desc(dev, psc->sc_version);
-	bus_release_resource(dev, SYS_RES_IOPORT, psc->sc_port_rid,
-	    psc->sc_port_res);
-	psc->sc_port_res = 0;
 
-	return error;
-}
-
-static int
-awi_pccard_attach(device_t dev)
-{
-	struct awi_pccard_softc *psc = device_get_softc(dev);
-	struct awi_softc *sc = &psc->sc_awi;
-	int error = 0;
-
-	psc->sc_port_res = 0;
 	psc->sc_irq_res = 0;
 	psc->sc_mem_res = 0;
 	psc->sc_intrhand = 0;
 
 	psc->sc_port_rid = 0;
 	psc->sc_port_res = bus_alloc_resource(dev, SYS_RES_IOPORT,
-	    &psc->sc_port_rid, 0, ~0, 16,
-	    rman_make_alignment_flags(64) | RF_ACTIVE);
+	    &psc->sc_port_rid, 0, ~0, 16, RF_ACTIVE);
 	if (!psc->sc_port_res) {
 		device_printf(dev, "awi_pccard_attach: port alloc failed\n");
 		goto fail;
@@ -174,9 +158,9 @@ awi_pccard_attach(device_t dev)
 #if 1
 	/*
 	 * XXX: awi needs to access memory with 8bit,
-	 * but pccardd apparently maps memory with MDF_16BITS flag.
+	 * but OLDCARD apparently maps memory with MDF_16BITS flag.
 	 * So memory mapped access is disabled and use IO port instead.
-	 * Also, memory mapping is not yet supported on pccard.
+	 * XXX: Should check to see if this is true of NEWCARD
 	 */
 	psc->sc_mem_res = 0;
 #else
@@ -255,7 +239,7 @@ awi_pccard_enable(struct awi_softc *sc)
 
 	if (psc->sc_intrhand == 0) {
 		error = bus_setup_intr(dev, psc->sc_irq_res, INTR_TYPE_NET,
-		    (void (*)(void *))awi_intr, sc, &psc->sc_intrhand);
+		    NULL, (void (*)(void *))awi_intr, sc, &psc->sc_intrhand);
 		if (error) {
 			device_printf(dev,
 			    "couldn't establish interrupt error=%d\n", error);
@@ -279,15 +263,10 @@ awi_pccard_disable(struct awi_softc *sc)
 
 static device_method_t awi_pccard_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
+	DEVMETHOD(device_probe,		awi_pccard_probe),
+	DEVMETHOD(device_attach,	awi_pccard_attach),
 	DEVMETHOD(device_detach,	awi_pccard_detach),
 	DEVMETHOD(device_shutdown,	awi_pccard_shutdown),
-
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	awi_pccard_match),
-	DEVMETHOD(card_compat_probe,	awi_pccard_probe),
-	DEVMETHOD(card_compat_attach,	awi_pccard_attach),
 
 	{ 0, 0 }
 };

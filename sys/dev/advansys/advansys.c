@@ -46,13 +46,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/advansys.c,v 1.29 2005/05/29 04:42:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/advansys/advansys.c,v 1.35 2007/06/17 05:55:46 scottl Exp $");
  
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/module.h>
 #include <sys/mutex.h>
 
 #include <machine/bus.h>
@@ -64,7 +65,6 @@ __FBSDID("$FreeBSD: src/sys/dev/advansys/advansys.c,v 1.29 2005/05/29 04:42:16 n
 #include <cam/cam_ccb.h>
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt_sim.h>
-#include <cam/cam_xpt_periph.h>
 #include <cam/cam_debug.h>
 
 #include <cam/scsi/scsi_all.h>
@@ -289,8 +289,12 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		ccb->ccb_h.status = CAM_REQ_INVALID;
 		xpt_done(ccb);
 		break;
+#define	IS_CURRENT_SETTINGS(c)	(c->type == CTS_TYPE_CURRENT_SETTINGS)
+#define	IS_USER_SETTINGS(c)	(c->type == CTS_TYPE_USER_SETTINGS)
 	case XPT_SET_TRAN_SETTINGS:
 	{
+		struct ccb_trans_settings_scsi *scsi;
+		struct ccb_trans_settings_spi *spi;
 		struct	 ccb_trans_settings *cts;
 		target_bit_vector targ_mask;
 		struct adv_transinfo *tconf;
@@ -305,12 +309,10 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		 * The user must specify which type of settings he wishes
 		 * to change.
 		 */
-		if (((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0)
-		 && ((cts->flags & CCB_TRANS_USER_SETTINGS) == 0)) {
+		if (IS_CURRENT_SETTINGS(cts) && !IS_USER_SETTINGS(cts)) {
 			tconf = &adv->tinfo[cts->ccb_h.target_id].current;
 			update_type |= ADV_TRANS_GOAL;
-		} else if (((cts->flags & CCB_TRANS_USER_SETTINGS) != 0)
-			&& ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) == 0)) {
+		} else if (IS_USER_SETTINGS(cts) && !IS_CURRENT_SETTINGS(cts)) {
 			tconf = &adv->tinfo[cts->ccb_h.target_id].user;
 			update_type |= ADV_TRANS_USER;
 		} else {
@@ -319,10 +321,11 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		}
 		
 		s = splcam();
-
+		scsi = &cts->proto_specific.scsi;
+		spi = &cts->xport_specific.spi;
 		if ((update_type & ADV_TRANS_GOAL) != 0) {
-			if ((cts->valid & CCB_TRANS_DISC_VALID) != 0) {
-				if ((cts->flags & CCB_TRANS_DISC_ENB) != 0)
+			if ((spi->valid & CTS_SPI_VALID_DISC) != 0) {
+				if ((spi->flags & CTS_SPI_FLAGS_DISC_ENB) != 0)
 					adv->disc_enable |= targ_mask;
 				else
 					adv->disc_enable &= ~targ_mask;
@@ -330,8 +333,8 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 						 adv->disc_enable); 
 			}
 
-			if ((cts->valid & CCB_TRANS_TQ_VALID) != 0) {
-				if ((cts->flags & CCB_TRANS_TAG_ENB) != 0)
+			if ((scsi->valid & CTS_SCSI_VALID_TQ) != 0) {
+				if ((scsi->flags & CTS_SCSI_FLAGS_TAG_ENB) != 0)
 					adv->cmd_qng_enabled |= targ_mask;
 				else
 					adv->cmd_qng_enabled &= ~targ_mask;
@@ -339,15 +342,15 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		}
 
 		if ((update_type & ADV_TRANS_USER) != 0) {
-			if ((cts->valid & CCB_TRANS_DISC_VALID) != 0) {
-				if ((cts->flags & CCB_TRANS_DISC_ENB) != 0)
+			if ((spi->valid & CTS_SPI_VALID_DISC) != 0) {
+				if ((spi->flags & CTS_SPI_VALID_DISC) != 0)
 					adv->user_disc_enable |= targ_mask;
 				else
 					adv->user_disc_enable &= ~targ_mask;
 			}
 
-			if ((cts->valid & CCB_TRANS_TQ_VALID) != 0) {
-				if ((cts->flags & CCB_TRANS_TAG_ENB) != 0)
+			if ((scsi->valid & CTS_SCSI_VALID_TQ) != 0) {
+				if ((scsi->flags & CTS_SCSI_FLAGS_TAG_ENB) != 0)
 					adv->user_cmd_qng_enabled |= targ_mask;
 				else
 					adv->user_cmd_qng_enabled &= ~targ_mask;
@@ -359,29 +362,29 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		 * but not both, the unspecified parameter defaults to its
 		 * current value in transfer negotiations.
 		 */
-		if (((cts->valid & CCB_TRANS_SYNC_RATE_VALID) != 0)
-		 || ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0)) {
+		if (((spi->valid & CTS_SPI_VALID_SYNC_RATE) != 0)
+		 || ((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) != 0)) {
 			/*
 			 * If the user provided a sync rate but no offset,
 			 * use the current offset.
 			 */
-			if ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID) == 0)
-				cts->sync_offset = tconf->offset;
+			if ((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) == 0)
+				spi->sync_offset = tconf->offset;
 
 			/*
 			 * If the user provided an offset but no sync rate,
 			 * use the current sync rate.
 			 */
-			if ((cts->valid & CCB_TRANS_SYNC_RATE_VALID) == 0)
-				cts->sync_period = tconf->period;
+			if ((spi->valid & CTS_SPI_VALID_SYNC_RATE) == 0)
+				spi->sync_period = tconf->period;
 
-			adv_period_offset_to_sdtr(adv, &cts->sync_period,
-						  &cts->sync_offset,
+			adv_period_offset_to_sdtr(adv, &spi->sync_period,
+						  &spi->sync_offset,
 						  cts->ccb_h.target_id);
 			
 			adv_set_syncrate(adv, /*struct cam_path */NULL,
-					 cts->ccb_h.target_id, cts->sync_period,
-					 cts->sync_offset, update_type);
+					 cts->ccb_h.target_id, spi->sync_period,
+					 spi->sync_offset, update_type);
 		}
 
 		splx(s);
@@ -392,6 +395,8 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 	case XPT_GET_TRAN_SETTINGS:
 	/* Get default/user set transfer settings for the target */
 	{
+		struct ccb_trans_settings_scsi *scsi;
+		struct ccb_trans_settings_spi *spi;
 		struct ccb_trans_settings *cts;
 		struct adv_transinfo *tconf;
 		target_bit_vector target_mask;
@@ -400,33 +405,40 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		cts = &ccb->cts;
 		target_mask = ADV_TID_TO_TARGET_MASK(cts->ccb_h.target_id);
 
-		cts->flags &= ~(CCB_TRANS_DISC_ENB|CCB_TRANS_TAG_ENB);
+		scsi = &cts->proto_specific.scsi;
+		spi = &cts->xport_specific.spi;
+
+		cts->protocol = PROTO_SCSI;
+		cts->protocol_version = SCSI_REV_2;
+		cts->transport = XPORT_SPI;
+		cts->transport_version = 2;
+
+		scsi->flags &= ~CTS_SCSI_FLAGS_TAG_ENB;
+		spi->flags &= ~CTS_SPI_FLAGS_DISC_ENB;
 
 		s = splcam();
-		if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
+		if (cts->type == CTS_TYPE_CURRENT_SETTINGS) {
 			tconf = &adv->tinfo[cts->ccb_h.target_id].current;
 			if ((adv->disc_enable & target_mask) != 0)
-				cts->flags |= CCB_TRANS_DISC_ENB;
+				spi->flags |= CTS_SPI_FLAGS_DISC_ENB;
 			if ((adv->cmd_qng_enabled & target_mask) != 0)
-				cts->flags |= CCB_TRANS_TAG_ENB;
+				scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
 		} else {
 			tconf = &adv->tinfo[cts->ccb_h.target_id].user;
 			if ((adv->user_disc_enable & target_mask) != 0)
-				cts->flags |= CCB_TRANS_DISC_ENB;
+				spi->flags |= CTS_SPI_FLAGS_DISC_ENB;
 			if ((adv->user_cmd_qng_enabled & target_mask) != 0)
-				cts->flags |= CCB_TRANS_TAG_ENB;
+				scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
 		}
-
-		cts->sync_period = tconf->period;
-		cts->sync_offset = tconf->offset;
+		spi->sync_period = tconf->period;
+		spi->sync_offset = tconf->offset;
 		splx(s);
-
-		cts->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
-		cts->valid = CCB_TRANS_SYNC_RATE_VALID
-			   | CCB_TRANS_SYNC_OFFSET_VALID
-			   | CCB_TRANS_BUS_WIDTH_VALID
-			   | CCB_TRANS_DISC_VALID
-			   | CCB_TRANS_TQ_VALID;
+		spi->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+		spi->valid = CTS_SPI_VALID_SYNC_RATE
+			   | CTS_SPI_VALID_SYNC_OFFSET
+			   | CTS_SPI_VALID_BUS_WIDTH
+			   | CTS_SPI_VALID_DISC;
+		scsi->valid = CTS_SCSI_VALID_TQ;
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -478,6 +490,10 @@ adv_action(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 		cpi->ccb_h.status = CAM_REQ_CMP;
+                cpi->transport = XPORT_SPI;
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
 		xpt_done(ccb);
 		break;
 	}
@@ -1398,7 +1414,7 @@ adv_attach(adv)
 	 * Construct our SIM entry.
 	 */
 	adv->sim = cam_sim_alloc(adv_action, adv_poll, "adv", adv, adv->unit,
-				 1, adv->max_openings, devq);
+				 &Giant, 1, adv->max_openings, devq);
 	if (adv->sim == NULL)
 		return (ENOMEM);
 
@@ -1407,7 +1423,7 @@ adv_attach(adv)
 	 *
 	 * XXX Twin Channel EISA Cards???
 	 */
-	if (xpt_bus_register(adv->sim, 0) != CAM_SUCCESS) {
+	if (xpt_bus_register(adv->sim, adv->dev, 0) != CAM_SUCCESS) {
 		cam_sim_free(adv->sim, /*free devq*/TRUE);
 		return (ENXIO);
 	}
@@ -1428,3 +1444,4 @@ adv_attach(adv)
 	xpt_action((union ccb *)&csa);
 	return (0);
 }
+MODULE_DEPEND(adv, cam, 1, 1, 1);

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/bktr/bktr_card.h,v 1.11.2.1 2006/01/14 14:18:34 netchild Exp $ */
+/* $FreeBSD: src/sys/dev/bktr/bktr_card.h,v 1.12 2005/11/13 13:26:37 netchild Exp $ */
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/bktr/bktr_i2c.h,v 1.4 2002/03/23 15:47:08 nsouch Exp $
+ * $FreeBSD: src/sys/dev/bktr/bktr_i2c.h,v 1.5 2006/09/18 20:17:42 jhb Exp $
  *
  */
 #ifndef _BT848_I2C_H
@@ -39,7 +39,7 @@ extern int bti2c_iic_getsda(device_t);
 extern int bti2c_iic_getscl(device_t);
 extern int bti2c_iic_reset(device_t, u_char, u_char, u_char *);
 
-extern int bti2c_smb_callback(device_t, int, caddr_t *);
+extern int bti2c_smb_callback(device_t, int, void *);
 extern int bti2c_smb_writeb(device_t dev, u_char slave, char cmd, char byte);
 extern int bti2c_smb_writew(device_t dev, u_char slave, char cmd, short word);
 extern int bti2c_smb_readb(device_t dev, u_char slave, char cmd, char *byte);

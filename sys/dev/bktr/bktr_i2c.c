@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_i2c.c,v 1.27 2005/05/29 04:42:19 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_i2c.c,v 1.29 2006/12/31 19:42:47 jmg Exp $");
 
 /*
  * I2C support for the bti2c chipset.
@@ -50,7 +50,6 @@ __FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_i2c.c,v 1.27 2005/05/29 04:42:19 nyan 
 #endif
 
 #if (__FreeBSD_version < 500000)
-#include <machine/clock.h>              /* for DELAY */
 #include <pci/pcivar.h>
 #include <pci/pcireg.h>
 #else
@@ -68,8 +67,6 @@ __FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_i2c.c,v 1.27 2005/05/29 04:42:19 nyan 
 
 #include <dev/smbus/smbconf.h>
 #include <dev/iicbus/iiconf.h>
-
-#define I2C_DELAY	40
 
 /* Compilation is void if BKTR_USE_FREEBSD_SMBUS is not
  * defined. This allows bktr owners to have smbus active for there
@@ -119,7 +116,7 @@ error:
 	return (error);
 }
 
-int bti2c_smb_callback(device_t dev, int index, caddr_t *data)
+int bti2c_smb_callback(device_t dev, int index, void *data)
 {
 	struct bktr_softc *bktr_sc = (struct bktr_softc *)device_get_softc(dev);
 	struct bktr_i2c_softc *sc = &bktr_sc->i2c_sc;
@@ -205,8 +202,6 @@ void bti2c_iic_setsda(device_t dev, int val)
 	else
 		OUTL(sc, BKTR_I2C_DATA_CTL, clock);
 
-	DELAY(I2C_DELAY);
-
 	return;
 }
 
@@ -221,8 +216,6 @@ void bti2c_iic_setscl(device_t dev, int val)
 		OUTL(sc, BKTR_I2C_DATA_CTL, 0x2 | data);
 	else
 		OUTL(sc, BKTR_I2C_DATA_CTL, data);
-
-	DELAY(I2C_DELAY);
 
 	return;
 }
@@ -337,5 +330,7 @@ bti2c_smb_readb(device_t dev, u_char slave, char cmd, char *byte)
 
 	return (0);
 }
+
+DRIVER_MODULE(smbus, bktr, smbus_driver, smbus_devclass, 0, 0);
 
 #endif /* defined(BKTR_USE_FREEBSD_SMBUS) */

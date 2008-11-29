@@ -46,7 +46,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/adv_isa.c,v 1.28.2.1 2005/07/18 19:43:45 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/advansys/adv_isa.c,v 1.31 2007/02/23 12:18:29 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h> 
@@ -337,7 +337,7 @@ adv_isa_probe(device_t dev)
 						RF_ACTIVE);
 		if (irqres == NULL ||
 		    bus_setup_intr(dev, irqres, INTR_TYPE_CAM|INTR_ENTROPY,
-				   adv_intr, adv, &ih)) {
+		        NULL, adv_intr, adv, &ih)) {
 			bus_dmamap_unload(overrun_dmat, overrun_dmamap);
 			bus_dmamem_free(overrun_dmat, overrun_buf,
 			    overrun_dmamap);
@@ -430,3 +430,4 @@ static driver_t adv_isa_driver = {
 
 static devclass_t adv_isa_devclass;
 DRIVER_MODULE(adv, isa, adv_isa_driver, adv_isa_devclass, 0, 0);
+MODULE_DEPEND(adv, isa, 1, 1, 1);

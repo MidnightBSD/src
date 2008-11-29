@@ -58,7 +58,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aha/aha.c,v 1.59 2005/05/29 04:42:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aha/aha.c,v 1.64 2007/06/17 05:55:46 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -66,6 +66,7 @@ __FBSDID("$FreeBSD: src/sys/dev/aha/aha.c,v 1.59 2005/05/29 04:42:16 nyan Exp $"
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
+#include <sys/module.h>
 #include <sys/mutex.h>
 
 #include <machine/bus.h>
@@ -604,13 +605,13 @@ aha_attach(struct aha_softc *aha)
 	/*
 	 * Construct our SIM entry
 	 */
-	aha->sim = cam_sim_alloc(ahaaction, ahapoll, "aha", aha, aha->unit, 2,
-	    tagged_dev_openings, devq);
+	aha->sim = cam_sim_alloc(ahaaction, ahapoll, "aha", aha, aha->unit,
+	     &Giant, 2, tagged_dev_openings, devq);
 	if (aha->sim == NULL) {
 		cam_simq_free(devq);
 		return (ENOMEM);
 	}
-	if (xpt_bus_register(aha->sim, 0) != CAM_SUCCESS) {
+	if (xpt_bus_register(aha->sim, aha->dev, 0) != CAM_SUCCESS) {
 		cam_sim_free(aha->sim, /*free_devq*/TRUE);
 		return (ENXIO);
 	}
@@ -899,32 +900,39 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 	case XPT_GET_TRAN_SETTINGS:
 	/* Get default/user set transfer settings for the target */
 	{
-		struct	ccb_trans_settings *cts;
-		u_int	target_mask;
+		struct	ccb_trans_settings *cts = &ccb->cts;
+		u_int	target_mask = 0x01 << ccb->ccb_h.target_id;
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
 
-		cts = &ccb->cts;
-		target_mask = 0x01 << ccb->ccb_h.target_id;
-		if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0) {
-			cts->flags = 0;
+		cts->protocol = PROTO_SCSI;
+		cts->protocol_version = SCSI_REV_2;
+		cts->transport = XPORT_SPI;
+		cts->transport_version = 2;
+		if (cts->type == CTS_TYPE_USER_SETTINGS) {
+			spi->flags = 0;
 			if ((aha->disc_permitted & target_mask) != 0)
-				cts->flags |= CCB_TRANS_DISC_ENB;
-			cts->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+				spi->flags |= CTS_SPI_FLAGS_DISC_ENB;
+			spi->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
 			if ((aha->sync_permitted & target_mask) != 0) {
 				if (aha->boardid >= BOARD_1542CF)
-					cts->sync_period = 25;
+					spi->sync_period = 25;
 				else
-					cts->sync_period = 50;
-			} else
-				cts->sync_period = 0;
+					spi->sync_period = 50;
+			} else {
+				spi->sync_period = 0;
+			}
 
-			if (cts->sync_period != 0)
-				cts->sync_offset = 15;
+			if (spi->sync_period != 0)
+				spi->sync_offset = 15;
 
-			cts->valid = CCB_TRANS_SYNC_RATE_VALID
-				   | CCB_TRANS_SYNC_OFFSET_VALID
-				   | CCB_TRANS_BUS_WIDTH_VALID
-				   | CCB_TRANS_DISC_VALID
-				   | CCB_TRANS_TQ_VALID;
+			spi->valid = CTS_SPI_VALID_SYNC_RATE
+				   | CTS_SPI_VALID_SYNC_OFFSET
+				   | CTS_SPI_VALID_BUS_WIDTH
+				   | CTS_SPI_VALID_DISC;
+			scsi->valid = CTS_SCSI_VALID_TQ;
 		} else {
 			ahafetchtransinfo(aha, cts);
 		}
@@ -988,6 +996,10 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
+                cpi->transport = XPORT_SPI;
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -1674,6 +1686,7 @@ ahafetchtransinfo(struct aha_softc *aha, struct ccb_trans_settings* cts)
 	int		error;
 	uint8_t	param;
 	targ_syncinfo_t	sync_info;
+	struct ccb_trans_settings_spi *spi = &cts->xport_specific.spi;
 
 	target = cts->ccb_h.target_id;
 	targ_offset = (target & 0x7);
@@ -1696,11 +1709,11 @@ ahafetchtransinfo(struct aha_softc *aha, struct ccb_trans_settings* cts)
 	sync_info = setup_info.syncinfo[targ_offset];
 
 	if (sync_info.sync == 0)
-		cts->sync_offset = 0;
+		spi->sync_offset = 0;
 	else
-		cts->sync_offset = sync_info.offset;
+		spi->sync_offset = sync_info.offset;
 
-	cts->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+	spi->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
 
 	if (aha->boardid >= BOARD_1542CF)
 		sync_period = 1000;
@@ -1709,14 +1722,14 @@ ahafetchtransinfo(struct aha_softc *aha, struct ccb_trans_settings* cts)
 	sync_period += 500 * sync_info.period;
 
 	/* Convert ns value to standard SCSI sync rate */
-	if (cts->sync_offset != 0)
-		cts->sync_period = scsi_calc_syncparam(sync_period);
+	if (spi->sync_offset != 0)
+		spi->sync_period = scsi_calc_syncparam(sync_period);
 	else
-		cts->sync_period = 0;
+		spi->sync_period = 0;
 
-	cts->valid = CCB_TRANS_SYNC_RATE_VALID
-		   | CCB_TRANS_SYNC_OFFSET_VALID
-		   | CCB_TRANS_BUS_WIDTH_VALID;
+	spi->valid = CTS_SPI_VALID_SYNC_RATE
+		   | CTS_SPI_VALID_SYNC_OFFSET
+		   | CTS_SPI_VALID_BUS_WIDTH;
         xpt_async(AC_TRANSFER_NEG, cts->ccb_h.path, cts);
 }
 
@@ -1860,3 +1873,4 @@ aha_detach(struct aha_softc *aha)
 	cam_sim_free(aha->sim, /*free_devq*/TRUE);
 	return (0);
 }
+MODULE_DEPEND(aha, cam, 1, 1, 1);

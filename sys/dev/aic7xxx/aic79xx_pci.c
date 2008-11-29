@@ -38,7 +38,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic79xx_pci.c,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
+ * $Id: aic79xx_pci.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  */
 
 #ifdef __linux__
@@ -46,7 +46,7 @@
 #include "aic79xx_inline.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic79xx_pci.c,v 1.23 2005/02/16 18:16:35 gibbs Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic79xx_pci.c,v 1.26 2007/04/17 06:26:24 scottl Exp $");
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
 #endif
@@ -314,7 +314,6 @@ int
 ahd_pci_config(struct ahd_softc *ahd, struct ahd_pci_identity *entry)
 {
 	struct scb_data *shared_scb_data;
-	u_long		 l;
 	u_int		 command;
 	uint32_t	 devconfig;
 	uint16_t	 device; 
@@ -342,7 +341,12 @@ ahd_pci_config(struct ahd_softc *ahd, struct ahd_pci_identity *entry)
 	error = entry->setup(ahd);
 	if (error != 0)
 		return (error);
-	
+
+	/*
+	 * Find the PCI-X cap pointer.  If we don't find it,
+	 * pcix_ptr will be 0.
+	 */
+	pci_find_extcap(ahd->dev_softc, PCIY_PCIX, &ahd->pcix_ptr);
 	devconfig = aic_pci_read_config(ahd->dev_softc, DEVCONFIG, /*bytes*/4);
 	if ((devconfig & PCIXINITPAT) == PCIXINIT_PCI33_66) {
 		ahd->chip |= AHD_PCI;
@@ -350,6 +354,8 @@ ahd_pci_config(struct ahd_softc *ahd, struct ahd_pci_identity *entry)
 		ahd->bugs &= ~AHD_PCIX_BUG_MASK;
 	} else {
 		ahd->chip |= AHD_PCIX;
+		if (ahd->pcix_ptr == 0)
+			return (ENXIO);
 	}
 	ahd->bus_description = pci_bus_modes[PCI_BUS_MODES_INDEX(devconfig)];
 
@@ -416,12 +422,12 @@ ahd_pci_config(struct ahd_softc *ahd, struct ahd_pci_identity *entry)
 	if (error != 0)
 		return (error);
 
-	ahd_list_lock(&l);
+	ahd_lock(ahd);
 	/*
 	 * Link this softc in with all other ahd instances.
 	 */
 	ahd_softc_insert(ahd);
-	ahd_list_unlock(&l);
+	ahd_unlock(ahd);
 	return (0);
 }
 
@@ -622,7 +628,7 @@ ahd_check_extport(struct ahd_softc *ahd)
 		}
 	}
 
-#if AHD_DEBUG
+#ifdef AHD_DEBUG
 	if (have_seeprom != 0
 	 && (ahd_debug & AHD_DUMP_SEEPROM) != 0) {
 		uint16_t *sc_data;
@@ -867,16 +873,16 @@ ahd_pci_split_intr(struct ahd_softc *ahd, u_int intstat)
 	uint8_t		sg_split_status1[2];
 	ahd_mode_state	saved_modes;
 	u_int		i;
-	uint16_t	pcix_status;
+	uint32_t	pcix_status;
 
 	/*
 	 * Check for splits in all modes.  Modes 0 and 1
 	 * additionally have SG engine splits to look at.
 	 */
-	pcix_status = aic_pci_read_config(ahd->dev_softc, PCIXR_STATUS,
-					  /*bytes*/2);
+	pcix_status = aic_pci_read_config(ahd->dev_softc,
+	    ahd->pcix_ptr + PCIXR_STATUS, /*bytes*/ 4);
 	printf("%s: PCI Split Interrupt - PCI-X status = 0x%x\n",
-	       ahd_name(ahd), pcix_status);
+	       ahd_name(ahd), pcix_status >> 16);
 	saved_modes = ahd_save_modes(ahd);
 	for (i = 0; i < 4; i++) {
 		ahd_set_modes(ahd, i, i);
@@ -922,8 +928,8 @@ ahd_pci_split_intr(struct ahd_softc *ahd, u_int intstat)
 	/*
 	 * Clear PCI-X status bits.
 	 */
-	aic_pci_write_config(ahd->dev_softc, PCIXR_STATUS,
-			     pcix_status, /*bytes*/2);
+	aic_pci_write_config(ahd->dev_softc, ahd->pcix_ptr + PCIXR_STATUS,
+			     pcix_status, /*bytes*/4);
 	ahd_outb(ahd, CLRINT, CLRSPLTINT);
 	ahd_restore_modes(ahd, saved_modes);
 }

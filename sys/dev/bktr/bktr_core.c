@@ -63,7 +63,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_core.c,v 1.139 2005/05/29 04:42:18 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_core.c,v 1.140 2005/12/04 10:06:03 ru Exp $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -981,7 +981,7 @@ video_open( bktr_ptr_t bktr )
 
 	OUTB(bktr, BKTR_ADC, SYNC_LEVEL);
 
-#if BKTR_SYSTEM_DEFAULT == BROOKTREE_PAL
+#if defined(BKTR_SYSTEM_DEFAULT) && BKTR_SYSTEM_DEFAULT == BROOKTREE_PAL
 	video_format = 0;
 #else
 	video_format = 1;

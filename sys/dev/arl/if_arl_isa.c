@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/arl/if_arl_isa.c,v 1.5 2005/06/10 16:49:04 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/arl/if_arl_isa.c,v 1.8 2007/02/23 12:18:32 piso Exp $");
 
 #include "opt_inet.h"
 
@@ -58,7 +58,6 @@ __FBSDID("$FreeBSD: src/sys/dev/arl/if_arl_isa.c,v 1.5 2005/06/10 16:49:04 brook
 #include <isa/pnpvar.h>
 #include <isa/isa_common.h>
 
-#include <machine/clock.h>
 #include <machine/md_var.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -304,7 +303,7 @@ arl_isa_attach (device_t dev)
 	arl_alloc_irq(dev, sc->irq_rid, 0);
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-			       arl_intr, sc, &sc->irq_handle);
+			       NULL, arl_intr, sc, &sc->irq_handle);
 	if (error) {
 		arl_release_resources(dev);
 		return (error);
@@ -324,13 +323,13 @@ arl_isa_detach(device_t dev)
 
 	arl_stop(sc);
 	ifmedia_removeall(&sc->arl_ifmedia);
+	bus_teardown_intr(dev, sc->irq_res, sc->irq_handle);
 #if __FreeBSD_version < 500100
 	ether_ifdetach(sc->arl_ifp, ETHER_BPF_SUPPORTED);
 #else
 	ether_ifdetach(sc->arl_ifp);
 	if_free(sc->arl_ifp);
 #endif
-	bus_teardown_intr(dev, sc->irq_res, sc->irq_handle);
 	arl_release_resources(dev);
 
 	return (0);

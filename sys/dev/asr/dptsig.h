@@ -19,7 +19,7 @@
  * arising in any way out of the use of this driver software, even if advised
  * of the possibility of such damage.
  *
- * $FreeBSD: src/sys/dev/asr/dptsig.h,v 1.8 2005/01/06 01:42:29 imp Exp $
+ * $FreeBSD: src/sys/dev/asr/dptsig.h,v 1.9 2005/12/04 10:06:03 ru Exp $
  */
 
 #ifndef __DPTSIG_H_
@@ -76,7 +76,7 @@ typedef unsigned long sigLONG;
 #endif	/* aix */
 #endif
 /* For the Macintosh */
-#if STRUCTALIGNMENTSUPPORTED
+#ifdef STRUCTALIGNMENTSUPPORTED
 #pragma options align=mac68k
 #endif
 
@@ -458,7 +458,7 @@ typedef struct dpt_sig_Packed {
 #endif	/* aix */
 #endif
 /* For the Macintosh */
-#if STRUCTALIGNMENTSUPPORTED
+#ifdef STRUCTALIGNMENTSUPPORTED
 #pragma options align=reset
 #endif
 

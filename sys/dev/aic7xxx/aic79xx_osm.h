@@ -30,9 +30,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic79xx_osm.h,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
+ * $Id: aic79xx_osm.h,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aic79xx_osm.h,v 1.16 2005/05/29 04:42:17 nyan Exp $
+ * $FreeBSD: src/sys/dev/aic7xxx/aic79xx_osm.h,v 1.21 2007/04/17 06:26:24 scottl Exp $
  */
 
 #ifndef _AIC79XX_FREEBSD_H_
@@ -55,7 +55,6 @@
 #define AIC_PCI_CONFIG 1
 #include <machine/bus.h>
 #include <machine/endian.h>
-#include <machine/clock.h>
 #include <machine/resource.h>
 
 #include <sys/rman.h>
@@ -77,10 +76,6 @@
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
 #include <cam/scsi/scsi_iu.h>
-
-#ifdef CAM_NEW_TRAN_CODE
-#define AHD_NEW_TRAN_SETTINGS
-#endif /* CAM_NEW_TRAN_CODE */
 
 /****************************** Platform Macros *******************************/
 #define	SIM_IS_SCSIBUS_B(ahd, sim)	\
@@ -118,7 +113,7 @@
 #define AHD_NSEG (roundup(btoc(MAXPHYS) + 1, 16))
 
 /* This driver supports target mode */
-#if NOT_YET
+#ifdef NOT_YET
 #define AHD_TARGET_MODE 1
 #endif
 
@@ -138,13 +133,14 @@ struct ahd_platform_data {
 	void			*ih;
 	eventhandler_tag	 eh;
 	struct proc		*recovery_thread;
+	struct mtx		mtx;
 };
 
 struct scb_platform_data {
 };
 
 /***************************** Core Includes **********************************/
-#if AHD_REG_PRETTY_PRINT
+#ifdef AHD_REG_PRETTY_PRINT
 #define AIC_DEBUG_REGISTERS 1
 #else
 #define AIC_DEBUG_REGISTERS 0
@@ -194,66 +190,25 @@ ahd_flush_device_writes(struct ahd_softc *ahd)
 /**************************** Locking Primitives ******************************/
 /* Lock protecting internal data structures */
 static __inline void ahd_lockinit(struct ahd_softc *);
-static __inline void ahd_lock(struct ahd_softc *, unsigned long *flags);
-static __inline void ahd_unlock(struct ahd_softc *, unsigned long *flags);
-
-/* Lock held during command compeletion to the upper layer */
-static __inline void ahd_done_lockinit(struct ahd_softc *);
-static __inline void ahd_done_lock(struct ahd_softc *, unsigned long *flags);
-static __inline void ahd_done_unlock(struct ahd_softc *, unsigned long *flags);
-
-/* Lock held during ahd_list manipulation and ahd softc frees */
-static __inline void ahd_list_lockinit(void);
-static __inline void ahd_list_lock(unsigned long *flags);
-static __inline void ahd_list_unlock(unsigned long *flags);
+static __inline void ahd_lock(struct ahd_softc *);
+static __inline void ahd_unlock(struct ahd_softc *);
 
 static __inline void
 ahd_lockinit(struct ahd_softc *ahd)
 {
+	mtx_init(&ahd->platform_data->mtx, "ahd_lock", NULL, MTX_DEF);
 }
 
 static __inline void
-ahd_lock(struct ahd_softc *ahd, unsigned long *flags)
+ahd_lock(struct ahd_softc *ahd)
 {
-	*flags = splcam();
+	mtx_lock(&ahd->platform_data->mtx);
 }
 
 static __inline void
-ahd_unlock(struct ahd_softc *ahd, unsigned long *flags)
+ahd_unlock(struct ahd_softc *ahd)
 {
-	splx(*flags);
-}
-
-/* Lock held during command compeletion to the upper layer */
-static __inline void
-ahd_done_lockinit(struct ahd_softc *ahd)
-{
-}
-
-static __inline void
-ahd_done_lock(struct ahd_softc *ahd, unsigned long *flags)
-{
-}
-
-static __inline void
-ahd_done_unlock(struct ahd_softc *ahd, unsigned long *flags)
-{
-}
-
-/* Lock held during ahd_list manipulation and ahd softc frees */
-static __inline void
-ahd_list_lockinit(void)
-{
-}
-
-static __inline void
-ahd_list_lock(unsigned long *flags)
-{
-}
-
-static __inline void
-ahd_list_unlock(unsigned long *flags)
-{
+	mtx_unlock(&ahd->platform_data->mtx);
 }
 
 /********************************** PCI ***************************************/

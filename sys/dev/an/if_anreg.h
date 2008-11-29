@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/an/if_anreg.h,v 1.23 2005/06/10 16:49:03 brooks Exp $
+ * $FreeBSD: src/sys/dev/an/if_anreg.h,v 1.23.10.1 2007/11/21 06:37:40 avatar Exp $
  */
 
 #define AN_TIMEOUT	65536
@@ -485,7 +485,7 @@ struct an_softc	{
 	int			an_have_rssimap;
 	struct an_ltv_rssi_map	an_rssimap;
 #endif
-	struct callout_handle	an_stat_ch;
+	struct callout		an_stat_ch;
 	struct mtx		an_mtx;
 	device_t		an_dev;
 	struct ifmedia		an_ifmedia;

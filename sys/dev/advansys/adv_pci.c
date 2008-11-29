@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/adv_pci.c,v 1.27 2005/05/29 04:42:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/advansys/adv_pci.c,v 1.31 2007/02/23 12:18:29 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -96,7 +96,7 @@ static int adv_pci_attach(device_t);
 /* 
  * The overrun buffer shared amongst all PCI adapters.
  */
-static  u_int8_t*	overrun_buf;
+static  void*		overrun_buf;
 static	bus_dma_tag_t	overrun_dmat;
 static	bus_dmamap_t	overrun_dmamap;
 static	bus_addr_t	overrun_physbase;
@@ -237,7 +237,7 @@ adv_pci_attach(device_t dev)
 			return ENXIO;
        		}
 		if (bus_dmamem_alloc(overrun_dmat,
-				     (void **)&overrun_buf,
+				     &overrun_buf,
 				     BUS_DMA_NOWAIT,
 				     &overrun_dmamap) != 0) {
 			bus_dma_tag_destroy(overrun_dmat);
@@ -288,7 +288,7 @@ adv_pci_attach(device_t dev)
 	adv->max_dma_count = ADV_PCI_MAX_DMA_COUNT;
 	adv->max_dma_addr = ADV_PCI_MAX_DMA_ADDR;
 
-#if CC_DISABLE_PCI_PARITY_INT
+#if defined(CC_DISABLE_PCI_PARITY_INT) && CC_DISABLE_PCI_PARITY_INT
 	{
 		u_int16_t config_msw;
 
@@ -309,7 +309,8 @@ adv_pci_attach(device_t dev)
 	irqres = bus_alloc_resource_any(dev, SYS_RES_IRQ, &irqrid,
 					RF_SHAREABLE | RF_ACTIVE);
 	if (irqres == NULL ||
-	    bus_setup_intr(dev, irqres, INTR_TYPE_CAM|INTR_ENTROPY, adv_intr, adv, &ih)) {
+	    bus_setup_intr(dev, irqres, INTR_TYPE_CAM|INTR_ENTROPY, NULL, 
+	        adv_intr, adv, &ih)) {
 		adv_free(adv);
 		bus_release_resource(dev, SYS_RES_IOPORT, rid, iores);
 		return ENXIO;
@@ -332,3 +333,4 @@ static driver_t adv_pci_driver = {
 
 static devclass_t adv_pci_devclass;
 DRIVER_MODULE(adv, pci, adv_pci_driver, adv_pci_devclass, 0, 0);
+MODULE_DEPEND(adv, pci, 1, 1, 1);

@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/adv_eisa.c,v 1.18 2005/05/29 04:42:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/advansys/adv_eisa.c,v 1.21 2007/02/23 12:18:29 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,7 +75,7 @@ __FBSDID("$FreeBSD: src/sys/dev/advansys/adv_eisa.c,v 1.18 2005/05/29 04:42:16 n
 /* 
  * The overrun buffer shared amongst all EISA adapters.
  */
-static	u_int8_t*	overrun_buf;
+static	void*		overrun_buf;
 static	bus_dma_tag_t	overrun_dmat;
 static	bus_dmamap_t	overrun_dmamap;
 static	bus_addr_t	overrun_physbase;
@@ -264,7 +264,7 @@ adv_eisa_attach(device_t dev)
 			goto bad;
        		}
 		if (bus_dmamem_alloc(overrun_dmat,
-				     (void **)&overrun_buf,
+				     &overrun_buf,
 				     BUS_DMA_NOWAIT,
 				     &overrun_dmamap) != 0) {
 			bus_dma_tag_destroy(overrun_dmat);
@@ -323,7 +323,8 @@ adv_eisa_attach(device_t dev)
 	/*
 	 * Enable our interrupt handler.
 	 */
-	bus_setup_intr(dev, irq, INTR_TYPE_CAM|INTR_ENTROPY, adv_intr, adv, &ih);
+	bus_setup_intr(dev, irq, INTR_TYPE_CAM|INTR_ENTROPY, NULL, adv_intr, 
+	    adv, &ih);
 
 	/* Attach sub-devices - always succeeds */
 	adv_attach(adv);
@@ -351,3 +352,4 @@ static driver_t adv_eisa_driver = {
 
 static devclass_t adv_eisa_devclass;
 DRIVER_MODULE(adv, eisa, adv_eisa_driver, adv_eisa_devclass, 0, 0);
+MODULE_DEPEND(adv, eisa, 1, 1, 1);

@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  *
  * $RISS: if_arl/dev/arl/if_arlreg.h,v 1.4 2004/03/16 04:43:27 count Exp $
- * $FreeBSD: src/sys/dev/arl/if_arlreg.h,v 1.6 2005/06/10 16:49:04 brooks Exp $
+ * $FreeBSD: src/sys/dev/arl/if_arlreg.h,v 1.7 2006/08/17 22:50:32 imp Exp $
  */
 
 #ifndef _IF_ARLREG_H
@@ -322,7 +322,7 @@ struct arl_softc {
 		for (i = cnt; i && ar->resetFlag; i--) { \
 			DELAY(delay); \
 		} \
-	} while (0);
+	} while (0)
 
 #ifdef _KERNEL
 void	arl_release_resources	(device_t);

@@ -25,11 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic/aic.c,v 1.23 2005/05/29 04:42:17 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic/aic.c,v 1.27 2007/06/17 05:55:46 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
+#include <sys/malloc.h>
 #include <sys/bus.h>
 
 #include <machine/bus.h>
@@ -165,31 +168,32 @@ aic_action(struct cam_sim *sim, union ccb *ccb)
 	}
 	case XPT_SET_TRAN_SETTINGS:
 	{
-		struct ccb_trans_settings *cts;
-		struct aic_tinfo *ti;
-
-		cts = &ccb->cts;
-		ti = &aic->tinfo[ccb->ccb_h.target_id];
+		struct ccb_trans_settings *cts = cts = &ccb->cts;
+		struct aic_tinfo *ti = &aic->tinfo[ccb->ccb_h.target_id];
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
 
 		s = splcam();
 
-		if ((cts->valid & CCB_TRANS_DISC_VALID) != 0 &&
+		if ((spi->valid & CTS_SPI_VALID_DISC) != 0 &&
 		    (aic->flags & AIC_DISC_ENABLE) != 0) {
-			if ((cts->flags & CCB_TRANS_DISC_ENB) != 0)
+			if ((spi->flags & CTS_SPI_FLAGS_DISC_ENB) != 0)
 				ti->flags |= TINFO_DISC_ENB;
 			else
 				ti->flags &= ~TINFO_DISC_ENB;
 		}
 
-		if ((cts->valid & CCB_TRANS_TQ_VALID) != 0) {
-			if ((cts->flags & CCB_TRANS_TAG_ENB) != 0)
+		if ((scsi->valid & CTS_SCSI_VALID_TQ) != 0) {
+			if ((scsi->flags & CTS_SCSI_FLAGS_TAG_ENB) != 0)
 				ti->flags |= TINFO_TAG_ENB;
 			else
 				ti->flags &= ~TINFO_TAG_ENB;
 		}
 
-		if ((cts->valid & CCB_TRANS_SYNC_RATE_VALID) != 0) {
-			ti->goal.period = cts->sync_period;
+		if ((spi->valid & CTS_SPI_VALID_SYNC_RATE) != 0) {
+			ti->goal.period = spi->sync_period;
 
 			if (ti->goal.period > aic->min_period) {
 				ti->goal.period = 0;
@@ -198,8 +202,8 @@ aic_action(struct cam_sim *sim, union ccb *ccb)
 				ti->goal.period = aic->max_period;
 		}
 
-		if ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0) {
-			ti->goal.offset = cts->sync_offset;
+		if ((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) != 0) {
+			ti->goal.offset = spi->sync_offset;
 			if (ti->goal.offset == 0)
 				ti->goal.period = 0;
 			else if (ti->goal.offset > AIC_SYNC_OFFSET)
@@ -217,36 +221,41 @@ aic_action(struct cam_sim *sim, union ccb *ccb)
 	}
 	case XPT_GET_TRAN_SETTINGS:
 	{
-		struct ccb_trans_settings *cts;
-		struct aic_tinfo *ti;
+		struct ccb_trans_settings *cts = &ccb->cts;
+		struct aic_tinfo *ti = &aic->tinfo[ccb->ccb_h.target_id];
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
 
-		cts = &ccb->cts;
-		ti = &aic->tinfo[ccb->ccb_h.target_id];
+		cts->protocol = PROTO_SCSI;
+		cts->protocol_version = SCSI_REV_2;
+		cts->transport = XPORT_SPI;
+		cts->transport_version = 2;
+		scsi->flags &= ~CTS_SCSI_FLAGS_TAG_ENB;
+		spi->flags &= ~CTS_SPI_FLAGS_DISC_ENB;
 
 		s = splcam();
-
-		cts->flags &= ~(CCB_TRANS_DISC_ENB|CCB_TRANS_TAG_ENB);
 		if ((ti->flags & TINFO_DISC_ENB) != 0)
-			cts->flags |= CCB_TRANS_DISC_ENB;
+			spi->flags |= CTS_SPI_FLAGS_DISC_ENB;
 		if ((ti->flags & TINFO_TAG_ENB) != 0)
-			cts->flags |= CCB_TRANS_TAG_ENB;
+			scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
 
-		if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
-			cts->sync_period = ti->current.period;
-			cts->sync_offset = ti->current.offset;
+		if (cts->type == CTS_TYPE_CURRENT_SETTINGS) {
+			spi->sync_period = ti->current.period;
+			spi->sync_offset = ti->current.offset;
 		} else {
-			cts->sync_period = ti->user.period;
-			cts->sync_offset = ti->user.offset;
+			spi->sync_period = ti->user.period;
+			spi->sync_offset = ti->user.offset;
 		}
-		cts->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
-
 		splx(s);
 
-		cts->valid = CCB_TRANS_SYNC_RATE_VALID
-			   | CCB_TRANS_SYNC_OFFSET_VALID
-			   | CCB_TRANS_BUS_WIDTH_VALID
-			   | CCB_TRANS_DISC_VALID
-			   | CCB_TRANS_TQ_VALID;
+		spi->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+		spi->valid = CTS_SPI_VALID_SYNC_RATE
+			   | CTS_SPI_VALID_SYNC_OFFSET
+			   | CTS_SPI_VALID_BUS_WIDTH
+			   | CTS_SPI_VALID_DISC;
+		scsi->valid = CTS_SCSI_VALID_TQ;
 
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
@@ -281,6 +290,10 @@ aic_action(struct cam_sim *sim, union ccb *ccb)
                 strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
                 strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
                 cpi->unit_number = cam_sim_unit(sim);
+                cpi->transport = XPORT_SPI;
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
                 cpi->ccb_h.status = CAM_REQ_CMP;
                 xpt_done(ccb);
                 break;
@@ -598,6 +611,7 @@ aic_handle_msgin(struct aic_softc *aic)
 	struct ccb_hdr *ccb_h;
 	struct aic_tinfo *ti;
 	struct ccb_trans_settings neg;
+	struct ccb_trans_settings_spi *spi = &neg.xport_specific.spi;
 
 	if (aic->state == AIC_RESELECTED) {
 		if (!MSG_ISIDENTIFY(aic->msg_buf[0])) {
@@ -683,10 +697,15 @@ aic_handle_msgin(struct aic_softc *aic)
 			ti->scsirate = ti->current.offset ? ti->current.offset |
 			    ((ti->current.period * 4 + 49) / 50 - 2) << 4 : 0;
 			aic_outb(aic, SCSIRATE, ti->scsirate);
-			neg.sync_period = ti->goal.period = ti->current.period;
-			neg.sync_offset = ti->goal.offset = ti->current.offset;
-			neg.valid = CCB_TRANS_SYNC_RATE_VALID
-				  | CCB_TRANS_SYNC_OFFSET_VALID;
+			memset(&neg, 0, sizeof (neg));
+			neg.protocol = PROTO_SCSI;
+			neg.protocol_version = SCSI_REV_2;
+			neg.transport = XPORT_SPI;
+			neg.transport_version = 2;
+			spi->sync_period = ti->goal.period = ti->current.period;
+			spi->sync_offset = ti->goal.offset = ti->current.offset;
+			spi->valid = CTS_SPI_VALID_SYNC_RATE
+				  | CTS_SPI_VALID_SYNC_OFFSET;
 			ccb_h = &scb->ccb->ccb_h;
 			xpt_setup_ccb(&neg.ccb_h, ccb_h->path, 1);
 			xpt_async(AC_TRANSFER_NEG, ccb_h->path, &neg);
@@ -722,10 +741,15 @@ aic_handle_msgin(struct aic_softc *aic)
 			ti->flags &= ~(TINFO_SDTR_SENT|TINFO_SDTR_NEGO);
 			ti->scsirate = 0;
 			aic_outb(aic, SCSIRATE, ti->scsirate);
-			neg.sync_period = ti->current.period;
-			neg.sync_offset = ti->current.offset;
-			neg.valid = CCB_TRANS_SYNC_RATE_VALID
-				  | CCB_TRANS_SYNC_OFFSET_VALID;
+			memset(&neg, 0, sizeof (neg));
+			neg.protocol = PROTO_SCSI;
+			neg.protocol_version = SCSI_REV_2;
+			neg.transport = XPORT_SPI;
+			neg.transport_version = 2;
+			spi->sync_period = ti->current.period;
+			spi->sync_offset = ti->current.offset;
+			spi->valid = CTS_SPI_VALID_SYNC_RATE
+				  | CTS_SPI_VALID_SYNC_OFFSET;
 			ccb_h = &scb->ccb->ccb_h;
 			xpt_setup_ccb(&neg.ccb_h, ccb_h->path, 1);
 			xpt_async(AC_TRANSFER_NEG, ccb_h->path, &neg);
@@ -1519,13 +1543,13 @@ aic_attach(struct aic_softc *aic)
 	 * Construct our SIM entry
 	 */
 	aic->sim = cam_sim_alloc(aic_action, aic_poll, "aic", aic,
-				 aic->unit, 2, 256, devq);
+				 aic->unit, &Giant, 2, 256, devq);
 	if (aic->sim == NULL) {
 		cam_simq_free(devq);
 		return (ENOMEM);
 	}
 
-	if (xpt_bus_register(aic->sim, 0) != CAM_SUCCESS) {
+	if (xpt_bus_register(aic->sim, aic->dev, 0) != CAM_SUCCESS) {
 		cam_sim_free(aic->sim, /*free_devq*/TRUE);
 		return (ENXIO);
 	}

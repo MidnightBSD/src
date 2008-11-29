@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic/aic_cbus.c,v 1.11 2005/04/13 13:02:58 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic/aic_cbus.c,v 1.13 2007/06/17 05:55:46 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -125,6 +125,7 @@ aic_isa_alloc_resources(device_t dev)
 		}
 	}
 
+	sc->sc_aic.dev = dev;
 	sc->sc_aic.unit = device_get_unit(dev);
 	sc->sc_aic.tag = rman_get_bustag(sc->sc_port);
 	sc->sc_aic.bsh = rman_get_bushandle(sc->sc_port);
@@ -211,7 +212,7 @@ aic_isa_attach(device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_CAM|INTR_ENTROPY,
-				aic_intr, aic, &sc->sc_ih);
+				NULL, aic_intr, aic, &sc->sc_ih);
 	if (error) {
 		device_printf(dev, "failed to register interrupt handler\n");
 		aic_isa_release_resources(dev);

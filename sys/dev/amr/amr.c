@@ -56,7 +56,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/amr/amr.c,v 1.65.2.5 2006/02/14 08:04:39 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/amr/amr.c,v 1.80 2006/10/31 21:19:25 pjd Exp $");
 
 /*
  * Driver for the AMI MegaRaid family of controllers.
@@ -110,6 +110,7 @@ static struct cdevsw amr_cdevsw = {
 	.d_name =	"amr",
 };
 
+int linux_no_adapter = 0;
 /*
  * Initialisation, bus interface.
  */
@@ -177,6 +178,8 @@ static void	amr_printcommand(struct amr_command *ac);
 #endif
 
 static void	amr_init_sysctl(struct amr_softc *sc);
+static int	amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr,
+		    int32_t flag, d_thread_t *td);
 
 /********************************************************************************
  ********************************************************************************
@@ -258,6 +261,9 @@ amr_attach(struct amr_softc *sc)
     sc->amr_dev_t = make_dev(&amr_cdevsw, device_get_unit(sc->amr_dev), UID_ROOT, GID_OPERATOR,
 			     S_IRUSR | S_IWUSR, "amr%d", device_get_unit(sc->amr_dev));
     sc->amr_dev_t->si_drv1 = sc;
+    linux_no_adapter++;
+    if (device_get_unit(sc->amr_dev) == 0)
+	make_dev_alias(sc->amr_dev_t, "megadev0");
 
     /*
      * Schedule ourselves to bring the controller up once interrupts are
@@ -542,9 +548,9 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 	    break;
 
 	case 'm':
-	    copyout(&sc->amr_linux_no_adapters, (void *)(uintptr_t)ali.data,
-		sizeof(sc->amr_linux_no_adapters));
-	    td->td_retval[0] = sc->amr_linux_no_adapters;
+	    copyout(&linux_no_adapter, (void *)(uintptr_t)ali.data,
+		sizeof(linux_no_adapter));
+	    td->td_retval[0] = linux_no_adapter;
 	    error = 0;
 	    break;
 
@@ -598,7 +604,6 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 	    mtx_lock(&sc->amr_list_lock); 
 	    while ((ac = amr_alloccmd(sc)) == NULL)
 		msleep(sc, &sc->amr_list_lock, PPAUSE, "amrioc", hz);
-	    mtx_unlock(&sc->amr_list_lock);
 
 	    ac_flags = AMR_CMD_DATAIN|AMR_CMD_DATAOUT|AMR_CMD_CCB_DATAIN|AMR_CMD_CCB_DATAOUT;
 	    bzero(&ac->ac_mailbox, sizeof(ac->ac_mailbox));
@@ -612,6 +617,7 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 	    temp = (void *)(uintptr_t)ap->ap_data_transfer_address;
 
 	    error = amr_wait_command(ac);
+	    mtx_unlock(&sc->amr_list_lock);
 	    if (error)
 		break;
 
@@ -652,7 +658,6 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 	    mtx_lock(&sc->amr_list_lock); 
 	    while ((ac = amr_alloccmd(sc)) == NULL)
 		msleep(sc, &sc->amr_list_lock, PPAUSE, "amrioc", hz);
-	    mtx_unlock(&sc->amr_list_lock); 
 
 	    ac_flags = AMR_CMD_DATAIN|AMR_CMD_DATAOUT;
 	    bzero(&ac->ac_mailbox, sizeof(ac->ac_mailbox));
@@ -663,6 +668,7 @@ amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag,
 	    ac->ac_flags = ac_flags;
 
 	    error = amr_wait_command(ac);
+	    mtx_unlock(&sc->amr_list_lock); 
 	    if (error)
 		break;
 
@@ -768,9 +774,30 @@ amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *
 
     case 0xc0046d00:
     case 0xc06e6d00:	/* Linux emulation */
-	return amr_linux_ioctl_int(dev, cmd, addr, flag, td);
-	break;
+	{
+	    devclass_t			devclass;
+	    struct amr_linux_ioctl	ali;
+	    int				adapter, error;
 
+	    devclass = devclass_find("amr");
+	    if (devclass == NULL)
+		return (ENOENT);
+
+	    error = copyin(addr, &ali, sizeof(ali));
+	    if (error)
+		return (error);
+	    if (ali.ui.fcs.opcode == 0x82)
+		adapter = 0;
+	    else
+		adapter = (ali.ui.fcs.adapno) ^ 'm' << 8;
+
+	    sc = devclass_get_softc(devclass, adapter);
+	    if (sc == NULL)
+		return (ENOENT);
+
+	return (amr_linux_ioctl_int(sc->amr_dev_t, cmd,
+	    addr, 0, td));
+	}
     default:
 	debug(1, "unknown ioctl 0x%lx", cmd);
 	return(ENOIOCTL);
@@ -809,7 +836,6 @@ amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *
     mtx_lock(&sc->amr_list_lock); 
     while ((ac = amr_alloccmd(sc)) == NULL)
 	msleep(sc, &sc->amr_list_lock, PPAUSE, "amrioc", hz);
-    mtx_unlock(&sc->amr_list_lock); 
 
     /* handle SCSI passthrough command */
     if (au_cmd[0] == AMR_CMD_PASS) {
@@ -860,7 +886,9 @@ amr_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int32_t flag, d_thread_t *
     ac->ac_flags = ac_flags;
 
     /* run the command */
-    if ((error = amr_wait_command(ac)) != 0)
+    error = amr_wait_command(ac);
+    mtx_unlock(&sc->amr_list_lock); 
+    if (error)
 	goto out;
 
     /* copy out data and set status */
@@ -1259,7 +1287,7 @@ amr_bio_command(struct amr_softc *sc, struct amr_command **acp)
     int			driveno;
     int			cmd;
 
-    ac = NULL;
+    *acp = NULL;
     error = 0;
 
     /* get a command */
@@ -1277,38 +1305,49 @@ amr_bio_command(struct amr_softc *sc, struct amr_command **acp)
     ac->ac_bio = bio;
     ac->ac_data = bio->bio_data;
     ac->ac_length = bio->bio_bcount;
-    if (bio->bio_cmd == BIO_READ) {
+    cmd = 0;
+    switch (bio->bio_cmd) {
+    case BIO_READ:
 	ac->ac_flags |= AMR_CMD_DATAIN;
 	if (AMR_IS_SG64(sc)) {
 	    cmd = AMR_CMD_LREAD64;
 	    ac->ac_flags |= AMR_CMD_SG64;
 	} else
 	    cmd = AMR_CMD_LREAD;
-    } else {
+	break;
+    case BIO_WRITE:
 	ac->ac_flags |= AMR_CMD_DATAOUT;
 	if (AMR_IS_SG64(sc)) {
 	    cmd = AMR_CMD_LWRITE64;
 	    ac->ac_flags |= AMR_CMD_SG64;
 	} else
 	    cmd = AMR_CMD_LWRITE;
+	break;
+    case BIO_FLUSH:
+	ac->ac_flags |= AMR_CMD_PRIORITY | AMR_CMD_DATAOUT;
+	cmd = AMR_CMD_FLUSH;
+	break;
     }
     amrd = (struct amrd_softc *)bio->bio_disk->d_drv1;
     driveno = amrd->amrd_drive - sc->amr_drive;
     blkcount = (bio->bio_bcount + AMR_BLKSIZE - 1) / AMR_BLKSIZE;
 
     ac->ac_mailbox.mb_command = cmd;
-    ac->ac_mailbox.mb_blkcount = blkcount;
-    ac->ac_mailbox.mb_lba = bio->bio_pblkno;
+    if (bio->bio_cmd & (BIO_READ|BIO_WRITE)) {
+	ac->ac_mailbox.mb_blkcount = blkcount;
+	ac->ac_mailbox.mb_lba = bio->bio_pblkno;
+	if ((bio->bio_pblkno + blkcount) > sc->amr_drive[driveno].al_size) {
+	    device_printf(sc->amr_dev,
+			  "I/O beyond end of unit (%lld,%d > %lu)\n", 
+			  (long long)bio->bio_pblkno, blkcount,
+			  (u_long)sc->amr_drive[driveno].al_size);
+	}
+    }
     ac->ac_mailbox.mb_drive = driveno;
     if (sc->amr_state & AMR_STATE_REMAP_LD)
 	ac->ac_mailbox.mb_drive |= 0x80;
 
     /* we fill in the s/g related data when the command is mapped */
-
-    if ((bio->bio_pblkno + blkcount) > sc->amr_drive[driveno].al_size)
-	device_printf(sc->amr_dev, "I/O beyond end of unit (%lld,%d > %lu)\n", 
-		      (long long)bio->bio_pblkno, blkcount,
-		      (u_long)sc->amr_drive[driveno].al_size);
 
     *acp = ac;
     return(error);
@@ -1322,7 +1361,8 @@ static int
 amr_wait_command(struct amr_command *ac)
 {
     int			error = 0;
-    
+    struct amr_softc	*sc = ac->ac_sc;
+
     debug_called(1);
 
     ac->ac_complete = NULL;
@@ -1332,8 +1372,9 @@ amr_wait_command(struct amr_command *ac)
     }
     
     while ((ac->ac_flags & AMR_CMD_BUSY) && (error != EWOULDBLOCK)) {
-	error = tsleep(ac, PRIBIO, "amrwcmd", 0);
+	error = msleep(ac,&sc->amr_list_lock, PRIBIO, "amrwcmd", 0);
     }
+
     return(error);
 }
 
@@ -1755,13 +1796,44 @@ amr_setup_ccb64map(void *arg, bus_dma_segment_t *segs, int nsegments, int error)
     }
 }
 
+static void
+amr_setup_dmamap_cb(void *arg, bus_dma_segment_t *segs, int nsegments,
+    int error)
+{
+    struct amr_command          *ac = (struct amr_command *)arg;
+    struct amr_softc            *sc = ac->ac_sc;
+
+    amr_setup_dmamap(arg, segs, nsegments, error);
+
+    if (bus_dmamap_load(sc->amr_buffer_dmat, ac->ac_ccb_dmamap,
+	ac->ac_ccb_data, ac->ac_ccb_length, amr_setup_ccbmap, ac,
+	0) == EINPROGRESS) {
+	sc->amr_state |= AMR_STATE_QUEUE_FRZN;
+    }
+}
+
+static void
+amr_setup_dma64map_cb(void *arg, bus_dma_segment_t *segs, int nsegments,
+    int error)
+{
+    struct amr_command          *ac = (struct amr_command *)arg;
+    struct amr_softc            *sc = ac->ac_sc;
+
+    amr_setup_dma64map(arg, segs, nsegments, error);
+
+    if (bus_dmamap_load(sc->amr_buffer64_dmat, ac->ac_ccb_dma64map,
+	ac->ac_ccb_data, ac->ac_ccb_length, amr_setup_ccb64map, ac,
+	0) == EINPROGRESS) {
+	sc->amr_state |= AMR_STATE_QUEUE_FRZN;
+    }
+}
+
 static int
 amr_mapcmd(struct amr_command *ac)
 {
     bus_dma_tag_t	tag;
-    bus_dmamap_t	datamap, ccbmap;
+    bus_dmamap_t	datamap;
     bus_dmamap_callback_t *cb;
-    bus_dmamap_callback_t *ccb_cb;
     struct amr_softc	*sc = ac->ac_sc;
 
     debug_called(3);
@@ -1769,35 +1841,22 @@ amr_mapcmd(struct amr_command *ac)
     if (AC_IS_SG64(ac)) {
 	tag = sc->amr_buffer64_dmat;
 	datamap = ac->ac_dma64map;
-	ccbmap = ac->ac_ccb_dma64map;
-	cb = amr_setup_dma64map;
-	ccb_cb = amr_setup_ccb64map;
+	cb = amr_setup_dma64map_cb;
     } else {
 	tag = sc->amr_buffer_dmat;
 	datamap = ac->ac_dmamap;
-	ccbmap = ac->ac_ccb_dmamap;
-	cb = amr_setup_dmamap;
-	ccb_cb = amr_setup_ccbmap;
+	cb = amr_setup_dmamap_cb;
     }
 
     /* if the command involves data at all, and hasn't been mapped */
     if ((ac->ac_flags & AMR_CMD_MAPPED) == 0 && (ac->ac_data != NULL)) {
-	if (ac->ac_ccb_data == NULL) {
-	    /* map the data buffers into bus space and build the s/g list */
-	    if (bus_dmamap_load(tag, datamap, ac->ac_data, ac->ac_length,
-		amr_setup_data_dmamap, ac, 0) == EINPROGRESS) {
-		sc->amr_state |= AMR_STATE_QUEUE_FRZN;
-	    }
-	} else {
-	    if (bus_dmamap_load(tag, datamap, ac->ac_data, ac->ac_length,
-		cb, ac, BUS_DMA_NOWAIT) != 0) {
-		return (ENOMEM);
-	    }
-	    if (bus_dmamap_load(tag, ccbmap, ac->ac_ccb_data,
-		ac->ac_ccb_length, ccb_cb, ac, 0) == EINPROGRESS) {
-		sc->amr_state |= AMR_STATE_QUEUE_FRZN;
-	    }
-     }
+	if (ac->ac_ccb_data == NULL)
+	    cb = amr_setup_data_dmamap;
+	/* map the data buffers into bus space and build the s/g list */
+	if (bus_dmamap_load(tag, datamap, ac->ac_data, ac->ac_length,
+	    cb, ac, 0) == EINPROGRESS) {
+	    sc->amr_state |= AMR_STATE_QUEUE_FRZN;
+	}
    } else {
     	if (sc->amr_submit_command(ac) == EBUSY) {
 	    amr_freeslot(ac);
@@ -1995,20 +2054,25 @@ amr_complete(void *context, int pending)
 	/* unmap the command's data buffer */
 	amr_unmapcmd(ac);
 
-	/* unbusy the command */
-	ac->ac_flags &= ~AMR_CMD_BUSY;
-	    
 	/* 
 	 * Is there a completion handler? 
 	 */
 	if (ac->ac_complete != NULL) {
+	    /* unbusy the command */
+	    ac->ac_flags &= ~AMR_CMD_BUSY;
 	    ac->ac_complete(ac);
 	    
 	    /* 
 	     * Is someone sleeping on this one?
 	     */
-	} else if (ac->ac_flags & AMR_CMD_SLEEP) {
-	    wakeup(ac);
+	} else {
+	    mtx_lock(&sc->amr_list_lock);
+	    ac->ac_flags &= ~AMR_CMD_BUSY;
+	    if (ac->ac_flags & AMR_CMD_SLEEP) {
+		/* unbusy the command */
+		wakeup(ac);
+	    }
+	    mtx_unlock(&sc->amr_list_lock);
 	}
 
 	if(!sc->amr_busyslots) {

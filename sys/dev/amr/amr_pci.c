@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/amr/amr_pci.c,v 1.29.2.2 2006/02/14 08:05:29 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/amr/amr_pci.c,v 1.38 2007/02/23 12:18:31 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -119,6 +119,8 @@ static driver_t amr_pci_driver = {
 
 static devclass_t	amr_devclass;
 DRIVER_MODULE(amr, pci, amr_pci_driver, amr_devclass, 0, 0);
+MODULE_DEPEND(amr, pci, 1, 1, 1);
+MODULE_DEPEND(amr, cam, 1, 1, 1);
 
 static struct amr_ident
 {
@@ -261,7 +263,7 @@ amr_pci_attach(device_t dev)
 	goto out;
     }
     if (bus_setup_intr(sc->amr_dev, sc->amr_irq,
-	INTR_TYPE_BIO | INTR_ENTROPY | INTR_MPSAFE, amr_pci_intr,
+	INTR_TYPE_BIO | INTR_ENTROPY | INTR_MPSAFE, NULL, amr_pci_intr,
 	sc, &sc->amr_intr)) {
         device_printf(sc->amr_dev, "can't set up interrupt\n");
 	goto out;
@@ -481,7 +483,7 @@ amr_pci_intr(void *arg)
 static void
 amr_pci_free(struct amr_softc *sc)
 {
-    u_int8_t	*p
+    void *p
 
     debug_called(1);
 
@@ -500,8 +502,7 @@ amr_pci_free(struct amr_softc *sc)
 	bus_dma_tag_destroy(sc->amr_sg_dmat);
 
     /* free and destroy DMA memory and tag for mailbox */
-    /* XXX Brain damaged GCC Alert! */
-    p = (u_int8_t *)(uintptr_t)(volatile void *)sc->amr_mailbox64;
+    p = (void *)(uintptr_t)(volatile void *)sc->amr_mailbox64;
     if (sc->amr_mailbox) {
 	bus_dmamem_free(sc->amr_mailbox_dmat, p, sc->amr_mailbox_dmamap);
     }
@@ -543,7 +544,7 @@ static int
 amr_sglist_map(struct amr_softc *sc)
 {
     size_t	segsize;
-    u_int8_t	*p;
+    void	*p;
     int		error;
 
     debug_called(1);
@@ -630,7 +631,7 @@ static int
 amr_setup_mbox(struct amr_softc *sc)
 {
     int		error;
-    u_int8_t	*p;
+    void	*p;
     
     debug_called(1);
 

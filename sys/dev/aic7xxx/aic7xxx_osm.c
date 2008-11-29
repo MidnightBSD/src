@@ -28,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic7xxx_osm.c,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aic7xxx_osm.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic7xxx_osm.c,v 1.42.2.1 2005/10/14 02:03:27 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic7xxx_osm.c,v 1.50 2007/06/17 05:55:47 scottl Exp $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic7xxx_osm.c,v 1.42.2.1 2005/10/14 02:0
 
 devclass_t ahc_devclass;
 
-#if UNUSED
+#if 0
 static void	ahc_dump_targcmd(struct target_cmd *cmd);
 #endif
 static int	ahc_modevent(module_t mod, int type, void *data);
@@ -107,8 +107,8 @@ ahc_map_int(struct ahc_softc *ahc)
 
 	/* Hook up our interrupt handler */
 	error = bus_setup_intr(ahc->dev_softc, ahc->platform_data->irq,
-			       INTR_TYPE_CAM, ahc_platform_intr, ahc,
-			       &ahc->platform_data->ih);
+			       INTR_TYPE_CAM|INTR_MPSAFE, NULL, 
+			       ahc_platform_intr, ahc, &ahc->platform_data->ih);
 
 	if (error != 0)
 		device_printf(ahc->dev_softc, "bus_setup_intr() failed: %d\n",
@@ -152,12 +152,14 @@ ahc_attach(struct ahc_softc *ahc)
 	struct cam_sim *sim2;
 	struct cam_path *path;
 	struct cam_path *path2;
-	long s;
 	int count;
 
 	count = 0;
 	sim = NULL;
 	sim2 = NULL;
+	path = NULL;
+	path2 = NULL;
+
 
 	/*
 	 * Create a thread to perform all recovery.
@@ -167,7 +169,7 @@ ahc_attach(struct ahc_softc *ahc)
 
 	ahc_controller_info(ahc, ahc_info);
 	printf("%s\n", ahc_info);
-	ahc_lock(ahc, &s);
+	ahc_lock(ahc);
 
 	/*
 	 * Attach secondary channel first if the user has
@@ -194,13 +196,13 @@ ahc_attach(struct ahc_softc *ahc)
 	 */
 	sim = cam_sim_alloc(ahc_action, ahc_poll, "ahc", ahc,
 			    device_get_unit(ahc->dev_softc),
-			    1, AHC_MAX_QUEUE, devq);
+			    &ahc->platform_data->mtx, 1, AHC_MAX_QUEUE, devq);
 	if (sim == NULL) {
 		cam_simq_free(devq);
 		goto fail;
 	}
 
-	if (xpt_bus_register(sim, bus_id) != CAM_SUCCESS) {
+	if (xpt_bus_register(sim, ahc->dev_softc, bus_id) != CAM_SUCCESS) {
 		cam_sim_free(sim, /*free_devq*/TRUE);
 		sim = NULL;
 		goto fail;
@@ -225,7 +227,8 @@ ahc_attach(struct ahc_softc *ahc)
 
 	if (ahc->features & AHC_TWIN) {
 		sim2 = cam_sim_alloc(ahc_action, ahc_poll, "ahc",
-				    ahc, device_get_unit(ahc->dev_softc), 1,
+				    ahc, device_get_unit(ahc->dev_softc),
+				    &ahc->platform_data->mtx, 1,
 				    AHC_MAX_QUEUE, devq);
 
 		if (sim2 == NULL) {
@@ -234,7 +237,8 @@ ahc_attach(struct ahc_softc *ahc)
 			goto fail;
 		}
 		
-		if (xpt_bus_register(sim2, bus_id2) != CAM_SUCCESS) {
+		if (xpt_bus_register(sim2, ahc->dev_softc, bus_id2) !=
+		    CAM_SUCCESS) {
 			printf("ahc_attach: Unable to attach second "
 			       "bus due to resource shortage");
 			/*
@@ -276,6 +280,7 @@ fail:
 		ahc->platform_data->sim_b = sim2;
 		ahc->platform_data->path_b = path2;
 	}
+	ahc_unlock(ahc);
 
 	if (count != 0) {
 		/* We have to wait until after any system dumps... */
@@ -285,7 +290,6 @@ fail:
 		ahc_intr_enable(ahc, TRUE);
 	}
 
-	ahc_unlock(ahc, &s);
 	return (count);
 }
 
@@ -298,7 +302,9 @@ ahc_platform_intr(void *arg)
 	struct	ahc_softc *ahc;
 
 	ahc = (struct ahc_softc *)arg; 
+	ahc_lock(ahc);
 	ahc_intr(ahc);
+	ahc_unlock(ahc);
 }
 
 /*
@@ -329,7 +335,7 @@ ahc_done(struct ahc_softc *ahc, struct scb *scb)
 		ahc_run_untagged_queue(ahc, untagged_q);
 	}
 
-	untimeout(ahc_platform_timeout, (caddr_t)scb, ccb->ccb_h.timeout_ch);
+	callout_stop(&scb->io_timer);
 
 	if ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
 		bus_dmasync_op_t op;
@@ -439,7 +445,6 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 	struct	ahc_tmode_lstate *lstate;
 	u_int	target_id;
 	u_int	our_id;
-	long	s;
 
 	CAM_DEBUG(ccb->ccb_h.path, CAM_DEBUG_TRACE, ("ahc_action\n"));
 	
@@ -472,13 +477,11 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 		}
 		if (ccb->ccb_h.func_code == XPT_ACCEPT_TARGET_IO) {
 
-			ahc_lock(ahc, &s);
 			SLIST_INSERT_HEAD(&lstate->accept_tios, &ccb->ccb_h,
 					  sim_links.sle);
 			ccb->ccb_h.status = CAM_REQ_INPROG;
 			if ((ahc->flags & AHC_TQINFIFO_BLOCKED) != 0)
 				ahc_run_tqinfifo(ahc, /*paused*/FALSE);
-			ahc_unlock(ahc, &s);
 			break;
 		}
 
@@ -508,17 +511,14 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 		/*
 		 * get an scb to use.
 		 */
-		ahc_lock(ahc, &s);
 		if ((scb = ahc_get_scb(ahc)) == NULL) {
 	
 			xpt_freeze_simq(sim, /*count*/1);
 			ahc->flags |= AHC_RESOURCE_SHORTAGE;
-			ahc_unlock(ahc, &s);
 			ccb->ccb_h.status = CAM_REQUEUE_REQ;
 			xpt_done(ccb);
 			return;
 		}
-		ahc_unlock(ahc, &s);
 		
 		hscb = scb->hscb;
 		
@@ -600,7 +600,6 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 	}
 	case XPT_SET_TRAN_SETTINGS:
 	{
-#ifdef AHC_NEW_TRAN_SETTINGS
 		struct	ahc_devinfo devinfo;
 		struct	ccb_trans_settings *cts;
 		struct	ccb_trans_settings_scsi *scsi;
@@ -649,8 +648,6 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 			break;
 		}
 		
-		ahc_lock(ahc, &s);
-
 		if ((spi->valid & CTS_SPI_VALID_DISC) != 0) {
 			if ((spi->flags & CTS_SPI_FLAGS_DISC_ENB) != 0)
 				*discenable |= devinfo.target_mask;
@@ -726,139 +723,16 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 					 spi->ppr_options, update_type,
 					 /*paused*/FALSE);
 		}
-		ahc_unlock(ahc, &s);
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
-#else
-		struct	  ahc_devinfo devinfo;
-		struct	  ccb_trans_settings *cts;
-		struct	  ahc_initiator_tinfo *tinfo;
-		struct	  ahc_tmode_tstate *tstate;
-		uint16_t *discenable;
-		uint16_t *tagenable;
-		u_int	  update_type;
-		long	  s;
-
-		cts = &ccb->cts;
-		ahc_compile_devinfo(&devinfo, SIM_SCSI_ID(ahc, sim),
-				    cts->ccb_h.target_id,
-				    cts->ccb_h.target_lun,
-				    SIM_CHANNEL(ahc, sim),
-				    ROLE_UNKNOWN);
-		tinfo = ahc_fetch_transinfo(ahc, devinfo.channel,
-					    devinfo.our_scsiid,
-					    devinfo.target, &tstate);
-		update_type = 0;
-		if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
-			update_type |= AHC_TRANS_GOAL;
-			discenable = &tstate->discenable;
-			tagenable = &tstate->tagenable;
-		} else if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0) {
-			update_type |= AHC_TRANS_USER;
-			discenable = &ahc->user_discenable;
-			tagenable = &ahc->user_tagenable;
-		} else {
-			ccb->ccb_h.status = CAM_REQ_INVALID;
-			xpt_done(ccb);
-			break;
-		}
-		
-		ahc_lock(ahc, &s);
-
-		if ((cts->valid & CCB_TRANS_DISC_VALID) != 0) {
-			if ((cts->flags & CCB_TRANS_DISC_ENB) != 0)
-				*discenable |= devinfo.target_mask;
-			else
-				*discenable &= ~devinfo.target_mask;
-		}
-		
-		if ((cts->valid & CCB_TRANS_TQ_VALID) != 0) {
-			if ((cts->flags & CCB_TRANS_TAG_ENB) != 0)
-				*tagenable |= devinfo.target_mask;
-			else
-				*tagenable &= ~devinfo.target_mask;
-		}	
-
-		if ((cts->valid & CCB_TRANS_BUS_WIDTH_VALID) != 0) {
-			ahc_validate_width(ahc, /*tinfo limit*/NULL,
-					   &cts->bus_width, ROLE_UNKNOWN);
-			ahc_set_width(ahc, &devinfo, cts->bus_width,
-				      update_type, /*paused*/FALSE);
-		}
-
-		if ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID) == 0) {
-			if (update_type == AHC_TRANS_USER)
-				cts->sync_offset = tinfo->user.offset;
-			else
-				cts->sync_offset = tinfo->goal.offset;
-		}
-
-		if ((cts->valid & CCB_TRANS_SYNC_RATE_VALID) == 0) {
-			if (update_type == AHC_TRANS_USER)
-				cts->sync_period = tinfo->user.period;
-			else
-				cts->sync_period = tinfo->goal.period;
-		}
-
-		if (((cts->valid & CCB_TRANS_SYNC_RATE_VALID) != 0)
-		 || ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0)) {
-			struct ahc_syncrate *syncrate;
-			u_int ppr_options;
-			u_int maxsync;
-
-			if ((ahc->features & AHC_ULTRA2) != 0)
-				maxsync = AHC_SYNCRATE_DT;
-			else if ((ahc->features & AHC_ULTRA) != 0)
-				maxsync = AHC_SYNCRATE_ULTRA;
-			else
-				maxsync = AHC_SYNCRATE_FAST;
-
-			ppr_options = 0;
-			if (cts->sync_period <= 9
-			 && cts->bus_width == MSG_EXT_WDTR_BUS_16_BIT)
-				ppr_options = MSG_EXT_PPR_DT_REQ;
-
-			syncrate = ahc_find_syncrate(ahc, &cts->sync_period,
-						     &ppr_options,
-						     maxsync);
-			ahc_validate_offset(ahc, /*tinfo limit*/NULL,
-					    syncrate, &cts->sync_offset,
-					    MSG_EXT_WDTR_BUS_8_BIT,
-					    ROLE_UNKNOWN);
-
-			/* We use a period of 0 to represent async */
-			if (cts->sync_offset == 0) {
-				cts->sync_period = 0;
-				ppr_options = 0;
-			}
-
-			if (ppr_options == MSG_EXT_PPR_DT_REQ
-			 && tinfo->user.transport_version >= 3) {
-				tinfo->goal.transport_version =
-				    tinfo->user.transport_version;
-				tinfo->curr.transport_version =
-				    tinfo->user.transport_version;
-			}
-			
-			ahc_set_syncrate(ahc, &devinfo, syncrate,
-					 cts->sync_period, cts->sync_offset,
-					 ppr_options, update_type,
-					 /*paused*/FALSE);
-		}
-		ahc_unlock(ahc, &s);
-		ccb->ccb_h.status = CAM_REQ_CMP;
-		xpt_done(ccb);
-#endif
 		break;
 	}
 	case XPT_GET_TRAN_SETTINGS:
 	/* Get default/user set transfer settings for the target */
 	{
 
-		ahc_lock(ahc, &s);
 		ahc_get_tran_settings(ahc, SIM_SCSI_ID(ahc, sim),
 				      SIM_CHANNEL(ahc, sim), &ccb->cts);
-		ahc_unlock(ahc, &s);
 		xpt_done(ccb);
 		break;
 	}
@@ -877,10 +751,8 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 	{
 		int  found;
 		
-		ahc_lock(ahc, &s);
 		found = ahc_reset_channel(ahc, SIM_CHANNEL(ahc, sim),
 					  /*initiate reset*/TRUE);
-		ahc_unlock(ahc, &s);
 		if (bootverbose) {
 			xpt_print_path(SIM_PATH(ahc, sim));
 			printf("SCSI bus reset delivered. "
@@ -929,7 +801,6 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-#ifdef AHC_NEW_TRAN_SETTINGS
 		cpi->protocol = PROTO_SCSI;
 		cpi->protocol_version = SCSI_REV_2;
 		cpi->transport = XPORT_SPI;
@@ -940,7 +811,6 @@ ahc_action(struct cam_sim *sim, union ccb *ccb)
 			cpi->xport_specific.spi.ppr_options =
 			    SID_SPI_CLOCK_DT_ST;
 		}
-#endif
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -956,7 +826,6 @@ static void
 ahc_get_tran_settings(struct ahc_softc *ahc, int our_id, char channel,
 		      struct ccb_trans_settings *cts)
 {
-#ifdef AHC_NEW_TRAN_SETTINGS
 	struct	ahc_devinfo devinfo;
 	struct	ccb_trans_settings_scsi *scsi;
 	struct	ccb_trans_settings_spi *spi;
@@ -1017,52 +886,6 @@ ahc_get_tran_settings(struct ahc_softc *ahc, int our_id, char channel,
 	}
 
 	cts->ccb_h.status = CAM_REQ_CMP;
-#else
-	struct	ahc_devinfo devinfo;
-	struct	ahc_initiator_tinfo *targ_info;
-	struct	ahc_tmode_tstate *tstate;
-	struct	ahc_transinfo *tinfo;
-
-	ahc_compile_devinfo(&devinfo, our_id,
-			    cts->ccb_h.target_id,
-			    cts->ccb_h.target_lun,
-			    channel, ROLE_UNKNOWN);
-	targ_info = ahc_fetch_transinfo(ahc, devinfo.channel,
-					devinfo.our_scsiid,
-					devinfo.target, &tstate);
-	
-	if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0)
-		tinfo = &targ_info->curr;
-	else
-		tinfo = &targ_info->user;
-	
-	cts->flags &= ~(CCB_TRANS_DISC_ENB|CCB_TRANS_TAG_ENB);
-	if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) == 0) {
-		if ((ahc->user_discenable & devinfo.target_mask) != 0)
-			cts->flags |= CCB_TRANS_DISC_ENB;
-
-		if ((ahc->user_tagenable & devinfo.target_mask) != 0)
-			cts->flags |= CCB_TRANS_TAG_ENB;
-	} else {
-		if ((tstate->discenable & devinfo.target_mask) != 0)
-			cts->flags |= CCB_TRANS_DISC_ENB;
-
-		if ((tstate->tagenable & devinfo.target_mask) != 0)
-			cts->flags |= CCB_TRANS_TAG_ENB;
-	}
-	cts->sync_period = tinfo->period;
-	cts->sync_offset = tinfo->offset;
-	cts->bus_width = tinfo->width;
-	
-	cts->valid = CCB_TRANS_SYNC_RATE_VALID
-		   | CCB_TRANS_SYNC_OFFSET_VALID
-		   | CCB_TRANS_BUS_WIDTH_VALID;
-
-	if (cts->ccb_h.target_lun != CAM_LUN_WILDCARD)
-		cts->valid |= CCB_TRANS_DISC_VALID|CCB_TRANS_TQ_VALID;
-
-	cts->ccb_h.status = CAM_REQ_CMP;
-#endif
 }
 
 static void
@@ -1077,7 +900,6 @@ ahc_async(void *callback_arg, uint32_t code, struct cam_path *path, void *arg)
 	case AC_LOST_DEVICE:
 	{
 		struct	ahc_devinfo devinfo;
-		long	s;
 
 		ahc_compile_devinfo(&devinfo, SIM_SCSI_ID(ahc, sim),
 				    xpt_path_target_id(path),
@@ -1089,14 +911,12 @@ ahc_async(void *callback_arg, uint32_t code, struct cam_path *path, void *arg)
 		 * Revert to async/narrow transfers
 		 * for the next device.
 		 */
-		ahc_lock(ahc, &s);
 		ahc_set_width(ahc, &devinfo, MSG_EXT_WDTR_BUS_8_BIT,
 			      AHC_TRANS_GOAL|AHC_TRANS_CUR, /*paused*/FALSE);
 		ahc_set_syncrate(ahc, &devinfo, /*syncrate*/NULL,
 				 /*period*/0, /*offset*/0, /*ppr_options*/0,
 				 AHC_TRANS_GOAL|AHC_TRANS_CUR,
 				 /*paused*/FALSE);
-		ahc_unlock(ahc, &s);
 		break;
 	}
 	default:
@@ -1114,7 +934,6 @@ ahc_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nsegments,
 	struct	ahc_initiator_tinfo *tinfo;
 	struct	ahc_tmode_tstate *tstate;
 	u_int	mask;
-	long	s;
 
 	scb = (struct scb *)arg;
 	ccb = scb->io_ctx;
@@ -1127,9 +946,7 @@ ahc_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nsegments,
 			aic_set_transaction_status(scb, CAM_REQ_CMP_ERR);
 		if (nsegments != 0)
 			bus_dmamap_unload(ahc->buffer_dmat, scb->dmamap);
-		ahc_lock(ahc, &s);
 		ahc_free_scb(ahc, scb);
-		ahc_unlock(ahc, &s);
 		xpt_done(ccb);
 		return;
 	}
@@ -1202,9 +1019,7 @@ ahc_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nsegments,
 					    CAM_REQ_TOO_BIG);
 					bus_dmamap_unload(ahc->buffer_dmat,
 							  scb->dmamap);
-					ahc_lock(ahc, &s);
 					ahc_free_scb(ahc, scb);
-					ahc_unlock(ahc, &s);
 					xpt_done(ccb);
 					return;
 				}
@@ -1227,8 +1042,6 @@ ahc_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nsegments,
 	
 	scb->sg_count = nsegments;
 
-	ahc_lock(ahc, &s);
-
 	/*
 	 * Last time we need to check if this SCB needs to
 	 * be aborted.
@@ -1237,7 +1050,6 @@ ahc_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nsegments,
 		if (nsegments != 0)
 			bus_dmamap_unload(ahc->buffer_dmat, scb->dmamap);
 		ahc_free_scb(ahc, scb);
-		ahc_unlock(ahc, &s);
 		xpt_done(ccb);
 		return;
 	}
@@ -1288,7 +1100,6 @@ ahc_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nsegments,
 		TAILQ_INSERT_TAIL(untagged_q, scb, links.tqe);
 		scb->flags |= SCB_UNTAGGEDQ;
 		if (TAILQ_FIRST(untagged_q) != scb) {
-			ahc_unlock(ahc, &s);
 			return;
 		}
 	}
@@ -1310,8 +1121,6 @@ ahc_execute_scb(void *arg, bus_dma_segment_t *dm_segs, int nsegments,
 	} else {
 		ahc_queue_scb(ahc, scb);
 	}
-
-	ahc_unlock(ahc, &s);
 }
 
 static void
@@ -1341,13 +1150,9 @@ ahc_setup_data(struct ahc_softc *ahc, struct cam_sim *sim,
 
 			if (hscb->cdb_len > sizeof(hscb->cdb32)
 			 || (ccb_h->flags & CAM_CDB_PHYS) != 0) {
-				u_long s;
-
 				aic_set_transaction_status(scb,
 							   CAM_REQ_INVALID);
-				ahc_lock(ahc, &s);
 				ahc_free_scb(ahc, scb);
-				ahc_unlock(ahc, &s);
 				xpt_done((union ccb *)csio);
 				return;
 			}
@@ -1536,14 +1341,10 @@ ahc_send_async(struct ahc_softc *ahc, char channel, u_int target,
 	switch (code) {
 	case AC_TRANSFER_NEG:
 	{
-#ifdef AHC_NEW_TRAN_SETTINGS
 		struct	ccb_trans_settings_scsi *scsi;
 	
 		cts.type = CTS_TYPE_CURRENT_SETTINGS;
 		scsi = &cts.proto_specific.scsi;
-#else
-		cts.flags = CCB_TRANS_CURRENT_SETTINGS;
-#endif
 		cts.ccb_h.path = path;
 		cts.ccb_h.target_id = target;
 		cts.ccb_h.target_lun = lun;
@@ -1551,23 +1352,13 @@ ahc_send_async(struct ahc_softc *ahc, char channel, u_int target,
 							  : ahc->our_id_b,
 				      channel, &cts);
 		arg = &cts;
-#ifdef AHC_NEW_TRAN_SETTINGS
 		scsi->valid &= ~CTS_SCSI_VALID_TQ;
 		scsi->flags &= ~CTS_SCSI_FLAGS_TAG_ENB;
-#else
-		cts.valid &= ~CCB_TRANS_TQ_VALID;
-		cts.flags &= ~CCB_TRANS_TAG_ENB;
-#endif
 		if (opt_arg == NULL)
 			break;
 		if (*((ahc_queue_alg *)opt_arg) == AHC_QUEUE_TAGGED)
-#ifdef AHC_NEW_TRAN_SETTINGS
 			scsi->flags |= ~CTS_SCSI_FLAGS_TAG_ENB;
 		scsi->valid |= CTS_SCSI_VALID_TQ;
-#else
-			cts.flags |= CCB_TRANS_TAG_ENB;
-		cts.valid |= CCB_TRANS_TQ_VALID;
-#endif
 		break;
 	}
 	case AC_SENT_BDR:
@@ -1643,29 +1434,19 @@ int
 ahc_detach(device_t dev)
 {
 	struct ahc_softc *ahc;
-	u_long l;
-	u_long s;
 
-	ahc_list_lock(&l);
 	device_printf(dev, "detaching device\n");
 	ahc = device_get_softc(dev);
-	ahc = ahc_find_softc(ahc);
-	if (ahc == NULL) {
-		device_printf(dev, "aic7xxx already detached\n");
-		ahc_list_unlock(&l);
-		return (ENOENT);
-	}
+	ahc_lock(ahc);
 	TAILQ_REMOVE(&ahc_tailq, ahc, links);
-	ahc_list_unlock(&l);
-	ahc_lock(ahc, &s);
 	ahc_intr_enable(ahc, FALSE);
 	bus_teardown_intr(dev, ahc->platform_data->irq, ahc->platform_data->ih);
-	ahc_unlock(ahc, &s);
+	ahc_unlock(ahc);
 	ahc_free(ahc);
 	return (0);
 }
 
-#if UNUSED
+#if 0
 static void
 ahc_dump_targcmd(struct target_cmd *cmd)
 {

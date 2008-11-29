@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aha/aha_isa.c,v 1.36 2005/05/29 04:42:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aha/aha_isa.c,v 1.39 2007/02/23 12:18:30 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -272,7 +272,7 @@ aha_isa_attach(device_t dev)
 	}
 
 	error = bus_setup_intr(dev, aha->irq, INTR_TYPE_CAM|INTR_ENTROPY,
-	    aha_intr, aha, &ih);
+	    NULL, aha_intr, aha, &ih);
 	if (error) {
 		device_printf(dev, "Unable to register interrupt handler\n");
                 goto fail;
@@ -374,3 +374,4 @@ static driver_t aha_isa_driver = {
 static devclass_t aha_devclass;
 
 DRIVER_MODULE(aha, isa, aha_isa_driver, aha_devclass, 0, 0);
+MODULE_DEPEND(aha, isa, 1, 1, 1);

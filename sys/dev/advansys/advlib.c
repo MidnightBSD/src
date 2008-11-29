@@ -42,7 +42,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/advansys/advlib.c,v 1.23 2005/05/29 04:42:16 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/advansys/advlib.c,v 1.26 2006/11/02 00:54:33 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -238,7 +238,7 @@ static void	 adv_toggle_irq_act(struct adv_softc *adv);
 /* Chip Control */
 static int	 adv_host_req_chip_halt(struct adv_softc *adv);
 static void	 adv_set_chip_ih(struct adv_softc *adv, u_int16_t ins_code);
-#if UNUSED
+#if 0
 static u_int8_t  adv_get_chip_scsi_ctrl(struct adv_softc *adv);
 #endif
 
@@ -514,7 +514,7 @@ adv_get_eeprom_config(struct adv_softc *adv, struct
 	for (s_addr = cfg_beg; s_addr <= (cfg_end - 1); s_addr++, wbuf++) {
 		*wbuf = adv_read_eeprom_16(adv, s_addr);
 		sum += *wbuf;
-#if ADV_DEBUG_EEPROM
+#ifdef ADV_DEBUG_EEPROM
 		printf("Addr 0x%x: 0x%04x\n", s_addr, *wbuf);
 #endif
 	}
@@ -1135,11 +1135,19 @@ adv_set_syncrate(struct adv_softc *adv, struct cam_path *path,
 			 * new transfer parameters.
 			 */
 			struct	ccb_trans_settings neg;
+			memset(&neg, 0, sizeof (neg));
+			struct ccb_trans_settings_spi *spi =
+			    &neg.xport_specific.spi;
 
-			neg.sync_period = period;
-			neg.sync_offset = offset;
-			neg.valid = CCB_TRANS_SYNC_RATE_VALID
-				  | CCB_TRANS_SYNC_OFFSET_VALID;
+			neg.protocol = PROTO_SCSI;
+			neg.protocol_version = SCSI_REV_2;
+			neg.transport = XPORT_SPI;
+			neg.transport_version = 2;
+
+			spi->sync_offset = offset;
+			spi->sync_period = period;
+			spi->valid |= CTS_SPI_VALID_SYNC_OFFSET;
+			spi->valid |= CTS_SPI_VALID_SYNC_RATE;
 			xpt_setup_ccb(&neg.ccb_h, path, /*priority*/1);
 			xpt_async(AC_TRANSFER_NEG, path, &neg);
 		}
@@ -1615,7 +1623,7 @@ adv_set_chip_ih(struct adv_softc *adv, u_int16_t ins_code)
 	adv_set_bank(adv, 0);
 }
 
-#if UNUSED
+#if 0
 static u_int8_t
 adv_get_chip_scsi_ctrl(struct adv_softc *adv)
 {
@@ -1826,12 +1834,12 @@ adv_put_ready_queue(struct adv_softc *adv, struct adv_scsi_q *scsiq,
 		      (u_int16_t *) &scsiq->q1.cntl,
 		      ((sizeof(scsiq->q1) + sizeof(scsiq->q2)) / 2) - 1);
 
-#if CC_WRITE_IO_COUNT
+#ifdef CC_WRITE_IO_COUNT
 	adv_write_lram_16(adv, q_addr + ADV_SCSIQ_W_REQ_COUNT,
 			  adv->req_count);
 #endif
 
-#if CC_CLEAR_DMA_REMAIN
+#ifdef CC_CLEAR_DMA_REMAIN
 
 	adv_write_lram_32(adv, q_addr + ADV_SCSIQ_DW_REMAIN_XFER_ADDR, 0);
 	adv_write_lram_32(adv, q_addr + ADV_SCSIQ_DW_REMAIN_XFER_CNT, 0);

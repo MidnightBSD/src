@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic79xx.c,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
+ * $Id: aic79xx.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  */
 
 #ifdef __linux__
@@ -46,7 +46,7 @@
 #include "aicasm/aicasm_insformat.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic79xx.c,v 1.36 2005/02/16 23:13:38 gibbs Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic79xx.c,v 1.40 2007/04/19 18:53:52 scottl Exp $");
 #include <dev/aic7xxx/aic79xx_osm.h>
 #include <dev/aic7xxx/aic79xx_inline.h>
 #include <dev/aic7xxx/aicasm/aicasm_insformat.h>
@@ -174,7 +174,7 @@ static void		ahd_handle_devreset(struct ahd_softc *ahd,
 					    struct ahd_devinfo *devinfo,
 					    u_int lun, cam_status status,
 					    char *message, int verbose_level);
-#if AHD_TARGET_MODE
+#ifdef AHD_TARGET_MODE
 static void		ahd_setup_target_msgin(struct ahd_softc *ahd,
 					       struct ahd_devinfo *devinfo,
 					       struct scb *scb);
@@ -1237,7 +1237,7 @@ ahd_handle_seqint(struct ahd_softc *ahd, u_int intstat)
 					ahd->msgin_index = 0;
 				}
 			}
-#if AHD_TARGET_MODE
+#ifdef AHD_TARGET_MODE
 			else {
 				if (bus_phase == P_MESGOUT) {
 					ahd->msg_type =
@@ -5271,6 +5271,7 @@ ahd_alloc(void *platform_arg, char *name)
 		ahd_free(ahd);
 		ahd = NULL;
 	}
+	ahd_lockinit(ahd);
 #ifdef AHD_DEBUG
 	if ((ahd_debug & AHD_SHOW_MEMORY) != 0) {
 		printf("%s: scb size = 0x%x, hscb size = 0x%x\n",
@@ -5342,22 +5343,6 @@ ahd_softc_insert(struct ahd_softc *ahd)
 	ahd->init_level++;
 }
 
-/*
- * Verify that the passed in softc pointer is for a
- * controller that is still configured.
- */
-struct ahd_softc *
-ahd_find_softc(struct ahd_softc *ahd)
-{
-	struct ahd_softc *list_ahd;
-
-	TAILQ_FOREACH(list_ahd, &ahd_tailq, links) {
-		if (list_ahd == ahd)
-			return (ahd);
-	}
-	return (NULL);
-}
-
 void
 ahd_set_unit(struct ahd_softc *ahd, int unit)
 {
@@ -5414,7 +5399,7 @@ ahd_free(struct ahd_softc *ahd)
 
 		tstate = ahd->enabled_targets[i];
 		if (tstate != NULL) {
-#if AHD_TARGET_MODE
+#ifdef AHD_TARGET_MODE
 			int j;
 
 			for (j = 0; j < AHD_NUM_LUNS; j++) {
@@ -5430,7 +5415,7 @@ ahd_free(struct ahd_softc *ahd)
 			free(tstate, M_DEVBUF);
 		}
 	}
-#if AHD_TARGET_MODE
+#ifdef AHD_TARGET_MODE
 	if (ahd->black_hole != NULL) {
 		xpt_free_path(ahd->black_hole->path);
 		free(ahd->black_hole, M_DEVBUF);
@@ -5708,7 +5693,8 @@ ahd_init_scbdata(struct ahd_softc *ahd)
 	scb_data->init_level++;
 
 	/* Perform initial CCB allocation */
-	ahd_alloc_scbs(ahd);
+	while (ahd_alloc_scbs(ahd) != 0)
+		;
 
 	if (scb_data->numscbs == 0) {
 		printf("%s: ahd_init_scbdata - "
@@ -5955,7 +5941,8 @@ look_again:
 
 		if (tries++ != 0)
 			return (NULL);
-		ahd_alloc_scbs(ahd);
+		if (ahd_alloc_scbs(ahd) == 0)
+			return (NULL);
 		goto look_again;
 	}
 	LIST_REMOVE(scb, links.le);
@@ -6026,7 +6013,7 @@ ahd_free_scb(struct ahd_softc *ahd, struct scb *scb)
 	aic_platform_scb_free(ahd, scb);
 }
 
-void
+int
 ahd_alloc_scbs(struct ahd_softc *ahd)
 {
 	struct scb_data *scb_data;
@@ -6046,7 +6033,7 @@ ahd_alloc_scbs(struct ahd_softc *ahd)
 	scb_data = &ahd->scb_data;
 	if (scb_data->numscbs >= AHD_SCB_MAX_ALLOC)
 		/* Can't allocate any more */
-		return;
+		return (0);
 
 	if (scb_data->scbs_left != 0) {
 		int offset;
@@ -6059,14 +6046,14 @@ ahd_alloc_scbs(struct ahd_softc *ahd)
 		hscb_map = malloc(sizeof(*hscb_map), M_DEVBUF, M_NOWAIT);
 
 		if (hscb_map == NULL)
-			return;
+			return (0);
 
 		/* Allocate the next batch of hardware SCBs */
 		if (aic_dmamem_alloc(ahd, scb_data->hscb_dmat,
 				     (void **)&hscb_map->vaddr,
 				     BUS_DMA_NOWAIT, &hscb_map->dmamap) != 0) {
 			free(hscb_map, M_DEVBUF);
-			return;
+			return (0);
 		}
 
 		SLIST_INSERT_HEAD(&scb_data->hscb_maps, hscb_map, links);
@@ -6092,14 +6079,14 @@ ahd_alloc_scbs(struct ahd_softc *ahd)
 		sg_map = malloc(sizeof(*sg_map), M_DEVBUF, M_NOWAIT);
 
 		if (sg_map == NULL)
-			return;
+			return (0);
 
 		/* Allocate the next batch of S/G lists */
 		if (aic_dmamem_alloc(ahd, scb_data->sg_dmat,
 				     (void **)&sg_map->vaddr,
 				     BUS_DMA_NOWAIT, &sg_map->dmamap) != 0) {
 			free(sg_map, M_DEVBUF);
-			return;
+			return (0);
 		}
 
 		SLIST_INSERT_HEAD(&scb_data->sg_maps, sg_map, links);
@@ -6129,14 +6116,14 @@ ahd_alloc_scbs(struct ahd_softc *ahd)
 		sense_map = malloc(sizeof(*sense_map), M_DEVBUF, M_NOWAIT);
 
 		if (sense_map == NULL)
-			return;
+			return (0);
 
 		/* Allocate the next batch of sense buffers */
 		if (aic_dmamem_alloc(ahd, scb_data->sense_dmat,
 				     (void **)&sense_map->vaddr,
 				     BUS_DMA_NOWAIT, &sense_map->dmamap) != 0) {
 			free(sense_map, M_DEVBUF);
-			return;
+			return (0);
 		}
 
 		SLIST_INSERT_HEAD(&scb_data->sense_maps, sense_map, links);
@@ -6215,6 +6202,7 @@ ahd_alloc_scbs(struct ahd_softc *ahd)
 		next_scb->col_scb = ahd_find_scb_by_tag(ahd, col_tag);
 		if (next_scb->col_scb != NULL)
 			next_scb->col_scb->col_scb = next_scb;
+		aic_timer_init(&next_scb->io_timer);
 		ahd_free_scb(ahd, next_scb);
 		hscb++;
 		hscb_busaddr += sizeof(*hscb);
@@ -6224,6 +6212,7 @@ ahd_alloc_scbs(struct ahd_softc *ahd)
 		sense_busaddr += AHD_SENSE_BUFSIZE;
 		scb_data->numscbs++;
 	}
+	return (i);
 }
 
 void
@@ -6690,7 +6679,7 @@ ahd_chip_init(struct ahd_softc *ahd)
 	ahd_outb(ahd, CLRSINT3, NTRAMPERR|OSRAMPERR);
 	ahd_outb(ahd, CLRINT, CLRSCSIINT);
 
-#if NEEDS_MORE_TESTING
+#ifdef NEEDS_MORE_TESTING
 	/*
 	 * Always enable abort on incoming L_Qs if this feature is
 	 * supported.  We use this to catch invalid SCB references.
@@ -7251,7 +7240,7 @@ ahd_match_scb(struct ahd_softc *ahd, struct scb *scb, int target,
 	if (match != 0)
 		match = ((lun == slun) || (lun == CAM_LUN_WILDCARD));
 	if (match != 0) {
-#if AHD_TARGET_MODE
+#ifdef AHD_TARGET_MODE
 		int group;
 
 		group = XPT_FC_GROUP(scb->io_ctx->ccb_h.func_code);
@@ -7925,7 +7914,7 @@ ahd_reset_channel(struct ahd_softc *ahd, char channel, int initiate_reset)
 	/* Make sure the sequencer is in a safe location. */
 	ahd_clear_critical_section(ahd);
 
-#if AHD_TARGET_MODE
+#ifdef AHD_TARGET_MODE
 	if ((ahd->flags & AHD_TARGETROLE) != 0) {
 		ahd_run_tqinfifo(ahd, /*paused*/TRUE);
 	}
@@ -8060,19 +8049,10 @@ ahd_reset_channel(struct ahd_softc *ahd, char channel, int initiate_reset)
 static void
 ahd_reset_poll(void *arg)
 {
-	struct	ahd_softc *ahd;
+	struct	ahd_softc *ahd = (struct ahd_softc *)arg;
 	u_int	scsiseq1;
-	u_long	l;
-	u_long	s;
 	
-	ahd_list_lock(&l);
-	ahd = ahd_find_softc((struct ahd_softc *)arg);
-	if (ahd == NULL) {
-		printf("ahd_reset_poll: Instance %p no longer exists\n", arg);
-		ahd_list_unlock(&l);
-		return;
-	}
-	ahd_lock(ahd, &s);
+	ahd_lock(ahd);
 	ahd_pause(ahd);
 	ahd_update_modes(ahd);
 	ahd_set_modes(ahd, AHD_MODE_SCSI, AHD_MODE_SCSI);
@@ -8081,8 +8061,7 @@ ahd_reset_poll(void *arg)
 		aic_timer_reset(&ahd->reset_timer, AHD_RESET_POLL_MS,
 				ahd_reset_poll, ahd);
 		ahd_unpause(ahd);
-		ahd_unlock(ahd, &s);
-		ahd_list_unlock(&l);
+		ahd_unlock(ahd);
 		return;
 	}
 
@@ -8092,29 +8071,18 @@ ahd_reset_poll(void *arg)
 	ahd_outb(ahd, SCSISEQ1, scsiseq1 & (ENSELI|ENRSELI|ENAUTOATNP));
 	ahd_unpause(ahd);
 	ahd->flags &= ~AHD_RESET_POLL_ACTIVE;
-	ahd_unlock(ahd, &s);
 	aic_release_simq(ahd);
-	ahd_list_unlock(&l);
+	ahd_unlock(ahd);
 }
 
 /**************************** Statistics Processing ***************************/
 static void
 ahd_stat_timer(void *arg)
 {
-	struct	ahd_softc *ahd;
-	u_long	l;
-	u_long	s;
+	struct	ahd_softc *ahd = (struct ahd_softc *)arg;
 	int	enint_coal;
 	
-	ahd_list_lock(&l);
-	ahd = ahd_find_softc((struct ahd_softc *)arg);
-	if (ahd == NULL) {
-		printf("ahd_stat_timer: Instance %p no longer exists\n", arg);
-		ahd_list_unlock(&l);
-		return;
-	}
-	ahd_lock(ahd, &s);
-
+	ahd_lock(ahd);
 	enint_coal = ahd->hs_mailbox & ENINT_COALESCE;
 	if (ahd->cmdcmplt_total > ahd->int_coalescing_threshold)
 		enint_coal |= ENINT_COALESCE;
@@ -8138,8 +8106,7 @@ ahd_stat_timer(void *arg)
 	ahd->cmdcmplt_counts[ahd->cmdcmplt_bucket] = 0;
 	aic_timer_reset(&ahd->stat_timer, AHD_STAT_UPDATE_MS,
 			ahd_stat_timer, ahd);
-	ahd_unlock(ahd, &s);
-	ahd_list_unlock(&l);
+	ahd_unlock(ahd);
 }
 
 /****************************** Status Processing *****************************/
@@ -9078,11 +9045,12 @@ ahd_dump_card_state(struct ahd_softc *ahd)
 	}
 	printf("\nTotal %d\n", i);
 
-	printf("Kernel Free SCB list: ");
+	printf("Kernel Free SCB lists: ");
 	i = 0;
 	TAILQ_FOREACH(scb, &ahd->scb_data.free_scbs, links.tqe) {
 		struct scb *list_scb;
 
+		printf("\n  COLIDX[%d]: ", AHD_GET_SCB_COL_IDX(ahd, scb));
 		list_scb = scb;
 		do {
 			printf("%d ", SCB_GET_TAG(list_scb));
@@ -9090,6 +9058,7 @@ ahd_dump_card_state(struct ahd_softc *ahd)
 		} while (list_scb && i++ < AHD_SCB_MAX);
 	}
 
+	printf("\n  Any Device: ");
 	LIST_FOREACH(scb, &ahd->scb_data.any_dev_free_scb_list, links.le) {
 		if (i++ > AHD_SCB_MAX)
 			break;
@@ -9298,13 +9267,10 @@ ahd_recover_commands(struct ahd_softc *ahd)
 {
 	struct	scb *scb;
 	struct	scb *active_scb;
-	long	s;
 	int	found;
 	int	was_paused;
 	u_int	active_scbptr;
 	u_int	last_phase;
-
-	ahd_lock(ahd, &s);
 
 	/*
 	 * Pause the controller and manually flush any
@@ -9331,7 +9297,6 @@ ahd_recover_commands(struct ahd_softc *ahd)
 		printf("%s: Timedout SCBs already complete. "
 		       "Interrupts may not be functioning.\n", ahd_name(ahd));
 		ahd_unpause(ahd);
-		ahd_unlock(ahd, &s);
 		return;
 	}
 
@@ -9522,7 +9487,6 @@ bus_reset:
 	}
 
 	ahd_unpause(ahd);
-	ahd_unlock(ahd, &s);
 }
 
 /*
@@ -9938,13 +9902,9 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 	 */
 	if ((ahd->flags & AHD_TARGETROLE) == 0
 	 && ccb->ccb_h.target_id != CAM_TARGET_WILDCARD) {
-		u_long	s;
-
 		printf("Configuring Target Mode\n");
-		ahd_lock(ahd, &s);
 		if (LIST_FIRST(&ahd->pending_scbs) != NULL) {
 			ccb->ccb_h.status = CAM_BUSY;
-			ahd_unlock(ahd, &s);
 			return;
 		}
 		ahd->flags |= AHD_TARGETROLE;
@@ -9953,7 +9913,6 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 		ahd_pause(ahd);
 		ahd_loadseq(ahd);
 		ahd_restart(ahd);
-		ahd_unlock(ahd, &s);
 	}
 	cel = &ccb->cel;
 	target = ccb->ccb_h.target_id;
@@ -10019,7 +9978,6 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 		}
 		SLIST_INIT(&lstate->accept_tios);
 		SLIST_INIT(&lstate->immed_notifies);
-		ahd_lock(ahd, &s);
 		ahd_pause(ahd);
 		if (target != CAM_TARGET_WILDCARD) {
 			tstate->enabled_luns[lun] = lstate;
@@ -10078,7 +10036,6 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 			ahd_outb(ahd, SCSISEQ1, scsiseq1);
 		}
 		ahd_unpause(ahd);
-		ahd_unlock(ahd, &s);
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_print_path(ccb->ccb_h.path);
 		printf("Lun now enabled for target mode\n");
@@ -10091,8 +10048,6 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 			return;
 		}
 
-		ahd_lock(ahd, &s);
-		
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		LIST_FOREACH(scb, &ahd->pending_scbs, pending_links) {
 			struct ccb_hdr *ccbh;
@@ -10102,7 +10057,6 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 			 && !xpt_path_comp(ccbh->path, ccb->ccb_h.path)){
 				printf("CTIO pending\n");
 				ccb->ccb_h.status = CAM_REQ_INVALID;
-				ahd_unlock(ahd, &s);
 				return;
 			}
 		}
@@ -10118,7 +10072,6 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 		}
 
 		if (ccb->ccb_h.status != CAM_REQ_CMP) {
-			ahd_unlock(ahd, &s);
 			return;
 		}
 
@@ -10185,7 +10138,6 @@ ahd_handle_en_lun(struct ahd_softc *ahd, struct cam_sim *sim, union ccb *ccb)
 			}
 		}
 		ahd_unpause(ahd);
-		ahd_unlock(ahd, &s);
 	}
 #endif
 }

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_os.c,v 1.51 2005/05/29 04:42:19 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_os.c,v 1.54 2007/02/23 12:18:34 piso Exp $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -149,6 +149,8 @@ SYSCTL_INT(_hw_bt848, OID_AUTO, dolby, CTLFLAG_RW, &bt848_dolby, 0, "");
 
 #include <vm/vm.h>
 
+#include <dev/bktr/ioctl_bt848.h>	/* extensions to ioctl_meteor.h */
+
 #ifndef __NetBSD__
 #include <vm/vm_kern.h>
 #include <vm/pmap.h>
@@ -262,6 +264,13 @@ static struct cdevsw bktr_cdevsw = {
 	.d_name =	"bktr",
 };
 
+#ifdef BKTR_USE_FREEBSD_SMBUS
+#include <dev/iicbus/iiconf.h>
+#include <dev/smbus/smbconf.h>
+MODULE_DEPEND(bktr, iicbb, IICBB_MINVER, IICBB_MODVER, IICBB_MAXVER);
+MODULE_DEPEND(bktr, iicbus, IICBUS_MINVER, IICBUS_MODVER, IICBUS_MAXVER);
+MODULE_DEPEND(bktr, smbus, SMBUS_MINVER, SMBUS_MODVER, SMBUS_MAXVER);
+#endif
 DRIVER_MODULE(bktr, pci, bktr_driver, bktr_devclass, 0, 0);
 MODULE_DEPEND(bktr, bktr_mem, 1,1,1);
 MODULE_VERSION(bktr, 1);
@@ -375,7 +384,7 @@ bktr_attach( device_t dev )
 	}
 
 	error = bus_setup_intr(dev, bktr->res_irq, INTR_TYPE_TTY,
-                               bktr_intr, bktr, &bktr->res_ih);
+                               NULL, bktr_intr, bktr, &bktr->res_ih);
 	if (error) {
 		device_printf(dev, "could not setup irq\n");
 		goto fail;
@@ -760,8 +769,15 @@ bktr_ioctl( struct cdev *dev, ioctl_cmd_t cmd, caddr_t arg, int flag, struct thr
 		return (ENXIO);
 	}
 
+#ifdef BKTR_GPIO_ACCESS
+	if (bktr->bigbuf == 0 && cmd != BT848_GPIO_GET_EN &&
+	    cmd != BT848_GPIO_SET_EN && cmd != BT848_GPIO_GET_DATA &&
+	    cmd != BT848_GPIO_SET_DATA)	/* no frame buffer allocated (ioctl failed) */
+		return( ENOMEM );
+#else
 	if (bktr->bigbuf == 0)	/* no frame buffer allocated (ioctl failed) */
 		return( ENOMEM );
+#endif
 
 	switch ( FUNCTION( minor(dev) ) ) {
 	case VIDEO_DEV:

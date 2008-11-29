@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ahb/ahbreg.h,v 1.5 2005/01/06 01:42:25 imp Exp $
+ * $FreeBSD: src/sys/dev/ahb/ahbreg.h,v 1.6 2007/06/17 05:55:46 scottl Exp $
  */
 
 /* Resource Constatns */
@@ -258,6 +258,7 @@ struct ecb {
 };
 
 struct ahb_softc {
+	device_t		 dev;
 	bus_space_tag_t		 tag;
 	bus_space_handle_t	 bsh;
 	struct	cam_sim		*sim;

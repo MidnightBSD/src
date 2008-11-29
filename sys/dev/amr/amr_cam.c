@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/amr/amr_cam.c,v 1.15.2.1 2006/01/26 22:04:21 ambrisko Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/amr/amr_cam.c,v 1.22 2007/06/17 05:55:48 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -148,6 +148,7 @@ amr_cam_attach(struct amr_softc *sc)
 						  "amr",
 						  sc,
 						  device_get_unit(sc->amr_dev),
+						  &Giant,
 						  1,
 						  AMR_MAX_SCSI_CMDS,
 						  devq)) == NULL) {
@@ -157,7 +158,7 @@ amr_cam_attach(struct amr_softc *sc)
 	}
 
 	/* register the bus ID so we can get it later */
-	if (xpt_bus_register(sc->amr_cam_sim[chn], chn)) {
+	if (xpt_bus_register(sc->amr_cam_sim[chn], sc->amr_dev, chn)) {
 	    device_printf(sc->amr_dev, "CAM XPT bus registration failed\n");
 	    return(ENXIO);
 	}
@@ -291,6 +292,10 @@ amr_cam_action(struct cam_sim *sim, union ccb *ccb)
 	cpi->unit_number = cam_sim_unit(sim);
 	cpi->bus_id = cam_sim_bus(sim);
 	cpi->base_transfer_speed = 132 * 1024;  /* XXX get from controller? */
+	cpi->transport = XPORT_SPI;
+	cpi->transport_version = 2;
+	cpi->protocol = PROTO_SCSI;
+	cpi->protocol_version = SCSI_REV_2;
 	cpi->ccb_h.status = CAM_REQ_CMP;
 
 	break;
@@ -314,27 +319,33 @@ amr_cam_action(struct cam_sim *sim, union ccb *ccb)
 
     case XPT_GET_TRAN_SETTINGS:
     {
-	struct ccb_trans_settings	*cts;
+	struct ccb_trans_settings	*cts = &(ccb->cts);
 
 	debug(3, "XPT_GET_TRAN_SETTINGS");
 
-	cts = &(ccb->cts);
+	struct ccb_trans_settings_scsi *scsi = &cts->proto_specific.scsi;
+	struct ccb_trans_settings_spi *spi = &cts->xport_specific.spi;
 
-	if ((cts->flags & CCB_TRANS_USER_SETTINGS) == 0) {
+	cts->protocol = PROTO_SCSI;
+	cts->protocol_version = SCSI_REV_2;
+	cts->transport = XPORT_SPI;
+	cts->transport_version = 2;
+
+	if (cts->type == CTS_TYPE_USER_SETTINGS) {
 		ccb->ccb_h.status = CAM_FUNC_NOTAVAIL;
 		break;
-        }
+	}
 
-	cts->flags = CCB_TRANS_DISC_ENB|CCB_TRANS_TAG_ENB;
-	cts->bus_width = MSG_EXT_WDTR_BUS_32_BIT;
-	cts->sync_period = 6;   /* 40MHz how wide is this bus? */
-	cts->sync_offset = 31;  /* How to extract this from board? */
+	spi->flags = CTS_SPI_FLAGS_DISC_ENB;
+	spi->bus_width = MSG_EXT_WDTR_BUS_32_BIT;
+	spi->sync_period = 6;   /* 40MHz how wide is this bus? */
+	spi->sync_offset = 31;  /* How to extract this from board? */
 
-	cts->valid = CCB_TRANS_SYNC_RATE_VALID
-	    | CCB_TRANS_SYNC_OFFSET_VALID
-	    | CCB_TRANS_BUS_WIDTH_VALID
-	    | CCB_TRANS_DISC_VALID
-	    | CCB_TRANS_TQ_VALID;
+	spi->valid = CTS_SPI_VALID_SYNC_RATE
+	    | CTS_SPI_VALID_SYNC_OFFSET
+	    | CTS_SPI_VALID_BUS_WIDTH
+	    | CTS_SPI_VALID_DISC;
+	scsi->valid = CTS_SCSI_VALID_TQ;
 	ccb->ccb_h.status = CAM_REQ_CMP;
 	break;
     }

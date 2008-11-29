@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/arl/if_arl.c,v 1.10.2.1 2005/08/25 05:01:04 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/arl/if_arl.c,v 1.15 2006/12/29 13:59:47 jhb Exp $");
 
 #include "opt_inet.h"
 
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/dev/arl/if_arl.c,v 1.10.2.1 2005/08/25 05:01:04 rwat
 #include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/conf.h>
 
@@ -54,7 +55,7 @@ __FBSDID("$FreeBSD: src/sys/dev/arl/if_arl.c,v 1.10.2.1 2005/08/25 05:01:04 rwat
 #include <sys/rman.h>
 
 #include <net/if.h>
-#include <net/if_arp.h>
+#include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/ethernet.h>
@@ -70,7 +71,6 @@ __FBSDID("$FreeBSD: src/sys/dev/arl/if_arl.c,v 1.10.2.1 2005/08/25 05:01:04 rwat
 
 #include <net/bpf.h>
 
-#include <machine/clock.h>
 
 #include <dev/arl/if_arlreg.h>
 
@@ -505,7 +505,7 @@ arl_ioctl(ifp, cmd, data)
 		break;
 
 	case SIOCS80211:
-		if ((error = suser(td)))
+		if ((error = priv_check(td, PRIV_NET80211_MANAGE)))
 			break;
 		switch (ireq->i_type) {
 		case IEEE80211_IOC_SSID:
@@ -578,7 +578,7 @@ arl_ioctl(ifp, cmd, data)
 	}
 	case SIOCGARLALL:
 		bzero(&arlan_io, sizeof(arlan_io));
-		if (!suser(td)) {
+		if (!priv_check(td, PRIV_DRIVER)) {
 			bcopy(ar->systemId, arlan_io.cfg.sid, 4);
 		}
 
@@ -617,7 +617,7 @@ arl_ioctl(ifp, cmd, data)
 	} while (0)
 
 	case SIOCSARLALL:
-		if (suser(td))
+		if (priv_check(td, PRIV_DRIVER))
 			break;
 
 		user = (void *)ifr->ifr_data;
@@ -980,7 +980,7 @@ arl_read(sc, buf, len)
 	 * Check if there's a bpf filter listening on this interface.
 	 * If so, hand off the raw packet to bpf.
 	 */
-	if (ifp->if_bpf) {
+	if (bpf_peers_present(ifp->if_bpf)) {
 		/*
 		 * Note that the interface cannot be in promiscuous mode if
 		 * there are no bpf listeners.  And if el are in promiscuous
@@ -989,7 +989,7 @@ arl_read(sc, buf, len)
 		 * This test does not support multicasts.
 		 */
 		if ((ifp->if_flags & IFF_PROMISC)
-		   && bcmp(eh->ether_dhost, IFP2ENADDR(sc->arl_ifp),
+		   && bcmp(eh->ether_dhost, IF_LLADDR(sc->arl_ifp),
 			   sizeof(eh->ether_dhost)) != 0
 		   && bcmp(eh->ether_dhost, BROADCASTADDR,
 			   sizeof(eh->ether_dhost)) != 0)

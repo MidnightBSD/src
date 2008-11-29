@@ -53,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: src/sys/dev/amr/amrvar.h,v 1.26.2.2 2006/02/14 08:04:39 ps Exp $
+ *      $FreeBSD: src/sys/dev/amr/amrvar.h,v 1.33 2006/05/03 16:45:15 ambrisko Exp $
  */
 
 #include <geom/geom_disk.h>
@@ -254,8 +254,6 @@ extern void		amr_free(struct amr_softc *sc);
 extern int		amr_flush(struct amr_softc *sc);
 extern int		amr_done(struct amr_softc *sc);
 extern void		amr_startio(struct amr_softc *sc);
-extern int		amr_linux_ioctl_int(struct cdev *dev, u_long cmd, caddr_t addr,
-			    int32_t flag, d_thread_t *td);
 
 /*
  * Command buffer allocation.

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_pci.c,v 1.54.2.4 2006/01/30 17:56:07 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_pci.c,v 1.62.2.3 2007/12/10 20:18:19 emaste Exp $");
 
 /*
  * PCI bus interface and resource allocation.
@@ -82,6 +82,8 @@ static driver_t aac_pci_driver = {
 static devclass_t	aac_devclass;
 
 DRIVER_MODULE(aac, pci, aac_pci_driver, aac_devclass, 0, 0);
+MODULE_DEPEND(aac, pci, 1, 1, 1);
+
 
 struct aac_ident
 {
@@ -126,13 +128,13 @@ struct aac_ident
 	{0x9005, 0x0285, 0x9005, 0x0286, AAC_HWIF_I960RX, AAC_FLAGS_NO4GB |
 	 AAC_FLAGS_256FIBS, "Adaptec SCSI RAID 2120S"},
 	{0x9005, 0x0285, 0x9005, 0x0290, AAC_HWIF_I960RX, AAC_FLAGS_NO4GB,
-	 "Adaptec SCSI RAID 2410SA"},
+	 "Adaptec SATA RAID 2410SA"},
 	{0x9005, 0x0285, 0x1028, 0x0291, AAC_HWIF_I960RX, AAC_FLAGS_NO4GB,
 	 "Dell CERC SATA RAID 2"},
 	{0x9005, 0x0285, 0x9005, 0x0292, AAC_HWIF_I960RX, AAC_FLAGS_NO4GB,
-	 "Adaptec SCSI RAID 2810SA"},
+	 "Adaptec SATA RAID 2810SA"},
 	{0x9005, 0x0285, 0x9005, 0x0293, AAC_HWIF_I960RX, AAC_FLAGS_NO4GB,
-	 "Adaptec SCSI RAID 21610SA"},
+	 "Adaptec SATA RAID 21610SA"},
 	{0x9005, 0x0285, 0x103c, 0x3227, AAC_HWIF_I960RX, AAC_FLAGS_NO4GB,
 	 "HP ML110 G2 (Adaptec 2610SA)"},
 	{0x9005, 0x0286, 0x9005, 0x028c, AAC_HWIF_RKT, 0,
@@ -161,9 +163,9 @@ struct aac_ident
 	{0x9005, 0x0286, 0x9005, 0x029d, AAC_HWIF_RKT, 0,
 	 "Adaptec SATA RAID 2420SA"},
 	{0x9005, 0x0286, 0x9005, 0x029e, AAC_HWIF_RKT, 0,
-	 "ICP9024RO SATA RAID"},
+	 "ICP ICP9024RO SCSI RAID"},
 	{0x9005, 0x0286, 0x9005, 0x029f, AAC_HWIF_RKT, 0,
-	 "ICP9014RO SATA RAID"},
+	 "ICP ICP9014RO SCSI RAID"},
 	{0x9005, 0x0285, 0x9005, 0x0294, AAC_HWIF_I960RX, 0,
 	 "Adaptec SATA RAID 2026ZCR"},
 	{0x9005, 0x0285, 0x103c, 0x3227, AAC_HWIF_I960RX, 0,
@@ -173,6 +175,8 @@ struct aac_ident
 	{0x9005, 0x0285, 0x9005, 0x0297, AAC_HWIF_I960RX, 0,
 	 "Adaptec SAS RAID 4005SAS"},
 	{0x9005, 0x0285, 0x1014, 0x02f2, AAC_HWIF_I960RX, 0,
+	 "IBM ServeRAID 8i"},
+	{0x9005, 0x0285, 0x1014, 0x0312, AAC_HWIF_I960RX, 0,
 	 "IBM ServeRAID 8i"},
 	{0x9005, 0x0285, 0x9005, 0x0298, AAC_HWIF_I960RX, 0,
 	 "Adaptec SAS RAID 4000SAS"},
@@ -185,13 +189,95 @@ struct aac_ident
 	{0x9005, 0x0285, 0x9005, 0x028f, AAC_HWIF_I960RX, 0,
 	 "Adaptec SATA RAID 2025SA ZCR"},
 	{0x9005, 0x0285, 0x9005, 0x02a4, AAC_HWIF_I960RX, 0,
-	 "ICP 9085LI SAS RAID"},
+	 "ICP ICP9085LI SAS RAID"},
 	{0x9005, 0x0285, 0x9005, 0x02a5, AAC_HWIF_I960RX, 0,
-	 "ICP 5085BR SAS RAID"},
+	 "ICP ICP5085BR SAS RAID"},
 	{0x9005, 0x0286, 0x9005, 0x02a0, AAC_HWIF_RKT, 0,
-	 "ICP9047MA SATA RAID"},
+	 "ICP ICP9047MA SATA RAID"},
 	{0x9005, 0x0286, 0x9005, 0x02a1, AAC_HWIF_RKT, 0,
-	 "ICP9087MA SATA RAID"},
+	 "ICP ICP9087MA SATA RAID"},
+	{0x9005, 0x0286, 0x9005, 0x02a6, AAC_HWIF_RKT, 0,
+	 "ICP9067MA SATA RAID"},
+	{0x9005, 0x0285, 0x9005, 0x02b5, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 5445"},
+	{0x9005, 0x0285, 0x9005, 0x02b6, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 5805"},
+	{0x9005, 0x0285, 0x9005, 0x02b7, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 5085"},
+	{0x9005, 0x0285, 0x9005, 0x02b8, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5445SL"},
+	{0x9005, 0x0285, 0x9005, 0x02b9, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5085SL"},
+	{0x9005, 0x0285, 0x9005, 0x02ba, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5805SL"},
+	{0x9005, 0x0285, 0x9005, 0x02bb, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 3405"},
+	{0x9005, 0x0285, 0x9005, 0x02bc, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 3805"},
+	{0x9005, 0x0285, 0x9005, 0x02bd, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 31205"},
+	{0x9005, 0x0285, 0x9005, 0x02be, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 31605"},
+	{0x9005, 0x0285, 0x9005, 0x02bf, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5045BL"},
+	{0x9005, 0x0285, 0x9005, 0x02c0, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5085BL"},
+	{0x9005, 0x0285, 0x9005, 0x02c1, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5125BR"},
+	{0x9005, 0x0285, 0x9005, 0x02c2, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5165BR"},
+	{0x9005, 0x0285, 0x9005, 0x02c3, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 51205"},
+	{0x9005, 0x0285, 0x9005, 0x02c4, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 51605"},
+	{0x9005, 0x0285, 0x9005, 0x02c5, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5125SL"},
+	{0x9005, 0x0285, 0x9005, 0x02c6, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5165SL"},
+	{0x9005, 0x0285, 0x9005, 0x02c7, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 3085"},
+	{0x9005, 0x0285, 0x9005, 0x02c8, AAC_HWIF_I960RX, 0,
+	 "ICP RAID ICP5805BL"},
+	{0x9005, 0x0285, 0x9005, 0x02ce, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 51245"},
+	{0x9005, 0x0285, 0x9005, 0x02cf, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 51645"},
+	{0x9005, 0x0285, 0x9005, 0x02d0, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID 52445"},
+	{0x9005, 0x0285, 0x9005, 0x02d1, AAC_HWIF_I960RX, 0,
+        "Adaptec RAID 5405"},
+	{0x9005, 0x0286, 0x1014, 0x9580, AAC_HWIF_RKT, 0,
+	 "IBM ServeRAID-8k"},
+	{0x9005, 0x0285, 0x1014, 0x034d, AAC_HWIF_I960RX, 0,
+	 "IBM ServeRAID 8s"},
+	{0x9005, 0x0285, 0x108e, 0x7aac, AAC_HWIF_I960RX, 0,
+	 "Sun STK RAID REM"},
+	{0x9005, 0x0285, 0x108e, 0x7aae, AAC_HWIF_I960RX, 0,
+	 "Sun STK RAID EM"},
+	{0x9005, 0x0285, 0x108e, 0x286, AAC_HWIF_I960RX, 0,
+	 "SG-XPCIESAS-R-IN"},
+	{0x9005, 0x0285, 0x108e, 0x287, AAC_HWIF_I960RX, 0,
+	 "SG-XPCIESAS-R-EX"},
+	{0x9005, 0x0285, 0x15d9, 0x2b5, AAC_HWIF_I960RX, 0,
+	 "AOC-USAS-S4i"},
+	{0x9005, 0x0285, 0x15d9, 0x2b6, AAC_HWIF_I960RX, 0,
+	 "AOC-USAS-S8i"},
+	{0x9005, 0x0285, 0x15d9, 0x2c9, AAC_HWIF_I960RX, 0,
+	 "AOC-USAS-S4iR"},
+	{0x9005, 0x0285, 0x15d9, 0x2ca, AAC_HWIF_I960RX, 0,
+	 "AOC-USAS-S8iR"},
+	{0x9005, 0x0285, 0x15d9, 0x2d2, AAC_HWIF_I960RX, 0,
+	 "AOC-USAS-S8i-LP"},
+	{0x9005, 0x0285, 0x15d9, 0x2d3, AAC_HWIF_I960RX, 0,
+	 "AOC-USAS-S8iR-LP"},
+	{0, 0, 0, 0, 0, 0, 0}
+};
+struct aac_ident
+aac_family_identifiers[] = {
+	{0x9005, 0x0285, 0, 0, AAC_HWIF_I960RX, 0,
+	 "Adaptec RAID Controller"},
+	{0x9005, 0x0286, 0, 0, AAC_HWIF_RKT, 0,
+	 "Adaptec RAID Controller"},
 	{0, 0, 0, 0, 0, 0, 0}
 };
 
@@ -199,13 +285,23 @@ static struct aac_ident *
 aac_find_ident(device_t dev)
 {
 	struct aac_ident *m;
+	u_int16_t vendid, devid, sub_vendid, sub_devid;
+
+	vendid = pci_get_vendor(dev);
+	devid = pci_get_device(dev);
+	sub_vendid = pci_get_subvendor(dev);
+	sub_devid = pci_get_subdevice(dev);
 
 	for (m = aac_identifiers; m->vendor != 0; m++) {
-		if ((m->vendor == pci_get_vendor(dev)) &&
-		    (m->device == pci_get_device(dev)) &&
-		    (m->subvendor == pci_get_subvendor(dev)) &&
-		    (m->subdevice == pci_get_subdevice(dev)))
-		return (m);
+		if ((m->vendor == vendid) && (m->device == devid) &&
+		    (m->subvendor == sub_vendid) &&
+		    (m->subdevice == sub_devid))
+			return (m);
+	}
+
+	for (m = aac_family_identifiers; m->vendor != 0; m++) {
+		if ((m->vendor == vendid) && (m->device == devid))
+			return (m);
 	}
 
 	return (NULL);

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic/aic_pccard.c,v 1.16 2005/06/24 14:36:51 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic/aic_pccard.c,v 1.20 2007/06/17 05:55:46 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -51,11 +51,10 @@ struct aic_pccard_softc {
 
 static int aic_pccard_alloc_resources(device_t);
 static void aic_pccard_release_resources(device_t);
-static int aic_pccard_match(device_t);
 static int aic_pccard_probe(device_t);
 static int aic_pccard_attach(device_t);
 
-const struct pccard_product aic_pccard_products[] = {
+static const struct pccard_product aic_pccard_products[] = {
 	PCMCIA_CARD(ADAPTEC, APA1460),
 	PCMCIA_CARD(ADAPTEC, APA1460A),
 	PCMCIA_CARD(NEWMEDIA, BUSTOASTER),
@@ -87,6 +86,7 @@ aic_pccard_alloc_resources(device_t dev)
 		return (ENOMEM);
 	}
 
+	sc->sc_aic.dev = dev;
 	sc->sc_aic.unit = device_get_unit(dev);
 	sc->sc_aic.tag = rman_get_bustag(sc->sc_port);
 	sc->sc_aic.bsh = rman_get_bushandle(sc->sc_port);
@@ -106,7 +106,7 @@ aic_pccard_release_resources(device_t dev)
 }
 
 static int
-aic_pccard_match(device_t dev)
+aic_pccard_probe(device_t dev)
 {
 	const struct pccard_product *pp;
 
@@ -120,10 +120,11 @@ aic_pccard_match(device_t dev)
 }
 
 static int
-aic_pccard_probe(device_t dev)
+aic_pccard_attach(device_t dev)
 {
 	struct aic_pccard_softc *sc = device_get_softc(dev);
 	struct aic_softc *aic = &sc->sc_aic;
+	int error;
 
 	if (aic_pccard_alloc_resources(dev))
 		return (ENXIO);
@@ -131,24 +132,8 @@ aic_pccard_probe(device_t dev)
 		aic_pccard_release_resources(dev);
 		return (ENXIO);
 	}
-	aic_pccard_release_resources(dev);
 
 	device_set_desc(dev, "Adaptec 6260/6360 SCSI controller");
-	return (0);
-}
-
-static int
-aic_pccard_attach(device_t dev)
-{
-	struct aic_pccard_softc *sc = device_get_softc(dev);
-	struct aic_softc *aic = &sc->sc_aic;
-	int error;
-
-	error = aic_pccard_alloc_resources(dev);
-	if (error) {
-		device_printf(dev, "resource allocation failed\n");
-		return (error);
-	}
 
 	error = aic_attach(aic);
 	if (error) {
@@ -158,7 +143,7 @@ aic_pccard_attach(device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_CAM|INTR_ENTROPY,
-				aic_intr, aic, &sc->sc_ih);
+				NULL, aic_intr, aic, &sc->sc_ih);
 	if (error) {
 		device_printf(dev, "failed to register interrupt handler\n");
 		aic_pccard_release_resources(dev);
@@ -191,14 +176,9 @@ aic_pccard_detach(device_t dev)
 
 static device_method_t aic_pccard_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
+	DEVMETHOD(device_probe,		aic_pccard_probe),
+	DEVMETHOD(device_attach,	aic_pccard_attach),
 	DEVMETHOD(device_detach,	aic_pccard_detach),
-
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	aic_pccard_match),
-	DEVMETHOD(card_compat_probe,	aic_pccard_probe),
-	DEVMETHOD(card_compat_attach,	aic_pccard_attach),
 
 	{ 0, 0 }
 };

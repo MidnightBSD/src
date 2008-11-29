@@ -29,9 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic7xxx_osm.h,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aic7xxx_osm.h,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aic7xxx_osm.h,v 1.29 2005/05/29 04:42:17 nyan Exp $
+ * $FreeBSD: src/sys/dev/aic7xxx/aic7xxx_osm.h,v 1.33 2007/04/17 06:26:25 scottl Exp $
  */
 
 #ifndef _AIC7XXX_FREEBSD_H_
@@ -62,7 +62,6 @@
 #endif
 #include <machine/bus.h>
 #include <machine/endian.h>
-#include <machine/clock.h>
 #include <machine/resource.h>
 
 #include <sys/rman.h>
@@ -85,10 +84,6 @@
 
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
-
-#ifdef CAM_NEW_TRAN_CODE
-#define AHC_NEW_TRAN_SETTINGS
-#endif /* CAM_NEW_TRAN_CODE */
 
 /*************************** Attachment Bookkeeping ***************************/
 extern devclass_t ahc_devclass;
@@ -151,13 +146,14 @@ struct ahc_platform_data {
 	void			*ih;
 	eventhandler_tag	 eh;
 	struct proc		*recovery_thread;
+	struct mtx		mtx;
 };
 
 struct scb_platform_data {
 };
 
 /***************************** Core Includes **********************************/
-#if AHC_REG_PRETTY_PRINT
+#ifdef AHC_REG_PRETTY_PRINT
 #define AIC_DEBUG_REGISTERS 1
 #else
 #define AIC_DEBUG_REGISTERS 0
@@ -192,66 +188,25 @@ ahc_flush_device_writes(struct ahc_softc *ahc)
 /**************************** Locking Primitives ******************************/
 /* Lock protecting internal data structures */
 static __inline void ahc_lockinit(struct ahc_softc *);
-static __inline void ahc_lock(struct ahc_softc *, unsigned long *flags);
-static __inline void ahc_unlock(struct ahc_softc *, unsigned long *flags);
-
-/* Lock held during command compeletion to the upper layer */
-static __inline void ahc_done_lockinit(struct ahc_softc *);
-static __inline void ahc_done_lock(struct ahc_softc *, unsigned long *flags);
-static __inline void ahc_done_unlock(struct ahc_softc *, unsigned long *flags);
-
-/* Lock held during ahc_list manipulation and ahc softc frees */
-static __inline void ahc_list_lockinit(void);
-static __inline void ahc_list_lock(unsigned long *flags);
-static __inline void ahc_list_unlock(unsigned long *flags);
+static __inline void ahc_lock(struct ahc_softc *);
+static __inline void ahc_unlock(struct ahc_softc *);
 
 static __inline void
 ahc_lockinit(struct ahc_softc *ahc)
 {
+	mtx_init(&ahc->platform_data->mtx, "ahc_lock", NULL, MTX_DEF);
 }
 
 static __inline void
-ahc_lock(struct ahc_softc *ahc, unsigned long *flags)
+ahc_lock(struct ahc_softc *ahc)
 {
-	*flags = splcam();
+	mtx_lock(&ahc->platform_data->mtx);
 }
 
 static __inline void
-ahc_unlock(struct ahc_softc *ahc, unsigned long *flags)
+ahc_unlock(struct ahc_softc *ahc)
 {
-	splx(*flags);
-}
-
-/* Lock held during command compeletion to the upper layer */
-static __inline void
-ahc_done_lockinit(struct ahc_softc *ahc)
-{
-}
-
-static __inline void
-ahc_done_lock(struct ahc_softc *ahc, unsigned long *flags)
-{
-}
-
-static __inline void
-ahc_done_unlock(struct ahc_softc *ahc, unsigned long *flags)
-{
-}
-
-/* Lock held during ahc_list manipulation and ahc softc frees */
-static __inline void
-ahc_list_lockinit(void)
-{
-}
-
-static __inline void
-ahc_list_lock(unsigned long *flags)
-{
-}
-
-static __inline void
-ahc_list_unlock(unsigned long *flags)
-{
+	mtx_unlock(&ahc->platform_data->mtx);
 }
 
 /************************* Initialization/Teardown ****************************/

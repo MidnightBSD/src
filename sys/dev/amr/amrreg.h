@@ -53,7 +53,7 @@
  * SUCH DAMAGE.
  *
  *
- *      $FreeBSD: src/sys/dev/amr/amrreg.h,v 1.8.2.1 2006/01/26 22:04:21 ambrisko Exp $
+ *      $FreeBSD: src/sys/dev/amr/amrreg.h,v 1.10 2006/01/13 23:50:21 jkim Exp $
  */
 
 /********************************************************************************

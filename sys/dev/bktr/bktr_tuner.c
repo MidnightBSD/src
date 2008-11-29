@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_tuner.c,v 1.19.2.1 2006/01/14 14:18:34 netchild Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_tuner.c,v 1.20 2005/11/13 13:26:37 netchild Exp $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/an/if_an_pci.c,v 1.27 2005/03/05 19:06:11 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/an/if_an_pci.c,v 1.28 2007/02/23 12:18:31 piso Exp $");
 
 /*
  * This is a PCI shim for the Aironet PC4500/4800 wireless network
@@ -240,7 +240,7 @@ an_attach_pci(dev)
 	 * Must setup the interrupt after the an_attach to prevent racing.
 	 */
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-	    an_intr, sc, &sc->irq_handle);
+	    NULL, an_intr, sc, &sc->irq_handle);
 
 fail:
 	if (error)

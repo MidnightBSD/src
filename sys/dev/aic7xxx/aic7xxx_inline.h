@@ -37,9 +37,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic7xxx_inline.h,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aic7xxx_inline.h,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aic7xxx_inline.h,v 1.24 2005/01/06 01:42:26 imp Exp $
+ * $FreeBSD: src/sys/dev/aic7xxx/aic7xxx_inline.h,v 1.25 2007/04/19 18:53:52 scottl Exp $
  */
 
 #ifndef _AIC7XXX_INLINE_H_
@@ -363,7 +363,8 @@ ahc_get_scb(struct ahc_softc *ahc)
 	struct scb *scb;
 
 	if ((scb = SLIST_FIRST(&ahc->scb_data->free_scbs)) == NULL) {
-		ahc_alloc_scbs(ahc);
+		if (ahc_alloc_scbs(ahc) == 0)
+			return (NULL);
 		scb = SLIST_FIRST(&ahc->scb_data->free_scbs);
 		if (scb == NULL)
 			return (NULL);

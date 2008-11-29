@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ar/if_ar.c,v 1.71.2.1 2005/08/25 05:01:04 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ar/if_ar.c,v 1.75 2007/03/21 03:38:34 nyan Exp $");
 
 /*
  * Programming assumptions and other issues.
@@ -258,8 +258,8 @@ ar_attach(device_t device)
 	
 	arc_init(hc);
 
-	if(BUS_SETUP_INTR(device_get_parent(device), device, hc->res_irq,
-	    INTR_TYPE_NET, arintr, hc, &hc->intr_cookie) != 0)
+	if(bus_setup_intr(device, hc->res_irq,
+	    INTR_TYPE_NET, NULL, arintr, hc, &hc->intr_cookie) != 0)
 		return (1);
 
 	sc = hc->sc;
@@ -285,7 +285,7 @@ ar_attach(device_t device)
 #ifndef	NETGRAPH
 		ifp = SC2IFP(sc) = if_alloc(IFT_PPP);
 		if (ifp == NULL) {
-			if (BUS_TEARDOWN_INTR(device_get_parent(device), device,
+			if (bus_teardown_intr(device,
 			    hc->res_irq, hc->intr_cookie) != 0) {
 				printf("intr teardown failed.. continuing\n");
 			}
@@ -351,11 +351,10 @@ ar_attach(device_t device)
 int
 ar_detach(device_t device)
 {
-	device_t parent = device_get_parent(device);
 	struct ar_hardc *hc = device_get_softc(device);
 
 	if (hc->intr_cookie != NULL) {
-		if (BUS_TEARDOWN_INTR(parent, device,
+		if (bus_teardown_intr(device,
 			hc->res_irq, hc->intr_cookie) != 0) {
 				printf("intr teardown failed.. continuing\n");
 		}
@@ -453,29 +452,21 @@ ar_deallocate_resources(device_t device)
 	struct ar_hardc *hc = device_get_softc(device);
 
 	if (hc->res_irq != 0) {
-		bus_deactivate_resource(device, SYS_RES_IRQ,
-			hc->rid_irq, hc->res_irq);
 		bus_release_resource(device, SYS_RES_IRQ,
 			hc->rid_irq, hc->res_irq);
 		hc->res_irq = 0;
 	}
 	if (hc->res_ioport != 0) {
-		bus_deactivate_resource(device, SYS_RES_IOPORT,
-			hc->rid_ioport, hc->res_ioport);
 		bus_release_resource(device, SYS_RES_IOPORT,
 			hc->rid_ioport, hc->res_ioport);
 		hc->res_ioport = 0;
 	}
 	if (hc->res_memory != 0) {
-		bus_deactivate_resource(device, SYS_RES_MEMORY,
-			hc->rid_memory, hc->res_memory);
 		bus_release_resource(device, SYS_RES_MEMORY,
 			hc->rid_memory, hc->res_memory);
 		hc->res_memory = 0;
 	}
 	if (hc->res_plx_memory != 0) {
-		bus_deactivate_resource(device, SYS_RES_MEMORY,
-			hc->rid_plx_memory, hc->res_plx_memory);
 		bus_release_resource(device, SYS_RES_MEMORY,
 			hc->rid_plx_memory, hc->res_plx_memory);
 		hc->res_plx_memory = 0;

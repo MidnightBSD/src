@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/aac/aacreg.h,v 1.21.2.2 2005/10/28 15:48:09 scottl Exp $
+ *	$FreeBSD: src/sys/dev/aac/aacreg.h,v 1.23.2.1 2007/12/10 20:18:19 emaste Exp $
  */
 
 /*
@@ -602,6 +602,58 @@ struct aac_adapter_info {
 	u_int32_t		SupportedOptions; /* supported features of this
 						   * controller */
 	AAC_OemFlavor	OemVariant;
+} __packed;
+
+/* 
+ * Structure used to respond to a RequestSupplementAdapterInfo fib.
+ */
+struct vpd_info {
+	u_int8_t		AssemblyPn[8];
+	u_int8_t		FruPn[8];
+	u_int8_t		BatteryFruPn[8];
+	u_int8_t		EcVersionString[8];
+	u_int8_t		Tsid[12];
+} __packed;
+
+#define	MFG_PCBA_SERIAL_NUMBER_WIDTH	12
+#define	MFG_WWN_WIDTH			8
+
+struct aac_supplement_adapter_info {
+	/* The assigned Adapter Type Text, extra byte for null termination */
+	int8_t		AdapterTypeText[17+1];
+	/* Pad for the text above */
+	int8_t		Pad[2];
+	/* Size in bytes of the memory that is flashed */
+	u_int32_t	FlashMemoryByteSize;
+	/* The assigned IMAGEID_xxx for this adapter */
+	u_int32_t	FlashImageId;
+	/*
+	 * The maximum number of Phys available on a SATA/SAS
+	 * Controller, 0 otherwise
+	 */
+	u_int32_t	MaxNumberPorts;
+	/* Version of expansion area */
+	u_int32_t	Version;
+	u_int32_t	FeatureBits;
+	u_int8_t		SlotNumber;
+	u_int8_t		ReservedPad0[3];
+	u_int8_t		BuildDate[12];
+	/* The current number of Ports on a SAS controller, 0 otherwise */
+	u_int32_t	CurrentNumberPorts;
+
+	struct vpd_info VpdInfo;
+
+	/* Firmware Revision (Vmaj.min-dash.) */
+	struct FsaRevision	FlashFirmwareRevision;
+	u_int32_t	RaidTypeMorphOptions;
+	/* Firmware's boot code Revision (Vmaj.min-dash.) */
+	struct FsaRevision	FlashFirmwareBootRevision;
+	/* PCBA serial no. from th MFG sector */
+	u_int8_t		MfgPcbaSerialNo[MFG_PCBA_SERIAL_NUMBER_WIDTH];
+	/* WWN from the MFG sector */
+	u_int8_t		MfgWWNName[MFG_WWN_WIDTH];
+	/* Growth Area for future expansion ((7*4) - 12 - 8)/4 = 2 words */
+	u_int32_t	ReservedGrowth[2];
 } __packed;
 
 /*

@@ -38,9 +38,9 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aicasm_macro_gram.y,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aicasm_macro_gram.y,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y,v 1.3 2005/01/06 01:42:27 imp Exp $
+ * $FreeBSD: src/sys/dev/aic7xxx/aicasm/aicasm_macro_gram.y,v 1.4 2006/12/29 13:08:46 yar Exp $
  */
 
 #include <sys/types.h>
@@ -114,7 +114,7 @@ macro_arglist:
 |	macro_arglist ',' T_ARG
 	{
 		if ($1 == 0) {
-			stop("Comma without preceeding argument in arg list",
+			stop("Comma without preceding argument in arg list",
 			     EX_DATAERR);
 			/* NOTREACHED */
 		}

@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************
- * $FreeBSD: src/sys/dev/amd/amd.c,v 1.30 2005/05/29 04:42:17 nyan Exp $
+ * $FreeBSD: src/sys/dev/amd/amd.c,v 1.36 2007/06/17 05:55:47 scottl Exp $
  */
 
 /*
@@ -58,6 +58,7 @@
 #include <sys/module.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/malloc.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -504,6 +505,10 @@ amd_action(struct cam_sim * psim, union ccb * pccb)
 		strncpy(cpi->hba_vid, "TRM-AMD", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(psim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(psim);
+                cpi->transport = XPORT_SPI;
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(pccb);
 		break;
@@ -536,67 +541,81 @@ amd_action(struct cam_sim * psim, union ccb * pccb)
 	case XPT_TERM_IO:
 		pccb->ccb_h.status = CAM_REQ_INVALID;
 		xpt_done(pccb);
-		/* XXX: intentional fall-through ?? */
+		break;
 	case XPT_GET_TRAN_SETTINGS:
 	{
-		struct ccb_trans_settings *cts;
-		struct amd_target_info *targ_info;
+		struct ccb_trans_settings *cts = &pccb->cts;
+		struct amd_target_info *targ_info = &amd->tinfo[target_id];
 		struct amd_transinfo *tinfo;
 		int     intflag;
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
 
-		cts = &pccb->cts;
+		cts->protocol = PROTO_SCSI;
+		cts->protocol_version = SCSI_REV_2;
+		cts->transport = XPORT_SPI;
+		cts->transport_version = 2;
+
 		intflag = splcam();
-		targ_info = &amd->tinfo[target_id];
-		if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
+		if (cts->type == CTS_TYPE_CURRENT_SETTINGS) {
 			/* current transfer settings */
 			if (targ_info->disc_tag & AMD_CUR_DISCENB) {
-				cts->flags = CCB_TRANS_DISC_ENB;
+				spi->flags = CTS_SPI_FLAGS_DISC_ENB;
 			} else {
-				cts->flags = 0;	/* no tag & disconnect */
+				spi->flags = 0;
 			}
 			if (targ_info->disc_tag & AMD_CUR_TAGENB) {
-				cts->flags |= CCB_TRANS_TAG_ENB;
+				scsi->flags = CTS_SCSI_FLAGS_TAG_ENB;
+			} else {
+				scsi->flags = 0;
 			}
 			tinfo = &targ_info->current;
 		} else {
 			/* default(user) transfer settings */
 			if (targ_info->disc_tag & AMD_USR_DISCENB) {
-				cts->flags = CCB_TRANS_DISC_ENB;
+				spi->flags = CTS_SPI_FLAGS_DISC_ENB;
 			} else {
-				cts->flags = 0;
+				spi->flags = 0;
 			}
 			if (targ_info->disc_tag & AMD_USR_TAGENB) {
-				cts->flags |= CCB_TRANS_TAG_ENB;
+				scsi->flags = CTS_SCSI_FLAGS_TAG_ENB;
+			} else {
+				scsi->flags = 0;
 			}
 			tinfo = &targ_info->user;
 		}
-
-		cts->sync_period = tinfo->period;
-		cts->sync_offset = tinfo->offset;
-		cts->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+		spi->sync_period = tinfo->period;
+		spi->sync_offset = tinfo->offset;
 		splx(intflag);
-		cts->valid = CCB_TRANS_SYNC_RATE_VALID
-			   | CCB_TRANS_SYNC_OFFSET_VALID
-			   | CCB_TRANS_BUS_WIDTH_VALID
-			   | CCB_TRANS_DISC_VALID
-			   | CCB_TRANS_TQ_VALID;
+
+		spi->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+		spi->valid = CTS_SPI_VALID_SYNC_RATE
+			   | CTS_SPI_VALID_SYNC_OFFSET
+			   | CTS_SPI_VALID_BUS_WIDTH
+			   | CTS_SPI_VALID_DISC;
+		scsi->valid = CTS_SCSI_VALID_TQ;
 		pccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(pccb);
 		break;
 	}
+#define	IS_CURRENT_SETTINGS(c)	(c->type == CTS_TYPE_CURRENT_SETTINGS)
+#define	IS_USER_SETTINGS(c)	(c->type == CTS_TYPE_USER_SETTINGS)
 	case XPT_SET_TRAN_SETTINGS:
 	{
-		struct ccb_trans_settings *cts;
+		struct ccb_trans_settings *cts = &pccb->cts;
 		struct amd_target_info *targ_info;
-		u_int  update_type;
+		u_int  update_type = 0;
 		int    intflag;
 		int    last_entry;
-
-		cts = &pccb->cts;
-		update_type = 0;
-		if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
+		if (IS_CURRENT_SETTINGS(cts)) {
 			update_type |= AMD_TRANS_GOAL;
-		} else if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0) {
+		} else if (IS_USER_SETTINGS(cts)) {
 			update_type |= AMD_TRANS_USER;
 		}
 		if (update_type == 0
@@ -608,32 +627,36 @@ amd_action(struct cam_sim * psim, union ccb * pccb)
 		intflag = splcam();
 		targ_info = &amd->tinfo[target_id];
 
-		if ((cts->valid & CCB_TRANS_DISC_VALID) != 0) {
+		if ((spi->valid & CTS_SPI_VALID_DISC) != 0) {
 			if (update_type & AMD_TRANS_GOAL) {
-				if ((cts->flags & CCB_TRANS_DISC_ENB) != 0) {
+				if ((spi->flags & CTS_SPI_FLAGS_DISC_ENB)
+				   != 0) {
 					targ_info->disc_tag |= AMD_CUR_DISCENB;
 				} else {
 					targ_info->disc_tag &= ~AMD_CUR_DISCENB;
 				}
 			}
 			if (update_type & AMD_TRANS_USER) {
-				if ((cts->flags & CCB_TRANS_DISC_ENB) != 0) {
+				if ((spi->flags & CTS_SPI_FLAGS_DISC_ENB)
+				   != 0) {
 					targ_info->disc_tag |= AMD_USR_DISCENB;
 				} else {
 					targ_info->disc_tag &= ~AMD_USR_DISCENB;
 				}
 			}
 		}
-		if ((cts->valid & CCB_TRANS_TQ_VALID) != 0) {
+		if ((scsi->valid & CTS_SCSI_VALID_TQ) != 0) {
 			if (update_type & AMD_TRANS_GOAL) {
-				if ((cts->flags & CCB_TRANS_TAG_ENB) != 0) {
+				if ((scsi->flags & CTS_SCSI_FLAGS_TAG_ENB)
+				   != 0) {
 					targ_info->disc_tag |= AMD_CUR_TAGENB;
 				} else {
 					targ_info->disc_tag &= ~AMD_CUR_TAGENB;
 				}
 			}
 			if (update_type & AMD_TRANS_USER) {
-				if ((cts->flags & CCB_TRANS_TAG_ENB) != 0) {
+				if ((scsi->flags & CTS_SCSI_FLAGS_TAG_ENB)
+				    != 0) {
 					targ_info->disc_tag |= AMD_USR_TAGENB;
 				} else {
 					targ_info->disc_tag &= ~AMD_USR_TAGENB;
@@ -641,39 +664,39 @@ amd_action(struct cam_sim * psim, union ccb * pccb)
 			}
 		}
 
-		if ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID) == 0) {
+		if ((spi->valid & CTS_SPI_VALID_SYNC_OFFSET) == 0) {
 			if (update_type & AMD_TRANS_GOAL)
-				cts->sync_offset = targ_info->goal.offset;
+				spi->sync_offset = targ_info->goal.offset;
 			else
-				cts->sync_offset = targ_info->user.offset;
+				spi->sync_offset = targ_info->user.offset;
 		}
 
-		if (cts->sync_offset > AMD_MAX_SYNC_OFFSET)
-			cts->sync_offset = AMD_MAX_SYNC_OFFSET;
+		if (spi->sync_offset > AMD_MAX_SYNC_OFFSET)
+			spi->sync_offset = AMD_MAX_SYNC_OFFSET;
 
-		if ((cts->valid & CCB_TRANS_SYNC_RATE_VALID) == 0) {
+		if ((spi->valid & CTS_SPI_VALID_SYNC_RATE) == 0) {
 			if (update_type & AMD_TRANS_GOAL)
-				cts->sync_period = targ_info->goal.period;
+				spi->sync_period = targ_info->goal.period;
 			else
-				cts->sync_period = targ_info->user.period;
+				spi->sync_period = targ_info->user.period;
 		}
 
 		last_entry = sizeof(tinfo_sync_period) - 1;
-		if ((cts->sync_period != 0)
-		 && (cts->sync_period < tinfo_sync_period[0]))
-			cts->sync_period = tinfo_sync_period[0];
-		if (cts->sync_period > tinfo_sync_period[last_entry])
-		 	cts->sync_period = 0;
-		if (cts->sync_offset == 0)
-			cts->sync_period = 0;
+		if ((spi->sync_period != 0)
+		 && (spi->sync_period < tinfo_sync_period[0]))
+			spi->sync_period = tinfo_sync_period[0];
+		if (spi->sync_period > tinfo_sync_period[last_entry])
+		 	spi->sync_period = 0;
+		if (spi->sync_offset == 0)
+			spi->sync_period = 0;
 
 		if ((update_type & AMD_TRANS_USER) != 0) {
-			targ_info->user.period = cts->sync_period;
-			targ_info->user.offset = cts->sync_offset;
+			targ_info->user.period = spi->sync_period;
+			targ_info->user.offset = spi->sync_offset;
 		}
 		if ((update_type & AMD_TRANS_GOAL) != 0) {
-			targ_info->goal.period = cts->sync_period;
-			targ_info->goal.offset = cts->sync_offset;
+			targ_info->goal.period = spi->sync_period;
+			targ_info->goal.offset = spi->sync_offset;
 		}
 		splx(intflag);
 		pccb->ccb_h.status = CAM_REQ_CMP;
@@ -817,12 +840,14 @@ amdsetsync(struct amd_softc *amd, u_int target, u_int clockrate,
 				    cam_sim_path(amd->psim), target,
 				    CAM_LUN_WILDCARD) == CAM_REQ_CMP) {
 			struct ccb_trans_settings neg;
-
+			struct ccb_trans_settings_spi *spi =
+			    &neg.xport_specific.spi;
 			xpt_setup_ccb(&neg.ccb_h, path, /*priority*/1);
-			neg.sync_period = period;
-			neg.sync_offset = offset;
-			neg.valid = CCB_TRANS_SYNC_RATE_VALID
-				  | CCB_TRANS_SYNC_OFFSET_VALID;
+			memset(&neg, 0, sizeof (neg));
+			spi->sync_period = period;
+			spi->sync_offset = offset;
+			spi->valid = CTS_SPI_VALID_SYNC_RATE
+				  | CTS_SPI_VALID_SYNC_OFFSET;
 			xpt_async(AC_TRANSFER_NEG, path, &neg);
 			xpt_free_path(path);	
 		}
@@ -1474,13 +1499,14 @@ amdhandlemsgreject(struct amd_softc *amd)
 	} else if ((srb != NULL)
 		&& (srb->pccb->ccb_h.flags & CAM_TAG_ACTION_VALID) != 0) {
 		struct  ccb_trans_settings neg;
+		struct ccb_trans_settings_scsi *scsi = &neg.proto_specific.scsi;
 
 		printf("amd%d:%d: refuses tagged commands.  Performing "
 		       "non-tagged I/O\n", amd->unit, amd->cur_target);
 
 		amdsettags(amd, amd->cur_target, FALSE);
-		neg.flags = 0;
-		neg.valid = CCB_TRANS_TQ_VALID;
+		memset(&neg, 0, sizeof (neg));
+		scsi->valid = CTS_SCSI_VALID_TQ;
 		xpt_setup_ccb(&neg.ccb_h, srb->pccb->ccb_h.path, /*priority*/1);
 		xpt_async(AC_TRANSFER_NEG, srb->pccb->ccb_h.path, &neg);
 
@@ -2435,7 +2461,7 @@ amd_attach(device_t dev)
 					RF_SHAREABLE | RF_ACTIVE);
 	if (irqres == NULL ||
 	    bus_setup_intr(dev, irqres, INTR_TYPE_CAM | INTR_ENTROPY,
-	    amd_intr, amd, &ih)) {
+	    NULL, amd_intr, amd, &ih)) {
 		if (bootverbose)
 			printf("amd%d: unable to register interrupt handler!\n",
 			       unit);
@@ -2456,8 +2482,8 @@ amd_attach(device_t dev)
 	}
 
 	amd->psim = cam_sim_alloc(amd_action, amd_poll, "amd",
-				  amd, amd->unit, 1, MAX_TAGS_CMD_QUEUE,
-				  devq);
+				  amd, amd->unit, &Giant,
+				  1, MAX_TAGS_CMD_QUEUE, devq);
 	if (amd->psim == NULL) {
 		cam_simq_free(devq);
 		if (bootverbose)
@@ -2465,7 +2491,7 @@ amd_attach(device_t dev)
 		return ENXIO;
 	}
 
-	if (xpt_bus_register(amd->psim, 0) != CAM_SUCCESS) {
+	if (xpt_bus_register(amd->psim, dev, 0) != CAM_SUCCESS) {
 		cam_sim_free(amd->psim, /*free_devq*/TRUE);
 		if (bootverbose)
 			printf("amd_attach: xpt_bus_register failure!\n");
@@ -2509,4 +2535,5 @@ static driver_t amd_driver = {
 
 static devclass_t amd_devclass;
 DRIVER_MODULE(amd, pci, amd_driver, amd_devclass, 0, 0);
+MODULE_DEPEND(amd, pci, 1, 1, 1);
 MODULE_DEPEND(amd, cam, 1, 1, 1);

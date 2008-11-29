@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/an/if_an_isa.c,v 1.15 2005/01/06 01:42:28 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/an/if_an_isa.c,v 1.17 2007/02/23 12:18:31 piso Exp $");
 
 #include "opt_inet.h"
 
@@ -77,12 +77,11 @@ static struct isa_pnp_id an_ids[] = {
 	{ 0, NULL }
 };
 
-static int an_probe_isa		(device_t);
-static int an_attach_isa	(device_t);
+static int an_probe_isa(device_t);
+static int an_attach_isa(device_t);
 
 static int
-an_probe_isa(dev)
-	device_t		dev;
+an_probe_isa(device_t dev)
 {
 	int			error = 0;
 
@@ -103,8 +102,7 @@ an_probe_isa(dev)
 }
 
 static int
-an_attach_isa(dev)
-	device_t dev;
+an_attach_isa(device_t dev)
 {
 	struct an_softc *sc = device_get_softc(dev);
 	int flags = device_get_flags(dev);
@@ -124,7 +122,7 @@ an_attach_isa(dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-			       an_intr, sc, &sc->irq_handle);
+			       NULL, an_intr, sc, &sc->irq_handle);
 	if (error) {
 		an_release_resources(dev);
 		return (error);

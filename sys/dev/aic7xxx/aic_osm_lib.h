@@ -30,9 +30,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic_osm_lib.h,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+ * $Id: aic_osm_lib.h,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  *
- * $FreeBSD: src/sys/dev/aic7xxx/aic_osm_lib.h,v 1.5 2005/01/06 01:42:26 imp Exp $
+ * $FreeBSD: src/sys/dev/aic7xxx/aic_osm_lib.h,v 1.6 2007/04/17 06:26:25 scottl Exp $
  */
 
 /******************************** OS Includes *********************************/
@@ -143,7 +143,7 @@ aic_wakeup_recovery_thread(struct aic_softc *aic)
 	bus_dma_tag_create(parent_tag, alignment, boundary,		\
 			   lowaddr, highaddr, filter, filterarg,	\
 			   maxsize, nsegments, maxsegsz, flags,		\
-			   busdma_lock_mutex, &Giant,			\
+			   busdma_lock_mutex, &aic->platform_data->mtx,			\
 			   dma_tagp)
 #else
 #define aic_dma_tag_create(aic, parent_tag, alignment, boundary,	\
@@ -187,7 +187,7 @@ aic_wakeup_recovery_thread(struct aic_softc *aic)
 
 /***************************** Timer Facilities *******************************/
 #if __FreeBSD_version >= 500000
-#define aic_timer_init(timer) callout_init(timer, /*mpsafe*/0)
+#define aic_timer_init(timer) callout_init(timer, /*mpsafe*/1)
 #else
 #define aic_timer_init callout_init
 #endif
@@ -223,10 +223,7 @@ aic_scb_timer_reset(struct scb *scb, u_int msec)
 	time = msec;
 	time *= hz;
 	time /= 1000;
-	untimeout(aic_platform_timeout, (caddr_t)scb,
-		  scb->io_ctx->ccb_h.timeout_ch);
-	scb->io_ctx->ccb_h.timeout_ch =
-	    timeout(aic_platform_timeout, scb, time);
+	callout_reset(&scb->io_timer, time, aic_platform_timeout, scb);
 }
 
 static __inline void
@@ -235,13 +232,7 @@ aic_scb_timer_start(struct scb *scb)
 	
 	if (AIC_SCB_DATA(scb->aic_softc)->recovery_scbs == 0
 	 && scb->io_ctx->ccb_h.timeout != CAM_TIME_INFINITY) {
-		uint64_t time;
-
-		time = scb->io_ctx->ccb_h.timeout;
-		time *= hz;
-		time /= 1000;
-		scb->io_ctx->ccb_h.timeout_ch =
-		    timeout(aic_platform_timeout, scb, time);
+		aic_scb_timer_reset(scb, scb->io_ctx->ccb_h.timeout);
 	}
 }
 

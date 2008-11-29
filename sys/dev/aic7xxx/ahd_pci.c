@@ -28,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ahd_pci.c,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
+ * $Id: ahd_pci.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/ahd_pci.c,v 1.18 2005/03/05 19:24:22 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/ahd_pci.c,v 1.20 2006/09/03 00:27:40 jmg Exp $");
 
 #include <dev/aic7xxx/aic79xx_osm.h>
 
@@ -109,8 +109,8 @@ ahd_pci_attach(device_t dev)
 
 	/* Allocate a dmatag for our SCB DMA maps */
 	/* XXX Should be a child of the PCI bus dma tag */
-	error = aic_dma_tag_create(ahd, /*parent*/NULL, /*alignment*/1,
-				   /*boundary*/0,
+	error = aic_dma_tag_create(ahd, /*parent*/bus_get_dma_tag(dev),
+				   /*alignment*/1, /*boundary*/0,
 				   (ahd->flags & AHD_39BIT_ADDRESSING)
 				   ? 0x7FFFFFFFFF
 				   : BUS_SPACE_MAXADDR_32BIT,
@@ -163,6 +163,7 @@ ahd_pci_map_registers(struct ahd_softc *ahd)
 		if (bootverbose)
 			device_printf(ahd->dev_softc,
 				      "Defaulting to MEMIO on\n");
+		allow_memio = 1;
 	}
 
 	if ((command & PCIM_CMD_MEMEN) != 0

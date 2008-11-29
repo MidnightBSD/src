@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.20.2.2 2006/01/30 17:56:07 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_cam.c,v 1.28.2.2 2007/12/10 20:18:19 emaste Exp $");
 
 /*
  * CAM front-end for communicating with non-DASD devices
@@ -103,13 +103,17 @@ MALLOC_DEFINE(M_AACCAM, "aaccam", "AAC CAM info");
 static void
 aac_cam_event(struct aac_softc *sc, struct aac_event *event, void *arg)
 {
+	union ccb *ccb;
 	struct aac_cam *camsc;
 
 	switch (event->ev_type) {
 	case AAC_EVENT_CMFREE:
-		camsc = arg;
+		ccb = arg;
+		camsc = ccb->ccb_h.sim_priv.entries[0].ptr;
 		free(event, M_AACCAM);
 		xpt_release_simq(camsc->sim, 1);
+		ccb->ccb_h.status = CAM_REQUEUE_REQ;
+		xpt_done(ccb);
 		break;
 	default:
 		device_printf(sc->aac_dev, "unknown event %d in aac_cam\n",
@@ -131,19 +135,21 @@ aac_cam_probe(device_t dev)
 static int
 aac_cam_detach(device_t dev)
 {
+	struct aac_softc *sc;
 	struct aac_cam *camsc;
 	debug_called(2);
 
 	camsc = (struct aac_cam *)device_get_softc(dev);
+	sc = camsc->inf->aac_sc;
 
-	mtx_lock(&Giant);
+	mtx_lock(&sc->aac_io_lock);
 
 	xpt_async(AC_LOST_DEVICE, camsc->path, NULL);
 	xpt_free_path(camsc->path);
 	xpt_bus_deregister(cam_sim_path(camsc->sim));
 	cam_sim_free(camsc->sim, /*free_devq*/TRUE);
 
-	mtx_unlock(&Giant);
+	mtx_unlock(&sc->aac_io_lock);
 
 	return (0);
 }
@@ -171,15 +177,17 @@ aac_cam_attach(device_t dev)
 		return (EIO);
 
 	sim = cam_sim_alloc(aac_cam_action, aac_cam_poll, "aacp", camsc,
-	    device_get_unit(dev), 1, 1, devq);
+	    device_get_unit(dev), &inf->aac_sc->aac_io_lock, 1, 1, devq);
 	if (sim == NULL) {
 		cam_simq_free(devq);
 		return (EIO);
 	}
 
 	/* Since every bus has it's own sim, every bus 'appears' as bus 0 */
-	if (xpt_bus_register(sim, 0) != CAM_SUCCESS) {
+	mtx_lock(&inf->aac_sc->aac_io_lock);
+	if (xpt_bus_register(sim, dev, 0) != CAM_SUCCESS) {
 		cam_sim_free(sim, TRUE);
+		mtx_unlock(&inf->aac_sc->aac_io_lock);
 		return (EIO);
 	}
 
@@ -187,8 +195,10 @@ aac_cam_attach(device_t dev)
 	    CAM_TARGET_WILDCARD, CAM_LUN_WILDCARD) != CAM_REQ_CMP) {
 		xpt_bus_deregister(cam_sim_path(sim));
 		cam_sim_free(sim, TRUE);
+		mtx_unlock(&inf->aac_sc->aac_io_lock);
 		return (EIO);
 	}
+	mtx_unlock(&inf->aac_sc->aac_io_lock);
 
 	camsc->sim = sim;
 	camsc->path = path;
@@ -263,15 +273,30 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
-
+                cpi->transport = XPORT_SPI;
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		return;
 	}
 	case XPT_GET_TRAN_SETTINGS:
 	{
-		ccb->cts.flags &= ~(CCB_TRANS_DISC_ENB | CCB_TRANS_TAG_ENB);
-		ccb->cts.valid = CCB_TRANS_DISC_VALID | CCB_TRANS_TQ_VALID;
+		struct ccb_trans_settings_scsi *scsi =
+			&ccb->cts.proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+			&ccb->cts.xport_specific.spi;
+		ccb->cts.protocol = PROTO_SCSI;
+		ccb->cts.protocol_version = SCSI_REV_2;
+		ccb->cts.transport = XPORT_SPI;
+		ccb->cts.transport_version = 2;
+		if (ccb->ccb_h.target_lun != CAM_LUN_WILDCARD) {
+			scsi->valid = CTS_SCSI_VALID_TQ;
+			spi->valid |= CTS_SPI_VALID_DISC;
+		} else {
+			scsi->valid = 0;
+		}
 		ccb->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		return;
@@ -306,27 +331,23 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 
 	/* Async ops that require communcation with the controller */
 
-	mtx_lock(&sc->aac_io_lock);
 	if (aac_alloc_command(sc, &cm)) {
 		struct aac_event *event;
 
 		xpt_freeze_simq(sim, 1);
-		ccb->ccb_h.status = CAM_REQUEUE_REQ;
-		xpt_done(ccb);
+		ccb->ccb_h.status = CAM_RESRC_UNAVAIL;
+		ccb->ccb_h.sim_priv.entries[0].ptr = camsc;
 		event = malloc(sizeof(struct aac_event), M_AACCAM,
 		    M_NOWAIT | M_ZERO);
 		if (event == NULL) {
 			device_printf(sc->aac_dev,
 			    "Warning, out of memory for event\n");
-			/* XXX Yuck, what to do here? */
-			mtx_unlock(&sc->aac_io_lock);
 			return;
 		}
 		event->ev_callback = aac_cam_event;
-		event->ev_arg = camsc;
+		event->ev_arg = ccb;
 		event->ev_type = AAC_EVENT_CMFREE;
 		aac_add_event(sc, event);
-		mtx_unlock(&sc->aac_io_lock);
 		return;
 	}
 
@@ -371,16 +392,17 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 			bcopy(csio->cdb_io.cdb_bytes, (u_int8_t *)&srb->cdb[0],
 			    srb->cdb_len);
 
+		/* Set command */
+		fib->Header.Command = (sc->flags & AAC_FLAGS_SG_64BIT) ? 
+			ScsiPortCommandU64 : ScsiPortCommand;
+
 		/* Map the s/g list. XXX 32bit addresses only! */
 		if ((ccb->ccb_h.flags & CAM_DIR_MASK) != CAM_DIR_NONE) {
 			if ((ccb->ccb_h.flags & CAM_SCATTER_VALID) == 0) {
 				srb->data_len = csio->dxfer_len;
 				if (ccb->ccb_h.flags & CAM_DATA_PHYS) {
-					/*
-					 * XXX This isn't 64-bit clean.
-					 * However, this condition is not
-					 * normally used in CAM.
-					 */
+					/* Send a 32bit command */
+					fib->Header.Command = ScsiPortCommand;
 					srb->sg_map32.SgCount = 1;
 					srb->sg_map32.SgEntry[0].SgAddress =
 					    (uint32_t)(uintptr_t)csio->data_ptr;
@@ -437,14 +459,11 @@ aac_cam_action(struct cam_sim *sim, union ccb *ccb)
 	    AAC_FIBSTATE_FROMHOST	|
 	    AAC_FIBSTATE_REXPECTED	|
 	    AAC_FIBSTATE_NORM;
-	fib->Header.Command = ScsiPortCommand;
 	fib->Header.Size = sizeof(struct aac_fib_header) +
 	    sizeof(struct aac_srb32);
 
 	aac_enqueue_ready(cm);
 	aac_startio(cm->cm_sc);
-
-	mtx_unlock(&sc->aac_io_lock);
 
 	return;
 }
@@ -509,8 +528,8 @@ aac_cam_complete(struct aac_command *cm)
 			else
 				command = ccb->csio.cdb_io.cdb_bytes[0];
 
-			if ((command == INQUIRY) &&
-			    (ccb->ccb_h.status == CAM_REQ_CMP)) {
+			if (command == INQUIRY) {
+				if (ccb->ccb_h.status == CAM_REQ_CMP) {
 				device = ccb->csio.data_ptr[0] & 0x1f;
 				/*
 				 * We want DASD and PROC devices to only be
@@ -521,6 +540,11 @@ aac_cam_complete(struct aac_command *cm)
 				    (sc->flags & AAC_FLAGS_CAM_PASSONLY))
 					ccb->csio.data_ptr[0] =
 					    ((device & 0xe0) | T_NODEVICE);
+				} else if (ccb->ccb_h.status == CAM_SEL_TIMEOUT &&
+					ccb->ccb_h.target_lun != 0) {
+					/* fix for INQUIRYs on Lun>0 */
+					ccb->ccb_h.status = CAM_DEV_NOT_THERE;
+				}
 			}
 		}
 	}
@@ -549,7 +573,6 @@ aac_cam_reset_bus(struct cam_sim *sim, union ccb *ccb)
 		return (CAM_REQ_ABORTED);
 	}
 
-	mtx_lock(&sc->aac_io_lock);
 	aac_alloc_sync_fib(sc, &fib);
 
 	vmi = (struct aac_vmioctl *)&fib->data[0];
@@ -574,7 +597,6 @@ aac_cam_reset_bus(struct cam_sim *sim, union ccb *ccb)
 	}
 
 	aac_release_sync_fib(sc);
-	mtx_unlock(&sc->aac_io_lock);
 	return (CAM_REQ_CMP);
 }
 

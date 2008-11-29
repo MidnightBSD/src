@@ -46,7 +46,7 @@
  * become a "Registered Developer" of the I2O SIG. This can be done by calling
  * 415-750-8352 in the US, or via http://www.i2osig.org.
  *
- * $FreeBSD: src/sys/dev/asr/i2odep.h,v 1.8 2005/01/06 01:42:29 imp Exp $
+ * $FreeBSD: src/sys/dev/asr/i2odep.h,v 1.9 2006/02/04 08:01:49 scottl Exp $
  *
  **************************************************************************/
 
@@ -80,8 +80,8 @@ typedef	   signed short	  S16;
 typedef	   unsigned char  U8;
 typedef	   unsigned short U16;
 
-typedef	   unsigned long  U32;
-typedef	   unsigned short S32;
+typedef	   u_int32_t U32;
+typedef	   int32_t  S32;
 
 
 /* Bitfields */

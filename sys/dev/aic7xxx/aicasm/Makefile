@@ -1,7 +1,7 @@
 #
-# $Id: Makefile,v 1.1.1.2 2006-02-25 02:36:18 laffer1 Exp $
+# $Id: Makefile,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
 #
-# $FreeBSD: src/sys/dev/aic7xxx/aicasm/Makefile,v 1.20.2.1 2005/12/27 21:35:40 ru Exp $
+# $FreeBSD: src/sys/dev/aic7xxx/aicasm/Makefile,v 1.23 2005/11/21 14:41:10 ru Exp $
 
 PROG=	aicasm
 

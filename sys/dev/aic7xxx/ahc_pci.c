@@ -28,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: ahc_pci.c,v 1.1.1.2 2006-02-25 02:36:17 laffer1 Exp $
+ * $Id: ahc_pci.c,v 1.1.1.3 2008-11-29 22:26:49 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/ahc_pci.c,v 1.64 2005/03/05 19:24:22 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/ahc_pci.c,v 1.65 2006/09/03 00:27:40 jmg Exp $");
 
 #include <dev/aic7xxx/aic7xxx_osm.h>
 
@@ -107,8 +107,8 @@ ahc_pci_attach(device_t dev)
 
 	/* Allocate a dmatag for our SCB DMA maps */
 	/* XXX Should be a child of the PCI bus dma tag */
-	error = aic_dma_tag_create(ahc, /*parent*/NULL, /*alignment*/1,
-				   /*boundary*/0,
+	error = aic_dma_tag_create(ahc, /*parent*/bus_get_dma_tag(dev),
+				   /*alignment*/1, /*boundary*/0,
 				   (ahc->flags & AHC_39BIT_ADDRESSING)
 				   ? 0x7FFFFFFFFFLL
 				   : BUS_SPACE_MAXADDR_32BIT,

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_card.c,v 1.34.2.1 2006/01/14 14:18:34 netchild Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_card.c,v 1.36 2005/12/04 10:06:03 ru Exp $");
 
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)
@@ -120,7 +120,7 @@ __FBSDID("$FreeBSD: src/sys/dev/bktr/bktr_card.c,v 1.34.2.1 2006/01/14 14:18:34 
 #define PFC8582_WADDR           0xa0
 #define PFC8582_RADDR		0xa1
 
-#if BKTR_SYSTEM_DEFAULT == BROOKTREE_PAL
+#if defined(BKTR_SYSTEM_DEFAULT) && BKTR_SYSTEM_DEFAULT == BROOKTREE_PAL
 #define DEFAULT_TUNER   PHILIPS_PALI
 #else
 #define DEFAULT_TUNER   PHILIPS_NTSC
@@ -1196,7 +1196,7 @@ checkTuner:
 	    break;
 
 	case CARD_LEADTEK:
-#if BKTR_SYSTEM_DEFAULT == BROOKTREE_PAL
+#if defined(BKTR_SYSTEM_DEFAULT) && BKTR_SYSTEM_DEFAULT == BROOKTREE_PAL
 	    select_tuner( bktr, PHILIPS_FR1216_PAL );
 #else
 	    select_tuner( bktr, PHILIPS_FR1236_NTSC );
