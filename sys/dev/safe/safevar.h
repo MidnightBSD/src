@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/safe/safevar.h,v 1.1 2003/07/21 21:46:07 sam Exp $
+ * $FreeBSD: src/sys/dev/safe/safevar.h,v 1.2 2006/05/17 18:34:26 pjd Exp $
  */
 #ifndef _SAFE_SAFEVAR_H_
 #define	_SAFE_SAFEVAR_H_
@@ -138,6 +138,7 @@ struct safe_session {
 	u_int32_t	ses_used;
 	u_int32_t	ses_klen;		/* key length in bits */
 	u_int32_t	ses_key[8];		/* DES/3DES/AES key */
+	u_int32_t	ses_mlen;		/* hmac length in bytes */
 	u_int32_t	ses_hminner[5];		/* hmac inner state */
 	u_int32_t	ses_hmouter[5];		/* hmac outer state */
 	u_int32_t	ses_iv[4];		/* DES/3DES/AES iv */
