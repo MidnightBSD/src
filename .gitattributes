@@ -26973,6 +26973,9 @@ sys/dev/usb/if_kue.c -text
 sys/dev/usb/if_kuereg.h -text
 sys/dev/usb/if_rue.c -text
 sys/dev/usb/if_ruereg.h -text
+sys/dev/usb/if_rum.c -text
+sys/dev/usb/if_rumreg.h -text
+sys/dev/usb/if_rumvar.h -text
 sys/dev/usb/if_udav.c -text
 sys/dev/usb/if_udavreg.h -text
 sys/dev/usb/if_ural.c -text
