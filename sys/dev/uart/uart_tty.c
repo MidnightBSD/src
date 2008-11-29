@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_tty.c,v 1.22.2.1 2006/03/10 19:37:32 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_tty.c,v 1.29 2006/07/27 00:07:10 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,11 +54,9 @@ static cn_probe_t uart_cnprobe;
 static cn_init_t uart_cninit;
 static cn_term_t uart_cnterm;
 static cn_getc_t uart_cngetc;
-static cn_checkc_t uart_cncheckc;
 static cn_putc_t uart_cnputc;
 
-CONS_DRIVER(uart, uart_cnprobe, uart_cninit, uart_cnterm, uart_cngetc,
-    uart_cncheckc, uart_cnputc, NULL);
+CONSOLE_DRIVER(uart);
 
 static struct uart_devinfo uart_console;
 
@@ -118,17 +116,10 @@ uart_cnputc(struct consdev *cp, int c)
 }
 
 static int
-uart_cncheckc(struct consdev *cp)
-{
-
-	return (uart_poll(cp->cn_arg));
-}
-
-static int
 uart_cngetc(struct consdev *cp)
 {
 
-	return (uart_getc(cp->cn_arg));
+	return (uart_poll(cp->cn_arg));
 }
 
 static int
@@ -137,6 +128,10 @@ uart_tty_open(struct tty *tp, struct cdev *dev)
 	struct uart_softc *sc;
 
 	sc = tp->t_sc;
+
+	if (sc == NULL || sc->sc_leaving)
+		return (ENXIO);
+
 	sc->sc_opened = 1;
 	return (0);
 }
@@ -307,30 +302,32 @@ uart_tty_intr(void *arg)
 		return;
 
 	pend = atomic_readandclear_32(&sc->sc_ttypend);
-	if (!(pend & UART_IPEND_MASK))
+	if (!(pend & SER_INT_MASK))
 		return;
 
 	tp = sc->sc_u.u_tty.tp;
 
-	if (pend & UART_IPEND_RXREADY) {
+	if (pend & SER_INT_RXREADY) {
 		while (!uart_rx_empty(sc) && !(tp->t_state & TS_TBLOCK)) {
 			xc = uart_rx_get(sc);
 			c = xc & 0xff;
 			if (xc & UART_STAT_FRAMERR)
 				c |= TTY_FE;
+			if (xc & UART_STAT_OVERRUN)
+				c |= TTY_OE;
 			if (xc & UART_STAT_PARERR)
 				c |= TTY_PE;
 			ttyld_rint(tp, c);
 		}
 	}
 
-	if (pend & UART_IPEND_BREAK) {
+	if (pend & SER_INT_BREAK) {
 		if (tp != NULL && !(tp->t_iflag & IGNBRK))
 			ttyld_rint(tp, 0);
 	}
 
-	if (pend & UART_IPEND_SIGCHG) {
-		sig = pend & UART_IPEND_SIGMASK;
+	if (pend & SER_INT_SIGCHG) {
+		sig = pend & SER_INT_SIGMASK;
 		if (sig & SER_DDCD)
 			ttyld_modem(tp, sig & SER_DCD);
 		if ((sig & SER_DCTS) && (tp->t_cflag & CCTS_OFLOW) &&
@@ -343,7 +340,7 @@ uart_tty_intr(void *arg)
 		}
 	}
 
-	if (pend & UART_IPEND_TXIDLE) {
+	if (pend & SER_INT_TXIDLE) {
 		tp->t_state &= ~TS_BUSY;
 		ttyld_start(tp);
 	}
@@ -380,7 +377,7 @@ uart_tty_attach(struct uart_softc *sc)
 	swi_add(&tty_intr_event, uart_driver_name, uart_tty_intr, sc, SWI_TTY,
 	    INTR_TYPE_TTY, &sc->sc_softih);
 
-	ttycreate(tp, NULL, 0, MINOR_CALLOUT, "u%r", unit);
+	ttycreate(tp, TS_CALLOUT, "u%r", unit);
 
 	return (0);
 }
