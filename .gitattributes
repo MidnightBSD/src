@@ -26983,6 +26983,9 @@ sys/dev/usb/if_udavreg.h -text
 sys/dev/usb/if_ural.c -text
 sys/dev/usb/if_uralreg.h -text
 sys/dev/usb/if_uralvar.h -text
+sys/dev/usb/if_zyd.c -text
+sys/dev/usb/if_zydfw.h -text
+sys/dev/usb/if_zydreg.h -text
 sys/dev/usb/kue_fw.h -text
 sys/dev/usb/ohci.c -text
 sys/dev/usb/ohci_pci.c -text
