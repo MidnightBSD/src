@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbdc.c,v 1.21 2005/06/10 20:56:37 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbdc.c,v 1.25 2006/09/04 00:19:31 dwhite Exp $");
 
 #include "opt_kbd.h"
 
@@ -174,8 +174,6 @@ atkbdc_configure(void)
 	tag = I386_BUS_SPACE_IO;
 #elif defined(__amd64__)
 	tag = AMD64_BUS_SPACE_IO;
-#elif defined(__alpha__)
-	tag = busspace_isa_io;
 #elif defined(__ia64__)
 	tag = IA64_BUS_SPACE_IO;
 #elif defined(__sparc64__)
@@ -215,7 +213,7 @@ atkbdc_configure(void)
 	port0 = IO_KBD;
 	resource_int_value("atkbdc", 0, "port", &port0);
 	port1 = IO_KBD + KBD_STATUS_PORT;
-#if notyet
+#ifdef notyet
 	bus_space_map(tag, port0, IO_KBDSIZE, 0, &h0);
 	bus_space_map(tag, port1, IO_KBDSIZE, 0, &h1);
 #else
@@ -225,6 +223,14 @@ atkbdc_configure(void)
 #endif
 
 #if defined(__i386__)
+	/*
+	 * Check if we really have AT keyboard controller. Poll status
+	 * register until we get "all clear" indication. If no such
+	 * indication comes, it probably means that there is no AT
+	 * keyboard controller present. Give up in such case. Check relies
+	 * on the fact that reading from non-existing in/out port returns
+	 * 0xff on i386. May or may not be true on other platforms.
+	 */
 	flags = intr_disable();
 	for (i = 0; i != 65535; i++) {
 		if ((bus_space_read_1(tag, h1, 0) & 0x2) == 0)
@@ -232,7 +238,7 @@ atkbdc_configure(void)
 	}
 	intr_restore(flags);
 	if (i == 65535)
-		return ENXIO;
+                return ENXIO;
 #endif
 
 	return atkbdc_setup(atkbdc_softc[0], tag, h0, h1);
@@ -873,9 +879,15 @@ empty_both_buffers(KBDC p, int wait)
 	    t -= delta;
 	}
 
-	waited += (delta * 1000);
-	if (waited == (delta * 1000000))
+	/*
+	 * Some systems (Intel/IBM blades) do not have keyboard devices and
+	 * will thus hang in this procedure. Time out after delta seconds to
+	 * avoid this hang -- the keyboard attach will fail later on.
+	 */
+        waited += (delta * 1000);
+        if (waited == (delta * 1000000))
 	    return;
+
 	DELAY(delta*1000);
     }
 #if KBDIO_DEBUG >= 2

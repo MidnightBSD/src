@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ahb/ahb.c,v 1.34.2.1 2006/06/29 18:12:18 mjacob Exp $
+ * $FreeBSD: src/sys/dev/ahb/ahb.c,v 1.43 2007/06/17 15:21:09 scottl Exp $
  */
 
 #include <sys/param.h>
@@ -69,7 +69,7 @@
 	bus_space_write_4((ahb)->tag, (ahb)->bsh, port, value)
 
 static const char		*ahbmatch(eisa_id_t type);
-static struct ahb_softc		*ahballoc(u_long unit, struct resource *res);
+static struct ahb_softc		*ahballoc(device_t dev, struct resource *res);
 static void			 ahbfree(struct ahb_softc *ahb);
 static int			 ahbreset(struct ahb_softc *ahb);
 static void			 ahbmapecbs(void *arg, bus_dma_segment_t *segs,
@@ -271,7 +271,7 @@ ahbattach(device_t dev)
 		return ENOMEM;
 	}
 
-	if ((ahb = ahballoc(device_get_unit(dev), io)) == NULL) {
+	if ((ahb = ahballoc(dev, io)) == NULL) {
 		goto error_exit2;
 	}
 
@@ -378,7 +378,10 @@ ahbattach(device_t dev)
 		goto error_exit;
 
 	/* Enable our interrupt */
-	bus_setup_intr(dev, irq, INTR_TYPE_CAM|INTR_ENTROPY, ahbintr, ahb, &ih);
+	if (bus_setup_intr(dev, irq, INTR_TYPE_CAM|INTR_ENTROPY, NULL, ahbintr, 
+	    ahb, &ih) != 0)
+		goto error_exit;
+
 	return (0);
 
 error_exit:
@@ -397,7 +400,7 @@ error_exit2:
 }
 
 static struct ahb_softc *
-ahballoc(u_long unit, struct resource *res)
+ahballoc(device_t dev, struct resource *res)
 {
 	struct	ahb_softc *ahb;
 
@@ -406,16 +409,17 @@ ahballoc(u_long unit, struct resource *res)
 	 */
 	ahb = malloc(sizeof(struct ahb_softc), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (!ahb) {
-		printf("ahb%ld: cannot malloc!\n", unit);
+		device_printf(dev, "cannot malloc!\n");
 		return (NULL);
 	}
 	SLIST_INIT(&ahb->free_ecbs);
 	LIST_INIT(&ahb->pending_ccbs);
-	ahb->unit = unit;
+	ahb->unit = device_get_unit(dev);
 	ahb->tag = rman_get_bustag(res);
 	ahb->bsh = rman_get_bushandle(res);
 	ahb->disc_permitted = ~0;
 	ahb->tags_permitted = ~0;
+	ahb->dev = dev;
 
 	return (ahb);
 }
@@ -550,13 +554,13 @@ ahbxptattach(struct ahb_softc *ahb)
 	 * Construct our SIM entry
 	 */
 	ahb->sim = cam_sim_alloc(ahbaction, ahbpoll, "ahb", ahb, ahb->unit,
-				 2, ahb->num_ecbs, devq);
+				 &Giant, 2, ahb->num_ecbs, devq);
 	if (ahb->sim == NULL) {
 		cam_simq_free(devq);
 		return (ENOMEM);
 	}
 
-	if (xpt_bus_register(ahb->sim, 0) != CAM_SUCCESS) {
+	if (xpt_bus_register(ahb->sim, ahb->dev, 0) != CAM_SUCCESS) {
 		cam_sim_free(ahb->sim, /*free_devq*/TRUE);
 		return (ENXIO);
 	}
@@ -728,12 +732,17 @@ ahbprocesserror(struct ahb_softc *ahb, struct ecb *ecb, union ccb *ccb)
 	case HS_TAG_MSG_REJECTED:
 	{
 		struct ccb_trans_settings neg; 
+		struct ccb_trans_settings_scsi *scsi = &neg.proto_specific.scsi;
 
 		xpt_print_path(ccb->ccb_h.path);
 		printf("refuses tagged commands.  Performing "
 		       "non-tagged I/O\n");
-		neg.flags = 0;
-		neg.valid = CCB_TRANS_TQ_VALID;
+		memset(&neg, 0, sizeof (neg));
+		neg.protocol = PROTO_SCSI;
+		neg.protocol_version = SCSI_REV_2;
+		neg.transport = XPORT_SPI;
+		neg.transport_version = 2;
+		scsi->flags = CTS_SCSI_VALID_TQ;
 		xpt_setup_ccb(&neg.ccb_h, ccb->ccb_h.path, /*priority*/1); 
 		xpt_async(AC_TRANSFER_NEG, ccb->ccb_h.path, &neg);
 		ahb->tags_permitted &= ~(0x01 << ccb->ccb_h.target_id);
@@ -1128,28 +1137,36 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 	case XPT_GET_TRAN_SETTINGS:
 	/* Get default/user set transfer settings for the target */
 	{
-		struct	ccb_trans_settings *cts;
-		u_int	target_mask;
+		struct	ccb_trans_settings *cts = &ccb->cts;
+		u_int	target_mask = 0x01 << ccb->ccb_h.target_id;
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
 
-		cts = &ccb->cts;
-		target_mask = 0x01 << ccb->ccb_h.target_id;
-		if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0) {
-			cts->flags = 0;
+		if (cts->type == CTS_TYPE_USER_SETTINGS) {
+			cts->protocol = PROTO_SCSI;
+			cts->protocol_version = SCSI_REV_2;
+			cts->transport = XPORT_SPI;
+			cts->transport_version = 2;
+
+			scsi->flags &= ~CTS_SCSI_FLAGS_TAG_ENB;
+			spi->flags &= ~CTS_SPI_FLAGS_DISC_ENB;
 			if ((ahb->disc_permitted & target_mask) != 0)
-				cts->flags |= CCB_TRANS_DISC_ENB;
+				spi->flags |= CTS_SPI_FLAGS_DISC_ENB;
 			if ((ahb->tags_permitted & target_mask) != 0)
-				cts->flags |= CCB_TRANS_TAG_ENB;
-			cts->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
-			cts->sync_period = 25; /* 10MHz */
+				scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
+			spi->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+			spi->sync_period = 25; /* 10MHz */
 
-			if (cts->sync_period != 0)
-				cts->sync_offset = 15;
+			if (spi->sync_period != 0)
+				spi->sync_offset = 15;
 
-			cts->valid = CCB_TRANS_SYNC_RATE_VALID
-				   | CCB_TRANS_SYNC_OFFSET_VALID
-				   | CCB_TRANS_BUS_WIDTH_VALID
-				   | CCB_TRANS_DISC_VALID
-				   | CCB_TRANS_TQ_VALID;
+			spi->valid = CTS_SPI_VALID_SYNC_RATE
+				   | CTS_SPI_VALID_SYNC_OFFSET
+				   | CTS_SPI_VALID_BUS_WIDTH
+				   | CTS_SPI_VALID_DISC;
+			scsi->valid = CTS_SCSI_VALID_TQ;
 			ccb->ccb_h.status = CAM_REQ_CMP;
 		} else {
 			ccb->ccb_h.status = CAM_FUNC_NOTAVAIL;
@@ -1215,6 +1232,10 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
+                cpi->transport = XPORT_SPI;
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -1349,3 +1370,5 @@ static driver_t ahb_eisa_driver = {
 static devclass_t ahb_devclass;
 
 DRIVER_MODULE(ahb, eisa, ahb_eisa_driver, ahb_devclass, 0, 0);
+MODULE_DEPEND(ahb, eisa, 1, 1, 1);
+MODULE_DEPEND(ahb, cam, 1, 1, 1);

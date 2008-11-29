@@ -26,8 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd.c,v 1.47.2.1 2006/05/26 00:56:14 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd.c,v 1.52 2006/10/25 13:35:42 ru Exp $");
 
+#include "opt_compat.h"
 #include "opt_kbd.h"
 #include "opt_atkbd.h"
 
@@ -181,9 +182,6 @@ atkbd_timeout(void *arg)
 
 typedef struct atkbd_state {
 	KBDC		kbdc;		/* keyboard controller */
-					/* XXX: don't move this field; pcvt
-					 * expects `kbdc' to be the first
-					 * field in this structure. */
 	int		ks_mode;	/* input mode (K_XLATE,K_RAW,K_CODE) */
 	int		ks_flags;	/* flags */
 #define COMPOSE		(1 << 0)
@@ -482,6 +480,22 @@ atkbd_intr(keyboard_t *kbd, void *arg)
 	int delay[2];
 	int c;
 
+	if (!KBD_HAS_DEVICE(kbd)) {
+		/*
+		 * The keyboard was not detected before;
+		 * it must have been reconnected!
+		 */
+		state = (atkbd_state_t *)kbd->kb_data;
+		init_keyboard(state->kbdc, &kbd->kb_type,
+			      kbd->kb_config);
+		KBD_FOUND_DEVICE(kbd);
+		atkbd_ioctl(kbd, KDSETLED, (caddr_t)&state->ks_state);
+		get_typematic(kbd);
+		delay[0] = kbd->kb_delay1;
+		delay[1] = kbd->kb_delay2;
+		atkbd_ioctl(kbd, KDSETREPEAT, (caddr_t)delay);
+	}
+
 	if (KBD_IS_ACTIVE(kbd) && KBD_IS_BUSY(kbd)) {
 		/* let the callback function to process the input */
 		(*kbd->kb_callback.kc_func)(kbd, KBDIO_KEYINPUT,
@@ -491,22 +505,6 @@ atkbd_intr(keyboard_t *kbd, void *arg)
 		do {
 			c = atkbd_read_char(kbd, FALSE);
 		} while (c != NOKEY);
-
-		if (!KBD_HAS_DEVICE(kbd)) {
-			/*
-			 * The keyboard was not detected before;
-			 * it must have been reconnected!
-			 */
-			state = (atkbd_state_t *)kbd->kb_data;
-			init_keyboard(state->kbdc, &kbd->kb_type,
-				      kbd->kb_config);
-			atkbd_ioctl(kbd, KDSETLED, (caddr_t)&state->ks_state);
-			get_typematic(kbd);
-			delay[0] = kbd->kb_delay1;
-			delay[1] = kbd->kb_delay2;
-			atkbd_ioctl(kbd, KDSETREPEAT, (caddr_t)delay);
-			KBD_FOUND_DEVICE(kbd);
-		}
 	}
 	return 0;
 }
@@ -854,6 +852,10 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	int error;
 	int s;
 	int i;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	int ival;
+#endif
 
 	s = spltty();
 	switch (cmd) {
@@ -861,6 +863,13 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case KDGKBMODE:		/* get keyboard mode */
 		*(int *)arg = state->ks_mode;
 		break;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('K', 7):
+		ival = IOCPARM_IVAL(arg);
+		arg = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case KDSKBMODE:		/* set keyboard mode */
 		switch (*(int *)arg) {
 		case K_XLATE:
@@ -886,6 +895,13 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case KDGETLED:		/* get keyboard LED */
 		*(int *)arg = KBD_LED_VAL(kbd);
 		break;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('K', 66):
+		ival = IOCPARM_IVAL(arg);
+		arg = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case KDSETLED:		/* set keyboard LED */
 		/* NOTE: lock key state in ks_state won't be changed */
 		if (*(int *)arg & ~LOCK_MASK) {
@@ -915,6 +931,13 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 	case KDGKBSTATE:	/* get lock key state */
 		*(int *)arg = state->ks_state & LOCK_MASK;
 		break;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('K', 20):
+		ival = IOCPARM_IVAL(arg);
+		arg = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case KDSKBSTATE:	/* set lock key state */
 		if (*(int *)arg & ~LOCK_MASK) {
 			splx(s);
@@ -938,6 +961,13 @@ atkbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t arg)
 		}
 		return error;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('K', 67):
+		ival = IOCPARM_IVAL(arg);
+		arg = (caddr_t)&ival;
+		/* FALLTHROUGH */
+#endif
 	case KDSETRAD:		/* set keyboard repeat rate (old interface) */
 		splx(s);
 		if (!KBD_HAS_DEVICE(kbd))
@@ -1330,7 +1360,7 @@ init_keyboard(KBDC kbdc, int *type, int flags)
 		}
 	}
 
-#if defined(__alpha__) || defined(__sparc64__)
+#if defined(__sparc64__)
 	if (send_kbd_command_and_data(
 		kbdc, KBDC_SET_SCANCODE_SET, 2) != KBD_ACK) {
 		printf("atkbd: can't set translation.\n");

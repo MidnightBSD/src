@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/psm.c,v 1.86.2.2 2006/04/21 09:40:25 takawata Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/atkbdc/psm.c,v 1.93 2007/06/17 04:32:18 mjacob Exp $");
 
 #include "opt_isa.h"
 #include "opt_psm.h"
@@ -361,7 +361,7 @@ static struct {
       0x08, MOUSE_PS2INTELLI_PACKETSIZE, enable_msintelli, },
     { MOUSE_MODEL_GLIDEPOINT,		/* ALPS GlidePoint */
       0xc0, MOUSE_PS2_PACKETSIZE, enable_aglide, },
-    { MOUSE_MODEL_THINK,		/* Kensignton ThinkingMouse */
+    { MOUSE_MODEL_THINK,		/* Kensington ThinkingMouse */
       0x80, MOUSE_PS2_PACKETSIZE, enable_kmouse, },
     { MOUSE_MODEL_VERSAPAD,		/* Interlink electronics VersaPad */
       0xe8, MOUSE_PS2VERSA_PACKETSIZE, enable_versapad, },
@@ -1251,6 +1251,16 @@ psmprobe(device_t dev)
         endprobe(ENXIO);
     }
 
+    /*
+     * Synaptics TouchPad seems to go back to Relative Mode after
+     * the previous set_controller_command_byte() call; by issueing
+     * a Read Mode Byte command, the touchpad is in Absolute Mode
+     * again.
+     */
+    if (sc->hw.model == MOUSE_MODEL_SYNAPTICS) {
+        mouse_ext_command(sc->kbdc, 1);
+    }
+
     /* done */
     kbdc_set_device_mask(sc->kbdc, mask | KBD_AUX_CONTROL_BITS);
     kbdc_lock(sc->kbdc, FALSE);
@@ -1275,7 +1285,7 @@ psmattach(device_t dev)
 				      RF_SHAREABLE | RF_ACTIVE);
     if (sc->intr == NULL)
 	return (ENXIO);
-    error = bus_setup_intr(dev, sc->intr, INTR_TYPE_TTY, psmintr, sc, &sc->ih);
+    error = bus_setup_intr(dev, sc->intr, INTR_TYPE_TTY, NULL, psmintr, sc, &sc->ih);
     if (error) {
 	bus_release_resource(dev, SYS_RES_IRQ, rid, sc->intr);
 	return (error);
@@ -1805,6 +1815,8 @@ psmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td
 	     */
 	    if (((old_mousemode_t *)addr)->resolution > 0)
 	        mode.resolution = -((old_mousemode_t *)addr)->resolution - 1;
+	    else
+	        mode.resolution = 0;
 	    mode.accelfactor = ((old_mousemode_t *)addr)->accelfactor;
 	    mode.level = -1;
 	} else {
@@ -2885,7 +2897,7 @@ mouse_ext_command(KBDC kbdc, int command)
     return TRUE;
 }
 
-#if notyet
+#ifdef notyet
 /* Logitech MouseMan Cordless II */
 static int
 enable_lcordless(struct psm_softc *sc)

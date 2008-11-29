@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd_atkbdc.c,v 1.19 2005/06/10 20:56:37 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/atkbdc/atkbd_atkbdc.c,v 1.20 2007/02/23 12:18:33 piso Exp $");
 
 #include "opt_kbd.h"
 
@@ -136,7 +136,7 @@ atkbdattach(device_t dev)
 					  RF_SHAREABLE | RF_ACTIVE);
 	if (sc->intr == NULL)
 		return ENXIO;
-	error = bus_setup_intr(dev, sc->intr, INTR_TYPE_TTY, atkbdintr,
+	error = bus_setup_intr(dev, sc->intr, INTR_TYPE_TTY, NULL, atkbdintr,
 			       kbd, &sc->ih);
 	if (error)
 		bus_release_resource(dev, SYS_RES_IRQ, rid, sc->intr);
