@@ -23,11 +23,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/uart/uart_cpu.h,v 1.8 2005/01/06 01:43:26 imp Exp $
+ * $FreeBSD: src/sys/dev/uart/uart_cpu.h,v 1.12 2007/04/02 22:00:22 marcel Exp $
  */
 
 #ifndef _DEV_UART_CPU_H_
 #define _DEV_UART_CPU_H_
+
+#include <sys/kdb.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 
 /*
  * Low-level operations for use by console and/or debug port support.
@@ -37,14 +41,9 @@ struct uart_ops {
 	void (*init)(struct uart_bas *, int, int, int, int);
 	void (*term)(struct uart_bas *);
 	void (*putc)(struct uart_bas *, int);
-	int (*poll)(struct uart_bas *);
-	int (*getc)(struct uart_bas *);
+	int (*rxready)(struct uart_bas *);
+	int (*getc)(struct uart_bas *, struct mtx *);
 };
-
-extern struct uart_ops uart_i8251_ops;
-extern struct uart_ops uart_ns8250_ops;
-extern struct uart_ops uart_sab82532_ops;
-extern struct uart_ops uart_z8530_ops;
 
 extern bus_space_tag_t uart_bus_space_io;
 extern bus_space_tag_t uart_bus_space_mem;
@@ -55,7 +54,7 @@ extern bus_space_tag_t uart_bus_space_mem;
 struct uart_softc;
 struct uart_devinfo {
 	SLIST_ENTRY(uart_devinfo) next;
-	struct uart_ops ops;
+	struct uart_ops *ops;
 	struct uart_bas bas;
 	int	baudrate;
 	int	databits;
@@ -68,11 +67,16 @@ struct uart_devinfo {
 	int	(*attach)(struct uart_softc*);
 	int	(*detach)(struct uart_softc*);
 	void	*cookie;		/* Type dependent use. */
+	struct mtx *hwmtx;
 };
 
 int uart_cpu_eqres(struct uart_bas *, struct uart_bas *);
 int uart_cpu_getdev(int, struct uart_devinfo *);
-int uart_getenv(int, struct uart_devinfo *);
+
+int uart_getenv(int, struct uart_devinfo *, struct uart_class *);
+const char *uart_getname(struct uart_class *);
+struct uart_ops *uart_getops(struct uart_class *);
+int uart_getrange(struct uart_class *);
 
 void uart_add_sysdev(struct uart_devinfo *);
 
@@ -80,41 +84,87 @@ void uart_add_sysdev(struct uart_devinfo *);
  * Operations for low-level access to the UART. Primarily for use
  * by console and debug port logic.
  */
+
+static __inline void
+uart_lock(struct mtx *hwmtx)
+{
+	if (!kdb_active && hwmtx != NULL)
+		mtx_lock_spin(hwmtx);
+}
+
+static __inline void
+uart_unlock(struct mtx *hwmtx)
+{
+	if (!kdb_active && hwmtx != NULL)
+		mtx_unlock_spin(hwmtx);
+}
+
 static __inline int
 uart_probe(struct uart_devinfo *di)
 {
-	return (di->ops.probe(&di->bas));
+	int res;
+
+	uart_lock(di->hwmtx);
+	res = di->ops->probe(&di->bas);
+	uart_unlock(di->hwmtx);
+	return (res);
 }
 
 static __inline void
 uart_init(struct uart_devinfo *di)
 {
-	di->ops.init(&di->bas, di->baudrate, di->databits, di->stopbits,
+	uart_lock(di->hwmtx);
+	di->ops->init(&di->bas, di->baudrate, di->databits, di->stopbits,
 	    di->parity);
+	uart_unlock(di->hwmtx);
 }
 
 static __inline void
 uart_term(struct uart_devinfo *di)
 {
-	di->ops.term(&di->bas);
+	uart_lock(di->hwmtx);
+	di->ops->term(&di->bas);
+	uart_unlock(di->hwmtx);
 }
 
 static __inline void
 uart_putc(struct uart_devinfo *di, int c)
 {
-	di->ops.putc(&di->bas, c);
+	uart_lock(di->hwmtx);
+	di->ops->putc(&di->bas, c);
+	uart_unlock(di->hwmtx);
+}
+
+static __inline int
+uart_rxready(struct uart_devinfo *di)
+{
+	int res;
+
+	uart_lock(di->hwmtx);
+	res = di->ops->rxready(&di->bas);
+	uart_unlock(di->hwmtx);
+	return (res);
 }
 
 static __inline int
 uart_poll(struct uart_devinfo *di)
 {
-	return (di->ops.poll(&di->bas));
+	int res;
+
+	uart_lock(di->hwmtx);
+	if (di->ops->rxready(&di->bas))
+		res = di->ops->getc(&di->bas, NULL);
+	else
+		res = -1;
+	uart_unlock(di->hwmtx);
+	return (res);
 }
 
 static __inline int
 uart_getc(struct uart_devinfo *di)
 {
-	return (di->ops.getc(&di->bas));
+
+	return (di->ops->getc(&di->bas, di->hwmtx));
 }
 
 #endif /* _DEV_UART_CPU_H_ */

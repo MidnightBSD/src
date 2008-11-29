@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_ebus.c,v 1.6.2.5 2006/02/15 09:16:01 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_ebus.c,v 1.12 2006/04/02 21:58:09 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -98,10 +98,6 @@ uart_ebus_probe(device_t dev)
 		}
 		sc->sc_class = &uart_ns8250_class;
 		return (uart_bus_probe(dev, 0, 0, 0, 0));
-	}
-	if (!strcmp(nm, "se") || !strcmp(cmpt, "sab82532")) {
-		sc->sc_class = &uart_sab82532_class;
-		return (uart_bus_probe(dev, 0, 0, 0, 1));
 	}
 
 	return (ENXIO);

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/uart/uart_bus.h,v 1.9 2005/01/06 01:43:26 imp Exp $
+ * $FreeBSD: src/sys/dev/uart/uart_bus.h,v 1.15 2007/04/02 22:00:22 marcel Exp $
  */
 
 #ifndef _DEV_UART_BUS_H_
@@ -42,31 +42,11 @@
 #define	UART_FLUSH_RECEIVER	UART_DRAIN_RECEIVER
 #define	UART_FLUSH_TRANSMITTER	UART_DRAIN_TRANSMITTER
 
-/*
- * Interrupt sources (in priority order). See also uart_core.c
- * Note that the low order 16 bits are used to pass modem signals
- * from the hardware interrupt handler to the software interrupt
- * handler.
- */
-#define	UART_IPEND_OVERRUN	0x010000
-#define	UART_IPEND_BREAK	0x020000
-#define	UART_IPEND_RXREADY	0x040000
-#define	UART_IPEND_SIGCHG	0x080000
-#define	UART_IPEND_TXIDLE	0x100000
-
-#define	UART_IPEND_MASK		0x1f0000
-#define	UART_IPEND_SIGMASK	0x00ffff
-
 /* Received character status bits. */
 #define	UART_STAT_BREAK		0x0100
 #define	UART_STAT_FRAMERR	0x0200
 #define	UART_STAT_OVERRUN	0x0400
 #define	UART_STAT_PARERR	0x0800
-
-#define	UART_SIGMASK_DTE	(SER_DTR | SER_RTS)
-#define	UART_SIGMASK_DCE	(SER_DSR | SER_CTS | SER_DCD | SER_RI)
-#define	UART_SIGMASK_STATE	(UART_SIGMASK_DTE | UART_SIGMASK_DCE)
-#define	UART_SIGMASK_DELTA	(UART_SIGMASK_STATE << 8)
 
 #ifdef UART_PPS_ON_CTS
 #define	UART_SIG_DPPS		SER_DCTS
@@ -87,13 +67,10 @@
  */
 struct uart_class {
 	KOBJ_CLASS_FIELDS;
+	struct uart_ops *uc_ops;	/* Low-level console operations. */
 	u_int	uc_range;		/* Bus space address range. */
 	u_int	uc_rclk;		/* Default rclk for this device. */
 };
-
-extern struct uart_class uart_ns8250_class;
-extern struct uart_class uart_sab82532_class;
-extern struct uart_class uart_z8530_class;
 
 struct uart_softc {
 	KOBJ_FIELDS;
@@ -101,7 +78,8 @@ struct uart_softc {
 	struct uart_bas	sc_bas;
 	device_t	sc_dev;
 
-	struct mtx	sc_hwmtx;	/* Spinlock protecting hardware. */
+	struct mtx	sc_hwmtx_s;	/* Spinlock protecting hardware. */
+	struct mtx	*sc_hwmtx;
 
 	struct resource	*sc_rres;	/* Register resource. */
 	int		sc_rrid;
@@ -112,7 +90,6 @@ struct uart_softc {
 
 	int		sc_callout:1;	/* This UART is opened for callout. */
 	int		sc_fastintr:1;	/* This UART uses fast interrupts. */
-	int		sc_hasfifo:1;	/* This UART has FIFOs. */
 	int		sc_hwiflow:1;	/* This UART has HW input flow ctl. */
 	int		sc_hwoflow:1;	/* This UART has HW output flow ctl. */
 	int		sc_leaving:1;	/* This UART is going away. */
@@ -159,7 +136,10 @@ extern char uart_driver_name[];
 
 int uart_bus_attach(device_t dev);
 int uart_bus_detach(device_t dev);
+serdev_intr_t *uart_bus_ihand(device_t dev, int ipend);
+int uart_bus_ipend(device_t dev);
 int uart_bus_probe(device_t dev, int regshft, int rclk, int rid, int chan);
+int uart_bus_sysdev(device_t dev);
 
 int uart_tty_attach(struct uart_softc *);
 int uart_tty_detach(struct uart_softc *);

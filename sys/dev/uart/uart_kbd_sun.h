@@ -32,7 +32,7 @@
  * Agency (DARPA) and Air Force Research Laboratory, Air Force
  * Materiel Command, USAF, under agreement number F30602-01-2-0537.
  *
- * $FreeBSD: src/sys/dev/uart/uart_kbd_sun.h,v 1.2 2005/01/06 01:43:26 imp Exp $
+ * $FreeBSD: src/sys/dev/uart/uart_kbd_sun.h,v 1.3 2006/11/02 00:01:15 marius Exp $
  */
 
 /* keyboard commands (host->kbd) */
@@ -63,3 +63,6 @@
 #define	KB_SUN2		2		/* type 2 keyboard */
 #define	KB_SUN3		3		/* type 3 keyboard */
 #define	KB_SUN4		4		/* type 4/5/6 keyboard */
+
+#define	SKBD_KEY_RELEASE	0x80
+#define	SKBD_KEY_CHAR(c)	((c) & 0x7f)

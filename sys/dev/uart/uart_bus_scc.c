@@ -1,10 +1,11 @@
 /*-
- * Copyright (c) 2001 M. Warner Losh.  All rights reserved.
- * Copyright (c) 2003 Norikatsu Shigemura, Takenori Watanabe All rights reserved.
+ * Copyright (c) 2004-2006 Marcel Moolenaar
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -24,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_pccard.c,v 1.11 2005/10/28 06:27:53 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_scc.c,v 1.1 2006/03/30 18:33:22 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -32,69 +33,83 @@ __FBSDID("$FreeBSD: src/sys/dev/uart/uart_bus_pccard.c,v 1.11 2005/10/28 06:27:5
 #include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+
 #include <machine/bus.h>
+#include <sys/rman.h>
 #include <machine/resource.h>
 
-#include <dev/pccard/pccard_cis.h>
-#include <dev/pccard/pccardvar.h>
+#include <dev/scc/scc_bus.h>
 
 #include <dev/uart/uart.h>
 #include <dev/uart/uart_bus.h>
 
-#include "pccarddevs.h"
+static int uart_scc_attach(device_t dev);
+static int uart_scc_probe(device_t dev);
 
-static	int	uart_pccard_probe(device_t dev);
-static	int	uart_pccard_attach(device_t dev);
-
-static device_method_t uart_pccard_methods[] = {
+static device_method_t uart_scc_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		uart_pccard_probe),
-	DEVMETHOD(device_attach,	uart_pccard_attach),
+	DEVMETHOD(device_probe,		uart_scc_probe),
+	DEVMETHOD(device_attach,	uart_scc_attach),
 	DEVMETHOD(device_detach,	uart_bus_detach),
-
+	/* Serdev interface */
+	DEVMETHOD(serdev_ihand,		uart_bus_ihand),
+	DEVMETHOD(serdev_sysdev,	uart_bus_sysdev),
 	{ 0, 0 }
 };
 
-static driver_t uart_pccard_driver = {
+static driver_t uart_scc_driver = {
 	uart_driver_name,
-	uart_pccard_methods,
+	uart_scc_methods,
 	sizeof(struct uart_softc),
 };
 
 static int
-uart_pccard_probe(device_t dev)
+uart_scc_attach(device_t dev)
 {
-	int error;
-	uint32_t fcn;
-
-	fcn = PCCARD_FUNCTION_UNSPEC;
-	error = pccard_get_function(dev, &fcn);
-	if (error != 0)
-		return (error);
-	/*
-	 * If a serial card, we are likely the right driver.  However,
-	 * some serial cards are better serviced by other drivers, so
-	 * allow other drivers to claim it, if they want.
-	 */
-	if (fcn == PCCARD_FUNCTION_SERIAL)
-		return (BUS_PROBE_GENERIC);
-
-	return (ENXIO);
-}
-
-static int
-uart_pccard_attach(device_t dev)
-{
+	device_t parent;
 	struct uart_softc *sc;
-	int error;
+	uintptr_t mtx;
 
+	parent = device_get_parent(dev);
 	sc = device_get_softc(dev);
-	sc->sc_class = &uart_ns8250_class;
 
-	error = uart_bus_probe(dev, 0, 0, 0, 0);
-	if (error > 0)
-		return (error);
+	if (BUS_READ_IVAR(parent, dev, SCC_IVAR_HWMTX, &mtx))
+		return (ENXIO);
+	sc->sc_hwmtx = (struct mtx *)(void *)mtx;
 	return (uart_bus_attach(dev));
 }
 
-DRIVER_MODULE(uart, pccard, uart_pccard_driver, uart_devclass, 0, 0);
+static int
+uart_scc_probe(device_t dev)
+{
+	device_t parent;
+	struct uart_softc *sc;
+	uintptr_t ch, cl, md, rs;
+
+	parent = device_get_parent(dev);
+	sc = device_get_softc(dev);
+
+	if (BUS_READ_IVAR(parent, dev, SCC_IVAR_MODE, &md) ||
+	    BUS_READ_IVAR(parent, dev, SCC_IVAR_CLASS, &cl))
+		return (ENXIO);
+	if (md != SCC_MODE_ASYNC)
+		return (ENXIO);
+	switch (cl) {
+	case SCC_CLASS_SAB82532:
+		sc->sc_class = &uart_sab82532_class;
+		break;
+	case SCC_CLASS_Z8530:
+		sc->sc_class = &uart_z8530_class;
+		break;
+	default:
+		return (ENXIO);
+	}
+	if (BUS_READ_IVAR(parent, dev, SCC_IVAR_CHANNEL, &ch) ||
+	    BUS_READ_IVAR(parent, dev, SCC_IVAR_CLOCK, &cl) ||
+	    BUS_READ_IVAR(parent, dev, SCC_IVAR_REGSHFT, &rs))
+		return (ENXIO);
+
+	return (uart_bus_probe(dev, rs, cl, 0, ch));
+}
+
+DRIVER_MODULE(uart, scc, uart_scc_driver, uart_devclass, 0, 0);

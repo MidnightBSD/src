@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/uart/uart.h,v 1.4 2005/01/06 01:43:26 imp Exp $
+ * $FreeBSD: src/sys/dev/uart/uart.h,v 1.6 2007/04/02 22:00:22 marcel Exp $
  */
 
 #ifndef _DEV_UART_H_
@@ -50,12 +50,6 @@ struct uart_bas {
 #define	uart_setreg(bas, reg, value)	\
 	bus_space_write_1((bas)->bst, (bas)->bsh, uart_regofs(bas, reg), value)
 
-/* 16-bit I/O (e.g. to divisor latch) */
-#define	uart_getdreg(bas, reg)		\
-	bus_space_read_2((bas)->bst, (bas)->bsh, uart_regofs(bas, reg))
-#define	uart_setdreg(bas, reg, value)	\
-	bus_space_write_2((bas)->bst, (bas)->bsh, uart_regofs(bas, reg), value)
-
 /*
  * XXX we don't know the length of the bus space address range in use by
  * the UART. Since barriers don't use the length field currently, we put
@@ -64,6 +58,15 @@ struct uart_bas {
 #define uart_barrier(bas)		\
 	bus_space_barrier((bas)->bst, (bas)->bsh, 0, 0,		\
 	    BUS_SPACE_BARRIER_READ|BUS_SPACE_BARRIER_WRITE)
+
+/*
+ * UART device classes.
+ */
+struct uart_class;
+
+extern struct uart_class uart_ns8250_class __attribute__((weak));
+extern struct uart_class uart_sab82532_class __attribute__((weak));
+extern struct uart_class uart_z8530_class __attribute__((weak));
 
 /*
  * Device flags.

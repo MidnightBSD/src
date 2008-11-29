@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_dev_ns8250.c,v 1.14 2005/01/06 01:43:26 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_dev_ns8250.c,v 1.27 2007/04/03 01:21:10 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,13 +75,15 @@ ns8250_delay(struct uart_bas *bas)
 	lcr = uart_getreg(bas, REG_LCR);
 	uart_setreg(bas, REG_LCR, lcr | LCR_DLAB);
 	uart_barrier(bas);
-	divisor = uart_getdreg(bas, REG_DL);
+	divisor = uart_getreg(bas, REG_DLL) | (uart_getreg(bas, REG_DLH) << 8);
 	uart_barrier(bas);
 	uart_setreg(bas, REG_LCR, lcr);
 	uart_barrier(bas);
 
 	/* 1/10th the time to transmit 1 character (estimate). */
-	return (16000000 * divisor / bas->rclk);
+	if (divisor <= 134)
+		return (16000000 * divisor / bas->rclk);
+	return (16000 * divisor / (bas->rclk / 1000));
 }
 
 static int
@@ -194,12 +196,13 @@ ns8250_param(struct uart_bas *bas, int baudrate, int databits, int stopbits,
 
 	/* Set baudrate. */
 	if (baudrate > 0) {
-		uart_setreg(bas, REG_LCR, lcr | LCR_DLAB);
-		uart_barrier(bas);
 		divisor = ns8250_divisor(bas->rclk, baudrate);
 		if (divisor == 0)
 			return (EINVAL);
-		uart_setdreg(bas, REG_DL, divisor);
+		uart_setreg(bas, REG_LCR, lcr | LCR_DLAB);
+		uart_barrier(bas);
+		uart_setreg(bas, REG_DLL, divisor & 0xff);
+		uart_setreg(bas, REG_DLH, (divisor >> 8) & 0xff);
 		uart_barrier(bas);
 	}
 
@@ -216,22 +219,22 @@ static int ns8250_probe(struct uart_bas *bas);
 static void ns8250_init(struct uart_bas *bas, int, int, int, int);
 static void ns8250_term(struct uart_bas *bas);
 static void ns8250_putc(struct uart_bas *bas, int);
-static int ns8250_poll(struct uart_bas *bas);
-static int ns8250_getc(struct uart_bas *bas);
+static int ns8250_rxready(struct uart_bas *bas);
+static int ns8250_getc(struct uart_bas *bas, struct mtx *);
 
-struct uart_ops uart_ns8250_ops = {
+static struct uart_ops uart_ns8250_ops = {
 	.probe = ns8250_probe,
 	.init = ns8250_init,
 	.term = ns8250_term,
 	.putc = ns8250_putc,
-	.poll = ns8250_poll,
+	.rxready = ns8250_rxready,
 	.getc = ns8250_getc,
 };
 
 static int
 ns8250_probe(struct uart_bas *bas)
 {
-	u_char lcr, val;
+	u_char val;
 
 	/* Check known 0 bits that don't depend on DLAB. */
 	val = uart_getreg(bas, REG_IIR);
@@ -241,36 +244,22 @@ ns8250_probe(struct uart_bas *bas)
 	if (val & 0xe0)
 		return (ENXIO);
 
-	lcr = uart_getreg(bas, REG_LCR);
-	uart_setreg(bas, REG_LCR, lcr & ~LCR_DLAB);
-	uart_barrier(bas);
-
-	/* Check known 0 bits that depend on !DLAB. */
-	val = uart_getreg(bas, REG_IER);
-	if (val & 0xf0)
-		goto fail;
-
-	uart_setreg(bas, REG_LCR, lcr);
-	uart_barrier(bas);
 	return (0);
-
- fail:
-	uart_setreg(bas, REG_LCR, lcr);
-	uart_barrier(bas);
-	return (ENXIO);
 }
 
 static void
 ns8250_init(struct uart_bas *bas, int baudrate, int databits, int stopbits,
     int parity)
 {
+	u_char	ier;
 
 	if (bas->rclk == 0)
 		bas->rclk = DEFAULT_RCLK;
 	ns8250_param(bas, baudrate, databits, stopbits, parity);
 
 	/* Disable all interrupt sources. */
-	uart_setreg(bas, REG_IER, 0);
+	ier = uart_getreg(bas, REG_IER) & 0xf0;
+	uart_setreg(bas, REG_IER, ier);
 	uart_barrier(bas);
 
 	/* Disable the FIFO (if present). */
@@ -296,41 +285,43 @@ ns8250_term(struct uart_bas *bas)
 static void
 ns8250_putc(struct uart_bas *bas, int c)
 {
-	int delay, limit;
+	int limit;
 
-	/* 1/10th the time to transmit 1 character (estimate). */
-	delay = ns8250_delay(bas);
-
-	limit = 20;
+	limit = 250000;
 	while ((uart_getreg(bas, REG_LSR) & LSR_THRE) == 0 && --limit)
-		DELAY(delay);
+		DELAY(4);
 	uart_setreg(bas, REG_DATA, c);
 	uart_barrier(bas);
-	limit = 40;
+	limit = 250000;
 	while ((uart_getreg(bas, REG_LSR) & LSR_TEMT) == 0 && --limit)
-		DELAY(delay);
+		DELAY(4);
 }
 
 static int
-ns8250_poll(struct uart_bas *bas)
+ns8250_rxready(struct uart_bas *bas)
 {
 
-	if (uart_getreg(bas, REG_LSR) & LSR_RXRDY)
-		return (uart_getreg(bas, REG_DATA));
-	return (-1);
+	return ((uart_getreg(bas, REG_LSR) & LSR_RXRDY) != 0 ? 1 : 0);
 }
 
 static int
-ns8250_getc(struct uart_bas *bas)
+ns8250_getc(struct uart_bas *bas, struct mtx *hwmtx)
 {
-	int delay;
+	int c;
 
-	/* 1/10th the time to transmit 1 character (estimate). */
-	delay = ns8250_delay(bas);
+	uart_lock(hwmtx);
 
-	while ((uart_getreg(bas, REG_LSR) & LSR_RXRDY) == 0)
-		DELAY(delay);
-	return (uart_getreg(bas, REG_DATA));
+	while ((uart_getreg(bas, REG_LSR) & LSR_RXRDY) == 0) {
+		uart_unlock(hwmtx);
+		DELAY(4);
+		uart_lock(hwmtx);
+	}
+
+	c = uart_getreg(bas, REG_DATA);
+
+	uart_unlock(hwmtx);
+
+	return (c);
 }
 
 /*
@@ -371,9 +362,10 @@ static kobj_method_t ns8250_methods[] = {
 };
 
 struct uart_class uart_ns8250_class = {
-	"ns8250 class",
+	"ns8250",
 	ns8250_methods,
 	sizeof(struct ns8250_softc),
+	.uc_ops = &uart_ns8250_ops,
 	.uc_range = 8,
 	.uc_rclk = DEFAULT_RCLK
 };
@@ -406,7 +398,8 @@ ns8250_bus_attach(struct uart_softc *sc)
 	ns8250_bus_getsig(sc);
 
 	ns8250_clrint(bas);
-	ns8250->ier = IER_EMSC | IER_ERLS | IER_ERXRDY;
+	ns8250->ier = uart_getreg(bas, REG_IER) & 0xf0;
+	ns8250->ier |= IER_EMSC | IER_ERLS | IER_ERXRDY;
 	uart_setreg(bas, REG_IER, ns8250->ier);
 	uart_barrier(bas);
 	return (0);
@@ -416,9 +409,11 @@ static int
 ns8250_bus_detach(struct uart_softc *sc)
 {
 	struct uart_bas *bas;
+	u_char ier;
 
 	bas = &sc->sc_bas;
-	uart_setreg(bas, REG_IER, 0);
+	ier = uart_getreg(bas, REG_IER) & 0xf0;
+	uart_setreg(bas, REG_IER, ier);
 	uart_barrier(bas);
 	ns8250_clrint(bas);
 	return (0);
@@ -432,15 +427,15 @@ ns8250_bus_flush(struct uart_softc *sc, int what)
 	int error;
 
 	bas = &sc->sc_bas;
-	mtx_lock_spin(&sc->sc_hwmtx);
-	if (sc->sc_hasfifo) {
+	uart_lock(sc->sc_hwmtx);
+	if (sc->sc_rxfifosz > 1) {
 		ns8250_flush(bas, what);
 		uart_setreg(bas, REG_FCR, ns8250->fcr);
 		uart_barrier(bas);
 		error = 0;
 	} else
 		error = ns8250_drain(bas, what);
-	mtx_unlock_spin(&sc->sc_hwmtx);
+	uart_unlock(sc->sc_hwmtx);
 	return (error);
 }
 
@@ -453,14 +448,14 @@ ns8250_bus_getsig(struct uart_softc *sc)
 	do {
 		old = sc->sc_hwsig;
 		sig = old;
-		mtx_lock_spin(&sc->sc_hwmtx);
+		uart_lock(sc->sc_hwmtx);
 		msr = uart_getreg(&sc->sc_bas, REG_MSR);
-		mtx_unlock_spin(&sc->sc_hwmtx);
+		uart_unlock(sc->sc_hwmtx);
 		SIGCHG(msr & MSR_DSR, sig, SER_DSR, SER_DDSR);
 		SIGCHG(msr & MSR_CTS, sig, SER_CTS, SER_DCTS);
 		SIGCHG(msr & MSR_DCD, sig, SER_DCD, SER_DDCD);
 		SIGCHG(msr & MSR_RI,  sig, SER_RI,  SER_DRI);
-		new = sig & ~UART_SIGMASK_DELTA;
+		new = sig & ~SER_MASK_DELTA;
 	} while (!atomic_cmpset_32(&sc->sc_hwsig, old, new));
 	return (sig);
 }
@@ -474,7 +469,7 @@ ns8250_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 
 	bas = &sc->sc_bas;
 	error = 0;
-	mtx_lock_spin(&sc->sc_hwmtx);
+	uart_lock(sc->sc_hwmtx);
 	switch (request) {
 	case UART_IOCTL_BREAK:
 		lcr = uart_getreg(bas, REG_LCR);
@@ -519,7 +514,8 @@ ns8250_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 		lcr = uart_getreg(bas, REG_LCR);
 		uart_setreg(bas, REG_LCR, lcr | LCR_DLAB);
 		uart_barrier(bas);
-		divisor = uart_getdreg(bas, REG_DL);
+		divisor = uart_getreg(bas, REG_DLL) |
+		    (uart_getreg(bas, REG_DLH) << 8);
 		uart_barrier(bas);
 		uart_setreg(bas, REG_LCR, lcr);
 		uart_barrier(bas);
@@ -533,7 +529,7 @@ ns8250_bus_ioctl(struct uart_softc *sc, int request, intptr_t data)
 		error = EINVAL;
 		break;
 	}
-	mtx_unlock_spin(&sc->sc_hwmtx);
+	uart_unlock(sc->sc_hwmtx);
 	return (error);
 }
 
@@ -545,28 +541,28 @@ ns8250_bus_ipend(struct uart_softc *sc)
 	uint8_t iir, lsr;
 
 	bas = &sc->sc_bas;
-	mtx_lock_spin(&sc->sc_hwmtx);
+	uart_lock(sc->sc_hwmtx);
 	iir = uart_getreg(bas, REG_IIR);
 	if (iir & IIR_NOPEND) {
-		mtx_unlock_spin(&sc->sc_hwmtx);
+		uart_unlock(sc->sc_hwmtx);
 		return (0);
 	}
 	ipend = 0;
 	if (iir & IIR_RXRDY) {
 		lsr = uart_getreg(bas, REG_LSR);
-		mtx_unlock_spin(&sc->sc_hwmtx);
+		uart_unlock(sc->sc_hwmtx);
 		if (lsr & LSR_OE)
-			ipend |= UART_IPEND_OVERRUN;
+			ipend |= SER_INT_OVERRUN;
 		if (lsr & LSR_BI)
-			ipend |= UART_IPEND_BREAK;
+			ipend |= SER_INT_BREAK;
 		if (lsr & LSR_RXRDY)
-			ipend |= UART_IPEND_RXREADY;
+			ipend |= SER_INT_RXREADY;
 	} else {
-		mtx_unlock_spin(&sc->sc_hwmtx);
+		uart_unlock(sc->sc_hwmtx);
 		if (iir & IIR_TXRDY)
-			ipend |= UART_IPEND_TXIDLE;
+			ipend |= SER_INT_TXIDLE;
 		else
-			ipend |= UART_IPEND_SIGCHG;
+			ipend |= SER_INT_SIGCHG;
 	}
 	return ((sc->sc_leaving) ? 0 : ipend);
 }
@@ -579,9 +575,9 @@ ns8250_bus_param(struct uart_softc *sc, int baudrate, int databits,
 	int error;
 
 	bas = &sc->sc_bas;
-	mtx_lock_spin(&sc->sc_hwmtx);
+	uart_lock(sc->sc_hwmtx);
 	error = ns8250_param(bas, baudrate, databits, stopbits, parity);
-	mtx_unlock_spin(&sc->sc_hwmtx);
+	uart_unlock(sc->sc_hwmtx);
 	return (error);
 }
 
@@ -590,7 +586,7 @@ ns8250_bus_probe(struct uart_softc *sc)
 {
 	struct uart_bas *bas;
 	int count, delay, error, limit;
-	uint8_t lsr, mcr;
+	uint8_t lsr, mcr, ier;
 
 	bas = &sc->sc_bas;
 
@@ -601,7 +597,7 @@ ns8250_bus_probe(struct uart_softc *sc)
 	mcr = MCR_IE;
 	if (sc->sc_sysdev == NULL) {
 		/* By using ns8250_init() we also set DTR and RTS. */
-		ns8250_init(bas, 9600, 8, 1, UART_PARITY_NONE);
+		ns8250_init(bas, 115200, 8, 1, UART_PARITY_NONE);
 	} else
 		mcr |= MCR_DTR | MCR_RTS;
 
@@ -625,14 +621,14 @@ ns8250_bus_probe(struct uart_softc *sc)
 	 */
 	uart_setreg(bas, REG_FCR, FCR_ENABLE);
 	uart_barrier(bas);
-	sc->sc_hasfifo = (uart_getreg(bas, REG_IIR) & IIR_FIFO_MASK) ? 1 : 0;
-	if (!sc->sc_hasfifo) {
+	if (!(uart_getreg(bas, REG_IIR) & IIR_FIFO_MASK)) {
 		/*
 		 * NS16450 or INS8250. We don't bother to differentiate
 		 * between them. They're too old to be interesting.
 		 */
 		uart_setreg(bas, REG_MCR, mcr);
 		uart_barrier(bas);
+		sc->sc_rxfifosz = sc->sc_txfifosz = 1;
 		device_set_desc(sc->sc_dev, "8250 or 16450 or compatible");
 		return (0);
 	}
@@ -674,7 +670,8 @@ ns8250_bus_probe(struct uart_softc *sc)
 		    --limit)
 			DELAY(delay);
 		if (limit == 0) {
-			uart_setreg(bas, REG_IER, 0);
+			ier = uart_getreg(bas, REG_IER) & 0xf0;
+			uart_setreg(bas, REG_IER, ier);
 			uart_setreg(bas, REG_MCR, mcr);
 			uart_setreg(bas, REG_FCR, 0);
 			uart_barrier(bas);
@@ -740,7 +737,7 @@ ns8250_bus_receive(struct uart_softc *sc)
 	uint8_t lsr;
 
 	bas = &sc->sc_bas;
-	mtx_lock_spin(&sc->sc_hwmtx);
+	uart_lock(sc->sc_hwmtx);
 	lsr = uart_getreg(bas, REG_LSR);
 	while (lsr & LSR_RXRDY) {
 		if (uart_rx_full(sc)) {
@@ -761,7 +758,7 @@ ns8250_bus_receive(struct uart_softc *sc)
 		uart_barrier(bas);
 		lsr = uart_getreg(bas, REG_LSR);
 	}
-	mtx_unlock_spin(&sc->sc_hwmtx);
+	uart_unlock(sc->sc_hwmtx);
  	return (0);
 }
 
@@ -785,7 +782,7 @@ ns8250_bus_setsig(struct uart_softc *sc, int sig)
 			    SER_DRTS);
 		}
 	} while (!atomic_cmpset_32(&sc->sc_hwsig, old, new));
-	mtx_lock_spin(&sc->sc_hwmtx);
+	uart_lock(sc->sc_hwmtx);
 	ns8250->mcr &= ~(MCR_DTR|MCR_RTS);
 	if (new & SER_DTR)
 		ns8250->mcr |= MCR_DTR;
@@ -793,7 +790,7 @@ ns8250_bus_setsig(struct uart_softc *sc, int sig)
 		ns8250->mcr |= MCR_RTS;
 	uart_setreg(bas, REG_MCR, ns8250->mcr);
 	uart_barrier(bas);
-	mtx_unlock_spin(&sc->sc_hwmtx);
+	uart_unlock(sc->sc_hwmtx);
 	return (0);
 }
 
@@ -805,7 +802,7 @@ ns8250_bus_transmit(struct uart_softc *sc)
 	int i;
 
 	bas = &sc->sc_bas;
-	mtx_lock_spin(&sc->sc_hwmtx);
+	uart_lock(sc->sc_hwmtx);
 	while ((uart_getreg(bas, REG_LSR) & LSR_THRE) == 0)
 		;
 	uart_setreg(bas, REG_IER, ns8250->ier | IER_ETXRDY);
@@ -815,6 +812,6 @@ ns8250_bus_transmit(struct uart_softc *sc)
 		uart_barrier(bas);
 	}
 	sc->sc_txbusy = 1;
-	mtx_unlock_spin(&sc->sc_hwmtx);
+	uart_unlock(sc->sc_hwmtx);
 	return (0);
 }

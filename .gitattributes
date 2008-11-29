@@ -26932,6 +26932,7 @@ sys/dev/uart/uart_bus_isa.c -text
 sys/dev/uart/uart_bus_pccard.c -text
 sys/dev/uart/uart_bus_pci.c -text
 sys/dev/uart/uart_bus_puc.c -text
+sys/dev/uart/uart_bus_scc.c -text
 sys/dev/uart/uart_core.c -text
 sys/dev/uart/uart_cpu.h -text
 sys/dev/uart/uart_cpu_alpha.c -text
@@ -26939,6 +26940,7 @@ sys/dev/uart/uart_cpu_amd64.c -text
 sys/dev/uart/uart_cpu_i386.c -text
 sys/dev/uart/uart_cpu_ia64.c -text
 sys/dev/uart/uart_cpu_pc98.c -text
+sys/dev/uart/uart_cpu_powerpc.c -text
 sys/dev/uart/uart_cpu_sparc64.c -text
 sys/dev/uart/uart_dbg.c -text
 sys/dev/uart/uart_dev_ns8250.c -text

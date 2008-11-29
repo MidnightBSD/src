@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_cpu_ia64.c,v 1.11 2005/01/06 01:43:26 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_cpu_ia64.c,v 1.13 2007/04/02 22:00:22 marcel Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -59,9 +59,14 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 {
 	struct dig64_hcdp_table *tbl;
 	struct dig64_hcdp_entry *ent;
+	struct uart_class *class;
 	bus_addr_t addr;
 	uint64_t hcdp;
 	unsigned int i;
+
+	class = &uart_ns8250_class;
+	if (class == NULL)
+		return (ENXIO);
 
 	/*
 	 * Use the DIG64 HCDP table if present.
@@ -82,12 +87,12 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 
 			addr = ent->address.addr_high;
 			addr = (addr << 32) + ent->address.addr_low;
-			di->ops = uart_ns8250_ops;
+			di->ops = uart_getops(class);
 			di->bas.chan = 0;
 			di->bas.bst = (ent->address.addr_space == 0)
 			    ? uart_bus_space_mem : uart_bus_space_io;
-			if (bus_space_map(di->bas.bst, addr, 8, 0,
-			    &di->bas.bsh) != 0)
+			if (bus_space_map(di->bas.bst, addr,
+			    uart_getrange(class), 0, &di->bas.bsh) != 0)
 				continue;
 			di->bas.regshft = 0;
 			di->bas.rclk = ent->pclock << 4;
@@ -104,5 +109,5 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 	}
 
 	/* Check the environment. */
-	return (uart_getenv(devtype, di));
+	return (uart_getenv(devtype, di, class));
 }
