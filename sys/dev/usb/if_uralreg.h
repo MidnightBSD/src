@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/usb/if_uralreg.h,v 1.1.2.1 2006/01/29 14:16:36 damien Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_uralreg.h,v 1.6 2007/06/11 03:36:52 sam Exp $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -16,6 +16,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+#define RAL_NOISE_FLOOR		-95
+#define RAL_RSSI_CORR		120
 
 #define RAL_RX_DESC_SIZE	(sizeof (struct ural_rx_desc))
 #define RAL_TX_DESC_SIZE	(sizeof (struct ural_tx_desc))

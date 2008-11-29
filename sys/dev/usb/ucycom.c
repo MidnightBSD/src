@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/ucycom.c,v 1.3 2004/10/12 09:21:03 phk Exp $
+ * $FreeBSD: src/sys/dev/usb/ucycom.c,v 1.6 2007/06/21 14:42:33 imp Exp $
  */
 
 /*
@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ucycom.c,v 1.3 2004/10/12 09:21:03 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ucycom.c,v 1.6 2007/06/21 14:42:33 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -52,7 +52,6 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/ucycom.c,v 1.3 2004/10/12 09:21:03 phk Exp $
 
 #include "usbdevs.h"
 #include <dev/usb/usb.h>
-#include <dev/usb/usb_port.h>
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usbdi_util.h>
 #include <dev/usb/usbhid.h>
@@ -103,9 +102,9 @@ struct ucycom_softc {
 	char			 sc_dying;
 };
 
-static int ucycom_probe(device_t);
-static int ucycom_attach(device_t);
-static int ucycom_detach(device_t);
+static device_probe_t ucycom_probe;
+static device_attach_t ucycom_attach;
+static device_detach_t ucycom_detach;
 static t_open_t ucycom_open;
 static t_close_t ucycom_close;
 static void ucycom_start(struct tty *);
@@ -177,7 +176,6 @@ ucycom_attach(device_t dev)
 	struct ucycom_softc *sc;
 	struct ucycom_device *ud;
 	usb_endpoint_descriptor_t *ued;
-	char *devinfo;
 	void *urd;
 	int error, urdlen;
 
@@ -187,14 +185,6 @@ ucycom_attach(device_t dev)
 	bzero(sc, sizeof *sc);
 	sc->sc_dev = dev;
 	sc->sc_usbdev = uaa->device;
-
-	/* get device description */
-	/* XXX usb_devinfo() has little or no overflow protection */
-	devinfo = malloc(1024, M_USBDEV, M_WAITOK);
-	usbd_devinfo(sc->sc_usbdev, 0, devinfo);
-	device_set_desc_copy(dev, devinfo);
-	device_printf(dev, "%s\n", devinfo);
-	free(devinfo, M_USBDEV);
 
 	/* get chip model */
 	for (ud = ucycom_devices; ud->model != 0; ++ud)
@@ -284,7 +274,7 @@ ucycom_attach(device_t dev)
 	    "output bytes");
 
 	/* create character device node */
-	ttycreate(sc->sc_tty, NULL, 0, 0, "y%r", device_get_unit(sc->sc_dev));
+	ttycreate(sc->sc_tty, 0, "y%r", device_get_unit(sc->sc_dev));
 
 	return (0);
 }

@@ -1,5 +1,5 @@
 /*	$NetBSD: usbdi.h,v 1.64 2004/10/23 13:26:34 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usbdi.h,v 1.59 2005/05/16 06:58:43 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/usbdi.h,v 1.63 2007/06/30 20:18:44 imp Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -162,7 +162,7 @@ void usbd_set_polling(usbd_device_handle, int);
 const char *usbd_errstr(usbd_status);
 
 void usbd_add_dev_event(int, usbd_device_handle);
-void usbd_add_drv_event(int, usbd_device_handle, device_ptr_t);
+void usbd_add_drv_event(int, usbd_device_handle, device_t);
 
 void usbd_devinfo(usbd_device_handle, int, char *);
 const struct usbd_quirks *usbd_get_quirks(usbd_device_handle);
@@ -173,7 +173,8 @@ usbd_status usbd_reload_device_desc(usbd_device_handle);
 
 int usbd_ratecheck(struct timeval *last);
 
-usbd_status usbd_get_string(usbd_device_handle dev, int si, char *buf);
+usbd_status usbd_get_string(usbd_device_handle dev, int si, char *buf,
+    size_t len);
 
 /* An iterator for descriptors. */
 typedef struct {
@@ -193,12 +194,16 @@ struct usb_task {
 	TAILQ_ENTRY(usb_task) next;
 	void (*fun)(void *);
 	void *arg;
-	char onqueue;
+	int queue;
 };
+#define USB_TASKQ_HC		0
+#define USB_TASKQ_DRIVER	1
+#define USB_NUM_TASKQS		2
+#define USB_TASKQ_NAMES		{"usbtask-hc", "usbtask-dr"}
 
-void usb_add_task(usbd_device_handle, struct usb_task *);
+void usb_add_task(usbd_device_handle, struct usb_task *, int queue);
 void usb_rem_task(usbd_device_handle, struct usb_task *);
-#define usb_init_task(t, f, a) ((t)->fun = (f), (t)->arg = (a), (t)->onqueue = 0)
+#define usb_init_task(t, f, a) ((t)->fun = (f), (t)->arg = (a), (t)->queue = -1)
 
 struct usb_devno {
 	u_int16_t ud_vendor;
@@ -228,29 +233,6 @@ struct usb_attach_arg {
 	int			nifaces; /* number of interfaces */
 };
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-/* Match codes. */
-/* First five codes is for a whole device. */
-#define UMATCH_VENDOR_PRODUCT_REV			14
-#define UMATCH_VENDOR_PRODUCT				13
-#define UMATCH_VENDOR_DEVCLASS_DEVPROTO			12
-#define UMATCH_DEVCLASS_DEVSUBCLASS_DEVPROTO		11
-#define UMATCH_DEVCLASS_DEVSUBCLASS			10
-/* Next six codes are for interfaces. */
-#define UMATCH_VENDOR_PRODUCT_REV_CONF_IFACE		 9
-#define UMATCH_VENDOR_PRODUCT_CONF_IFACE		 8
-#define UMATCH_VENDOR_IFACESUBCLASS_IFACEPROTO		 7
-#define UMATCH_VENDOR_IFACESUBCLASS			 6
-#define UMATCH_IFACECLASS_IFACESUBCLASS_IFACEPROTO	 5
-#define UMATCH_IFACECLASS_IFACESUBCLASS			 4
-#define UMATCH_IFACECLASS				 3
-#define UMATCH_IFACECLASS_GENERIC			 2
-/* Generic driver */
-#define UMATCH_GENERIC					 1
-/* No match */
-#define UMATCH_NONE					 0
-
-#elif defined(__FreeBSD__)
 /* FreeBSD needs values less than zero */
 #define UMATCH_VENDOR_PRODUCT_REV			(-10)
 #define UMATCH_VENDOR_PRODUCT				(-20)
@@ -268,12 +250,9 @@ struct usb_attach_arg {
 #define UMATCH_GENERIC					(-140)
 #define UMATCH_NONE					(ENXIO)
 
-#endif
-
 #define USBD_SHOW_DEVICE_CLASS		0x1
 #define USBD_SHOW_INTERFACE_CLASS	0x2
 
-#if defined(__FreeBSD__)
 int usbd_driver_load(module_t mod, int what, void *arg);
 
 static inline int
@@ -289,8 +268,6 @@ usb_get_iface(device_t dev)
 	struct usb_attach_arg *uap = device_get_ivars(dev);
 	return (uap->iface);
 }
-
-#endif
 
 /* XXX Perhaps USB should have its own levels? */
 #ifdef USB_USE_SOFTINTR

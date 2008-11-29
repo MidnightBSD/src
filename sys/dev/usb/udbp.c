@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/udbp.c,v 1.29 2005/01/06 01:43:28 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/udbp.c,v 1.41 2007/07/05 15:25:32 imp Exp $");
 
 /* Driver for arbitrary double bulk pipe devices.
  * The driver assumes that there will be the same driver on the other side.
@@ -79,11 +79,7 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/udbp.c,v 1.29 2005/01/06 01:43:28 imp Exp $"
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/file.h>
-#if __FreeBSD_version >= 500014
 #include <sys/selinfo.h>
-#else
-#include <sys/select.h>
-#endif
 #include <sys/poll.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
@@ -108,8 +104,8 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/udbp.c,v 1.29 2005/01/06 01:43:28 imp Exp $"
 #include <netgraph/netgraph.h>
 
 #ifdef USB_DEBUG
-#define DPRINTF(x)	if (udbpdebug) logprintf x
-#define DPRINTFN(n,x)	if (udbpdebug>(n)) logprintf x
+#define DPRINTF(x)	if (udbpdebug) printf x
+#define DPRINTFN(n,x)	if (udbpdebug>(n)) printf x
 int	udbpdebug = 0;
 SYSCTL_NODE(_hw_usb, OID_AUTO, udbp, CTLFLAG_RW, 0, "USB udbp");
 SYSCTL_INT(_hw_usb_udbp, OID_AUTO, debug, CTLFLAG_RW,
@@ -159,24 +155,24 @@ typedef struct udbp_softc *udbp_p;
 
 
 
-Static ng_constructor_t	ng_udbp_constructor;
-Static ng_rcvmsg_t	ng_udbp_rcvmsg;
-Static ng_shutdown_t	ng_udbp_rmnode;
-Static ng_newhook_t	ng_udbp_newhook;
-Static ng_connect_t	ng_udbp_connect;
-Static ng_rcvdata_t	ng_udbp_rcvdata;
-Static ng_disconnect_t	ng_udbp_disconnect;
+static ng_constructor_t	ng_udbp_constructor;
+static ng_rcvmsg_t	ng_udbp_rcvmsg;
+static ng_shutdown_t	ng_udbp_rmnode;
+static ng_newhook_t	ng_udbp_newhook;
+static ng_connect_t	ng_udbp_connect;
+static ng_rcvdata_t	ng_udbp_rcvdata;
+static ng_disconnect_t	ng_udbp_disconnect;
 
 /* Parse type for struct ngudbpstat */
-Static const struct ng_parse_struct_field
+static const struct ng_parse_struct_field
 	ng_udbp_stat_type_fields[] = NG_UDBP_STATS_TYPE_INFO;
-Static const struct ng_parse_type ng_udbp_stat_type = {
+static const struct ng_parse_type ng_udbp_stat_type = {
 	&ng_parse_struct_type,
 	&ng_udbp_stat_type_fields
 };
 
 /* List of commands and how to convert arguments to/from ASCII */
-Static const struct ng_cmdlist ng_udbp_cmdlist[] = {
+static const struct ng_cmdlist ng_udbp_cmdlist[] = {
 	{
 	  NGM_UDBP_COOKIE,
 	  NGM_UDBP_GET_STATUS,
@@ -195,7 +191,7 @@ Static const struct ng_cmdlist ng_udbp_cmdlist[] = {
 };
 
 /* Netgraph node type descriptor */
-Static struct ng_type ng_udbp_typestruct = {
+static struct ng_type ng_udbp_typestruct = {
 	.version =	NG_ABI_VERSION,
 	.name =		NG_UDBP_NODE_TYPE,
 	.constructor =	ng_udbp_constructor,
@@ -208,21 +204,41 @@ Static struct ng_type ng_udbp_typestruct = {
 	.cmdlist =	ng_udbp_cmdlist,
 };
 
-Static int udbp_setup_in_transfer	(udbp_p sc);
-Static void udbp_in_transfer_cb		(usbd_xfer_handle xfer,
+static int udbp_setup_in_transfer	(udbp_p sc);
+static void udbp_in_transfer_cb		(usbd_xfer_handle xfer,
 					usbd_private_handle priv,
 					usbd_status err);
 
-Static int udbp_setup_out_transfer	(udbp_p sc);
-Static void udbp_out_transfer_cb	(usbd_xfer_handle xfer,
+static int udbp_setup_out_transfer	(udbp_p sc);
+static void udbp_out_transfer_cb	(usbd_xfer_handle xfer,
 					usbd_private_handle priv,
 					usbd_status err);
 
-USB_DECLARE_DRIVER(udbp);
+static device_probe_t udbp_match;
+static device_attach_t udbp_attach;
+static device_detach_t udbp_detach;
 
-USB_MATCH(udbp)
+static device_method_t udbp_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		udbp_match),
+	DEVMETHOD(device_attach,	udbp_attach),
+	DEVMETHOD(device_detach,	udbp_detach),
+
+	{ 0, 0 }
+};
+
+static driver_t udbp_driver = {
+	"udbp",
+	udbp_methods,
+	sizeof(struct udbp_softc)
+};
+
+static devclass_t udbp_devclass;
+
+static int
+udbp_match(device_t self)
 {
-	USB_MATCH_START(udbp, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usb_interface_descriptor_t *id;
 	if (!uaa->iface)
 	  return (UMATCH_NONE);
@@ -238,28 +254,33 @@ USB_MATCH(udbp)
 	 */
 	if ((uaa->vendor == USB_VENDOR_NETCHIP &&
 	     uaa->product == USB_PRODUCT_NETCHIP_TURBOCONNECT))
-		return(UMATCH_VENDOR_PRODUCT);
+		return (UMATCH_VENDOR_PRODUCT);
 
 	if ((uaa->vendor == USB_VENDOR_PROLIFIC &&
 	     (uaa->product == USB_PRODUCT_PROLIFIC_PL2301 ||
 	      uaa->product == USB_PRODUCT_PROLIFIC_PL2302)))
-		return(UMATCH_VENDOR_PRODUCT);
+		return (UMATCH_VENDOR_PRODUCT);
 
 	if ((uaa->vendor == USB_VENDOR_ANCHOR &&
 	     uaa->product == USB_PRODUCT_ANCHOR_EZLINK))
-		return(UMATCH_VENDOR_PRODUCT);
+		return (UMATCH_VENDOR_PRODUCT);
+
+	if ((uaa->vendor == USB_VENDOR_GENESYS &&
+	     uaa->product == USB_PRODUCT_GENESYS_GL620USB))
+		return (UMATCH_VENDOR_PRODUCT);
 
 	return (UMATCH_NONE);
 }
 
-USB_ATTACH(udbp)
+static int
+udbp_attach(device_t self)
 {
-	USB_ATTACH_START(udbp, sc, uaa);
+	struct udbp_softc *sc = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usbd_interface_handle iface = uaa->iface;
 	usb_interface_descriptor_t *id;
 	usb_endpoint_descriptor_t *ed, *ed_bulkin = NULL, *ed_bulkout = NULL;
 	usbd_status err;
-	char devinfo[1024];
 	int i;
 	static int ngudbp_done_init=0;
 
@@ -267,16 +288,14 @@ USB_ATTACH(udbp)
 	/* fetch the interface handle for the first interface */
 	(void) usbd_device2interface_handle(uaa->device, 0, &iface);
 	id = usbd_get_interface_descriptor(iface);
-	usbd_devinfo(uaa->device, USBD_SHOW_INTERFACE_CLASS, devinfo);
-	USB_ATTACH_SETUP;
+	sc->sc_dev = self;
 
 	/* Find the two first bulk endpoints */
 	for (i = 0 ; i < id->bNumEndpoints; i++) {
 		ed = usbd_interface2endpoint_descriptor(iface, i);
 		if (!ed) {
-			printf("%s: could not read endpoint descriptor\n",
-			       USBDEVNAME(sc->sc_dev));
-			USB_ATTACH_ERROR_RETURN;
+			device_printf(self, "could not read endpoint descriptor\n");
+			return ENXIO;
 		}
 
 		if (UE_GET_DIR(ed->bEndpointAddress) == UE_DIR_IN
@@ -293,27 +312,26 @@ USB_ATTACH(udbp)
 
 	/* Verify that we goething sensible */
 	if (ed_bulkin == NULL || ed_bulkout == NULL) {
-		printf("%s: bulk-in and/or bulk-out endpoint not found\n",
-			USBDEVNAME(sc->sc_dev));
-		USB_ATTACH_ERROR_RETURN;
+		device_printf(self, "bulk-in and/or bulk-out endpoint not found\n");
+		return ENXIO;
 	}
 
 	if (ed_bulkin->wMaxPacketSize[0] != ed_bulkout->wMaxPacketSize[0] ||
 	   ed_bulkin->wMaxPacketSize[1] != ed_bulkout->wMaxPacketSize[1]) {
-		printf("%s: bulk-in and bulk-out have different packet sizes %d %d %d %d\n",
-			USBDEVNAME(sc->sc_dev),
-		       ed_bulkin->wMaxPacketSize[0],
-		       ed_bulkout->wMaxPacketSize[0],
-		       ed_bulkin->wMaxPacketSize[1],
-		       ed_bulkout->wMaxPacketSize[1]);
-		USB_ATTACH_ERROR_RETURN;
+		device_printf(self,
+		    "bulk-in and bulk-out have different packet sizes %d %d %d %d\n",
+		    ed_bulkin->wMaxPacketSize[0],
+		    ed_bulkout->wMaxPacketSize[0],
+		    ed_bulkin->wMaxPacketSize[1],
+		    ed_bulkout->wMaxPacketSize[1]);
+		return ENXIO;
 	}
 
 	sc->sc_bulkin = ed_bulkin->bEndpointAddress;
 	sc->sc_bulkout = ed_bulkout->bEndpointAddress;
 
 	DPRINTF(("%s: Bulk-in: 0x%02x, bulk-out 0x%02x, packet size = %d\n",
-		USBDEVNAME(sc->sc_dev), sc->sc_bulkin, sc->sc_bulkout,
+		device_get_nameunit(sc->sc_dev), sc->sc_bulkin, sc->sc_bulkout,
 		ed_bulkin->wMaxPacketSize[0]));
 
 	/* Allocate the in transfer struct */
@@ -340,15 +358,15 @@ USB_ATTACH(udbp)
 	err = usbd_open_pipe(iface, sc->sc_bulkin,
 				USBD_EXCLUSIVE_USE, &sc->sc_bulkin_pipe);
 	if (err) {
-		printf("%s: cannot open bulk-in pipe (addr %d)\n",
-			USBDEVNAME(sc->sc_dev), sc->sc_bulkin);
+		device_printf(self, "cannot open bulk-in pipe (addr %d)\n",
+		    sc->sc_bulkin);
 		goto bad;
 	}
 	err = usbd_open_pipe(iface, sc->sc_bulkout,
 				USBD_EXCLUSIVE_USE, &sc->sc_bulkout_pipe);
 	if (err) {
-		printf("%s: cannot open bulk-out pipe (addr %d)\n",
-			USBDEVNAME(sc->sc_dev), sc->sc_bulkout);
+		device_printf(self, "cannot open bulk-out pipe (addr %d)\n",
+		    sc->sc_bulkout);
 		goto bad;
 	}
 
@@ -362,7 +380,7 @@ USB_ATTACH(udbp)
 
 	if ((err = ng_make_node_common(&ng_udbp_typestruct, &sc->node)) == 0) {
 		char	nodename[128];
-		sprintf(nodename, "%s", USBDEVNAME(sc->sc_dev));
+		sprintf(nodename, "%s", device_get_nameunit(sc->sc_dev));
 		if ((err = ng_name_node(sc->node, nodename))) {
 			NG_NODE_UNREF(sc->node);
 			sc->node = NULL;
@@ -389,7 +407,7 @@ USB_ATTACH(udbp)
 	if (err) {
 		goto bad;
 	}
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 bad:
 #if 0 /* probably done in udbp_detach() */
 		if (sc->sc_bulkout_buffer) {
@@ -406,17 +424,18 @@ bad:
 		}
 #endif
 		udbp_detach(self);
-		USB_ATTACH_ERROR_RETURN;
+		return ENXIO;
 }
 
 
-USB_DETACH(udbp)
+static int
+udbp_detach(device_t self)
 {
-	USB_DETACH_START(udbp, sc);
+	struct udbp_softc *sc = device_get_softc(self);
 
 	sc->flags |= DISCONNECTED;
 
-	DPRINTF(("%s: disconnected\n", USBDEVNAME(self)));
+	DPRINTF(("%s: disconnected\n", device_get_nameunit(self)));
 
 	if (sc->sc_bulkin_pipe) {
 		usbd_abort_pipe(sc->sc_bulkin_pipe);
@@ -447,7 +466,7 @@ USB_DETACH(udbp)
 }
 
 
-Static int
+static int
 udbp_setup_in_transfer(udbp_p sc)
 {
 	void *priv = sc;	/* XXX this should probably be some pointer to
@@ -475,14 +494,14 @@ udbp_setup_in_transfer(udbp_p sc)
 	err = usbd_transfer(sc->sc_bulkin_xfer);
 	if (err && err != USBD_IN_PROGRESS) {
 		DPRINTF(("%s: failed to setup in-transfer, %s\n",
-			USBDEVNAME(sc->sc_dev), usbd_errstr(err)));
+			device_get_nameunit(sc->sc_dev), usbd_errstr(err)));
 		return(err);
 	}
 
 	return (USBD_NORMAL_COMPLETION);
 }
 
-Static void
+static void
 udbp_in_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 			usbd_status err)
 {
@@ -494,7 +513,7 @@ udbp_in_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 	if (err) {
 		if (err != USBD_CANCELLED) {
 			DPRINTF(("%s: bulk-out transfer failed: %s\n",
-				USBDEVNAME(sc->sc_dev), usbd_errstr(err)));
+				device_get_nameunit(sc->sc_dev), usbd_errstr(err)));
 		} else {
 			/* USBD_CANCELLED happens at unload of the driver */
 			return;
@@ -519,7 +538,7 @@ udbp_in_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 }
 
 
-Static int
+static int
 udbp_setup_out_transfer(udbp_p sc)
 {
 	void *priv = sc;	/* XXX this should probably be some pointer to
@@ -551,9 +570,8 @@ udbp_setup_out_transfer(udbp_p sc)
 
 	pktlen = m->m_pkthdr.len;
 	if (pktlen > sc->sc_bulkout_bufferlen) {
-		printf("%s: Packet too large, %d > %d\n",
-			USBDEVNAME(sc->sc_dev), pktlen,
-			sc->sc_bulkout_bufferlen);
+		device_printf(sc->sc_dev, "Packet too large, %d > %d\n",
+		    pktlen, sc->sc_bulkout_bufferlen);
 		return (USBD_IOERROR);
 	}
 
@@ -574,14 +592,14 @@ udbp_setup_out_transfer(udbp_p sc)
 	err = usbd_transfer(sc->sc_bulkout_xfer);
 	if (err && err != USBD_IN_PROGRESS) {
 		DPRINTF(("%s: failed to setup out-transfer, %s\n",
-			USBDEVNAME(sc->sc_dev), usbd_errstr(err)));
+			device_get_nameunit(sc->sc_dev), usbd_errstr(err)));
 		return(err);
 	}
 
 	return (USBD_NORMAL_COMPLETION);
 }
 
-Static void
+static void
 udbp_out_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 			usbd_status err)
 {
@@ -590,7 +608,7 @@ udbp_out_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 
 	if (err) {
 		DPRINTF(("%s: bulk-out transfer failed: %s\n",
-			USBDEVNAME(sc->sc_dev), usbd_errstr(err)));
+			device_get_nameunit(sc->sc_dev), usbd_errstr(err)));
 		/* Transfer has failed, packet is not transmitted */
 		/* XXX Invalidate packet */
 		return;
@@ -606,6 +624,7 @@ udbp_out_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 
 DRIVER_MODULE(udbp, uhub, udbp_driver, udbp_devclass, usbd_driver_load, 0);
 MODULE_DEPEND(udbp, netgraph, NG_ABI_VERSION, NG_ABI_VERSION, NG_ABI_VERSION);
+MODULE_DEPEND(udbp, usb, 1, 1, 1);
 
 
 /***********************************************************************
@@ -617,7 +636,7 @@ MODULE_DEPEND(udbp, netgraph, NG_ABI_VERSION, NG_ABI_VERSION, NG_ABI_VERSION);
  * routine and the constructor will return EINVAL as you should not be able
  * to create nodes that depend on hardware (unless you can add the hardware :)
  */
-Static int
+static int
 ng_udbp_constructor(node_p node)
 {
 	return (EINVAL);
@@ -634,7 +653,7 @@ ng_udbp_constructor(node_p node)
  * pointer of each hook points to the appropriate UDBP_hookinfo struct
  * so that the source of an input packet is easily identified.
  */
-Static int
+static int
 ng_udbp_newhook(node_p node, hook_p hook, const char *name)
 {
 	const udbp_p sc = NG_NODE_PRIVATE(node);
@@ -666,7 +685,7 @@ ng_udbp_newhook(node_p node, hook_p hook, const char *name)
  * the cookie in the header didn't match what we consider to be current
  * (so that old userland programs could continue to work).
  */
-Static int
+static int
 ng_udbp_rcvmsg(node_p node, item_p item, hook_p lasthook)
 {
 	const udbp_p sc = NG_NODE_PRIVATE(node);
@@ -719,7 +738,7 @@ ng_udbp_rcvmsg(node_p node, item_p item, hook_p lasthook)
 /*
  * Accept data from the hook and queue it for output.
  */
-Static int
+static int
 ng_udbp_rcvdata(hook_p hook, item_p item)
 {
 	const udbp_p sc = NG_NODE_PRIVATE(NG_HOOK_NODE(hook));
@@ -770,7 +789,7 @@ bad:	/*
  * We are a persistant device, we refuse to go away, and
  * only remove our links and reset ourself.
  */
-Static int
+static int
 ng_udbp_rmnode(node_p node)
 {
 	const udbp_p sc = NG_NODE_PRIVATE(node);
@@ -797,7 +816,7 @@ ng_udbp_rmnode(node_p node)
 
 	if ((err = ng_make_node_common(&ng_udbp_typestruct, &sc->node)) == 0) {
 		char	nodename[128];
-		sprintf(nodename, "%s", USBDEVNAME(sc->sc_dev));
+		sprintf(nodename, "%s", device_get_nameunit(sc->sc_dev));
 		if ((err = ng_name_node(sc->node, nodename))) {
 			NG_NODE_UNREF(sc->node); /* out damned spot! */
 			sc->flags &= ~NETGRAPH_INITIALISED;
@@ -813,7 +832,7 @@ ng_udbp_rmnode(node_p node)
  * This is called once we've already connected a new hook to the other node.
  * It gives us a chance to balk at the last minute.
  */
-Static int
+static int
 ng_udbp_connect(hook_p hook)
 {
 	/* probably not at splnet, force outward queueing */
@@ -827,7 +846,7 @@ ng_udbp_connect(hook_p hook)
  *
  * For this type, removal of the last link destroys the node
  */
-Static int
+static int
 ng_udbp_disconnect(hook_p hook)
 {
 	const udbp_p sc = NG_NODE_PRIVATE(NG_HOOK_NODE(hook));

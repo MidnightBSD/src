@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/urio.c,v 1.35 2005/01/06 01:43:29 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/urio.c,v 1.48 2007/06/21 14:42:34 imp Exp $");
 
 
 /*
@@ -48,25 +48,16 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/urio.c,v 1.35 2005/01/06 01:43:29 imp Exp $"
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
-#if defined(__NetBSD__)
-#include <sys/device.h>
-#include <sys/ioctl.h>
-#elif defined(__FreeBSD__)
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/ioccom.h>
-#endif
 #include <sys/fcntl.h>
 #include <sys/filio.h>
 #include <sys/conf.h>
 #include <sys/uio.h>
 #include <sys/tty.h>
 #include <sys/file.h>
-#if __FreeBSD_version >= 500014
 #include <sys/selinfo.h>
-#else
-#include <sys/select.h>
-#endif
 #include <sys/poll.h>
 #include <sys/sysctl.h>
 #include <sys/uio.h>
@@ -79,8 +70,8 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/urio.c,v 1.35 2005/01/06 01:43:29 imp Exp $"
 #include <dev/usb/rio500_usb.h>
 
 #ifdef USB_DEBUG
-#define DPRINTF(x)	if (uriodebug) logprintf x
-#define DPRINTFN(n,x)	if (uriodebug>(n)) logprintf x
+#define DPRINTF(x)	if (uriodebug) printf x
+#define DPRINTFN(n,x)	if (uriodebug>(n)) printf x
 int	uriodebug = 0;
 SYSCTL_NODE(_hw_usb, OID_AUTO, urio, CTLFLAG_RW, 0, "USB urio");
 SYSCTL_INT(_hw_usb_urio, OID_AUTO, debug, CTLFLAG_RW,
@@ -97,18 +88,6 @@ SYSCTL_INT(_hw_usb_urio, OID_AUTO, debug, CTLFLAG_RW,
 #define RIO_IN  1
 #define RIO_NODIR  2
 
-#if defined(__NetBSD__)
-int urioopen(dev_t, int, int, struct proc *);
-int urioclose(dev_t, int, int, struct proc *p);
-int urioread(dev_t, struct uio *uio, int);
-int uriowrite(dev_t, struct uio *uio, int);
-int urioioctl(dev_t, u_long, caddr_t, int, struct proc *);
-
-cdev_decl(urio);
-#define RIO_UE_GET_DIR(p) ((UE_GET_DIR(p) == UE_DIR_IN) ? RIO_IN :\
-			  ((UE_GET_DIR(p) == UE_DIR_OUT) ? RIO_OUT :\
-							   RIO_NODIR))
-#elif defined(__FreeBSD__)
 d_open_t  urioopen;
 d_close_t urioclose;
 d_read_t  urioread;
@@ -116,7 +95,7 @@ d_write_t uriowrite;
 d_ioctl_t urioioctl;
 
 
-Static struct cdevsw urio_cdevsw = {
+static struct cdevsw urio_cdevsw = {
 	.d_version =	D_VERSION,
 	.d_flags =	D_NEEDGIANT,
 	.d_open =	urioopen,
@@ -125,19 +104,15 @@ Static struct cdevsw urio_cdevsw = {
 	.d_write =	uriowrite,
 	.d_ioctl =	urioioctl,
 	.d_name =	"urio",
-#if __FreeBSD_version < 500014
- 	.d_bmaj =	-1
-#endif
 };
 #define RIO_UE_GET_DIR(p) ((UE_GET_DIR(p) == UE_DIR_IN) ? RIO_IN :\
 		 	  ((UE_GET_DIR(p) == UE_DIR_OUT) ? RIO_OUT :\
 			    				   RIO_NODIR))
-#endif  /*defined(__FreeBSD__)*/
 
 #define	URIO_BBSIZE	1024
 
 struct urio_softc {
- 	USBBASEDEVICE sc_dev;
+ 	device_t sc_dev;
 	usbd_device_handle sc_udev;
 	usbd_interface_handle sc_iface;
 
@@ -147,23 +122,39 @@ struct urio_softc {
 	int sc_epaddr[2];
 
 	int sc_refcnt;
-#if defined(__FreeBSD__)
 	struct cdev *sc_dev_t;
-#endif	/* defined(__FreeBSD__) */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
 	u_char sc_dying;
-#endif
 };
 
 #define URIOUNIT(n) (minor(n))
 
 #define RIO_RW_TIMEOUT 4000	/* ms */
 
-USB_DECLARE_DRIVER(urio);
+static device_probe_t urio_match;
+static device_attach_t urio_attach;
+static device_detach_t urio_detach;
 
-USB_MATCH(urio)
+static device_method_t urio_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		urio_match),
+	DEVMETHOD(device_attach,	urio_attach),
+	DEVMETHOD(device_detach,	urio_detach),
+
+	{ 0, 0 }
+};
+
+static driver_t urio_driver = {
+	"urio",
+	urio_methods,
+	sizeof(struct urio_softc)
+};
+
+static devclass_t urio_devclass;
+
+static int
+urio_match(device_t self)
 {
-	USB_MATCH_START(urio, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usb_device_descriptor_t *dd;
 
 	DPRINTFN(10,("urio_match\n"));
@@ -183,49 +174,27 @@ USB_MATCH(urio)
 		return UMATCH_NONE;
 }
 
-USB_ATTACH(urio)
+static int
+urio_attach(device_t self)
 {
-	USB_ATTACH_START(urio, sc, uaa);
-	char devinfo[1024];
+	struct urio_softc *sc = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usbd_device_handle udev;
 	usbd_interface_handle iface;
 	u_int8_t epcount;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	u_int8_t niface;
-#endif
 	usbd_status r;
 	char * ermsg = "<none>";
 	int i;
 
 	DPRINTFN(10,("urio_attach: sc=%p\n", sc));
-	usbd_devinfo(uaa->device, 0, devinfo);
-	USB_ATTACH_SETUP;
-
+	sc->sc_dev = self;
 	sc->sc_udev = udev = uaa->device;
 
-#if defined(__FreeBSD__)
  	if ((!uaa->device) || (!uaa->iface)) {
 		ermsg = "device or iface";
  		goto nobulk;
 	}
 	sc->sc_iface = iface = uaa->iface;
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
- 	if (!udev) {
-		ermsg = "device";
- 		goto nobulk;
-	}
-	r = usbd_interface_count(udev, &niface);
-	if (r) {
-		ermsg = "iface";
-		goto nobulk;
-	}
-	r = usbd_device2interface_handle(udev, 0, &iface);
-	if (r) {
-		ermsg = "iface";
-		goto nobulk;
-	}
-	sc->sc_iface = iface;
-#endif
 	sc->sc_opened = 0;
 	sc->sc_pipeh_in = 0;
 	sc->sc_pipeh_out = 0;
@@ -260,34 +229,27 @@ USB_ATTACH(urio)
 		goto nobulk;
 	}
 
-#if defined(__FreeBSD__)
-	/* XXX no error trapping, no storing of struct cdev **/
 	sc->sc_dev_t = make_dev(&urio_cdevsw, device_get_unit(self),
 			UID_ROOT, GID_OPERATOR,
 			0644, "urio%d", device_get_unit(self));
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-	usbd_add_drv_event(USB_EVENT_DRIVER_ATTACH, sc->sc_udev,
-			   USBDEV(sc->sc_dev));
-#endif
-
 	DPRINTFN(10, ("urio_attach: %p\n", sc->sc_udev));
 
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 
  nobulk:
-	printf("%s: could not find %s\n", USBDEVNAME(sc->sc_dev),ermsg);
-	USB_ATTACH_ERROR_RETURN;
+	printf("%s: could not find %s\n", device_get_nameunit(sc->sc_dev),ermsg);
+	return ENXIO;
 }
 
 
 int
-urioopen(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
+urioopen(struct cdev *dev, int flag, int mode, struct thread *p)
 {
-#if (USBDI >= 1)
 	struct urio_softc * sc;
-#endif
 	int unit = URIOUNIT(dev);
-	USB_GET_SC_OPEN(urio, unit, sc);
+	sc = devclass_get_softc(urio_devclass, unit);
+	if (sc == NULL)
+		return (ENXIO);
 
 	DPRINTFN(5, ("urioopen: flag=%d, mode=%d, unit=%d\n",
 		     flag, mode, unit));
@@ -321,13 +283,11 @@ urioopen(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
 }
 
 int
-urioclose(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
+urioclose(struct cdev *dev, int flag, int mode, struct thread *p)
 {
-#if (USBDI >= 1)
 	struct urio_softc * sc;
-#endif
 	int unit = URIOUNIT(dev);
-	USB_GET_SC(urio, unit, sc);
+	sc = devclass_get_softc(urio_devclass, unit);
 
 	DPRINTFN(5, ("urioclose: flag=%d, mode=%d, unit=%d\n", flag, mode, unit));
 	if (sc->sc_pipeh_in)
@@ -346,49 +306,29 @@ urioclose(struct cdev *dev, int flag, int mode, usb_proc_ptr p)
 int
 urioread(struct cdev *dev, struct uio *uio, int flag)
 {
-#if (USBDI >= 1)
 	struct urio_softc * sc;
 	usbd_xfer_handle reqh;
-#else
-	usbd_request_handle reqh;
-	usbd_private_handle r_priv;
-        void *r_buff;
-        usbd_status r_status;
-#endif
 	int unit = URIOUNIT(dev);
 	usbd_status r;
 	char buf[URIO_BBSIZE];
 	u_int32_t n, tn;
 	int error = 0;
 
-	USB_GET_SC(urio, unit, sc);
+	sc = devclass_get_softc(urio_devclass, unit);
 
 	DPRINTFN(5, ("urioread: %d\n", unit));
 	if (!sc->sc_opened)
 		return EIO;
 
-#if (USBDI >= 1)
 	sc->sc_refcnt++;
 	reqh = usbd_alloc_xfer(sc->sc_udev);
-#else
-	reqh = usbd_alloc_request();
-#endif
 	if (reqh == 0)
 		return ENOMEM;
 	while ((n = min(URIO_BBSIZE, uio->uio_resid)) != 0) {
 		DPRINTFN(1, ("urioread: start transfer %d bytes\n", n));
 		tn = n;
-#if (USBDI >= 1)
  		usbd_setup_xfer(reqh, sc->sc_pipeh_in, 0, buf, tn,
 				       0, RIO_RW_TIMEOUT, 0);
-#else
-		r = usbd_setup_request(reqh, sc->sc_pipeh_in, 0, buf, tn,
-				       0, RIO_RW_TIMEOUT, 0);
-		if (r != USBD_NORMAL_COMPLETION) {
-			error = EIO;
-			break;
-		}
-#endif
 		r = usbd_sync_transfer(reqh);
 		if (r != USBD_NORMAL_COMPLETION) {
 			DPRINTFN(1, ("urioread: error=%d\n", r));
@@ -397,53 +337,35 @@ urioread(struct cdev *dev, struct uio *uio, int flag)
 			error = EIO;
 			break;
 		}
-#if (USBDI >= 1)
 		usbd_get_xfer_status(reqh, 0, 0, &tn, 0);
-#else
-		usbd_get_request_status(reqh, &r_priv, &r_buff, &tn, &r_status);
-#endif
 
 		DPRINTFN(1, ("urioread: got %d bytes\n", tn));
 		error = uiomove(buf, tn, uio);
 		if (error || tn < n)
 			break;
 	}
-#if (USBDI >= 1)
 	usbd_free_xfer(reqh);
-#else
-	usbd_free_request(reqh);
-#endif
-
 	return error;
 }
 
 int
 uriowrite(struct cdev *dev, struct uio *uio, int flag)
 {
-#if (USBDI >= 1)
 	struct urio_softc * sc;
 	usbd_xfer_handle reqh;
-#else
-	usbd_request_handle reqh;
-#endif
 	int unit = URIOUNIT(dev);
 	usbd_status r;
 	char buf[URIO_BBSIZE];
 	u_int32_t n;
 	int error = 0;
 
-	USB_GET_SC(urio, unit, sc);
-
+	sc = devclass_get_softc(urio_devclass, unit);
 	DPRINTFN(5, ("uriowrite: %d\n", unit));
 	if (!sc->sc_opened)
 		return EIO;
 
-#if (USBDI >= 1)
 	sc->sc_refcnt++;
 	reqh = usbd_alloc_xfer(sc->sc_udev);
-#else
-	reqh = usbd_alloc_request();
-#endif
 	if (reqh == 0)
 		return EIO;
 	while ((n = min(URIO_BBSIZE, uio->uio_resid)) != 0) {
@@ -451,17 +373,8 @@ uriowrite(struct cdev *dev, struct uio *uio, int flag)
 		if (error)
 			break;
 		DPRINTFN(1, ("uriowrite: transfer %d bytes\n", n));
-#if (USBDI >= 1)
  		usbd_setup_xfer(reqh, sc->sc_pipeh_out, 0, buf, n,
 				       0, RIO_RW_TIMEOUT, 0);
-#else
-		r = usbd_setup_request(reqh, sc->sc_pipeh_out, 0, buf, n,
-				       0, RIO_RW_TIMEOUT, 0);
-		if (r != USBD_NORMAL_COMPLETION) {
-			error = EIO;
-			break;
-		}
-#endif
 		r = usbd_sync_transfer(reqh);
 		if (r != USBD_NORMAL_COMPLETION) {
 			DPRINTFN(1, ("uriowrite: error=%d\n", r));
@@ -469,27 +382,18 @@ uriowrite(struct cdev *dev, struct uio *uio, int flag)
 			error = EIO;
 			break;
 		}
-#if (USBDI >= 1)
 		usbd_get_xfer_status(reqh, 0, 0, 0, 0);
-#endif
 	}
 
-#if (USBDI >= 1)
 	usbd_free_xfer(reqh);
-#else
-	usbd_free_request(reqh);
-#endif
-
 	return error;
 }
 
 
 int
-urioioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, usb_proc_ptr p)
+urioioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *p)
 {
-#if (USBDI >= 1)
 	struct urio_softc * sc;
-#endif
 	int unit = URIOUNIT(dev);
 	struct RioCommand *rio_cmd;
 	int requesttype, len;
@@ -501,8 +405,7 @@ urioioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, usb_proc_ptr p)
 	int error = 0;
 	usbd_status r;
 
-	USB_GET_SC(urio, unit, sc);
-
+	sc = devclass_get_softc(urio_devclass, unit);
 	switch (cmd) {
 	case RIO_RECV_COMMAND:
 		if (!(flag & FWRITE))
@@ -555,7 +458,7 @@ urioioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, usb_proc_ptr p)
 		uio.uio_rw =
 			req.bmRequestType & UT_READ ?
 			UIO_READ : UIO_WRITE;
-		uio.uio_procp = p;
+		uio.uio_td = p;
 		ptr = malloc(len, M_TEMP, M_WAITOK);
 		if (uio.uio_rw == UIO_WRITE) {
 			error = uiomove(ptr, len, &uio);
@@ -584,60 +487,14 @@ ret:
 	return error;
 }
 
-
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-int
-urio_activate(device_ptr_t self, enum devact act)
+static int
+urio_detach(device_t self)
 {
-	struct urio_softc *sc = (struct urio_softc *)self;
-
-	switch (act) {
-	case DVACT_ACTIVATE:
-		return (EOPNOTSUPP);
-		break;
-
-	case DVACT_DEACTIVATE:
-		sc->sc_dying = 1;
-		break;
-	}
-	return (0);
-}
-
-USB_DETACH(urio)
-{
-	USB_DETACH_START(urio, sc);
-	struct urio_endpoint *sce;
-	int i, dir;
+	struct urio_softc *sc = device_get_softc(self);
 	int s;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int maj, mn;
 
-	DPRINTF(("urio_detach: sc=%p flags=%d\n", sc, flags));
-#elif defined(__FreeBSD__)
 	DPRINTF(("urio_detach: sc=%p\n", sc));
-#endif
-
 	sc->sc_dying = 1;
-	/* Abort all pipes.  Causes processes waiting for transfer to wake. */
-#if 0
-	for (i = 0; i < USB_MAX_ENDPOINTS; i++) {
-		for (dir = OUT; dir <= IN; dir++) {
-			sce = &sc->sc_endpoints[i][dir];
-			if (sce && sce->pipeh)
-				usbd_abort_pipe(sce->pipeh);
-		}
-	}
-
-	s = splusb();
-	if (--sc->sc_refcnt >= 0) {
-		/* Wake everyone */
-		for (i = 0; i < USB_MAX_ENDPOINTS; i++)
-			wakeup(&sc->sc_endpoints[i][IN]);
-		/* Wait for processes to go away. */
-		usb_detach_wait(USBDEV(sc->sc_dev));
-	}
-	splx(s);
-#else
 	if (sc->sc_pipeh_in)
 		usbd_abort_pipe(sc->sc_pipeh_in);
 
@@ -647,41 +504,15 @@ USB_DETACH(urio)
 	s = splusb();
 	if (--sc->sc_refcnt >= 0) {
 		/* Wait for processes to go away. */
-		usb_detach_wait(USBDEV(sc->sc_dev));
+		usb_detach_wait(sc->sc_dev);
 	}
 	splx(s);
-#endif
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	/* locate the major number */
-	for (maj = 0; maj < nchrdev; maj++)
-		if (cdevsw[maj].d_open == urioopen)
-			break;
-
-	/* Nuke the vnodes for any open instances (calls close). */
-	mn = self->dv_unit * USB_MAX_ENDPOINTS;
-	vdevgone(maj, mn, mn + USB_MAX_ENDPOINTS - 1, VCHR);
-#endif
-
-	usbd_add_drv_event(USB_EVENT_DRIVER_DETACH, sc->sc_udev,
-			   USBDEV(sc->sc_dev));
-
-	return (0);
-}
-#endif /* defined(__NetBSD__) || defined(__OpenBSD__) */
-
-#if defined(__FreeBSD__)
-Static int
-urio_detach(device_t self)
-{
-	struct urio_softc *sc = device_get_softc(self);
-
-	DPRINTF(("%s: disconnected\n", USBDEVNAME(self)));
 	destroy_dev(sc->sc_dev_t);
 	/* XXX not implemented yet */
 	device_set_desc(self, NULL);
 	return 0;
 }
 
+MODULE_DEPEND(uscanner, usb, 1, 1, 1);
 DRIVER_MODULE(urio, uhub, urio_driver, urio_devclass, usbd_driver_load, 0);
-#endif

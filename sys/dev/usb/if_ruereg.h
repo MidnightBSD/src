@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/if_ruereg.h,v 1.6 2005/06/10 16:49:15 brooks Exp $
+ * $FreeBSD: src/sys/dev/usb/if_ruereg.h,v 1.8 2007/07/09 20:56:39 imp Exp $
  */
 
 #ifndef _IF_RUEREG_H_
@@ -200,12 +200,11 @@ struct rue_softc {
 	int			rue_if_flags;
 	struct ue_cdata		rue_cdata;
 	struct callout_handle	rue_stat_ch;
-#if __FreeBSD_version >= 500000
 	struct mtx		rue_mtx;
-#endif
 	char			rue_dying;
 	struct timeval		rue_rx_notice;
 	struct usb_qdat		rue_qdat;
+	struct usb_task		rue_tick_task;
 };
 
 #if defined(__FreeBSD__)

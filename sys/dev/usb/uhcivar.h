@@ -1,5 +1,5 @@
 /*	$NetBSD: uhcivar.h,v 1.33 2002/02/11 11:41:30 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/uhcivar.h,v 1.40 2005/03/19 19:08:46 iedowse Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/uhcivar.h,v 1.45 2007/06/14 16:23:31 imp Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -100,6 +100,9 @@ struct uhci_soft_td {
 	uhci_td_t td;			/* The real TD, must be first */
 	uhci_soft_td_qh_t link; 	/* soft version of the td_link field */
 	uhci_physaddr_t physaddr;	/* TD's physical address. */
+	usb_dma_t aux_dma;		/* Auxillary storage if needed. */
+	void *aux_data;			/* Original aux data virtual address. */
+	int aux_len;			/* Auxillary storage size. */
 };
 /*
  * Make the size such that it is a multiple of UHCI_TD_ALIGN.  This way
@@ -143,13 +146,10 @@ typedef struct uhci_softc {
 	bus_space_tag_t iot;
 	bus_space_handle_t ioh;
 	bus_size_t sc_size;
-#if defined(__FreeBSD__)
 	void *ih;
 
 	struct resource *io_res;
 	struct resource *irq_res;
-#endif
-
 	uhci_physaddr_t *sc_pframes;
 	usb_dma_t sc_dma;
 	struct uhci_vframe sc_vframes[UHCI_VFRAMELIST_COUNT];
@@ -166,7 +166,7 @@ typedef struct uhci_softc {
 	uhci_soft_td_t *sc_freetds;	/* TD free list */
 	uhci_soft_qh_t *sc_freeqhs;	/* QH free list */
 
-	SIMPLEQ_HEAD(, usbd_xfer) sc_free_xfers; /* free xfers */
+	STAILQ_HEAD(, usbd_xfer) sc_free_xfers; /* free xfers */
 
 	u_int8_t sc_addr;		/* device address */
 	u_int8_t sc_conf;		/* device configuration */
@@ -187,7 +187,7 @@ typedef struct uhci_softc {
 	/* Info for the root hub interrupt channel. */
 	int sc_ival;			/* time between root hub intrs */
 	usbd_xfer_handle sc_intr_xfer;	/* root hub interrupt transfer */
-	usb_callout_t sc_poll_handle;
+	struct callout sc_poll_handle;
 
 	char sc_vendor[16];		/* vendor string for root hub */
 	int sc_id_vendor;		/* vendor ID for root hub */
@@ -196,19 +196,11 @@ typedef struct uhci_softc {
 	void *sc_powerhook;		/* cookie from power hook */
 	void *sc_shutdownhook;		/* cookie from shutdown hook */
 #endif
-
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	device_ptr_t sc_child;		/* /dev/usb# device */
-#endif
 } uhci_softc_t;
 
 usbd_status	uhci_init(uhci_softc_t *);
 int		uhci_intr(void *);
 int		uhci_detach(uhci_softc_t *, int);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-int		uhci_activate(device_ptr_t, enum devact);
-#endif
-
 void		uhci_shutdown(void *v);
 void		uhci_power(int state, void *priv);
 

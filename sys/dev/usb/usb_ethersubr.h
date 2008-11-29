@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/usb_ethersubr.h,v 1.10 2005/03/25 13:22:58 sobomax Exp $
+ * $FreeBSD: src/sys/dev/usb/usb_ethersubr.h,v 1.12 2007/01/08 23:21:06 alfred Exp $
  */
 
 #ifndef _USB_ETHERSUBR_H_
@@ -55,6 +55,7 @@ struct ue_chain {
 	char			*ue_buf;
 	struct mbuf		*ue_mbuf;
 	int			ue_idx;
+	usbd_status		ue_status;
 };
 
 struct ue_cdata {
@@ -77,5 +78,14 @@ int usb_ether_tx_list_init	(void *, struct ue_cdata *,
     usbd_device_handle);
 void usb_ether_rx_list_free	(struct ue_cdata *);
 void usb_ether_tx_list_free	(struct ue_cdata *);
+
+struct usb_taskqueue {
+	int dummy;
+};
+
+void usb_ether_task_init(device_t, int, struct usb_taskqueue *);
+void usb_ether_task_enqueue(struct usb_taskqueue *, struct task *);
+void usb_ether_task_drain(struct usb_taskqueue *, struct task *);
+void usb_ether_task_destroy(struct usb_taskqueue *);
 
 #endif /* _USB_ETHERSUBR_H_ */

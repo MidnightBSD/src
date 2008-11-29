@@ -1,5 +1,5 @@
 /*	$NetBSD: uvisor.c,v 1.9 2001/01/23 14:04:14 augustss Exp $	*/
-/*      $FreeBSD: src/sys/dev/usb/uvisor.c,v 1.24.2.1 2005/12/12 19:52:52 bmah Exp $	*/
+/*      $FreeBSD: src/sys/dev/usb/uvisor.c,v 1.40 2007/07/05 06:28:46 imp Exp $	*/
 
 /* Also already merged from NetBSD:
  *	$NetBSD: uvisor.c,v 1.12 2001/11/13 06:24:57 lukem Exp $
@@ -58,12 +58,8 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-#include <sys/device.h>
-#elif defined(__FreeBSD__)
 #include <sys/module.h>
 #include <sys/bus.h>
-#endif
 #include <sys/conf.h>
 #include <sys/tty.h>
 #include <sys/sysctl.h>
@@ -175,11 +171,11 @@ struct uvisor_softc {
 	u_int16_t		sc_flags;
 };
 
-Static usbd_status uvisor_init(struct uvisor_softc *);
+static usbd_status uvisor_init(struct uvisor_softc *);
 
-/*Static usbd_status clie_3_5_init(struct uvisor_softc *);*/
+/*static usbd_status clie_3_5_init(struct uvisor_softc *);*/
 
-Static void uvisor_close(void *, int);
+static void uvisor_close(void *, int);
 
 struct ucom_callback uvisor_callback = {
 	NULL,
@@ -192,10 +188,10 @@ struct ucom_callback uvisor_callback = {
 	NULL,
 };
 
-Static device_probe_t uvisor_match;
-Static device_attach_t uvisor_attach;
-Static device_detach_t uvisor_detach;
-Static device_method_t uvisor_methods[] = {
+static device_probe_t uvisor_match;
+static device_attach_t uvisor_attach;
+static device_detach_t uvisor_detach;
+static device_method_t uvisor_methods[] = {
        /* Device interface */
        DEVMETHOD(device_probe, uvisor_match),
        DEVMETHOD(device_attach, uvisor_attach),
@@ -204,7 +200,7 @@ Static device_method_t uvisor_methods[] = {
  };
 
 
-Static driver_t uvisor_driver = {
+static driver_t uvisor_driver = {
        "ucom",
        uvisor_methods,
        sizeof (struct uvisor_softc)
@@ -223,6 +219,9 @@ struct uvisor_type {
 #define PALM35  0x0004
 };
 static const struct uvisor_type uvisor_devs[] = {
+	{{ USB_VENDOR_ACEECA, USB_PRODUCT_ACEECA_MEZ1000 }, PALM4 },
+	{{ USB_VENDOR_GARMIN, USB_PRODUCT_GARMIN_IQUE_3600 }, PALM4 },
+	{{ USB_VENDOR_FOSSIL, USB_PRODUCT_FOSSIL_WRISTPDA }, PALM4 },
 	{{ USB_VENDOR_HANDSPRING, USB_PRODUCT_HANDSPRING_VISOR }, VISOR },
 	{{ USB_VENDOR_HANDSPRING, USB_PRODUCT_HANDSPRING_TREO }, PALM4 },
 	{{ USB_VENDOR_HANDSPRING, USB_PRODUCT_HANDSPRING_TREO600 }, PALM4 },
@@ -236,20 +235,24 @@ static const struct uvisor_type uvisor_devs[] = {
 	{{ USB_VENDOR_PALM, USB_PRODUCT_PALM_TUNGSTEN_T }, PALM4 },
 	{{ USB_VENDOR_PALM, USB_PRODUCT_PALM_ZIRE }, PALM4 },
 	{{ USB_VENDOR_PALM, USB_PRODUCT_PALM_ZIRE31 }, PALM4 },
+	{{ USB_VENDOR_SAMSUNG, USB_PRODUCT_SAMSUNG_I500 }, PALM4 }, 
 	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_40 }, 0 },
 	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_41 }, PALM4 },
 	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_S360 }, PALM4 },
 	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_NX60 }, PALM4 },
 	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_35 }, PALM35 },
 /*	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_25 }, PALM4 },*/
+/*	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_TH55 }, PALM4 }, */	/* See PR 80935 */
 	{{ USB_VENDOR_SONY, USB_PRODUCT_SONY_CLIE_TJ37 }, PALM4 },
+	{{ USB_VENDOR_TAPWAVE, USB_PRODUCT_TAPWAVE_ZODIAC }, PALM4 },
 };
 #define uvisor_lookup(v, p) ((const struct uvisor_type *)usb_lookup(uvisor_devs, v, p))
 
 
-USB_MATCH(uvisor)
+static int
+uvisor_match(device_t self)
 {
-	USB_MATCH_START(uvisor, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 
 	if (uaa->iface != NULL)
 		return (UMATCH_NONE);
@@ -261,52 +264,40 @@ USB_MATCH(uvisor)
 		UMATCH_VENDOR_PRODUCT : UMATCH_NONE);
 }
 
-USB_ATTACH(uvisor)
+static int
+uvisor_attach(device_t self)
 {
-	USB_ATTACH_START(uvisor, sc, uaa);
+	struct uvisor_softc *sc = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usbd_device_handle dev = uaa->device;
 	usbd_interface_handle iface;
 	usb_interface_descriptor_t *id;
 	usb_endpoint_descriptor_t *ed;
-	char *devinfo;
-	const char *devname;
 	int i;
 	usbd_status err;
 	struct ucom_softc *ucom;
 
-	devinfo = malloc(1024, M_USBDEV, M_WAITOK);
 	ucom = &sc->sc_ucom;
-
-	bzero(sc, sizeof (struct uvisor_softc));
-	usbd_devinfo(dev, 0, devinfo);
-
 	ucom->sc_dev = self;
-	device_set_desc_copy(self, devinfo);
-
 	ucom->sc_udev = dev;
 	ucom->sc_iface = uaa->iface;
-
-	devname = USBDEVNAME(ucom->sc_dev);
-	printf("%s: %s\n", devname, devinfo);
 
 	DPRINTFN(10,("\nuvisor_attach: sc=%p\n", sc));
 
 	/* Move the device into the configured state. */
 	err = usbd_set_config_index(dev, UVISOR_CONFIG_INDEX, 1);
 	if (err) {
-		printf("\n%s: failed to set configuration, err=%s\n",
-		       devname, usbd_errstr(err));
+		device_printf(self, "failed to set configuration, err=%s\n",
+		    usbd_errstr(err));
 		goto bad;
 	}
 
 	err = usbd_device2interface_handle(dev, UVISOR_IFACE_INDEX, &iface);
 	if (err) {
-		printf("\n%s: failed to get interface, err=%s\n",
-		       devname, usbd_errstr(err));
+		device_printf(self, "failed to get interface, err=%s\n",
+		    usbd_errstr(err));
 		goto bad;
 	}
-
-	printf("%s: %s\n", devname, devinfo);
 
 	sc->sc_flags = uvisor_lookup(uaa->vendor, uaa->product)->uv_flags;
 
@@ -320,8 +311,9 @@ USB_ATTACH(uvisor)
 		int addr, dir, attr;
 		ed = usbd_interface2endpoint_descriptor(iface, i);
 		if (ed == NULL) {
-			printf("%s: could not read endpoint descriptor"
-			       ": %s\n", devname, usbd_errstr(err));
+			device_printf(self,
+			    "could not read endpoint descriptor: %s\n",
+			    usbd_errstr(err));
 			goto bad;
 		}
 
@@ -333,18 +325,16 @@ USB_ATTACH(uvisor)
 		else if (dir == UE_DIR_OUT && attr == UE_BULK)
 			ucom->sc_bulkout_no = addr;
 		else {
-			printf("%s: unexpected endpoint\n", devname);
+			device_printf(self, "unexpected endpoint\n");
 			goto bad;
 		}
 	}
 	if (ucom->sc_bulkin_no == -1) {
-		printf("%s: Could not find data bulk in\n",
-		       USBDEVNAME(ucom->sc_dev));
+		device_printf(self, "Could not find data bulk in\n");
 		goto bad;
 	}
 	if (ucom->sc_bulkout_no == -1) {
-		printf("%s: Could not find data bulk out\n",
-		       USBDEVNAME(ucom->sc_dev));
+		device_printf(self, "Could not find data bulk out\n");
 		goto bad;
 	}
 
@@ -366,29 +356,29 @@ USB_ATTACH(uvisor)
 		err = uvisor_init(sc);
 
 	if (err) {
-		printf("%s: init failed, %s\n", USBDEVNAME(ucom->sc_dev),
-		       usbd_errstr(err));
+		device_printf(ucom->sc_dev, "init failed, %s\n",
+		    usbd_errstr(err));
 		goto bad;
 	}
 
 	usbd_add_drv_event(USB_EVENT_DRIVER_ATTACH, ucom->sc_udev,
-			   USBDEV(ucom->sc_dev));
+	  ucom->sc_dev);
 
 	DPRINTF(("uvisor: in=0x%x out=0x%x\n", ucom->sc_bulkin_no, ucom->sc_bulkout_no));
 	ucom_attach(&sc->sc_ucom);
 
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 
 bad:
 	DPRINTF(("uvisor_attach: ATTACH ERROR\n"));
 	ucom->sc_dying = 1;
-	USB_ATTACH_ERROR_RETURN;
+	return ENXIO;
 }
 
 #if 0
 
 int
-uvisor_activate(device_ptr_t self, enum devact act)
+uvisor_activate(device_t self, enum devact act)
 {
 	struct uvisor_softc *sc = (struct uvisor_softc *)self;
 	int rv = 0;
@@ -409,9 +399,10 @@ uvisor_activate(device_ptr_t self, enum devact act)
 
 #endif
 
-USB_DETACH(uvisor)
+static int
+uvisor_detach(device_t self)
 {
-	USB_DETACH_START(uvisor, sc);
+	struct uvisor_softc *sc = device_get_softc(self);
 	int rv = 0;
 
 	DPRINTF(("uvisor_detach: sc=%p\n", sc));
@@ -419,7 +410,7 @@ USB_DETACH(uvisor)
 	rv = ucom_detach(&sc->sc_ucom);
 
 	usbd_add_drv_event(USB_EVENT_DRIVER_DETACH, sc->sc_ucom.sc_udev,
-			   USBDEV(sc->sc_ucom.sc_dev));
+	  sc->sc_ucom.sc_dev);
 
 	return (rv);
 }
@@ -454,7 +445,7 @@ uvisor_init(struct uvisor_softc *sc)
 		char *string;
 
 		np = UGETW(coninfo.num_ports);
-		printf("%s: Number of ports: %d\n", USBDEVNAME(sc->sc_ucom.sc_dev), np);
+		device_printf(sc->sc_ucom.sc_dev, "Number of ports: %d\n", np);
 		for (i = 0; i < np; ++i) {
 			switch (coninfo.connections[i].port_function_id) {
 			case UVISOR_FUNCTION_GENERIC:
@@ -473,9 +464,9 @@ uvisor_init(struct uvisor_softc *sc)
 				string = "unknown";
 				break;
 			}
-			printf("%s: port %d, is for %s\n",
-			    USBDEVNAME(sc->sc_ucom.sc_dev), coninfo.connections[i].port,
-			    string);
+			device_printf(sc->sc_ucom.sc_dev,
+			    "port %d, is for %s\n",
+			    coninfo.connections[i].port, string);
 		}
 	}
 #endif
@@ -595,7 +586,7 @@ clie_3_5_init(struct uvisor_softc *sc)
 		char *string;
 
 		np = UGETW(coninfo.num_ports);
-		DPRINTF(("%s: Number of ports: %d\n", USBDEVNAME(sc->sc_ucom.sc_dev), np));
+		DPRINTF(("%s: Number of ports: %d\n", device_get_nameunit(sc->sc_ucom.sc_dev), np));
 		for (i = 0; i < np; ++i) {
 			switch (coninfo.connections[i].port_function_id) {
 			case UVISOR_FUNCTION_GENERIC:
@@ -615,7 +606,7 @@ clie_3_5_init(struct uvisor_softc *sc)
 				break;	
 			}
 			DPRINTF(("%s: port %d, is for %s\n",
-			    USBDEVNAME(sc->sc_ucom.sc_dev), coninfo.connections[i].port,
+			    device_get_nameunit(sc->sc_ucom.sc_dev), coninfo.connections[i].port,
 			    string));
 		}
 	}

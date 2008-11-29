@@ -1,7 +1,7 @@
-/*	$FreeBSD: src/sys/dev/usb/if_uralvar.h,v 1.3.2.3 2006/01/29 14:16:36 damien Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_uralvar.h,v 1.9 2007/06/11 03:36:52 sam Exp $	*/
 
 /*-
- * Copyright (c) 2005, 2006
+ * Copyright (c) 2005
  *	Damien Bergamini <damien.bergamini@free.fr>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -19,6 +19,11 @@
 
 #define RAL_RX_LIST_COUNT	1
 #define RAL_TX_LIST_COUNT	1
+
+#define URAL_SCAN_START         1
+#define URAL_SCAN_END           2
+#define URAL_SET_CHANNEL        3
+
 
 struct ural_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
@@ -69,20 +74,12 @@ struct ural_rx_data {
 	struct mbuf		*m;
 };
 
-struct ural_amrr {
-	int	txcnt;
-	int	retrycnt;
-	int	success;
-	int	success_threshold;
-	int	recovery;
-};
-
 struct ural_softc {
 	struct ifnet			*sc_ifp;
 	struct ieee80211com		sc_ic;
 	int				(*sc_newstate)(struct ieee80211com *,
 					    enum ieee80211_state, int);
-	USBBASEDEVICE			sc_dev;
+	device_t			sc_dev;
 	usbd_device_handle		sc_udev;
 	usbd_interface_handle		sc_iface;
 
@@ -98,9 +95,13 @@ struct ural_softc {
 	usbd_pipe_handle		sc_tx_pipeh;
 
 	enum ieee80211_state		sc_state;
+	int				sc_arg;
+	int                             sc_scan_action; /* should be an enum */
 	struct usb_task			sc_task;
+	struct usb_task			sc_scantask;
 
-	struct ural_amrr		amrr;
+	struct ieee80211_amrr		amrr;
+	struct ieee80211_amrr_node	amn;
 
 	struct ural_rx_data		rx_data[RAL_RX_LIST_COUNT];
 	struct ural_tx_data		tx_data[RAL_TX_LIST_COUNT];
@@ -110,9 +111,8 @@ struct ural_softc {
 
 	struct mtx			sc_mtx;
 
-	struct callout			scan_ch;
+	struct callout			watchdog_ch;
 	struct callout			amrr_ch;
-
 	int				sc_tx_timer;
 
 	uint16_t			sta[11];

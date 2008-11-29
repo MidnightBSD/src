@@ -1,5 +1,5 @@
 /*	$NetBSD: usb_mem.c,v 1.26 2003/02/01 06:23:40 thorpej Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usb_mem.c,v 1.7 2005/01/06 01:43:29 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/usb_mem.c,v 1.13 2007/06/20 05:10:53 imp Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -46,20 +46,15 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_mem.c,v 1.7 2005/01/06 01:43:29 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_mem.c,v 1.13 2007/06/20 05:10:53 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-#include <sys/device.h>		/* for usbdivar.h */
-#include <machine/bus.h>
-#elif defined(__FreeBSD__)
 #include <sys/endian.h>
 #include <sys/module.h>
 #include <sys/bus.h>
-#endif
 #include <sys/queue.h>
 
 #include <machine/bus.h>
@@ -75,8 +70,8 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/usb_mem.c,v 1.7 2005/01/06 01:43:29 imp Exp 
 #include <dev/usb/usb_mem.h>
 
 #ifdef USB_DEBUG
-#define DPRINTF(x)	if (usbdebug) logprintf x
-#define DPRINTFN(n,x)	if (usbdebug>(n)) logprintf x
+#define DPRINTF(x)	if (usbdebug) printf x
+#define DPRINTFN(n,x)	if (usbdebug>(n)) printf x
 extern int usbdebug;
 #else
 #define DPRINTF(x)
@@ -94,19 +89,19 @@ struct usb_frag_dma {
 	LIST_ENTRY(usb_frag_dma) next;
 };
 
-Static bus_dmamap_callback_t usbmem_callback;
-Static usbd_status	usb_block_allocmem(bus_dma_tag_t, size_t, size_t,
+static bus_dmamap_callback_t usbmem_callback;
+static usbd_status	usb_block_allocmem(bus_dma_tag_t, size_t, size_t,
 					   usb_dma_block_t **);
-Static void		usb_block_freemem(usb_dma_block_t *);
+static void		usb_block_freemem(usb_dma_block_t *);
 
-Static LIST_HEAD(, usb_dma_block) usb_blk_freelist =
+static LIST_HEAD(, usb_dma_block) usb_blk_freelist =
 	LIST_HEAD_INITIALIZER(usb_blk_freelist);
-Static int usb_blk_nfree = 0;
+static int usb_blk_nfree = 0;
 /* XXX should have different free list for different tags (for speed) */
-Static LIST_HEAD(, usb_frag_dma) usb_frag_freelist =
+static LIST_HEAD(, usb_frag_dma) usb_frag_freelist =
 	LIST_HEAD_INITIALIZER(usb_frag_freelist);
 
-Static void
+static void
 usbmem_callback(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 {
 	int i;
@@ -122,7 +117,7 @@ usbmem_callback(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 		p->segs[i] = segs[i];
 }
 
-Static usbd_status
+static usbd_status
 usb_block_allocmem(bus_dma_tag_t tag, size_t size, size_t align,
 		   usb_dma_block_t **dmap)
 {
@@ -167,17 +162,10 @@ usb_block_allocmem(bus_dma_tag_t tag, size_t size, size_t align,
 	if (p == NULL)
 		return (USBD_NOMEM);
 
-#if __FreeBSD_version >= 500000
 	if (bus_dma_tag_create(tag, align, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    size, sizeof(p->segs) / sizeof(p->segs[0]), size,
-	    BUS_DMA_ALLOCNOW, NULL, NULL, &p->tag) == ENOMEM)
-#else
-	if (bus_dma_tag_create(tag, align, 0,
-	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
-	    size, sizeof(p->segs) / sizeof(p->segs[0]), size,
-	    BUS_DMA_ALLOCNOW, &p->tag) == ENOMEM)
-#endif
+	    0, NULL, NULL, &p->tag) == ENOMEM)
 	{
 		goto free;
 	}
@@ -215,7 +203,7 @@ free:
  * from an interrupt context and that is BAD.
  * XXX when should we really free?
  */
-Static void
+static void
 usb_block_freemem(usb_dma_block_t *p)
 {
 	int s;
@@ -230,7 +218,7 @@ usb_block_freemem(usb_dma_block_t *p)
 usbd_status
 usb_allocmem(usbd_bus_handle bus, size_t size, size_t align, usb_dma_t *p)
 {
-	bus_dma_tag_t tag = bus->dmatag;
+	bus_dma_tag_t tag = bus->parent_dmatag;
 	usbd_status err;
 	struct usb_frag_dma *f;
 	usb_dma_block_t *b;

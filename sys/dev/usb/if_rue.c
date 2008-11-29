@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2001-2003, Shunsuke Akiyama <akiyama@FreeBSD.org>.
+ * Copyright (c) 1997, 1998, 1999, 2000 Bill Paul <wpaul@ee.columbia.edu>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,7 +57,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.21.2.4 2006/03/17 21:30:56 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.40 2007/07/09 16:58:07 imp Exp $");
 
 /*
  * RealTek RTL8150 USB to fast ethernet controller driver.
@@ -85,9 +86,6 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.21.2.4 2006/03/17 21:30:56 gleb
 
 #include <sys/bus.h>
 #include <machine/bus.h>
-#if __FreeBSD_version < 500000
-#include <machine/clock.h>
-#endif
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbdi.h>
@@ -101,18 +99,18 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/if_rue.c,v 1.21.2.4 2006/03/17 21:30:56 gleb
 
 #include <dev/usb/if_ruereg.h>
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 #ifdef USB_DEBUG
-Static int	ruedebug = 0;
+static int	ruedebug = 0;
 SYSCTL_NODE(_hw_usb, OID_AUTO, rue, CTLFLAG_RW, 0, "USB rue");
 SYSCTL_INT(_hw_usb_rue, OID_AUTO, debug, CTLFLAG_RW,
 	   &ruedebug, 0, "rue debug level");
 
 #define DPRINTFN(n, x)	do { \
 				if (ruedebug > (n)) \
-					logprintf x; \
+					printf x; \
 			} while (0);
 #else
 #define DPRINTFN(n, x)
@@ -123,49 +121,49 @@ SYSCTL_INT(_hw_usb_rue, OID_AUTO, debug, CTLFLAG_RW,
  * Various supported device vendors/products.
  */
 
-Static struct rue_type rue_devs[] = {
+static struct rue_type rue_devs[] = {
 	{ USB_VENDOR_MELCO, USB_PRODUCT_MELCO_LUAKTX },
 	{ USB_VENDOR_REALTEK, USB_PRODUCT_REALTEK_USBKR100 },
 	{ 0, 0 }
 };
 
-Static int rue_match(device_ptr_t);
-Static int rue_attach(device_ptr_t);
-Static int rue_detach(device_ptr_t);
+static device_probe_t rue_match;
+static device_attach_t rue_attach;
+static device_detach_t rue_detach;
+static device_shutdown_t rue_shutdown;
+static miibus_readreg_t rue_miibus_readreg;
+static miibus_writereg_t rue_miibus_writereg;
+static miibus_statchg_t rue_miibus_statchg;
 
-Static int rue_encap(struct rue_softc *, struct mbuf *, int);
+static int rue_encap(struct rue_softc *, struct mbuf *, int);
 #ifdef RUE_INTR_PIPE
-Static void rue_intr(usbd_xfer_handle, usbd_private_handle, usbd_status);
+static void rue_intr(usbd_xfer_handle, usbd_private_handle, usbd_status);
 #endif
-Static void rue_rxeof(usbd_xfer_handle, usbd_private_handle, usbd_status);
-Static void rue_txeof(usbd_xfer_handle, usbd_private_handle, usbd_status);
-Static void rue_tick(void *);
-Static void rue_rxstart(struct ifnet *);
-Static void rue_start(struct ifnet *);
-Static int rue_ioctl(struct ifnet *, u_long, caddr_t);
-Static void rue_init(void *);
-Static void rue_stop(struct rue_softc *);
-Static void rue_watchdog(struct ifnet *);
-Static void rue_shutdown(device_ptr_t);
-Static int rue_ifmedia_upd(struct ifnet *);
-Static void rue_ifmedia_sts(struct ifnet *, struct ifmediareq *);
+static void rue_rxeof(usbd_xfer_handle, usbd_private_handle, usbd_status);
+static void rue_txeof(usbd_xfer_handle, usbd_private_handle, usbd_status);
+static void rue_tick(void *);
+static void rue_tick_task(void *);
+static void rue_rxstart(struct ifnet *);
+static void rue_start(struct ifnet *);
+static int rue_ioctl(struct ifnet *, u_long, caddr_t);
+static void rue_init(void *);
+static void rue_stop(struct rue_softc *);
+static void rue_watchdog(struct ifnet *);
+static int rue_ifmedia_upd(struct ifnet *);
+static void rue_ifmedia_sts(struct ifnet *, struct ifmediareq *);
 
-Static int rue_miibus_readreg(device_ptr_t, int, int);
-Static int rue_miibus_writereg(device_ptr_t, int, int, int);
-Static void rue_miibus_statchg(device_ptr_t);
+static void rue_setmulti(struct rue_softc *);
+static void rue_reset(struct rue_softc *);
 
-Static void rue_setmulti(struct rue_softc *);
-Static void rue_reset(struct rue_softc *);
+static int rue_read_mem(struct rue_softc *, u_int16_t, void *, u_int16_t);
+static int rue_write_mem(struct rue_softc *, u_int16_t, void *, u_int16_t);
+static int rue_csr_read_1(struct rue_softc *, int);
+static int rue_csr_write_1(struct rue_softc *, int, u_int8_t);
+static int rue_csr_read_2(struct rue_softc *, int);
+static int rue_csr_write_2(struct rue_softc *, int, u_int16_t);
+static int rue_csr_write_4(struct rue_softc *, int, u_int32_t);
 
-Static int rue_read_mem(struct rue_softc *, u_int16_t, void *, u_int16_t);
-Static int rue_write_mem(struct rue_softc *, u_int16_t, void *, u_int16_t);
-Static int rue_csr_read_1(struct rue_softc *, int);
-Static int rue_csr_write_1(struct rue_softc *, int, u_int8_t);
-Static int rue_csr_read_2(struct rue_softc *, int);
-Static int rue_csr_write_2(struct rue_softc *, int, u_int16_t);
-Static int rue_csr_write_4(struct rue_softc *, int, u_int32_t);
-
-Static device_method_t rue_methods[] = {
+static device_method_t rue_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe, rue_match),
 	DEVMETHOD(device_attach, rue_attach),
@@ -184,13 +182,13 @@ Static device_method_t rue_methods[] = {
 	{ 0, 0 }
 };
 
-Static driver_t rue_driver = {
+static driver_t rue_driver = {
 	"rue",
 	rue_methods,
 	sizeof(struct rue_softc)
 };
 
-Static devclass_t rue_devclass;
+static devclass_t rue_devclass;
 
 DRIVER_MODULE(rue, uhub, rue_driver, rue_devclass, usbd_driver_load, 0);
 DRIVER_MODULE(miibus, rue, miibus_driver, miibus_devclass, 0, 0);
@@ -210,7 +208,7 @@ MODULE_DEPEND(rue, miibus, 1, 1, 1);
 #define RUE_CLRBIT_2(sc, reg, x) \
 	rue_csr_write_2(sc, reg, rue_csr_read_2(sc, reg) & ~(x))
 
-Static int
+static int
 rue_read_mem(struct rue_softc *sc, u_int16_t addr, void *buf, u_int16_t len)
 {
 	usb_device_request_t	req;
@@ -232,15 +230,15 @@ rue_read_mem(struct rue_softc *sc, u_int16_t addr, void *buf, u_int16_t len)
 	RUE_UNLOCK(sc);
 
 	if (err) {
-		printf("rue%d: control pipe read failed: %s\n",
-		       sc->rue_unit, usbd_errstr(err));
+		device_printf(sc->rue_dev, "control pipe read failed: %s\n",
+		    usbd_errstr(err));
 		return (-1);
 	}
 
 	return (0);
 }
 
-Static int
+static int
 rue_write_mem(struct rue_softc *sc, u_int16_t addr, void *buf, u_int16_t len)
 {
 	usb_device_request_t	req;
@@ -262,15 +260,15 @@ rue_write_mem(struct rue_softc *sc, u_int16_t addr, void *buf, u_int16_t len)
 	RUE_UNLOCK(sc);
 
 	if (err) {
-		printf("rue%d: control pipe write failed: %s\n",
-		       sc->rue_unit, usbd_errstr(err));
+		device_printf(sc->rue_dev, "control pipe write failed: %s\n",
+		    usbd_errstr(err));
 		return (-1);
 	}
 
 	return (0);
 }
 
-Static int
+static int
 rue_csr_read_1(struct rue_softc *sc, int reg)
 {
 	int		err;
@@ -284,7 +282,7 @@ rue_csr_read_1(struct rue_softc *sc, int reg)
 	return (val);
 }
 
-Static int
+static int
 rue_csr_read_2(struct rue_softc *sc, int reg)
 {
 	int		err;
@@ -301,7 +299,7 @@ rue_csr_read_2(struct rue_softc *sc, int reg)
 	return (val);
 }
 
-Static int
+static int
 rue_csr_write_1(struct rue_softc *sc, int reg, u_int8_t val)
 {
 	int	err;
@@ -314,7 +312,7 @@ rue_csr_write_1(struct rue_softc *sc, int reg, u_int8_t val)
 	return (0);
 }
 
-Static int
+static int
 rue_csr_write_2(struct rue_softc *sc, int reg, u_int16_t val)
 {
 	int	err;
@@ -329,7 +327,7 @@ rue_csr_write_2(struct rue_softc *sc, int reg, u_int16_t val)
 	return (0);
 }
 
-Static int
+static int
 rue_csr_write_4(struct rue_softc *sc, int reg, u_int32_t val)
 {
 	int	err;
@@ -344,10 +342,10 @@ rue_csr_write_4(struct rue_softc *sc, int reg, u_int32_t val)
 	return (0);
 }
 
-Static int
-rue_miibus_readreg(device_ptr_t dev, int phy, int reg)
+static int
+rue_miibus_readreg(device_t dev, int phy, int reg)
 {
-	struct rue_softc	*sc = USBGETSOFTC(dev);
+	struct rue_softc	*sc = device_get_softc(dev);
 	int			rval;
 	int			ruereg;
 
@@ -379,7 +377,7 @@ rue_miibus_readreg(device_ptr_t dev, int phy, int reg)
 			rval = rue_csr_read_1(sc, reg);
 			return (rval);
 		}
-		printf("rue%d: bad phy register\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "bad phy register\n");
 		return (0);
 	}
 
@@ -388,10 +386,10 @@ rue_miibus_readreg(device_ptr_t dev, int phy, int reg)
 	return (rval);
 }
 
-Static int
-rue_miibus_writereg(device_ptr_t dev, int phy, int reg, int data)
+static int
+rue_miibus_writereg(device_t dev, int phy, int reg, int data)
 {
-	struct rue_softc	*sc = USBGETSOFTC(dev);
+	struct rue_softc	*sc = device_get_softc(dev);
 	int			ruereg;
 
 	if (phy != 0)		/* RTL8150 supports PHY == 0, only */
@@ -422,7 +420,7 @@ rue_miibus_writereg(device_ptr_t dev, int phy, int reg, int data)
 			rue_csr_write_1(sc, reg, data);
 			return (0);
 		}
-		printf("rue%d: bad phy register\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "bad phy register\n");
 		return (0);
 	}
 	rue_csr_write_2(sc, ruereg, data);
@@ -430,8 +428,8 @@ rue_miibus_writereg(device_ptr_t dev, int phy, int reg, int data)
 	return (0);
 }
 
-Static void
-rue_miibus_statchg(device_ptr_t dev)
+static void
+rue_miibus_statchg(device_t dev)
 {
 	/*
 	 * When the code below is enabled the card starts doing weird
@@ -444,7 +442,7 @@ rue_miibus_statchg(device_ptr_t dev)
 	 * out, so that disable it for good.
 	 */
 #if 0
-	struct rue_softc	*sc = USBGETSOFTC(dev);
+	struct rue_softc	*sc = device_get_softc(dev);
 	struct mii_data		*mii = GET_MII(sc);
 	int			bmcr;
 
@@ -472,7 +470,7 @@ rue_miibus_statchg(device_ptr_t dev)
  * Program the 64-bit multicast hash filter.
  */
 
-Static void
+static void
 rue_setmulti(struct rue_softc *sc)
 {
 	struct ifnet		*ifp;
@@ -501,11 +499,7 @@ rue_setmulti(struct rue_softc *sc)
 
 	/* now program new ones */
 	IF_ADDR_LOCK(ifp);
-#if __FreeBSD_version >= 500000
 	TAILQ_FOREACH (ifma, &ifp->if_multiaddrs, ifma_link)
-#else
-	LIST_FOREACH (ifma, &ifp->if_multiaddrs, ifma_link)
-#endif
 	{
 		if (ifma->ifma_addr->sa_family != AF_LINK)
 			continue;
@@ -531,7 +525,7 @@ rue_setmulti(struct rue_softc *sc)
 	rue_csr_write_4(sc, RUE_MAR4, hashes[1]);
 }
 
-Static void
+static void
 rue_reset(struct rue_softc *sc)
 {
 	int	i;
@@ -544,7 +538,7 @@ rue_reset(struct rue_softc *sc)
 			break;
 	}
 	if (i == RUE_TIMEOUT)
-		printf("rue%d: reset never completed!\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "reset never completed!\n");
 
 	DELAY(10000);
 }
@@ -553,9 +547,10 @@ rue_reset(struct rue_softc *sc)
  * Probe for a RTL8150 chip.
  */
 
-USB_MATCH(rue)
+static int
+rue_match(device_t self)
 {
-	USB_MATCH_START(rue, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	struct rue_type	*t;
 
 	if (uaa->iface == NULL)
@@ -578,10 +573,11 @@ USB_MATCH(rue)
  * setup and ethernet/BPF attach.
  */
 
-USB_ATTACH(rue)
+static int
+rue_attach(device_t self)
 {
-	USB_ATTACH_START(rue, sc, uaa);
-	char				*devinfo;
+	struct rue_softc *sc = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	u_char				eaddr[ETHER_ADDR_LEN];
 	struct ifnet			*ifp;
 	usbd_interface_handle		iface;
@@ -591,25 +587,19 @@ USB_ATTACH(rue)
 	int				i;
 	struct rue_type			*t;
 
-	devinfo = malloc(1024, M_USBDEV, M_WAITOK);
-
-	bzero(sc, sizeof (struct rue_softc));
-	usbd_devinfo(uaa->device, 0, devinfo);
-
 	sc->rue_dev = self;
 	sc->rue_udev = uaa->device;
-	sc->rue_unit = device_get_unit(self);
 
 	if (usbd_set_config_no(sc->rue_udev, RUE_CONFIG_NO, 0)) {
-		printf("rue%d: getting interface handle failed\n",
-			sc->rue_unit);
+		device_printf(sc->rue_dev, "getting interface handle failed\n");
 		goto error;
 	}
 
+	usb_init_task(&sc->rue_tick_task, rue_tick_task, sc);
+
 	err = usbd_device2interface_handle(uaa->device, RUE_IFACE_IDX, &iface);
 	if (err) {
-		printf("rue%d: getting interface handle failed\n",
-		       sc->rue_unit);
+		device_printf(sc->rue_dev, "getting interface handle failed\n");
 		goto error;
 	}
 
@@ -627,15 +617,11 @@ USB_ATTACH(rue)
 
 	id = usbd_get_interface_descriptor(sc->rue_iface);
 
-	usbd_devinfo(uaa->device, 0, devinfo);
-	device_set_desc_copy(self, devinfo);
-	printf("%s: %s\n", USBDEVNAME(self), devinfo);
-
 	/* Find endpoints */
 	for (i = 0; i < id->bNumEndpoints; i++) {
 		ed = usbd_interface2endpoint_descriptor(iface, i);
 		if (ed == NULL) {
-			printf("rue%d: couldn't get ep %d\n", sc->rue_unit, i);
+			device_printf(sc->rue_dev, "couldn't get ep %d\n", i);
 			goto error;
 		}
 		if (UE_GET_DIR(ed->bEndpointAddress) == UE_DIR_IN &&
@@ -650,10 +636,8 @@ USB_ATTACH(rue)
 		}
 	}
 
-#if __FreeBSD_version >= 500000
 	mtx_init(&sc->rue_mtx, device_get_nameunit(self), MTX_NETWORK_LOCK,
 		 MTX_DEF | MTX_RECURSE);
-#endif
 	RUE_LOCK(sc);
 
 	/* Reset the adapter */
@@ -663,17 +647,17 @@ USB_ATTACH(rue)
 	err = rue_read_mem(sc, RUE_EEPROM_IDR0,
 			   (caddr_t)&eaddr, ETHER_ADDR_LEN);
 	if (err) {
-		printf("rue%d: couldn't get station address\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "couldn't get station address\n");
 		goto error1;
 	}
 
 	ifp = sc->rue_ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
-		printf("rue%d: can not if_alloc()\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "can not if_alloc()\n");
 		goto error1;
 	}
 	ifp->if_softc = sc;
-	if_initname(ifp, "rue", sc->rue_unit);
+	if_initname(ifp, "rue", device_get_unit(sc->rue_dev));
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST |
 	    IFF_NEEDSGIANT;
@@ -686,7 +670,7 @@ USB_ATTACH(rue)
 	/* MII setup */
 	if (mii_phy_probe(self, &sc->rue_miibus,
 			  rue_ifmedia_upd, rue_ifmedia_sts)) {
-		printf("rue%d: MII without any PHY!\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "MII without any PHY!\n");
 		goto error2;
 	}
 
@@ -694,33 +678,25 @@ USB_ATTACH(rue)
 	sc->rue_qdat.if_rxstart = rue_rxstart;
 
 	/* Call MI attach routine */
-#if __FreeBSD_version >= 500000
 	ether_ifattach(ifp, eaddr);
-#else
-	ether_ifattach(ifp, ETHER_BPF_SUPPORTED);
-#endif
 	callout_handle_init(&sc->rue_stat_ch);
 	usb_register_netisr();
 	sc->rue_dying = 0;
 
 	RUE_UNLOCK(sc);
-	free(devinfo, M_USBDEV);
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 
     error2:
 	if_free(ifp);
     error1:
 	RUE_UNLOCK(sc);
-#if __FreeBSD_version >= 500000
 	mtx_destroy(&sc->rue_mtx);
-#endif
     error:
-	free(devinfo, M_USBDEV);
-	USB_ATTACH_ERROR_RETURN;
+	return ENXIO;
 }
 
-Static int
-rue_detach(device_ptr_t dev)
+static int
+rue_detach(device_t dev)
 {
 	struct rue_softc	*sc;
 	struct ifnet		*ifp;
@@ -731,12 +707,9 @@ rue_detach(device_ptr_t dev)
 
 	sc->rue_dying = 1;
 	untimeout(rue_tick, sc, sc->rue_stat_ch);
-#if __FreeBSD_version >= 500000
+	usb_rem_task(sc->rue_udev, &sc->rue_tick_task);
 	ether_ifdetach(ifp);
 	if_free(ifp);
-#else
-	ether_ifdetach(ifp, ETHER_BPF_SUPPORTED);
-#endif
 
 	if (sc->rue_ep[RUE_ENDPT_TX] != NULL)
 		usbd_abort_pipe(sc->rue_ep[RUE_ENDPT_TX]);
@@ -748,15 +721,13 @@ rue_detach(device_ptr_t dev)
 #endif
 
 	RUE_UNLOCK(sc);
-#if __FreeBSD_version >= 500000
 	mtx_destroy(&sc->rue_mtx);
-#endif
 
 	return (0);
 }
 
 #ifdef RUE_INTR_PIPE
-Static void
+static void
 rue_intr(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 {
 	struct rue_softc	*sc = priv;
@@ -776,8 +747,8 @@ rue_intr(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 			RUE_UNLOCK(sc);
 			return;
 		}
-		printf("rue%d: usb error on intr: %s\n", sc->rue_unit,
-			usbd_errstr(status));
+		device_printf(sc->rue_dev, "usb error on intr: %s\n",
+		    usbd_errstr(status));
 		if (status == USBD_STALLED)
 			usbd_clear_endpoint_stall(sc->rue_ep[RUE_ENDPT_INTR]);
 		RUE_UNLOCK(sc);
@@ -794,7 +765,7 @@ rue_intr(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 }
 #endif
 
-Static void
+static void
 rue_rxstart(struct ifnet *ifp)
 {
 	struct rue_softc	*sc;
@@ -807,7 +778,7 @@ rue_rxstart(struct ifnet *ifp)
 	c->ue_mbuf = usb_ether_newbuf();
 	if (c->ue_mbuf == NULL) {
 		printf("%s: no memory for rx list "
-		    "-- packet dropped!\n", USBDEVNAME(sc->rue_dev));
+		    "-- packet dropped!\n", device_get_nameunit(sc->rue_dev));
 		ifp->if_ierrors++;
 		RUE_UNLOCK(sc);
 		return;
@@ -827,7 +798,7 @@ rue_rxstart(struct ifnet *ifp)
  * the higher level protocols.
  */
 
-Static void
+static void
 rue_rxeof(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 {
 	struct ue_chain	*c = priv;
@@ -853,8 +824,8 @@ rue_rxeof(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 			return;
 		}
 		if (usbd_ratecheck(&sc->rue_rx_notice))
-			printf("rue%d: usb error on rx: %s\n", sc->rue_unit,
-			       usbd_errstr(status));
+			device_printf(sc->rue_dev, "usb error on rx: %s\n",
+			    usbd_errstr(status));
 		if (status == USBD_STALLED)
 			usbd_clear_endpoint_stall(sc->rue_ep[RUE_ENDPT_RX]);
 		goto done;
@@ -903,7 +874,7 @@ rue_rxeof(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
  * the list buffers.
  */
 
-Static void
+static void
 rue_txeof(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 {
 	struct ue_chain	*c = priv;
@@ -920,8 +891,8 @@ rue_txeof(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 			RUE_UNLOCK(sc);
 			return;
 		}
-		printf("rue%d: usb error on tx: %s\n", sc->rue_unit,
-			usbd_errstr(status));
+		device_printf(sc->rue_dev, "usb error on tx: %s\n",
+		    usbd_errstr(status));
 		if (status == USBD_STALLED)
 			usbd_clear_endpoint_stall(sc->rue_ep[RUE_ENDPT_TX]);
 		RUE_UNLOCK(sc);
@@ -946,8 +917,22 @@ rue_txeof(usbd_xfer_handle xfer, usbd_private_handle priv, usbd_status status)
 	RUE_UNLOCK(sc);
 }
 
-Static void
+static void
 rue_tick(void *xsc)
+{
+	struct rue_softc *sc = xsc;
+
+	if (sc == NULL)
+		return;
+	if (sc->rue_dying)
+		return;
+
+	/* Perform periodic stuff in process context */
+	usb_add_task(sc->rue_udev, &sc->rue_tick_task, USB_TASKQ_DRIVER);
+}
+
+static void
+rue_tick_task(void *xsc)
 {
 	struct rue_softc	*sc = xsc;
 	struct ifnet		*ifp;
@@ -978,7 +963,7 @@ rue_tick(void *xsc)
 	RUE_UNLOCK(sc);
 }
 
-Static int
+static int
 rue_encap(struct rue_softc *sc, struct mbuf *m, int idx)
 {
 	int			total_len;
@@ -1019,7 +1004,7 @@ rue_encap(struct rue_softc *sc, struct mbuf *m, int idx)
 	return (0);
 }
 
-Static void
+static void
 rue_start(struct ifnet *ifp)
 {
 	struct rue_softc	*sc = ifp->if_softc;
@@ -1066,7 +1051,7 @@ rue_start(struct ifnet *ifp)
 	RUE_UNLOCK(sc);
 }
 
-Static void
+static void
 rue_init(void *xsc)
 {
 	struct rue_softc	*sc = xsc;
@@ -1090,13 +1075,13 @@ rue_init(void *xsc)
 	rue_reset(sc);
 
 	/* Set MAC address */
-	rue_write_mem(sc, RUE_IDR0, IFP2ENADDR(sc->rue_ifp),
+	rue_write_mem(sc, RUE_IDR0, IF_LLADDR(sc->rue_ifp),
 	    ETHER_ADDR_LEN);
 
 	/* Init TX ring. */
 	if (usb_ether_tx_list_init(sc, &sc->rue_cdata,
 	    sc->rue_udev) == ENOBUFS) {
-		printf("rue%d: tx list init failed\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "tx list init failed\n");
 		RUE_UNLOCK(sc);
 		return;
 	}
@@ -1104,7 +1089,7 @@ rue_init(void *xsc)
 	/* Init RX ring. */
 	if (usb_ether_rx_list_init(sc, &sc->rue_cdata,
 	    sc->rue_udev) == ENOBUFS) {
-		printf("rue%d: rx list init failed\n", sc->rue_unit);
+		device_printf(sc->rue_dev, "rx list init failed\n");
 		RUE_UNLOCK(sc);
 		return;
 	}
@@ -1146,16 +1131,16 @@ rue_init(void *xsc)
 	err = usbd_open_pipe(sc->rue_iface, sc->rue_ed[RUE_ENDPT_RX],
 			     USBD_EXCLUSIVE_USE, &sc->rue_ep[RUE_ENDPT_RX]);
 	if (err) {
-		printf("rue%d: open rx pipe failed: %s\n",
-			sc->rue_unit, usbd_errstr(err));
+		device_printf(sc->rue_dev, "open rx pipe failed: %s\n",
+		    usbd_errstr(err));
 		RUE_UNLOCK(sc);
 		return;
 	}
 	err = usbd_open_pipe(sc->rue_iface, sc->rue_ed[RUE_ENDPT_TX],
 			     USBD_EXCLUSIVE_USE, &sc->rue_ep[RUE_ENDPT_TX]);
 	if (err) {
-		printf("rue%d: open tx pipe failed: %s\n",
-			sc->rue_unit, usbd_errstr(err));
+		device_printf(sc->rue_dev, "open tx pipe failed: %s\n",
+		    usbd_errstr(err));
 		RUE_UNLOCK(sc);
 		return;
 	}
@@ -1167,8 +1152,8 @@ rue_init(void *xsc)
 				  sc->rue_cdata.ue_ibuf, RUE_INTR_PKTLEN,
 				  rue_intr, RUE_INTR_INTERVAL);
 	if (err) {
-		printf("rue%d: open intr pipe failed: %s\n",
-			sc->rue_unit, usbd_errstr(err));
+		device_printf(sc->rue_dev, "open intr pipe failed: %s\n",
+		    usbd_errstr(err));
 		RUE_UNLOCK(sc);
 		return;
 	}
@@ -1195,7 +1180,7 @@ rue_init(void *xsc)
  * Set media options.
  */
 
-Static int
+static int
 rue_ifmedia_upd(struct ifnet *ifp)
 {
 	struct rue_softc	*sc = ifp->if_softc;
@@ -1216,7 +1201,7 @@ rue_ifmedia_upd(struct ifnet *ifp)
  * Report current media status.
  */
 
-Static void
+static void
 rue_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
 {
 	struct rue_softc	*sc = ifp->if_softc;
@@ -1227,7 +1212,7 @@ rue_ifmedia_sts(struct ifnet *ifp, struct ifmediareq *ifmr)
 	ifmr->ifm_status = mii->mii_media_status;
 }
 
-Static int
+static int
 rue_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 {
 	struct rue_softc	*sc = ifp->if_softc;
@@ -1281,7 +1266,7 @@ rue_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	return (error);
 }
 
-Static void
+static void
 rue_watchdog(struct ifnet *ifp)
 {
 	struct rue_softc	*sc = ifp->if_softc;
@@ -1291,7 +1276,7 @@ rue_watchdog(struct ifnet *ifp)
 	RUE_LOCK(sc);
 
 	ifp->if_oerrors++;
-	printf("rue%d: watchdog timeout\n", sc->rue_unit);
+	device_printf(sc->rue_dev, "watchdog timeout\n");
 
 	c = &sc->rue_cdata.ue_tx_chain[0];
 	usbd_get_xfer_status(c->ue_xfer, NULL, NULL, NULL, &stat);
@@ -1308,7 +1293,7 @@ rue_watchdog(struct ifnet *ifp)
  * RX and TX lists.
  */
 
-Static void
+static void
 rue_stop(struct rue_softc *sc)
 {
 	usbd_status	err;
@@ -1328,13 +1313,13 @@ rue_stop(struct rue_softc *sc)
 	if (sc->rue_ep[RUE_ENDPT_RX] != NULL) {
 		err = usbd_abort_pipe(sc->rue_ep[RUE_ENDPT_RX]);
 		if (err) {
-			printf("rue%d: abort rx pipe failed: %s\n",
-			       sc->rue_unit, usbd_errstr(err));
+			device_printf(sc->rue_dev, "abort rx pipe failed: %s\n",
+			    usbd_errstr(err));
 		}
 		err = usbd_close_pipe(sc->rue_ep[RUE_ENDPT_RX]);
 		if (err) {
-			printf("rue%d: close rx pipe failed: %s\n",
-			       sc->rue_unit, usbd_errstr(err));
+			device_printf(sc->rue_dev, "close rx pipe failed: %s\n",
+			    usbd_errstr(err));
 		}
 		sc->rue_ep[RUE_ENDPT_RX] = NULL;
 	}
@@ -1342,13 +1327,13 @@ rue_stop(struct rue_softc *sc)
 	if (sc->rue_ep[RUE_ENDPT_TX] != NULL) {
 		err = usbd_abort_pipe(sc->rue_ep[RUE_ENDPT_TX]);
 		if (err) {
-			printf("rue%d: abort tx pipe failed: %s\n",
-			       sc->rue_unit, usbd_errstr(err));
+			device_printf(sc->rue_dev, "abort tx pipe failed: %s\n",
+			    usbd_errstr(err));
 		}
 		err = usbd_close_pipe(sc->rue_ep[RUE_ENDPT_TX]);
 		if (err) {
-			printf("rue%d: close tx pipe failed: %s\n",
-			       sc->rue_unit, usbd_errstr(err));
+			device_printf(sc->rue_dev, "close tx pipe failed: %s\n",
+			    usbd_errstr(err));
 		}
 		sc->rue_ep[RUE_ENDPT_TX] = NULL;
 	}
@@ -1357,13 +1342,13 @@ rue_stop(struct rue_softc *sc)
 	if (sc->rue_ep[RUE_ENDPT_INTR] != NULL) {
 		err = usbd_abort_pipe(sc->rue_ep[RUE_ENDPT_INTR]);
 		if (err) {
-			printf("rue%d: abort intr pipe failed: %s\n",
-			       sc->rue_unit, usbd_errstr(err));
+			device_printf(sc->rue_dev, "abort intr pipe failed: %s\n",
+			    usbd_errstr(err));
 		}
 		err = usbd_close_pipe(sc->rue_ep[RUE_ENDPT_INTR]);
 		if (err) {
-			printf("rue%d: close intr pipe failed: %s\n",
-			       sc->rue_unit, usbd_errstr(err));
+			device_printf(sc->rue_dev, "close intr pipe failed: %s\n",
+			    usbd_errstr(err));
 		}
 		sc->rue_ep[RUE_ENDPT_INTR] = NULL;
 	}
@@ -1391,8 +1376,8 @@ rue_stop(struct rue_softc *sc)
  * get confused by errant DMAs when rebooting.
  */
 
-Static void
-rue_shutdown(device_ptr_t dev)
+static int
+rue_shutdown(device_t dev)
 {
 	struct rue_softc	*sc;
 
@@ -1403,4 +1388,6 @@ rue_shutdown(device_ptr_t dev)
 	rue_reset(sc);
 	rue_stop(sc);
 	RUE_UNLOCK(sc);
+
+	return (0);
 }

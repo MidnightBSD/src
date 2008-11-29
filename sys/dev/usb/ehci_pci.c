@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ehci_pci.c,v 1.18.2.1 2006/01/26 01:43:13 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ehci_pci.c,v 1.28.2.1 2007/11/26 18:21:42 jfv Exp $");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -58,6 +58,8 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/ehci_pci.c,v 1.18.2.1 2006/01/26 01:43:13 ie
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/bus.h>
 #include <sys/queue.h>
 #include <sys/lockmgr.h>
@@ -115,6 +117,8 @@ static const char *ehci_device_ich5 = "Intel 82801EB/R (ICH5) USB 2.0 controller
 static const char *ehci_device_ich6 = "Intel 82801FB (ICH6) USB 2.0 controller";
 #define PCI_EHCI_DEVICEID_ICH7		0x27cc8086
 static const char *ehci_device_ich7 = "Intel 82801GB/R (ICH7) USB 2.0 controller";
+#define PCI_EHCI_DEVICEID_63XX		0x268c8086
+static const char *ehci_device_63XX = "Intel 63XXESB USB 2.0 controller";
  
 /* NEC */
 #define PCI_EHCI_DEVICEID_NEC		0x00e01033
@@ -145,17 +149,17 @@ static const char *ehci_device_generic = "EHCI (generic) USB 2.0 controller";
 
 #ifdef USB_DEBUG
 #define EHCI_DEBUG USB_DEBUG
-#define DPRINTF(x)	do { if (ehcidebug) logprintf x; } while (0)
+#define DPRINTF(x)	do { if (ehcidebug) printf x; } while (0)
 extern int ehcidebug;
 #else
 #define DPRINTF(x)
 #endif
 
-static int ehci_pci_attach(device_t self);
-static int ehci_pci_detach(device_t self);
-static int ehci_pci_shutdown(device_t self);
-static int ehci_pci_suspend(device_t self);
-static int ehci_pci_resume(device_t self);
+static device_attach_t ehci_pci_attach;
+static device_detach_t ehci_pci_detach;
+static device_shutdown_t ehci_pci_shutdown;
+static device_suspend_t ehci_pci_suspend;
+static device_resume_t ehci_pci_resume;
 static void ehci_pci_givecontroller(device_t self);
 static void ehci_pci_takecontroller(device_t self);
 
@@ -216,6 +220,8 @@ ehci_pci_match(device_t self)
 		return (ehci_device_sb400);
 	case PCI_EHCI_DEVICEID_6300:
 		return (ehci_device_6300);
+	case PCI_EHCI_DEVICEID_63XX:
+		return (ehci_device_63XX);
 	case PCI_EHCI_DEVICEID_ICH4:
 		return (ehci_device_ich4);
 	case PCI_EHCI_DEVICEID_ICH5:
@@ -268,6 +274,7 @@ static int
 ehci_pci_attach(device_t self)
 {
 	ehci_softc_t *sc = device_get_softc(self);
+	devclass_t dc;
 	device_t parent;
 	device_t *neighbors;
 	device_t *nbus;
@@ -285,7 +292,7 @@ ehci_pci_attach(device_t self)
 	case PCI_USBREV_1_0:
 	case PCI_USBREV_1_1:
 		sc->sc_bus.usbrev = USBREV_UNKNOWN;
-		printf("pre-2.0 USB rev\n");
+		device_printf(self, "pre-2.0 USB rev\n");
 		return ENXIO;
 	case PCI_USBREV_2_0:
 		sc->sc_bus.usbrev = USBREV_2_0;
@@ -368,7 +375,7 @@ ehci_pci_attach(device_t self)
 	}
 
 	err = bus_setup_intr(self, sc->irq_res, INTR_TYPE_BIO,
-	    (driver_intr_t *) ehci_intr, sc, &sc->ih);
+	    NULL, (driver_intr_t *)ehci_intr, sc, &sc->ih);
 	if (err) {
 		device_printf(self, "Could not setup irq, %d\n", err);
 		sc->ih = NULL;
@@ -401,6 +408,7 @@ ehci_pci_attach(device_t self)
 		return ENXIO;
 	}
 	ncomp = 0;
+	dc = devclass_find("usb");
 	slot = pci_get_slot(self);
 	function = pci_get_function(self);
 	for (i = 0; i < count; i++) {
@@ -408,17 +416,50 @@ ehci_pci_attach(device_t self)
 			pci_get_function(neighbors[i]) < function) {
 			res = device_get_children(neighbors[i],
 				&nbus, &buscount);
-			if (res != 0 || buscount != 1)
+			if (res != 0)
 				continue;
+			if (buscount != 1) {
+				free(nbus, M_TEMP);
+				continue;
+			}
+			if (device_get_devclass(nbus[0]) != dc) {
+				free(nbus, M_TEMP);
+				continue;
+			}
 			bsc = device_get_softc(nbus[0]);
+			free(nbus, M_TEMP);
 			DPRINTF(("ehci_pci_attach: companion %s\n",
-			    USBDEVNAME(bsc->bdev)));
+			    device_get_nameunit(bsc->bdev)));
 			sc->sc_comps[ncomp++] = bsc;
 			if (ncomp >= EHCI_COMPANION_MAX)
 				break;
 		}
 	}
 	sc->sc_ncomp = ncomp;
+
+	/* Allocate a parent dma tag for DMA maps */
+	err = bus_dma_tag_create(bus_get_dma_tag(self), 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	    BUS_SPACE_MAXSIZE_32BIT, USB_DMA_NSEG, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    NULL, NULL, &sc->sc_bus.parent_dmatag);
+	if (err) {
+		device_printf(self, "Could not allocate parent DMA tag (%d)\n",
+		    err);
+		ehci_pci_detach(self);
+		return ENXIO;
+	}
+
+	/* Allocate a dma tag for transfer buffers */
+	err = bus_dma_tag_create(sc->sc_bus.parent_dmatag, 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	    BUS_SPACE_MAXSIZE_32BIT, USB_DMA_NSEG, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    busdma_lock_mutex, &Giant, &sc->sc_bus.buffer_dmatag);
+	if (err) {
+		device_printf(self, "Could not allocate buffer DMA tag (%d)\n",
+		    err);
+		ehci_pci_detach(self);
+		return ENXIO;
+	}
 
 	ehci_pci_takecontroller(self);
 	err = ehci_init(sc);
@@ -450,6 +491,10 @@ ehci_pci_detach(device_t self)
 	 */
 	if (sc->iot && sc->ioh)
 		bus_space_write_4(sc->iot, sc->ioh, EHCI_USBINTR, 0);
+	if (sc->sc_bus.parent_dmatag != NULL)
+		bus_dma_tag_destroy(sc->sc_bus.parent_dmatag);
+	if (sc->sc_bus.buffer_dmatag != NULL)
+		bus_dma_tag_destroy(sc->sc_bus.buffer_dmatag);
 
 	if (sc->irq_res && sc->ih) {
 		int err = bus_teardown_intr(self, sc->irq_res, sc->ih);
@@ -496,7 +541,7 @@ ehci_pci_takecontroller(device_t self)
 		pci_write_config(self, eecp, legsup | EHCI_LEGSUP_OSOWNED, 4);
 		if (legsup & EHCI_LEGSUP_BIOSOWNED) {
 			printf("%s: waiting for BIOS to give up control\n",
-			    USBDEVNAME(sc->sc_bus.bdev));
+			    device_get_nameunit(sc->sc_bus.bdev));
 			for (i = 0; i < 5000; i++) {
 				legsup = pci_read_config(self, eecp, 4);
 				if ((legsup & EHCI_LEGSUP_BIOSOWNED) == 0)
@@ -505,7 +550,7 @@ ehci_pci_takecontroller(device_t self)
 			}
 			if (legsup & EHCI_LEGSUP_BIOSOWNED)
 				printf("%s: timed out waiting for BIOS\n",
-				    USBDEVNAME(sc->sc_bus.bdev));
+				    device_get_nameunit(sc->sc_bus.bdev));
 		}
 	}
 }

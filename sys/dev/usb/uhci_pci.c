@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/uhci_pci.c,v 1.57 2005/03/01 07:50:11 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/uhci_pci.c,v 1.61.2.1 2007/11/26 18:21:42 jfv Exp $");
 
 /* Universal Host Controller Interface
  *
@@ -54,15 +54,15 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/uhci_pci.c,v 1.57 2005/03/01 07:50:11 imp Ex
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/bus.h>
 #include <sys/queue.h>
-#if defined(__FreeBSD__)
 #include <sys/bus.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <sys/rman.h>
-#endif
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -139,6 +139,18 @@ static const char *uhci_device_ich6_c = "Intel 82801FB/FR/FW/FRW (ICH6) USB cont
 #define PCI_UHCI_DEVICEID_ICH6_D	0x265b8086
 static const char *uhci_device_ich6_d = "Intel 82801FB/FR/FW/FRW (ICH6) USB controller USB-D";
 
+#define PCI_UHCI_DEVICEID_63XXESB_1	0x26888086
+static const char *uhci_device_esb_1 = "Intel 631XESB/632XESB/3100 USB controller USB-1";
+
+#define PCI_UHCI_DEVICEID_63XXESB_2	0x26898086
+static const char *uhci_device_esb_2 = "Intel 631XESB/632XESB/3100 USB controller USB-2";
+
+#define PCI_UHCI_DEVICEID_63XXESB_3	0x268a8086
+static const char *uhci_device_esb_3 = "Intel 631XESB/632XESB/3100 USB controller USB-3";
+
+#define PCI_UHCI_DEVICEID_63XXESB_4	0x268b8086
+static const char *uhci_device_esb_4 = "Intel 631XESB/632XESB/3100 USB controller USB-4";
+
 #define PCI_UHCI_DEVICEID_440MX		0x719a8086
 static const char *uhci_device_440mx = "Intel 82443MX USB controller";
 
@@ -153,11 +165,10 @@ static const char *uhci_device_generic = "UHCI (generic) USB controller";
 #define PCI_UHCI_BASE_REG               0x20
 
 
-static int uhci_pci_attach(device_t self);
-static int uhci_pci_detach(device_t self);
-static int uhci_pci_suspend(device_t self);
-static int uhci_pci_resume(device_t self);
-
+static device_attach_t uhci_pci_attach;
+static device_detach_t uhci_pci_detach;
+static device_suspend_t uhci_pci_suspend;
+static device_resume_t uhci_pci_resume;
 
 static int
 uhci_pci_suspend(device_t self)
@@ -231,6 +242,14 @@ uhci_pci_match(device_t self)
 		return (uhci_device_ich6_c);
 	} else if (device_id == PCI_UHCI_DEVICEID_ICH6_D) {
 		return (uhci_device_ich6_d);
+	} else if (device_id == PCI_UHCI_DEVICEID_63XXESB_1) {
+		return (uhci_device_esb_1);
+	} else if (device_id == PCI_UHCI_DEVICEID_63XXESB_2) {
+		return (uhci_device_esb_2);
+	} else if (device_id == PCI_UHCI_DEVICEID_63XXESB_3) {
+		return (uhci_device_esb_3);
+	} else if (device_id == PCI_UHCI_DEVICEID_63XXESB_4) {
+		return (uhci_device_esb_4);
 	} else if (device_id == PCI_UHCI_DEVICEID_440MX) {
 		return (uhci_device_440mx);
 	} else if (device_id == PCI_UHCI_DEVICEID_460GX) {
@@ -328,7 +347,7 @@ uhci_pci_attach(device_t self)
 	}
 
 	err = bus_setup_intr(self, sc->irq_res, INTR_TYPE_BIO,
-	    (driver_intr_t *) uhci_intr, sc, &sc->ih);
+	    NULL, (driver_intr_t *) uhci_intr, sc, &sc->ih);
 	if (err) {
 		device_printf(self, "Could not setup irq, %d\n", err);
 		sc->ih = NULL;
@@ -347,6 +366,29 @@ uhci_pci_attach(device_t self)
 		    pci_read_config(self, PCI_LEGSUP, 2));
 #endif
 	pci_write_config(self, PCI_LEGSUP, PCI_LEGSUP_USBPIRQDEN, 2);
+
+	/* Allocate a parent dma tag for DMA maps */
+	err = bus_dma_tag_create(bus_get_dma_tag(self), 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	    BUS_SPACE_MAXSIZE_32BIT, USB_DMA_NSEG, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    NULL, NULL, &sc->sc_bus.parent_dmatag);
+	if (err) {
+		device_printf(self, "Could not allocate parent DMA tag (%d)\n",
+		    err);
+		uhci_pci_detach(self);
+		return ENXIO;
+	}
+	/* Allocate a dma tag for transfer buffers */
+	err = bus_dma_tag_create(sc->sc_bus.parent_dmatag, 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	    BUS_SPACE_MAXSIZE_32BIT, USB_DMA_NSEG, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    busdma_lock_mutex, &Giant, &sc->sc_bus.buffer_dmatag);
+	if (err) {
+		device_printf(self, "Could not allocate transfer tag (%d)\n",
+		    err);
+		uhci_pci_detach(self);
+		return ENXIO;
+	}
 
 	err = uhci_init(sc);
 	if (!err) {
@@ -372,6 +414,10 @@ uhci_pci_detach(device_t self)
 		sc->sc_flags &= ~UHCI_SCFLG_DONEINIT;
 	}
 
+	if (sc->sc_bus.parent_dmatag != NULL)
+		bus_dma_tag_destroy(sc->sc_bus.parent_dmatag);
+	if (sc->sc_bus.buffer_dmatag != NULL)
+		bus_dma_tag_destroy(sc->sc_bus.buffer_dmatag);
 
 	if (sc->irq_res && sc->ih) {
 		int err = bus_teardown_intr(self, sc->irq_res, sc->ih);

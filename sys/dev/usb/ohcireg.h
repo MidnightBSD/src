@@ -1,5 +1,5 @@
 /*	$NetBSD: ohcireg.h,v 1.17 2000/04/01 09:27:35 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ohcireg.h,v 1.22 2005/01/06 01:43:28 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/ohcireg.h,v 1.23 2006/05/28 05:27:08 iedowse Exp $	*/
 
 
 /*-
@@ -220,7 +220,8 @@ typedef struct {
 	u_int16_t	itd_offset[OHCI_ITD_NOFFSET];	/* Buffer offsets */
 #define itd_pswn itd_offset				/* Packet Status Word*/
 #define OHCI_ITD_PAGE_SELECT	0x00001000
-#define OHCI_ITD_MK_OFFS(len)	(0xe000 | ((len) & 0x1fff))
+#define OHCI_ITD_MK_OFFS(page, off) \
+     (0xe000 | ((page) ? OHCI_ITD_PAGE_SELECT : 0) | ((off) & 0xfff))
 #define OHCI_ITD_PSW_LENGTH(x)	((x) & 0xfff)		/* Transfer length */
 #define OHCI_ITD_PSW_GET_CC(x)	((x) >> 12)		/* Condition Code */
 } ohci_itd_t;

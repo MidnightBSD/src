@@ -29,7 +29,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/if_cdcereg.h,v 1.5.2.1 2005/12/29 05:30:39 sobomax Exp $
+ * $FreeBSD: src/sys/dev/usb/if_cdcereg.h,v 1.8 2007/06/10 07:33:48 imp Exp $
  */
 
 #ifndef _USB_IF_CDCEREG_H_
@@ -55,7 +55,6 @@ struct cdce_softc {
 	usbd_pipe_handle	 cdce_bulkout_pipe;
 	char			 cdce_dying;
 	device_t		 cdce_dev;
-	int			 cdce_unit;
 
 	struct ue_cdata		 cdce_cdata;
 	struct timeval		 cdce_rx_notice;
@@ -66,8 +65,6 @@ struct cdce_softc {
 	struct mtx		 cdce_mtx;
 
 	struct usb_qdat		 q;
-
-	char			 devinfo[1024];
 };
 
 /* We are still under Giant */

@@ -2,7 +2,7 @@
  * Copyright (c) 2004 Bernd Walter <ticso@freebsd.org>
  *
  * $URL: https://devel.bwct.de/svn/projects/ubser/ubser.c $
- * $Date: 2006-02-25 02:37:00 $
+ * $Date: 2008-11-29 16:07:31 $
  * $Author: laffer1 $
  * $Rev: 1127 $
  */
@@ -70,7 +70,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ubser.c,v 1.16.2.1 2006/01/30 22:47:45 ticso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ubser.c,v 1.30 2007/07/05 06:42:14 imp Exp $");
 
 /*
  * BWCT serial adapter driver
@@ -112,12 +112,12 @@ SYSCTL_INT(_hw_usb_ubser, OID_AUTO, debug, CTLFLAG_RW,
 	   &ubserdebug, 0, "ubser debug level");
 #define DPRINTF(x)      do { \
 				if (ubserdebug) \
-					logprintf x; \
+					printf x; \
 			} while (0)
 
 #define DPRINTFN(n, x)  do { \
 				if (ubserdebug > (n)) \
-					logprintf x; \
+					printf x; \
 			} while (0)
 #else
 #define DPRINTF(x)
@@ -137,7 +137,7 @@ struct ubser_port {
 };
 
 struct ubser_softc {
-	USBBASEDEVICE		sc_dev;
+	device_t		sc_dev;
 	usbd_device_handle	sc_udev;
 	usbd_interface_handle	sc_iface;	/* data interface */
 	int			sc_ifaceno;
@@ -164,24 +164,44 @@ struct ubser_softc {
 	struct ubser_port	*sc_port;
 };
 
-Static int ubserparam(struct tty *, struct termios *);
-Static void ubserstart(struct tty *);
-Static void ubserstop(struct tty *, int);
-Static usbd_status ubserstartread(struct ubser_softc *);
-Static void ubserreadcb(usbd_xfer_handle, usbd_private_handle, usbd_status);
-Static void ubserwritecb(usbd_xfer_handle, usbd_private_handle, usbd_status);
-Static void ubser_cleanup(struct ubser_softc *sc);
+static int ubserparam(struct tty *, struct termios *);
+static void ubserstart(struct tty *);
+static void ubserstop(struct tty *, int);
+static usbd_status ubserstartread(struct ubser_softc *);
+static void ubserreadcb(usbd_xfer_handle, usbd_private_handle, usbd_status);
+static void ubserwritecb(usbd_xfer_handle, usbd_private_handle, usbd_status);
+static void ubser_cleanup(struct ubser_softc *sc);
 
-Static t_break_t	ubserbreak;
-Static t_open_t		ubseropen;
-Static t_close_t	ubserclose;
-Static t_modem_t	ubsermodem;
+static t_break_t	ubserbreak;
+static t_open_t		ubseropen;
+static t_close_t	ubserclose;
+static t_modem_t	ubsermodem;
 
-USB_DECLARE_DRIVER(ubser);
+static device_probe_t ubser_match;
+static device_attach_t ubser_attach;
+static device_detach_t ubser_detach;
 
-USB_MATCH(ubser)
+static device_method_t ubser_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		ubser_match),
+	DEVMETHOD(device_attach,	ubser_attach),
+	DEVMETHOD(device_detach,	ubser_detach),
+
+	{ 0, 0 }
+};
+
+static driver_t ubser_driver = {
+	"ubser",
+	ubser_methods,
+	sizeof(struct ubser_softc)
+};
+
+static devclass_t ubser_devclass;
+
+static int
+ubser_match(device_t self)
 {
-	USB_MATCH_START(ubser, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usb_string_descriptor_t us;
 	usb_interface_descriptor_t *id;
 	usb_device_descriptor_t *dd;
@@ -218,14 +238,15 @@ USB_MATCH(ubser)
 	return (UMATCH_NONE);
 }
 
-USB_ATTACH(ubser)
+static int
+ubser_attach(device_t self)
 {
-	USB_ATTACH_START(ubser, sc, uaa);
+	struct ubser_softc *sc = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usbd_device_handle udev = uaa->device;
 	usb_endpoint_descriptor_t *ed;
 	usb_interface_descriptor_t *id;
 	usb_device_request_t req;
-	char *devinfo;
 	struct tty *tp;
 	usbd_status err;
 	int i;
@@ -233,9 +254,7 @@ USB_ATTACH(ubser)
 	uint8_t epcount;
 	struct ubser_port *pp;
 
-	devinfo = malloc(1024, M_USBDEV, M_WAITOK);
-	usbd_devinfo(udev, 0, devinfo);
-	USB_ATTACH_SETUP;
+	sc->sc_dev = self;
 
 	DPRINTFN(10,("\nubser_attach: sc=%p\n", sc));
 
@@ -261,32 +280,29 @@ USB_ATTACH(ubser)
 	err = usbd_do_request_flags(udev, &req, &sc->sc_numser,
 	    USBD_SHORT_XFER_OK, &alen, USBD_DEFAULT_TIMEOUT);
 	if (err) {
-		printf("%s: failed to get number of serials\n",
-		    USBDEVNAME(sc->sc_dev));
+		device_printf(self, "failed to get number of serials\n");
 		goto bad;
 	} else if (alen != 1) {
-		printf("%s: bogus answer on get_numser\n",
-		    USBDEVNAME(sc->sc_dev));
+		device_printf(self, "bogus answer on get_numser\n");
 		goto bad;
 	}
 	if (sc->sc_numser > MAX_SER)
 		sc->sc_numser = MAX_SER;
-	printf("%s: found %i serials\n", USBDEVNAME(sc->sc_dev), sc->sc_numser);
+	device_printf(self, "found %i serials\n", sc->sc_numser);
 
 	sc->sc_port = malloc(sizeof(*sc->sc_port) * sc->sc_numser,
 	    M_USBDEV, M_WAITOK);
 
 	/* find our bulk endpoints */
 	epcount = 0;
-	usbd_endpoint_count(sc->sc_iface, &epcount);
+	(void)usbd_endpoint_count(sc->sc_iface, &epcount);
 	sc->sc_bulkin_no = -1;
 	sc->sc_bulkout_no = -1;
 	for (i = 0; i < epcount; i++) {
 		ed = usbd_interface2endpoint_descriptor(sc->sc_iface, i);
 		if (ed == NULL) {
-			printf("%s: couldn't get ep %d\n",
-			USBDEVNAME(sc->sc_dev), i);
-			USB_ATTACH_ERROR_RETURN;
+			device_printf(self, "couldn't get ep %d\n", i);
+			return ENXIO;
 		}
 		if (UE_GET_DIR(ed->bEndpointAddress) == UE_DIR_IN &&
 		    UE_GET_XFERTYPE(ed->bmAttributes) == UE_BULK) {
@@ -301,8 +317,7 @@ USB_ATTACH(ubser)
 		}
 	}
 	if (sc->sc_bulkin_no == -1 || sc->sc_bulkout_no == -1) {
-		printf("%s: could not find bulk in/out endpoint\n",
-		    USBDEVNAME(sc->sc_dev));
+		device_printf(self, "could not find bulk in/out endpoint\n");
 		sc->sc_dying = 1;
 		goto bad;
 	}
@@ -312,18 +327,16 @@ USB_ATTACH(ubser)
 	err = usbd_open_pipe(sc->sc_iface, sc->sc_bulkin_no, 0,
 			     &sc->sc_bulkin_pipe);
 	if (err) {
-		printf("%s: open bulk in error (addr %d): %s\n",
-		       USBDEVNAME(sc->sc_dev), sc->sc_bulkin_no,
-		       usbd_errstr(err));
+		device_printf(self, "open bulk in error (addr %d): %s\n",
+		    sc->sc_bulkin_no, usbd_errstr(err));
 		goto fail_0;
 	}
 	/* Bulk-out pipe */
 	err = usbd_open_pipe(sc->sc_iface, sc->sc_bulkout_no,
 			     USBD_EXCLUSIVE_USE, &sc->sc_bulkout_pipe);
 	if (err) {
-		printf("%s: open bulk out error (addr %d): %s\n",
-		       USBDEVNAME(sc->sc_dev), sc->sc_bulkout_no,
-		       usbd_errstr(err));
+		device_printf(self, "open bulk out error (addr %d): %s\n",
+		    sc->sc_bulkout_no, usbd_errstr(err));
 		goto fail_1;
 	}
 
@@ -353,7 +366,7 @@ USB_ATTACH(ubser)
 		tp->t_open = ubseropen;
 		tp->t_close = ubserclose;
 		tp->t_modem = ubsermodem;
-		ttycreate(tp, NULL, 0, 0, "y%r%r", USBDEVUNIT(sc->sc_dev), i);
+		ttycreate(tp, 0, "y%r%r", device_get_unit(sc->sc_dev), i);
 	}
 
 
@@ -376,9 +389,7 @@ USB_ATTACH(ubser)
 	}
 
 	ubserstartread(sc);
-
-	free(devinfo, M_USBDEV);
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 
 fail_4:
 	for (i = 0; i < sc->sc_numser; i++) {
@@ -413,14 +424,13 @@ bad:
 	}
 
 	DPRINTF(("ubser_attach: ATTACH ERROR\n"));
-	free(devinfo, M_USBDEV);
-
-	USB_ATTACH_ERROR_RETURN;
+	return ENXIO;
 }
 
-USB_DETACH(ubser)
+static int
+ubser_detach(device_t self)
 {
-	USB_DETACH_START(ubser, sc);
+	struct ubser_softc *sc = device_get_softc(self);
 	int i;
 	struct ubser_port *pp;
 
@@ -450,13 +460,13 @@ USB_DETACH(ubser)
 
 	if (--sc->sc_refcnt >= 0) {
 		/* Wait for processes to go away. */
-		usb_detach_wait(USBDEV(sc->sc_dev));
+		usb_detach_wait(sc->sc_dev);
 	}
 
 	return (0);
 }
 
-Static int
+static int
 ubserparam(struct tty *tp, struct termios *t)
 {
 	struct ubser_softc *sc;
@@ -516,7 +526,7 @@ ubserparam(struct tty *tp, struct termios *t)
 	return (0);
 }
 
-Static void
+static void
 ubserstart(struct tty *tp)
 {
 	struct ubser_softc *sc;
@@ -590,7 +600,7 @@ ubserstart(struct tty *tp)
 	ttwwakeup(tp);
 }
 
-Static void
+static void
 ubserstop(struct tty *tp, int flag)
 {
 	struct ubser_softc *sc;
@@ -611,7 +621,7 @@ ubserstop(struct tty *tp, int flag)
 	DPRINTF(("ubserstop: done\n"));
 }
 
-Static void
+static void
 ubserwritecb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 {
 	struct tty *tp;
@@ -629,8 +639,8 @@ ubserwritecb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 		goto error;
 
 	if (status != USBD_NORMAL_COMPLETION) {
-		printf("%s: ubserwritecb: %s\n",
-		       USBDEVNAME(sc->sc_dev), usbd_errstr(status));
+		device_printf(sc->sc_dev, "ubserwritecb: %s\n",
+		    usbd_errstr(status));
 		if (status == USBD_STALLED)
 			usbd_clear_endpoint_stall_async(sc->sc_bulkin_pipe);
 		/* XXX we should restart after some delay. */
@@ -640,8 +650,8 @@ ubserwritecb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 	usbd_get_xfer_status(xfer, NULL, NULL, &cc, NULL);
 	DPRINTF(("ubserwritecb: cc = %d\n", cc));
 	if (cc <= sc->sc_opkthdrlen) {
-		printf("%s: sent size too small, cc = %d\n",
-		       USBDEVNAME(sc->sc_dev), cc);
+		device_printf(sc->sc_dev, "sent size too small, cc = %d\n",
+		    cc);
 		goto error;
 	}
 
@@ -662,7 +672,7 @@ error:
 	return;
 }
 
-Static usbd_status
+static usbd_status
 ubserstartread(struct ubser_softc *sc)
 {
 	usbd_status err;
@@ -687,7 +697,7 @@ ubserstartread(struct ubser_softc *sc)
 	return (USBD_NORMAL_COMPLETION);
 }
 
-Static void
+static void
 ubserreadcb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 {
 	struct ubser_softc *sc = (struct ubser_softc *)p;
@@ -698,8 +708,8 @@ ubserreadcb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 	int lostcc;
 
 	if (status == USBD_IOERROR) {
-		printf("%s: ubserreadcb: %s - restarting\n",
-		    USBDEVNAME(sc->sc_dev), usbd_errstr(status));
+		device_printf(sc->sc_dev, "ubserreadcb: %s - restarting\n",
+		    usbd_errstr(status));
 		goto resubmit;
 	}
 
@@ -707,8 +717,8 @@ ubserreadcb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 
 	if (status != USBD_NORMAL_COMPLETION) {
 		if (status != USBD_CANCELLED) {
-			printf("%s: ubserreadcb: %s\n",
-			    USBDEVNAME(sc->sc_dev), usbd_errstr(status));
+			device_printf(sc->sc_dev, "ubserreadcb: %s\n",
+			    usbd_errstr(status));
 		}
 		if (status == USBD_STALLED)
 			usbd_clear_endpoint_stall_async(sc->sc_bulkin_pipe);
@@ -722,8 +732,8 @@ ubserreadcb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 		goto resubmit;
 
 	if (cc > sc->sc_ibufsizepad) {
-		printf("%s: invalid receive data size, %d chars\n",
-		       USBDEVNAME(sc->sc_dev), cc);
+		device_printf(sc->sc_dev, "invalid receive data size, %d chars\n",
+		    cc);
 		goto resubmit;
 	}
 
@@ -757,16 +767,15 @@ ubserreadcb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 			ubserstart(tp);
 		}
 		if (lostcc > 0)
-			printf("%s: lost %d chars\n", USBDEVNAME(sc->sc_dev),
-			       lostcc);
+			device_printf(sc->sc_dev, "lost %d chars\n", lostcc);
 	} else {
 		/* Give characters to tty layer. */
 		while (cc > 0) {
 			DPRINTFN(7, ("ubserreadcb: char = 0x%02x\n", *cp));
 			if (ttyld_rint(tp, *cp) == -1) {
 				/* XXX what should we do? */
-				printf("%s: lost %d chars\n",
-				       USBDEVNAME(sc->sc_dev), cc);
+				device_printf(sc->sc_dev, "lost %d chars\n",
+				    cc);
 				break;
 			}
 			cc--;
@@ -777,13 +786,13 @@ ubserreadcb(usbd_xfer_handle xfer, usbd_private_handle p, usbd_status status)
 resubmit:
 	err = ubserstartread(sc);
 	if (err) {
-		printf("%s: read start failed\n", USBDEVNAME(sc->sc_dev));
+		device_printf(sc->sc_dev, "read start failed\n");
 		/* XXX what should we do now? */
 	}
 
 }
 
-Static void
+static void
 ubser_cleanup(struct ubser_softc *sc)
 {
 	int i;
@@ -836,7 +845,7 @@ ubserclose(struct tty *tp)
 	pp = tp->t_sc;
 	sc = pp->p_sc;
 	if (--sc->sc_refcnt < 0)
-		usb_detach_wakeup(USBDEV(sc->sc_dev));
+		usb_detach_wakeup(sc->sc_dev);
 }
 
 static void
@@ -869,5 +878,5 @@ ubsermodem(struct tty *tp, int sigon, int sigoff)
 	return (SER_DTR | SER_RTS | SER_DCD);
 }
 
+MODULE_DEPEND(ubser, usb, 1, 1, 1);
 DRIVER_MODULE(ubser, uhub, ubser_driver, ubser_devclass, usbd_driver_load, 0);
-

@@ -28,22 +28,12 @@
  * its contributors.
  */
 
-/*  $FreeBSD: src/sys/dev/usb/dsbr100io.h,v 1.2 2005/01/06 01:36:28 imp Exp $ */
+/*  $FreeBSD: src/sys/dev/usb/dsbr100io.h,v 1.3 2007/06/12 19:01:32 imp Exp $ */
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #include <sys/ioccom.h>
-#endif
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define FM_SET_FREQ	_IOWR('U', 200, int)
 #define FM_GET_FREQ	_IOWR('U', 201, int)
 #define FM_START	_IOWR('U', 202, int)
 #define FM_STOP		_IOWR('U', 203, int)
 #define FM_GET_STAT	_IOWR('U', 204, int)
-#else
-#define FM_SET_FREQ		0x1
-#define FM_GET_FREQ		0x2
-#define FM_START		0x3
-#define FM_STOP			0x4
-#define FM_GET_STAT		0x5
-#endif

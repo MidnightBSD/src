@@ -38,19 +38,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usbdi_util.c,v 1.34 2005/03/01 08:01:22 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usbdi_util.c,v 1.38 2007/06/20 05:10:54 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-#include <sys/proc.h>
-#include <sys/device.h>
-#elif defined(__FreeBSD__)
 #include <sys/bus.h>
-#endif
 
 #include <dev/usb/usb.h>
 #include <dev/usb/usbhid.h>
@@ -59,8 +54,8 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/usbdi_util.c,v 1.34 2005/03/01 08:01:22 sobo
 #include <dev/usb/usbdi_util.h>
 
 #ifdef USB_DEBUG
-#define DPRINTF(x)	if (usbdebug) logprintf x
-#define DPRINTFN(n,x)	if (usbdebug>(n)) logprintf x
+#define DPRINTF(x)	if (usbdebug) printf x
+#define DPRINTFN(n,x)	if (usbdebug>(n)) printf x
 extern int usbdebug;
 #else
 #define DPRINTF(x)
@@ -384,7 +379,7 @@ usbd_get_hid_descriptor(usbd_interface_handle ifc)
 
 usbd_status
 usbd_read_report_desc(usbd_interface_handle ifc, void **descp, int *sizep,
-		      usb_malloc_type mem)
+		      struct malloc_type *mem)
 {
 	usb_interface_descriptor_t *id;
 	usb_hid_descriptor_t *hid;
@@ -425,9 +420,9 @@ usbd_get_config(usbd_device_handle dev, u_int8_t *conf)
 	return (usbd_do_request(dev, &req, conf));
 }
 
-Static void usbd_bulk_transfer_cb(usbd_xfer_handle xfer,
+static void usbd_bulk_transfer_cb(usbd_xfer_handle xfer,
 				  usbd_private_handle priv, usbd_status status);
-Static void
+static void
 usbd_bulk_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 		      usbd_status status)
 {
@@ -467,9 +462,9 @@ usbd_bulk_transfer(usbd_xfer_handle xfer, usbd_pipe_handle pipe,
 	return (err);
 }
 
-Static void usbd_intr_transfer_cb(usbd_xfer_handle xfer,
+static void usbd_intr_transfer_cb(usbd_xfer_handle xfer,
 				  usbd_private_handle priv, usbd_status status);
-Static void
+static void
 usbd_intr_transfer_cb(usbd_xfer_handle xfer, usbd_private_handle priv,
 		      usbd_status status)
 {
@@ -510,19 +505,19 @@ usbd_intr_transfer(usbd_xfer_handle xfer, usbd_pipe_handle pipe,
 }
 
 void
-usb_detach_wait(device_ptr_t dv)
+usb_detach_wait(device_t dv)
 {
-	DPRINTF(("usb_detach_wait: waiting for %s\n", USBDEVPTRNAME(dv)));
+	DPRINTF(("usb_detach_wait: waiting for %s\n", device_get_nameunit(dv)));
 	if (tsleep(dv, PZERO, "usbdet", hz * 60))
 		printf("usb_detach_wait: %s didn't detach\n",
-		        USBDEVPTRNAME(dv));
-	DPRINTF(("usb_detach_wait: %s done\n", USBDEVPTRNAME(dv)));
+		        device_get_nameunit(dv));
+	DPRINTF(("usb_detach_wait: %s done\n", device_get_nameunit(dv)));
 }
 
 void
-usb_detach_wakeup(device_ptr_t dv)
+usb_detach_wakeup(device_t dv)
 {
-	DPRINTF(("usb_detach_wakeup: for %s\n", USBDEVPTRNAME(dv)));
+	DPRINTF(("usb_detach_wakeup: for %s\n", device_get_nameunit(dv)));
 	wakeup(dv);
 }
 

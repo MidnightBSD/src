@@ -1,5 +1,5 @@
 /*	$NetBSD: ucomvar.h,v 1.9 2001/01/23 21:56:17 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ucomvar.h,v 1.7 2005/01/06 01:43:28 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/ucomvar.h,v 1.9 2007/06/12 17:30:54 imp Exp $	*/
 
 /*-
  * Copyright (c) 2001-2002, Shunsuke Akiyama <akiyama@jp.FreeBSD.org>.
@@ -97,7 +97,7 @@ struct ucom_callback {
 #define UCOM_SET_RTS 2
 #define UCOM_SET_BREAK 3
 	int (*ucom_param)(void *, int, struct termios *);
-	int (*ucom_ioctl)(void *, int, u_long, caddr_t, int, usb_proc_ptr);
+	int (*ucom_ioctl)(void *, int, u_long, caddr_t, int, struct thread *);
 	int (*ucom_open)(void *, int);
 	void (*ucom_close)(void *, int);
 	void (*ucom_read)(void *, int, u_char **, u_int32_t *);
@@ -120,7 +120,7 @@ struct ucom_callback {
 #define UCS_RTS_IFLOW	0x0008	/* use RTS input flow control */
 
 struct ucom_softc {
-	USBBASEDEVICE		sc_dev;		/* base device */
+	device_t		sc_dev;		/* base device */
 	usbd_device_handle	sc_udev;	/* USB device */
 	usbd_interface_handle	sc_iface;	/* data interface */
 

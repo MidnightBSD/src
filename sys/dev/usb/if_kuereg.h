@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/if_kuereg.h,v 1.18 2005/06/10 16:49:15 brooks Exp $
+ * $FreeBSD: src/sys/dev/usb/if_kuereg.h,v 1.20 2007/06/11 05:50:47 imp Exp $
  */
 
 /*
@@ -142,14 +142,11 @@ struct kue_softc {
 	struct kue_ether_desc	kue_desc;
 	int			kue_ed[KUE_ENDPT_MAX];
 	usbd_pipe_handle	kue_ep[KUE_ENDPT_MAX];
-	int			kue_unit;
 	int			kue_if_flags;
 	u_int16_t		kue_rxfilt;
 	u_int8_t		*kue_mcfilters;
 	struct ue_cdata		kue_cdata;
-#if __FreeBSD_version >= 500000
 	struct mtx		kue_mtx;
-#endif
 	char			kue_dying;
 	struct timeval		kue_rx_notice;
 	struct usb_qdat		kue_qdat;

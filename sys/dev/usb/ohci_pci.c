@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ohci_pci.c,v 1.44.2.1 2006/01/29 01:26:46 iedowse Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ohci_pci.c,v 1.50 2007/06/21 14:42:33 imp Exp $");
 
 /*
  * USB Open Host Controller driver.
@@ -55,6 +55,8 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/ohci_pci.c,v 1.44.2.1 2006/01/29 01:26:46 ie
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/bus.h>
 #include <sys/queue.h>
 #include <machine/bus.h>
@@ -126,10 +128,10 @@ static const char *ohci_device_generic = "OHCI (generic) USB controller";
 #define PCI_OHCI_BASE_REG	0x10
 
 
-static int ohci_pci_attach(device_t self);
-static int ohci_pci_detach(device_t self);
-static int ohci_pci_suspend(device_t self);
-static int ohci_pci_resume(device_t self);
+static device_attach_t ohci_pci_attach;
+static device_detach_t ohci_pci_detach;
+static device_suspend_t ohci_pci_suspend;
+static device_resume_t ohci_pci_resume;
 
 static int
 ohci_pci_suspend(device_t self)
@@ -295,14 +297,38 @@ ohci_pci_attach(device_t self)
 		sprintf(sc->sc_vendor, "(0x%04x)", pci_get_vendor(self));
 	}
 
-	err = bus_setup_intr(self, sc->irq_res, INTR_TYPE_BIO,
-	    (driver_intr_t *) ohci_intr, sc, &sc->ih);
+	err = bus_setup_intr(self, sc->irq_res, INTR_TYPE_BIO, NULL, ohci_intr, 
+			     sc, &sc->ih);
 	if (err) {
 		device_printf(self, "Could not setup irq, %d\n", err);
 		sc->ih = NULL;
 		ohci_pci_detach(self);
 		return ENXIO;
 	}
+
+	/* Allocate a parent dma tag for DMA maps */
+	err = bus_dma_tag_create(bus_get_dma_tag(self), 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	    BUS_SPACE_MAXSIZE_32BIT, USB_DMA_NSEG, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    NULL, NULL, &sc->sc_bus.parent_dmatag);
+	if (err) {
+		device_printf(self, "Could not allocate parent DMA tag (%d)\n",
+		    err);
+		ohci_pci_detach(self);
+		return ENXIO;
+	}
+	/* Allocate a dma tag for transfer buffers */
+	err = bus_dma_tag_create(sc->sc_bus.parent_dmatag, 1, 0,
+	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	    BUS_SPACE_MAXSIZE_32BIT, USB_DMA_NSEG, BUS_SPACE_MAXSIZE_32BIT, 0,
+	    busdma_lock_mutex, &Giant, &sc->sc_bus.buffer_dmatag);
+	if (err) {
+		device_printf(self, "Could not allocate transfer tag (%d)\n",
+		    err);
+		ohci_pci_detach(self);
+		return ENXIO;
+	}
+
 	err = ohci_init(sc);
 	if (!err) {
 		sc->sc_flags |= OHCI_SCFLG_DONEINIT;
@@ -327,6 +353,11 @@ ohci_pci_detach(device_t self)
 		sc->sc_flags &= ~OHCI_SCFLG_DONEINIT;
 	}
 
+	if (sc->sc_bus.parent_dmatag != NULL)
+		bus_dma_tag_destroy(sc->sc_bus.parent_dmatag);
+	if (sc->sc_bus.buffer_dmatag != NULL)
+		bus_dma_tag_destroy(sc->sc_bus.buffer_dmatag);
+
 	if (sc->irq_res && sc->ih) {
 		int err = bus_teardown_intr(self, sc->irq_res, sc->ih);
 
@@ -345,7 +376,8 @@ ohci_pci_detach(device_t self)
 		sc->irq_res = NULL;
 	}
 	if (sc->io_res) {
-		bus_release_resource(self, SYS_RES_MEMORY, PCI_CBMEM, sc->io_res);
+		bus_release_resource(self, SYS_RES_MEMORY, PCI_CBMEM,
+		    sc->io_res);
 		sc->io_res = NULL;
 		sc->iot = 0;
 		sc->ioh = 0;

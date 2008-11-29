@@ -1,5 +1,5 @@
 /*	$NetBSD: usb.h,v 1.69 2002/09/22 23:20:50 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usb.h,v 1.39.2.1 2006/01/20 22:47:49 mux Exp $    */
+/*	$FreeBSD: src/sys/dev/usb/usb.h,v 1.47 2007/06/30 02:40:21 imp Exp $    */
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -45,13 +45,26 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-#include <sys/ioctl.h>
+#if defined(_KERNEL)
+#include "opt_usb.h"
+
+#ifdef SYSCTL_DECL
+SYSCTL_DECL(_hw_usb);
 #endif
 
-#if defined(_KERNEL)
-#include <dev/usb/usb_port.h>
+#include <sys/malloc.h>
+
+MALLOC_DECLARE(M_USB);
+MALLOC_DECLARE(M_USBDEV);
+MALLOC_DECLARE(M_USBHC);
 #endif /* _KERNEL */
+
+#define PWR_RESUME 0
+#define PWR_SUSPEND 1
+#define PWR_STANDBY 2
+#define PWR_SOFTSUSPEND 3
+#define PWR_SOFTSTANDBY 4
+#define PWR_SOFTRESUME 5
 
 /* These two defines are used by usbd to autoload the usb kld */
 #define USB_KLD		"usb"		/* name of usb module */
@@ -98,11 +111,7 @@ typedef u_int8_t uDWord[4];
 #define USETDW(w,v) (*(u_int32_t *)(w) = (v))
 #endif
 
-#if defined(__FreeBSD__) && (__FreeBSD_version <= 500014)
-#define UPACKED __attribute__ ((packed))
-#else
 #define UPACKED __packed
-#endif
 
 typedef struct {
 	uByte		bmRequestType;
@@ -426,6 +435,7 @@ typedef struct {
 #define UICLASS_HID		0x03
 #define  UISUBCLASS_BOOT	1
 #define  UIPROTO_BOOT_KEYBOARD	1
+#define  UIPROTO_MOUSE		2
 
 #define UICLASS_PHYSICAL	0x05
 

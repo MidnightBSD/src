@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/usb/if_cuereg.h,v 1.18 2005/06/10 16:49:15 brooks Exp $
+ * $FreeBSD: src/sys/dev/usb/if_cuereg.h,v 1.20 2007/06/11 05:42:47 imp Exp $
  */
 
 /*
@@ -148,15 +148,12 @@ struct cue_softc {
 	usbd_interface_handle	cue_iface;
 	int			cue_ed[CUE_ENDPT_MAX];
 	usbd_pipe_handle	cue_ep[CUE_ENDPT_MAX];
-	int			cue_unit;
 	u_int8_t		cue_mctab[CUE_MCAST_TABLE_LEN];
 	int			cue_if_flags;
 	u_int16_t		cue_rxfilt;
 	struct ue_cdata		cue_cdata;
 	struct callout_handle	cue_stat_ch;
-#if __FreeBSD_version >= 500000
 	struct mtx		cue_mtx;
-#endif
 	char			cue_dying;
 	struct timeval		cue_rx_notice;
 	struct usb_qdat		cue_qdat;

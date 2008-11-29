@@ -1,5 +1,5 @@
 /*	$NetBSD: ehcivar.h,v 1.19 2005/04/29 15:04:29 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/ehcivar.h,v 1.9.2.1 2006/01/26 01:43:13 iedowse Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/ehcivar.h,v 1.17 2007/06/14 16:23:31 imp Exp $	*/
 
 /*-
  * Copyright (c) 2001 The NetBSD Foundation, Inc.
@@ -53,6 +53,7 @@ typedef struct ehci_soft_qh {
 	struct ehci_soft_qh *next;
 	struct ehci_soft_qh *prev;
 	struct ehci_soft_qtd *sqtd;
+	struct ehci_soft_qtd *inactivesqtd;
 	ehci_physaddr_t physaddr;
 	int islot;		/* Interrupt list slot. */
 } ehci_soft_qh_t;
@@ -149,16 +150,13 @@ typedef struct ehci_softc {
 	u_int32_t sc_eintrs;
 	ehci_soft_qh_t *sc_async_head;
 
-	SIMPLEQ_HEAD(, usbd_xfer) sc_free_xfers; /* free xfers */
+	STAILQ_HEAD(, usbd_xfer) sc_free_xfers; /* free xfers */
 
 	struct lock sc_doorbell_lock;
 
-	usb_callout_t sc_tmo_pcd;
-	usb_callout_t sc_tmo_intrlist;
+	struct callout sc_tmo_pcd;
+	struct callout sc_tmo_intrlist;
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	device_ptr_t sc_child;		/* /dev/usb# device */
-#endif
 	char sc_dying;
 #if defined(__NetBSD__)
 	struct usb_dma_reserve sc_dma_reserve;
@@ -182,7 +180,7 @@ usbd_status	ehci_init(ehci_softc_t *);
 int		ehci_intr(void *);
 int		ehci_detach(ehci_softc_t *, int);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
-int		ehci_activate(device_ptr_t, enum devact);
+int		ehci_activate(device_t, enum devact);
 #endif
 void		ehci_power(int state, void *priv);
 void		ehci_shutdown(void *v);

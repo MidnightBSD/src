@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001 M. Warner Losh
+ * Copyright (c) 2001-2007 M. Warner Losh
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,32 +29,22 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ufm.c,v 1.23 2005/01/06 01:43:28 imp Exp $");
-
+__FBSDID("$FreeBSD: src/sys/dev/usb/ufm.c,v 1.36 2007/06/21 14:42:33 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
-#if defined(__NetBSD__)
-#include <sys/device.h>
-#include <sys/ioctl.h>
-#elif defined(__FreeBSD__)
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/ioccom.h>
-#endif
 #include <sys/fcntl.h>
 #include <sys/filio.h>
 #include <sys/conf.h>
 #include <sys/uio.h>
 #include <sys/tty.h>
 #include <sys/file.h>
-#if __FreeBSD_version >= 500014
 #include <sys/selinfo.h>
-#else
-#include <sys/select.h>
-#endif
 #include <sys/poll.h>
 #include <sys/sysctl.h>
 
@@ -66,8 +56,8 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/ufm.c,v 1.23 2005/01/06 01:43:28 imp Exp $")
 #include <dev/usb/dsbr100io.h>
 
 #ifdef USB_DEBUG
-#define DPRINTF(x)	if (ufmdebug) logprintf x
-#define DPRINTFN(n,x)	if (ufmdebug>(n)) logprintf x
+#define DPRINTF(x)	if (ufmdebug) printf x
+#define DPRINTFN(n,x)	if (ufmdebug>(n)) printf x
 int	ufmdebug = 0;
 SYSCTL_NODE(_hw_usb, OID_AUTO, ufm, CTLFLAG_RW, 0, "USB ufm");
 SYSCTL_INT(_hw_usb_ufm, OID_AUTO, debug, CTLFLAG_RW,
@@ -77,36 +67,25 @@ SYSCTL_INT(_hw_usb_ufm, OID_AUTO, debug, CTLFLAG_RW,
 #define DPRINTFN(n,x)
 #endif
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-int ufmopen(dev_t, int, int, usb_proc_ptr);
-int ufmclose(dev_t, int, int, usb_proc_ptr);
-int ufmioctl(dev_t, u_long, caddr_t, int, usb_proc_ptr);
-
-cdev_decl(ufm);
-#elif defined(__FreeBSD__)
 d_open_t  ufmopen;
 d_close_t ufmclose;
 d_ioctl_t ufmioctl;
 
-Static struct cdevsw ufm_cdevsw = {
+static struct cdevsw ufm_cdevsw = {
 	.d_version =	D_VERSION,
 	.d_flags =	D_NEEDGIANT,
 	.d_open =	ufmopen,
 	.d_close =	ufmclose,
 	.d_ioctl =	ufmioctl,
 	.d_name =	"ufm",
-#if (__FreeBSD_version < 500014)
- 	.d_bmaj =	-1
-#endif
 };
-#endif  /*defined(__FreeBSD__)*/
 
 #define FM_CMD0		0x00
 #define FM_CMD_SET_FREQ	0x01
 #define FM_CMD2		0x02
 
 struct ufm_softc {
- 	USBBASEDEVICE sc_dev;
+ 	device_t sc_dev;
 	usbd_device_handle sc_udev;
 	usbd_interface_handle sc_iface;
 
@@ -115,18 +94,35 @@ struct ufm_softc {
 	int sc_freq;
 
 	int sc_refcnt;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	u_char sc_dying;
-#endif
 };
 
 #define UFMUNIT(n) (minor(n))
 
-USB_DECLARE_DRIVER(ufm);
+static device_probe_t ufm_match;
+static device_attach_t ufm_attach;
+static device_detach_t ufm_detach;
 
-USB_MATCH(ufm)
+static device_method_t ufm_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		ufm_match),
+	DEVMETHOD(device_attach,	ufm_attach),
+	DEVMETHOD(device_detach,	ufm_detach),
+
+	{ 0, 0 }
+};
+
+static driver_t ufm_driver = {
+	"ufm",
+	ufm_methods,
+	sizeof(struct ufm_softc)
+};
+
+static devclass_t ufm_devclass;
+
+static int
+ufm_match(device_t self)
 {
-	USB_MATCH_START(ufm, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usb_device_descriptor_t *dd;
 
 	DPRINTFN(10,("ufm_match\n"));
@@ -143,49 +139,27 @@ USB_MATCH(ufm)
 		return UMATCH_NONE;
 }
 
-USB_ATTACH(ufm)
+static int
+ufm_attach(device_t self)
 {
-	USB_ATTACH_START(ufm, sc, uaa);
-	char devinfo[1024];
+	struct ufm_softc *sc = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	usb_endpoint_descriptor_t *edesc;
 	usbd_device_handle udev;
 	usbd_interface_handle iface;
 	u_int8_t epcount;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	u_int8_t niface;
-#endif
 	usbd_status r;
 	char * ermsg = "<none>";
 
 	DPRINTFN(10,("ufm_attach: sc=%p\n", sc));
-	usbd_devinfo(uaa->device, 0, devinfo);
-	USB_ATTACH_SETUP;
-
+	sc->sc_dev = self;
 	sc->sc_udev = udev = uaa->device;
 
-#if defined(__FreeBSD__)
  	if ((!uaa->device) || (!uaa->iface)) {
 		ermsg = "device or iface";
  		goto nobulk;
 	}
 	sc->sc_iface = iface = uaa->iface;
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
- 	if (!udev) {
-		ermsg = "device";
- 		goto nobulk;
-	}
-	r = usbd_interface_count(udev, &niface);
-	if (r) {
-		ermsg = "iface";
-		goto nobulk;
-	}
-	r = usbd_device2interface_handle(udev, 0, &iface);
-	if (r) {
-		ermsg = "iface";
-		goto nobulk;
-	}
-	sc->sc_iface = iface;
-#endif
 	sc->sc_opened = 0;
 	sc->sc_refcnt = 0;
 
@@ -202,33 +176,28 @@ USB_ATTACH(ufm)
 	}
 	sc->sc_epaddr = edesc->bEndpointAddress;
 
-#if defined(__FreeBSD__)
 	/* XXX no error trapping, no storing of struct cdev **/
 	(void) make_dev(&ufm_cdevsw, device_get_unit(self),
 			UID_ROOT, GID_OPERATOR,
 			0644, "ufm%d", device_get_unit(self));
-#elif defined(__NetBSD__) || defined(__OpenBSD__)
-	usbd_add_drv_event(USB_EVENT_DRIVER_ATTACH, sc->sc_udev,
-			   USBDEV(sc->sc_dev));
-#endif
-
 	DPRINTFN(10, ("ufm_attach: %p\n", sc->sc_udev));
-
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 
  nobulk:
-	printf("%s: could not find %s\n", USBDEVNAME(sc->sc_dev),ermsg);
-	USB_ATTACH_ERROR_RETURN;
+	device_printf(sc->sc_dev, "could not find %s\n", ermsg);
+	return ENXIO;
 }
 
 
 int
-ufmopen(struct cdev *dev, int flag, int mode, usb_proc_ptr td)
+ufmopen(struct cdev *dev, int flag, int mode, struct thread *td)
 {
 	struct ufm_softc *sc;
 
 	int unit = UFMUNIT(dev);
-	USB_GET_SC_OPEN(ufm, unit, sc);
+	sc = devclass_get_softc(ufm_devclass, unit);
+	if (sc == NULL)
+		return (ENXIO);
 
 	DPRINTFN(5, ("ufmopen: flag=%d, mode=%d, unit=%d\n",
 		     flag, mode, unit));
@@ -244,12 +213,12 @@ ufmopen(struct cdev *dev, int flag, int mode, usb_proc_ptr td)
 }
 
 int
-ufmclose(struct cdev *dev, int flag, int mode, usb_proc_ptr td)
+ufmclose(struct cdev *dev, int flag, int mode, struct thread *td)
 {
 	struct ufm_softc *sc;
 
 	int unit = UFMUNIT(dev);
-	USB_GET_SC(ufm, unit, sc);
+	sc = devclass_get_softc(ufm_devclass, unit);
 
 	DPRINTFN(5, ("ufmclose: flag=%d, mode=%d, unit=%d\n", flag, mode, unit));
 	sc->sc_opened = 0;
@@ -274,10 +243,8 @@ ufm_do_req(struct ufm_softc *sc, u_int8_t reqtype, u_int8_t request,
 	err = usbd_do_request_flags(sc->sc_udev, &req, retbuf, 0, NULL,
 	    USBD_DEFAULT_TIMEOUT);
 	splx(s);
-	if (err) {
-		printf("usbd_do_request_flags returned %#x\n", err);
+	if (err)
 		return (EIO);
-	}
 	return (0);
 }
 
@@ -367,14 +334,14 @@ ufm_get_stat(struct ufm_softc *sc, caddr_t addr)
 }
 
 int
-ufmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, usb_proc_ptr td)
+ufmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, struct thread *td)
 {
 	struct ufm_softc *sc;
 
 	int unit = UFMUNIT(dev);
 	int error = 0;
 
-	USB_GET_SC(ufm, unit, sc);
+	sc = devclass_get_softc(ufm_devclass, unit);
 
 	switch (cmd) {
 	case FM_SET_FREQ:
@@ -399,75 +366,11 @@ ufmioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag, usb_proc_ptr td)
 	return error;
 }
 
-
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-int
-ufm_activate(device_ptr_t self, enum devact act)
-{
-	struct ufm_softc *sc = (struct ufm_softc *)self;
-
-	switch (act) {
-	case DVACT_ACTIVATE:
-		return (EOPNOTSUPP);
-		break;
-
-	case DVACT_DEACTIVATE:
-		sc->sc_dying = 1;
-		break;
-	}
-	return (0);
-}
-
-USB_DETACH(ufm)
-{
-	USB_DETACH_START(ufm, sc);
-	struct ufm_endpoint *sce;
-	int i, dir;
-	int s;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int maj, mn;
-
-	DPRINTF(("ufm_detach: sc=%p flags=%d\n", sc, flags));
-#elif defined(__FreeBSD__)
-	DPRINTF(("ufm_detach: sc=%p\n", sc));
-#endif
-
-	sc->sc_dying = 1;
-
-	s = splusb();
-	if (--sc->sc_refcnt >= 0) {
-		/* Wait for processes to go away. */
-		usb_detach_wait(USBDEV(sc->sc_dev));
-	}
-	splx(s);
-
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	/* locate the major number */
-	for (maj = 0; maj < nchrdev; maj++)
-		if (cdevsw[maj].d_open == ufmopen)
-			break;
-
-	/* Nuke the vnodes for any open instances (calls close). */
-	mn = self->dv_unit * USB_MAX_ENDPOINTS;
-	vdevgone(maj, mn, mn + USB_MAX_ENDPOINTS - 1, VCHR);
-#elif defined(__FreeBSD__)
-	/* XXX not implemented yet */
-#endif
-
-	usbd_add_drv_event(USB_EVENT_DRIVER_DETACH, sc->sc_udev,
-			   USBDEV(sc->sc_dev));
-
-	return (0);
-}
-#endif /* defined(__NetBSD__) || defined(__OpenBSD__) */
-
-#if defined(__FreeBSD__)
-Static int
+static int
 ufm_detach(device_t self)
 {
-	DPRINTF(("%s: disconnected\n", USBDEVNAME(self)));
 	return 0;
 }
 
+MODULE_DEPEND(ufm, usb, 1, 1, 1);
 DRIVER_MODULE(ufm, uhub, ufm_driver, ufm_devclass, usbd_driver_load, 0);
-#endif

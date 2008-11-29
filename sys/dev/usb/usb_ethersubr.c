@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usb_ethersubr.c,v 1.20 2005/03/25 12:42:30 sobomax Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usb_ethersubr.c,v 1.23 2007/01/08 23:21:06 alfred Exp $");
 
 /*
  * Callbacks in the USB code operate at splusb() (actually splbio()
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/usb_ethersubr.c,v 1.20 2005/03/25 12:42:30 s
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
 #include <sys/socket.h>
+#include <sys/taskqueue.h>
 
 #include <net/if.h>
 #include <net/if_types.h>
@@ -68,13 +69,14 @@ __FBSDID("$FreeBSD: src/sys/dev/usb/usb_ethersubr.c,v 1.20 2005/03/25 12:42:30 s
 #include <dev/usb/usb.h>
 #include <dev/usb/usb_ethersubr.h>
 
-Static struct ifqueue usbq_rx;
-Static struct ifqueue usbq_tx;
-Static int mtx_inited = 0;
+static struct ifqueue usbq_rx;
+static struct ifqueue usbq_tx;
+static int mtx_inited = 0;
 
-Static void usbintr		(void);
+static void usbintr		(void);
 
-Static void usbintr(void)
+static void
+usbintr(void)
 {
 	struct mbuf		*m;
 	struct usb_qdat		*q;
@@ -110,7 +112,8 @@ Static void usbintr(void)
 	return;
 }
 
-void usb_register_netisr()
+void
+usb_register_netisr(void)
 {
 	if (mtx_inited)
 		return;
@@ -125,7 +128,8 @@ void usb_register_netisr()
  * Must be called at splusb() (actually splbio()). This should be
  * the case when called from a transfer callback routine.
  */
-void usb_ether_input(m)
+void
+usb_ether_input(m)
 	struct mbuf		*m;
 {
 	IF_ENQUEUE(&usbq_rx, m);
@@ -134,7 +138,8 @@ void usb_ether_input(m)
 	return;
 }
 
-void usb_tx_done(m)
+void
+usb_tx_done(m)
 	struct mbuf		*m;
 {
 	IF_ENQUEUE(&usbq_tx, m);
@@ -241,4 +246,33 @@ usb_ether_tx_list_free(struct ue_cdata *cd)
 			cd->ue_tx_chain[i].ue_xfer = NULL;
 		}
 	}
+}
+
+void
+usb_ether_task_init(device_t dev, int flags, struct usb_taskqueue *tq)
+{
+
+	/* nothing for now. */
+}
+
+void
+usb_ether_task_enqueue(struct usb_taskqueue *tq, struct task *task)
+{
+
+	taskqueue_enqueue(taskqueue_thread, task);
+}
+
+void
+usb_ether_task_drain(struct usb_taskqueue *tq, struct task *task)
+{
+
+	taskqueue_drain(taskqueue_thread, task);
+}
+
+void
+usb_ether_task_destroy(struct usb_taskqueue *tq)
+{
+
+	/* nothing for now */
+
 }
