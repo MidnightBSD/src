@@ -27000,6 +27000,7 @@ sys/dev/usb/ucycom.c -text
 sys/dev/usb/udbp.c -text
 sys/dev/usb/udbp.h -text
 sys/dev/usb/ufm.c -text
+sys/dev/usb/ufoma.c -text
 sys/dev/usb/uftdi.c -text
 sys/dev/usb/uftdireg.h -text
 sys/dev/usb/ugen.c -text
