@@ -26988,6 +26988,7 @@ sys/dev/usb/ohcireg.h -text
 sys/dev/usb/ohcivar.h -text
 sys/dev/usb/rio500_usb.h -text
 sys/dev/usb/rt2573_ucode.h -text
+sys/dev/usb/uark.c -text
 sys/dev/usb/ubsa.c -text
 sys/dev/usb/ubser.c -text
 sys/dev/usb/ubser.h -text
