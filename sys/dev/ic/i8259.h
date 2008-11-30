@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ic/i8259.h,v 1.1 2004/01/06 18:59:37 jhb Exp $
+ * $FreeBSD: src/sys/dev/ic/i8259.h,v 1.2 2005/10/23 09:05:51 glebius Exp $
  */
 
 /*
- * Register defintions for the i8259A programmable interrupt cnotroller.
+ * Register defintions for the i8259A programmable interrupt controller.
  */
 
 #ifndef _DEV_IC_I8259_H_

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ic/z8530.h,v 1.3 2005/01/06 01:42:44 imp Exp $
+ * $FreeBSD: src/sys/dev/ic/z8530.h,v 1.4 2006/02/24 02:03:35 marcel Exp $
  */
 
 #ifndef _DEV_IC_Z8530_H_
@@ -34,9 +34,12 @@
  * Channel B data:	1
  * Channel A control:	2
  * Channel A data:	3
- *
- * We expect a seperate subregion for each channel.
  */
+
+/* The following apply when using a device-scoped bus handle */
+#define	CHAN_A		2
+#define	CHAN_B		0
+
 #define	REG_CTRL	0
 #define	REG_DATA	1
 
@@ -69,7 +72,7 @@
 #define	RR_BCL		6	/* Byte Count Low. */
 #define	RR_BCH		7	/* Byte Count High. */
 #define	RR_RB		8	/* Receive Buffer. */
-#define	RR_RPC		9	/* Receive Parameters and Contro. */
+#define	RR_RPC		9	/* Receive Parameters and Control. */
 #define	RR_MSB		10	/* Miscellaneous Status Bits. */
 #define	RR_MCB1		11	/* Miscellaneous Control Bits (part 1). */
 #define	RR_TCL		12	/* BRG Time Constant Low. */

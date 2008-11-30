@@ -26157,6 +26157,7 @@ sys/dev/ic/nec765.h -text
 sys/dev/ic/ns16550.h -text
 sys/dev/ic/rsa.h -text
 sys/dev/ic/sab82532.h -text
+sys/dev/ic/via6522reg.h -text
 sys/dev/ic/wd33c93reg.h -text
 sys/dev/ic/z8530.h -text
 sys/dev/ichsmb/ichsmb.c -text

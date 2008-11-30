@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)ns16550.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/dev/ic/ns16550.h,v 1.16 2004/11/20 23:19:42 marcel Exp $
+ * $FreeBSD: src/sys/dev/ic/ns16550.h,v 1.17 2006/05/23 00:41:12 benno Exp $
  */
 
 /*
@@ -127,7 +127,8 @@
 #define	com_dlbl	com_dll
 #define	com_dlm		1	/* divisor latch high (R/W) */
 #define	com_dlbh	com_dlm
-#define	REG_DL		com_dll
+#define	REG_DLL		com_dll
+#define	REG_DLH		com_dlm
 
 /* 16450 register #7.  Not multiplexed. */
 #define	com_scr		7	/* scratch register (R/W) */
