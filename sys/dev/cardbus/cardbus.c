@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cardbus/cardbus.c,v 1.52.2.3 2006/03/01 18:19:33 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cardbus/cardbus.c,v 1.66 2007/09/30 11:05:14 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,18 +71,12 @@ SYSCTL_INT(_hw_cardbus, OID_AUTO, cis_debug, CTLFLAG_RW,
 #define	DPRINTF(a) if (cardbus_debug) printf a
 #define	DEVPRINTF(x) if (cardbus_debug) device_printf x
 
-
-static void	cardbus_add_map(device_t cbdev, device_t child, int reg);
-static int	cardbus_alloc_resources(device_t cbdev, device_t child);
 static int	cardbus_attach(device_t cbdev);
 static int	cardbus_attach_card(device_t cbdev);
-static int	cardbus_barsort(const void *a, const void *b);
 static int	cardbus_detach(device_t cbdev);
 static int	cardbus_detach_card(device_t cbdev);
-static void	cardbus_device_setup_regs(device_t brdev, int b, int s, int f,
-		    pcicfgregs *cfg);
+static void	cardbus_device_setup_regs(pcicfgregs *cfg);
 static void	cardbus_driver_added(device_t cbdev, driver_t *driver);
-static void	cardbus_pickup_maps(device_t cbdev, device_t child);
 static int	cardbus_probe(device_t cbdev);
 static int	cardbus_read_ivar(device_t cbdev, device_t child, int which,
 		    uintptr_t *result);
@@ -90,307 +84,6 @@ static void	cardbus_release_all_resources(device_t cbdev,
 		    struct cardbus_devinfo *dinfo);
 static int	cardbus_write_ivar(device_t cbdev, device_t child, int which,
 		    uintptr_t value);
-
-/*
- * Resource allocation
- */
-/*
- * Adding a memory/io resource (sans CIS)
- */
-
-static void
-cardbus_add_map(device_t cbdev, device_t child, int reg)
-{
-	struct cardbus_devinfo *dinfo = device_get_ivars(child);
-	struct resource_list_entry *rle;
-	uint32_t size;
-	uint32_t testval;
-	int type;
-
-	STAILQ_FOREACH(rle, &dinfo->pci.resources, link) {
-		if (rle->rid == reg)
-			return;
-	}
-
-	if (reg == CARDBUS_ROM_REG)
-		testval = CARDBUS_ROM_ADDRMASK;
-	else
-		testval = ~0;
-
-	pci_write_config(child, reg, testval, 4);
-	testval = pci_read_config(child, reg, 4);
-
-	if (testval == ~0 || testval == 0)
-		return;
-
-	if ((testval & 1) == 0)
-		type = SYS_RES_MEMORY;
-	else
-		type = SYS_RES_IOPORT;
-
-	size = CARDBUS_MAPREG_MEM_SIZE(testval);
-	device_printf(cbdev, "Resource not specified in CIS: id=%x, size=%x\n",
-	    reg, size);
-	resource_list_add(&dinfo->pci.resources, type, reg, 0UL, ~0UL, size);
-}
-
-static void
-cardbus_pickup_maps(device_t cbdev, device_t child)
-{
-	struct cardbus_devinfo *dinfo = device_get_ivars(child);
-	int reg;
-
-	/*
-	 * Try to pick up any resources that was not specified in CIS.
-	 * Maybe this isn't any longer necessary now that we have fixed
-	 * CIS parsing and we should filter things here?  XXX
-	 */
-	for (reg = 0; reg < dinfo->pci.cfg.nummaps; reg++)
-		cardbus_add_map(cbdev, child, PCIR_BAR(reg));
-}
-
-static int
-cardbus_barsort(const void *a, const void *b)
-{
-	return ((*(const struct resource_list_entry * const *)b)->count -
-	    (*(const struct resource_list_entry * const *)a)->count);
-}
-
-/* XXX this function is too long */
-static int
-cardbus_alloc_resources(device_t cbdev, device_t child)
-{
-	struct cardbus_devinfo *dinfo = device_get_ivars(child);
-	int count;
-	struct resource_list_entry *rle;
-	struct resource_list_entry **barlist;
-	int tmp;
-	uint32_t mem_psize = 0, mem_nsize = 0, io_size = 0;
-	struct resource *res;
-	uint32_t start,end;
-	int rid, flags;
-
-	count = 0;
-	STAILQ_FOREACH(rle, &dinfo->pci.resources, link) {
-		count++;
-	}
-	if (count == 0)
-		return (0);
-	barlist = malloc(sizeof(struct resource_list_entry*) * count, M_DEVBUF,
-	    M_WAITOK);
-	count = 0;
-	STAILQ_FOREACH(rle, &dinfo->pci.resources, link) {
-		barlist[count] = rle;
-		if (rle->type == SYS_RES_IOPORT) {
-			io_size += rle->count;
-		} else if (rle->type == SYS_RES_MEMORY) {
-			if (dinfo->mprefetchable & BARBIT(rle->rid))
-				mem_psize += rle->count;
-			else
-				mem_nsize += rle->count;
-		}
-		count++;
-	}
-
-	/*
-	 * We want to allocate the largest resource first, so that our
-	 * allocated memory is packed.
-	 */
-	qsort(barlist, count, sizeof(struct resource_list_entry *),
-	    cardbus_barsort);
-
-	/* Allocate prefetchable memory */
-	flags = 0;
-	for (tmp = 0; tmp < count; tmp++) {
-		rle = barlist[tmp];
-		if (rle->res == NULL &&
-		    rle->type == SYS_RES_MEMORY &&
-		    dinfo->mprefetchable & BARBIT(rle->rid)) {
-			flags = rman_make_alignment_flags(rle->count);
-			break;
-		}
-	}
-	if (flags > 0) { /* If any prefetchable memory is requested... */
-		/*
-		 * First we allocate one big space for all resources of this
-		 * type.  We do this because our parent, pccbb, needs to open
-		 * a window to forward all addresses within the window, and
-		 * it would be best if nobody else has resources allocated
-		 * within the window.
-		 * (XXX: Perhaps there might be a better way to do this?)
-		 */
-		rid = 0;
-		res = bus_alloc_resource(cbdev, SYS_RES_MEMORY, &rid, 0,
-		    (dinfo->mprefetchable & dinfo->mbelow1mb)?0xFFFFF:~0UL,
-		    mem_psize, flags);
-		if (res == NULL) {
-			device_printf(cbdev,
-			    "Can't get memory for prefetch mem\n");
-			free(barlist, M_DEVBUF);
-			return (EIO);
-		}
-		start = rman_get_start(res);
-		end = rman_get_end(res);
-		DEVPRINTF((cbdev, "Prefetchable memory at %x-%x\n", start, end));
-		/*
-		 * Now that we know the region is free, release it and hand it
-		 * out piece by piece.
-		 */
-		bus_release_resource(cbdev, SYS_RES_MEMORY, rid, res);
-		for (tmp = 0; tmp < count; tmp++) {
-			rle = barlist[tmp];
-			if (rle->type == SYS_RES_MEMORY &&
-			    dinfo->mprefetchable & BARBIT(rle->rid)) {
-				rle->res = bus_alloc_resource(cbdev,
-				    rle->type, &rle->rid, start, end,
-				    rle->count,
-				    rman_make_alignment_flags(rle->count));
-				if (rle->res != NULL) {
-					rle->start = rman_get_start(rle->res);
-					rle->end = rman_get_end(rle->res);
-					pci_write_config(child,
-					    rle->rid, rle->start, 4);
-				}
-			}
-		}
-	}
-
-	/* Allocate non-prefetchable memory */
-	flags = 0;
-	for (tmp = 0; tmp < count; tmp++) {
-		rle = barlist[tmp];
-		if (rle->type == SYS_RES_MEMORY &&
-		    (dinfo->mprefetchable & BARBIT(rle->rid)) == 0) {
-			flags = rman_make_alignment_flags(rle->count);
-			break;
-		}
-	}
-	if (flags > 0) { /* If any non-prefetchable memory is requested... */
-		/*
-		 * First we allocate one big space for all resources of this
-		 * type.  We do this because our parent, pccbb, needs to open
-		 * a window to forward all addresses within the window, and
-		 * it would be best if nobody else has resources allocated
-		 * within the window.
-		 * (XXX: Perhaps there might be a better way to do this?)
-		 */
-		rid = 0;
-		res = bus_alloc_resource(cbdev, SYS_RES_MEMORY, &rid, 0,
-		    ((~dinfo->mprefetchable) & dinfo->mbelow1mb)?0xFFFFF:~0UL,
-		    mem_nsize, flags);
-		if (res == NULL) {
-			device_printf(cbdev,
-			    "Can't get memory for non-prefetch mem\n");
-			free(barlist, M_DEVBUF);
-			return (EIO);
-		}
-		start = rman_get_start(res);
-		end = rman_get_end(res);
-		DEVPRINTF((cbdev, "Non-prefetchable memory at %x-%x\n",
-		    start, end));
-		/*
-		 * Now that we know the region is free, release it and hand it
-		 * out piece by piece.
-		 */
-		bus_release_resource(cbdev, SYS_RES_MEMORY, rid, res);
-		for (tmp = 0; tmp < count; tmp++) {
-			rle = barlist[tmp];
-			if (rle->type == SYS_RES_MEMORY &&
-			    (dinfo->mprefetchable & BARBIT(rle->rid)) == 0) {
-				rle->res = bus_alloc_resource(cbdev,
-				    rle->type, &rle->rid, start, end,
-				    rle->count,
-				    rman_make_alignment_flags(rle->count));
-				if (rle->res == NULL) {
-					DEVPRINTF((cbdev, "Cannot pre-allocate "
-					    "memory for cardbus device\n"));
-					free(barlist, M_DEVBUF);
-					return (ENOMEM);
-				}
-				rle->start = rman_get_start(rle->res);
-				rle->end = rman_get_end(rle->res);
-				pci_write_config(child,
-				    rle->rid, rle->start, 4);
-			}
-		}
-	}
-
-	/* Allocate IO ports */
-	flags = 0;
-	for (tmp = 0; tmp < count; tmp++) {
-		rle = barlist[tmp];
-		if (rle->type == SYS_RES_IOPORT) {
-			flags = rman_make_alignment_flags(rle->count);
-			break;
-		}
-	}
-	if (flags > 0) { /* If any IO port is requested... */
-		/*
-		 * First we allocate one big space for all resources of this
-		 * type.  We do this because our parent, pccbb, needs to open
-		 * a window to forward all addresses within the window, and
-		 * it would be best if nobody else has resources allocated
-		 * within the window.
-		 * (XXX: Perhaps there might be a better way to do this?)
-		 */
-		rid = 0;
-		res = bus_alloc_resource(cbdev, SYS_RES_IOPORT, &rid, 0,
-		    (dinfo->ibelow1mb)?0xFFFFF:~0UL, io_size, flags);
-		if (res == NULL) {
-			device_printf(cbdev,
-			    "Can't get memory for IO ports\n");
-			free(barlist, M_DEVBUF);
-			return (EIO);
-		}
-		start = rman_get_start(res);
-		end = rman_get_end(res);
-		DEVPRINTF((cbdev, "IO port at %x-%x\n", start, end));
-		/*
-		 * Now that we know the region is free, release it and hand it
-		 * out piece by piece.
-		 */
-		bus_release_resource(cbdev, SYS_RES_IOPORT, rid, res);
-		for (tmp = 0; tmp < count; tmp++) {
-			rle = barlist[tmp];
-			if (rle->type == SYS_RES_IOPORT) {
-				rle->res = bus_alloc_resource(cbdev,
-				    rle->type, &rle->rid, start, end,
-				    rle->count,
-				    rman_make_alignment_flags(rle->count));
-				if (rle->res == NULL) {
-					DEVPRINTF((cbdev, "Cannot pre-allocate "
-					    "IO port for cardbus device\n"));
-					free(barlist, M_DEVBUF);
-					return (ENOMEM);
-				}
-				rle->start = rman_get_start(rle->res);
-				rle->end = rman_get_end(rle->res);
-				pci_write_config(child,
-				    rle->rid, rle->start, 4);
-			}
-		}
-	}
-
-	/* Allocate IRQ */
-	rid = 0;
-	res = bus_alloc_resource_any(cbdev, SYS_RES_IRQ, &rid, RF_SHAREABLE);
-	if (res == NULL) {
-		device_printf(cbdev, "Can't get memory for irq\n");
-		free(barlist, M_DEVBUF);
-		return (EIO);
-	}
-	start = rman_get_start(res);
-	end = rman_get_end(res);
-	resource_list_add(&dinfo->pci.resources, SYS_RES_IRQ, rid, start, end,
-	    1);
-	rle = resource_list_find(&dinfo->pci.resources, SYS_RES_IRQ, rid);
-	rle->res = res;
-	dinfo->pci.cfg.intline = start;
-	pci_write_config(child, PCIR_INTLINE, start, 1);
-
-	free(barlist, M_DEVBUF);
-	return (0);
-}
 
 /************************************************************************/
 /* Probe/Attach								*/
@@ -400,25 +93,33 @@ static int
 cardbus_probe(device_t cbdev)
 {
 	device_set_desc(cbdev, "CardBus bus");
-	return 0;
+	return (0);
 }
 
 static int
 cardbus_attach(device_t cbdev)
 {
-	return 0;
+	struct cardbus_softc *sc = device_get_softc(cbdev);
+
+	sc->sc_dev = cbdev;
+	cardbus_device_create(sc);
+	return (0);
 }
 
 static int
 cardbus_detach(device_t cbdev)
 {
+	struct cardbus_softc *sc = device_get_softc(cbdev);
+
 	cardbus_detach_card(cbdev);
-	return 0;
+	cardbus_device_destroy(sc);
+	return (0);
 }
 
 static int
 cardbus_suspend(device_t self)
 {
+
 	cardbus_detach_card(self);
 	return (0);
 }
@@ -426,6 +127,7 @@ cardbus_suspend(device_t self)
 static int
 cardbus_resume(device_t self)
 {
+
 	return (0);
 }
 
@@ -434,23 +136,25 @@ cardbus_resume(device_t self)
 /************************************************************************/
 
 static void
-cardbus_device_setup_regs(device_t brdev, int b, int s, int f, pcicfgregs *cfg)
+cardbus_device_setup_regs(pcicfgregs *cfg)
 {
-	PCIB_WRITE_CONFIG(brdev, b, s, f, PCIR_INTLINE,
-	    pci_get_irq(device_get_parent(brdev)), 1);
-	cfg->intline = PCIB_READ_CONFIG(brdev, b, s, f, PCIR_INTLINE, 1);
+	device_t dev = cfg->dev;
+	int i;
 
-	PCIB_WRITE_CONFIG(brdev, b, s, f, PCIR_CACHELNSZ, 0x08, 1);
-	cfg->cachelnsz = PCIB_READ_CONFIG(brdev, b, s, f, PCIR_CACHELNSZ, 1);
+	/*
+	 * Some cards power up with garbage in their BARs.  This
+	 * code clears all that junk out.
+	 */
+	for (i = 0; i < PCI_MAX_BAR_0; i++)
+		pci_write_config(dev, PCIR_BAR(i), 0, 4);
 
-	PCIB_WRITE_CONFIG(brdev, b, s, f, PCIR_LATTIMER, 0xa8, 1);
-	cfg->lattimer = PCIB_READ_CONFIG(brdev, b, s, f, PCIR_LATTIMER, 1);
-
-	PCIB_WRITE_CONFIG(brdev, b, s, f, PCIR_MINGNT, 0x14, 1);
-	cfg->mingnt = PCIB_READ_CONFIG(brdev, b, s, f, PCIR_MINGNT, 1);
-
-	PCIB_WRITE_CONFIG(brdev, b, s, f, PCIR_MAXLAT, 0x14, 1);
-	cfg->maxlat = PCIB_READ_CONFIG(brdev, b, s, f, PCIR_MAXLAT, 1);
+	cfg->intline =
+	    pci_get_irq(device_get_parent(device_get_parent(dev)));
+	pci_write_config(dev, PCIR_INTLINE, cfg->intline, 1);
+	pci_write_config(dev, PCIR_CACHELNSZ, 0x08, 1);
+	pci_write_config(dev, PCIR_LATTIMER, 0xa8, 1);
+	pci_write_config(dev, PCIR_MINGNT, 0x14, 1);
+	pci_write_config(dev, PCIR_MAXLAT, 0x14, 1);
 }
 
 static int
@@ -458,52 +162,48 @@ cardbus_attach_card(device_t cbdev)
 {
 	device_t brdev = device_get_parent(cbdev);
 	device_t child;
+	int bus, domain, slot, func;
 	int cardattached = 0;
-	int bus, slot, func;
+	int cardbusfunchigh = 0;
 
 	cardbus_detach_card(cbdev); /* detach existing cards */
 	POWER_ENABLE_SOCKET(brdev, cbdev);
+	domain = pcib_get_domain(cbdev);
 	bus = pcib_get_bus(cbdev);
+	slot = 0;
 	/* For each function, set it up and try to attach a driver to it */
-	for (slot = 0; slot <= CARDBUS_SLOTMAX; slot++) {
-		int cardbusfunchigh = 0;
-		for (func = 0; func <= cardbusfunchigh; func++) {
-			struct cardbus_devinfo *dinfo;
+	for (func = 0; func <= cardbusfunchigh; func++) {
+		struct cardbus_devinfo *dinfo;
 
-			dinfo = (struct cardbus_devinfo *)
-			    pci_read_device(brdev, bus, slot, func,
-				sizeof(struct cardbus_devinfo));
-			if (dinfo == NULL)
-				continue;
-			if (dinfo->pci.cfg.mfdev)
-				cardbusfunchigh = CARDBUS_FUNCMAX;
+		dinfo = (struct cardbus_devinfo *)
+		    pci_read_device(brdev, domain, bus, slot, func,
+			sizeof(struct cardbus_devinfo));
+		if (dinfo == NULL)
+			continue;
+		if (dinfo->pci.cfg.mfdev)
+			cardbusfunchigh = PCI_FUNCMAX;
 
-			cardbus_device_setup_regs(brdev, bus, slot, func,
-			    &dinfo->pci.cfg);
-			child = device_add_child(cbdev, NULL, -1);
-			if (child == NULL) {
-				DEVPRINTF((cbdev, "Cannot add child!\n"));
-				pci_freecfg((struct pci_devinfo *)dinfo);
-				continue;
-			}
-			dinfo->pci.cfg.dev = child;
-			resource_list_init(&dinfo->pci.resources);
-			device_set_ivars(child, dinfo);
-			if (cardbus_do_cis(cbdev, child) != 0) {
-				DEVPRINTF((cbdev, "Can't parse cis\n"));
-				pci_freecfg((struct pci_devinfo *)dinfo);
-				continue;
-			}
-			cardbus_pickup_maps(cbdev, child);
-			cardbus_alloc_resources(cbdev, child);
-			pci_print_verbose(&dinfo->pci);
-			if (device_probe_and_attach(child) != 0)
-				cardbus_release_all_resources(cbdev, dinfo);
-			else
-				cardattached++;
+		child = device_add_child(cbdev, NULL, -1);
+		if (child == NULL) {
+			DEVPRINTF((cbdev, "Cannot add child!\n"));
+			pci_freecfg((struct pci_devinfo *)dinfo);
+			continue;
 		}
+		dinfo->pci.cfg.dev = child;
+		resource_list_init(&dinfo->pci.resources);
+		device_set_ivars(child, dinfo);
+		if (cardbus_do_cis(cbdev, child) != 0)
+			DEVPRINTF((cbdev, "Warning: Bogus CIS ignored\n"));
+		pci_cfg_save(dinfo->pci.cfg.dev, &dinfo->pci, 0);
+		pci_cfg_restore(dinfo->pci.cfg.dev, &dinfo->pci);
+		cardbus_device_setup_regs(&dinfo->pci.cfg);
+		pci_add_resources(cbdev, child, 1, dinfo->mprefetchable);
+		pci_print_verbose(&dinfo->pci);
+		if (device_probe_and_attach(child) == 0)
+			cardattached++;
+		else
+			pci_cfg_save(dinfo->pci.cfg.dev, &dinfo->pci, 1);
 	}
-
 	if (cardattached > 0)
 		return (0);
 	POWER_DISABLE_SOCKET(brdev, cbdev);
@@ -518,7 +218,8 @@ cardbus_detach_card(device_t cbdev)
 	int tmp;
 	int err = 0;
 
-	device_get_children(cbdev, &devlist, &numdevs);
+	if (device_get_children(cbdev, &devlist, &numdevs) != 0)
+		return (ENOENT);
 
 	if (numdevs == 0) {
 		free(devlist, M_TEMP);
@@ -552,7 +253,9 @@ cardbus_driver_added(device_t cbdev, driver_t *driver)
 	struct cardbus_devinfo *dinfo;
 
 	DEVICE_IDENTIFY(driver, cbdev);
-	device_get_children(cbdev, &devlist, &numdevs);
+	if (device_get_children(cbdev, &devlist, &numdevs) != 0)
+		return;
+
 	/*
 	 * If there are no drivers attached, but there are children,
 	 * then power the card up.
@@ -570,12 +273,9 @@ cardbus_driver_added(device_t cbdev, driver_t *driver)
 			continue;
 		dinfo = device_get_ivars(dev);
 		pci_print_verbose(&dinfo->pci);
-		resource_list_init(&dinfo->pci.resources);
-		cardbus_do_cis(cbdev, dev);
-		cardbus_pickup_maps(cbdev, dev);
-		cardbus_alloc_resources(cbdev, dev);
+		pci_cfg_restore(dinfo->pci.cfg.dev, &dinfo->pci);
 		if (device_probe_and_attach(dev) != 0)
-			cardbus_release_all_resources(cbdev, dinfo);
+			pci_cfg_save(dev, &dinfo->pci, 1);
 	}
 	free(devlist, M_TEMP);
 }
@@ -588,18 +288,13 @@ cardbus_release_all_resources(device_t cbdev, struct cardbus_devinfo *dinfo)
 	/* Free all allocated resources */
 	STAILQ_FOREACH(rle, &dinfo->pci.resources, link) {
 		if (rle->res) {
-			if (rman_get_device(rle->res) != cbdev)
-				device_printf(cbdev, "release_all_resource: "
-				    "Resource still owned by child, oops. "
-				    "(type=%d, rid=%d, addr=%lx)\n",
-				    rle->type, rle->rid,
-				    rman_get_start(rle->res));
 			BUS_RELEASE_RESOURCE(device_get_parent(cbdev),
 			    cbdev, rle->type, rle->rid, rle->res);
 			rle->res = NULL;
 			/*
 			 * zero out config so the card won't acknowledge
-			 * access to the space anymore
+			 * access to the space anymore. XXX doesn't handle
+			 * 64-bit bars.
 			 */
 			pci_write_config(dinfo->pci.cfg.dev, rle->rid, 0, 4);
 		}
@@ -664,8 +359,8 @@ static device_method_t cardbus_methods[] = {
 	{0,0}
 };
 
-DECLARE_CLASS(pci_driver);
-DEFINE_CLASS_1(cardbus, cardbus_driver, cardbus_methods, 0, pci_driver);
+DEFINE_CLASS_1(cardbus, cardbus_driver, cardbus_methods,
+    sizeof(struct cardbus_softc), pci_driver);
 
 static devclass_t cardbus_devclass;
 
