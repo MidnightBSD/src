@@ -25980,9 +25980,6 @@ sys/dev/ex/if_exvar.h -text
 sys/dev/exca/exca.c -text
 sys/dev/exca/excareg.h -text
 sys/dev/exca/excavar.h -text
-sys/dev/fatm/exca.c -text
-sys/dev/fatm/excareg.h -text
-sys/dev/fatm/excavar.h -text
 sys/dev/fatm/firmware.h -text
 sys/dev/fatm/if_fatm.c -text
 sys/dev/fatm/if_fatm_rate.h -text
