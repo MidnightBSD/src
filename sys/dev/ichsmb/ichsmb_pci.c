@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb_pci.c,v 1.16.2.1 2005/08/19 18:38:55 brian Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb_pci.c,v 1.19.2.1 2007/12/02 08:42:15 remko Exp $");
 
 /*
  * Support for the SMBus controller logical device which is part of the
@@ -73,6 +73,8 @@ __FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb_pci.c,v 1.16.2.1 2005/08/19 18:38:
 #define ID_82801CA			0x24838086
 #define ID_82801DC			0x24C38086
 #define ID_82801EB			0x24D38086
+#define ID_82801FB			0x266A8086
+#define ID_82801GB			0x27da8086
 #define ID_6300ESB			0x25a48086
 #define	ID_631xESB			0x269b8086
 
@@ -144,11 +146,17 @@ ichsmb_pci_probe(device_t dev)
 	case ID_82801EB:
 		device_set_desc(dev, "Intel 82801EB (ICH5) SMBus controller");
 		break;
+	case ID_82801FB:
+		device_set_desc(dev, "Intel 82801FB (ICH6) SMBus controller");
+		break;
+	case ID_82801GB:
+		device_set_desc(dev, "Intel 82801GB (ICH7) SMBus controller");
+		break;
 	case ID_6300ESB:
 		device_set_desc(dev, "Intel 6300ESB (ICH) SMBus controller");
 		break;
 	case ID_631xESB:
-		device_set_desc(dev, "Intel 631xESB/6321ESB (ESB2 SMBus controller");
+		device_set_desc(dev, "Intel 631xESB/6321ESB (ESB2) SMBus controller");
 		break;
 	default:
 		if (pci_get_class(dev) == PCIC_SERIALBUS
@@ -168,7 +176,6 @@ static int
 ichsmb_pci_attach(device_t dev)
 {
 	const sc_p sc = device_get_softc(dev);
-	u_int32_t cmd;
 	int error;
 
 	/* Initialize private state */
@@ -184,7 +191,7 @@ ichsmb_pci_attach(device_t dev)
 		sc->io_res = bus_alloc_resource(dev, SYS_RES_IOPORT,
 		    &sc->io_rid, 0, ~0, 32, RF_ACTIVE);
 	if (sc->io_res == NULL) {
-		log(LOG_ERR, "%s: can't map I/O\n", device_get_nameunit(dev));
+		device_printf(dev, "can't map I/O\n");
 		error = ENXIO;
 		goto fail;
 	}
@@ -196,27 +203,7 @@ ichsmb_pci_attach(device_t dev)
 	sc->irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ,
 	    &sc->irq_rid, RF_ACTIVE | RF_SHAREABLE);
 	if (sc->irq_res == NULL) {
-		log(LOG_ERR, "%s: can't get IRQ\n", device_get_nameunit(dev));
-		error = ENXIO;
-		goto fail;
-	}
-
-	/* Set up interrupt handler */
-	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_MISC,
-	    ichsmb_device_intr, sc, &sc->irq_handle);
-	if (error != 0) {
-		log(LOG_ERR, "%s: can't setup irq\n", device_get_nameunit(dev));
-		goto fail;
-	}
-
-	/* Enable I/O mapping */
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	cmd |= PCIM_CMD_PORTEN;
-	pci_write_config(dev, PCIR_COMMAND, cmd, 4);
-	cmd = pci_read_config(dev, PCIR_COMMAND, 4);
-	if ((cmd & PCIM_CMD_PORTEN) == 0) {
-		log(LOG_ERR, "%s: can't enable memory map\n",
-		    device_get_nameunit(dev));
+		device_printf(dev, "can't get IRQ\n");
 		error = ENXIO;
 		goto fail;
 	}
@@ -225,7 +212,10 @@ ichsmb_pci_attach(device_t dev)
 	pci_write_config(dev, ICH_HOSTC, ICH_HOSTC_HST_EN, 1);
 
 	/* Done */
-	return (ichsmb_attach(dev));
+	error = ichsmb_attach(dev);
+	if (error)
+		goto fail;
+	return (0);
 
 fail:
 	/* Attach failed, release resources */

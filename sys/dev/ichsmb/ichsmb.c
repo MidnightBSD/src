@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb.c,v 1.13.2.1 2005/08/19 18:38:55 brian Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb.c,v 1.18 2007/02/23 12:18:43 piso Exp $");
 
 /*
  * Support for the SMBus controller logical device which is part of the
@@ -51,6 +51,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb.c,v 1.13.2.1 2005/08/19 18:38:55 b
 #include <sys/kernel.h>
 #include <sys/errno.h>
 #include <sys/lock.h>
+#include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/syslog.h>
 #include <sys/bus.h>
@@ -70,7 +71,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ichsmb/ichsmb.c,v 1.13.2.1 2005/08/19 18:38:55 b
 #define ICHSMB_DEBUG	0
 #if ICHSMB_DEBUG != 0 && defined(__CC_SUPPORTS___FUNC__)
 #define DBG(fmt, args...)	\
-	do { log(LOG_DEBUG, "%s: " fmt, __func__ , ## args); } while (0)
+	do { printf("%s: " fmt, __func__ , ## args); } while (0)
 #else
 #define DBG(fmt, args...)	do { } while (0)
 #endif
@@ -109,26 +110,38 @@ ichsmb_attach(device_t dev)
 	const sc_p sc = device_get_softc(dev);
 	int error;
 
+	/* Create mutex */
+	mtx_init(&sc->mutex, device_get_nameunit(dev), "ichsmb", MTX_DEF);
+
 	/* Add child: an instance of the "smbus" device */
 	if ((sc->smb = device_add_child(dev, DRIVER_SMBUS, -1)) == NULL) {
-		log(LOG_ERR, "%s: no \"%s\" child found\n",
-		    device_get_nameunit(dev), DRIVER_SMBUS);
-		return (ENXIO);
+		device_printf(dev, "no \"%s\" child found\n", DRIVER_SMBUS);
+		error = ENXIO;
+		goto fail;
 	}
 
 	/* Clear interrupt conditions */
 	bus_space_write_1(sc->io_bst, sc->io_bsh, ICH_HST_STA, 0xff);
 
-	/* Add "smbus" child */
-	if ((error = bus_generic_attach(dev)) != 0) {
-		log(LOG_ERR, "%s: failed to attach child: %d\n",
-		    device_get_nameunit(dev), error);
-		return (ENXIO);
+	/* Set up interrupt handler */
+	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_MISC,
+	    NULL, ichsmb_device_intr, sc, &sc->irq_handle);
+	if (error != 0) {
+		device_printf(dev, "can't setup irq\n");
+		goto fail;
 	}
 
-	/* Create mutex */
-	mtx_init(&sc->mutex, device_get_nameunit(dev), "ichsmb", MTX_DEF);
+	/* Attach "smbus" child */
+	if ((error = bus_generic_attach(dev)) != 0) {
+		device_printf(dev, "failed to attach child: %d\n", error);
+		goto fail;
+	}
+
 	return (0);
+
+fail:
+	mtx_destroy(&sc->mutex);
+	return (error);
 }
 
 /********************************************************************
@@ -136,7 +149,7 @@ ichsmb_attach(device_t dev)
 ********************************************************************/
 
 int 
-ichsmb_callback(device_t dev, int index, caddr_t data)
+ichsmb_callback(device_t dev, int index, void *data)
 {
 	int smb_error = 0;
 
@@ -381,7 +394,7 @@ ichsmb_bwrite(device_t dev, u_char slave, char cmd, u_char count, char *buf)
 	KASSERT(sc->ich_cmd == -1,
 	    ("%s: ich_cmd=%d\n", __func__ , sc->ich_cmd));
 	if (count < 1 || count > 32)
-		return (EINVAL);
+		return (SMB_EINVAL);
 	bcopy(buf, sc->block_data, count);
 	sc->block_count = count;
 	sc->block_index = 1;
@@ -403,7 +416,7 @@ ichsmb_bwrite(device_t dev, u_char slave, char cmd, u_char count, char *buf)
 }
 
 int
-ichsmb_bread(device_t dev, u_char slave, char cmd, u_char count, char *buf)
+ichsmb_bread(device_t dev, u_char slave, char cmd, u_char *count, char *buf)
 {
 	const sc_p sc = device_get_softc(dev);
 	int smb_error;
@@ -411,10 +424,10 @@ ichsmb_bread(device_t dev, u_char slave, char cmd, u_char count, char *buf)
 	DBG("slave=0x%02x cmd=0x%02x count=%d\n", slave, (u_char)cmd, count);
 	KASSERT(sc->ich_cmd == -1,
 	    ("%s: ich_cmd=%d\n", __func__ , sc->ich_cmd));
-	if (count < 1 || count > 32)
-		return (EINVAL);
+	if (*count < 1 || *count > 32)
+		return (SMB_EINVAL);
 	bzero(sc->block_data, sizeof(sc->block_data));
-	sc->block_count = count;
+	sc->block_count = 0;
 	sc->block_index = 0;
 	sc->block_write = 0;
 
@@ -423,11 +436,13 @@ ichsmb_bread(device_t dev, u_char slave, char cmd, u_char count, char *buf)
 	bus_space_write_1(sc->io_bst, sc->io_bsh, ICH_XMIT_SLVA,
 	    (slave << 1) | ICH_XMIT_SLVA_READ);
 	bus_space_write_1(sc->io_bst, sc->io_bsh, ICH_HST_CMD, cmd);
-	bus_space_write_1(sc->io_bst, sc->io_bsh, ICH_D0, count); /* XXX? */
+	bus_space_write_1(sc->io_bst, sc->io_bsh, ICH_D0, *count); /* XXX? */
 	bus_space_write_1(sc->io_bst, sc->io_bsh, ICH_HST_CNT,
 	    ICH_HST_CNT_START | ICH_HST_CNT_INTREN | sc->ich_cmd);
-	if ((smb_error = ichsmb_wait(sc)) == SMB_ENOERR)
-		bcopy(sc->block_data, buf, sc->block_count);
+	if ((smb_error = ichsmb_wait(sc)) == SMB_ENOERR) {
+		bcopy(sc->block_data, buf, min(sc->block_count, *count));
+		*count = sc->block_count;
+	}
 	mtx_unlock(&sc->mutex);
 	DBG("smb_error=%d\n", smb_error);
 #if ICHSMB_DEBUG
@@ -515,8 +530,8 @@ ichsmb_device_intr(void *cookie)
 			ok_bits |= ichsmb_state_irqs[cmd_index];
 		}
 		if ((status & ~ok_bits) != 0) {
-			log(LOG_ERR, "%s: irq 0x%02x during %d\n",
-			    device_get_nameunit(dev), status, cmd_index);
+			device_printf(dev, "irq 0x%02x during %d\n", status,
+			    cmd_index);
 			bus_space_write_1(sc->io_bst, sc->io_bsh,
 			    ICH_HST_STA, (status & ~ok_bits));
 			continue;
@@ -526,12 +541,10 @@ ichsmb_device_intr(void *cookie)
 		if (status & ICH_HST_STA_SMBALERT_STS) {
 			static int smbalert_count = 16;
 			if (smbalert_count > 0) {
-				log(LOG_WARNING, "%s: SMBALERT# rec'd\n",
-				    device_get_nameunit(dev));
+				device_printf(dev, "SMBALERT# rec'd\n");
 				if (--smbalert_count == 0) {
-					log(LOG_WARNING,
-					    "%s: not logging anymore\n",
-					    device_get_nameunit(dev));
+					device_printf(dev,
+					    "not logging anymore\n");
 				}
 			}
 		}
@@ -606,8 +619,7 @@ finished:
 
 	/* Too many loops? */
 	if (count == maxloops) {
-		log(LOG_ERR, "%s: interrupt loop, status=0x%02x\n",
-		    device_get_nameunit(dev),
+		device_printf(dev, "interrupt loop, status=0x%02x\n",
 		    bus_space_read_1(sc->io_bst, sc->io_bsh, ICH_HST_STA));
 	}
 }
@@ -625,20 +637,14 @@ ichsmb_wait(sc_p sc)
 	KASSERT(sc->ich_cmd != -1,
 	    ("%s: ich_cmd=%d\n", __func__ , sc->ich_cmd));
 	mtx_assert(&sc->mutex, MA_OWNED);
-sleep:
-	error = msleep(sc, &sc->mutex, PZERO | PCATCH, "ichsmb", hz / 4);
+	error = msleep(sc, &sc->mutex, PZERO, "ichsmb", hz / 4);
 	DBG("msleep -> %d\n", error);
 	switch (error) {
-	case ERESTART:
-		if (sc->ich_cmd != -1)
-			goto sleep;
-		/* FALLTHROUGH */
 	case 0:
 		smb_error = sc->smb_error;
 		break;
 	case EWOULDBLOCK:
-		log(LOG_ERR, "%s: device timeout, status=0x%02x\n",
-		    device_get_nameunit(dev),
+		device_printf(dev, "device timeout, status=0x%02x\n",
 		    bus_space_read_1(sc->io_bst, sc->io_bsh, ICH_HST_STA));
 		sc->ich_cmd = -1;
 		smb_error = SMB_ETIMEOUT;
@@ -674,14 +680,20 @@ ichsmb_release_resources(sc_p sc)
 	}
 }
 
-int ichsmb_detach(device_t dev)
+int
+ichsmb_detach(device_t dev)
 {
 	const sc_p sc = device_get_softc(dev);
+	int error;
 
-	mtx_destroy(&sc->mutex);
-	bus_generic_detach(dev);
+	error = bus_generic_detach(dev);
+	if (error)
+		return (error);
 	device_delete_child(dev, sc->smb);
 	ichsmb_release_resources(sc);
+	mtx_destroy(&sc->mutex);
 	
 	return 0;
 }
+
+DRIVER_MODULE(smbus, ichsmb, smbus_driver, smbus_devclass, 0, 0);
