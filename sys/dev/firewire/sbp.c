@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/sbp.c,v 1.81 2005/01/06 01:42:41 imp Exp $
+ * $FreeBSD: src/sys/dev/firewire/sbp.c,v 1.97 2007/06/17 05:55:50 scottl Exp $
  *
  */
 
@@ -91,6 +91,7 @@
  * because of CAM_SCSI2_MAXLUN in cam_xpt.c
  */
 #define SBP_NUM_LUNS 64
+#define SBP_MAXPHYS  MIN(MAXPHYS, (512*1024) /* 512KB */)
 #define SBP_DMA_SIZE PAGE_SIZE
 #define SBP_LOGIN_SIZE sizeof(struct sbp_login_res)
 #define SBP_QUEUE_LEN ((SBP_DMA_SIZE - SBP_LOGIN_SIZE) / sizeof(struct sbp_ocb))
@@ -161,9 +162,9 @@ TUNABLE_INT("hw.firewire.sbp.tags", &sbp_tags);
 
 #define SBP_SEG_MAX rounddown(0xffff, PAGE_SIZE)
 #ifdef __sparc64__ /* iommu */
-#define SBP_IND_MAX howmany(MAXPHYS, SBP_SEG_MAX)
+#define SBP_IND_MAX howmany(SBP_MAXPHYS, SBP_SEG_MAX)
 #else
-#define SBP_IND_MAX howmany(MAXPHYS, PAGE_SIZE)
+#define SBP_IND_MAX howmany(SBP_MAXPHYS, PAGE_SIZE)
 #endif
 struct sbp_ocb {
 	STAILQ_ENTRY(sbp_ocb)	ocb;
@@ -244,7 +245,10 @@ struct sbp_softc {
 	struct timeval last_busreset;
 #define SIMQ_FREEZED 1
 	int flags;
+	struct mtx mtx;
 };
+#define SBP_LOCK(sbp) mtx_lock(&(sbp)->mtx)
+#define SBP_UNLOCK(sbp) mtx_unlock(&(sbp)->mtx)
 
 static void sbp_post_explore (void *);
 static void sbp_recv (struct fw_xfer *);
@@ -258,6 +262,7 @@ static void sbp_execute_ocb (void *,  bus_dma_segment_t *, int, int);
 static void sbp_free_ocb (struct sbp_dev *, struct sbp_ocb *);
 static void sbp_abort_ocb (struct sbp_ocb *, int);
 static void sbp_abort_all_ocbs (struct sbp_dev *, int);
+static struct fw_xfer * sbp_write_cmd_locked (struct sbp_dev *, int, int);
 static struct fw_xfer * sbp_write_cmd (struct sbp_dev *, int, int);
 static struct sbp_ocb * sbp_get_ocb (struct sbp_dev *);
 static struct sbp_ocb * sbp_enqueue_ocb (struct sbp_dev *, struct sbp_ocb *);
@@ -698,8 +703,8 @@ sbp_login(struct sbp_dev *sdev)
 	if (t.tv_sec >= 0 && t.tv_usec > 0)
 		ticks = (t.tv_sec * 1000 + t.tv_usec / 1000) * hz / 1000;
 SBP_DEBUG(0)
-	printf("%s: sec = %ld usec = %ld ticks = %d\n", __func__,
-	    t.tv_sec, t.tv_usec, ticks);
+	printf("%s: sec = %jd usec = %ld ticks = %d\n", __func__,
+	    (intmax_t)t.tv_sec, t.tv_usec, ticks);
 END_DEBUG
 	callout_reset(&sdev->login_callout, ticks,
 			sbp_login_callout, (void *)(sdev));
@@ -735,8 +740,10 @@ END_DEBUG
 			continue;
 		if (alive && (sdev->status != SBP_DEV_DEAD)) {
 			if (sdev->path != NULL) {
+				SBP_LOCK(sbp);
 				xpt_freeze_devq(sdev->path, 1);
 				sdev->freeze ++;
+				SBP_UNLOCK(sbp);
 			}
 			sbp_probe_lun(sdev);
 SBP_DEBUG(0)
@@ -768,8 +775,10 @@ SBP_DEBUG(0)
 				printf("lost target\n");
 END_DEBUG
 				if (sdev->path) {
+					SBP_LOCK(sbp);
 					xpt_freeze_devq(sdev->path, 1);
 					sdev->freeze ++;
+					SBP_UNLOCK(sbp);
 				}
 				sdev->status = SBP_DEV_RETRY;
 				sbp_abort_all_ocbs(sdev, CAM_SCSI_BUS_RESET);
@@ -797,8 +806,10 @@ SBP_DEBUG(0)
 	printf("sbp_post_busreset\n");
 END_DEBUG
 	if ((sbp->sim->flags & SIMQ_FREEZED) == 0) {
+		SBP_LOCK(sbp);
 		xpt_freeze_simq(sbp->sim, /*count*/1);
 		sbp->sim->flags |= SIMQ_FREEZED;
+		SBP_UNLOCK(sbp);
 	}
 	microtime(&sbp->last_busreset);
 }
@@ -814,6 +825,10 @@ sbp_post_explore(void *arg)
 SBP_DEBUG(0)
 	printf("sbp_post_explore (sbp_cold=%d)\n", sbp_cold);
 END_DEBUG
+	/* We need physical access */
+	if (!firewire_phydma_enable)
+		return;
+
 	if (sbp_cold > 0)
 		sbp_cold --;
 
@@ -869,8 +884,10 @@ END_DEBUG
 		if (target->num_lun == 0)
 			sbp_free_target(target);
 	}
+	SBP_LOCK(sbp);
 	xpt_release_simq(sbp->sim, /*run queue*/TRUE);
 	sbp->sim->flags &= ~SIMQ_FREEZED;
+	SBP_UNLOCK(sbp);
 }
 
 #if NEED_RESPONSE
@@ -900,7 +917,9 @@ sbp_xfer_free(struct fw_xfer *xfer)
 	sdev = (struct sbp_dev *)xfer->sc;
 	fw_xfer_unload(xfer);
 	s = splfw();
+	SBP_LOCK(sdev->target->sbp);
 	STAILQ_INSERT_TAIL(&sdev->target->xferlist, xfer, link);
+	SBP_UNLOCK(sdev->target->sbp);
 	splx(s);
 }
 
@@ -935,7 +954,7 @@ SBP_DEBUG(0)
 END_DEBUG
 
 	xfer = sbp_write_cmd(sdev, FWTCODE_WREQQ, 0);
-	xfer->act.hand = sbp_reset_start_callback;
+	xfer->hand = sbp_reset_start_callback;
 	fp = &xfer->send.hdr;
 	fp->mode.wreqq.dest_hi = 0xffff;
 	fp->mode.wreqq.dest_lo = 0xf0000000 | RESET_START;
@@ -1042,9 +1061,11 @@ END_DEBUG
 	ccb->ccb_h.ccb_sdev_ptr = sdev;
 
 	/* The scan is in progress now. */
+	SBP_LOCK(target->sbp);
 	xpt_action(ccb);
 	xpt_release_devq(sdev->path, sdev->freeze, TRUE);
 	sdev->freeze = 1;
+	SBP_UNLOCK(target->sbp);
 }
 
 static __inline void
@@ -1107,8 +1128,10 @@ END_DEBUG
 
 	sbp_xfer_free(xfer);
 	if (sdev->path) {
+		SBP_LOCK(sdev->target->sbp);
 		xpt_release_devq(sdev->path, sdev->freeze, TRUE);
 		sdev->freeze = 0;
+		SBP_UNLOCK(sdev->target->sbp);
 	}
 }
 
@@ -1126,9 +1149,9 @@ END_DEBUG
 	if (xfer == NULL)
 		return;
 	if (sdev->status == SBP_DEV_ATTACHED || sdev->status == SBP_DEV_PROBE)
-		xfer->act.hand = sbp_agent_reset_callback;
+		xfer->hand = sbp_agent_reset_callback;
 	else
-		xfer->act.hand = sbp_do_attach;
+		xfer->hand = sbp_do_attach;
 	fp = &xfer->send.hdr;
 	fp->mode.wreqq.data = htonl(0xf);
 	fw_asyreq(xfer->fc, -1, xfer);
@@ -1160,7 +1183,7 @@ SBP_DEBUG(0)
 END_DEBUG
 	xfer = sbp_write_cmd(sdev, FWTCODE_WREQQ, 0);
 
-	xfer->act.hand = sbp_busy_timeout_callback;
+	xfer->hand = sbp_busy_timeout_callback;
 	fp = &xfer->send.hdr;
 	fp->mode.wreqq.dest_hi = 0xffff;
 	fp->mode.wreqq.dest_lo = 0xf0000000 | BUSY_TIMEOUT;
@@ -1174,7 +1197,7 @@ sbp_orb_pointer_callback(struct fw_xfer *xfer)
 	struct sbp_dev *sdev;
 	sdev = (struct sbp_dev *)xfer->sc;
 
-SBP_DEBUG(1)
+SBP_DEBUG(2)
 	sbp_show_sdev_info(sdev, 2);
 	printf("%s\n", __func__);
 END_DEBUG
@@ -1183,6 +1206,8 @@ END_DEBUG
 		printf("%s: xfer->resp = %d\n", __func__, xfer->resp);
 	}
 	sbp_xfer_free(xfer);
+
+	SBP_LOCK(sdev->target->sbp);
 	sdev->flags &= ~ORB_POINTER_ACTIVE;
 
 	if ((sdev->flags & ORB_POINTER_NEED) != 0) {
@@ -1193,6 +1218,7 @@ END_DEBUG
 		if (ocb != NULL)
 			sbp_orb_pointer(sdev, ocb);
 	}
+	SBP_UNLOCK(sdev->target->sbp);
 	return;
 }
 
@@ -1206,6 +1232,8 @@ SBP_DEBUG(1)
 	printf("%s: 0x%08x\n", __func__, (uint32_t)ocb->bus_addr);
 END_DEBUG
 
+	mtx_assert(&sdev->target->sbp->mtx, MA_OWNED);
+
 	if ((sdev->flags & ORB_POINTER_ACTIVE) != 0) {
 SBP_DEBUG(0)
 		printf("%s: orb pointer active\n", __func__);
@@ -1215,10 +1243,10 @@ END_DEBUG
 	}
 
 	sdev->flags |= ORB_POINTER_ACTIVE;
-	xfer = sbp_write_cmd(sdev, FWTCODE_WREQB, 0x08);
+	xfer = sbp_write_cmd_locked(sdev, FWTCODE_WREQB, 0x08);
 	if (xfer == NULL)
 		return;
-	xfer->act.hand = sbp_orb_pointer_callback;
+	xfer->hand = sbp_orb_pointer_callback;
 
 	fp = &xfer->send.hdr;
 	fp->mode.wreqb.len = 8;
@@ -1252,7 +1280,9 @@ END_DEBUG
 	sdev->flags &= ~ORB_DOORBELL_ACTIVE;
 	if ((sdev->flags & ORB_DOORBELL_NEED) != 0) {
 		sdev->flags &= ~ORB_DOORBELL_NEED;
+		SBP_LOCK(sdev->target->sbp);
 		sbp_doorbell(sdev);
+		SBP_UNLOCK(sdev->target->sbp);
 	}
 	return;
 }
@@ -1272,22 +1302,24 @@ END_DEBUG
 		return;
 	}
 	sdev->flags |= ORB_DOORBELL_ACTIVE;
-	xfer = sbp_write_cmd(sdev, FWTCODE_WREQQ, 0x10);
+	xfer = sbp_write_cmd_locked(sdev, FWTCODE_WREQQ, 0x10);
 	if (xfer == NULL)
 		return;
-	xfer->act.hand = sbp_doorbell_callback;
+	xfer->hand = sbp_doorbell_callback;
 	fp = &xfer->send.hdr;
 	fp->mode.wreqq.data = htonl(0xf);
 	fw_asyreq(xfer->fc, -1, xfer);
 }
 
 static struct fw_xfer *
-sbp_write_cmd(struct sbp_dev *sdev, int tcode, int offset)
+sbp_write_cmd_locked(struct sbp_dev *sdev, int tcode, int offset)
 {
 	struct fw_xfer *xfer;
 	struct fw_pkt *fp;
 	struct sbp_target *target;
 	int s, new = 0;
+
+	mtx_assert(&sdev->target->sbp->mtx, MA_OWNED);
 
 	target = sdev->target;
 	s = splfw();
@@ -1313,13 +1345,10 @@ sbp_write_cmd(struct sbp_dev *sdev, int tcode, int offset)
 	}
 	splx(s);
 
-	microtime(&xfer->tv);
-
 	if (new) {
 		xfer->recv.pay_len = 0;
 		xfer->send.spd = min(sdev->target->fwdev->speed, max_speed);
 		xfer->fc = sdev->target->sbp->fd.fc;
-		xfer->retry_req = fw_asybusy;
 	}
 
 	if (tcode == FWTCODE_WREQB)
@@ -1340,6 +1369,19 @@ sbp_write_cmd(struct sbp_dev *sdev, int tcode, int offset)
 
 }
 
+static struct fw_xfer *
+sbp_write_cmd(struct sbp_dev *sdev, int tcode, int offset)
+{
+	struct sbp_softc *sbp = sdev->target->sbp;
+	struct fw_xfer *xfer;
+
+	SBP_LOCK(sbp);
+	xfer = sbp_write_cmd_locked(sdev, tcode, offset);
+	SBP_UNLOCK(sbp);
+
+	return (xfer);
+}
+
 static void
 sbp_mgm_orb(struct sbp_dev *sdev, int func, struct sbp_ocb *aocb)
 {
@@ -1353,20 +1395,25 @@ sbp_mgm_orb(struct sbp_dev *sdev, int func, struct sbp_ocb *aocb)
 	nid = target->sbp->fd.fc->nodeid | FWLOCALBUS;
 
 	s = splfw();
+	SBP_LOCK(target->sbp);
 	if (func == ORB_FUN_RUNQUEUE) {
 		ocb = STAILQ_FIRST(&target->mgm_ocb_queue);
 		if (target->mgm_ocb_cur != NULL || ocb == NULL) {
+			SBP_UNLOCK(target->sbp);
 			splx(s);
 			return;
 		}
 		STAILQ_REMOVE_HEAD(&target->mgm_ocb_queue, ocb);
+		SBP_UNLOCK(target->sbp);
 		goto start;
 	}
 	if ((ocb = sbp_get_ocb(sdev)) == NULL) {
+		SBP_UNLOCK(target->sbp);
 		splx(s);
 		/* XXX */
 		return;
 	}
+	SBP_UNLOCK(target->sbp);
 	ocb->flags = OCB_ACT_MGM;
 	ocb->sdev = sdev;
 
@@ -1404,7 +1451,9 @@ END_DEBUG
 
 	if (target->mgm_ocb_cur != NULL) {
 		/* there is a standing ORB */
+		SBP_LOCK(target->sbp);
 		STAILQ_INSERT_TAIL(&sdev->target->mgm_ocb_queue, ocb, ocb);
+		SBP_UNLOCK(target->sbp);
 		splx(s);
 		return;
 	}
@@ -1418,7 +1467,7 @@ start:
 	if(xfer == NULL){
 		return;
 	}
-	xfer->act.hand = sbp_mgm_callback;
+	xfer->hand = sbp_mgm_callback;
 
 	fp = &xfer->send.hdr;
 	fp->mode.wreqb.dest_hi = sdev->target->mgm_hi;
@@ -1738,8 +1787,10 @@ END_DEBUG
 	/* we have to reset the fetch agent if it's dead */
 	if (sbp_status->dead) {
 		if (sdev->path) {
+			SBP_LOCK(sbp);
 			xpt_freeze_devq(sdev->path, 1);
 			sdev->freeze ++;
+			SBP_UNLOCK(sbp);
 		}
 		reset_agent = 1;
 	}
@@ -1847,7 +1898,9 @@ printf("len %d\n", sbp_status->len);
 				/* fix up inq data */
 				if (ccb->csio.cdb_io.cdb_bytes[0] == INQUIRY)
 					sbp_fix_inq_data(ocb);
+				SBP_LOCK(sbp);
 				xpt_done(ccb);
+				SBP_UNLOCK(sbp);
 			}
 			break;
 		default:
@@ -1876,8 +1929,7 @@ done0:
 	sfp->mode.wres.dst = rfp->mode.wreqb.src;
 	xfer->dst = sfp->mode.wres.dst;
 	xfer->spd = min(sdev->target->fwdev->speed, max_speed);
-	xfer->act.hand = sbp_loginres_callback;
-	xfer->retry_req = fw_asybusy;
+	xfer->hand = sbp_loginres_callback;
 
 	sfp->mode.wres.tlrt = rfp->mode.wreqb.tlrt;
 	sfp->mode.wres.tcode = FWTCODE_WRES;
@@ -1887,6 +1939,7 @@ done0:
 	fw_asyreq(xfer->fc, -1, xfer);
 #else
 	/* recycle */
+	/* we don't need a lock here because bottom half is serialized */
 	STAILQ_INSERT_TAIL(&sbp->fwb.xferlist, xfer, link);
 #endif
 
@@ -1911,9 +1964,17 @@ sbp_attach(device_t dev)
 {
 	struct sbp_softc *sbp;
 	struct cam_devq *devq;
-	struct fw_xfer *xfer;
+	struct firewire_comm *fc;
 	int i, s, error;
 
+	if (DFLTPHYS > SBP_MAXPHYS)
+		device_printf(dev, "Warning, DFLTPHYS(%dKB) is larger than "
+			"SBP_MAXPHYS(%dKB).\n", DFLTPHYS / 1024,
+			SBP_MAXPHYS / 1024);
+
+	if (!firewire_phydma_enable)
+		device_printf(dev, "Warning, hw.firewire.phydma_enable must be 1 "
+			"for SBP over FireWire.\n");
 SBP_DEBUG(0)
 	printf("sbp_attach (cold=%d)\n", cold);
 END_DEBUG
@@ -1923,12 +1984,13 @@ END_DEBUG
 	sbp = ((struct sbp_softc *)device_get_softc(dev));
 	bzero(sbp, sizeof(struct sbp_softc));
 	sbp->fd.dev = dev;
-	sbp->fd.fc = device_get_ivars(dev);
+	sbp->fd.fc = fc = device_get_ivars(dev);
+	mtx_init(&sbp->mtx, "sbp", NULL, MTX_DEF);
 
 	if (max_speed < 0)
-		max_speed = sbp->fd.fc->speed;
+		max_speed = fc->speed;
 
-	error = bus_dma_tag_create(/*parent*/sbp->fd.fc->dmat,
+	error = bus_dma_tag_create(/*parent*/fc->dmat,
 				/* XXX shoud be 4 for sane backend? */
 				/*alignment*/1,
 				/*boundary*/0,
@@ -1940,7 +2002,7 @@ END_DEBUG
 				/*flags*/BUS_DMA_ALLOCNOW,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 501102
 				/*lockfunc*/busdma_lock_mutex,
-				/*lockarg*/&Giant,
+				/*lockarg*/&sbp->mtx,
 #endif
 				&sbp->dmat);
 	if (error != 0) {
@@ -1960,6 +2022,7 @@ END_DEBUG
 
 	sbp->sim = cam_sim_alloc(sbp_action, sbp_poll, "sbp", sbp,
 				 device_get_unit(dev),
+				 &sbp->mtx,
 				 /*untagged*/ 1,
 				 /*tagged*/ SBP_QUEUE_LEN - 1,
 				 devq);
@@ -1969,8 +2032,8 @@ END_DEBUG
 		return (ENXIO);
 	}
 
-
-	if (xpt_bus_register(sbp->sim, /*bus*/0) != CAM_SUCCESS)
+	SBP_LOCK(sbp);
+	if (xpt_bus_register(sbp->sim, dev, /*bus*/0) != CAM_SUCCESS)
 		goto fail;
 
 	if (xpt_create_path(&sbp->path, xpt_periph, cam_sim_path(sbp->sim),
@@ -1978,39 +2041,35 @@ END_DEBUG
 		xpt_bus_deregister(cam_sim_path(sbp->sim));
 		goto fail;
 	}
+	SBP_UNLOCK(sbp);
 
 	/* We reserve 16 bit space (4 bytes X 64 targets X 256 luns) */
 	sbp->fwb.start = ((u_int64_t)SBP_BIND_HI << 32) | SBP_DEV2ADDR(0, 0);
 	sbp->fwb.end = sbp->fwb.start + 0xffff;
-	sbp->fwb.act_type = FWACT_XFER;
 	/* pre-allocate xfer */
 	STAILQ_INIT(&sbp->fwb.xferlist);
-	for (i = 0; i < SBP_NUM_OCB/2; i ++) {
-		xfer = fw_xfer_alloc_buf(M_SBP,
-			/* send */0,
-			/* recv */SBP_RECV_LEN);
-		xfer->act.hand = sbp_recv;
-#if NEED_RESPONSE
-		xfer->fc = sbp->fd.fc;
-#endif
-		xfer->sc = (caddr_t)sbp;
-		STAILQ_INSERT_TAIL(&sbp->fwb.xferlist, xfer, link);
-	}
-	fw_bindadd(sbp->fd.fc, &sbp->fwb);
+	fw_xferlist_add(&sbp->fwb.xferlist, M_SBP,
+	    /*send*/ 0, /*recv*/ SBP_RECV_LEN, SBP_NUM_OCB/2,
+	    fc, (void *)sbp, sbp_recv);
+
+	fw_bindadd(fc, &sbp->fwb);
 
 	sbp->fd.post_busreset = sbp_post_busreset;
 	sbp->fd.post_explore = sbp_post_explore;
 
-	if (sbp->fd.fc->status != -1) {
+	if (fc->status != -1) {
 		s = splfw();
 		sbp_post_busreset((void *)sbp);
 		sbp_post_explore((void *)sbp);
 		splx(s);
 	}
+	SBP_LOCK(sbp);
 	xpt_async(AC_BUS_RESET, sbp->path, /*arg*/ NULL);
+	SBP_UNLOCK(sbp);
 
 	return (0);
 fail:
+	SBP_UNLOCK(sbp);
 	cam_sim_free(sbp->sim, /*free_devq*/TRUE);
 	return (ENXIO);
 }
@@ -2097,7 +2156,6 @@ sbp_detach(device_t dev)
 {
 	struct sbp_softc *sbp = ((struct sbp_softc *)device_get_softc(dev));
 	struct firewire_comm *fc = sbp->fd.fc;
-	struct fw_xfer *xfer, *next;
 	int i;
 
 SBP_DEBUG(0)
@@ -2106,28 +2164,27 @@ END_DEBUG
 
 	for (i = 0; i < SBP_NUM_TARGETS; i ++) 
 		sbp_cam_detach_target(&sbp->targets[i]);
+
+	SBP_LOCK(sbp);
 	xpt_async(AC_LOST_DEVICE, sbp->path, NULL);
 	xpt_free_path(sbp->path);
 	xpt_bus_deregister(cam_sim_path(sbp->sim));
-	cam_sim_free(sbp->sim, /*free_devq*/ TRUE),
+	cam_sim_free(sbp->sim, /*free_devq*/ TRUE);
+	SBP_UNLOCK(sbp);
 
 	sbp_logout_all(sbp);
 
 	/* XXX wait for logout completion */
-	tsleep(&i, FWPRI, "sbpdtc", hz/2);
+	pause("sbpdtc", hz/2);
 
 	for (i = 0 ; i < SBP_NUM_TARGETS ; i ++)
 		sbp_free_target(&sbp->targets[i]);
 
-	for (xfer = STAILQ_FIRST(&sbp->fwb.xferlist);
-				xfer != NULL; xfer = next) {
-		next = STAILQ_NEXT(xfer, link);
-		fw_xfer_free_buf(xfer);
-	}
-	STAILQ_INIT(&sbp->fwb.xferlist);
 	fw_bindremove(fc, &sbp->fwb);
+	fw_xferlist_remove(&sbp->fwb.xferlist);
 
 	bus_dma_tag_destroy(sbp->dmat);
+	mtx_destroy(&sbp->mtx);
 
 	return (0);
 }
@@ -2141,15 +2198,17 @@ sbp_cam_detach_sdev(struct sbp_dev *sdev)
 		return;
 	if (sdev->status == SBP_DEV_RESET)
 		return;
+	sbp_abort_all_ocbs(sdev, CAM_DEV_NOT_THERE);
 	if (sdev->path) {
+		SBP_LOCK(sdev->target->sbp);
 		xpt_release_devq(sdev->path,
 				 sdev->freeze, TRUE);
 		sdev->freeze = 0;
 		xpt_async(AC_LOST_DEVICE, sdev->path, NULL);
 		xpt_free_path(sdev->path);
 		sdev->path = NULL;
+		SBP_UNLOCK(sdev->target->sbp);
 	}
-	sbp_abort_all_ocbs(sdev, CAM_DEV_NOT_THERE);
 }
 
 static void
@@ -2182,8 +2241,10 @@ sbp_target_reset(struct sbp_dev *sdev, int method)
 			continue;
 		if (tsdev->status == SBP_DEV_RESET)
 			continue;
+		SBP_LOCK(target->sbp);
 		xpt_freeze_devq(tsdev->path, 1);
 		tsdev->freeze ++;
+		SBP_UNLOCK(target->sbp);
 		sbp_abort_all_ocbs(tsdev, CAM_CMD_TIMEOUT);
 		if (method == 2)
 			tsdev->status = SBP_DEV_LOGIN;
@@ -2238,8 +2299,10 @@ sbp_timeout(void *arg)
 	switch(sdev->timeout) {
 	case 1:
 		printf("agent reset\n");
+		SBP_LOCK(sdev->target->sbp);
 		xpt_freeze_devq(sdev->path, 1);
 		sdev->freeze ++;
+		SBP_UNLOCK(sdev->target->sbp);
 		sbp_abort_all_ocbs(sdev, CAM_CMD_TIMEOUT);
 		sbp_agent_reset(sdev);
 		break;
@@ -2343,6 +2406,7 @@ END_DEBUG
 		void *cdb;
 
 		csio = &ccb->csio;
+		mtx_assert(sim->mtx, MA_OWNED);
 
 SBP_DEBUG(2)
 		printf("%s:%d:%d XPT_SCSI_IO: "
@@ -2384,10 +2448,12 @@ END_DEBUG
 		}
 #endif
 		if ((ocb = sbp_get_ocb(sdev)) == NULL) {
-			ccb->ccb_h.status = CAM_REQUEUE_REQ;
+			ccb->ccb_h.status = CAM_RESRC_UNAVAIL;
 			if (sdev->freeze == 0) {
+				SBP_LOCK(sdev->target->sbp);
 				xpt_freeze_devq(sdev->path, 1);
 				sdev->freeze ++;
+				SBP_UNLOCK(sdev->target->sbp);
 			}
 			xpt_done(ccb);
 			return;
@@ -2527,6 +2593,10 @@ END_DEBUG
 		strncpy(cpi->hba_vid, "SBP", HBA_IDLEN);
 		strncpy(cpi->dev_name, sim->sim_name, DEV_IDLEN);
 		cpi->unit_number = sim->unit_number;
+                cpi->transport = XPORT_SPI;	/* XX should have a FireWire */
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
 
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
@@ -2535,15 +2605,24 @@ END_DEBUG
 	case XPT_GET_TRAN_SETTINGS:
 	{
 		struct ccb_trans_settings *cts = &ccb->cts;
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
+
+		cts->protocol = PROTO_SCSI;
+		cts->protocol_version = SCSI_REV_2;
+		cts->transport = XPORT_SPI;	/* should have a FireWire */
+		cts->transport_version = 2;
+		spi->valid = CTS_SPI_VALID_DISC;
+		spi->flags = CTS_SPI_FLAGS_DISC_ENB;
+		scsi->valid = CTS_SCSI_VALID_TQ;
+		scsi->flags = CTS_SCSI_FLAGS_TAG_ENB;
 SBP_DEBUG(1)
 		printf("%s:%d:%d XPT_GET_TRAN_SETTINGS:.\n",
 			device_get_nameunit(sbp->fd.dev),
 			ccb->ccb_h.target_id, ccb->ccb_h.target_lun);
 END_DEBUG
-		/* Enable disconnect and tagged queuing */
-		cts->valid = CCB_TRANS_DISC_VALID | CCB_TRANS_TQ_VALID;
-		cts->flags = CCB_TRANS_DISC_ENB | CCB_TRANS_TAG_ENB;
-
 		cts->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -2679,6 +2758,7 @@ SBP_DEBUG(1)
 #endif
 	    __func__, ntohl(sbp_status->orb_lo), sbp_status->src);
 END_DEBUG
+	SBP_LOCK(sdev->target->sbp);
 	for (ocb = STAILQ_FIRST(&sdev->ocbs); ocb != NULL; ocb = next) {
 		next = STAILQ_NEXT(ocb, ocb);
 		flags = ocb->flags;
@@ -2715,8 +2795,11 @@ END_DEBUG
 				 * XXX this is not correct for unordered
 				 * execution. 
 				 */
-				if (sdev->last_ocb != NULL)
+				if (sdev->last_ocb != NULL) {
+					SBP_UNLOCK(sdev->target->sbp);
 					sbp_free_ocb(sdev, sdev->last_ocb);
+					SBP_LOCK(sdev->target->sbp);
+				}
 				sdev->last_ocb = ocb;
 				if (next != NULL &&
 				    sbp_status->src == SRC_NO_NEXT)
@@ -2726,6 +2809,7 @@ END_DEBUG
 		} else
 			order ++;
 	}
+	SBP_UNLOCK(sdev->target->sbp);
 	splx(s);
 SBP_DEBUG(0)
 	if (ocb && order > 0) {
@@ -2742,6 +2826,7 @@ sbp_enqueue_ocb(struct sbp_dev *sdev, struct sbp_ocb *ocb)
 	int s = splfw();
 	struct sbp_ocb *prev, *prev2;
 
+	mtx_assert(&sdev->target->sbp->mtx, MA_OWNED);
 SBP_DEBUG(1)
 	sbp_show_sdev_info(sdev, 2);
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
@@ -2760,8 +2845,8 @@ END_DEBUG
 	if (use_doorbell && prev == NULL)
 		prev2 = sdev->last_ocb;
 
-	if (prev2 != NULL) {
-SBP_DEBUG(2)
+	if (prev2 != NULL && (ocb->sdev->flags & ORB_LINK_DEAD) == 0) {
+SBP_DEBUG(1)
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
 		printf("linking chain 0x%x -> 0x%x\n",
 		    prev2->bus_addr, ocb->bus_addr);
@@ -2770,8 +2855,13 @@ SBP_DEBUG(2)
 		    (uintmax_t)prev2->bus_addr, (uintmax_t)ocb->bus_addr);
 #endif
 END_DEBUG
-		prev2->orb[1] = htonl(ocb->bus_addr);
-		prev2->orb[0] = 0;
+		/*
+		 * Suppress compiler optimization so that orb[1] must be written first.
+		 * XXX We may need an explicit memory barrier for other architectures
+		 * other than i386/amd64.
+		 */
+		*(volatile uint32_t *)&prev2->orb[1] = htonl(ocb->bus_addr);
+		*(volatile uint32_t *)&prev2->orb[0] = 0;
 	}
 	splx(s);
 
@@ -2783,6 +2873,8 @@ sbp_get_ocb(struct sbp_dev *sdev)
 {
 	struct sbp_ocb *ocb;
 	int s = splfw();
+
+	mtx_assert(&sdev->target->sbp->mtx, MA_OWNED);
 	ocb = STAILQ_FIRST(&sdev->free_ocbs);
 	if (ocb == NULL) {
 		sdev->flags |= ORB_SHORTAGE;
@@ -2801,6 +2893,8 @@ sbp_free_ocb(struct sbp_dev *sdev, struct sbp_ocb *ocb)
 {
 	ocb->flags = 0;
 	ocb->ccb = NULL;
+
+	SBP_LOCK(sdev->target->sbp);
 	STAILQ_INSERT_TAIL(&sdev->free_ocbs, ocb, ocb);
 	if ((sdev->flags & ORB_SHORTAGE) != 0) {
 		int count;
@@ -2810,6 +2904,7 @@ sbp_free_ocb(struct sbp_dev *sdev, struct sbp_ocb *ocb)
 		sdev->freeze = 0;
 		xpt_release_devq(sdev->path, count, TRUE);
 	}
+	SBP_UNLOCK(sdev->target->sbp);
 }
 
 static void
@@ -2840,7 +2935,9 @@ END_DEBUG
 		untimeout(sbp_timeout, (caddr_t)ocb,
 					ocb->ccb->ccb_h.timeout_ch);
 		ocb->ccb->ccb_h.status = status;
+		SBP_LOCK(sdev->target->sbp);
 		xpt_done(ocb->ccb);
+		SBP_UNLOCK(sdev->target->sbp);
 	}
 	sbp_free_ocb(sdev, ocb);
 }
@@ -2854,8 +2951,12 @@ sbp_abort_all_ocbs(struct sbp_dev *sdev, int status)
 
 	s = splfw();
 
-	bcopy(&sdev->ocbs, &temp, sizeof(temp));
+	STAILQ_INIT(&temp);
+	SBP_LOCK(sdev->target->sbp);
+	STAILQ_CONCAT(&temp, &sdev->ocbs);
 	STAILQ_INIT(&sdev->ocbs);
+	SBP_UNLOCK(sdev->target->sbp);
+
 	for (ocb = STAILQ_FIRST(&temp); ocb != NULL; ocb = next) {
 		next = STAILQ_NEXT(ocb, ocb);
 		sbp_abort_ocb(ocb, status);

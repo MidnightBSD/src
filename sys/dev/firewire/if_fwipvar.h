@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/if_fwipvar.h,v 1.4 2005/06/10 16:49:08 brooks Exp $
+ * $FreeBSD: src/sys/dev/firewire/if_fwipvar.h,v 1.5 2007/06/06 14:31:36 simokawa Exp $
  */
 
 #ifndef _NET_IF_FWIPVAR_H_
@@ -58,5 +58,8 @@ struct fwip_softc {
 		struct ifnet *fwip_ifp;
 		struct fwip_softc *fwip;
 	} fw_softc;
+	struct mtx mtx;
 };
+#define FWIP_LOCK(fwip)   mtx_lock(&(fwip)->mtx)
+#define FWIP_UNLOCK(fwip) mtx_unlock(&(fwip)->mtx)
 #endif /* !_NET_IF_FWIPVAR_H_ */

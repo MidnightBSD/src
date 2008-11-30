@@ -31,14 +31,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/if_fwevar.h,v 1.5 2005/06/10 16:49:08 brooks Exp $
+ * $FreeBSD: src/sys/dev/firewire/if_fwevar.h,v 1.6 2007/06/06 14:31:36 simokawa Exp $
  */
 
 #ifndef _NET_IF_FWEVAR_H_
 #define _NET_IF_FWEVAR_H_
 
 struct fwe_softc {
-	/* XXX this must be first for fd.post_explore() */
+	/* XXX this must be the first for fd.post_explore() */
 	struct firewire_dev_comm fd;
 	short stream_ch;
 	short dma_ch;
@@ -48,5 +48,8 @@ struct fwe_softc {
 		struct ifnet *ifp;
 		struct fwe_softc *fwe;
 	} eth_softc;
+	struct mtx mtx;
 };
+#define FWE_LOCK(fwe)	mtx_lock(&(fwe)->mtx)
+#define FWE_UNLOCK(fwe)	mtx_unlock(&(fwe)->mtx)
 #endif /* !_NET_IF_FWEVAR_H_ */

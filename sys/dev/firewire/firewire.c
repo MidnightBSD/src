@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/firewire.c,v 1.80.2.1 2005/11/28 06:41:40 simokawa Exp $
+ * $FreeBSD: src/sys/dev/firewire/firewire.c,v 1.100 2007/07/20 03:42:57 simokawa Exp $
  *
  */
 
@@ -44,6 +44,9 @@
 #include <sys/malloc.h>
 #include <sys/conf.h>
 #include <sys/sysctl.h>
+#include <sys/kthread.h>
+
+#include <sys/kdb.h>
 
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
 #include <machine/clock.h>	/* for DELAY() */
@@ -94,6 +97,7 @@ static int firewire_probe	(device_t);
 static int firewire_attach      (device_t);
 static int firewire_detach      (device_t);
 static int firewire_resume      (device_t);
+static void firewire_xfer_timeout(void *, int);
 #if 0
 static int firewire_shutdown    (device_t);
 #endif
@@ -103,15 +107,13 @@ static void fw_try_bmr_callback (struct fw_xfer *);
 static void fw_asystart (struct fw_xfer *);
 static int fw_get_tlabel (struct firewire_comm *, struct fw_xfer *);
 static void fw_bus_probe (struct firewire_comm *);
-static void fw_bus_explore (struct firewire_comm *);
-static void fw_bus_explore_callback (struct fw_xfer *);
 static void fw_attach_dev (struct firewire_comm *);
+static void fw_bus_probe_thread(void *);
 #ifdef FW_VMACCESS
 static void fw_vmaccess (struct fw_xfer *);
 #endif
-struct fw_xfer *asyreqq (struct firewire_comm *, uint8_t, uint8_t, uint8_t,
-	uint32_t, uint32_t, void (*)(struct fw_xfer *));
 static int fw_bmr (struct firewire_comm *);
+static void fw_dump_hdr(struct fw_pkt *, char *);
 
 static device_method_t firewire_methods[] = {
 	/* Device interface */
@@ -180,9 +182,11 @@ fw_noderesolve_eui64(struct firewire_comm *fc, struct fw_eui64 *eui)
 	int s;
 
 	s = splfw();
+	FW_GLOCK(fc);
 	STAILQ_FOREACH(fwdev, &fc->devices, link)
 		if (FW_EUI64_EQUAL(fwdev->eui, *eui))
 			break;
+	FW_GUNLOCK(fc);
 	splx(s);
 
 	if(fwdev == NULL) return NULL;
@@ -198,14 +202,14 @@ fw_asyreq(struct firewire_comm *fc, int sub, struct fw_xfer *xfer)
 {
 	int err = 0;
 	struct fw_xferq *xferq;
-	int tl = 0, len;
+	int len;
 	struct fw_pkt *fp;
 	int tcode;
 	struct tcode_info *info;
 
 	if(xfer == NULL) return EINVAL;
-	if(xfer->act.hand == NULL){
-		printf("act.hand == NULL\n");
+	if(xfer->hand == NULL){
+		printf("hand == NULL\n");
 		return EINVAL;
 	}
 	fp = &xfer->send.hdr;
@@ -216,6 +220,17 @@ fw_asyreq(struct firewire_comm *fc, int sub, struct fw_xfer *xfer)
 		printf("invalid tcode=%x\n", tcode);
 		return EINVAL;
 	}
+
+	/* XXX allow bus explore packets only after bus rest */
+	if ((fc->status < FWBUSEXPLORE) &&
+	    ((tcode != FWTCODE_RREQQ) || (fp->mode.rreqq.dest_hi != 0xffff) ||
+	    (fp->mode.rreqq.dest_lo  < 0xf0000000) ||
+	    (fp->mode.rreqq.dest_lo >= 0xf0001000))) {
+		xfer->resp = EAGAIN;
+		xfer->flag = FWXF_BUSY;
+		return (EAGAIN);
+	}
+
 	if (info->flag & FWTI_REQ)
 		xferq = fc->atq;
 	else
@@ -244,20 +259,18 @@ fw_asyreq(struct firewire_comm *fc, int sub, struct fw_xfer *xfer)
 	if(!(xferq->queued < xferq->maxq)){
 		device_printf(fc->bdev, "Discard a packet (queued=%d)\n",
 			xferq->queued);
-		return EINVAL;
+		return EAGAIN;
 	}
 
+	xfer->tl = -1;
 	if (info->flag & FWTI_TLABEL) {
-		if ((tl = fw_get_tlabel(fc, xfer)) == -1)
+		if (fw_get_tlabel(fc, xfer) < 0)
 			return EAGAIN;
-		fp->mode.hdr.tlrt = tl << 2;
 	}
 
-	xfer->tl = tl;
 	xfer->resp = 0;
 	xfer->fc = fc;
 	xfer->q = xferq;
-	xfer->retry_req = fw_asybusy;
 
 	fw_asystart(xfer);
 	return err;
@@ -266,23 +279,30 @@ fw_asyreq(struct firewire_comm *fc, int sub, struct fw_xfer *xfer)
  * Wakeup blocked process.
  */
 void
-fw_asy_callback(struct fw_xfer *xfer){
+fw_xferwake(struct fw_xfer *xfer)
+{
+	struct mtx *lock = &xfer->fc->wait_lock;
+
+	mtx_lock(lock);
+	xfer->flag |= FWXF_WAKE;
+	mtx_unlock(lock);
+
 	wakeup(xfer);
 	return;
 }
-/*
- * Postpone to later retry.
- */
-void fw_asybusy(struct fw_xfer *xfer){
-	printf("fw_asybusy\n");
-/*
-	xfer->ch =  timeout((timeout_t *)fw_asystart, (void *)xfer, 20000);
-*/
-#if 0
-	DELAY(20000);
-#endif
-	fw_asystart(xfer);
-	return;
+
+int
+fw_xferwait(struct fw_xfer *xfer)
+{
+	struct mtx *lock = &xfer->fc->wait_lock;
+	int err = 0;
+
+	mtx_lock(lock);
+	if ((xfer->flag & FWXF_WAKE) == 0)
+		err = msleep((void *)xfer, lock, PWAIT|PCATCH, "fw_xferwait", 0);
+	mtx_unlock(lock);
+
+	return (err);
 }
 
 /*
@@ -293,27 +313,15 @@ fw_asystart(struct fw_xfer *xfer)
 {
 	struct firewire_comm *fc = xfer->fc;
 	int s;
-	if(xfer->retry++ >= fc->max_asyretry){
-		device_printf(fc->bdev, "max_asyretry exceeded\n");
-		xfer->resp = EBUSY;
-		xfer->state = FWXF_BUSY;
-		xfer->act.hand(xfer);
-		return;
-	}
-#if 0 /* XXX allow bus explore packets only after bus rest */
-	if (fc->status < FWBUSEXPLORE) {
-		xfer->resp = EAGAIN;
-		xfer->state = FWXF_BUSY;
-		if (xfer->act.hand != NULL)
-			xfer->act.hand(xfer);
-		return;
-	}
-#endif
-	microtime(&xfer->tv);
 	s = splfw();
-	xfer->state = FWXF_INQ;
+	/* Protect from interrupt/timeout */
+	FW_GLOCK(fc);
+	xfer->flag = FWXF_INQ;
 	STAILQ_INSERT_TAIL(&xfer->q->q, xfer, link);
+#if 0
 	xfer->q->queued ++;
+#endif
+	FW_GUNLOCK(fc);
 	splx(s);
 	/* XXX just queue for mbuf */
 	if (xfer->mbuf == NULL)
@@ -335,12 +343,13 @@ firewire_probe(device_t dev)
 }
 
 static void
-firewire_xfer_timeout(struct firewire_comm *fc)
+firewire_xfer_timeout(void *arg, int pending)
 {
-	struct fw_xfer *xfer;
-	struct tlabel *tl;
+	struct firewire_comm *fc = (struct firewire_comm *)arg;
+	struct fw_xfer *xfer, *txfer;
 	struct timeval tv;
 	struct timeval split_timeout;
+	STAILQ_HEAD(, fw_xfer) xfer_timeout;
 	int i, s;
 
 	split_timeout.tv_sec = 0;
@@ -348,34 +357,41 @@ firewire_xfer_timeout(struct firewire_comm *fc)
 
 	microtime(&tv);
 	timevalsub(&tv, &split_timeout);
+	STAILQ_INIT(&xfer_timeout);
 
 	s = splfw();
+	mtx_lock(&fc->tlabel_lock);
 	for (i = 0; i < 0x40; i ++) {
-		while ((tl = STAILQ_FIRST(&fc->tlabels[i])) != NULL) {
-			xfer = tl->xfer;
+		while ((xfer = STAILQ_FIRST(&fc->tlabels[i])) != NULL) {
+			if ((xfer->flag & FWXF_SENT) == 0)
+				/* not sent yet */
+				break;
 			if (timevalcmp(&xfer->tv, &tv, >))
 				/* the rests are newer than this */
 				break;
-			if (xfer->state == FWXF_START)
-				/* not sent yet */
-				break;
 			device_printf(fc->bdev,
-				"split transaction timeout dst=0x%x tl=0x%x state=%d\n",
-				xfer->send.hdr.mode.hdr.dst, i, xfer->state);
+				"split transaction timeout: "
+				"tl=0x%x flag=0x%02x\n", i, xfer->flag);
+			fw_dump_hdr(&xfer->send.hdr, "send");
 			xfer->resp = ETIMEDOUT;
-			STAILQ_REMOVE_HEAD(&fc->tlabels[i], link);
-			fw_xfer_done(xfer);
+			STAILQ_REMOVE_HEAD(&fc->tlabels[i], tlabel);
+			STAILQ_INSERT_TAIL(&xfer_timeout, xfer, tlabel);
 		}
 	}
+	mtx_unlock(&fc->tlabel_lock);
 	splx(s);
+	fc->timeout(fc);
+
+	STAILQ_FOREACH_SAFE(xfer, &xfer_timeout, tlabel, txfer)
+		xfer->hand(xfer);	
 }
 
-#define WATCHDOC_HZ 10
+#define WATCHDOG_HZ 10
 static void
 firewire_watchdog(void *arg)
 {
 	struct firewire_comm *fc;
-	static int watchdoc_clock = 0;
+	static int watchdog_clock = 0;
 
 	fc = (struct firewire_comm *)arg;
 
@@ -384,13 +400,12 @@ firewire_watchdog(void *arg)
 	 * We encounter a timeout easily. To avoid this,
 	 * ignore clock interrupt for a while.
 	 */
-	if (watchdoc_clock > WATCHDOC_HZ * 15) {
-		firewire_xfer_timeout(fc);
-		fc->timeout(fc);
-	} else
-		watchdoc_clock ++;
+	if (watchdog_clock > WATCHDOG_HZ * 15)
+		taskqueue_enqueue(fc->taskqueue, &fc->task_timeout);
+	else
+		watchdog_clock ++;
 
-	callout_reset(&fc->timeout_callout, hz / WATCHDOC_HZ,
+	callout_reset(&fc->timeout_callout, hz / WATCHDOG_HZ,
 			(void *)firewire_watchdog, (void *)fc);
 }
 
@@ -414,13 +429,19 @@ firewire_attach(device_t dev)
 
 	fwdev_makedev(sc);
 
-	CALLOUT_INIT(&sc->fc->timeout_callout);
-	CALLOUT_INIT(&sc->fc->bmr_callout);
-	CALLOUT_INIT(&sc->fc->retry_probe_callout);
-	CALLOUT_INIT(&sc->fc->busprobe_callout);
+	mtx_init(&fc->wait_lock, "fwwait", NULL, MTX_DEF);
+	mtx_init(&fc->tlabel_lock, "fwtlabel", NULL, MTX_DEF);
+	CALLOUT_INIT(&fc->timeout_callout);
+	CALLOUT_INIT(&fc->bmr_callout);
+	CALLOUT_INIT(&fc->busprobe_callout);
+	TASK_INIT(&fc->task_timeout, 0, firewire_xfer_timeout, (void *)fc);
 
 	callout_reset(&sc->fc->timeout_callout, hz,
 			(void *)firewire_watchdog, (void *)sc->fc);
+
+	/* create thread */
+	kthread_create(fw_bus_probe_thread, (void *)fc, &fc->probe_thread,
+		0, 0, "fw%d_probe", unit);
 
 	/* Locate our children */
 	bus_generic_probe(dev);
@@ -474,35 +495,41 @@ static int
 firewire_detach(device_t dev)
 {
 	struct firewire_softc *sc;
-	struct csrdir *csrd, *next;
+	struct firewire_comm *fc;
 	struct fw_device *fwdev, *fwdev_next;
 	int err;
 
 	sc = (struct firewire_softc *)device_get_softc(dev);
+	fc = sc->fc;
+	mtx_lock(&fc->wait_lock);
+	fc->status = FWBUSDETACH;
+	wakeup(fc);
+	if (msleep(fc->probe_thread, &fc->wait_lock, PWAIT, "fwthr", hz * 60))
+		printf("firewire probe thread didn't die\n");
+	mtx_unlock(&fc->wait_lock);
+
 	if ((err = fwdev_destroydev(sc)) != 0)
 		return err;
 
 	if ((err = bus_generic_detach(dev)) != 0)
 		return err;
 
-	callout_stop(&sc->fc->timeout_callout);
-	callout_stop(&sc->fc->bmr_callout);
-	callout_stop(&sc->fc->retry_probe_callout);
-	callout_stop(&sc->fc->busprobe_callout);
+	callout_stop(&fc->timeout_callout);
+	callout_stop(&fc->bmr_callout);
+	callout_stop(&fc->busprobe_callout);
 
 	/* XXX xfree_free and untimeout on all xfers */
-	for (fwdev = STAILQ_FIRST(&sc->fc->devices); fwdev != NULL;
+	for (fwdev = STAILQ_FIRST(&fc->devices); fwdev != NULL;
 							fwdev = fwdev_next) {
 		fwdev_next = STAILQ_NEXT(fwdev, link);
 		free(fwdev, M_FW);
 	}
-	for (csrd = SLIST_FIRST(&sc->fc->csrfree); csrd != NULL; csrd = next) {
-		next = SLIST_NEXT(csrd, link);
-		free(csrd, M_FW);
-	}
-	free(sc->fc->topology_map, M_FW);
-	free(sc->fc->speed_map, M_FW);
-	free(sc->fc->crom_src_buf, M_FW);
+	free(fc->topology_map, M_FW);
+	free(fc->speed_map, M_FW);
+	free(fc->crom_src_buf, M_FW);
+
+	mtx_destroy(&fc->tlabel_lock);
+	mtx_destroy(&fc->wait_lock);
 	return(0);
 }
 #if 0
@@ -521,8 +548,11 @@ fw_xferq_drain(struct fw_xferq *xferq)
 
 	while ((xfer = STAILQ_FIRST(&xferq->q)) != NULL) {
 		STAILQ_REMOVE_HEAD(&xferq->q, link);
+#if 0
 		xferq->queued --;
+#endif
 		xfer->resp = EAGAIN;
+		xfer->flag = FWXF_SENTERR;
 		fw_xfer_done(xfer);
 	}
 }
@@ -530,12 +560,32 @@ fw_xferq_drain(struct fw_xferq *xferq)
 void
 fw_drain_txq(struct firewire_comm *fc)
 {
+	struct fw_xfer *xfer, *txfer;
+	STAILQ_HEAD(, fw_xfer) xfer_drain;
 	int i;
 
+	STAILQ_INIT(&xfer_drain);
+
+	FW_GLOCK(fc);
 	fw_xferq_drain(fc->atq);
 	fw_xferq_drain(fc->ats);
 	for(i = 0; i < fc->nisodma; i++)
 		fw_xferq_drain(fc->it[i]);
+	FW_GUNLOCK(fc);
+
+	mtx_lock(&fc->tlabel_lock);
+	for (i = 0; i < 0x40; i ++)
+		while ((xfer = STAILQ_FIRST(&fc->tlabels[i])) != NULL) {
+			if (firewire_debug)
+				printf("tl=%d flag=%d\n", i, xfer->flag);
+			xfer->resp = EAGAIN;
+			STAILQ_REMOVE_HEAD(&fc->tlabels[i], tlabel);
+			STAILQ_INSERT_TAIL(&xfer_drain, xfer, tlabel);
+		}
+	mtx_unlock(&fc->tlabel_lock);
+
+	STAILQ_FOREACH_SAFE(xfer, &xfer_drain, tlabel, txfer)
+		xfer->hand(xfer);	
 }
 
 static void
@@ -704,13 +754,10 @@ fw_busreset(struct firewire_comm *fc, uint32_t new_status)
 void fw_init(struct firewire_comm *fc)
 {
 	int i;
-	struct csrdir *csrd;
 #ifdef FW_VMACCESS
 	struct fw_xfer *xfer;
 	struct fw_bind *fwb;
 #endif
-
-	fc->max_asyretry = FW_MAXASYRTY;
 
 	fc->arq->queued = 0;
 	fc->ars->queued = 0;
@@ -745,9 +792,6 @@ void fw_init(struct firewire_comm *fc)
 
 		STAILQ_INIT(&fc->it[i]->q);
 		STAILQ_INIT(&fc->ir[i]->q);
-
-		STAILQ_INIT(&fc->it[i]->binds);
-		STAILQ_INIT(&fc->ir[i]->binds);
 	}
 
 	fc->arq->maxq = FWMAXQUEUE;
@@ -772,15 +816,6 @@ void fw_init(struct firewire_comm *fc)
 	CSRARC(fc, SPED_MAP + 4) = 1;
 
 	STAILQ_INIT(&fc->devices);
-
-/* Initialize csr ROM work space */
-	SLIST_INIT(&fc->ongocsr);
-	SLIST_INIT(&fc->csrfree);
-	for( i = 0 ; i < FWMAXCSRDIR ; i++){
-		csrd = (struct csrdir *) malloc(sizeof(struct csrdir), M_FW,M_NOWAIT);
-		if(csrd == NULL) break;
-		SLIST_INSERT_HEAD(&fc->csrfree, csrd, link);
-	}
 
 /* Initialize Async handlers */
 	STAILQ_INIT(&fc->binds);
@@ -814,7 +849,7 @@ void fw_init(struct firewire_comm *fc)
 		fw_xfer_free(xfer);
 		return;
 	}
-	xfer->act.hand = fw_vmaccess;
+	xfer->hand = fw_vmaccess;
 	xfer->fc = fc;
 	xfer->sc = NULL;
 
@@ -836,13 +871,17 @@ struct fw_bind *
 fw_bindlookup(struct firewire_comm *fc, uint16_t dest_hi, uint32_t dest_lo)
 {
 	u_int64_t addr;
-	struct fw_bind *tfw;
+	struct fw_bind *tfw, *r = NULL;
 
 	addr = ((u_int64_t)dest_hi << 32) | dest_lo;
+	FW_GLOCK(fc);
 	STAILQ_FOREACH(tfw, &fc->binds, fclist)
-		if (tfw->act_type != FWACT_NULL && BIND_CMP(addr, tfw) == 0)
-			return(tfw);
-	return(NULL);
+		if (BIND_CMP(addr, tfw) == 0) {
+			r = tfw;
+			break;
+		}
+	FW_GUNLOCK(fc);
+	return(r);
 }
 
 /*
@@ -852,33 +891,29 @@ int
 fw_bindadd(struct firewire_comm *fc, struct fw_bind *fwb)
 {
 	struct fw_bind *tfw, *prev = NULL;
+	int r = 0;
 
 	if (fwb->start > fwb->end) {
 		printf("%s: invalid range\n", __func__);
 		return EINVAL;
 	}
 
+	FW_GLOCK(fc);
 	STAILQ_FOREACH(tfw, &fc->binds, fclist) {
 		if (fwb->end < tfw->start)
 			break;
 		prev = tfw;
 	}
-	if (prev == NULL) {
+	if (prev == NULL)
 		STAILQ_INSERT_HEAD(&fc->binds, fwb, fclist);
-		goto out;
-	}
-	if (prev->end < fwb->start) {
+	else if (prev->end < fwb->start)
 		STAILQ_INSERT_AFTER(&fc->binds, prev, fwb, fclist);
-		goto out;
+	else {
+		printf("%s: bind failed\n", __func__);
+		r = EBUSY;
 	}
-
-	printf("%s: bind failed\n", __func__);
-	return (EBUSY);
-
-out:
-	if (fwb->act_type == FWACT_CH)
-		STAILQ_INSERT_HEAD(&fc->ir[fwb->sub]->binds, fwb, chlist);
-	return (0);
+	FW_GUNLOCK(fc);
+	return (r);
 }
 
 /*
@@ -894,6 +929,7 @@ fw_bindremove(struct firewire_comm *fc, struct fw_bind *fwb)
 	int s;
 
 	s = splfw();
+	FW_GLOCK(fc);
 	STAILQ_FOREACH(tfw, &fc->binds, fclist)
 		if (tfw == fwb) {
 			STAILQ_REMOVE(&fc->binds, fwb, fw_bind, fclist);
@@ -901,6 +937,7 @@ fw_bindremove(struct firewire_comm *fc, struct fw_bind *fwb)
 		}
 
 	printf("%s: no such binding\n", __func__);
+	FW_GUNLOCK(fc);
 	splx(s);
 	return (1);
 found:
@@ -912,9 +949,57 @@ found:
 	}
 	STAILQ_INIT(&fwb->xferlist);
 #endif
+	FW_GUNLOCK(fc);
 
 	splx(s);
 	return 0;
+}
+
+int
+fw_xferlist_add(struct fw_xferlist *q, struct malloc_type *type,
+    int slen, int rlen, int n,
+    struct firewire_comm *fc, void *sc, void (*hand)(struct fw_xfer *))
+{
+	int i, s;
+	struct fw_xfer *xfer;
+
+	for (i = 0; i < n; i++) {
+		xfer = fw_xfer_alloc_buf(type, slen, rlen);
+		if (xfer == NULL)
+			return (n);
+		xfer->fc = fc;
+		xfer->sc = sc;
+		xfer->hand = hand;
+		s = splfw();
+		STAILQ_INSERT_TAIL(q, xfer, link);
+		splx(s);
+	}
+	return (n);
+}
+
+void
+fw_xferlist_remove(struct fw_xferlist *q)
+{
+	struct fw_xfer *xfer, *next;
+
+	for (xfer = STAILQ_FIRST(q); xfer != NULL; xfer = next) {
+                next = STAILQ_NEXT(xfer, link);
+                fw_xfer_free_buf(xfer);
+        }
+        STAILQ_INIT(q);
+}
+/*
+ * dump packet header
+ */
+static void
+fw_dump_hdr(struct fw_pkt *fp, char *prefix)
+{
+	printf("%s: dst=0x%02x tl=0x%02x rt=%d tcode=0x%x pri=0x%x "
+	    "src=0x%03x\n", prefix,
+	    fp->mode.hdr.dst & 0x3f,
+	    fp->mode.hdr.tlrt >> 2, fp->mode.hdr.tlrt & 3,
+	    fp->mode.hdr.tcode, fp->mode.hdr.pri,
+	    fp->mode.hdr.src);
 }
 
 /*
@@ -923,18 +1008,33 @@ found:
 static void
 fw_tl_free(struct firewire_comm *fc, struct fw_xfer *xfer)
 {
-	struct tlabel *tl;
-	int s = splfw();
+	struct fw_xfer *txfer;
+	int s;
 
-	for( tl = STAILQ_FIRST(&fc->tlabels[xfer->tl]); tl != NULL;
-		tl = STAILQ_NEXT(tl, link)){
-		if(tl->xfer == xfer){
-			STAILQ_REMOVE(&fc->tlabels[xfer->tl], tl, tlabel, link);
-			free(tl, M_FW);
-			splx(s);
-			return;
-		}
+	if (xfer->tl < 0)
+		return;
+
+	s = splfw();
+	mtx_lock(&fc->tlabel_lock);
+#if 1	/* make sure the label is allocated */
+	STAILQ_FOREACH(txfer, &fc->tlabels[xfer->tl], tlabel)
+		if(txfer == xfer)
+			break;
+	if (txfer == NULL) {
+		printf("%s: the xfer is not in the queue "
+		    "(tlabel=%d, flag=0x%x)\n",
+		    __FUNCTION__, xfer->tl, xfer->flag);
+		fw_dump_hdr(&xfer->send.hdr, "send");
+		fw_dump_hdr(&xfer->recv.hdr, "recv");
+		kdb_backtrace();
+		mtx_unlock(&fc->tlabel_lock);
+		splx(s);
+		return;
 	}
+#endif
+
+	STAILQ_REMOVE(&fc->tlabels[xfer->tl], xfer, fw_xfer, tlabel);
+	mtx_unlock(&fc->tlabel_lock);
 	splx(s);
 	return;
 }
@@ -943,22 +1043,33 @@ fw_tl_free(struct firewire_comm *fc, struct fw_xfer *xfer)
  * To obtain XFER structure by transaction label.
  */
 static struct fw_xfer *
-fw_tl2xfer(struct firewire_comm *fc, int node, int tlabel)
+fw_tl2xfer(struct firewire_comm *fc, int node, int tlabel, int tcode)
 {
 	struct fw_xfer *xfer;
-	struct tlabel *tl;
 	int s = splfw();
+	int req;
 
-	for( tl = STAILQ_FIRST(&fc->tlabels[tlabel]); tl != NULL;
-		tl = STAILQ_NEXT(tl, link)){
-		if(tl->xfer->send.hdr.mode.hdr.dst == node){
-			xfer = tl->xfer;
+	mtx_lock(&fc->tlabel_lock);
+	STAILQ_FOREACH(xfer, &fc->tlabels[tlabel], tlabel)
+		if(xfer->send.hdr.mode.hdr.dst == node) {
+			mtx_unlock(&fc->tlabel_lock);
 			splx(s);
+			KASSERT(xfer->tl == tlabel,
+				("xfer->tl 0x%x != 0x%x", xfer->tl, tlabel));
+			/* extra sanity check */
+			req = xfer->send.hdr.mode.hdr.tcode;
+			if (xfer->fc->tcode[req].valid_res != tcode) {
+				printf("%s: invalid response tcode "
+				    "(0x%x for 0x%x)\n", __FUNCTION__,
+				    tcode, req);
+				return(NULL);
+			}
+			
 			if (firewire_debug > 2)
 				printf("fw_tl2xfer: found tl=%d\n", tlabel);
 			return(xfer);
 		}
-	}
+	mtx_unlock(&fc->tlabel_lock);
 	if (firewire_debug > 1)
 		printf("fw_tl2xfer: not found tl=%d\n", tlabel);
 	splx(s);
@@ -1017,15 +1128,16 @@ fw_xfer_alloc_buf(struct malloc_type *type, int send_len, int recv_len)
 void
 fw_xfer_done(struct fw_xfer *xfer)
 {
-	if (xfer->act.hand == NULL) {
-		printf("act.hand == NULL\n");
+	if (xfer->hand == NULL) {
+		printf("hand == NULL\n");
 		return;
 	}
 
 	if (xfer->fc == NULL)
 		panic("fw_xfer_done: why xfer->fc is NULL?");
 
-	xfer->act.hand(xfer);
+	fw_tl_free(xfer->fc, xfer);
+	xfer->hand(xfer);
 }
 
 void
@@ -1034,16 +1146,20 @@ fw_xfer_unload(struct fw_xfer* xfer)
 	int s;
 
 	if(xfer == NULL ) return;
-	if(xfer->state == FWXF_INQ){
+	if(xfer->flag & FWXF_INQ){
 		printf("fw_xfer_free FWXF_INQ\n");
 		s = splfw();
+		FW_GLOCK(xfer->fc);
 		STAILQ_REMOVE(&xfer->q->q, xfer, fw_xfer, link);
+#if 0
 		xfer->q->queued --;
+#endif
+		FW_GUNLOCK(xfer->fc);
 		splx(s);
 	}
 	if (xfer->fc != NULL) {
 #if 1
-		if(xfer->state == FWXF_START)
+		if(xfer->flag & FWXF_START)
 			/*
 			 * This could happen if:
 			 *  1. We call fwohci_arcv() before fwohci_txd().
@@ -1051,11 +1167,9 @@ fw_xfer_unload(struct fw_xfer* xfer)
 			 */
 			printf("fw_xfer_free FWXF_START\n");
 #endif
-		fw_tl_free(xfer->fc, xfer);
 	}
-	xfer->state = FWXF_INIT;
+	xfer->flag = FWXF_INIT;
 	xfer->resp = 0;
-	xfer->retry = 0;
 }
 /*
  * To free IEEE1394 XFER structure. 
@@ -1092,8 +1206,8 @@ void
 fw_asy_callback_free(struct fw_xfer *xfer)
 {
 #if 0
-	printf("asyreq done state=%d resp=%d\n",
-				xfer->state, xfer->resp);
+	printf("asyreq done flag=0x%02x resp=%d\n",
+				xfer->flag, xfer->resp);
 #endif
 	fw_xfer_free(xfer);
 }
@@ -1113,8 +1227,7 @@ fw_phy_config(struct firewire_comm *fc, int root_node, int gap_count)
 	if (xfer == NULL)
 		return;
 	xfer->fc = fc;
-	xfer->retry_req = fw_asybusy;
-	xfer->act.hand = fw_asy_callback_free;
+	xfer->hand = fw_asy_callback_free;
 
 	fp = &xfer->send.hdr;
 	fp->mode.ld[1] = 0;
@@ -1160,7 +1273,6 @@ void fw_sidrcv(struct firewire_comm* fc, uint32_t *sid, u_int len)
 	u_int i, j, node, c_port = 0, i_branch = 0;
 
 	fc->sid_cnt = len /(sizeof(uint32_t) * 2);
-	fc->status = FWBUSINIT;
 	fc->max_node = fc->nodeid & 0x3f;
 	CSRARC(fc, NODE_IDS) = ((uint32_t)fc->nodeid) << 16;
 	fc->status = FWBUSCYMELECT;
@@ -1277,7 +1389,6 @@ fw_bus_probe(struct firewire_comm *fc)
 
 	s = splfw();
 	fc->status = FWBUSEXPLORE;
-	fc->retry_count = 0;
 
 	/* Invalidate all devices, just after bus reset. */
 	STAILQ_FOREACH(fwdev, &fc->devices, link)
@@ -1285,13 +1396,183 @@ fw_bus_probe(struct firewire_comm *fc)
 			fwdev->status = FWDEVINVAL;
 			fwdev->rcnt = 0;
 		}
-
-	fc->ongonode = 0;
-	fc->ongoaddr = CSRROMOFF;
-	fc->ongodev = NULL;
-	fc->ongoeui.hi = 0xffffffff; fc->ongoeui.lo = 0xffffffff;
-	fw_bus_explore(fc);
 	splx(s);
+
+	wakeup((void *)fc);
+}
+
+static int
+fw_explore_read_quads(struct fw_device *fwdev, int offset,
+    uint32_t *quad, int n)
+{
+	struct fw_xfer *xfer;
+	uint32_t tmp;
+	int i, error;
+
+	for (i = 0; i < n; i ++, offset += sizeof(uint32_t)) {
+		xfer = fwmem_read_quad(fwdev, NULL, -1,
+		    0xffff, 0xf0000000 | offset, (void *)&tmp,
+		    fw_xferwake);
+		if (xfer == NULL)
+			return (-1);
+		fw_xferwait(xfer);
+
+		if (xfer->resp == 0)
+			quad[i] = ntohl(tmp);
+
+		error = xfer->resp;
+		fw_xfer_free(xfer);
+		if (error)
+			return (error);
+	}
+	return (0);
+}
+
+
+static int
+fw_explore_csrblock(struct fw_device *fwdev, int offset, int recur)
+{
+	int err, i, off;
+	struct csrdirectory *dir;
+	struct csrreg *reg;
+
+	dir = (struct csrdirectory *)&fwdev->csrrom[offset/sizeof(uint32_t)];
+	err = fw_explore_read_quads(fwdev, CSRROMOFF + offset,
+	    (uint32_t *)dir, 1);
+	if (err)
+		return (-1);
+
+	offset += sizeof(uint32_t);
+	reg = (struct csrreg *)&fwdev->csrrom[offset/sizeof(uint32_t)];
+	err = fw_explore_read_quads(fwdev, CSRROMOFF + offset,
+	    (uint32_t *)reg, dir->crc_len);
+	if (err)
+		return (-1);
+
+	/* XXX check CRC */
+
+	off = CSRROMOFF + offset + sizeof(uint32_t) * (dir->crc_len - 1);
+	if (fwdev->rommax < off)
+		fwdev->rommax = off;
+
+	if (recur == 0)
+		return (0);
+
+	for (i = 0; i < dir->crc_len; i ++, offset += sizeof(uint32_t)) {
+		if ((reg[i].key & CSRTYPE_MASK) == CSRTYPE_D)
+			recur = 1;
+		else if ((reg[i].key & CSRTYPE_MASK) == CSRTYPE_L)
+			recur = 0;
+		else
+			continue;
+
+		off = offset + reg[i].val * sizeof(uint32_t);
+		if (off > CROMSIZE) {
+			printf("%s: invalid offset %d\n", __FUNCTION__, off);
+			return(-1);
+		}
+		err = fw_explore_csrblock(fwdev, off, recur);
+		if (err)
+			return (-1);
+	}
+	return (0);
+}
+
+static int
+fw_explore_node(struct fw_device *dfwdev)
+{
+	struct firewire_comm *fc;
+	struct fw_device *fwdev, *pfwdev, *tfwdev;
+	uint32_t *csr;
+	struct csrhdr *hdr;
+	struct bus_info *binfo;
+	int err, node, spd;
+
+	fc = dfwdev->fc;
+	csr = dfwdev->csrrom;
+	node = dfwdev->dst;
+
+	/* First quad */
+	err = fw_explore_read_quads(dfwdev, CSRROMOFF, &csr[0], 1);
+	if (err)
+		return (-1);
+	hdr = (struct csrhdr *)&csr[0];
+	if (hdr->info_len != 4) {
+		if (firewire_debug)
+			printf("node%d: wrong bus info len(%d)\n",
+			    node, hdr->info_len);
+		return (-1);
+	}
+
+	/* bus info */
+	err = fw_explore_read_quads(dfwdev, CSRROMOFF + 0x04, &csr[1], 4);
+	if (err)
+		return (-1);
+	binfo = (struct bus_info *)&csr[1];
+	if (binfo->bus_name != CSR_BUS_NAME_IEEE1394) {
+		if (firewire_debug)
+			printf("node%d: invalid bus name 0x%08x\n",
+			    node, binfo->bus_name);
+		return (-1);
+	}
+	spd = fc->speed_map->speed[fc->nodeid][node];
+	STAILQ_FOREACH(fwdev, &fc->devices, link)
+		if (FW_EUI64_EQUAL(fwdev->eui, binfo->eui64))
+			break;
+	if (fwdev == NULL) {
+		/* new device */
+		fwdev = malloc(sizeof(struct fw_device), M_FW,
+						M_NOWAIT | M_ZERO);
+		if (fwdev == NULL) {
+			if (firewire_debug)
+				printf("node%d: no memory\n", node);
+			return (-1);
+		}
+		fwdev->fc = fc;
+		fwdev->eui = binfo->eui64;
+		/* inesrt into sorted fwdev list */
+		pfwdev = NULL;
+		STAILQ_FOREACH(tfwdev, &fc->devices, link) {
+			if (tfwdev->eui.hi > fwdev->eui.hi ||
+				(tfwdev->eui.hi == fwdev->eui.hi &&
+				tfwdev->eui.lo > fwdev->eui.lo))
+				break;
+			pfwdev = tfwdev;
+		}
+		if (pfwdev == NULL)
+			STAILQ_INSERT_HEAD(&fc->devices, fwdev, link);
+		else
+			STAILQ_INSERT_AFTER(&fc->devices, pfwdev, fwdev, link);
+
+		device_printf(fc->bdev, "New %s device ID:%08x%08x\n",
+		    linkspeed[spd],
+		    fwdev->eui.hi, fwdev->eui.lo);
+	}
+	fwdev->dst = node;
+	fwdev->status = FWDEVINIT;
+	fwdev->speed = spd;
+
+	/* unchanged ? */
+	if (bcmp(&csr[0], &fwdev->csrrom[0], sizeof(uint32_t) * 5) == 0) {
+		if (firewire_debug)
+			printf("node%d: crom unchanged\n", node);
+		return (0);
+	}
+
+	bzero(&fwdev->csrrom[0], CROMSIZE);
+
+	/* copy first quad and bus info block */
+	bcopy(&csr[0], &fwdev->csrrom[0], sizeof(uint32_t) * 5);
+	fwdev->rommax = CSRROMOFF + sizeof(uint32_t) * 4;
+
+	err = fw_explore_csrblock(fwdev, 0x14, 1); /* root directory */
+
+	if (err) {
+		fwdev->status = FWDEVINVAL;
+		fwdev->csrrom[0] = 0;
+	}
+	return (err);
+
 }
 
 /*
@@ -1313,343 +1594,74 @@ fw_find_self_id(struct firewire_comm *fc, int node)
 	return 0;
 }
 
-/*
- * To collect device informations on the IEEE1394 bus. 
- */
 static void
-fw_bus_explore(struct firewire_comm *fc )
+fw_explore(struct firewire_comm *fc)
 {
-	int err = 0;
-	struct fw_device *fwdev, *pfwdev, *tfwdev;
-	uint32_t addr;
-	struct fw_xfer *xfer;
-	struct fw_pkt *fp;
+	int node, err, s, i, todo, todo2, trys;
+	char nodes[63];
+	struct fw_device dfwdev;
 	union fw_self_id *fwsid;
 
-	if(fc->status != FWBUSEXPLORE)
-		return;
+	todo = 0;
+	/* setup dummy fwdev */
+	dfwdev.fc = fc;
+	dfwdev.speed = 0;
+	dfwdev.maxrec = 8; /* 512 */
+	dfwdev.status = FWDEVINIT;
 
-loop:
-	if(fc->ongonode == fc->nodeid) fc->ongonode++;
-
-	if(fc->ongonode > fc->max_node) goto done;
-	if(fc->ongonode >= 0x3f) goto done;
-
-	/* check link */
-	/* XXX we need to check phy_id first */
-	fwsid = fw_find_self_id(fc, fc->ongonode);
-	if (!fwsid || !fwsid->p0.link_active) {
-		if (firewire_debug)
-			printf("node%d: link down\n", fc->ongonode);
-		fc->ongonode++;
-		goto loop;
-	}
-
-	if(fc->ongoaddr <= CSRROMOFF &&
-		fc->ongoeui.hi == 0xffffffff &&
-		fc->ongoeui.lo == 0xffffffff ){
-		fc->ongoaddr = CSRROMOFF;
-		addr = 0xf0000000 | fc->ongoaddr;
-	}else if(fc->ongoeui.hi == 0xffffffff ){
-		fc->ongoaddr = CSRROMOFF + 0xc;
-		addr = 0xf0000000 | fc->ongoaddr;
-	}else if(fc->ongoeui.lo == 0xffffffff ){
-		fc->ongoaddr = CSRROMOFF + 0x10;
-		addr = 0xf0000000 | fc->ongoaddr;
-	}else if(fc->ongodev == NULL){
-		STAILQ_FOREACH(fwdev, &fc->devices, link)
-			if (FW_EUI64_EQUAL(fwdev->eui, fc->ongoeui))
-				break;
-		if(fwdev != NULL){
-			fwdev->dst = fc->ongonode;
-			fwdev->status = FWDEVINIT;
-			fc->ongodev = fwdev;
-			fc->ongoaddr = CSRROMOFF;
-			addr = 0xf0000000 | fc->ongoaddr;
-			goto dorequest;
+	for (node = 0; node <= fc->max_node; node ++) {
+		/* We don't probe myself and linkdown nodes */
+		if (node == fc->nodeid)
+			continue;
+		fwsid = fw_find_self_id(fc, node);
+		if (!fwsid || !fwsid->p0.link_active) {
+			if (firewire_debug)
+				printf("node%d: link down\n", node);
+			continue;
 		}
-		fwdev = malloc(sizeof(struct fw_device), M_FW,
-							M_NOWAIT | M_ZERO);
-		if(fwdev == NULL)
-			return;
-		fwdev->fc = fc;
-		fwdev->rommax = 0;
-		fwdev->dst = fc->ongonode;
-		fwdev->eui.hi = fc->ongoeui.hi; fwdev->eui.lo = fc->ongoeui.lo;
-		fwdev->status = FWDEVINIT;
-		fwdev->speed = fc->speed_map->speed[fc->nodeid][fc->ongonode];
+		nodes[todo++] = node;
+	}
 
-		pfwdev = NULL;
-		STAILQ_FOREACH(tfwdev, &fc->devices, link) {
-			if (tfwdev->eui.hi > fwdev->eui.hi ||
-					(tfwdev->eui.hi == fwdev->eui.hi &&
-					tfwdev->eui.lo > fwdev->eui.lo))
-				break;
-			pfwdev = tfwdev;
+	s = splfw();
+	for (trys = 0; todo > 0 && trys < 3; trys ++) {
+		todo2 = 0;
+		for (i = 0; i < todo; i ++) {
+			dfwdev.dst = nodes[i];
+			err = fw_explore_node(&dfwdev);
+			if (err)
+				nodes[todo2++] = nodes[i];
+			if (firewire_debug)
+				printf("%s: node %d, err = %d\n",
+					__FUNCTION__, node, err);
 		}
-		if (pfwdev == NULL)
-			STAILQ_INSERT_HEAD(&fc->devices, fwdev, link);
-		else
-			STAILQ_INSERT_AFTER(&fc->devices, pfwdev, fwdev, link);
-
-		device_printf(fc->bdev, "New %s device ID:%08x%08x\n",
-			linkspeed[fwdev->speed],
-			fc->ongoeui.hi, fc->ongoeui.lo);
-
-		fc->ongodev = fwdev;
-		fc->ongoaddr = CSRROMOFF;
-		addr = 0xf0000000 | fc->ongoaddr;
-	}else{
-		addr = 0xf0000000 | fc->ongoaddr;
+		todo = todo2;
 	}
-dorequest:
-#if 0
-	xfer = asyreqq(fc, FWSPD_S100, 0, 0,
-		((FWLOCALBUS | fc->ongonode) << 16) | 0xffff , addr,
-		fw_bus_explore_callback);
-	if(xfer == NULL) goto done;
-#else
-	xfer = fw_xfer_alloc(M_FWXFER);
-	if(xfer == NULL){
-		goto done;
-	}
-	xfer->send.spd = 0;
-	fp = &xfer->send.hdr;
-	fp->mode.rreqq.dest_hi = 0xffff;
-	fp->mode.rreqq.tlrt = 0;
-	fp->mode.rreqq.tcode = FWTCODE_RREQQ;
-	fp->mode.rreqq.pri = 0;
-	fp->mode.rreqq.src = 0;
-	fp->mode.rreqq.dst = FWLOCALBUS | fc->ongonode;
-	fp->mode.rreqq.dest_lo = addr;
-	xfer->act.hand = fw_bus_explore_callback;
-
-	if (firewire_debug)
-		printf("node%d: explore addr=0x%x\n",
-				fc->ongonode, fc->ongoaddr);
-	err = fw_asyreq(fc, -1, xfer);
-	if(err){
-		fw_xfer_free( xfer);
-		return;
-	}
-#endif
-	return;
-done:
-	/* fw_attach_devs */
-	fc->status = FWBUSEXPDONE;
-	if (firewire_debug)
-		printf("bus_explore done\n");
-	fw_attach_dev(fc);
-	return;
-
+	splx(s);
 }
 
-/* Portable Async. request read quad */
-struct fw_xfer *
-asyreqq(struct firewire_comm *fc, uint8_t spd, uint8_t tl, uint8_t rt,
-	uint32_t addr_hi, uint32_t addr_lo,
-	void (*hand) (struct fw_xfer*))
-{
-	struct fw_xfer *xfer;
-	struct fw_pkt *fp;
-	int err;
 
-	xfer = fw_xfer_alloc(M_FWXFER);
-	if (xfer == NULL)
-		return NULL;
-
-	xfer->send.spd = spd; /* XXX:min(spd, fc->spd) */
-	fp = &xfer->send.hdr;
-	fp->mode.rreqq.dest_hi = addr_hi & 0xffff;
-	if(tl & FWP_TL_VALID){
-		fp->mode.rreqq.tlrt = (tl & 0x3f) << 2;
-	}else{
-		fp->mode.rreqq.tlrt = 0;
-	}
-	fp->mode.rreqq.tlrt |= rt & 0x3;
-	fp->mode.rreqq.tcode = FWTCODE_RREQQ;
-	fp->mode.rreqq.pri = 0;
-	fp->mode.rreqq.src = 0;
-	fp->mode.rreqq.dst = addr_hi >> 16;
-	fp->mode.rreqq.dest_lo = addr_lo;
-	xfer->act.hand = hand;
-
-	err = fw_asyreq(fc, -1, xfer);
-	if(err){
-		fw_xfer_free( xfer);
-		return NULL;
-	}
-	return xfer;
-}
-
-/*
- * Callback for the IEEE1394 bus information collection. 
- */
 static void
-fw_bus_explore_callback(struct fw_xfer *xfer)
+fw_bus_probe_thread(void *arg)
 {
 	struct firewire_comm *fc;
-	struct fw_pkt *sfp,*rfp;
-	struct csrhdr *chdr;
-	struct csrdir *csrd;
-	struct csrreg *csrreg;
-	uint32_t offset;
 
-	
-	if(xfer == NULL) {
-		printf("xfer == NULL\n");
-		return;
-	}
-	fc = xfer->fc;
+	fc = (struct firewire_comm *)arg;
 
-	if (firewire_debug)
-		printf("node%d: callback addr=0x%x\n",
-			fc->ongonode, fc->ongoaddr);
-
-	if(xfer->resp != 0){
-		device_printf(fc->bdev,
-		    "bus_explore node=%d addr=0x%x resp=%d retry=%d\n",
-		    fc->ongonode, fc->ongoaddr, xfer->resp, xfer->retry);
-		if (xfer->retry < fc->max_asyretry) {
-			fw_asystart(xfer);
-			return;
+	mtx_lock(&fc->wait_lock);
+	while (fc->status != FWBUSDETACH) {
+		if (fc->status == FWBUSEXPLORE) {
+			mtx_unlock(&fc->wait_lock);
+			fw_explore(fc);
+			fc->status = FWBUSEXPDONE;
+			if (firewire_debug)
+				printf("bus_explore done\n");
+			fw_attach_dev(fc);
+			mtx_lock(&fc->wait_lock);
 		}
-		goto errnode;
+		msleep((void *)fc, &fc->wait_lock, PWAIT|PCATCH, "-", 0);
 	}
-
-	sfp = &xfer->send.hdr;
-	rfp = &xfer->recv.hdr;
-#if 0
-	{
-		uint32_t *qld;
-		int i;
-		qld = (uint32_t *)xfer->recv.buf;
-		printf("len:%d\n", xfer->recv.len);
-		for( i = 0 ; i <= xfer->recv.len && i < 32; i+= 4){
-			printf("0x%08x ", rfp->mode.ld[i/4]);
-			if((i % 16) == 15) printf("\n");
-		}
-		if((i % 16) != 15) printf("\n");
-	}
-#endif
-	if(fc->ongodev == NULL){
-		if(sfp->mode.rreqq.dest_lo == (0xf0000000 | CSRROMOFF)){
-			rfp->mode.rresq.data = ntohl(rfp->mode.rresq.data);
-			chdr = (struct csrhdr *)(&rfp->mode.rresq.data);
-/* If CSR is minimal confinguration, more investigation is not needed. */
-			if(chdr->info_len == 1){
-				if (firewire_debug)
-					printf("node%d: minimal config\n",
-								fc->ongonode);
-				goto nextnode;
-			}else{
-				fc->ongoaddr = CSRROMOFF + 0xc;
-			}
-		}else if(sfp->mode.rreqq.dest_lo == (0xf0000000 |(CSRROMOFF + 0xc))){
-			fc->ongoeui.hi = ntohl(rfp->mode.rresq.data);
-			fc->ongoaddr = CSRROMOFF + 0x10;
-		}else if(sfp->mode.rreqq.dest_lo == (0xf0000000 |(CSRROMOFF + 0x10))){
-			fc->ongoeui.lo = ntohl(rfp->mode.rresq.data);
-			if (fc->ongoeui.hi == 0 && fc->ongoeui.lo == 0) {
-				if (firewire_debug)
-					printf("node%d: eui64 is zero.\n",
-							fc->ongonode);
-				goto nextnode;
-			}
-			fc->ongoaddr = CSRROMOFF;
-		}
-	}else{
-		if (fc->ongoaddr == CSRROMOFF &&
-		    fc->ongodev->csrrom[0] == ntohl(rfp->mode.rresq.data)) {
-			fc->ongodev->status = FWDEVATTACHED;
-			goto nextnode;
-		}
-		fc->ongodev->csrrom[(fc->ongoaddr - CSRROMOFF)/4] = ntohl(rfp->mode.rresq.data);
-		if(fc->ongoaddr > fc->ongodev->rommax){
-			fc->ongodev->rommax = fc->ongoaddr;
-		}
-		csrd = SLIST_FIRST(&fc->ongocsr);
-		if((csrd = SLIST_FIRST(&fc->ongocsr)) == NULL){
-			chdr = (struct csrhdr *)(fc->ongodev->csrrom);
-			offset = CSRROMOFF;
-		}else{
-			chdr = (struct csrhdr *)&fc->ongodev->csrrom[(csrd->off - CSRROMOFF)/4];
-			offset = csrd->off;
-		}
-		if(fc->ongoaddr > (CSRROMOFF + 0x14) && fc->ongoaddr != offset){
-			csrreg = (struct csrreg *)&fc->ongodev->csrrom[(fc->ongoaddr - CSRROMOFF)/4];
-			if( csrreg->key == 0x81 || csrreg->key == 0xd1){
-				csrd = SLIST_FIRST(&fc->csrfree);
-				if(csrd == NULL){
-					goto nextnode;
-				}else{
-					csrd->ongoaddr = fc->ongoaddr;
-					fc->ongoaddr += csrreg->val * 4;
-					csrd->off = fc->ongoaddr;
-					SLIST_REMOVE_HEAD(&fc->csrfree, link);
-					SLIST_INSERT_HEAD(&fc->ongocsr, csrd, link);
-					goto nextaddr;
-				}
-			}
-		}
-		fc->ongoaddr += 4;
-		if(((fc->ongoaddr - offset)/4 > chdr->crc_len) &&
-				(fc->ongodev->rommax < 0x414)){
-			if(fc->ongodev->rommax <= 0x414){
-				csrd = SLIST_FIRST(&fc->csrfree);
-				if(csrd == NULL) goto nextnode;
-				csrd->off = fc->ongoaddr;
-				csrd->ongoaddr = fc->ongoaddr;
-				SLIST_REMOVE_HEAD(&fc->csrfree, link);
-				SLIST_INSERT_HEAD(&fc->ongocsr, csrd, link);
-			}
-			goto nextaddr;
-		}
-
-		while(((fc->ongoaddr - offset)/4 > chdr->crc_len)){
-			if(csrd == NULL){
-				goto nextnode;
-			};
-			fc->ongoaddr = csrd->ongoaddr + 4;
-			SLIST_REMOVE_HEAD(&fc->ongocsr, link);
-			SLIST_INSERT_HEAD(&fc->csrfree, csrd, link);
-			csrd = SLIST_FIRST(&fc->ongocsr);
-			if((csrd = SLIST_FIRST(&fc->ongocsr)) == NULL){
-				chdr = (struct csrhdr *)(fc->ongodev->csrrom);
-				offset = CSRROMOFF;
-			}else{
-				chdr = (struct csrhdr *)&(fc->ongodev->csrrom[(csrd->off - CSRROMOFF)/4]);
-				offset = csrd->off;
-			}
-		}
-		if((fc->ongoaddr - CSRROMOFF) > CSRROMSIZE){
-			goto nextnode;
-		}
-	}
-nextaddr:
-	fw_xfer_free( xfer);
-	fw_bus_explore(fc);
-	return;
-errnode:
-	fc->retry_count++;
-	if (fc->ongodev != NULL) {
-		fc->ongodev->status = FWDEVINVAL;
-		/* Invalidate ROM */
-		fc->ongodev->csrrom[0] = 0;
-	}
-nextnode:
-	fw_xfer_free( xfer);
-	fc->ongonode++;
-/* housekeeping work space */
-	fc->ongoaddr = CSRROMOFF;
-	fc->ongodev = NULL;
-	fc->ongoeui.hi = 0xffffffff; fc->ongoeui.lo = 0xffffffff;
-	while((csrd = SLIST_FIRST(&fc->ongocsr)) != NULL){
-		SLIST_REMOVE_HEAD(&fc->ongocsr, link);
-		SLIST_INSERT_HEAD(&fc->csrfree, csrd, link);
-	}
-	fw_bus_explore(fc);
-	return;
+	mtx_unlock(&fc->wait_lock);
+	kthread_exit(0);
 }
 
 /*
@@ -1694,14 +1706,6 @@ fw_attach_dev(struct firewire_comm *fc)
 	}
 	free(devlistp, M_TEMP);
 
-	if (fc->retry_count > 0) {
-		device_printf(fc->bdev, "bus_explore failed for %d nodes\n",
-		    fc->retry_count);
-#if 0
-		callout_reset(&fc->retry_probe_callout, hz*2,
-					(void *)fc->ibr, (void *)fc);
-#endif
-	}
 	return;
 }
 
@@ -1711,40 +1715,34 @@ fw_attach_dev(struct firewire_comm *fc)
 static int
 fw_get_tlabel(struct firewire_comm *fc, struct fw_xfer *xfer)
 {
-	u_int i;
-	struct tlabel *tl, *tmptl;
+	u_int dst, new_tlabel;
+	struct fw_xfer *txfer;
 	int s;
-	static uint32_t label = 0;
 
+	dst = xfer->send.hdr.mode.hdr.dst & 0x3f;
 	s = splfw();
-	for( i = 0 ; i < 0x40 ; i ++){
-		label = (label + 1) & 0x3f;
-		for(tmptl = STAILQ_FIRST(&fc->tlabels[label]);
-			tmptl != NULL; tmptl = STAILQ_NEXT(tmptl, link)){
-			if (tmptl->xfer->send.hdr.mode.hdr.dst ==
-			    xfer->send.hdr.mode.hdr.dst)
+	mtx_lock(&fc->tlabel_lock);
+	new_tlabel = (fc->last_tlabel[dst] + 1) & 0x3f;
+	STAILQ_FOREACH(txfer, &fc->tlabels[new_tlabel], tlabel)
+		if ((txfer->send.hdr.mode.hdr.dst & 0x3f) == dst)
 				break;
-		}
-		if(tmptl == NULL) {
-			tl = malloc(sizeof(struct tlabel),M_FW,M_NOWAIT);
-			if (tl == NULL) {
-				splx(s);
-				return (-1);
-			}
-			tl->xfer = xfer;
-			STAILQ_INSERT_TAIL(&fc->tlabels[label], tl, link);
-			splx(s);
-			if (firewire_debug > 1)
-				printf("fw_get_tlabel: dst=%d tl=%d\n",
-				    xfer->send.hdr.mode.hdr.dst, label);
-			return(label);
-		}
+	if(txfer == NULL) {
+		fc->last_tlabel[dst] = new_tlabel;
+		STAILQ_INSERT_TAIL(&fc->tlabels[new_tlabel], xfer, tlabel);
+		mtx_unlock(&fc->tlabel_lock);
+		splx(s);
+		xfer->tl = new_tlabel;
+		xfer->send.hdr.mode.hdr.tlrt = new_tlabel << 2;
+		if (firewire_debug > 1)
+			printf("fw_get_tlabel: dst=%d tl=%d\n", dst, new_tlabel);
+		return (new_tlabel);
 	}
+	mtx_unlock(&fc->tlabel_lock);
 	splx(s);
 
 	if (firewire_debug > 1)
 		printf("fw_get_tlabel: no free tlabel\n");
-	return(-1);
+	return (-1);
 }
 
 static void
@@ -1755,7 +1753,7 @@ fw_rcv_copy(struct fw_rcv_buf *rb)
 	struct tcode_info *tinfo;
 	u_int res, i, len, plen;
 
-	rb->xfer->recv.spd -= rb->spd;
+	rb->xfer->recv.spd = rb->spd;
 
 	pkt = (struct fw_pkt *)rb->vec->iov_base;
 	tinfo = &rb->fc->tcode[pkt->mode.hdr.tcode];
@@ -1809,7 +1807,7 @@ fw_rcv(struct fw_rcv_buf *rb)
 {
 	struct fw_pkt *fp, *resfp;
 	struct fw_bind *bind;
-	int tcode, s;
+	int tcode;
 	int i, len, oldstate;
 #if 0
 	{
@@ -1832,7 +1830,7 @@ fw_rcv(struct fw_rcv_buf *rb)
 	case FWTCODE_RRESB:
 	case FWTCODE_LRES:
 		rb->xfer = fw_tl2xfer(rb->fc, fp->mode.hdr.src,
-					fp->mode.hdr.tlrt >> 2);
+				fp->mode.hdr.tlrt >> 2, fp->mode.hdr.tcode);
 		if(rb->xfer == NULL) {
 			printf("fw_rcv: unknown response "
 			    "%s(%x) src=0x%x tl=0x%x rt=%d data=0x%x\n",
@@ -1841,16 +1839,16 @@ fw_rcv(struct fw_rcv_buf *rb)
 			    fp->mode.hdr.tlrt >> 2,
 			    fp->mode.hdr.tlrt & 3,
 			    fp->mode.rresq.data);
-#if 1
+#if 0
 			printf("try ad-hoc work around!!\n");
 			rb->xfer = fw_tl2xfer(rb->fc, fp->mode.hdr.src,
 					(fp->mode.hdr.tlrt >> 2)^3);
 			if (rb->xfer == NULL) {
 				printf("no use...\n");
-				goto err;
+				return;
 			}
 #else
-			goto err;
+			return;
 #endif
 		}
 		fw_rcv_copy(rb);
@@ -1859,8 +1857,8 @@ fw_rcv(struct fw_rcv_buf *rb)
 		else
 			rb->xfer->resp = 0;
 		/* make sure the packet is drained in AT queue */
-		oldstate = rb->xfer->state;
-		rb->xfer->state = FWXF_RCVD;
+		oldstate = rb->xfer->flag;
+		rb->xfer->flag = FWXF_RCVD;
 		switch (oldstate) {
 		case FWXF_SENT:
 			fw_xfer_done(rb->xfer);
@@ -1872,7 +1870,7 @@ fw_rcv(struct fw_rcv_buf *rb)
 #endif
 			break;
 		default:
-			printf("unexpected state %d\n", rb->xfer->state);
+			printf("unexpected flag 0x%02x\n", rb->xfer->flag);
 		}
 		return;
 	case FWTCODE_WREQQ:
@@ -1892,9 +1890,9 @@ fw_rcv(struct fw_rcv_buf *rb)
 			    fp->mode.wreqq.dest_hi, fp->mode.wreqq.dest_lo,
 			    tcode_str[tcode], tcode,
 			    fp->mode.hdr.src, ntohl(fp->mode.wreqq.data));
-			if (rb->fc->status == FWBUSRESET) {
+			if (rb->fc->status == FWBUSINIT) {
 				printf("fw_rcv: cannot respond(bus reset)!\n");
-				goto err;
+				return;
 			}
 			rb->xfer = fw_xfer_alloc(M_FWXFER);
 			if(rb->xfer == NULL){
@@ -1925,62 +1923,29 @@ fw_rcv(struct fw_rcv_buf *rb)
 			resfp->mode.rresb.extcode = 0;
 			resfp->mode.rresb.len = 0;
 /*
-			rb->xfer->act.hand = fw_asy_callback;
+			rb->xfer->hand = fw_xferwake;
 */
-			rb->xfer->act.hand = fw_xfer_free;
+			rb->xfer->hand = fw_xfer_free;
 			if(fw_asyreq(rb->fc, -1, rb->xfer)){
 				fw_xfer_free(rb->xfer);
 				return;
 			}
-			goto err;
+			return;
 		}
 		len = 0;
 		for (i = 0; i < rb->nvec; i ++)
 			len += rb->vec[i].iov_len;
-		switch(bind->act_type){
-		case FWACT_XFER:
-			/* splfw()?? */
-			rb->xfer = STAILQ_FIRST(&bind->xferlist);
-			if (rb->xfer == NULL) {
-				printf("Discard a packet for this bind.\n");
-				goto err;
-			}
-			STAILQ_REMOVE_HEAD(&bind->xferlist, link);
-			fw_rcv_copy(rb);
-			rb->xfer->act.hand(rb->xfer);
+		rb->xfer = STAILQ_FIRST(&bind->xferlist);
+		if (rb->xfer == NULL) {
+#if 1
+			printf("Discard a packet for this bind.\n");
+#endif
 			return;
-			break;
-		case FWACT_CH:
-			if(rb->fc->ir[bind->sub]->queued >=
-				rb->fc->ir[bind->sub]->maxq){
-				device_printf(rb->fc->bdev,
-					"Discard a packet %x %d\n",
-					bind->sub,
-					rb->fc->ir[bind->sub]->queued);
-				goto err;
-			}
-			rb->xfer = STAILQ_FIRST(&bind->xferlist);
-			if (rb->xfer == NULL) {
-				printf("Discard packet for this bind\n");
-				goto err;
-			}
-			STAILQ_REMOVE_HEAD(&bind->xferlist, link);
-			fw_rcv_copy(rb);
-			s = splfw();
-			rb->fc->ir[bind->sub]->queued++;
-			STAILQ_INSERT_TAIL(&rb->fc->ir[bind->sub]->q,
-			    rb->xfer, link);
-			splx(s);
-
-			wakeup((caddr_t)rb->fc->ir[bind->sub]);
-
-			return;
-			break;
-		default:
-			goto err;
-			break;
 		}
-		break;
+		STAILQ_REMOVE_HEAD(&bind->xferlist, link);
+		fw_rcv_copy(rb);
+		rb->xfer->hand(rb->xfer);
+		return;
 #if 0 /* shouldn't happen ?? or for GASP */
 	case FWTCODE_STREAM:
 	{
@@ -1993,13 +1958,14 @@ fw_rcv(struct fw_rcv_buf *rb)
 #endif
 		if(xferq->queued >= xferq->maxq) {
 			printf("receive queue is full\n");
-			goto err;
+			return;
 		}
 		/* XXX get xfer from xfer queue, we don't need copy for 
 			per packet mode */
 		rb->xfer = fw_xfer_alloc_buf(M_FWXFER, 0, /* XXX */
 						vec[0].iov_len);
-		if (rb->xfer == NULL) goto err;
+		if (rb->xfer == NULL)
+			return;
 		fw_rcv_copy(rb)
 		s = splfw();
 		xferq->queued++;
@@ -2027,8 +1993,6 @@ fw_rcv(struct fw_rcv_buf *rb)
 		printf("fw_rcv: unknow tcode %d\n", tcode);
 		break;
 	}
-err:
-	return;
 }
 
 /*
@@ -2095,7 +2059,7 @@ fw_try_bmr(void *arg)
 	fp->mode.lreq.dest_lo = 0xf0000000 | BUS_MGR_ID;
 	xfer->send.payload[0] = htonl(0x3f);
 	xfer->send.payload[1] = htonl(fc->nodeid);
-	xfer->act.hand = fw_try_bmr_callback;
+	xfer->hand = fw_try_bmr_callback;
 
 	err = fw_asyreq(fc, -1, xfer);
 	if(err){
@@ -2170,8 +2134,7 @@ fw_vmaccess(struct fw_xfer *xfer){
 	}
 	sfp->mode.hdr.dst = rfp->mode.hdr.src;
 	xfer->dst = ntohs(rfp->mode.hdr.src);
-	xfer->act.hand = fw_xfer_free;
-	xfer->retry_req = fw_asybusy;
+	xfer->hand = fw_xfer_free;
 
 	sfp->mode.hdr.tlrt = rfp->mode.hdr.tlrt;
 	sfp->mode.hdr.pri = 0;
@@ -2251,6 +2214,34 @@ fw_bmr(struct firewire_comm *fc)
 		0xffff, 0xf0000000 | STATE_SET, &quad, fw_asy_callback_free);
 
 	return 0;
+}
+
+int
+fw_open_isodma(struct firewire_comm *fc, int tx)
+{
+	struct fw_xferq **xferqa;
+	struct fw_xferq *xferq;
+	int i;
+
+	if (tx)
+		xferqa = &fc->it[0];
+	else
+		xferqa = &fc->ir[0];
+
+	FW_GLOCK(fc);
+	for (i = 0; i < fc->nisodma; i ++) {
+		xferq = xferqa[i];
+		if ((xferq->flag & FWXFERQ_OPEN) == 0) {
+			xferq->flag |= FWXFERQ_OPEN;
+			break;
+		}
+	}
+	if (i == fc->nisodma) {
+		printf("no free dma channel (tx=%d)\n", tx);
+		i = -1;
+	}
+	FW_GUNLOCK(fc);
+	return (i);
 }
 
 static int

@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/firewire/fwcrom.c,v 1.13 2004/10/22 15:39:39 simokawa Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/firewire/fwcrom.c,v 1.14 2006/02/04 21:37:39 imp Exp $");
 #endif
 
 #include <sys/param.h>
@@ -409,13 +409,15 @@ crom_add_quad(struct crom_chunk *chunk, uint32_t entry)
 int
 crom_add_entry(struct crom_chunk *chunk, int key, int val)
 {
-	struct csrreg *reg;
-	uint32_t i;
+	union
+	{
+		struct csrreg reg;
+		uint32_t i;
+	} foo;
 	
-	reg = (struct csrreg *)&i;
-	reg->key = key;
-	reg->val = val;
-	return(crom_add_quad(chunk, (uint32_t) i));
+	foo.reg.key = key;
+	foo.reg.val = val;
+	return (crom_add_quad(chunk, foo.i));
 }
 
 int

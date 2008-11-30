@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/fwohci_pci.c,v 1.52 2005/05/20 12:37:16 marius Exp $
+ * $FreeBSD: src/sys/dev/firewire/fwohci_pci.c,v 1.60 2007/06/06 14:31:36 simokawa Exp $
  */
 
 #define BOUNCE_BUFFER_TEST	0
@@ -169,8 +169,8 @@ fwohci_pci_probe( device_t dev )
 		return BUS_PROBE_DEFAULT;
 	}
 	if (id == (FW_VENDORID_SONY | FW_DEVICE_CXD1947)) {
-		device_set_desc(dev, "Sony i.LINK (CXD1947)");
-		return BUS_PROBE_DEFAULT;
+		device_printf(dev, "Sony i.LINK (CXD1947) not supported\n");
+		return ENXIO;
 	}
 	if (id == (FW_VENDORID_SONY | FW_DEVICE_CXD3222)) {
 		device_set_desc(dev, "Sony i.LINK (CXD3222)");
@@ -241,11 +241,9 @@ fwohci_pci_init(device_t self)
 	uint16_t cmd;
 
 	cmd = pci_read_config(self, PCIR_COMMAND, 2);
-	cmd |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN |
-		PCIM_CMD_SERRESPEN | PCIM_CMD_PERRESPEN;
+	cmd |= PCIM_CMD_MEMEN | PCIM_CMD_BUSMASTEREN | PCIM_CMD_MWRICEN;
 #if 1  /* for broken hardware */
 	cmd &= ~PCIM_CMD_MWRICEN; 
-	cmd &= ~(PCIM_CMD_SERRESPEN | PCIM_CMD_PERRESPEN);
 #endif
 	pci_write_config(self, PCIR_COMMAND, cmd, 2);
 
@@ -304,6 +302,7 @@ fwohci_pci_attach(device_t self)
 		firewire_debug = bootverbose;
 #endif
 
+	mtx_init(FW_GMTX(&sc->fc), "firewire", NULL, MTX_DEF);
 	fwohci_pci_init(self);
 
 	rid = PCI_CBMEM;
@@ -337,12 +336,12 @@ fwohci_pci_attach(device_t self)
 
 
 	err = bus_setup_intr(self, sc->irq_res,
-#if FWOHCI_TASKQUEUE
 			INTR_TYPE_NET | INTR_MPSAFE,
+#if FWOHCI_INTFILT
+		     fwohci_filt, NULL, sc, &sc->ih);
 #else
-			INTR_TYPE_NET,
+		     NULL, (driver_intr_t *) fwohci_intr, sc, &sc->ih);
 #endif
-		     (driver_intr_t *) fwohci_intr, sc, &sc->ih);
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
 	/* XXX splcam() should mask this irq for sbp.c*/
 	err = bus_setup_intr(self, sc->irq_res, INTR_TYPE_CAM,
@@ -357,7 +356,13 @@ fwohci_pci_attach(device_t self)
 		return ENXIO;
 	}
 
-	err = bus_dma_tag_create(/*parent*/NULL, /*alignment*/1,
+	err = bus_dma_tag_create(
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700020
+				/*parent*/bus_get_dma_tag(self),
+#else
+				/*parent*/NULL,
+#endif
+				/*alignment*/1,
 				/*boundary*/0,
 #if BOUNCE_BUFFER_TEST
 				/*lowaddr*/BUS_SPACE_MAXADDR_24BIT,
@@ -372,7 +377,7 @@ fwohci_pci_attach(device_t self)
 				/*flags*/BUS_DMA_ALLOCNOW,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 501102
 				/*lockfunc*/busdma_lock_mutex,
-				/*lockarg*/&Giant,
+				/*lockarg*/FW_GMTX(&sc->fc),
 #endif
 				&sc->fc.dmat);
 	if (err != 0) {
@@ -420,19 +425,18 @@ fwohci_pci_detach(device_t self)
 				  FWOHCI_INTMASKCLR, OHCI_INT_EN);
 
 	if (sc->irq_res) {
-		int err = bus_teardown_intr(self, sc->irq_res, sc->ih);
-		if (err)
-			/* XXX or should we panic? */
-			device_printf(self, "Could not tear down irq, %d\n",
-				      err);
+		int err;
+		if (sc->ih) {
+			err = bus_teardown_intr(self, sc->irq_res, sc->ih);
+			if (err)
+				device_printf(self,
+					 "Could not tear down irq, %d\n", err);
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
-		bus_teardown_intr(self, sc->irq_res, sc->ih_cam);
-		bus_teardown_intr(self, sc->irq_res, sc->ih_bio);
+			bus_teardown_intr(self, sc->irq_res, sc->ih_cam);
+			bus_teardown_intr(self, sc->irq_res, sc->ih_bio);
 #endif
-		sc->ih = NULL;
-	}
-
-	if (sc->irq_res) {
+			sc->ih = NULL;
+		}
 		bus_release_resource(self, SYS_RES_IRQ, 0, sc->irq_res);
 		sc->irq_res = NULL;
 	}
@@ -445,6 +449,7 @@ fwohci_pci_detach(device_t self)
 	}
 
 	fwohci_detach(sc, self);
+	mtx_destroy(FW_GMTX(&sc->fc));
 	splx(s);
 
 	return 0;
@@ -489,7 +494,7 @@ fwohci_pci_add_child(device_t dev, int order, const char *name, int unit)
 {
 	struct fwohci_softc *sc;
 	device_t child;
-	int s, err = 0;
+	int err = 0;
 
 	sc = (struct fwohci_softc *)device_get_softc(dev);
 	child = device_add_child(dev, name, unit);
@@ -512,10 +517,13 @@ fwohci_pci_add_child(device_t dev, int order, const char *name, int unit)
 	 * Clear the bus reset event flag to start transactions even when
 	 * interrupt is disabled during the boot process.
 	 */
-	DELAY(250); /* 2 cycles */
-	s = splfw();
-	fwohci_poll((void *)sc, 0, -1);
-	splx(s);
+	if (cold) {
+		int s;
+		DELAY(250); /* 2 cycles */
+		s = splfw();
+		fwohci_poll((void *)sc, 0, -1);
+		splx(s);
+	}
 
 	return (child);
 }

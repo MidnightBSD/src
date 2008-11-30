@@ -35,7 +35,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/firewire/fwdma.c,v 1.7 2005/01/06 01:42:41 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/firewire/fwdma.c,v 1.9 2007/06/06 14:31:36 simokawa Exp $");
 #endif
 
 #include <sys/param.h>
@@ -92,7 +92,7 @@ fwdma_malloc(struct firewire_comm *fc, int alignment, bus_size_t size,
 		/*flags*/ BUS_DMA_ALLOCNOW,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 501102 
 		/*lockfunc*/busdma_lock_mutex,
-		/*lockarg*/&Giant,
+		/*lockarg*/FW_GMTX(fc),
 #endif
 		&dma->dma_tag);
 	if (err) {
@@ -190,7 +190,7 @@ fwdma_malloc_multiseg(struct firewire_comm *fc, int alignment,
 			/*flags*/ BUS_DMA_ALLOCNOW,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 501102
 			/*lockfunc*/busdma_lock_mutex,
-			/*lockarg*/&Giant,
+			/*lockarg*/FW_GMTX(fc),
 #endif
 			&am->dma_tag)) {
 		printf("fwdma_malloc_multiseg: tag_create failed\n");

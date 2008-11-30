@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/fwohcireg.h,v 1.22 2005/05/20 12:37:16 marius Exp $
+ * $FreeBSD: src/sys/dev/firewire/fwohcireg.h,v 1.23 2007/04/30 14:06:30 simokawa Exp $
  *
  */
 #define		PCI_CBMEM		PCIR_BAR(0)
@@ -396,8 +396,13 @@ struct fwohci_txpkthdr{
 	}mode;
 };
 struct fwohci_trailer{
+#if BYTE_ORDER == BIG_ENDIAN
+	uint32_t stat:16,
+		  time:16;
+#else
 	uint32_t time:16,
 		  stat:16;
+#endif
 };
 
 #define	OHCI_CNTL_CYCSRC	(0x1 << 22)

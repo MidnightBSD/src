@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/firewirereg.h,v 1.37.2.1 2005/08/13 21:24:15 rwatson Exp $
+ * $FreeBSD: src/sys/dev/firewire/firewirereg.h,v 1.50 2007/07/20 03:42:57 simokawa Exp $
  *
  */
 
@@ -47,8 +47,12 @@ typedef	struct proc fw_proc;
 #endif
 
 #include <sys/uio.h>
+#include <sys/mutex.h>
+#include <sys/taskqueue.h>
 
 #define	splfw splimp
+
+STAILQ_HEAD(fw_xferlist, fw_xfer);
 
 struct fw_device{
 	uint16_t dst;
@@ -96,6 +100,7 @@ struct tcode_info {
 #define FWTI_TLABEL	(1 << 2)
 #define FWTI_BLOCK_STR	(1 << 3)
 #define FWTI_BLOCK_ASY	(1 << 4)
+	u_char valid_res;
 };
 
 struct firewire_comm{
@@ -110,18 +115,9 @@ struct firewire_comm{
 	u_int irm;
 	u_int max_node;
 	u_int max_hop;
-	u_int max_asyretry;
 #define FWPHYASYST (1 << 0)
-	u_int retry_count;
-	uint32_t ongobus:10,
-		  ongonode:6,
-		  ongoaddr:16;
-	struct fw_device *ongodev;
-	struct fw_eui64 ongoeui;
-#define	FWMAXCSRDIR     16
-	SLIST_HEAD(, csrdir) ongocsr;
-	SLIST_HEAD(, csrdir) csrfree;
 	uint32_t status;
+#define	FWBUSDETACH	(-2)
 #define	FWBUSNOTREADY	(-1)
 #define	FWBUSRESET	0
 #define	FWBUSINIT	1
@@ -136,7 +132,9 @@ struct firewire_comm{
 	struct fw_eui64 eui;
 	struct fw_xferq
 		*arq, *atq, *ars, *ats, *it[FW_MAX_DMACH],*ir[FW_MAX_DMACH];
-	STAILQ_HEAD(, tlabel) tlabels[0x40];
+	struct fw_xferlist tlabels[0x40];
+	u_char last_tlabel[0x40];
+	struct mtx tlabel_lock;
 	STAILQ_HEAD(, fw_bind) binds;
 	STAILQ_HEAD(, fw_device) devices;
 	u_int  sid_cnt;
@@ -152,7 +150,7 @@ struct firewire_comm{
 	struct callout busprobe_callout;
 	struct callout bmr_callout;
 	struct callout timeout_callout;
-	struct callout retry_probe_callout;
+	struct task task_timeout;
 	uint32_t (*cyctimer) (struct  firewire_comm *);
 	void (*ibr) (struct firewire_comm *);
 	uint32_t (*set_bmr) (struct firewire_comm *, uint32_t);
@@ -168,14 +166,17 @@ struct firewire_comm{
 	void (*itx_post) (struct firewire_comm *, uint32_t *);
 	struct tcode_info *tcode;
 	bus_dma_tag_t dmat;
+	struct mtx mtx;
+	struct mtx wait_lock;
+	struct taskqueue *taskqueue;
+	struct proc *probe_thread;
 };
 #define CSRARC(sc, offset) ((sc)->csr_arc[(offset)/4])
 
-struct csrdir{
-	uint32_t ongoaddr;
-	uint32_t off;
-	SLIST_ENTRY(csrdir) link;
-};
+#define FW_GMTX(fc)		(&(fc)->mtx)
+#define FW_GLOCK(fc)		mtx_lock(FW_GMTX(fc))
+#define FW_GUNLOCK(fc)		mtx_unlock(FW_GMTX(fc))
+#define FW_GLOCK_ASSERT(fc)	mtx_assert(FW_GMTX(fc), MA_OWNED)
 
 struct fw_xferq {
 	int flag;
@@ -193,11 +194,10 @@ struct fw_xferq {
 #define FWXFERQ_WAKEUP (1 << 17)
 	void (*start) (struct firewire_comm*);
 	int dmach;
-	STAILQ_HEAD(, fw_xfer) q;
+	struct fw_xferlist q;
 	u_int queued;
 	u_int maxq;
 	u_int psize;
-	STAILQ_HEAD(, fw_bind) binds;
 	struct fwdma_alloc_multi *buf;
 	u_int bnchunk;
 	u_int bnpacket;
@@ -220,22 +220,13 @@ struct fw_bulkxfer{
 	int resp;
 };
 
-struct tlabel{
-	struct fw_xfer  *xfer;
-	STAILQ_ENTRY(tlabel) link;
-};
-
 struct fw_bind{
 	u_int64_t start;
 	u_int64_t end;
-	STAILQ_HEAD(, fw_xfer) xferlist;
+	struct fw_xferlist xferlist;
 	STAILQ_ENTRY(fw_bind) fclist;
 	STAILQ_ENTRY(fw_bind) chlist;
-#define FWACT_NULL	0
-#define FWACT_XFER	2
-#define FWACT_CH	3
-	uint8_t act_type;
-	uint8_t sub;
+	void *sc;
 };
 
 struct fw_xfer{
@@ -244,20 +235,18 @@ struct fw_xfer{
 	struct fw_xferq *q;
 	struct timeval tv;
 	int8_t resp;
-#define FWXF_INIT 0
-#define FWXF_INQ 1
-#define FWXF_START 2
-#define FWXF_SENT 3
-#define FWXF_SENTERR 4
-#define FWXF_BUSY 8
-#define FWXF_RCVD 10
-	uint8_t state;
-	uint8_t retry;
-	uint8_t tl;
-	void (*retry_req) (struct fw_xfer *);
-	union{
-		void (*hand) (struct fw_xfer *);
-	} act;
+#define FWXF_INIT	0x00
+#define FWXF_INQ	0x01
+#define FWXF_START	0x02
+#define FWXF_SENT	0x04
+#define FWXF_SENTERR	0x08
+#define FWXF_BUSY	0x10
+#define FWXF_RCVD	0x20
+
+#define FWXF_WAKE	0x80
+	uint8_t flag;
+	int8_t tl;
+	void (*hand) (struct fw_xfer *);
 	struct {
 		struct fw_pkt hdr;
 		uint32_t *payload;
@@ -266,6 +255,7 @@ struct fw_xfer{
 	} send, recv;
 	struct mbuf *mbuf;
 	STAILQ_ENTRY(fw_xfer) link;
+	STAILQ_ENTRY(fw_xfer) tlabel;
 	struct malloc_type *malloc;
 };
 
@@ -287,15 +277,18 @@ struct fw_xfer *fw_xfer_alloc_buf (struct malloc_type *, int, int);
 void fw_init (struct firewire_comm *);
 int fw_tbuf_update (struct firewire_comm *, int, int);
 int fw_rbuf_update (struct firewire_comm *, int, int);
-void fw_asybusy (struct fw_xfer *);
 int fw_bindadd (struct firewire_comm *, struct fw_bind *);
 int fw_bindremove (struct firewire_comm *, struct fw_bind *);
+int fw_xferlist_add (struct fw_xferlist *, struct malloc_type *, int, int, int,
+    struct firewire_comm *, void *, void (*)(struct fw_xfer *));
+void fw_xferlist_remove (struct fw_xferlist *);
 int fw_asyreq (struct firewire_comm *, int, struct fw_xfer*);
 void fw_busreset (struct firewire_comm *, uint32_t);
 uint16_t fw_crc16 (uint32_t *, uint32_t);
 void fw_xfer_timeout (void *);
 void fw_xfer_done (struct fw_xfer *);
-void fw_asy_callback (struct fw_xfer *);
+void fw_xferwake (struct fw_xfer *);
+int fw_xferwait (struct fw_xfer *);
 void fw_asy_callback_free (struct fw_xfer *);
 struct fw_device *fw_noderesolve_nodeid (struct firewire_comm *, int);
 struct fw_device *fw_noderesolve_eui64 (struct firewire_comm *, struct fw_eui64 *);
@@ -304,9 +297,11 @@ void fw_drain_txq (struct firewire_comm *);
 int fwdev_makedev (struct firewire_softc *);
 int fwdev_destroydev (struct firewire_softc *);
 void fwdev_clone (void *, struct ucred *, char *, int, struct cdev **);
+int fw_open_isodma(struct firewire_comm *, int);
 
 extern int firewire_debug;
 extern devclass_t firewire_devclass;
+extern int firewire_phydma_enable;
 
 #ifdef __DragonFly__
 #define		FWPRI		PCATCH
@@ -317,7 +312,7 @@ extern devclass_t firewire_devclass;
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
 #define CALLOUT_INIT(x) callout_init(x)
 #else
-#define CALLOUT_INIT(x) callout_init(x, 0 /* mpsafe */)
+#define CALLOUT_INIT(x) callout_init(x, 1 /* mpsafe */)
 #endif
 
 #if defined(__DragonFly__) || __FreeBSD_version < 500000
