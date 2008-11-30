@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: /repoman/r/ncvs/src/sys/dev/ata/atapi-fd.h,v 1.24.2.2 2006/03/10 12:30:08 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/atapi-fd.h,v 1.27 2007/02/21 19:07:19 sos Exp $
  */
 
 /* ATAPI Rewriteable drive Capabilities and Mechanical Status Page */

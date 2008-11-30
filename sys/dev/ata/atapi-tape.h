@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/atapi-tape.h,v 1.23.2.1 2006/01/25 08:13:45 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/atapi-tape.h,v 1.25 2007/02/21 19:07:19 sos Exp $
  */
 
 /* ATAPI tape drive Capabilities and Mechanical Status Page */

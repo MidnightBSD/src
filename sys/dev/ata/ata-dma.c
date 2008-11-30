@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-dma.c,v 1.137.2.2 2006/01/25 08:13:44 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-dma.c,v 1.147.2.1.2.1 2008/01/09 08:55:10 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -75,9 +75,10 @@ ata_dmainit(device_t dev)
 	ch->dma->load = ata_dmaload;
 	ch->dma->unload = ata_dmaunload;
 	ch->dma->alignment = 2;
-	ch->dma->boundary = 128 * DEV_BSIZE;
+	ch->dma->boundary = 65536;
 	ch->dma->segsize = 128 * DEV_BSIZE;
 	ch->dma->max_iosize = 128 * DEV_BSIZE;
+	ch->dma->max_address = BUS_SPACE_MAXADDR_32BIT;
     }
 }
 
@@ -96,21 +97,21 @@ ata_dmaalloc(device_t dev)
     struct ata_channel *ch = device_get_softc(dev);
     struct ata_dc_cb_args ccba;
 
-    if (bus_dma_tag_create(NULL, ch->dma->alignment, 0,
-			   BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
+    if (bus_dma_tag_create(bus_get_dma_tag(dev), ch->dma->alignment, 0,
+			   ch->dma->max_address, BUS_SPACE_MAXADDR,
 			   NULL, NULL, ch->dma->max_iosize,
 			   ATA_DMA_ENTRIES, ch->dma->segsize,
 			   0, NULL, NULL, &ch->dma->dmatag))
 	goto error;
 
     if (bus_dma_tag_create(ch->dma->dmatag, PAGE_SIZE, PAGE_SIZE,
-			   BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
+			   ch->dma->max_address, BUS_SPACE_MAXADDR,
 			   NULL, NULL, MAXTABSZ, 1, MAXTABSZ,
 			   0, NULL, NULL, &ch->dma->sg_tag))
 	goto error;
 
     if (bus_dma_tag_create(ch->dma->dmatag,ch->dma->alignment,ch->dma->boundary,
-			   BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
+			   ch->dma->max_address, BUS_SPACE_MAXADDR,
 			   NULL, NULL, ch->dma->max_iosize,
 			   ATA_DMA_ENTRIES, ch->dma->segsize,
 			   0, NULL, NULL, &ch->dma->data_tag))
@@ -131,7 +132,7 @@ ata_dmaalloc(device_t dev)
 	goto error;
 
     if (bus_dma_tag_create(ch->dma->dmatag, PAGE_SIZE, 64 * 1024,
-			   BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR,
+			   ch->dma->max_address, BUS_SPACE_MAXADDR,
 			   NULL, NULL, MAXWSPCSZ, 1, MAXWSPCSZ,
 			   0, NULL, NULL, &ch->dma->work_tag))
 	goto error;
@@ -212,6 +213,7 @@ ata_dmasetprd(void *xsc, bus_dma_segment_t *segs, int nsegs, int error)
 	prd[i].count = htole32(segs[i].ds_len);
     }
     prd[i - 1].count |= htole32(ATA_DMA_EOT);
+    KASSERT(nsegs <= ATA_DMA_ENTRIES, ("too many DMA segment entries\n"));
     args->nsegs = nsegs;
 }
 
@@ -271,7 +273,7 @@ ata_dmaunload(device_t dev)
 			BUS_DMASYNC_POSTWRITE);
 
 	bus_dmamap_sync(ch->dma->data_tag, ch->dma->data_map,
-			(ch->dma->flags & ATA_DMA_READ) != 0 ?
+			(ch->dma->flags & ATA_DMA_READ) ?
 			BUS_DMASYNC_POSTREAD : BUS_DMASYNC_POSTWRITE);
 	bus_dmamap_unload(ch->dma->data_tag, ch->dma->data_map);
 

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-all.h,v 1.103.2.5 2006/02/19 15:18:23 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/ata-all.h,v 1.124.2.1.2.1 2008/01/09 08:55:10 delphij Exp $
  */
 
 /* ATA register defines */
@@ -155,7 +155,7 @@
 #define ATA_AHCI_GHC                    0x04
 #define         ATA_AHCI_GHC_AE         0x80000000
 #define         ATA_AHCI_GHC_IE         0x00000002
-#define         ATA_AHCI_GHC_HR         0x80000001
+#define         ATA_AHCI_GHC_HR         0x00000001
 
 #define ATA_AHCI_IS                     0x08
 #define ATA_AHCI_PI                     0x0c
@@ -228,6 +228,29 @@
 #define ATA_AHCI_CT_SG_OFFSET           128
 #define ATA_AHCI_CT_SIZE                256
 
+struct ata_ahci_dma_prd {
+    u_int64_t                   dba;
+    u_int32_t                   reserved;
+    u_int32_t                   dbc;            /* 0 based */
+#define ATA_AHCI_PRD_MASK       0x003fffff      /* max 4MB */
+#define ATA_AHCI_PRD_IPC        (1<<31)
+} __packed;
+
+struct ata_ahci_cmd_tab {
+    u_int8_t                    cfis[64];
+    u_int8_t                    acmd[32];
+    u_int8_t                    reserved[32];
+    struct ata_ahci_dma_prd     prd_tab[16];
+} __packed;
+
+struct ata_ahci_cmd_list {
+    u_int16_t                   cmd_flags;
+    u_int16_t                   prd_length;     /* PRD entries */
+    u_int32_t                   bytecount;
+    u_int64_t                   cmd_table_phys; /* 128byte aligned */
+} __packed;
+
+
 /* DMA register defines */
 #define ATA_DMA_ENTRIES                 256
 #define ATA_DMA_EOT                     0x80000000
@@ -270,7 +293,8 @@
 #define ATA_IRQ_RID                     0
 #define ATA_DEV(device)                 ((device == ATA_MASTER) ? 0 : 1)
 #define ATA_CFA_MAGIC1                  0x844A
-#define	ATA_CFA_MAGIC2			0x848A
+#define ATA_CFA_MAGIC2                  0x848A
+#define ATA_CFA_MAGIC3                  0x8400
 #define ATAPI_MAGIC_LSB                 0x14
 #define ATAPI_MAGIC_MSB                 0xeb
 #define ATAPI_P_READ                    (ATA_S_DRQ | ATA_I_IN)
@@ -302,7 +326,7 @@ struct ata_composite {
 /* structure used to queue an ATA/ATAPI request */
 struct ata_request {
     device_t                    dev;            /* device handle */
-    device_t			parent;		/* channel handle */
+    device_t                    parent;         /* channel handle */
     union {
 	struct {
 	    u_int8_t            command;        /* command reg */
@@ -312,7 +336,7 @@ struct ata_request {
 	} ata;
 	struct {
 	    u_int8_t            ccb[16];        /* ATAPI command block */
-	    struct atapi_sense  sense;     /* ATAPI request sense data */
+	    struct atapi_sense  sense;          /* ATAPI request sense data */
 	    u_int8_t            saved_cmd;      /* ATAPI saved command */
 	} atapi;
     } u;
@@ -335,8 +359,8 @@ struct ata_request {
 #define         ATA_R_DIRECT            0x00001000
 
 #define         ATA_R_DEBUG             0x10000000
-#define		ATA_R_DANGER1		0x20000000
-#define		ATA_R_DANGER2		0x40000000
+#define         ATA_R_DANGER1           0x20000000
+#define         ATA_R_DANGER2           0x40000000
 
     u_int8_t                    status;         /* ATA status */
     u_int8_t                    error;          /* ATA error */
@@ -418,6 +442,7 @@ struct ata_dma {
     u_int32_t                   segsize;        /* DMA SG list segment size */
     u_int32_t                   max_iosize;     /* DMA data max IO size */
     u_int32_t                   cur_iosize;     /* DMA data current IO size */
+    u_int64_t                   max_address;    /* highest DMA'able address */
     int                         flags;
 #define ATA_DMA_READ                    0x01    /* transaction is a read */
 #define ATA_DMA_LOADED                  0x02    /* DMA tables etc loaded */
@@ -439,6 +464,8 @@ struct ata_lowlevel {
     int (*begin_transaction)(struct ata_request *request);
     int (*end_transaction)(struct ata_request *request);
     int (*command)(struct ata_request *request);
+    void (*tf_read)(struct ata_request *request);
+    void (*tf_write)(struct ata_request *request);
 };
 
 /* structure holding resources for an ATA channel */
@@ -468,6 +495,7 @@ struct ata_channel {
 #define         ATA_ATA_SLAVE           0x02
 #define         ATA_ATAPI_MASTER        0x04
 #define         ATA_ATAPI_SLAVE         0x08
+#define         ATA_PORTMULTIPLIER      0x10
 
     struct mtx                  state_mtx;      /* state lock */
     int                         state;          /* ATA channel state */
@@ -536,9 +564,9 @@ int ata_generic_command(struct ata_request *request);
 extern uma_zone_t ata_request_zone;
 #define ata_alloc_request() uma_zalloc(ata_request_zone, M_NOWAIT | M_ZERO)
 #define ata_free_request(request) { \
-    if (!(request->flags & ATA_R_DANGER2)) \
-        uma_zfree(ata_request_zone, request); \
-    }
+	if (!(request->flags & ATA_R_DANGER2)) \
+	    uma_zfree(ata_request_zone, request); \
+	}
 /* macros for alloc/free of struct ata_composite */
 extern uma_zone_t ata_composite_zone;
 #define ata_alloc_composite() uma_zalloc(ata_composite_zone, M_NOWAIT | M_ZERO)

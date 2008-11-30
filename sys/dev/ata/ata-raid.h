@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2000 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2000 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-raid.h,v 1.34.2.4 2006/09/30 14:51:49 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/ata-raid.h,v 1.46 2007/02/21 19:07:18 sos Exp $
  */
 
 /* misc defines */

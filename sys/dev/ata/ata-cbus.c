@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2002 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 2002 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-cbus.c,v 1.22.2.1 2006/01/25 08:13:44 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-cbus.c,v 1.25 2007/02/23 12:18:32 piso Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -144,7 +144,7 @@ ata_cbus_attach(device_t dev)
     }
 
     if ((bus_setup_intr(dev, ctlr->irq, ATA_INTR_FLAGS,
-			ata_cbus_intr, ctlr, &ctlr->ih))) {
+			NULL, ata_cbus_intr, ctlr, &ctlr->ih))) {
 	device_printf(dev, "unable to setup interrupt\n");
 	bus_release_resource(dev, SYS_RES_IOPORT, ATA_IOADDR_RID, ctlr->io);
 	bus_release_resource(dev, SYS_RES_IOPORT, ATA_CTLADDR_RID, ctlr->ctlio);
@@ -188,12 +188,16 @@ ata_cbus_alloc_resource(device_t dev, device_t child, int type, int *rid,
 
 static int
 ata_cbus_setup_intr(device_t dev, device_t child, struct resource *irq,
-	       int flags, driver_intr_t *intr, void *arg,
-	       void **cookiep)
+	       int flags, driver_filter_t *filter, driver_intr_t *intr, 
+	       void *arg, void **cookiep)
 {
     struct ata_cbus_controller *controller = device_get_softc(dev);
     int unit = ((struct ata_channel *)device_get_softc(child))->unit;
 
+    if (filter != NULL) {
+	    printf("ata-cbus.c: we cannot use a filter here\n");
+	    return (EINVAL);
+    }
     controller->interrupt[unit].function = intr;
     controller->interrupt[unit].argument = arg;
     *cookiep = controller;

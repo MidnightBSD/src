@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-card.c,v 1.36.2.1 2006/01/25 08:13:44 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-card.c,v 1.40 2007/02/21 19:07:18 sos Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

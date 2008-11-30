@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/atapi-cd.h,v 1.44.2.1 2006/01/25 08:13:45 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/atapi-cd.h,v 1.46.2.1 2007/10/31 19:59:53 sos Exp $
  */
 
 /* CDROM Table Of Contents */
@@ -95,6 +95,7 @@ struct cappage {
 #define MST_CDROM               0x00
 #define MST_CDR                 0x10
 #define MST_CDRW                0x20
+#define MST_DVD                 0x40
 
 #define MST_NO_DISC             0x70
 #define MST_DOOR_OPEN           0x71

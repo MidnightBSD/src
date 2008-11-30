@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.105.2.4 2006/02/19 15:18:23 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.121.2.2 2007/11/21 21:15:00 sos Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -42,9 +42,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-pci.c,v 1.105.2.4 2006/02/19 15:18:23 so
 #include <machine/stdarg.h>
 #include <machine/resource.h>
 #include <machine/bus.h>
-#ifdef __alpha__
-#include <machine/md_var.h>
-#endif
 #include <sys/rman.h>
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -62,10 +59,15 @@ static MALLOC_DEFINE(M_ATAPCI, "ata_pci", "ATA driver PCI");
 int
 ata_legacy(device_t dev)
 {
-    return ((pci_read_config(dev, PCIR_PROGIF, 1)&PCIP_STORAGE_IDE_MASTERDEV) &&
-	    ((pci_read_config(dev, PCIR_PROGIF, 1) &
-	      (PCIP_STORAGE_IDE_MODEPRIM | PCIP_STORAGE_IDE_MODESEC)) !=
-	     (PCIP_STORAGE_IDE_MODEPRIM | PCIP_STORAGE_IDE_MODESEC)));
+    return (((pci_read_config(dev, PCIR_PROGIF, 1)&PCIP_STORAGE_IDE_MASTERDEV)&&
+	     ((pci_read_config(dev, PCIR_PROGIF, 1) &
+	       (PCIP_STORAGE_IDE_MODEPRIM | PCIP_STORAGE_IDE_MODESEC)) !=
+	      (PCIP_STORAGE_IDE_MODEPRIM | PCIP_STORAGE_IDE_MODESEC))) ||
+	    (!pci_read_config(dev, PCIR_BAR(0), 4) &&
+	     !pci_read_config(dev, PCIR_BAR(1), 4) &&
+	     !pci_read_config(dev, PCIR_BAR(2), 4) &&
+	     !pci_read_config(dev, PCIR_BAR(3), 4) &&
+	     !pci_read_config(dev, PCIR_BAR(5), 4)));
 }
 
 int
@@ -74,6 +76,13 @@ ata_pci_probe(device_t dev)
     if (pci_get_class(dev) != PCIC_STORAGE)
 	return ENXIO;
 
+    /* if this is an AHCI chipset grab it */
+    if (pci_get_subclass(dev) == PCIS_STORAGE_SATA) {
+	if (!ata_ahci_ident(dev))
+	    return ATA_PROBE_OK;
+    }
+
+    /* run through the vendor specific drivers */
     switch (pci_get_vendor(dev)) {
     case ATA_ACARD_ID: 
 	if (!ata_acard_ident(dev))
@@ -123,6 +132,10 @@ ata_pci_probe(device_t dev)
 	if (!ata_national_ident(dev))
 	    return ATA_PROBE_OK;
 	break;
+    case ATA_NETCELL_ID:
+	if (!ata_netcell_ident(dev))
+	    return ATA_PROBE_OK;
+	break;
     case ATA_NVIDIA_ID:
 	if (!ata_nvidia_ident(dev))
 	    return ATA_PROBE_OK;
@@ -166,8 +179,7 @@ ata_pci_probe(device_t dev)
     }
 
     /* unknown chipset, try generic DMA if it seems possible */
-    if ((pci_get_class(dev) == PCIC_STORAGE) &&
-	(pci_get_subclass(dev) == PCIS_STORAGE_IDE)) {
+    if (pci_get_subclass(dev) == PCIS_STORAGE_IDE) {
 	if (!ata_generic_ident(dev))
 	    return ATA_PROBE_OK;
     }
@@ -210,11 +222,7 @@ ata_pci_attach(device_t dev)
 
     /* attach all channels on this controller */
     for (unit = 0; unit < ctlr->channels; unit++) {
-	if (unit == 0 && (pci_get_progif(dev) & 0x81) == 0x80) {
-	    device_add_child(dev, "ata", unit);
-	    continue;
-	}
-	if (unit == 1 && (pci_get_progif(dev) & 0x84) == 0x80) {
+	if ((unit == 0 || unit == 1) && ata_legacy(dev)) {
 	    device_add_child(dev, "ata", unit);
 	    continue;
 	}
@@ -288,14 +296,10 @@ ata_pci_alloc_resource(device_t dev, device_t child, int type, int *rid,
     }
     if (type == SYS_RES_IRQ && *rid == ATA_IRQ_RID) {
 	if (ata_legacy(dev)) {
-#ifdef __alpha__
-	    res = alpha_platform_alloc_ide_intr(unit);
-#else
 	    int irq = (unit == 0 ? 14 : 15);
 	    
 	    res = BUS_ALLOC_RESOURCE(device_get_parent(dev), child,
 				     SYS_RES_IRQ, rid, irq, irq, 1, flags);
-#endif
 	}
 	else
 	    res = controller->r_irq;
@@ -331,12 +335,8 @@ ata_pci_release_resource(device_t dev, device_t child, int type, int rid,
 	    return ENOENT;
 
 	if (ata_legacy(dev)) {
-#ifdef __alpha__
-	    return alpha_platform_release_ide_intr(unit, r);
-#else
 	    return BUS_RELEASE_RESOURCE(device_get_parent(dev), child,
 					SYS_RES_IRQ, rid, r);
-#endif
 	}
 	else  
 	    return 0;
@@ -346,22 +346,21 @@ ata_pci_release_resource(device_t dev, device_t child, int type, int rid,
 
 int
 ata_pci_setup_intr(device_t dev, device_t child, struct resource *irq, 
-		   int flags, driver_intr_t *function, void *argument,
-		   void **cookiep)
+		   int flags, driver_filter_t *filter, driver_intr_t *function, 
+		   void *argument, void **cookiep)
 {
     if (ata_legacy(dev)) {
-#ifdef __alpha__
-	return alpha_platform_setup_ide_intr(child, irq, function, argument,
-					     cookiep);
-#else
 	return BUS_SETUP_INTR(device_get_parent(dev), child, irq,
-			      flags, function, argument, cookiep);
-#endif
+			      flags, filter, function, argument, cookiep);
     }
     else {
 	struct ata_pci_controller *controller = device_get_softc(dev);
 	int unit = ((struct ata_channel *)device_get_softc(child))->unit;
 
+	if (filter != NULL) {
+		printf("ata-pci.c: we cannot use a filter here\n");
+		return (EINVAL);
+	}
 	controller->interrupt[unit].function = function;
 	controller->interrupt[unit].argument = argument;
 	*cookiep = controller;
@@ -374,11 +373,7 @@ ata_pci_teardown_intr(device_t dev, device_t child, struct resource *irq,
 		      void *cookie)
 {
     if (ata_legacy(dev)) {
-#ifdef __alpha__
-	return alpha_platform_teardown_ide_intr(child, irq, cookie);
-#else
 	return BUS_TEARDOWN_INTR(device_get_parent(dev), child, irq, cookie);
-#endif
     }
     else {
 	struct ata_pci_controller *controller = device_get_softc(dev);
@@ -515,6 +510,35 @@ ata_pci_dmainit(device_t dev)
     }
 }
 
+char *
+ata_pcivendor2str(device_t dev)
+{
+    switch (pci_get_vendor(dev)) {
+    case ATA_ACARD_ID:          return "Acard";
+    case ATA_ACER_LABS_ID:      return "AcerLabs";
+    case ATA_AMD_ID:            return "AMD";
+    case ATA_ATI_ID:            return "ATI";
+    case ATA_CYRIX_ID:          return "Cyrix";
+    case ATA_CYPRESS_ID:        return "Cypress";
+    case ATA_HIGHPOINT_ID:      return "HighPoint";
+    case ATA_INTEL_ID:          return "Intel";
+    case ATA_ITE_ID:            return "ITE";
+    case ATA_JMICRON_ID:        return "JMicron";
+    case ATA_MARVELL_ID:        return "Marvell";
+    case ATA_NATIONAL_ID:       return "National";
+    case ATA_NETCELL_ID:        return "Netcell";
+    case ATA_NVIDIA_ID:         return "nVidia";
+    case ATA_PROMISE_ID:        return "Promise";
+    case ATA_SERVERWORKS_ID:    return "ServerWorks";
+    case ATA_SILICON_IMAGE_ID:  return "SiI";
+    case ATA_SIS_ID:            return "SiS";
+    case ATA_VIA_ID:            return "VIA";
+    case ATA_CENATEK_ID:        return "Cenatek";
+    case ATA_MICRON_ID:         return "Micron";
+    default:                    return "Generic";
+    }
+}
+
 static device_method_t ata_pci_methods[] = {
     /* device interface */
     DEVMETHOD(device_probe,             ata_pci_probe),
@@ -584,8 +608,11 @@ ata_pcichannel_attach(device_t dev)
     if (ch->dma)
 	ch->dma->alloc(dev);
 
-    if ((error = ctlr->allocate(dev)))
+    if ((error = ctlr->allocate(dev))) {
+	if (ch->dma)
+	    ch->dma->free(dev);
 	return error;
+    }
 
     return ata_attach(dev);
 }

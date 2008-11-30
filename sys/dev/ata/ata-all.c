@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-all.c,v 1.252.2.5 2006/02/19 15:18:23 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-all.c,v 1.280 2007/10/04 19:17:15 sos Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -47,9 +47,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-all.c,v 1.252.2.5 2006/02/19 15:18:23 so
 #include <machine/resource.h>
 #include <machine/bus.h>
 #include <sys/rman.h>
-#ifdef __alpha__
-#include <machine/md_var.h>
-#endif
 #include <dev/ata/ata-all.h>
 #include <ata_if.h>
 
@@ -125,7 +122,7 @@ ata_attach(device_t dev)
 
     /* reset the controller HW, the channel and device(s) */
     while (ATA_LOCKING(dev, ATA_LF_LOCK) != ch->unit)
-	tsleep(&error, PRIBIO, "ataatch", 1);
+	pause("ataatch", 1);
     ATA_RESET(dev);
     ATA_LOCKING(dev, ATA_LF_UNLOCK);
 
@@ -137,7 +134,7 @@ ata_attach(device_t dev)
 	device_printf(dev, "unable to allocate interrupt\n");
 	return ENXIO;
     }
-    if ((error = bus_setup_intr(dev, ch->r_irq, ATA_INTR_FLAGS,
+    if ((error = bus_setup_intr(dev, ch->r_irq, ATA_INTR_FLAGS, NULL,
 				(driver_intr_t *)ata_interrupt, ch, &ch->ih))) {
 	device_printf(dev, "unable to setup interrupt\n");
 	return error;
@@ -160,11 +157,10 @@ ata_detach(device_t dev)
     if (!ch->r_irq)
 	return ENXIO;
 
-    /* grap the channel lock so no new requests gets launched */ 
-    mtx_lock(&ch->state_mtx); 
-    ch->state |= ATA_STALL_QUEUE; 
-    mtx_unlock(&ch->state_mtx); 
-
+    /* grap the channel lock so no new requests gets launched */
+    mtx_lock(&ch->state_mtx);
+    ch->state |= ATA_STALL_QUEUE;
+    mtx_unlock(&ch->state_mtx);
 
     /* detach & delete all children */
     if (!device_get_children(dev, &children, &nchildren)) {
@@ -200,16 +196,16 @@ ata_reinit(device_t dev)
 
     /* poll for locking the channel */
     while (ATA_LOCKING(dev, ATA_LF_LOCK) != ch->unit)
-	tsleep(&dev, PRIBIO, "atarini", 1);
+	pause("atarini", 1);
 
     /* catch eventual request in ch->running */
     mtx_lock(&ch->state_mtx);
-    if ((request = ch->running)) 
-        callout_stop(&request->callout); 
-    ch->running = NULL; 
-    
-    /* unconditionally grap the channel lock */ 
-    ch->state |= ATA_STALL_QUEUE; 
+    if ((request = ch->running))
+	callout_stop(&request->callout);
+    ch->running = NULL;
+
+    /* unconditionally grap the channel lock */
+    ch->state |= ATA_STALL_QUEUE;
     mtx_unlock(&ch->state_mtx);
 
     /* reset the controller HW, the channel and device(s) */
@@ -219,26 +215,25 @@ ata_reinit(device_t dev)
     if (!device_get_children(dev, &children, &nchildren)) {
 	mtx_lock(&Giant);       /* newbus suckage it needs Giant */
 	for (i = 0; i < nchildren; i++) {
-            /* did any children go missing? */
+	    /* did any children go missing ? */
 	    if (children[i] && device_is_attached(children[i]) &&
 		ATA_REINIT(children[i])) {
-		    /*
-		     * if we have a running request and its device matches
-		     * this child we need to inform the request that the 
-		     * device is gone. 
-		     */
-		    if (request && request->dev == children[i]) {
-			request->result = ENXIO;
-			device_printf(request->dev,
-				      "FAILURE - device detached\n");
+		/*
+		 * if we had a running request and its device matches
+		 * this child we need to inform the request that the 
+		 * device is gone.
+		 */
+		if (request && request->dev == children[i]) {
+		    request->result = ENXIO;
+		    device_printf(request->dev, "FAILURE - device detached\n");
 
-			/* if not timeout finish request here */
-			if (!(request->flags & ATA_R_TIMEOUT))
+		    /* if not timeout finish request here */
+		    if (!(request->flags & ATA_R_TIMEOUT))
 			    ata_finish(request);
-                        request = NULL;
-		    }
-		    device_delete_child(dev, children[i]);
+		    request = NULL;
 		}
+		device_delete_child(dev, children[i]);
+	    }
 	}
 	free(children, M_TEMP);
 	mtx_unlock(&Giant);     /* newbus suckage dealt with, release Giant */
@@ -337,7 +332,7 @@ ata_interrupt(void *data)
 	}
 
 	/*
-	 * we have the HW locks, so end the tranaction for this request
+	 * we have the HW locks, so end the transaction for this request
 	 * if it finishes immediately otherwise wait for next interrupt
 	 */
 	if (ch->hw.end_transaction(request) == ATA_OP_FINISHED) {
@@ -488,10 +483,10 @@ ata_device_ioctl(device_t dev, u_long cmd, caddr_t data)
 	    request->flags |= ATA_R_WRITE;
 	ata_queue_request(request);
 	if (request->flags & ATA_R_ATAPI) {
-            bcopy(&request->u.atapi.sense, &ioc_request->u.atapi.sense,
-                sizeof(struct atapi_sense));
-        }
-        else {
+	    bcopy(&request->u.atapi.sense, &ioc_request->u.atapi.sense,
+		  sizeof(struct atapi_sense));
+	}
+	else {
 	    ioc_request->u.ata.command = request->u.ata.command;
 	    ioc_request->u.ata.feature = request->u.ata.feature;
 	    ioc_request->u.ata.lba = request->u.ata.lba;
@@ -606,14 +601,12 @@ ata_getparam(struct ata_device *atadev, int init)
 		   isprint(atadev->param.model[1]))) {
 	struct ata_params *atacap = &atadev->param;
 	char buffer[64];
-#if BYTE_ORDER == BIG_ENDIAN
 	int16_t *ptr;
 
 	for (ptr = (int16_t *)atacap;
 	     ptr < (int16_t *)atacap + sizeof(struct ata_params)/2; ptr++) {
-	    *ptr = bswap16(*ptr);
+	    *ptr = le16toh(*ptr);
 	}
-#endif
 	if (!(!strncmp(atacap->model, "FX", 2) ||
 	      !strncmp(atacap->model, "NEC", 3) ||
 	      !strncmp(atacap->model, "Pioneer", 7) ||
@@ -631,8 +624,8 @@ ata_getparam(struct ata_device *atadev, int init)
 
 	if (bootverbose)
 	    printf("ata%d-%s: pio=%s wdma=%s udma=%s cable=%s wire\n",
-                   device_get_unit(ch->dev),
-		   atadev->unit == ATA_MASTER ? "master":"slave",
+		   device_get_unit(ch->dev),
+		   atadev->unit == ATA_MASTER ? "master" : "slave",
 		   ata_mode2str(ata_pmode(atacap)),
 		   ata_mode2str(ata_wmode(atacap)),
 		   ata_mode2str(ata_umode(atacap)),
@@ -642,8 +635,8 @@ ata_getparam(struct ata_device *atadev, int init)
 	    sprintf(buffer, "%.40s/%.8s", atacap->model, atacap->revision);
 	    device_set_desc_copy(atadev->dev, buffer);
 	    if ((atadev->param.config & ATA_PROTO_ATAPI) &&
-                (atadev->param.config != ATA_CFA_MAGIC1) &&
-                (atadev->param.config != ATA_CFA_MAGIC2)) {
+		(atadev->param.config != ATA_CFA_MAGIC1) &&
+		(atadev->param.config != ATA_CFA_MAGIC2)) {
 		if (atapi_dma && ch->dma &&
 		    (atadev->param.config & ATA_DRQ_MASK) != ATA_DRQ_INTR &&
 		    ata_umode(&atadev->param) >= ATA_UDMA2)
@@ -745,7 +738,7 @@ ata_modify_if_48bit(struct ata_request *request)
 
     atadev->flags &= ~ATA_D_48BIT_ACTIVE;
 
-    if ((request->u.ata.lba >= ATA_MAX_28BIT_LBA ||
+    if (((request->u.ata.lba + request->u.ata.count) >= ATA_MAX_28BIT_LBA ||
 	 request->u.ata.count > 256) &&
 	atadev->param.support.command2 & ATA_SUPPORT_ADDRESS48) {
 
@@ -831,7 +824,7 @@ ata_udelay(int interval)
     if (1 || interval < (1000000/hz) || ata_delayed_attach)
 	DELAY(interval);
     else
-	tsleep(&interval, PRIBIO, "ataslp", interval/(1000000/hz));
+	pause("ataslp", interval/(1000000/hz));
 }
 
 char *

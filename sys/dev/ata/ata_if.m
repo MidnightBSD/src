@@ -1,4 +1,4 @@
-# Copyright (c) 2004 - 2006 Søren Schmidt <sos@FreeBSD.org>
+# Copyright (c) 2004 - 2007 Søren Schmidt <sos@FreeBSD.org>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/dev/ata/ata_if.m,v 1.5.2.1 2006/01/25 08:13:45 sos Exp $
+# $FreeBSD: src/sys/dev/ata/ata_if.m,v 1.7 2007/04/06 16:18:59 sos Exp $
 
 #include <sys/bus.h>
 #include <sys/kernel.h>
