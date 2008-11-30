@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hfa/hfa_pci.c,v 1.6 2005/05/29 04:42:20 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hfa/hfa_pci.c,v 1.7 2007/02/23 12:18:42 piso Exp $");
 
 /*
  *
@@ -161,7 +161,7 @@ hfa_pci_attach (dev)
          * Map interrupt in
          */
 	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
-	                            hfa_intr, sc, &sc->irq_ih);
+	                            NULL, hfa_intr, sc, &sc->irq_ih);
 	if (error) {
 	        device_printf(dev, "Interrupt handler setup failed.\n");
 	        goto fail;

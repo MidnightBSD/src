@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hatm/if_hatm.c,v 1.24.2.2 2005/10/09 04:15:12 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hatm/if_hatm.c,v 1.27 2007/02/23 12:18:41 piso Exp $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -1951,7 +1951,7 @@ hatm_attach(device_t dev)
 #endif
 
 	error = bus_setup_intr(dev, sc->irqres, sc->mpsafe | INTR_TYPE_NET,
-	    hatm_intr, &sc->irq_0, &sc->ih);
+	    NULL, hatm_intr, &sc->irq_0, &sc->ih);
 	if (error != 0) {
 		device_printf(dev, "could not setup interrupt\n");
 		hatm_detach(dev);

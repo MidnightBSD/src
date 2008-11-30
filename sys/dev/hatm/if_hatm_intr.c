@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hatm/if_hatm_intr.c,v 1.18.2.2 2005/08/25 05:01:10 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hatm/if_hatm_intr.c,v 1.22 2007/06/08 01:37:47 mjacob Exp $");
 
 /*
  * ForeHE driver.
@@ -110,7 +110,7 @@ static void hatm_mbuf_page_alloc(struct hatm_softc *sc, u_int group);
  * buffers because the only place we're call from is the interrupt handler.
  * Under these circumstances the code looks safe.
  */
-__inline void
+void
 hatm_ext_free(struct mbufx_free **list, struct mbufx_free *buf)
 {
 	for (;;) {
@@ -457,7 +457,7 @@ hatm_rx_buffer(struct hatm_softc *sc, u_int group, u_int handle)
 
 		if (m != NULL) {
 			m->m_ext.ref_cnt = &c0->hdr.ref_cnt;
-			m_extadd(m, (void *)c0, MBUF0_SIZE,
+			MEXTADD(m, (void *)c0, MBUF0_SIZE,
 			    hatm_mbuf0_free, sc, M_PKTHDR, EXT_EXTREF);
 			m->m_data += MBUF0_OFFSET;
 		} else
@@ -481,7 +481,7 @@ hatm_rx_buffer(struct hatm_softc *sc, u_int group, u_int handle)
 
 		if (m != NULL) {
 			m->m_ext.ref_cnt = &c1->hdr.ref_cnt;
-			m_extadd(m, (void *)c1, MBUF1_SIZE,
+			MEXTADD(m, (void *)c1, MBUF1_SIZE,
 			    hatm_mbuf1_free, sc, M_PKTHDR, EXT_EXTREF);
 			m->m_data += MBUF1_OFFSET;
 		} else
