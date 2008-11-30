@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fdc/fdc.c,v 1.307.2.2 2006/03/07 15:50:25 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fdc/fdc.c,v 1.317 2007/02/27 17:16:52 jhb Exp $");
 
 #include "opt_fdc.h"
 
@@ -69,6 +69,7 @@ __FBSDID("$FreeBSD: src/sys/dev/fdc/fdc.c,v 1.307.2.2 2006/03/07 15:50:25 jhb Ex
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/rman.h>
 #include <sys/sysctl.h>
@@ -191,6 +192,7 @@ static struct fd_type *fd_native_types[] = {
 #define	FDO_MOEN3	0x80	/*  motor enable drive 3 */
 
 #define	FDSTS	4	/* NEC 765 Main Status Register (R) */
+#define FDDSR	4	/* Data Rate Select Register (W) */
 #define	FDDATA	5	/* NEC 765 Data Register (R/W) */
 #define	FDCTL	7	/* Control Register (W) */
 
@@ -259,6 +261,7 @@ struct fd_data {
 #define FD_NOT_VALID -2
 
 static driver_intr_t fdc_intr;
+static driver_filter_t fdc_intr_fast;
 static void fdc_reset(struct fdc_data *);
 
 SYSCTL_NODE(_debug, OID_AUTO, fdc, CTLFLAG_RW, 0, "fdc driver");
@@ -341,6 +344,13 @@ fdsts_rd(struct fdc_data *fdc)
 {
 
 	return fdregrd(fdc, FDSTS);
+}
+
+static void
+fddsr_wr(struct fdc_data *fdc, u_int8_t v)
+{
+
+	fdregwr(fdc, FDDSR, v);
 }
 
 static void
@@ -494,11 +504,16 @@ fdc_reset(struct fdc_data *fdc)
 {
 	int i, r[10];
 
-	/* Try a reset, keep motor on */
-	fdout_wr(fdc, fdc->fdout & ~(FDO_FRST|FDO_FDMAEN));
-	DELAY(100);
-	/* enable FDC, but defer interrupts a moment */
-	fdout_wr(fdc, fdc->fdout & ~FDO_FDMAEN);
+	if (fdc->fdct == FDC_ENHANCED) {
+		/* Try a software reset, default precomp, and 500 kb/s */
+		fddsr_wr(fdc, I8207X_DSR_SR);
+	} else {
+		/* Try a hardware reset, keep motor on */
+		fdout_wr(fdc, fdc->fdout & ~(FDO_FRST|FDO_FDMAEN));
+		DELAY(100);
+		/* enable FDC, but defer interrupts a moment */
+		fdout_wr(fdc, fdc->fdout & ~FDO_FDMAEN);
+	}
 	DELAY(100);
 	fdout_wr(fdc, fdc->fdout);
 
@@ -508,7 +523,7 @@ fdc_reset(struct fdc_data *fdc)
 
 	if (fdc->fdct == FDC_ENHANCED) {
 		if (fdc_cmd(fdc, 4,
-		    I8207X_CONFIGURE,
+		    I8207X_CONFIG,
 		    0,
 		    0x40 |			/* Enable Implied Seek */
 		    0x10 |			/* Polling disabled */
@@ -519,7 +534,7 @@ fdc_reset(struct fdc_data *fdc)
 			    " CONFIGURE failed in reset\n");
 		if (debugflags & 1) {
 			if (fdc_cmd(fdc, 1,
-			    0x0e,			/* DUMPREG */
+			    I8207X_DUMPREG,
 			    10, &r[0], &r[1], &r[2], &r[3], &r[4],
 			    &r[5], &r[6], &r[7], &r[8], &r[9]))
 				device_printf(fdc->fdc_dev,
@@ -672,6 +687,14 @@ fdc_intr(void *arg)
 	wakeup(arg);
 }
 
+static int
+fdc_intr_fast(void *arg)
+{
+
+	wakeup(arg);
+	return(FILTER_HANDLED);
+}
+
 /*
  * fdc_pio(): perform programmed IO read/write for YE PCMCIA floppy.
  */
@@ -745,6 +768,9 @@ fdc_worker(struct fdc_data *fdc)
 		(fdc->retry >= retries || (fd->options & FDOPT_NORETRY))) {
 		if ((debugflags & 4))
 			printf("Too many retries (EIO)\n");
+		mtx_lock(&fdc->fdc_mtx);
+		fd->flags |= FD_EMPTY;
+		mtx_unlock(&fdc->fdc_mtx);
 		return (fdc_biodone(fdc, EIO));
 	}
 
@@ -764,7 +790,7 @@ fdc_worker(struct fdc_data *fdc)
 	if (fdc->flags & FDC_NEEDS_RESET) {
 		fdc->flags &= ~FDC_NEEDS_RESET;
 		fdc_reset(fdc);
-		msleep(fdc, NULL, PRIBIO, "fdcrst", hz);
+		tsleep(fdc, PRIBIO, "fdcrst", hz);
 		/* Discard results */
 		for (i = 0; i < 4; i++)
 			fdc_sense_int(fdc, &st0, &cyl);
@@ -804,7 +830,10 @@ fdc_worker(struct fdc_data *fdc)
 
 	/* Select drive, setup params */
 	fd_select(fd);
-	fdctl_wr(fdc, fd->ft->trans);
+	if (fdc->fdct == FDC_ENHANCED)
+		fddsr_wr(fdc, fd->ft->trans);
+	else
+		fdctl_wr(fdc, fd->ft->trans);
 
 	if (bp->bio_cmd & BIO_PROBE) {
 
@@ -826,7 +855,7 @@ fdc_worker(struct fdc_data *fdc)
 		retry_line = __LINE__;
 		if (fdc_cmd(fdc, 2, NE7CMD_RECAL, fd->fdsu, 0))
 			return (1);
-		msleep(fdc, NULL, PRIBIO, "fdrecal", hz);
+		tsleep(fdc, PRIBIO, "fdrecal", hz);
 		retry_line = __LINE__;
 		if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
 			return (1); /* XXX */
@@ -838,7 +867,7 @@ fdc_worker(struct fdc_data *fdc)
 		retry_line = __LINE__;
 		if (fdc_cmd(fdc, 3, NE7CMD_SEEK, fd->fdsu, 1, 0))
 			return (1);
-		msleep(fdc, NULL, PRIBIO, "fdseek", hz);
+		tsleep(fdc, PRIBIO, "fdseek", hz);
 		retry_line = __LINE__;
 		if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
 			return (1); /* XXX */
@@ -927,7 +956,7 @@ fdc_worker(struct fdc_data *fdc)
 		retry_line = __LINE__;
 		if (fdc_cmd(fdc, 2, NE7CMD_RECAL, fd->fdsu, 0))
 			return (1);
-		msleep(fdc, NULL, PRIBIO, "fdrecal", hz);
+		tsleep(fdc, PRIBIO, "fdrecal", hz);
 		retry_line = __LINE__;
 		if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
 			return (1); /* XXX */
@@ -938,7 +967,7 @@ fdc_worker(struct fdc_data *fdc)
 		fd->track = 0;
 		/* let the heads settle */
 		if (settle)
-			msleep(fdc->fd, NULL, PRIBIO, "fdhdstl", settle);
+			tsleep(fdc->fd, PRIBIO, "fdhdstl", settle);
 	}
 
 	/*
@@ -954,7 +983,7 @@ fdc_worker(struct fdc_data *fdc)
 		retry_line = __LINE__;
 		if (fdc_cmd(fdc, 3, NE7CMD_SEEK, fd->fdsu, descyl, 0))
 			return (1);
-		msleep(fdc, NULL, PRIBIO, "fdseek", hz);
+		tsleep(fdc, PRIBIO, "fdseek", hz);
 		retry_line = __LINE__;
 		if (fdc_sense_int(fdc, &st0, &cyl) == FD_NOT_VALID)
 			return (1); /* XXX */
@@ -965,7 +994,7 @@ fdc_worker(struct fdc_data *fdc)
 		}
 		/* let the heads settle */
 		if (settle)
-			msleep(fdc->fd, NULL, PRIBIO, "fdhdstl", settle);
+			tsleep(fdc->fd, PRIBIO, "fdhdstl", settle);
 	}
 	fd->track = cylinder;
 
@@ -1051,7 +1080,7 @@ fdc_worker(struct fdc_data *fdc)
 	}
 
 	/* Wait for interrupt */
-	i = msleep(fdc, NULL, PRIBIO, "fddata", hz);
+	i = tsleep(fdc, PRIBIO, "fddata", hz);
 
 	/* PIO if the read looks good */
 	if (i == 0 && (fdc->flags & FDC_NODMA) && (bp->bio_cmd & BIO_READ))
@@ -1176,7 +1205,6 @@ fdc_thread(void *arg)
 		mtx_lock(&fdc->fdc_mtx);
 	}
 	fdc->flags &= ~(FDC_KTHREAD_EXIT | FDC_KTHREAD_ALIVE);
-	wakeup(&fdc->fdc_thread);
 	mtx_unlock(&fdc->fdc_mtx);
 
 	kthread_exit(0);
@@ -1250,7 +1278,7 @@ fdmisccmd(struct fd_data *fd, u_int cmd, void *data)
 	fd_enqueue(fd, bp);
 
 	do {
-		msleep(bp, NULL, PRIBIO, "fdwait", hz);
+		tsleep(bp, PRIBIO, "fdwait", hz);
 	} while (!(bp->bio_flags & BIO_DONE));
 	error = bp->bio_error;
 
@@ -1470,8 +1498,9 @@ fd_ioctl(struct g_provider *pp, u_long cmd, void *data, int fflag, struct thread
 		return (0);
 
 	case FD_CLRERR:
-		if (suser(td) != 0)
-			return (EPERM);
+		error = priv_check(td, PRIV_DRIVER);
+		if (error)
+			return (error);
 		fd->fdc->fdc_errs = 0;
 		return (0);
 
@@ -1681,8 +1710,8 @@ fdc_detach(device_t dev)
 		return (error);
 
 	/* kill worker thread */
-	fdc->flags |= FDC_KTHREAD_EXIT;
 	mtx_lock(&fdc->fdc_mtx);
+	fdc->flags |= FDC_KTHREAD_EXIT;
 	wakeup(&fdc->head);
 	while ((fdc->flags & FDC_KTHREAD_ALIVE) != 0)
 		msleep(&fdc->fdc_thread, &fdc->fdc_mtx, PRIBIO, "fdcdet", 0);
@@ -1737,9 +1766,11 @@ fdc_attach(device_t dev)
 		return (error);
 	}
 	error = bus_setup_intr(dev, fdc->res_irq,
-	    INTR_TYPE_BIO | INTR_ENTROPY | INTR_MPSAFE |
-	    ((fdc->flags & FDC_NOFAST) ? 0 : INTR_FAST),
-	    fdc_intr, fdc, &fdc->fdc_intr);
+	    INTR_TYPE_BIO | INTR_ENTROPY | 
+	    ((fdc->flags & FDC_NOFAST) ? INTR_MPSAFE : 0),		       
+            ((fdc->flags & FDC_NOFAST) ? NULL : fdc_intr_fast), 	    
+	    ((fdc->flags & FDC_NOFAST) ? fdc_intr : NULL), 
+			       fdc, &fdc->fdc_intr);
 	if (error) {
 		device_printf(dev, "cannot setup interrupt\n");
 		return (error);
