@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/cy/cyvar.h,v 1.1 2004/05/01 17:44:03 bde Exp $
+ * $FreeBSD: src/sys/dev/cy/cyvar.h,v 1.2 2007/02/23 12:18:37 piso Exp $
  */
 
 typedef u_char volatile *cy_addr;
@@ -32,5 +32,5 @@ extern	devclass_t	cy_devclass;
 extern	char		cy_driver_name[];
 
 void	*cyattach_common(cy_addr cy_iobase, int cy_align);
-driver_intr_t	cyintr;
+driver_filter_t	cyintr;
 int	cy_units(cy_addr cy_iobase, int cy_align);

@@ -23,13 +23,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.45.2.2 2006/03/10 19:37:31 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.57 2007/07/27 11:59:56 rwatson Exp $");
 
 #include <sys/param.h>
 
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/mbuf.h>
 #include <sys/sockio.h>
@@ -51,7 +52,6 @@ __FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.45.2.2 2006/03/10 19:37:31 jhb Ex
 #include <net/if.h>
 #include <machine/cpufunc.h>
 #include <machine/cserial.h>
-#include <machine/clock.h>
 #include <machine/resource.h>
 #include <dev/cx/machdep.h>
 #include <dev/cx/cxddk.h>
@@ -229,7 +229,18 @@ static cx_board_t *adapter [NCX];
 static drv_t *channel [NCX*NCHAN];
 static struct callout led_timo [NCX];
 static struct callout timeout_handle;
-extern struct cdevsw cx_cdevsw;
+
+static int cx_open (struct cdev *dev, int flag, int mode, struct thread *td);
+static int cx_close (struct cdev *dev, int flag, int mode, struct thread *td);
+static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td);
+static struct cdevsw cx_cdevsw = {
+	.d_version  = D_VERSION,
+	.d_open     = cx_open,
+	.d_close    = cx_close,
+	.d_ioctl    = cx_ioctl,
+	.d_name     = "cx",
+	.d_flags    = D_TTY | D_NEEDGIANT,
+};
 
 static int MY_SOFT_INTR;
 
@@ -769,7 +780,7 @@ static int cx_attach (device_t dev)
 	s = splhigh ();
 	if (bus_setup_intr (dev, bd->irq_res,
 			   INTR_TYPE_NET|(cx_mpsafenet?INTR_MPSAFE:0),
-			   cx_intr, bd, &bd->intrhand)) {
+			   NULL, cx_intr, bd, &bd->intrhand)) {
 		printf ("cx%d: Can't setup irq %ld\n", unit, irq);
 		bd->board = 0;
 		b->sys = 0;
@@ -887,8 +898,7 @@ static int cx_attach (device_t dev)
 		cx_register_modem (c, &cx_modem);
 		CX_UNLOCK (bd);
 
-		ttycreate(d->tty, NULL, 0, MINOR_CALLOUT,
-		    "x%r%r", b->num, c->num);
+		ttycreate(d->tty, TS_CALLOUT, "x%r%r", b->num, c->num);
 		d->devt = make_dev (&cx_cdevsw, b->num*NCHAN + c->num + 64, UID_ROOT, GID_WHEEL, 0600, "cx%d", b->num*NCHAN + c->num);
 		d->devt->si_drv1 = d;
 		callout_init (&d->dcd_timeout_handle,
@@ -947,13 +957,10 @@ static int cx_detach (device_t dev)
 	}
 	CX_UNLOCK (bd);
 	bus_teardown_intr (dev, bd->irq_res, bd->intrhand);
-	bus_deactivate_resource (dev, SYS_RES_IRQ, bd->irq_rid, bd->irq_res);
 	bus_release_resource (dev, SYS_RES_IRQ, bd->irq_rid, bd->irq_res);
 	
-	bus_deactivate_resource (dev, SYS_RES_DRQ, bd->drq_rid, bd->drq_res);
 	bus_release_resource (dev, SYS_RES_DRQ, bd->drq_rid, bd->drq_res);
 	
-	bus_deactivate_resource (dev, SYS_RES_IOPORT, bd->base_rid, bd->irq_res);
 	bus_release_resource (dev, SYS_RES_IOPORT, bd->base_rid, bd->base_res);
 
 	CX_LOCK (bd);
@@ -1185,8 +1192,7 @@ static void cx_send (drv_t *d)
 		if (! m)
 			return;
 #ifndef NETGRAPH
-		if (d->ifp->if_bpf)
-			BPF_MTAP (d->ifp, m);
+		BPF_MTAP (d->ifp, m);
 #endif
 		len = m_length (m, NULL);
 		if (! m->m_next)
@@ -1342,8 +1348,7 @@ static void cx_receive (cx_chan_t *c, char *data, int len)
 	m->m_pkthdr.rcvif = d->ifp;
 	/* Check if there's a BPF listener on this interface.
 	 * If so, hand off the raw packet to bpf. */
-	if (d->ifp->if_bpf)
-		BPF_TAP (d->ifp, data, len);
+	BPF_TAP (d->ifp, data, len);
 	IF_ENQUEUE (&d->queue, m);
 #endif
 }
@@ -1623,7 +1628,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETPORT:
 		CX_DEBUG2 (d, ("ioctl: setproto\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 
@@ -1649,7 +1654,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETPROTO:
 		CX_DEBUG2 (d, ("ioctl: setproto\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_ASYNC)
@@ -1686,7 +1691,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETKEEPALIVE:
 		CX_DEBUG2 (d, ("ioctl: setkeepalive\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if ((IFP2SP(d->ifp)->pp_flags & PP_FR) ||
@@ -1716,7 +1721,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETMODE:
 		CX_DEBUG2 (d, ("ioctl: setmode\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 
@@ -1769,7 +1774,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_CLRSTAT:
 		CX_DEBUG2 (d, ("ioctl: clrstat\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splhigh ();
@@ -1801,7 +1806,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETBAUD:
 		CX_DEBUG2 (d, ("ioctl: setbaud\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_ASYNC)
@@ -1827,7 +1832,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETLOOP:
 		CX_DEBUG2 (d, ("ioctl: setloop\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_ASYNC)
@@ -1853,7 +1858,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETDPLL:
 		CX_DEBUG2 (d, ("ioctl: setdpll\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_ASYNC)
@@ -1879,7 +1884,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETNRZI:
 		CX_DEBUG2 (d, ("ioctl: setnrzi\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_ASYNC)
@@ -1903,7 +1908,7 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETDEBUG:
 		CX_DEBUG2 (d, ("ioctl: setdebug\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splhigh ();
@@ -2265,15 +2270,6 @@ static void cx_modem (cx_chan_t *c)
 	callout_reset (&d->dcd_timeout_handle, hz/2, cx_carrier, d);
 }
 
-static struct cdevsw cx_cdevsw = {
-	.d_version  = D_VERSION,
-	.d_open     = cx_open,
-	.d_close    = cx_close,
-	.d_ioctl    = cx_ioctl,
-	.d_name     = "cx",
-	.d_flags    = D_TTY | D_NEEDGIANT,
-};
-
 #ifdef NETGRAPH
 static int ng_cx_constructor (node_p node)
 {
@@ -2527,11 +2523,6 @@ static int cx_modevent (module_t mod, int type, void *unused)
 {
 	static int load_count = 0;
 
-	if (!debug_mpsafenet && cx_mpsafenet) {
-		printf ("WORNING! Network stack is not MPSAFE. "
-			"Turning off debug.cx.mpsafenet.\n");
-		cx_mpsafenet = 0;
-	}
 	if (cx_mpsafenet)
 		cx_cdevsw.d_flags &= ~D_NEEDGIANT;
 

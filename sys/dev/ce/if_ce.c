@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ce/if_ce.c,v 1.3.6.1 2006/03/10 22:57:36 rik Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ce/if_ce.c,v 1.9 2007/07/27 11:59:56 rwatson Exp $");
 
 #include <sys/param.h>
 
@@ -29,6 +29,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ce/if_ce.c,v 1.3.6.1 2006/03/10 22:57:36 rik Exp
 #if NPCI > 0
 
 #include <sys/ucred.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
@@ -68,13 +69,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ce/if_ce.c,v 1.3.6.1 2006/03/10 22:57:36 rik Exp
 #   include <net/if_types.h>
 #   include <net/if_sppp.h>
 #   define PP_CISCO IFF_LINK2
-#   if __FreeBSD_version < 500000
-#	include <bpf.h>
-#	define NBPFILTER NBPF
-#   else
-#	include "opt_bpf.h"
-#	define NBPFILTER DEV_BPF
-#   endif
 #   include <net/bpf.h>
 #endif
 #include <dev/cx/machdep.h>
@@ -666,7 +660,7 @@ static int ce_attach (device_t dev)
 #else
 				INTR_TYPE_NET,
 #endif
-				ce_intr, bd, &bd->ce_intrhand);
+				NULL, ce_intr, bd, &bd->ce_intrhand);
 	if (error) {
 		printf ("ce%d: cannot set up irq\n", unit);
 		bus_release_resource (dev, SYS_RES_IRQ, 0, bd->ce_irq);
@@ -843,10 +837,9 @@ static int ce_detach (device_t dev)
 		if (! d || ! d->chan)
 			continue;
 #ifndef NETGRAPH
-#if __FreeBSD_version >= 410000 && NBPFILTER > 0
 		/* Detach from the packet filter list of interfaces. */
 		bpfdetach (d->ifp);
-#endif
+
 		/* Detach from the sync PPP list. */
 		sppp_detach (d->ifp);
 
@@ -888,7 +881,6 @@ static int ce_detach (device_t dev)
 
 	/* Disable the interrupt request. */
 	bus_teardown_intr (dev, bd->ce_irq, bd->ce_intrhand);
-	bus_deactivate_resource (dev, SYS_RES_IRQ, 0, bd->ce_irq);
 	bus_release_resource (dev, SYS_RES_IRQ, 0, bd->ce_irq);
 	TAU32_DestructiveHalt (b->ddk.pControllerObject, 0);
 	bus_release_resource (dev, SYS_RES_MEMORY, PCIR_BAR(0), bd->ce_res);
@@ -1069,10 +1061,10 @@ static void ce_send (drv_t *d)
 		if (! m)
 			return;
 #ifndef NETGRAPH
-		if (d->ifp->if_bpf)
 #if __FreeBSD_version >= 500000
-			BPF_MTAP (d->ifp, m);
+		BPF_MTAP (d->ifp, m);
 #else
+		if (d->ifp->if_bpf)
 			bpf_mtap (d->ifp, m);
 #endif
 #endif
@@ -1191,10 +1183,10 @@ static void ce_receive (ce_chan_t *c, unsigned char *data, int len)
 	m->m_pkthdr.rcvif = d->ifp;
 	/* Check if there's a BPF listener on this interface.
 	 * If so, hand off the raw packet to bpf. */
-	if (d->ifp->if_bpf)
 #if __FreeBSD_version >= 500000
-		BPF_TAP (d->ifp, data, len);
+	BPF_TAP (d->ifp, data, len);
 #else
+	if (d->ifp->if_bpf)
 		bpf_tap (d->ifp, data, len);
 #endif
 	IF_ENQUEUE(&d->rqueue, m);
@@ -1341,9 +1333,11 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else /* __FreeBSD_version >= 500000 */
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
-#endif /* __FreeBSD_version >= 500000 */
+#else
+		error = priv_check (td, PRIV_DRIVER);
+#endif
 		if (error)
 			return error;
 #if __FreeBSD_version >= 600034
@@ -1380,8 +1374,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1408,8 +1404,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1426,8 +1424,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		CE_DEBUG2 (d, ("ioctl: setcfg\n"));
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1526,8 +1526,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1560,8 +1562,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1586,8 +1590,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1608,8 +1614,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1634,8 +1642,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1658,8 +1668,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1686,8 +1698,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1708,8 +1722,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1734,8 +1750,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1758,8 +1776,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1784,8 +1804,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1810,8 +1832,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1836,8 +1860,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1867,8 +1893,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1892,8 +1920,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1909,8 +1939,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -1945,8 +1977,10 @@ static int ce_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		/* Only for superuser! */
 #if __FreeBSD_version < 500000
 		error = suser (p);
-#else
+#elsif __FreeBSD_version < 700000
 		error = suser (td);
+#else
+		error = priv_check (td, PRIV_DRIVER);
 #endif
 		if (error)
 			return error;
@@ -2569,13 +2603,6 @@ static int ce_modevent (module_t mod, int type, void *unused)
 
 #if __FreeBSD_version < 500000
 	dev = makedev (CDEV_MAJOR, 0);
-#endif
-#if __FreeBSD_version >= 501114
-	if (!debug_mpsafenet && ce_mpsafenet) {
-		printf ("WORNING! Network stack is not MPSAFE. "
-			"Turning off debug.ce.mpsafenet.\n");
-		ce_mpsafenet = 0;
-	}
 #endif
 #if __FreeBSD_version >= 502103
 	if (ce_mpsafenet)

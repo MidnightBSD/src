@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cy/cy.c,v 1.160.2.1 2006/03/10 19:37:31 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cy/cy.c,v 1.163 2007/02/23 12:18:36 piso Exp $");
 
 #include "opt_compat.h"
 
@@ -433,7 +433,7 @@ cyattach_common(cy_addr cy_iobase, int cy_align)
 				swi_add(&clk_intr_event, "cy", cypoll, NULL, SWI_CLOCK, 0,
 					&cy_slow_ih);
 			}
-			ttycreate(tp, NULL, 0, MINOR_CALLOUT, "c%r%r",
+			ttycreate(tp, TS_CALLOUT, "c%r%r",
 			    adapter, unit % CY_MAX_PORTS);
 		}
 	}
@@ -644,7 +644,7 @@ cyinput(struct com_s *com)
 			  com->mcr_image |= com->mcr_rts);
 }
 
-void
+int
 cyintr(void *vcom)
 {
 	struct com_s	*basecom;
@@ -671,7 +671,7 @@ cyintr(void *vcom)
 		/* poll to see if it has any work */
 		status = cd_inb(iobase, CD1400_SVRR, cy_align);
 		if (status == 0)
-			continue;
+			continue; // XXX - FILTER_STRAY?
 #ifdef CyDebug
 		++cy_svrr_probes;
 #endif
@@ -1111,6 +1111,7 @@ terminate_tx_service:
 	swi_sched(cy_slow_ih, SWI_DELAY);
 
 	COM_UNLOCK();
+	return (FILTER_HANDLED);
 }
 
 static void

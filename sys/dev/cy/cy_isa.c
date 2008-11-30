@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cy/cy_isa.c,v 1.146 2004/05/30 20:08:29 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cy/cy_isa.c,v 1.148 2007/02/23 12:18:36 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -74,7 +74,7 @@ cy_isa_probe(device_t dev)
 {
 	struct resource *mem_res;
 	cy_addr iobase;
-	int mem_rid;
+	int error, mem_rid;
 
 	if (isa_get_logicalid(dev) != 0)	/* skip PnP probes */
 		return (ENXIO);
@@ -96,8 +96,9 @@ cy_isa_probe(device_t dev)
 	cy_outb(iobase, CY_CLEAR_INTR, 0, 0);
 	DELAY(500);
 
+	error = (cy_units(iobase, 0) == 0 ? ENXIO : 0);
 	bus_release_resource(dev, SYS_RES_MEMORY, mem_rid, mem_res);
-	return (cy_units(iobase, 0) == 0 ? ENXIO : 0);
+	return (error);
 }
 
 static int
@@ -132,8 +133,8 @@ cy_isa_attach(device_t dev)
 		device_printf(dev, "interrupt resource allocation failed\n");
 		goto fail;
 	}
-	if (bus_setup_intr(dev, irq_res, INTR_TYPE_TTY | INTR_FAST, cyintr,
-	    vsc, &irq_cookie) != 0) {
+	if (bus_setup_intr(dev, irq_res, INTR_TYPE_TTY, 
+	    cyintr, NULL, vsc, &irq_cookie) != 0) {	    
 		device_printf(dev, "interrupt setup failed\n");
 		goto fail;
 	}

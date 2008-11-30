@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cy/cy_pci.c,v 1.37 2005/03/05 18:30:10 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cy/cy_pci.c,v 1.38 2007/02/23 12:18:37 piso Exp $");
 
 #include "opt_cy_pci_fastintr.h"
 
@@ -145,14 +145,14 @@ cy_pci_attach(dev)
 		goto fail;
 	}
 #ifdef CY_PCI_FASTINTR
-	irq_setup = bus_setup_intr(dev, irq_res, INTR_TYPE_TTY | INTR_FAST,
-	    cyintr, vsc, &irq_cookie);
+	irq_setup = bus_setup_intr(dev, irq_res, INTR_TYPE_TTY,
+	    cyintr, NULL, vsc, &irq_cookie);
 #else
 	irq_setup = ENXIO;
 #endif
 	if (irq_setup != 0)
 		irq_setup = bus_setup_intr(dev, irq_res, INTR_TYPE_TTY,
-		    cyintr, vsc, &irq_cookie);
+		    NULL, (driver_intr_t *)cyintr, vsc, &irq_cookie);
 	if (irq_setup != 0) {
 		device_printf(dev, "interrupt setup failed\n");
 		goto fail;
