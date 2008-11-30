@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_x86.c,v 1.2.2.1 2005/08/26 19:49:32 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_x86.c,v 1.5.2.1 2007/12/03 10:50:58 jkoshy Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -91,7 +91,7 @@ pmc_intel_initialize(void)
 #if	defined(__i386__) || defined(__amd64__)
 	case 0xF00:		/* P4 */
 		model = ((cpu_id & 0xF0000) >> 12) | ((cpu_id & 0xF0) >> 4);
-		if (model >= 0 && model <= 4) /* known models */
+		if (model >= 0 && model <= 6) /* known models */
 			cputype = PMC_CPU_INTEL_PIV;
 		break;
 	}

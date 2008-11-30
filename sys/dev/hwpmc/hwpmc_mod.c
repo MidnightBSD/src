@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/hwpmc/hwpmc_mod.c,v 1.10.2.7 2006/06/16 22:11:55 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_mod.c,v 1.29 2007/06/05 00:00:50 jeff Exp $");
 
 #include <sys/param.h>
 #include <sys/eventhandler.h>
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/hwpmc/hwpmc_mod.c,v 1.10.2.7 200
 #include <sys/pmc.h>
 #include <sys/pmckern.h>
 #include <sys/pmclog.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/queue.h>
 #include <sys/resourcevar.h>
@@ -52,6 +53,8 @@ __FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/hwpmc/hwpmc_mod.c,v 1.10.2.7 200
 #include <sys/sysent.h>
 #include <sys/systm.h>
 #include <sys/vnode.h>
+
+#include <sys/linker.h>		/* needs to be after <sys/malloc.h> */
 
 #include <machine/atomic.h>
 #include <machine/md_var.h>
@@ -150,7 +153,7 @@ static LIST_HEAD(, pmc_owner)			pmc_ss_owners;
  * Prototypes
  */
 
-#if	DEBUG
+#ifdef	DEBUG
 static int	pmc_debugflags_sysctl_handler(SYSCTL_HANDLER_ARGS);
 static int	pmc_debugflags_parse(char *newstr, char *fence);
 #endif
@@ -202,7 +205,7 @@ static void	pmc_unlink_target_process(struct pmc *pmc,
 
 SYSCTL_NODE(_kern, OID_AUTO, hwpmc, CTLFLAG_RW, 0, "HWPMC parameters");
 
-#if	DEBUG
+#ifdef	DEBUG
 struct pmc_debugflags pmc_debugflags = PMC_DEBUG_DEFAULT_FLAGS;
 char	pmc_debugstr[PMC_DEBUG_STRSIZE];
 TUNABLE_STR(PMC_SYSCTL_NAME_PREFIX "debugflags", pmc_debugstr,
@@ -249,8 +252,6 @@ SYSCTL_INT(_kern_hwpmc, OID_AUTO, mtxpoolsize, CTLFLAG_TUN|CTLFLAG_RD,
  * if system-wide measurements need to be taken concurrently with other
  * per-process measurements.  This feature is turned off by default.
  */
-
-SYSCTL_DECL(_security_bsd);
 
 static int pmc_unprivileged_syspmcs = 0;
 TUNABLE_INT("security.bsd.unprivileged_syspmcs", &pmc_unprivileged_syspmcs);
@@ -301,7 +302,7 @@ static moduledata_t pmc_mod = {
 DECLARE_MODULE(pmc, pmc_mod, SI_SUB_SMP, SI_ORDER_ANY);
 MODULE_VERSION(pmc, PMC_VERSION);
 
-#if	DEBUG
+#ifdef	DEBUG
 enum pmc_dbgparse_state {
 	PMCDS_WS,		/* in whitespace */
 	PMCDS_MAJOR,		/* seen a major keyword */
@@ -494,33 +495,32 @@ pmc_debugflags_sysctl_handler(SYSCTL_HANDLER_ARGS)
  *
  * The driver uses four locking strategies for its operation:
  *
- * - There is a 'global' SX lock "pmc_sx" that is used to protect
- *   the its 'meta-data'.
+ * - The global SX lock "pmc_sx" is used to protect internal
+ *   data structures.
  *
- *   Calls into the module (via syscall() or by the kernel) start with
- *   this lock being held in exclusive mode.  Depending on the requested
- *   operation, the lock may be downgraded to 'shared' mode to allow
- *   more concurrent readers into the module.
+ *   Calls into the module by syscall() start with this lock being
+ *   held in exclusive mode.  Depending on the requested operation,
+ *   the lock may be downgraded to 'shared' mode to allow more
+ *   concurrent readers into the module.  Calls into the module from
+ *   other parts of the kernel acquire the lock in shared mode.
  *
  *   This SX lock is held in exclusive mode for any operations that
  *   modify the linkages between the driver's internal data structures.
  *
  *   The 'pmc_hook' function pointer is also protected by this lock.
  *   It is only examined with the sx lock held in exclusive mode.  The
- *   kernel module is allowed to be unloaded only with the sx lock
- *   held in exclusive mode.  In normal syscall handling, after
- *   acquiring the pmc_sx lock we first check that 'pmc_hook' is
- *   non-null before proceeding.  This prevents races between the
- *   thread unloading the module and other threads seeking to use the
- *   module.
+ *   kernel module is allowed to be unloaded only with the sx lock held
+ *   in exclusive mode.  In normal syscall handling, after acquiring the
+ *   pmc_sx lock we first check that 'pmc_hook' is non-null before
+ *   proceeding.  This prevents races between the thread unloading the module
+ *   and other threads seeking to use the module.
  *
  * - Lookups of target process structures and owner process structures
  *   cannot use the global "pmc_sx" SX lock because these lookups need
  *   to happen during context switches and in other critical sections
  *   where sleeping is not allowed.  We protect these lookup tables
  *   with their own private spin-mutexes, "pmc_processhash_mtx" and
- *   "pmc_ownerhash_mtx".  These are 'leaf' mutexes, in that no other
- *   lock is acquired with these locks held.
+ *   "pmc_ownerhash_mtx".
  *
  * - Interrupt handlers work in a lock free manner.  At interrupt
  *   time, handlers look at the PMC pointer (phw->phw_pmc) configured
@@ -570,9 +570,17 @@ pmc_debugflags_sysctl_handler(SYSCTL_HANDLER_ARGS)
  *     We prevent further scheduling of the PMC by marking it as in
  *     state 'DELETED'.  If the runcount of the PMC is non-zero then
  *     this PMC is currently running on a CPU somewhere.  The thread
- *     doing the PMCRELEASE operation waits by repeatedly doing an
- *     tsleep() till the runcount comes to zero.
+ *     doing the PMCRELEASE operation waits by repeatedly doing a
+ *     pause() till the runcount comes to zero.
  *
+ * The contents of a PMC descriptor (struct pmc) are protected using
+ * a spin-mutex.  In order to save space, we use a mutex pool.
+ *
+ * In terms of lock types used by witness(4), we use:
+ * - Type "pmc-sx", used by the global SX lock.
+ * - Type "pmc-sleep", for sleep mutexes used by logger threads.
+ * - Type "pmc-per-proc", for protecting PMC owner descriptors.
+ * - Type "pmc-leaf", used for all other spin mutexes.
  */
 
 /*
@@ -583,10 +591,10 @@ static void
 pmc_save_cpu_binding(struct pmc_binding *pb)
 {
 	PMCDBG(CPU,BND,2, "%s", "save-cpu");
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	pb->pb_bound = sched_is_bound(curthread);
 	pb->pb_cpu   = curthread->td_oncpu;
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 	PMCDBG(CPU,BND,2, "save-cpu cpu=%d", pb->pb_cpu);
 }
 
@@ -599,12 +607,12 @@ pmc_restore_cpu_binding(struct pmc_binding *pb)
 {
 	PMCDBG(CPU,BND,2, "restore-cpu curcpu=%d restore=%d",
 	    curthread->td_oncpu, pb->pb_cpu);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	if (pb->pb_bound)
 		sched_bind(curthread, pb->pb_cpu);
 	else
 		sched_unbind(curthread);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 	PMCDBG(CPU,BND,2, "%s", "restore-cpu done");
 }
 
@@ -623,9 +631,9 @@ pmc_select_cpu(int cpu)
 	    "disabled CPU %d", __LINE__, cpu));
 
 	PMCDBG(CPU,SEL,2, "select-cpu cpu=%d", cpu);
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_bind(curthread, cpu);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
 
 	KASSERT(curthread->td_oncpu == cpu,
 	    ("[pmc,%d] CPU not bound [cpu=%d, curr=%d]", __LINE__,
@@ -637,7 +645,7 @@ pmc_select_cpu(int cpu)
 /*
  * Force a context switch.
  *
- * We do this by tsleep'ing for 1 tick -- invoking mi_switch() is not
+ * We do this by pause'ing for 1 tick -- invoking mi_switch() is not
  * guaranteed to force a context switch.
  */
 
@@ -645,7 +653,7 @@ static void
 pmc_force_context_switch(void)
 {
 
-	(void) tsleep((void *) pmc_force_context_switch, 0, "pmcctx", 1);
+	pause("pmcctx", 1);
 }
 
 /*
@@ -750,7 +758,7 @@ pmc_link_target_process(struct pmc *pm, struct pmc_process *pp)
 	PMCDBG(PRC,TLK,1, "link-target pmc=%p ri=%d pmc-process=%p",
 	    pm, ri, pp);
 
-#if	DEBUG
+#ifdef	DEBUG
 	LIST_FOREACH(pt, &pm->pm_targets, pt_next)
 	    if (pt->pt_process == pp)
 		    KASSERT(0, ("[pmc,%d] pp %p already in pmc %p targets",
@@ -1404,19 +1412,138 @@ pmc_process_csw_out(struct thread *td)
 }
 
 /*
+ * Log a KLD operation.
+ */
+
+static void
+pmc_process_kld_load(struct pmckern_map_in *pkm)
+{
+	struct pmc_owner *po;
+
+	sx_assert(&pmc_sx, SX_LOCKED);
+
+	/*
+	 * Notify owners of system sampling PMCs about KLD operations.
+	 */
+
+	LIST_FOREACH(po, &pmc_ss_owners, po_ssnext)
+	    if (po->po_flags & PMC_PO_OWNS_LOGFILE)
+	    	pmclog_process_map_in(po, (pid_t) -1, pkm->pm_address,
+		    (char *) pkm->pm_file);
+
+	/*
+	 * TODO: Notify owners of (all) process-sampling PMCs too.
+	 */
+
+	return;
+}
+
+static void
+pmc_process_kld_unload(struct pmckern_map_out *pkm)
+{
+	struct pmc_owner *po;
+
+	sx_assert(&pmc_sx, SX_LOCKED);
+
+	LIST_FOREACH(po, &pmc_ss_owners, po_ssnext)
+	    if (po->po_flags & PMC_PO_OWNS_LOGFILE)
+		pmclog_process_map_out(po, (pid_t) -1,
+		    pkm->pm_address, pkm->pm_address + pkm->pm_size);
+		    
+	/*
+	 * TODO: Notify owners of process-sampling PMCs.
+	 */
+}
+
+/*
+ * A mapping change for a process.
+ */
+
+static void
+pmc_process_mmap(struct thread *td, struct pmckern_map_in *pkm)
+{
+	int ri;
+	pid_t pid;
+	char *fullpath, *freepath;
+	const struct pmc *pm;
+	struct pmc_owner *po;
+	const struct pmc_process *pp;
+
+	freepath = fullpath = NULL;
+	pmc_getfilename((struct vnode *) pkm->pm_file, &fullpath, &freepath);
+
+	pid = td->td_proc->p_pid;
+
+	/* Inform owners of all system-wide sampling PMCs. */
+	LIST_FOREACH(po, &pmc_ss_owners, po_ssnext)
+	    if (po->po_flags & PMC_PO_OWNS_LOGFILE)
+		pmclog_process_map_in(po, pid, pkm->pm_address, fullpath);
+
+	if ((pp = pmc_find_process_descriptor(td->td_proc, 0)) == NULL)
+		goto done;
+
+	/*
+	 * Inform sampling PMC owners tracking this process.
+	 */
+	for (ri = 0; ri < md->pmd_npmc; ri++)
+		if ((pm = pp->pp_pmcs[ri].pp_pmc) != NULL &&
+		    PMC_IS_SAMPLING_MODE(PMC_TO_MODE(pm)))
+			pmclog_process_map_in(pm->pm_owner,
+			    pid, pkm->pm_address, fullpath);
+
+  done:
+	if (freepath)
+		FREE(freepath, M_TEMP);
+}
+
+
+/*
+ * Log an munmap request.
+ */
+
+static void
+pmc_process_munmap(struct thread *td, struct pmckern_map_out *pkm)
+{
+	int ri;
+	pid_t pid;
+	struct pmc_owner *po;
+	const struct pmc *pm;
+	const struct pmc_process *pp;
+
+	pid = td->td_proc->p_pid;
+
+	LIST_FOREACH(po, &pmc_ss_owners, po_ssnext)
+	    if (po->po_flags & PMC_PO_OWNS_LOGFILE)
+		pmclog_process_map_out(po, pid, pkm->pm_address,
+		    pkm->pm_address + pkm->pm_size);
+
+	if ((pp = pmc_find_process_descriptor(td->td_proc, 0)) == NULL)
+		return;
+
+	for (ri = 0; ri < md->pmd_npmc; ri++)
+		if ((pm = pp->pp_pmcs[ri].pp_pmc) != NULL &&
+		    PMC_IS_SAMPLING_MODE(PMC_TO_MODE(pm)))
+			pmclog_process_map_out(pm->pm_owner, pid,
+			    pkm->pm_address, pkm->pm_address + pkm->pm_size);
+}
+
+/*
  * The 'hook' invoked from the kernel proper
  */
 
 
-#if	DEBUG
+#ifdef	DEBUG
 const char *pmc_hooknames[] = {
+	/* these strings correspond to PMC_FN_* in <sys/pmckern.h> */
 	"",
-	"EXIT",
 	"EXEC",
-	"FORK",
 	"CSW-IN",
 	"CSW-OUT",
-	"SAMPLE"
+	"SAMPLE",
+	"KLDLOAD",
+	"KLDUNLOAD",
+	"MMAP",
+	"MUNMAP"
 };
 #endif
 
@@ -1578,8 +1705,29 @@ pmc_hook_handler(struct thread *td, int function, void *arg)
 		pmc_process_samples(PCPU_GET(cpuid));
 		break;
 
+
+	case PMC_FN_KLD_LOAD:
+		sx_assert(&pmc_sx, SX_LOCKED);
+		pmc_process_kld_load((struct pmckern_map_in *) arg);
+		break;
+
+	case PMC_FN_KLD_UNLOAD:
+		sx_assert(&pmc_sx, SX_LOCKED);
+		pmc_process_kld_unload((struct pmckern_map_out *) arg);
+		break;
+
+	case PMC_FN_MMAP:
+		sx_assert(&pmc_sx, SX_LOCKED);
+		pmc_process_mmap(td, (struct pmckern_map_in *) arg);
+		break;
+
+	case PMC_FN_MUNMAP:
+		sx_assert(&pmc_sx, SX_LOCKED);
+		pmc_process_munmap(td, (struct pmckern_map_out *) arg);
+		break;
+
 	default:
-#if DEBUG
+#ifdef	DEBUG
 		KASSERT(0, ("[pmc,%d] unknown hook %d\n", __LINE__, function));
 #endif
 		break;
@@ -1615,7 +1763,7 @@ pmc_allocate_owner_descriptor(struct proc *p)
 	LIST_INSERT_HEAD(poh, po, po_next); /* insert into hash table */
 
 	TAILQ_INIT(&po->po_logbuffers);
-	mtx_init(&po->po_mtx, "pmc-owner-mtx", "pmc", MTX_SPIN);
+	mtx_init(&po->po_mtx, "pmc-owner-mtx", "pmc-per-proc", MTX_SPIN);
 
 	PMCDBG(OWN,ALL,1, "allocate-owner proc=%p (%d, %s) pmc-owner=%p",
 	    p, p->p_pid, p->p_comm, po);
@@ -1761,7 +1909,7 @@ pmc_destroy_pmc_descriptor(struct pmc *pm)
 {
 	(void) pm;
 
-#if	DEBUG
+#ifdef	DEBUG
 	KASSERT(pm->pm_state == PMC_STATE_DELETED ||
 	    pm->pm_state == PMC_STATE_FREE,
 	    ("[pmc,%d] destroying non-deleted PMC", __LINE__));
@@ -1778,7 +1926,7 @@ pmc_destroy_pmc_descriptor(struct pmc *pm)
 static void
 pmc_wait_for_pmc_idle(struct pmc *pm)
 {
-#if	DEBUG
+#ifdef	DEBUG
 	volatile int maxloop;
 
 	maxloop = 100 * mp_ncpus;
@@ -1789,7 +1937,7 @@ pmc_wait_for_pmc_idle(struct pmc *pm)
 	 * comes down to zero.
 	 */
 	while (atomic_load_acq_32(&pm->pm_runcount) > 0) {
-#if	DEBUG
+#ifdef	DEBUG
 		maxloop--;
 		KASSERT(maxloop > 0,
 		    ("[pmc,%d] (ri%d, rc%d) waiting too long for "
@@ -2230,6 +2378,8 @@ pmc_start(struct pmc *pm)
 		po->po_sscount++;
 	}
 
+	/* TODO: dump system wide process mappings to the log? */
+
 	/*
 	 * Move to the CPU associated with this
 	 * PMC, and start the hardware.
@@ -2339,7 +2489,7 @@ pmc_stop(struct pmc *pm)
 }
 
 
-#if	DEBUG
+#ifdef	DEBUG
 static const char *pmc_op_to_name[] = {
 #undef	__PMC_OP
 #define	__PMC_OP(N, D)	#N ,
@@ -2401,10 +2551,11 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 
 	case PMC_OP_CONFIGURELOG:
 	{
+		struct proc *p;
 		struct pmc *pm;
 		struct pmc_owner *po;
+		struct pmckern_map_in *km, *kmbase;
 		struct pmc_op_configurelog cl;
-		struct proc *p;
 
 		sx_assert(&pmc_sx, SX_XLOCKED);
 
@@ -2439,6 +2590,21 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 			}
 		} else
 			error = EINVAL;
+
+		if (error)
+			break;
+
+		/*
+		 * Log the current set of kernel modules.
+		 */
+		kmbase = linker_hwpmc_list_objects();
+		for (km = kmbase; km->pm_file != NULL; km++) {
+			PMCDBG(LOG,REG,1,"%s %p", (char *) km->pm_file,
+			    (void *) km->pm_address);
+			pmclog_process_map_in(po, (pid_t) -1, km->pm_address,
+			    km->pm_file);
+		}
+		FREE(kmbase, M_LINKER);
 	}
 	break;
 
@@ -2624,10 +2790,9 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		KASSERT(td == curthread,
 		    ("[pmc,%d] td != curthread", __LINE__));
 
-		if (suser(td) || jailed(td->td_ucred)) {
-			error =  EPERM;
+		error = priv_check(td, PRIV_PMC_MANAGE);
+		if (error)
 			break;
-		}
 
 		if ((error = copyin(arg, &pma, sizeof(pma))) != 0)
 			break;
@@ -2760,11 +2925,16 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 		 */
 
 		if (PMC_IS_SYSTEM_MODE(mode)) {
-			if (jailed(curthread->td_ucred))
+			if (jailed(curthread->td_ucred)) {
 				error = EPERM;
-			else if (suser(curthread) &&
-			    (pmc_unprivileged_syspmcs == 0))
-				error = EPERM;
+				break;
+			}
+			if (!pmc_unprivileged_syspmcs) {
+				error = priv_check(curthread,
+				    PRIV_PMC_SYSTEM);
+				if (error)
+					break;
+			}
 		}
 
 		if (error)
@@ -3283,11 +3453,11 @@ pmc_syscall_handler(struct thread *td, void *syscall_args)
 
 		pprw = (struct pmc_op_pmcrw *) arg;
 
-#if	DEBUG
+#ifdef	DEBUG
 		if (prw.pm_flags & PMC_F_NEWVALUE)
 			PMCDBG(PMC,OPS,2, "rw id=%d new %jx -> old %jx",
 			    ri, prw.pm_value, oldvalue);
-		else
+		else if (prw.pm_flags & PMC_F_OLDVALUE)
 			PMCDBG(PMC,OPS,2, "rw id=%d -> old %jx", ri, oldvalue);
 #endif
 
@@ -3922,7 +4092,7 @@ pmc_initialize(void)
 	md = NULL;
 	error = 0;
 
-#if	DEBUG
+#ifdef	DEBUG
 	/* parse debug flags first */
 	if (TUNABLE_STR_FETCH(PMC_SYSCTL_NAME_PREFIX "debugflags",
 		pmc_debugstr, sizeof(pmc_debugstr)))
@@ -4021,13 +4191,15 @@ pmc_initialize(void)
 
 	pmc_processhash = hashinit(pmc_hashsize, M_PMC,
 	    &pmc_processhashmask);
-	mtx_init(&pmc_processhash_mtx, "pmc-process-hash", "pmc", MTX_SPIN);
+	mtx_init(&pmc_processhash_mtx, "pmc-process-hash", "pmc-leaf",
+	    MTX_SPIN);
 
 	LIST_INIT(&pmc_ss_owners);
 	pmc_ss_count = 0;
 
 	/* allocate a pool of spin mutexes */
-	pmc_mtxpool = mtx_pool_create("pmc", pmc_mtxpool_size, MTX_SPIN);
+	pmc_mtxpool = mtx_pool_create("pmc-leaf", pmc_mtxpool_size,
+	    MTX_SPIN);
 
 	PMCDBG(MOD,INI,1, "pmc_ownerhash=%p, mask=0x%lx "
 	    "targethash=%p mask=0x%lx", pmc_ownerhash, pmc_ownerhashmask,
@@ -4072,7 +4244,7 @@ pmc_cleanup(void)
 	struct pmc_ownerhash *ph;
 	struct pmc_owner *po, *tmp;
 	struct pmc_binding pb;
-#if	DEBUG
+#ifdef	DEBUG
 	struct pmc_processhash *prh;
 #endif
 
@@ -4122,7 +4294,7 @@ pmc_cleanup(void)
 
 	mtx_destroy(&pmc_processhash_mtx);
 	if (pmc_processhash) {
-#if	DEBUG
+#ifdef	DEBUG
 		struct pmc_process *pp;
 
 		PMCDBG(MOD,INI,3, "%s", "destroy process hash");

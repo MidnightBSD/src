@@ -26128,7 +26128,6 @@ sys/dev/hptrr/ldm.h -text
 sys/dev/hptrr/list.h -text
 sys/dev/hptrr/os_bsd.h -text
 sys/dev/hptrr/osm.h -text
-sys/dev/hwpmc/hwpmc_alpha.c -text
 sys/dev/hwpmc/hwpmc_amd.c -text
 sys/dev/hwpmc/hwpmc_amd.h -text
 sys/dev/hwpmc/hwpmc_arm.c -text

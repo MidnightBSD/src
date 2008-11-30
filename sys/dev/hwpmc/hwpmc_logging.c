@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005-2006 Joseph Koshy
+ * Copyright (c) 2005 Joseph Koshy
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_logging.c,v 1.3.2.1 2006/03/22 10:25:36 jkoshy Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hwpmc/hwpmc_logging.c,v 1.7 2007/04/19 08:02:51 jkoshy Exp $");
 
 #include <sys/param.h>
 #include <sys/file.h>
@@ -137,10 +137,11 @@ static struct mtx pmc_kthread_mtx;	/* sleep lock */
 
 CTASSERT(sizeof(struct pmclog_closelog) == 3*4);
 CTASSERT(sizeof(struct pmclog_dropnotify) == 3*4);
-CTASSERT(sizeof(struct pmclog_mappingchange) == PATH_MAX +
-    5*4 + 2*sizeof(uintfptr_t));
-CTASSERT(offsetof(struct pmclog_mappingchange,pl_pathname) ==
-    5*4 + 2*sizeof(uintfptr_t));
+CTASSERT(sizeof(struct pmclog_map_in) == PATH_MAX +
+    4*4 + sizeof(uintfptr_t));
+CTASSERT(offsetof(struct pmclog_map_in,pl_pathname) ==
+    4*4 + sizeof(uintfptr_t));
+CTASSERT(sizeof(struct pmclog_map_out) == 4*4 + 2*sizeof(uintfptr_t));
 CTASSERT(sizeof(struct pmclog_pcsample) == 6*4 + sizeof(uintfptr_t));
 CTASSERT(sizeof(struct pmclog_pmcallocate) == 6*4);
 CTASSERT(sizeof(struct pmclog_pmcattach) == 5*4 + PATH_MAX);
@@ -203,7 +204,7 @@ pmclog_get_buffer(struct pmc_owner *po)
 
 	PMCDBG(LOG,GTB,1, "po=%p plb=%p", po, plb);
 
-#if	DEBUG
+#ifdef	DEBUG
 	if (plb)
 		KASSERT(plb->plb_ptr == plb->plb_base &&
 		    plb->plb_base < plb->plb_fence,
@@ -728,24 +729,36 @@ pmclog_process_dropnotify(struct pmc_owner *po)
 }
 
 void
-pmclog_process_mappingchange(struct pmc_owner *po, pid_t pid, int type,
-    uintfptr_t start, uintfptr_t end, char *path)
+pmclog_process_map_in(struct pmc_owner *po, pid_t pid, uintfptr_t start,
+    const char *path)
 {
 	int pathlen, recordlen;
 
+	KASSERT(path != NULL, ("[pmclog,%d] map-in, null path", __LINE__));
+
 	pathlen = strlen(path) + 1;	/* #bytes for path name */
-	recordlen = offsetof(struct pmclog_mappingchange, pl_pathname) +
+	recordlen = offsetof(struct pmclog_map_in, pl_pathname) +
 	    pathlen;
 
-	PMCLOG_RESERVE(po,MAPPINGCHANGE,recordlen);
-	PMCLOG_EMIT32(type);
-	PMCLOG_EMITADDR(start);
-	PMCLOG_EMITADDR(end);
+	PMCLOG_RESERVE(po, MAP_IN, recordlen);
 	PMCLOG_EMIT32(pid);
+	PMCLOG_EMITADDR(start);
 	PMCLOG_EMITSTRING(path,pathlen);
 	PMCLOG_DESPATCH(po);
 }
 
+void
+pmclog_process_map_out(struct pmc_owner *po, pid_t pid, uintfptr_t start,
+    uintfptr_t end)
+{
+	KASSERT(start <= end, ("[pmclog,%d] start > end", __LINE__));
+
+	PMCLOG_RESERVE(po, MAP_OUT, sizeof(struct pmclog_map_out));
+	PMCLOG_EMIT32(pid);
+	PMCLOG_EMITADDR(start);
+	PMCLOG_EMITADDR(end);
+	PMCLOG_DESPATCH(po);
+}
 
 void
 pmclog_process_pcsample(struct pmc *pm, struct pmc_sample *ps)
@@ -960,8 +973,9 @@ pmclog_initialize()
 		PMCLOG_INIT_BUFFER_DESCRIPTOR(plb);
 		TAILQ_INSERT_HEAD(&pmc_bufferlist, plb, plb_next);
 	}
-	mtx_init(&pmc_bufferlist_mtx, "pmc-buffer-list", "pmc", MTX_SPIN);
-	mtx_init(&pmc_kthread_mtx, "pmc-kthread", "pmc", MTX_DEF);
+	mtx_init(&pmc_bufferlist_mtx, "pmc-buffer-list", "pmc-leaf",
+	    MTX_SPIN);
+	mtx_init(&pmc_kthread_mtx, "pmc-kthread", "pmc-sleep", MTX_DEF);
 }
 
 /*
