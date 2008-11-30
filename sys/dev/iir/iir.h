@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/iir/iir.h,v 1.13.2.1 2006/03/12 16:38:28 scottl Exp $ */
+/* $FreeBSD: src/sys/dev/iir/iir.h,v 1.16 2007/06/17 05:55:50 scottl Exp $ */
 /*-
  *       Copyright (c) 2000-04 ICP vortex GmbH
  *       Copyright (c) 2002-04 Intel Corporation
@@ -41,7 +41,7 @@
  * credits:     Niklas Hallqvist;       OpenBSD driver for the ICP Controllers.
  *              FreeBSD.ORG;            Great O/S to work on and for.
  *
- * $Id: iir.h,v 1.2 2007-01-13 15:04:10 laffer1 Exp $"
+ * $Id: iir.h,v 1.3 2008-11-30 20:02:36 laffer1 Exp $"
  */
 
 #ifndef _IIR_H
@@ -590,6 +590,7 @@ struct gdt_intr_ctx {
 
 /* softc structure */
 struct gdt_softc {
+    device_t sc_devnode;
     int sc_hanum;
     int sc_class;               /* Controller class */
 #define GDT_MPR         0x05

@@ -29,9 +29,9 @@
  * SUCH DAMAGE.
  */
 
-#ident "$Id: iir_pci.c,v 1.2 2007-01-13 15:04:10 laffer1 Exp $"
+#ident "$Id: iir_pci.c,v 1.3 2008-11-30 20:02:36 laffer1 Exp $"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iir/iir_pci.c,v 1.15.2.1 2006/03/12 16:38:28 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/iir/iir_pci.c,v 1.20 2007/06/17 05:55:50 scottl Exp $");
 
 /*
  *  iir_pci.c:  PCI Bus Attachment for Intel Integrated RAID Controller driver
@@ -56,7 +56,6 @@ __FBSDID("$FreeBSD: src/sys/dev/iir/iir_pci.c,v 1.15.2.1 2006/03/12 16:38:28 sco
 
 #include <machine/bus.h> 
 #include <machine/resource.h>
-#include <machine/clock.h>
 #include <sys/rman.h>
 
 #include <dev/pci/pcireg.h>
@@ -159,6 +158,8 @@ static  driver_t iir_pci_driver =
 static devclass_t iir_devclass;
 
 DRIVER_MODULE(iir, pci, iir_pci_driver, iir_devclass, 0, 0);
+MODULE_DEPEND(iir, pci, 1, 1, 1);
+MODULE_DEPEND(iir, cam, 1, 1, 1);
 
 static int
 iir_pci_probe(device_t dev)
@@ -208,7 +209,7 @@ iir_pci_attach(device_t dev)
     }
 
     gdt = device_get_softc(dev);
-    bzero(gdt, sizeof(struct gdt_softc));
+    gdt->sc_devnode = dev;
     gdt->sc_init_level = 0;
     gdt->sc_dpmemt = rman_get_bustag(io);
     gdt->sc_dpmemh = rman_get_bushandle(io);
@@ -343,7 +344,7 @@ iir_pci_attach(device_t dev)
 
     /* associate interrupt handler */
     if (bus_setup_intr( dev, irq, INTR_TYPE_CAM, 
-                        iir_intr, gdt, &ih )) {
+                        NULL, iir_intr, gdt, &ih )) {
         device_printf(dev, "Unable to register interrupt handler\n");
         error = ENXIO;
         goto err;

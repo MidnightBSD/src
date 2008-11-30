@@ -39,11 +39,11 @@
  *              Mike Smith;             Some driver source code.
  *              FreeBSD.ORG;            Great O/S to work on and for.
  *
- * $Id: iir.c,v 1.2 2007-01-13 15:04:10 laffer1 Exp $"
+ * $Id: iir.c,v 1.3 2008-11-30 20:02:36 laffer1 Exp $"
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iir/iir.c,v 1.13.2.1 2006/03/12 16:38:28 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/iir/iir.c,v 1.19 2007/06/17 05:55:50 scottl Exp $");
 
 #define _IIR_C_
 
@@ -57,7 +57,6 @@ __FBSDID("$FreeBSD: src/sys/dev/iir/iir.c,v 1.13.2.1 2006/03/12 16:38:28 scottl 
 #include <sys/bus.h>
 
 #include <machine/bus.h>
-#include <machine/clock.h>
 #include <machine/stdarg.h>
 
 #include <cam/cam.h>
@@ -503,9 +502,10 @@ iir_attach(struct gdt_softc *gdt)
          * Construct our SIM entry
          */
         gdt->sims[i] = cam_sim_alloc(iir_action, iir_poll, "iir",
-                                     gdt, gdt->sc_hanum, /*untagged*/1,
+                                     gdt, gdt->sc_hanum, &Giant,
+				     /*untagged*/1,
                                      /*tagged*/GDT_MAXCMDS, devq);
-        if (xpt_bus_register(gdt->sims[i], i) != CAM_SUCCESS) {
+        if (xpt_bus_register(gdt->sims[i], gdt->sc_devnode, i) != CAM_SUCCESS) {
             cam_sim_free(gdt->sims[i], /*free_devq*/i == 0);
             break;
         }
@@ -1349,23 +1349,28 @@ iir_action( struct cam_sim *sim, union ccb *ccb )
       case XPT_GET_TRAN_SETTINGS:
         /* Get default/user set transfer settings for the target */
           {
-              struct        ccb_trans_settings *cts;
-              u_int target_mask;
-              
-              cts = &ccb->cts;
-              target_mask = 0x01 << target;
-              if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0) { 
-                  cts->flags = CCB_TRANS_DISC_ENB|CCB_TRANS_TAG_ENB;
-                  cts->bus_width = MSG_EXT_WDTR_BUS_16_BIT;
-                  cts->sync_period = 25; /* 10MHz */
-                  if (cts->sync_period != 0)
-                      cts->sync_offset = 15;
+              struct        ccb_trans_settings *cts = &ccb->cts;
+              struct ccb_trans_settings_scsi *scsi = &cts->proto_specific.scsi;
+              struct ccb_trans_settings_spi *spi = &cts->xport_specific.spi;
+
+              cts->protocol = PROTO_SCSI;
+              cts->protocol_version = SCSI_REV_2;
+              cts->transport = XPORT_SPI;
+              cts->transport_version = 2;
+
+              if (cts->type == CTS_TYPE_USER_SETTINGS) {
+		  spi->flags = CTS_SPI_FLAGS_DISC_ENB;
+                  scsi->flags = CTS_SCSI_FLAGS_TAG_ENB;
+                  spi->bus_width = MSG_EXT_WDTR_BUS_16_BIT;
+                  spi->sync_period = 25; /* 10MHz */
+                  if (spi->sync_period != 0)
+                      spi->sync_offset = 15;
                   
-                  cts->valid = CCB_TRANS_SYNC_RATE_VALID
-                      | CCB_TRANS_SYNC_OFFSET_VALID
-                      | CCB_TRANS_BUS_WIDTH_VALID
-                      | CCB_TRANS_DISC_VALID
-                      | CCB_TRANS_TQ_VALID;
+                  spi->valid = CTS_SPI_VALID_SYNC_RATE
+                      | CTS_SPI_VALID_SYNC_OFFSET
+                      | CTS_SPI_VALID_BUS_WIDTH
+                      | CTS_SPI_VALID_DISC;
+                  scsi->valid = CTS_SCSI_VALID_TQ;
                   ccb->ccb_h.status = CAM_REQ_CMP;
               } else {
                   ccb->ccb_h.status = CAM_FUNC_NOTAVAIL;
@@ -1431,6 +1436,10 @@ iir_action( struct cam_sim *sim, union ccb *ccb )
               else
                   strncpy(cpi->hba_vid, "ICP vortex ", HBA_IDLEN);
               strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
+              cpi->transport = XPORT_SPI;
+              cpi->transport_version = 2;
+              cpi->protocol = PROTO_SCSI;
+              cpi->protocol_version = SCSI_REV_2;
               cpi->ccb_h.status = CAM_REQ_CMP;
               --gdt_stat.io_count_act;
               xpt_done(ccb);
