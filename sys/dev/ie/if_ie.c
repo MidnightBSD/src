@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ie/if_ie.c,v 1.102.2.3 2005/10/09 04:15:12 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ie/if_ie.c,v 1.106 2005/11/11 16:04:52 ru Exp $");
 
 /*
  * Intel 82586 Ethernet chip
@@ -599,7 +599,7 @@ check_eh(struct ie_softc *sc, struct ether_header *eh)
 		return (1);
 
 	/* Always accept packets directed at us */
-	if (ether_equal(eh->ether_dhost, IFP2ENADDR(sc->ifp)))
+	if (ether_equal(eh->ether_dhost, IF_LLADDR(sc->ifp)))
 		return (1);
 
 	/* Must have IFF_ALLMULTI but not IFF_PROMISC set. The chip is
@@ -1530,7 +1530,7 @@ ieinit(xsc)
 		cmd->com.ie_cmd_cmd = IE_CMD_IASETUP | IE_CMD_LAST;
 		cmd->com.ie_cmd_link = 0xffff;
 
-		bcopy((volatile char *)IFP2ENADDR(sc->ifp),
+		bcopy((volatile char *)IF_LLADDR(sc->ifp),
 		      (volatile char *)&cmd->ie_address, sizeof cmd->ie_address);
 		scb->ie_command_list = MK_16(MEM(sc), cmd);
 		if (command_and_wait(sc, IE_CU_START, cmd, IE_STAT_COMPL)

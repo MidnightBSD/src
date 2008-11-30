@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ieee488/upd7210.h,v 1.3 2005/02/12 23:52:44 phk Exp $
+ * $FreeBSD: src/sys/dev/ieee488/upd7210.h,v 1.6 2005/09/24 20:44:55 phk Exp $
  *
  * Locating an actual µPD7210 data book has proven quite impossible for me.
  * There are a fair number of newer chips which are supersets of the µPD7210
@@ -47,10 +47,10 @@ struct ibfoo;
 typedef int upd7210_irq_t(struct upd7210 *, int);
 
 struct upd7210 {
-	bus_space_handle_t	reg_handle[8];
-	bus_space_tag_t		reg_tag[8];
+	struct resource		*reg_res[8];
 	u_int			reg_offset[8];
 	int			dmachan;
+	int			unit;
 
 	/* private stuff */
 	struct mtx		mutex;
@@ -72,6 +72,7 @@ struct upd7210 {
 #ifdef UPD7210_HW_DRIVER
 void upd7210intr(void *);
 void upd7210attach(struct upd7210 *);
+void upd7210detach(struct upd7210 *);
 #endif
 
 #ifdef UPD7210_SW_DRIVER
@@ -218,7 +219,6 @@ enum upd7210_rreg {
 #define ADR1_EOI	(1 << 7)	/* End or Identify		*/
 
 /* Stuff from software drivers */
-extern struct cdevsw gpib_l_cdevsw;
 extern struct cdevsw gpib_ib_cdevsw;
 
 /* Stuff from upd7210.c */

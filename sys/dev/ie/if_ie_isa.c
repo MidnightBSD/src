@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ie/if_ie_isa.c,v 1.4 2005/06/10 16:49:10 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ie/if_ie_isa.c,v 1.7 2007/02/23 12:18:43 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -51,7 +51,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ie/if_ie_isa.c,v 1.4 2005/06/10 16:49:10 brooks 
 #include <machine/resource.h>
 #include <sys/rman.h>
 
-#include <machine/clock.h>
 #include <machine/md_var.h>
 
 #include <net/if.h>
@@ -123,7 +122,7 @@ ie_isa_3C507_identify (driver_t *driver, device_t parent)
 	     port += IE_3C507_IOSIZE) {
 
 		if (ie_3C507_port_check(port)) {
-#if DEBUG 
+#ifdef DEBUG 
 			if (bootverbose) {
 				device_printf(parent,
 					"(if_ie) (3C507) not found at port %#x\n",
@@ -271,7 +270,7 @@ ie_isa_3C507_attach (device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				ie_intr, sc, &sc->irq_ih);
+				NULL, ie_intr, sc, &sc->irq_ih);
 	if (error) {
 		device_printf(dev, "Unable to register interrupt handler\n"); 
 		goto bad;
@@ -339,7 +338,7 @@ ie_isa_ee16_identify (driver_t *driver, device_t parent)
 		port = ports[i];
 
 		if (ie_ee16_port_check(port)) {
-#if DEBUG
+#ifdef DEBUG
 			if (bootverbose) {
 				device_printf(parent,
 					"if_ie: (EE16) not found at port %#x\n",
@@ -562,7 +561,7 @@ ie_isa_ee16_attach (device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				ie_intr, sc, &sc->irq_ih);
+				NULL, ie_intr, sc, &sc->irq_ih);
 	if (error) {
 		device_printf(dev, "Unable to register interrupt handler\n"); 
 		goto bad;
@@ -774,7 +773,7 @@ ie_isa_sl_attach (device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				ie_intr, sc, &sc->irq_ih);
+				NULL, ie_intr, sc, &sc->irq_ih);
 	if (error) {
 		device_printf(dev, "Unable to register interrupt handler\n"); 
 		goto bad;

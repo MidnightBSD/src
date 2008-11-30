@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/iicbus/iicsmb.c,v 1.12 2003/08/10 14:28:24 ticso Exp $
+ * $FreeBSD: src/sys/dev/iicbus/iicsmb.c,v 1.14 2006/09/11 20:52:41 jhb Exp $
  *
  */
 
@@ -83,7 +83,7 @@ static int iicsmb_detach(device_t);
 static void iicsmb_identify(driver_t *driver, device_t parent);
 
 static void iicsmb_intr(device_t dev, int event, char *buf);
-static int iicsmb_callback(device_t dev, int index, caddr_t data);
+static int iicsmb_callback(device_t dev, int index, void *data);
 static int iicsmb_quick(device_t dev, u_char slave, int how);
 static int iicsmb_sendb(device_t dev, u_char slave, char byte);
 static int iicsmb_recvb(device_t dev, u_char slave, char *byte);
@@ -93,7 +93,7 @@ static int iicsmb_readb(device_t dev, u_char slave, char cmd, char *byte);
 static int iicsmb_readw(device_t dev, u_char slave, char cmd, short *word);
 static int iicsmb_pcall(device_t dev, u_char slave, char cmd, short sdata, short *rdata);
 static int iicsmb_bwrite(device_t dev, u_char slave, char cmd, u_char count, char *buf);
-static int iicsmb_bread(device_t dev, u_char slave, char cmd, u_char count, char *buf);
+static int iicsmb_bread(device_t dev, u_char slave, char cmd, u_char *count, char *buf);
 
 static devclass_t iicsmb_devclass;
 
@@ -152,8 +152,6 @@ static int
 iicsmb_attach(device_t dev)
 {
 	struct iicsmb_softc *sc = (struct iicsmb_softc *)device_get_softc(dev);
-
-	bzero(sc, sizeof(*sc));
 
 	sc->smbus = device_add_child(dev, "smbus", -1);
 
@@ -249,7 +247,7 @@ end:
 }
 
 static int
-iicsmb_callback(device_t dev, int index, caddr_t data)
+iicsmb_callback(device_t dev, int index, void *data)
 {
 	device_t parent = device_get_parent(dev);
 	int error = 0;
@@ -484,7 +482,7 @@ error:
 }
 
 static int
-iicsmb_bread(device_t dev, u_char slave, char cmd, u_char count, char *buf)
+iicsmb_bread(device_t dev, u_char slave, char cmd, u_char *count, char *buf)
 {
 	device_t parent = device_get_parent(dev);
 	int error, sent, read;
@@ -498,9 +496,10 @@ iicsmb_bread(device_t dev, u_char slave, char cmd, u_char count, char *buf)
 	if ((error = iicbus_repeated_start(parent, slave | LSB, IICBUS_TIMEOUT)))
 		goto error;
 
-	if ((error = iicbus_read(parent, buf, (int)count, &read,
+	if ((error = iicbus_read(parent, buf, (int)*count, &read,
 						IIC_LAST_READ, IICBUS_TIMEOUT)))
 		goto error;
+	*count = read;
 
 error:
 	iicbus_stop(parent);
@@ -508,6 +507,7 @@ error:
 }
 
 DRIVER_MODULE(iicsmb, iicbus, iicsmb_driver, iicsmb_devclass, 0, 0);
+DRIVER_MODULE(smbus, iicsmb, smbus_driver, smbus_devclass, 0, 0);
 MODULE_DEPEND(iicsmb, iicbus, IICBUS_MINVER, IICBUS_PREFVER, IICBUS_MAXVER);
 MODULE_DEPEND(iicsmb, smbus, SMBUS_MINVER, SMBUS_PREFVER, SMBUS_MAXVER);
 MODULE_VERSION(iicsmb, 1);

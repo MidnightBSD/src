@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/iwi/if_iwivar.h,v 1.4.2.1 2005/09/26 17:31:36 damien Exp $	*/
+/*	$FreeBSD: src/sys/dev/iwi/if_iwivar.h,v 1.16 2007/06/11 10:56:06 thompsa Exp $	*/
 
 /*-
  * Copyright (c) 2004, 2005
@@ -26,15 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-struct iwi_firmware {
-	void	*boot;
-	int	boot_size;
-	void	*ucode;
-	int	ucode_size;
-	void	*main;
-	int	main_size;
-};
 
 struct iwi_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
@@ -116,6 +107,13 @@ struct iwi_node {
 #define IWI_MAX_IBSSNODE	32
 };
 
+struct iwi_fw {
+	const struct firmware	*fp;		/* image handle */
+	const char		*data;		/* firmware image data */
+	size_t			size;		/* firmware image size */
+	const char		*name;		/* associated image name */
+};
+
 struct iwi_softc {
 	struct ifnet		*sc_ifp;
 	struct ieee80211com	sc_ic;
@@ -125,15 +123,27 @@ struct iwi_softc {
 	device_t		sc_dev;
 
 	struct mtx		sc_mtx;
+	struct mtx		sc_cmdlock;
+	char			sc_cmdname[12];	/* e.g. "iwi0_cmd" */
+	uint8_t			sc_mcast[IEEE80211_ADDR_LEN];
 	struct unrhdr		*sc_unr;
+	struct taskqueue	*sc_tq;		/* private task queue */
+	struct taskqueue	*sc_tq2;	/* reset task queue */
+#if __FreeBSD_version < 700000
+	struct proc		*sc_tqproc;
+#endif
 
-	struct iwi_firmware	fw;
 	uint32_t		flags;
-#define IWI_FLAG_FW_CACHED	(1 << 0)
-#define IWI_FLAG_FW_INITED	(1 << 1)
-#define IWI_FLAG_FW_WARNED	(1 << 2)
-#define IWI_FLAG_SCANNING	(1 << 3)
-
+#define IWI_FLAG_FW_INITED	(1 << 0)
+#define	IWI_FLAG_BUSY		(1 << 3)	/* busy sending a command */
+#define	IWI_FLAG_ASSOCIATED	(1 << 4)	/* currently associated  */
+#define IWI_FLAG_CHANNEL_SCAN	(1 << 5)
+	uint32_t		fw_state;
+#define IWI_FW_IDLE		0
+#define IWI_FW_LOADING		1
+#define IWI_FW_ASSOCIATING	2
+#define IWI_FW_DISASSOCIATING	3
+#define IWI_FW_SCANNING		4
 	struct iwi_cmd_ring	cmdq;
 	struct iwi_tx_ring	txq[WME_NUM_AC];
 	struct iwi_rx_ring	rxq;
@@ -146,12 +156,77 @@ struct iwi_softc {
 	int			mem_rid;
 	int			irq_rid;
 
+	/*
+	 * The card needs external firmware images to work, which is made of a
+	 * bootloader, microcode and firmware proper. In version 3.00 and
+	 * above, all pieces are contained in a single image, preceded by a
+	 * struct iwi_firmware_hdr indicating the size of the 3 pieces.
+	 * Old firmware < 3.0 has separate boot and ucode, so we need to
+	 * load all of them explicitly.
+	 * To avoid issues related to fragmentation, we keep the block of
+	 * dma-ble memory around until detach time, and reallocate it when
+	 * it becomes too small. fw_dma_size is the size currently allocated.
+	 */
+	int			fw_dma_size;
+	uint32_t		fw_flags;	/* allocation status */
+#define	IWI_FW_HAVE_DMAT	0x01
+#define	IWI_FW_HAVE_MAP		0x02
+#define	IWI_FW_HAVE_PHY		0x04
+	bus_dma_tag_t		fw_dmat;
+	bus_dmamap_t		fw_map;
+	bus_addr_t		fw_physaddr;
+	void			*fw_virtaddr;
+	enum ieee80211_opmode	fw_mode;	/* mode of current firmware */
+	struct iwi_fw		fw_boot;	/* boot firmware */
+	struct iwi_fw		fw_uc;		/* microcode */
+	struct iwi_fw		fw_fw;		/* operating mode support */
+
+	int			curchan;	/* current h/w channel # */
 	int			antenna;
-	int			dwelltime;
 	int			bluetooth;
+	struct iwi_associate	assoc;
+	struct iwi_wme_params	wme[3];
+	u_int			sc_scangen;
+
+	struct task		sc_radiontask;	/* radio on processing */
+	struct task		sc_radiofftask;	/* radio off processing */
+	struct task		sc_scanaborttask;	/* cancel active scan */
+	struct task		sc_restarttask;	/* restart adapter processing */
+	struct task		sc_opstask;	/* scan / auth processing */
+
+	unsigned int		sc_softled : 1,	/* enable LED gpio status */
+				sc_ledstate: 1,	/* LED on/off state */
+				sc_blinking: 1;	/* LED blink operation active */
+	u_int			sc_nictype;	/* NIC type from EEPROM */
+	u_int			sc_ledpin;	/* mask for activity LED */
+	u_int			sc_ledidle;	/* idle polling interval */
+	int			sc_ledevent;	/* time of last LED event */
+	u_int8_t		sc_rxrate;	/* current rx rate for LED */
+	u_int8_t		sc_rxrix;
+	u_int8_t		sc_txrate;	/* current tx rate for LED */
+	u_int8_t		sc_txrix;
+	u_int16_t		sc_ledoff;	/* off time for current blink */
+	struct callout		sc_ledtimer;	/* led off timer */
+	struct callout		sc_wdtimer;	/* watchdog timer */
 
 	int			sc_tx_timer;
+	int			sc_rfkill_timer;/* poll for rfkill change */
+	int			sc_state_timer;	/* firmware state timer */
+	int			sc_busy_timer;	/* firmware cmd timer */
 
+#define IWI_SCAN_START		(1 << 0)
+#define IWI_SET_CHANNEL	        (1 << 1)
+#define	IWI_SCAN_END		(1 << 2)
+#define	IWI_ASSOC		(1 << 3)
+#define	IWI_DISASSOC		(1 << 4)
+#define	IWI_SCAN_CURCHAN	(1 << 5)
+#define	IWI_SCAN_ALLCHAN	(1 << 6)
+#define	IWI_SET_WME		(1 << 7)
+#define	IWI_CMD_MAXOPS		10
+	int                     sc_cmd[IWI_CMD_MAXOPS];
+	int                     sc_cmd_cur;    /* current queued scan task */
+	int                     sc_cmd_next;   /* last queued scan task */
+	unsigned long		sc_maxdwell;	/* max dwell time for curchan */
 	struct bpf_if		*sc_drvbpf;
 
 	union {
@@ -169,8 +244,47 @@ struct iwi_softc {
 	int			sc_txtap_len;
 };
 
-#define SIOCSLOADFW	 _IOW('i', 137, struct ifreq)
-#define SIOCSKILLFW	 _IOW('i', 138, struct ifreq)
+#define	IWI_STATE_BEGIN(_sc, _state)	do {			\
+	KASSERT(_sc->fw_state == IWI_FW_IDLE,			\
+	    ("iwi firmware not idle"));				\
+	_sc->fw_state = _state;					\
+	_sc->sc_state_timer = 5;				\
+	DPRINTF(("enter FW state %d\n",	_state));		\
+} while (0)
 
-#define IWI_LOCK(sc)	mtx_lock(&(sc)->sc_mtx)
-#define IWI_UNLOCK(sc)	mtx_unlock(&(sc)->sc_mtx)
+#define	IWI_STATE_END(_sc, _state)	do {			\
+	if (_sc->fw_state == _state)				\
+		DPRINTF(("exit FW state %d\n", _state));	\
+	 else							\
+		DPRINTF(("expected FW state %d, got %d\n",	\
+			    _state, _sc->fw_state));		\
+	_sc->fw_state = IWI_FW_IDLE;				\
+	wakeup(_sc);						\
+	_sc->sc_state_timer = 0;				\
+} while (0)
+/*
+ * NB.: This models the only instance of async locking in iwi_init_locked
+ *	and must be kept in sync.
+ */
+#define	IWI_LOCK_INIT(sc) \
+	mtx_init(&(sc)->sc_mtx, device_get_nameunit((sc)->sc_dev), \
+	    MTX_NETWORK_LOCK, MTX_DEF)
+#define	IWI_LOCK_DESTROY(sc)	mtx_destroy(&(sc)->sc_mtx)
+#define	IWI_LOCK_DECL	int	__waslocked = 0
+#define IWI_LOCK_ASSERT(sc)	mtx_assert(&(sc)->sc_mtx, MA_OWNED)
+#define IWI_LOCK(sc)	do {				\
+	if (!(__waslocked = mtx_owned(&(sc)->sc_mtx)))	\
+		mtx_lock(&(sc)->sc_mtx);		\
+} while (0)
+#define IWI_UNLOCK(sc)	do {			\
+	if (!__waslocked)			\
+		mtx_unlock(&(sc)->sc_mtx);	\
+} while (0)
+#define	IWI_CMD_LOCK_INIT(sc) do { \
+	snprintf((sc)->sc_cmdname, sizeof((sc)->sc_cmdname), "%s_cmd", \
+		device_get_nameunit((sc)->sc_dev)); \
+	mtx_init(&(sc)->sc_cmdlock, (sc)->sc_cmdname, NULL, MTX_DEF); \
+} while (0)
+#define	IWI_CMD_LOCK_DESTROY(sc)	mtx_destroy(&(sc)->sc_cmdlock)
+#define	IWI_CMD_LOCK(sc)		mtx_lock(&(sc)->sc_cmdlock)
+#define	IWI_CMD_UNLOCK(sc)		mtx_unlock(&(sc)->sc_cmdlock)

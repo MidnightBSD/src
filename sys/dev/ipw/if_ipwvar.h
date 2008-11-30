@@ -1,7 +1,7 @@
-/*      $FreeBSD: src/sys/dev/ipw/if_ipwvar.h,v 1.3 2005/06/10 16:49:11 brooks Exp $	*/
+/*      $FreeBSD: src/sys/dev/ipw/if_ipwvar.h,v 1.6.2.1 2007/10/18 01:32:58 thompsa Exp $	*/
 
 /*-
- * Copyright (c) 2004, 2005
+ * Copyright (c) 2004-2006
  *      Damien Bergamini <damien.bergamini@free.fr>. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,13 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-struct ipw_firmware {
-	void	*main;
-	int	main_size;
-	void	*ucode;
-	int	ucode_size;
-};
 
 #define IPW_MAX_NSEG	1
 
@@ -91,13 +84,22 @@ struct ipw_softc {
 	device_t			sc_dev;
 
 	struct mtx			sc_mtx;
+	struct task			sc_init_task;
+	struct task			sc_scan_task;
+	struct task			sc_chan_task;
+	struct task			sc_assoc_task;
+	struct task			sc_disassoc_task;
+	struct callout			sc_wdtimer;	/* watchdog timer */
 
-	struct ipw_firmware		fw;
 	uint32_t			flags;
-#define IPW_FLAG_FW_CACHED		(1 << 0)
-#define IPW_FLAG_FW_INITED		(1 << 1)
+#define IPW_FLAG_FW_INITED		(1 << 0)
+#define IPW_FLAG_INIT_LOCKED		(1 << 1)
 #define IPW_FLAG_HAS_RADIO_SWITCH	(1 << 2)
-#define	IPW_FLAG_FW_WARNED		(1 << 3)
+#define	IPW_FLAG_HACK			(1 << 3)
+#define	IPW_FLAG_SCANNING		(1 << 4)
+#define	IPW_FLAG_ENABLED		(1 << 5)
+#define	IPW_FLAG_BUSY			(1 << 6)
+#define	IPW_FLAG_ASSOCIATED		(1 << 7)
 
 	int				irq_rid;
 	int				mem_rid;
@@ -106,8 +108,10 @@ struct ipw_softc {
 	bus_space_tag_t			sc_st;
 	bus_space_handle_t		sc_sh;
 	void 				*sc_ih;
+	const struct firmware		*sc_firmware;
 
 	int				sc_tx_timer;
+	int				sc_scan_timer;
 
 	bus_dma_tag_t			tbd_dmat;
 	bus_dma_tag_t			rbd_dmat;
@@ -167,8 +171,17 @@ struct ipw_softc {
 	int				sc_txtap_len;
 };
 
-#define SIOCSLOADFW	 _IOW('i', 137, struct ifreq)
-#define SIOCSKILLFW	 _IOW('i', 138, struct ifreq)
-
-#define IPW_LOCK(sc)	mtx_lock(&(sc)->sc_mtx)
-#define IPW_UNLOCK(sc)	mtx_unlock(&(sc)->sc_mtx)
+/*
+ * NB.: This models the only instance of async locking in ipw_init_locked
+ *	and must be kept in sync.
+ */
+#define	IPW_LOCK_DECL	int	__waslocked = 0
+#define IPW_LOCK(sc)	do {				\
+	if (!(__waslocked = mtx_owned(&(sc)->sc_mtx)))	\
+		mtx_lock(&sc->sc_mtx);			\
+} while (0)
+#define IPW_UNLOCK(sc)	do {				\
+	if (!__waslocked)				\
+		mtx_unlock(&sc->sc_mtx);		\
+} while (0)
+#define IPW_LOCK_ASSERT(sc)	mtx_assert(&(sc)->sc_mtx, MA_OWNED)

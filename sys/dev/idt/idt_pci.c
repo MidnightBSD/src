@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/idt/idt_pci.c,v 1.7 2005/05/29 04:42:21 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/idt/idt_pci.c,v 1.8 2007/02/23 12:18:43 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -160,7 +160,7 @@ idt_attach(device_t dev)
 		goto fail;
 	}
 
-	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET, nicstar_intr,
+	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET, NULL, nicstar_intr,
 			       sc, &sc->irq_ih);
 	if (error) {
 		device_printf(dev, "could not setup irq.\n");

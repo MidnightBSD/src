@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/if_ndis/if_ndisvar.h,v 1.23.2.1 2005/10/27 17:06:46 wpaul Exp $
+ * $FreeBSD: src/sys/dev/if_ndis/if_ndisvar.h,v 1.27 2007/07/12 02:54:05 thompsa Exp $
  */
 
 #define NDIS_DEFAULT_NODENAME	"FreeBSD NDIS node"
@@ -174,6 +174,14 @@ struct ndis_softc {
 	int			ndis_evtcidx;
 	struct ifqueue		ndis_rxqueue;
 	kspin_lock		ndis_rxlock;
+
+	struct taskqueue	*ndis_tq;		/* private task queue */
+#if __FreeBSD_version < 700000
+	struct proc		*ndis_tqproc;
+#endif
+	struct task		ndis_scantask;
+	int			(*ndis_newstate)(struct ieee80211com *,
+				    enum ieee80211_state, int);
 };
 
 #define NDIS_LOCK(_sc)		KeAcquireSpinLock(&(_sc)->ndis_spinlock, \

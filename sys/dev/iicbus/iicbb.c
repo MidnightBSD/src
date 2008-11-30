@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iicbus/iicbb.c,v 1.13 2003/08/24 17:49:13 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/iicbus/iicbb.c,v 1.19 2007/03/23 23:03:54 imp Exp $");
 
 /*
  * Generic I2C bit-banging code
@@ -63,10 +63,11 @@ struct iicbb_softc {
 	device_t iicbus;
 };
 
-static int iicbb_probe(device_t);
 static int iicbb_attach(device_t);
+static void iicbb_child_detached(device_t, device_t);
 static int iicbb_detach(device_t);
 static int iicbb_print_child(device_t, device_t);
+static int iicbb_probe(device_t);
 
 static int iicbb_callback(device_t, int, caddr_t);
 static int iicbb_start(device_t, u_char, int);
@@ -82,6 +83,7 @@ static device_method_t iicbb_methods[] = {
 	DEVMETHOD(device_detach,	iicbb_detach),
 
 	/* bus interface */
+	DEVMETHOD(bus_child_detached,	iicbb_child_detached),
 	DEVMETHOD(bus_print_child,	iicbb_print_child),
 
 	/* iicbus interface */
@@ -92,6 +94,7 @@ static device_method_t iicbb_methods[] = {
 	DEVMETHOD(iicbus_write,		iicbb_write),
 	DEVMETHOD(iicbus_read,		iicbb_read),
 	DEVMETHOD(iicbus_reset,		iicbb_reset),
+	DEVMETHOD(iicbus_transfer,	iicbus_transfer_gen),
 
 	{ 0, 0 }
 };
@@ -104,39 +107,57 @@ driver_t iicbb_driver = {
 
 devclass_t iicbb_devclass;
 
-static int iicbb_probe(device_t dev)
+static int
+iicbb_probe(device_t dev)
 {
 	device_set_desc(dev, "I2C bit-banging driver");
 
 	return (0);
 }
 
-static int iicbb_attach(device_t dev)
+static int
+iicbb_attach(device_t dev)
 {
 	struct iicbb_softc *sc = (struct iicbb_softc *)device_get_softc(dev);
 
-	bzero(sc, sizeof(struct iicbb_softc));
-
 	sc->iicbus = device_add_child(dev, "iicbus", -1);
-
 	if (!sc->iicbus)
 		return (ENXIO);
-
 	bus_generic_attach(dev);
 
 	return (0);
 }
 
-static int iicbb_detach(device_t dev)
+static int
+iicbb_detach(device_t dev)
+{
+	struct iicbb_softc *sc = (struct iicbb_softc *)device_get_softc(dev);
+	device_t child;
+
+	/*
+	 * We need to save child because the detach indirectly causes
+	 * sc->iicbus to be zeroed.  Since we added the device
+	 * unconditionally in iicbb_attach, we need to make sure we
+	 * delete it here.  See iicbb_child_detached.  We need that
+	 * callback in case newbus detached our children w/o detaching
+	 * us (say iicbus is a module and unloaded w/o iicbb being
+	 * unloaded).
+	 */
+	child = sc->iicbus;
+	bus_generic_detach(dev);
+	if (child)
+		device_delete_child(dev, child);
+
+	return (0);
+}
+
+static void
+iicbb_child_detached( device_t dev, device_t child )
 {
 	struct iicbb_softc *sc = (struct iicbb_softc *)device_get_softc(dev);
 
-	if (sc->iicbus) {
-		bus_generic_detach(dev);
-		device_delete_child(dev, sc->iicbus);
-	}
-
-	return (0);
+	if (child == sc->iicbus)
+		sc->iicbus = NULL;
 }
 
 static int
@@ -192,7 +213,8 @@ static int i2c_debug = 0;
 					printf(format, args);	\
 				} while (0)
 
-static void iicbb_setscl(device_t dev, int val, int timeout)
+static void
+iicbb_setscl(device_t dev, int val, int timeout)
 {
 	int k = 0;
 
@@ -207,7 +229,8 @@ static void iicbb_setscl(device_t dev, int val, int timeout)
 	return;
 }
 
-static void iicbb_one(device_t dev, int timeout)
+static void
+iicbb_one(device_t dev, int timeout)
 {
 	I2C_SET(dev,0,1);
 	I2C_SET(dev,1,1);
@@ -215,7 +238,8 @@ static void iicbb_one(device_t dev, int timeout)
 	return;
 }
 
-static void iicbb_zero(device_t dev, int timeout)
+static void
+iicbb_zero(device_t dev, int timeout)
 {
 	I2C_SET(dev,0,0);
 	I2C_SET(dev,1,0);
@@ -237,7 +261,8 @@ static void iicbb_zero(device_t dev, int timeout)
  * When the SLAVE has pulled this line low the MASTER will take the CLOCK
  * line low and then the SLAVE will release the SDA (data) line.
  */
-static int iicbb_ack(device_t dev, int timeout)
+static int
+iicbb_ack(device_t dev, int timeout)
 {
 	int noack;
 	int k = 0;
@@ -258,7 +283,8 @@ static int iicbb_ack(device_t dev, int timeout)
 	return (noack);
 }
 
-static void iicbb_sendbyte(device_t dev, u_char data, int timeout)
+static void
+iicbb_sendbyte(device_t dev, u_char data, int timeout)
 {
 	int i;
     
@@ -273,7 +299,8 @@ static void iicbb_sendbyte(device_t dev, u_char data, int timeout)
 	return;
 }
 
-static u_char iicbb_readbyte(device_t dev, int last, int timeout)
+static u_char
+iicbb_readbyte(device_t dev, int last, int timeout)
 {
 	int i;
 	unsigned char data=0;
@@ -295,17 +322,20 @@ static u_char iicbb_readbyte(device_t dev, int last, int timeout)
 	return data;
 }
 
-static int iicbb_callback(device_t dev, int index, caddr_t data)
+static int
+iicbb_callback(device_t dev, int index, caddr_t data)
 {
 	return (IICBB_CALLBACK(device_get_parent(dev), index, data));
 }
 
-static int iicbb_reset(device_t dev, u_char speed, u_char addr, u_char *oldaddr)
+static int
+iicbb_reset(device_t dev, u_char speed, u_char addr, u_char *oldaddr)
 {
 	return (IICBB_RESET(device_get_parent(dev), speed, addr, oldaddr));
 }
 
-static int iicbb_start(device_t dev, u_char slave, int timeout)
+static int
+iicbb_start(device_t dev, u_char slave, int timeout)
 {
 	int error;
 
@@ -331,7 +361,8 @@ error:
 	return (error);
 }
 
-static int iicbb_stop(device_t dev)
+static int
+iicbb_stop(device_t dev)
 {
 	I2C_SET(dev,0,0);
 	I2C_SET(dev,1,0);
@@ -340,8 +371,8 @@ static int iicbb_stop(device_t dev)
 	return (0);
 }
 
-static int iicbb_write(device_t dev, char * buf, int len, int *sent,
-			int timeout)
+static int
+iicbb_write(device_t dev, char * buf, int len, int *sent, int timeout)
 {
 	int bytes, error = 0;
 
@@ -364,8 +395,8 @@ error:
 	return (error);
 }
 
-static int iicbb_read(device_t dev, char * buf, int len, int *read,
-			int last, int delay)
+static int
+iicbb_read(device_t dev, char * buf, int len, int *read, int last, int delay)
 {
 	int bytes;
 
@@ -382,9 +413,16 @@ static int iicbb_read(device_t dev, char * buf, int len, int *read,
 	return (0);
 }
 
+/* 
+ * XXX This is lame.  We need to have a base iicbb_bridge class that all these
+ * XXX derive from.
+ */
 DRIVER_MODULE(iicbb, bktr, iicbb_driver, iicbb_devclass, 0, 0);
+DRIVER_MODULE(iicbb, ixpiic, iicbb_driver, iicbb_devclass, 0, 0);
 DRIVER_MODULE(iicbb, lpbb, iicbb_driver, iicbb_devclass, 0, 0);
 DRIVER_MODULE(iicbb, viapm, iicbb_driver, iicbb_devclass, 0, 0);
+DRIVER_MODULE(iicbb, cxm_iic, iicbb_driver, iicbb_devclass, 0, 0);
+DRIVER_MODULE(iicbb, at91_bbiic, iicbb_driver, iicbb_devclass, 0, 0);
 
 MODULE_DEPEND(iicbb, iicbus, IICBUS_MINVER, IICBUS_PREFVER, IICBUS_MAXVER);
 MODULE_VERSION(iicbb, IICBB_MODVER);

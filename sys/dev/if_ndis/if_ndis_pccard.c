@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis_pccard.c,v 1.13 2005/05/08 23:19:20 wpaul Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis_pccard.c,v 1.14 2007/04/06 11:21:01 pjd Exp $");
 
 #include <sys/ctype.h>
 #include <sys/param.h>
@@ -131,8 +131,8 @@ ndis_devcompare(bustype, t, dev)
 		return(FALSE);
 
 	while(t->ndis_name != NULL) {
-		if (ndis_strcasecmp(vendstr, t->ndis_vid) == 0 &&
-		    ndis_strcasecmp(prodstr, t->ndis_did) == 0) {
+		if (strcasecmp(vendstr, t->ndis_vid) == 0 &&
+		    strcasecmp(prodstr, t->ndis_did) == 0) {
 			device_set_desc(dev, t->ndis_name);
 			return(TRUE);
 		}
@@ -237,8 +237,8 @@ ndis_attach_pccard(dev)
 		return(error);
 
 	while(t->ndis_name != NULL) {
-		if (ndis_strcasecmp(vendstr, t->ndis_vid) == 0 &&
-		    ndis_strcasecmp(prodstr, t->ndis_did) == 0)
+		if (strcasecmp(vendstr, t->ndis_vid) == 0 &&
+		    strcasecmp(prodstr, t->ndis_did) == 0)
 			break;
 		t++;
 		devidx++;

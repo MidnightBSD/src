@@ -26,12 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ips/ips.c,v 1.17 2005/04/26 13:38:29 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ips/ips.c,v 1.21 2006/10/05 07:28:43 maxim Exp $");
 
+#include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <machine/clock.h>
 
 static d_open_t ips_open;
 static d_close_t ips_close;
@@ -64,7 +64,10 @@ static const char* ips_adapter_name[] = {
 	"ServeRAID 5i II (sarasota)",
 	"ServeRAID 5i (sarasota)",
 	"ServeRAID 6M (marco)",
-	"ServeRAID 6i (sebring)"
+	"ServeRAID 6i (sebring)",
+	"ServeRAID 7t",
+	"ServeRAID 7k",
+	"ServeRAID 7M"
 };
 
 
@@ -308,7 +311,7 @@ static void ips_timeout(void *arg)
 				sc->state |= IPS_TIMEOUT;
 				device_printf(sc->dev, "WARNING: command timeout. Adapter is in toaster mode, resetting to known state\n");
 			}
-			command[i].status.value = IPS_ERROR_STATUS;
+			ips_set_error(&command[i], ETIMEDOUT);
 			command[i].callback(&command[i]);
 			/* hmm, this should be enough cleanup */
 		} else
@@ -440,7 +443,7 @@ int ips_morpheus_reinit(ips_softc_t *sc, int force)
 	device_printf(sc->dev, "resetting adapter, this may take up to 5 minutes\n");
 	ips_write_4(sc, MORPHEUS_REG_IDR, 0x80000000);
 	DELAY(5000000);
-	pci_read_config(sc->dev, 0, 4);
+	ips_read_4(sc, MORPHEUS_REG_OIMR);
 
 	tmp = ips_read_4(sc, MORPHEUS_REG_OISR);
 	for(i = 0; i < 45 && !(tmp & MORPHEUS_BIT_POST1); i++){
@@ -554,7 +557,7 @@ void ips_issue_morpheus_cmd(ips_command_t *command)
 {
 	/* hmmm, is there a cleaner way to do this? */
 	if(command->sc->state & IPS_OFFLINE){
-		command->status.value = IPS_ERROR_STATUS;
+		ips_set_error(command, EINVAL);
 		command->callback(command);
 		return;
 	}
@@ -722,7 +725,7 @@ void ips_issue_copperhead_cmd(ips_command_t *command)
 	int i;
 	/* hmmm, is there a cleaner way to do this? */
 	if(command->sc->state & IPS_OFFLINE){
-		command->status.value = IPS_ERROR_STATUS;
+		ips_set_error(command, EINVAL);
 		command->callback(command);
 		return;
 	}

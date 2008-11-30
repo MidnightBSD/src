@@ -26187,6 +26187,7 @@ sys/dev/ie/if_ievar.h -text
 sys/dev/ieee488/ibfoo.c -text
 sys/dev/ieee488/ibfoo_int.h -text
 sys/dev/ieee488/pcii.c -text
+sys/dev/ieee488/tnt4882.c -text
 sys/dev/ieee488/ugpib.h -text
 sys/dev/ieee488/upd7210.c -text
 sys/dev/ieee488/upd7210.h -text
@@ -26195,6 +26196,9 @@ sys/dev/if_ndis/if_ndis_pccard.c -text
 sys/dev/if_ndis/if_ndis_pci.c -text
 sys/dev/if_ndis/if_ndis_usb.c -text
 sys/dev/if_ndis/if_ndisvar.h -text
+sys/dev/iicbus/ad7418.c -text
+sys/dev/iicbus/ds1672.c -text
+sys/dev/iicbus/icee.c -text
 sys/dev/iicbus/if_ic.c -text
 sys/dev/iicbus/iic.c -text
 sys/dev/iicbus/iic.h -text
@@ -26229,6 +26233,7 @@ sys/dev/ips/ips_disk.h -text
 sys/dev/ips/ips_ioctl.c -text
 sys/dev/ips/ips_ioctl.h -text
 sys/dev/ips/ips_pci.c -text
+sys/dev/ips/ipsreg.h -text
 sys/dev/ipw/if_ipw.c -text
 sys/dev/ipw/if_ipwreg.h -text
 sys/dev/ipw/if_ipwvar.h -text
@@ -26251,6 +26256,7 @@ sys/dev/isp/isp_library.c -text
 sys/dev/isp/isp_library.h -text
 sys/dev/isp/isp_pci.c -text
 sys/dev/isp/isp_sbus.c -text
+sys/dev/isp/isp_stds.h -text
 sys/dev/isp/isp_target.c -text
 sys/dev/isp/isp_target.h -text
 sys/dev/isp/isp_tpublic.h -text
@@ -26264,6 +26270,8 @@ sys/dev/ispfw/asm_12160.h -text
 sys/dev/ispfw/asm_2100.h -text
 sys/dev/ispfw/asm_2200.h -text
 sys/dev/ispfw/asm_2300.h -text
+sys/dev/ispfw/asm_2322.h -text
+sys/dev/ispfw/asm_2400.h -text
 sys/dev/ispfw/ispfw.c -text
 sys/dev/iwi/if_iwi.c -text
 sys/dev/iwi/if_iwireg.h -text

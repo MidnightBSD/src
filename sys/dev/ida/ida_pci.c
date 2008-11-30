@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ida/ida_pci.c,v 1.34 2005/05/29 04:42:20 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ida/ida_pci.c,v 1.35 2007/02/23 12:18:43 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -298,7 +298,7 @@ ida_pci_attach(device_t dev)
 	        return (ENOMEM);
 	}
 	error = bus_setup_intr(dev, ida->irq, INTR_TYPE_BIO | INTR_ENTROPY,
-	    ida_intr, ida, &ida->ih);
+	    NULL, ida_intr, ida, &ida->ih);
 	if (error) {
 		device_printf(dev, "can't setup interrupt\n");
 		ida_free(ida);

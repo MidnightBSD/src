@@ -27,9 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ips/ips_pci.c,v 1.13 2005/03/05 18:17:34 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ips/ips_pci.c,v 1.15 2007/02/23 12:18:44 piso Exp $");
 
+#include <dev/ips/ipsreg.h>
 #include <dev/ips/ips.h>
+
+#include <dev/pci/pcireg.h>
+#include <dev/pci/pcivar.h>
 
 static int ips_pci_free(ips_softc_t *sc);
 static void ips_intrhook(void *arg);
@@ -126,7 +130,8 @@ static int ips_pci_attach(device_t dev)
                 device_printf(dev, "irq allocation failed\n");
                 goto error;
         }
-	if(bus_setup_intr(dev, sc->irqres, INTR_TYPE_BIO|INTR_MPSAFE, sc->ips_adapter_intr, sc, &sc->irqcookie)){
+	if(bus_setup_intr(dev, sc->irqres, INTR_TYPE_BIO|INTR_MPSAFE, NULL, 
+	    sc->ips_adapter_intr, sc, &sc->irqcookie)){
                 device_printf(dev, "irq setup failed\n");
                 goto error;
         }

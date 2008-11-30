@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/joy/joy_pccard.c,v 1.5 2004/05/27 03:49:42 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/joy/joy_pccard.c,v 1.6 2005/09/20 19:51:26 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -45,24 +45,17 @@ __FBSDID("$FreeBSD: src/sys/dev/joy/joy_pccard.c,v 1.5 2004/05/27 03:49:42 imp E
 #include "pccarddevs.h"
 
 static int
-joy_pccard_match(device_t dev)
+joy_pccard_probe(device_t dev)
 {
 	/* For the moment, don't match anything :-) */
-
 	return(ENXIO);
 }
 
 static device_method_t joy_pccard_methods[] = {
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
+	DEVMETHOD(device_probe,		joy_pccard_probe),
+	DEVMETHOD(device_attach,	joy_attach),
 	DEVMETHOD(device_detach,	joy_detach),
-
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	joy_pccard_match),
-	DEVMETHOD(card_compat_probe,	joy_probe),
-	DEVMETHOD(card_compat_attach,	joy_attach),
-
-    { 0, 0 }
+	{ 0, 0 }
 };
 
 static driver_t joy_pccard_driver = {

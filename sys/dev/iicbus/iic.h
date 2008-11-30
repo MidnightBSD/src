@@ -23,13 +23,24 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/iicbus/iic.h,v 1.3 1999/08/28 00:44:16 peter Exp $
+ * $FreeBSD: src/sys/dev/iicbus/iic.h,v 1.5 2006/11/28 06:51:36 imp Exp $
  *
  */
 #ifndef __IIC_H
 #define __IIC_H
 
 #include <sys/ioccom.h>
+
+/* Designed to be compatible with linux's struct i2c_msg */
+struct iic_msg
+{
+	uint16_t	slave;
+	uint16_t	flags;
+#define	IIC_M_WR	0	/* Fake flag for write */
+#define	IIC_M_RD	0x0001	/* read vs write */
+	uint16_t	len;	/* msg legnth */
+	uint8_t *	buf;
+};
 
 struct iiccmd {
 	u_char slave;
@@ -38,10 +49,16 @@ struct iiccmd {
 	char *buf;
 };
 
+struct iic_rdwr_data {
+	struct iic_msg *msgs;
+	uint32_t nmsgs;
+};
+
 #define I2CSTART	_IOW('i', 1, struct iiccmd)	/* start condition */
 #define I2CSTOP		_IO('i', 2)			/* stop condition */
 #define I2CRSTCARD	_IOW('i', 3, struct iiccmd)	/* reset the card */
 #define I2CWRITE	_IOW('i', 4, struct iiccmd)	/* send data */
 #define I2CREAD		_IOW('i', 5, struct iiccmd)	/* receive data */
+#define I2CRDWR		_IOW('i', 6, struct iic_rdwr_data)	/* General read/write interface */
 
 #endif

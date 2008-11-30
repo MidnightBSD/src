@@ -12,7 +12,7 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *    this product includes software developed by Matriplex, inc.
+ *	This product includes software developed by Matriplex, inc.
  * 4. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
@@ -37,7 +37,7 @@
  *
  ******************************************************************************
  *
- * $FreeBSD: src/sys/dev/idt/idtreg.h,v 1.2 2005/01/06 01:42:46 imp Exp $
+ * $FreeBSD: src/sys/dev/idt/idtreg.h,v 1.3 2007/01/09 04:26:51 imp Exp $
  */
 
 #define	IDT_VERSION	"IDT 1.101"

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis_usb.c,v 1.5 2005/04/24 20:21:22 wpaul Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis_usb.c,v 1.9 2007/06/18 22:24:32 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -69,10 +69,9 @@ __FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis_usb.c,v 1.5 2005/04/24 20:21:22 
 
 MODULE_DEPEND(ndis, usb, 1, 1, 1);
 
-Static int ndisusb_match	(device_ptr_t);
-Static int ndisusb_attach	(device_ptr_t);
-Static struct resource_list *ndis_get_resource_list
-				(device_t, device_t);
+static device_probe_t ndisusb_match;
+static device_attach_t ndisusb_attach;
+static bus_get_resource_list_t ndis_get_resource_list;
 
 extern int ndisdrv_modevent     (module_t, int, void *);
 extern int ndis_attach          (device_t);
@@ -83,7 +82,7 @@ extern int ndis_resume          (device_t);
 
 extern unsigned char drv_data[];
 
-Static device_method_t ndis_methods[] = {
+static device_method_t ndis_methods[] = {
         /* Device interface */
 	DEVMETHOD(device_probe,		ndisusb_match),
 	DEVMETHOD(device_attach,	ndisusb_attach),
@@ -98,39 +97,42 @@ Static device_method_t ndis_methods[] = {
 	{ 0, 0 }
 };
 
-Static driver_t ndis_driver = {
+static driver_t ndis_driver = {
 	"ndis",
 	ndis_methods,
 	sizeof(struct ndis_softc)
 };
 
-Static devclass_t ndis_devclass;
+static devclass_t ndis_devclass;
 
 DRIVER_MODULE(ndis, uhub, ndis_driver, ndis_devclass, ndisdrv_modevent, 0);
 
-USB_MATCH(ndisusb)
+static int
+ndisusb_match(device_t self)
 {
-	USB_MATCH_START(ndisusb, uaa);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 
 	if (windrv_lookup(0, "USB Bus") == NULL)
-		return(UMATCH_NONE);
+		return (UMATCH_NONE);
 
 	if (uaa->iface != NULL)
-		return(UMATCH_NONE);
+		return (UMATCH_NONE);
 
-	return(UMATCH_NONE);
+	return (UMATCH_NONE);
 }
 
-USB_ATTACH(ndisusb)
+static int
+ndisusb_attach(device_t self)
 {
-	USB_ATTACH_START(ndisusb, dummy, uaa);
+	struct ndisusb_softc *dummy = device_get_softc(self);
+	struct usb_attach_arg *uaa = device_get_ivars(self);
 	struct ndis_softc	*sc;
 	driver_object		*drv;
 
 	sc = (struct ndis_softc *)dummy;
 
 	if (uaa->device == NULL)
-		USB_ATTACH_ERROR_RETURN;
+		return ENXIO;
 
 	sc->ndis_dev = self;
 
@@ -140,15 +142,13 @@ USB_ATTACH(ndisusb)
 	windrv_create_pdo(drv, self);
 
 	if (ndis_attach(self) != 0)
-		USB_ATTACH_ERROR_RETURN;
+		return ENXIO;
 
-	USB_ATTACH_SUCCESS_RETURN;
+	return 0;
 }
 
 static struct resource_list *
-ndis_get_resource_list(dev, child)
-	device_t		dev;
-	device_t		child;
+ndis_get_resource_list(device_t dev, device_t child)
 {
 	struct ndis_softc       *sc;
 

@@ -25,9 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ips/ips_ioctl.h,v 1.1 2003/05/11 06:36:49 scottl Exp $
+ * $FreeBSD: src/sys/dev/ips/ips_ioctl.h,v 1.2 2006/01/03 23:03:39 scottl Exp $
  */
 
+#ifndef _IPS_IOCTL_H
+#define _IPS_IOCTL_H
 
 #include <sys/ioccom.h>
 
@@ -42,6 +44,13 @@
 
 #define IPS_IOCTL_BUFFER_SIZE 4096
 
+typedef struct ips_user_request{
+	void *	command_buffer;
+	void *	data_buffer;
+	u_int32_t	status;
+}ips_user_request;
+
+#ifdef _KERNEL
 
 typedef struct ips_ioctl{
 	ips_generic_cmd *	command_buffer;
@@ -53,9 +62,6 @@ typedef struct ips_ioctl{
 	bus_dmamap_t  		dmamap;
 }ips_ioctl_t;
 
-typedef struct ips_user_request{
-	void *	command_buffer;
-	void *	data_buffer;
-	u_int32_t	status;
-}ips_user_request;
+#endif
+#endif
 

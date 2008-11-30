@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/iicbus/iic.c,v 1.32 2004/06/16 09:46:45 phk Exp $
+ * $FreeBSD: src/sys/dev/iicbus/iic.c,v 1.39 2007/03/23 23:08:28 imp Exp $
  *
  */
 #include <sys/param.h>
@@ -122,15 +122,9 @@ iic_attach(device_t dev)
 {
 	struct iic_softc *sc = (struct iic_softc *)device_get_softc(dev);
 
-	if (!sc)
-		return (ENOMEM);
-
-	bzero(sc, sizeof(struct iic_softc));
-
 	sc->sc_devnode = make_dev(&iic_cdevsw, device_get_unit(dev),
 			UID_ROOT, GID_WHEEL,
 			0600, "iic%d", device_get_unit(dev));
-
 	return (0);
 }
 
@@ -146,7 +140,7 @@ iic_detach(device_t dev)
 }
 
 static int
-iicopen (struct cdev *dev, int flags, int fmt, struct thread *td)
+iicopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	struct iic_softc *sc = IIC_SOFTC(minor(dev));
 
@@ -246,15 +240,17 @@ iicioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 	struct iic_softc *sc = IIC_SOFTC(minor(dev));
 	device_t parent = device_get_parent(iicdev);
 	struct iiccmd *s = (struct iiccmd *)data;
-	int error, count;
+	struct iic_rdwr_data *d = (struct iic_rdwr_data *)data;
+	struct iic_msg *m;
+	int error, count, i;
 	char *buf = NULL;
+	void **usrbufs = NULL;
 
 	if (!sc)
 		return (EINVAL);
 
-	if ((error = iicbus_request_bus(device_get_parent(iicdev), iicdev,
-			(flags & O_NONBLOCK) ? IIC_DONTWAIT :
-						(IIC_WAIT | IIC_INTR))))
+	if ((error = iicbus_request_bus(parent, iicdev,
+	    (flags & O_NONBLOCK) ? IIC_DONTWAIT : (IIC_WAIT | IIC_INTR))))
 		return (error);
 
 	switch (cmd) {
@@ -276,7 +272,7 @@ iicioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 		break;
 
 	case I2CRSTCARD:
-		error = iicbus_reset(parent, 0, 0, NULL);
+		error = iicbus_reset(parent, IIC_UNKNOWN, 0, NULL);
 		break;
 
 	case I2CWRITE:
@@ -303,11 +299,35 @@ iicioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 		error = copyout(buf, s->buf, s->count);
 		break;
 
+	case I2CRDWR:
+		buf = malloc(sizeof(*d->msgs) * d->nmsgs, M_TEMP, M_WAITOK);
+		usrbufs = malloc(sizeof(void *) * d->nmsgs, M_TEMP, M_ZERO | M_WAITOK);
+		error = copyin(d->msgs, buf, sizeof(*d->msgs) * d->nmsgs);
+		if (error)
+			break;
+		/* Alloc kernel buffers for userland data, copyin write data */
+		for (i = 0; i < d->nmsgs; i++) {
+			m = &((struct iic_msg *)buf)[i];
+			usrbufs[i] = m->buf;
+			m->buf = malloc(m->len, M_TEMP, M_WAITOK);
+			if (!(m->flags & IIC_M_RD))
+				copyin(usrbufs[i], m->buf, m->len);
+		}
+		error = iicbus_transfer(iicdev, (struct iic_msg *)buf, d->nmsgs);
+		/* Copyout all read segments, free up kernel buffers */
+		for (i = 0; i < d->nmsgs; i++) {
+			m = &((struct iic_msg *)buf)[i];
+			if (m->flags & IIC_M_RD)
+				copyout(m->buf, usrbufs[i], m->len);
+			free(m->buf, M_TEMP);
+		}
+		free(usrbufs, M_TEMP);
+		break;
 	default:
 		error = ENOTTY;
 	}
 
-	iicbus_release_bus(device_get_parent(iicdev), iicdev);
+	iicbus_release_bus(parent, iicdev);
 
 	if (buf != NULL)
 		free(buf, M_TEMP);

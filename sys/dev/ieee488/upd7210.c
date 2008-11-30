@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ieee488/upd7210.c,v 1.7 2005/04/04 17:37:35 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ieee488/upd7210.c,v 1.10 2006/03/11 15:39:22 phk Exp $");
 
 #  define	GPIB_DEBUG
 #  undef	GPIB_DEBUG
@@ -40,6 +40,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ieee488/upd7210.c,v 1.7 2005/04/04 17:37:35 phk 
 #include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/module.h>
+#include <sys/rman.h>
 #include <sys/bus.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -70,10 +71,7 @@ upd7210_rd(struct upd7210 *u, enum upd7210_rreg reg)
 {
 	u_int r;
 
-	r = bus_space_read_1(
-	    u->reg_tag[reg],
-	    u->reg_handle[reg],
-	    u->reg_offset[reg]);
+	r = bus_read_1(u->reg_res[reg], u->reg_offset[reg]);
 	u->rreg[reg] = r;
 	return (r);
 }
@@ -81,10 +79,8 @@ upd7210_rd(struct upd7210 *u, enum upd7210_rreg reg)
 void
 upd7210_wr(struct upd7210 *u, enum upd7210_wreg reg, u_int val)
 {
-	bus_space_write_1(
-	    u->reg_tag[reg],
-	    u->reg_handle[reg],
-	    u->reg_offset[reg], val);
+
+	bus_write_1(u->reg_res[reg], u->reg_offset[reg], val);
 	u->wreg[reg] = val;
 	if (reg == AUXMR)
 		u->wreg[8 + (val >> 5)] = val & 0x1f;
@@ -101,6 +97,7 @@ upd7210intr(void *arg)
 	isr1 = upd7210_rd(u, ISR1);
 	isr2 = upd7210_rd(u, ISR2);
 	if (u->busy == 0 || u->irq == NULL || !u->irq(u, 1)) {
+#if 0
 		printf("upd7210intr [%02x %02x %02x",
 		    upd7210_rd(u, DIR), isr1, isr2);
 		printf(" %02x %02x %02x %02x %02x] ",
@@ -111,6 +108,7 @@ upd7210intr(void *arg)
 		    upd7210_rd(u, ADR1));
 		upd7210_print_isr(isr1, isr2);
 		printf("\n");
+#endif
 	}
 	mtx_unlock(&u->mutex);
 }
@@ -271,21 +269,34 @@ static struct cdevsw gpib_l_cdevsw = {
 
 /* Housekeeping */
 
+static struct unrhdr *units;
+
 void
 upd7210attach(struct upd7210 *u)
 {
-	int unit = 0;
 	struct cdev *dev;
 
+	if (units == NULL)
+		units = new_unrhdr(0, minor2unit(MAXMINOR), NULL);
+	u->unit = alloc_unr(units);
 	mtx_init(&u->mutex, "gpib", NULL, MTX_DEF);
-	u->cdev = make_dev(&gpib_l_cdevsw, unit,
+	u->cdev = make_dev(&gpib_l_cdevsw, u->unit,
 	    UID_ROOT, GID_WHEEL, 0444,
-	    "gpib%ul", unit);
+	    "gpib%ul", u->unit);
 	u->cdev->si_drv1 = u;
 
-	dev = make_dev(&gpib_ib_cdevsw, unit,
+	dev = make_dev(&gpib_ib_cdevsw, u->unit,
 	    UID_ROOT, GID_WHEEL, 0444,
-	    "gpib%uib", unit);
+	    "gpib%uib", u->unit);
 	dev->si_drv1 = u;
 	dev_depends(u->cdev, dev);
+}
+
+void
+upd7210detach(struct upd7210 *u)
+{
+
+	destroy_dev(u->cdev);
+	mtx_destroy(&u->mutex);
+	free_unr(units, u->unit);
 }

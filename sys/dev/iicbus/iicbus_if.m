@@ -23,10 +23,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/dev/iicbus/iicbus_if.m,v 1.6 2005/01/06 01:42:47 imp Exp $
+# $FreeBSD: src/sys/dev/iicbus/iicbus_if.m,v 1.8 2006/12/05 06:19:36 imp Exp $
 #
 
 #include <sys/bus.h>
+#include <dev/iicbus/iic.h>
 
 INTERFACE iicbus;
 
@@ -90,7 +91,7 @@ METHOD int read {
 #
 METHOD int write {
 	device_t dev;
-	char *buf;
+	const char *buf;
 	int len;
 	int *bytes;
 	int timeout;
@@ -104,4 +105,13 @@ METHOD int reset {
 	u_char speed;
 	u_char addr;
 	u_char *oldaddr;
+};
+
+#
+# Generalized Read/Write interface
+#
+METHOD int transfer {
+	device_t dev;
+	struct iic_msg *msgs;
+	uint32_t nmsgs;
 };

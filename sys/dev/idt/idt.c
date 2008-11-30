@@ -77,7 +77,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/idt/idt.c,v 1.11 2005/06/10 16:49:10 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/idt/idt.c,v 1.12 2006/05/16 14:36:26 phk Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -95,7 +95,6 @@ __FBSDID("$FreeBSD: src/sys/dev/idt/idt.c,v 1.11 2005/06/10 16:49:10 brooks Exp 
 #include <sys/proc.h>
 #include <sys/signalvar.h>
 #include <sys/mman.h>
-#include <machine/clock.h>
 #include <machine/cpu.h>	/* bootverbose */
 
 #include <sys/bus.h>
