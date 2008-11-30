@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/fb/fbreg.h,v 1.18.8.1 2005/10/05 21:48:02 marius Exp $
+ * $FreeBSD: src/sys/dev/fb/fbreg.h,v 1.21 2007/01/18 13:08:08 marius Exp $
  */
 
 #ifndef _DEV_FB_FBREG_H_
@@ -43,14 +43,15 @@
 #define fillw_io(p, d, c)	fillw((p), (void *)(d), (c))
 void generic_bcopy(const void *s, void *d, size_t c);
 void generic_bzero(void *d, size_t c);
-#elif __amd64__
+#elif defined(__amd64__)
 #define bcopy_io(s, d, c)	bcopy((void *)(s), (void *)(d), (c))
 #define bcopy_toio(s, d, c)	bcopy((void *)(s), (void *)(d), (c))
 #define bcopy_fromio(s, d, c)	bcopy((void *)(s), (void *)(d), (c))
 #define bzero_io(d, c)		bzero((void *)(d), (c))
 #define fill_io(p, d, c)	fill((p), (void *)(d), (c))
 #define fillw_io(p, d, c)	fillw((p), (void *)(d), (c))
-#elif __ia64__
+#elif defined(__ia64__) || defined(__sparc64__)
+#if defined(__ia64__)
 #include <machine/bus.h>
 #define	bcopy_fromio(s, d, c)	\
 	bus_space_read_region_1(IA64_BUS_SPACE_MEM, s, 0, (void*)(d), c)
@@ -69,13 +70,14 @@ void generic_bzero(void *d, size_t c);
 #define	writeb(a, v)		bus_space_write_1(IA64_BUS_SPACE_MEM, a, 0, v)
 #define	writew(a, v)		bus_space_write_2(IA64_BUS_SPACE_MEM, a, 0, v)
 #define	writel(a, v)		bus_space_write_4(IA64_BUS_SPACE_MEM, a, 0, v)
+#endif /* __ia64__ */
 static __inline void
 fillw(int val, uint16_t *buf, size_t size)
 {
 	while (size--)
 		*buf++ = val;
 }
-#elif __powerpc__
+#elif defined(__powerpc__)
 
 #define bcopy_io(s, d, c)	ofwfb_bcopy((void *)(s), (void *)(d), (c))
 #define bcopy_toio(s, d, c)	ofwfb_bcopy((void *)(s), (void *)(d), (c))
@@ -91,7 +93,7 @@ void ofwfb_fillw(int pat, void *base, size_t cnt);
 u_int16_t ofwfb_readw(u_int16_t *addr);
 void ofwfb_writew(u_int16_t *addr, u_int16_t val);
 
-#else /* !__i386__ && !__ia64__ && !__amd64__ && !__powerpc__ */
+#else /* !__i386__ && !__amd64__ && !__ia64__ && !__sparc64__ && !__powerpc__ */
 #define bcopy_io(s, d, c)	memcpy_io((d), (s), (c))
 #define bcopy_toio(s, d, c)	memcpy_toio((d), (void *)(s), (c))
 #define bcopy_fromio(s, d, c)	memcpy_fromio((void *)(d), (s), (c))

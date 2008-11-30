@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex_pccard.c,v 1.14 2005/06/24 14:36:52 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex_pccard.c,v 1.18 2007/02/23 12:18:40 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -54,39 +54,54 @@ __FBSDID("$FreeBSD: src/sys/dev/ex/if_ex_pccard.c,v 1.14 2005/06/24 14:36:52 imp
 
 static const struct pccard_product ex_pccard_products[] = {
 	PCMCIA_CARD(OLICOM, OC2220),
+	PCMCIA_CARD(OLICOM, OC2231),
+	PCMCIA_CARD(OLICOM, OC2232),
 	PCMCIA_CARD(INTEL, ETHEREXPPRO),
 	{ NULL }
 };
 
 /* Bus Front End Functions */
-static int	ex_pccard_match(device_t);
 static int	ex_pccard_probe(device_t);
 static int	ex_pccard_attach(device_t);
 
-static device_method_t ex_pccard_methods[] = {
-	/* Device interface */
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
-	DEVMETHOD(device_detach,	ex_detach),
+static int
+ex_pccard_enet_ok(u_char *enaddr)
+{
+	int			i;
+	u_char			sum;
 
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	ex_pccard_match),
-	DEVMETHOD(card_compat_probe,	ex_pccard_probe),
-	DEVMETHOD(card_compat_attach,	ex_pccard_attach),
-
-	{ 0, 0 }
-};
-
-static driver_t ex_pccard_driver = {
-	"ex",
-	ex_pccard_methods,
-	sizeof(struct ex_softc),
-};
-
-DRIVER_MODULE(ex, pccard, ex_pccard_driver, ex_devclass, 0, 0);
+	if (enaddr[0] == 0xff)
+		return (0);
+	for (i = 0, sum = 0; i < ETHER_ADDR_LEN; i++)
+		sum |= enaddr[i];
+	return (sum != 0);
+}
 
 static int
-ex_pccard_match(device_t dev)
+ex_pccard_silicom_cb(const struct pccard_tuple *tuple, void *arg)
+{
+	u_char *enaddr = arg;
+	int i;
+
+	if (tuple->code != CISTPL_FUNCE)
+		return (0);
+	if (tuple->length != 15)
+		return (0);
+	if (pccard_tuple_read_1(tuple, 6) != 6)
+		return (0);
+	for (i = 0; i < 6; i++)
+		enaddr[i] = pccard_tuple_read_1(tuple, 7 + i);
+	return (1);
+}
+
+static void
+ex_pccard_get_silicom_mac(device_t dev, u_char *ether_addr)
+{
+	pccard_cis_scan(dev, ex_pccard_silicom_cb, ether_addr);
+}
+
+static int
+ex_pccard_probe(device_t dev)
 {
 	const struct pccard_product *pp;
 	int error;
@@ -106,95 +121,6 @@ ex_pccard_match(device_t dev)
 		return 0;
 	}
 	return EIO;
-}
-
-static int
-ex_pccard_probe(device_t dev)
-{
-	u_int		iobase;
-	u_int		irq;
-
-	iobase = bus_get_resource_start(dev, SYS_RES_IOPORT, 0);
-	if (!iobase) {
-		printf("ex: no iobase?\n");
-		return(ENXIO);
-	}
-
-	if (bootverbose)
-		printf("ex: ex_pccard_probe() found card at 0x%03x\n", iobase);
-
-	irq = bus_get_resource_start(dev, SYS_RES_IRQ, 0);
-
-	if (irq == 0) {
-		printf("ex: invalid IRQ.\n");
-		return(ENXIO);
-	}
-
-	return(0);
-}
-
-static int
-ex_pccard_enet_ok(u_char *enaddr)
-{
-	int			i;
-	u_char			sum;
-
-	if (enaddr[0] == 0xff)
-		return (0);
-	for (i = 0, sum = 0; i < ETHER_ADDR_LEN; i++)
-		sum |= enaddr[i];
-	return (sum != 0);
-}
-
-#if 0
-#ifdef NETBSD_LIKE
-static int
-ex_pccard_silicom_cb(struct pccard_tuple *tuple, void *arg)
-{
-	u_char *enaddr = arg;
-
-	if (tuple->code != PCMCIA_CISTPL_FUNCE)
-		return (0);
-	if (tuple->length != 15)
-		return (0);
-	if (CARD_CIS_READ_1(tuple->dev, tuple, 6) != 6)
-		return (0);
-	for (i = 0; i < 6; i++)
-		enaddr[i] = CARD_CIS_READ_1(tuple->dev, tuple, 7 + i);
-	return (1);
-}
-#endif
-#endif
-
-static void
-ex_pccard_get_silicom_mac(device_t dev, u_char *ether_addr)
-{
-#if 0
-#ifdef	NETBSD_LIKE
-	CARD_CIS_SCAN(dev, ex_pccard_silicom_cb, ether_addr);
-#endif
-#ifdef	CS_LIKE
-	uint8_t buffer[64];
-	tuple_t tuple;
-	int i;
-	
-	tuple.TupleData = buffer;
-	tuple.TupleDataMax = sizeof(buffer);
-	tuple.TupleOffset = 0;
-	tuple.DesiredTuple = CISTPL_FUNCE;
-	tuple.Attributes = TUPLE_RETURN_COMMON;
-	if (CARD_SERVICE(dev, GetFirstTuple, &tuple) != CS_SUCCESS)
-		return;
-	if (CARD_SERVICES(dev, GetTupleData, &tuple) != CS_SUCCESS)
-		return;
-	if (tuple.TupleLength != 15)
-		return;
-	if (buffer[6] != 6)
-		return;
-	for (i = 0; i < 6; i++)
-		ether_addr[i] = buffer[7 + i);
-#endif
-#endif
 }
 
 static int
@@ -239,7 +165,7 @@ ex_pccard_attach(device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
-	    ex_intr, (void *)sc, &sc->ih);
+	    NULL, ex_intr, (void *)sc, &sc->ih);
 	if (error) {
 		device_printf(dev, "bus_setup_intr() failed!\n");
 		goto bad;
@@ -250,3 +176,19 @@ bad:
 	ex_release_resources(dev);
 	return (error);
 }
+static device_method_t ex_pccard_methods[] = {
+	/* Device interface */
+	DEVMETHOD(device_probe,		ex_pccard_probe),
+	DEVMETHOD(device_attach,	ex_pccard_attach),
+	DEVMETHOD(device_detach,	ex_detach),
+
+	{ 0, 0 }
+};
+
+static driver_t ex_pccard_driver = {
+	"ex",
+	ex_pccard_methods,
+	sizeof(struct ex_softc),
+};
+
+DRIVER_MODULE(ex, pccard, ex_pccard_driver, ex_devclass, 0, 0);

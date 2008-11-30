@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ed/if_edvar.h,v 1.32.2.2 2005/10/08 18:00:40 imp Exp $
+ * $FreeBSD: src/sys/dev/ed/if_edvar.h,v 1.42 2006/06/12 04:30:42 imp Exp $
  */
 
 #ifndef SYS_DEV_ED_IF_EDVAR_H
@@ -71,6 +71,7 @@ struct ed_softc {
         void	(*sc_tick)(void *);
 	void (*readmem)(struct ed_softc *sc, bus_size_t src, uint8_t *dst,
 	    uint16_t amount);
+	u_short	(*sc_write_mbufs)(struct ed_softc *, struct mbuf *, bus_size_t);
 
 	int	nic_offset;	/* NIC (DS8390) I/O bus address offset */
 	int	asic_offset;	/* ASIC I/O bus address offset */
@@ -105,6 +106,8 @@ struct ed_softc {
 	u_char  rec_page_start;	/* first page of RX ring-buffer */
 	u_char  rec_page_stop;	/* last page of RX ring-buffer */
 	u_char  next_packet;	/* pointer to next unread RX packet */
+	u_int	tx_mem;		/* Total amount of RAM for tx */
+	u_int	rx_mem;		/* Total amount of RAM for rx */
 	struct	ifmib_iso_8802_3 mibdata; /* stuff for network mgmt */
 };
 
@@ -215,15 +218,10 @@ int	ed_isa_mem_ok(device_t, u_long, u_int); /* XXX isa specific */
 void	ed_stop(struct ed_softc *);
 void	ed_shmem_readmem16(struct ed_softc *, bus_size_t, uint8_t *, uint16_t);
 void	ed_shmem_readmem8(struct ed_softc *, bus_size_t, uint8_t *, uint16_t);
+u_short	ed_shmem_write_mbufs(struct ed_softc *, struct mbuf *, bus_size_t);
 void	ed_pio_readmem(struct ed_softc *, bus_size_t, uint8_t *, uint16_t);
 void	ed_pio_writemem(struct ed_softc *, uint8_t *, uint16_t, uint16_t);
-
-/* The following is unsatisfying XXX */
-#ifdef ED_HPP
-void	ed_hpp_set_physical_link(struct ed_softc *);
-void	ed_hpp_readmem(struct ed_softc *, bus_size_t, uint8_t *, uint16_t);
-u_short	ed_hpp_write_mbufs(struct ed_softc *, struct mbuf *, int);
-#endif
+u_short	ed_pio_write_mbufs(struct ed_softc *, struct mbuf *, bus_size_t);
 
 void	ed_disable_16bit_access(struct ed_softc *);
 void	ed_enable_16bit_access(struct ed_softc *);
@@ -243,7 +241,7 @@ extern devclass_t ed_devclass;
 #define ED_VENDOR_SIC		0x04		/* Allied-Telesis SIC */
 
 /*
- * Compile-time config flags
+ * Configure time flags
  */
 /*
  * this sets the default for enabling/disabling the transceiver

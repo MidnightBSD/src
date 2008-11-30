@@ -34,52 +34,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /*-
- * This font lives in the public domain. It it a PC font, IBM encoding,
+ * This font lives in the public domain. It is a PC font, IBM encoding,
  * which was designed for use with syscons.
  *
  * Copyright (c) 2000 Andrew Miklic
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fb/boot_font.c,v 1.5 2005/05/29 04:42:20 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fb/boot_font.c,v 1.9 2007/06/16 21:31:52 marius Exp $");
 
 #include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/proc.h>
-#include <sys/fcntl.h>
-#include <sys/malloc.h>
-#include <sys/fbio.h>
 
-#include <isa/isareg.h>
-#include <dev/fb/vgareg.h>
-
-#include <vm/vm.h>
-#include <vm/vm_param.h>
-#include <vm/pmap.h>
-
-#include <machine/md_var.h>
-#include <machine/pc/bios.h>
-#include <machine/clock.h>
-#include <machine/bus.h>
-#include <machine/pc/vesa.h>
-#include <machine/resource.h>
-#include <machine/rpb.h>
-
-#include <sys/bus.h>
-#include <sys/rman.h>
-
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
-
-#include <dev/fb/fbreg.h>
 #include <dev/fb/gfb.h>
-#include <dev/gfb/gfb_pci.h>
 
-#include "opt_fb.h"
-
-struct gfb_font bold8x16 = {
+const struct gfb_font bold8x16 = {
 	8,
 	16,
 	{

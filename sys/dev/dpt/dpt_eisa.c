@@ -26,7 +26,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_eisa.c,v 1.20 2005/05/29 04:42:19 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_eisa.c,v 1.24 2007/06/17 05:55:49 scottl Exp $");
+
+#include "opt_eisa.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,6 +109,7 @@ dpt_eisa_attach (device_t dev)
 	int		error = 0;
 
 	dpt = device_get_softc(dev);
+	dpt->dev = dev;
 
 	dpt->io_rid = 0;
 	dpt->io_type = SYS_RES_IOPORT;
@@ -153,7 +156,7 @@ dpt_eisa_attach (device_t dev)
 	splx(s);
 
 	if (bus_setup_intr(dev, dpt->irq_res, INTR_TYPE_CAM | INTR_ENTROPY,
-			   dpt_intr, dpt, &dpt->ih)) {
+			   NULL, dpt_intr, dpt, &dpt->ih)) {
 		device_printf(dev, "Unable to register interrupt handler\n");
 		error = ENXIO;
 		goto bad;
@@ -212,3 +215,5 @@ static driver_t dpt_eisa_driver = {
 };
 
 DRIVER_MODULE(dpt, eisa, dpt_eisa_driver, dpt_devclass, 0, 0);
+MODULE_DEPEND(dpt, eisa, 1, 1, 1);
+MODULE_DEPEND(dpt, cam, 1, 1, 1);

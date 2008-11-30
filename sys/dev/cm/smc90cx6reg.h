@@ -1,5 +1,5 @@
 /*	$NetBSD: smc90cx6reg.h,v 1.7 1999/02/16 23:34:13 is Exp $ */
-/*	$FreeBSD: src/sys/dev/cm/smc90cx6reg.h,v 1.1 2002/01/08 20:03:12 fjoe Exp $ */
+/*	$FreeBSD: src/sys/dev/cm/smc90cx6reg.h,v 1.2 2006/06/11 22:25:01 fjoe Exp $ */
 
 /*-
  * Copyright (c) 1994, 1995, 1998 The NetBSD Foundation, Inc.
@@ -45,6 +45,7 @@
 #define _SMC90CXVAR_H_
 
 #define CM_IO_PORTS 16
+#define CM_MEM_SIZE	0x800
 
 /* register offsets */
 

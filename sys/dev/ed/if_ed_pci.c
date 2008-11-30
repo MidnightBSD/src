@@ -18,7 +18,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_pci.c,v 1.43.2.3 2005/10/17 02:17:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_pci.c,v 1.49 2007/02/23 12:18:38 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -107,7 +107,7 @@ ed_pci_attach(device_t dev)
 		return (error);
 	}
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET | INTR_MPSAFE,
-	    edintr, sc, &sc->irq_handle);
+	    NULL, edintr, sc, &sc->irq_handle);
 	if (error) {
 		ed_release_resources(dev);
 		return (error);

@@ -65,7 +65,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/esp/esp_sbus.c,v 1.11 2005/05/19 14:51:10 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/esp/esp_sbus.c,v 1.14 2007/02/23 12:18:40 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -135,6 +135,7 @@ static driver_t esp_dma_driver = {
 };
 
 DRIVER_MODULE(esp, dma, esp_dma_driver, esp_devclass, 0, 0);
+MODULE_DEPEND(esp, dma, 1, 1, 1);
 
 static device_method_t esp_sbus_methods[] = {
 	DEVMETHOD(device_probe,		esp_probe),
@@ -152,6 +153,9 @@ static driver_t esp_sbus_driver = {
 };
 
 DRIVER_MODULE(esp, sbus, esp_sbus_driver, esp_devclass, 0, 0);
+MODULE_DEPEND(esp, sbus, 1, 1, 1);
+
+MODULE_DEPEND(esp, cam, 1, 1, 1);
 
 /*
  * Functions and the switch for the MI code.
@@ -258,7 +262,7 @@ esp_sbus_attach(device_t dev)
 
 		/* Create a parent DMA tag based on this bus. */
 		error = bus_dma_tag_create(
-		    NULL,			/* parent */
+		    bus_get_dma_tag(dev),	/* parent */
 		    PAGE_SIZE, 0,		/* alignment, boundary */
 		    BUS_SPACE_MAXADDR,		/* lowaddr */
 		    BUS_SPACE_MAXADDR,		/* highaddr */
@@ -687,7 +691,7 @@ espattach(struct esp_softc *esc, struct ncr53c9x_glue *gluep)
 		return (ENXIO);
 	}
 	if (bus_setup_intr(esc->sc_dev, esc->sc_irqres,
-	    INTR_TYPE_BIO|INTR_MPSAFE, ncr53c9x_intr, sc, &esc->sc_irq)) {
+	    INTR_TYPE_BIO|INTR_MPSAFE, NULL, ncr53c9x_intr, sc, &esc->sc_irq)) {
 		device_printf(esc->sc_dev, "cannot set up interrupt\n");
 		error = ENXIO;
 		goto fail_ires;

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_isa.c,v 1.23.2.2 2005/11/04 18:09:07 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_isa.c,v 1.31 2007/02/23 12:18:38 piso Exp $");
 
 #include "opt_ed.h"
 
@@ -55,15 +55,16 @@ static int ed_isa_probe(device_t);
 static int ed_isa_attach(device_t);
 
 static struct isa_pnp_id ed_ids[] = {
-	{ 0x1684a34d,	NULL },		/* SMC8416 */
-	{ 0xd680d041,	NULL },		/* PNP80d6 */
-	{ 0x1980635e,	NULL },		/* WSC8019 */
 	{ 0x0131d805,	NULL },		/* ANX3101 */
+	{ 0x4cf48906,	NULL },		/* ATIf44c */
 	{ 0x01200507,	NULL },		/* AXE2001 */
-	{ 0x19808c4a,	NULL },		/* RTL8019 */
 	{ 0x0090252a,	NULL },		/* JQE9000 */
 	{ 0x0020832e,	NULL },		/* KTC2000 */
-	{ 0x4cf48906,	NULL },		/* ATIf44c */
+	{ 0xd680d041,	NULL },		/* PNP80d6 */
+	{ 0x6081d041,	NULL },		/* PNP8160 */
+	{ 0x19808c4a,	NULL },		/* RTL8019 */
+	{ 0x1684a34d,	NULL },		/* SMC8416 */
+	{ 0x1980635e,	NULL },		/* WSC8019 */
 	{ 0,		NULL }
 };
 
@@ -81,6 +82,7 @@ ed_isa_probe_Novell(device_t dev)
 	/*
 	 * Final sanity check for Gateway Ethernet cards before
 	 * believing that they really are Gateway AT.
+	 * XXX I think this is stale.
 	 */
 	if ((ED_FLAGS_GETTYPE(flags) == ED_FLAGS_GWETHER) &&
 	    (sc->enaddr[2] == 0x86)) {
@@ -168,16 +170,12 @@ ed_isa_attach(device_t dev)
 	ed_alloc_irq(dev, sc->irq_rid, 0);
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET | INTR_MPSAFE,
-	    edintr, sc, &sc->irq_handle);
+	    NULL, edintr, sc, &sc->irq_handle);
 	if (error) {
 		ed_release_resources(dev);
 		return (error);
 	}
 
-#ifdef ED_HPP
-	if (sc->vendor == ED_VENDOR_HP && sc->type == ED_TYPE_HP_PCLANPLUS)
-		sc->readmem = ed_hpp_readmem;
-#endif
 	return ed_attach(dev);
 }
 

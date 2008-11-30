@@ -29,7 +29,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_novell.c,v 1.6.2.1 2005/09/17 04:01:03 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_novell.c,v 1.10 2006/06/12 04:30:42 imp Exp $");
 
 #include "opt_ed.h"
 
@@ -192,6 +192,7 @@ ed_probe_Novell_generic(device_t dev, int flags)
 	/* clear any pending interrupts that might have occurred above */
 	ed_nic_outb(sc, ED_P0_ISR, 0xff);
 
+	sc->sc_write_mbufs = ed_pio_write_mbufs;
 	return (0);
 }
 
@@ -288,8 +289,10 @@ ed_Novell_read_mac(struct ed_softc *sc)
 	uint8_t romdata[16];
 
 	/*
-	 * Pull the MAC address out of the roms that are on the isa
-	 * version of these cards.
+	 * Most ne1000/ne2000 compatible cards have their MAC address
+	 * located in the first few words of the address space.  This seems
+	 * universally true for ISA and PCI implementations, but PC Card
+	 * devices seem to have more variance.
 	 */
 	ed_pio_readmem(sc, 0, romdata, 16);
 	for (n = 0; n < ETHER_ADDR_LEN; n++)

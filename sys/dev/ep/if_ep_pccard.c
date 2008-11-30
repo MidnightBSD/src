@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep_pccard.c,v 1.48.2.1 2005/09/17 04:01:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep_pccard.c,v 1.50 2007/02/23 12:18:39 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -204,7 +204,7 @@ ep_pccard_attach(device_t dev)
 		goto bad;
 	}
 	if ((error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    ep_intr, sc, &sc->ep_intrhand))) {
+	    NULL, ep_intr, sc, &sc->ep_intrhand))) {
 		device_printf(dev, "bus_setup_intr() failed! (%d)\n", error);
 		goto bad;
 	}

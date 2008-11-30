@@ -1,24 +1,24 @@
 /*-
- * Low-level subroutines for Cronyx Tau-PCI adapter.			
- *									
- * Copyright (C) 1999-2003 Cronyx Engineering.				
- * Author: Serge Vakulenko, <vak@cronyx.ru>				
- *									
- * Copyright (C) 2000-2004 Cronyx Engineering.				
- * Author: Roman Kurakin, <rik@cronyx.ru>					
- *									
- * This software is distributed with NO WARRANTIES, not even the implied	
- * warranties for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	
- *									
- * Authors grant any other persons or organisations a permission to use,	
- * modify and redistribute this software in source and binary forms,	
- * as long as this message is kept with the software, all derivative	
- * works or modified versions.						
- *									
+ * Low-level subroutines for Cronyx Tau-PCI adapter.
+ *
+ * Copyright (C) 1999-2003 Cronyx Engineering.
+ * Author: Serge Vakulenko, <vak@cronyx.ru>
+ *
+ * Copyright (C) 2000-2004 Cronyx Engineering.
+ * Author: Roman Kurakin, <rik@cronyx.ru>
+ *
+ * This software is distributed with NO WARRANTIES, not even the implied
+ * warranties for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * Authors grant any other persons or organisations a permission to use,
+ * modify and redistribute this software in source and binary forms,
+ * as long as this message is kept with the software, all derivative
+ * works or modified versions.
+ *
  * $Cronyx: cpddk.c,v 1.13.4.37 2004/12/11 16:14:39 rik Exp $
- */									
+ */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cp/cpddk.c,v 1.5 2005/01/06 01:42:32 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cp/cpddk.c,v 1.6 2005/12/17 07:09:17 obrien Exp $");
 
 #include <dev/cx/machdep.h>
 

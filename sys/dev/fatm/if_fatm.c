@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fatm/if_fatm.c,v 1.19.2.1 2005/08/25 05:01:08 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fatm/if_fatm.c,v 1.23 2007/02/23 12:18:40 piso Exp $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -1838,7 +1838,7 @@ fatm_fix_chain(struct fatm_softc *sc, struct mbuf **mp)
 
 			d = mtod(m, u_char *);
 			if ((off = (uintptr_t)(void *)d % 4) != 0) {
-				if (!(m->m_flags & M_EXT) || !MEXT_IS_REF(m)) {
+				if (M_WRITABLE(m)) {
 					sc->istats.fix_addr_copy++;
 					bcopy(d, d - off, m->m_len);
 					m->m_data = (caddr_t)(d - off);
@@ -1857,7 +1857,7 @@ fatm_fix_chain(struct fatm_softc *sc, struct mbuf **mp)
 			}
 
 			if ((off = m->m_len % 4) != 0) {
-				if ((m->m_flags & M_EXT) && MEXT_IS_REF(m)) {
+				if (!M_WRITABLE(m)) {
 					if ((new = copy_mbuf(m)) == NULL) {
 						sc->istats.fix_len_noext++;
 						goto fail;
@@ -3059,8 +3059,8 @@ fatm_attach(device_t dev)
 	bpfattach(ifp, DLT_ATM_RFC1483, sizeof(struct atmllc));
 #endif
 
-	error = bus_setup_intr(dev, sc->irqres, INTR_TYPE_NET,
-	    fatm_intr, sc, &sc->ih);
+	error = bus_setup_intr(dev, sc->irqres, INTR_TYPE_NET | INTR_MPSAFE,
+	    NULL, fatm_intr, sc, &sc->ih);
 	if (error) {
 		if_printf(ifp, "couldn't setup irq\n");
 		goto fail;

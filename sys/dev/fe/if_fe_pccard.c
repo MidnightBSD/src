@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fe/if_fe_pccard.c,v 1.27 2005/06/24 14:36:53 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fe/if_fe_pccard.c,v 1.32 2005/11/19 23:26:57 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -54,17 +54,17 @@ __FBSDID("$FreeBSD: src/sys/dev/fe/if_fe_pccard.c,v 1.27 2005/06/24 14:36:53 imp
 #include "pccarddevs.h"
 
 /*
- *	PC-Card (PCMCIA) specific code.
+ *	PC Card (PCMCIA) specific code.
  */
 static int fe_pccard_probe(device_t);
 static int fe_pccard_attach(device_t);
 static int fe_pccard_detach(device_t);
-static int fe_pccard_match(device_t);
 
 static const struct fe_pccard_product {
         struct pccard_product mpp_product;
 	int mpp_flags;
 #define MPP_MBH10302 1
+#define MPP_ANYFUNC 2
 } fe_pccard_products[] = {
 	/* These need to be first */
 	{ PCMCIA_CARD(FUJITSU2, FMV_J181), MPP_MBH10302 },
@@ -82,43 +82,40 @@ static const struct fe_pccard_product {
 	{ PCMCIA_CARD(FUJITSU, LA10S), 0 },
 	{ PCMCIA_CARD(FUJITSU, NE200T), MPP_MBH10302 },/* Sold by Eagle */
 	{ PCMCIA_CARD(RATOC, REX_R280), 0 },
+	{ PCMCIA_CARD(XIRCOM, CE), MPP_ANYFUNC },
         { { NULL } }
 };
 
 static int
-fe_pccard_match(device_t dev)
+fe_pccard_probe(device_t dev)
 {
-        const struct pccard_product *pp;
 	int		error;
 	uint32_t	fcn = PCCARD_FUNCTION_UNSPEC;
+        const struct fe_pccard_product *pp;
 
-	/* Make sure we're a network function */
-	error = pccard_get_function(dev, &fcn);
-	if (error != 0)
-		return (error);
-	if (fcn != PCCARD_FUNCTION_NETWORK)
-		return (ENXIO);
-
-        if ((pp = pccard_product_lookup(dev,
+        if ((pp = (const struct fe_pccard_product *)pccard_product_lookup(dev,
 	    (const struct pccard_product *)fe_pccard_products,
             sizeof(fe_pccard_products[0]), NULL)) != NULL) {
-		if (pp->pp_name != NULL)
-			device_set_desc(dev, pp->pp_name);
-                return 0;
+		if (pp->mpp_product.pp_name != NULL)
+			device_set_desc(dev, pp->mpp_product.pp_name);
+		if (pp->mpp_flags & MPP_ANYFUNC)
+			return (0);
+		/* Make sure we're a network function */
+		error = pccard_get_function(dev, &fcn);
+		if (error != 0)
+			return (error);
+		if (fcn != PCCARD_FUNCTION_NETWORK)
+			return (ENXIO);
+		return (0);
         }
-        return EIO;
+        return (ENXIO);
 }
 
 static device_method_t fe_pccard_methods[] = {
         /* Device interface */
-        DEVMETHOD(device_probe,         pccard_compat_probe),
-        DEVMETHOD(device_attach,        pccard_compat_attach),
+        DEVMETHOD(device_probe,         fe_pccard_probe),
+        DEVMETHOD(device_attach,        fe_pccard_attach),
         DEVMETHOD(device_detach,        fe_pccard_detach),
-
-        /* Card interface */
-        DEVMETHOD(card_compat_match,    fe_pccard_match),
-        DEVMETHOD(card_compat_probe,    fe_pccard_probe),
-        DEVMETHOD(card_compat_attach,   fe_pccard_attach),
 
 	{ 0, 0 }
 };
@@ -137,7 +134,7 @@ static int fe_probe_tdk(device_t, const struct fe_pccard_product *);
  *      Initialize the device - called from Slot manager.
  */
 static int
-fe_pccard_probe(device_t dev)
+fe_pccard_attach(device_t dev)
 {
 	struct fe_softc *sc;
         const struct fe_pccard_product *pp;
@@ -157,23 +154,16 @@ fe_pccard_probe(device_t dev)
 		error = fe_probe_mbh(dev, pp);
 	else
 		error = fe_probe_tdk(dev, pp);
-	if (error == 0)
-		error = fe_alloc_irq(dev, 0);
-
-	fe_release_resource(dev);
-	return (error);
-}
-
-static int
-fe_pccard_attach(device_t dev)
-{
-	struct fe_softc *sc = device_get_softc(dev);
-
-	if (sc->port_used)
-		fe_alloc_port(dev, sc->port_used);
-	fe_alloc_irq(dev, 0);
-
-	return fe_attach(dev);
+	if (error != 0) {
+		fe_release_resource(dev);
+		return (error);
+	}
+	error = fe_alloc_irq(dev, 0);
+	if (error != 0) {
+		fe_release_resource(dev);
+		return (error);
+	}
+	return (fe_attach(dev));
 }
 
 /*
@@ -187,8 +177,8 @@ fe_pccard_detach(device_t dev)
 
 	fe_stop(sc);
 	ether_ifdetach(ifp);
-	if_free(ifp);
 	bus_teardown_intr(dev, sc->irq_res, sc->irq_handle);
+	if_free(ifp);
 	fe_release_resource(dev);
 
 	return 0;
@@ -261,6 +251,40 @@ fe_probe_mbh(device_t dev, const struct fe_pccard_product *pp)
 	return 0;
 }
 
+static int
+sn_pccard_xircom_mac(const struct pccard_tuple *tuple, void *argp)
+{
+	uint8_t *enaddr = argp;
+	int i;
+
+#if 1
+	/*
+	 * We fail to map the CIS twice, for reasons unknown.  We
+	 * may fix this in the future by loading the CIS with a sane
+	 * CIS from userland.
+	 */
+	static uint8_t defaultmac[ETHER_ADDR_LEN] = {
+		0x00, 0x80, 0xc7, 0xed, 0x16, 0x7b};
+
+	/* Copy the MAC ADDR and return success */
+	for (i = 0; i < ETHER_ADDR_LEN; i++)
+		enaddr[i] = defaultmac[i];
+#else
+	/* FUNCE is not after FUNCID, so we gotta go find it */
+	if (tuple->code != 0x22)
+		return (0);
+
+	/* Make sure this is a sane node */
+	if (tuple->length < ETHER_ADDR_LEN + 3)
+		return (0);
+
+	/* Copy the MAC ADDR and return success */
+	for (i = 0; i < ETHER_ADDR_LEN; i++)
+		enaddr[i] = pccard_tuple_read_1(tuple, i + 3);
+#endif
+	return (1);
+}
+
 /*
  * Probe and initialization for TDK/CONTEC PCMCIA Ethernet interface.
  * by MASUI Kenji <masui@cs.titech.ac.jp>
@@ -268,7 +292,7 @@ fe_probe_mbh(device_t dev, const struct fe_pccard_product *pp)
  * (Contec uses TDK Ethenet chip -- hosokawa)
  *
  * This version of fe_probe_tdk has been rewrote to handle
- * *generic* PC card implementation of Fujitsu MB8696x family.  The
+ * *generic* PC Card implementation of Fujitsu MB8696x family.  The
  * name _tdk is just for a historical reason. :-)
  */
 static int
@@ -282,6 +306,7 @@ fe_probe_tdk (device_t dev, const struct fe_pccard_product *pp)
             /*  { FE_DLCR5, 0x80, 0x00 },       Does not work well.  */
                 { 0 }
         };
+
 
         /* C-NET(PC)C occupies 16 I/O addresses. */
 	if (fe_alloc_port(dev, 16))
@@ -301,6 +326,11 @@ fe_probe_tdk (device_t dev, const struct fe_pccard_product *pp)
         sc->typestr = "Generic MB8696x/78Q837x Ethernet (PCMCIA)";
 
 	pccard_get_ether(dev, sc->enaddr);
+
+        /* Make sure we got a valid station address.  */
+        if (!fe_valid_Ether_p(sc->enaddr, 0)) {
+	        pccard_cis_scan(dev, sn_pccard_xircom_mac, sc->enaddr);
+	}
 
         /* Make sure we got a valid station address.  */
         if (!fe_valid_Ether_p(sc->enaddr, 0))

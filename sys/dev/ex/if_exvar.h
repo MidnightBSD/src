@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/ex/if_exvar.h,v 1.6 2005/06/10 16:49:08 brooks Exp $
+ *	$FreeBSD: src/sys/dev/ex/if_exvar.h,v 1.7 2007/04/16 12:31:34 pjd Exp $
  */
 
 struct ex_softc {
@@ -113,6 +113,6 @@ void		ex_stop(struct ex_softc *);
 #define EX_LOCK_INIT(_sc) \
 	mtx_init(&_sc->sc_mtx, device_get_nameunit(_sc->dev), \
 	    MTX_NETWORK_LOCK, MTX_DEF)
-#define EX_LOCK_DESTORY(_sc)	mtx_destroy(&_sc->sc_mtx);
+#define EX_LOCK_DESTROY(_sc)	mtx_destroy(&_sc->sc_mtx);
 #define EX_ASSERT_LOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_OWNED);
 #define EX_ASSERT_UNLOCKED(_sc)	mtx_assert(&_sc->sc_mtx, MA_NOTOWNED);

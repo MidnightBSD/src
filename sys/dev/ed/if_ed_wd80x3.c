@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_wd80x3.c,v 1.4.2.1 2005/09/17 04:01:03 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_wd80x3.c,v 1.6 2006/01/27 19:10:13 imp Exp $");
 
 #include "opt_ed.h"
 
@@ -428,6 +428,7 @@ ed_probe_WD80x3_generic(device_t dev, int flags, uint16_t *intr_vals[])
 	 */
 	error = ed_clear_memory(dev);
 	ed_disable_16bit_access(sc);
+	sc->sc_write_mbufs = ed_shmem_write_mbufs;
 	return (error);
 }
 

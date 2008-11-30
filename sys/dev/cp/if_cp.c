@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cp/if_cp.c,v 1.24.2.1 2005/08/25 05:01:06 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cp/if_cp.c,v 1.34 2007/07/27 11:59:56 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/ucred.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: src/sys/dev/cp/if_cp.c,v 1.24.2.1 2005/08/25 05:01:06 rwatso
 #include <sys/module.h>
 #include <sys/conf.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
 #include <sys/sysctl.h>
@@ -183,6 +184,18 @@ static struct callout led_timo [NBRD];
 static struct callout timeout_handle;
 
 static int cp_destroy = 0;
+
+static int cp_open (struct cdev *dev, int oflags, int devtype, struct thread *td);
+static int cp_close (struct cdev *dev, int fflag, int devtype, struct thread *td);
+static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td);
+static struct cdevsw cp_cdevsw = {
+	.d_version  = D_VERSION,
+	.d_open     = cp_open,
+	.d_close    = cp_close,
+	.d_ioctl    = cp_ioctl,
+	.d_name     = "cp",
+	.d_flags    = D_NEEDGIANT,
+};
 
 /*
  * Print the mbuf chain, for debug purposes only.
@@ -338,8 +351,6 @@ static void cp_intr (void *arg)
 #endif
 }
 
-extern struct cdevsw cp_cdevsw;
-
 static void
 cp_bus_dmamap_addr (void *arg, bus_dma_segment_t *segs, int nseg, int error)
 {
@@ -470,7 +481,7 @@ static int cp_attach (device_t dev)
 	callout_init (&led_timo[unit], cp_mpsafenet ? CALLOUT_MPSAFE : 0);
 	error  = bus_setup_intr (dev, bd->cp_irq,
 				INTR_TYPE_NET|(cp_mpsafenet?INTR_MPSAFE:0),
-				cp_intr, bd, &bd->cp_intrhand);
+				NULL, cp_intr, bd, &bd->cp_intrhand);
 	if (error) {
 		cp_destroy = 1;
 		printf ("cp%d: cannot set up irq\n", unit);
@@ -604,6 +615,9 @@ static int cp_detach (device_t dev)
 	cp_reset (b, 0 ,0);
 	callout_stop (&led_timo[b->num]);
 
+	/* Disable the interrupt request. */
+	bus_teardown_intr (dev, bd->cp_irq, bd->cp_intrhand);
+
 	for (c=b->chan; c<b->chan+NCHAN; ++c) {
 		drv_t *d = (drv_t*) c->sys;
 
@@ -636,9 +650,6 @@ static int cp_detach (device_t dev)
 	b->sys = NULL;
 	CP_UNLOCK (bd);
 
-	/* Disable the interrupt request. */
-	bus_teardown_intr (dev, bd->cp_irq, bd->cp_intrhand);
-	bus_deactivate_resource (dev, SYS_RES_IRQ, 0, bd->cp_irq);
 	bus_release_resource (dev, SYS_RES_IRQ, 0, bd->cp_irq);
 	bus_release_resource (dev, SYS_RES_MEMORY, PCIR_BAR(0), bd->cp_res);
 
@@ -821,8 +832,7 @@ static void cp_send (drv_t *d)
 		if (! m)
 			return;
 #ifndef NETGRAPH
-		if (d->ifp->if_bpf)
-			BPF_MTAP (d->ifp, m);
+		BPF_MTAP (d->ifp, m);
 #endif
 		len = m_length (m, NULL);
 		if (len >= BUFSZ)
@@ -931,8 +941,7 @@ static void cp_receive (cp_chan_t *c, unsigned char *data, int len)
 	m->m_pkthdr.rcvif = d->ifp;
 	/* Check if there's a BPF listener on this interface.
 	 * If so, hand off the raw packet to bpf. */
-	if (d->ifp->if_bpf)
-		BPF_TAP (d->ifp, data, len);
+	BPF_TAP (d->ifp, data, len);
 	IF_ENQUEUE (&d->queue, m);
 #endif
 }
@@ -1060,7 +1069,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETPROTO:
 		CP_DEBUG2 (d, ("ioctl: setproto\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (d->ifp->if_drv_flags & IFF_DRV_RUNNING)
@@ -1091,7 +1100,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETKEEPALIVE:
 		CP_DEBUG2 (d, ("ioctl: setkeepalive\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if ((IFP2SP(d->ifp)->pp_flags & PP_FR) ||
@@ -1115,7 +1124,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETMODE:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (*(int*)data != SERIAL_HDLC)
@@ -1131,7 +1140,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETCFG:
 		CP_DEBUG2 (d, ("ioctl: setcfg\n"));
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1)
@@ -1228,7 +1237,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_CLRSTAT:
 		CP_DEBUG2 (d, ("ioctl: clrstat\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		c->rintr    = 0;
@@ -1257,7 +1266,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETBAUD:
 		CP_DEBUG2 (d, ("ioctl: setbaud\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1275,7 +1284,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETLOOP:
 		CP_DEBUG2 (d, ("ioctl: setloop\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1295,7 +1304,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETDPLL:
 		CP_DEBUG2 (d, ("ioctl: setdpll\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_SERIAL)
@@ -1317,7 +1326,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETNRZI:
 		CP_DEBUG2 (d, ("ioctl: setnrzi\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_SERIAL)
@@ -1337,7 +1346,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETDEBUG:
 		CP_DEBUG2 (d, ("ioctl: setdebug\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		d->chan->debug = *(int*)data;
@@ -1359,7 +1368,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETHIGAIN:
 		CP_DEBUG2 (d, ("ioctl: sethigain\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1)
@@ -1381,7 +1390,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETPHONY:
 		CP_DEBUG2 (d, ("ioctl: setphony\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1)
@@ -1403,7 +1412,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETUNFRAM:
 		CP_DEBUG2 (d, ("ioctl: setunfram\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1)
@@ -1425,7 +1434,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETSCRAMBLER:
 		CP_DEBUG2 (d, ("ioctl: setscrambler\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_G703 && !c->unfram)
@@ -1450,7 +1459,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETMONITOR:
 		CP_DEBUG2 (d, ("ioctl: setmonitor\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1)
@@ -1472,7 +1481,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETUSE16:
 		CP_DEBUG2 (d, ("ioctl: setuse16\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1)
@@ -1494,7 +1503,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETCRC4:
 		CP_DEBUG2 (d, ("ioctl: setcrc4\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1)
@@ -1527,7 +1536,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETCLK:
 		CP_DEBUG2 (d, ("ioctl: setclk\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_E1 &&
@@ -1560,7 +1569,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETTIMESLOTS:
 		CP_DEBUG2 (d, ("ioctl: settimeslots\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if ((c->type != T_E1 || c->unfram) && c->type != T_DATA)
@@ -1586,7 +1595,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETINVCLK:
 		CP_DEBUG2 (d, ("ioctl: setinvclk\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_SERIAL)
@@ -1609,7 +1618,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETINVTCLK:
 		CP_DEBUG2 (d, ("ioctl: setinvtclk\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_SERIAL)
@@ -1631,7 +1640,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETINVRCLK:
 		CP_DEBUG2 (d, ("ioctl: setinvrclk\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->type != T_SERIAL)
@@ -1658,7 +1667,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_RESET:
 		CP_DEBUG2 (d, ("ioctl: reset\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1671,7 +1680,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_HARDRESET:
 		CP_DEBUG2 (d, ("ioctl: hardreset\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1703,7 +1712,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETDIR:
 		CP_DEBUG2 (d, ("ioctl: setdir\n"));
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1728,7 +1737,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		if (c->type != T_E3 && c->type != T_T3 && c->type != T_STS1)
 			return EINVAL;
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1750,7 +1759,7 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		if (c->type != T_T3 && c->type != T_STS1)
 			return EINVAL;
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1809,15 +1818,6 @@ static int cp_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	}
 	return ENOTTY;
 }
-
-static struct cdevsw cp_cdevsw = {
-	.d_version  = D_VERSION,
-	.d_open     = cp_open,
-	.d_close    = cp_close,
-	.d_ioctl    = cp_ioctl,
-	.d_name     = "cp",
-	.d_flags    = D_NEEDGIANT,
-};
 
 #ifdef NETGRAPH
 static int ng_cp_constructor (node_p node)
@@ -2265,11 +2265,6 @@ static int cp_modevent (module_t mod, int type, void *unused)
 {
 	static int load_count = 0;
 
-	if (!debug_mpsafenet && cp_mpsafenet) {
-		printf ("WORNING! Network stack is not MPSAFE. "
-			"Turning off debug.cp.mpsafenet.\n");
-		cp_mpsafenet = 0;
-	}
 	if (cp_mpsafenet)
 		cp_cdevsw.d_flags &= ~D_NEEDGIANT;
 

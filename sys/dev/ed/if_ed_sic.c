@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_sic.c,v 1.4.2.1 2005/09/17 04:01:03 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_sic.c,v 1.6 2006/01/27 19:10:13 imp Exp $");
 
 #include "opt_ed.h"
 
@@ -150,6 +150,7 @@ ed_probe_SIC(device_t dev, int port_rid, int flags)
 
 	sc->mem_ring = sc->mem_start + sc->txb_cnt * ED_PAGE_SIZE * ED_TXBUF_SIZE;
 
+	sc->sc_write_mbufs = ed_shmem_write_mbufs;
 	return (0);
 }
 

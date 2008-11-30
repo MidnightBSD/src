@@ -40,7 +40,7 @@
  */
 
 
-#ident "$FreeBSD: src/sys/dev/dpt/dpt.h,v 1.16 2005/01/06 01:42:35 imp Exp $"
+#ident "$FreeBSD: src/sys/dev/dpt/dpt.h,v 1.18 2007/06/17 05:55:49 scottl Exp $"
 
 #ifndef _DPT_H
 #define _DPT_H
@@ -1018,6 +1018,7 @@ struct sg_map_node {
 
 /* Main state machine and interface structure */
 typedef struct dpt_softc {
+	device_t		dev;
 
 	struct resource *	io_res;
 	int			io_rid;
@@ -1292,7 +1293,9 @@ int			dpt_init(struct dpt_softc *dpt);
 int			dpt_attach(dpt_softc_t * dpt);
 void			dpt_intr(void *arg);
 
+#ifdef DEV_EISA
 dpt_conf_t *		dpt_pio_get_conf(u_int32_t);
+#endif
 
 #if 0
 extern void		hex_dump(u_char * data, int length,

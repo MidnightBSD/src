@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep_mca.c,v 1.12 2005/07/01 05:31:23 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep_mca.c,v 1.13 2007/02/23 15:55:37 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -128,7 +128,7 @@ ep_mca_attach(device_t dev)
 
 	if ((error = ep_attach(sc)))
 		goto bad;
-	if ((error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE, ep_intr,
+	if ((error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE, NULL, ep_intr,
 		    sc, &sc->ep_intrhand))) {
 		device_printf(dev, "bus_setup_intr() failed! (%d)\n", error);
 		goto bad;

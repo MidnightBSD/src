@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ctau/if_ct.c,v 1.25.2.1 2005/08/25 05:01:06 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ctau/if_ct.c,v 1.34 2007/07/27 11:59:56 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -32,6 +32,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ctau/if_ct.c,v 1.25.2.1 2005/08/25 05:01:06 rwat
 #include <sys/mbuf.h>
 #include <sys/sockio.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <sys/conf.h>
@@ -47,7 +48,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ctau/if_ct.c,v 1.25.2.1 2005/08/25 05:01:06 rwat
 #include <net/if.h>
 #include <machine/cpufunc.h>
 #include <machine/cserial.h>
-#include <machine/clock.h>
 #include <machine/resource.h>
 #include <dev/cx/machdep.h>
 #include <dev/ctau/ctddk.h>
@@ -185,6 +185,18 @@ static ct_board_t *adapter [NCTAU];
 static drv_t *channel [NCTAU*NCHAN];
 static struct callout led_timo [NCTAU];
 static struct callout timeout_handle;
+
+static int ct_open (struct cdev *dev, int oflags, int devtype, struct thread *td);
+static int ct_close (struct cdev *dev, int fflag, int devtype, struct thread *td);
+static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td);
+static struct cdevsw ct_cdevsw = {
+	.d_version  = D_VERSION,
+	.d_open     = ct_open,
+	.d_close    = ct_close,
+	.d_ioctl    = ct_ioctl,
+	.d_name     = "ct",
+	.d_flags    = D_NEEDGIANT,
+};
 
 /*
  * Print the mbuf chain, for debug purposes only.
@@ -486,8 +498,6 @@ static int ct_probe (device_t dev)
 	return 0;
 }
 
-extern struct cdevsw ct_cdevsw;
-
 static void
 ct_bus_dmamap_addr (void *arg, bus_dma_segment_t *segs, int nseg, int error)
 {
@@ -672,7 +682,7 @@ static int ct_attach (device_t dev)
 	s = splimp ();
 	if (bus_setup_intr (dev, bd->irq_res,
 			   INTR_TYPE_NET|(ct_mpsafenet?INTR_MPSAFE:0),
-			   ct_intr, bd, &bd->intrhand)) {
+			   NULL, ct_intr, bd, &bd->intrhand)) {
 		printf ("ct%d: Can't setup irq %ld\n", unit, irq);
 		bd->board = 0;
 		adapter [unit] = 0;
@@ -808,13 +818,10 @@ static int ct_detach (device_t dev)
 	CT_UNLOCK (bd);
 	
 	bus_teardown_intr (dev, bd->irq_res, bd->intrhand);
-	bus_deactivate_resource (dev, SYS_RES_IRQ, bd->irq_rid, bd->irq_res);
 	bus_release_resource (dev, SYS_RES_IRQ, bd->irq_rid, bd->irq_res);
 	
-	bus_deactivate_resource (dev, SYS_RES_DRQ, bd->drq_rid, bd->drq_res);
 	bus_release_resource (dev, SYS_RES_DRQ, bd->drq_rid, bd->drq_res);
 	
-	bus_deactivate_resource (dev, SYS_RES_IOPORT, bd->base_rid, bd->irq_res);
 	bus_release_resource (dev, SYS_RES_IOPORT, bd->base_rid, bd->base_res);
 
 	CT_LOCK (bd);
@@ -1030,8 +1037,7 @@ static void ct_send (drv_t *d)
 		if (! m)
 			return;
 #ifndef NETGRAPH
-		if (d->ifp->if_bpf)
-			BPF_MTAP (d->ifp, m);
+		BPF_MTAP (d->ifp, m);
 #endif
 		len = m_length (m, NULL);
 		if (! m->m_next)
@@ -1151,8 +1157,7 @@ static void ct_receive (ct_chan_t *c, char *data, int len)
 	m->m_pkthdr.rcvif = d->ifp;
 	/* Check if there's a BPF listener on this interface.
 	 * If so, hand off the raw packet to bpf. */
-	if (d->ifp->if_bpf)
-		BPF_TAP (d->ifp, data, len);
+	BPF_TAP (d->ifp, data, len);
 	IF_ENQUEUE (&d->queue, m);
 #endif
 }
@@ -1291,7 +1296,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETPROTO:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (d->ifp->if_drv_flags & IFF_DRV_RUNNING)
@@ -1319,7 +1324,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETKEEPALIVE:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if ((IFP2SP(d->ifp)->pp_flags & PP_FR) ||
@@ -1348,7 +1353,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETCFG:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_HDLC)
@@ -1426,7 +1431,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_CLRSTAT:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		c->rintr = 0;
@@ -1449,7 +1454,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETBAUD:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1465,7 +1470,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETLOOP:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1483,7 +1488,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETDPLL:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_E1 || c->mode == M_G703)
@@ -1503,7 +1508,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETNRZI:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_E1 || c->mode == M_G703)
@@ -1521,7 +1526,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETDEBUG:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		c->debug = *(int*)data;
@@ -1541,7 +1546,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETHIGAIN:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1563,7 +1568,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 		if (c->mode != M_E1)
 			return EINVAL;
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1586,7 +1591,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETCLK:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1610,7 +1615,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETTIMESLOTS:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1628,7 +1633,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETSUBCHAN:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		s = splimp ();
@@ -1654,7 +1659,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	case SERIAL_SETINVCLK:
 	case SERIAL_SETINVTCLK:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_E1 || c->mode == M_G703)
@@ -1668,7 +1673,7 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 
 	case SERIAL_SETINVRCLK:
 		/* Only for superuser! */
-		error = suser (td);
+		error = priv_check (td, PRIV_DRIVER);
 		if (error)
 			return error;
 		if (c->mode == M_E1 || c->mode == M_G703)
@@ -1739,15 +1744,6 @@ static int ct_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 	}
 	return ENOTTY;
 }
-
-static struct cdevsw ct_cdevsw = {
-	.d_version  = D_VERSION,
-	.d_open     = ct_open,
-	.d_close    = ct_close,
-	.d_ioctl    = ct_ioctl,
-	.d_name     = "ct",
-	.d_flags    = D_NEEDGIANT,
-};
 
 #ifdef NETGRAPH
 static int ng_ct_constructor (node_p node)
@@ -2210,11 +2206,6 @@ static int ct_modevent (module_t mod, int type, void *unused)
 {
 	static int load_count = 0;
 
-	if (!debug_mpsafenet && ct_mpsafenet) {
-		printf ("WORNING! Network stack is not MPSAFE. "
-			"Turning off debug.ct.mpsafenet.\n");
-		ct_mpsafenet = 0;
-	}
 	if (ct_mpsafenet)
 		ct_cdevsw.d_flags &= ~D_NEEDGIANT;
 

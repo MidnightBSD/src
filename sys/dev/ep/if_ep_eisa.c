@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep_eisa.c,v 1.33.2.1 2005/09/17 04:01:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep_eisa.c,v 1.35 2007/02/23 12:18:39 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -217,8 +217,8 @@ ep_eisa_attach(device_t dev)
 		device_printf(dev, "ep_attach() failed! (%d)\n", error);
 		goto bad;
 	}
-	if ((error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE, ep_intr,
-		    sc, &sc->ep_intrhand))) {
+	if ((error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE, 
+	    NULL, ep_intr, sc, &sc->ep_intrhand))) {
 		device_printf(dev, "bus_setup_intr() failed! (%d)\n", error);
 		goto bad;
 	}

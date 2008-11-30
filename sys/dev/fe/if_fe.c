@@ -21,7 +21,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fe/if_fe.c,v 1.91.2.3 2005/10/09 04:18:17 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fe/if_fe.c,v 1.98 2007/02/23 12:18:41 piso Exp $");
 
 /*
  *
@@ -31,7 +31,7 @@ __FBSDID("$FreeBSD: src/sys/dev/fe/if_fe.c,v 1.91.2.3 2005/10/09 04:18:17 delphi
  * This version is intended to be a generic template for various
  * MB86960A/MB86965A based Ethernet cards.  It currently supports
  * Fujitsu FMV-180 series for ISA and Allied-Telesis AT1700/RE2000
- * series for ISA, as well as Fujitsu MBH10302 PC card.
+ * series for ISA, as well as Fujitsu MBH10302 PC Card.
  * There are some currently-
  * unused hooks embedded, which are primarily intended to support
  * other types of Ethernet cards, but the author is not sure whether
@@ -108,7 +108,7 @@ __FBSDID("$FreeBSD: src/sys/dev/fe/if_fe.c,v 1.91.2.3 2005/10/09 04:18:17 delphi
 /*
  * Maximum loops when interrupt.
  * This option prevents an infinite loop due to hardware failure.
- * (Some laptops make an infinite loop after PC-Card is ejected.)
+ * (Some laptops make an infinite loop after PC Card is ejected.)
  */
 #ifndef FE_MAX_LOOP
 #define FE_MAX_LOOP 0x800
@@ -741,7 +741,7 @@ fe_attach (device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-			       fe_intr, sc, &sc->irq_handle);
+			       NULL, fe_intr, sc, &sc->irq_handle);
 	if (error) {
 		if_free(ifp);
 		fe_release_resource(dev);
@@ -1043,7 +1043,7 @@ fe_init (void * xsc)
 	DELAY(200);
 
 	/* Feed the station address.  */
-	fe_outblk(sc, FE_DLCR8, IFP2ENADDR(sc->ifp), ETHER_ADDR_LEN);
+	fe_outblk(sc, FE_DLCR8, IF_LLADDR(sc->ifp), ETHER_ADDR_LEN);
 
 	/* Clear multicast address filter to receive nothing.  */
 	fe_outb(sc, FE_DLCR7,
@@ -1095,7 +1095,7 @@ fe_init (void * xsc)
 	 * point in this version.  The following code *must* be
 	 * redundant now.  FIXME.
 	 *
-	 * I've heard a rumore that on some PC card implementation of
+	 * I've heard a rumore that on some PC Card implementation of
 	 * 8696x, the receive buffer can have some data at this point.
 	 * The following message helps discovering the fact.  FIXME.
 	 */
@@ -1197,7 +1197,7 @@ fe_start (struct ifnet *ifp)
 		 * If txb_count is incorrect, leaving it as-is will cause
 		 * sending of garbage after next interrupt.  We have to
 		 * avoid it.  Hence, we reset the txb_count here.  If
-		 * txb_free was incorrect, resetting txb_count just loose
+		 * txb_free was incorrect, resetting txb_count just loses
 		 * some packets.  We can live with it.
 		 */
 		sc->txb_count = 0;

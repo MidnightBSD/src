@@ -25980,6 +25980,9 @@ sys/dev/ex/if_exvar.h -text
 sys/dev/exca/exca.c -text
 sys/dev/exca/excareg.h -text
 sys/dev/exca/excavar.h -text
+sys/dev/fatm/exca.c -text
+sys/dev/fatm/excareg.h -text
+sys/dev/fatm/excavar.h -text
 sys/dev/fatm/firmware.h -text
 sys/dev/fatm/if_fatm.c -text
 sys/dev/fatm/if_fatm_rate.h -text
@@ -25987,8 +25990,10 @@ sys/dev/fatm/if_fatmreg.h -text
 sys/dev/fatm/if_fatmvar.h -text
 sys/dev/fb/boot_font.c -text
 sys/dev/fb/creator.c -text
+sys/dev/fb/creatorreg.h -text
 sys/dev/fb/fb.c -text
 sys/dev/fb/fbreg.h -text
+sys/dev/fb/gallant12x22.c -text
 sys/dev/fb/gallant12x22.h -text
 sys/dev/fb/gfb.c -text
 sys/dev/fb/gfb.h -text

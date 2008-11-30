@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/cs/if_csvar.h,v 1.7 2005/06/10 16:49:06 brooks Exp $
+ * $FreeBSD: src/sys/dev/cs/if_csvar.h,v 1.9 2006/09/15 15:16:10 glebius Exp $
  */
 
 #ifndef _IF_CSVAR_H
@@ -37,6 +37,7 @@
 struct cs_softc {
 	/* Ethernet common code */
 	struct ifnet *ifp;
+	device_t dev;
 
 	/* Configuration words from EEPROM */
 	int auto_neg_cnf;               /* AutoNegotitation configuration */
@@ -44,7 +45,7 @@ struct cs_softc {
 	int isa_config;                 /* ISA configuration */
 	int chip_type;			/* Type of chip */
 
-	u_char	enaddr[6];
+	u_char	enaddr[ETHER_ADDR_LEN];
 
 	struct ifmedia media;		/* Media information */
 

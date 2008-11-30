@@ -66,7 +66,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/esp/ncr53c9xvar.h,v 1.7 2005/05/19 14:51:10 marius Exp $ */
+/* $FreeBSD: src/sys/dev/esp/ncr53c9xvar.h,v 1.8 2005/12/04 10:06:03 ru Exp $ */
 
 #ifndef _DEV_IC_NCR53C9XVAR_H_
 #define _DEV_IC_NCR53C9XVAR_H_
@@ -142,11 +142,11 @@ struct ncr53c9x_ecb {
 	u_char	 tag[2];	/* TAG bytes */
 	u_char	 pad[1];
 
-#if NCR53C9X_DEBUG > 1
+#if defined(NCR53C9X_DEBUG) && NCR53C9X_DEBUG > 1
 	char trace[1000];
 #endif
 };
-#if NCR53C9X_DEBUG > 1
+#if defined(NCR53C9X_DEBUG) && NCR53C9X_DEBUG > 1
 #define ECB_TRACE(ecb, msg, a, b) do { \
 	const char *f = "[" msg "]"; \
 	int n = strlen((ecb)->trace); \

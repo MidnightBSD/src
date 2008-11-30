@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex.c,v 1.56.2.3 2005/10/09 04:15:12 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex.c,v 1.62 2006/02/04 08:16:41 imp Exp $");
 
 /*
  * Intel EtherExpress Pro/10, Pro/10+ Ethernet driver
@@ -308,7 +308,7 @@ ex_init(void *xsc)
 		CSR_WRITE_1(sc, EEPROM_REG, temp_reg & ~Trnoff_Enable);
 	}
 	for (i = 0; i < ETHER_ADDR_LEN; i++) {
-		CSR_WRITE_1(sc, I_ADDR_REG0 + i, IFP2ENADDR(sc->ifp)[i]);
+		CSR_WRITE_1(sc, I_ADDR_REG0 + i, IF_LLADDR(sc->ifp)[i]);
 	}
 	/*
 	 * - Setup transmit chaining and discard bad received frames.
@@ -802,13 +802,6 @@ ex_ioctl(register struct ifnet *ifp, u_long cmd, caddr_t data)
       				ex_init(sc);
 			}
 			break;
-#ifdef NODEF
-		case SIOCGHWADDR:
-			DODEBUG(Start_End, printf("SIOCGHWADDR"););
-			bcopy((caddr_t)sc->sc_addr, (caddr_t)&ifr->ifr_data,
-			      sizeof(sc->sc_addr));
-			break;
-#endif
 		case SIOCADDMULTI:
 		case SIOCDELMULTI:
 			ex_init(sc);
@@ -892,7 +885,7 @@ ex_setmulti(struct ex_softc *sc)
 		/* Program our MAC address as well */
 		/* XXX: Is this necessary?  The Linux driver does this
 		 * but the NetBSD driver does not */
-		addr = (uint16_t*)(&IFP2ENADDR(sc->ifp));
+		addr = (uint16_t*)IF_LLADDR(sc->ifp);
 		CSR_WRITE_2(sc, IO_PORT_REG, *addr++);
 		CSR_WRITE_2(sc, IO_PORT_REG, *addr++);
 		CSR_WRITE_2(sc, IO_PORT_REG, *addr++);

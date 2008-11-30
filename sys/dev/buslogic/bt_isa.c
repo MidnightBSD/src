@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/buslogic/bt_isa.c,v 1.25 2005/05/29 04:42:19 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/buslogic/bt_isa.c,v 1.26 2006/12/11 18:28:30 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -353,3 +353,4 @@ static driver_t bt_isa_driver = {
 static devclass_t bt_devclass;
 
 DRIVER_MODULE(bt, isa, bt_isa_driver, bt_devclass, 0, 0);
+MODULE_DEPEND(bt, isa, 1, 1, 1);

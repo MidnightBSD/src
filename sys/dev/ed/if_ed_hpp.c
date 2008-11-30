@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_hpp.c,v 1.2.2.1 2005/09/17 04:01:03 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_hpp.c,v 1.7 2006/01/27 19:10:13 imp Exp $");
 
 #include "opt_ed.h"
 
@@ -60,8 +60,13 @@ __FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_hpp.c,v 1.2.2.1 2005/09/17 04:01:03 imp
 #include <dev/ed/if_edreg.h>
 #include <dev/ed/if_edvar.h>
 
+static void	ed_hpp_readmem(struct ed_softc *, bus_size_t, uint8_t *,
+		    uint16_t);
 static void	ed_hpp_writemem(struct ed_softc *, uint8_t *, uint16_t,
 		    uint16_t);
+static void	ed_hpp_set_physical_link(struct ed_softc *sc);
+static u_short	ed_hpp_write_mbufs(struct ed_softc *, struct mbuf *,
+		    bus_size_t);
 
 /*
  * Interrupt conversion table for the HP PC LAN+
@@ -141,7 +146,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 	    (ed_asic_inb(sc, ED_HPP_ID + 1) != 0x48) ||
 	    ((ed_asic_inb(sc, ED_HPP_ID + 2) & 0xF0) != 0) ||
 	    (ed_asic_inb(sc, ED_HPP_ID + 3) != 0x53))
-		return ENXIO;
+		return (ENXIO);
 
 	/* 
 	 * Read the MAC address and verify checksum on the address.
@@ -155,7 +160,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 	checksum += ed_asic_inb(sc, ED_HPP_MAC_ADDR + ETHER_ADDR_LEN);
 
 	if (checksum != 0xFF)
-		return ENXIO;
+		return (ENXIO);
 
 	/*
 	 * Verify that the software model number is 0.
@@ -164,7 +169,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 	ed_asic_outw(sc, ED_HPP_PAGING, ED_HPP_PAGE_ID);
 	if (((sc->hpp_id = ed_asic_inw(sc, ED_HPP_PAGE_4)) & 
 		ED_HPP_ID_SOFT_MODEL_MASK) != 0x0000)
-		return ENXIO;
+		return (ENXIO);
 
 	/*
 	 * Read in and save the current options configured on card.
@@ -194,7 +199,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 	DELAY(5000);
 
 	if (!(ed_nic_inb(sc, ED_P0_ISR) & ED_ISR_RST))
-		return ENXIO;	/* reset did not complete */
+		return (ENXIO);	/* reset did not complete */
 
 	/*
 	 * Read out configuration information.
@@ -209,7 +214,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 	 */
 
 	if (irq >= (sizeof(ed_hpp_intr_val) / sizeof(ed_hpp_intr_val[0])))
-		return ENXIO;
+		return (ENXIO);
 
 	/* 
 	 * If the kernel IRQ was specified with a '?' use the cards idea
@@ -267,7 +272,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 			return (error);
 		
 		if (mem_addr != conf_maddr)
-			return ENXIO;
+			return (ENXIO);
 
 		error = ed_alloc_memory(dev, 0, memsize);
 		if (error)
@@ -352,9 +357,12 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
 
 		if (bcmp(test_pattern, test_buffer, 
 			sizeof(test_pattern)))
-			return ENXIO;
+			return (ENXIO);
 	}
 
+	sc->sc_mediachg = ed_hpp_set_physical_link;
+	sc->sc_write_mbufs = ed_hpp_write_mbufs;
+	sc->readmem = ed_hpp_readmem;
 	return (0);
 }
 
@@ -362,7 +370,7 @@ ed_probe_HP_pclanp(device_t dev, int port_rid, int flags)
  * HP PC Lan+ : Set the physical link to use AUI or TP/TL.
  */
 
-void
+static void
 ed_hpp_set_physical_link(struct ed_softc *sc)
 {
 	struct ifnet *ifp = sc->ifp;
@@ -371,7 +379,7 @@ ed_hpp_set_physical_link(struct ed_softc *sc)
 	ed_asic_outw(sc, ED_HPP_PAGING, ED_HPP_PAGE_LAN);
 	lan_page = ed_asic_inw(sc, ED_HPP_PAGE_0);
 
-	if (ifp->if_flags & IFF_ALTPHYS) {
+	if (ifp->if_flags & IFF_LINK2) {
 		/*
 		 * Use the AUI port.
 		 */
@@ -409,7 +417,7 @@ ed_hpp_set_physical_link(struct ed_softc *sc)
  * IO.
  */
 
-void
+static void
 ed_hpp_readmem(struct ed_softc *sc, bus_size_t src, uint8_t *dst,
     uint16_t amount)
 {
@@ -545,8 +553,8 @@ ed_hpp_writemem(struct ed_softc *sc, uint8_t *src, uint16_t dst, uint16_t len)
  * allows it.
  */
 
-u_short
-ed_hpp_write_mbufs(struct ed_softc *sc, struct mbuf *m, int dst)
+static u_short
+ed_hpp_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 {
 	int len, wantbyte;
 	unsigned short total_len;

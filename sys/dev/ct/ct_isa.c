@@ -1,7 +1,7 @@
 /*	$NecBSD: ct_isa.c,v 1.6 1999/07/26 06:32:01 honda Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ct/ct_isa.c,v 1.13 2005/05/10 12:02:14 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ct/ct_isa.c,v 1.14 2007/02/23 12:18:36 piso Exp $");
 /*	$NetBSD$	*/
 
 /*-
@@ -330,7 +330,7 @@ ct_isa_attach(device_t dev)
 	splx(s);
 
 	if (bus_setup_intr(dev, ct->irq_res, INTR_TYPE_CAM,
-			   (driver_intr_t *)ctintr, ct, &ct->sc_ih)) {
+			   NULL, (driver_intr_t *)ctintr, ct, &ct->sc_ih)) {
 		ct_space_unmap(dev, ct);
 		return ENXIO;
 	}

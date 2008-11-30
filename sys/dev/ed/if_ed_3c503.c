@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_3c503.c,v 1.2.2.1 2005/09/17 04:01:03 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_3c503.c,v 1.5 2006/01/27 19:10:13 imp Exp $");
 
 #include "opt_ed.h"
 
@@ -59,6 +59,8 @@ __FBSDID("$FreeBSD: src/sys/dev/ed/if_ed_3c503.c,v 1.2.2.1 2005/09/17 04:01:03 i
 
 #include <dev/ed/if_edreg.h>
 #include <dev/ed/if_edvar.h>
+
+static void ed_3c503_mediachg(struct ed_softc *sc);
 
 /*
  * Probe and vendor-specific initialization routine for 3Com 3c503 boards
@@ -323,7 +325,7 @@ ed_probe_3Com(device_t dev, int port_rid, int flags)
 	 * mem.
 	 */
 	ed_asic_outb(sc, ED_3COM_GACFR, ED_3COM_GACFR_RSEL |
-	     ED_3COM_GACFR_MBS0);
+	    ED_3COM_GACFR_MBS0);
 
 	/*
 	 * Initialize "Vector Pointer" registers. These gawd-awful things are
@@ -335,7 +337,27 @@ ed_probe_3Com(device_t dev, int port_rid, int flags)
 	ed_asic_outb(sc, ED_3COM_VPTR1, 0xff);
 	ed_asic_outb(sc, ED_3COM_VPTR0, 0x00);
 
-	return (ed_clear_memory(dev));
+	error = ed_clear_memory(dev);
+	if (error == 0) {
+		sc->sc_mediachg = ed_3c503_mediachg;
+		sc->sc_write_mbufs = ed_shmem_write_mbufs;
+	}
+	return (error);
+}
+
+static void
+ed_3c503_mediachg(struct ed_softc *sc)
+{
+	struct ifnet *ifp = sc->ifp;
+
+	/*
+	 * If this is a 3Com board, the tranceiver must be software enabled
+	 * (there is no settable hardware default).
+	 */
+	if (ifp->if_flags & IFF_LINK2)
+		ed_asic_outb(sc, ED_3COM_CR, 0);
+	else
+		ed_asic_outb(sc, ED_3COM_CR, ED_3COM_CR_XSEL);
 }
 
 #endif /* ED_3C503 */

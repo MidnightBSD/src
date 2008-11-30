@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cs/if_cs_isa.c,v 1.6 2005/01/06 01:42:32 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cs/if_cs_isa.c,v 1.7 2007/02/23 12:18:36 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -99,7 +99,7 @@ cs_isa_attach(device_t dev)
         cs_alloc_irq(dev, sc->irq_rid, 0);
                 
         error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-	    csintr, sc, &sc->irq_handle);
+	    NULL, csintr, sc, &sc->irq_handle);
         if (error) {
                 cs_release_resources(dev);
                 return (error);

@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_pci.c,v 1.34 2005/05/29 04:42:19 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_pci.c,v 1.37 2007/06/17 05:55:49 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -81,6 +81,7 @@ dpt_pci_attach (device_t dev)
 	u_int32_t	command;
 
 	dpt = device_get_softc(dev);
+	dpt->dev = dev;
 
 	command = pci_read_config(dev, PCIR_COMMAND, /*bytes*/1);
 
@@ -163,7 +164,7 @@ dpt_pci_attach (device_t dev)
 	splx(s);
 
 	if (bus_setup_intr(dev, dpt->irq_res, INTR_TYPE_CAM | INTR_ENTROPY,
-			   dpt_intr, dpt, &dpt->ih)) {
+			   NULL, dpt_intr, dpt, &dpt->ih)) {
 		device_printf(dev, "Unable to register interrupt handler\n");
 		error = ENXIO;
 		goto bad;
@@ -195,3 +196,5 @@ static driver_t dpt_pci_driver = {
 };
 
 DRIVER_MODULE(dpt, pci, dpt_pci_driver, dpt_devclass, 0, 0);
+MODULE_DEPEND(dpt, pci, 1, 1, 1);
+MODULE_DEPEND(dpt, cam, 1, 1, 1);

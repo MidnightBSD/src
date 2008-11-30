@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cs/if_cs_pccard.c,v 1.17 2005/06/24 14:36:51 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cs/if_cs_pccard.c,v 1.19 2007/02/23 12:18:36 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -55,7 +55,7 @@ static const struct pccard_product cs_pccard_products[] = {
 	{ NULL }
 };
 static int
-cs_pccard_match(device_t dev)
+cs_pccard_probe(device_t dev)
 {
 	const struct pccard_product *pp;
 	int		error;
@@ -78,31 +78,20 @@ cs_pccard_match(device_t dev)
 }
 
 static int
-cs_pccard_probe(device_t dev)
+cs_pccard_attach(device_t dev)
 {
 	struct cs_softc *sc = device_get_softc(dev);
 	int error;
 
 	sc->flags |= CS_NO_IRQ;
 	error = cs_cs89x0_probe(dev);
-	cs_release_resources(dev);
-	return (error);
-}
-
-static int
-cs_pccard_attach(device_t dev)
-{
-	struct cs_softc *sc = device_get_softc(dev);
-	int error;
-
-	error = cs_alloc_port(dev, sc->port_rid, CS_89x0_IO_PORTS);
 	if (error != 0)
-		goto bad;
+		return (error);
 	error = cs_alloc_irq(dev, sc->irq_rid, 0);
 	if (error != 0)
 		goto bad;
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-	    csintr, sc, &sc->irq_handle);
+	    NULL, csintr, sc, &sc->irq_handle);
 	if (error != 0)
 		goto bad;
 
@@ -114,14 +103,9 @@ bad:
 
 static device_method_t cs_pccard_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		pccard_compat_probe),
-	DEVMETHOD(device_attach,	pccard_compat_attach),
+	DEVMETHOD(device_probe,		cs_pccard_probe),
+	DEVMETHOD(device_attach,	cs_pccard_attach),
 	DEVMETHOD(device_detach,	cs_detach),
-
-	/* Card interface */
-	DEVMETHOD(card_compat_match,	cs_pccard_match),
-	DEVMETHOD(card_compat_probe,	cs_pccard_probe),
-	DEVMETHOD(card_compat_attach,	cs_pccard_attach),
 
 	{ 0, 0 }
 };

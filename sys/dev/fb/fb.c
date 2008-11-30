@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fb/fb.c,v 1.32 2004/07/15 08:26:00 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fb/fb.c,v 1.33 2005/12/04 10:06:03 ru Exp $");
 
 #include "opt_fb.h"
 
@@ -304,7 +304,7 @@ vid_configure(int flags)
 
 #ifdef FB_INSTALL_CDEV
 
-#if experimental
+#if 0 /* experimental */
 
 static devclass_t	fb_devclass;
 
@@ -348,12 +348,12 @@ fbattach(device_t dev)
 	return 0;
 }
 
-#endif /* experimental */
+#endif
 
 #define FB_UNIT(dev)	minor(dev)
 #define FB_MKMINOR(unit) (u)
 
-#if experimental
+#if 0 /* experimental */
 static d_open_t		fbopen;
 static d_close_t	fbclose;
 static d_read_t		fbread;

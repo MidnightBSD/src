@@ -27,9 +27,9 @@
  * SUCH DAMAGE.
  */
 
-#ident "$FreeBSD: src/sys/dev/dpt/dpt_scsi.c,v 1.50 2005/05/29 04:42:19 nyan Exp $"
+#ident "$FreeBSD: src/sys/dev/dpt/dpt_scsi.c,v 1.57 2007/06/17 05:55:49 scottl Exp $"
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_scsi.c,v 1.50 2005/05/29 04:42:19 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_scsi.c,v 1.57 2007/06/17 05:55:49 scottl Exp $");
 
 /*
  * dpt_scsi.c: SCSI dependant code for the DPT driver
@@ -50,6 +50,8 @@ __FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_scsi.c,v 1.50 2005/05/29 04:42:19 nyan E
 #define _DPT_C_
 
 #include "opt_dpt.h"
+#include "opt_eisa.h"
+
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/eventhandler.h>
@@ -63,7 +65,6 @@ __FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_scsi.c,v 1.50 2005/05/29 04:42:19 nyan E
 #include <machine/resource.h>
 #include <sys/rman.h>
 
-#include <machine/clock.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -107,7 +108,9 @@ devclass_t	dpt_devclass;
 /* ================= Private Inline Function declarations ===================*/
 static __inline int		dpt_just_reset(dpt_softc_t * dpt);
 static __inline int		dpt_raid_busy(dpt_softc_t * dpt);
+#ifdef DEV_EISA
 static __inline int		dpt_pio_wait (u_int32_t, u_int, u_int, u_int);
+#endif
 static __inline int		dpt_wait(dpt_softc_t *dpt, u_int bits,
 					 u_int state);
 static __inline struct dpt_ccb* dptgetccb(struct dpt_softc *dpt);
@@ -182,6 +185,7 @@ dpt_raid_busy(dpt_softc_t * dpt)
 		return (0);
 }
 
+#ifdef DEV_EISA
 static __inline int
 dpt_pio_wait (u_int32_t base, u_int reg, u_int bits, u_int state)
 {
@@ -197,6 +201,7 @@ dpt_pio_wait (u_int32_t base, u_int reg, u_int bits, u_int state)
 	}
 	return (-1);
 }
+#endif
 
 static __inline int
 dpt_wait(dpt_softc_t *dpt, u_int bits, u_int state)
@@ -387,6 +392,7 @@ dptallocccbs(dpt_softc_t *dpt)
 	return (i);
 }
 
+#ifdef DEV_EISA
 dpt_conf_t *
 dpt_pio_get_conf (u_int32_t base)
 {
@@ -479,6 +485,7 @@ dpt_pio_get_conf (u_int32_t base)
 	}
 	return (NULL);
 }
+#endif
 
 /*
  * Read a configuration page into the supplied dpt_cont_t buffer.
@@ -1005,26 +1012,33 @@ dpt_action(struct cam_sim *sim, union ccb *ccb)
 	case XPT_GET_TRAN_SETTINGS:
 	/* Get default/user set transfer settings for the target */
 	{
-		struct	ccb_trans_settings *cts;
-		u_int	target_mask;
+		struct	ccb_trans_settings *cts = &ccb->cts;
+		struct ccb_trans_settings_scsi *scsi =
+		    &cts->proto_specific.scsi;
+		struct ccb_trans_settings_spi *spi =
+		    &cts->xport_specific.spi;
+
+		cts->protocol = PROTO_SCSI;
+		cts->protocol_version = SCSI_REV_2;
+		cts->transport = XPORT_SPI;
+		cts->transport_version = 2;
  
-		cts = &ccb->cts;
-		target_mask = 0x01 << ccb->ccb_h.target_id;
-		if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0) { 
-			cts->flags = CCB_TRANS_DISC_ENB|CCB_TRANS_TAG_ENB;
-			cts->bus_width = (dpt->max_id > 7)
+		if (cts->type == CTS_TYPE_USER_SETTINGS) {
+			spi->flags = CTS_SPI_FLAGS_DISC_ENB;
+			spi->bus_width = (dpt->max_id > 7)
 				       ? MSG_EXT_WDTR_BUS_8_BIT
 				       : MSG_EXT_WDTR_BUS_16_BIT;
-			cts->sync_period = 25; /* 10MHz */
+			spi->sync_period = 25; /* 10MHz */
+			if (spi->sync_period != 0)
+				spi->sync_offset = 15;
+			scsi->flags = CTS_SCSI_FLAGS_TAG_ENB;
 
-			if (cts->sync_period != 0)
-				cts->sync_offset = 15;
-
-			cts->valid = CCB_TRANS_SYNC_RATE_VALID
-				   | CCB_TRANS_SYNC_OFFSET_VALID
-				   | CCB_TRANS_BUS_WIDTH_VALID
-				   | CCB_TRANS_DISC_VALID
-				   | CCB_TRANS_TQ_VALID;
+			spi->valid = CTS_SPI_VALID_SYNC_RATE
+				| CTS_SPI_VALID_SYNC_OFFSET
+				| CTS_SPI_VALID_SYNC_RATE
+				| CTS_SPI_VALID_BUS_WIDTH
+				| CTS_SPI_VALID_DISC;
+			scsi->valid = CTS_SCSI_VALID_TQ;
 			ccb->ccb_h.status = CAM_REQ_CMP;
 		} else {
 			ccb->ccb_h.status = CAM_FUNC_NOTAVAIL;
@@ -1074,6 +1088,10 @@ dpt_action(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->hba_vid, "DPT", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
+                cpi->transport = XPORT_SPI;
+                cpi->transport_version = 2;
+                cpi->protocol = PROTO_SCSI;
+                cpi->protocol_version = SCSI_REV_2;
 		cpi->ccb_h.status = CAM_REQ_CMP;
 		xpt_done(ccb);
 		break;
@@ -1548,7 +1566,8 @@ dpt_attach(dpt_softc_t *dpt)
 		 * Construct our SIM entry
 		 */
 		dpt->sims[i] = cam_sim_alloc(dpt_action, dpt_poll, "dpt",
-					     dpt, dpt->unit, /*untagged*/2,
+					     dpt, dpt->unit, &Giant,
+					     /*untagged*/2,
 					     /*tagged*/dpt->max_dccbs, devq);
 		if (dpt->sims[i] == NULL) {
 			if (i == 0)
@@ -1560,7 +1579,7 @@ dpt_attach(dpt_softc_t *dpt)
 			break;
 		}
 
-		if (xpt_bus_register(dpt->sims[i], i) != CAM_SUCCESS) {
+		if (xpt_bus_register(dpt->sims[i], dpt->dev, i) != CAM_SUCCESS){
 			cam_sim_free(dpt->sims[i], /*free_devq*/i == 0);
 			dpt->sims[i] = NULL;
 			break;
@@ -1812,7 +1831,7 @@ dpttimeout(void *arg)
 	s = splcam();
 
 	/*
-	 * Try to clear any pending jobs.  FreeBSD will loose interrupts,
+	 * Try to clear any pending jobs.  FreeBSD will lose interrupts,
 	 * leaving the controller suspended, and commands timed-out.
 	 * By calling the interrupt handler, any command thus stuck will be
 	 * completed.

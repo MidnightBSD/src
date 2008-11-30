@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/digi/digi.c,v 1.58 2005/02/25 20:50:20 sam Exp $
+ * $FreeBSD: src/sys/dev/digi/digi.c,v 1.63 2006/09/27 19:56:58 ru Exp $
  */
 
 /*-
@@ -360,7 +360,7 @@ digi_init(struct digi_softc *sc)
 	DLOG(DIGIDB_INIT, (sc->dev, "BIOS started after %d us\n", i));
 
 	for (i = 0; vW(ptr) != *(u_short *)"GD"; i++) {
-		if (i > 2*hz) {
+		if (i > 5*hz) {
 			log(LOG_ERR, "digi%d: BIOS boot failed "
 			    "(0x%02x != 0x%02x)\n",
 			    sc->res.unit, vW(ptr), *(u_short *)"GD");
@@ -588,7 +588,7 @@ digi_init(struct digi_softc *sc)
 
 		ttyinitmode(tp, 0, 0);
 		port->send_ring = 1;	/* Default action on signal RI */
-		ttycreate(tp, NULL, 0, MINOR_CALLOUT, "D%r%r", sc->res.unit, i);
+		ttycreate(tp, TS_CALLOUT, "D%r%r", sc->res.unit, i);
 	}
 
 	sc->hidewin(sc);
@@ -783,7 +783,6 @@ digi_loadmoduledata(struct digi_softc *sc)
 	modlen = strlen(sc->module);
 	modfile = malloc(modlen + 6, M_TEMP, M_WAITOK);
 	snprintf(modfile, modlen + 6, "digi_%s", sc->module);
-	res = linker_reference_module(modfile, NULL, &lf);
 	if ((res = linker_reference_module(modfile, NULL, &lf)) != 0)
 		printf("%s: Failed %d to autoload module\n", modfile, res);
 	free(modfile, M_TEMP);
@@ -796,7 +795,7 @@ digi_loadmoduledata(struct digi_softc *sc)
 	free(sym, M_TEMP);
 	if (symptr == NULL) {
 		printf("digi_%s.ko: Symbol `%s' not found\n", sc->module, sym);
-		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
+		linker_release_module(NULL, NULL, lf);
 		return (EINVAL);
 	}
 
@@ -804,7 +803,7 @@ digi_loadmoduledata(struct digi_softc *sc)
 	if (digi_mod->dm_version != DIGI_MOD_VERSION) {
 		printf("digi_%s.ko: Invalid version %d (need %d)\n",
 		    sc->module, digi_mod->dm_version, DIGI_MOD_VERSION);
-		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
+		linker_release_module(NULL, NULL, lf);
 		return (EINVAL);
 	}
 
@@ -826,7 +825,7 @@ digi_loadmoduledata(struct digi_softc *sc)
 		bcopy(digi_mod->dm_link.data, sc->link.data, sc->link.size);
 	}
 
-	linker_file_unload(lf, LINKER_UNLOAD_FORCE);
+	linker_release_module(NULL, NULL, lf);
 
 	return (0);
 }
@@ -914,6 +913,10 @@ digiioctl(struct tty *tp, u_long cmd, void *data, int flag, struct thread *td)
 {
 	struct digi_softc *sc;
 	struct digi_p *port;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	int ival;
+#endif
 
 	port = tp->t_sc;
 	sc = port->sc;
@@ -943,8 +946,15 @@ digiioctl(struct tty *tp, u_long cmd, void *data, int flag, struct thread *td)
 			}
 		}
 		return (0);
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+	case _IO('e', 'C'):
+		ival = IOCPARM_IVAL(data);
+		data = &ival;
+		/* FALLTHROUGH */
+#endif
 	case DIGIIO_RING:
-		port->send_ring = *(u_char *)data;
+		port->send_ring = (u_char)*(int *)data;
 		break;
 	default:
 		return (ENOTTY);

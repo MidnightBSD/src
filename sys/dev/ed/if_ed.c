@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed.c,v 1.254.2.4 2005/10/08 18:00:40 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ed/if_ed.c,v 1.271 2007/03/21 03:38:35 nyan Exp $");
 
 /*
  * Device driver for National Semiconductor DS8390/WD83C690 based ethernet
@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ed/if_ed.c,v 1.254.2.4 2005/10/08 18:00:40 imp E
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
 #include <sys/syslog.h>
 
 #include <sys/bus.h>
@@ -87,8 +88,6 @@ static __inline void ed_rint(struct ed_softc *);
 static __inline void ed_xmit(struct ed_softc *);
 static __inline void ed_ring_copy(struct ed_softc *, bus_size_t, char *,
     u_short);
-static u_short	ed_pio_write_mbufs(struct ed_softc *, struct mbuf *,
-    bus_size_t);
 
 static void	ed_setrcr(struct ed_softc *);
 
@@ -224,22 +223,16 @@ ed_release_resources(device_t dev)
 	struct ed_softc *sc = device_get_softc(dev);
 
 	if (sc->port_res) {
-		bus_deactivate_resource(dev, SYS_RES_IOPORT,
-		    sc->port_rid, sc->port_res);
 		bus_release_resource(dev, SYS_RES_IOPORT,
 		    sc->port_rid, sc->port_res);
 		sc->port_res = 0;
 	}
 	if (sc->mem_res) {
-		bus_deactivate_resource(dev, SYS_RES_MEMORY,
-		    sc->mem_rid, sc->mem_res);
 		bus_release_resource(dev, SYS_RES_MEMORY,
 		    sc->mem_rid, sc->mem_res);
 		sc->mem_res = 0;
 	}
 	if (sc->irq_res) {
-		bus_deactivate_resource(dev, SYS_RES_IRQ,
-		    sc->irq_rid, sc->irq_res);
 		bus_release_resource(dev, SYS_RES_IRQ,
 		    sc->irq_rid, sc->irq_res);
 		sc->irq_res = 0;
@@ -276,7 +269,11 @@ ed_attach(device_t dev)
 			sc->readmem = ed_pio_readmem;
 		}
 	}
-	
+	if (sc->sc_write_mbufs == NULL) {
+		device_printf(dev, "No write mbufs routine set\n");
+		return (ENXIO);
+	}
+
 	callout_init_mtx(&sc->tick_ch, ED_MUTEX(sc), 0);
 	/*
 	 * Set interface to stopped condition (reset)
@@ -310,13 +307,17 @@ ed_attach(device_t dev)
 				    dot3ChipSetNational8390);
 	sc->mibdata.dot3Compliance = DOT3COMPLIANCE_COLLS;
 
-	/*
-	 * Set default state for ALTPHYS flag (used to disable the 
-	 * tranceiver for AUI operation), based on config option.
-	 */
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
+	/*
+	 * Set default state for LINK2 flag (used to disable the 
+	 * tranceiver for AUI operation), based on config option.
+	 * We only set this flag before we attach the device, so there's
+	 * no race.  It is convenient to allow users to turn this off
+	 * by default in the kernel config, but given our more advanced
+	 * boot time configuration options, this might no longer be needed.
+	 */
 	if (device_get_flags(dev) & ED_FLAGS_DISABLE_TRANCEIVER)
-		ifp->if_flags |= IFF_ALTPHYS;
+		ifp->if_flags |= IFF_LINK2;
 
 	/*
 	 * Attach the interface
@@ -324,7 +325,25 @@ ed_attach(device_t dev)
 	ether_ifattach(ifp, sc->enaddr);
 	/* device attach does transition from UNCONFIGURED to IDLE state */
 
-	if (bootverbose || 1) {
+	sc->tx_mem = sc->txb_cnt * ED_PAGE_SIZE * ED_TXBUF_SIZE;
+	sc->rx_mem = (sc->rec_page_stop - sc->rec_page_start) * ED_PAGE_SIZE;
+	SYSCTL_ADD_STRING(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    0, "type", CTLTYPE_STRING | CTLFLAG_RD, sc->type_str, 0,
+	    "Type of chip in card");
+	SYSCTL_ADD_UINT(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    1, "TxMem", CTLTYPE_STRING | CTLFLAG_RD, &sc->tx_mem, 0,
+	    "Memory set aside for transmitting packets");
+	SYSCTL_ADD_UINT(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    2, "RxMem", CTLTYPE_STRING | CTLFLAG_RD, &sc->rx_mem, 0,
+	    "Memory  set aside for receiving packets");
+	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    3, "Mem", CTLTYPE_STRING | CTLFLAG_RD, &sc->mem_size, 0,
+	    "Total Card Memory");
+	if (bootverbose) {
 		if (sc->type_str && (*sc->type_str != 0))
 			device_printf(dev, "type %s ", sc->type_str);
 		else
@@ -338,12 +357,12 @@ ed_attach(device_t dev)
 			    sc->hpp_mem_start ? "memory mapped" : "regular");
 		else
 #endif
-			printf("%s ", sc->isa16bit ? "(16 bit)" : "(8 bit)");
+			printf("%s", sc->isa16bit ? "(16 bit)" : "(8 bit)");
 
 #if defined(ED_HPP) || defined(ED_3C503)
 		printf("%s", (((sc->vendor == ED_VENDOR_3COM) ||
 				    (sc->vendor == ED_VENDOR_HP)) &&
-			   (ifp->if_flags & IFF_ALTPHYS)) ?
+			   (ifp->if_flags & IFF_LINK2)) ?
 		    " tranceiver disabled" : "");
 #endif
 		printf("\n");
@@ -551,7 +570,7 @@ ed_init_locked(struct ed_softc *sc)
 	 * Copy out our station address
 	 */
 	for (i = 0; i < ETHER_ADDR_LEN; ++i)
-		ed_nic_outb(sc, ED_P1_PAR(i), IFP2ENADDR(sc->ifp)[i]);
+		ed_nic_outb(sc, ED_P1_PAR(i), IF_LLADDR(sc->ifp)[i]);
 
 	/*
 	 * Set Current Page pointer to next_packet (initialized above)
@@ -569,20 +588,8 @@ ed_init_locked(struct ed_softc *sc)
 	 */
 	ed_nic_outb(sc, ED_P0_TCR, 0);
 
-#ifdef ED_3C503
-	/*
-	 * If this is a 3Com board, the tranceiver must be software enabled
-	 * (there is no settable hardware default).
-	 */
-	if (sc->vendor == ED_VENDOR_3COM) {
-		if (ifp->if_flags & IFF_ALTPHYS)
-			ed_asic_outb(sc, ED_3COM_CR, 0);
-		else
-			ed_asic_outb(sc, ED_3COM_CR, ED_3COM_CR_XSEL);
-	}
-#endif
 	if (sc->sc_mediachg)
-	    sc->sc_mediachg(sc);
+		sc->sc_mediachg(sc);
 
 	/*
 	 * Set 'running' flag, and clear output active flag.
@@ -719,77 +726,10 @@ outloop:
 	/* txb_new points to next open buffer slot */
 	buffer = sc->mem_start + (sc->txb_new * ED_TXBUF_SIZE * ED_PAGE_SIZE);
 
-	if (sc->mem_shared) {
-		/*
-		 * Special case setup for 16 bit boards...
-		 */
-		if (sc->isa16bit) {
-			switch (sc->vendor) {
-#ifdef ED_3C503
-				/*
-				 * For 16bit 3Com boards (which have 16k of
-				 * memory), we have the xmit buffers in a
-				 * different page of memory ('page 0') - so
-				 * change pages.
-				 */
-			case ED_VENDOR_3COM:
-				ed_asic_outb(sc, ED_3COM_GACFR,
-					     ED_3COM_GACFR_RSEL);
-				break;
-#endif
-				/*
-				 * Enable 16bit access to shared memory on
-				 * WD/SMC boards.
-				 *
-				 * XXX - same as ed_enable_16bit_access()
-				 */
-			case ED_VENDOR_WD_SMC:
-				ed_asic_outb(sc, ED_WD_LAAR,
-				    sc->wd_laar_proto | ED_WD_LAAR_M16EN);
-				if (sc->chip_type == ED_CHIP_TYPE_WD790)
-					ed_asic_outb(sc, ED_WD_MSR, ED_WD_MSR_MENB);
-				break;
-			}
-		}
-		for (len = 0; m != 0; m = m->m_next) {
-			if (sc->isa16bit)
-				bus_space_write_region_2(sc->mem_bst,
-				    sc->mem_bsh, buffer,
-				    mtod(m, uint16_t *), (m->m_len + 1)/ 2);
-			else
-				bus_space_write_region_1(sc->mem_bst,
-				    sc->mem_bsh, buffer,
-				    mtod(m, uint8_t *), m->m_len);
-			buffer += m->m_len;
-			len += m->m_len;
-		}
-
-		/*
-		 * Restore previous shared memory access
-		 */
-		if (sc->isa16bit) {
-			switch (sc->vendor) {
-#ifdef ED_3C503
-			case ED_VENDOR_3COM:
-				ed_asic_outb(sc, ED_3COM_GACFR,
-				    ED_3COM_GACFR_RSEL | ED_3COM_GACFR_MBS0);
-				break;
-#endif
-			case ED_VENDOR_WD_SMC:
-				/* XXX - same as ed_disable_16bit_access() */
-				if (sc->chip_type == ED_CHIP_TYPE_WD790)
-					ed_asic_outb(sc, ED_WD_MSR, 0x00);
-				ed_asic_outb(sc, ED_WD_LAAR,
-				    sc->wd_laar_proto & ~ED_WD_LAAR_M16EN);
-				break;
-			}
-		}
-	} else {
-		len = ed_pio_write_mbufs(sc, m, buffer);
-		if (len == 0) {
-			m_freem(m0);
-			goto outloop;
-		}
+	len = sc->sc_write_mbufs(sc, m, buffer);
+	if (len == 0) {
+		m_freem(m0);
+		goto outloop;
 	}
 
 	sc->txb_len[sc->txb_new] = max(len, (ETHER_MIN_LEN-ETHER_CRC_LEN));
@@ -1223,12 +1163,15 @@ ed_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	case SIOCSIFFLAGS:
 		/*
 		 * If the interface is marked up and stopped, then start it.
+		 * If we're up and already running, then it may be a mediachg.
 		 * If it is marked down and running, then stop it.
 		 */
 		ED_LOCK(sc);
 		if (ifp->if_flags & IFF_UP) {
 			if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0)
 				ed_init_locked(sc);
+			else if (sc->sc_mediachg)
+				sc->sc_mediachg(sc);
 		} else {
 			if (ifp->if_drv_flags & IFF_DRV_RUNNING) {
 				ed_stop(sc);
@@ -1241,23 +1184,6 @@ ed_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		 */
 		ed_setrcr(sc);
 
-		/*
-		 * An unfortunate hack to provide the (required) software
-		 * control of the tranceiver for 3Com/HP boards.
-		 * The ALTPHYS flag disables the tranceiver if set.
-		 */
-#ifdef ED_3C503
-		if (sc->vendor == ED_VENDOR_3COM) {
-			if (ifp->if_flags & IFF_ALTPHYS)
-				ed_asic_outb(sc, ED_3COM_CR, 0);
-			else
-				ed_asic_outb(sc, ED_3COM_CR, ED_3COM_CR_XSEL);
-		}
-#endif
-#ifdef ED_HPP
-		if (sc->vendor == ED_VENDOR_HP) 
-			ed_hpp_set_physical_link(sc);
-#endif
 		ED_UNLOCK(sc);
 		break;
 
@@ -1479,7 +1405,7 @@ ed_pio_writemem(struct ed_softc *sc, uint8_t *src, uint16_t dst, uint16_t len)
  * Write an mbuf chain to the destination NIC memory address using
  *	programmed I/O.
  */
-static u_short
+u_short
 ed_pio_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 {
 	struct ifnet *ifp = sc->ifp;
@@ -1488,12 +1414,6 @@ ed_pio_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
 	int     maxwait = 200;	/* about 240us */
 
 	ED_ASSERT_LOCKED(sc);
-
-#ifdef ED_HPP
-	/* HP PC Lan+ cards need special handling */
-	if (sc->vendor == ED_VENDOR_HP && sc->type == ED_TYPE_HP_PCLANPLUS)
-		return ed_hpp_write_mbufs(sc, m, dst);
-#endif
 
 	/* Regular Novell cards */
 	/* First, count up the total number of bytes to copy */
@@ -1729,4 +1649,75 @@ ed_clear_memory(device_t dev)
 		}
 	}
 	return (0);
+}
+	    
+u_short
+ed_shmem_write_mbufs(struct ed_softc *sc, struct mbuf *m, bus_size_t dst)
+{
+	u_short len;
+
+	/*
+	 * Special case setup for 16 bit boards...
+	 */
+	if (sc->isa16bit) {
+		switch (sc->vendor) {
+#ifdef ED_3C503
+			/*
+			 * For 16bit 3Com boards (which have 16k of
+			 * memory), we have the xmit buffers in a
+			 * different page of memory ('page 0') - so
+			 * change pages.
+			 */
+		case ED_VENDOR_3COM:
+			ed_asic_outb(sc, ED_3COM_GACFR, ED_3COM_GACFR_RSEL);
+			break;
+#endif
+			/*
+			 * Enable 16bit access to shared memory on
+			 * WD/SMC boards.
+			 *
+			 * XXX - same as ed_enable_16bit_access()
+			 */
+		case ED_VENDOR_WD_SMC:
+			ed_asic_outb(sc, ED_WD_LAAR,
+			    sc->wd_laar_proto | ED_WD_LAAR_M16EN);
+			if (sc->chip_type == ED_CHIP_TYPE_WD790)
+				ed_asic_outb(sc, ED_WD_MSR, ED_WD_MSR_MENB);
+			break;
+		}
+	}
+	for (len = 0; m != 0; m = m->m_next) {
+		if (sc->isa16bit)
+			bus_space_write_region_2(sc->mem_bst,
+			    sc->mem_bsh, dst,
+			    mtod(m, uint16_t *), (m->m_len + 1)/ 2);
+		else
+			bus_space_write_region_1(sc->mem_bst,
+			    sc->mem_bsh, dst,
+			    mtod(m, uint8_t *), m->m_len);
+		dst += m->m_len;
+		len += m->m_len;
+	}
+
+	/*
+	 * Restore previous shared memory access
+	 */
+	if (sc->isa16bit) {
+		switch (sc->vendor) {
+#ifdef ED_3C503
+		case ED_VENDOR_3COM:
+			ed_asic_outb(sc, ED_3COM_GACFR,
+			    ED_3COM_GACFR_RSEL | ED_3COM_GACFR_MBS0);
+			break;
+#endif
+		case ED_VENDOR_WD_SMC:
+			/* XXX - same as ed_disable_16bit_access() */
+			if (sc->chip_type == ED_CHIP_TYPE_WD790)
+				ed_asic_outb(sc, ED_WD_MSR, 0x00);
+			ed_asic_outb(sc, ED_WD_LAAR,
+			    sc->wd_laar_proto & ~ED_WD_LAAR_M16EN);
+			break;
+		}
+	}
+	return (len);
 }

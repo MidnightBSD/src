@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cpufreq/ichss.c,v 1.9 2005/03/20 01:25:21 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cpufreq/ichss.c,v 1.10 2006/05/16 14:36:24 phk Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -39,7 +39,6 @@ __FBSDID("$FreeBSD: src/sys/dev/cpufreq/ichss.c,v 1.9 2005/03/20 01:25:21 njl Ex
 
 #include <dev/pci/pcivar.h>
 #include <machine/bus.h>
-#include <machine/clock.h>
 #include <machine/resource.h>
 #include <sys/rman.h>
 

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/buslogic/bt_mca.c,v 1.10 2004/09/15 11:58:34 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/buslogic/bt_mca.c,v 1.11 2006/12/11 18:28:30 mjacob Exp $");
 
 /*
  * Written using the bt_isa/bt_pci code as a reference.
@@ -338,3 +338,4 @@ static driver_t bt_mca_driver = {
 static devclass_t bt_devclass;
 
 DRIVER_MODULE(bt, mca, bt_mca_driver, bt_devclass, 0, 0);
+MODULE_DEPEND(bt, mca, 1, 1, 1);

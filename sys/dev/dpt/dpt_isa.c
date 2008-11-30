@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_isa.c,v 1.9 2005/05/29 04:42:19 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/dpt/dpt_isa.c,v 1.11 2007/06/17 05:55:49 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -154,7 +154,7 @@ dpt_isa_attach (device_t dev)
 	int		error = 0;
 
 	dpt = device_get_softc(dev);
-
+	dpt->dev = dev;
 
 	dpt->io_rid = 0;
 	dpt->io_type = SYS_RES_IOPORT;
@@ -268,3 +268,5 @@ static driver_t dpt_isa_driver = {
 };
 
 DRIVER_MODULE(dpt, isa, dpt_isa_driver, dpt_devclass, 0, 0);
+MODULE_DEPEND(dpt, isa, 1, 1, 1);
+MODULE_DEPEND(dpt, cam, 1, 1, 1);

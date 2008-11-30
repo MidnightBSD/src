@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ed/if_ed_cbus.c,v 1.21.2.2 2006/02/24 14:36:22 nyan Exp $
+ * $FreeBSD: src/sys/dev/ed/if_ed_cbus.c,v 1.28 2007/02/23 12:18:38 piso Exp $
  */
 
 #include <sys/param.h>
@@ -37,7 +37,6 @@
 #include <machine/bus.h>
 #include <sys/rman.h>
 #include <machine/resource.h>
-#include <machine/clock.h>
 
 #include <net/ethernet.h>
 #include <net/if.h>
@@ -54,13 +53,13 @@
 static int ed98_alloc_port(device_t, int);
 static int ed98_alloc_memory(device_t, int);
 static int ed_pio_testmem(struct ed_softc *, int, int, int);
-static int ed_probe_SIC98(device_t, int, int);
 static int ed_probe_CNET98(device_t, int, int);
 static int ed_probe_CNET98EL(device_t, int, int);
+static int ed_probe_EZ98(device_t, int, int);
 static int ed_probe_NEC77(device_t, int, int);
 static int ed_probe_NW98X(device_t, int, int);
 static int ed_probe_SB98(device_t, int, int);
-static int ed_probe_EZ98(device_t, int, int);
+static int ed_probe_SIC98(device_t, int, int);
 static int ed98_probe_Novell(device_t, int, int);
 static int ed98_probe_generic8390(struct ed_softc *);
 static void ed_reset_CNET98(struct ed_softc *, int);
@@ -244,7 +243,7 @@ ed_cbus_attach(dev)
 	ed_alloc_irq(dev, sc->irq_rid, 0);
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET | INTR_MPSAFE,
-	    edintr, sc, &sc->irq_handle);
+	    NULL, edintr, sc, &sc->irq_handle);
 	if (error) {
 		ed_release_resources(dev);
 		return (error);
@@ -790,6 +789,7 @@ ed98_probe_Novell(device_t dev, int port_rid, int flags)
 	/* clear any pending interrupts that might have occurred above */
 	ed_nic_outb(sc, ED_P0_ISR, 0xff);
 
+	sc->sc_write_mbufs = ed_pio_write_mbufs;
 	return (0);
 }
 
@@ -890,6 +890,7 @@ ed_probe_SIC98(device_t dev, int port_rid, int flags)
 
 	sc->mem_ring = sc->mem_start + sc->txb_cnt * ED_PAGE_SIZE * ED_TXBUF_SIZE;
 
+	sc->sc_write_mbufs = ed_shmem_write_mbufs;
 	return (0);
 }
 
@@ -1139,6 +1140,7 @@ ed_probe_CNET98(device_t dev, int port_rid, int flags)
 	ed_asic_outb(sc, ED_CNET98_INT_MASK, 0x7e);
 	DELAY(1000);
 
+	sc->sc_write_mbufs = ed_shmem_write_mbufs;
 	return (0);
 }
 
@@ -1233,6 +1235,7 @@ ed_probe_CNET98EL(device_t dev, int port_rid, int flags)
 	/* clear any pending interrupts that might have occurred above */
 	ed_nic_outb(sc, ED_P0_ISR, 0xff);
 
+	sc->sc_write_mbufs = ed_pio_write_mbufs;
 	return (0);
 }
 
@@ -1500,9 +1503,8 @@ ed_probe_SB98(device_t dev, int port_rid, int flags)
 
 	/* Test memory via PIO */
 	sc->cr_proto = ED_CR_RD2;
-	if (!ed_pio_testmem(sc, 16384, 1, flags)) {
+	if (!ed_pio_testmem(sc, 16384, 1, flags))
 		return (ENXIO);
-	}
 
 	/* This looks like an SB9801 board. */
 	sc->type_str = "SB9801";
@@ -1513,6 +1515,7 @@ ed_probe_SB98(device_t dev, int port_rid, int flags)
 	/* clear any pending interrupts that might have occurred above */
 	ed_nic_outb(sc, ED_P0_ISR, 0xff);
 
+	sc->sc_write_mbufs = ed_pio_write_mbufs;
 	return (0);
 }
 

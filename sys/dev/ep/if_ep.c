@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep.c,v 1.140.2.2 2005/09/17 04:01:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ep/if_ep.c,v 1.148 2006/12/01 20:29:55 mlaier Exp $");
 
 /*
  *	Modified from the FreeBSD 1.1.5.1 version by:
@@ -72,7 +72,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ep/if_ep.c,v 1.140.2.2 2005/09/17 04:01:04 imp E
 #include <sys/rman.h>
 
 #include <net/if.h>
-#include <net/if_arp.h>
+#include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/ethernet.h>
@@ -304,7 +304,9 @@ ep_attach(struct ep_softc *sc)
 	ifp->if_ioctl = epioctl;
 	ifp->if_watchdog = epwatchdog;
 	ifp->if_init = epinit;
-	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
+	ifp->if_snd.ifq_drv_maxlen = IFQ_MAXLEN;
+	IFQ_SET_READY(&ifp->if_snd);
 
 	if (!sc->epb.mii_trans) {
 		ifmedia_init(&sc->ifmedia, 0, ep_ifmedia_upd, ep_ifmedia_sts);
@@ -350,20 +352,18 @@ ep_detach(device_t dev)
 	struct ifnet *ifp;
 
 	sc = device_get_softc(dev);
-	EP_ASSERT_UNLOCKED(sc);
 	ifp = sc->ifp;
-
-	if (sc->gone)
-		return (0);
+	EP_ASSERT_UNLOCKED(sc);
+	EP_LOCK(sc);
 	if (bus_child_present(dev))
 		epstop(sc);
-
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
-	ether_ifdetach(ifp);
-	if_free(ifp);
-
 	sc->gone = 1;
+	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+	EP_UNLOCK(sc);
+	ether_ifdetach(ifp);
 	ep_free(dev);
+
+	if_free(ifp);
 	EP_LOCK_DESTROY(sc);
 
 	return (0);
@@ -408,7 +408,7 @@ epinit_locked(struct ep_softc *sc)
 
 	GO_WINDOW(sc, 2);
 	/* Reload the ether_addr. */
-	ep_setup_station(sc, IFP2ENADDR(sc->ifp));
+	ep_setup_station(sc, IF_LLADDR(sc->ifp));
 
 	CSR_WRITE_2(sc, EP_COMMAND, RX_RESET);
 	CSR_WRITE_2(sc, EP_COMMAND, TX_RESET);
@@ -484,7 +484,7 @@ epstart_locked(struct ifnet *ifp)
 		return;
 startagain:
 	/* Sneak a peek at the next packet */
-	IF_DEQUEUE(&ifp->if_snd, m0);
+	IFQ_DRV_DEQUEUE(&ifp->if_snd, m0);
 	if (m0 == NULL)
 		return;
 	for (len = 0, m = m0; m != NULL; m = m->m_next)
@@ -509,7 +509,7 @@ startagain:
 		/* make sure */
 		if (CSR_READ_2(sc, EP_W1_FREE_TX) < len + pad + 4) {
 			ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-			IF_PREPEND(&ifp->if_snd, m0);
+			IFQ_DRV_PREPEND(&ifp->if_snd, m0);
 			goto done;
 		}
 	} else
@@ -564,7 +564,7 @@ readcheck:
 		 * we check if we have packets left, in that case
 		 * we prepare to come back later
 		 */
-		if (ifp->if_snd.ifq_head)
+		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 			CSR_WRITE_2(sc, EP_COMMAND, SET_TX_AVAIL_THRESH | 8);
 		goto done;
 	}
@@ -674,7 +674,7 @@ rescan:
 				         * To have a tx_avail_int but giving
 					 * the chance to the Reception
 				         */
-					if (ifp->if_snd.ifq_head)
+					if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
 						CSR_WRITE_2(sc, EP_COMMAND,
 						    SET_TX_AVAIL_THRESH | 8);
 				}
@@ -918,12 +918,6 @@ epioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			epinit_locked(sc);
 		EP_UNLOCK(sc);
 		break;
-#ifdef notdef
-	case SIOCGHWADDR:
-		bcopy((caddr_t)sc->sc_addr, (caddr_t)&ifr->ifr_data,
-		    sizeof(sc->sc_addr));
-		break;
-#endif
 	case SIOCADDMULTI:
 	case SIOCDELMULTI:
 		/*
@@ -964,8 +958,6 @@ epwatchdog(struct ifnet *ifp)
 static void
 epstop(struct ep_softc *sc)
 {
-	if (sc->gone)
-		return;
 	CSR_WRITE_2(sc, EP_COMMAND, RX_DISABLE);
 	CSR_WRITE_2(sc, EP_COMMAND, RX_DISCARD_TOP_PACK);
 	EP_BUSY_WAIT(sc);

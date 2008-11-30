@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ed/if_ed_pccard.c,v 1.84.2.3 2005/11/04 18:11:56 imp Exp $
+ * $FreeBSD: src/sys/dev/ed/if_ed_pccard.c,v 1.113 2007/07/11 04:14:40 imp Exp $
  */
 
 /*
@@ -159,6 +159,7 @@ static const struct ed_product {
 	{ PCMCIA_CARD(COREGA, FETHER_PCC_TXF), NE2000DVF_DL100XX},
 	{ PCMCIA_CARD(DAYNA, COMMUNICARD_E_1), 0},
 	{ PCMCIA_CARD(DAYNA, COMMUNICARD_E_2), 0},
+	{ PCMCIA_CARD(DLINK, DE650), 0 },
 	{ PCMCIA_CARD(DLINK, DE660), 0 },
 	{ PCMCIA_CARD(DLINK, DE660PLUS), 0},
 	{ PCMCIA_CARD(DYNALINK, L10C), 0},
@@ -185,6 +186,7 @@ static const struct ed_product {
 	{ PCMCIA_CARD(MAGICRAM, ETHER), 0},
 	{ PCMCIA_CARD(MELCO, LPC3_CLX), NE2000DVF_AX88X90},
 	{ PCMCIA_CARD(MELCO, LPC3_TX), NE2000DVF_AX88X90},
+	{ PCMCIA_CARD(MICRORESEARCH, MR10TPC), 0},
 	{ PCMCIA_CARD(NDC, ND5100_E), 0},
 	{ PCMCIA_CARD(NETGEAR, FA410TXC), NE2000DVF_DL100XX},
 	/* Same ID as DLINK DFE-670TXD.  670 has DL10022, fa411 has ax88790 */
@@ -477,7 +479,7 @@ ed_pccard_attach(device_t dev)
 		goto bad;
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET | INTR_MPSAFE,
-	    edintr, sc, &sc->irq_handle);
+	    NULL, edintr, sc, &sc->irq_handle);
 	if (error) {
 		device_printf(dev, "setup intr failed %d \n", error);
 		goto bad;
@@ -540,7 +542,7 @@ ed_pccard_attach(device_t dev)
 	    sc->chip_type == ED_CHIP_TYPE_DL10022) {
 		/* Probe for an MII bus, but ignore errors. */
 		ed_pccard_dl100xx_mii_reset(sc);
-		mii_phy_probe(dev, &sc->miibus, ed_ifmedia_upd,
+		(void)mii_phy_probe(dev, &sc->miibus, ed_ifmedia_upd,
 		    ed_ifmedia_sts);
 	} else if (sc->chip_type == ED_CHIP_TYPE_AX88190) {
 		ed_pccard_ax88x90_mii_reset(sc);

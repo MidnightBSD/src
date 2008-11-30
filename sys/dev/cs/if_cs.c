@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cs/if_cs.c,v 1.41.2.1 2005/08/25 05:01:06 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cs/if_cs.c,v 1.45 2006/09/15 15:16:10 glebius Exp $");
 
 /*
  *
@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: src/sys/dev/cs/if_cs.c,v 1.41.2.1 2005/08/25 05:01:06 rwatso
 
 #include <net/if.h>
 #include <net/if_arp.h>
+#include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/if_types.h>
 #include <net/ethernet.h>
@@ -197,7 +198,7 @@ cs_duplex_auto(struct cs_softc *sc)
 	    RE_NEG_NOW | ALLOW_FDX | AUTO_NEG_ENABLE);
 	for (i=0; cs_readreg(sc, PP_AutoNegST) & AUTO_NEG_BUSY; i++) {
 		if (i > 40000) {
-			if_printf(sc->ifp,
+			device_printf(sc->dev,
 			    "full/half duplex auto negotiation timeout\n");
 			error = ETIMEDOUT;
 			break;
@@ -217,7 +218,7 @@ enable_tp(struct cs_softc *sc)
 	DELAY( 150000 );
 
 	if ((cs_readreg(sc, PP_LineST) & LINK_OK)==0) {
-		if_printf(sc->ifp, "failed to enable TP\n");
+		device_printf(sc->dev, "failed to enable TP\n");
 		return (EINVAL);
 	}
 
@@ -278,7 +279,7 @@ enable_aui(struct cs_softc *sc)
 	    (sc->line_ctl & ~AUTO_AUI_10BASET) | AUI_ONLY);
 
 	if (!send_test_pkt(sc)) {
-		if_printf(sc->ifp, "failed to enable AUI\n");
+		device_printf(sc->dev, "failed to enable AUI\n");
 		return (EINVAL);
 	}
 	return (0);
@@ -296,7 +297,7 @@ enable_bnc(struct cs_softc *sc)
 	    (sc->line_ctl & ~AUTO_AUI_10BASET) | AUI_ONLY);
 
 	if (!send_test_pkt(sc)) {
-		if_printf(sc->ifp, "failed to enable BNC\n");
+		device_printf(sc->dev, "failed to enable BNC\n");
 		return (EINVAL);
 	}
 	return (0);
@@ -585,6 +586,8 @@ cs_attach(device_t dev)
 	struct cs_softc *sc = device_get_softc(dev);;
 	struct ifnet *ifp;
 
+	sc->dev = dev;
+	
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
 		device_printf(dev, "can not if_alloc()\n");
@@ -629,7 +632,7 @@ cs_attach(device_t dev)
 
 	sc->buffer=malloc(ETHER_MAX_LEN-ETHER_CRC_LEN,M_DEVBUF,M_NOWAIT);
 	if (sc->buffer == NULL) {
-		if_printf(ifp, "Couldn't allocate memory for NIC\n");
+		device_printf(sc->dev, "Couldn't allocate memory for NIC\n");
 		return(0);
 	}
 
@@ -664,7 +667,7 @@ cs_attach(device_t dev)
 	case A_CNF_MEDIA_10B_2: media = IFM_ETHER|IFM_10_2; break;
 	case A_CNF_MEDIA_AUI:   media = IFM_ETHER|IFM_10_5; break;
 	default:
-		if_printf(ifp, "no media, assuming 10baseT\n");
+		device_printf(sc->dev, "no media, assuming 10baseT\n");
 		sc->adapter_cnf |= A_CNF_10B_T;
 		ifmedia_add(&sc->media, IFM_ETHER|IFM_10_T, 0, NULL);
 		if (sc->chip_type != CS8900) {
@@ -696,8 +699,8 @@ cs_detach(device_t dev)
 	cs_stop(sc);
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	ether_ifdetach(ifp);
-	if_free(ifp);
 	cs_release_resources(dev);
+	if_free(ifp);
 	return (0);
 }
 
@@ -798,13 +801,13 @@ cs_get_packet(struct cs_softc *sc)
 	length = cs_inw(sc, RX_FRAME_PORT);
 
 #ifdef CS_DEBUG
-	if_printf(ifp, "rcvd: stat %x, len %d\n",
+	device_printf(sc->dev, "rcvd: stat %x, len %d\n",
 		status, length);
 #endif
 
 	if (!(status & RX_OK)) {
 #ifdef CS_DEBUG
-		if_printf(ifp, "bad pkt stat %x\n", status);
+		device_printf(sc->dev, "bad pkt stat %x\n", status);
 #endif
 		ifp->if_ierrors++;
 		return (-1);
@@ -863,13 +866,13 @@ csintr(void *arg)
 	int status;
 
 #ifdef CS_DEBUG
-	if_printf(ifp, "Interrupt.\n");
+	device_printf(sc->dev, "Interrupt.\n");
 #endif
 
 	while ((status=cs_inw(sc, ISQ_PORT))) {
 
 #ifdef CS_DEBUG
-		if_printf(ifp, "from ISQ: %04x\n", status);
+		device_printf(sc->dev, "from ISQ: %04x\n", status);
 #endif
 
 		switch (status & ISQ_EVENT_MASK) {
@@ -1051,11 +1054,28 @@ cs_reset(struct cs_softc *sc)
 	cs_init(sc);
 }
 
+static uint16_t
+cs_hash_index(struct sockaddr_dl *addr)
+{
+	uint32_t crc;
+	uint16_t idx;
+	caddr_t lla;
+
+	lla = LLADDR(addr);
+	crc = ether_crc32_le(lla, ETHER_ADDR_LEN);
+	idx = crc >> 26;
+
+	return (idx);
+}
+
 static void
 cs_setmode(struct cs_softc *sc)
 {
-	struct ifnet *ifp = sc->ifp;
 	int rx_ctl;
+	uint16_t af[4];
+	uint16_t port, mask, index;
+	struct ifnet *ifp = sc->ifp;
+	struct ifmultiaddr *ifma;
 
 	/* Stop the receiver while changing filters */
 	cs_writereg(sc, PP_LineCTL, cs_readreg(sc, PP_LineCTL) & ~SERIAL_RX_ON);
@@ -1063,26 +1083,46 @@ cs_setmode(struct cs_softc *sc)
 	if (ifp->if_flags & IFF_PROMISC) {
 		/* Turn on promiscuous mode. */
 		rx_ctl = RX_OK_ACCEPT | RX_PROM_ACCEPT;
-	} else {
-		if (ifp->if_flags & IFF_MULTICAST) {
-			/* Allow receiving frames with multicast addresses */
-			rx_ctl = RX_IA_ACCEPT | RX_BROADCAST_ACCEPT |
-				 RX_OK_ACCEPT | RX_MULTCAST_ACCEPT;
-			/*
-			 * Here the reconfiguration of chip's multicast
-			 * filters should be done but I've no idea about
-			 * hash transformation in this chip. If you can
-			 * add this code or describe me the transformation
-			 * I'd be very glad.
-			 */
+	} else if (ifp->if_flags & IFF_MULTICAST) {
+		/* Allow receiving frames with multicast addresses */
+		rx_ctl = RX_IA_ACCEPT | RX_BROADCAST_ACCEPT |
+			 RX_OK_ACCEPT | RX_MULTCAST_ACCEPT;
+
+		/* Start with an empty filter */
+		af[0] = af[1] = af[2] = af[3] = 0x0000;
+
+		if (ifp->if_flags & IFF_ALLMULTI) {
+			/* Accept all multicast frames */
+			af[0] = af[1] = af[2] = af[3] = 0xffff;
 		} else {
-			/*
-			 * Receive only good frames addressed for us and
-			 * good broadcasts.
+			/* 
+			 * Set up the filter to only accept multicast
+			 * frames we're interested in.
 			 */
-			rx_ctl = RX_IA_ACCEPT | RX_BROADCAST_ACCEPT |
-				 RX_OK_ACCEPT;
+			IF_ADDR_LOCK(ifp);
+			TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+				struct sockaddr_dl *dl =
+				    (struct sockaddr_dl *)ifma->ifma_addr;
+
+				index = cs_hash_index(dl);
+				port = (u_int16_t) (index >> 4);
+				mask = (u_int16_t) (1 << (index & 0xf));
+				af[port] |= mask;
+			}
+			IF_ADDR_UNLOCK(ifp);
 		}
+
+		cs_writereg(sc, PP_LAF + 0, af[0]);
+		cs_writereg(sc, PP_LAF + 2, af[1]);
+		cs_writereg(sc, PP_LAF + 4, af[2]);
+		cs_writereg(sc, PP_LAF + 6, af[3]);
+	} else {
+		/*
+		 * Receive only good frames addressed for us and
+		 * good broadcasts.
+		 */
+		rx_ctl = RX_IA_ACCEPT | RX_BROADCAST_ACCEPT |
+			 RX_OK_ACCEPT;
 	}
 
 	/* Set up the filter */
@@ -1100,7 +1140,7 @@ cs_ioctl(register struct ifnet *ifp, u_long command, caddr_t data)
 	int s,error=0;
 
 #ifdef CS_DEBUG
-	if_printf(ifp, "ioctl(%lx)\n", command);
+	if_printf(ifp, "%s command=%lx\n", __func__, command);
 #endif
 
 	s=splimp();
@@ -1228,7 +1268,7 @@ cs_mediaset(struct cs_softc *sc, int media)
 	    ~(SERIAL_RX_ON | SERIAL_TX_ON));
 
 #ifdef CS_DEBUG
-	if_printf(sc->ifp, "cs_setmedia(%x)\n", media);
+	device_printf(sc->dev, "%s media=%x\n", __func__, media);
 #endif
 
 	switch (IFM_SUBTYPE(media)) {

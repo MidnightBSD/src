@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/en/if_en_pci.c,v 1.36.2.2 2005/10/09 04:15:11 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/en/if_en_pci.c,v 1.42 2007/02/23 12:18:39 piso Exp $");
 
 /*
  * i f _ e n _ p c i . c  
@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: src/sys/dev/en/if_en_pci.c,v 1.36.2.2 2005/10/09 04:15:11 de
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/en/if_en_pci.c,v 1.36.2.2 2005/10/09 04:15:11 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/en/if_en_pci.c,v 1.42 2007/02/23 12:18:39 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -98,7 +98,7 @@ static  void adp_get_macaddr(struct en_pci_softc *);
  * address of config base memory address register in PCI config space
  * (this is card specific)
  */
-#define PCI_CBMA        0x10
+#define PCI_CBMA        PCIR_BAR(0)
 
 /*
  * tonga (pci bridge).   ENI cards only!
@@ -150,8 +150,8 @@ adp_busreset(void *v)
 	dummy = bus_space_read_4(sc->en_memt, sc->en_base, ADP_PCIREG);
 	if ((dummy & (ADP_PCIREG_SWAP_WORD | ADP_PCIREG_SWAP_DMA)) !=
 	    ADP_PCIREG_SWAP_DMA)
-		if_printf(sc->ifp, "adp_busreset: Adaptec ATM did "
-		    "NOT reset!\n");
+		device_printf(sc->dev, "%s: Adaptec ATM did NOT reset!\n",
+		    __func__);
 }
 
 /***********************************************************************/
@@ -193,11 +193,11 @@ en_pci_attach(device_t dev)
 {
 	struct en_softc *sc;
 	struct en_pci_softc *scp;
-	u_long val;
 	int rid, error = 0;
 
 	sc = device_get_softc(dev);
 	scp = (struct en_pci_softc *)sc;
+	sc->dev = dev;	
 	sc->ifp = if_alloc(IFT_ATM);
 	if (sc->ifp == NULL) {
 		device_printf(dev, "can not if_alloc()\n");
@@ -211,9 +211,7 @@ en_pci_attach(device_t dev)
 	/*
 	 * Enable bus mastering.
 	 */
-	val = pci_read_config(dev, PCIR_COMMAND, 2);
-	val |= (PCIM_CMD_MEMEN|PCIM_CMD_BUSMASTEREN);
-	pci_write_config(dev, PCIR_COMMAND, val, 2);
+	pci_enable_busmaster(dev);
 
 	/*
 	 * Map control/status registers.
@@ -228,7 +226,6 @@ en_pci_attach(device_t dev)
 		goto fail;
 	}
 
-	sc->dev = dev;
 	sc->en_memt = rman_get_bustag(scp->res);
 	sc->en_base = rman_get_bushandle(scp->res);
 
@@ -280,11 +277,10 @@ en_pci_attach(device_t dev)
 	 * Do the interrupt SETUP last just before returning
 	 */
 	error = bus_setup_intr(dev, scp->irq, INTR_TYPE_NET,
-	    en_intr, sc, &scp->ih);
+	    NULL, en_intr, sc, &scp->ih);
 	if (error) {
 		en_reset(sc);
 		atm_ifdetach(sc->ifp);
-		if_free(sc->ifp);
 		device_printf(dev, "could not setup irq\n");
 		bus_release_resource(dev, SYS_RES_IRQ, 0, scp->irq);
 		bus_release_resource(dev, SYS_RES_MEMORY, PCI_CBMA, scp->res);
@@ -312,7 +308,7 @@ en_pci_detach(device_t dev)
 	 * Stop DMA and drop transmit queue.
 	 */
 	if ((sc->ifp->if_drv_flags & IFF_DRV_RUNNING)) {
-		if_printf(sc->ifp, "still running\n");
+		device_printf(sc->dev, "still running\n");
 		sc->ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	}
 
@@ -321,7 +317,6 @@ en_pci_detach(device_t dev)
 	 */
 	en_reset(sc);
 	atm_ifdetach(sc->ifp);
-	if_free(sc->ifp);
 
 	/*
 	 * Deallocate resources.
@@ -334,6 +329,7 @@ en_pci_detach(device_t dev)
 	 * Free all the driver internal resources
 	 */
 	en_destroy(sc);
+	if_free(sc->ifp);
 
 	return (0);
 }

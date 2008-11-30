@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex_isa.c,v 1.11 2005/06/10 16:49:08 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ex/if_ex_isa.c,v 1.12 2007/02/23 12:18:40 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -314,7 +314,7 @@ ex_isa_attach(device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
-				ex_intr, (void *)sc, &sc->ih);
+				NULL, ex_intr, (void *)sc, &sc->ih);
 	if (error) {
 		device_printf(dev, "bus_setup_intr() failed!\n");
 		goto bad;

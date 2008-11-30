@@ -2,7 +2,7 @@
 
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cnw/if_cnw.c,v 1.18.2.3 2005/10/09 04:15:11 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cnw/if_cnw.c,v 1.25 2007/02/23 19:27:49 imp Exp $");
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -236,6 +236,7 @@ struct cfattach cnw_ca = {
 #include <sys/mbuf.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/ucred.h>
 #include <sys/socket.h>
@@ -246,7 +247,6 @@ struct cfattach cnw_ca = {
 
 #include <machine/bus.h>
 #include <machine/resource.h>
-#include <machine/clock.h>
 #include <machine/md_var.h>
 #include <sys/rman.h>
 
@@ -1340,7 +1340,7 @@ cnw_ioctl(ifp, cmd, data)
 #if !defined(__FreeBSD__)
 		error = suser(p->p_ucred, &p->p_acflag);
 #else
-		error = suser(td);
+		error = priv_check(td, PRIV_DRIVER);
 #endif
 		if (error)
 			break;
@@ -1351,7 +1351,7 @@ cnw_ioctl(ifp, cmd, data)
 #if !defined(__FreeBSD__)
 		error = suser(p->p_ucred, &p->p_acflag);
 #else
-		error = suser(td);
+		error = priv_check(td, PRIV_DRIVER);
 #endif
 		if (error)
 			break;
@@ -1362,7 +1362,7 @@ cnw_ioctl(ifp, cmd, data)
 #if !defined(__FreeBSD__)
 		error = suser(p->p_ucred, &p->p_acflag);
 #else
-		error = suser(td);
+		error = priv_check(td, PRIV_DRIVER);
 #endif
 		if (error)
 			break;
@@ -1599,8 +1599,8 @@ static int cnw_pccard_detach(dev)
 	cnw_stop(sc);
 
 	ether_ifdetach(ifp);
-	if_free(ifp);
 	cnw_free(dev);
+	if_free(ifp);
 	sc->cnw_gone = 1;
 
 #if 0
@@ -1631,7 +1631,7 @@ static int cnw_pccard_attach(device_t dev)
 		return (error);
 	}
 
-	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
+	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET, NULL,
 			       cnw_intr, sc, &sc->cnw_intrhand);
 
 	if (error) {
