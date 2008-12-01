@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/ata-raid.c,v 1.98.2.9 2006/09/02 17:01:32 so
 /* prototypes */
 static void ata_raid_done(struct ata_request *request);
 static void ata_raid_config_changed(struct ar_softc *rdp, int writeback);
-static int ata_raid_status(struct ata_ioc_raid_config *config);
+static int ata_raid_status(struct ata_ioc_raid_status *status);
 static int ata_raid_create(struct ata_ioc_raid_config *config);
 static int ata_raid_delete(int array);
 static int ata_raid_addspare(struct ata_ioc_raid_config *config);
@@ -146,6 +146,21 @@ ata_raid_attach(struct ar_softc *rdp, int writeback)
     rdp->disk->d_maxsize = 128 * DEV_BSIZE;
     rdp->disk->d_drv1 = rdp;
     rdp->disk->d_unit = rdp->lun;
+    /* we support flushing cache if all components support it */
+    /* XXX: not all components can be connected at this point */
+    rdp->disk->d_flags = DISKFLAG_CANFLUSHCACHE;
+    for (disk = 0; disk < rdp->total_disks; disk++) {
+	struct ata_device *atadev;
+
+	if (rdp->disks[disk].dev == NULL)
+	    continue;
+	if ((atadev = device_get_softc(rdp->disks[disk].dev)) == NULL)
+	    continue;
+	if (atadev->param.support.command2 & ATA_SUPPORT_FLUSHCACHE)
+	    continue;
+	rdp->disk->d_flags = 0;
+	break;
+    }
     disk_create(rdp->disk, DISK_VERSION);
 
     printf("ar%d: %juMB <%s %s%s> status: %s\n", rdp->lun,
@@ -201,13 +216,14 @@ ata_raid_attach(struct ar_softc *rdp, int writeback)
 static int
 ata_raid_ioctl(u_long cmd, caddr_t data)
 {
+    struct ata_ioc_raid_status *status = (struct ata_ioc_raid_status *)data;
     struct ata_ioc_raid_config *config = (struct ata_ioc_raid_config *)data;
     int *lun = (int *)data;
     int error = EOPNOTSUPP;
 
     switch (cmd) {
     case IOCATARAIDSTATUS:
-	error = ata_raid_status(config);
+	error = ata_raid_status(status);
 	break;
 			
     case IOCATARAIDCREATE:
@@ -229,6 +245,39 @@ ata_raid_ioctl(u_long cmd, caddr_t data)
     return error;
 }
 
+static int
+ata_raid_flush(struct bio *bp)
+{
+    struct ar_softc *rdp = bp->bio_disk->d_drv1;
+    struct ata_request *request;
+    device_t dev;
+    int disk, error;
+
+    error = 0;
+    bp->bio_pflags = 0;
+
+    for (disk = 0; disk < rdp->total_disks; disk++) {
+	if ((dev = rdp->disks[disk].dev) != NULL)
+	    bp->bio_pflags++;
+    }
+    for (disk = 0; disk < rdp->total_disks; disk++) {
+	if ((dev = rdp->disks[disk].dev) == NULL)
+	    continue;
+	if (!(request = ata_raid_init_request(rdp, bp)))
+	    return ENOMEM;
+	request->dev = dev;
+	request->u.ata.command = ATA_FLUSHCACHE;
+	request->u.ata.lba = 0;
+	request->u.ata.count = 0;
+	request->u.ata.feature = 0;
+	request->timeout = 1;
+	request->retries = 0;
+	request->flags |= ATA_R_ORDERED | ATA_R_DIRECT;
+	ata_queue_request(request);
+    }
+    return 0;
+}
+
 static void
 ata_raid_strategy(struct bio *bp)
 {
@@ -237,6 +286,15 @@ ata_raid_strategy(struct bio *bp)
     caddr_t data;
     u_int64_t blkno, lba, blk = 0;
     int count, chunk, drv, par = 0, change = 0;
+
+    if (bp->bio_cmd == BIO_FLUSH) {
+	int error;
+
+	error = ata_raid_flush(bp);
+	if (error != 0)
+		biofinish(bp, NULL, error);
+	return;
+    }
 
     if (!(rdp->status & AR_S_READY) ||
 	(bp->bio_cmd != BIO_READ && bp->bio_cmd != BIO_WRITE)) {
@@ -554,6 +612,15 @@ ata_raid_done(struct ata_request *request)
     struct bio *bp = request->bio;
     int i, mirror, finished = 0;
 
+    if (bp->bio_cmd == BIO_FLUSH) {
+	if (bp->bio_error == 0)
+	    bp->bio_error = request->result;
+	ata_free_request(request);
+	if (--bp->bio_pflags == 0)
+	    biodone(bp);
+	return;
+    }
+
     switch (rdp->type) {
     case AR_T_JBOD:
     case AR_T_SPAN:
@@ -863,25 +930,32 @@ ata_raid_config_changed(struct ar_softc *rdp, int writeback)
 }
 
 static int
-ata_raid_status(struct ata_ioc_raid_config *config)
+ata_raid_status(struct ata_ioc_raid_status *status)
 {
     struct ar_softc *rdp;
     int i;
 	
-    if (!(rdp = ata_raid_arrays[config->lun]))
+    if (!(rdp = ata_raid_arrays[status->lun]))
 	return ENXIO;
 	
-    config->type = rdp->type;
-    config->total_disks = rdp->total_disks;
+    status->type = rdp->type;
+    status->total_disks = rdp->total_disks;
     for (i = 0; i < rdp->total_disks; i++ ) {
-	if ((rdp->disks[i].flags & AR_DF_PRESENT) && rdp->disks[i].dev)  
-	    config->disks[i] = device_get_unit(rdp->disks[i].dev);
-	else
-	    config->disks[i] = -1;
+	status->disks[i].state = 0;
+	if ((rdp->disks[i].flags & AR_DF_PRESENT) && rdp->disks[i].dev) {
+	    status->disks[i].lun = device_get_unit(rdp->disks[i].dev);
+	    if (rdp->disks[i].flags & AR_DF_PRESENT)
+		status->disks[i].state |= AR_DISK_PRESENT;
+	    if (rdp->disks[i].flags & AR_DF_ONLINE)
+		status->disks[i].state |= AR_DISK_ONLINE;
+	    if (rdp->disks[i].flags & AR_DF_SPARE)
+		status->disks[i].state |= AR_DISK_SPARE;
+	} else
+	    status->disks[i].lun = -1;
     }
-    config->interleave = rdp->interleave;
-    config->status = rdp->status;
-    config->progress = 100 * rdp->rebuild_lba / rdp->total_sectors;
+    status->interleave = rdp->interleave;
+    status->status = rdp->status;
+    status->progress = 100 * rdp->rebuild_lba / rdp->total_sectors;
     return 0;
 }
 
@@ -3956,6 +4030,9 @@ ata_raid_init_request(struct ar_softc *rdp, struct bio *bio)
 	break;
     case BIO_WRITE:
 	request->flags = ATA_R_WRITE;
+	break;
+    case BIO_FLUSH:
+	request->flags = ATA_R_CONTROL;
 	break;
     }
     return request;
