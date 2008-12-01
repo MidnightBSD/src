@@ -81,12 +81,12 @@ struct ata_connect_task {
 #define ATA_ATP865R             0x00091191
 
 #define ATA_AMD_ID              0x1022
-#define ATA_AMD5536             0x209a1022
 #define ATA_AMD755              0x74011022
 #define ATA_AMD756              0x74091022
 #define ATA_AMD766              0x74111022
 #define ATA_AMD768              0x74411022
 #define ATA_AMD8111             0x74691022
+#define ATA_AMD5536             0x209a1022
 
 #define ATA_ACER_LABS_ID        0x10b9
 #define ATA_ALI_1533            0x153310b9
@@ -210,6 +210,9 @@ struct ata_connect_task {
 #define ATA_NATIONAL_ID         0x100b
 #define ATA_SC1100              0x0502100b
 
+#define ATA_NETCELL_ID          0x169c
+#define ATA_NETCELL_SR          0x0044169c
+
 #define ATA_NVIDIA_ID           0x10de
 #define ATA_NFORCE1             0x01bc10de
 #define ATA_NFORCE2             0x006510de
@@ -298,6 +301,8 @@ struct ata_connect_task {
 #define ATA_SII3512             0x35121095
 #define ATA_SII3112             0x31121095
 #define ATA_SII3112_1           0x02401095
+#define ATA_SII3124		0x31241095
+#define ATA_SII3132		0x31321095
 #define ATA_SII0680             0x06801095
 #define ATA_CMD646              0x06461095
 #define ATA_CMD648              0x06481095
@@ -364,6 +369,7 @@ struct ata_connect_task {
 #define ATA_VIA8235             0x31771106
 #define ATA_VIA8237             0x32271106
 #define ATA_VIA8237A            0x05911106
+#define ATA_VIA8237S		0x53371106
 #define ATA_VIA8251             0x33491106
 #define ATA_VIA8361             0x31121106
 #define ATA_VIA8363             0x03051106
@@ -410,6 +416,7 @@ struct ata_connect_task {
 #define SWKSMIO         3
 
 #define SIIMEMIO        1
+#define SIIPRBIO        2
 #define SIIINTR         0x01
 #define SIISETCLK       0x02
 #define SIIBUG          0x04
@@ -448,16 +455,18 @@ int ata_pci_attach(device_t dev);
 int ata_pci_detach(device_t dev);
 struct resource * ata_pci_alloc_resource(device_t dev, device_t child, int type, int *rid, u_long start, u_long end, u_long count, u_int flags);
 int ata_pci_release_resource(device_t dev, device_t child, int type, int rid, struct resource *r);
-int ata_pci_setup_intr(device_t dev, device_t child, struct resource *irq, int flags, driver_intr_t *function, void *argument, void **cookiep);
+int ata_pci_setup_intr(device_t dev, device_t child, struct resource *irq, int flags, driver_filter_t *filter, driver_intr_t *function, void *argument, void **cookiep);
  int ata_pci_teardown_intr(device_t dev, device_t child, struct resource *irq, void *cookie);
 int ata_pci_allocate(device_t dev);
 void ata_pci_hw(device_t dev);
 int ata_pci_status(device_t dev);
-void ata_pci_dmainit(device_t);
+void ata_pci_dmainit(device_t dev);
+char *ata_pcivendor2str(device_t dev);
 
 
 /* global prototypes ata-chipset.c */
 int ata_generic_ident(device_t);
+int ata_ahci_ident(device_t);
 int ata_acard_ident(device_t);
 int ata_ali_ident(device_t);
 int ata_amd_ident(device_t);
@@ -471,6 +480,7 @@ int ata_jmicron_ident(device_t);
 int ata_marvell_ident(device_t);
 int ata_national_ident(device_t);
 int ata_nvidia_ident(device_t);
+int ata_netcell_ident(device_t);
 int ata_promise_ident(device_t);
 int ata_serverworks_ident(device_t);
 int ata_sii_ident(device_t);
