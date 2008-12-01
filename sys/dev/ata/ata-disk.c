@@ -62,6 +62,14 @@ static disk_strategy_t ad_strategy;
 static disk_ioctl_t ad_ioctl;
 static dumper_t ad_dump;
 
+/*
+ * Most platforms map firmware geom to actual, but some don't.  If
+ * not overridden, default to nothing.
+ */
+#ifndef ad_firmware_geom_adjust
+#define ad_firmware_geom_adjust(dev, disk)
+#endif
+
 /* local vars */
 static MALLOC_DEFINE(M_AD, "ad_driver", "ATA disk driver");
 
@@ -72,7 +80,8 @@ ad_probe(device_t dev)
 
     if (!(atadev->param.config & ATA_PROTO_ATAPI) ||
 	(atadev->param.config == ATA_CFA_MAGIC1) ||
-	(atadev->param.config == ATA_CFA_MAGIC2))
+	(atadev->param.config == ATA_CFA_MAGIC2) ||
+	(atadev->param.config == ATA_CFA_MAGIC3))
 	return 0;
     else
 	return ENXIO;
@@ -151,8 +160,13 @@ ad_attach(device_t dev)
     adp->disk->d_fwsectors = adp->sectors;
     adp->disk->d_fwheads = adp->heads;
     adp->disk->d_unit = device_get_unit(dev);
+    if (atadev->param.support.command2 & ATA_SUPPORT_FLUSHCACHE)
+	adp->disk->d_flags = DISKFLAG_CANFLUSHCACHE;
+    snprintf(adp->disk->d_ident, sizeof(adp->disk->d_ident), "ad:%s",
+	atadev->param.serial);
     disk_create(adp->disk, DISK_VERSION);
     device_add_child(dev, "subdisk", device_get_unit(dev));
+    ad_firmware_geom_adjust(dev, adp->disk);
     bus_generic_attach(dev);
     return 0;
 }
@@ -259,6 +273,15 @@ ad_strategy(struct bio *bp)
 	    request->u.ata.command = ATA_WRITE_MUL;
 	else
 	    request->u.ata.command = ATA_WRITE;
+	break;
+    case BIO_FLUSH:
+	request->u.ata.lba = 0;
+	request->u.ata.count = 0;
+	request->u.ata.feature = 0;
+	request->bytecount = 0;
+	request->transfersize = 0;
+	request->flags = ATA_R_CONTROL;
+	request->u.ata.command = ATA_FLUSHCACHE;
 	break;
     default:
 	device_printf(dev, "FAILURE - unknown BIO operation\n");
@@ -368,6 +391,8 @@ ad_describe(device_t dev)
     else {
 	if (!strncmp(atadev->param.model, "ST", 2))
 	    strcpy(vendor, "Seagate ");
+	else if (!strncmp(atadev->param.model, "HDS", 3))
+	    strcpy(vendor, "Hitachi ");
 	else
 	    strcpy(vendor, "");
 	strncpy(product, atadev->param.model, 40);
