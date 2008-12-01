@@ -34,6 +34,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ata/atapi-cd.c,v 1.179.2.4 2006/01/25 08:13:45 s
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/bio.h>
 #include <sys/bus.h>
@@ -257,8 +258,11 @@ acd_geom_ioctl(struct g_provider *pp, u_long cmd, void *addr, int fflag, struct 
 	cdp->flags |= F_LOCKED;
 	break;
 
+    /*
+     * XXXRW: Why does this require privilege?
+     */
     case CDIOCRESET:
-	error = suser(td);
+	error = priv_check(td, PRIV_DRIVER);
 	if (error)
 	    break;
 	error = acd_test_ready(dev);
@@ -709,7 +713,7 @@ acd_geom_access(struct g_provider *pp, int dr, int dw, int de)
 	     request->u.atapi.sense.key == 7) &&
 	    request->u.atapi.sense.asc == 4 &&
 	    request->u.atapi.sense.ascq == 1)
-	    tsleep(&timeout, PRIBIO, "acdld", hz / 2);
+	    pause("acdld", hz / 2);
 	else
 	    break;
     }
@@ -1094,7 +1098,7 @@ acd_fixate(device_t dev, int multisession)
     /* some drives just return ready, wait for the expected fixate time */
     if ((error = acd_test_ready(dev)) != EBUSY) {
 	timeout = timeout / (cdp->cap.cur_write_speed / 177);
-	tsleep(&error, PRIBIO, "acdfix", timeout * hz / 2);
+	pause("acdfix", timeout * hz / 2);
 	return acd_test_ready(dev);
     }
 
@@ -1103,7 +1107,7 @@ acd_fixate(device_t dev, int multisession)
 	    return error;
 	if ((error = acd_test_ready(dev)) != EBUSY)
 	    return error;
-	tsleep(&error, PRIBIO, "acdcld", hz / 2);
+	pause("acdcld", hz / 2);
     }
     return EIO;
 }
@@ -1237,10 +1241,8 @@ acd_get_progress(device_t dev, int *finished)
     request->flags = ATA_R_ATAPI | ATA_R_READ;
     request->timeout = 30;
     ata_queue_request(request);
-/*  rgb - fix for pr 109270 from Martin Birgmeier
-    if (!request->error && request->u.atapi.sense.error & ATA_SENSE_VALID)
-*/
-    if (!request->error && request->u.atapi.sense.specific & ATA_SENSE_SPEC_VALID)
+    if (!request->error &&
+	request->u.atapi.sense.specific & ATA_SENSE_SPEC_VALID)
 	*finished = ((request->u.atapi.sense.specific2 |
 		     (request->u.atapi.sense.specific1<<8))*100)/65535;
     else
@@ -1341,7 +1343,8 @@ acd_report_key(device_t dev, struct dvd_authinfo *ai)
     error = ata_atapicmd(dev, ccb, (caddr_t)d, length,
 			 ai->format == DVD_INVALIDATE_AGID ? 0 : ATA_R_READ,10);
     if (error) {
-	free(d, M_ACD);
+	if (length)
+	    free(d, M_ACD);
 	return error;
     }
 
@@ -1383,7 +1386,8 @@ acd_report_key(device_t dev, struct dvd_authinfo *ai)
     default:
 	error = EINVAL;
     }
-    free(d, M_ACD);
+    if (length)
+	free(d, M_ACD);
     return error;
 }
 
@@ -1639,13 +1643,15 @@ static void
 acd_get_cap(device_t dev)
 {
     struct acd_softc *cdp = device_get_ivars(dev);
+    int8_t ccb[16] = { ATAPI_MODE_SENSE_BIG, 0, ATAPI_CDROM_CAP_PAGE,
+		       0, 0, 0, 0, sizeof(cdp->cap)>>8, sizeof(cdp->cap),
+		       0, 0, 0, 0, 0, 0, 0 };
     int count;
 
     /* get drive capabilities, some bugridden drives needs this repeated */
     for (count = 0 ; count < 5 ; count++) {
-	if (!acd_mode_sense(dev, ATAPI_CDROM_CAP_PAGE,
-			    (caddr_t)&cdp->cap, sizeof(cdp->cap)) &&
-			    cdp->cap.page_code == ATAPI_CDROM_CAP_PAGE) {
+	if (!ata_atapicmd(dev, ccb, (caddr_t)&cdp->cap, sizeof(cdp->cap),
+			  ATA_R_READ | ATA_R_QUIET, 5)) {
 	    cdp->cap.max_read_speed = ntohs(cdp->cap.max_read_speed);
 	    cdp->cap.cur_read_speed = ntohs(cdp->cap.cur_read_speed);
 	    cdp->cap.max_write_speed = ntohs(cdp->cap.max_write_speed);
@@ -1824,6 +1830,8 @@ acd_describe(device_t dev)
 		printf("CD-R "); break;
 	    case MST_CDRW:
 		printf("CD-RW "); break;
+	    case MST_DVD:
+		printf("DVD "); break;
 	    case MST_DOOR_OPEN:
 		printf("door open"); break;
 	    case MST_NO_DISC:
