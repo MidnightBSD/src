@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/logo/logo_saver.c,v 1.12 2003/07/21 13:04:54 nyan Exp $
+ * $FreeBSD: src/sys/dev/syscons/logo/logo_saver.c,v 1.13 2007/02/21 12:27:12 philip Exp $
  */
 
 #include <sys/param.h>
@@ -42,6 +42,12 @@
 
 #define SAVER_NAME	 "logo_saver"
 
+#define SET_ORIGIN(adp, o) do {				\
+	int oo = o;					\
+	if (oo != last_origin)				\
+	    set_origin(adp, last_origin = oo);		\
+	} while (0)
+
 extern unsigned int	 logo_w;
 extern unsigned int	 logo_h;
 extern unsigned char	 logo_pal[];
@@ -56,10 +62,11 @@ static void
 logo_blit(video_adapter_t *adp, int x, int y)
 {
 	int d, l, o, p;
+	int last_origin = -1;
 	
 	for (o = 0, p = y * bpsl + x; p > banksize; p -= banksize)
 		o += banksize;
-	set_origin(adp, o);
+	SET_ORIGIN(adp, o);
 	
 	for (d = 0; d < logo_img_size; d += logo_w) {
 		if (p + logo_w < banksize) {
@@ -68,12 +75,12 @@ logo_blit(video_adapter_t *adp, int x, int y)
 		} else if (p < banksize) {
 			l = banksize - p;
 			bcopy(logo_img + d, vid + p, l);
-			set_origin(adp, (o += banksize));
+			SET_ORIGIN(adp, (o += banksize));
 			bcopy(logo_img + d + l, vid, logo_w - l);
 			p += bpsl - banksize;
 		} else {
 			p -= banksize;
-			set_origin(adp, (o += banksize));
+			SET_ORIGIN(adp, (o += banksize));
 			bcopy(logo_img + d, vid + p, logo_w);
 			p += bpsl;
 		}

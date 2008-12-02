@@ -26,13 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/sysmouse.c,v 1.27 2005/02/27 21:16:11 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/syscons/sysmouse.c,v 1.29 2006/11/06 13:41:56 rwatson Exp $");
 
 #include "opt_syscons.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
+#include <sys/priv.h>
 #include <sys/tty.h>
 #include <sys/kernel.h>
 #include <sys/consio.h>
@@ -83,7 +84,8 @@ smopen(struct cdev *dev, int flag, int mode, struct thread *td)
 		ttyinitmode(tp, 0, 0);
 		smparam(tp, &tp->t_termios);
 		ttyld_modem(tp, 1);
-	} else if (tp->t_state & TS_XCLUDE && suser(td)) {
+	} else if (tp->t_state & TS_XCLUDE &&
+	    priv_check(td, PRIV_TTY_EXCLUSIVE)) {
 		return EBUSY;
 	}
 
@@ -211,7 +213,7 @@ smioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 		splx(s);
 		return 0;
 
-#if notyet
+#ifdef notyet
 	case MOUSE_GETVARS:	/* get internal mouse variables */
 	case MOUSE_SETVARS:	/* set internal mouse variables */
 		return ENODEV;

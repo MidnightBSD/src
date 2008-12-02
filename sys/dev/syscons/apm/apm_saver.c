@@ -25,13 +25,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/apm/apm_saver.c,v 1.10 2005/04/04 05:28:19 imp Exp $
+ * $FreeBSD: src/sys/dev/syscons/apm/apm_saver.c,v 1.11 2006/05/25 23:06:38 imp Exp $
  */
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/condvar.h>
 #include <sys/kernel.h>
+#include <sys/kthread.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/consio.h>
 #include <sys/fbio.h>
 

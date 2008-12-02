@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/scvesactl.c,v 1.22.2.1 2005/09/02 15:31:03 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/syscons/scvesactl.c,v 1.25 2007/01/10 19:04:00 marius Exp $");
 
 #include "opt_vga.h"
 
@@ -115,7 +115,6 @@ vesa_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *
 
 			mode = (cmd & 0xff) + M_VESA_BASE;
 
-			/* Only set graphics mode in non-pcvt case */
 			if (((cmd & IOC_DIRMASK) == IOC_VOID) &&
 			    (mode > M_VESA_FULL_1280) &&
 			    (mode < M_VESA_MODE_MAX))
@@ -149,4 +148,4 @@ vesa_unload_ioctl(void)
 	return 0;
 }
 
-#endif	/* SC_NO_MODE_CHANGE */
+#endif /* VGA_NO_MODE_CHANGE */
