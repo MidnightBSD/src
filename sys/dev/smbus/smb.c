@@ -23,8 +23,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/smbus/smb.c,v 1.34.8.1 2006/01/12 10:34:38 ru Exp $
+ * $FreeBSD: src/sys/dev/smbus/smb.c,v 1.38 2006/09/26 14:38:56 jhb Exp $
  */
+
+#ifdef HAVE_KERNEL_OPTION_HEADERS
+#include "opt_compat.h"
+#endif
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -55,6 +59,7 @@ struct smb_softc {
 #define IIC_DEVICE(unit) \
 	(devclass_get_device(smb_devclass, (unit)))
 
+static void smb_identify(driver_t *driver, device_t parent);
 static int smb_probe(device_t);
 static int smb_attach(device_t);
 static int smb_detach(device_t);
@@ -63,6 +68,7 @@ static devclass_t smb_devclass;
 
 static device_method_t smb_methods[] = {
 	/* device interface */
+	DEVMETHOD(device_identify,	smb_identify),
 	DEVMETHOD(device_probe,		smb_probe),
 	DEVMETHOD(device_attach,	smb_attach),
 	DEVMETHOD(device_detach,	smb_detach),
@@ -91,6 +97,14 @@ static struct cdevsw smb_cdevsw = {
 	.d_ioctl =	smbioctl,
 	.d_name =	"smb",
 };
+
+static void
+smb_identify(driver_t *driver, device_t parent)
+{
+
+	if (device_find_child(parent, "smb", -1) == NULL)
+		BUS_ADD_CHILD(parent, 0, "smb", -1);
+}
 
 static int
 smb_probe(device_t dev)
@@ -171,6 +185,7 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 	device_t smbdev = IIC_DEVICE(minor(dev));
 	int error;
 	short w;
+	u_char count;
 	char c;
 
 	if (sc == NULL)
@@ -259,15 +274,19 @@ smbioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags, struct thread *t
 		}
 		break;
 
+#if defined(COMPAT_FREEBSD4) || defined(COMPAT_FREEBSD5) || defined(COMPAT_FREEBSD6)
+	case SMB_OLD_BREAD:
+#endif
 	case SMB_BREAD:
 		if (s->count && s->data.byte_ptr) {
-			if (s->count > SMB_MAXBLOCKSIZE)
-				s->count = SMB_MAXBLOCKSIZE;
+			count = min(s->count, SMB_MAXBLOCKSIZE);
 			error = smbus_error(smbus_bread(parent, s->slave,
-						s->cmd, s->count, buf));
+						s->cmd, &count, buf));
 			if (error)
 				break;
-			error = copyout(buf, s->data.byte_ptr, s->count);
+			error = copyout(buf, s->data.byte_ptr,
+			    min(count, s->count));
+			s->count = count;
 		}
 		break;
 		

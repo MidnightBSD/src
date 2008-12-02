@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/snc/dp83932.c,v 1.19.2.2 2005/08/25 05:01:15 rwatson Exp $	*/
+/*	$FreeBSD: src/sys/dev/snc/dp83932.c,v 1.23 2005/12/06 11:19:37 ru Exp $	*/
 /*	$NecBSD: dp83932.c,v 1.5 1999/07/29 05:08:44 kmatsuda Exp $	*/
 /*	$NetBSD: if_snc.c,v 1.18 1998/04/25 21:27:40 scottr Exp $	*/
 
@@ -70,7 +70,7 @@
 #include <sys/socket.h>
 #include <sys/syslog.h>
 #include <sys/errno.h>
-#if NRND > 0
+#if defined(NRND) && NRND > 0
 #include <sys/rnd.h>
 #endif
 
@@ -202,7 +202,7 @@ sncconfig(sc, media, nmedia, defmedia, myea)
 
 	ether_ifattach(ifp, myea);
 
-#if NRND > 0
+#if defined(NRND) && NRND > 0
 	rnd_attach_source(&sc->rnd_source, device_get_nameunit(sc->sc_dev),
 	    RND_TYPE_NET, 0);
 #endif
@@ -670,7 +670,7 @@ camprogram(sc)
 	ifp = sc->sc_ifp;
 
 	/* Always load our own address first. */
-	camentry (sc, mcount, IFP2ENADDR(sc->sc_ifp));
+	camentry (sc, mcount, IF_LLADDR(sc->sc_ifp));
 	mcount++;
 
 	/* Assume we won't need allmulti bit. */
@@ -890,7 +890,7 @@ sncintr(arg)
 		}
 		sncstart(sc->sc_ifp);
 
-#if NRND > 0
+#if defined(NRND) && NRND > 0
 		if (isr)
 			rnd_add_uint32(&sc->rnd_source, isr);
 #endif

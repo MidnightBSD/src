@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni.c,v 1.20.2.1 2005/08/25 05:01:15 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni.c,v 1.24 2007/07/05 07:46:33 peter Exp $");
 
 /*
  * Device driver for Granch SBNI12 leased line adapters
@@ -67,6 +67,7 @@ __FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni.c,v 1.20.2.1 2005/08/25 05:01:15 rw
 #include <sys/sockio.h>
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/callout.h>
 #include <sys/syslog.h>
@@ -77,8 +78,8 @@ __FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni.c,v 1.20.2.1 2005/08/25 05:01:15 rw
 #include <machine/resource.h>
 
 #include <net/if.h>
+#include <net/if_dl.h>
 #include <net/ethernet.h>
-#include <net/if_arp.h>
 #include <net/bpf.h>
 #include <net/if_types.h>
 
@@ -411,8 +412,10 @@ recv_frame(struct sbni_softc *sc)
 		    skip_tail(sc, framelen, crc);
 		if (frame_ok)
 			interpret_ack(sc, ack);
-	} else
+	} else {
+		framelen = 0;
 		frame_ok = 0;
+	}
 
 	sbni_outb(sc, CSR0, sbni_inb(sc, CSR0) ^ CT_ZER);
 	if (frame_ok) {
@@ -1094,7 +1097,7 @@ sbni_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		 * SBNI specific ioctl
 		 */
 	case SIOCGHWFLAGS:	/* get flags */
-		bcopy((caddr_t)IFP2ENADDR(sc->ifp)+3, (caddr_t) &flags, 3);
+		bcopy((caddr_t)IF_LLADDR(sc->ifp)+3, (caddr_t) &flags, 3);
 		flags.rxl = sc->cur_rxl_index;
 		flags.rate = sc->csr1.rate;
 		flags.fixed_rxl = (sc->delta_rxl == 0);
@@ -1110,7 +1113,7 @@ sbni_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 	case SIOCSHWFLAGS:	/* set flags */
 		/* root only */
-		error = suser(td);
+		error = priv_check(td, PRIV_DRIVER);
 		if (error)
 			break;
 		flags = *(struct sbni_flags*)&ifr->ifr_data;
@@ -1125,14 +1128,14 @@ sbni_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 		sc->csr1.rate = flags.fixed_rate ? flags.rate : DEFAULT_RATE;
 		if (flags.mac_addr)
 			bcopy((caddr_t) &flags,
-			      (caddr_t) IFP2ENADDR(sc->ifp)+3, 3);
+			      (caddr_t) IF_LLADDR(sc->ifp)+3, 3);
 
 		/* Don't be afraid... */
 		sbni_outb(sc, CSR1, *(char*)(&sc->csr1) | PR_RES);
 		break;
 
 	case SIOCRINSTATS:
-		if (!(error = suser(td)))	/* root only */
+		if (!(error = priv_check(td, PRIV_DRIVER)))	/* root only */
 			bzero(&sc->in_stats, sizeof(struct sbni_in_stats));
 		break;
 

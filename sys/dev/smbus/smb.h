@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/smbus/smb.h,v 1.4 2004/05/16 21:18:45 joerg Exp $
+ * $FreeBSD: src/sys/dev/smbus/smb.h,v 1.5 2006/09/11 20:52:41 jhb Exp $
  *
  */
 #ifndef __SMB_H
@@ -64,6 +64,7 @@ struct smbcmd {
 #define SMB_READW	_IOW('i', 8, struct smbcmd)
 #define SMB_PCALL	_IOW('i', 9, struct smbcmd)
 #define SMB_BWRITE	_IOW('i', 10, struct smbcmd)
-#define SMB_BREAD	_IOW('i', 11, struct smbcmd)
+#define SMB_OLD_BREAD	_IOW('i', 11, struct smbcmd)
+#define SMB_BREAD	_IOWR('i', 11, struct smbcmd)
 
 #endif

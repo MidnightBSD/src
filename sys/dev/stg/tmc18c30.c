@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30.c,v 1.14 2005/05/29 04:42:26 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30.c,v 1.15 2006/05/16 14:36:32 phk Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -71,7 +71,6 @@ __FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30.c,v 1.14 2005/05/29 04:42:26 nyan E
 #endif /* __NetBSD__ */
 
 #ifdef __FreeBSD__
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/bus.h>
 

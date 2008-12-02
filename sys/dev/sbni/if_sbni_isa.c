@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni_isa.c,v 1.14 2005/06/10 16:49:14 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni_isa.c,v 1.15 2007/02/23 12:18:53 piso Exp $");
 
 
 #include <sys/param.h>
@@ -123,7 +123,7 @@ sbni_attach_isa(device_t dev)
 		printf(" irq %ld\n", rman_get_start(sc->irq_res));
 		error = bus_setup_intr(
 		    dev, sc->irq_res, INTR_TYPE_NET,
-		    sbni_intr, sc, &sc->irq_handle);
+		    NULL, sbni_intr, sc, &sc->irq_handle);
 		if (error) {
 			printf("sbni%d: bus_setup_intr\n", next_sbni_unit);
 			bus_release_resource(

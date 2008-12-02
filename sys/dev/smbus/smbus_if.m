@@ -23,7 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/dev/smbus/smbus_if.m,v 1.7 2005/01/06 01:43:15 imp Exp $
+# $FreeBSD: src/sys/dev/smbus/smbus_if.m,v 1.8 2006/09/11 20:52:41 jhb Exp $
 #
 
 #include <sys/bus.h>
@@ -47,7 +47,7 @@ METHOD void intr {
 METHOD int callback {
 	device_t dev;
 	int index;
-	caddr_t data;
+	void *data;
 };
 
 #
@@ -146,6 +146,6 @@ METHOD int bread {
 	device_t dev;
 	u_char slave;
 	char cmd;
-	u_char count;
+	u_char *count;
 	char *buf;
 };

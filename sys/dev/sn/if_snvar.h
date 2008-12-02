@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sn/if_snvar.h,v 1.8.2.1 2005/09/17 04:01:04 imp Exp $
+ * $FreeBSD: src/sys/dev/sn/if_snvar.h,v 1.10 2005/09/15 19:34:12 ru Exp $
  */
 
 #ifndef _IF_SNVAR_H

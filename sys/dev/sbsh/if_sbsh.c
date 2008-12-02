@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sbsh/if_sbsh.c,v 1.12.2.2 2005/08/25 05:01:15 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sbsh/if_sbsh.c,v 1.19 2007/06/08 01:54:22 mjacob Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -34,10 +34,10 @@ __FBSDID("$FreeBSD: src/sys/dev/sbsh/if_sbsh.c,v 1.12.2.2 2005/08/25 05:01:15 rw
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/socket.h>
 #include <sys/random.h>
-#include <machine/clock.h>
 #include <machine/stdarg.h>
 
 #include <net/if.h>
@@ -256,7 +256,7 @@ sbsh_attach(device_t dev)
 	init_card(sc);
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				sbsh_intr, sc, &sc->intr_hand);
+				NULL, sbsh_intr, sc, &sc->intr_hand);
 	if (error) {
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq_res);
 		bus_release_resource(dev, SYS_RES_MEMORY,
@@ -311,11 +311,12 @@ sbsh_detach(device_t dev)
 
 	sbsh_stop(sc);
 	ether_ifdetach(ifp);
-	if_free(ifp);
 
 	bus_teardown_intr(dev, sc->irq_res, sc->intr_hand);
 	bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq_res);
 	bus_release_resource(dev, SYS_RES_MEMORY, PCIR_BAR(1), sc->mem_res);
+
+	if_free(ifp);
 
 	splx(s);
 	return (0);
@@ -424,7 +425,7 @@ sbsh_ioctl(struct ifnet	*ifp, u_long cmd, caddr_t data)
 
 	switch(cmd) {
 	case SIOCLOADFIRMW:
-		if ((error = suser(curthread)) != 0)
+		if ((error = priv_check(curthread, PRIV_DRIVER)) != 0)
 			break;
 		if (ifp->if_flags & IFF_UP)
 			error = EBUSY;
@@ -444,7 +445,7 @@ sbsh_ioctl(struct ifnet	*ifp, u_long cmd, caddr_t data)
 		break;
 
 	case  SIOCGETSTATS :
-		if ((error = suser(curthread)) != 0)
+		if ((error = priv_check(curthread, PRIV_DRIVER)) != 0)
 			break;
 
 		t = 0;
@@ -478,7 +479,7 @@ sbsh_ioctl(struct ifnet	*ifp, u_long cmd, caddr_t data)
 		break;
 
 	case  SIOCCLRSTATS :
-		if (!(error = suser(curthread))) {
+		if (!(error = priv_check(curthread, PRIV_DRIVER))) {
 			bzero(&sc->in_stats, sizeof(struct sbni16_stats));
 			t = 2;
 			if (issue_cx28975_cmd(sc, _DSL_CLEAR_ERROR_CTRS, &t, 1))
@@ -1038,7 +1039,7 @@ issue_cx28975_cmd(struct sbsh_softc *sc, u_int8_t cmd,
 			u_int8_t *data, u_int8_t size)
 {
 	volatile struct cx28975_cmdarea  *p = sc->cmdp;
-	u_int8_t  *databuf = p->in_data;
+	volatile u_int8_t  *databuf = p->in_data;
 	int  i;
 
 	u_int8_t  cksum = 0;

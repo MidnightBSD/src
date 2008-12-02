@@ -30,7 +30,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
  *
- * $FreeBSD: src/sys/dev/si/sireg.h,v 1.10 2005/01/06 01:43:14 imp Exp $
+ * $FreeBSD: src/sys/dev/si/sireg.h,v 1.11 2005/11/07 21:53:58 jhb Exp $
  */
 
 /*
@@ -62,14 +62,14 @@
 #define SIEISAIOSIZE	0x100			/* XXX How many ports */
 
 /* SI old PCI */
-#define SIPCIBADR	0x10			/* Which BADR to map in RAM */
+#define SIPCIBADR	PCIR_BAR(0)		/* Which BADR to map in RAM */
 #define SIPCI_MEMSIZE	0x100000		/* Mapping size */
 #define SIPCIRESET	0xc0001			/* 0 = Reset */
 #define SIPCIINTCL	0x40001			/* 0 = clear int */
 
 /* SI Jet PCI */
-#define SIJETSSIDREG	0x2c			/* Is it an SX or RIO? */
-#define SIJETBADR	0x18			/* Which BADR to map in RAM */
+#define SIJETSSIDREG	PCIR_SUBVEND_0		/* Is it an SX or RIO? */
+#define SIJETBADR	PCIR_BAR(2)		/* Which BADR to map in RAM */
 /* SI Jet PCI & ISA */
 #define SIJETIDBASE	0x7c00			/* ID ROM base */
 #define SISPLXID	0x984d			/* Specialix ID */

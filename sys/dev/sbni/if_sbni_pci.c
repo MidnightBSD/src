@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni_pci.c,v 1.11 2004/03/17 17:50:41 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sbni/if_sbni_pci.c,v 1.12 2007/02/23 12:18:53 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -137,7 +137,7 @@ sbni_pci_attach(device_t dev)
 	if (sc->irq_res) {
 		printf(" irq %ld\n", rman_get_start(sc->irq_res));
 		error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET,
-				       sbni_intr, sc, &sc->irq_handle);
+				       NULL, sbni_intr, sc, &sc->irq_handle);
 		if (error) {
 			printf("sbni%d: bus_setup_intr\n", next_sbni_unit);
 			goto attach_failed;

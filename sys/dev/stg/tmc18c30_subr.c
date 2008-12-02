@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30_subr.c,v 1.5 2005/05/29 04:42:26 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30_subr.c,v 1.6 2006/07/14 04:35:59 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -168,7 +168,6 @@ stg_detach (device_t dev)
 	struct stg_softc *sc = device_get_softc(dev);
 	intrmask_t s;
 
-	printf("%s: unload\n",sc->sc_sclow.sl_xname);
 	s = splcam();
 	scsi_low_deactivate((struct scsi_low_softc *)sc);
 	scsi_low_dettach(&sc->sc_sclow);

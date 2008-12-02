@@ -26719,6 +26719,7 @@ sys/dev/sn/if_sn_isa.c -text
 sys/dev/sn/if_sn_pccard.c -text
 sys/dev/sn/if_snreg.h -text
 sys/dev/sn/if_snvar.h -text
+sys/dev/sn/ositech.h -text
 sys/dev/snc/dp83932.c -text
 sys/dev/snc/dp83932reg.h -text
 sys/dev/snc/dp83932subr.c -text

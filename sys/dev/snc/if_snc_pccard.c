@@ -27,12 +27,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/snc/if_snc_pccard.c,v 1.8.2.1 2005/08/25 05:01:15 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/snc/if_snc_pccard.c,v 1.11 2007/02/23 12:18:54 piso Exp $");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
  *
- *	This is the PC-Card attachment on FreeBSD
+ *	This is the PC Card attachment on FreeBSD
  *		written by Motomichi Matsuzaki <mzaki@e-mail.ne.jp> and
  *			   Hiroshi Yamashita <bluemoon@msj.biglobe.ne.jp>
  */
@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: src/sys/dev/snc/if_snc_pccard.c,v 1.8.2.1 2005/08/25 05:01:1
 #include <dev/snc/if_sncreg.h>
 
 /*
- *      PC-Card (PCMCIA) specific code.
+ *      PC Card (PCMCIA) specific code.
  */
 static int	snc_pccard_probe(device_t);
 static int	snc_pccard_attach(device_t);
@@ -135,7 +135,7 @@ snc_pccard_attach(device_t dev)
 	snc_alloc_irq(dev, 0, 0);
 		
 	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
-			       sncintr, sc, &sc->irq_handle);
+			       NULL, sncintr, sc, &sc->irq_handle);
 	if (error) {
 		printf("snc_isa_attach: bus_setup_intr() failed\n");
 		snc_release_resources(dev);

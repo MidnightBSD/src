@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/snp/snp.c,v 1.99.2.2 2005/09/23 23:22:22 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/snp/snp.c,v 1.105.4.1 2008/01/04 04:53:21 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -118,7 +118,7 @@ static struct clonedevs	  *snpclones;
 static struct tty	*snpdevtotty(struct cdev *dev);
 static void		snp_clone(void *arg, struct ucred *cred, char *name,
 			    int namelen, struct cdev **dev);
-static int		snp_detach(struct snoop *snp);
+static void		snp_detach(void *arg);
 static int		snp_down(struct snoop *snp);
 static int		snp_in(struct snoop *snp, char *buf, int n);
 static int		snp_modevent(module_t mod, int what, void *arg);
@@ -137,9 +137,7 @@ ttytosnp(struct tty *tp)
 }
 
 static int
-snplclose(tp, flag)
-	struct tty *tp;
-	int flag;
+snplclose(struct tty *tp, int flag)
 {
 	struct snoop *snp;
 	int error;
@@ -153,10 +151,7 @@ snplclose(tp, flag)
 }
 
 static int
-snplwrite(tp, uio, flag)
-	struct tty *tp;
-	struct uio *uio;
-	int flag;
+snplwrite(struct tty *tp, struct uio *uio, int flag)
 {
 	struct iovec iov;
 	struct uio uio2;
@@ -196,8 +191,7 @@ snplwrite(tp, uio, flag)
 }
 
 static struct tty *
-snpdevtotty(dev)
-	struct cdev *dev;
+snpdevtotty(struct cdev *dev)
 {
 	struct cdevsw *cdp;
 	struct tty *tp;
@@ -219,10 +213,7 @@ snpdevtotty(dev)
 				 */
 
 static int
-snpwrite(dev, uio, flag)
-	struct cdev *dev;
-	struct uio *uio;
-	int flag;
+snpwrite(struct cdev *dev, struct uio *uio, int flag)
 {
 	struct snoop *snp;
 	struct tty *tp;
@@ -257,10 +248,7 @@ tty_input:
 
 
 static int
-snpread(dev, uio, flag)
-	struct cdev *dev;
-	struct uio *uio;
-	int flag;
+snpread(struct cdev *dev, struct uio *uio, int flag)
 {
 	struct snoop *snp;
 	int error, len, n, nblen, s;
@@ -323,10 +311,7 @@ snpread(dev, uio, flag)
 }
 
 static int
-snp_in(snp, buf, n)
-	struct snoop *snp;
-	char *buf;
-	int n;
+snp_in(struct snoop *snp, char *buf, int n)
 {
 	int s_free, s_tail;
 	int s, len, nblen;
@@ -403,10 +388,7 @@ snp_in(snp, buf, n)
 }
 
 static int
-snpopen(dev, flag, mode, td)
-	struct cdev *dev;
-	int flag, mode;
-	struct thread *td;
+snpopen(struct cdev *dev, int flag, int mode, struct thread *td)
 {
 	struct snoop *snp;
 
@@ -440,12 +422,13 @@ snpopen(dev, flag, mode, td)
 }
 
 
-static int
-snp_detach(snp)
-	struct snoop *snp;
+static void
+snp_detach(void *arg)
 {
+	struct snoop *snp;
 	struct tty *tp;
 
+	snp = (struct snoop *)arg;
 	snp->snp_base = 0;
 	snp->snp_len = 0;
 
@@ -470,16 +453,10 @@ detach_notty:
 	selwakeuppri(&snp->snp_sel, PZERO + 1);
 	if ((snp->snp_flags & SNOOP_OPEN) == 0) 
 		free(snp, M_SNP);
-
-	return (0);
 }
 
 static int
-snpclose(dev, flags, fmt, td)
-	struct cdev *dev;
-	int flags;
-	int fmt;
-	struct thread *td;
+snpclose(struct cdev *dev, int flags, int fmt, struct thread *td)
 {
 	struct snoop *snp;
 
@@ -489,14 +466,14 @@ snpclose(dev, flags, fmt, td)
 	free(snp->snp_buf, M_SNP);
 	snp->snp_flags &= ~SNOOP_OPEN;
 	dev->si_drv1 = NULL;
-	destroy_dev(dev);
+	snp_detach(snp);
+	destroy_dev_sched(dev);
 
-	return (snp_detach(snp));
+	return (0);
 }
 
 static int
-snp_down(snp)
-	struct snoop *snp;
+snp_down(struct snoop *snp)
 {
 
 	if (snp->snp_blen != SNOOP_MINLEN) {
@@ -505,20 +482,17 @@ snp_down(snp)
 		snp->snp_blen = SNOOP_MINLEN;
 	}
 	snp->snp_flags |= SNOOP_DOWN;
+	snp_detach(snp);
 
-	return (snp_detach(snp));
+	return (0);
 }
 
 static int
-snpioctl(dev, cmd, data, flags, td)
-	struct cdev *dev;
-	u_long cmd;
-	caddr_t data;
-	int flags;
-	struct thread *td;
+snpioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags,
+    struct thread *td)
 {
 	struct snoop *snp;
-	struct tty *tp, *tpo;
+	struct tty *tp;
 	struct cdev *tdev;
 	struct file *fp;
 	int s;
@@ -529,6 +503,7 @@ snpioctl(dev, cmd, data, flags, td)
 		s = *(int *)data;
 		if (s < 0)
 			return (snp_down(snp));
+
 		if (fget(td, s, &fp) != 0)
 			return (EINVAL);
 		if (fp->f_type != DTYPE_VNODE ||
@@ -540,6 +515,9 @@ snpioctl(dev, cmd, data, flags, td)
 		tdev = fp->f_vnode->v_rdev;
 		fdrop(fp, td);
 
+		if (snp->snp_tty != NULL)
+			return (EBUSY);
+
 		tp = snpdevtotty(tdev);
 		if (!tp)
 			return (EINVAL);
@@ -547,13 +525,6 @@ snpioctl(dev, cmd, data, flags, td)
 			return (EBUSY);
 
 		s = spltty();
-
-		if (snp->snp_target == NULL) {
-			tpo = snp->snp_tty;
-			if (tpo)
-				tpo->t_state &= ~TS_SNOOP;
-		}
-
 		tp->t_state |= TS_SNOOP;
 		snp->snp_olddisc = tp->t_line;
 		tp->t_line = snooplinedisc;
@@ -611,10 +582,7 @@ snpioctl(dev, cmd, data, flags, td)
 }
 
 static int
-snppoll(dev, events, td)
-	struct cdev *dev;
-	int events;
-	struct thread *td;
+snppoll(struct cdev *dev, int events, struct thread *td)
 {
 	struct snoop *snp;
 	int revents;
@@ -636,12 +604,8 @@ snppoll(dev, events, td)
 }
 
 static void
-snp_clone(arg, cred, name, namelen, dev)
-	void *arg;
-	struct ucred *cred;
-	char *name;
-	int namelen;
-	struct cdev **dev;
+snp_clone(void *arg, struct ucred *cred, char *name, int namelen,
+    struct cdev **dev)
 {
 	int u, i;
 
@@ -651,19 +615,15 @@ snp_clone(arg, cred, name, namelen, dev)
 		return;
 	i = clone_create(&snpclones, &snp_cdevsw, &u, dev, 0);
 	if (i)
-		*dev = make_dev(&snp_cdevsw, unit2minor(u),
-		     UID_ROOT, GID_WHEEL, 0600, "snp%d", u);
+		*dev = make_dev_credf(MAKEDEV_REF, &snp_cdevsw, unit2minor(u),
+		     NULL, UID_ROOT, GID_WHEEL, 0600, "snp%d", u);
 	if (*dev != NULL) {
-		dev_ref(*dev);
 		(*dev)->si_flags |= SI_CHEAPCLONE;
 	}
 }
 
 static int
-snp_modevent(mod, type, data)
-	module_t mod;
-	int type;
-	void *data;
+snp_modevent(module_t mod, int type, void *data)
 {
 	static eventhandler_tag eh_tag;
 
@@ -678,7 +638,9 @@ snp_modevent(mod, type, data)
 		if (!LIST_EMPTY(&snp_sclist))
 			return (EBUSY);
 		EVENTHANDLER_DEREGISTER(dev_clone, eh_tag);
+		drain_dev_clone_events();
 		clone_cleanup(&snpclones);
+		destroy_dev_drain(&snp_cdevsw);
 		ldisc_deregister(snooplinedisc);
 		break;
 	default:

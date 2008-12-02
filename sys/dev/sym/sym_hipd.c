@@ -56,12 +56,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sym/sym_hipd.c,v 1.55 2005/05/29 04:42:26 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sym/sym_hipd.c,v 1.67 2007/07/20 23:02:01 se Exp $");
 
 #define SYM_DRIVER_NAME	"sym-1.6.5-20000902"
 
 /* #define SYM_DEBUG_GENERIC_SUPPORT */
-/* #define CAM_NEW_TRAN_CODE */
 
 #include <sys/param.h>
 
@@ -112,13 +111,6 @@ typedef u_int16_t u16;
 typedef	u_int32_t u32;
 
 /*
- *  From 'cam.error_recovery_diffs.20010313.context' patch.
- */
-#ifdef  CAM_NEW_TRAN_CODE
-#define FreeBSD_New_Tran_Settings
-#endif  /* CAM_NEW_TRAN_CODE */
-
-/*
  *  Driver definitions.
  */
 #include <dev/sym/sym_defs.h>
@@ -137,8 +129,6 @@ typedef	u_int32_t u32;
 
 #if	defined	__i386__ || defined __amd64__
 #define MEMORY_BARRIER()	do { ; } while(0)
-#elif	defined	__alpha__
-#define MEMORY_BARRIER()	alpha_mb()
 #elif	defined	__powerpc__
 #define MEMORY_BARRIER()	__asm__ volatile("eieio; sync" : : : "memory")
 #elif	defined	__ia64__
@@ -148,44 +138,6 @@ typedef	u_int32_t u32;
 #else
 #error	"Not supported platform"
 #endif
-
-/*
- *  Portable but silly implemented byte order primitives.
- *  We define the primitives we need, since FreeBSD doesn't 
- *  seem to have them yet.
- */
-#if	BYTE_ORDER == BIG_ENDIAN
-
-#define __revb16(x) (	(((u16)(x) & (u16)0x00ffU) << 8) | \
-			(((u16)(x) & (u16)0xff00U) >> 8) 	)
-#define __revb32(x) (	(((u32)(x) & 0x000000ffU) << 24) | \
-			(((u32)(x) & 0x0000ff00U) <<  8) | \
-			(((u32)(x) & 0x00ff0000U) >>  8) | \
-			(((u32)(x) & 0xff000000U) >> 24)	)
-
-#define __htole16(v)	__revb16(v)
-#define __htole32(v)	__revb32(v)
-#define __le16toh(v)	__htole16(v)
-#define __le32toh(v)	__htole32(v)
-
-static __inline u16	_htole16(u16 v) { return __htole16(v); }
-static __inline u32	_htole32(u32 v) { return __htole32(v); }
-#define _le16toh	_htole16
-#define _le32toh	_htole32
-
-#else	/* LITTLE ENDIAN */
-
-#define __htole16(v)	(v)
-#define __htole32(v)	(v)
-#define __le16toh(v)	(v)
-#define __le32toh(v)	(v)
-
-#define _htole16(v)	(v)
-#define _htole32(v)	(v)
-#define _le16toh(v)	(v)
-#define _le32toh(v)	(v)
-
-#endif	/* BYTE_ORDER */
 
 /*
  *  A la VMS/CAM-3 queue management.
@@ -250,7 +202,7 @@ static __inline void sym_que_splice(struct sym_quehead *list,
 }
 
 #define sym_que_entry(ptr, type, member) \
-	((type *)((char *)(ptr)-(unsigned int)(&((type *)0)->member)))
+	((type *)((char *)(ptr)-(size_t)(&((type *)0)->member)))
 
 
 #define sym_insque(new, pos)		__sym_que_add(new, pos, (pos)->flink)
@@ -421,11 +373,7 @@ static void MDELAY(int ms) { while (ms--) UDELAY(1000); }
  */
 
 #define MEMO_SHIFT	4	/* 16 bytes minimum memory chunk */
-#ifndef __amd64__
 #define MEMO_PAGE_ORDER	0	/* 1 PAGE  maximum */
-#else
-#define MEMO_PAGE_ORDER	1	/* 2 PAGEs maximum on amd64 */
-#endif
 #if 0
 #define MEMO_FREE_UNUSED	/* Free unused pages immediately */
 #endif
@@ -434,14 +382,8 @@ static void MDELAY(int ms) { while (ms--) UDELAY(1000); }
 #define MEMO_CLUSTER_SIZE	(1UL << MEMO_CLUSTER_SHIFT)
 #define MEMO_CLUSTER_MASK	(MEMO_CLUSTER_SIZE-1)
 
-#ifndef __amd64__
 #define get_pages()		malloc(MEMO_CLUSTER_SIZE, M_DEVBUF, M_NOWAIT)
 #define free_pages(p)		free((p), M_DEVBUF)
-#else
-#define get_pages()		contigmalloc(MEMO_CLUSTER_SIZE, M_DEVBUF, \
-				    0, 0, 1LL << 32, PAGE_SIZE, 1LL << 32)
-#define free_pages(p)		contigfree((p), MEMO_CLUSTER_SIZE, M_DEVBUF)
-#endif
 
 typedef u_long m_addr_t;	/* Enough bits to bit-hack addresses */
 
@@ -675,7 +617,7 @@ static m_addr_t ___dma_getp(m_pool_s *mp)
 			      BUS_DMA_NOWAIT, &vbp->dmamap))
 		goto out_err;
 	bus_dmamap_load(mp->dmat, vbp->dmamap, vaddr,
-			MEMO_CLUSTER_SIZE, getbaddrcb, &baddr, 0);
+			MEMO_CLUSTER_SIZE, getbaddrcb, &baddr, BUS_DMA_NOWAIT);
 	if (baddr) {
 		int hc = VTOB_HASH_CODE(vaddr);
 		vbp->vaddr = (m_addr_t) vaddr;
@@ -735,7 +677,7 @@ static m_pool_s *___cre_dma_pool(bus_dma_tag_t dev_dmat)
 		mp->dev_dmat = dev_dmat;
 		if (!bus_dma_tag_create(dev_dmat, 1, MEMO_CLUSTER_SIZE,
 			       BUS_SPACE_MAXADDR_32BIT,
-			       BUS_SPACE_MAXADDR_32BIT,
+			       BUS_SPACE_MAXADDR,
 			       NULL, NULL, MEMO_CLUSTER_SIZE, 1,
 			       MEMO_CLUSTER_SIZE, 0,
 			       busdma_lock_mutex, &Giant, &mp->dmat)) {
@@ -920,16 +862,10 @@ struct sym_nvram {
 
 /*
  *  Some provision for support for BIG ENDIAN CPU.
- *  Btw, FreeBSD does not seem to be ready yet for big endian.
  */
 
-#if	BYTE_ORDER == BIG_ENDIAN
-#define cpu_to_scr(dw)	_htole32(dw)
-#define scr_to_cpu(dw)	_le32toh(dw)
-#else
-#define cpu_to_scr(dw)	(dw)
-#define scr_to_cpu(dw)	(dw)
-#endif
+#define cpu_to_scr(dw)	htole32(dw)
+#define scr_to_cpu(dw)	le32toh(dw)
 
 /*
  *  Access to the chip IO registers and on-chip RAM.
@@ -1122,10 +1058,8 @@ typedef struct sym_hcb *hcb_p;
  *  Gather negotiable parameters value
  */
 struct sym_trans {
-#ifdef	FreeBSD_New_Tran_Settings
 	u8 scsi_version;
 	u8 spi_version;
-#endif
 	u8 period;
 	u8 offset;
 	u8 width;
@@ -1592,7 +1526,11 @@ struct sym_hcb {
 	/*
 	 *  Target data.
 	 */
+#ifdef __amd64__
+	struct sym_tcb	*target;
+#else
 	struct sym_tcb	target[SYM_CONF_MAX_TARGET];
+#endif
 
 	/*
 	 *  Target control block bus address array used by the SCRIPT 
@@ -2262,9 +2200,9 @@ static void sym_fw_bind_script (hcb_p np, u32 *start, int len)
 	};
 }
 
-/*--------------------------------------------------------------------------*/
-/*--------------------------- END OF FIRMARES  -----------------------------*/
-/*--------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
+/*--------------------------- END OF FIRMWARES  -----------------------------*/
+/*---------------------------------------------------------------------------*/
 
 /*
  *  Function prototypes.
@@ -2642,7 +2580,7 @@ static int sym_prepare_setting(hcb_p np, struct sym_nvram *nvram)
 	 *  64 bit addressing  (895A/896/1010) ?
 	 */
 	if (np->features & FE_DAC)
-#if BITS_PER_LONG > 32
+#ifdef __LP64__
 		np->rv_ccntl1	|= (XTIMOD | EXTIBMV);
 #else
 		np->rv_ccntl1	|= (DDAC);
@@ -2804,10 +2742,8 @@ static int sym_prepare_setting(hcb_p np, struct sym_nvram *nvram)
 	for (i = 0 ; i < SYM_CONF_MAX_TARGET ; i++) {
 		tcb_p tp = &np->target[i];
 
-#ifdef	FreeBSD_New_Tran_Settings
 		tp->tinfo.user.scsi_version = tp->tinfo.current.scsi_version= 2;
 		tp->tinfo.user.spi_version  = tp->tinfo.current.spi_version = 2;
-#endif
 		tp->tinfo.user.period = np->minsync;
 		tp->tinfo.user.offset = np->maxoffs;
 		tp->tinfo.user.width  = np->maxwide ? BUS_16_BIT : BUS_8_BIT;
@@ -2825,9 +2761,7 @@ static int sym_prepare_setting(hcb_p np, struct sym_nvram *nvram)
 			    tp->tinfo.user.width == BUS_16_BIT) {
 				tp->tinfo.user.options |= PPR_OPT_DT;
 				tp->tinfo.user.offset   = np->maxoffs_dt;
-#ifdef	FreeBSD_New_Tran_Settings
 				tp->tinfo.user.spi_version = 3;
-#endif
 			}
 		}
 
@@ -3514,7 +3448,6 @@ sym_xpt_async_transfer_neg(hcb_p np, int target, u_int spi_valid)
 
 	bzero(&cts, sizeof(cts));
 
-#ifdef	FreeBSD_New_Tran_Settings
 #define	cts__scsi (cts.proto_specific.scsi)
 #define	cts__spi  (cts.xport_specific.spi)
 
@@ -3535,21 +3468,11 @@ sym_xpt_async_transfer_neg(hcb_p np, int target, u_int spi_valid)
 		cts__spi.ppr_options = tp->tinfo.current.options;
 #undef cts__spi
 #undef cts__scsi
-#else
-	cts.valid = spi_valid;
-	if (spi_valid & CCB_TRANS_SYNC_RATE_VALID)
-		cts.sync_period = tp->tinfo.current.period;
-	if (spi_valid & CCB_TRANS_SYNC_OFFSET_VALID)
-		cts.sync_offset = tp->tinfo.current.offset;
-	if (spi_valid & CCB_TRANS_BUS_WIDTH_VALID)
-		cts.bus_width   = tp->tinfo.current.width;
-#endif
 	xpt_setup_ccb(&cts.ccb_h, path, /*priority*/1);
 	xpt_async(AC_TRANSFER_NEG, path, &cts);
 	xpt_free_path(path);
 }
 
-#ifdef	FreeBSD_New_Tran_Settings
 #define SYM_SPI_VALID_WDTR		\
 	CTS_SPI_VALID_BUS_WIDTH |	\
 	CTS_SPI_VALID_SYNC_RATE |	\
@@ -3562,19 +3485,6 @@ sym_xpt_async_transfer_neg(hcb_p np, int target, u_int spi_valid)
 	CTS_SPI_VALID_BUS_WIDTH |	\
 	CTS_SPI_VALID_SYNC_RATE |	\
 	CTS_SPI_VALID_SYNC_OFFSET
-#else
-#define SYM_SPI_VALID_WDTR		\
-	CCB_TRANS_BUS_WIDTH_VALID |	\
-	CCB_TRANS_SYNC_RATE_VALID |	\
-	CCB_TRANS_SYNC_OFFSET_VALID
-#define SYM_SPI_VALID_SDTR		\
-	CCB_TRANS_SYNC_RATE_VALID |	\
-	CCB_TRANS_SYNC_OFFSET_VALID
-#define SYM_SPI_VALID_PPR		\
-	CCB_TRANS_BUS_WIDTH_VALID |	\
-	CCB_TRANS_SYNC_RATE_VALID |	\
-	CCB_TRANS_SYNC_OFFSET_VALID
-#endif
 
 /*
  *  We received a WDTR.
@@ -4861,10 +4771,8 @@ static void sym_sir_bad_scsi_status(hcb_p np, int num, ccb_p cp)
 		 */
 		cp->sensecmd[0]		= 0x03;
 		cp->sensecmd[1]		= cp->lun << 5;
-#ifdef	FreeBSD_New_Tran_Settings
 		if (tp->tinfo.current.scsi_version > 2 || cp->lun > 7)
 			cp->sensecmd[1]	= 0;
-#endif
 		cp->sensecmd[4]		= SYM_SNS_BBUF_LEN;
 		cp->data_len		= SYM_SNS_BBUF_LEN;
 
@@ -8119,20 +8027,12 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 		 *  Update SCSI device settings in LUN control block.
 		 */
 		lp = sym_lp(np, tp, ccb_h->target_lun);
-#ifdef	FreeBSD_New_Tran_Settings
 		if (cts->type == CTS_TYPE_CURRENT_SETTINGS) {
-#else
-		if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
-#endif
 			sym_update_trans(np, tp, &tp->tinfo.goal, cts);
 			if (lp)
 				sym_update_dflags(np, &lp->current_flags, cts);
 		}
-#ifdef	FreeBSD_New_Tran_Settings
 		if (cts->type == CTS_TYPE_USER_SETTINGS) {
-#else
-		if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0) {
-#endif
 			sym_update_trans(np, tp, &tp->tinfo.user, cts);
 			if (lp)
 				sym_update_dflags(np, &lp->user_flags, cts);
@@ -8151,7 +8051,6 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 		tp = &np->target[ccb_h->target_id];
 		lp = sym_lp(np, tp, ccb_h->target_lun);
 
-#ifdef	FreeBSD_New_Tran_Settings
 #define	cts__scsi (&cts->proto_specific.scsi)
 #define	cts__spi  (&cts->xport_specific.spi)
 		if (cts->type == CTS_TYPE_CURRENT_SETTINGS) {
@@ -8189,35 +8088,6 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 		cts__scsi->valid |= CTS_SCSI_VALID_TQ;
 #undef	cts__spi
 #undef	cts__scsi
-#else
-		if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
-			tip = &tp->tinfo.current;
-			dflags = lp ? lp->current_flags : 0;
-		}
-		else {
-			tip = &tp->tinfo.user;
-			dflags = lp ? lp->user_flags : tp->usrflags;
-		}
-		
-		cts->sync_period = tip->period;
-		cts->sync_offset = tip->offset;
-		cts->bus_width   = tip->width;
-
-		cts->valid = CCB_TRANS_SYNC_RATE_VALID
-			   | CCB_TRANS_SYNC_OFFSET_VALID
-			   | CCB_TRANS_BUS_WIDTH_VALID;
-
-		cts->flags &= ~(CCB_TRANS_DISC_ENB|CCB_TRANS_TAG_ENB);
-
-		if (dflags & SYM_DISC_ENABLED)
-			cts->flags |= CCB_TRANS_DISC_ENB;
-
-		if (dflags & SYM_TAGS_ENABLED)
-			cts->flags |= CCB_TRANS_TAG_ENB;
-
-		cts->valid |= CCB_TRANS_DISC_VALID;
-		cts->valid |= CCB_TRANS_TQ_VALID;
-#endif
 		sym_xpt_done2(np, ccb, CAM_REQ_CMP);
 		break;
 	}
@@ -8254,7 +8124,6 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
 
-#ifdef	FreeBSD_New_Tran_Settings
 		cpi->protocol = PROTO_SCSI;
 		cpi->protocol_version = SCSI_REV_2;
 		cpi->transport = XPORT_SPI;
@@ -8265,7 +8134,6 @@ static void sym_action2(struct cam_sim *sim, union ccb *ccb)
 			cpi->xport_specific.spi.ppr_options =
 			    SID_SPI_CLOCK_DT_ST;
 		}
-#endif
 		sym_xpt_done2(np, ccb, CAM_REQ_CMP);
 		break;
 	}
@@ -8364,7 +8232,6 @@ static void sym_update_trans(hcb_p np, tcb_p tp, struct sym_trans *tip,
 	/*
 	 *  Update the infos.
 	 */
-#ifdef	FreeBSD_New_Tran_Settings
 #define cts__spi (&cts->xport_specific.spi)
 	if ((cts__spi->valid & CTS_SPI_VALID_BUS_WIDTH) != 0)
 		tip->width = cts__spi->bus_width;
@@ -8381,14 +8248,6 @@ static void sym_update_trans(hcb_p np, tcb_p tp, struct sym_trans *tip,
 	    cts->transport_version != XPORT_VERSION_UNKNOWN)
 		tip->spi_version = cts->transport_version;
 #undef cts__spi
-#else
-	if ((cts->valid & CCB_TRANS_BUS_WIDTH_VALID) != 0)
-		tip->width = cts->bus_width;
-	if ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID) != 0)
-		tip->offset = cts->sync_offset;
-	if ((cts->valid & CCB_TRANS_SYNC_RATE_VALID) != 0)
-		tip->period = cts->sync_period;
-#endif
 	/*
 	 *  Scale against driver configuration limits.
 	 */
@@ -8402,7 +8261,6 @@ static void sym_update_trans(hcb_p np, tcb_p tp, struct sym_trans *tip,
 	if (tip->width > np->maxwide)
 		tip->width  = np->maxwide;
 
-#ifdef	FreeBSD_New_Tran_Settings
 	/*
 	 *  Only accept DT if controller supports and SYNC/WIDE asked.
 	 */
@@ -8410,16 +8268,6 @@ static void sym_update_trans(hcb_p np, tcb_p tp, struct sym_trans *tip,
 	    !(tip->width == BUS_16_BIT && tip->offset)) {
 		tip->options &= ~PPR_OPT_DT;
 	}
-#else
-	/*
-	 *  For now, only assume DT if period <= 9, BUS 16 and offset != 0.
-	 */
-	tip->options = 0;
-	if ((np->features & (FE_C10|FE_ULTRA3)) == (FE_C10|FE_ULTRA3) &&
-	    tip->period <= 9 && tip->width == BUS_16_BIT && tip->offset) {
-		tip->options |= PPR_OPT_DT;
-	}
-#endif
 
 	/*
 	 *  Scale period factor and offset against controller limits.
@@ -8448,7 +8296,6 @@ static void sym_update_trans(hcb_p np, tcb_p tp, struct sym_trans *tip,
 static void 
 sym_update_dflags(hcb_p np, u_char *flags, struct ccb_trans_settings *cts)
 {
-#ifdef	FreeBSD_New_Tran_Settings
 #define	cts__scsi (&cts->proto_specific.scsi)
 #define	cts__spi  (&cts->xport_specific.spi)
 	if ((cts__spi->valid & CTS_SPI_VALID_DISC) != 0) {
@@ -8466,21 +8313,6 @@ sym_update_dflags(hcb_p np, u_char *flags, struct ccb_trans_settings *cts)
 	}
 #undef	cts__spi
 #undef	cts__scsi
-#else
-	if ((cts->valid & CCB_TRANS_DISC_VALID) != 0) {
-		if ((cts->flags & CCB_TRANS_DISC_ENB) != 0)
-			*flags |= SYM_DISC_ENABLED;
-		else
-			*flags &= ~SYM_DISC_ENABLED;
-	}
-
-	if ((cts->valid & CCB_TRANS_TQ_VALID) != 0) {
-		if ((cts->flags & CCB_TRANS_TAG_ENB) != 0)
-			*flags |= SYM_TAGS_ENABLED;
-		else
-			*flags &= ~SYM_TAGS_ENABLED;
-	}
-#endif
 }
 
 
@@ -8653,11 +8485,7 @@ sym_pci_attach(device_t dev)
 	int 	i;
 	bus_dma_tag_t	bus_dmat;
 
-	/*
-	 *  I expected to be told about a parent 
-	 *  DMA tag, but didn't find any.
-	 */
-	bus_dmat = NULL;
+	bus_dmat = bus_get_dma_tag(dev);
 
 	/*
 	 *  Only probed devices should be attached.
@@ -8698,6 +8526,12 @@ sym_pci_attach(device_t dev)
 	np->fw_patch	 = fw->patch;
 	np->fw_name	 = fw->name;
 
+#ifdef __amd64__
+	np->target = sym_calloc_dma(SYM_CONF_MAX_TARGET * sizeof(*(np->target)),
+			"TARGET");
+	if (!np->target)
+		goto attach_failed;
+#endif
 	/*
 	 * Edit its name.
 	 */
@@ -8902,7 +8736,7 @@ sym_pci_attach(device_t dev)
 		if (np->features & FE_RAM8K) {
 			np->ram_ws = 8192;
 			np->scriptb_ba = np->scripta_ba + 4096;
-#if BITS_PER_LONG > 32
+#ifdef __LP64__
 			np->scr_ram_seg = cpu_to_scr(np->scripta_ba >> 32);
 #endif
 		}
@@ -9096,6 +8930,11 @@ static void sym_pci_free(hcb_p np)
 			       "LUNMP");
 #endif 
 	}
+#ifdef __amd64__
+	if (np->target)
+		sym_mfree_dma(np->target,
+			SYM_CONF_MAX_TARGET * sizeof(*(np->target)), "TARGET");
+#endif
 	if (np->targtbl)
 		sym_mfree_dma(np->targtbl, 256, "TARGTBL");
 	if (np->data_dmat)
@@ -9120,7 +8959,7 @@ static int sym_cam_attach(hcb_p np)
 	 *  Establish our interrupt handler.
 	 */
 	err = bus_setup_intr(np->device, np->irq_res,
-			     INTR_TYPE_CAM | INTR_ENTROPY, sym_intr, np,
+			     INTR_TYPE_CAM | INTR_ENTROPY, NULL, sym_intr, np,
 			     &np->intr);
 	if (err) {
 		device_printf(np->device, "bus_setup_intr() failed: %d\n",
@@ -9139,12 +8978,12 @@ static int sym_cam_attach(hcb_p np)
 	 *  Construct our SIM entry.
 	 */
 	sim = cam_sim_alloc(sym_action, sym_poll, "sym", np, np->unit,
-			    1, SYM_SETUP_MAX_TAG, devq);
+			    &Giant, 1, SYM_SETUP_MAX_TAG, devq);
 	if (!sim)
 		goto fail;
 	devq = 0;
 
-	if (xpt_bus_register(sim, 0) != CAM_SUCCESS)
+	if (xpt_bus_register(sim, np->device, 0) != CAM_SUCCESS)
 		goto fail;
 	np->sim = sim;
 	sim = 0;

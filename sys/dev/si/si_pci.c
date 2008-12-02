@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/si/si_pci.c,v 1.7 2005/03/01 08:58:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/si/si_pci.c,v 1.9 2007/02/23 19:33:07 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -33,6 +33,7 @@ __FBSDID("$FreeBSD: src/sys/dev/si/si_pci.c,v 1.7 2005/03/01 08:58:04 imp Exp $"
 #include <dev/si/sireg.h>
 #include <dev/si/sivar.h>
 
+#include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
 static int
@@ -98,7 +99,7 @@ si_pci_attach(device_t dev)
 	}
 	sc->sc_irq = rman_get_start(sc->sc_irq_res);
 	error = bus_setup_intr(dev, sc->sc_irq_res, INTR_TYPE_TTY,
-			       si_intr, sc, &ih);
+			       NULL, si_intr, sc, &ih);
 	if (error) {
 		device_printf(dev, "could not activate interrupt\n");
 		goto fail;

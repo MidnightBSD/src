@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/scd/scd.c,v 1.85 2005/05/29 04:42:25 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/scd/scd.c,v 1.86 2007/02/27 17:23:28 jhb Exp $");
 
 
 #undef	SCD_DEBUG
@@ -1293,7 +1293,7 @@ waitfor_status_bits(struct scd_softc *sc, int bits_set, int bits_clear)
 			{
 				break;
 			}
-			tsleep(waitfor_status_bits, PZERO - 1, "waitfor", hz/10);
+			pause("waitfor", hz/10);
 		}
 	}
 	if ((c & bits_set) == bits_set &&

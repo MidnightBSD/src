@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *   $FreeBSD: src/sys/dev/sn/if_snreg.h,v 1.5 2005/01/06 01:43:15 imp Exp $
+ *   $FreeBSD: src/sys/dev/sn/if_snreg.h,v 1.6 2005/09/22 05:56:32 imp Exp $
  */
 
 /*
@@ -403,11 +403,5 @@
 #define SMC_DELAY(sc) { CSR_READ_2(sc, RECV_CONTROL_REG_W); \
                         CSR_READ_2(sc, RECV_CONTROL_REG_W); \
                         CSR_READ_2(sc, RECV_CONTROL_REG_W); }
-
-/* Define flags
- */
-
-#define SN_FLAGS_PCCARD		0x0001	/* PCMCIA (PC-card) */
-#define	SN_FLAGS_XJBT10		0x0002	/* Megahertz XJ-BT10 (PCMCIA) */
 
 #endif	/* _IF_SNREG_H_ */

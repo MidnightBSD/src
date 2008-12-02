@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/snc/if_snc_cbus.c,v 1.6 2005/01/06 01:43:15 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/snc/if_snc_cbus.c,v 1.7 2007/02/23 12:18:54 piso Exp $");
 
 /*
  *	National Semiconductor  DP8393X SONIC Driver
@@ -190,7 +190,7 @@ snc_isa_attach(dev)
 	snc_alloc_irq(dev, 0, 0);
 		
 	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
-			       sncintr, sc, &sc->irq_handle);
+			       NULL, sncintr, sc, &sc->irq_handle);
 	if (error) {
 		printf("snc_isa_attach: bus_setup_intr() failed\n");
 		snc_release_resources(dev);

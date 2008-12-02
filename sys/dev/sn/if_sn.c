@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sn/if_sn.c,v 1.45.2.3 2005/09/17 04:01:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sn/if_sn.c,v 1.55 2007/02/23 12:18:54 piso Exp $");
 
 /*
  * This is a driver for SMC's 9000 series of Ethernet adapters.
@@ -110,7 +110,6 @@ __FBSDID("$FreeBSD: src/sys/dev/sn/if_sn.c,v 1.45.2.3 2005/09/17 04:01:04 imp Ex
 
 #include <net/bpf.h>
 #include <net/bpfdesc.h>
-
 
 #include <dev/sn/if_snreg.h>
 #include <dev/sn/if_snvar.h>
@@ -205,7 +204,10 @@ sn_attach(device_t dev)
 	ifp->if_ioctl = snioctl;
 	ifp->if_watchdog = snwatchdog;
 	ifp->if_init = sninit;
+	ifp->if_baudrate = 10000000;
+	IFQ_SET_MAXLEN(&ifp->if_snd, IFQ_MAXLEN);
 	ifp->if_snd.ifq_maxlen = IFQ_MAXLEN;
+	IFQ_SET_READY(&ifp->if_snd);
 	ifp->if_timer = 0;
 
 	ether_ifattach(ifp, eaddr);
@@ -216,7 +218,8 @@ sn_attach(device_t dev)
 	 * during startup to avoid LORs in the network layer.
 	 */
 	if ((err = bus_setup_intr(dev, sc->irq_res,
-	    INTR_TYPE_NET | INTR_MPSAFE, sn_intr, sc, &sc->intrhand)) != 0) {
+	    INTR_TYPE_NET | INTR_MPSAFE, NULL, sn_intr, sc, 
+	    &sc->intrhand)) != 0) {
 		sn_detach(dev);
 		return err;
 	}
@@ -233,8 +236,8 @@ sn_detach(device_t dev)
 	snstop(sc);
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING; 
 	ether_ifdetach(ifp);
-	if_free(ifp);
 	sn_deactivate(dev);
+	if_free(ifp);
 	SN_LOCK_DESTROY(sc);
 	return 0;
 }
@@ -373,7 +376,7 @@ snstart_locked(struct ifnet *ifp)
 
 	SN_ASSERT_LOCKED(sc);
 
-	if (sc->ifp->if_drv_flags & IFF_DRV_OACTIVE)
+	if (ifp->if_drv_flags & IFF_DRV_OACTIVE)
 		return;
 	if (sc->pages_wanted != -1) {
 		if_printf(ifp, "snstart() while memory allocation pending\n");
@@ -384,7 +387,7 @@ startagain:
 	/*
 	 * Sneak a peek at the next packet
 	 */
-	m = sc->ifp->if_snd.ifq_head;
+	m = ifp->if_snd.ifq_head;
 	if (m == 0)
 		return;
 	/*
@@ -402,8 +405,8 @@ startagain:
 	 */
 	if (len + pad > ETHER_MAX_LEN - ETHER_CRC_LEN) {
 		if_printf(ifp, "large packet discarded (A)\n");
-		++sc->ifp->if_oerrors;
-		IF_DEQUEUE(&sc->ifp->if_snd, m);
+		++ifp->if_oerrors;
+		IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
 		m_freem(m);
 		goto readcheck;
 	}
@@ -460,8 +463,8 @@ startagain:
 		CSR_WRITE_1(sc, INTR_MASK_REG_B, mask);
 		sc->intr_mask = mask;
 
-		sc->ifp->if_timer = 1;
-		sc->ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+		ifp->if_timer = 1;
+		ifp->if_drv_flags |= IFF_DRV_OACTIVE;
 		sc->pages_wanted = numPages;
 		return;
 	}
@@ -496,7 +499,7 @@ startagain:
 	 * Get the packet from the kernel.  This will include the Ethernet
 	 * frame header, MAC Addresses etc.
 	 */
-	IF_DEQUEUE(&sc->ifp->if_snd, m);
+	IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
 
 	/*
 	 * Push out the data to the card.
@@ -544,12 +547,12 @@ startagain:
 
 	CSR_WRITE_2(sc, MMU_CMD_REG_W, MMUCR_ENQUEUE);
 
-	sc->ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-	sc->ifp->if_timer = 1;
+	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+	ifp->if_timer = 1;
 
 	BPF_MTAP(ifp, top);
 
-	sc->ifp->if_opackets++;
+	ifp->if_opackets++;
 	m_freem(top);
 
 
@@ -598,7 +601,7 @@ snresume(struct ifnet *ifp)
 	/*
 	 * Sneak a peek at the next packet
 	 */
-	m = sc->ifp->if_snd.ifq_head;
+	m = ifp->if_snd.ifq_head;
 	if (m == 0) {
 		if_printf(ifp, "snresume() with nothing to send\n");
 		return;
@@ -618,8 +621,8 @@ snresume(struct ifnet *ifp)
 	 */
 	if (len + pad > ETHER_MAX_LEN - ETHER_CRC_LEN) {
 		if_printf(ifp, "large packet discarded (B)\n");
-		++sc->ifp->if_oerrors;
-		IF_DEQUEUE(&sc->ifp->if_snd, m);
+		++ifp->if_oerrors;
+		IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
 		m_freem(m);
 		return;
 	}
@@ -654,7 +657,7 @@ snresume(struct ifnet *ifp)
 	packet_no = CSR_READ_1(sc, ALLOC_RESULT_REG_B);
 	if (packet_no & ARR_FAILED) {
 		if_printf(ifp, "Memory allocation failed.  Weird.\n");
-		sc->ifp->if_timer = 1;
+		ifp->if_timer = 1;
 		goto try_start;
 	}
 	/*
@@ -695,7 +698,7 @@ snresume(struct ifnet *ifp)
 	 * Get the packet from the kernel.  This will include the Ethernet
 	 * frame header, MAC Addresses etc.
 	 */
-	IF_DEQUEUE(&sc->ifp->if_snd, m);
+	IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
 
 	/*
 	 * Push out the data to the card.
@@ -743,7 +746,7 @@ snresume(struct ifnet *ifp)
 
 	BPF_MTAP(ifp, top);
 
-	sc->ifp->if_opackets++;
+	ifp->if_opackets++;
 	m_freem(top);
 
 try_start:
@@ -751,15 +754,15 @@ try_start:
 	/*
 	 * Now pass control to snstart() to queue any additional packets
 	 */
-	sc->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 	snstart(ifp);
 
 	/*
 	 * We've sent something, so we're active.  Set a watchdog in case the
 	 * TX_EMPTY interrupt is lost.
 	 */
-	sc->ifp->if_drv_flags |= IFF_DRV_OACTIVE;
-	sc->ifp->if_timer = 1;
+	ifp->if_drv_flags |= IFF_DRV_OACTIVE;
+	ifp->if_timer = 1;
 
 	return;
 }
@@ -817,7 +820,7 @@ sn_intr(void *arg)
 		SMC_SELECT_BANK(sc, 2);
 		CSR_WRITE_1(sc, INTR_ACK_REG_B, IM_RX_OVRN_INT);
 
-		++sc->ifp->if_ierrors;
+		++ifp->if_ierrors;
 	}
 	/*
 	 * Got a packet.
@@ -845,8 +848,8 @@ sn_intr(void *arg)
 		 * Disable this interrupt.
 		 */
 		mask &= ~IM_ALLOC_INT;
-		sc->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-		snresume(sc->ifp);
+		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+		snresume(ifp);
 	}
 	/*
 	 * TX Completion.  Handle a transmit error message. This will only be
@@ -883,11 +886,11 @@ sn_intr(void *arg)
 			device_printf(sc->dev, 
 			    "Successful packet caused interrupt\n");
 		} else {
-			++sc->ifp->if_oerrors;
+			++ifp->if_oerrors;
 		}
 
 		if (tx_status & EPHSR_LATCOL)
-			++sc->ifp->if_collisions;
+			++ifp->if_collisions;
 
 		/*
 		 * Some of these errors will have disabled transmit.
@@ -912,8 +915,8 @@ sn_intr(void *arg)
 		/*
 		 * Attempt to queue more transmits.
 		 */
-		sc->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-		snstart_locked(sc->ifp);
+		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+		snstart_locked(ifp);
 	}
 	/*
 	 * Transmit underrun.  We use this opportunity to update transmit
@@ -938,20 +941,20 @@ sn_intr(void *arg)
 		/*
 		 * Single collisions
 		 */
-		sc->ifp->if_collisions += card_stats & ECR_COLN_MASK;
+		ifp->if_collisions += card_stats & ECR_COLN_MASK;
 
 		/*
 		 * Multiple collisions
 		 */
-		sc->ifp->if_collisions += (card_stats & ECR_MCOLN_MASK) >> 4;
+		ifp->if_collisions += (card_stats & ECR_MCOLN_MASK) >> 4;
 
 		SMC_SELECT_BANK(sc, 2);
 
 		/*
 		 * Attempt to enqueue some more stuff.
 		 */
-		sc->ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-		snstart_locked(sc->ifp);
+		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
+		snstart_locked(ifp);
 	}
 	/*
 	 * Some other error.  Try to fix it by resetting the adapter.
@@ -1029,7 +1032,7 @@ read_another:
 	 * Account for receive errors and discard.
 	 */
 	if (status & RS_ERRORS) {
-		++sc->ifp->if_ierrors;
+		++ifp->if_ierrors;
 		goto out;
 	}
 	/*
@@ -1049,7 +1052,7 @@ read_another:
 	if (m == NULL)
 		goto out;
 
-	m->m_pkthdr.rcvif = sc->ifp;
+	m->m_pkthdr.rcvif = ifp;
 	m->m_pkthdr.len = m->m_len = packet_length;
 
 	/*
@@ -1062,7 +1065,7 @@ read_another:
 	 */
 	if ((m->m_flags & M_EXT) == 0) {
 		m_freem(m);
-		++sc->ifp->if_ierrors;
+		++ifp->if_ierrors;
 		printf("sn: snread() kernel memory allocation problem\n");
 		goto out;
 	}
@@ -1077,7 +1080,7 @@ read_another:
 		data += packet_length & ~1;
 		*data = CSR_READ_1(sc, DATA_REG_B);
 	}
-	++sc->ifp->if_ipackets;
+	++ifp->if_ipackets;
 
 	/*
 	 * Remove link layer addresses and whatnot.
@@ -1142,20 +1145,7 @@ snioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		SN_UNLOCK(sc);
 		break;
 
-#ifdef notdef
-	case SIOCGHWADDR:
-		bcopy((caddr_t) sc->sc_addr, (caddr_t) & ifr->ifr_data,
-		      sizeof(sc->sc_addr));
-		break;
-#endif
-
 	case SIOCADDMULTI:
-		/* update multicast filter list. */
-		SN_LOCK(sc);
-		sn_setmcast(sc);
-		error = 0;
-		SN_UNLOCK(sc);
-		break;
 	case SIOCDELMULTI:
 		/* update multicast filter list. */
 		SN_LOCK(sc);
@@ -1164,7 +1154,6 @@ snioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		SN_UNLOCK(sc);
 		break;
 	default:
-		error = EINVAL;
 		error = ether_ioctl(ifp, cmd, data);
 		break;
 	}

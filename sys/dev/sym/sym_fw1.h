@@ -55,7 +55,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/sym/sym_fw1.h,v 1.7 2005/01/06 01:43:24 imp Exp $ */
+/* $FreeBSD: src/sys/dev/sym/sym_fw1.h,v 1.8 2006/08/04 07:56:34 yar Exp $ */
 
 /*
  *  Scripts for SYMBIOS-Processor
@@ -317,7 +317,7 @@ static struct SYM_FWA_SCR SYM_FWA_SCR = {
 	/*
 	 *  Now there are 4 possibilities:
 	 *
-	 *  (1) The chip looses arbitration.
+	 *  (1) The chip loses arbitration.
 	 *  This is ok, because it will try again,
 	 *  when the bus becomes idle.
 	 *  (But beware of the timeout function!)

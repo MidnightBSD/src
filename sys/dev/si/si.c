@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/si/si.c,v 1.135.2.2 2006/01/15 00:20:31 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/si/si.c,v 1.139 2007/01/18 13:33:36 marius Exp $");
 
 #ifndef lint
 static const char si_copyright1[] =  "@(#) Copyright (C) Specialix International, 1990,1992,1998",
@@ -43,6 +43,7 @@ static const char si_copyright1[] =  "@(#) Copyright (C) Specialix International
 
 #include "opt_compat.h"
 #include "opt_debug_si.h"
+#include "opt_eisa.h"
 #include "opt_tty.h"
 
 #include <sys/param.h>
@@ -53,6 +54,7 @@ static const char si_copyright1[] =  "@(#) Copyright (C) Specialix International
 #include <sys/fcntl.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/priv.h>
 #include <sys/sysctl.h>
 #include <sys/bus.h>
 #include <machine/bus.h>
@@ -276,8 +278,10 @@ siattach(device_t dev)
 	/* Stop the CPU first so it won't stomp around while we load */
 
 	switch (sc->sc_type) {
+#ifdef DEV_EISA
 		case SIEISA:
 			outb(sc->sc_iobase + 2, sc->sc_irq << 4);
+#endif
 		break;
 		case SIPCI:
 			*(maddr+SIPCIRESET) = 0;
@@ -320,12 +324,14 @@ siattach(device_t dev)
 	/* Now start the CPU */
 
 	switch (sc->sc_type) {
+#ifdef DEV_EISA
 	case SIEISA:
 		/* modify the download code to tell it that it's on an EISA */
 		*(maddr + 0x42) = 1;
 		outb(sc->sc_iobase + 2, (sc->sc_irq << 4) | 4);
 		(void)inb(sc->sc_iobase + 3); /* reset interrupt */
 		break;
+#endif
 	case SIPCI:
 		/* modify the download code to tell it that it's on a PCI */
 		*(maddr+0x42) = 1;
@@ -553,8 +559,8 @@ try_next:
 			tp->t_oproc = si_start;
 			tp->t_param = siparam;
 			tp->t_stop = si_stop;
-			ttycreate(tp, NULL, 0, MINOR_CALLOUT, "A%r%r", unit,
- 			    (int)(pp - sc->sc_ports));
+			ttycreate(tp, TS_CALLOUT, "A%r%r", unit,
+			    (int)(pp - sc->sc_ports));
 		}
 try_next2:
 		if (modp->sm_next == 0) {
@@ -650,7 +656,7 @@ si_Sioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *t
 
 	ip = (int *)data;
 
-#define SUCHECK if ((error = suser(td))) goto out
+#define SUCHECK if ((error = priv_check(td, PRIV_DRIVER))) goto out
 
 	switch (cmd) {
 	case TCSIPORTS:
@@ -1131,11 +1137,13 @@ si_intr(void *arg)
 			((volatile struct si_reg *)maddr)->int_pending = 0;
 			*(maddr+SIJETINTCL) = 0x0;
 			break;
+#ifdef DEV_EISA
 		case SIEISA:
 			maddr = sc->sc_maddr;
 			((volatile struct si_reg *)maddr)->int_pending = 0;
 			(void)inb(sc->sc_iobase + 3);
 			break;
+#endif
 		case SIEMPTY:
 		default:
 			continue;
@@ -1621,7 +1629,9 @@ si_modulename(int host_type, int uart_type)
 {
 	switch (host_type) {
 	/* Z280 based cards */
+#ifdef DEV_EISA
 	case SIEISA:
+#endif
 	case SIHOST2:
 	case SIHOST:
 	case SIPCI:

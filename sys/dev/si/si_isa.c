@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/si/si_isa.c,v 1.7 2005/01/06 01:43:14 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/si/si_isa.c,v 1.8 2007/02/23 19:33:07 imp Exp $");
 
 #include "opt_debug_si.h"
 
@@ -292,7 +292,7 @@ si_isa_attach(device_t dev)
 	}
 	sc->sc_irq = rman_get_start(sc->sc_irq_res);
 	error = bus_setup_intr(dev, sc->sc_irq_res, INTR_TYPE_TTY,
-			       si_intr, sc,&ih);
+			       NULL, si_intr, sc, &ih);
 	if (error) {
 		device_printf(dev, "couldn't activate interrupt\n");
 		goto fail;

@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/streams/streams.c,v 1.50 2005/02/07 18:22:20 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/streams/streams.c,v 1.56 2007/08/06 14:26:00 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -68,11 +68,6 @@ static int svr4_soo_close(struct file *, struct thread *);
 static int svr4_ptm_alloc(struct thread *);
 static  d_open_t	streamsopen;
 
-struct svr4_sockcache_head svr4_head;
-
-/* Initialization flag (set/queried by svr4_mod LKM) */
-int svr4_str_initialized = 0;
-
 /*
  * Device minor numbers
  */
@@ -89,8 +84,8 @@ enum {
 	dev_unix_ord_stream	= 40
 };
 
-static struct cdev *dt_ptm, *dt_arp, *dt_icmp, *dt_ip, *dt_tcp, *dt_udp, *dt_rawip,
-	*dt_unix_dgram, *dt_unix_stream, *dt_unix_ord_stream;
+static struct cdev *dt_ptm, *dt_arp, *dt_icmp, *dt_ip, *dt_tcp, *dt_udp,
+	*dt_rawip, *dt_unix_dgram, *dt_unix_stream, *dt_unix_ord_stream;
 
 static struct fileops svr4_netops = {
 	.fo_read = soo_read,
@@ -104,7 +99,6 @@ static struct fileops svr4_netops = {
  
 static struct cdevsw streams_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
 	.d_open =	streamsopen,
 	.d_name =	"streams",
 };
@@ -122,7 +116,6 @@ streams_modevent(module_t mod, int type, void *unused)
 {
 	switch (type) {
 	case MOD_LOAD:
-		/* XXX should make sure it isn't already loaded first */
 		dt_ptm = make_dev(&streams_cdevsw, dev_ptm, 0, 0, 0666,
 			"ptm");
 		dt_arp = make_dev(&streams_cdevsw, dev_arp, 0, 0, 0666,
@@ -190,20 +183,15 @@ MODULE_VERSION(streams, 1);
 static  int
 streamsopen(struct cdev *dev, int oflags, int devtype, struct thread *td)
 {
-	int type, protocol;
-	int fd, extraref;
-	struct file *fp;
+	struct filedesc *fdp;
+	struct svr4_strm *st;
 	struct socket *so;
-	int error;
-	int family;
-	struct proc *p = td->td_proc;
+	struct file *fp;
+	int family, type, protocol;
+	int error, fd;
 	
-	PROC_LOCK(p);
-	if (td->td_dupfd >= 0) {
-	  PROC_UNLOCK(p);
+	if (td->td_dupfd >= 0)
 	  return ENODEV;
-	}
-	PROC_UNLOCK(p);
 
 	switch (minor(dev)) {
 	case dev_udp:
@@ -251,38 +239,40 @@ streamsopen(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	  return EOPNOTSUPP;
 	}
 
+	fdp = td->td_proc->p_fd;
 	if ((error = falloc(td, &fp, &fd)) != 0)
 	  return error;
 	/* An extra reference on `fp' has been held for us by falloc(). */
 
-	if ((error = socreate(family, &so, type, protocol,
-	    td->td_ucred, td)) != 0) {
-	  FILEDESC_LOCK_FAST(p->p_fd);
-	  /* Check the fd table entry hasn't changed since we made it. */
-	  extraref = 0;
-	  if (p->p_fd->fd_ofiles[fd] == fp) {
-	    p->p_fd->fd_ofiles[fd] = NULL;
-	    extraref = 1;
-	  }
-	  FILEDESC_UNLOCK_FAST(p->p_fd);
-	  if (extraref)
-	    fdrop(fp, td);
-	  fdrop(fp, td);
-	  return error;
+	error = socreate(family, &so, type, protocol, td->td_ucred, td);
+	if (error) {
+	   fdclose(fdp, fp, fd, td);
+	   fdrop(fp, td);
+	   return error;
 	}
 
-	FILEDESC_LOCK_FAST(p->p_fd);
+	FILE_LOCK(fp);
 	fp->f_data = so;
 	fp->f_flag = FREAD|FWRITE;
 	fp->f_ops = &svr4_netops;
 	fp->f_type = DTYPE_SOCKET;
-	FILEDESC_UNLOCK_FAST(p->p_fd);
+	FILE_UNLOCK(fp);
 
-	(void)svr4_stream_get(fp);
+	/*
+	 * Allocate a stream structure and attach it to this socket.
+	 * We don't bother locking so_emuldata for SVR4 stream sockets as
+	 * its value is constant for the lifetime of the stream once it
+	 * is initialized here.
+	 */
+	st = malloc(sizeof(struct svr4_strm), M_TEMP, M_WAITOK);
+	st->s_family = so->so_proto->pr_domain->dom_family;
+	st->s_cmd = ~0;
+	st->s_afd = -1;
+	st->s_eventmask = 0;
+	so->so_emuldata = st;
+
 	fdrop(fp, td);
-	PROC_LOCK(p);
 	td->td_dupfd = fd;
-	PROC_UNLOCK(p);
 	return ENXIO;
 }
 
@@ -324,9 +314,7 @@ svr4_ptm_alloc(td)
 		case ENXIO:
 			return error;
 		case 0:
-			PROC_LOCK(p);
 			td->td_dupfd = td->td_retval[0];
-			PROC_UNLOCK(p);
 			return ENXIO;
 		default:
 			if (ttynumbers[++n] == '\0') {
@@ -345,67 +333,12 @@ svr4_stream_get(fp)
 	struct file *fp;
 {
 	struct socket *so;
-	struct svr4_strm *st;
 
 	if (fp == NULL || fp->f_type != DTYPE_SOCKET)
 		return NULL;
 
 	so = fp->f_data;
-
-	/*
-	 * mpfixme: lock socketbuffer here
-	 */
-	if (so->so_emuldata) {
-		return so->so_emuldata;
-	}
-
-	/* Allocate a new one. */
-	st = malloc(sizeof(struct svr4_strm), M_TEMP, M_WAITOK);
-	st->s_family = so->so_proto->pr_domain->dom_family;
-	st->s_cmd = ~0;
-	st->s_afd = -1;
-	st->s_eventmask = 0;
-	/*
-	 * avoid a race where we loose due to concurrancy issues
-	 * of two threads trying to allocate the so_emuldata.
-	 */
-	if (so->so_emuldata) {
-		/* lost the race, use the existing emuldata */
-		FREE(st, M_TEMP);
-		st = so->so_emuldata;
-	} else {
-		/* we won, or there was no race, use our copy */
-		so->so_emuldata = st;
-		fp->f_ops = &svr4_netops;
-	}
-
-	return st;
-}
-
-void
-svr4_delete_socket(p, fp)
-	struct proc *p;
-	struct file *fp;
-{
-	struct svr4_sockcache_entry *e;
-	void *cookie = ((struct socket *)fp->f_data)->so_emuldata;
-
-	while (svr4_str_initialized != 2) {
-		if (atomic_cmpset_acq_int(&svr4_str_initialized, 0, 1)) {
-			TAILQ_INIT(&svr4_head);
-			atomic_store_rel_int(&svr4_str_initialized, 2);
-		}
-		return;
-	}
-
-	TAILQ_FOREACH(e, &svr4_head, entries)
-		if (e->p == p && e->cookie == cookie) {
-			TAILQ_REMOVE(&svr4_head, e, entries);
-			DPRINTF(("svr4_delete_socket: %s [%p,%d,%d]\n",
-				 e->sock.sun_path, p, (int)e->dev, e->ino));
-			free(e, M_TEMP);
-			return;
-		}
+	return so->so_emuldata;
 }
 
 static int

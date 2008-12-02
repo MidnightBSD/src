@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30_isa.c,v 1.12 2005/05/29 04:42:26 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/stg/tmc18c30_isa.c,v 1.13 2007/02/23 12:18:55 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -97,7 +97,7 @@ stg_isa_attach(device_t dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_CAM | INTR_ENTROPY,
-			       stg_intr, (void *)sc, &sc->stg_intrhand);
+			       NULL, stg_intr, (void *)sc, &sc->stg_intrhand);
 	if (error) {
 		stg_release_resource(dev);
 		return(error);

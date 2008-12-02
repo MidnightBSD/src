@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sr/if_sr.c,v 1.69.2.1 2005/08/25 05:01:16 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sr/if_sr.c,v 1.73 2007/03/21 03:38:36 nyan Exp $");
 
 /*
  * Programming assumptions and other issues.
@@ -389,8 +389,8 @@ sr_attach(device_t device)
 	src_init(hc);
 	sr_init_sca(hc);
 
-	if (BUS_SETUP_INTR(device_get_parent(device), device, hc->res_irq,
-	    INTR_TYPE_NET, srintr, hc, &hc->intr_cookie) != 0)
+	if (bus_setup_intr(device, hc->res_irq,
+	    INTR_TYPE_NET, NULL, srintr, hc, &hc->intr_cookie) != 0)
 		goto errexit;
 
 	/*
@@ -462,11 +462,10 @@ errexit:
 int
 sr_detach(device_t device)
 {
-	device_t parent = device_get_parent(device);
 	struct sr_hardc *hc = device_get_softc(device);
 
 	if (hc->intr_cookie != NULL) {
-		if (BUS_TEARDOWN_INTR(parent, device,
+		if (bus_teardown_intr(device,
 			hc->res_irq, hc->intr_cookie) != 0) {
 				printf("intr teardown failed.. continuing\n");
 		}
@@ -569,29 +568,21 @@ sr_deallocate_resources(device_t device)
 	struct sr_hardc *hc = device_get_softc(device);
 
 	if (hc->res_irq != 0) {
-		bus_deactivate_resource(device, SYS_RES_IRQ,
-			hc->rid_irq, hc->res_irq);
 		bus_release_resource(device, SYS_RES_IRQ,
 			hc->rid_irq, hc->res_irq);
 		hc->res_irq = 0;
 	}
 	if (hc->res_ioport != 0) {
-		bus_deactivate_resource(device, SYS_RES_IOPORT,
-			hc->rid_ioport, hc->res_ioport);
 		bus_release_resource(device, SYS_RES_IOPORT,
 			hc->rid_ioport, hc->res_ioport);
 		hc->res_ioport = 0;
 	}
 	if (hc->res_memory != 0) {
-		bus_deactivate_resource(device, SYS_RES_MEMORY,
-			hc->rid_memory, hc->res_memory);
 		bus_release_resource(device, SYS_RES_MEMORY,
 			hc->rid_memory, hc->res_memory);
 		hc->res_memory = 0;
 	}
 	if (hc->res_plx_memory != 0) {
-		bus_deactivate_resource(device, SYS_RES_MEMORY,
-			hc->rid_plx_memory, hc->res_plx_memory);
 		bus_release_resource(device, SYS_RES_MEMORY,
 			hc->rid_plx_memory, hc->res_plx_memory);
 		hc->res_plx_memory = 0;
