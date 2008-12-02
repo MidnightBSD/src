@@ -26309,12 +26309,6 @@ sys/dev/lge/if_lge.c -text
 sys/dev/lge/if_lgereg.h -text
 sys/dev/lmc/if_lmc.c -text
 sys/dev/lmc/if_lmc.h -text
-sys/dev/lnc/if_lnc.c -text
-sys/dev/lnc/if_lnc_cbus.c -text
-sys/dev/lnc/if_lnc_isa.c -text
-sys/dev/lnc/if_lnc_pci.c -text
-sys/dev/lnc/if_lncreg.h -text
-sys/dev/lnc/if_lncvar.h -text
 sys/dev/mc146818/mc146818.c -text
 sys/dev/mc146818/mc146818reg.h -text
 sys/dev/mc146818/mc146818var.h -text
