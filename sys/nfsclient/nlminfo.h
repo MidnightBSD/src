@@ -25,7 +25,7 @@
  * SUCH DAMAGE.
  *
  *      from BSDI nlminfo.h,v 2.1 1998/03/18 01:30:38 don Exp
- * $FreeBSD: src/sys/nfsclient/nlminfo.h,v 1.2.14.1 2005/10/27 18:32:39 glebius Exp $
+ * $FreeBSD: src/sys/nfsclient/nlminfo.h,v 1.3 2005/10/26 07:18:36 glebius Exp $
  */
 
 /*

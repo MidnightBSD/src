@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsmount.h	8.3 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfsclient/nfsmount.h,v 1.30 2005/06/10 23:50:40 green Exp $
+ * $FreeBSD: src/sys/nfsclient/nfsmount.h,v 1.32.2.1 2007/10/12 19:18:46 mohans Exp $
  */
 
 #ifndef _NFSCLIENT_NFSMOUNT_H_
@@ -40,8 +40,9 @@ struct nfs_tcp_mountstate {
  	int rpcresid;
 #define NFS_TCP_EXPECT_RPCMARKER 	0x0001 /* Expect to see a RPC/TCP marker next */
 #define NFS_TCP_FORCE_RECONNECT 	0x0002 /* Force a TCP reconnect */
+#define NFS_TCP_WAIT_WRITE_DRAIN 	0x0004 /* Waiting for socket writers to finish */
  	int flags;
-	struct mtx mtx;
+	int sock_send_inprog;
 };
 
 /*
@@ -50,6 +51,7 @@ struct nfs_tcp_mountstate {
  * Holds NFS specific information for mount.
  */
 struct	nfsmount {
+	struct mtx	nm_mtx;
 	int	nm_flag;		/* Flags for soft/hard... */
 	int	nm_state;		/* Internal state flags */
 	struct	mount *nm_mountp;	/* Vfs structure for this filesystem */
@@ -64,8 +66,8 @@ struct	nfsmount {
 	struct	sockaddr *nm_nam;	/* Addr of server */
 	int	nm_timeo;		/* Init timer for NFSMNT_DUMBTIMR */
 	int	nm_retry;		/* Max retries */
-	int	nm_srtt[4];		/* Timers for rpcs */
-	int	nm_sdrtt[4];
+	int	nm_srtt[NFS_MAX_TIMER],	/* RTT Timers for rpcs */
+		nm_sdrtt[NFS_MAX_TIMER];
 	int	nm_sent;		/* Request send count */
 	int	nm_cwnd;		/* Request send window */
 	int	nm_timeouts;		/* Request timeouts */

@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfs.h	8.4 (Berkeley) 5/1/95
- * $FreeBSD: src/sys/nfsclient/nfs.h,v 1.90 2005/01/24 12:31:06 phk Exp $
+ * $FreeBSD: src/sys/nfsclient/nfs.h,v 1.98.2.1 2007/10/12 19:18:46 mohans Exp $
  */
 
 #ifndef _NFSCLIENT_NFS_H_
@@ -53,7 +53,8 @@
 #define	NFS_MAXTIMEO	(60 * NFS_HZ)	/* Max timeout to backoff to */
 #define	NFS_MINIDEMTIMEO (5 * NFS_HZ)	/* Min timeout for non-idempotent ops*/
 #define	NFS_MAXREXMIT	100		/* Stop counting after this many */
-#define	NFS_RETRANS	10		/* Num of retrans for soft mounts */
+#define	NFS_RETRANS	10		/* Num of retrans for UDP soft mounts */
+#define	NFS_RETRANS_TCP	2		/* Num of retrans for TCP soft mounts */
 #define	NFS_MAXGRPS	16		/* Max. size of groups list */
 #ifndef NFS_MINATTRTIMO
 #define	NFS_MINATTRTIMO 3		/* VREG attrib cache timeout in sec */
@@ -85,6 +86,7 @@
 #define NFS_CMPFH(n, f, s) \
 	((n)->n_fhsize == (s) && !bcmp((caddr_t)(n)->n_fhp, (caddr_t)(f), (s)))
 #define NFS_ISV3(v)	(VFSTONFS((v)->v_mount)->nm_flag & NFSMNT_NFSV3)
+#define NFS_ISV4(v)	(VFSTONFS((v)->v_mount)->nm_flag & NFSMNT_NFSV4)
 
 #define NFSSTA_HASWRITEVERF	0x00040000  /* Has write verifier for V3 */
 #define NFSSTA_GOTFSINFO	0x00100000  /* Got the V3 fsinfo */
@@ -131,6 +133,7 @@ extern struct uma_zone *nfsmount_zone;
 
 extern struct callout nfs_callout;
 extern struct nfsstats nfsstats;
+extern struct mtx nfs_iod_mtx;
 
 extern int nfs_numasync;
 extern unsigned int nfs_iodmax;
@@ -144,18 +147,13 @@ extern u_int32_t rpc_auth_unix, rpc_msgaccepted, rpc_call, rpc_autherr;
 
 extern int nfsv3_procid[NFS_NPROCS];
 
-struct uio;
-struct buf;
-struct vattr;
-struct nameidata;
-
 /*
  * Socket errors ignored for connectionless sockets??
  * For now, ignore them all
  */
 #define	NFSIGNORE_SOERROR(s, e) \
 		((e) != EINTR && (e) != EIO && \
-		 (e) != ERESTART && (e) != EWOULDBLOCK && \
+		(e) != ERESTART && (e) != EWOULDBLOCK && \
 		((s) & PR_CONNREQUIRED) == 0)
 
 /*
@@ -178,6 +176,7 @@ struct nfsreq {
 	int		r_rtt;		/* RTT for rpc */
 	int		r_lastmsg;	/* last tprintf */
 	struct thread	*r_td;		/* Proc that did I/O system call */
+	struct mtx	r_mtx;		/* Protects nfsreq fields */
 };
 
 /*
@@ -194,19 +193,27 @@ extern TAILQ_HEAD(nfs_reqq, nfsreq) nfs_reqq;
 #define	R_TPRINTFMSG	0x20		/* Did a tprintf msg. */
 #define	R_MUSTRESEND	0x40		/* Must resend request */
 #define	R_GETONEREP	0x80		/* Probe for one reply only */
+#define	R_PIN_REQ	0x100		/* Pin request down (rexmit in prog or other) */
+
+struct buf;
+struct socket;
+struct uio;
+struct vattr;
 
 /*
  * Pointers to ops that differ from v3 to v4
  */
 struct nfs_rpcops {
-	int	(*nr_readrpc)(struct vnode *vp, struct uio *uiop, struct ucred *cred);
-	int	(*nr_writerpc)(struct vnode *vp, struct uio *uiop, struct ucred *cred,
-			       int *iomode, int *must_commit);
+	int	(*nr_readrpc)(struct vnode *vp, struct uio *uiop,
+		    struct ucred *cred);
+	int	(*nr_writerpc)(struct vnode *vp, struct uio *uiop,
+		    struct ucred *cred, int *iomode, int *must_commit);
 	int	(*nr_writebp)(struct buf *bp, int force, struct thread *td);
-	int	(*nr_readlinkrpc)(struct vnode *vp, struct uio *uiop, struct ucred *cred);
+	int	(*nr_readlinkrpc)(struct vnode *vp, struct uio *uiop,
+		    struct ucred *cred);
 	void	(*nr_invaldir)(struct vnode *vp);
 	int	(*nr_commit)(struct vnode *vp, u_quad_t offset, int cnt,
-			     struct ucred *cred, struct thread *td);
+		    struct ucred *cred, struct thread *td);
 };
 
 /*
@@ -254,6 +261,31 @@ extern int nfs_debug;
 
 #endif
 
+/*
+ * On fast networks, the estimator will try to reduce the
+ * timeout lower than the latency of the server's disks,
+ * which results in too many timeouts, so cap the lower
+ * bound.
+ */
+#define NFS_MINRTO	(NFS_HZ >> 2)
+
+/*
+ * Keep the RTO from increasing to unreasonably large values
+ * when a server is not responding.
+ */
+#define NFS_MAXRTO	(20 * NFS_HZ)
+
+enum nfs_rto_timer_t {
+	NFS_DEFAULT_TIMER,
+	NFS_GETATTR_TIMER,
+	NFS_LOOKUP_TIMER,
+	NFS_READ_TIMER,
+	NFS_WRITE_TIMER,
+};
+#define NFS_MAX_TIMER	(NFS_WRITE_TIMER)
+
+#define NFS_INITRTT	(NFS_HZ << 3)
+
 vfs_init_t nfs_init;
 vfs_uninit_t nfs_uninit;
 int	nfs_mountroot(struct mount *mp, struct thread *td);
@@ -261,8 +293,8 @@ int	nfs_mountroot(struct mount *mp, struct thread *td);
 #ifndef NFS4_USE_RPCCLNT
 int	nfs_send(struct socket *, struct sockaddr *, struct mbuf *,
 	    struct nfsreq *);
-int	nfs_sndlock(struct nfsreq *);
-void	nfs_sndunlock(struct nfsreq *);
+int	nfs_connect_lock(struct nfsreq *);
+void	nfs_connect_unlock(struct nfsreq *);
 #endif /* ! NFS4_USE_RPCCLNT */
 
 int	nfs_vinvalbuf(struct vnode *, int, struct thread *, int);
@@ -275,8 +307,8 @@ int	nfs_readdirrpc(struct vnode *, struct uio *, struct ucred *);
 int	nfs_nfsiodnew(void);
 int	nfs_asyncio(struct nfsmount *, struct buf *, struct ucred *, struct thread *);
 int	nfs_doio(struct vnode *, struct buf *, struct ucred *, struct thread *);
-void    nfs_doio_directwrite (struct buf *);
-void    nfs_up(struct nfsreq *, struct nfsmount *, struct thread *,
+void	nfs_doio_directwrite (struct buf *);
+void	nfs_up(struct nfsreq *, struct nfsmount *, struct thread *,
 	    const char *, int);
 void	nfs_down(struct nfsreq *, struct nfsmount *, struct thread *,
 	    const char *, int, int);
@@ -297,6 +329,7 @@ int	nfs_connect(struct nfsmount *, struct nfsreq *);
 void	nfs_disconnect(struct nfsmount *);
 void	nfs_safedisconnect(struct nfsmount *);
 int	nfs_getattrcache(struct vnode *, struct vattr *);
+int	nfs_iosize(struct nfsmount *nmp);
 int	nfsm_strtmbuf(struct mbuf **, char **, const char *, long);
 int	nfs_bioread(struct vnode *, struct uio *, int, struct ucred *);
 int	nfsm_uiotombuf(struct uio *, struct mbuf **, int, caddr_t *);
@@ -307,12 +340,10 @@ int	nfs_fsinfo(struct nfsmount *, struct vnode *, struct ucred *,
 int	nfs_meta_setsize (struct vnode *, struct ucred *,
 	    struct thread *, u_quad_t);
 
-void    nfs_set_sigmask __P((struct thread *td, sigset_t *oldset));
-void    nfs_restore_sigmask __P((struct thread *td, sigset_t *set));
-int     nfs_tsleep __P((struct thread *td, void *ident, int priority, char *wmesg, 
-			int timo));
-int     nfs_msleep __P((struct thread *td, void *ident, struct mtx *mtx, int priority, 
-			char *wmesg, int timo));
+void	nfs_set_sigmask(struct thread *td, sigset_t *oldset);
+void	nfs_restore_sigmask(struct thread *td, sigset_t *set);
+int	nfs_msleep(struct thread *td, void *ident, struct mtx *mtx,
+	    int priority, char *wmesg, int timo);
 
 #endif	/* _KERNEL */
 

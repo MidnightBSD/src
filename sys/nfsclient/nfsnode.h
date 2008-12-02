@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsnode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: src/sys/nfsclient/nfsnode.h,v 1.55 2005/03/16 11:28:19 phk Exp $
+ * $FreeBSD: src/sys/nfsclient/nfsnode.h,v 1.60 2007/03/09 04:02:37 mohans Exp $
  */
 
 #ifndef _NFSCLIENT_NFSNODE_H_
@@ -74,6 +74,16 @@ struct nfsdmap {
 #define ndm_cookies	ndm_un1.ndmu3_cookies
 #define ndm4_cookies	ndm_un1.ndmu4_cookies
 
+#define n_ac_ts_tid		n_ac_ts.nfs_ac_ts_tid
+#define n_ac_ts_pid		n_ac_ts.nfs_ac_ts_pid
+#define n_ac_ts_syscalls	n_ac_ts.nfs_ac_ts_syscalls
+
+struct nfs_attrcache_timestamp {
+	lwpid_t		nfs_ac_ts_tid;
+	pid_t		nfs_ac_ts_pid;
+	unsigned long	nfs_ac_ts_syscalls;	
+};
+
 /*
  * The nfsnode is the nfs equivalent to ufs's inode. Any similarity
  * is purely coincidental.
@@ -88,6 +98,7 @@ struct nfsdmap {
  *     be well aligned and, therefore, tightly packed.
  */
 struct nfsnode {
+	struct mtx 		n_mtx;		/* Protects all of these members */
 	u_quad_t		n_size;		/* Current size of file */
 	u_quad_t		n_brev;		/* Modify rev when cached */
 	u_quad_t		n_lrev;		/* Modify rev for lease */
@@ -120,13 +131,13 @@ struct nfsnode {
 	short			n_fhsize;	/* size in bytes, of fh */
 	short			n_flag;		/* Flag for locking.. */
 	nfsfh_t			n_fh;		/* Small File Handle */
-	struct lock		n_rslock;
 	struct nfs4_fctx	n_rfc;
 	struct nfs4_fctx	n_wfc;
 	u_char			*n_name;	/* leaf name, for v4 OPEN op */
 	uint32_t		n_namelen;
-	daddr_t			ra_expect_lbn;
 	int			n_directio_opens;
+	int                     n_directio_asyncwr;
+	struct nfs_attrcache_timestamp n_ac_ts;
 };
 
 #define n_atim		n_un1.nf_atim
@@ -140,6 +151,8 @@ struct nfsnode {
 /*
  * Flags for n_flag
  */
+#define NFSYNCWAIT      0x0002  /* fsync waiting for all directio async writes
+				  to drain */
 #define	NMODIFIED	0x0004	/* Might have a modified buffer in bio */
 #define	NWRITEERR	0x0008	/* Flag write errors so close will know */
 /* 0x20, 0x40, 0x80 free */
@@ -150,6 +163,7 @@ struct nfsnode {
 #define	NTRUNCATE	0x1000	/* Opened by nfs_setattr() */
 #define	NSIZECHANGED	0x2000  /* File size has changed: need cache inval */
 #define NNONCACHE	0x4000  /* Node marked as noncacheable */
+#define NDIRCOOKIELK	0x8000	/* Lock to serialize access to directory cookies */
 
 /*
  * Convert between nfsnode pointers and vnode pointers
@@ -167,31 +181,6 @@ extern struct proc *nfs_iodwant[NFS_MAXASYNCDAEMON];
 extern struct nfsmount *nfs_iodmount[NFS_MAXASYNCDAEMON];
 
 #if defined(_KERNEL)
-
-/*
- *	nfs_rslock -	Attempt to obtain lock on nfsnode
- *
- *	Attempt to obtain a lock on the passed nfsnode, returning ENOLCK
- *	if the lock could not be obtained due to our having to sleep.  This
- *	function is generally used to lock around code that modifies an
- *	NFS file's size.  In order to avoid deadlocks the lock
- *	should not be obtained while other locks are being held.
- */
-
-static __inline int
-nfs_rslock(struct nfsnode *np, struct thread *td)
-{
-
-        return(lockmgr(&np->n_rslock,
-            LK_EXCLUSIVE | LK_CANRECURSE | LK_SLEEPFAIL, NULL, td));
-}
-
-static __inline void
-nfs_rsunlock(struct nfsnode *np, struct thread *td)
-{
-
-	(void)lockmgr(&np->n_rslock, LK_RELEASE, NULL, td);
-}
 
 extern	struct vop_vector	nfs_fifoops;
 extern	struct vop_vector	nfs_vnodeops;
@@ -211,11 +200,17 @@ int	nfs_reclaim(struct vop_reclaim_args *);
 /* other stuff */
 int	nfs_removeit(struct sillyrename *);
 int	nfs4_removeit(struct sillyrename *);
-int	nfs_nget(struct mount *, nfsfh_t *, int, struct nfsnode **);
+int	nfs_nget(struct mount *, nfsfh_t *, int, struct nfsnode **, int flags);
 nfsuint64 *nfs_getcookie(struct nfsnode *, off_t, int);
 uint64_t *nfs4_getcookie(struct nfsnode *, off_t, int);
 void	nfs_invaldir(struct vnode *);
 void	nfs4_invaldir(struct vnode *);
+int	nfs_upgrade_vnlock(struct vnode *vp, struct thread *td);
+void	nfs_downgrade_vnlock(struct vnode *vp, struct thread *td, int old_lock);
+void	nfs_printf(const char *fmt, ...);
+
+void nfs_dircookie_lock(struct nfsnode *np);
+void nfs_dircookie_unlock(struct nfsnode *np);
 
 #endif /* _KERNEL */
 

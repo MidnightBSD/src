@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.140.2.1 2005/12/13 21:29:26 rees Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.146.2.1 2007/10/12 19:18:46 mohans Exp $");
 
 /*
  * These functions support the macros and help fiddle mbuf chains for
@@ -76,6 +76,12 @@ __FBSDID("$FreeBSD: src/sys/nfsclient/nfs_subs.c,v 1.140.2.1 2005/12/13 21:29:26
 #include <netinet/in.h>
 
 /*
+ * Note that stdarg.h and the ANSI style va_start macro is used for both
+ * ANSI and traditional C compilers.
+ */
+#include <machine/stdarg.h>
+
+/*
  * Data items converted to xdr at startup, since they are constant
  * This is kinda hokey, but may save a little time doing byte swaps
  */
@@ -95,8 +101,8 @@ int		nfs_pbuf_freecnt = -1;	/* start out unlimited */
 
 struct nfs_reqq	nfs_reqq;
 struct mtx nfs_reqq_mtx;
-struct mtx nfs_reply_mtx;
 struct nfs_bufq	nfs_bufq;
+struct mtx nfs_xid_mtx;
 
 /*
  * and the reverse mapping from generic to Version 2 procedure numbers
@@ -182,6 +188,7 @@ nfsm_rpchead(struct ucred *cr, int nmflag, int procid, int auth_type,
 	 */
 	tl = nfsm_build(u_int32_t *, 8 * NFSX_UNSIGNED);
 
+	mtx_lock(&nfs_xid_mtx);
 	/* Get a pretty random xid to start with */
 	if (!nfs_xid)
 		nfs_xid = random();
@@ -193,6 +200,7 @@ nfsm_rpchead(struct ucred *cr, int nmflag, int procid, int auth_type,
 
 	*xidpp = tl;
 	*tl++ = txdr_unsigned(nfs_xid);
+	mtx_unlock(&nfs_xid_mtx);
 	*tl++ = rpc_call;
 	*tl++ = rpc_vers;
 	*tl++ = txdr_unsigned(NFS_PROG);
@@ -414,9 +422,10 @@ nfs_init(struct vfsconf *vfsp)
 	 * Initialize reply list and start timer
 	 */
 	TAILQ_INIT(&nfs_reqq);
-	callout_init(&nfs_callout, 0);
+	callout_init(&nfs_callout, CALLOUT_MPSAFE);
 	mtx_init(&nfs_reqq_mtx, "NFS reqq lock", NULL, MTX_DEF);
-	mtx_init(&nfs_reply_mtx, "Synch NFS reply posting", NULL, MTX_DEF);
+	mtx_init(&nfs_iod_mtx, "NFS iod lock", NULL, MTX_DEF);
+	mtx_init(&nfs_xid_mtx, "NFS xid lock", NULL, MTX_DEF);
 
 	nfs_pbuf_freecnt = nswbuf / 2 + 1;
 
@@ -437,17 +446,78 @@ nfs_uninit(struct vfsconf *vfsp)
 	 * Tell all nfsiod processes to exit. Clear nfs_iodmax, and wakeup
 	 * any sleeping nfsiods so they check nfs_iodmax and exit.
 	 */
+	mtx_lock(&nfs_iod_mtx);
 	nfs_iodmax = 0;
 	for (i = 0; i < nfs_numasync; i++)
 		if (nfs_iodwant[i])
 			wakeup(&nfs_iodwant[i]);
 	/* The last nfsiod to exit will wake us up when nfs_numasync hits 0 */
 	while (nfs_numasync)
-		tsleep(&nfs_numasync, PWAIT, "ioddie", 0);
-
+		msleep(&nfs_numasync, &nfs_iod_mtx, PWAIT, "ioddie", 0);
+	mtx_unlock(&nfs_iod_mtx);
 	nfs_nhuninit();
 	uma_zdestroy(nfsmount_zone);
 	return (0);
+}
+
+void 
+nfs_dircookie_lock(struct nfsnode *np)
+{
+	mtx_lock(&np->n_mtx);
+	while (np->n_flag & NDIRCOOKIELK)
+		(void) msleep(&np->n_flag, &np->n_mtx, PZERO, "nfsdirlk", 0);
+	np->n_flag |= NDIRCOOKIELK;
+	mtx_unlock(&np->n_mtx);
+}
+
+void 
+nfs_dircookie_unlock(struct nfsnode *np)
+{
+	mtx_lock(&np->n_mtx);
+	np->n_flag &= ~NDIRCOOKIELK;
+	wakeup(&np->n_flag);
+	mtx_unlock(&np->n_mtx);
+}
+
+int
+nfs_upgrade_vnlock(struct vnode *vp, struct thread *td)
+{
+	int old_lock;
+	
+ 	if ((old_lock = VOP_ISLOCKED(vp, td)) != LK_EXCLUSIVE) {
+ 		if (old_lock == LK_SHARED) {
+ 			/* Upgrade to exclusive lock, this might block */
+ 			vn_lock(vp, LK_UPGRADE | LK_RETRY, td);
+ 		} else {
+ 			vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+ 		}
+  	}
+	return old_lock;
+}
+
+void
+nfs_downgrade_vnlock(struct vnode *vp, struct thread *td, int old_lock)
+{
+	if (old_lock != LK_EXCLUSIVE) {
+ 		if (old_lock == LK_SHARED) {
+ 			/* Downgrade from exclusive lock, this might block */
+ 			vn_lock(vp, LK_DOWNGRADE, td);
+ 		} else {
+ 			VOP_UNLOCK(vp, 0, td);
+ 		}
+  	}
+}
+
+void
+nfs_printf(const char *fmt, ...)
+{
+	va_list ap;
+
+	mtx_lock(&Giant);
+	va_start(ap, fmt);
+	printf(fmt, ap);
+	va_end(ap);
+	mtx_unlock(&Giant);
 }
 
 /*
@@ -466,7 +536,7 @@ nfs_uninit(struct vfsconf *vfsp)
  */
 int
 nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
-    struct vattr *vaper, int dontshrink)
+		  struct vattr *vaper, int dontshrink)
 {
 	struct vnode *vp = *vpp;
 	struct vattr *vap;
@@ -478,8 +548,9 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 	struct mbuf *md;
 	enum vtype vtyp;
 	u_short vmode;
-	struct timespec mtime;
+	struct timespec mtime, mtime_save;
 	int v3 = NFS_ISV3(vp);
+	struct thread *td = curthread;
 
 	md = *mdp;
 	t1 = (mtod(md, caddr_t) + md->m_len) - *dposp;
@@ -535,6 +606,7 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 	 * information.
 	 */
 	np = VTONFS(vp);
+	mtx_lock(&np->n_mtx);
 	if (vp->v_type != vtyp) {
 		vp->v_type = vtyp;
 		if (vp->v_type == VFIFO)
@@ -545,6 +617,7 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 	vap->va_type = vtyp;
 	vap->va_mode = (vmode & 07777);
 	vap->va_rdev = rdev;
+	mtime_save = vap->va_mtime;
 	vap->va_mtime = mtime;
 	vap->va_fsid = vp->v_mount->mnt_stat.f_fsid.val[0];
 	if (v3) {
@@ -578,6 +651,14 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 		vap->va_filerev = 0;
 	}
 	np->n_attrstamp = time_second;
+	/* Timestamp the NFS otw getattr fetch */
+	if (td->td_proc) {
+		np->n_ac_ts_tid = td->td_tid;
+		np->n_ac_ts_pid = td->td_proc->p_pid;
+		np->n_ac_ts_syscalls = td->td_syscalls;
+	} else
+		bzero(&np->n_ac_ts, sizeof(struct nfs_attrcache_timestamp));
+	
 	if (vap->va_size != np->n_size) {
 		if (vap->va_type == VREG) {
 			if (dontshrink && vap->va_size < np->n_size) {
@@ -608,6 +689,21 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 			np->n_size = vap->va_size;
 		}
 	}
+	/*
+	 * The following checks are added to prevent a race between (say)
+	 * a READDIR+ and a WRITE. 
+	 * READDIR+, WRITE requests sent out.
+	 * READDIR+ resp, WRITE resp received on client.
+	 * However, the WRITE resp was handled before the READDIR+ resp
+	 * causing the post op attrs from the write to be loaded first
+	 * and the attrs from the READDIR+ to be loaded later. If this 
+	 * happens, we have stale attrs loaded into the attrcache.
+	 * We detect this by for the mtime moving back. We invalidate the 
+	 * attrcache when this happens.
+	 */
+	if (timespeccmp(&mtime_save, &vap->va_mtime, >))
+		/* Size changed or mtime went backwards */
+		np->n_attrstamp = 0;
 	if (vaper != NULL) {
 		bcopy((caddr_t)vap, (caddr_t)vaper, sizeof(*vap));
 		if (np->n_flag & NCHG) {
@@ -617,6 +713,7 @@ nfs_loadattrcache(struct vnode **vpp, struct mbuf **mdp, caddr_t *dposp,
 				vaper->va_mtime = np->n_mtim;
 		}
 	}
+	mtx_unlock(&np->n_mtx);
 	return (0);
 }
 
@@ -639,16 +736,20 @@ nfs_getattrcache(struct vnode *vp, struct vattr *vaper)
 	struct vattr *vap;
 	struct nfsmount *nmp;
 	int timeo;
-
+	
 	np = VTONFS(vp);
 	vap = &np->n_vattr;
 	nmp = VFSTONFS(vp->v_mount);
+#ifdef NFS_ACDEBUG
+	mtx_lock(&Giant);	/* nfs_printf() */
+#endif
+	mtx_lock(&np->n_mtx);
 	/* XXX n_mtime doesn't seem to be updated on a miss-and-reload */
 	timeo = (time_second - np->n_mtime.tv_sec) / 10;
 
 #ifdef NFS_ACDEBUG
 	if (nfs_acdebug>1)
-		printf("nfs_getattrcache: initial timeo = %d\n", timeo);
+		nfs_printf("nfs_getattrcache: initial timeo = %d\n", timeo);
 #endif
 
 	if (vap->va_type == VDIR) {
@@ -665,18 +766,19 @@ nfs_getattrcache(struct vnode *vp, struct vattr *vaper)
 
 #ifdef NFS_ACDEBUG
 	if (nfs_acdebug > 2)
-		printf("acregmin %d; acregmax %d; acdirmin %d; acdirmax %d\n",
-			nmp->nm_acregmin, nmp->nm_acregmax,
-			nmp->nm_acdirmin, nmp->nm_acdirmax);
+		nfs_printf("acregmin %d; acregmax %d; acdirmin %d; acdirmax %d\n",
+			   nmp->nm_acregmin, nmp->nm_acregmax,
+			   nmp->nm_acdirmin, nmp->nm_acdirmax);
 
 	if (nfs_acdebug)
-		printf("nfs_getattrcache: age = %d; final timeo = %d\n",
-			(time_second - np->n_attrstamp), timeo);
+		nfs_printf("nfs_getattrcache: age = %d; final timeo = %d\n",
+			   (time_second - np->n_attrstamp), timeo);
 #endif
 
 	if ((time_second - np->n_attrstamp) >= timeo) {
 		nfsstats.attrcache_misses++;
-		return (ENOENT);
+		mtx_unlock(&np->n_mtx);
+		return( ENOENT);
 	}
 	nfsstats.attrcache_hits++;
 	if (vap->va_size != np->n_size) {
@@ -701,6 +803,10 @@ nfs_getattrcache(struct vnode *vp, struct vattr *vaper)
 		if (np->n_flag & NUPD)
 			vaper->va_mtime = np->n_mtim;
 	}
+	mtx_unlock(&np->n_mtx);
+#ifdef NFS_ACDEBUG
+	mtx_unlock(&Giant);	/* nfs_printf() */
+#endif
 	return (0);
 }
 
@@ -714,7 +820,8 @@ nfs_getcookie(struct nfsnode *np, off_t off, int add)
 {
 	struct nfsdmap *dp, *dp2;
 	int pos;
-
+	nfsuint64 *retval = NULL;
+	
 	pos = (uoff_t)off / NFS_DIRBLKSIZ;
 	if (pos == 0 || off < 0) {
 #ifdef DIAGNOSTIC
@@ -732,14 +839,14 @@ nfs_getcookie(struct nfsnode *np, off_t off, int add)
 			dp->ndm_eocookie = 0;
 			LIST_INSERT_HEAD(&np->n_cookies, dp, ndm_list);
 		} else
-			return (NULL);
+			goto out;
 	}
 	while (pos >= NFSNUMCOOKIES) {
 		pos -= NFSNUMCOOKIES;
 		if (LIST_NEXT(dp, ndm_list)) {
 			if (!add && dp->ndm_eocookie < NFSNUMCOOKIES &&
-				pos >= dp->ndm_eocookie)
-				return (NULL);
+			    pos >= dp->ndm_eocookie)
+				goto out;
 			dp = LIST_NEXT(dp, ndm_list);
 		} else if (add) {
 			MALLOC(dp2, struct nfsdmap *, sizeof (struct nfsdmap),
@@ -748,15 +855,17 @@ nfs_getcookie(struct nfsnode *np, off_t off, int add)
 			LIST_INSERT_AFTER(dp, dp2, ndm_list);
 			dp = dp2;
 		} else
-			return (NULL);
+			goto out;
 	}
 	if (pos >= dp->ndm_eocookie) {
 		if (add)
 			dp->ndm_eocookie = pos + 1;
 		else
-			return (NULL);
+			goto out;
 	}
-	return (&dp->ndm_cookies[pos]);
+	retval = &dp->ndm_cookies[pos];
+out:
+	return (retval);
 }
 
 /*
@@ -773,11 +882,13 @@ nfs_invaldir(struct vnode *vp)
 	if (vp->v_type != VDIR)
 		panic("nfs: invaldir not dir");
 #endif
+	nfs_dircookie_lock(np);
 	np->n_direofoffset = 0;
 	np->n_cookieverf.nfsuquad[0] = 0;
 	np->n_cookieverf.nfsuquad[1] = 0;
 	if (LIST_FIRST(&np->n_cookies))
 		LIST_FIRST(&np->n_cookies)->ndm_eocookie = 0;
+	nfs_dircookie_unlock(np);
 }
 
 /*
@@ -796,8 +907,6 @@ nfs_clearcommit(struct mount *mp)
 	struct vnode *vp, *nvp;
 	struct buf *bp, *nbp;
 	int s;
-
-	GIANT_REQUIRED;
 
 	s = splbio();
 	MNT_ILOCK(mp);
@@ -848,7 +957,7 @@ nfsm_mtofh_xx(struct vnode *d, struct vnode **v, int v3, int *f,
 		t1 = nfsm_getfh_xx(&ttfhp, &ttfhsize, (v3), md, dpos);
 		if (t1 != 0)
 			return t1;
-		t1 = nfs_nget(d->v_mount, ttfhp, ttfhsize, &ttnp);
+		t1 = nfs_nget(d->v_mount, ttfhp, ttfhsize, &ttnp, LK_EXCLUSIVE);
 		if (t1 != 0)
 			return t1;
 		*v = NFSTOV(ttnp);
@@ -896,7 +1005,7 @@ nfsm_getfh_xx(nfsfh_t **f, int *s, int v3, struct mbuf **md, caddr_t *dpos)
 
 int
 nfsm_loadattr_xx(struct vnode **v, struct vattr *va, struct mbuf **md,
-    caddr_t *dpos)
+		 caddr_t *dpos)
 {
 	int t1;
 
@@ -910,7 +1019,7 @@ nfsm_loadattr_xx(struct vnode **v, struct vattr *va, struct mbuf **md,
 
 int
 nfsm_postop_attr_xx(struct vnode **v, int *f, struct mbuf **md,
-    caddr_t *dpos)
+		    caddr_t *dpos)
 {
 	u_int32_t *tl;
 	int t1;
@@ -945,9 +1054,11 @@ nfsm_wcc_data_xx(struct vnode **v, int *f, struct mbuf **md, caddr_t *dpos)
 		tl = nfsm_dissect_xx(6 * NFSX_UNSIGNED, md, dpos);
 		if (tl == NULL)
 			return EBADRPC;
+		mtx_lock(&(VTONFS(*v))->n_mtx);
 		if (*f)
  			ttretf = (VTONFS(*v)->n_mtime.tv_sec == fxdr_unsigned(u_int32_t, *(tl + 2)) && 
 				  VTONFS(*v)->n_mtime.tv_nsec == fxdr_unsigned(u_int32_t, *(tl + 3))); 
+		mtx_unlock(&(VTONFS(*v))->n_mtx);
 	}
 	t1 = nfsm_postop_attr_xx(v, &ttattrf, md, dpos);
 	if (t1)

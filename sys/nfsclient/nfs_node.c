@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_node.c,v 1.76.2.2 2006/03/12 21:50:02 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_node.c,v 1.86 2007/03/13 01:50:26 tegge Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,7 +99,7 @@ nfs_vncmpf(struct vnode *vp, void *arg)
  * nfsnode structure is returned.
  */
 int
-nfs_nget(struct mount *mntp, nfsfh_t *fhp, int fhsize, struct nfsnode **npp)
+nfs_nget(struct mount *mntp, nfsfh_t *fhp, int fhsize, struct nfsnode **npp, int flags)
 {
 	struct thread *td = curthread;	/* XXX */
 	struct nfsnode *np;
@@ -107,27 +107,17 @@ nfs_nget(struct mount *mntp, nfsfh_t *fhp, int fhsize, struct nfsnode **npp)
 	struct vnode *nvp;
 	int error;
 	u_int hash;
-	int rsflags;
 	struct nfsmount *nmp;
 	struct nfs_vncmp ncmp;
 
-	/*
-	 * Calculate nfs mount point and figure out whether the rslock should
-	 * be interruptible or not.
-	 */
 	nmp = VFSTONFS(mntp);
-	if (nmp->nm_flag & NFSMNT_INT)
-		rsflags = PCATCH;
-	else
-		rsflags = 0;
-
 	*npp = NULL;
 
 	hash = fnv_32_buf(fhp->fh_bytes, fhsize, FNV1_32_INIT);
 	ncmp.fhsize = fhsize;
 	ncmp.fh = fhp;
 
-	error = vfs_hash_get(mntp, hash, LK_EXCLUSIVE,
+	error = vfs_hash_get(mntp, hash, flags,
 	    td, &nvp, nfs_vncmpf, &ncmp);
 	if (error)
 		return (error);
@@ -158,23 +148,44 @@ nfs_nget(struct mount *mntp, nfsfh_t *fhp, int fhsize, struct nfsnode **npp)
 		vp->v_bufobj.bo_ops = &buf_ops_nfs;
 	vp->v_data = np;
 	np->n_vnode = vp;
-	error = vfs_hash_insert(vp, hash, LK_EXCLUSIVE,
-	    td, &nvp, nfs_vncmpf, &ncmp);
-	if (error)
-		return (error);
-	if (nvp != NULL) {
-		*npp = VTONFS(nvp);
-		/* vrele() the duplicate allocated here, to get it recycled */
-		vrele(vp);
-		return (0);
-	}
+	/* 
+	 * Initialize the mutex even if the vnode is going to be a loser.
+	 * This simplifies the logic in reclaim, which can then unconditionally
+	 * destroy the mutex (in the case of the loser, or if hash_insert happened
+	 * to return an error no special casing is needed).
+	 */
+	mtx_init(&np->n_mtx, "NFSnode lock", NULL, MTX_DEF);
+	/*
+	 * NFS supports recursive and shared locking.
+	 */
+	vp->v_vnlock->lk_flags |= LK_CANRECURSE;
+	vp->v_vnlock->lk_flags &= ~LK_NOSHARE;
 	if (fhsize > NFS_SMALLFH) {
 		MALLOC(np->n_fhp, nfsfh_t *, fhsize, M_NFSBIGFH, M_WAITOK);
 	} else
 		np->n_fhp = &np->n_fh;
 	bcopy((caddr_t)fhp, (caddr_t)np->n_fhp, fhsize);
 	np->n_fhsize = fhsize;
-	lockinit(&np->n_rslock, PVFS | rsflags, "nfrslk", 0, 0);
+	lockmgr(vp->v_vnlock, LK_EXCLUSIVE, NULL, td);
+	error = insmntque(vp, mntp);
+	if (error != 0) {
+		*npp = NULL;
+		if (np->n_fhsize > NFS_SMALLFH) {
+			FREE((caddr_t)np->n_fhp, M_NFSBIGFH);
+		}
+		mtx_destroy(&np->n_mtx);
+		uma_zfree(nfsnode_zone, np);
+		return (error);
+	}
+	error = vfs_hash_insert(vp, hash, flags, 
+	    td, &nvp, nfs_vncmpf, &ncmp);
+	if (error)
+		return (error);
+	if (nvp != NULL) {
+		*npp = VTONFS(nvp);
+		/* vfs_hash_insert() vput()'s the losing vnode */
+		return (0);
+	}
 	*npp = np;
 
 	return (0);
@@ -245,8 +256,7 @@ nfs_reclaim(struct vop_reclaim_args *ap)
 	if (np->n_fhsize > NFS_SMALLFH) {
 		FREE((caddr_t)np->n_fhp, M_NFSBIGFH);
 	}
-
-	lockdestroy(&np->n_rslock);
+	mtx_destroy(&np->n_mtx);
 	uma_zfree(nfsnode_zone, vp->v_data);
 	vp->v_data = NULL;
 	return (0);

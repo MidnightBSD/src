@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/krpc_subr.c,v 1.29 2005/03/16 08:13:08 jmg Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/krpc_subr.c,v 1.30 2007/08/06 14:26:02 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -214,8 +214,6 @@ krpc_call(struct sockaddr_in *sa, u_int prog, u_int vers, u_int func,
 	/* Free at end if not null. */
 	nam = mhead = NULL;
 	from = NULL;
-
-	NET_ASSERT_GIANT();
 
 	/*
 	 * Create socket and set its recieve timeout.

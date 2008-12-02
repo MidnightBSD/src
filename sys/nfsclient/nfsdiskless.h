@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsdiskless.h	8.2 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfsclient/nfsdiskless.h,v 1.17 2005/01/07 01:45:51 imp Exp $
+ * $FreeBSD: src/sys/nfsclient/nfsdiskless.h,v 1.18 2006/12/06 02:15:25 sam Exp $
  */
 
 #ifndef _NFSCLIENT_NFSDISKLESS_H_
@@ -108,6 +108,7 @@ extern struct nfs_diskless nfs_diskless;
 extern int	nfs_diskless_valid;
 void bootpc_init(void);
 void nfs_setup_diskless(void);
+void nfs_parse_options(const char *, struct nfs_args *);
 #endif
 
 #endif

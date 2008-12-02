@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.40.2.2 2006/02/14 00:06:32 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.45 2007/04/21 18:11:18 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.40.2.2 2006/02/14 00:06:32 
 #include <sys/mbuf.h>
 #include <sys/mount.h>
 #include <sys/namei.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/resourcevar.h>
 #include <sys/socket.h>
@@ -64,8 +65,8 @@ __FBSDID("$FreeBSD: src/sys/nfsclient/nfs_lock.c,v 1.40.2.2 2006/02/14 00:06:32 
 
 extern void (*nlminfo_release_p)(struct proc *p);
 
-MALLOC_DEFINE(M_NFSLOCK, "NFS lock", "NFS lock request");
-MALLOC_DEFINE(M_NLMINFO, "nlminfo", "NFS lock process structure");
+MALLOC_DEFINE(M_NFSLOCK, "nfsclient_lock", "NFS lock request");
+MALLOC_DEFINE(M_NLMINFO, "nfsclient_nlminfo", "NFS lock process structure");
 
 static int nfslockdans(struct thread *td, struct lockd_ans *ansp);
 static void nlminfo_release(struct proc *p);
@@ -84,6 +85,10 @@ static int
 nfslock_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 {
 	int error;
+
+	error = priv_check(td, PRIV_NFS_LOCKD);
+	if (error)
+		return (error);
 
 	mtx_lock(&nfslock_mtx);
 	if (!nfslock_isopen) {
@@ -290,7 +295,7 @@ nfs_dolock(struct vop_advlock_args *ap)
 			return (error);
 
 		/*
-		 * retry after 20 seconds if we haven't gotten a responce yet.
+		 * Retry after 20 seconds if we haven't gotten a response yet.
 		 * This number was picked out of thin air... but is longer
 		 * then even a reasonably loaded system should take (at least
 		 * on a local network).  XXX Probably should use a back-off
@@ -339,17 +344,6 @@ static int
 nfslockdans(struct thread *td, struct lockd_ans *ansp)
 {
 	struct proc *targetp;
-	int error;
-
-	/* Let root, or someone who once was root (lockd generally
-	 * switches to the daemon uid once it is done setting up) make
-	 * this call.
-	 *
-	 * XXX This authorization check is probably not right.
-	 */
-	if ((error = suser(td)) != 0 &&
-	    td->td_ucred->cr_svuid != 0)
-		return (error);
 
 	/* the version should match, or we're out of sync */
 	if (ansp->la_vers != LOCKD_ANS_VERSION)
