@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/lge/if_lgereg.h,v 1.5.2.2 2005/11/30 16:04:52 jhb Exp $
+ * $FreeBSD: src/sys/dev/lge/if_lgereg.h,v 1.9 2006/09/15 15:16:11 glebius Exp $
  */
 
 
@@ -523,6 +523,7 @@ struct lge_ring_data {
 
 struct lge_softc {
 	struct ifnet		*lge_ifp;
+	device_t		lge_dev;
 	bus_space_handle_t	lge_bhandle;
 	bus_space_tag_t		lge_btag;
 	struct resource		*lge_res;
@@ -607,8 +608,3 @@ struct lge_softc {
 #define LGE_PSTATE_D3		0x0003
 #define LGE_PME_EN		0x0010
 #define LGE_PME_STATUS		0x8000
-
-#ifdef __alpha__
-#undef vtophys
-#define vtophys(va)		alpha_XXX_dmamap((vm_offset_t)va)
-#endif

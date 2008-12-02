@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.39.2.4 2005/11/30 16:04:52 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.50 2007/02/23 12:18:45 piso Exp $");
 
 /*
  * Level 1 LXT1001 gigabit ethernet driver for FreeBSD. Public
@@ -89,7 +89,6 @@ __FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.39.2.4 2005/11/30 16:04:52 jhb 
 
 #include <vm/vm.h>              /* for vtophys */
 #include <vm/pmap.h>            /* for vtophys */
-#include <machine/clock.h>      /* for DELAY */
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <sys/bus.h>
@@ -105,7 +104,7 @@ __FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.39.2.4 2005/11/30 16:04:52 jhb 
 
 #include <dev/lge/if_lgereg.h>
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 /*
@@ -231,7 +230,7 @@ lge_eeprom_getword(sc, addr, dest)
 			break;
 
 	if (i == LGE_TIMEOUT) {
-		if_printf(sc->lge_ifp, "EEPROM read timed out\n");
+		device_printf(sc->lge_dev, "EEPROM read timed out\n");
 		return;
 	}
 
@@ -296,7 +295,7 @@ lge_miibus_readreg(dev, phy, reg)
 			break;
 
 	if (i == LGE_TIMEOUT) {
-		if_printf(sc->lge_ifp, "PHY read timed out\n");
+		device_printf(sc->lge_dev, "PHY read timed out\n");
 		return(0);
 	}
 
@@ -321,7 +320,7 @@ lge_miibus_writereg(dev, phy, reg, data)
 			break;
 
 	if (i == LGE_TIMEOUT) {
-		if_printf(sc->lge_ifp, "PHY write timed out\n");
+		device_printf(sc->lge_dev, "PHY write timed out\n");
 		return(0);
 	}
 
@@ -427,7 +426,7 @@ lge_reset(sc)
 	}
 
 	if (i == LGE_TIMEOUT)
-		if_printf(sc->lge_ifp, "reset never completed\n");
+		device_printf(sc->lge_dev, "reset never completed\n");
 
 	/* Wait a little while for the chip to get its brains in order. */
 	DELAY(1000);
@@ -473,6 +472,8 @@ lge_attach(dev)
 	int			error = 0, rid;
 
 	sc = device_get_softc(dev);
+	sc->lge_dev = dev;
+	
 	mtx_init(&sc->lge_mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK,
 	    MTX_DEF);
 	callout_init_mtx(&sc->lge_stat_callout, &sc->lge_mtx, 0);
@@ -572,7 +573,7 @@ lge_attach(dev)
 	ether_ifattach(ifp, eaddr);
 
 	error = bus_setup_intr(dev, sc->lge_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    lge_intr, sc, &sc->lge_intrhand);
+	    NULL, lge_intr, sc, &sc->lge_intrhand);
 
 	if (error) {
 		ether_ifdetach(ifp);
@@ -611,7 +612,6 @@ lge_detach(dev)
 	LGE_UNLOCK(sc);
 	callout_drain(&sc->lge_stat_callout);
 	ether_ifdetach(ifp);
-	if_free(ifp);
 
 	bus_generic_detach(dev);
 	device_delete_child(dev, sc->lge_miibus);
@@ -621,6 +621,7 @@ lge_detach(dev)
 	bus_release_resource(dev, LGE_RES, LGE_RID, sc->lge_res);
 
 	contigfree(sc->lge_ldata, sizeof(struct lge_list_data), M_DEVBUF);
+	if_free(ifp);
 	lge_free_jumbo_mem(sc);
 	mtx_destroy(&sc->lge_mtx);
 
@@ -699,7 +700,7 @@ lge_newbuf(sc, c, m)
 	if (m == NULL) {
 		MGETHDR(m_new, M_DONTWAIT, MT_DATA);
 		if (m_new == NULL) {
-			if_printf(sc->lge_ifp, "no memory for rx list "
+			device_printf(sc->lge_dev, "no memory for rx list "
 			    "-- packet dropped!\n");
 			return(ENOBUFS);
 		}
@@ -708,7 +709,7 @@ lge_newbuf(sc, c, m)
 		buf = lge_jalloc(sc);
 		if (buf == NULL) {
 #ifdef LGE_VERBOSE
-			if_printf(sc->lge_ifp, "jumbo allocation failed "
+			device_printf(sc->lge_dev, "jumbo allocation failed "
 			    "-- packet dropped!\n");
 #endif
 			m_freem(m_new);
@@ -769,7 +770,7 @@ lge_alloc_jumbo_mem(sc)
 	    M_NOWAIT, 0, 0xffffffff, PAGE_SIZE, 0);
 
 	if (sc->lge_cdata.lge_jumbo_buf == NULL) {
-		if_printf(sc->lge_ifp, "no memory for jumbo buffers!\n");
+		device_printf(sc->lge_dev, "no memory for jumbo buffers!\n");
 		return(ENOBUFS);
 	}
 
@@ -787,7 +788,7 @@ lge_alloc_jumbo_mem(sc)
 		entry = malloc(sizeof(struct lge_jpool_entry),
 		    M_DEVBUF, M_NOWAIT);
 		if (entry == NULL) {
-			if_printf(sc->lge_ifp, "no memory for jumbo "
+			device_printf(sc->lge_dev, "no memory for jumbo "
 			    "buffer queue!\n");
 			return(ENOBUFS);
 		}
@@ -830,7 +831,7 @@ lge_jalloc(sc)
 	
 	if (entry == NULL) {
 #ifdef LGE_VERBOSE
-		if_printf(sc->lge_ifp, "no free jumbo buffers\n");
+		device_printf(sc->lge_dev, "no free jumbo buffers\n");
 #endif
 		return(NULL);
 	}
@@ -926,7 +927,7 @@ lge_rxeof(sc, cnt)
 			    ifp, NULL);
 			lge_newbuf(sc, &LGE_RXTAIL(sc), m);
 			if (m0 == NULL) {
-				if_printf(ifp, "no receive buffers "
+				device_printf(sc->lge_dev, "no receive buffers "
 				    "available -- packet dropped!\n");
 				ifp->if_ierrors++;
 				continue;
@@ -1049,7 +1050,7 @@ lge_tick(xsc)
 			if (bootverbose &&
 		  	    (IFM_SUBTYPE(mii->mii_media_active) == IFM_1000_SX||
 			    IFM_SUBTYPE(mii->mii_media_active) == IFM_1000_T))
-				if_printf(ifp, "gigabit link up\n");
+				device_printf(sc->lge_dev, "gigabit link up\n");
 			if (ifp->if_snd.ifq_head != NULL)
 				lge_start_locked(ifp);
 		}
@@ -1263,12 +1264,12 @@ lge_init_locked(sc)
 	mii = device_get_softc(sc->lge_miibus);
 
 	/* Set MAC address */
-	CSR_WRITE_4(sc, LGE_PAR0, *(u_int32_t *)(&IFP2ENADDR(sc->lge_ifp)[0]));
-	CSR_WRITE_4(sc, LGE_PAR1, *(u_int32_t *)(&IFP2ENADDR(sc->lge_ifp)[4]));
+	CSR_WRITE_4(sc, LGE_PAR0, *(u_int32_t *)(&IF_LLADDR(sc->lge_ifp)[0]));
+	CSR_WRITE_4(sc, LGE_PAR1, *(u_int32_t *)(&IF_LLADDR(sc->lge_ifp)[4]));
 
 	/* Init circular RX list. */
 	if (lge_list_rx_init(sc) == ENOBUFS) {
-		if_printf(ifp, "initialization failed: no "
+		device_printf(sc->lge_dev, "initialization failed: no "
 		    "memory for rx buffers\n");
 		lge_stop(sc);
 		return;
