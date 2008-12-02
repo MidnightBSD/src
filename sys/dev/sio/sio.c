@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.459.2.1 2006/03/10 19:37:32 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.470 2007/02/23 12:18:53 piso Exp $");
 
 #include "opt_comconsole.h"
 #include "opt_compat.h"
@@ -45,8 +45,8 @@ __FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.459.2.1 2006/03/10 19:37:32 jhb Ex
  * Works for National Semiconductor NS8250-NS16550AF UARTs.
  * COM driver, based on HP dca driver.
  *
- * Changes for PC-Card integration:
- *	- Added PC-Card driver table and handlers
+ * Changes for PC Card integration:
+ *	- Added PC Card driver table and handlers
  */
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -263,7 +263,7 @@ static	void	comclose(struct tty *tp);
 static	int	comopen(struct tty *tp, struct cdev *dev);
 static	void	sioinput(struct com_s *com);
 static	void	siointr1(struct com_s *com);
-static	void	siointr(void *arg);
+static	int	siointr(void *arg);
 static	int	commodem(struct tty *tp, int sigon, int sigoff);
 static	int	comparam(struct tty *tp, struct termios *t);
 static	void	siopoll(void *);
@@ -370,7 +370,7 @@ sysctl_machdep_comdefaultrate(SYSCTL_HANDLER_ARGS)
 
 SYSCTL_PROC(_machdep, OID_AUTO, conspeed, CTLTYPE_INT | CTLFLAG_RW,
 	    0, 0, sysctl_machdep_comdefaultrate, "I", "");
-/* TUNABLE_INT("machdep.conspeed", &comdefaultrate); */
+TUNABLE_INT("machdep.conspeed", __DEVOLATILE(int *, &comdefaultrate));
 
 #define SET_FLAG(dev, bit) device_set_flags(dev, device_get_flags(dev) | (bit))
 #define CLR_FLAG(dev, bit) device_set_flags(dev, device_get_flags(dev) & ~(bit))
@@ -700,7 +700,7 @@ sioprobe(dev, xrid, rclk, noprobe)
 			device_set_softc(dev, NULL);
 			free(com, M_DEVBUF);
 		}
-		return (result);
+		return (result == 0 ? BUS_PROBE_DEFAULT + 1 : result);
 	}
 
 	/*
@@ -777,7 +777,7 @@ sioprobe(dev, xrid, rclk, noprobe)
 		device_set_softc(dev, NULL);
 		free(com, M_DEVBUF);
 	}
-	return (result);
+	return (result == 0 ? BUS_PROBE_DEFAULT + 1 : result);
 }
 
 #ifdef COM_ESP
@@ -1074,13 +1074,14 @@ determined_type: ;
 	rid = 0;
 	com->irqres = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, RF_ACTIVE);
 	if (com->irqres) {
-		ret = BUS_SETUP_INTR(device_get_parent(dev), dev, com->irqres,
-				     INTR_TYPE_TTY | INTR_FAST,
-				     siointr, com, &com->cookie);
+		ret = bus_setup_intr(dev, com->irqres,
+				     INTR_TYPE_TTY,
+				     siointr, NULL, com, 
+				     &com->cookie);
 		if (ret) {
-			ret = BUS_SETUP_INTR(device_get_parent(dev), dev,
+			ret = bus_setup_intr(dev,
 					     com->irqres, INTR_TYPE_TTY,
-					     siointr, com, &com->cookie);
+					     NULL, (driver_intr_t *)siointr, com, &com->cookie);
 			if (ret == 0)
 				device_printf(dev, "unable to activate interrupt in fast mode - using normal mode\n");
 		}
@@ -1099,7 +1100,7 @@ determined_type: ;
 	}
 
 	/* We're ready, open the doors... */
-	ttycreate(tp, NULL, unit, MINOR_CALLOUT, "d%r", unit);
+	ttycreate(tp, TS_CALLOUT, "d%r", unit);
 
 	return (0);
 }
@@ -1378,7 +1379,7 @@ sioinput(com)
 		outb(com->modem_ctl_port, com->mcr_image |= MCR_RTS);
 }
 
-static void
+static int
 siointr(arg)
 	void		*arg;
 {
@@ -1422,6 +1423,7 @@ siointr(arg)
 	} while (possibly_more_intrs);
 	mtx_unlock_spin(&sio_lock);
 #endif /* COM_MULTIPORT */
+	return(FILTER_HANDLED);
 }
 
 static struct timespec siots[8];
@@ -2273,15 +2275,13 @@ static void siocnclose(struct siocnstate *sp, Port_t iobase);
 static void siocnopen(struct siocnstate *sp, Port_t iobase, int speed);
 static void siocntxwait(Port_t iobase);
 
-static cn_probe_t siocnprobe;
-static cn_init_t siocninit;
-static cn_term_t siocnterm;
-static cn_checkc_t siocncheckc;
-static cn_getc_t siocngetc;
-static cn_putc_t siocnputc;
+static cn_probe_t sio_cnprobe;
+static cn_init_t sio_cninit;
+static cn_term_t sio_cnterm;
+static cn_getc_t sio_cngetc;
+static cn_putc_t sio_cnputc;
 
-CONS_DRIVER(sio, siocnprobe, siocninit, siocnterm, siocngetc, siocncheckc,
-	    siocnputc, NULL);
+CONSOLE_DRIVER(sio);
 
 static void
 siocntxwait(iobase)
@@ -2403,7 +2403,7 @@ siocnclose(sp, iobase)
 }
 
 static void
-siocnprobe(cp)
+sio_cnprobe(cp)
 	struct consdev	*cp;
 {
 	speed_t			boot_speed;
@@ -2486,21 +2486,21 @@ siocnprobe(cp)
 }
 
 static void
-siocninit(cp)
+sio_cninit(cp)
 	struct consdev	*cp;
 {
 	comconsole = cp->cn_unit;
 }
 
 static void
-siocnterm(cp)
+sio_cnterm(cp)
 	struct consdev	*cp;
 {
 	comconsole = -1;
 }
 
 static int
-siocncheckc(struct consdev *cd)
+sio_cngetc(struct consdev *cd)
 {
 	int	c;
 	Port_t	iobase;
@@ -2530,38 +2530,8 @@ siocncheckc(struct consdev *cd)
 	return (c);
 }
 
-static int
-siocngetc(struct consdev *cd)
-{
-	int	c;
-	Port_t	iobase;
-	int	s;
-	struct siocnstate	sp;
-	speed_t	speed;
-
-	if (cd != NULL && cd->cn_unit == siocnunit) {
-		iobase = siocniobase;
-		speed = comdefaultrate;
-	} else {
-#ifdef GDB
-		iobase = siogdbiobase;
-		speed = gdbdefaultrate;
-#else
-		return (-1);
-#endif
-	}
-	s = spltty();
-	siocnopen(&sp, iobase, speed);
-	while (!(inb(iobase + com_lsr) & LSR_RXRDY))
-		;
-	c = inb(iobase + com_data);
-	siocnclose(&sp, iobase);
-	splx(s);
-	return (c);
-}
-
 static void
-siocnputc(struct consdev *cd, int c)
+sio_cnputc(struct consdev *cd, int c)
 {
 	int	need_unlock;
 	int	s;
@@ -2607,11 +2577,9 @@ static gdb_probe_f siogdbprobe;
 static gdb_init_f siogdbinit;
 static gdb_term_f siogdbterm;
 static gdb_getc_f siogdbgetc;
-static gdb_checkc_f siogdbcheckc;
 static gdb_putc_f siogdbputc;
 
-GDB_DBGPORT(sio, siogdbprobe, siogdbinit, siogdbterm, siogdbcheckc,
-    siogdbgetc, siogdbputc);
+GDB_DBGPORT(sio, siogdbprobe, siogdbinit, siogdbterm, siogdbgetc, siogdbputc);
 
 static int
 siogdbprobe(void)
@@ -2632,19 +2600,13 @@ siogdbterm(void)
 static void
 siogdbputc(int c)
 {
-	siocnputc(NULL, c);
-}
-
-static int
-siogdbcheckc(void)
-{
-	return (siocncheckc(NULL));
+	sio_cnputc(NULL, c);
 }
 
 static int
 siogdbgetc(void)
 {
-	return (siocngetc(NULL));
+	return (sio_cngetc(NULL));
 }
 
 #endif

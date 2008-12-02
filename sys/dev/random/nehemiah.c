@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/random/nehemiah.c,v 1.3.2.1 2006/02/08 05:58:17 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/random/nehemiah.c,v 1.4 2005/12/20 21:41:52 ps Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>

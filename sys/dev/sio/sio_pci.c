@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sio/sio_pci.c,v 1.21 2005/05/29 04:42:25 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sio/sio_pci.c,v 1.23 2007/03/29 04:26:52 maxim Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/random/yarrow.c,v 1.45.2.1 2006/02/08 05:58:17 ps Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/random/yarrow.c,v 1.47.2.1 2007/11/29 16:05:38 simon Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -114,7 +114,7 @@ random_yarrow_init_alg(struct sysctl_ctx_list *clist, struct sysctl_oid *in_o)
 		OID_AUTO, "yarrow", CTLFLAG_RW, 0,
 		"Yarrow Parameters");
 
-	 SYSCTL_ADD_PROC(clist,
+	SYSCTL_ADD_PROC(clist,
 		SYSCTL_CHILDREN(random_yarrow_o), OID_AUTO,
 		"gengateinterval", CTLTYPE_INT|CTLFLAG_RW,
 		&random_state.gengateinterval, 10,
