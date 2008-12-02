@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * if_ar.h
  *

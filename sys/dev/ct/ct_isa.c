@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NecBSD: ct_isa.c,v 1.6 1999/07/26 06:32:01 honda Exp $	*/
 
 #include <sys/cdefs.h>

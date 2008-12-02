@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Michael Smith
  * Copyright (c) 2004 Paul Saab

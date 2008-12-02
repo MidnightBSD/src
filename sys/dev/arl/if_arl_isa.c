@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001, Ivan Sharov, Vitaly Belekhov.
  * Copyright (c) 2004 Stanislav Svirid.

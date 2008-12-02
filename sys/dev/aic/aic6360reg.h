@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Charles Hannum.
  * Copyright (c) 1994 Jarle Greipsland.

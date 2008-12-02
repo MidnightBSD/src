@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Cronyx-Tau32-PCI adapter driver for FreeBSD.
  *

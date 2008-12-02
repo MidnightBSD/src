@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * DDK library for Cronyx-Tau adapters.
  *

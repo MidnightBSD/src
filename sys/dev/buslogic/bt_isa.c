@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  *      Buslogic BT-54X and BT-445 cards

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * AMD Am83C30 serial communication controller registers.
  *

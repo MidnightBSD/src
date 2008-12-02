@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: smc90cx6var.h,v 1.5 2000/03/23 07:01:32 thorpej Exp $	*/
 /*	$FreeBSD: src/sys/dev/cm/smc90cx6var.h,v 1.5 2006/06/11 22:25:01 fjoe Exp $ */
 

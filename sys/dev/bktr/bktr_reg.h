@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * $FreeBSD: src/sys/dev/bktr/bktr_reg.h,v 1.50 2005/05/24 20:42:08 cognet Exp $
  *

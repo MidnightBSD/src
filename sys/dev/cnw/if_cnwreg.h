@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_cnwreg.h,v 1.3 2000/07/05 18:42:19 itojun Exp $	*/
 /* $FreeBSD: src/sys/dev/cnw/if_cnwreg.h,v 1.1 2001/03/16 07:25:42 imp Exp $ */
 

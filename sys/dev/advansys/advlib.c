@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Low level routines for the Advanced Systems Inc. SCSI controllers chips
  *

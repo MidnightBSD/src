@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * extensions to ioctl_meteor.h for the bt848 cards
  *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: smc90cx6reg.h,v 1.7 1999/02/16 23:34:13 is Exp $ */
 /*	$FreeBSD: src/sys/dev/cm/smc90cx6reg.h,v 1.2 2006/06/11 22:25:01 fjoe Exp $ */
 

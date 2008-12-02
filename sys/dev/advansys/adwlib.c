@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Low level routines for Second Generation
  * Advanced Systems Inc. SCSI controllers chips

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Generic driver definitions and exported functions for the Advanced
  * Systems Inc. Second Generation SCSI controllers

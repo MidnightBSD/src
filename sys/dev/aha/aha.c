@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Generic register and struct definitions for the Adaptech 154x/164x
  * SCSI host adapters. Product specific probe and attach routines can

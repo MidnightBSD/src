@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * CAM SCSI device driver for the Adaptec 174X SCSI Host adapter
  *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Middle-level code for Cronyx Tau32-PCI adapters.
  *

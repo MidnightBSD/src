@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997-2001 Gerd Knorr <kraxel@bytesex.org>
  * All rights reserved.

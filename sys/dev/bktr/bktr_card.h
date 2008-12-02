@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/dev/bktr/bktr_card.h,v 1.12 2005/11/13 13:26:37 netchild Exp $ */
 
 /*

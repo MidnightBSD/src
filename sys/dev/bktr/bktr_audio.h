@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/dev/bktr/bktr_audio.h,v 1.4 2005/01/06 01:42:31 imp Exp $ */
 /*
  * This is part of the Driver for Video Capture Cards (Frame grabbers)

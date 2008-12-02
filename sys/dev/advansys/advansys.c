@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Generic driver for the Advanced Systems Inc. SCSI controllers
  * Product specific probe and attach routines can be found in:

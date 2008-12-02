@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/dev/bktr/CHANGELOG.TXT,v 1.22 2006/08/04 07:56:32 yar Exp $ */
 
 /*

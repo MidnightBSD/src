@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_bah_zbus.c,v 1.6 2000/01/23 21:06:12 aymeric Exp $ */
 
 #include <sys/cdefs.h>

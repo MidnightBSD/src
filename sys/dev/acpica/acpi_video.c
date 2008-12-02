@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002-2003 Taku YAMAMOTO <taku@cent.saitama-u.ac.jp>
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: acpi_video.c,v 1.2 2008-11-23 16:18:02 laffer1 Exp $
+ *	$Id: acpi_video.c,v 1.3 2008-12-02 02:24:29 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>

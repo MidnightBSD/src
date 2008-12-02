@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Cronyx Tau-PCI DDK definitions.
  *

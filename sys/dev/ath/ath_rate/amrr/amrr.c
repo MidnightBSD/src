@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 INRIA
  * Copyright (c) 2002-2005 Sam Leffler, Errno Consulting

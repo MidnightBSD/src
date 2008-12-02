@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Low-level subroutines for Cronyx Tau-PCI adapter.
  *

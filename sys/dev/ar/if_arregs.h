@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 - 2001 John Hay.  All rights reserved.
  *

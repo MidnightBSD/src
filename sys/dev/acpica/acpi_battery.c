@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Nate Lawson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@jp.freebsd.org>

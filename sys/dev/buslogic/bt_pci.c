@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Product specific probe and attach routines for:
  *      Buslogic BT946, BT948, BT956, BT958 SCSI controllers

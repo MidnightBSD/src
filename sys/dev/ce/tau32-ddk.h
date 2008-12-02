@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * DDK (Driver Development Kit) for Cronyx Tau32-PCI adapter.
  *

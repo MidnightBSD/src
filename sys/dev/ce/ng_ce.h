@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Defines for Cronyx Tau32-PCI adapter driver.
  *

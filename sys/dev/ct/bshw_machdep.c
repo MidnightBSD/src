@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NecBSD: bshw_machdep.c,v 1.8.12.6 2001/06/29 06:28:05 honda Exp $	*/
 
 #include <sys/cdefs.h>

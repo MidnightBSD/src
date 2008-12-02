@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Level One LXT318 E1 transceiver registers.
  * Crystal CS61318 E1 Line Interface Unit registers.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Jonathan Lemon
  * Copyright (c) 1999, 2000 Michael Smith

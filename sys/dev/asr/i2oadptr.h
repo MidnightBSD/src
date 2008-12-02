@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  ****************************************************************
  * Copyright (c) 1996-2000 Distributed Processing Technology Corporation

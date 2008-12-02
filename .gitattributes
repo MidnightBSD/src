@@ -25571,7 +25571,6 @@ sys/dev/arcmsr/arcmsr.h -text
 sys/dev/arl/if_arl.c -text
 sys/dev/arl/if_arl_isa.c -text
 sys/dev/arl/if_arlreg.h -text
-sys/dev/asr/MAINTAINER -text
 sys/dev/asr/asr.c -text
 sys/dev/asr/dptalign.h -text
 sys/dev/asr/dptsig.h -text

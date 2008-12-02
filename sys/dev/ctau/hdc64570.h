@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Hitachi HD64570 serial communications adaptor registers.
  *

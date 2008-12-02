@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Downloadable microcode for Second Generation
  * Advanced Systems Inc. SCSI controllers

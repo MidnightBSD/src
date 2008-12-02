@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Mark Tinguely and Jim Lowe
  * All rights reserved.

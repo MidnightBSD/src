@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Defines for Cronyx-Tau adapter driver.
  *

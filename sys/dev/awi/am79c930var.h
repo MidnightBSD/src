@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $NetBSD: am79c930var.h,v 1.3 2004/01/15 09:33:48 onoe Exp $ */
 /* $FreeBSD: src/sys/dev/awi/am79c930var.h,v 1.3 2004/01/15 10:04:20 onoe Exp $ */
 

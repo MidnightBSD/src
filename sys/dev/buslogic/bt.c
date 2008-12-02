@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Generic driver for the BusLogic MultiMaster SCSI host adapters
  * Product specific probe and attach routines can be found in:

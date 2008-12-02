@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Cronyx-Tau adapter driver for FreeBSD.
  * Supports PPP/HDLC and Cisco/HDLC protocol in synchronous mode,

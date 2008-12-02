@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: smc90cx6.c,v 1.38 2001/07/07 15:57:53 thorpej Exp $ */
 
 #include <sys/cdefs.h>

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006-2007 Broadcom Corporation
  *	David Christensen <davidch@broadcom.com>.  All rights reserved.
