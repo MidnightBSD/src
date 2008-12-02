@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pccard/pccardvarp.h,v 1.1.2.2 2005/10/23 18:22:16 imp Exp $
+ * $FreeBSD: src/sys/dev/pccard/pccardvarp.h,v 1.4 2007/05/31 19:29:20 piso Exp $
  */
 
 #ifndef _PCCARD_PCCARDVARP_H
@@ -112,6 +112,7 @@ struct pccard_function {
 	bus_addr_t	pf_mfc_iobase;
 	bus_addr_t	pf_mfc_iomax;
 	int		pf_flags;
+	driver_filter_t	*intr_filter;
 	driver_intr_t	*intr_handler;
 	void		*intr_handler_arg;
 	void		*intr_handler_cookie;

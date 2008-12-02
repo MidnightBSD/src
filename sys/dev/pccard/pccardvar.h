@@ -1,5 +1,5 @@
 /*	$NetBSD: pcmciavar.h,v 1.12 2000/02/08 12:51:31 enami Exp $	*/
-/* $FreeBSD: src/sys/dev/pccard/pccardvar.h,v 1.53.2.2 2005/09/27 18:42:20 imp Exp $ */
+/* $FreeBSD: src/sys/dev/pccard/pccardvar.h,v 1.61 2005/09/25 01:38:02 imp Exp $ */
 
 /*-
  * Copyright (c) 1997 Marc Horowitz.  All rights reserved.
@@ -143,19 +143,6 @@ pccard_product_lookup(device_t dev, const struct pccard_product *tab,
 #define	pccard_mfc(sc)							\
 		(STAILQ_FIRST(&(sc)->card.pf_head) &&			\
 		 STAILQ_NEXT(STAILQ_FIRST(&(sc)->card.pf_head),pf_list))
-
-/* compat layer */
-static __inline int
-pccard_compat_probe(device_t dev)
-{
-	return (CARD_COMPAT_DO_PROBE(device_get_parent(dev), dev));
-}
-
-static __inline int
-pccard_compat_attach(device_t dev)
-{
-	return (CARD_COMPAT_DO_ATTACH(device_get_parent(dev), dev));
-}
 
 /* Convenience functions */
 

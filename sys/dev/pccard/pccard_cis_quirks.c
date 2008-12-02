@@ -1,7 +1,7 @@
 /*	$NetBSD: pcmcia_cis_quirks.c,v 1.6 2000/04/12 21:07:55 scw Exp $ */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccard/pccard_cis_quirks.c,v 1.15.2.1 2005/09/27 18:42:20 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pccard/pccard_cis_quirks.c,v 1.16.2.1 2007/10/30 10:17:11 remko Exp $");
 
 #define	PCCARDDEBUG
 
@@ -180,6 +180,27 @@ static struct pccard_config_entry pccard_ndc_nd5100_func0_cfe0 = {
 	0,			/* maxtwins */
 };
 
+static struct pccard_function pccard_sierra_a555_func1 = {
+	1,			/* function number */
+	PCCARD_FUNCTION_SERIAL,
+	0x24,			/* last cfe number */
+	0x700,			/* ccr_base */
+	0x73,			/* ccr_mask */
+};
+
+static struct pccard_config_entry pccard_sierra_a555_func1_cfe0 = {
+	0x22,			/* cfe number */
+	PCCARD_CFE_IO8 | PCCARD_CFE_IRQLEVEL, 
+	PCCARD_IFTYPE_IO,
+	1,			/* num_iospace */
+	0,			/* iomask */
+	{ { 0x0008, 0x3e8 } },	/* iospace */
+	0x3fbc,			/* irqmask */
+	0,			/* num_memspace */
+	{ },			/* memspace */
+	0,			/* maxtwins */
+};
+
 static struct pccard_cis_quirk pccard_cis_quirks[] = {
 	{ PCMCIA_VENDOR_3COM, PCMCIA_PRODUCT_3COM_3CXEM556, PCMCIA_CIS_INVALID, 
 	  &pccard_3cxem556_func0, &pccard_3cxem556_func0_cfe0 },
@@ -195,6 +216,18 @@ static struct pccard_cis_quirk pccard_cis_quirks[] = {
 	{ PCMCIA_VENDOR_3COM, PCMCIA_PRODUCT_3COM_3CCFEM556BI,
 	  PCMCIA_CIS_INVALID,
 	  &pccard_3ccfem556bi_func1, &pccard_3ccfem556bi_func1_cfe0 },
+	{ PCMCIA_VENDOR_SIERRA, PCMCIA_PRODUCT_SIERRA_A550,
+	  PCMCIA_CIS_INVALID,
+	  &pccard_sierra_a555_func1, &pccard_sierra_a555_func1_cfe0 },
+	{ PCMCIA_VENDOR_SIERRA, PCMCIA_PRODUCT_SIERRA_A555,
+	  PCMCIA_CIS_INVALID,
+	  &pccard_sierra_a555_func1, &pccard_sierra_a555_func1_cfe0 },
+	{ PCMCIA_VENDOR_SIERRA, PCMCIA_PRODUCT_SIERRA_A710,
+	  PCMCIA_CIS_INVALID,
+	  &pccard_sierra_a555_func1, &pccard_sierra_a555_func1_cfe0 },
+	{ PCMCIA_VENDOR_SIERRA, PCMCIA_PRODUCT_SIERRA_AC710,
+	  PCMCIA_CIS_INVALID,
+	  &pccard_sierra_a555_func1, &pccard_sierra_a555_func1_cfe0 },
 	{ PCMCIA_VENDOR_INVALID, PCMCIA_PRODUCT_INVALID, PCMCIA_CIS_SVEC_LANCARD,
 	  &pccard_sveclancard_func0, &pccard_sveclancard_func0_cfe0 },
 	{ PCMCIA_VENDOR_INVALID, PCMCIA_PRODUCT_INVALID, PCMCIA_CIS_NDC_ND5100_E,

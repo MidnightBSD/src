@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccard/pccard.c,v 1.105.2.3 2006/01/31 17:10:02 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pccard/pccard.c,v 1.119 2007/06/16 23:33:57 imp Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,8 +92,6 @@ static void	pccard_function_init(struct pccard_function *pf);
 static void	pccard_function_free(struct pccard_function *pf);
 static int	pccard_function_enable(struct pccard_function *pf);
 static void	pccard_function_disable(struct pccard_function *pf);
-static int	pccard_compat_do_probe(device_t bus, device_t dev);
-static int	pccard_compat_do_attach(device_t bus, device_t dev);
 static int	pccard_probe(device_t dev);
 static int	pccard_attach(device_t dev);
 static int	pccard_detach(device_t dev);
@@ -120,10 +118,11 @@ static struct resource *pccard_alloc_resource(device_t dev,
 static int	pccard_release_resource(device_t dev, device_t child, int type,
 		    int rid, struct resource *r);
 static void	pccard_child_detached(device_t parent, device_t dev);
+static int      pccard_filter(void *arg);
 static void	pccard_intr(void *arg);
 static int	pccard_setup_intr(device_t dev, device_t child,
-		    struct resource *irq, int flags, driver_intr_t *intr,
-		    void *arg, void **cookiep);
+		    struct resource *irq, int flags, driver_filter_t *filt, 
+		    driver_intr_t *intr, void *arg, void **cookiep);
 static int	pccard_teardown_intr(device_t dev, device_t child,
 		    struct resource *r, void *cookie);
 
@@ -299,6 +298,7 @@ pccard_detach_card(device_t dev)
 	struct pccard_softc *sc = PCCARD_SOFTC(dev);
 	struct pccard_function *pf;
 	struct pccard_config_entry *cfe;
+	struct pccard_ivar *devi;
 	int state;
 
 	/*
@@ -314,7 +314,9 @@ pccard_detach_card(device_t dev)
 		if (pf->cfe != NULL)
 			pccard_function_disable(pf);
 		pccard_function_free(pf);
+		devi = PCCARD_IVAR(pf->dev);
 		device_delete_child(dev, pf->dev);
+		free(devi, M_DEVBUF);
 	}
 	if (sc->sc_enabled_count == 0)
 		POWER_DISABLE_SOCKET(device_get_parent(dev), dev);
@@ -759,28 +761,6 @@ pccard_function_disable(struct pccard_function *pf)
 	pf->sc->sc_enabled_count--;
 }
 
-/*
- * simulate the old "probe" routine.  In the new world order, the driver
- * needs to grab devices while in the old they were assigned to the device by
- * the pccardd process.  These symbols are exported to the upper layers.
- */
-static int
-pccard_compat_do_probe(device_t bus, device_t dev)
-{
-	return (CARD_COMPAT_MATCH(dev));
-}
-
-static int
-pccard_compat_do_attach(device_t bus, device_t dev)
-{
-	int err;
-
-	err = CARD_COMPAT_PROBE(dev);
-	if (err <= 0)
-		err = CARD_COMPAT_ATTACH(dev);
-	return (err);
-}
-
 #define PCCARD_NPORT	2
 #define PCCARD_NMEM	5
 #define PCCARD_NIRQ	1
@@ -998,7 +978,7 @@ pccard_safe_quote(char *dst, const char *src, size_t len)
 
 	if (len == 0)
 		return;
-	while (walker < ep)
+	while (src != NULL && walker < ep)
 	{
 		if (*src == '"') {
 			if (ep - walker < 2)
@@ -1197,8 +1177,8 @@ pccard_child_detached(device_t parent, device_t dev)
 	pccard_function_disable(pf);
 }
 
-static void
-pccard_intr(void *arg)
+static int
+pccard_filter(void *arg)
 {
 	struct pccard_function *pf = (struct pccard_function*) arg;
 	int reg;
@@ -1228,25 +1208,39 @@ pccard_intr(void *arg)
 		else
 			doisr = 0;
 	}
-	if (pf->intr_handler != NULL && doisr)
-		pf->intr_handler(pf->intr_handler_arg);
+	if (doisr) {
+		if (pf->intr_filter != NULL)
+			return (pf->intr_filter(pf->intr_handler_arg));
+		return (FILTER_SCHEDULE_THREAD);
+	}
+	return (FILTER_STRAY);
+}
+
+static void
+pccard_intr(void *arg)
+{
+	struct pccard_function *pf = (struct pccard_function*) arg;
+	
+	pf->intr_handler(pf->intr_handler_arg);	
 }
 
 static int
 pccard_setup_intr(device_t dev, device_t child, struct resource *irq,
-    int flags, driver_intr_t *intr, void *arg, void **cookiep)
+    int flags, driver_filter_t *filt, driver_intr_t *intr, void *arg, 
+    void **cookiep)
 {
 	struct pccard_softc *sc = PCCARD_SOFTC(dev);
 	struct pccard_ivar *ivar = PCCARD_IVAR(child);
 	struct pccard_function *pf = ivar->pf;
 	int err;
 
-	if (pf->intr_handler != NULL)
+	if (pf->intr_filter != NULL || pf->intr_handler != NULL)
 		panic("Only one interrupt handler per function allowed");
-	err = bus_generic_setup_intr(dev, child, irq, flags, pccard_intr,
-	    pf, cookiep);
+	err = bus_generic_setup_intr(dev, child, irq, flags, pccard_filter, 
+	    intr ? pccard_intr : NULL, pf, cookiep);
 	if (err != 0)
 		return (err);
+	pf->intr_filter = filt;
 	pf->intr_handler = intr;
 	pf->intr_handler_arg = arg;
 	pf->intr_handler_cookie = *cookiep;
@@ -1430,8 +1424,6 @@ static device_method_t pccard_methods[] = {
 	DEVMETHOD(card_attach_card,	pccard_attach_card),
 	DEVMETHOD(card_detach_card,	pccard_detach_card),
 	DEVMETHOD(card_do_product_lookup, pccard_do_product_lookup),
-	DEVMETHOD(card_compat_do_probe, pccard_compat_do_probe),
-	DEVMETHOD(card_compat_do_attach, pccard_compat_do_attach),
 	DEVMETHOD(card_cis_scan,	pccard_scan_cis),
 	DEVMETHOD(card_attr_read,	pccard_attr_read_impl),
 	DEVMETHOD(card_attr_write,	pccard_attr_write_impl),
