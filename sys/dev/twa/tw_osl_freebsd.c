@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-05 Applied Micro Circuits Corporation.
+ * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
  * Copyright (c) 2000 Michael Smith
  * Copyright (c) 2000 BSDi
@@ -26,13 +26,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/twa/tw_osl_freebsd.c,v 1.1.4.1 2005/12/07 18:18:05 vkashyap Exp $
+ *	$FreeBSD: src/sys/dev/twa/tw_osl_freebsd.c,v 1.9 2007/10/09 17:43:57 scottl Exp $
  */
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
  *
  * Author: Vinod Kashyap
+ * Modifications by: Adam Radford
+ * Modifications by: Manjunath Ranganathaiah
  */
 
 
@@ -174,9 +176,11 @@ static TW_INT32	twa_attach(device_t dev);
 static TW_INT32	twa_detach(device_t dev);
 static TW_INT32	twa_shutdown(device_t dev);
 static TW_VOID	twa_busdma_lock(TW_VOID *lock_arg, bus_dma_lock_op_t op);
-static TW_VOID	twa_pci_intr(TW_VOID *arg);
 #ifdef TW_OSLI_DEFERRED_INTR_USED
+static int	twa_pci_intr_fast(TW_VOID *arg);
 static TW_VOID	twa_deferred_intr(TW_VOID *context, TW_INT32 pending);
+#else
+static TW_VOID	twa_pci_intr(TW_VOID *arg);
 #endif /* TW_OSLI_DEFERRED_INTR_USED */
 
 static TW_INT32	tw_osli_alloc_mem(struct twa_softc *sc);
@@ -207,7 +211,8 @@ static driver_t	twa_pci_driver = {
 };
 
 DRIVER_MODULE(twa, pci, twa_pci_driver, twa_devclass, 0, 0);
-
+MODULE_DEPEND(twa, cam, 1, 1, 1);
+MODULE_DEPEND(twa, pci, 1, 1, 1);
 
 
 /*
@@ -277,6 +282,8 @@ twa_attach(device_t dev)
 	mtx_init(sc->io_lock, "tw_osl_io_lock", NULL, MTX_SPIN);
 	sc->q_lock = &(sc->q_lock_handle);
 	mtx_init(sc->q_lock, "tw_osl_q_lock", NULL, MTX_SPIN);
+	sc->sim_lock = &(sc->sim_lock_handle);
+	mtx_init(sc->sim_lock, "tw_osl_sim_lock", NULL, MTX_DEF | MTX_RECURSE);
 
 	sysctl_ctx_init(&sc->sysctl_ctxt);
 	sc->sysctl_tree = SYSCTL_ADD_NODE(&sc->sysctl_ctxt,
@@ -355,12 +362,14 @@ twa_attach(device_t dev)
 		return(ENXIO);
 	}
 	if ((error = bus_setup_intr(sc->bus_dev, sc->irq_res,
-			((mp_ncpus > 1) ? (INTR_MPSAFE
 #ifdef TW_OSLI_DEFERRED_INTR_USED
-			| INTR_FAST
-#endif /* TW_OSLI_DEFERRED_INTR_USED */
-			) : 0) | INTR_TYPE_CAM,
-			twa_pci_intr, sc, &sc->intr_handle))) {
+			INTR_TYPE_CAM | INTR_FAST,
+			twa_pci_intr_fast, NULL,
+#else
+			INTR_TYPE_CAM | INTR_MPSAFE,
+			NULL, twa_pci_intr,	    
+#endif 
+			sc, &sc->intr_handle))) {
 		tw_osli_printf(sc, "error = %d",
 			TW_CL_SEVERITY_ERROR_STRING,
 			TW_CL_MESSAGE_SOURCE_FREEBSD_DRIVER,
@@ -391,9 +400,6 @@ twa_attach(device_t dev)
 			TW_OSLI_MAX_NUM_IOS, TW_OSLI_MAX_NUM_AENS,
 			sc->non_dma_mem, sc->dma_mem,
 			sc->dma_mem_phys
-#ifdef TW_OSL_FLASH_FIRMWARE
-			, sc->flash_dma_mem, sc->flash_dma_mem_phys
-#endif /* TW_OSL_FLASH_FIRMWARE */
 			))) {
 		tw_osli_printf(sc, "error = %d",
 			TW_CL_SEVERITY_ERROR_STRING,
@@ -404,23 +410,6 @@ twa_attach(device_t dev)
 		tw_osli_free_resources(sc);
 		return(error);
 	}
-
-#ifdef TW_OSL_FLASH_FIRMWARE
-	/* Free any memory allocated for firmware flashing. */
-	if (sc->flash_dma_mem) {
-		bus_dmamap_unload(sc->flash_tag, sc->flash_map);
-		bus_dmamem_free(sc->flash_tag, sc->flash_dma_mem,
-			sc->flash_map);
-	}
-	if (sc->flash_tag)
-		bus_dma_tag_destroy(sc->flash_tag);
-	/*
-	 * Set flash_tag and flash_dma_mem to 0, so we don't try freeing them
-	 * again, later.
-	 */
-	sc->flash_tag = 0;
-	sc->flash_dma_mem = 0;
-#endif /* TW_OSL_FLASH_FIRMWARE */
 
 	/* Create the control device. */
 	sc->ctrl_dev = make_dev(&twa_cdevsw, device_get_unit(sc->bus_dev),
@@ -460,12 +449,6 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	TW_UINT32			max_sg_elements;
 	TW_UINT32			non_dma_mem_size;
 	TW_UINT32			dma_mem_size;
-#ifdef TW_OSL_FLASH_FIRMWARE
-	TW_UINT32			flash_dma_mem_size;
-#endif /* TW_OSL_FLASH_FIRMWARE */
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-	TW_UINT32			per_req_dma_mem_size;
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
 	TW_INT32			error;
 	TW_INT32			i;
 
@@ -473,9 +456,6 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 
 	sc->flags |= (sizeof(bus_addr_t) == 8) ? TW_CL_64BIT_ADDRESSES : 0;
 	sc->flags |= (sizeof(bus_size_t) == 8) ? TW_CL_64BIT_SG_LENGTH : 0;
-#ifdef TW_OSL_FLASH_FIRMWARE
-	sc->flags |= TW_CL_FLASH_FIRMWARE; 
-#endif /* TW_OSL_FLASH_FIRMWARE */
 #ifdef TW_OSLI_DEFERRED_INTR_USED
 	sc->flags |= TW_CL_DEFERRED_INTR_USED; 
 #endif /* TW_OSLI_DEFERRED_INTR_USED */
@@ -487,12 +467,6 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 			sc->device_id, TW_OSLI_MAX_NUM_IOS,  TW_OSLI_MAX_NUM_AENS,
 			&(sc->alignment), &(sc->sg_size_factor),
 			&non_dma_mem_size, &dma_mem_size
-#ifdef TW_OSL_FLASH_FIRMWARE
-			, &flash_dma_mem_size
-#endif /* TW_OSL_FLASH_FIRMWARE */
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-			, &per_req_dma_mem_size
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
 			))) {
 		tw_osli_printf(sc, "error = %d",
 			TW_CL_SEVERITY_ERROR_STRING,
@@ -544,10 +518,6 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 				BUS_SPACE_MAXADDR,	/* lowaddr */
 				BUS_SPACE_MAXADDR, 	/* highaddr */
 				NULL, NULL, 		/* filter, filterarg */
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-				(TW_OSLI_MAX_NUM_IOS *
-				per_req_dma_mem_size) +	
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
 				dma_mem_size,		/* maxsize */
 				1,			/* nsegments */
 				BUS_SPACE_MAXSIZE,	/* maxsegsize */
@@ -584,53 +554,6 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 	bus_dmamap_load(sc->cmd_tag, sc->cmd_map, sc->dma_mem,
 		dma_mem_size, twa_map_load_callback,
 		&sc->dma_mem_phys, 0);
-
-
-#ifdef TW_OSL_FLASH_FIRMWARE
-	/*
-	 * Create a dma tag for Common Layer's DMA'able memory,
-	 * used to flash firmware (flash_dma_mem).
-	 */
-	if (bus_dma_tag_create(sc->parent_tag,		/* parent */
-				sc->alignment,		/* alignment */
-				0,			/* boundary */
-				BUS_SPACE_MAXADDR,	/* lowaddr */
-				BUS_SPACE_MAXADDR, 	/* highaddr */
-				NULL, NULL, 		/* filter, filterarg */
-				flash_dma_mem_size,	/* maxsize */
-				1,			/* nsegments */
-				flash_dma_mem_size,	/* maxsegsize */
-				0,			/* flags */
-				NULL,			/* lockfunc */
-				NULL,			/* lockfuncarg */
-				&sc->flash_tag		/* tag */)) {
-		tw_osli_printf(sc, "error = %d",
-			TW_CL_SEVERITY_ERROR_STRING,
-			TW_CL_MESSAGE_SOURCE_FREEBSD_DRIVER,
-			0x200D,
-			"Can't allocate DMA tag for Common Layer's "
-			"firmware flash memory",
-			ENOMEM);
-		return(ENOMEM);
-	}
-
-	if (bus_dmamem_alloc(sc->flash_tag, &sc->flash_dma_mem,
-		BUS_DMA_NOWAIT, &sc->flash_map)) {
-		tw_osli_printf(sc, "error = %d",
-			TW_CL_SEVERITY_ERROR_STRING,
-			TW_CL_MESSAGE_SOURCE_FREEBSD_DRIVER,
-			0x200E,
-			"Can't allocate DMA'able memory for Common Layer's "
-			"firmware flash",
-			ENOMEM);
-		return(ENOMEM);
-	}
-
-	bus_dmamap_load(sc->flash_tag, sc->flash_map, sc->flash_dma_mem,
-		flash_dma_mem_size, twa_map_load_callback,
-		&sc->flash_dma_mem_phys, 0);
-
-#endif /* TW_OSL_FLASH_FIRMWARE */
 
 	/*
 	 * Create a dma tag for data buffers; size will be the maximum
@@ -728,26 +651,9 @@ tw_osli_alloc_mem(struct twa_softc *sc)
 			return(ENOMEM);
 		}
 
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-		req->req_pkt.dma_mem = ((TW_INT8 *)(sc->dma_mem)) +
-			(i * per_req_dma_mem_size);
-		req->req_pkt.dma_mem_phys = sc->dma_mem_phys +
-			(i * per_req_dma_mem_size);
-
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
-
 		/* Insert request into the free queue. */
 		tw_osli_req_q_insert_tail(req, TW_OSLI_FREE_Q);
 	}
-
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-	sc->dma_mem = ((TW_INT8 *)(sc->dma_mem)) +
-		(TW_OSLI_MAX_NUM_IOS * per_req_dma_mem_size);
-	sc->dma_mem_phys += (TW_OSLI_MAX_NUM_IOS * per_req_dma_mem_size);
-
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
 
 	return(0);
 }
@@ -803,22 +709,6 @@ tw_osli_free_resources(struct twa_softc *sc)
 		if ((error = bus_dma_tag_destroy(sc->cmd_tag)))
 			tw_osli_dbg_dprintf(1, sc,
 				"dma_tag_destroy(cmd) returned %d", error);
-
-
-#ifdef TW_OSL_FLASH_FIRMWARE
-
-	if (sc->flash_dma_mem) {
-		/* In case this piece of memory has already been freed. */
-		bus_dmamap_unload(sc->flash_tag, sc->flash_map);
-		bus_dmamem_free(sc->flash_tag, sc->flash_dma_mem,
-			sc->flash_map);
-	}
-	if (sc->flash_tag)
-		if ((error = bus_dma_tag_destroy(sc->flash_tag)))
-			tw_osli_dbg_dprintf(1, sc,
-				"dma_tag_destroy(flash) returned %d", error);
-
-#endif /* TW_OSL_FLASH_FIRMWARE */
 
 	if (sc->dma_tag)
 		if ((error = bus_dma_tag_destroy(sc->dma_tag)))
@@ -975,7 +865,29 @@ twa_busdma_lock(TW_VOID *lock_arg, bus_dma_lock_op_t op)
 }
 
 
+#ifdef TW_OSLI_DEFERRED_INTR_USED
+/*
+ * Function name:	twa_pci_intr_fast
+ * Description:		Interrupt handler.  Wrapper for twa_interrupt.
+ *
+ * Input:		arg	-- ptr to OSL internal ctlr context
+ * Output:		FILTER_HANDLED or FILTER_STRAY
+ * Return value:	None
+ */
+static int
+twa_pci_intr_fast(TW_VOID *arg)
+{
+	struct twa_softc	*sc = (struct twa_softc *)arg;
 
+	tw_osli_dbg_dprintf(10, sc, "entered");
+	if (tw_cl_interrupt(&(sc->ctlr_handle))) {
+		taskqueue_enqueue_fast(taskqueue_fast,
+			&(sc->deferred_intr_callback));
+		return(FILTER_HANDLED);
+	}
+	return(FILTER_STRAY);
+}
+#else
 /*
  * Function name:	twa_pci_intr
  * Description:		Interrupt handler.  Wrapper for twa_interrupt.
@@ -991,15 +903,9 @@ twa_pci_intr(TW_VOID *arg)
 
 	tw_osli_dbg_dprintf(10, sc, "entered");
 	if (tw_cl_interrupt(&(sc->ctlr_handle)))
-#ifdef TW_OSLI_DEFERRED_INTR_USED
-		taskqueue_enqueue_fast(taskqueue_fast,
-			&(sc->deferred_intr_callback));
-#else /* TW_OSLI_DEFERRED_INTR_USED */
 		tw_cl_deferred_interrupt(&(sc->ctlr_handle));
-#endif /* TW_OSLI_DEFERRED_INTR_USED */
 }
-
-
+#endif
 
 #ifdef TW_OSLI_DEFERRED_INTR_USED
 
@@ -1150,10 +1056,11 @@ tw_osli_fw_passthru(struct twa_softc *sc, TW_INT8 *buf)
 			/*
 			 * Don't touch req after a reset.  It (and any
 			 * associated data) will already have been
-			 * freed by the callback.  Just return.
+			 * unmapped by the callback.
 			 */
 			user_buf->driver_pkt.os_status = error;
-			return(ETIMEDOUT);
+			error = ETIMEDOUT;
+			goto fw_passthru_err;
 		}
 		/* 
 		 * Either the request got completed, or we were woken up by a
@@ -1310,21 +1217,8 @@ tw_osli_get_request(struct twa_softc *sc)
 		req->error_code = 0;
 		req->orig_req = NULL;
 
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-		/* Don't zero dma_mem & dma_mem_phys in req_pkt. */
-		req->req_pkt.cmd = 0;
-		req->req_pkt.flags = 0;
-		req->req_pkt.status = 0;
-		req->req_pkt.tw_osl_callback = NULL;
-		bzero(&(req->req_pkt.gen_req_pkt),
-			sizeof(req->req_pkt.gen_req_pkt));
-
-#else /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
-
 		bzero(&(req->req_pkt), sizeof(struct tw_cl_req_packet));
 
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
 	}
 	return(req);
 }

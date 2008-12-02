@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-05 Applied Micro Circuits Corporation.
+ * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap
  * All rights reserved.
  *
@@ -24,13 +24,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/twa/tw_cl_io.c,v 1.1.4.1 2005/12/07 18:18:05 vkashyap Exp $
+ *	$FreeBSD: src/sys/dev/twa/tw_cl_io.c,v 1.4 2007/10/09 17:43:57 scottl Exp $
  */
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
  *
  * Author: Vinod Kashyap
+ * Modifications by: Adam Radford
+ * Modifications by: Manjunath Ranganathaiah
  */
 
 
@@ -96,9 +98,6 @@ tw_cl_start_io(struct tw_cl_ctlr_handle *ctlr_handle,
 	}
 
 	if ((req = tw_cli_get_request(ctlr
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-		, req_pkt
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
 		)) == TW_CL_NULL) {
 		tw_cli_dbg_printf(2, ctlr_handle, tw_osl_cur_func(),
 			"Out of request context packets: returning busy");
@@ -107,17 +106,6 @@ tw_cl_start_io(struct tw_cl_ctlr_handle *ctlr_handle,
 	}
 
 	req_handle->cl_req_ctxt = req;
-
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-	req->cmd_pkt = req_pkt->dma_mem;
-	req->cmd_pkt_phys = req_pkt->dma_mem_phys;
-	tw_osl_memzero(req->cmd_pkt,
-		sizeof(struct tw_cl_command_header) +
-		28 /* max bytes before sglist */);
-
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
-
 	req->req_handle = req_handle;
 	req->orig_req = req_pkt;
 	req->tw_cli_callback = tw_cli_complete_io;
@@ -184,23 +172,18 @@ tw_cli_submit_cmd(struct tw_cli_req_context *req)
 	TW_UINT32			status_reg;
 	TW_INT32			error;
 	TW_UINT8			notify_osl_of_ctlr_busy = TW_CL_FALSE;
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-	TW_SYNC_HANDLE			sync_handle;
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
 
 	tw_cli_dbg_printf(10, ctlr_handle, tw_osl_cur_func(), "entered");
 
 	/* Serialize access to the controller cmd queue. */
 	tw_osl_get_lock(ctlr_handle, ctlr->io_lock);
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-	if (req->flags & TW_CLI_REQ_FLAGS_EXTERNAL) {
-		if (!(ctlr->flags & TW_CL_DEFERRED_INTR_USED))
-			tw_osl_sync_isr_block(ctlr_handle, &sync_handle);
-	} else {
-		if (ctlr->flags & TW_CL_DEFERRED_INTR_USED)
-			tw_osl_sync_io_block(ctlr_handle, &sync_handle);
-	}
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
+
+	/* For 9650SE first write low 4 bytes */
+	if ((ctlr->device_id == TW_CL_DEVICE_ID_9K_E) ||
+	    (ctlr->device_id == TW_CL_DEVICE_ID_9K_SA))
+		tw_osl_write_reg(ctlr_handle,
+				 TWA_COMMAND_QUEUE_OFFSET_LOW,
+				 (TW_UINT32)(req->cmd_pkt_phys + sizeof(struct tw_cl_command_header)), 4);
 
 	/* Check to see if we can post a command. */
 	status_reg = TW_CLI_READ_STATUS_REGISTER(ctlr_handle);
@@ -215,10 +198,8 @@ tw_cli_submit_cmd(struct tw_cli_req_context *req)
 			"Cmd queue full");
 
 		if ((req->flags & TW_CLI_REQ_FLAGS_INTERNAL)
-#ifndef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
 			|| ((req_pkt) &&
 			(req_pkt->flags & TW_CL_REQ_RETRY_ON_BUSY))
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
 			) {
 			if (req->state != TW_CLI_REQ_STATE_PENDING) {
 				tw_cli_dbg_printf(2, ctlr_handle,
@@ -237,28 +218,32 @@ tw_cli_submit_cmd(struct tw_cli_req_context *req)
 		tw_cli_dbg_printf(10, ctlr_handle, tw_osl_cur_func(),
 			"Submitting command");
 
-		/*
-		 * The controller cmd queue is not full.  Mark the request as
-		 * currently being processed by the firmware, and move it into
-		 * the busy queue.  Then submit the cmd.
-		 */
+		/* Insert command into busy queue */
 		req->state = TW_CLI_REQ_STATE_BUSY;
 		tw_cli_req_q_insert_tail(req, TW_CLI_BUSY_Q);
-		TW_CLI_WRITE_COMMAND_QUEUE(ctlr_handle,
-			req->cmd_pkt_phys +
-			sizeof(struct tw_cl_command_header));
-	}
 
-out:
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-	if (req->flags & TW_CLI_REQ_FLAGS_EXTERNAL) {
-		if (!(ctlr->flags & TW_CL_DEFERRED_INTR_USED))
-			tw_osl_sync_isr_unblock(ctlr_handle, &sync_handle);
-	} else {
-		if (ctlr->flags & TW_CL_DEFERRED_INTR_USED)
-			tw_osl_sync_io_unblock(ctlr_handle, &sync_handle);
+		if ((ctlr->device_id == TW_CL_DEVICE_ID_9K_E) ||
+		    (ctlr->device_id == TW_CL_DEVICE_ID_9K_SA)) {
+			/* Now write the high 4 bytes */
+			tw_osl_write_reg(ctlr_handle, 
+					 TWA_COMMAND_QUEUE_OFFSET_HIGH,
+					 (TW_UINT32)(((TW_UINT64)(req->cmd_pkt_phys + sizeof(struct tw_cl_command_header)))>>32), 4);
+		} else {
+			if (ctlr->flags & TW_CL_64BIT_ADDRESSES) {
+				/* First write the low 4 bytes, then the high 4. */
+				tw_osl_write_reg(ctlr_handle,
+						 TWA_COMMAND_QUEUE_OFFSET_LOW,
+						 (TW_UINT32)(req->cmd_pkt_phys + sizeof(struct tw_cl_command_header)), 4);
+				tw_osl_write_reg(ctlr_handle, 
+						 TWA_COMMAND_QUEUE_OFFSET_HIGH,
+						 (TW_UINT32)(((TW_UINT64)(req->cmd_pkt_phys + sizeof(struct tw_cl_command_header)))>>32), 4);
+			} else
+				tw_osl_write_reg(ctlr_handle, 
+						 TWA_COMMAND_QUEUE_OFFSET,
+						 (TW_UINT32)(req->cmd_pkt_phys + sizeof(struct tw_cl_command_header)), 4);
+		}
 	}
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
+out:
 	tw_osl_free_lock(ctlr_handle, ctlr->io_lock);
 
 	if (status_reg & TWA_STATUS_COMMAND_QUEUE_FULL) {
@@ -324,9 +309,6 @@ tw_cl_fw_passthru(struct tw_cl_ctlr_handle *ctlr_handle,
 	}
 
 	if ((req = tw_cli_get_request(ctlr
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-		, req_pkt
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
 		)) == TW_CL_NULL) {
 		tw_cli_dbg_printf(2, ctlr_handle, tw_osl_cur_func(),
 			"Out of request context packets: returning busy");
@@ -335,17 +317,6 @@ tw_cl_fw_passthru(struct tw_cl_ctlr_handle *ctlr_handle,
 	}
 
 	req_handle->cl_req_ctxt = req;
-
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-	req->cmd_pkt = req_pkt->dma_mem;
-	req->cmd_pkt_phys = req_pkt->dma_mem_phys;
-	tw_osl_memzero(req->cmd_pkt,
-		sizeof(struct tw_cl_command_header) +
-		28 /* max bytes before sglist */);
-
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
-
 	req->req_handle = req_handle;
 	req->orig_req = req_pkt;
 	req->tw_cli_callback = tw_cli_complete_io;
@@ -384,7 +355,10 @@ tw_cl_fw_passthru(struct tw_cl_ctlr_handle *ctlr_handle,
 			(TW_UINT8)(TW_CL_SWAP16(req->request_id));
 		if ((sgl_offset =
 			GET_SGL_OFF(cmd_7k->generic.sgl_off__opcode))) {
-			sgl = (((TW_UINT32 *)cmd_7k) + sgl_offset);
+			if (ctlr->device_id == TW_CL_DEVICE_ID_9K_SA)
+				sgl = (((TW_UINT32 *)cmd_7k) + cmd_7k->generic.size);
+			else
+				sgl = (((TW_UINT32 *)cmd_7k) + sgl_offset);
 			cmd_7k->generic.size += pt_req->sgl_entries *
 				((ctlr->flags & TW_CL_64BIT_ADDRESSES) ? 3 : 2);
 		}
@@ -725,7 +699,7 @@ tw_cl_ioctl(struct tw_cl_ctlr_handle *ctlr_handle, TW_INT32 cmd, TW_VOID *buf)
 			TWA_CURRENT_FW_BUILD(ctlr->arch_id);
 		comp_pkt.driver_srl_low = TWA_BASE_FW_SRL;
 		comp_pkt.driver_branch_low = TWA_BASE_FW_BRANCH;
-		comp_pkt.driver_build_high = TWA_BASE_FW_BUILD;
+		comp_pkt.driver_build_low = TWA_BASE_FW_BUILD;
 		comp_pkt.fw_on_ctlr_srl = ctlr->fw_on_ctlr_srl;
 		comp_pkt.fw_on_ctlr_branch = ctlr->fw_on_ctlr_branch;
 		comp_pkt.fw_on_ctlr_build = ctlr->fw_on_ctlr_build;
@@ -781,9 +755,6 @@ tw_cli_get_param(struct tw_cli_ctlr_context *ctlr, TW_INT32 table_id,
 
 	/* Get a request packet. */
 	if ((req = tw_cli_get_request(ctlr
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-		, TW_CL_NULL
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
 		)) == TW_CL_NULL)
 		goto out;
 
@@ -793,17 +764,6 @@ tw_cli_get_param(struct tw_cli_ctlr_context *ctlr, TW_INT32 table_id,
 		goto out;
 	}
 	ctlr->state |= TW_CLI_CTLR_STATE_INTERNAL_REQ_BUSY;
-
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-	req->cmd_pkt = ctlr->cmd_pkt_buf;
-	req->cmd_pkt_phys = ctlr->cmd_pkt_phys;
-	tw_osl_memzero(req->cmd_pkt,
-		sizeof(struct tw_cl_command_header) +
-		28 /* max bytes before sglist */);
-
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
-
 	req->data = ctlr->internal_req_data;
 	req->data_phys = ctlr->internal_req_data_phys;
 	req->length = TW_CLI_SECTOR_SIZE;
@@ -914,9 +874,6 @@ tw_cli_set_param(struct tw_cli_ctlr_context *ctlr, TW_INT32 table_id,
 
 	/* Get a request packet. */
 	if ((req = tw_cli_get_request(ctlr
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-		, TW_CL_NULL
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
 		)) == TW_CL_NULL)
 		goto out;
 
@@ -926,17 +883,6 @@ tw_cli_set_param(struct tw_cli_ctlr_context *ctlr, TW_INT32 table_id,
 		goto out;
 	}
 	ctlr->state |= TW_CLI_CTLR_STATE_INTERNAL_REQ_BUSY;
-
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-	req->cmd_pkt = ctlr->cmd_pkt_buf;
-	req->cmd_pkt_phys = ctlr->cmd_pkt_phys;
-	tw_osl_memzero(req->cmd_pkt,
-		sizeof(struct tw_cl_command_header) +
-		28 /* max bytes before sglist */);
-
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
-
 	req->data = ctlr->internal_req_data;
 	req->data_phys = ctlr->internal_req_data_phys;
 	req->length = TW_CLI_SECTOR_SIZE;
@@ -1232,7 +1178,9 @@ tw_cli_soft_reset(struct tw_cli_ctlr_context *ctlr)
 
 	TW_CLI_SOFT_RESET(ctlr_handle);
 
-	if (ctlr->device_id == TW_CL_DEVICE_ID_9K_X) {
+	if ((ctlr->device_id == TW_CL_DEVICE_ID_9K_X) ||
+	    (ctlr->device_id == TW_CL_DEVICE_ID_9K_E) ||
+	    (ctlr->device_id == TW_CL_DEVICE_ID_9K_SA)) {
 		/*
 		 * There's a hardware bug in the G133 ASIC, which can lead to
 		 * PCI parity errors and hangs, if the host accesses any
@@ -1406,21 +1354,8 @@ tw_cli_get_aen(struct tw_cli_ctlr_context *ctlr)
 	tw_cli_dbg_printf(4, ctlr->ctlr_handle, tw_osl_cur_func(), "entered");
 
 	if ((req = tw_cli_get_request(ctlr
-#ifdef TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST
-		, TW_CL_NULL
-#endif /* TW_OSL_NON_DMA_MEM_ALLOC_PER_REQUEST */
 		)) == TW_CL_NULL)
 		return(TW_OSL_EBUSY);
-
-#ifdef TW_OSL_DMA_MEM_ALLOC_PER_REQUEST
-
-	req->cmd_pkt = ctlr->cmd_pkt_buf;
-	req->cmd_pkt_phys = ctlr->cmd_pkt_phys;
-	tw_osl_memzero(req->cmd_pkt,
-		sizeof(struct tw_cl_command_header) +
-		28 /* max bytes before sglist */);
-
-#endif /* TW_OSL_DMA_MEM_ALLOC_PER_REQUEST */
 
 	req->flags |= TW_CLI_REQ_FLAGS_INTERNAL;
 	req->flags |= TW_CLI_REQ_FLAGS_9K;

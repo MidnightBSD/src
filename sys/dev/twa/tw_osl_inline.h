@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-05 Applied Micro Circuits Corporation.
+ * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
  * All rights reserved.
  *
@@ -24,13 +24,14 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/twa/tw_osl_inline.h,v 1.1.2.1 2005/12/07 18:18:05 vkashyap Exp $
+ *	$FreeBSD: src/sys/dev/twa/tw_osl_inline.h,v 1.3 2007/05/09 04:16:32 scottl Exp $
  */
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
  *
  * Author: Vinod Kashyap
+ * Modifications by: Adam Radford
  */
 
 
@@ -276,9 +277,7 @@ tw_osl_write_reg_inline(struct tw_cl_ctlr_handle *ctlr_handle,
  * Return value:	local time
  */
 #define tw_osl_get_local_time()						\
-	(time_second - (tz_minuteswest * 60) -				\
-		(wall_cmos_clock ? adjkerntz : 0))
-
+	(time_second - utc_offset())
 
 
 /*

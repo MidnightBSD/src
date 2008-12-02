@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-05 Applied Micro Circuits Corporation.
+ * Copyright (c) 2004-07 Applied Micro Circuits Corporation.
  * Copyright (c) 2004-05 Vinod Kashyap.
  * All rights reserved.
  *
@@ -24,13 +24,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/twa/tw_osl.h,v 1.1.4.1 2005/12/07 18:18:05 vkashyap Exp $
+ *	$FreeBSD: src/sys/dev/twa/tw_osl.h,v 1.5.2.1 2007/10/19 15:21:16 scottl Exp $
  */
 
 /*
  * AMCC'S 3ware driver for 9000 series storage controllers.
  *
  * Author: Vinod Kashyap
+ * Modifications by: Adam Radford
+ * Modifications by: Manjunath Ranganathaiah
  */
 
 
@@ -51,7 +53,9 @@
 #define TW_OSLI_MAX_NUM_IOS		TW_CL_MAX_SIMULTANEOUS_REQUESTS
 #define TW_OSLI_MAX_NUM_AENS		0x100
 
+/* Disabled, doesn't work yet.
 #define TW_OSLI_DEFERRED_INTR_USED
+*/
 
 /* Possible values of req->state. */
 #define TW_OSLI_REQ_STATE_INIT		0x0	/* being initialized */
@@ -133,11 +137,6 @@ struct twa_softc {
 	TW_VOID			*non_dma_mem;
 	TW_VOID			*dma_mem;
 	TW_UINT64		dma_mem_phys;
-#ifdef TW_OSL_FLASH_FIRMWARE
-	TW_VOID			*flash_dma_mem;
-	TW_UINT64		flash_dma_mem_phys;
-#endif /* TW_OSL_FLASH_FIRMWARE */
-
 
 	/* Request queues and arrays. */
 	struct tw_cl_link	req_q_head[TW_OSLI_Q_COUNT];
@@ -147,6 +146,8 @@ struct twa_softc {
 	struct mtx		*io_lock;/* ptr to general purpose lock */
 	struct mtx		q_lock_handle;	/* queue manipulation lock */
 	struct mtx		*q_lock;/* ptr to queue manipulation lock */
+	struct mtx		sim_lock_handle;/* sim lock shared with cam */
+	struct mtx		*sim_lock;/* ptr to sim lock */
 
 #ifdef TW_OSL_DEBUG
 	struct tw_osli_q_stats	q_stats[TW_OSLI_Q_COUNT];/* queue statistics */
@@ -164,10 +165,6 @@ struct twa_softc {
 	bus_dma_tag_t		ioctl_tag; /* ioctl data buffer DMA tag */
 	bus_dmamap_t		cmd_map; /* DMA map for CL's DMA'able mem */
 	bus_dmamap_t		ioctl_map; /* DMA map for ioctl data buffers */
-#ifdef TW_OSL_FLASH_FIRMWARE
-	bus_dma_tag_t		flash_tag;/* DMA tag for CL's fw flash mem */
-	bus_dmamap_t		flash_map;/* DMA map for CL's fw flash mem */
-#endif /* TW_OSL_FLASH_FIRMWARE */
 	struct resource		*irq_res;	/* interrupt resource */
 	TW_INT32		irq_res_id;	/* register resource id */
 	TW_VOID			*intr_handle;	/* interrupt handle */
