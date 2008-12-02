@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/mly/mly.c,v 1.38 2005/05/29 04:42:23 nyan Exp $
+ *	$FreeBSD: src/sys/dev/mly/mly.c,v 1.45 2007/06/17 05:55:51 scottl Exp $
  */
 
 #include <sys/param.h>
@@ -147,6 +147,8 @@ static driver_t mly_pci_driver = {
 
 static devclass_t	mly_devclass;
 DRIVER_MODULE(mly, pci, mly_pci_driver, mly_devclass, 0, 0);
+MODULE_DEPEND(mly, pci, 1, 1, 1);
+MODULE_DEPEND(mly, cam, 1, 1, 1);
 
 static struct cdevsw mly_cdevsw = {
 	.d_version =	D_VERSION,
@@ -234,12 +236,10 @@ mly_attach(device_t dev)
     mly_initq_busy(sc);
     mly_initq_complete(sc);
 
-#if __FreeBSD_version >= 500005
     /*
      * Initialise command-completion task.
      */
     TASK_INIT(&sc->mly_task_complete, 0, mly_complete, sc);
-#endif
 
     /* disable interrupts before we start talking to the controller */
     MLY_MASK_INTERRUPTS(sc);
@@ -380,7 +380,7 @@ mly_pci_attach(struct mly_softc *sc)
 	mly_printf(sc, "can't allocate interrupt\n");
 	goto fail;
     }
-    if (bus_setup_intr(sc->mly_dev, sc->mly_irq, INTR_TYPE_CAM | INTR_ENTROPY,  mly_intr, sc, &sc->mly_intr)) {
+    if (bus_setup_intr(sc->mly_dev, sc->mly_irq, INTR_TYPE_CAM | INTR_ENTROPY, NULL, mly_intr, sc, &sc->mly_intr)) {
 	mly_printf(sc, "can't set up interrupt\n");
 	goto fail;
     }
@@ -1605,11 +1605,9 @@ mly_done(struct mly_softc *sc)
 
     splx(s);
     if (worked) {
-#if __FreeBSD_version >= 500005
 	if (sc->mly_state & MLY_STATE_INTERRUPTS_ON)
 	    taskqueue_enqueue(taskqueue_swi_giant, &sc->mly_task_complete);
 	else
-#endif
 	    mly_complete(sc, 0);
     }
 }
@@ -1947,11 +1945,12 @@ mly_cam_attach(struct mly_softc *sc)
 
 	    if ((sc->mly_cam_sim[chn] = cam_sim_alloc(mly_cam_action, mly_cam_poll, "mly", sc,
 						      device_get_unit(sc->mly_dev),
+						      &Giant,
 						      sc->mly_controllerinfo->maximum_parallel_commands,
 						      1, devq)) == NULL) {
 		return(ENOMEM);
 	    }
-	    if (xpt_bus_register(sc->mly_cam_sim[chn], chn)) {
+	    if (xpt_bus_register(sc->mly_cam_sim[chn], sc->mly_dev, chn)) {
 		mly_printf(sc, "CAM XPT phsyical channel registration failed\n");
 		return(ENXIO);
 	    }
@@ -1966,11 +1965,12 @@ mly_cam_attach(struct mly_softc *sc)
     for (i = 0; i < sc->mly_controllerinfo->virtual_channels_present; i++, chn++) {
 	if ((sc->mly_cam_sim[chn] = cam_sim_alloc(mly_cam_action, mly_cam_poll, "mly", sc,
 						  device_get_unit(sc->mly_dev),
+						  &Giant,
 						  sc->mly_controllerinfo->maximum_parallel_commands,
 						  0, devq)) == NULL) {
 	    return(ENOMEM);
 	}
-	if (xpt_bus_register(sc->mly_cam_sim[chn], chn)) {
+	if (xpt_bus_register(sc->mly_cam_sim[chn], sc->mly_dev, chn)) {
 	    mly_printf(sc, "CAM XPT virtual channel registration failed\n");
 	    return(ENXIO);
 	}
@@ -2101,6 +2101,10 @@ mly_cam_action(struct cam_sim *sim, union ccb *ccb)
         cpi->unit_number = cam_sim_unit(sim);
         cpi->bus_id = cam_sim_bus(sim);
 	cpi->base_transfer_speed = 132 * 1024;	/* XXX what to set this to? */
+	cpi->transport = XPORT_SPI;
+	cpi->transport_version = 2;
+	cpi->protocol = PROTO_SCSI;
+	cpi->protocol_version = SCSI_REV_2;
 	ccb->ccb_h.status = CAM_REQ_CMP;
 	break;
     }
@@ -2109,45 +2113,52 @@ mly_cam_action(struct cam_sim *sim, union ccb *ccb)
     {
 	struct ccb_trans_settings	*cts = &ccb->cts;
 	int				bus, target;
+	struct ccb_trans_settings_scsi *scsi = &cts->proto_specific.scsi;
+	struct ccb_trans_settings_spi *spi = &cts->xport_specific.spi;
+
+	cts->protocol = PROTO_SCSI;
+	cts->protocol_version = SCSI_REV_2;
+	cts->transport = XPORT_SPI;
+	cts->transport_version = 2;
+
+	scsi->flags = 0;
+	scsi->valid = 0;
+	spi->flags = 0;
+	spi->valid = 0;
 
 	bus = cam_sim_bus(sim);
 	target = cts->ccb_h.target_id;
-	/* XXX validate bus/target? */
-
 	debug(2, "XPT_GET_TRAN_SETTINGS %d:%d", bus, target);
-	cts->valid = 0;
-
 	/* logical device? */
 	if (sc->mly_btl[bus][target].mb_flags & MLY_BTL_LOGICAL) {
 	    /* nothing special for these */
-
 	/* physical device? */
 	} else if (sc->mly_btl[bus][target].mb_flags & MLY_BTL_PHYSICAL) {
 	    /* allow CAM to try tagged transactions */
-	    cts->flags |= CCB_TRANS_TAG_ENB;
-	    cts->valid |= CCB_TRANS_TQ_VALID;
+	    scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
+	    scsi->valid |= CTS_SCSI_VALID_TQ;
 
 	    /* convert speed (MHz) to usec */
 	    if (sc->mly_btl[bus][target].mb_speed == 0) {
-		cts->sync_period = 1000000 / 5;
+		spi->sync_period = 1000000 / 5;
 	    } else {
-		cts->sync_period = 1000000 / sc->mly_btl[bus][target].mb_speed;
+		spi->sync_period = 1000000 / sc->mly_btl[bus][target].mb_speed;
 	    }
 
 	    /* convert bus width to CAM internal encoding */
 	    switch (sc->mly_btl[bus][target].mb_width) {
 	    case 32:
-		cts->bus_width = MSG_EXT_WDTR_BUS_32_BIT;
+		spi->bus_width = MSG_EXT_WDTR_BUS_32_BIT;
 		break;
 	    case 16:
-		cts->bus_width = MSG_EXT_WDTR_BUS_16_BIT;
+		spi->bus_width = MSG_EXT_WDTR_BUS_16_BIT;
 		break;
 	    case 8:
 	    default:
-		cts->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
+		spi->bus_width = MSG_EXT_WDTR_BUS_8_BIT;
 		break;
 	    }
-	    cts->valid |= CCB_TRANS_SYNC_RATE_VALID | CCB_TRANS_BUS_WIDTH_VALID;
+	    spi->valid |= CTS_SPI_VALID_SYNC_RATE | CTS_SPI_VALID_BUS_WIDTH;
 
 	    /* not a device, bail out */
 	} else {
@@ -2156,8 +2167,8 @@ mly_cam_action(struct cam_sim *sim, union ccb *ccb)
 	}
 
 	/* disconnect always OK */
-	cts->flags |= CCB_TRANS_DISC_ENB;
-	cts->valid |= CCB_TRANS_DISC_VALID;
+	spi->flags |= CTS_SPI_FLAGS_DISC_ENB;
+	spi->valid |= CTS_SPI_VALID_DISC;
 
 	cts->ccb_h.status = CAM_REQ_CMP;
 	break;

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/mly/mlyvar.h,v 1.6 2004/06/16 09:46:51 phk Exp $
+ *	$FreeBSD: src/sys/dev/mly/mlyvar.h,v 1.7 2005/08/08 12:23:27 scottl Exp $
  */
 
 /********************************************************************************
@@ -57,15 +57,7 @@
  ********************************************************************************
  ********************************************************************************/
 
-#if __FreeBSD_version >= 500005
 # include <sys/taskqueue.h>
-#endif
-
-#if __FreeBSD_version <= 500014
-# include <machine/clock.h>
-# undef offsetof
-# define offsetof(type, field) ((size_t)(&((type *)0)->field))
-#endif
 
 #ifndef INTR_ENTROPY
 # define INTR_ENTROPY 0
@@ -234,10 +226,8 @@ struct mly_softc {
     struct cam_path		*mly_cam_path;			/* rescan path */
     int				mly_cam_channels;		/* total channel count */
 
-#if __FreeBSD_version >= 500005
     /* command-completion task */
-    struct task		mly_task_complete;	/* deferred-completion task */
-#endif
+    struct task			mly_task_complete;	/* deferred-completion task */
     int				mly_qfrzn_cnt;		/* Track simq freezes */
 };
 
