@@ -26421,8 +26421,6 @@ sys/dev/mpt/mpilib/mpi_inb.h -text
 sys/dev/mpt/mpilib/mpi_init.h -text
 sys/dev/mpt/mpilib/mpi_ioc.h -text
 sys/dev/mpt/mpilib/mpi_lan.h -text
-sys/dev/mpt/mpilib/mpi_log_fc.h -text
-sys/dev/mpt/mpilib/mpi_log_sas.h -text
 sys/dev/mpt/mpilib/mpi_raid.h -text
 sys/dev/mpt/mpilib/mpi_sas.h -text
 sys/dev/mpt/mpilib/mpi_targ.h -text

@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/mpt/mpt_cam.h,v 1.1.2.3 2006/09/16 05:42:06 mjacob Exp $ */
+/* $FreeBSD: src/sys/dev/mpt/mpt_cam.h,v 1.6 2007/05/05 20:18:24 mjacob Exp $ */
 /*-
  * LSI MPT Host Adapter FreeBSD Wrapper Definitions (CAM version)
  *
@@ -101,6 +101,8 @@
 #include <cam/cam_ccb.h>
 #include <cam/cam_sim.h>
 #include <cam/cam_xpt.h>
+#include <cam/cam_periph.h>
+#include <cam/cam_xpt_periph.h>
 #include <cam/cam_xpt_sim.h>
 #include <cam/cam_debug.h>
 #include <cam/scsi/scsi_all.h>
@@ -141,4 +143,12 @@ mpt_wakeup_recovery_thread(struct mpt_softc *mpt)
 	wakeup(mpt);
 }
 
+/************************** Version Compatibility *************************/
+#if	__FreeBSD_version < 700031
+#define	mpt_sim_alloc(a, b, c, mpt, e, f, g)	\
+	cam_sim_alloc(a, b, c, mpt, (mpt)->unit, e, f, g)
+#else
+#define	mpt_sim_alloc(a, b, c, mpt, e, f, g)	\
+	cam_sim_alloc(a, b, c, mpt, (mpt)->unit, &(mpt)->mpt_lock, e, f, g)
+#endif
 #endif /*_MPT_CAM_H_ */

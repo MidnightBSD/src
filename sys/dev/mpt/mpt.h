@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/mpt/mpt.h,v 1.6.2.4 2006/09/16 05:42:06 mjacob Exp $ */
+/* $FreeBSD: src/sys/dev/mpt/mpt.h,v 1.42 2007/08/14 19:17:35 scottl Exp $ */
 /*-
  * Generic defines for LSI '909 FC  adapters.
  * FreeBSD Version.
@@ -105,12 +105,19 @@
 #include <sys/systm.h>
 #include <sys/endian.h>
 #include <sys/eventhandler.h>
+#if __FreeBSD_version < 500000  
+#include <sys/kernel.h>
+#include <sys/queue.h>
+#include <sys/malloc.h>
+#include <sys/devicestat.h>
+#else
 #include <sys/lock.h>
 #include <sys/kernel.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/condvar.h>
+#endif
 #include <sys/proc.h>
 #include <sys/bus.h>
 #include <sys/module.h>
@@ -118,10 +125,20 @@
 #include <machine/cpu.h>
 #include <machine/resource.h>
 
+#if __FreeBSD_version < 500000  
+#include <machine/bus.h>
+#include <machine/clock.h>
+#endif
+
 #include <sys/rman.h>
 
+#if __FreeBSD_version < 500000  
+#include <pci/pcireg.h>
+#include <pci/pcivar.h>
+#else
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
+#endif
 
 #include <machine/bus.h>
 #include "opt_ddb.h"
@@ -139,7 +156,11 @@
 /* XXX For mpt_debug.c */
 #include <dev/mpt/mpilib/mpi_init.h>
 
+#define	MPT_S64_2_SCALAR(y)	((((int64_t)y.High) << 32) | (y.Low))
+#define	MPT_U64_2_SCALAR(y)	((((uint64_t)y.High) << 32) | (y.Low))
+
 /****************************** Misc Definitions ******************************/
+/* #define MPT_TEST_MULTIPATH	1 */
 #define MPT_OK (0)
 #define MPT_FAIL (0x10000)
 
@@ -210,6 +231,9 @@ int mpt_modevent(module_t, int, void *);
 #define bus_dmamap_sync_range(dma_tag, dmamap, offset, len, op)	\
 	bus_dmamap_sync(dma_tag, dmamap, op)
 
+#if __FreeBSD_version < 600000
+#define	bus_get_dma_tag(x)	NULL
+#endif
 #if __FreeBSD_version >= 501102
 #define mpt_dma_tag_create(mpt, parent_tag, alignment, boundary,	\
 			   lowaddr, highaddr, filter, filterarg,	\
@@ -218,7 +242,7 @@ int mpt_modevent(module_t, int, void *);
 	bus_dma_tag_create(parent_tag, alignment, boundary,		\
 			   lowaddr, highaddr, filter, filterarg,	\
 			   maxsize, nsegments, maxsegsz, flags,		\
-			   busdma_lock_mutex, &Giant,			\
+			   busdma_lock_mutex, &(mpt)->mpt_lock,		\
 			   dma_tagp)
 #else
 #define mpt_dma_tag_create(mpt, parent_tag, alignment, boundary,	\
@@ -238,6 +262,13 @@ struct mpt_map_info {
 };
 
 void mpt_map_rquest(void *, bus_dma_segment_t *, int, int);
+/* **************************** NewBUS interrupt Crock ************************/
+#if __FreeBSD_version < 700031
+#define	mpt_setup_intr(d, i, f, U, if, ifa, hp)	\
+	bus_setup_intr(d, i, f, if, ifa, hp)
+#else
+#define	mpt_setup_intr	bus_setup_intr
+#endif
 
 /**************************** Kernel Thread Support ***************************/
 #if __FreeBSD_version > 500005
@@ -250,21 +281,35 @@ void mpt_map_rquest(void *, bus_dma_segment_t *, int, int);
 
 /****************************** Timer Facilities ******************************/
 #if __FreeBSD_version > 500000
-#define mpt_callout_init(c)	callout_init(c, /*mpsafe*/0);
+#define mpt_callout_init(c)	callout_init(c, /*mpsafe*/1);
 #else
 #define mpt_callout_init(c)	callout_init(c);
 #endif
 
 /********************************** Endianess *********************************/
-static __inline uint64_t
-u64toh(U64 s)
-{
-	uint64_t result;
+#define	MPT_2_HOST64(ptr, tag)	ptr->tag = le64toh(ptr->tag)
+#define	MPT_2_HOST32(ptr, tag)	ptr->tag = le32toh(ptr->tag)
+#define	MPT_2_HOST16(ptr, tag)	ptr->tag = le16toh(ptr->tag)
 
-	result = le32toh(s.Low);
-	result |= ((uint64_t)le32toh(s.High)) << 32;
-	return (result);
-}
+#define	HOST_2_MPT64(ptr, tag)	ptr->tag = htole64(ptr->tag)
+#define	HOST_2_MPT32(ptr, tag)	ptr->tag = htole32(ptr->tag)
+#define	HOST_2_MPT16(ptr, tag)	ptr->tag = htole16(ptr->tag)
+
+#if	_BYTE_ORDER == _BIG_ENDIAN
+void mpt2host_sge_simple_union(SGE_SIMPLE_UNION *);
+void mpt2host_iocfacts_reply(MSG_IOC_FACTS_REPLY *);
+void mpt2host_portfacts_reply(MSG_PORT_FACTS_REPLY *);
+void mpt2host_config_page_ioc2(CONFIG_PAGE_IOC_2 *);
+void mpt2host_config_page_raid_vol_0(CONFIG_PAGE_RAID_VOL_0 *);
+void mpt2host_mpi_raid_vol_indicator(MPI_RAID_VOL_INDICATOR *);
+#else
+#define	mpt2host_sge_simple_union(x)		do { ; } while (0)
+#define	mpt2host_iocfacts_reply(x)		do { ; } while (0)
+#define	mpt2host_portfacts_reply(x)		do { ; } while (0)
+#define	mpt2host_config_page_ioc2(x)		do { ; } while (0)
+#define	mpt2host_config_page_raid_vol_0(x)	do { ; } while (0)
+#define	mpt2host_mpi_raid_vol_indicator(x)	do { ; } while (0)
+#endif
 
 /**************************** MPI Transaction State ***************************/
 typedef enum {
@@ -293,7 +338,19 @@ struct req_entry {
 	bus_addr_t	sense_pbuf;	/* Physical Address of sense data */
 	bus_dmamap_t	dmap;		/* DMA map for data buffers */
 	struct req_entry *chain;	/* for SGE overallocations */
+	struct callout  callout;	/* Timeout for the request */
 };
+
+typedef struct mpt_config_params {
+	u_int		Action;
+	u_int		PageVersion;
+	u_int		PageLength;
+	u_int		PageNumber;
+	u_int		PageType;
+	u_int		PageAddress;
+	u_int		ExtPageLength;
+	u_int		ExtPageType;
+} cfgparms_t;
 
 /**************************** MPI Target State Info ***************************/
 
@@ -468,6 +525,36 @@ struct mpt_evtf_record {
 
 LIST_HEAD(mpt_evtf_list, mpt_evtf_record);
 
+struct mptsas_devinfo {
+	uint16_t	dev_handle;
+	uint16_t	parent_dev_handle;
+	uint16_t	enclosure_handle;
+	uint16_t	slot;
+	uint8_t		phy_num;
+	uint8_t		physical_port;
+	uint8_t		target_id;
+	uint8_t		bus;
+	uint64_t	sas_address;
+	uint32_t	device_info;
+};
+
+struct mptsas_phyinfo {
+	uint16_t	handle;
+	uint8_t		phy_num;
+	uint8_t		port_id;
+	uint8_t		negotiated_link_rate;
+	uint8_t		hw_link_rate;
+	uint8_t		programmed_link_rate;
+	uint8_t		sas_port_add_phy;
+	struct mptsas_devinfo identify;
+	struct mptsas_devinfo attached;
+};
+
+struct mptsas_portinfo {
+	uint16_t			num_phys;
+	struct mptsas_phyinfo		*phy_info;
+};
+
 struct mpt_softc {
 	device_t		dev;
 #if __FreeBSD_version < 500000  
@@ -479,8 +566,11 @@ struct mpt_softc {
 #endif
 	uint32_t		mpt_pers_mask;
 	uint32_t
+				: 8,
 		unit		: 8,
-				: 3,
+		ready		: 1,
+		fw_uploaded	: 1,
+		msi_enable	: 1,
 		twildcard	: 1,
 		tenabled	: 1,
 		do_cfg_role	: 1,
@@ -499,25 +589,21 @@ struct mpt_softc {
 	u_int			role;	/* role: none, ini, target, both */
 
 	u_int			verbose;
+#ifdef	MPT_TEST_MULTIPATH
+	int			failure_id;
+#endif
 
 	/*
 	 * IOC Facts
 	 */
-	uint16_t	mpt_global_credits;
-	uint16_t	request_frame_size;
-	uint8_t		mpt_max_devices;
-	uint8_t		mpt_max_buses;
-	uint8_t		ioc_facts_flags;
-	uint8_t		padding0;
+	MSG_IOC_FACTS_REPLY	ioc_facts;
 
 	/*
 	 * Port Facts
-	 * XXX - Add multi-port support!.
 	 */
-	uint16_t	mpt_ini_id;
-	uint16_t	mpt_port_type;
-	uint16_t	mpt_proto_flags;
-	uint16_t	mpt_max_tgtcmds;
+	MSG_PORT_FACTS_REPLY *	port_facts;
+#define	mpt_ini_id	port_facts[0].PortSCSIID
+#define	mpt_max_tgtcmds	port_facts[0].MaxPostedCmdBuffers
 
 	/*
 	 * Device Configuration Information
@@ -583,6 +669,7 @@ struct mpt_softc {
 	/*
 	 * PCI Hardware info
 	 */
+	int			pci_msi_count;
 	struct resource *	pci_irq;	/* Interrupt map for chip */
 	void *			ih;		/* Interupt handle */
 	struct mpt_pci_cfg	pci_cfg;	/* saved PCI conf registers */
@@ -675,6 +762,9 @@ struct mpt_softc {
 	bus_dmamap_t		fw_dmap;	/* DMA map for firmware image */
 	bus_addr_t		fw_phys;	/* BusAddr of firmware image */
 
+	/* SAS Topology */
+	struct mptsas_portinfo	*sas_portinfo;
+
 	/* Shutdown Event Handler. */
 	eventhandler_tag         eh;
 
@@ -697,6 +787,7 @@ mpt_assign_serno(struct mpt_softc *mpt, request_t *req)
 #define	MPT_LOCK(mpt)		mpt_lockspl(mpt)
 #define	MPT_UNLOCK(mpt)		mpt_unlockspl(mpt)
 #define	MPT_OWNED(mpt)		mpt->mpt_islocked
+#define	MPT_LOCK_ASSERT(mpt)
 #define	MPTLOCK_2_CAMLOCK	MPT_UNLOCK
 #define	CAMLOCK_2_MPTLOCK	MPT_LOCK
 #define	MPT_LOCK_SETUP(mpt)
@@ -749,9 +840,13 @@ mpt_sleep(struct mpt_softc *mpt, void *ident, int priority,
 	return (error);
 }
 
+#define mpt_req_timeout(req, ticks, func, arg) \
+	callout_reset(&(req)->callout, (ticks), (func), (arg));
+#define mpt_req_untimeout(req, func, arg) \
+	callout_stop(&(req)->callout)
+
 #else
-#ifdef	LOCKING_WORKED_AS_IT_SHOULD
-#error "Shouldn't Be Here!"
+#if 1
 #define	MPT_IFLAGS		INTR_TYPE_CAM | INTR_ENTROPY | INTR_MPSAFE
 #define	MPT_LOCK_SETUP(mpt)						\
 		mtx_init(&mpt->mpt_lock, "mpt", NULL, MTX_DEF);		\
@@ -765,53 +860,44 @@ mpt_sleep(struct mpt_softc *mpt, void *ident, int priority,
 #define	MPT_LOCK(mpt)		mtx_lock(&(mpt)->mpt_lock)
 #define	MPT_UNLOCK(mpt)		mtx_unlock(&(mpt)->mpt_lock)
 #define	MPT_OWNED(mpt)		mtx_owned(&(mpt)->mpt_lock)
-#define	MPTLOCK_2_CAMLOCK(mpt)	\
-	mtx_unlock(&(mpt)->mpt_lock); mtx_lock(&Giant)
-#define	CAMLOCK_2_MPTLOCK(mpt)	\
-	mtx_unlock(&Giant); mtx_lock(&(mpt)->mpt_lock)
+#define	MPT_LOCK_ASSERT(mpt)	mtx_assert(&(mpt)->mpt_lock, MA_OWNED)
+#define	MPTLOCK_2_CAMLOCK(mpt)
+#define	CAMLOCK_2_MPTLOCK(mpt)
 #define mpt_sleep(mpt, ident, priority, wmesg, timo) \
 	msleep(ident, &(mpt)->mpt_lock, priority, wmesg, timo)
+#define mpt_req_timeout(req, ticks, func, arg) \
+	callout_reset(&(req)->callout, (ticks), (func), (arg));
+#define mpt_req_untimeout(req, func, arg) \
+	callout_stop(&(req)->callout)
 
 #else
 
 #define	MPT_IFLAGS		INTR_TYPE_CAM | INTR_ENTROPY
 #define	MPT_LOCK_SETUP(mpt)	do { } while (0)
 #define	MPT_LOCK_DESTROY(mpt)	do { } while (0)
-#if	0
-#define	MPT_LOCK(mpt)		\
-	device_printf(mpt->dev, "LOCK %s:%d\n", __FILE__, __LINE__); 	\
-	KASSERT(mpt->mpt_locksetup == 0,				\
-	    ("recursive lock acquire at %s:%d", __FILE__, __LINE__));	\
-	mpt->mpt_locksetup = 1
-#define	MPT_UNLOCK(mpt)		\
-	device_printf(mpt->dev, "UNLK %s:%d\n", __FILE__, __LINE__); 	\
-	KASSERT(mpt->mpt_locksetup == 1,				\
-	    ("release unowned lock at %s:%d", __FILE__, __LINE__));	\
-	mpt->mpt_locksetup = 0
-#else
-#define	MPT_LOCK(mpt)							\
-	KASSERT(mpt->mpt_locksetup == 0,				\
-	    ("recursive lock acquire at %s:%d", __FILE__, __LINE__));	\
-	mpt->mpt_locksetup = 1
-#define	MPT_UNLOCK(mpt)							\
-	KASSERT(mpt->mpt_locksetup == 1,				\
-	    ("release unowned lock at %s:%d", __FILE__, __LINE__));	\
-	mpt->mpt_locksetup = 0
-#endif
-#define	MPT_OWNED(mpt)		mpt->mpt_locksetup
-#define	MPTLOCK_2_CAMLOCK(mpt)	MPT_UNLOCK(mpt)
-#define	CAMLOCK_2_MPTLOCK(mpt)	MPT_LOCK(mpt)
+#define	MPT_LOCK_ASSERT(mpt)	mtx_assert(&Giant, MA_OWNED)
+#define	MPT_LOCK(mpt)		mtx_lock(&Giant)
+#define	MPT_UNLOCK(mpt)		mtx_unlock(&Giant)
+#define	MPTLOCK_2_CAMLOCK(mpt)
+#define	CAMLOCK_2_MPTLOCK(mpt)
 
 static __inline int
 mpt_sleep(struct mpt_softc *, void *, int, const char *, int);
+
+#define mpt_ccb_timeout(ccb, ticks, func, arg) \
+	do {	\
+		(ccb)->ccb_h.timeout_ch = timeout((func), (arg), (ticks)); \
+	} while (0)
+#define mpt_ccb_untimeout(ccb, func, arg) \
+	untimeout((func), (arg), (ccb)->ccb_h.timeout_ch)
+#define mpt_ccb_timeout_init(ccb) \
+	callout_handle_init(&(ccb)->ccb_h.timeout_ch)
 
 static __inline int
 mpt_sleep(struct mpt_softc *mpt, void *i, int p, const char *w, int t)
 {
 	int r;
-	MPT_UNLOCK(mpt);
 	r = tsleep(i, p, w, t);
-	MPT_LOCK(mpt);
 	return (r);
 }
 #endif
@@ -913,7 +999,7 @@ mpt_complete_request_chain(struct mpt_softc *, struct req_queue *, u_int);
 
 /************************** Scatter Gather Managment **************************/
 /* MPT_RQSL- size of request frame, in bytes */
-#define	MPT_RQSL(mpt)		(mpt->request_frame_size << 2)
+#define	MPT_RQSL(mpt)		(mpt->ioc_facts.RequestFrameSize << 2)
 
 /* MPT_NSGL- how many SG entries can fit in a request frame size */
 #define	MPT_NSGL(mpt)		(MPT_RQSL(mpt) / sizeof (SGE_IO_UNION))
@@ -1140,11 +1226,19 @@ void		mpt_dump_reply_frame(struct mpt_softc *mpt,
 
 void		mpt_set_config_regs(struct mpt_softc *);
 int		mpt_issue_cfg_req(struct mpt_softc */*mpt*/, request_t */*req*/,
-				  u_int /*Action*/, u_int /*PageVersion*/,
-				  u_int /*PageLength*/, u_int /*PageNumber*/,
-				  u_int /*PageType*/, uint32_t /*PageAddress*/,
+				  cfgparms_t *params,
 				  bus_addr_t /*addr*/, bus_size_t/*len*/,
 				  int /*sleep_ok*/, int /*timeout_ms*/);
+int		mpt_read_extcfg_header(struct mpt_softc *mpt, int PageVersion,
+				       int PageNumber, uint32_t PageAddress,
+				       int ExtPageType,
+				       CONFIG_EXTENDED_PAGE_HEADER *rslt,
+				       int sleep_ok, int timeout_ms);
+int		mpt_read_extcfg_page(struct mpt_softc *mpt, int Action,
+				     uint32_t PageAddress,
+				     CONFIG_EXTENDED_PAGE_HEADER *hdr,
+				     void *buf, size_t len, int sleep_ok,
+				     int timeout_ms);
 int		mpt_read_cfg_header(struct mpt_softc *, int /*PageType*/,
 				    int /*PageNumber*/,
 				    uint32_t /*PageAddress*/,
@@ -1176,7 +1270,6 @@ mpt_write_cur_cfg_page(struct mpt_softc *mpt, uint32_t PageAddress,
 				   PageAddress, hdr, len, sleep_ok,
 				   timeout_ms));
 }
-
 /* mpt_debug.c functions */
 void mpt_print_reply(void *vmsg);
 void mpt_print_db(uint32_t mb);
