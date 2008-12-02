@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Sean Bullington <seanATstalker.org>
  *               2003-2006 Anish Mistry <amistry@am-productions.biz>

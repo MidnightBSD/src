@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2007 Thomas Quinot <thomas@cuivre.fr.eu.org>
  * All rights reserved.

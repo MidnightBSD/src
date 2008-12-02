@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 OGAWA Takaya <t-ogawa@triaez.kaisei.org>
  * Copyright (c) 2004 TAKAHASHI Yoshihiro <nyan@FreeBSD.org>
