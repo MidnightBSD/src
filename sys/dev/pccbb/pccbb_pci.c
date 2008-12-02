@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb_pci.c,v 1.9 2005/06/06 06:05:32 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb_pci.c,v 1.26 2007/09/30 11:05:15 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -93,7 +93,6 @@ __FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb_pci.c,v 1.9 2005/06/06 06:05:32 imp 
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
-#include <machine/clock.h>
 
 #include <dev/pccard/pccardreg.h>
 #include <dev/pccard/pccardvar.h>
@@ -118,6 +117,7 @@ __FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb_pci.c,v 1.9 2005/06/06 06:05:32 imp 
 		pci_read_config(DEV, REG, SIZE) MASK1) MASK2, SIZE)
 
 static void cbb_chipinit(struct cbb_softc *sc);
+static void cbb_pci_intr(void *arg);
 
 static struct yenta_chipinfo {
 	uint32_t yc_id;
@@ -150,6 +150,15 @@ static struct yenta_chipinfo {
 	{PCIC_ID_TI4450, "TI4450 PCI-CardBus Bridge", CB_TI12XX},
 	{PCIC_ID_TI4451, "TI4451 PCI-CardBus Bridge", CB_TI12XX},
 	{PCIC_ID_TI4510, "TI4510 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI6411, "TI6411 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI6420, "TI6420 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI6420SC, "TI6420 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI7410, "TI7410 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI7510, "TI7510 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI7610, "TI7610 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI7610M, "TI7610 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI7610SD, "TI7610 PCI-CardBus Bridge", CB_TI12XX},
+	{PCIC_ID_TI7610MS, "TI7610 PCI-CardBus Bridge", CB_TI12XX},
 
 	/* ENE */
 	{PCIC_ID_ENE_CB710, "ENE CB710 PCI-CardBus Bridge", CB_TI12XX},
@@ -186,7 +195,14 @@ static struct yenta_chipinfo {
 	{PCIC_ID_OZ6922, "O2Micro OZ6922 PCI-CardBus Bridge", CB_O2MICRO},
 	{PCIC_ID_OZ6933, "O2Micro OZ6933 PCI-CardBus Bridge", CB_O2MICRO},
 	{PCIC_ID_OZ711E1, "O2Micro OZ711E1 PCI-CardBus Bridge", CB_O2MICRO},
+	{PCIC_ID_OZ711EC1, "O2Micro OZ711EC1/M1 PCI-CardBus Bridge", CB_O2MICRO},
+	{PCIC_ID_OZ711E2, "O2Micro OZ711E2 PCI-CardBus Bridge", CB_O2MICRO},
 	{PCIC_ID_OZ711M1, "O2Micro OZ711M1 PCI-CardBus Bridge", CB_O2MICRO},
+	{PCIC_ID_OZ711M2, "O2Micro OZ711M2 PCI-CardBus Bridge", CB_O2MICRO},
+	{PCIC_ID_OZ711M3, "O2Micro OZ711M3 PCI-CardBus Bridge", CB_O2MICRO},
+
+	/* SMC */
+	{PCIC_ID_SMC_34C90, "SMC 34C90 PCI-CardBus Bridge", CB_CIRRUS},
 
 	/* sentinel */
 	{0 /* null id */, "unknown", CB_UNKNOWN},
@@ -271,7 +287,7 @@ static void
 cbb_print_config(device_t dev)
 {
 	int i;
-	
+
 	device_printf(dev, "PCI Configuration space:");
 	for (i = 0; i < 256; i += 4) {
 		if (i % 16 == 0)
@@ -286,20 +302,25 @@ cbb_pci_attach(device_t brdev)
 {
 	static int curr_bus_number = 2; /* XXX EVILE BAD (see below) */
 	struct cbb_softc *sc = (struct cbb_softc *)device_get_softc(brdev);
-	int rid, bus, pribus;
+	struct sysctl_ctx_list *sctx;
+	struct sysctl_oid *soid;
+	int rid;
 	device_t parent;
+	uint32_t pribus;
 
 	parent = device_get_parent(brdev);
 	mtx_init(&sc->mtx, device_get_nameunit(brdev), "cbb", MTX_DEF);
 	cv_init(&sc->cv, "cbb cv");
+	cv_init(&sc->powercv, "cbb cv");
 	sc->chipset = cbb_chipset(pci_get_devid(brdev), NULL);
 	sc->dev = brdev;
 	sc->cbdev = NULL;
 	sc->exca[0].pccarddev = NULL;
+	sc->domain = pci_get_domain(brdev);
 	sc->secbus = pci_read_config(brdev, PCIR_SECBUS_2, 1);
 	sc->subbus = pci_read_config(brdev, PCIR_SUBBUS_2, 1);
+	sc->pribus = pcib_get_bus(parent);
 	SLIST_INIT(&sc->rl);
-	STAILQ_INIT(&sc->intr_handlers);
 	cbb_powerstate_d0(brdev);
 
 	rid = CBBR_SOCKBASE;
@@ -314,7 +335,7 @@ cbb_pci_attach(device_t brdev)
 		DEVPRINTF((brdev, "Found memory at %08lx\n",
 		    rman_get_start(sc->base_res)));
 	}
-		
+
 	sc->bst = rman_get_bustag(sc->base_res);
 	sc->bsh = rman_get_bushandle(sc->base_res);
 	exca_init(&sc->exca[0], brdev, sc->bst, sc->bsh, CBB_EXCA_OFFSET);
@@ -323,30 +344,50 @@ cbb_pci_attach(device_t brdev)
 	sc->chipinit = cbb_chipinit;
 	sc->chipinit(sc);
 
+	/*Sysctls*/
+	sctx = device_get_sysctl_ctx(brdev);
+	soid = device_get_sysctl_tree(brdev);
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "domain",
+	    CTLFLAG_RD, &sc->domain, 0, "Domain number");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "pribus",
+	    CTLFLAG_RD, &sc->pribus, 0, "Primary bus number");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "secbus",
+	    CTLFLAG_RD, &sc->secbus, 0, "Secondary bus number");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "subbus",
+	    CTLFLAG_RD, &sc->subbus, 0, "Subordinate bus number");
+#if 0
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "memory",
+	    CTLFLAG_RD, &sc->subbus, 0, "Memory window open");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "premem",
+	    CTLFLAG_RD, &sc->subbus, 0, "Prefetch memroy window open");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "io1",
+	    CTLFLAG_RD, &sc->subbus, 0, "io range 1 open");
+	SYSCTL_ADD_UINT(sctx, SYSCTL_CHILDREN(soid), OID_AUTO, "io2",
+	    CTLFLAG_RD, &sc->subbus, 0, "io range 2 open");
+#endif
+
 	/*
 	 * This is a gross hack.  We should be scanning the entire pci
 	 * tree, assigning bus numbers in a way such that we (1) can
-	 * reserve 1 extra bus just in case and (2) all sub busses 
+	 * reserve 1 extra bus just in case and (2) all sub busses
 	 * are in an appropriate range.
 	 */
-	bus = pci_read_config(brdev, PCIR_SECBUS_2, 1);
-	pribus = pcib_get_bus(parent);
-	DEVPRINTF((brdev, "Secondary bus is %d\n", bus));
-	if (bus == 0) {
-		if (curr_bus_number <= pribus)
-			curr_bus_number = pribus + 1;
-		if (pci_read_config(brdev, PCIR_PRIBUS_2, 1) != pribus) {
-			DEVPRINTF((brdev, "Setting primary bus to %d\n", pribus));
-			pci_write_config(brdev, PCIR_PRIBUS_2, pribus, 1);
+	DEVPRINTF((brdev, "Secondary bus is %d\n", sc->secbus));
+	pribus = pci_read_config(brdev, PCIR_PRIBUS_2, 1);
+	if (sc->secbus == 0 || sc->pribus != pribus) {
+		if (curr_bus_number <= sc->pribus)
+			curr_bus_number = sc->pribus + 1;
+		if (pribus != sc->pribus) {
+			DEVPRINTF((brdev, "Setting primary bus to %d\n",
+			    sc->pribus));
+			pci_write_config(brdev, PCIR_PRIBUS_2, sc->pribus, 1);
 		}
-		bus = curr_bus_number;
-		DEVPRINTF((brdev, "Secondary bus set to %d subbus %d\n", bus,
-		    bus + 1));
-		sc->secbus = bus;
-		sc->subbus = bus + 1;
-		pci_write_config(brdev, PCIR_SECBUS_2, bus, 1);
-		pci_write_config(brdev, PCIR_SUBBUS_2, bus + 1, 1);
-		curr_bus_number += 2;
+		sc->secbus = curr_bus_number++;
+		sc->subbus = curr_bus_number++;
+		DEVPRINTF((brdev, "Secondary bus set to %d subbus %d\n",
+		    sc->secbus, sc->subbus));
+		pci_write_config(brdev, PCIR_SECBUS_2, sc->secbus, 1);
+		pci_write_config(brdev, PCIR_SUBBUS_2, sc->subbus, 1);
 	}
 
 	/* attach children */
@@ -367,13 +408,13 @@ cbb_pci_attach(device_t brdev)
 	sc->irq_res = bus_alloc_resource_any(brdev, SYS_RES_IRQ, &rid,
 	    RF_SHAREABLE | RF_ACTIVE);
 	if (sc->irq_res == NULL) {
-		printf("cbb: Unable to map IRQ...\n");
+		device_printf(brdev, "Unable to map IRQ...\n");
 		goto err;
 	}
 
 	if (bus_setup_intr(brdev, sc->irq_res, INTR_TYPE_AV | INTR_MPSAFE,
-	    cbb_intr, sc, &sc->intrhand)) {
-		device_printf(brdev, "couldn't establish interrupt");
+	    NULL, cbb_pci_intr, sc, &sc->intrhand)) {
+		device_printf(brdev, "couldn't establish interrupt\n");
 		goto err;
 	}
 
@@ -394,7 +435,7 @@ cbb_pci_attach(device_t brdev)
 
 	/* Start the thread */
 	if (kthread_create(cbb_event_thread, sc, &sc->event_thread, 0, 0,
-	    "%s", device_get_nameunit(brdev))) {
+	    "%s event thread", device_get_nameunit(brdev))) {
 		device_printf(brdev, "unable to create event thread.\n");
 		panic("cbb_create_event_thread");
 	}
@@ -445,7 +486,7 @@ cbb_chipinit(struct cbb_softc *sc)
 	/* Use PCI interrupt for interrupt routing */
 	PCI_MASK2_CONFIG(sc->dev, CBBR_BRIDGECTRL,
 	    & ~(CBBM_BRIDGECTRL_MASTER_ABORT |
-	    CBBM_BRIDGECTRL_INTR_IREQ_EN),
+	    CBBM_BRIDGECTRL_INTR_IREQ_ISA_EN),
 	    | CBBM_BRIDGECTRL_WRITE_POST_EN,
 	    2);
 
@@ -527,27 +568,32 @@ cbb_chipinit(struct cbb_softc *sc)
 		reg = (reg & 0x0f) |
 		    EXCA_O2CC_IREQ_INTC | EXCA_O2CC_STSCHG_INTC;
 		exca_putb(&sc->exca[0], EXCA_O2MICRO_CTRL_C, reg);
-
 		break;
 	case CB_TOPIC97:
 		/*
 		 * Disable Zoom Video, ToPIC 97, 100.
 		 */
-		pci_write_config(sc->dev, CBBR_TOPIC_ZV_CONTROL, 0, 1);
+		pci_write_config(sc->dev, TOPIC97_ZV_CONTROL, 0, 1);
 		/*
 		 * ToPIC 97, 100
 		 * At offset 0xa1: INTERRUPT CONTROL register
 		 * 0x1: Turn on INT interrupts.
 		 */
-		PCI_MASK_CONFIG(sc->dev, CBBR_TOPIC_INTCTRL,
-		    | CBBM_TOPIC_INTCTRL_INTIRQSEL, 1);
+		PCI_MASK_CONFIG(sc->dev, TOPIC_INTCTRL,
+		    | TOPIC97_INTCTRL_INTIRQSEL, 1);
+		/*
+		 * ToPIC97, 100
+		 * Need to assert support for low voltage cards
+		 */
+		exca_setb(&sc->exca[0], EXCA_TOPIC97_CTRL,
+		    EXCA_TOPIC97_CTRL_LV_MASK);
 		goto topic_common;
 	case CB_TOPIC95:
 		/*
 		 * SOCKETCTRL appears to be TOPIC 95/B specific
 		 */
-		PCI_MASK_CONFIG(sc->dev, CBBR_TOPIC_SOCKETCTRL,
-		    | CBBM_TOPIC_SOCKETCTRL_SCR_IRQSEL, 4);
+		PCI_MASK_CONFIG(sc->dev, TOPIC95_SOCKETCTRL,
+		    | TOPIC95_SOCKETCTRL_SCR_IRQSEL, 4);
 
 	topic_common:;
 		/*
@@ -560,26 +606,25 @@ cbb_chipinit(struct cbb_softc *sc)
 		 * in legacy mode to 0x3e0 and offset 0. (legacy
 		 * mode is determined elsewhere)
 		 */
-		pci_write_config(sc->dev, CBBR_TOPIC_SLOTCTRL,
-		    CBBM_TOPIC_SLOTCTRL_SLOTON |
-		    CBBM_TOPIC_SLOTCTRL_SLOTEN |
-		    CBBM_TOPIC_SLOTCTRL_ID_LOCK |
-		    CBBM_TOPIC_SLOTCTRL_ID_WP, 1);
+		pci_write_config(sc->dev, TOPIC_SLOTCTRL,
+		    TOPIC_SLOTCTRL_SLOTON |
+		    TOPIC_SLOTCTRL_SLOTEN |
+		    TOPIC_SLOTCTRL_ID_LOCK |
+		    TOPIC_SLOTCTRL_ID_WP, 1);
 
 		/*
 		 * At offset 0xa3 Card Detect Control Register
 		 * 0x80 CARDBUS enbale
 		 * 0x01 Cleared for hardware change detect
 		 */
-		PCI_MASK2_CONFIG(sc->dev, CBBR_TOPIC_CDC,
-		    | CBBM_TOPIC_CDC_CARDBUS,
-		    & ~CBBM_TOPIC_CDC_SWDETECT, 4);
+		PCI_MASK2_CONFIG(sc->dev, TOPIC_CDC,
+		    | TOPIC_CDC_CARDBUS, & ~TOPIC_CDC_SWDETECT, 4);
 		break;
 	}
 
 	/*
 	 * Need to tell ExCA registers to CSC interrupts route via PCI
-	 * interrupts.  There are two ways to do this.  Once is to set
+	 * interrupts.  There are two ways to do this.  One is to set
 	 * INTR_ENABLE and the other is to set CSC to 0.  Since both
 	 * methods are mutually compatible, we do both.
 	 */
@@ -607,12 +652,146 @@ cbb_route_interrupt(device_t pcib, device_t dev, int pin)
 	return (rman_get_start(sc->irq_res));
 }
 
+static int
+cbb_pci_shutdown(device_t brdev)
+{
+	struct cbb_softc *sc = (struct cbb_softc *)device_get_softc(brdev);
+
+	/*
+	 * Place the cards in reset, turn off the interrupts and power
+	 * down the socket.
+	 */
+	PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL, |CBBM_BRIDGECTRL_RESET, 2);
+	exca_clrb(&sc->exca[0], EXCA_INTR, EXCA_INTR_RESET);
+	cbb_set(sc, CBB_SOCKET_MASK, 0);
+	cbb_set(sc, CBB_SOCKET_EVENT, 0xffffffff);
+	cbb_power(brdev, CARD_OFF);
+
+	/* 
+	 * For paranoia, turn off all address decoding.  Really not needed,
+	 * it seems, but it can't hurt
+	 */
+	exca_putb(&sc->exca[0], EXCA_ADDRWIN_ENABLE, 0);
+	pci_write_config(brdev, CBBR_MEMBASE0, 0, 4);
+	pci_write_config(brdev, CBBR_MEMLIMIT0, 0, 4);
+	pci_write_config(brdev, CBBR_MEMBASE1, 0, 4);
+	pci_write_config(brdev, CBBR_MEMLIMIT1, 0, 4);
+	pci_write_config(brdev, CBBR_IOBASE0, 0, 4);
+	pci_write_config(brdev, CBBR_IOLIMIT0, 0, 4);
+	pci_write_config(brdev, CBBR_IOBASE1, 0, 4);
+	pci_write_config(brdev, CBBR_IOLIMIT1, 0, 4);
+	return (0);
+}
+
+static void
+cbb_pci_intr(void *arg)
+{
+	struct cbb_softc *sc = arg;
+	uint32_t sockevent;
+
+	/*
+	 * Read the socket event.  Sometimes, the theory goes, the PCI
+	 * bus is so loaded that it cannot satisfy the read request, so
+	 * we get garbage back from the following read.  We have to filter
+	 * out the garbage so that we don't spontaneously reset the card
+	 * under high load.  PCI isn't supposed to act like this.  No doubt
+	 * this is a bug in the PCI bridge chipset (or cbb brige) that's being
+	 * used in certain amd64 laptops today.  Work around the issue by
+	 * assuming that any bits we don't know about being set means that
+	 * we got garbage.
+	 */
+	sockevent = cbb_get(sc, CBB_SOCKET_EVENT);
+	if (sockevent != 0 && (sockevent & ~CBB_SOCKET_EVENT_VALID_MASK) == 0) {
+		/* ack the interrupt */
+		cbb_set(sc, CBB_SOCKET_EVENT, sockevent);
+
+		/*
+		 * If anything has happened to the socket, we assume that
+		 * the card is no longer OK, and we shouldn't call its
+		 * ISR.  We set cardok as soon as we've attached the
+		 * card.  This helps in a noisy eject, which happens
+		 * all too often when users are ejecting their PC Cards.
+		 *
+		 * We use this method in preference to checking to see if
+		 * the card is still there because the check suffers from
+		 * a race condition in the bouncing case.  Prior versions
+		 * of the pccard software used a similar trick and achieved
+		 * excellent results.
+		 */
+		if (sockevent & CBB_SOCKET_EVENT_CD) {
+			mtx_lock(&sc->mtx);
+			cbb_clrb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_CD);
+			sc->cardok = 0;
+			cbb_disable_func_intr(sc);
+			cv_signal(&sc->cv);
+			mtx_unlock(&sc->mtx);
+		}
+		/*
+		 * If we get a power interrupt, wakeup anybody that might
+		 * be waiting for one.
+		 */
+		if (sockevent & CBB_SOCKET_EVENT_POWER) {
+			mtx_lock(&sc->mtx);
+			sc->powerintr++;
+			cv_signal(&sc->powercv);
+			mtx_unlock(&sc->mtx);
+		}
+	}
+	/*
+	 * Some chips also require us to read the old ExCA registe for
+	 * card status change when we route CSC vis PCI.  This isn't supposed
+	 * to be required, but it clears the interrupt state on some chipsets.
+	 * Maybe there's a setting that would obviate its need.  Maybe we
+	 * should test the status bits and deal with them, but so far we've
+	 * not found any machines that don't also give us the socket status
+	 * indication above.
+	 *
+	 * We have to call this unconditionally because some bridges deliver
+	 * the event independent of the CBB_SOCKET_EVENT_CD above.
+	 */
+	exca_getb(&sc->exca[0], EXCA_CSC);
+}
+
+/************************************************************************/
+/* PCI compat methods							*/
+/************************************************************************/
+
+static int
+cbb_maxslots(device_t brdev)
+{
+	return (0);
+}
+
+static uint32_t
+cbb_read_config(device_t brdev, int b, int s, int f, int reg, int width)
+{
+	uint32_t rv;
+
+	/*
+	 * Pass through to the next ppb up the chain (i.e. our grandparent).
+	 */
+	rv = PCIB_READ_CONFIG(device_get_parent(device_get_parent(brdev)),
+	    b, s, f, reg, width);
+	return (rv);
+}
+
+static void
+cbb_write_config(device_t brdev, int b, int s, int f, int reg, uint32_t val,
+    int width)
+{
+	/*
+	 * Pass through to the next ppb up the chain (i.e. our grandparent).
+	 */
+	PCIB_WRITE_CONFIG(device_get_parent(device_get_parent(brdev)),
+	    b, s, f, reg, val, width);
+}
+
 static device_method_t cbb_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,			cbb_pci_probe),
 	DEVMETHOD(device_attach,		cbb_pci_attach),
 	DEVMETHOD(device_detach,		cbb_detach),
-	DEVMETHOD(device_shutdown,		cbb_shutdown),
+	DEVMETHOD(device_shutdown,		cbb_pci_shutdown),
 	DEVMETHOD(device_suspend,		cbb_suspend),
 	DEVMETHOD(device_resume,		cbb_resume),
 

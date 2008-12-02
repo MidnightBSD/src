@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pccbb/pccbbreg.h,v 1.16 2005/01/13 19:05:25 imp Exp $
+ * $FreeBSD: src/sys/dev/pccbb/pccbbreg.h,v 1.20 2006/08/12 09:06:55 imp Exp $
  */
 
 /*
@@ -82,7 +82,7 @@
 #define	CBBR_BRIDGECTRL				0x3e	/* len=2 */
 # define	CBBM_BRIDGECTRL_MASTER_ABORT		0x0020
 # define	CBBM_BRIDGECTRL_RESET			0x0040
-# define	CBBM_BRIDGECTRL_INTR_IREQ_EN		0x0080
+# define	CBBM_BRIDGECTRL_INTR_IREQ_ISA_EN	0x0080
 # define	CBBM_BRIDGECTRL_PREFETCH_0		0x0100
 # define	CBBM_BRIDGECTRL_PREFETCH_1		0x0200
 # define	CBBM_BRIDGECTRL_WRITE_POST_EN		0x0400
@@ -92,7 +92,7 @@
 
 #define	CBBR_LEGACY				0x44	/* len=4 */
 
-/* TI * */
+/* TI */
 #define CBBR_SYSCTRL				0x80	/* len=4 */
 # define	CBBM_SYSCTRL_INTRTIE			0x20000000u
 
@@ -132,44 +132,60 @@
 # define	CBBM_DEVCTRL_INT_PCI			0x02
 
 /* ToPIC 95 ONLY */
-#define	CBBR_TOPIC_SOCKETCTRL			0x90
-# define	CBBM_TOPIC_SOCKETCTRL_SCR_IRQSEL	0x00000001 /* PCI intr */
+#define	TOPIC95_SOCKETCTRL			0x90
+# define TOPIC95_SOCKETCTRL_SCR_IRQSEL	0x00000001 /* PCI intr */
 /* ToPIC 97, 100 */
-#define CBBR_TOPIC_ZV_CONTROL			0x9c	/* 1 byte */
-# define	CBBM_TOPIC_ZVC_ENABLE			0x1
+#define TOPIC97_ZV_CONTROL			0x9c	/* 1 byte */
+# define TOPIC97_ZVC_ENABLE			0x1
 
 /* TOPIC 95+ */
-#define	CBBR_TOPIC_SLOTCTRL			0xa0	/* 1 byte */
-# define	CBBM_TOPIC_SLOTCTRL_SLOTON		0x80
-# define	CBBM_TOPIC_SLOTCTRL_SLOTEN		0x40
-# define	CBBM_TOPIC_SLOTCTRL_ID_LOCK		0x20
-# define	CBBM_TOPIC_SLOTCTRL_ID_WP		0x10
-# define	CBBM_TOPIC_SLOTCTRL_PORT_MASK		0x0c
-# define	CBBM_TOPIC_SLOTCTRL_PORT_SHIFT		2
-# define	CBBM_TOPIC_SLOTCTRL_OSF_MASK		0x03
-# define	CBBM_TOPIC_SLOTCTRL_OSF_SHIFT		0
+#define	TOPIC_SLOTCTRL			0xa0	/* 1 byte */
+# define TOPIC_SLOTCTRL_SLOTON		0x80
+# define TOPIC_SLOTCTRL_SLOTEN		0x40
+# define TOPIC_SLOTCTRL_ID_LOCK		0x20
+# define TOPIC_SLOTCTRL_ID_WP		0x10
+# define TOPIC_SLOTCTRL_PORT_MASK	0x0c
+# define TOPIC_SLOTCTRL_PORT_SHIFT	2
+# define TOPIC_SLOTCTRL_OSF_MASK	0x03
+# define TOPIC_SLOTCTRL_OSF_SHIFT	0
 
 /* TOPIC 95+ */
-#define CBBR_TOPIC_INTCTRL			0xa1	/* 1 byte */
-# define	CBBM_TOPIC_INTCTRL_INTB			0x20
-# define	CBBM_TOPIC_INTCTRL_INTA			0x10
-# define	CBBM_TOPIC_INTCTRL_INT_MASK		0x30
+#define TOPIC_INTCTRL			0xa1	/* 1 byte */
+# define TOPIC_INTCTRL_INTB		0x20
+# define TOPIC_INTCTRL_INTA		0x10
+# define TOPIC_INTCTRL_INT_MASK		0x30
 /* The following bits may be for ToPIC 95 only */
-# define	CBBM_TOPIC_INTCTRL_CLOCK_MASK		0x0c
-# define	CBBM_TOPIC_INTCTRL_CLOCK_2		0x08 /* PCI Clk/2 */
-# define	CBBM_TOPIC_INTCTRL_CLOCK_1		0x04 /* PCI Clk */
-# define	CBBM_TOPIC_INTCTRL_CLOCK_0		0x00 /* no clock */
+# define TOPIC95_INTCTRL_CLOCK_MASK	0x0c
+# define TOPIC95_INTCTRL_CLOCK_2	0x08 /* PCI Clk/2 */
+# define TOPIC95_INTCTRL_CLOCK_1	0x04 /* PCI Clk */
+# define TOPIC95_INTCTRL_CLOCK_0	0x00 /* no clock */
 /* ToPIC97, 100 defines the following bits */
-# define	CBBM_TOPIC_INTCTRL_STSIRQNP		0x04
-# define	CBBM_TOPIC_INTCTRL_IRQNP		0x02
-# define	CBBM_TOPIC_INTCTRL_INTIRQSEL		0x01
+# define TOPIC97_INTCTRL_STSIRQNP		0x04
+# define TOPIC97_INTCTRL_IRQNP		0x02
+# define TOPIC97_INTCTRL_INTIRQSEL	0x01
 
 /* TOPIC 95+ */
-#define CBBR_TOPIC_CDC			0xa3	/* 1 byte */
-# define	CBBM_TOPIC_CDC_CARDBUS			0x80
-# define	CBBM_TOPIC_CDC_VS1			0x04
-# define	CBBM_TOPIC_CDC_VS2			0x02
-# define	CBBM_TOPIC_CDC_SWDETECT			0x01
+#define TOPIC_CDC			0xa3	/* 1 byte */
+# define TOPIC_CDC_CARDBUS		0x80
+# define TOPIC_CDC_VS1			0x04
+# define TOPIC_CDC_VS2			0x02
+# define TOPIC_CDC_SWDETECT		0x01
+
+/* TOPIC97+? */
+#define TOPIC_REG_CTRL			0xa4	/* 4 bytes */
+# define TOPIC_REG_CTRL_RESUME_RESET  0x80000000
+# define TOPIC_REG_CTRL_REMOVE_RESET  0x40000000
+# define TOPIC97_REG_CTRL_CLKRUN_ENA  0x20000000
+# define TOPIC97_REG_CTRL_TESTMODE    0x10000000
+# define TOPIC97_REG_CTRL_IOPLUP      0x08000000
+# define TOPIC_REG_CTRL_BUFOFF_PWROFF 0x02000000
+# define TOPIC_REG_CTRL_BUFOFF_SIGOFF 0x01000000
+# define TOPIC97_REG_CTRL_CB_DEV_MASK 0x0000f800
+# define TOPIC97_REG_CTRL_CB_DEV_SHIFT 11
+# define TOPIC97_REG_CTRL_RI_DISABLE  0x00000004
+# define TOPIC97_REG_CTRL_CAUDIO_OFF  0x00000002
+# define TOPIC_REG_CTRL_CAUDIO_INVERT 0x00000001
+
 
 /* Socket definitions */
 #define	CBB_SOCKET_EVENT_CSTS		0x01	/* Card Status Change */
@@ -177,6 +193,7 @@
 #define	CBB_SOCKET_EVENT_CD2		0x04	/* Card Detect 2 */
 #define	CBB_SOCKET_EVENT_CD		0x06	/* Card Detect all */
 #define	CBB_SOCKET_EVENT_POWER		0x08	/* Power Cycle */
+#define	CBB_SOCKET_EVENT_VALID_MASK	0x0f	/* All socket events */
 
 #define	CBB_SOCKET_MASK_CSTS		0x01	/* Card Status Change */
 #define	CBB_SOCKET_MASK_CD		0x06	/* Card Detect */
@@ -220,26 +237,26 @@
 
 #define	CBB_SOCKET_CTRL_STOPCLK		0x80
 
-#define CBB_FORCE_CV_TEST		(1UL << 14)
-#define CBB_FORCE_3VCARD		(1UL << 11)
-#define CBB_FORCE_5VCARD		(1UL << 10)
-#define CBB_FORCE_BAD_VCC_REQ		(1UL <<  9)
-#define CBB_FORCE_DATA_LOST		(1UL <<  8)
-#define CBB_FORCE_NOT_A_CARD		(1UL <<  7)
-#define CBB_FORCE_CB_CARD		(1UL <<  5)
-#define CBB_FORCE_R2_CARD		(1UL <<  4)
-#define CBB_FORCE_POWER_CYCLE		(1UL <<  3)
-#define CBB_FORCE_CD2_CHANGE		(1UL <<  2)
-#define CBB_FORCE_CD1_CHANGE		(1UL <<  1)
-#define CBB_FORCE_CSTCHG		(1UL <<  0)
+#define	CBB_FORCE_CV_TEST		(1UL << 14)
+#define	CBB_FORCE_3VCARD		(1UL << 11)
+#define	CBB_FORCE_5VCARD		(1UL << 10)
+#define	CBB_FORCE_BAD_VCC_REQ		(1UL <<  9)
+#define	CBB_FORCE_DATA_LOST		(1UL <<  8)
+#define	CBB_FORCE_NOT_A_CARD		(1UL <<  7)
+#define	CBB_FORCE_CB_CARD		(1UL <<  5)
+#define	CBB_FORCE_R2_CARD		(1UL <<  4)
+#define	CBB_FORCE_POWER_CYCLE		(1UL <<  3)
+#define	CBB_FORCE_CD2_CHANGE		(1UL <<  2)
+#define	CBB_FORCE_CD1_CHANGE		(1UL <<  1)
+#define	CBB_FORCE_CSTCHG		(1UL <<  0)
 
 #include <dev/pccbb/pccbbdevid.h>
 
-#define CBB_SOCKET_EVENT		0x00
-#define CBB_SOCKET_MASK			0x04
-#define CBB_SOCKET_STATE		0x08
-#define CBB_SOCKET_FORCE		0x0c
-#define CBB_SOCKET_CONTROL		0x10
-#define CBB_SOCKET_POWER		0x14
+#define	CBB_SOCKET_EVENT		0x00
+#define	CBB_SOCKET_MASK			0x04
+#define	CBB_SOCKET_STATE		0x08
+#define	CBB_SOCKET_FORCE		0x0c
+#define	CBB_SOCKET_CONTROL		0x10
+#define	CBB_SOCKET_POWER		0x14
 
-#define CBB_EXCA_OFFSET			0x800	/* offset for exca regs */
+#define	CBB_EXCA_OFFSET			0x800	/* offset for exca regs */

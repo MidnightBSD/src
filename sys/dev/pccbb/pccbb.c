@@ -75,7 +75,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb.c,v 1.121 2005/01/13 19:05:25 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb.c,v 1.165 2007/09/30 11:05:15 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -84,6 +84,7 @@ __FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb.c,v 1.121 2005/01/13 19:05:25 imp Ex
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/kthread.h>
+#include <sys/interrupt.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
@@ -96,7 +97,6 @@ __FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb.c,v 1.121 2005/01/13 19:05:25 imp Ex
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
-#include <machine/clock.h>
 
 #include <dev/pccard/pccardreg.h>
 #include <dev/pccard/pccardvar.h>
@@ -133,19 +133,19 @@ SYSCTL_NODE(_hw, OID_AUTO, cbb, CTLFLAG_RD, 0, "CBB parameters");
 
 /* There's no way to say TUNEABLE_LONG to get the right types */
 u_long cbb_start_mem = CBB_START_MEM;
-TUNABLE_INT("hw.cbb.start_memory", (int *)&cbb_start_mem);
+TUNABLE_ULONG("hw.cbb.start_memory", &cbb_start_mem);
 SYSCTL_ULONG(_hw_cbb, OID_AUTO, start_memory, CTLFLAG_RW,
     &cbb_start_mem, CBB_START_MEM,
     "Starting address for memory allocations");
 
 u_long cbb_start_16_io = CBB_START_16_IO;
-TUNABLE_INT("hw.cbb.start_16_io", (int *)&cbb_start_16_io);
+TUNABLE_ULONG("hw.cbb.start_16_io", &cbb_start_16_io);
 SYSCTL_ULONG(_hw_cbb, OID_AUTO, start_16_io, CTLFLAG_RW,
     &cbb_start_16_io, CBB_START_16_IO,
     "Starting ioport for 16-bit cards");
 
 u_long cbb_start_32_io = CBB_START_32_IO;
-TUNABLE_INT("hw.cbb.start_32_io", (int *)&cbb_start_32_io);
+TUNABLE_ULONG("hw.cbb.start_32_io", &cbb_start_32_io);
 SYSCTL_ULONG(_hw_cbb, OID_AUTO, start_32_io, CTLFLAG_RW,
     &cbb_start_32_io, CBB_START_32_IO,
     "Starting ioport for 32-bit cards");
@@ -157,7 +157,7 @@ SYSCTL_ULONG(_hw_cbb, OID_AUTO, debug, CTLFLAG_RW, &cbb_debug, 0,
 
 static void	cbb_insert(struct cbb_softc *sc);
 static void	cbb_removal(struct cbb_softc *sc);
-static int	cbb_detect_voltage(device_t brdev);
+static uint32_t	cbb_detect_voltage(device_t brdev);
 static void	cbb_cardbus_reset(device_t brdev);
 static int	cbb_cardbus_io_open(device_t brdev, int win, uint32_t start,
 		    uint32_t end);
@@ -177,6 +177,7 @@ static int	cbb_cardbus_power_enable_socket(device_t brdev,
 		    device_t child);
 static void	cbb_cardbus_power_disable_socket(device_t brdev,
 		    device_t child);
+static int	cbb_func_filt(void *arg);
 static void	cbb_func_intr(void *arg);
 
 static void
@@ -282,32 +283,67 @@ int
 cbb_detach(device_t brdev)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
-	int numdevs;
 	device_t *devlist;
-	int tmp;
-	int error;
+	int tmp, tries, error, numdevs;
 
-	device_get_children(brdev, &devlist, &numdevs);
+	/*
+	 * Before we delete the children (which we have to do because
+	 * attach doesn't check for children busses correctly), we have
+	 * to detach the children.  Even if we didn't need to delete the
+	 * children, we have to detach them.
+	 */
+	error = bus_generic_detach(brdev);
+	if (error != 0)
+		return (error);
 
-	error = 0;
-	for (tmp = 0; tmp < numdevs; tmp++) {
-		if (device_detach(devlist[tmp]) == 0)
-			device_delete_child(brdev, devlist[tmp]);
-		else
-			error++;
-	}
+	/*
+	 * Since the attach routine doesn't search for children before it
+	 * attaches them to this device, we must delete them here in order
+	 * for the kldload/unload case to work.  If we failed to do that, then
+	 * we'd get duplicate devices when cbb.ko was reloaded.
+	 */
+	tries = 10;
+	do {
+		error = device_get_children(brdev, &devlist, &numdevs);
+		if (error == 0)
+			break;
+		/*
+		 * Try hard to cope with low memory.
+		 */
+		if (error == ENOMEM) {
+			pause("cbbnomem", 1);
+			continue;
+		}
+	} while (tries-- > 0);
+	for (tmp = 0; tmp < numdevs; tmp++)
+		device_delete_child(brdev, devlist[tmp]);
 	free(devlist, M_TEMP);
-	if (error > 0)
-		return (ENXIO);
 
-	mtx_lock(&sc->mtx);
-	/* 
-	 * XXX do we teardown all the ones still registered to guard against
-	 * XXX buggy client drivers?
+	/* Turn off the interrupts */
+	cbb_set(sc, CBB_SOCKET_MASK, 0);
+
+	/* reset 16-bit pcmcia bus */
+	exca_clrb(&sc->exca[0], EXCA_INTR, EXCA_INTR_RESET);
+
+	/* turn off power */
+	cbb_power(brdev, CARD_OFF);
+
+	/* Ack the interrupt */
+	cbb_set(sc, CBB_SOCKET_EVENT, 0xffffffff);
+
+	/*
+	 * Wait for the thread to die.  kthread_exit will do a wakeup
+	 * on the event thread's struct thread * so that we know it is
+	 * safe to proceed.  IF the thread is running, set the please
+	 * die flag and wait for it to comply.  Since the wakeup on
+	 * the event thread happens only in kthread_exit, we don't
+	 * need to loop here.
 	 */
 	bus_teardown_intr(brdev, sc->irq_res, sc->intrhand);
+	mtx_lock(&sc->mtx);
 	sc->flags |= CBB_KTHREAD_DONE;
-	if (sc->flags & CBB_KTHREAD_RUNNING) {
+	while (sc->flags & CBB_KTHREAD_RUNNING) {
+		DEVPRINTF((sc->dev, "Waiting for thread to die\n"));
 		cv_broadcast(&sc->cv);
 		msleep(sc->event_thread, &sc->mtx, PWAIT, "cbbun", 0);
 	}
@@ -318,55 +354,26 @@ cbb_detach(device_t brdev)
 	    sc->base_res);
 	mtx_destroy(&sc->mtx);
 	cv_destroy(&sc->cv);
-	return (0);
-}
-
-int
-cbb_shutdown(device_t brdev)
-{
-	struct cbb_softc *sc = (struct cbb_softc *)device_get_softc(brdev);
-	/* properly reset everything at shutdown */
-
-	PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL, |CBBM_BRIDGECTRL_RESET, 2);
-	exca_clrb(&sc->exca[0], EXCA_INTR, EXCA_INTR_RESET);
-
-	cbb_set(sc, CBB_SOCKET_MASK, 0);
-
-	cbb_power(brdev, CARD_OFF);
-
-	exca_putb(&sc->exca[0], EXCA_ADDRWIN_ENABLE, 0);
-	pci_write_config(brdev, CBBR_MEMBASE0, 0, 4);
-	pci_write_config(brdev, CBBR_MEMLIMIT0, 0, 4);
-	pci_write_config(brdev, CBBR_MEMBASE1, 0, 4);
-	pci_write_config(brdev, CBBR_MEMLIMIT1, 0, 4);
-	pci_write_config(brdev, CBBR_IOBASE0, 0, 4);
-	pci_write_config(brdev, CBBR_IOLIMIT0, 0, 4);
-	pci_write_config(brdev, CBBR_IOBASE1, 0, 4);
-	pci_write_config(brdev, CBBR_IOLIMIT1, 0, 4);
-	pci_write_config(brdev, PCIR_COMMAND, 0, 2);
+	cv_destroy(&sc->powercv);
 	return (0);
 }
 
 int
 cbb_setup_intr(device_t dev, device_t child, struct resource *irq,
-  int flags, driver_intr_t *intr, void *arg, void **cookiep)
+  int flags, driver_filter_t *filt, driver_intr_t *intr, void *arg,
+   void **cookiep)
 {
 	struct cbb_intrhand *ih;
 	struct cbb_softc *sc = device_get_softc(dev);
 	int err;
 
-	/*
-	 * Well, this is no longer strictly true.  You can have multiple
-	 * FAST ISRs, but can't mix fast and slow, so we have to assume
-	 * least common denominator until the base system supports mixing
-	 * and matching better.
-	 */
-	if ((flags & INTR_FAST) != 0)
+	if (filt == NULL && intr == NULL)
 		return (EINVAL);
 	ih = malloc(sizeof(struct cbb_intrhand), M_DEVBUF, M_NOWAIT);
 	if (ih == NULL)
 		return (ENOMEM);
 	*cookiep = ih;
+	ih->filt = filt;
 	ih->intr = intr;
 	ih->arg = arg;
 	ih->sc = sc;
@@ -375,14 +382,14 @@ cbb_setup_intr(device_t dev, device_t child, struct resource *irq,
 	 * XXX for now that's all we need to do.
 	 */
 	err = BUS_SETUP_INTR(device_get_parent(dev), child, irq, flags,
-	    cbb_func_intr, ih, &ih->cookie);
+	    filt ? cbb_func_filt : NULL, intr ? cbb_func_intr : NULL, ih,
+	    &ih->cookie);
 	if (err != 0) {
 		free(ih, M_DEVBUF);
 		return (err);
 	}
-	STAILQ_INSERT_TAIL(&sc->intr_handlers, ih, entries);
 	cbb_enable_func_intr(sc);
-	sc->flags |= CBB_CARD_OK;
+	sc->cardok = 1;
 	return 0;
 }
 
@@ -391,7 +398,6 @@ cbb_teardown_intr(device_t dev, device_t child, struct resource *irq,
     void *cookie)
 {
 	struct cbb_intrhand *ih;
-	struct cbb_softc *sc = device_get_softc(dev);
 	int err;
 
 	/* XXX Need to do different things for ISA interrupts. */
@@ -400,7 +406,6 @@ cbb_teardown_intr(device_t dev, device_t child, struct resource *irq,
 	    ih->cookie);
 	if (err != 0)
 		return (err);
-	STAILQ_REMOVE(&sc->intr_handlers, ih, cbb_intrhand, entries);
 	free(ih, M_DEVBUF);
 	return (0);
 }
@@ -417,7 +422,11 @@ cbb_driver_added(device_t brdev, driver_t *driver)
 	int wake = 0;
 
 	DEVICE_IDENTIFY(driver, brdev);
-	device_get_children(brdev, &devlist, &numdevs);
+	tmp = device_get_children(brdev, &devlist, &numdevs);
+	if (tmp != 0) {
+		device_printf(brdev, "Cannot get children list, no reprobe\n");
+		return;
+	}
 	for (tmp = 0; tmp < numdevs; tmp++) {
 		dev = devlist[tmp];
 		if (device_get_state(dev) == DS_NOTPRESENT &&
@@ -438,6 +447,7 @@ cbb_child_detached(device_t brdev, device_t child)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
 
+	/* I'm not sure we even need this */
 	if (child != sc->cbdev && child != sc->exca[0].pccarddev)
 		device_printf(brdev, "Unknown child detached: %s\n",
 		    device_get_nameunit(child));
@@ -455,8 +465,10 @@ cbb_event_thread(void *arg)
 	int err;
 	int not_a_card = 0;
 
+	mtx_lock(&sc->mtx);
 	sc->flags |= CBB_KTHREAD_RUNNING;
 	while ((sc->flags & CBB_KTHREAD_DONE) == 0) {
+		mtx_unlock(&sc->mtx);
 		/*
 		 * We take out Giant here because we need it deep,
 		 * down in the bowels of the vm system for mapping the
@@ -472,10 +484,13 @@ cbb_event_thread(void *arg)
 			cbb_removal(sc);
 		} else if (status & CBB_STATE_NOT_A_CARD) {
 			/*
-			 * Up to 20 times, try to rescan the card when we
-			 * see NOT_A_CARD.
+			 * Up to 10 times, try to rescan the card when we see
+			 * NOT_A_CARD.  10 is somehwat arbitrary.  When this
+			 * pathology hits, there's a ~40% chance each try will
+			 * fail.  10 tries takes about 5s and results in a
+			 * 99.99% certainty of the results.
 			 */
-			if (not_a_card++ < 20) {
+			if (not_a_card++ < 10) {
 				DEVPRINTF((sc->dev,
 				    "Not a card bit set, rescanning\n"));
 				cbb_setb(sc, CBB_SOCKET_FORCE, CBB_FORCE_CV_TEST);
@@ -490,12 +505,12 @@ cbb_event_thread(void *arg)
 		mtx_unlock(&Giant);
 
 		/*
-		 * Wait until it has been 1s since the last time we
+		 * Wait until it has been 250ms since the last time we
 		 * get an interrupt.  We handle the rest of the interrupt
 		 * at the top of the loop.  Although we clear the bit in the
 		 * ISR, we signal sc->cv from the detach path after we've
 		 * set the CBB_KTHREAD_DONE bit, so we can't do a simple
-		 * 1s sleep here.
+		 * 250ms sleep here.
 		 *
 		 * In our ISR, we turn off the card changed interrupt.  Turn
 		 * them back on here before we wait for them to happen.  We
@@ -509,10 +524,11 @@ cbb_event_thread(void *arg)
 		err = 0;
 		while (err != EWOULDBLOCK &&
 		    (sc->flags & CBB_KTHREAD_DONE) == 0)
-			err = cv_timedwait(&sc->cv, &sc->mtx, 1 * hz);
-		mtx_unlock(&sc->mtx);
+			err = cv_timedwait(&sc->cv, &sc->mtx, hz / 4);
 	}
+	DEVPRINTF((sc->dev, "Thread terminating\n"));
 	sc->flags &= ~CBB_KTHREAD_RUNNING;
+	mtx_unlock(&sc->mtx);
 	kthread_exit(0);
 }
 
@@ -532,12 +548,15 @@ cbb_insert(struct cbb_softc *sc)
 	    sockevent, sockstate));
 
 	if (sockstate & CBB_STATE_R2_CARD) {
-		if (sc->exca[0].pccarddev) {
+		if (device_is_attached(sc->exca[0].pccarddev)) {
 			sc->flags |= CBB_16BIT_CARD;
 			exca_insert(&sc->exca[0]);
+		} else {
+			device_printf(sc->dev,
+			    "16-bit card inserted, but no pccard bus.\n");
 		}
 	} else if (sockstate & CBB_STATE_CB_CARD) {
-		if (sc->cbdev != NULL) {
+		if (device_is_attached(sc->cbdev)) {
 			sc->flags &= ~CBB_16BIT_CARD;
 			CARD_ATTACH_CARD(sc->cbdev);
 		} else {
@@ -556,11 +575,11 @@ cbb_insert(struct cbb_softc *sc)
 static void
 cbb_removal(struct cbb_softc *sc)
 {
-	sc->flags &= ~CBB_CARD_OK;
+	sc->cardok = 0;
 	if (sc->flags & CBB_16BIT_CARD) {
 		exca_removal(&sc->exca[0]);
 	} else {
-		if (sc->cbdev != NULL)
+		if (device_is_attached(sc->cbdev))
 			CARD_DETACH_CARD(sc->cbdev);
 	}
 	cbb_destroy_res(sc);
@@ -570,29 +589,8 @@ cbb_removal(struct cbb_softc *sc)
 /* Interrupt Handler							*/
 /************************************************************************/
 
-/*
- * Since we touch hardware in the worst case, we don't need to use atomic
- * ops on the CARD_OK tests.  They would save us a trip to the hardware
- * if CARD_OK was recently cleared and the caches haven't updated yet.
- * However, an atomic op costs between 100-200 CPU cycles.  On a 3GHz
- * machine, this is about 33-66ns, whereas a trip the the hardware
- * is about that.  On slower machines, the cost is even higher, so the
- * trip to the hardware is cheaper and achieves the same ends that
- * a fully locked operation would give us.
- *
- * This is a separate routine because we'd have to use locking and/or
- * other synchronization in cbb_intr to do this there.  That would be
- * even more expensive.
- *
- * I need to investigate what this means for a SMP machine with multiple
- * CPUs servicing the ISR when an eject happens.  In the case of a dirty
- * eject, CD glitches and we might read 'card present' from the hardware
- * due to this jitter.  If we assumed that cbb_intr() ran before
- * cbb_func_intr(), we could just check the SOCKET_MASK register and if
- * CD changes were clear there, then we'd know the card was gone.
- */
-static void
-cbb_func_intr(void *arg)
+static int
+cbb_func_filt(void *arg)
 {
 	struct cbb_intrhand *ih = (struct cbb_intrhand *)arg;
 	struct cbb_softc *sc = ih->sc;
@@ -600,91 +598,76 @@ cbb_func_intr(void *arg)
 	/*
 	 * Make sure that the card is really there.
 	 */
-	if ((sc->flags & CBB_CARD_OK) == 0)
-		return;
+	if (!sc->cardok)
+		return (FILTER_STRAY);
 	if (!CBB_CARD_PRESENT(cbb_get(sc, CBB_SOCKET_STATE))) {
-		sc->flags &= ~CBB_CARD_OK;
-		return;
+		sc->cardok = 0;
+		return (FILTER_HANDLED);
 	}
 
 	/*
-	 * nb: don't have to check for giant or not, since that's done
-	 * in the ISR dispatch
+	 * nb: don't have to check for giant or not, since that's done in the
+	 * ISR dispatch and one can't hold Giant in a filter anyway...
 	 */
-	(*ih->intr)(ih->arg);
+	return ((*ih->filt)(ih->arg));	
 }
 
-void
-cbb_intr(void *arg)
+static void
+cbb_func_intr(void *arg)
 {
-	struct cbb_softc *sc = arg;
-	uint32_t sockevent;
+	struct cbb_intrhand *ih = (struct cbb_intrhand *)arg;
+	struct cbb_softc *sc = ih->sc;
 
 	/*
-	 * This ISR needs work XXX
+	 * While this check may seem redundant, it helps close a race
+	 * condition.  If the card is ejected after the filter runs, but
+	 * before this ISR can be scheduled, then we need to do the same
+	 * filtering to prevent the card's ISR from being called.  One could
+	 * argue that the card's ISR should be able to cope, but experience
+	 * has shown they can't always.  This mitigates the problem by making
+	 * the race quite a bit smaller.  Properly written client ISRs should
+	 * cope with the card going away in the middle of the ISR.  We assume
+	 * that drivers that are sophisticated enough to use filters don't
+	 * need our protection.  This also allows us to ensure they *ARE*
+	 * called if their filter said they needed to be called.
 	 */
-	sockevent = cbb_get(sc, CBB_SOCKET_EVENT);
-	if (sockevent != 0) {
-		/* ack the interrupt */
-		cbb_setb(sc, CBB_SOCKET_EVENT, sockevent);
-
-		/*
-		 * If anything has happened to the socket, we assume that
-		 * the card is no longer OK, and we shouldn't call its
-		 * ISR.  We set CARD_OK as soon as we've attached the
-		 * card.  This helps in a noisy eject, which happens
-		 * all too often when users are ejecting their PC Cards.
-		 *
-		 * We use this method in preference to checking to see if
-		 * the card is still there because the check suffers from
-		 * a race condition in the bouncing case.  Prior versions
-		 * of the pccard software used a similar trick and achieved
-		 * excellent results.
-		 */
-		if (sockevent & CBB_SOCKET_EVENT_CD) {
-			mtx_lock(&sc->mtx);
-			cbb_setb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_CD);
-			sc->flags &= ~CBB_CARD_OK;
-			cbb_disable_func_intr(sc);
-			cv_signal(&sc->cv);
-			mtx_unlock(&sc->mtx);
+	if (ih->filt == NULL) {
+		if (!sc->cardok)
+			return;
+		if (!CBB_CARD_PRESENT(cbb_get(sc, CBB_SOCKET_STATE))) {
+			sc->cardok = 0;
+			return;
 		}
 	}
+
 	/*
-	 * Some chips also require us to read the old ExCA registe for
-	 * card status change when we route CSC vis PCI.  This isn't supposed
-	 * to be required, but it clears the interrupt state on some chipsets.
-	 * Maybe there's a setting that would obviate its need.  Maybe we
-	 * should test the status bits and deal with them, but so far we've
-	 * not found any machines that don't also give us the socket status
-	 * indication above.
-	 *
-	 * We have to call this unconditionally because some bridges deliver
-	 * the even independent of the CBB_SOCKET_EVENT_CD above.
+	 * Call the registered ithread interrupt handler.  This entire routine
+	 * will be called with Giant if this isn't an MP safe driver, or not
+	 * if it is.  Either way, we don't have to worry.
 	 */
-	exca_getb(&sc->exca[0], EXCA_CSC);
+	ih->intr(ih->arg);
 }
 
 /************************************************************************/
 /* Generic Power functions						*/
 /************************************************************************/
 
-static int
+static uint32_t
 cbb_detect_voltage(device_t brdev)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
 	uint32_t psr;
-	int vol = CARD_UKN_CARD;
+	uint32_t vol = CARD_UKN_CARD;
 
 	psr = cbb_get(sc, CBB_SOCKET_STATE);
 
-	if (psr & CBB_STATE_5VCARD)
+	if (psr & CBB_STATE_5VCARD && psr & CBB_STATE_5VSOCK)
 		vol |= CARD_5V_CARD;
-	if (psr & CBB_STATE_3VCARD)
+	if (psr & CBB_STATE_3VCARD && psr & CBB_STATE_3VSOCK)
 		vol |= CARD_3V_CARD;
-	if (psr & CBB_STATE_XVCARD)
+	if (psr & CBB_STATE_XVCARD && psr & CBB_STATE_XVSOCK)
 		vol |= CARD_XV_CARD;
-	if (psr & CBB_STATE_YVCARD)
+	if (psr & CBB_STATE_YVCARD && psr & CBB_STATE_YVSOCK)
 		vol |= CARD_YV_CARD;
 
 	return (vol);
@@ -697,9 +680,9 @@ cbb_o2micro_power_hack(struct cbb_softc *sc)
 
 	/*
 	 * Issue #2: INT# not qualified with IRQ Routing Bit.  An
-	 * unexpected PCI INT# may be generated during PC-Card
+	 * unexpected PCI INT# may be generated during PC Card
 	 * initialization even with the IRQ Routing Bit Set with some
-	 * PC-Cards.
+	 * PC Cards.
 	 *
 	 * This is a two part issue.  The first part is that some of
 	 * our older controllers have an issue in which the slot's PCI
@@ -707,7 +690,7 @@ cbb_o2micro_power_hack(struct cbb_softc *sc)
 	 * bit 7).  Regardless of the IRQ routing bit, if NO ISA IRQ
 	 * is selected (ExCA register 03h bits 3:0, of the slot, are
 	 * cleared) we will generate INT# if IREQ# is asserted.  The
-	 * second part is because some PC-Cards prematurally assert
+	 * second part is because some PC Cards prematurally assert
 	 * IREQ# before the ExCA registers are fully programmed.  This
 	 * in turn asserts INT# because ExCA register 03h bits 3:0
 	 * (ISA IRQ Select) are not yet programmed.
@@ -718,6 +701,11 @@ cbb_o2micro_power_hack(struct cbb_softc *sc)
 	 * Selecting IRQ1 will result in INT# NOT being asserted
 	 * (because IRQ1 is selected), and IRQ1 won't be asserted
 	 * because our controllers don't generate IRQ1.
+	 *
+	 * Other, non O2Micro controllers will generate irq 1 in some
+	 * situations, so we can't do this hack for everybody.  Reports of
+	 * keyboard controller's interrupts being suppressed occurred when
+	 * we did this.
 	 */
 	reg = exca_getb(&sc->exca[0], EXCA_INTR);
 	exca_putb(&sc->exca[0], EXCA_INTR, (reg & 0xf0) | 1);
@@ -738,29 +726,32 @@ cbb_o2micro_power_hack2(struct cbb_softc *sc, uint8_t reg)
 int
 cbb_power(device_t brdev, int volts)
 {
-	uint32_t status, sock_ctrl;
+	uint32_t status, sock_ctrl, reg_ctrl, mask;
 	struct cbb_softc *sc = device_get_softc(brdev);
-	int timeout;
+	int cnt, sane;
 	int retval = 0;
-	uint32_t sockevent;
+	int on = 0;
 	uint8_t reg = 0;
 
-	status = cbb_get(sc, CBB_SOCKET_STATE);
 	sock_ctrl = cbb_get(sc, CBB_SOCKET_CONTROL);
 
 	sock_ctrl &= ~CBB_SOCKET_CTRL_VCCMASK;
 	switch (volts & CARD_VCCMASK) {
 	case 5:
 		sock_ctrl |= CBB_SOCKET_CTRL_VCC_5V;
+		on++;
 		break;
 	case 3:
 		sock_ctrl |= CBB_SOCKET_CTRL_VCC_3V;
+		on++;
 		break;
 	case XV:
 		sock_ctrl |= CBB_SOCKET_CTRL_VCC_XV;
+		on++;
 		break;
 	case YV:
 		sock_ctrl |= CBB_SOCKET_CTRL_VCC_YV;
+		on++;
 		break;
 	case 0:
 		break;
@@ -778,43 +769,88 @@ cbb_power(device_t brdev, int volts)
 	if (volts != 0 && sc->chipset == CB_O2MICRO)
 		reg = cbb_o2micro_power_hack(sc);
 
+	/*
+	 * We have to mask the card change detect interrupt while
+	 * we're messing with the power.  It is allowed to bounce
+	 * while we're messing with power as things settle down.  In
+	 * addition, we mask off the card's function interrupt by
+	 * routing it via the ISA bus.  This bit generally only
+	 * affects 16-bit cards.  Some bridges allow one to set
+	 * another bit to have it also affect 32-bit cards.  Since
+	 * 32-bit cards are required to be better behaved, we don't
+	 * bother to get into those bridge specific features.
+	 */
+	mask = cbb_get(sc, CBB_SOCKET_MASK);
+	mask |= CBB_SOCKET_MASK_POWER;
+	mask &= ~CBB_SOCKET_MASK_CD;
+	cbb_set(sc, CBB_SOCKET_MASK, mask);
+	PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL,
+	    |CBBM_BRIDGECTRL_INTR_IREQ_ISA_EN, 2);
 	cbb_set(sc, CBB_SOCKET_CONTROL, sock_ctrl);
+	if (on) {
+		mtx_lock(&sc->mtx);
+		cnt = sc->powerintr;
+		/*
+		 * We have a shortish timeout of 500ms here.  Some
+		 * bridges do not generate a POWER_CYCLE event for
+		 * 16-bit cards.  In those cases, we have to cope the
+		 * best we can, and having only a short delay is
+		 * better than the alternatives.
+		 */
+		sane = 10;
+		while (!(cbb_get(sc, CBB_SOCKET_STATE) & CBB_STATE_POWER_CYCLE) &&
+		    cnt == sc->powerintr && sane-- > 0)
+			cv_timedwait(&sc->powercv, &sc->mtx, hz / 20);
+		mtx_unlock(&sc->mtx);
+		/*
+		 * The TOPIC95B requires a little bit extra time to get
+		 * its act together, so delay for an additional 100ms.  Also
+		 * as documented below, it doesn't seem to set the POWER_CYCLE
+		 * bit, so don't whine if it never came on.
+		 */
+		if (sc->chipset == CB_TOPIC95) {
+			pause("cbb95B", hz / 10);
+		} else if (sane <= 0) {
+			device_printf(sc->dev, "power timeout, doom?\n");
+		}
+	}
+
+	/*
+	 * After the power is good, we can turn off the power interrupt.
+	 * However, the PC Card standard says that we must delay turning the
+	 * CD bit back on for a bit to allow for bouncyness on power down
+	 * (recall that we don't wait above for a power down, since we don't
+	 * get an interrupt for that).  We're called either from the suspend
+	 * code in which case we don't want to turn card change on again, or
+	 * we're called from the card insertion code, in which case the cbb
+	 * thread will turn it on for us before it waits to be woken by a
+	 * change event.
+	 *
+	 * NB: Topic95B doesn't set the power cycle bit.  we assume that
+	 * both it and the TOPIC95 behave the same.
+	 */
+	cbb_clrb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_POWER);
 	status = cbb_get(sc, CBB_SOCKET_STATE);
-
-	/* 
-	 * XXX This busy wait is bogus.  We should wait for a power
-	 * interrupt and then whine if the status is bad.  If we're
-	 * worried about the card not coming up, then we should also
-	 * schedule a timeout which we can cancel in the power interrupt.
-	 */
-	timeout = 20;
-	do {
-		DELAY(20*1000);
-		sockevent = cbb_get(sc, CBB_SOCKET_EVENT);
-	} while (!(sockevent & CBB_SOCKET_EVENT_POWER) && --timeout > 0);
-	/* reset event status */
-	/* XXX should only reset EVENT_POWER */
-	cbb_set(sc, CBB_SOCKET_EVENT, sockevent);
-	if (timeout < 0) {
-		printf ("VCC supply failed.\n");
-		goto done;
+	if (on && sc->chipset != CB_TOPIC95) {
+		if ((status & CBB_STATE_POWER_CYCLE) == 0)
+			device_printf(sc->dev, "Power not on?\n");
 	}
-
-	/* XXX
-	 * delay 400 ms: thgough the standard defines that the Vcc set-up time
-	 * is 20 ms, some PC-Card bridge requires longer duration.
-	 * XXX Note: We should check the stutus AFTER the delay to give time
-	 * for things to stabilize.
-	 */
-	DELAY(400*1000);
-
 	if (status & CBB_STATE_BAD_VCC_REQ) {
-		device_printf(sc->dev,
-		    "bad Vcc request. ctrl=0x%x, status=0x%x\n",
-		    sock_ctrl ,status);
-		printf("cbb_power: %dV\n", volts);
+		device_printf(sc->dev, "Bad Vcc requested\n");	
+		/* XXX Do we want to do something to mitigate things here? */
 		goto done;
 	}
+	if (sc->chipset == CB_TOPIC97) {
+		reg_ctrl = pci_read_config(sc->dev, TOPIC_REG_CTRL, 4);
+		reg_ctrl &= ~TOPIC97_REG_CTRL_TESTMODE;
+		if (on)
+			reg_ctrl |= TOPIC97_REG_CTRL_CLKRUN_ENA;
+		else
+			reg_ctrl &= ~TOPIC97_REG_CTRL_CLKRUN_ENA;
+		pci_write_config(sc->dev, TOPIC_REG_CTRL, reg_ctrl, 4);
+	}
+	PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL,
+	    & ~CBBM_BRIDGECTRL_INTR_IREQ_ISA_EN, 2);
 	retval = 1;
 done:;
 	if (volts != 0 && sc->chipset == CB_O2MICRO)
@@ -822,25 +858,54 @@ done:;
 	return (retval);
 }
 
+static int
+cbb_current_voltage(device_t brdev)
+{
+	struct cbb_softc *sc = device_get_softc(brdev);
+	uint32_t ctrl;
+	
+	ctrl = cbb_get(sc, CBB_SOCKET_CONTROL);
+	switch (ctrl & CBB_SOCKET_CTRL_VCCMASK) {
+	case CBB_SOCKET_CTRL_VCC_5V:
+		return CARD_5V_CARD;
+	case CBB_SOCKET_CTRL_VCC_3V:
+		return CARD_3V_CARD;
+	case CBB_SOCKET_CTRL_VCC_XV:
+		return CARD_XV_CARD;
+	case CBB_SOCKET_CTRL_VCC_YV:
+		return CARD_YV_CARD;
+	}
+	return 0;
+}
+
 /*
  * detect the voltage for the card, and set it.  Since the power
  * used is the square of the voltage, lower voltages is a big win
  * and what Windows does (and what Microsoft prefers).  The MS paper
- * also talks about preferring the CIS entry as well.  In addition,
- * we power up with OE disabled.  We'll set it later in the power
- * up sequence.
+ * also talks about preferring the CIS entry as well, but that has
+ * to be done elsewhere.  We also optimize power sequencing here
+ * and don't change things if we're already powered up at a supported
+ * voltage.
+ *
+ * In addition, we power up with OE disabled.  We'll set it later
+ * in the power up sequence.
  */
 static int
 cbb_do_power(device_t brdev)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
-	int voltage;
+	uint32_t voltage, curpwr;
+	uint32_t status;
 
-	/* Don't enable OE */
+	/* Don't enable OE (output enable) until power stable */
 	exca_clrb(&sc->exca[0], EXCA_PWRCTL, EXCA_PWRCTL_OE);
 
-	/* Prefer lowest voltage supported */
 	voltage = cbb_detect_voltage(brdev);
+	curpwr = cbb_current_voltage(brdev);
+	status = cbb_get(sc, CBB_SOCKET_STATE);
+	if ((status & CBB_STATE_POWER_CYCLE) && (voltage & curpwr))
+		return 0;
+	/* Prefer lowest voltage supported */
 	cbb_power(brdev, CARD_OFF);
 	if (voltage & CARD_YV_CARD)
 		cbb_power(brdev, CARD_VCC(YV));
@@ -865,19 +930,23 @@ static void
 cbb_cardbus_reset(device_t brdev)
 {
 	struct cbb_softc *sc = device_get_softc(brdev);
-	int delay_us;
+	int delay;
 
-	delay_us = sc->chipset == CB_RF5C47X ? 400*1000 : 20*1000;
+	/*
+	 * 20ms is necessary for most bridges.  For some reason, the Ricoh
+	 * RF5C47x bridges need 400ms.
+	 */
+	delay = sc->chipset == CB_RF5C47X ? 400 : 20;
 
 	PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL, |CBBM_BRIDGECTRL_RESET, 2);
 
-	DELAY(delay_us);
+	pause("cbbP3", hz * delay / 1000);
 
 	/* If a card exists, unreset it! */
 	if (CBB_CARD_PRESENT(cbb_get(sc, CBB_SOCKET_STATE))) {
 		PCI_MASK_CONFIG(brdev, CBBR_BRIDGECTRL,
 		    &~CBBM_BRIDGECTRL_RESET, 2);
-		DELAY(delay_us);
+		pause("cbbP4", hz * delay / 1000);
 	}
 }
 
@@ -948,21 +1017,20 @@ cbb_cardbus_mem_open(device_t brdev, int win, uint32_t start, uint32_t end)
 	return (0);
 }
 
-/*
- * XXX The following function belongs in the pci bus layer.
- */
+#define START_NONE 0xffffffff
+#define END_NONE 0
+
 static void
 cbb_cardbus_auto_open(struct cbb_softc *sc, int type)
 {
 	uint32_t starts[2];
 	uint32_t ends[2];
 	struct cbb_reslist *rle;
-	int align;
-	int prefetchable[2];
+	int align, i;
 	uint32_t reg;
 
-	starts[0] = starts[1] = 0xffffffff;
-	ends[0] = ends[1] = 0;
+	starts[0] = starts[1] = START_NONE;
+	ends[0] = ends[1] = END_NONE;
 
 	if (type == SYS_RES_MEMORY)
 		align = CBB_MEMALIGN;
@@ -971,97 +1039,68 @@ cbb_cardbus_auto_open(struct cbb_softc *sc, int type)
 	else
 		align = 1;
 
-	/*
-	 * This looks somewhat bogus, and doesn't seem to really respect
-	 * alignment.  The alignment stuff is happening too late (it
-	 * should happen at allocation time, not activation time) and
-	 * this code looks generally to be too complex for the purpose
-	 * it surves.
-	 */
 	SLIST_FOREACH(rle, &sc->rl, link) {
 		if (rle->type != type)
-			;
-		else if (rle->res == NULL) {
-			device_printf(sc->dev, "WARNING: Resource not reserved?  "
-			    "(type=%d, addr=%lx)\n",
-			    rle->type, rman_get_start(rle->res));
-		} else if (!(rman_get_flags(rle->res) & RF_ACTIVE)) {
-			/* XXX */
-		} else if (starts[0] == 0xffffffff) {
-			starts[0] = rman_get_start(rle->res);
-			ends[0] = rman_get_end(rle->res);
-			prefetchable[0] =
-			    rman_get_flags(rle->res) & RF_PREFETCHABLE;
-		} else if (rman_get_end(rle->res) > ends[0] &&
-		    rman_get_start(rle->res) - ends[0] <
-		    CBB_AUTO_OPEN_SMALLHOLE && prefetchable[0] ==
-		    (rman_get_flags(rle->res) & RF_PREFETCHABLE)) {
-			ends[0] = rman_get_end(rle->res);
-		} else if (rman_get_start(rle->res) < starts[0] &&
-		    starts[0] - rman_get_end(rle->res) <
-		    CBB_AUTO_OPEN_SMALLHOLE && prefetchable[0] ==
-		    (rman_get_flags(rle->res) & RF_PREFETCHABLE)) {
-			starts[0] = rman_get_start(rle->res);
-		} else if (starts[1] == 0xffffffff) {
-			starts[1] = rman_get_start(rle->res);
-			ends[1] = rman_get_end(rle->res);
-			prefetchable[1] =
-			    rman_get_flags(rle->res) & RF_PREFETCHABLE;
-		} else if (rman_get_end(rle->res) > ends[1] &&
-		    rman_get_start(rle->res) - ends[1] <
-		    CBB_AUTO_OPEN_SMALLHOLE && prefetchable[1] ==
-		    (rman_get_flags(rle->res) & RF_PREFETCHABLE)) {
-			ends[1] = rman_get_end(rle->res);
-		} else if (rman_get_start(rle->res) < starts[1] &&
-		    starts[1] - rman_get_end(rle->res) <
-		    CBB_AUTO_OPEN_SMALLHOLE && prefetchable[1] ==
-		    (rman_get_flags(rle->res) & RF_PREFETCHABLE)) {
-			starts[1] = rman_get_start(rle->res);
+			continue;
+		if (rle->res == NULL)
+			continue;
+		if (!(rman_get_flags(rle->res) & RF_ACTIVE))
+			continue;
+		if (rman_get_flags(rle->res) & RF_PREFETCHABLE)
+			i = 1;
+		else
+			i = 0;
+		if (rman_get_start(rle->res) < starts[i])
+			starts[i] = rman_get_start(rle->res);
+		if (rman_get_end(rle->res) > ends[i])
+			ends[i] = rman_get_end(rle->res);
+	}
+	for (i = 0; i < 2; i++) {
+		if (starts[i] == START_NONE)
+			continue;
+		starts[i] &= ~(align - 1);
+		ends[i] = ((ends[i] + align - 1) & ~(align - 1)) - 1;
+	}
+	if (starts[0] != START_NONE && starts[1] != START_NONE) {
+		if (starts[0] < starts[1]) {
+			if (ends[0] > starts[1]) {
+				device_printf(sc->dev, "Overlapping ranges"
+				    " for prefetch and non-prefetch memory\n");
+				return;
+			}
 		} else {
-			uint32_t diffs[2];
-			int win;
-
-			diffs[0] = diffs[1] = 0xffffffff;
-			if (rman_get_start(rle->res) > ends[0])
-				diffs[0] = rman_get_start(rle->res) - ends[0];
-			else if (rman_get_end(rle->res) < starts[0])
-				diffs[0] = starts[0] - rman_get_end(rle->res);
-			if (rman_get_start(rle->res) > ends[1])
-				diffs[1] = rman_get_start(rle->res) - ends[1];
-			else if (rman_get_end(rle->res) < starts[1])
-				diffs[1] = starts[1] - rman_get_end(rle->res);
-
-			win = (diffs[0] <= diffs[1])?0:1;
-			if (rman_get_start(rle->res) > ends[win])
-				ends[win] = rman_get_end(rle->res);
-			else if (rman_get_end(rle->res) < starts[win])
-				starts[win] = rman_get_start(rle->res);
-			if (!(rman_get_flags(rle->res) & RF_PREFETCHABLE))
-				prefetchable[win] = 0;
+			if (ends[1] > starts[0]) {
+				device_printf(sc->dev, "Overlapping ranges"
+				    " for prefetch and non-prefetch memory\n");
+				return;
+			}
 		}
-
-		if (starts[0] != 0xffffffff)
-			starts[0] -= starts[0] % align;
-		if (starts[1] != 0xffffffff)
-			starts[1] -= starts[1] % align;
-		if (ends[0] % align != 0)
-			ends[0] += align - ends[0] % align - 1;
-		if (ends[1] % align != 0)
-			ends[1] += align - ends[1] % align - 1;
 	}
 
 	if (type == SYS_RES_MEMORY) {
 		cbb_cardbus_mem_open(sc->dev, 0, starts[0], ends[0]);
 		cbb_cardbus_mem_open(sc->dev, 1, starts[1], ends[1]);
 		reg = pci_read_config(sc->dev, CBBR_BRIDGECTRL, 2);
-		reg &= ~(CBBM_BRIDGECTRL_PREFETCH_0|
+		reg &= ~(CBBM_BRIDGECTRL_PREFETCH_0 |
 		    CBBM_BRIDGECTRL_PREFETCH_1);
-		reg |= (prefetchable[0]?CBBM_BRIDGECTRL_PREFETCH_0:0)|
-		    (prefetchable[1]?CBBM_BRIDGECTRL_PREFETCH_1:0);
+		if (starts[1] != START_NONE)
+			reg |= CBBM_BRIDGECTRL_PREFETCH_1;
 		pci_write_config(sc->dev, CBBR_BRIDGECTRL, reg, 2);
+		if (bootverbose) {
+			device_printf(sc->dev, "Opening memory:\n");
+			if (starts[0] != START_NONE)
+				device_printf(sc->dev, "Normal: %#x-%#x\n",
+				    starts[0], ends[0]);
+			if (starts[1] != START_NONE)
+				device_printf(sc->dev, "Prefetch: %#x-%#x\n",
+				    starts[1], ends[1]);
+		}
 	} else if (type == SYS_RES_IOPORT) {
 		cbb_cardbus_io_open(sc->dev, 0, starts[0], ends[0]);
 		cbb_cardbus_io_open(sc->dev, 1, starts[1], ends[1]);
+		if (bootverbose && starts[0] != START_NONE)
+			device_printf(sc->dev, "Opening I/O: %#x-%#x\n",
+			    starts[0], ends[0]);
 	}
 }
 
@@ -1119,6 +1158,9 @@ cbb_cardbus_alloc_resource(device_t brdev, device_t child, int type,
 			start = cbb_start_32_io;
 		if (end < start)
 			end = start;
+		if (count > (1 << RF_ALIGNMENT(flags)))
+			flags = (flags & ~RF_ALIGNMENT_MASK) | 
+			    rman_make_alignment_flags(count);
 		break;
 	case SYS_RES_MEMORY:
 		if (start <= cbb_start_mem)
@@ -1134,11 +1176,10 @@ cbb_cardbus_alloc_resource(device_t brdev, device_t child, int type,
 			    rman_make_alignment_flags(align);
 		break;
 	}
-
 	res = BUS_ALLOC_RESOURCE(device_get_parent(brdev), child, type, rid,
 	    start, end, count, flags & ~RF_ACTIVE);
 	if (res == NULL) {
-		printf("cbb alloc res fail\n");
+		printf("cbb alloc res fail type %d rid %x\n", type, *rid);
 		return (NULL);
 	}
 	cbb_insert_res(sc, res, type, *rid);
@@ -1196,16 +1237,19 @@ cbb_pcic_power_disable_socket(device_t brdev, device_t child)
 
 	DPRINTF(("cbb_pcic_socket_disable\n"));
 
-	/* reset signal asserting... */
-	exca_clrb(&sc->exca[0], EXCA_INTR, EXCA_INTR_RESET);
-	DELAY(2*1000);
+	/* Turn off the card's interrupt and leave it in reset, wait 10ms */
+	exca_putb(&sc->exca[0], EXCA_INTR, 0);
+	pause("cbbP1", hz / 100);
 
 	/* power down the socket */
 	cbb_power(brdev, CARD_OFF);
-	exca_clrb(&sc->exca[0], EXCA_PWRCTL, EXCA_PWRCTL_OE);
+	exca_putb(&sc->exca[0], EXCA_PWRCTL, 0);
 
 	/* wait 300ms until power fails (Tpf). */
-	DELAY(300 * 1000);
+	pause("cbbP2", hz * 300 / 1000);
+
+	/* enable CSC interrupts */
+	exca_putb(&sc->exca[0], EXCA_INTR, EXCA_INTR_ENABLE);
 }
 
 /************************************************************************/
@@ -1426,6 +1470,9 @@ cbb_read_ivar(device_t brdev, device_t child, int which, uintptr_t *result)
 	struct cbb_softc *sc = device_get_softc(brdev);
 
 	switch (which) {
+	case PCIB_IVAR_DOMAIN:
+		*result = sc->domain;
+		return (0);
 	case PCIB_IVAR_BUS:
 		*result = sc->secbus;
 		return (0);
@@ -1439,45 +1486,13 @@ cbb_write_ivar(device_t brdev, device_t child, int which, uintptr_t value)
 	struct cbb_softc *sc = device_get_softc(brdev);
 
 	switch (which) {
+	case PCIB_IVAR_DOMAIN:
+		return (EINVAL);
 	case PCIB_IVAR_BUS:
 		sc->secbus = value;
-		break;
+		return (0);
 	}
 	return (ENOENT);
-}
-
-/************************************************************************/
-/* PCI compat methods							*/
-/************************************************************************/
-
-int
-cbb_maxslots(device_t brdev)
-{
-	return (0);
-}
-
-uint32_t
-cbb_read_config(device_t brdev, int b, int s, int f, int reg, int width)
-{
-	uint32_t rv;
-
-	/*
-	 * Pass through to the next ppb up the chain (i.e. our grandparent).
-	 */
-	rv = PCIB_READ_CONFIG(device_get_parent(device_get_parent(brdev)),
-	    b, s, f, reg, width);
-	return (rv);
-}
-
-void
-cbb_write_config(device_t brdev, int b, int s, int f, int reg, uint32_t val,
-    int width)
-{
-	/*
-	 * Pass through to the next ppb up the chain (i.e. our grandparent).
-	 */
-	PCIB_WRITE_CONFIG(device_get_parent(device_get_parent(brdev)),
-	    b, s, f, reg, val, width);
 }
 
 int
@@ -1486,11 +1501,12 @@ cbb_suspend(device_t self)
 	int			error = 0;
 	struct cbb_softc	*sc = device_get_softc(self);
 
-	cbb_set(sc, CBB_SOCKET_MASK, 0);	/* Quiet hardware */
-	bus_teardown_intr(self, sc->irq_res, sc->intrhand);
-	sc->flags &= ~CBB_CARD_OK;		/* Card is bogus now */
 	error = bus_generic_suspend(self);
-	return (error);
+	if (error != 0)
+		return (error);
+	cbb_set(sc, CBB_SOCKET_MASK, 0);	/* Quiet hardware */
+	sc->cardok = 0;				/* Card is bogus now */
+	return (0);
 }
 
 int
@@ -1519,18 +1535,6 @@ cbb_resume(device_t self)
 	tmp = cbb_get(sc, CBB_SOCKET_EVENT);
 	cbb_set(sc, CBB_SOCKET_EVENT, tmp);
 
-	/* re-establish the interrupt. */
-	if (bus_setup_intr(self, sc->irq_res, INTR_TYPE_AV | INTR_MPSAFE,
-	    cbb_intr, sc, &sc->intrhand)) {
-		device_printf(self, "couldn't re-establish interrupt");
-		bus_release_resource(self, SYS_RES_IRQ, 0, sc->irq_res);
-		bus_release_resource(self, SYS_RES_MEMORY, CBBR_SOCKBASE,
-		    sc->base_res);
-		sc->irq_res = NULL;
-		sc->base_res = NULL;
-		return (ENOMEM);
-	}
-
 	/* CSC Interrupt: Card detect interrupt on */
 	cbb_setb(sc, CBB_SOCKET_MASK, CBB_SOCKET_MASK_CD);
 
@@ -1551,6 +1555,5 @@ cbb_child_present(device_t self)
 	uint32_t sockstate;
 
 	sockstate = cbb_get(sc, CBB_SOCKET_STATE);
-	return (CBB_CARD_PRESENT(sockstate) &&
-	  (sc->flags & CBB_CARD_OK) == CBB_CARD_OK);
+	return (CBB_CARD_PRESENT(sockstate) && sc->cardok);
 }

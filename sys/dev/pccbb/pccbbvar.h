@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pccbb/pccbbvar.h,v 1.23 2005/01/13 19:05:25 imp Exp $
+ * $FreeBSD: src/sys/dev/pccbb/pccbbvar.h,v 1.32 2007/09/30 11:05:15 marius Exp $
  */
 
 /*
@@ -32,11 +32,11 @@
  */
 
 struct cbb_intrhand {
+	driver_filter_t	*filt;
 	driver_intr_t	*intr;
 	void 		*arg;
 	struct cbb_softc *sc;
 	void		*cookie;
-	STAILQ_ENTRY(cbb_intrhand) entries;
 };
 
 struct cbb_reslist {
@@ -62,12 +62,15 @@ struct cbb_softc {
 	void		*intrhand;
 	bus_space_tag_t bst;
 	bus_space_handle_t bsh;
-	u_int8_t	secbus;
-	u_int8_t	subbus;
+	uint32_t	domain;
+	unsigned int	pribus;
+	unsigned int	secbus;
+	unsigned int	subbus;
 	struct mtx	mtx;
 	struct cv	cv;
+	struct cv	powercv;
+	int		cardok;
 	u_int32_t	flags;
-#define CBB_CARD_OK		0x08000000
 #define	CBB_16BIT_CARD		0x20000000
 #define	CBB_KTHREAD_RUNNING	0x40000000
 #define	CBB_KTHREAD_DONE	0x80000000
@@ -83,11 +86,10 @@ struct cbb_softc {
 #define	CB_TOPIC97	8		/* Toshiba ToPIC97/100 */
 #define	CB_O2MICRO	9		/* O2Micro chips */
 	SLIST_HEAD(, cbb_reslist) rl;
-	STAILQ_HEAD(, cbb_intrhand) intr_handlers;
-
 	device_t	cbdev;
 	struct proc	*event_thread;
 	void (*chipinit)(struct cbb_softc *);
+	volatile int	powerintr;
 };
 
 /* result of detect_card */
@@ -123,8 +125,6 @@ int	cbb_detach(device_t brdev);
 void	cbb_disable_func_intr(struct cbb_softc *sc);
 void	cbb_driver_added(device_t brdev, driver_t *driver);
 void	cbb_event_thread(void *arg);
-void	cbb_intr(void *arg);
-int	cbb_maxslots(device_t brdev);
 int	cbb_pcic_set_memory_offset(device_t brdev, device_t child, int rid,
 	    uint32_t cardaddr, uint32_t *deltap);
 int	cbb_pcic_set_res_flags(device_t brdev, device_t child, int type,
@@ -132,21 +132,17 @@ int	cbb_pcic_set_res_flags(device_t brdev, device_t child, int type,
 int	cbb_power(device_t brdev, int volts);
 int	cbb_power_enable_socket(device_t brdev, device_t child);
 void	cbb_power_disable_socket(device_t brdev, device_t child);
-uint32_t cbb_read_config(device_t brdev, int b, int s, int f,
-	    int reg, int width);
 int	cbb_read_ivar(device_t brdev, device_t child, int which,
 	    uintptr_t *result);
 int	cbb_release_resource(device_t brdev, device_t child,
 	    int type, int rid, struct resource *r);
 int	cbb_resume(device_t self);
 int	cbb_setup_intr(device_t dev, device_t child, struct resource *irq,
-	    int flags, driver_intr_t *intr, void *arg, void **cookiep);
-int	cbb_shutdown(device_t brdev);
+	    int flags, driver_filter_t *filt, driver_intr_t *intr, void *arg,
+	    void **cookiep);
 int	cbb_suspend(device_t self);
 int	cbb_teardown_intr(device_t dev, device_t child, struct resource *irq,
 	    void *cookie);
-void	cbb_write_config(device_t brdev, int b, int s, int f,
-	    int reg, uint32_t val, int width);
 int	cbb_write_ivar(device_t brdev, device_t child, int which,
 	    uintptr_t value);
 
