@@ -26665,8 +26665,6 @@ sys/dev/rp/rp_isa.c -text
 sys/dev/rp/rp_pci.c -text
 sys/dev/rp/rpreg.h -text
 sys/dev/rp/rpvar.h -text
-sys/dev/sab/sab.c -text
-sys/dev/sab/sab82532reg.h -text
 sys/dev/safe/safe.c -text
 sys/dev/safe/safereg.h -text
 sys/dev/safe/safevar.h -text
