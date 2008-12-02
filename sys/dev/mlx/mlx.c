@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/mlx/mlx.c,v 1.53 2005/05/29 04:42:23 nyan Exp $
+ *	$FreeBSD: src/sys/dev/mlx/mlx.c,v 1.54 2007/02/23 12:18:46 piso Exp $
  */
 
 /*
@@ -364,7 +364,7 @@ mlx_attach(struct mlx_softc *sc)
 	device_printf(sc->mlx_dev, "can't allocate interrupt\n");
 	return(ENXIO);
     }
-    error = bus_setup_intr(sc->mlx_dev, sc->mlx_irq, INTR_TYPE_BIO | INTR_ENTROPY,  mlx_intr, sc, &sc->mlx_intr);
+    error = bus_setup_intr(sc->mlx_dev, sc->mlx_irq, INTR_TYPE_BIO | INTR_ENTROPY, NULL, mlx_intr, sc, &sc->mlx_intr);
     if (error) {
 	device_printf(sc->mlx_dev, "can't set up interrupt\n");
 	return(ENXIO);

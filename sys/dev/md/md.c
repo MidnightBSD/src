@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/sys/dev/md/md.c,v 1.153.2.6 2006/02/14 14:46:22 luigi Exp $
+ * $FreeBSD: src/sys/dev/md/md.c,v 1.169 2007/06/05 00:00:51 jeff Exp $
  *
  */
 
@@ -67,6 +67,7 @@
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mdioctl.h>
+#include <sys/mount.h>
 #include <sys/mutex.h>
 #include <sys/sx.h>
 #include <sys/namei.h>
@@ -88,14 +89,15 @@
 
 #define MD_MODVER 1
 
-#define MD_SHUTDOWN 0x10000	/* Tell worker thread to terminate. */
+#define MD_SHUTDOWN	0x10000		/* Tell worker thread to terminate. */
+#define	MD_EXITING	0x20000		/* Worker thread is exiting. */
 
 #ifndef MD_NSECT
 #define MD_NSECT (10000 * 2)
 #endif
 
-static MALLOC_DEFINE(M_MD, "MD disk", "Memory Disk");
-static MALLOC_DEFINE(M_MDSECT, "MD sectors", "Memory Disk Sectors");
+static MALLOC_DEFINE(M_MD, "md_disk", "Memory Disk");
+static MALLOC_DEFINE(M_MDSECT, "md_sectors", "Memory Disk Sectors");
 
 static int md_debug;
 SYSCTL_INT(_debug, OID_AUTO, mddebug, CTLFLAG_RW, &md_debug, 0, "");
@@ -120,6 +122,8 @@ static g_init_t g_md_init;
 static g_fini_t g_md_fini;
 static g_start_t g_md_start;
 static g_access_t g_md_access;
+static void g_md_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp, 
+    struct g_consumer *cp __unused, struct g_provider *pp);
 
 static int	mdunits;
 static struct cdev *status_dev = 0;
@@ -140,6 +144,7 @@ struct g_class g_md_class = {
 	.fini = g_md_fini,
 	.start = g_md_start,
 	.access = g_md_access,
+	.dumpconf = g_md_dumpconf,
 };
 
 DECLARE_GEOM_CLASS(g_md_class, g_md);
@@ -401,6 +406,15 @@ mdstart_malloc(struct md_s *sc, struct bio *bp)
 	off_t secno, nsec, uc;
 	uintptr_t sp, osp;
 
+	switch (bp->bio_cmd) {
+	case BIO_READ:
+	case BIO_WRITE:
+	case BIO_DELETE:
+		break;
+	default:
+		return (EOPNOTSUPP);
+	}
+
 	nsec = bp->bio_length / sc->sectorsize;
 	secno = bp->bio_offset / sc->sectorsize;
 	dst = bp->bio_data;
@@ -482,12 +496,25 @@ mdstart_preload(struct md_s *sc, struct bio *bp)
 static int
 mdstart_vnode(struct md_s *sc, struct bio *bp)
 {
-	int error;
+	int error, vfslocked;
 	struct uio auio;
 	struct iovec aiov;
 	struct mount *mp;
+	struct vnode *vp;
+	struct thread *td;
 
-	mtx_assert(&Giant, MA_OWNED);
+	switch (bp->bio_cmd) {
+	case BIO_READ:
+	case BIO_WRITE:
+	case BIO_FLUSH:
+		break;
+	default:
+		return (EOPNOTSUPP);
+	}
+
+	td = curthread;
+	vp = sc->vnode;
+
 	/*
 	 * VNODE I/O
 	 *
@@ -495,6 +522,17 @@ mdstart_vnode(struct md_s *sc, struct bio *bp)
 	 * B_INVAL because (for a write anyway), the buffer is
 	 * still valid.
 	 */
+
+	if (bp->bio_cmd == BIO_FLUSH) {
+		vfslocked = VFS_LOCK_GIANT(vp->v_mount);
+		(void) vn_start_write(vp, &mp, V_WAIT);
+		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+		error = VOP_FSYNC(vp, MNT_WAIT, td);
+		VOP_UNLOCK(vp, 0, td);
+		vn_finished_write(mp);
+		VFS_UNLOCK_GIANT(vfslocked);
+		return (error);
+	}
 
 	bzero(&auio, sizeof(auio));
 
@@ -504,30 +542,32 @@ mdstart_vnode(struct md_s *sc, struct bio *bp)
 	auio.uio_iovcnt = 1;
 	auio.uio_offset = (vm_ooffset_t)bp->bio_offset;
 	auio.uio_segflg = UIO_SYSSPACE;
-	if(bp->bio_cmd == BIO_READ)
+	if (bp->bio_cmd == BIO_READ)
 		auio.uio_rw = UIO_READ;
-	else if(bp->bio_cmd == BIO_WRITE)
+	else if (bp->bio_cmd == BIO_WRITE)
 		auio.uio_rw = UIO_WRITE;
 	else
 		panic("wrong BIO_OP in mdstart_vnode");
 	auio.uio_resid = bp->bio_length;
-	auio.uio_td = curthread;
+	auio.uio_td = td;
 	/*
 	 * When reading set IO_DIRECT to try to avoid double-caching
 	 * the data.  When writing IO_DIRECT is not optimal.
 	 */
+	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (bp->bio_cmd == BIO_READ) {
-		vn_lock(sc->vnode, LK_EXCLUSIVE | LK_RETRY, curthread);
-		error = VOP_READ(sc->vnode, &auio, IO_DIRECT, sc->cred);
-		VOP_UNLOCK(sc->vnode, 0, curthread);
+		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+		error = VOP_READ(vp, &auio, IO_DIRECT, sc->cred);
+		VOP_UNLOCK(vp, 0, td);
 	} else {
-		(void) vn_start_write(sc->vnode, &mp, V_WAIT);
-		vn_lock(sc->vnode, LK_EXCLUSIVE | LK_RETRY, curthread);
-		error = VOP_WRITE(sc->vnode, &auio,
-		    sc->flags & MD_ASYNC ? 0 : IO_SYNC, sc->cred);
-		VOP_UNLOCK(sc->vnode, 0, curthread);
+		(void) vn_start_write(vp, &mp, V_WAIT);
+		vn_lock(vp, LK_EXCLUSIVE | LK_RETRY, td);
+		error = VOP_WRITE(vp, &auio, sc->flags & MD_ASYNC ? 0 : IO_SYNC,
+		    sc->cred);
+		VOP_UNLOCK(vp, 0, td);
 		vn_finished_write(mp);
 	}
+	VFS_UNLOCK_GIANT(vfslocked);
 	bp->bio_resid = auio.uio_resid;
 	return (error);
 }
@@ -540,6 +580,15 @@ mdstart_swap(struct md_s *sc, struct bio *bp)
 	vm_pindex_t i, lastp;
 	vm_page_t m;
 	u_char *p;
+
+	switch (bp->bio_cmd) {
+	case BIO_READ:
+	case BIO_WRITE:
+	case BIO_DELETE:
+		break;
+	default:
+		return (EOPNOTSUPP);
+	}
 
 	p = bp->bio_data;
 
@@ -638,35 +687,22 @@ md_kthread(void *arg)
 {
 	struct md_s *sc;
 	struct bio *bp;
-	int error, hasgiant;
+	int error;
 
 	sc = arg;
-	mtx_lock_spin(&sched_lock);
+	thread_lock(curthread);
 	sched_prio(curthread, PRIBIO);
-	mtx_unlock_spin(&sched_lock);
+	thread_unlock(curthread);
+	if (sc->type == MD_VNODE)
+		curthread->td_pflags |= TDP_NORUNNINGBUF;
 
-	switch (sc->type) {
-	case MD_VNODE:
-		mtx_lock(&Giant);
-		hasgiant = 1;
-		break;
-	case MD_MALLOC:
-	case MD_PRELOAD:
-	case MD_SWAP:
-	default:
-		hasgiant = 0;
-		break;
-	}
-	
 	for (;;) {
+		mtx_lock(&sc->queue_mtx);
 		if (sc->flags & MD_SHUTDOWN) {
-			sc->procp = NULL;
-			wakeup(&sc->procp);
-			if (hasgiant)
-				mtx_unlock(&Giant);
+			sc->flags |= MD_EXITING;
+			mtx_unlock(&sc->queue_mtx);
 			kthread_exit(0);
 		}
-		mtx_lock(&sc->queue_mtx);
 		bp = bioq_takefirst(&sc->bio_queue);
 		if (!bp) {
 			msleep(sc, &sc->queue_mtx, PRIBIO | PDROP, "mdwait", 0);
@@ -864,7 +900,7 @@ mdcreate_vnode(struct md_s *sc, struct md_ioctl *mdio, struct thread *td)
 {
 	struct vattr vattr;
 	struct nameidata nd;
-	int error, flags;
+	int error, flags, vfslocked;
 
 	error = copyinstr(mdio->md_file, sc->file, sizeof(sc->file), NULL);
 	if (error != 0)
@@ -876,17 +912,20 @@ mdcreate_vnode(struct md_s *sc, struct md_ioctl *mdio, struct thread *td)
 	 */
 	if ((mdio->md_options & MD_READONLY) != 0)
 		flags &= ~FWRITE;
-	NDINIT(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, sc->file, td);
-	error = vn_open(&nd, &flags, 0, -1);
+	NDINIT(&nd, LOOKUP, FOLLOW | MPSAFE, UIO_SYSSPACE, sc->file, td);
+	error = vn_open(&nd, &flags, 0, NULL);
 	if (error != 0)
 		return (error);
+	vfslocked = NDHASGIANT(&nd);
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	if (nd.ni_vp->v_type != VREG ||
 	    (error = VOP_GETATTR(nd.ni_vp, &vattr, td->td_ucred, td))) {
 		VOP_UNLOCK(nd.ni_vp, 0, td);
 		(void)vn_close(nd.ni_vp, flags, td->td_ucred, td);
+		VFS_UNLOCK_GIANT(vfslocked);
 		return (error ? error : EINVAL);
 	}
+	nd.ni_vp->v_vflag |= VV_MD;
 	VOP_UNLOCK(nd.ni_vp, 0, td);
 
 	if (mdio->md_fwsectors != 0)
@@ -900,16 +939,21 @@ mdcreate_vnode(struct md_s *sc, struct md_ioctl *mdio, struct thread *td)
 
 	error = mdsetcred(sc, td->td_ucred);
 	if (error != 0) {
+		vn_lock(nd.ni_vp, LK_EXCLUSIVE | LK_RETRY, td);
+		nd.ni_vp->v_vflag &= ~VV_MD;
+		VOP_UNLOCK(nd.ni_vp, 0, td);
 		(void)vn_close(nd.ni_vp, flags, td->td_ucred, td);
+		VFS_UNLOCK_GIANT(vfslocked);
 		return (error);
 	}
+	VFS_UNLOCK_GIANT(vfslocked);
 	return (0);
 }
 
 static int
 mddestroy(struct md_s *sc, struct thread *td)
 {
-
+	int vfslocked;
 
 	if (sc->gp) {
 		sc->gp->softc = NULL;
@@ -919,16 +963,21 @@ mddestroy(struct md_s *sc, struct thread *td)
 		sc->gp = NULL;
 		sc->pp = NULL;
 	}
+	mtx_lock(&sc->queue_mtx);
 	sc->flags |= MD_SHUTDOWN;
 	wakeup(sc);
-	while (sc->procp != NULL)
-		tsleep(&sc->procp, PRIBIO, "mddestroy", hz / 10);
+	while (!(sc->flags & MD_EXITING))
+		msleep(sc->procp, &sc->queue_mtx, PRIBIO, "mddestroy", hz / 10);
+	mtx_unlock(&sc->queue_mtx);
 	mtx_destroy(&sc->queue_mtx);
 	if (sc->vnode != NULL) {
-		mtx_lock(&Giant);
+		vfslocked = VFS_LOCK_GIANT(sc->vnode->v_mount);
+		vn_lock(sc->vnode, LK_EXCLUSIVE | LK_RETRY, td);
+		sc->vnode->v_vflag &= ~VV_MD;
+		VOP_UNLOCK(sc->vnode, 0, td);
 		(void)vn_close(sc->vnode, sc->flags & MD_READONLY ?
 		    FREAD : (FREAD|FWRITE), sc->cred, td);
-		mtx_unlock(&Giant);
+		VFS_UNLOCK_GIANT(vfslocked);
 	}
 	if (sc->cred != NULL)
 		crfree(sc->cred);
@@ -1175,6 +1224,65 @@ g_md_init(struct g_class *mp __unused)
 	status_dev = make_dev(&mdctl_cdevsw, MAXMINOR, UID_ROOT, GID_WHEEL,
 	    0600, MDCTL_NAME);
 	g_topology_lock();
+}
+
+static void
+g_md_dumpconf(struct sbuf *sb, const char *indent, struct g_geom *gp, 
+    struct g_consumer *cp __unused, struct g_provider *pp)
+{
+	struct md_s *mp;
+	char *type;
+
+	mp = gp->softc;
+	if (mp == NULL)
+		return;
+
+	switch (mp->type) {
+	case MD_MALLOC:
+		type = "malloc";
+		break;
+	case MD_PRELOAD:
+		type = "preload";
+		break;
+	case MD_VNODE:
+		type = "vnode";
+		break;
+	case MD_SWAP:
+		type = "swap";
+		break;
+	default:
+		type = "unknown";
+		break;
+	}
+
+	if (pp != NULL) {
+		if (indent == NULL) {
+			sbuf_printf(sb, " u %d", mp->unit);
+			sbuf_printf(sb, " s %ju", (uintmax_t) mp->sectorsize);
+			sbuf_printf(sb, " f %ju", (uintmax_t) mp->fwheads);
+			sbuf_printf(sb, " fs %ju", (uintmax_t) mp->fwsectors);
+			sbuf_printf(sb, " l %ju", (uintmax_t) mp->mediasize);
+			sbuf_printf(sb, " t %s", type);
+			if (mp->type == MD_VNODE && mp->vnode != NULL)
+				sbuf_printf(sb, " file %s", mp->file);
+		} else {
+			sbuf_printf(sb, "%s<unit>%d</unit>\n", indent,
+			    mp->unit);
+			sbuf_printf(sb, "%s<sectorsize>%ju</sectorsize>\n",
+			    indent, (uintmax_t) mp->sectorsize);
+			sbuf_printf(sb, "%s<fwheads>%ju</fwheads>\n",
+			    indent, (uintmax_t) mp->fwheads);
+			sbuf_printf(sb, "%s<fwsectors>%ju</fwsectors>\n",
+			    indent, (uintmax_t) mp->fwsectors);
+			sbuf_printf(sb, "%s<length>%ju</length>\n",
+			    indent, (uintmax_t) mp->mediasize);
+			sbuf_printf(sb, "%s<type>%s</type>\n", indent,
+			    type);
+			if (mp->type == MD_VNODE && mp->vnode != NULL)
+				sbuf_printf(sb, "%s<file>%s</file>\n",
+				    indent, mp->file);
+		}
+	}
 }
 
 static void
