@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/ppbconf.c,v 1.23 2003/08/24 17:54:16 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/ppbconf.c,v 1.26.4.1 2008/01/15 22:28:15 jhb Exp $");
 #include "opt_ppb_1284.h"
 
 #include <sys/param.h>
@@ -36,6 +36,9 @@ __FBSDID("$FreeBSD: src/sys/dev/ppbus/ppbconf.c,v 1.23 2003/08/24 17:54:16 obrie
 #include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/malloc.h>
+#include <sys/rman.h>
+
+#include <machine/resource.h>
 
 #include <dev/ppbus/ppbconf.h>
 #include <dev/ppbus/ppb_1284.h>
@@ -380,9 +383,38 @@ end_scan:
 
 #endif /* !DONTPROBE_1284 */
 
+static void
+ppbus_dummy_intr(void *arg)
+{
+}
+
 static int
 ppbus_attach(device_t dev)
 {
+	struct ppb_data *ppb = (struct ppb_data *)device_get_softc(dev);
+	uintptr_t irq;
+	int error, rid;
+
+	/* Attach a dummy interrupt handler to suck up any stray interrupts. */
+	BUS_READ_IVAR(device_get_parent(dev), dev, PPC_IVAR_IRQ, &irq);
+
+	if (irq > 0) {
+		rid = 0;
+		ppb->irq_res = bus_alloc_resource(dev, SYS_RES_IRQ, &rid, irq,
+		    irq, 1, RF_SHAREABLE);
+		if (ppb->irq_res != NULL) {
+			error = bus_setup_intr(dev, ppb->irq_res,
+			    INTR_TYPE_TTY | INTR_MPSAFE, NULL, ppbus_dummy_intr,
+			    ppb, &ppb->intr_cookie);
+			if (error) {
+				device_printf(dev,
+				    "failed to setup interrupt handler\n");
+				bus_release_resource(dev, SYS_RES_IRQ, 0,
+				    ppb->irq_res);
+				return (error);
+			}
+		}
+	}
 
 	/* Locate our children */
 	bus_generic_probe(dev);
@@ -399,19 +431,41 @@ ppbus_attach(device_t dev)
 }
 
 static int
+ppbus_detach(device_t dev)
+{
+	struct ppb_data *ppb = (struct ppb_data *)device_get_softc(dev);
+        device_t *children;
+        int nchildren, i;
+
+	/* detach & delete all children */
+	if (!device_get_children(dev, &children, &nchildren)) {
+		for (i = 0; i < nchildren; i++)
+			if (children[i])
+				device_delete_child(dev, children[i]);
+		free(children, M_TEMP);
+        }
+
+	if (ppb->irq_res != NULL) {
+		bus_teardown_intr(dev, ppb->irq_res, ppb->intr_cookie);
+		bus_release_resource(dev, SYS_RES_IRQ, 0, ppb->irq_res);
+	}
+	return (0);
+}
+
+static int
 ppbus_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
-			void (*ihand)(void *), void *arg, void **cookiep)
+    driver_filter_t *filt, void (*ihand)(void *), void *arg, void **cookiep)
 {
 	int error;
 	struct ppb_data *ppb = DEVTOSOFTC(bus);
-	struct ppb_device *ppbdev = (struct ppb_device *)device_get_ivars(child);
+	struct ppb_device *ppbdev = device_get_ivars(child);
 
 	/* a device driver must own the bus to register an interrupt */
 	if (ppb->ppb_owner != child)
 		return (EINVAL);
 
 	if ((error = BUS_SETUP_INTR(device_get_parent(bus), child, r, flags,
-					ihand, arg, cookiep)))
+					filt, ihand, arg, cookiep)))
 		return (error);
 
 	/* store the resource and the cookie for eventually forcing
@@ -539,6 +593,7 @@ static device_method_t ppbus_methods[] = {
         /* device interface */
 	DEVMETHOD(device_probe,         ppbus_probe),
 	DEVMETHOD(device_attach,        ppbus_attach),
+	DEVMETHOD(device_detach,        ppbus_detach),
   
         /* bus interface */
 	DEVMETHOD(bus_add_child,	ppbus_add_child),

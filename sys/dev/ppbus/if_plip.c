@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/if_plip.c,v 1.37.2.1 2005/08/25 05:01:14 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/if_plip.c,v 1.44 2007/02/23 12:18:49 piso Exp $");
 
 /*
  * Parallel port TCP/IP interfaces added.  I looked at the driver from
@@ -185,7 +185,7 @@ lp_identify(driver_t *driver, device_t parent)
 {
 	device_t dev;
 
-	dev = device_find_child(parent, "plip", 0);
+	dev = device_find_child(parent, "plip", -1);
 	if (!dev)
 		BUS_ADD_CHILD(parent, 0, "plip", -1);
 }
@@ -357,8 +357,8 @@ lpioctl (struct ifnet *ifp, u_long cmd, caddr_t data)
 	    }
 
 	    /* attach our interrupt handler, later detached when the bus is released */
-	    if ((error = BUS_SETUP_INTR(ppbus, dev, sc->res_irq,
-					INTR_TYPE_NET, lp_intr, dev, &ih))) {
+	    if ((error = bus_setup_intr(dev, sc->res_irq,
+					INTR_TYPE_NET, NULL, lp_intr, dev, &ih))) {
 		ppb_release_bus(ppbus, dev);
 		return (error);
 	    }
@@ -455,7 +455,7 @@ static void
 lptap(struct ifnet *ifp, struct mbuf *m)
 {
 	u_int32_t af = AF_INET;
-	BPF_MTAP2(ifp, &af, sizeof(af), m);
+	bpf_mtap2(ifp->if_bpf, &af, sizeof(af), m);
 }
 
 static void
@@ -514,7 +514,7 @@ lp_intr (void *arg)
 	    sc->sc_ifp->if_ibytes += len;
 	    top = m_devget(sc->sc_ifbuf + CLPIPHDRLEN, len, 0, sc->sc_ifp, 0);
 	    if (top) {
-		if (sc->sc_ifp->if_bpf)
+		if (bpf_peers_present(sc->sc_ifp->if_bpf))
 		    lptap(sc->sc_ifp, top);
 		netisr_queue(NETISR_IP, top);	/* mbuf is free'd on failure. */
 	    }
@@ -559,7 +559,7 @@ lp_intr (void *arg)
 	    sc->sc_ifp->if_ibytes += len;
 	    top = m_devget(sc->sc_ifbuf + LPIPHDRLEN, len, 0, sc->sc_ifp, 0);
 	    if (top) {
-		if (sc->sc_ifp->if_bpf)
+		if (bpf_peers_present(sc->sc_ifp->if_bpf))
 		    lptap(sc->sc_ifp, top);
 		netisr_queue(NETISR_IP, top);	/* mbuf is free'd on failure. */
 	    }
@@ -694,7 +694,7 @@ lpoutput (struct ifnet *ifp, struct mbuf *m,
 	} else {
 		ifp->if_opackets++;
 		ifp->if_obytes += m->m_pkthdr.len;
-		if (ifp->if_bpf)
+		if (bpf_peers_present(ifp->if_bpf))
 		    lptap(ifp, m);
 	}
 
@@ -739,7 +739,7 @@ lpoutput (struct ifnet *ifp, struct mbuf *m,
     } else {
 	ifp->if_opackets++;
 	ifp->if_obytes += m->m_pkthdr.len;
-	if (ifp->if_bpf)
+	if (bpf_peers_present(ifp->if_bpf))
 	    lptap(ifp, m);
     }
 
@@ -770,3 +770,4 @@ static driver_t lp_driver = {
 };
 
 DRIVER_MODULE(plip, ppbus, lp_driver, lp_devclass, 0, 0);
+MODULE_DEPEND(plip, ppbus, 1, 1, 1);

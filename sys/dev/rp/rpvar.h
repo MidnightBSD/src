@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/rp/rpvar.h,v 1.8 2005/01/06 01:43:11 imp Exp $
+ * $FreeBSD: src/sys/dev/rp/rpvar.h,v 1.10 2006/11/20 12:59:27 marius Exp $
  */
 
 /*
@@ -63,11 +63,11 @@ struct rp_port {
 	int			rp_xmit_stopped:1;
 	CONTROLLER_t *		rp_ctlp;
 	CHANNEL_t		rp_channel;
-	unsigned short		TxBuf[TXFIFO_SIZE/2 +1];
-	unsigned short		RxBuf[RXFIFO_SIZE/2 +1];
+	unsigned char		TxBuf[TXFIFO_SIZE];
+	unsigned char		RxBuf[RXFIFO_SIZE];
 };
 
 /* Actually not used */
-#if notdef
+#ifdef notdef
 extern struct termios deftermios;
 #endif /* notdef */

@@ -62,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ray/if_ray.c,v 1.79.2.2 2005/08/25 05:01:14 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ray/if_ray.c,v 1.87 2007/09/05 21:25:58 sam Exp $");
 
 /*
  * Card configuration
@@ -78,8 +78,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ray/if_ray.c,v 1.79.2.2 2005/08/25 05:01:14 rwat
  * interact with pccardd) if you use other memory mapped cards in the
  * same pccard slot as currently old mappings are not cleaned up very well
  * by the bus_release_resource methods or pccardd.
- *
- * There is no support for running this driver on 4.0.
+ * XXX Are these workarounds necessary with NEWCARD?
  *
  * Ad-hoc and infra-structure modes
  * ================================
@@ -276,6 +275,16 @@ __FBSDID("$FreeBSD: src/sys/dev/ray/if_ray.c,v 1.79.2.2 2005/08/25 05:01:14 rwat
 #include <dev/ray/if_raydbg.h>
 #include <dev/ray/if_rayvar.h>
 
+typedef uint8_t *ieee80211_mgt_beacon_t;
+typedef uint8_t *ieee80211_mgt_auth_t;
+
+#define	IEEE80211_AUTH_ALGORITHM(auth) \
+	((auth)[0] | ((auth)[1] << 8))
+#define	IEEE80211_AUTH_TRANSACTION(auth) \
+	((auth)[2] | ((auth)[3] << 8))
+#define	IEEE80211_AUTH_STATUS(auth) \
+	((auth)[4] | ((auth)[5] << 8))
+
 static MALLOC_DEFINE(M_RAYCOM, "raycom", "Raylink command queue entry");
 /*
  * Prototyping
@@ -357,7 +366,7 @@ static void	ray_dump_mbuf		(struct ray_softc *sc, struct mbuf *m, char *s);
 #endif /* RAY_DEBUG & RAY_DBG_MBUF */
 
 /*
- * PC-Card (PCMCIA) driver definition
+ * PC Card (PCMCIA) driver definition
  */
 static device_method_t ray_methods[] = {
 	/* Device interface */
@@ -604,7 +613,6 @@ ray_detach(device_t dev)
 	sc->sc_c.np_havenet = 0;
 	ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
 	ether_ifdetach(ifp);
-	if_free(ifp);
 
 	/*
 	 * Stop the runq and wake up anyone sleeping for us.
@@ -627,6 +635,7 @@ ray_detach(device_t dev)
 	 * Release resources
 	 */
 	ray_res_release(sc);
+	if_free(ifp);
 	RAY_DPRINTF(sc, RAY_DBG_STOP, "unloading complete");
 
 	splx(s);
@@ -1230,7 +1239,7 @@ ray_init_auth_send(struct ray_softc *sc, u_int8_t *dst, int sequence)
 	    IEEE80211_FC0_TYPE_MGT | IEEE80211_FC0_SUBTYPE_AUTH,
 	    IEEE80211_FC1_DIR_NODS,
 	    dst,
-	    IFP2ENADDR(sc->ifp),
+	    IF_LLADDR(sc->ifp),
 	    sc->sc_c.np_bss_id);
 
 	/* Add algorithm number */
@@ -3750,7 +3759,7 @@ ray_res_alloc_irq(struct ray_softc *sc)
 		return (ENOMEM);
 	}
 	if ((error = bus_setup_intr(sc->dev, sc->irq_res, INTR_TYPE_NET,
-	    ray_intr, sc, &sc->irq_handle)) != 0) {
+	    NULL, ray_intr, sc, &sc->irq_handle)) != 0) {
 		RAY_PRINTF(sc, "Failed to setup irq");
 		return (error);
 	}

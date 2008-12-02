@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/rp/rp_pci.c,v 1.11.2.1 2006/02/14 23:09:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/rp/rp_pci.c,v 1.13 2006/01/25 14:55:11 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -105,7 +105,7 @@ static devclass_t rp_devclass;
 
 static int rp_pciprobe(device_t dev);
 static int rp_pciattach(device_t dev);
-#if notdef
+#ifdef notdef
 static int rp_pcidetach(device_t dev);
 static int rp_pcishutdown(device_t dev);
 #endif /* notdef */
@@ -308,7 +308,7 @@ sPCIInitController( CONTROLLER_t *CtlP,
       			CtlP->AiopNumChan[i] = 8;
 			break;
 		default:
-#if notdef
+#ifdef notdef
       			CtlP->AiopNumChan[i] = 8;
 #else
       			CtlP->AiopNumChan[i] = sReadAiopNumChan(CtlP, i);

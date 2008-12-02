@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/lpbb.c,v 1.18 2004/03/18 21:10:11 guido Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/lpbb.c,v 1.19 2005/12/21 10:54:46 ru Exp $");
 
 /*
  * I2C Bit-Banging over parallel port
@@ -226,5 +226,6 @@ static driver_t lpbb_driver = {
 };
 
 DRIVER_MODULE(lpbb, ppbus, lpbb_driver, lpbb_devclass, 0, 0);
+MODULE_DEPEND(lpbb, ppbus, 1, 1, 1);
 MODULE_DEPEND(lpbb, iicbb, IICBB_MINVER, IICBB_PREFVER, IICBB_MAXVER);
 MODULE_VERSION(lpbb, 1);

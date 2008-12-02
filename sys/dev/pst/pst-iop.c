@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pst/pst-iop.c,v 1.7 2004/10/03 16:06:46 stefanf Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pst/pst-iop.c,v 1.8 2007/02/23 12:18:50 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -159,7 +159,7 @@ iop_attach(void *arg)
 
     /* setup and enable interrupts */
     bus_setup_intr(sc->dev, sc->r_irq, INTR_TYPE_BIO|INTR_ENTROPY|INTR_MPSAFE,
-		   iop_intr, sc, &sc->handle);
+		   NULL, iop_intr, sc, &sc->handle);
     sc->reg->oqueue_intr_mask = 0x0;
 }
 

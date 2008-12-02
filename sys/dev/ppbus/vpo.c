@@ -26,12 +26,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/vpo.c,v 1.33 2004/07/09 16:56:46 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/vpo.c,v 1.36 2007/06/17 05:55:52 scottl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/module.h>
 #include <sys/bus.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/malloc.h>
 
 #include <cam/cam.h>
@@ -160,14 +162,14 @@ vpo_attach(device_t dev)
 		return (ENXIO);
 
 	vpo->sim = cam_sim_alloc(vpo_action, vpo_poll, "vpo", vpo,
-				 device_get_unit(dev),
+				 device_get_unit(dev), &Giant,
 				 /*untagged*/1, /*tagged*/0, devq);
 	if (vpo->sim == NULL) {
 		cam_simq_free(devq);
 		return (ENXIO);
 	}
 
-	if (xpt_bus_register(vpo->sim, /*bus*/0) != CAM_SUCCESS) {
+	if (xpt_bus_register(vpo->sim, dev, /*bus*/0) != CAM_SUCCESS) {
 		cam_sim_free(vpo->sim, /*free_devq*/TRUE);
 		return (ENXIO);
 	}
@@ -465,3 +467,5 @@ static driver_t vpo_driver = {
 	sizeof(struct vpo_data),
 };
 DRIVER_MODULE(vpo, ppbus, vpo_driver, vpo_devclass, 0, 0);
+MODULE_DEPEND(vpo, ppbus, 1, 1, 1);
+MODULE_DEPEND(vpo, cam, 1, 1, 1);

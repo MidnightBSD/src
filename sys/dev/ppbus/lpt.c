@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/lpt.c,v 1.36 2005/03/17 09:32:37 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/lpt.c,v 1.40 2007/02/23 12:18:49 piso Exp $");
 
 /*
  * Device Driver for AT parallel printer port
@@ -342,7 +342,7 @@ lpt_identify(driver_t *driver, device_t parent)
 
 	device_t dev;
 
-	dev = device_find_child(parent, LPT_NAME, 0);
+	dev = device_find_child(parent, LPT_NAME, -1);
 	if (!dev)
 		BUS_ADD_CHILD(parent, 0, LPT_NAME, -1);
 }
@@ -406,6 +406,21 @@ lpt_attach(device_t dev)
 	    UID_ROOT, GID_WHEEL, 0600, LPT_NAME "%d", unit);
 	make_dev(&lpt_cdevsw, unit | LP_BYPASS,
 	    UID_ROOT, GID_WHEEL, 0600, LPT_NAME "%d.ctl", unit);
+	return (0);
+}
+
+static int
+lpt_detach(device_t dev)
+{
+	struct lpt_data *sc = DEVTOSOFTC(dev);
+
+	lpt_release_ppbus(dev);
+	if (sc->intr_resource != 0) {
+		BUS_TEARDOWN_INTR(device_get_parent(dev), dev,
+		    sc->intr_resource, sc->intr_cookie);
+		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->intr_resource);
+	}
+
 	return (0);
 }
 
@@ -744,8 +759,8 @@ lptwrite(struct cdev *dev, struct uio *uio, int ioflag)
 	/* if interrupts are working, register the handler */
 	if (sc->sc_irq & LP_USE_IRQ) {
 		/* register our interrupt handler */
-		err = BUS_SETUP_INTR(ppbus, lptdev, sc->intr_resource,
-			       INTR_TYPE_TTY, lpt_intr, lptdev,
+		err = bus_setup_intr(lptdev, sc->intr_resource,
+			       INTR_TYPE_TTY, NULL, lpt_intr, lptdev,
 			       &sc->intr_cookie);
 		if (err) {
 			device_printf(lptdev, "handler registration failed, polled mode.\n");
@@ -954,6 +969,7 @@ static device_method_t lpt_methods[] = {
 	DEVMETHOD(device_identify,	lpt_identify),
 	DEVMETHOD(device_probe,		lpt_probe),
 	DEVMETHOD(device_attach,	lpt_attach),
+	DEVMETHOD(device_detach,	lpt_detach),
 
 	{ 0, 0 }
 };
@@ -965,3 +981,4 @@ static driver_t lpt_driver = {
 };
 
 DRIVER_MODULE(lpt, ppbus, lpt_driver, lpt_devclass, 0, 0);
+MODULE_DEPEND(lpt, ppbus, 1, 1, 1);

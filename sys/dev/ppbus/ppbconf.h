@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ppbus/ppbconf.h,v 1.19 2003/08/07 15:04:25 jhb Exp $
+ * $FreeBSD: src/sys/dev/ppbus/ppbconf.h,v 1.19.24.1 2008/01/15 22:28:15 jhb Exp $
  *
  */
 #ifndef __PPBCONF_H
@@ -248,6 +248,9 @@ struct ppb_data {
 				 * NIBBLE, PS2, EPP or ECP */
 
 	void *ppb_owner;	/* device which owns the bus */
+
+	struct resource *irq_res;
+	void *intr_cookie;
 };
 
 #ifdef _KERNEL

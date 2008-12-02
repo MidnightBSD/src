@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/rp/rp_isa.c,v 1.7 2005/01/06 01:43:11 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/rp/rp_isa.c,v 1.8 2005/12/04 10:06:04 ru Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -242,7 +242,7 @@ rp_attach(device_t dev)
 
 	ctlp = device_get_softc(dev);
 
-#if notdef
+#ifdef notdef
 	num_aiops = sInitController(ctlp,
 				rp_controller,
 				MAX_AIOPS_PER_BOARD, 0,

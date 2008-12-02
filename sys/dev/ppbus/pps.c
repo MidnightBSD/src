@@ -15,7 +15,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/pps.c,v 1.50 2005/04/14 15:56:10 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/pps.c,v 1.52 2007/02/23 12:18:49 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -51,7 +51,7 @@ struct pps_data {
 	void *intr_cookie;		/* interrupt registration cookie */
 };
 
-static void	ppsintr(void *arg);
+static int	ppsintr(void *arg);
 static void 	ppshcpoll(void *arg);
 
 #define DEVTOSOFTC(dev) \
@@ -205,7 +205,7 @@ ppsopen(struct cdev *dev, int flags, int fmt, struct thread *td)
 
 		/* attach the interrupt handler */
 		if ((error = bus_setup_intr(ppsdev, sc->intr_resource,
-		    (INTR_TYPE_TTY | INTR_MPSAFE | INTR_FAST), ppsintr,
+		    (INTR_TYPE_TTY | INTR_MPSAFE), ppsintr, NULL,
 		    sc, &sc->intr_cookie))) {
 			ppb_release_bus(ppbus, ppsdev);
 			return (error);
@@ -276,14 +276,14 @@ ppshcpoll(void *arg)
 	mtx_unlock_spin(&sc->mtx);
 }
 
-static void
+static int
 ppsintr(void *arg)
 {
 	struct pps_data *sc = (struct pps_data *)arg;
 
 	pps_capture(&sc->pps[0]);
 	if (!(ppb_rstr(sc->ppbus) & nACK))
-		return;
+		return (FILTER_STRAY);
 	if (sc->pps[0].ppsparam.mode & PPS_ECHOASSERT) 
 		ppb_wctr(sc->ppbus, IRQENABLE | AUTOFEED);
 	mtx_lock_spin(&sc->mtx);
@@ -291,6 +291,7 @@ ppsintr(void *arg)
 	mtx_unlock_spin(&sc->mtx);
 	if (sc->pps[0].ppsparam.mode & PPS_ECHOASSERT) 
 		ppb_wctr(sc->ppbus, IRQENABLE);
+	return (FILTER_HANDLED);
 }
 
 static int
@@ -321,3 +322,4 @@ static driver_t pps_driver = {
 	sizeof(struct pps_data),
 };
 DRIVER_MODULE(pps, ppbus, pps_driver, pps_devclass, 0, 0);
+MODULE_DEPEND(pps, ppbus, 1, 1, 1);
