@@ -28366,7 +28366,6 @@ sys/modules/linprocfs/Makefile -text
 sys/modules/linsysfs/Makefile -text
 sys/modules/linux/Makefile -text
 sys/modules/lmc/Makefile -text
-sys/modules/lnc/Makefile -text
 sys/modules/lpt/Makefile -text
 sys/modules/mac_biba/Makefile -text
 sys/modules/mac_bsdextended/Makefile -text
