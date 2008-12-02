@@ -28484,7 +28484,6 @@ sys/modules/nwfs/Makefile -text
 sys/modules/nxge/Makefile -text
 sys/modules/oldcard/Makefile -text
 sys/modules/oltr/Makefile -text
-sys/modules/osf1/Makefile -text
 sys/modules/owi/Makefile -text
 sys/modules/padlock/Makefile -text
 sys/modules/patm/Makefile -text
