@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/rc/rc.c,v 1.99.2.1 2006/03/10 19:37:32 jhb Exp $
+ * $FreeBSD: src/sys/dev/rc/rc.c,v 1.103 2007/02/23 12:18:51 piso Exp $
  */
 
 /*
@@ -301,11 +301,11 @@ rc_attach(device_t dev)
 		tp->t_break   = rc_break;
 		tp->t_close   = rc_close;
 		tp->t_stop    = rc_stop;
-		ttycreate(tp, NULL, 0, MINOR_CALLOUT, "m%d", chan + base);
+		ttycreate(tp, TS_CALLOUT, "m%d", chan + base);
 	}
 
-	error = bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_TTY, rc_intr, sc,
-	    &sc->sc_hwicookie);
+	error = bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_TTY, NULL, rc_intr,
+	    sc, &sc->sc_hwicookie);
 	if (error) {
 		device_printf(dev, "failed to register interrupt handler\n");
 		goto fail;
