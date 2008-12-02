@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/syscons.h,v 1.83.2.2 2005/10/05 21:48:02 marius Exp $
+ * $FreeBSD: src/sys/dev/syscons/syscons.h,v 1.88 2007/09/20 04:05:59 simokawa Exp $
  */
 
 #ifndef _DEV_SYSCONS_SYSCONS_H_
@@ -333,6 +333,7 @@ typedef struct scr_stat {
 
 	int		splash_save_mode;	/* saved mode for splash screen */
 	int		splash_save_status;	/* saved status for splash screen */
+	struct mtx	scr_lock;		/* mutex for sc_puts() */
 #ifdef _SCR_MD_STAT_DECLARED_
 	scr_md_stat_t	md;			/* machine dependent vars */
 #endif
@@ -536,19 +537,17 @@ typedef struct {
 		(*kbdsw[(kbd)->kb_index]->poll)((kbd), (on))
 
 #define SC_VIDEO_LOCKINIT(sc)						\
-	mtx_init(&(sc)->video_mtx, "syscons video lock", NULL, MTX_SPIN);
-
+		mtx_init(&(sc)->video_mtx, "syscons video lock", NULL,MTX_SPIN);
 #define SC_VIDEO_LOCK(sc)						\
-	do { 								\
-		if (!cold)						\
-			mtx_lock_spin(&(sc)->video_mtx);		\
-	} while (0)
-
+		do {							\
+			if (!cold)					\
+				mtx_lock_spin(&(sc)->video_mtx);	\
+		} while(0)
 #define SC_VIDEO_UNLOCK(sc)						\
-	do {								\
-		if (!cold)						\
-			mtx_unlock_spin(&(sc)->video_mtx);		\
-	} while(0)
+		do {							\
+			if (!cold)					\
+				mtx_unlock_spin(&(sc)->video_mtx);	\
+		} while(0)
 
 /* syscons.c */
 extern int 	(*sc_user_ioctl)(struct cdev *dev, u_long cmd, caddr_t data,

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/scmouse.c,v 1.37.2.3 2005/10/05 21:48:02 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/syscons/scmouse.c,v 1.42 2007/05/25 13:13:12 delphij Exp $");
 
 #include "opt_syscons.h"
 
@@ -444,7 +444,8 @@ mouse_cut_start(scr_stat *scp)
 
     if (scp->status & MOUSE_VISIBLE) {
 	sc_remove_all_cutmarkings(scp->sc);
-	if (scp->mouse_pos == scp->mouse_cut_start == scp->mouse_cut_end) {
+	if ((scp->mouse_pos == scp->mouse_cut_start) &&
+	    (scp->mouse_pos == scp->mouse_cut_end)) {
 	    cut_buffer[0] = '\0';
 	    return;
 	} else if (skip_spc_right(scp, scp->mouse_pos) >= scp->xsize) {

@@ -30,8 +30,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/syscons/syscons.c,v 1.436.2.5 2006/03/04 00:41:28 emax Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/syscons/syscons.c,v 1.453.4.1 2008/01/28 12:49:33 kib Exp $");
 
+#include "opt_compat.h"
 #include "opt_syscons.h"
 #include "opt_splash.h"
 #include "opt_ddb.h"
@@ -49,6 +50,7 @@ __FBSDID("$FreeBSD: /repoman/r/ncvs/src/sys/dev/syscons/syscons.c,v 1.436.2.5 20
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/random.h>
 #include <sys/reboot.h>
@@ -217,16 +219,13 @@ static int update_kbd_state(scr_stat *scp, int state, int mask);
 static int update_kbd_leds(scr_stat *scp, int which);
 static timeout_t blink_screen;
 
-static cn_probe_t	sccnprobe;
-static cn_init_t	sccninit;
-static cn_getc_t	sccngetc;
-static cn_checkc_t	sccncheckc;
-static cn_putc_t	sccnputc;
-static cn_dbctl_t	sccndbctl;
-static cn_term_t	sccnterm;
+static cn_probe_t	sc_cnprobe;
+static cn_init_t	sc_cninit;
+static cn_term_t	sc_cnterm;
+static cn_getc_t	sc_cngetc;
+static cn_putc_t	sc_cnputc;
 
-CONS_DRIVER(sc, sccnprobe, sccninit, sccnterm, sccngetc, sccncheckc, sccnputc,
-	    sccndbctl);
+CONSOLE_DRIVER(sc);
 
 static	d_open_t	scopen;
 static	d_close_t	scclose;
@@ -519,7 +518,7 @@ scopen(struct cdev *dev, int flag, int mode, struct thread *td)
 	ttyld_modem(tp, 1);
     }
     else
-	if (tp->t_state & TS_XCLUDE && suser(td))
+	if (tp->t_state & TS_XCLUDE && priv_check(td, PRIV_TTY_EXCLUSIVE))
 	    return(EBUSY);
 
     error = ttyld_open(tp, dev);
@@ -683,6 +682,10 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
     sc_softc_t *sc;
     scr_stat *scp;
     int s;
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    int ival;
+#endif
 
     tp = dev->si_tty;
 
@@ -766,11 +769,11 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	return 0;
 
     case CONS_BELLTYPE: 	/* set bell type sound/visual */
-	if ((*(int *)data) & 0x01)
+	if ((*(int *)data) & CONS_VISUAL_BELL)
 	    sc->flags |= SC_VISUAL_BELL;
 	else
 	    sc->flags &= ~SC_VISUAL_BELL;
-	if ((*(int *)data) & 0x02)
+	if ((*(int *)data) & CONS_QUIET_BELL)
 	    sc->flags |= SC_QUIET_BELL;
 	else
 	    sc->flags &= ~SC_QUIET_BELL;
@@ -983,6 +986,13 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	bcopy(&scp->smode, data, sizeof(struct vt_mode));
 	return 0;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('v', 4):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case VT_RELDISP:    	/* screen switcher ioctl */
 	s = spltty();
 	/*
@@ -999,7 +1009,7 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	    return EPERM;
 	}
 	error = EINVAL;
-	switch(*(intptr_t *)data) {
+	switch(*(int *)data) {
 	case VT_FALSE:  	/* user refuses to release screen, abort */
 	    if ((error = finish_vt_rel(scp, FALSE, &s)) == 0)
 		DPRINTF(5, ("%s%d: VT_FALSE\n", SC_DRIVER_NAME, sc->unit));
@@ -1028,17 +1038,31 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	}
 	return EINVAL;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('v', 5):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case VT_ACTIVATE:   	/* switch to screen *data */
-	i = (*(intptr_t *)data == 0) ? scp->index : (*(intptr_t *)data - 1);
+	i = (*(int *)data == 0) ? scp->index : (*(int *)data - 1);
 	s = spltty();
 	error = sc_clean_up(sc->cur_scp);
 	splx(s);
 	if (error)
-		return error;
+	    return error;
 	return sc_switch_scr(sc, i);
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('v', 6):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case VT_WAITACTIVE: 	/* wait for switch to occur */
-	i = (*(intptr_t *)data == 0) ? scp->index : (*(intptr_t *)data - 1);
+	i = (*(int *)data == 0) ? scp->index : (*(int *)data - 1);
 	if ((i < sc->first_vty) || (i >= sc->first_vty + sc->vtys))
 	    return EINVAL;
 	s = spltty();
@@ -1047,10 +1071,11 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	if (error)
 	    return error;
 	scp = sc_get_stat(SC_DEV(sc, i));
+	if (scp == NULL)
+		return (ENXIO);
 	if (scp == scp->sc->cur_scp)
 	    return 0;
-	while ((error=tsleep(&scp->smode, PZERO|PCATCH,
-			     "waitvt", 0)) == ERESTART) ;
+	error = tsleep(&scp->smode, PZERO | PCATCH, "waitvt", 0);
 	return error;
 
     case VT_GETACTIVE:		/* get active vty # */
@@ -1069,7 +1094,7 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	return 0;
 
     case KDENABIO:      	/* allow io operations */
-	error = suser(td);
+	error = priv_check(td, PRIV_IO);
 	if (error != 0)
 	    return error;
 	error = securelevel_gt(td->td_ucred, 0);
@@ -1090,6 +1115,13 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 #endif
 	return 0;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('K', 20):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case KDSKBSTATE:    	/* set keyboard state (locks) */
 	if (*(int *)data & ~LOCK_MASK)
 	    return EINVAL;
@@ -1112,14 +1144,28 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	    error = ENODEV;
 	return error;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('K', 67):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case KDSETRAD:      	/* set keyboard repeat & delay rates (old) */
 	if (*(int *)data & ~0x7f)
 	    return EINVAL;
-	error = kbd_ioctl(sc->kbd, cmd, data);
+	error = kbd_ioctl(sc->kbd, KDSETRAD, data);
 	if (error == ENOIOCTL)
 	    error = ENODEV;
 	return error;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('K', 7):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case KDSKBMODE:     	/* set keyboard mode */
 	switch (*(int *)data) {
 	case K_XLATE:   	/* switch to XLT ascii mode */
@@ -1127,7 +1173,7 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	case K_CODE: 		/* switch to CODE mode */
 	    scp->kbd_mode = *(int *)data;
 	    if (scp == sc->cur_scp)
-		kbd_ioctl(sc->kbd, cmd, data);
+		kbd_ioctl(sc->kbd, KDSKBMODE, data);
 	    return 0;
 	default:
 	    return EINVAL;
@@ -1144,6 +1190,13 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	    error = ENODEV;
 	return error;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('K', 8):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case KDMKTONE:      	/* sound the bell */
 	if (*(int*)data)
 	    sc_bell(scp, (*(int*)data)&0xffff,
@@ -1152,6 +1205,13 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	    sc_bell(scp, scp->bell_pitch, scp->bell_duration);
 	return 0;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('K', 63):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case KIOCSOUND:     	/* make tone (*data) hz */
 	if (scp == sc->cur_scp) {
 	    if (*(int *)data)
@@ -1169,6 +1229,13 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	}
 	return 0;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('K', 66):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case KDSETLED:      	/* set keyboard LED status */
 	if (*(int *)data & ~LED_MASK)	/* FIXME: LOCK_MASK? */
 	    return EINVAL;
@@ -1191,12 +1258,19 @@ scioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 	    error = ENODEV;
 	return error;
 
+#if defined(COMPAT_FREEBSD6) || defined(COMPAT_FREEBSD5) || \
+    defined(COMPAT_FREEBSD4) || defined(COMPAT_43)
+    case _IO('c', 110):
+	ival = IOCPARM_IVAL(data);
+	data = (caddr_t)&ival;
+	/* FALLTHROUGH */
+#endif
     case CONS_SETKBD: 		/* set the new keyboard */
 	{
 	    keyboard_t *newkbd;
 
 	    s = spltty();
-	    newkbd = kbd_get_keyboard((int)*(intptr_t *)data);
+	    newkbd = kbd_get_keyboard(*(int *)data);
 	    if (newkbd == NULL) {
 		splx(s);
 		return EINVAL;
@@ -1405,7 +1479,7 @@ scstart(struct tty *tp)
 }
 
 static void
-sccnprobe(struct consdev *cp)
+sc_cnprobe(struct consdev *cp)
 {
     int unit;
     int flags;
@@ -1427,7 +1501,7 @@ sccnprobe(struct consdev *cp)
 }
 
 static void
-sccninit(struct consdev *cp)
+sc_cninit(struct consdev *cp)
 {
     int unit;
     int flags;
@@ -1440,7 +1514,7 @@ sccninit(struct consdev *cp)
 }
 
 static void
-sccnterm(struct consdev *cp)
+sc_cnterm(struct consdev *cp)
 {
     /* we are not the kernel console any more, release everything */
 
@@ -1458,7 +1532,7 @@ sccnterm(struct consdev *cp)
 }
 
 static void
-sccnputc(struct consdev *cd, int c)
+sc_cnputc(struct consdev *cd, int c)
 {
     u_char buf[1];
     scr_stat *scp = sc_console;
@@ -1500,46 +1574,9 @@ sccnputc(struct consdev *cd, int c)
 }
 
 static int
-sccngetc(struct consdev *cd)
-{
-    return sccngetch(0);
-}
-
-static int
-sccncheckc(struct consdev *cd)
+sc_cngetc(struct consdev *cd)
 {
     return sccngetch(SCGETC_NONBLOCK);
-}
-
-static void
-sccndbctl(struct consdev *cd, int on)
-{
-    /* assert(sc_console_unit >= 0) */
-    /* try to switch to the kernel console screen */
-    if (on && debugger == 0) {
-	/*
-	 * TRY to make sure the screen saver is stopped, 
-	 * and the screen is updated before switching to 
-	 * the vty0.
-	 */
-	scrn_timer(NULL);
-	if (!cold
-	    && sc_console->sc->cur_scp->smode.mode == VT_AUTO
-	    && sc_console->smode.mode == VT_AUTO) {
-	    sc_console->sc->cur_scp->status |= MOUSE_HIDDEN;
-	    ++debugger;		/* XXX */
-#ifdef DDB
-	    /* unlock vty switching */
-	    sc_console->sc->flags &= ~SC_SCRN_VTYLOCK;
-#endif
-	    sc_switch_scr(sc_console->sc, sc_console->index);
-	    --debugger;		/* XXX */
-	}
-    }
-    if (on)
-	++debugger;
-    else
-	--debugger;
 }
 
 static int
@@ -1618,7 +1655,7 @@ sccnupdate(scr_stat *scp)
 {
     /* this is a cut-down version of scrn_timer()... */
 
-    if (scp->sc->font_loading_in_progress) 
+    if (scp->sc->font_loading_in_progress)
 	return;
 
     if (debugger > 0 || panicstr || shutdown_in_progress) {
@@ -2141,7 +2178,7 @@ sc_switch_scr(sc_softc_t *sc, u_int next_scr)
 	return 0;
     }
     sc->delayed_next_scr = 0;
-    
+
     s = spltty();
     cur_scp = sc->cur_scp;
 
@@ -2290,8 +2327,8 @@ sc_switch_scr(sc_softc_t *sc, u_int next_scr)
     if (sc->new_scp == sc->old_scp) {
 	sc->switch_in_progress = 0;
 	/*
-	 * XXX wakeup() calls mtx_lock(&sched_lock) which will hang if
-	 * sched_lock is in an in-between state, e.g., when we stop at
+	 * XXX wakeup() locks the scheduler lock which will hang if
+	 * the lock is in an in-between state, e.g., when we stop at
 	 * a breakpoint at fork_exit.  It has always been wrong to call
 	 * wakeup() when the debugger is active.  In RELENG_4, wakeup()
 	 * is supposed to be locked by splhigh(), but the debugger may
@@ -2475,14 +2512,23 @@ exchange_scr(sc_softc_t *sc)
 void
 sc_puts(scr_stat *scp, u_char *buf, int len)
 {
+    int need_unlock = 0;
+
 #ifdef DEV_SPLASH
     /* make screensaver happy */
     if (!sticky_splash && scp == scp->sc->cur_scp && !sc_saver_keyb_only)
 	run_scrn_saver = FALSE;
 #endif
 
-    if (scp->tsw)
+    if (scp->tsw) {
+	if (!kdb_active && !mtx_owned(&scp->scr_lock)) {
+		need_unlock = 1;
+		mtx_lock_spin(&scp->scr_lock);
+	}
 	(*scp->tsw->te_puts)(scp, buf, len);
+	if (need_unlock)
+		mtx_unlock_spin(&scp->scr_lock);
+    }
 
     if (scp->sc->delayed_next_scr)
 	sc_switch_scr(scp->sc, scp->sc->delayed_next_scr - 1);
@@ -2492,8 +2538,8 @@ void
 sc_draw_cursor_image(scr_stat *scp)
 {
     /* assert(scp == scp->sc->cur_scp); */
-   SC_VIDEO_LOCK(scp->sc);
-   (*scp->rndr->draw_cursor)(scp, scp->cursor_pos,
+    SC_VIDEO_LOCK(scp->sc);
+    (*scp->rndr->draw_cursor)(scp, scp->cursor_pos,
 			      scp->curs_attr.flags & CONS_BLINK_CURSOR, TRUE,
 			      sc_inside_cutmark(scp, scp->cursor_pos));
     scp->cursor_oldpos = scp->cursor_pos;
@@ -2648,6 +2694,7 @@ scinit(int unit, int flags)
     sc = sc_get_softc(unit, flags & SC_KERNEL_CONSOLE);
     if ((sc->flags & SC_INIT_DONE) == 0)
 	SC_VIDEO_LOCKINIT(sc);
+
     adp = NULL;
     if (sc->adapter >= 0) {
 	vid_release(sc->adp, (void *)&sc->adapter);
@@ -2859,6 +2906,7 @@ scterm(int unit, int flags)
 	(*scp->tsw->te_term)(scp, &scp->ts);
     if (scp->ts != NULL)
 	free(scp->ts, M_DEVBUF);
+    mtx_destroy(&scp->scr_lock);
 
     /* clear the structure */
     if (!(flags & SC_KERNEL_CONSOLE)) {
@@ -3042,6 +3090,8 @@ init_scp(sc_softc_t *sc, int vty, scr_stat *scp)
     scp->history = NULL;
     scp->history_pos = 0;
     scp->history_size = 0;
+
+    mtx_init(&scp->scr_lock, "scrlock", NULL, MTX_SPIN);
 }
 
 int
