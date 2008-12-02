@@ -344,7 +344,6 @@ bsd_to_linux_ftype(const char *fstypename)
 		{"msdosfs", LINUX_MSDOS_SUPER_MAGIC},
 		{"ntfs",    LINUX_NTFS_SUPER_MAGIC},
 		{"nwfs",    LINUX_NCP_SUPER_MAGIC},
-		{"hpfs",    LINUX_HPFS_SUPER_MAGIC},
 		{"coda",    LINUX_CODA_SUPER_MAGIC},
 		{"devfs",   LINUX_DEVFS_SUPER_MAGIC},
 		{NULL,      0L}};
