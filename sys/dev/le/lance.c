@@ -72,12 +72,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/le/lance.c,v 1.1.2.1 2006/02/13 11:30:40 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/le/lance.c,v 1.4 2007/01/20 10:47:16 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/endian.h>
 #include <sys/lock.h>
+#include <sys/kernel.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
 #include <sys/socket.h>
@@ -91,70 +92,20 @@ __FBSDID("$FreeBSD: src/sys/dev/le/lance.c,v 1.1.2.1 2006/02/13 11:30:40 marius 
 #include <net/if_types.h>
 #include <net/if_vlan_var.h>
 
+#include <machine/bus.h>
+
 #include <dev/le/lancereg.h>
 #include <dev/le/lancevar.h>
 
 devclass_t le_devclass;
 
-static inline uint16_t ether_cmp(void *, void *);
-
 static void lance_start(struct ifnet *);
 static void lance_stop(struct lance_softc *);
 static void lance_init(void *);
-static struct mbuf *lance_get(struct lance_softc *, int, int);
-static void lance_watchdog(struct ifnet *);
+static void lance_watchdog(void *s);
 static int lance_mediachange(struct ifnet *);
 static void lance_mediastatus(struct ifnet *, struct ifmediareq *);
 static int lance_ioctl(struct ifnet *, u_long, caddr_t);
-
-/*
- * Compare two Ether/802 addresses for equality, inlined and
- * unrolled for speed.  Use this like memcmp().
- *
- * XXX: Add <machine/inlines.h> for stuff like this?
- * XXX: or maybe add it to libkern.h instead?
- *
- * "I'd love to have an inline assembler version of this."
- * XXX: Who wanted that? mycroft?  I wrote one, but this
- * version in C is as good as hand-coded assembly. -gwr
- *
- * Please do NOT tweak this without looking at the actual
- * assembly code generated before and after your tweaks!
- */
-static inline uint16_t
-ether_cmp(void *one, void *two)
-{
-	uint16_t *a = (u_short *)one;
-	uint16_t *b = (u_short *)two;
-	uint16_t diff;
-
-#ifdef	m68k
-	/*
-	 * The post-increment-pointer form produces the best
-	 * machine code for m68k.  This was carefully tuned
-	 * so it compiles to just 8 short (2-byte) op-codes!
-	 */
-	diff  = *a++ - *b++;
-	diff |= *a++ - *b++;
-	diff |= *a++ - *b++;
-#else
-	/*
-	 * Most modern CPUs do better with a single expresion.
-	 * Note that short-cut evaluation is NOT helpful here,
-	 * because it just makes the code longer, not faster!
-	 */
-	diff = (a[0] - b[0]) | (a[1] - b[1]) | (a[2] - b[2]);
-#endif
-
-	return (diff);
-}
-
-#define ETHER_CMP	ether_cmp
-
-#ifdef LANCE_REVC_BUG
-/* Make sure this is short-aligned, for ether_cmp(). */
-static uint16_t bcast_enaddr[3] = { ~0, ~0, ~0 };
-#endif
 
 int
 lance_config(struct lance_softc *sc, const char* name, int unit)
@@ -169,12 +120,13 @@ lance_config(struct lance_softc *sc, const char* name, int unit)
 	if (ifp == NULL)
 		return (ENOSPC);
 
+	callout_init_mtx(&sc->sc_wdog_ch, &sc->sc_mtx, 0);
+
 	/* Initialize ifnet structure. */
 	ifp->if_softc = sc;
 	if_initname(ifp, name, unit);
 	ifp->if_start = lance_start;
 	ifp->if_ioctl = lance_ioctl;
-	ifp->if_watchdog = lance_watchdog;
 	ifp->if_init = lance_init;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 #ifdef LANCE_REVC_BUG
@@ -263,6 +215,7 @@ lance_detach(struct lance_softc *sc)
 	LE_LOCK(sc);
 	lance_stop(sc);
 	LE_UNLOCK(sc);
+	callout_drain(&sc->sc_wdog_ch);
 	ether_ifdetach(ifp);
 	if_free(ifp);
 }
@@ -307,7 +260,8 @@ lance_stop(struct lance_softc *sc)
 	 * Mark the interface down and cancel the watchdog timer.
 	 */
 	ifp->if_drv_flags &= ~(IFF_DRV_RUNNING | IFF_DRV_OACTIVE);
-	ifp->if_timer = 0;
+	callout_stop(&sc->sc_wdog_ch);
+	sc->sc_wdog_timer = 0;
 
 	(*sc->sc_wrcsr)(sc, LE_CSR0, LE_C0_STOP);
 }
@@ -345,6 +299,10 @@ lance_init_locked(struct lance_softc *sc)
 	/* Set the correct byte swapping mode, etc. */
 	(*sc->sc_wrcsr)(sc, LE_CSR3, sc->sc_conf3);
 
+	/* Set the current media. This may require the chip to be stopped. */
+	if (sc->sc_mediachange)
+		(void)(*sc->sc_mediachange)(sc);
+
 	/*
 	 * Update our private copy of the Ethernet address.
 	 * We NEED the copy so we can ensure its alignment!
@@ -368,16 +326,13 @@ lance_init_locked(struct lance_softc *sc)
 		if ((*sc->sc_rdcsr)(sc, LE_CSR0) & LE_C0_IDON)
 			break;
 
-	/* Set the current media. */
-	if (sc->sc_mediachange)
-		(void)(*sc->sc_mediachange)(sc);
-
 	if ((*sc->sc_rdcsr)(sc, LE_CSR0) & LE_C0_IDON) {
 		/* Start the LANCE. */
 		(*sc->sc_wrcsr)(sc, LE_CSR0, LE_C0_INEA | LE_C0_STRT);
 		ifp->if_drv_flags |= IFF_DRV_RUNNING;
 		ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
-		ifp->if_timer = 0;
+		sc->sc_wdog_timer = 0;
+		callout_reset(&sc->sc_wdog_ch, hz, lance_watchdog, sc);
 		(*sc->sc_start_locked)(sc);
 	} else
 		if_printf(ifp, "controller failed to initialize\n");
@@ -424,7 +379,7 @@ lance_put(struct lance_softc *sc, int boff, struct mbuf *m)
  * We copy the data into mbufs.  When full cluster sized units are present
  * we copy into clusters.
  */
-static struct mbuf *
+struct mbuf *
 lance_get(struct lance_softc *sc, int boff, int totlen)
 {
 	struct ifnet *ifp = sc->sc_ifp;
@@ -432,9 +387,16 @@ lance_get(struct lance_softc *sc, int boff, int totlen)
 	caddr_t newdata;
 	int len;
 
+	if (totlen <= ETHER_HDR_LEN || totlen > LEBLEN - ETHER_CRC_LEN) {
+#ifdef LEDEBUG
+		if_printf(ifp, "invalid packet size %d; dropping\n", totlen);
+#endif
+		return (NULL);
+	}
+
 	MGETHDR(m0, M_DONTWAIT, MT_DATA);
-	if (m0 == 0)
-		return (0);
+	if (m0 == NULL)
+		return (NULL);
 	m0->m_pkthdr.rcvif = ifp;
 	m0->m_pkthdr.len = totlen;
 	len = MHLEN;
@@ -473,93 +435,46 @@ lance_get(struct lance_softc *sc, int boff, int totlen)
 
  bad:
 	m_freem(m0);
-	return (0);
-}
-
-/*
- * Pass a packet to the higher levels.
- */
-void
-lance_read(struct lance_softc *sc, int boff, int len)
-{
-	struct ifnet *ifp = sc->sc_ifp;
-	struct ether_header *eh;
-	struct mbuf *m;
-
-	LE_LOCK_ASSERT(sc, MA_OWNED);
-
-	if (len <= ETHER_HDR_LEN || len > LEBLEN - ETHER_CRC_LEN) {
-#ifdef LEDEBUG
-		if_printf(ifp, "invalid packet size %d; dropping\n", len);
-#endif
-		ifp->if_ierrors++;
-		return;
-	}
-
-	/* Pull packet off interface. */
-	m = lance_get(sc, boff, len);
-	if (m == 0) {
-		ifp->if_ierrors++;
-		return;
-	}
-
-	ifp->if_ipackets++;
-
-	eh = mtod(m, struct ether_header *);
-
-#ifdef LANCE_REVC_BUG
-	/*
-	 * The old LANCE (Rev. C) chips have a bug which causes
-	 * garbage to be inserted in front of the received packet.
-	 * The work-around is to ignore packets with an invalid
-	 * destination address (garbage will usually not match).
-	 * Of course, this precludes multicast support...
-	 */
-	if (ETHER_CMP(eh->ether_dhost, sc->sc_enaddr) &&
-	    ETHER_CMP(eh->ether_dhost, bcast_enaddr)) {
-		m_freem(m);
-		return;
-	}
-#endif
-
-	/*
-	 * Some lance device does not present IFF_SIMPLEX behavior on multicast
-	 * packets.  Make sure to drop it if it is from ourselves.
-	 */
-	if (!ETHER_CMP(eh->ether_shost, sc->sc_enaddr)) {
-		m_freem(m);
-		return;
-	}
-
-	/* Pass the packet up. */
-	LE_UNLOCK(sc);
-	(*ifp->if_input)(ifp, m);
-	LE_LOCK(sc);
+	return (NULL);
 }
 
 static void
-lance_watchdog(struct ifnet *ifp)
+lance_watchdog(void *xsc)
 {
-	struct lance_softc *sc = ifp->if_softc;
+	struct lance_softc *sc = (struct lance_softc *)xsc;
+	struct ifnet *ifp = sc->sc_ifp;
 
-	LE_LOCK(sc);
+	LE_LOCK_ASSERT(sc, MA_OWNED);
+
+	if (sc->sc_wdog_timer == 0 || --sc->sc_wdog_timer != 0) {
+		callout_reset(&sc->sc_wdog_ch, hz, lance_watchdog, sc);
+		return;
+	}
+
 	if_printf(ifp, "device timeout\n");
 	++ifp->if_oerrors;
 	lance_init_locked(sc);
-	LE_UNLOCK(sc);
 }
 
 static int
 lance_mediachange(struct ifnet *ifp)
 {
 	struct lance_softc *sc = ifp->if_softc;
-	int error;
 
 	if (sc->sc_mediachange) {
+		/*
+		 * For setting the port in LE_CSR15 the PCnet chips must
+		 * be powered down or stopped and unlike documented may
+		 * not take effect without an initialization. So don't
+		 * invoke (*sc_mediachange) directly here but go through
+		 * lance_init_locked().
+		 */
 		LE_LOCK(sc);
-		error = (*sc->sc_mediachange)(sc);
+		lance_stop(sc);
+		lance_init_locked(sc);
+		if (!IFQ_DRV_IS_EMPTY(&ifp->if_snd))
+			(*sc->sc_start_locked)(sc);
 		LE_UNLOCK(sc);
-		return (error);
 	}
 	return (0);
 }
@@ -702,7 +617,7 @@ lance_setladrf(struct lance_softc *sc, uint16_t *af)
 		crc >>= 26;
 
 		/* Set the corresponding bit in the filter. */
-		af[crc >> 4] |= LE_HTOLE16(1U << (crc & 0xf));
+		af[crc >> 4] |= LE_HTOLE16(1 << (crc & 0xf));
 	}
 	IF_ADDR_UNLOCK(ifp);
 }

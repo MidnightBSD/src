@@ -1,4 +1,4 @@
-/*	$NetBSD: if_le_pci.c,v 1.43 2005/12/11 12:22:49 christos Exp $	*/
+/*	$NetBSD: if_le_isa.c,v 1.41 2005/12/24 20:27:41 perry Exp $	*/
 
 /*-
  * Copyright (c) 1997, 1998 The NetBSD Foundation, Inc.
@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/le/if_le_pci.c,v 1.7 2007/02/23 12:18:45 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/le/if_le_isa.c,v 1.4 2007/02/23 12:18:45 piso Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -93,28 +93,29 @@ __FBSDID("$FreeBSD: src/sys/dev/le/if_le_pci.c,v 1.7 2007/02/23 12:18:45 piso Ex
 #include <machine/bus.h>
 #include <machine/resource.h>
 
-#include <dev/pci/pcireg.h>
-#include <dev/pci/pcivar.h>
+#include <isa/isavar.h>
 
 #include <dev/le/lancereg.h>
 #include <dev/le/lancevar.h>
-#include <dev/le/am79900var.h>
+#include <dev/le/am7990var.h>
 
-#define	AMD_VENDOR	0x1022
-#define	AMD_PCNET_PCI	0x2000
-#define	AMD_PCNET_HOME	0x2001
-#define	PCNET_MEMSIZE	(32*1024)
-#define	PCNET_PCI_RDP	0x10
-#define	PCNET_PCI_RAP	0x12
-#define	PCNET_PCI_BDP	0x16
+#define	LE_ISA_MEMSIZE	(16*1024)
+#define	PCNET_RDP	0x10
+#define	PCNET_RAP	0x12
 
-struct le_pci_softc {
-	struct am79900_softc	sc_am79900;	/* glue to MI code */
+struct le_isa_softc {
+	struct am7990_softc	sc_am7990;	/* glue to MI code */
+
+	bus_size_t		sc_rap;		/* offsets to LANCE... */
+	bus_size_t		sc_rdp;		/* ...registers */
 
 	int			sc_rrid;
 	struct resource		*sc_rres;
 	bus_space_tag_t		sc_regt;
 	bus_space_handle_t	sc_regh;
+
+	int			sc_drid;
+	struct resource		*sc_dres;
 
 	int			sc_irid;
 	struct resource		*sc_ires;
@@ -125,158 +126,83 @@ struct le_pci_softc {
 	bus_dmamap_t		sc_dmam;
 };
 
-static device_probe_t le_pci_probe;
-static device_attach_t le_pci_attach;
-static device_detach_t le_pci_detach;
-static device_resume_t le_pci_resume;
-static device_suspend_t le_pci_suspend;
+static device_probe_t le_isa_probe;
+static device_attach_t le_isa_attach;
+static device_detach_t le_isa_detach;
+static device_resume_t le_isa_resume;
+static device_suspend_t le_isa_suspend;
 
-static device_method_t le_pci_methods[] = {
+static device_method_t le_isa_methods[] = {
 	/* Device interface */
-	DEVMETHOD(device_probe,		le_pci_probe),
-	DEVMETHOD(device_attach,	le_pci_attach),
-	DEVMETHOD(device_detach,	le_pci_detach),
+	DEVMETHOD(device_probe,		le_isa_probe),
+	DEVMETHOD(device_attach,	le_isa_attach),
+	DEVMETHOD(device_detach,	le_isa_detach),
 	/* We can just use the suspend method here. */
-	DEVMETHOD(device_shutdown,	le_pci_suspend),
-	DEVMETHOD(device_suspend,	le_pci_suspend),
-	DEVMETHOD(device_resume,	le_pci_resume),
+	DEVMETHOD(device_shutdown,	le_isa_suspend),
+	DEVMETHOD(device_suspend,	le_isa_suspend),
+	DEVMETHOD(device_resume,	le_isa_resume),
 
 	{ 0, 0 }
 };
 
-DEFINE_CLASS_0(le, le_pci_driver, le_pci_methods, sizeof(struct le_pci_softc));
-DRIVER_MODULE(le, pci, le_pci_driver, le_devclass, 0, 0);
+DEFINE_CLASS_0(le, le_isa_driver, le_isa_methods, sizeof(struct le_isa_softc));
+DRIVER_MODULE(le, isa, le_isa_driver, le_devclass, 0, 0);
 MODULE_DEPEND(le, ether, 1, 1, 1);
 
-static const int le_home_supmedia[] = {
-	IFM_MAKEWORD(IFM_ETHER, IFM_HPNA_1, 0, 0)
+struct le_isa_param {
+	const char	*name;
+	u_long		iosize;
+	bus_size_t	rap;
+	bus_size_t	rdp;
+	bus_size_t	macstart;
+	int		macstride;
+} static const le_isa_params[] = {
+	{ "BICC Isolan", 24, 0xe, 0xc, 0, 2 },
+	{ "Novell NE2100", 16, 0x12, 0x10, 0, 1 }
 };
 
-static const int le_pci_supmedia[] = {
-	IFM_MAKEWORD(IFM_ETHER, IFM_AUTO, 0, 0),
-	IFM_MAKEWORD(IFM_ETHER, IFM_AUTO, IFM_FDX, 0),
-	IFM_MAKEWORD(IFM_ETHER, IFM_10_T, 0, 0),
-	IFM_MAKEWORD(IFM_ETHER, IFM_10_T, IFM_FDX, 0),
-	IFM_MAKEWORD(IFM_ETHER, IFM_10_5, 0, 0),
-	IFM_MAKEWORD(IFM_ETHER, IFM_10_5, IFM_FDX, 0)
+static struct isa_pnp_id le_isa_ids[] = {
+	{ 0x0322690e, "Cabletron E2200 Single Chip" },	/* CSI2203 */
+	{ 0x0110490a, "Boca LANCard Combo" },		/* BRI1001 */
+	{ 0x0100a60a, "Melco Inc. LGY-IV" },		/* BUF0001 */
+	{ 0xd880d041, "Novell NE2100" },		/* PNP80D8 */
+	{ 0x0082d041, "Cabletron E2100 Series DNI" },	/* PNP8200 */
+	{ 0x3182d041, "AMD AM1500T/AM2100" },		/* PNP8231 */
+	{ 0x8c82d041, "AMD PCnet-ISA" },		/* PNP828C */
+	{ 0x8d82d041, "AMD PCnet-32" },			/* PNP828D */
+	{ 0xcefaedfe, "Racal InterLan EtherBlaster" },	/* _WMFACE */
+	{ 0, NULL }
 };
 
-static void le_pci_wrbcr(struct lance_softc *, uint16_t, uint16_t);
-static uint16_t le_pci_rdbcr(struct lance_softc *, uint16_t);
-static void le_pci_wrcsr(struct lance_softc *, uint16_t, uint16_t);
-static uint16_t le_pci_rdcsr(struct lance_softc *, uint16_t);
-static int le_pci_mediachange(struct lance_softc *);
-static void le_pci_hwreset(struct lance_softc *);
-static bus_dmamap_callback_t le_pci_dma_callback;
+static void le_isa_wrcsr(struct lance_softc *, uint16_t, uint16_t);
+static uint16_t le_isa_rdcsr(struct lance_softc *, uint16_t);
+static bus_dmamap_callback_t le_isa_dma_callback;
+static int le_isa_probe_legacy(device_t, const struct le_isa_param *);
 
 static void
-le_pci_wrbcr(struct lance_softc *sc, uint16_t port, uint16_t val)
+le_isa_wrcsr(struct lance_softc *sc, uint16_t port, uint16_t val)
 {
-	struct le_pci_softc *lesc = (struct le_pci_softc *)sc;
+	struct le_isa_softc *lesc = (struct le_isa_softc *)sc;
 
-	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, port);
-	bus_space_barrier(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, 2,
+	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, lesc->sc_rap, port);
+	bus_space_barrier(lesc->sc_regt, lesc->sc_regh, lesc->sc_rap, 2,
 	    BUS_SPACE_BARRIER_WRITE);
-	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_BDP, val);
+	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, lesc->sc_rdp, val);
 }
 
 static uint16_t
-le_pci_rdbcr(struct lance_softc *sc, uint16_t port)
+le_isa_rdcsr(struct lance_softc *sc, uint16_t port)
 {
-	struct le_pci_softc *lesc = (struct le_pci_softc *)sc;
+	struct le_isa_softc *lesc = (struct le_isa_softc *)sc;
 
-	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, port);
-	bus_space_barrier(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, 2,
+	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, lesc->sc_rap, port);
+	bus_space_barrier(lesc->sc_regt, lesc->sc_regh, lesc->sc_rap, 2,
 	    BUS_SPACE_BARRIER_WRITE);
-	return (bus_space_read_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_BDP));
+	return (bus_space_read_2(lesc->sc_regt, lesc->sc_regh, lesc->sc_rdp));
 }
 
 static void
-le_pci_wrcsr(struct lance_softc *sc, uint16_t port, uint16_t val)
-{
-	struct le_pci_softc *lesc = (struct le_pci_softc *)sc;
-
-	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, port);
-	bus_space_barrier(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, 2,
-	    BUS_SPACE_BARRIER_WRITE);
-	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RDP, val);
-}
-
-static uint16_t
-le_pci_rdcsr(struct lance_softc *sc, uint16_t port)
-{
-	struct le_pci_softc *lesc = (struct le_pci_softc *)sc;
-
-	bus_space_write_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, port);
-	bus_space_barrier(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RAP, 2,
-	    BUS_SPACE_BARRIER_WRITE);
-	return (bus_space_read_2(lesc->sc_regt, lesc->sc_regh, PCNET_PCI_RDP));
-}
-
-static int
-le_pci_mediachange(struct lance_softc *sc)
-{
-	struct ifmedia *ifm = &sc->sc_media;
-	uint16_t reg;
-
-	if (IFM_TYPE(ifm->ifm_media) != IFM_ETHER)
-		return (EINVAL);
-
-	if (IFM_SUBTYPE(ifm->ifm_media) == IFM_HPNA_1)
-		le_pci_wrbcr(sc, LE_BCR49,
-		    (le_pci_rdbcr(sc, LE_BCR49) & ~LE_B49_PHYSEL) | 0x1);
-	else if (IFM_SUBTYPE(ifm->ifm_media) == IFM_AUTO)
-		le_pci_wrbcr(sc, LE_BCR2,
-		    le_pci_rdbcr(sc, LE_BCR2) | LE_B2_ASEL);
-	else {
-		le_pci_wrbcr(sc, LE_BCR2,
-		    le_pci_rdbcr(sc, LE_BCR2) & ~LE_B2_ASEL);
-
-		reg = le_pci_rdcsr(sc, LE_CSR15);
-		reg &= ~LE_C15_PORTSEL(LE_PORTSEL_MASK);
-		if (IFM_SUBTYPE(ifm->ifm_media) == IFM_10_T)
-			reg |= LE_C15_PORTSEL(LE_PORTSEL_10T);
-		else
-			reg |= LE_C15_PORTSEL(LE_PORTSEL_AUI);
-		le_pci_wrcsr(sc, LE_CSR15, reg);
-	}
-
-	reg = le_pci_rdbcr(sc, LE_BCR9);
-	if (IFM_OPTIONS(ifm->ifm_media) & IFM_FDX) {
-		reg |= LE_B9_FDEN;
-		/*
-		 * Allow FDX on AUI only if explicitly chosen,
-		 * not in autoselect mode.
-		 */
-		if (IFM_SUBTYPE(ifm->ifm_media) == IFM_10_5)
-			reg |= LE_B9_AUIFD;
-		else
-			reg &= ~LE_B9_AUIFD;
-	} else
-		reg &= ~LE_B9_FDEN;
-	le_pci_wrbcr(sc, LE_BCR9, reg);
-
-	return (0);
-}
-
-static void
-le_pci_hwreset(struct lance_softc *sc)
-{
-
-	/*
-	 * Chip is stopped. Set software style to PCnet-PCI (32-bit).
-	 * Actually, am79900.c implements ILACC support (hence its
-	 * name) but unfortunately VMware does not. As far as this
-	 * driver is concerned that should not make a difference
-	 * though, as the settings used have the same meaning for
-	 * both, ILACC and PCnet-PCI (note that there would be a
-	 * difference for the ADD_FCS/NO_FCS bit if used).
-	 */
-	le_pci_wrbcr(sc, LE_BCR20, LE_B20_SSTYLE_PCNETPCI2);
-}
-
-static void
-le_pci_dma_callback(void *xsc, bus_dma_segment_t *segs, int nsegs, int error)
+le_isa_dma_callback(void *xsc, bus_dma_segment_t *segs, int nsegs, int error)
 {
 	struct lance_softc *sc = (struct lance_softc *)xsc;
 
@@ -287,44 +213,109 @@ le_pci_dma_callback(void *xsc, bus_dma_segment_t *segs, int nsegs, int error)
 }
 
 static int
-le_pci_probe(device_t dev)
+le_isa_probe_legacy(device_t dev, const struct le_isa_param *leip)
 {
+	struct le_isa_softc *lesc;
+	struct lance_softc *sc;
+	int error;
 
-	if (pci_get_vendor(dev) != AMD_VENDOR)
+	lesc = device_get_softc(dev);
+	sc = &lesc->sc_am7990.lsc;
+
+	lesc->sc_rrid = 0;
+	lesc->sc_rres = bus_alloc_resource(dev, SYS_RES_IOPORT, &lesc->sc_rrid,
+	    0, ~0, leip->iosize, RF_ACTIVE);
+	if (lesc->sc_rres == NULL)
 		return (ENXIO);
+	lesc->sc_regt = rman_get_bustag(lesc->sc_rres);
+	lesc->sc_regh = rman_get_bushandle(lesc->sc_rres);
+	lesc->sc_rap = leip->rap;
+	lesc->sc_rdp = leip->rdp;
 
-	switch (pci_get_device(dev)) {
-	case AMD_PCNET_PCI:
-		device_set_desc(dev, "AMD PCnet-PCI");
-		/* Let pcn(4) win. */
-		return (BUS_PROBE_LOW_PRIORITY);
-	case AMD_PCNET_HOME:
-		device_set_desc(dev, "AMD PCnet-Home");
-		/* Let pcn(4) win. */
-		return (BUS_PROBE_LOW_PRIORITY);
+	/* Stop the chip and put it in a known state. */
+	le_isa_wrcsr(sc, LE_CSR0, LE_C0_STOP);
+	DELAY(100);
+	if (le_isa_rdcsr(sc, LE_CSR0) != LE_C0_STOP) {
+		error = ENXIO;
+		goto fail;
+	}
+	le_isa_wrcsr(sc, LE_CSR3, 0);
+	error = 0;
+
+ fail:
+	bus_release_resource(dev, SYS_RES_IOPORT, lesc->sc_rrid, lesc->sc_rres);
+	return (error);
+}
+
+static int
+le_isa_probe(device_t dev)
+{
+	int i;
+
+	switch (ISA_PNP_PROBE(device_get_parent(dev), dev, le_isa_ids)) {
+	case 0:
+		return (BUS_PROBE_DEFAULT);
+	case ENOENT:
+		for (i = 0; i < sizeof(le_isa_params) /
+		    sizeof(le_isa_params[0]); i++) {
+			if (le_isa_probe_legacy(dev, &le_isa_params[i]) == 0) {
+				device_set_desc(dev, le_isa_params[i].name);
+				return (BUS_PROBE_DEFAULT);
+			}
+		}
+		/* FALLTHROUGH */
+	case ENXIO:
 	default:
 		return (ENXIO);
 	}
 }
 
 static int
-le_pci_attach(device_t dev)
+le_isa_attach(device_t dev)
 {
-	struct le_pci_softc *lesc;
+	struct le_isa_softc *lesc;
 	struct lance_softc *sc;
-	int error, i;
+	bus_size_t macstart, rap, rdp;
+	int error, i, macstride;
 
 	lesc = device_get_softc(dev);
-	sc = &lesc->sc_am79900.lsc;
+	sc = &lesc->sc_am7990.lsc;
 
 	LE_LOCK_INIT(sc, device_get_nameunit(dev));
 
-	pci_enable_busmaster(dev);
-	pci_enable_io(dev, PCIM_CMD_PORTEN);
+	lesc->sc_rrid = 0;
+	switch (ISA_PNP_PROBE(device_get_parent(dev), dev, le_isa_ids)) {
+	case 0:
+		lesc->sc_rres = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
+		    &lesc->sc_rrid, RF_ACTIVE);
+		rap = PCNET_RAP;
+		rdp = PCNET_RDP;
+		macstart = 0;
+		macstride = 1;
+		break;
+	case ENOENT:
+		for (i = 0; i < sizeof(le_isa_params) /
+		    sizeof(le_isa_params[0]); i++) {
+			if (le_isa_probe_legacy(dev, &le_isa_params[i]) == 0) {
+				lesc->sc_rres = bus_alloc_resource(dev,
+				    SYS_RES_IOPORT, &lesc->sc_rrid, 0, ~0,
+				    le_isa_params[i].iosize, RF_ACTIVE);
+				rap = le_isa_params[i].rap;
+				rdp = le_isa_params[i].rdp;
+				macstart = le_isa_params[i].macstart;
+				macstride = le_isa_params[i].macstride;
+				goto found;
+			}
+		}
+		/* FALLTHROUGH */
+	case ENXIO:
+	default:
+		device_printf(dev, "cannot determine chip\n");
+		error = ENXIO;
+		goto fail_mtx;
+	}
 
-	lesc->sc_rrid = PCIR_BAR(0);
-	lesc->sc_rres = bus_alloc_resource_any(dev, SYS_RES_IOPORT,
-	    &lesc->sc_rrid, RF_ACTIVE);
+ found:
 	if (lesc->sc_rres == NULL) {
 		device_printf(dev, "cannot allocate registers\n");
 		error = ENXIO;
@@ -332,19 +323,29 @@ le_pci_attach(device_t dev)
 	}
 	lesc->sc_regt = rman_get_bustag(lesc->sc_rres);
 	lesc->sc_regh = rman_get_bushandle(lesc->sc_rres);
+	lesc->sc_rap = rap;
+	lesc->sc_rdp = rdp;
+
+	lesc->sc_drid = 0;
+	if ((lesc->sc_dres = bus_alloc_resource_any(dev, SYS_RES_DRQ,
+	    &lesc->sc_drid, RF_ACTIVE)) == NULL) {
+		device_printf(dev, "cannot allocate DMA channel\n");
+		error = ENXIO;
+		goto fail_rres;
+	}
 
 	lesc->sc_irid = 0;
 	if ((lesc->sc_ires = bus_alloc_resource_any(dev, SYS_RES_IRQ,
 	    &lesc->sc_irid, RF_SHAREABLE | RF_ACTIVE)) == NULL) {
 		device_printf(dev, "cannot allocate interrupt\n");
 		error = ENXIO;
-		goto fail_rres;
+		goto fail_dres;
 	}
 
 	error = bus_dma_tag_create(
 	    bus_get_dma_tag(dev),	/* parent */
 	    1, 0,			/* alignment, boundary */
-	    BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
+	    BUS_SPACE_MAXADDR_24BIT,	/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
 	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
@@ -358,16 +359,15 @@ le_pci_attach(device_t dev)
 		goto fail_ires;
 	}
 
-	sc->sc_memsize = PCNET_MEMSIZE;
+	sc->sc_memsize = LE_ISA_MEMSIZE;
 	/*
-	 * For Am79C970A, Am79C971 and Am79C978 the init block must be 2-byte
-	 * aligned and the ring descriptors must be 16-byte aligned when using
-	 * a 32-bit software style.
+	 * For Am79C90, Am79C961 and Am79C961A the init block must be 2-byte
+	 * aligned and the ring descriptors must be 8-byte aligned.
 	 */
 	error = bus_dma_tag_create(
 	    lesc->sc_pdmat,		/* parent */
-	    16, 0,			/* alignment, boundary */
-	    BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
+	    8, 0,			/* alignment, boundary */
+	    BUS_SPACE_MAXADDR_24BIT,	/* lowaddr */
 	    BUS_SPACE_MAXADDR,		/* highaddr */
 	    NULL, NULL,			/* filter, filterarg */
 	    sc->sc_memsize,		/* maxsize */
@@ -390,36 +390,23 @@ le_pci_attach(device_t dev)
 
 	sc->sc_addr = 0;
 	error = bus_dmamap_load(lesc->sc_dmat, lesc->sc_dmam, sc->sc_mem,
-	    sc->sc_memsize, le_pci_dma_callback, sc, 0);
+	    sc->sc_memsize, le_isa_dma_callback, sc, 0);
 	if (error != 0 || sc->sc_addr == 0) {
                 device_printf(dev, "cannot load DMA buffer map\n");
 		goto fail_dmem;
 	}
 
-	sc->sc_flags = LE_BSWAP;
-	sc->sc_conf3 = 0;
+	isa_dmacascade(rman_get_start(lesc->sc_dres));
 
-	sc->sc_mediastatus = NULL;
-	switch (pci_get_device(dev)) {
-	case AMD_PCNET_HOME:
-		sc->sc_mediachange = le_pci_mediachange;
-		sc->sc_supmedia = le_home_supmedia;
-		sc->sc_nsupmedia = sizeof(le_home_supmedia) / sizeof(int);
-		sc->sc_defaultmedia = le_home_supmedia[0];
-		break;
-	default:
-		sc->sc_mediachange = le_pci_mediachange;
-		sc->sc_supmedia = le_pci_supmedia;
-		sc->sc_nsupmedia = sizeof(le_pci_supmedia) / sizeof(int);
-		sc->sc_defaultmedia = le_pci_supmedia[0];
-	}
+	sc->sc_flags = 0;
+	sc->sc_conf3 = 0;
 
 	/*
 	 * Extract the physical MAC address from the ROM.
 	 */
 	for (i = 0; i < sizeof(sc->sc_enaddr); i++)
-		sc->sc_enaddr[i] =
-		    bus_space_read_1(lesc->sc_regt, lesc->sc_regh, i);
+		sc->sc_enaddr[i] =  bus_space_read_1(lesc->sc_regt,
+		    lesc->sc_regh, macstart + i * macstride);
 
 	sc->sc_copytodesc = lance_copytobuf_contig;
 	sc->sc_copyfromdesc = lance_copyfrombuf_contig;
@@ -427,31 +414,34 @@ le_pci_attach(device_t dev)
 	sc->sc_copyfrombuf = lance_copyfrombuf_contig;
 	sc->sc_zerobuf = lance_zerobuf_contig;
 
-	sc->sc_rdcsr = le_pci_rdcsr;
-	sc->sc_wrcsr = le_pci_wrcsr;
-	sc->sc_hwreset = le_pci_hwreset;
+	sc->sc_rdcsr = le_isa_rdcsr;
+	sc->sc_wrcsr = le_isa_wrcsr;
+	sc->sc_hwreset = NULL;
 	sc->sc_hwinit = NULL;
 	sc->sc_hwintr = NULL;
 	sc->sc_nocarrier = NULL;
+	sc->sc_mediachange = NULL;
+	sc->sc_mediastatus = NULL;
+	sc->sc_supmedia = NULL;
 
-	error = am79900_config(&lesc->sc_am79900, device_get_name(dev),
+	error = am7990_config(&lesc->sc_am7990, device_get_name(dev),
 	    device_get_unit(dev));
 	if (error != 0) {
-		device_printf(dev, "cannot attach Am79900\n");
+		device_printf(dev, "cannot attach Am7990\n");
 		goto fail_dmap;
 	}
 
 	error = bus_setup_intr(dev, lesc->sc_ires, INTR_TYPE_NET | INTR_MPSAFE,
-	    NULL, am79900_intr, sc, &lesc->sc_ih);
+	    NULL, am7990_intr, sc, &lesc->sc_ih);
 	if (error != 0) {
 		device_printf(dev, "cannot set up interrupt\n");
-		goto fail_am79900;
+		goto fail_am7990;
 	}
 
 	return (0);
 
- fail_am79900:
-	am79900_detach(&lesc->sc_am79900);
+ fail_am7990:
+	am7990_detach(&lesc->sc_am7990);
  fail_dmap:
 	bus_dmamap_unload(lesc->sc_dmat, lesc->sc_dmam);
  fail_dmem:
@@ -462,6 +452,8 @@ le_pci_attach(device_t dev)
 	bus_dma_tag_destroy(lesc->sc_pdmat);
  fail_ires:
 	bus_release_resource(dev, SYS_RES_IRQ, lesc->sc_irid, lesc->sc_ires);
+ fail_dres:
+	bus_release_resource(dev, SYS_RES_DRQ, lesc->sc_drid, lesc->sc_dres);
  fail_rres:
 	bus_release_resource(dev, SYS_RES_IOPORT, lesc->sc_rrid, lesc->sc_rres);
  fail_mtx:
@@ -470,21 +462,22 @@ le_pci_attach(device_t dev)
 }
 
 static int
-le_pci_detach(device_t dev)
+le_isa_detach(device_t dev)
 {
-	struct le_pci_softc *lesc;
+	struct le_isa_softc *lesc;
 	struct lance_softc *sc;
 
 	lesc = device_get_softc(dev);
-	sc = &lesc->sc_am79900.lsc;
+	sc = &lesc->sc_am7990.lsc;
 
 	bus_teardown_intr(dev, lesc->sc_ires, lesc->sc_ih);
-	am79900_detach(&lesc->sc_am79900);
+	am7990_detach(&lesc->sc_am7990);
 	bus_dmamap_unload(lesc->sc_dmat, lesc->sc_dmam);
 	bus_dmamem_free(lesc->sc_dmat, sc->sc_mem, lesc->sc_dmam);
 	bus_dma_tag_destroy(lesc->sc_dmat);
 	bus_dma_tag_destroy(lesc->sc_pdmat);
 	bus_release_resource(dev, SYS_RES_IRQ, lesc->sc_irid, lesc->sc_ires);
+	bus_release_resource(dev, SYS_RES_DRQ, lesc->sc_drid, lesc->sc_dres);
 	bus_release_resource(dev, SYS_RES_IOPORT, lesc->sc_rrid, lesc->sc_rres);
 	LE_LOCK_DESTROY(sc);
 
@@ -492,25 +485,25 @@ le_pci_detach(device_t dev)
 }
 
 static int
-le_pci_suspend(device_t dev)
+le_isa_suspend(device_t dev)
 {
-	struct le_pci_softc *lesc;
+	struct le_isa_softc *lesc;
 
 	lesc = device_get_softc(dev);
 
-	lance_suspend(&lesc->sc_am79900.lsc);
+	lance_suspend(&lesc->sc_am7990.lsc);
 
 	return (0);
 }
 
 static int
-le_pci_resume(device_t dev)
+le_isa_resume(device_t dev)
 {
-	struct le_pci_softc *lesc;
+	struct le_isa_softc *lesc;
 
 	lesc = device_get_softc(dev);
 
-	lance_resume(&lesc->sc_am79900.lsc);
+	lance_resume(&lesc->sc_am7990.lsc);
 
 	return (0);
 }

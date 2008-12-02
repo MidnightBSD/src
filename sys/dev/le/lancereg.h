@@ -120,7 +120,7 @@
  * valid on the LANCE.
  */
 
-/* $FreeBSD: src/sys/dev/le/lancereg.h,v 1.1.2.1 2006/02/13 11:30:40 marius Exp $ */
+/* $FreeBSD: src/sys/dev/le/lancereg.h,v 1.2 2006/05/16 21:04:01 marius Exp $ */
 
 #ifndef _DEV_LE_LANCEREG_H_
 #define	_DEV_LE_LANCEREG_H_
@@ -497,7 +497,7 @@
 #define	LE_B20_SSIZE32	0x0100		/* Software Size 32-bit */
 #define	LE_B20_SSTYLE	0x0007		/* Software Style */
 #define	LE_B20_SSTYLE_LANCE	0	/* LANCE/PCnet-ISA (16-bit) */
-#define	LE_B20_SSTYPE_ILACC	1	/* ILACC (32-bit) */
+#define	LE_B20_SSTYLE_ILACC	1	/* ILACC (32-bit) */
 #define	LE_B20_SSTYLE_PCNETPCI2	2	/* PCnet-PCI (32-bit) */
 #define	LE_B20_SSTYLE_PCNETPCI3	3	/* PCnet-PCI II (32-bit) */
 

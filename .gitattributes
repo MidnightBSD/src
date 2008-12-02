@@ -26298,11 +26298,15 @@ sys/dev/le/am79900reg.h -text
 sys/dev/le/am79900var.h -text
 sys/dev/le/am7990reg.h -text
 sys/dev/le/am7990var.h -text
+sys/dev/le/if_le_cbus.c -text
+sys/dev/le/if_le_isa.c -text
+sys/dev/le/if_le_lebuffer.c -text
 sys/dev/le/if_le_ledma.c -text
 sys/dev/le/if_le_pci.c -text
 sys/dev/le/lance.c -text
 sys/dev/le/lancereg.h -text
 sys/dev/le/lancevar.h -text
+sys/dev/le/lebuffer_sbus.c -text
 sys/dev/led/led.c -text
 sys/dev/led/led.h -text
 sys/dev/lge/if_lge.c -text

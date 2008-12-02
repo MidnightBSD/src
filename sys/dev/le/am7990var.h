@@ -37,7 +37,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/le/am7990var.h,v 1.1.2.1 2006/02/13 11:30:40 marius Exp $ */
+/* $FreeBSD: src/sys/dev/le/am7990var.h,v 1.1 2006/01/31 14:48:58 marius Exp $ */
 
 #ifndef _DEV_LE_AM7990VAR_H_
 #define	_DEV_LE_AM7990VAR_H_
