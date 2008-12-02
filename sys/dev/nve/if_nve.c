@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: if_nve.c,v 1.3 2008-09-05 19:02:59 laffer1 Exp $
+ * $Id: if_nve.c,v 1.4 2008-12-02 22:45:00 laffer1 Exp $
  */
 /*
  * NVIDIA nForce MCP Networking Adapter driver
@@ -72,7 +72,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nve/if_nve.c,v 1.7.2.11 2006/09/13 15:15:57 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nve/if_nve.c,v 1.28 2007/06/12 02:21:02 yongari Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -292,7 +292,7 @@ nve_probe(device_t dev)
 		if ((pci_get_vendor(dev) == t->vid_id) &&
 		    (pci_get_device(dev) == t->dev_id)) {
 			device_set_desc(dev, t->name);
-			return (0);
+			return (BUS_PROBE_LOW_PRIORITY);
 		}
 		t++;
 	}
@@ -530,13 +530,14 @@ nve_attach(device_t dev)
 	ifp->if_snd.ifq_drv_maxlen = TX_RING_SIZE - 1;
 	IFQ_SET_READY(&ifp->if_snd);
 	ifp->if_capabilities |= IFCAP_VLAN_MTU;
+	ifp->if_capenable |= IFCAP_VLAN_MTU;
 
 	/* Attach to OS's managers. */
 	ether_ifattach(ifp, eaddr);
 
 	/* Activate our interrupt handler. - attach last to avoid lock */
 	error = bus_setup_intr(sc->dev, sc->irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    nve_intr, sc, &sc->sc_ih);
+	    NULL, nve_intr, sc, &sc->sc_ih);
 	if (error) {
 		device_printf(sc->dev, "couldn't set up interrupt handler\n");
 		goto fail;
@@ -660,7 +661,7 @@ nve_init_locked(struct nve_softc *sc)
 		return;
 	}
 	/* Set the MAC address */
-	sc->hwapi->pfnSetNodeAddress(sc->hwapi->pADCX, IFP2ENADDR(sc->ifp));
+	sc->hwapi->pfnSetNodeAddress(sc->hwapi->pADCX, IF_LLADDR(sc->ifp));
 	sc->hwapi->pfnEnableInterrupts(sc->hwapi->pADCX);
 	sc->hwapi->pfnStart(sc->hwapi->pADCX);
 
@@ -1039,7 +1040,7 @@ nve_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 
 	default:
 		/* Everything else we forward to generic ether ioctl */
-		error = ether_ioctl(ifp, (int)command, data);
+		error = ether_ioctl(ifp, command, data);
 		break;
 	}
 
