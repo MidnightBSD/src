@@ -26750,6 +26750,16 @@ sys/dev/sound/isa/sb16.c -text
 sys/dev/sound/isa/sb8.c -text
 sys/dev/sound/isa/sbc.c -text
 sys/dev/sound/isa/sndbuf_dma.c -text
+sys/dev/sound/midi/midi.c -text
+sys/dev/sound/midi/midi.h -text
+sys/dev/sound/midi/midiq.h -text
+sys/dev/sound/midi/mpu401.c -text
+sys/dev/sound/midi/mpu401.h -text
+sys/dev/sound/midi/mpu_if.m -text
+sys/dev/sound/midi/mpufoi_if.m -text
+sys/dev/sound/midi/sequencer.c -text
+sys/dev/sound/midi/sequencer.h -text
+sys/dev/sound/midi/synth_if.m -text
 sys/dev/sound/pci/als4000.c -text
 sys/dev/sound/pci/als4000.h -text
 sys/dev/sound/pci/atiixp.c -text
