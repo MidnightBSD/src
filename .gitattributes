@@ -26910,7 +26910,6 @@ sys/dev/trm/trm.h -text
 sys/dev/twa/tw_cl.h -text
 sys/dev/twa/tw_cl_externs.h -text
 sys/dev/twa/tw_cl_fwif.h -text
-sys/dev/twa/tw_cl_fwimg.c -text
 sys/dev/twa/tw_cl_init.c -text
 sys/dev/twa/tw_cl_intr.c -text
 sys/dev/twa/tw_cl_io.c -text
