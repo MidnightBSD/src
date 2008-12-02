@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ata/atapi-cd.c,v 1.6 2008/12/02 02:08:16 laffer1 Exp $ */
 /*-
- * Copyright (c) 1998 - 2006 Søren Schmidt <sos@FreeBSD.org>
+ * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/atapi-cd.c,v 1.179.2.4 2006/01/25 08:13:45 sos Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/atapi-cd.c,v 1.193.2.2 2007/11/21 21:15:00 sos Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -158,12 +158,9 @@ acd_reinit(device_t dev)
 {
     struct ata_channel *ch = device_get_softc(device_get_parent(dev));
     struct ata_device *atadev = device_get_softc(dev);
-    struct acd_softc *cdp = device_get_ivars(dev);
 
     if (((atadev->unit == ATA_MASTER) && !(ch->devices & ATA_ATAPI_MASTER)) ||
 	((atadev->unit == ATA_SLAVE) && !(ch->devices & ATA_ATAPI_SLAVE))) {
-	device_set_ivars(dev, NULL);
-	free(cdp, M_ACD);
 	return 1;   
     }
     ATA_SETMODE(device_get_parent(dev), dev);
@@ -704,10 +701,7 @@ acd_geom_access(struct g_provider *pp, int dr, int dw, int de)
 	request->dev = dev;
 	bcopy(ccb, request->u.atapi.ccb, 16);
 	request->flags = ATA_R_ATAPI;
-	/* rgb - up timeout to 10 
 	request->timeout = 5;
-	*/
-	request->timeout = 10;
 	ata_queue_request(request);
 	if (!request->error &&
 	    (request->u.atapi.sense.key == 2 ||
@@ -1245,7 +1239,7 @@ acd_get_progress(device_t dev, int *finished)
     if (!request->error &&
 	request->u.atapi.sense.specific & ATA_SENSE_SPEC_VALID)
 	*finished = ((request->u.atapi.sense.specific2 |
-		     (request->u.atapi.sense.specific1<<8))*100)/65535;
+		     (request->u.atapi.sense.specific1 << 8)) * 100) / 65535;
     else
 	*finished = 0;
     ata_free_request(request);
