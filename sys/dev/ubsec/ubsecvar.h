@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/ubsec/ubsecvar.h,v 1.8 2005/01/06 01:43:27 imp Exp $ */
+/* $FreeBSD: src/sys/dev/ubsec/ubsecvar.h,v 1.9 2006/05/17 18:34:26 pjd Exp $ */
 /*	$OpenBSD: ubsecvar.h,v 1.35 2002/09/24 18:33:26 jason Exp $	*/
 
 /*-
@@ -218,6 +218,7 @@ struct ubsec_softc {
 struct ubsec_session {
 	u_int32_t	ses_used;
 	u_int32_t	ses_deskey[6];		/* 3DES key */
+	u_int32_t	ses_mlen;		/* hmac length */
 	u_int32_t	ses_hminner[5];		/* hmac inner state */
 	u_int32_t	ses_hmouter[5];		/* hmac outer state */
 	u_int32_t	ses_iv[2];		/* [3]DES iv */
