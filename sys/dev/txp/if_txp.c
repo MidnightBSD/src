@@ -35,15 +35,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.46 2007/06/12 04:33:21 yongari Exp $");
 
 /*
  * Driver for 3c990 (Typhoon) Ethernet ASIC
  */
-
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 glebius Exp $");
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sockio.h>
@@ -73,7 +69,6 @@ __FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 gleb
 
 #include <vm/vm.h>              /* for vtophys */
 #include <vm/pmap.h>            /* for vtophys */
-#include <machine/clock.h>	/* for DELAY */
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <sys/bus.h>
@@ -92,7 +87,7 @@ __FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 gleb
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.31.2.5 2006/01/13 19:21:44 glebius Exp $";
+  "$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.46 2007/06/12 04:33:21 yongari Exp $";
 #endif
 
 /*
@@ -265,6 +260,11 @@ txp_attach(dev)
 
 	sc->sc_fwbuf = contigmalloc(32768, M_DEVBUF,
 	    M_NOWAIT, 0, 0xffffffff, PAGE_SIZE, 0);
+	if (sc->sc_fwbuf == NULL) {
+		device_printf(dev, "no memory for firmware\n");
+		error = ENXIO;
+		goto fail;
+	}
 	error = txp_download_fw(sc);
 	contigfree(sc->sc_fwbuf, 32768, M_DEVBUF);
 	sc->sc_fwbuf = NULL;
@@ -274,6 +274,11 @@ txp_attach(dev)
 
 	sc->sc_ldata = contigmalloc(sizeof(struct txp_ldata), M_DEVBUF,
 	    M_NOWAIT, 0, 0xffffffff, PAGE_SIZE, 0);
+	if (sc->sc_ldata == NULL) {
+		device_printf(dev, "no memory for descriptor ring\n");
+		error = ENXIO;
+		goto fail;
+	}
 	bzero(sc->sc_ldata, sizeof(struct txp_ldata));
 
 	if (txp_alloc_rings(sc)) {
@@ -341,7 +346,7 @@ txp_attach(dev)
 	ether_ifattach(ifp, eaddr);
 
 	error = bus_setup_intr(dev, sc->sc_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    txp_intr, sc, &sc->sc_intrhand);
+	    NULL, txp_intr, sc, &sc->sc_intrhand);
 
 	if (error) {
 		ether_ifdetach(ifp);
@@ -394,9 +399,6 @@ txp_release_resources(sc)
 
 	dev = sc->sc_dev;
 
-	if (sc->sc_ifp)
-		if_free(sc->sc_ifp);
-
 	if (sc->sc_intrhand != NULL)
 		bus_teardown_intr(dev, sc->sc_irq, sc->sc_intrhand);
 
@@ -408,6 +410,9 @@ txp_release_resources(sc)
 
 	if (sc->sc_ldata != NULL)
 		contigfree(sc->sc_ldata, sizeof(struct txp_ldata), M_DEVBUF);
+
+	if (sc->sc_ifp)
+		if_free(sc->sc_ifp);
 
 	return;
 }
@@ -766,9 +771,8 @@ txp_rx_reclaim(sc, r)
 		}
 
 		if (rxd->rx_stat & RX_STAT_VLAN) {
-			VLAN_INPUT_TAG_NEW(ifp, m, htons(rxd->rx_vlan >> 16));
-			if (m == NULL)
-				goto next;
+			m->m_pkthdr.ether_vtag = htons(rxd->rx_vlan >> 16);
+			m->m_flags |= M_VLANTAG;
 		}
 
 		TXP_UNLOCK(sc);
@@ -1180,12 +1184,12 @@ txp_init_locked(sc)
 	    NULL, NULL, NULL, 1);
 
 	/* Set station address. */
-	((u_int8_t *)&p1)[1] = IFP2ENADDR(sc->sc_ifp)[0];
-	((u_int8_t *)&p1)[0] = IFP2ENADDR(sc->sc_ifp)[1];
-	((u_int8_t *)&p2)[3] = IFP2ENADDR(sc->sc_ifp)[2];
-	((u_int8_t *)&p2)[2] = IFP2ENADDR(sc->sc_ifp)[3];
-	((u_int8_t *)&p2)[1] = IFP2ENADDR(sc->sc_ifp)[4];
-	((u_int8_t *)&p2)[0] = IFP2ENADDR(sc->sc_ifp)[5];
+	((u_int8_t *)&p1)[1] = IF_LLADDR(sc->sc_ifp)[0];
+	((u_int8_t *)&p1)[0] = IF_LLADDR(sc->sc_ifp)[1];
+	((u_int8_t *)&p2)[3] = IF_LLADDR(sc->sc_ifp)[2];
+	((u_int8_t *)&p2)[2] = IF_LLADDR(sc->sc_ifp)[3];
+	((u_int8_t *)&p2)[1] = IF_LLADDR(sc->sc_ifp)[4];
+	((u_int8_t *)&p2)[0] = IF_LLADDR(sc->sc_ifp)[5];
 	txp_command(sc, TXP_CMD_STATION_ADDRESS_WRITE, p1, p2, 0,
 	    NULL, NULL, NULL, 1);
 
@@ -1273,7 +1277,6 @@ txp_start_locked(ifp)
 	struct mbuf *m, *m0;
 	struct txp_swdesc *sd;
 	u_int32_t firstprod, firstcnt, prod, cnt;
-	struct m_tag *mtag;
 
 	TXP_LOCK_ASSERT(sc);
 	if ((ifp->if_drv_flags & (IFF_DRV_RUNNING | IFF_DRV_OACTIVE)) !=
@@ -1312,10 +1315,9 @@ txp_start_locked(ifp)
 		if (++cnt >= (TX_ENTRIES - 4))
 			goto oactive;
 
-		mtag = VLAN_OUTPUT_TAG(ifp, m);
-		if (mtag != NULL) {
+		if (m->m_flags & M_VLANTAG) {
 			txd->tx_pflags = TX_PFLAGS_VLAN |
-			    (htons(VLAN_TAG_VALUE(mtag)) << TX_PFLAGS_VLANTAG_S);
+			    (htons(m->m_pkthdr.ether_vtag) << TX_PFLAGS_VLANTAG_S);
 		}
 
 		if (m->m_pkthdr.csum_flags & CSUM_IP)
@@ -1354,7 +1356,7 @@ txp_start_locked(ifp)
 
 		ifp->if_timer = 5;
 
-		BPF_MTAP(ifp, m);
+		ETHER_BPF_MTAP(ifp, m);
 		WRITE_REG(sc, r->r_reg, TXP_IDX2OFFSET(prod));
 	}
 
