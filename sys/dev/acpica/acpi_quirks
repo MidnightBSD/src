@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+# $MidnightBSD: src/sys/dev/acpica/acpi_quirks,v 1.2 2008/12/02 02:24:28 laffer1 Exp $
 # $FreeBSD: src/sys/dev/acpica/acpi_quirks,v 1.6 2005/06/26 18:19:14 dwmalone Exp $
 #
 # Quirks for ACPI tables can be added here.

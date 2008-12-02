@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 #-
 # Copyright (c) 2004 Nate Lawson
 # All rights reserved.
