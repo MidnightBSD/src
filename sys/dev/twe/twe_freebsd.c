@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/twe/twe_freebsd.c,v 1.42 2005/03/06 20:57:54 scottl Exp $
+ * $FreeBSD: src/sys/dev/twe/twe_freebsd.c,v 1.44 2007/02/23 12:18:56 piso Exp $
  */
 
 /*
@@ -254,7 +254,8 @@ twe_attach(device_t dev)
 	twe_free(sc);
 	return(ENXIO);
     }
-    if (bus_setup_intr(sc->twe_dev, sc->twe_irq, INTR_TYPE_BIO | INTR_ENTROPY,  twe_pci_intr, sc, &sc->twe_intr)) {
+    if (bus_setup_intr(sc->twe_dev, sc->twe_irq, INTR_TYPE_BIO | INTR_ENTROPY,  
+		       NULL, twe_pci_intr, sc, &sc->twe_intr)) {
 	twe_printf(sc, "can't set up interrupt\n");
 	twe_free(sc);
 	return(ENXIO);
@@ -866,7 +867,7 @@ twed_detach(device_t dev)
 /********************************************************************************
  * Allocate a command buffer
  */
-MALLOC_DEFINE(TWE_MALLOC_CLASS, "twe commands", "twe commands");
+MALLOC_DEFINE(TWE_MALLOC_CLASS, "twe_commands", "twe commands");
 
 struct twe_request *
 twe_allocate_request(struct twe_softc *sc, int tag)
