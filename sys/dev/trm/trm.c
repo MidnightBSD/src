@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/trm/trm.c,v 1.26 2005/05/29 04:42:26 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/trm/trm.c,v 1.33 2007/06/17 05:55:52 scottl Exp $");
 
 /*
  *	HISTORY:					
@@ -83,7 +83,6 @@ __FBSDID("$FreeBSD: src/sys/dev/trm/trm.c,v 1.26 2005/05/29 04:42:26 nyan Exp $"
 #include <dev/pci/pcireg.h>
 #include <machine/resource.h>
 #include <machine/bus.h>
-#include <machine/clock.h>
 #include <sys/rman.h>
 
 #include <cam/cam.h>
@@ -712,6 +711,10 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			strncpy(cpi->hba_vid, "Tekram_TRM", HBA_IDLEN);
 			strncpy(cpi->dev_name, cam_sim_name(psim), DEV_IDLEN);
 			cpi->unit_number = cam_sim_unit(psim);
+			cpi->transport = XPORT_SPI;
+			cpi->transport_version = 2;
+			cpi->protocol = PROTO_SCSI;
+			cpi->protocol_version = SCSI_REV_2;
 			cpi->ccb_h.status = CAM_REQ_CMP;
 			xpt_done(pccb);
 				   }
@@ -830,44 +833,52 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 		 * (GET) default/user transfer settings for the target 
 	 	 */
 		case XPT_GET_TRAN_SETTINGS: {
-			struct	ccb_trans_settings *cts;        
+			struct	ccb_trans_settings *cts = &pccb->cts;
 			int	intflag;
 			struct	trm_transinfo *tinfo;
 			PDCB	pDCB;	
-			
+			struct ccb_trans_settings_scsi *scsi =
+			    &cts->proto_specific.scsi;
+			struct ccb_trans_settings_spi *spi =
+			    &cts->xport_specific.spi;
+
+			cts->protocol = PROTO_SCSI;
+			cts->protocol_version = SCSI_REV_2;
+			cts->transport = XPORT_SPI;
+			cts->transport_version = 2;
+
 			TRM_DPRINTF(" XPT_GET_TRAN_SETTINGS \n");
-	    		cts = &pccb->cts;
 			pDCB = &pACB->DCBarray[target_id][target_lun];
 			intflag = splcam();
 			/*
 			 * disable interrupt
 			 */
-			if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0) {
+			if (cts->type == CTS_TYPE_CURRENT_SETTINGS) {
 				/* current transfer settings */
 				if (pDCB->tinfo.disc_tag & TRM_CUR_DISCENB)
-					cts->flags = CCB_TRANS_DISC_ENB;
+					spi->flags = CTS_SPI_FLAGS_DISC_ENB;
 				else
-					cts->flags = 0;/* no tag & disconnect */
+					spi->flags = 0;/* no tag & disconnect */
 				if (pDCB->tinfo.disc_tag & TRM_CUR_TAGENB)
-					cts->flags |= CCB_TRANS_TAG_ENB;
+					scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
 				tinfo = &pDCB->tinfo.current;
 				TRM_DPRINTF("CURRENT:  cts->flags= %2x \n",
 				    cts->flags);
 			} else {
 		  	  /* default(user) transfer settings */
 				if (pDCB->tinfo.disc_tag & TRM_USR_DISCENB)
-					cts->flags = CCB_TRANS_DISC_ENB;
+					spi->flags = CTS_SPI_FLAGS_DISC_ENB;
 				else
-					cts->flags = 0;
+					spi->flags = 0;
 				if (pDCB->tinfo.disc_tag & TRM_USR_TAGENB)
-					cts->flags |= CCB_TRANS_TAG_ENB;
+					scsi->flags |= CTS_SCSI_FLAGS_TAG_ENB;
 				tinfo = &pDCB->tinfo.user;
 				TRM_DPRINTF("USER: cts->flags= %2x \n",
 					cts->flags);
 			}
-			cts->sync_period = tinfo->period;
-			cts->sync_offset = tinfo->offset;
-			cts->bus_width   = tinfo->width;
+			spi->sync_period = tinfo->period;
+			spi->sync_offset = tinfo->offset;
+			spi->bus_width   = tinfo->width;
 			TRM_DPRINTF("pDCB->SyncPeriod: %d  \n", 
 				pDCB->SyncPeriod);
 			TRM_DPRINTF("period: %d  \n", tinfo->period);
@@ -875,11 +886,11 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			TRM_DPRINTF("width: %d  \n", tinfo->width);
 
 	    		splx(intflag);
-			cts->valid = CCB_TRANS_SYNC_RATE_VALID | 
-			    CCB_TRANS_SYNC_OFFSET_VALID | 
-			    CCB_TRANS_BUS_WIDTH_VALID | 
-			    CCB_TRANS_DISC_VALID | 
-			    CCB_TRANS_TQ_VALID;
+			spi->valid = CTS_SPI_VALID_SYNC_RATE |
+			    CTS_SPI_VALID_SYNC_OFFSET |
+			    CTS_SPI_VALID_BUS_WIDTH |
+			    CTS_SPI_VALID_DISC;
+			scsi->valid = CTS_SCSI_VALID_TQ;
 			pccb->ccb_h.status = CAM_REQ_CMP;
 			xpt_done(pccb);
 					    }
@@ -890,25 +901,28 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 		 * (Set) transfer rate/width negotiation settings 
 		 */
 		case XPT_SET_TRAN_SETTINGS: {
-			struct	ccb_trans_settings *cts;
+			struct	ccb_trans_settings *cts =  &pccb->cts;
 			u_int	update_type;
 			int	intflag;
 			PDCB	pDCB;
+			struct ccb_trans_settings_scsi *scsi =
+			    &cts->proto_specific.scsi;
+			struct ccb_trans_settings_spi *spi =
+			    &cts->xport_specific.spi;
 
 			TRM_DPRINTF(" XPT_SET_TRAN_SETTINGS \n");
-	    		cts = &pccb->cts;
 			update_type = 0;
-			if ((cts->flags & CCB_TRANS_CURRENT_SETTINGS) != 0)
+			if (cts->type == CTS_TYPE_CURRENT_SETTINGS)
 				update_type |= TRM_TRANS_GOAL;
-			if ((cts->flags & CCB_TRANS_USER_SETTINGS) != 0)
+			if (cts->type == CTS_TYPE_USER_SETTINGS)
 				update_type |= TRM_TRANS_USER;
 			intflag = splcam();
 	    		pDCB = &pACB->DCBarray[target_id][target_lun];
 
-			if ((cts->valid & CCB_TRANS_DISC_VALID) != 0) {
+			if ((spi->valid & CTS_SPI_VALID_DISC) != 0) {
 			  /*ccb disc enables */
 				if (update_type & TRM_TRANS_GOAL) {
-					if ((cts->flags & CCB_TRANS_DISC_ENB)
+					if ((spi->flags & CTS_SPI_FLAGS_DISC_ENB)
 					    != 0) 
 				    		pDCB->tinfo.disc_tag 
 						    |= TRM_CUR_DISCENB;
@@ -917,7 +931,7 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 						    ~TRM_CUR_DISCENB;
 				}
 				if (update_type & TRM_TRANS_USER) {
-					if ((cts->flags & CCB_TRANS_DISC_ENB)
+					if ((spi->flags & CTS_SPI_FLAGS_DISC_ENB)
 					    != 0)
 						pDCB->tinfo.disc_tag 
 						    |= TRM_USR_DISCENB;
@@ -926,10 +940,10 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 						    ~TRM_USR_DISCENB;
 				}
 			}
-			if ((cts->valid & CCB_TRANS_TQ_VALID) != 0) {
+			if ((scsi->valid & CTS_SCSI_VALID_TQ) != 0) {
 			  /* if ccb tag q active */
 				if (update_type & TRM_TRANS_GOAL) {
-					if ((cts->flags & CCB_TRANS_TAG_ENB)
+					if ((scsi->flags & CTS_SCSI_FLAGS_TAG_ENB)
 					    != 0)
 						pDCB->tinfo.disc_tag |= 
 						    TRM_CUR_TAGENB;
@@ -938,7 +952,7 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 						    ~TRM_CUR_TAGENB;
 				}
 				if (update_type & TRM_TRANS_USER) {
-					if ((cts->flags & CCB_TRANS_TAG_ENB)
+					if ((scsi->flags & CTS_SCSI_FLAGS_TAG_ENB)
 					    != 0)
 				  		pDCB->tinfo.disc_tag |= 
 						    TRM_USR_TAGENB;
@@ -949,31 +963,31 @@ trm_action(struct cam_sim *psim, union ccb *pccb)
 			}
 			/* Minimum sync period factor	*/
 
-			if ((cts->valid & CCB_TRANS_SYNC_RATE_VALID) != 0) {
+			if ((spi->valid & CTS_SPI_VALID_SYNC_RATE) != 0) {
 				/* if ccb sync active */
 				/* TRM-S1040 MinSyncPeriod = 4 clocks/byte */
-				if ((cts->sync_period != 0) &&
-				    (cts->sync_period < 125))
-					cts->sync_period = 125;
+				if ((spi->sync_period != 0) &&
+				    (spi->sync_period < 125))
+					spi->sync_period = 125;
 				/* 1/(125*4) minsync 2 MByte/sec */
-				if ((cts->valid & CCB_TRANS_SYNC_OFFSET_VALID)
+				if ((spi->valid & CTS_SPI_VALID_SYNC_OFFSET)
 				    != 0) {
-					if (cts->sync_offset == 0)
-				 		cts->sync_period = 0;
+					if (spi->sync_offset == 0)
+				 		spi->sync_period = 0;
 					/* TRM-S1040 MaxSyncOffset = 15 bytes*/
-					if (cts->sync_offset > 15) 
-						cts->sync_offset = 15;
+					if (spi->sync_offset > 15) 
+						spi->sync_offset = 15;
 				}
 			}
 			if ((update_type & TRM_TRANS_USER) != 0) {
-				pDCB->tinfo.user.period = cts->sync_period;
-				pDCB->tinfo.user.offset = cts->sync_offset;
-				pDCB->tinfo.user.width  = cts->bus_width;
+				pDCB->tinfo.user.period = spi->sync_period;
+				pDCB->tinfo.user.offset = spi->sync_offset;
+				pDCB->tinfo.user.width  = spi->bus_width;
 			}
 			if ((update_type & TRM_TRANS_GOAL) != 0) {
-				pDCB->tinfo.goal.period = cts->sync_period;
-				pDCB->tinfo.goal.offset = cts->sync_offset;
-				pDCB->tinfo.goal.width  = cts->bus_width;
+				pDCB->tinfo.goal.period = spi->sync_period;
+				pDCB->tinfo.goal.offset = spi->sync_offset;
+				pDCB->tinfo.goal.width  = spi->bus_width;
 			}
 			splx(intflag);
 			pccb->ccb_h.status = CAM_REQ_CMP;
@@ -2283,9 +2297,11 @@ trm_SetXferRate(PACB pACB,PSRB pSRB, PDCB pDCB)
 	 */
 	TRM_DPRINTF("trm_SetXferRate\n");
 	pccb = pSRB->pccb;
-	neg.sync_period = pDCB->tinfo.goal.period;
-	neg.sync_offset = pDCB->tinfo.goal.offset;
-	neg.valid = CCB_TRANS_SYNC_RATE_VALID | CCB_TRANS_SYNC_OFFSET_VALID;
+	memset(&neg, 0, sizeof (neg));
+	neg.xport_specific.spi.sync_period = pDCB->tinfo.goal.period;
+	neg.xport_specific.spi.sync_offset = pDCB->tinfo.goal.offset;
+	neg.xport_specific.spi.valid =
+	    CTS_SPI_VALID_SYNC_RATE | CTS_SPI_VALID_SYNC_OFFSET;
 	xpt_setup_ccb(&neg.ccb_h, pccb->ccb_h.path, /* priority */1);
 	xpt_async(AC_TRANSFER_NEG, pccb->ccb_h.path, &neg);
 	if (!(pDCB->IdentifyMsg & 0x07)) {
@@ -3580,7 +3596,7 @@ trm_attach(device_t dev)
 	    RF_SHAREABLE | RF_ACTIVE);
     	if (pACB->irq == NULL ||
 	    bus_setup_intr(dev, pACB->irq, 
-	    INTR_TYPE_CAM, trm_Interrupt, pACB, &pACB->ih)) {
+	    INTR_TYPE_CAM, NULL, trm_Interrupt, pACB, &pACB->ih)) {
 		printf("trm%d: register Interrupt handler error!\n", unit);
 		goto bad;
 	}
@@ -3620,6 +3636,7 @@ trm_attach(device_t dev)
 	    "trm",
 	    pACB,
 	    unit,
+	    &Giant,
 	    1,
 	    TRM_MAX_TAGS_CMD_QUEUE,
 	    device_Q);
@@ -3628,7 +3645,7 @@ trm_attach(device_t dev)
 		cam_simq_free(device_Q);  /* SIM allocate fault*/
 		goto bad;
 	}
-	if (xpt_bus_register(pACB->psim, 0) != CAM_SUCCESS)  {
+	if (xpt_bus_register(pACB->psim, dev, 0) != CAM_SUCCESS)  {
 		printf("trm%d: xpt_bus_register fault !\n",unit);
 		goto bad;
 	}
@@ -3743,4 +3760,5 @@ static driver_t trm_driver = {
 
 static devclass_t trm_devclass;
 DRIVER_MODULE(trm, pci, trm_driver, trm_devclass, 0, 0);
+MODULE_DEPEND(trm, pci, 1, 1, 1);
 MODULE_DEPEND(trm, cam, 1, 1, 1);
