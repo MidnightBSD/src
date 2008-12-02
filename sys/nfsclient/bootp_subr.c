@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Gordon Ross, Adam Glass
  * Copyright (c) 1992 Regents of the University of California.

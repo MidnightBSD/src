@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: krpc_subr.c,v 1.12.4.1 1996/06/07 00:52:26 cgd Exp $	*/
 
 /*-

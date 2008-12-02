@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/nfs4client/nfs4.h,v 1.2 2005/01/07 01:45:50 imp Exp $ */
-/* $Id: nfs4.h,v 1.1.1.2 2006-02-25 02:37:39 laffer1 Exp $ */
+/* $Id: nfs4.h,v 1.2 2008-12-02 21:51:48 laffer1 Exp $ */
 
 /*-
  * copyright (c) 2003
