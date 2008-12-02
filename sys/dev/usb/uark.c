@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: uark.c,v 1.1 2006/08/14 08:30:22 jsg Exp $	*/
 
 /*

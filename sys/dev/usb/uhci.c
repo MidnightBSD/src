@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uhci.c,v 1.170 2003/02/19 01:35:04 augustss Exp $	*/
 
 /*	Also already incorporated from NetBSD:

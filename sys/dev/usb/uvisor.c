@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uvisor.c,v 1.9 2001/01/23 14:04:14 augustss Exp $	*/
 /*      $FreeBSD: src/sys/dev/usb/uvisor.c,v 1.40 2007/07/05 06:28:46 imp Exp $	*/
 

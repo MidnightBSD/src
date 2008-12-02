@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Scott Mitchell
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: if_xereg.h,v 1.1.1.3 2008-11-18 16:48:50 laffer1 Exp $
+ *	$Id: if_xereg.h,v 1.2 2008-12-02 22:43:18 laffer1 Exp $
  * $FreeBSD: src/sys/dev/xe/if_xereg.h,v 1.7 2005/10/06 08:30:40 pjd Exp $
  */
 #ifndef DEV_XE_IF_XEREG_H

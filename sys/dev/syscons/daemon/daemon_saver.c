@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Sandro Sigala, Brescia, Italy.
  * Copyright (c) 1997 Chris Shenton

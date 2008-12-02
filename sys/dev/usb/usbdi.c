@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usbdi.c,v 1.106 2004/10/24 12:52:40 augustss Exp $	*/
 
 #include <sys/cdefs.h>

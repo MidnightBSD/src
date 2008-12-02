@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usb.c,v 1.68 2002/02/20 20:30:12 christos Exp $	*/
 
 /* Also already merged from NetBSD:

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 Ludd, University of Lule}, Sweden.
  * Copyright (c) 2000 Sergey A. Babkin

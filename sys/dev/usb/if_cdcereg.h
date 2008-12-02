@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2003-2005 Craig Boston
  * All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$FreeBSD: src/sys/dev/usb/if_ural.c,v 1.69 2007/09/17 19:07:24 sam Exp $	*/
 
 /*-

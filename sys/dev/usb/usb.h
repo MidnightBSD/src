@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usb.h,v 1.69 2002/09/22 23:20:50 augustss Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/usb.h,v 1.47 2007/06/30 02:40:21 imp Exp $    */
 

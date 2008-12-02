@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002
  *	M Warner Losh <imp@freebsd.org>.  All rights reserved.

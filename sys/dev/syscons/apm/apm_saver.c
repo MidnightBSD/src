@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Nick Sayer (who stole shamelessly from blank_saver)
  * All rights reserved.

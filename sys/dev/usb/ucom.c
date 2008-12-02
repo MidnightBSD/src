@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ucom.c,v 1.40 2001/11/13 06:24:54 lukem Exp $	*/
 
 /*-

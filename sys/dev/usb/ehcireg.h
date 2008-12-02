@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ehcireg.h,v 1.18 2004/10/22 10:38:17 augustss Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/ehcireg.h,v 1.8 2005/09/18 11:45:39 netchild Exp $	*/
 

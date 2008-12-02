@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ohci.c,v 1.138 2003/02/08 03:32:50 ichiro Exp $	*/
 
 /* Also, already ported:

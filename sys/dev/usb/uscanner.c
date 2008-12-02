@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uscanner.c,v 1.30 2002/07/11 21:14:36 augustss Exp$	*/
 
 /* Also already merged from NetBSD:

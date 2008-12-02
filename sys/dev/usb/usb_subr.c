@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usb_subr.c,v 1.99 2002/07/11 21:14:34 augustss Exp $	*/
 
 /* Also already have from NetBSD:

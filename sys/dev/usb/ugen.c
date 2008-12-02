@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ugen.c,v 1.79 2006/03/01 12:38:13 yamt Exp $	*/
 
 /* Also already merged from NetBSD:

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Eduardo Horvath.
  * All rights reserved.

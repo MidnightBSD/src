@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/dev/syscons/logo/logo.c,v 1.3 2001/08/09 00:02:30 peter Exp $ */
 
 #define logo_width 88

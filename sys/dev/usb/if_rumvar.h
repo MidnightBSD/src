@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$FreeBSD: src/sys/dev/usb/if_rumvar.h,v 1.2 2007/06/11 03:36:52 sam Exp $	*/
 
 /*-

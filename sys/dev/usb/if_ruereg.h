@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001-2003, Shunsuke Akiyama <akiyama@FreeBSD.org>.
  * All rights reserved.

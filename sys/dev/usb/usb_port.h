@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: usb_port.h,v 1.18 2000/09/06 22:42:10 rahnds Exp $ */
 /*	$NetBSD: usb_port.h,v 1.54 2002/03/28 21:49:19 ichiro Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/usb_port.h,v 1.98 2007/07/06 20:02:37 imp Exp $       */

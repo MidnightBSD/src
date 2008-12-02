@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999, 2003  Scott Mitchell
  * All rights reserved.

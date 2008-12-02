@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Mach Operating System
  * Copyright (c) 1991,1990,1989 Carnegie Mellon University

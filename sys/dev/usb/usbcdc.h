@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usbcdc.h,v 1.9 2004/10/23 13:24:24 augustss Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/usbcdc.h,v 1.12 2005/03/01 06:35:04 sobomax Exp $	*/
 

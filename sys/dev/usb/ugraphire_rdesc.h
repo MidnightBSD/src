@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usb/ugraphire_rdesc.h,v 1.1 2000/12/29 01:47:49 augustss Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/ugraphire_rdesc.h,v 1.3 2005/12/31 04:38:50 mux Exp $ */
 /*-

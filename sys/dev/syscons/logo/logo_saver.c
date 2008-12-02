@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Dag-Erling Coïdan Smørgrav
  * All rights reserved.

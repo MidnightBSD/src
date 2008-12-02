@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$FreeBSD: src/sys/dev/wpi/if_wpireg.h,v 1.2.2.1 2007/12/08 12:44:57 benjsc Exp $	*/
 
 /*-

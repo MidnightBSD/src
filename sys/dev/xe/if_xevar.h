@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Scott Mitchell
  * All rights reserved.
@@ -23,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$Id: if_xevar.h,v 1.1.1.2 2006-02-25 02:37:02 laffer1 Exp $
+ *	$Id: if_xevar.h,v 1.2 2008-12-02 22:43:18 laffer1 Exp $
  * $FreeBSD: src/sys/dev/xe/if_xevar.h,v 1.6 2005/06/10 16:49:17 brooks Exp $
  */
 #ifndef DEV_XE_IF_XEDEV_H

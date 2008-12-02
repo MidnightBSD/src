@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ehci.c,v 1.91 2005/02/27 00:27:51 perry Exp $ */
 
 /*-

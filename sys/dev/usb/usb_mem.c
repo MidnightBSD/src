@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usb_mem.c,v 1.26 2003/02/01 06:23:40 thorpej Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/usb_mem.c,v 1.13 2007/06/20 05:10:53 imp Exp $	*/
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_cdce.c,v 1.4 2004/10/24 12:50:54 augustss Exp $ */
 
 /*

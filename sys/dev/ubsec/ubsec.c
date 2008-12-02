@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: ubsec.c,v 1.115 2002/09/24 18:33:26 jason Exp $	*/
 
 /*-

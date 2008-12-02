@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usbdi_util.c,v 1.42 2004/12/03 08:53:40 augustss Exp $	*/
 
 /*-

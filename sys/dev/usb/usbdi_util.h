@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: usbdi_util.h,v 1.31 2004/12/03 08:53:40 augustss Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/usbdi_util.h,v 1.21 2007/01/03 10:50:03 luigi Exp $	*/
 

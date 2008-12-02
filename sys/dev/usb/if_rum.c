@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$FreeBSD: src/sys/dev/usb/if_rum.c,v 1.13 2007/09/17 19:07:24 sam Exp $	*/
 
 /*-

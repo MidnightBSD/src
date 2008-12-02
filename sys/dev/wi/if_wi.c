@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: wi.c,v 1.109 2003/01/09 08:52:19 dyoung Exp $	*/
 
 /*-

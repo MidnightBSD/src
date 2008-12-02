@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uhid.c,v 1.46 2001/11/13 06:24:55 lukem Exp $	*/
 
 /* Also already merged from NetBSD:

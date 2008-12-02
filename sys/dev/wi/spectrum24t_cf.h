@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD$	*/
 /* $FreeBSD: src/sys/dev/wi/spectrum24t_cf.h,v 1.2 2005/01/06 01:43:33 imp Exp $ */
 

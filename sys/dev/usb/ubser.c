@@ -1,8 +1,9 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Bernd Walter <ticso@freebsd.org>
  *
  * $URL: https://devel.bwct.de/svn/projects/ubser/ubser.c $
- * $Date: 2008-11-29 16:07:31 $
+ * $Date: 2008-12-02 22:43:15 $
  * $Author: laffer1 $
  * $Rev: 1127 $
  */

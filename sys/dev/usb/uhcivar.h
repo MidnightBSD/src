@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: uhcivar.h,v 1.33 2002/02/11 11:41:30 augustss Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/uhcivar.h,v 1.45 2007/06/14 16:23:31 imp Exp $	*/
 

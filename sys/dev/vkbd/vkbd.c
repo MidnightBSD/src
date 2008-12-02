@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * vkbd.c
  */
@@ -27,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: vkbd.c,v 1.3 2008-11-18 18:40:19 laffer1 Exp $
+ * $Id: vkbd.c,v 1.4 2008-12-02 22:43:16 laffer1 Exp $
  * $FreeBSD: src/sys/dev/vkbd/vkbd.c,v 1.11 2006/09/27 19:57:00 ru Exp $
  */
 
