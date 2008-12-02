@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/nge/if_ngereg.h,v 1.13.2.1 2005/11/05 00:53:41 jhb Exp $
+ * $FreeBSD: src/sys/dev/nge/if_ngereg.h,v 1.16 2006/09/15 15:16:12 glebius Exp $
  */
 
 #define NGE_CSR			0x00
@@ -649,6 +649,7 @@ struct nge_ring_data {
 
 struct nge_softc {
 	struct ifnet		*nge_ifp;
+	device_t		nge_dev;
 	bus_space_handle_t	nge_bhandle;
 	bus_space_tag_t		nge_btag;
 	struct resource		*nge_res;
@@ -731,8 +732,3 @@ struct nge_softc {
 #define NGE_PSTATE_D3		0x0003
 #define NGE_PME_EN		0x0010
 #define NGE_PME_STATUS		0x8000
-
-#ifdef __alpha__
-#undef vtophys
-#define vtophys(va)		alpha_XXX_dmamap((vm_offset_t)va)
-#endif

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nge/if_nge.c,v 1.75.2.6 2006/01/13 19:21:44 glebius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nge/if_nge.c,v 1.91 2007/03/04 03:38:07 csjp Exp $");
 
 /*
  * National Semiconductor DP83820/DP83821 gigabit ethernet driver
@@ -113,7 +113,6 @@ __FBSDID("$FreeBSD: src/sys/dev/nge/if_nge.c,v 1.75.2.6 2006/01/13 19:21:44 gleb
 
 #include <vm/vm.h>              /* for vtophys */
 #include <vm/pmap.h>            /* for vtophys */
-#include <machine/clock.h>      /* for DELAY */
 #include <machine/bus.h>
 #include <machine/resource.h>
 #include <sys/bus.h>
@@ -133,7 +132,7 @@ MODULE_DEPEND(nge, pci, 1, 1, 1);
 MODULE_DEPEND(nge, ether, 1, 1, 1);
 MODULE_DEPEND(nge, miibus, 1, 1, 1);
 
-/* "controller miibus0" required.  See GENERIC if you get errors here. */
+/* "device miibus" required.  See GENERIC if you get errors here. */
 #include "miibus_if.h"
 
 #define NGE_CSUM_FEATURES	(CSUM_IP | CSUM_TCP | CSUM_UDP)
@@ -742,7 +741,7 @@ nge_reset(sc)
 	}
 
 	if (i == NGE_TIMEOUT)
-		if_printf(sc->nge_ifp, "reset never completed\n");
+		device_printf(sc->nge_dev, "reset never completed\n");
 
 	/* Wait a little while for the chip to get its brains in order. */
 	DELAY(1000);
@@ -795,6 +794,7 @@ nge_attach(dev)
 	int			error = 0, rid;
 
 	sc = device_get_softc(dev);
+	sc->nge_dev = dev;
 
 	NGE_LOCK_INIT(sc, device_get_nameunit(dev));
 	callout_init_mtx(&sc->nge_stat_ch, &sc->nge_mtx, 0);
@@ -915,7 +915,7 @@ nge_attach(dev)
 	 * Hookup IRQ last.
 	 */
 	error = bus_setup_intr(dev, sc->nge_irq, INTR_TYPE_NET | INTR_MPSAFE,
-	    nge_intr, sc, &sc->nge_intrhand);
+	    NULL, nge_intr, sc, &sc->nge_intrhand);
 	if (error) {
 		device_printf(dev, "couldn't set up irq\n");
 		goto fail;
@@ -1227,10 +1227,9 @@ nge_rxeof(sc)
 		 * to vlan_input() instead of ether_input().
 		 */
 		if (extsts & NGE_RXEXTSTS_VLANPKT) {
-			VLAN_INPUT_TAG_NEW(ifp, m,
-			    ntohs(extsts & NGE_RXEXTSTS_VTCI));
-			if (m == NULL)
-				continue;
+			m->m_pkthdr.ether_vtag =
+			    ntohs(extsts & NGE_RXEXTSTS_VTCI);
+			m->m_flags |= M_VLANTAG;
 		}
 		NGE_UNLOCK(sc);
 		(*ifp->if_input)(ifp, m);
@@ -1322,7 +1321,7 @@ nge_tick(xsc)
 			if (CSR_READ_4(sc, NGE_TBI_BMSR) 
 			    & NGE_TBIBMSR_ANEG_DONE) {
 				if (bootverbose)
-					if_printf(sc->nge_ifp, 
+					device_printf(sc->nge_dev, 
 					    "gigabit link up\n");
 				nge_miibus_statchg(sc->nge_miibus);
 				sc->nge_link++;
@@ -1340,7 +1339,7 @@ nge_tick(xsc)
 				sc->nge_link++;
 				if (IFM_SUBTYPE(mii->mii_media_active) 
 				    == IFM_1000_T && bootverbose)
-					if_printf(sc->nge_ifp, 
+					device_printf(sc->nge_dev, 
 					    "gigabit link up\n");
 				if (ifp->if_snd.ifq_head != NULL)
 					nge_start_locked(ifp);
@@ -1507,7 +1506,6 @@ nge_encap(sc, m_head, txidx)
 	struct nge_desc		*f = NULL;
 	struct mbuf		*m;
 	int			frag, cur, cnt = 0;
-	struct m_tag		*mtag;
 
 	/*
  	 * Start packing the mbufs in this chain into
@@ -1549,10 +1547,9 @@ nge_encap(sc, m_head, txidx)
 			    NGE_TXEXTSTS_UDPCSUM;
 	}
 
-	mtag = VLAN_OUTPUT_TAG(sc->nge_ifp, m_head);
-	if (mtag != NULL) {
+	if (m_head->m_flags & M_VLANTAG) {
 		sc->nge_ldata->nge_tx_list[cur].nge_extsts |=
-		    (NGE_TXEXTSTS_VLANPKT|htons(VLAN_TAG_VALUE(mtag)));
+		    (NGE_TXEXTSTS_VLANPKT|htons(m_head->m_pkthdr.ether_vtag));
 	}
 
 	sc->nge_ldata->nge_tx_list[cur].nge_mbuf = m_head;
@@ -1616,7 +1613,7 @@ nge_start_locked(ifp)
 		 * If there's a BPF listener, bounce a copy of this frame
 		 * to him.
 		 */
-		BPF_MTAP(ifp, m_head);
+		ETHER_BPF_MTAP(ifp, m_head);
 
 	}
 
@@ -1669,17 +1666,17 @@ nge_init_locked(sc)
 	/* Set MAC address */
 	CSR_WRITE_4(sc, NGE_RXFILT_CTL, NGE_FILTADDR_PAR0);
 	CSR_WRITE_4(sc, NGE_RXFILT_DATA,
-	    ((u_int16_t *)IFP2ENADDR(sc->nge_ifp))[0]);
+	    ((u_int16_t *)IF_LLADDR(sc->nge_ifp))[0]);
 	CSR_WRITE_4(sc, NGE_RXFILT_CTL, NGE_FILTADDR_PAR1);
 	CSR_WRITE_4(sc, NGE_RXFILT_DATA,
-	    ((u_int16_t *)IFP2ENADDR(sc->nge_ifp))[1]);
+	    ((u_int16_t *)IF_LLADDR(sc->nge_ifp))[1]);
 	CSR_WRITE_4(sc, NGE_RXFILT_CTL, NGE_FILTADDR_PAR2);
 	CSR_WRITE_4(sc, NGE_RXFILT_DATA,
-	    ((u_int16_t *)IFP2ENADDR(sc->nge_ifp))[2]);
+	    ((u_int16_t *)IF_LLADDR(sc->nge_ifp))[2]);
 
 	/* Init circular RX list. */
 	if (nge_list_rx_init(sc) == ENOBUFS) {
-		if_printf(sc->nge_ifp, "initialization failed: no "
+		device_printf(sc->nge_dev, "initialization failed: no "
 			"memory for rx buffers\n");
 		nge_stop(sc);
 		return;
@@ -2080,7 +2077,7 @@ nge_watchdog(ifp)
 	sc = ifp->if_softc;
 
 	ifp->if_oerrors++;
-	if_printf(sc->nge_ifp, "watchdog timeout\n");
+	if_printf(ifp, "watchdog timeout\n");
 
 	NGE_LOCK(sc);
 	nge_stop(sc);
