@@ -1,4 +1,3 @@
-# $MidnightBSD$
 # $FreeBSD: src/sys/modules/sound/driver/hda/Makefile,v 1.1 2006/10/01 11:13:00 ariff Exp $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci/hda
