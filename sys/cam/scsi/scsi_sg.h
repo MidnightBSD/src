@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Structures and definitions for SCSI commands to the SG passthrough device.
  *

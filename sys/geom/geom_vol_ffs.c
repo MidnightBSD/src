@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002, 2003 Gordon Tetlow
  * All rights reserved.

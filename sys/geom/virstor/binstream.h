@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 Ivan Voras <ivoras@gmail.com>
  * All rights reserved.
@@ -26,7 +27,7 @@
  * $FreeBSD: src/sys/geom/virstor/binstream.h,v 1.1 2007/09/23 07:34:23 pjd Exp $
  */
 
-// $Id: binstream.h,v 1.1 2008-09-30 15:14:25 laffer1 Exp $
+// $Id: binstream.h,v 1.2 2008-12-03 00:25:52 laffer1 Exp $
 
 
 #ifndef _BIN_STREAM_

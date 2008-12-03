@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  Copyright (c) 2005 Chris Jones
  *  All rights reserved.

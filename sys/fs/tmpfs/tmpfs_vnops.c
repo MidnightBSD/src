@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_vnops.c,v 1.39 2007/07/23 15:41:01 jmmv Exp $	*/
 
 /*

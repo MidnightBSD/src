@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Implementation of SCSI Direct Access Peripheral driver for CAM.
  *

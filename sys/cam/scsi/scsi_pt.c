@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Implementation of SCSI Processor Target Peripheral driver for CAM.
  *

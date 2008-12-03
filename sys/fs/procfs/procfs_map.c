@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993

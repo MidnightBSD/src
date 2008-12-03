@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Common functions for SCSI Interface Modules (SIMs).
  *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_vnops.h,v 1.7 2005/12/03 17:34:44 christos Exp $	*/
 
 /*

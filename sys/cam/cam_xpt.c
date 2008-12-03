@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Implementation of the Common Access Method Transport (XPT) layer.
  *

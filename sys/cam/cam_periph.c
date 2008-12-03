@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Common functions for CAM "type" (peripheral) drivers.
  *

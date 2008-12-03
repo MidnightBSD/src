@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_vfsops.c,v 1.10 2005/12/11 12:24:29 christos Exp $	*/
 
 /*

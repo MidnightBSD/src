@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ntfs_vnops.c,v 1.23 1999/10/31 19:45:27 jdolecek Exp $	*/
 
 /*-

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __XFS_CONFIG_H__
 #define	__XFS_CONFIG_H__
 

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2005 Apple Computer, Inc.
  * All rights reserved.
@@ -28,7 +29,7 @@
  *
  * P4: //depot/projects/trustedbsd/audit3/sys/bsm/audit.h#40
  * $FreeBSD: src/sys/bsm/audit.h,v 1.9.2.1 2007/11/04 12:50:40 rwatson Exp $
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/bsm/audit.h,v 1.3 2008/09/03 02:11:52 laffer1 Exp $
  */
 
 #ifndef _BSM_AUDIT_H

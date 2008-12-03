@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/compat/netbsd/dvcfg.h,v 1.6 2005/01/05 22:34:36 imp Exp $ */
 /*	$NetBSD$	*/
 /*-

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Implementation of Utility functions for all SCSI device types.
  *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * CAM request queue management definitions.
  *

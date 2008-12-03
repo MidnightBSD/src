@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Implementation of the Target Mode 'Black Hole device' for CAM.
  *

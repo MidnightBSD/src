@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: linux_futex.h,v 1.2 2005/12/11 12:20:19 christos Exp $ */
 
 /*-

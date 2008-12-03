@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005
  *      Bill Paul <wpaul@windriver.com>.  All rights reserved.

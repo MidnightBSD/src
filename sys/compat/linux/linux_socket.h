@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Assar Westerlund
  * All rights reserved.

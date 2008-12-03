@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $ */
 
 /*-

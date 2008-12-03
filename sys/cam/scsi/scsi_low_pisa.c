@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NecBSD: scsi_low_pisa.c,v 1.13.18.1 2001/06/08 06:27:48 honda Exp $	*/
 /*	$NetBSD$	*/
 /*-

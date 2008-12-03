@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998 Mark Newton
  * Copyright (c) 1996 Christos Zoulas. 

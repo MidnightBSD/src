@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __XFS_SUPPORT_MUTEX_H__
 #define __XFS_SUPPORT_MUTEX_H__
 

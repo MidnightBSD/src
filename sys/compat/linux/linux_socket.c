@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Søren Schmidt
  * All rights reserved.

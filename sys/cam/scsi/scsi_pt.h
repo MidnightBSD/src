@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Structure and function declarations for Processor type devices.
  *

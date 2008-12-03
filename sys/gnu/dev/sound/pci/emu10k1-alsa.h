@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __SOUND_EMU10K1_H
 #define __SOUND_EMU10K1_H
 

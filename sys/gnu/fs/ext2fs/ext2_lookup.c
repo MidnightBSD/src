@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  modified for Lites 1.1
  *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Tim J. Robbins.
  * All rights reserved.

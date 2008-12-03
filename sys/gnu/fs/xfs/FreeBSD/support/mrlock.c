@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #include <sys/param.h>
 #include <sys/pcpu.h>
 #include <support/debug.h>

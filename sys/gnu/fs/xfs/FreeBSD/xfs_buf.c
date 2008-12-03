@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001,2005 Russell Cattelan
  * All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * System call numbers.
  *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Ioctl definitions for the SCSI Target Driver
  *

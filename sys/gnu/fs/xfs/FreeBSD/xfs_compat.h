@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __XFS_COMPAT_H__
 #define	__XFS_COMPAT_H__
 

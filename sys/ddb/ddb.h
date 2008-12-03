@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993, Garrett A. Wollman.
  * Copyright (c) 1993, University of Vermont and State Agricultural College.

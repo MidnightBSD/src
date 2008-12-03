@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Marcel Moolenaar
  * All rights reserved.

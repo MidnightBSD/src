@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Macros for tracing/loging information in the CAM layer
  *

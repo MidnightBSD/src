@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	Derived from:
  *	$NetBSD: svr4_resource.h,v 1.1 1998/11/28 21:53:02 christos Exp $	*/
 

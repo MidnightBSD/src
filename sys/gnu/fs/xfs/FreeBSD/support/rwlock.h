@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __XFS_SUPPORT_RWLOCK_H__
 #define __XFS_SUPPORT_RWLOCK_H__
 

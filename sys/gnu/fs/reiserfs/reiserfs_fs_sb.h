@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright 2000 Hans Reiser
  * See README for licensing and copyright details

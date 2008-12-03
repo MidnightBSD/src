@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ntfs_ihash.c,v 1.5 1999/09/30 16:56:40 jdolecek Exp $	*/
 
 /*-

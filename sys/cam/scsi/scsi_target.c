@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Generic SCSI Target Kernel Mode Driver
  *

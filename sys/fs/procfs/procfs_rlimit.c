@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Adrian Chadd
  * Copyright (c) 1993

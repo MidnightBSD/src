@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.

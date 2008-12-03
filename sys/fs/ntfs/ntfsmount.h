@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ntfsmount.h,v 1.3 1999/07/26 14:02:32 jdolecek Exp $	*/
 
 /*-

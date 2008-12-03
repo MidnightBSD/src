@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000, 2002 Kenneth D. Merry
  * All rights reserved.

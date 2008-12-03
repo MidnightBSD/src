@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001,2006 Alexander Kabaev, Russell Cattelan Digital Elves Inc.
  * All rights reserved.

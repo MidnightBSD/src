@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2006 Tobias Reifenberger

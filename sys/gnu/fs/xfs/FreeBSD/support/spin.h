@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __XFS_SUPPORT_SPIN_H__
 #define __XFS_SUPPORT_SPIN_H__
 

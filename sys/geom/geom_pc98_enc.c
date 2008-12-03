@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 TAKAHASHI Yoshihiro
  * All rights reserved.

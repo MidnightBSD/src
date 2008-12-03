@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999 Brian Scott Dean, brdean@unx.sas.com.
  *                    All rights reserved.
@@ -39,7 +40,7 @@
  *	From: @(#)procfs_regs.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_dbregs.c,v 1.2 2008-09-20 00:44:24 laffer1 Exp $
+ *	$Id: procfs_dbregs.c,v 1.3 2008-12-03 00:25:43 laffer1 Exp $
  * $FreeBSD: src/sys/fs/procfs/procfs_dbregs.c,v 1.27 2007/04/15 13:24:03 des Exp $
  */
 

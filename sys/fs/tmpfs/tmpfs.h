@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs.h,v 1.26 2007/02/22 06:37:00 thorpej Exp $	*/
 
 /*

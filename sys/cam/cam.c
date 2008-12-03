@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Generic utility routines for the Common Access Method layer.
  *

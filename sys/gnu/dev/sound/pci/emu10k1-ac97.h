@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/gnu/dev/sound/pci/emu10k1-ac97.h,v 1.2 2004/01/09 05:08:32 obrien Exp $ */
 
 #ifndef _AC97_CODEC_H_

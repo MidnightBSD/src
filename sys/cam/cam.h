@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for the CAM system.
  *

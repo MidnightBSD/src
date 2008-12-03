@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Data structures and definitions for CAM Control Blocks (CCBs).
  *

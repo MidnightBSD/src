@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2000-2003 Silicon Graphics, Inc.  All Rights Reserved.
  * Copyright (c) 2006 Russell Cattelan Digital Elves, Inc. All Rights Reserved.

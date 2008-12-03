@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: tmpfs_fifoops.h,v 1.4 2005/12/03 17:34:44 christos Exp $	*/
 
 /*

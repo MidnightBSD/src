@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * This file is in the public domain.
  * $FreeBSD: src/sys/cam/scsi/scsi_iu.h,v 1.3 2005/01/05 22:34:34 imp Exp $

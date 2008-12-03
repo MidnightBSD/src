@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Jake Burkholder
  * Copyright (c) 2003 Poul-Henning Kamp

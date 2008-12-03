@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  Copyright (c) 2004 Lukas Ertl
  *  All rights reserved.

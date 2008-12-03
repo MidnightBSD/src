@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * $FreeBSD: src/sys/compat/svr4/svr4_fuser.h,v 1.5 2005/01/05 22:34:36 imp Exp $
  *	Derived from:

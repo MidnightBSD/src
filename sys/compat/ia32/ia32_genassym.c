@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/compat/ia32/ia32_genassym.c,v 1.5 2006/10/05 01:56:11 davidxu Exp $");
 

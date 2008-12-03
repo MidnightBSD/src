@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Largely written by Julian Elischer (julian@tfs.com)
  * for TRW Financial Systems.

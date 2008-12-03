@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994, 1995 The Regents of the University of California.
  * Copyright (c) 1994, 1995 Jan-Simon Pendry.

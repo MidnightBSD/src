@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Copyright (c) 2001-2002 Silicon Graphics, Inc.  All Rights Reserved.
  *

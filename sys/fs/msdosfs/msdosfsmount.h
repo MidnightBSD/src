@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/fs/msdosfs/msdosfsmount.h,v 1.39 2007/07/12 16:09:07 bde Exp $ */
 /*	$NetBSD: msdosfsmount.h,v 1.17 1997/11/17 15:37:07 ws Exp $	*/
 

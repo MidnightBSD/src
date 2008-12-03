@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __XFS_SUPPORT_ATOMIC_H__
 
 #include <sys/types.h>

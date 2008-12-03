@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  *  Copyright (c) by James Courtier-Dutton <James@superbug.demon.co.uk>
  *  Driver p16v chips

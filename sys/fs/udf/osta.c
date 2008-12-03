@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Various routines from the OSTA 2.01 specs.  Copyrights are included with
  * each code segment.  Slight whitespace modifications have been made for

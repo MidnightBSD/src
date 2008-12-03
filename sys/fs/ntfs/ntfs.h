@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ntfs.h,v 1.9 1999/10/31 19:45:26 jdolecek Exp $	*/
 
 /*-

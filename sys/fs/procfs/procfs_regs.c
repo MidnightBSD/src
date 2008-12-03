@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1993 Jan-Simon Pendry
  * Copyright (c) 1993
@@ -33,7 +34,7 @@
  *	@(#)procfs_regs.c	8.4 (Berkeley) 6/15/94
  *
  * From:
- *	$Id: procfs_regs.c,v 1.2 2008-09-20 00:44:24 laffer1 Exp $
+ *	$Id: procfs_regs.c,v 1.3 2008-12-03 00:25:44 laffer1 Exp $
  * $FreeBSD: src/sys/fs/procfs/procfs_regs.c,v 1.32 2007/04/15 13:24:03 des Exp $
  */
 

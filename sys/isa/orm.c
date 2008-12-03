@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Nikolai Saoukh
  * All rights reserved.
