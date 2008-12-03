@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_ioctl.h -- IOCTL processing for DRM -*- linux-c -*-
  * Created: Fri Jan  8 09:01:26 1999 by faith@valinux.com
  */

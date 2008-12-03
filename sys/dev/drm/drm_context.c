@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_context.h -- IOCTLs for generic contexts -*- linux-c -*-
  * Created: Fri Nov 24 18:31:37 2000 by gareth@valinux.com
  */

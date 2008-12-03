@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* sis_ds.h -- Private header for Direct Rendering Manager -*- linux-c -*-
  * Created: Mon Jan  4 10:05:05 1999 by sclin@sis.com.tw
  */

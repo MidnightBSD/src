@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* ati_pcigart.h -- ATI PCI GART support -*- linux-c -*-
  * Created: Wed Dec 13 21:52:19 2000 by gareth@valinux.com
  */

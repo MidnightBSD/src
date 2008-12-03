@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* savage_state.c -- State and drawing support for Savage
  *
  * Copyright 2004  Felix Kuehling

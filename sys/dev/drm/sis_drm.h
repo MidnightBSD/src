@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* sis_drv.h -- Private header for sis driver -*- linux-c -*- */
 /*-
  * Copyright 2005 Eric Anholt

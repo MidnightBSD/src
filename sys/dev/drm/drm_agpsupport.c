@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_agpsupport.h -- DRM support for AGP/GART backend -*- linux-c -*-
  * Created: Mon Dec 13 09:56:45 1999 by faith@precisioninsight.com
  */

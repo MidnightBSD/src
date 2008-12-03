@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* radeon_drm.h -- Public header for the radeon driver -*- linux-c -*-
  *
  * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.

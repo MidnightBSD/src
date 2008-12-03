@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mach64_drv.h -- Private header for mach64 driver -*- linux-c -*-
  * Created: Fri Nov 24 22:07:58 2000 by gareth@valinux.com
  */

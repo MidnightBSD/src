@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_dma.c -- DMA support for mga g200/g400 -*- linux-c -*-
  * Created: Mon Dec 13 01:50:01 1999 by jhartmann@precisioninsight.com
  */

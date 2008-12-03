@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_warp.c -- Matrox G200/G400 WARP engine management -*- linux-c -*-
  * Created: Thu Jan 11 21:29:32 2001 by gareth@valinux.com
  */

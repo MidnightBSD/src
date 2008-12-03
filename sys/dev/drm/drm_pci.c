@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**
  * \file drm_pci.h
  * \brief PCI consistent, DMA-accessible memory functions.

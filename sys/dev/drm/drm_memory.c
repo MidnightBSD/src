@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_memory.h -- Memory management wrappers for DRM -*- linux-c -*-
  * Created: Thu Feb  4 14:00:34 1999 by faith@valinux.com
  */

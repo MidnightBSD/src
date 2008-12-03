@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mach64_dma.c -- DMA support for mach64 (Rage Pro) driver -*- linux-c -*- */
 /**
  * \file mach64_dma.c

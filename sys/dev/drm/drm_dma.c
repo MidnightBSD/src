@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_dma.c -- DMA IOCTL and function support -*- linux-c -*-
  * Created: Fri Mar 19 14:30:16 1999 by faith@valinux.com
  */

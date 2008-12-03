@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* radeon_cp.c -- CP support for Radeon -*- linux-c -*- */
 /*-
  * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.

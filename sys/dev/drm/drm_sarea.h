@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**
  * \file drm_sarea.h
  * \brief SAREA definitions

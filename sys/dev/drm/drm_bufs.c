@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_bufs.h -- Generic buffer template -*- linux-c -*-
  * Created: Thu Nov 23 03:10:50 2000 by gareth@valinux.com
  */

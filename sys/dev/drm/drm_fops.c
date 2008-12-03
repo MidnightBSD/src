@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_fops.h -- File operations for DRM -*- linux-c -*-
  * Created: Mon Jan  4 08:58:31 1999 by faith@valinux.com
  */

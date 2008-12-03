@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_drv.c -- Matrox G200/G400 driver -*- linux-c -*-
  * Created: Mon Dec 13 01:56:22 1999 by jhartmann@precisioninsight.com
  */

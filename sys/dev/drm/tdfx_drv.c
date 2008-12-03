@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* tdfx_drv.c -- tdfx driver -*- linux-c -*-
  * Created: Thu Oct  7 10:38:32 1999 by faith@precisioninsight.com
  */

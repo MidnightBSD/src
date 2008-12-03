@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * $FreeBSD: src/sys/dev/drm/drm_pciids.h,v 1.7 2006/09/07 23:04:47 anholt Exp $
  */

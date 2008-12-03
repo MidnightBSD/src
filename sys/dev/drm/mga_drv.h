@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_drv.h -- Private header for the Matrox G200/G400 driver -*- linux-c -*-
  * Created: Mon Dec 13 01:50:01 1999 by jhartmann@precisioninsight.com
  *

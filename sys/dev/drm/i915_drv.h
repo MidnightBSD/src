@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* i915_drv.h -- Private header for the I915 driver -*- linux-c -*-
  */
 /*

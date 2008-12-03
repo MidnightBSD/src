@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_auth.h -- IOCTLs for authentication -*- linux-c -*-
  * Created: Tue Feb  2 08:37:54 1999 by faith@valinux.com
  */

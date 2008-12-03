@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* drm_drv.h -- Generic driver template -*- linux-c -*-
  * Created: Thu Nov 23 03:10:50 2000 by gareth@valinux.com
  */

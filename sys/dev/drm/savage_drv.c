@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* savage_drv.c -- Savage DRI driver
  */
 /*-

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$FreeBSD: src/sys/netipsec/esp_var.h,v 1.2 2005/01/07 01:45:46 imp Exp $	*/
 /*	$OpenBSD: ip_esp.h,v 1.37 2002/06/09 16:26:10 itojun Exp $	*/
 /*-

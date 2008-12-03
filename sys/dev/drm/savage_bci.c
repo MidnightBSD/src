@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* savage_bci.c -- BCI support for Savage
  *
  * Copyright 2004  Felix Kuehling

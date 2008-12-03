@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* i915_irq.c -- IRQ support for the I915 -*- linux-c -*-
  */
 /*-

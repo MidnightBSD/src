@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**
  * \file drm.h
  * Header for the Direct Rendering Manager

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /**
  * \file drm_atomic.h
  * Atomic operations used in the DRM which may or may not be provided by the OS.

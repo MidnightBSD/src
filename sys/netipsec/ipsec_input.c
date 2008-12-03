@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$FreeBSD: src/sys/netipsec/ipsec_input.c,v 1.19 2007/09/12 05:54:53 gnn Exp $	*/
 /*	$OpenBSD: ipsec_input.c,v 1.63 2003/02/20 18:35:43 deraadt Exp $	*/
 /*-

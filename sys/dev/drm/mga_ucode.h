@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mga_ucode.h -- Matrox G200/G400 WARP engine microcode -*- linux-c -*-
  * Created: Thu Jan 11 21:20:43 2001 by gareth@valinux.com
  *

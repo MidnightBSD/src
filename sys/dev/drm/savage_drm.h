@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* savage_drm.h -- Public header for the savage driver
  *
  * Copyright 2004  Felix Kuehling

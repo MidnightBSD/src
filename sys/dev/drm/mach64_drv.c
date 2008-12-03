@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* mach64_drv.c -- ATI Rage 128 driver -*- linux-c -*-
  * Created: Mon Dec 13 09:47:27 1999 by faith@precisioninsight.com
  */

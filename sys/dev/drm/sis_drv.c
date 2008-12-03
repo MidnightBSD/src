@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* sis.c -- sis driver -*- linux-c -*-
  */
 /*-

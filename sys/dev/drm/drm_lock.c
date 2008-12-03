@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* lock.c -- IOCTLs for locking -*- linux-c -*-
  * Created: Tue Feb  2 08:37:54 1999 by faith@valinux.com
  */

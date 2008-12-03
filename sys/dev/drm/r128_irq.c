@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* r128_irq.c -- IRQ handling for radeon -*- linux-c -*-
  */
 /*-

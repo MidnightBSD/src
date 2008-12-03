@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* radeon_drv.h -- Private header for radeon driver -*- linux-c -*-
  *
  * Copyright 1999 Precision Insight, Inc., Cedar Park, Texas.

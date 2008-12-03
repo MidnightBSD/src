@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* i915_dma.c -- DMA support for the I915 -*- linux-c -*-
  */
 /*-
