@@ -28575,6 +28575,9 @@ sys/modules/sound/driver/csa/Makefile -text
 sys/modules/sound/driver/driver/Makefile -text
 sys/modules/sound/driver/ds1/Makefile -text
 sys/modules/sound/driver/emu10k1/Makefile -text
+sys/modules/sound/driver/emu10kx/Makefile -text
+sys/modules/sound/driver/envy24/Makefile -text
+sys/modules/sound/driver/envy24ht/Makefile -text
 sys/modules/sound/driver/es137x/Makefile -text
 sys/modules/sound/driver/ess/Makefile -text
 sys/modules/sound/driver/fm801/Makefile -text
@@ -28588,6 +28591,7 @@ sys/modules/sound/driver/sb16/Makefile -text
 sys/modules/sound/driver/sb8/Makefile -text
 sys/modules/sound/driver/sbc/Makefile -text
 sys/modules/sound/driver/solo/Makefile -text
+sys/modules/sound/driver/spicds/Makefile -text
 sys/modules/sound/driver/t4dwave/Makefile -text
 sys/modules/sound/driver/uaudio/Makefile -text
 sys/modules/sound/driver/via8233/Makefile -text
