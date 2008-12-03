@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef __sctp_lock_bsd_h__
 #define __sctp_lock_bsd_h__
 /*-

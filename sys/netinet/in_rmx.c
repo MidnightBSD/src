@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 1994, 1995 Massachusetts Institute of Technology
  *

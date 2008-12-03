@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_gre.c,v 1.49 2003/12/11 00:22:29 itojun Exp $ */
 /*	 $FreeBSD: src/sys/net/if_gre.c,v 1.46 2007/06/26 23:01:01 rwatson Exp $ */
 

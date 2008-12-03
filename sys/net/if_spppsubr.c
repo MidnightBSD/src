@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Synchronous PPP/Cisco/Frame Relay link level subroutines.
  * Keepalive protocol implemented in both Cisco and PPP modes.

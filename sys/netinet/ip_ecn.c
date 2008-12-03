@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: ip_ecn.c,v 1.12 2002/01/07 11:34:47 kjc Exp $	*/
 
 /*-

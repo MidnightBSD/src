@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * NetWare requestor error codes, they taken from NDK
  *

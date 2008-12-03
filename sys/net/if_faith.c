@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$KAME: if_faith.c,v 1.23 2001/12/17 13:55:29 sumikawa Exp $	*/
 
 /*-

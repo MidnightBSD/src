@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Defines for synchronous PPP/Cisco/Frame Relay link level subroutines.
  */

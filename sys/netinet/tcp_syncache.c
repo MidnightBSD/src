@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 McAfee, Inc.
  * Copyright (c) 2006 Andre Oppermann, Internet Business Solutions AG

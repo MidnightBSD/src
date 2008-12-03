@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: types.h,v 1.13 2000/06/13 01:02:44 thorpej Exp $	*/
 /*	$NetBSD: xdr.h,v 1.19 2000/07/17 05:00:45 matt Exp $	*/
 

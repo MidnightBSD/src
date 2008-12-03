@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001,2002,2003 Jonathan Lemon <jlemon@FreeBSD.org>
  * Copyright (c) 1997, Stefan Esser <se@freebsd.org>

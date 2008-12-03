@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*      $NetBSD: if_atm.h,v 1.7 1996/11/09 23:02:27 chuck Exp $       */
 /* $FreeBSD: src/sys/net/if_atm.h,v 1.24 2005/08/09 10:19:58 rwatson Exp $ */
 

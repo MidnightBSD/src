@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* 
  * static configuration for libncp
  *

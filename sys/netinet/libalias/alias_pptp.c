@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * alias_pptp.c
  *

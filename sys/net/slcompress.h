@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Definitions for tcp compression routines.
  */

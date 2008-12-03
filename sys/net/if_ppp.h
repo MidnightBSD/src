@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * if_ppp.h - Point-to-Point Protocol definitions.
  */

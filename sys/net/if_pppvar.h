@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * if_pppvar.h - private structures and declarations for PPP.
  */

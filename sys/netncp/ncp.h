@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  *  ncp.h
  */

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: ieee80211_amrr.c,v 1.1 2006/06/17 19:07:19 damien Exp $	*/
 
 /*-

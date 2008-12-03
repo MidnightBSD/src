@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/net/ppp_deflate.c,v 1.22 2006/02/27 16:56:22 wkoszek Exp $	*/
 
 /*-

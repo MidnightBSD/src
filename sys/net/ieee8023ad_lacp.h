@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ieee8023ad_impl.h,v 1.2 2005/12/10 23:21:39 elad Exp $	*/
 
 /*-

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/sys/net/zlib.h,v 1.10 2005/01/07 01:45:35 imp Exp $	*/
 
 /*

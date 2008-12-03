@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ppp_tty.c - Point-to-Point Protocol (PPP) driver for asynchronous
  * 	       tty devices.

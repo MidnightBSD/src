@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003 Tim J. Robbins.
  * Copyright (c) 1999, 2000, 2001 Boris Popov

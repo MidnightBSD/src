@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1989 Stephen Deering.
  * Copyright (c) 1992, 1993

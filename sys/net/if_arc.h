@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: if_arc.h,v 1.13 1999/11/19 20:41:19 thorpej Exp $	*/
 /* $FreeBSD: src/sys/net/if_arc.h,v 1.9 2006/04/12 07:44:31 rwatson Exp $ */
 

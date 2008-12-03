@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Fundamental constants relating to ethernet.
  *

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*      $NetBSD: if_atmsubr.c,v 1.10 1997/03/11 23:19:51 chuck Exp $       */
 
 /*-

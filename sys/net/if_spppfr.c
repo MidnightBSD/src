@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Synchronous Frame Relay link level subroutines.
  * ANSI T1.617-compaible link management signaling

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2002 Luigi Rizzo, Universita` di Pisa
  *

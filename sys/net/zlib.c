@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * This file is derived from various .h and .c files from the zlib-1.0.4
  * distribution by Jean-loup Gailly and Mark Adler, with some additions

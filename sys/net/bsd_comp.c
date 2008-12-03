@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Because this code is derived from the 4.3BSD compress source:
  *

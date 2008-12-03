@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: ip_id.c,v 1.2 1999/08/26 13:37:01 provos Exp $ */
 
 /*-

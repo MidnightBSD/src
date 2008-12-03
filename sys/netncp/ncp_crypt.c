@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  *  Routines in this file based on work of Volker Lendecke
  */

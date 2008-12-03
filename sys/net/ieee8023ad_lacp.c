@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: ieee8023ad_lacp.c,v 1.3 2005/12/11 12:24:54 christos Exp $	*/
 
 /*-

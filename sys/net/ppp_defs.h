@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ppp_defs.h - PPP definitions.
  */

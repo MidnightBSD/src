@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * ppp_comp.h - Definitions for doing PPP packet compression.
  */
