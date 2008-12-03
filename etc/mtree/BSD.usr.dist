@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.6 2007/10/13 01:55:18 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.7 2008/12/03 23:47:36 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -18,6 +18,10 @@
         compat
             aout
             ..
+        ..
+        dtrace
+        ..
+        engines
         ..
     ..
     libdata
@@ -75,6 +79,12 @@
                 ..
             ..
             legal
+                intel_ipw
+                ..
+                intel_iwi
+                ..
+                intel_wpi
+                ..
             ..
             ncurses
             ..
@@ -204,11 +214,15 @@
             ..
             find_interface
             ..
+            hostapd
+            ..
             ibcs2
             ..
             ipfilter
             ..
             ipfw
+            ..
+            iscsi
             ..
             isdn
                 contrib
@@ -293,6 +307,8 @@
                 ..
             ..
             tcsh
+            ..
+            wpa_supplicant
             ..
         ..
         games
