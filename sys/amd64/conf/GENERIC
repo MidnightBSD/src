@@ -11,7 +11,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first
 # in NOTES.
 #
-# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.8 2008/09/30 02:18:57 laffer1 Exp $
+# $MidnightBSD: src/sys/amd64/conf/GENERIC,v 1.9 2008/09/30 02:47:45 laffer1 Exp $
 # $FreeBSD: src/sys/amd64/conf/GENERIC,v 1.439.2.7 2005/10/28 19:21:27 jhb Exp $
 
 cpu		HAMMER
@@ -27,10 +27,11 @@ options 	SCHED_4BSD		# 4BSD scheduler
 options 	PREEMPTION		# Enable kernel thread preemption
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
+options		SCTP			# Stream Control Transmission Protocol
 options 	FFS			# Berkeley Fast Filesystem
 options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
-options 	UFS_DIRHASH		# Improve performance on big directories
+options 	UFS_DIRHASH		# Improve performance on big directoriesoptions		UFS_GJOURNAL		# Enable gjournal based UFS journaling
 options 	MD_ROOT			# MD is a potential root device
 options 	NFSCLIENT		# Network Filesystem Client
 options 	NFSSERVER		# Network Filesystem Server
@@ -43,6 +44,7 @@ options 	PSEUDOFS		# Pseudo-filesystem framework
 options 	GEOM_PART_GPT		# GUID Partition Tables.
 options 	GEOM_LABEL		# Support for labels with ISO, UFS
 options 	COMPAT_43		# Needed by COMPAT_LINUX32
+options		COMPAT_43TTY		# BSD 4.3 TTY compat
 options 	COMPAT_IA32		# Compatible with i386 binaries
 options 	COMPAT_FREEBSD4		# Compatible with FreeBSD4
 options 	COMPAT_FREEBSD5		# Compatible with FreeBSD5
@@ -56,6 +58,9 @@ options 	SYSVSEM			# SYSV-style semaphores
 options 	_KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
 options 	KBD_INSTALL_CDEV	# install a CDEV entry in /dev
 options 	ADAPTIVE_GIANT		# Giant mutex is adaptive.
+option		STOP_NMI		# Stop CPUS using NMI instead of IPI
+options		AUDIT			# Security event auditing
+
 options		SMP			# Support multicore and multiprocessor
 					# systems.
 
@@ -92,6 +97,7 @@ device		ahd		# AHA39320/29320 and onboard AIC79xx devices
 #options	AHD_REG_PRETTY_PRINT	# Print register bitfields in debug
 					# output.  Adds ~215k to driver.
 device		amd		# AMD 53C974 (Tekram DC-390(T))
+device		hptiop		# Highpoint RocketRaid 3xxx series
 device		isp		# Qlogic family
 #device 	ispfw		# Firmware for QLogic HBAs- normally a module
 device		mpt		# LSI-Logic MPT-Fusion
@@ -120,6 +126,7 @@ device		arcmsr		# Areca SATA II RAID
 device		ciss		# Compaq Smart RAID 5*
 device		dpt		# DPT Smartcache III, IV - See NOTES for options
 device		hptmv		# Highpoint RocketRAID 182x
+device		hptrr		# Highpoint RocketRAID 17xx, 22xx, 23xx, 25xx
 device		iir		# Intel Integrated RAID
 device		ips		# IBM (Adaptec) ServeRAID
 device		mly		# Mylex AcceleRAID/eXtremeRAID
@@ -140,6 +147,8 @@ device		atkbdc		# AT keyboard controller
 device		atkbd		# AT keyboard
 device		psm		# PS/2 mouse
 
+device		kbdmux		# keyboard multiplexer
+
 device		vga		# VGA video card driver
 
 device		splash		# Splash screen and screen saver support
@@ -157,6 +166,7 @@ device		cardbus		# CardBus (32-bit) bus
 
 # Serial (COM) ports
 device		sio		# 8250, 16[45]50 based serial ports
+device		uart		# Generic UART driver
 
 # Parallel port
 device		ppc
@@ -175,6 +185,7 @@ device		ppi		# Parallel port interface device
 device		de		# DEC/Intel DC21x4x (``Tulip'')
 device		em		# Intel PRO/1000 adapter Gigabit Ethernet Card
 device		ixgb		# Intel PRO/10GbE Ethernet Card
+device		le		# AMD Am7900 LANNCand Am79C9xx PCnet
 device		txp		# 3Com 3cR990 (``Typhoon'')
 device		vx		# 3Com 3c590, 3c595 (``Vortex'')
 
@@ -187,8 +198,10 @@ device		bge		# Broadcom BCM570xx Gigabit Ethernet
 device		dc		# DEC/Intel 21143 and various workalikes
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
 device		lge		# Level 1 LXT1001 gigabit Ethernet
+device		msk		# Marvell/SysKonnect Yukon II Gigabit Ethernet
+device		nfe		# nVidia nForce MCP onboard Ethernet
 device		nge		# NatSemi DP83820 gigabit Ethernet
-device		nve		# nVidia nForce MCP on-board Ethernet Networking
+#device		nve		# nVidia nForce MCP on-board Ethernet Networking
 device		pcn		# AMD Am79C97x PCI 10/100(precedence over 'lnc')
 device		re		# RealTek 8139C+/8169/8169S/8110S
 device		rl		# RealTek 8129/8139
@@ -211,8 +224,6 @@ device		ed		# NE[12]000, SMC Ultra, 3c503, DS8390 cards
 device		ex		# Intel EtherExpress Pro/10 and Pro/10+
 device		ep		# Etherlink III based cards
 device		fe		# Fujitsu MB8696x based cards
-# XXX kvtop brokenness, pointer/int warnings
-#device		lnc		# NE2100, NE32-VL Lance Ethernet cards
 device		sn		# SMC's 9000 series of Ethernet chips
 device		xe		# Xircom pccard Ethernet
 
@@ -221,6 +232,9 @@ device		wlan		# 802.11 support
 device		wlan_wep	# 802.11 WEP support
 device		wlan_ccmp	# 802.11 CCMP support
 device		wlan_tkip	# 802.11 TKIP support
+device		wlan_amrr	# AMRR transmit rate control algorithm
+device		wlan_scan_ap	# 802.11 AP mode scanning
+device		wlan_scan_sta	# 802.11 STA mode scanning
 device		an		# Aironet 4500/4800 802.11 wireless NICs.
 device		ath		# Atheros AR5210, AR5211, and AR5212
 device		ath_hal		# Atheros Hardwar Abstraction Layer
@@ -274,3 +288,6 @@ device		rue		# RealTek RTL8150 USB Ethernet
 device		firewire	# FireWire bus code
 device		sbp		# SCSI over FireWire (Requires scbus and da)
 device		fwe		# Ethernet over FireWire (non-standard!)
+device		fwip		# IP over FireWire (RFC 2734, 3146)
+device		dcons		# Dumb console driver
+device		dcons_crom	# Configuration rom for dcons
