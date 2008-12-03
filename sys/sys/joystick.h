@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1995 Jean-Marc Zucconi
  * All rights reserved.

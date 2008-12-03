@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999 Takanori Watanabe
  * All rights reserved.

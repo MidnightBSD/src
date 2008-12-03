@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: cryptosoft.c,v 1.35 2002/04/26 08:43:50 deraadt Exp $	*/
 
 /*-

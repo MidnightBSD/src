@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copryight 1997 Sean Eric Fagan
  *

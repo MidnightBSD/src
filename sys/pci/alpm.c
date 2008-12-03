@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1998, 1999, 2001 Nicolas Souchu
  * All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Header for general data acquisition definitions.
  *

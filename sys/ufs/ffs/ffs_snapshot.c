@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2000 Marshall Kirk McKusick. All Rights Reserved.
  *

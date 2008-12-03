@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright 2004 The Aerospace Corporation.  All rights reserved.
  *

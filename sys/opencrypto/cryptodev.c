@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$OpenBSD: cryptodev.c,v 1.52 2002/06/19 07:22:46 deraadt Exp $	*/
 
 /*-

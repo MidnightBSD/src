@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 nCircle Network Security, Inc.
  * All rights reserved.

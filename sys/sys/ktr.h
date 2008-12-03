@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1996 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: ktr.h,v 1.2 2008-09-16 01:18:24 laffer1 Exp $
+ *	from BSDI $Id: ktr.h,v 1.3 2008-12-03 00:11:22 laffer1 Exp $
  * $FreeBSD: src/sys/sys/ktr.h,v 1.37 2006/01/25 14:57:23 jhb Exp $
  */
 

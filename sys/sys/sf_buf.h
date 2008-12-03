@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003-2004 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.

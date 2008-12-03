@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1999-2001 Robert N. M. Watson
  * All rights reserved.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 1992-2006 The FreeBSD Project. All rights reserved.
  *
@@ -22,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/sys/copyright.h,v 1.4 2007/04/10 06:11:10 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/copyright.h,v 1.5 2008/01/01 07:08:42 laffer1 Exp $
  * $FreeBSD: src/sys/sys/copyright.h,v 1.19.2.1 2006/02/08 09:11:58 ru Exp $
  */
 

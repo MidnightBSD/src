@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*      $OpenBSD: criov.c,v 1.9 2002/01/29 15:48:29 jason Exp $	*/
 
 /*-

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997 Berkeley Software Design, Inc. All rights reserved.
  *
@@ -25,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from BSDI $Id: lock.h,v 1.2 2008-09-16 01:18:24 laffer1 Exp $
+ *	from BSDI $Id: lock.h,v 1.3 2008-12-03 00:11:22 laffer1 Exp $
  * $FreeBSD: src/sys/sys/lock.h,v 1.68 2007/04/03 17:57:50 kmacy Exp $
  */
 

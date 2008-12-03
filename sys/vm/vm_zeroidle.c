@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1994 John Dyson
  * Copyright (c) 2001 Matt Dillon

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1997,1998,2003 Doug Rabson
  * All rights reserved.

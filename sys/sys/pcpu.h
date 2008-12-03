@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Wind River Systems, Inc.
  * All rights reserved.

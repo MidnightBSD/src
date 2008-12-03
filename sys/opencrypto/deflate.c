@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $OpenBSD: deflate.c,v 1.3 2001/08/20 02:45:22 hugh Exp $ */
 
 /*-

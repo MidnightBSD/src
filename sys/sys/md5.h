@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /* MD5.H - header file for MD5C.C
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/sys/md5.h,v 1.4 2008/10/01 16:44:42 laffer1 Exp $
  * $FreeBSD: src/sys/sys/md5.h,v 1.20 2006/03/15 19:47:12 andre Exp $
  */
 

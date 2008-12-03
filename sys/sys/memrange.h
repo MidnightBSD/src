@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * Memory range attribute operations, peformed on /dev/mem
  *

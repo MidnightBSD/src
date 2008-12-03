@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005, Sam Leffler <sam@errno.com>
  * All rights reserved.

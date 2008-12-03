@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2006 Kip Macy kmacy@FreeBSD.org
  * Copyright (c) 2006 Kris Kennaway kris@FreeBSD.org

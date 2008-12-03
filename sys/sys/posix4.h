@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 #ifndef _P1003_1B_P1003_1B_H_
 #define _P1003_1B_P1003_1B_H_
 /*-

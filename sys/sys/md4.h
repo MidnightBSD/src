@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* MD4.H - header file for MD4C.C
  * $FreeBSD: src/sys/sys/md4.h,v 1.2 2005/01/07 02:29:23 imp Exp $
  */

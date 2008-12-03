@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2001 Alcove - Nicolas Souchu
  * All rights reserved.

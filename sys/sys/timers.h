@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (c) 1994 by Chris Provenzano, proven@mit.edu

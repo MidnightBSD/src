@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2001 Julian Elischer <julian@freebsd.org>
  * for the FreeBSD Foundation.

@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  *	Include file for PCMCIA user process interface
  *

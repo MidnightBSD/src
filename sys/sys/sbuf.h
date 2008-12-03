@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2000 Poul-Henning Kamp and Dag-Erling Coïdan Smørgrav
  * All rights reserved.

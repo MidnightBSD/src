@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * 16 Feb 93	Julian Elischer	(julian@dialix.oz.au)
  *
