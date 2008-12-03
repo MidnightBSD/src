@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*-
  * Copyright (C) 2002 Benno Rice <benno@FreeBSD.org>
  * All rights reserved.

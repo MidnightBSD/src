@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: openfirmio.h,v 1.4 2002/09/06 13:23:19 gehenna Exp $ */
 
 /*-

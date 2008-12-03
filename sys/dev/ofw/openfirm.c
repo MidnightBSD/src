@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: Locore.c,v 1.7 2000/08/20 07:04:59 tsubai Exp $	*/
 
 /*-

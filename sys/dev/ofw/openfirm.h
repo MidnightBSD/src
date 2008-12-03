@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*	$NetBSD: openfirm.h,v 1.1 1998/05/15 10:16:00 tsubai Exp $	*/
 
 /*-
