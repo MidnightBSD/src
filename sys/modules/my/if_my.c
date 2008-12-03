@@ -83,7 +83,7 @@ static int      MY_USEIOSPACE = 1;
 
 #ifndef lint
 static          const char rcsid[] =
-"$Id: if_my.c,v 1.1.1.3 2008-12-03 01:59:22 laffer1 Exp $";
+"$Id: if_my.c,v 1.1.1.1 2008-12-03 01:59:06 laffer1 Exp $";
 #endif
 
 /*
