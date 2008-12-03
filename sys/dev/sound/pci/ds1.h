@@ -1,13 +1,12 @@
 /*
-* =======================================================================
-*	title		: define
-*	company		: YAMAHA
-*	author		: Taichi Sugiyama
-*	create Data     : 28/Sep/99
-* =======================================================================
-* $MidnightBSD$
-* $FreeBSD: src/sys/dev/sound/pci/ds1.h,v 1.1 2000/05/31 03:21:36 cg Exp $
-*/
+ * =======================================================================
+ *	title		: define
+ *	company		: YAMAHA
+ *	author		: Taichi Sugiyama
+ *	create Data     : 28/Sep/99
+ * =======================================================================
+ * $FreeBSD: src/sys/dev/sound/pci/ds1.h,v 1.1 2000/05/31 03:21:36 cg Exp $
+ */
 
 
 /* ----- YAMAHA DS-XG Devices -------------------------------------------- */

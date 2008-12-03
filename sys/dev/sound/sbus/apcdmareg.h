@@ -1,36 +1,35 @@
-/*	$MidnightBSD$	*/
 /*	$FreeBSD: src/sys/dev/sound/sbus/apcdmareg.h,v 1.2 2005/01/06 01:43:22 imp Exp $	*/
 /*	$OpenBSD: apcdmareg.h,v 1.2 2003/06/02 18:53:18 jason Exp $	*/
 
 /*-
-* Copyright (c) 2001 Jason L. Wright (jason@thought.net)
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-* THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
-* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-* ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-* POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2001 Jason L. Wright (jason@thought.net)
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
 
 /*
-* Definitions for Sun APC DMA controller.
-*/
+ * Definitions for Sun APC DMA controller.
+ */
 
 /* APC DMA registers */
 #define	APC_CSR		0x0010		/* control/status */
@@ -44,8 +43,8 @@
 #define	APC_PNC		0x003c		/* playback next count */
 
 /*
-* APC DMA Register definitions
-*/
+ * APC DMA Register definitions
+ */
 #define	APC_CSR_RESET		0x00000001	/* reset */
 #define	APC_CSR_CDMA_GO		0x00000004	/* capture dma go */
 #define	APC_CSR_PDMA_GO		0x00000008	/* playback dma go */
@@ -69,12 +68,47 @@
 #define	APC_CSR_PI		0x00400000	/* playback interrupt */
 #define	APC_CSR_GI		0x00800000	/* general interrupt */
 
-#define	APC_CSR_PLAY			( 		APC_CSR_EI		| 	 	APC_CSR_GIE		| 		APC_CSR_PIE		| 		APC_CSR_EIE		| 		APC_CSR_PDMA_GO		| 		APC_CSR_PMIE		)
+#define	APC_CSR_PLAY			( \
+		APC_CSR_EI		| \
+	 	APC_CSR_GIE		| \
+		APC_CSR_PIE		| \
+		APC_CSR_EIE		| \
+		APC_CSR_PDMA_GO		| \
+		APC_CSR_PMIE		)
 
-#define	APC_CSR_CAPTURE			( 		APC_CSR_EI		| 	 	APC_CSR_GIE		| 		APC_CSR_CIE		| 		APC_CSR_EIE		| 		APC_CSR_CDMA_GO	)
+#define	APC_CSR_CAPTURE			( \
+		APC_CSR_EI		| \
+	 	APC_CSR_GIE		| \
+		APC_CSR_CIE		| \
+		APC_CSR_EIE		| \
+		APC_CSR_CDMA_GO	)
 
-#define	APC_CSR_PLAY_PAUSE		(~( 		APC_CSR_PPAUSE		| 		APC_CSR_GI		| 		APC_CSR_PI		| 		APC_CSR_CI		| 		APC_CSR_EI		| 		APC_CSR_PMI		| 		APC_CSR_PMIE		| 		APC_CSR_CMI		| 		APC_CSR_CMIE		) )
+#define	APC_CSR_PLAY_PAUSE		(~( \
+		APC_CSR_PPAUSE		| \
+		APC_CSR_GI		| \
+		APC_CSR_PI		| \
+		APC_CSR_CI		| \
+		APC_CSR_EI		| \
+		APC_CSR_PMI		| \
+		APC_CSR_PMIE		| \
+		APC_CSR_CMI		| \
+		APC_CSR_CMIE		) )
 
-#define	APC_CSR_CAPTURE_PAUSE		(~( 		APC_CSR_PPAUSE		| 		APC_CSR_GI		| 		APC_CSR_PI		| 		APC_CSR_CI		| 		APC_CSR_EI		| 		APC_CSR_PMI		| 		APC_CSR_PMIE		| 		APC_CSR_CMI		| 		APC_CSR_CMIE		) )
+#define	APC_CSR_CAPTURE_PAUSE		(~( \
+		APC_CSR_PPAUSE		| \
+		APC_CSR_GI		| \
+		APC_CSR_PI		| \
+		APC_CSR_CI		| \
+		APC_CSR_EI		| \
+		APC_CSR_PMI		| \
+		APC_CSR_PMIE		| \
+		APC_CSR_CMI		| \
+		APC_CSR_CMIE		) )
 
-#define	APC_CSR_INTR_MASK		( 		APC_CSR_GI		| 		APC_CSR_PI		| 		APC_CSR_CI		| 		APC_CSR_EI		| 		APC_CSR_PMI		| 		APC_CSR_CMI		)
+#define	APC_CSR_INTR_MASK		( \
+		APC_CSR_GI		| \
+		APC_CSR_PI		| \
+		APC_CSR_CI		| \
+		APC_CSR_EI		| \
+		APC_CSR_PMI		| \
+		APC_CSR_CMI		)

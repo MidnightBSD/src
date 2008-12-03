@@ -1,44 +1,43 @@
 /*-
-* Copyright (c) 2002 Orion Hodson <orion@freebsd.org>
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHERIN CONTRACT, STRICT
-* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
-* SUCH DAMAGE.
-*
-* $MidnightBSD$
-* $FreeBSD: src/sys/dev/sound/pci/via8233.h,v 1.4 2005/01/06 01:43:19 imp Exp $
-*/
+ * Copyright (c) 2002 Orion Hodson <orion@freebsd.org>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHERIN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THEPOSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * $FreeBSD: src/sys/dev/sound/pci/via8233.h,v 1.4 2005/01/06 01:43:19 imp Exp $
+ */
 
 #ifndef _SYS_SOUND_PCI_VIA8233_H_
 #define _SYS_SOUND_PCI_VIA8233_H_
 
 /*
-* VIA Technologies VT8233 Southbridge Audio Driver
-*
-* Documentation sources:
-*
-* o V8233C specs. from VIA, gratefully received under NDA.
-* o AC97 R2.2 specs.
-* o ALSA driver (very useful comments)
-*/
+ * VIA Technologies VT8233 Southbridge Audio Driver
+ *
+ * Documentation sources:
+ *
+ * o V8233C specs. from VIA, gratefully received under NDA.
+ * o AC97 R2.2 specs.
+ * o ALSA driver (very useful comments)
+ */
 
 #define	VIA_PCI_SPDIF		0x49
 #define		VIA_SPDIF_EN		0x08
@@ -73,7 +72,10 @@
 #	define VIA_PCI_ACLINK_SERIAL	0x10
 #	define VIA_PCI_ACLINK_VRATE	0x08
 #	define VIA_PCI_ACLINK_SGD	0x04
-#	define VIA_PCI_ACLINK_DESIRED 	(VIA_PCI_ACLINK_EN | 		      					 VIA_PCI_ACLINK_NRST |		      					 VIA_PCI_ACLINK_VRATE | 	      					 VIA_PCI_ACLINK_SGD)
+#	define VIA_PCI_ACLINK_DESIRED 	(VIA_PCI_ACLINK_EN | 		      \
+					 VIA_PCI_ACLINK_NRST |		      \
+					 VIA_PCI_ACLINK_VRATE | 	      \
+					 VIA_PCI_ACLINK_SGD)
 
 #define VIA_MC_SGD_STATUS	0x40
 #define VIA_WR0_SGD_STATUS	0x60

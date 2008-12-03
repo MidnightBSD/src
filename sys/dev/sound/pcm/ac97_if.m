@@ -25,7 +25,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
 # $FreeBSD: src/sys/dev/sound/pcm/ac97_if.m,v 1.4 2005/01/06 01:43:20 imp Exp $
 #
 
@@ -35,7 +34,8 @@ INTERFACE ac97;
 
 CODE {
 
-	static u_int32_t ac97_noinit(kobj_t obj, void *devinfo)
+	static u_int32_t
+	ac97_noinit(kobj_t obj, void *devinfo)
 	{
 		return 1;
 	}
@@ -43,19 +43,19 @@ CODE {
 };
 
 METHOD u_int32_t init {
-kobj_t obj;
-void *devinfo;
+	kobj_t obj;
+	void *devinfo;
 } DEFAULT ac97_noinit;
 
 METHOD int read {
-kobj_t obj;
-void *devinfo;
-int regno;
+	kobj_t obj;
+	void *devinfo;
+	int regno;
 };
 
 METHOD int write {
-kobj_t obj;
-void *devinfo;
-int regno;
-u_int32_t data;
+	kobj_t obj;
+	void *devinfo;
+	int regno;
+	u_int32_t data;
 };

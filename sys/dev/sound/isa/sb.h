@@ -1,8 +1,30 @@
-/*
-* file: sbcard.h
-* $MidnightBSD$
-* $FreeBSD: src/sys/dev/sound/isa/sb.h,v 1.15 2004/05/13 11:32:54 truckman Exp $
-*/
+/*-
+ * Copyright (c) 1997,1998 Luigi Rizzo
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * $FreeBSD: src/sys/dev/sound/isa/sb.h,v 1.16 2007/02/02 13:33:35 joel Exp $
+ */
 
 #ifndef SB_H
 #define SB_H
@@ -13,8 +35,8 @@ void sbc_lockassert(struct sbc_softc *);
 void sbc_unlock(struct sbc_softc *);
 
 /*
-* sound blaster registers
-*/
+ * sound blaster registers
+ */
 
 #define SBDSP_RST	0x6
 #define DSP_READ	0xA
@@ -33,8 +55,8 @@ void sbc_unlock(struct sbc_softc *);
 #endif
 
 /*
-* DSP Commands. There are many, and in many cases they are used explicitly
-*/
+ * DSP Commands. There are many, and in many cases they are used explicitly
+ */
 
 /* these are not used except for programmed I/O (not in this driver) */
 #define	DSP_DAC8		0x10	/* direct DAC output */
@@ -54,7 +76,7 @@ void sbc_unlock(struct sbc_softc *);
 
 /* SBPro commands. Some cards (JAZZ, SMW) also support 16 bits */
 
-/* prepare for dma input */
+	/* prepare for dma input */
 #define	DSP_CMD_DMAMODE(stereo, bit16) (0xA0 | (stereo ? 8:0) | (bit16 ? 4:0))
 
 #define	DSP_CMD_DAC2		0x16	/* 2-bit adpcm dma out (cont) */
@@ -98,12 +120,12 @@ void sbc_unlock(struct sbc_softc *);
 #endif
 
 /*
-* in fact, for the SB16, dma commands are as follows:
-*
-*  cmd, mode, len_low, len_high.
-*
-* cmd is a combination of DSP_DMA16 or DSP_DMA8 and
-*/
+ * in fact, for the SB16, dma commands are as follows:
+ *
+ *  cmd, mode, len_low, len_high.
+ *
+ * cmd is a combination of DSP_DMA16 or DSP_DMA8 and
+ */
 
 #define	DSP_DMA16		0xb0
 #define	DSP_DMA8		0xc0
@@ -113,8 +135,8 @@ void sbc_unlock(struct sbc_softc *);
 #   define DSP_F16_FIFO_ON	0x02
 
 /*
-* mode is a combination of the following:
-*/
+ * mode is a combination of the following:
+ */
 #define DSP_F16_STEREO	0x20
 #define DSP_F16_SIGNED	0x10
 
@@ -128,8 +150,8 @@ void sbc_unlock(struct sbc_softc *);
 #define UART_MIDI	1
 
 /*
-* values used for bd_flags in SoundBlaster driver
-*/
+ * values used for bd_flags in SoundBlaster driver
+ */
 #define	BD_F_HISPEED	0x0001	/* doing high speed ... */
 
 #if 0
@@ -154,8 +176,8 @@ void sbc_unlock(struct sbc_softc *);
 #define BD_F_DMARUN2	0x4000
 
 /*
-* Mixer registers of SB Pro
-*/
+ * Mixer registers of SB Pro
+ */
 #define VOC_VOL		0x04
 #define MIC_VOL		0x0A
 #define MIC_MIX		0x0A
@@ -171,8 +193,8 @@ void sbc_unlock(struct sbc_softc *);
 #define IRQ_STAT	0x82
 
 /*
-* Additional registers on the SG NX Pro
-*/
+ * Additional registers on the SG NX Pro
+ */
 #define COVOX_VOL	0x42
 #define TREBLE_LVL	0x44
 #define BASS_LVL	0x46
@@ -186,8 +208,8 @@ void sbc_unlock(struct sbc_softc *);
 #define STEREO_DAC	0x02
 
 /*
-* Mixer registers of SB16
-*/
+ * Mixer registers of SB16
+ */
 #define SB16_IMASK_L	0x3d
 #define SB16_IMASK_R	0x3e
 #define SB16_OMASK	0x3c

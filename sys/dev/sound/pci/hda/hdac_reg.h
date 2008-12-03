@@ -1,38 +1,37 @@
 /*-
-* Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-* SUCH DAMAGE.
-*
-* $MidnightBSD$
-* $FreeBSD: src/sys/dev/sound/pci/hda/hdac_reg.h,v 1.1 2006/10/01 11:12:59 ariff Exp $
-*/
+ * Copyright (c) 2006 Stephane E. Potvin <sepotvin@videotron.ca>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * $FreeBSD: src/sys/dev/sound/pci/hda/hdac_reg.h,v 1.1 2006/10/01 11:12:59 ariff Exp $
+ */
 
 #ifndef _HDAC_REG_H_
 #define _HDAC_REG_H_
 
 /****************************************************************************
-* HDA Controller Register Set
-****************************************************************************/
+ * HDA Controller Register Set
+ ****************************************************************************/
 #define HDAC_GCAP	0x00	/* 2 - Global Capabilities*/
 #define HDAC_VMIN	0x02	/* 1 - Minor Version */
 #define HDAC_VMAJ	0x03	/* 1 - Major Version */
@@ -113,8 +112,8 @@
 #define _HDAC_BSDBDBU(n, iss, oss)	(0x1c + _HDAC_BSDOFFSET(n, iss, oss))
 
 /****************************************************************************
-* HDA Controller Register Fields
-****************************************************************************/
+ * HDA Controller Register Fields
+ ****************************************************************************/
 
 /* GCAP - Global Capabilities */
 #define HDAC_GCAP_64OK			0x0001
@@ -131,9 +130,12 @@
 #define HDAC_GCAP_NSDO_2SDO		0x02
 #define HDAC_GCAP_NSDO_4SDO		0x04
 
-#define HDAC_GCAP_BSS(gcap)							(((gcap) & HDAC_GCAP_BSS_MASK) >> HDAC_GCAP_BSS_SHIFT)
-#define HDAC_GCAP_ISS(gcap)							(((gcap) & HDAC_GCAP_ISS_MASK) >> HDAC_GCAP_ISS_SHIFT)
-#define HDAC_GCAP_OSS(gcap)							(((gcap) & HDAC_GCAP_OSS_MASK) >> HDAC_GCAP_OSS_SHIFT)
+#define HDAC_GCAP_BSS(gcap)						\
+	(((gcap) & HDAC_GCAP_BSS_MASK) >> HDAC_GCAP_BSS_SHIFT)
+#define HDAC_GCAP_ISS(gcap)						\
+	(((gcap) & HDAC_GCAP_ISS_MASK) >> HDAC_GCAP_ISS_SHIFT)
+#define HDAC_GCAP_OSS(gcap)						\
+	(((gcap) & HDAC_GCAP_OSS_MASK) >> HDAC_GCAP_OSS_SHIFT)
 
 /* GCTL - Global Control */
 #define HDAC_GCTL_CRST			0x00000001
@@ -148,7 +150,9 @@
 #define HDAC_STATESTS_SDIWAKE_MASK	0x7fff
 #define HDAC_STATESTS_SDIWAKE_SHIFT	0
 
-#define HDAC_STATESTS_SDIWAKE(statests, n)				    (((((statests) & HDAC_STATESTS_SDIWAKE_MASK) >>			    HDAC_STATESTS_SDIWAKE_SHIFT) >> (n)) & 0x0001)
+#define HDAC_STATESTS_SDIWAKE(statests, n)				\
+    (((((statests) & HDAC_STATESTS_SDIWAKE_MASK) >>			\
+    HDAC_STATESTS_SDIWAKE_SHIFT) >> (n)) & 0x0001)
 
 /* GSTS - Global Status */
 #define HDAC_GSTS_FSTS			0x0002
@@ -199,7 +203,8 @@
 #define HDAC_CORBSIZE_CORBSZCAP_16	0x20
 #define HDAC_CORBSIZE_CORBSZCAP_256	0x40
 
-#define HDAC_CORBSIZE_CORBSIZE(corbsize)				    (((corbsize) & HDAC_CORBSIZE_CORBSIZE_MASK) >> HDAC_CORBSIZE_CORBSIZE_SHIFT)
+#define HDAC_CORBSIZE_CORBSIZE(corbsize)				\
+    (((corbsize) & HDAC_CORBSIZE_CORBSIZE_MASK) >> HDAC_CORBSIZE_CORBSIZE_SHIFT)
 
 /* RIRBWP - RIRB Write Pointer */
 #define HDAC_RIRBWP_RIRBWP_MASK		0x00ff
@@ -233,7 +238,8 @@
 #define HDAC_RIRBSIZE_RIRBSZCAP_16	0x20
 #define HDAC_RIRBSIZE_RIRBSZCAP_256	0x40
 
-#define HDAC_RIRBSIZE_RIRBSIZE(rirbsize)				    (((rirbsize) & HDAC_RIRBSIZE_RIRBSIZE_MASK) >> HDAC_RIRBSIZE_RIRBSIZE_SHIFT)
+#define HDAC_RIRBSIZE_RIRBSIZE(rirbsize)				\
+    (((rirbsize) & HDAC_RIRBSIZE_RIRBSIZE_MASK) >> HDAC_RIRBSIZE_RIRBSIZE_SHIFT)
 
 /* DPLBASE - DMA Position Lower Base Address */
 #define HDAC_DPLBASE_DPLBASE_MASK	0xffffff80

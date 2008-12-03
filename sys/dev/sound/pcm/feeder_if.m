@@ -25,7 +25,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
 # $FreeBSD: src/sys/dev/sound/pcm/feeder_if.m,v 1.6 2005/01/06 01:43:21 imp Exp $
 #
 
@@ -35,22 +34,26 @@ INTERFACE feeder;
 
 CODE {
 
-	static int feeder_noinit(struct pcm_feeder* feeder)
+	static int
+	feeder_noinit(struct pcm_feeder* feeder)
 	{
 		return 0;
 	}
 
-	static int feeder_nofree(struct pcm_feeder* feeder)
+	static int
+	feeder_nofree(struct pcm_feeder* feeder)
 	{
 		return 0;
 	}
 
-	static int feeder_noset(struct pcm_feeder* feeder, int what, int value)
+	static int
+	feeder_noset(struct pcm_feeder* feeder, int what, int value)
 	{
 		return -1;
 	}
 
-	static int feeder_noget(struct pcm_feeder* feeder, int what)
+	static int
+	feeder_noget(struct pcm_feeder* feeder, int what)
 	{
 		return -1;
 	}
@@ -58,28 +61,28 @@ CODE {
 };
 
 METHOD int init {
-struct pcm_feeder* feeder;
+	struct pcm_feeder* feeder;
 } DEFAULT feeder_noinit;
 
 METHOD int free {
-struct pcm_feeder* feeder;
+	struct pcm_feeder* feeder;
 } DEFAULT feeder_nofree;
 
 METHOD int set {
-struct pcm_feeder* feeder;
-int what;
-int value;
+	struct pcm_feeder* feeder;
+	int what;
+	int value;
 } DEFAULT feeder_noset;
 
 METHOD int get {
-struct pcm_feeder* feeder;
-int what;
+	struct pcm_feeder* feeder;
+	int what;
 } DEFAULT feeder_noget;
 
 METHOD int feed {
-struct pcm_feeder* feeder;
-struct pcm_channel* c;
-u_int8_t* buffer;
-u_int32_t count;
-void* source;
+	struct pcm_feeder* feeder;
+	struct pcm_channel* c;
+	u_int8_t* buffer;
+	u_int32_t count;
+	void* source;
 };

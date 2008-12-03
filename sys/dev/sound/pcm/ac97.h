@@ -1,31 +1,30 @@
 /*-
-* Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-* SUCH DAMAGE.
-*
-* $MidnightBSD$
-* $FreeBSD: src/sys/dev/sound/pcm/ac97.h,v 1.16.2.1 2005/12/30 19:55:54 netchild Exp $
-*/
+ * Copyright (c) 1999 Cameron Grant <cg@freebsd.org>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * $FreeBSD: src/sys/dev/sound/pcm/ac97.h,v 1.20 2007/04/19 13:54:22 ariff Exp $
+ */
 
 #define AC97_MUTE	0x8080
 
@@ -61,7 +60,8 @@
 #define		AC97_POWER_DAC		(1 << 1)
 #define		AC97_POWER_ANL		(1 << 2)
 #define		AC97_POWER_REF		(1 << 3)
-#define		AC97_POWER_STATUS	(AC97_POWER_ADC | AC97_POWER_DAC | 					 AC97_POWER_REF | AC97_POWER_ANL )
+#define		AC97_POWER_STATUS	(AC97_POWER_ADC | AC97_POWER_DAC | \
+					 AC97_POWER_REF | AC97_POWER_ANL )
 #define AC97_REGEXT_ID		0x28
 #define 	AC97_EXTCAP_VRA		(1 << 0)
 #define 	AC97_EXTCAP_DRA		(1 << 1)
@@ -82,7 +82,6 @@
 
 #define	AC97_F_EAPD_INV		0x00000001
 #define	AC97_F_RDCD_BUG		0x00000002
-#define	AC97_F_SOFTVOL		0x00000004
 
 #define AC97_DECLARE(name) static DEFINE_CLASS(name, name ## _methods, sizeof(struct kobj))
 #define AC97_CREATE(dev, devinfo, cls) ac97_create(dev, devinfo, &cls ## _class)
@@ -102,7 +101,7 @@ int ac97_setextmode(struct ac97_info *codec, u_int16_t mode);
 u_int16_t ac97_getextmode(struct ac97_info *codec);
 u_int16_t ac97_getextcaps(struct ac97_info *codec);
 u_int16_t ac97_getcaps(struct ac97_info *codec);
+u_int32_t ac97_getsubvendor(struct ac97_info *codec);
 
 u_int16_t ac97_rdcd(struct ac97_info *codec, int reg);
 void	  ac97_wrcd(struct ac97_info *codec, int reg, u_int16_t val);
-

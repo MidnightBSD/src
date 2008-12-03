@@ -25,8 +25,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$
-# $FreeBSD: src/sys/dev/sound/pcm/channel_if.m,v 1.5 2005/01/06 01:43:20 imp Exp $
+# $FreeBSD: src/sys/dev/sound/pcm/channel_if.m,v 1.7 2007/03/16 17:16:24 ariff Exp $
 #
 
 #include <dev/sound/pcm/sound.h>
@@ -35,32 +34,57 @@ INTERFACE channel;
 
 CODE {
 
-	static int channel_nosetdir(kobj_t obj, void *data, int dir)
+	static int
+	channel_nosetdir(kobj_t obj, void *data, int dir)
 	{
 		return 0;
 	}
 
-	static int channel_noreset(kobj_t obj, void *data)
+	static int
+	channel_noreset(kobj_t obj, void *data)
 	{
 		return 0;
 	}
 
-	static int channel_noresetdone(kobj_t obj, void *data)
+	static int
+	channel_noresetdone(kobj_t obj, void *data)
 	{
 		return 0;
 	}
 
-	static int channel_nofree(kobj_t obj, void *data)
+	static int
+	channel_nofree(kobj_t obj, void *data)
 	{
 		return 1;
 	}
 
-	static u_int32_t channel_nogetptr(kobj_t obj, void *data)
+	static u_int32_t
+	channel_nogetptr(kobj_t obj, void *data)
 	{
 		return 0;
 	}
 
-	static int channel_nonotify(kobj_t obj, void *data, u_int32_t changed)
+	static int
+	channel_nonotify(kobj_t obj, void *data, u_int32_t changed)
+	{
+		return 0;
+	}
+
+	static int
+	channel_nogetpeaks(kobj_t obj, void *data, int *lpeak, int *rpeak)
+	{
+		return -1;
+	}
+
+	static int
+	channel_nogetrates(kobj_t obj, void *data, int **rates)
+	{
+		*rates = NULL;
+		return 0;
+	}
+
+	static int
+	channel_nosetfragments(kobj_t obj, void *data, u_int32_t blocksize, u_int32_t blockcount)
 	{
 		return 0;
 	}
@@ -68,70 +92,128 @@ CODE {
 };
 
 METHOD void* init {
-kobj_t obj;
-void *devinfo;
-struct snd_dbuf *b;
-struct pcm_channel *c;
-int dir;
+	kobj_t obj;
+	void *devinfo;
+	struct snd_dbuf *b;
+	struct pcm_channel *c;
+	int dir;
 };
 
 METHOD int free {
-kobj_t obj;
-void *data;
+	kobj_t obj;
+	void *data;
 } DEFAULT channel_nofree;
 
 METHOD int reset {
-kobj_t obj;
-void *data;
+	kobj_t obj;
+	void *data;
 } DEFAULT channel_noreset;
 
 METHOD int resetdone {
-kobj_t obj;
-void *data;
+	kobj_t obj;
+	void *data;
 } DEFAULT channel_noresetdone;
 
 METHOD int setdir {
-kobj_t obj;
-void *data;
-int dir;
+	kobj_t obj;
+	void *data;
+	int dir;
 } DEFAULT channel_nosetdir;
 
 METHOD u_int32_t setformat {
-kobj_t obj;
-void *data;
-u_int32_t format;
+	kobj_t obj;
+	void *data;
+	u_int32_t format;
 };
 
 METHOD u_int32_t setspeed {
-kobj_t obj;
-void *data;
-u_int32_t speed;
+	kobj_t obj;
+	void *data;
+	u_int32_t speed;
 };
 
 METHOD u_int32_t setblocksize {
-kobj_t obj;
-void *data;
-u_int32_t blocksize;
+	kobj_t obj;
+	void *data;
+	u_int32_t blocksize;
 };
 
+METHOD int setfragments {
+	kobj_t obj;
+	void *data;
+	u_int32_t blocksize;
+	u_int32_t blockcount;
+} DEFAULT channel_nosetfragments;
+
 METHOD int trigger {
-kobj_t obj;
-void *data;
-int go;
+	kobj_t obj;
+	void *data;
+	int go;
 };
 
 METHOD u_int32_t getptr {
-kobj_t obj;
-void *data;
+	kobj_t obj;
+	void *data;
 } DEFAULT channel_nogetptr;
 
 METHOD struct pcmchan_caps* getcaps {
-kobj_t obj;
-void *data;
+	kobj_t obj;
+	void *data;
 };
 
 METHOD int notify {
-kobj_t obj;
-void *data;
-u_int32_t changed;
+	kobj_t obj;
+	void *data;
+	u_int32_t changed;
 } DEFAULT channel_nonotify;
+
+/**
+ * @brief Retrieve channel peak values
+ *
+ * This function is intended to obtain peak volume values for samples
+ * played/recorded on a channel.  Values are on a linear scale from 0 to
+ * 32767.  If the channel is monaural, a single value should be recorded
+ * in @c lpeak.
+ *
+ * If hardware support isn't available, the SNDCTL_DSP_GET[IO]PEAKS
+ * operation should return EINVAL.  However, we may opt to provide
+ * software support that the user may toggle via sysctl/mixext.
+ *
+ * @param obj	standard kobj object (usually @c channel->methods)
+ * @param data	driver-specific data (usually @c channel->devinfo)
+ * @param lpeak	pointer to store left peak level
+ * @param rpeak	pointer to store right peak level
+ *
+ * @retval -1	Error; usually operation isn't supported.
+ * @retval 0	success
+ */
+METHOD int getpeaks {
+	kobj_t obj;
+	void *data;
+	int *lpeak;
+	int *rpeak;
+} DEFAULT channel_nogetpeaks;
+
+/**
+ * @brief Retrieve discrete supported sample rates
+ *
+ * Some cards operate at fixed rates, and this call is intended to retrieve
+ * those rates primarily for when in-kernel rate adjustment is undesirable
+ * (e.g., application wants direct DMA access after setting a channel to run
+ * "uncooked").
+ *
+ * The parameter @c rates is a double pointer which will be reset to
+ * point to an array of supported sample rates.  The number of elements
+ * in the array is returned to the caller.
+ *
+ * @param obj	standard kobj object (usually @c channel->methods)
+ * @param data	driver-specific data (usually @c channel->devinfo)
+ * @param rates	rate array pointer
+ *
+ * @return Number of rates in the array
+ */
+METHOD int getrates {
+	kobj_t obj;
+	void *data;
+	int **rates;
+} DEFAULT channel_nogetrates;

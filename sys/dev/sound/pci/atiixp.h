@@ -1,66 +1,65 @@
 /*-
-* Copyright (c) 2005 Ariff Abdullah <ariff@FreeBSD.org>
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-* THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
-* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-* OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-* SUCH DAMAGE.
-*
-* $MidnightBSD$
-* $FreeBSD: src/sys/dev/sound/pci/atiixp.h,v 1.1.2.2 2006/03/02 00:09:30 ariff Exp $
-*/
+ * Copyright (c) 2005 Ariff Abdullah <ariff@FreeBSD.org>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * $FreeBSD: src/sys/dev/sound/pci/atiixp.h,v 1.3.2.1 2007/11/06 02:07:56 ariff Exp $
+ */
 
 #ifndef _ATIIXP_H_
 #define _ATIIXP_H_
 
 /*
-* Constants, pretty much FreeBSD specific.
-*/
-
+ * Constants, pretty much FreeBSD specific.
+ */
+ 
 /* Number of playback / recording channel */
 #define ATI_IXP_NPCHAN		1
 #define ATI_IXP_NRCHAN		1
 #define ATI_IXP_NCHANS		(ATI_IXP_NPCHAN + ATI_IXP_NRCHAN)
 
 /*
-* Maximum segments/descriptors is 256, but 2 for
-* each channel should be more than enough for us.
-*/
+ * Maximum segments/descriptors is 256, but 2 for
+ * each channel should be more than enough for us.
+ */
 #define ATI_IXP_DMA_CHSEGS	2
 #define ATI_IXP_DMA_CHSEGS_MIN	2
 #define ATI_IXP_DMA_CHSEGS_MAX	256
 
-#define ATI_IXP_DEFAULT_BUFSZ	(1 << 13)	/* 8192 */
-
 #define ATI_VENDOR_ID		0x1002	/* ATI Technologies */
+
 #define ATI_IXP_200_ID		0x4341
 #define ATI_IXP_300_ID		0x4361
 #define ATI_IXP_400_ID		0x4370
+#define ATI_IXP_SB600_ID	0x4384
 
 #define ATI_IXP_BASE_RATE	48000
 
 /* 
-* Register definitions for ATI IXP
-*
-* References: ALSA snd-atiixp.c , OpenBSD/NetBSD auixp-*.h
-*/
+ * Register definitions for ATI IXP
+ *
+ * References: ALSA snd-atiixp.c , OpenBSD/NetBSD auixp-*.h
+ */
 
 #define ATI_IXP_CODECS 3
 
@@ -196,7 +195,9 @@
 #define ATI_MAX_DESCRIPTORS	256	/* max number of descriptor packets */
 
 /* codec detection constant indicating the interrupt flags */
-#define ALL_CODECS_NOT_READY     (ATI_REG_ISR_CODEC0_NOT_READY | ATI_REG_ISR_CODEC1_NOT_READY |     ATI_REG_ISR_CODEC2_NOT_READY)
+#define ALL_CODECS_NOT_READY \
+    (ATI_REG_ISR_CODEC0_NOT_READY | ATI_REG_ISR_CODEC1_NOT_READY |\
+     ATI_REG_ISR_CODEC2_NOT_READY)
 #define CODEC_CHECK_BITS (ALL_CODECS_NOT_READY|ATI_REG_ISR_NEW_FRAME)
 
 #endif

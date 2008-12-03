@@ -26730,6 +26730,8 @@ sys/dev/snc/if_sncreg.h -text
 sys/dev/snc/if_sncvar.h -text
 sys/dev/snp/snp.c -text
 sys/dev/sound/chip.h -text
+sys/dev/sound/clone.c -text
+sys/dev/sound/clone.h -text
 sys/dev/sound/driver.c -text
 sys/dev/sound/isa/ad1816.c -text
 sys/dev/sound/isa/ad1816.h -text
@@ -26773,6 +26775,14 @@ sys/dev/sound/pci/ds1-fw.h -text
 sys/dev/sound/pci/ds1.c -text
 sys/dev/sound/pci/ds1.h -text
 sys/dev/sound/pci/emu10k1.c -text
+sys/dev/sound/pci/emu10kx-midi.c -text
+sys/dev/sound/pci/emu10kx-pcm.c -text
+sys/dev/sound/pci/emu10kx.c -text
+sys/dev/sound/pci/emu10kx.h -text
+sys/dev/sound/pci/envy24.c -text
+sys/dev/sound/pci/envy24.h -text
+sys/dev/sound/pci/envy24ht.c -text
+sys/dev/sound/pci/envy24ht.h -text
 sys/dev/sound/pci/es137x.c -text
 sys/dev/sound/pci/es137x.h -text
 sys/dev/sound/pci/fm801.c -text
@@ -26790,6 +26800,8 @@ sys/dev/sound/pci/neomagic-coeff.h -text
 sys/dev/sound/pci/neomagic.c -text
 sys/dev/sound/pci/neomagic.h -text
 sys/dev/sound/pci/solo.c -text
+sys/dev/sound/pci/spicds.c -text
+sys/dev/sound/pci/spicds.h -text
 sys/dev/sound/pci/t4dwave.c -text
 sys/dev/sound/pci/t4dwave.h -text
 sys/dev/sound/pci/via8233.c -text
@@ -26828,10 +26840,13 @@ sys/dev/sound/pcm/vchan.h -text
 sys/dev/sound/sbus/apcdmareg.h -text
 sys/dev/sound/sbus/cs4231.c -text
 sys/dev/sound/sbus/cs4231.h -text
+sys/dev/sound/unit.c -text
+sys/dev/sound/unit.h -text
 sys/dev/sound/usb/uaudio.c -text
 sys/dev/sound/usb/uaudio.h -text
 sys/dev/sound/usb/uaudio_pcm.c -text
 sys/dev/sound/usb/uaudioreg.h -text
+sys/dev/sound/version.h -text
 sys/dev/speaker/speaker.h -text
 sys/dev/speaker/spkr.c -text
 sys/dev/sr/if_sr.c -text
