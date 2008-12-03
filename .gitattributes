@@ -27020,6 +27020,10 @@ sys/dev/usb/ohcireg.h -text
 sys/dev/usb/ohcivar.h -text
 sys/dev/usb/rio500_usb.h -text
 sys/dev/usb/rt2573_ucode.h -text
+sys/dev/usb/sl811hs.c -text
+sys/dev/usb/sl811hsreg.h -text
+sys/dev/usb/sl811hsvar.h -text
+sys/dev/usb/slhci_pccard.c -text
 sys/dev/usb/uark.c -text
 sys/dev/usb/ubsa.c -text
 sys/dev/usb/ubser.c -text
@@ -27041,6 +27045,7 @@ sys/dev/usb/uhcireg.h -text
 sys/dev/usb/uhcivar.h -text
 sys/dev/usb/uhid.c -text
 sys/dev/usb/uhub.c -text
+sys/dev/usb/uipaq.c -text
 sys/dev/usb/ukbd.c -text
 sys/dev/usb/ulpt.c -text
 sys/dev/usb/umass.c -text
