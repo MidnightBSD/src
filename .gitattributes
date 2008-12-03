@@ -28409,8 +28409,6 @@ sys/modules/mxge/mxge/Makefile -text
 sys/modules/mxge/mxge_eth_z8e/Makefile -text
 sys/modules/mxge/mxge_ethp_z8e/Makefile -text
 sys/modules/my/Makefile -text
-sys/modules/my/if_my.c -text
-sys/modules/my/if_myreg.h -text
 sys/modules/ncp/Makefile -text
 sys/modules/ncv/Makefile -text
 sys/modules/ndis/Makefile -text
