@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_rx.c,v 1.7 2005/06/10 16:49:13 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_rx.c,v 1.8 2005/09/19 22:04:41 andre Exp $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -405,11 +405,11 @@ patm_rcv_mbuf(struct patm_softc *sc, void *buf, u_int h, int hdr)
 	}
 
 	if ((h & ~MBUF_HMASK) == MBUF_VHANDLE) {
-		m_extadd(m, (caddr_t)buf, VMBUF_SIZE, mbp_ext_free,
+		MEXTADD(m, (caddr_t)buf, VMBUF_SIZE, mbp_ext_free,
 		    sc->vbuf_pool, M_PKTHDR, EXT_NET_DRV);
 		m->m_data += VMBUF_OFFSET;
 	} else {
-		m_extadd(m, (caddr_t)buf, SMBUF_SIZE, mbp_ext_free,
+		MEXTADD(m, (caddr_t)buf, SMBUF_SIZE, mbp_ext_free,
 		    sc->sbuf_pool, M_PKTHDR, EXT_NET_DRV);
 		m->m_data += SMBUF_OFFSET;
 	}

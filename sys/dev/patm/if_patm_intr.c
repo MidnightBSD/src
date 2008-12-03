@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_intr.c,v 1.5.2.1 2005/08/25 05:01:13 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_intr.c,v 1.7 2006/08/04 07:56:33 yar Exp $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -226,7 +226,7 @@ patm_intr(void *p)
  * Feeding buffers is actually not so easy as it seems. We cannot use the
  * fraction fields in the status registers, because they round down, i.e.
  * if we have 34 buffers in the queue, it will show 1. If we now feed
- * 512 - 1 * 32 buffers, we loose two buffers. The only reliable way to know
+ * 512 - 1 * 32 buffers, we lose two buffers. The only reliable way to know
  * how many buffers are in the queue are the FBQP registers.
  */
 static u_int

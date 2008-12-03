@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_attach.c,v 1.11.2.1 2005/10/09 04:18:18 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_attach.c,v 1.14 2007/02/23 12:18:48 piso Exp $");
 
 #include "opt_inet.h"
 #include "opt_natm.h"
@@ -441,8 +441,8 @@ patm_attach(device_t dev)
 #endif
 
 	patm_debug(sc, ATTACH, "attaching interrupt handler");
-	error = bus_setup_intr(dev, sc->irqres, INTR_TYPE_NET, patm_intr,
-	    sc, &sc->ih);
+	error = bus_setup_intr(dev, sc->irqres, INTR_TYPE_NET | INTR_MPSAFE,
+	    NULL, patm_intr, sc, &sc->ih);
 	if (error != 0) {
 		patm_printf(sc, "could not setup interrupt\n");
 		atm_ifdetach(sc->ifp);
