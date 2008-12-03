@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm.h,v 1.9.2.2 2006/05/17 07:40:11 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm.h,v 1.12 2006/05/17 06:36:28 anholt Exp $");
 
 /**
  * \mainpage

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_drv.c,v 1.1.2.2 2006/05/17 07:40:11 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_drv.c,v 1.6.4.1 2008/01/29 01:39:16 kensmith Exp $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -519,6 +519,9 @@ static int drm_load(drm_device_t *dev)
 	dev->pci_slot = pci_get_slot(dev->device);
 	dev->pci_func = pci_get_function(dev->device);
 
+	dev->pci_vendor = pci_get_vendor(dev->device);
+	dev->pci_device = pci_get_device(dev->device);
+
 	TAILQ_INIT(&dev->maplist);
 
 	drm_mem_init();
@@ -708,6 +711,9 @@ int drm_close(struct cdev *kdev, int flags, int fmt, DRM_STRUCTPROC *p)
 		return EINVAL;
 	}
 
+	if (--priv->refs != 0)
+		goto done;
+
 	if (dev->driver.preclose != NULL)
 		dev->driver.preclose(dev, filp);
 
@@ -783,17 +789,17 @@ int drm_close(struct cdev *kdev, int flags, int fmt, DRM_STRUCTPROC *p)
 	dev->buf_pgid = 0;
 #endif /* __NetBSD__  || __OpenBSD__ */
 
-	if (--priv->refs == 0) {
-		if (dev->driver.postclose != NULL)
-			dev->driver.postclose(dev, priv);
-		TAILQ_REMOVE(&dev->files, priv, link);
-		free(priv, M_DRM);
-	}
+	if (dev->driver.postclose != NULL)
+		dev->driver.postclose(dev, priv);
+
+	TAILQ_REMOVE(&dev->files, priv, link);
+	free(priv, M_DRM);
 
 	/* ========================================================
 	 * End inline drm_release
 	 */
 
+	done:
 	atomic_inc( &dev->counts[_DRM_STAT_CLOSES] );
 #ifdef __FreeBSD__
 	device_unbusy(dev->device);

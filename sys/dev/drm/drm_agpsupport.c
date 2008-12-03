@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_agpsupport.c,v 1.1.2.3 2006/05/17 07:40:11 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_agpsupport.c,v 1.6 2006/12/28 21:55:47 jhb Exp $");
 
 #include "dev/drm/drmP.h"
 
@@ -46,7 +46,7 @@ static int
 drm_device_find_capability(drm_device_t *dev, int cap)
 {
 #ifdef __FreeBSD__
-#if __FreeBSD_version >= 700010
+#if __FreeBSD_version >= 602102
 
 	return (pci_find_extcap(dev->device, cap, NULL) == 0);
 #else

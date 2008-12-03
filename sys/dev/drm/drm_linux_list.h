@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_linux_list.h,v 1.3.2.1 2005/12/14 00:52:58 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_linux_list.h,v 1.4 2005/11/28 23:13:52 anholt Exp $");
 
 struct list_head {
 	struct list_head *next, *prev;

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drmP.h,v 1.13.2.3 2006/05/17 07:40:11 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drmP.h,v 1.18 2006/11/06 13:41:53 rwatson Exp $");
 
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
@@ -50,6 +50,9 @@ typedef struct drm_file drm_file_t;
 #include <sys/systm.h>
 #include <sys/conf.h>
 #include <sys/stat.h>
+#if __FreeBSD_version >= 700000
+#include <sys/priv.h>
+#endif
 #include <sys/proc.h>
 #include <sys/lock.h>
 #include <sys/fcntl.h>
@@ -173,7 +176,7 @@ MALLOC_DECLARE(M_DRM);
 #define wait_queue_head_t	atomic_t
 #define DRM_WAKEUP(w)		wakeup((void *)w)
 #define DRM_WAKEUP_INT(w)	wakeup(w)
-#define DRM_INIT_WAITQUEUE(queue) do {} while (0)
+#define DRM_INIT_WAITQUEUE(queue) do {(void)(queue);} while (0)
 
 #if defined(__FreeBSD__) && __FreeBSD_version < 502109
 #define bus_alloc_resource_any(dev, type, rid, flags) \
@@ -233,7 +236,11 @@ enum {
 
 #define PAGE_ALIGN(addr) round_page(addr)
 /* DRM_SUSER returns true if the user is superuser */
+#if __FreeBSD_version >= 700000
+#define	DRM_SUSER(p)		(priv_check(p, PRIV_DRIVER) == 0)
+#else
 #define DRM_SUSER(p)		(suser(p) == 0)
+#endif
 #define DRM_AGP_FIND_DEVICE()	agp_find_device()
 #define DRM_MTRR_WC		MDF_WRITECOMBINE
 #define jiffies			ticks
@@ -273,6 +280,7 @@ extern struct cfdriver drm_cd;
 #endif
 
 typedef unsigned long dma_addr_t;
+typedef u_int64_t u64;
 typedef u_int32_t u32;
 typedef u_int16_t u16;
 typedef u_int8_t u8;
@@ -715,6 +723,9 @@ struct drm_device {
 
 	struct drm_driver_info driver;
 	drm_pci_id_list_t *id_entry;	/* PCI ID, name, and chipset private */
+
+	u_int16_t pci_device;		/* PCI device id */
+	u_int16_t pci_vendor;		/* PCI vendor id */
 
 	char		  *unique;	/* Unique identifier: e.g., busid  */
 	int		  unique_len;	/* Length of unique field	   */
