@@ -1,9 +1,10 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name:	skgehw.h
  * Project:	Gigabit Ethernet Adapters, Common Modules
- * Version:	$Revision: 1.4 $
- * Date:	$Date: 2008-12-03 00:03:00 $
+ * Version:	$Revision: 1.5 $
+ * Date:	$Date: 2008-12-03 00:04:38 $
  * Purpose:	Defines and Macros for the Gigabit Ethernet Adapter Product Family
  *
  ******************************************************************************/

@@ -1,9 +1,10 @@
+/* $MidnightBSD$ */
 /******************************************************************************
  *
  * Name   : sky2.c
  * Project: Gigabit Ethernet Driver for FreeBSD 5.x/6.x
- * Version: $Revision: 1.4 $
- * Date   : $Date: 2008-12-03 00:03:00 $
+ * Version: $Revision: 1.5 $
+ * Date   : $Date: 2008-12-03 00:04:37 $
  * Purpose: Main driver source file
  *
  *****************************************************************************/
