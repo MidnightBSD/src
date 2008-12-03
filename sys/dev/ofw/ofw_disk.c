@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_disk.c,v 1.17 2005/01/06 01:43:00 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_disk.c,v 1.18 2005/10/31 03:09:38 grehan Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -82,6 +82,7 @@ ofwd_startio(struct ofwd_softc *sc, struct bio *bp)
 	u_int r;
 
 	r = OF_seek(sc->ofwd_instance, bp->bio_offset);
+
         switch (bp->bio_cmd) {
         case BIO_READ:
 		r = OF_read(sc->ofwd_instance, (void *)bp->bio_data,
@@ -164,7 +165,7 @@ g_ofwd_init(struct g_class *mp __unused)
 	bioq_init(&sc->ofwd_bio_queue);
         mtx_init(&sc->ofwd_queue_mtx, "ofwd bio queue", NULL, MTX_DEF);
 	sc->ofwd_instance = ifd;
-	sc->ofwd_mediasize = (off_t)2*33554432 * OFWD_BLOCKSIZE;
+	sc->ofwd_mediasize = (off_t)2*33554432;
 	sc->ofwd_sectorsize = OFWD_BLOCKSIZE;
 	sc->ofwd_fwsectors = 0;
 	sc->ofwd_fwheads = 0;

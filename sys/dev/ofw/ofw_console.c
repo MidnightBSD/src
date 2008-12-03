@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_console.c,v 1.31 2005/01/06 01:43:00 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_console.c,v 1.36 2006/11/06 17:43:10 rwatson Exp $");
 
 #include "opt_comconsole.h"
 #include "opt_ofw.h"
@@ -32,6 +32,7 @@ __FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_console.c,v 1.31 2005/01/06 01:43:00 imp
 #include <sys/param.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
+#include <sys/priv.h>
 #include <sys/systm.h>
 #include <sys/types.h>
 #include <sys/conf.h>
@@ -73,14 +74,13 @@ static int	ofw_tty_param(struct tty *, struct termios *);
 static void	ofw_tty_stop(struct tty *, int);
 static void	ofw_timeout(void *);
 
-static cn_probe_t	ofw_cons_probe;
-static cn_init_t	ofw_cons_init;
-static cn_getc_t	ofw_cons_getc;
-static cn_checkc_t 	ofw_cons_checkc;
-static cn_putc_t	ofw_cons_putc;
+static cn_probe_t	ofw_cnprobe;
+static cn_init_t	ofw_cninit;
+static cn_term_t	ofw_cnterm;
+static cn_getc_t	ofw_cngetc;
+static cn_putc_t	ofw_cnputc;
 
-CONS_DRIVER(ofw, ofw_cons_probe, ofw_cons_init, NULL, ofw_cons_getc,
-    ofw_cons_checkc, ofw_cons_putc, NULL);
+CONSOLE_DRIVER(ofw);
 
 static void
 cn_drvinit(void *unused)
@@ -139,10 +139,10 @@ ofw_dev_open(struct cdev *dev, int flag, int mode, struct thread *td)
 	if ((tp->t_state & TS_ISOPEN) == 0) {
 		tp->t_state |= TS_CARR_ON;
 		ttyconsolemode(tp, 0);
-		ttsetwater(tp);
 
 		setuptimeout = 1;
-	} else if ((tp->t_state & TS_XCLUDE) && suser(td)) {
+	} else if ((tp->t_state & TS_XCLUDE) &&
+	    priv_check(td, PRIV_TTY_EXCLUSIVE)) {
 		return (EBUSY);
 	}
 
@@ -228,7 +228,7 @@ ofw_timeout(void *v)
 
 	tp = (struct tty *)v;
 
-	while ((c = ofw_cons_checkc(NULL)) != -1) {
+	while ((c = ofw_cngetc(NULL)) != -1) {
 		if (tp->t_state & TS_ISOPEN) {
 			ttyld_rint(tp, c);
 		}
@@ -238,7 +238,7 @@ ofw_timeout(void *v)
 }
 
 static void
-ofw_cons_probe(struct consdev *cp)
+ofw_cnprobe(struct consdev *cp)
 {
 	int chosen;
 
@@ -261,7 +261,7 @@ ofw_cons_probe(struct consdev *cp)
 }
 
 static void
-ofw_cons_init(struct consdev *cp)
+ofw_cninit(struct consdev *cp)
 {
 
 	/* XXX: This is the alias, but that should be good enough */
@@ -269,30 +269,13 @@ ofw_cons_init(struct consdev *cp)
 	cp->cn_tp = ofw_tp;
 }
 
-static int
-ofw_cons_getc(struct consdev *cp)
+static void
+ofw_cnterm(struct consdev *cp)
 {
-	unsigned char ch;
-	int l;
-
-	ch = '\0';
-
-	while ((l = OF_read(stdin, &ch, 1)) != 1) {
-		if (l != -2 && l != 0) {
-			return (-1);
-		}
-	}
-
-#if defined(KDB) && defined(ALT_BREAK_TO_DEBUGGER)
-	if (kdb_alt_break(ch, &alt_break_state))
-		kdb_enter("Break sequence on console");
-#endif
-
-	return (ch);
 }
 
 static int
-ofw_cons_checkc(struct consdev *cp)
+ofw_cngetc(struct consdev *cp)
 {
 	unsigned char ch;
 
@@ -308,7 +291,7 @@ ofw_cons_checkc(struct consdev *cp)
 }
 
 static void
-ofw_cons_putc(struct consdev *cp, int c)
+ofw_cnputc(struct consdev *cp, int c)
 {
 	char cbuf;
 

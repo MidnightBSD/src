@@ -26510,6 +26510,8 @@ sys/dev/nxge/xgehal/xgehal-stats.c -text
 sys/dev/nxge/xgell-version.h -text
 sys/dev/ofw/ofw_bus.h -text
 sys/dev/ofw/ofw_bus_if.m -text
+sys/dev/ofw/ofw_bus_subr.c -text
+sys/dev/ofw/ofw_bus_subr.h -text
 sys/dev/ofw/ofw_console.c -text
 sys/dev/ofw/ofw_disk.c -text
 sys/dev/ofw/ofw_pci.h -text

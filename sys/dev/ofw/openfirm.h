@@ -54,7 +54,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ofw/openfirm.h,v 1.11 2005/01/06 01:43:00 imp Exp $
+ * $FreeBSD: src/sys/dev/ofw/openfirm.h,v 1.13 2007/06/16 22:30:38 marius Exp $
  */
 
 #ifndef _OPENFIRM_H_
@@ -90,7 +90,6 @@ void		OF_init(int (*openfirm)(void *));
 
 /* Generic functions */
 int		OF_test(char *);
-void		OF_helloworld(void);
 void		OF_printf(const char *, ...);
 
 /* Device tree functions */
@@ -130,10 +129,6 @@ void		OF_chain(void *, u_int,
 
 /* User interface functions */
 int		OF_interpret(char *, int, ...);
-#if 0
-void 		*OF_set_callback(void *);
-void		OF_set_symbol_lookup(void *, void *);
-#endif
 
 /* Time function */
 int		OF_milliseconds(void);

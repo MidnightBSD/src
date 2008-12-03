@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ofw/openpromio.c,v 1.7 2005/05/19 15:23:17 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ofw/openpromio.c,v 1.7.14.1 2007/12/23 11:26:48 marius Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -101,12 +101,17 @@ openprom_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags,
 	char *buf;
 	int error;
 
+	if ((flags & FREAD) == 0)
+		return (EPERM);
+
 	prop = buf = NULL;
 	error = 0;
-	oprom = *(void **)data;
 	switch (cmd) {
 	case OPROMCHILD:
 	case OPROMNEXT:
+		if (data == NULL || *(void **)data == NULL)
+			return (EINVAL);
+		oprom = *(void **)data;
 		error = copyin(&oprom->oprom_size, &len, sizeof(len));
 		if (error != 0)
 			break;
@@ -135,6 +140,9 @@ openprom_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flags,
 		break;
 	case OPROMGETPROP:
 	case OPROMNXTPROP:
+		if (data == NULL || *(void **)data == NULL)
+			return (EINVAL);
+		oprom = *(void **)data;
 		error = copyin(&oprom->oprom_size, &len, sizeof(len));
 		if (error != 0)
 			break;
