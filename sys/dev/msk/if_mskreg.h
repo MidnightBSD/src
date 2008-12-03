@@ -2,8 +2,8 @@
  *
  * Name:	skgehw.h
  * Project:	Gigabit Ethernet Adapters, Common Modules
- * Version:	$Revision: 1.3 $
- * Date:	$Date: 2008-07-01 07:12:41 $
+ * Version:	$Revision: 1.4 $
+ * Date:	$Date: 2008-12-03 00:03:00 $
  * Purpose:	Defines and Macros for the Gigabit Ethernet Adapter Product Family
  *
  ******************************************************************************/
@@ -93,8 +93,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $MidnightBSD: src/sys/dev/msk/if_mskreg.h,v 1.2 2008/07/01 00:53:50 laffer1 Exp $ */
-/*$FreeBSD: src/sys/dev/msk/if_mskreg.h,v 1.3.2.4.2.1 2007/12/08 12:19:13 remko Exp $*/
+/*$FreeBSD: src/sys/dev/msk/if_mskreg.h,v 1.6.2.1 2007/12/08 12:16:15 remko Exp $*/
 
 /*
  * SysKonnect PCI vendor ID
@@ -2319,9 +2318,9 @@ struct msk_if_softc;
 /* Softc for the Marvell Yukon II controller. */
 struct msk_softc {
 	struct resource		*msk_res[1];	/* I/O resource */
-	int			msk_res_type;
-	int			msk_res_id;
+	struct resource_spec	*msk_res_spec;
 	struct resource		*msk_irq[2];	/* IRQ resources */
+	struct resource_spec	*msk_irq_spec;
 	void			*msk_intrhand[2]; /* irq handler handle */
 	device_t		msk_dev;
 	uint8_t			msk_hw_id;

@@ -2,8 +2,8 @@
  *
  * Name   : sky2.c
  * Project: Gigabit Ethernet Driver for FreeBSD 5.x/6.x
- * Version: $Revision: 1.3 $
- * Date   : $Date: 2008-07-01 07:12:41 $
+ * Version: $Revision: 1.4 $
+ * Date   : $Date: 2008-12-03 00:03:00 $
  * Purpose: Main driver source file
  *
  *****************************************************************************/
@@ -99,8 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/sys/dev/msk/if_msk.c,v 1.11.2.8.2.1 2007/12/08 12:19:13 remko Exp $ */
-__MBSDID("$MidnightBSD: src/sys/dev/msk/if_msk.c,v 1.2 2008/07/01 00:53:50 laffer1 Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/msk/if_msk.c,v 1.18.2.1 2007/12/08 12:16:14 remko Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -153,25 +152,12 @@ MODULE_DEPEND(msk, miibus, 1, 1, 1);
 #include "miibus_if.h"
 
 /* Tunables. */
-
-static int msi_disable = 1;
+static int msi_disable = 0;
 TUNABLE_INT("hw.msk.msi_disable", &msi_disable);
+static int legacy_intr = 0;
+TUNABLE_INT("hw.msk.legacy_intr", &legacy_intr);
 
 #define MSK_CSUM_FEATURES	(CSUM_TCP | CSUM_UDP)
-
-/* RELENG_6 support code */
-#ifndef	IFCAP_TSO4
-#define	IFCAP_TSO4	0
-#define	CSUM_TSO	0
-#endif
-#ifndef	VLAN_CAPABILITIES
-#define	VLAN_CAPABILITIES(x)
-#endif
-#ifndef	IFCAP_VLAN_HWCSUM
-#define	IFCAP_VLAN_HWCSUM	0
-#endif
-#undef	MSI_SUPPORT
-#undef	TSO_SUPPORT
 
 /*
  * Devices supported by this driver.
@@ -249,7 +235,8 @@ static int msk_attach(device_t);
 static int msk_detach(device_t);
 
 static void msk_tick(void *);
-static void msk_intr(void *);
+static void msk_legacy_intr(void *);
+static int msk_intr(void *);
 static void msk_int_task(void *, int);
 static void msk_intr_phy(struct msk_if_softc *);
 static void msk_intr_gmac(struct msk_if_softc *);
@@ -357,6 +344,27 @@ static devclass_t msk_devclass;
 DRIVER_MODULE(mskc, pci, mskc_driver, mskc_devclass, 0, 0);
 DRIVER_MODULE(msk, mskc, msk_driver, msk_devclass, 0, 0);
 DRIVER_MODULE(miibus, msk, miibus_driver, miibus_devclass, 0, 0);
+
+static struct resource_spec msk_res_spec_io[] = {
+	{ SYS_RES_IOPORT,	PCIR_BAR(1),	RF_ACTIVE },
+	{ -1,			0,		0 }
+};
+
+static struct resource_spec msk_res_spec_mem[] = {
+	{ SYS_RES_MEMORY,	PCIR_BAR(0),	RF_ACTIVE },
+	{ -1,			0,		0 }
+};
+
+static struct resource_spec msk_irq_spec_legacy[] = {
+	{ SYS_RES_IRQ,		0,		RF_ACTIVE | RF_SHAREABLE },
+	{ -1,			0,		0 }
+};
+
+static struct resource_spec msk_irq_spec_msi[] = {
+	{ SYS_RES_IRQ,		1,		RF_ACTIVE },
+	{ SYS_RES_IRQ,		2,		RF_ACTIVE },
+	{ -1,			0,		0 }
+};
 
 static int
 msk_miibus_readreg(device_t dev, int phy, int reg)
@@ -1296,7 +1304,6 @@ mskc_reset(struct msk_softc *sc)
          * On dual port PCI-X card, there is an problem where status
          * can be received out of order due to split transactions.
          */
-#if 0
 	if (sc->msk_bustype == MSK_PCIX_BUS && sc->msk_num_port > 1) {
 		int pcix;
 		uint16_t pcix_cmd;
@@ -1310,7 +1317,6 @@ mskc_reset(struct msk_softc *sc)
 			CSR_WRITE_1(sc, B2_TST_CTRL1, TST_CFG_WRITE_OFF);
 		}
         }
-#endif
 	if (sc->msk_bustype == MSK_PEX_BUS) {
 		uint16_t v, width;
 
@@ -1538,10 +1544,7 @@ static int
 mskc_attach(device_t dev)
 {
 	struct msk_softc *sc;
-	int error, *port, rid; /* int reg */
-#ifdef	MSI_SUPPORT
-	int i, msic;
-#endif
+	int error, msic, *port, reg;
 
 	sc = device_get_softc(dev);
 	sc->msk_dev = dev;
@@ -1555,27 +1558,21 @@ mskc_attach(device_t dev)
 
 	/* Allocate I/O resource */
 #ifdef MSK_USEIOSPACE
-	sc->msk_res_type = SYS_RES_IOPORT;
-	sc->msk_res_id = PCIR_BAR(1);
+	sc->msk_res_spec = msk_res_spec_io;
 #else
-	sc->msk_res_type = SYS_RES_MEMORY;
-	sc->msk_res_id = PCIR_BAR(0);
+	sc->msk_res_spec = msk_res_spec_mem;
 #endif
-	sc->msk_res[0] = bus_alloc_resource_any(dev, sc->msk_res_type,
-	    &sc->msk_res_id, RF_ACTIVE);
-	if (sc->msk_res[0] == NULL) {
-		if (sc->msk_res_type == SYS_RES_MEMORY) {
-			sc->msk_res_type = SYS_RES_IOPORT;
-			sc->msk_res_id = PCIR_BAR(1);
-		} else {
-			sc->msk_res_type = SYS_RES_MEMORY;
-			sc->msk_res_id = PCIR_BAR(0);
-		}
-		sc->msk_res[0] = bus_alloc_resource_any(dev, sc->msk_res_type,
-		    &sc->msk_res_id, RF_ACTIVE);
-		if (sc->msk_res[0] == NULL) {
+	sc->msk_irq_spec = msk_irq_spec_legacy;
+	error = bus_alloc_resources(dev, sc->msk_res_spec, sc->msk_res);
+	if (error) {
+		if (sc->msk_res_spec == msk_res_spec_mem)
+			sc->msk_res_spec = msk_res_spec_io;
+		else
+			sc->msk_res_spec = msk_res_spec_mem;
+		error = bus_alloc_resources(dev, sc->msk_res_spec, sc->msk_res);
+		if (error) {
 			device_printf(dev, "couldn't allocate %s resources\n",
-			    sc->msk_res_type == SYS_RES_MEMORY ? "memory" :
+			    sc->msk_res_spec == msk_res_spec_mem ? "memory" :
 			    "I/O");
 			mtx_destroy(&sc->msk_mtx);
 			return (ENXIO);
@@ -1629,13 +1626,11 @@ mskc_attach(device_t dev)
 	}
 
 	/* Check bus type. */
-#if 0
 	if (pci_find_extcap(sc->msk_dev, PCIY_EXPRESS, &reg) == 0)
 		sc->msk_bustype = MSK_PEX_BUS;
 	else if (pci_find_extcap(sc->msk_dev, PCIY_PCIX, &reg) == 0)
 		sc->msk_bustype = MSK_PCIX_BUS;
 	else
-#endif
 		sc->msk_bustype = MSK_PCI_BUS;
 
 	/* Get H/W features(bugs). */
@@ -1708,7 +1703,6 @@ mskc_attach(device_t dev)
 		sc->msk_hw_feature = 0;
 	}
 
-#ifdef	MSI_SUPPORT
 	/* Allocate IRQ resources. */
 	msic = pci_msi_count(dev);
 	if (bootverbose)
@@ -1722,45 +1716,22 @@ mskc_attach(device_t dev)
 	 * port cards with separate MSI messages, so for now I disable MSI
 	 * on dual port cards.
 	 */
+	if (legacy_intr != 0)
+		msi_disable = 1;
 	if (msic == 2 && msi_disable == 0 && sc->msk_num_port == 1 &&
 	    pci_alloc_msi(dev, &msic) == 0) {
 		if (msic == 2) {
 			sc->msk_msi = 1;
+			sc->msk_irq_spec = msk_irq_spec_msi;
 		} else
 			pci_release_msi(dev);
 	}
 
-	if (sc->msk_msi == 0) {
-		rid = 0;
-		sc->msk_irq[0] = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
-		    RF_SHAREABLE | RF_ACTIVE);
-		if (sc->msk_irq[0] == NULL) {
-			device_printf(dev, "couldn't allocate IRQ resources\n");
-			error = ENXIO;
-			goto fail;
-		}
-	} else {
-		for (i = 0, rid = 1; i < 2; i++, rid++) {
-			sc->msk_irq[i] = bus_alloc_resource_any(dev, SYS_RES_IRQ,
-			    &rid, RF_ACTIVE);
-			if (sc->msk_irq[i] == NULL) {
-				device_printf(dev,
-				    "couldn't allocate IRQ resources\n");
-				error = ENXIO;
-				goto fail;
-			}
-		}
-	}
-#else
-	rid = 0;
-	sc->msk_irq[0] = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
-	    RF_SHAREABLE | RF_ACTIVE);
-	if (sc->msk_irq[0] == NULL) {
+	error = bus_alloc_resources(dev, sc->msk_irq_spec, sc->msk_irq);
+	if (error) {
 		device_printf(dev, "couldn't allocate IRQ resources\n");
-		error = ENXIO;
 		goto fail;
 	}
-#endif
 
 	if ((error = msk_status_dma_alloc(sc)) != 0)
 		goto fail;
@@ -1816,18 +1787,25 @@ mskc_attach(device_t dev)
 		goto fail;
 	}
 
-	TASK_INIT(&sc->msk_int_task, 0, msk_int_task, sc);
-	sc->msk_tq = taskqueue_create_fast("msk_taskq", M_WAITOK,
-	    taskqueue_thread_enqueue, &sc->msk_tq);
-	taskqueue_start_threads(&sc->msk_tq, 1, PI_NET, "%s taskq",
-	    device_get_nameunit(sc->msk_dev));
 	/* Hook interrupt last to avoid having to lock softc. */
-	error = bus_setup_intr(dev, sc->msk_irq[0], INTR_TYPE_NET |
-	    INTR_MPSAFE | INTR_FAST, msk_intr, sc, &sc->msk_intrhand[0]);
+	if (legacy_intr)
+		error = bus_setup_intr(dev, sc->msk_irq[0], INTR_TYPE_NET |
+		    INTR_MPSAFE, NULL, msk_legacy_intr, sc,
+		    &sc->msk_intrhand[0]);
+	else {
+		TASK_INIT(&sc->msk_int_task, 0, msk_int_task, sc);
+		sc->msk_tq = taskqueue_create_fast("msk_taskq", M_WAITOK,
+		    taskqueue_thread_enqueue, &sc->msk_tq);
+		taskqueue_start_threads(&sc->msk_tq, 1, PI_NET, "%s taskq",
+		    device_get_nameunit(sc->msk_dev));
+		error = bus_setup_intr(dev, sc->msk_irq[0], INTR_TYPE_NET |
+		    INTR_MPSAFE, msk_intr, NULL, sc, &sc->msk_intrhand[0]);
+	}
 
 	if (error != 0) {
 		device_printf(dev, "couldn't set up interrupt handler\n");
-		taskqueue_free(sc->msk_tq);
+		if (legacy_intr == 0)
+			taskqueue_free(sc->msk_tq);
 		sc->msk_tq = NULL;
 		goto fail;
 	}
@@ -1930,7 +1908,7 @@ mskc_detach(device_t dev)
 
 	msk_status_dma_free(sc);
 
-	if (sc->msk_tq != NULL) {
+	if (legacy_intr == 0 && sc->msk_tq != NULL) {
 		taskqueue_drain(sc->msk_tq, &sc->msk_int_task);
 		taskqueue_free(sc->msk_tq);
 		sc->msk_tq = NULL;
@@ -1943,33 +1921,10 @@ mskc_detach(device_t dev)
 		bus_teardown_intr(dev, sc->msk_irq[0], sc->msk_intrhand[0]);
 		sc->msk_intrhand[1] = NULL;
 	}
-#ifdef	MSI_SUPPORT
-	if (sc->msk_msi) {
-		int i, rid;
-		for (i = 0, rid = 1; i < 2; i++, rid++) {
-			if (sc->msk_irq[i] != NULL) {
-				bus_release_resource(dev, SYS_RES_IRQ, rid,
-				    sc->msk_irq[i]);
-				sc->msk_irq[i] = NULL;
-			}
-		}
+	bus_release_resources(dev, sc->msk_irq_spec, sc->msk_irq);
+	if (sc->msk_msi)
 		pci_release_msi(dev);
-	} else {
-		if (sc->msk_irq[0] != NULL) {
-			bus_release_resource(dev, SYS_RES_IRQ, 0,
-			    sc->msk_irq[0]);
-			sc->msk_irq[0] = NULL;
-		}
-	}
-#else
-	if (sc->msk_irq[0] != NULL) {
-		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->msk_irq[0]);
-		sc->msk_irq[0] = NULL;
-	}
-#endif
-	if (sc->msk_res[0] != NULL)
-		bus_release_resource(dev, sc->msk_res_type, sc->msk_res_id,
-		    sc->msk_res[0]);
+	bus_release_resources(dev, sc->msk_res_spec, sc->msk_res);
 	mtx_destroy(&sc->msk_mtx);
 
 	return (0);
@@ -1998,7 +1953,7 @@ msk_status_dma_alloc(struct msk_softc *sc)
 	int error;
 
 	error = bus_dma_tag_create(
-		    NULL,	/* parent */
+		    bus_get_dma_tag(sc->msk_dev),	/* parent */
 		    MSK_STAT_ALIGN, 0,		/* alignment, boundary */
 		    BUS_SPACE_MAXADDR,		/* lowaddr */
 		    BUS_SPACE_MAXADDR,		/* highaddr */
@@ -2093,7 +2048,7 @@ msk_txrx_dma_alloc(struct msk_if_softc *sc_if)
 	 * never seen these exotic scheme on ethernet interface hardware.
 	 */
 	error = bus_dma_tag_create(
-		    NULL,	/* parent */
+		    bus_get_dma_tag(sc_if->msk_if_dev),	/* parent */
 		    1, 0,			/* alignment, boundary */
 		    BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
 		    BUS_SPACE_MAXADDR,		/* highaddr */
@@ -2689,14 +2644,10 @@ msk_encap(struct msk_if_softc *sc_if, struct mbuf **m_head)
 	struct msk_txdesc *txd, *txd_last;
 	struct msk_tx_desc *tx_le;
 	struct mbuf *m;
-	struct m_tag *mtag;
 	bus_dmamap_t map;
 	bus_dma_segment_t txsegs[MSK_MAXTXSEGS];
 	uint32_t control, prod, si;
-	uint16_t offset, tcp_offset;
-#ifdef	TSO_SUPPORT
-	uint16_t tso_mtu;
-#endif
+	uint16_t offset, tcp_offset, tso_mtu;
 	int error, i, nseg, tso;
 
 	MSK_IF_LOCK_ASSERT(sc_if);
@@ -2818,7 +2769,6 @@ msk_encap(struct msk_if_softc *sc_if, struct mbuf **m_head)
 	tx_le = NULL;
 
 	/* Check TSO support. */
-#ifdef	TSO_SUPPORT
 	if ((m->m_pkthdr.csum_flags & CSUM_TSO) != 0) {
 		tso_mtu = offset + m->m_pkthdr.tso_segsz;
 		if (tso_mtu != sc_if->msk_cdata.msk_tso_mtu) {
@@ -2831,20 +2781,18 @@ msk_encap(struct msk_if_softc *sc_if, struct mbuf **m_head)
 		}
 		tso++;
 	}
-#endif
 	/* Check if we have a VLAN tag to insert. */
-	mtag = VLAN_OUTPUT_TAG(sc_if->msk_ifp, m);
-	if (mtag != NULL) {
+	if ((m->m_flags & M_VLANTAG) != 0) {
 		if (tso == 0) {
 			tx_le = &sc_if->msk_rdata.msk_tx_ring[prod];
 			tx_le->msk_addr = htole32(0);
 			tx_le->msk_control = htole32(OP_VLAN | HW_OWNER |
-			    htons(VLAN_TAG_VALUE(mtag)));
+			    htons(m->m_pkthdr.ether_vtag));
 			sc_if->msk_cdata.msk_tx_cnt++;
 			MSK_INC(prod, MSK_TX_RING_CNT);
 		} else {
 			tx_le->msk_control |= htole32(OP_VLAN |
-			    htons(VLAN_TAG_VALUE(mtag)));
+			    htons(m->m_pkthdr.ether_vtag));
 		}
 		control |= INS_VLAN;
 	}
@@ -2958,7 +2906,7 @@ msk_start(struct ifnet *ifp)
 		 * If there's a BPF listener, bounce a copy of this frame
 		 * to him.
 		 */
-		BPF_MTAP(ifp, m_head);
+		ETHER_BPF_MTAP(ifp, m_head);
 	}
 
 	if (enq > 0) {
@@ -3143,7 +3091,8 @@ msk_rxeof(struct msk_if_softc *sc_if, uint32_t status, int len)
 		/* Check for VLAN tagged packets. */
 		if ((status & GMR_FS_VLAN) != 0 &&
 		    (ifp->if_capenable & IFCAP_VLAN_HWTAGGING) != 0) {
-			VLAN_INPUT_TAG_NEW(ifp, m, sc_if->msk_vtag);
+			m->m_pkthdr.ether_vtag = sc_if->msk_vtag;
+			m->m_flags |= M_VLANTAG;
 		}
 		MSK_IF_UNLOCK(sc_if);
 		(*ifp->if_input)(ifp, m);
@@ -3195,7 +3144,8 @@ msk_jumbo_rxeof(struct msk_if_softc *sc_if, uint32_t status, int len)
 		/* Check for VLAN tagged packets. */
 		if ((status & GMR_FS_VLAN) != 0 &&
 		    (ifp->if_capenable & IFCAP_VLAN_HWTAGGING) != 0) {
-			VLAN_INPUT_TAG_NEW(ifp, m, sc_if->msk_vtag);
+			m->m_pkthdr.ether_vtag = sc_if->msk_vtag;
+			m->m_flags |= M_VLANTAG;
 		}
 		MSK_IF_UNLOCK(sc_if);
 		(*ifp->if_input)(ifp, m);
@@ -3569,7 +3519,76 @@ msk_handle_events(struct msk_softc *sc)
 	return (sc->msk_stat_cons != CSR_READ_2(sc, STAT_PUT_IDX));
 }
 
+/* Legacy interrupt handler for shared interrupt. */
 static void
+msk_legacy_intr(void *xsc)
+{
+	struct msk_softc *sc;
+	struct msk_if_softc *sc_if0, *sc_if1;
+	struct ifnet *ifp0, *ifp1;
+	uint32_t status;
+
+	sc = xsc;
+	MSK_LOCK(sc);
+
+	/* Reading B0_Y2_SP_ISRC2 masks further interrupts. */
+	status = CSR_READ_4(sc, B0_Y2_SP_ISRC2);
+	if (status == 0 || status == 0xffffffff || sc->msk_suspended != 0 ||
+	    (status & sc->msk_intrmask) == 0) {
+		CSR_WRITE_4(sc, B0_Y2_SP_ICR, 2);
+		return;
+	}
+
+	sc_if0 = sc->msk_if[MSK_PORT_A];
+	sc_if1 = sc->msk_if[MSK_PORT_B];
+	ifp0 = ifp1 = NULL;
+	if (sc_if0 != NULL)
+		ifp0 = sc_if0->msk_ifp;
+	if (sc_if1 != NULL)
+		ifp1 = sc_if1->msk_ifp;
+
+	if ((status & Y2_IS_IRQ_PHY1) != 0 && sc_if0 != NULL)
+		msk_intr_phy(sc_if0);
+	if ((status & Y2_IS_IRQ_PHY2) != 0 && sc_if1 != NULL)
+		msk_intr_phy(sc_if1);
+	if ((status & Y2_IS_IRQ_MAC1) != 0 && sc_if0 != NULL)
+		msk_intr_gmac(sc_if0);
+	if ((status & Y2_IS_IRQ_MAC2) != 0 && sc_if1 != NULL)
+		msk_intr_gmac(sc_if1);
+	if ((status & (Y2_IS_CHK_RX1 | Y2_IS_CHK_RX2)) != 0) {
+		device_printf(sc->msk_dev, "Rx descriptor error\n");
+		sc->msk_intrmask &= ~(Y2_IS_CHK_RX1 | Y2_IS_CHK_RX2);
+		CSR_WRITE_4(sc, B0_IMSK, sc->msk_intrmask);
+		CSR_READ_4(sc, B0_IMSK);
+	}
+        if ((status & (Y2_IS_CHK_TXA1 | Y2_IS_CHK_TXA2)) != 0) {
+		device_printf(sc->msk_dev, "Tx descriptor error\n");
+		sc->msk_intrmask &= ~(Y2_IS_CHK_TXA1 | Y2_IS_CHK_TXA2);
+		CSR_WRITE_4(sc, B0_IMSK, sc->msk_intrmask);
+		CSR_READ_4(sc, B0_IMSK);
+	}
+	if ((status & Y2_IS_HW_ERR) != 0)
+		msk_intr_hwerr(sc);
+
+	while (msk_handle_events(sc) != 0)
+		;
+	if ((status & Y2_IS_STAT_BMU) != 0)
+		CSR_WRITE_4(sc, STAT_CTRL, SC_STAT_CLR_IRQ);
+
+	/* Reenable interrupts. */
+	CSR_WRITE_4(sc, B0_Y2_SP_ICR, 2);
+
+	if (ifp0 != NULL && (ifp0->if_drv_flags & IFF_DRV_RUNNING) != 0 &&
+	    !IFQ_DRV_IS_EMPTY(&ifp0->if_snd))
+		taskqueue_enqueue(taskqueue_fast, &sc_if0->msk_tx_task);
+	if (ifp1 != NULL && (ifp1->if_drv_flags & IFF_DRV_RUNNING) != 0 &&
+	    !IFQ_DRV_IS_EMPTY(&ifp1->if_snd))
+		taskqueue_enqueue(taskqueue_fast, &sc_if1->msk_tx_task);
+
+	MSK_UNLOCK(sc);
+}
+
+static int
 msk_intr(void *xsc)
 {
 	struct msk_softc *sc;
@@ -3580,10 +3599,11 @@ msk_intr(void *xsc)
 	/* Reading B0_Y2_SP_ISRC2 masks further interrupts. */
 	if (status == 0 || status == 0xffffffff) {
 		CSR_WRITE_4(sc, B0_Y2_SP_ICR, 2);
-		return;
+		return (FILTER_STRAY);
 	}
 
 	taskqueue_enqueue(sc->msk_tq, &sc->msk_int_task);
+	return (FILTER_HANDLED);
 }
 
 static void
