@@ -1,6 +1,6 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/usbdivar.h,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*	$NetBSD: usbdivar.h,v 1.70 2002/07/11 21:14:36 augustss Exp $	*/
-/*	$FreeBSD: src/sys/dev/usb/usbdivar.h,v 1.43.2.1 2006/03/01 01:59:05 iedowse Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/usbdivar.h,v 1.50 2007/06/14 16:23:31 imp Exp $	*/
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -39,12 +39,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if defined(__NetBSD__)
-#include <sys/callout.h>
-#endif
-
 /* From usb_mem.h */
-DECLARE_USB_DMA_T;
+struct usb_dma_block;
+typedef struct {
+	struct usb_dma_block *block;
+	u_int offs;
+	u_int len;
+} usb_dma_t;
 
 struct usbd_xfer;
 struct usbd_pipe;
@@ -103,7 +104,7 @@ struct usb_softc;
 
 struct usbd_bus {
 	/* Filled by HC driver */
-	USBBASEDEVICE		bdev; /* base device, host adapter */
+	device_t		bdev; /* base device, host adapter */
 	struct usbd_bus_methods	*methods;
 	u_int32_t		pipe_size; /* size of a pipe struct */
 	/* Filled by usb driver */
@@ -131,7 +132,8 @@ struct usbd_bus {
 #endif
 #endif
 
-	bus_dma_tag_t		dmatag;	/* DMA tag */
+	bus_dma_tag_t		parent_dmatag;	/* Base DMA tag */
+	bus_dma_tag_t		buffer_dmatag;	/* Tag for transfer buffers */
 };
 
 struct usbd_device {
@@ -156,7 +158,7 @@ struct usbd_device {
 	usb_config_descriptor_t *cdesc;	       /* full config descr */
 	const struct usbd_quirks     *quirks;  /* device quirks, always set */
 	struct usbd_hub	       *hub;           /* only if this is a hub */
-	device_ptr_t	       *subdevs;       /* sub-devices, 0 terminated */
+	device_t	       *subdevs;       /* sub-devices, 0 terminated */
 	uint8_t		       *ifacenums;     /* sub-device interfacenumbers */
 };
 
@@ -177,7 +179,7 @@ struct usbd_pipe {
 	int			refcnt;
 	char			running;
 	char			aborting;
-	SIMPLEQ_HEAD(, usbd_xfer) queue;
+	STAILQ_HEAD(, usbd_xfer) queue;
 	LIST_ENTRY(usbd_pipe)	next;
 
 	usbd_xfer_handle	intrxfer; /* used for repeating requests */
@@ -186,6 +188,15 @@ struct usbd_pipe {
 
 	/* Filled by HC driver. */
 	struct usbd_pipe_methods *methods;
+};
+
+#define USB_DMA_NSEG (btoc(MAXPHYS) + 1)
+
+/* DMA-capable memory buffer. */
+struct usb_dma_mapping {
+	bus_dma_segment_t segs[USB_DMA_NSEG];	/* The physical segments. */
+	int nsegs;				/* Number of segments. */
+	bus_dmamap_t map;			/* DMA mapping. */
 };
 
 struct usbd_xfer {
@@ -215,18 +226,19 @@ struct usbd_xfer {
 
 	/* For memory allocation */
 	struct usbd_device     *device;
-	usb_dma_t		dmabuf;
+	struct usb_dma_mapping	dmamap;
+	void			*allocbuf;
 
 	int			rqflags;
 #define URQ_REQUEST	0x01
 #define URQ_AUTO_DMABUF	0x10
 #define URQ_DEV_DMABUF	0x20
 
-	SIMPLEQ_ENTRY(usbd_xfer) next;
+	STAILQ_ENTRY(usbd_xfer) next;
 
 	void		       *hcpriv; /* private use by the HC driver */
 
-	usb_callout_t		timeout_handle;
+	struct callout		timeout_handle;
 };
 
 void usbd_init(void);
@@ -249,7 +261,7 @@ usbd_status	usbd_setup_pipe(usbd_device_handle dev,
 				usbd_interface_handle iface,
 				struct usbd_endpoint *, int,
 				usbd_pipe_handle *pipe);
-usbd_status	usbd_new_device(device_ptr_t parent,
+usbd_status	usbd_new_device(device_t parent,
 				usbd_bus_handle bus, int depth,
 				int lowspeed, int port,
 				struct usbd_port *);
@@ -260,7 +272,7 @@ void		usb_free_device(usbd_device_handle);
 
 usbd_status	usb_insert_transfer(usbd_xfer_handle xfer);
 void		usb_transfer_complete(usbd_xfer_handle xfer);
-void		usb_disconnect_port(struct usbd_port *up, device_ptr_t);
+void		usb_disconnect_port(struct usbd_port *up, device_t);
 
 /* Routines from usb.c */
 void		usb_needs_explore(usbd_device_handle);
@@ -282,9 +294,6 @@ void		usb_schedsoftintr(struct usbd_bus *);
 
 /* Locator stuff. */
 
-#if defined(__NetBSD__)
-#include "locators.h"
-#elif defined(__FreeBSD__) || defined(__OpenBSD__)
 /* XXX these values are used to statically bind some elements in the USB tree
  * to specific driver instances. This should be somehow emulated in FreeBSD
  * but can be done later on.
@@ -296,16 +305,6 @@ void		usb_schedsoftintr(struct usbd_bus *);
 #define UHUBCF_VENDOR_DEFAULT -1
 #define UHUBCF_PRODUCT_DEFAULT -1
 #define UHUBCF_RELEASE_DEFAULT -1
-#endif
-
-#if defined (__OpenBSD__)
-#define	UHUBCF_PORT		0
-#define	UHUBCF_CONFIGURATION	1
-#define	UHUBCF_INTERFACE	2
-#define	UHUBCF_VENDOR		3
-#define	UHUBCF_PRODUCT		4
-#define	UHUBCF_RELEASE		5
-#endif
 
 #define	uhubcf_port		cf_loc[UHUBCF_PORT]
 #define	uhubcf_configuration	cf_loc[UHUBCF_CONFIGURATION]
