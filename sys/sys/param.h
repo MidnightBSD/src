@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/param.h,v 1.12 2008/12/03 00:11:22 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -34,7 +34,7 @@
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
  * $FreeBSD: src/sys/sys/param.h,v 1.244.2.8 2006/01/18 13:24:24 andre Exp $
- * $MidnightBSD: src/sys/sys/param.h,v 1.11 2008/09/13 01:24:18 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/param.h,v 1.12 2008/12/03 00:11:22 laffer1 Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -62,7 +62,7 @@
 #define __FreeBSD_version 700055	/* Master, propagated to newvers */
 
 #undef __MidnightBSD_version
-#define __MidnightBSD_version	002101
+#define __MidnightBSD_version	002102
 
 #ifndef LOCORE
 #include <sys/types.h>
