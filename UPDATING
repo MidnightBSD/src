@@ -3,6 +3,19 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20081204:
+	Work has completed on importing ZFS, jemalloc, several
+	new devices, SCTP, updated pf, a new tempfs, linuxolator 2.6 kernel
+	support, improved locking for file desc., audit (openbsm), 
+	openssl .98e, nfe, imporved intel high def audio, midi, updated
+	intel gigabit (em), support for several wifi cards (intel), ...
+
+	Renamed 0.3-CURRENT officially. Switched to using MidnightBSD version
+	data from param.h instead of the FreeBSD version.  This means
+	testing is now possible in the ports tree for the version
+	and that any ports or code relying on the FreeBSD version from
+	sys/sys/param.h will need to be fixed.
+
 20080905:
 	update nve(4) to support new hardware.
 
@@ -594,4 +607,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.42 2008/09/02 02:02:36 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.43 2008/09/05 19:02:59 laffer1 Exp $
