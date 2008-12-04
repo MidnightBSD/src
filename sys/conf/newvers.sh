@@ -29,10 +29,10 @@
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
 # $FreeBSD: src/sys/conf/newvers.sh,v 1.69.2.10 2006/02/01 18:04:43 kensmith Exp $
-# $MidnightBSD: src/sys/conf/newvers.sh,v 1.2 2006/05/22 06:14:15 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/newvers.sh,v 1.3 2007/04/10 06:28:53 laffer1 Exp $
 
 TYPE="MidnightBSD"
-REVISION="0.2"
+REVISION="0.3"
 BRANCH="CURRENT"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
@@ -41,10 +41,10 @@ RELEASE="${REVISION}-${BRANCH}"
 VERSION="${TYPE} ${RELEASE}"
 
 if [ "X${PARAMFILE}" != "X" ]; then
-	RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' \
+	RELDATE=$(awk '/__MidnightBSD_version.*propagated to newvers/ {print $3}' \
 		${PARAMFILE})
 else
-	RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' \
+	RELDATE=$(awk '/__MidnightBSD_version.*propagated to newvers/ {print $3}' \
 		$(dirname $0)/../sys/param.h)
 fi
 
