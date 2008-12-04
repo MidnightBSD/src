@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/usr.sbin/apm/Makefile,v 1.17 2004/05/27 19:23:27 njl Exp $
 
 PROG=	apm

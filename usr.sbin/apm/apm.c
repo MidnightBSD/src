@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /*
  * apm / zzz	APM BIOS utility for FreeBSD
  *
