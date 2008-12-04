@@ -15851,6 +15851,7 @@ etc/ntpd.conf -text
 etc/opieaccess -text
 etc/pam.d/Makefile -text
 etc/pam.d/README -text
+etc/pam.d/atrun -text
 etc/pam.d/convert.pl -text
 etc/pam.d/cron -text
 etc/pam.d/ftpd -text
