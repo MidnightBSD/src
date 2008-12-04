@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/ef.c,v 1.8.2.1 2005/12/30 22:13:59 marcel Exp $
+ * $FreeBSD: src/usr.sbin/kldxref/ef.c,v 1.9 2005/12/18 04:52:37 marcel Exp $
  */
 
 #include <sys/param.h>

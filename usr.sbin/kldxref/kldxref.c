@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/kldxref/kldxref.c,v 1.10 2004/08/27 00:58:40 iedowse Exp $
+ * $FreeBSD: src/usr.sbin/kldxref/kldxref.c,v 1.14 2006/08/05 18:22:11 imp Exp $
  */
 
 #include <sys/types.h>
@@ -86,7 +86,7 @@ static const char *xref_file = "linker.hints";
 static char recbuf[MAXRECSIZE];
 static int recpos, reccnt;
 
-void maketempfile(char *, const char *);
+FILE *maketempfile(char *, const char *);
 static void usage(void);
 
 static void
@@ -187,7 +187,7 @@ parse_entry(struct mod_metadata *md, const char *cval,
 		printf("  module %s\n", cval);
 		break;
 	default:
-		warnx("unknown metdata record %d in file %s", md->md_type, kldname);
+		warnx("unknown metadata record %d in file %s", md->md_type, kldname);
 	}
 	if (!error)
 		record_end();
@@ -226,8 +226,7 @@ read_kld(char *filename, char *kldname)
 		cp = strrchr(kldname, '.');
 		nmlen = cp ? min(MAXMODNAME, cp - kldname) : 
 		    min(MAXMODNAME, strlen(kldname));
-		strncpy(kldmodname, kldname, nmlen);
-		kldmodname[nmlen] = '\0';
+		strlcpy(kldmodname, kldname, nmlen);
 /*		fprintf(fxref, "%s:%s:%d\n", kldmodname, kldname, 0);*/
 	}
 	do {
@@ -253,21 +252,21 @@ read_kld(char *filename, char *kldname)
 	return error;
 }
 
-void
+FILE *
 maketempfile(char *dest, const char *root)
 {
 	char *p;
+	int fd;
 
-	strncpy(dest, root, MAXPATHLEN - 1);
-	dest[MAXPATHLEN] = '\0';
+	strlcpy(dest, root, MAXPATHLEN);
 
 	if ((p = strrchr(dest, '/')) != 0)
 		p++;
 	else
 		p = dest;
 	strcpy(p, "lhint.XXXXXX");
-	if (mkstemp(dest) == -1)
-		err(1, "%s", dest);
+	fd = mkstemp(dest);
+	return ((fd == -1) ? NULL : fdopen(fd, "w+"));
 }
 
 static char xrefname[MAXPATHLEN], tempname[MAXPATHLEN];
@@ -322,6 +321,7 @@ main(int argc, char *argv[])
 		p = fts_read(ftsp);
 		if ((p == NULL || p->fts_info == FTS_D) && !dflag && fxref) {
 			fclose(fxref);
+			fxref = NULL;
 			if (reccnt) {
 				rename(tempname, xrefname);
 			} else {
@@ -334,8 +334,7 @@ main(int argc, char *argv[])
 		if (p && p->fts_info == FTS_D && !dflag) {
 			snprintf(xrefname, sizeof(xrefname), "%s/%s",
 			    ftsp->fts_path, xref_file);
-			maketempfile(tempname, ftsp->fts_path);
-			fxref = fopen(tempname, "w+t");
+			fxref = maketempfile(tempname, ftsp->fts_path);
 			if (fxref == NULL)
 				err(1, "can't create %s", tempname);
 			ival = 1;
@@ -343,6 +342,9 @@ main(int argc, char *argv[])
 			reccnt = 0;
 		}
 		if (p->fts_info != FTS_F)
+			continue;
+		if (p->fts_namelen >= 8 &&
+		    strcmp(p->fts_name + p->fts_namelen - 8, ".symbols") == 0)
 			continue;
 		read_kld(p->fts_path, p->fts_name);
 	}

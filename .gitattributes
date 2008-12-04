@@ -33183,7 +33183,6 @@ usr.sbin/kldxref/ef_amd64.c -text
 usr.sbin/kldxref/ef_i386.c -text
 usr.sbin/kldxref/ef_nop.c -text
 usr.sbin/kldxref/ef_obj.c -text
-usr.sbin/kldxref/ef_powerpc.c -text
 usr.sbin/kldxref/ef_sparc64.c -text
 usr.sbin/kldxref/fileformat -text
 usr.sbin/kldxref/kldxref.8 -text
