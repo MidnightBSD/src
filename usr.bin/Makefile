@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.16 2008/09/02 05:33:28 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.17 2008/11/13 17:22:14 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -317,8 +317,8 @@ _usbhidctl=	usbhidctl
 .if ${MK_NCP} != "no"
 _ncplist=	ncplist
 _ncplogin=	ncplogin
+#_pcc=		pcc
 .endif
-_pcc=		pcc
 _smbutil=	smbutil
 .endif
 
