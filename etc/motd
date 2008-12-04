@@ -7,14 +7,18 @@ Before seeking technical support, please use the following resources:
     The MidnightBSD website has the latest information on security
     advisories.  http://www.midnightbsd.org/
 
-    MidnightBSD is on FreeNode #MidnightBSD
+    MidnightBSD is on FreeNode #MidnightBSD (IRC)
+
+    MidnightBSD Forums: http://forums.midnightbsd.org/
+
+    MidnightBSD Wiki: http://www.midnightbsd.org/wiki/
   
 If you still have a question or problem, please take the output of
 `uname -a', along with any relevant error messages, and email it
-as a question to questions@MidnightBSD.org.  If you are
+to midnightbsd-users@MidnightBSD.org (mailing list). If you are
 unfamiliar with MidnightBSD's directory layout, please refer to the hier(7)
-manual page.  If you are not familiar with manual pages, type `man man'.
+manual page. If you are not familiar with manual pages, type `man man'.
 
 You may also use sysinstall(8) to re-enter the installation and
-configuration utility.  Edit /etc/motd to change this login announcement.
+configuration utility. Edit /etc/motd to change this login announcement.
 
