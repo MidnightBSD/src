@@ -1,16 +1,16 @@
-# $NetBSD: Makefile,v 1.16 2001/01/14 15:37:22 minoura Exp $
-# $FreeBSD: src/etc/rc.d/Makefile,v 1.53.2.8 2006/02/12 22:13:15 flz Exp $
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.8 2007/10/26 14:12:39 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.9 2008/04/28 05:22:21 laffer1 Exp $ 
+
+.include <bsd.own.mk>
 
 FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	abi accounting addswap adjkerntz amd \
-	apm apmd archdep atm1 atm2 atm3 auto_linklocal \
-	bgfsck bluetooth bootparams bsnmpd \
+	apm apmd archdep atm1 atm2 atm3 auditd auto_linklocal \
+	bgfsck bluetooth bootparams bridge bsnmpd bthidd \
 	ccd cleanvar cleartmp cron \
 	devd devfs dhclient \
 	dmesg dumpon \
 	encswap \
-	firstboot fsck ftpd \
+	firstboot fsck ftp-proxy ftpd \
 	gbde geli geli2 \
 	hcsecd \
 	hostapd hostname \
@@ -36,14 +36,19 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	serial sound sppp swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
-	ugidfw usbd \
+	ugidfw \
 	var virecover \
 	watchdogd wpa_supplicant \
 	ypbind yppasswdd ypserv \
-	ypset ypupdated ypxfrd
+	ypset ypupdated ypxfrd \
+	zfs
 
-.if !defined(NO_OPENSSH)
+.if ${MK_OPENSSH} != "no"
 FILES+=	sshd
+.endif
+
+.if ${MK_NS_CACHING} != "no"
+FILES+= nscd
 .endif
 
 FILESDIR=	/etc/rc.d

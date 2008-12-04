@@ -15948,12 +15948,15 @@ etc/rc.d/archdep -text
 etc/rc.d/atm1 -text
 etc/rc.d/atm2 -text
 etc/rc.d/atm3 -text
+etc/rc.d/auditd -text
 etc/rc.d/auto_linklocal -text
 etc/rc.d/bgfsck -text
 etc/rc.d/bluetooth -text
 etc/rc.d/bootconf.sh -text
 etc/rc.d/bootparams -text
+etc/rc.d/bridge -text
 etc/rc.d/bsnmpd -text
+etc/rc.d/bthidd -text
 etc/rc.d/ccd -text
 etc/rc.d/cleanvar -text
 etc/rc.d/cleartmp -text
@@ -15966,6 +15969,7 @@ etc/rc.d/dumpon -text
 etc/rc.d/encswap -text
 etc/rc.d/firstboot -text
 etc/rc.d/fsck -text
+etc/rc.d/ftp-proxy -text
 etc/rc.d/ftpd -text
 etc/rc.d/gbde -text
 etc/rc.d/geli -text
@@ -16016,6 +16020,7 @@ etc/rc.d/nfsd -text
 etc/rc.d/nfslocking -text
 etc/rc.d/nfsserver -text
 etc/rc.d/nisdomain -text
+etc/rc.d/nscd -text
 etc/rc.d/nsswitch -text
 etc/rc.d/ntpd -text
 etc/rc.d/othermta -text
@@ -16059,7 +16064,6 @@ etc/rc.d/syslogd -text
 etc/rc.d/timed -text
 etc/rc.d/tmp -text
 etc/rc.d/ugidfw -text
-etc/rc.d/usbd -text
 etc/rc.d/var -text
 etc/rc.d/virecover -text
 etc/rc.d/watchdogd -text
@@ -16070,6 +16074,7 @@ etc/rc.d/ypserv -text
 etc/rc.d/ypset -text
 etc/rc.d/ypupdated -text
 etc/rc.d/ypxfrd -text
+etc/rc.d/zfs -text
 etc/rc.firewall -text
 etc/rc.firewall6 -text
 etc/rc.initdiskless -text

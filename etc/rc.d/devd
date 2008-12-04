@@ -1,11 +1,10 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/devd,v 1.7.2.1 2005/12/16 01:42:54 dougb Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/devd,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: devd
-# REQUIRE: NETWORKING
-# BEFORE: mountcritremote
+# REQUIRE: netif network_ipv6
+# BEFORE: NETWORKING mountcritremote
 # KEYWORD: nojail
 
 . /etc/rc.subr
