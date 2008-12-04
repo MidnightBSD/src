@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/net/if_loop.c,v 1.4 2008/12/03 00:26:54 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -88,7 +88,7 @@
 #elif defined(LARGE_LOMTU)
 #define LOMTU	131072
 #else
-#define LOMTU	16384
+#define LOMTU	32768
 #endif
 
 #define LONAME	"lo"
