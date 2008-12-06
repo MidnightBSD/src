@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/linux/imgact_linux.c,v 1.54 2005/04/01 20:00:10 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/linux/imgact_linux.c,v 1.55.4.1 2008/01/19 18:15:04 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -119,12 +119,14 @@ exec_linux_imgact(struct image_params *imgp)
     /*
      * Destroy old process VM and create a new one (with a new stack)
      */
-    exec_new_vmspace(imgp, &linux_sysvec);
+    error = exec_new_vmspace(imgp, &linux_sysvec);
+    if (error)
+	    goto fail;
     vmspace = imgp->proc->p_vmspace;
 
     /*
      * Check if file_offset page aligned,.
-     * Currently we cannot handle misalinged file offsets,
+     * Currently we cannot handle misaligned file offsets,
      * and so we read in the entire image (what a waste).
      */
     if (file_offset & PAGE_MASK) {

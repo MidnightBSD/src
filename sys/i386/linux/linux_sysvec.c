@@ -27,14 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/linux/linux_sysvec.c,v 1.137.2.1 2005/12/22 21:25:20 jhb Exp $");
-
-/* XXX we use functions that might not exist. */
-#include "opt_compat.h"
-
-#ifndef COMPAT_43
-#error "Unable to compile Linux-emulator due to missing COMPAT_43 option!"
-#endif
+__FBSDID("$FreeBSD: src/sys/i386/linux/linux_sysvec.c,v 1.150 2007/09/20 13:46:26 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -53,6 +46,7 @@ __FBSDID("$FreeBSD: src/sys/i386/linux/linux_sysvec.c,v 1.137.2.1 2005/12/22 21:
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/vnode.h>
+#include <sys/eventhandler.h>
 
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -68,14 +62,12 @@ __FBSDID("$FreeBSD: src/sys/i386/linux/linux_sysvec.c,v 1.137.2.1 2005/12/22 21:
 
 #include <i386/linux/linux.h>
 #include <i386/linux/linux_proto.h>
+#include <compat/linux/linux_emul.h>
 #include <compat/linux/linux_mib.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
 
 MODULE_VERSION(linux, 1);
-MODULE_DEPEND(linux, sysvmsg, 1, 1, 1);
-MODULE_DEPEND(linux, sysvsem, 1, 1, 1);
-MODULE_DEPEND(linux, sysvshm, 1, 1, 1);
 
 MALLOC_DEFINE(M_LINUX, "linux", "Linux mode structures");
 
@@ -103,6 +95,7 @@ extern int linux_szsigcode;
 extern struct sysent linux_sysent[LINUX_SYS_MAXSYSCALL];
 
 SET_DECLARE(linux_ioctl_handler_set, struct linux_ioctl_handler);
+SET_DECLARE(linux_device_handler_set, struct linux_device_handler);
 
 static int	linux_fixup(register_t **stack_base,
 		    struct image_params *iparams);
@@ -110,13 +103,23 @@ static int	elf_linux_fixup(register_t **stack_base,
 		    struct image_params *iparams);
 static void	linux_prepsyscall(struct trapframe *tf, int *args, u_int *code,
 		    caddr_t *params);
-static void     linux_sendsig(sig_t catcher, int sig, sigset_t *mask,
-		    u_long code);
+static void     linux_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask);
 static void	exec_linux_setregs(struct thread *td, u_long entry,
 				   u_long stack, u_long ps_strings);
 
+extern LIST_HEAD(futex_list, futex) futex_list;
+extern struct sx futex_sx;
+
+static eventhandler_tag linux_exit_tag;
+static eventhandler_tag linux_schedtail_tag;
+static eventhandler_tag linux_exec_tag;
+
 /*
  * Linux syscalls return negative errno's, we do positive and map them
+ * Reference:
+ *   FreeBSD: src/sys/sys/errno.h
+ *   Linux:   linux-2.6.17.8/include/asm-generic/errno-base.h
+ *            linux-2.6.17.8/include/asm-generic/errno.h
  */
 static int bsd_to_linux_errno[ELAST + 1] = {
 	-0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,  -8,  -9,
@@ -127,7 +130,8 @@ static int bsd_to_linux_errno[ELAST + 1] = {
 	-100,-101,-102,-103,-104,-105,-106,-107,-108,-109,
 	-110,-111, -40, -36,-112,-113, -39, -11, -87,-122,
 	-116, -66,  -6,  -6,  -6,  -6,  -6, -37, -38,  -9,
-	-6, -6, -43, -42, -75, -6, -84
+	  -6,  -6, -43, -42, -75,-125, -84, -95, -16, -74,
+	 -72, -67, -71
 };
 
 int bsd_to_linux_signal[LINUX_SIGTBLSZ] = {
@@ -270,15 +274,18 @@ extern int _ucodesel, _udatasel;
 extern unsigned long linux_sznonrtsigcode;
 
 static void
-linux_rt_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+linux_rt_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct thread *td = curthread;
 	struct proc *p = td->td_proc;
 	struct sigacts *psp;
 	struct trapframe *regs;
 	struct l_rt_sigframe *fp, frame;
+	int sig, code;
 	int oonstack;
 
+	sig = ksi->ksi_signo;
+	code = ksi->ksi_code;	
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 	psp = p->p_sigacts;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
@@ -287,7 +294,7 @@ linux_rt_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 
 #ifdef DEBUG
 	if (ldebug(rt_sendsig))
-		printf(ARGS(rt_sendsig, "%p, %d, %p, %lu"),
+		printf(ARGS(rt_sendsig, "%p, %d, %p, %u"),
 		    catcher, sig, (void*)mask, code);
 #endif
 	/*
@@ -318,7 +325,7 @@ linux_rt_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	/* Fill in POSIX parts */
 	frame.sf_si.lsi_signo = sig;
 	frame.sf_si.lsi_code = code;
-	frame.sf_si.lsi_addr = (void *)regs->tf_err;
+	frame.sf_si.lsi_addr = ksi->ksi_addr;
 
 	/*
 	 * Build the signal context to be used by sigreturn.
@@ -352,6 +359,7 @@ linux_rt_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	frame.sf_sc.uc_mcontext.sc_esp_at_signal = regs->tf_esp;
 	frame.sf_sc.uc_mcontext.sc_ss     = regs->tf_ss;
 	frame.sf_sc.uc_mcontext.sc_err    = regs->tf_err;
+	frame.sf_sc.uc_mcontext.sc_cr2    = (register_t)ksi->ksi_addr;
 	frame.sf_sc.uc_mcontext.sc_trapno = bsd_to_linux_trapcode(code);
 
 #ifdef DEBUG
@@ -403,7 +411,7 @@ linux_rt_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
  * specified pc, psl.
  */
 static void
-linux_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
+linux_sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 {
 	struct thread *td = curthread;
 	struct proc *p = td->td_proc;
@@ -411,23 +419,25 @@ linux_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	struct trapframe *regs;
 	struct l_sigframe *fp, frame;
 	l_sigset_t lmask;
+	int sig, code;
 	int oonstack, i;
 
 	PROC_LOCK_ASSERT(p, MA_OWNED);
 	psp = p->p_sigacts;
+	sig = ksi->ksi_signo;
+	code = ksi->ksi_code;
 	mtx_assert(&psp->ps_mtx, MA_OWNED);
 	if (SIGISMEMBER(psp->ps_siginfo, sig)) {
 		/* Signal handler installed with SA_SIGINFO. */
-		linux_rt_sendsig(catcher, sig, mask, code);
+		linux_rt_sendsig(catcher, ksi, mask);
 		return;
 	}
-
 	regs = td->td_frame;
 	oonstack = sigonstack(regs->tf_esp);
 
 #ifdef DEBUG
 	if (ldebug(sendsig))
-		printf(ARGS(sendsig, "%p, %d, %p, %lu"),
+		printf(ARGS(sendsig, "%p, %d, %p, %u"),
 		    catcher, sig, (void*)mask, code);
 #endif
 
@@ -478,7 +488,8 @@ linux_sendsig(sig_t catcher, int sig, sigset_t *mask, u_long code)
 	frame.sf_sc.sc_esp_at_signal = regs->tf_esp;
 	frame.sf_sc.sc_ss     = regs->tf_ss;
 	frame.sf_sc.sc_err    = regs->tf_err;
-	frame.sf_sc.sc_trapno = bsd_to_linux_trapcode(code);
+	frame.sf_sc.sc_cr2    = (register_t)ksi->ksi_addr;
+	frame.sf_sc.sc_trapno = bsd_to_linux_trapcode(ksi->ksi_trapno);
 
 	for (i = 0; i < (LINUX_NSIG_WORDS-1); i++)
 		frame.sf_extramask[i] = lmask.__bits[i+1];
@@ -525,6 +536,7 @@ linux_sigreturn(struct thread *td, struct linux_sigreturn_args *args)
 	struct trapframe *regs;
 	l_sigset_t lmask;
 	int eflags, i;
+	ksiginfo_t ksi;
 
 	regs = td->td_frame;
 
@@ -565,7 +577,12 @@ linux_sigreturn(struct thread *td, struct linux_sigreturn_args *args)
 	 */
 #define	CS_SECURE(cs)	(ISPL(cs) == SEL_UPL)
 	if (!CS_SECURE(frame.sf_sc.sc_cs)) {
-		trapsignal(td, SIGBUS, T_PROTFLT);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGBUS;
+		ksi.ksi_code = BUS_OBJERR;
+		ksi.ksi_trapno = T_PROTFLT;
+		ksi.ksi_addr = (void *)regs->tf_eip;
+		trapsignal(td, &ksi);
 		return(EINVAL);
 	}
 
@@ -621,6 +638,7 @@ linux_rt_sigreturn(struct thread *td, struct linux_rt_sigreturn_args *args)
 	stack_t ss;
 	struct trapframe *regs;
 	int eflags;
+	ksiginfo_t ksi;
 
 	regs = td->td_frame;
 
@@ -663,7 +681,12 @@ linux_rt_sigreturn(struct thread *td, struct linux_rt_sigreturn_args *args)
 	 */
 #define	CS_SECURE(cs)	(ISPL(cs) == SEL_UPL)
 	if (!CS_SECURE(context->sc_cs)) {
-		trapsignal(td, SIGBUS, T_PROTFLT);
+		ksiginfo_init_trap(&ksi);
+		ksi.ksi_signo = SIGBUS;
+		ksi.ksi_code = BUS_OBJERR;
+		ksi.ksi_trapno = T_PROTFLT;
+		ksi.ksi_addr = (void *)regs->tf_eip;
+		trapsignal(td, &ksi);
 		return(EINVAL);
 	}
 
@@ -792,7 +815,7 @@ exec_linux_setregs(struct thread *td, u_long entry,
 struct sysentvec linux_sysvec = {
 	LINUX_SYS_MAXSYSCALL,
 	linux_sysent,
-	0xff,
+	0,
 	LINUX_SIGTBLSZ,
 	bsd_to_linux_signal,
 	ELAST + 1,
@@ -821,7 +844,7 @@ struct sysentvec linux_sysvec = {
 struct sysentvec elf_linux_sysvec = {
 	LINUX_SYS_MAXSYSCALL,
 	linux_sysent,
-	0xff,
+	0,
 	LINUX_SIGTBLSZ,
 	bsd_to_linux_signal,
 	ELAST + 1,
@@ -855,6 +878,7 @@ static Elf32_Brandinfo linux_brand = {
 					"/lib/ld-linux.so.1",
 					&elf_linux_sysvec,
 					NULL,
+					BI_CAN_EXEC_DYN,
 				 };
 
 static Elf32_Brandinfo linux_glibc2brand = {
@@ -865,6 +889,7 @@ static Elf32_Brandinfo linux_glibc2brand = {
 					"/lib/ld-linux.so.2",
 					&elf_linux_sysvec,
 					NULL,
+					BI_CAN_EXEC_DYN,
 				 };
 
 Elf32_Brandinfo *linux_brandlist[] = {
@@ -879,6 +904,7 @@ linux_elf_modevent(module_t mod, int type, void *data)
 	Elf32_Brandinfo **brandinfo;
 	int error;
 	struct linux_ioctl_handler **lihp;
+	struct linux_device_handler **ldhp;
 
 	error = 0;
 
@@ -891,6 +917,18 @@ linux_elf_modevent(module_t mod, int type, void *data)
 		if (error == 0) {
 			SET_FOREACH(lihp, linux_ioctl_handler_set)
 				linux_ioctl_register_handler(*lihp);
+			SET_FOREACH(ldhp, linux_device_handler_set)
+				linux_device_register_handler(*ldhp);
+			mtx_init(&emul_lock, "emuldata lock", NULL, MTX_DEF);
+			sx_init(&emul_shared_lock, "emuldata->shared lock");
+			LIST_INIT(&futex_list);
+			sx_init(&futex_sx, "futex protection lock");
+			linux_exit_tag = EVENTHANDLER_REGISTER(process_exit, linux_proc_exit,
+			      NULL, 1000);
+			linux_schedtail_tag = EVENTHANDLER_REGISTER(schedtail, linux_schedtail,
+			      NULL, 1000);
+			linux_exec_tag = EVENTHANDLER_REGISTER(process_exec, linux_proc_exec,
+			      NULL, 1000);
 			if (bootverbose)
 				printf("Linux ELF exec handler installed\n");
 		} else
@@ -910,6 +948,14 @@ linux_elf_modevent(module_t mod, int type, void *data)
 		if (error == 0) {
 			SET_FOREACH(lihp, linux_ioctl_handler_set)
 				linux_ioctl_unregister_handler(*lihp);
+			SET_FOREACH(ldhp, linux_device_handler_set)
+				linux_device_unregister_handler(*ldhp);
+			mtx_destroy(&emul_lock);
+			sx_destroy(&emul_shared_lock);
+			sx_destroy(&futex_sx);
+			EVENTHANDLER_DEREGISTER(process_exit, linux_exit_tag);
+			EVENTHANDLER_DEREGISTER(schedtail, linux_schedtail_tag);
+			EVENTHANDLER_DEREGISTER(process_exec, linux_exec_tag);
 			if (bootverbose)
 				printf("Linux ELF exec handler removed\n");
 		} else

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/linux/linux_dummy.c,v 1.38 2004/03/28 21:43:27 bms Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/linux/linux_dummy.c,v 1.46 2007/03/29 02:11:46 julian Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: src/sys/i386/linux/linux_dummy.c,v 1.38 2004/03/28 21:43:27 
 #include <i386/linux/linux_proto.h>
 #include <compat/linux/linux_util.h>
 
-DUMMY(stat);
 DUMMY(stime);
 DUMMY(fstat);
 DUMMY(olduname);
@@ -57,19 +56,52 @@ DUMMY(sysfs);
 DUMMY(vm86);
 DUMMY(query_module);
 DUMMY(nfsservctl);
-DUMMY(prctl);
-DUMMY(rt_sigpending);
-DUMMY(rt_sigtimedwait);
 DUMMY(rt_sigqueueinfo);
 DUMMY(capget);
 DUMMY(capset);
-DUMMY(sendfile);
+DUMMY(sendfile);		/* different semantics */
 DUMMY(truncate64);
 DUMMY(setfsuid);
 DUMMY(setfsgid);
 DUMMY(pivot_root);
 DUMMY(mincore);
 DUMMY(fadvise64);
+DUMMY(lookup_dcookie);
+DUMMY(epoll_create);
+DUMMY(epoll_ctl);
+DUMMY(epoll_wait);
+DUMMY(remap_file_pages);
+DUMMY(fstatfs64);
+DUMMY(fadvise64_64);
+DUMMY(mbind);
+DUMMY(get_mempolicy);
+DUMMY(set_mempolicy);
+DUMMY(kexec_load);
+DUMMY(waitid);
+DUMMY(add_key);
+DUMMY(request_key);
+DUMMY(keyctl);
+DUMMY(ioprio_set);
+DUMMY(ioprio_get);
+DUMMY(inotify_init);
+DUMMY(inotify_add_watch);
+DUMMY(inotify_rm_watch);
+DUMMY(migrate_pages);
+DUMMY(mkdirat);
+DUMMY(mknodat);
+DUMMY(fchownat);
+DUMMY(futimesat);
+DUMMY(fstatat64);
+DUMMY(unlinkat);
+DUMMY(renameat);
+DUMMY(linkat);
+DUMMY(symlinkat);
+DUMMY(readlinkat);
+DUMMY(fchmodat);
+DUMMY(faccessat);
+DUMMY(pselect6);
+DUMMY(ppoll);
+DUMMY(unshare);
 
 #define DUMMY_XATTR(s)						\
 int								\

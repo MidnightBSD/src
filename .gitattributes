@@ -27849,6 +27849,7 @@ sys/i386/linux/linux_locore.s -text
 sys/i386/linux/linux_machdep.c -text
 sys/i386/linux/linux_proto.h -text
 sys/i386/linux/linux_ptrace.c -text
+sys/i386/linux/linux_support.s -text
 sys/i386/linux/linux_syscall.h -text
 sys/i386/linux/linux_sysent.c -text
 sys/i386/linux/linux_sysvec.c -text
