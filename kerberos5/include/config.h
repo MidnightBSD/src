@@ -238,9 +238,7 @@ static /**/const char *const rcsid[] = { (const char *)rcsid, "@(#)" msg }
 #define HAVE_FNMATCH_H 1
 
 /* Define if el_init takes four arguments. */
-#if __FreeBSD_version >= 500024
 #define HAVE_FOUR_VALUED_EL_INIT 1
-#endif
 
 /* define if krb_put_int takes four arguments. */
 #define HAVE_FOUR_VALUED_KRB_PUT_INT 1
@@ -312,15 +310,10 @@ static /**/const char *const rcsid[] = { (const char *)rcsid, "@(#)" msg }
 #define HAVE_GETPAGESIZE 1
 
 /* Define to 1 if you have the `getprogname' function. */
-#if (__FreeBSD_version >= 430002 && __FreeBSD_version < 500000) || \
-    __FreeBSD_version >= 500019
 #define HAVE_GETPROGNAME 1
-#endif
 
 /* Define to 1 if you have the `getpwnam_r' function. */
-#if __FreeBSD_version >= 500112
 #define HAVE_GETPWNAM_R 1
-#endif
 
 /* Define to 1 if you have the `getrlimit' function. */
 #define HAVE_GETRLIMIT 1
@@ -348,9 +341,7 @@ static /**/const char *const rcsid[] = { (const char *)rcsid, "@(#)" msg }
 #define HAVE_GLOB 1
 
 /* Define to 1 if you have the `grantpt' function. */
-#if __FreeBSD_version >= 500100
 #define HAVE_GRANTPT 1
-#endif
 
 /* Define to 1 if you have the <grp.h> header file. */
 #define HAVE_GRP_H 1
@@ -557,9 +548,7 @@ static /**/const char *const rcsid[] = { (const char *)rcsid, "@(#)" msg }
 #define HAVE_PTHREAD_H 1
 
 /* Define to 1 if you have the `ptsname' function. */
-#if __FreeBSD_version >= 500100
 #define HAVE_PTSNAME 1
-#endif
 
 /* Define to 1 if you have the <pty.h> header file. */
 /* #undef HAVE_PTY_H */
@@ -646,10 +635,7 @@ static /**/const char *const rcsid[] = { (const char *)rcsid, "@(#)" msg }
 #define HAVE_SETPROCTITLE 1
 
 /* Define to 1 if you have the `setprogname' function. */
-#if (__FreeBSD_version >= 430002 && __FreeBSD_version < 500000) || \
-    __FreeBSD_version >= 500019
 #define HAVE_SETPROGNAME 1
-#endif
 
 /* Define to 1 if you have the `setregid' function. */
 #define HAVE_SETREGID 1
@@ -709,9 +695,7 @@ static /**/const char *const rcsid[] = { (const char *)rcsid, "@(#)" msg }
 /* #undef HAVE_STANDARDS_H */
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#if __FreeBSD_version >= 500028
 #define HAVE_STDINT_H 1
-#endif
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
@@ -1014,9 +998,7 @@ static /**/const char *const rcsid[] = { (const char *)rcsid, "@(#)" msg }
 #define HAVE_UNISTD_H 1
 
 /* Define to 1 if you have the `unlockpt' function. */
-#if __FreeBSD_version >= 500100
 #define HAVE_UNLOCKPT 1
-#endif
 
 /* Define if you have the function `unsetenv'. */
 #define HAVE_UNSETENV 1
