@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipfcomp.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ipfcomp.c,v 1.2 2008-12-06 20:34:27 laffer1 Exp $";
 #endif
 
 #include "ipf.h"
@@ -98,7 +98,7 @@ frentry_t *fr;
 		fprintf(fp, "#include <sys/types.h>\n");
 		fprintf(fp, "#include <sys/time.h>\n");
 		fprintf(fp, "#include <sys/socket.h>\n");
-		fprintf(fp, "#if (__FreeBSD_version >= 40000)\n");
+		fprintf(fp, "#if (__FreeBSD_version >= 40000) || defined(__MidnightBSD__)\n");
 		fprintf(fp, "# if defined(_KERNEL)\n");
 		fprintf(fp, "#  include <sys/libkern.h>\n");
 		fprintf(fp, "# else\n");
@@ -107,7 +107,7 @@ frentry_t *fr;
 		fprintf(fp, "#endif\n");
 		fprintf(fp, "#if (__NetBSD_Version__ >= 399000000)\n");
 		fprintf(fp, "#else\n");
-		fprintf(fp, "# if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__sgi)\n");
+		fprintf(fp, "# if !defined(__MidnightBSD__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__sgi)\n");
 		fprintf(fp, "#  include <sys/systm.h>\n");
 		fprintf(fp, "# endif\n");
 		fprintf(fp, "#endif\n");
@@ -118,7 +118,7 @@ frentry_t *fr;
 		fprintf(fp, "# include <sys/mbuf.h>\n");
 		fprintf(fp, "#endif\n");
 		fprintf(fp,
-"#if defined(__FreeBSD__) && (__FreeBSD_version > 220000)\n");
+"#if defined(__MidnightBSD__) || defined(__FreeBSD__) && (__FreeBSD_version > 220000)\n");
 		fprintf(fp, "# include <sys/sockio.h>\n");
 		fprintf(fp, "#else\n");
 		fprintf(fp, "# include <sys/ioctl.h>\n");

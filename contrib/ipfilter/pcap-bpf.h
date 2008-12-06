@@ -39,7 +39,7 @@
  *
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  *
- * @(#) $Header: /home/cvs/src/contrib/ipfilter/pcap-bpf.h,v 1.1.1.2 2006-02-25 02:33:23 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/ipfilter/pcap-bpf.h,v 1.2 2008-12-06 20:34:25 laffer1 Exp $ (LBL)
  */
 
 /*
@@ -163,7 +163,7 @@ struct bpf_version {
  * for DLT_SLIP_BSDOS and DLT_PPP_BSDOS, which are 15 and 16, but they
  * didn't.  So it goes.
  */
-#if defined(__NetBSD__) || defined(__FreeBSD__)
+#if defined(__NetBSD__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
 #ifndef DLT_SLIP_BSDOS
 #define DLT_SLIP_BSDOS	13	/* BSD/OS Serial Line IP */
 #define DLT_PPP_BSDOS	14	/* BSD/OS Point-to-point Protocol */

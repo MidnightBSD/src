@@ -8,7 +8,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "%W% %G% (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: iptests.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: iptests.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -75,7 +75,7 @@ typedef	int	boolean_t;
 # include <asm/atomic.h>
 #endif
 #if !defined(linux)
-# if defined(__FreeBSD__)
+# if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #  include "radix_ipf.h"
 # endif
 # include <net/route.h>

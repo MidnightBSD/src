@@ -5,7 +5,7 @@
  * 
  * See the IPFILTER.LICENCE file for details on licencing.  
  *   
- * $Id: getifname.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $ 
+ * $Id: getifname.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $ 
  */     
 
 #include "ipf.h"
@@ -47,7 +47,7 @@ struct ifnet *ptr;
 	return ifname;
 #else
 # if defined(NetBSD) && (NetBSD >= 199905) && (NetBSD < 1991011) || \
-    defined(__OpenBSD__) || \
+    defined(__OpenBSD__) || defined(__MidnightBSD__) || \
     (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
 #else
 	char buf[32];
@@ -63,7 +63,7 @@ struct ifnet *ptr;
 	if (kmemcpy((char *)&netif, (u_long)ptr, sizeof(netif)) == -1)
 		return "X";
 # if defined(NetBSD) && (NetBSD >= 199905) && (NetBSD < 1991011) || \
-    defined(__OpenBSD__) || defined(linux) || \
+    defined(__OpenBSD__) || defined(linux) || defined(__MidnightBSD__) || \
     (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
 	return strdup(netif.if_xname);
 # else

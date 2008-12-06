@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <time.h>
 #if !defined(__SVR4) && !defined(__svr4__)
-# if (__FreeBSD_version >= 300000)
+# if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 #  include <sys/dirent.h>
 # else
 #  include <sys/dir.h>
@@ -78,7 +78,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipmon.c	1.21 6/5/96 (C)1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipmon.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ipmon.c,v 1.2 2008-12-06 20:34:27 laffer1 Exp $";
 #endif
 
 
@@ -1035,7 +1035,7 @@ int	blen;
 		(void) sprintf(t, "%dx ", ipl->ipl_count);
 		t += strlen(t);
 	}
-#if (defined(MENTAT) || \
+#if (defined(MENTAT) || defined(__MidnightBSD__) || \
 	(defined(NetBSD) && (NetBSD <= 1991011) && (NetBSD >= 199603)) || \
 	(defined(__FreeBSD__) && (__FreeBSD_version >= 501113)) || \
 	(defined(OpenBSD) && (OpenBSD >= 199603))) || defined(linux)

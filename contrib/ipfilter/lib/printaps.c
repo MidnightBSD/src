@@ -13,7 +13,7 @@
 
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: printaps.c,v 1.1.1.2 2008-11-22 14:33:10 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: printaps.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
 #endif
 
 
@@ -46,7 +46,7 @@ int opts;
 			ap.aps_state[0], ap.aps_state[1],
 			ap.aps_sel[0], ap.aps_sel[1]);
 #if (defined(NetBSD) && (NetBSD >= 199905) && (NetBSD < 1991011)) || \
-    (__FreeBSD_version >= 300000) || defined(OpenBSD)
+    (__FreeBSD_version >= 300000) || defined(OpenBSD) || defined(__MidnightBSD__)
 		printf("\t\tseq: off %hd/%hd min %x/%x\n",
 			ap.aps_seqoff[0], ap.aps_seqoff[1],
 			ap.aps_seqmin[0], ap.aps_seqmin[1]);

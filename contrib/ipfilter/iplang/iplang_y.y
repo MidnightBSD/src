@@ -663,7 +663,7 @@ struct ether_addr *buf;
 	if (!e)
 		fprintf(stderr, "Invalid ethernet address: %s\n", arg);
 	else
-# ifdef	__FreeBSD__
+# if	defined(__FreeBSD__) || defined(__MidnightBSD__)
 		bcopy(e->octet, buf->octet, sizeof(e->octet));
 # else
 		bcopy(e->ether_addr_octet, buf->ether_addr_octet,

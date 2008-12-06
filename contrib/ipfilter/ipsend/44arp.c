@@ -8,12 +8,12 @@
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
+#if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 # include <net/if_var.h>
 #endif
 #include <net/if_dl.h>
 #include <net/if_types.h>
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # include "radix_ipf.h"
 #endif
 #ifndef __osf__

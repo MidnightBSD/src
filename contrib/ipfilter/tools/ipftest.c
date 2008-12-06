@@ -12,7 +12,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipt.c	1.19 6/3/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipftest.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ipftest.c,v 1.2 2008-12-06 20:34:27 laffer1 Exp $";
 #endif
 
 extern	char	*optarg;
@@ -46,7 +46,7 @@ void	fixv4sums __P((mb_t *, ip_t *));
 
 #if defined(__NetBSD__) || defined(__OpenBSD__) || SOLARIS || \
 	(_BSDI_VERSION >= 199701) || (__FreeBSD_version >= 300000) || \
-	defined(__osf__) || defined(linux)
+	defined(__osf__) || defined(linux) || defined(__MidnightBSD__)
 int ipftestioctl __P((int, ioctlcmd_t, ...));
 int ipnattestioctl __P((int, ioctlcmd_t, ...));
 int ipstatetestioctl __P((int, ioctlcmd_t, ...));
@@ -325,7 +325,7 @@ char *argv[];
 
 #if defined(__NetBSD__) || defined(__OpenBSD__) || SOLARIS || \
 	(_BSDI_VERSION >= 199701) || (__FreeBSD_version >= 300000) || \
-	defined(__osf__) || defined(linux)
+	defined(__osf__) || defined(linux) || defined(__MidnightBSD__)
 int ipftestioctl(int dev, ioctlcmd_t cmd, ...)
 {
 	caddr_t data;

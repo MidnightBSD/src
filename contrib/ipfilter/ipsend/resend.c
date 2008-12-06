@@ -8,7 +8,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)resend.c	1.3 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: resend.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: resend.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -25,7 +25,7 @@ static const char rcsid[] = "@(#)$Id: resend.c,v 1.1.1.2 2008-11-22 14:33:09 laf
 #ifndef	linux
 # include <netinet/ip_var.h>
 # include <netinet/if_ether.h>
-# if __FreeBSD_version >= 300000
+# if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 #  include <net/if_var.h>
 # endif
 #endif

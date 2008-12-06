@@ -6,7 +6,7 @@
  * See the IPFILTER.LICENCE file for details on licencing.
  *
  * @(#)ipf.h	1.12 6/5/96
- * $Id: ipf.h,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $
+ * $Id: ipf.h,v 1.2 2008-12-06 20:34:25 laffer1 Exp $
  */
 
 #ifndef	__IPF_H__
@@ -42,7 +42,7 @@ struct file;
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
+#if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 # include <net/if_var.h>
 #endif
 #include <netinet/in.h>
@@ -98,7 +98,7 @@ struct file;
 #ifndef	U_32_T
 # define	U_32_T	1
 # if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
-    defined(__sgi)
+    defined(__sgi) || defined(__MidnightBSD__)
 typedef	u_int32_t	u_32_t;
 # else
 #  if defined(__alpha__) || defined(__alpha) || defined(_LP64)
@@ -110,7 +110,7 @@ typedef uint32_t	u_32_t;
 typedef unsigned int	u_32_t;
 #   endif
 #  endif
-# endif /* __NetBSD__ || __OpenBSD__ || __FreeBSD__ || __sgi */
+# endif /* __NetBSD__ || __OpenBSD__ || __FreeBSD__ || __sgi || __MidnightBSD__  */
 #endif /* U_32_T */
 
 #ifndef	MAXHOSTNAMELEN
@@ -151,6 +151,7 @@ typedef	struct	{
 
 
 #if defined(__NetBSD__) || defined(__OpenBSD__) || \
+        defined(__MidnightBSD__) || \
         (_BSDI_VERSION >= 199701) || (__FreeBSD_version >= 300000) || \
 	SOLARIS || defined(__sgi) || defined(__osf__) || defined(linux)
 # include <stdarg.h>

@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.1.1.3 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.2 2008-12-06 20:34:25 laffer1 Exp $";
 #endif
 
 #ifndef	SOLARIS
@@ -15,9 +15,9 @@ static const char rcsid[] = "@(#)$Id: ip_fil.c,v 1.1.1.3 2008-11-22 14:33:09 laf
 #endif
 
 #include <sys/param.h>
-#if defined(__FreeBSD__) && !defined(__FreeBSD_version)
+#if defined(__FreeBSD__) && !defined(__FreeBSD_version) || (defined(__MidnightBSD__) && !defined(__MidnightBSD_version))
 # if defined(IPFILTER_LKM)
-#  ifndef __FreeBSD_cc_version
+#  ifndef __FreeBSD_cc_version || __MidnightBSD_cc_version
 #   include <osreldate.h>
 #  else
 #   if __FreeBSD_cc_version < 430000
@@ -46,7 +46,8 @@ struct file;
 #endif
 #include <sys/time.h>
 #if !SOLARIS
-# if (NetBSD > 199609) || (OpenBSD > 199603) || (__FreeBSD_version >= 300000)
+# if (NetBSD > 199609) || (OpenBSD > 199603) || \
+    (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 #  include <sys/dirent.h>
 # else
 #  include <sys/dir.h>
@@ -72,7 +73,7 @@ struct file;
 #ifdef sun
 # include <net/af.h>
 #endif
-#if __FreeBSD_version >= 300000
+#if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 # include <net/if_var.h>
 #endif
 #ifdef __sgi
@@ -81,7 +82,7 @@ struct file;
 #include <sys/hashing.h>
 # endif
 #endif
-#if defined(__FreeBSD__) || defined(SOLARIS2)
+#if defined(__FreeBSD__) || defined(SOLARIS2) || defined(__MidnightBSD__)
 # include "radix_ipf.h"
 #endif
 #ifndef __osf__
@@ -131,7 +132,7 @@ struct file;
 #ifdef IPFILTER_COMPILED
 # include "netinet/ip_rules.h"
 #endif
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000) || defined(__MidnightBSD_version)
 # include <sys/malloc.h>
 #endif
 #ifdef __hpux
@@ -293,7 +294,8 @@ struct sockaddr *s;
 
 #if (defined(NetBSD) && (NetBSD <= 1991011) && (NetBSD >= 199606)) || \
     (defined(OpenBSD) && (OpenBSD >= 199603)) || defined(linux) || \
-    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
+    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113)) || \
+    (defined(__MidnightBSD__))
 	sprintf(fname, "/tmp/%s", ifp->if_xname);
 #else
 	sprintf(fname, "/tmp/%s%d", ifp->if_name, ifp->if_unit);
@@ -319,7 +321,7 @@ char *addr;
 	struct ifaddr *ifa;
 #endif
 
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__MidnightBSD__)
 	if (ifp->if_addrlist.tqh_first != NULL)
 #else
 # ifdef __sgi
@@ -331,7 +333,8 @@ char *addr;
 		return;
 
 	ifa = (struct ifaddr *)malloc(sizeof(*ifa));
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
+    defined(__MidnightBSD__)
 	ifp->if_addrlist.tqh_first = ifa;
 #else
 # ifdef __sgi
@@ -363,7 +366,8 @@ int v;
 	char *addr;
 #if (defined(NetBSD) && (NetBSD <= 1991011) && (NetBSD >= 199606)) || \
     (defined(OpenBSD) && (OpenBSD >= 199603)) || defined(linux) || \
-    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
+    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113)) || \
+    (defined(__MidnightBSD__))
 
 	if (name == NULL)
 		name = "anon0";
@@ -429,12 +433,14 @@ int v;
 	}
 	ifp = ifneta[nifs - 1];
 
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
+    defined(__MidnightBSD__)
 	TAILQ_INIT(&ifp->if_addrlist);
 #endif
 #if (defined(NetBSD) && (NetBSD <= 1991011) && (NetBSD >= 199606)) || \
     (defined(OpenBSD) && (OpenBSD >= 199603)) || defined(linux) || \
-    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
+    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113)) || \
+    defined(__MidnightBSD__)
 	(void) strncpy(ifp->if_xname, name, sizeof(ifp->if_xname));
 #else
 	for (s = name; *s && !ISDIGIT(*s); s++)
@@ -465,7 +471,8 @@ struct ifnet *ifp;
 	static char ifname[LIFNAMSIZ];
 
 #if defined(__OpenBSD__) || defined(__NetBSD__) || defined(linux) || \
-    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
+    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113)) || \
+    defined(__MidnightBSD__)
 	sprintf(ifname, "%s", ifp->if_xname);
 #else
 	sprintf(ifname, "%s%d", ifp->if_name, ifp->if_unit);
@@ -483,7 +490,8 @@ void init_ifp()
 
 #if (defined(NetBSD) && (NetBSD <= 1991011) && (NetBSD >= 199606)) || \
     (defined(OpenBSD) && (OpenBSD >= 199603)) || defined(linux) || \
-    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113))
+    (defined(__FreeBSD__) && (__FreeBSD_version >= 501113)) || \
+    defined(__MidnightBSD__)
 	for (ifpp = ifneta; ifpp && (ifp = *ifpp); ifpp++) {
 		ifp->if_output = (void *)write_output;
 		sprintf(fname, "/tmp/%s", ifp->if_xname);
@@ -771,7 +779,8 @@ struct in_addr *inp, *inpmask;
 	struct ifaddr *ifa;
 #endif
 
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
+    defined(__MidnightBSD__)
 	ifa = ifp->if_addrlist.tqh_first;
 #else
 # ifdef __sgi

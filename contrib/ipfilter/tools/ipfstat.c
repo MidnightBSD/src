@@ -5,7 +5,7 @@
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # ifndef __FreeBSD_cc_version
 #  include <osreldate.h>
 # else
@@ -71,7 +71,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)fils.c	1.21 4/20/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ipfstat.c,v 1.1.1.2 2008-11-22 14:33:11 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ipfstat.c,v 1.2 2008-12-06 20:34:27 laffer1 Exp $";
 #endif
 
 #ifdef __hpux

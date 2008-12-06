@@ -32,7 +32,8 @@
 # endif
 #endif
 #include <sys/systm.h>
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
+#if defined(__MidnightBSD__) || \
+    defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
 # ifndef ACTUALLY_LKM_NOT_KERNEL
 #  include "opt_devfs.h"
 # endif
@@ -44,7 +45,7 @@
 #endif
 #include <sys/conf.h>
 #include <sys/file.h>
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/lock.h>
 #endif
 #include <sys/stat.h>
@@ -59,7 +60,7 @@
 #if	BSD >= 199506
 # include <sys/sysctl.h>
 #endif
-#if (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 # include <sys/socket.h>
 #endif
 #include <net/if.h>
@@ -140,7 +141,7 @@ SYSCTL_IPF(_net_inet_ipf, OID_AUTO, ippr_ftp_pasvonly, CTLFLAG_RW,
 static void *ipf_devfs[IPL_LOGSIZE];
 #endif
 
-#if !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
+#if !defined(__MidnightBSD__) || !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
 int	ipl_major = 0;
 
 static struct   cdevsw  ipldevsw =
@@ -168,7 +169,7 @@ extern int nchrdev;
 static struct cdevsw ipl_cdevsw = {
 	iplopen,	iplclose,	iplread,	nowrite, /* 79 */
 	iplioctl,	nostop,		noreset,	nodevtotty,
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 	seltrue,	nommap,		nostrategy,	"ipl",
 #else
 	noselect,	nommap,		nostrategy,	"ipl",
@@ -195,7 +196,7 @@ static int iplaction(lkmtp, cmd)
 struct lkm_table *lkmtp;
 int cmd;
 {
-#if !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
+#if !defined(__MidnightBSD__) || !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
 	int i = ipl_major;
 	struct lkm_dev *args = lkmtp->private.lkm_dev;
 #endif
@@ -207,7 +208,7 @@ int cmd;
 		if (lkmexists(lkmtp))
 			return EEXIST;
 
-#if !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
+#if !defined(__MidnightBSD__) || !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
 		for (i = 0; i < nchrdev; i++)
 			if (cdevsw[i].d_open == lkmenodev ||
 			    cdevsw[i].d_open == iplopen)
@@ -270,7 +271,7 @@ static int if_ipl_remove __P((void))
 		if ((error = namei(&nd)))
 			return (error);
 		VOP_LEASE(nd.ni_vp, curproc, curproc->p_ucred, LEASE_WRITE);
-#if (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 		VOP_LOCK(nd.ni_vp, LK_RETRY | LK_EXCLUSIVE, curproc);
 		VOP_LEASE(nd.ni_dvp, curproc, curproc->p_ucred, LEASE_WRITE);
 		(void) VOP_REMOVE(nd.ni_dvp, nd.ni_vp, &nd.ni_cnd);
@@ -338,7 +339,7 @@ int cmd;
 		vattr.va_rdev = (ipl_major << 8) | i;
 		VOP_LEASE(nd.ni_dvp, curproc, curproc->p_ucred, LEASE_WRITE);
 		error = VOP_MKNOD(nd.ni_dvp, &nd.ni_vp, &nd.ni_cnd, &vattr);
-#if (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 		vput(nd.ni_dvp);
 #endif
 		if (error)
@@ -374,7 +375,7 @@ int cmd, ver;
 # ifdef	IPFILTER_LKM
 #  include <sys/exec.h>
 
-#  if (__FreeBSD_version >= 300000)
+#  if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 MOD_DEV(if_ipl, LM_DT_CHAR, CDEV_MAJOR, &ipl_cdevsw);
 #  else
 MOD_DECL(if_ipl);
@@ -398,7 +399,7 @@ int if_ipl(lkmtp, cmd, ver)
 struct lkm_table *lkmtp;
 int cmd, ver;
 {
-#  if (__FreeBSD_version >= 300000)
+#  if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 	MOD_DISPATCH(if_ipl, lkmtp, cmd, ver, iplaction, iplaction, iplaction);
 #  else
 	DISPATCH(lkmtp, cmd, ver, iplaction, iplaction, iplaction);
@@ -462,7 +463,7 @@ sysctl_ipf_int SYSCTL_HANDLER_ARGS
 #endif
 
 
-# if defined(IPFILTER_LKM) || \
+# if defined(IPFILTER_LKM) || defined(__MidnightBSD__) || \
      defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
 SYSINIT(ipldev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE+CDEV_MAJOR,ipl_drvinit,NULL)
 # endif /* IPFILTER_LKM */

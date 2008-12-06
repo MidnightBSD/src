@@ -13,7 +13,7 @@
 
 #include <sys/param.h>
 
-#if defined(__FreeBSD__) && (__FreeBSD__ > 1)
+#if defined(__MidnightBSD__) || defined(__FreeBSD__) && (__FreeBSD__ > 1)
 # ifdef	IPFILTER_LKM
 #  include <osreldate.h>
 #  define	ACTUALLY_LKM_NOT_KERNEL
@@ -22,7 +22,7 @@
 # endif
 #endif
 #include <sys/systm.h>
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
+#if defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 220000)
 # include <sys/conf.h>
 # include <sys/kernel.h>
 # ifdef DEVFS
@@ -31,7 +31,7 @@
 #endif
 #include <sys/conf.h>
 #include <sys/file.h>
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/lock.h>
 #endif
 #include <sys/stat.h>
@@ -46,10 +46,10 @@
 #if	BSD >= 199506
 # include <sys/sysctl.h>
 #endif
-#if (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 # include <sys/socket.h>
 #endif
-#if (__FreeBSD_version >= 199511)
+#if defined(__MidnightBSD__) || (__FreeBSD_version >= 199511)
 #include <net/if.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
@@ -59,7 +59,7 @@
 #include <netinet/tcp.h>
 #include <netinet/tcpip.h>
 #endif
-#if (__FreeBSD__ > 1)
+#if defined(__MidnightBSD__) || (__FreeBSD__ > 1)
 # include <sys/sysent.h>
 #endif
 #include <sys/lkm.h>
@@ -70,7 +70,7 @@
 
 int	xxxinit __P((struct lkm_table *, int, int));
 
-#if !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
+#if !defined(__MidnightBSD__) || !defined(__FreeBSD_version) || (__FreeBSD_version < 220000)
 MOD_DEV(IPL_VERSION, LM_DT_CHAR, -1, &ipldevsw);
 #endif
 
@@ -88,7 +88,7 @@ int cmd, ver;
 # ifdef	IPFILTER_LKM
 #  include <sys/exec.h>
 
-#  if (__FreeBSD_version >= 300000)
+#  if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 MOD_MISC(ipfrule);
 #  else
 MOD_DECL(ipfrule);
@@ -110,7 +110,7 @@ int ipfrule(lkmtp, cmd, ver)
 struct lkm_table *lkmtp;
 int cmd, ver;
 {
-#  if (__FreeBSD_version >= 300000)
+#  if defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)
 	MOD_DISPATCH(ipfrule, lkmtp, cmd, ver, ipfrule_ioctl, ipfrule_ioctl,
 		     ipfrule_ioctl);
 #  else

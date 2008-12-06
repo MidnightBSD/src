@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)sock.c	1.2 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: sock.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: sock.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
 #endif
 #include <sys/param.h>
 #include <sys/types.h>
@@ -24,7 +24,7 @@ typedef int     boolean_t;
 #ifndef	ultrix
 #include <fcntl.h>
 #endif
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 # include <sys/dirent.h>
 #else
 # include <sys/dir.h>
@@ -66,7 +66,7 @@ typedef int     boolean_t;
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <net/if.h>
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # include "radix_ipf.h"
 #endif
 #ifndef __osf__
@@ -301,7 +301,8 @@ struct	tcpiphdr *ti;
 	fd = (struct filedesc *)malloc(sizeof(*fd));
 	if (fd == NULL)
 		return NULL;
-#if defined( __FreeBSD_version) && __FreeBSD_version >= 500013
+#if defined(__MidnightBSD__) || \
+    defined( __FreeBSD_version) && __FreeBSD_version >= 500013
 	if (KMCPY(fd, p->ki_fd, sizeof(*fd)) == -1)
 	    {
 		fprintf(stderr, "read(%#lx,%#lx) failed\n",

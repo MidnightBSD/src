@@ -29,7 +29,7 @@
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
+#if defined(__MidnightBSD__) || __FreeBSD_version >= 300000
 # include <net/if_var.h>
 #endif
 #if defined(linux) || defined(__osf__) || defined(__sgi) || defined(__hpux)
@@ -44,7 +44,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)kmem.c	1.4 1/12/96 (C) 1992 Darren Reed";
-static const char rcsid[] = "@(#)$Id: kmem.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: kmem.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
 #endif
 
 

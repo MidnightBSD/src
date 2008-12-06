@@ -16,7 +16,7 @@
 #if BSD < 199103
 #include <sys/fcntlcom.h>
 #endif
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 # include <sys/dirent.h>
 #else
 # include <sys/dir.h>
@@ -48,7 +48,7 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)sbpf.c	1.3 8/25/95 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id: sbpf.c,v 1.1.1.2 2008-11-22 14:33:09 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: sbpf.c,v 1.2 2008-12-06 20:34:26 laffer1 Exp $";
 #endif
 
 /*

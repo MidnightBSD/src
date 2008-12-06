@@ -5,7 +5,7 @@
  *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
-#ifdef	__FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # ifndef __FreeBSD_cc_version
 #  include <osreldate.h>
 # else
@@ -33,7 +33,7 @@
 #include <netinet/in_systm.h>
 #include <sys/time.h>
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
+#if defined(__MidnightBSD__) || __FreeBSD_version >= 300000
 # include <net/if_var.h>
 #endif
 #include <netinet/ip.h>
