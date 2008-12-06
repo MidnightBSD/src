@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.1 2008/12/06 05:08:38 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.2 2008/12/06 15:03:28 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008 Lucas Holt
  * All rights reserved.
@@ -31,10 +31,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static void usage();
+static void	usage();
 
 int 
-main(int argc, char *argv[]) {
+main(int argc, char *argv[])
+{
 	int life, time, units;
 	size_t len;
 	int ch, lflag, tflag, uflag;
@@ -93,11 +94,13 @@ main(int argc, char *argv[]) {
 			printf("%d batteries\n", units);
 	}
 
-	return 0;
+	return (0);
 }
 
 static void
-usage() {
+usage()
+{
+
 	fprintf(stderr, "usage: batt [-ltf]\n");
 	exit(1);
 }
