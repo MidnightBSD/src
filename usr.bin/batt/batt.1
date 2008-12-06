@@ -22,20 +22,31 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/share/examples/mdoc/example.1,v 1.2 2007/03/12 22:47:16 laffer1 Exp $
+.\" $MidnightBSD: src/usr.bin/batt/batt.1,v 1.1 2008/08/17 03:56:12 laffer1 Exp $
 .\"
-.Dd August 16, 2008
+.Dd December 6, 2008
 .Dt BATT 1
 .Os
 .Sh NAME
 .Nm batt
 .Nd "battery status and life"
+.Sh SYNOPSIS
+.Nm
+.Op Fl ltu
 .Sh DESCRIPTION
 The
 .Nm
 command prints the current status of batteries connected on
 ACPI capable systems. This does not include CMOS batteries.
 .Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl l
+List the battery life remaining as a percentage.
+.It Fl t
+Show the time remaining in minutes.
+.It Fl u
+Display the number of battery units.
 .Sh HISTORY
 The
 .Nm

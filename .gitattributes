@@ -31018,7 +31018,7 @@ usr.bin/basename/basename.1 -text
 usr.bin/basename/basename.c -text
 usr.bin/batt/Makefile -text
 usr.bin/batt/batt.1 -text
-usr.bin/batt/batt.sh -text
+usr.bin/batt/batt.c -text
 usr.bin/bc/Makefile -text
 usr.bin/bc/USD.doc/Makefile -text
 usr.bin/bc/USD.doc/bc -text
