@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wpi/if_wpivar.h,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/dev/wpi/if_wpivar.h,v 1.1.2.1 2007/12/08 12:44:57 benjsc Exp $	*/
 
 /*-
@@ -17,11 +17,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#if ( __FreeBSD_version > 700000 )
 #include <net80211/ieee80211_amrr.h>
-#else
-#include <dev/wpi/ieee80211_amrr.h>
-#endif
 
 /* DMA mapping */
 struct wpi_mapping {

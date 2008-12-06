@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wpi/if_wpi.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 2006,2007
  *	Damien Bergamini <damien.bergamini@free.fr>
@@ -76,9 +76,7 @@ __FBSDID("$FreeBSD: src/sys/dev/wpi/if_wpi.c,v 1.5.2.1.2.1 2008/02/02 07:30:02 s
 #include <sys/linker.h>
 #include <sys/firmware.h>
 
-#if (__FreeBSD_version > 700000)
 #define WPI_CURRENT
-#endif
 
 #include <machine/bus.h>
 #include <machine/resource.h>
@@ -521,7 +519,6 @@ wpi_attach(device_t dev)
 		}
 	}
 
-#if __FreeBSD_version >= 700000
 	/*
 	 * Create the taskqueues used by the driver. Primarily
 	 * sc_tq handles most the task
@@ -535,9 +532,6 @@ wpi_attach(device_t dev)
 	    taskqueue_thread_enqueue, &sc->sc_tq2);
 	taskqueue_start_threads(&sc->sc_tq2, 1, PI_NET, "%s taskq2",
 	    device_get_nameunit(dev));
-#else
-#error "Sorry, this driver is not yet ready for FreeBSD < 7.0"
-#endif
 
 	/* Create the tasks that can be queued */
 #if 0
