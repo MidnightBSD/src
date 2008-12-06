@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/ata/atapi-cd.c,v 1.6 2008/12/02 02:08:16 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/ata/atapi-cd.c,v 1.7 2008/12/02 02:32:16 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998 - 2007 Søren Schmidt <sos@FreeBSD.org>
  * All rights reserved.
@@ -397,12 +397,10 @@ acd_geom_ioctl(struct g_provider *pp, u_long cmd, void *addr, int fflag, struct 
 	}
 	break;
 
-#if __FreeBSD_version > 600008
     case CDIOCREADSUBCHANNEL_SYSSPACE:
 	nocopyout = 1;
 	/* FALLTHROUGH */
 
-#endif
     case CDIOCREADSUBCHANNEL:
 	{
 	    struct ioc_read_subchannel *args =
