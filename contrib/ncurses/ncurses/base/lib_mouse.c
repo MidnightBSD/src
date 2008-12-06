@@ -79,7 +79,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_mouse.c,v 1.1.1.3 2008-10-05 15:21:41 laffer1 Exp $")
+MODULE_ID("$Id: lib_mouse.c,v 1.2 2008-12-06 03:36:20 laffer1 Exp $")
 
 #include <term.h>
 #include <tic.h>
@@ -108,7 +108,7 @@ make an error
 #undef buttons			/* symbol conflict in consio.h */
 #undef mouse_info		/* symbol conflict in consio.h */
 #include <osreldate.h>
-#if (__FreeBSD_version >= 400017)
+#if (__FreeBSD_version >= 400017 || __MidnightBSD_version)
 #include <sys/consio.h>
 #include <sys/fbio.h>
 #else

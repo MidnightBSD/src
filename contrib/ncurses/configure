@@ -4744,7 +4744,7 @@ fi;
 #include "confdefs.h"
 
 #include <osreldate.h>
-#if (__FreeBSD_version >= 400017)
+#if (__FreeBSD_version >= 400017 || __MidnightBSD_version)
 #include <sys/consio.h>
 #include <sys/fbio.h>
 #else
