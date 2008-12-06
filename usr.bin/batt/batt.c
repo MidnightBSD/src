@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.2 2008/12/06 15:03:28 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.3 2008/12/06 15:11:57 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008 Lucas Holt
  * All rights reserved.
@@ -38,11 +38,14 @@ main(int argc, char *argv[])
 {
 	int life, time, units;
 	size_t len;
-	int ch, lflag, tflag, uflag;
+	int ch, cflag, lflag, tflag, uflag;
 
-	lflag = tflag = uflag = 0;
-	while ((ch = getopt(argc, argv, "ltu")) != -1) {
+	cflag = lflag = tflag = uflag = 0;
+	while ((ch = getopt(argc, argv, "cltu")) != -1) {
 		switch (ch) {
+			case 'c':
+				cflag = 1;
+				break;
 			case 'l':
 				lflag = 1;
 				break;
@@ -69,29 +72,40 @@ main(int argc, char *argv[])
 		len = sizeof(life);
 		if (sysctlbyname("hw.acpi.battery.life", &life, &len, NULL, 0) < 0)
 			err(1, "ACPI not loaded or no battery found.");
-		printf("%d%% capacity\n", life);
+		if (cflag)
+			printf("%d ", life);
+		else
+			printf("%d%% capacity\n", life);
 	}
 
 	if (tflag) {
 		len = sizeof(time);
 		if (sysctlbyname("hw.acpi.battery.time", &time, &len, NULL, 0) < 0)
 			err(1, "ACPI not loaded or no battery found.");
-		if (time < 1)
-			printf("Battery charging or drained.\n");
-		else if (time == 1)
-			printf("1 minute remaining\n");
-		else
-			printf("%d minutes remaining\n", time);
+		if (cflag)
+			printf("%d ", time);
+		else {
+			if (time < 1)
+				printf("Battery charging or drained.\n");
+			else if (time == 1)
+				printf("1 minute remaining\n");
+			else
+				printf("%d minutes remaining\n", time);
+		}
 	}
 
 	if (uflag) {
 		len = sizeof(units);
         	if (sysctlbyname("hw.acpi.battery.units", &units, &len, NULL, 0) < 0)
                 	err(1, "ACPI not loaded or no battery found.");
-		if (units == 1)
-			printf("1 battery\n");
-        	else
-			printf("%d batteries\n", units);
+		if (cflag)
+			printf("%d", units);
+		else {
+			if (units == 1)
+				printf("1 battery\n");
+        		else
+				printf("%d batteries\n", units);
+		}
 	}
 
 	return (0);
@@ -101,6 +115,6 @@ static void
 usage()
 {
 
-	fprintf(stderr, "usage: batt [-ltf]\n");
+	fprintf(stderr, "usage: batt [-cltf]\n");
 	exit(1);
 }

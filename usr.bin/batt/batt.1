@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/usr.bin/batt/batt.1,v 1.1 2008/08/17 03:56:12 laffer1 Exp $
+.\" $MidnightBSD: src/usr.bin/batt/batt.1,v 1.2 2008/12/06 05:08:38 laffer1 Exp $
 .\"
 .Dd December 6, 2008
 .Dt BATT 1
@@ -32,7 +32,7 @@
 .Nd "battery status and life"
 .Sh SYNOPSIS
 .Nm
-.Op Fl ltu
+.Op Fl cltu
 .Sh DESCRIPTION
 The
 .Nm
@@ -41,6 +41,8 @@ ACPI capable systems. This does not include CMOS batteries.
 .Pp
 The following options are available:
 .Bl -tag -width indent
+.It Fl c
+Make output concise for use in scripts
 .It Fl l
 List the battery life remaining as a percentage.
 .It Fl t
