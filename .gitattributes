@@ -27121,10 +27121,6 @@ sys/dev/xe/if_xe.c -text
 sys/dev/xe/if_xe_pccard.c -text
 sys/dev/xe/if_xereg.h -text
 sys/dev/xe/if_xevar.h -text
-sys/dev/zs/z8530reg.h -text
-sys/dev/zs/z8530var.h -text
-sys/dev/zs/zs.c -text
-sys/dev/zs/zs_macio.c -text
 sys/fs/cd9660/TODO -text
 sys/fs/cd9660/TODO.hibler -text
 sys/fs/cd9660/cd9660_bmap.c -text
