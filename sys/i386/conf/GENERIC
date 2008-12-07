@@ -15,10 +15,9 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.13 2008/06/27 16:31:58 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.14 2008/12/04 19:10:58 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
-machine		i386
 cpu		I586_CPU
 cpu		I686_CPU
 ident		GENERIC
@@ -26,14 +25,14 @@ ident		GENERIC
 # To statically compile in device wiring instead of /boot/device.hints
 #hints		"GENERIC.hints"		# Default places to look for devices.
 
-#makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
+makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
 
 #options 	SCHED_ULE		# ULE scheduler
 options 	SCHED_4BSD		# 4BSD scheduler
 options 	PREEMPTION		# Enable kernel thread preemption
 options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
-options		SCTP			# Stream Control Transmission Protocol
+options 	SCTP			# Stream Control Transmission Protocol
 options 	FFS			# Berkeley Fast Filesystem
 options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
@@ -49,9 +48,10 @@ options 	PSEUDOFS		# Pseudo-filesystem framework
 options 	GEOM_GPT		# GUID Partition Tables.
 options 	GEOM_LABEL		# Support for labels with ISO, UFS
 options 	COMPAT_43		# Compatible with BSD 4.3 [KEEP THIS!]
-options		COMPAT_43TTY
+options 	COMPAT_43TTY
 options 	COMPAT_FREEBSD4		# Compatible with FreeBSD4
 options 	COMPAT_FREEBSD5		# Compatible with FreeBSD5
+options 	COMPAT_FREEBSD6		# Compatible with FreeBSD6
 options 	SCSI_DELAY=5000		# Delay (in ms) before probing SCSI
 options 	KTRACE			# ktrace(1) support
 options 	SYSVSHM			# SYSV-style shared memory
@@ -60,8 +60,10 @@ options 	SYSVSEM			# SYSV-style semaphores
 options 	_KPOSIX_PRIORITY_SCHEDULING # POSIX P1003_1B real-time extensions
 options 	KBD_INSTALL_CDEV	# install a CDEV entry in /dev
 options 	ADAPTIVE_GIANT		# Giant mutex is adaptive.
-options		AUDIT
-options		SMP			# Support Multicore and Multiproccesor
+options 	AUDIT
+options 	STOP_NMI		# Stop CPUS using NMI instead of IPI
+
+options 	SMP			# Support Multicore and Multiproccesor
 					# systems.
 device		apic			# I/O APIC
 
@@ -148,8 +150,6 @@ device		atkbd		# AT keyboard
 device		psm		# PS/2 mouse
 device		kbdmux		# Keyboard multiplexer
 
-device		kbdmux		# keyboard multiplexer
-
 device		vga		# VGA video card driver
 options		VESA		# Support Higher Resolutions.
 
@@ -218,6 +218,7 @@ device		sf		# Adaptec AIC-6915 (``Starfire'')
 device		sis		# Silicon Integrated Systems SiS 900/SiS 7016
 device		sk		# SysKonnect SK-984x & SK-982x gigabit Ethernet
 device		ste		# Sundance ST201 (D-Link DFE-550TX)
+device		stge		# Sundance/Tamarack TC9021 gigabit Ethernet
 device		ti		# Alteon Networks Tigon I/II gigabit Ethernet
 device		tl		# Texas Instruments ThunderLAN
 device		tx		# SMC EtherPower II (83c170 ``EPIC'')
