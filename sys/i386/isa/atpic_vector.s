@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	from: vector.s, 386BSD 0.1 unknown origin
- * $FreeBSD: src/sys/i386/isa/atpic_vector.s,v 1.47 2004/05/26 07:43:41 bde Exp $
+ * $FreeBSD: src/sys/i386/isa/atpic_vector.s,v 1.50 2006/12/17 05:07:01 kmacy Exp $
  */
 
 /*
@@ -41,28 +41,20 @@
 #include "assym.s"
 
 /*
- * Macros for interrupt interrupt entry, call to handler, and exit.
+ * Macros for interrupt entry, call to handler, and exit.
  */
 #define	INTR(irq_num, vec_name) \
 	.text ;								\
 	SUPERALIGN_TEXT ;						\
 IDTVEC(vec_name) ;							\
-	pushl	$0 ;		/* dummy error code */			\
-	pushl	$0 ;		/* dummy trap type */			\
-	pushal ;		/* 8 ints */				\
-	pushl	%ds ;		/* save data and extra segments ... */	\
-	pushl	%es ;							\
-	pushl	%fs ;							\
-	movl	$KDSEL, %eax ;	/* reload with kernel's data segment */	\
-	movl	%eax, %ds ;						\
-	movl	%eax, %es ;						\
-	movl	$KPSEL, %eax ;	/* reload with per-CPU data segment */	\
-	movl	%eax, %fs ;						\
+	PUSH_FRAME ;							\
+	SET_KERNEL_SREGS ;						\
 ;									\
 	FAKE_MCOUNT(TF_EIP(%esp)) ;					\
+	pushl	%esp		;                                       \
 	pushl	$irq_num; 	/* pass the IRQ */			\
 	call	atpic_handle_intr ;					\
-	addl	$4, %esp ;	/* discard the parameter */		\
+	addl	$8, %esp ;	/* discard the parameters */		\
 ;									\
 	MEXITCOUNT ;							\
 	jmp	doreti

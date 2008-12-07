@@ -50,7 +50,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/spic.c,v 1.16 2005/01/06 22:18:16 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/spic.c,v 1.17 2006/05/16 14:32:16 phk Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -63,7 +63,6 @@ __FBSDID("$FreeBSD: src/sys/i386/isa/spic.c,v 1.16 2005/01/06 22:18:16 imp Exp $
 #include <isa/isavar.h>
 #include <sys/poll.h>
 #include <machine/pci_cfgreg.h>
-#include <machine/clock.h>
 #include <sys/tty.h>
 #include <sys/conf.h>
 #include <sys/fcntl.h>

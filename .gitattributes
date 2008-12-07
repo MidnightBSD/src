@@ -27822,14 +27822,11 @@ sys/i386/isa/elcr.c -text
 sys/i386/isa/elink.c -text
 sys/i386/isa/elink.h -text
 sys/i386/isa/icu.h -text
-sys/i386/isa/if_el.c -text
-sys/i386/isa/if_elreg.h -text
 sys/i386/isa/isa.c -text
 sys/i386/isa/isa.h -text
 sys/i386/isa/isa_dma.c -text
 sys/i386/isa/nmi.c -text
 sys/i386/isa/npx.c -text
-sys/i386/isa/pcf.c -text
 sys/i386/isa/pmtimer.c -text
 sys/i386/isa/prof_machdep.c -text
 sys/i386/isa/spic.c -text

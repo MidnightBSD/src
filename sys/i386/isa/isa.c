@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/isa.c,v 1.148 2005/01/06 22:18:16 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/isa.c,v 1.151 2007/09/01 12:18:28 nyan Exp $");
 
 /*-
  * Modifications for Intel architecture by Garrett A. Wollman.
@@ -57,9 +57,6 @@ __FBSDID("$FreeBSD: src/sys/i386/isa/isa.c,v 1.148 2005/01/06 22:18:16 imp Exp $
  * SUCH DAMAGE.
  */
 
-#ifdef PC98 
-#define __RMAN_RESOURCE_VISIBLE
-#endif
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -247,11 +244,13 @@ isa_release_resource(device_t bus, device_t child, int type, int rid,
 
 	if (type == SYS_RES_MEMORY || type == SYS_RES_IOPORT) {
 		bh = rman_get_bushandle(r);
-		for (i = 1; i < bh->bsh_ressz; i++)
-			resource_list_release(rl, bus, child, type, rid + i,
-					      bh->bsh_res[i]);
-		if (bh->bsh_res != NULL)
-			free(bh->bsh_res, M_DEVBUF);
+		if (bh != NULL) {
+			for (i = 1; i < bh->bsh_ressz; i++)
+				resource_list_release(rl, bus, child, type,
+						      rid + i, bh->bsh_res[i]);
+			if (bh->bsh_res != NULL)
+				free(bh->bsh_res, M_DEVBUF);
+		}
 	}
 #endif
 	return resource_list_release(rl, bus, child, type, rid, r);
@@ -265,10 +264,11 @@ isa_release_resource(device_t bus, device_t child, int type, int rid,
  */
 int
 isa_setup_intr(device_t bus, device_t child, struct resource *r, int flags,
-	       void (*ihand)(void *), void *arg, void **cookiep)
+	       driver_filter_t filter, void (*ihand)(void *), void *arg,
+	       void **cookiep)
 {
 	return (BUS_SETUP_INTR(device_get_parent(bus), child, r, flags,
-			       ihand, arg, cookiep));
+			       filter, ihand, arg, cookiep));
 }
 
 int

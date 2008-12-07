@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/isa/vesa.c,v 1.51.2.1 2005/10/05 21:48:03 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/isa/vesa.c,v 1.53 2005/12/05 11:58:33 ru Exp $");
 
 #include "opt_vga.h"
 #include "opt_vesa.h"
@@ -1173,7 +1173,7 @@ vesa_save_palette(video_adapter_t *adp, u_char *palette)
 static int
 vesa_load_palette(video_adapter_t *adp, u_char *palette)
 {
-#if notyet
+#ifdef notyet
 	int bits;
 	int error;
 
@@ -1393,7 +1393,7 @@ set_palette(video_adapter_t *adp, int base, int count,
 	    u_char *red, u_char *green, u_char *blue, u_char *trans)
 {
 	return 1;
-#if notyet
+#ifdef notyet
 	u_char *r;
 	u_char *g;
 	u_char *b;
