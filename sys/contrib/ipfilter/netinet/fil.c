@@ -82,8 +82,8 @@ struct file;
 #ifdef sun
 # include <net/af.h>
 #endif
-#if !defined(_KERNEL) && (defined(__FreeBSD__) || defined(SOLARIS2)) || \
-    defined(__MidnightBSD__)
+#if !defined(_KERNEL) && (defined(__FreeBSD__) || defined(SOLARIS2) || \
+    defined(__MidnightBSD__))
 # if (__FreeBSD_version >= 504000) || defined(__MidnightBSD__)
 #  undef _RADIX_H_
 # endif
@@ -158,7 +158,7 @@ struct file;
 #if !defined(lint)
 static const char sccsid[] = "@(#)fil.c	1.36 6/5/96 (C) 1993-2000 Darren Reed";
 static const char rcsid[] = "@(#)$FreeBSD: src/sys/contrib/ipfilter/netinet/fil.c,v 1.52.2.2 2007/12/01 00:53:41 darrenr Exp $";
-/* static const char rcsid[] = "@(#)$Id: fil.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $"; */
+/* static const char rcsid[] = "@(#)$Id: fil.c,v 1.4 2008-12-07 02:33:38 laffer1 Exp $"; */
 #endif
 
 #ifndef	_KERNEL
@@ -3209,7 +3209,7 @@ nodata:
  * SUCH DAMAGE.
  *
  *	@(#)uipc_mbuf.c	8.2 (Berkeley) 1/4/94
- * $Id: fil.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $
+ * $Id: fil.c,v 1.4 2008-12-07 02:33:38 laffer1 Exp $
  */
 /*
  * Copy data from an mbuf chain starting "off" bytes from the beginning,

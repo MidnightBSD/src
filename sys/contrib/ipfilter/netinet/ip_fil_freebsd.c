@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.4 2008-12-07 02:33:39 laffer1 Exp $";
 #endif
 
 #if defined(KERNEL) || defined(_KERNEL)
@@ -302,7 +302,7 @@ int ipfdetach()
  * Filter ioctl interface.
  */
 int iplioctl(dev, cmd, data, mode
-# if defined(_KERNEL) && ((BSD >= 199506) || 
+# if defined(_KERNEL) && ((BSD >= 199506) || \
   (__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
 , p)
 #  if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
