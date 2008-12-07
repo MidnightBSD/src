@@ -1,7 +1,7 @@
 #
 # PAE -- Generic kernel configuration file for MidnightBSD/i386 PAE
 #
-# $MidnightBSD: src/sys/i386/conf/PAE,v 1.3 2006/10/01 22:12:20 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/PAE,v 1.4 2007/01/13 15:04:47 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/PAE,v 1.16.2.2 2005/11/08 22:28:37 scottl Exp $
 
 include GENERIC
@@ -18,6 +18,9 @@ device		acpi
 # Don't build modules with this kernel config, since they are not built with
 # the correct options headers.
 makeoptions	NO_MODULES=yes
+
+# force isp firmware to fully loaded
+device		ispfw
 
 # What follows is a list of drivers that are normally in GENERIC, but either
 # don't work or are untested with PAE.  Be very careful before enabling any
@@ -44,6 +47,7 @@ nodevice	asr
 nodevice	dpt
 nodevice	mly
 nodevice	hptmv
+nodevice	hptrr
 
 nodevice	ida
 nodevice	mlx
@@ -51,7 +55,6 @@ nodevice	pst
 
 nodevice	agp
 
-nodevice	de
 nodevice	txp
 nodevice	vx
 
@@ -71,12 +74,20 @@ nodevice	ex
 nodevice	ep
 nodevice	fe
 nodevice	ie
-nodevice	lnc
 nodevice	sn
 nodevice	xe
 
 nodevice	wlan
+nodevice	wlan_wep	# 802.11 WEP support
+nodevice	wlan_ccmp	# 802.11 CCMP support
+nodevice	wlan_tkip	# 802.11 TKIP support
+nodevice	wlan_amrr	# AMRR transmit rate control algorithm
+nodevice	wlan_scan_ap	# 802.11 AP mode scanning
+nodevice	wlan_scan_sta	# 802.11 STA mode scanning
 nodevice	an
+nodevice	ath		# Atheros pci/cardbus NIC's
+nodevice	ath_hal		# Atheros HAL (Hardware Access Layer)
+nodevice	ath_rate_sample	# SampleRate tx rate control for ath
 nodevice	awi
 nodevice	ral
 nodevice	wi
@@ -93,6 +104,7 @@ nodevice	umass
 nodevice	ums
 nodevice	ural
 nodevice	urio
+nodevice	rum
 nodevice	uscanner
 nodevice	aue
 nodevice	axe
