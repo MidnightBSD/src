@@ -35,7 +35,7 @@ struct file;
 #if !defined(__hpux) && !defined(__osf__) && !defined(linux) && !defined(AIX)
 # include <sys/ioccom.h>
 #endif
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # include <sys/filio.h>
 # include <sys/malloc.h>
 #else
@@ -58,7 +58,7 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_state.c	1.8 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_scan.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_scan.c,v 1.3 2008-12-07 00:54:02 laffer1 Exp $";
 #endif
 
 #ifdef	IPFILTER_SCAN	/* endif at bottom of file */

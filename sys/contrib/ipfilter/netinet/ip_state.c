@@ -23,8 +23,9 @@
 #  include "opt_ipfilter.h"
 # endif
 #endif
-#if defined(_KERNEL) && defined(__FreeBSD_version) && \
-    (__FreeBSD_version >= 400000) && !defined(KLD_MODULE)
+#if defined(_KERNEL) && (defined(__FreeBSD_version) && \
+    (__FreeBSD_version >= 400000) || defined(__MidnightBSD__)) && \
+    !defined(KLD_MODULE)
 #include "opt_inet6.h"
 #endif
 #if !defined(_KERNEL) && !defined(__KERNEL__)
@@ -38,10 +39,12 @@ struct file;
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
+#if defined(_KERNEL) && \
+    ((__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
 # include <sys/filio.h>
 # include <sys/fcntl.h>
-# if (__FreeBSD_version >= 300000) && !defined(IPFILTER_LKM)
+# if ((__FreeBSD_version >= 300000) || defined(__MidnightBSD__)) && \
+    !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
 # endif
 #else
@@ -101,7 +104,7 @@ struct file;
 #ifdef	USE_INET6
 #include <netinet/icmp6.h>
 #endif
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include <sys/libkern.h>
@@ -113,7 +116,7 @@ struct file;
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_state.c	1.8 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_state.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_state.c,v 1.3 2008-12-07 00:54:02 laffer1 Exp $";
 #endif
 
 static	ipstate_t **ips_table = NULL;
@@ -209,7 +212,7 @@ int fr_stateinit()
 		/*
 		 * XXX - ips_seed[X] should be a random number of sorts.
 		 */
-#if  (__FreeBSD_version >= 400000)
+#if  (__FreeBSD_version >= 400000) || defined(__MidnightBSD__)
 		ips_seed[i] = arc4random();
 #else
 		ips_seed[i] = ((u_long)ips_seed + i) * fr_statesize;

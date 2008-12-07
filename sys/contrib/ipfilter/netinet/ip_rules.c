@@ -11,7 +11,8 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__sgi)
+#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__sgi) && \
+    defined(__MidnightBSD__)
 # include <sys/systm.h>
 #endif
 #include <sys/errno.h>
@@ -19,7 +20,8 @@
 #if !defined(__SVR4) && !defined(__svr4__) && !defined(__hpux)
 # include <sys/mbuf.h>
 #endif
-#if defined(__FreeBSD__) && (__FreeBSD_version > 220000)
+#if defined(__MidnightBSD__) || defined(__FreeBSD__) && \
+    (__FreeBSD_version > 220000)
 # include <sys/sockio.h>
 #else
 # include <sys/ioctl.h>
