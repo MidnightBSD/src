@@ -3,6 +3,23 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20081206:
+	Due to the massive change in the underlying system under way,
+	we're naming the next release 1.0.  The sys/sys/param.h was
+	changed accordingly.  ipfilter and ncurses were corrected
+	using __MidnightBSD__ tests in the code.  
+
+	The GENERIC kernel config was caught up on i386 today.  Consider
+	i386 still broken, but amd64 is running again. 
+
+	mdoc.local was updated with the new MidnightBSD version info.
+
+	batt(1) was rewritten in C.  It now supports several flags and
+	runs about 8 times faster on my laptop.  The default output
+	shows the number of minutes of battery life remaining and the
+	percentage.  You can use -u to display the number of batteries or
+	-c to get script friendly output.  Consult the man page for more.
+
 20081204:
 	Work has completed on importing ZFS, jemalloc, several
 	new devices, SCTP, updated pf, a new tempfs, linuxolator 2.6 kernel
@@ -607,4 +624,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.43 2008/09/05 19:02:59 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.44 2008/12/04 14:50:47 laffer1 Exp $
