@@ -1,6 +1,6 @@
 #!/bin/sh -
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/pccard_ether,v 1.2 2006/08/28 01:35:54 laffer1 Exp $
 # $FreeBSD: src/etc/pccard_ether,v 1.45.2.2 2005/12/10 02:11:07 brooks Exp $
 #
 # pccard_ether interfacename [start|stop|restart]
@@ -68,11 +68,15 @@ checkauto()
 
 pccard_ether_start()
 {
-	if [ -z "$rc_force" -a -x /usr/bin/grep ]; then
-		if ifconfig $ifn | grep -s '[<,]UP[,>]' > /dev/null 2>&1; then
-		    # Interface is already up, so ignore it.
-		    exit 0
-		fi
+	ifexists $ifn || exit 1
+
+	if [ -z "$rc_force" ]; then
+		for uif in `ifconfig -ul`; do
+			if [ "${uif}" = "${ifn}" ]; then
+				# Interface is already up, so ignore it.
+				exit 0
+			fi
+		done
 	fi
 
 	/etc/rc.d/netif start $ifn
@@ -85,10 +89,7 @@ pccard_ether_start()
 		fi
 	fi
 
-	# IPv6 setup
-	if checkyesno ipv6_enable; then
-		network6_interface_setup $ifn
-	fi
+	# XXX: IPv6 setup should be done in some way.
 }
 
 pccard_ether_stop()
@@ -102,12 +103,7 @@ pccard_ether_stop()
 	/etc/rc.d/netif stop $ifn
 
 	# clean ARP table
-	arp -d -a
-
-	# Clean the routing table
-	if checkyesno removable_route_flush; then
-		route -n flush -inet > /dev/null
-	fi
+	ifexists $ifn && arp -d -i $ifn -a
 }
 
 pccard_ether_restart()
