@@ -29,10 +29,10 @@
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
 # $FreeBSD: src/sys/conf/newvers.sh,v 1.69.2.10 2006/02/01 18:04:43 kensmith Exp $
-# $MidnightBSD: src/sys/conf/newvers.sh,v 1.3 2007/04/10 06:28:53 laffer1 Exp $
+# $MidnightBSD: src/sys/conf/newvers.sh,v 1.4 2008/12/04 14:32:54 laffer1 Exp $
 
 TYPE="MidnightBSD"
-REVISION="0.3"
+REVISION="1.0"
 BRANCH="CURRENT"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
