@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/i386/conf/GENERIC.hints,v 1.2 2006/10/01 22:12:20 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC.hints,v 1.14 2005/01/14 06:54:59 imp Exp $
 hint.fdc.0.at="isa"
 hint.fdc.0.port="0x3F0"
@@ -72,8 +72,8 @@ hint.ie.0.maddr="0xd0000"
 hint.fe.0.at="isa"
 hint.fe.0.disabled="1"
 hint.fe.0.port="0x300"
-hint.lnc.0.at="isa"
-hint.lnc.0.disabled="1"
-hint.lnc.0.port="0x280"
-hint.lnc.0.irq="10"
-hint.lnc.0.drq="0"
+hint.le.0.at="isa"
+hint.le.0.disabled="1"
+hint.le.0.port="0x280"
+hint.le.0.irq="10"
+hint.le.0.drq="0"
