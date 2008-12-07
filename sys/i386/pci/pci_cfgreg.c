@@ -28,7 +28,9 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/pci/pci_cfgreg.c,v 1.116 2005/01/06 22:18:17 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/pci/pci_cfgreg.c,v 1.124.2.2 2007/12/06 08:25:43 jhb Exp $");
+
+#include "opt_xbox.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -48,6 +50,10 @@ __FBSDID("$FreeBSD: src/sys/i386/pci/pci_cfgreg.c,v 1.116 2005/01/06 22:18:17 im
 #include <vm/vm_extern.h>
 #include <vm/pmap.h>
 #include <machine/pmap.h>
+
+#ifdef XBOX
+#include <machine/xbox.h>
+#endif
 
 #define PRVERB(a) do {							\
 	if (bootverbose)						\
@@ -153,15 +159,19 @@ pci_cfgregopen(void)
 	 * This also implies that it can do PCIe extended config cycles.
 	 */
 
-	/* Check for the Intel 7520 and 925 chipsets */
-	vid = pci_cfgregread(0, 0, 0, 0x0, 2);
-	did = pci_cfgregread(0, 0, 0, 0x2, 2);
-	if ((vid == 0x8086) && (did == 0x3590)) {
-		pciebar = pci_cfgregread(0, 0, 0, 0xce, 2) << 16;
-		pciereg_cfgopen();
-	} else if ((vid == 0x8086) && (did == 0x2580)) {
-		pciebar = pci_cfgregread(0, 0, 0, 0x48, 4);
-		pciereg_cfgopen();
+	/* Check for supported chipsets */
+	vid = pci_cfgregread(0, 0, 0, PCIR_VENDOR, 2);
+	did = pci_cfgregread(0, 0, 0, PCIR_DEVICE, 2);
+	if (vid == 0x8086) {
+		if (did == 0x3590 || did == 0x3592) {
+			/* Intel 7520 or 7320 */
+			pciebar = pci_cfgregread(0, 0, 0, 0xce, 2) << 16;
+			pciereg_cfgopen();
+		} else if (did == 0x2580 || did == 0x2584) {
+			/* Intel 915 or 925 */
+			pciebar = pci_cfgregread(0, 0, 0, 0x48, 4);
+			pciereg_cfgopen();
+		}
 	}
 
 	return(1);
@@ -207,6 +217,39 @@ pci_cfgenable(unsigned bus, unsigned slot, unsigned func, int reg, int bytes)
 {
 	int dataport = 0;
 
+#ifdef XBOX
+	if (arch_i386_is_xbox) {
+		/*
+		 * The Xbox MCPX chipset is a derivative of the nForce 1
+		 * chipset. It almost has the same bus layout; some devices
+		 * cannot be used, because they have been removed.
+		 */
+
+		/*
+		 * Devices 00:00.1 and 00:00.2 used to be memory controllers on
+		 * the nForce chipset, but on the Xbox, using them will lockup
+		 * the chipset.
+		 */
+		if (bus == 0 && slot == 0 && (func == 1 || func == 2))
+			return dataport;
+		
+		/*
+		 * Bus 1 only contains a VGA controller at 01:00.0. When you try
+		 * to probe beyond that device, you only get garbage, which
+		 * could cause lockups.
+		 */
+		if (bus == 1 && (slot != 0 || func != 0))
+			return dataport;
+		
+		/*
+		 * Bus 2 used to contain the AGP controller, but the Xbox MCPX
+		 * doesn't have one. Probing it can cause lockups.
+		 */
+		if (bus >= 2)
+			return dataport;
+	}
+#endif
+
 	if (bus <= PCI_BUSMAX
 	    && slot < devmax
 	    && func <= PCI_FUNCMAX
@@ -237,11 +280,15 @@ pci_cfgdisable(void)
 {
 	switch (cfgmech) {
 	case CFGMECH_1:
-		outl(CONF1_ADDR_PORT, 0);
+		/*
+		 * Do nothing for the config mechanism 1 case.
+		 * Writing a 0 to the address port can apparently
+		 * confuse some bridges and cause spurious
+		 * access failures.
+		 */
 		break;
 	case CFGMECH_2:
 		outb(CONF2_ENABLE_PORT, 0);
-		outb(CONF2_FORWARD_PORT, 0);
 		break;
 	}
 }
@@ -360,6 +407,7 @@ pcireg_cfgopen(void)
 	uint32_t mode1res, oldval1;
 	uint8_t mode2res, oldval2;
 
+	/* Check for type #1 first. */
 	oldval1 = inl(CONF1_ADDR_PORT);
 
 	if (bootverbose) {
@@ -367,39 +415,37 @@ pcireg_cfgopen(void)
 		    oldval1);
 	}
 
-	if ((oldval1 & CONF1_ENABLE_MSK) == 0) {
+	cfgmech = CFGMECH_1;
+	devmax = 32;
 
-		cfgmech = CFGMECH_1;
-		devmax = 32;
+	outl(CONF1_ADDR_PORT, CONF1_ENABLE_CHK);
+	DELAY(1);
+	mode1res = inl(CONF1_ADDR_PORT);
+	outl(CONF1_ADDR_PORT, oldval1);
 
-		outl(CONF1_ADDR_PORT, CONF1_ENABLE_CHK);
-		DELAY(1);
-		mode1res = inl(CONF1_ADDR_PORT);
-		outl(CONF1_ADDR_PORT, oldval1);
+	if (bootverbose)
+		printf("pci_open(1a):\tmode1res=0x%08x (0x%08lx)\n",  mode1res,
+		    CONF1_ENABLE_CHK);
 
-		if (bootverbose)
-			printf("pci_open(1a):\tmode1res=0x%08x (0x%08lx)\n", 
-			    mode1res, CONF1_ENABLE_CHK);
-
-		if (mode1res) {
-			if (pci_cfgcheck(32)) 
-				return (cfgmech);
-		}
-
-		outl(CONF1_ADDR_PORT, CONF1_ENABLE_CHK1);
-		mode1res = inl(CONF1_ADDR_PORT);
-		outl(CONF1_ADDR_PORT, oldval1);
-
-		if (bootverbose)
-			printf("pci_open(1b):\tmode1res=0x%08x (0x%08lx)\n", 
-			    mode1res, CONF1_ENABLE_CHK1);
-
-		if ((mode1res & CONF1_ENABLE_MSK1) == CONF1_ENABLE_RES1) {
-			if (pci_cfgcheck(32)) 
-				return (cfgmech);
-		}
+	if (mode1res) {
+		if (pci_cfgcheck(32)) 
+			return (cfgmech);
 	}
 
+	outl(CONF1_ADDR_PORT, CONF1_ENABLE_CHK1);
+	mode1res = inl(CONF1_ADDR_PORT);
+	outl(CONF1_ADDR_PORT, oldval1);
+
+	if (bootverbose)
+		printf("pci_open(1b):\tmode1res=0x%08x (0x%08lx)\n",  mode1res,
+		    CONF1_ENABLE_CHK1);
+
+	if ((mode1res & CONF1_ENABLE_MSK1) == CONF1_ENABLE_RES1) {
+		if (pci_cfgcheck(32)) 
+			return (cfgmech);
+	}
+
+	/* Type #1 didn't work, so try type #2. */
 	oldval2 = inb(CONF2_ENABLE_PORT);
 
 	if (bootverbose) {
@@ -429,6 +475,7 @@ pcireg_cfgopen(void)
 		}
 	}
 
+	/* Nothing worked, so punt. */
 	cfgmech = CFGMECH_NONE;
 	devmax = 0;
 	return (cfgmech);

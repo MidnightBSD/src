@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/bios/smbios.c,v 1.4.8.1 2005/10/06 20:43:44 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/bios/smbios.c,v 1.6 2007/03/20 20:21:44 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -131,7 +131,7 @@ smbios_identify (driver_t *driver, device_t parent)
 				return;
 		}
 
-		child = BUS_ADD_CHILD(parent, 0, "smbios", -1);
+		child = BUS_ADD_CHILD(parent, 5, "smbios", -1);
 		device_set_driver(child, driver);
 		bus_set_resource(child, SYS_RES_MEMORY, rid, addr, length);
 		device_set_desc(child, "System Management BIOS");

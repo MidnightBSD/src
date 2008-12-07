@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/bios/smapi.c,v 1.13 2004/06/16 09:47:07 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/bios/smapi.c,v 1.14 2007/03/20 20:21:44 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -166,7 +166,7 @@ smapi_identify (driver_t *driver, device_t parent)
 		rid = 0;
 		length = ADDR2HDR(addr)->length;
 
-		child = BUS_ADD_CHILD(parent, 0, "smapi", -1);
+		child = BUS_ADD_CHILD(parent, 5, "smapi", -1);
 		device_set_driver(child, driver);
 		bus_set_resource(child, SYS_RES_MEMORY, rid, addr, length);
 		device_set_desc(child, "SMAPI BIOS");

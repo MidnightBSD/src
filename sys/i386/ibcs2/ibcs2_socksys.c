@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_socksys.c,v 1.21 2005/01/06 23:22:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_socksys.c,v 1.22 2006/11/06 13:41:59 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -173,9 +173,6 @@ ibcs2_setipdomainname(td, uap)
 {
 	char hname[MAXHOSTNAMELEN], *ptr;
 	int error, sctl[2], hlen;
-
-	if ((error = suser(td)))
-		return (error);
 
 	/* W/out a hostname a domain-name is nonsense */
 	if ( strlen(hostname) == 0 )

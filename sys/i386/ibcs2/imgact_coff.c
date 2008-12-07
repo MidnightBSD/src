@@ -28,10 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/imgact_coff.c,v 1.65 2005/04/27 09:05:19 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/imgact_coff.c,v 1.67.4.1 2008/01/19 18:15:03 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/exec.h>
 #include <sys/fcntl.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
@@ -203,7 +204,7 @@ coff_load_file(struct thread *td, char *name)
   	if ((error = VOP_ACCESS(vp, VEXEC, td->td_ucred, td)) != 0)
     		goto fail;
 
-  	if ((error = VOP_OPEN(vp, FREAD, td->td_ucred, td, -1)) != 0)
+  	if ((error = VOP_OPEN(vp, FREAD, td->td_ucred, td, NULL)) != 0)
     		goto fail;
 
 	/*
@@ -336,7 +337,9 @@ exec_coff_imgact(imgp)
 
 	VOP_UNLOCK(imgp->vp, 0, td);
 
-	exec_new_vmspace(imgp, &ibcs2_svr3_sysvec);
+	error = exec_new_vmspace(imgp, &ibcs2_svr3_sysvec);
+	if (error)
+		goto fail;
 	vmspace = imgp->proc->p_vmspace;
 
 	for (i = 0; i < nscns; i++) {

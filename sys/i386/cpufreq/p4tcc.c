@@ -37,8 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: src/sys/i386/cpufreq/p4tcc.c,v 1.11.2.1 2005/10/25 20:52:44 njl Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sys/i386/cpufreq/p4tcc.c,v 1.12 2005/10/23 19:38:06 njl Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

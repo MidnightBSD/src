@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_isc.c,v 1.18 2005/07/07 19:28:55 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_isc.c,v 1.19 2006/07/28 19:05:27 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -58,13 +58,9 @@ ibcs2_isc(struct thread *td, struct ibcs2_isc_args *uap)
 	code = (tf->tf_eax & 0xffffff00) >> 8;
 	callp = &isc_sysent[code];
 
-	if (code < IBCS2_ISC_MAXSYSCALL) {
-		if ((callp->sy_narg & SYF_MPSAFE) == 0)
-			mtx_lock(&Giant);
+	if (code < IBCS2_ISC_MAXSYSCALL)
 		error = (*callp->sy_call)(td, (void *)uap);
-		if ((callp->sy_narg & SYF_MPSAFE) == 0)
-			mtx_unlock(&Giant);
-	} else
+	else
 		error = ENOSYS;
 	return (error);
 }

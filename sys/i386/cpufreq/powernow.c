@@ -29,8 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-/*$FreeBSD: src/sys/i386/cpufreq/powernow.c,v 1.4 2007/01/23 19:20:30 bruno Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sys/i386/cpufreq/powernow.c,v 1.4 2007/01/23 19:20:30 bruno Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

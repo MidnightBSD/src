@@ -1,6 +1,6 @@
 # Makefile for syscall tables
 #
-# $FreeBSD: src/sys/i386/ibcs2/Makefile,v 1.3.14.1 2006/02/13 23:48:26 rwatson Exp $
+# $FreeBSD: src/sys/i386/ibcs2/Makefile,v 1.4 2006/02/05 23:25:19 rwatson Exp $
 
 all:
 	@echo "make sysent, isc_sysent or xenix_sysent only"

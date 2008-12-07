@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/pci/pci_pir.c,v 1.117.2.1 2005/07/18 19:45:21 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/pci/pci_pir.c,v 1.120 2006/11/09 18:03:36 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -92,9 +92,6 @@ static void	pci_pir_find_link_handler(struct PIR_entry *entry,
 static void	pci_pir_initial_irqs(struct PIR_entry *entry,
 		    struct PIR_intpin *intpin, void *arg);
 static void	pci_pir_parse(void);
-static void	pci_pir_print_intpin(struct PIR_entry *entry,
-		    struct PIR_intpin *intpin, void *arg);
-static void	pci_pir_print_table(void);
 static uint8_t	pci_pir_search_irq(int bus, int device, int pin);
 static int	pci_pir_valid_irq(struct pci_link *pci_link, int irq);
 static void	pci_pir_walk_table(pir_entry_handler *handler, void *arg);
@@ -110,6 +107,7 @@ static int pir_interrupt_weight[NUM_ISA_INTERRUPTS];
 /* sysctl vars */
 SYSCTL_DECL(_hw_pci);
 
+/* XXX this likely should live in a header file */
 #ifdef PC98
 /* IRQs 3, 5, 7, 9, 10, 11, 12, 13 */
 #define PCI_IRQ_OVERRIDE_MASK 0x3e68
@@ -167,11 +165,6 @@ pci_pir_open(void)
 	pci_route_count = (pt->pt_header.ph_length -
 	    sizeof(struct PIR_header)) / 
 	    sizeof(struct PIR_entry);
-	if (bootverbose) {
-		printf("Found $PIR table, %d entries at %p\n",
-		    pci_route_count, pci_route_table);
-		pci_pir_print_table();
-	}
 }
 
 /*
@@ -620,37 +613,6 @@ pci_print_irqmask(u_int16_t irqs)
 				first = 0;
 			printf("%d", i);
 		}
-}
-
-/*
- * Dump the contents of a single intpin entry to the console.
- */
-static void
-pci_pir_print_intpin(struct PIR_entry *entry, struct PIR_intpin *intpin,
-    void *arg)
-{
-
-	if (entry->pe_slot == 0)
-		printf("embedded ");
-	else
-		printf("slot %-3d ", entry->pe_slot);
-	printf(" %3d  %3d    %c   0x%02x  ", entry->pe_bus, entry->pe_device,
-	    intpin - entry->pe_intpin + 'A', intpin->link);
-	pci_print_irqmask(intpin->irqs);
-	printf("\n");
-}
-
-/*
- * Dump the contents of a PCI BIOS Interrupt Routing Table to the console.
- */
-static void
-pci_pir_print_table(void)
-{
-
-	printf("PCI-Only Interrupts: ");
-	pci_print_irqmask(pci_route_table->pt_header.ph_pci_irqs);
-	printf("\nLocation  Bus Device Pin  Link  IRQs\n");
-	pci_pir_walk_table(pci_pir_print_intpin, NULL);
 }
 
 /*

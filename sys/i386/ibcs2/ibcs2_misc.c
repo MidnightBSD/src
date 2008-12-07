@@ -47,7 +47,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_misc.c,v 1.61 2005/07/07 19:29:42 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_misc.c,v 1.67 2007/03/26 15:39:49 jhb Exp $");
 
 /*
  * IBCS2 compatibility module.
@@ -65,10 +65,10 @@ __FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_misc.c,v 1.61 2005/07/07 19:29:42 j
 #include <sys/imgact.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/mac.h>
 #include <sys/malloc.h>
 #include <sys/file.h>			/* Must come after sys/malloc.h */
 #include <sys/mutex.h>
+#include <sys/priv.h>
 #include <sys/reboot.h>
 #include <sys/resourcevar.h>
 #include <sys/stat.h>
@@ -89,6 +89,8 @@ __FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_misc.c,v 1.61 2005/07/07 19:29:42 j
 #include <i386/ibcs2/ibcs2_util.h>
 #include <i386/ibcs2/ibcs2_utime.h>
 #include <i386/ibcs2/ibcs2_xenix.h>
+
+#include <security/mac/mac_framework.h>
 
 int
 ibcs2_ulimit(td, uap)
@@ -207,7 +209,6 @@ ibcs2_execv(td, uap)
 	free(path, M_TEMP);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
-	exec_free_args(&eargs);
 	return (error);
 }
 
@@ -227,7 +228,6 @@ ibcs2_execve(td, uap)
 	free(path, M_TEMP);
 	if (error == 0)
 		error = kern_execve(td, &eargs, NULL);
-	exec_free_args(&eargs);
 	return (error);
 }
 
@@ -331,7 +331,7 @@ ibcs2_getdents(td, uap)
 	struct iovec aiov;
 	struct ibcs2_dirent idb;
 	off_t off;			/* true file offset */
-	int buflen, error, eofflag;
+	int buflen, error, eofflag, vfslocked;
 	u_long *cookies = NULL, *cookiep;
 	int ncookies;
 #define	BSD_DIRENT(cp)		((struct dirent *)(cp))
@@ -344,7 +344,9 @@ ibcs2_getdents(td, uap)
 		return (EBADF);
 	}
 	vp = fp->f_vnode;
+	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (vp->v_type != VDIR) {	/* XXX  vnode readdir op should do this */
+		VFS_UNLOCK_GIANT(vfslocked);
 		fdrop(fp, td);
 		return (EINVAL);
 	}
@@ -461,6 +463,7 @@ eof:
 	td->td_retval[0] = uap->nbytes - resid;
 out:
 	VOP_UNLOCK(vp, 0, td);
+	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookies)
 		free(cookies, M_TEMP);
@@ -486,7 +489,7 @@ ibcs2_read(td, uap)
 		char name[14];
 	} idb;
 	off_t off;			/* true file offset */
-	int buflen, error, eofflag, size;
+	int buflen, error, eofflag, size, vfslocked;
 	u_long *cookies = NULL, *cookiep;
 	int ncookies;
 
@@ -501,7 +504,9 @@ ibcs2_read(td, uap)
 		return (EBADF);
 	}
 	vp = fp->f_vnode;
+	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (vp->v_type != VDIR) {
+		VFS_UNLOCK_GIANT(vfslocked);
 		fdrop(fp, td);
 		return read(td, (struct read_args *)uap);
 	}
@@ -624,6 +629,7 @@ eof:
 	td->td_retval[0] = uap->nbytes - resid;
 out:
 	VOP_UNLOCK(vp, 0, td);
+	VFS_UNLOCK_GIANT(vfslocked);
 	fdrop(fp, td);
 	if (cookies)
 		free(cookies, M_TEMP);
@@ -653,35 +659,25 @@ ibcs2_getgroups(td, uap)
 	struct thread *td;
 	struct ibcs2_getgroups_args *uap;
 {
-	int error, i;
-	ibcs2_gid_t *iset = NULL;
-	struct getgroups_args sa;
-	gid_t *gp;
-	caddr_t sg = stackgap_init();
+	ibcs2_gid_t iset[NGROUPS_MAX];
+	gid_t gp[NGROUPS_MAX];
+	u_int i, ngrp;
+	int error;
 
 	if (uap->gidsetsize < 0)
 		return (EINVAL);
-	if (uap->gidsetsize > NGROUPS_MAX)
-		uap->gidsetsize = NGROUPS_MAX;
-	sa.gidsetsize = uap->gidsetsize;
-	if (uap->gidsetsize) {
-		sa.gidset = stackgap_alloc(&sg, NGROUPS_MAX *
-						    sizeof(gid_t *));
-		iset = stackgap_alloc(&sg, uap->gidsetsize *
-				      sizeof(ibcs2_gid_t));
+	ngrp = MIN(uap->gidsetsize, NGROUPS_MAX);
+	error = kern_getgroups(td, &ngrp, gp);
+	if (error)
+		return (error);
+	if (uap->gidsetsize > 0) {
+		for (i = 0; i < ngrp; i++)
+			iset[i] = (ibcs2_gid_t)gp[i];
+		error = copyout(iset, uap->gidset, ngrp * sizeof(ibcs2_gid_t));
 	}
-	if ((error = getgroups(td, &sa)) != 0)
-		return error;
-	if (uap->gidsetsize == 0)
-		return 0;
-
-	for (i = 0, gp = sa.gidset; i < td->td_retval[0]; i++)
-		iset[i] = (ibcs2_gid_t)*gp++;
-	if (td->td_retval[0] && (error = copyout((caddr_t)iset,
-					  (caddr_t)uap->gidset,
-					  sizeof(ibcs2_gid_t) * td->td_retval[0])))
-		return error;
-        return 0;
+	if (error == 0)
+		td->td_retval[0] = ngrp;
+	return (error);
 }
 
 int
@@ -689,28 +685,21 @@ ibcs2_setgroups(td, uap)
 	struct thread *td;
 	struct ibcs2_setgroups_args *uap;
 {
+	ibcs2_gid_t iset[NGROUPS_MAX];
+	gid_t gp[NGROUPS_MAX];
 	int error, i;
-	ibcs2_gid_t *iset;
-	struct setgroups_args sa;
-	gid_t *gp;
-	caddr_t sg = stackgap_init();
 
 	if (uap->gidsetsize < 0 || uap->gidsetsize > NGROUPS_MAX)
 		return (EINVAL);
-	sa.gidsetsize = uap->gidsetsize;
-	sa.gidset = stackgap_alloc(&sg, sa.gidsetsize *
-					    sizeof(gid_t *));
-	iset = stackgap_alloc(&sg, sa.gidsetsize *
-			      sizeof(ibcs2_gid_t *));
-	if (sa.gidsetsize) {
-		if ((error = copyin((caddr_t)uap->gidset, (caddr_t)iset, 
-				   sizeof(ibcs2_gid_t *) *
-				   uap->gidsetsize)) != 0)
-			return error;
+	if (uap->gidsetsize && uap->gidset) {
+		error = copyin(uap->gidset, iset, sizeof(ibcs2_gid_t) *
+		    uap->gidsetsize);
+		if (error)
+			return (error);
+		for (i = 0; i < uap->gidsetsize; i++)
+			gp[i] = (gid_t)iset[i];
 	}
-	for (i = 0, gp = sa.gidset; i < sa.gidsetsize; i++)
-		*gp++ = (gid_t)iset[i];
-	return setgroups(td, &sa);
+	return (kern_setgroups(td, uap->gidsetsize, gp));
 }
 
 int
@@ -1020,14 +1009,22 @@ ibcs2_plock(td, uap)
 #define IBCS2_DATALOCK	4
 
 	
-        if ((error = suser(td)) != 0)
-                return EPERM;
 	switch(uap->cmd) {
 	case IBCS2_UNLOCK:
+        	error = priv_check(td, PRIV_VM_MUNLOCK);
+		if (error)
+			return (error);
+		/* XXX - TODO */
+		return (0);
+
 	case IBCS2_PROCLOCK:
 	case IBCS2_TEXTLOCK:
 	case IBCS2_DATALOCK:
-		return 0;	/* XXX - TODO */
+        	error = priv_check(td, PRIV_VM_MLOCK);
+		if (error)
+			return (error);
+		/* XXX - TODO */
+		return 0;
 	}
 	return EINVAL;
 }
@@ -1055,9 +1052,6 @@ ibcs2_uadmin(td, uap)
 #define SCO_AD_GETBMAJ      0
 #define SCO_AD_GETCMAJ      1
 
-        if (suser(td))
-                return EPERM;
-
 	switch(uap->cmd) {
 	case SCO_A_REBOOT:
 	case SCO_A_SHUTDOWN:
@@ -1067,11 +1061,11 @@ ibcs2_uadmin(td, uap)
 		case SCO_AD_PWRDOWN:
 		case SCO_AD_PWRNAP:
 			r.opt = RB_HALT;
-			reboot(td, &r);
+			return (reboot(td, &r));
 		case SCO_AD_BOOT:
 		case SCO_AD_IBOOT:
 			r.opt = RB_AUTOBOOT;
-			reboot(td, &r);
+			return (reboot(td, &r));
 		}
 		return EINVAL;
 	case SCO_A_REMOUNT:
@@ -1226,7 +1220,7 @@ ibcs2_rename(td, uap)
 	 * errors.
 	 */
 	error = ibcs2_emul_find(td, uap->to, UIO_USERSPACE, &to, 1);
-	if (link == NULL) {
+	if (to == NULL) {
 		free(from, M_TEMP);
 		return (error);
 	}

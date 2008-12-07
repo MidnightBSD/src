@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_sysvec.c,v 1.30.2.1 2006/01/10 21:44:58 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_sysvec.c,v 1.32 2007/01/17 15:05:52 delphij Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -110,7 +110,7 @@ ibcs2_modevent(module_t mod, int type, void *unused)
 	case MOD_UNLOAD:
 		/* if this was an ELF module we'd use elf_brand_inuse()... */
 		sx_slock(&allproc_lock);
-		LIST_FOREACH(p, &allproc, p_list) {
+		FOREACH_PROC_IN_SYSTEM(p) {
 			if (p->p_sysent == &ibcs2_svr3_sysvec) {
 				rval = EBUSY;
 				break;

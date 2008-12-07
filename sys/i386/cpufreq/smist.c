@@ -42,9 +42,7 @@ __FBSDID("$FreeBSD: src/sys/i386/cpufreq/smist.c,v 1.2 2007/06/17 07:18:23 njl E
 #include <sys/bus.h>
 #include <sys/cpu.h>
 #include <sys/kernel.h>
-#include <sys/lock.h>
 #include <sys/module.h>
-#include <sys/mutex.h>
 #include <sys/systm.h>
 
 #include <machine/bus.h>

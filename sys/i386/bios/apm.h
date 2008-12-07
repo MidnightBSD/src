@@ -15,7 +15,7 @@
  *
  * Sep, 1994	Implemented on FreeBSD 1.1.5.1R (Toshiba AVS001WD)
  *
- * $FreeBSD: src/sys/i386/bios/apm.h,v 1.5 2005/01/06 22:18:15 imp Exp $
+ * $FreeBSD: src/sys/i386/bios/apm.h,v 1.6 2006/05/25 23:06:38 imp Exp $
  */
 
 #define APM_NEVENTS 16
@@ -29,7 +29,10 @@ struct apm_softc {
 	bus_space_handle_t	sc_ioh;
 	struct resource 	*sc_res;
 #endif
-	int	initialized, active, bios_busy;
+	struct mtx	mtx;
+	struct cv	cv;
+	struct proc	*event_thread;
+	int	initialized, active, running, bios_busy;
 	int	always_halt_cpu, slow_idle_cpu;
 	int	disabled, disengaged;
 	int	suspending;

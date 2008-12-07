@@ -26,17 +26,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/acpica/OsdEnvironment.c,v 1.10.8.1 2005/11/07 09:53:24 obrien Exp $");
-__MBSDID("$MidnightBSD");
+__FBSDID("$FreeBSD: src/sys/i386/acpica/OsdEnvironment.c,v 1.12 2007/03/22 18:16:41 jkim Exp $");
 
 /*
  * 6.1 : Environmental support
  */
 #include <sys/types.h>
+#include <sys/bus.h>
 #include <sys/linker_set.h>
 #include <sys/sysctl.h>
 
 #include <contrib/dev/acpica/acpi.h>
+#include <contrib/dev/acpica/actables.h>
 
 static u_long i386_acpi_root;
 
@@ -55,25 +56,16 @@ AcpiOsTerminate(void)
 	return(0);
 }
 
-ACPI_STATUS
-AcpiOsGetRootPointer(UINT32 Flags, ACPI_POINTER *RsdpPhysicalAddress)
+ACPI_PHYSICAL_ADDRESS
+AcpiOsGetRootPointer(void)
 {
-	ACPI_POINTER ptr;
-	ACPI_STATUS status;
+	u_long	ptr;
 
-	if (i386_acpi_root == 0) {
-		/*
-		 * The loader passes the physical address at which it found the
-		 * RSDP in a hint.  We could recover this rather than searching
-		 * manually here.
-		 */
-		status = AcpiFindRootPointer(Flags, &ptr);
-		if (status == AE_OK)
-			i386_acpi_root = ptr.Pointer.Physical;
-	} else
-		status = AE_OK;
+	if (i386_acpi_root == 0 &&
+	    (resource_long_value("acpi", 0, "rsdp", (long *)&ptr) == 0 ||
+	    AcpiFindRootPointer((ACPI_NATIVE_UINT *)&ptr) == AE_OK) &&
+	    ptr != 0)
+		i386_acpi_root = ptr;
 
-	RsdpPhysicalAddress->PointerType = ACPI_PHYSICAL_POINTER;
-	RsdpPhysicalAddress->Pointer.Physical = i386_acpi_root;
-	return (status);
+	return (i386_acpi_root);
 }

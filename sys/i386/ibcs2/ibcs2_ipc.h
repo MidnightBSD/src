@@ -27,7 +27,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/ibcs2/ibcs2_ipc.h,v 1.8 2005/01/06 23:22:04 imp Exp $
+ * $FreeBSD: src/sys/i386/ibcs2/ibcs2_ipc.h,v 1.9 2006/07/08 19:52:49 jhb Exp $
  */
 
 
@@ -38,7 +38,7 @@ struct ibcs2_ipc_perm {
 	u_short	cgid;	/* creator group id */
 	u_short	mode;	/* r/w permission */
 	u_short	seq;	/* sequence # (to generate unique msg/sem/shm id) */
-	key_t	key;	/* user specified msg/sem/shm key */
+	ibcs2_key_t key; /* user specified msg/sem/shm key */
 };
 
 struct ibcs2_msqid_ds {

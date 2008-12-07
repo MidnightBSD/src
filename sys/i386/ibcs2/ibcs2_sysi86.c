@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_sysi86.c,v 1.22 2005/07/07 19:30:30 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_sysi86.c,v 1.23 2006/11/06 13:41:59 rwatson Exp $");
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -76,8 +76,6 @@ ibcs2_sysi86(struct thread *td, struct ibcs2_sysi86_args *args)
 	        int name[2];
 	        int error;
 
-		if ((error = suser(td)))
-		  return (error);
 		name[0] = CTL_KERN;
 		name[1] = KERN_HOSTNAME;
 		mtx_lock(&Giant);

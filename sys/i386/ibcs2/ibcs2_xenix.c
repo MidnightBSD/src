@@ -29,12 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_xenix.c,v 1.35 2005/07/07 19:28:55 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_xenix.c,v 1.42 2007/07/05 05:32:44 peter Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/namei.h> 
 #include <sys/sysproto.h>
+#include <sys/clock.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -42,6 +43,7 @@ __FBSDID("$FreeBSD: src/sys/i386/ibcs2/ibcs2_xenix.c,v 1.35 2005/07/07 19:28:55 
 #include <sys/vnode.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysctl.h>
+#include <sys/sysent.h>
 #include <sys/unistd.h>
 
 #include <machine/cpu.h>
@@ -68,13 +70,9 @@ ibcs2_xenix(struct thread *td, struct ibcs2_xenix_args *uap)
 	code = (tf->tf_eax & 0xff00) >> 8;
 	callp = &xenix_sysent[code];
 
-	if (code < IBCS2_XENIX_MAXSYSCALL) {
-		if ((callp->sy_narg & SYF_MPSAFE) == 0)
-			mtx_lock(&Giant);
+	if (code < IBCS2_XENIX_MAXSYSCALL)
 		error = ((*callp->sy_call)(td, (void *)uap));
-		if ((callp->sy_narg & SYF_MPSAFE) == 0)
-			mtx_unlock(&Giant);
-	} else
+	else
 		error = ENOSYS;
 	return (error);
 }
@@ -84,18 +82,15 @@ xenix_rdchk(td, uap)
 	struct thread *td;
 	struct xenix_rdchk_args *uap;
 {
-	int error;
-	struct ioctl_args sa;
-	caddr_t sg = stackgap_init();
+	int data, error;
 
 	DPRINTF(("IBCS2: 'xenix rdchk'\n"));
-	sa.fd = uap->fd;
-	sa.com = FIONREAD;
-	sa.data = stackgap_alloc(&sg, sizeof(int));
-	if ((error = ioctl(td, &sa)) != 0)
-		return error;
-	td->td_retval[0] = (*((int*)sa.data)) ? 1 : 0;
-	return 0;
+	
+	error = kern_ioctl(td, uap->fd, FIONREAD, (caddr_t)&data);
+	if (error)
+		return (error);
+	td->td_retval[0] = data ? 1 : 0;
+	return (0);
 }
 
 int
@@ -107,7 +102,6 @@ xenix_chsize(td, uap)
 
 	DPRINTF(("IBCS2: 'xenix chsize'\n"));
 	sa.fd = uap->fd;
-	sa.pad = 0;
 	sa.length = uap->size;
 	return ftruncate(td, &sa);
 }
@@ -145,8 +139,7 @@ xenix_nap(struct thread *td, struct xenix_nap_args *uap)
 	DPRINTF(("IBCS2: 'xenix nap %d ms'\n", uap->millisec));
 	period = (long)uap->millisec / (1000/hz);
 	if (period)
-		while (tsleep(&period, PPAUSE, "nap", period) 
-		       != EWOULDBLOCK) ;
+		pause("nap", period);
 	return 0;
 }
 
@@ -216,7 +209,7 @@ xenix_eaccess(struct thread *td, struct xenix_eaccess_args *uap)
 		bsd_flags |= X_OK;
 
 	CHECKALTEXIST(td, uap->path, &path);
-	error = kern_access(td, path, UIO_SYSSPACE, bsd_flags);
+	error = kern_eaccess(td, path, UIO_SYSSPACE, bsd_flags);
 	free(path, M_TEMP);
         return (error);
 }

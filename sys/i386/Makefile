@@ -1,11 +1,10 @@
-# $FreeBSD: src/sys/i386/Makefile,v 1.11 2002/06/21 06:18:02 mckusick Exp $
+# $FreeBSD: src/sys/i386/Makefile,v 1.12 2007/05/13 18:21:54 mckusick Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/11/93
 
 # Makefile for i386 links, tags file
 
 # SYS is normally set in Make.tags.inc
-# SYS=/sys
-SYS=/nsys
+SYS=/sys
 
 TAGDIR=	i386
 
@@ -25,7 +24,8 @@ links::
 	-for i in ${DI386}; do \
 	    (cd $$i && { rm -f tags; ln -s ../tags tags; }) done
 
-SI386=	${SYS}/i386/apm/*.[ch] \
+SI386=	${SYS}/i386/acpica/*.[ch] ${SYS}/i386/bios/*.[ch] \
+	${SYS}/i386/cpufreq/*.[ch] ${SYS}/i386/pci/*.[ch] \
 	${SYS}/i386/i386/*.[ch] ${SYS}/i386/ibcs2/*.[ch] \
 	${SYS}/i386/include/*.[ch] ${SYS}/i386/isa/*.[ch] \
 	${SYS}/i386/linux/*.[ch]

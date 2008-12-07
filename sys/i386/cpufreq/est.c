@@ -26,8 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-/* $FreeBSD: /repoman/r/ncvs/src/sys/i386/cpufreq/est.c,v 1.7.2.1 2006/05/29 22:40:03 njl Exp $ */
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/sys/i386/cpufreq/est.c,v 1.11 2006/05/11 17:35:44 njl Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
