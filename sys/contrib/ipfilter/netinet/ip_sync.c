@@ -36,10 +36,12 @@ struct file;
 #if defined(__NetBSD__) && (__NetBSD_Version__ >= 104000000)
 # include <sys/proc.h>
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
+#if defined(_KERNEL) && \
+    ((__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
 # include <sys/filio.h>
 # include <sys/fcntl.h>
-# if (__FreeBSD_version >= 300000) && !defined(IPFILTER_LKM)
+# if (defined(__MidnightBSD__) || (__FreeBSD_version >= 300000)) && \
+    !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
 # endif
 #else
@@ -88,7 +90,7 @@ struct file;
 #ifdef  USE_INET6
 #include <netinet/icmp6.h>
 #endif
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include <sys/libkern.h>
@@ -98,7 +100,7 @@ struct file;
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: ip_sync.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_sync.c,v 1.3 2008-12-07 00:59:17 laffer1 Exp $";
 #endif
 
 #define	SYNC_STATETABSZ	256
@@ -292,7 +294,8 @@ struct uio *uio;
 
 	int err = 0;
 
-#  if (BSD >= 199306) || defined(__FreeBSD__) || defined(__osf__)
+#  if (BSD >= 199306) || defined(__FreeBSD__) || defined(__osf__) || \
+    defined(__MidnightBSD__)
 	uio->uio_rw = UIO_WRITE;
 #  endif
 
@@ -428,7 +431,8 @@ struct uio *uio;
 	if ((uio->uio_resid & 3) || (uio->uio_resid < 8))
 		return EINVAL;
 
-#  if (BSD >= 199306) || defined(__FreeBSD__) || defined(__osf__)
+#  if (BSD >= 199306) || defined(__FreeBSD__) || defined(__osf__) || \
+    defined(__MidnightBSD__)
 	uio->uio_rw = UIO_READ;
 #  endif
 
