@@ -25,11 +25,11 @@
 # SUCH DAMAGE.
 #
 # $FreeBSD: src/etc/rc.d/syscons,v 1.13.2.2 2006/03/21 19:42:32 emax Exp $
-# $MidnightBSD: src/etc/rc.d/syscons,v 1.4 2007/10/26 15:27:08 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/syscons,v 1.5 2007/10/26 15:29:24 laffer1 Exp $
 #
 
 # PROVIDE: syscons
-# REQUIRE: LOGIN usbd
+# REQUIRE: LOGIN
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -39,6 +39,7 @@ extra_commands="setkeyboard"
 setkeyboard_cmd="syscons_setkeyboard"
 start_precmd="syscons_precmd"
 start_cmd="syscons_start"
+stop_cmd=":"
 
 # stdin must be redirected because it might be for a serial console
 #
@@ -128,10 +129,6 @@ syscons_precmd()
 	then
 		return 1
 	fi
-	if [ -x /usr/sbin/ispcvt ] && /usr/sbin/ispcvt
-	then
-		return 1
-	fi
 	return 0
 }
 
@@ -217,7 +214,7 @@ syscons_start()
 		for i in `kldstat | awk '$5 ~ "_saver\.ko$" { print $5 }'`; do
 			kldunload ${i}
 		done
-		kldstat -v | grep -q _saver || kldload ${saver}_saver
+		load_kld -e _saver ${saver}_saver
 		;;
 	esac
 
