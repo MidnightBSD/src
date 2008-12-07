@@ -30,7 +30,7 @@ struct file;
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
+#if defined(_KERNEL) && ((__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
@@ -80,7 +80,7 @@ struct file;
 #include "netinet/ip_state.h"
 #include "netinet/ip_auth.h"
 #include "netinet/ip_proxy.h"
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 # include <sys/malloc.h>
 # if defined(_KERNEL)
 #  ifndef IPFILTER_LKM
@@ -103,7 +103,7 @@ extern struct timeout fr_slowtimer_ch;
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_frag.c	1.11 3/24/96 (C) 1993-2000 Darren Reed";
 static const char rcsid[] = "@(#)$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_frag.c,v 1.32.2.1 2007/10/31 05:00:37 darrenr Exp $";
-/* static const char rcsid[] = "@(#)$Id: ip_frag.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $"; */
+/* static const char rcsid[] = "@(#)$Id: ip_frag.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $"; */
 #endif
 
 
@@ -869,7 +869,7 @@ int fr_slowtimer()
 #   if defined(__OpenBSD__)
 	timeout_add(&fr_slowtimer_ch, hz/2);
 #   else
-#    if (__FreeBSD_version >= 300000)
+#    if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 	fr_slowtimer_ch = timeout(fr_slowtimer, NULL, hz/2);
 #    else
 #     ifdef linux

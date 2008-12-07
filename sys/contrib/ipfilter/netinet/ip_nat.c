@@ -39,7 +39,7 @@ struct file;
 # include <sys/uio.h>
 # undef _KERNEL
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 220000)
+#if defined(_KERNEL) && ((__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
 # include <sys/filio.h>
 # include <sys/fcntl.h>
 #else
@@ -67,11 +67,11 @@ struct file;
 # include <sys/stream.h>
 # include <sys/kmem.h>
 #endif
-#if __FreeBSD_version >= 300000
+#if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 # include <sys/queue.h>
 #endif
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
+#if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 # include <net/if_var.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
@@ -107,7 +107,7 @@ extern struct ifnet vpnif;
 #ifdef	IPFILTER_SYNC
 #include "netinet/ip_sync.h"
 #endif
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 # include <sys/malloc.h>
 #endif
 /* END OF INCLUDES */
@@ -118,7 +118,7 @@ extern struct ifnet vpnif;
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_nat.c	1.11 6/5/96 (C) 1995 Darren Reed";
 static const char rcsid[] = "@(#)$FreeBSD: src/sys/contrib/ipfilter/netinet/ip_nat.c,v 1.42.2.1 2007/10/31 05:00:38 darrenr Exp $";
-/* static const char rcsid[] = "@(#)$Id: ip_nat.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $"; */
+/* static const char rcsid[] = "@(#)$Id: ip_nat.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $"; */
 #endif
 
 

@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $";
 #endif
 
 #if defined(KERNEL) || defined(_KERNEL)
@@ -16,16 +16,16 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.2 2008-09-19 02:15:13
 # define	KERNEL	1
 # define	_KERNEL	1
 #endif
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 400000) && \
+#if (defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 400000)) && \
     !defined(KLD_MODULE) && !defined(IPFILTER_LKM)
 # include "opt_inet6.h"
 #endif
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 440000) && \
+#if (defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 440000)) && \
     !defined(KLD_MODULE) && !defined(IPFILTER_LKM)
 # include "opt_random_ip_id.h"
 #endif
 #include <sys/param.h>
-#if defined(__FreeBSD__) && !defined(__FreeBSD_version)
+#if defined(__MidnightBSD__) || defined(__FreeBSD__) && !defined(__FreeBSD_version)
 # if defined(IPFILTER_LKM)
 #  ifndef __FreeBSD_cc_version
 #   include <osreldate.h>
@@ -39,7 +39,7 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.2 2008-09-19 02:15:13
 #include <sys/errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
-#if __FreeBSD_version >= 220000
+#if __FreeBSD_version >= 220000 || defined(__MidnightBSD__)
 # include <sys/fcntl.h>
 # include <sys/filio.h>
 #else
@@ -47,7 +47,7 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.2 2008-09-19 02:15:13
 #endif
 #include <sys/time.h>
 #include <sys/systm.h>
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 # include <sys/dirent.h>
 #else
 # include <sys/dir.h>
@@ -57,16 +57,16 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.2 2008-09-19 02:15:13
 #endif
 #include <sys/protosw.h>
 #include <sys/socket.h>
-#if __FreeBSD_version >= 500043
+#if __FreeBSD_version >= 500043 || defined(__MidnightBSD__)
 # include <sys/selinfo.h>
 #else
 # include <sys/select.h>
 #endif
 
 #include <net/if.h>
-#if __FreeBSD_version >= 300000
+#if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 # include <net/if_var.h>
-# if __FreeBSD_version >= 500043
+# if __FreeBSD_version >= 500043 || defined(__MidnightBSD__)
 #  include <net/netisr.h>
 # endif
 # if !defined(IPFILTER_LKM)
@@ -106,7 +106,8 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.2 2008-09-19 02:15:13
 #include "netinet/ip_scan.h"
 #endif
 #include "netinet/ip_pool.h"
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || \
+    defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 #endif
 #include <sys/kernel.h>
@@ -115,7 +116,7 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.2 2008-09-19 02:15:13
 #endif
 extern	int	ip_optcopy __P((struct ip *, struct ip *));
 
-#if (__FreeBSD_version > 460000)
+#if (__FreeBSD_version > 460000) || defined(__MidnightBSD__)
 extern	int	path_mtu_discovery;
 #endif
 
@@ -138,12 +139,12 @@ ipfrwlock_t	ipf_frag, ipf_state, ipf_nat, ipf_natfrag, ipf_auth;
 # endif
 int		ipf_locks_done = 0;
 
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 struct callout_handle fr_slowtimer_ch;
 #endif
 struct	selinfo	ipfselwait[IPL_LOGSIZE];
 
-#if (__FreeBSD_version >= 500011)
+#if (__FreeBSD_version >= 500011) || defined(__MidnightBSD__)
 # include <sys/conf.h>
 # if defined(NETBSD_PF)
 #  include <net/pfil.h>
@@ -156,7 +157,7 @@ int (*fr_checkp) __P((ip_t *ip, int hlen, void *ifp, int out, mb_t **mp));
 #endif /* __FreeBSD_version >= 500011 */
 
 
-#if (__FreeBSD_version >= 502103)
+#if (__FreeBSD_version >= 502103) || defined(__MidnightBSD__)
 static eventhandler_tag ipf_arrivetag, ipf_departtag, ipf_clonetag;
 
 static void ipf_ifevent(void *arg);
@@ -169,7 +170,8 @@ void *arg;
 #endif
 
 
-#if (__FreeBSD_version >= 501108) && defined(_KERNEL)
+#if (defined(__MidnightBSD__) || (__FreeBSD_version >= 501108)) && \
+    defined(_KERNEL)
 
 static int
 fr_check_wrapper(void *arg, struct mbuf **mp, struct ifnet *ifp, int dir)
@@ -237,7 +239,7 @@ int ipfattach()
 		ipforwarding = 1;
 
 	SPL_X(s);
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 	fr_slowtimer_ch = timeout(fr_slowtimer, NULL,
 				    (hz / IPF_HZ_DIVIDE) * IPF_HZ_MULT);
 #else
@@ -261,7 +263,7 @@ int ipfdetach()
 
 	SPL_NET(s);
 
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 	if (fr_slowtimer_ch.callout != NULL)
 		untimeout(fr_slowtimer, NULL, fr_slowtimer_ch);
 	bzero(&fr_slowtimer_ch, sizeof(fr_slowtimer_ch));
@@ -300,11 +302,12 @@ int ipfdetach()
  * Filter ioctl interface.
  */
 int iplioctl(dev, cmd, data, mode
-# if defined(_KERNEL) && ((BSD >= 199506) || (__FreeBSD_version >= 220000))
+# if defined(_KERNEL) && ((BSD >= 199506) || 
+  (__FreeBSD_version >= 220000) || defined(__MidnightBSD__))
 , p)
-#  if (__FreeBSD_version >= 500024)
+#  if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
 struct thread *p;
-#   if (__FreeBSD_version >= 500043)
+#   if (__FreeBSD_version >= 500043) || defined(__MidnightBSD__)
 #    define	p_uid	td_ucred->cr_ruid
 #   else
 #    define	p_uid	t_proc->p_cred->p_ruid
@@ -316,7 +319,7 @@ struct proc *p;
 # else
 )
 # endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 502116)
+#if defined(_KERNEL) && (defined(__MidnightBSD__) || (__FreeBSD_version >= 502116))
 struct cdev *dev;
 #else
 dev_t dev;
@@ -406,10 +409,11 @@ void *ifp;
  * routines below for saving IP headers to buffer
  */
 int iplopen(dev, flags
-#if ((BSD >= 199506) || (__FreeBSD_version >= 220000)) && defined(_KERNEL)
+#if ((BSD >= 199506) || (__FreeBSD_version >= 220000) || \
+    defined(__MidnightBSD__)) && defined(_KERNEL)
 , devtype, p)
 int devtype;
-# if (__FreeBSD_version >= 500024)
+# if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
 struct thread *p;
 # else
 struct proc *p;
@@ -417,7 +421,8 @@ struct proc *p;
 #else
 )
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 502116)
+#if defined(_KERNEL) && ((__FreeBSD_version >= 502116) || \
+    defined(__MidnightBSD__))
 struct cdev *dev;
 #else
 dev_t dev;
@@ -435,10 +440,11 @@ int flags;
 
 
 int iplclose(dev, flags
-#if ((BSD >= 199506) || (__FreeBSD_version >= 220000)) && defined(_KERNEL)
+#if ((BSD >= 199506) || (__FreeBSD_version >= 220000) || \
+    defined(__MidnightBSD__)) && defined(_KERNEL)
 , devtype, p)
 int devtype;
-# if (__FreeBSD_version >= 500024)
+# if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
 struct thread *p;
 # else
 struct proc *p;
@@ -446,7 +452,7 @@ struct proc *p;
 #else
 )
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 502116)
+#if defined(_KERNEL) && ((__FreeBSD_version >= 502116) || defined(__MidnightBSD__))
 struct cdev *dev;
 #else
 dev_t dev;
@@ -474,7 +480,7 @@ int ioflag;
 #else
 int iplread(dev, uio)
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 502116)
+#if defined(_KERNEL) && ((__FreeBSD_version >= 502116) || defined(__MidnightBSD__))
 struct cdev *dev;
 #else
 dev_t dev;
@@ -514,7 +520,7 @@ int ioflag;
 #else
 int iplwrite(dev, uio)
 #endif
-#if defined(_KERNEL) && (__FreeBSD_version >= 502116)
+#if defined(_KERNEL) && ((__FreeBSD_version >= 502116) || defined(__MidnightBSD__))
 struct cdev *dev;
 #else
 dev_t dev;
@@ -654,7 +660,7 @@ mb_t *m, **mpp;
 		IP_HL_A(ip, sizeof(*oip) >> 2);
 		ip->ip_tos = oip->ip_tos;
 		ip->ip_id = fin->fin_ip->ip_id;
-#if (__FreeBSD_version > 460000)
+#if (__FreeBSD_version > 460000) || defined(__MidnightBSD__)
 		ip->ip_off = path_mtu_discovery ? IP_DF : 0;
 #else
 		ip->ip_off = 0;
@@ -934,7 +940,7 @@ frdest_t *fdp;
 		 * currently "to <if>" and "to <if>:ip#" are not supported
 		 * for IPv6
 		 */
-#if  (__FreeBSD_version >= 490000)
+#if  (__FreeBSD_version >= 490000) || defined(__MidnightBSD__)
 		return ip6_output(m0, NULL, NULL, 0, NULL, NULL, NULL);
 #else
 		return ip6_output(m0, NULL, NULL, 0, NULL, NULL);
@@ -1192,7 +1198,7 @@ struct in_addr *inp, *inpmask;
 	else if (v == 6)
 		bzero((char *)inp, sizeof(struct in6_addr));
 #endif
-#if  (__FreeBSD_version >= 300000)
+#if  (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 	ifa = TAILQ_FIRST(&ifp->if_addrhead);
 #else
 	ifa = ifp->if_addrlist;
@@ -1211,7 +1217,7 @@ struct in_addr *inp, *inpmask;
 				break;
 		}
 #endif
-#if (__FreeBSD_version >= 300000)
+#if (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 		ifa = TAILQ_NEXT(ifa, ifa_link);
 #else
 		ifa = ifa->ifa_next;
@@ -1248,7 +1254,7 @@ u_32_t fr_newisn(fin)
 fr_info_t *fin;
 {
 	u_32_t newiss;
-#if  (__FreeBSD_version >= 400000)
+#if  (__FreeBSD_version >= 400000) || defined(__MidnightBSD__)
 	newiss = arc4random();
 #else
 	static iss_seq_off = 0;
@@ -1492,7 +1498,7 @@ mb_t *m;
 	int error = 0;
 
 	if (fin->fin_out == 0) {
-#if (__FreeBSD_version >= 501000)
+#if (__FreeBSD_version >= 501000) || defined(__MidnightBSD__)
 		netisr_dispatch(NETISR_IP, m);
 #else
 		struct ifqueue *ifq;
@@ -1519,7 +1525,7 @@ mb_t *m;
 	} else {
 		fin->fin_ip->ip_len = ntohs(fin->fin_ip->ip_len);
 		fin->fin_ip->ip_off = ntohs(fin->fin_ip->ip_off);
-#if (__FreeBSD_version >= 470102)
+#if (__FreeBSD_version >= 470102) || defined(__MidnightBSD__)
 		error = ip_output(m, NULL, NULL, IP_FORWARDING, NULL, NULL);
 #else
 		error = ip_output(m, NULL, NULL, IP_FORWARDING, NULL);
@@ -1530,8 +1536,9 @@ mb_t *m;
 }
 
 int ipf_pfil_unhook(void) {
-#if defined(NETBSD_PF) && (__FreeBSD_version >= 500011)
-# if __FreeBSD_version >= 501108
+#if defined(NETBSD_PF) && (defined(__MidnightBSD__) || \
+    (__FreeBSD_version >= 500011))
+# if __FreeBSD_version >= 501108 || defined(__MidnightBSD__)
 	struct pfil_head *ph_inet;
 #  ifdef USE_INET6
 	struct pfil_head *ph_inet6;
@@ -1540,8 +1547,8 @@ int ipf_pfil_unhook(void) {
 #endif
 
 #ifdef NETBSD_PF
-# if (__FreeBSD_version >= 500011)
-#  if (__FreeBSD_version >= 501108)
+# if (__FreeBSD_version >= 500011) || defined(__MidnightBSD__)
+#  if (__FreeBSD_version >= 501108) || defined(__MidnightBSD__)
 	ph_inet = pfil_head_get(PFIL_TYPE_AF, AF_INET);
 	if (ph_inet != NULL)
 		pfil_remove_hook((void *)fr_check_wrapper, NULL,
@@ -1554,7 +1561,7 @@ int ipf_pfil_unhook(void) {
 	pfil_remove_hook((void *)fr_check, PFIL_IN|PFIL_OUT|PFIL_WAITOK);
 # endif
 # ifdef USE_INET6
-#  if (__FreeBSD_version >= 501108)
+#  if (__FreeBSD_version >= 501108) || defined(__MidnightBSD__)
 	ph_inet6 = pfil_head_get(PFIL_TYPE_AF, AF_INET6);
 	if (ph_inet6 != NULL)
 		pfil_remove_hook((void *)fr_check_wrapper6, NULL,
@@ -1570,8 +1577,9 @@ int ipf_pfil_unhook(void) {
 }
 
 int ipf_pfil_hook(void) {
-#if defined(NETBSD_PF) && (__FreeBSD_version >= 500011)
-# if __FreeBSD_version >= 501108
+#if defined(NETBSD_PF) && (defined(__MidnightBSD__) || \
+    (__FreeBSD_version >= 500011))
+# if __FreeBSD_version >= 501108 || defined(__MidnightBSD__)
 	struct pfil_head *ph_inet;
 #  ifdef USE_INET6
 	struct pfil_head *ph_inet6;
@@ -1580,8 +1588,8 @@ int ipf_pfil_hook(void) {
 #endif
 
 # ifdef NETBSD_PF
-#  if __FreeBSD_version >= 500011
-#   if __FreeBSD_version >= 501108
+#  if __FreeBSD_version >= 500011 || defined(__MidnightBSD__)
+#   if __FreeBSD_version >= 501108 || defined(__MidnightBSD__)
 	ph_inet = pfil_head_get(PFIL_TYPE_AF, AF_INET);
 #    ifdef USE_INET6
 	ph_inet6 = pfil_head_get(PFIL_TYPE_AF, AF_INET6);
@@ -1604,7 +1612,7 @@ int ipf_pfil_hook(void) {
 	pfil_add_hook((void *)fr_check, PFIL_IN|PFIL_OUT|PFIL_WAITOK);
 #  endif
 #  ifdef USE_INET6
-#   if __FreeBSD_version >= 501108
+#   if __FreeBSD_version >= 501108 || defined(__MidnightBSD__)
 	if (ph_inet6 != NULL)
 		pfil_add_hook((void *)fr_check_wrapper6, NULL,
 				      PFIL_IN|PFIL_OUT|PFIL_WAITOK, ph_inet6);
@@ -1620,7 +1628,7 @@ int ipf_pfil_hook(void) {
 void
 ipf_event_reg(void)
 {
-#if (__FreeBSD_version >= 502103)
+#if (__FreeBSD_version >= 502103) || defined(__MidnightBSD__)
 	ipf_arrivetag =  EVENTHANDLER_REGISTER(ifnet_arrival_event, \
 					       ipf_ifevent, NULL, \
 					       EVENTHANDLER_PRI_ANY);
@@ -1635,7 +1643,7 @@ ipf_event_reg(void)
 void
 ipf_event_dereg(void)
 {
-#if (__FreeBSD_version >= 502103)
+#if (__FreeBSD_version >= 502103) || defined(__MidnightBSD__)
 	if (ipf_arrivetag != NULL) {
 		EVENTHANDLER_DEREGISTER(ifnet_arrival_event, ipf_arrivetag);
 	}

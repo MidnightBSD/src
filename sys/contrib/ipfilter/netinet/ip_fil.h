@@ -1234,8 +1234,8 @@ typedef struct ipftoken {
 # define	IPF_SMAJ	0	/* temp assignment XXX, not critical */
 #endif
 
-#if !defined(CDEV_MAJOR) && defined (__FreeBSD_version) && \
-    (__FreeBSD_version >= 220000)
+#if !defined(CDEV_MAJOR) && (defined(__MidnightBSD__) || defined (__FreeBSD_version) && \
+    (__FreeBSD_version >= 220000))
 # define	CDEV_MAJOR	79
 #endif
 
@@ -1245,7 +1245,7 @@ typedef struct ipftoken {
  * with this!
  */
 #if (defined(NetBSD) && (NetBSD > 199609) && (NetBSD <= 1991011)) || \
-    (defined(NetBSD1_2) && NetBSD1_2 > 1) || \
+    (defined(NetBSD1_2) && NetBSD1_2 > 1) || defined(__MidnightBSD__) || \
     (defined(__FreeBSD__) && (__FreeBSD_version >= 500043))
 # if defined(NetBSD) && (NetBSD >= 199905)
 #  define PFIL_HOOKS
@@ -1272,7 +1272,7 @@ extern	int	(*fr_checkp) __P((ip_t *, int, void *, int, mb_t **));
 extern	int	ipf_log __P((void));
 extern	struct	ifnet *get_unit __P((char *, int));
 extern	char	*get_ifname __P((struct ifnet *));
-# if defined(__NetBSD__) || defined(__OpenBSD__) || \
+# if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__MidnightBSD__) || \
 	  (_BSDI_VERSION >= 199701) || (__FreeBSD_version >= 300000)
 extern	int	iplioctl __P((int, ioctlcmd_t, caddr_t, int));
 # else
@@ -1285,7 +1285,7 @@ extern	int	bcopywrap __P((void *, void *, size_t));
 #else /* #ifndef _KERNEL */
 # ifdef BSD
 #  if (defined(__NetBSD__) && (__NetBSD_Version__ < 399000000)) || \
-      defined(__osf__) || \
+      defined(__osf__) || defined(__MidnightBSD__) || \
       (defined(__FreeBSD_version) && (__FreeBSD_version < 500043))
 #   include <sys/select.h>
 #  else
@@ -1341,13 +1341,14 @@ extern	void	ipfilter_sgi_intfsync __P((void));
 extern	int	iplidentify __P((char *));
 #   endif
 #   if (defined(_BSDI_VERSION) && _BSDI_VERSION >= 199510) || \
-      (__FreeBSD_version >= 220000) || \
+      (__FreeBSD_version >= 220000) || defined(__MidnightBSD__) || \
       (NetBSD >= 199511) || defined(__OpenBSD__)
 #    if defined(__NetBSD__) || \
        (defined(_BSDI_VERSION) && _BSDI_VERSION >= 199701) || \
-       defined(__OpenBSD__) || (__FreeBSD_version >= 300000)
-#     if (__FreeBSD_version >= 500024)
-#      if (__FreeBSD_version >= 502116)
+       defined(__OpenBSD__) || defined(__MidnightBSD__) || \
+       (__FreeBSD_version >= 300000)
+#     if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
+#      if (__FreeBSD_version >= 502116) || defined(__MidnightBSD__)
 extern	int	iplioctl __P((struct cdev*, u_long, caddr_t, int, struct thread *));
 #      else
 extern	int	iplioctl __P((dev_t, u_long, caddr_t, int, struct thread *));
@@ -1366,8 +1367,8 @@ extern	int	iplioctl __P((dev_t, u_long, caddr_t, int, struct proc *));
 #    else
 extern	int	iplioctl __P((dev_t, int, caddr_t, int, struct thread *));
 #    endif
-#    if (__FreeBSD_version >= 500024)
-#      if (__FreeBSD_version >= 502116)
+#    if (__FreeBSD_version >= 500024) || defined(__MidnightBSD__)
+#      if (__FreeBSD_version >= 502116) || defined(__MidnightBSD__)
 extern	int	iplopen __P((struct cdev*, int, int, struct thread *));
 extern	int	iplclose __P((struct cdev*, int, int, struct thread *));
 #      else
@@ -1393,7 +1394,7 @@ extern	int	iplioctl __P((dev_t, int, caddr_t, int));
 #    endif
 #   endif /* (_BSDI_VERSION >= 199510) */
 #   if	BSD >= 199306
-#      if (__FreeBSD_version >= 502116)
+#      if (__FreeBSD_version >= 502116) || defined(__MidnightBSD__)
 extern	int	iplread __P((struct cdev*, struct uio *, int));
 extern	int	iplwrite __P((struct cdev*, struct uio *, int));
 #      else
@@ -1409,7 +1410,7 @@ extern	int	iplwrite __P((dev_t, struct uio *));
 #  endif /* __ sgi */
 # endif /* MENTAT */
 
-# if defined(__FreeBSD_version)
+# if defined(__FreeBSD_version) || defined(__MidnightBSD__)
 extern	int	ipf_pfil_hook __P((void));
 extern	int	ipf_pfil_unhook __P((void));
 extern	void	ipf_event_reg __P((void));
@@ -1447,7 +1448,7 @@ extern	int	fr_resolvefunc __P((void *));
 extern	void	*fr_resolvenic __P((char *, int));
 extern	int	fr_send_icmp_err __P((int, fr_info_t *, int));
 extern	int	fr_send_reset __P((fr_info_t *));
-#if  (__FreeBSD_version < 501000) || !defined(_KERNEL)
+#if  (__FreeBSD_version < 501000) || !defined(_KERNEL) || !defined(__MidnightBSD__)
 extern	int	ppsratecheck __P((struct timeval *, int *, int));
 #endif
 extern	ipftq_t	*fr_addtimeoutqueue __P((ipftq_t **, u_int));

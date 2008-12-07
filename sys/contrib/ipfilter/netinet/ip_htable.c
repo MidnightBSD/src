@@ -27,10 +27,10 @@ struct file;
 # undef _KERNEL
 #endif
 #include <sys/socket.h>
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 #endif
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #  include <sys/cdefs.h>
 #  include <sys/proc.h>
 #endif
@@ -53,7 +53,7 @@ struct file;
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: ip_htable.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_htable.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $";
 #endif
 
 #ifdef	IPFILTER_LOOKUP

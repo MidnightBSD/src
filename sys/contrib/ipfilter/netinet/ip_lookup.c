@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/file.h>
-#if __FreeBSD_version >= 220000 && defined(_KERNEL)
+#if (__FreeBSD_version >= 220000 || defined(__MidnightBSD__)) && defined(_KERNEL)
 # include <sys/fcntl.h>
 # include <sys/filio.h>
 #else
@@ -38,7 +38,7 @@ struct file;
 # define _RADIX_H_
 #endif
 #include <net/if.h>
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #  include <sys/cdefs.h>
 #  include <sys/proc.h>
 #endif
@@ -58,7 +58,7 @@ struct file;
 /* END OF INCLUDES */
 
 #if !defined(lint)
-static const char rcsid[] = "@(#)$Id: ip_lookup.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_lookup.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $";
 #endif
 
 #ifdef	IPFILTER_LOOKUP

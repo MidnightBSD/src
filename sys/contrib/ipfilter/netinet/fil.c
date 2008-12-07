@@ -24,9 +24,9 @@
 #  endif
 # endif
 #endif
-#if defined(_KERNEL) && defined(__FreeBSD_version) && \
-    (__FreeBSD_version >= 220000)
-# if (__FreeBSD_version >= 400000)
+#if defined(_KERNEL) && (defined(__MidnightBSD__) || defined(__FreeBSD_version) && \
+    (__FreeBSD_version >= 220000))
+# if (__FreeBSD_version >= 400000 ) || defined(__MidnightBSD__)
 #  if !defined(IPFILTER_LKM)
 #   include "opt_inet6.h"
 #  endif
@@ -82,8 +82,9 @@ struct file;
 #ifdef sun
 # include <net/af.h>
 #endif
-#if !defined(_KERNEL) && (defined(__FreeBSD__) || defined(SOLARIS2))
-# if (__FreeBSD_version >= 504000)
+#if !defined(_KERNEL) && (defined(__FreeBSD__) || defined(SOLARIS2)) || \
+    defined(__MidnightBSD__)
+# if (__FreeBSD_version >= 504000) || defined(__MidnightBSD__)
 #  undef _RADIX_H_
 # endif
 # include "radix_ipf.h"
@@ -142,7 +143,8 @@ struct file;
 #if defined(IPFILTER_BPF) && defined(_KERNEL)
 # include <net/bpf.h>
 #endif
-#if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#if defined(__MidnightBSD__) || \
+    defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 # include <sys/malloc.h>
 # if defined(_KERNEL) && !defined(IPFILTER_LKM)
 #  include "opt_ipfilter.h"
@@ -156,7 +158,7 @@ struct file;
 #if !defined(lint)
 static const char sccsid[] = "@(#)fil.c	1.36 6/5/96 (C) 1993-2000 Darren Reed";
 static const char rcsid[] = "@(#)$FreeBSD: src/sys/contrib/ipfilter/netinet/fil.c,v 1.52.2.2 2007/12/01 00:53:41 darrenr Exp $";
-/* static const char rcsid[] = "@(#)$Id: fil.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $"; */
+/* static const char rcsid[] = "@(#)$Id: fil.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $"; */
 #endif
 
 #ifndef	_KERNEL
@@ -3207,7 +3209,7 @@ nodata:
  * SUCH DAMAGE.
  *
  *	@(#)uipc_mbuf.c	8.2 (Berkeley) 1/4/94
- * $Id: fil.c,v 1.2 2008-09-19 02:15:13 laffer1 Exp $
+ * $Id: fil.c,v 1.3 2008-12-07 00:18:55 laffer1 Exp $
  */
 /*
  * Copy data from an mbuf chain starting "off" bytes from the beginning,
@@ -4750,7 +4752,7 @@ void *data;
 }
 
 
-#if !defined(_KERNEL) || (!defined(__NetBSD__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)) || \
+#if !defined(_KERNEL) || (!defined(__NetBSD__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)) && !defined(__MidnightBSD__) || \
     (defined(__FreeBSD__) && (__FreeBSD_version < 501000)) || \
     (defined(__NetBSD__) && (__NetBSD_Version__ < 105000000)) || \
     (defined(__OpenBSD__) && (OpenBSD < 200006))
@@ -5333,6 +5335,7 @@ char *buffer;
 	static char namebuf[LIFNAMSIZ];
 # if defined(MENTAT) || defined(__FreeBSD__) || defined(__osf__) || \
      defined(__sgi) || defined(linux) || defined(_AIX51) || \
+     defined(__MidnightBSD__) || \
      (defined(sun) && !defined(__SVR4) && !defined(__svr4__))
 	int unit, space;
 	char temp[20];
@@ -5344,7 +5347,7 @@ char *buffer;
 	(void) strncpy(buffer, ifp->if_name, LIFNAMSIZ);
 	buffer[LIFNAMSIZ - 1] = '\0';
 # if defined(MENTAT) || defined(__FreeBSD__) || defined(__osf__) || \
-     defined(__sgi) || defined(_AIX51) || \
+     defined(__sgi) || defined(_AIX51) || defined(__MidnightBSD__) || \
      (defined(sun) && !defined(__SVR4) && !defined(__svr4__))
 	for (s = buffer; *s; s++)
 		;

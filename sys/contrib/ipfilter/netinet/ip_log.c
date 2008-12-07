@@ -23,9 +23,10 @@
 #  include "opt_ipfilter.h"
 # endif
 #endif
-#if defined(__FreeBSD__) && !defined(IPFILTER_LKM)
+#if (defined(__MidnightBSD__) || defined(__FreeBSD__)) && !defined(IPFILTER_LKM)
 # if defined(_KERNEL)
-#  if defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
+#  if defined(__MidnightBSD__) || \
+      defined(__FreeBSD_version) && (__FreeBSD_version >= 300000)
 #   include "opt_ipfilter.h"
 #  endif
 # else
@@ -52,7 +53,7 @@ struct file;
 # undef _KERNEL
 # undef KERNEL
 #endif
-#if __FreeBSD_version >= 220000 && defined(_KERNEL)
+#if (defined(__MidnightBSD__) || __FreeBSD_version >= 220000) && defined(_KERNEL)
 # include <sys/fcntl.h>
 # include <sys/filio.h>
 #else
@@ -68,14 +69,14 @@ struct file;
 #if !SOLARIS && !defined(__hpux) && !defined(linux)
 # if (defined(NetBSD) && NetBSD > 199609) || \
      (defined(OpenBSD) && OpenBSD > 199603) || \
-     (__FreeBSD_version >= 300000)
+     (__FreeBSD_version >= 300000) || defined(__MidnightBSD__)
 #  include <sys/dirent.h>
 # else
 #  include <sys/dir.h>
 # endif
 # include <sys/mbuf.h>
 # include <sys/select.h>
-# if __FreeBSD_version >= 500000
+# if __FreeBSD_version >= 500000 || defined(__MidnightBSD__)
 #  include <sys/selinfo.h>
 # endif
 #else
@@ -100,7 +101,7 @@ struct file;
 #ifdef sun
 # include <net/af.h>
 #endif
-#if __FreeBSD_version >= 300000
+#if __FreeBSD_version >= 300000 || defined(__MidnightBSD__)
 # include <net/if_var.h>
 #endif
 #include <net/route.h>
@@ -136,7 +137,8 @@ struct file;
 #include "netinet/ip_frag.h"
 #include "netinet/ip_state.h"
 #include "netinet/ip_auth.h"
-#if (__FreeBSD_version >= 300000) || defined(__NetBSD__)
+#if (__FreeBSD_version >= 300000) || defined(__NetBSD__) || \
+    defined(__MidnightBSD__)
 # include <sys/malloc.h>
 #endif
 /* END OF INCLUDES */
@@ -346,7 +348,7 @@ u_int flags;
 #  if (defined(NetBSD) && (NetBSD <= 1991011) && (NetBSD >= 199603)) || \
       (defined(OpenBSD) && (OpenBSD >= 199603)) || defined(linux) || \
       (defined(__FreeBSD__) && (__FreeBSD_version >= 501113)) || \
-      (SOLARIS && defined(_INET_IP_STACK_H))
+      (SOLARIS && defined(_INET_IP_STACK_H)) || defined(__MidnightBSD__)
 	COPYIFNAME(fin->fin_v, ifp, ipfl.fl_ifname);
 #  else
 	ipfl.fl_unit = (u_int)ifp->if_unit;
@@ -618,7 +620,8 @@ struct uio *uio;
 # endif /* SOLARIS */
 	}
 
-# if (BSD >= 199101) || defined(__FreeBSD__) || defined(__osf__)
+# if (BSD >= 199101) || defined(__FreeBSD__) || defined(__osf__) || \
+    defined(__MidnightBSD__)
 	uio->uio_rw = UIO_READ;
 # endif
 
