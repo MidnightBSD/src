@@ -2,7 +2,7 @@
 #
 # $NetBSD: dhclient,v 1.8 2002/03/22 04:33:58 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/dhclient,v 1.20.2.1 2005/07/29 23:36:28 brooks Exp $
-# $MidnightBSD: src/etc/rc.d/dhclient,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/dhclient,v 1.3 2007/08/06 00:23:51 laffer1 Exp $
 
 # PROVIDE: dhclient
 # KEYWORD: nojail nostart
@@ -18,15 +18,22 @@ stop_cmd="dhclient_stop"
 
 dhclient_start()
 {
-	# prevent unnecessicary restarts
-	# XXX: should use a pidfile
-	if [ -x /usr/bin/pgrep ]; then
-		pids=`/usr/bin/pgrep -f "dhclient: $ifn(\$| .*)"`
+	# prevent unnecessary restarts
+	# XXX: dhclient had better create a pidfile
+	if [ -x /bin/pgrep ]; then
+		pids=`/bin/pgrep -f "dhclient: $ifn(\$| .*)"`
 		if [ -n "$pids" ]; then
 			exit 0
 		fi
 	fi
 
+	# Override for $ifn specific flags (see rc.subr for $flags setting)
+	specific=`get_if_var $ifn dhclient_flags_IF`
+	if [ -z "$flags" -a -n "$specific" ]; then
+		rc_flags=$specific
+	fi
+
+	background_dhclient=`get_if_var $ifn background_dhclient_IF $background_dhclient`
 	if checkyesno background_dhclient; then
 		rc_flags="${rc_flags} -b"
 	fi
@@ -42,6 +49,7 @@ dhclient_stop()
 ifn="$2"
 
 load_rc_config $name
+load_rc_config network
 
 if ! dhcpif $ifn; then
 	return 1
