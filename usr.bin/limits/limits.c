@@ -22,7 +22,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/limits/limits.c,v 1.14 2004/12/19 13:29:25 cperciva Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/limits/limits.c,v 1.17 2007/07/04 00:00:40 scf Exp $");
 
 #include <err.h>
 #include <stdio.h>
@@ -244,6 +244,7 @@ main(int argc, char *argv[])
     int rcswhich, shelltype;
     int i, num_limits = 0;
     int ch, doeval = 0, doall = 0;
+    int rtrn;
     login_cap_t * lc = NULL;
     enum { ANY=0, SOFT=1, HARD=2, BOTH=3, DISPLAYONLY=4 } type = ANY;
     enum { RCSUNKNOWN=0, RCSSET=1, RCSSEL=2 } todo = RCSUNKNOWN;
@@ -399,8 +400,13 @@ main(int argc, char *argv[])
 	login_close(lc);
 
 	/* set leading environment variables, like eval(1) */
-	while (*argv && (p = strchr(*argv, '=')))
-	    (void)setenv(*argv++, ++p, 1);
+	while (*argv && (p = strchr(*argv, '='))) {
+		*p = '\0';
+		rtrn = setenv(*argv++, p + 1, 1);
+		*p = '=';
+		if (rtrn == -1)
+			err(EXIT_FAILURE, "setenv %s", *argv);
+	}
 
 	/* Set limits */
 	for (rcswhich = 0; rcswhich < RLIM_NLIMITS; rcswhich++) {
