@@ -28389,6 +28389,10 @@ sys/modules/ispfw/isp_2322/Makefile -text
 sys/modules/ispfw/isp_2400/Makefile -text
 sys/modules/ispfw/ispfw/Makefile -text
 sys/modules/iwi/Makefile -text
+sys/modules/iwifw/Makefile -text
+sys/modules/iwifw/iwi_bss/Makefile -text
+sys/modules/iwifw/iwi_ibss/Makefile -text
+sys/modules/iwifw/iwi_monitor/Makefile -text
 sys/modules/ixgb/Makefile -text
 sys/modules/joy/Makefile -text
 sys/modules/kbdmux/Makefile -text
