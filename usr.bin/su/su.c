@@ -74,12 +74,17 @@ static char sccsid[] = "@(#)su.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/su/su.c,v 1.76 2005/01/17 19:57:59 rwatson Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/su/su.c,v 1.86.2.1 2007/10/24 01:04:10 davidxu Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+
+#ifdef USE_BSM_AUDIT
+#include <bsm/libbsm.h>
+#include <bsm/audit_uevents.h>
+#endif
 
 #include <err.h>
 #include <errno.h>
@@ -93,6 +98,7 @@ __FBSDID("$FreeBSD: src/usr.bin/su/su.c,v 1.76 2005/01/17 19:57:59 rwatson Exp $
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include <security/pam_appl.h>
 #include <security/openpam.h>
@@ -164,6 +170,10 @@ main(int argc, char *argv[])
 	const char	*p, *user, *shell, *mytty, **nargv;
 	struct sigaction sa, sa_int, sa_quit, sa_pipe;
 	int temp, fds[2];
+#ifdef USE_BSM_AUDIT
+	const char	*aerr;
+	au_id_t		 auid;
+#endif
 
 	shell = class = cleanenv = NULL;
 	asme = asthem = fastlogin = statusp = 0;
@@ -204,15 +214,27 @@ main(int argc, char *argv[])
 		usage();
 	/* NOTREACHED */
 
-	if (strlen(user) > MAXLOGNAME - 1)
-		errx(1, "username too long");
-
 	/*
 	 * Try to provide more helpful debugging output if su(1) is running
 	 * non-setuid, or was run from a file system not mounted setuid.
 	 */
 	if (geteuid() != 0)
 		errx(1, "not running setuid");
+
+#ifdef USE_BSM_AUDIT
+	if (getauid(&auid) < 0 && errno != ENOSYS) {
+		syslog(LOG_AUTH | LOG_ERR, "getauid: %s", strerror(errno));
+		errx(1, "Permission denied");
+	}
+#endif
+	if (strlen(user) > MAXLOGNAME - 1) {
+#ifdef USE_BSM_AUDIT
+		if (audit_submit(AUE_su, auid,
+		    1, EPERM, "username too long: '%s'", user))
+			errx(1, "Permission denied");
+#endif
+		errx(1, "username too long");
+	}
 
 	nargv = malloc(sizeof(char *) * (size_t)(argc + 4));
 	if (nargv == NULL)
@@ -239,8 +261,14 @@ main(int argc, char *argv[])
 	pwd = getpwnam(username);
 	if (username == NULL || pwd == NULL || pwd->pw_uid != ruid)
 		pwd = getpwuid(ruid);
-	if (pwd == NULL)
+	if (pwd == NULL) {
+#ifdef USE_BSM_AUDIT
+		if (audit_submit(AUE_su, auid, 1, EPERM,
+		    "unable to determine invoking subject: '%s'", username))
+			errx(1, "Permission denied");
+#endif
 		errx(1, "who are you?");
+	}
 
 	username = strdup(pwd->pw_name);
 	if (username == NULL)
@@ -275,10 +303,19 @@ main(int argc, char *argv[])
 
 	retcode = pam_authenticate(pamh, 0);
 	if (retcode != PAM_SUCCESS) {
+#ifdef USE_BSM_AUDIT
+		if (audit_submit(AUE_su, auid, 1, EPERM, "bad su %s to %s on %s",
+		    username, user, mytty))
+			errx(1, "Permission denied");
+#endif
 		syslog(LOG_AUTH|LOG_WARNING, "BAD SU %s to %s on %s",
 		    username, user, mytty);
 		errx(1, "Sorry");
 	}
+#ifdef USE_BSM_AUDIT
+	if (audit_submit(AUE_su, auid, 0, 0, "successful authentication"))
+		errx(1, "Permission denied");
+#endif
 	retcode = pam_get_item(pamh, PAM_USER, (const void **)&p);
 	if (retcode == PAM_SUCCESS)
 		user = p;
@@ -286,20 +323,39 @@ main(int argc, char *argv[])
 		syslog(LOG_ERR, "pam_get_item(PAM_USER): %s",
 		    pam_strerror(pamh, retcode));
 	pwd = getpwnam(user);
-	if (pwd == NULL)
+	if (pwd == NULL) {
+#ifdef USE_BSM_AUDIT
+		if (audit_submit(AUE_su, auid, 1, EPERM,
+		    "unknown subject: %s", user))
+			errx(1, "Permission denied");
+#endif
 		errx(1, "unknown login: %s", user);
+	}
 
 	retcode = pam_acct_mgmt(pamh, 0);
 	if (retcode == PAM_NEW_AUTHTOK_REQD) {
 		retcode = pam_chauthtok(pamh,
 			PAM_CHANGE_EXPIRED_AUTHTOK);
 		if (retcode != PAM_SUCCESS) {
+#ifdef USE_BSM_AUDIT
+			aerr = pam_strerror(pamh, retcode);
+			if (aerr == NULL)
+				aerr = "Unknown PAM error";
+			if (audit_submit(AUE_su, auid, 1, EPERM,
+			    "pam_chauthtok: %s", aerr))
+				errx(1, "Permission denied");
+#endif
 			syslog(LOG_ERR, "pam_chauthtok: %s",
 			    pam_strerror(pamh, retcode));
 			errx(1, "Sorry");
 		}
 	}
 	if (retcode != PAM_SUCCESS) {
+#ifdef USE_BSM_AUDIT
+		if (audit_submit(AUE_su, auid, 1, EPERM, "pam_acct_mgmt: %s",
+		    pam_strerror(pamh, retcode)))
+			errx(1, "Permission denied");
+#endif
 		syslog(LOG_ERR, "pam_acct_mgmt: %s",
 			pam_strerror(pamh, retcode));
 		errx(1, "Sorry");
@@ -309,8 +365,14 @@ main(int argc, char *argv[])
 	if (class == NULL)
 		lc = login_getpwclass(pwd);
 	else {
-		if (ruid != 0)
+		if (ruid != 0) {
+#ifdef USE_BSM_AUDIT
+			if (audit_submit(AUE_su, auid, 1, EPERM,
+			    "only root may use -c"))
+				errx(1, "Permission denied");
+#endif
 			errx(1, "only root may use -c");
+		}
 		lc = login_getclass(class);
 		if (lc == NULL)
 			errx(1, "unknown class: %s", class);
@@ -340,12 +402,6 @@ main(int argc, char *argv[])
 		iscsh = strcmp(p, "csh") ? (strcmp(p, "tcsh") ? NO : YES) : YES;
 	}
 	setpriority(PRIO_PROCESS, 0, prio);
-
-	/* Switch to home directory */
-	if (asthem) {
-		if (chdir(pwd->pw_dir) < 0)
-			errx(1, "no directory");
-	}
 
 	/*
 	 * PAM modules might add supplementary groups in pam_setcred(), so
@@ -393,14 +449,20 @@ main(int argc, char *argv[])
 		sigaction(SIGTTOU, &sa, NULL);
 		close(fds[0]);
 		setpgid(child_pid, child_pid);
-		tcsetpgrp(STDERR_FILENO, child_pid);
+		if (tcgetpgrp(STDERR_FILENO) == getpgrp())
+			tcsetpgrp(STDERR_FILENO, child_pid);
 		close(fds[1]);
 		sigaction(SIGPIPE, &sa_pipe, NULL);
 		while ((pid = waitpid(child_pid, &statusp, WUNTRACED)) != -1) {
 			if (WIFSTOPPED(statusp)) {
-				kill(getpid(), SIGSTOP);
 				child_pgrp = getpgid(child_pid);
-				tcsetpgrp(1, child_pgrp);
+				if (tcgetpgrp(STDERR_FILENO) == child_pgrp)
+					tcsetpgrp(STDERR_FILENO, getpgrp());
+				kill(getpid(), SIGSTOP);
+				if (tcgetpgrp(STDERR_FILENO) == getpgrp()) {
+					child_pgrp = getpgid(child_pid);
+					tcsetpgrp(STDERR_FILENO, child_pgrp);
+				}
 				kill(child_pid, SIGCONT);
 				statusp = 1;
 				continue;
@@ -470,6 +532,10 @@ main(int argc, char *argv[])
 					LOGIN_SETENV);
 				if (p)
 					setenv("TERM", p, 1);
+
+				p = pam_getenv(pamh, "HOME");
+				if (chdir(p ? p : pwd->pw_dir) < 0)
+					errx(1, "no directory");
 			}
 		}
 		login_close(lc);
@@ -496,10 +562,14 @@ static void
 export_pam_environment(void)
 {
 	char	**pp;
+	char	*p;
 
 	for (pp = environ_pam; *pp != NULL; pp++) {
-		if (ok_to_export(*pp))
-			putenv(*pp);
+		if (ok_to_export(*pp)) {
+			p = strchr(*pp, '=');
+			*p = '\0';
+			setenv(*pp, p + 1, 1);
+		}
 		free(*pp);
 	}
 }
