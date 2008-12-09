@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/elf2aout/elf2aout.c,v 1.9.12.1 2005/12/30 22:13:59 marcel Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/elf2aout/elf2aout.c,v 1.11 2006/04/21 09:39:51 delphij Exp $");
 
 #include <sys/types.h>
 #include <sys/elf64.h>
@@ -54,9 +54,6 @@ struct exec {
 	u_int32_t	a_drsize;
 };
 #define A_MAGIC 0x01030107
-
-extern char *optarg;
-extern int optind;
 
 static void usage(void);
 
