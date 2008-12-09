@@ -1,9 +1,10 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
-
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.14 2008/05/16 21:40:36 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.15 2008/11/07 22:54:55 laffer1 Exp $
 
-.if !defined(NO_SENDMAIL)
+.include <bsd.own.mk>
+
+.if ${MK_SENDMAIL} != "no"
 SUBDIR=	sendmail
 .endif
 
@@ -17,16 +18,34 @@ BIN1=	amd.map apmd.conf auth.conf \
 	rc rc.bsdextended rc.firewall rc.firewall6 rc.initdiskless \
 	rc.sendmail rc.shutdown \
 	rc.subr remote rpc services shells \
-	snmpd.config sysctl.conf syslog.conf usbd.conf \
+	snmpd.config sysctl.conf syslog.conf \
 	etc.${MACHINE_ARCH}/ttys \
 	${.CURDIR}/../gnu/usr.bin/man/manpath/manpath.config \
 	${.CURDIR}/../usr.bin/mail/misc/mail.rc \
 	${.CURDIR}/../usr.bin/locate/locate/locate.rc
-.if !defined(NO_LPR)
+
+OPENBSMDIR=			${.CURDIR}/../contrib/openbsm
+BSM_ETC_OPEN_FILES=		${OPENBSMDIR}/etc/audit_class \
+				${OPENBSMDIR}/etc/audit_event
+BSM_ETC_RESTRICTED_FILES=	${OPENBSMDIR}/etc/audit_control \
+				${OPENBSMDIR}/etc/audit_user
+BSM_ETC_EXEC_FILES=		${OPENBSMDIR}/etc/audit_warn
+BSM_ETC_DIR=			${DESTDIR}/etc/security
+
+.if ${MK_LPR} != "no"
 BIN1+=	printcap
 .endif
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_NS_CACHING} != "no"
+BIN1+= nscd.conf
+.endif
+
+.if ${MK_OPENSSH} != "no"
+SSH=	${.CURDIR}/../crypto/openssh/ssh_config \
+	${.CURDIR}/../crypto/openssh/sshd_config \
+	${.CURDIR}/../crypto/openssh/moduli
+.endif
+.if ${MK_OPENSSL} != "no"
 SSL=	${.CURDIR}/../crypto/openssl/apps/openssl.cnf
 .endif
 
@@ -37,19 +56,19 @@ BIN2=	netstart pccard_ether rc.suspend rc.resume
 
 MTREE=	BSD.include.dist BSD.local.dist BSD.root.dist BSD.usr.dist \
 	BSD.var.dist BSD.x11.dist BSD.x11-4.dist
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 MTREE+=	BSD.sendmail.dist
 .endif
-.if !defined(NO_BIND)
+.if ${MK_BIND} != "no"
 MTREE+=	BIND.chroot.dist
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 MTREE+=	BIND.include.dist
 .endif
 .endif
 
 PPPCNF=	ppp.conf
 
-.if defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} == "no"
 ETCMAIL=mailer.conf aliases
 .else
 ETCMAIL=Makefile README mailer.conf access.sample virtusertable.sample \
@@ -60,13 +79,13 @@ ETCMAIL=Makefile README mailer.conf access.sample virtusertable.sample \
 FREEBSD=COPYRIGHT
 
 afterinstall:
-.if !defined(NO_MAN)
-	cd ${.CURDIR}/../share/man; ${MAKE} makedb
+.if ${MK_MAN} != "no"
+	${_+_}cd ${.CURDIR}/../share/man; ${MAKE} makedb
 .endif
 
 distribute:
-	cd ${.CURDIR} ; ${MAKE} install DESTDIR=${DISTDIR}/${DISTRIBUTION}
-	cd ${.CURDIR} ; ${MAKE} distribution DESTDIR=${DISTDIR}/${DISTRIBUTION}
+	${_+_}cd ${.CURDIR} ; ${MAKE} install DESTDIR=${DISTDIR}/${DISTRIBUTION}
+	${_+_}cd ${.CURDIR} ; ${MAKE} distribution DESTDIR=${DISTDIR}/${DISTRIBUTION}
 
 .include <bsd.endian.mk>
 .if ${TARGET_ENDIANNESS} == "1234"
@@ -95,41 +114,45 @@ distribution:
 		master.passwd nsmb.conf opieaccess ${DESTDIR}/etc; \
 	    pwd_mkdb ${PWD_MKDB_ENDIAN} -i -p -d ${DESTDIR}/etc \
 		${DESTDIR}/etc/master.passwd
-	cd ${.CURDIR}/bluetooth; ${MAKE} install
-	cd ${.CURDIR}/defaults; ${MAKE} install
-	cd ${.CURDIR}/gss; ${MAKE} install
-	cd ${.CURDIR}/periodic; ${MAKE} install
-	cd ${.CURDIR}/rc.d; ${MAKE} install
-	cd ${.CURDIR}/../share/termcap; ${MAKE} etc-termcap
-	cd ${.CURDIR}/../usr.sbin/rmt; ${MAKE} etc-rmt
-	cd ${.CURDIR}/pam.d; ${MAKE} install
-.if !defined(NO_I4B)
-	cd ${.CURDIR}/isdn; ${MAKE} install
+	${_+_}cd ${.CURDIR}/bluetooth; ${MAKE} install
+	${_+_}cd ${.CURDIR}/defaults; ${MAKE} install
+	${_+_}cd ${.CURDIR}/gss; ${MAKE} install
+	${_+_}cd ${.CURDIR}/periodic; ${MAKE} install
+	${_+_}cd ${.CURDIR}/rc.d; ${MAKE} install
+	${_+_}cd ${.CURDIR}/../share/termcap; ${MAKE} etc-termcap
+	${_+_}cd ${.CURDIR}/../usr.sbin/rmt; ${MAKE} etc-rmt
+	${_+_}cd ${.CURDIR}/pam.d; ${MAKE} install
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0444 \
+	    ${BSM_ETC_OPEN_FILES} ${BSM_ETC_DIR}
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0600 \
+	    ${BSM_ETC_RESTRICTED_FILES} ${BSM_ETC_DIR}
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0500 \
+	    ${BSM_ETC_EXEC_FILES} ${BSM_ETC_DIR}
+.if ${MK_I4B} != "no"
+	${_+_}cd ${.CURDIR}/isdn; ${MAKE} install
 .endif
-.if !defined(NO_BIND)
-.if !defined(NO_BIND_MTREE)
+.if ${MK_BIND_MTREE} != "no"
 	@if [ ! -e ${DESTDIR}/etc/namedb ]; then \
 		set -x; \
 		ln -s ../var/named/etc/namedb ${DESTDIR}/etc/namedb; \
 	fi
 .endif
-.if !defined(NO_BIND_ETC)
-	cd ${.CURDIR}/namedb; ${MAKE} install
+.if ${MK_BIND_ETC} != "no"
+	${_+_}cd ${.CURDIR}/namedb; ${MAKE} install
 .endif
+.if ${MK_SENDMAIL} != "no"
+	${_+_}cd ${.CURDIR}/sendmail; ${MAKE} distribution
 .endif
-.if !defined(NO_SENDMAIL)
-	cd ${.CURDIR}/sendmail; ${MAKE} distribution
+.if ${MK_OPENSSH} != "no"
+	${_+_}cd ${.CURDIR}/ssh; ${MAKE} install
 .endif
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
-.if !defined(NO_OPENSSH)
-	cd ${.CURDIR}/ssh; ${MAKE} install
-.endif
+.if ${MK_OPENSSL} != "no"
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${SSL} ${DESTDIR}/etc/ssl
 .endif
 	cd ${.CURDIR}; ${INSTALL} -o root -g wheel -m 440 \
 	    ${SUDO} ${DESTDIR}/etc
-.if !defined(NO_KERBEROS)
+.if ${MK_KERBEROS} != "no"
 	cd ${.CURDIR}/root; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 		dot.k5login ${DESTDIR}/root/.k5login;
@@ -166,9 +189,11 @@ distribution:
 	    ${DESTDIR}/var/crash
 	cd ${.CURDIR}/..; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 		${FREEBSD} ${DESTDIR}/
+.if exists(${.CURDIR}/../sys/${MACHINE}/conf/GENERIC.hints)
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 	    ${.CURDIR}/../sys/${MACHINE}/conf/GENERIC.hints \
 	    ${DESTDIR}/boot/device.hints
+.endif
 
 distrib-dirs:
 	mtree -eU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.root.dist -p ${DESTDIR}/
@@ -176,17 +201,15 @@ distrib-dirs:
 	mtree -eU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.usr.dist -p ${DESTDIR}/usr
 	mtree -eU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.include.dist \
 		-p ${DESTDIR}/usr/include
-.if !defined(NO_BIND)
-.if defined(WITH_BIND_LIBS)
+.if ${MK_BIND_LIBS} != "no"
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BIND.include.dist \
 	    -p ${DESTDIR}/usr/include
 .endif
-.if !defined(NO_BIND_MTREE)
+.if ${MK_BIND_MTREE} != "no"
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BIND.chroot.dist \
 	    -p ${DESTDIR}/var/named
 .endif
-.endif
-.if !defined(NO_SENDMAIL)
+.if ${MK_SENDMAIL} != "no"
 	mtree -deU ${MTREE_FOLLOWS_SYMLINKS} -f ${.CURDIR}/mtree/BSD.sendmail.dist -p ${DESTDIR}/
 .endif
 	cd ${DESTDIR}/; rm -f ${DESTDIR}/sys; ln -s usr/src/sys sys
@@ -221,7 +244,7 @@ etc-examples:
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 \
 	    ${BIN1} ${BIN2} nsmb.conf opieaccess \
 	    ${DESTDIR}/usr/share/examples/etc
-	cd ${.CURDIR}/defaults; ${MAKE} install \
+	${_+_}cd ${.CURDIR}/defaults; ${MAKE} install \
 	    DESTDIR=${DESTDIR}/usr/share/examples
 
 .include <bsd.prog.mk>

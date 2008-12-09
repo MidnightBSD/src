@@ -15858,6 +15858,7 @@ etc/network.subr -text
 etc/networks -text
 etc/newsyslog.conf -text
 etc/nls.alias -text
+etc/nscd.conf -text
 etc/nsmb.conf -text
 etc/ntpd.conf -text
 etc/opieaccess -text
@@ -16114,7 +16115,6 @@ etc/ssh/Makefile -text
 etc/sysctl.conf -text
 etc/syslog.conf -text
 etc/termcap.small -text
-etc/usbd.conf -text
 games/Makefile -text
 games/Makefile.inc -text
 games/bcd/Makefile -text
