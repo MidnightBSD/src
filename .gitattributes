@@ -31776,8 +31776,7 @@ usr.bin/nohup/nohup.c -text
 usr.bin/nslookup/Makefile -text
 usr.bin/nsupdate/Makefile -text
 usr.bin/objformat/Makefile -text
-usr.bin/objformat/objformat.1 -text
-usr.bin/objformat/objformat.c -text
+usr.bin/objformat/objformat.sh -text
 usr.bin/opieinfo/Makefile -text
 usr.bin/opiekey/Makefile -text
 usr.bin/opiepasswd/Makefile -text
