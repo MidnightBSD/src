@@ -39,7 +39,7 @@
 __COPYRIGHT(
 "@(#) Copyright (c) 1999\
  The NetBSD Foundation, Inc.  All rights reserved.");
-__RCSID("$FreeBSD: src/usr.bin/nl/nl.c,v 1.10 2005/04/09 14:31:41 stefanf Exp $");
+__RCSID("$FreeBSD: src/usr.bin/nl/nl.c,v 1.11 2006/12/22 05:54:19 imp Exp $");
 #endif    
 
 #include <sys/types.h>
@@ -296,14 +296,11 @@ filter()
 	int section;		/* logical page section */
 	unsigned int adjblank;	/* adjacent blank lines */
 	int consumed;		/* intbuffer measurement */
-	int donumber, idx;
+	int donumber = 0, idx;
 
 	adjblank = 0;
 	line = startnum;
 	section = BODY;
-#ifdef __GNUC__
-	(void)&donumber;	/* avoid bogus `uninitialized' warning */
-#endif
 
 	while (fgets(buffer, (int)buffersize, stdin) != NULL) {
 		for (idx = FOOTER; idx <= NP_LAST; idx++) {
