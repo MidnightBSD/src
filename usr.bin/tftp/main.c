@@ -44,7 +44,7 @@ static char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/tftp/main.c,v 1.21 2003/10/12 00:27:55 tjr Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/tftp/main.c,v 1.22 2005/10/19 15:37:42 stefanf Exp $");
 
 /* Many bug fixes are from Jim Guyton <guyton@rand-unix> */
 
@@ -635,7 +635,7 @@ command()
 	if (vrbose) {
 		el = el_init("tftp", stdin, stdout, stderr);
 		hist = history_init();
-		history(hist, &he, H_EVENT, 100);
+		history(hist, &he, H_SETSIZE, 100);
 		el_set(el, EL_HIST, history, hist);
 		el_set(el, EL_EDITOR, "emacs");
 		el_set(el, EL_PROMPT, command_prompt);
