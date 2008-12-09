@@ -4,16 +4,9 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $MidnightBSD: src/sys/i386/conf/NOTES,v 1.4 2007/01/13 14:37:42 laffer1 Exp $
-# $FreeBSD: src/sys/i386/conf/NOTES,v 1.1202.2.5 2005/12/14 00:52:57 anholt Exp $
+# $MidnightBSD$
+# $FreeBSD: src/sys/i386/conf/NOTES,v 1.1244.2.3.2.1 2008/02/06 03:24:28 scottl Exp $
 #
-
-#
-# This directive is mandatory; it defines the architecture to be
-# configured for; in this case, the 386 family based IBM-PC and
-# compatibles.
-#
-machine		i386
 
 #
 # We want LINT to cover profiling as well.
@@ -57,7 +50,9 @@ options 	MP_WATCHDOG
 
 # Debugging options.
 #
-options		KDB_STOP_NMI		# Stop CPUS using NMI instead of IPI
+options		STOP_NMI		# Stop CPUS using NMI instead of IPI
+options 	COUNT_XINVLTLB_HITS	# Counters for TLB events
+options 	COUNT_IPIS		# Per-CPU IPI interrupt counters
 
 
 
@@ -69,7 +64,6 @@ options		KDB_STOP_NMI		# Stop CPUS using NMI instead of IPI
 # deleting the specification for CPUs you don't need to use may make
 # parts of the system run faster.
 #
-cpu		I486_CPU
 cpu		I586_CPU		# aka Pentium(tm)
 cpu		I686_CPU		# aka Pentium Pro(tm)
 
@@ -217,6 +211,23 @@ options 	NPX_DEBUG	# enable npx debugging
 #
 options 	PERFMON
 
+#
+# XBOX causes the kernel to be bootable on the Microsoft XBox console system.
+# The resulting kernel will auto-detect whether it is being booted on a XBox,
+# so kernels compiled with this option will also work on an ordinary PC.
+# This option require I686_CPU.
+#
+# xboxfb includes support for the XBox frame buffer device. It is fully USB-
+# keyboard aware, and will only be used if an xbox is detected. This option
+# (obviously) requires XBOX support in your kernel.
+#
+# NOTE: xboxfb currently conflicts with syscons(4); if you have an XBOX and
+# include both in your kernel; you will not get any video output. Ordinary
+# PC's do not suffer from this.
+#
+options		XBOX
+device		xboxfb
+
 
 #####################################################################
 # NETWORKING OPTIONS
@@ -257,9 +268,50 @@ options 	CLK_CALIBRATION_LOOP
 # clock to actually be used.
 options 	CLK_USE_I8254_CALIBRATION
 
+# Provide read/write access to the memory in the clock chip.
+device		nvram		# Access to rtc cmos via /dev/nvram
+
 
 #####################################################################
 # MISCELLANEOUS DEVICES AND OPTIONS
+
+# 
+# sio: serial ports (see sio(4)), including support for various
+#      PC Card devices, such as Modem and NICs
+#
+device		sio
+hint.sio.0.at="isa"
+hint.sio.0.port="0x3F8"
+hint.sio.0.flags="0x10"
+hint.sio.0.irq="4"
+
+# `flags' specific to sio(4).
+#	0x10	enable console support for this unit.  Other console flags
+#		(if applicable) are ignored unless this is set.  Enabling
+#		console support does not make the unit the preferred console.
+#		Boot with -h or set boot_serial=YES in the loader.  For sio(4)
+#		specifically, the 0x20 flag can also be set (see above).
+#		Currently, at most one unit can have console support; the
+#		first one (in config file order) with this flag set is
+#		preferred.  Setting this flag for sio0 gives the old behaviour.
+#	0x20	force this unit to be the console (unless there is another
+#		higher priority console).  This replaces the COMCONSOLE option.
+#	0x40	reserve this unit for low level console operations.  Do not
+#		access the device in any normal way.
+#	0x80	use this port for serial line gdb support in ddb.  Also known
+#		as debug port.
+# PnP `flags'
+#	0x1	disable probing of this device.  Used to prevent your modem
+#		from being attached as a PnP modem.
+# Other flags for sio that aren't documented in the man page.
+#	0x20000	enable hardware RTS/CTS and larger FIFOs.  Only works for
+#		ST16650A-compatible UARTs.
+
+# Options for sio:
+options 	COM_ESP			# Code for Hayes ESP.
+options 	COM_MULTIPORT		# Code for some cards with shared IRQs.
+options 	CONSPEED=115200		# Speed for serial console
+					# (default 9600).
 
 device		speaker		#Play IBM BASIC-style noises out your speaker
 hint.speaker.0.at="isa"
@@ -290,7 +342,7 @@ device		isa		# Required by npx(4)
 # versions.
 #
 # MAXMEM specifies the amount of RAM on the machine; if this is not
-# specified, FreeBSD will first read the amount of memory from the CMOS
+# specified, MidnightBSD will first read the amount of memory from the CMOS
 # RAM, so the amount of memory will initially be limited to 64MB or 16MB
 # depending on the BIOS.  If the BIOS reports 64MB, a memory probe will
 # then attempt to detect the installed amount of RAM.  If this probe
@@ -380,17 +432,71 @@ hint.npx.0.irq="13"
 # Optional devices:
 #
 
+# PS/2 mouse
+device		psm
+hint.psm.0.at="atkbdc"
+hint.psm.0.irq="12"
+
+# Options for psm:
+options 	PSM_HOOKRESUME		#hook the system resume event, useful
+					#for some laptops
+options 	PSM_RESETAFTERSUSPEND	#reset the device at the resume event
+
+# The keyboard controller; it controls the keyboard and the PS/2 mouse.
+device		atkbdc
+hint.atkbdc.0.at="isa"
+hint.atkbdc.0.port="0x060"
+
+# The AT keyboard
+device		atkbd
+hint.atkbd.0.at="atkbdc"
+hint.atkbd.0.irq="1"
+
+# Options for atkbd:
+options 	ATKBD_DFLT_KEYMAP	# specify the built-in keymap
+makeoptions	ATKBD_DFLT_KEYMAP=jp.106
+
+# `flags' for atkbd:
+#       0x01    Force detection of keyboard, else we always assume a keyboard
+#       0x02    Don't reset keyboard, useful for some newer ThinkPads
+#	0x03	Force detection and avoid reset, might help with certain
+#		dockingstations
+#       0x04    Old-style (XT) keyboard support, useful for older ThinkPads
+
+# Video card driver for VGA adapters.
+device		vga
+hint.vga.0.at="isa"
+
+# Options for vga:
+# Try the following option if the mouse pointer is not drawn correctly
+# or font does not seem to be loaded properly.  May cause flicker on
+# some systems.
+options 	VGA_ALT_SEQACCESS
+
+# If you can dispense with some vga driver features, you may want to
+# use the following options to save some memory.
+#options 	VGA_NO_FONT_LOADING	# don't save/load font
+#options 	VGA_NO_MODE_CHANGE	# don't change video modes
+
+# Older video cards may require this option for proper operation.
+options 	VGA_SLOW_IOACCESS	# do byte-wide i/o's to TS and GDC regs
+
+# The following option probably won't work with the LCD displays.
+options 	VGA_WIDTH90		# support 90 column modes
+
+# Debugging.
+options 	VGA_DEBUG
+
 # 3Dfx Voodoo Graphics, Voodoo II /dev/3dfx CDEV support.  This will create
 # the /dev/3dfx0 device to work with glide implementations.  This should get
 # linked to /dev/3dfx and /dev/voodoo.  Note that this is not the same as
 # the tdfx DRI module from XFree86 and is completely unrelated.
 #
 # To enable Linuxulator support, one must also include COMPAT_LINUX in the
-# config as well, or you will not have the dependencies.  The other option
-# is to load both as modules.
+# config as well.  The other option is to load both as modules.
 
 device		tdfx			# Enable 3Dfx Voodoo support
-options 	TDFX_LINUX		# Enable Linuxulator support
+device		tdfx_linux		# Enable Linuxulator support
 
 #
 # ACPI support using the Intel ACPI Component Architecture reference
@@ -403,23 +509,24 @@ options 	TDFX_LINUX		# Enable Linuxulator support
 #
 # ACPI_NO_SEMAPHORES makes the AcpiOs*Semaphore routines a no-op.
 #
-# ACPICA_PEDANTIC enables strict checking of AML.  Our default is to
-# relax these checks to allow code generated by the Microsoft compiler
-# to still execute.
-#
 # Note that building ACPI into the kernel is deprecated; the module is
 # normally loaded automatically by the loader.
 
 device		acpi
 options 	ACPI_DEBUG
 #!options 	ACPI_NO_SEMAPHORES
-#!options 	ACPICA_PEDANTIC
+
+# ACPI Asus Desktop Extras. (voltage, temp, fan)
+device		acpi_aiboost
 
 # ACPI Asus Extras (LCD backlight/brightness, video output, etc.)
 device		acpi_asus
 
 # ACPI Fujitsu Extras (Buttons)
 device		acpi_fujitsu
+
+# ACPI extras driver for IBM laptops
+device         acpi_ibm
 
 # ACPI Panasonic Extras (LCD backlight/brightness, video output, etc.)
 device		acpi_panasonic
@@ -432,6 +539,9 @@ device		acpi_toshiba
 
 # ACPI Video Extensions (LCD backlight/brightness, video output, etc.)
 device		acpi_video
+
+# ACPI Docking Station
+device		acpi_dock
 
 # The cpufreq(4) driver provides support for non-ACPI CPU frequency control
 device		cpufreq
@@ -464,33 +574,37 @@ hint.mse.0.irq="5"
 #       (requires sppp)
 # arl:	Aironet Arlan 655 wireless adapters.
 # ath:  Atheros a/b/g WiFi adapters (requires ath_hal and wlan)
-# ce:	Cronyx Tau-PCI/32 sync single/dual port G.703/E1 serial Adaptor
-#	with 32 HDLC subchannels (requires sppp (default), or NETGRAPH if
-	NETGRAPH_CRONYX is configured)
+# ce:   Cronyx Tau-PCI/32 sync single/dual port G.703/E1 serial adaptor
+#       with 32 HDLC subchannels (requires sppp (default), or NETGRAPH if
+#       NETGRAPH_CRONYX is configured)
 # cp:   Cronyx Tau-PCI sync single/dual/four port
 #       V.35/RS-232/RS-530/RS-449/X.21/G.703/E1/E3/T3/STS-1
 #       serial adaptor (requires sppp (default), or NETGRAPH if
 #       NETGRAPH_CRONYX is configured)
+# cs:   IBM Etherjet and other Crystal Semi CS89x0-based adapters
 # ctau: Cronyx Tau sync dual port V.35/RS-232/RS-530/RS-449/X.21/G.703/E1
 #       serial adaptor (requires sppp (default), or NETGRAPH if
 #       NETGRAPH_CRONYX is configured)
 # cx:   Cronyx Sigma multiport sync/async adapter (requires sppp (default),
 #       or NETGRAPH if NETGRAPH_CRONYX is configured)
 # ed:   Western Digital and SMC 80xx; Novell NE1000 and NE2000; 3Com 3C503
-#       HP PC Lan+, various PC Card devices (refer to etc/defaults/pccard.conf)
+#       HP PC Lan+, various PC Card devices
 #       (requires miibus)
-# el:   3Com 3C501 (slow!)
 # ie:   AT&T StarLAN 10 and EN100; 3Com 3C507; unknown NI5210;
 #       Intel EtherExpress
-# lnc:  Lance/PCnet cards (Isolan, Novell NE2100, NE32-VL, AMD Am7990 and
-#       Am79C960)
+# ipw:	Intel PRO/Wireless 2100 IEEE 802.11 adapter
+# iwi:	Intel PRO/Wireless 2200BG/2225BG/2915ABG IEEE 802.11 adapters
+# nfe:	nVidia nForce MCP on-board Ethernet Networking (BSD open source)
 # nve:	nVidia nForce MCP on-board Ethernet Networking
 # oltr: Olicom ISA token-ring adapters OC-3115, OC-3117, OC-3118 and OC-3133.
 #       Olicom PCI token-ring adapters OC-3136, OC-3137, OC-3139, OC-3140,
 #       OC-3141, OC-3540 and OC-3250.
+# ral:	Ralink Technology IEEE 802.11 wireless adapter
 # sbni: Granch SBNI12-xx ISA and PCI adapters
 # sr:   RISCom/N2 hdlc sync 1/2 port V.35/X.21 serial driver (requires sppp)
+# ural:	Ralink Technology RT2500USB IEEE 802.11 wireless adapter
 # wl:   Lucent Wavelan (ISA card only).
+# wpi:	Intel 3945ABG Wireless LAN controller
 
 # Order for ISA/EISA devices is important here
 
@@ -505,6 +619,9 @@ hint.arl.0.irq="9"
 hint.arl.0.maddr="0xd0000"
 device		ce
 device		cp
+device		cs
+hint.cs.0.at="isa"
+hint.cs.0.port="0x300"
 device		ctau
 hint.ctau.0.at="isa"
 hint.ctau.0.port="0x240"
@@ -517,7 +634,6 @@ hint.cx.0.irq="15"
 hint.cx.0.drq="7"
 #options 	NETGRAPH_CRONYX		# Enable NETGRAPH support for Cronyx adapter(s)
 device		ed
-#options 	ED_NO_MIIBUS		# Disable ed miibus support
 options 	ED_3C503
 options 	ED_HPP
 options 	ED_SIC
@@ -525,21 +641,23 @@ hint.ed.0.at="isa"
 hint.ed.0.port="0x280"
 hint.ed.0.irq="5"
 hint.ed.0.maddr="0xd8000"
-device		el
-hint.el.0.at="isa"
-hint.el.0.port="0x300"
-hint.el.0.irq="9"
 device		ie			# Hints only required for Starlan
 hint.ie.2.at="isa"
 hint.ie.2.port="0x300"
 hint.ie.2.irq="5"
 hint.ie.2.maddr="0xd0000"
-device		lnc
-hint.lnc.0.at="isa"
-hint.lnc.0.port="0x280"
-hint.lnc.0.irq="10"
-hint.lnc.0.drq="0"
+device		iwi
+device		ipw
+# Hint for the i386-only ISA front-end of le(4).
+hint.le.0.at="isa"
+hint.le.0.port="0x280"
+hint.le.0.irq="10"
+hint.le.0.drq="0"
+device		nfe		# nVidia nForce MCP on-board Ethernet Networking
 device		nve		# nVidia nForce MCP on-board Ethernet Networking
+device		oltr
+hint.oltr.0.at="isa"
+device		ral
 device		sbni
 hint.sbni.0.at="isa"
 hint.sbni.0.port="0x210"
@@ -550,13 +668,13 @@ hint.sr.0.at="isa"
 hint.sr.0.port="0x300"
 hint.sr.0.irq="5"
 hint.sr.0.maddr="0xd0000"
-device		oltr
-hint.oltr.0.at="isa"
+device		ural
 device		wl
 hint.wl.0.at="isa"
 hint.wl.0.port="0x300"
 options 	WLCACHE		# enables the signal-strength cache
 options 	WLDEBUG		# enables verbose debugging output
+device		wpi
 
 device		ath
 device		ath_hal		# Atheros HAL (includes binary component)
@@ -604,10 +722,24 @@ hint.stg.0.port="11"
 device		aac
 device		aacp	# SCSI Passthrough interface (optional, CAM required)
 
+# The 'asr' driver provides support for current DPT/Adaptec SCSI RAID
+# controllers (SmartRAID V and VI and later).
+# These controllers require the CAM infrastructure.
 #
-# Highpoint RocketRAID 182x.  This is really just software RAID on a
-# Marvell SATA chip.
+device		asr
+
+#
+# Highpoint RocketRAID 182x.
 device		hptmv
+
+#
+# Highpoint RocketRAID.  Supports RR172x, RR222x, RR2240, RR232x, RR2340,
+# RR2210, RR174x, RR2522, RR231x, RR230x.
+device		hptrr
+
+#
+# Highpoint RocketRaid 3xxx series SATA RAID
+device		hptiop
 
 #
 # IBM (now Adaptec) ServeRAID controllers
@@ -627,7 +759,11 @@ options 	SAFE_RNDTEST	# enable rndtest support
 # Miscellaneous hardware:
 #
 # apm: Laptop Advanced Power Management (experimental)
+# ipmi: Intelligent Platform Management Interface
 # pmtimer: Timer device driver for power management events (APM or ACPI)
+# smapi: System Management Application Program Interface driver
+# smbios: DMI/SMBIOS entry point
+# vpd: Vital Product Data kernel interface
 # cy: Cyclades serial driver
 # digi: Digiboard driver
 # spic: Sony Programmable I/O controller (VAIO notebooks)
@@ -656,6 +792,10 @@ options 	SAFE_RNDTEST	# enable rndtest support
 
 device		apm
 hint.apm.0.flags="0x20"
+device		ipmi
+device		smapi
+device		smbios
+device		vpd
 device		pmtimer			# Adjust system timer at wakeup time
 device		cy
 options 	CY_PCI_FASTINTR		# Use with cy_pci unless irq is shared
@@ -682,9 +822,6 @@ hint.pbio.0.port="0x360"
 device		spic
 hint.spic.0.at="isa"
 hint.spic.0.port="0x10a0"
-# sx device is i386 and pc98 only at the moment.
-device		sx
-options 	SX_DEBUG
 # HOT1 Xilinx 6200 card (http://www.vcc.com/)
 device		xrpu
 
@@ -719,6 +856,13 @@ hint.pcf.0.irq="5"
 # ichwd: Intel ICH watchdog timer
 #
 device		ichwd
+
+#
+# Temperature sensors:
+#
+# coretemp: on-die sensor on Intel Core and newer CPUs
+#
+device		coretemp
 
 #---------------------------------------------------------------------------
 # ISDN4BSD
@@ -926,22 +1070,23 @@ options 	NI4BRBCH=4
 device		i4btel
 options 	NI4BTEL=2
 #
+#XXXBZ# IPR and ISPPP are not usable until I4B is locked.
 # network driver for IP over raw HDLC ISDN
-device		i4bipr
-options 	NI4BIPR=4
+#XXXBZ#device		i4bipr
+#XXXBZ#options 	NI4BIPR=4
 # enable VJ header compression detection for ipr i/f
-options 	IPR_VJ
+#XXXBZ#options 	IPR_VJ
 # enable logging of the first n IP packets to isdnd (n=32 here)
-options 	IPR_LOG=32
+#XXXBZ#options 	IPR_LOG=32
 #
 # network driver for sync PPP over ISDN; requires an equivalent
 # number of sppp device to be configured
-device		i4bisppp
-options 	NI4BISPPP=4
+#XXXBZ#device		i4bisppp
+#XXXBZ#options 	NI4BISPPP=4
 #
 # B-channel interface to the netgraph subsystem
-device		i4bing
-options 	NI4BING=2
+#XXXBZ#device		i4bing
+#XXXBZ#options 	NI4BING=2
 #
 # CAPI driver needed for active ISDN cards (see iavc driver above)
 device		i4bcapi
@@ -971,7 +1116,11 @@ options 	PMAP_SHPGPERPROC=201
 # constraints in loader(8) on i386, this must be a multiple of 4.
 # 256 = 1 GB of kernel address space.  Increasing this also causes
 # a reduction of the address space in user processes.  512 splits
-# the 4GB cpu address space in half (2GB user, 2GB kernel).
+# the 4GB cpu address space in half (2GB user, 2GB kernel).  For PAE
+# kernels, the value will need to be double non-PAE.  A value of 1024
+# for PAE kernels is necessary to split the address space in half.
+# This will likely need to be increased to handle memory sizes >4GB.
+# PAE kernels default to a value of 512.
 #
 options 	KVA_PAGES=260
 
@@ -995,6 +1144,10 @@ options 	COMPAT_AOUT
 # and PSEUDOFS)
 options 	LINPROCFS
 
+#Enable the linux-like sys filesystem support (requires COMPAT_LINUX
+# and PSEUDOFS)
+options		LINSYSFS
+
 #
 # SysVR4 ABI emulation
 #
@@ -1014,6 +1167,10 @@ options 	LINPROCFS
 options 	COMPAT_SVR4	# build emulator statically
 options 	DEBUG_SVR4	# enable verbose debugging
 device		streams		# STREAMS network driver (required for svr4).
+
+# Enable NDIS binary driver support
+options 	NDISAPI
+device		ndis
 
 
 #####################################################################
@@ -1067,9 +1224,6 @@ options 	VM_KMEM_SIZE_MAX
 options 	VM_KMEM_SIZE_SCALE
 
 
-# The I/O device
-device		io
-
 # asr old ioctls support, needed by raidutils
 
 options		ASR_COMPAT
