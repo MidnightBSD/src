@@ -35,10 +35,10 @@
 #include <sys/types.h>
 #include <sys/param.h>	/* for MAXPATHLEN */
 #include <sys/stat.h>
-#include <fcntl.h>	/* for open() */
 #ifdef QUICK
 #include <sys/mman.h>
 #endif
+#include <limits.h>	/* for PIPE_BUF */
 
 #if defined(HAVE_UTIMES)
 # include <sys/time.h>
@@ -63,7 +63,7 @@
 #include "patchlevel.h"
 
 #ifndef	lint
-FILE_RCSID("@(#)$Id: magic.c,v 1.2 2007-05-23 17:26:02 ctriv Exp $")
+FILE_RCSID("@(#)$File: magic.c,v 1.45 2007/12/27 16:35:59 christos Exp $")
 #endif	/* lint */
 
 #ifdef __EMX__
@@ -75,13 +75,21 @@ protected int file_os2_apptype(struct magic_set *ms, const char *fn,
 private void free_mlist(struct mlist *);
 private void close_and_restore(const struct magic_set *, const char *, int,
     const struct stat *);
+private int info_from_stat(struct magic_set *, mode_t);
+#ifndef COMPILE_ONLY
+private const char *file_or_fd(struct magic_set *, const char *, int);
+#endif
+
+#ifndef	STDIN_FILENO
+#define	STDIN_FILENO	0
+#endif
 
 public struct magic_set *
 magic_open(int flags)
 {
 	struct magic_set *ms;
 
-	if ((ms = malloc(sizeof(struct magic_set))) == NULL)
+	if ((ms = calloc((size_t)1, sizeof(struct magic_set))) == NULL)
 		return NULL;
 
 	if (magic_setflags(ms, flags) == -1) {
@@ -97,13 +105,15 @@ magic_open(int flags)
 	if (ms->o.pbuf == NULL)
 		goto free2;
 
-	ms->c.off = malloc((ms->c.len = 10) * sizeof(*ms->c.off));
-	if (ms->c.off == NULL)
+	ms->c.li = malloc((ms->c.len = 10) * sizeof(*ms->c.li));
+	if (ms->c.li == NULL)
 		goto free3;
 	
 	ms->haderr = 0;
 	ms->error = -1;
 	ms->mlist = NULL;
+	ms->file = "unknown";
+	ms->line = 0;
 	return ms;
 free3:
 	free(ms->o.pbuf);
@@ -132,14 +142,31 @@ free_mlist(struct mlist *mlist)
 	free(ml);
 }
 
+private int
+info_from_stat(struct magic_set *ms, mode_t md)
+{
+	/* We cannot open it, but we were able to stat it. */
+	if (md & 0222)
+		if (file_printf(ms, "writable, ") == -1)
+			return -1;
+	if (md & 0111)
+		if (file_printf(ms, "executable, ") == -1)
+			return -1;
+	if (S_ISREG(md))
+		if (file_printf(ms, "regular file, ") == -1)
+			return -1;
+	if (file_printf(ms, "no read permission") == -1)
+		return -1;
+	return 0;
+}
+
 public void
-magic_close(ms)
-    struct magic_set *ms;
+magic_close(struct magic_set *ms)
 {
 	free_mlist(ms->mlist);
 	free(ms->o.pbuf);
 	free(ms->o.buf);
-	free(ms->c.off);
+	free(ms->c.li);
 	free(ms);
 }
 
@@ -178,8 +205,11 @@ private void
 close_and_restore(const struct magic_set *ms, const char *name, int fd,
     const struct stat *sb)
 {
+	if (fd == STDIN_FILENO)
+		return;
 	(void) close(fd);
-	if (fd != STDIN_FILENO && (ms->flags & MAGIC_PRESERVE_ATIME) != 0) {
+
+	if ((ms->flags & MAGIC_PRESERVE_ATIME) != 0) {
 		/*
 		 * Try to restore access, modification times if read it.
 		 * This is really *bad* because it will modify the status
@@ -188,6 +218,7 @@ close_and_restore(const struct magic_set *ms, const char *name, int fd,
 		 */
 #ifdef HAVE_UTIMES
 		struct timeval  utsbuf[2];
+		memset(utsbuf, 0, sizeof(struct timeval) * 2);
 		utsbuf[0].tv_sec = sb->st_atime;
 		utsbuf[1].tv_sec = sb->st_mtime;
 
@@ -195,6 +226,7 @@ close_and_restore(const struct magic_set *ms, const char *name, int fd,
 #elif defined(HAVE_UTIME_H) || defined(HAVE_SYS_UTIME_H)
 		struct utimbuf  utbuf;
 
+		memset(&utbuf, 0, sizeof(struct utimbuf));
 		utbuf.actime = sb->st_atime;
 		utbuf.modtime = sb->st_mtime;
 		(void) utime(name, &utbuf); /* don't care if loses */
@@ -203,101 +235,124 @@ close_and_restore(const struct magic_set *ms, const char *name, int fd,
 }
 
 #ifndef COMPILE_ONLY
+
+/*
+ * find type of descriptor
+ */
+public const char *
+magic_descriptor(struct magic_set *ms, int fd)
+{
+	return file_or_fd(ms, NULL, fd);
+}
+
 /*
  * find type of named file
  */
 public const char *
 magic_file(struct magic_set *ms, const char *inname)
 {
-	int	fd = 0;
-	unsigned char buf[HOWMANY+1];	/* one extra for terminating '\0' */
+	return file_or_fd(ms, inname, STDIN_FILENO);
+}
+
+private const char *
+file_or_fd(struct magic_set *ms, const char *inname, int fd)
+{
+	int	rv = -1;
+	unsigned char *buf;
 	struct stat	sb;
 	ssize_t nbytes = 0;	/* number of bytes read from a datafile */
+	int	ispipe = 0;
+
+	/*
+	 * one extra for terminating '\0', and
+	 * some overlapping space for matches near EOF
+	 */
+#define SLOP (1 + sizeof(union VALUETYPE))
+	if ((buf = malloc(HOWMANY + SLOP)) == NULL)
+		return NULL;
 
 	if (file_reset(ms) == -1)
-		return NULL;
+		goto done;
 
 	switch (file_fsmagic(ms, inname, &sb)) {
-	case -1:
-		return NULL;
-	case 0:
+	case -1:		/* error */
+		goto done;
+	case 0:			/* nothing found */
 		break;
-	default:
-		return file_getbuffer(ms);
+	default:		/* matched it and printed type */
+		rv = 0;
+		goto done;
 	}
 
-#ifndef	STDIN_FILENO
-#define	STDIN_FILENO	0
+	if (inname == NULL) {
+		if (fstat(fd, &sb) == 0 && S_ISFIFO(sb.st_mode))
+			ispipe = 1;
+	} else {
+		int flags = O_RDONLY|O_BINARY;
+
+		if (stat(inname, &sb) == 0 && S_ISFIFO(sb.st_mode)) {
+			flags |= O_NONBLOCK;
+			ispipe = 1;
+		}
+
+		errno = 0;
+		if ((fd = open(inname, flags)) < 0) {
+#ifdef __CYGWIN__
+			char *tmp = alloca(strlen(inname) + 5);
+			(void)strcat(strcpy(tmp, inname), ".exe");
+			if ((fd = open(tmp, flags)) < 0) {
 #endif
-	if (inname == NULL)
-		fd = STDIN_FILENO;
-	else if ((fd = open(inname, O_RDONLY)) < 0) {
-		/* We cannot open it, but we were able to stat it. */
-		if (sb.st_mode & 0222)
-			if (file_printf(ms, "writable, ") == -1)
-				return NULL;
-		if (sb.st_mode & 0111)
-			if (file_printf(ms, "executable, ") == -1)
-				return NULL;
-		if (S_ISREG(sb.st_mode))
-			if (file_printf(ms, "regular file, ") == -1)
-				return NULL;
-		if (file_printf(ms, "no read permission") == -1)
-			return NULL;
-		return file_getbuffer(ms);
+				if (info_from_stat(ms, sb.st_mode) == -1)
+					goto done;
+				rv = 0;
+				goto done;
+#ifdef __CYGWIN__
+			}
+#endif
+		}
+#ifdef O_NONBLOCK
+		if ((flags = fcntl(fd, F_GETFL)) != -1) {
+			flags &= ~O_NONBLOCK;
+			(void)fcntl(fd, F_SETFL, flags);
+		}
+#endif
 	}
 
 	/*
 	 * try looking at the first HOWMANY bytes
 	 */
-	if ((nbytes = read(fd, (char *)buf, HOWMANY)) == -1) {
-		file_error(ms, errno, "cannot read `%s'", inname);
-		goto done;
+	if (ispipe) {
+		ssize_t r = 0;
+
+		while ((r = sread(fd, (void *)&buf[nbytes],
+		    (size_t)(HOWMANY - nbytes), 1)) > 0) {
+			nbytes += r;
+			if (r < PIPE_BUF) break;
+		}
+
+		if (nbytes == 0) {
+			/* We can not read it, but we were able to stat it. */
+			if (info_from_stat(ms, sb.st_mode) == -1)
+				goto done;
+			rv = 0;
+			goto done;
+		}
+
+	} else {
+		if ((nbytes = read(fd, (char *)buf, HOWMANY)) == -1) {
+			file_error(ms, errno, "cannot read `%s'", inname);
+			goto done;
+		}
 	}
 
-	if (nbytes == 0) {
-		if (file_printf(ms, (ms->flags & MAGIC_MIME) ?
-		    "application/x-empty" : "empty") == -1)
-			goto done;
-		goto gotit;
-	} else if (nbytes == 1) {
-		if (file_printf(ms, "very short file (no magic)") == -1)
-			goto done;
-		goto gotit;
-	} else {
-		buf[nbytes] = '\0';	/* null-terminate it */
-#ifdef __EMX__
-		switch (file_os2_apptype(ms, inname, buf, nbytes)) {
-		case -1:
-			goto done;
-		case 0:
-			break;
-		default:
-			goto gotit;
-		}
-#endif
-		if (file_buffer(ms, buf, (size_t)nbytes) == -1)
-			goto done;
-#ifdef BUILTIN_ELF
-		if (nbytes > 5) {
-			/*
-			 * We matched something in the file, so this *might*
-			 * be an ELF file, and the file is at least 5 bytes
-			 * long, so if it's an ELF file it has at least one
-			 * byte past the ELF magic number - try extracting
-			 * information from the ELF headers that cannot easily
-			 * be extracted with rules in the magic file.
-			 */
-			file_tryelf(ms, fd, buf, (size_t)nbytes);
-		}
-#endif
-	}
-gotit:
-	close_and_restore(ms, inname, fd, &sb);
-	return file_getbuffer(ms);
+	(void)memset(buf + nbytes, 0, SLOP); /* NUL terminate */
+	if (file_buffer(ms, fd, inname, buf, (size_t)nbytes) == -1)
+		goto done;
+	rv = 0;
 done:
+	free(buf);
 	close_and_restore(ms, inname, fd, &sb);
-	return NULL;
+	return rv == 0 ? file_getbuffer(ms) : NULL;
 }
 
 
@@ -310,7 +365,7 @@ magic_buffer(struct magic_set *ms, const void *buf, size_t nb)
 	 * The main work is done here!
 	 * We have the file name and/or the data buffer to be identified. 
 	 */
-	if (file_buffer(ms, buf, nb) == -1) {
+	if (file_buffer(ms, -1, NULL, buf, nb) == -1) {
 		return NULL;
 	}
 	return file_getbuffer(ms);
