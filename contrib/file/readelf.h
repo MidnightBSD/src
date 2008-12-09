@@ -50,6 +50,7 @@ typedef	uint32_t 	Elf64_Addr[2];
 typedef	uint32_t 	Elf64_Off[2];
 typedef uint32_t 	Elf64_Xword[2];
 #else
+#undef USE_ARRAY_FOR_64BIT_TYPES
 typedef	uint64_t 	Elf64_Addr;
 typedef	uint64_t 	Elf64_Off;
 typedef uint64_t 	Elf64_Xword;
@@ -96,6 +97,7 @@ typedef struct {
 
 /* e_type */
 #define ET_EXEC		2
+#define ET_DYN		3
 #define ET_CORE		4
 
 /* sh_type */
@@ -189,12 +191,6 @@ typedef struct {
     Elf64_Off	sh_entsize;
 } Elf64_Shdr;
 
-/* Notes used in ET_CORE */
-#define NT_PRSTATUS	1
-#define NT_PRFPREG	2
-#define NT_PRPSINFO	3
-#define NT_TASKSTRUCT	4
-
 #define	NT_NETBSD_CORE_PROCINFO		1
 
 /* Note header in a PT_NOTE section */
@@ -210,10 +206,12 @@ typedef struct {
     Elf64_Word	n_type;
 } Elf64_Nhdr;
 
+/* Notes used in ET_CORE */
 #define	NT_PRSTATUS	1
 #define	NT_PRFPREG	2
 #define	NT_PRPSINFO	3
 #define	NT_PRXREG	4
+#define NT_TASKSTRUCT	4
 #define	NT_PLATFORM	5
 #define	NT_AUXV		6
 
@@ -223,6 +221,7 @@ typedef struct {
 #define NT_NETBSD_EMULATION	2
 #define NT_FREEBSD_VERSION	1
 #define NT_OPENBSD_VERSION	1
+#define NT_DRAGONFLY_VERSION	1
 /* GNU executables (name = "GNU") */
 #define NT_GNU_VERSION		1
 

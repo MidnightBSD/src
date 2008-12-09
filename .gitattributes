@@ -3837,13 +3837,17 @@ contrib/file/Magdir/asterix -text
 contrib/file/Magdir/att3b -text
 contrib/file/Magdir/audio -text
 contrib/file/Magdir/bFLT -text
+contrib/file/Magdir/basis -text
+contrib/file/Magdir/bflt -text
 contrib/file/Magdir/blender -text
 contrib/file/Magdir/blit -text
 contrib/file/Magdir/bout -text
 contrib/file/Magdir/bsdi -text
+contrib/file/Magdir/btsnoop -text
 contrib/file/Magdir/c-lang -text
 contrib/file/Magdir/c64 -text
 contrib/file/Magdir/cad -text
+contrib/file/Magdir/cafebabe -text
 contrib/file/Magdir/cddb -text
 contrib/file/Magdir/chi -text
 contrib/file/Magdir/chord -text
@@ -3856,6 +3860,7 @@ contrib/file/Magdir/communications -text
 contrib/file/Magdir/compress -text
 contrib/file/Magdir/console -text
 contrib/file/Magdir/convex -text
+contrib/file/Magdir/cracklib -text
 contrib/file/Magdir/ctags -text
 contrib/file/Magdir/cvs -text
 contrib/file/Magdir/dact -text
@@ -3867,6 +3872,7 @@ contrib/file/Magdir/dolby -text
 contrib/file/Magdir/dump -text
 contrib/file/Magdir/dyadic -text
 contrib/file/Magdir/editors -text
+contrib/file/Magdir/efi -text
 contrib/file/Magdir/elf -text
 contrib/file/Magdir/encore -text
 contrib/file/Magdir/epoc -text
@@ -3875,6 +3881,7 @@ contrib/file/Magdir/fcs -text
 contrib/file/Magdir/filesystems -text
 contrib/file/Magdir/flash -text
 contrib/file/Magdir/fonts -text
+contrib/file/Magdir/fortran -text
 contrib/file/Magdir/frame -text
 contrib/file/Magdir/freebsd -text
 contrib/file/Magdir/fsav -text
@@ -3925,6 +3932,7 @@ contrib/file/Magdir/modem -text
 contrib/file/Magdir/motorola -text
 contrib/file/Magdir/msdos -text
 contrib/file/Magdir/msvc -text
+contrib/file/Magdir/mup -text
 contrib/file/Magdir/natinst -text
 contrib/file/Magdir/ncr -text
 contrib/file/Magdir/netbsd -text
@@ -3935,6 +3943,7 @@ contrib/file/Magdir/ocaml -text
 contrib/file/Magdir/octave -text
 contrib/file/Magdir/olf -text
 contrib/file/Magdir/os2 -text
+contrib/file/Magdir/os400 -text
 contrib/file/Magdir/os9 -text
 contrib/file/Magdir/osf1 -text
 contrib/file/Magdir/palm -text
@@ -3960,6 +3969,7 @@ contrib/file/Magdir/rpm -text
 contrib/file/Magdir/rtf -text
 contrib/file/Magdir/sc -text
 contrib/file/Magdir/sccs -text
+contrib/file/Magdir/scientific -text
 contrib/file/Magdir/sendmail -text
 contrib/file/Magdir/sequent -text
 contrib/file/Magdir/sgi -text
@@ -3984,6 +3994,7 @@ contrib/file/Magdir/timezone -text
 contrib/file/Magdir/troff -text
 contrib/file/Magdir/tuxedo -text
 contrib/file/Magdir/typeset -text
+contrib/file/Magdir/unicode -text
 contrib/file/Magdir/unknown -text
 contrib/file/Magdir/uuencode -text
 contrib/file/Magdir/varied.out -text
@@ -4022,6 +4033,7 @@ contrib/file/configure.in -text
 contrib/file/file.c -text
 contrib/file/file.h -text
 contrib/file/file.man -text
+contrib/file/file_opts.h -text
 contrib/file/fsmagic.c -text
 contrib/file/funcs.c -text
 contrib/file/install-sh -text

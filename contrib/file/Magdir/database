@@ -67,6 +67,15 @@
 >16	belong	>0		(Queue, version %d, big-endian)
 12	lelong	0x00042253	Berkeley DB
 >16	lelong	>0		(Queue, version %d, little-endian)
+
+# From Max Bowsher.
+12	long	0x00040988	Berkeley DB
+>16	long	>0		(Log, version %d, native byte-order)
+12	belong	0x00040988	Berkeley DB 
+>16	belong	>0		(Log, version %d, big-endian)
+12	lelong	0x00040988	Berkeley DB
+>16	lelong	>0		(Log, version %d, little-endian)
+
 #
 #
 # Round Robin Database Tool by Tobias Oetiker <oetiker@ee.ethz.ch>
@@ -201,3 +210,13 @@
 16	string		MIT-MAGIC-COOKIE-1	X11 Xauthority data
 17	string		MIT-MAGIC-COOKIE-1	X11 Xauthority data
 18	string		MIT-MAGIC-COOKIE-1	X11 Xauthority data
+
+# From: Maxime Henrion <mux@FreeBSD.org>
+# PostgreSQL's custom dump format, Maxime Henrion <mux@FreeBSD.org>
+0	string		PGDMP		PostgreSQL custom database dump
+>5	byte		x		- v%d
+>6	byte		x		\b.%d
+>5	beshort		<=0x100		\b-0
+>5	beshort		>0x100
+>>7	byte		x		\b-%d
+

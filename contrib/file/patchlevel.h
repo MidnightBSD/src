@@ -1,11 +1,47 @@
 #define	FILE_VERSION_MAJOR	4
-#define	patchlevel		12
+#define	patchlevel		23
 
 /*
  * Patchlevel file for Ian Darwin's MAGIC command.
- * $Id: patchlevel.h,v 1.1.1.2 2006-02-25 02:32:35 laffer1 Exp $
+ * $File: patchlevel.h,v 1.67 2007/12/28 20:08:40 christos Exp $
  *
  * $Log: not supported by cvs2svn $
+ * Revision 1.67  2007/12/28 20:08:40  christos
+ * welcome to 4.23.
+ *
+ * Revision 1.66  2007/12/27 16:38:24  christos
+ * welcome to 4.22
+ *
+ * Revision 1.65  2007/05/24 17:22:27  christos
+ * Welcome to 4.21
+ *
+ * Revision 1.64  2007/03/01 22:14:55  christos
+ * welcome to 4.20
+ *
+ * Revision 1.63  2007/01/12 17:38:28  christos
+ * Use File id.
+ *
+ * Revision 1.62  2006/12/11 21:49:58  christos
+ * time for 4.19
+ *
+ * Revision 1.61  2006/10/31 21:18:09  christos
+ * bump
+ *
+ * Revision 1.60  2006/03/02 22:15:12  christos
+ * welcome to 4.17
+ *
+ * Revision 1.59  2005/10/17 17:15:21  christos
+ * welcome to 4.16
+ *
+ * Revision 1.58  2005/08/18 15:52:56  christos
+ * welcome to 4.15
+ *
+ * Revision 1.57  2005/06/25 15:52:14  christos
+ * Welcome to 4.14
+ *
+ * Revision 1.56  2005/02/09 19:25:13  christos
+ * Welcome to 4.13
+ *
  * Revision 1.55  2004/11/24 18:57:47  christos
  * Re-do the autoconf stuff once more; passes make dist now.
  *
