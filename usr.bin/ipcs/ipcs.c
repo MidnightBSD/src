@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/ipcs/ipcs.c,v 1.27 2005/05/24 23:42:09 csjp Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/ipcs/ipcs.c,v 1.29 2006/05/15 08:20:38 maxim Exp $");
 
 #include <assert.h>
 #include <err.h>
@@ -93,11 +93,11 @@ static struct nlist symbols[] = {
 };
 
 #define	SHMINFO_XVEC				\
-X(shmmax, sizeof(int))				\
-X(shmmin, sizeof(int))				\
-X(shmmni, sizeof(int))				\
-X(shmseg, sizeof(int))				\
-X(shmall, sizeof(int))
+X(shmmax, sizeof(u_long))				\
+X(shmmin, sizeof(u_long))				\
+X(shmmni, sizeof(u_long))				\
+X(shmseg, sizeof(u_long))				\
+X(shmall, sizeof(u_long))
 
 #define	SEMINFO_XVEC				\
 X(semmap, sizeof(int))				\
@@ -598,7 +598,7 @@ kget(int idx, void *addr, size_t size)
 		if (symbols[idx].n_type == 0 || symbols[idx].n_value == 0)
 			errx(1, "symbol %s undefined", symn);
 		/*
-		 * For some symbols, the value we retreieve is
+		 * For some symbols, the value we retrieve is
 		 * actually a pointer; since we want the actual value,
 		 * we have to manually dereference it.
 		 */
