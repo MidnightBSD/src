@@ -33,7 +33,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)tty.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/tty/tty.1,v 1.8 2005/02/13 22:25:25 ru Exp $
+.\" $FreeBSD: src/usr.bin/tty/tty.1,v 1.9 2006/12/13 20:15:49 ru Exp $
 .\"
 .Dd June 6, 1993
 .Dt TTY 1
@@ -51,10 +51,11 @@ utility writes the name of the terminal attached to standard input
 to standard output.
 The name that is written is the string returned by
 .Xr ttyname 3 .
-If the standard input is not a terminal, the message ``not a tty''
+If the standard input is not a terminal, the message
+.Dq Li "not a tty"
 is written.
 The options are as follows:
-.Bl -tag -width Ds
+.Bl -tag -width indent
 .It Fl s
 Do not write the terminal name; only the exit status is affected
 when this option is specified.
@@ -64,7 +65,7 @@ option is deprecated in favor of the
 .Dq Li "test -t 0"
 command.
 .El
-.Pp
+.Sh EXIT STATUS
 The
 .Nm
 utility
