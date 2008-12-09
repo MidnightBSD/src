@@ -32162,9 +32162,6 @@ usr.bin/tsort/tsort.c -text
 usr.bin/tty/Makefile -text
 usr.bin/tty/tty.1 -text
 usr.bin/tty/tty.c -text
-usr.bin/uac/Makefile -text
-usr.bin/uac/uac.1 -text
-usr.bin/uac/uac.c -text
 usr.bin/ul/Makefile -text
 usr.bin/ul/ul.1 -text
 usr.bin/ul/ul.c -text
