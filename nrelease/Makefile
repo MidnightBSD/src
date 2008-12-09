@@ -1,4 +1,4 @@
-# $MidnightBSD: src/nrelease/Makefile,v 1.8 2008/05/22 22:43:56 laffer1 Exp $
+# $MidnightBSD: src/nrelease/Makefile,v 1.9 2008/05/23 20:23:49 laffer1 Exp $
 # $DragonFly: src/nrelease/Makefile,v 1.1 2003/12/01 09:59:43 dillon Exp $
 #
 ISODIR ?= /usr/release
@@ -15,7 +15,7 @@ quickrel:	check clean buildworld2 buildkernel2 buildiso buildiso2 mkiso
 realquickrel:	check clean buildiso buildiso2 mkiso
 
 check:
-	if [ ! -f /usr/local/bin/mkisofs ]; then \
+	@if [ ! -f /usr/local/bin/mkisofs ]; then \
 		echo "You need to install the cdrtools port for this target"; \
 		exit 1; fi
 
