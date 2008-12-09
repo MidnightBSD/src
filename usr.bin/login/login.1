@@ -9,7 +9,11 @@
 .\" 2. Redistributions in binary form must reproduce the above copyright
 .\"    notice, this list of conditions and the following disclaimer in the
 .\"    documentation and/or other materials provided with the distribution.
-.\" 3. Neither the name of the University nor the names of its contributors
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"	This product includes software developed by the University of
+.\"	California, Berkeley and its contributors.
+.\" 4. Neither the name of the University nor the names of its contributors
 .\"    may be used to endorse or promote products derived from this software
 .\"    without specific prior written permission.
 .\"
@@ -26,10 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)login.1	8.2 (Berkeley) 5/5/94
-.\" $FreeBSD: src/usr.bin/login/login.1,v 1.28 2004/10/16 00:13:38 brueffer Exp $
-.\" $MidnightBSD: src/usr.bin/login/login.1,v 1.2 2006/12/29 22:27:52 laffer1 Exp $
+.\" $FreeBSD: src/usr.bin/login/login.1,v 1.32.2.1 2007/12/06 10:48:31 philip Exp $
 .\"
-.Dd October 16, 2004
+.Dd September 13, 2006
 .Dt LOGIN 1
 .Os
 .Sh NAME
@@ -119,8 +122,15 @@ command which is similar or identical to this utility.
 Consult the
 .Xr builtin 1
 manual page.
+.Pp
+The
+.Nm
+utility will submit an audit record when login succeeds or fails.
+Failure to determine the current auditing state will
+result in an error exit from
+.Nm .
 .Sh FILES
-.Bl -tag -width ".Pa /etc/login.conf" -compact
+.Bl -tag -width ".Pa /etc/security/audit_control" -compact
 .It Pa /etc/fbtab
 changes device protections
 .It Pa /etc/login.conf
@@ -136,19 +146,23 @@ configure authentication services
 .It Pa /etc/pam.d/login
 .Xr pam 8
 configuration file
+.It Pa /etc/security/audit_user
+user flags for auditing
+.It Pa /etc/security/audit_control
+global flags for auditing
 .El
 .Sh SEE ALSO
 .Xr builtin 1 ,
 .Xr chpass 1 ,
 .Xr csh 1 ,
+.Xr newgrp 1 ,
 .Xr passwd 1 ,
 .Xr rlogin 1 ,
 .Xr getpass 3 ,
 .Xr fbtab 5 ,
 .Xr login.access 5 ,
 .Xr login.conf 5 ,
-.Xr environ 7 ,
-.Xr pam 8
+.Xr environ 7
 .Sh HISTORY
 A
 .Nm

@@ -17,7 +17,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,8 +45,7 @@ static char sccsid[] = "@(#)login.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/login/login.c,v 1.99 2005/06/01 12:23:06 maxim Exp $");
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/usr.bin/login/login.c,v 1.106 2007/07/04 00:00:40 scf Exp $");
 
 /*
  * login [ name ]
@@ -170,6 +173,9 @@ main(int argc, char *argv[])
 	login_cap_t *lc = NULL;
 	login_cap_t *lc_user = NULL;
 	pid_t pid;
+#ifdef USE_BSM_AUDIT
+	char auditsuccess = 1;
+#endif
 
 	(void)signal(SIGQUIT, SIG_IGN);
 	(void)signal(SIGINT, SIG_IGN);
@@ -288,16 +294,25 @@ main(int argc, char *argv[])
 		pam_err = pam_start("login", username, &pamc, &pamh);
 		if (pam_err != PAM_SUCCESS) {
 			pam_syslog("pam_start()");
+#ifdef USE_BSM_AUDIT
+			au_login_fail("PAM Error", 1);
+#endif
 			bail(NO_SLEEP_EXIT, 1);
 		}
 		pam_err = pam_set_item(pamh, PAM_TTY, tty);
 		if (pam_err != PAM_SUCCESS) {
 			pam_syslog("pam_set_item(PAM_TTY)");
+#ifdef USE_BSM_AUDIT
+			au_login_fail("PAM Error", 1);
+#endif
 			bail(NO_SLEEP_EXIT, 1);
 		}
 		pam_err = pam_set_item(pamh, PAM_RHOST, hostname);
 		if (pam_err != PAM_SUCCESS) {
 			pam_syslog("pam_set_item(PAM_RHOST)");
+#ifdef USE_BSM_AUDIT
+			au_login_fail("PAM Error", 1);
+#endif
 			bail(NO_SLEEP_EXIT, 1);
 		}
 
@@ -314,6 +329,9 @@ main(int argc, char *argv[])
 		    (uid == (uid_t)0 || uid == (uid_t)pwd->pw_uid)) {
 			/* already authenticated */
 			rval = 0;
+#ifdef USE_BSM_AUDIT
+			auditsuccess = 0; /* opened a terminal window only */
+#endif
 		} else {
 			fflag = 0;
 			(void)setpriority(PRIO_PROCESS, 0, -4);
@@ -326,8 +344,18 @@ main(int argc, char *argv[])
 
 		pam_cleanup();
 
+		/*
+		 * We are not exiting here, but this corresponds to a failed
+		 * login event, so set exitstatus to 1.
+		 */
+#ifdef USE_BSM_AUDIT
+		au_login_fail("Login incorrect", 1);
+#endif
+
 		(void)printf("Login incorrect\n");
 		failures++;
+
+		pwd = NULL;
 
 		/*
 		 * Allow up to 'retry' (10) attempts, but start
@@ -347,6 +375,12 @@ main(int argc, char *argv[])
 	(void)signal(SIGHUP, SIG_DFL);
 
 	endpwent();
+
+#ifdef USE_BSM_AUDIT
+	/* Audit successful login. */
+	if (auditsuccess)
+		au_login_success();
+#endif
 
 	/*
 	 * Establish the login class.
@@ -471,8 +505,7 @@ main(int argc, char *argv[])
 	if (!pflag)
 		environ = envinit;
 	if (term != NULL)
-		if (setenv("TERM", term, 0) == -1)
-			err(1, "setenv: cannot set TERM=%s", term);
+		setenv("TERM", term, 0);
 
 	/*
 	 * PAM modules might add supplementary groups during pam_setcred().
@@ -543,24 +576,16 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (setenv("SHELL", pwd->pw_shell, 1) == -1)
-		err(1, "setenv: cannot set SHELL=%s", pwd->pw_shell);
-	if (setenv("HOME", pwd->pw_dir, 1) == -1)
-		err(1, "setenv: cannot set HOME=%s", pwd->pw_dir);
+	(void)setenv("SHELL", pwd->pw_shell, 1);
+	(void)setenv("HOME", pwd->pw_dir, 1);
 	/* Overwrite "term" from login.conf(5) for any known TERM */
-	if (term == NULL && (tp = stypeof(tty)) != NULL) {
-		if (setenv("TERM", tp, 1) == -1)
-			err(1, "setenv: cannot set TERM=%s", stypeof(tty));
-	} else {
-		if (setenv("TERM", TERM_UNKNOWN, 0) == -1)
-			err(1, "setenv: cannot set TERM");
-	}
-	if (setenv("LOGNAME", username, 1) == -1)
-		err(1, "setenv: cannot set LOGNAME=%s", username);
-	if (setenv("USER", username, 1) == -1)
-		err(1, "setenv: cannot set USER=%s", username);
-	if (setenv("PATH", rootlogin ? _PATH_STDPATH : _PATH_DEFPATH, 0) == -1)
-		err(1, "setenv: cannot set PATH");
+	if (term == NULL && (tp = stypeof(tty)) != NULL)
+		(void)setenv("TERM", tp, 1);
+	else
+		(void)setenv("TERM", TERM_UNKNOWN, 0);
+	(void)setenv("LOGNAME", username, 1);
+	(void)setenv("USER", username, 1);
+	(void)setenv("PATH", rootlogin ? _PATH_STDPATH : _PATH_DEFPATH, 0);
 
 	if (!quietlog) {
 		const char *cw;
@@ -741,10 +766,11 @@ export(const char *s)
 		"SHELL", "HOME", "LOGNAME", "MAIL", "CDPATH",
 		"IFS", "PATH", NULL
 	};
+	char *p;
 	const char **pp;
 	size_t n;
 
-	if (strlen(s) > 1024 || strchr(s, '=') == NULL)
+	if (strlen(s) > 1024 || (p = strchr(s, '=')) == NULL)
 		return (0);
 	if (strncmp(s, "LD_", 3) == 0)
 		return (0);
@@ -753,7 +779,9 @@ export(const char *s)
 		if (s[n] == '=' && strncmp(s, *pp, n) == 0)
 			return (0);
 	}
-	(void)putenv(s);
+	*p = '\0';
+	(void)setenv(s, p + 1, 1);
+	*p = '=';
 	return (1);
 }
 
@@ -942,6 +970,10 @@ bail(int sec, int eval)
 {
 
 	pam_cleanup();
+#ifdef USE_BSM_AUDIT
+	if (pwd != NULL)
+		audit_logout();
+#endif
 	(void)sleep(sec);
 	exit(eval);
 }

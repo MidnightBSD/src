@@ -31553,6 +31553,7 @@ usr.bin/login/README -text
 usr.bin/login/login.1 -text
 usr.bin/login/login.c -text
 usr.bin/login/login.h -text
+usr.bin/login/login_audit.c -text
 usr.bin/login/login_fbtab.c -text
 usr.bin/login/pathnames.h -text
 usr.bin/logins/Makefile -text
