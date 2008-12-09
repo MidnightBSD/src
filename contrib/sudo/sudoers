@@ -26,7 +26,7 @@ root	ALL=(ALL) SETENV: ALL
 
 # Uncomment to allow people in group wheel to run all commands
 # and set environment variables.
-# %wheel	ALL=(ALL) SETENV: ALL
+%wheel	ALL=(ALL) SETENV: ALL
 
 # Same thing without a password
 # %wheel	ALL=(ALL) NOPASSWD: SETENV: ALL
