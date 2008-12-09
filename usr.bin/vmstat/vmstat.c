@@ -10,7 +10,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -40,7 +44,7 @@ static char sccsid[] = "@(#)vmstat.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/vmstat/vmstat.c,v 1.86.2.4 2006/10/28 18:15:13 glebius Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/vmstat/vmstat.c,v 1.98 2007/07/27 20:01:22 alc Exp $");
 __MBSDID("$MidnightBSD$");
 
 #include <sys/param.h>
@@ -393,26 +397,14 @@ getdrivedata(char **argv)
 static long
 getuptime(void)
 {
-	static struct timeval boottime;
-	static time_t now;
+	struct timespec sp;
 	time_t uptime;
 
-	if (boottime.tv_sec == 0) {
-		if (kd != NULL) {
-			kread(X_BOOTTIME, &boottime, sizeof(boottime));
-		} else {
-			size_t size;
-
-			size = sizeof(boottime);
-			mysysctl("kern.boottime", &boottime, &size, NULL, 0);
-			if (size != sizeof(boottime))
-				errx(1, "kern.boottime size mismatch");
-		}
-	}
-	(void)time(&now);
-	uptime = now - boottime.tv_sec;
+	(void)clock_gettime(CLOCK_MONOTONIC, &sp);
+	uptime = sp.tv_sec;
 	if (uptime <= 0 || uptime > 60*60*24*365*10)
 		errx(1, "time makes no sense; namelist must be wrong");
+
 	return(uptime);
 }
 
@@ -450,6 +442,7 @@ fill_vmmeter(struct vmmeter *vmmp)
 		GET_VM_STATS(vm, v_reactivated);
 		GET_VM_STATS(vm, v_pdwakeups);
 		GET_VM_STATS(vm, v_pdpages);
+		GET_VM_STATS(vm, v_tcached);
 		GET_VM_STATS(vm, v_dfree);
 		GET_VM_STATS(vm, v_pfree);
 		GET_VM_STATS(vm, v_tfree);
@@ -587,9 +580,9 @@ dovmstat(unsigned int interval, int reps)
 		    total.t_rq - 1, total.t_dw + total.t_pw, total.t_sw);
 #define vmstat_pgtok(a) ((a) * (sum.v_page_size >> 10))
 #define	rate(x)	(((x) + halfuptime) / uptime)	/* round */
-		(void)printf(" %7ld %6ld ", (long)vmstat_pgtok(total.t_avm),
-			     (long)vmstat_pgtok(total.t_free));
-		(void)printf("%4lu ",
+		(void)printf(" %7d %6d ", vmstat_pgtok(total.t_avm),
+		    vmstat_pgtok(total.t_free));
+		(void)printf("%5lu ",
 		    (unsigned long)rate(sum.v_vm_faults - osum.v_vm_faults));
 		(void)printf("%3lu ",
 		    (unsigned long)rate(sum.v_reactivated - osum.v_reactivated));
@@ -599,12 +592,12 @@ dovmstat(unsigned int interval, int reps)
 		(void)printf("%3lu ",
 		    (unsigned long)rate(sum.v_swapout + sum.v_vnodeout -
 		    (osum.v_swapout + osum.v_vnodeout)));
-		(void)printf("%3lu ",
+		(void)printf("%5lu ",
 		    (unsigned long)rate(sum.v_tfree - osum.v_tfree));
 		(void)printf("%3lu ",
 		    (unsigned long)rate(sum.v_pdpages - osum.v_pdpages));
 		devstats();
-		(void)printf("%4lu %4lu %3lu ",
+		(void)printf("%4lu %4lu %4lu ",
 		    (unsigned long)rate(sum.v_intr - osum.v_intr),
 		    (unsigned long)rate(sum.v_syscall - osum.v_syscall),
 		    (unsigned long)rate(sum.v_swtch - osum.v_swtch));
@@ -639,14 +632,14 @@ printhdr(void)
 	else if (num_shown == 1)
 		(void)printf("disk");
 	(void)printf("   faults      cpu\n");
-	(void)printf(" r b w     avm    fre  flt  re  pi  po  fr  sr ");
+	(void)printf(" r b w     avm    fre   flt  re  pi  po    fr  sr ");
 	for (i = 0; i < num_devices; i++)
 		if ((dev_select[i].selected)
 		 && (dev_select[i].selected <= maxshowdevs))
 			(void)printf("%c%c%d ", dev_select[i].device_name[0],
 				     dev_select[i].device_name[1],
 				     dev_select[i].unit_number);
-	(void)printf("  in   sy  cs us sy id\n");
+	(void)printf("  in   sy   cs us sy id\n");
 	hdrcnt = winlines - 2;
 }
 
@@ -730,6 +723,7 @@ dosum(void)
 	(void)printf("%9u pages affected by  fork()\n", sum.v_forkpages);
 	(void)printf("%9u pages affected by vfork()\n", sum.v_vforkpages);
 	(void)printf("%9u pages affected by rfork()\n", sum.v_rforkpages);
+	(void)printf("%9u pages cached\n", sum.v_tcached);
 	(void)printf("%9u pages freed\n", sum.v_tfree);
 	(void)printf("%9u pages freed by daemon\n", sum.v_dfree);
 	(void)printf("%9u pages freed by exiting processes\n", sum.v_pfree);
