@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.4 2008/09/29 21:06:22 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.5 2008/09/30 03:08:19 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -40,8 +40,9 @@ LDIRS=	bsm cam geom net net80211 netatalk netgraph netinet netinet6 \
 
 LSUBDIRS=	cam/scsi \
 	dev/acpica dev/an dev/bktr dev/firewire dev/hwpmc \
-	dev/ic dev/iicbus ${_dev_ieee488} dev/ofw \
-	dev/pbio dev/ppbus dev/smbus dev/speaker dev/usb dev/wi dev/utopia \
+	dev/ic dev/iicbus ${_dev_ieee488} dev/lmc dev/ofw \
+	dev/pbio dev/ppbus dev/smbus \
+	dev/speaker dev/usb dev/utopia dev/vkbd dev/wi \
 	fs/devfs fs/fdescfs fs/fifofs fs/msdosfs fs/ntfs fs/nullfs \
 	fs/nwfs fs/portalfs fs/procfs fs/smbfs fs/udf fs/unionfs \
 	geom/cache geom/concat geom/eli geom/gate geom/journal geom/label \
@@ -55,6 +56,10 @@ LSUBDIRS=	cam/scsi \
 
 .if ${MK_GPIB} != "no"
 _dev_ieee488=	dev/ieee488
+.endif
+
+.if ${MK_HESIOD} != "no"
+INCS+=		hesiod.h
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
