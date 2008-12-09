@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.48.2.4 2006/01/12 15:44:42 ru Exp $
-.\" $MidnightBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.9 2008/07/04 00:09:32 laffer1 Exp $
+.\" $MidnightBSD: src/gnu/usr.bin/groff/tmac/mdoc.local,v 1.10 2008/12/07 04:00:12 laffer1 Exp $
 .\"
 .\"     %beginstrip%
 .
@@ -81,7 +81,7 @@
 .
 .
 .\" Default .Os value
-.ds doc-default-operating-system MidnightBSD\~1.0
+.ds doc-default-operating-system MidnightBSD\~0.3
 .
 .\" MidnightBSD releases not found in doc-common
 .ds doc-operating-system-MidnightBSD-0.1  0.1
