@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/intr_machdep.h,v 1.7.2.3 2006/03/10 19:37:33 jhb Exp $
+ * $FreeBSD: src/sys/i386/include/intr_machdep.h,v 1.20 2007/05/08 21:29:14 jhb Exp $
  */
 
 #ifndef __MACHINE_INTR_MACHDEP_H__
@@ -43,11 +43,18 @@
  * 191 and still be safe since only interrupt sources in actual use will
  * allocate IDT vectors.
  *
- * For now we stick with 255 as ISA IRQs and PCI intline IRQs only allow
- * for IRQs in the range 0 - 254.  When MSI support is added this number
- * will likely increase.
+ * The first 255 IRQs (0 - 254) are reserved for ISA IRQs and PCI intline IRQs.
+ * IRQ values beyond 256 are used by MSI.  We leave 255 unused to avoid
+ * confusion since 255 is used in PCI to indicate an invalid IRQ.
  */
-#define	NUM_IO_INTS	255
+#define	NUM_MSI_INTS	128
+#define	FIRST_MSI_INT	256
+#define	NUM_IO_INTS	(FIRST_MSI_INT + NUM_MSI_INTS)
+
+/*
+ * Default base address for MSI messages on x86 platforms.
+ */
+#define	MSI_INTEL_ADDR_BASE		0xfee00000
 
 /*
  * - 1 ??? dummy counter.
@@ -56,9 +63,9 @@
  * - 7 counters for each CPU for IPI counters for SMP.
  */
 #ifdef SMP
-#define	INTRCNT_COUNT	(1 + NUM_IO_INTS * 2 + 1)
-#else
 #define	INTRCNT_COUNT	(1 + NUM_IO_INTS * 2 + (1 + 7) * MAXCPU)
+#else
+#define	INTRCNT_COUNT	(1 + NUM_IO_INTS * 2 + 1)
 #endif
 
 #ifndef LOCORE
@@ -79,13 +86,15 @@ struct pic {
 	void (*pic_disable_source)(struct intsrc *, int);
 	void (*pic_eoi_source)(struct intsrc *);
 	void (*pic_enable_intr)(struct intsrc *);
+	void (*pic_disable_intr)(struct intsrc *);
 	int (*pic_vector)(struct intsrc *);
 	int (*pic_source_pending)(struct intsrc *);
-	void (*pic_suspend)(struct intsrc *);
-	void (*pic_resume)(struct intsrc *);
+	void (*pic_suspend)(struct pic *);
+	void (*pic_resume)(struct pic *);
 	int (*pic_config_intr)(struct intsrc *, enum intr_trigger,
 	    enum intr_polarity);
 	void (*pic_assign_cpu)(struct intsrc *, u_int apic_id);
+	STAILQ_ENTRY(pic) pics;
 };
 
 /* Flags for pic_disable_source() */
@@ -106,10 +115,10 @@ struct intsrc {
 	u_long *is_count;
 	u_long *is_straycount;
 	u_int is_index;
-	u_int is_enabled:1;
+	u_int is_handlers;
 };
 
-struct intrframe;
+struct trapframe;
 
 extern struct mtx icu_lock;
 extern int elcr_found;
@@ -120,21 +129,27 @@ enum intr_trigger elcr_read_trigger(u_int irq);
 void	elcr_resume(void);
 void	elcr_write_trigger(u_int irq, enum intr_trigger trigger);
 #ifdef SMP
-void	intr_add_cpu(u_int apic_id);
-#else
-#define	intr_add_cpu(apic_id)
+void	intr_add_cpu(u_int cpu);
 #endif
-int	intr_add_handler(const char *name, int vector, driver_intr_t handler,
-    void *arg, enum intr_type flags, void **cookiep);
+int	intr_add_handler(const char *name, int vector, driver_filter_t filter,
+    driver_intr_t handler, void *arg, enum intr_type flags, void **cookiep);
 int	intr_config_intr(int vector, enum intr_trigger trig,
     enum intr_polarity pol);
-void	intr_execute_handlers(struct intsrc *isrc, struct intrframe *iframe);
+void	intr_execute_handlers(struct intsrc *isrc, struct trapframe *frame);
 struct intsrc *intr_lookup_source(int vector);
+int	intr_register_pic(struct pic *pic);
 int	intr_register_source(struct intsrc *isrc);
 int	intr_remove_handler(void *cookie);
 void	intr_resume(void);
 void	intr_suspend(void);
 void	intrcnt_add(const char *name, u_long **countp);
+void	nexus_add_irq(u_long irq);
+int	msi_alloc(device_t dev, int count, int maxcount, int *irqs);
+void	msi_init(void);
+int	msi_map(int irq, uint64_t *addr, uint32_t *data);
+int	msi_release(int* irqs, int count);
+int	msix_alloc(device_t dev, int *irq);
+int	msix_release(int irq);
 
 #endif	/* !LOCORE */
 #endif	/* _KERNEL */
