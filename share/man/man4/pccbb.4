@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/pccbb.4,v 1.6 2004/12/23 05:32:02 imp Exp $
+.\" $FreeBSD: src/share/man/man4/pccbb.4,v 1.8 2005/11/18 10:52:22 ru Exp $
 .\"
 .Dd July 21, 2004
 .Dt PCCBB 4
@@ -163,6 +163,18 @@ Toshiba ToPIC95B
 Toshiba ToPIC97
 .It
 Toshiba ToPIC100
+.El
+.Sh TUNABLES
+The driver supports the following tunable parameters, which may be
+added to
+.Pa /boot/loader.conf
+or set via the
+.Xr sysctl 8
+command:
+.Bl -tag -width ".Cm hw.cbb.debug" -compact
+.It Cm hw.cbb.debug
+Non-zero values cause more verbose information to be printed to aid in
+debugging problems with the bridge chipset.
 .El
 .Sh SEE ALSO
 .Xr cardbus 4 ,

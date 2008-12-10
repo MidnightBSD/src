@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/wlan.4,v 1.8.2.1 2005/12/02 16:45:03 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/wlan.4,v 1.13 2007/09/10 17:20:21 brueffer Exp $
 .\"
-.Dd November 26, 2005
+.Dd September 6, 2007
 .Dt WLAN 4
 .Os
 .Sh NAME
@@ -48,9 +48,11 @@ is required for the
 .Xr ipw 4 ,
 .Xr iwi 4 ,
 .Xr ral 4 ,
+.Xr rum 4 ,
 .Xr ural 4 ,
+.Xr wi 4 ,
 and
-.Xr wi 4
+.Xr zyd 4
 drivers, with other drivers to follow.
 .Pp
 The
@@ -125,13 +127,15 @@ was used to be compatible with
 .Xr iwi 4 ,
 .Xr netintro 4 ,
 .Xr ral 4 ,
+.Xr rum 4 ,
 .Xr ural 4 ,
 .Xr wi 4 ,
 .Xr wlan_acl 4 ,
 .Xr wlan_ccmp 4 ,
 .Xr wlan_tkip 4 ,
 .Xr wlan_wep 4 ,
-.Xr wlan_xauth 4
+.Xr wlan_xauth 4 ,
+.Xr zyd 4
 .Sh STANDARDS
 More information can be found in the IEEE 802.11 Standard.
 .Sh HISTORY
