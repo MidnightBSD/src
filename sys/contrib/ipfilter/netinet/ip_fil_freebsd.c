@@ -7,7 +7,7 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)ip_fil.c	2.41 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.4 2008-12-07 02:33:39 laffer1 Exp $";
+static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.5 2008-12-10 17:22:10 laffer1 Exp $";
 #endif
 
 #if defined(KERNEL) || defined(_KERNEL)
@@ -20,7 +20,7 @@ static const char rcsid[] = "@(#)$Id: ip_fil_freebsd.c,v 1.4 2008-12-07 02:33:39
     !defined(KLD_MODULE) && !defined(IPFILTER_LKM)
 # include "opt_inet6.h"
 #endif
-#if (defined(__MidnightBSD__) || defined(__FreeBSD_version) && (__FreeBSD_version >= 440000)) && \
+#if (defined(__FreeBSD_version) && (__FreeBSD_version >= 440000)) && \
     !defined(KLD_MODULE) && !defined(IPFILTER_LKM)
 # include "opt_random_ip_id.h"
 #endif
