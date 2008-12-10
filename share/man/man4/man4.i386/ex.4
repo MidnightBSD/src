@@ -23,7 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/ex.4,v 1.21.2.2 2006/02/02 07:50:02 trhodes Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/ex.4,v 1.26 2005/11/18 10:52:23 ru Exp $
 .\"
 .Dd July 16, 2005
 .Dt EX 4 i386
@@ -51,12 +51,13 @@ The
 driver provides support for Ethernet adapters based on the Intel
 i82595 chip.
 .Pp
-The card will be searched for in the
+On the ISA bus, the card will be searched for in the
 I/O address range 0x200 - 0x3a0.
-If the IRQ will be
-read from the EEPROM on the card.
-For correct operation on newer
-cards the Plug-N-Play support should be disabled.
+The IRQ will be read from the EEPROM on the card.
+For correct operation Plug-N-Play support should be disabled.
+.Pp
+On the PC Card bus, the card will be automatically recognized and
+configured.
 .Sh HARDWARE
 The
 .Nm
@@ -64,11 +65,17 @@ driver supports the following Ethernet adapters:
 .Pp
 .Bl -bullet -compact
 .It
-Intel EtherExpress Pro/10
+Intel EtherExpress Pro/10 ISA
 .It
-Intel EtherExpress Pro/10+
+Intel EtherExpress Pro/10+ ISA
 .It
-The Olicom OC2220
+Olicom OC2220 Ethernet PC Card
+.It
+Olicom OC2232 Ethernet/Modem PC Card
+.It
+Silicom Ethernet LAN PC Card
+.It
+Silicom EtherSerial LAN PC Card
 .El
 .Sh DIAGNOSTICS
 .Bl -diag
@@ -97,7 +104,16 @@ The
 .Nm
 device driver was written by
 .An Javier Mart\('in Rueda .
+The PC Card attachment was written by
+.An Mitsuru ISAWAKI
+and
+.An Warner Losh .
 This manual page was written by
 .An David E. O'Brien .
 .Sh BUGS
 Currently the driver does not support multicast.
+.Pp
+The Silicom EtherSerial card's serial port does not currently work.
+The Olicom OC2232 PC Card should work with the
+.Nm
+driver, but is currently completely broken.

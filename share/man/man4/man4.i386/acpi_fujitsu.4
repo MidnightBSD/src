@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_fujitsu.4,v 1.2.2.1 2005/07/30 09:34:58 hrs Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_fujitsu.4,v 1.5 2006/04/01 11:21:00 brueffer Exp $
 .\"
 .Dd March 20, 2005
 .Dt ACPI_FUJITSU 4 i386
@@ -32,7 +32,19 @@
 .Nm acpi_fujitsu
 .Nd Fujitsu Laptop Extras
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device acpi_fujitsu"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+acpi_fujitsu_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -154,7 +166,7 @@ driver first appeared in
 The
 .Nm
 driver was written by
-.An Sean Bullington Aq sean@stalker.org ,
+.An Sean Bullington Aq shegget@gmail.com ,
 .An Anish Mistry Aq mistry.7@osu.edu ,
 and
 .An Marc Santcroos Aq marks@ripe.net .

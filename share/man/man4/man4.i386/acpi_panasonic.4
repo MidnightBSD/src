@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_panasonic.4,v 1.4.2.2 2005/08/18 15:01:23 keramida Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_panasonic.4,v 1.7 2006/04/01 11:21:00 brueffer Exp $
 .\"
 .Dd July 11, 2004
 .Dt ACPI_PANASONIC 4 i386
@@ -32,7 +32,19 @@
 .Nm acpi_panasonic
 .Nd "ACPI hotkey driver for Panasonic laptops"
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device acpi_panasonic"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+acpi_panasonic_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm

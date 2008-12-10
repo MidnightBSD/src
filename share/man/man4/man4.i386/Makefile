@@ -1,6 +1,7 @@
-# $FreeBSD: src/share/man/man4/man4.i386/Makefile,v 1.178.2.4 2006/03/10 23:27:41 rik Exp $
+# $FreeBSD: src/share/man/man4/man4.i386/Makefile,v 1.185 2007/03/30 21:19:10 takawata Exp $
 
-MAN=	acpi_asus.4 \
+MAN=	acpi_aiboost.4 \
+	acpi_asus.4 \
 	acpi_fujitsu.4 \
 	acpi_ibm.4 \
 	acpi_panasonic.4 \
@@ -19,7 +20,6 @@ MAN=	acpi_asus.4 \
 	ct.4 \
 	ctau.4 \
 	cx.4 \
-	el.4 \
 	ep.4 \
 	ex.4 \
 	fe.4 \
@@ -27,7 +27,6 @@ MAN=	acpi_asus.4 \
 	ie.4 \
 	io.4 \
 	linux.4 \
-	lnc.4 \
 	longrun.4 \
 	mcd.4 \
 	mse.4 \

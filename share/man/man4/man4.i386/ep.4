@@ -27,7 +27,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/ep.4,v 1.37.2.3 2006/02/02 07:50:02 trhodes Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/ep.4,v 1.45 2007/01/30 08:40:04 brueffer Exp $
 .\"
 .Dd July 16, 2005
 .Dt EP 4 i386
@@ -154,54 +154,55 @@ They are supported by the
 driver.
 .Sh DIAGNOSTICS
 .Bl -diag
-.It ep0: reset (status: %x)
+.It "ep0: reset (status: %x)"
 The driver has encountered a FIFO underrun or overrun.
 The driver will reset the card and the packet will be lost.
 This is not fatal.
-.It ep0: eeprom failed to come ready
+.It "ep0: eeprom failed to come ready"
 The eeprom failed to come ready.
 This probably means the card is wedged.
-.It ep0: 3c509 in test mode. Erase pencil mark!
+.It "ep0: 3c509 in test mode. Erase pencil mark!"
 This means that someone has scribbled with pencil
 in the test area on the card.
 Erase the pencil mark and reboot.
 (This is not a joke).
-.It ep0: No I/O space?!
+.It "ep0: No I/O space?!"
 The driver was unable to allocate the I/O space that it thinks
 should be there.
 Look for conflicts with other devices.
-.It ep0: No irq?!
-The driver couldn't allocate the interrupt it wanted.
+.It "ep0: No irq?!"
+The driver could not allocate the interrupt it wanted.
 Look for conflicts, although sharing interrupts for PC Card is normal.
-.It ep0: No connectors!
+.It "ep0: No connectors!"
 The driver queried the hardware for what ethernet attachment were
 present, but the hardware reported none that the driver recognized.
-.It ep0: Unable to get Ethernet address!
+.It "ep0: Unable to get Ethernet address!"
 The driver was unable to read the ethernet address from the EEPROM.
 This is likely the result of the card being wedged.
-.It ep0: if_alloc() failed
+.It "ep0: if_alloc() failed"
 The driver was unable to allocate a ifnet structure.
 This may happen in extremely low memory conditions.
-.It ep0: strange connector type in EEPROM: assuming AUI
+.It "ep0: strange connector type in EEPROM: assuming AUI"
 The driver does not know what to do with the information the EEPROM
 has about connectors, so it is assuming the worst.
-.It ep0: unknown ID 0xXXXXXXXX
-The driver has found an ID that it believes it supports, but doesn't
+.It "ep0: unknown ID 0xXXXXXXXX"
+The driver has found an ID that it believes it supports, but does not
 have a specific identification string to present to the user.
-.It ep0: <%s> at port 0x%03x in EISA mode
+.It "ep0: <%s> at port 0x%03x in EISA mode"
 The 3C509 ISA card is in EISA mode.
-This message appears to be purely informational. 
-.It ep0: <%s> at x0%03x in PnP mode
+This message appears to be purely informational.
+.It "ep0: <%s> at x0%03x in PnP mode"
 This card appears to be in Plug and Play mode.
 It should be probed as part of the plug and play phase of the ISA
 probes.
-.It ep0: Invalid EEPROM checksum!
+.It "ep0: Invalid EEPROM checksum!"
 The EEPROM has a bad checksum, so the driver is ignoring the card.
-.It ep0: bus_setup_intr() failed!
+.It "ep0: bus_setup_intr() failed!"
 The driver was unable to setup the interrupt handler.
 This should never happen.
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr ed 4 ,
 .Xr el 4 ,
 .Xr ie 4 ,

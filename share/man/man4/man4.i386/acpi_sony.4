@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_sony.4,v 1.1.2.1 2005/09/19 16:51:10 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_sony.4,v 1.4 2006/11/01 03:45:24 kevlo Exp $
 .\"
 .Dd September 14, 2005
 .Dt ACPI_SONY 4 i386
@@ -31,7 +31,19 @@
 .Nm acpi_sony
 .Nd "ACPI notebook controller driver for Sony laptops"
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device acpi_sony"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+acpi_sony_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -41,14 +53,17 @@ The following sysctl is currently implemented:
 .Bl -tag -width indent
 .It Va dev.acpi_sony.0.brightness
 Current brightness level of the display.
+.It Va dev.acpi_sony.0.cdp
+Turns the CD power on or off.
+.El
+.Sh SEE ALSO
+.Xr acpi 4 ,
+.Xr sysctl 8
 .Sh HISTORY
 The
 .Nm
 driver first appeared in
 .Fx 6.0 .
-.Sh SEE ALSO
-.Xr acpi 4 ,
-.Xr sysctl 8
 .Sh AUTHORS
 The
 .Nm

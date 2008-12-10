@@ -23,16 +23,28 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_asus.4,v 1.9.2.1 2005/07/30 09:34:58 hrs Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_asus.4,v 1.14 2007/06/02 21:10:01 philip Exp $
 .\"
-.Dd May 9, 2005
+.Dd June 2, 2007
 .Dt ACPI_ASUS 4 i386
 .Os
 .Sh NAME
 .Nm acpi_asus
 .Nd Asus Laptop Extras
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device acpi_asus"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+acpi_asus_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -55,6 +67,12 @@ xxN
 A1x
 .It
 A2x
+.It
+A3N
+.It
+A4D
+.It
+A6VM
 .It
 D1x
 .It
@@ -84,6 +102,8 @@ M1A
 .It
 M2E
 .It
+M6N
+.It
 M6R
 .It
 S1x
@@ -91,6 +111,8 @@ S1x
 S2x
 .It
 V6V
+.It
+W5A
 .El
 .Pp
 Additionally,

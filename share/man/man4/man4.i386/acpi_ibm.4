@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_ibm.4,v 1.2.2.5 2006/02/17 20:43:12 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/man4.i386/acpi_ibm.4,v 1.15 2006/12/01 09:00:38 ru Exp $
 .\"
 .Dd January 14, 2006
 .Dt ACPI_IBM 4 i386
@@ -32,7 +32,19 @@
 .Nm acpi_ibm
 .Nd "ACPI extras driver for IBM laptops"
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device acpi_ibm"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+acpi_ibm_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -381,6 +393,7 @@ case ${NOTIFY} in
                         sysctl dev.acpi_${OEM}.0.bluetooth=1
                         MESSAGE="bluetooth enabled"
                 fi
+                ;;
         0x10|0x11)
                 LEVEL=`sysctl -n dev.acpi_${OEM}.0.lcd_brightness`
                 PERCENT=`${ECHO} "${BC_PRECOMMANDS} ; \\

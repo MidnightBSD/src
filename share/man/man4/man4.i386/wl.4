@@ -28,8 +28,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/man4.i386/wl.4,v 1.20 2004/12/21 01:09:34 brueffer Exp $
-.Dd July 7, 1997
+.\" $FreeBSD: src/share/man/man4/man4.i386/wl.4,v 1.22 2006/09/29 16:16:41 bms Exp $
+.Dd September 29, 2006
 .Dt WL 4 i386
 .Os
 .Sh NAME
@@ -147,7 +147,7 @@ It may experience transmit-side
 errors when modern faster cpus send packets at it faster than it can handle.
 The driver (and probably the chip) does not support an all multicast mode.
 As a result, it can be used with applications like
-.Xr mrouted 8 ,
+.Xr mrouted 8 Pq Pa ports/net/mrouted ,
 but it must go into promiscuous mode for that to work.
 The driver
 is slow to change modes from "normal" to promiscuous mode, presumably

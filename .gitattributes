@@ -22751,6 +22751,7 @@ share/man/man4/mac_stub.4 -text
 share/man/man4/mac_test.4 -text
 share/man/man4/man4.i386/CPU_ELAN.4 -text
 share/man/man4/man4.i386/Makefile -text
+share/man/man4/man4.i386/acpi_aiboost.4 -text
 share/man/man4/man4.i386/acpi_asus.4 -text
 share/man/man4/man4.i386/acpi_fujitsu.4 -text
 share/man/man4/man4.i386/acpi_ibm.4 -text
