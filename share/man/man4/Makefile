@@ -1,9 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.6 2008/11/19 21:09:18 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.7 2008/12/02 03:07:46 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
+	acpi_dock.4 \
 	acpi_thermal.4 \
 	acpi_video.4 \
 	adv.4 \
@@ -47,6 +48,7 @@ MAN=	aac.4 \
 	ciss.4 \
 	cm.4 \
 	cnw.4 \
+	coretemp.4 \
 	cpufreq.4 \
 	crypto.4 \
 	cue.4 \
@@ -265,6 +267,7 @@ MAN=	aac.4 \
 	sbp.4 \
 	sbp_targ.4 \
 	sbsh.4 \
+	scc.4 \
 	sched_4bsd.4 \
 	sched_ule.4 \
 	screen.4 \
@@ -376,6 +379,7 @@ MAN=	aac.4 \
 	witness.4 \
 	wlan.4 \
 	wlan_acl.4 \
+	wlan_amrr.4 \
 	wlan_ccmp.4 \
 	wlan_tkip.4 \
 	wlan_wep.4 \
