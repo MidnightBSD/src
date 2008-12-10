@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ncv/ncr53c500.c,v 1.12 2005/05/29 04:42:23 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ncv/ncr53c500.c,v 1.13 2006/05/16 14:36:29 phk Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -73,7 +73,6 @@ __FBSDID("$FreeBSD: src/sys/dev/ncv/ncr53c500.c,v 1.12 2005/05/29 04:42:23 nyan 
 #endif /* __NetBSD__ */
 
 #ifdef __FreeBSD__
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/bus.h>
 
