@@ -22601,6 +22601,7 @@ share/man/man3/tree.3 -text
 share/man/man4/Makefile -text
 share/man/man4/aac.4 -text
 share/man/man4/acpi.4 -text
+share/man/man4/acpi_dock.4 -text
 share/man/man4/acpi_thermal.4 -text
 share/man/man4/acpi_video.4 -text
 share/man/man4/adv.4 -text
@@ -22644,6 +22645,7 @@ share/man/man4/ch.4 -text
 share/man/man4/ciss.4 -text
 share/man/man4/cm.4 -text
 share/man/man4/cnw.4 -text
+share/man/man4/coretemp.4 -text
 share/man/man4/cpufreq.4 -text
 share/man/man4/crypto.4 -text
 share/man/man4/cue.4 -text
@@ -22931,6 +22933,7 @@ share/man/man4/safe.4 -text
 share/man/man4/sbp.4 -text
 share/man/man4/sbp_targ.4 -text
 share/man/man4/sbsh.4 -text
+share/man/man4/scc.4 -text
 share/man/man4/sched_4bsd.4 -text
 share/man/man4/sched_ule.4 -text
 share/man/man4/screen.4 -text
@@ -23042,6 +23045,7 @@ share/man/man4/wi.4 -text
 share/man/man4/witness.4 -text
 share/man/man4/wlan.4 -text
 share/man/man4/wlan_acl.4 -text
+share/man/man4/wlan_amrr.4 -text
 share/man/man4/wlan_ccmp.4 -text
 share/man/man4/wlan_tkip.4 -text
 share/man/man4/wlan_wep.4 -text
