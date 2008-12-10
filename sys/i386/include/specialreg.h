@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)specialreg.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/i386/include/specialreg.h,v 1.27.8.2 2006/07/21 15:12:03 mr Exp $
+ * $FreeBSD: src/sys/i386/include/specialreg.h,v 1.42 2007/08/15 19:26:02 des Exp $
  */
 
 #ifndef _MACHINE_SPECIALREG_H_
@@ -37,12 +37,9 @@
  * Bits in 386 special registers:
  */
 #define	CR0_PE	0x00000001	/* Protected mode Enable */
-#define	CR0_MP	0x00000002	/* "Math" Present (NPX or NPX emulator) */
-#define	CR0_EM	0x00000004	/* EMulate non-NPX coproc. (trap ESC only) */
+#define	CR0_MP	0x00000002	/* "Math" (fpu) Present */
+#define	CR0_EM	0x00000004	/* EMulate FPU instructions. (trap ESC only) */
 #define	CR0_TS	0x00000008	/* Task Switched (if MP, trap ESC and WAIT) */
-#ifdef notused
-#define	CR0_ET	0x00000010	/* Extension Type (387 (if set) vs 287) */
-#endif
 #define	CR0_PG	0x80000000	/* PaGing enable */
 
 /*
@@ -69,6 +66,11 @@
 #define	CR4_PCE	0x00000100	/* Performance monitoring counter enable */
 #define	CR4_FXSR 0x00000200	/* Fast FPU save/restore used by OS */
 #define	CR4_XMM	0x00000400	/* enable SIMD/MMX2 to use except 16 */
+
+/*
+ * Bits in AMD64 special registers.  EFER is 64 bits wide.
+ */
+#define	EFER_NXE 0x000000800	/* PTE No-Execute bit enable (R/W) */
 
 /*
  * CPUID instruction features register
@@ -107,22 +109,39 @@
 #define	CPUID_IA64	0x40000000
 #define	CPUID_PBE	0x80000000
 
+#define	CPUID2_SSE3	0x00000001
+#define	CPUID2_MON	0x00000008
+#define	CPUID2_DS_CPL	0x00000010
+#define	CPUID2_VMX	0x00000020
+#define	CPUID2_SMX	0x00000040
+#define	CPUID2_EST	0x00000080
+#define	CPUID2_TM2	0x00000100
+#define	CPUID2_SSSE3	0x00000200
+#define	CPUID2_CNXTID	0x00000400
+#define	CPUID2_CX16	0x00002000
+#define	CPUID2_XTPR	0x00004000
+#define	CPUID2_PDCM	0x00008000
+#define	CPUID2_DCA	0x00040000
+
 /*
  * Important bits in the AMD extended cpuid flags
  */
-#define AMDID_SYSCALL	0x00000800
-#define AMDID_MP	0x00080000
-#define AMDID_NX	0x00100000
-#define AMDID_EXT_MMX	0x00400000
-#define AMDID_FFXSR	0x01000000
-#define AMDID_RDTSCP	0x08000000
-#define AMDID_LM	0x20000000
-#define AMDID_EXT_3DNOW	0x40000000
-#define AMDID_3DNOW	0x80000000
+#define	AMDID_SYSCALL	0x00000800
+#define	AMDID_MP	0x00080000
+#define	AMDID_NX	0x00100000
+#define	AMDID_EXT_MMX	0x00400000
+#define	AMDID_FFXSR	0x01000000
+#define	AMDID_RDTSCP	0x08000000
+#define	AMDID_LM	0x20000000
+#define	AMDID_EXT_3DNOW	0x40000000
+#define	AMDID_3DNOW	0x80000000
 
-#define AMDID2_LAHF	0x00000001
-#define AMDID2_CMP	0x00000002
-#define AMDID2_CR8	0x00000010
+#define	AMDID2_LAHF	0x00000001
+#define	AMDID2_CMP	0x00000002
+#define	AMDID2_SVM	0x00000004
+#define	AMDID2_EXT_APIC	0x00000008
+#define	AMDID2_CR8	0x00000010
+#define	AMDID2_PREFETCH	0x00000100
 
 /*
  * CPUID instruction 1 ebx info
@@ -135,29 +154,30 @@
 /*
  * AMD extended function 8000_0008h ecx info
  */
-#define AMDID_CMP_CORES		0x000000ff
+#define	AMDID_CMP_CORES		0x000000ff
 
 /*
  * Model-specific registers for the i386 family
  */
-#define MSR_P5_MC_ADDR		0x000
-#define MSR_P5_MC_TYPE		0x001
-#define MSR_TSC			0x010
+#define	MSR_P5_MC_ADDR		0x000
+#define	MSR_P5_MC_TYPE		0x001
+#define	MSR_TSC			0x010
 #define	MSR_P5_CESR		0x011
 #define	MSR_P5_CTR0		0x012
 #define	MSR_P5_CTR1		0x013
 #define	MSR_IA32_PLATFORM_ID	0x017
-#define MSR_APICBASE		0x01b
-#define MSR_EBL_CR_POWERON	0x02a
+#define	MSR_APICBASE		0x01b
+#define	MSR_EBL_CR_POWERON	0x02a
 #define	MSR_TEST_CTL		0x033
-#define MSR_BIOS_UPDT_TRIG	0x079
+#define	MSR_BIOS_UPDT_TRIG	0x079
 #define	MSR_BBL_CR_D0		0x088
 #define	MSR_BBL_CR_D1		0x089
 #define	MSR_BBL_CR_D2		0x08a
-#define MSR_BIOS_SIGN		0x08b
-#define MSR_PERFCTR0		0x0c1
-#define MSR_PERFCTR1		0x0c2
-#define MSR_MTRRcap		0x0fe
+#define	MSR_BIOS_SIGN		0x08b
+#define	MSR_PERFCTR0		0x0c1
+#define	MSR_PERFCTR1		0x0c2
+#define	MSR_IA32_EXT_CONFIG	0x0ee	/* Undocumented. Core Solo/Duo only */
+#define	MSR_MTRRcap		0x0fe
 #define	MSR_BBL_CR_ADDR		0x116
 #define	MSR_BBL_CR_DECC		0x118
 #define	MSR_BBL_CR_CTL		0x119
@@ -167,45 +187,47 @@
 #define	MSR_SYSENTER_CS_MSR	0x174
 #define	MSR_SYSENTER_ESP_MSR	0x175
 #define	MSR_SYSENTER_EIP_MSR	0x176
-#define MSR_MCG_CAP		0x179
-#define MSR_MCG_STATUS		0x17a
-#define MSR_MCG_CTL		0x17b
-#define MSR_EVNTSEL0		0x186
-#define MSR_EVNTSEL1		0x187
-#define MSR_THERM_CONTROL	0x19a
-#define MSR_THERM_INTERRUPT	0x19b
-#define MSR_THERM_STATUS	0x19c
-#define MSR_DEBUGCTLMSR		0x1d9
-#define MSR_LASTBRANCHFROMIP	0x1db
-#define MSR_LASTBRANCHTOIP	0x1dc
-#define MSR_LASTINTFROMIP	0x1dd
-#define MSR_LASTINTTOIP		0x1de
-#define MSR_ROB_CR_BKUPTMPDR6	0x1e0
-#define MSR_MTRRVarBase		0x200
-#define MSR_MTRR64kBase		0x250
-#define MSR_MTRR16kBase		0x258
-#define MSR_MTRR4kBase		0x268
-#define MSR_MTRRdefType		0x2ff
-#define MSR_MC0_CTL		0x400
-#define MSR_MC0_STATUS		0x401
-#define MSR_MC0_ADDR		0x402
-#define MSR_MC0_MISC		0x403
-#define MSR_MC1_CTL		0x404
-#define MSR_MC1_STATUS		0x405
-#define MSR_MC1_ADDR		0x406
-#define MSR_MC1_MISC		0x407
-#define MSR_MC2_CTL		0x408
-#define MSR_MC2_STATUS		0x409
-#define MSR_MC2_ADDR		0x40a
-#define MSR_MC2_MISC		0x40b
-#define MSR_MC4_CTL		0x40c
-#define MSR_MC4_STATUS		0x40d
-#define MSR_MC4_ADDR		0x40e
-#define MSR_MC4_MISC		0x40f
-#define MSR_MC3_CTL		0x410
-#define MSR_MC3_STATUS		0x411
-#define MSR_MC3_ADDR		0x412
-#define MSR_MC3_MISC		0x413
+#define	MSR_MCG_CAP		0x179
+#define	MSR_MCG_STATUS		0x17a
+#define	MSR_MCG_CTL		0x17b
+#define	MSR_EVNTSEL0		0x186
+#define	MSR_EVNTSEL1		0x187
+#define	MSR_THERM_CONTROL	0x19a
+#define	MSR_THERM_INTERRUPT	0x19b
+#define	MSR_THERM_STATUS	0x19c
+#define	MSR_IA32_MISC_ENABLE	0x1a0
+#define	MSR_DEBUGCTLMSR		0x1d9
+#define	MSR_LASTBRANCHFROMIP	0x1db
+#define	MSR_LASTBRANCHTOIP	0x1dc
+#define	MSR_LASTINTFROMIP	0x1dd
+#define	MSR_LASTINTTOIP		0x1de
+#define	MSR_ROB_CR_BKUPTMPDR6	0x1e0
+#define	MSR_MTRRVarBase		0x200
+#define	MSR_MTRR64kBase		0x250
+#define	MSR_MTRR16kBase		0x258
+#define	MSR_MTRR4kBase		0x268
+#define	MSR_PAT			0x277
+#define	MSR_MTRRdefType		0x2ff
+#define	MSR_MC0_CTL		0x400
+#define	MSR_MC0_STATUS		0x401
+#define	MSR_MC0_ADDR		0x402
+#define	MSR_MC0_MISC		0x403
+#define	MSR_MC1_CTL		0x404
+#define	MSR_MC1_STATUS		0x405
+#define	MSR_MC1_ADDR		0x406
+#define	MSR_MC1_MISC		0x407
+#define	MSR_MC2_CTL		0x408
+#define	MSR_MC2_STATUS		0x409
+#define	MSR_MC2_ADDR		0x40a
+#define	MSR_MC2_MISC		0x40b
+#define	MSR_MC3_CTL		0x40c
+#define	MSR_MC3_STATUS		0x40d
+#define	MSR_MC3_ADDR		0x40e
+#define	MSR_MC3_MISC		0x40f
+#define	MSR_MC4_CTL		0x410
+#define	MSR_MC4_STATUS		0x411
+#define	MSR_MC4_ADDR		0x412
+#define	MSR_MC4_MISC		0x413
 
 /*
  * Constants related to MSR's.
@@ -216,11 +238,23 @@
 #define	APICBASE_ADDRESS	0xfffff000
 
 /*
+ * PAT modes.
+ */
+#define	PAT_UNCACHEABLE		0x00
+#define	PAT_WRITE_COMBINING	0x01
+#define	PAT_WRITE_THROUGH	0x04
+#define	PAT_WRITE_PROTECTED	0x05
+#define	PAT_WRITE_BACK		0x06
+#define	PAT_UNCACHED		0x07
+#define	PAT_VALUE(i, m)		((long long)(m) << (8 * (i)))
+#define	PAT_MASK(i)		PAT_VALUE(i, 0xff)
+
+/*
  * Constants related to MTRRs
  */
-#define MTRR_N64K		8	/* numbers of fixed-size entries */
-#define MTRR_N16K		16
-#define MTRR_N4K		64
+#define	MTRR_N64K		8	/* numbers of fixed-size entries */
+#define	MTRR_N16K		16
+#define	MTRR_N4K		64
 
 /*
  * Cyrix configuration registers, accessible as IO ports.
@@ -253,7 +287,7 @@
 #define	CCR2_SUSP_HLT	0x08	/* Suspend on HALT */
 #define	CCR2_WT1		0x10	/* WT region 1 */
 #define	CCR2_WPR1		0x10	/* Write-protect region 1 */
-#define CCR2_BARB		0x20	/* Flushes write-back cache when entering
+#define	CCR2_BARB		0x20	/* Flushes write-back cache when entering
 								   hold state. */
 #define	CCR2_BWRT		0x40	/* Enables burst write cycles */
 #define	CCR2_USE_SUSP	0x80	/* Enables suspend pins */
@@ -380,11 +414,11 @@
 #define	RCR6	0xe2
 #define	RCR7	0xe3
 
-#define RCR_RCD	0x01	/* Disables caching for ARRx (x = 0-6). */
-#define RCR_RCE	0x01	/* Enables caching for ARR7. */
-#define RCR_WWO	0x02	/* Weak write ordering. */
+#define	RCR_RCD	0x01	/* Disables caching for ARRx (x = 0-6). */
+#define	RCR_RCE	0x01	/* Enables caching for ARR7. */
+#define	RCR_WWO	0x02	/* Weak write ordering. */
 #define	RCR_WL	0x04	/* Weak locking. */
-#define RCR_WG	0x08	/* Write gathering. */
+#define	RCR_WG	0x08	/* Write gathering. */
 #define	RCR_WT	0x10	/* Write-through. */
 #define	RCR_NLB	0x20	/* LBA# pin is not asserted. */
 
@@ -393,41 +427,44 @@
 #define	AMD_WT_ALLOC_PRE	0x20000	/* programmable range enable */
 #define	AMD_WT_ALLOC_FRE	0x10000	/* fixed (A0000-FFFFF) range enable */
 
+/* AMD64 MSR's */
+#define	MSR_EFER	0xc0000080	/* extended features */
+
 /* VIA ACE crypto featureset: for via_feature_rng */
 #define	VIA_HAS_RNG		1	/* cpu has RNG */
 
-/* VIA ACE crypto featureset: for via_has_xcrypt */
-#define VIA_HAS_AES		1	/* cpu has AES */
-#define VIA_HAS_SHA		2	/* cpu has SHA1 & SHA256 */
-#define VIA_HAS_MM		4	/* cpu has RSA instructions */
-#define VIA_HAS_AESCTR		8	/* cpu has AES-CTR instructions */
+/* VIA ACE crypto featureset: for via_feature_xcrypt */
+#define	VIA_HAS_AES		1	/* cpu has AES */
+#define	VIA_HAS_SHA		2	/* cpu has SHA1 & SHA256 */
+#define	VIA_HAS_MM		4	/* cpu has RSA instructions */
+#define	VIA_HAS_AESCTR		8	/* cpu has AES-CTR instructions */
 
 /* Centaur Extended Feature flags */
-#define VIA_CPUID_HAS_RNG	0x000004
-#define VIA_CPUID_DO_RNG	0x000008
-#define VIA_CPUID_HAS_ACE	0x000040
-#define VIA_CPUID_DO_ACE	0x000080
-#define VIA_CPUID_HAS_ACE2	0x000100
-#define VIA_CPUID_DO_ACE2	0x000200
-#define VIA_CPUID_HAS_PHE	0x000400
-#define VIA_CPUID_DO_PHE	0x000800
-#define VIA_CPUID_HAS_PMM	0x001000
-#define VIA_CPUID_DO_PMM	0x002000
+#define	VIA_CPUID_HAS_RNG	0x000004
+#define	VIA_CPUID_DO_RNG	0x000008
+#define	VIA_CPUID_HAS_ACE	0x000040
+#define	VIA_CPUID_DO_ACE	0x000080
+#define	VIA_CPUID_HAS_ACE2	0x000100
+#define	VIA_CPUID_DO_ACE2	0x000200
+#define	VIA_CPUID_HAS_PHE	0x000400
+#define	VIA_CPUID_DO_PHE	0x000800
+#define	VIA_CPUID_HAS_PMM	0x001000
+#define	VIA_CPUID_DO_PMM	0x002000
 
 /* VIA ACE xcrypt-* instruction context control options */
-#define VIA_CRYPT_CWLO_ROUND_M		0x0000000f
-#define VIA_CRYPT_CWLO_ALG_M		0x00000070
-#define VIA_CRYPT_CWLO_ALG_AES		0x00000000
-#define VIA_CRYPT_CWLO_KEYGEN_M		0x00000080
-#define VIA_CRYPT_CWLO_KEYGEN_HW	0x00000000
-#define VIA_CRYPT_CWLO_KEYGEN_SW	0x00000080
-#define VIA_CRYPT_CWLO_NORMAL		0x00000000
-#define VIA_CRYPT_CWLO_INTERMEDIATE	0x00000100
-#define VIA_CRYPT_CWLO_ENCRYPT		0x00000000
-#define VIA_CRYPT_CWLO_DECRYPT		0x00000200
-#define VIA_CRYPT_CWLO_KEY128		0x0000000a	/* 128bit, 10 rds */
-#define VIA_CRYPT_CWLO_KEY192		0x0000040c	/* 192bit, 12 rds */
-#define VIA_CRYPT_CWLO_KEY256		0x0000080e	/* 256bit, 15 rds */
+#define	VIA_CRYPT_CWLO_ROUND_M		0x0000000f
+#define	VIA_CRYPT_CWLO_ALG_M		0x00000070
+#define	VIA_CRYPT_CWLO_ALG_AES		0x00000000
+#define	VIA_CRYPT_CWLO_KEYGEN_M		0x00000080
+#define	VIA_CRYPT_CWLO_KEYGEN_HW	0x00000000
+#define	VIA_CRYPT_CWLO_KEYGEN_SW	0x00000080
+#define	VIA_CRYPT_CWLO_NORMAL		0x00000000
+#define	VIA_CRYPT_CWLO_INTERMEDIATE	0x00000100
+#define	VIA_CRYPT_CWLO_ENCRYPT		0x00000000
+#define	VIA_CRYPT_CWLO_DECRYPT		0x00000200
+#define	VIA_CRYPT_CWLO_KEY128		0x0000000a	/* 128bit, 10 rds */
+#define	VIA_CRYPT_CWLO_KEY192		0x0000040c	/* 192bit, 12 rds */
+#define	VIA_CRYPT_CWLO_KEY256		0x0000080e	/* 256bit, 15 rds */
 
 #ifndef LOCORE
 static __inline u_char

@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/mptable.h,v 1.222.2.1 2006/03/01 05:57:15 sam Exp $
+ * $FreeBSD: src/sys/i386/include/mptable.h,v 1.223 2006/02/22 21:38:33 sam Exp $
  */
 
 #ifndef __MACHINE_MPTABLE_H__
