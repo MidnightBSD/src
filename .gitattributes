@@ -22723,7 +22723,6 @@ share/man/man4/ispfw.4 -text
 share/man/man4/iwi.4 -text
 share/man/man4/ixgb.4 -text
 share/man/man4/joy.4 -text
-share/man/man4/kame.4 -text
 share/man/man4/kbdmux.4 -text
 share/man/man4/keyboard.4 -text
 share/man/man4/kld.4 -text
@@ -22839,6 +22838,7 @@ share/man/man4/ncr.4 -text
 share/man/man4/ncv.4 -text
 share/man/man4/netgraph.4 -text
 share/man/man4/netintro.4 -text
+share/man/man4/nfe.4 -text
 share/man/man4/ng_UI.4 -text
 share/man/man4/ng_async.4 -text
 share/man/man4/ng_atm.4 -text
@@ -23051,11 +23051,11 @@ share/man/man4/wlan_ccmp.4 -text
 share/man/man4/wlan_tkip.4 -text
 share/man/man4/wlan_wep.4 -text
 share/man/man4/wlan_xauth.4 -text
-share/man/man4/worm.4 -text
 share/man/man4/xe.4 -text
 share/man/man4/xl.4 -text
 share/man/man4/xpt.4 -text
 share/man/man4/zero.4 -text
+share/man/man4/zyd.4 -text
 share/man/man5/Makefile -text
 share/man/man5/a.out.5 -text
 share/man/man5/acct.5 -text

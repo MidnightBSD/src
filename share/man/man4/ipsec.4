@@ -27,48 +27,79 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ipsec.4,v 1.16.2.1 2006/03/09 12:41:34 gnn Exp $
+.\" $FreeBSD: src/share/man/man4/ipsec.4,v 1.22 2007/08/05 16:16:14 bz Exp $
 .\"
-.Dd February 14, 2006
+.Dd August 5, 2007
 .Dt IPSEC 4
 .Os
 .Sh NAME
-.Nm ipsec
-.Nd IP security protocol
+.Nm IPsec
+.Nd Internet Protocol Security protocol
 .Sh SYNOPSIS
+.Cd "options IPSEC"
+.Cd "options IPSEC_FILTERTUNNEL"
+.Cd "device crypto"
+.Pp
 .In sys/types.h
 .In netinet/in.h
-.In netinet6/ipsec.h
+.In netipsec/ipsec.h
+.In netipsec/ipsec6.h
 .Sh DESCRIPTION
 .Nm
 is a security protocol implemented within the Internet Protocol layer
-of the TCP/IP stack.
+of the networking stack.
 .Nm
 is defined for both IPv4 and IPv6
 .Xr ( inet 4
 and
 .Xr inet6 4 ) .
 .Nm
-contains two protocols, 
-ESP, the encapsulated security payload protocol and
-AH, the authentication header protocol.
-ESP prevents unauthorized parties from reading the payload of an IP packet
-by encrypting it using
-secret key cryptography algorithms.
-AH both authenticates guarantees the integrity of an IP packet
+is a set of protocols,
+.Tn ESP
+(for Encapsulating Security Payload)
+.Tn AH
+(for Authentication Header),
+and
+.Tn IPComp
+(for IP Payload Compression Protocol)
+that provide security services for IP datagrams.
+AH both authenticates and guarantees the integrity of an IP packet
 by attaching a cryptographic checksum computed using one-way hash functions.
+ESP, in addition, prevents unauthorized parties from reading the payload of
+an IP packet by also encrypting it.
+IPComp tries to increase communication performance by compressing IP payload,
+thus reducing the amount of data sent.
+This will help nodes on slow links but with enough computing power.
 .Nm
-has operates in one of two modes: transport mode or tunnel mode.
+operates in one of two modes: transport mode or tunnel mode.
 Transport mode is used to protect peer-to-peer communication between end nodes.
 Tunnel mode encapsulates IP packets within other IP packets
 and is designed for security gateways such as VPN endpoints.
+.Pp
+System configuration requires the
+.Xr crypto 4
+subsystem.
+.Pp
+The packets can be passed to a virtual
+.Xr enc 4
+interface,
+to perform packet filtering before outbound encryption and after decapsulation
+inbound.
+.Pp
+To properly filter on the inner packets of an
+.Nm
+tunnel with firewalls, add
+.Cd "options IPSEC_FILTERTUNNEL"
+to the kernel configuration file.
 .\"
 .Ss Kernel interface
 .Nm
 is controlled by a key management and policy engine,
-that reside in the operating system kernel.  Key management
+that reside in the operating system kernel.
+Key management
 is the process of associating keys with security associations, also
-know as SAs.  Policy management dictates when new security
+know as SAs.
+Policy management dictates when new security
 associations created or destroyed.
 .Pp
 The key management engine can be accessed from userland by using
@@ -88,8 +119,9 @@ interface.
 The kernel implements
 an extended version of the
 .Dv PF_KEY
-interface, and allows the programmer to define IPsec policies
-which are similar to the per-packet filters.  The
+interface and allows the programmer to define IPsec policies
+which are similar to the per-packet filters.
+The
 .Xr setsockopt 2
 interface is used to define per-socket behavior, and
 .Xr sysctl 3
@@ -103,40 +135,42 @@ should be implemented as daemon processes which call the
 .Nm APIs.
 .\"
 .Ss Policy management
-IPsec policies can be managed in one of two ways, either by 
+IPsec policies can be managed in one of two ways, either by
 configuring per-socket policies using the
-.Xr setsockopt 2 
+.Xr setsockopt 2
 system calls, or by configuring kernel level packet filter-based
 policies using the
 .Dv PF_KEY
 interface, via the
-.Xr setkey 8 
-command.
-In either case, IPsec policies must be specified using the syntax described in
-.Xr ipsec_set_policy 3 .
-Please refer to the
 .Xr setkey 8
-man page for instructions on its use.
+you can define IPsec policies against packets using rules similar to packet
+filtering rules.
+Refer to
+.Xr setkey 8
+on how to use it.
 .Pp
 When setting policies using the
 .Xr setkey 8
-command the
+command, the
 .Dq Li default
-option you can have the system use its default policy, explained
-below, for processing packets.
+option instructs the system to use its default policy, as
+explained below, for processing packets.
 The following sysctl variables are available for configuring the
-system's IPsec behavior.  The variables can have one of two values.
+system's IPsec behavior.
+The variables can have one of two values.
 A
 .Li 1
 means
 .Dq Li use ,
 which means that if there is a security association then use it but if
-there is not then the packets are not processed by IPsec.  The value
+there is not then the packets are not processed by IPsec.
+The value
 .Li 2
 is synonymous with
 .Dq Li require ,
 which requires that a security association must exist for the packets
-to move, and not be dropped.  These terms are defined in
+to move, and not be dropped.
+These terms are defined in
 .Xr ipsec_set_policy 8 .
 .Bl -column net.inet6.ipsec6.esp_trans_deflev integerxxx
 .It Sy "Name	Type	Changeable"
@@ -151,7 +185,8 @@ to move, and not be dropped.  These terms are defined in
 .El
 .Pp
 If the kernel does not find a matching, system wide, policy then the
-default value is applied.  The system wide default policy is specified
+default value is applied.
+The system wide default policy is specified
 by the following
 .Xr sysctl 8
 variables.
@@ -169,7 +204,19 @@ means
 .El
 .\"
 .Ss Miscellaneous sysctl variables
-The following variables are accessible via
+When the
+.Nm
+protocols are configured for use, all protocols are included in the system.
+To selectively enable/disable protocols, use
+.Xr sysctl 8 .
+.Bl -column net.inet.ipcomp.ipcomp_enable
+.It Sy "Name	Default"
+.It "net.inet.esp.esp_enable	On"
+.It "net.inet.ah.ah_enable	On"
+.It "net.inet.ipcomp.ipcomp_enable	Off"
+.El
+.Pp
+In addition the following variables are accessible via
 .Xr sysctl 8 ,
 for tweaking the kernel's IPsec behavior:
 .Bl -column net.inet6.ipsec6.inbonud_call_ike integerxxx
@@ -235,12 +282,13 @@ protocol acts as a plug-in to the
 and
 .Xr inet6 4
 protocols and therefore supports most of the protocols defined upon
-those IP-layer protocols.  The
+those IP-layer protocols.
+The
 .Xr icmp 4
 and
-.Xr icmp6 4 
+.Xr icmp6 4
 protocols may behave differently with
-.Nm 
+.Nm
 because
 .Nm
 can prevent
@@ -253,6 +301,8 @@ routines from looking into the IP payload.
 .Xr ioctl 2 ,
 .Xr socket 2 ,
 .Xr ipsec_set_policy 3 ,
+.Xr crypto 4 ,
+.Xr enc 4 ,
 .Xr icmp6 4 ,
 .Xr intro 4 ,
 .Xr ip6 4 ,
@@ -289,12 +339,42 @@ routines from looking into the IP payload.
 .%O work in progress material
 .Re
 .Sh HISTORY
-The implementation described herein appeared in WIDE/KAME IPv6/IPsec stack.
-.Sh BUGS
-The IPsec support is subject to change as the IPsec protocols develop.
+The original
+.Nm
+implementation appeared in the WIDE/KAME IPv6/IPsec stack.
 .Pp
+For
+.Fx 5.0
+a fully locked IPsec implementation called fast_ipsec was brought in.
+The protocols drew heavily on the
+.Ox
+implementation of the
+.Tn IPsec
+protocols.
+The policy management code was derived from the
+.Tn KAME
+implementation found
+in their
+.Tn IPsec
+protocols.
+The fast_ipsec implementation lacked
+.Xr ip6 4
+support but made use of the
+.Xr crypto 4
+subsystem.
+.Pp
+For
+.Fx 7.0
+.Xr ip6 4
+support was added to fast_ipsec.
+After this the old KAME IPsec implementation was dropped and fast_ipsec
+became what now is the only
+.Nm
+implementation in
+.Fx .
+.Sh BUGS
 There is no single standard for the policy engine API,
-so the policy engine API described herein is just for KAME implementation.
+so the policy engine API described herein is just for this implementation.
 .Pp
 AH and tunnel mode encapsulation may not work as you might expect.
 If you configure inbound
@@ -320,5 +400,12 @@ and
 .Dv SADB_SPDDUMP
 operations on
 .Dv PF_KEY
-sockets may fail due to lack of space.  Increasing the socket buffer
+sockets may fail due to lack of space.
+Increasing the socket buffer
 size may alleviate this problem.
+.Pp
+The
+.Tn IPcomp
+protocol support is currently broken.
+.Pp
+This documentation needs more review.

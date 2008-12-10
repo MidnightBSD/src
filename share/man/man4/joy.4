@@ -1,5 +1,5 @@
 .\"
-.\" $FreeBSD: src/share/man/man4/joy.4,v 1.26 2005/01/21 08:36:37 ru Exp $
+.\" $FreeBSD: src/share/man/man4/joy.4,v 1.30 2007/02/12 20:58:32 brueffer Exp $
 .\"
 .Dd January 23, 1995
 .Dt JOY 4
@@ -8,16 +8,26 @@
 .Nm joy
 .Nd joystick device driver
 .Sh SYNOPSIS
-To link into the kernel:
-.Cd device joy
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device joy"
+.Ed
 .Pp
-To load as a kernel loadable module:
-.Dl kldload joy
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+joy_load="YES"
+.Ed
 .Pp
 In
 .Pa /boot/device.hints :
 .Cd hint.joy.0.at="isa"
 .Cd hint.joy.0.port="0x201"
+.Cd hint.joy.1.at="isa"
+.Cd hint.joy.1.port="0x201"
 .Pp
 .In sys/joystick.h
 .Sh DESCRIPTION
@@ -94,7 +104,7 @@ The pinout of the DB-15 connector is as follow:
 .Ed
 .Pp
 Pots are normally 0-150k variable resistors (0-100k sometimes), and
-according to the IBM techref, the time is given by
+according to the IBM technical reference, the time is given by
 Time = 24.2e-6s + 0.011e-6s * R/Ohms
 .Sh FILES
 .Bl -tag -width /dev/joy?
@@ -102,7 +112,9 @@ Time = 24.2e-6s + 0.011e-6s * R/Ohms
 joystick device files
 .El
 .Sh HISTORY
-The joystick driver appeared in
+The
+.Nm
+driver appeared in
 .Fx 2.0.5 .
 .Sh AUTHORS
 .An Jean-Marc Zucconi Aq jmz@cabri.obs-besancon.fr

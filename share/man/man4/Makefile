@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.7 2008/12/02 03:07:46 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.8 2008/12/10 17:36:03 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -126,7 +126,6 @@ MAN=	aac.4 \
 	iwi.4 \
 	ixgb.4 \
 	joy.4 \
-	kame.4 \
 	kbdmux.4 \
 	keyboard.4 \
 	kld.4 \
@@ -172,6 +171,7 @@ MAN=	aac.4 \
 	ncv.4 \
 	netgraph.4 \
 	netintro.4 \
+	nfe.4 \
 	ng_async.4 \
 	ng_atm.4 \
 	ngatmbase.4 \
@@ -384,11 +384,11 @@ MAN=	aac.4 \
 	wlan_tkip.4 \
 	wlan_wep.4 \
 	wlan_xauth.4 \
-	worm.4 \
 	xe.4 \
 	xl.4 \
 	xpt.4 \
-	zero.4
+	zero.4 \
+	zyd.4
 
 MLINKS=	agp.4 agpgart.4
 MLINKS+=altq.4 ALTQ.4
