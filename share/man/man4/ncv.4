@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ncv.4,v 1.6 2004/08/10 22:17:01 simon Exp $
+.\" $FreeBSD: src/share/man/man4/ncv.4,v 1.7 2006/06/18 09:53:00 brueffer Exp $
 .\"
 .Dd August 10, 2004
 .Dt NCV 4
@@ -31,8 +31,20 @@
 .Nm ncv
 .Nd "NCR 53C500 based SCSI host adapter driver"
 .Sh SYNOPSIS
-.Cd "device ncv"
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device scbus"
+.Cd "device ncv"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ncv_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
