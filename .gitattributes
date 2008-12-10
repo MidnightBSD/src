@@ -22899,7 +22899,6 @@ share/man/man4/nsp.4 -text
 share/man/man4/null.4 -text
 share/man/man4/nve.4 -text
 share/man/man4/ohci.4 -text
-share/man/man4/oldcard.4 -text
 share/man/man4/orm.4 -text
 share/man/man4/pass.4 -text
 share/man/man4/patm.4 -text

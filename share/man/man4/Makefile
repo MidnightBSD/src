@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.8 2008/12/10 17:36:03 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.9 2008/12/10 17:54:40 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -232,7 +232,6 @@ MAN=	aac.4 \
 	null.4 \
 	${_nve.4} \
 	ohci.4 \
-	oldcard.4 \
 	orm.4 \
 	pass.4 \
 	patm.4 \
@@ -448,7 +447,6 @@ MLINKS+=netintro.4 net.4 \
 	netintro.4 networking.4
 MLINKS+=nge.4 if_nge.4
 MLINKS+=${_nve.4} ${_if_nve.4}
-MLINKS+=oldcard.4 card.4
 MLINKS+=patm.4 if_patm.4
 MLINKS+=pccbb.4 cbb.4
 MLINKS+=pcm.4 snd.4 \
