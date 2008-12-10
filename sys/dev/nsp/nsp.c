@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nsp/nsp.c,v 1.14 2005/05/29 04:42:24 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nsp/nsp.c,v 1.15 2006/05/16 14:36:29 phk Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -72,7 +72,6 @@ __FBSDID("$FreeBSD: src/sys/dev/nsp/nsp.c,v 1.14 2005/05/29 04:42:24 nyan Exp $"
 #endif /* __NetBSD__ */
 
 #ifdef __FreeBSD__
-#include <machine/clock.h>
 #include <machine/cpu.h>
 #include <machine/bus.h>
 
