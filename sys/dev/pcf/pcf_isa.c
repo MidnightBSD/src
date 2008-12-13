@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pcf/pcf_isa.c,v 1.5 2004/08/11 21:19:31 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pcf/pcf_isa.c,v 1.9 2007/03/21 03:38:36 nyan Exp $");
 
 /*
  * Hardware driver for a Philips PCF8584 I2C bus controller sitting
@@ -101,9 +101,12 @@ pcf_isa_probe(device_t dev)
 	u_long		start, count;
 	u_int		rid = 0, port, error;
 
-	bus_get_resource(dev, SYS_RES_IOPORT, rid, &start, &count);
-	
+	/* skip PnP probes */
+	if (isa_get_logicalid(dev))
+		return (ENXIO);
+
 	/* The port address must be explicitly specified */
+	bus_get_resource(dev, SYS_RES_IOPORT, rid, &start, &count);
 	if ((error = resource_int_value(PCF_NAME, 0, "port", &port) != 0))
 		return (error);
 
@@ -150,9 +153,9 @@ pcf_isa_attach(device_t dev)
 	pcf_rst_card(dev, IIC_FASTEST, PCF_DEFAULT_ADDR, NULL);
 
 	if (sc->res_irq) {
-		rv = BUS_SETUP_INTR(device_get_parent(dev), dev, sc->res_irq,
+		rv = bus_setup_intr(dev, sc->res_irq,
 				    INTR_TYPE_NET /* | INTR_ENTROPY */,
-				    pcf_intr, sc, &sc->intr_cookie);
+				    NULL, pcf_intr, sc, &sc->intr_cookie);
 		if (rv) {
 			device_printf(dev, "could not setup IRQ\n");
 			goto error;
@@ -169,14 +172,10 @@ pcf_isa_attach(device_t dev)
 
 error:
 	if (sc->res_irq != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IRQ, sc->rid_irq,
-					sc->res_irq);
 		bus_release_resource(dev, SYS_RES_IRQ, sc->rid_irq,
 				     sc->res_irq);
 	}
 	if (sc->res_ioport != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IOPORT, sc->rid_ioport,
-					sc->res_ioport);
 		bus_release_resource(dev, SYS_RES_IOPORT, sc->rid_ioport,
 				     sc->res_ioport);
 	}
@@ -198,13 +197,10 @@ pcf_isa_detach(device_t dev)
 		return (rv);
 
 	if (sc->res_irq != 0) {
-		BUS_TEARDOWN_INTR(device_get_parent(dev), dev, sc->res_irq,
-				  sc->intr_cookie);
-		bus_deactivate_resource(dev, SYS_RES_IRQ, sc->rid_irq, sc->res_irq);
+		bus_teardown_intr(dev, sc->res_irq, sc->intr_cookie);
 		bus_release_resource(dev, SYS_RES_IRQ, sc->rid_irq, sc->res_irq);
 	}
 
-	bus_deactivate_resource(dev, SYS_RES_IOPORT, sc->rid_ioport, sc->res_ioport);
 	bus_release_resource(dev, SYS_RES_IOPORT, sc->rid_ioport, sc->res_ioport);
 
 	return (0);

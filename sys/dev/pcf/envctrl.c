@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pcf/envctrl.c,v 1.5 2005/06/04 20:29:28 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pcf/envctrl.c,v 1.8 2007/03/21 03:38:36 nyan Exp $");
 
 /*
  * Device specific driver for the SUNW,envctrl device found on some
@@ -133,9 +133,9 @@ envctrl_attach(device_t dev)
 	/* reset the chip */
 	pcf_rst_card(dev, IIC_FASTEST, PCF_DEFAULT_ADDR, NULL);
 
-	rv = BUS_SETUP_INTR(device_get_parent(dev), dev, sc->res_irq,
+	rv = bus_setup_intr(dev, sc->res_irq,
 			    INTR_TYPE_NET /* | INTR_ENTROPY */,
-			    pcf_intr, sc, &sc->intr_cookie);
+			    NULL, pcf_intr, sc, &sc->intr_cookie);
 	if (rv) {
 		device_printf(dev, "could not setup IRQ\n");
 		goto error;
@@ -151,14 +151,10 @@ envctrl_attach(device_t dev)
 
 error:
 	if (sc->res_irq != 0) {
-		bus_deactivate_resource(dev, SYS_RES_IRQ, sc->rid_irq,
-					sc->res_irq);
 		bus_release_resource(dev, SYS_RES_IRQ, sc->rid_irq,
 				     sc->res_irq);
 	}
 	if (sc->res_ioport != 0) {
-		bus_deactivate_resource(dev, SYS_RES_MEMORY, sc->rid_ioport,
-					sc->res_ioport);
 		bus_release_resource(dev, SYS_RES_MEMORY, sc->rid_ioport,
 				     sc->res_ioport);
 	}
@@ -180,13 +176,10 @@ envctrl_detach(device_t dev)
 		return (rv);
 
 	if (sc->res_irq != 0) {
-		BUS_TEARDOWN_INTR(device_get_parent(dev), dev, sc->res_irq,
-				  sc->intr_cookie);
-		bus_deactivate_resource(dev, SYS_RES_IRQ, sc->rid_irq, sc->res_irq);
+		bus_teardown_intr(dev, sc->res_irq, sc->intr_cookie);
 		bus_release_resource(dev, SYS_RES_IRQ, sc->rid_irq, sc->res_irq);
 	}
 
-	bus_deactivate_resource(dev, SYS_RES_MEMORY, sc->rid_ioport, sc->res_ioport);
 	bus_release_resource(dev, SYS_RES_MEMORY, sc->rid_ioport, sc->res_ioport);
 
 	return (0);
