@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/mse/mse_cbus.c,v 1.4 2005/04/08 05:22:58 imp Exp $
+ * $FreeBSD: src/sys/dev/mse/mse_cbus.c,v 1.5 2006/05/16 14:36:28 phk Exp $
  */
 
 /*-
@@ -82,7 +82,6 @@
 #include <sys/mouse.h>
 
 #include <machine/bus.h>
-#include <machine/clock.h>
 #include <machine/resource.h>
 #include <sys/rman.h>
 
