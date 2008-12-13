@@ -35,7 +35,7 @@
  *
  */
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -43,7 +43,7 @@
 __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.46.2.1 2007/11/25 19:26:46 mlaier Exp $");
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include "opt_mac.h"
 #include "opt_bpf.h"
 #include "opt_pf.h"
@@ -80,14 +80,14 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.46.2.1 2007/11/25 19:26:46 m
 #include <sys/socketvar.h>
 #include <sys/kernel.h>
 #include <sys/time.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/sysctl.h>
 #include <sys/endian.h>
 #else
 #include <sys/pool.h>
 #endif
 #include <sys/proc.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/kthread.h>
 #include <sys/lock.h>
 #include <sys/sx.h>
@@ -100,7 +100,9 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.46.2.1 2007/11/25 19:26:46 m
 #include <net/bpf.h>
 #include <net/route.h>
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <net/radix_mpath.h>
+#endif
 #endif
 
 #include <netinet/in.h>
@@ -120,7 +122,9 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.46.2.1 2007/11/25 19:26:46 m
 #include <netinet/if_ether.h>
 
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <dev/rndvar.h>
+#endif
 #endif
 #include <net/pfvar.h>
 #include <net/if_pflog.h>
@@ -134,13 +138,13 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.46.2.1 2007/11/25 19:26:46 m
 #include <netinet/in_pcb.h>
 #include <netinet/icmp6.h>
 #include <netinet6/nd6.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <netinet6/ip6_var.h>
 #include <netinet6/in6_pcb.h>
 #endif
 #endif /* INET6 */
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <machine/in_cksum.h>
 #include <sys/limits.h>
 #include <sys/ucred.h>
@@ -174,7 +178,7 @@ struct pf_anchor_stackframe {
 	struct pf_anchor			*child;
 } pf_anchor_stack[64];
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 uma_zone_t		 pf_src_tree_pl, pf_rule_pl;
 uma_zone_t		 pf_state_pl, pf_altq_pl, pf_pooladdr_pl;
 #else
@@ -202,7 +206,7 @@ void			 pf_change_icmp(struct pf_addr *, u_int16_t *,
 			    struct pf_addr *, struct pf_addr *, u_int16_t,
 			    u_int16_t *, u_int16_t *, u_int16_t *,
 			    u_int16_t *, u_int8_t, sa_family_t);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 void			 pf_send_tcp(struct mbuf *,
 			    const struct pf_rule *, sa_family_t,
 #else
@@ -226,7 +230,7 @@ struct pf_rule		*pf_get_translation(struct pf_pdesc *, struct mbuf *,
 int			 pf_test_tcp(struct pf_rule **, struct pf_state **,
 			    int, struct pfi_kif *, struct mbuf *, int,
 			    void *, struct pf_pdesc *, struct pf_rule **,
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			    struct pf_ruleset **, struct ifqueue *,
 			    struct inpcb *);
 #else
@@ -235,7 +239,7 @@ int			 pf_test_tcp(struct pf_rule **, struct pf_state **,
 int			 pf_test_udp(struct pf_rule **, struct pf_state **,
 			    int, struct pfi_kif *, struct mbuf *, int,
 			    void *, struct pf_pdesc *, struct pf_rule **,
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			    struct pf_ruleset **, struct ifqueue *,
 			    struct inpcb *);
 #else
@@ -284,7 +288,7 @@ void			 pf_route(struct mbuf **, struct pf_rule *, int,
 void			 pf_route6(struct mbuf **, struct pf_rule *, int,
 			    struct ifnet *, struct pf_state *,
 			    struct pf_pdesc *);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 /* XXX: import */
 #else
 int			 pf_socket_lookup(int, struct pf_pdesc *);
@@ -306,7 +310,7 @@ struct pf_state		*pf_find_state_recurse(struct pfi_kif *,
 int			 pf_src_connlimit(struct pf_state **);
 int			 pf_check_congestion(struct ifqueue *);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 int in4_cksum(struct mbuf *m, u_int8_t nxt, int off, int len);
 
 extern int pf_end_threads;
@@ -379,7 +383,7 @@ struct pf_src_tree tree_src_tracking;
 struct pf_state_tree_id tree_id;
 struct pf_state_queue state_list;
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int pf_src_compare(struct pf_src_node *, struct pf_src_node *);
 static int pf_state_compare_lan_ext(struct pf_state *, struct pf_state *);
 static int pf_state_compare_ext_gwy(struct pf_state *, struct pf_state *);
@@ -394,7 +398,7 @@ RB_GENERATE(pf_state_tree_ext_gwy, pf_state,
 RB_GENERATE(pf_state_tree_id, pf_state,
     u.s.entry_id, pf_state_compare_id);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 #else
 static __inline int
@@ -442,7 +446,7 @@ pf_src_compare(struct pf_src_node *a, struct pf_src_node *b)
 	return (0);
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 #else
 static __inline int
@@ -514,7 +518,7 @@ pf_state_compare_lan_ext(struct pf_state *a, struct pf_state *b)
 	return (0);
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 #else
 static __inline int
@@ -586,7 +590,7 @@ pf_state_compare_ext_gwy(struct pf_state *a, struct pf_state *b)
 	return (0);
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
 #else
 static __inline int
@@ -939,7 +943,7 @@ pf_insert_state(struct pfi_kif *kif, struct pf_state *state)
 	}
 	if (RB_INSERT(pf_state_tree_id, &tree_id, state) != NULL) {
 		if (pf_status.debug >= PF_DEBUG_MISC) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			printf("pf: state insert failed: "
 			    "id: %016llx creatorid: %08x",
 			    (long long)be64toh(state->id),
@@ -975,7 +979,7 @@ pf_purge_thread(void *v)
 	for (;;) {
 		tsleep(pf_purge_thread, PWAIT, "pftm", 1 * hz);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		sx_slock(&pf_consistency_lock);
 		PF_LOCK();
 
@@ -1005,7 +1009,7 @@ pf_purge_thread(void *v)
 		}
 
 		splx(s);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 		sx_sunlock(&pf_consistency_lock);
 #endif
@@ -1025,7 +1029,7 @@ pf_state_expires(const struct pf_state *state)
 		return (time_second);
 	if (state->timeout == PFTM_UNTIL_PACKET)
 		return (0);
-#ifdef __FreeBSD__	
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	KASSERT(state->timeout != PFTM_UNLINKED,
 	    ("pf_state_expires: timeout == PFTM_UNLINKED"));
 	KASSERT((state->timeout < PFTM_MAX), 
@@ -1067,7 +1071,7 @@ pf_purge_expired_src_nodes(int waslocked)
 
 		 if (cur->states <= 0 && cur->expire <= time_second) {
 			 if (! locked) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 				 if (!sx_try_upgrade(&pf_consistency_lock)) {
 					 PF_UNLOCK();
 					 sx_sunlock(&pf_consistency_lock);
@@ -1095,7 +1099,7 @@ pf_purge_expired_src_nodes(int waslocked)
 	 }
 
 	 if (locked && !waslocked)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		sx_downgrade(&pf_consistency_lock);
 #else
 		rw_exit_write(&pf_consistency_lock);
@@ -1136,13 +1140,13 @@ pf_src_tree_remove_state(struct pf_state *s)
 void
 pf_unlink_state(struct pf_state *cur)
 {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	if (cur->local_flags & PFSTATE_EXPIRING)
 		return;
 	cur->local_flags |= PFSTATE_EXPIRING;
 #endif
 	if (cur->src.state == PF_TCPS_PROXY_DST) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		pf_send_tcp(NULL, cur->rule.ptr, cur->af,
 #else
 		pf_send_tcp(cur->rule.ptr, cur->af,
@@ -1176,7 +1180,7 @@ pf_free_state(struct pf_state *cur)
 	    pfsyncif->sc_bulk_terminator == cur))
 		return;
 #endif
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	KASSERT(cur->timeout == PFTM_UNLINKED,
 	    ("pf_free_state: cur->timeout != PFTM_UNLINKED"));
 #else
@@ -1223,7 +1227,7 @@ pf_purge_expired_states(u_int32_t maxcheck)
 		if (cur->timeout == PFTM_UNLINKED) {
 			/* free unlinked state */
 			if (! locked) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 				 if (!sx_try_upgrade(&pf_consistency_lock)) {
 					 PF_UNLOCK();
 					 sx_sunlock(&pf_consistency_lock);
@@ -1240,7 +1244,7 @@ pf_purge_expired_states(u_int32_t maxcheck)
 			/* unlink and free expired state */
 			pf_unlink_state(cur);
 			if (! locked) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 				 if (!sx_try_upgrade(&pf_consistency_lock)) {
 					 PF_UNLOCK();
 					 sx_sunlock(&pf_consistency_lock);
@@ -1258,7 +1262,7 @@ pf_purge_expired_states(u_int32_t maxcheck)
 	}
 
 	if (locked)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		sx_downgrade(&pf_consistency_lock);
 #else
 		rw_exit_write(&pf_consistency_lock);
@@ -1690,7 +1694,7 @@ pf_modulate_sack(struct mbuf *m, int off, struct pf_pdesc *pd,
     struct tcphdr *th, struct pf_state_peer *dst)
 {
 	int hlen = (th->th_off << 2) - sizeof(*th), thoptlen = hlen;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	u_int8_t opts[TCP_MAXOLEN], *opt = opts;
 #else
 	u_int8_t opts[MAX_TCPOPTLEN], *opt = opts;
@@ -1738,7 +1742,7 @@ pf_modulate_sack(struct mbuf *m, int off, struct pf_pdesc *pd,
 	}
 
 	if (copyback)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		m_copyback(m, off + sizeof(*th), thoptlen, (caddr_t)opts);
 #else
 		m_copyback(m, off + sizeof(*th), thoptlen, opts);
@@ -1747,7 +1751,7 @@ pf_modulate_sack(struct mbuf *m, int off, struct pf_pdesc *pd,
 }
 
 void
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 pf_send_tcp(struct mbuf *replyto, const struct pf_rule *r, sa_family_t af,
 #else
 pf_send_tcp(const struct pf_rule *r, sa_family_t af,
@@ -1769,7 +1773,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 	char		*opt;
 	struct pf_mtag	*pf_mtag;
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	KASSERT(
 #ifdef INET
 	    af == AF_INET
@@ -1815,7 +1819,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 	m = m_gethdr(M_DONTWAIT, MT_HEADER);
 	if (m == NULL)
 		return;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #ifdef MAC
 	if (replyto)
 		mac_create_mbuf_netlayer(replyto, m);
@@ -1830,7 +1834,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 		return;
 	}
 	if (tag)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		m->m_flags |= M_SKIP_FIREWALL;
 #else
 		pf_mtag->flags |= PF_TAG_GENERATED;
@@ -1908,7 +1912,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 		h->ip_v = 4;
 		h->ip_hl = sizeof(*h) >> 2;
 		h->ip_tos = IPTOS_LOWDELAY;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		h->ip_off = path_mtu_discovery ? IP_DF : 0;
 		h->ip_len = len;
 #else
@@ -1918,7 +1922,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 		h->ip_ttl = ttl ? ttl : ip_defttl;
 		h->ip_sum = 0;
 		if (eh == NULL) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			PF_UNLOCK();
 			ip_output(m, (void *)NULL, (void *)NULL, 0,
 			    (void *)NULL, (void *)NULL);
@@ -1943,7 +1947,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 			bcopy(eh->ether_dhost, e->ether_shost, ETHER_ADDR_LEN);
 			bcopy(eh->ether_shost, e->ether_dhost, ETHER_ADDR_LEN);
 			e->ether_type = eh->ether_type;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			PF_UNLOCK();
 			/* XXX_IMPORT: later */
 			ip_output(m, (void *)NULL, &ro, 0,
@@ -1965,7 +1969,7 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 		h6->ip6_vfc |= IPV6_VERSION;
 		h6->ip6_hlim = IPV6_DEFHLIM;
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 		ip6_output(m, NULL, NULL, 0, NULL, NULL, NULL);
 		PF_LOCK();
@@ -1983,11 +1987,11 @@ pf_send_icmp(struct mbuf *m, u_int8_t type, u_int8_t code, sa_family_t af,
 {
 	struct pf_mtag	*pf_mtag;
 	struct mbuf	*m0;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	struct ip *ip;
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	m0 = m_copypacket(m, M_DONTWAIT);
 	if (m0 == NULL)
 		return;
@@ -1996,7 +2000,7 @@ pf_send_icmp(struct mbuf *m, u_int8_t type, u_int8_t code, sa_family_t af,
 #endif
 	if ((pf_mtag = pf_get_mtag(m0)) == NULL)
 		return;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/* XXX: revisit */
 	m0->m_flags |= M_SKIP_FIREWALL;
 #else
@@ -2018,7 +2022,7 @@ pf_send_icmp(struct mbuf *m, u_int8_t type, u_int8_t code, sa_family_t af,
 	switch (af) {
 #ifdef INET
 	case AF_INET:
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		/* icmp_error() expects host byte ordering */
 		ip = mtod(m0, struct ip *);
 		NTOHS(ip->ip_len);
@@ -2033,11 +2037,11 @@ pf_send_icmp(struct mbuf *m, u_int8_t type, u_int8_t code, sa_family_t af,
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		icmp6_error(m0, type, code, 0);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_LOCK();
 #endif
 		break;
@@ -2143,6 +2147,7 @@ pf_match_gid(u_int8_t op, gid_t a1, gid_t a2, gid_t g)
 }
 
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 struct pf_mtag *
 pf_find_mtag(struct mbuf *m)
 {
@@ -2170,6 +2175,7 @@ pf_get_mtag(struct mbuf *m)
 
 	return ((struct pf_mtag *)(mtag + 1));
 }
+#endif
 #endif
 
 int
@@ -2893,7 +2899,7 @@ pf_get_translation(struct pf_pdesc *pd, struct mbuf *m, int off, int direction,
 }
 
 int
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 pf_socket_lookup(int direction, struct pf_pdesc *pd, struct inpcb *inp_arg)
 #else
 pf_socket_lookup(int direction, struct pf_pdesc *pd)
@@ -2901,7 +2907,7 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 {
 	struct pf_addr		*saddr, *daddr;
 	u_int16_t		 sport, dport;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	struct inpcbinfo	*pi;
 #else
 	struct inpcbtable	*tb;
@@ -2913,7 +2919,7 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 	pd->lookup.uid = UID_MAX;
 	pd->lookup.gid = GID_MAX;
 	pd->lookup.pid = NO_PID;		/* XXX: revisit */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	if (inp_arg != NULL) {
 		INP_LOCK_ASSERT(inp_arg);
 		if (inp_arg->inp_socket) {
@@ -2931,7 +2937,7 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 			return (-1);
 		sport = pd->hdr.tcp->th_sport;
 		dport = pd->hdr.tcp->th_dport;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		pi = &tcbinfo;
 #else
 		tb = &tcbtable;
@@ -2942,7 +2948,7 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 			return (-1);
 		sport = pd->hdr.udp->uh_sport;
 		dport = pd->hdr.udp->uh_dport;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		pi = &udbinfo;
 #else
 		tb = &udbtable;
@@ -2966,7 +2972,7 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 	switch (pd->af) {
 #ifdef INET
 	case AF_INET:
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		INP_INFO_RLOCK(pi);	/* XXX LOR */
 		inp = in_pcblookup_hash(pi, saddr->v4, sport, daddr->v4,
 			dport, 0, NULL);
@@ -2990,7 +2996,7 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		INP_INFO_RLOCK(pi);
 		inp = in6_pcblookup_hash(pi, &saddr->v6, sport,
 			&daddr->v6, dport, 0, NULL);
@@ -3017,7 +3023,7 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 	default:
 		return (-1);
 	}
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	INP_LOCK(inp);
 	if ((inp->inp_socket == NULL) || (inp->inp_socket->so_cred == NULL)) {
 		INP_UNLOCK(inp);
@@ -3138,7 +3144,7 @@ pf_calc_mss(struct pf_addr *addr, sa_family_t af, u_int16_t offer)
 		dst->sin_family = AF_INET;
 		dst->sin_len = sizeof(*dst);
 		dst->sin_addr = addr->v4;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #ifdef RTF_PRCLONING
 		rtalloc_ign(&ro, (RTF_CLONING | RTF_PRCLONING));
 #else /* !RTF_PRCLONING */
@@ -3158,7 +3164,7 @@ pf_calc_mss(struct pf_addr *addr, sa_family_t af, u_int16_t offer)
 		dst6->sin6_family = AF_INET6;
 		dst6->sin6_len = sizeof(*dst6);
 		dst6->sin6_addr = addr->v6;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #ifdef RTF_PRCLONING
 		rtalloc_ign((struct route *)&ro6,
 		    (RTF_CLONING | RTF_PRCLONING));
@@ -3212,7 +3218,7 @@ pf_set_rt_ifp(struct pf_state *s, struct pf_addr *saddr)
 int
 pf_test_tcp(struct pf_rule **rm, struct pf_state **sm, int direction,
     struct pfi_kif *kif, struct mbuf *m, int off, void *h,
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
     struct pf_pdesc *pd, struct pf_rule **am, struct pf_ruleset **rsm,
     struct ifqueue *ifq, struct inpcb *inp)
 #else
@@ -3240,7 +3246,7 @@ pf_test_tcp(struct pf_rule **rm, struct pf_state **sm, int direction,
 		return (PF_DROP);
 	}
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	if (inp != NULL)
 		pd->lookup.done = pf_socket_lookup(direction, pd, inp);
 	else if (debug_pfugidhack) {
@@ -3312,7 +3318,7 @@ pf_test_tcp(struct pf_rule **rm, struct pf_state **sm, int direction,
 		else if ((r->flagset & th->th_flags) != r->flags)
 			r = TAILQ_NEXT(r, entries);
 		else if (r->uid.op && (pd->lookup.done || (pd->lookup.done =
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		    pf_socket_lookup(direction, pd, inp), 1)) &&
 #else
 		    pf_socket_lookup(direction, pd), 1)) &&
@@ -3321,7 +3327,7 @@ pf_test_tcp(struct pf_rule **rm, struct pf_state **sm, int direction,
 		    pd->lookup.uid))
 			r = TAILQ_NEXT(r, entries);
 		else if (r->gid.op && (pd->lookup.done || (pd->lookup.done =
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		    pf_socket_lookup(direction, pd, inp), 1)) &&
 #else
 		    pf_socket_lookup(direction, pd), 1)) &&
@@ -3365,7 +3371,7 @@ pf_test_tcp(struct pf_rule **rm, struct pf_state **sm, int direction,
 
 	if (r->log || (nr != NULL && nr->natpass && nr->log)) {
 		if (rewrite)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			m_copyback(m, off, sizeof(*th), (caddr_t)th);
 #else
 			m_copyback(m, off, sizeof(*th), th);
@@ -3399,7 +3405,7 @@ pf_test_tcp(struct pf_rule **rm, struct pf_state **sm, int direction,
 				ack++;
 			if (th->th_flags & TH_FIN)
 				ack++;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			pf_send_tcp(m, r, af, pd->dst,
 #else
 			pf_send_tcp(r, af, pd->dst,
@@ -3515,7 +3521,7 @@ cleanup:
 		if ((th->th_flags & (TH_SYN|TH_ACK)) == TH_SYN &&
 		    r->keep_state == PF_STATE_MODULATE) {
 			/* Generate sequence number modulator */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			while ((s->src.seqdiff =
 			    pf_new_isn(s) - s->src.seqlo) == 0)
 				;	
@@ -3613,7 +3619,7 @@ cleanup:
 			mss = pf_calc_mss(saddr, af, mss);
 			mss = pf_calc_mss(daddr, af, mss);
 			s->src.mss = mss;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			pf_send_tcp(NULL, r, af, daddr, saddr, th->th_dport,
 #else
 			pf_send_tcp(r, af, daddr, saddr, th->th_dport,
@@ -3635,7 +3641,7 @@ cleanup:
 int
 pf_test_udp(struct pf_rule **rm, struct pf_state **sm, int direction,
     struct pfi_kif *kif, struct mbuf *m, int off, void *h,
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
     struct pf_pdesc *pd, struct pf_rule **am, struct pf_ruleset **rsm,
     struct ifqueue *ifq, struct inpcb *inp)
 #else
@@ -3662,7 +3668,7 @@ pf_test_udp(struct pf_rule **rm, struct pf_state **sm, int direction,
 		return (PF_DROP);
 	}
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	if (inp != NULL)
 		pd->lookup.done = pf_socket_lookup(direction, pd, inp);
 	else if (debug_pfugidhack) {
@@ -3732,7 +3738,7 @@ pf_test_udp(struct pf_rule **rm, struct pf_state **sm, int direction,
 		else if (r->rule_flag & PFRULE_FRAGMENT)
 			r = TAILQ_NEXT(r, entries);
 		else if (r->uid.op && (pd->lookup.done || (pd->lookup.done =
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		    pf_socket_lookup(direction, pd, inp), 1)) &&
 #else
 		    pf_socket_lookup(direction, pd), 1)) &&
@@ -3741,7 +3747,7 @@ pf_test_udp(struct pf_rule **rm, struct pf_state **sm, int direction,
 		    pd->lookup.uid))
 			r = TAILQ_NEXT(r, entries);
 		else if (r->gid.op && (pd->lookup.done || (pd->lookup.done =
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		    pf_socket_lookup(direction, pd, inp), 1)) &&
 #else
 		    pf_socket_lookup(direction, pd), 1)) &&
@@ -3784,7 +3790,7 @@ pf_test_udp(struct pf_rule **rm, struct pf_state **sm, int direction,
 
 	if (r->log || (nr != NULL && nr->natpass && nr->log)) {
 		if (rewrite)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			m_copyback(m, off, sizeof(*uh), (caddr_t)uh);
 #else
 			m_copyback(m, off, sizeof(*uh), uh);
@@ -4662,7 +4668,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 				REASON_SET(reason, PFRES_SYNPROXY);
 				return (PF_DROP);
 			}
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			pf_send_tcp(NULL, (*state)->rule.ptr, pd->af, pd->dst,
 #else
 			pf_send_tcp((*state)->rule.ptr, pd->af, pd->dst,
@@ -4705,7 +4711,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 			(*state)->src.max_win = MAX(ntohs(th->th_win), 1);
 			if ((*state)->dst.seqhi == 1)
 				(*state)->dst.seqhi = htonl(arc4random());
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			pf_send_tcp(NULL, (*state)->rule.ptr, pd->af,
 			    &src->addr,
 #else
@@ -4724,7 +4730,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 		} else {
 			(*state)->dst.max_win = MAX(ntohs(th->th_win), 1);
 			(*state)->dst.seqlo = ntohl(th->th_seq);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			pf_send_tcp(NULL, (*state)->rule.ptr, pd->af, pd->dst,
 #else
 			pf_send_tcp((*state)->rule.ptr, pd->af, pd->dst,
@@ -4733,7 +4739,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 			    ntohl(th->th_ack), ntohl(th->th_seq) + 1,
 			    TH_ACK, (*state)->src.max_win, 0, 0, 0,
 			    (*state)->tag, NULL, NULL);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			pf_send_tcp(NULL, (*state)->rule.ptr, pd->af,
 			    &src->addr,
 #else
@@ -4785,7 +4791,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 
 		/* Deferred generation of sequence number modulator */
 		if (dst->seqdiff && !src->seqdiff) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			while ((src->seqdiff = pf_new_isn(*state) - seq) == 0)
 				;
 #else
@@ -5004,7 +5010,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 			pf_print_flags(th->th_flags);
 			printf(" seq=%u (%u) ack=%u len=%u ackskew=%d "
 			    "pkts=%llu:%llu\n", seq, orig_seq, ack, pd->p_len,
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			    ackskew, (unsigned long long)(*state)->packets[0],
 			    (unsigned long long)(*state)->packets[1]);
 #else
@@ -5047,7 +5053,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 		    (*state)->src.state == TCPS_SYN_SENT) {
 			/* Send RST for state mismatches during handshake */
 			if (!(th->th_flags & TH_RST))
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 				pf_send_tcp(m, (*state)->rule.ptr, pd->af,
 #else
 				pf_send_tcp((*state)->rule.ptr, pd->af,
@@ -5067,7 +5073,7 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 			printf(" seq=%u (%u) ack=%u len=%u ackskew=%d "
 			    "pkts=%llu:%llu dir=%s,%s\n",
 			    seq, orig_seq, ack, pd->p_len, ackskew,
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			    (unsigned long long)(*state)->packets[0],
 			    (unsigned long long)(*state)->packets[1],
 #else
@@ -5402,7 +5408,7 @@ pf_test_state_icmp(struct pf_state **state, int direction, struct pfi_kif *kif,
 			} while (!terminal);
 			break;
 #endif /* INET6 */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		default:
 			panic("AF not supported: %d", pd->af);
 #endif
@@ -5898,11 +5904,15 @@ pf_routable(struct pf_addr *addr, sa_family_t af, struct pfi_kif *kif)
 	int			 ret = 1;
 	int			 check_mpath;
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	extern int		 ipmultipath;
+#endif
 #endif
 #ifdef INET6
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	extern int		 ip6_multipath;
+#endif
 #endif
 	struct sockaddr_in6	*dst6;
 	struct route_in6	 ro;
@@ -5922,8 +5932,10 @@ pf_routable(struct pf_addr *addr, sa_family_t af, struct pfi_kif *kif)
 		dst->sin_len = sizeof(*dst);
 		dst->sin_addr = addr->v4;
 #ifndef __FreeBSD__	/* MULTIPATH_ROUTING */
+#ifndef __MidnightBSD__
 		if (ipmultipath)
 			check_mpath = 1;
+#endif
 #endif
 		break;
 #ifdef INET6
@@ -5933,8 +5945,10 @@ pf_routable(struct pf_addr *addr, sa_family_t af, struct pfi_kif *kif)
 		dst6->sin6_len = sizeof(*dst6);
 		dst6->sin6_addr = addr->v6;
 #ifndef __FreeBSD__	/* MULTIPATH_ROUTING */
+#ifndef __MidnightBSD__
 		if (ip6_multipath)
 			check_mpath = 1;
+#endif
 #endif
 		break;
 #endif /* INET6 */
@@ -5946,7 +5960,7 @@ pf_routable(struct pf_addr *addr, sa_family_t af, struct pfi_kif *kif)
 	if (kif != NULL && kif->pfik_ifp->if_type == IFT_ENC)
 		goto out;
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	rtalloc_ign((struct route *)&ro, RTF_CLONING);
 #else /* ! __FreeBSD__ */
 	rtalloc_noclone((struct route *)&ro, NO_CLONING);
@@ -5968,15 +5982,17 @@ pf_routable(struct pf_addr *addr, sa_family_t af, struct pfi_kif *kif)
 		do {
 			rt = (struct rtentry *)rn;
 #ifndef __FreeBSD__ /* CARPDEV */
+#ifndef __MidnightBSD__
 			if (rt->rt_ifp->if_type == IFT_CARP)
 				ifp = rt->rt_ifp->if_carpdev;
 			else
+#endif
 #endif
 				ifp = rt->rt_ifp;
 
 			if (kif->pfik_ifp == ifp)
 				ret = 1;
-#ifdef __FreeBSD__ /* MULTIPATH_ROUTING */
+#if defined(__FreeBSD__) || defined(__MidnightBSD__) /* MULTIPATH_ROUTING */
 			rn = NULL;
 #else
 			rn = rn_mpath_next(rn);
@@ -6022,7 +6038,7 @@ pf_rtlabel_match(struct pf_addr *addr, sa_family_t af, struct pf_addr_wrap *aw)
 		return (0);
 	}
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # ifdef RTF_PRCLONING
 	rtalloc_ign((struct route *)&ro, (RTF_CLONING|RTF_PRCLONING));
 # else /* !RTF_PRCLONING */
@@ -6033,7 +6049,7 @@ pf_rtlabel_match(struct pf_addr *addr, sa_family_t af, struct pf_addr_wrap *aw)
 #endif
 
 	if (ro.ro_rt != NULL) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		/* XXX_IMPORT: later */
 #else
 		if (ro.ro_rt->rt_labelid == aw->v.rtlabel)
@@ -6060,7 +6076,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	struct pf_addr		 naddr;
 	struct pf_src_node	*sn = NULL;
 	int			 error = 0;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	int sw_csum;
 #endif
 #ifdef IPSEC
@@ -6078,7 +6094,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	}
 
 	if (r->rt == PF_DUPTO) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		if ((m0 = m_dup(*m, M_DONTWAIT)) == NULL)
 #else
 		if ((m0 = m_copym2(*m, 0, M_COPYALL, M_NOWAIT)) == NULL)
@@ -6141,7 +6157,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 		goto bad;
 
 	if (oifp != ifp) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 		if (pf_test(PF_OUT, ifp, &m0, NULL, NULL) != PF_PASS) {
 			PF_LOCK();
@@ -6165,7 +6181,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 		ip = mtod(m0, struct ip *);
 	}
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/* Copied from FreeBSD 5.1-CURRENT ip_output. */
 	m0->m_pkthdr.csum_flags |= CSUM_IP;
 	sw_csum = m0->m_pkthdr.csum_flags & ~ifp->if_hwassist;
@@ -6260,7 +6276,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	if (ip->ip_off & htons(IP_DF)) {
 		ipstat.ips_cantfrag++;
 		if (r->rt != PF_DUPTO) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			/* icmp_error() expects host byte ordering */
 			NTOHS(ip->ip_len);
 			NTOHS(ip->ip_off);
@@ -6278,7 +6294,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	}
 
 	m1 = m0;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/*
 	 * XXX: is cheaper + less error prone than own function
 	 */
@@ -6290,7 +6306,9 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 #endif
 	if (error) {
 #ifndef __FreeBSD__	/* ip_fragment does not do m_freem() on FreeBSD */
+#ifndef __MidnightBSD__
 		m0 = NULL;
+#endif
 #endif
 		goto bad;
 	}
@@ -6298,7 +6316,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	for (m0 = m1; m0; m0 = m1) {
 		m1 = m0->m_nextpkt;
 		m0->m_nextpkt = 0;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		if (error == 0) {
 			PF_UNLOCK();
 			error = (*ifp->if_output)(ifp, m0, sintosa(dst),
@@ -6356,7 +6374,7 @@ pf_route6(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	}
 
 	if (r->rt == PF_DUPTO) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		if ((m0 = m_dup(*m, M_DONTWAIT)) == NULL)
 #else
 		if ((m0 = m_copym2(*m, 0, M_COPYALL, M_NOWAIT)) == NULL)
@@ -6384,7 +6402,7 @@ pf_route6(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 
 	/* Cheat. XXX why only in the v6 case??? */
 	if (r->rt == PF_FASTROUTE) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		m0->m_flags |= M_SKIP_FIREWALL;
 		PF_UNLOCK();
 		ip6_output(m0, NULL, NULL, 0, NULL, NULL, NULL);
@@ -6422,7 +6440,7 @@ pf_route6(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 		goto bad;
 
 	if (oifp != ifp) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 		if (pf_test6(PF_OUT, ifp, &m0, NULL, NULL) != PF_PASS) {
 			PF_LOCK();
@@ -6453,16 +6471,16 @@ pf_route6(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	if (IN6_IS_SCOPE_EMBED(&dst->sin6_addr))
 		dst->sin6_addr.s6_addr16[1] = htons(ifp->if_index);
 	if ((u_long)m0->m_pkthdr.len <= ifp->if_mtu) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		error = nd6_output(ifp, ifp, m0, dst, NULL);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_LOCK();
 #endif
 	} else {
 		in6_ifstat_inc(ifp, ifs6_in_toobig);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		if (r->rt != PF_DUPTO) {
 			PF_UNLOCK();
 			icmp6_error(m0, ICMP6_PACKET_TOO_BIG, 0, ifp->if_mtu);
@@ -6488,7 +6506,7 @@ bad:
 #endif /* INET6 */
 
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 /*
  * FreeBSD supports cksum offloads for the following drivers.
  *  em(4), fxp(4), ixgb(4), lge(4), ndis(4), nge(4), re(4),
@@ -6707,7 +6725,7 @@ pf_check_proto_cksum(struct mbuf *m, int off, int len, u_int8_t p,
 
 #ifdef INET
 int
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
     struct ether_header *eh, struct inpcb *inp)
 #else
@@ -6725,29 +6743,29 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 	struct pf_pdesc		 pd;
 	int			 off, dirndx, pqid = 0;
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	PF_LOCK();
 #endif
 	if (!pf_status.running)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	{
 		PF_UNLOCK();
 #endif
 		return (PF_PASS);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	}
 #endif
 
 	memset(&pd, 0, sizeof(pd));
 	if ((pd.pf_mtag = pf_get_mtag(m)) == NULL) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		DPFPRINTF(PF_DEBUG_URGENT,
 		    ("pf_test: pf_get_mtag returned NULL\n"));
 		return (PF_DROP);
 	}
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	if (m->m_flags & M_SKIP_FIREWALL) {
 		PF_UNLOCK();
 		return (PF_PASS);
@@ -6757,7 +6775,7 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 		return (PF_PASS);
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/* XXX_IMPORT: later */
 #else
 	if (ifp->if_type == IFT_CARP && ifp->if_carpdev)
@@ -6766,7 +6784,7 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 
 	kif = (struct pfi_kif *)ifp->if_pf_kif;
 	if (kif == NULL) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		DPFPRINTF(PF_DEBUG_URGENT,
@@ -6774,13 +6792,13 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 		return (PF_DROP);
 	}
 	if (kif->pfik_flags & PFI_IFLAG_SKIP) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		return (PF_PASS);
 	}
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	M_ASSERTPKTHDR(m);
 #else
 #ifdef DIAGNOSTIC
@@ -6862,7 +6880,7 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_tcp(&r, &s, dir, kif,
 			    m, off, h, &pd, &a, &ruleset, NULL, inp);
 #else
@@ -6903,7 +6921,7 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_udp(&r, &s, dir, kif,
 			    m, off, h, &pd, &a, &ruleset, NULL, inp);
 #else
@@ -6938,7 +6956,7 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_icmp(&r, &s, dir, kif,
 			    m, off, h, &pd, &a, &ruleset, NULL);
 #else
@@ -6958,7 +6976,7 @@ pf_test(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_other(&r, &s, dir, kif, m, off, h,
 			    &pd, &a, &ruleset, NULL);
 #else
@@ -7090,7 +7108,7 @@ done:
 		/* pf_route can free the mbuf causing *m0 to become NULL */
 		pf_route(m0, r, dir, ifp, s, &pd);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	PF_UNLOCK();
 #endif
 
@@ -7100,7 +7118,7 @@ done:
 
 #ifdef INET6
 int
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
     struct ether_header *eh, struct inpcb *inp)
 #else
@@ -7118,23 +7136,23 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 	struct pf_pdesc		 pd;
 	int			 off, terminal = 0, dirndx, rh_cnt = 0;
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	PF_LOCK();
 #endif
 
 	if (!pf_status.running)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	{
 		PF_UNLOCK();
 #endif
 		return (PF_PASS);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	}
 #endif
 
 	memset(&pd, 0, sizeof(pd));
 	if ((pd.pf_mtag = pf_get_mtag(m)) == NULL) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		DPFPRINTF(PF_DEBUG_URGENT,
@@ -7144,7 +7162,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 	if (pd.pf_mtag->flags & PF_TAG_GENERATED)
 		return (PF_PASS);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/* XXX_IMPORT: later */
 #else
 	if (ifp->if_type == IFT_CARP && ifp->if_carpdev)
@@ -7153,7 +7171,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 
 	kif = (struct pfi_kif *)ifp->if_pf_kif;
 	if (kif == NULL) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		DPFPRINTF(PF_DEBUG_URGENT,
@@ -7161,13 +7179,13 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 		return (PF_DROP);
 	}
 	if (kif->pfik_flags & PFI_IFLAG_SKIP) {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		PF_UNLOCK();
 #endif
 		return (PF_PASS);
 	}
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	M_ASSERTPKTHDR(m);
 #else
 #ifdef DIAGNOSTIC
@@ -7176,7 +7194,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 #endif /* DIAGNOSTIC */
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	h = NULL;	/* make the compiler happy */
 #endif
 
@@ -7320,7 +7338,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_tcp(&r, &s, dir, kif,
 			    m, off, h, &pd, &a, &ruleset, NULL, inp);
 #else
@@ -7362,7 +7380,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_udp(&r, &s, dir, kif,
 			    m, off, h, &pd, &a, &ruleset, NULL, inp);
 #else
@@ -7398,7 +7416,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_icmp(&r, &s, dir, kif,
 			    m, off, h, &pd, &a, &ruleset, NULL);
 #else
@@ -7418,7 +7436,7 @@ pf_test6(int dir, struct ifnet *ifp, struct mbuf **m0,
 			a = s->anchor.ptr;
 			log = s->log;
 		} else if (s == NULL)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			action = pf_test_other(&r, &s, dir, kif, m, off, h,
 			    &pd, &a, &ruleset, NULL);
 #else
@@ -7546,7 +7564,7 @@ done:
 		/* pf_route6 can free the mbuf causing *m0 to become NULL */
 		pf_route6(m0, r, dir, ifp, s, &pd);
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	PF_UNLOCK();
 #endif
 	return (action);
@@ -7556,7 +7574,7 @@ done:
 int
 pf_check_congestion(struct ifqueue *ifq)
 {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/* XXX_IMPORT: later */
 	return (0);
 #else
