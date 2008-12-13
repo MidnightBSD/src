@@ -1,8 +1,8 @@
-# $FreeBSD: src/sys/modules/ipw/Makefile,v 1.1 2005/04/18 18:47:38 damien Exp $
+# $FreeBSD: src/sys/modules/ipw/Makefile,v 1.2 2005/09/27 18:10:35 mlaier Exp $
 
 .PATH: ${.CURDIR}/../../dev/ipw
 
 KMOD    = if_ipw
-SRCS    = if_ipw.c opt_bdg.h device_if.h bus_if.h pci_if.h
+SRCS    = if_ipw.c device_if.h bus_if.h pci_if.h
 
 .include <bsd.kmod.mk>
