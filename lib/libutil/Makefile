@@ -1,12 +1,13 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 #	$FreeBSD: src/lib/libutil/Makefile,v 1.56.8.2 2006/01/15 17:50:35 delphij Exp $
-# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.4 2008/11/20 15:31:28 laffer1 Exp $
+# 	$MidnightBSD: src/lib/libutil/Makefile,v 1.5 2008/11/20 15:41:06 laffer1 Exp $
+
+SHLIBDIR?= /lib
 
 .include <bsd.own.mk>
 
 LIB=	util
 SHLIB_MAJOR= 7
-SHLIBDIR?= /lib
 SRCS=	_secure_path.c auth.c expand_number.c flopen.c efun.c fparseln.c \
 	humanize_number.c kld.c login.c \
 	login_auth.c login_cap.c login_class.c login_crypt.c login_ok.c \
