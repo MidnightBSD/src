@@ -20,8 +20,9 @@
 # Copies of this Software may be made, however, the above copyright
 # notice must be reproduced on all copies.
 #
-#	@(#) $Id: Makefile,v 1.1.1.3 2008-10-30 20:39:05 laffer1 Exp $
+#	@(#) $Id: Makefile,v 1.2 2008-12-13 22:51:06 laffer1 Exp $
 # $FreeBSD: src/lib/libatm/Makefile,v 1.14 2007/05/21 02:49:02 deischen Exp $
+# $MidnightBSD$
 
 LIB=	atm
 SHLIB_MAJOR= 5
@@ -32,10 +33,6 @@ INCS=	libatm.h
 DPADD=	${LIBMD}
 LDADD=	-lmd
 
-.if ${MACHINE_ARCH} == "arm"
-WARNS?= 3
-.else
 WARNS?=	6
-.endif
 
 .include <bsd.lib.mk>
