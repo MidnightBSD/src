@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/conf/NOTES,v 1.1454 2007/09/26 21:14:17 marius Exp $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
@@ -78,7 +79,7 @@ makeoptions	CONF_CFLAGS=-fno-builtin  #Don't allow use of memcmp, etc.
 makeoptions	DESTDIR=/tmp
 
 #
-# FreeBSD processes are subject to certain limits to their consumption
+# MidnightBSD processes are subject to certain limits to their consumption
 # of system resources.  See getrlimit(2) for more details.  Each
 # resource limit has two values, a "soft" limit and a "hard" limit.
 # The soft limits can be modified during normal system operation, but
@@ -286,9 +287,9 @@ options 	TURNSTILE_PROFILING
 
 #
 # Implement system calls compatible with 4.3BSD and older versions of
-# FreeBSD.  You probably do NOT want to remove this as much current code
+# MidnightBSD.  You probably do NOT want to remove this as much current code
 # still relies on the 4.3 emulation.  Note that some architectures that
-# are supported by FreeBSD do not include support for certain important
+# are supported by MidnightBSD do not include support for certain important
 # aspects of this compatibility option, namely those related to the
 # signal delivery mechanism.
 #
@@ -944,7 +945,6 @@ options 	NFSCLIENT		#Network File System client
 # The rest are optional:
 options 	CD9660			#ISO 9660 filesystem
 options 	FDESCFS			#File descriptor filesystem
-options 	HPFS			#OS/2 File system
 options 	MSDOSFS			#MS DOS File System (FAT, FAT32)
 options 	NFSSERVER		#Network File System server
 options 	NTFS			#NT File System
