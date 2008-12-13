@@ -27875,6 +27875,9 @@ sys/i386/svr4/svr4_genassym.c -text
 sys/i386/svr4/svr4_locore.s -text
 sys/i386/svr4/svr4_machdep.c -text
 sys/i386/svr4/svr4_machdep.h -text
+sys/i386/xbox/pic16l.s -text
+sys/i386/xbox/xbox.c -text
+sys/i386/xbox/xboxfb.c -text
 sys/isa/isa_common.c -text
 sys/isa/isa_common.h -text
 sys/isa/isa_dmareg.h -text
