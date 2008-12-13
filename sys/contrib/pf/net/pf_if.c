@@ -32,7 +32,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_if.c,v 1.11.2.2 2007/11/25 19:26:4
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/malloc.h>
 #endif
 #include <sys/mbuf.h>
@@ -51,7 +51,9 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_if.c,v 1.11.2.2 2007/11/25 19:26:4
 #include <sys/socketvar.h>
 #include <sys/kernel.h>
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #include <sys/device.h>
+#endif
 #endif
 #include <sys/time.h>
 
@@ -72,7 +74,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_if.c,v 1.11.2.2 2007/11/25 19:26:4
 
 struct pfi_kif		 *pfi_all = NULL;
 struct pfi_statehead	  pfi_statehead;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 uma_zone_t		  pfi_addr_pl;
 #else
 struct pool		  pfi_addr_pl;
@@ -82,7 +84,7 @@ long			  pfi_update = 1;
 struct pfr_addr		 *pfi_buffer;
 int			  pfi_buffer_cnt;
 int			  pfi_buffer_max;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 eventhandler_tag	  pfi_attach_cookie = NULL;
 eventhandler_tag	  pfi_detach_cookie = NULL;
 eventhandler_tag	  pfi_attach_group_cookie = NULL;
@@ -101,7 +103,7 @@ void		 pfi_address_add(struct sockaddr *, int, int);
 int		 pfi_if_compare(struct pfi_kif *, struct pfi_kif *);
 int		 pfi_skip_if(const char *, struct pfi_kif *);
 int		 pfi_unmask(void *);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 void		 pfi_attach_ifnet_event(void * __unused, struct ifnet *);
 void		 pfi_detach_ifnet_event(void * __unused, struct ifnet *);
 void		 pfi_attach_group_event(void * __unused, struct ifg_group *);
@@ -126,8 +128,10 @@ pfi_initialize(void)
 
 	TAILQ_INIT(&pfi_statehead);
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	pool_init(&pfi_addr_pl, sizeof(struct pfi_dynaddr), 0, 0, 0,
 	    "pfiaddrpl", &pool_allocator_nointr);
+#endif
 #endif
 	pfi_buffer_max = 64;
 	pfi_buffer = malloc(pfi_buffer_max * sizeof(*pfi_buffer),
@@ -136,7 +140,7 @@ pfi_initialize(void)
 	if ((pfi_all = pfi_kif_get(IFG_ALL)) == NULL)
 		panic("pfi_kif_get for pfi_all failed");
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	struct ifg_group *ifg;
 	struct ifnet *ifp;
 
@@ -162,7 +166,7 @@ pfi_initialize(void)
 #endif
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 void
 pfi_cleanup(void)
 {
@@ -204,7 +208,7 @@ pfi_kif_get(const char *kif_name)
 		return (kif);
 
 	/* create new one */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	if ((kif = malloc(sizeof(*kif), PFI_MTYPE, M_NOWAIT)) == NULL)
 #else
 	if ((kif = malloc(sizeof(*kif), PFI_MTYPE, M_DONTWAIT)) == NULL)
@@ -213,7 +217,7 @@ pfi_kif_get(const char *kif_name)
 
 	bzero(kif, sizeof(*kif));
 	strlcpy(kif->pfik_name, kif_name, sizeof(kif->pfik_name));
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	/*
 	 * It seems that the value of time_second is in unintialzied state
 	 * when pf sets interface statistics clear time in boot phase if pf
@@ -317,10 +321,12 @@ pfi_attach_ifnet(struct ifnet *ifp)
 	ifp->if_pf_kif = (caddr_t)kif;
 
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	if ((kif->pfik_ah_cookie = hook_establish(ifp->if_addrhooks, 1,
 	    pfi_kifaddr_update, kif)) == NULL)
 		panic("pfi_attach_ifnet: cannot allocate '%s' address hook",
 		    ifp->if_xname);
+#endif
 #endif
 
 	pfi_kif_update(kif);
@@ -340,7 +346,9 @@ pfi_detach_ifnet(struct ifnet *ifp)
 	s = splsoftnet();
 	pfi_update++;
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 	hook_disestablish(ifp->if_addrhooks, kif->pfik_ah_cookie);
+#endif
 #endif
 	pfi_kif_update(kif);
 
@@ -581,7 +589,7 @@ pfi_instance_add(struct ifnet *ifp, int net, int flags)
 		af = ia->ifa_addr->sa_family;
 		if (af != AF_INET && af != AF_INET6)
 			continue;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		/*
 		 * XXX: For point-to-point interfaces, (ifname:0) and IPv4,
 		 *	jump over addresses without a proper route to work
@@ -650,7 +658,7 @@ pfi_address_add(struct sockaddr *sa, int af, int net)
 			return;
 		}
 		p = malloc(new_max * sizeof(*pfi_buffer), PFI_MTYPE,
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 		    M_NOWAIT);
 #else
 		    M_DONTWAIT);
@@ -784,7 +792,7 @@ pfi_get_ifaces(const char *name, struct pfi_kif *buf, int *size)
 {
 	struct pfi_kif	*p, *nextp;
 	int		 s, n = 0;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	int		 error;
 #endif
 
@@ -797,7 +805,7 @@ pfi_get_ifaces(const char *name, struct pfi_kif *buf, int *size)
 			if (!p->pfik_tzero)
 				p->pfik_tzero = time_second;
 			pfi_kif_ref(p, PFI_KIF_REF_RULE);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 			PF_COPYOUT(p, buf++, sizeof(*buf), error);
 			if (error) {
 #else
@@ -887,7 +895,7 @@ pfi_unmask(void *addr)
 	return (b);
 }
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 void
 pfi_attach_ifnet_event(void *arg __unused, struct ifnet *ifp)
 {
