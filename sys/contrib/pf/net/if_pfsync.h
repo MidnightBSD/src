@@ -165,7 +165,7 @@ union sc_tdb_statep {
 extern int	pfsync_sync_ok;
 
 struct pfsync_softc {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	struct ifnet		*sc_ifp;
 #else
 	struct ifnet		 sc_if;
@@ -173,7 +173,7 @@ struct pfsync_softc {
 	struct ifnet		*sc_sync_ifp;
 
 	struct ip_moptions	 sc_imo;
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	struct callout		 sc_tmo;
 #ifdef PFSYNC_TDB
 	struct callout		 sc_tdb_tmo;
@@ -193,7 +193,7 @@ struct pfsync_softc {
 #ifdef PFSYNC_TDB
     	struct mbuf		*sc_mbuf_tdb;	/* dito for TDB updates */
 #endif
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	struct ifqueue		 sc_ifq;
 	struct task		 sc_send_task;
 #endif
@@ -209,7 +209,7 @@ struct pfsync_softc {
 	int			 sc_bulk_tries;
 	int			 sc_maxcount;	/* number of states in mtu */
 	int			 sc_maxupdates;	/* number of updates/state */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	eventhandler_tag	 sc_detachtag;
 #endif
 };
@@ -279,7 +279,7 @@ struct pfsyncreq {
 	int		 pfsyncr_authlevel;
 };
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define	SIOCSETPFSYNC	_IOW('i', 247, struct ifreq)
 #define	SIOCGETPFSYNC	_IOWR('i', 248, struct ifreq)
 #endif
@@ -340,7 +340,7 @@ struct pfsyncreq {
 } while (0)
 
 #ifdef _KERNEL
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 void pfsync_input(struct mbuf *, __unused int);
 #else
 void pfsync_input(struct mbuf *, ...);

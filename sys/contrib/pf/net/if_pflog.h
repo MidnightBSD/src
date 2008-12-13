@@ -32,7 +32,7 @@
 
 #ifdef _KERNEL
 struct pflog_softc {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 	struct ifnet		*sc_ifp;	/* the interface pointer */
 #else
 	struct ifnet		sc_if;		/* the interface */
@@ -78,7 +78,7 @@ struct old_pfloghdr {
 
 #ifdef _KERNEL
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 struct pf_rule;
 struct pf_ruleset;
 struct pfi_kif;
