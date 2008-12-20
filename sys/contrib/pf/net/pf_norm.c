@@ -127,15 +127,8 @@ struct pf_fragment {
 TAILQ_HEAD(pf_fragqueue, pf_fragment)	pf_fragqueue;
 TAILQ_HEAD(pf_cachequeue, pf_fragment)	pf_cachequeue;
 
-#ifndef __FreeBSD__
-#ifndef __MidnightBSD__
-static __inline int	 pf_frag_compare(struct pf_fragment *,
-			    struct pf_fragment *);
-#else
 static int	 pf_frag_compare(struct pf_fragment *,
 			    struct pf_fragment *);
-#endif
-#endif
 RB_HEAD(pf_frag_tree, pf_fragment)	pf_frag_tree, pf_cache_tree;
 RB_PROTOTYPE(pf_frag_tree, pf_fragment, fr_entry, pf_frag_compare);
 RB_GENERATE(pf_frag_tree, pf_fragment, fr_entry, pf_frag_compare);
@@ -204,11 +197,7 @@ pf_normalize_init(void)
 	TAILQ_INIT(&pf_cachequeue);
 }
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 static int
-#else
-static __inline int
-#endif
 pf_frag_compare(struct pf_fragment *a, struct pf_fragment *b)
 {
 	int	diff;
