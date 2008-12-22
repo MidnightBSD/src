@@ -103,9 +103,12 @@ main(int argc, char **argv)
 			fprintf(stderr, "#env clearing environ\n");
 	}
 	for (argv += optind; *argv && (p = strchr(*argv, '=')); ++argv) {
+		*p=0;
+		p++;
 		if (env_verbosity)
-			fprintf(stderr, "#env setenv:\t%s\n", *argv);
-		(void)setenv(*argv, ++p, 1);
+			fprintf(stderr, "#env setenv:\t'%s' = '%s'\n", *argv, p);
+		if (setenv(*argv, p, 1) != 0)
+			warn(NULL);
 	}
 	if (*argv) {
 		if (altpath)
