@@ -3,6 +3,12 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20081231:
+	Correct a problem where bluetooth and netgraph sockets are not
+	properly initialized.
+
+	Happy 2009.
+
 20081206:
 	Due to the massive change in the underlying system under way,
 	we're naming the next release 1.0.  The sys/sys/param.h was
@@ -624,4 +630,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.44 2008/12/04 14:50:47 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.45 2008/12/07 04:10:26 laffer1 Exp $

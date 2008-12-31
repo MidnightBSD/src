@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/sys/copyright.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $ */
 /*-
  * Copyright (C) 1992-2006 The FreeBSD Project. All rights reserved.
  *
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/sys/sys/copyright.h,v 1.5 2008/01/01 07:08:42 laffer1 Exp $
+ * $MidnightBSD: src/sys/sys/copyright.h,v 1.6 2008/12/03 00:11:21 laffer1 Exp $
  * $FreeBSD: src/sys/sys/copyright.h,v 1.19.2.1 2006/02/08 09:11:58 ru Exp $
  */
 
@@ -32,7 +32,7 @@
 
 /* MidnightBSD */
 #define COPYRIGHT_MidnightBSD \
-	"Copyright (c) 2006-2008 The MidnightBSD Project.\n"
+	"Copyright (c) 2006-2009 The MidnightBSD Project.\n"
   
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
