@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080101:
+	Update time zone data to 2008i.
+
 20081231:
 	Correct a problem where bluetooth and netgraph sockets are not
 	properly initialized.
@@ -630,4 +633,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.45 2008/12/07 04:10:26 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.46 2008/12/31 15:01:20 laffer1 Exp $
