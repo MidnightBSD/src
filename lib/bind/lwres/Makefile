@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.5 2008/11/11 16:49:48 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/lwres/Makefile,v 1.6 2008/11/11 16:52:12 laffer1 Exp $
 # $FreeBSD: src/lib/bind/lwres/Makefile,v 1.7.2.1 2005/11/16 07:59:50 ru Exp $
 
 .include <bsd.own.mk>
@@ -10,7 +10,7 @@ SRCDIR=		${BIND_DIR}/lib/lwres
 
 # Unlike other BIND libs, this should be installed unless the user says NO.
 .if ${MK_BIND_LIBS_LWRES} != "no"
-WITH_BIND_LIBS=
+MK_BIND_LIBS=	yes
 .endif
 
 .include	"${LIB_BIND_DIR}/config.mk"
