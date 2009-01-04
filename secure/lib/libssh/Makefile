@@ -1,8 +1,10 @@
-# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.6 2008/04/06 06:24:01 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.7 2008/04/06 06:31:26 laffer1 Exp $
 # $FreeBSD: src/secure/lib/libssh/Makefile,v 1.34.2.2 2005/09/11 16:50:33 des Exp $
 
+.include <bsd.own.mk>
+
 LIB=	ssh
-SHLIB_MAJOR=	3
+SHLIB_MAJOR=	4
 SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	canohost.c channels.c cipher.c cipher-acss.c cipher-aes.c \
 	cipher-bf1.c cipher-ctr.c cipher-3des1.c cleanup.c \
@@ -12,13 +14,13 @@ SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
 	monitor_fdpass.c rijndael.c ssh-dss.c ssh-rsa.c dh.c kexdh.c \
 	kexgex.c kexdhc.c kexgexc.c scard.c msg.c progressmeter.c dns.c \
-	entropy.c scard-opensc.c umac.c
+	entropy.c scard-opensc.c
 
 # gss-genr.c should be in $SRCS but causes linking problems, so it is
 # compiled directly into sshd instead.
 
 # Portability layer
-SRCS+=	bsd-closefrom.c bsd-misc.c getrrsetbyname.c openssl-compat.c \
+SRCS+=	bsd-closefrom.c bsd-misc.c getrrsetbyname.c \
 	port-tun.c vis.c xcrypt.c xmmap.c
 # MidnightBSD additions
 SRCS+=	version.c
@@ -31,8 +33,8 @@ CFLAGS+= -I${SSHDIR} -include ssh_namespace.h
 DPADD=	${LIBZ}
 LDADD=	-lz
 
-.if !defined(NO_KERBEROS)
-CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_H=1 -DKRB5 -DHEIMDAL
+.if ${MK_KERBEROS_SUPPORT} != "no"
+CFLAGS+= -DGSSAPI -DHAVE_GSSAPI_GSSAPI_H=1 -DKRB5 -DHEIMDAL
 DPADD+=	${LIBGSSAPI} ${LIBKRB5} ${LIBASN1} ${LIBCOM_ERR} ${LIBMD} ${LIBROKEN}
 LDADD+=	-lgssapi -lkrb5 -lasn1 -lcom_err -lmd -lroken
 .endif
