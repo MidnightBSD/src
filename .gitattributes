@@ -22276,15 +22276,6 @@ share/examples/Makefile -text
 share/examples/MidnightBSD_version/Makefile -text
 share/examples/MidnightBSD_version/MidnightBSD_version.c -text
 share/examples/MidnightBSD_version/README -text
-share/examples/atm/NOTES -text
-share/examples/atm/README -text
-share/examples/atm/Startup -text
-share/examples/atm/atm-config.sh -text
-share/examples/atm/atm-sockets.txt -text
-share/examples/atm/cpcs-design.txt -text
-share/examples/atm/fore-microcode.txt -text
-share/examples/atm/sscf-design.txt -text
-share/examples/atm/sscop-design.txt -text
 share/examples/bootforth/README -text
 share/examples/bootforth/boot.4th -text
 share/examples/bootforth/frames.4th -text

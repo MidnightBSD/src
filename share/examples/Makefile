@@ -1,11 +1,10 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD: src/share/examples/Makefile,v 1.3 2007/03/12 23:15:08 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.4 2007/03/13 00:26:29 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
 LDIRS=	IPv6 \
 	MidnightBSD_version \
-	atm \
 	bootforth \
 	cvsup \
 	diskless \
