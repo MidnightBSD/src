@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.15 2008/12/04 18:10:36 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.16 2009/01/04 20:30:10 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -2824,7 +2824,6 @@ OLD_LIBS+=lib/libncursesw.so.6
 OLD_LIBS+=lib/libreadline.so.6
 OLD_LIBS+=usr/lib/libdialog.so.5
 OLD_LIBS+=usr/lib/libgnuregex.so.3
-OLD_LIBS+=usr/lib/libhistory.so.6
 OLD_LIBS+=usr/lib/libpam.so.3
 OLD_LIBS+=usr/lib/libssh.so.3
 OLD_LIBS+=usr/lib/pam_chroot.so.3
@@ -2909,7 +2908,6 @@ OLD_LIBS+=usr/lib/libradius.so.2
 OLD_LIBS+=usr/lib/librpcsvc.so.3
 OLD_LIBS+=usr/lib/libsdp.so.2
 OLD_LIBS+=usr/lib/libsmb.so.2
-OLD_LIBS+=usr/lib/libstdc++.so.5
 OLD_LIBS+=usr/lib/libtacplus.so.2
 OLD_LIBS+=usr/lib/libthr.so.2
 OLD_LIBS+=usr/lib/libthread_db.so.2
