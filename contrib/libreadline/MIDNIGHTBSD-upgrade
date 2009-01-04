@@ -1,4 +1,8 @@
-# $FreeBSD: src/contrib/libreadline/FREEBSD-upgrade,v 1.6 2004/10/18 07:15:43 ache Exp $
+# $MidnightBSD$
+#
+# http://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
+# http://cnswww.cns.cwru.edu/php/chet/readline/CHANGES
+# ftp.gnu.org/gnu/readline
 #
 # Official patches 001-005 imported as v5_0_p1_p5
 #

@@ -8390,9 +8390,9 @@ contrib/libpcap/sunatmpos.h -text
 contrib/libreadline/CHANGELOG -text
 contrib/libreadline/CHANGES -text
 contrib/libreadline/COPYING -text
-contrib/libreadline/FREEBSD-upgrade -text
 contrib/libreadline/INSTALL -text
 contrib/libreadline/MANIFEST -text
+contrib/libreadline/MIDNIGHTBSD-upgrade -text
 contrib/libreadline/Makefile.in -text
 contrib/libreadline/NEWS -text
 contrib/libreadline/README -text
