@@ -1,16 +1,21 @@
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libfetch/Makefile,v 1.2 2008/07/09 18:57:20 laffer1 Exp $
 # $FreeBSD: src/lib/libfetch/Makefile,v 1.44.2.1 2005/07/22 17:29:05 kensmith Exp $
+
+.include <bsd.own.mk>
 
 LIB=		fetch
 CFLAGS+=	-I.
-CFLAGS+=	-DINET6
 SRCS=		fetch.c common.c ftp.c http.c file.c \
 		ftperr.h httperr.h
 INCS=		fetch.h
 MAN=		fetch.3
 CLEANFILES=	ftperr.h httperr.h
 
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL)
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=	-DINET6
+.endif
+
+.if ${MK_OPENSSL} != "no"
 CFLAGS+=	-DWITH_SSL
 DPADD=		${LIBSSL} ${LIBCRYPTO}
 LDADD=		-lssl -lcrypto
@@ -21,7 +26,7 @@ CFLAGS+=	-DFTP_COMBINE_CWDS
 CSTD?=		c99
 WARNS?=		2
 
-SHLIB_MAJOR=    4
+SHLIB_MAJOR=    5
 
 ftperr.h: ftp.errors ${.CURDIR}/Makefile
 	@echo "static struct fetcherr ftp_errlist[] = {" > ${.TARGET}
