@@ -1,5 +1,3 @@
-/* $FreeBSD: src/contrib/libreadline/rlconf.h,v 1.7 2004/10/21 23:45:57 ache Exp $ */
-
 /* rlconf.h -- readline configuration definitions */
 
 /* Copyright (C) 1994 Free Software Foundation, Inc.
@@ -39,8 +37,11 @@
 /* Ugly but working hack for binding prefix meta. */
 #define PREFIX_META_HACK
 
-/* The final, last-ditch effort file name for an init file. */
+/* The next-to-last-ditch effort file name for a user-specific init file. */
 #define DEFAULT_INPUTRC "~/.inputrc"
+
+/* The ultimate last-ditch filenname for an init file -- system-wide. */
+#define SYS_INPUTRC "/etc/inputrc"
 
 /* If defined, expand tabs to spaces. */
 #define DISPLAY_TABS
