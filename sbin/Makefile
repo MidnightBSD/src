@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
 # $FreeBSD: src/sbin/Makefile,v 1.168 2007/07/24 15:35:00 scottl Exp $
-# $MidnightBSD: src/sbin/Makefile,v 1.7 2008/11/11 21:42:04 laffer1 Exp $
+# $MidnightBSD: src/sbin/Makefile,v 1.8 2008/11/11 22:24:03 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -84,7 +84,7 @@ SUBDIR=	adjkerntz \
 	slattach \
 	spppcontrol \
 	startslip \
-	sunlabel \
+	${_sunlabel} \
 	swapon \
 	sysctl \
 	tunefs \
@@ -119,6 +119,10 @@ _sconfig=	sconfig
 
 .if ${MACHINE_ARCH} == "amd64"
 _fdisk=		fdisk
+.endif
+
+.if ${MACHINE_ARCH} == "sparc64"
+_sunlabel=	sunlabel
 .endif
 
 .include <bsd.subdir.mk>
