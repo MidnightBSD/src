@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.8 2008/12/03 23:58:32 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.9 2008/12/04 00:05:20 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -189,8 +189,6 @@
             IPv6
             ..
             MidnightBSD_version
-            ..
-            atm
             ..
             bc
             ..
@@ -820,8 +818,6 @@
         misc
             fonts
             ..
-            pcvtfonts
-            ..
         ..
         mk
         ..
@@ -1147,12 +1143,6 @@
                 ..
                 man3
                 ..
-            ..
-        ..
-        pcvt
-            Doc
-            ..
-            Etc
             ..
         ..
         security
