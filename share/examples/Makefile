@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD: src/share/examples/Makefile,v 1.4 2007/03/13 00:26:29 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.5 2009/01/04 22:59:14 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -36,15 +36,6 @@ XFILES=	IPv6/USAGE \
 	MidnightBSD_version/MidnightBSD_version.c \
 	MidnightBSD_version/Makefile \
 	MidnightBSD_version/README \
-	atm/NOTES \
-	atm/README \
-	atm/Startup \
-	atm/atm-config.sh \
-	atm/atm-sockets.txt \
-	atm/cpcs-design.txt \
-	atm/fore-microcode.txt \
-	atm/sscf-design.txt \
-	atm/sscop-design.txt \
 	bootforth/README \
 	bootforth/boot.4th \
 	bootforth/frames.4th \
