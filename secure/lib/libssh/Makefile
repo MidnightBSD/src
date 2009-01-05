@@ -1,4 +1,4 @@
-# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.7 2008/04/06 06:31:26 laffer1 Exp $
+# $MidnightBSD: src/secure/lib/libssh/Makefile,v 1.8 2009/01/04 22:38:00 laffer1 Exp $
 # $FreeBSD: src/secure/lib/libssh/Makefile,v 1.34.2.2 2005/09/11 16:50:33 des Exp $
 
 .include <bsd.own.mk>
@@ -10,7 +10,7 @@ SRCS=	acss.c authfd.c authfile.c bufaux.c bufbn.c buffer.c \
 	cipher-bf1.c cipher-ctr.c cipher-3des1.c cleanup.c \
 	compat.c compress.c crc32.c deattack.c fatal.c hostfile.c \
 	log.c match.c md-sha256.c moduli.c nchan.c packet.c \
-	readpass.c rsa.c ttymodes.c xmalloc.c \
+	readpass.c rsa.c ttymodes.c xmalloc.c umac.c \
 	atomicio.c key.c dispatch.c kex.c mac.c uidswap.c uuencode.c misc.c \
 	monitor_fdpass.c rijndael.c ssh-dss.c ssh-rsa.c dh.c kexdh.c \
 	kexgex.c kexdhc.c kexgexc.c scard.c msg.c progressmeter.c dns.c \
