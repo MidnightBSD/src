@@ -3,6 +3,14 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20080110:
+	For applications using OpenSSL for SSL connections, an invalid SSL
+	certificate may be interpreted as valid.  This could for example be
+	used by an attacker to perform a man-in-the-middle attack.
+
+	Other applications which use the OpenSSL EVP API may similarly be
+	affected.
+
 20080104:
 	Import GNU libreadline 5.2
 
@@ -636,4 +644,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.47 2009/01/01 22:52:48 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.48 2009/01/04 23:46:22 laffer1 Exp $
