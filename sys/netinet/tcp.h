@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet/tcp.h,v 1.3 2008/12/03 00:27:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -79,6 +79,8 @@ struct tcphdr {
 
 #define	TCPOPT_EOL		0
 #define	   TCPOLEN_EOL			1
+#define	TCPOPT_PAD		0		/* padding after EOL */
+#define	   TCPOLEN_PAD			1
 #define	TCPOPT_NOP		1
 #define	   TCPOLEN_NOP			1
 #define	TCPOPT_MAXSEG		2

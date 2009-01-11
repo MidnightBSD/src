@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet/tcp_output.c,v 1.5 2008/12/03 00:27:00 laffer1 Exp $ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1995
  *	The Regents of the University of California.  All rights reserved.
@@ -1281,12 +1281,16 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 	for (mask = 1; mask < TOF_MAXOPT; mask <<= 1) {
 		if ((to->to_flags & mask) != mask)
 			continue;
+		if (optlen == TCP_MAXOLEN)
+			break;
 		switch (to->to_flags & mask) {
 		case TOF_MSS:
 			while (optlen % 4) {
 				optlen += TCPOLEN_NOP;
 				*optp++ = TCPOPT_NOP;
 			}
+			if (TCP_MAXOLEN - optlen < TCPOLEN_MAXSEG)
+				continue;
 			optlen += TCPOLEN_MAXSEG;
 			*optp++ = TCPOPT_MAXSEG;
 			*optp++ = TCPOLEN_MAXSEG;
@@ -1299,6 +1303,8 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 				optlen += TCPOLEN_NOP;
 				*optp++ = TCPOPT_NOP;
 			}
+			if (TCP_MAXOLEN - optlen < TCPOLEN_WINDOW)
+				continue;
 			optlen += TCPOLEN_WINDOW;
 			*optp++ = TCPOPT_WINDOW;
 			*optp++ = TCPOLEN_WINDOW;
@@ -1309,6 +1315,8 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 				optlen += TCPOLEN_NOP;
 				*optp++ = TCPOPT_NOP;
 			}
+			if (TCP_MAXOLEN - optlen < TCPOLEN_SACK_PERMITTED)
+				continue;
 			optlen += TCPOLEN_SACK_PERMITTED;
 			*optp++ = TCPOPT_SACK_PERMITTED;
 			*optp++ = TCPOLEN_SACK_PERMITTED;
@@ -1318,6 +1326,8 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 				optlen += TCPOLEN_NOP;
 				*optp++ = TCPOPT_NOP;
 			}
+			if (TCP_MAXOLEN - optlen < TCPOLEN_TIMESTAMP)
+				continue;
 			optlen += TCPOLEN_TIMESTAMP;
 			*optp++ = TCPOPT_TIMESTAMP;
 			*optp++ = TCPOLEN_TIMESTAMP;
@@ -1356,7 +1366,7 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 				optlen += TCPOLEN_NOP;
 				*optp++ = TCPOPT_NOP;
 			}
-			if (TCP_MAXOLEN - optlen < 2 + TCPOLEN_SACK)
+			if (TCP_MAXOLEN - optlen < TCPOLEN_SACKHDR + TCPOLEN_SACK)
 				continue;
 			optlen += TCPOLEN_SACKHDR;
 			*optp++ = TCPOPT_SACK;
@@ -1387,9 +1397,15 @@ tcp_addoptions(struct tcpopt *to, u_char *optp)
 		optlen += TCPOLEN_EOL;
 		*optp++ = TCPOPT_EOL;
 	}
+	/*
+	 * According to RFC 793 (STD0007):
+	 *   "The content of the header beyond the End-of-Option option
+	 *    must be header padding (i.e., zero)."
+	 *   and later: "The padding is composed of zeros."
+	 */
 	while (optlen % 4) {
-		optlen += TCPOLEN_NOP;
-		*optp++ = TCPOPT_NOP;
+		optlen += TCPOLEN_PAD;
+		*optp++ = TCPOPT_PAD;
 	}
 
 	KASSERT(optlen <= TCP_MAXOLEN, ("%s: TCP options too long", __func__));
