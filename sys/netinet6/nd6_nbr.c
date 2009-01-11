@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet6/nd6_nbr.c,v 1.3 2008/12/03 00:27:01 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/netinet6/nd6_nbr.c,v 1.47 2007/07/05 16:29:40 delphij Exp $	*/
 /*	$KAME: nd6_nbr.c,v 1.86 2002/01/21 02:33:04 jinmei Exp $	*/
 
@@ -142,6 +142,24 @@ nd6_ns_input(struct mbuf *m, int off, int icmp6len)
 		} else {
 			nd6log((LOG_INFO, "nd6_ns_input: bad DAD packet "
 			    "(wrong ip6 dst)\n"));
+			goto bad;
+		}
+	} else if (!nd6_onlink_ns_rfc4861) {
+		struct sockaddr_in6 src_sa6;
+
+		/*
+		 * According to recent IETF discussions, it is not a good idea
+		 * to accept a NS from an address which would not be deemed
+		 * to be a neighbor otherwise.  This point is expected to be
+		 * clarified in future revisions of the specification.
+		 */
+		bzero(&src_sa6, sizeof(src_sa6));
+		src_sa6.sin6_family = AF_INET6;
+		src_sa6.sin6_len = sizeof(src_sa6);
+		src_sa6.sin6_addr = saddr6;
+		if (!nd6_is_addr_neighbor(&src_sa6, ifp)) {
+			nd6log((LOG_INFO, "nd6_ns_input: "
+				"NS packet from non-neighbor\n"));
 			goto bad;
 		}
 	}

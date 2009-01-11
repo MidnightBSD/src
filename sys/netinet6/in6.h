@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet6/in6.h,v 1.5 2008/12/03 00:27:01 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/netinet6/in6.h,v 1.51 2007/07/19 09:16:40 bz Exp $	*/
 /*	$KAME: in6.h,v 1.89 2001/05/27 13:28:35 itojun Exp $	*/
 
@@ -600,7 +600,9 @@ struct ip6_mtuinfo {
 /* New entries should be added here from current IPV6CTL_MAXID value. */
 /* to define items, should talk with KAME guys first, for *BSD compatibility */
 #define IPV6CTL_STEALTH		45
-#define IPV6CTL_MAXID		46
+
+#define	ICMPV6CTL_ND6_ONLINKNSRFC4861	47
+#define IPV6CTL_MAXID		48
 #endif /* __BSD_VISIBLE */
 
 /*

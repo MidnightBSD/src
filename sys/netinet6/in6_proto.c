@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet6/in6_proto.c,v 1.4 2008/12/03 00:27:01 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/netinet6/in6_proto.c,v 1.46 2007/07/05 16:29:39 delphij Exp $	*/
 /*	$KAME: in6_proto.c,v 1.91 2001/05/27 13:28:35 itojun Exp $	*/
 
@@ -393,6 +393,7 @@ time_t	ip6_log_time = (time_t)0L;
 #ifdef IPSTEALTH
 int	ip6stealth = 0;
 #endif
+int	nd6_onlink_ns_rfc4861 = 0; /* allow 'on-link' nd6 NS (as in RFC 4861) */
 
 /* icmp6 */
 /*
@@ -566,3 +567,6 @@ SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_ND6_MAXNUDHINT,
 	nd6_maxnudhint, CTLFLAG_RW,	&nd6_maxnudhint, 0, "");
 SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_ND6_DEBUG,
 	nd6_debug, CTLFLAG_RW,	&nd6_debug,		0, "");
+SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_ND6_ONLINKNSRFC4861,
+	nd6_onlink_ns_rfc4861, CTLFLAG_RW, &nd6_onlink_ns_rfc4861, 0,
+	"Accept 'on-link' nd6 NS in compliance with RFC 4861.");

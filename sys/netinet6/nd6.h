@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/netinet6/nd6.h,v 1.3 2008/12/03 00:27:01 laffer1 Exp $ */
 /*	$FreeBSD: src/sys/netinet6/nd6.h,v 1.21 2005/10/21 16:23:00 suz Exp $	*/
 /*	$KAME: nd6.h,v 1.76 2001/12/18 02:10:31 itojun Exp $	*/
 
@@ -340,6 +340,7 @@ extern struct llinfo_nd6 llinfo_nd6;
 extern struct nd_drhead nd_defrouter;
 extern struct nd_prhead nd_prefix;
 extern int nd6_debug;
+extern int nd6_onlink_ns_rfc4861;
 
 #define nd6log(x)	do { if (nd6_debug) log x; } while (/*CONSTCOND*/ 0)
 
