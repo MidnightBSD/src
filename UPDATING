@@ -11,6 +11,8 @@ Items affecting the mports and packages system can be found in
 	Other applications which use the OpenSSL EVP API may similarly be
 	affected.
 
+	Stop cross site request forgery attacks in lukemftpd
+
 20080104:
 	Import GNU libreadline 5.2
 
@@ -644,4 +646,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.48 2009/01/04 23:46:22 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.49 2009/01/10 22:58:42 laffer1 Exp $
