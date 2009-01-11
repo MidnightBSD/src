@@ -29282,7 +29282,6 @@ sys/netinet/udp_var.h -text
 sys/netinet6/dest6.c -text
 sys/netinet6/frag6.c -text
 sys/netinet6/icmp6.c -text
-sys/netinet6/icmp6.c.orig -text
 sys/netinet6/icmp6.h -text
 sys/netinet6/in6.c -text
 sys/netinet6/in6.h -text
