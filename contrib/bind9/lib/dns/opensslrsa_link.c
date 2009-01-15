@@ -17,7 +17,7 @@
 
 /*
  * Principal Author: Brian Wellington
- * $Id: opensslrsa_link.c,v 1.1.1.4 2008-04-18 18:31:33 laffer1 Exp $
+ * $Id: opensslrsa_link.c,v 1.2 2009-01-15 16:20:38 laffer1 Exp $
  */
 #ifdef OPENSSL
 
@@ -246,7 +246,7 @@ opensslrsa_verify(dst_context_t *dctx, const isc_region_t *sig) {
 
 	status = RSA_verify(type, digest, digestlen, sig->base,
 			    RSA_size(rsa), rsa);
-	if (status == 0)
+	if (status != 1)
 		return (dst__openssl_toresult(DST_R_VERIFYFAILURE));
 
 	return (ISC_R_SUCCESS);
