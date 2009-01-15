@@ -22,9 +22,9 @@
 .\" OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 .\" EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/boot0cfg/boot0cfg.8,v 1.29 2005/04/07 20:04:55 scottl Exp $
+.\" $FreeBSD: src/usr.sbin/boot0cfg/boot0cfg.8,v 1.32 2007/06/07 07:43:04 pav Exp $
 .\"
-.Dd February 21, 1999
+.Dd June 7, 2007
 .Dt BOOT0CFG 8
 .Os
 .Sh NAME
@@ -43,7 +43,7 @@
 .Ar disk
 .Sh DESCRIPTION
 The
-.Fx
+.Mx
 .Sq boot0
 boot manager permits the operator to select from which disk and
 slice an i386 machine (PC) is booted.
@@ -163,6 +163,13 @@ To boot slice 2 on the next boot:
 To enable just slices 1 and 2 in the menu:
 .Pp
 .Dl "boot0cfg -m 0x3 ad0"
+.Pp
+To go back to non-interactive booting, use
+.Xr fdisk 8
+to install the default MBR:
+.Pp
+.Dl "fdisk -B ad0"
+.Pp
 .Sh SEE ALSO
 .Xr geom 4 ,
 .Xr boot 8 ,
