@@ -3,7 +3,10 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
-20080110:
+20090115:
+	Fix a problem with DNSSEC and BIND.
+
+20090110:
 	For applications using OpenSSL for SSL connections, an invalid SSL
 	certificate may be interpreted as valid.  This could for example be
 	used by an attacker to perform a man-in-the-middle attack.
@@ -13,10 +16,10 @@ Items affecting the mports and packages system can be found in
 
 	Stop cross site request forgery attacks in lukemftpd
 
-20080104:
+20090104:
 	Import GNU libreadline 5.2
 
-20080101:
+20090101:
 	Update time zone data to 2008i.
 
 20081231:
@@ -646,4 +649,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.49 2009/01/10 22:58:42 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.50 2009/01/11 01:52:40 laffer1 Exp $
