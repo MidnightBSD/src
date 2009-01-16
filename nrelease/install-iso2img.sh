@@ -1,7 +1,5 @@
 #!/bin/sh
 # beerware license, written by Dario Freni (saturnero@freesbie.org)
-#
-# You can set some variables here. Edit them to fit your needs.
 
 # Set serial variable to 0 if you don't want serial console at all,
 # 1 if you want comconsole and 2 if you want comconsole and vidconsole
@@ -41,9 +39,7 @@ mount -t cd9660 /dev/${isodev} ${tmpdir}/iso
 mount /dev/${imgdev}a ${tmpdir}/img
 
 echo "Copying files to the image..."
-( cd ${tmpdir}/iso && find . -print -depth | gcpio -dump ${tmpdir}/img )
-#bzcat ${tmpdir}/iso/dist/root.dist.bz2 | mtree -PUr -p ${tmpdir}/img 2>&=
-#1 > /dev/null
+( cd ${tmpdir}/iso && pax -rw . ${tmpdir}/img )
 
 #echo "/dev/ufs/${UFS_LABEL} / ufs ro 1 1" > ${tmpdir}/img/etc/fstab
 
