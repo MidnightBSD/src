@@ -17,7 +17,7 @@
  *
  */
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_osfp.c,v 1.6 2007/07/03 12:16:07 mlaier Exp $");
 #endif
@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_osfp.c,v 1.6 2007/07/03 12:16:07 m
 # define DPFPRINTF(format, x...)		\
 	if (pf_status.debug >= PF_DEBUG_NOISY)	\
 		printf(format , ##x)
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 typedef uma_zone_t pool_t;
 #else
 typedef struct pool pool_t;
@@ -66,7 +66,7 @@ typedef struct pool pool_t;
 # define pool_put(pool, item)	free(item)
 # define pool_init(pool, size, a, ao, f, m, p)	(*(pool)) = (size)
 
-# ifdef __FreeBSD__
+# if defined(__FreeBSD__) || defined(__MidnightBSD__)
 # define NTOHS(x) (x) = ntohs((u_int16_t)(x))
 # endif
 
@@ -301,14 +301,14 @@ pf_osfp_match(struct pf_osfp_enlist *list, pf_osfp_t os)
 }
 
 /* Initialize the OS fingerprint system */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 int
 #else
 void
 #endif
 pf_osfp_initialize(void)
 {
-#if defined(__FreeBSD__) && defined(_KERNEL)
+#if (defined(__MidnightBSD__) || defined(__FreeBSD__)) && defined(_KERNEL)
 	int error = ENOMEM;
 	
 	do {
@@ -324,7 +324,7 @@ pf_osfp_initialize(void)
 	    "pfosfp", &pool_allocator_nointr);
 #endif
 	SLIST_INIT(&pf_osfp_list);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #ifdef _KERNEL
 	return (error);
 #else
@@ -333,7 +333,7 @@ pf_osfp_initialize(void)
 #endif
 }
 
-#if defined(__FreeBSD__) && (_KERNEL)
+#if (defined(__MidnightBSD__) || defined(__FreeBSD__)) && (_KERNEL)
 void
 pf_osfp_cleanup(void)
 {
