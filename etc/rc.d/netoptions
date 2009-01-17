@@ -1,18 +1,17 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/netoptions,v 1.141 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD: src/etc/rc.d/netoptions,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/netoptions,v 1.3 2007/10/26 15:20:25 laffer1 Exp $
 
 # PROVIDE: netoptions
 # REQUIRE: FILESYSTEMS
-# BEFORE:  securelevel
 # KEYWORD: nojail
 
 . /etc/rc.subr
 
 load_rc_config 'XXX'
 
-echo -n 'Additional TCP options:'
+echo -n 'Additional IP options:'
 case ${log_in_vain} in
 [Nn][Oo] | '')
 	log_in_vain=0
@@ -33,4 +32,46 @@ esac
 	sysctl net.inet.tcp.log_in_vain="${log_in_vain}" >/dev/null
 	sysctl net.inet.udp.log_in_vain="${log_in_vain}" >/dev/null
 )
+
+case ${tcp_extensions} in
+[Yy][Ee][Ss] | '')
+	;;
+*)
+	echo -n ' tcp extensions=NO'
+	sysctl net.inet.tcp.rfc1323=0 >/dev/null
+	;;
+esac
+
+case ${tcp_keepalive} in
+[Nn][Oo])
+	echo -n ' TCP keepalive=NO'
+	sysctl net.inet.tcp.always_keepalive=0 >/dev/null
+	;;
+esac
+
+case ${tcp_drop_synfin} in
+[Yy][Ee][Ss])
+	echo -n ' drop SYN+FIN packets=YES'
+	sysctl net.inet.tcp.drop_synfin=1 >/dev/null
+	;;
+esac
+
+case ${ip_portrange_first} in
+[Nn][Oo] | '')
+	;;
+*)
+	echo -n " ip_portrange_first=$ip_portrange_first"
+	sysctl net.inet.ip.portrange.first=$ip_portrange_first >/dev/null
+	;;
+esac
+
+case ${ip_portrange_last} in
+[Nn][Oo] | '')
+	;;
+*)
+	echo -n " ip_portrange_last=$ip_portrange_last"
+	sysctl net.inet.ip.portrange.last=$ip_portrange_last >/dev/null
+	;;
+esac
+
 echo '.'
