@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $FreeBSD: src/etc/rc.d/pppoed,v 1.3 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/pppoed,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
 
 # PROVIDE: pppoed
 # REQUIRE: NETWORKING
@@ -18,6 +18,7 @@ stop_cmd=":"
 
 pppoed_start()
 {
+	local _opts
 	if [ -n "${pppoed_provider}" ]; then
 			pppoed_flags="${pppoed_flags} -p ${pppoed_provider}"
 	fi
