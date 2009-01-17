@@ -23,7 +23,7 @@
 # SUCH DAMAGE.
 #
 # $MidnightBSD$
-# $FreeBSD: src/etc/network.subr,v 1.164.2.2 2005/12/10 02:20:13 brooks Exp $
+# $FreeBSD: src/etc/network.subr,v 1.180.2.1 2007/11/08 05:52:23 thompsa Exp $
 #
 
 #
@@ -45,14 +45,11 @@ ifconfig_up()
 	ifconfig_args=`ifconfig_getargs $1`
 	if [ -n "${ifconfig_args}" ]; then
 		ifconfig $1 up
-		eval "ifconfig $1 ${ifconfig_args}"
+		ifconfig $1 ${ifconfig_args}
 		_cfg=0
 	fi
 
 	if wpaif $1; then
-		if [ $_cfg -ne 0 ] ; then
-			ifconfig $1 up
-		fi
 		/etc/rc.d/wpa_supplicant start $1
 		_cfg=0		# XXX: not sure this should count
 	fi
@@ -61,7 +58,9 @@ ifconfig_up()
 		if [ $_cfg -ne 0 ] ; then
 			ifconfig $1 up
 		fi
-		/etc/rc.d/dhclient start $1
+		if syncdhcpif $1; then
+			/etc/rc.d/dhclient start $1
+		fi
 		_cfg=0
 	fi
 
@@ -69,32 +68,13 @@ ifconfig_up()
 }
 
 # ifconfig_down if
-#	Remove all inet entries from the $if interface. It returns
-#	0 if inet entries were found and removed. It returns 1 if
-#	no entries were found or they could not be removed.
+#	returns 1 if wpa_supplicant or dhclient was stopped or
+#	the interface exists.
 #
 ifconfig_down()
 {
 	[ -z "$1" ] && return 1
-	_ifs="^"
 	_cfg=1
-
-	inetList="`ifconfig $1 | grep 'inet ' | tr "\n" "$_ifs"`"
-
-	oldifs="$IFS"
-	IFS="$_ifs"
-	for _inet in $inetList ; do
-		# get rid of extraneous line
-		[ -z "$_inet" ] && break
-
-		_inet=`expr "$_inet" : '.*\(inet \([0-9]\{1,3\}\.\)\{3\}[0-9]\{1,3\}\).*'`
-
-		IFS="$oldifs"
-		ifconfig $1 ${_inet} delete
-		IFS="$_ifs"
-		_cfg=0
-	done
-	IFS="$oldifs"
 
 	if wpaif $1; then
 		/etc/rc.d/wpa_supplicant stop $1
@@ -106,7 +86,37 @@ ifconfig_down()
 		_cfg=0
 	fi
 
+	if ifexists $1; then
+		ifconfig $1 down
+		_cfg=0
+	fi
+
 	return $_cfg
+}
+
+# get_if_var if var [default]
+#       Return the value of the pseudo-hash corresponding to $if where
+#       $var is a string containg the sub-string "IF" which will be
+#       replaced with $if after the characters defined in _punct are
+#       replaced with '_'. If the variable is unset, replace it with
+#       $default if given.
+get_if_var()
+{
+	if [ $# -ne 2 -a $# -ne 3 ]; then
+		err 3 'USAGE: get_if_var name var [default]'
+	fi
+
+	_if=$1
+	_punct=". - / +"
+	for _punct_c in $_punct; do
+		_if=`ltr ${_if} ${_punct_c} '_'`
+	done
+	_var=$2
+	_default=$3
+
+	prefix=${_var%%IF*}
+	suffix=${_var##*IF}
+	eval echo \${${prefix}${_if}${suffix}-${_default}}
 }
 
 # _ifconfig_getargs if
@@ -120,9 +130,7 @@ _ifconfig_getargs()
 		return 1
 	fi
 
-	eval _args=\${ifconfig_$1-$ifconfig_DEFAULT}
-
-	echo "$_args"
+	get_if_var $_ifn ifconfig_IF "$ifconfig_DEFAULT"
 }
 
 # ifconfig_getargs if
@@ -138,12 +146,11 @@ ifconfig_getargs()
 
 	for _arg in $_tmpargs; do
 		case $_arg in
-		[Dd][Hh][Cc][Pp])
-			;;
-		[Nn][Oo][Aa][Uu][Tt][Oo])
-			;;
-		[Ww][Pp][Aa])
-			;;
+		[Dd][Hh][Cc][Pp]) ;;
+		[Nn][Oo][Aa][Uu][Tt][Oo]) ;;
+		[Nn][Oo][Ss][Yy][Nn][Cc][Dd][Hh][Cc][Pp]) ;;
+		[Ss][Yy][Nn][Cc][Dd][Hh][Cc][Pp]) ;;
+		[Ww][Pp][Aa]) ;;
 		*)
 			_args="$_args $_arg"
 			;;
@@ -179,9 +186,38 @@ dhcpif()
 		[Dd][Hh][Cc][Pp])
 			return 0
 			;;
+		[Nn][Oo][Ss][Yy][Nn][Cc][Dd][Hh][Cc][Pp])
+			return 0
+			;;
+		[Ss][Yy][Nn][Cc][Dd][Hh][Cc][Pp])
+			return 0
+			;;
 		esac
 	done
 	return 1
+}
+
+# syncdhcpif
+#	Returns 0 if the interface should be configured synchronously and
+#	1 otherwise.
+syncdhcpif()
+{
+	_tmpargs=`_ifconfig_getargs $1`
+	for _arg in $_tmpargs; do
+		case $_arg in
+		[Nn][Oo][Ss][Yy][Nn][Cc][Dd][Hh][Cc][Pp])
+			return 1
+			;;
+		[Ss][Yy][Nn][Cc][Dd][Hh][Cc][Pp])
+			return 0
+			;;
+		esac
+	done
+	if checkyesno synchronous_dhclient; then
+		return 0
+	else
+		return 1
+	fi
 }
 
 # wpaif if
@@ -199,6 +235,37 @@ wpaif()
 	return 1
 }
 
+# ipv6if if
+#	Returns 0 if the interface should be configured for IPv6 and
+#	1 otherwise.
+ipv6if()
+{
+	if ! checkyesno ipv6_enable; then
+		return 1
+	fi
+	case "${ipv6_network_interfaces}" in
+	[Aa][Uu][Tt][Oo])
+		return 0
+		;;
+	''|[Nn][Oo][Nn][Ee])
+		return 1
+		;;
+	esac
+	for v6if in ${ipv6_network_interfaces}; do
+		if [ "${v6if}" = "${1}" ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+# ifexists if
+#	Returns 0 if the interface exists and 1 otherwise.
+ifexists()
+{
+	ifconfig -n $1 > /dev/null 2>&1
+}
+
 # ipv4_up if
 #  add IPv4 addresses to the interface $if 
 ipv4_up()
@@ -213,8 +280,32 @@ ipv4_up()
 ipv4_down()
 {
 	_if=$1
-	ifalias_down ${_if}
-	ipv4_addrs_common ${_if} -alias
+	_ifs="^"
+	_ret=1
+
+	ifexists ${_if} || return 1
+
+	inetList="`ifconfig ${_if} | grep 'inet ' | tr "\n" "$_ifs"`"
+
+	oldifs="$IFS"
+	IFS="$_ifs"
+	for _inet in $inetList ; do
+		# get rid of extraneous line
+		[ -z "$_inet" ] && break
+
+		_inet=`expr "$_inet" : '.*\(inet \([0-9]\{1,3\}\.\)\{3\}[0-9]\{1,3\}\).*'`
+
+		IFS="$oldifs"
+		ifconfig ${_if} ${_inet} delete
+		IFS="$_ifs"
+		_ret=0
+	done
+	IFS="$oldifs"
+
+	ifalias_down ${_if} && _ret=0
+	ipv4_addrs_common ${_if} -alias && _ret=0
+
+	return $_ret
 }
 
 # ipv4_addrs_common if action
@@ -227,7 +318,7 @@ ipv4_addrs_common()
 	_action=$2
     
 	# get ipv4-addresses
-	eval cidr_addr=\${ipv4_addrs_${_if}}
+	cidr_addr=`get_if_var $_if ipv4_addrs_IF`
     
 	for _cidr in ${cidr_addr}; do
 		_ipaddr=${_cidr%%/*}
@@ -267,7 +358,7 @@ ifalias_up()
 	_ret=1
 	alias=0
 	while : ; do
-		eval ifconfig_args=\$ifconfig_$1_alias${alias}
+		ifconfig_args=`get_if_var $1 ifconfig_IF_alias${alias}`
 		if [ -n "${ifconfig_args}" ]; then
 			ifconfig $1 ${ifconfig_args} alias
 			alias=$((${alias} + 1))
@@ -289,7 +380,7 @@ ifalias_down()
 	_ret=1
 	alias=0
 	while : ; do
-		eval ifconfig_args=\$ifconfig_$1_alias${alias}
+		ifconfig_args=`get_if_var $1 ifconfig_IF_alias${alias}`
 		if [ -n "${ifconfig_args}" ]; then
 			ifconfig $1 ${ifconfig_args} -alias
 			alias=$((${alias} + 1))
@@ -362,26 +453,89 @@ clone_down()
 	debug "Destroyed clones: ${_list}"
 }
 
+# Create netgraph nodes.
+#
+ng_mkpeer() {
+	ngctl -f - 2> /dev/null <<EOF
+mkpeer $*
+msg dummy nodeinfo
+EOF
+}
+
+ng_create_one() {
+	ng_mkpeer $* | while read line; do
+		t=`expr "${line}" : '.* name="\([a-z]*[0-9]*\)" .*'`
+		if [ -n "${t}" ]; then
+			echo ${t}
+			return
+		fi
+	done
+}
+
 gif_up() {
+	# The following must be removed once RELENG_7 is branched.
 	case ${gif_interfaces} in
-	[Nn][Oo] | '')
+	[Nn][Oo])
+		warn "gif_interfaces=\"NO\" is deprecated, use gif_interfaces=\"\" instead."
+		gif_interfaces=""
 		;;
-	*)
-		for i in ${gif_interfaces}; do
-			eval peers=\$gifconfig_$i
-			case ${peers} in
+	esac
+
+	for i in ${gif_interfaces}; do
+		peers=`get_if_var $i gifconfig_IF`
+		case ${peers} in
+		'')
+			continue
+			;;
+		*)
+			ifconfig $i create >/dev/null 2>&1
+			ifconfig $i tunnel ${peers}
+			ifconfig $i up
+			;;
+		esac
+	done
+}
+
+# ng_fec_create ifn
+# Configure Fast EtherChannel for interface $ifn. Returns 0 if FEC
+# arguments were found and configured; returns !0 otherwise.
+ng_fec_create() {
+	 local req_iface iface bogus
+	 req_iface="$1"
+
+	 ngctl shutdown ${req_iface}: > /dev/null 2>&1
+
+	 bogus=""
+	 while true; do
+		 iface=`ng_create_one fec dummy fec`
+		 if [ -z "${iface}" ]; then
+			 exit 2
+		 fi
+		 if [ "${iface}" = "${req_iface}" ]; then
+			 break
+		 fi
+		 bogus="${bogus} ${iface}"
+	 done
+
+	 for iface in ${bogus}; do
+		 ngctl shutdown ${iface}:
+	 done
+}
+
+fec_up() {
+	for i in ${fec_interfaces}; do
+		ng_fec_create $i
+		for j in `get_if_var $i fecconfig_IF`; do
+			case ${j} in
 			'')
 				continue
 				;;
 			*)
-				ifconfig $i create >/dev/null 2>&1
-				ifconfig $i tunnel ${peers}
-				ifconfig $i up
+				ngctl msg ${i}: add_iface "\"${j}\""
 				;;
 			esac
 		done
-		;;
-	esac
+	done
 }
 
 #
@@ -392,7 +546,7 @@ gif_up() {
 ipx_up()
 {
 	ifn="$1"
-	eval ifconfig_args=\$ifconfig_${ifn}_ipx
+	ifconfig_args=`get_if_var $ifn ifconfig_IF_ipx`
 	if [ -n "${ifconfig_args}" ]; then
 		ifconfig ${ifn} ${ifconfig_args}
 		return 0
@@ -409,6 +563,8 @@ ipx_down()
 	[ -z "$1" ] && return 1
 	_ifs="^"
 	_ret=1
+
+	ifexists $1 || return 1
 
 	ipxList="`ifconfig $1 | grep 'ipx ' | tr "\n" "$_ifs"`"
 
@@ -439,7 +595,7 @@ ifnet_rename()
 	_ifn_list="`ifconfig -l`"
 	[ -z "$_ifn_list" ] && return 0
 	for _if in ${_ifn_list} ; do
-		eval _ifname=\$ifconfig_${_if}_name
+		_ifname=`get_if_var $_if ifconfig_IF_name`
 		if [ ! -z "$_ifname" ]; then
 			ifconfig $_if name $_ifname
 		fi
@@ -483,6 +639,10 @@ list_net_interfaces()
 		_tmplist="${_lo}${_tmplist}"
 		;;
 	*)
+		if [ -z "$type" ]; then
+			warn "Values of network_interfaces other than"\
+			  "AUTO are deprecated"
+		fi
 		_tmplist="${network_interfaces} ${cloned_interfaces}"
 		;;
 	esac
@@ -500,7 +660,7 @@ list_net_interfaces()
 		if dhcpif $_if; then
 			_dhcplist="${_dhcplist}${_aprefix}${_if}"
 			[ -z "$_aprefix" ] && _aprefix=' '
-		elif [ -n "`_ifconfig_getargs $if`" ]; then
+		elif [ -n "`_ifconfig_getargs $_if`" ]; then
 			_nodhcplist="${_nodhcplist}${_bprefix}${_if}"
 			[ -z "$_bprefix" ] && _bprefix=' '
 		fi
@@ -565,7 +725,7 @@ network6_interface_setup()
 	esac
 	for i in $interfaces; do
 		rtsol_interface=yes
-		eval prefix=\$ipv6_prefix_$i
+		prefix=`get_if_var $i ipv6_prefix_IF`
 		if [ -n "${prefix}" ]; then
 			rtsol_available=no
 			rtsol_interface=no
@@ -585,7 +745,7 @@ network6_interface_setup()
 				esac
 			done
 		fi
-		eval ipv6_ifconfig=\$ipv6_ifconfig_$i
+		ipv6_ifconfig=`get_if_var $i ipv6_ifconfig_IF`
 		if [ -n "${ipv6_ifconfig}" ]; then
 			rtsol_available=no
 			rtsol_interface=no
@@ -595,7 +755,7 @@ network6_interface_setup()
 		if [ ${rtsol_available} = yes -a ${rtsol_interface} = yes ]
 		then
 			case ${i} in
-			lo0|gif[0-9]*|stf[0-9]*|faith[0-9]*|lp[0-9]*|sl[0-9]*|tun[0-9]*)
+			lo0|gif[0-9]*|stf[0-9]*|faith[0-9]*|lp[0-9]*|sl[0-9]*|tun[0-9]*|pflog[0-9]*|pfsync[0-9]*)
 				;;
 			*)
 				rtsol_interfaces="${rtsol_interfaces} ${i}"
@@ -620,7 +780,7 @@ network6_interface_setup()
 	for i in $interfaces; do
 		alias=0
 		while : ; do
-			eval ipv6_ifconfig=\$ipv6_ifconfig_${i}_alias${alias}
+			ipv6_ifconfig=`get_if_var $i ipv6_ifconfig_IF_alias${alias}`
 			if [ -z "${ipv6_ifconfig}" ]; then
 				break;
 			fi
@@ -696,7 +856,7 @@ network6_static_routes_setup()
 		;;
 	*)
 		for i in ${ipv6_static_routes}; do
-			eval ipv6_route_args=\$ipv6_route_${i}
+			ipv6_route_args=`get_if_var $i ipv6_route_IF`
 			route add -inet6 ${ipv6_route_args}
 		done
 		;;
