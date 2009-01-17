@@ -16004,6 +16004,7 @@ etc/rc.d/hcsecd -text
 etc/rc.d/hostapd -text
 etc/rc.d/hostid -text
 etc/rc.d/hostname -text
+etc/rc.d/idmapd -text
 etc/rc.d/ike -text
 etc/rc.d/inetd -text
 etc/rc.d/initrandom -text
