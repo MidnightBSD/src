@@ -16035,6 +16035,7 @@ etc/rc.d/motd -text
 etc/rc.d/mountcritlocal -text
 etc/rc.d/mountcritremote -text
 etc/rc.d/mountd -text
+etc/rc.d/mountlate -text
 etc/rc.d/moused -text
 etc/rc.d/mroute6d -text
 etc/rc.d/mrouted -text
