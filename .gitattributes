@@ -16030,6 +16030,8 @@ etc/rc.d/local -text
 etc/rc.d/localpkg -text
 etc/rc.d/lockd -text
 etc/rc.d/lpd -text
+etc/rc.d/mdconfig -text
+etc/rc.d/mdconfig2 -text
 etc/rc.d/mixer -text
 etc/rc.d/motd -text
 etc/rc.d/mountcritlocal -text
@@ -16063,8 +16065,6 @@ etc/rc.d/ppp -text
 etc/rc.d/pppoed -text
 etc/rc.d/pwcheck -text
 etc/rc.d/quota -text
-etc/rc.d/ramdisk -text
-etc/rc.d/ramdisk-own -text
 etc/rc.d/random -text
 etc/rc.d/rarpd -text
 etc/rc.d/rcconf.sh -text
@@ -16085,6 +16085,7 @@ etc/rc.d/serial -text
 etc/rc.d/sound -text
 etc/rc.d/sppp -text
 etc/rc.d/sshd -text
+etc/rc.d/statd -text
 etc/rc.d/swap1 -text
 etc/rc.d/syscons -text
 etc/rc.d/sysctl -text

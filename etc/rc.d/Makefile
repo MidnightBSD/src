@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.14 2009/01/17 17:35:26 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.15 2009/01/17 17:37:02 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -22,7 +22,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	kadmind kerberos kernel keyserv kldxref kpasswdd \
 	ldconfig local localpkg lockd lpd \
 	mixer motd mountcritlocal mountcritremote mountlate \
-	mountd moused mroute6d mrouted msgs \
+	mdconfig mdconfig2 mountd moused mroute6d mrouted msgs \
 	named natd netif netoptions \
 	network_ipv6 newsyslog nfsclient nfsd \
 	nfsserver nisdomain nsswitch ntpd \
@@ -30,10 +30,10 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	pf pflog pfsync \
 	powerd power_profile ppp pppoed pwcheck \
 	quota \
-	ramdisk ramdisk-own random rarpd rdate resolv root \
+	random rarpd rdate resolv root \
 	route6d routed routing rpcbind rtadvd rwho \
 	savecore sdpd securelevel sendmail \
-	serial sound sppp swap1 \
+	serial sound sppp statd swap1 \
 	syscons sysctl syslogd \
 	timed tmp \
 	ugidfw \
