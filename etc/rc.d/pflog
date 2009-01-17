@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/pflog,v 1.5.2.1 2006/01/22 13:40:47 yar Exp $
-# $MidnightBSD: src/etc/rc.d/pflog,v 1.3 2007/01/08 00:10:37 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/pflog,v 1.12 2007/04/09 08:53:40 des Exp $
+# $MidnightBSD: src/etc/rc.d/pflog,v 1.4 2007/10/26 15:20:25 laffer1 Exp $
 
 # PROVIDE: pflog
 # REQUIRE: FILESYSTEMS netif cleanvar
@@ -22,19 +22,11 @@ resync_cmd="pflog_resync"
 
 pflog_prestart()
 {
-	# load pflog kernel module if needed
-	if ! kldstat -q -m pflog; then
-		if kldload pflog; then
-			info 'pflog module loaded.'
-		else
-			warn 'pflog module failed to load.'
-			return 1
-		fi
-	fi
+	load_kld pflog || return 1
 
 	# set pflog0 interface to up state
 	if ! ifconfig pflog0 up; then
-		warn 'could not not bring up pflog0.'
+		warn 'could not bring up pflog0.'
 		return 1
 	fi
 

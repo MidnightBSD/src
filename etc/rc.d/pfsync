@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $MidnightBSD: src/etc/rc.d/pfsync,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
-# $FreeBSD: src/etc/rc.d/pfsync,v 1.1.2.1 2005/10/08 03:32:54 yar Exp $
+# $MidnightBSD: src/etc/rc.d/pfsync,v 1.3 2007/10/26 15:20:25 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/pfsync,v 1.5 2007/04/10 16:42:13 keramida Exp $
 #
 
 # PROVIDE: pfsync
@@ -15,33 +15,35 @@ rcvar=`set_rcvar`
 start_precmd="pfsync_prestart"
 start_cmd="pfsync_start"
 stop_cmd="pfsync_stop"
+required_modules="pf"
 
 pfsync_prestart()
 {
+	# XXX Currently pfsync cannot be a module as it must register
+	# a network protocol in a static kernel table.
+	if ! kldstat -q -m pfsync; then
+		warn "pfsync(4) must be statically compiled in the kernel."
+		return 1
+	fi
+
 	case "$pfsync_syncdev" in
 	'')
 		warn "pfsync_syncdev is not set."
 		return 1
 		;;
 	esac
-
-	# load pf kernel module if needed
-	if ! kldstat -q -m pf ; then
-		if kldload pf ; then
-			info "pf module loaded."
-		else
-			warn "pf module failed to load."
-			return 1
-		fi
-	fi
-
 	return 0
 }
 
 pfsync_start()
 {
+	local _syncpeer
+
 	echo "Enabling pfsync."
-	ifconfig pfsync0 syncdev $pfsync_syncdev $pfsync_ifconfig up
+	if [ -n "${pfsync_syncpeer}" ]; then
+		_syncpeer="syncpeer ${pfsync_syncpeer}"
+	fi
+	ifconfig pfsync0 $_syncpeer syncdev $pfsync_syncdev $pfsync_ifconfig up
 }
 
 pfsync_stop()

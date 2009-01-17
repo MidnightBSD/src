@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.10 2008/12/04 16:15:50 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.11 2009/01/17 16:31:32 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -13,9 +13,9 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	firstboot fsck ftp-proxy ftpd \
 	gbde geli geli2 \
 	hcsecd \
-	hostapd hostname \
+	hostapd hostid hostname \
 	ike \
-	inetd initrandom \
+	idmapd inetd initrandom \
 	ip6addrctl ip6fw ipfilter ipfs ipfw ipmon \
 	ipnat ipsec ipxrouted isdnd \
 	jail \

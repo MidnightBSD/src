@@ -16002,6 +16002,7 @@ etc/rc.d/geli -text
 etc/rc.d/geli2 -text
 etc/rc.d/hcsecd -text
 etc/rc.d/hostapd -text
+etc/rc.d/hostid -text
 etc/rc.d/hostname -text
 etc/rc.d/ike -text
 etc/rc.d/inetd -text

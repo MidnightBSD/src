@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/pf,v 1.7.2.4 2006/01/22 13:45:28 yar Exp $
-# $MidnightBSD: src/etc/rc.d/pf,v 1.2 2006/08/28 02:47:46 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/pf,v 1.16 2007/04/09 08:53:40 des Exp $
+# $MidnightBSD: src/etc/rc.d/pf,v 1.3 2007/10/26 15:20:25 laffer1 Exp $
 
 # PROVIDE: pf
 # REQUIRE: FILESYSTEMS netif pflog pfsync
@@ -13,7 +13,6 @@
 name="pf"
 rcvar=`set_rcvar`
 load_rc_config $name
-start_precmd="pf_prestart"
 start_cmd="pf_start"
 stop_cmd="pf_stop"
 check_cmd="pf_check"
@@ -22,25 +21,12 @@ resync_cmd="pf_resync"
 status_cmd="pf_status"
 extra_commands="check reload resync status"
 required_files="$pf_rules"
-
-pf_prestart()
-{
-	# load pf kernel module if needed
-	if ! kldstat -q -m pf ; then
-		if kldload pf ; then
-			info 'pf module loaded.'
-		else
-			warn 'pf module failed to load.'
-			return 1
-		fi
-	fi
-	return 0
-}
+required_modules="pf"
 
 pf_start()
 {
 	echo "Enabling pf."
-	$pf_program -Fall > /dev/null 2>&1
+	$pf_program -F all > /dev/null 2>&1
 	$pf_program -f "$pf_rules" $pf_flags
 	if ! $pf_program -s info | grep -q "Enabled" ; then
 		$pf_program -e
