@@ -16028,6 +16028,7 @@ etc/rc.d/kpasswdd -text
 etc/rc.d/ldconfig -text
 etc/rc.d/local -text
 etc/rc.d/localpkg -text
+etc/rc.d/lockd -text
 etc/rc.d/lpd -text
 etc/rc.d/mixer -text
 etc/rc.d/motd -text
@@ -16046,7 +16047,6 @@ etc/rc.d/network_ipv6 -text
 etc/rc.d/newsyslog -text
 etc/rc.d/nfsclient -text
 etc/rc.d/nfsd -text
-etc/rc.d/nfslocking -text
 etc/rc.d/nfsserver -text
 etc/rc.d/nisdomain -text
 etc/rc.d/nscd -text
