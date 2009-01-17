@@ -16056,7 +16056,6 @@ etc/rc.d/pfsync -text
 etc/rc.d/power_profile -text
 etc/rc.d/powerd -text
 etc/rc.d/ppp -text
-etc/rc.d/ppp-user -text
 etc/rc.d/pppoed -text
 etc/rc.d/pwcheck -text
 etc/rc.d/quota -text
