@@ -16021,6 +16021,7 @@ etc/rc.d/isdnd -text
 etc/rc.d/jail -text
 etc/rc.d/kadmind -text
 etc/rc.d/kerberos -text
+etc/rc.d/kernel -text
 etc/rc.d/keyserv -text
 etc/rc.d/kldxref -text
 etc/rc.d/kpasswdd -text
