@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# $NetBSD: mountd,v 1.11 2002/01/31 01:26:06 lukem Exp $
-# $FreeBSD: src/etc/rc.d/mountd,v 1.15.2.1 2005/09/21 20:27:50 rodrigc Exp $
-# $MidnightBSD$
+# $FreeBSD: src/etc/rc.d/mountd,v 1.19.4.1 2008/01/28 07:58:31 dougb Exp $
+# $MidnightBSD: src/etc/rc.d/mountd,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: mountd
 # REQUIRE: NETWORKING nfsserver rpcbind quota
@@ -13,6 +12,7 @@
 name="mountd"
 rcvar=`set_rcvar`
 command="/usr/sbin/${name}"
+pidfile="/var/run/${name}.pid"
 required_files="/etc/exports"
 start_precmd="mountd_precmd"
 extra_commands="reload"
@@ -36,6 +36,11 @@ mountd_precmd()
 			checkyesno weak_mountd_authentication && rc_flags="-n"
 		fi
 	fi
+
+	if checkyesno zfs_enable; then
+		rc_flags="${rc_flags} /etc/exports /etc/zfs/exports"
+	fi
+
 	rm -f /var/db/mountdtab
 	( umask 022 ; > /var/db/mountdtab )
 	return 0
