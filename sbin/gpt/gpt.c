@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/gpt/gpt.c,v 1.10.2.1 2005/09/06 23:59:01 marcel Exp $");
+__FBSDID("$FreeBSD: src/sbin/gpt/gpt.c,v 1.16.2.1 2007/11/09 02:29:43 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -256,6 +256,62 @@ le_uuid_enc(void *buf, uuid_t const *uuid)
 	p[9] = uuid->clock_seq_low;
 	for (i = 0; i < _UUID_NODE_LEN; i++)
 		p[10 + i] = uuid->node[i];
+}
+
+int
+parse_uuid(const char *s, uuid_t *uuid)
+{
+	uint32_t status;
+
+	uuid_from_string(s, uuid, &status);
+	if (status == uuid_s_ok)
+		return (0);
+
+	switch (*s) {
+	case 'e':
+		if (strcmp(s, "efi") == 0) {
+			uuid_t efi = GPT_ENT_TYPE_EFI;
+			*uuid = efi;
+			return (0);
+		}
+		break;
+	case 'h':
+		if (strcmp(s, "hfs") == 0) {
+			uuid_t hfs = GPT_ENT_TYPE_APPLE_HFS;
+			*uuid = hfs;
+			return (0);
+		}
+		break;
+	case 'l':
+		if (strcmp(s, "linux") == 0) {
+			uuid_t lnx = GPT_ENT_TYPE_MS_BASIC_DATA;
+			*uuid = lnx;
+			return (0);
+		}
+		break;
+	case 's':
+		if (strcmp(s, "swap") == 0) {
+			uuid_t sw = GPT_ENT_TYPE_FREEBSD_SWAP;
+			*uuid = sw;
+			return (0);
+		}
+		break;
+	case 'u':
+		if (strcmp(s, "ufs") == 0) {
+			uuid_t ufs = GPT_ENT_TYPE_FREEBSD_UFS;
+			*uuid = ufs;
+			return (0);
+		}
+		break;
+	case 'w':
+		if (strcmp(s, "windows") == 0) {
+			uuid_t win = GPT_ENT_TYPE_MS_BASIC_DATA;
+			*uuid = win;
+			return (0);
+		}
+		break;
+	}
+	return (EINVAL);
 }
 
 void*
@@ -529,10 +585,16 @@ gpt_open(const char *dev)
 
 	if (gpt_mbr(fd, 0LL) == -1)
 		goto close;
-	if (gpt_gpt(fd, 1LL) == -1)
-		goto close;
-	if (gpt_gpt(fd, mediasz / secsz - 1LL) == -1)
-		goto close;
+
+	/*
+	 * Don't look for a GPT unless we have a valid PMBR.
+	 */
+	if (map_find(MAP_TYPE_PMBR) != NULL) {
+		if (gpt_gpt(fd, 1LL) == -1)
+			goto close;
+		if (gpt_gpt(fd, mediasz / secsz - 1LL) == -1)
+			goto close;
+	}
 
 	return (fd);
 

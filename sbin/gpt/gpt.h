@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/gpt/gpt.h,v 1.7.2.1 2005/09/06 23:59:01 marcel Exp $
+ * $FreeBSD: src/sbin/gpt/gpt.h,v 1.11 2006/06/22 22:05:28 marcel Exp $
  */
 
 #ifndef _GPT_H_
@@ -36,6 +36,7 @@
 
 void	le_uuid_dec(void const *, uuid_t *);
 void	le_uuid_enc(void *, uuid_t const *);
+int	parse_uuid(const char *, uuid_t *);
 
 struct mbr_part {
 	uint8_t		part_flag;		/* bootstrap flags */

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/gpt/map.h,v 1.5.8.1 2005/09/06 23:59:01 marcel Exp $
+ * $FreeBSD: src/sbin/gpt/map.h,v 1.6 2005/08/31 01:47:19 marcel Exp $
  */
 
 #ifndef _MAP_H_
