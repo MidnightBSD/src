@@ -16050,7 +16050,6 @@ etc/rc.d/nscd -text
 etc/rc.d/nsswitch -text
 etc/rc.d/ntpd -text
 etc/rc.d/othermta -text
-etc/rc.d/pccard -text
 etc/rc.d/pf -text
 etc/rc.d/pflog -text
 etc/rc.d/pfsync -text

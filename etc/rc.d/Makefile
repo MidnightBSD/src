@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/rc.d/Makefile,v 1.9 2008/04/28 05:22:21 laffer1 Exp $ 
+# $MidnightBSD: src/etc/rc.d/Makefile,v 1.10 2008/12/04 16:15:50 laffer1 Exp $ 
 
 .include <bsd.own.mk>
 
@@ -27,7 +27,7 @@ FILES=	DAEMON FILESYSTEMS LOGIN NETWORKING SERVERS \
 	network_ipv6 newsyslog nfsclient nfsd \
 	nfslocking nfsserver nisdomain nsswitch ntpd \
 	othermta \
-	pccard pf pflog pfsync \
+	pf pflog pfsync \
 	powerd power_profile ppp pppoed pwcheck \
 	quota \
 	ramdisk ramdisk-own random rarpd rdate resolv root \
