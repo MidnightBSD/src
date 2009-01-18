@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/kerberos,v 1.4.2.1 2005/09/25 18:45:56 rwatson Exp $
-# $MidnightBSD$
+# $FreeBSD: src/etc/rc.d/kerberos,v 1.6.4.2 2008/01/29 07:15:46 mtm Exp $
+# $MidnightBSD: src/etc/rc.d/kerberos,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: kerberos
 # REQUIRE: NETWORKING
@@ -9,9 +9,9 @@
 . /etc/rc.subr
 
 name="kerberos5"
-load_rc_config $name
 rcvar="kerberos5_server_enable"
-command="${kerberos5_server}"
-command_args="${kerberos5_server_flags} &"
 
+load_rc_config $name
+command="${kerberos5_server}"
+kerberos5_flags="${kerberos5_server_flags}"
 run_rc_command "$1"

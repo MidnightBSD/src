@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# $NetBSD: isdnd,v 1.9 2002/04/10 23:37:13 martin Exp $
-# $FreeBSD: src/etc/rc.d/isdnd,v 1.20 2005/01/16 03:12:03 obrien Exp $
-# $MidnightBSD: src/etc/rc.d/isdnd,v 1.3 2007/04/02 00:03:51 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/isdnd,v 1.23.4.1 2008/01/28 07:58:31 dougb Exp $
+# $MidnightBSD: src/etc/rc.d/isdnd,v 1.4 2007/10/26 15:20:25 laffer1 Exp $
 #
 # Mostly based on original script (/etc/rc.isdn) written by  Hellmuth Michaelis
 #
@@ -22,16 +21,6 @@ start_cmd="isdnd_start"
 isdnd_start()
 {
 	echo -n 'ISDN subsystem setup:'
-
-	# Check for pcvt driver (VT100/VT220 emulator)
-	#
-	if [ -x /usr/sbin/ispcvt ]; then
-		if /usr/sbin/ispcvt; then
-			# No vidcontrol if we are using pcvt
-			#
-			isdn_screenflags=NO
-		fi
-	fi
 
 	# Start isdnd
 	#
