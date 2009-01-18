@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/ip6fw,v 1.6 2004/10/07 13:55:26 mtm Exp $
-# $MidnightBSD: src/etc/rc.d/ip6fw,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/ip6fw,v 1.9 2007/04/02 15:38:53 mtm Exp $
+# $MidnightBSD: src/etc/rc.d/ip6fw,v 1.3 2007/10/26 14:08:50 laffer1 Exp $
 
 # PROVIDE: ip6fw
 # REQUIRE: routing
@@ -13,21 +13,8 @@
 name="ip6fw"
 rcvar=`set_rcvar ipv6_firewall`
 start_cmd="ip6fw_start"
-start_precmd="ip6fw_prestart"
 stop_cmd="${SYSCTL_W} net.inet6.ip6.fw.enable=0"
-
-ip6fw_prestart()
-{
-	# Load IPv6 firewall module, if not already loaded
-	if ! ${SYSCTL} net.inet6.ip6.fw.enable > /dev/null 2>&1; then
-		kldload ip6fw && {
-			debug 'Kernel IPv6 firewall module loaded.'
-			return 0
-		}
-		warn 'IPv6 firewall kernel module failed to load.'
-		return 1
-	fi
-}
+required_modules="ipfw"
 
 ip6fw_start()
 {
@@ -41,7 +28,7 @@ ip6fw_start()
 	if [ -r "${ipv6_firewall_script}" ]; then
 		/bin/sh "${ipv6_firewall_script}"
 		echo 'IPv6 Firewall rules loaded.'
-	elif [ "`ip6fw l 65535`" = "65535 deny ipv6 from any to any" ]; then
+	elif [ "`ipfw show 65535`" = "65535 deny ip from any to any" ]; then
 		warn 'IPv6 firewall rules have not been loaded. Default' \
 		    ' to DENY all access.'
 	fi
@@ -50,7 +37,7 @@ ip6fw_start()
 	#
 	if checkyesno ipv6_firewall_logging; then
 		echo 'IPv6 Firewall logging=YES'
-		sysctl net.inet6.ip6.fw.verbose=1 >/dev/null
+		sysctl net.inet.ip.fw.verbose=1 >/dev/null
 	fi
 
 	# Enable the firewall

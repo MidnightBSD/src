@@ -24,8 +24,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/etc/rc.d/geli,v 1.2.2.2 2005/12/15 23:32:35 pjd Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/geli,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/geli,v 1.4 2006/12/31 10:37:18 yar Exp $
+#
 
 # PROVIDE: disks
 # REQUIRE: initrandom
@@ -34,19 +35,14 @@
 . /etc/rc.subr
 
 name="geli"
+start_precmd='[ -n "$(geli_make_list)" ]'
 start_cmd="geli_start"
 stop_cmd="geli_stop"
+required_modules="geom_eli:g_eli"
 
 geli_start()
 {
 	devices=`geli_make_list`
-
-	# If there are no devices return before loading geom_eli.ko.
-	if [ -z "${devices}" ]; then
-		return
-	fi
-
-	kldstat -q -m g_eli || geli load || err 1 'geom_eli module failed to load.'
 
 	if [ -z "${geli_tries}" ]; then
 		if [ -n "${geli_attach_attempts}" ]; then

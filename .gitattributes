@@ -15978,7 +15978,6 @@ etc/rc.d/auditd -text
 etc/rc.d/auto_linklocal -text
 etc/rc.d/bgfsck -text
 etc/rc.d/bluetooth -text
-etc/rc.d/bootconf.sh -text
 etc/rc.d/bootparams -text
 etc/rc.d/bridge -text
 etc/rc.d/bsnmpd -text

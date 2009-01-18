@@ -2,7 +2,7 @@
 #
 # $NetBSD: amd,v 1.10 2002/04/29 12:08:17 lukem Exp $
 # $FreeBSD: src/etc/rc.d/amd,v 1.15.2.1 2006/01/08 09:20:47 rse Exp $
-# $MidnightBSD: src/etc/rc.d/amd,v 1.4 2006/10/18 16:07:47 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/amd,v 1.5 2007/10/26 14:12:39 laffer1 Exp $
 
 # PROVIDE: amd
 # REQUIRE: rpcbind ypbind nfsclient cleanvar ldconfig
@@ -47,7 +47,7 @@ amd_precmd()
 		;;
 	*)
 		rc_flags="-p ${rc_flags}"
-		command_args=" > /var/run/amd.pid 2> /dev/null"
+		command_args="> /var/run/amd.pid 2> /dev/null"
 		;;
 	esac
 	return 0

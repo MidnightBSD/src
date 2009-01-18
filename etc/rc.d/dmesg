@@ -2,12 +2,12 @@
 #
 # $NetBSD: dmesg,v 1.8 2002/03/22 04:33:58 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/dmesg,v 1.5 2005/01/16 03:12:03 obrien Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/dmesg,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
 
 # PROVIDE: dmesg
 # REQUIRE: mountcritremote cleanvar
 # BEFORE:  DAEMON
-# KEYWORD: Daemon nojail
+# KEYWORD: nojail
 
 . /etc/rc.subr
 

@@ -24,8 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $MidnightBSD$ 
-# $FreeBSD: src/etc/rc.d/bluetooth,v 1.1.2.1 2005/11/23 18:03:33 emax Exp $
+# $MidnightBSD: src/etc/rc.d/bluetooth,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/bluetooth,v 1.3 2006/12/31 10:37:18 yar Exp $
 
 # PROVIDE: bluetooth
 # REQUIRE: DAEMON
@@ -37,6 +37,7 @@ name="bluetooth"
 rcvar=
 start_cmd="bluetooth_start"
 stop_cmd="bluetooth_stop"
+required_modules="ng_bluetooth ng_hci ng_l2cap ng_btsocket"
 
 ##############################################################################
 # Read and parse Bluetooth device configuration file
@@ -44,6 +45,8 @@ stop_cmd="bluetooth_stop"
 
 bluetooth_read_conf()
 {
+	local _err _file _line _namespace
+
 	_file=$1
 	_namespace=$2
 	_err=0
@@ -226,19 +229,15 @@ bluetooth_shutdown_stack()
 
 bluetooth_start()
 {
-	dev=$1
+	local _file
 
-	# Automatically load modules
-	kldload ng_bluetooth > /dev/null 2>&1
-	kldload ng_hci > /dev/null 2>&1
-	kldload ng_l2cap > /dev/null 2>&1
-	kldload ng_btsocket > /dev/null 2>&1
+	dev=$1
 
 	# Try to figure out device type by looking at device name
 	case "${dev}" in
 	# sioX - serial/UART Bluetooth device
 	sio*)
-		kldload ng_h4 > /dev/null 2>&1
+		load_kld ng_h4 || return 1
 
 		hook="hook"
 

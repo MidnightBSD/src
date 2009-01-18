@@ -1,7 +1,8 @@
 #!/bin/sh
 #
-# $FreeBSD: src/etc/rc.d/hcsecd,v 1.4.2.1 2005/11/23 18:03:33 emax Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/etc/rc.d/hcsecd,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $FreeBSD: src/etc/rc.d/hcsecd,v 1.5 2006/12/31 10:37:18 yar Exp $
+#
 
 # PROVIDE: hcsecd
 # REQUIRE: DAEMON
@@ -14,21 +15,7 @@ name="hcsecd"
 command="/usr/sbin/${name}"
 pidfile="/var/run/${name}.pid"
 rcvar=`set_rcvar`
-start_precmd="hcsecd_prestart"
-
-hcsecd_prestart()
-{
-	if ! kldstat -q -m ng_btsocket ; then
-		if kldload ng_btsocket > /dev/null 2>&1 ; then
-			info 'ng_btsocket module loaded'
-		else
-			warn 'ng_btsocket module failed to load'
-			return 1
-		fi
-	fi
-
-	return 0
-}
+required_modules="ng_btsocket"
 
 load_rc_config $name
 config="${hcsecd_config:-/etc/bluetooth/${name}.conf}"

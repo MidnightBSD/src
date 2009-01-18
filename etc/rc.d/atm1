@@ -24,9 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $FreeBSD: src/etc/rc.d/atm1,v 1.16 2006/12/31 10:37:18 yar Exp $
 # $MidnightBSD$
-# $FreeBSD: src/etc/rc.d/atm1,v 1.15 2004/10/07 13:55:25 mtm Exp $
-#
 
 # PROVIDE: atm1
 # REQUIRE: root
@@ -49,7 +48,7 @@ atm_start()
 {
 	if [ -n "${natm_interfaces}" ] ; then
 		# Load the HARP pseudo interface
-		kldstat -v | grep -q if_harp || kldload if_harp
+		load_kld if_harp || return 1
 
 		# Load all the NATM drivers that we need
 		for natm in ${natm_interfaces} ; do
@@ -59,7 +58,7 @@ atm_start()
 
 	# Load loadable HARP drivers
 	for dev in ${atm_load} ; do
-		kldstat -v | grep -q ${dev} || kldload ${dev}
+		load_kld ${dev} || return 1
 	done
 
 	# Locate all probed ATM adapters
