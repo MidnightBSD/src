@@ -32,7 +32,7 @@
  * $FreeBSD: src/sys/dev/if_ndis/if_ndisvar.h,v 1.27 2007/07/12 02:54:05 thompsa Exp $
  */
 
-#define NDIS_DEFAULT_NODENAME	"FreeBSD NDIS node"
+#define NDIS_DEFAULT_NODENAME	"MidnightBSD NDIS node"
 #define NDIS_NODENAME_LEN	32
 
 /* For setting/getting OIDs from userspace. */
@@ -88,10 +88,6 @@ TAILQ_HEAD(nch, ndis_cfglist);
 #define NDIS_TXPKTS 64
 #define NDIS_INC(x)		\
 	(x)->ndis_txidx = ((x)->ndis_txidx + 1) % NDIS_TXPKTS
-
-#if __FreeBSD_version < 600007
-#define arpcom ic.ic_ac
-#endif
 
 #define NDIS_EVENTS 4
 #define NDIS_EVTINC(x)	(x) = ((x) + 1) % NDIS_EVENTS
@@ -150,10 +146,6 @@ struct ndis_softc {
 	int			ndis_if_flags;
 	int			ndis_skip;
 
-#if __FreeBSD_version < 502113
-	struct sysctl_ctx_list	ndis_ctx;
-	struct sysctl_oid	*ndis_tree;
-#endif
 	int			ndis_devidx;
 	interface_type		ndis_iftype;
 	driver_object		*ndis_dobj;
@@ -176,9 +168,6 @@ struct ndis_softc {
 	kspin_lock		ndis_rxlock;
 
 	struct taskqueue	*ndis_tq;		/* private task queue */
-#if __FreeBSD_version < 700000
-	struct proc		*ndis_tqproc;
-#endif
 	struct task		ndis_scantask;
 	int			(*ndis_newstate)(struct ieee80211com *,
 				    enum ieee80211_state, int);
