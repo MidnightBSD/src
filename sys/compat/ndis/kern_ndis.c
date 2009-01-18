@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/ndis/kern_ndis.c,v 1.3 2008/12/03 00:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -295,15 +295,6 @@ ndis_create_sysctls(arg)
 
 	TAILQ_INIT(&sc->ndis_cfglist_head);
 
-#if __FreeBSD_version < 502113
-	/* Create the sysctl tree. */
-
-	sc->ndis_tree = SYSCTL_ADD_NODE(&sc->ndis_ctx,
-	    SYSCTL_STATIC_CHILDREN(_hw), OID_AUTO,
-	    device_get_nameunit(sc->ndis_dev), CTLFLAG_RD, 0,
-	    device_get_desc(sc->ndis_dev));
-
-#endif
 	/* Add the driver-specific registry keys. */
 
 	while(1) {
@@ -318,11 +309,7 @@ ndis_create_sysctls(arg)
 		/* See if we already have a sysctl with this name */
 
 		oidp = NULL;
-#if __FreeBSD_version < 502113
-		TAILQ_FOREACH(e, &sc->ndis_ctx, link) {
-#else
 		TAILQ_FOREACH(e, device_get_sysctl_ctx(sc->ndis_dev), link) {
-#endif
                 	oidp = e->entry;
 			if (strcasecmp(oidp->oid_name, vals->nc_cfgkey) == 0)
 				break;
@@ -403,18 +390,11 @@ ndis_add_sysctl(arg, key, desc, val, flag)
 	TAILQ_INSERT_TAIL(&sc->ndis_cfglist_head, cfg, link);
 
 	cfg->ndis_oid =
-#if __FreeBSD_version < 502113
-	SYSCTL_ADD_STRING(&sc->ndis_ctx, SYSCTL_CHILDREN(sc->ndis_tree),
-	    OID_AUTO, cfg->ndis_cfg.nc_cfgkey, flag,
-	    cfg->ndis_cfg.nc_val, sizeof(cfg->ndis_cfg.nc_val),
-	    cfg->ndis_cfg.nc_cfgdesc);
-#else
 	SYSCTL_ADD_STRING(device_get_sysctl_ctx(sc->ndis_dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->ndis_dev)),
 	    OID_AUTO, cfg->ndis_cfg.nc_cfgkey, flag,
 	    cfg->ndis_cfg.nc_val, sizeof(cfg->ndis_cfg.nc_val),
 	    cfg->ndis_cfg.nc_cfgdesc);
-#endif
 
 	return(0);
 }
@@ -436,11 +416,7 @@ ndis_flush_sysctls(arg)
 
 	sc = arg;
 
-#if __FreeBSD_version < 502113
-	clist = &sc->ndis_ctx;
-#else
 	clist = device_get_sysctl_ctx(sc->ndis_dev);
-#endif
 
 	while (!TAILQ_EMPTY(&sc->ndis_cfglist_head)) {
 		cfg = TAILQ_FIRST(&sc->ndis_cfglist_head);
@@ -568,19 +544,11 @@ ndis_convert_res(arg)
 	device_t		dev;
 	struct resource_list	*brl;
 	struct resource_list_entry	*brle;
-#if __FreeBSD_version < 600022
-	struct resource_list	brl_rev;
-	struct resource_list_entry	*n;
-#endif
 	int 			error = 0;
 
 	sc = arg;
 	block = sc->ndis_block;
 	dev = sc->ndis_dev;
-
-#if __FreeBSD_version < 600022
-	SLIST_INIT(&brl_rev);
-#endif
 
 	rl = malloc(sizeof(ndis_resource_list) +
 	    (sizeof(cm_partial_resource_desc) * (sc->ndis_rescnt - 1)),
@@ -598,37 +566,7 @@ ndis_convert_res(arg)
 
 	if (brl != NULL) {
 
-#if __FreeBSD_version < 600022
-		/*
-		 * We have a small problem. Some PCI devices have
-		 * multiple I/O ranges. Windows orders them starting
-		 * from lowest numbered BAR to highest. We discover
-		 * them in that order too, but insert them into a singly
-		 * linked list head first, which means when time comes
-		 * to traverse the list, we enumerate them in reverse
-		 * order. This screws up some drivers which expect the
-		 * BARs to be in ascending order so that they can choose
-		 * the "first" one as their register space. Unfortunately,
-		 * in order to fix this, we have to create our own
-		 * temporary list with the entries in reverse order.
-		 */
-
-		SLIST_FOREACH(brle, brl, link) {
-			n = malloc(sizeof(struct resource_list_entry),
-			    M_TEMP, M_NOWAIT);
-			if (n == NULL) {
-				error = ENOMEM;
-				goto bad;
-			}
-			bcopy((char *)brle, (char *)n,
-			    sizeof(struct resource_list_entry));
-			SLIST_INSERT_HEAD(&brl_rev, n, link);
-		}
-
-		SLIST_FOREACH(brle, &brl_rev, link) {
-#else
 		STAILQ_FOREACH(brle, brl, link) {
-#endif
 			switch (brle->type) {
 			case SYS_RES_IOPORT:
 				prd->cprd_type = CmResourceTypePort;
@@ -671,16 +609,6 @@ ndis_convert_res(arg)
 	}
 
 	block->nmb_rlist = rl;
-
-#if __FreeBSD_version < 600022
-bad:
-
-	while (!SLIST_EMPTY(&brl_rev)) {
-		n = SLIST_FIRST(&brl_rev);
-		SLIST_REMOVE_HEAD(&brl_rev, link);
-		free (n, M_TEMP);
-	}
-#endif
 
 	return(error);
 }

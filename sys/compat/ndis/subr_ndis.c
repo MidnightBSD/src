@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -648,11 +647,7 @@ NdisReadConfiguration(status, parm, cfg, key, type)
 	 * See if registry key is already in a list of known keys
 	 * included with the driver.
 	 */
-#if __FreeBSD_version < 502113
-	TAILQ_FOREACH(e, &sc->ndis_ctx, link) {
-#else
 	TAILQ_FOREACH(e, device_get_sysctl_ctx(sc->ndis_dev), link) {
-#endif
 		oidp = e->entry;
 		if (strcasecmp(oidp->oid_name, keystr) == 0) {
 			if (strcmp((char *)oidp->oid_arg1, "UNSET") == 0) {
@@ -757,11 +752,7 @@ NdisWriteConfiguration(status, cfg, key, parm)
 
 	/* See if the key already exists. */
 
-#if __FreeBSD_version < 502113
-	TAILQ_FOREACH(e, &sc->ndis_ctx, link) {
-#else
 	TAILQ_FOREACH(e, device_get_sysctl_ctx(sc->ndis_dev), link) {
-#endif
 		oidp = e->entry;
 		if (strcasecmp(oidp->oid_name, keystr) == 0) {
 			/* Found it, set the value. */
@@ -1361,23 +1352,11 @@ NdisReadNetworkAddress(status, addr, addrlen, adapter)
 	block = (ndis_miniport_block *)adapter;
 	sc = device_get_softc(block->nmb_physdeviceobj->do_devext);
 
-#ifdef IFP2ENADDR
-	if (bcmp(IFP2ENADDR(sc->ifp), empty, ETHER_ADDR_LEN) == 0)
-#elif __FreeBSD_version >= 700000
 	if (sc->ifp->if_addr == NULL ||
 	    bcmp(IF_LLADDR(sc->ifp), empty, ETHER_ADDR_LEN) == 0)
-#else
-	if (bcmp(sc->arpcom.ac_enaddr, empty, ETHER_ADDR_LEN) == 0)
-#endif
 		*status = NDIS_STATUS_FAILURE;
 	else {
-#ifdef IFP2ENADDR
-		*addr = IFP2ENADDR(sc->ifp);
-#elif __FreeBSD_version >= 700000
 		*addr = IF_LLADDR(sc->ifp);
-#else
-		*addr = sc->arpcom.ac_enaddr;
-#endif
 		*addrlen = ETHER_ADDR_LEN;
 		*status = NDIS_STATUS_SUCCESS;
 	}

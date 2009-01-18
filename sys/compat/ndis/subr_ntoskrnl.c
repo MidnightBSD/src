@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.3 2008/12/03 00:24:37 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -45,9 +45,7 @@ __FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.90 2007/07/22 20:53:
 #include <sys/mutex.h>
 
 #include <sys/callout.h>
-#if __FreeBSD_version > 502113
 #include <sys/kdb.h>
-#endif
 #include <sys/kernel.h>
 #include <sys/proc.h>
 #include <sys/condvar.h>
@@ -2703,11 +2701,7 @@ ntoskrnl_finddev(dev, paddr, res)
 
 	rl = BUS_GET_RESOURCE_LIST(device_get_parent(dev), dev);
 	if (rl != NULL) {
-#if __FreeBSD_version < 600022
-		SLIST_FOREACH(rle, rl, link) {
-#else
 		STAILQ_FOREACH(rle, rl, link) {
-#endif
 			r = rle->res;
 
 			if (r == NULL)
@@ -2799,9 +2793,6 @@ ntoskrnl_workitem_thread(arg)
 		KeReleaseSpinLock(&kq->kq_lock, irql);
 	}
 
-#if __FreeBSD_version < 502113
-        mtx_lock(&Giant);
-#endif
         kthread_exit(0);
         return; /* notreached */
 }
@@ -3560,9 +3551,6 @@ PsTerminateSystemThread(status)
 
 	ntoskrnl_kth--;
 
-#if __FreeBSD_version < 502113
-	mtx_lock(&Giant);
-#endif
 	kthread_exit(0);
 	return(0);	/* notreached */
 }
@@ -3584,11 +3572,7 @@ static void
 DbgBreakPoint(void)
 {
 
-#if __FreeBSD_version < 502113
-	Debugger("DbgBreakPoint(): breakpoint");
-#else
 	kdb_enter("DbgBreakPoint(): breakpoint");
-#endif
 }
 
 static void
@@ -3829,14 +3813,9 @@ ntoskrnl_dpc_thread(arg)
 
 	thread_lock(curthread);
 #ifdef NTOSKRNL_MULTIPLE_DPCS
-#if __FreeBSD_version >= 502102
 	sched_bind(curthread, kq->kq_cpu);
 #endif
-#endif
         sched_prio(curthread, PRI_MIN_KERN);
-#if __FreeBSD_version < 600000
-        curthread->td_base_pri = PRI_MIN_KERN;
-#endif
 	thread_unlock(curthread);
 
 	while (1) {
@@ -3869,9 +3848,6 @@ ntoskrnl_dpc_thread(arg)
 		KeSetEvent(&kq->kq_done, IO_NO_INCREMENT, FALSE);
 	}
 
-#if __FreeBSD_version < 502113
-        mtx_lock(&Giant);
-#endif
         kthread_exit(0);
         return; /* notreached */
 }
