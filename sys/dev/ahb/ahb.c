@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/ahb/ahb.c,v 1.4 2008/12/02 02:24:30 laffer1 Exp $ */
 /*-
  * CAM SCSI device driver for the Adaptec 174X SCSI Host adapter
  *
@@ -1229,7 +1229,7 @@ ahbaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = ahb->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

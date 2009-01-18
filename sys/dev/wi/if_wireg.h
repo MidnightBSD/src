@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wi/if_wireg.h,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998, 1999
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -84,11 +84,11 @@
 #ifdef __NetBSD__
 #define OS_STRING_NAME	"NetBSD"
 #endif
-#ifdef __FreeBSD__
-#define OS_STRING_NAME	"FreeBSD"
-#endif
 #ifdef __OpenBSD__
 #define OS_STRING_NAME	"OpenBSD"
+#endif
+#ifdef __MidnightBSD__
+#define OS_STRING_NAME "MidnightBSD"
 #endif
 
 #define WI_DEFAULT_NODENAME	OS_STRING_NAME " WaveLAN/IEEE node"

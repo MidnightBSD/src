@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/aha/aha.c,v 1.2 2008/12/02 02:24:30 laffer1 Exp $ */
 /*
  * Generic register and struct definitions for the Adaptech 154x/164x
  * SCSI host adapters. Product specific probe and attach routines can
@@ -993,7 +993,7 @@ ahaaction(struct cam_sim *sim, union ccb *ccb)
 		cpi->initiator_id = aha->scsi_id;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "Adaptec", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);

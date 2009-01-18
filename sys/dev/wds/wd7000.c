@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/wds/wd7000.c,v 1.2 2008/12/02 22:43:17 laffer1 Exp $ */
 /*-
  * Copyright (c) 1994 Ludd, University of Lule}, Sweden.
  * Copyright (c) 2000 Sergey A. Babkin
@@ -1225,7 +1225,7 @@ wds_action(struct cam_sim * sim, union ccb * ccb)
 		cpi->hba_misc = 0;
 		cpi->bus_id = cam_sim_bus(sim);
 		cpi->base_transfer_speed = 3300;
-		strncpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strncpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
 		strncpy(cpi->hba_vid, "WD/FDC", HBA_IDLEN);
 		strncpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = cam_sim_unit(sim);
