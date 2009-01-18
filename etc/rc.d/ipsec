@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# $NetBSD: ipsec,v 1.7 2002/03/22 04:33:58 thorpej Exp $
 # $FreeBSD: src/etc/rc.d/ipsec,v 1.11.2.2 2006/01/31 00:28:01 pjd Exp $
-# $MidnightBSD: src/etc/rc.d/ipsec,v 1.2 2006/08/28 02:47:45 laffer1 Exp $
+# $MidnightBSD: src/etc/rc.d/ipsec,v 1.3 2007/10/26 15:20:25 laffer1 Exp $
 
 # PROVIDE: ipsec
 # REQUIRE: FILESYSTEMS
@@ -53,8 +52,6 @@ ipsec_stop()
 ipsec_reload()
 {
 	echo "Reloading ipsec manual keys/policies."
-	${ipsec_program} -F
-	${ipsec_program} -FP
 	${ipsec_program} -f "$ipsec_file"
 }
 
