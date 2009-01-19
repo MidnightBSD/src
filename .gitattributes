@@ -25234,6 +25234,7 @@ sys/contrib/dev/ath/public/xscale-le-elf.hal.o.uu -text
 sys/contrib/dev/ath/public/xscale-le-elf.inc -text
 sys/contrib/dev/ath/public/xscale-le-elf.opt_ah.h -text
 sys/contrib/dev/ath/version.h -text
+sys/contrib/dev/bwi/README -text
 sys/contrib/dev/ipw/LICENSE -text
 sys/contrib/dev/ipw/ipw2100-1.3-i.fw.uu -text
 sys/contrib/dev/ipw/ipw2100-1.3-p.fw.uu -text
