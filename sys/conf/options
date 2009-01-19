@@ -723,6 +723,10 @@ ATH_RXBUF		opt_ath.h
 ATH_DIAGAPI		opt_ath.h
 ATH_TX99_DIAG		opt_ath.h
 
+# options for Broadcom wireless driver
+BWI_DEBUG		opt_bwi.h
+BWI_DEBUG_VERBOSE	opt_bwi.h
+
 # dcons options 
 DCONS_BUF_SIZE		opt_dcons.h
 DCONS_POLL_HZ		opt_dcons.h
