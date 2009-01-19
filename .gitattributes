@@ -28224,6 +28224,7 @@ sys/modules/bktr/bktr/Makefile -text
 sys/modules/bktr/bktr_mem/Makefile -text
 sys/modules/bridge/Makefile -text
 sys/modules/bridgestp/Makefile -text
+sys/modules/bwi/Makefile -text
 sys/modules/cam/Makefile -text
 sys/modules/canbepm/Makefile -text
 sys/modules/canbus/Makefile -text
