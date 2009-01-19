@@ -31,7 +31,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/dev/bwi/if_bwivar.h,v 1.1 2009/01/19 22:02:25 laffer1 Exp $
  * $DragonFly: src/sys/dev/netif/bwi/if_bwivar.h,v 1.1 2007/09/08 06:15:54 sephe Exp $
  */
 
@@ -85,7 +85,6 @@
 #define CSR_CLRBITS_2(sc, reg, bits)	\
 	CSR_WRITE_2((sc), (reg), CSR_READ_2((sc), (reg)) & ~(bits))
 
-#define BWI_DEBUG
 #ifdef BWI_DEBUG
 #define DPRINTF(sc, fmt, ...)	device_printf(sc->sc_dev, fmt, __VA_ARGS__)
 #else

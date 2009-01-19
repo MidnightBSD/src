@@ -31,13 +31,14 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $MidnightBSD$
+ * $MidnightBSD: src/sys/dev/bwi/if_bwi.c,v 1.1 2009/01/19 22:02:25 laffer1 Exp $
  * $DragonFly: src/sys/dev/netif/bwi/if_bwi.c,v 1.1 2007/09/08 06:15:54 sephe Exp $
  */
 
 #include <sys/cdefs.h>
 
 #include "opt_inet.h"
+#include "opt_bwi.h"
 
 #include <sys/param.h>
 #include <sys/endian.h>
