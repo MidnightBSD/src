@@ -28,7 +28,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man4/bwi.4,v 1.1 2009/01/19 22:28:38 laffer1 Exp $
 .\" $DragonFly: src/share/man/man4/bwi.4,v 1.8 2008/05/01 12:34:06 sephe Exp $
 .\"
 .Dd January 19, 2009
@@ -86,16 +86,20 @@ Dell Truemobile 1400	BCM4309	Mini PCI	b/g
 .El
 .Sh FILES
 The firmware for the adapter is not shipped with
-.Dx
+.Mx
 and must be obtained separately.
 An archive with firmware files that are known to work can be found at:
 .Bd -literal -offset indent
 http://leaf.dragonflybsd.org/~sephe/bwi/v3.tbz
 .Ed
 .Pp
-The firmware files have to reside in
-.Pa /etc/firmware/bwi
-and will be loaded when the interface is brought up.
+The firmware files are built as part of the bwifw module and
+must be loaded for
+.Nm
+to work. Place the files in 
+.Pa /usr/src/sys/contrib/dev/bwi
+and build bwifw in
+.Pa /usr/src/sys/modules/bwifw
 .Sh SEE ALSO
 .Xr arp 4 ,
 .Xr cardbus 4 ,
@@ -108,13 +112,21 @@ and will be loaded when the interface is brought up.
 The
 .Nm
 driver first appeared in
-.Dx 1.11 .
+.Dx 1.11
+and
+.Mx 0.3
 .Sh AUTHORS
 .An -nosplit
 The
 .Nm
 driver was written by
 .An Sepherosa Ziehau .
+It was later ported to
+.Fx 7.0 ,
+then brought into 
+.Mx 0.3
+by 
+.An Lucas Holt .
 .Pp
 The hardware specification was reverse engineered by the people at
 .Pa http://bcm-specs.sipsolutions.net .
