@@ -25701,6 +25701,17 @@ sys/dev/buslogic/bt_isa.c -text
 sys/dev/buslogic/bt_mca.c -text
 sys/dev/buslogic/bt_pci.c -text
 sys/dev/buslogic/btreg.h -text
+sys/dev/bwi/bitops.h -text
+sys/dev/bwi/bwimac.c -text
+sys/dev/bwi/bwimac.h -text
+sys/dev/bwi/bwiphy.c -text
+sys/dev/bwi/bwiphy.h -text
+sys/dev/bwi/bwirf.c -text
+sys/dev/bwi/bwirf.h -text
+sys/dev/bwi/if_bwi.c -text
+sys/dev/bwi/if_bwi_pci.c -text
+sys/dev/bwi/if_bwireg.h -text
+sys/dev/bwi/if_bwivar.h -text
 sys/dev/cardbus/cardbus.c -text
 sys/dev/cardbus/cardbus_cis.c -text
 sys/dev/cardbus/cardbus_cis.h -text
