@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 1/4/94
 # $FreeBSD: src/include/Makefile,v 1.244.2.2 2005/11/16 10:50:09 ru Exp $
-# $MidnightBSD: src/include/Makefile,v 1.5 2008/09/30 03:08:19 laffer1 Exp $
+# $MidnightBSD: src/include/Makefile,v 1.6 2008/12/09 17:30:43 laffer1 Exp $
 #
 # Doing a "make install" builds /usr/include.
 
@@ -85,8 +85,6 @@ osreldate.h: ${.CURDIR}/../sys/conf/newvers.sh ${.CURDIR}/../sys/sys/param.h \
 	echo "#ifdef _KERNEL" >> osreldate.h; \
 	echo "#error \"<osreldate.h> cannot be used in the kernel, use <sys/param.h>\"" >> osreldate.h; \
 	echo "#else" >> osreldate.h; \
-	echo "#undef __FreeBSD_version" >> osreldate.h; \
-	echo "#define __FreeBSD_version $$RELDATE" >> osreldate.h; \
 	echo "#undef __MidnightBSD_version" >> osreldate.h; \
 	echo "#define __MidnightBSD_version $$RELDATE" >> osreldate.h; \
 	echo "#endif" >> osreldate.h
