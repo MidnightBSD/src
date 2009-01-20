@@ -4,7 +4,7 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $MidnightBSD: src/sys/i386/conf/NOTES,v 1.6 2008/12/09 16:58:48 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/NOTES,v 1.7 2008/12/13 03:03:42 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/NOTES,v 1.1244.2.3.2.1 2008/02/06 03:24:28 scottl Exp $
 #
 
@@ -574,6 +574,7 @@ hint.mse.0.irq="5"
 #       (requires sppp)
 # arl:	Aironet Arlan 655 wireless adapters.
 # ath:  Atheros a/b/g WiFi adapters (requires ath_hal and wlan)
+# bwi:	Broadcom WiFi adapters.
 # ce:   Cronyx Tau-PCI/32 sync single/dual port G.703/E1 serial adaptor
 #       with 32 HDLC subchannels (requires sppp (default), or NETGRAPH if
 #       NETGRAPH_CRONYX is configured)
@@ -682,6 +683,8 @@ device		ath_hal		# Atheros HAL (includes binary component)
 #device		ath_rate_onoe	# Onoe rate control for ath driver
 device		ath_rate_sample	# SampleRate rate control for the ath driver
 #device		wlan		# 802.11 layer
+
+device		bwi		# Broadcom wireless 430x
 
 #
 # ATA raid adapters
