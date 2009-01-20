@@ -15,7 +15,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.15 2008/12/07 03:46:54 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.16 2008/12/09 22:29:52 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I586_CPU
@@ -251,6 +251,8 @@ device		ath		# Atheros AR5210, AR5211, and AR5212
 device		ath_hal		# Atheros Hardwar Abstraction Layer
 device		ath_rate_sample # Atheros rate sampling.
 device		awi		# BayStack 660 and others
+#device		bwi		# Broadcom Wireless 4300 
+#device		bwifw		# Broadcom Wireless firmware (normally module)
 device		ral		# Ralink Technology RT2500 wireless NICs.
 device		wi		# WaveLAN/Intersil/Symbol 802.11 wireless NICs.
 #device		wl		# Older non 802.11 Wavelan wireless NIC.
