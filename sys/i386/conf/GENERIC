@@ -1,10 +1,7 @@
 #
 # GENERIC -- Generic kernel configuration file for MidnightBSD/i386
 #
-# The FreeBSD handbook is a good reference for kernel configuration information
-# until we write our own documentation.
-#
-#    http://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#    http://www.midnightbsd.org/wiki/KernelConfig
 #
 # An exhaustive list of options and more detailed explanations of the
 # device lines is also present in the ../../conf/NOTES and NOTES files.
@@ -15,7 +12,7 @@
 # released before I got my first computer is not supported. Few 486 systems
 # have enough ram to run the installer properly anyway. 
 #
-# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.16 2008/12/09 22:29:52 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/GENERIC,v 1.17 2009/01/20 17:45:24 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/GENERIC,v 1.429.2.5 2006/01/23 14:19:36 marius Exp $
 
 cpu		I586_CPU
