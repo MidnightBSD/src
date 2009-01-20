@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/make_dev.9,v 1.17 2005/03/28 10:28:57 brueffer Exp $
+.\" $FreeBSD: src/share/man/man9/make_dev.9,v 1.23 2007/05/09 05:05:50 brueffer Exp $
 .\"
-.Dd March 28, 2005
+.Dd May 6, 2007
 .Os
 .Dt MAKE_DEV 9
 .Sh NAME
@@ -38,14 +38,14 @@ and DEVFS registration for devices
 .Sh SYNOPSIS
 .In sys/param.h
 .In sys/conf.h
-.Ft struct cdev
+.Ft struct cdev *
 .Fn make_dev "struct cdevsw *cdevsw" "int minor" "uid_t uid" "gid_t gid" "int perms" "const char *fmt" ...
-.Ft struct cdev
-.Fn make_dev_alias "struct cdev pdev" "const char *fmt" ...
+.Ft struct cdev *
+.Fn make_dev_alias "struct cdev *pdev" "const char *fmt" ...
 .Ft void
-.Fn destroy_dev "struct cdev dev"
+.Fn destroy_dev "struct cdev *dev"
 .Ft void
-.Fn dev_depends "struct cdev pdev" "struct cdev cdev"
+.Fn dev_depends "struct cdev *pdev" "struct cdev *cdev"
 .Sh DESCRIPTION
 The
 .Fn make_dev
@@ -57,9 +57,19 @@ the presence of the new device.
 The device will be owned by
 .Va uid ,
 with the group ownership as
-.Va gid ,
-and with the name as specified in
-.Va name .
+.Va gid .
+The name is the expansion of 
+.Va fmt 
+and following arguments as
+.Xr printf 9
+would print it.
+The name determines its path under
+.Pa /dev
+or other 
+.Xr devfs 5 
+mount point and may contain slash
+.Ql /
+characters to denote subdirectories.
 The permissions of the file specified in
 .Va perms
 are defined in
@@ -99,6 +109,24 @@ and makes another (aliased) name for this device.
 It is an error to call
 .Fn make_dev_alias
 prior to calling
+.Fn make_dev .
+.Pp
+The
+.Fa cdev
+returned by
+.Fn make_dev
+and
+.Fn make_dev_alias
+has two fields,
+.Fa si_drv1
+and
+.Fa si_drv2 ,
+that are available to store state.
+Both fields are of type
+.Ft void * .
+These are designed to replace the
+.Fa minor
+argument to
 .Fn make_dev .
 .Pp
 The

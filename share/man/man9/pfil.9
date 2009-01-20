@@ -26,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/pfil.9,v 1.20 2005/01/21 08:36:40 ru Exp $
+.\" $FreeBSD: src/share/man/man9/pfil.9,v 1.22 2006/09/18 15:24:20 ru Exp $
 .\"
 .Dd September 29, 2004
 .Dt PFIL 9
@@ -145,7 +145,7 @@ function
 might sleep!
 .Sh SEE ALSO
 .Xr bpf 4 ,
-.Xr bridge 4
+.Xr if_bridge 4
 .Sh HISTORY
 The
 .Nm
@@ -196,10 +196,12 @@ Packets diverted through these hooks have data in
 host byte order contrary to the above statements.
 .Pp
 The
-.Xr bridge 4
-diverts inbound
+.Xr if_bridge 4
+diverts
 .Dv AF_INET
-traffic, but contrary to the above
+and
+.Dv AF_INET6
+traffic according to its sysctl settings, but contrary to the above
 statements, the data is provided in host byte order.
 .Pp
 When a

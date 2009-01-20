@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/memguard.9,v 1.1 2005/02/22 17:18:27 brueffer Exp $
+.\" $FreeBSD: src/share/man/man9/memguard.9,v 1.5 2006/09/18 15:24:20 ru Exp $
 .\"
-.Dd February 22, 2005
+.Dd January 31, 2006
 .Dt MEMGUARD 9
 .Os
 .Sh NAME
@@ -47,42 +47,38 @@ can only take over
 and
 .Fn free
 for a particular malloc type.
-.Nm
-takes over
-.Dv M_SUBPROC
-allocations by default.
-.Sh FILES
-.Bl -tag -width ".Pa src/sys/kern/kern_malloc.c" -compact
-.It Pa src/sys/kern/kern_malloc.c
-File to replace the malloc type in
-.El
 .Sh EXAMPLES
-The following steps are necessary to use
-.Nm :
-.Bl -enum
-.It
-Put the
-.Dv DEBUG_MEMGUARD
-option into your kernel config.
-.It
-Open
-.Pa src/sys/kern/kern_malloc.c
-in your favourite editor.
-Look for lines containing
-.Dq Li "XXX CHANGEME!"
-and replace
-.Dv M_SUBPROC
-with the appropriate malloc type.
-This might require additional but small/simple
-code modifications
-(e.g., if the malloc type is declared out of scope).
-.It
-Build and install your kernel.
-Tune the
-.Va vm.memguard_divisor
-boot-time tunable, which is used to scale how much of
+To use
+.Nm
+for memory type compiled into the kernel, one has to add the
+following line to the
+.Pa /boot/loader.conf :
+.Bd -literal -offset indent
+vm.memguard.desc=<memory_type>
+.Ed
+.Pp
+Where
+.Ar memory_type
+is a short description of memory type to monitor.
+The short description of memory type is the second argument to
+.Xr MALLOC_DEFINE 9 ,
+so one has to find it in the kernel source.
+.Pp
+To use
+.Nm
+for memory type defined in a kernel module, one has to set
+.Va vm.memguard.desc
+.Xr sysctl 8
+variable before loading the module:
+.Bd -literal -offset indent
+sysctl vm.memguard.desc=<memory_type>
+.Ed
+.Pp
+The
+.Va vm.memguard.divisor
+boot-time tunable is used to scale how much of
 .Va kmem_map
-you want to allot for
+one wants to allocate for
 .Nm .
 The default is 10, so
 .Va kmem_size Ns /10
@@ -93,12 +89,12 @@ value can be obtained via the
 .Va vm.kmem_size
 .Xr sysctl 8
 variable.
-.El
 .Sh SEE ALSO
 .Xr sysctl 8 ,
 .Xr vmstat 8 ,
 .Xr contigmalloc 9 ,
-.Xr malloc 9
+.Xr malloc 9 ,
+.Xr redzone 9
 .Sh HISTORY
 .Nm
 first appeared in

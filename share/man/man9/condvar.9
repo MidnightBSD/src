@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/condvar.9,v 1.11 2004/11/08 18:15:11 jhb Exp $
+.\" $FreeBSD: src/share/man/man9/condvar.9,v 1.21 2007/06/05 20:53:18 imp Exp $
 .\"
-.Dd December 11, 2000
+.Dd June 5, 2007
 .Dt CONDVAR 9
 .Os
 .Sh NAME
@@ -35,6 +35,7 @@
 .Nm cv_destroy ,
 .Nm cv_wait ,
 .Nm cv_wait_sig ,
+.Nm cv_wait_unlock ,
 .Nm cv_timedwait ,
 .Nm cv_timedwait_sig ,
 .Nm cv_signal ,
@@ -51,13 +52,15 @@
 .Ft void
 .Fn cv_destroy "struct cv *cvp"
 .Ft void
-.Fn cv_wait "struct cv *cvp" "struct mtx *mp"
+.Fn cv_wait "struct cv *cvp" "lock"
 .Ft int
-.Fn cv_wait_sig "struct cv *cvp" "struct mtx *mp"
+.Fn cv_wait_sig "struct cv *cvp" "lock"
+.Ft void
+.Fn cv_wait_unlock "struct cv *cvp" "lock"
 .Ft int
-.Fn cv_timedwait "struct cv *cvp" "struct mtx *mp" "int timo"
+.Fn cv_timedwait "struct cv *cvp" "lock" "int timo"
 .Ft int
-.Fn cv_timedwait_sig "struct cv *cvp" "struct mtx *mp" "int timo"
+.Fn cv_timedwait_sig "struct cv *cvp" "lock" "int timo"
 .Ft void
 .Fn cv_signal "struct cv *cvp"
 .Ft void
@@ -84,6 +87,7 @@ Condition variables are destroyed with
 Threads wait on condition variables by calling
 .Fn cv_wait ,
 .Fn cv_wait_sig ,
+.Fn cv_wait_unlock ,
 .Fn cv_timedwait ,
 or
 .Fn cv_timedwait_sig .
@@ -105,26 +109,45 @@ returns the description string of
 as set by the initial call to
 .Fn cv_init .
 .Pp
+The
+.Fa lock
+argument is a pointer to either a
+.Xr mutex 9 ,
+.Xr rwlock 9 ,
+or
+.Xr sx 9
+lock.
+A 
+.Xr mutex 9
+argument must be initialized with
+.Dv MTX_DEF 
+and not
+.Dv MTX_SPIN .
 A thread must hold
-.Fa mp
+.Fa lock
 before calling
 .Fn cv_wait ,
 .Fn cv_wait_sig ,
+.Fn cv_wait_unlock ,
 .Fn cv_timedwait ,
 or
 .Fn cv_timedwait_sig .
 When a thread waits on a condition,
-.Fa mp
-is atomically released before the thread is blocked, then atomically reacquired
+.Fa lock
+is atomically released before the thread is blocked, then reacquired
 before the function call returns.
+The
+.Fn cv_wait_unlock
+function does not reacquire the lock before returning.
 All waiters must pass the same
-.Fa mp
+.Fa lock
 in conjunction with
 .Fa cvp .
 .Pp
 When
 .Fn cv_wait ,
 .Fn cv_wait_sig ,
+.Fn cv_wait_unlock ,
 .Fn cv_timedwait ,
 and
 .Fn cv_timedwait_sig
@@ -169,9 +192,9 @@ and
 will fail if:
 .Bl -tag -width Er
 .It Bq Er EINTR
-An unmasked signal was caught.
+A signal was caught and the system call should be interrupted.
 .It Bq Er ERESTART
-A masked signal was caught.
+A signal was caught and the system call should be restarted.
 .El
 .Pp
 .Fn cv_timedwait
@@ -183,8 +206,10 @@ will fail if:
 Timeout expired.
 .El
 .Sh SEE ALSO
-.Xr msleep 9 ,
+.Xr locking 9 ,
 .Xr mtx_pool 9 ,
 .Xr mutex 9 ,
+.Xr rwlock 9 ,
 .Xr sema 9 ,
+.Xr sleep 9 ,
 .Xr sx 9

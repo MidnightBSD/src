@@ -26,7 +26,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/driver.9,v 1.11 2005/06/28 20:15:18 hmp Exp $
+.\" $FreeBSD: src/share/man/man9/driver.9,v 1.12 2005/08/08 12:16:53 brian Exp $
 .\"
 .Dd June 16, 1998
 .Dt DRIVER 9
@@ -45,7 +45,7 @@ static int foo_detach(device_t);
 static int foo_frob(device_t, int, int);
 static int foo_twiddle(device_t, char *);
 
-static struct device_method_t foo_methods[] = {
+static device_method_t foo_methods[] = {
 	/* Methods from the device interface */
 	DEVMETHOD(device_probe,		foo_probe),
 	DEVMETHOD(device_attach,	foo_attach),

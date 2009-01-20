@@ -22,8 +22,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/watchdog.9,v 1.3 2004/07/06 07:39:50 ru Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD: src/share/man/man9/watchdog.9,v 1.6 2007/03/28 21:21:22 brueffer Exp $
 .\"
 .Dd February 28, 2004
 .Dt WATCHDOG 9
@@ -36,6 +35,7 @@
 .Ft void
 .Fn watchdog_fn "void *private" "u_int cmd" "int *error"
 .Fn EVENTHANDLER_REGISTER watchdog_list watchdog_fn private 0
+.Fn EVENTHANDLER_DEREGISTER watchdog_list eventhandler_tag
 .Sh DESCRIPTION
 To implement a watchdog in software or hardware, only a single
 function needs to be written and registered on the global
@@ -51,17 +51,21 @@ If
 is zero, the watchdog must be disabled and the
 .Fa error
 argument left untouched.
+If the watchdog cannot be disabled, the
+.Fa error
+argument must be set to 
+.Dv EOPNOTSUPP .
 .Pp
 Else the watchdog should be reset and configured to a timeout of
 .Pq 1 << Pq Fa cmd No & Dv WD_INTERVAL
 nanoseconds or larger and the
 .Fa error
-argument be set to zero.
+argument be set to zero to signal arming of a watchdog.
 .Pp
 If the watchdog cannot be configured to the proposed timeout, it
 must be disabled and the
 .Fa error
-argument left untouched.
+argument left as is (to avoid hiding the arming of another watchdog).
 .Pp
 There is no specification of what the watchdog should do when it
 times out, but a hardware reset or similar

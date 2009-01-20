@@ -24,8 +24,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/ieee80211_ioctl.9,v 1.3 2005/06/28 20:15:18 hmp Exp $
-.\" $Id: ieee80211_ioctl.9,v 1.1.1.2 2006-02-25 02:35:48 laffer1 Exp $
+.\" $FreeBSD: src/share/man/man9/ieee80211_ioctl.9,v 1.5 2007/07/01 10:25:06 thompsa Exp $
+.\" $Id: ieee80211_ioctl.9,v 1.2 2009-01-20 19:31:05 laffer1 Exp $
 .\"
 .Dd March 2, 2004
 .Dt IEEE80211_IOCTL 9
@@ -55,11 +55,6 @@ and
 .Fn ieee80211_cfgset
 functions implement a legacy interface for getting and setting 802.11
 interface attributes respectively.
-The interface is compatible with the RIDs implemented by the legacy
-.Xr owi 4
-driver and used by the
-.Xr wicontrol 8
-utility.
 .Pp
 .\"
 The
@@ -79,9 +74,7 @@ in the driver's private soft state structure, so driver writers may prefer
 to use this as the catch-all in a switch statement to avoid code duplication.
 .\"
 .Sh SEE ALSO
-.Xr owi 4 ,
 .Xr ifconfig 8 ,
-.Xr wicontrol 8 ,
 .Xr ieee80211 9 ,
 .Xr ifnet 9
 .Sh HISTORY

@@ -22,9 +22,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/DECLARE_GEOM_CLASS.9,v 1.4 2005/01/13 09:33:06 ru Exp $
+.\" $FreeBSD: src/share/man/man9/DECLARE_GEOM_CLASS.9,v 1.5 2007/09/20 10:52:08 gabor Exp $
 .\"
-.Dd January 6, 2005
+.Dd August 13, 2007
 .Dt DECLARE_GEOM_CLASS 9
 .Os
 .Sh NAME
@@ -110,7 +110,7 @@ below).
 .Sh EXAMPLES
 Example class declaration.
 .Bd -literal -offset indent
-static struct geom *
+static struct g_geom *
 g_example_taste(struct g_class *mp, struct g_provider *pp,
     int flags __unused)
 {

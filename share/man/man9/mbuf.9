@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/mbuf.9,v 1.58.2.2 2006/03/23 23:24:33 sam Exp $
+.\" $FreeBSD: src/share/man/man9/mbuf.9,v 1.65 2007/02/26 15:17:19 bms Exp $
 .\"
-.Dd March 15, 2006
+.Dd February 26, 2007
 .Dt MBUF 9
 .Os
 .\"
@@ -51,14 +51,10 @@
 .Fa "int type"
 .Fc
 .Fn MEXTFREE "struct mbuf *mbuf"
-.Fn MEXT_ADD_REF "struct mbuf *mbuf"
-.Fn MEXT_REM_REF "struct mbuf *mbuf"
 .Fn MFREE "struct mbuf *mbuf" "struct mbuf *successor"
 .\"
 .Ss Mbuf utility macros
 .Fn mtod "struct mbuf *mbuf" "type"
-.Ft int
-.Fn MEXT_IS_REF "struct mbuf *mbuf"
 .Fn M_ALIGN "struct mbuf *mbuf" "u_int len"
 .Fn MH_ALIGN "struct mbuf *mbuf" "u_int len"
 .Ft int
@@ -100,6 +96,8 @@
 .Fn m_copyup "struct mbuf *mbuf" "int len" "int dstoff"
 .Ft struct mbuf *
 .Fn m_pullup "struct mbuf *mbuf" "int len"
+.Ft struct mbuf *
+.Fn m_pulldown "struct mbuf *mbuf" "int offset" "int len" "int *offsetp"
 .Ft struct mbuf *
 .Fn m_copym "struct mbuf *mbuf" "int offset" "int len" "int how"
 .Ft struct mbuf *
@@ -233,9 +231,8 @@ types are defined as follows:
 .Bd -literal
 /* mbuf types */
 #define	MT_DATA		1	/* dynamic (data) allocation */
-#define	MT_HEADER	2	/* packet header */
+#define	MT_HEADER	MT_DATA	/* packet header */
 #define	MT_SONAME	8	/* socket name */
-#define	MT_FTABLE	11	/* fragment reassembly header */
 #define	MT_CONTROL	14	/* extra-data protocol message */
 #define	MT_OOBDATA	15	/* expedited data */
 .Ed
@@ -302,18 +299,6 @@ buffer,
 .Pp
 The allocation and management of the reference counter is handled by the
 subsystem.
-The developer can check whether the reference count for the
-external storage of a given
-.Vt mbuf
-is greater than 1 with the
-.Dv MEXT_IS_REF
-macro.
-Similarly, the developer can directly add and remove references,
-if absolutely necessary, with the use of the
-.Dv MEXT_ADD_REF
-and
-.Dv MEXT_REM_REF
-macros.
 .Pp
 The system also supplies a default type of external storage buffer called an
 .Vt mbuf cluster .
@@ -660,6 +645,10 @@ are contiguous and lay in the data area of
 .Fa mbuf ,
 so they are accessible with
 .Fn mtod mbuf type .
+It is important to remember that this may involve
+reallocating some mbufs and moving data so all pointers
+referencing data within the old mbuf chain
+must be recalculated or made invalid.
 Return the new
 .Vt mbuf chain
 on success,
@@ -675,6 +664,42 @@ so
 .Fa len
 must be less than
 .Dv MHLEN .
+.\"
+.It Fn m_pulldown mbuf offset len offsetp
+Arrange that
+.Fa len
+bytes between
+.Fa offset
+and
+.Fa offset + len
+in the
+.Vt mbuf chain
+are contiguous and lay in the data area of
+.Fa mbuf ,
+so they are accessible with
+.Fn mtod mbuf type .
+.Fa len must be smaller than, or equal to, the size of an
+.Vt mbuf cluster .
+Return a pointer to an intermediate
+.Vt mbuf
+in the chain containing the requested region;
+the offset in the data region of the
+.Vt mbuf chain
+to the data contained in the returned mbuf is stored in
+.Fa *offsetp .
+If
+.Fa offp
+is NULL, the region may be accessed using
+.Fn mtod mbuf type .
+If
+.Fa offp
+is non-NULL, the region may be accessed using
+.Fn mtod mbuf uint8_t + *offsetp .
+The region of the mbuf chain between its beginning and
+.Fa off
+is not modified, therefore it is safe to hold pointers to data within
+this region before calling
+.Fn m_pulldown .
 .\"
 .It Fn m_copym mbuf offset len how
 Make a copy of an
@@ -1135,7 +1160,35 @@ appeared in an early version of
 Besides being used for network packets, they were used
 to store various dynamic structures, such as routing table
 entries, interface addresses, protocol control blocks, etc.
+In more recent
+.Fx
+use of
+.Vt mbufs
+is almost entirely limited to packet storage, with
+.Xr uma 9
+zones being used directly to store other network-related memory.
+.Pp
+Historically, the
+.Vt mbuf
+allocator has been a special-purpose memory allocator able to run in
+interrupt contexts and allocating from a special kernel address space map.
+As of
+.Fx 5.3 ,
+the
+.Vt mbuf
+allocator is a wrapper around
+.Xr uma 9 ,
+allowing caching of
+.Vt mbufs ,
+clusters, and
+.Vt mbuf
++ cluster pairs in per-CPU caches, as well as bringing other benefits of
+slab allocation.
 .Sh AUTHORS
 The original
 .Nm
 manual page was written by Yar Tikhiy.
+The
+.Xr uma 9
+.Vt mbuf
+allocator was written by Bosko Milekic.

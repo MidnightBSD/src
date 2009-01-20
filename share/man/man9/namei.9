@@ -31,9 +31,9 @@
 .\" If you integrate this manpage in another OS, I'd appreciate a note
 .\"	- eivind@FreeBSD.org
 .\"
-.\" $FreeBSD: src/share/man/man9/namei.9,v 1.26.2.1 2005/09/25 18:51:45 rwatson Exp $
+.\" $FreeBSD: src/share/man/man9/namei.9,v 1.29 2005/12/13 17:07:52 ru Exp $
 .\"
-.Dd May 27, 2003
+.Dd September 21, 2005
 .Os
 .Dt NAMEI 9
 .Sh NAME
@@ -82,7 +82,7 @@ will acquire it if the caller indicates it is
 in which case the caller must later release
 .Va Giant
 based on the results of
-.Fn NDHASGIANT.
+.Fn NDHASGIANT .
 .Pp
 The
 .Fn NDINIT

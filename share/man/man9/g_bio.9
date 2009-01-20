@@ -1,5 +1,5 @@
 .\"
-.\" Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+.\" Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -22,9 +22,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/g_bio.9,v 1.9 2004/08/04 21:35:05 pjd Exp $
+.\" $FreeBSD: src/share/man/man9/g_bio.9,v 1.13 2007/05/06 12:48:39 wkoszek Exp $
 .\"
-.Dd January 16, 2004
+.Dd November 1, 2006
 .Dt G_BIO 9
 .Os
 .Sh NAME
@@ -39,7 +39,11 @@
 .Ft "struct bio *"
 .Fn g_new_bio void
 .Ft "struct bio *"
+.Fn g_alloc_bio void
+.Ft "struct bio *"
 .Fn g_clone_bio "struct bio *bp"
+.Ft "struct bio *"
+.Fn g_duplicate_bio "struct bio *bp"
 .Ft void
 .Fn g_destroy_bio "struct bio *bp"
 .Ft void
@@ -71,6 +75,8 @@ attributes on a particular provider or path.
 Attributes are named by ascii strings and are stored in the
 .Va bio_attribute
 field.
+.It Dv BIO_FLUSH
+Tells underlying providers to flush their write caches.
 .El
 .It Va bio_flags
 Available flags:
@@ -138,6 +144,13 @@ function allocates a new, empty
 .Vt bio
 structure.
 .Pp
+.Fn g_alloc_bio
+- same as
+.Fn g_new_bio ,
+but always succeeds (allocates bio with the
+.Dv M_WAITOK
+malloc flag).
+.Pp
 The
 .Fn g_clone_bio
 function allocates a new
@@ -173,6 +186,13 @@ Modify the clone.
 .It
 Schedule the clone on its own consumer.
 .El
+.Pp
+.Fn g_duplicate_bio
+- same as
+.Fn g_clone_bio ,
+but always succeeds (allocates bio with the
+.Dv M_WAITOK
+malloc flag).
 .Pp
 The
 .Fn g_destroy_bio
@@ -213,7 +233,7 @@ example_start(struct bio *bp)
 	struct bio *cbp;
 
 	printf("Request received: ");
-	g_print_bio();
+	g_print_bio(bp);
 	printf("\\n");
 
 	sc = bp->bio_to->geom->softc;

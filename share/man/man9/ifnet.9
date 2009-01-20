@@ -26,9 +26,9 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/ifnet.9,v 1.50.2.1 2005/08/18 15:01:24 keramida Exp $
+.\" $FreeBSD: src/share/man/man9/ifnet.9,v 1.53 2007/03/14 13:19:50 bms Exp $
 .\"
-.Dd June 10, 2005
+.Dd March 14, 2007
 .Os
 .Dt IFNET 9
 .Sh NAME
@@ -103,19 +103,9 @@
 .Ft void
 .Fn \*(lp*if_start\*(rp "struct ifnet *ifp"
 .Ft int
-.Fn \*(lp*if_done\*(rp "struct ifnet *ifp"
-.Ft int
 .Fn \*(lp*if_ioctl\*(rp "struct ifnet *ifp" "int cmd" "caddr_t data"
 .Ft void
 .Fn \*(lp*if_watchdog\*(rp "struct ifnet *ifp"
-.Ft int
-.Fn \*(lp*if_poll_recv\*(rp "struct ifnet *ifp" "int *quotap"
-.Ft int
-.Fn \*(lp*if_poll_xmit\*(rp "struct ifnet *ifp" "int *quotap"
-.Ft void
-.Fn \*(lp*if_poll_inttrn\*(rp "struct ifnet *ifp"
-.Ft void
-.Fn \*(lp*if_poll_slowinput\*(rp "struct ifnet *ifp" "struct mbuf *m"
 .Ft void
 .Fn \*(lp*if_init\*(rp "void *if_softc"
 .Ft int
@@ -1024,7 +1014,7 @@ this address structure is saved in the global array
 .Va ifnet_addrs . )
 The
 .Fa ifp
-must have been allocted by
+must have been allocated by
 .Fn if_alloc .
 .It Fn if_detach
 Shut down and unlink the specified

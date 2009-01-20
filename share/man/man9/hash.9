@@ -24,39 +24,39 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\"     $OpenBSD: hash.9,v 1.5 2003/04/17 05:08:39 jmc Exp $
-.\" $FreeBSD: src/share/man/man9/hash.9,v 1.1.2.1 2006/04/04 19:50:02 andre Exp $
+.\" $FreeBSD: src/share/man/man9/hash.9,v 1.4 2007/04/09 22:55:14 thompsa Exp $
 .\"
-.Dd December 8, 2001
+.Dd April 3, 2007
 .Dt HASH 9
 .Os
 .Sh NAME
-.Nm hash
-.\" XXX - Should all these be .Nm as well?
-.\" .Nm hash32 ,
-.\" .Nm hash32_buf ,
-.\" .Nm hash32_str ,
-.\" .Nm hash32_strn ,
-.\" .Nm hash32_stre ,
-.\" .Nm hash32_strne
+.Nm hash ,
+.Nm hash32 ,
+.Nm hash32_buf ,
+.Nm hash32_str ,
+.Nm hash32_strn ,
+.Nm hash32_stre ,
+.Nm hash32_strne
 .Nd general kernel hashing functions
 .Sh SYNOPSIS
-.Fd #include <sys/hash.h>
+.In sys/hash.h
 .Ft uint32_t
-.Fn hash32_buf "void *buf" "size_t len" "uint32_t hash"
+.Fn hash32_buf "const void *buf" "size_t len" "uint32_t hash"
 .Ft uint32_t
-.Fn hash32_str "void *buf" "uint32_t hash"
+.Fn hash32_str "const void *buf" "uint32_t hash"
 .Ft uint32_t
-.Fn hash32_strn "void *buf" "size_t len" "uint32_t hash"
+.Fn hash32_strn "const void *buf" "size_t len" "uint32_t hash"
 .Ft uint32_t
-.Fn hash32_stre "void *buf" "int end" "char **ep" "uint32_t hash"
+.Fn hash32_stre "const void *buf" "int end" "const char **ep" "uint32_t hash"
 .Ft uint32_t
-.Fn hash32_strne "void *buf" "size_t len" "int end" "char **ep" "uint32_t hash"
+.Fn hash32_strne "const void *buf" "size_t len" "int end" "const char **ep" "uint32_t hash"
 .Sh DESCRIPTION
 The
 .Fn hash32
 functions are used to give a consistent and general interface to
 a decent hashing algorithm within the kernel.
-These functions can be used to hash ASCII
+These functions can be used to hash
+.Tn ASCII
 .Dv NUL
 terminated strings, as well as blocks of memory.
 .Pp
@@ -119,6 +119,7 @@ u_long mask = 0;
 void
 sample_init(void)
 {
+
         hashtbl = hashinit(numwanted, type, flags, &mask);
 }
 

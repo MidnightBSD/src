@@ -29,7 +29,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/time.9,v 1.16 2005/06/15 13:31:23 ru Exp $
+.\" $FreeBSD: src/share/man/man9/time.9,v 1.17 2006/03/02 19:47:41 ru Exp $
 .\"
 .Dd September 17, 2004
 .Dt TIME 9
@@ -43,8 +43,8 @@
 .In sys/time.h
 .Pp
 .Vt extern struct timeval boottime ;
-.Vt extern struct time_t time_second ;
-.Vt extern struct timeval time_uptime ;
+.Vt extern time_t time_second ;
+.Vt extern time_t time_uptime ;
 .Sh DESCRIPTION
 The
 .Va boottime
@@ -71,7 +71,6 @@ and
 functions can be used to get the current time more accurately and in an
 atomic manner.
 Similarly, the
-The
 .Xr binuptime 9 ,
 .Xr getbinuptime 9 ,
 .Xr microuptime 9 ,

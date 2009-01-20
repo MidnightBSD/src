@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/rman.9,v 1.6 2005/06/28 20:15:18 hmp Exp $
+.\" $FreeBSD: src/share/man/man9/rman.9,v 1.9 2007/04/29 19:46:33 jmg Exp $
 .\"
-.Dd March 15, 2005
+.Dd April 29, 2007
 .Dt RMAN 9
 .Os
 .Sh NAME
@@ -139,7 +139,28 @@ The
 function initializes the region descriptor, pointed to by the
 .Fa rm
 argument, for use with the resource management functions.
+It is required that the fields
+.Va rm_type
+and
+.Va rm_descr
+of
+.Vt "struct rman"
+be set before calling
+.Fn rman_init .
+The field
+.Va rm_type
+shall be set to
+.Dv RMAN_ARRAY .
+The field
+.Va rm_descr
+shall be set to a string that describes the resource to be managed.
 It also initializes any mutexes associated with the structure.
+If
+.Fn rman_init
+fails to initalize the mutex, it will return
+.Er ENOMEM ; otherwise it will return 0 and
+.Fa rm
+will be initalized.
 .Pp
 The
 .Fn rman_fini
@@ -167,10 +188,15 @@ The
 and
 .Fa end
 arguments specify the bounds of the region.
-.Pp
-.Em NOTE :
-This interface is not robust against programming errors which
-add multiple copies of the same region.
+If successful,
+.Fn rman_manage_region
+will return 0.
+If the region overlaps with an existing region, it will return
+.Er EBUSY .
+.Er ENOMEM
+will be return when
+.Fn rman_manage_region
+failed to allocate memory for the region.
 .Pp
 The
 .Fn rman_reserve_resource_bound
@@ -316,7 +342,6 @@ The
 .Fn rman_get_device
 function returns a pointer to the device which reserved the resource
 .Fa r .
-.Pp
 .Sh SEE ALSO
 .Xr bus_activate_resource 9 ,
 .Xr bus_alloc_resource 9 ,

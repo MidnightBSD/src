@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/sysctl_ctx_init.9,v 1.12 2004/07/03 18:29:24 ru Exp $
+.\" $FreeBSD: src/share/man/man9/sysctl_ctx_init.9,v 1.14 2007/07/27 19:55:42 remko Exp $
 .\"
 .Dd July 15, 2000
 .Dt SYSCTL_CTX_INIT 9
@@ -135,7 +135,8 @@ in most cases, the programmer specifies
 as the oid number when creating an oid.
 However, during registration of the oid in the tree,
 this number is changed to the first available number
-greater than 99.
+greater than or equal to 
+.Dv CTL_AUTO_START .
 If the first step of context deletion fails,
 re-registration of the oid does not change the already assigned oid number
 (which is different from OID_AUTO).
@@ -225,6 +226,7 @@ and then proceeds to free the older entries (in this case the nodes).
 .Sh SEE ALSO
 .Xr queue 3 ,
 .Xr sysctl 8 ,
+.Xr sysctl 9 ,
 .Xr sysctl_add_oid 9 ,
 .Xr sysctl_remove_oid 9
 .Sh HISTORY

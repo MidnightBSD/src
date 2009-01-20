@@ -24,9 +24,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 .\" DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man9/VFS_SET.9,v 1.9 2005/01/18 20:37:11 ru Exp $
+.\" $FreeBSD: src/share/man/man9/VFS_SET.9,v 1.11 2007/04/05 21:17:52 pjd Exp $
 .\"
-.Dd December 2, 2001
+.Dd April 5, 2007
 .Dt VFS_SET 9
 .Os
 .Sh NAME
@@ -70,6 +70,11 @@ Pseudo file system, data does not represent on-disk files.
 Loopback file system layer.
 .It Dv VFCF_UNICODE
 File names are stored as Unicode.
+.It Dv VFCF_JAIL
+can be mounted from within a jail if
+.Va security.jail.mount_allowed
+sysctl is set to
+.Dv 1 .
 .El
 .Sh PSEUDOCODE
 .Bd -literal
@@ -96,6 +101,8 @@ static struct vfsops myfs_vfsops = {
 VFS_SET(myfs_vfsops, skelfs, 0);
 .Ed
 .Sh SEE ALSO
+.Xr jail 2 ,
+.Xr jail 8 ,
 .Xr DECLARE_MODULE 9 ,
 .Xr vfsconf 9 ,
 .Xr vfs_modevent 9
