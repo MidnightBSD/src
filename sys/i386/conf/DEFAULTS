@@ -1,6 +1,7 @@
 #
-# DEFAULTS -- Default kernel configuration file for FreeBSD/i386
+# DEFAULTS -- Default kernel configuration file for MidnightBSD/i386
 #
+# $MidnightBSD$
 # $FreeBSD: src/sys/i386/conf/DEFAULTS,v 1.10 2007/06/11 00:38:06 marcel Exp $
 
 machine		i386
