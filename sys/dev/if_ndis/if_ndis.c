@@ -1564,6 +1564,7 @@ ndis_linksts_done(adapter)
 		IoQueueWorkItem(sc->ndis_tickitem, 
 		    (io_workitem_func)ndis_ticktask_wrap,
 		    WORKQUEUE_CRITICAL, sc);
+		/* XXX: startitem might be handled before tickitem */
 		IoQueueWorkItem(sc->ndis_startitem,
 		    (io_workitem_func)ndis_starttask_wrap,
 		    WORKQUEUE_CRITICAL, ifp);
@@ -1647,6 +1648,11 @@ ndis_ticktask(d, xsc)
 			ieee80211_new_state(ic, IEEE80211_S_RUN, -1);
 		}
 		NDIS_LOCK(sc);
+		/* XXX: Start kludge */
+		IoQueueWorkItem(sc->ndis_startitem,
+			(io_workitem_func)ndis_starttask_wrap,
+			WORKQUEUE_CRITICAL, sc->ifp);
+		/* XXX: End kludge */
 #ifdef LINK_STATE_UP
 		if_link_state_change(sc->ifp, LINK_STATE_UP);
 #else
@@ -3146,6 +3152,11 @@ ndis_resettask(d, arg)
 
 	sc = arg;
 	ndis_reset_nic(sc);
+	/* XXX: Start kludge */
+	IoQueueWorkItem(sc->ndis_startitem,
+	    (io_workitem_func)ndis_starttask_wrap,
+	    WORKQUEUE_CRITICAL, sc->ifp);
+	/* XXX: End kludge */
 	return;
 }
 
@@ -3165,6 +3176,7 @@ ndis_watchdog(ifp)
 	IoQueueWorkItem(sc->ndis_resetitem,
 	    (io_workitem_func)ndis_resettask_wrap,
 	    WORKQUEUE_CRITICAL, sc);
+	/* XXX: startitem might be handled before resetitem */
 	IoQueueWorkItem(sc->ndis_startitem,
 	    (io_workitem_func)ndis_starttask_wrap,
 	    WORKQUEUE_CRITICAL, ifp);
