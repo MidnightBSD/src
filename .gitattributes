@@ -23180,7 +23180,6 @@ share/man/man9/LOCK_PROFILING.9 -text
 share/man/man9/MD5.9 -text
 share/man/man9/MODULE_DEPEND.9 -text
 share/man/man9/MODULE_VERSION.9 -text
-share/man/man9/MUTEX_PROFILING.9 -text
 share/man/man9/Makefile -text
 share/man/man9/SYSCALL_MODULE.9 -text
 share/man/man9/VFS.9 -text
@@ -23195,7 +23194,6 @@ share/man/man9/VFS_STATFS.9 -text
 share/man/man9/VFS_SYNC.9 -text
 share/man/man9/VFS_UNMOUNT.9 -text
 share/man/man9/VFS_VGET.9 -text
-share/man/man9/VFS_VPTOFH.9 -text
 share/man/man9/VOP_ACCESS.9 -text
 share/man/man9/VOP_ACLCHECK.9 -text
 share/man/man9/VOP_ADVLOCK.9 -text
@@ -23296,7 +23294,6 @@ share/man/man9/device_set_desc.9 -text
 share/man/man9/device_set_driver.9 -text
 share/man/man9/device_set_flags.9 -text
 share/man/man9/devstat.9 -text
-share/man/man9/devsw.9 -text
 share/man/man9/devtoname.9 -text
 share/man/man9/disk.9 -text
 share/man/man9/domain.9 -text
@@ -23494,7 +23491,6 @@ share/man/man9/vm_page_lookup.9 -text
 share/man/man9/vm_page_protect.9 -text
 share/man/man9/vm_page_rename.9 -text
 share/man/man9/vm_page_sleep_busy.9 -text
-share/man/man9/vm_page_unmanage.9 -text
 share/man/man9/vm_page_wakeup.9 -text
 share/man/man9/vm_page_wire.9 -text
 share/man/man9/vm_page_zero_fill.9 -text
