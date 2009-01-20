@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.1 2008-05-14 04:25:57 laffer1 Exp $	*/
+/*	$Id: scan.l,v 1.2 2009-01-20 21:09:40 laffer1 Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -38,6 +38,7 @@ FS			(f|F|l|L)
 IS			(u|U|l|L)*
 
 %{
+#include <stdlib.h>
 #include <errno.h>  
 #include <string.h>
 #include <stdarg.h>
@@ -48,30 +49,29 @@ IS			(u|U|l|L)*
 static NODE *cvtdig(int radix);
 static NODE *charcon(void);
 static void control(int);
-static NODE *floatcon(void);
-static NODE *fhexcon(void);
-int notype, parbal;
+static void pragma(void);
+int notype, parbal, inattr, parlvl;
+static int resw(TWORD, int);
 
-#define	CPP_PRAGMA	1
 #define	CPP_IDENT 	2
 #define	CPP_LINE 	3
 #define	CPP_HASH	4
 
 #ifdef STABS
-#define	STABS_LINE(x) if (gflag && blevel) stabs_line(x)
+#define	STABS_LINE(x) if (gflag && cftnsp) stabs_line(x)
 #else
 #define STABS_LINE(x)
 #endif
 #if defined(FLEX_SCANNER) && YY_FLEX_SUBMINOR_VERSION >= 31
-/* Hack to avoid unneccessary warnings */
+/* Hack to avoid unnecessary warnings */
 FILE *yyget_in  (void);
 FILE *yyget_out  (void);
 int yyget_leng  (void);
 char *yyget_text  (void);
-void yyset_in (FILE *  in_str );
-void yyset_out (FILE *  out_str );
+void yyset_in (FILE *);
+void yyset_out (FILE *);
 int yyget_debug  (void);
-void yyset_debug (int  bdebug );
+void yyset_debug (int);
 int yylex_destroy  (void);
 extern int yyget_lineno (void);
 extern void yyset_lineno (int);
@@ -95,9 +95,9 @@ extern void yyset_lineno (int);
 "case"			{ return(C_CASE); }
 "char"			{ yylval.nodep = mkty((TWORD)CHAR, 0, MKSUE(CHAR));
 			  notype=1; return(C_TYPE); }
-"const"			{ yylval.nodep =
-				block(QUALIFIER, NIL, NIL, CON, 0, 0);
-			  return(C_QUALIFIER); }
+"_Complex"		{ yylval.nodep = mkty((TWORD)COMPLEX, 0, MKSUE(DOUBLE));
+			  notype=1; return(C_TYPE); }
+"const"			{ 	return resw(CON, C_QUALIFIER); }
 "continue"		{ return(C_CONTINUE); }
 "default"		{ return(C_DEFAULT); }
 "do"			{ return(C_DO); }
@@ -125,60 +125,48 @@ extern void yyset_lineno (int);
 			  notype=1; return(C_TYPE); }
 "sizeof"		{ return(C_SIZEOF); }
 "static"		{ yylval.intval = STATIC; return(C_CLASS); }
-"struct"		{ yylval.intval = INSTRUCT; notype=1; return(C_STRUCT); }
+"struct"		{ yylval.intval = STNAME; notype=1; return(C_STRUCT); }
 "switch"		{ return(C_SWITCH); }
 "typedef"		{ yylval.intval = TYPEDEF; return(C_CLASS); }
-"union"			{ yylval.intval = INUNION; notype=1; return(C_STRUCT); }
+"union"			{ yylval.intval = UNAME; notype=1; return(C_STRUCT); }
 "unsigned"		{ yylval.nodep = mkty((TWORD)UNSIGNED, 0, MKSUE(UNSIGNED));
 			  notype=1; return(C_TYPE); }
 "void"			{ yylval.nodep = mkty((TWORD)VOID, 0, MKSUE(VOID));
 			  notype=1; return(C_TYPE); }
-"volatile"		{ yylval.nodep =
-				block(QUALIFIER, NIL, NIL, VOL, 0, 0);
-			  return(C_QUALIFIER); }
+"volatile"		{	return resw(VOL, C_QUALIFIER); }
 "while"			{ return(C_WHILE); }
 
-{L}({L}|{D})*		{ 	struct symtab *s;
-				int i;
+{L}({L}|{D})*	{ 	struct symtab *s;
+			int i = 0;
 
-				yylval.strp = addname(yytext);
-				if ((i = gcc_keyword(yylval.strp,
-				    &yylval.nodep)) != 0)
-					return i;
-// printf("str: %s notype %d parbal %d\n", yytext, notype, parbal);
-				if (!notype) {
-					s = lookup(yylval.strp, SNOCREAT);
-					if (s && s->sclass == TYPEDEF)
-						return notype=1, C_TYPENAME;
-				}
-				return(C_NAME);
+			yylval.strp = addname(yytext);
+#ifdef GCC_COMPAT
+			if ((i = gcc_keyword(yylval.strp, &yylval.nodep)) > 0)
+				return i;
+#endif
+			if (i == 0) {
+				if (notype)
+					return(C_NAME);
+				s = lookup(yylval.strp, SNOCREAT);
+				return s && s->sclass == TYPEDEF ?
+				    notype=1, C_TYPENAME : C_NAME;
 			}
+		}
 
 0[xX]{H}+{IS}?		{ yylval.nodep = cvtdig(16); return(C_ICON); }
 0{D}+{IS}?		{ yylval.nodep = cvtdig(8); return(C_ICON); }
 {D}+{IS}?		{ yylval.nodep = cvtdig(10); return(C_ICON); }
 L?'(\\.|[^\\'])+'	{ yylval.nodep = charcon(); return(C_ICON); }
 
-{D}+{E}{FS}?		{ yylval.nodep = floatcon(); return(C_FCON); }
-{D}*"."{D}+({E})?{FS}?	{ yylval.nodep = floatcon(); return(C_FCON); }
-{D}+"."{D}*({E})?{FS}?	{ yylval.nodep = floatcon(); return(C_FCON); }
-0[xX]{H}*"."{H}+{P}{FS}? { yylval.nodep = fhexcon(); return(C_FCON); }
-0[xX]{H}+"."{P}{FS}?	{ yylval.nodep = fhexcon(); return(C_FCON); }
-0[xX]{H}+{P}{FS}?	{ yylval.nodep = fhexcon(); return(C_FCON); }
+{D}+{E}{FS}?		{ yylval.nodep = floatcon(yytext); return(C_FCON); }
+{D}*"."{D}+({E})?{FS}?	{ yylval.nodep = floatcon(yytext); return(C_FCON); }
+{D}+"."{D}*({E})?{FS}?	{ yylval.nodep = floatcon(yytext); return(C_FCON); }
+0[xX]{H}*"."{H}+{P}{FS}? { yylval.nodep = fhexcon(yytext); return(C_FCON); }
+0[xX]{H}+"."{P}{FS}?	{ yylval.nodep = fhexcon(yytext); return(C_FCON); }
+0[xX]{H}+{P}{FS}?	{ yylval.nodep = fhexcon(yytext); return(C_FCON); }
 
-L?\"(\\.|[^\\"])*\"	{
-				char *c = yytext;
-				int i = yyleng-2, rv;
+L?\"(\\.|[^\\"])*\"	{ yylval.strp = yytext; return C_STRING; }
 
-				if (*c++ == 'L') {
-					c++, i--;
-					rv = C_WSTRING;
-				} else
-					rv = C_STRING;
-				c[i] = 0; /* last " */
-				yylval.strp = c;
-				return rv;
-			}
 "..."			{ return(C_ELLIPSIS); }
 ">>="			{ yylval.intval = RSEQ; return(C_ASOP); }
 "<<="			{ yylval.intval = LSEQ; return(C_ASOP); }
@@ -203,12 +191,16 @@ L?\"(\\.|[^\\"])*\"	{
 "!="			{ yylval.intval = NE; return(C_EQUOP); }
 ";"			{ notype = 0; return(';'); }
 ("{"|"<%")		{ notype = 0; return('{'); }
-("}"|"%>")		{ return('}'); }
+("}"|"%>")		{ if (rpole) notype = 1; return('}'); }
 ","			{ if (parbal) notype = 0; return(','); }
 ":"			{ return(':'); }
 "="			{ return('='); }
 "("			{ parbal++; notype = 0; return('('); }
-")"			{ parbal--; if (parbal==0) { notype = 0; } return(')'); }
+")"			{	parbal--;
+				if (parbal==0) { notype = 0; }
+				if (inattr && parlvl == parbal)
+					inattr = 0;
+				return(')'); }
 ("["|"<:")		{ return('['); }
 ("]"|":>")		{ return(']'); }
 "."			{ yylval.intval = DOT; return(C_STROP); }
@@ -225,7 +217,7 @@ L?\"(\\.|[^\\"])*\"	{
 "^"			{ return('^'); }
 "|"			{ return('|'); }
 "?"			{ return('?'); }
-^#pragma[ \t].*		{ control(CPP_PRAGMA); }
+^#pragma[ \t].*		{ pragma(); }
 ^#ident[ \t].*		{ control(CPP_IDENT); }
 ^#line[ \t].*		{ control(CPP_LINE); }
 ^#.*			{ control(CPP_HASH); }
@@ -246,6 +238,25 @@ yywrap(void)
 	return(1);
 }
 
+int
+resw(TWORD t, int rv)
+{
+	if (inattr) {
+		yylval.strp = addname(yytext);
+		return C_NAME;
+	}
+
+	switch (rv) {
+	case C_QUALIFIER:
+		yylval.nodep = block(QUALIFIER, NIL, NIL, t, 0, 0);
+		return C_QUALIFIER;
+	default:
+		cerror("resw");
+	}
+	return 0;
+}
+
+#ifndef SOFTFLOAT
 /*
  * XXX floatcon() and fhexcon() should be in support libraries for
  * the target floating point.
@@ -266,9 +277,9 @@ f2(char *str)
 }
 
 NODE *
-floatcon(void)
+floatcon(char *s)
 {
-	return f2(yytext);
+	return f2(s);
 }
 
 static int
@@ -283,10 +294,9 @@ h2n(int ch)
 }
 
 NODE *
-fhexcon(void)
+fhexcon(char *c)
 {
 	char buf[500];
-	char *c = yytext;
 	unsigned long long num1, num2;
 
 	/* XXX - convert it to a decimal float number and use strtod */
@@ -307,6 +317,7 @@ fhexcon(void)
 	snprintf(buf, sizeof(buf), "%llu.%lluE%s", num1, num2, c);
 	return f2(buf);
 }
+#endif
 
 unsigned int
 esccon(char **sptr)
@@ -325,9 +336,13 @@ esccon(char **sptr)
 	case '\"': val = '\"'; break;
 	case 'x': val = strtoul(wr, &wr, 16); break;
 	case '0': case '1': case '2': case '3': case '4': 
-	case '5': case '6': case '7': case '8': case '9': 
-		wr--;
-		val = strtoul(wr, &wr, 8);
+	case '5': case '6': case '7':
+		val = wr[-1] - '0';
+		if (*wr >= '0' && *wr <= '7') {
+			val = (val << 3) + (*wr++ - '0');
+			if (*wr >= '0' && *wr <= '7')
+				val = (val << 3) + (*wr++ - '0');
+		}
 		break;
 	default: val = wr[-1];
 	}
@@ -387,8 +402,7 @@ cvtdig(int radix)
 			ntype = UNSIGNED;
 	}
 	ntype = ctype(ntype);
-	p = block(ICON, NIL, NIL, ntype, 0, MKSUE(ntype));
-	p->n_lval = v;
+	p = xbcon(v, NULL, ntype);
 	ASGLVAL(p->n_slval, v);
 
 	return p;
@@ -432,7 +446,6 @@ control(int t)
 
 	wr++;	/* Skip initial '#' */
 	switch (t) {
-	case CPP_PRAGMA:
 	case CPP_IDENT:
 		return;	/* Just skip these for now. */
 
@@ -447,6 +460,8 @@ control(int t)
 		lineno = val - 1;
 		while (*wr && *wr != '\"')
 			wr++;
+		if (*wr == 0)
+			return;
 		if (*wr++ != '\"')
 			goto bad;
 		eptr = wr;
@@ -464,4 +479,63 @@ control(int t)
 	return;
 bad:
 	werror("%s: illegal control", yytext);
+}
+
+/*
+ * split a pragma string in parts.
+ */
+static char **
+splitup(char *str)
+{
+	char *s, **ary;
+	int i;
+
+	/* count ws. at least needed array size, add 2 to terminate */
+	for (i = 2, s = str; *s; s++)
+		if (*s == ' ' || *s == '\t' ||
+		    *s == '(' || *s == ')' || *s == ',')
+			i++;
+	ary = tmpalloc(sizeof(char *)*i);
+	for (i = 0, s = strtok(str, " \t(,)"); s; s = strtok(NULL, " \t(,)"))
+		ary[i++] = s;
+	ary[i] = NULL;
+	return ary;
+}
+
+int pragma_allpacked;
+int pragma_packed, pragma_aligned;
+char *pragma_renamed;
+
+/*
+ * got a full pragma line.  Split it up here.
+ */
+static void
+pragma()
+{
+	char **ary;
+
+	ary = splitup(yytext);
+	if (ary[1] == NULL)
+		goto bad;
+	if (strcmp(ary[1], "pack") == 0) {
+		pragma_allpacked = ary[2] ? atoi(ary[2]) : 0;
+	} else if (strcmp(ary[1], "packed") == 0) {
+		pragma_packed = ary[2] ? atoi(ary[2]) : 1;
+	} else if (strcmp(ary[1], "aligned") == 0) {
+		pragma_aligned = ary[2] ? atoi(ary[2]) : 1;
+	} else if (strcmp(ary[1], "rename") == 0) {
+		pragma_renamed = newstring(ary[2], strlen(ary[2]));
+	} else if (mypragma(ary)) {
+		return;
+	} else {
+bad:
+		if (Wunknown_pragmas)
+			werror("unknown pragma");
+	}
+}
+
+void
+cunput(char c)
+{
+	unput(c);
 }

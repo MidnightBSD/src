@@ -1,5 +1,5 @@
 %{
-/*	$Id: scanner.l,v 1.1 2008-05-14 04:25:57 laffer1 Exp $	*/
+/*	$Id: scanner.l,v 1.2 2009-01-20 21:09:40 laffer1 Exp $   */
 
 /*
  * Copyright (c) 2004 Anders Magnusson. All rights reserved.
@@ -27,19 +27,25 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <fcntl.h>
+#include <errno.h>
 
+#include "compat.h"
 #include "cpp.h"
 #include "y.tab.h"
 %}
 
 %{
-static long long cvtdig(int rad);
-static int charcon(void);
+static void cvtdig(int rad);
+static int charcon(usch *);
 static void elsestmt(void);
 static void ifdefstmt(void);
 static void ifndefstmt(void);
@@ -50,8 +56,8 @@ static void pragmastmt(void);
 static void undefstmt(void);
 static void cpperror(void);
 static void elifstmt(void);
-//static void linestmt(void);
 static void storepb(void);
+static void badop(const char *);
 void  include(void);
 void  define(void);
 
@@ -82,15 +88,17 @@ yyinput(char *b, int m)
 }
 #undef YY_INPUT
 #undef YY_BUF_SIZE
-#define	YY_BUF_SIZE 32768
+#define	YY_BUF_SIZE (8*65536)
 #define YY_INPUT(b,r,m) (r = yyinput(b, m))
+#ifdef HAVE_CPP_VARARG_MACRO_GCC
 #define fprintf(x, ...) error(__VA_ARGS__)
+#endif
 #define	ECHO putstr((usch *)yytext)
 #undef fileno
 #define fileno(x) 0
 
 #if YY_FLEX_SUBMINOR_VERSION >= 31
-/* Hack to avoid unneccessary warnings */
+/* Hack to avoid unnecessary warnings */
 FILE *yyget_in	(void);
 FILE *yyget_out  (void);
 int yyget_leng	(void);
@@ -108,6 +116,9 @@ int yylex_destroy  (void);
 #define unput(ch) unch(ch)
 #endif
 #define PRTOUT(x) if (YYSTATE || slow) return x; if (!flslvl) putstr((usch *)yytext);
+/* protection against recursion in #include */
+#define MAX_INCLEVEL	100
+static int inclevel;
 %}
 
 D	[0-9]
@@ -118,7 +129,7 @@ FS	(f|F|l|L)
 IS	(u|U|l|L)*
 WS	[\t ]
 
-%s IFR CONTR DEF
+%s IFR CONTR DEF COMMENT
 
 %%
 
@@ -139,6 +150,8 @@ WS	[\t ]
 
 "\r"			{ ; /* Ignore CR's */ }
 
+<IFR>"++"		{ badop("++"); }
+<IFR>"--"		{ badop("--"); }
 <IFR>"=="		{ return EQ; }
 <IFR>"!="		{ return NE; }
 <IFR>"<="		{ return LE; }
@@ -160,28 +173,41 @@ WS	[\t ]
 
 <IFR>{WS}+		{ ; }
 <IFR>{L}({L}|{D})*	{
+				yylval.node.op = NUMBER;
 				if (gotdef) {
-					yylval.val =
-					    lookup((usch *)yytext, FIND) != 0;
+					yylval.node.nd_val
+					    = lookup((usch *)yytext, FIND) != 0;
 					gotdef = 0;
 					return IDENT;
 				}
-				yylval.val = 0;
+				yylval.node.nd_val = 0;
 				return NUMBER;
 			}
 
-[1-9][0-9]*		{ if (slow && !YYSTATE) return IDENT; scale = 10; goto num; }
+[0-9][0-9]*		{
+				if (slow && !YYSTATE)
+					return IDENT;
+				scale = yytext[0] == '0' ? 8 : 10;
+				goto num;
+			}
 
 0[xX]{H}+{IS}?		{	scale = 16;
-			num:	if (YYSTATE)
-					yylval.val = cvtdig(scale);
+			num:	if (YYSTATE == IFR) 
+					cvtdig(scale);
 				PRTOUT(NUMBER);
 			}
 0{D}+{IS}?		{ scale = 8; goto num; }
 {D}+{IS}?		{ scale = 10; goto num; }
-L?'(\\.|[^\\'])+'	{	if (YYSTATE)
-					yylval.val = charcon();
-				PRTOUT(NUMBER);
+'(\\.|[^\\'])+'		{
+				if (YYSTATE || slow) {
+					yylval.node.op = NUMBER;
+					yylval.node.nd_val = charcon((usch *)yytext);
+					return (NUMBER);
+				}
+				if (tflag)
+					yyless(1);
+				if (!flslvl)
+					putstr((usch *)yytext);
 			}
 
 <IFR>.			{ return yytext[0]; }
@@ -190,7 +216,14 @@ L?'(\\.|[^\\'])+'	{	if (YYSTATE)
 {D}*"."{D}+({E})?{FS}?	{ PRTOUT(FPOINT); }
 {D}+"."{D}*({E})?{FS}?	{ PRTOUT(FPOINT); }
 
-^{WS}*#{WS}*		{ contr = 1; BEGIN CONTR; }
+^{WS}*#{WS}*		{	extern int inmac;
+
+				if (inmac)
+					error("preprocessor directive found "
+					    "while expanding macro");
+				contr = 1;
+				BEGIN CONTR;
+			}
 {WS}+			{ PRTOUT(WSPACE); }
 
 <CONTR>"ifndef"		{ contr = 0; ifndefstmt(); }
@@ -203,19 +236,25 @@ L?'(\\.|[^\\'])+'	{	if (YYSTATE)
 <CONTR>"define"		{ contr = 0; BEGIN DEF; define(); BEGIN 0; }
 <CONTR>"undef"		{ contr = 0; if (slow) return IDENT; undefstmt(); }
 <CONTR>"line"		{ contr = 0; storepb(); BEGIN 0; line(); }
-<CONTR>"pragma"		{ contr = 0; pragmastmt(); }
+<CONTR>"pragma"		{ contr = 0; pragmastmt(); BEGIN 0; }
 <CONTR>"elif"		{ contr = 0; storepb(); BEGIN IFR; elifstmt(); BEGIN 0; }
 
 
 
 "//".*$			{ /* if (tflag) yyless(..) */
-				if (Cflag)
+				if (Cflag && !flslvl && !slow)
 					putstr((usch *)yytext);
 				else if (!flslvl)
 					putch(' ');
 			}
 "/*"			{	int c, wrn;
-				if (Cflag)
+				int prtcm = Cflag && !flslvl && !slow;
+				extern int readmac;
+
+				if (Cflag && !flslvl && readmac)
+					return CMNT;
+
+				if (prtcm)
 					putstr((usch *)yytext);
 				wrn = 0;
 			more:	while ((c = input()) && c != '*') {
@@ -223,20 +262,18 @@ L?'(\\.|[^\\'])+'	{	if (YYSTATE)
 						putch(c), ifiles->lineno++;
 					else if (c == 1) /* WARN */
 						wrn = 1;
-					else if (Cflag)
+					else if (prtcm)
 						putch(c);
 				}
 				if (c == 0)
 					return 0;
-				if (Cflag)
+				if (prtcm)
 					putch(c);
 				if ((c = input()) && c != '/') {
-					if (Cflag)
-						putch('*');
 					unput(c);
 					goto more;
 				}
-				if (Cflag)
+				if (prtcm)
 					putch(c);
 				if (c == 0)
 					return 0;
@@ -280,7 +317,31 @@ L?\"(\\.|[^\\"])*\"	{ PRTOUT(STRING); }
 				xx: ;
 			}
 
-.			{ PRTOUT(yytext[0]); }
+.			{
+				if (contr) {
+					while (input() != '\n')
+						;
+					unput('\n');
+					BEGIN 0;
+					contr = 0;
+					goto yy;
+				}
+				if (YYSTATE || slow)
+					return yytext[0];
+				if (yytext[0] == 6) { /* PRAGS */
+					usch *obp = stringbuf;
+					extern usch *prtprag(usch *);
+					*stringbuf++ = yytext[0];
+					do {
+						*stringbuf = input();
+					} while (*stringbuf++ != 14);
+					prtprag(obp);
+					stringbuf = obp;
+				} else {
+					PRTOUT(yytext[0]);
+				}
+				yy:;
+			}
 
 %%
 
@@ -393,25 +454,26 @@ prinit(struct initar *it, struct includ *ic)
 /*
  * A new file included.
  * If ifiles == NULL, this is the first file and already opened (stdin).
- * Return 0 on success, -1 on failure to open file.
+ * Return 0 on success, -1 if file to be included is not found.
  */
 int
 pushfile(usch *file)
 {
 	extern struct initar *initar;
 	struct includ ibuf;
-	struct includ *old;
 	struct includ *ic;
 	int c, otrulvl;
 
 	ic = &ibuf;
-	old = ifiles;
+	ic->next = ifiles;
 
 	slow = 0;
 	if (file != NULL) {
 		if ((ic->infil = open((char *)file, O_RDONLY)) < 0)
 			return -1;
 		ic->orgfn = ic->fname = file;
+		if (++inclevel > MAX_INCLEVEL)
+			error("Limit for nested includes exceeded");
 	} else {
 		ic->infil = 0;
 		ic->orgfn = ic->fname = (usch *)"<stdin>";
@@ -438,8 +500,9 @@ pushfile(usch *file)
 	if (otrulvl != trulvl || flslvl)
 		error("unterminated conditional");
 
-	ifiles = old;
+	ifiles = ic->next;
 	close(ic->infil);
+	inclevel--;
 	return 0;
 }
 
@@ -458,7 +521,7 @@ prtline()
 			s = sheap("%s: %s\n", Mfile, ifiles->fname);
 			write(ofd, s, strlen((char *)s));
 		}
-	} else
+	} else if (!Pflag)
 		putstr(sheap("# %d \"%s\"\n", ifiles->lineno, ifiles->fname));
 	stringbuf = os;
 }
@@ -468,7 +531,7 @@ cunput(int c)
 {
 #ifdef CPP_DEBUG
 	extern int dflag;
-	if (dflag)printf(": '%c'(%d)", c, c);
+	if (dflag)printf(": '%c'(%d)", c > 31 ? c : ' ', c);
 #endif
 	unput(c);
 }
@@ -488,13 +551,13 @@ dig2num(int c)
 }
 
 /*
- * Convert some string numbers to long long.
- * Do not care about UL trailers, should we?
+ * Convert string numbers to unsigned long long and check overflow.
  */
-static long long
+static void
 cvtdig(int rad)
 {
-	long long rv = 0;
+	unsigned long long rv = 0;
+	unsigned long long rv2 = 0;
 	char *y = yytext;
 	int c;
 
@@ -503,20 +566,30 @@ cvtdig(int rad)
 		y++;
 	while (isxdigit(c)) {
 		rv = rv * rad + dig2num(c);
+		/* check overflow */
+		if (rv / rad < rv2)
+			error("Constant \"%s\" is out of range", yytext);
+		rv2 = rv;
 		c = *y++;
 	}
-	return rv;
+	y--;
+	while (*y == 'l' || *y == 'L')
+		y++;
+	yylval.node.op = *y == 'u' || *y == 'U' ? UNUMBER : NUMBER;
+	yylval.node.nd_uval = rv;
+	if ((rad == 8 || rad == 16) && yylval.node.nd_val < 0)
+		yylval.node.op = UNUMBER;
+	if (yylval.node.op == NUMBER && yylval.node.nd_val < 0)
+		/* too large for signed */
+		error("Constant \"%s\" is out of range", yytext);
 }
 
 static int
-charcon(void)
+charcon(usch *p)
 {
-	usch *p = (usch *)yytext;
 	int val, c;
 
-	if (*p == 'L')
-		p++;
-	p++; /* first ' */
+	p++; /* skip first ' */
 	val = 0;
 	if (*p++ == '\\') {
 		switch (*p++) {
@@ -553,14 +626,24 @@ charcon(void)
 }
 
 static void
-chknl(void)
+chknl(int ignore)
 {
 	int t;
 
+	slow = 1;
 	while ((t = yylex()) == WSPACE)
 		;
-	if (t != '\n')
-		error("newline expected, got %d", t);
+	if (t != '\n') {
+		if (ignore) {
+			warning("newline expected, got \"%s\"", yytext);
+			/* ignore rest of line */
+			while ((t = yylex()) && t != '\n')
+				;
+		}
+		else
+			error("newline expected, got \"%s\"", yytext);
+	}
+	slow = 0;
 }
 
 static void
@@ -583,12 +666,14 @@ elsestmt(void)
 	if (elslvl==trulvl+flslvl)
 		error("Too many else");
 	elslvl=trulvl+flslvl;
-	chknl();
+	chknl(1);
 }
 
 static void
 ifdefstmt(void)		 
 { 
+	int t;
+
 	if (flslvl) {
 		/* just ignore the rest of the line */
 		while (input() != '\n')
@@ -599,28 +684,36 @@ ifdefstmt(void)
 		return;
 	}
 	slow = 1;
-	if (yylex() != WSPACE || yylex() != IDENT)
+	do
+		t = yylex();
+	while (t == WSPACE);
+	if (t != IDENT)
 		error("bad ifdef");
 	slow = 0;
 	if (flslvl == 0 && lookup((usch *)yytext, FIND) != 0)
 		trulvl++;
 	else
 		flslvl++;
-	chknl();
+	chknl(0);
 }
 
 static void
 ifndefstmt(void)	  
 { 
+	int t;
+
 	slow = 1;
-	if (yylex() != WSPACE || yylex() != IDENT)
+	do
+		t = yylex();
+	while (t == WSPACE);
+	if (t != IDENT)
 		error("bad ifndef");
 	slow = 0;
 	if (flslvl == 0 && lookup((usch *)yytext, FIND) == 0)
 		trulvl++;
 	else
 		flslvl++;
-	chknl();
+	chknl(0);
 }
 
 static void
@@ -637,7 +730,7 @@ endifstmt(void)
 	if (flslvl == 0)
 		elflvl = 0;
 	elslvl = 0;
-	chknl();
+	chknl(1);
 }
 
 /*
@@ -694,8 +787,24 @@ storepb(void)
 	usch *opb = stringbuf;
 	int c;
 
-	while ((c = input()) != '\n')
+	while ((c = input()) != '\n') {
+		if (c == '/') {
+			 if ((c = input()) == '*') {
+				/* ignore comments here whatsoever */
+				usch *g = stringbuf;
+				getcmnt();
+				stringbuf = g;
+				continue;
+			} else if (c == '/') {
+				while ((c = input()) && c != '\n')
+					;
+				break;
+			}
+			unput(c);
+			c = '/';
+		}
 		savch(c);
+	}
 	cunput('\n');
 	savch(0);
 	fixdefined(opb); /* XXX can fail if #line? */
@@ -779,7 +888,7 @@ cpperror(void)
 	if (flslvl)
 		stringbuf = cp;
 	else
-		error("error: %s", cp);
+		error("%s", cp);
 }
 
 static void
@@ -793,7 +902,7 @@ undefstmt(void)
 	if (flslvl == 0 && (np = lookup((usch *)yytext, FIND)))
 		np->value = 0;
 	slow = 0;
-	chknl();
+	chknl(0);
 }
 
 static void
@@ -804,11 +913,26 @@ pragmastmt(void)
 	slow = 1;
 	if (yylex() != WSPACE)
 		error("bad pragma");
-	putstr((usch *)"#pragma ");
+	if (!flslvl)
+		putstr((usch *)"#pragma ");
 	do {
-		putch(c = input());	/* Do arg expansion instead? */
+		c = input();
+		if (!flslvl)
+			putch(c);	/* Do arg expansion instead? */
 	} while (c && c != '\n');
 	ifiles->lineno++;
 	prtline();
 	slow = 0;
+}
+
+static void
+badop(const char *op)
+{
+	error("invalid operator in preprocessor expression: %s", op);
+}
+
+int
+cinput()
+{
+	return input();
 }

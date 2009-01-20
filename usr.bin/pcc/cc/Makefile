@@ -1,12 +1,12 @@
-# $MidnightBSD: src/usr.bin/pcc/cc/Makefile,v 1.7 2008/06/27 16:12:36 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/cc/Makefile,v 1.8 2008/07/03 23:57:44 laffer1 Exp $
 
 PROG=	pcc
 SRCS=	cc.c
 TARGOS=	midnightbsd
 TARGMACH=	${MACHINE_ARCH}
 
-CFLAGS+=	-DLIBEXECDIR=\"/usr/libexec\"
-CFLAGS+=	-I${.CURDIR}/..
+CFLAGS+=	-DLIBEXECDIR=\"/usr/libexec/\"
+CFLAGS+=	-I${.CURDIR}/.. -I${.CURDIR}/../mip/
 CFLAGS+=	-Dmach_${TARGMACH} -Dos_${TARGOS}
 
 BINDIR=	/usr/bin

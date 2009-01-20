@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.bin/pcc/ccom/Makefile.inc,v 1.5.2.1 2008/06/25 19:33:23 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/ccom/Makefile,v 1.2 2008/07/03 23:57:46 laffer1 Exp $
 #	$OpenBSD: Makefile.inc,v 1.3 2007/10/15 01:05:25 deraadt Exp $
 #
 # Makefile for the ccom part of pcc.
@@ -14,8 +14,8 @@ TARGMACH=       ${MACHINE_ARCH}
 CFLAGS+=        -Dmach_${TARGMACH}
 CFLAGS+=	-DPCC_DEBUG -DGCC_COMPAT
 CFLAGS+=	-Wall -Wmissing-prototypes -Wstrict-prototypes -Werror
-CFLAGS+=	-I. -I${.CURDIR}/.. -I${.CURDIR} -I${.CURDIR}/../mip
-CFLAGS+=	-I${.CURDIR}/../${TARGMACH}
+CFLAGS+=	-I. -I${.CURDIR}/.. -I${.CURDIR} 
+CFLAGS+=	-I${.CURDIR}/../${TARGMACH} -I${.CURDIR}/../mip
 
 .PATH:	${.CURDIR}/../${TARGMACH}
 .PATH:	${.CURDIR}/../mip

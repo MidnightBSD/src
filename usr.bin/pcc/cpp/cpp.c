@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.3 2008-06-25 19:49:04 laffer1 Exp $	*/
+/*	$Id: cpp.c,v 1.4 2009-01-20 21:09:40 laffer1 Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -66,24 +66,24 @@
  * from V7 cpp, and at last ansi/c99 support.
  */
 
-#include "../config.h"
+#include "config.h"
 
+#ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
+#endif
 
 #include <fcntl.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
 #include <ctype.h>
 
-#ifdef HAVE_ALLOCA_H
-#include <alloca.h>
-#endif
-
+#include "compat.h"
 #include "cpp.h"
 #include "y.tab.h"
 
@@ -103,12 +103,15 @@ int dflag;	/* debug printouts */
 #define DDPRINT(x)
 #endif
 
+#define	GCC_VARI
+
 int ofd;
 usch outbuf[CPPBUF];
-int obufp, istty;
-int Cflag, Mflag, dMflag;
+int obufp, istty, inmac;
+int Cflag, Mflag, dMflag, Pflag;
 usch *Mfile;
 struct initar *initar;
+int readmac;
 
 /* avoid recursion */
 struct recur {
@@ -149,6 +152,7 @@ usch *stringbuf = sbf;
  *   1->   - number of args.
  */
 
+#define	GCCARG	0xfd	/* has gcc varargs that may be replaced with 0 */
 #define	VARG	0xfe	/* has varargs */
 #define	OBJCT	0xff
 #define	WARN	1	/* SOH, not legal char */
@@ -156,6 +160,8 @@ usch *stringbuf = sbf;
 #define	SNUFF	3	/* ETX, not legal char */
 #define	NOEXP	4	/* EOT, not legal char */
 #define	EXPAND	5	/* ENQ, not legal char */
+#define	PRAGS	6	/* start of converted pragma */
+#define	PRAGE	14	/* end of converted pragma */
 
 /* args for lookup() */
 #define	FIND	0
@@ -168,6 +174,9 @@ void include(void);
 void line(void);
 void flbuf(void);
 void usage(void);
+usch *xstrdup(char *str);
+usch *prtprag(usch *opb);
+
 
 int
 main(int argc, char **argv)
@@ -177,7 +186,13 @@ main(int argc, char **argv)
 	struct symtab *nl;
 	register int ch;
 
-	while ((ch = getopt(argc, argv, "CD:I:MS:U:d:i:tvV?")) != -1)
+#ifdef TIMING
+	struct timeval t1, t2;
+
+	(void)gettimeofday(&t1, NULL);
+#endif
+
+	while ((ch = getopt(argc, argv, "CD:I:MPS:U:d:i:tvV?")) != -1)
 		switch (ch) {
 		case 'C': /* Do not discard comments */
 			Cflag++;
@@ -197,6 +212,10 @@ main(int argc, char **argv)
 
 		case 'M': /* Generate dependencies for make */
 			Mflag++;
+			break;
+
+		case 'P': /* Inhibit generation of line numbers */
+			Pflag++;
 			break;
 
 		case 'S':
@@ -219,7 +238,7 @@ main(int argc, char **argv)
 			break;
 #endif
 		case 'v':
-			printf("pcpp: %s\n", VERSSTR);
+			printf("cpp: %s\n", VERSSTR);
 			break;
 		case 'd':
 			if (optarg[0] == 'M') {
@@ -267,6 +286,10 @@ main(int argc, char **argv)
 		nl = lookup((usch *)"__STDC__", ENTER);
 		savch(0); savch('1'); savch(OBJCT);
 		nl->value = stringbuf-1;
+
+		nl = lookup((usch *)"__STDC_VERSION__", ENTER);
+		savch(0); savstr((usch *)"199901L"); savch(OBJCT);
+		nl->value = stringbuf-1;
 	}
 
 	if (Mflag && !dMflag) {
@@ -298,6 +321,17 @@ main(int argc, char **argv)
 
 	flbuf();
 	close(ofd);
+#ifdef TIMING
+	(void)gettimeofday(&t2, NULL);
+	t2.tv_sec -= t1.tv_sec;
+	t2.tv_usec -= t1.tv_usec;
+	if (t2.tv_usec < 0) {
+		t2.tv_usec += 1000000;
+		t2.tv_sec -= 1;
+	}
+	fprintf(stderr, "cpp total time: %ld s %ld us\n",
+	     t2.tv_sec, t2.tv_usec);
+#endif
 	return 0;
 }
 
@@ -315,6 +349,7 @@ gotident(struct symtab *nl)
 
 	thisnl = NULL;
 	slow = 1;
+	readmac++;
 	base = osp = stringbuf;
 	goto found;
 
@@ -377,6 +412,10 @@ found:			if (nl == 0 || subst(nl, NULL) == 0) {
 			thisnl = NULL;
 			break;
 
+		case CMNT:
+			getcmnt();
+			break;
+
 		case STRING:
 		case '\n':
 		case NUMBER:
@@ -394,11 +433,12 @@ found:			if (nl == 0 || subst(nl, NULL) == 0) {
 		}
 		if (thisnl == NULL) {
 			slow = 0;
+			readmac--;
 			savch(0);
 			return base;
 		}
 	}
-	error("preamture EOF");
+	error("premature EOF");
 	/* NOTREACHED */
 	return NULL; /* XXX gcc */
 }
@@ -423,7 +463,7 @@ line()
 		slow = 0;
 		return;
 	}
-	if (yylex() != STRING)
+	if (yylex() != STRING || yytext[0] == 'L')
 		goto bad;
 	c = strlen((char *)yytext);
 	if (llen < c) {
@@ -550,6 +590,55 @@ definp(void)
 }
 
 void
+getcmnt(void)
+{
+	int c;
+
+	savstr((usch *)yytext);
+	for (;;) {
+		c = cinput();
+		if (c == '*') {
+			c = cinput();
+			if (c == '/') {
+				savstr((usch *)"*/");
+				return;
+			}
+			cunput(c);
+			c = '*';
+		}
+		savch(c);
+	}
+}
+
+/*
+ * Compare two replacement lists, taking in account comments etc.
+ */
+static int
+cmprepl(usch *o, usch *n)
+{
+	for (; *o; o--, n--) {
+		/* comment skip */
+		if (*o == '/' && o[-1] == '*') {
+			while (*o != '*' || o[-1] != '/')
+				o--;
+			o -= 2;
+		}
+		if (*n == '/' && n[-1] == '*') {
+			while (*n != '*' || n[-1] != '/')
+				n--;
+			n -= 2;
+		}
+		while (*o == ' ' || *o == '\t')
+			o--;
+		while (*n == ' ' || *n == '\t')
+			n--;
+		if (*o != *n)
+			return 1;
+	}
+	return 0;
+}
+
+void
 define()
 {
 	struct symtab *np;
@@ -557,7 +646,10 @@ define()
 	int c, i, redef;
 	int mkstr = 0, narg = -1;
 	int ellips = 0;
-	int len;
+#ifdef GCC_VARI
+	usch *gccvari = NULL;
+	int wascon;
+#endif
 
 	if (flslvl)
 		return;
@@ -571,12 +663,13 @@ define()
 	np = lookup((usch *)yytext, ENTER);
 	redef = np->value != NULL;
 
+	readmac = 1;
 	sbeg = stringbuf;
 	if ((c = yylex()) == '(') {
 		narg = 0;
 		/* function-like macros, deal with identifiers */
+		c = definp();
 		for (;;) {
-			c = definp();
 			if (c == ')')
 				break;
 			if (c == ELLIPS) {
@@ -586,15 +679,27 @@ define()
 				break;
 			}
 			if (c == IDENT) {
-				len = strlen(yytext);
-				args[narg] = alloca(len+1);
-				strlcpy((char *)args[narg], yytext, len+1);
-				narg++;
-				if ((c = definp()) == ',')
+				/* make sure there is no arg of same name */
+				for (i = 0; i < narg; i++)
+					if (!strcmp((char *) args[i], yytext))
+						error("Duplicate macro "
+						  "parameter \"%s\"", yytext);
+				args[narg++] = xstrdup(yytext);
+				if ((c = definp()) == ',') {
+					if ((c = definp()) == ')')
+						goto bad;
 					continue;
+				}
+#ifdef GCC_VARI
+				if (c == ELLIPS) {
+					if (definp() != ')')
+						goto bad;
+					gccvari = args[--narg];
+					break;
+				}
+#endif
 				if (c == ')')
 					break;
-				goto bad;
 			}
 			goto bad;
 		}
@@ -608,9 +713,17 @@ define()
 	while (c == WSPACE)
 		c = yylex();
 
+	/* replacement list cannot start with ## operator */
+	if (c == CONCAT)
+		goto bad;
+
 	/* parse replacement-list, substituting arguments */
 	savch('\0');
 	while (c != '\n') {
+#ifdef GCC_VARI
+		wascon = 0;
+loop:
+#endif
 		switch (c) {
 		case WSPACE:
 			/* remove spaces if it surrounds a ## directive */
@@ -622,6 +735,12 @@ define()
 				savch(CONC);
 				if ((c = yylex()) == WSPACE)
 					c = yylex();
+#ifdef GCC_VARI
+				if (c == '\n')
+					break;
+				wascon = 1;
+				goto loop;
+#endif
 			}
 			continue;
 
@@ -630,7 +749,14 @@ define()
 			savch(CONC);
 			if ((c = yylex()) == WSPACE)
 				c = yylex();
+#ifdef GCC_VARI
+			if (c == '\n')
+				break;
+			wascon = 1;
+			goto loop;
+#else
 			continue;
+#endif
 
 		case MKSTR:
 			if (narg < 0) {
@@ -655,6 +781,16 @@ define()
 				if (strcmp(yytext, (char *)args[i]) == 0)
 					break;
 			if (i == narg) {
+#ifdef GCC_VARI
+				if (gccvari &&
+				    strcmp(yytext, (char *)gccvari) == 0) {
+					savch(wascon ? GCCARG : VARG);
+					savch(WARN);
+					if (mkstr)
+						savch(SNUFF), mkstr = 0;
+					break;
+				}
+#endif
 				if (mkstr)
 					error("not argument");
 				goto id;
@@ -674,31 +810,40 @@ define()
 				savch(SNUFF), mkstr = 0;
 			break;
 
+		case CMNT: /* save comments */
+			getcmnt();
+			break;
+
 		default:
 id:			savstr((usch *)yytext);
 			break;
 		}
 		c = yylex();
 	}
+	readmac = 0;
 	/* remove trailing whitespace */
 	while (stringbuf > sbeg) {
 		if (stringbuf[-1] == ' ' || stringbuf[-1] == '\t')
 			stringbuf--;
+		/* replacement list cannot end with ## operator */
+		else if (stringbuf[-1] == CONC)
+			goto bad;
 		else
 			break;
 	}
+#ifdef GCC_VARI
+	if (gccvari) {
+		savch(narg);
+		savch(VARG);
+	} else
+#endif
 	if (ellips) {
 		savch(narg);
 		savch(VARG);
 	} else
 		savch(narg < 0 ? OBJCT : narg);
 	if (redef) {
-		usch *o = np->value, *n = stringbuf-1;
-
-		/* Redefinition to identical replacement-list is allowed */
-		while (*o && *o == *n)
-			o--, n--;
-		if (*o || *o != *n)
+		if (cmprepl(np->value, stringbuf-1))
 			error("%s redefined\nprevious define: %s:%d",
 			    np->namep, np->file, np->line);
 		stringbuf = sbeg;  /* forget this space */
@@ -726,9 +871,28 @@ id:			savstr((usch *)yytext);
 	}
 #endif
 	slow = 0;
+	for (i = 0; i < narg; i++)
+		free(args[i]);
 	return;
 
 bad:	error("bad define");
+}
+
+void
+xwarning(usch *s)
+{
+	usch *t;
+	usch *sb = stringbuf;
+
+	flbuf();
+	savch(0);
+	if (ifiles != NULL) {
+		t = sheap("%s:%d: warning: ", ifiles->fname, ifiles->lineno);
+		write (2, t, strlen((char *)t));
+	}
+	write (2, s, strlen((char *)s));
+	write (2, "\n", 1);
+	stringbuf = sb;
 }
 
 void
@@ -739,7 +903,7 @@ xerror(usch *s)
 	flbuf();
 	savch(0);
 	if (ifiles != NULL) {
-		t = sheap("%s:%d: ", ifiles->fname, ifiles->lineno);
+		t = sheap("%s:%d: error: ", ifiles->fname, ifiles->lineno);
 		write (2, t, strlen((char *)t));
 	}
 	write (2, s, strlen((char *)s));
@@ -751,7 +915,7 @@ xerror(usch *s)
  * store a character into the "define" buffer.
  */
 void
-savch(c)
+savch(int c)
 {
 	if (stringbuf-sbf < SBSIZE) {
 		*stringbuf++ = c;
@@ -768,10 +932,9 @@ static void
 pragoper(void)
 {
 	usch *opb;
-	int t;
+	int t, plev;
 
-	slow = 1;
-	putstr((usch *)"\n#pragma ");
+	slow++;
 	if ((t = yylex()) == WSPACE)
 		t = yylex();
 	if (t != '(')
@@ -779,29 +942,37 @@ pragoper(void)
 	if ((t = yylex()) == WSPACE)
 		t = yylex();
 	opb = stringbuf;
-	while (t != ')') {
+	for (plev = 0; ; t = yylex()) {
+		if (t == '(')
+			plev++;
+		if (t == ')')
+			plev--;
+		if (plev < 0)
+			break;
 		savstr((usch *)yytext);
-		t = yylex();
 	}
+
 	savch(0);
 	cunput(WARN);
 	unpstr(opb);
 	stringbuf = opb;
 	expmac(NULL);
+	cunput('\n');
 	while (stringbuf > opb)
 		cunput(*--stringbuf);
-	if ((t = yylex()) != STRING)
-		goto bad;
-	opb = (usch *)yytext;
-	if (*opb++ == 'L')
-		opb++;
-	while ((t = *opb++) != '\"') {
-		if (t == '\\' && (*opb == '\"' || *opb == '\\'))
-			t = *opb++;
-		putch(t);
+	savch(PRAGS);
+	while ((t = yylex()) != '\n') {
+		if (t == WSPACE)
+			continue;
+		if (t != STRING)
+			goto bad;
+		savstr((usch *)yytext);
 	}
-	putch('\n');
-	prtline();
+
+	savch(PRAGE);
+	while (stringbuf > opb)
+		cunput(*--stringbuf);
+	slow--;
 	return;
 bad:	error("bad pragma operator");
 }
@@ -815,8 +986,8 @@ struct symtab *sp;
 struct recur *rp;
 {
 	struct recur rp2;
-	register usch *vp, *cp;
-	int c, rv = 0, ws;
+	register usch *vp, *cp, *obp;
+	int c, nl;
 
 	DPRINT(("subst: %s\n", sp->namep));
 	/*
@@ -842,40 +1013,36 @@ struct recur *rp;
 
 		/* should we be here at all? */
 		/* check if identifier is followed by parentheses */
-		rv = 1;
-		ws = 0;
+
+		obp = stringbuf;
+		nl = 0;
 		do {
-			c = yylex();
+			c = cinput();
+			*stringbuf++ = c;
 			if (c == WARN) {
 				gotwarn++;
 				if (rp == NULL)
-					goto noid;
-			} else if (c == WSPACE || c == '\n')
-				ws = 1;
-		} while (c == WSPACE || c == '\n' || c == WARN);
+					break;
+			}
+			if (c == '\n')
+				nl++;
+		} while (c == ' ' || c == '\t' || c == '\n' || 
+			    c == '\r' || c == WARN);
 
-		cp = (usch *)yytext;
-		while (*cp)
-			cp++;
-		while (cp > (usch *)yytext)
-			cunput(*--cp);
 		DPRINT(("c %d\n", c));
 		if (c == '(' ) {
+			cunput(c);
+			stringbuf = obp;
+			ifiles->lineno += nl;
 			expdef(vp, &rp2, gotwarn);
-			return rv;
+			return 1;
 		} else {
-			/* restore identifier */
-noid:			while (gotwarn--)
-				cunput(WARN);
-			if (ws)
-				cunput(' ');
-			cp = sp->namep;
-			while (*cp)
-				cp++;
-			while (cp > sp->namep)
-				cunput(*--cp);
+	 		*stringbuf = 0;
+			unpstr(obp);
+			unpstr(sp->namep);
 			if ((c = yylex()) != IDENT)
 				error("internal sync error");
+			stringbuf = obp;
 			return 0;
 		}
 	} else {
@@ -903,18 +1070,18 @@ expmac(struct recur *rp)
 	struct symtab *nl;
 	int c, noexp = 0, orgexp;
 	usch *och, *stksv;
-	extern int yyleng;
 
 #ifdef CPP_DEBUG
 	if (dflag) {
 		struct recur *rp2 = rp;
 		printf("\nexpmac\n");
 		while (rp2) {
-			printf("do not expand %s\n", rp->sp->namep);
+			printf("do not expand %s\n", rp2->sp->namep);
 			rp2 = rp2->next;
 		}
 	}
 #endif
+	readmac++;
 	while ((c = yylex()) != WARN) {
 		switch (c) {
 		case NOEXP: noexp++; break;
@@ -940,7 +1107,8 @@ expmac(struct recur *rp)
 				else
 					orgexp++;
 
-			DDPRINT(("id1: noexp %d orgexp %d\n", noexp, orgexp));
+			DDPRINT(("id1: typ %d noexp %d orgexp %d\n",
+			    c, noexp, orgexp));
 			if (c == IDENT) { /* XXX numbers? */
 				DDPRINT(("id2: str %s\n", yytext));
 				/* OK to always expand here? */
@@ -974,6 +1142,8 @@ expmac(struct recur *rp)
 			unpstr((usch *)yytext);
 			if (orgexp == -1)
 				cunput(EXPAND);
+			else if (orgexp == -2)
+				cunput(EXPAND), cunput(EXPAND);
 			else if (orgexp == 1)
 				cunput(NOEXP);
 			unpstr(och);
@@ -1004,8 +1174,7 @@ expmac(struct recur *rp)
 				error("bad noexp %d", noexp);
 			stksv = NULL;
 			if ((c = yylex()) == WSPACE) {
-				stksv = alloca(yyleng+1);
-				strlcpy((char *)stksv, yytext, yyleng+1);
+				stksv = xstrdup(yytext);
 				c = yylex();
 			}
 			/* only valid for expansion if fun macro */
@@ -1022,6 +1191,12 @@ expmac(struct recur *rp)
 					unpstr(stksv);
 				savstr(nl->namep);
 			}
+			if (stksv)
+				free(stksv);
+			break;
+
+		case CMNT:
+			getcmnt();
 			break;
 
 		case STRING:
@@ -1043,6 +1218,7 @@ def:		default:
 	}
 	if (noexp)
 		error("expmac noexp=%d", noexp);
+	readmac--;
 	DPRINT(("return from expmac\n"));
 }
 
@@ -1053,34 +1229,40 @@ def:		default:
  * result is written on top of heap
  */
 void
-expdef(vp, rp, gotwarn)
-	usch *vp;
-	struct recur *rp;
+expdef(usch *vp, struct recur *rp, int gotwarn)
 {
 	usch **args, *sptr, *ap, *bp, *sp;
 	int narg, c, i, plev, snuff, instr;
 	int ellips = 0;
 
-	DPRINT(("expdef %s rp %s\n", vp, (rp ? (char *)rp->sp->namep : "")));
+	DPRINT(("expdef rp %s\n", (rp ? (char *)rp->sp->namep : "")));
 	if ((c = yylex()) != '(')
-		error("got %c, expected )", c);
+		error("got %c, expected (", c);
 	if (vp[1] == VARG) {
 		narg = *vp--;
 		ellips = 1;
 	} else
 		narg = vp[1];
-	args = alloca(sizeof(usch *) * (narg+ellips));
+	if ((args = malloc(sizeof(usch *) * (narg+ellips))) == NULL)
+		error("expdef: out of mem");
 
 	/*
 	 * read arguments and store them on heap.
 	 * will be removed just before return from this function.
 	 */
+	inmac = 1;
 	sptr = stringbuf;
+	instr = 0;
 	for (i = 0; i < narg && c != ')'; i++) {
 		args[i] = stringbuf;
 		plev = 0;
 		while ((c = yylex()) == WSPACE || c == '\n')
 			;
+		DDPRINT((":AAA (%d)", c));
+		if (instr == -1)
+			savch(NOEXP), instr = 1;
+		if (c == NOEXP)
+			instr = 1;
 		for (;;) {
 			if (plev == 0 && (c == ')' || c == ','))
 				break;
@@ -1091,10 +1273,20 @@ expdef(vp, rp, gotwarn)
 			savstr((usch *)yytext);
 			while ((c = yylex()) == '\n')
 				savch('\n');
+			while (c == CMNT) {
+				getcmnt();
+				c = yylex();
+			}
+			if (c == EXPAND)
+				instr = 0;
+			if (c == 0)
+				error("eof in macro");
 		}
 		while (args[i] < stringbuf &&
 		    (stringbuf[-1] == ' ' || stringbuf[-1] == '\t'))
 			stringbuf--;
+		if (instr == 1)
+			savch(EXPAND), instr = -1;
 		savch('\0');
 	}
 	if (ellips)
@@ -1102,8 +1294,12 @@ expdef(vp, rp, gotwarn)
 	if (ellips && c != ')') {
 		args[i] = stringbuf;
 		plev = 0;
+		instr = 0;
 		while ((c = yylex()) == WSPACE)
 			;
+		if (c == NOEXP)
+			instr++;
+		DDPRINT((":AAY (%d)", c));
 		for (;;) {
 			if (plev == 0 && c == ')')
 				break;
@@ -1111,9 +1307,16 @@ expdef(vp, rp, gotwarn)
 				plev++;
 			if (c == ')')
 				plev--;
-			savstr((usch *)yytext);
+			if (plev == 0 && c == ',' && instr) {
+				savch(EXPAND);
+				savch(',');
+				savch(NOEXP);
+			} else
+				savstr((usch *)yytext);
 			while ((c = yylex()) == '\n')
 				savch('\n');
+			if (c == EXPAND)
+				instr--;
 		}
 		while (args[i] < stringbuf &&
 		    (stringbuf[-1] == ' ' || stringbuf[-1] == '\t'))
@@ -1122,10 +1325,13 @@ expdef(vp, rp, gotwarn)
 		
 	}
 	if (narg == 0 && ellips == 0)
-		c = yylex();
+		while ((c = yylex()) == WSPACE || c == '\n')
+			;
+
 	if (c != ')' || (i != narg && ellips == 0) || (i < narg && ellips == 1))
 		error("wrong arg count");
 
+	inmac = 0;
 	while (gotwarn--)
 		cunput(WARN);
 
@@ -1147,6 +1353,14 @@ expdef(vp, rp, gotwarn)
 			if (sp[-1] == VARG) {
 				bp = ap = args[narg];
 				sp--;
+#ifdef GCC_VARI
+			} else if (sp[-1] == GCCARG) {
+				ap = args[narg];
+				if (ap[0] == 0)
+					ap = (usch *)"0";
+				bp = ap;
+				sp--;
+#endif
 			} else
 				bp = ap = args[(int)*--sp];
 			if (sp[2] != CONC && !snuff && sp[-1] != CONC) {
@@ -1192,6 +1406,7 @@ expdef(vp, rp, gotwarn)
 
 	/* scan the input buffer (until WARN) and save result on heap */
 	expmac(rp);
+	free(args);
 }
 
 usch *
@@ -1255,6 +1470,10 @@ void
 putstr(usch *s)
 {
 	for (; *s; s++) {
+		if (*s == PRAGS) {
+			s = prtprag(s);
+			continue;
+		}
 		outbuf[obufp++] = *s;
 		if (obufp == CPPBUF || (istty && *s == '\n'))
 			flbuf();
@@ -1480,3 +1699,41 @@ lookup(usch *key, int enterf)
 	return (struct symtab *)new->lr[bit];
 }
 
+usch *
+xstrdup(char *str)
+{
+	size_t len = strlen(str)+1;
+	usch *rv;
+
+	if ((rv = malloc(len)) == NULL)
+		error("xstrdup: out of mem");
+	strlcpy((char *)rv, str, len);
+	return rv;
+}
+
+usch *
+prtprag(usch *s)
+{
+	int ch;
+
+	s++;
+	putstr((usch *)"\n#pragma ");
+	while (*s != PRAGE) {
+		if (*s == 'L')
+			s++;
+		if (*s == '\"') {
+			s++;
+			while ((ch = *s++) != '\"') {
+				if (ch == '\\' && (*s == '\"' || *s == '\\'))
+					ch = *s++;
+				putch(ch);
+			}
+		} else {
+			s++;
+			putch(*s);
+		}
+	}
+	putstr((usch *)"\n");
+	prtline();
+	return ++s;
+}

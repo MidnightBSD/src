@@ -1,5 +1,6 @@
-/*	$Id: code.c,v 1.2 2009-01-20 21:09:40 laffer1 Exp $	*/
+/*	$Id: code.c,v 1.1 2009-01-20 21:09:39 laffer1 Exp $	*/
 /*
+ * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
  *
@@ -29,6 +30,9 @@
 
 # include "pass1.h"
 
+NODE *funarg(NODE *, int *);
+int argreg(TWORD, int *);
+
 int lastloc = -1;
 
 /*
@@ -39,11 +43,7 @@ void
 defloc(struct symtab *sp)
 {
 	extern char *nextsect;
-#if defined(ELFABI) || defined(PECOFFABI)
 	static char *loctbl[] = { "text", "data", "section .rodata" };
-#elif defined(MACHOABI)
-	static char *loctbl[] = { "text", "data", "const_data" };
-#endif
 	TWORD t;
 	int s;
 
@@ -60,8 +60,6 @@ defloc(struct symtab *sp)
 		nextsect = ".tdata";
 	}
 #endif
-	if (sp->ssue->suesection)
-		nextsect = sp->ssue->suesection;
 	if (nextsect) {
 		printf("	.section %s\n", nextsect);
 		nextsect = NULL;
@@ -75,10 +73,8 @@ defloc(struct symtab *sp)
 		printf("	.align %d\n", sp->ssue->suealign/ALCHAR);
 	if (sp->sclass == EXTDEF)
 		printf("	.globl %s\n", exname(sp->soname));
-#if defined(ELFABI)
 	if (ISFTN(t))
 		printf("\t.type %s,@function\n", exname(sp->soname));
-#endif
 	if (sp->slevel == 0)
 		printf("%s:\n", exname(sp->soname));
 	else
@@ -114,11 +110,8 @@ efcode()
  * indices in symtab for the arguments; n is the number
  */
 void
-bfcode(struct symtab **sp, int cnt)
+bfcode(struct symtab **a, int cnt)
 {
-#ifdef os_win32
-	extern int argstacksize;
-#endif
 	struct symtab *sp2;
 	extern int gotnr;
 	NODE *n, *p;
@@ -127,72 +120,41 @@ bfcode(struct symtab **sp, int cnt)
 	if (cftnsp->stype == STRTY+FTN || cftnsp->stype == UNIONTY+FTN) {
 		/* Function returns struct, adjust arg offset */
 		for (i = 0; i < cnt; i++) 
-			sp[i]->soffset += SZPOINT(INT);
+			sp[i]->soffset += SZPOINT(LONG);
 	}
-
-#ifdef os_win32
-	/*
-	 * Count the arguments and mangle name in symbol table as a callee.
-	 */
-	argstacksize = 0;
-	if (cftnsp->sflags & SSTDCALL) {
-		char buf[64];
-		for (i = 0; i < cnt; i++) {
-			TWORD t = sp[i]->stype;
-			if (t == STRTY || t == UNIONTY)
-				argstacksize += sp[i]->ssue->suesize;
-			else
-				argstacksize += szty(t) * SZINT / SZCHAR;
-		}
-		snprintf(buf, 64, "%s@%d", cftnsp->soname, argstacksize);
-		cftnsp->soname = newstring(buf, strlen(buf));
-	}
-#endif
 
 	if (kflag) {
-#define	STL	100
-		char *str = inlalloc(STL);
-#if !defined(MACHOABI)
-		int l = getlab();
-#endif
-
-		/* Generate extended assembler for PIC prolog */
+		/* Put ebx in temporary */
+		n = block(REG, NIL, NIL, INT, 0, MKSUE(INT));
+		n->n_rval = EBX;
 		p = tempnode(0, INT, 0, MKSUE(INT));
 		gotnr = regno(p);
-		p = block(XARG, p, NIL, INT, 0, MKSUE(INT));
-		p->n_name = "=g";
-		p = block(XASM, p, bcon(0), INT, 0, MKSUE(INT));
-#if defined(MACHOABI)
-		if (snprintf(str, STL, "call L%s$pb\nL%s$pb:\n\tpopl %%0\n",
-		    cftnsp->sname, cftnsp->sname) >= STL)
-			cerror("bfcode");
-#else
-		if (snprintf(str, STL,
-		    "call " LABFMT "\n" LABFMT ":\n	popl %%0\n"
-		    "	addl $_GLOBAL_OFFSET_TABLE_+[.-" LABFMT "], %%0\n",
-		    l, l, l) >= STL)
-			cerror("bfcode");
-#endif
-		p->n_name = str;
-		p->n_right->n_type = STRTY;
-		ecomp(p);
+		ecomp(buildtree(ASSIGN, p, n));
 	}
-	if (xtemps == 0)
-		return;
 
-	/* put arguments in temporaries */
-	for (i = 0; i < cnt; i++) {
-		if (sp[i]->stype == STRTY || sp[i]->stype == UNIONTY ||
-		    cisreg(sp[i]->stype) == 0)
-			continue;
-		if (cqual(sp[i]->stype, sp[i]->squal) & VOL)
-			continue;
-		sp2 = sp[i];
-		n = tempnode(0, sp[i]->stype, sp[i]->sdf, sp[i]->ssue);
-		n = buildtree(ASSIGN, n, nametree(sp2));
-		sp[i]->soffset = regno(n->n_left);
-		sp[i]->sflags |= STNODE;
-		ecomp(n);
+	/* recalculate the arg offset and create TEMP moves */
+	for (n = 0, i = 0; i < cnt; i++) {
+		sp = a[i];
+
+		if (n < 6) {
+			p = tempnode(0, sp->stype, sp->sdf, sp->ssue);
+			q = block(REG, NIL, NIL, sp->stype, sp->sdf, sp->ssue);
+			q->n_rval = argreg(sp->stype, &n);
+			p = buildtree(ASSIGN, p, q);
+			sp->soffset = regno(p->n_left);
+			sp->sflags |= STNODE;
+			ecomp(p);
+		} else {
+			sp->soffset += SZLONG * n;
+			if (xtemps) {
+				/* put stack args in temps if optimizing */
+				p = tempnode(0, sp->stype, sp->sdf, sp->ssue);
+				p = buildtree(ASSIGN, p, buildtree(NAME, 0, 0));
+				sp->soffset = regno(p->n_left);
+				sp->sflags |= STNODE;
+				ecomp(p);
+			}
+		}
 	}
 }
 
@@ -206,55 +168,71 @@ bccode()
 	SETOFF(autooff, SZINT);
 }
 
-#if defined(MACHOABI)
-struct stub stublist;
-struct stub nlplist;
-#endif
-
 /* called just before final exit */
 /* flag is 1 if errors, 0 if none */
 void
 ejobcode(int flag )
 {
-#if defined(MACHOABI)
-	/*
-	 * iterate over the stublist and output the PIC stubs
-`	 */
-	if (kflag) {
-		struct stub *p;
-
-		DLIST_FOREACH(p, &stublist, link) {
-			printf("\t.section __IMPORT,__jump_table,symbol_stubs,self_modifying_code+pure_instructions,5\n");
-			printf("L%s$stub:\n", p->name);
-			printf("\t.indirect_symbol %s\n", exname(p->name));
-			printf("\thlt ; hlt ; hlt ; hlt ; hlt\n");
-			printf("\t.subsections_via_symbols\n");
-		}
-
-		printf("\t.section __IMPORT,__pointers,non_lazy_symbol_pointers\n");
-		DLIST_FOREACH(p, &nlplist, link) {
-			printf("L%s$non_lazy_ptr:\n", p->name);
-			printf("\t.indirect_symbol %s\n", exname(p->name));
-			printf("\t.long 0\n");
-	        }
-
-	}
-#endif
+	if (errors)
+		return;
 
 #define _MKSTR(x) #x
 #define MKSTR(x) _MKSTR(x)
 #define OS MKSTR(TARGOS)
-        printf("\t.ident \"PCC: %s (%s)\"\n", PACKAGE_STRING, OS);
+        printf("\t.ident \"PCC: %s (%s)\"\n\t.end\n", PACKAGE_STRING, OS);
 }
 
 void
 bjobcode()
 {
-#if defined(MACHOABI)
-	DLIST_INIT(&stublist, link);
-	DLIST_INIT(&nlplist, link);
-#endif
 }
+
+static const int argregsi[] = { RDI, RSI, RDX, RCX, R09, R08 };
+
+int
+argreg(TWORD t, int *n)   
+{
+	switch (t) {
+	case FLOAT:
+	case DOUBLE:
+	case LDOUBLE:
+		return FR6 - *n - 2;
+	case LONGLONG:
+	case ULONGLONG:
+		/* TODO */;
+	default:
+		return argregsi[(*n)++];
+	}
+}
+
+NODE *
+funarg(NODE *p, int *n)
+{
+	NODE *r;
+	int sz;
+
+	if (p->n_op == CM) {
+		p->n_left = funarg(p->n_left, n);
+		p->n_right = funarg(p->n_right, n);
+		return p;
+	}
+
+	if (*n >= 6) {
+		*n++;
+		r = block(OREG, NIL, NIL, p->n_type|PTR, 0,
+		    MKSUE(p->n_type|PTR));
+		r->n_rval = RBP;
+		r->n_lval = 16 + (*n - 6) * 8;
+	} else {
+		r = block(REG, NIL, NIL, p->n_type, 0, 0);
+		r->n_lval = 0;
+		r->n_rval = argreg(p->n_type, n);
+	}
+	p = block(ASSIGN, r, p, p->n_type, 0, 0);
+	clocal(p);
+
+	return p;
+}  
 
 /*
  * Called with a function call with arguments as argument.
@@ -266,24 +244,12 @@ funcode(NODE *p)
 {
 	extern int gotnr;
 	NODE *r, *l;
+	int n = 0;
 
-	/* Fix function call arguments. On x86, just add funarg */
-	for (r = p->n_right; r->n_op == CM; r = r->n_left) {
-		if (r->n_right->n_op != STARG)
-			r->n_right = block(FUNARG, r->n_right, NIL,
-			    r->n_right->n_type, r->n_right->n_df,
-			    r->n_right->n_sue);
-	}
-	if (r->n_op != STARG) {
-		l = talloc();
-		*l = *r;
-		r->n_op = FUNARG;
-		r->n_left = l;
-		r->n_type = l->n_type;
-	}
+	p->n_right = funarg(p->n_right, &n);
+
 	if (kflag == 0)
 		return p;
-#if defined(ELFABI)
 	/* Create an ASSIGN node for ebx */
 	l = block(REG, NIL, NIL, INT, 0, MKSUE(INT));
 	l->n_rval = EBX;
@@ -295,7 +261,6 @@ funcode(NODE *p)
 			;
 		r->n_left = block(CM, l, r->n_left, INT, 0, MKSUE(INT));
 	}
-#endif
 	return p;
 }
 

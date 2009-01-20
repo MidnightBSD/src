@@ -1,17 +1,15 @@
-# $MidnightBSD: src/usr.bin/pcc/cpp/Makefile,v 1.5 2008/05/15 05:55:30 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/pcc/cpp/Makefile,v 1.6 2008/06/25 19:49:04 laffer1 Exp $
 
 .include <bsd.own.mk>
 
 PROG=	pcpp
 TARGOS=	midnightbsd
 BINDIR=	${libexecdir}
-NO_MAN=
-#MAN=	cpp.1
-#MANDIR=	/usr/local/man/man
+MAN=	pcpp.1
 
 CFLAGS+=	-DCPP_DEBUG -Wall -Wmissing-prototypes -Wstrict-prototypes -Werror
 CFLAGS+=	-DLIBEXECDIR=\"${libexecdir}\"
-CFLAGS+=	-I. -I${.CURDIR}
+CFLAGS+=	-I. -I${.CURDIR} -I${.CURDIR}/.. -I${.CURDIR}/../mip/
 SRCS=	cpy.y scanner.l cpp.c
 
 CLEANFILES+=	y.tab.c y.tab.h 

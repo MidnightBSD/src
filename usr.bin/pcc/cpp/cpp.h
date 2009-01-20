@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.2 2008-05-15 04:53:33 laffer1 Exp $	*/
+/*	$Id: cpp.h,v 1.3 2009-01-20 21:09:40 laffer1 Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -28,8 +28,9 @@
  */
 
 #include <stdio.h> /* for obuf */
+#include <stdlib.h>
 
-#include "../config.h"
+#include "config.h"
 
 typedef unsigned char usch;
 #ifdef YYTEXT_POINTER
@@ -43,7 +44,7 @@ extern	int	trulvl;
 extern	int	flslvl;
 extern	int	elflvl;
 extern	int	elslvl;
-extern	int	tflag, Cflag;
+extern	int	tflag, Cflag, Pflag;
 extern	int	Mflag, dMflag;
 extern	usch	*Mfile;
 extern	int	ofd;
@@ -72,6 +73,7 @@ struct includ {
 	int infil;
 	usch *curptr;
 	usch *maxread;
+	usch *ostr;
 	usch *buffer;
 	usch bbuf[NAMEMAX+CPPBUF+1];
 } *ifiles;
@@ -89,6 +91,23 @@ struct initar {
 	int type;
 	char *str;
 };
+
+/*
+ * Struct used in parse tree evaluation.
+ * op is one of:
+ *	- number type (NUMBER, UNUMBER)
+ *	- zero (0) if divided by zero.
+ */
+struct nd {
+	int op;
+	union {
+		long long val;
+		unsigned long long uval;
+	} n;
+};
+
+#define nd_val n.val
+#define nd_uval n.uval
 
 struct recur;	/* not used outside cpp.c */
 int subst(struct symtab *, struct recur *);
@@ -115,6 +134,15 @@ void putch(int);
 void putstr(usch *s);
 void line(void);
 usch *sheap(char *fmt, ...);
+void xwarning(usch *);
 void xerror(usch *);
+#ifdef HAVE_CPP_VARARG_MACRO_GCC
+#define warning(...) xwarning(sheap(__VA_ARGS__))
 #define error(...) xerror(sheap(__VA_ARGS__))
+#else
+#define warning printf
+#define error printf
+#endif
 void expmac(struct recur *);
+int cinput(void);
+void getcmnt(void);

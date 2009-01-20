@@ -1,5 +1,6 @@
-/*	$Id: order.c,v 1.2 2009-01-20 21:09:40 laffer1 Exp $	*/
+/*	$Id: order.c,v 1.1 2009-01-20 21:09:39 laffer1 Exp $	*/
 /*
+ * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
  *
@@ -167,32 +168,6 @@ nspecial(struct optab *q)
 			return s;
 		}
 
-	case SCONV:
-		if ((q->ltype & (TINT|TUNSIGNED|TSHORT|TUSHORT)) && 
-		    q->rtype == (TCHAR|TUCHAR)) {
-			static struct rspecial s[] = { 
-				{ NOLEFT, ESI }, { NOLEFT, EDI }, { 0 } };
-			return s;
-		} else if ((q->ltype & TINT) &&
-		    q->rtype == (TLONGLONG|TULONGLONG)) {
-			static struct rspecial s[] = {
-				{ NLEFT, EAX }, { NRES, EAXEDX },
-				{ NEVER, EAX }, { NEVER, EDX }, { 0 } };
-			return s;
-		} else if (q->ltype == TSHORT &&
-		    q->rtype == (TLONGLONG|TULONGLONG)) {
-			static struct rspecial s[] = {
-				{ NRES, EAXEDX },
-				{ NEVER, EAX }, { NEVER, EDX }, { 0 } };
-			return s;
-		} else if (q->ltype == TCHAR &&
-		    q->rtype == (TLONGLONG|TULONGLONG)) {
-			static struct rspecial s[] = {
-				{ NRES, EAXEDX },
-				{ NEVER, EAX }, { NEVER, EDX }, { 0 } };
-			return s;
-		}
-		break;
 	case DIV:
 		if (q->lshape == SBREG) {
 			static struct rspecial s[] = {
@@ -208,8 +183,9 @@ nspecial(struct optab *q)
 			return s;
 		} else if (q->lshape & SCREG) {
 			static struct rspecial s[] = {
-				{ NEVER, EAX }, { NEVER, EDX },
-				{ NEVER, ECX }, { NRES, EAXEDX }, { 0 } };
+				{ NEVER, RAX }, { NEVER, RDX },
+				{ NLEFT, RAX }, { NRES, RAX },
+				{ NORIGHT, RDX }, { NORIGHT, RAX }, { 0 } };
 			return s;
 		}
 		break;
@@ -229,7 +205,7 @@ nspecial(struct optab *q)
 		} else if (q->lshape & SCREG) {
 			static struct rspecial s[] = {
 				{ NEVER, EAX }, { NEVER, EDX },
-				{ NEVER, ECX }, { NRES, EAXEDX }, { 0 } };
+				{ NEVER, ECX }, { NRES, RAX }, { 0 } };
 			return s;
 		}
 		break;
@@ -242,22 +218,15 @@ nspecial(struct optab *q)
 		} else if (q->lshape & SCREG) {
 			static struct rspecial s[] = {
 				{ NEVER, EAX }, { NEVER, EDX },
-				{ NEVER, ECX }, { NRES, EAXEDX }, { 0 } };
+				{ NEVER, ECX }, { NRES, RAX }, { 0 } };
 			return s;
 		}
 		break;
 	case LS:
 	case RS:
-		if (q->visit & (INAREG|INBREG)) {
-			static struct rspecial s[] = {
-				{ NRIGHT, CL }, { NOLEFT, ECX }, { 0 } };
-			return s;
-		} else if (q->visit & INCREG) {
-			static struct rspecial s[] = {
-				{ NEVER, EAX }, { NEVER, EDX },
-				{ NEVER, ECX }, { NRES, EAXEDX }, { 0 } };
-			return s;
-		}
+		static struct rspecial s[] = {
+			{ NRIGHT, CL }, { NOLEFT, RCX }, { 0 } };
+		return s;
 		break;
 
 	default:

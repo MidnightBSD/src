@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.1 2008-05-14 04:25:57 laffer1 Exp $	*/
+/*	$Id: trees.c,v 1.2 2009-01-20 21:09:40 laffer1 Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -70,14 +70,16 @@
 # include "pass2.h"
 
 # include <stdarg.h>
+# include <string.h>
 
 static void chkpun(NODE *p);
 static int opact(NODE *p);
 static int moditype(TWORD);
 static NODE *strargs(NODE *);
 static void rmcops(NODE *p);
-
-int lastloc = -1;
+static void putjops(NODE *, void *);
+static struct symtab *findmember(struct symtab *, char *);
+int inftn; /* currently between epilog/prolog */
 
 /*	some special actions, used in finding the type of nodes */
 # define NCVT 01
@@ -107,6 +109,8 @@ int lastloc = -1;
 	*/
 
 int bdebug = 0;
+extern int negrel[];
+
 
 NODE *
 buildtree(int o, NODE *l, NODE *r)
@@ -116,8 +120,6 @@ buildtree(int o, NODE *l, NODE *r)
 	int opty;
 	struct symtab *sp = NULL; /* XXX gcc */
 	NODE *lr, *ll;
-	char *name;
-	struct symtab **elem;
 
 #ifdef PCC_DEBUG
 	if (bdebug) {
@@ -143,23 +145,23 @@ buildtree(int o, NODE *l, NODE *r)
 	} else if (o == NOT && l->n_op == FCON) {
 		l = clocal(block(SCONV, l, NIL, INT, 0, MKSUE(INT)));
 	} else if( o == UMINUS && l->n_op == FCON ){
-			l->n_dcon = -l->n_dcon;
+			l->n_dcon = FLOAT_NEG(l->n_dcon);
 			return(l);
 
 	} else if( o==QUEST && l->n_op==ICON ) {
 		CONSZ c = l->n_lval;
 		nfree(l);
 		if (c) {
+			walkf(r->n_right, putjops, 0);
 			tfree(r->n_right);
 			l = r->n_left;
-			nfree(r);
-			return(l);
 		} else {
+			walkf(r->n_left, putjops, 0);
 			tfree(r->n_left);
 			l = r->n_right;
-			nfree(r);
-			return(l);
 		}
+		nfree(r);
+		return(l);
 	} else if( opty == BITYPE && l->n_op == ICON && r->n_op == ICON ){
 
 		switch( o ){
@@ -199,9 +201,11 @@ buildtree(int o, NODE *l, NODE *r)
 		case ER:
 		case LS:
 		case RS:
-			if( conval( l, o, r ) ) {
-				nfree(r);
-				return(l);
+			if (!ISPTR(l->n_type) && !ISPTR(r->n_type)) {
+				if( conval( l, o, r ) ) {
+					nfree(r);
+					return(l);
+				}
 			}
 			break;
 		}
@@ -214,21 +218,24 @@ buildtree(int o, NODE *l, NODE *r)
 		case MUL:
 		case DIV:
 			if (l->n_op == ICON)
-				l->n_dcon = l->n_lval;
+				l->n_dcon = FLOAT_CAST(l->n_lval, l->n_type);
 			if (r->n_op == ICON)
-				r->n_dcon = r->n_lval;
+				r->n_dcon = FLOAT_CAST(r->n_lval, r->n_type);
 			switch (o) {
 			case PLUS:
-				l->n_dcon += r->n_dcon; break;
+				l->n_dcon = FLOAT_PLUS(l->n_dcon, r->n_dcon);
+				break;
 			case MINUS:
-				l->n_dcon -= r->n_dcon; break;
+				l->n_dcon = FLOAT_MINUS(l->n_dcon, r->n_dcon);
+				break;
 			case MUL:
-				l->n_dcon *= r->n_dcon; break;
+				l->n_dcon = FLOAT_MUL(l->n_dcon, r->n_dcon);
+				break;
 			case DIV:
-				if (r->n_dcon == 0)
-					uerror("division by 0.");
-				else
-					l->n_dcon /= r->n_dcon;
+				if (FLOAT_ISZERO(r->n_dcon))
+					goto runtime;
+				l->n_dcon = FLOAT_DIV(l->n_dcon, r->n_dcon);
+				break;
 			}
 			l->n_op = FCON;
 			l->n_type = DOUBLE;
@@ -237,7 +244,7 @@ buildtree(int o, NODE *l, NODE *r)
 			return(l);
 		}
 	}
-
+runtime:
 	/* its real; we must make a new node */
 
 	p = block(o, l, r, INT, 0, MKSUE(INT));
@@ -247,6 +254,8 @@ buildtree(int o, NODE *l, NODE *r)
 	if (actions & LVAL) { /* check left descendent */
 		if (notlval(p->n_left)) {
 			uerror("lvalue required");
+			nfree(p);
+			return l;
 #ifdef notyet
 		} else {
 			if ((l->n_type > BTMASK && ISCON(l->n_qual)) ||
@@ -296,53 +305,7 @@ buildtree(int o, NODE *l, NODE *r)
 		switch(o){
 
 		case NAME:
-			sp = spname;
-			if (sp->sflags & STNODE) {
-				/* Generated for optimizer */
-				p->n_op = TEMP;
-				p->n_type = sp->stype;
-				p->n_sue = sp->ssue;
-				p->n_df = sp->sdf;
-				p->n_lval = sp->soffset;
-				break;
-			}
-				
-#ifdef GCC_COMPAT
-			/* Get a label name */
-			if (sp->sflags == SLBLNAME) {
-				p->n_type = VOID;
-				p->n_sue = MKSUE(VOID);
-				p->n_lval = 0;
-				p->n_sp = sp;
-				break;
-			} else
-#endif
-			if (sp->stype == UNDEF) {
-				uerror("%s undefined", sp->sname);
-				/* make p look reasonable */
-				p->n_type = INT;
-				p->n_sue = MKSUE(INT);
-				p->n_df = NULL;
-				p->n_sp = sp;
-				p->n_lval = 0;
-				defid(p, SNULL);
-				break;
-			}
-			p->n_type = sp->stype;
-			p->n_qual = sp->squal;
-			p->n_df = sp->sdf;
-			p->n_sue = sp->ssue;
-			p->n_lval = 0;
-			p->n_sp = sp;
-			/* special case: MOETY is really an ICON... */
-			if (p->n_type == MOETY) {
-				p->n_sp = NULL;
-				p->n_lval = sp->soffset;
-				p->n_df = NULL;
-				p->n_type = ENUMTY;
-				p->n_op = ICON;
-			}
-			break;
+			cerror("buildtree NAME");
 
 		case STREF:
 			/* p->x turned into *(p+offset) */
@@ -354,17 +317,23 @@ buildtree(int o, NODE *l, NODE *r)
 				break;
 			}
 
-			if ((elem = l->n_sue->suelem) == NULL)
+			if ((sp = l->n_sue->sylnk) == NULL) {
 				uerror("undefined struct or union");
+				break;
+			}
 
+			sp = findmember(sp, r->n_name);
+#ifdef notdef
 			name = r->n_name;
-			for (; *elem != NULL; elem++) {
-				sp = *elem;
+			for (; sp != NULL; sp = sp->snext) {
 				if (sp->sname == name)
 					break;
 			}
-			if (*elem == NULL)
-				uerror("member '%s' not declared", name);
+#endif
+			if (sp == NULL) {
+				uerror("member '%s' not declared", r->n_name);
+				break;
+			}
 
 			r->n_sp = sp;
 			p = stref(p);
@@ -453,7 +422,7 @@ buildtree(int o, NODE *l, NODE *r)
 				TWORD t;
 				union dimfun *d;
 
-				if (l->n_sue != r->n_sue)
+				if (l->n_sue->sylnk != r->n_sue->sylnk)
 					uerror("assignment of different structures");
 
 				r = buildtree(ADDROF, r, NIL);
@@ -462,6 +431,7 @@ buildtree(int o, NODE *l, NODE *r)
 				sue = r->n_sue;
 
 				l = block(STASG, l, r, t, d, sue);
+				l = clocal(l);
 
 				if( o == RETURN ){
 					nfree(p);
@@ -483,6 +453,8 @@ buildtree(int o, NODE *l, NODE *r)
 
 		case CALL:
 			p->n_right = r = strargs(p->n_right);
+			p = funcode(p);
+			/* FALLTHROUGH */
 		case UCALL:
 			if (!ISPTR(l->n_type))
 				uerror("illegal function");
@@ -540,6 +512,88 @@ buildtree(int o, NODE *l, NODE *r)
 
 	}
 
+/* Find a member in a struct or union.  May be an unnamed member */
+static struct symtab *
+findmember(struct symtab *sp, char *s)
+{
+	struct symtab *sp2, *sp3;
+
+	for (; sp != NULL; sp = sp->snext) {
+		if (sp->sname[0] == '*') {
+			/* unnamed member, recurse down */
+			if ((sp2 = findmember(sp->ssue->sylnk, s))) {
+				sp3 = tmpalloc(sizeof (struct symtab));
+				*sp3 = *sp2;
+				sp3->soffset += sp->soffset;
+				return sp3;
+			}
+		} else if (sp->sname == s)
+			return sp;
+	}
+	return NULL;
+}
+
+
+/*
+ * Check if there will be a lost label destination inside of a ?:
+ * It cannot be reached so just print it out.
+ */
+static void
+putjops(NODE *p, void *arg)
+{
+	if (p->n_op == COMOP && p->n_left->n_op == GOTO)
+		plabel(p->n_left->n_left->n_lval+1);
+}
+
+/*
+ * Build a name node based on a symtab entry.
+ * broken out from buildtree().
+ */
+NODE *
+nametree(struct symtab *sp)
+{
+	NODE *p;
+
+	p = block(NAME, NIL, NIL, sp->stype, sp->sdf, sp->ssue);
+	p->n_qual = sp->squal;
+	p->n_sp = sp;
+
+#ifndef NO_C_BUILTINS
+	if (sp->sname[0] == '_' && strncmp(sp->sname, "__builtin_", 10) == 0)
+		return p;  /* do not touch builtins here */
+	
+#endif
+
+	if (sp->sflags & STNODE) {
+		/* Generated for optimizer */
+		p->n_op = TEMP;
+		p->n_rval = sp->soffset;
+	}
+
+#ifdef GCC_COMPAT
+	/* Get a label name */
+	if (sp->sflags == SLBLNAME) {
+		p->n_type = VOID;
+		p->n_sue = MKSUE(VOID);
+	}
+#endif
+	if (sp->stype == UNDEF) {
+		uerror("%s undefined", sp->sname);
+		/* make p look reasonable */
+		p->n_type = INT;
+		p->n_sue = MKSUE(INT);
+		p->n_df = NULL;
+		defid(p, SNULL);
+	}
+	if (sp->sclass == MOE) {
+		p->n_op = ICON;
+		p->n_lval = sp->soffset;
+		p->n_df = NULL;
+		p->n_sp = NULL;
+	}
+	return clocal(p);
+}
+
 /*
  * Do a conditional branch.
  */
@@ -548,8 +602,10 @@ cbranch(NODE *p, NODE *q)
 {
 	p = buildtree(CBRANCH, p, q);
 	if (p->n_left->n_op == ICON) {
-		if (p->n_left->n_lval != 0)
+		if (p->n_left->n_lval != 0) {
 			branch(q->n_lval); /* branch always */
+			reached = 0;
+		}
 		tfree(p);
 		tfree(q);
 		return;
@@ -714,6 +770,7 @@ conval(NODE *p, int o, NODE *q)
  * we check that this integer is in fact a constant zero...
  * in the case of ASSIGN, any assignment of pointer to integer is illegal
  * this falls out, because the LHS is never 0.
+ * XXX - check for COMOPs in assignment RHS?
  */
 void
 chkpun(NODE *p)
@@ -743,8 +800,10 @@ chkpun(NODE *p)
 			return;
 		break;
 	default:
-		if ((t1 == VOID && t2 != VOID) || (t1 != VOID && t2 == VOID))
-			return uerror("value of void expression used");
+		if ((t1 == VOID && t2 != VOID) || (t1 != VOID && t2 == VOID)) {
+			uerror("value of void expression used");
+			return;
+		}
 		break;
 	}
 
@@ -753,26 +812,6 @@ chkpun(NODE *p)
 		return;
 	if (BTYPE(t2) == VOID && (t1 & TMASK))
 		return;
-
-#ifdef notdef
-	/* C99 says that enums always should be handled as ints */
-	/* check for enumerations */
-	if (t1==ENUMTY || t2==ENUMTY) {
-		if( clogop( p->n_op ) && p->n_op != EQ && p->n_op != NE ) {
-			werror( "comparison of enums" );
-			return;
-			}
-		if (t1==ENUMTY && t2==ENUMTY) {
-			if (p->n_left->n_sue!=p->n_right->n_sue)
-				werror("enumeration type clash, "
-				    "operator %s", copst(p->n_op));
-			return;
-		}
-		if ((t1 == ENUMTY && t2 <= BTMASK) ||
-		    (t2 == ENUMTY && t1 <= BTMASK))
-			return;
-	}
-#endif
 
 	if (ISPTR(t1) || ISARY(t1))
 		q = p->n_right;
@@ -786,7 +825,7 @@ chkpun(NODE *p)
 		d1 = p->n_left->n_df;
 		d2 = p->n_right->n_df;
 		if (t1 == t2) {
-			if (p->n_left->n_sue != p->n_right->n_sue)
+			if (p->n_left->n_sue->sylnk != p->n_right->n_sue->sylnk)
 				werror("illegal structure pointer combination");
 			return;
 		}
@@ -815,7 +854,8 @@ chkpun(NODE *p)
 			t1 = DECREF(t1);
 			t2 = DECREF(t2);
 		}
-		werror("illegal pointer combination");
+		if (Wpointer_sign)
+			werror("illegal pointer combination");
 	}
 }
 
@@ -855,6 +895,21 @@ stref(NODE *p)
 
 	off = s->soffset;
 	dsc = s->sclass;
+
+#ifndef CAN_UNALIGN
+	/*
+	 * If its a packed struct, and the target cannot do unaligned
+	 * accesses, then split it up in two bitfield operations.
+	 * LHS and RHS accesses are different, so must delay
+	 * it until we know.  Do the bitfield construct here though.
+	 */
+	if ((dsc & FIELD) == 0 && (off % talign(s->stype, s->ssue))) {
+//		int sz = tsize(s->stype, s->sdf, s->ssue);
+//		int al = talign(s->stype, s->ssue);
+//		int sz1 = al - (off % al);
+		
+	}
+#endif
 
 	if (dsc & FIELD) {  /* make fields look like ints */
 		off = (off/ALINT)*ALINT;
@@ -911,12 +966,18 @@ notlval(p) register NODE *p; {
 NODE *
 bcon(int i)
 {
-	register NODE *p;
+	return xbcon(i, NULL, INT);
+}
 
-	p = block(ICON, NIL, NIL, INT, 0, MKSUE(INT));
-	p->n_lval = i;
-	p->n_sp = NULL;
-	return(clocal(p));
+NODE *
+xbcon(CONSZ val, struct symtab *sp, TWORD type)
+{
+	NODE *p;
+
+	p = block(ICON, NIL, NIL, type, 0, MKSUE(type));
+	p->n_lval = val;
+	p->n_sp = sp;
+	return clocal(p);
 }
 
 NODE *
@@ -995,34 +1056,6 @@ convert(NODE *p, int f)
 	return(p);
 }
 
-/*
- * change enums to ints, or appropriate types
- */
-void
-econvert( p ) register NODE *p; {
-
-
-	register TWORD ty;
-
-	if( (ty=BTYPE(p->n_type)) == ENUMTY || ty == MOETY ) {
-		if (p->n_sue->suesize == SZCHAR)
-			ty = INT;
-		else if (p->n_sue->suesize == SZINT)
-			ty = INT;
-		else if (p->n_sue->suesize == SZSHORT)
-			ty = INT;
-		else if (p->n_sue->suesize == SZLONGLONG)
-			ty = LONGLONG;
-		else
-			ty = LONG;
-		ty = ctype(ty);
-		p->n_sue = MKSUE(ty);
-		MODTYPE(p->n_type,ty);
-		if (p->n_op == ICON && ty != LONG && ty != LONGLONG)
-			p->n_type = INT, p->n_sue = MKSUE(INT);
-	}
-}
-
 NODE *
 pconvert( p ) register NODE *p; {
 
@@ -1049,7 +1082,12 @@ oconvert(p) register NODE *p; {
 	case LT:
 	case GE:
 	case GT:
-		if( ISUNSIGNED(p->n_left->n_type) || ISUNSIGNED(p->n_right->n_type) )  p->n_op += (ULE-LE);
+		if(ISUNSIGNED(p->n_left->n_type) ||
+		    ISUNSIGNED(p->n_right->n_type) ||
+		    ISPTR(p->n_left->n_type) ||
+		    ISPTR(p->n_right->n_type))
+			 p->n_op += (ULE-LE);
+		/* FALLTHROUGH */
 	case EQ:
 	case NE:
 		return( p );
@@ -1184,10 +1222,10 @@ tymatch(p)  register NODE *p; {
 		t2 = DEUNSIGN(t2);
 		}
 
-	if (t1 == ENUMTY || t1 == MOETY)
-		t1 = INT; /* XXX */
-	if (t2 == ENUMTY || t2 == MOETY)
-		t2 = INT; /* XXX */
+	if (Wsign_compare && clogop(o) && t1 == t2 && lu != ru &&
+	    p->n_left->n_op != ICON && p->n_right->n_op != ICON)
+		werror("comparison between signed and unsigned");
+
 #if 0
 	if ((t1 == CHAR || t1 == SHORT) && o!= RETURN)
 		t1 = INT;
@@ -1266,8 +1304,6 @@ NODE *
 makety(NODE *p, TWORD t, TWORD q, union dimfun *d, struct suedef *sue)
 {
 
-	if (p->n_type == ENUMTY && p->n_op == ICON)
-		econvert(p);
 	if (t == p->n_type) {
 		p->n_df = d;
 		p->n_sue = sue;
@@ -1294,10 +1330,7 @@ makety(NODE *p, TWORD t, TWORD q, union dimfun *d, struct suedef *sue)
 	if (p->n_op == ICON) {
 		if (t == DOUBLE || t == FLOAT) {
 			p->n_op = FCON;
-			if (ISUNSIGNED(p->n_type))
-				p->n_dcon = (U_CONSZ) p->n_lval;
-			else
-				p->n_dcon = p->n_lval;
+			p->n_dcon = FLOAT_CAST(p->n_lval, p->n_type);
 			p->n_type = t;
 			p->n_qual = q;
 			p->n_sue = MKSUE(t);
@@ -1332,20 +1365,21 @@ block(int o, NODE *l, NODE *r, TWORD t, union dimfun *d, struct suedef *sue)
 	return(p);
 	}
 
-int
-icons(p) register NODE *p; {
+/*
+ * Return the constant value from an ICON.
+ */
+CONSZ
+icons(NODE *p)
+{
 	/* if p is an integer constant, return its value */
-	int val;
+	CONSZ val;
 
-	if( p->n_op != ICON ){
+	if (p->n_op != ICON || p->n_sp != NULL) {
 		uerror( "constant expected");
 		val = 1;
-		}
-	else {
+	} else
 		val = p->n_lval;
-		if( val != p->n_lval ) uerror( "constant too big for cross-compiler" );
-		}
-	tfree( p );
+	tfree(p);
 	return(val);
 }
 
@@ -1382,7 +1416,6 @@ icons(p) register NODE *p; {
 # define MSTR 04	/* structure */
 # define MPTR 010	/* pointer */
 # define MPTI 020	/* pointer or integer */
-# define MENU 040	/* enumeration variable or member */
 
 int
 opact(NODE *p)
@@ -1428,8 +1461,6 @@ opact(NODE *p)
 
 	case MUL:
 	case DIV:
-		if ((mt1&MDBI) && (mt2&MENU)) return( TYMATCH );
-		if ((mt2&MDBI) && (mt1&MENU)) return( TYMATCH );
 		if( mt12 & MDBI ) return( TYMATCH );
 		break;
 
@@ -1452,13 +1483,12 @@ opact(NODE *p)
 	case GT:
 	case GE:
 		if( mt12 & MDBI ) return( TYMATCH+CVTO );
-		else if( mt12 & MPTR ) return( PTMATCH+PUN );
+		else if( mt12 & MPTR ) return( PTMATCH+PUN+CVTO );
 		else if( mt12 & MPTI ) return( PTMATCH+PUN );
 		else break;
 
 	case QUEST:
 	case COMOP:
-		if( mt2&MENU ) return( TYPR+NCVTR );
 		return( TYPR );
 
 	case STREF:
@@ -1480,12 +1510,6 @@ opact(NODE *p)
 		if( mt12 & MSTR ) return( LVAL+NCVT+TYPL+OTHER );
 	case CAST:
 		if( mt12 & MDBI ) return( TYPL+LVAL+TYMATCH );
-#if 0
-		else if(mt1&MENU && mt2&MDBI) return( TYPL+LVAL+TYMATCH );
-		else if(mt2&MENU && mt1&MDBI) return( TYPL+LVAL+TYMATCH );
-		else if( (mt1&MENU)||(mt2&MENU) )
-			return( LVAL+NCVT+TYPL+PTMATCH+PUN );
-#endif
 		else if( mt1 & MPTR) return( LVAL+PTMATCH+PUN );
 		else if( mt12 & MPTI ) return( TYPL+LVAL+TYMATCH+PUN );
 		break;
@@ -1542,10 +1566,6 @@ moditype(TWORD ty)
 {
 	switch (ty) {
 
-	case ENUMTY:
-	case MOETY:
-		return( MENU|MINT|MDBI|MPTI );
-
 	case STRTY:
 	case UNIONTY:
 		return( MSTR );
@@ -1572,7 +1592,7 @@ moditype(TWORD ty)
 	}
 }
 
-int tvaloff = 100;
+int tvaloff = MAXREGS+NPERMREG > 100 ? MAXREGS+NPERMREG + 100 : 100;
 
 /*
  * Returns a TEMP node with temp number nr.
@@ -1584,7 +1604,7 @@ tempnode(int nr, TWORD type, union dimfun *df, struct suedef *sue)
 	NODE *r;
 
 	r = block(TEMP, NIL, NIL, type, df, sue);
-	r->n_lval = nr ? nr : tvaloff;
+	regno(r) = nr ? nr : tvaloff;
 	tvaloff += szty(type);
 	return r;
 }
@@ -1599,6 +1619,9 @@ doszof(NODE *p)
 	TWORD ty;
 	NODE *rv;
 
+	if (p->n_op == FLD)
+		uerror("can't apply sizeof to bit-field");
+
 	/*
 	 * Arrays may be dynamic, may need to make computations.
 	 */
@@ -1607,6 +1630,8 @@ doszof(NODE *p)
 	df = p->n_df;
 	ty = p->n_type;
 	while (ISARY(ty)) {
+		if (df->ddim == NOOFFSET)
+			uerror("sizeof of incomplete type");
 		rv = buildtree(MUL, rv, df->ddim >= 0 ? bcon(df->ddim) :
 		    tempnode(-df->ddim, INT, 0, MKSUE(INT)));
 		df++;
@@ -1633,39 +1658,50 @@ eprint(NODE *p, int down, int *a, int *b)
 	ty = coptype( p->n_op );
 
 	printf("%p) %s, ", p, copst(p->n_op));
+	if (p->n_op == XARG || p->n_op == XASM)
+		printf("id '%s', ", p->n_name);
 	if (ty == LTYPE) {
 		printf(CONFMT, p->n_lval);
-		printf(", %d, ", p->n_rval);
+		printf(", %d, ", (p->n_op != NAME && p->n_op != ICON) ?
+		    p->n_rval : 0);
 	}
 	tprint(stdout, p->n_type, p->n_qual);
 	printf( ", %p, %p\n", p->n_df, p->n_sue );
 }
 # endif
 
-void
-prtdcon(NODE *p)
+/*
+ * Emit everything that should be emitted on the left side 
+ * of a comma operator, and remove the operator.
+ * Do not traverse through QUEST, ANDAND and OROR.
+ * Enable this for all targets when stable enough.
+ */
+static void
+comops(NODE *p)
 {
-	int o = p->n_op, i;
+	int o;
+	NODE *q;
 
-	if (o != FCON)
-		return;
-
-	/* Write float constants to memory */
-	/* Should be volontary per architecture */
-
-	setloc1(RDATA);
-	defalign(p->n_type == FLOAT ? ALFLOAT : p->n_type == DOUBLE ?
-	    ALDOUBLE : ALLDOUBLE );
-	deflab1(i = getlab());
-	ninval(0, btdims[p->n_type].suesize, p);
-	p->n_op = NAME;
-	p->n_lval = 0;
-	p->n_sp = tmpalloc(sizeof(struct symtab_hdr));
-	p->n_sp->sclass = ILABEL;
-	p->n_sp->soffset = i;
+	while (p->n_op == COMOP) {
+		/* XXX hack for GCC ({ }) ops */
+		if (p->n_left->n_op == GOTO) {
+			int v = p->n_left->n_left->n_lval;
+			ecomp(p->n_left);
+			plabel(v+1);
+		} else
+			ecomp(p->n_left); /* will recurse if more COMOPs */
+		q = p->n_right;
+		*p = *q;
+		nfree(q);
+	}
+	o = coptype(p->n_op);
+	if (p->n_op == QUEST || p->n_op == ANDAND || p->n_op == OROR)
+		o = UTYPE;
+	if (o != LTYPE)
+		comops(p->n_left);
+	if (o == BITYPE)
+		comops(p->n_right);
 }
-
-extern int negrel[];
 
 /*
  * Walk up through the tree from the leaves,
@@ -1815,6 +1851,7 @@ calc:		if (true < 0) {
 	case ANDAND:
 		lab = false<0 ? getlab() : false ;
 		andorbr(p->n_left, -1, lab);
+		comops(p->n_right);
 		andorbr(p->n_right, true, false);
 		if (false < 0)
 			plabel( lab);
@@ -1824,6 +1861,7 @@ calc:		if (true < 0) {
 	case OROR:
 		lab = true<0 ? getlab() : true;
 		andorbr(p->n_left, lab, -1);
+		comops(p->n_right);
 		andorbr(p->n_right, true, false);
 		if (true < 0)
 			plabel( lab);
@@ -1862,9 +1900,18 @@ rmcops(NODE *p)
 	NODE *q, *r;
 	int o, ty, lbl, lbl2, tval = 0;
 
-again:
 	o = p->n_op;
 	ty = coptype(o);
+	if (BTYPE(p->n_type) == ENUMTY) { /* fixup enum */
+		MODTYPE(p->n_type, p->n_sue->sylnk->stype);
+		/*
+		 * XXX may fail if these are true:
+		 * - variable-sized enums
+		 * - non-byte-addressed targets.
+		 */
+		if (BTYPE(p->n_type) == ENUMTY && ISPTR(p->n_type))
+			MODTYPE(p->n_type, INT); /* INT ok? */
+	}
 	switch (o) {
 	case QUEST:
 
@@ -1878,9 +1925,10 @@ again:
 		/* Make ASSIGN node */
 		/* Only if type is not void */
 		q = p->n_right->n_left;
+		comops(q);
 		if (type != VOID) {
 			r = tempnode(0, q->n_type, q->n_df, q->n_sue);
-			tval = r->n_lval;
+			tval = regno(r);
 			q = buildtree(ASSIGN, r, q);
 		}
 		rmcops(q);
@@ -1889,6 +1937,7 @@ again:
 		plabel( lbl);
 
 		q = p->n_right->n_right;
+		comops(q);
 		if (type != VOID) {
 			r = tempnode(tval, q->n_type, q->n_df, q->n_sue);
 			q = buildtree(ASSIGN, r, q);
@@ -1927,7 +1976,7 @@ again:
 		*r = *p;
 		andorbr(r, -1, lbl = getlab());
 		q = tempnode(0, p->n_type, p->n_df, p->n_sue);
-		tval = q->n_lval;
+		tval = regno(q);
 		r = tempnode(tval, p->n_type, p->n_df, p->n_sue);
 		ecode(buildtree(ASSIGN, q, bcon(1)));
 		branch(lbl2 = getlab());
@@ -1945,13 +1994,7 @@ again:
 		p->n_op = ICON; p->n_type = VOID;
 		break;
 	case COMOP:
-		rmcops(p->n_left);
-		ecode(p->n_left);
-		/* Now when left tree is dealt with, rm COMOP */
-		q = p->n_right;
-		*p = *p->n_right;
-		nfree(q);
-		goto again;
+		cerror("COMOP error");
 
 	default:
 		if (ty == LTYPE)
@@ -1994,7 +2037,7 @@ delasgop(NODE *p)
 	if (p->n_op == INCR || p->n_op == DECR) {
 		/*
 		 * Rewrite x++ to (x += 1) -1; and deal with it further down.
-		 * Pass2 will remove -1 if unneccessary.
+		 * Pass2 will remove -1 if unnecessary.
 		 */
 		q = ccopy(p);
 		tfree(p->n_left);
@@ -2009,7 +2052,7 @@ delasgop(NODE *p)
 
 		if (has_se(l)) {
 			q = tempnode(0, ll->n_type, ll->n_df, ll->n_sue);
-			tval = q->n_lval;
+			tval = regno(q);
 			r = tempnode(tval, ll->n_type, ll->n_df,ll->n_sue);
 			l->n_left = q;
 			/* Now the left side of node p has no side effects. */
@@ -2052,18 +2095,20 @@ ecomp(NODE *p)
 		fwalk(p, eprint, 0);
 #endif
 	if (!reached) {
-		werror("statement not reached");
+		if (Wunreachable_code)
+			werror("statement not reached");
 		reached = 1;
 	}
 	p = optim(p);
+	comops(p);
 	rmcops(p);
 	p = delasgop(p);
-	setloc1(PROG);
 	if (p->n_op == ICON && p->n_type == VOID)
 		tfree(p);
 	else
 		ecode(p);
 }
+
 
 #if defined(MULTIPASS)
 void	
@@ -2072,9 +2117,7 @@ p2tree(NODE *p)
 	struct symtab *q;
 	int ty;
 
-# ifdef MYP2TREE
-	MYP2TREE(p);  /* local action can be taken here; then return... */
-# endif
+	myp2tree(p);  /* local action can be taken here */
 
 	ty = coptype(p->n_op);
 
@@ -2101,11 +2144,10 @@ p2tree(NODE *p)
 	case ICON:
 		/* print external name */
 		if ((q = p->n_sp) != NULL) {
-			if ((q->sclass == STATIC && q->slevel > 0) ||
-			    q->sclass == ILABEL) {
+			if ((q->sclass == STATIC && q->slevel > 0)) {
 				printf(LABFMT, q->soffset);
 			} else
-				printf("%s\n", exname(q->sname));
+				printf("%s\n", exname(q->soname));
 		} else
 			printf("\n");
 		break;
@@ -2125,6 +2167,10 @@ p2tree(NODE *p)
 		printf("\t%d\t\n", talign(STRTY, p->n_left->n_sue));
 		break;
 
+	case XARG:
+	case XASM:
+		break;
+
 	default:
 		printf(	 "\n" );
 	}
@@ -2135,15 +2181,24 @@ p2tree(NODE *p)
 		p2tree(p->n_right);
 }
 #else
+static char *
+sptostr(struct symtab *sp)
+{
+	char *cp = inlalloc(32);
+	int n = sp->soffset;
+	if (n < 0)
+		n = -n;
+	snprintf(cp, 32, LABFMT, n);
+	return cp;
+}
+
 void
 p2tree(NODE *p)
 {
 	struct symtab *q;
 	int ty;
 
-# ifdef MYP2TREE
-	MYP2TREE(p);  /* local action can be taken here; then return... */
-# endif
+	myp2tree(p);  /* local action can be taken here */
 
 	ty = coptype(p->n_op);
 
@@ -2154,23 +2209,19 @@ p2tree(NODE *p)
 		if ((q = p->n_sp) != NULL) {
 			if ((q->sclass == STATIC && q->slevel > 0) ||
 #ifdef GCC_COMPAT
-			    q->sflags == SLBLNAME ||
+			    q->sflags == SLBLNAME
 #endif
-			    q->sclass == ILABEL) {
-				char *cp = (isinlining ?
-				    permalloc(32) : tmpalloc(32));
-				int n = q->soffset;
-				if (n < 0)
-					n = -n;
-				snprintf(cp, 32, LABFMT, n);
+			    ) {
+				p->n_name = sptostr(q);
+			} else if (!kflag) {
+				char *name = exname(q->soname);
+				int n = strlen(name) + 1;
+				char *cp = inlalloc(n);
+
+				strlcpy(cp, name, n);
 				p->n_name = cp;
-			} else {
-#ifdef GCC_COMPAT
-				p->n_name = gcc_findname(q);
-#else
-				p->n_name = exname(q->sname);
-#endif
-			}
+			} else
+				p->n_name = q->soname;
 		} else
 			p->n_name = "";
 		break;
@@ -2198,6 +2249,10 @@ p2tree(NODE *p)
 		p->n_stalign = talign(STRTY,p->n_left->n_sue)/SZCHAR;
 		break;
 
+	case XARG:
+	case XASM:
+		break;
+
 	default:
 		p->n_name = "";
 		}
@@ -2212,7 +2267,7 @@ p2tree(NODE *p)
  * Change void data types into char.
  */
 static void
-delvoid(NODE *p)
+delvoid(NODE *p, void *arg)
 {
 	/* Convert "PTR undef" (void *) to "PTR uchar" */
 	if (BTYPE(p->n_type) == VOID)
@@ -2227,7 +2282,7 @@ delvoid(NODE *p)
 			*q = *p;
 			q->n_type = BOOL_TYPE;
 			r = tempnode(0, BOOL_TYPE, NULL, MKSUE(BOOL_TYPE));
-			val = r->n_lval;
+			val = regno(r);
 			s = tempnode(val, BOOL_TYPE, NULL, MKSUE(BOOL_TYPE));
 			*p = *s;
 			q = buildtree(ASSIGN, r, q);
@@ -2250,8 +2305,7 @@ ecode(NODE *p)
 
 	p = optim(p);
 	p = delasgop(p);
-	walkf(p, prtdcon);
-	walkf(p, delvoid);
+	walkf(p, delvoid, 0);
 #ifdef PCC_DEBUG
 	if (xdebug) {
 		printf("Fulltree:\n"); 
@@ -2282,26 +2336,28 @@ send_passt(int type, ...)
 	else
 		sz = sizeof(struct interpass);
 
-	ip = isinlining ? permalloc(sz) : tmpalloc(sz);
+	ip = inlalloc(sz);
 	ip->type = type;
 	ip->lineno = lineno;
 	switch (type) {
 	case IP_NODE:
-		if (lastloc != PROG)
-			setloc1(PROG);
 		ip->ip_node = va_arg(ap, NODE *);
 		break;
 	case IP_EPILOG:
+		if (!isinlining)
+			defloc(cftnsp);
+		/* FALLTHROUGH */
 	case IP_PROLOG:
-		setloc1(PROG);
+		inftn = type == IP_PROLOG ? 1 : 0;
 		ipp = (struct interpass_prolog *)ip;
-		ipp->ipp_regs = va_arg(ap, int);
+		memset(ipp->ipp_regs, (type == IP_PROLOG)? -1 : 0,
+		    sizeof(ipp->ipp_regs));
 		ipp->ipp_autos = va_arg(ap, int);
 		ipp->ipp_name = va_arg(ap, char *);
 		ipp->ipp_type = va_arg(ap, TWORD);
 		ipp->ipp_vis = va_arg(ap, int);
 		ip->ip_lbl = va_arg(ap, int);
-		ipp->ip_tmpnum = tvaloff;
+		ipp->ip_tmpnum = va_arg(ap, int);
 		ipp->ip_lblnum = crslab;
 		if (type == IP_PROLOG)
 			ipp->ip_lblnum--;
@@ -2311,9 +2367,11 @@ send_passt(int type, ...)
 		break;
 	case IP_ASM:
 		if (blevel == 0) { /* outside function */
-			printf("\t%s\n", va_arg(ap, char *));
+			printf("\t");
+			printf("%s", va_arg(ap, char *));
+			printf("\n");
 			va_end(ap);
-			lastloc = -1;
+			defloc(NULL);
 			return;
 		}
 		ip->ip_asm = va_arg(ap, char *);
@@ -2322,12 +2380,11 @@ send_passt(int type, ...)
 		cerror("bad send_passt type %d", type);
 	}
 	va_end(ap);
+	pass1_lastchance(ip); /* target-specific info */
 	if (isinlining)
 		inline_addarg(ip);
 	else
 		pass2_compile(ip);
-	if (type == IP_EPILOG)
-		lastloc = PROG;
 }
 
 char *
@@ -2363,6 +2420,8 @@ copst(int op)
 	SNAM(RSEQ,>>=)
 	SNAM(INCR,++)
 	SNAM(DECR,--)
+	SNAM(STRING,STRING)
+	SNAM(SZOF,SIZEOF)
 	default:
 		cerror("bad copst %d", op);
 	}
@@ -2375,6 +2434,7 @@ cdope(int op)
 	if (op <= MAXOP)
 		return dope[op];
 	switch (op) {
+	case STRING:
 	case QUALIFIER:
 	case CLASS:
 	case RB:
@@ -2415,6 +2475,7 @@ cdope(int op)
 	case DECR:
 		return BITYPE|ASGFLG;
 	}
+	cerror("cdope missing op %d", op);
 	return 0; /* XXX gcc */
 }
 
@@ -2445,7 +2506,45 @@ ccopy(NODE *p)
 void
 plabel(int label)
 {
-	setloc1(PROG);
 	reached = 1; /* Will this always be correct? */
 	send_passt(IP_DEFLAB, label);
 }
+
+/*
+ * Perform integer promotion on node n.
+ */
+NODE *
+intprom(NODE *n)
+{
+	if ((n->n_type >= CHAR && n->n_type < INT) || n->n_type == BOOL) {
+		if ((n->n_type == UCHAR && MAX_UCHAR > MAX_INT) ||
+		    (n->n_type == USHORT && MAX_USHORT > MAX_INT))
+			return makety(n, UNSIGNED, 0, 0, MKSUE(UNSIGNED));
+		return makety(n, INT, 0, 0, MKSUE(INT));
+	}
+	return n;
+}
+
+/*
+ * Return CON/VOL/0, whichever are active for the current type.
+ */
+int
+cqual(TWORD t, TWORD q)
+{
+	while (ISARY(t))
+		t = DECREF(t), q = DECQAL(q);
+	if (t <= BTMASK)
+		q <<= TSHIFT;
+	return q & (CON|VOL);
+}
+
+int crslab = 10;
+/*
+ * Return a number for internal labels.
+ */
+int
+getlab(void)
+{
+	return crslab++;
+}
+

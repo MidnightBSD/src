@@ -1,43 +1,129 @@
+/* $Id: ccconfig.h,v 1.2 2009-01-20 21:09:39 laffer1 Exp $ */
 /*-
- * Copyright (c) 2007 Lucas Holt <luke@midnightbsd.org>
- * Copyright (c) 2007 David O'Brien <obrien@FreeBSD.org>
- * Copyright (c) 2007 Ed Schouten <ed@fxq.nl>
- * All rights reserved.
+ * Copyright (c) 2007, 2008
+ *	Thorsten Glaser <tg@mirbsd.de>
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
  */
 
-#define CPPADD { "-D__MidnightBSD__", "-D__ELF__", "-D__unix__=1", "-D__unix=1", "-D__STDC__=1", NULL, }
-#define DYNLINKER { "-dynamic-linker", "/libexec/ld-elf.so.1", NULL }
-#define CRT0FILE "/usr/lib/crt1.o"
-#define STARTFILES { "/usr/lib/crti.o", "/usr/lib/crtbegin.o", NULL }
-#define ENDFILES { "/usr/lib/crtend.o", "/usr/lib/crtn.o", NULL }
-#define STARTLABEL "_start"
+/**
+ * Configuration for pcc on a MidnightBSD (amd64, i386 or sparc64) target
+ */
 
-#if defined(mach_i386) || defined(mach_x86)
-#define CPPMDADD { "-D__i386__", "-D__i386", NULL, }
-#else
-#error defines for arch missing
+/* === mi part === */
+
+#ifndef LIBDIR
+#define LIBDIR			"/usr/lib/"
 #endif
 
+/* cpp MI defines */
+#define CPPADD			{		\
+	"-D__MidnightBSD__",			\
+	"-D__FreeBSD__",			\
+	"-D__unix__",				\
+	"-D__unix",				\
+	"-Dunix",				\
+	"-D__ELF__",				\
+	"-D_LONGLONG",				\
+	NULL					\
+}
+
+/* for dynamically linked binaries */
+#define DYNLINKER		{		\
+	"-dynamic-linker",			\
+	"/libexec/ld-elf.so.1",			\
+	NULL					\
+}
+#define STARTFILES		{		\
+	LIBDIR "crti.o",			\
+	LIBDIR "crtbegin.o",			\
+	NULL					\
+}
+#define ENDFILES		{		\
+	LIBDIR "crtend.o",			\
+	LIBDIR "crtn.o",			\
+	NULL					\
+}
+
+/* for shared libraries */
+#define STARTFILES_S		{		\
+	LIBDIR "crti.o",			\
+	LIBDIR "crtbeginS.o",			\
+	NULL					\
+}
+#define ENDFILES_S		{		\
+	LIBDIR "crtendS.o",			\
+	LIBDIR "crtn.o",			\
+	NULL					\
+}
+
+/* for statically linked binaries */
+#define STARTFILES_T		{		\
+	LIBDIR "crti.o",			\
+	LIBDIR "crtbeginT.o",			\
+	NULL					\
+}
+#define ENDFILES_T		{		\
+	LIBDIR "crtend.o",			\
+	LIBDIR "crtn.o",			\
+	NULL					\
+}
+
+#define LIBCLIBS		{		\
+	"-lc",					\
+	NULL					\
+}
+#define LIBCLIBS_PROFILE	{		\
+	"-lc_p",				\
+	NULL					\
+}
+
+
+/* C run-time startup */
+#define CRT0FILE		LIBDIR "crt1.o"
+#define CRT0FILE_PROFILE	LIBDIR "gcrt1.o"
+#define STARTLABEL		"_start"
+
+/* debugging info */
 #define STABS
 
+/* === md part === */
+
+#if defined(mach_i386)
+#define CPPMDADD		{		\
+	"-D__i386__",				\
+	"-D__i386",				\
+	"-Di386",				\
+	NULL,					\
+}
+#elif defined(mach_sparc64)
+#define CPPMDADD		{		\
+	"-D__sparc64__",			\
+	"-D__sparc_v9__",			\
+	"-D__sparcv9",				\
+	"-D__sparc__",				\
+	"-D__sparc",				\
+	"-Dsparc",				\
+	"-D__arch64__",				\
+	"-D__LP64__",				\
+	"-D_LP64",				\
+	NULL,					\
+}
+#elif defined(mach_amd64)
+#error pcc does not support amd64 yet
+#else
+#error this architecture is not supported by MidnightBSD
+#endif

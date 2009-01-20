@@ -1,4 +1,4 @@
-/*      $Id: match.c,v 1.1 2007-09-28 13:47:20 laffer1 Exp $   */
+/*      $Id: match.c,v 1.2 2009-01-20 21:09:41 laffer1 Exp $   */
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -60,15 +60,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-# include "pass2.h"
+#include "pass2.h"
 
+#ifdef HAVE_STRINGS_H
 #include <strings.h>
+#endif
 
-void prttype(int t);
 void setclass(int tmp, int class);
 int getclass(int tmp);
-
-int fldsz, fldshf;
 
 int s2debug = 0;
 
@@ -149,27 +148,14 @@ tshape(NODE *p, int shape)
 		break;
 
 	case ICON:
+	case FCON:
 		if (shape & SCON)
 			return SRDIR;
 		break;
 
 	case FLD:
-		if (shape & SFLD) {
-			int sh;
-
-			if ((sh = flshape(p->n_left)) == SRNOPE)
-				return sh;
-			/* it is a FIELD shape; make side-effects */
-			/* XXX - this will not work for multi-matches */
-			o = p->n_rval;
-			fldsz = UPKFSZ(o);
-# ifdef RTOLBYTES
-			fldshf = UPKFOFF(o);
-# else
-			fldshf = SZINT - fldsz - UPKFOFF(o);
-# endif
-			return sh;
-		}
+		if (shape & SFLD)
+			return flshape(p->n_left);
 		break;
 
 	case CCODES:
@@ -190,9 +176,13 @@ tshape(NODE *p, int shape)
 		break;
 
 	case UMUL:
+#if 0
 		if (shumul(p->n_left) & shape)
 			return SROREG;	/* Calls offstar to traverse down */
 		break;
+#else
+		return shumul(p->n_left, shape);
+#endif
 
 	}
 	return SRNOPE;
@@ -264,6 +254,13 @@ ttype(TWORD t, int tword)
 	return(0);
 }
 
+#define FLDSZ(x)	UPKFSZ(x)
+#ifdef RTOLBYTES
+#define	FLDSHF(x)	UPKFOFF(x)
+#else
+#define	FLDSHF(x)	(SZINT - FLDSZ(x) - UPKFOFF(x))
+#endif
+
 /*
  * generate code by interpreting table entry
  */
@@ -271,6 +268,9 @@ void
 expand(NODE *p, int cookie, char *cp)
 {
 	CONSZ val;
+
+//printf("expand\n");
+//fwalk(p, e2print, 0);
 
 	for( ; *cp; ++cp ){
 		switch( *cp ){
@@ -284,23 +284,34 @@ expand(NODE *p, int cookie, char *cp)
 			continue;
 
 		case 'F':  /* this line deleted if FOREFF is active */
-			if( cookie & FOREFF ) while( *++cp != '\n' ) ; /* VOID */
+			if (cookie & FOREFF) {
+				while (*cp && *cp != '\n')
+					cp++;
+				if (*cp == 0)
+					return;
+			}
 			continue;
 
 		case 'S':  /* field size */
-			printf( "%d", fldsz );
+			if (fldexpand(p, cookie, &cp))
+				continue;
+			printf("%d", FLDSZ(p->n_rval));
 			continue;
 
 		case 'H':  /* field shift */
-			printf( "%d", fldshf );
+			if (fldexpand(p, cookie, &cp))
+				continue;
+			printf("%d", FLDSHF(p->n_rval));
 			continue;
 
 		case 'M':  /* field mask */
 		case 'N':  /* complement of field mask */
+			if (fldexpand(p, cookie, &cp))
+				continue;
 			val = 1;
-			val <<= fldsz;
+			val <<= FLDSZ(p->n_rval);
 			--val;
-			val <<= fldshf;
+			val <<= FLDSHF(p->n_rval);
 			adrcon( *cp=='M' ? val : ~val );
 			continue;
 
@@ -312,6 +323,11 @@ expand(NODE *p, int cookie, char *cp)
 			continue;
 
 		case 'O':  /* opcode string */
+#ifdef FINDMOPS
+			if (p->n_op == ASSIGN)
+				hopcode(*++cp, p->n_right->n_op);
+			else
+#endif
 			hopcode( *++cp, p->n_op );
 			continue;
 
@@ -382,26 +398,6 @@ getlr(NODE *p, int c)
 	return NULL;
 }
 
-static char *tarr[] = {
-	"CHAR", "SHORT", "INT", "LONG", "FLOAT", "DOUBLE", "POINT", "UCHAR",
-	"USHORT", "UINT", "ULONG", "PTRTO", "ANY", "STRUCT", "LONGLONG",
-	"ULONGLONG",
-};
-
-void
-prttype(int t)
-{
-	int i, gone = 0;
-
-	for (i = 0; i < 16; i++)
-		if ((t >> i) & 1) {
-			if (gone) putchar('|');
-			gone++;
-			printf("%s", tarr[i]);
-		}
-}
-
-
 #ifdef PCC_DEBUG
 #define	F2DEBUG(x)	if (f2debug) printf x
 #define	F2WALK(x)	if (f2debug) fwalk(x, e2print, 0)
@@ -415,8 +411,8 @@ prttype(int t)
  * Shape is register class where we want the result.
  * Returns register class if register nodes.
  * If w is: (should be shapes)
- *	- LREG - result in register, call geninsn().
- *	- LOREG - create OREG; call offstar().
+ *	- SRREG - result in register, call geninsn().
+ *	- SROREG - create OREG; call offstar().
  *	- 0 - clear su, walk down.
  */
 static int
@@ -424,12 +420,14 @@ swmatch(NODE *p, int shape, int w)
 {
 	int rv = 0;
 
+	F2DEBUG(("swmatch: p=%p, shape=%s, w=%s\n", p, prcook(shape), srtyp[w]));
+
 	switch (w) {
-	case LREG:
+	case SRREG:
 		rv = geninsn(p, shape);
 		break;
 
-	case LOREG:
+	case SROREG:
 		/* should be here only if op == UMUL */
 		if (p->n_op != UMUL && p->n_op != FLD)
 			comperr("swmatch %p", p);
@@ -493,7 +491,8 @@ chcheck(NODE *p, int shape, int rew)
  *	p - node (for this leg)
  *	shape - given shape for this leg
  *	cookie - cookie given for parent node
- *	rv - switch key for traversing down
+ *	rew - 
+ *	go - switch key for traversing down
  *	returns register class.
  */
 static int
@@ -501,20 +500,23 @@ shswitch(int sh, NODE *p, int shape, int cookie, int rew, int go)
 {
 	int lsh;
 
+	F2DEBUG(("shswitch: p=%p, shape=%s, ", p, prcook(shape)));
+	F2DEBUG(("cookie=%s, rew=0x%x, go=%s\n", prcook(cookie), rew, srtyp[go]));
+
 	switch (go) {
 	case SRDIR: /* direct match, just clear su */
 		(void)swmatch(p, 0, 0);
 		break;
 
 	case SROREG: /* call offstar to prepare for OREG conversion */
-		(void)swmatch(p, shape, LOREG);
+		(void)swmatch(p, shape, SROREG);
 		break;
 
 	case SRREG: /* call geninsn() to get value into register */
-		lsh = shape & INREGS;
+		lsh = shape & (FORCC | INREGS);
 		if (rew && cookie != FOREFF)
-			lsh &= (cookie & INREGS);
-		lsh = swmatch(p, lsh, LREG);
+			lsh &= (cookie & (FORCC | INREGS));
+		lsh = swmatch(p, lsh, SRREG);
 		if (rew)
 			sh = lsh;
 		break;
@@ -549,7 +551,10 @@ findops(NODE *p, int cookie)
 	for (i = 0; ixp[i] >= 0; i++) {
 		q = &table[ixp[i]];
 
-		F2DEBUG(("findop: ixp %d\n", ixp[i]));
+		F2DEBUG(("findop: ixp %d str %s\n", ixp[i], q->cstring));
+		if (!acceptable(q))		/* target-dependent filter */
+			continue;
+
 		if (ttype(l->n_type, q->ltype) == 0 ||
 		    ttype(r->n_type, q->rtype) == 0)
 			continue; /* Types must be correct */
@@ -565,7 +570,8 @@ findops(NODE *p, int cookie)
 		F2DEBUG(("findop lshape %d\n", shl));
 		F2WALK(l);
 
-		if ((shr = chcheck(r, q->rshape, q->rewrite & RRIGHT))== SRNOPE)			continue;
+		if ((shr = chcheck(r, q->rshape, q->rewrite & RRIGHT)) == SRNOPE)
+			continue;
 
 		F2DEBUG(("findop rshape %d\n", shr));
 		F2WALK(r);
@@ -592,18 +598,26 @@ findops(NODE *p, int cookie)
 
 	sh = -1;
 
+#ifdef mach_pdp11
+	if (cookie == FORCC && p->n_op != AND)	/* XXX - fix */
+		cookie = INREGS;
+#else
+	if (cookie == FORCC)
+		cookie = INREGS;
+#endif
+
 	sh = shswitch(sh, p->n_left, qq->lshape, cookie,
 	    qq->rewrite & RLEFT, gol);
 	sh = shswitch(sh, p->n_right, qq->rshape, cookie,
 	    qq->rewrite & RRIGHT, gor);
 
 	if (sh == -1) {
-		if (cookie == FOREFF)
+		if (cookie == FOREFF || cookie == FORCC)
 			sh = 0;
 		else
 			sh = ffs(cookie & qq->visit & INREGS)-1;
 	}
-	F2DEBUG(("findops: node %p (%s)\n", p, prcook(1 << sh)));
+	F2DEBUG(("findops: node %p sh %d (%s)\n", p, sh, prcook(1 << sh)));
 	p->n_su = MKIDX(idx, 0);
 	SCLASS(p->n_su, sh);
 	return sh;
@@ -647,6 +661,9 @@ relops(NODE *p)
 		q = &table[ixp[i]];
 
 		F2DEBUG(("relops: ixp %d\n", ixp[i]));
+		if (!acceptable(q))		/* target-dependent filter */
+			continue;
+
 		if (ttype(l->n_type, q->ltype) == 0 ||
 		    ttype(r->n_type, q->rtype) == 0)
 			continue; /* Types must be correct */
@@ -686,7 +703,7 @@ relops(NODE *p)
 	(void)shswitch(-1, p->n_right, q->rshape, FORCC,
 	    q->rewrite & RRIGHT, gor);
 	
-	F2DEBUG(("findops: node %p\n", p));
+	F2DEBUG(("relops: node %p\n", p));
 	p->n_su = MKIDX(idx, 0);
 	SCLASS(p->n_su, CLASSA); /* XXX */
 	return 0;
@@ -727,7 +744,10 @@ findasg(NODE *p, int cookie)
 	for (i = 0; ixp[i] >= 0; i++) {
 		q = &table[ixp[i]];
 
-		F2DEBUG(("asgop: ixp %d\n", ixp[i]));
+		F2DEBUG(("findasg: ixp %d\n", ixp[i]));
+		if (!acceptable(q))		/* target-dependent filter */
+			continue;
+
 		if (ttype(l->n_type, q->ltype) == 0 ||
 		    ttype(r->n_type, q->rtype) == 0)
 			continue; /* Types must be correct */
@@ -735,20 +755,30 @@ findasg(NODE *p, int cookie)
 		if ((cookie & q->visit) == 0)
 			continue; /* must get a result */
 
-		F2DEBUG(("asgop got types\n"));
-		if ((shl = tshape(l, q->lshape)) == SRNOPE)
-			continue;
+		F2DEBUG(("findasg got types\n"));
+#ifdef mach_pdp11 /* XXX - check for other targets too */
+		if (p->n_op == STASG && ISPTR(l->n_type)) {
+			/* Accept lvalue to be in register */
+			/* if struct assignment is given a pointer */
+			if ((shl = chcheck(l, q->lshape,
+			    q->rewrite & RLEFT)) == SRNOPE)
+				continue;
+		} else
+#endif
+		{
+			if ((shl = tshape(l, q->lshape)) == SRNOPE)
+				continue;
+			if (shl == SRREG)
+				continue;
+		}
 
-		if (shl == SRREG)
-			continue;
-
-		F2DEBUG(("asgop lshape %d\n", shl));
+		F2DEBUG(("findasg lshape %d\n", shl));
 		F2WALK(l);
 
-		if ((shr = chcheck(r, q->rshape, q->rewrite & RRIGHT))== SRNOPE)
+		if ((shr = chcheck(r, q->rshape, q->rewrite & RRIGHT)) == SRNOPE)
 			continue;
 
-		F2DEBUG(("asgop rshape %d\n", shr));
+		F2DEBUG(("findasg rshape %d\n", shr));
 		F2WALK(r);
 		if (q->needs & REWRITE)
 			break;	/* Done here */
@@ -778,6 +808,23 @@ findasg(NODE *p, int cookie)
 	sh = shswitch(sh, p->n_right, qq->rshape, cookie,
 	    qq->rewrite & RRIGHT, gor);
 
+#ifdef mach_pdp11 /* XXX all targets? */
+	lvl = 0;
+	if (cookie == FOREFF)
+		lvl = RVEFF, sh = 0;
+	else if (cookie == FORCC)
+		lvl = RVCC, sh = 0;
+	else if (sh == -1) {
+		sh = ffs(cookie & qq->visit & INREGS)-1;
+#ifdef PCC_DEBUG
+		if (sh == -1)
+			comperr("findasg bad shape");
+#endif
+		SCLASS(lvl,sh);
+	} else
+		SCLASS(lvl,sh);
+	p->n_su = MKIDX(idx, lvl);
+#else
 	if (sh == -1) {
 		if (cookie == FOREFF)
 			sh = 0;
@@ -788,7 +835,10 @@ findasg(NODE *p, int cookie)
 
 	p->n_su = MKIDX(idx, 0);
 	SCLASS(p->n_su, sh);
-
+#endif /* mach_pdp11 */
+#ifdef FINDMOPS
+	p->n_flags &= ~1;
+#endif
 	return sh;
 }
 
@@ -812,6 +862,9 @@ findumul(NODE *p, int cookie)
 		q = &table[ixp[i]];
 
 		F2DEBUG(("findumul: ixp %d\n", ixp[i]));
+		if (!acceptable(q))		/* target-dependent filter */
+			continue;
+
 		if ((q->visit & cookie) == 0)
 			continue; /* wrong registers */
 
@@ -874,6 +927,8 @@ findleaf(NODE *p, int cookie)
 		q = &table[ixp[i]];
 
 		F2DEBUG(("findleaf: ixp %d\n", ixp[i]));
+		if (!acceptable(q))		/* target-dependent filter */
+			continue;
 		if ((q->visit & cookie) == 0)
 			continue; /* wrong registers */
 
@@ -935,6 +990,9 @@ finduni(NODE *p, int cookie)
 		q = &table[ixp[i]];
 
 		F2DEBUG(("finduni: ixp %d\n", ixp[i]));
+		if (!acceptable(q))		/* target-dependent filter */
+			continue;
+
 		if (ttype(l->n_type, q->ltype) == 0)
 			continue; /* Type must be correct */
 
@@ -993,3 +1051,192 @@ finduni(NODE *p, int cookie)
 	SCLASS(p->n_su, sh);
 	return sh;
 }
+
+#ifdef FINDMOPS
+/*
+ * Try to find constructs like "a = a + 1;" and match them together
+ * with instructions like "incl a" or "addl $1,a".
+ *
+ * Level assignment for priority:
+ *	left	right	prio
+ *	-	-	-
+ *	direct	direct	1
+ *	direct	REG	2
+ *	direct	OREG	3
+ *	OREG	direct	4
+ *	OREG	REG	5
+ *	OREG	OREG	6
+ */
+int
+findmops(NODE *p, int cookie)
+{
+	extern int *qtable[];
+	struct optab *q;
+	int i, sh, shl, shr, lvl = 10;
+	NODE *l, *r;
+	int *ixp;
+	struct optab *qq = NULL; /* XXX gcc */
+	int idx = 0, gol = 0, gor = 0;
+
+	shl = shr = 0;
+
+	F2DEBUG(("findmops tree: %s\n", prcook(cookie)));
+	F2WALK(p);
+
+	l = getlr(p, 'L');
+	r = getlr(p, 'R');
+	/* See if this is a usable tree to work with */
+	/* Currently only check for leaves */
+	if (optype(r->n_op) != BITYPE || treecmp(l, r->n_left) == 0)
+		return FFAIL;
+
+	F2DEBUG(("findmops is useable\n"));
+
+	/* We can try to find a match.  Use right op */
+	ixp = qtable[r->n_op];
+	l = getlr(r, 'L');
+	r = getlr(r, 'R');
+
+	for (i = 0; ixp[i] >= 0; i++) {
+		q = &table[ixp[i]];
+
+		F2DEBUG(("findmops: ixp %d\n", ixp[i]));
+		if (!acceptable(q))		/* target-dependent filter */
+			continue;
+
+		if (ttype(l->n_type, q->ltype) == 0 ||
+		    ttype(r->n_type, q->rtype) == 0)
+			continue; /* Types must be correct */
+
+		F2DEBUG(("findmops got types\n"));
+
+		switch (cookie) {
+		case FOREFF:
+			if ((q->visit & FOREFF) == 0)
+				continue; /* Not only for side effects */
+			break;
+		case FORCC:
+			if ((q->visit & FORCC) == 0)
+				continue; /* Not only for side effects */
+			break;
+		default:
+			if ((cookie & q->visit) == 0)
+				continue; /* Won't match requested shape */
+			if (((cookie & INREGS & q->lshape) == 0) || !isreg(l))
+				continue; /* Bad return register */
+			break;
+		}
+		F2DEBUG(("findmops cookie\n"));
+
+		/*
+		 * left shape must match left node.
+		 */
+		if ((shl = tshape(l, q->lshape)) != SRDIR && (shl != SROREG))
+			continue;
+
+		F2DEBUG(("findmops lshape %d\n", shl));
+		F2WALK(l);
+
+		if ((shr = chcheck(r, q->rshape, 0)) == SRNOPE)
+			continue;
+
+		F2DEBUG(("findmops rshape %d\n", shr));
+
+		/*
+		 * Only allow RLEFT. XXX
+		 */
+		if ((q->rewrite & (RLEFT|RRIGHT)) != RLEFT)
+			continue;
+
+		F2DEBUG(("rewrite OK\n"));
+
+		F2WALK(r);
+		if (q->needs & REWRITE)
+			break;	/* Done here */
+
+		if (lvl <= (shl + shr))
+			continue;
+
+		lvl = shl + shr;
+		qq = q;
+		idx = ixp[i];
+		gol = shl;
+		gor = shr;
+	}
+
+	if (lvl == 10)
+		return FFAIL;
+	F2DEBUG(("findmops entry %d(%s,%s)\n", idx, srtyp[gol], srtyp[gor]));
+
+	/*
+	 * Now we're here and have a match. left is semi-direct and 
+	 * right may be anything.
+	 */
+
+	sh = -1;
+	sh = shswitch(sh, p->n_left, qq->lshape, cookie,
+	    qq->rewrite & RLEFT, gol);
+	sh = shswitch(sh, r, qq->rshape, cookie, 0, gor);
+
+	if (sh == -1) {
+		if (cookie & (FOREFF|FORCC))
+			sh = 0;
+		else
+			sh = ffs(cookie & qq->visit & INREGS)-1;
+	}
+	F2DEBUG(("findmops done: node %p class %d\n", p, sh));
+
+	/* Trickery:  Set table index on assign to op instead */
+	/* gencode() will remove useless nodes */
+	p->n_su = MKIDX(idx, 0);
+	p->n_flags |= 1; /* XXX tell gencode to reduce the right tree */
+	SCLASS(p->n_su, sh);
+
+	return sh;
+}
+
+/*
+ * Compare two trees; return 1 if equal and 0 if not.
+ */
+int
+treecmp(NODE *p1, NODE *p2)
+{
+	if (p1->n_op != p2->n_op)
+		return 0;
+
+	switch (p1->n_op) {
+	case UMUL:
+		return treecmp(p1->n_left, p2->n_left);
+
+	case OREG:
+		if (p1->n_lval != p2->n_lval || p1->n_rval != p2->n_rval)
+			return 0;
+		break;
+
+	case NAME:
+	case ICON:
+		if (strcmp(p1->n_name, p2->n_name))
+			return 0;
+		/* FALLTHROUGH */
+		if (p1->n_lval != p2->n_lval)
+			return 0;
+		break;
+
+	case REG:
+	case TEMP:
+		if (p1->n_rval != p2->n_rval)
+			return 0;
+		break;
+	case PLUS:
+	case MINUS:
+		if (treecmp(p1->n_left, p2->n_left) == 0 ||
+		    treecmp(p1->n_right, p2->n_right) == 0)
+			return 0;
+		break;
+
+	default:
+		return 0;
+	}
+	return 1;
+}
+#endif
