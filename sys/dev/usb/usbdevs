@@ -1382,6 +1382,7 @@ product HP2 C500		0x6002	PhotoSmart C500
 
 /* HUAWEI products */
 product HUAWEI MOBILE		0x1001	Huawei Mobile
+product HUAWEI E220		0x1003	Huawei E220 HSDPA USB Modem
 
 /* HUAWEI 3com products */
 product HUAWEI3COM WUB320G	0x0009	Aolynk WUB320g

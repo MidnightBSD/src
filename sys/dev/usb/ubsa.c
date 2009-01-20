@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ubsa.c,v 1.3 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 2002, Alexander Kabaev <kan.FreeBSD.org>.
  * All rights reserved.
@@ -235,6 +235,8 @@ static const struct ubsa_product {
 	{ USB_VENDOR_OPTION, USB_PRODUCT_OPTION_GT3GPLUS },
 	/* Huawei Mobile */
 	{ USB_VENDOR_HUAWEI, USB_PRODUCT_HUAWEI_MOBILE },
+	/* Huawei E220 USB Modem */
+	{ USB_VENDOR_HUAWEI, USB_PRODUCT_HUAWEI_E220 },
 	{ 0, 0 }
 };
 
