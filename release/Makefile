@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.17.2.7 2008/08/29 21:59:01 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.19 2008/09/02 01:55:36 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -28,7 +28,7 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 #
 #CHROOTDIR=/junk/release
 # If this is a -stable snapshot, then set
-#RELEASETAG=RELENG_0_2
+#RELEASETAG=RELENG_0_3
 #
 # To test a release with a source tree containing patches and
 # other work. This tree will get copied instead of getting the
@@ -699,7 +699,6 @@ release.8:
 	  done )
 	cp ${RD}/trees/base/sbin/dhclient-script ${RD}/mfsfd/stand
 #	cp ${RD}/trees/base/usr/bin/tar ${RD}/mfsfd/stand
-	cp ${.CURDIR}/../etc/usbd.conf ${RD}/mfsfd/etc/usbd.conf
 	cp ${.CURDIR}/../etc/master.passwd ${RD}/mfsfd/etc/master.passwd
 	cp ${RD}/trees/base/etc/*pwd.db ${RD}/mfsfd/etc/
 	( for F in defaults/rc.conf netconfig protocols ; do \
