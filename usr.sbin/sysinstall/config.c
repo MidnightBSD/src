@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.11.2.1 2008/08/30 16:15:42 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/config.c,v 1.12 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/config.c,v 1.233.2.1 2005/07/28 01:18:19 grehan Exp $
  *
  * Copyright (c) 1995
@@ -240,7 +240,7 @@ configFstab(dialogMenuItem *self)
 		fstype(chunk_list[i]), fstype_short(chunk_list[i]), seq_num(chunk_list[i]), seq_num(chunk_list[i]));
 	} else {
 		/* swap */
-		fprintf(fstab, "/dev/%s.bde\t\t%s\t\t%s\t%s\t\t%d\t%d\n",
+		fprintf(fstab, "/dev/%s.eli\t\t%s\t\t%s\t%s\t\t%d\t%d\n",
 		   name_of(chunk_list[i]), mount_point(chunk_list[i]),
 		   fstype(chunk_list[i]), fstype_short(chunk_list[i]),
 		   seq_num(chunk_list[i]), seq_num(chunk_list[i]));
