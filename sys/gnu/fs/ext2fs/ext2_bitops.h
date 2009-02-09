@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/gnu/fs/ext2fs/ext2_bitops.h,v 1.2 2008/12/03 00:25:52 laffer1 Exp $ */
 /*-
  * Copyright (c) 2003 Marcel Moolenaar
  * All rights reserved.
@@ -85,7 +85,7 @@ find_next_zero_bit(void *data, size_t sz, size_t ofs)
 		mask = ~0U << (ofs & 31);
 		bit = *p | ~mask;
 		if (bit != ~0U)
-			return (ffs(~bit) + ofs - 1);
+			return (ffs(~bit) + (ofs & ~31U) - 1);
 		p++;
 		ofs = (ofs + 31U) & ~31U;
 	}
