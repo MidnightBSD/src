@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/compat/linux/linux_futex.c,v 1.2 2008/12/03 00:24:37 laffer1 Exp $ */
 /*	$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $ */
 
 /*-
@@ -328,7 +328,7 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 	default:
 		printf("linux_sys_futex: unknown op %d\n",
 		    args->op);
-		break;
+		return (ENOSYS);
 	}
 	return (0);
 }
