@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/compat/linux/linux_futex.c,v 1.2 2008/12/03 00:24:37 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/compat/linux/linux_futex.c,v 1.3 2009/03/01 19:19:22 laffer1 Exp $ */
 /*	$NetBSD: linux_futex.c,v 1.7 2006/07/24 19:01:49 manu Exp $ */
 
 /*-
@@ -118,6 +118,15 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 		printf(ARGS(futex, "%p, %i, %i, *, %p, %i"), args->uaddr, args->op,
 		    args->val, args->uaddr2, args->val3);
 #endif
+
+	/* 
+	 * Our implementation provides only privates futexes. Most of the apps
+	 * should use private futexes but don't claim so. Therefore we treat
+	 * all futexes as private by clearing the FUTEX_PRIVATE_FLAG. It works
+	 * in most cases (ie. when futexes are not shared on file descriptor
+	 * or between different processes.).
+	 */
+	args->op = (args->op & ~LINUX_FUTEX_PRIVATE_FLAG);
 
 	switch (args->op) {
 	case LINUX_FUTEX_WAIT:
@@ -265,10 +274,11 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 		break;
 
 	case LINUX_FUTEX_FD:
-		/* XXX: Linux plans to remove this operation */
+#ifdef DEBUG
 		printf("linux_sys_futex: unimplemented op %d\n",
 		    args->op);
-		break;
+#endif
+		return (ENOSYS);
 
 	case LINUX_FUTEX_WAKE_OP:
 		FUTEX_SYSTEM_LOCK;
@@ -324,6 +334,18 @@ linux_sys_futex(struct thread *td, struct linux_sys_futex_args *args)
 
 		FUTEX_SYSTEM_UNLOCK;
 		break;
+
+	case LINUX_FUTEX_LOCK_PI:
+		/* not yet implemented */
+		return (ENOSYS);
+
+	case LINUX_FUTEX_UNLOCK_PI:
+		/* not yet implemented */
+		return (ENOSYS);
+
+	case LINUX_FUTEX_TRYLOCK_PI:
+		/* not yet implemented */
+		return (ENOSYS);
 
 	default:
 		printf("linux_sys_futex: unknown op %d\n",
