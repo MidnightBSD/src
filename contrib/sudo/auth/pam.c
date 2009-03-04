@@ -52,6 +52,15 @@
 # include <security/pam_appl.h>
 #endif
 
+#ifdef HAVE_DGETTEXT
+# include <libintl.h>
+# if defined(__LINUX_PAM__)
+#  define PAM_TEXT_DOMAIN	"Linux-PAM"
+# elif defined(__sun__)
+#  define PAM_TEXT_DOMAIN	"SUNW_OST_SYSOSPAM"
+# endif
+#endif
+
 #include "sudo.h"
 #include "sudo_auth.h"
 
@@ -63,7 +72,7 @@
 #endif
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: pam.c,v 1.43.2.4 2007/07/22 12:14:53 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: pam.c,v 1.43.2.11 2008/11/22 18:19:22 millert Exp $";
 #endif /* lint */
 
 static int sudo_conv __P((int, PAM_CONST struct pam_message **,
@@ -99,10 +108,10 @@ pam_init(pw, promptp, auth)
      * will cause a crash if PAM_TTY is not set so if
      * there is no tty, set PAM_TTY to the empty string.
      */
-    if (strcmp(user_tty, "unknown") == 0)
+    if (user_ttypath == NULL)
 	(void) pam_set_item(pamh, PAM_TTY, "");
     else
-	(void) pam_set_item(pamh, PAM_TTY, user_tty);
+	(void) pam_set_item(pamh, PAM_TTY, user_ttypath);
 
     return(AUTH_SUCCESS);
 }
@@ -190,9 +199,11 @@ pam_prep_user(pw)
     /*
      * Set PAM_USER to the user we are changing *to* and
      * set PAM_RUSER to the user we are coming *from*.
+     * We set PAM_RHOST to avoid a bug in Solaris 7 and below.
      */
     (void) pam_set_item(pamh, PAM_USER, pw->pw_name);
     (void) pam_set_item(pamh, PAM_RUSER, user_name);
+    (void) pam_set_item(pamh, PAM_RHOST, user_host);
 
     /*
      * Set credentials (may include resource limits, device ownership, etc).
@@ -204,6 +215,7 @@ pam_prep_user(pw)
      */
     (void) pam_setcred(pamh, PAM_ESTABLISH_CRED);
 
+#ifndef NO_PAM_SESSION
     /*
      * To fully utilize PAM sessions we would need to keep a
      * sudo process around until the command exits.  However, we
@@ -215,6 +227,7 @@ pam_prep_user(pw)
 	return(AUTH_FAILURE);
     }
     (void) pam_close_session(pamh, 0);
+#endif
 
     if (pam_end(pamh, PAM_SUCCESS | PAM_DATA_SILENT) == PAM_SUCCESS)
 	return(AUTH_SUCCESS);
@@ -235,9 +248,9 @@ sudo_conv(num_msg, msg, response, appdata_ptr)
 {
     struct pam_response *pr;
     PAM_CONST struct pam_message *pm;
-    const char *p = def_prompt;
+    const char *prompt;
     char *pass;
-    int n, flags;
+    int n, flags, std_prompt;
     extern int nil_pw;
 
     if ((*response = malloc(num_msg * sizeof(struct pam_response))) == NULL)
@@ -250,16 +263,35 @@ sudo_conv(num_msg, msg, response, appdata_ptr)
 	    case PAM_PROMPT_ECHO_ON:
 		SET(flags, TGP_ECHO);
 	    case PAM_PROMPT_ECHO_OFF:
+		prompt = def_prompt;
+
+		/* Is the sudo prompt standard? (If so, we'l just use PAM's) */
+		std_prompt = strncmp(def_prompt, "Password:", 9) == 0 &&
+		    (def_prompt[9] == '\0' ||
+		    (def_prompt[9] == ' ' && def_prompt[10] == '\0'));
+
 		/* Only override PAM prompt if it matches /^Password: ?/ */
-		if (strncmp(pm->msg, "Password:", 9) || (pm->msg[9] != '\0'
-		    && (pm->msg[9] != ' ' || pm->msg[10] != '\0')))
-		    p = pm->msg;
+#if defined(PAM_TEXT_DOMAIN) && defined(HAVE_DGETTEXT)
+		if (!def_passprompt_override && (std_prompt ||
+		    (strcmp(pm->msg, dgettext(PAM_TEXT_DOMAIN, "Password: ")) &&
+		    strcmp(pm->msg, dgettext(PAM_TEXT_DOMAIN, "Password:")))))
+		    prompt = pm->msg;
+#else
+		if (!def_passprompt_override && (std_prompt ||
+		    strncmp(pm->msg, "Password:", 9) || (pm->msg[9] != '\0'
+		    && (pm->msg[9] != ' ' || pm->msg[10] != '\0'))))
+		    prompt = pm->msg;
+#endif
 		/* Read the password. */
-		pass = tgetpass(p, def_passwd_timeout * 60, flags);
+		pass = tgetpass(prompt, def_passwd_timeout * 60, flags);
 		if (pass == NULL) {
 		    /* We got ^C instead of a password; abort quickly. */
 		    nil_pw = 1;
+#if defined(__darwin__) || defined(__APPLE__)
+		    pass = "";
+#else
 		    goto err;
+#endif
 		}
 		pr->resp = estrdup(pass);
 		if (*pr->resp == '\0')

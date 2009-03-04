@@ -13,7 +13,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Sudo: sudo_auth.h,v 1.20.2.2 2007/06/12 01:28:42 millert Exp $
+ * $Sudo: sudo_auth.h,v 1.20.2.5 2008/12/02 17:31:16 millert Exp $
  */
 
 #ifndef SUDO_AUTH_H
@@ -57,6 +57,7 @@ int sia_setup __P((struct passwd *pw, char **prompt, sudo_auth *auth));
 int sia_verify __P((struct passwd *pw, char *prompt, sudo_auth *auth));
 int sia_cleanup __P((struct passwd *pw, sudo_auth *auth));
 int aixauth_verify __P((struct passwd *pw, char *pass, sudo_auth *auth));
+int aixauth_cleanup __P((struct passwd *pw, sudo_auth *auth));
 int bsdauth_init __P((struct passwd *pw, char **prompt, sudo_auth *auth));
 int bsdauth_verify __P((struct passwd *pw, char *prompt, sudo_auth *auth));
 int bsdauth_cleanup __P((struct passwd *pw, sudo_auth *auth));
@@ -92,14 +93,14 @@ int securid_verify __P((struct passwd *pw, char *pass, sudo_auth *auth));
 #  define AUTH_STANDALONE \
 	AUTH_ENTRY(0, "SecurId", \
 	    securid_init, securid_setup, securid_verify, NULL)
-#elif defined(HAVE_SIA)
+#elif defined(HAVE_SIA_SES_INIT)
 #  define AUTH_STANDALONE \
 	AUTH_ENTRY(0, "sia", \
 	    NULL, sia_setup, sia_verify, sia_cleanup)
 #elif defined(HAVE_AIXAUTH)
 #  define AUTH_STANDALONE \
 	AUTH_ENTRY(0, "aixauth", \
-	    NULL, NULL, aixauth_verify, NULL)
+	    NULL, NULL, aixauth_verify, aixauth_cleanup)
 #elif defined(HAVE_FWTK)
 #  define AUTH_STANDALONE \
 	AUTH_ENTRY(0, "fwtk", \

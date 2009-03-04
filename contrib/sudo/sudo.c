@@ -96,13 +96,16 @@
 # include <project.h>
 # include <sys/task.h>
 #endif
+#ifdef HAVE_SELINUX
+# include <selinux/selinux.h>
+#endif
 
 #include "sudo.h"
 #include "interfaces.h"
 #include "version.h"
 
 #ifndef lint
-__unused __unused static const char rcsid[] = "$Sudo: sudo.c,v 1.369.2.29 2007/08/15 13:48:56 millert Exp $";
+__unused __unused static const char rcsid[] = "$Sudo: sudo.c,v 1.369.2.50 2008/11/10 13:07:49 millert Exp $";
 #endif /* lint */
 
 /*
@@ -152,7 +155,7 @@ login_cap_t *lc;
 #ifdef HAVE_BSD_AUTH_H
 char *login_style;
 #endif /* HAVE_BSD_AUTH_H */
-sigaction_t saved_sa_int, saved_sa_quit, saved_sa_tstp, saved_sa_chld;
+sigaction_t saved_sa_int, saved_sa_quit, saved_sa_tstp;
 
 
 int
@@ -195,14 +198,13 @@ main(argc, argv, envp)
      *  us at some point and avoid the logging.
      *  Install handler to wait for children when they exit.
      */
+    zero_bytes(&sa, sizeof(sa));
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     sa.sa_handler = SIG_IGN;
     (void) sigaction(SIGINT, &sa, &saved_sa_int);
     (void) sigaction(SIGQUIT, &sa, &saved_sa_quit);
     (void) sigaction(SIGTSTP, &sa, &saved_sa_tstp);
-    sa.sa_handler = reapchild;
-    (void) sigaction(SIGCHLD, &sa, &saved_sa_chld);
 
     /*
      * Turn off core dumps and close open files.
@@ -266,31 +268,34 @@ main(argc, argv, envp)
 
     cmnd_status = init_vars(sudo_mode, environ);
 
+#ifdef HAVE_SETLOCALE
+    setlocale(LC_ALL, "C");
+#endif
 #ifdef HAVE_LDAP
     validated = sudo_ldap_check(pwflag);
 
     /* Skip reading /etc/sudoers if LDAP told us to */
-    if (def_ignore_local_sudoers); /* skips */
-    else if (ISSET(validated, VALIDATE_OK) && !printmatches); /* skips */
-    else if (ISSET(validated, VALIDATE_OK) && printmatches)
-    {
+    if (!def_ignore_local_sudoers) {
+	int v;
+
 	check_sudoers();	/* check mode/owner on _PATH_SUDOERS */
 
-	/* User is found in LDAP and we want a list of all sudo commands the
-	 * user can do, so consult sudoers but throw away result.
-	 */
-	sudoers_lookup(pwflag);
+	/* Local sudoers file overrides LDAP if we have a match. */
+	v = sudoers_lookup(pwflag);
+	if (validated == VALIDATE_ERROR || ISSET(v, VALIDATE_OK))
+	    validated = v;
     }
-    else
+#else
+    check_sudoers();	/* check mode/owner on _PATH_SUDOERS */
+
+    /* Validate the user but don't search for pseudo-commands. */
+    validated = sudoers_lookup(pwflag);
 #endif
-    {
-	check_sudoers();	/* check mode/owner on _PATH_SUDOERS */
-
-	/* Validate the user but don't search for pseudo-commands. */
-	validated = sudoers_lookup(pwflag);
-    }
     if (safe_cmnd == NULL)
 	safe_cmnd = estrdup(user_cmnd);
+#ifdef HAVE_SETLOCALE
+    setlocale(LC_ALL, "");
+#endif
 
     /*
      * Look up the timestamp dir owner if one is specified.
@@ -342,7 +347,7 @@ main(argc, argv, envp)
 	    (void) close(fd);
     }
 
-    /* User may have overriden environment resetting via the -E flag. */
+    /* User may have overridden environment resetting via the -E flag. */
     if (ISSET(sudo_mode, MODE_PRESERVE_ENV) && ISSET(validated, FLAG_SETENV))
 	def_env_reset = FALSE;
 
@@ -397,8 +402,12 @@ main(argc, argv, envp)
 	}
 
 	/* Override user's umask if configured to do so. */
-	if (def_umask != 0777)
-	    (void) umask(def_umask);
+	if (def_umask != 0777) {
+	    mode_t mask = umask(def_umask);
+	    mask |= def_umask;
+	    if (mask != def_umask)  
+		umask(mask);
+	}
 
 	/* Restore coredumpsize resource limit. */
 #if defined(RLIMIT_CORE) && !defined(SUDO_DEVEL)
@@ -437,13 +446,18 @@ main(argc, argv, envp)
 	(void) sigaction(SIGINT, &saved_sa_int, NULL);
 	(void) sigaction(SIGQUIT, &saved_sa_quit, NULL);
 	(void) sigaction(SIGTSTP, &saved_sa_tstp, NULL);
-	(void) sigaction(SIGCHLD, &saved_sa_chld, NULL);
 
 #ifndef PROFILING
 	if (ISSET(sudo_mode, MODE_BACKGROUND) && fork() > 0)
 	    exit(0);
-	else
+	else {
+#ifdef HAVE_SELINUX
+	    if (is_selinux_enabled() > 0 && user_role != NULL)
+		selinux_exec(user_role, user_type, NewArgv, environ,
+		    ISSET(sudo_mode, MODE_LOGIN_SHELL));
+#endif
 	    execve(safe_cmnd, NewArgv, environ);
+	}
 #else
 	exit(0);
 #endif /* PROFILING */
@@ -498,7 +512,7 @@ init_vars(sudo_mode, envp)
     int sudo_mode;
     char **envp;
 {
-    char *p, **ep, thost[MAXHOSTNAMELEN];
+    char *p, **ep, thost[MAXHOSTNAMELEN + 1];
     int nohostname, rval;
 
     /* Sanity check command from user. */
@@ -524,6 +538,7 @@ init_vars(sudo_mode, envp)
     if (nohostname)
 	user_host = user_shost = "localhost";
     else {
+	thost[sizeof(thost) - 1] = '\0';
 	user_host = estrdup(thost);
 	if (def_fqdn) {
 	    /* Defer call to set_fqdn() until log_error() is safe. */
@@ -540,9 +555,9 @@ init_vars(sudo_mode, envp)
     }
 
     if ((p = ttyname(STDIN_FILENO)) || (p = ttyname(STDOUT_FILENO))) {
-	if (strncmp(p, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
-	    p += sizeof(_PATH_DEV) - 1;
-	user_tty = estrdup(p);
+	user_tty = user_ttypath = estrdup(p);
+	if (strncmp(user_tty, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
+	    user_tty += sizeof(_PATH_DEV) - 1;
     } else
 	user_tty = "unknown";
 
@@ -596,7 +611,7 @@ init_vars(sudo_mode, envp)
 
 #ifdef HAVE_GETGROUPS
     if ((user_ngroups = getgroups(0, NULL)) > 0) {
-	user_groups = emalloc2(user_ngroups, MAX(sizeof(gid_t), sizeof(int)));
+	user_groups = emalloc2(user_ngroups, sizeof(GETGROUPS_T));
 	if (getgroups(user_ngroups, user_groups) < 0)
 	    log_error(USE_ERRNO|MSG_ONLY, "can't get group vector");
     } else
@@ -610,8 +625,10 @@ init_vars(sudo_mode, envp)
 	log_error(USE_ERRNO|MSG_ONLY, "can't get hostname");
 
     set_runaspw(*user_runas);		/* may call log_error() */
-    if (*user_runas[0] == '#' && runas_pw->pw_name && runas_pw->pw_name[0])
-	*user_runas = estrdup(runas_pw->pw_name);
+    if (*user_runas[0] == '#') {
+	if (runas_pw->pw_name != *user_runas && runas_pw->pw_name[0])
+	    *user_runas = estrdup(runas_pw->pw_name);
+    }
 
     /*
      * Get current working directory.  Try as user, fall back to root.
@@ -730,8 +747,10 @@ parse_args(argc, argv)
 
     while (NewArgc > 0) {
 	if (NewArgv[0][0] == '-') {
-	    if (NewArgv[0][1] != '\0' && NewArgv[0][2] != '\0')
+	    if (NewArgv[0][1] != '\0' && NewArgv[0][2] != '\0') {
 		warnx("please use single character options");
+		usage(1);
+	    }
 
 	    switch (NewArgv[0][1]) {
 		case 'p':
@@ -740,6 +759,7 @@ parse_args(argc, argv)
 			usage(1);
 
 		    user_prompt = NewArgv[1];
+		    def_passprompt_override = TRUE;
 
 		    NewArgc--;
 		    NewArgv++;
@@ -855,6 +875,28 @@ parse_args(argc, argv)
 		case 'E':
 		    SET(rval, MODE_PRESERVE_ENV);
 		    break;
+#ifdef HAVE_SELINUX
+		case 'r':
+		    /* Must have an associated SELinux role. */
+		    if (NewArgv[1] == NULL)
+			usage(1);
+
+		    user_role = NewArgv[1];
+
+		    NewArgc--;
+		    NewArgv++;
+		    break;
+		case 't':
+		    /* Must have an associated SELinux type. */
+		    if (NewArgv[1] == NULL)
+			usage(1);
+
+		    user_type = NewArgv[1];
+
+		    NewArgc--;
+		    NewArgv++;
+		    break;
+#endif
 		case '-':
 		    NewArgc--;
 		    NewArgv++;
@@ -890,7 +932,10 @@ args_done:
 	    warnx("you may not specify environment variables in edit mode");
 	usage(1);
     }
-
+    if (ISSET(rval, MODE_PRESERVE_ENV) && ISSET(rval, MODE_LOGIN_SHELL)) {
+	warnx("you may not specify both the `-i' and `-E' options");
+	usage(1);
+    }
     if (user_runas != NULL && !ISSET(rval, (MODE_EDIT|MODE_RUN))) {
 	if (excl != '\0')
 	    warnx("the `-u' and '-%c' options may not be used together", excl);
@@ -989,9 +1034,25 @@ static void
 initial_setup()
 {
     int miss[3], devnull = -1;
-#if defined(RLIMIT_CORE) && !defined(SUDO_DEVEL)
+#if defined(__linux__) || (defined(RLIMIT_CORE) && !defined(SUDO_DEVEL))
     struct rlimit rl;
+#endif
 
+#if defined(__linux__)
+    /*
+     * Unlimit the number of processes since Linux's setuid() will
+     * apply resource limits when changing uid and return EAGAIN if
+     * nproc would be violated by the uid switch.
+     */
+    rl.rlim_cur = rl.rlim_max = RLIM_INFINITY;
+    if (setrlimit(RLIMIT_NPROC, &rl)) {
+	if (getrlimit(RLIMIT_NPROC, &rl) == 0) {
+	    rl.rlim_cur = rl.rlim_max;
+	    (void)setrlimit(RLIMIT_NPROC, &rl);
+	}
+    }
+#endif /* __linux__ */
+#if defined(RLIMIT_CORE) && !defined(SUDO_DEVEL)
     /*
      * Turn off core dumps.
      */
@@ -1143,7 +1204,7 @@ set_fqdn()
     char *p;
 
 #ifdef HAVE_GETADDRINFO
-    memset(&hint, 0, sizeof(hint));
+    zero_bytes(&hint, sizeof(hint));
     hint.ai_family = PF_UNSPEC;
     hint.ai_flags = AI_CANONNAME;
     if (getaddrinfo(user_host, NULL, &hint, &res0) != 0) {
@@ -1189,8 +1250,13 @@ set_runaspw(user)
 	runas_pw = sudo_getpwuid(atoi(user + 1));
 	if (runas_pw == NULL) {
 	    runas_pw = emalloc(sizeof(struct passwd));
-	    (void) memset((VOID *)runas_pw, 0, sizeof(struct passwd));
+	    zero_bytes(runas_pw, sizeof(struct passwd));
 	    runas_pw->pw_uid = atoi(user + 1);
+	    runas_pw->pw_name = user;
+	    runas_pw->pw_passwd = "*";
+	    runas_pw->pw_gecos = user;
+	    runas_pw->pw_dir = "/";
+	    runas_pw->pw_shell = estrdup(_PATH_BSHELL);
 	}
     } else {
 	runas_pw = sudo_getpwnam(user);
@@ -1251,9 +1317,15 @@ usage(exit_val)
     int exit_val;
 {
     char **p, **uvec[4];
-    int i, linelen, linemax, ulen;
+    int i, linelen, linemax, ulen, plen;
     static char *uvec1[] = {
-	" -h | -K | -k | -L | -l | -V | -v",
+	" -h |",
+	" -K |",
+	" -k |",
+	" -L |",
+	" -l |",
+	" -V |",
+	" -v",
 	NULL
     };
     static char *uvec2[] = {
@@ -1264,7 +1336,13 @@ usage(exit_val)
 #ifdef HAVE_LOGIN_CAP_H
 	" [-c class|-]",
 #endif
+#ifdef HAVE_SELINUX
+	" [-r role]",
+#endif
 	" [-p prompt]",
+#ifdef HAVE_SELINUX
+	" [-t type]",
+#endif
 	" [-u username|#uid]",
 	" [VAR=value]",
 	" {-i | -s | <command>}",
@@ -1305,14 +1383,16 @@ usage(exit_val)
     ulen = (int)strlen(getprogname()) + 7;
     linemax = 80;
     for (i = 0; uvec[i] != NULL; i++) {
-	linelen = linemax - ulen;
 	printf("usage: %s", getprogname());
+	linelen = linemax - ulen;
 	for (p = uvec[i]; *p != NULL; p++) {
-	    if (linelen == linemax || (linelen -= strlen(*p)) >= 0) {
+	    plen = (int)strlen(*p);
+	    if (linelen >= plen || linelen == linemax - ulen) {
 		fputs(*p, stdout);
+		linelen -= plen;
 	    } else {
 		p--;
-		linelen = linemax;
+		linelen = linemax - ulen;
 		printf("\n%*s", ulen, "");
 	    }
 	}

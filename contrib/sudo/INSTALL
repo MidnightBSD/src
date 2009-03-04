@@ -252,6 +252,13 @@ Special features/options:
 	is to compile noexec support if libtool supports building
 	shared objects on your OS.
 
+  --disable-pam-session
+        Disable sudo's PAM session support.  This may be needed on
+        older PAM implementations or on operating systems where
+        opening a PAM session changes the utmp or wtmp files.  If
+        PAM session support is disabled, resource limits may not
+        be updatedin for command being run.
+
   --disable-root-mailer
 	By default sudo will run the mailer as root when tattling
 	on a user so as to prevent that user from killing the mailer.
@@ -312,6 +319,10 @@ Special features/options:
 	Properly handle GNU stow packaging.  The sudoers file will
 	physically live in ${prefix}/etc and /etc/sudoers will be
 	a symbolic link.
+
+  --with-selinux 
+	Enable support for role based access control (RBAC) on
+	systems that support SELinux.
 
 The following options are also configurable at runtime:
 
@@ -386,8 +397,8 @@ The following options are also configurable at runtime:
   --with-passprompt="PASSWORD PROMPT"
 	Default prompt to use when asking for a password; can be overridden
 	via the -p option and the SUDO_PROMPT environment variable. Supports
-	two escapes: "%u" expands to the user's login name and "%h" expands
-	to the local hostname.  Default is "Password:".
+	the "%H", "%h", "%U" and "%u" escapes as documented in the sudo
+	manual page.  The default value is "Password:".
 
   --with-badpass-message="BAD PASSWORD MESSAGE"
 	Message that is displayed if a user enters an incorrect password.
@@ -690,6 +701,11 @@ HP-UX:
     functionality.  You must use either the HP ANSI C compiler or gcc for
     noexec to work.  Binary packages of gcc are available from
     http://hpux.connect.org.uk/ and http://hpux.cs.utah.edu/.
+
+    To prevent PAM from overriding the value of umask on HP-UX 11,
+    you will need to add a line like the following to /etc/pam.conf:
+
+    sudo	session	required	libpam_hpsec.so.1 bypass_umask
 
 SunOS 4.x:
     The /bin/sh shipped with SunOS blows up while running configure.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 2004-2005 Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "config.h"
+#include <config.h>
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -28,6 +28,7 @@
 #  include <stdlib.h>
 # endif
 #endif /* STDC_HEADERS */
+#include <fcntl.h>
 #ifdef HAVE_DIRENT_H
 # include <dirent.h>
 # define NAMLEN(dirent) strlen((dirent)->d_name)
@@ -48,26 +49,67 @@
 #include "sudo.h"
 
 #ifndef lint
-static const char rcsid[] = "$Sudo: closefrom.c,v 1.6 2004/06/01 20:51:56 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: closefrom.c,v 1.6.2.3 2007/06/20 11:06:50 millert Exp $";
 #endif /* lint */
+
+#ifndef HAVE_FCNTL_CLOSEM
+# ifndef HAVE_DIRFD
+#   define closefrom_fallback	closefrom
+# endif
+#endif
 
 /*
  * Close all file descriptors greater than or equal to lowfd.
+ * This is the expensive (ballback) method.
  */
+void
+closefrom_fallback(lowfd)
+    int lowfd;
+{
+    long fd, maxfd;
+
+    /*
+     * Fall back on sysconf() or getdtablesize().  We avoid checking
+     * resource limits since it is possible to open a file descriptor
+     * and then drop the rlimit such that it is below the open fd.
+     */
+#ifdef HAVE_SYSCONF
+    maxfd = sysconf(_SC_OPEN_MAX);
+#else
+    maxfd = getdtablesize();
+#endif /* HAVE_SYSCONF */
+    if (maxfd < 0)
+	maxfd = OPEN_MAX;
+
+    for (fd = lowfd; fd < maxfd; fd++)
+	(void) close((int) fd);
+}
+
+/*
+ * Close all file descriptors greater than or equal to lowfd.
+ * We try the fast way first, falling back on the slow method.
+ */
+#ifdef HAVE_FCNTL_CLOSEM
 void
 closefrom(lowfd)
     int lowfd;
 {
-    long fd, maxfd;
-#ifdef HAVE_DIRFD
-    char fdpath[PATH_MAX], *endp;
+    if (fcntl(lowfd, F_CLOSEM, 0) == -1)
+	closefrom_fallback(lowfd);
+}
+#else
+# ifdef HAVE_DIRFD
+void
+closefrom(lowfd)
+    int lowfd;
+{
     struct dirent *dent;
     DIR *dirp;
-    int len;
+    char *endp;
+    long fd;
 
-    /* Check for a /proc/$$/fd directory. */
-    len = snprintf(fdpath, sizeof(fdpath), "/proc/%ld/fd", (long)getpid());
-    if (len != -1 && len <= sizeof(fdpath) && (dirp = opendir(fdpath))) {
+    /* Use /proc/self/fd directory if it exists. */
+    if ((dirp = opendir("/proc/self/fd")) != NULL) {
 	while ((dent = readdir(dirp)) != NULL) {
 	    fd = strtol(dent->d_name, &endp, 10);
 	    if (dent->d_name != endp && *endp == '\0' &&
@@ -76,22 +118,7 @@ closefrom(lowfd)
 	}
 	(void) closedir(dirp);
     } else
-#endif
-    {
-	/*
-	 * Fall back on sysconf() or getdtablesize().  We avoid checking
-	 * resource limits since it is possible to open a file descriptor
-	 * and then drop the rlimit such that it is below the open fd.
-	 */
-#ifdef HAVE_SYSCONF
-	maxfd = sysconf(_SC_OPEN_MAX);
-#else
-	maxfd = getdtablesize();
-#endif /* HAVE_SYSCONF */
-	if (maxfd < 0)
-	    maxfd = OPEN_MAX;
-
-	for (fd = lowfd; fd < maxfd; fd++)
-	    (void) close((int) fd);
-    }
+	closefrom_fallback(lowfd);
 }
+#endif /* HAVE_DIRFD */
+#endif /* HAVE_FCNTL_CLOSEM */

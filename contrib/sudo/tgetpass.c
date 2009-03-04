@@ -70,7 +70,7 @@
 #include "sudo.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: tgetpass.c,v 1.111.2.2 2007/06/12 01:26:35 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: tgetpass.c,v 1.111.2.9 2008/11/02 14:53:47 millert Exp $";
 #endif /* lint */
 
 #ifndef TCSASOFT
@@ -89,26 +89,24 @@ __unused static const char rcsid[] = "$Sudo: tgetpass.c,v 1.111.2.2 2007/06/12 0
 #endif
 
 /*
- * Abstract method of getting at the term flags.
+ * Compat macros for non-termios systems.
  */
-#undef TERM
-#undef tflags
-#ifdef HAVE_TERMIOS_H
-# define TERM			termios
-# define tflags			c_lflag
-# define term_getattr(f, t)	tcgetattr(f, t)
-# define term_setattr(f, t)	tcsetattr(f, TCSADRAIN|TCSASOFT, t)
-#else
+#ifndef HAVE_TERMIOS_H
 # ifdef HAVE_TERMIO_H
-# define TERM			termio
-# define tflags			c_lflag
-# define term_getattr(f, t)	ioctl(f, TCGETA, t)
-# define term_setattr(f, t)	ioctl(f, TCSETAF, t)
+#  undef termios
+#  define termios		termio
+#  define tcgetattr(f, t)	ioctl(f, TCGETA, t)
+#  define tcsetattr(f, a, t)	ioctl(f, a, t)
+#  undef TCSAFLUSH
+#  define TCSAFLUSH		TCSETAF
 # else
-#  define TERM			sgttyb
-#  define tflags		sg_flags
-#  define term_getattr(f, t)	ioctl(f, TIOCGETP, t)
-#  define term_setattr(f, t)	ioctl(f, TIOCSETP, t)
+#  undef termios
+#  define termios		sgttyb
+#  define c_lflag		sg_flags
+#  define tcgetattr(f, t)	ioctl(f, TIOCGETP, t)
+#  define tcsetattr(f, a, t)	ioctl(f, a, t)
+#  undef TCSAFLUSH
+#  define TCSAFLUSH		TIOCSETP
 # endif /* HAVE_TERMIO_H */
 #endif /* HAVE_TERMIOS_H */
 
@@ -128,13 +126,16 @@ tgetpass(prompt, timeout, flags)
 {
     sigaction_t sa, savealrm, saveint, savehup, savequit, saveterm;
     sigaction_t savetstp, savettin, savettou;
-    struct TERM term, oterm;
+    struct termios term, oterm;
     char *pass;
     static char buf[SUDO_PASS_MAX + 1];
     int input, output, save_errno;
 
     (void) fflush(stdout);
 restart:
+    signo = 0;
+    pass = NULL;
+    save_errno = 0;
     /* Open /dev/tty for reading/writing if possible else use stdin/stderr. */
     if (ISSET(flags, TGP_STDIN) ||
 	(input = output = open(_PATH_TTY, O_RDWR|O_NOCTTY)) == -1) {
@@ -146,6 +147,7 @@ restart:
      * Catch signals that would otherwise cause the user to end
      * up with echo turned off in the shell.
      */
+    zero_bytes(&sa, sizeof(sa));
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_INTERRUPT;	/* don't restart system calls */
     sa.sa_handler = handler;
@@ -159,34 +161,40 @@ restart:
     (void) sigaction(SIGTTOU, &sa, &savettou);
 
     /* Turn echo off/on as specified by flags.  */
-    if (term_getattr(input, &oterm) == 0) {
+    if (tcgetattr(input, &oterm) == 0) {
 	(void) memcpy(&term, &oterm, sizeof(term));
 	if (!ISSET(flags, TGP_ECHO))
-	    CLR(term.tflags, (ECHO | ECHONL));
+	    CLR(term.c_lflag, ECHO|ECHONL);
 #ifdef VSTATUS
 	term.c_cc[VSTATUS] = _POSIX_VDISABLE;
 #endif
-	(void) term_setattr(input, &term);
+	(void) tcsetattr(input, TCSAFLUSH|TCSASOFT, &term);
     } else {
-	memset(&term, 0, sizeof(term));
-	memset(&oterm, 0, sizeof(oterm));
+	zero_bytes(&term, sizeof(term));
+	zero_bytes(&oterm, sizeof(oterm));
     }
 
-    if (prompt)
-	(void) write(output, prompt, strlen(prompt));
+    /* No output if we are already backgrounded. */
+    if (signo != SIGTTOU && signo != SIGTTIN) {
+	if (prompt)
+	    (void) write(output, prompt, strlen(prompt));
 
-    if (timeout > 0)
-	alarm(timeout);
-    pass = getln(input, buf, sizeof(buf));
-    alarm(0);
-    save_errno = errno;
+	if (timeout > 0)
+	    alarm(timeout);
+	pass = getln(input, buf, sizeof(buf));
+	alarm(0);
+	save_errno = errno;
 
-    if (!ISSET(term.tflags, ECHO))
-	(void) write(output, "\n", 1);
+	if (!ISSET(term.c_lflag, ECHO))
+	    (void) write(output, "\n", 1);
+    }
 
     /* Restore old tty settings and signals. */
-    if (memcmp(&term, &oterm, sizeof(term)) != 0)
-	(void) term_setattr(input, &oterm);
+    if (memcmp(&term, &oterm, sizeof(term)) != 0) {
+	while (tcsetattr(input, TCSAFLUSH|TCSASOFT, &oterm) == -1 &&
+	    errno == EINTR)
+	    continue;
+    }
     (void) sigaction(SIGALRM, &savealrm, NULL);
     (void) sigaction(SIGINT, &saveint, NULL);
     (void) sigaction(SIGHUP, &savehup, NULL);
@@ -208,12 +216,12 @@ restart:
 	    case SIGTSTP:
 	    case SIGTTIN:
 	    case SIGTTOU:
-		signo = 0;
 		goto restart;
 	}
     }
 
-    errno = save_errno;
+    if (save_errno)
+	errno = save_errno;
     return(pass);
 }
 

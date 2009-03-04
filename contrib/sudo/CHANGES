@@ -1951,3 +1951,208 @@ Sudo 1.6.9p3 released.
 616) Fixed a K&R compilation error.
 
 Sudo 1.6.9p4 released.
+
+617) Fixed a bug in the IP address matching introduced by the IPV6 merge.
+
+618) For "visudo -f file" we now use the permissions of the original file
+     and not the hard-coded sudoers owner/group/mode.  This makes
+     it possible to use visudo with a revision control system.
+
+619) Fixed sudoedit when used on a non-existent file.
+
+620) Regenerated configure using autoconf 2.6.1 and libtool 1.5.24.
+
+621) Groups and netgroups are now valid in an LDAP sudoRunas statement.
+
+Sudo 1.6.9p5 released.
+
+622) Worked around bugs in the session support of some PAM implementations.
+     The full tty path is now passed to PAM as well.
+
+623) Sudo now only prints the password prompt if the process is in the
+     foreground.
+
+624) inttypes.h is now included when appropriate if it is present.
+
+625) Simplified alias allocation in the parser.
+
+Sudo 1.6.9p6 released.
+
+626) Go back to using TCSAFLUSH instead of TCSADRAIN when turning
+     off echo in tgetpass().
+
+627) Fixed addition of -lutil for logincap on FreeBSD and NetBSD.
+
+628) Add configure check for struct in6_addr since some systems define
+     AF_INET6 but have no real IPv6 support.
+
+Sudo 1.6.9p7 released.
+
+629) Fixed a bug where a sudoers entry with no runas user specified
+     was treated differently from a line with the default runas
+     user specified.
+
+Sudo 1.6.9p8 released.
+
+630) The ALL command in sudoers now implies SETENV permissions.
+
+631) The command search is now performed using the target user's
+     auxiliary group vector too.
+
+632) When determining if the PAM prompt is the default "Password: ",
+     compare the localized version if possible.
+
+633) Added passprompt_override flag to sudoers to cause sudo's prompt
+     to be used in all cases.  Also set when the -p flag is used.
+
+Sudo 1.6.9p9 released.
+
+634) Moved LDAP options into a table for simplified parsing/setting.
+
+635) Fixed a problem with how some LDAP options were being applied.
+
+636) Added support for connecting directly to LDAP servers via SSL
+     in addition to the existing start_tls support.
+
+Sudo 1.6.9p10 released.
+
+637) Fixed a compilation problem on SCO related to how they
+     store the high resolution timestamps in struct stat.
+
+638) Avoid checking the passwd file group multiple times
+     in the LDAP query when the user's passwd group is also
+     listed in the supplemental group vector.
+
+639) The URI specifier can now be used in ldap.conf even when
+     the LDAP SDK doesn't support ldap_initialize().
+
+640) New %p prompt escape that expands to the user whose password
+     is being prompted, as specified by the rootpw, targetpw and
+     runaspw sudoers flags.  Based on a diff from Patrick Schoenfeld.
+
+Sudo 1.6.9p11 released.
+
+641) Added a configure check for the ber_set_option() function.
+
+642) Fixed a compilation problem with the HP-UX K&R C compiler.
+
+643) Revamped the Kerberos 5 ticket verification code.
+
+644) Added support for the checkpeer ldap.conf variable for
+     netscape-based LDAP SDKs.
+
+645) Fixed a problem where an incomplete password could be echoed
+     to the screen if there was a read timeout.
+
+Sudo 1.6.9p12 released.
+
+646) Sudo will now set the nproc resource limit to unlimited on Linux
+     systems to work around Linux's setuid() resource limit semantics.
+     On PAM systems the resource limits will be reset by pam_limits.so
+     before the command is executed.
+
+647) SELinux support that can be used to implement role based access
+     control (RBAC).  A role and (optional) type may be specified
+     in sudoers or on the command line.  These are then used in the
+     security context that the command is run as.
+
+648) Fixed a Kerberos 5 compilation problem with MIT Kerberos.
+
+Sudo 1.6.9p13 released.
+
+649) Fixed an invalid assumption in the PAM conversation function
+     introduced in version 1.6.9p9.  The conversation function may
+     be called for non-password reading purposes as well.
+
+650) Fixed freeing an uninitialized pointer in -l mode, introduced in
+     version 1.6.9p13.
+
+651) Check /etc/sudoers after LDAP even if the user was found in LDAP.
+     This allows Defaults options in /etc/sudoers to take effect.
+
+652) Add missing checks for enforcing mode in SELinux RBAC mode.
+
+Sudo 1.6.9p14 released.
+
+653) Fixed installation of sudo_noexec.so on AIX.
+
+654) Updated libtool to version 1.5.26.
+
+655) Fixed printing of default SELinux role and type in -V mode.
+
+656) The HOME environment variable is once again preserved by default,
+     as per the documentation.
+
+Sudo 1.6.9p15 released.
+
+657) There was a missing space before the ldap libraries in the Makefile
+     for some configurations.
+
+658) LDAPS_PORT may not be defined on older Solaris LDAP SDKs.
+
+659) If the LDAP server could not be contacted and the user was not present
+     in sudoers, a syntax error in sudoers was incorrectly reported.
+
+Sudo 1.6.9p16 released.
+
+660) The -i flag should imply resetting the environment, as it did in
+     sudo version prior to 1.6.9.  Also, the -i and -E flags are
+     mutually exclusive.
+
+661) Fixed the configure test for dirfd() under Linux.
+
+662) Fixed test for whether -lintl is required to link.
+
+663) Changed how sudo handles the child process when sending mail.
+     This fixes a problem on Linux with the mail_always option.
+
+664) Fixed a problem with line continuation characters inside of
+     quoted strings.
+
+Sudo 1.6.9p17 released.
+
+665) Fixed a crash when the -i flag was used with a uid not in the password
+     database.
+
+666) Regenerated parser to pull in a yacc skeleton fix.
+
+667) Sudo now operates in the C locale again when doing a match against
+     sudoers.
+
+668) Fixed a potential crash when a glob matches a large number of files.
+
+669) Fixed compilation problem with certain versions of Heimdal krb5 related
+     to krb5_get_init_creds_opt_free().
+
+670) When setting the umask, use the union of the user's umask and the
+     default value set in sudoers so that we never lower the user's
+     umask when running a command.
+
+671) Sudo now supports 64-character host names.
+
+672) Fixed a problem with the SELinux support for "sudo -l".
+
+673) When doing a wildcard match against a filename, sudo will now only
+     check the filesystem if the basename of the path matches, or if
+     the basename itself contains wildcards.
+
+674) Sudo will now unset the AUTHSTATE environment variable on AIX after
+     authenticating.
+
+Sudo 1.6.9p18 released.
+
+675) Fixed configuration of SIA authentication on Digital UNIX.
+
+676) Standardize on "option" instead of "flag" when referring to command
+     line options in the documentation.
+
+677) Fixed behavior when ^C it entered at the password prompt on MacOS.
+
+Sudo 1.6.9p19 released.
+
+678) Only use the cached supplementory group vector when matching groups
+     for the invoking user.
+
+679) Fixed a compilation problem on AIX.
+
+Sudo 1.6.9p20 released.

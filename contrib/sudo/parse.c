@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 1998-2005, 2007
+ * Copyright (c) 1996, 1998-2005, 2007-2008
  *	Todd C. Miller <Todd.Miller@courtesan.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -90,8 +90,10 @@
 #endif /* HAVE_EXTENDED_GLOB */
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: parse.c,v 1.160.2.12 2007/08/13 16:30:02 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: parse.c,v 1.160.2.22 2009/01/28 00:50:01 millert Exp $";
 #endif /* lint */
+
+static int command_matches_dir __P((char *, size_t));
 
 /*
  * Globals
@@ -198,11 +200,26 @@ sudoers_lookup(pwflag)
 		    /*
 		     * User was granted access to cmnd on host as user.
 		     */
+#ifdef HAVE_SELINUX
+		    /* Set role and type if not specified on command line. */
+		    if (user_role == NULL) {
+			if (match[top-1].role != NULL)
+			    user_role = match[top-1].role;
+			else
+			    user_role = def_role;
+		    }
+		    if (user_type == NULL) {
+			if (match[top-1].type != NULL)
+			    user_type = match[top-1].type;
+			else
+			    user_type = def_type;
+		    }
+#endif
 		    set_perms(PERM_ROOT);
 		    return(VALIDATE_OK |
 			(no_passwd == TRUE ? FLAG_NOPASS : 0) |
 			(no_execve == TRUE ? FLAG_NOEXEC : 0) |
-			(setenv_ok == TRUE ? FLAG_SETENV : 0));
+			(setenv_ok >= TRUE ? FLAG_SETENV : 0));
 		} else if ((runas_matches == TRUE && cmnd_matches == FALSE) ||
 		    (runas_matches == FALSE && cmnd_matches == TRUE)) {
 		    /*
@@ -212,7 +229,7 @@ sudoers_lookup(pwflag)
 		    return(VALIDATE_NOT_OK |
 			(no_passwd == TRUE ? FLAG_NOPASS : 0) |
 			(no_execve == TRUE ? FLAG_NOEXEC : 0) |
-			(setenv_ok == TRUE ? FLAG_SETENV : 0));
+			(setenv_ok >= TRUE ? FLAG_SETENV : 0));
 		}
 	    }
 	    top--;
@@ -238,10 +255,9 @@ command_matches(sudoers_cmnd, sudoers_args)
     char *sudoers_args;
 {
     struct stat sudoers_stat;
-    struct dirent *dent;
-    char **ap, *base, buf[PATH_MAX];
+    char **ap, *base, *cp;
     glob_t gl;
-    DIR *dirp;
+    size_t dlen;
 
     /* Check for pseudo-commands */
     if (strchr(user_cmnd, '/') == NULL) {
@@ -264,20 +280,31 @@ command_matches(sudoers_cmnd, sudoers_args)
 	} else
 	    return(FALSE);
     }
+    dlen = strlen(sudoers_cmnd);
 
     /*
-     * If sudoers_cmnd has meta characters in it, use fnmatch(3)
-     * to do the matching.
+     * If sudoers_cmnd has meta characters in it, we may need to
+     * use glob(3) and fnmatch(3) to do the matching.
      */
     if (has_meta(sudoers_cmnd)) {
+	/*
+	 * First check to see if we can avoid the call to glob(3).
+	 * Short circuit if there are no meta chars in the command itself
+	 * and user_base and basename(sudoers_cmnd) don't match.
+	 */
+	if (sudoers_cmnd[dlen - 1] != '/') {
+	    if ((base = strrchr(sudoers_cmnd, '/')) != NULL) {
+		base++;
+		if (!has_meta(base) && strcmp(user_base, base) != 0)
+		    return(FALSE);
+	    }
+	}
 	/*
 	 * Return true if we find a match in the glob(3) results AND
 	 *  a) there are no args in sudoers OR
 	 *  b) there are no args on command line and none required by sudoers OR
 	 *  c) there are args in sudoers and on command line and they match
 	 * else return false.
-	 *
-	 * Could optimize patterns ending in "/*" to "/user_base"
 	 */
 #define GLOB_FLAGS	(GLOB_NOSORT | GLOB_MARK | GLOB_BRACE | GLOB_TILDE)
 	if (glob(sudoers_cmnd, GLOB_FLAGS, NULL, &gl) != 0) {
@@ -285,24 +312,32 @@ command_matches(sudoers_cmnd, sudoers_args)
 	    return(FALSE);
 	}
 	/* For each glob match, compare basename, st_dev and st_ino. */
-	for (ap = gl.gl_pathv; *ap != NULL; ap++) {
-	    /* only stat if basenames are the same */
-	    if ((base = strrchr(*ap, '/')) != NULL)
+	for (ap = gl.gl_pathv; (cp = *ap) != NULL; ap++) {
+	    /* If it ends in '/' it is a directory spec. */
+	    dlen = strlen(cp);
+	    if (cp[dlen - 1] == '/') {
+		if (command_matches_dir(cp, dlen))
+		    return(TRUE);
+		continue;
+	    }
+
+	    /* Only proceed if user_base and basename(cp) match */
+	    if ((base = strrchr(cp, '/')) != NULL)
 		base++;
 	    else
-		base = *ap;
+		base = cp;
 	    if (strcmp(user_base, base) != 0 ||
-		stat(*ap, &sudoers_stat) == -1)
+		stat(cp, &sudoers_stat) == -1)
 		continue;
 	    if (user_stat->st_dev == sudoers_stat.st_dev &&
 		user_stat->st_ino == sudoers_stat.st_ino) {
 		efree(safe_cmnd);
-		safe_cmnd = estrdup(*ap);
+		safe_cmnd = estrdup(cp);
 		break;
 	    }
 	}
 	globfree(&gl);
-	if (*ap == NULL)
+	if (cp == NULL)
 	    return(FALSE);
 
 	if (!sudoers_args ||
@@ -312,75 +347,85 @@ command_matches(sudoers_cmnd, sudoers_args)
 	    efree(safe_cmnd);
 	    safe_cmnd = estrdup(user_cmnd);
 	    return(TRUE);
-	} else
-	    return(FALSE);
+	}
+	return(FALSE);
     } else {
-	size_t dlen = strlen(sudoers_cmnd);
+	/* If it ends in '/' it is a directory spec. */
+	if (sudoers_cmnd[dlen - 1] == '/')
+	    return(command_matches_dir(sudoers_cmnd, dlen));
 
-	/*
-	 * No meta characters
-	 * Check to make sure this is not a directory spec (doesn't end in '/')
-	 */
-	if (sudoers_cmnd[dlen - 1] != '/') {
-	    /* Only proceed if user_base and basename(sudoers_cmnd) match */
-	    if ((base = strrchr(sudoers_cmnd, '/')) == NULL)
-		base = sudoers_cmnd;
-	    else
-		base++;
-	    if (strcmp(user_base, base) != 0 ||
-		stat(sudoers_cmnd, &sudoers_stat) == -1)
-		return(FALSE);
-
-	    /*
-	     * Return true if inode/device matches AND
-	     *  a) there are no args in sudoers OR
-	     *  b) there are no args on command line and none req by sudoers OR
-	     *  c) there are args in sudoers and on command line and they match
-	     */
-	    if (user_stat->st_dev != sudoers_stat.st_dev ||
-		user_stat->st_ino != sudoers_stat.st_ino)
-		return(FALSE);
-	    if (!sudoers_args ||
-		(!user_args && sudoers_args && !strcmp("\"\"", sudoers_args)) ||
-		(sudoers_args &&
-		 fnmatch(sudoers_args, user_args ? user_args : "", 0) == 0)) {
-		efree(safe_cmnd);
-		safe_cmnd = estrdup(sudoers_cmnd);
-		return(TRUE);
-	    } else
-		return(FALSE);
-	}
-
-	/*
-	 * Grot through sudoers_cmnd's directory entries, looking for user_base.
-	 */
-	dirp = opendir(sudoers_cmnd);
-	if (dirp == NULL)
+	/* Only proceed if user_base and basename(sudoers_cmnd) match */
+	if ((base = strrchr(sudoers_cmnd, '/')) == NULL)
+	    base = sudoers_cmnd;
+	else
+	    base++;
+	if (strcmp(user_base, base) != 0 ||
+	    stat(sudoers_cmnd, &sudoers_stat) == -1)
 	    return(FALSE);
 
-	if (strlcpy(buf, sudoers_cmnd, sizeof(buf)) >= sizeof(buf))
+	/*
+	 * Return true if inode/device matches AND
+	 *  a) there are no args in sudoers OR
+	 *  b) there are no args on command line and none req by sudoers OR
+	 *  c) there are args in sudoers and on command line and they match
+	 */
+	if (user_stat->st_dev != sudoers_stat.st_dev ||
+	    user_stat->st_ino != sudoers_stat.st_ino)
 	    return(FALSE);
-	while ((dent = readdir(dirp)) != NULL) {
-	    /* ignore paths > PATH_MAX (XXX - log) */
-	    buf[dlen] = '\0';
-	    if (strlcat(buf, dent->d_name, sizeof(buf)) >= sizeof(buf))
-		continue;
-
-	    /* only stat if basenames are the same */
-	    if (strcmp(user_base, dent->d_name) != 0 ||
-		stat(buf, &sudoers_stat) == -1)
-		continue;
-	    if (user_stat->st_dev == sudoers_stat.st_dev &&
-		user_stat->st_ino == sudoers_stat.st_ino) {
-		efree(safe_cmnd);
-		safe_cmnd = estrdup(buf);
-		break;
-	    }
+	if (!sudoers_args ||
+	    (!user_args && sudoers_args && !strcmp("\"\"", sudoers_args)) ||
+	    (sudoers_args &&
+	     fnmatch(sudoers_args, user_args ? user_args : "", 0) == 0)) {
+	    efree(safe_cmnd);
+	    safe_cmnd = estrdup(sudoers_cmnd);
+	    return(TRUE);
 	}
-
-	closedir(dirp);
-	return(dent != NULL);
+	return(FALSE);
     }
+}
+
+/*
+ * Return TRUE if user_cmnd names one of the inodes in dir, else FALSE.
+ */
+static int
+command_matches_dir(sudoers_dir, dlen)
+    char *sudoers_dir;
+    size_t dlen;
+{
+    struct stat sudoers_stat;
+    struct dirent *dent;
+    char buf[PATH_MAX];
+    DIR *dirp;
+
+    /*
+     * Grot through directory entries, looking for user_base.
+     */
+    dirp = opendir(sudoers_dir);
+    if (dirp == NULL)
+	return(FALSE);
+
+    if (strlcpy(buf, sudoers_dir, sizeof(buf)) >= sizeof(buf))
+	return(FALSE);
+    while ((dent = readdir(dirp)) != NULL) {
+	/* ignore paths > PATH_MAX (XXX - log) */
+	buf[dlen] = '\0';
+	if (strlcat(buf, dent->d_name, sizeof(buf)) >= sizeof(buf))
+	    continue;
+
+	/* only stat if basenames are the same */
+	if (strcmp(user_base, dent->d_name) != 0 ||
+	    stat(buf, &sudoers_stat) == -1)
+	    continue;
+	if (user_stat->st_dev == sudoers_stat.st_dev &&
+	    user_stat->st_ino == sudoers_stat.st_ino) {
+	    efree(safe_cmnd);
+	    safe_cmnd = estrdup(buf);
+	    break;
+	}
+    }
+
+    closedir(dirp);
+    return(dent != NULL);
 }
 
 static int
@@ -390,22 +435,21 @@ addr_matches_if(n)
     int i;
     struct in_addr addr;
     struct interface *ifp;
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
     struct in6_addr addr6;
     int j;
 #endif
-    int family = AF_UNSPEC;
+    int family;
 
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
     if (inet_pton(AF_INET6, n, &addr6) > 0) {
 	family = AF_INET6;
     } else
-#else
+#endif
     {
 	family = AF_INET;
 	addr.s_addr = inet_addr(n);
     }
-#endif
 
     for (i = 0; i < num_interfaces; i++) {
 	ifp = &interfaces[i];
@@ -418,7 +462,7 @@ addr_matches_if(n)
 		    == addr.s_addr)
 		    return(TRUE);
 		break;
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 		if (memcmp(ifp->addr.ip6.s6_addr, addr6.s6_addr,
 		    sizeof(addr6.s6_addr)) == 0)
@@ -429,7 +473,7 @@ addr_matches_if(n)
 		}
 		if (j == sizeof(addr6.s6_addr))
 		    return(TRUE);
-#endif /* AF_INET6 */
+#endif /* HAVE_IN6_ADDR */
 	}
     }
 
@@ -444,22 +488,21 @@ addr_matches_if_netmask(n, m)
     int i;
     struct in_addr addr, mask;
     struct interface *ifp;
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
     struct in6_addr addr6, mask6;
     int j;
 #endif
-    int family = AF_UNSPEC;
+    int family;
 
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
     if (inet_pton(AF_INET6, n, &addr6) > 0)
 	family = AF_INET6;
     else
-#else
+#endif
     {
 	family = AF_INET;
 	addr.s_addr = inet_addr(n);
     }
-#endif
 
     if (family == AF_INET) {
 	if (strchr(m, '.'))
@@ -472,7 +515,7 @@ addr_matches_if_netmask(n, m)
 	    mask.s_addr = htonl(mask.s_addr);
 	}
     }
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
     else {
 	if (inet_pton(AF_INET6, m, &mask6) <= 0) {
 	    j = atoi(m);
@@ -486,7 +529,7 @@ addr_matches_if_netmask(n, m)
 	    }
 	}
     }
-#endif /* AF_INET6 */
+#endif /* HAVE_IN6_ADDR */
 
     for (i = 0; i < num_interfaces; i++) {
 	ifp = &interfaces[i];
@@ -496,7 +539,7 @@ addr_matches_if_netmask(n, m)
 	    case AF_INET:
 		if ((ifp->addr.ip4.s_addr & mask.s_addr) == addr.s_addr)
 		    return(TRUE);
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 		for (j = 0; j < sizeof(addr6.s6_addr); j++) {
 		    if ((ifp->addr.ip6.s6_addr[j] & mask6.s6_addr[j]) != addr6.s6_addr[j])
@@ -504,7 +547,7 @@ addr_matches_if_netmask(n, m)
 		}
 		if (j == sizeof(addr6.s6_addr))
 		    return(TRUE);
-#endif /* AF_INET6 */
+#endif /* HAVE_IN6_ADDR */
 	}
     }
 
@@ -608,9 +651,11 @@ usergr_matches(group, user, pw)
     /*
      * If the user has a supplementary group vector, check it first.
      */
-    for (i = 0; i < user_ngroups; i++) {
-	if (grp->gr_gid == user_groups[i])
-	    return(TRUE);
+    if (strcmp(user, user_name) == 0) {
+	for (i = 0; i < user_ngroups; i++) {
+	    if (grp->gr_gid == user_groups[i])
+		return(TRUE);
+	}
     }
     if (grp->gr_mem != NULL) {
 	for (cur = grp->gr_mem; *cur; cur++) {
@@ -646,8 +691,8 @@ netgr_matches(netgr, host, shost, user)
 #ifdef HAVE_GETDOMAINNAME
     /* get the domain name (if any) */
     if (!initialized) {
-	domain = (char *) emalloc(MAXHOSTNAMELEN);
-	if (getdomainname(domain, MAXHOSTNAMELEN) == -1 || *domain == '\0') {
+	domain = (char *) emalloc(MAXHOSTNAMELEN + 1);
+	if (getdomainname(domain, MAXHOSTNAMELEN + 1) == -1 || *domain == '\0') {
 	    efree(domain);
 	    domain = NULL;
 	}

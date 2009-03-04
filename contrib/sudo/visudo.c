@@ -78,7 +78,7 @@
 #include "version.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: visudo.c,v 1.166.2.9 2007/07/22 19:21:01 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: visudo.c,v 1.166.2.12 2008/11/02 14:45:50 millert Exp $";
 #endif /* lint */
 
 struct sudoersfile {
@@ -98,7 +98,7 @@ static RETSIGTYPE Exit		__P((int));
 static void edit_sudoers	__P((struct sudoersfile *, char *, char *, int));
 static void visudo		__P((struct sudoersfile *, char *, char *));
 static void setup_signals	__P((void));
-static void install_sudoers	__P((struct sudoersfile *));
+static void install_sudoers	__P((struct sudoersfile *, int));
 static int check_syntax		__P(());
 static int run_command		__P((char *, char **));
 static char *get_args		__P((char *));
@@ -141,7 +141,7 @@ main(argc, argv)
     char **argv;
 {
     char *args, *editor;
-    int ch, checkonly, n;
+    int ch, checkonly, n, oldperms;
 
     /* Initialize sudoers struct. */
     sudoers.path = _PATH_SUDOERS;
@@ -158,7 +158,7 @@ main(argc, argv)
     /*
      * Arg handling.
      */
-    checkonly = 0;
+    checkonly = oldperms = FALSE;
     while ((ch = getopt(argc, argv, "Vcf:sq")) != -1) {
 	switch (ch) {
 	    case 'V':
@@ -170,6 +170,7 @@ main(argc, argv)
 	    case 'f':			/* sudoers file path */
 		sudoers.path = optarg;
 		easprintf(&sudoers.tpath, "%s.tmp", optarg);
+		oldperms = TRUE;
 		break;
 	    case 's':
 		pedantic++;		/* strict mode */
@@ -215,7 +216,7 @@ main(argc, argv)
     visudo(&sudoers, editor, args);
 
     /* Install the new sudoers file. */
-    install_sudoers(&sudoers);
+    install_sudoers(&sudoers, oldperms);
 
     exit(0);
 }
@@ -383,21 +384,36 @@ visudo(sp, editor, args)
  * move it into place.  Returns TRUE on success, else FALSE.
  */
 static void
-install_sudoers(sp)
+install_sudoers(sp, oldperms)
     struct sudoersfile *sp;
+    int oldperms;
 {
+    struct stat sb;
+
     /*
      * Change mode and ownership of temp file so when
      * we move it to sp->path things are kosher.
      */
-    if (chown(sp->tpath, SUDOERS_UID, SUDOERS_GID) != 0) {
-	warn("unable to set (uid, gid) of %s to (%d, %d)",
-	    sp->tpath, SUDOERS_UID, SUDOERS_GID);
-	Exit(-1);
-    }
-    if (chmod(sp->tpath, SUDOERS_MODE) != 0) {
-	warn("unable to change mode of %s to 0%o", sp->tpath, SUDOERS_MODE);
-	Exit(-1);
+    if (oldperms) {
+	/* Use perms of the existing file.  */
+#ifdef HAVE_FSTAT
+	if (fstat(sp->fd, &sb) == -1)
+#else
+	if (stat(sp->path, &sb) == -1)
+#endif
+	    err(1, "can't stat %s", sp->path);
+	(void) chown(sp->tpath, sb.st_uid, sb.st_gid);
+	(void) chmod(sp->tpath, sb.st_mode & 0777);
+    } else {
+	if (chown(sp->tpath, SUDOERS_UID, SUDOERS_GID) != 0) {
+	    warn("unable to set (uid, gid) of %s to (%d, %d)",
+		sp->tpath, SUDOERS_UID, SUDOERS_GID);
+	    Exit(-1);
+	}
+	if (chmod(sp->tpath, SUDOERS_MODE) != 0) {
+	    warn("unable to change mode of %s to 0%o", sp->tpath, SUDOERS_MODE);
+	    Exit(-1);
+	}
     }
 
     /*
@@ -559,6 +575,7 @@ setup_signals()
 	/*
 	 * Setup signal handlers to cleanup nicely.
 	 */
+	zero_bytes(&sa, sizeof(sa));
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 	sa.sa_handler = Exit;
@@ -574,12 +591,7 @@ run_command(path, argv)
     char **argv;
 {
     int status;
-    pid_t pid;
-    sigset_t set, oset;
-
-    (void) sigemptyset(&set);
-    (void) sigaddset(&set, SIGCHLD);
-    (void) sigprocmask(SIG_BLOCK, &set, &oset);
+    pid_t pid, rv;
 
     switch (pid = fork()) {
 	case -1:
@@ -587,7 +599,6 @@ run_command(path, argv)
 	    Exit(-1);
 	    break;	/* NOTREACHED */
 	case 0:
-	    (void) sigprocmask(SIG_SETMASK, &oset, NULL);
 	    endpwent();
 	    closefrom(STDERR_FILENO + 1);
 	    execv(path, argv);
@@ -596,15 +607,15 @@ run_command(path, argv)
 	    break;	/* NOTREACHED */
     }
 
+    do {
 #ifdef sudo_waitpid
-    pid = sudo_waitpid(pid, &status, 0);
+	rv = sudo_waitpid(pid, &status, 0);
 #else
-    pid = wait(&status);
+	rv = wait(&status);
 #endif
+    } while (rv == -1 && errno == EINTR);
 
-    (void) sigprocmask(SIG_SETMASK, &oset, NULL);
-
-    if (pid == -1 || !WIFEXITED(status))
+    if (rv == -1 || !WIFEXITED(status))
 	return(-1);
     return(WEXITSTATUS(status));
 }

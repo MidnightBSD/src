@@ -62,10 +62,10 @@
 #include "sudo.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: sudo_edit.c,v 1.6.2.7 2007/07/08 18:44:41 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: sudo_edit.c,v 1.6.2.11 2008/11/02 14:53:47 millert Exp $";
 #endif /* lint */
 
-extern sigaction_t saved_sa_int, saved_sa_quit, saved_sa_tstp, saved_sa_chld;
+extern sigaction_t saved_sa_int, saved_sa_quit, saved_sa_tstp;
 extern char **environ;
 
 /*
@@ -112,7 +112,7 @@ int sudo_edit(argc, argv, envp)
      * and copy the contents of the original to it.
      */
     tf = emalloc2(argc - 1, sizeof(*tf));
-    memset(tf, 0, (argc - 1) * sizeof(*tf));
+    zero_bytes(tf, (argc - 1) * sizeof(*tf));
     for (i = 0, ap = argv + 1; i < argc - 1 && *ap != NULL; i++, ap++) {
 	error = -1;
 	set_perms(PERM_RUNAS);
@@ -124,7 +124,7 @@ int sudo_edit(argc, argv, envp)
 	endpwent();
 	if ((ofd = open(*ap, O_RDONLY, 0644)) != -1 || errno == ENOENT) {
 	    if (ofd == -1) {
-		memset(&sb, 0, sizeof(sb));		/* new file */
+		zero_bytes(&sb, sizeof(sb));		/* new file */
 		error = 0;
 	    } else {
 #ifdef HAVE_FSTAT
@@ -135,7 +135,7 @@ int sudo_edit(argc, argv, envp)
 	    }
 	}
 	set_perms(PERM_ROOT);
-	if (error || !S_ISREG(sb.st_mode)) {
+	if (error || (ofd != -1 && !S_ISREG(sb.st_mode))) {
 	    if (error)
 		warn("%s", *ap);
 	    else
@@ -231,11 +231,11 @@ int sudo_edit(argc, argv, envp)
 	nargv[ac++] = tf[i++].tfile;
     nargv[ac] = NULL;
 
-    /* We wait for our own children and can be suspended. */
+    /* Allow the editor to be suspended. */
+    zero_bytes(&sa, sizeof(sa));
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     sa.sa_handler = SIG_DFL;
-    (void) sigaction(SIGCHLD, &sa, NULL);
     (void) sigaction(SIGTSTP, &saved_sa_tstp, NULL);
 
     /*
@@ -251,7 +251,6 @@ int sudo_edit(argc, argv, envp)
 	/* child */
 	(void) sigaction(SIGINT, &saved_sa_int, NULL);
 	(void) sigaction(SIGQUIT, &saved_sa_quit, NULL);
-	(void) sigaction(SIGCHLD, &saved_sa_chld, NULL);
 	set_perms(PERM_FULL_USER);
 	endpwent();
 	endgrent();

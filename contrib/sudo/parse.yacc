@@ -54,15 +54,13 @@
 # include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 #include <pwd.h>
-#if defined(HAVE_MALLOC_H) && !defined(STDC_HEADERS)
-# include <malloc.h>
-#endif /* HAVE_MALLOC_H && !STDC_HEADERS */
 #if defined(YYBISON) && defined(HAVE_ALLOCA_H) && !defined(__GNUC__)
 # include <alloca.h>
 #endif /* YYBISON && HAVE_ALLOCA_H && !__GNUC__ */
 #ifdef HAVE_LSEARCH
 # include <search.h>
 #endif /* HAVE_LSEARCH */
+#include <limits.h>
 
 #include "sudo.h"
 #include "parse.h"
@@ -72,8 +70,21 @@
 #endif /* HAVE_LSEARCH */
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: parse.yacc,v 1.204.2.6 2007/08/13 16:30:02 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: parse.yacc,v 1.204.2.14 2008/10/30 14:40:04 millert Exp $";
 #endif /* lint */
+
+/*
+ * We must define SIZE_MAX for yacc's skeleton.c.
+ * If there is no SIZE_MAX or SIZE_T_MAX we have to assume that size_t
+ * could be signed (as it is on SunOS 4.x).
+ */
+#ifndef SIZE_MAX
+# ifdef SIZE_T_MAX
+#  define SIZE_MAX	SIZE_T_MAX
+# else
+#  define SIZE_MAX	INT_MAX
+# endif /* SIZE_T_MAX */
+#endif /* SIZE_MAX */
 
 /*
  * Globals
@@ -107,6 +118,9 @@ int used_runas = FALSE;
 	    (_var) = NOMATCH; \
 } while (0)
 
+#define	SETENV_RESET \
+	if (setenv_ok == IMPLIED) setenv_ok = def_setenv ? TRUE : UNSPEC
+
 /*
  * The matching stack, initial space allocated in init_parser().
  */
@@ -126,6 +140,8 @@ int top = 0, stacksize = 0;
 	match[top].nopass = def_authenticate ? UNSPEC : TRUE; \
 	match[top].noexec = def_noexec ? TRUE : UNSPEC; \
 	match[top].setenv = def_setenv ? TRUE : UNSPEC; \
+	match[top].role = NULL; \
+	match[top].type = NULL; \
 	top++; \
     } while (0)
 
@@ -142,6 +158,8 @@ int top = 0, stacksize = 0;
 	match[top].nopass = match[top-1].nopass; \
 	match[top].noexec = match[top-1].noexec; \
 	match[top].setenv = match[top-1].setenv; \
+	match[top].role   = estrdup(match[top-1].role); \
+	match[top].type   = estrdup(match[top-1].type); \
 	top++; \
     } while (0)
 
@@ -149,8 +167,11 @@ int top = 0, stacksize = 0;
     do { \
 	if (top == 0) \
 	    yyerror("matching stack underflow"); \
-	else \
+	else { \
+	    efree(match[top-1].role); \
+	    efree(match[top-1].type); \
 	    top--; \
+	} \
     } while (0)
 
 
@@ -167,6 +188,12 @@ int top = 0, stacksize = 0;
 
 #define append_runas(s, p) append(s, &cm_list[cm_list_len].runas, \
 	&cm_list[cm_list_len].runas_len, &cm_list[cm_list_len].runas_size, p)
+
+#define append_role(s, p) append(s, &cm_list[cm_list_len].role, \
+	&cm_list[cm_list_len].role_len, &cm_list[cm_list_len].role_size, p)
+
+#define append_type(s, p) append(s, &cm_list[cm_list_len].type, \
+	&cm_list[cm_list_len].type_len, &cm_list[cm_list_len].type_size, p)
 
 #define append_entries(s, p) append(s, &ga_list[ga_list_len-1].entries, \
 	&ga_list[ga_list_len-1].entries_len, \
@@ -198,7 +225,7 @@ static void append		__P((char *, char **, size_t *, size_t *, char *));
 static void expand_ga_list	__P((void));
 static void expand_match_list	__P((void));
 static aliasinfo *find_alias	__P((char *, int));
-static int  more_aliases	__P((void));
+static void more_aliases	__P((void));
        void init_parser		__P((void));
        void yyerror		__P((char *));
 
@@ -226,6 +253,7 @@ yyerror(s)
     int BOOLEAN;
     struct sudo_command command;
     int tok;
+    struct selinux_info seinfo;
 }
 
 %start file				/* special start symbol */
@@ -255,6 +283,8 @@ yyerror(s)
 %token <tok>	 RUNASALIAS		/* Runas_Alias keyword */
 %token <tok>	 ':' '=' ',' '!' '+' '-' /* union member tokens */
 %token <tok>	 ERROR
+%token <tok>	 TYPE			/* SELinux type */
+%token <tok>	 ROLE			/* SELinux role */
 
 /*
  * NOTE: these are not true booleans as there are actually 4 possible values:
@@ -269,6 +299,9 @@ yyerror(s)
 %type <BOOLEAN>	 oprunasuser
 %type <BOOLEAN>	 runaslist
 %type <BOOLEAN>	 user
+%type <seinfo>	 selinux
+%type <string>	 rolespec
+%type <string>	 typespec
 
 %%
 
@@ -380,6 +413,12 @@ privilege	:	hostlist '=' cmndspeclist {
 			    no_passwd = def_authenticate ? UNSPEC : TRUE;
 			    no_execve = def_noexec ? TRUE : UNSPEC;
 			    setenv_ok = def_setenv ? TRUE : UNSPEC;
+#ifdef HAVE_SELINUX
+			    efree(match[top-1].role);
+			    match[top-1].role = NULL;
+			    efree(match[top-1].type);
+			    match[top-1].type = NULL;
+#endif
 			}
 		;
 
@@ -443,7 +482,18 @@ cmndspeclist	:	cmndspec
 		|	cmndspeclist ',' cmndspec
 		;
 
-cmndspec	:	runasspec cmndtag opcmnd {
+cmndspec	:	{ SETENV_RESET; } runasspec selinux cmndtag opcmnd {
+#ifdef HAVE_SELINUX
+			    /* Replace inherited role/type as needed. */
+			    if ($3.role != NULL) {
+				efree(match[top-1].role);
+				match[top-1].role = $3.role;
+			    }
+			    if ($3.type != NULL) {
+				efree(match[top-1].type);
+				match[top-1].type = $3.type;
+			    }
+#endif
 			    /*
 			     * Push the entry onto the stack if it is worth
 			     * saving and reset cmnd_matches for next cmnd.
@@ -468,6 +518,7 @@ cmndspec	:	runasspec cmndtag opcmnd {
 				pushcp;
 			    else if (user_matches == TRUE && keepall)
 				pushcp;
+
 			    cmnd_matches = UNSPEC;
 			}
 		;
@@ -488,6 +539,105 @@ opcmnd		:	cmnd {
 			}
 		;
 
+rolespec	:	ROLE '=' WORD {
+#ifdef HAVE_SELINUX
+			    if (printmatches == TRUE && host_matches == TRUE &&
+				user_matches == TRUE && runas_matches == TRUE)
+				append_role($3, NULL);
+			    $$ = $3;
+#else
+			    free($3);
+			    $$ = NULL;
+#endif /* HAVE_SELINUX */
+			}
+		;
+
+typespec	:	TYPE '=' WORD {
+#ifdef HAVE_SELINUX
+			    if (printmatches == TRUE && host_matches == TRUE &&
+				user_matches == TRUE && runas_matches == TRUE)
+				append_type($3, NULL);
+			    $$ = $3;
+#else
+			    free($3);
+			    $$ = NULL;
+#endif /* HAVE_SELINUX */
+			}
+		;
+
+selinux		:	/* empty */ {
+#ifdef HAVE_SELINUX
+			    if (printmatches == TRUE && host_matches == TRUE &&
+				user_matches == TRUE && runas_matches == TRUE) {
+				if (match[top-1].role != NULL) {
+				    /* Inherit role. */
+				    cm_list[cm_list_len].role =
+					estrdup(cm_list[cm_list_len-1].role);
+				    cm_list[cm_list_len].role_len =
+					cm_list[cm_list_len-1].role_len;
+				    cm_list[cm_list_len].role_size =
+					cm_list[cm_list_len-1].role_len + 1;
+				}
+				if (match[top-1].type != NULL) {
+				    /* Inherit type. */
+				    cm_list[cm_list_len].type =
+					estrdup(cm_list[cm_list_len-1].type);
+				    cm_list[cm_list_len].type_len =
+					cm_list[cm_list_len-1].type_len;
+				    cm_list[cm_list_len].type_size =
+					cm_list[cm_list_len-1].type_len + 1;
+				}
+			    }
+#endif /* HAVE_SELINUX */
+			    $$.role = NULL;
+			    $$.type = NULL;
+			}
+		|	rolespec {
+#ifdef HAVE_SELINUX
+			    if (printmatches == TRUE && host_matches == TRUE &&
+				user_matches == TRUE && runas_matches == TRUE) {
+				if (match[top-1].type != NULL) {
+				    /* Inherit type. */
+				    cm_list[cm_list_len].type =
+					estrdup(cm_list[cm_list_len-1].type);
+				    cm_list[cm_list_len].type_len =
+					cm_list[cm_list_len-1].type_len;
+				    cm_list[cm_list_len].type_size =
+					cm_list[cm_list_len-1].type_len + 1;
+				}
+			    }
+#endif /* HAVE_SELINUX */
+			    $$.role = $1;
+			    $$.type = NULL;
+			}
+		|	typespec {
+#ifdef HAVE_SELINUX
+			    if (printmatches == TRUE && host_matches == TRUE &&
+				user_matches == TRUE && runas_matches == TRUE) {
+				if (match[top-1].role != NULL) {
+				    /* Inherit role. */
+				    cm_list[cm_list_len].role =
+					estrdup(cm_list[cm_list_len-1].role);
+				    cm_list[cm_list_len].role_len =
+					cm_list[cm_list_len-1].role_len;
+				    cm_list[cm_list_len].role_size =
+					cm_list[cm_list_len-1].role_len + 1;
+				}
+			    }
+#endif /* HAVE_SELINUX */
+			    $$.type = $1;
+			    $$.role = NULL;
+			}
+		|	rolespec typespec {
+			    $$.role = $1;
+			    $$.type = $2;
+			}
+		|	typespec rolespec {
+			    $$.type = $1;
+			    $$.role = $2;
+			}
+		;
+
 runasspec	:	/* empty */ {
 			    if (printmatches == TRUE && host_matches == TRUE &&
 				user_matches == TRUE) {
@@ -500,7 +650,7 @@ runasspec	:	/* empty */ {
 				    cm_list[cm_list_len].runas_len =
 					cm_list[cm_list_len-1].runas_len;
 				    cm_list[cm_list_len].runas_size =
-					cm_list[cm_list_len-1].runas_size;
+					cm_list[cm_list_len-1].runas_len + 1;
 				}
 			    }
 			    /*
@@ -508,9 +658,8 @@ runasspec	:	/* empty */ {
 			     * then check against default runas user.
 			     */
 			    if (runas_matches == UNSPEC) {
-				runas_matches =
-				    userpw_matches(def_runas_default,
-					*user_runas, runas_pw);
+				runas_matches = userpw_matches(def_runas_default,
+				    *user_runas, runas_pw) ? TRUE : NOMATCH;
 			    }
 			}
 		|	RUNAS runaslist {
@@ -696,6 +845,9 @@ cmnd		:	ALL {
 				    expand_match_list();
 				}
 			    }
+			    /* sudo "ALL" implies the SETENV tag */
+			    if (setenv_ok == UNSPEC)
+				setenv_ok = IMPLIED;
 
 			    efree(safe_cmnd);
 			    safe_cmnd = NULL;
@@ -964,12 +1116,8 @@ add_alias(alias, type, val)
     size_t onaliases;
     char s[512];
 
-    if (naliases >= nslots && !more_aliases()) {
-	(void) snprintf(s, sizeof(s), "Out of memory defining alias `%s'",
-			alias);
-	yyerror(s);
-	return(FALSE);
-    }
+    if (naliases >= nslots)
+	more_aliases();
 
     ai.type = type;
     ai.val = val;
@@ -1013,17 +1161,12 @@ find_alias(alias, type)
 /*
  * Allocates more space for the aliases list.
  */
-static int
+static void
 more_aliases()
 {
 
     nslots += MOREALIASES;
-    if (nslots == MOREALIASES)
-	aliases = (aliasinfo *) malloc(nslots * sizeof(aliasinfo));
-    else
-	aliases = (aliasinfo *) realloc(aliases, nslots * sizeof(aliasinfo));
-
-    return(aliases != NULL);
+    aliases = (aliasinfo *) erealloc3(aliases, nslots, sizeof(aliasinfo));
 }
 
 /*
@@ -1095,6 +1238,14 @@ list_matches()
 	    (void) printf("(%s) ", def_runas_default);
 	}
 
+#ifdef HAVE_SELINUX
+	/* SELinux role and type */
+	if (cm_list[count].role != NULL)
+	    (void) printf("ROLE=%s ", cm_list[count].role);
+	if (cm_list[count].type != NULL)
+	    (void) printf("TYPE=%s ", cm_list[count].type);
+#endif
+
 	/* Is execve(2) disabled? */
 	if (cm_list[count].noexecve == TRUE && !def_noexec)
 	    (void) fputs("NOEXEC: ", stdout);
@@ -1134,6 +1285,8 @@ list_matches()
     for (count = 0; count < cm_list_len; count++) {
 	efree(cm_list[count].runas);
 	efree(cm_list[count].cmnd);
+	efree(cm_list[count].role);
+	efree(cm_list[count].type);
     }
     efree(cm_list);
     cm_list = NULL;
@@ -1238,6 +1391,7 @@ expand_match_list()
     }
 
     cm_list[cm_list_len].runas = cm_list[cm_list_len].cmnd = NULL;
+    cm_list[cm_list_len].type = cm_list[cm_list_len].role = NULL;
     cm_list[cm_list_len].nopasswd = FALSE;
     cm_list[cm_list_len].noexecve = FALSE;
     cm_list[cm_list_len].setenv = FALSE;

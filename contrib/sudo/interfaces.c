@@ -19,7 +19,7 @@
  */
 
 /*
- * Supress a warning w/ gcc on Digital UN*X.
+ * Suppress a warning w/ gcc on Digital UN*X.
  * The system headers should really do this....
  */
 #if defined(__osf__) && !defined(__cplusplus)
@@ -89,7 +89,7 @@ struct rtentry;
 #include "interfaces.h"
 
 #ifndef lint
-__unused static const char rcsid[] = "$Sudo: interfaces.c,v 1.72.2.6 2007/08/14 15:19:25 millert Exp $";
+__unused static const char rcsid[] = "$Sudo: interfaces.c,v 1.72.2.9 2008/11/02 14:53:47 millert Exp $";
 #endif /* lint */
 
 
@@ -104,7 +104,7 @@ load_interfaces()
 {
     struct ifaddrs *ifa, *ifaddrs;
     struct sockaddr_in *sin;
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
     struct sockaddr_in6 *sin6;
 #endif
     int i;
@@ -121,7 +121,7 @@ load_interfaces()
 
 	switch(ifa->ifa_addr->sa_family) {
 	    case AF_INET:
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 #endif
 		num_interfaces++;
@@ -151,7 +151,7 @@ load_interfaces()
 		interfaces[i].family = AF_INET;
 		i++;
 		break;
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 		sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
 		memcpy(&interfaces[i].addr, &sin6->sin6_addr,
@@ -162,7 +162,7 @@ load_interfaces()
 		interfaces[i].family = AF_INET6;
 		i++;
 		break;
-#endif /* AF_INET6 */
+#endif /* HAVE_IN6_ADDR */
 	}
     }
 #ifdef HAVE_FREEIFADDRS
@@ -249,7 +249,7 @@ load_interfaces()
 		continue;
 
 #ifdef SIOCGIFFLAGS
-	memset(&ifr_tmp, 0, sizeof(ifr_tmp));
+	zero_bytes(&ifr_tmp, sizeof(ifr_tmp));
 	strncpy(ifr_tmp.ifr_name, ifr->ifr_name, sizeof(ifr_tmp.ifr_name) - 1);
 	if (ioctl(sock, SIOCGIFFLAGS, (caddr_t) &ifr_tmp) < 0)
 #endif
@@ -267,7 +267,7 @@ load_interfaces()
 	previfname = ifr->ifr_name;
 
 	/* Get the netmask. */
-	(void) memset(&ifr_tmp, 0, sizeof(ifr_tmp));
+	zero_bytes(&ifr_tmp, sizeof(ifr_tmp));
 	strncpy(ifr_tmp.ifr_name, ifr->ifr_name, sizeof(ifr_tmp.ifr_name) - 1);
 #ifdef SIOCGIFNETMASK
 #ifdef _ISC
@@ -325,7 +325,7 @@ void
 dump_interfaces()
 {
     int i;
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
     char addrbuf[INET6_ADDRSTRLEN], maskbuf[INET6_ADDRSTRLEN];
 #endif
 
@@ -336,7 +336,7 @@ dump_interfaces()
 		printf("\t%s / ", inet_ntoa(interfaces[i].addr.ip4));
 		puts(inet_ntoa(interfaces[i].netmask.ip4));
 		break;
-#ifdef AF_INET6
+#ifdef HAVE_IN6_ADDR
 	    case AF_INET6:
 		inet_ntop(AF_INET6, &interfaces[i].addr.ip6,
 		    addrbuf, sizeof(addrbuf));
@@ -344,7 +344,7 @@ dump_interfaces()
 		    maskbuf, sizeof(maskbuf));
 		printf("\t%s / %s\n", addrbuf, maskbuf);
 		break;
-#endif /* AF_INET6 */
+#endif /* HAVE_IN6_ADDR */
 	}
     }
 }
