@@ -1,3 +1,4 @@
+# $MidnightBSD$
 # $FreeBSD: src/sys/modules/aha/Makefile,v 1.8.14.1 2006/02/10 00:37:58 yar Exp $
 
 .PATH: ${.CURDIR}/../../dev/aha
