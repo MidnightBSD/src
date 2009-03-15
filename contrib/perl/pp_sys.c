@@ -3002,7 +3002,7 @@ PP(pp_ftrread)
 
     case OP_FTEEXEC:
 #ifdef PERL_EFF_ACCESS
-	access_mode = W_OK;
+	access_mode = X_OK;
 #else
 	use_access = 0;
 #endif
