@@ -1,0 +1,33 @@
+.include <bsd.own.mk>
+.include <bsd.obj.mk>
+
+
+SRCDIR= ${.CURDIR}/../../contrib/perl
+
+CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
+                -Dmksymlinks -Dsrc=${SRCDIR} 
+                
+CONFIGURE_SCRIPT=    Configure
+                
+PERL_MAKEFILE= Makefile
+                
+all: perl
+                
+perl: ${PERL_MAKEFILE}
+	cd ${.OBJDIR} && ${MAKE} -f ${PERL_MAKEFILE}
+	
+${PERL_MAKEFILE}:
+	cd ${.OBJDIR} && ${SRCDIR}/${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
+            
+clean:
+	cd ${.OBJDIR} && ls -A | grep -v 'BSDmakefile' | xargs rm -r
+
+install:
+	cd ${.OBJDIR} && ${MAKE} -f ${PERL_MAKEFILE} install	
+                                        
+.PHONY: clean                                        
+                                        
+                                        
+                                        
+                                        
+                                        

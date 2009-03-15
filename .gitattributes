@@ -35482,6 +35482,7 @@ usr.bin/pcc/sparc64/local2.c -text
 usr.bin/pcc/sparc64/macdefs.h -text
 usr.bin/pcc/sparc64/order.c -text
 usr.bin/pcc/sparc64/table.c -text
+usr.bin/perl/BSDmakefile -text
 usr.bin/pkill/Makefile -text
 usr.bin/pkill/pkill.1 -text
 usr.bin/pkill/pkill.c -text
