@@ -37,7 +37,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic79xx.c,v 1.2 2009-01-18 19:29:04 laffer1 Exp $
+ * $Id: aic79xx.c,v 1.3 2009-03-15 14:02:29 laffer1 Exp $
  */
 
 #ifdef __linux__
@@ -2234,6 +2234,7 @@ ahd_handle_nonpkt_busfree(struct ahd_softc *ahd)
 			printerror = 0;
 		} else if (ahd_sent_msg(ahd, AHDMSG_1B,
 					MSG_BUS_DEV_RESET, TRUE)) {
+#ifdef __FreeBSD__
 			/*
 			 * Don't mark the user's request for this BDR
 			 * as completing with CAM_BDR_SENT.  CAM3
@@ -2245,6 +2246,7 @@ ahd_handle_nonpkt_busfree(struct ahd_softc *ahd)
 					  CAM_LUN_WILDCARD, SCB_LIST_NULL,
 					  ROLE_INITIATOR))
 				aic_set_transaction_status(scb, CAM_REQ_CMP);
+#endif
 			ahd_handle_devreset(ahd, &devinfo, CAM_LUN_WILDCARD,
 					    CAM_BDR_SENT, "Bus Device Reset",
 					    /*verbose_level*/0);
@@ -5223,11 +5225,23 @@ ahd_alloc(void *platform_arg, char *name)
 {
 	struct  ahd_softc *ahd;
 
+#ifndef	__FreeBSD__
+	ahd = malloc(sizeof(*ahd), M_DEVBUF, M_NOWAIT);
+	if (!ahd) {
+		printf("aic7xxx: cannot malloc softc!\n");
+		free(name, M_DEVBUF);
+		return NULL;
+	}
+#else
 	ahd = device_get_softc((device_t)platform_arg);
+#endif
 	memset(ahd, 0, sizeof(*ahd));
 	ahd->seep_config = malloc(sizeof(*ahd->seep_config),
 				  M_DEVBUF, M_NOWAIT);
 	if (ahd->seep_config == NULL) {
+#ifndef	__FreeBSD__
+		free(ahd, M_DEVBUF);
+#endif
 		free(name, M_DEVBUF);
 		return (NULL);
 	}
@@ -5413,6 +5427,9 @@ ahd_free(struct ahd_softc *ahd)
 		free(ahd->seep_config, M_DEVBUF);
 	if (ahd->saved_stack != NULL)
 		free(ahd->saved_stack, M_DEVBUF);
+#ifndef __FreeBSD__
+	free(ahd, M_DEVBUF);
+#endif
 	return;
 }
 
