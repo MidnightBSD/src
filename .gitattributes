@@ -14788,6 +14788,7 @@ contrib/smbfs/smbutil/print.c -text
 contrib/smbfs/smbutil/smbutil.1 -text
 contrib/smbfs/smbutil/smbutil.c -text
 contrib/smbfs/smbutil/view.c -text
+contrib/sqlite3/MIDNIGHTBSD-Xlist -text
 contrib/sqlite3/MIDNIGHTBSD-upgrade -text
 contrib/sqlite3/shell.c -text
 contrib/sqlite3/sqlite3.1 -text
