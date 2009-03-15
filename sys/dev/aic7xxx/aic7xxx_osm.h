@@ -29,8 +29,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic7xxx_osm.h,v 1.3 2009-03-15 14:02:29 laffer1 Exp $
+ * $Id: aic7xxx_osm.h,v 1.4 2009-03-15 14:24:21 laffer1 Exp $
  *
+ * $MidnightBSD$
  * $FreeBSD: src/sys/dev/aic7xxx/aic7xxx_osm.h,v 1.33 2007/04/17 06:26:25 scottl Exp $
  */
 
@@ -42,20 +43,14 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>		/* For device_t */
-#if __FreeBSD_version >= 500000
 #include <sys/endian.h>
-#endif
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
 #include <sys/queue.h>
 
-#if __FreeBSD_version < 500000
-#include <pci.h>
-#else
 #define NPCI 1
-#endif
 
 #if NPCI > 0
 #define AIC_PCI_CONFIG 1
@@ -67,13 +62,8 @@
 #include <sys/rman.h>
 
 #if NPCI > 0
-#if __FreeBSD_version >= 500000
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
-#else
-#include <pci/pcireg.h>
-#include <pci/pcivar.h>
-#endif
 #endif
 
 #include <cam/cam.h>

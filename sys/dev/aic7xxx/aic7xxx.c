@@ -37,7 +37,8 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGES.
  *
- * $Id: aic7xxx.c,v 1.3 2009-03-15 14:02:29 laffer1 Exp $
+ * $MidnightBSD$
+ * $Id: aic7xxx.c,v 1.4 2009-03-15 14:24:21 laffer1 Exp $
  */
 
 #ifdef __linux__
@@ -46,7 +47,7 @@
 #include "aicasm/aicasm_insformat.h"
 #else
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic7xxx.c,v 1.112 2007/07/31 20:11:02 scottl Exp $");
+/* $FreeBSD: src/sys/dev/aic7xxx/aic7xxx.c,v 1.112 2007/07/31 20:11:02 scottl Exp $ */
 #include <dev/aic7xxx/aic7xxx_osm.h>
 #include <dev/aic7xxx/aic7xxx_inline.h>
 #include <dev/aic7xxx/aicasm/aicasm_insformat.h>
@@ -1280,7 +1281,6 @@ ahc_handle_scsiint(struct ahc_softc *ahc, u_int intstat)
 				printerror = 0;
 			} else if (ahc_sent_msg(ahc, AHCMSG_1B,
 						MSG_BUS_DEV_RESET, TRUE)) {
-#ifdef __FreeBSD__
 				/*
 				 * Don't mark the user's request for this BDR
 				 * as completing with CAM_BDR_SENT.  CAM3
@@ -1294,7 +1294,6 @@ ahc_handle_scsiint(struct ahc_softc *ahc, u_int intstat)
 						  ROLE_INITIATOR)) {
 					aic_set_transaction_status(scb, CAM_REQ_CMP);
 				}
-#endif
 				ahc_compile_devinfo(&devinfo,
 						    initiator_role_id,
 						    target,
@@ -3903,23 +3902,11 @@ ahc_alloc(void *platform_arg, char *name)
 	struct  ahc_softc *ahc;
 	int	i;
 
-#ifndef	__FreeBSD__
-	ahc = malloc(sizeof(*ahc), M_DEVBUF, M_NOWAIT);
-	if (!ahc) {
-		printf("aic7xxx: cannot malloc softc!\n");
-		free(name, M_DEVBUF);
-		return NULL;
-	}
-#else
 	ahc = device_get_softc((device_t)platform_arg);
-#endif
 	memset(ahc, 0, sizeof(*ahc));
 	ahc->seep_config = malloc(sizeof(*ahc->seep_config),
 				  M_DEVBUF, M_NOWAIT);
 	if (ahc->seep_config == NULL) {
-#ifndef	__FreeBSD__
-		free(ahc, M_DEVBUF);
-#endif
 		free(name, M_DEVBUF);
 		return (NULL);
 	}
@@ -4112,9 +4099,6 @@ ahc_free(struct ahc_softc *ahc)
 		free(ahc->name, M_DEVBUF);
 	if (ahc->seep_config != NULL)
 		free(ahc->seep_config, M_DEVBUF);
-#ifndef __FreeBSD__
-	free(ahc, M_DEVBUF);
-#endif
 	return;
 }
 

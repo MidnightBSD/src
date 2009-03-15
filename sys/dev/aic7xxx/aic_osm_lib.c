@@ -29,11 +29,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: aic_osm_lib.c,v 1.3 2009-03-15 14:02:29 laffer1 Exp $
+ * $MidnightBSD$
+ * $Id: aic_osm_lib.c,v 1.4 2009-03-15 14:24:21 laffer1 Exp $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aic7xxx/aic_osm_lib.c,v 1.6 2007/07/31 20:11:03 scottl Exp $");
+/* $FreeBSD: src/sys/dev/aic7xxx/aic_osm_lib.c,v 1.6 2007/07/31 20:11:03 scottl Exp $ */
 
 static void	aic_recovery_thread(void *arg);
 
@@ -131,23 +132,6 @@ aic_recovery_thread(void *arg)
 void
 aic_calc_geometry(struct ccb_calc_geometry *ccg, int extended)
 {
-#if __FreeBSD_version >= 500000
 	cam_calc_geometry(ccg, extended);
-#else
-	uint32_t size_mb;
-	uint32_t secs_per_cylinder;
-
-	size_mb = ccg->volume_size / ((1024L * 1024L) / ccg->block_size);
-	if (size_mb > 1024 && extended) {
-		ccg->heads = 255;
-		ccg->secs_per_track = 63;
-	} else {
-		ccg->heads = 64;
-		ccg->secs_per_track = 32;
-	}
-	secs_per_cylinder = ccg->heads * ccg->secs_per_track;
-	ccg->cylinders = ccg->volume_size / secs_per_cylinder;
-	ccg->ccb_h.status = CAM_REQ_CMP;
-#endif
 }
 
