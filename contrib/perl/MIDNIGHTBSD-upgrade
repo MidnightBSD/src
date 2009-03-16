@@ -1,4 +1,4 @@
-$MidnightBSD: src/contrib/bzip2/MIDNIGHTBSD-upgrade,v 1.2 2008/09/30 00:28:07 laffer1 Exp $
+$MidnightBSD: src/contrib/perl/MIDNIGHTBSD-upgrade,v 1.1 2009/03/15 19:48:36 ctriv Exp $
 
 Perl - Practical Extraction and Report Language
 	originals can be found at: http://www.perl.org/get.html	
@@ -12,3 +12,6 @@ The following log shows details of trimming:
 
 	tar xf perl-5.10.0.tar.gz -X MIDNIGHTBSD-Xlist
 
+After you have created the vendor branch, make our own MANIFEST in HEAD:
+
+	find . -type f | sed -e 's:^./::' | grep -v MIDNIGHTBSD | sort > MANIFEST

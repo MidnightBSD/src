@@ -10527,6 +10527,7 @@ contrib/perl/Configure -text
 contrib/perl/Copying -text
 contrib/perl/EXTERN.h -text
 contrib/perl/INTERN.h -text
+contrib/perl/MANIFEST -text
 contrib/perl/MIDNIGHTBSD-Xlist -text
 contrib/perl/MIDNIGHTBSD-upgrade -text
 contrib/perl/Makefile.SH -text
