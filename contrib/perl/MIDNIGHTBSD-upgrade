@@ -1,4 +1,4 @@
-$MidnightBSD: src/contrib/perl/MIDNIGHTBSD-upgrade,v 1.1 2009/03/15 19:48:36 ctriv Exp $
+$MidnightBSD: src/contrib/perl/MIDNIGHTBSD-upgrade,v 1.2 2009/03/16 02:22:11 ctriv Exp $
 
 Perl - Practical Extraction and Report Language
 	originals can be found at: http://www.perl.org/get.html	
@@ -14,4 +14,4 @@ The following log shows details of trimming:
 
 After you have created the vendor branch, make our own MANIFEST in HEAD:
 
-	find . -type f | sed -e 's:^./::' | grep -v MIDNIGHTBSD | sort > MANIFEST
+	find . -type f | sed -e 's:^./::' | grep -v MIDNIGHTBSD | grep -v CVS | sort > MANIFEST
