@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: src/lib/libc/db/hash/hash_buf.c,v 1.8 2007/01/09 00:27:50 im
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef DEBUG
 #include <assert.h>
