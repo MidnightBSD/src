@@ -1,9 +1,20 @@
+#
+# $MidnightBSD$
+#
+# This makefile deals with binding perl's build system to our own.
+# It is called BSDmakefile because perl's configure makes a 'Makefile',
+# and it is not possible to change the name.
+#
 .include <bsd.own.mk>
 .include <bsd.obj.mk>
-
+.include <bsd.man.mk>
 
 SRCDIR= ${.CURDIR}/../../contrib/perl
 
+#
+# mksymlinks is perl's way of building away from the src dir.  It builds a bunch of symlinks
+# so everthing is where Configure thinks it should be.  Hackish, but it works.
+#
 CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
                 -Dmksymlinks -Dsrc=${SRCDIR} 
                 
@@ -18,16 +29,39 @@ perl: ${PERL_MAKEFILE}
 	
 ${PERL_MAKEFILE}:
 	cd ${.OBJDIR} && ${SRCDIR}/${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
-            
+
+# if OBJDIR is ., then don't delete ourselves.            
 clean:
 	cd ${.OBJDIR} && ls -A | grep -v 'BSDmakefile' | xargs rm -r
 
-install:
-	cd ${.OBJDIR} && ${MAKE} -f ${PERL_MAKEFILE} install	
-                                        
+install: install.perl install.man
+
+install.perl:
+	cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR} ./perl installperl --destdir=${DESTDIR} 
+
+
+
+#
+# perl doesn't compress man pages, so we do a staged install
+#
+MANSECTIONS= 1 3
+	
+install.man: convertpods finalmaninstall
+
+convertpods:
+	@cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR} ./perl installman --man1dir=${.OBJDIR}/rawmans/1 --man3dir=${.OBJDIR}/rawmans/3
+
+finalmaninstall:
+.for SEC in ${MANSECTIONS}
+	@cd ${.OBJDIR}/rawmans/${SEC}; \
+	for man in `ls`; do \
+		${MCOMPRESS_CMD} $$man > $$man${MCOMPRESS_EXT}; \
+		echo ${MINSTALL} $$man${MCOMPRESS_EXT} ${DESTDIR}${MANDIR}${SEC}/$$man${MCOMPRESS_EXT}; \
+		${MINSTALL} $$man${MCOMPRESS_EXT} ${DESTDIR}${MANDIR}${SEC}/$$man${MCOMPRESS_EXT}; \
+	done
+.endfor
+	
 .PHONY: clean                                        
-                                        
-                                        
                                         
                                         
                                         
