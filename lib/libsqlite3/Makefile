@@ -1,5 +1,5 @@
 #	From: @(#)Makefile	8.2 (Berkeley) 12/15/93
-# $MidnightBSD: src/lib/libsqlite3/Makefile,v 1.4 2008/04/28 05:40:02 laffer1 Exp $
+# $MidnightBSD: src/lib/libsqlite3/Makefile,v 1.5 2009/03/19 15:07:58 ctriv Exp $
 
 SQLITEDIR=	${.CURDIR}/../../contrib/sqlite3
 .PATH:		${SQLITEDIR}
@@ -13,7 +13,5 @@ CFLAGS+=	-I${SQLITEDIR}
 WARNS?=		0
 
 INCS=		${SQLITEDIR}/sqlite3.h
-
-LDADD=		-lpthread
 
 .include <bsd.lib.mk>
