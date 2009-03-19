@@ -1,5 +1,5 @@
 #
-# $MidnightBSD$
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.2 2009/03/16 17:31:22 ctriv Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -16,6 +16,7 @@ SRCDIR= ${.CURDIR}/../../contrib/perl
 # so everthing is where Configure thinks it should be.  Hackish, but it works.
 #
 CONFIGURE_ARGS= -des -Dprefix=/usr -Dsiteprefix=/usr/local -Dvendorprefix=/usr \
+		-Dsiteman1dir=/usr/local/man/man1 -Dsiteman3dir=/usr/local/man/man3 \
                 -Dmksymlinks -Dsrc=${SRCDIR} 
                 
 CONFIGURE_SCRIPT=    Configure
@@ -32,7 +33,7 @@ ${PERL_MAKEFILE}:
 
 # if OBJDIR is ., then don't delete ourselves.            
 clean:
-	cd ${.OBJDIR} && ls -A | grep -v 'BSDmakefile' | xargs rm -r
+	cd ${.OBJDIR} && ls -A | grep -v 'BSDmakefile' | grep -v 'CVS' | xargs rm -r
 
 install: install.perl install.man
 
