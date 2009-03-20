@@ -24,9 +24,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+# $FreeBSD: src/etc/periodic/security/100.chksetuid,v 1.8.14.1 2008/01/29 00:22:33 dougb Exp $
 # $MidnightBSD$
-# $FreeBSD: src/etc/periodic/security/100.chksetuid,v 1.8 2005/01/13 15:07:35 glebius Exp $
-#
 
 # If there is a global system configuration file, suck it in.
 #
@@ -45,7 +44,7 @@ case "$daily_status_security_chksetuid_enable" in
 	echo ""
 	echo 'Checking setuid files and devices:'
 	# XXX Note that there is the possibility of overrunning the args to ls
-	MP=`mount -t ufs | egrep -v " no(suid|exec)" | awk '{ print $3 }' | sort`
+	MP=`mount -t ufs,zfs | egrep -v " no(suid|exec)" | awk '{ print $3 }' | sort`
 	if [ -n "${MP}" ]
 	then
 	    set ${MP}

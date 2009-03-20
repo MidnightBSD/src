@@ -19510,13 +19510,12 @@ etc/periodic/security/100.chksetuid -text
 etc/periodic/security/200.chkmounts -text
 etc/periodic/security/300.chkuid0 -text
 etc/periodic/security/400.passwdless -text
+etc/periodic/security/410.logincheck -text
 etc/periodic/security/500.ipfwdenied -text
 etc/periodic/security/510.ipfdenied -text
 etc/periodic/security/520.pfdenied -text
 etc/periodic/security/550.ipfwlimit -text
-etc/periodic/security/600.ip6fwdenied -text
 etc/periodic/security/610.ipf6denied -text
-etc/periodic/security/650.ip6fwlimit -text
 etc/periodic/security/700.kernelmsg -text
 etc/periodic/security/800.loginfail -text
 etc/periodic/security/900.tcpwrap -text
