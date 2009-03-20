@@ -21,6 +21,6 @@ echo '========================================================' 1>&2
 (echo '=========== IT HAS BEEN OBSOLETE FOR YEARS! ====-=======' >/dev/tty) 2>/dev/null
 (echo '========================================================' >/dev/tty) 2>/dev/null
 # highlight the nag or it will never be fixed!
-sleep 10
+# sleep 10
 echo elf
 exit 0
