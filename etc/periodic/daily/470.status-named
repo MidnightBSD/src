@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # $MidnightBSD$
-# $FreeBSD: src/etc/periodic/daily/470.status-named,v 1.6.10.1 2005/11/27 00:38:57 dougb Exp $
+# $FreeBSD: src/etc/periodic/daily/470.status-named,v 1.8 2006/06/11 20:39:12 maxim Exp $
 #
 
 # If there is a global system configuration file, suck it in.
@@ -32,7 +32,7 @@ case "$daily_status_named_enable" in
 
 	start=`date -v-1d '+%b %e'`
 	rc=$(catmsgs |
-	    fgrep -E ".*named\[[[:digit:]]+\]: transfer of .*failed .*: REFUSED" |
+	    fgrep -E "^$start.*named\[[[:digit:]]+\]: transfer of .*failed .*: REFUSED" |
 	    sed -e "s/.*transfer of \'\(.*\)\/IN\' from \(.*\)#[0-9]*: .*/\1 from \2/" |
 	    sort -f | uniq -ic | (
 		usedns=0
