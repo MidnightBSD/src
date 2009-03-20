@@ -1,6 +1,6 @@
 #!/bin/sh -
 #
-# $MidnightBSD$
+# $MidnightBSD: src/etc/periodic/weekly/310.locate,v 1.2 2006/08/28 02:13:44 laffer1 Exp $
 # $FreeBSD: src/etc/periodic/weekly/310.locate,v 1.6 2000/09/14 17:19:13 brian Exp $
 #
 
@@ -24,7 +24,7 @@ case "$weekly_locate_enable" in
 	chmod 644 $locdb || rc=3
 
 	cd /
-	echo /usr/libexec/locate.updatedb | nice -5 su -fm nobody || rc=3
+	echo /usr/libexec/locate.updatedb | nice -n 5 su -fm nobody || rc=3
 	chmod 444 $locdb || rc=3;;
 
     *)  rc=0;;
