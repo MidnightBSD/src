@@ -14795,6 +14795,7 @@ contrib/sqlite3/shell.c -text
 contrib/sqlite3/sqlite3.1 -text
 contrib/sqlite3/sqlite3.c -text
 contrib/sqlite3/sqlite3.h -text
+contrib/sqlite3/sqlite3.pc -text
 contrib/sqlite3/sqlite3ext.h -text
 contrib/sudo/BUGS -text
 contrib/sudo/CHANGES -text
