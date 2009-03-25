@@ -21,12 +21,12 @@
  * Name to id translation routines used by the scanner.
  * These functions are not time critical.
  *
- * $FreeBSD: src/contrib/libpcap/nametoaddr.c,v 1.12 2005/07/11 03:43:25 sam Exp $
+ * $FreeBSD: src/contrib/libpcap/nametoaddr.c,v 1.12.10.1 2007/10/19 03:03:56 mlaier Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/nametoaddr.c,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/nametoaddr.c,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -278,7 +278,7 @@ pcap_nametoproto(const char *str)
 #include "ethertype.h"
 
 struct eproto {
-	char *s;
+	const char *s;
 	u_short p;
 };
 
@@ -399,7 +399,7 @@ __pcap_atodn(const char *s, bpf_u_int32 *addr)
 
 	u_int node, area;
 
-	if (sscanf((char *)s, "%d.%d", &area, &node) != 2)
+	if (sscanf(s, "%d.%d", &area, &node) != 2)
 		bpf_error("malformed decnet address '%s'", s);
 
 	*addr = (area << AREASHIFT) & AREAMASK;
@@ -485,7 +485,7 @@ pcap_ether_hostton(const char *name)
 	u_char a[6];
 
 	ap = NULL;
-	if (ether_hostton((char *)name, (struct ether_addr *)a) == 0) {
+	if (ether_hostton(name, (struct ether_addr *)a) == 0) {
 		ap = (u_char *)malloc(6);
 		if (ap != NULL)
 			memcpy((char *)ap, (char *)a, 6);

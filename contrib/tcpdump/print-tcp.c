@@ -23,7 +23,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-tcp.c,v 1.1.1.2 2006-02-25 02:34:03 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-tcp.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -799,7 +799,7 @@ tcp_verify_signature(const struct ip *ip, const struct tcphdr *tp,
 	MD5_Update(&ctx, tcpmd5secret, strlen(tcpmd5secret));
 	MD5_Final(sig, &ctx);
 
-	if (memcmp(rcvsig, sig, 16))
+	if (memcmp(rcvsig, sig, TCP_SIGLEN) == 0)
 		return (SIGNATURE_VALID);
 	else
 		return (SIGNATURE_INVALID);

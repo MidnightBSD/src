@@ -19,11 +19,11 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/libpcap/grammar.y,v 1.10 2005/07/11 03:43:25 sam Exp $
+ * $FreeBSD: src/contrib/libpcap/grammar.y,v 1.11.2.1 2007/10/19 03:03:56 mlaier Exp $
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/grammar.y,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/grammar.y,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -53,7 +53,11 @@ struct rtentry;
 #include "pcap-int.h"
 
 #include "gencode.h"
-#include "pf.h"
+#ifdef HAVE_NET_PFVAR_H
+#include <net/if.h>
+#include <net/pfvar.h>
+#include <net/if_pflog.h>
+#endif
 #include <pcap-namedb.h>
 
 #ifdef HAVE_OS_PROTO_H
@@ -69,7 +73,7 @@ int n_errors = 0;
 static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF, Q_UNDEF };
 
 static void
-yyerror(char *msg)
+yyerror(const char *msg)
 {
 	++n_errors;
 	bpf_error("%s", msg);
@@ -86,6 +90,50 @@ pcap_parse()
 }
 #endif
 
+#ifdef HAVE_NET_PFVAR_H
+static int
+pfreason_to_num(const char *reason)
+{
+	const char *reasons[] = PFRES_NAMES;
+	int i;
+
+	for (i = 0; reasons[i]; i++) {
+		if (pcap_strcasecmp(reason, reasons[i]) == 0)
+			return (i);
+	}
+	bpf_error("unknown PF reason");
+	/*NOTREACHED*/
+}
+
+static int
+pfaction_to_num(const char *action)
+{
+	if (pcap_strcasecmp(action, "pass") == 0 ||
+	    pcap_strcasecmp(action, "accept") == 0)
+		return (PF_PASS);
+	else if (pcap_strcasecmp(action, "drop") == 0 ||
+		pcap_strcasecmp(action, "block") == 0)
+		return (PF_DROP);
+	else {
+		bpf_error("unknown PF action");
+		/*NOTREACHED*/
+	}
+}
+#else /* !HAVE_NET_PFVAR_H */
+static int
+pfreason_to_num(const char *reason)
+{
+	bpf_error("libpcap was compiled on a machine without pf support");
+	/*NOTREACHED*/
+}
+
+static int
+pfaction_to_num(const char *action)
+{
+	bpf_error("libpcap was compiled on a machine without pf support");
+	/*NOTREACHED*/
+}
+#endif /* HAVE_NET_PFVAR_H */
 %}
 
 %union {
@@ -114,8 +162,9 @@ pcap_parse()
 %type	<i>	atmtype atmmultitype
 %type	<blk>	atmfield
 %type	<blk>	atmfieldvalue atmvalue atmlistvalue
-%type   <blk>   mtp3field
-%type   <blk>   mtp3fieldvalue mtp3value mtp3listvalue
+%type	<i>	mtp2type
+%type	<blk>	mtp3field
+%type	<blk>	mtp3fieldvalue mtp3value mtp3listvalue
 
 
 %token  DST SRC HOST GATEWAY
@@ -132,6 +181,7 @@ pcap_parse()
 %token  LEN
 %token  IPV6 ICMPV6 AH ESP
 %token	VLAN MPLS
+%token	PPPOED PPPOES
 %token  ISO ESIS CLNP ISIS L1 L2 IIH LSP SNP CSNP PSNP 
 %token  STP
 %token  IPX
@@ -140,7 +190,8 @@ pcap_parse()
 %token	OAM OAMF4 CONNECTMSG METACONNECT
 %token	VPI VCI
 %token	RADIO
-%token  SIO OPC DPC SLS
+%token	FISU LSSU MSU
+%token	SIO OPC DPC SLS
 
 %type	<s> ID
 %type	<e> EID
@@ -261,6 +312,7 @@ rterm:	  head id		{ $$ = $2; }
 	| atmtype		{ $$.b = gen_atmtype_abbrev($1); $$.q = qerr; }
 	| atmmultitype		{ $$.b = gen_atmmulti_abbrev($1); $$.q = qerr; }
 	| atmfield atmvalue	{ $$.b = $2.b; $$.q = qerr; }
+	| mtp2type		{ $$.b = gen_mtp2type_abbrev($1); $$.q = qerr; }
 	| mtp3field mtp3value	{ $$.b = $2.b; $$.q = qerr; }
 	;
 /* protocol level qualifiers */
@@ -334,6 +386,8 @@ other:	  pqual TK_BROADCAST	{ $$ = gen_broadcast($1); }
 	| VLAN			{ $$ = gen_vlan(-1); }
 	| MPLS pnum		{ $$ = gen_mpls($2); }
 	| MPLS			{ $$ = gen_mpls(-1); }
+	| PPPOED		{ $$ = gen_pppoed(); }
+	| PPPOES		{ $$ = gen_pppoes(); }
 	| pfvar			{ $$ = $1; }
 	;
 
@@ -346,28 +400,10 @@ pfvar:	  PF_IFNAME ID		{ $$ = gen_pf_ifname($2); }
 	;
 
 reason:	  NUM			{ $$ = $1; }
-	| ID			{ const char *reasons[] = PFRES_NAMES;
-				  int i;
-				  for (i = 0; reasons[i]; i++) {
-					  if (pcap_strcasecmp($1, reasons[i]) == 0) {
-						  $$ = i;
-						  break;
-					  }
-				  }
-				  if (reasons[i] == NULL)
-					  bpf_error("unknown PF reason");
-				}
+	| ID			{ $$ = pfreason_to_num($1); }
 	;
 
-action:	  ID			{ if (pcap_strcasecmp($1, "pass") == 0 ||
-				      pcap_strcasecmp($1, "accept") == 0)
-					$$ = PF_PASS;
-				  else if (pcap_strcasecmp($1, "drop") == 0 ||
-				      pcap_strcasecmp($1, "block") == 0)
-					$$ = PF_DROP;
-				  else
-					  bpf_error("unknown PF action");
-				}
+action:	  ID			{ $$ = pfaction_to_num($1); }
 	;
 
 relop:	  '>'			{ $$ = BPF_JGT; }
@@ -436,6 +472,11 @@ atmfieldvalue: NUM {
 	;
 atmlistvalue: atmfieldvalue
 	| atmlistvalue or atmfieldvalue { gen_or($1.b, $3.b); $$ = $3; }
+	;
+	/* MTP2 types quantifier */
+mtp2type: FISU			{ $$ = M_FISU; }
+	| LSSU			{ $$ = M_LSSU; }
+	| MSU			{ $$ = M_MSU; }
 	;
 	/* MTP3 field types quantifier */
 mtp3field: SIO			{ $$.mtp3fieldtype = M_SIO; }

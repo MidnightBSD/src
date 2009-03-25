@@ -23,11 +23,11 @@
  * Further tweaked to more closely resemble print-fddi.c
  *	Guy Harris <guy@alum.mit.edu>
  *
- * $FreeBSD: src/contrib/tcpdump/print-token.c,v 1.7 2005/05/29 19:09:28 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-token.c,v 1.8.2.1 2007/10/19 03:04:00 mlaier Exp $
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-token.c,v 1.1.1.2 2006-02-25 02:34:03 laffer1 Exp $";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-token.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -155,7 +155,6 @@ token_print(const u_char *p, u_int length, u_int caplen)
 	caplen -= hdr_len;
 
 	/* Frame Control field determines interpretation of packet */
-	extracted_ethertype = 0;
 	if (FRAME_TYPE(trp) == TOKEN_FC_LLC) {
 		/* Try to print the LLC-layer header & higher layers */
 		if (llc_print(p, length, caplen, ESRC(&ehdr), EDST(&ehdr),
@@ -169,7 +168,7 @@ token_print(const u_char *p, u_int length, u_int caplen)
 				printf("(LLC %s) ",
 			etherproto_string(htons(extracted_ethertype)));
 			}
-			if (!xflag && !qflag)
+			if (!suppress_default_print)
 				default_print(p, caplen);
 		}
 	} else {
@@ -178,7 +177,7 @@ token_print(const u_char *p, u_int length, u_int caplen)
 		if (!eflag)
 			token_hdr_print(trp, length + TOKEN_HDRLEN + route_len,
 			    ESRC(&ehdr), EDST(&ehdr));
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	}
 	return (hdr_len);

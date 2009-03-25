@@ -11,6 +11,8 @@ acconfig.h
 aclocal.m4
 addrtoname.c
 addrtoname.h
+af.c
+af.h
 ah.h
 aodv.h
 appletalk.h
@@ -29,6 +31,7 @@ configure
 configure.in
 cpack.c
 cpack.h
+dccp.h
 decnet.h
 decode_prefix.h
 enc.h
@@ -105,7 +108,6 @@ packetdat.awk
 parsenfsfh.c
 pcap_dump_ftell.c
 pcap-missing.h
-pf.h
 pmap_prot.h
 ppp.h
 print-802_11.c
@@ -125,6 +127,7 @@ print-cdp.c
 print-chdlc.c
 print-cip.c
 print-cnfp.c
+print-dccp.c
 print-decnet.c
 print-dhcp6.c
 print-domain.c
@@ -169,6 +172,7 @@ print-netbios.c
 print-nfs.c
 print-ntp.c
 print-null.c
+print-olsr.c
 print-ospf.c
 print-ospf6.c
 print-pflog.c
@@ -188,6 +192,7 @@ print-sctp.c
 print-sip.c
 print-sl.c
 print-sll.c
+print-slow.c
 print-smb.c
 print-snmp.c
 print-stp.c
@@ -226,6 +231,7 @@ tcpdump.1
 tcpdump.c
 tcpdump-stdinc.h
 telnet.h
+tftp.h
 timed.h
 token.h
 udp.h

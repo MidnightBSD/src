@@ -1,4 +1,4 @@
-.\" @(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump.1,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)
+.\" @(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump.1,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)
 .\"
 .\"	$NetBSD: tcpdump.8,v 1.9 2003/03/31 00:18:17 perry Exp $
 .\"
@@ -22,7 +22,7 @@
 .\" WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
 .\" MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 .\"
-.\" $FreeBSD: src/contrib/tcpdump/tcpdump.1,v 1.15 2005/07/11 04:14:02 sam Exp $
+.\" $FreeBSD: src/contrib/tcpdump/tcpdump.1,v 1.17.2.1 2007/10/19 03:04:00 mlaier Exp $
 .\"
 .TH TCPDUMP 1  "18 April 2005"
 .SH NAME
@@ -112,8 +112,9 @@ tcpdump \- dump traffic on a network
 .ad
 .SH DESCRIPTION
 .LP
-\fITcpdump\fP prints out the headers of packets on a network interface
-that match the boolean \fIexpression\fP.  It can also be run with the
+\fITcpdump\fP prints out a description of the contents of packets on a
+network interface that match the boolean \fIexpression\fP.  It can also
+be run with the
 .B \-w
 flag, which causes it to save the packet data to a file for later
 analysis, and/or with the
@@ -240,7 +241,10 @@ operation, be enabled on that interface.
 .TP
 .B Under BSD (this includes Mac OS X):
 You must have read access to
-.IR /dev/bpf* .
+.I /dev/bpf*
+on systems that don't have a cloning BPF device, or to
+.I /dev/bpf
+on systems that do.
 On BSDs with a devfs (this includes Mac OS X), this might involve more
 than just having somebody with super-user access setting the ownership
 or permissions on the BPF devices - it might involve configuring devfs
@@ -543,7 +547,7 @@ Standard output is used if \fIfile\fR is ``-''.
 .TP
 .B \-W
 Used in conjunction with the 
-.I \-C 
+.B \-C 
 option, this will limit the number
 of files created to the specified number, and begin overwriting files
 from the beginning, thus creating a 'rotating' buffer. 
@@ -552,7 +556,9 @@ the files with enough leading 0s to support the maximum number of
 files, allowing them to sort correctly.
 .TP
 .B \-x
-Print each packet (minus its link level header) in hex.
+When parsing and printing,
+in addition to printing the headers of each packet, print the data of
+each packet (minus its link level header) in hex. 
 The smaller of the entire packet or
 .I snaplen
 bytes will be printed.  Note that this is the entire link-layer
@@ -561,16 +567,22 @@ will also be printed when the higher layer packet is shorter than the
 required padding.
 .TP
 .B \-xx
-Print each packet,
+When parsing and printing,
+in addition to printing the headers of each packet, print the data of
+each packet,
 .I including
 its link level header, in hex.
 .TP
 .B \-X
-Print each packet (minus its link level header) in hex and ASCII.
+When parsing and printing,
+in addition to printing the headers of each packet, print the data of
+each packet (minus its link level header) in hex and ASCII.
 This is very handy for analysing new protocols.
 .TP
 .B \-XX
-Print each packet,
+When parsing and printing,
+in addition to printing the headers of each packet, print the data of
+each packet,
 .I including
 its link level header, in hex and ASCII.
 .TP
@@ -757,8 +769,16 @@ This syntax does not work in IPv6-enabled configuration at this moment.
 .IP "\fBdst net \fInet\fR"
 True if the IPv4/v6 destination address of the packet has a network
 number of \fInet\fP.
-\fINet\fP may be either a name from /etc/networks
-or a network number (see \fInetworks(4)\fP for details).
+\fINet\fP may be either a name from the networks database
+(/etc/networks, etc.) or a network number.
+An IPv4 network number can be written as a dotted quad (e.g., 192.168.1.0),
+dotted triple (e.g., 192.168.1), dotted pair (e.g, 172.16), or single
+number (e.g., 10); the netmask is 255.255.255.255 for a dotted quad
+(which means that it's really a host match), 255.255.255.0 for a dotted
+triple, 255.255.0.0 for a dotted pair, or 255.0.0.0 for a single number.
+An IPv6 network number must be written out fully; the netmask is
+ff:ff:ff:ff:ff:ff:ff:ff, so IPv6 "network" matches are really always
+host matches, and a network match requires a netmask length.
 .IP "\fBsrc net \fInet\fR"
 True if the IPv4/v6 source address of the packet has a network
 number of \fInet\fP.
@@ -1029,20 +1049,72 @@ Note that
 \fItcpdump\fP does not currently know how to parse these protocols.
 .IP "\fBvlan \fI[vlan_id]\fR"
 True if the packet is an IEEE 802.1Q VLAN packet.
-If \fI[vlan_id]\fR is specified, only true is the packet has the specified
+If \fI[vlan_id]\fR is specified, only true if the packet has the specified
 \fIvlan_id\fR.
 Note that the first \fBvlan\fR keyword encountered in \fIexpression\fR
-changes the decoding offsets for the remainder of \fIexpression\fR
-on the assumption that the packet is a VLAN packet.
-the \fI[vlan_id]\fR statement may be used more than once, to filter on vlan hierarchies.
-each use of the \fI[vlan_id]\fR \fIexpression\fR increments the filter offsets by 4.
+changes the decoding offsets for the remainder of \fIexpression\fR on
+the assumption that the packet is a VLAN packet.  The \fBvlan
+\fI[vlan_id]\fR expression may be used more than once, to filter on VLAN
+hierarchies.  Each use of that expression increments the filter offsets
+by 4.
+.IP
+For example:
+.in +.5i
+.nf
+\fBvlan 100 && vlan 200\fR
 .fi
-example(s):
+.in -.5i
+filters on VLAN 200 encapsulated within VLAN 100, and
+.in +.5i
+.nf
+\fBvlan && vlan 300 && ip\fR
 .fi
-"vlan 100 && vlan 200" filters on vlan 200 encapsulated within vlan 100
+.in -.5i
+filters IPv4 protocols encapsulated in VLAN 300 encapsulated within any
+higher order VLAN.
+.IP "\fBmpls \fI[label_num]\fR"
+True if the packet is an MPLS packet.
+If \fI[label_num]\fR is specified, only true is the packet has the specified
+\fIlabel_num\fR.
+Note that the first \fBmpls\fR keyword encountered in \fIexpression\fR
+changes the decoding offsets for the remainder of \fIexpression\fR on
+the assumption that the packet is a MPLS-encapsulated IP packet.  The
+\fBmpls \fI[label_num]\fR expression may be used more than once, to
+filter on MPLS hierarchies.  Each use of that expression increments the
+filter offsets by 4. 
+.IP
+For example:
+.in +.5i
+.nf
+\fBmpls 100000 && mpls 1024\fR
 .fi
-"vlan && vlan 300 && ip" filters IPv4 protocols encapsulated in vlan 300 encapsulated within any higher order vlan
+.in -.5i
+filters packets with an outer label of 100000 and an inner label of
+1024, and
+.in +.5i
+.nf
+\fBmpls && mpls 1024 && host 192.9.200.1\fR
 .fi
+.in -.5i
+filters packets to or from 192.9.200.1 with an inner label of 1024 and
+any outer label.
+.IP \fBpppoed\fP
+True if the packet is a PPP-over-Ethernet Discovery packet (Ethernet
+type 0x8863).
+.IP \fBpppoes\fP
+True if the packet is a PPP-over-Ethernet Session packet (Ethernet
+type 0x8864).
+Note that the first \fBpppoes\fR keyword encountered in \fIexpression\fR
+changes the decoding offsets for the remainder of \fIexpression\fR on
+the assumption that the packet is a PPPoE session packet.
+.IP
+For example:
+.in +.5i
+.nf
+\fBpppoes && ip\fR
+.fi
+.in -.5i
+filters IPv4 protocols encapsulated in PPPoE.
 .IP  "\fBtcp\fR, \fBudp\fR, \fBicmp\fR"
 Abbreviations for:
 .in +.5i
@@ -2256,6 +2328,13 @@ patches@tcpdump.org
 .LP
 NIT doesn't let you watch your own outbound traffic, BPF will.
 We recommend that you use the latter.
+.LP
+When running
+.BR tcpdump
+with the
+.B \-v
+option on a network interface supporting checksum off-loading,
+IP packets sourced from this machine will have many false 'bad cksum 0' errors.
 .LP
 On Linux systems with 2.0[.x] kernels:
 .IP

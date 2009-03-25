@@ -1,3 +1,4 @@
+/* $FreeBSD: src/contrib/tcpdump/print-802_11.c,v 1.2.2.1 2007/10/19 03:03:58 mlaier Exp $ */
 /*
  * Copyright (c) 2001
  *	Fortress Technologies, Inc.  All rights reserved.
@@ -22,7 +23,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-802_11.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-802_11.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -46,39 +47,78 @@ static const char rcsid[] _U_ =
 #include "ieee802_11.h"
 #include "ieee802_11_radio.h"
 
+#define PRINT_SSID(p) \
+	switch (p.ssid_status) { \
+	case TRUNCATED: \
+		return 0; \
+	case PRESENT: \
+		printf(" ("); \
+		fn_print(p.ssid.ssid, NULL); \
+		printf(")"); \
+		break; \
+	case NOT_PRESENT: \
+		break; \
+	}
+
 #define PRINT_RATE(_sep, _r, _suf) \
 	printf("%s%2.1f%s", _sep, (.5 * ((_r) & 0x7f)), _suf)
 #define PRINT_RATES(p) \
-do { \
-	int z; \
-	const char *sep = " ["; \
-	for (z = 0; z < p.rates.length ; z++) { \
-		PRINT_RATE(sep, p.rates.rate[z], \
-			(p.rates.rate[z] & 0x80 ? "*" : "")); \
-		sep = " "; \
+	switch (p.rates_status) { \
+	case TRUNCATED: \
+		return 0; \
+	case PRESENT: \
+		do { \
+			int z; \
+			const char *sep = " ["; \
+			for (z = 0; z < p.rates.length ; z++) { \
+				PRINT_RATE(sep, p.rates.rate[z], \
+					(p.rates.rate[z] & 0x80 ? "*" : "")); \
+				sep = " "; \
+			} \
+			if (p.rates.length != 0) \
+				printf(" Mbit]"); \
+		} while (0); \
+		break; \
+	case NOT_PRESENT: \
+		break; \
+	}
+
+#define PRINT_DS_CHANNEL(p) \
+	switch (p.ds_status) { \
+	case TRUNCATED: \
+		return 0; \
+	case PRESENT: \
+		printf(" CH: %u", p.ds.channel); \
+		break; \
+	case NOT_PRESENT: \
+		break; \
 	} \
-	if (p.rates.length != 0) \
-		printf(" Mbit]"); \
-} while (0)
+	printf("%s", \
+	    CAPABILITY_PRIVACY(p.capability_info) ? ", PRIVACY" : "" );
+
+static const int ieee80211_htrates[16] = {
+	13,		/* IFM_IEEE80211_MCS0 */
+	26,		/* IFM_IEEE80211_MCS1 */
+	39,		/* IFM_IEEE80211_MCS2 */
+	52,		/* IFM_IEEE80211_MCS3 */
+	78,		/* IFM_IEEE80211_MCS4 */
+	104,		/* IFM_IEEE80211_MCS5 */
+	117,		/* IFM_IEEE80211_MCS6 */
+	130,		/* IFM_IEEE80211_MCS7 */
+	26,		/* IFM_IEEE80211_MCS8 */
+	52,		/* IFM_IEEE80211_MCS9 */
+	78,		/* IFM_IEEE80211_MCS10 */
+	104,		/* IFM_IEEE80211_MCS11 */
+	156,		/* IFM_IEEE80211_MCS12 */
+	208,		/* IFM_IEEE80211_MCS13 */
+	234,		/* IFM_IEEE80211_MCS14 */
+	260,		/* IFM_IEEE80211_MCS15 */
+};
+#define PRINT_HT_RATE(_sep, _r, _suf) \
+	printf("%s%.1f%s", _sep, (.5 * ieee80211_htrates[(_r) & 0xf]), _suf)
 
 static const char *auth_alg_text[]={"Open System","Shared Key","EAP"};
-static const char *subtype_text[]={
-	"Assoc Request",
-	"Assoc Response",
-	"ReAssoc Request",
-	"ReAssoc Response",
-	"Probe Request",
-	"Probe Response",
-	"",
-	"",
-	"Beacon",
-	"ATIM",
-	"Disassociation",
-	"Authentication",
-	"DeAuthentication",
-	"",
-	""
-};
+#define NUM_AUTH_ALGS	(sizeof auth_alg_text / sizeof auth_alg_text[0])
 
 static const char *status_text[] = {
 	"Succesful",  /*  0  */
@@ -102,8 +142,8 @@ static const char *status_text[] = {
 	"Association denied because AP is unable to handle additional associated stations",	  /*  17 */
 	"Association denied due to requesting station not supporting all of the " \
 		"data rates in BSSBasicRateSet parameter",	  /*  18 */
-	NULL
 };
+#define NUM_STATUSES	(sizeof status_text / sizeof status_text[0])
 
 static const char *reason_text[] = {
 	"Reserved", /* 0 */
@@ -112,12 +152,12 @@ static const char *reason_text[] = {
 	"Deauthenticated because sending station is leaving (or has left) IBSS or ESS", /* 3 */
 	"Disassociated due to inactivity", /* 4 */
 	"Disassociated because AP is unable to handle all currently associated stations", /* 5 */
-	"Class 2 frame receivedfrom nonauthenticated station", /* 6 */
+	"Class 2 frame received from nonauthenticated station", /* 6 */
 	"Class 3 frame received from nonassociated station", /* 7 */
 	"Disassociated because sending station is leaving (or has left) BSS", /* 8 */
 	"Station requesting (re)association is not authenticated with responding station", /* 9 */
-	NULL
 };
+#define NUM_REASONS	(sizeof reason_text / sizeof reason_text[0])
 
 static int
 wep_print(const u_char *p)
@@ -134,94 +174,141 @@ wep_print(const u_char *p)
 	return 1;
 }
 
-static int
+static void
 parse_elements(struct mgmt_body_t *pbody, const u_char *p, int offset)
 {
+	/*
+	 * We haven't seen any elements yet.
+	 */
+	pbody->challenge_status = NOT_PRESENT;
+	pbody->ssid_status = NOT_PRESENT;
+	pbody->rates_status = NOT_PRESENT;
+	pbody->ds_status = NOT_PRESENT;
+	pbody->cf_status = NOT_PRESENT;
+	pbody->tim_status = NOT_PRESENT;
+
 	for (;;) {
 		if (!TTEST2(*(p + offset), 1))
-			return 1;
+			return;
 		switch (*(p + offset)) {
 		case E_SSID:
+			/* Present, possibly truncated */
+			pbody->ssid_status = TRUNCATED;
 			if (!TTEST2(*(p + offset), 2))
-				return 0;
+				return;
 			memcpy(&pbody->ssid, p + offset, 2);
 			offset += 2;
-			if (pbody->ssid.length <= 0)
-				break;
-			if (!TTEST2(*(p + offset), pbody->ssid.length))
-				return 0;
-			memcpy(&pbody->ssid.ssid, p + offset,
-			    pbody->ssid.length);
-			offset += pbody->ssid.length;
+			if (pbody->ssid.length != 0) {
+				if (pbody->ssid.length >
+				    sizeof(pbody->ssid.ssid) - 1)
+					return;
+				if (!TTEST2(*(p + offset), pbody->ssid.length))
+					return;
+				memcpy(&pbody->ssid.ssid, p + offset,
+				    pbody->ssid.length);
+				offset += pbody->ssid.length;
+			}
 			pbody->ssid.ssid[pbody->ssid.length] = '\0';
+			/* Present and not truncated */
+			pbody->ssid_status = PRESENT;
 			break;
 		case E_CHALLENGE:
+			/* Present, possibly truncated */
+			pbody->challenge_status = TRUNCATED;
 			if (!TTEST2(*(p + offset), 2))
-				return 0;
+				return;
 			memcpy(&pbody->challenge, p + offset, 2);
 			offset += 2;
-			if (pbody->challenge.length <= 0)
-				break;
-			if (!TTEST2(*(p + offset), pbody->challenge.length))
-				return 0;
-			memcpy(&pbody->challenge.text, p + offset,
-			    pbody->challenge.length);
-			offset += pbody->challenge.length;
+			if (pbody->challenge.length != 0) {
+				if (pbody->challenge.length >
+				    sizeof(pbody->challenge.text) - 1)
+					return;
+				if (!TTEST2(*(p + offset), pbody->challenge.length))
+					return;
+				memcpy(&pbody->challenge.text, p + offset,
+				    pbody->challenge.length);
+				offset += pbody->challenge.length;
+			}
 			pbody->challenge.text[pbody->challenge.length] = '\0';
+			/* Present and not truncated */
+			pbody->challenge_status = PRESENT;
 			break;
 		case E_RATES:
+			/* Present, possibly truncated */
+			pbody->rates_status = TRUNCATED;
 			if (!TTEST2(*(p + offset), 2))
-				return 0;
+				return;
 			memcpy(&(pbody->rates), p + offset, 2);
 			offset += 2;
-			if (pbody->rates.length <= 0)
-				break;
-			if (!TTEST2(*(p + offset), pbody->rates.length))
-				return 0;
-			memcpy(&pbody->rates.rate, p + offset,
-			    pbody->rates.length);
-			offset += pbody->rates.length;
+			if (pbody->rates.length != 0) {
+				if (pbody->rates.length > sizeof pbody->rates.rate)
+					return;
+				if (!TTEST2(*(p + offset), pbody->rates.length))
+					return;
+				memcpy(&pbody->rates.rate, p + offset,
+				    pbody->rates.length);
+				offset += pbody->rates.length;
+			}
+			/* Present and not truncated */
+			pbody->rates_status = PRESENT;
 			break;
 		case E_DS:
+			/* Present, possibly truncated */
+			pbody->ds_status = TRUNCATED;
 			if (!TTEST2(*(p + offset), 3))
-				return 0;
+				return;
 			memcpy(&pbody->ds, p + offset, 3);
 			offset += 3;
+			/* Present and not truncated */
+			pbody->ds_status = PRESENT;
 			break;
 		case E_CF:
+			/* Present, possibly truncated */
+			pbody->cf_status = TRUNCATED;
 			if (!TTEST2(*(p + offset), 8))
-				return 0;
+				return;
 			memcpy(&pbody->cf, p + offset, 8);
 			offset += 8;
+			/* Present and not truncated */
+			pbody->cf_status = PRESENT;
 			break;
 		case E_TIM:
+			/* Present, possibly truncated */
+			pbody->tim_status = TRUNCATED;
 			if (!TTEST2(*(p + offset), 2))
-				return 0;
+				return;
 			memcpy(&pbody->tim, p + offset, 2);
 			offset += 2;
 			if (!TTEST2(*(p + offset), 3))
-				return 0;
+				return;
 			memcpy(&pbody->tim.count, p + offset, 3);
 			offset += 3;
 
 			if (pbody->tim.length <= 3)
 				break;
+			if (pbody->tim.length - 3 > sizeof pbody->tim.bitmap)
+				return;
 			if (!TTEST2(*(p + offset), pbody->tim.length - 3))
-				return 0;
+				return;
 			memcpy(pbody->tim.bitmap, p + (pbody->tim.length - 3),
 			    (pbody->tim.length - 3));
 			offset += pbody->tim.length - 3;
+			/* Present and not truncated */
+			pbody->tim_status = PRESENT;
 			break;
 		default:
 #if 0
 			printf("(1) unhandled element_id (%d)  ",
 			    *(p + offset) );
 #endif
+			if (!TTEST2(*(p + offset), 2))
+				return;
+			if (!TTEST2(*(p + offset + 2), *(p + offset + 1)))
+				return;
 			offset += *(p + offset + 1) + 2;
 			break;
 		}
 	}
-	return 1;
 }
 
 /*********************************************************************************
@@ -239,24 +326,20 @@ handle_beacon(const u_char *p)
 	if (!TTEST2(*p, IEEE802_11_TSTAMP_LEN + IEEE802_11_BCNINT_LEN +
 	    IEEE802_11_CAPINFO_LEN))
 		return 0;
-	memcpy(&pbody.timestamp, p, 8);
+	memcpy(&pbody.timestamp, p, IEEE802_11_TSTAMP_LEN);
 	offset += IEEE802_11_TSTAMP_LEN;
 	pbody.beacon_interval = EXTRACT_LE_16BITS(p+offset);
 	offset += IEEE802_11_BCNINT_LEN;
 	pbody.capability_info = EXTRACT_LE_16BITS(p+offset);
 	offset += IEEE802_11_CAPINFO_LEN;
 
-	if (!parse_elements(&pbody, p, offset))
-		return 0;
+	parse_elements(&pbody, p, offset);
 
-	printf(" (");
-	fn_print(pbody.ssid.ssid, NULL);
-	printf(")");
+	PRINT_SSID(pbody);
 	PRINT_RATES(pbody);
-	printf(" %s CH: %u%s",
-	    CAPABILITY_ESS(pbody.capability_info) ? "ESS" : "IBSS",
-	    pbody.ds.channel,
-	    CAPABILITY_PRIVACY(pbody.capability_info) ? ", PRIVACY" : "" );
+	printf(" %s",
+	    CAPABILITY_ESS(pbody.capability_info) ? "ESS" : "IBSS");
+	PRINT_DS_CHANNEL(pbody);
 
 	return 1;
 }
@@ -276,12 +359,9 @@ handle_assoc_request(const u_char *p)
 	pbody.listen_interval = EXTRACT_LE_16BITS(p+offset);
 	offset += IEEE802_11_LISTENINT_LEN;
 
-	if (!parse_elements(&pbody, p, offset))
-		return 0;
+	parse_elements(&pbody, p, offset);
 
-	printf(" (");
-	fn_print(pbody.ssid.ssid, NULL);
-	printf(")");
+	PRINT_SSID(pbody);
 	PRINT_RATES(pbody);
 	return 1;
 }
@@ -304,12 +384,13 @@ handle_assoc_response(const u_char *p)
 	pbody.aid = EXTRACT_LE_16BITS(p+offset);
 	offset += IEEE802_11_AID_LEN;
 
-	if (!parse_elements(&pbody, p, offset))
-		return 0;
+	parse_elements(&pbody, p, offset);
 
 	printf(" AID(%x) :%s: %s", ((u_int16_t)(pbody.aid << 2 )) >> 2 ,
 	    CAPABILITY_PRIVACY(pbody.capability_info) ? " PRIVACY " : "",
-	    (pbody.status_code < 19 ? status_text[pbody.status_code] : "n/a"));
+	    (pbody.status_code < NUM_STATUSES
+		? status_text[pbody.status_code]
+		: "n/a"));
 
 	return 1;
 }
@@ -332,12 +413,10 @@ handle_reassoc_request(const u_char *p)
 	memcpy(&pbody.ap, p+offset, IEEE802_11_AP_LEN);
 	offset += IEEE802_11_AP_LEN;
 
-	if (!parse_elements(&pbody, p, offset))
-		return 0;
+	parse_elements(&pbody, p, offset);
 
-	printf(" (");
-	fn_print(pbody.ssid.ssid, NULL);
-	printf(") AP : %s", etheraddr_string( pbody.ap ));
+	PRINT_SSID(pbody);
+	printf(" AP : %s", etheraddr_string( pbody.ap ));
 
 	return 1;
 }
@@ -357,12 +436,9 @@ handle_probe_request(const u_char *p)
 
 	memset(&pbody, 0, sizeof(pbody));
 
-	if (!parse_elements(&pbody, p, offset))
-		return 0;
+	parse_elements(&pbody, p, offset);
 
-	printf(" (");
-	fn_print(pbody.ssid.ssid, NULL);
-	printf(")");
+	PRINT_SSID(pbody);
 	PRINT_RATES(pbody);
 
 	return 1;
@@ -387,15 +463,11 @@ handle_probe_response(const u_char *p)
 	pbody.capability_info = EXTRACT_LE_16BITS(p+offset);
 	offset += IEEE802_11_CAPINFO_LEN;
 
-	if (!parse_elements(&pbody, p, offset))
-		return 0;
+	parse_elements(&pbody, p, offset);
 
-	printf(" (");
-	fn_print(pbody.ssid.ssid, NULL);
-	printf(") ");
+	PRINT_SSID(pbody);
 	PRINT_RATES(pbody);
-	printf(" CH: %u%s", pbody.ds.channel,
-	    CAPABILITY_PRIVACY(pbody.capability_info) ? ", PRIVACY" : "" );
+	PRINT_DS_CHANNEL(pbody);
 
 	return 1;
 }
@@ -419,8 +491,9 @@ handle_disassoc(const u_char *p)
 	pbody.reason_code = EXTRACT_LE_16BITS(p);
 
 	printf(": %s",
-	    (pbody.reason_code < 10) ? reason_text[pbody.reason_code]
-	                             : "Reserved" );
+	    (pbody.reason_code < NUM_REASONS)
+		? reason_text[pbody.reason_code]
+		: "Reserved" );
 
 	return 1;
 }
@@ -442,28 +515,31 @@ handle_auth(const u_char *p)
 	pbody.status_code = EXTRACT_LE_16BITS(p + offset);
 	offset += 2;
 
-	if (!parse_elements(&pbody, p, offset))
-		return 0;
+	parse_elements(&pbody, p, offset);
 
 	if ((pbody.auth_alg == 1) &&
 	    ((pbody.auth_trans_seq_num == 2) ||
 	     (pbody.auth_trans_seq_num == 3))) {
 		printf(" (%s)-%x [Challenge Text] %s",
-		    (pbody.auth_alg < 4) ? auth_alg_text[pbody.auth_alg]
-		                         : "Reserved",
+		    (pbody.auth_alg < NUM_AUTH_ALGS)
+			? auth_alg_text[pbody.auth_alg]
+			: "Reserved",
 		    pbody.auth_trans_seq_num,
 		    ((pbody.auth_trans_seq_num % 2)
-		        ? ((pbody.status_code < 19)
+		        ? ((pbody.status_code < NUM_STATUSES)
 			       ? status_text[pbody.status_code]
 			       : "n/a") : ""));
 		return 1;
 	}
 	printf(" (%s)-%x: %s",
-	    (pbody.auth_alg < 4) ? auth_alg_text[pbody.auth_alg] : "Reserved",
+	    (pbody.auth_alg < NUM_AUTH_ALGS)
+		? auth_alg_text[pbody.auth_alg]
+		: "Reserved",
 	    pbody.auth_trans_seq_num,
 	    (pbody.auth_trans_seq_num % 2)
-	        ? ((pbody.status_code < 19) ? status_text[pbody.status_code]
-	                                    : "n/a")
+	        ? ((pbody.status_code < NUM_STATUSES)
+		    ? status_text[pbody.status_code]
+	            : "n/a")
 	        : "");
 
 	return 1;
@@ -483,8 +559,9 @@ handle_deauth(const struct mgmt_header_t *pmh, const u_char *p)
 	pbody.reason_code = EXTRACT_LE_16BITS(p);
 	offset += IEEE802_11_REASON_LEN;
 
-	reason = (pbody.reason_code < 10) ? reason_text[pbody.reason_code]
-	                                  : "Reserved";
+	reason = (pbody.reason_code < NUM_REASONS)
+			? reason_text[pbody.reason_code]
+			: "Reserved";
 
 	if (eflag) {
 		printf(": %s", reason);
@@ -504,28 +581,36 @@ static int
 mgmt_body_print(u_int16_t fc, const struct mgmt_header_t *pmh,
     const u_char *p)
 {
-	printf("%s", subtype_text[FC_SUBTYPE(fc)]);
-
 	switch (FC_SUBTYPE(fc)) {
 	case ST_ASSOC_REQUEST:
+		printf("Assoc Request");
 		return handle_assoc_request(p);
 	case ST_ASSOC_RESPONSE:
+		printf("Assoc Response");
 		return handle_assoc_response(p);
 	case ST_REASSOC_REQUEST:
+		printf("ReAssoc Request");
 		return handle_reassoc_request(p);
 	case ST_REASSOC_RESPONSE:
+		printf("ReAssoc Response");
 		return handle_reassoc_response(p);
 	case ST_PROBE_REQUEST:
+		printf("Probe Request");
 		return handle_probe_request(p);
 	case ST_PROBE_RESPONSE:
+		printf("Probe Response");
 		return handle_probe_response(p);
 	case ST_BEACON:
+		printf("Beacon");
 		return handle_beacon(p);
 	case ST_ATIM:
+		printf("ATIM");
 		return handle_atim();
 	case ST_DISASSOC:
+		printf("Disassociation");
 		return handle_disassoc(p);
 	case ST_AUTH:
+		printf("Authentication");
 		if (!TTEST2(*p, 3))
 			return 0;
 		if ((p[0] == 0 ) && (p[1] == 0) && (p[2] == 0)) {
@@ -534,6 +619,7 @@ mgmt_body_print(u_int16_t fc, const struct mgmt_header_t *pmh,
 		}
 		return handle_auth(p);
 	case ST_DEAUTH:
+		printf("DeAuthentication");
 		return handle_deauth(pmh, p);
 		break;
 	default:
@@ -552,6 +638,17 @@ static int
 ctrl_body_print(u_int16_t fc, const u_char *p)
 {
 	switch (FC_SUBTYPE(fc)) {
+	case CTRL_BAR:
+		printf("BAR");
+		if (!TTEST2(*p, CTRL_BAR_HDRLEN))
+			return 0;
+		if (!eflag)
+			printf(" RA:%s TA:%s CTL(%x) SEQ(%u) ",
+			    etheraddr_string(((const struct ctrl_bar_t *)p)->ra),
+			    etheraddr_string(((const struct ctrl_bar_t *)p)->ta),
+			    EXTRACT_LE_16BITS(&(((const struct ctrl_bar_t *)p)->ctl)),
+			    EXTRACT_LE_16BITS(&(((const struct ctrl_bar_t *)p)->seq)));
+		break;
 	case CTRL_PS_POLL:
 		printf("Power Save-Poll");
 		if (!TTEST2(*p, CTRL_PS_POLL_HDRLEN))
@@ -623,22 +720,23 @@ static void
 data_header_print(u_int16_t fc, const u_char *p, const u_int8_t **srcp,
     const u_int8_t **dstp)
 {
-	switch (FC_SUBTYPE(fc)) {
-	case DATA_DATA:
-	case DATA_NODATA:
-		break;
-	case DATA_DATA_CF_ACK:
-	case DATA_NODATA_CF_ACK:
-		printf("CF Ack ");
-		break;
-	case DATA_DATA_CF_POLL:
-	case DATA_NODATA_CF_POLL:
-		printf("CF Poll ");
-		break;
-	case DATA_DATA_CF_ACK_POLL:
-	case DATA_NODATA_CF_ACK_POLL:
-		printf("CF Ack/Poll ");
-		break;
+	u_int subtype = FC_SUBTYPE(fc);
+
+	if (DATA_FRAME_IS_CF_ACK(subtype) || DATA_FRAME_IS_CF_POLL(subtype) ||
+	    DATA_FRAME_IS_QOS(subtype)) {
+		printf("CF ");
+		if (DATA_FRAME_IS_CF_ACK(subtype)) {
+			if (DATA_FRAME_IS_CF_POLL(subtype))
+				printf("Ack/Poll");
+			else
+				printf("Ack");
+		} else {
+			if (DATA_FRAME_IS_CF_POLL(subtype))
+				printf("Poll");
+		}
+		if (DATA_FRAME_IS_QOS(subtype))
+			printf("+QoS");
+		printf(" ");
 	}
 
 #define ADDR1  (p + 4)
@@ -724,6 +822,13 @@ ctrl_header_print(u_int16_t fc, const u_char *p, const u_int8_t **srcp,
 		return;
 
 	switch (FC_SUBTYPE(fc)) {
+	case CTRL_BAR:
+		printf(" RA:%s TA:%s CTL(%x) SEQ(%u) ",
+		    etheraddr_string(((const struct ctrl_bar_t *)p)->ra),
+		    etheraddr_string(((const struct ctrl_bar_t *)p)->ta),
+		    EXTRACT_LE_16BITS(&(((const struct ctrl_bar_t *)p)->ctl)),
+		    EXTRACT_LE_16BITS(&(((const struct ctrl_bar_t *)p)->seq)));
+		break;
 	case CTRL_PS_POLL:
 		printf("BSSID:%s TA:%s ",
 		    etheraddr_string(((const struct ctrl_ps_poll_t *)p)->bssid),
@@ -761,11 +866,15 @@ ctrl_header_print(u_int16_t fc, const u_char *p, const u_int8_t **srcp,
 static int
 extract_header_length(u_int16_t fc)
 {
+	int len;
+
 	switch (FC_TYPE(fc)) {
 	case T_MGMT:
 		return MGMT_HDRLEN;
 	case T_CTRL:
 		switch (FC_SUBTYPE(fc)) {
+		case CTRL_BAR:
+			return CTRL_BAR_HDRLEN;
 		case CTRL_PS_POLL:
 			return CTRL_PS_POLL_HDRLEN;
 		case CTRL_RTS:
@@ -782,7 +891,10 @@ extract_header_length(u_int16_t fc)
 			return 0;
 		}
 	case T_DATA:
-		return (FC_TO_DS(fc) && FC_FROM_DS(fc)) ? 30 : 24;
+		len = (FC_TO_DS(fc) && FC_FROM_DS(fc)) ? 30 : 24;
+		if (DATA_FRAME_IS_QOS(FC_SUBTYPE(fc)))
+			len += 2;
+		return len;
 	default:
 		printf("unknown IEEE802.11 frame type (%d)", FC_TYPE(fc));
 		return 0;
@@ -836,8 +948,12 @@ ieee_802_11_hdr_print(u_int16_t fc, const u_char *p, const u_int8_t **srcp,
 	}
 }
 
+#ifndef roundup2
+#define	roundup2(x, y)	(((x)+((y)-1))&(~((y)-1))) /* if y is powers of two */
+#endif
+
 static u_int
-ieee802_11_print(const u_char *p, u_int length, u_int caplen)
+ieee802_11_print(const u_char *p, u_int length, u_int caplen, int pad)
 {
 	u_int16_t fc;
 	u_int hdrlen;
@@ -851,6 +967,8 @@ ieee802_11_print(const u_char *p, u_int length, u_int caplen)
 
 	fc = EXTRACT_LE_16BITS(p);
 	hdrlen = extract_header_length(fc);
+	if (pad)
+		hdrlen = roundup2(hdrlen, 4);
 
 	if (caplen < hdrlen) {
 		printf("[|802.11]");
@@ -881,6 +999,8 @@ ieee802_11_print(const u_char *p, u_int length, u_int caplen)
 		}
 		break;
 	case T_DATA:
+		if (DATA_FRAME_IS_NULL(FC_SUBTYPE(fc)))
+			return hdrlen;	/* no-data frame */
 		/* There may be a problem w/ AP not having this bit set */
 		if (FC_WEP(fc)) {
 			if (!wep_print(p)) {
@@ -900,7 +1020,7 @@ ieee802_11_print(const u_char *p, u_int length, u_int caplen)
 				printf("(LLC %s) ",
 				    etherproto_string(
 				        htons(extracted_ethertype)));
-			if (!xflag && !qflag)
+			if (!suppress_default_print)
 				default_print(p, caplen);
 		}
 		break;
@@ -921,11 +1041,69 @@ ieee802_11_print(const u_char *p, u_int length, u_int caplen)
 u_int
 ieee802_11_if_print(const struct pcap_pkthdr *h, const u_char *p)
 {
-	return ieee802_11_print(p, h->len, h->caplen);
+	return ieee802_11_print(p, h->len, h->caplen, 0);
+}
+
+#define	IEEE80211_CHAN_FHSS \
+	(IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_GFSK)
+#define	IEEE80211_CHAN_A \
+	(IEEE80211_CHAN_5GHZ | IEEE80211_CHAN_OFDM)
+#define	IEEE80211_CHAN_B \
+	(IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_CCK)
+#define	IEEE80211_CHAN_PUREG \
+	(IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_OFDM)
+#define	IEEE80211_CHAN_G \
+	(IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_DYN)
+
+#define	IS_CHAN_FHSS(flags) \
+	((flags & IEEE80211_CHAN_FHSS) == IEEE80211_CHAN_FHSS)
+#define	IS_CHAN_A(flags) \
+	((flags & IEEE80211_CHAN_A) == IEEE80211_CHAN_A)
+#define	IS_CHAN_B(flags) \
+	((flags & IEEE80211_CHAN_B) == IEEE80211_CHAN_B)
+#define	IS_CHAN_PUREG(flags) \
+	((flags & IEEE80211_CHAN_PUREG) == IEEE80211_CHAN_PUREG)
+#define	IS_CHAN_G(flags) \
+	((flags & IEEE80211_CHAN_G) == IEEE80211_CHAN_G)
+#define	IS_CHAN_ANYG(flags) \
+	(IS_CHAN_PUREG(flags) || IS_CHAN_G(flags))
+
+static void
+print_chaninfo(int freq, int flags)
+{
+	printf("%u MHz", freq);
+	if (IS_CHAN_FHSS(flags))
+		printf(" FHSS");
+	if (IS_CHAN_A(flags)) {
+		if (flags & IEEE80211_CHAN_HALF)
+			printf(" 11a/10Mhz");
+		else if (flags & IEEE80211_CHAN_QUARTER)
+			printf(" 11a/5Mhz");
+		else
+			printf(" 11a");
+	}
+	if (IS_CHAN_ANYG(flags)) {
+		if (flags & IEEE80211_CHAN_HALF)
+			printf(" 11g/10Mhz");
+		else if (flags & IEEE80211_CHAN_QUARTER)
+			printf(" 11g/5Mhz");
+		else
+			printf(" 11g");
+	} else if (IS_CHAN_B(flags))
+		printf(" 11b");
+	if (flags & IEEE80211_CHAN_TURBO)
+		printf(" Turbo");
+	if (flags & IEEE80211_CHAN_HT20)
+		printf(" ht/20");
+	else if (flags & IEEE80211_CHAN_HT40D)
+		printf(" ht/40-");
+	else if (flags & IEEE80211_CHAN_HT40U)
+		printf(" ht/40+");
+	printf(" ");
 }
 
 static int
-print_radiotap_field(struct cpack_state *s, u_int32_t bit)
+print_radiotap_field(struct cpack_state *s, u_int32_t bit, int *pad)
 {
 	union {
 		int8_t		i8;
@@ -934,11 +1112,15 @@ print_radiotap_field(struct cpack_state *s, u_int32_t bit)
 		u_int16_t	u16;
 		u_int32_t	u32;
 		u_int64_t	u64;
-	} u, u2;
+	} u, u2, u3, u4;
 	int rc;
 
 	switch (bit) {
 	case IEEE80211_RADIOTAP_FLAGS:
+		rc = cpack_uint8(s, &u.u8);
+		if (u.u8 & IEEE80211_RADIOTAP_F_DATAPAD)
+			*pad = 1;
+		break;
 	case IEEE80211_RADIOTAP_RATE:
 	case IEEE80211_RADIOTAP_DB_ANTSIGNAL:
 	case IEEE80211_RADIOTAP_DB_ANTNOISE:
@@ -969,6 +1151,18 @@ print_radiotap_field(struct cpack_state *s, u_int32_t bit)
 	case IEEE80211_RADIOTAP_TSFT:
 		rc = cpack_uint64(s, &u.u64);
 		break;
+	case IEEE80211_RADIOTAP_XCHANNEL:
+		rc = cpack_uint32(s, &u.u32);
+		if (rc != 0)
+			break;
+		rc = cpack_uint16(s, &u2.u16);
+		if (rc != 0)
+			break;
+		rc = cpack_uint8(s, &u3.u8);
+		if (rc != 0)
+			break;
+		rc = cpack_uint8(s, &u4.u8);
+		break;
 	default:
 		/* this bit indicates a field whose
 		 * size we do not know, so we cannot
@@ -985,15 +1179,16 @@ print_radiotap_field(struct cpack_state *s, u_int32_t bit)
 
 	switch (bit) {
 	case IEEE80211_RADIOTAP_CHANNEL:
-		printf("%u MHz ", u.u16);
-		if (u2.u16 != 0)
-			printf("(0x%04x) ", u2.u16);
+		print_chaninfo(u.u16, u2.u16);
 		break;
 	case IEEE80211_RADIOTAP_FHSS:
 		printf("fhset %d fhpat %d ", u.u16 & 0xff, (u.u16 >> 8) & 0xff);
 		break;
 	case IEEE80211_RADIOTAP_RATE:
-		PRINT_RATE("", u.u8, " Mb/s ");
+		if (u.u8 & 0x80)
+			PRINT_RATE("", u.u8, " Mb/s ");
+		else
+			PRINT_HT_RATE("", u.u8, " Mb/s ");
 		break;
 	case IEEE80211_RADIOTAP_DBM_ANTSIGNAL:
 		printf("%ddB signal ", u.i8);
@@ -1028,12 +1223,17 @@ print_radiotap_field(struct cpack_state *s, u_int32_t bit)
 			printf("wep ");
 		if (u.u8 & IEEE80211_RADIOTAP_F_FRAG)
 			printf("fragmented ");
+		if (u.u8 & IEEE80211_RADIOTAP_F_BADFCS)
+			printf("bad-fcs ");
 		break;
 	case IEEE80211_RADIOTAP_ANTENNA:
 		printf("antenna %d ", u.u8);
 		break;
 	case IEEE80211_RADIOTAP_TSFT:
 		printf("%" PRIu64 "us tsft ", u.u64);
+		break;
+	case IEEE80211_RADIOTAP_XCHANNEL:
+		print_chaninfo(u2.u16, u.u32);
 		break;
 	}
 	return 0;
@@ -1059,6 +1259,7 @@ ieee802_11_radio_print(const u_char *p, u_int length, u_int caplen)
 	int bit0;
 	const u_char *iter;
 	u_int len;
+	int pad;
 
 	if (caplen < sizeof(*hdr)) {
 		printf("[|802.11]");
@@ -1092,6 +1293,8 @@ ieee802_11_radio_print(const u_char *p, u_int length, u_int caplen)
 		return caplen;
 	}
 
+	/* Assume no Atheros padding between 802.11 header and body */
+	pad = 0;
 	for (bit0 = 0, presentp = &hdr->it_present; presentp <= last_presentp;
 	     presentp++, bit0 += 32) {
 		for (present = EXTRACT_LE_32BITS(presentp); present;
@@ -1103,12 +1306,12 @@ ieee802_11_radio_print(const u_char *p, u_int length, u_int caplen)
 			bit = (enum ieee80211_radiotap_type)
 			    (bit0 + BITNO_32(present ^ next_present));
 
-			if (print_radiotap_field(&cpacker, bit) != 0)
+			if (print_radiotap_field(&cpacker, bit, &pad) != 0)
 				goto out;
 		}
 	}
 out:
-	return len + ieee802_11_print(p + len, length - len, caplen - len);
+	return len + ieee802_11_print(p + len, length - len, caplen - len, pad);
 #undef BITNO_32
 #undef BITNO_16
 #undef BITNO_8
@@ -1139,7 +1342,7 @@ ieee802_11_avs_radio_print(const u_char *p, u_int length, u_int caplen)
 	}
 
 	return caphdr_len + ieee802_11_print(p + caphdr_len,
-	    length - caphdr_len, caplen - caphdr_len);
+	    length - caphdr_len, caplen - caphdr_len, 0);
 }
 
 #define PRISM_HDR_LEN		144
@@ -1178,7 +1381,7 @@ prism_if_print(const struct pcap_pkthdr *h, const u_char *p)
 	}
 
 	return PRISM_HDR_LEN + ieee802_11_print(p + PRISM_HDR_LEN,
-	    length - PRISM_HDR_LEN, caplen - PRISM_HDR_LEN);
+	    length - PRISM_HDR_LEN, caplen - PRISM_HDR_LEN, 0);
 }
 
 /*

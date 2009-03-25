@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/ospf.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /home/cvs/src/contrib/tcpdump/ospf.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL) */
 /*
  * Copyright (c) 1991, 1993, 1994, 1995, 1996, 1997
  *	The Regents of the University of California.  All rights reserved.
@@ -48,6 +48,7 @@
 /* ospf_authtype	*/
 #define	OSPF_AUTH_NONE		0	/* No auth-data */
 #define	OSPF_AUTH_SIMPLE	1	/* Simple password */
+#define OSPF_AUTH_SIMPLE_LEN	8	/* max length of simple authentication */
 #define OSPF_AUTH_MD5		2	/* MD5 authentication */
 #define OSPF_AUTH_MD5_LEN	16	/* length of MD5 authentication */
 
@@ -89,7 +90,7 @@
 #define LS_OPAQUE_TE_LINK_SUBTLV_LINK_PROTECTION_TYPE 14 /* draft-ietf-ccamp-ospf-gmpls-extensions */
 #define LS_OPAQUE_TE_LINK_SUBTLV_INTF_SW_CAP_DESCR    15 /* draft-ietf-ccamp-ospf-gmpls-extensions */
 #define LS_OPAQUE_TE_LINK_SUBTLV_SHARED_RISK_GROUP    16 /* draft-ietf-ccamp-ospf-gmpls-extensions */
-#define LS_OPAQUE_TE_LINK_SUBTLV_DIFFSERV_TE          17 /* draft-ietf-tewg-diff-te-proto-06 */
+#define LS_OPAQUE_TE_LINK_SUBTLV_BW_CONSTRAINTS       17 /* rfc4124 */
 
 #define LS_OPAQUE_TE_LINK_SUBTLV_LINK_TYPE_PTP        1  /* rfc3630 */
 #define LS_OPAQUE_TE_LINK_SUBTLV_LINK_TYPE_MA         2  /* rfc3630 */

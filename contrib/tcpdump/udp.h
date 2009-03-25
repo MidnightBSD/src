@@ -1,4 +1,4 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/udp.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL) */
+/* @(#) $Header: /home/cvs/src/contrib/tcpdump/udp.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL) */
 /*
  * Copyright (c) 1982, 1986, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -57,6 +57,7 @@ struct udphdr {
 #define RIP_PORT 520		/*XXX*/
 #define LDP_PORT 646
 #define AODV_PORT 654		/*XXX*/
+#define OLSR_PORT 698           /* rfc3626 */
 #define KERBEROS_SEC_PORT 750	/*XXX*/
 #define L2TP_PORT 1701		/*XXX*/
 #define SIP_PORT 5060
@@ -73,13 +74,13 @@ struct udphdr {
 #define RADIUS_ACCOUNTING_PORT 1646
 #define RADIUS_NEW_ACCOUNTING_PORT 1813
 #define HSRP_PORT 1985		/*XXX*/
+#define LMP_PORT                701 /* rfc4204 */
 #define LWRES_PORT		921
 #define ZEPHYR_SRV_PORT		2103
 #define ZEPHYR_CLT_PORT		2104
 #define MPLS_LSP_PING_PORT      3503 /* draft-ietf-mpls-lsp-ping-02.txt */
 #define BFD_CONTROL_PORT        3784 /* draft-katz-ward-bfd-v4v6-1hop-00.txt */
 #define BFD_ECHO_PORT           3785 /* draft-katz-ward-bfd-v4v6-1hop-00.txt */
-#define LMP_PORT                49998 /* unofficial - no IANA assignment yet */
 
 #ifdef INET6
 #define RIPNG_PORT 521		/*XXX*/

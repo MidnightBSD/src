@@ -21,12 +21,12 @@
  * Code by Matt Thomas, Digital Equipment Corporation
  *	with an awful lot of hacking by Jeffrey Mogul, DECWRL
  *
- * $FreeBSD: src/contrib/tcpdump/print-llc.c,v 1.11 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-llc.c,v 1.12.2.1 2007/10/19 03:03:59 mlaier Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-llc.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-llc.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -52,6 +52,7 @@ static struct tok llc_values[] = {
         { LLCSAP_8021B_I,  "802.1B I" },
         { LLCSAP_8021B_G,  "802.1B G" },
         { LLCSAP_IP,       "IP" },
+        { LLCSAP_SNA,      "SNA" },
         { LLCSAP_PROWAYNM, "ProWay NM" },
         { LLCSAP_8021D,    "STP" },
         { LLCSAP_RS511,    "RS511" },
@@ -64,7 +65,7 @@ static struct tok llc_values[] = {
         { 0,               NULL },
 };
 
-static struct tok cmd2str[] = {
+static struct tok llc_cmd_values[] = {
 	{ LLC_UI,	"ui" },
 	{ LLC_TEST,	"test" },
 	{ LLC_XID,	"xid" },
@@ -76,8 +77,36 @@ static struct tok cmd2str[] = {
 	{ 0,		NULL }
 };
 
+static const struct tok llc_flag_values[] = { 
+        { 0, "Command" },
+        { LLC_GSAP, "Response" },
+        { LLC_U_POLL, "Poll" },
+        { LLC_GSAP|LLC_U_POLL, "Final" },
+        { LLC_IS_POLL, "Poll" },
+        { LLC_GSAP|LLC_IS_POLL, "Final" },
+	{ 0, NULL }
+};
+
+
+static const struct tok llc_ig_flag_values[] = { 
+        { 0, "Individual" },
+        { LLC_IG, "Group" },
+	{ 0, NULL }
+};
+
+
+static const struct tok llc_supervisory_values[] = { 
+        { 0, "Receiver Ready" },
+        { 1, "Receiver not Ready" },
+        { 2, "Reject" },
+	{ 0,             NULL }
+};
+
+
 static const struct tok cisco_values[] = { 
 	{ PID_CISCO_CDP, "CDP" },
+	{ PID_CISCO_VTP, "VTP" },
+	{ PID_CISCO_DTP, "DTP" },
 	{ 0,             NULL }
 };
 
@@ -94,6 +123,10 @@ static const struct tok bridged_values[] = {
 	{ PID_RFC2684_802_6_NOFCS, "802.6 w/o FCS" },
 	{ PID_RFC2684_BPDU,        "BPDU" },
 	{ 0,                       NULL },
+};
+
+static const struct tok null_values[] = { 
+	{ 0,             NULL }
 };
 
 struct oui_tok {
@@ -117,10 +150,12 @@ int
 llc_print(const u_char *p, u_int length, u_int caplen,
 	  const u_char *esrc, const u_char *edst, u_short *extracted_ethertype)
 {
-	u_int8_t dsap, ssap;
+	u_int8_t dsap_field, dsap, ssap_field, ssap;
 	u_int16_t control;
 	int is_u;
 	register int ret;
+
+	*extracted_ethertype = 0;
 
 	if (caplen < 3) {
 		(void)printf("[|llc]");
@@ -128,8 +163,8 @@ llc_print(const u_char *p, u_int length, u_int caplen,
 		return(0);
 	}
 
-	dsap = *p;
-	ssap = *(p + 1);
+	dsap_field = *p;
+	ssap_field = *(p + 1);
 
 	/*
 	 * OK, what type of LLC frame is this?  The length
@@ -161,7 +196,7 @@ llc_print(const u_char *p, u_int length, u_int caplen,
 		is_u = 0;
 	}
 
-	if (ssap == LLCSAP_GLOBAL && dsap == LLCSAP_GLOBAL) {
+	if (ssap_field == LLCSAP_GLOBAL && dsap_field == LLCSAP_GLOBAL) {
 		/*
 		 * This is an Ethernet_802.3 IPX frame; it has an
 		 * 802.3 header (i.e., an Ethernet header where the
@@ -178,27 +213,28 @@ llc_print(const u_char *p, u_int length, u_int caplen,
 		 */
 
             if (eflag)
-		printf("IPX-802.3: ");
+		printf("IPX 802.3: ");
 
             ipx_print(p, length);
             return (1);
 	}
 
+	dsap = dsap_field & ~LLC_IG;
+	ssap = ssap_field & ~LLC_GSAP;
+
 	if (eflag) {
+                printf("LLC, dsap %s (0x%02x) %s, ssap %s (0x%02x) %s",
+                       tok2str(llc_values, "Unknown", dsap),
+                       dsap,
+                       tok2str(llc_ig_flag_values, "Unknown", dsap_field & LLC_IG),
+                       tok2str(llc_values, "Unknown", ssap),
+                       ssap,
+                       tok2str(llc_flag_values, "Unknown", ssap_field & LLC_GSAP));
+
 		if (is_u) {
-			printf("LLC, dsap %s (0x%02x), ssap %s (0x%02x), cmd 0x%02x: ",
-			    tok2str(llc_values, "Unknown", dsap),
-			    dsap,
-			    tok2str(llc_values, "Unknown", ssap),
-			    ssap,
-			    control);
+			printf(", ctrl 0x%02x: ", control);
 		} else {
-			printf("LLC, dsap %s (0x%02x), ssap %s (0x%02x), cmd 0x%04x: ",
-			    tok2str(llc_values, "Unknown", dsap),
-			    dsap,
-			    tok2str(llc_values, "Unknown", ssap),
-			    ssap,
-			    control);
+			printf(", ctrl 0x%04x: ", control);
 		}
 	}
 
@@ -223,7 +259,9 @@ llc_print(const u_char *p, u_int length, u_int caplen,
 		 *
 		 * Skip DSAP, LSAP, and control field.
 		 */
-		printf("(NOV-802.2) ");
+                if (eflag)
+                        printf("IPX 802.2: ");
+
 		ipx_print(p+3, length-3);
 		return (1);
 	}
@@ -278,42 +316,33 @@ llc_print(const u_char *p, u_int length, u_int caplen,
 	}
 
 	if (!eflag) {
-		if ((ssap & ~LLC_GSAP) == dsap) {
+		if (ssap == dsap) {
 			if (esrc == NULL || edst == NULL)
-				(void)printf("%s ", llcsap_string(dsap));
+				(void)printf("%s ", tok2str(llc_values, "Unknown DSAP 0x%02x", dsap));
 			else
 				(void)printf("%s > %s %s ",
 						etheraddr_string(esrc),
 						etheraddr_string(edst),
-						llcsap_string(dsap));
+						tok2str(llc_values, "Unknown DSAP 0x%02x", dsap));
 		} else {
 			if (esrc == NULL || edst == NULL)
 				(void)printf("%s > %s ",
-					llcsap_string(ssap & ~LLC_GSAP),
-					llcsap_string(dsap));
+                                        tok2str(llc_values, "Unknown SSAP 0x%02x", ssap),
+					tok2str(llc_values, "Unknown DSAP 0x%02x", dsap));
 			else
 				(void)printf("%s %s > %s %s ",
 					etheraddr_string(esrc),
-					llcsap_string(ssap & ~LLC_GSAP),
+                                        tok2str(llc_values, "Unknown SSAP 0x%02x", ssap),
 					etheraddr_string(edst),
-					llcsap_string(dsap));
+					tok2str(llc_values, "Unknown DSAP 0x%02x", dsap));
 		}
 	}
 
 	if (is_u) {
-		const char *m;
-		char f;
-
-		m = tok2str(cmd2str, "%02x", LLC_U_CMD(control));
-		switch ((ssap & LLC_GSAP) | (control & LLC_U_POLL)) {
-			case 0:			f = 'C'; break;
-			case LLC_GSAP:		f = 'R'; break;
-			case LLC_U_POLL:	f = 'P'; break;
-			case LLC_GSAP|LLC_U_POLL: f = 'F'; break;
-			default:		f = '?'; break;
-		}
-
-		printf("%s/%c", m, f);
+		printf("Unnumbered, %s, Flags [%s], length %u",
+                       tok2str(llc_cmd_values, "%02x", LLC_U_CMD(control)),
+                       tok2str(llc_flag_values,"?",(ssap_field & LLC_GSAP) | (control & LLC_U_POLL)),
+                       length);
 
 		p += 3;
 		length -= 3;
@@ -328,27 +357,18 @@ llc_print(const u_char *p, u_int length, u_int caplen,
 			}
 		}
 	} else {
-		char f;
-
-		switch ((ssap & LLC_GSAP) | (control & LLC_IS_POLL)) {
-			case 0:			f = 'C'; break;
-			case LLC_GSAP:		f = 'R'; break;
-			case LLC_IS_POLL:	f = 'P'; break;
-			case LLC_GSAP|LLC_IS_POLL: f = 'F'; break;
-			default:		f = '?'; break;
-		}
-
 		if ((control & LLC_S_FMT) == LLC_S_FMT) {
-			static const char *llc_s[] = { "rr", "rej", "rnr", "03" };
-			(void)printf("%s (r=%d,%c)",
-				llc_s[LLC_S_CMD(control)],
+			(void)printf("Supervisory, %s, rcv seq %u, Flags [%s], length %u",
+				tok2str(llc_supervisory_values,"?",LLC_S_CMD(control)),
 				LLC_IS_NR(control),
-				f);
+				tok2str(llc_flag_values,"?",(ssap_field & LLC_GSAP) | (control & LLC_IS_POLL)),
+                                length);
 		} else {
-			(void)printf("I (s=%d,r=%d,%c)",
+			(void)printf("Information, send seq %u, rcv seq %u, Flags [%s], length %u",
 				LLC_I_NS(control),
 				LLC_IS_NR(control),
-				f);
+				tok2str(llc_flag_values,"?",(ssap_field & LLC_GSAP) | (control & LLC_IS_POLL)),
+                                length);
 		}
 		p += 4;
 		length -= 4;
@@ -370,7 +390,7 @@ snap_print(const u_char *p, u_int length, u_int caplen,
 	et = EXTRACT_16BITS(p + 3);
 
 	if (eflag) {
-		const struct tok *tok = NULL;
+		const struct tok *tok = null_values;
 		const struct oui_tok *otp;
 
 		for (otp = &oui_to_tok[0]; otp->tok != NULL; otp++) {

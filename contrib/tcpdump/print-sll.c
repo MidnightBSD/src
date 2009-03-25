@@ -20,7 +20,7 @@
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-sll.c,v 1.1.1.2 2006-02-25 02:34:03 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-sll.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -148,7 +148,6 @@ sll_if_print(const struct pcap_pkthdr *h, const u_char *p)
 	 * Is it (gag) an 802.3 encapsulation, or some non-Ethernet
 	 * packet type?
 	 */
-	extracted_ethertype = 0;
 	if (ether_type <= ETHERMTU) {
 		/*
 		 * Yes - what type is it?
@@ -173,6 +172,9 @@ sll_if_print(const struct pcap_pkthdr *h, const u_char *p)
 			break;
 
 		default:
+			extracted_ethertype = 0;
+			/*FALLTHROUGH*/
+
 		unknown:
 			/* ether_type not known, print raw packet */
 			if (!eflag)
@@ -181,7 +183,7 @@ sll_if_print(const struct pcap_pkthdr *h, const u_char *p)
 				printf("(LLC %s) ",
 			       etherproto_string(htons(extracted_ethertype)));
 			}
-			if (!xflag && !qflag)
+			if (!suppress_default_print)
 				default_print(p, caplen);
 			break;
 		}
@@ -190,7 +192,7 @@ sll_if_print(const struct pcap_pkthdr *h, const u_char *p)
 		/* ether_type not known, print raw packet */
 		if (!eflag)
 			sll_print(sllp, length + SLL_HDR_LEN);
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	}
 

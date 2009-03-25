@@ -31,8 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/contrib/libpcap/pcap.h,v 1.11 2005/07/11 03:43:25 sam Exp $
- * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap.h,v 1.1.1.2 2006-02-25 02:33:30 laffer1 Exp $ (LBL)
+ * $FreeBSD: src/contrib/libpcap/pcap.h,v 1.12.2.2 2007/10/20 20:25:49 mlaier Exp $
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/pcap.h,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)
  */
 
 #ifndef lib_pcap_h
@@ -113,15 +113,22 @@ struct pcap_file_header {
 };
 
 typedef enum {
-       D_INOUT = 0,
-       D_IN,
-       D_OUT
-} direction_t;
+       PCAP_D_INOUT = 0,
+       PCAP_D_IN,
+       PCAP_D_OUT
+} pcap_direction_t;
 
 /*
- * Each packet in the dump file is prepended with this generic header.
- * This gets around the problem of different headers for different
- * packet interfaces.
+ * Generic per-packet information, as supplied by libpcap.
+ *
+ * The time stamp can and should be a "struct timeval", regardless of
+ * whether your system supports 32-bit tv_sec in "struct timeval",
+ * 64-bit tv_sec in "struct timeval", or both if it supports both 32-bit
+ * and 64-bit applications.  The on-disk format of savefiles uses 32-bit
+ * tv_sec (and tv_usec); this structure is irrelevant to that.  32-bit
+ * and 64-bit versions of libpcap, even if they're on the same platform,
+ * should supply the appropriate version of "struct timeval", even if
+ * that's not what the underlying packet capture mechanism supplies.
  */
 struct pcap_pkthdr {
 	struct timeval ts;	/* time stamp */
@@ -216,18 +223,18 @@ int 	pcap_next_ex(pcap_t *, struct pcap_pkthdr **, const u_char **);
 void	pcap_breakloop(pcap_t *);
 int	pcap_stats(pcap_t *, struct pcap_stat *);
 int	pcap_setfilter(pcap_t *, struct bpf_program *);
-int 	pcap_setdirection(pcap_t *, direction_t);
+int 	pcap_setdirection(pcap_t *, pcap_direction_t);
 int	pcap_getnonblock(pcap_t *, char *);
 int	pcap_setnonblock(pcap_t *, int, char *);
 void	pcap_perror(pcap_t *, char *);
 int	pcap_inject(pcap_t *, const void *, size_t);
 int	pcap_sendpacket(pcap_t *, const u_char *, int);
-char	*pcap_strerror(int);
+const char *pcap_strerror(int);
 char	*pcap_geterr(pcap_t *);
-int	pcap_compile(pcap_t *, struct bpf_program *, char *, int,
+int	pcap_compile(pcap_t *, struct bpf_program *, const char *, int,
 	    bpf_u_int32);
 int	pcap_compile_nopcap(int, int, struct bpf_program *,
-	    char *, int, bpf_u_int32);
+	    const char *, int, bpf_u_int32);
 void	pcap_freecode(struct bpf_program *);
 int	pcap_datalink(pcap_t *);
 int	pcap_list_datalinks(pcap_t *, int **);

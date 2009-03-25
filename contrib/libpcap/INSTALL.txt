@@ -1,4 +1,4 @@
-@(#) $Header: /home/cvs/src/contrib/libpcap/INSTALL.txt,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)
+@(#) $Header: /home/cvs/src/contrib/libpcap/INSTALL.txt,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)
 
 To build libpcap, run "./configure" (a shell script). The configure
 script will determine your system attributes and generate an
@@ -373,7 +373,6 @@ pcap-win32.c	- WinPcap capture support
 pcap.3		- manual entry
 pcap.c		- pcap utility routines
 pcap.h		- public libpcap definitions
-pf.h		- OpenBSD DLT_PFLOG definitions
 ppp.h		- Point to Point Protocol definitions
 rawss7.h	- information on DLT_ types for SS7
 savefile.c	- offline support

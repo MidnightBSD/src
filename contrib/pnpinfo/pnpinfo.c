@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/contrib/pnpinfo/pnpinfo.c,v 1.9 2004/01/04 11:11:02 charnier Exp $");
+__FBSDID("$FreeBSD: src/contrib/pnpinfo/pnpinfo.c,v 1.10 2006/08/22 07:51:09 ru Exp $");
 
 #include <sys/time.h>
 
@@ -592,9 +592,6 @@ main(int argc, char **argv)
     /* Hey what about a i386_iopl() call :) */
     if (open("/dev/io", O_RDONLY) < 0)
 	errx(1, "can't get I/O privilege");
-#endif
-#ifdef __alpha__
-    ioperm(0x203, 0x400 - 0x203, 1);
 #endif
 
     printf("Checking for Plug-n-Play devices...\n");

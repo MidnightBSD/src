@@ -19,12 +19,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/libpcap/scanner.l,v 1.12 2005/07/11 03:43:25 sam Exp $
+ * $FreeBSD: src/contrib/libpcap/scanner.l,v 1.13.2.1 2007/10/19 03:03:56 mlaier Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/scanner.l,v 1.1.1.2 2006-02-25 02:33:30 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/scanner.l,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -82,11 +82,11 @@ N		([0-9]+|(0X|0x)[0-9A-Fa-f]+)
 B		([0-9A-Fa-f][0-9A-Fa-f]?)
 W		([0-9A-Fa-f][0-9A-Fa-f]?[0-9A-Fa-f]?[0-9A-Fa-f]?)
 
-%a 16000
-%o 19000
-%e 6000
-%k 4000
-%p 25000
+%a 18400
+%o 21500
+%e 7600
+%k 4550
+%p 27600
 %n 2000
 
 V680		{W}:{W}:{W}:{W}:{W}:{W}:{W}:{W}
@@ -264,6 +264,8 @@ outbound	return OUTBOUND;
 
 vlan		return VLAN;
 mpls		return MPLS;
+pppoed		return PPPOED;
+pppoes		return PPPOES;
 
 lane		return LANE;
 llc		return LLC;
@@ -287,6 +289,10 @@ srnr|subrulenum	return PF_SRNR;
 reason		return PF_REASON;
 action		return PF_ACTION;
 
+fisu		return FISU;
+lssu		return LSSU;
+lsu		return LSSU;
+msu		return MSU;
 sio		return SIO;
 opc		return OPC;
 dpc		return DPC;
@@ -356,7 +362,7 @@ tcp-urg			{ yylval.i = 0x20; return NUM; }
 %%
 void
 lex_init(buf)
-	char *buf;
+	const char *buf;
 {
 #ifdef FLEX_SCANNER
 	in_buffer = yy_scan_string(buf);

@@ -30,11 +30,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/ipproto.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/ipproto.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)
  *
  * From:
  *	@(#)in.h	8.3 (Berkeley) 1/3/94
- * $FreeBSD: src/contrib/tcpdump/ipproto.h,v 1.1.1.3 2005/07/11 03:53:32 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/ipproto.h,v 1.1.1.4 2006/09/04 20:03:46 sam Exp $
  */
 
 extern struct tok ipproto_values[];
@@ -65,6 +65,9 @@ extern struct tok ipproto_values[];
 #endif
 #ifndef IPPROTO_UDP
 #define	IPPROTO_UDP		17		/* user datagram protocol */
+#endif
+#ifndef IPPROTO_DCCP
+#define	IPPROTO_DCCP		33		/* datagram congestion control protocol */
 #endif
 #ifndef IPPROTO_IPV6
 #define IPPROTO_IPV6		41

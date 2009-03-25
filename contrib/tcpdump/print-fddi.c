@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-fddi.c,v 1.10 2005/05/29 19:09:27 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-fddi.c,v 1.11.2.1 2007/10/19 03:03:58 mlaier Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-fddi.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-fddi.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -266,7 +266,6 @@ fddi_print(const u_char *p, u_int length, u_int caplen)
 	caplen -= FDDI_HDRLEN;
 
 	/* Frame Control field determines interpretation of packet */
-	extracted_ethertype = 0;
 	if ((fddip->fddi_fc & FDDIFC_CLFF) == FDDIFC_LLC_ASYNC) {
 		/* Try to print the LLC-layer header & higher layers */
 		if (llc_print(p, length, caplen, ESRC(&ehdr), EDST(&ehdr),
@@ -282,7 +281,7 @@ fddi_print(const u_char *p, u_int length, u_int caplen)
 				printf("(LLC %s) ",
 			etherproto_string(htons(extracted_ethertype)));
 			}
-			if (!xflag && !qflag)
+			if (!suppress_default_print)
 				default_print(p, caplen);
 		}
 	} else if ((fddip->fddi_fc & FDDIFC_CLFF) == FDDIFC_SMT)
@@ -292,7 +291,7 @@ fddi_print(const u_char *p, u_int length, u_int caplen)
 		if (!eflag)
 			fddi_hdr_print(fddip, length + FDDI_HDRLEN, ESRC(&ehdr),
 			    EDST(&ehdr));
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	}
 }

@@ -70,7 +70,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/pcap-dlpi.c,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/pcap-dlpi.c,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -396,6 +396,14 @@ pcap_inject_dlpi(pcap_t *p, const void *buf, size_t size)
 		    pcap_strerror(errno));
 		return (-1);
 	}
+	/*
+	 * putmsg() returns either 0 or -1; it doesn't indicate how
+	 * many bytes were written (presumably they were all written
+	 * or none of them were written).  OpenBSD's pcap_inject()
+	 * returns the number of bytes written, so, for API compatibility,
+	 * we return the number of bytes we were told to write.
+	 */
+	ret = size;
 #else /* no raw mode */
 	/*
 	 * XXX - this is a pain, because you might have to extract
@@ -1039,8 +1047,13 @@ dl_dohpuxbind(int fd, char *ebuf)
 		/*
 		 * For any error other than a UNIX EBUSY, give up.
 		 */
-		if (uerror != EBUSY)
+		if (uerror != EBUSY) {
+			/*
+			 * dlbindack() has already filled in ebuf for
+			 * this error.
+			 */
 			return (-1);
+		}
 
 		/*
 		 * For EBUSY, try the next SAP value; that means that
@@ -1050,9 +1063,14 @@ dl_dohpuxbind(int fd, char *ebuf)
 		 */
 		*ebuf = '\0';
 		hpsap++;
-		if (hpsap > 100)
+		if (hpsap > 100) {
+			strlcpy(ebuf,
+			    "All SAPs from 22 through 100 are in use",
+			    PCAP_ERRBUF_SIZE);
 			return (-1);
+		}
 	}
+	return (0);
 }
 #endif
 
@@ -1126,6 +1144,13 @@ recv_ack(int fd, int size, const char *what, char *bufp, char *ebuf, int *uerror
 	struct	strbuf	ctl;
 	int	flags;
 
+	/*
+	 * Clear out "*uerror", so it's only set for DL_ERROR_ACK/DL_SYSERR,
+	 * making that the only place where EBUSY is treated specially.
+	 */
+	if (uerror != NULL)
+		*uerror = 0;
+
 	ctl.maxlen = MAXDLBUF;
 	ctl.len = 0;
 	ctl.buf = bufp;
@@ -1161,8 +1186,6 @@ recv_ack(int fd, int size, const char *what, char *bufp, char *ebuf, int *uerror
 			break;
 
 		default:
-			if (uerror != NULL)
-				*uerror = 0;
 			snprintf(ebuf, PCAP_ERRBUF_SIZE, "recv_ack: %s: %s",
 			    what, dlstrerror(dlp->error_ack.dl_errno));
 			break;
@@ -1170,8 +1193,6 @@ recv_ack(int fd, int size, const char *what, char *bufp, char *ebuf, int *uerror
 		return (-1);
 
 	default:
-		if (uerror != NULL)
-			*uerror = 0;
 		snprintf(ebuf, PCAP_ERRBUF_SIZE,
 		    "recv_ack: %s: Unexpected primitive ack %s",
 		    what, dlprim(dlp->dl_primitive));
@@ -1179,8 +1200,6 @@ recv_ack(int fd, int size, const char *what, char *bufp, char *ebuf, int *uerror
 	}
 
 	if (ctl.len < size) {
-		if (uerror != NULL)
-			*uerror = 0;
 		snprintf(ebuf, PCAP_ERRBUF_SIZE,
 		    "recv_ack: %s: Ack too small (%d < %d)",
 		    what, ctl.len, size);

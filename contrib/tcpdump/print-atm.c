@@ -18,11 +18,11 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-atm.c,v 1.11 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-atm.c,v 1.12.2.1 2007/10/19 03:03:58 mlaier Exp $
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-atm.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-atm.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -44,6 +44,12 @@ static const char rcsid[] _U_ =
 #include "llc.h"
 
 #include "ether.h"
+
+struct tok oam_f_values[] = {
+    { OAMF4SC, "OAM F4 (segment)" },
+    { OAMF4EC, "OAM F4 (end)" },
+    { 0, NULL }
+};
 
 struct tok oam_celltype_values[] = {
     { 0x1, "Fault Management" },
@@ -108,7 +114,7 @@ atm_llc_print(const u_char *p, int length, int caplen)
 			printf("(LLC %s) ",
 		etherproto_string(htons(extracted_ethertype)));
 		}
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	}
 }
@@ -137,6 +143,15 @@ atm_if_print(const struct pcap_pkthdr *h, const u_char *p)
 		printf("[|atm]");
 		return (caplen);
 	}
+
+        /* Cisco Style NLPID ? */
+        if (*p == LLC_UI) {
+            if (eflag)
+                printf("CNLPID ");
+            isoclns_print(p+1, length-1, caplen-1);
+            return hdrlen;
+        }
+
 	/*
 	 * Extract the presumed LLC header into a variable, for quick
 	 * testing.
@@ -291,9 +306,10 @@ atm_print(u_int vpi, u_int vci, u_int traftype, const u_char *p, u_int length,
 int 
 oam_print (const u_char *p, u_int length, u_int hec) {
 
-    u_int16_t cell_header, cell_type, func_type,vpi,vci,payload,clp;
+    u_int32_t cell_header;
+    u_int16_t cell_type, func_type,vpi,vci,payload,clp;
 
-    cell_header = EXTRACT_32BITS(p);
+    cell_header = EXTRACT_32BITS(p+hec);
     cell_type = ((*(p+4+hec))>>4) & 0x0f;
     func_type = *(p+4+hec) & 0x0f;
 
@@ -302,20 +318,9 @@ oam_print (const u_char *p, u_int length, u_int hec) {
     payload = (cell_header>>1)&0x7;
     clp = cell_header&0x1;
 
-    switch (vci) {
-    case OAMF4SC:
-        printf("OAM F4 (segment), ");
-            break;
-    case OAMF4EC:
-        printf("OAM F4 (end), ");
-        break;
-    default:
-        printf("OAM F5, ");
-        break;
-    }
-
-    if (eflag)
-        printf("vpi %u, vci %u, payload %u, clp %u, ",vpi,vci,payload,clp);
+    printf("%s, vpi %u, vci %u, payload %u, clp %u, ",
+           tok2str(oam_f_values, "OAM F5", vci),
+           vpi, vci, payload, clp);
 
     printf("cell-type %s (%u)",
            tok2str(oam_celltype_values, "unknown", cell_type),

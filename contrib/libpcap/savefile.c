@@ -30,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/libpcap/savefile.c,v 1.1.1.2 2006-02-25 02:33:30 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/libpcap/savefile.c,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -70,6 +70,12 @@ static const char rcsid[] _U_ =
  * as per a request from Dumas Hwang <dumas.hwang@navtelcom.com>.
  */
 #define NAVTEL_TCPDUMP_MAGIC	0xa12b3c4d
+
+/*
+ * Normal libpcap format, except for seconds/nanoseconds timestamps,
+ * as per a request by Ulf Lamping <ulf.lamping@web.de>
+ */
+#define NSEC_TCPDUMP_MAGIC	0xa1b23c4d
 
 /*
  * We use the "receiver-makes-right" approach to byte order,
@@ -412,6 +418,140 @@ static const char rcsid[] _U_ =
  */
 #define LINKTYPE_LINUX_LAPD	177
 
+/*
+ * Juniper-private data link type, as per request from
+ * Hannes Gredler <hannes@juniper.net>. 
+ * The Link Types are used for prepending meta-information
+ * like interface index, interface name
+ * before standard Ethernet, PPP, Frelay & C-HDLC Frames
+ */
+#define LINKTYPE_JUNIPER_ETHER  178
+#define LINKTYPE_JUNIPER_PPP    179
+#define LINKTYPE_JUNIPER_FRELAY 180
+#define LINKTYPE_JUNIPER_CHDLC  181
+
+/*
+ * Multi Link Frame Relay (FRF.16)
+ */
+#define LINKTYPE_MFR            182
+
+/*
+ * Juniper-private data link type, as per request from
+ * Hannes Gredler <hannes@juniper.net>. 
+ * The DLT_ is used for internal communication with a
+ * voice Adapter Card (PIC)
+ */
+#define LINKTYPE_JUNIPER_VP     183
+
+/*
+ * Arinc 429 frames.
+ * DLT_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ * Every frame contains a 32bit A429 label.
+ * More documentation on Arinc 429 can be found at
+ * http://www.condoreng.com/support/downloads/tutorials/ARINCTutorial.pdf
+ */
+#define LINKTYPE_A429           184
+
+/*
+ * Arinc 653 Interpartition Communication messages.
+ * DLT_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ * Please refer to the A653-1 standard for more information.
+ */
+#define LINKTYPE_A653_ICM       185
+
+/*
+ * USB packets, beginning with a USB setup header; requested by
+ * Paolo Abeni <paolo.abeni@email.it>.
+ */
+#define LINKTYPE_USB		186
+
+/*
+ * Bluetooth HCI UART transport layer (part H:4); requested by
+ * Paolo Abeni.
+ */
+#define LINKTYPE_BLUETOOTH_HCI_H4	187
+
+/*
+ * IEEE 802.16 MAC Common Part Sublayer; requested by Maria Cruz
+ * <cruz_petagay@bah.com>.
+ */
+#define LINKTYPE_IEEE802_16_MAC_CPS	188
+
+/*
+ * USB packets, beginning with a Linux USB header; requested by
+ * Paolo Abeni <paolo.abeni@email.it>.
+ */
+#define LINKTYPE_USB_LINUX	189
+
+/*
+ * Controller Area Network (CAN) v. 2.0B packets.
+ * DLT_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ * Used to dump CAN packets coming from a CAN Vector board.
+ * More documentation on the CAN v2.0B frames can be found at
+ * http://www.can-cia.org/downloads/?269
+ */
+#define LINKTYPE_CAN20B         190
+
+/*
+ * IEEE 802.15.4, with address fields padded, as is done by Linux
+ * drivers; requested by Juergen Schimmer.
+ */
+#define LINKTYPE_IEEE802_15_4_LINUX	191
+
+/*
+ * Per Packet Information encapsulated packets.
+ * LINKTYPE_ requested by Gianluca Varenni <gianluca.varenni@cacetech.com>.
+ */
+#define LINKTYPE_PPI			192
+
+/*
+ * Header for 802.16 MAC Common Part Sublayer plus a radiotap radio header;
+ * requested by Charles Clancy.
+ */
+#define LINKTYPE_IEEE802_16_MAC_CPS_RADIO	193
+
+/*
+ * Juniper-private data link type, as per request from
+ * Hannes Gredler <hannes@juniper.net>. 
+ * The DLT_ is used for internal communication with a
+ * integrated service module (ISM).
+ */
+#define LINKTYPE_JUNIPER_ISM    194
+
+/*
+ * IEEE 802.15.4, exactly as it appears in the spec (no padding, no
+ * nothing); requested by Mikko Saarnivala <mikko.saarnivala@sensinode.com>.
+ */
+#define LINKTYPE_IEEE802_15_4	195
+
+/*
+ * Various link-layer types, with a pseudo-header, for SITA
+ * (http://www.sita.aero/); requested by Fulko Hew (fulko.hew@gmail.com).
+ */
+#define LINKTYPE_SITA		196
+
+/*
+ * Various link-layer types, with a pseudo-header, for Endace DAG cards;
+ * encapsulates Endace ERF records.  Requested by Stephen Donnelly
+ * <stephen@endace.com>.
+ */
+#define LINKTYPE_ERF		197
+
+/*
+ * Special header prepended to Ethernet packets when capturing from a
+ * u10 Networks board.  Requested by Phil Mulholland
+ * <phil@u10networks.com>.
+ */
+#define LINKTYPE_RAIF1		198
+
+/*
+ * IPMB packet for IPMI, beginning with the I2C slave address, followed
+ * by the netFn and LUN, etc..  Requested by Chanthy Toeung
+ * <chanthy.toeung@ca.kontron.com>.
+ */
+#define LINKTYPE_IPMB		199
+
+
 static struct linktype_map {
 	int	dlt;
 	int	linktype;
@@ -611,6 +751,66 @@ static struct linktype_map {
 	/* viSDN LAPD */
 	{ DLT_LINUX_LAPD,	LINKTYPE_LINUX_LAPD },
 
+        /* Juniper meta-information before Ether, PPP, Frame Relay, C-HDLC Frames */
+        { DLT_JUNIPER_ETHER, LINKTYPE_JUNIPER_ETHER },
+        { DLT_JUNIPER_PPP, LINKTYPE_JUNIPER_PPP },
+        { DLT_JUNIPER_FRELAY, LINKTYPE_JUNIPER_FRELAY },
+        { DLT_JUNIPER_CHDLC, LINKTYPE_JUNIPER_CHDLC },
+
+        /* Multi Link Frame Relay (FRF.16) */
+        { DLT_MFR,              LINKTYPE_MFR },
+
+        /* Juniper Voice PIC */
+        { DLT_JUNIPER_VP,       LINKTYPE_JUNIPER_VP },
+
+	/* Controller Area Network (CAN) v2.0B */
+	{ DLT_A429,		LINKTYPE_A429 },
+
+	/* Arinc 653 Interpartition Communication messages */
+	{ DLT_A653_ICM,         LINKTYPE_A653_ICM },
+
+	/* USB */
+	{ DLT_USB,		LINKTYPE_USB },
+
+	/* Bluetooth HCI UART transport layer */
+	{ DLT_BLUETOOTH_HCI_H4,	LINKTYPE_BLUETOOTH_HCI_H4 },
+
+	/* IEEE 802.16 MAC Common Part Sublayer */
+	{ DLT_IEEE802_16_MAC_CPS,	LINKTYPE_IEEE802_16_MAC_CPS },
+
+	/* USB with Linux header */
+	{ DLT_USB_LINUX,	LINKTYPE_USB_LINUX },
+
+	/* Controller Area Network (CAN) v2.0B */
+	{ DLT_CAN20B,		LINKTYPE_CAN20B },
+
+	/* IEEE 802.15.4 with address fields padded */
+	{ DLT_IEEE802_15_4_LINUX,	LINKTYPE_IEEE802_15_4_LINUX },
+
+	/* Per Packet Information encapsulated packets */
+	{ DLT_PPI,			LINKTYPE_PPI },
+
+	/* IEEE 802.16 MAC Common Part Sublayer plus radiotap header */
+	{ DLT_IEEE802_16_MAC_CPS_RADIO, LINKTYPE_IEEE802_16_MAC_CPS_RADIO },
+
+        /* Juniper Voice ISM */
+        { DLT_JUNIPER_ISM,      LINKTYPE_JUNIPER_ISM },
+
+	/* IEEE 802.15.4 exactly as it appears in the spec */
+        { DLT_IEEE802_15_4,	LINKTYPE_IEEE802_15_4 },
+
+	/* Various link-layer types for SITA */
+	{ DLT_SITA,		LINKTYPE_SITA },
+
+	/* Various link-layer types for Endace */
+	{ DLT_ERF,		LINKTYPE_ERF },
+
+	/* Special header for u10 Networks boards */
+	{ DLT_RAIF1,		LINKTYPE_RAIF1 },
+
+	/* IPMB */
+	{ DLT_IPMB,		LINKTYPE_IPMB },
+
 	{ -1,			-1 }
 };
 
@@ -722,7 +922,7 @@ sf_inject(pcap_t *p, const void *buf _U_, size_t size _U_)
  * single device? IN, OUT or both?
  */
 static int
-sf_setdirection(pcap_t *p, direction_t d)
+sf_setdirection(pcap_t *p, pcap_direction_t d)
 {
 	snprintf(p->errbuf, sizeof(p->errbuf),
 	    "Setting direction is not supported on savefiles");
@@ -845,6 +1045,28 @@ pcap_fopen_offline(FILE *fp, char *errbuf)
 	p->tzoff = hdr.thiszone;
 	p->snapshot = hdr.snaplen;
 	p->linktype = linktype_to_dlt(hdr.linktype);
+	if (magic == KUZNETZOV_TCPDUMP_MAGIC && p->linktype == DLT_EN10MB) {
+		/*
+		 * This capture might have been done in raw mode or cooked
+		 * mode.
+		 *
+		 * If it was done in cooked mode, p->snapshot was passed
+		 * to recvfrom() as the buffer size, meaning that the
+		 * most packet data that would be copied would be
+		 * p->snapshot.  However, a faked Ethernet header would
+		 * then have been added to it, so the most data that would
+		 * be in a packet in the file would be p->snapshot + 14.
+		 *
+		 * We can't easily tell whether the capture was done in
+		 * raw mode or cooked mode, so we'll assume it was
+		 * cooked mode, and add 14 to the snapshot length.  That
+		 * means that, for a raw capture, the snapshot length will
+		 * be misleading if you use it to figure out why a capture
+		 * doesn't have all the packet data, but there's not much
+		 * we can do to avoid that.
+		 */
+		p->snapshot += 14;
+	}
 	p->sf.rfile = fp;
 #ifndef WIN32
 	p->bufsize = hdr.snaplen;
@@ -1152,7 +1374,7 @@ pcap_dump(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
 	sf_hdr.len        = h->len;
 	/* XXX we should check the return status */
 	(void)fwrite(&sf_hdr, sizeof(sf_hdr), 1, f);
-	(void)fwrite((char *)sp, h->caplen, 1, f);
+	(void)fwrite(sp, h->caplen, 1, f);
 }
 
 static pcap_dumper_t *

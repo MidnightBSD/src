@@ -22,7 +22,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-lane.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-lane.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -134,7 +134,6 @@ lane_print(const u_char *p, u_int length, u_int caplen)
 	/*
 	 * Is it (gag) an 802.3 encapsulation?
 	 */
-	extracted_ethertype = 0;
 	if (ether_type <= ETHERMTU) {
 		/* Try to print the LLC-layer header & higher layers */
 		if (llc_print(p, length, caplen, ep->h_source, ep->h_dest,
@@ -146,7 +145,7 @@ lane_print(const u_char *p, u_int length, u_int caplen)
 				printf("(LLC %s) ",
 			       etherproto_string(htons(extracted_ethertype)));
 			}
-			if (!xflag && !qflag)
+			if (!suppress_default_print)
 				default_print(p, caplen);
 		}
 	} else if (ether_encap_print(ether_type, p, length, caplen,
@@ -154,7 +153,7 @@ lane_print(const u_char *p, u_int length, u_int caplen)
 		/* ether_type not known, print raw packet */
 		if (!eflag)
 			lane_hdr_print((u_char *)ep, length + sizeof(*ep));
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	}
 }

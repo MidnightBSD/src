@@ -18,8 +18,8 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/libpcap/gencode.h,v 1.8 2005/07/11 03:43:25 sam Exp $
- * @(#) $Header: /home/cvs/src/contrib/libpcap/gencode.h,v 1.1.1.2 2006-02-25 02:33:29 laffer1 Exp $ (LBL)
+ * $FreeBSD: src/contrib/libpcap/gencode.h,v 1.9.2.1 2007/10/19 03:03:56 mlaier Exp $
+ * @(#) $Header: /home/cvs/src/contrib/libpcap/gencode.h,v 1.1.1.3 2009-03-25 16:59:32 laffer1 Exp $ (LBL)
  */
 
 /*
@@ -174,11 +174,16 @@
 				   end-to-end circuits, ILMI circuits or
 				   connection signalling circuit. */
 
-/*MTP3 field types */
-#define M_SIO 1
-#define M_OPC 2
-#define M_DPC 3
-#define M_SLS 4
+/* MTP2 types */
+#define M_FISU		22	/* FISU */
+#define M_LSSU		23	/* LSSU */
+#define M_MSU		24	/* MSU */
+
+/* MTP3 field types */
+#define M_SIO		1
+#define M_OPC		2
+#define M_DPC		3
+#define M_SLS		4
 
 
 struct slist;
@@ -290,10 +295,14 @@ struct block *gen_inbound(int);
 struct block *gen_vlan(int);
 struct block *gen_mpls(int);
 
+struct block *gen_pppoed(void);
+struct block *gen_pppoes(void);
+
 struct block *gen_atmfield_code(int atmfield, bpf_int32 jvalue, bpf_u_int32 jtype, int reverse);
 struct block *gen_atmtype_abbrev(int type);
 struct block *gen_atmmulti_abbrev(int type);
 
+struct block *gen_mtp2type_abbrev(int type);
 struct block *gen_mtp3field_code(int mtp3field, bpf_u_int32 jvalue, bpf_u_int32 jtype, int reverse);
 
 struct block *gen_pf_ifname(const char *);
@@ -313,7 +322,7 @@ char *sdup(const char *);
 
 struct bpf_insn *icode_to_fcode(struct block *, int *);
 int pcap_parse(void);
-void lex_init(char *);
+void lex_init(const char *);
 void lex_cleanup(void);
 void sappend(struct slist *, struct slist *);
 

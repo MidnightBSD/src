@@ -21,12 +21,12 @@
  * Format and print Novell IPX packets.
  * Contributed by Brad Parker (brad@fcr.com).
  *
- * $FreeBSD: src/contrib/tcpdump/print-ipx.c,v 1.9 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-ipx.c,v 1.10 2006/09/04 20:25:04 sam Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ipx.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ipx.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -198,7 +198,7 @@ ipx_rip_print(const u_short *ipx, u_int length)
 	(void)printf("ipx-rip-req");
 	if (length > 0) {
 	    TCHECK(ipx[3]);
-	    (void)printf(" %x/%d.%d", EXTRACT_32BITS(&ipx[0]),
+	    (void)printf(" %u/%d.%d", EXTRACT_32BITS(&ipx[0]),
 			 EXTRACT_16BITS(&ipx[2]), EXTRACT_16BITS(&ipx[3]));
 	}
 	break;
@@ -206,7 +206,7 @@ ipx_rip_print(const u_short *ipx, u_int length)
 	(void)printf("ipx-rip-resp");
 	for (i = 0; i < 50 && length > 0; i++) {
 	    TCHECK(ipx[3]);
-	    (void)printf(" %x/%d.%d", EXTRACT_32BITS(&ipx[0]),
+	    (void)printf(" %u/%d.%d", EXTRACT_32BITS(&ipx[0]),
 			 EXTRACT_16BITS(&ipx[2]), EXTRACT_16BITS(&ipx[3]));
 
 	    ipx += 4;

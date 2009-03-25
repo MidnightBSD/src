@@ -21,7 +21,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ipfc.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ipfc.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -101,8 +101,6 @@ ipfc_print(const u_char *p, u_int length, u_int caplen)
 	p += IPFC_HDRLEN;
 	caplen -= IPFC_HDRLEN;
 
-	/* Frame Control field determines interpretation of packet */
-	extracted_ethertype = 0;
 	/* Try to print the LLC-layer header & higher layers */
 	if (llc_print(p, length, caplen, ESRC(&ehdr), EDST(&ehdr),
 	    &extracted_ethertype) == 0) {
@@ -117,7 +115,7 @@ ipfc_print(const u_char *p, u_int length, u_int caplen)
 			printf("(LLC %s) ",
 		etherproto_string(htons(extracted_ethertype)));
 		}
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	}
 }

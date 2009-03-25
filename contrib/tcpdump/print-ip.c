@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-ip.c,v 1.13 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-ip.c,v 1.14.2.1 2007/10/19 03:03:59 mlaier Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ip.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ip.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -52,6 +52,7 @@ struct tok ip_option_values[] = {
     { IPOPT_SSRR, "SSRR" },
     { IPOPT_LSRR, "LSRR" },
     { IPOPT_RA, "RA" },
+    { IPOPT_RFC1393, "traceroute" },
     { 0, NULL }
 };
 
@@ -75,9 +76,9 @@ ip_printroute(register const u_char *cp, u_int length)
 		printf(" [bad ptr %u]", cp[2]);
 
 	for (len = 3; len < length; len += 4) {
-		printf("%s", ipaddr_string(&cp[len]));
+		printf(" %s", ipaddr_string(&cp[len]));
                 if (ptr > len)
-                    printf (", ");
+                        printf(",");
 	}
 }
 
@@ -139,17 +140,17 @@ ip_printts(register const u_char *cp, u_int length)
 	const char *type;
 
 	if (length < 4) {
-		printf("[bad length %d]", length);
+		printf("[bad length %u]", length);
 		return;
 	}
 	printf(" TS{");
 	hoplen = ((cp[3]&0xF) != IPOPT_TS_TSONLY) ? 8 : 4;
 	if ((length - 4) & (hoplen-1))
-		printf("[bad length %d]", length);
+		printf("[bad length %u]", length);
 	ptr = cp[2] - 1;
 	len = 0;
 	if (ptr < 4 || ((ptr - 4) & (hoplen-1)) || ptr > length + 1)
-		printf("[bad ptr %d]", cp[2]);
+		printf("[bad ptr %u]", cp[2]);
 	switch (cp[3]&0xF) {
 	case IPOPT_TS_TSONLY:
 		printf("TSONLY");
@@ -199,12 +200,19 @@ static void
 ip_optprint(register const u_char *cp, u_int length)
 {
 	register u_int option_len;
+	const char *sep = "";
 
 	for (; length > 0; cp += option_len, length -= option_len) {
 		u_int option_code;
 
+		printf("%s", sep);
+		sep = ",";
+
 		TCHECK(*cp);
 		option_code = *cp;
+
+                printf("%s",
+                        tok2str(ip_option_values,"unknown %u",option_code));
 
 		if (option_code == IPOPT_NOP ||
                     option_code == IPOPT_EOL)
@@ -212,16 +220,17 @@ ip_optprint(register const u_char *cp, u_int length)
 
 		else {
 			TCHECK(cp[1]);
-			option_len = cp[1];			
+			option_len = cp[1];
+			if (option_len < 2) {
+		                printf(" [bad length %u]", option_len);
+				return;
+			}
 		}
 
-                printf("%s (%u) len %u",
-                       tok2str(ip_option_values,"unknown",option_code),
-                       option_code,
-                       option_len);
-
-                if (option_len < 2)
-                        return;
+		if (option_len > length) {
+	                printf(" [bad length %u]", option_len);
+			return;
+		}
 
                 TCHECK2(*cp, option_len);
 
@@ -236,13 +245,17 @@ ip_optprint(register const u_char *cp, u_int length)
 		case IPOPT_RR:       /* fall through */
 		case IPOPT_SSRR:
 		case IPOPT_LSRR:
-			ip_printroute( cp, option_len);
+			ip_printroute(cp, option_len);
 			break;
 
 		case IPOPT_RA:
+			if (option_len < 4) {
+				printf(" [bad length %u]", option_len);
+				break;
+			}
                         TCHECK(cp[3]);
                         if (EXTRACT_16BITS(&cp[2]) != 0)
-                            printf("value %u", EXTRACT_16BITS(&cp[2]));
+                            printf(" value %u", EXTRACT_16BITS(&cp[2]));
 			break;
 
 		case IPOPT_NOP:       /* nothing to print - fall through */
@@ -343,12 +356,6 @@ in_cksum_shouldbe(u_int16_t sum, u_int16_t computed_sum)
 	return shouldbe;
 }
 
-#ifndef IP_MF
-#define IP_MF 0x2000
-#endif /* IP_MF */
-#ifndef IP_DF
-#define IP_DF 0x4000
-#endif /* IP_DF */
 #define IP_RES 0x8000
 
 static struct tok ip_frag_values[] = {
@@ -413,21 +420,27 @@ again:
 	case IPPROTO_SCTP:
 		sctp_print(ipds->cp, (const u_char *)ipds->ip, ipds->len);
 		break;
+
+	case IPPROTO_DCCP:
+		dccp_print(ipds->cp, (const u_char *)ipds->ip, ipds->len);
+		break;
 		
 	case IPPROTO_TCP:
+		/* pass on the MF bit plus the offset to detect fragments */
 		tcp_print(ipds->cp, ipds->len, (const u_char *)ipds->ip,
-			  (ipds->off &~ 0x6000));
+			  ipds->off & (IP_MF|IP_OFFMASK));
 		break;
 		
 	case IPPROTO_UDP:
+		/* pass on the MF bit plus the offset to detect fragments */
 		udp_print(ipds->cp, ipds->len, (const u_char *)ipds->ip,
-			  (ipds->off &~ 0x6000));
+			  ipds->off & (IP_MF|IP_OFFMASK));
 		break;
 		
 	case IPPROTO_ICMP:
 		/* pass on the MF bit plus the offset to detect fragments */
 		icmp_print(ipds->cp, ipds->len, (const u_char *)ipds->ip,
-			   (ipds->off & 0x3fff));
+			   ipds->off & (IP_MF|IP_OFFMASK));
 		break;
 		
 	case IPPROTO_PIGP:
@@ -623,7 +636,7 @@ ip_print(netdissect_options *ndo,
             }
 
             if (ipds->ip->ip_ttl >= 1)
-                (void)printf(", ttl %3u", ipds->ip->ip_ttl);    
+                (void)printf(", ttl %u", ipds->ip->ip_ttl);    
 
 	    /*
 	     * for the firewall guys, print id, offset.
@@ -631,19 +644,19 @@ ip_print(netdissect_options *ndo,
 	     * For unfragmented datagrams, note the don't fragment flag.
 	     */
 
-	    (void)printf(", id %u, offset %u, flags [%s], proto: %s (%u)",
+	    (void)printf(", id %u, offset %u, flags [%s], proto %s (%u)",
                          EXTRACT_16BITS(&ipds->ip->ip_id),
                          (ipds->off & 0x1fff) * 8,
-                         bittok2str(ip_frag_values, "none", ipds->off&0xe000 ),
+                         bittok2str(ip_frag_values, "none", ipds->off&0xe000),
                          tok2str(ipproto_values,"unknown",ipds->ip->ip_p),
                          ipds->ip->ip_p);
 
-            (void)printf(", length: %u", EXTRACT_16BITS(&ipds->ip->ip_len));
+            (void)printf(", length %u", EXTRACT_16BITS(&ipds->ip->ip_len));
 
             if ((hlen - sizeof(struct ip)) > 0) {
-                printf(", options ( ");
+                printf(", options (");
                 ip_optprint((u_char *)(ipds->ip + 1), hlen - sizeof(struct ip));
-                printf(" )");
+                printf(")");
             }
 
 	    if ((u_char *)ipds->ip + hlen <= snapend) {
@@ -667,7 +680,7 @@ ip_print(netdissect_options *ndo,
 		ipds->nh = ipds->ip->ip_p;
 
 		if (ipds->nh != IPPROTO_TCP && ipds->nh != IPPROTO_UDP &&
-		    ipds->nh != IPPROTO_SCTP) {
+		    ipds->nh != IPPROTO_SCTP && ipds->nh != IPPROTO_DCCP) {
 			(void)printf("%s > %s: ",
 				     ipaddr_string(&ipds->ip->ip_src),
 				     ipaddr_string(&ipds->ip->ip_dst));

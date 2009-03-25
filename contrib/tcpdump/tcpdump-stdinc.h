@@ -29,9 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump-stdinc.h,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)
- *
- * $FreeBSD: src/contrib/tcpdump/tcpdump-stdinc.h,v 1.3 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/tcpdump-stdinc.h,v 1.4.2.1 2007/10/19 03:04:00 mlaier Exp $
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump-stdinc.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)
  */
 
 /*
@@ -48,11 +47,11 @@
 
 #include <stdio.h>
 #include <winsock2.h>
+#include <Ws2tcpip.h>
 #include "bittypes.h"
 #include <ctype.h>
 #include <time.h>
 #include <io.h>
-#include "IP6_misc.h"
 #include <fcntl.h>
 #include <sys/types.h>
 #include <net/netdb.h>  /* in wpcap's Win32/include */
@@ -147,6 +146,14 @@ typedef char* caddr_t;
 
 #ifndef INET_ADDRSTRLEN
 #define INET_ADDRSTRLEN 16
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
 #endif
 
 #endif /* tcpdump_stdinc_h */

@@ -21,12 +21,26 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-pflog.c,v 1.1.1.2 2006-02-25 02:34:03 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-pflog.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#ifndef HAVE_NET_PFVAR_H
+#error "No pf headers available"
+#endif
+
+#include <sys/types.h>
+#ifndef WIN32
+#include <sys/socket.h>
+#endif
+#include <net/if.h>
+#include <net/pfvar.h>
+#include <net/if_pflog.h>
+
+
 
 #include <tcpdump-stdinc.h>
 
@@ -35,7 +49,6 @@ static const char rcsid[] _U_ =
 
 #include "interface.h"
 #include "addrtoname.h"
-#include "pf.h"
 
 static struct tok pf_reasons[] = {
 	{ 0,	"0(match)" },
@@ -44,6 +57,15 @@ static struct tok pf_reasons[] = {
 	{ 3,	"3(short)" },
 	{ 4,	"4(normalize)" },
 	{ 5,	"5(memory)" },
+	{ 6,	"6(bad-timestamp)" },
+	{ 7,	"7(congestion)" },
+	{ 8,	"8(ip-option)" },
+	{ 9,	"9(proto-cksum)" },
+	{ 10,	"10(state-mismatch)" },
+	{ 11,	"11(state-insert)" },
+	{ 12,	"12(state-limit)" },
+	{ 13,	"13(src-limit)" },
+	{ 14,	"14(synproxy)" },
 	{ 0,	NULL }
 };
 
@@ -152,7 +174,7 @@ pflog_if_print(const struct pcap_pkthdr *h, register const u_char *p)
 		/* address family not handled, print raw packet */
 		if (!eflag)
 			pflog_print(hdr);
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	}
 	

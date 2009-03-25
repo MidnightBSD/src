@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-udp.c,v 1.9 2005/05/29 19:09:28 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-udp.c,v 1.9.10.1 2007/10/19 03:04:00 mlaier Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-udp.c,v 1.1.1.2 2006-02-25 02:34:03 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-udp.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -676,6 +676,8 @@ udp_print(register const u_char *bp, u_int length,
 			lwres_print((const u_char *)(up + 1), length);
                 else if (ISPORT(LDP_PORT))
 			ldp_print((const u_char *)(up + 1), length);
+                else if (ISPORT(OLSR_PORT))
+			olsr_print((const u_char *)(up + 1), length);
                 else if (ISPORT(MPLS_LSP_PING_PORT))
 			lspping_print((const u_char *)(up + 1), length);
 		else if (dport == BFD_CONTROL_PORT ||

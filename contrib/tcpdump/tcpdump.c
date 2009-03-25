@@ -30,10 +30,10 @@ static const char copyright[] _U_ =
     "@(#) Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 2000\n\
 The Regents of the University of California.  All rights reserved.\n";
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump.c,v 1.1.1.2 2006-02-25 02:34:04 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/tcpdump.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
-/* $FreeBSD: src/contrib/tcpdump/tcpdump.c,v 1.10 2005/07/11 04:14:02 sam Exp $ */
+/* $FreeBSD: src/contrib/tcpdump/tcpdump.c,v 1.11.2.2 2007/11/25 19:28:38 mlaier Exp $ */
 
 /*
  * tcpdump - monitor tcp/ip traffic on an ethernet.
@@ -192,7 +192,7 @@ static struct printer printers[] = {
 #ifdef DLT_LTALK
 	{ ltalk_if_print,	DLT_LTALK },
 #endif
-#ifdef DLT_PFLOG
+#if defined(DLT_PFLOG) && defined(HAVE_NET_PFVAR_H)
 	{ pflog_if_print, 	DLT_PFLOG },
 #endif
 #ifdef DLT_FR
@@ -254,6 +254,21 @@ static struct printer printers[] = {
 #endif
 #ifdef DLT_JUNIPER_SERVICES
 	{ juniper_services_print, DLT_JUNIPER_SERVICES },
+#endif
+#ifdef DLT_JUNIPER_ETHER
+	{ juniper_ether_print, DLT_JUNIPER_ETHER },
+#endif
+#ifdef DLT_JUNIPER_PPP
+	{ juniper_ppp_print, DLT_JUNIPER_PPP },
+#endif
+#ifdef DLT_JUNIPER_FRELAY
+	{ juniper_frelay_print, DLT_JUNIPER_FRELAY },
+#endif
+#ifdef DLT_JUNIPER_CHDLC
+	{ juniper_chdlc_print, DLT_JUNIPER_CHDLC },
+#endif
+#ifdef DLT_MFR
+	{ mfr_if_print, DLT_MFR },
 #endif
 	{ NULL,			0 },
 };
@@ -494,8 +509,6 @@ main(int argc, char **argv)
 			break;
 
 		case 'A':
-			++xflag;
-			++Xflag;
 			++Aflag;
 			break;
 
@@ -657,6 +670,7 @@ main(int argc, char **argv)
 
 		case 'q':
 			++qflag;
+			++suppress_default_print;
 			break;
 
 		case 'r':
@@ -737,10 +751,12 @@ main(int argc, char **argv)
 
 		case 'x':
 			++xflag;
+			++suppress_default_print;
 			break;
 
 		case 'X':
 			++Xflag;
+			++suppress_default_print;
 			break;
 
 		case 'y':
@@ -1116,6 +1132,7 @@ info(register int verbose)
 
 	if (pcap_stats(pd, &stat) < 0) {
 		(void)fprintf(stderr, "pcap_stats: %s\n", pcap_geterr(pd));
+		infoprint = 0;
 		return;
 	}
 
@@ -1226,9 +1243,28 @@ print_packet(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
 	snapend = sp + h->caplen;
 
 	hdrlen = (*print_info->printer)(h, sp);
-	if (xflag) {
+	if (Xflag) {
 		/*
-		 * Print the raw packet data.
+		 * Print the raw packet data in hex and ASCII.
+		 */
+		if (Xflag > 1) {
+			/*
+			 * Include the link-layer header.
+			 */
+			hex_and_ascii_print("\n\t", sp, h->caplen);
+		} else {
+			/*
+			 * Don't include the link-layer header - and if
+			 * we have nothing past the link-layer header,
+			 * print nothing.
+			 */
+			if (h->caplen > hdrlen)
+				hex_and_ascii_print("\n\t", sp + hdrlen,
+				    h->caplen - hdrlen);
+		}
+	} else if (xflag) {
+		/*
+		 * Print the raw packet data in hex.
 		 */
 		if (xflag > 1) {
 			/*
@@ -1245,15 +1281,15 @@ print_packet(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
 				hex_print("\n\t", sp + hdrlen,
 				    h->caplen - hdrlen);
 		}
-       } else if (Xflag) {
+	} else if (Aflag) {
 		/*
-		 * Print the raw packet data.
+		 * Print the raw packet data in ASCII.
 		 */
-		if (Xflag > 1) {
+		if (Aflag > 1) {
 			/*
 			 * Include the link-layer header.
 			 */
-			ascii_print("\n\t", sp, h->caplen);
+			ascii_print(sp, h->caplen);
 		} else {
 			/*
 			 * Don't include the link-layer header - and if
@@ -1261,8 +1297,7 @@ print_packet(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
 			 * print nothing.
 			 */
 			if (h->caplen > hdrlen)
-				ascii_print("\n\t", sp + hdrlen,
-				    h->caplen - hdrlen);
+				ascii_print(sp + hdrlen, h->caplen - hdrlen);
 		}
 	}
 
@@ -1301,12 +1336,12 @@ print_packet(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
 #endif
 
 /*
- * By default, print the specified data out in hex.
+ * By default, print the specified data out in hex and ASCII.
  */
 static void
 ndo_default_print(netdissect_options *ndo _U_, const u_char *bp, u_int length)
 {
-	ascii_print("\n\t", bp, length); /* pass on lf and identation string */
+	hex_and_ascii_print("\n\t", bp, length); /* pass on lf and identation string */
 }
 
 void

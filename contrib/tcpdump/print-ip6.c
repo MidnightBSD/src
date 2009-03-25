@@ -18,12 +18,12 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-ip6.c,v 1.7 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-ip6.c,v 1.8.2.1 2007/10/19 03:03:59 mlaier Exp $
  */
 
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ip6.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ip6.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -95,7 +95,7 @@ ip6_print(register const u_char *bp, register u_int length)
 		(void)printf("flowlabel 0x%05x, ", flow & 0x000fffff);
 #endif
 
-            (void)printf("hlim %u, next-header: %s (%u), length: %u) ",
+            (void)printf("hlim %u, next-header %s (%u) payload length: %u) ",
                          ip6->ip6_hlim,
                          tok2str(ipproto_values,"unknown",ip6->ip6_nxt),
                          ip6->ip6_nxt,
@@ -118,7 +118,7 @@ ip6_print(register const u_char *bp, register u_int length)
 
 		if (cp == (const u_char *)(ip6 + 1) &&
 		    nh != IPPROTO_TCP && nh != IPPROTO_UDP &&
-		    nh != IPPROTO_SCTP) {
+		    nh != IPPROTO_DCCP && nh != IPPROTO_SCTP) {
 			(void)printf("%s > %s: ", ip6addr_string(&ip6->ip6_src),
 				     ip6addr_string(&ip6->ip6_dst));
 		}
@@ -161,6 +161,9 @@ ip6_print(register const u_char *bp, register u_int length)
 			break;
 		case IPPROTO_SCTP:
 			sctp_print(cp, (const u_char *)ip6, len);
+			return;
+		case IPPROTO_DCCP:
+			dccp_print(cp, (const u_char *)ip6, len);
 			return;
 		case IPPROTO_TCP:
 			tcp_print(cp, len, (const u_char *)ip6, fragmented);
@@ -224,7 +227,7 @@ ip6_print(register const u_char *bp, register u_int length)
 			return;
 
 		default:
-			(void)printf("ip-proto-%d %d", ip6->ip6_nxt, len);
+			(void)printf("ip-proto-%d %d", nh, len);
 			return;
 		}
 	}

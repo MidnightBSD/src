@@ -1,4 +1,5 @@
-/* @(#) $Header: /home/cvs/src/contrib/tcpdump/ieee802_11.h,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL) */
+/* $FreeBSD: src/contrib/tcpdump/ieee802_11.h,v 1.2.2.1 2007/10/19 03:03:58 mlaier Exp $ */
+/* @(#) $Header: /home/cvs/src/contrib/tcpdump/ieee802_11.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL) */
 /*
  * Copyright (c) 2001
  *	Fortress Technologies
@@ -30,6 +31,7 @@
 #define	IEEE802_11_RA_LEN		6
 #define	IEEE802_11_TA_LEN		6
 #define	IEEE802_11_SEQ_LEN		2
+#define	IEEE802_11_CTL_LEN		2
 #define	IEEE802_11_IV_LEN		3
 #define	IEEE802_11_KID_LEN		1
 
@@ -72,6 +74,7 @@
 /* RESERVED 			0xF  */
 
 
+#define	CTRL_BAR	0x8
 #define	CTRL_PS_POLL	0xA
 #define	CTRL_RTS	0xB
 #define	CTRL_CTS	0xC
@@ -79,14 +82,32 @@
 #define	CTRL_CF_END	0xE
 #define	CTRL_END_ACK	0xF
 
-#define	DATA_DATA		0x0
-#define	DATA_DATA_CF_ACK	0x1
-#define	DATA_DATA_CF_POLL	0x2
-#define	DATA_DATA_CF_ACK_POLL	0x3
-#define	DATA_NODATA		0x4
-#define	DATA_NODATA_CF_ACK	0x5
-#define	DATA_NODATA_CF_POLL	0x6
-#define	DATA_NODATA_CF_ACK_POLL	0x7
+#define	DATA_DATA			0x0
+#define	DATA_DATA_CF_ACK		0x1
+#define	DATA_DATA_CF_POLL		0x2
+#define	DATA_DATA_CF_ACK_POLL		0x3
+#define	DATA_NODATA			0x4
+#define	DATA_NODATA_CF_ACK		0x5
+#define	DATA_NODATA_CF_POLL		0x6
+#define	DATA_NODATA_CF_ACK_POLL		0x7
+
+#define DATA_QOS_DATA			0x8
+#define DATA_QOS_DATA_CF_ACK		0x9
+#define DATA_QOS_DATA_CF_POLL		0xA
+#define DATA_QOS_DATA_CF_ACK_POLL	0xB
+#define DATA_QOS_NODATA			0xC
+#define DATA_QOS_CF_POLL_NODATA		0xE
+#define DATA_QOS_CF_ACK_POLL_NODATA	0xF
+
+/*
+ * The subtype field of a data frame is, in effect, composed of 4 flag
+ * bits - CF-Ack, CF-Poll, Null (means the frame doesn't actually have
+ * any data), and QoS.
+ */
+#define DATA_FRAME_IS_CF_ACK(x)		((x) & 0x01)
+#define DATA_FRAME_IS_CF_POLL(x)	((x) & 0x02)
+#define DATA_FRAME_IS_NULL(x)		((x) & 0x04)
+#define DATA_FRAME_IS_QOS(x)		((x) & 0x08)
 
 /*
  * Bits in the frame control field.
@@ -122,6 +143,12 @@ struct mgmt_header_t {
 #define	CAPABILITY_CFP_REQ(cap)	((cap) & 0x0008)
 #define	CAPABILITY_PRIVACY(cap)	((cap) & 0x0010)
 
+typedef enum {
+	NOT_PRESENT,
+	PRESENT,
+	TRUNCATED
+} elem_status_t;
+
 struct ssid_t {
 	u_int8_t	element_id;
 	u_int8_t	length;
@@ -131,7 +158,7 @@ struct ssid_t {
 struct rates_t {
 	u_int8_t	element_id;
 	u_int8_t	length;
-	u_int8_t	rate[8];
+	u_int8_t	rate[16];
 };
 
 struct challenge_t {
@@ -139,6 +166,7 @@ struct challenge_t {
 	u_int8_t	length;
 	u_int8_t	text[254]; /* 1-253 + 1 for null */
 };
+
 struct fh_t {
 	u_int8_t	element_id;
 	u_int8_t	length;
@@ -199,22 +227,29 @@ struct tim_t {
 
 
 struct mgmt_body_t {
-	u_int8_t   	timestamp[8];
+	u_int8_t   	timestamp[IEEE802_11_TSTAMP_LEN];
 	u_int16_t  	beacon_interval;
 	u_int16_t 	listen_interval;
 	u_int16_t 	status_code;
 	u_int16_t 	aid;
-	u_char		ap[6];
+	u_char		ap[IEEE802_11_AP_LEN];
 	u_int16_t	reason_code;
 	u_int16_t	auth_alg;
 	u_int16_t	auth_trans_seq_num;
+	elem_status_t	challenge_status;
 	struct challenge_t  challenge;
 	u_int16_t	capability_info;
+	elem_status_t	ssid_status;
 	struct ssid_t	ssid;
+	elem_status_t	rates_status;
 	struct rates_t 	rates;
+	elem_status_t	ds_status;
 	struct ds_t	ds;
+	elem_status_t	cf_status;
 	struct cf_t	cf;
+	elem_status_t	fh_status;
 	struct fh_t	fh;
+	elem_status_t	tim_status;
 	struct tim_t	tim;
 };
 
@@ -279,6 +314,20 @@ struct ctrl_end_ack_t {
 
 #define	CTRL_END_ACK_HDRLEN	(IEEE802_11_FC_LEN+IEEE802_11_DUR_LEN+\
 				 IEEE802_11_RA_LEN+IEEE802_11_BSSID_LEN)
+
+struct ctrl_bar_t {
+	u_int16_t	fc;
+	u_int16_t	dur;
+	u_int8_t	ra[6];
+	u_int8_t	ta[6];
+	u_int16_t	ctl;
+	u_int16_t	seq;
+	u_int8_t	fcs[4];
+};
+
+#define	CTRL_BAR_HDRLEN		(IEEE802_11_FC_LEN+IEEE802_11_DUR_LEN+\
+				 IEEE802_11_RA_LEN+IEEE802_11_TA_LEN+\
+				 IEEE802_11_CTL_LEN+IEEE802_11_SEQ_LEN)
 
 #define	IV_IV(iv)	((iv) & 0xFFFFFF)
 #define	IV_PAD(iv)	(((iv) >> 24) & 0x3F)

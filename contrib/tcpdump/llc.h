@@ -18,7 +18,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * @(#) $Header: /home/cvs/src/contrib/tcpdump/llc.h,v 1.1.1.2 2006-02-25 02:34:01 laffer1 Exp $ (LBL)
+ * @(#) $Header: /home/cvs/src/contrib/tcpdump/llc.h,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)
  */
 
 /*
@@ -27,6 +27,7 @@
 
 #define	LLC_U_FMT	3
 #define	LLC_GSAP	1
+#define	LLC_IG	        1 /* Individual / Group */
 #define LLC_S_FMT	1
 
 #define	LLC_U_POLL	0x10
@@ -43,7 +44,7 @@
 #define	LLC_XID		0xaf
 #define	LLC_FRMR	0x87
 
-#define	LLC_S_CMD(is)	(((is) >> 1) & 0x03)
+#define	LLC_S_CMD(is)	(((is) >> 2) & 0x03)
 #define	LLC_RR		0x0001
 #define	LLC_RNR		0x0005
 #define	LLC_REJ		0x0009
@@ -62,6 +63,9 @@
 #endif
 #ifndef LLCSAP_8021B_G
 #define	LLCSAP_8021B_G		0x03
+#endif
+#ifndef LLCSAP_SNA
+#define	LLCSAP_SNA		0x04
 #endif
 #ifndef LLCSAP_IP
 #define	LLCSAP_IP		0x06
@@ -98,6 +102,8 @@
  * PIDs for use with OUI_CISCO.
  */
 #define	PID_CISCO_CDP		0x2000	/* Cisco Discovery Protocol */
+#define	PID_CISCO_VTP		0x2003	/* Cisco VLAN Trunk Protocol */
+#define	PID_CISCO_DTP		0x2004	/* Cisco Dynamic Trunk Protocol */
 
 /*
  * PIDs for use with OUI_RFC2684.

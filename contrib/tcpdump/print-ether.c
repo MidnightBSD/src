@@ -18,11 +18,11 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $FreeBSD: src/contrib/tcpdump/print-ether.c,v 1.16 2005/07/11 04:14:02 sam Exp $
+ * $FreeBSD: src/contrib/tcpdump/print-ether.c,v 1.17.2.1 2007/10/19 03:03:58 mlaier Exp $
  */
 #ifndef lint
 static const char rcsid[] _U_ =
-    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ether.c,v 1.1.1.2 2006-02-25 02:34:02 laffer1 Exp $ (LBL)";
+    "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-ether.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $ (LBL)";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -49,7 +49,7 @@ const struct tok ethertype_values[] = {
     { ETHERTYPE_VMAN,		"VMAN" },
     { ETHERTYPE_PUP,            "PUP" },
     { ETHERTYPE_ARP,            "ARP"},
-    { ETHERTYPE_REVARP ,        "Reverse ARP"},
+    { ETHERTYPE_REVARP,         "Reverse ARP"},
     { ETHERTYPE_NS,             "NS" },
     { ETHERTYPE_SPRITE,         "Sprite" },
     { ETHERTYPE_TRAIL,          "Trail" },
@@ -67,6 +67,7 @@ const struct tok ethertype_values[] = {
     { ETHERTYPE_AARP,           "Appletalk ARP" },
     { ETHERTYPE_IPX,            "IPX" },
     { ETHERTYPE_PPP,            "PPP" },
+    { ETHERTYPE_SLOW,           "Slow Protocols" },
     { ETHERTYPE_PPPOED,         "PPPoE D" },
     { ETHERTYPE_PPPOES,         "PPPoE S" },
     { ETHERTYPE_EAPOL,          "EAPOL" },
@@ -129,7 +130,6 @@ ether_print(const u_char *p, u_int length, u_int caplen)
 	/*
 	 * Is it (gag) an 802.3 encapsulation?
 	 */
-	extracted_ether_type = 0;
 	if (ether_type <= ETHERMTU) {
 		/* Try to print the LLC-layer header & higher layers */
 		if (llc_print(p, length, caplen, ESRC(ep), EDST(ep),
@@ -138,7 +138,7 @@ ether_print(const u_char *p, u_int length, u_int caplen)
 			if (!eflag)
 				ether_hdr_print((u_char *)ep, length + ETHER_HDRLEN);
 
-			if (!xflag && !qflag)
+			if (!suppress_default_print)
 				default_print(p, caplen);
 		}
 	} else if (ether_encap_print(ether_type, p, length, caplen,
@@ -147,7 +147,7 @@ ether_print(const u_char *p, u_int length, u_int caplen)
 		if (!eflag)
 			ether_hdr_print((u_char *)ep, length + ETHER_HDRLEN);
 
-		if (!xflag && !qflag)
+		if (!suppress_default_print)
 			default_print(p, caplen);
 	} 
 }
@@ -244,11 +244,13 @@ ether_encap_print(u_short ether_type, const u_char *p,
 
 		if (llc_print(p, length, caplen, p - 18, p - 12,
 		    extracted_ether_type) == 0) {
-				ether_hdr_print(p - 18, length + 4);
+                        ether_hdr_print(p - 18, length + 4);
+
+                        if (!suppress_default_print) {
+                                default_print(p - 18, caplen + 4);
+                        }
 		}
 
-		if (!xflag && !qflag)
-		        default_print(p - 18, caplen + 4);
 
 		return (1);
 
@@ -270,10 +272,11 @@ ether_encap_print(u_short ether_type, const u_char *p,
                 if (llc_print(p, length, caplen, p - 16, p - 10,
                               extracted_ether_type) == 0) {
                     ether_hdr_print(p - 16, length + 2);
-                }
 
-                if (!xflag && !qflag)
-                    default_print(p - 16, caplen + 2);
+                    if (!suppress_default_print) {
+                            default_print(p - 16, caplen + 2);
+                    }
+                }
 
                 return (1);
 
@@ -297,6 +300,10 @@ ether_encap_print(u_short ether_type, const u_char *p,
 			printf(": ");
 			ppp_print(p, length);
 		}
+		return (1);
+
+	case ETHERTYPE_SLOW:
+	        slow_print(p, length);
 		return (1);
 
         case ETHERTYPE_LOOPBACK:

@@ -24,7 +24,7 @@
 
 #ifndef lint
 static const char rcsid[] _U_ =
-     "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-pptp.c,v 1.1.1.2 2006-02-25 02:34:03 laffer1 Exp $";
+     "@(#) $Header: /home/cvs/src/contrib/tcpdump/print-pptp.c,v 1.1.1.3 2009-03-25 16:54:05 laffer1 Exp $";
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -39,14 +39,6 @@ static const char rcsid[] _U_ =
 #include "extract.h"
 
 static char tstr[] = " [|pptp]";
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
 
 #define PPTP_MSG_TYPE_CTRL	1	/* Control Message */
 #define PPTP_MSG_TYPE_MGMT	2	/* Management Message (currently not used */
