@@ -1,8 +1,12 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.313 2008/04/02 16:55:05 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.373 2008/11/13 00:36:07 tg Exp $'
 #-
 # Environment used: CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF TARGET_OS
 # CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NOPWNAM MKSH_NOVI
+#			MKSH_CLS_STRING MKSH_AFREE_DEBUG MKSH_BINSHREDUCED
+
+LC_ALL=C
+export LC_ALL
 
 v() {
 	$e "$*"
@@ -12,8 +16,8 @@ v() {
 vv() {
 	_c=$1
 	shift
-	eval '$e "\$ $*" 2>&'$h
-	eval 'eval "$@" 2>&'$h | sed "s^${_c} "
+	$e "\$ $*" 2>&1
+	eval "$@" 2>&1 | sed "s^${_c} "
 }
 
 vq() {
@@ -45,6 +49,7 @@ fx=
 me=`basename "$0"`
 orig_CFLAGS=$CFLAGS
 phase=x
+oldish_ed=stdout-ed,no-stderr-ed
 
 if test -t 1; then
 	bi='[1m'
@@ -122,9 +127,11 @@ ac_testn() {
 	fi
 	ac_testinit "$@" || return
 	cat >scn.c
-	vv ']' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN scn.c $LIBS $ccpr"
+	vv ']' "$CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN scn.c $LIBS $ccpr" | \
+	    sed 's^\] scn.c:\([0-9]*\):\] mirtoconf(\1):'
 	test $tcfn = no && test -f a.out && tcfn=a.out
 	test $tcfn = no && test -f a.exe && tcfn=a.exe
+	test $tcfn = no && test -f scn && tcfn=scn
 	if test -f $tcfn; then
 		test 1 = $fr || fv=1
 	else
@@ -132,7 +139,7 @@ ac_testn() {
 	fi
 	test ugcc=$phase$ct && $CC $CFLAGS $CPPFLAGS $LDFLAGS $NOWARN scn.c \
 	    $LIBS 2>&1 | grep 'unrecogni[sz]ed' >/dev/null 2>&1 && fv=$fr
-	rm -f scn.c scn.o $tcfn
+	rm -f scn.c scn.o ${tcfn}*
 	ac_testdone
 }
 
@@ -208,16 +215,16 @@ if test -d mksh || test -d mksh.exe; then
 	echo "$me: Error: ./mksh is a directory!" >&2
 	exit 1
 fi
-rm -f a.exe a.out *core crypt.exp lft mksh mksh.cat1 mksh.exe no *.o \
-    scn.c signames.inc stdint.h test.sh x
+rm -f a.exe* a.out* *core crypt.exp lft mksh mksh.cat1 mksh.exe mksh.s \
+    no *.o scn.c signames.inc stdint.h test.sh x
 
-curdir=`pwd` srcdir=`dirname "$0"` check_categories=pdksh
+curdir=`pwd` srcdir=`dirname "$0"` check_categories=
 
 e=echo
-h=1
 r=0
 eq=0
 pm=0
+llvm=NO
 
 for i
 do
@@ -225,12 +232,14 @@ do
 	-j)
 		pm=1
 		;;
+	-llvm)
+		llvm=-std-compile-opts
+		;;
+	-llvm=*)
+		llvm=`echo "x$i" | sed 's/^x-llvm=//'`
+		;;
 	-Q)
 		eq=1
-		;;
-	-q)
-		e=:
-		h=-
 		;;
 	-r)
 		r=1
@@ -245,37 +254,39 @@ done
 SRCS="alloc.c edit.c eval.c exec.c expr.c funcs.c histrap.c"
 SRCS="$SRCS jobs.c lex.c main.c misc.c shf.c syn.c tree.c var.c"
 
-test 0 = $r && echo | $NROFF -v 2>&1 | grep GNU >/dev/null 2>&1 && \
-    NROFF="$NROFF -c"
 if test x"$srcdir" = x"."; then
 	CPPFLAGS="-I. $CPPFLAGS"
 else
 	CPPFLAGS="-I. -I'$srcdir' $CPPFLAGS"
 fi
 
-
 test x"$TARGET_OS" = x"" && TARGET_OS=`uname -s 2>/dev/null || uname`
 warn=
 ccpc=-Wc,
 ccpl=-Wl,
 tsts=
-ccpr='|| rm -f $tcfn'
+ccpr='|| rm -f ${tcfn}*'
 case $TARGET_OS in
 AIX)
+	CPPFLAGS="$CPPFLAGS -D_ALL_SOURCE"
 	if test x"$LDFLAGS" = x""; then
 		LDFLAGS="${ccpl}-bI:crypt.exp"
-		cat >crypt.exp <<-EOF
-			#!
-			__crypt_r
-			__encrypt_r
-			__setkey_r
-		EOF
+		echo '#!
+__crypt_r
+__encrypt_r
+__setkey_r' >crypt.exp
 	fi
 	: ${LIBS='-lcrypt'}
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 BSD/OS)
+	: ${HAVE_SETLOCALE_CTYPE=0}
+	;;
+BeOS|Haiku)
+	warn=' and will currently not work'
 	;;
 CYGWIN*)
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 Darwin)
 	;;
@@ -296,8 +307,10 @@ Interix)
 	ccpl='-Y '
 	CPPFLAGS="$CPPFLAGS -D_ALL_SOURCE"
 	: ${LIBS='-lcrypt'}
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 IRIX*)
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 Linux)
 	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
@@ -306,31 +319,40 @@ Linux)
 MidnightBSD)
 	;;
 Minix)
-	CPPFLAGS="$CPPFLAGS -D_MINIX -D_POSIX_SOURCE"
+	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_POSIX_1_SOURCE=2"
 	warn=' and will currently not work'
 #	warn=" but might work with the GNU tools"
 #	warn="$warn${nl}but not with ACK - /usr/bin/cc - yet)"
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 MirBSD)
 	;;
 NetBSD)
 	;;
 OpenBSD)
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 OSF1)
 	HAVE_SIG_T=0	# incompatible
 	CPPFLAGS="$CPPFLAGS -D_OSF_SOURCE -D_POSIX_C_SOURCE=200112L"
 	CPPFLAGS="$CPPFLAGS -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED"
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 Plan9)
 	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_LIMITS_EXTENSION"
 	CPPFLAGS="$CPPFLAGS -D_BSD_EXTENSION -D_SUSV2_SOURCE"
 	warn=' and will currently not work'
+	CPPFLAGS="$CPPFLAGS -DMKSH_ASSUME_UTF8"
 	;;
 PW32*)
 	HAVE_SIG_T=0	# incompatible
 	warn=' and will currently not work'
 	# missing: killpg() getrlimit()
+	: ${HAVE_SETLOCALE_CTYPE=0}
+	;;
+QNX)
+	oldish_ed=no-stderr-ed		# oldish /bin/ed is broken
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 SunOS)
 	CPPFLAGS="$CPPFLAGS -D_BSD_SOURCE -D__EXTENSIONS__"
@@ -342,6 +364,7 @@ syllable)
 ULTRIX)
 	: ${CC=cc -YPOSIX}
 	CPPFLAGS="$CPPFLAGS -Dssize_t=int"
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 UWIN*)
 	ccpc='-Yc,'
@@ -349,9 +372,18 @@ UWIN*)
 	tsts=" 3<>/dev/tty"
 	warn="; it will compile, but the target"
 	warn="$warn${nl}platform itself is very flakey/unreliable"
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 *)
 	warn='; it may or may not work'
+	;;
+esac
+
+case " $CPPFLAGS " in
+*\ -DMKSH_ASSUME_UTF8=0\ *)
+	;;
+*\ -DMKSH_ASSUME_UTF8*)
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 esac
 
@@ -363,14 +395,15 @@ if test -n "$warn"; then
 fi
 
 : ${CC=cc} ${NROFF=nroff}
-
+test 0 = $r && echo | $NROFF -v 2>&1 | grep GNU >/dev/null 2>&1 && \
+    NROFF="$NROFF -c"
 
 # this aids me in tracing FTBFSen without access to the buildd
 dstversion=`sed -n '/define MKSH_VERSION/s/^.*"\(.*\)".*$/\1/p' $srcdir/sh.h`
 $e "Hi from$ao $bi$srcversion$ao on:"
 case $TARGET_OS in
 Darwin)
-	vv '|' "hwprefs os_type >&2"
+	vv '|' "hwprefs machine_type os_type os_class >&2"
 	vv '|' "uname -a >&2"
 	;;
 IRIX*)
@@ -379,7 +412,7 @@ IRIX*)
 	;;
 OSF1)
 	vv '|' "uname -a >&2"
-	vv '|' "sizer -v >&2"
+	vv '|' "/usr/sbin/sizer -v >&2"
 	;;
 *)
 	vv '|' "uname -a >&2"
@@ -398,81 +431,93 @@ $e $bi$me: Scanning for functions... please ignore any errors.$ao
 # notes:
 # – ICC defines __GNUC__ too
 # – GCC defines __hpux too
+# - LLVM+clang defines __GNUC__ too
+# - nwcc defines __GNUC__ too
 CPP="$CC -E"
 $e ... which compiler seems to be used
-cat >scn.c <<-'EOF'
-	#if defined(__ICC) || defined(__INTEL_COMPILER)
-	ct=icc
-	#elif defined(__xlC__) || defined(__IBMC__)
-	ct=xlc
-	#elif defined(__SUNPRO_C)
-	ct=sunpro
-	#elif defined(__BORLANDC__)
-	ct=bcc
-	#elif defined(__WATCOMC__)
-	ct=watcom
-	#elif defined(__MWERKS__)
-	ct=metrowerks
-	#elif defined(__HP_cc)
-	ct=hpcc
-	#elif defined(__DECC)
-	ct=dec
-	#elif defined(__PGI)
-	ct=pgi
-	#elif defined(__DMC__)
-	ct=dmc
-	#elif defined(_MSC_VER)
-	ct=msc
-	#elif defined(__ADSPBLACKFIN__) || defined(__ADSPTS__) || defined(__ADSP21000__)
-	ct=adsp
-	#elif defined(__IAR_SYSTEMS_ICC__)
-	ct=iar
-	#elif defined(SDCC)
-	ct=sdcc
-	#elif defined(__PCC__)
-	ct=pcc
-	#elif defined(__TenDRA__)
-	ct=tendra
-	#elif defined(__TINYC__)
-	ct=tcc
-	#elif defined(__GNUC__)
-	ct=gcc
-	#elif defined(_COMPILER_VERSION)
-	ct=mipspro
-	#elif defined(__sgi)
-	ct=mipspro
-	#elif defined(__hpux) || defined(__hpua)
-	ct=hpcc
-	#elif defined(__ultrix)
-	ct=ucode
-	#else
-	ct=unknown
-	#endif
-EOF
+echo '#if defined(__ICC) || defined(__INTEL_COMPILER)
+ct=icc
+#elif defined(__xlC__) || defined(__IBMC__)
+ct=xlc
+#elif defined(__SUNPRO_C)
+ct=sunpro
+#elif defined(__BORLANDC__)
+ct=bcc
+#elif defined(__WATCOMC__)
+ct=watcom
+#elif defined(__MWERKS__)
+ct=metrowerks
+#elif defined(__HP_cc)
+ct=hpcc
+#elif defined(__DECC) || (defined(__osf__) && !defined(__GNUC__))
+ct=dec
+#elif defined(__PGI)
+ct=pgi
+#elif defined(__DMC__)
+ct=dmc
+#elif defined(_MSC_VER)
+ct=msc
+#elif defined(__ADSPBLACKFIN__) || defined(__ADSPTS__) || defined(__ADSP21000__)
+ct=adsp
+#elif defined(__IAR_SYSTEMS_ICC__)
+ct=iar
+#elif defined(SDCC)
+ct=sdcc
+#elif defined(__PCC__)
+ct=pcc
+#elif defined(__TenDRA__)
+ct=tendra
+#elif defined(__TINYC__)
+ct=tcc
+#elif defined(__llvm__) && defined(__clang__)
+ct=clang
+#elif defined(__NWCC__)
+ct=nwcc
+#elif defined(__GNUC__)
+ct=gcc
+#elif defined(_COMPILER_VERSION)
+ct=mipspro
+#elif defined(__sgi)
+ct=mipspro
+#elif defined(__hpux) || defined(__hpua)
+ct=hpcc
+#elif defined(__ultrix)
+ct=ucode
+#else
+ct=unknown
+#endif' >scn.c
 ct=unknown
 vv ']' "$CPP scn.c | grep ct= | tr -d \\\\015 >x"
-test 1 = $h && sed 's/^/[ /' x
+sed 's/^/[ /' x
 eval `cat x`
 rm -f x
-cat >scn.c <<-'EOF'
-	int main(void) { return (0); }
-EOF
+echo 'int main(void) { return (0); }' >scn.c
 case $ct in
 adsp)
-	cat >&2 <<-'EOF'
-		Warning: Analog Devices C++ compiler for Blackfin, TigerSHARC
-		    and SHARC (21000) DSPs detected. This compiler has not yet
-		    been tested for compatibility with mksh. Continue at your
-		    own risk, please report success/failure to the developers.
-	EOF
+	echo >&2 'Warning: Analog Devices C++ compiler for Blackfin, TigerSHARC
+    and SHARC (21000) DSPs detected. This compiler has not yet
+    been tested for compatibility with mksh. Continue at your
+    own risk, please report success/failure to the developers.'
 	;;
 bcc)
-	echo >&2 "Warning: Borland C++ Builder detected. This compiler might"
-	echo >&2 "    produce broken executables. Continue at your own risk,"
-	echo >&2 "    please report success/failure to the developers."
+	echo >&2 "Warning: Borland C++ Builder detected. This compiler might
+    produce broken executables. Continue at your own risk,
+    please report success/failure to the developers."
+	;;
+clang)
+	# does not work with current "ccc" compiler driver
+	vv '|' "$CC -version"
+	# this works, for now
+	vv '|' "${CLANG-clang} -version"
+	# ensure compiler and linker are in sync unless overridden
+	case $CCC_CC:$CCC_LD in
+	:*)	;;
+	*:)	CCC_LD=$CCC_CC; export CCC_LD ;;
+	esac
 	;;
 dec)
 	vv '|' "$CC -V"
+	vv '|' "$CC -Wl,-V scn.c"
 	;;
 dmc)
 	echo >&2 "Warning: Digital Mars Compiler detected. When running under"
@@ -481,29 +526,25 @@ dmc)
 	echo >&2 "    please report success/failure to the developers."
 	;;
 gcc)
-	vv '|' "$CC -v"
+	vv '|' "$CC -v scn.c"
 	vv '|' 'echo `$CC -dumpmachine` gcc`$CC -dumpversion`'
 	;;
 hpcc)
-	vv '|' "$CC -V"
+	vv '|' "$CC -V scn.c"
 	;;
 iar)
-	cat >&2 <<-'EOF'
-		Warning: IAR Systems (http://www.iar.com) compiler for embedded
-		    systems detected. This unsupported compiler has not yet
-		    been tested for compatibility with mksh. Continue at your
-		    own risk, please report success/failure to the developers.
-	EOF
+	echo >&2 'Warning: IAR Systems (http://www.iar.com) compiler for embedded
+    systems detected. This unsupported compiler has not yet
+    been tested for compatibility with mksh. Continue at your
+    own risk, please report success/failure to the developers.'
 	;;
 icc)
 	vv '|' "$CC -V"
 	;;
 metrowerks)
-	cat >&2 <<-'EOF'
-		Warning: Metrowerks C compiler detected. This has not yet
-		    been tested for compatibility with mksh. Continue at your
-		    own risk, please report success/failure to the developers.
-	EOF
+	echo >&2 'Warning: Metrowerks C compiler detected. This has not yet
+    been tested for compatibility with mksh. Continue at your
+    own risk, please report success/failure to the developers.'
 	;;
 mipspro)
 	vv '|' "$CC -version"
@@ -527,26 +568,25 @@ msc)
 		;;
 	esac
 	;;
+nwcc)
+	vv '|' "$CC -version"
+	;;
 pcc)
 	vv '|' "$CC -v"
 	;;
 pgi)
-	cat >&2 <<-'EOF'
-		Warning: PGI detected. This unknown compiler has not yet
-		    been tested for compatibility with mksh. Continue at your
-		    own risk, please report success/failure to the developers.
-	EOF
+	echo >&2 'Warning: PGI detected. This unknown compiler has not yet
+    been tested for compatibility with mksh. Continue at your
+    own risk, please report success/failure to the developers.'
 	;;
 sdcc)
-	cat >&2 <<-'EOF'
-		Warning: sdcc (http://sdcc.sourceforge.net), the small devices
-		    C compiler for embedded systems detected. This has not yet
-		    been tested for compatibility with mksh. Continue at your
-		    own risk, please report success/failure to the developers.
-	EOF
+	echo >&2 'Warning: sdcc (http://sdcc.sourceforge.net), the small devices
+    C compiler for embedded systems detected. This has not yet
+    been tested for compatibility with mksh. Continue at your
+    own risk, please report success/failure to the developers.'
 	;;
 sunpro)
-	vv '|' "$CC -v"
+	vv '|' "$CC -V scn.c"
 	;;
 tcc)
 	vv '|' "$CC -v"
@@ -556,23 +596,24 @@ tendra)
 	;;
 ucode)
 	vv '|' "$CC -V"
+	vv '|' "$CC -Wl,-V scn.c"
 	;;
 watcom)
-	cat >&2 <<-'EOF'
-		Warning: Watcom C Compiler detected. This compiler has not yet
-		    been tested for compatibility with mksh. Continue at your
-		    own risk, please report success/failure to the developers.
-	EOF
+	echo >&2 'Warning: Watcom C Compiler detected. This compiler has not yet
+    been tested for compatibility with mksh. Continue at your
+    own risk, please report success/failure to the developers.'
 	;;
 xlc)
 	vv '|' "$CC -qversion=verbose"
+	vv '|' "ld -V"
 	;;
 *)
 	ct=unknown
 	;;
 esac
+test x"$llvm" = x"NO" || vv '|' "llc -version"
 $e "$bi==> which compiler seems to be used...$ao $ui$ct$ao"
-rm -f scn.c scn.o scn a.out a.exe
+rm -f scn.c scn.o scn a.out* a.exe*
 
 case $TARGET_OS in
 HP-UX)
@@ -598,15 +639,21 @@ ac_testn compiler_fails '' 'if the compiler does not fail correctly' <<-EOF
 EOF
 if test 1 = $HAVE_COMPILER_FAILS; then
 	save_CFLAGS=$CFLAGS
+	: ${HAVE_CAN_DELEXE=x}
 	if test $ct = dmc; then
 		CFLAGS="$CFLAGS ${ccpl}/DELEXECUTABLE"
 		ac_testn can_delexe compiler_fails 0 'for the /DELEXECUTABLE linker option' <<-EOF
 			int main(void) { return (0); }
 		EOF
-		test 1 = $HAVE_CAN_DELEXE || CFLAGS=$save_CFLAGS
+	elif test $ct = dec; then
+		CFLAGS="$CFLAGS ${ccpl}-non_shared"
+		ac_testn can_delexe compiler_fails 0 'for the -non_shared linker option' <<-EOF
+			int main(void) { return (0); }
+		EOF
 	else
 		exit 1
 	fi
+	test 1 = $HAVE_CAN_DELEXE || CFLAGS=$save_CFLAGS
 	ac_testn compiler_still_fails '' 'if the compiler still does not fail correctly' <<-EOF
 	EOF
 	test 1 = $HAVE_COMPILER_STILL_FAILS && exit 1
@@ -694,9 +741,9 @@ else
 fi
 # other flags: just add them if they are supported
 i=0
-phase=u
 if test $ct = gcc; then
-	NOWARN=$DOWARN		# scan for flags with -Werror
+	# The following tests run with -Werror (gcc only) if possible
+	NOWARN=$DOWARN; phase=u
 	ac_flags 1 fnostrictaliasing -fno-strict-aliasing
 	ac_flags 1 fstackprotectorall -fstack-protector-all
 	ac_flags 1 fwrapv -fwrapv
@@ -725,9 +772,7 @@ elif test $ct = mipspro; then
 	ac_flags 1 fullwarn -fullwarn 'for remark output support'
 elif test $ct = msc; then
 	ac_flags 1 strpool "${ccpc}/GF" 'if string pooling can be enabled'
-	cat >x <<-'EOF'
-		int main(void) { char test[64] = ""; return (*test); }
-	EOF
+	echo 'int main(void) { char test[64] = ""; return (*test); }' >x
 	ac_flags - 1 stackon "${ccpc}/GZ" 'if stack checks can be enabled' <x
 	ac_flags - 1 stckall "${ccpc}/Ge" 'stack checks for all functions' <x
 	ac_flags - 1 secuchk "${ccpc}/GS" 'for compiler security checks' <x
@@ -748,8 +793,12 @@ elif test $ct = tendra; then
 	ac_flags 1 extansi -Xa
 elif test $ct = tcc; then
 	ac_flags 1 boundschk -b
+elif test $ct = clang; then
+	i=1
+elif test $ct = nwcc; then
+	ac_flags 1 ssp -stackprotect
 fi
-# flags common to a subset of compilers
+# flags common to a subset of compilers (run with -Werror on gcc)
 if test 1 = $i; then
 	ac_flags 1 stdg99 -std=gnu99 'for support of ISO C99 + GCC extensions'
 	test 1 = $HAVE_CAN_STDG99 || \
@@ -757,17 +806,8 @@ if test 1 = $i; then
 	ac_flags 1 wall -Wall
 fi
 phase=x
-NOWARN=$save_NOWARN	# gcc runs with -Werror until here
-ac_test expstmt '' "if the compiler supports statements as expressions" <<-'EOF'
-	#define ksh_isspace(c)	({					\
-		unsigned ksh_isspace_c = (c);				\
-		(ksh_isspace_c >= 0x09 && ksh_isspace_c <= 0x0D) ||	\
-		    (ksh_isspace_c == 0x20);				\
-	})
-	int main(int ac, char *av[]) { return (ksh_isspace(ac + **av)); }
-EOF
 
-# The following tests are run with -Werror if possible
+# The following tests run with -Werror or similar (all compilers) if possible
 NOWARN=$DOWARN
 
 #
@@ -818,13 +858,12 @@ ac_testn mksh_full '' "if a full-featured mksh is requested" <<-'EOF'
 	int main(void) { return (0); }
 	#endif
 EOF
-
-ac_testn mksh_defutf8 '' "if to assume UTF-8 is enabled" <<-'EOF'
-	#ifdef MKSH_ASSUME_UTF8
-	/* force a success: we assume UTF-8 by default */
+ac_testn mksh_reduced mksh_full 0 "if a reduced-feature sh is requested" <<-'EOF'
+	#ifdef MKSH_BINSHREDUCED
+	/* force a success: we want a reduced mksh-as-bin-sh */
 	int main(void) { return (0); }
 	#else
-	/* force a failure: use setlocale() and nl_langinfo(CODESET) */
+	/* force a failure: we want a full mksh, always */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#endif
 EOF
@@ -836,9 +875,11 @@ if test 0 = $HAVE_MKSH_FULL; then
 		ac_flags 1 fnoinline -fno-inline
 	fi
 
-	: ${HAVE_MKNOD=0} ${HAVE_SETLOCALE_CTYPE=0}
+	: ${HAVE_MKNOD=0}
 	check_categories=$check_categories,smksh
-	test 0 = $HAVE_MKSH_DEFUTF8 || check_categories=$check_categories,dutf
+fi
+if test 1 = $HAVE_MKSH_REDUCED; then
+	check_categories=$check_categories,binsh
 fi
 
 #
@@ -849,11 +890,12 @@ ac_header sys/mkdev.h sys/types.h
 ac_header sys/mman.h sys/types.h
 ac_header sys/sysmacros.h
 ac_header libgen.h
-ac_header libutil.h
+ac_header libutil.h sys/types.h
 ac_header paths.h
 ac_header stdbool.h
+ac_header strings.h
 ac_header grp.h sys/types.h
-ac_header ulimit.h
+ac_header ulimit.h sys/types.h
 ac_header values.h
 
 ac_header '!' stdint.h stdarg.h
@@ -877,14 +919,12 @@ ac_cppflags STDINT_H
 #
 # Environment: definitions
 #
-cat >lft.c <<-'EOF'
-	#include <sys/types.h>
-	/* check that off_t can represent 2^63-1 correctly, thx FSF */
-	#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
-	int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721 &&
-	    LARGE_OFF_T % 2147483647 == 1) ? 1 : -1];
-	int main(void) { return (0); }
-EOF
+echo '#include <sys/types.h>
+/* check that off_t can represent 2^63-1 correctly, thx FSF */
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721 &&
+    LARGE_OFF_T % 2147483647 == 1) ? 1 : -1];
+int main(void) { return (0); }' >lft.c
 ac_testn can_lfs '' "for large file support" <lft.c
 save_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$CPPFLAGS -D_FILE_OFFSET_BITS=64"
@@ -911,13 +951,15 @@ EOF
 ac_testn sig_t <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
-	int main(void) { return ((int)(sig_t)0); }
+	#include <stddef.h>
+	int main(void) { return ((ptrdiff_t)(sig_t)0); }
 EOF
 
 ac_testn sighandler_t '!' sig_t 0 <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
-	int main(void) { return ((int)(sighandler_t)0); }
+	#include <stddef.h>
+	int main(void) { return ((ptrdiff_t)(sighandler_t)0); }
 EOF
 if test 1 = $HAVE_SIGHANDLER_T; then
 	CPPFLAGS="$CPPFLAGS -Dsig_t=sighandler_t"
@@ -927,7 +969,8 @@ fi
 ac_testn __sighandler_t '!' sig_t 0 <<-'EOF'
 	#include <sys/types.h>
 	#include <signal.h>
-	int main(void) { return ((int)(__sighandler_t)0); }
+	#include <stddef.h>
+	int main(void) { return ((ptrdiff_t)(__sighandler_t)0); }
 EOF
 if test 1 = $HAVE___SIGHANDLER_T; then
 	CPPFLAGS="$CPPFLAGS -Dsig_t=__sighandler_t"
@@ -987,13 +1030,17 @@ ac_testn arc4random <<-'EOF'
 EOF
 
 save_LIBS=$LIBS
-if test 0 = $HAVE_ARC4RANDOM && test -f "$srcdir/arc4random.c"; then
-	ac_header sys/sysctl.h
-	addsrcs HAVE_ARC4RANDOM arc4random.c
-	HAVE_ARC4RANDOM=1
-	# ensure isolation of source directory from build directory
-	test -f arc4random.c || cp "$srcdir/arc4random.c" .
-	LIBS="$LIBS arc4random.c"
+if test 0 = $HAVE_ARC4RANDOM; then
+	test -f arc4random.c || if test -f "$srcdir/arc4random.c"; then
+		# ensure isolation of source directory from build directory
+		cp "$srcdir/arc4random.c" .
+	fi
+	if test -f arc4random.c; then
+		ac_header sys/sysctl.h
+		addsrcs HAVE_ARC4RANDOM arc4random.c
+		HAVE_ARC4RANDOM=1
+		LIBS="$LIBS arc4random.c"
+	fi
 fi
 ac_cppflags ARC4RANDOM
 
@@ -1007,7 +1054,7 @@ ac_test arc4random_pushb arc4random 0 <<-'EOF'
 EOF
 LIBS=$save_LIBS
 
-ac_test flock_ex '' 'flock and mmap' <<-'EOF'
+ac_testn flock_ex '' 'flock and mmap' <<-'EOF'
 	#include <sys/types.h>
 	#include <sys/file.h>
 	#include <sys/mman.h>
@@ -1015,23 +1062,6 @@ ac_test flock_ex '' 'flock and mmap' <<-'EOF'
 	#include <stdlib.h>
 	int main(void) { return ((void *)mmap(NULL, flock(0, LOCK_EX),
 	    PROT_READ, MAP_PRIVATE, 0, 0) == (void *)NULL ? 1 : 0); }
-EOF
-
-ac_test mkstemp <<-'EOF'
-	#include <stdlib.h>
-	int main(void) { char tmpl[] = "X"; return (mkstemp(tmpl)); }
-EOF
-
-ac_test setlocale_ctype '!' mksh_defutf8 0 'setlocale(LC_CTYPE, "")' <<-'EOF'
-	#include <locale.h>
-	#include <stddef.h>
-	int main(void) { return ((ptrdiff_t)(void *)setlocale(LC_CTYPE, "")); }
-EOF
-
-ac_test langinfo_codeset setlocale_ctype 0 'nl_langinfo(CODESET)' <<-'EOF'
-	#include <langinfo.h>
-	#include <stddef.h>
-	int main(void) { return ((ptrdiff_t)(void *)nl_langinfo(CODESET)); }
 EOF
 
 ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
@@ -1044,12 +1074,50 @@ ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
 	}
 EOF
 
+ac_test mkstemp <<-'EOF'
+	#include <stdlib.h>
+	int main(void) { char tmpl[] = "X"; return (mkstemp(tmpl)); }
+EOF
+
+ac_test nice <<-'EOF'
+	#include <unistd.h>
+	int main(void) { return (nice(4)); }
+EOF
+
+ac_test realpath mksh_full 0 <<-'EOF'
+	#if HAVE_SYS_PARAM_H
+	#include <sys/param.h>
+	#endif
+	#include <stdlib.h>
+	#ifndef PATH_MAX
+	#define PATH_MAX 1024
+	#endif
+	char *res, dst[PATH_MAX];
+	const char src[] = ".";
+	int main(void) {
+		res = realpath(src, dst);
+		return (res == NULL ? 1 : 0);
+	}
+EOF
+
 ac_test revoke mksh_full 0 <<-'EOF'
 	#if HAVE_LIBUTIL_H
 	#include <libutil.h>
 	#endif
 	#include <unistd.h>
 	int main(int ac, char *av[]) { return (ac + revoke(av[0])); }
+EOF
+
+ac_test setlocale_ctype '' 'setlocale(LC_CTYPE, "")' <<-'EOF'
+	#include <locale.h>
+	#include <stddef.h>
+	int main(void) { return ((ptrdiff_t)(void *)setlocale(LC_CTYPE, "")); }
+EOF
+
+ac_test langinfo_codeset setlocale_ctype 0 'nl_langinfo(CODESET)' <<-'EOF'
+	#include <langinfo.h>
+	#include <stddef.h>
+	int main(void) { return ((ptrdiff_t)(void *)nl_langinfo(CODESET)); }
 EOF
 
 ac_test setmode mknod 1 <<-'EOF'
@@ -1077,9 +1145,12 @@ ac_test setgroups setresugid 0 <<-'EOF'
 	int main(void) { gid_t gid = 0; return (setgroups(0, &gid)); }
 EOF
 
-ac_test strcasestr setlocale_ctype 1 <<-'EOF'
+ac_test strcasestr <<-'EOF'
 	#include <stddef.h>
 	#include <string.h>
+	#if HAVE_STRINGS_H
+	#include <strings.h>
+	#endif
 	int main(int ac, char *av[]) {
 		return ((ptrdiff_t)(void *)strcasestr(*av, av[ac]));
 	}
@@ -1093,8 +1164,8 @@ EOF
 #
 # check headers for declarations
 #
-save_CC=$CC
-CC="$CC -c -o $tcfn"
+save_CC=$CC; save_LDFLAGS=$LDFLAGS; save_LIBS=$LIBS
+CC="$CC -c -o $tcfn"; LDFLAGS=; LIBS=
 ac_test '!' arc4random_decl arc4random 1 'if arc4random() does not need to be declared' <<-'EOF'
 	#define MKSH_INCLUDES_ONLY
 	#include "sh.h"
@@ -1124,7 +1195,7 @@ ac_test sys_siglist_decl sys_siglist 1 'if sys_siglist[] does not need to be dec
 	#include "sh.h"
 	int main(void) { return (sys_siglist[0][0]); }
 EOF
-CC=$save_CC
+CC=$save_CC; LDFLAGS=$save_LDFLAGS; LIBS=$save_LIBS
 
 #
 # other checks
@@ -1156,7 +1227,7 @@ $e ... done.
 # the character count to standard output; cope for that
 echo wq >x
 ed x <x 2>/dev/null | grep 3 >/dev/null 2>&1 && \
-    check_categories=$check_categories,oldish-ed
+    check_categories=$check_categories,$oldish_ed
 rm -f x
 
 if test 0 = $HAVE_SYS_SIGNAME; then
@@ -1166,26 +1237,24 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 		$e No list of signal names available via cpp. Falling back...
 	fi
 	sigseen=:
-	cat >scn.c <<-'EOF'
-		#include <signal.h>
-		#ifndef NSIG
-		#if defined(_NSIG)
-		#define NSIG _NSIG
-		#elif defined(SIGMAX)
-		#define NSIG (SIGMAX+1)
-		#endif
-		#endif
-		mksh_cfg: NSIG
-	EOF
+	echo '#include <signal.h>
+#ifndef NSIG
+#if defined(_NSIG)
+#define NSIG _NSIG
+#elif defined(SIGMAX)
+#define NSIG (SIGMAX+1)
+#endif
+#endif
+mksh_cfg: NSIG' >scn.c
 	NSIG=`vq "$CPP $CPPFLAGS scn.c" | grep mksh_cfg: | \
 	    sed 's/^mksh_cfg:[	 ]*\([0-9x ()+-]*\).*$/\1/'`
 	case $NSIG in
 	*[\ \(\)+-]*) NSIG=`awk "BEGIN { print $NSIG }"` ;;
 	esac
 	printf=printf
-	printf hallo >/dev/null 2>&1 || printf=echo
+	(printf hallo) >/dev/null 2>&1 || printf=echo
 	test $printf = echo || NSIG=`printf %d "$NSIG" 2>/dev/null`
-	test 1 = $h && $printf "NSIG=$NSIG ... "
+	$printf "NSIG=$NSIG ... "
 	sigs="ABRT ALRM BUS CHLD CLD CONT DIL EMT FPE HUP ILL INFO INT IO IOT"
 	sigs="$sigs KILL LOST PIPE PROF PWR QUIT RESV SAK SEGV STOP SYS TERM"
 	sigs="$sigs TRAP TSTP TTIN TTOU URG USR1 USR2 VTALRM WINCH XCPU XFSZ"
@@ -1205,7 +1274,7 @@ if test 0 = $HAVE_SYS_SIGNAME; then
 		*:$nr:*) ;;
 		*)	echo "		{ $nr, \"$name\" },"
 			sigseen=$sigseen$nr:
-			test 1 = $h && $printf "$name=$nr " >&2
+			$printf "$name=$nr " >&2
 			;;
 		esac
 	done 2>&1 >signames.inc
@@ -1224,53 +1293,74 @@ case $curdir in
 *)	echo "#!$curdir/mksh" >test.sh ;;
 esac
 cat >>test.sh <<-EOF
-	export PATH='$PATH'
+	LC_ALL=C PATH='$PATH'; export LC_ALL PATH
+	test -n "\$KSH_VERSION" || exit 1
 	check_categories=$check_categories
 	print Testing mksh for conformance:
 	fgrep MirOS: '$srcdir/check.t'
 	fgrep MIRBSD '$srcdir/check.t'
 	print "This shell is actually:\\n\\t\$KSH_VERSION"
 	print 'test.sh built for mksh $dstversion'
-	perl=perl5
-	\$perl -e print >/dev/null 2>&1 || perl=perl
-	\$perl -e print >/dev/null 2>&1 || exit 1
-	exec \$perl '$srcdir/check.pl' -s '$srcdir/check.t' \\
-	    -p '$curdir/mksh' -C \$check_categories \$*$tsts
+	cstr='\$os = defined \$^O ? \$^O : "unknown";'
+	cstr="\$cstr"'print \$os . ", Perl version " . \$];'
+	for perli in \$PERL perl5 perl no; do
+		[[ \$perli = no ]] && exit 1
+		perlos=\$(\$perli -e "\$cstr") 2>&- || continue
+		print "Perl interpreter '\$perli' running on '\$perlos'"
+		[[ -n \$perlos ]] && break
+	done
+	exec \$perli '$srcdir/check.pl' -s '$srcdir/check.t' -p '$curdir/mksh' -C \${check_categories#,} \$*$tsts
 EOF
 chmod 755 test.sh
+if test x"$llvm" = x"NO"; then
+	emitbc=-c
+else
+	emitbc="-emit-llvm -c"
+fi
 echo set -x >Rebuild.sh
 for file in $SRCS; do
 	objs="$objs `echo x"$file" | sed 's/^x\(.*\)\.c$/\1.o/'`"
 	test -f $file || file=$srcdir/$file
-	echo "$CC $CFLAGS $CPPFLAGS -c $file || exit 1" >>Rebuild.sh
+	echo "$CC $CFLAGS $CPPFLAGS $emitbc $file || exit 1" >>Rebuild.sh
 done
+if test x"$llvm" = x"NO"; then
+	lobjs=$objs
+else
+	echo "rm -f mksh.s" >>Rebuild.sh
+	echo "llvm-link -o - $objs | opt $llvm | llc -o mksh.s" >>Rebuild.sh
+	lobjs=mksh.s
+fi
 case $tcfn in
 a.exe)	echo tcfn=mksh.exe >>Rebuild.sh ;;
 *)	echo tcfn=mksh >>Rebuild.sh ;;
 esac
-echo "$CC $CFLAGS $LDFLAGS -o \$tcfn $objs $LIBS $ccpr" >>Rebuild.sh
+echo "$CC $CFLAGS $LDFLAGS -o \$tcfn $lobjs $LIBS $ccpr" >>Rebuild.sh
 echo 'test -f $tcfn || exit 1; size $tcfn' >>Rebuild.sh
 if test 1 = $pm; then
 	for file in $SRCS; do
 		test -f $file || file=$srcdir/$file
-		v "$CC $CFLAGS $CPPFLAGS -c $file" &
+		v "$CC $CFLAGS $CPPFLAGS $emitbc $file" &
 	done
 	wait
 else
 	for file in $SRCS; do
 		test -f $file || file=$srcdir/$file
-		v "$CC $CFLAGS $CPPFLAGS -c $file" || exit 1
+		v "$CC $CFLAGS $CPPFLAGS $emitbc $file" || exit 1
 	done
+fi
+if test x"$emitbc" = x"-emit-llvm -c"; then
+	rm -f mksh.s
+	v "llvm-link -o - $objs | opt $llvm | llc -o mksh.s"
 fi
 case $tcfn in
 a.exe)	tcfn=mksh.exe ;;
 *)	tcfn=mksh ;;
 esac
-v "$CC $CFLAGS $LDFLAGS -o $tcfn $objs $LIBS $ccpr"
+v "$CC $CFLAGS $LDFLAGS -o $tcfn $lobjs $LIBS $ccpr"
 test -f $tcfn || exit 1
 test 1 = $r || v "$NROFF -mdoc <'$srcdir/mksh.1' >mksh.cat1" || \
     rm -f mksh.cat1
-test 0 = $eq && test 1 = $h && v size $tcfn
+test 0 = $eq && v size $tcfn
 i=install
 test -f /usr/ucb/$i && i=/usr/ucb/$i
 test 1 = $eq && e=:

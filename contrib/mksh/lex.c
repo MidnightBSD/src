@@ -1,8 +1,8 @@
-/*	$OpenBSD: lex.c,v 1.43 2007/06/02 16:40:59 moritz Exp $	*/
+/*	$OpenBSD: lex.c,v 1.44 2008/07/03 17:52:08 otto Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.57 2008/03/28 13:46:53 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/lex.c,v 1.79 2008/12/13 17:02:15 tg Exp $");
 
 /*
  * states while lexing word
@@ -151,7 +151,7 @@ yylex(int cf)
 	states[0].ls_info.base = NULL;
 	statep = &states[1];
 	state_info.base = states;
-	state_info.end = &states[STATE_BSIZE];
+	state_info.end = &state_info.base[STATE_BSIZE];
 
 	Xinit(ws, wp, 64, ATEMP);
 
@@ -192,6 +192,10 @@ yylex(int cf)
 		c = getsc();
 		if (c == '<') {
 			state = SHERESTRING;
+			while ((c = getsc()) == ' ' || c == '\t')
+				;
+			ungetsc(c);
+			c = '<';
 			goto accept_nonword;
 		}
 		ungetsc(c);
@@ -771,20 +775,36 @@ yylex(int cf)
 		state = SBASE;
 
 	dp = Xstring(ws, wp);
-	if ((c == '<' || c == '>') && state == SBASE &&
-	    ((c2 = Xlength(ws, wp)) == 0 ||
-	    (c2 == 2 && dp[0] == CHAR && ksh_isdigit(dp[1])))) {
-		struct ioword *iop = (struct ioword *) alloc(sizeof(*iop), ATEMP);
+	if ((c == '<' || c == '>' || c == '&') && state == SBASE) {
+		struct ioword *iop = alloc(sizeof (struct ioword), ATEMP);
 
-		if (c2 == 2)
-			iop->unit = dp[1] - '0';
-		else
-			iop->unit = c == '>'; /* 0 for <, 1 for > */
+		if (Xlength(ws, wp) == 0)
+			iop->unit = c == '<' ? 0 : 1;
+		else for (iop->unit = 0, c2 = 0; c2 < Xlength(ws, wp); c2 += 2) {
+			if (dp[c2] != CHAR)
+				goto no_iop;
+			if (!ksh_isdigit(dp[c2 + 1]))
+				goto no_iop;
+			iop->unit = (iop->unit * 10) + dp[c2 + 1] - '0';
+		}
+
+		if (iop->unit >= FDBASE)
+			goto no_iop;
+
+		if (c == '&') {
+			if ((c2 = getsc()) != '>') {
+				ungetsc(c2);
+				goto no_iop;
+			}
+			c = c2;
+			iop->flag = IOBASH;
+		} else
+			iop->flag = 0;
 
 		c2 = getsc();
 		/* <<, >>, <> are ok, >< is not */
 		if (c == c2 || (c == '<' && c2 == '>')) {
-			iop->flag = c == c2 ?
+			iop->flag |= c == c2 ?
 			    (c == '>' ? IOCAT : IOHERE) : IORDWR;
 			if (iop->flag == IOHERE) {
 				if ((c2 = getsc()) == '-')
@@ -793,9 +813,9 @@ yylex(int cf)
 					ungetsc(c2);
 			}
 		} else if (c2 == '&')
-			iop->flag = IODUP | (c == '<' ? IORDUP : 0);
+			iop->flag |= IODUP | (c == '<' ? IORDUP : 0);
 		else {
-			iop->flag = c == '>' ? IOWRITE : IOREAD;
+			iop->flag |= c == '>' ? IOWRITE : IOREAD;
 			if (c == '>' && c2 == '|')
 				iop->flag |= IOCLOB;
 			else
@@ -808,6 +828,8 @@ yylex(int cf)
 		Xfree(ws, wp);	/* free word */
 		yylval.iop = iop;
 		return REDIR;
+ no_iop:
+		;
 	}
 
 	if (wp == dp && state == SBASE) {
@@ -881,16 +903,24 @@ yylex(int cf)
 				/* prefer functions over aliases */
 				ktdelete(p);
 			else {
-				Source *s;
+				Source *s = source;
 
-				for (s = source; s->type == SALIAS; s = s->next)
+				while (s->flags & SF_HASALIAS)
 					if (s->u.tblp == p)
 						return LWORD;
+					else
+						s = s->next;
 				/* push alias expansion */
 				s = pushs(SALIAS, source->areap);
 				s->start = s->str = p->val.s;
 				s->u.tblp = p;
+				s->flags |= SF_HASALIAS;
 				s->next = source;
+				if (source->type == SEOF) {
+					/* prevent infinite recursion at EOS */
+					source->u.tblp = p;
+					source->flags |= SF_HASALIAS;
+				}
 				source = s;
 				afree(yylval.cp, ATEMP);
 				goto Again;
@@ -1012,7 +1042,7 @@ pushs(int type, Area *areap)
 {
 	Source *s;
 
-	s = (Source *)alloc(sizeof(Source), areap);
+	s = alloc(sizeof (Source), areap);
 	s->type = type;
 	s->str = null;
 	s->start = NULL;
@@ -1076,7 +1106,7 @@ getsc__(void)
 				source->flags |= s->flags & SF_ALIAS;
 				s = source;
 			} else if (*s->u.tblp->val.s &&
-			    ksh_isspace(strnul(s->u.tblp->val.s)[-1])) {
+			    (c = strnul(s->u.tblp->val.s)[-1], ksh_isspace(c))) {
 				source = s = s->next;	/* pop source stack */
 				/* Note that this alias ended with a space,
 				 * enabling alias expansion on the following
@@ -1134,9 +1164,7 @@ getsc__(void)
 		    (((const unsigned char *)(s->str))[0] == 0xBB) &&
 		    (((const unsigned char *)(s->str))[1] == 0xBF)) {
 			s->str += 2;
-#if !defined(MKSH_ASSUME_UTF8) || !defined(MKSH_SMALL)
-			Flag(FUTFHACK) = 1;
-#endif
+			UTFMODE = 1;
 			goto getsc_again;
 		}
 	}
@@ -1218,16 +1246,9 @@ getsc_line(Source *s)
 		if (s->type == SFILE)
 			shf_fdclose(s->u.shf);
 		s->str = NULL;
-	} else if (interactive) {
-		char *p = Xstring(s->xs, xp);
-		if (cur_prompt == PS1)
-			while (*p && ctype(*p, C_IFS) && ctype(*p, C_IFSWS))
-				p++;
-		if (*p) {
-			s->line++;
-			histsave(s->line, s->str, 1);
-		}
-	}
+	} else if (interactive && *s->str &&
+	    (cur_prompt != PS1 || !ctype(*s->str, C_IFS | C_IFSWS)))
+		histsave(&s->line, s->str, true, true);
 	if (interactive)
 		set_prompt(PS2, NULL);
 }
@@ -1269,9 +1290,10 @@ set_prompt(int to, Source *s)
 				 * unwinding its stack through this code as it
 				 * exits.
 				 */
-			} else
-				prompt = str_save(substitute(ps1, 0),
-				    saved_atemp);
+			} else {
+				char *cp = substitute(ps1, 0);
+				strdupx(prompt, cp, saved_atemp);
+			}
 			quitenv(NULL);
 		}
 		break;
@@ -1310,7 +1332,7 @@ dopprompt(const char *cp, int ntruncate, int doprint)
 				columns--;
 		} else if (*cp == delimiter)
 			indelimit = !indelimit;
-		else if (Flag(FUTFHACK) && ((unsigned)*cp > 0x7F)) {
+		else if (UTFMODE && ((unsigned char)*cp > 0x7F)) {
 			const char *cp2;
 			columns += utf_widthadj(cp, &cp2);
 			if (doprint && (indelimit ||
@@ -1503,7 +1525,7 @@ getsc_bn(void)
 static Lex_state *
 push_state_(State_info *si, Lex_state *old_end)
 {
-	Lex_state	*new = alloc(sizeof(Lex_state) * STATE_BSIZE, ATEMP);
+	Lex_state *new = alloc(STATE_BSIZE * sizeof (Lex_state), ATEMP);
 
 	new[0].ls_info.base = old_end;
 	si->base = &new[0];

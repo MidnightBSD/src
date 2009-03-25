@@ -2,7 +2,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.14 2008/03/28 13:33:37 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/expr.c,v 1.21 2008/12/13 17:02:13 tg Exp $");
 
 /* The order of these enums is constrained by the order of opinfo[] */
 enum token {
@@ -470,15 +470,21 @@ exprtoken(Expr_state *es)
 			es->val = tempvar();
 			es->val->flag |= EXPRLVALUE;
 		} else {
-			tvar = str_nsave(es->tokp, cp - es->tokp, ATEMP);
+			strndupx(tvar, es->tokp, cp - es->tokp, ATEMP);
 			es->val = global(tvar);
 			afree(tvar, ATEMP);
 		}
 		es->tok = VAR;
+	} else if (c == '1' && cp[1] == '#') {
+		cp += 2;
+		utf_ptradjx(cp, cp);
+		strndupx(tvar, es->tokp, cp - es->tokp, ATEMP);
+		goto process_tvar;
 	} else if (ksh_isdigit(c)) {
-		for (; c != '_' && (ksh_isalnux(c) || c == '#'); c = *cp++)
-			;
-		tvar = str_nsave(es->tokp, --cp - es->tokp, ATEMP);
+		while (c != '_' && (ksh_isalnux(c) || c == '#'))
+			c = *cp++;
+		strndupx(tvar, es->tokp, --cp - es->tokp, ATEMP);
+ process_tvar:
 		es->val = tempvar();
 		es->val->flag &= ~INTEGER;
 		es->val->type = 0;
@@ -538,7 +544,7 @@ tempvar(void)
 {
 	struct tbl *vp;
 
-	vp = (struct tbl *)alloc(sizeof (struct tbl), ATEMP);
+	vp = alloc(sizeof (struct tbl), ATEMP);
 	vp->flag = ISSET|INTEGER;
 	vp->type = 0;
 	vp->areap = ATEMP;

@@ -2,7 +2,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/var.c,v 1.51 2008/02/24 15:20:52 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var.c,v 1.65 2008/12/13 17:02:18 tg Exp $");
 
 /*
  * Variables
@@ -37,7 +37,7 @@ newblock(void)
 	struct block *l;
 	static const char *empty[] = { null };
 
-	l = (struct block *) alloc(sizeof(struct block), ATEMP);
+	l = alloc(sizeof (struct block), ATEMP);
 	l->flags = 0;
 	ainit(&l->area); /* todo: could use e->area (l->area => l->areap) */
 	if (!e->loc) {
@@ -130,10 +130,10 @@ array_index_calc(const char *n, bool *arrayp, uint32_t *valp)
 
 		/* Calculate the value of the subscript */
 		*arrayp = true;
-		tmp = str_nsave(p+1, len-2, ATEMP);
+		strndupx(tmp, p + 1, len - 2, ATEMP);
 		sub = substitute(tmp, 0);
 		afree(tmp, ATEMP);
-		n = str_nsave(n, p - n, ATEMP);
+		strndupx(n, n, p - n, ATEMP);
 		evaluate(sub, &rval, KSH_UNWIND_ERROR, true);
 		*valp = (uint32_t)rval;
 		afree(sub, ATEMP);
@@ -298,23 +298,35 @@ str_val(struct tbl *vp)
 			n = (vp->val.i < 0) ? -vp->val.i : vp->val.i;
 		base = (vp->type == 0) ? 10 : vp->type;
 
-		*--s = '\0';
-		do {
-			*--s = digits[n % base];
-			n /= base;
-		} while (n != 0);
-		if (base != 10) {
-			*--s = '#';
-			*--s = digits[base % 10];
-			if (base >= 10)
-				*--s = digits[base / 10];
+		if (base == 1) {
+			size_t sz = 1;
+
+			*(s = strbuf) = '1';
+			s[1] = '#';
+			if (!UTFMODE || ((n & 0xFF80) == 0xEF80))
+				s[2] = n & 0xFF;
+			else
+				sz = utf_wctomb(s + 2, n);
+			s[2 + sz] = '\0';
+		} else {
+			*--s = '\0';
+			do {
+				*--s = digits[n % base];
+				n /= base;
+			} while (n != 0);
+			if (base != 10) {
+				*--s = '#';
+				*--s = digits[base % 10];
+				if (base >= 10)
+					*--s = digits[base / 10];
+			}
+			if (!(vp->flag & INT_U) && vp->val.i < 0)
+				*--s = '-';
 		}
-		if (!(vp->flag & INT_U) && vp->val.i < 0)
-			*--s = '-';
 		if (vp->flag & (RJUST|LJUST)) /* case already dealt with */
 			s = formatstr(vp, s);
 		else
-			s = str_save(s, ATEMP);
+			strdupx(s, s, ATEMP);
 	}
 	return s;
 }
@@ -355,7 +367,7 @@ setstr(struct tbl *vq, const char *s, int error_ok)
 				internal_errorf(
 				    "setstr: %s=%s: assigning to self",
 				    vq->name, s);
-			afree((void*)vq->val.s, vq->areap);
+			afree(vq->val.s, vq->areap);
 		}
 		vq->flag &= ~(ISSET|ALLOC);
 		vq->type = 0;
@@ -364,7 +376,7 @@ setstr(struct tbl *vq, const char *s, int error_ok)
 		if ((vq->flag&EXPORT))
 			export(vq, s);
 		else {
-			vq->val.s = str_save(s, vq->areap);
+			strdupx(vq->val.s, s, vq->areap);
 			vq->flag |= ALLOC;
 		}
 	} else {		/* integer dest */
@@ -374,7 +386,7 @@ setstr(struct tbl *vq, const char *s, int error_ok)
 	vq->flag |= ISSET;
 	if ((vq->flag&SPECIAL))
 		setspec(vq);
-	afreechk(salloc);
+	afree(salloc, ATEMP);
 	return (1);
 }
 
@@ -401,9 +413,8 @@ int
 getint(struct tbl *vp, long int *nump, bool arith)
 {
 	char *s;
-	int c;
-	int base, neg;
-	int have_base = 0;
+	int c, base, neg;
+	bool have_base = false;
 	long num;
 
 	if (vp->flag&SPECIAL)
@@ -431,18 +442,28 @@ getint(struct tbl *vp, long int *nump, bool arith)
 				s++;
 		} else
 			base = 8;
-		have_base++;
+		have_base = true;
 	}
 	for (c = *s++; c ; c = *s++) {
 		if (c == '-') {
 			neg++;
 			continue;
 		} else if (c == '#') {
-			base = (int) num;
-			if (have_base || base < 2 || base > 36)
-				return -1;
+			base = (int)num;
+			if (have_base || base < 1 || base > 36)
+				return (-1);
+			if (base == 1) {
+				unsigned int wc;
+
+				if (!UTFMODE)
+					wc = *(unsigned char *)s;
+				else if (utf_mbtowc(&wc, s) == (size_t)-1)
+					wc = 0xEF00 + *(unsigned char *)s;
+				*nump = (long)wc;
+				return (1);
+			}
 			num = 0;
-			have_base = 1;
+			have_base = true;
 			continue;
 		} else if (ksh_isdigit(c))
 			c -= '0';
@@ -491,8 +512,9 @@ formatstr(struct tbl *vp, const char *s)
 {
 	int olen, nlen;
 	char *p, *q;
+	size_t psiz;
 
-	olen = strlen(s);
+	olen = utf_mbswidth(s);
 
 	if (vp->flag & (RJUST|LJUST)) {
 		if (!vp->u2.field)	/* default field width */
@@ -501,25 +523,41 @@ formatstr(struct tbl *vp, const char *s)
 	} else
 		nlen = olen;
 
-	p = (char *) alloc(nlen + 1, ATEMP);
+	p = alloc((psiz = nlen * /* MB_LEN_MAX */ 3 + 1), ATEMP);
 	if (vp->flag & (RJUST|LJUST)) {
-		int slen;
+		int slen = olen, i = 0;
 
 		if (vp->flag & RJUST) {
-			const char *qq = s + olen;
+			const char *qq = s;
+			int n = 0;
+
+			while (i < slen)
+				i += utf_widthadj(qq, &qq);
 			/* strip trailing spaces (at&t uses qq[-1] == ' ') */
-			while (qq > s && ksh_isspace(qq[-1]))
+			while (qq > s && ksh_isspace(qq[-1])) {
 				--qq;
-			slen = qq - s;
-			if (slen > vp->u2.field) {
-				s += slen - vp->u2.field;
-				slen = vp->u2.field;
+				--slen;
 			}
+			if (vp->flag & ZEROFIL && vp->flag & INTEGER) {
+				if (s[1] == '#')
+					n = 2;
+				else if (s[2] == '#')
+					n = 3;
+				if (vp->u2.field <= n)
+					n = 0;
+			}
+			if (n) {
+				memcpy(p, s, n);
+				s += n;
+			}
+			while (slen > vp->u2.field)
+				slen -= utf_widthadj(s, &s);
 			if (vp->u2.field - slen)
-				memset(p, (vp->flag & ZEROFIL) ? '0' : ' ',
+				memset(p + n, (vp->flag & ZEROFIL) ? '0' : ' ',
 				    vp->u2.field - slen);
+			slen -= n;
 			shf_snprintf(p + vp->u2.field - slen,
-			    nlen + 1 - (vp->u2.field - slen),
+			    psiz - (vp->u2.field - slen),
 			    "%.*s", slen, s);
 		} else {
 			/* strip leading spaces/zeros */
@@ -532,7 +570,7 @@ formatstr(struct tbl *vp, const char *s)
 				vp->u2.field, vp->u2.field, s);
 		}
 	} else
-		memcpy(p, s, olen + 1);
+		memcpy(p, s, strlen(s) + 1);
 
 	if (vp->flag & UCASEV_AL) {
 		for (q = p; *q; q++)
@@ -557,14 +595,14 @@ export(struct tbl *vp, const char *val)
 	int vallen = strlen(val) + 1;
 
 	vp->flag |= ALLOC;
-	xp = (char*)alloc(namelen + 1 + vallen, vp->areap);
+	xp = alloc(namelen + 1 + vallen, vp->areap);
 	memcpy(vp->val.s = xp, vp->name, namelen);
 	xp += namelen;
 	*xp++ = '=';
 	vp->type = xp - vp->val.s; /* offset to value */
 	memcpy(xp, val, vallen);
 	if (op != NULL)
-		afree((void*)op, vp->areap);
+		afree(op, vp->areap);
 }
 
 /*
@@ -605,12 +643,12 @@ typeset(const char *var, Tflag set, Tflag clr, int field, int base)
 		val += len;
 	}
 	if (*val == '=')
-		tvar = str_nsave(var, val++ - var, ATEMP);
+		strndupx(tvar, var, val++ - var, ATEMP);
 	else {
 		/* Importing from original environment: must have an = */
 		if (set & IMPORT)
 			return NULL;
-		tvar = str_save(var, ATEMP);
+		strdupx(tvar, var, ATEMP);
 		val = NULL;
 	}
 
@@ -683,14 +721,13 @@ typeset(const char *var, Tflag set, Tflag clr, int field, int base)
 						t->flag &= ~ISSET;
 					else {
 						if (t->flag & ALLOC)
-							afree((void*) t->val.s,
-							    t->areap);
+							afree(t->val.s, t->areap);
 						t->flag &= ~(ISSET|ALLOC);
 						t->type = 0;
 					}
 				}
 				if (free_me)
-					afree((void *) free_me, t->areap);
+					afree(free_me, t->areap);
 			}
 		}
 		if (!ok)
@@ -724,7 +761,7 @@ void
 unset(struct tbl *vp, int array_ref)
 {
 	if (vp->flag & ALLOC)
-		afree((void*)vp->val.s, vp->areap);
+		afree(vp->val.s, vp->areap);
 	if ((vp->flag & ARRAY) && !array_ref) {
 		struct tbl *a, *tmp;
 
@@ -733,7 +770,7 @@ unset(struct tbl *vp, int array_ref)
 			tmp = a;
 			a = a->u.array;
 			if (tmp->flag & ALLOC)
-				afree((void *) tmp->val.s, tmp->areap);
+				afree(tmp->val.s, tmp->areap);
 			afree(tmp, tmp->areap);
 		}
 		vp->u.array = NULL;
@@ -858,7 +895,7 @@ makenv(void)
  * otherwise arc4random(3). We have static caches to make change_random
  * and writes to $RANDOM a cheap operation.
  */
-#if HAVE_ARC4RANDOM
+#if HAVE_ARC4RANDOM && !defined(MKSH_SMALL)
 static uint32_t rnd_cache[2];
 static char rnd_lastflag = 2;
 #endif
@@ -866,6 +903,9 @@ static char rnd_lastflag = 2;
 static int
 rnd_get(void)
 {
+#if HAVE_ARC4RANDOM && defined(MKSH_SMALL)
+	return (arc4random() & 0x7FFF);
+#else
 #if HAVE_ARC4RANDOM
 #if HAVE_ARC4RANDOM_PUSHB
 	uint32_t rv = 0;
@@ -898,11 +938,19 @@ rnd_get(void)
 	}
 #endif
 	return (rand() & 0x7FFF);
+#endif
 }
 
 static void
 rnd_set(unsigned long newval)
 {
+#if HAVE_ARC4RANDOM && defined(MKSH_SMALL)
+#if HAVE_ARC4RANDOM_PUSHB
+	arc4random_pushb(&newval, sizeof (newval));
+#else
+	arc4random_addrandom((void *)&newval, sizeof (newval));
+#endif
+#else
 #if HAVE_ARC4RANDOM
 	rnd_cache[0] ^= (newval << 15) | rand();
 	rnd_cache[1] ^= newval >> 17;
@@ -914,8 +962,10 @@ rnd_set(unsigned long newval)
 	rnd_lastflag = 0;
 #endif
 	srand(newval & 0x7FFF);
+#endif
 }
 
+#if !HAVE_ARC4RANDOM || !defined(MKSH_SMALL)
 /*
  * Called after a fork in parent to bump the random number generator.
  * Done to ensure children will not get the same random number sequence
@@ -943,6 +993,7 @@ change_random(unsigned long newval)
 
 	srand(rval);
 }
+#endif
 
 /*
  * handle special variables with side effects - PATH, SECONDS.
@@ -1023,7 +1074,7 @@ setspec(struct tbl *vp)
 		if (path)
 			afree(path, APERM);
 		s = str_val(vp);
-		path = str_save(s, APERM);
+		strdupx(path, s, APERM);
 		flushcom(1);	/* clear tracked aliases */
 		break;
 	case V_IFS:
@@ -1049,7 +1100,7 @@ setspec(struct tbl *vp)
 			s = str_val(vp);
 			if (s[0] == '/' && access(s, W_OK|X_OK) == 0 &&
 			    stat(s, &statb) == 0 && S_ISDIR(statb.st_mode))
-				tmpdir = str_save(s, APERM);
+				strdupx(tmpdir, s, APERM);
 		}
 		break;
 	case V_HISTSIZE:
@@ -1102,7 +1153,7 @@ unsetspec(struct tbl *vp)
 	case V_PATH:
 		if (path)
 			afree(path, APERM);
-		path = str_save(def_path, APERM);
+		strdupx(path, def_path, APERM);
 		flushcom(1);	/* clear tracked aliases */
 		break;
 	case V_IFS:
@@ -1161,8 +1212,7 @@ arraysearch(struct tbl *vp, uint32_t val)
 		else
 			new = curr;
 	} else
-		new = (struct tbl *)alloc(sizeof(struct tbl) + namelen,
-		    vp->areap);
+		new = alloc(sizeof (struct tbl) + namelen, vp->areap);
 	strlcpy(new->name, vp->name, namelen);
 	new->flag = vp->flag & ~(ALLOC|DEFINED|ISSET|SPECIAL);
 	new->type = vp->type;
@@ -1202,12 +1252,15 @@ char *
 arrayname(const char *str)
 {
 	const char *p;
+	char *rv;
 
 	if ((p = cstrchr(str, '[')) == 0)
 		/* Shouldn't happen, but why worry? */
-		return str_save(str, ATEMP);
+		strdupx(rv, str, ATEMP);
+	else
+		strndupx(rv, str, p - str, ATEMP);
 
-	return str_nsave(str, p - str, ATEMP);
+	return (rv);
 }
 
 /* Set (or overwrite, if !reset) the array variable var to the values in vals.

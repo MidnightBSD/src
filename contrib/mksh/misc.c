@@ -1,4 +1,4 @@
-/*	$OpenBSD: misc.c,v 1.32 2007/08/02 11:05:54 fgsch Exp $	*/
+/*	$OpenBSD: misc.c,v 1.34 2008/07/12 12:33:42 miod Exp $	*/
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
 #include "sh.h"
@@ -6,8 +6,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.72 2008/04/11 19:55:23 tg Exp $\t"
-	MKSH_SH_H_ID);
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.93.2.1 2008/12/13 17:43:26 tg Exp $");
 
 #undef USE_CHVT
 #if defined(TIOCSCTTY) && !defined(MKSH_SMALL)
@@ -35,7 +34,7 @@ static char *do_phys_path(XString *, char *, const char *);
 void
 setctypes(const char *s, int t)
 {
-	unsigned i;
+	unsigned int i;
 
 	if (t & C_IFS) {
 		for (i = 0; i < UCHAR_MAX + 1; i++)
@@ -64,31 +63,9 @@ initctypes(void)
 	setctypes(" \n\t\"#$&'()*;<>?[]\\`|", C_QUOTE);
 }
 
-/* Allocate a string of size n+1 and copy upto n characters from the possibly
- * NUL terminated string s into it.  Always returns a NUL terminated string
- * (unless n < 0).
- */
-char *
-str_nsave(const char *s, int n, Area *ap)
-{
-	char *ns = NULL;
-
-	if (n >= 0 && s)
-		strlcpy(ns = alloc(n + 1, ap), s, n + 1);
-	return (ns);
-}
-
-#ifdef MKSH_SMALL
-char *
-str_save(const char *s, Area *ap)
-{
-	return (str_nsave(s, s ? strlen(s) : 0, ap));
-}
-#endif
-
 /* called from XcheckN() to grow buffer */
 char *
-Xcheck_grow_(XString *xsp, const char *xp, unsigned more)
+Xcheck_grow_(XString *xsp, const char *xp, unsigned int more)
 {
 	const char *old_beg = xsp->beg;
 
@@ -108,7 +85,9 @@ const struct shoption options[] = {
 	{ "arc4random",	  0,		OF_ANY },
 #endif
 	{ "braceexpand",  0,		OF_ANY }, /* non-standard */
+#if HAVE_NICE
 	{ "bgnice",	  0,		OF_ANY },
+#endif
 	{ NULL,		'c',	    OF_CMDLINE },
 	{ "emacs",	  0,		OF_ANY },
 	{ "errexit",	'e',		OF_ANY },
@@ -185,7 +164,7 @@ options_fmt_entry(const void *arg, int i, char *buf, int buflen)
 static void
 printoptions(int verbose)
 {
-	unsigned i;
+	unsigned int i;
 
 	if (verbose) {
 		struct options_info oi;
@@ -216,14 +195,15 @@ printoptions(int verbose)
 char *
 getoptions(void)
 {
-	unsigned i;
+	unsigned int i;
 	char m[(int) FNFLAGS + 1];
 	char *cp = m;
 
 	for (i = 0; i < NELEM(options); i++)
 		if (options[i].c && Flag(i))
 			*cp++ = options[i].c;
-	return (str_nsave(m, cp - m, ATEMP));
+	strndupx(cp, m, cp - m, ATEMP);
+	return (cp);
 }
 
 /* change a Flag(*) value; takes care of special actions */
@@ -513,8 +493,7 @@ gmatchx(const char *s, const char *p, bool isfile)
 	if (!isfile && !has_globbing(p, pe)) {
 		size_t len = pe - p + 1;
 		char tbuf[64];
-		char *t = len <= sizeof(tbuf) ? tbuf :
-		    (char *) alloc(len, ATEMP);
+		char *t = len <= sizeof(tbuf) ? tbuf : alloc(len, ATEMP);
 		debunk(t, p, len);
 		return !strcmp(t, s);
 	}
@@ -768,11 +747,11 @@ pat_scan(const unsigned char *p, const unsigned char *pe, int match_sep)
 			continue;
 		if ((*++p == /*(*/ ')' && nest-- == 0) ||
 		    (*p == '|' && match_sep && nest == 0))
-			return ++p;
+			return (p + 1);
 		if ((*p & 0x80) && vstrchr("*+?@! ", *p & 0x7f))
 			nest++;
 	}
-	return NULL;
+	return (NULL);
 }
 
 int
@@ -954,11 +933,8 @@ print_columns(struct shf *shf, int n,
     char *(*func) (const void *, int, char *, int),
     const void *arg, int max_width, int prefcol)
 {
-	char *str = (char *) alloc(max_width + 1, ATEMP);
-	int i;
-	int r, c;
-	int rows, cols;
-	int nspace;
+	char *str = alloc(max_width + 1, ATEMP);
+	int i, r, c, rows, cols, nspace;
 
 	/* max_width + 1 for the space.  Note that no space
 	 * is printed after the last column to avoid problems
@@ -1135,7 +1111,7 @@ make_path(const char *cwd, const char *file,
 			for (pend = plist; *pend && *pend != ':'; pend++)
 				;
 			plen = pend - plist;
-			*cdpathp = *pend ? ++pend : NULL;
+			*cdpathp = *pend ? pend + 1 : NULL;
 		}
 
 		if ((use_cdpath == 0 || !plen || plist[0] != '/') &&
@@ -1251,8 +1227,10 @@ set_current_wd(char *pathl)
 	} else
 		len = strlen(p) + 1;
 
-	if (len > current_wd_size)
-		current_wd = aresize(current_wd, current_wd_size = len, APERM);
+	if (len > current_wd_size) {
+		afree(current_wd, APERM);
+		current_wd = alloc(current_wd_size = len, APERM);
+	}
 	memcpy(current_wd, p, len);
 	if (p != pathl && p != null)
 		afree(p, ATEMP);
@@ -1424,6 +1402,7 @@ strstr(char *b, const char *l)
 }
 #endif
 
+#ifndef MKSH_ASSUME_UTF8
 #if !HAVE_STRCASESTR
 const char *
 stristr(const char *b, const char *l)
@@ -1443,12 +1422,24 @@ stristr(const char *b, const char *l)
 	return (b - 1);
 }
 #endif
+#endif
 
-#if !HAVE_EXPSTMT
-bool
-ksh_isspace_(unsigned ksh_isspace_c)
+#ifdef MKSH_SMALL
+char *
+strndup_(const char *src, size_t len, Area *ap)
 {
-	return ((ksh_isspace_c >= 0x09 && ksh_isspace_c <= 0x0D) ||
-	    (ksh_isspace_c == 0x20));
+	char *dst = NULL;
+
+	if (src != NULL) {
+		dst = alloc(++len, ap);
+		strlcpy(dst, src, len);
+	}
+	return (dst);
+}
+
+char *
+strdup_(const char *src, Area *ap)
+{
+	return (src == NULL ? NULL : strndup_(src, strlen(src), ap));
 }
 #endif

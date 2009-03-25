@@ -1,9 +1,9 @@
-/*	$OpenBSD: history.c,v 1.35 2006/05/29 18:22:24 otto Exp $	*/
+/*	$OpenBSD: history.c,v 1.36 2008/05/20 00:30:30 fgsch Exp $	*/
 /*	$OpenBSD: trap.c,v 1.22 2005/03/30 17:16:37 deraadt Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.60 2008/04/02 16:55:06 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.76 2008/12/13 17:02:14 tg Exp $");
 
 /*-
  * MirOS: This is the default mapping type, and need not be specified.
@@ -21,7 +21,7 @@ static int hist_count_lines(unsigned char *, int);
 static int hist_shrink(unsigned char *, int);
 static unsigned char *hist_skip_back(unsigned char *,int *,int);
 static void histload(Source *, unsigned char *, int);
-static void histinsert(Source *, int, unsigned char *);
+static void histinsert(Source *, int, const char *);
 static void writehistfile(int, char *);
 static int sprinkle(int);
 #endif
@@ -68,7 +68,8 @@ c_fc(const char **wp)
 				sflag++;
 			else {
 				size_t len = strlen(p);
-				editor = str_nsave(p, len + 4, ATEMP);
+				editor = alloc(len + 4, ATEMP);
+				memcpy(editor, p, len);
 				memcpy(editor + len, " $_", 4);
 			}
 			break;
@@ -117,7 +118,7 @@ c_fc(const char **wp)
 
 		/* Check for pattern replacement argument */
 		if (*wp && **wp && (p = cstrchr(*wp + 1, '='))) {
-			pat = str_save(*wp, ATEMP);
+			strdupx(pat, *wp, ATEMP);
 			rep = pat + (p - *wp);
 			*rep++ = '\0';
 			wp++;
@@ -189,9 +190,13 @@ c_fc(const char **wp)
 				    hist_source->line - (int)(histptr - hp));
 			shf_putc('\t', shl_stdout);
 			/* print multi-line commands correctly */
-			for (s = *hp; (t = strchr(s, '\n')); s = t)
-				shf_fprintf(shl_stdout, "%.*s\t",
-				    (int)(++t - s), s);
+			s = *hp;
+			while ((t = strchr(s, '\n'))) {
+				*t = '\0';
+				shf_fprintf(shl_stdout, "%s\n\t", s);
+				*t++ = '\n';
+				s = t;
+			}
 			shf_fprintf(shl_stdout, "%s\n", s);
 		}
 		shf_flush(shl_stdout);
@@ -275,10 +280,10 @@ hist_execute(char *cmd)
 			if (!*q) /* ignore trailing newline */
 				q = NULL;
 		}
-		histsave(++(hist_source->line), p, 1);
+		histsave(&hist_source->line, p, true, true);
 
 		shellf("%s\n", p); /* POSIX doesn't say this is done... */
-		if ((p = q)) /* restore \n (trailing \n not restored) */
+		if (q)		/* restore \n (trailing \n not restored) */
 			q[-1] = '\n';
 	}
 
@@ -301,7 +306,7 @@ hist_replace(char **hp, const char *pat, const char *rep, int globr)
 	char *line;
 
 	if (!pat)
-		line = str_save(*hp, ATEMP);
+		strdupx(line, *hp, ATEMP);
 	else {
 		char *s, *s1;
 		int pat_len = strlen(pat);
@@ -347,14 +352,14 @@ hist_get(const char *str, int approx, int allow_cur)
 
 	if (getn(str, &n)) {
 		hp = histptr + (n < 0 ? n : (n - hist_source->line));
-		if (hp < history) {
+		if ((ptrdiff_t)hp < (ptrdiff_t)history) {
 			if (approx)
 				hp = hist_get_oldest();
 			else {
 				bi_errorf("%s: not in history", str);
 				hp = NULL;
 			}
-		} else if (hp > histptr) {
+		} else if ((ptrdiff_t)hp > (ptrdiff_t)histptr) {
 			if (approx)
 				hp = hist_get_newest(allow_cur);
 			else {
@@ -409,7 +414,7 @@ histbackup(void)
 
 	if (histptr >= history && last_line != hist_source->line) {
 		hist_source->line--;
-		afree((void*)*histptr, APERM);
+		afree(*histptr, APERM);
 		histptr--;
 		last_line = hist_source->line;
 	}
@@ -499,7 +504,7 @@ sethistsize(int n)
 			cursize = n;
 		}
 
-		history = (char **)aresize(history, n*sizeof(char *), APERM);
+		history = aresize(history, n * sizeof (char *), APERM);
 
 		histsize = n;
 		histptr = history + cursize;
@@ -550,7 +555,7 @@ init_histvec(void)
 {
 	if (history == (char **)NULL) {
 		histsize = HISTORYSIZE;
-		history = (char **)alloc(histsize*sizeof (char *), APERM);
+		history = alloc(histsize * sizeof (char *), APERM);
 		histptr = history - 1;
 	}
 }
@@ -569,24 +574,30 @@ init_histvec(void)
  * save command in history
  */
 void
-histsave(int lno __unused, const char *cmd, int dowrite __unused)
+histsave(int *lnp, const char *cmd, bool dowrite __unused, bool ignoredups)
 {
 	char **hp;
 	char *c, *cp;
 
-	c = str_save(cmd, APERM);
+	strdupx(c, cmd, APERM);
 	if ((cp = strchr(c, '\n')) != NULL)
 		*cp = '\0';
 
+	if (ignoredups && !strcmp(c, *histptr)) {
+		afree(c, APERM);
+		return;
+	}
+	++*lnp;
+
 #if HAVE_PERSISTENT_HISTORY
 	if (histfd && dowrite)
-		writehistfile(lno, c);
+		writehistfile(*lnp, c);
 #endif
 
 	hp = histptr;
 
 	if (++hp >= history + histsize) { /* remove oldest command */
-		afree((void*)*history, APERM);
+		afree(*history, APERM);
 		for (hp = history; hp < history + histsize - 1; hp++)
 			hp[0] = hp[1];
 	}
@@ -635,10 +646,9 @@ hist_init(Source *s)
 	hist_source = s;
 
 #if HAVE_PERSISTENT_HISTORY
-	hname = str_val(global("HISTFILE"));
-	if (hname == NULL)
+	if ((hname = str_val(global("HISTFILE"))) == NULL)
 		return;
-	hname = str_save(hname, APERM);
+	strdupx(hname, hname, APERM);
 
  retry:
 	/* we have a file and are interactive */
@@ -673,17 +683,27 @@ hist_init(Source *s)
 			if (base != (unsigned char *)MAP_FAILED)
 				munmap((caddr_t)base, hsize);
 			hist_finish();
-			unlink(hname);
+			if (unlink(hname) /* fails */)
+				goto hiniterr;
 			goto retry;
 		}
 		if (hsize > 2) {
+			int rv = 0;
+
 			lines = hist_count_lines(base+2, hsize-2);
 			if (lines > histsize) {
 				/* we need to make the file smaller */
 				if (hist_shrink(base, hsize))
-					unlink(hname);
+					rv = unlink(hname);
 				munmap((caddr_t)base, hsize);
 				hist_finish();
+				if (rv) {
+ hiniterr:
+					bi_errorf("cannot unlink HISTFILE %s"
+					    " - %s", hname, strerror(errno));
+					hsize = 0;
+					return;
+				}
 				goto retry;
 			}
 		}
@@ -810,8 +830,8 @@ static void
 histload(Source *s, unsigned char *base, int bytes)
 {
 	State state;
-	int	lno = 0;
-	unsigned char	*line = NULL;
+	int lno = 0;
+	unsigned char *line = NULL;
 
 	for (state = shdr; bytes-- > 0; base++) {
 		switch (state) {
@@ -841,10 +861,11 @@ histload(Source *s, unsigned char *base, int bytes)
 				/* worry about line numbers */
 				if (histptr >= history && lno-1 != s->line) {
 					/* a replacement ? */
-					histinsert(s, lno, line);
+					histinsert(s, lno, (char *)line);
 				} else {
-					s->line = lno;
-					histsave(lno, (char *)line, 0);
+					s->line = lno--;
+					histsave(&lno, (char *)line, false,
+					    false);
 				}
 				state = shdr;
 			}
@@ -856,15 +877,15 @@ histload(Source *s, unsigned char *base, int bytes)
  *	Insert a line into the history at a specified number
  */
 static void
-histinsert(Source *s, int lno, unsigned char *line)
+histinsert(Source *s, int lno, const char *line)
 {
 	char **hp;
 
-	if (lno >= s->line-(histptr-history) && lno <= s->line) {
-		hp = &histptr[lno-s->line];
+	if (lno >= s->line - (histptr - history) && lno <= s->line) {
+		hp = &histptr[lno - s->line];
 		if (*hp)
-			afree((void*)*hp, APERM);
-		*hp = str_save((char *)line, APERM);
+			afree(*hp, APERM);
+		strdupx(*hp, line, APERM);
 	}
 }
 
@@ -991,9 +1012,10 @@ inittraps(void)
 			else {
 				char *s;
 
-				sigtraps[i].name = s = str_save(
-				    !strncasecmp(cs, "SIG", 3) ? cs + 3 : cs,
-				    APERM);
+				if (!strncasecmp(cs, "SIG", 3))
+					cs += 3;
+				strdupx(s, cs, APERM);
+				sigtraps[i].name = s;
 				while ((*s = ksh_toupper(*s)))
 					++s;
 			}
@@ -1011,7 +1033,7 @@ inittraps(void)
 	}
 	sigtraps[SIGEXIT_].name = "EXIT";	/* our name for signal 0 */
 
-	sigemptyset(&Sigact_ign.sa_mask);
+	(void)sigemptyset(&Sigact_ign.sa_mask);
 	Sigact_ign.sa_flags = 0; /* interruptible */
 	Sigact_ign.sa_handler = SIG_IGN;
 
@@ -1258,7 +1280,7 @@ settrap(Trap *p, const char *s)
 
 	if (p->trap)
 		afree(p->trap, APERM);
-	p->trap = str_save(s, APERM); /* handles s == 0 */
+	strdupx(p->trap, s, APERM); /* handles s == 0 */
 	p->flags |= TF_CHANGED;
 	f = !s ? SIG_DFL : s[0] ? trapsig : SIG_IGN;
 
@@ -1357,7 +1379,7 @@ setsig(Trap *p, sig_t f, int flags)
 
 	if (p->cursig != f) {
 		p->cursig = f;
-		sigemptyset(&sigact.sa_mask);
+		(void)sigemptyset(&sigact.sa_mask);
 		sigact.sa_flags = 0 /* interruptible */;
 		sigact.sa_handler = f;
 		sigaction(p->signal, &sigact, NULL);

@@ -2,7 +2,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.45 2008/03/01 22:49:37 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.51 2008/12/13 17:02:13 tg Exp $");
 
 #ifdef MKSH_SMALL
 #define MKSH_NOPWNAM
@@ -297,8 +297,7 @@ expand(const char *cp,	/* input word */
 					if (!st->next) {
 						SubType *newst;
 
-						newst = (SubType *) alloc(
-						    sizeof(SubType), ATEMP);
+						newst = alloc(sizeof (SubType), ATEMP);
 						newst->next = NULL;
 						newst->prev = st;
 						st->next = newst;
@@ -357,7 +356,7 @@ expand(const char *cp,	/* input word */
 						flen = strlen(beg);
 						if (num < 0 || num > flen)
 							num = flen;
-						x.str = str_nsave(beg, num, ATEMP);
+						strndupx(x.str, beg, num, ATEMP);
 						goto do_CSUBST;
 					}
 					case '/': {
@@ -425,7 +424,8 @@ expand(const char *cp,	/* input word */
 							goto no_repl;
 
 						/* prepare string on which to work */
-						sbeg = s = str_save(str_val(st->var), ATEMP);
+						strdupx(s, str_val(st->var), ATEMP);
+						sbeg = s;
 
 						/* first see if we have any match at all */
 						tpat0 = pat;
@@ -476,7 +476,7 @@ expand(const char *cp,	/* input word */
 									break;
 								p--;
 							}
-						end = str_nsave(s, sbeg - s, ATEMP);
+						strndupx(end, s, sbeg - s, ATEMP);
 						d = shf_smprintf("%s%s%s", end, rrep, p);
 						afree(end, ATEMP);
 						sbeg = d + (sbeg - s) + strlen(rrep);
@@ -589,7 +589,7 @@ expand(const char *cp,	/* input word */
 					 */
 					len = strlen(dp) + 1;
 					setstr(st->var,
-					    debunk((char *) alloc(len, ATEMP),
+					    debunk(alloc(len, ATEMP),
 					    dp, len), KSH_UNWIND_ERROR);
 					x.str = str_val(st->var);
 					type = XSUB;
@@ -769,10 +769,7 @@ expand(const char *cp,	/* input word */
 				    Xlength(ds, dp) == 0) {
 					char *p;
 
-					if ((p = str_nsave(null, 0, ATEMP))
-					    == NULL)
-						internal_errorf("unable "
-						    "to allocate memory");
+					*(p = alloc(1, ATEMP)) = '\0';
 					XPput(*wp, p);
 				}
 				type = XSUBMID;
@@ -1114,16 +1111,17 @@ trimsub(char *str, char *pat, int how)
 		}
 		break;
 	case '%':		/* shortest match at end */
-		for (p = end; p >= str; p--) {
-			if (gmatchx(p, pat, false))
-				return str_nsave(str, p - str, ATEMP);
-		}
+		for (p = end; p >= str; p--)
+			if (gmatchx(p, pat, false)) {
+ trimsub_match:
+				strndupx(end, str, p - str, ATEMP);
+				return (end);
+			}
 		break;
 	case '%'|0x80:		/* longest match at end */
-		for (p = str; p <= end; p++) {
+		for (p = str; p <= end; p++)
 			if (gmatchx(p, pat, false))
-				return str_nsave(str, p - str, ATEMP);
-		}
+				goto trimsub_match;
 		break;
 	}
 
@@ -1224,7 +1222,8 @@ globit(XString *xs,	/* dest string */
 				*xp = '\0';
 			}
 		}
-		XPput(*wp, str_nsave(Xstring(*xs, xp), Xlength(*xs, xp), ATEMP));
+		strndupx(np, Xstring(*xs, xp), Xlength(*xs, xp), ATEMP);
+		XPput(*wp, np);
 		return;
 	}
 
@@ -1406,7 +1405,7 @@ homedir(char *name)
 		pw = getpwnam(name);
 		if (pw == NULL)
 			return NULL;
-		ap->val.s = str_save(pw->pw_dir, APERM);
+		strdupx(ap->val.s, pw->pw_dir, APERM);
 		ap->flag |= DEFINED|ISSET|ALLOC;
 	}
 	return ap->val.s;
@@ -1474,7 +1473,7 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 				l1 = brace_start - start;
 				l2 = (p - 1) - field_start;
 				l3 = end - brace_end;
-				new = (char *) alloc(l1 + l2 + l3 + 1, ATEMP);
+				new = alloc(l1 + l2 + l3 + 1, ATEMP);
 				memcpy(new, start, l1);
 				memcpy(new + l1, field_start, l2);
 				memcpy(new + l1 + l2, brace_end, l3);

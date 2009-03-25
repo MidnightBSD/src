@@ -1,4 +1,4 @@
-/*	$OpenBSD: alloc.c,v 1.7 2004/02/19 18:51:17 deraadt Exp $	*/
+/*	$OpenBSD: alloc.c,v 1.8 2008/07/21 17:30:08 millert Exp $	*/
 
 /*-
  * Copyright (c) 2002 Marc Espie.
@@ -29,7 +29,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/alloc.c,v 1.6 2007/06/05 18:59:54 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/alloc.c,v 1.8 2008/08/02 17:45:09 tg Exp $");
 
 struct link {
 	struct link *prev;
@@ -102,11 +102,24 @@ void
 afree(void *ptr, Area *ap)
 {
 	struct link *l;
+#ifdef MKSH_AFREE_DEBUG
+	struct link *lp;
+#endif
 
 	if (!ptr)
 		return;
 
 	l = P2L(ptr);
+
+#ifdef MKSH_AFREE_DEBUG
+	for (lp = ap->freelist; lp != NULL; lp = lp->next)
+		if (l == lp)
+			break;
+	if (lp == NULL) {
+		internal_warningf("afree: pointer %p not allocated", ptr);
+		exit(255);
+	}
+#endif
 
 	if (l->prev)
 		l->prev->next = l->next;

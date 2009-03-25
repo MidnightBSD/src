@@ -1,5 +1,5 @@
-.\" $MirOS: src/bin/mksh/mksh.1,v 1.115 2008/04/01 21:07:20 tg Exp $
-.\" $OpenBSD: ksh.1,v 1.120 2007/05/31 20:47:44 otto Exp $
+.\" $MirOS: src/bin/mksh/mksh.1,v 1.145.2.1 2008/12/13 17:44:42 tg Exp $
+.\" $OpenBSD: ksh.1,v 1.122 2008/05/17 23:31:52 sobrado Exp $
 .\"-
 .\" Try to make GNU groff and AT&T nroff more compatible
 .\" * ` generates ‘ in groff, so use \`
@@ -30,7 +30,7 @@
 .el .xD \\$1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8
 ..
 .\"-
-.Dd $Mdocdate: April 1 2008 $
+.Dd $Mdocdate: December 13 2008 $
 .Dt MKSH 1
 .Os MirBSD
 .Sh NAME
@@ -252,6 +252,7 @@ The meta-characters are used in building the following
 .Ql \*(Gt ,
 .Ql \*(Gt& ,
 .Ql \*(Gt\*(Gt ,
+.Ql &\*(Gt ,
 etc. are used to specify redirections (see
 .Sx Input/output redirection
 below);
@@ -776,7 +777,7 @@ succeeds).
 The single argument form of
 .Ic test ,
 which tests if the argument has a non-zero length, is not valid; explicit
-operators must always be used e.g. instead of
+operators must always be used, e.g. instead of
 .No \&[ Ar str No \&]
 use
 .No \&[[ \-n Ar str No \&]] .
@@ -888,9 +889,7 @@ or
 the shell tracks all commands.
 This option is set automatically for non-interactive shells.
 For interactive shells, only the following commands are
-automatically tracked, unless
-.Fl o Ic posix
-is set:
+automatically tracked:
 .Xr cat 1 ,
 .Xr cc 1 ,
 .Xr chmod 1 ,
@@ -1056,9 +1055,10 @@ form
 where
 .Ar expr
 is an arithmetic expression.
-Array indices are currently limited to the range 0 through 4294967295 (for
+Array indices are currently limited to the range 0 through 4294967295, (for
 .Nm
 only; portable maximum is 1023), inclusive.
+That is, they are a 32-bit unsigned integer.
 Parameter substitutions take the form
 .Pf $ Ns Ar name ,
 .Pf ${ Ns Ar name Ns } ,
@@ -1537,7 +1537,7 @@ When using
 .Ic getopts ,
 it contains the argument for a parsed option, if it requires one.
 .It Ev OPTIND
-The index of the next argument to be processed by
+The index of the next argument to be processed when using
 .Ic getopts .
 Assigning 1 to this parameter causes
 .Ic getopts
@@ -1551,8 +1551,10 @@ An empty string resulting from a leading or trailing
 colon, or two adjacent colons, is treated as a
 .Sq \&.
 (the current directory).
+.It Ev PGRP
+The process ID of the shell's process group leader.
 .It Ev PPID
-The process ID of the shell's parent (read-only).
+The process ID of the shell's parent.
 .It Ev PS1
 The primary prompt for interactive shells.
 Parameter, command, and arithmetic
@@ -1595,7 +1597,7 @@ assignment time, while the $USER and $PWD are escaped
 and thus will be evaluated each time a prompt is displayed):
 .Bd -literal
 PS1=\*(aq${USER:=$(id \-un)}\*(aq"@${HOSTNAME:=$(hostname \-s)}:\e$PWD $(
-	if (( $(id \-u) )); then print \e$; else print \e#; fi) "
+	if (( USER_ID )); then print \e$; else print \e#; fi) "
 .Ed
 .Pp
 Note that since the command-line editors try to figure out how long the prompt
@@ -1683,6 +1685,8 @@ If this parameter is not
 set, or does not contain the absolute path of a writable directory, temporary
 files are created in
 .Pa /tmp .
+.It Ev USER_ID
+The effective user id of the shell.
 .El
 .Ss Tilde expansion
 Tilde expansion which is done in parallel with parameter substitution, is done
@@ -2000,23 +2004,57 @@ This is called a here string.
 Standard input is duplicated from file descriptor
 .Ar fd .
 .Ar fd
-can be a single digit, indicating the number of an existing file descriptor;
+can be a number, indicating the number of an existing file descriptor;
 the letter
 .Ql p ,
 indicating the file descriptor associated with the output of the current
 co-process; or the character
 .Ql \- ,
 indicating standard input is to be closed.
+Note that
+.Ar fd
+is limited to a single digit in most shell implementations.
 .It \*(Gt& Ar fd
 Same as
 .Ic \*(Lt& ,
 except the operation is done on standard output.
+.It &\*(Gt Ar file
+Same as
+.Ic \*(Gt Ar file 2\*(Gt&1 .
+This is a GNU
+.Nm bash
+extension supported by
+.Nm
+which also supports the preceding explicit fd number, for example,
+.Ic 3&\*(Gt Ar file
+is the same as
+.Ic 3\*(Gt Ar file 2\*(Gt&3
+in
+.Nm
+but a syntax error in GNU
+.Nm bash .
+.It Xo
+.No &\*(Gt| Ar file ,
+.No &\*(Gt\*(Gt Ar file ,
+.No &\*(Gt& Ar fd
+.Xc
+Same as
+.Ic \*(Gt| Ar file ,
+.Ic \*(Gt\*(Gt Ar file ,
+or
+.Ic \*(Gt& Ar fd ,
+followed by
+.Ic 2\*(Gt&1 ,
+as above.
+These are
+.Nm
+extensions.
 .El
 .Pp
 In any of the above redirections, the file descriptor that is redirected
 (i.e. standard input or standard output)
 can be explicitly given by preceding the
-redirection with a single digit.
+redirection with a number (portably, only a single digit).
 Parameter, command, and arithmetic
 substitutions, tilde substitutions, and (if the shell is interactive)
 file name generation are all performed on the
@@ -2043,6 +2081,11 @@ pipelines are created and in the order they are given, so the following
 will print an error with a line number prepended to it:
 .Pp
 .D1 $ cat /foo/bar 2\*(Gt&1 \*(Gt /dev/null \*(Ba cat \-n
+.Pp
+File descriptors created by input/output redirections are private to the
+Korn shell, but passed to sub-processes if
+.Fl o Ic posix
+is set.
 .Ss Arithmetic expressions
 Integer arithmetic expressions can be used with the
 .Ic let
@@ -2087,6 +2130,8 @@ Grouping operators:
 ( )
 .Ed
 .Pp
+Integer constants are currently limited to 32-bit, signed or unsigned.
+Overflows wrap silently.
 Integer constants may be specified with arbitrary bases using the notation
 .Ar base Ns # Ns Ar number ,
 where
@@ -2110,6 +2155,21 @@ extension, in all forms of arithmetic expressions,
 except as numeric arguments to the
 .Ic test
 command.
+As a special
+.Nm mksh
+extension, numbers to the base of one are treated as either (8-bit
+transparent) ASCII or Unicode codepoints, depending on the shell's
+.Ic utf8\-hack
+flag (current setting).
+Note that NUL bytes (integral value of zero) cannot be used.
+In Unicode mode, raw octets are mapped into the range EF80..EFFF as in
+OPTU-8, which is in the PUA and has been assigned by CSUR for this use.
+If more than one octet in ASCII mode, or a sequence of more than one
+octet not forming a valid and minimal CESU-8 sequence is passed, the
+behaviour is undefined (usually, the shell aborts with a parse error,
+but rarely, it succeeds, e.g. on the sequence C2 20).
+That's why you should always use ASCII mode unless you know that the
+input is well-formed UTF-8 in the range of 0000..FFFD.
 .Pp
 The operators are evaluated as follows:
 .Bl -tag -width Ds -offset indent
@@ -3046,7 +3106,7 @@ is syntactic sugar for
 .Ic mknod
 .Op Fl m Ar mode
 .Ar name
-.Op Cm c \*(Ba Cm b
+.Op Cm b \*(Ba Cm c
 .Ar major minor
 .Xc
 .It Xo
@@ -3260,6 +3320,14 @@ option is used, in which case
 commands defining all read-only parameters, including their values, are
 printed.
 .Pp
+.It Xo
+.Ic realpath
+.Op Fl \-
+.Ar name
+.Xc
+Prints the resolved absolute pathname corresponding to
+.Ar name .
+.Pp
 .It Ic rename Ar from to
 Renames the file
 .Ar from
@@ -3402,16 +3470,23 @@ if
 is used).
 .It Fl U \*(Ba Ic utf8\-hack
 Enable UTF-8 support in the
-.Sx Emacs editing mode .
+.Sx Emacs editing mode
+and internal string handling functions.
 This is enabled automatically for interactive shells if your system supports
 .Fn setlocale LC_CTYPE \&""
 and optionally
 .Fn nl_langinfo CODESET ,
+or the
+.Ev LC_ALL ,
+.Ev LC_CTYPE ,
+or
+.Ev LANG
+environment variables,
 and at least one of these returns something that matches
 .Dq UTF\-8
 or
 .Dq utf8 ,
-or if the input begins with a Byte Order Mark.
+or if the input begins with a UTF-8 Byte Order Mark.
 .It Fl u \*(Ba Ic nounset
 Referencing of an unset parameter is treated as an error, unless one of the
 .Ql \- ,
@@ -3513,9 +3588,12 @@ and
 commands above for more details.
 .It Ic posix
 Enable POSIX mode.
-Currently, this just turns off
+Automatically enabled if the basename of the shell invocation begins with
+.Dq sh
+and this autodetection feature was requested at compilation time.
+As a side effect, setting this flag turns off
 .Ic braceexpand
-mode when turned on, which can be turned back on manually.
+mode, which can be turned back on manually.
 .It Ic restricted
 The shell is a restricted shell.
 This option can only be used when the shell is invoked.
@@ -4060,6 +4138,7 @@ If not combined with
 this is the same as
 .Fl R ,
 except zero padding is used instead of space padding.
+For integers, the number instead of the base is padded.
 .El
 .Pp
 If any of the
@@ -4457,6 +4536,9 @@ character is displayed in the last column indicating that there are more
 characters after, before and after, or before the current position,
 respectively.
 The line is scrolled horizontally as necessary.
+.Pp
+Completed lines are pushed into the history, unless they begin with an
+IFS character or IFS white space, or are the same as the previous line.
 .Ss Emacs editing mode
 When the
 .Ic emacs
@@ -4622,6 +4704,15 @@ has been performed.
 Lowercases the next
 .Ar n
 words.
+.It Xo edit\-line:
+.Op Ar n 
+.No \*(haXe
+.Xc
+Edit line
+.Ar n
+or the current line, if not specified, interactively.
+The actual command executed is
+.Ic fc \-e ${VISUAL:\-${EDITOR:\-vi}} Ar n .
 .It end\-of\-history: \*(ha[\*(Gt
 Moves to the end of the history.
 .It end\-of\-line: \*(haE
@@ -4716,7 +4807,9 @@ Introduces a 2-character command sequence.
 .Xc
 The last
 .Pq Ar n Ns th
-word of the previous command is inserted at the cursor.
+word of the previous (on repeated execution, second-last, third-last, etc.)
+command is inserted at the cursor.
+Use of this editing command trashes the mark.
 .It quote: \*(ha\*(ha , \*(haV
 The following character is taken literally rather than as an editing command.
 .It redraw: \*(haL
@@ -4744,7 +4837,16 @@ An initial
 .Ql \*(ha
 in the search string anchors the search.
 The escape key will leave search mode.
-Other commands will be executed after leaving search mode.
+Other commands, including sequences of escape as
+.Ic prefix\-1
+followed by a
+.Ic prefix\-1
+or
+.Ic prefix\-2
+key will be executed after leaving search mode.
+The
+.Ic abort Pq \*(haG
+command will restore the input line before search started.
 Successive
 .Ic search\-history
 commands continue searching backward to the next previous occurrence of the
@@ -4786,6 +4888,9 @@ Immediately after a
 replaces the inserted text string with the next previously killed text string.
 .El
 .Ss Vi editing mode
+.Em Note:
+The vi command-line editing mode is orphaned, yet still functional.
+.Pp
 The vi command-line editor in
 .Nm
 has basically the same commands as the
@@ -5454,7 +5559,7 @@ and many other persons, and is currently maintained by
 .An Thorsten Glaser Aq tg@mirbsd.de .
 .Sh BUGS
 This document attempts to describe
-.Nm mksh\ R33c
+.Nm mksh\ R36
 and up,
 compiled without any options impacting functionality, such as
 .Dv MKSH_SMALL ,

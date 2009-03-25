@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.174 2008/04/11 19:55:23 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.252 2008/12/13 17:02:11 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -7,10 +7,9 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R33 2008/04/11
+	@(#)MIRBSD KSH R36 2008/12/13
 description:
 	Check version of shell.
-category: pdksh
 stdin:
 	echo $KSH_VERSION
 name: KSH_VERSION
@@ -151,6 +150,22 @@ stdin:
 expected-stdout:
 	hi
 	there
+---
+name: alias-9
+description:
+	Check that recursion is detected/avoided in aliases.
+	This check fails for slow machines or Cygwin, raise
+	the time-limit clause (e.g. to 7) if this occurs.
+time-limit: 3
+stdin:
+	echo -n >tf
+	alias ls=ls
+	ls
+	echo $(ls)
+	exit 0
+expected-stdout:
+	tf
+	tf
 ---
 name: arith-lazy-1
 description:
@@ -1499,6 +1514,14 @@ expected-stdout:
 	one
 		 $sabeq onm
 ---
+name: heredoc-9d
+description:
+	Check another corner case of here strings
+stdin:
+	tr abcdefghijklmnopqrstuvwxyz nopqrstuvwxyzabcdefghijklm <<< bar
+expected-stdout:
+	one
+---
 name: heredoc-quoting-unsubst
 description:
 	Check for correct handling of quoted characters in
@@ -1676,9 +1699,10 @@ expected-stdout:
 ---
 name: heredoc-tmpfile-8
 description:
-	Check that heredoc temp files aren't removed too soon or too late.
-	Heredoc in function, backgrounded call to function.
-	This check can fail on slow machines (<100 MHz), that's normal.
+	Check that heredoc temp files aren't removed too soon or too
+	late. Heredoc in function, backgrounded call to function.
+	This check can fail on slow machines (<100 MHz), or Cygwin,
+	that's normal.
 stdin:
 	TMPDIR=$PWD
 	# Background eval so main shell doesn't do parsing
@@ -1718,6 +1742,49 @@ expected-stdout:
 	1	echo hi
 expected-stderr-pattern:
 	/^X*$/
+---
+name: history-dups
+description:
+	Verify duplicates and spaces are not entered
+arguments: !-i!
+env-setup: !ENV=./Env!HISTFILE=hist.file!
+file-setup: file 644 "Env"
+	PS1=X
+stdin:
+	echo hi
+	 echo yo
+	echo hi
+	fc -l
+expected-stdout:
+	hi
+	yo
+	hi
+	1	echo hi
+expected-stderr-pattern:
+	/^X*$/
+---
+name: history-unlink
+description:
+	Check if broken HISTFILEs do not cause trouble
+category: !os:cygwin
+arguments: !-i!
+env-setup: !ENV=./Env!HISTFILE=foo/hist.file!
+file-setup: file 644 "Env"
+	PS1=X
+file-setup: dir 755 "foo"
+file-setup: file 644 "foo/hist.file"
+	sometext
+time-limit: 5
+perl-setup: chmod(0555, "foo");
+stdin:
+	echo hi
+	fc -l
+	chmod 0755 foo
+expected-stdout:
+	hi
+	1	echo hi
+expected-stderr-pattern:
+	/(.*cannot unlink HISTFILE.*\n)?X*$/
 ---
 name: history-e-minus-1
 description:
@@ -1800,15 +1867,17 @@ file-setup: file 644 "Env"
 stdin:
 	echo abc def
 	echo ghi jkl
+	:
 	fc -e - echo
-	fc -l 2 4
+	fc -l 2 5
 expected-stdout:
 	abc def
 	ghi jkl
 	ghi jkl
 	2	echo ghi jkl
-	3	echo ghi jkl
-	4	fc -l 2 4
+	3	:
+	4	echo ghi jkl
+	5	fc -l 2 5
 expected-stderr-pattern:
 	/^X*echo ghi jkl\nX*$/
 ---
@@ -2153,7 +2222,7 @@ description:
 	Basic (ed) editing works (assumes you have generic ed editor
 	that prints no prompts). This is for oldish ed(1) which write
 	the character count to stdout.
-category: oldish-ed
+category: stdout-ed
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2175,7 +2244,7 @@ expected-stderr-pattern:
 name: history-ed-2-old
 description:
 	Correct command is edited when number given
-category: oldish-ed
+category: stdout-ed
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2206,7 +2275,7 @@ description:
 	in history.
 	(NOTE: adjusted for COMPLEX HISTORY compile time option)
 	(ksh88 fails 'cause it lists the fc command)
-category: oldish-ed
+category: stdout-ed
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2237,7 +2306,7 @@ name: history-ed-1
 description:
 	Basic (ed) editing works (assumes you have generic ed editor
 	that prints no prompts). This is for newish ed(1) and stderr.
-category: !oldish-ed
+category: !no-stderr-ed
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2257,7 +2326,7 @@ expected-stderr-pattern:
 name: history-ed-2
 description:
 	Correct command is edited when number given
-category: !oldish-ed
+category: !no-stderr-ed
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2284,7 +2353,7 @@ name: history-ed-3
 description:
 	Newly created multi line commands show up as single command
 	in history.
-category: !oldish-ed
+category: !no-stderr-ed
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -2936,8 +3005,6 @@ expected-stdout:
 	foo	bar
 ---
 name: regression-13
-# no /etc/termcap on UWIN
-category: !os:uwin-nt
 description:
 	The following command hangs forever:
 		$ (: ; cat /etc/termcap) | sleep 2
@@ -2954,7 +3021,7 @@ stdin:
 	cat t1 t1 t1 t1  t1 t1 t1 t1  t1 t1 t1 t1  t1 t1 t1 t1  > t2
 	cat t2 t2 t2 t2  t2 t2 t2 t2  t2 t2 t2 t2  t2 t2 t2 t2  > t1
 	cat t1 t1 t1 t1 > t2
-	(: ; cat t2) | sleep 1
+	(: ; cat t2 2>&-) | sleep 1
 ---
 name: regression-14
 description:
@@ -3815,6 +3882,18 @@ expected-stdout:
 	FNORD_H=8
 	FNORD-8
 ---
+name: regression-64
+description:
+	Check that we can redefine functions calling time builtin
+stdin:
+	t() {
+		time >/dev/null
+	}
+	t 2>/dev/null
+	t() {
+		time
+	}
+---
 name: syntax-1
 description:
 	Check that lone ampersand is a syntax error
@@ -4183,8 +4262,8 @@ description:
 stdin:
 	set -o braceexpand
 	set +o posix
-	set +o | fgrep posix >/dev/null && echo posix || echo noposix
-	set +o | fgrep braceexpand >/dev/null && echo brex || echo nobrex
+	[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix
+	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
 	echo {a,b,c}
 	set +o braceexpand
 	echo {a,b,c}
@@ -4192,12 +4271,12 @@ stdin:
 	echo {a,b,c}
 	set -o posix
 	echo {a,b,c}
-	set +o | fgrep posix >/dev/null && echo posix || echo noposix
-	set +o | fgrep braceexpand >/dev/null && echo brex || echo nobrex
+	[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix
+	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
 	set -o braceexpand
 	echo {a,b,c}
-	set +o | fgrep posix >/dev/null && echo posix || echo noposix
-	set +o | fgrep braceexpand >/dev/null && echo brex || echo nobrex
+	[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix
+	[[ $(set +o) == *@(-o braceexpand)@(| *) ]] && echo brex || echo nobrex
 expected-stdout:
 	noposix
 	brex
@@ -4210,6 +4289,44 @@ expected-stdout:
 	a b c
 	posix
 	brex
+---
+name: posix-mode-2a
+description:
+	Check that posix mode is *not* automatically turned on
+category: !binsh
+stdin:
+	ln -s "$__progname" ksh
+	ln -s "$__progname" sh
+	ln -s "$__progname" ./-ksh
+	ln -s "$__progname" ./-sh
+	for shell in {,-}{,k}sh; do
+		print -- $shell $(./$shell +l -c \
+		    '[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix')
+	done
+expected-stdout:
+	sh noposix
+	ksh noposix
+	-sh noposix
+	-ksh noposix
+---
+name: posix-mode-2b
+description:
+	Check that posix mode is automatically turned on
+category: binsh
+stdin:
+	ln -s "$__progname" ksh
+	ln -s "$__progname" sh
+	ln -s "$__progname" ./-ksh
+	ln -s "$__progname" ./-sh
+	for shell in {,-}{,k}sh; do
+		print -- $shell $(./$shell +l -c \
+		    '[[ $(set +o) == *@(-o posix)@(| *) ]] && echo posix || echo noposix')
+	done
+expected-stdout:
+	sh posix
+	ksh noposix
+	-sh posix
+	-ksh noposix
 ---
 name: pipeline-1
 description:
@@ -4252,7 +4369,7 @@ expected-stdout:
 name: persist-history-1
 description:
 	Check if persistent history saving works
-category: !no-histfile,pdksh,!smksh
+category: !no-histfile
 arguments: !-i!
 env-setup: !ENV=./Env!HISTFILE=hist.file!
 file-setup: file 644 "Env"
@@ -4277,13 +4394,27 @@ stdin:
 expected-stdout:
 	<0hall0    > <    0hall0> <hall0     > <00000hall0> <0000 hallo>
 ---
+name: typeset-padding-2
+description:
+	Check if base-!10 integers are padded right
+stdin:
+	typeset -Uui16 -L9 ln=16#1
+	typeset -Uui16 -R9 rn=16#1
+	typeset -Uui16 -Z9 zn=16#1
+	typeset -L9 ls=16#1
+	typeset -R9 rs=16#1
+	typeset -Z9 zs=16#1
+	print "<$ln> <$rn> <$zn> <$ls> <$rs> <$zs>"
+expected-stdout:
+	<16#1     > <     16#1> <16#000001> <16#1     > <     16#1> <0000016#1>
+---
 name: utf8bom-1
 description:
 	Check that the UTF-8 Byte Order Mark is ignored as the first
 	multibyte character of the shell input (with -c, from standard
 	input, as file, or as eval argument), but nowhere else
 # breaks on Mac OSX (HFS+ non-standard Unicode canonical decomposition)
-category: pdksh,!os:darwin
+category: !os:darwin
 stdin:
 	mkdir foo
 	print '#!/bin/sh\necho ohne' >foo/fnord
@@ -4328,7 +4459,7 @@ description:
 	XXX if the OS can already execute them, we lose
 	note: cygwin execve(2) doesn't return to us with ENOEXEC, we lose
 	note: Ultrix perl5 t4 returns 65280 (exit-code 255) and no text
-category: pdksh,!os:cygwin,!os:uwin-nt,!os:ultrix
+category: !os:cygwin,!os:uwin-nt,!os:ultrix,!smksh
 env-setup: !FOO=BAR!
 stdin:
 	print '#!'"$__progname"'\nprint "a=$ENV{FOO}";' >t1
@@ -4350,19 +4481,79 @@ expected-stderr-pattern:
 ---
 name: utf8bom-3
 description:
-	Reading the UTF-8 BOM should enable the utf8-hack flag
-category: pdksh,!dutf
+	Reading the UTF-8 BOM should enable the utf8-mode flag
 stdin:
-	"$__progname" -c ':; x=$(set +o); if [[ $x = *utf8* ]]; then print on; else print off; fi'
-	"$__progname" -c '﻿:; x=$(set +o); if [[ $x = *utf8* ]]; then print on; else print off; fi'
+	"$__progname" -c ':; if [[ $- = *U* ]]; then print on; else print off; fi'
+	"$__progname" -c '﻿:; if [[ $- = *U* ]]; then print on; else print off; fi'
 expected-stdout:
 	off
 	on
 ---
+name: utf8opt-1a
+description:
+	Check that the utf8-mode flag is not set at non-interactive startup
+category: !os:hpux
+env-setup: !PS1=!PS2=!LC_CTYPE=en_US.UTF-8!
+stdin:
+	if [[ $- = *U* ]]; then
+		print is set
+	else
+		print is not set
+	fi
+expected-stdout:
+	is not set
+---
+name: utf8opt-1b
+description:
+	Check that the utf8-mode flag is not set at non-interactive startup
+category: os:hpux
+env-setup: !PS1=!PS2=!LC_CTYPE=en_US.utf8!
+stdin:
+	if [[ $- = *U* ]]; then
+		print is set
+	else
+		print is not set
+	fi
+expected-stdout:
+	is not set
+---
+name: utf8opt-2a
+description:
+	Check that the utf8-mode flag is set at interactive startup
+category: !os:hpux
+arguments: !-i!
+env-setup: !PS1=!PS2=!LC_CTYPE=en_US.UTF-8!
+stdin:
+	if [[ $- = *U* ]]; then
+		print is set
+	else
+		print is not set
+	fi
+expected-stdout:
+	is set
+expected-stderr-pattern:
+	/(# )*/
+---
+name: utf8opt-2b
+description:
+	Check that the utf8-mode flag is set at interactive startup
+category: os:hpux
+arguments: !-i!
+env-setup: !PS1=!PS2=!LC_CTYPE=en_US.utf8!
+stdin:
+	if [[ $- = *U* ]]; then
+		print is set
+	else
+		print is not set
+	fi
+expected-stdout:
+	is set
+expected-stderr-pattern:
+	/(# )*/
+---
 name: aliases-1
 description:
 	Check if built-in shell aliases are okay
-category: pdksh
 stdin:
 	alias
 	typeset -f
@@ -4384,7 +4575,6 @@ expected-stdout:
 name: aliases-2a
 description:
 	Check if “set -o posix” disables built-in aliases (except a few)
-#category: pdksh
 category: disabled
 arguments: !-o!posix!
 stdin:
@@ -4397,7 +4587,6 @@ expected-stdout:
 name: aliases-3a
 description:
 	Check if running as sh disables built-in aliases (except a few)
-#category: pdksh
 category: disabled
 arguments: !-o!posix!
 stdin:
@@ -4411,7 +4600,6 @@ expected-stdout:
 name: aliases-2b
 description:
 	Check if “set -o posix” does not influence built-in aliases
-category: pdksh
 arguments: !-o!posix!
 stdin:
 	alias
@@ -4434,7 +4622,6 @@ expected-stdout:
 name: aliases-3b
 description:
 	Check if running as sh does not influence built-in aliases
-category: pdksh
 arguments: !-o!posix!
 stdin:
 	cp "$__progname" sh
@@ -4570,6 +4757,19 @@ stdin:
 expected-stdout:
 	<d��Û€Û@>
 ---
+name: print-nul-chars
+description:
+	Check handling of NUL characters for print and read
+	note: second line should output “4 3” but we cannot
+	handle NUL characters in strings yet
+stdin:
+	print $(($(print '<\0>' | wc -c)))
+	x=$(print '<\0>')
+	print $(($(print "$x" | wc -c))) ${#x}
+expected-stdout:
+	4
+	3 2
+---
 name: dot-needs-argument
 description:
 	check Debian #415167 solution: '.' without arguments should fail
@@ -4602,4 +4802,636 @@ expected-stdout:
 	baz
 	bar
 	rab
+---
+name: integer-base-one-1
+description:
+	check if the use of fake integer base 1 works
+stdin:
+	set -U
+	typeset -Uui16 i0=1#� i1=1#€
+	typeset -i1 o0a=64
+	typeset -i1 o1a=0x263A
+	typeset -Uui1 o0b=0x7E
+	typeset -Uui1 o1b=0xFDD0
+	integer px=0xCAFE 'p0=1# ' p1=1#… pl=1#f
+	print "in <$i0> <$i1>"
+	print "out <${o0a#1#}|${o0b#1#}> <${o1a#1#}|${o1b#1#}>"
+	typeset -Uui1 i0 i1
+	print "pass <$px> <$p0> <$p1> <$pl> <${i0#1#}|${i1#1#}>"
+	typeset -Uui16 tv1=1#~ tv2=1# tv3=1#� tv4=1#� tv5=1#� tv6=1#� tv7=1#  tv8=1#
+	print "specX <${tv1#16#}> <${tv2#16#}> <${tv3#16#}> <${tv4#16#}> <${tv5#16#}> <${tv6#16#}> <${tv7#16#}> <${tv8#16#}>"
+	typeset -i1 tv1 tv2 tv3 tv4 tv5 tv6 tv7 tv8
+	print "specW <${tv1#1#}> <${tv2#1#}> <${tv3#1#}> <${tv4#1#}> <${tv5#1#}> <${tv6#1#}> <${tv7#1#}> <${tv8#1#}>"
+	typeset -i1 xs1=0xEF7F xs2=0xEF80 xs3=0xFDD0
+	print "specU <${xs1#1#}> <${xs2#1#}> <${xs3#1#}>"
+expected-stdout:
+	in <16#EFEF> <16#20AC>
+	out <@|~> <☺|﷐>
+	pass <16#cafe> <1# > <1#…> <1#f> <�|€>
+	specX <7E> <7F> <EF80> <EF81> <EFC0> <EFC1> <A0> <80>
+	specW <~> <> <�> <�> <�> <�> < > <>
+	specU <> <�> <﷐>
+---
+name: integer-base-one-2a
+description:
+	check if the use of fake integer base 1 stops at correct characters
+stdin:
+	set -U
+	integer x=1#foo
+	print /$x/
+expected-stderr-pattern:
+	/1#foo: unexpected 'oo'/
+expected-exit: e != 0
+---
+name: integer-base-one-2b
+description:
+	check if the use of fake integer base 1 stops at correct characters
+stdin:
+	set -U
+	integer x=1#��
+	print /$x/
+expected-stderr-pattern:
+	/1#��: unexpected '�'/
+expected-exit: e != 0
+---
+name: integer-base-one-2c1
+description:
+	check if the use of fake integer base 1 stops at correct characters
+stdin:
+	set -U
+	integer x=1#…
+	print /$x/
+expected-stdout:
+	/1#…/
+---
+name: integer-base-one-2c2
+description:
+	check if the use of fake integer base 1 stops at correct characters
+stdin:
+	set +U
+	integer x=1#…
+	print /$x/
+expected-stderr-pattern:
+	/1#…: unexpected '�'/
+expected-exit: e != 0
+---
+name: integer-base-one-2d1
+description:
+	check if the use of fake integer base 1 handles octets okay
+stdin:
+	set -U
+	typeset -i16 x=1#�
+	print /$x/	# invalid utf-8
+expected-stdout:
+	/16#efff/
+---
+name: integer-base-one-2d2
+description:
+	check if the use of fake integer base 1 handles octets
+stdin:
+	set -U
+	typeset -i16 x=1#�
+	print /$x/	# invalid 2-byte
+expected-stdout:
+	/16#efc2/
+---
+name: integer-base-one-2d3
+description:
+	check if the use of fake integer base 1 handles octets
+stdin:
+	set -U
+	typeset -i16 x=1#�
+	print /$x/	# invalid 2-byte
+expected-stdout:
+	/16#efef/
+---
+name: integer-base-one-2d4
+description:
+	check if the use of fake integer base 1 stops at invalid input
+stdin:
+	set -U
+	typeset -i16 x=1#��
+	print /$x/	# invalid 3-byte
+expected-stderr-pattern:
+	/1#��: unexpected '�'/
+expected-exit: e != 0
+---
+name: integer-base-one-2d5
+description:
+	check if the use of fake integer base 1 stops at invalid input
+stdin:
+	set -U
+	typeset -i16 x=1#��
+	print /$x/	# non-minimalistic
+expected-stderr-pattern:
+	/1#��: unexpected '�'/
+expected-exit: e != 0
+---
+name: integer-base-one-2d6
+description:
+	check if the use of fake integer base 1 stops at invalid input
+stdin:
+	set -U
+	typeset -i16 x=1#���
+	print /$x/	# non-minimalistic
+expected-stderr-pattern:
+	/1#���: unexpected '�'/
+expected-exit: e != 0
+---
+name: integer-base-one-3a
+description:
+	some sample code for hexdumping
+stdin:
+	{
+		print 'Hello, World!\\\nこんにちは！'
+		typeset -Uui16 i=0x100
+		# change that to 0xFF once we can handle embedded
+		# NUL characters in strings / here documents
+		while (( i++ < 0x1FF )); do
+			print -n "\x${i#16#1}"
+		done
+		print
+	} | {
+		typeset -Uui16 -Z11 pos=0
+		typeset -Uui16 -Z5 hv
+		typeset -i1 wc=0x0A
+		dasc=
+		nl=${wc#1#}
+		while IFS= read -r line; do
+			line=$line$nl
+			while [[ -n $line ]]; do
+				hv=1#${line::1}
+				if (( (pos & 15) == 0 )); then
+					(( pos )) && print "$dasc|"
+					print -n "${pos#16#}  "
+					dasc=' |'
+				fi
+				print -n "${hv#16#} "
+				if (( (hv < 32) || (hv > 126) )); then
+					dasc=$dasc.
+				else
+					dasc=$dasc${line::1}
+				fi
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+				line=${line:1}
+			done
+		done
+		if (( (pos & 15) != 1 )); then
+			while (( pos & 15 )); do
+				print -n '   '
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+			done
+			print "$dasc|"
+		fi
+	}
+expected-stdout:
+	00000000  48 65 6C 6C 6F 2C 20 57 - 6F 72 6C 64 21 5C 0A E3  |Hello, World!\..|
+	00000010  81 93 E3 82 93 E3 81 AB - E3 81 A1 E3 81 AF EF BC  |................|
+	00000020  81 0A 01 02 03 04 05 06 - 07 08 09 0A 0B 0C 0D 0E  |................|
+	00000030  0F 10 11 12 13 14 15 16 - 17 18 19 1A 1B 1C 1D 1E  |................|
+	00000040  1F 20 21 22 23 24 25 26 - 27 28 29 2A 2B 2C 2D 2E  |. !"#$%&'()*+,-.|
+	00000050  2F 30 31 32 33 34 35 36 - 37 38 39 3A 3B 3C 3D 3E  |/0123456789:;<=>|
+	00000060  3F 40 41 42 43 44 45 46 - 47 48 49 4A 4B 4C 4D 4E  |?@ABCDEFGHIJKLMN|
+	00000070  4F 50 51 52 53 54 55 56 - 57 58 59 5A 5B 5C 5D 5E  |OPQRSTUVWXYZ[\]^|
+	00000080  5F 60 61 62 63 64 65 66 - 67 68 69 6A 6B 6C 6D 6E  |_`abcdefghijklmn|
+	00000090  6F 70 71 72 73 74 75 76 - 77 78 79 7A 7B 7C 7D 7E  |opqrstuvwxyz{|}~|
+	000000A0  7F 80 81 82 83 84 85 86 - 87 88 89 8A 8B 8C 8D 8E  |................|
+	000000B0  8F 90 91 92 93 94 95 96 - 97 98 99 9A 9B 9C 9D 9E  |................|
+	000000C0  9F A0 A1 A2 A3 A4 A5 A6 - A7 A8 A9 AA AB AC AD AE  |................|
+	000000D0  AF B0 B1 B2 B3 B4 B5 B6 - B7 B8 B9 BA BB BC BD BE  |................|
+	000000E0  BF C0 C1 C2 C3 C4 C5 C6 - C7 C8 C9 CA CB CC CD CE  |................|
+	000000F0  CF D0 D1 D2 D3 D4 D5 D6 - D7 D8 D9 DA DB DC DD DE  |................|
+	00000100  DF E0 E1 E2 E3 E4 E5 E6 - E7 E8 E9 EA EB EC ED EE  |................|
+	00000110  EF F0 F1 F2 F3 F4 F5 F6 - F7 F8 F9 FA FB FC FD FE  |................|
+	00000120  FF 0A                   -                          |..|
+---
+name: integer-base-one-3b
+description:
+	some sample code for hexdumping Unicode
+stdin:
+	set -U
+	{
+		print 'Hello, World!\\\nこんにちは！'
+		typeset -Uui16 i=0x100
+		# change that to 0xFF once we can handle embedded
+		# NUL characters in strings / here documents
+		while (( i++ < 0x1FF )); do
+			print -n "\u${i#16#1}"
+		done
+		print
+		print \\xff		# invalid utf-8
+		print \\xc2		# invalid 2-byte
+		print \\xef\\xbf\\xc0	# invalid 3-byte
+		print \\xc0\\x80	# non-minimalistic
+		print \\xe0\\x80\\x80	# non-minimalistic
+		print '�￾￿'	# end of range
+	} | {
+		typeset -Uui16 -Z11 pos=0
+		typeset -Uui16 -Z5 hv
+		typeset -i1 wc=0x0A
+		dasc=
+		nl=${wc#1#}
+		integer n
+		while IFS= read -r line; do
+			line=$line$nl
+			while [[ -n $line ]]; do
+				(( hv = 1#${line::1} & 0xFF ))
+				if (( (hv < 0xC2) || (hv >= 0xF0) )); then
+					n=1
+				elif (( hv < 0xE0 )); then
+					n=2
+				else
+					n=3
+				fi
+				if (( n > 1 )); then
+					(( (1#${line:1:1} & 0xC0) == 0x80 )) || n=1
+					(( hv == 0xE0 )) && \
+					    (( (1#${line:1:1} & 0xFF) < 0xA0 )) && n=1
+				fi
+				if (( n > 2 )); then
+					(( hv = 1#${line:2:1} & 0xFF ))
+					(( (hv & 0xC0) == 0x80 )) || n=1
+					(( (((1#${line::1} & 0xFF) == 0xEF) && \
+					    ((1#${line:1:1} & 0xFF) == 0xBF) && \
+					    (hv > 0xBD)) )) && n=1
+				fi
+				wc=1#${line::n}
+				if (( (wc < 32) || \
+				    ((wc > 126) && (wc < 160)) )); then
+					dch=.
+				elif (( (wc & 0xFF80) == 0xEF80 )); then
+					dch=�
+				else
+					dch=${wc#1#}
+				fi
+				if (( (pos & 15) >= (n == 3 ? 14 : 15) )); then
+					dasc=$dasc$dch
+					dch=
+				fi
+				while (( n-- )); do
+					if (( (pos & 15) == 0 )); then
+						(( pos )) && print "$dasc|"
+						print -n "${pos#16#}  "
+						dasc=' |'
+					fi
+					hv=1#${line::1}
+					print -n "${hv#16#} "
+					(( (pos++ & 15) == 7 )) && \
+					    print -n -- '- '
+					line=${line:1}
+				done
+				dasc=$dasc$dch
+			done
+		done
+		if (( pos & 15 )); then
+			while (( pos & 15 )); do
+				print -n '   '
+				(( (pos++ & 15) == 7 )) && print -n -- '- '
+			done
+			print "$dasc|"
+		fi
+	}
+expected-stdout:
+	00000000  48 65 6C 6C 6F 2C 20 57 - 6F 72 6C 64 21 5C 0A E3  |Hello, World!\.こ|
+	00000010  81 93 E3 82 93 E3 81 AB - E3 81 A1 E3 81 AF EF BC  |んにちは！|
+	00000020  81 0A 01 02 03 04 05 06 - 07 08 09 0A 0B 0C 0D 0E  |...............|
+	00000030  0F 10 11 12 13 14 15 16 - 17 18 19 1A 1B 1C 1D 1E  |................|
+	00000040  1F 20 21 22 23 24 25 26 - 27 28 29 2A 2B 2C 2D 2E  |. !"#$%&'()*+,-.|
+	00000050  2F 30 31 32 33 34 35 36 - 37 38 39 3A 3B 3C 3D 3E  |/0123456789:;<=>|
+	00000060  3F 40 41 42 43 44 45 46 - 47 48 49 4A 4B 4C 4D 4E  |?@ABCDEFGHIJKLMN|
+	00000070  4F 50 51 52 53 54 55 56 - 57 58 59 5A 5B 5C 5D 5E  |OPQRSTUVWXYZ[\]^|
+	00000080  5F 60 61 62 63 64 65 66 - 67 68 69 6A 6B 6C 6D 6E  |_`abcdefghijklmn|
+	00000090  6F 70 71 72 73 74 75 76 - 77 78 79 7A 7B 7C 7D 7E  |opqrstuvwxyz{|}~|
+	000000A0  7F C2 80 C2 81 C2 82 C2 - 83 C2 84 C2 85 C2 86 C2  |.........|
+	000000B0  87 C2 88 C2 89 C2 8A C2 - 8B C2 8C C2 8D C2 8E C2  |........|
+	000000C0  8F C2 90 C2 91 C2 92 C2 - 93 C2 94 C2 95 C2 96 C2  |........|
+	000000D0  97 C2 98 C2 99 C2 9A C2 - 9B C2 9C C2 9D C2 9E C2  |........|
+	000000E0  9F C2 A0 C2 A1 C2 A2 C2 - A3 C2 A4 C2 A5 C2 A6 C2  | ¡¢£¤¥¦§|
+	000000F0  A7 C2 A8 C2 A9 C2 AA C2 - AB C2 AC C2 AD C2 AE C2  |¨©ª«¬­®¯|
+	00000100  AF C2 B0 C2 B1 C2 B2 C2 - B3 C2 B4 C2 B5 C2 B6 C2  |°±²³´µ¶·|
+	00000110  B7 C2 B8 C2 B9 C2 BA C2 - BB C2 BC C2 BD C2 BE C2  |¸¹º»¼½¾¿|
+	00000120  BF C3 80 C3 81 C3 82 C3 - 83 C3 84 C3 85 C3 86 C3  |ÀÁÂÃÄÅÆÇ|
+	00000130  87 C3 88 C3 89 C3 8A C3 - 8B C3 8C C3 8D C3 8E C3  |ÈÉÊËÌÍÎÏ|
+	00000140  8F C3 90 C3 91 C3 92 C3 - 93 C3 94 C3 95 C3 96 C3  |ÐÑÒÓÔÕÖ×|
+	00000150  97 C3 98 C3 99 C3 9A C3 - 9B C3 9C C3 9D C3 9E C3  |ØÙÚÛÜÝÞß|
+	00000160  9F C3 A0 C3 A1 C3 A2 C3 - A3 C3 A4 C3 A5 C3 A6 C3  |àáâãäåæç|
+	00000170  A7 C3 A8 C3 A9 C3 AA C3 - AB C3 AC C3 AD C3 AE C3  |èéêëìíîï|
+	00000180  AF C3 B0 C3 B1 C3 B2 C3 - B3 C3 B4 C3 B5 C3 B6 C3  |ðñòóôõö÷|
+	00000190  B7 C3 B8 C3 B9 C3 BA C3 - BB C3 BC C3 BD C3 BE C3  |øùúûüýþÿ|
+	000001A0  BF 0A FF 0A C2 0A EF BF - C0 0A C0 80 0A E0 80 80  |.�.�.���.��.���|
+	000001B0  0A EF BF BD EF BF BE EF - BF BF 0A                 |.�������.|
+---
+name: ulimit-1
+description:
+	Check if we can use a specific syntax idiom for ulimit
+stdin:
+	if ! x=$(ulimit -d); then
+		print expected to fail on this OS
+	else
+		ulimit -dS $x && print okay
+	fi
+expected-stdout:
+	okay
+---
+name: bashiop-1
+description:
+	Check if GNU bash-like I/O redirection works
+	Part 1: this is also supported by GNU bash
+stdin:
+	exec 3>&1
+	function threeout {
+		echo ras
+		echo dwa >&2
+		echo tri >&3
+	}
+	threeout &>foo
+	echo ===
+	cat foo
+expected-stdout:
+	tri
+	===
+	ras
+	dwa
+---
+name: bashiop-2a
+description:
+	Check if GNU bash-like I/O redirection works
+	Part 2: this is *not* supported by GNU bash
+stdin:
+	exec 3>&1
+	function threeout {
+		echo ras
+		echo dwa >&2
+		echo tri >&3
+	}
+	threeout 3&>foo
+	echo ===
+	cat foo
+expected-stdout:
+	ras
+	===
+	dwa
+	tri
+---
+name: bashiop-2b
+description:
+	Check if GNU bash-like I/O redirection works
+	Part 2: this is *not* supported by GNU bash
+stdin:
+	exec 3>&1
+	function threeout {
+		echo ras
+		echo dwa >&2
+		echo tri >&3
+	}
+	threeout 3>foo &>&3
+	echo ===
+	cat foo
+expected-stdout:
+	===
+	ras
+	dwa
+	tri
+---
+name: bashiop-2c
+description:
+	Check if GNU bash-like I/O redirection works
+	Part 2: this is *not* supported by GNU bash
+stdin:
+	echo mir >foo
+	set -o noclobber
+	exec 3>&1
+	function threeout {
+		echo ras
+		echo dwa >&2
+		echo tri >&3
+	}
+	threeout &>>foo
+	echo ===
+	cat foo
+expected-stdout:
+	tri
+	===
+	mir
+	ras
+	dwa
+---
+name: bashiop-3a
+description:
+	Check if GNU bash-like I/O redirection fails correctly
+	Part 1: this is also supported by GNU bash
+stdin:
+	echo mir >foo
+	set -o noclobber
+	exec 3>&1
+	function threeout {
+		echo ras
+		echo dwa >&2
+		echo tri >&3
+	}
+	threeout &>foo
+	echo ===
+	cat foo
+expected-stdout:
+	===
+	mir
+expected-stderr-pattern: /.*: cannot (create|overwrite) .*/
+---
+name: bashiop-3b
+description:
+	Check if GNU bash-like I/O redirection fails correctly
+	Part 2: this is *not* supported by GNU bash
+stdin:
+	echo mir >foo
+	set -o noclobber
+	exec 3>&1
+	function threeout {
+		echo ras
+		echo dwa >&2
+		echo tri >&3
+	}
+	threeout &>|foo
+	echo ===
+	cat foo
+expected-stdout:
+	tri
+	===
+	ras
+	dwa
+---
+name: bashiop-4
+description:
+	Check if GNU bash-like I/O redirection works
+	Part 4: this is also supported by GNU bash,
+	but failed in some mksh versions
+stdin:
+	exec 3>&1
+	function threeout {
+		echo ras
+		echo dwa >&2
+		echo tri >&3
+	}
+	function blubb {
+		[[ -e bar ]] && threeout "$bf" &>foo
+	}
+	blubb
+	echo -n >bar
+	blubb
+	echo ===
+	cat foo
+expected-stdout:
+	tri
+	===
+	ras
+	dwa
+---
+name: mkshiop-1
+description:
+	Check for support of more than 9 file descriptors
+category: !smksh
+stdin:
+	read -u10 foo 10<<< bar
+	print x$foo
+expected-stdout:
+	xbar
+---
+name: mkshiop-2
+description:
+	Check for support of more than 9 file descriptors
+category: !smksh
+stdin:
+	exec 12>foo
+	print -u12 bar
+	print baz >&12
+	cat foo
+expected-stdout:
+	bar
+	baz
+---
+name: oksh-seterror
+description:
+	$OpenBSD: seterror.sh,v 1.1 2003/02/09 18:52:49 espie Exp $
+	set -e is supposed to abort the script for errors that
+	are not caught otherwise. pdksh fails this test.
+stdin:
+	set -e
+	for i in 1 2 3
+	do
+		false && true
+	done
+	true
+expected-fail: yes
+---
+name: oksh-shcrash
+description:
+	src/regress/bin/ksh/shcrash.sh,v 1.1
+stdin:
+	deplibs="-lz -lpng /usr/local/lib/libjpeg.la -ltiff -lm -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libglib.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgtk.la -ltiff -ljpeg -lz -lpng -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk_pixbuf.la -lz -lpng /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libglib.la -lm -lm /usr/local/lib/libaudiofile.la -lm -lm -laudiofile -L/usr/local/lib /usr/local/lib/libesd.la -lm -lz -L/usr/local/lib /usr/local/lib/libgnomesupport.la -lm -lz -lm -lglib -L/usr/local/lib /usr/local/lib/libgnome.la -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgtk.la -lICE -lSM -lz -lpng /usr/local/lib/libungif.la /usr/local/lib/libjpeg.la -ltiff -lm -lz -lpng /usr/local/lib/libungif.la -lz /usr/local/lib/libjpeg.la -ltiff -L/usr/local/lib -L/usr/X11R6/lib /usr/local/lib/libgdk_imlib.la -lm -L/usr/local/lib /usr/local/lib/libart_lgpl.la -lm -lz -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lICE -lSM -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -L/usr/X11R6/lib -lm -lz -lpng -lungif -lz -ljpeg -ltiff -ljpeg -lgdk_imlib -lglib -lm -laudiofile -lm -laudiofile -lesd -L/usr/local/lib /usr/local/lib/libgnomeui.la -lz -lz /usr/local/lib/libxml.la -lz -lz -lz /usr/local/lib/libxml.la -lm -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libglib.la /usr/local/lib/libgmodule.la -lintl -lglib -lgmodule /usr/local/lib/libgdk.la /usr/local/lib/libgtk.la -L/usr/X11R6/lib -L/usr/local/lib /usr/local/lib/libglade.la -lz -lz -lz /usr/local/lib/libxml.la /usr/local/lib/libglib.la -lm -lm /usr/local/lib/libaudiofile.la -lm -lm -laudiofile /usr/local/lib/libesd.la -lm -lz /usr/local/lib/libgnomesupport.la -lm -lz -lm -lglib /usr/local/lib/libgnome.la -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -lglib -lgmodule /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -lglib -lgmodule /usr/local/lib/libgtk.la -lICE -lSM -lz -lpng /usr/local/lib/libungif.la /usr/local/lib/libjpeg.la -ltiff -lm -lz -lz /usr/local/lib/libgdk_imlib.la /usr/local/lib/libart_lgpl.la -lm -lz -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lm -lz -lungif -lz -ljpeg -ljpeg -lgdk_imlib -lglib -lm -laudiofile -lm -laudiofile -lesd /usr/local/lib/libgnomeui.la -L/usr/X11R6/lib -L/usr/local/lib /usr/local/lib/libglade-gnome.la /usr/local/lib/libglib.la -lm -lm /usr/local/lib/libaudiofile.la -lm -lm -laudiofile -L/usr/local/lib /usr/local/lib/libesd.la -lm -lz -L/usr/local/lib /usr/local/lib/libgnomesupport.la -lm -lz -lm -lglib -L/usr/local/lib /usr/local/lib/libgnome.la -lX11 -lXext /usr/local/lib/libiconv.la -L/usr/local/lib -L/usr/ports/devel/gettext/w-gettext-0.10.40/gettext-0.10.40/intl/.libs /usr/local/lib/libintl.la /usr/local/lib/libgmodule.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgdk.la -lintl -lm -lX11 -lXext -L/usr/X11R6/lib -lglib -lgmodule -L/usr/local/lib /usr/local/lib/libgtk.la -lICE -lSM -lz -lpng /usr/local/lib/libungif.la /usr/local/lib/libjpeg.la -ltiff -lm -lz -lpng /usr/local/lib/libungif.la -lz /usr/local/lib/libjpeg.la -ltiff -L/usr/local/lib -L/usr/X11R6/lib /usr/local/lib/libgdk_imlib.la -lm -L/usr/local/lib /usr/local/lib/libart_lgpl.la -lm -lz -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -lICE -lSM -lm -lX11 -lXext -lintl -lglib -lgmodule -lgdk -lgtk -L/usr/X11R6/lib -lm -lz -lpng -lungif -lz -ljpeg -ltiff -ljpeg -lgdk_imlib -lglib -lm -laudiofile -lm -laudiofile -lesd -L/usr/local/lib /usr/local/lib/libgnomeui.la -L/usr/X11R6/lib -L/usr/local/lib"
+	specialdeplibs="-lgnomeui -lart_lgpl -lgdk_imlib -ltiff -ljpeg -lungif -lpng -lz -lSM -lICE -lgtk -lgdk -lgmodule -lintl -lXext -lX11 -lgnome -lgnomesupport -lesd -laudiofile -lm -lglib"
+	for deplib in $deplibs; do
+		case $deplib in
+		-L*)
+			new_libs="$deplib $new_libs"
+			;;
+		*)
+			case " $specialdeplibs " in
+			*" $deplib "*)
+				new_libs="$deplib $new_libs";;
+			esac
+			;;
+		esac
+	done
+---
+name: oksh-varfunction
+description:
+	$OpenBSD: varfunction.sh,v 1.1 2003/12/15 05:28:40 otto Exp $
+	Calling
+		FOO=bar f
+	where f is a ksh style function, should not set FOO in the current
+	env. If f is a bourne style function, FOO should be set. Furthermore,
+	the function should receive a correct value of FOO. Additionally,
+	setting FOO in the function itself should not change the value in
+	global environment.
+	Inspired by PR 2450.
+stdin:
+	function k {
+		if [ x$FOO != xbar ]; then
+			echo 1
+			return 1
+		fi
+		x=$(env | grep FOO)
+		if [ "x$x" != "xFOO=bar" ]; then
+			echo 2
+			return 1;
+		fi
+		FOO=foo
+		return 0
+	}
+	b () {
+		if [ x$FOO != xbar ]; then
+			echo 3
+			return 1
+		fi
+		x=$(env | grep FOO)
+		if [ "x$x" != "xFOO=bar" ]; then
+			echo 4
+			return 1;
+		fi
+		FOO=foo
+		return 0
+	}
+	FOO=bar k
+	if [ $? != 0 ]; then
+		exit 1
+	fi
+	if [ x$FOO != x ]; then
+		exit 1
+	fi
+	FOO=bar b
+	if [ $? != 0 ]; then
+		exit 1
+	fi
+	if [ x$FOO != xbar ]; then
+		exit 1
+	fi
+	FOO=barbar
+	FOO=bar k
+	if [ $? != 0 ]; then
+		exit 1
+	fi
+	if [ x$FOO != xbarbar ]; then
+		exit 1
+	fi
+	FOO=bar b
+	if [ $? != 0 ]; then
+		exit 1
+	fi
+	if [ x$FOO != xbar ]; then
+		exit 1
+	fi
+---
+name: fd-cloexec-1
+description:
+	Verify that file descriptors > 2 are private for Korn shells
+file-setup: file 644 "test.sh"
+	print -u3 Fowl
+stdin:
+	exec 3>&1
+	"$__progname" test.sh
+expected-exit: e != 0
+expected-stderr:
+	test.sh[1]: print: -u: 3: bad file descriptor
+---
+name: fd-cloexec-2
+description:
+	Verify that file descriptors > 2 are not private for POSIX shells
+	See Debian Bug #154540, Closes: #499139
+file-setup: file 644 "test.sh"
+	print -u3 Fowl
+stdin:
+	set -o posix
+	exec 3>&1
+	"$__progname" test.sh
+expected-stdout:
+	Fowl
 ---

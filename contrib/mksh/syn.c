@@ -1,8 +1,8 @@
-/*	$OpenBSD: syn.c,v 1.27 2006/04/10 14:38:59 jaredy Exp $	*/
+/*	$OpenBSD: syn.c,v 1.28 2008/07/23 16:34:38 jaredy Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.20 2008/04/01 22:20:20 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.32 2008/12/13 17:02:17 tg Exp $");
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
@@ -144,10 +144,17 @@ static struct ioword *
 synio(int cf)
 {
 	struct ioword *iop;
+	static struct ioword *nextiop = NULL;
 	int ishere;
 
+	if (nextiop != NULL) {
+		iop = nextiop;
+		nextiop = NULL;
+		return (iop);
+	}
+
 	if (tpeek(cf) != REDIR)
-		return NULL;
+		return (NULL);
 	ACCEPT;
 	iop = yylval.iop;
 	ishere = (iop->flag&IOTYPE) == IOHERE;
@@ -156,12 +163,33 @@ synio(int cf)
 		iop->delim = yylval.cp;
 		if (*ident != 0) /* unquoted */
 			iop->flag |= IOEVAL;
-		if (herep >= &heres[HERES])
+		if (herep > &heres[HERES - 1])
 			yyerror("too many <<s\n");
 		*herep++ = iop;
 	} else
 		iop->name = yylval.cp;
-	return iop;
+
+	if (iop->flag & IOBASH) {
+		char *cp;
+
+		nextiop = alloc(sizeof (*iop), ATEMP);
+		nextiop->name = cp = alloc(5, ATEMP);
+
+		if (iop->unit > 9) {
+			*cp++ = CHAR;
+			*cp++ = '0' + (iop->unit / 10);
+		}
+		*cp++ = CHAR;
+		*cp++ = '0' + (iop->unit % 10);
+		*cp = EOS;
+
+		iop->flag &= ~IOBASH;
+		nextiop->unit = 2;
+		nextiop->flag = IODUP;
+		nextiop->delim = NULL;
+		nextiop->heredoc = NULL;
+	}
+	return (iop);
 }
 
 static struct op *
@@ -186,8 +214,7 @@ get_command(int cf)
 	XPtrV args, vars;
 	struct nesting_state old_nesting;
 
-	iops = (struct ioword **) alloc(sizeofN(struct ioword *, NUFILE+1),
-	    ATEMP);
+	iops = alloc((NUFILE + 1) * sizeof (struct ioword *), ATEMP);
 	XPinit(args, 16);
 	XPinit(vars, 16);
 
@@ -195,7 +222,7 @@ get_command(int cf)
 	switch (c = token(cf|KEYWORD|ALIAS|VARASN)) {
 	default:
 		REJECT;
-		afree((void*) iops, ATEMP);
+		afree(iops, ATEMP);
 		XPfree(args);
 		XPfree(vars);
 		return NULL; /* empty line */
@@ -211,9 +238,11 @@ get_command(int cf)
 			    (XPsize(args) == 0 ? ALIAS|VARASN : CMDWORD);
 			switch (tpeek(cf)) {
 			case REDIR:
-				if (iopn >= NUFILE)
-					yyerror("too many redirections\n");
-				iops[iopn++] = synio(cf);
+				while ((iop = synio(cf)) != NULL) {
+					if (iopn >= NUFILE)
+						yyerror("too many redirections\n");
+					iops[iopn++] = iop;
+				}
 				break;
 
 			case LWORD:
@@ -346,7 +375,7 @@ get_command(int cf)
 		if (!is_wdvarname(yylval.cp, true))
 			yyerror("%s: bad identifier\n",
 			    c == FOR ? "for" : "select");
-		t->str = str_nsave(ident, strlen(ident), ATEMP);
+		strdupx(t->str, ident, ATEMP);
 		nesting_push(&old_nesting, c);
 		t->vars = wordlist();
 		t->left = dogroup();
@@ -391,6 +420,11 @@ get_command(int cf)
 	case TIME:
 		syniocf &= ~(KEYWORD|ALIAS);
 		t = pipeline(0);
+		if (t) {
+			t->str = alloc(2, ATEMP);
+			t->str[0] = '\0';	/* TF_* flags */
+			t->str[1] = '\0';
+		}
 		t = block(TTIME, t, NOBLOCK, NOWORDS);
 		break;
 
@@ -407,12 +441,11 @@ get_command(int cf)
 	}
 
 	if (iopn == 0) {
-		afree((void*)iops, ATEMP);
+		afree(iops, ATEMP);
 		t->ioact = NULL;
 	} else {
 		iops[iopn++] = NULL;
-		iops = (struct ioword **) aresize((void*) iops,
-		    sizeofN(struct ioword *, iopn), ATEMP);
+		iops = aresize(iops, iopn * sizeof (struct ioword *), ATEMP);
 		t->ioact = iops;
 	}
 
@@ -519,18 +552,17 @@ static struct op *
 casepart(int endtok)
 {
 	struct op *t;
-	int c;
 	XPtrV ptns;
 
 	XPinit(ptns, 16);
 	t = newtp(TPAT);
-	c = token(CONTIN|KEYWORD); /* no ALIAS here */
-	if (c != '(')
+	/* no ALIAS here */
+	if (token(CONTIN | KEYWORD) != '(')
 		REJECT;
 	do {
 		musthave(LWORD, 0);
 		XPput(ptns, yylval.cp);
-	} while ((c = token(0)) == '|');
+	} while (token(0) == '|');
 	REJECT;
 	XPput(ptns, NULL);
 	t->vars = (char **) XPclose(ptns);
@@ -588,13 +620,13 @@ function_body(char *name,
 		 * be used as input), we pretend there is a colon here.
 		 */
 		t->left = newtp(TCOM);
-		t->left->args = (const char **)alloc(sizeof(char *) * 2, ATEMP);
-		t->left->args[0] = tv = alloc(sizeof(char) * 3, ATEMP);
+		t->left->args = alloc(2 * sizeof (char *), ATEMP);
+		t->left->args[0] = tv = alloc(3, ATEMP);
 		tv[0] = CHAR;
 		tv[1] = ':';
 		tv[2] = EOS;
 		t->left->args[1] = NULL;
-		t->left->vars = (char **)alloc(sizeof(char *), ATEMP);
+		t->left->vars = alloc(sizeof (char *), ATEMP);
 		t->left->vars[0] = NULL;
 		t->left->lineno = 1;
 	}
@@ -771,7 +803,7 @@ newtp(int type)
 {
 	struct op *t;
 
-	t = (struct op *)alloc(sizeof(*t), ATEMP);
+	t = alloc(sizeof (struct op), ATEMP);
 	t->type = type;
 	t->u.evalflags = 0;
 	t->args = NULL;
