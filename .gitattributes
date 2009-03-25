@@ -861,7 +861,6 @@ contrib/bind9/bin/named/xfrout.c -text
 contrib/bind9/bin/named/zoneconf.c -text
 contrib/bind9/bin/nsupdate/Makefile.in -text
 contrib/bind9/bin/nsupdate/nsupdate.1 -text
-contrib/bind9/bin/nsupdate/nsupdate.8 -text
 contrib/bind9/bin/nsupdate/nsupdate.c -text
 contrib/bind9/bin/nsupdate/nsupdate.docbook -text
 contrib/bind9/bin/nsupdate/nsupdate.html -text
