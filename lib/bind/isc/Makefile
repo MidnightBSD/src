@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/bind/isc/Makefile,v 1.3 2008/04/28 00:03:14 laffer1 Exp $
+# $MidnightBSD: src/lib/bind/isc/Makefile,v 1.4 2008/11/11 16:49:47 laffer1 Exp $
 # $FreeBSD: src/lib/bind/isc/Makefile,v 1.8 2007/06/02 23:19:56 dougb Exp $
 
 .include <bsd.own.mk>
@@ -33,7 +33,7 @@ SRCS+=		inet_pton.c \
 		hash.c heap.c hex.c hmacmd5.c hmacsha.c \
 		lex.c lfsr.c lib.c log.c md5.c \
 		mem.c mutexblock.c netaddr.c netscope.c ondestroy.c \
-		parseint.c print.c quota.c random.c \
+		parseint.c portset.c print.c quota.c random.c \
 		ratelimiter.c refcount.c region.c result.c rwlock.c \
 		serial.c sha1.c sha2.c sockaddr.c string.c strtoul.c \
 		symtab.c task.c taskpool.c timer.c version.c
@@ -85,6 +85,7 @@ INCS=		${SRCDIR}/include/isc/app.h \
 		${SRCDIR}/include/isc/ondestroy.h \
 		${SRCDIR}/include/isc/os.h \
 		${SRCDIR}/include/isc/parseint.h \
+		${SRCDIR}/include/isc/portset.h \
 		${SRCDIR}/include/isc/print.h \
 		${SRCDIR}/include/isc/quota.h \
 		${SRCDIR}/include/isc/random.h \

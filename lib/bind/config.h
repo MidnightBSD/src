@@ -1,4 +1,4 @@
-/* config.h.  Generated from config.h.in by configure.  */
+/* $FreeBSD: /usr/local/www/cvsroot/FreeBSD/src/lib/bind/config.h,v 1.7.2.3 2009/01/10 03:01:18 dougb Exp $ */
 /* config.h.in.  Generated from configure.in by autoheader.  */
 /*
  * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
@@ -17,7 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: config.h,v 1.4 2008-04-18 19:01:38 laffer1 Exp $ */
+/* $Id: config.h,v 1.5 2009-03-25 19:23:09 laffer1 Exp $ */
 
 /*! \file */
 
@@ -158,6 +158,12 @@ int sigwait(const unsigned int *set, int *sig);
 /* Define if you cannot bind() before connect() for TCP sockets. */
 /* #undef BROKEN_TCP_BIND_BEFORE_CONNECT */
 
+/* Solaris hack to get select_large_fdset. */
+/* #undef FD_SETSIZE */
+
+/* Define to 1 if you have the `capset' function. */
+/* #undef HAVE_CAPSET */
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 /* #undef HAVE_DLFCN_H */
 
@@ -214,6 +220,15 @@ int sigwait(const unsigned int *set, int *sig);
 
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
+
+/* Define to 1 if you have the <sys/capability.h> header file. */
+/* #undef HAVE_SYS_CAPABILITY_H */
+
+/* Define to 1 if you have the <sys/devpoll.h> header file. */
+/* #undef HAVE_SYS_DEVPOLL_H */
+
+/* Define to 1 if you have the <sys/dyntune.h> header file. */
+/* #undef HAVE_SYS_DYNTUNE_H */
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #define HAVE_SYS_PARAM_H 1
@@ -308,3 +323,7 @@ int sigwait(const unsigned int *set, int *sig);
 
 /* Define to `unsigned long' if <sys/types.h> does not define. */
 /* #undef uintptr_t */
+
+/* Define to empty if the keyword `volatile' does not work. Warning: valid
+   code using `volatile' can become incorrect without. Disable with care. */
+/* #undef volatile */

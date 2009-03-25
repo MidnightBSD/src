@@ -1,5 +1,6 @@
+/* $MidnightBSD$ */
 /*
- * Copyright (C) 2004, 2005, 2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2007, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +16,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: platform.h,v 1.3 2008-04-18 19:01:38 laffer1 Exp $ */
+/* $Id: platform.h,v 1.4 2009-03-25 19:23:09 laffer1 Exp $ */
 
 #ifndef ISC_PLATFORM_H
 #define ISC_PLATFORM_H 1
@@ -140,6 +141,21 @@
  */
 #undef ISC_PLATFORM_FIXIN6ISADDR
 
+/*! \brief
+ * Define if the system supports kqueue multiplexing
+ */
+#define ISC_PLATFORM_HAVEKQUEUE 1
+
+/*! \brief
+ * Define if the system supports epoll multiplexing
+ */
+#undef ISC_PLATFORM_HAVEEPOLL
+
+/*! \brief
+ * Define if the system supports /dev/poll multiplexing
+ */
+#undef ISC_PLATFORM_HAVEDEVPOLL
+
 /*
  *** Printing.
  ***/
@@ -224,19 +240,19 @@
 
 /*
  * If the "xadd" operation is available on this architecture,
- * ISC_PLATFORM_HAVEXADD will be defined. 
+ * ISC_PLATFORM_HAVEXADD will be defined.
  */
 #define ISC_PLATFORM_HAVEXADD 1
 
 /*
  * If the "atomic swap" operation is available on this architecture,
- * ISC_PLATFORM_HAVEATOMICSTORE" will be defined. 
+ * ISC_PLATFORM_HAVEATOMICSTORE" will be defined.
  */
 #define ISC_PLATFORM_HAVEATOMICSTORE 1
 
 /*
  * If the "compare-and-exchange" operation is available on this architecture,
- * ISC_PLATFORM_HAVECMPXCHG will be defined. 
+ * ISC_PLATFORM_HAVECMPXCHG will be defined.
  */
 #define ISC_PLATFORM_HAVECMPXCHG 1
 
