@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.16 2009/01/04 20:30:10 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.17 2009/01/04 22:30:17 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,8 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+# 20090325:
+OLD_FILES+=usr/share/man/man8/nsupdate.8.gz
 # 20090104:
 .if ${TARGET_ARCH} != "sparc64"
 OLD_FILES+=sbin/sunlabel
