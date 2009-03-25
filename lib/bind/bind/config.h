@@ -6,6 +6,7 @@
 /* #undef HAVE_STROPTS_H */
 #define HAVE_SYS_TIMERS_H 1
 #define HAVE_SYS_SELECT_H 1
+#define HAVE_MEMORY_H 1
 /* #undef SYS_CDEFS_H */
 /* #undef _POSIX_PTHREAD_SEMANTICS */
 /* #undef POSIX_GETPWUID_R */
@@ -14,14 +15,20 @@
 /* #undef POSIX_GETGRNAM_R */
 #define HAVE_MEMMOVE 1
 #define HAVE_MEMCHR 1
+/* #undef SPRINTF_CHAR */
+/* #undef VSPRINTF_CHAR */
+#define USE_SYSERROR_LIST 1
+/* #undef NEED_STRTOUL */
+/* #undef NEED_SUN4PROTOS */
+/* #undef REENABLE_SEND */
 
 /* #undef NEED_SETGROUPENT */
 /* #undef NEED_GETGROUPLIST */
 
 /* define if prototype for getgrnam_r() is required */
-/* #undef NEED_GETGRNAM_R */
-/* #undef NEED_GETGRGID_R */
-/* #undef NEED_GETGRENT_R */
+/* #undef NEED_GETGRNAM_R  */
+/* #undef NEED_GETGRGID_R  */
+/* #undef NEED_GETGRENT_R  */
 #define NEED_SETGRENT_R 1
 #define NEED_ENDGRENT_R 1
 
@@ -44,7 +51,7 @@
 /* #undef ssize_t */
 /* #undef uintptr_t */
 
-/* Shut up warnings about sputaux in stdio.h on BSD/OS pre-4.1 */
+/* Shut up warnings about sputaux in stdio.h on BSD/OS pre-4.1 */ 
 /* #undef SHUTUP_SPUTAUX */
 #ifdef SHUTUP_SPUTAUX
 struct __sFILE;
