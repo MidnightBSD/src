@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)paste.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/paste/paste.c,v 1.14 2004/06/25 01:48:43 tjr Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/paste/paste.c,v 1.15 2006/09/12 05:08:36 charnier Exp $");
 
 #include <sys/types.h>
 
@@ -140,7 +140,7 @@ parallel(char **argv)
 	LIST *head, *tmp;
 	int opencnt, output;
 
-	for (cnt = 0, head = NULL; (p = *argv); ++argv, ++cnt) {
+	for (cnt = 0, head = tmp = NULL; (p = *argv); ++argv, ++cnt) {
 		if ((lp = malloc(sizeof(LIST))) == NULL)
 			err(1, NULL);
 		if (p[0] == '-' && !p[1])
