@@ -1,5 +1,6 @@
 #	@(#)Makefile	0.1 (RWGrimes) 3/24/93
 # $FreeBSD: src/usr.sbin/tcpdump/tcpslice/Makefile,v 1.13 2001/07/20 06:20:21 obrien Exp $
+# $MidnightBSD$
 
 TCPDUMP_DISTDIR?= ${.CURDIR}/../../../contrib/tcpdump
 

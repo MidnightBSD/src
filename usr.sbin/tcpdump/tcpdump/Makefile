@@ -1,4 +1,5 @@
 # $FreeBSD: src/usr.sbin/tcpdump/tcpdump/Makefile,v 1.45.2.1 2007/10/19 03:04:02 mlaier Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
