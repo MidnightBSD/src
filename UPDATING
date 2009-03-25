@@ -3,6 +3,15 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20090325:
+	Update Bind to 9.4.3-P1
+
+	Update mksh to R36b
+
+	Update tcpdump to 3.9.8, fix libpcap to work with current.
+
+	Update pnpinfo, sync with FreeBSD.
+
 20090115:
 	Fix a problem with DNSSEC and BIND.
 
@@ -649,4 +658,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.50 2009/01/11 01:52:40 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.51 2009/01/16 04:21:33 laffer1 Exp $
