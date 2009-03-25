@@ -30,7 +30,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mkstr.1	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.bin/mkstr/mkstr.1,v 1.12 2003/08/22 17:55:56 dds Exp $
+.\" $FreeBSD: src/usr.bin/mkstr/mkstr.1,v 1.14 2007/03/04 08:24:13 ru Exp $
 .\"
 .Dd November 1, 2002
 .Dt MKSTR 1
@@ -41,12 +41,12 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl
-.Ar messagefile
+.Ar mesgfile
 .Ar prefix Ar
 .Sh DESCRIPTION
 The
 .Nm
-utility creates files containing error messages extracted from C source,
+utility creates a file containing error messages extracted from C source,
 and restructures the same C source, to utilize the created error message
 file.
 The intent of
@@ -58,8 +58,7 @@ section below).
 .Pp
 The
 .Nm
-utility processes each of the specified
-.Ar files ,
+utility processes each of the specified files,
 placing a restructured version of the input in a file whose name
 consists of the specified
 .Ar prefix
@@ -67,16 +66,15 @@ and the original name.
 A typical usage of
 .Nm
 is
-.Bd -literal -offset indent
-mkstr pistrings xx *.c
-.Ed
+.Pp
+.Dl "mkstr pistrings xx *.c"
 .Pp
 This command causes all the error messages from the C source
 files in the current directory to be placed in the file
-.Ar pistrings
+.Pa pistrings
 and restructured copies of the sources to be placed in
 files whose names are prefixed with
-.Ar \&xx .
+.Dq Li xx .
 .Pp
 Options:
 .Bl -tag -width indent
@@ -91,10 +89,10 @@ The
 .Nm
 utility finds error messages in the source by
 searching for the string
-.Li \&`error("'
+.Sq Li error("
 in the input stream.
 Each time it occurs, the C string starting at the
-.Sq \&"\&
+.Ql \&"
 is stored
 in the message file followed by a null character and a new-line character;
 The new source is restructured with
@@ -105,7 +103,7 @@ char efilname = "/usr/lib/pi_strings";
 int efil = -1;
 
 error(a1, a2, a3, a4)
-\&{
+{
 	char buf[256];
 
 	if (efil < 0) {
@@ -124,7 +122,7 @@ error(a1, a2, a3, a4)
 .Xr xstr 1 ,
 .Xr lseek 2
 .Sh HISTORY
-A
+An
 .Nm
 utility appeared in
 .Bx 3.0 .

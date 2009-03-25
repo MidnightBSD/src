@@ -6,11 +6,12 @@
  * this stuff is worth it, you can buy me a beer in return.       Maxim Sobolev
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/usr.bin/mkuzip/mkuzip.c,v 1.4 2005/05/11 17:02:38 fjoe Exp $
+ * $FreeBSD: src/usr.bin/mkuzip/mkuzip.c,v 1.6 2007/03/06 17:04:15 fjoe Exp $
  *
  */
 
 #include <sys/types.h>
+#include <sys/disk.h>
 #include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -122,9 +123,27 @@ int main(int argc, char **argv)
 	signal(SIGXFSZ, exit);
 	atexit(cleanup);
 
-	if (stat(iname, &sb) != 0) {
-		err(1, "%s", iname);
+	fdr = open(iname, O_RDONLY);
+	if (fdr < 0) {
+		err(1, "open(%s)", iname);
 		/* Not reached */
+	}
+	if (fstat(fdr, &sb) != 0) {
+		err(1, "fstat(%s)", iname);
+		/* Not reached */
+	}
+	if (S_ISCHR(sb.st_mode)) {
+		off_t ms;
+
+		if (ioctl(fdr, DIOCGMEDIASIZE, &ms) < 0) {
+			err(1, "ioctl(DIOCGMEDIASIZE)");
+			/* Not reached */
+		}
+		sb.st_size = ms;
+	} else if (!S_ISREG(sb.st_mode)) {
+		fprintf(stderr, "%s: not a character device or regular file\n",
+			iname);
+		exit(1);
 	}
 	hdr.nblocks = sb.st_size / hdr.blksz;
 	if ((sb.st_size % hdr.blksz) != 0) {
@@ -135,15 +154,10 @@ int main(int argc, char **argv)
 	}
 	toc = safe_malloc((hdr.nblocks + 1) * sizeof(*toc));
 
-	fdr = open(iname, O_RDONLY);
-	if (fdr < 0) {
-		err(1, "%s", iname);
-		/* Not reached */
-	}
 	fdw = open(oname, O_WRONLY | O_TRUNC | O_CREAT,
 		   S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	if (fdw < 0) {
-		err(1, "%s", oname);
+		err(1, "open(%s)", oname);
 		/* Not reached */
 	}
 	cleanfile = oname;
@@ -185,7 +199,7 @@ int main(int argc, char **argv)
 				    DEV_BSIZE);
 		}
 		if (write(fdw, obuf, destlen) < 0) {
-			err(1, "%s", oname);
+			err(1, "write(%s)", oname);
 			/* Not reached */
 		}
 		toc[i] = htobe64(offset);
@@ -204,7 +218,7 @@ int main(int argc, char **argv)
 	/* Write headers into pre-allocated space */
 	lseek(fdw, 0, SEEK_SET);
 	if (writev(fdw, iov, 2) < 0) {
-		err(1, "%s", oname);
+		err(1, "writev(%s)", oname);
 		/* Not reached */
 	}
 	cleanfile = NULL;

@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)yacc.y	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/mklocale/yacc.y,v 1.25 2005/05/16 09:32:41 ru Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/mklocale/yacc.y,v 1.27 2007/09/21 01:55:11 kevlo Exp $");
 
 #include <arpa/inet.h>
 
@@ -227,14 +227,14 @@ main(int ac, char *av[])
 
     fp = stdout;
 
-    while ((x = getopt(ac, av, "do:")) != EOF) {
+    while ((x = getopt(ac, av, "do:")) != -1) {
 	switch(x) {
 	case 'd':
 	    debug = 1;
 	    break;
 	case 'o':
 	    locale_file = optarg;
-	    if ((fp = fopen(locale_file, "w")) == 0)
+	    if ((fp = fopen(locale_file, "w")) == NULL)
 		err(1, "%s", locale_file);
 	    atexit(cleanout);
 	    break;

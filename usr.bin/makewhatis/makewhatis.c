@@ -27,12 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/makewhatis/makewhatis.c,v 1.9 2002/09/04 23:29:04 dwmalone Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/makewhatis/makewhatis.c,v 1.10.2.1 2007/10/18 12:55:27 edwin Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/queue.h>
+#include <sys/utsname.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -98,7 +99,7 @@ static const char *whatis_name="whatis";/* -n option: the name */
 static char *common_output;		/* -o option: the single output file */
 static char *locale;			/* user's locale if -L is used */
 static char *lang_locale;		/* short form of locale */
-static const char *machine;
+static const char *machine, *machine_arch;
 
 static int exit_code;			/* exit code to use when finished */
 static SLIST_HEAD(, visited_dir) visited_dirs =
@@ -725,6 +726,8 @@ process_page(struct page_info *page, char *section_dir)
 		case STATE_MANSTYLE:
 			if (strncmp(line, ".SH", 3) == 0)
 				break;
+			if (strncmp(line, ".SS", 3) == 0)
+				break;
 			trim_rhs(line);
 			if (strcmp(line, ".") == 0)
 				continue;
@@ -921,6 +924,12 @@ process_mandir(char *dir_name)
 		    entries[i]->d_name, machine);
 		if (stat(section_dir, &st) == 0 && S_ISDIR(st.st_mode))
 			process_section(section_dir);
+		if (strcmp(machine_arch, machine) != 0) {
+			snprintf(section_dir, sizeof section_dir, "%s/%s/%s",
+			    dir_name, entries[i]->d_name, machine_arch);
+			if (stat(section_dir, &st) == 0 && S_ISDIR(st.st_mode))
+				process_section(section_dir);
+		}
 		free(entries[i]);
 	}
 	free(entries);
@@ -1011,8 +1020,16 @@ main(int argc, char **argv)
 	whatis_proto = new_sbuf();
 	whatis_final = new_sbuf();
 
-	if ((machine = getenv("MACHINE")) == NULL)
-		machine = MACHINE;
+	if ((machine = getenv("MACHINE")) == NULL) {
+		static struct utsname utsname;
+
+		if (uname(&utsname) == -1)
+			err(1, "uname");
+		machine = utsname.machine;
+	}
+
+	if ((machine_arch = getenv("MACHINE_ARCH")) == NULL)
+		machine_arch = MACHINE_ARCH;
 
 	if (common_output != NULL && (fp = open_output(common_output)) == NULL)
 		err(1, "%s", common_output);
