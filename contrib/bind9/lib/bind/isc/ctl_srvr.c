@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: ctl_srvr.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
+static const char rcsid[] = "$Id: ctl_srvr.c,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $";
 #endif /* not lint */
 
 /*
@@ -40,6 +40,9 @@ static const char rcsid[] = "$Id: ctl_srvr.c,v 1.1.1.3 2008-04-18 18:31:33 laffe
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef HAVE_MEMORY_H
+#include <memory.h>
+#endif
 
 #include <isc/assertions.h>
 #include <isc/ctl.h>

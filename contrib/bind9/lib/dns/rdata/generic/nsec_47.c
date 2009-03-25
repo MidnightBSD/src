@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,11 +15,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: nsec_47.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $ */
+/* $Id: nsec_47.c,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $ */
 
 /* reviewed: Wed Mar 15 18:21:15 PST 2000 by brister */
 
-/* draft-ietf-dnsext-nsec-rdata-01.txt */
+/* RFC 3845 */
 
 #ifndef RDATA_GENERIC_NSEC_47_C
 #define RDATA_GENERIC_NSEC_47_C
@@ -255,7 +255,7 @@ fromstruct_nsec(ARGS_FROMSTRUCT) {
 		window = nsec->typebits[i];
 		len = nsec->typebits[i+1];
 		i += 2;
-		INSIST(first || window > lastwindow); 
+		INSIST(first || window > lastwindow);
 		INSIST(len > 0 && len <= 32);
 		INSIST(i + len <= nsec->len);
 		INSIST(nsec->typebits[i + len - 1] != 0);

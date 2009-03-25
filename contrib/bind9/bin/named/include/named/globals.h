@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2006, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: globals.h,v 1.1.1.4 2008-04-18 18:31:31 laffer1 Exp $ */
+/* $Id: globals.h,v 1.1.1.5 2009-03-25 17:51:25 laffer1 Exp $ */
 
 #ifndef NAMED_GLOBALS_H
 #define NAMED_GLOBALS_H 1
@@ -48,6 +48,7 @@ EXTERN isc_taskmgr_t *		ns_g_taskmgr		INIT(NULL);
 EXTERN dns_dispatchmgr_t *	ns_g_dispatchmgr	INIT(NULL);
 EXTERN isc_entropy_t *		ns_g_entropy		INIT(NULL);
 EXTERN isc_entropy_t *		ns_g_fallbackentropy	INIT(NULL);
+EXTERN unsigned int		ns_g_cpus_detected	INIT(1);
 
 /*
  * XXXRTH  We're going to want multiple timer managers eventually.  One

@@ -16,7 +16,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: assertions.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
+static const char rcsid[] = "$Id: assertions.c,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $";
 #endif
 
 #include "port_before.h"
@@ -78,6 +78,7 @@ assertion_type_to_text(assertion_type type) {
  * Private.
  */
 
+/* coverity[+kill] */
 static void
 default_assertion_failed(const char *file, int line, assertion_type type,
 			 const char *cond, int print_errno)

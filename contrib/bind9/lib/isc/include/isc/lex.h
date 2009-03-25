@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1998-2002  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: lex.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: lex.h,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $ */
 
 #ifndef ISC_LEX_H
 #define ISC_LEX_H 1
@@ -86,7 +86,7 @@ ISC_LANG_BEGINDECLS
 #define ISC_LEXOPT_DNSMULTILINE		0x20	/*%< Handle '(' and ')'. */
 #define ISC_LEXOPT_NOMORE		0x40	/*%< Want "no more" token. */
 
-#define ISC_LEXOPT_CNUMBER		0x80    /*%< Regognize octal and hex. */
+#define ISC_LEXOPT_CNUMBER		0x80    /*%< Recognize octal and hex. */
 #define ISC_LEXOPT_ESCAPE		0x100	/*%< Recognize escapes. */
 #define ISC_LEXOPT_QSTRINGMULTILINE	0x200	/*%< Allow multiline "" strings */
 #define ISC_LEXOPT_OCTAL		0x400	/*%< Expect a octal number. */

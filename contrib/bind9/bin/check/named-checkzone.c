@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1999-2003  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: named-checkzone.c,v 1.1.1.3 2008-04-18 18:31:31 laffer1 Exp $ */
+/* $Id: named-checkzone.c,v 1.1.1.4 2009-03-25 17:51:25 laffer1 Exp $ */
 
 /*! \file */
 
@@ -77,8 +77,9 @@ usage(void) {
 		"[-f inputformat] [-F outputformat] "
 		"[-t directory] [-w directory] [-k (ignore|warn|fail)] "
 		"[-n (ignore|warn|fail)] [-m (ignore|warn|fail)] "
-		"[-i (full|local|none)] [-M (ignore|warn|fail)] "
-		"[-S (ignore|warn|fail)] [-W (ignore|warn)] "
+		"[-i (full|full-sibling|local|local-sibling|none)] "
+		"[-M (ignore|warn|fail)] [-S (ignore|warn|fail)] "
+		"[-W (ignore|warn)] "
 		"zonename filename\n", prog_name);
 	exit(1);
 }
@@ -227,7 +228,7 @@ main(int argc, char **argv) {
 				zone_options &= ~DNS_ZONEOPT_FATALNS;
 			} else if (ARGCMP("fail")) {
 				zone_options |= DNS_ZONEOPT_CHECKNS|
-					        DNS_ZONEOPT_FATALNS;
+						DNS_ZONEOPT_FATALNS;
 			} else {
 				fprintf(stderr, "invalid argument to -n: %s\n",
 					isc_commandline_argument);

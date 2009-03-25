@@ -16,7 +16,7 @@
  */
 
 /*
- * $Id: misc.h,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $
+ * $Id: misc.h,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $
  */
 
 #ifndef _ISC_MISC_H
@@ -25,6 +25,7 @@
 /*! \file */
 
 #include <stdio.h>
+#include <sys/types.h>
 
 #define	bitncmp		__bitncmp
 /*#define isc_movefile	__isc_movefile */

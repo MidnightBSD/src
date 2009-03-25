@@ -16,7 +16,7 @@
  */
 
 #if !defined(LINT) && !defined(CODECENTER)
-static const char rcsid[] = "$Id: logging.c,v 1.1.1.3 2008-04-18 18:31:33 laffer1 Exp $";
+static const char rcsid[] = "$Id: logging.c,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $";
 #endif /* not lint */
 
 #include "port_before.h"
@@ -42,12 +42,6 @@ static const char rcsid[] = "$Id: logging.c,v 1.1.1.3 2008-04-18 18:31:33 laffer
 #include <isc/misc.h>
 
 #include "port_after.h"
-
-#ifdef VSPRINTF_CHAR
-# define VSPRINTF(x) strlen(vsprintf/**/x)
-#else
-# define VSPRINTF(x) ((size_t)vsprintf x)
-#endif
 
 #include "logging_p.h"
 
@@ -363,8 +357,8 @@ log_vwrite(log_context lc, int category, int level, const char *format,
 			continue;
 
 		if (!did_vsprintf) {
-			if (VSPRINTF((lc->buffer, format, args)) >
-			    (size_t)LOG_BUFFER_SIZE) {
+			(void)vsprintf(lc->buffer, format, args);
+			if (strlen(lc->buffer) > (size_t)LOG_BUFFER_SIZE) {
 				syslog(LOG_CRIT,
 				       "memory overrun in log_vwrite()");
 				exit(1);

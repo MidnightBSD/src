@@ -860,6 +860,7 @@ contrib/bind9/bin/named/update.c -text
 contrib/bind9/bin/named/xfrout.c -text
 contrib/bind9/bin/named/zoneconf.c -text
 contrib/bind9/bin/nsupdate/Makefile.in -text
+contrib/bind9/bin/nsupdate/nsupdate.1 -text
 contrib/bind9/bin/nsupdate/nsupdate.8 -text
 contrib/bind9/bin/nsupdate/nsupdate.c -text
 contrib/bind9/bin/nsupdate/nsupdate.docbook -text
@@ -996,6 +997,7 @@ contrib/bind9/doc/misc/options -text
 contrib/bind9/doc/misc/rfc-compliance -text
 contrib/bind9/doc/misc/roadmap -text
 contrib/bind9/doc/misc/sdb -text
+contrib/bind9/doc/misc/sort-options.pl -text
 contrib/bind9/doc/rfc/index -text
 contrib/bind9/doc/rfc/rfc1032.txt -text
 contrib/bind9/doc/rfc/rfc1033.txt -text
@@ -1102,6 +1104,9 @@ contrib/bind9/doc/rfc/rfc4431.txt -text
 contrib/bind9/doc/rfc/rfc4470.txt -text
 contrib/bind9/doc/rfc/rfc4634.txt -text
 contrib/bind9/doc/rfc/rfc4641.txt -text
+contrib/bind9/doc/rfc/rfc4648.txt -text
+contrib/bind9/doc/rfc/rfc4701.txt -text
+contrib/bind9/doc/rfc/rfc5155.txt -text
 contrib/bind9/doc/rfc/rfc952.txt -text
 contrib/bind9/doc/xsl/Makefile.in -text
 contrib/bind9/doc/xsl/copyright.xsl -text
@@ -1165,6 +1170,7 @@ contrib/bind9/lib/bind/include/isc/list.h -text
 contrib/bind9/lib/bind/include/isc/logging.h -text
 contrib/bind9/lib/bind/include/isc/memcluster.h -text
 contrib/bind9/lib/bind/include/isc/misc.h -text
+contrib/bind9/lib/bind/include/isc/platform.h.in -text
 contrib/bind9/lib/bind/include/isc/tree.h -text
 contrib/bind9/lib/bind/include/netdb.h -text
 contrib/bind9/lib/bind/include/netgroup.h -text
@@ -1669,6 +1675,7 @@ contrib/bind9/lib/isc/include/isc/ondestroy.h -text
 contrib/bind9/lib/isc/include/isc/os.h -text
 contrib/bind9/lib/isc/include/isc/parseint.h -text
 contrib/bind9/lib/isc/include/isc/platform.h.in -text
+contrib/bind9/lib/isc/include/isc/portset.h -text
 contrib/bind9/lib/isc/include/isc/print.h -text
 contrib/bind9/lib/isc/include/isc/quota.h -text
 contrib/bind9/lib/isc/include/isc/random.h -text
@@ -1728,6 +1735,7 @@ contrib/bind9/lib/isc/nothreads/mutex.c -text
 contrib/bind9/lib/isc/nothreads/thread.c -text
 contrib/bind9/lib/isc/ondestroy.c -text
 contrib/bind9/lib/isc/parseint.c -text
+contrib/bind9/lib/isc/portset.c -text
 contrib/bind9/lib/isc/powerpc/Makefile.in -text
 contrib/bind9/lib/isc/powerpc/include/Makefile.in -text
 contrib/bind9/lib/isc/powerpc/include/isc/Makefile.in -text

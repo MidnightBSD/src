@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2004, 2005  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004, 2005, 2008  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 2000, 2001  Internet Software Consortium.
  *
- * Permission to use, copy, modify, and distribute this software for any
+ * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: socket_p.h,v 1.1.1.3 2008-04-18 18:31:32 laffer1 Exp $ */
+/* $Id: socket_p.h,v 1.1.1.4 2009-03-25 17:51:27 laffer1 Exp $ */
 
 #ifndef ISC_SOCKET_P_H
 #define ISC_SOCKET_P_H
@@ -26,10 +26,7 @@
 #include <sys/select.h>
 #endif
 
-void
-isc__socketmgr_getfdsets(fd_set *readset, fd_set *writeset, int *maxfd);
-
-isc_result_t
-isc__socketmgr_dispatch(fd_set *readset, fd_set *writeset, int maxfd);
-
+typedef struct isc_socketwait isc_socketwait_t;
+int isc__socketmgr_waitevents(struct timeval *, isc_socketwait_t **);
+isc_result_t isc__socketmgr_dispatch(isc_socketwait_t *);
 #endif /* ISC_SOCKET_P_H */
