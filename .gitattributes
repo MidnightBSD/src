@@ -9065,6 +9065,7 @@ contrib/lukemftpd/src/popen.c -text
 contrib/lukemftpd/src/version.h -text
 contrib/lukemftpd/todo -text
 contrib/mksh/Build.sh -text
+contrib/mksh/MIDNIGHTBSD-upgrade -text
 contrib/mksh/alloc.c -text
 contrib/mksh/check.pl -text
 contrib/mksh/check.t -text

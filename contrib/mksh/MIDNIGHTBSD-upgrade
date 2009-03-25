@@ -1,0 +1,15 @@
+$MidnightBSD$
+
+Directions for updating MKSH (work in progress)
+
+1) Obtain the latest sources
+2) Unpack sources.
+3) Perform a test import (change version number as needed)
+cvs -q -n import -m "Virgin import of MKSH R36b" src/contrib/mksh MIROS vR36b
+
+4) if all goes well, 
+cvs import -m "Virgin import of MKSH R36b" src/contrib/mksh MIROS vR36b
+
+5) Check the Makefile in src/bin/mksh and the Build script for changes.
+
+6) update the dot file used for skel if needed.
