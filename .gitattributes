@@ -35917,6 +35917,7 @@ usr.bin/tip/tip/acu.c -text
 usr.bin/tip/tip/acutab.c -text
 usr.bin/tip/tip/cmds.c -text
 usr.bin/tip/tip/cmdtab.c -text
+usr.bin/tip/tip/cu.1 -text
 usr.bin/tip/tip/cu.c -text
 usr.bin/tip/tip/hunt.c -text
 usr.bin/tip/tip/log.c -text
