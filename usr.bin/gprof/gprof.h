@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)gprof.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.bin/gprof/gprof.h,v 1.24 2004/10/03 18:22:35 stefanf Exp $
+ * $FreeBSD: src/usr.bin/gprof/gprof.h,v 1.25 2006/08/23 12:11:18 ru Exp $
  */
 
 #include <sys/types.h>
@@ -41,9 +41,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if __alpha__
-#   include "alpha.h"
-#endif
 #if __amd64__
 #   include "amd64.h"
 #endif

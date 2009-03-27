@@ -38,7 +38,7 @@ static char sccsid[] = "@(#)printgprof.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gprof/printgprof.c,v 1.12 2004/05/24 12:44:00 stefanf Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/gprof/printgprof.c,v 1.13 2005/10/07 10:59:41 bde Exp $");
 
 #include <err.h>
 #include <string.h>
@@ -130,7 +130,8 @@ flatprofline( np )
     register nltype	*np;
 {
 
-    if ( zflag == 0 && np -> ncall == 0 && np -> time == 0 ) {
+    if ( zflag == 0 && np -> ncall == 0 && np -> time == 0 &&
+	 np -> childtime == 0 ) {
 	return;
     }
     actime += np -> time;
@@ -153,6 +154,9 @@ flatprofline( np )
 	    printf( " %8ld %8.2f %8.2f  " , np -> ncall ,
 		1000 * np -> time / hz / np -> ncall ,
 		1000 * ( np -> time + np -> childtime ) / hz / np -> ncall );
+    } else if ( np -> time != 0 || np -> childtime != 0 ) {
+	printf( " %8ld %7.2f%% %8.8s  " , np -> ncall ,
+	    100 * np -> time / ( np -> time + np -> childtime ) , "" );
     } else {
 	printf( " %8.8s %8.8s %8.8s  " , "" , "" , "" );
     }

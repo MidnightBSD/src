@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/killall/killall.c,v 1.31 2004/07/29 18:36:35 maxim Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/killall/killall.c,v 1.31.18.1 2007/11/14 19:18:40 ru Exp $");
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -154,11 +154,12 @@ main(int ac, char **av)
 			switch (**av) {
 			case 'j':
 				++*av;
-				if (**av == '\0')
+				if (**av == '\0') {
 					++av;
-				--ac;
+					--ac;
+				}
 				jflag++;
-				if (!*av)
+				if (*av == NULL)
 				    	errx(1, "must specify jid");
 				jid = strtol(*av, &ep, 10);
 				if (!*av || *ep)
@@ -168,23 +169,32 @@ main(int ac, char **av)
 				break;
 			case 'u':
 				++*av;
-				if (**av == '\0')
+				if (**av == '\0') {
 					++av;
-				--ac;
+					--ac;
+				}
+				if (*av == NULL)
+				    	errx(1, "must specify user");
 				user = *av;
 				break;
 			case 't':
 				++*av;
-				if (**av == '\0')
+				if (**av == '\0') {
 					++av;
-				--ac;
+					--ac;
+				}
+				if (*av == NULL)
+				    	errx(1, "must specify tty");
 				tty = *av;
 				break;
 			case 'c':
 				++*av;
-				if (**av == '\0')
+				if (**av == '\0') {
 					++av;
-				--ac;
+					--ac;
+				}
+				if (*av == NULL)
+				    	errx(1, "must specify procname");
 				cmd = *av;
 				break;
 			case 'v':
