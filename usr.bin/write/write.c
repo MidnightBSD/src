@@ -47,7 +47,7 @@ static char sccsid[] = "@(#)write.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/write/write.c,v 1.18 2005/01/05 11:52:40 cognet Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/write/write.c,v 1.18.10.1 2007/11/21 16:25:00 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/signal.h>
@@ -76,7 +76,6 @@ int utmp_chk(char *, char *);
 int
 main(int argc, char **argv)
 {
-	char *cp;
 	time_t atime;
 	uid_t myuid;
 	int msgsok, myttyfd;
@@ -100,8 +99,8 @@ main(int argc, char **argv)
 		errx(1, "can't find your tty");
 	if (!(mytty = ttyname(myttyfd)))
 		errx(1, "can't find your tty's name");
-	if ((cp = rindex(mytty, '/')))
-		mytty = cp + 1;
+	if (!strncmp(mytty, _PATH_DEV, strlen(_PATH_DEV)))
+		mytty += strlen(_PATH_DEV);
 	if (term_chk(mytty, &msgsok, &atime, 1))
 		exit(1);
 	if (!msgsok)
