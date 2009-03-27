@@ -1,4 +1,4 @@
-# $MidnightBSD: src/bin/mksh/Makefile,v 1.2 2008/03/03 22:20:56 laffer1 Exp $
+# $MidnightBSD: src/bin/mksh/Makefile,v 1.3 2008/04/17 23:13:56 laffer1 Exp $
 
 MKSHDIR= ${.CURDIR}/../../contrib/mksh
 .PATH: ${MKSHDIR}
@@ -24,11 +24,11 @@ CFLAGS+=	-DHAVE_EXPSTMT=1 -DHAVE_ATTRIBUTE=1 \
 		-DHAVE_STRCASESTR=1 -DHAVE_STRLCPY=1 -DHAVE_ARC4RANDOM_DECL=1 \
 		-DHAVE_ARC4RANDOM_PUSH_DECL=1 -DHAVE_SYS_SIGLIST_DECL=1 \
 		-DHAVE_PERSISTENT_HISTORY=1 -DHAVE_MKNOD=1
-LDFLAGS+=-static
 WARNS?=	6
 MAN=	mksh.1 
 
-LINKS=	${BINDIR}/mksh ${BINDIR}/rksh ${BINDIR}/mksh ${BINDIR}/ksh
+LINKS=	${BINDIR}/mksh ${BINDIR}/rksh
+LINKS+=	${BINDIR}/mksh ${BINDIR}/ksh
 MLINKS=	mksh.1 rksh.1 mksh.1 ulimit.1 mksh.1 ksh.1
 
 .include <bsd.prog.mk>
