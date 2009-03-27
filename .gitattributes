@@ -36024,9 +36024,6 @@ usr.bin/uuencode/Makefile -text
 usr.bin/uuencode/uuencode.1 -text
 usr.bin/uuencode/uuencode.c -text
 usr.bin/uuencode/uuencode.format.5 -text
-usr.bin/uuidgen/Makefile -text
-usr.bin/uuidgen/uuidgen.1 -text
-usr.bin/uuidgen/uuidgen.c -text
 usr.bin/vacation/Makefile -text
 usr.bin/vgrind/Makefile -text
 usr.bin/vgrind/RETEST/Makefile -text
