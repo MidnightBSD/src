@@ -3,6 +3,13 @@ Updating Information for MidnightBSD users
 Items affecting the mports and packages system can be found in
 /usr/mports/UPDATING. 
 
+20090327:
+	Update libarchive to 2.5.5, tar, and add bsdcpio.
+
+	Also previously, ctriv has been connecting Perl 5.10
+	to the build (part of os).  This will have an impact
+	on mports.
+
 20090325:
 	Update Bind to 9.4.3-P1
 
@@ -658,4 +665,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.51 2009/01/16 04:21:33 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.52 2009/03/25 18:09:08 laffer1 Exp $
