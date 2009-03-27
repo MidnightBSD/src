@@ -1,0 +1,23 @@
+# $MidnightBSD$
+# $FreeBSD: src/usr.bin/cpio/Makefile,v 1.6 2008/12/06 07:30:40 kientzle Exp $
+
+.include <bsd.own.mk>
+
+PROG=	bsdcpio
+BSDCPIO_VERSION_STRING=1.1.0
+SRCS=	cpio.c cmdline.c err.c matching.c pathmatch.c
+WARNS?=	6
+DPADD=	${LIBARCHIVE} ${LIBZ} ${LIBBZ2}
+CFLAGS+= -DBSDCPIO_VERSION_STRING=\"${BSDCPIO_VERSION_STRING}\"
+CFLAGS+= -DPLATFORM_CONFIG_H=\"config_midnightbsd.h\"
+LDADD+=	-larchive -lz -lbz2
+
+SYMLINKS=bsdcpio ${BINDIR}/cpio
+MLINKS= bsdcpio.1 cpio.1
+
+.PHONY: check test
+
+check test: $(PROG) bsdcpio.1.gz
+	cd ${.CURDIR}/test && make clean test
+
+.include <bsd.prog.mk>
