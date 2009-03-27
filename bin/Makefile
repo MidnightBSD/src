@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.9 2008/11/11 22:40:37 laffer1 Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.10 2009/03/27 22:04:42 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -43,7 +43,8 @@ SUBDIR= cat \
 	sleep \
 	stty \
 	sync \
-	test
+	test \
+	uuidgen
 
 .if ${MK_RCMDS} != "no"
 _rcp=	rcp
