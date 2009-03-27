@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/test/test.h,v 1.6 2007/07/14 17:52:01 kientzle Exp $
+ * $FreeBSD: src/lib/libarchive/test/test.h,v 1.6.2.4 2008/08/10 04:32:47 kientzle Exp $
  */
 
 /* Every test program should #include "test.h" as the first thing. */
@@ -31,22 +31,6 @@
  * The goal of this file (and the matching test.c) is to
  * simplify the very repetitive test-*.c test programs.
  */
-
-#define _FILE_OFFSET_BITS 64
-
-#include <archive.h>
-#include <archive_entry.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <wchar.h>
-
-#ifdef USE_DMALLOC
-#include <dmalloc.h>
-#endif
-
 #if defined(HAVE_CONFIG_H)
 /* Most POSIX platforms use the 'configure' script to build config.h */
 #include "../../config.h"
@@ -61,12 +45,112 @@
 #error Oops: No config.h and no pre-built configuration in test.h.
 #endif
 
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+#include <wchar.h>
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
+
 /* No non-FreeBSD platform will have __FBSDID, so just define it here. */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>  /* For __FBSDID */
 #else
 #define	__FBSDID(a)     /* null */
 #endif
+
+/*
+ * Redefine DEFINE_TEST for use in defining the test functions.
+ */
+#undef DEFINE_TEST
+#define DEFINE_TEST(name) void name(void); void name(void)
+
+/* An implementation of the standard assert() macro */
+#define assert(e)   test_assert(__FILE__, __LINE__, (e), #e, NULL)
+
+/* Assert two integers are the same.  Reports value of each one if not. */
+#define assertEqualInt(v1,v2)   \
+  test_assert_equal_int(__FILE__, __LINE__, (v1), #v1, (v2), #v2, NULL)
+
+/* Assert two strings are the same.  Reports value of each one if not. */
+#define assertEqualString(v1,v2)   \
+  test_assert_equal_string(__FILE__, __LINE__, (v1), #v1, (v2), #v2, NULL)
+/* As above, but v1 and v2 are wchar_t * */
+#define assertEqualWString(v1,v2)   \
+  test_assert_equal_wstring(__FILE__, __LINE__, (v1), #v1, (v2), #v2, NULL)
+/* As above, but raw blocks of bytes. */
+#define assertEqualMem(v1, v2, l)	\
+  test_assert_equal_mem(__FILE__, __LINE__, (v1), #v1, (v2), #v2, (l), #l, NULL)
+/* Assert two files are the same; allow printf-style expansion of second name.
+ * See below for comments about variable arguments here...
+ */
+#define assertEqualFile		\
+  test_setup(__FILE__, __LINE__);test_assert_equal_file
+/* Assert that a file is empty; supports printf-style arguments. */
+#define assertEmptyFile		\
+  test_setup(__FILE__, __LINE__);test_assert_empty_file
+/* Assert that a file exists; supports printf-style arguments. */
+#define assertFileExists		\
+  test_setup(__FILE__, __LINE__);test_assert_file_exists
+/* Assert that a file exists; supports printf-style arguments. */
+#define assertFileNotExists		\
+  test_setup(__FILE__, __LINE__);test_assert_file_not_exists
+/* Assert that file contents match a string; supports printf-style arguments. */
+#define assertFileContents             \
+  test_setup(__FILE__, __LINE__);test_assert_file_contents
+
+/*
+ * This would be simple with C99 variadic macros, but I don't want to
+ * require that.  Instead, I insert a function call before each
+ * skipping() call to pass the file and line information down.  Crude,
+ * but effective.
+ */
+#define skipping	\
+  test_setup(__FILE__, __LINE__);test_skipping
+
+/* Function declarations.  These are defined in test_utility.c. */
+void failure(const char *fmt, ...);
+void test_setup(const char *, int);
+void test_skipping(const char *fmt, ...);
+int test_assert(const char *, int, int, const char *, void *);
+int test_assert_empty_file(const char *, ...);
+int test_assert_equal_file(const char *, const char *, ...);
+int test_assert_equal_int(const char *, int, int, const char *, int, const char *, void *);
+int test_assert_equal_string(const char *, int, const char *v1, const char *, const char *v2, const char *, void *);
+int test_assert_equal_wstring(const char *, int, const wchar_t *v1, const char *, const wchar_t *v2, const char *, void *);
+int test_assert_equal_mem(const char *, int, const char *, const char *, const char *, const char *, size_t, const char *, void *);
+int test_assert_file_contents(const void *, int, const char *, ...);
+int test_assert_file_exists(const char *, ...);
+int test_assert_file_not_exists(const char *, ...);
+
+/* Like sprintf, then system() */
+int systemf(const char * fmt, ...);
+
+/* Suck file into string allocated via malloc(). Call free() when done. */
+/* Supports printf-style args: slurpfile(NULL, "%s/myfile", refdir); */
+char *slurpfile(size_t *, const char *fmt, ...);
+
+/* Extracts named reference file to the current directory. */
+void extract_reference_file(const char *);
+
+/*
+ * Special interfaces for libarchive test harness.
+ */
+
+#include "archive.h"
+#include "archive_entry.h"
+
+/* Special customized read-from-memory interface. */
+int read_open_memory(struct archive *, void *, size_t, size_t);
 
 /*
  * ARCHIVE_VERSION_STAMP first appeared in 1.9 and libarchive 2.2.4.
@@ -79,61 +163,9 @@
 		(ARCHIVE_API_VERSION * 1000000 + ARCHIVE_API_FEATURE * 1000)
 #endif
 
-
-/*
- * "list.h" is simply created by "grep DEFINE_TEST"; it has
- * a line like
- *      DEFINE_TEST(test_function)
- * for each test.
- * Include it here with a suitable DEFINE_TEST to declare all of the
- * test functions.
- */
-#define DEFINE_TEST(name) void name(void);
-#include "list.h"
-/*
- * Redefine DEFINE_TEST for use in defining the test functions.
- */
-#undef DEFINE_TEST
-#define DEFINE_TEST(name) void name(void)
-
-/* An implementation of the standard assert() macro */
-#define assert(e)   test_assert(__FILE__, __LINE__, (e), #e, NULL)
-/* As above, but reports any archive_error found in variable 'a' */
+/* Versions of above that accept an archive argument for additional info. */
 #define assertA(e)   test_assert(__FILE__, __LINE__, (e), #e, (a))
-
-/* Asserts that two integers are the same.  Reports value of each one if not. */
 #define assertEqualIntA(a,v1,v2)   \
   test_assert_equal_int(__FILE__, __LINE__, (v1), #v1, (v2), #v2, (a))
-#define assertEqualInt(v1,v2)   \
-  test_assert_equal_int(__FILE__, __LINE__, (v1), #v1, (v2), #v2, NULL)
-
-/* Asserts that two strings are the same.  Reports value of each one if not. */
 #define assertEqualStringA(a,v1,v2)   \
   test_assert_equal_string(__FILE__, __LINE__, (v1), #v1, (v2), #v2, (a))
-#define assertEqualString(v1,v2)   \
-  test_assert_equal_string(__FILE__, __LINE__, (v1), #v1, (v2), #v2, NULL)
-/* As above, but v1 and v2 are wchar_t * */
-#define assertEqualWString(v1,v2)   \
-  test_assert_equal_wstring(__FILE__, __LINE__, (v1), #v1, (v2), #v2, NULL)
-
-/*
- * This would be simple with C99 variadic macros, but I don't want to
- * require that.  Instead, I insert a function call before each
- * skipping() call to pass the file and line information down.  Crude,
- * but effective.
- */
-#define skipping	\
-  skipping_setup(__FILE__, __LINE__);test_skipping
-
-/* Function declarations.  These are defined in test_utility.c. */
-void failure(const char *fmt, ...);
-void skipping_setup(const char *, int);
-void test_skipping(const char *fmt, ...);
-void test_assert(const char *, int, int, const char *, struct archive *);
-void test_assert_equal_int(const char *, int, int, const char *, int, const char *, struct archive *);
-void test_assert_equal_string(const char *, int, const char *v1, const char *, const char *v2, const char *, struct archive *);
-void test_assert_equal_wstring(const char *, int, const wchar_t *v1, const char *, const wchar_t *v2, const char *, struct archive *);
-
-/* Special customized read-from-memory interface. */
-int read_open_memory(struct archive *, void *, size_t, size_t);
-int	read_open_memory(struct archive *, void *, size_t, size_t);

@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_util.c,v 1.15 2007/07/06 15:36:38 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_util.c,v 1.15.2.3 2008/08/10 04:32:47 kientzle Exp $");
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -38,29 +38,49 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_util.c,v 1.15 2007/07/06 15:36:38
 
 #include "archive.h"
 #include "archive_private.h"
+#include "archive_string.h"
 
+#if ARCHIVE_VERSION_NUMBER < 3000000
+/* These disappear in libarchive 3.0 */
+/* Deprecated. */
 int
 archive_api_feature(void)
 {
 	return (ARCHIVE_API_FEATURE);
 }
 
+/* Deprecated. */
 int
 archive_api_version(void)
 {
 	return (ARCHIVE_API_VERSION);
 }
 
+/* Deprecated synonym for archive_version_number() */
 int
 archive_version_stamp(void)
 {
-	return (ARCHIVE_VERSION_STAMP);
+	return (archive_version_number());
 }
 
+/* Deprecated synonym for archive_version_string() */
 const char *
 archive_version(void)
 {
-	return (PACKAGE_NAME " " PACKAGE_VERSION);
+	return (archive_version_string());
+}
+#endif
+
+int
+archive_version_number(void)
+{
+	return (ARCHIVE_VERSION_NUMBER);
+}
+
+const char *
+archive_version_string(void)
+{
+	return (ARCHIVE_VERSION_STRING);
 }
 
 int

@@ -32,7 +32,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read.c,v 1.35 2007/05/29 01:00:18 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read.c,v 1.35.2.2 2008/05/10 07:03:18 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -64,25 +64,12 @@ struct archive *
 archive_read_new(void)
 {
 	struct archive_read *a;
-	unsigned char	*nulls;
 
 	a = (struct archive_read *)malloc(sizeof(*a));
 	if (a == NULL)
 		return (NULL);
 	memset(a, 0, sizeof(*a));
 	a->archive.magic = ARCHIVE_READ_MAGIC;
-	a->bytes_per_block = ARCHIVE_DEFAULT_BYTES_PER_BLOCK;
-
-	a->null_length = 1024;
-	nulls = (unsigned char *)malloc(a->null_length);
-	if (nulls == NULL) {
-		archive_set_error(&a->archive, ENOMEM,
-		    "Can't allocate archive object 'nulls' element");
-		free(a);
-		return (NULL);
-	}
-	memset(nulls, 0, a->null_length);
-	a->nulls = nulls;
 
 	a->archive.state = ARCHIVE_STATE_NEW;
 	a->entry = archive_entry_new();
@@ -307,6 +294,18 @@ archive_read_next_header(struct archive *_a, struct archive_entry **entryp)
 	archive_clear_error(&a->archive);
 
 	/*
+	 * If no format has yet been chosen, choose one.
+	 */
+	if (a->format == NULL) {
+		slot = choose_format(a);
+		if (slot < 0) {
+			a->archive.state = ARCHIVE_STATE_FATAL;
+			return (ARCHIVE_FATAL);
+		}
+		a->format = &(a->formats[slot]);
+	}
+
+	/*
 	 * If client didn't consume entire data, skip any remainder
 	 * (This is especially important for GNU incremental directories.)
 	 */
@@ -324,12 +323,6 @@ archive_read_next_header(struct archive *_a, struct archive_entry **entryp)
 	/* Record start-of-header. */
 	a->header_position = a->archive.file_position;
 
-	slot = choose_format(a);
-	if (slot < 0) {
-		a->archive.state = ARCHIVE_STATE_FATAL;
-		return (ARCHIVE_FATAL);
-	}
-	a->format = &(a->formats[slot]);
 	ret = (a->format->read_header)(a, entry);
 
 	/*
@@ -654,8 +647,6 @@ archive_read_finish(struct archive *_a)
 			(a->formats[i].cleanup)(a);
 	}
 
-	/* Casting a pointer to int allows us to remove 'const.' */
-	free((void *)(uintptr_t)(const void *)a->nulls);
 	archive_string_free(&a->archive.error_string);
 	if (a->entry)
 		archive_entry_free(a->entry);
@@ -734,4 +725,15 @@ __archive_read_register_compression(struct archive_read *a,
 
 	__archive_errx(1, "Not enough slots for compression registration");
 	return (NULL); /* Never actually executed. */
+}
+
+/* used internally to simplify read-ahead */
+const void *
+__archive_read_ahead(struct archive_read *a, size_t len)
+{
+	const void *h;
+
+	if ((a->decompressor->read_ahead)(a, &h, len) < (ssize_t)len)
+		return (NULL);
+	return (h);
 }

@@ -23,7 +23,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_entry.c,v 1.2 2007/07/06 15:43:11 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_entry.c,v 1.2.2.3 2008/11/28 20:08:47 kientzle Exp $");
+
+#include <locale.h>
 
 /*
  * Most of these tests are system-independent, though a few depend on
@@ -50,6 +52,8 @@ DEFINE_TEST(test_entry)
 	const void *xval; /* For xattr tests. */
 	size_t xsize; /* For xattr tests. */
 	int c;
+	wchar_t wc;
+	long l;
 
 	assert((e = archive_entry_new()) != NULL);
 
@@ -65,14 +69,25 @@ DEFINE_TEST(test_entry)
 	 * The following tests are ordered alphabetically by the
 	 * name of the field.
 	 */
+
 	/* atime */
 	archive_entry_set_atime(e, 13579, 24680);
 	assertEqualInt(archive_entry_atime(e), 13579);
 	assertEqualInt(archive_entry_atime_nsec(e), 24680);
+	archive_entry_unset_atime(e);
+	assertEqualInt(archive_entry_atime(e), 0);
+	assertEqualInt(archive_entry_atime_nsec(e), 0);
+	assert(!archive_entry_atime_is_set(e));
+
 	/* ctime */
 	archive_entry_set_ctime(e, 13580, 24681);
 	assertEqualInt(archive_entry_ctime(e), 13580);
 	assertEqualInt(archive_entry_ctime_nsec(e), 24681);
+	archive_entry_unset_ctime(e);
+	assertEqualInt(archive_entry_ctime(e), 0);
+	assertEqualInt(archive_entry_ctime_nsec(e), 0);
+	assert(!archive_entry_ctime_is_set(e));
+
 #if ARCHIVE_VERSION_STAMP >= 1009000
 	/* dev */
 	archive_entry_set_dev(e, 235);
@@ -81,6 +96,7 @@ DEFINE_TEST(test_entry)
 	skipping("archive_entry_dev()");
 #endif
 	/* devmajor/devminor are tested specially below. */
+
 #if ARCHIVE_VERSION_STAMP >= 1009000
 	/* filetype */
 	archive_entry_set_filetype(e, AE_IFREG);
@@ -88,10 +104,13 @@ DEFINE_TEST(test_entry)
 #else
 	skipping("archive_entry_filetype()");
 #endif
+
 	/* fflags are tested specially below */
+
 	/* gid */
 	archive_entry_set_gid(e, 204);
 	assertEqualInt(archive_entry_gid(e), 204);
+
 	/* gname */
 	archive_entry_set_gname(e, "group");
 	assertEqualString(archive_entry_gname(e), "group");
@@ -100,6 +119,7 @@ DEFINE_TEST(test_entry)
 	assertEqualWString(archive_entry_gname_w(e), L"wgroup");
 	memset(wbuff, 0, sizeof(wbuff));
 	assertEqualWString(archive_entry_gname_w(e), L"wgroup");
+
 	/* hardlink */
 	archive_entry_set_hardlink(e, "hardlinkname");
 	assertEqualString(archive_entry_hardlink(e), "hardlinkname");
@@ -120,15 +140,50 @@ DEFINE_TEST(test_entry)
 #else
 	skipping("archive_entry_ino()");
 #endif
+
 	/* link */
-	/* TODO: implement these tests. */
+	archive_entry_set_hardlink(e, "hardlinkname");
+	archive_entry_set_symlink(e, NULL);
+	archive_entry_set_link(e, "link");
+	assertEqualString(archive_entry_hardlink(e), "link");
+	assertEqualString(archive_entry_symlink(e), NULL);
+	archive_entry_copy_link(e, "link2");
+	assertEqualString(archive_entry_hardlink(e), "link2");
+	assertEqualString(archive_entry_symlink(e), NULL);
+	archive_entry_copy_link_w(e, L"link3");
+	assertEqualString(archive_entry_hardlink(e), "link3");
+	assertEqualString(archive_entry_symlink(e), NULL);
+	archive_entry_set_hardlink(e, NULL);
+	archive_entry_set_symlink(e, "symlink");
+	archive_entry_set_link(e, "link");
+	assertEqualString(archive_entry_hardlink(e), NULL);
+	assertEqualString(archive_entry_symlink(e), "link");
+	archive_entry_copy_link(e, "link2");
+	assertEqualString(archive_entry_hardlink(e), NULL);
+	assertEqualString(archive_entry_symlink(e), "link2");
+	archive_entry_copy_link_w(e, L"link3");
+	assertEqualString(archive_entry_hardlink(e), NULL);
+	assertEqualString(archive_entry_symlink(e), "link3");
+	/* Arbitrarily override symlink if both hardlink and symlink set. */
+	archive_entry_set_hardlink(e, "hardlink");
+	archive_entry_set_symlink(e, "symlink");
+	archive_entry_set_link(e, "link");
+	assertEqualString(archive_entry_hardlink(e), "hardlink");
+	assertEqualString(archive_entry_symlink(e), "link");
+
 	/* mode */
 	archive_entry_set_mode(e, 0123456);
 	assertEqualInt(archive_entry_mode(e), 0123456);
+
 	/* mtime */
 	archive_entry_set_mtime(e, 13581, 24682);
 	assertEqualInt(archive_entry_mtime(e), 13581);
 	assertEqualInt(archive_entry_mtime_nsec(e), 24682);
+	archive_entry_unset_mtime(e);
+	assertEqualInt(archive_entry_mtime(e), 0);
+	assertEqualInt(archive_entry_mtime_nsec(e), 0);
+	assert(!archive_entry_mtime_is_set(e));
+
 #if ARCHIVE_VERSION_STAMP >= 1009000
 	/* nlink */
 	archive_entry_set_nlink(e, 736);
@@ -136,6 +191,7 @@ DEFINE_TEST(test_entry)
 #else
 	skipping("archive_entry_nlink()");
 #endif
+
 	/* pathname */
 	archive_entry_set_pathname(e, "path");
 	assertEqualString(archive_entry_pathname(e), "path");
@@ -151,6 +207,7 @@ DEFINE_TEST(test_entry)
 	assertEqualWString(archive_entry_pathname_w(e), L"wpath");
 	memset(wbuff, 0, sizeof(wbuff));
 	assertEqualWString(archive_entry_pathname_w(e), L"wpath");
+
 #if ARCHIVE_VERSION_STAMP >= 1009000
 	/* rdev */
 	archive_entry_set_rdev(e, 532);
@@ -159,9 +216,14 @@ DEFINE_TEST(test_entry)
 	skipping("archive_entry_rdev()");
 #endif
 	/* rdevmajor/rdevminor are tested specially below. */
+
 	/* size */
 	archive_entry_set_size(e, 987654321);
 	assertEqualInt(archive_entry_size(e), 987654321);
+	archive_entry_unset_size(e);
+	assertEqualInt(archive_entry_size(e), 0);
+	assert(!archive_entry_size_is_set(e));
+
 	/* symlink */
 	archive_entry_set_symlink(e, "symlinkname");
 	assertEqualString(archive_entry_symlink(e), "symlinkname");
@@ -174,9 +236,11 @@ DEFINE_TEST(test_entry)
 #endif
 	archive_entry_copy_symlink_w(e, L"wsymlink");
 	assertEqualWString(archive_entry_symlink_w(e), L"wsymlink");
+
 	/* uid */
 	archive_entry_set_uid(e, 83);
 	assertEqualInt(archive_entry_uid(e), 83);
+
 	/* uname */
 	archive_entry_set_uname(e, "user");
 	assertEqualString(archive_entry_uname(e), "user");
@@ -199,6 +263,11 @@ DEFINE_TEST(test_entry)
 	assertEqualString(archive_entry_fflags_text(e),
 	    "uappnd,nouchg,nodump,noopaque,uunlnk");
 	/* TODO: Test archive_entry_copy_fflags_text_w() */
+	/* Test archive_entry_copy_fflags_text() */
+	archive_entry_copy_fflags_text(e, "nouappnd, nouchg, dump,uunlnk");
+	archive_entry_fflags(e, &set, &clear);
+	assertEqualInt(16, set);
+	assertEqualInt(7, clear);
 #endif
 
 	/* See test_acl_basic.c for tests of ACL set/get consistency. */
@@ -213,10 +282,16 @@ DEFINE_TEST(test_entry)
 	assertEqualInt(1, archive_entry_xattr_count(e));
 	assertEqualInt(ARCHIVE_WARN,
 	    archive_entry_xattr_next(e, &xname, &xval, &xsize));
+	assertEqualString(xname, NULL);
+	assertEqualString(xval, NULL);
+	assertEqualInt(xsize, 0);
 	archive_entry_xattr_clear(e);
 	assertEqualInt(0, archive_entry_xattr_reset(e));
 	assertEqualInt(ARCHIVE_WARN,
 	    archive_entry_xattr_next(e, &xname, &xval, &xsize));
+	assertEqualString(xname, NULL);
+	assertEqualString(xval, NULL);
+	assertEqualInt(xsize, 0);
 	archive_entry_xattr_add_entry(e, "xattr1", "xattrvalue1", 12);
 	assertEqualInt(1, archive_entry_xattr_reset(e));
 	archive_entry_xattr_add_entry(e, "xattr2", "xattrvalue2", 12);
@@ -225,6 +300,9 @@ DEFINE_TEST(test_entry)
 	assertEqualInt(0, archive_entry_xattr_next(e, &xname, &xval, &xsize));
 	assertEqualInt(ARCHIVE_WARN,
 	    archive_entry_xattr_next(e, &xname, &xval, &xsize));
+	assertEqualString(xname, NULL);
+	assertEqualString(xval, NULL);
+	assertEqualInt(xsize, 0);
 
 
 	/*
@@ -348,6 +426,11 @@ DEFINE_TEST(test_entry)
 	assertEqualString(xname, "xattr1");
 	assertEqualString(xval, "xattrvalue");
 	assertEqualInt(xsize, 11);
+	assertEqualInt(ARCHIVE_WARN,
+	    archive_entry_xattr_next(e2, &xname, &xval, &xsize));
+	assertEqualString(xname, NULL);
+	assertEqualString(xval, NULL);
+	assertEqualInt(xsize, 0);
 #endif
 
 	/* Change the original */
@@ -453,6 +536,14 @@ DEFINE_TEST(test_entry)
 	assertEqualInt(tag, ARCHIVE_ENTRY_ACL_USER);
 	assertEqualInt(qual, 77);
 	assertEqualString(name, "user77");
+	assertEqualInt(1, archive_entry_acl_next(e2,
+			   ARCHIVE_ENTRY_ACL_TYPE_ACCESS,
+			   &type, &permset, &tag, &qual, &name));
+	assertEqualInt(type, 0);
+	assertEqualInt(permset, 0);
+	assertEqualInt(tag, 0);
+	assertEqualInt(qual, -1);
+	assertEqualString(name, NULL);
 #endif
 #if ARCHIVE_VERSION_STAMP < 1009000
 	skipping("xattr preserved in archive_entry copy");
@@ -669,6 +760,61 @@ DEFINE_TEST(test_entry)
 	assertEqualInt(archive_entry_rdev(e), makedev(0xfe, 0xdcba98));
 #endif
 #endif
+
+	/*
+	 * Exercise the character-conversion logic, if we can.
+	 */
+	if (NULL == setlocale(LC_ALL, "de_DE.UTF-8")) {
+		skipping("Can't exercise charset-conversion logic without"
+			" a suitable locale.");
+	} else {
+		/* A filename that cannot be converted to wide characters. */
+		archive_entry_copy_pathname(e, "abc\314\214mno\374xyz");
+		failure("Converting invalid chars to Unicode should fail.");
+		assert(NULL == archive_entry_pathname_w(e));
+		//failure("Converting invalid chars to UTF-8 should fail.");
+		//assert(NULL == archive_entry_pathname_utf8(e));
+
+		/* A group name that cannot be converted. */
+		archive_entry_copy_gname(e, "abc\314\214mno\374xyz");
+		failure("Converting invalid chars to Unicode should fail.");
+		assert(NULL == archive_entry_gname_w(e));
+
+		/* A user name that cannot be converted. */
+		archive_entry_copy_uname(e, "abc\314\214mno\374xyz");
+		failure("Converting invalid chars to Unicode should fail.");
+		assert(NULL == archive_entry_uname_w(e));
+
+		/* A hardlink target that cannot be converted. */
+		archive_entry_copy_hardlink(e, "abc\314\214mno\374xyz");
+		failure("Converting invalid chars to Unicode should fail.");
+		assert(NULL == archive_entry_hardlink_w(e));
+
+		/* A symlink target that cannot be converted. */
+		archive_entry_copy_symlink(e, "abc\314\214mno\374xyz");
+		failure("Converting invalid chars to Unicode should fail.");
+		assert(NULL == archive_entry_symlink_w(e));
+	}
+
+	l = 0x12345678L;
+	wc = (wchar_t)l; /* Wide character too big for UTF-8. */
+	if (NULL == setlocale(LC_ALL, "C") || (long)wc != l) {
+		skipping("Testing charset conversion failure requires 32-bit wchar_t and support for \"C\" locale.");
+	} else {
+		/*
+		 * Build the string L"xxx\U12345678yyy\u5678zzz" without
+		 * using C99 \u#### syntax, which isn't uniformly
+		 * supported.  (GCC 3.4.6, for instance, defaults to
+		 * "c89 plus GNU extensions.")
+		 */
+		wcscpy(wbuff, L"xxxAyyyBzzz");
+		wbuff[3] = 0x12345678;
+		wbuff[7] = 0x5678;
+		/* A wide filename that cannot be converted to narrow. */
+		archive_entry_copy_pathname_w(e, wbuff);
+		failure("Converting wide characters from Unicode should fail.");
+		assertEqualString(NULL, archive_entry_pathname(e));
+	}
 
 	/* Release the experimental entry. */
 	archive_entry_free(e);

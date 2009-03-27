@@ -26,11 +26,11 @@
  */
 
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_format_ar.c,v 1.5 2007/07/06 15:43:11 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_write_format_ar.c,v 1.5.2.2 2008/08/10 04:32:47 kientzle Exp $");
 
 char buff[4096];
 char buff2[64];
-static unsigned char strtab[] = "abcdefghijklmn.o/\nggghhhjjjrrrttt.o/\niiijjjdddsssppp.o/\n";
+static char strtab[] = "abcdefghijklmn.o/\nggghhhjjjrrrttt.o/\niiijjjdddsssppp.o/\n";
 
 DEFINE_TEST(test_write_format_ar)
 {
@@ -119,9 +119,7 @@ DEFINE_TEST(test_write_format_ar)
 	assertA(0 == archive_read_next_header(a, &ae));
 	assertEqualInt(0, archive_entry_mtime(ae));
 	assertEqualString("//", archive_entry_pathname(ae));
-	assertEqualInt(strlen(strtab), archive_entry_size(ae));
-	assertEqualIntA(a, strlen(strtab), archive_read_data(a, buff2, 100));
-	assert(0 == memcmp(buff2, strtab, strlen(strtab)));
+	assertEqualInt(0, archive_entry_size(ae));
 
 	assertA(0 == archive_read_next_header(a, &ae));
 	assert(1 == archive_entry_mtime(ae));
@@ -164,6 +162,7 @@ DEFINE_TEST(test_write_format_ar)
 	archive_entry_set_filetype(ae, AE_IFREG);
 	archive_entry_set_size(ae, 5);
 	assertA(0 == archive_write_header(a, ae));
+	assertA(5 == archive_entry_size(ae));
 	assertA(5 == archive_write_data(a, "12345", 7));
 	archive_entry_free(ae);
 

@@ -25,7 +25,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_cpio_newc.c,v 1.1.4.1 2007/10/21 22:17:25 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_cpio_newc.c,v 1.1.4.3 2008/05/10 06:57:04 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -102,8 +102,8 @@ archive_write_set_format_cpio_newc(struct archive *_a)
 	a->format_finish_entry = archive_write_newc_finish_entry;
 	a->format_finish = archive_write_newc_finish;
 	a->format_destroy = archive_write_newc_destroy;
-	a->archive_format = ARCHIVE_FORMAT_CPIO_SVR4_NOCRC;
-	a->archive_format_name = "SVR4 cpio nocrc";
+	a->archive.archive_format = ARCHIVE_FORMAT_CPIO_SVR4_NOCRC;
+	a->archive.archive_format_name = "SVR4 cpio nocrc";
 	return (ARCHIVE_OK);
 }
 
@@ -176,9 +176,15 @@ archive_write_newc_header(struct archive_write *a, struct archive_entry *entry)
 
 	cpio->entry_bytes_remaining = archive_entry_size(entry);
 	cpio->padding = 3 & (-cpio->entry_bytes_remaining);
+
 	/* Write the symlink now. */
-	if (p != NULL  &&  *p != '\0')
+	if (p != NULL  &&  *p != '\0') {
 		ret = (a->compressor.write)(a, p, strlen(p));
+		if (ret != ARCHIVE_OK)
+			return (ARCHIVE_FATAL);
+		pad = 0x3 & -strlen(p);
+		ret = (a->compressor.write)(a, "\0\0\0", pad);
+	}
 
 	return (ret);
 }

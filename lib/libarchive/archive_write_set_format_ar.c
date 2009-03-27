@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_ar.c,v 1.3 2007/05/29 01:00:19 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_write_set_format_ar.c,v 1.3.4.4 2008/08/10 06:09:25 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -75,8 +75,9 @@ static int		 archive_write_ar_header(struct archive_write *,
 static ssize_t		 archive_write_ar_data(struct archive_write *,
 			     const void *buff, size_t s);
 static int		 archive_write_ar_destroy(struct archive_write *);
+static int		 archive_write_ar_finish(struct archive_write *);
 static int		 archive_write_ar_finish_entry(struct archive_write *);
-static const char	*basename(const char *path);
+static const char	*ar_basename(const char *path);
 static int		 format_octal(int64_t v, char *p, int s);
 static int		 format_decimal(int64_t v, char *p, int s);
 
@@ -86,8 +87,8 @@ archive_write_set_format_ar_bsd(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	int r = archive_write_set_format_ar(a);
 	if (r == ARCHIVE_OK) {
-		a->archive_format = ARCHIVE_FORMAT_AR_BSD;
-		a->archive_format_name = "ar (BSD)";
+		a->archive.archive_format = ARCHIVE_FORMAT_AR_BSD;
+		a->archive.archive_format_name = "ar (BSD)";
 	}
 	return (r);
 }
@@ -98,8 +99,8 @@ archive_write_set_format_ar_svr4(struct archive *_a)
 	struct archive_write *a = (struct archive_write *)_a;
 	int r = archive_write_set_format_ar(a);
 	if (r == ARCHIVE_OK) {
-		a->archive_format = ARCHIVE_FORMAT_AR_GNU;
-		a->archive_format_name = "ar (GNU/SVR4)";
+		a->archive.archive_format = ARCHIVE_FORMAT_AR_GNU;
+		a->archive.archive_format_name = "ar (GNU/SVR4)";
 	}
 	return (r);
 }
@@ -126,7 +127,7 @@ archive_write_set_format_ar(struct archive_write *a)
 
 	a->format_write_header = archive_write_ar_header;
 	a->format_write_data = archive_write_ar_data;
-	a->format_finish = NULL;
+	a->format_finish = archive_write_ar_finish;
 	a->format_destroy = archive_write_ar_destroy;
 	a->format_finish_entry = archive_write_ar_finish_entry;
 	return (ARCHIVE_OK);
@@ -141,12 +142,15 @@ archive_write_ar_header(struct archive_write *a, struct archive_entry *entry)
 	struct ar_w *ar;
 	const char *pathname;
 	const char *filename;
+	int64_t size;
 
 	ret = 0;
 	append_fn = 0;
 	ar = (struct ar_w *)a->format_data;
 	ar->is_strtab = 0;
 	filename = NULL;
+	size = archive_entry_size(entry);
+
 
 	/*
 	 * Reject files with empty name.
@@ -192,18 +196,18 @@ archive_write_ar_header(struct archive_write *a, struct archive_entry *entry)
 		goto size;
 	}
 
-	/* 
+	/*
 	 * Otherwise, entry is a normal archive member.
 	 * Strip leading paths from filenames, if any.
 	 */
-	if ((filename = basename(pathname)) == NULL) {
+	if ((filename = ar_basename(pathname)) == NULL) {
 		/* Reject filenames with trailing "/" */
 		archive_set_error(&a->archive, EINVAL,
 		    "Invalid filename");
 		return (ARCHIVE_WARN);
 	}
 
-	if (a->archive_format == ARCHIVE_FORMAT_AR_GNU) {
+	if (a->archive.archive_format == ARCHIVE_FORMAT_AR_GNU) {
 		/*
 		 * SVR4/GNU variant use a "/" to mark then end of the filename,
 		 * make it possible to have embedded spaces in the filename.
@@ -260,7 +264,7 @@ archive_write_ar_header(struct archive_write *a, struct archive_entry *entry)
 				return (ARCHIVE_WARN);
 			}
 		}
-	} else if (a->archive_format == ARCHIVE_FORMAT_AR_BSD) {
+	} else if (a->archive.archive_format == ARCHIVE_FORMAT_AR_BSD) {
 		/*
 		 * BSD variant: for any file name which is more than
 		 * 16 chars or contains one or more embedded space(s), the
@@ -284,8 +288,7 @@ archive_write_ar_header(struct archive_write *a, struct archive_entry *entry)
 				return (ARCHIVE_WARN);
 			}
 			append_fn = 1;
-			archive_entry_set_size(entry,
-			    archive_entry_size(entry) + strlen(filename));
+			size += strlen(filename);
 		}
 	}
 
@@ -321,8 +324,7 @@ stat:
 	}
 
 size:
-	if (format_decimal(archive_entry_size(entry), buff + AR_size_offset,
-	    AR_size_size)) {
+	if (format_decimal(size, buff + AR_size_offset, AR_size_size)) {
 		archive_set_error(&a->archive, ERANGE,
 		    "File size out of range");
 		return (ARCHIVE_WARN);
@@ -332,7 +334,7 @@ size:
 	if (ret != ARCHIVE_OK)
 		return (ret);
 
-	ar->entry_bytes_remaining = archive_entry_size(entry);
+	ar->entry_bytes_remaining = size;
 	ar->entry_padding = ar->entry_bytes_remaining % 2;
 
 	if (append_fn > 0) {
@@ -387,6 +389,9 @@ archive_write_ar_destroy(struct archive_write *a)
 
 	ar = (struct ar_w *)a->format_data;
 
+	if (ar == NULL)
+		return (ARCHIVE_OK);
+
 	if (ar->has_strtab > 0) {
 		free(ar->strtab);
 		ar->strtab = NULL;
@@ -394,6 +399,23 @@ archive_write_ar_destroy(struct archive_write *a)
 
 	free(ar);
 	a->format_data = NULL;
+	return (ARCHIVE_OK);
+}
+
+static int
+archive_write_ar_finish(struct archive_write *a)
+{
+	int ret;
+
+	/*
+	 * If we haven't written anything yet, we need to write
+	 * the ar global header now to make it a valid ar archive.
+	 */
+	if (a->archive.file_position == 0) {
+		ret = (a->compressor.write)(a, "!<arch>\n", 8);
+		return (ret);
+	}
+
 	return (ARCHIVE_OK);
 }
 
@@ -507,7 +529,7 @@ format_decimal(int64_t v, char *p, int s)
 }
 
 static const char *
-basename(const char *path)
+ar_basename(const char *path)
 {
 	const char *endp, *startp;
 

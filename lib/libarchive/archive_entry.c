@@ -24,7 +24,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.44 2007/07/15 19:10:34 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.44.2.4 2008/11/28 20:08:47 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -34,9 +34,6 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.44 2007/07/15 19:10:3
 #endif
 #ifdef MAJOR_IN_MKDEV
 #include <sys/mkdev.h>
-# if !defined makedev && (defined mkdev || defined _WIN32 || defined __WIN32__)
-#  define makedev mkdev
-# endif
 #else
 #ifdef MAJOR_IN_SYSMACROS
 #include <sys/sysmacros.h>
@@ -74,18 +71,36 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_entry.c,v 1.44 2007/07/15 19:10:3
 #undef max
 #define	max(a, b)	((a)>(b)?(a):(b))
 
+/* Play games to come up with a suitable makedev() definition. */
+#ifdef __QNXNTO__
+/* QNX.  <sigh> */
+#include <sys/netmgr.h>
+#define ae_makedev(maj, min) makedev(ND_LOCAL_NODE, (maj), (min))
+#elif defined makedev
+/* There's a "makedev" macro. */
+#define ae_makedev(maj, min) makedev((maj), (min))
+#elif defined mkdev || defined _WIN32 || defined __WIN32__
+/* Windows. <sigh> */
+#define ae_makedev(maj, min) mkdev((maj), (min))
+#else
+/* There's a "makedev" function. */
+#define ae_makedev(maj, min) makedev((maj), (min))
+#endif
+
 static void	aes_clean(struct aes *);
 static void	aes_copy(struct aes *dest, struct aes *src);
 static const char *	aes_get_mbs(struct aes *);
 static const wchar_t *	aes_get_wcs(struct aes *);
-static void	aes_set_mbs(struct aes *, const char *mbs);
-static void	aes_copy_mbs(struct aes *, const char *mbs);
+static int	aes_set_mbs(struct aes *, const char *mbs);
+static int	aes_copy_mbs(struct aes *, const char *mbs);
 /* static void	aes_set_wcs(struct aes *, const wchar_t *wcs); */
-static void	aes_copy_wcs(struct aes *, const wchar_t *wcs);
-static void	aes_copy_wcs_len(struct aes *, const wchar_t *wcs, size_t);
+static int	aes_copy_wcs(struct aes *, const wchar_t *wcs);
+static int	aes_copy_wcs_len(struct aes *, const wchar_t *wcs, size_t);
 
 static char *	 ae_fflagstostr(unsigned long bitset, unsigned long bitclear);
 static const wchar_t	*ae_wcstofflags(const wchar_t *stringp,
+		    unsigned long *setp, unsigned long *clrp);
+static const char	*ae_strtofflags(const char *stringp,
 		    unsigned long *setp, unsigned long *clrp);
 static void	append_entry_w(wchar_t **wp, const wchar_t *prefix, int tag,
 		    const wchar_t *wname, int perm, int id);
@@ -131,169 +146,221 @@ static size_t wcslen(const wchar_t *s)
 #define wmemcpy(a,b,i)  (wchar_t *)memcpy((a), (b), (i) * sizeof(wchar_t))
 #endif
 
-
 static void
 aes_clean(struct aes *aes)
 {
-	if (aes->aes_mbs_alloc) {
-		free(aes->aes_mbs_alloc);
-		aes->aes_mbs_alloc = NULL;
+	if (aes->aes_wcs) {
+		free((wchar_t *)(uintptr_t)aes->aes_wcs);
+		aes->aes_wcs = NULL;
 	}
-	if (aes->aes_wcs_alloc) {
-		free(aes->aes_wcs_alloc);
-		aes->aes_wcs_alloc = NULL;
-	}
-	memset(aes, 0, sizeof(*aes));
+	archive_string_free(&(aes->aes_mbs));
+	archive_string_free(&(aes->aes_utf8));
+	aes->aes_set = 0;
 }
 
 static void
 aes_copy(struct aes *dest, struct aes *src)
 {
-	*dest = *src;
-	if (src->aes_mbs != NULL) {
-		dest->aes_mbs_alloc = strdup(src->aes_mbs);
-		dest->aes_mbs = dest->aes_mbs_alloc;
-		if (dest->aes_mbs == NULL)
-			__archive_errx(1, "No memory for aes_copy()");
-	}
+	wchar_t *wp;
+
+	dest->aes_set = src->aes_set;
+	archive_string_copy(&(dest->aes_mbs), &(src->aes_mbs));
+	archive_string_copy(&(dest->aes_utf8), &(src->aes_utf8));
 
 	if (src->aes_wcs != NULL) {
-		dest->aes_wcs_alloc = (wchar_t *)malloc((wcslen(src->aes_wcs) + 1)
+		wp = (wchar_t *)malloc((wcslen(src->aes_wcs) + 1)
 		    * sizeof(wchar_t));
-		dest->aes_wcs = dest->aes_wcs_alloc;
-		if (dest->aes_wcs == NULL)
+		if (wp == NULL)
 			__archive_errx(1, "No memory for aes_copy()");
-		wcscpy(dest->aes_wcs_alloc, src->aes_wcs);
+		wcscpy(wp, src->aes_wcs);
+		dest->aes_wcs = wp;
 	}
+}
+
+static const char *
+aes_get_utf8(struct aes *aes)
+{
+	if (aes->aes_set & AES_SET_UTF8)
+		return (aes->aes_utf8.s);
+	if ((aes->aes_set & AES_SET_WCS)
+	    && archive_strappend_w_utf8(&(aes->aes_utf8), aes->aes_wcs) != NULL) {
+		aes->aes_set |= AES_SET_UTF8;
+		return (aes->aes_utf8.s);
+	}
+	return (NULL);
 }
 
 static const char *
 aes_get_mbs(struct aes *aes)
 {
-	if (aes->aes_mbs == NULL && aes->aes_wcs == NULL)
-		return NULL;
-	if (aes->aes_mbs == NULL && aes->aes_wcs != NULL) {
-		/*
-		 * XXX Need to estimate the number of byte in the
-		 * multi-byte form.  Assume that, on average, wcs
-		 * chars encode to no more than 3 bytes.  There must
-		 * be a better way... XXX
-		 */
-		size_t mbs_length = wcslen(aes->aes_wcs) * 3 + 64;
-
-		aes->aes_mbs_alloc = (char *)malloc(mbs_length);
-		aes->aes_mbs = aes->aes_mbs_alloc;
-		if (aes->aes_mbs == NULL)
-			__archive_errx(1, "No memory for aes_get_mbs()");
-		wcstombs(aes->aes_mbs_alloc, aes->aes_wcs, mbs_length - 1);
-		aes->aes_mbs_alloc[mbs_length - 1] = 0;
+	/* If we already have an MBS form, return that immediately. */
+	if (aes->aes_set & AES_SET_MBS)
+		return (aes->aes_mbs.s);
+	/* If there's a WCS form, try converting with the native locale. */
+	if ((aes->aes_set & AES_SET_WCS)
+	    && archive_strappend_w_mbs(&(aes->aes_mbs), aes->aes_wcs) != NULL) {
+		aes->aes_set |= AES_SET_MBS;
+		return (aes->aes_mbs.s);
 	}
-	return (aes->aes_mbs);
+	/* We'll use UTF-8 for MBS if all else fails. */
+	return (aes_get_utf8(aes));
 }
 
 static const wchar_t *
 aes_get_wcs(struct aes *aes)
 {
-	if (aes->aes_wcs == NULL && aes->aes_mbs == NULL)
-		return NULL;
-	if (aes->aes_wcs == NULL && aes->aes_mbs != NULL) {
+	wchar_t *w;
+	int r;
+
+	/* Return WCS form if we already have it. */
+	if (aes->aes_set & AES_SET_WCS)
+		return (aes->aes_wcs);
+
+	if (aes->aes_set & AES_SET_MBS) {
+		/* Try converting MBS to WCS using native locale. */
 		/*
 		 * No single byte will be more than one wide character,
 		 * so this length estimate will always be big enough.
 		 */
-		size_t wcs_length = strlen(aes->aes_mbs);
+		size_t wcs_length = aes->aes_mbs.length;
 
-		aes->aes_wcs_alloc
-		    = (wchar_t *)malloc((wcs_length + 1) * sizeof(wchar_t));
-		aes->aes_wcs = aes->aes_wcs_alloc;
-		if (aes->aes_wcs == NULL)
+		w = (wchar_t *)malloc((wcs_length + 1) * sizeof(wchar_t));
+		if (w == NULL)
 			__archive_errx(1, "No memory for aes_get_wcs()");
-		mbstowcs(aes->aes_wcs_alloc, aes->aes_mbs, wcs_length);
-		aes->aes_wcs_alloc[wcs_length] = 0;
+		r = mbstowcs(w, aes->aes_mbs.s, wcs_length);
+		w[wcs_length] = 0;
+		if (r > 0) {
+			aes->aes_set |= AES_SET_WCS;
+			return (aes->aes_wcs = w);
+		}
+		free(w);
 	}
-	return (aes->aes_wcs);
+
+	if (aes->aes_set & AES_SET_UTF8) {
+		/* Try converting UTF8 to WCS. */
+		aes->aes_wcs = __archive_string_utf8_w(&(aes->aes_utf8));
+		aes->aes_set |= AES_SET_WCS;
+		return (aes->aes_wcs);
+	}
+	return (NULL);
 }
 
-static void
+static int
 aes_set_mbs(struct aes *aes, const char *mbs)
 {
-	if (aes->aes_mbs_alloc) {
-		free(aes->aes_mbs_alloc);
-		aes->aes_mbs_alloc = NULL;
-	}
-	if (aes->aes_wcs_alloc) {
-		free(aes->aes_wcs_alloc);
-		aes->aes_wcs_alloc = NULL;
-	}
-	aes->aes_mbs = mbs;
-	aes->aes_wcs = NULL;
+	return (aes_copy_mbs(aes, mbs));
 }
 
-static void
+static int
 aes_copy_mbs(struct aes *aes, const char *mbs)
 {
-	if (aes->aes_mbs_alloc) {
-		free(aes->aes_mbs_alloc);
-		aes->aes_mbs_alloc = NULL;
+	if (mbs == NULL) {
+		aes->aes_set = 0;
+		return (0);
 	}
-	if (aes->aes_wcs_alloc) {
-		free(aes->aes_wcs_alloc);
-		aes->aes_wcs_alloc = NULL;
+	aes->aes_set = AES_SET_MBS; /* Only MBS form is set now. */
+	archive_strcpy(&(aes->aes_mbs), mbs);
+	archive_string_empty(&(aes->aes_utf8));
+	if (aes->aes_wcs) {
+		free((wchar_t *)(uintptr_t)aes->aes_wcs);
+		aes->aes_wcs = NULL;
 	}
-	aes->aes_mbs_alloc = (char *)malloc((strlen(mbs) + 1) * sizeof(char));
-	if (aes->aes_mbs_alloc == NULL)
-		__archive_errx(1, "No memory for aes_copy_mbs()");
-	strcpy(aes->aes_mbs_alloc, mbs);
-	aes->aes_mbs = aes->aes_mbs_alloc;
-	aes->aes_wcs = NULL;
+	return (0);
 }
 
-#if 0
-static void
-aes_set_wcs(struct aes *aes, const wchar_t *wcs)
+/*
+ * The 'update' form tries to proactively update all forms of
+ * this string (WCS and MBS) and returns an error if any of
+ * them fail.  This is used by the 'pax' handler, for instance,
+ * to detect and report character-conversion failures early while
+ * still allowing clients to get potentially useful values from
+ * the more tolerant lazy conversions.  (get_mbs and get_wcs will
+ * strive to give the user something useful, so you can get hopefully
+ * usable values even if some of the character conversions are failing.)
+ */
+static int
+aes_update_utf8(struct aes *aes, const char *utf8)
 {
-	if (aes->aes_mbs_alloc) {
-		free(aes->aes_mbs_alloc);
-		aes->aes_mbs_alloc = NULL;
+	if (utf8 == NULL) {
+		aes->aes_set = 0;
+		return (1); /* Succeeded in clearing everything. */
 	}
-	if (aes->aes_wcs_alloc) {
-		free(aes->aes_wcs_alloc);
-		aes->aes_wcs_alloc = NULL;
-	}
-	aes->aes_mbs = NULL;
-	aes->aes_wcs = wcs;
-}
-#endif
 
-static void
+	/* Save the UTF8 string. */
+	archive_strcpy(&(aes->aes_utf8), utf8);
+
+	/* Empty the mbs and wcs strings. */
+	archive_string_empty(&(aes->aes_mbs));
+	if (aes->aes_wcs) {
+		free((wchar_t *)(uintptr_t)aes->aes_wcs);
+		aes->aes_wcs = NULL;
+	}
+
+	aes->aes_set = AES_SET_UTF8;	/* Only UTF8 is set now. */
+
+	/* TODO: We should just do a direct UTF-8 to MBS conversion
+	 * here.  That would be faster, use less space, and give the
+	 * same information.  (If a UTF-8 to MBS conversion succeeds,
+	 * then UTF-8->WCS and Unicode->MBS conversions will both
+	 * succeed.) */
+
+	/* Try converting UTF8 to WCS, return false on failure. */
+	aes->aes_wcs = __archive_string_utf8_w(&(aes->aes_utf8));
+	if (aes->aes_wcs == NULL)
+		return (0);
+	aes->aes_set = AES_SET_UTF8 | AES_SET_WCS; /* Both UTF8 and WCS set. */
+
+	/* Try converting WCS to MBS, return false on failure. */
+	if (archive_strappend_w_mbs(&(aes->aes_mbs), aes->aes_wcs) == NULL)
+		return (0);
+	aes->aes_set = AES_SET_UTF8 | AES_SET_WCS | AES_SET_MBS;
+
+	/* All conversions succeeded. */
+	return (1);
+}
+
+static int
 aes_copy_wcs(struct aes *aes, const wchar_t *wcs)
 {
-	aes_copy_wcs_len(aes, wcs, wcslen(wcs));
+	return aes_copy_wcs_len(aes, wcs, wcs == NULL ? 0 : wcslen(wcs));
 }
 
-static void
+static int
 aes_copy_wcs_len(struct aes *aes, const wchar_t *wcs, size_t len)
 {
-	if (aes->aes_mbs_alloc) {
-		free(aes->aes_mbs_alloc);
-		aes->aes_mbs_alloc = NULL;
+	wchar_t *w;
+
+	if (wcs == NULL) {
+		aes->aes_set = 0;
+		return (0);
 	}
-	if (aes->aes_wcs_alloc) {
-		free(aes->aes_wcs_alloc);
-		aes->aes_wcs_alloc = NULL;
+	aes->aes_set = AES_SET_WCS; /* Only WCS form set. */
+	archive_string_empty(&(aes->aes_mbs));
+	archive_string_empty(&(aes->aes_utf8));
+	if (aes->aes_wcs) {
+		free((wchar_t *)(uintptr_t)aes->aes_wcs);
+		aes->aes_wcs = NULL;
 	}
-	aes->aes_mbs = NULL;
-	aes->aes_wcs_alloc = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
-	if (aes->aes_wcs_alloc == NULL)
+	w = (wchar_t *)malloc((len + 1) * sizeof(wchar_t));
+	if (w == NULL)
 		__archive_errx(1, "No memory for aes_copy_wcs()");
-	wmemcpy(aes->aes_wcs_alloc, wcs, len);
-	aes->aes_wcs_alloc[len] = L'\0';
-	aes->aes_wcs = aes->aes_wcs_alloc;
+	wmemcpy(w, wcs, len);
+	w[len] = L'\0';
+	aes->aes_wcs = w;
+	return (0);
 }
+
+/****************************************************************************
+ *
+ * Public Interface
+ *
+ ****************************************************************************/
 
 struct archive_entry *
 archive_entry_clear(struct archive_entry *entry)
 {
+	if (entry == NULL)
+		return (NULL);
 	aes_clean(&entry->ae_fflags_text);
 	aes_clean(&entry->ae_gname);
 	aes_clean(&entry->ae_hardlink);
@@ -328,6 +395,7 @@ archive_entry_clone(struct archive_entry *entry)
 	aes_copy(&entry2->ae_hardlink, &entry->ae_hardlink);
 	aes_copy(&entry2->ae_pathname, &entry->ae_pathname);
 	aes_copy(&entry2->ae_symlink, &entry->ae_symlink);
+	entry2->ae_set = entry->ae_set;
 	aes_copy(&entry2->ae_uname, &entry->ae_uname);
 
 	/* Copy ACL data over. */
@@ -386,10 +454,22 @@ archive_entry_atime_nsec(struct archive_entry *entry)
 	return (entry->ae_stat.aest_atime_nsec);
 }
 
+int
+archive_entry_atime_is_set(struct archive_entry *entry)
+{
+	return (entry->ae_set & AE_SET_ATIME);
+}
+
 time_t
 archive_entry_ctime(struct archive_entry *entry)
 {
 	return (entry->ae_stat.aest_ctime);
+}
+
+int
+archive_entry_ctime_is_set(struct archive_entry *entry)
+{
+	return (entry->ae_set & AE_SET_CTIME);
 }
 
 long
@@ -402,7 +482,7 @@ dev_t
 archive_entry_dev(struct archive_entry *entry)
 {
 	if (entry->ae_stat.aest_dev_is_broken_down)
-		return makedev(entry->ae_stat.aest_devmajor,
+		return ae_makedev(entry->ae_stat.aest_devmajor,
 		    entry->ae_stat.aest_devminor);
 	else
 		return (entry->ae_stat.aest_dev);
@@ -493,13 +573,17 @@ archive_entry_gname_w(struct archive_entry *entry)
 const char *
 archive_entry_hardlink(struct archive_entry *entry)
 {
-	return (aes_get_mbs(&entry->ae_hardlink));
+	if (entry->ae_set & AE_SET_HARDLINK)
+		return (aes_get_mbs(&entry->ae_hardlink));
+	return (NULL);
 }
 
 const wchar_t *
 archive_entry_hardlink_w(struct archive_entry *entry)
 {
-	return (aes_get_wcs(&entry->ae_hardlink));
+	if (entry->ae_set & AE_SET_HARDLINK)
+		return (aes_get_wcs(&entry->ae_hardlink));
+	return (NULL);
 }
 
 ino_t
@@ -526,6 +610,12 @@ archive_entry_mtime_nsec(struct archive_entry *entry)
 	return (entry->ae_stat.aest_mtime_nsec);
 }
 
+int
+archive_entry_mtime_is_set(struct archive_entry *entry)
+{
+	return (entry->ae_set & AE_SET_MTIME);
+}
+
 unsigned int
 archive_entry_nlink(struct archive_entry *entry)
 {
@@ -548,7 +638,7 @@ dev_t
 archive_entry_rdev(struct archive_entry *entry)
 {
 	if (entry->ae_stat.aest_rdev_is_broken_down)
-		return makedev(entry->ae_stat.aest_rdevmajor,
+		return ae_makedev(entry->ae_stat.aest_rdevmajor,
 		    entry->ae_stat.aest_rdevminor);
 	else
 		return (entry->ae_stat.aest_rdev);
@@ -578,16 +668,32 @@ archive_entry_size(struct archive_entry *entry)
 	return (entry->ae_stat.aest_size);
 }
 
+int
+archive_entry_size_is_set(struct archive_entry *entry)
+{
+	return (entry->ae_set & AE_SET_SIZE);
+}
+
+const char *
+archive_entry_sourcepath(struct archive_entry *entry)
+{
+	return (aes_get_mbs(&entry->ae_sourcepath));
+}
+
 const char *
 archive_entry_symlink(struct archive_entry *entry)
 {
-	return (aes_get_mbs(&entry->ae_symlink));
+	if (entry->ae_set & AE_SET_SYMLINK)
+		return (aes_get_mbs(&entry->ae_symlink));
+	return (NULL);
 }
 
 const wchar_t *
 archive_entry_symlink_w(struct archive_entry *entry)
 {
-	return (aes_get_wcs(&entry->ae_symlink));
+	if (entry->ae_set & AE_SET_SYMLINK)
+		return (aes_get_wcs(&entry->ae_symlink));
+	return (NULL);
 }
 
 uid_t
@@ -629,6 +735,15 @@ archive_entry_set_fflags(struct archive_entry *entry,
 	entry->ae_fflags_clear = clear;
 }
 
+const char *
+archive_entry_copy_fflags_text(struct archive_entry *entry,
+    const char *flags)
+{
+	aes_copy_mbs(&entry->ae_fflags_text, flags);
+	return (ae_strtofflags(flags,
+		    &entry->ae_fflags_set, &entry->ae_fflags_clear));
+}
+
 const wchar_t *
 archive_entry_copy_fflags_text_w(struct archive_entry *entry,
     const wchar_t *flags)
@@ -663,6 +778,12 @@ archive_entry_copy_gname_w(struct archive_entry *entry, const wchar_t *name)
 	aes_copy_wcs(&entry->ae_gname, name);
 }
 
+int
+archive_entry_update_gname_utf8(struct archive_entry *entry, const char *name)
+{
+	return (aes_update_utf8(&entry->ae_gname, name));
+}
+
 void
 archive_entry_set_ino(struct archive_entry *entry, unsigned long ino)
 {
@@ -674,34 +795,62 @@ void
 archive_entry_set_hardlink(struct archive_entry *entry, const char *target)
 {
 	aes_set_mbs(&entry->ae_hardlink, target);
+	if (target != NULL)
+		entry->ae_set |= AE_SET_HARDLINK;
+	else
+		entry->ae_set &= ~AE_SET_HARDLINK;
 }
 
 void
 archive_entry_copy_hardlink(struct archive_entry *entry, const char *target)
 {
 	aes_copy_mbs(&entry->ae_hardlink, target);
+	if (target != NULL)
+		entry->ae_set |= AE_SET_HARDLINK;
+	else
+		entry->ae_set &= ~AE_SET_HARDLINK;
 }
 
 void
 archive_entry_copy_hardlink_w(struct archive_entry *entry, const wchar_t *target)
 {
 	aes_copy_wcs(&entry->ae_hardlink, target);
+	if (target != NULL)
+		entry->ae_set |= AE_SET_HARDLINK;
+	else
+		entry->ae_set &= ~AE_SET_HARDLINK;
 }
 
 void
 archive_entry_set_atime(struct archive_entry *entry, time_t t, long ns)
 {
 	entry->stat_valid = 0;
+	entry->ae_set |= AE_SET_ATIME;
 	entry->ae_stat.aest_atime = t;
 	entry->ae_stat.aest_atime_nsec = ns;
+}
+
+void
+archive_entry_unset_atime(struct archive_entry *entry)
+{
+	archive_entry_set_atime(entry, 0, 0);
+	entry->ae_set &= ~AE_SET_ATIME;
 }
 
 void
 archive_entry_set_ctime(struct archive_entry *entry, time_t t, long ns)
 {
 	entry->stat_valid = 0;
+	entry->ae_set |= AE_SET_CTIME;
 	entry->ae_stat.aest_ctime = t;
 	entry->ae_stat.aest_ctime_nsec = ns;
+}
+
+void
+archive_entry_unset_ctime(struct archive_entry *entry)
+{
+	archive_entry_set_ctime(entry, 0, 0);
+	entry->ae_set &= ~AE_SET_CTIME;
 }
 
 void
@@ -732,11 +881,39 @@ archive_entry_set_devminor(struct archive_entry *entry, dev_t m)
 void
 archive_entry_set_link(struct archive_entry *entry, const char *target)
 {
-	if (entry->ae_symlink.aes_mbs != NULL ||
-	    entry->ae_symlink.aes_wcs != NULL)
+	if (entry->ae_set & AE_SET_SYMLINK)
 		aes_set_mbs(&entry->ae_symlink, target);
 	else
 		aes_set_mbs(&entry->ae_hardlink, target);
+}
+
+/* Set symlink if symlink is already set, else set hardlink. */
+void
+archive_entry_copy_link(struct archive_entry *entry, const char *target)
+{
+	if (entry->ae_set & AE_SET_SYMLINK)
+		aes_copy_mbs(&entry->ae_symlink, target);
+	else
+		aes_copy_mbs(&entry->ae_hardlink, target);
+}
+
+/* Set symlink if symlink is already set, else set hardlink. */
+void
+archive_entry_copy_link_w(struct archive_entry *entry, const wchar_t *target)
+{
+	if (entry->ae_set & AE_SET_SYMLINK)
+		aes_copy_wcs(&entry->ae_symlink, target);
+	else
+		aes_copy_wcs(&entry->ae_hardlink, target);
+}
+
+int
+archive_entry_update_link_utf8(struct archive_entry *entry, const char *target)
+{
+	if (entry->ae_set & AE_SET_SYMLINK)
+		return (aes_update_utf8(&entry->ae_symlink, target));
+	else
+		return (aes_update_utf8(&entry->ae_hardlink, target));
 }
 
 void
@@ -750,8 +927,16 @@ void
 archive_entry_set_mtime(struct archive_entry *entry, time_t m, long ns)
 {
 	entry->stat_valid = 0;
+	entry->ae_set |= AE_SET_MTIME;
 	entry->ae_stat.aest_mtime = m;
 	entry->ae_stat.aest_mtime_nsec = ns;
+}
+
+void
+archive_entry_unset_mtime(struct archive_entry *entry)
+{
+	archive_entry_set_mtime(entry, 0, 0);
+	entry->ae_set &= ~AE_SET_MTIME;
 }
 
 void
@@ -777,6 +962,20 @@ void
 archive_entry_copy_pathname_w(struct archive_entry *entry, const wchar_t *name)
 {
 	aes_copy_wcs(&entry->ae_pathname, name);
+}
+
+int
+archive_entry_update_pathname_utf8(struct archive_entry *entry, const char *name)
+{
+	return (aes_update_utf8(&entry->ae_pathname, name));
+}
+
+void
+archive_entry_set_perm(struct archive_entry *entry, mode_t p)
+{
+	entry->stat_valid = 0;
+	entry->ae_stat.aest_mode &= AE_IFMT;
+	entry->ae_stat.aest_mode |= ~AE_IFMT & p;
 }
 
 void
@@ -808,24 +1007,50 @@ archive_entry_set_size(struct archive_entry *entry, int64_t s)
 {
 	entry->stat_valid = 0;
 	entry->ae_stat.aest_size = s;
+	entry->ae_set |= AE_SET_SIZE;
+}
+
+void
+archive_entry_unset_size(struct archive_entry *entry)
+{
+	archive_entry_set_size(entry, 0);
+	entry->ae_set &= ~AE_SET_SIZE;
+}
+
+void
+archive_entry_copy_sourcepath(struct archive_entry *entry, const char *path)
+{
+	aes_set_mbs(&entry->ae_sourcepath, path);
 }
 
 void
 archive_entry_set_symlink(struct archive_entry *entry, const char *linkname)
 {
 	aes_set_mbs(&entry->ae_symlink, linkname);
+	if (linkname != NULL)
+		entry->ae_set |= AE_SET_SYMLINK;
+	else
+		entry->ae_set &= ~AE_SET_SYMLINK;
 }
 
 void
 archive_entry_copy_symlink(struct archive_entry *entry, const char *linkname)
 {
 	aes_copy_mbs(&entry->ae_symlink, linkname);
+	if (linkname != NULL)
+		entry->ae_set |= AE_SET_SYMLINK;
+	else
+		entry->ae_set &= ~AE_SET_SYMLINK;
 }
 
 void
 archive_entry_copy_symlink_w(struct archive_entry *entry, const wchar_t *linkname)
 {
 	aes_copy_wcs(&entry->ae_symlink, linkname);
+	if (linkname != NULL)
+		entry->ae_set |= AE_SET_SYMLINK;
+	else
+		entry->ae_set &= ~AE_SET_SYMLINK;
 }
 
 void
@@ -851,6 +1076,12 @@ void
 archive_entry_copy_uname_w(struct archive_entry *entry, const wchar_t *name)
 {
 	aes_copy_wcs(&entry->ae_uname, name);
+}
+
+int
+archive_entry_update_uname_utf8(struct archive_entry *entry, const char *name)
+{
+	return (aes_update_utf8(&entry->ae_uname, name));
 }
 
 /*
@@ -1103,6 +1334,11 @@ archive_entry_acl_next(struct archive_entry *entry, int want_type, int *type,
 		entry->acl_p = entry->acl_p->next;
 	if (entry->acl_p == NULL) {
 		entry->acl_state = 0;
+		*type = 0;
+		*permset = 0;
+		*tag = 0;
+		*id = -1;
+		*name = NULL;
 		return (ARCHIVE_EOF); /* End of ACL entries. */
 	}
 	*type = entry->acl_p->type;
@@ -1122,7 +1358,7 @@ const wchar_t *
 archive_entry_acl_text_w(struct archive_entry *entry, int flags)
 {
 	int count;
-	int length;
+	size_t length;
 	const wchar_t *wname;
 	const wchar_t *prefix;
 	wchar_t separator;
@@ -1484,7 +1720,7 @@ archive_entry_xattr_next(struct archive_entry * entry,
 		return (ARCHIVE_OK);
 	} else {
 		*name = NULL;
-		*name = NULL;
+		*value = NULL;
 		*size = (size_t)0;
 		return (ARCHIVE_WARN);
 	}
@@ -1687,7 +1923,7 @@ static struct flag {
  *	Convert file flags to a comma-separated string.  If no flags
  *	are set, return the empty string.
  */
-char *
+static char *
 ae_fflagstostr(unsigned long bitset, unsigned long bitclear)
 {
 	char *string, *dp;
@@ -1732,6 +1968,70 @@ ae_fflagstostr(unsigned long bitset, unsigned long bitclear)
 }
 
 /*
+ * strtofflags --
+ *	Take string of arguments and return file flags.  This
+ *	version works a little differently than strtofflags(3).
+ *	In particular, it always tests every token, skipping any
+ *	unrecognized tokens.  It returns a pointer to the first
+ *	unrecognized token, or NULL if every token was recognized.
+ *	This version is also const-correct and does not modify the
+ *	provided string.
+ */
+static const char *
+ae_strtofflags(const char *s, unsigned long *setp, unsigned long *clrp)
+{
+	const char *start, *end;
+	struct flag *flag;
+	unsigned long set, clear;
+	const char *failed;
+
+	set = clear = 0;
+	start = s;
+	failed = NULL;
+	/* Find start of first token. */
+	while (*start == '\t'  ||  *start == ' '  ||  *start == ',')
+		start++;
+	while (*start != '\0') {
+		/* Locate end of token. */
+		end = start;
+		while (*end != '\0'  &&  *end != '\t'  &&
+		    *end != ' '  &&  *end != ',')
+			end++;
+		for (flag = flags; flag->name != NULL; flag++) {
+			if (memcmp(start, flag->name, end - start) == 0) {
+				/* Matched "noXXXX", so reverse the sense. */
+				clear |= flag->set;
+				set |= flag->clear;
+				break;
+			} else if (memcmp(start, flag->name + 2, end - start)
+			    == 0) {
+				/* Matched "XXXX", so don't reverse. */
+				set |= flag->set;
+				clear |= flag->clear;
+				break;
+			}
+		}
+		/* Ignore unknown flag names. */
+		if (flag->name == NULL  &&  failed == NULL)
+			failed = start;
+
+		/* Find start of next token. */
+		start = end;
+		while (*start == '\t'  ||  *start == ' '  ||  *start == ',')
+			start++;
+
+	}
+
+	if (setp)
+		*setp = set;
+	if (clrp)
+		*clrp = clear;
+
+	/* Return location of first failure. */
+	return (failed);
+}
+
+/*
  * wcstofflags --
  *	Take string of arguments and return file flags.  This
  *	version works a little differently than strtofflags(3).
@@ -1741,7 +2041,7 @@ ae_fflagstostr(unsigned long bitset, unsigned long bitclear)
  *	This version is also const-correct and does not modify the
  *	provided string.
  */
-const wchar_t *
+static const wchar_t *
 ae_wcstofflags(const wchar_t *s, unsigned long *setp, unsigned long *clrp)
 {
 	const wchar_t *start, *end;

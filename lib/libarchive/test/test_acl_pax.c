@@ -23,7 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "test.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/test/test_acl_pax.c,v 1.4 2007/07/06 15:43:11 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/test/test_acl_pax.c,v 1.4.2.1 2008/08/10 04:32:47 kientzle Exp $");
 
 /*
  * Exercise the system-independent portion of the ACL support.
@@ -332,14 +332,10 @@ acl_match(struct acl_t *acl, int type, int permset, int tag, int qual, const cha
 		return (1);
 	if (qual != acl->qual)
 		return (0);
-	if (name == NULL) {
-		if (acl->name == NULL || acl->name[0] == '\0')
-			return (1);
-	}
-	if (acl->name == NULL) {
-		if (name[0] == '\0')
-			return (1);
-	}
+	if (name == NULL)
+		return (acl->name == NULL || acl->name[0] == '\0');
+	if (acl->name == NULL)
+		return (name == NULL || name[0] == '\0');
 	return (0 == strcmp(name, acl->name));
 }
 

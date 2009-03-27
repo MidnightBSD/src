@@ -26,7 +26,7 @@
  */
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_ar.c,v 1.6 2007/05/29 01:00:19 kientzle Exp $");
+__FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_ar.c,v 1.6.4.4 2008/08/10 04:32:47 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD: src/lib/libarchive/archive_read_support_format_ar.c,v 1.6 20
 #include "archive_read_private.h"
 
 struct ar {
-	int	 bid;
 	off_t	 entry_bytes_remaining;
 	off_t	 entry_offset;
 	off_t	 entry_padding;
@@ -84,8 +83,7 @@ static int	archive_read_format_ar_read_header(struct archive_read *a,
 		    struct archive_entry *e);
 static uint64_t	ar_atol8(const char *p, unsigned char_cnt);
 static uint64_t	ar_atol10(const char *p, unsigned char_cnt);
-static int	ar_parse_gnu_filename_table(struct archive_read *, struct ar *,
-		    const void *, size_t);
+static int	ar_parse_gnu_filename_table(struct archive_read *a);
 static int	ar_parse_common_header(struct ar *ar, struct archive_entry *,
 		    const char *h);
 
@@ -103,7 +101,6 @@ archive_read_support_format_ar(struct archive *_a)
 		return (ARCHIVE_FATAL);
 	}
 	memset(ar, 0, sizeof(*ar));
-	ar->bid = -1;
 	ar->strtab = NULL;
 
 	r = __archive_read_register_format(a,
@@ -148,9 +145,6 @@ archive_read_format_ar_bid(struct archive_read *a)
 
 	ar = (struct ar *)(a->format->data);
 
-	if (ar->bid > 0)
-		return (ar->bid);
-
 	/*
 	 * Verify the 8-byte file signature.
 	 * TODO: Do we need to check more than this?
@@ -159,8 +153,7 @@ archive_read_format_ar_bid(struct archive_read *a)
 	if (bytes_read < 8)
 		return (-1);
 	if (strncmp((const char*)h, "!<arch>\n", 8) == 0) {
-		ar->bid = 64;
-		return (ar->bid);
+		return (64);
 	}
 	return (-1);
 }
@@ -173,8 +166,8 @@ archive_read_format_ar_read_header(struct archive_read *a,
 	struct ar *ar;
 	uint64_t number; /* Used to hold parsed numbers before validation. */
 	ssize_t bytes_read;
-	size_t bsd_name_length, entry_size;
-	char *p;
+	size_t bsd_name_length, entry_size, s;
+	char *p, *st;
 	const void *b;
 	const char *h;
 	int r;
@@ -274,8 +267,7 @@ archive_read_format_ar_read_header(struct archive_read *a,
 		/* This must come before any call to _read_ahead. */
 		ar_parse_common_header(ar, entry, h);
 		archive_entry_copy_pathname(entry, filename);
-		archive_entry_set_mode(entry,
-		    S_IFREG | (archive_entry_mode(entry) & 0777));
+		archive_entry_set_filetype(entry, AE_IFREG);
 		/* Get the size of the filename table. */
 		number = ar_atol10(h + AR_size_offset, AR_size_size);
 		if (number > SIZE_MAX) {
@@ -284,22 +276,42 @@ archive_read_format_ar_read_header(struct archive_read *a,
 			return (ARCHIVE_FATAL);
 		}
 		entry_size = (size_t)number;
+		if (entry_size == 0) {
+			archive_set_error(&a->archive, EINVAL,
+			    "Invalid string table");
+			return (ARCHIVE_WARN);
+		}
+		if (ar->strtab != NULL) {
+			archive_set_error(&a->archive, EINVAL,
+			    "More than one string tables exist");
+			return (ARCHIVE_WARN);
+		}
+
 		/* Read the filename table into memory. */
-		bytes_read = (a->decompressor->read_ahead)(a, &b, entry_size);
-		if (bytes_read <= 0)
-			return (ARCHIVE_FATAL);
-		if ((size_t)bytes_read < entry_size) {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "Truncated input file");
+		st = malloc(entry_size);
+		if (st == NULL) {
+			archive_set_error(&a->archive, ENOMEM,
+			    "Can't allocate filename table buffer");
 			return (ARCHIVE_FATAL);
 		}
-		/*
-		 * Don't consume the contents, so the client will
-		 * also get a shot at reading it.
-		 */
+		ar->strtab = st;
+		ar->strtab_size = entry_size;
+		for (s = entry_size; s > 0; s -= bytes_read) {
+			bytes_read = (a->decompressor->read_ahead)(a, &b, s);
+			if (bytes_read <= 0)
+				return (ARCHIVE_FATAL);
+			if (bytes_read > (ssize_t)s)
+				bytes_read = s;
+			memcpy(st, b, bytes_read);
+			st += bytes_read;
+			(a->decompressor->consume)(a, bytes_read);
+		}
+		/* All contents are consumed. */
+		ar->entry_bytes_remaining = 0;
+		archive_entry_set_size(entry, ar->entry_bytes_remaining);
 
 		/* Parse the filename table. */
-		return (ar_parse_gnu_filename_table(a, ar, b, entry_size));
+		return (ar_parse_gnu_filename_table(a));
 	}
 
 	/*
@@ -338,12 +350,16 @@ archive_read_format_ar_read_header(struct archive_read *a,
 
 		/* Parse the size of the name, adjust the file size. */
 		number = ar_atol10(h + AR_name_offset + 3, AR_name_size - 3);
-		if ((off_t)number > ar->entry_bytes_remaining) {
+		bsd_name_length = (size_t)number;
+		/* Guard against the filename + trailing NUL
+		 * overflowing a size_t and against the filename size
+		 * being larger than the entire entry. */
+		if (number > (uint64_t)(bsd_name_length + 1)
+		    || (off_t)bsd_name_length > ar->entry_bytes_remaining) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
 			    "Bad input file size");
 			return (ARCHIVE_FATAL);
 		}
-		bsd_name_length = (size_t)number;
 		ar->entry_bytes_remaining -= bsd_name_length;
 		/* Adjust file size reported to client. */
 		archive_entry_set_size(entry, ar->entry_bytes_remaining);
@@ -381,8 +397,7 @@ archive_read_format_ar_read_header(struct archive_read *a,
 		/* Parse the time, owner, mode, size fields. */
 		r = ar_parse_common_header(ar, entry, h);
 		/* Force the file type to a regular file. */
-		archive_entry_set_mode(entry,
-		    S_IFREG | (archive_entry_mode(entry) & 0777));
+		archive_entry_set_filetype(entry, AE_IFREG);
 		return (r);
 	}
 
@@ -500,31 +515,15 @@ archive_read_format_ar_skip(struct archive_read *a)
 }
 
 static int
-ar_parse_gnu_filename_table(struct archive_read *a, struct ar *ar,
-    const void *h, size_t size)
+ar_parse_gnu_filename_table(struct archive_read *a)
 {
+	struct ar *ar;
 	char *p;
+	size_t size;
 
-	if (ar->strtab != NULL) {
-		archive_set_error(&a->archive, EINVAL,
-		    "More than one string tables exist");
-		return (ARCHIVE_WARN);
-	}
+	ar = (struct ar*)(a->format->data);
+	size = ar->strtab_size;
 
-	if (size == 0) {
-		archive_set_error(&a->archive, EINVAL, "Invalid string table");
-		return (ARCHIVE_WARN);
-	}
-
-	ar->strtab_size = size;
-	ar->strtab = malloc(size);
-	if (ar->strtab == NULL) {
-		archive_set_error(&a->archive, ENOMEM,
-		    "Can't allocate string table buffer");
-		return (ARCHIVE_FATAL);
-	}
-
-	(void)memcpy(ar->strtab, h, size);
 	for (p = ar->strtab; p < ar->strtab + size - 1; ++p) {
 		if (*p == '/') {
 			*p++ = '\0';

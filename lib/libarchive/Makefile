@@ -1,30 +1,13 @@
-# $FreeBSD: src/lib/libarchive/Makefile,v 1.77 2007/07/15 19:10:34 kientzle Exp $
+# $FreeBSD: src/lib/libarchive/Makefile,v 1.77.2.3 2008/08/10 04:32:47 kientzle Exp $
 
 LIB=	archive
 DPADD=	${LIBBZ2} ${LIBZ}
 LDADD=	-lbz2 -lz
 
-# The libarchive version stamp.
-# Version is three numbers:
-#  Major: Bumped ONLY when API/ABI breakage happens (see SHLIB_MAJOR)
-#  Minor: Bumped when significant new features are added
-#  Revision: Bumped on any notable change
-VERSION= 2.2.4
-
-ARCHIVE_API_MAJOR!=	echo ${VERSION} | sed -e 's/[^0-9]/./g' -e 's/\..*//'
-ARCHIVE_API_MINOR!=	echo ${VERSION} | sed -e 's/[^0-9]/./g' -e 's/[0-9]*\.//' -e 's/\..*//'
-ARCHIVE_API_REV!=	echo ${VERSION} | sed -e 's/[^0-9]/./g' -e 's/.*\.//'
-
-# Can't use /usr/bin/printf to format the version stamp here, because
-# that's not available during installworld.  Fortunately, awk is.
-ARCHIVE_VERSION_STAMP!=	echo ${ARCHIVE_API_MAJOR} ${ARCHIVE_API_MINOR} ${ARCHIVE_API_REV} | awk '{printf("%d%03d%03d",$$1,$$2,$$3)}'
-
 # FreeBSD SHLIB_MAJOR value is managed as part of the FreeBSD system.
-# It has no real relation to the version number above.
+# It has no real relation to the libarchive version number.
 SHLIB_MAJOR= 4
 
-CFLAGS+=	-DPACKAGE_NAME=\"lib${LIB}\"
-CFLAGS+=	-DPACKAGE_VERSION=\"${VERSION}\"
 CFLAGS+=	-DPLATFORM_CONFIG_H=\"config_freebsd.h\"
 CFLAGS+=	-I${.OBJDIR}
 
@@ -33,27 +16,13 @@ WARNS?=	6
 # Headers to be installed in /usr/include
 INCS=	archive.h archive_entry.h
 
-# Build archive.h from archive.h.in by substituting version information.
-# Note: FreeBSD has inttypes.h, so enable that include in archive.h.in
-archive.h:	archive.h.in Makefile
-	cat ${.CURDIR}/archive.h.in | sed				\
-		-e 's/@ARCHIVE_VERSION@/${VERSION}/g'	 		\
-		-e 's/@SHLIB_MAJOR@/${SHLIB_MAJOR}/g'			\
-		-e 's/@ARCHIVE_API_MAJOR@/${ARCHIVE_API_MAJOR}/g'	\
-		-e 's/@ARCHIVE_API_MINOR@/${ARCHIVE_API_MINOR}/g'	\
-		-e 's/@ARCHIVE_VERSION_STAMP@/${ARCHIVE_VERSION_STAMP}/g' \
-		-e 's|@ARCHIVE_H_INCLUDE_INTTYPES_H@|#include <inttypes.h>  /* For int64_t */|g' \
-		> archive.h
-
-# archive.h needs to be cleaned
-CLEANFILES+=	archive.h
-
 # Sources to be compiled.
-SRCS=	archive.h					\
-	archive_check_magic.c				\
+SRCS=	archive_check_magic.c				\
 	archive_entry.c					\
 	archive_entry_copy_stat.c			\
 	archive_entry_stat.c				\
+	archive_entry_strmode.c				\
+	archive_entry_link_resolver.c			\
 	archive_read.c					\
 	archive_read_data_into_fd.c			\
 	archive_read_extract.c				\
@@ -72,6 +41,7 @@ SRCS=	archive.h					\
 	archive_read_support_format_cpio.c		\
 	archive_read_support_format_empty.c		\
 	archive_read_support_format_iso9660.c		\
+	archive_read_support_format_mtree.c		\
 	archive_read_support_format_tar.c		\
 	archive_read_support_format_zip.c		\
 	archive_string.c				\
@@ -86,6 +56,7 @@ SRCS=	archive.h					\
 	archive_write_open_filename.c			\
 	archive_write_open_memory.c			\
 	archive_write_set_compression_bzip2.c		\
+	archive_write_set_compression_compress.c	\
 	archive_write_set_compression_gzip.c		\
 	archive_write_set_compression_none.c		\
 	archive_write_set_compression_program.c		\
@@ -105,6 +76,7 @@ MAN=	archive_entry.3					\
 	archive_util.3					\
 	archive_write.3					\
 	archive_write_disk.3				\
+	cpio.5						\
 	libarchive.3					\
 	libarchive-formats.5				\
 	tar.5
@@ -120,10 +92,13 @@ MLINKS+=	archive_entry.3 archive_entry_acl_reset.3
 MLINKS+=	archive_entry.3 archive_entry_acl_text_w.3
 MLINKS+=	archive_entry.3 archive_entry_clear.3
 MLINKS+=	archive_entry.3 archive_entry_clone.3
+MLINKS+=	archive_entry.3 archive_entry_copy_fflags_text.3
 MLINKS+=	archive_entry.3 archive_entry_copy_fflags_text_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_gname.3
 MLINKS+=	archive_entry.3 archive_entry_copy_gname_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_hardlink_w.3
+MLINKS+=	archive_entry.3 archive_entry_copy_link.3
+MLINKS+=	archive_entry.3 archive_entry_copy_link_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_pathname_w.3
 MLINKS+=	archive_entry.3 archive_entry_copy_stat.3
 MLINKS+=	archive_entry.3 archive_entry_copy_symlink_w.3
@@ -215,6 +190,7 @@ MLINKS+=	archive_util.3 archive_error_string.3
 MLINKS+=	archive_util.3 archive_format.3
 MLINKS+=	archive_util.3 archive_format_name.3
 MLINKS+=	archive_util.3 archive_set_error.3
+MLINKS+=	archive_write.3 archive_write_close.3
 MLINKS+=	archive_write.3 archive_write_data.3
 MLINKS+=	archive_write.3 archive_write_finish.3
 MLINKS+=	archive_write.3 archive_write_finish_entry.3
@@ -232,6 +208,7 @@ MLINKS+=	archive_write.3 archive_write_set_bytes_in_last_block.3
 MLINKS+=	archive_write.3 archive_write_set_bytes_per_block.3
 MLINKS+=	archive_write.3 archive_write_set_callbacks.3
 MLINKS+=	archive_write.3 archive_write_set_compression_bzip2.3
+MLINKS+=	archive_write.3 archive_write_set_compression_compress.3
 MLINKS+=	archive_write.3 archive_write_set_compression_gzip.3
 MLINKS+=	archive_write.3 archive_write_set_compression_none.3
 MLINKS+=	archive_write.3 archive_write_set_compression_program.3
@@ -246,7 +223,8 @@ MLINKS+=	archive_write_disk.3 archive_write_disk_set_standard_lookup.3
 MLINKS+=	archive_write_disk.3 archive_write_disk_set_user_lookup.3
 MLINKS+=	libarchive.3 archive.3
 
-test:
+.PHONY: check test
+check test:
 	cd ${.CURDIR}/test && make test
 
 .include <bsd.lib.mk>

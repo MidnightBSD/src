@@ -22,23 +22,31 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/lib/libarchive/archive_entry_private.h,v 1.1 2007/05/29 01:00:18 kientzle Exp $
+ * $FreeBSD: src/lib/libarchive/archive_entry_private.h,v 1.1.4.4 2008/11/28 20:08:47 kientzle Exp $
  */
 
 #ifndef ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
 #define	ARCHIVE_ENTRY_PRIVATE_H_INCLUDED
 
+#include "archive_string.h"
+
 /*
  * Handle wide character (i.e., Unicode) and non-wide character
  * strings transparently.
- *
  */
 
 struct aes {
-	const char *aes_mbs;
-	char *aes_mbs_alloc;
+	struct archive_string aes_mbs;
+	struct archive_string aes_utf8;
 	const wchar_t *aes_wcs;
-	wchar_t *aes_wcs_alloc;
+	/* Bitmap of which of the above are valid.  Because we're lazy
+	 * about malloc-ing and reusing the underlying storage, we
+	 * can't rely on NULL pointers to indicate whether a string
+	 * has been set. */
+	int aes_set;
+#define	AES_SET_MBS 1
+#define	AES_SET_UTF8 2
+#define	AES_SET_WCS 4
 };
 
 struct ae_acl {
@@ -128,7 +136,13 @@ struct archive_entry {
 		dev_t		aest_rdevminor;
 	} ae_stat;
 
-
+	int ae_set; /* bitmap of fields that are currently set */
+#define	AE_SET_HARDLINK	1
+#define	AE_SET_SYMLINK	2
+#define	AE_SET_ATIME	4
+#define	AE_SET_CTIME	8
+#define	AE_SET_MTIME	16
+#define	AE_SET_SIZE	64
 
 	/*
 	 * Use aes here so that we get transparent mbs<->wcs conversions.
@@ -142,13 +156,21 @@ struct archive_entry {
 	struct aes ae_symlink;		/* symlink contents */
 	struct aes ae_uname;		/* Name of owner */
 
+	/* Not used within libarchive; useful for some clients. */
+	struct aes ae_sourcepath;	/* Path this entry is sourced from. */
+
+	/* ACL support. */
 	struct ae_acl	*acl_head;
 	struct ae_acl	*acl_p;
 	int		 acl_state;	/* See acl_next for details. */
 	wchar_t		*acl_text_w;
 
+	/* extattr support. */
 	struct ae_xattr *xattr_head;
 	struct ae_xattr *xattr_p;
+
+	/* Miscellaneous. */
+	char		 strmode[12];
 };
 
 
