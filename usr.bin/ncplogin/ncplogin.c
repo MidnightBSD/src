@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/ncplogin/ncplogin.c,v 1.4 2002/09/04 23:29:04 dwmalone Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/ncplogin/ncplogin.c,v 1.5 2007/02/05 07:35:23 kevlo Exp $");
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -69,7 +69,7 @@ static void
 login(int argc, char *argv[], struct ncp_conn_loginfo *li) {
 	int error = 0, connid, opt, setprimary = 0;
 
-	while ((opt = getopt(argc, argv, STDPARAM_OPT"D")) != EOF){
+	while ((opt = getopt(argc, argv, STDPARAM_OPT"D")) != -1) {
 		switch(opt){
 		    case STDPARAM_ARGS:
 			if (ncp_li_arg(li, opt, optarg))	

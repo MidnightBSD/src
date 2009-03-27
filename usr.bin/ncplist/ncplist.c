@@ -32,7 +32,7 @@
 
 #include <sys/cdefs.h>
 
-__FBSDID("$FreeBSD: src/usr.bin/ncplist/ncplist.c,v 1.2 2002/04/28 12:21:31 markm Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/ncplist/ncplist.c,v 1.3 2007/02/05 07:35:23 kevlo Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -380,7 +380,7 @@ main(int argc, char *argv[])
 	bzero(args, sizeof(args));
 
 	what = LO_NONE;
-	while ((opt = getopt(argc, argv, "h")) != EOF) {
+	while ((opt = getopt(argc, argv, "h")) != -1) {
 		switch (opt) {
 		    case 'h': case '?':
 			help();
