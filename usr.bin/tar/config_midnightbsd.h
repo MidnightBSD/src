@@ -22,21 +22,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/tar/config_freebsd.h,v 1.1 2007/03/11 10:36:42 kientzle Exp $
- # $MidnightBSD$
+ * $FreeBSD: src/usr.bin/tar/config_freebsd.h,v 1.1.4.3 2008/08/10 07:35:55 kientzle Exp $
  */
 
 /* A default configuration for FreeBSD, used if there is no config.h. */
 
-#define	PACKAGE_NAME "bsdtar"
+#include <sys/param.h>  /* __FreeBSD_version */
 
+#if __FreeBSD__ > 4
 #define	HAVE_ACL_GET_PERM 0
 #define	HAVE_ACL_GET_PERM_NP 1
 #define	HAVE_ACL_PERMSET_T 1
 #define	HAVE_ACL_USER 1
+#endif
 #undef	HAVE_ATTR_XATTR_H
 #define	HAVE_BZLIB_H 1
 #define	HAVE_CHFLAGS 1
+#define	HAVE_CHROOT 1
+#define	HAVE_DECL_OPTARG 1
+#define	HAVE_DECL_OPTIND 1
 #define	HAVE_DIRENT_D_NAMLEN 1
 #define	HAVE_DIRENT_H 1
 #define	HAVE_D_MD_ORDER 1
@@ -68,9 +72,12 @@
 #define	HAVE_MEMMOVE 1
 #define	HAVE_MEMORY_H 1
 #define	HAVE_MEMSET 1
+#if __FreeBSD_version >= 450002 /* nl_langinfo introduced */
 #define	HAVE_NL_LANGINFO 1
+#endif
 #define	HAVE_PATHS_H 1
 #define	HAVE_PWD_H 1
+#define	HAVE_REGEX_H 1
 #define	HAVE_SETLOCALE 1
 #define	HAVE_STDARG_H 1
 #define	HAVE_STDINT_H 1
@@ -84,7 +91,6 @@
 #define	HAVE_STRRCHR 1
 #undef	HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC
 #define	HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC 1
-#define	HAVE_STRUCT_STAT_ST_RDEV 1
 #define	HAVE_SYS_ACL_H 1
 #define	HAVE_SYS_IOCTL_H 1
 #define	HAVE_SYS_PARAM_H 1

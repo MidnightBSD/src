@@ -24,8 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/matching.c,v 1.11 2007/03/11 10:36:42 kientzle Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/tar/write.c,v 1.2 2007/03/14 02:45:08 laffer1 Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/tar/matching.c,v 1.11.2.4 2008/08/27 04:59:00 kientzle Exp $");
 
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -60,6 +59,7 @@ static int	bsdtar_fnmatch(const char *p, const char *s);
 static void	initialize_matching(struct bsdtar *);
 static int	match_exclusion(struct match *, const char *pathname);
 static int	match_inclusion(struct match *, const char *pathname);
+static int	pathmatch(const char *p, const char *s);
 
 /*
  * The matching logic here needs to be re-thought.  I started out to
@@ -119,8 +119,6 @@ add_pattern(struct bsdtar *bsdtar, struct match **list, const char *pattern)
 	match = malloc(sizeof(*match) + strlen(pattern) + 1);
 	if (match == NULL)
 		bsdtar_errc(bsdtar, 1, errno, "Out of memory");
-	if (pattern[0] == '/')
-		pattern++;
 	strcpy(match->pattern, pattern);
 	/* Both "foo/" and "foo" should match "foo/bar". */
 	if (match->pattern[strlen(match->pattern)-1] == '/')
@@ -158,7 +156,7 @@ excluded(struct bsdtar *bsdtar, const char *pathname)
 			 */
 			if (match->matches == 0) {
 				match->matches++;
-				matching->inclusions_unmatched_count++;
+				matching->inclusions_unmatched_count--;
 				return (0);
 			}
 			/*
@@ -196,12 +194,12 @@ match_exclusion(struct match *match, const char *pathname)
 	const char *p;
 
 	if (*match->pattern == '*' || *match->pattern == '/')
-		return (bsdtar_fnmatch(match->pattern, pathname) == 0);
+		return (pathmatch(match->pattern, pathname) == 0);
 
 	for (p = pathname; p != NULL; p = strchr(p, '/')) {
 		if (*p == '/')
 			p++;
-		if (bsdtar_fnmatch(match->pattern, p) == 0)
+		if (pathmatch(match->pattern, p) == 0)
 			return (1);
 	}
 	return (0);
@@ -214,7 +212,7 @@ match_exclusion(struct match *match, const char *pathname)
 int
 match_inclusion(struct match *match, const char *pathname)
 {
-	return (bsdtar_fnmatch(match->pattern, pathname) == 0);
+	return (pathmatch(match->pattern, pathname) == 0);
 }
 
 void
@@ -259,6 +257,64 @@ unmatched_inclusions(struct bsdtar *bsdtar)
 	return (matching->inclusions_unmatched_count);
 }
 
+
+int
+unmatched_inclusions_warn(struct bsdtar *bsdtar, const char *msg)
+{
+	struct matching *matching;
+	struct match *p;
+
+	matching = bsdtar->matching;
+	if (matching == NULL)
+		return (0);
+
+	p = matching->inclusions;
+	while (p != NULL) {
+		if (p->matches == 0) {
+			bsdtar->return_value = 1;
+			bsdtar_warnc(bsdtar, 0, "%s: %s",
+			    p->pattern, msg);
+		}
+		p = p->next;
+	}
+	return (matching->inclusions_unmatched_count);
+}
+
+/*
+ * TODO: Extend this so that the following matches work:
+ *     "foo//bar" == "foo/bar"
+ *     "foo/./bar" == "foo/bar"
+ *     "./foo" == "foo"
+ *
+ * The POSIX fnmatch() function doesn't handle any of these, but
+ * all are common situations that arise when paths are generated within
+ * large scripts.  E.g., the following is quite common:
+ *      MYPATH=foo/  TARGET=$MYPATH/bar
+ * It may be worthwhile to edit such paths at write time as well,
+ * especially when such editing may avoid the need for long pathname
+ * extensions.
+ */
+static int
+pathmatch(const char *pattern, const char *string)
+{
+	/*
+	 * Strip leading "./" or ".//" so that, e.g.,
+	 * "foo" matches "./foo".  In particular, this
+	 * opens up an optimization for the writer to
+	 * elide leading "./".
+	 */
+	if (pattern[0] == '.' && pattern[1] == '/') {
+		pattern += 2;
+		while (pattern[0] == '/')
+			++pattern;
+	}
+	if (string[0] == '.' && string[1] == '/') {
+		string += 2;
+		while (string[0] == '/')
+			++string;
+	}
+	return (bsdtar_fnmatch(pattern, string));
+}
 
 
 #if defined(HAVE_FNMATCH) && defined(HAVE_FNM_LEADING_DIR)

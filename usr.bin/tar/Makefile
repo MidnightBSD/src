@@ -1,13 +1,12 @@
-# $FreeBSD: src/usr.bin/tar/Makefile,v 1.32 2007/07/20 01:24:49 kientzle Exp $
-# $MidnightBSD$
+# $FreeBSD: src/usr.bin/tar/Makefile,v 1.32.2.4 2008/08/25 02:18:12 kientzle Exp $
 
 PROG=	bsdtar
-VERSION=	2.2.5
-SRCS=	bsdtar.c getdate.y matching.c read.c tree.c util.c write.c
+BSDTAR_VERSION_STRING=2.5.5
+SRCS=	bsdtar.c getdate.y matching.c read.c siginfo.c subst.c tree.c util.c write.c
 WARNS?=	5
 DPADD=	${LIBARCHIVE} ${LIBBZ2} ${LIBZ}
 LDADD=	-larchive -lbz2 -lz
-CFLAGS+=	-DPACKAGE_VERSION=\"${VERSION}\"
+CFLAGS+=	-DBSDTAR_VERSION_STRING=\"${BSDTAR_VERSION_STRING}\"
 CFLAGS+=	-DPLATFORM_CONFIG_H=\"config_midnightbsd.h\"
 CFLAGS+=	-I${.CURDIR}
 SYMLINKS=	bsdtar ${BINDIR}/tar

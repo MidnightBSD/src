@@ -44,7 +44,6 @@
  */
 #include "bsdtar_platform.h"
 __FBSDID("$FreeBSD: src/usr.bin/tar/tree.c,v 1.8 2007/03/11 10:36:42 kientzle Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/tar/write.c,v 1.2 2007/03/14 02:45:08 laffer1 Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>

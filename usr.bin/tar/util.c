@@ -24,8 +24,7 @@
  */
 
 #include "bsdtar_platform.h"
-__FBSDID("$FreeBSD: src/usr.bin/tar/util.c,v 1.17 2007/04/18 04:36:11 kientzle Exp $");
-__MBSDID("$MidnightBSD: src/usr.bin/tar/write.c,v 1.2 2007/03/14 02:45:08 laffer1 Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/tar/util.c,v 1.17.2.3 2008/12/11 05:56:47 kientzle Exp $");
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -52,6 +51,7 @@ __MBSDID("$MidnightBSD: src/usr.bin/tar/write.c,v 1.2 2007/03/14 02:45:08 laffer
 
 static void	bsdtar_vwarnc(struct bsdtar *, int code,
 		    const char *fmt, va_list ap);
+static const char *strip_components(const char *path, int elements);
 
 /*
  * Print a string, taking care with any non-printable characters.
@@ -179,7 +179,7 @@ yes(const char *fmt, ...)
 	fprintf(stderr, " (y/N)? ");
 	fflush(stderr);
 
-	l = read(2, buff, sizeof(buff));
+	l = read(2, buff, sizeof(buff) - 1);
 	if (l <= 0)
 		return (0);
 	buff[l] = 0;
@@ -200,56 +200,6 @@ yes(const char *fmt, ...)
 	return (0);
 }
 
-void
-bsdtar_strmode(struct archive_entry *entry, char *bp)
-{
-	static const char *perms = "?rwxrwxrwx ";
-	static const mode_t permbits[] =
-	    { S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP,
-	      S_IROTH, S_IWOTH, S_IXOTH };
-	mode_t mode;
-	int i;
-
-	/* Fill in a default string, then selectively override. */
-	strcpy(bp, perms);
-
-	mode = archive_entry_mode(entry);
-	switch (mode & S_IFMT) {
-	case S_IFREG:  bp[0] = '-'; break;
-	case S_IFBLK:  bp[0] = 'b'; break;
-	case S_IFCHR:  bp[0] = 'c'; break;
-	case S_IFDIR:  bp[0] = 'd'; break;
-	case S_IFLNK:  bp[0] = 'l'; break;
-	case S_IFSOCK: bp[0] = 's'; break;
-#ifdef S_IFIFO
-	case S_IFIFO:  bp[0] = 'p'; break;
-#endif
-#ifdef S_IFWHT
-	case S_IFWHT:  bp[0] = 'w'; break;
-#endif
-	}
-
-	for (i = 0; i < 9; i++)
-		if (!(mode & permbits[i]))
-			bp[i+1] = '-';
-
-	if (mode & S_ISUID) {
-		if (mode & S_IXUSR) bp[3] = 's';
-		else bp[3] = 'S';
-	}
-	if (mode & S_ISGID) {
-		if (mode & S_IXGRP) bp[6] = 's';
-		else bp[6] = 'S';
-	}
-	if (mode & S_ISVTX) {
-		if (mode & S_IXOTH) bp[9] = 't';
-		else bp[9] = 'T';
-	}
-	if (archive_entry_acl_count(entry, ARCHIVE_ENTRY_ACL_TYPE_ACCESS))
-		bp[10] = '+';
-}
-
-
 /*
  * Read lines from file and do something with each one.  If option_null
  * is set, lines are terminated with zero bytes; otherwise, they're
@@ -266,7 +216,7 @@ process_lines(struct bsdtar *bsdtar, const char *pathname,
 {
 	FILE *f;
 	char *buff, *buff_end, *line_start, *line_end, *p;
-	size_t buff_length, bytes_read, bytes_wanted;
+	size_t buff_length, new_buff_length, bytes_read, bytes_wanted;
 	int separator;
 	int ret;
 
@@ -313,7 +263,12 @@ process_lines(struct bsdtar *bsdtar, const char *pathname,
 			line_start = buff;
 		} else {
 			/* Line is too big; enlarge the buffer. */
-			p = realloc(buff, buff_length *= 2);
+			new_buff_length = buff_length * 2;
+			if (new_buff_length <= buff_length)
+				bsdtar_errc(bsdtar, 1, ENOMEM,
+				    "Line too long in %s", pathname);
+			buff_length = new_buff_length;
+			p = realloc(buff, buff_length);
 			if (p == NULL)
 				bsdtar_errc(bsdtar, 1, ENOMEM,
 				    "Line too long in %s", pathname);
@@ -392,6 +347,31 @@ do_chdir(struct bsdtar *bsdtar)
 	bsdtar->pending_chdir = NULL;
 }
 
+const char *
+strip_components(const char *path, int elements)
+{
+	const char *p = path;
+
+	while (elements > 0) {
+		switch (*p++) {
+		case '/':
+			elements--;
+			path = p;
+			break;
+		case '\0':
+			/* Path is too short, skip it. */
+			return (NULL);
+		}
+	}
+
+	while (*path == '/')
+	       ++path;
+	if (*path == '\0')
+	       return (NULL);
+
+	return (path);
+}
+
 /*
  * Handle --strip-components and any future path-rewriting options.
  * Returns non-zero if the pathname should not be extracted.
@@ -402,22 +382,65 @@ int
 edit_pathname(struct bsdtar *bsdtar, struct archive_entry *entry)
 {
 	const char *name = archive_entry_pathname(entry);
+#if HAVE_REGEX_H
+	char *subst_name;
+#endif
+	int r;
+
+#if HAVE_REGEX_H
+	r = apply_substitution(bsdtar, name, &subst_name, 0);
+	if (r == -1) {
+		bsdtar_warnc(bsdtar, 0, "Invalid substituion, skipping entry");
+		return 1;
+	}
+	if (r == 1) {
+		archive_entry_copy_pathname(entry, subst_name);
+		if (*subst_name == '\0') {
+			free(subst_name);
+			return -1;
+		} else
+			free(subst_name);
+		name = archive_entry_pathname(entry);
+	}
+
+	if (archive_entry_hardlink(entry)) {
+		r = apply_substitution(bsdtar, archive_entry_hardlink(entry), &subst_name, 1);
+		if (r == -1) {
+			bsdtar_warnc(bsdtar, 0, "Invalid substituion, skipping entry");
+			return 1;
+		}
+		if (r == 1) {
+			archive_entry_copy_hardlink(entry, subst_name);
+			free(subst_name);
+		}
+	}
+	if (archive_entry_symlink(entry) != NULL) {
+		r = apply_substitution(bsdtar, archive_entry_symlink(entry), &subst_name, 1);
+		if (r == -1) {
+			bsdtar_warnc(bsdtar, 0, "Invalid substituion, skipping entry");
+			return 1;
+		}
+		if (r == 1) {
+			archive_entry_copy_symlink(entry, subst_name);
+			free(subst_name);
+		}
+	}
+#endif
 
 	/* Strip leading dir names as per --strip-components option. */
 	if (bsdtar->strip_components > 0) {
-		int r = bsdtar->strip_components;
-		const char *p = name;
+		const char *linkname = archive_entry_hardlink(entry);
 
-		while (r > 0) {
-			switch (*p++) {
-			case '/':
-				r--;
-				name = p;
-				break;
-			case '\0':
-				/* Path is too short, skip it. */
+		name = strip_components(name, bsdtar->strip_components);
+		if (name == NULL)
+			return (1);
+
+		if (linkname != NULL) {
+			linkname = strip_components(linkname,
+			    bsdtar->strip_components);
+			if (linkname == NULL)
 				return (1);
-			}
+			archive_entry_copy_hardlink(entry, linkname);
 		}
 	}
 

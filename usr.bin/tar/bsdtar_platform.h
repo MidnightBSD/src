@@ -22,8 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.bin/tar/bsdtar_platform.h,v 1.24 2007/04/12 04:45:32 kientzle Exp $
- * $MidnightBSD$
+ * $FreeBSD: src/usr.bin/tar/bsdtar_platform.h,v 1.24.2.1 2008/02/10 23:24:16 kientzle Exp $
  */
 
 /*
@@ -50,7 +49,8 @@
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>  /* For __FBSDID */
 #else
-#define	__FBSDID(a)     /* null */
+/* Just leaving this macro replacement empty leads to a dangling semicolon. */
+#define	__FBSDID(a)     struct _undefined_hack
 #endif
 
 #ifdef HAVE_LIBARCHIVE
