@@ -350,6 +350,9 @@ bin/pax/tar.1 -text
 bin/pax/tar.c -text
 bin/pax/tar.h -text
 bin/pax/tty_subs.c -text
+bin/pkill/Makefile -text
+bin/pkill/pkill.1 -text
+bin/pkill/pkill.c -text
 bin/ps/Makefile -text
 bin/ps/extern.h -text
 bin/ps/fmt.c -text
