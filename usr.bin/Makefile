@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.21 2009/03/26 21:49:30 ctriv Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.22 2009/03/27 20:24:09 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -155,7 +155,6 @@ SUBDIR=	alias \
 	pathchk \
 	${_pcc} \
 	perl \
-	pkill \
 	pr \
 	printenv \
 	printf \

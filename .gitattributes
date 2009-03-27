@@ -35652,9 +35652,6 @@ usr.bin/pcc/sparc64/macdefs.h -text
 usr.bin/pcc/sparc64/order.c -text
 usr.bin/pcc/sparc64/table.c -text
 usr.bin/perl/BSDmakefile -text
-usr.bin/pkill/Makefile -text
-usr.bin/pkill/pkill.1 -text
-usr.bin/pkill/pkill.c -text
 usr.bin/pr/Makefile -text
 usr.bin/pr/egetopt.c -text
 usr.bin/pr/extern.h -text
