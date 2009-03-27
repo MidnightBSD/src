@@ -35147,11 +35147,9 @@ usr.bin/gprof/PSD.doc/pres2.pic -text
 usr.bin/gprof/PSD.doc/present.me -text
 usr.bin/gprof/PSD.doc/profiling.me -text
 usr.bin/gprof/PSD.doc/refs.me -text
-usr.bin/gprof/alpha.h -text
 usr.bin/gprof/amd64.h -text
 usr.bin/gprof/aout.c -text
 usr.bin/gprof/arcs.c -text
-usr.bin/gprof/arm.h -text
 usr.bin/gprof/dfn.c -text
 usr.bin/gprof/elf.c -text
 usr.bin/gprof/gprof.1 -text
@@ -35161,7 +35159,6 @@ usr.bin/gprof/gprof.flat -text
 usr.bin/gprof/gprof.h -text
 usr.bin/gprof/hertz.c -text
 usr.bin/gprof/i386.h -text
-usr.bin/gprof/ia64.h -text
 usr.bin/gprof/kernel.c -text
 usr.bin/gprof/lookup.c -text
 usr.bin/gprof/pathnames.h -text

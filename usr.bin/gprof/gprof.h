@@ -44,17 +44,8 @@
 #if __amd64__
 #   include "amd64.h"
 #endif
-#if __arm__
-#   include "arm.h"
-#endif
 #if __i386__
 #   include "i386.h"
-#endif
-#if __ia64__
-#   include "ia64.h"
-#endif
-#if __powerpc__
-#   include "powerpc.h"
 #endif
 #if __sparc64__
 #   include "sparc64.h"
