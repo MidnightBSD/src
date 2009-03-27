@@ -480,6 +480,9 @@ bin/test/TEST.csh -text
 bin/test/TEST.sh -text
 bin/test/test.1 -text
 bin/test/test.c -text
+bin/uuidgen/Makefile -text
+bin/uuidgen/uuidgen.1 -text
+bin/uuidgen/uuidgen.c -text
 cddl/Makefile -text
 cddl/Makefile.inc -text
 cddl/compat/opensolaris/include/devid.h -text
