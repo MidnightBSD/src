@@ -35900,7 +35900,6 @@ usr.bin/time/time.1 -text
 usr.bin/time/time.c -text
 usr.bin/tip/Makefile -text
 usr.bin/tip/Makefile.inc -text
-usr.bin/tip/NEWS -text
 usr.bin/tip/README -text
 usr.bin/tip/TODO -text
 usr.bin/tip/libacu/biz22.c -text
