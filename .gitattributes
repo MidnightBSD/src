@@ -26335,6 +26335,8 @@ share/man/man4/ath.4 -text
 share/man/man4/ath_hal.4 -text
 share/man/man4/atkbd.4 -text
 share/man/man4/atkbdc.4 -text
+share/man/man4/audit.4 -text
+share/man/man4/auditpipe.4 -text
 share/man/man4/aue.4 -text
 share/man/man4/awi.4 -text
 share/man/man4/axe.4 -text

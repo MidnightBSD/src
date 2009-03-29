@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.11 2009/01/04 22:58:15 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.12 2009/01/19 22:28:38 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
@@ -28,6 +28,8 @@ MAN=	aac.4 \
 	ath_hal.4 \
 	atkbd.4 \
 	atkbdc.4 \
+	audit.4 \
+	auditpipe.4 \
 	aue.4 \
 	awi.4 \
 	axe.4 \
