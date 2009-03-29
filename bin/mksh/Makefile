@@ -1,4 +1,4 @@
-# $MidnightBSD: src/bin/mksh/Makefile,v 1.3 2008/04/17 23:13:56 laffer1 Exp $
+# $MidnightBSD: src/bin/mksh/Makefile,v 1.4 2009/03/27 01:53:38 laffer1 Exp $
 
 MKSHDIR= ${.CURDIR}/../../contrib/mksh
 .PATH: ${MKSHDIR}
@@ -29,6 +29,7 @@ MAN=	mksh.1
 
 LINKS=	${BINDIR}/mksh ${BINDIR}/rksh
 LINKS+=	${BINDIR}/mksh ${BINDIR}/ksh
+LINKS+=	${BINDIR}/mksh ${BINDIR}/sh
 MLINKS=	mksh.1 rksh.1 mksh.1 ulimit.1 mksh.1 ksh.1
 
 .include <bsd.prog.mk>

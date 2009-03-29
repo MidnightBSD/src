@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/bin/Makefile,v 1.25 2005/03/02 11:53:21 trhodes Exp $
-# $MidnightBSD: src/bin/Makefile,v 1.10 2009/03/27 22:04:42 laffer1 Exp $
+# $MidnightBSD: src/bin/Makefile,v 1.11 2009/03/27 22:07:52 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -39,7 +39,6 @@ SUBDIR= cat \
 	${_rmail} \
 	rmdir \
 	setfacl \
-	sh \
 	sleep \
 	stty \
 	sync \
