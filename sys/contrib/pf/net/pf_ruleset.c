@@ -107,12 +107,13 @@ void			 pf_anchor_remove(struct pf_rule *);
 #endif
 #endif
 
-static __inline int pf_anchor_compare(struct pf_anchor *, struct pf_anchor *);
+/* __inline XXX  fails on sparc */
+static int pf_anchor_compare(struct pf_anchor *, struct pf_anchor *);
 
 RB_GENERATE(pf_anchor_global, pf_anchor, entry_global, pf_anchor_compare);
 RB_GENERATE(pf_anchor_node, pf_anchor, entry_node, pf_anchor_compare);
 
-static __inline int
+static int
 pf_anchor_compare(struct pf_anchor *a, struct pf_anchor *b)
 {
 	int c = strcmp(a->path, b->path);
