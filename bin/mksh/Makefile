@@ -1,12 +1,12 @@
-# $MidnightBSD: src/bin/mksh/Makefile,v 1.4 2009/03/27 01:53:38 laffer1 Exp $
+# $MidnightBSD: src/bin/mksh/Makefile,v 1.5 2009/03/29 02:30:59 laffer1 Exp $
 
 MKSHDIR= ${.CURDIR}/../../contrib/mksh
 .PATH: ${MKSHDIR}
 
 PROG=	mksh
 
-SRCS=	alloc.c edit.c eval.c exec.c expr.c funcs.c histrap.c \
-	jobs.c lex.c main.c misc.c shf.c syn.c tree.c var.c
+SRCS=	edit.c eval.c exec.c expr.c funcs.c histrap.c \
+	jobs.c lalloc.c lex.c main.c misc.c shf.c syn.c tree.c var.c
 
 DEFS=	-std=c99
 CFLAGS+=	${DEFS} -I${SRCDIR}
