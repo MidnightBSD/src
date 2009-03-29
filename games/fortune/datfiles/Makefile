@@ -1,10 +1,10 @@
 #	@(#)Makefile	8.2 (Berkeley) 4/19/94
 # $FreeBSD: src/games/fortune/datfiles/Makefile,v 1.33 2005/02/03 00:20:36 ru Exp $
-# $MidnightBSD: src/games/fortune/datfiles/Makefile,v 1.2 2007/07/17 10:10:12 laffer1 Exp $
+# $MidnightBSD: src/games/fortune/datfiles/Makefile,v 1.3 2007/07/19 07:54:18 laffer1 Exp $
 
-FILES=	fortunes freebsd-tips murphy startrek zippy
+FILES=	fortunes murphy startrek zippy
 BLDS=	fortunes.dat murphy.dat startrek.dat zippy.dat \
-	fortunes-o fortunes-o.dat freebsd-tips.dat
+	fortunes-o fortunes-o.dat
 
 # Pass all new entries by ${MAINTAINER} to preserve some semblance of
 # humor in the fortune files.  What's funny to you on 6 beers may not
@@ -27,7 +27,7 @@ CLEANFILES+=${BLDS}
 
 FILESDIR=	${SHAREDIR}/games/fortune
 
-.for f in fortunes fortunes2-o freebsd-tips gerrold.limerick limerick murphy murphy-o startrek zippy
+.for f in fortunes fortunes2-o gerrold.limerick limerick murphy murphy-o startrek zippy
 $f.dat: $f
 	PATH=$$PATH:/usr/games:${.OBJDIR}/../strfile \
 	    strfile -Cs ${.ALLSRC} ${.TARGET}
