@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nmdm/nmdm.c,v 1.35.2.1 2005/08/13 21:24:15 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nmdm/nmdm.c,v 1.39 2007/08/01 21:38:11 emax Exp $");
 
 /*
  * Pseudo-nulmodem driver
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: src/sys/dev/nmdm/nmdm.c,v 1.35.2.1 2005/08/13 21:24:15 rwats
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/tty.h>
 #include <sys/conf.h>
@@ -61,9 +62,6 @@ static d_open_t		nmdmopen;
 static t_oproc_t	nmdmoproc;
 static t_param_t	nmdmparam;
 static t_stop_t		nmdmstop;
-
-static void 	nmdminit(struct cdev *dev);
-
 
 static struct cdevsw nmdm_cdevsw = {
 	.d_version =	D_VERSION,
@@ -235,7 +233,7 @@ nmdminit(struct cdev *dev1)
 	pt->part1.dev = dev1;
 	pt->part2.dev = dev2;
 
-	pt->part1.nm_tty = ttymalloc(pt->part1.nm_tty);
+	pt->part1.nm_tty = ttyalloc();
 	pt->part1.nm_tty->t_oproc = nmdmoproc;
 	pt->part1.nm_tty->t_stop = nmdmstop;
 	pt->part1.nm_tty->t_modem = nmdmmodem;
@@ -245,7 +243,7 @@ nmdminit(struct cdev *dev1)
 	TASK_INIT(&pt->part1.pt_task, 0, nmdm_task_tty, pt->part1.nm_tty);
 	callout_init(&pt->part1.co, 0);
 
-	pt->part2.nm_tty = ttymalloc(pt->part2.nm_tty);
+	pt->part2.nm_tty = ttyalloc();
 	pt->part2.nm_tty->t_oproc = nmdmoproc;
 	pt->part2.nm_tty->t_stop = nmdmstop;
 	pt->part2.nm_tty->t_modem = nmdmmodem;
@@ -289,7 +287,8 @@ nmdmopen(struct cdev *dev, int flag, int devtype, struct thread *td)
 	if ((tp->t_state & TS_ISOPEN) == 0) {
 		ttyinitmode(tp, 0, 0);
 		ttsetwater(tp); /* XXX ? */
-	} else if (tp->t_state & TS_XCLUDE && suser(td)) {
+	} else if (tp->t_state & TS_XCLUDE &&
+	    priv_check(td, PRIV_TTY_EXCLUSIVE)) {
 		return (EBUSY);
 	}
 
@@ -402,8 +401,13 @@ nmdmmodem(struct tty *tp, int sigon, int sigoff)
 static int
 nmdmclose(struct cdev *dev, int flag, int mode, struct thread *td)
 {
+	struct tty *tp = dev->si_tty;
+	int error;
 
-	return (tty_close(dev->si_tty));
+	error = ttyld_close(tp, flag);
+	(void) tty_close(dev->si_tty);
+
+	return (error);
 }
 
 static void
