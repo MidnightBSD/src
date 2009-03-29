@@ -5,7 +5,7 @@
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.148 2008/12/13 17:02:12 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.156 2009/03/17 13:56:47 tg Exp $");
 
 /* tty driver characters we are interested in */
 typedef struct {
@@ -17,7 +17,7 @@ typedef struct {
 	int eof;
 } X_chars;
 
-X_chars edchars;
+static X_chars edchars;
 
 /* x_fc_glob() flags */
 #define XCF_COMMAND	BIT(0)	/* Do command completion */
@@ -49,10 +49,6 @@ static int x_vi(char *, size_t);
 #define x_flush()	shf_flush(shl_out)
 #define x_putc(c)	shf_putc((c), shl_out)
 
-#ifdef TIOCGWINSZ
-static void chkwinsz(void);
-#endif
-
 static int path_order_cmp(const void *aa, const void *bb);
 static char *add_glob(const char *, int);
 static void glob_table(const char *, XPtrV *, struct table *);
@@ -62,6 +58,7 @@ static int x_command_glob(int, const char *, int, char ***);
 static int x_locate_word(const char *, int, int, int *, bool *);
 
 static int x_e_getmbc(char *);
+static int utf_wcwidth(unsigned int);
 
 /* +++ generic editing functions +++ */
 
@@ -74,38 +71,9 @@ x_init(void)
 	    edchars.eof = -2;
 	/* default value for deficient systems */
 	edchars.werase = 027;	/* ^W */
-#ifdef TIOCGWINSZ
-	chkwinsz();
-#endif
+	change_winsz();
 	x_init_emacs();
 }
-
-#ifdef TIOCGWINSZ
-static void
-chkwinsz(void)
-{
-	struct winsize ws;
-
-	if (procpid == kshpid && ioctl(tty_fd, TIOCGWINSZ, &ws) >= 0) {
-		struct tbl *vp;
-
-		/* Do NOT export COLUMNS/LINES.  Many applications
-		 * check COLUMNS/LINES before checking ws.ws_col/row,
-		 * so if the app is started with C/L in the environ
-		 * and the window is then resized, the app won't
-		 * see the change cause the environ doesn't change.
-		 */
-		if (ws.ws_col) {
-			x_cols = ws.ws_col < MIN_COLS ? MIN_COLS : ws.ws_col;
-
-			if ((vp = typeset("COLUMNS", 0, 0, 0, 0)))
-				setint(vp, (long)ws.ws_col);
-		}
-		if (ws.ws_row && (vp = typeset("LINES", 0, 0, 0, 0)))
-			setint(vp, (long)ws.ws_row);
-	}
-}
-#endif
 
 /*
  * read an edited command line
@@ -126,9 +94,7 @@ x_read(char *buf, size_t len)
 	else
 		i = -1;		/* internal error */
 	x_mode(false);
-#ifdef TIOCGWINSZ
-	chkwinsz();
-#endif
+	change_winsz();
 	return i;
 }
 
@@ -756,12 +722,13 @@ utf_widthadj(const char *src, const char **dst)
 	if (!UTFMODE || (len = utf_mbtowc(&wc, src)) == (size_t)-1 ||
 	    wc == 0)
 		len = width = 1;
-	else
-		width = utf_wcwidth(wc);
+	else if ((width = utf_wcwidth(wc)) < 0)
+		/* XXX use 2 for x_zotc3 here? */
+		width = 1;
 
 	if (dst)
 		*dst = src + len;
-	return (width == -1 ? 2 : width);
+	return (width);
 }
 
 int
@@ -809,7 +776,7 @@ utf_skipcols(const char *p, int cols)
 
 __RCSID("$miros: src/lib/libc/i18n/wcwidth.c,v 1.8 2008/09/20 12:01:18 tg Exp $");
 
-int
+static int
 utf_wcwidth(unsigned int c)
 {
 	static const struct cbset {
@@ -1413,7 +1380,7 @@ x_init_prompt(void)
 	x_col = promptlen(prompt);
 	x_adj_ok = 1;
 	prompt_redraw = 1;
-	if (x_col > xx_cols)
+	if (x_col >= xx_cols)
 		x_col %= xx_cols;
 	x_displen = xx_cols - 2 - x_col;
 	x_adj_done = 0;
@@ -1863,7 +1830,7 @@ static void
 x_zotc2(int c)
 {
 	if (c == '\t') {
-		/*  Kludge, tabs are always four spaces.  */
+		/* Kludge, tabs are always four spaces. */
 		x_e_puts("    ");
 	} else if (c < ' ' || c == 0x7f) {
 		x_e_putc2('^');
@@ -1877,19 +1844,11 @@ x_zotc3(char **cp)
 {
 	unsigned char c = **(unsigned char **)cp;
 
-	if (c == 0xC2 && UTFMODE) {
-		unsigned char c2 = ((unsigned char *)*cp)[1];
-
-		if (c2 >= 0x80 && c2 < 0xA0) {
-			c = c2;
-			(*cp)++;
-		}
-	}
 	if (c == '\t') {
-		/*  Kludge, tabs are always four spaces.  */
+		/* Kludge, tabs are always four spaces. */
 		x_e_puts("    ");
 		(*cp)++;
-	} else if (c < ' ' || (c >= 0x7F && c < 0xA0)) {
+	} else if (c < ' ' || c == 0x7f) {
 		x_e_putc2('^');
 		x_e_putc2(UNCTRL(c));
 		(*cp)++;
@@ -2283,12 +2242,12 @@ x_redraw(int limit)
 	x_flush();
 	if (xbp == xbuf) {
 		x_col = promptlen(prompt);
-		if (x_col > xx_cols)
+		if (x_col >= xx_cols)
 			x_trunc = (x_col / xx_cols) * xx_cols;
 		if (prompt_redraw)
 			pprompt(prompt, x_trunc);
 	}
-	if (x_col > xx_cols)
+	if (x_col >= xx_cols)
 		x_col %= xx_cols;
 	x_displen = xx_cols - 2 - x_col;
 	if (x_displen < 1) {
@@ -2585,8 +2544,8 @@ x_print(int prefix, int key)
 
 int
 x_bind(const char *a1, const char *a2,
-    int macro,			/* bind -m */
-    int list)			/* bind -l */
+    bool macro,			/* bind -m */
+    bool list)			/* bind -l */
 {
 	unsigned char f;
 	int prefix, key;
@@ -3349,12 +3308,12 @@ x_mode(bool onoff)
 #endif
 		cb.c_iflag &= ~(INLCR | ICRNL);
 		cb.c_lflag &= ~(ISIG | ICANON | ECHO);
-#ifdef VLNEXT
+#if defined(VLNEXT) && defined(_POSIX_VDISABLE)
 		/* osf/1 processes lnext when ~icanon */
 		cb.c_cc[VLNEXT] = _POSIX_VDISABLE;
 #endif
 		/* sunos 4.1.x & osf/1 processes discard(flush) when ~icanon */
-#ifdef VDISCARD
+#if defined(VDISCARD) && defined(_POSIX_VDISABLE)
 		cb.c_cc[VDISCARD] = _POSIX_VDISABLE;
 #endif
 		cb.c_cc[VTIME] = 0;
@@ -3362,6 +3321,7 @@ x_mode(bool onoff)
 
 		tcsetattr(tty_fd, TCSADRAIN, &cb);
 
+#ifdef _POSIX_VDISABLE
 		/* Convert unset values to internal 'unset' value */
 		if (edchars.erase == _POSIX_VDISABLE)
 			edchars.erase = -1;
@@ -3375,6 +3335,7 @@ x_mode(bool onoff)
 			edchars.eof = -1;
 		if (edchars.werase == _POSIX_VDISABLE)
 			edchars.werase = -1;
+#endif
 
 		if (edchars.erase >= 0) {
 			bind_if_not_bound(0, edchars.erase, XFUNC_del_back);
@@ -3462,7 +3423,7 @@ static int	x_vi_putbuf(const char *, size_t);
 #define is_srch(c)	(classify[(c)&0x7f]&S_)
 #define is_zerocount(c)	(classify[(c)&0x7f]&Z_)
 
-const unsigned char	classify[128] = {
+static const unsigned char classify[128] = {
    /*       0       1       2       3       4       5       6       7        */
    /*   0   ^@     ^A      ^B      ^C      ^D      ^E      ^F      ^G        */
 	    B_,     0,      0,      0,      0,      C_|U_,  C_|Z_,  0,

@@ -4,7 +4,7 @@
 /*	$OpenBSD: tree.h,v 1.10 2005/03/28 21:28:22 deraadt Exp $	*/
 /*	$OpenBSD: expand.h,v 1.6 2005/03/30 17:16:37 deraadt Exp $	*/
 /*	$OpenBSD: lex.h,v 1.11 2006/05/29 18:22:24 otto Exp $	*/
-/*	$OpenBSD: proto.h,v 1.30 2006/03/17 16:30:13 millert Exp $	*/
+/*	$OpenBSD: proto.h,v 1.32 2009/01/29 23:27:26 jaredy Exp $	*/
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
@@ -17,7 +17,6 @@
 #endif
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/file.h>
 #include <sys/ioctl.h>
 #if HAVE_SYS_SYSMACROS_H
 #include <sys/sysmacros.h>
@@ -103,9 +102,9 @@
 #define __SCCSID(x)	__IDSTRING(sccsid,x)
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.267 2008/12/13 18:32:27 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.286 2009/03/25 21:45:28 tg Exp $");
 #endif
-#define MKSH_VERSION "R36 2008/12/13"
+#define MKSH_VERSION "R37 2009/03/25"
 
 #ifndef MKSH_INCLUDES_ONLY
 
@@ -263,6 +262,10 @@ extern int __cdecl setegid(gid_t);
 /* Table flag type - needs > 16 and < 32 bits */
 typedef int32_t Tflag;
 
+/* arithmetics types */
+typedef int32_t mksh_ari_t;
+typedef uint32_t mksh_uari_t;
+
 /* these shall be smaller than 100 */
 #ifdef MKSH_SMALL
 #define NUFILE		32	/* Number of user-accessible files */
@@ -393,10 +396,10 @@ char *ucstrstr(char *, const char *);
 #endif
 
 /*
- * Area-based allocation built on malloc/free
+ * simple grouping allocator
  */
-typedef struct Area {
-	struct link *freelist;	/* free list */
+typedef struct lalloc {
+	struct lalloc *next;
 } Area;
 
 EXTERN Area aperm;		/* permanent object space */
@@ -683,7 +686,9 @@ EXTERN size_t	current_wd_size;
 /* Minimum allowed value for x_cols: 2 for prompt, 3 for " < " at end of line
  */
 #define MIN_COLS	(2 + MIN_EDIT_SPACE + 3)
-EXTERN int	x_cols I__(80);	/* tty columns */
+#define MIN_LINS	3
+EXTERN int x_cols I__(80);	/* tty columns */
+EXTERN int x_lins I__(-1);	/* tty lines */
 
 /* These to avoid bracket matching problems */
 #define OPAREN	'('
@@ -774,7 +779,8 @@ struct tbl {			/* table item */
 	Area *areap;		/* area to allocate from */
 	union {
 		char *s;		/* string */
-		long i;			/* integer */
+		mksh_ari_t i;		/* integer */
+		mksh_uari_t u;		/* unsigned integer */
 		int (*f)(const char **);/* int function */
 		struct op *t;		/* "function" tree */
 	} val;			/* value */
@@ -903,17 +909,18 @@ extern const struct builtin mkshbuiltins[];
 
 /* var spec values */
 #define V_NONE		0
-#define V_PATH		1
-#define V_IFS		2
-#define V_SECONDS	3
-#define V_OPTIND	4
-#define V_RANDOM	8
-#define V_HISTSIZE	9
-#define V_HISTFILE	10
-#define V_COLUMNS	13
-#define V_TMOUT		15
-#define V_TMPDIR	16
-#define V_LINENO	17
+#define V_COLUMNS	1
+#define V_HISTFILE	2
+#define V_HISTSIZE	3
+#define V_IFS		4
+#define V_LINENO	5
+#define V_LINES		6
+#define V_OPTIND	7
+#define V_PATH		8
+#define V_RANDOM	9
+#define V_SECONDS	10
+#define V_TMOUT		11
+#define V_TMPDIR	12
 
 /* values for set_prompt() */
 #define PS1	0	/* command */
@@ -1256,22 +1263,22 @@ EXTERN int histsize;	/* history size */
 /* user and system time of last j_waitjed job */
 EXTERN struct timeval j_usrtime, j_systime;
 
-/* alloc.c */
-Area *ainit(Area *);
+/* lalloc.c */
+void ainit(Area *);
 void afreeall(Area *);
-void *alloc(size_t, Area *);	/* cannot fail */
+/* these cannot fail and can take NULL (not for ap) */
+#define alloc(n, ap)	aresize(NULL, (n), (ap))
 void *aresize(void *, size_t, Area *);
 void afree(void *, Area *);	/* can take NULL */
 /* edit.c */
 void x_init(void);
 int x_read(char *, size_t);
-int x_bind(const char *, const char *, int, int);
+int x_bind(const char *, const char *, bool, bool);
 /* UTF-8 stuff */
 size_t utf_mbtowc(unsigned int *, const char *);
 size_t utf_wctomb(char *, unsigned int);
 int utf_widthadj(const char *, const char **);
 int utf_mbswidth(const char *);
-int utf_wcwidth(unsigned int);
 const char *utf_skipcols(const char *, int);
 /* eval.c */
 char *substitute(const char *, int);
@@ -1282,7 +1289,7 @@ char *debunk(char *, const char *, size_t);
 void expand(const char *, XPtrV *, int);
 int glob_str(char *, XPtrV *, int);
 /* exec.c */
-int execute(struct op * volatile, volatile int);
+int execute(struct op * volatile, volatile int, volatile int * volatile);
 int shcomexec(const char **);
 struct tbl *findfunc(const char *, unsigned int, int);
 int define(const char *, struct op *);
@@ -1294,7 +1301,7 @@ int search_access(const char *, int, int *);
 int pr_menu(const char *const *);
 int pr_list(char *const *);
 /* expr.c */
-int evaluate(const char *, long *, int, bool);
+int evaluate(const char *, mksh_ari_t *, int, bool);
 int v_evaluate(struct tbl *, const char *, volatile int, bool);
 /* funcs.c */
 int c_hash(const char **);
@@ -1327,7 +1334,7 @@ int c_set(const char **);
 int c_unset(const char **);
 int c_ulimit(const char **);
 int c_times(const char **);
-int timex(struct op *, int);
+int timex(struct op *, int, volatile int *);
 void timex_hook(struct op *, char ** volatile *);
 int c_exec(const char **);
 int c_builtin(const char **);
@@ -1376,7 +1383,7 @@ void setexecsig(Trap *, int);
 void j_init(int);
 void j_exit(void);
 void j_change(void);
-int exchild(struct op *, int, int);
+int exchild(struct op *, int, volatile int *, int);
 void startlast(void);
 int waitlast(void);
 int waitfor(const char *, int *);
@@ -1525,11 +1532,11 @@ void initvar(void);
 struct tbl *global(const char *);
 struct tbl *local(const char *, bool);
 char *str_val(struct tbl *);
-long intval(struct tbl *);
+mksh_ari_t intval(struct tbl *);
 int setstr(struct tbl *, const char *, int);
 struct tbl *setint_v(struct tbl *, struct tbl *, bool);
-void setint(struct tbl *, long);
-int getint(struct tbl *, long *, bool);
+void setint(struct tbl *, mksh_ari_t);
+int getint(struct tbl *, mksh_ari_t *, bool);
 struct tbl *typeset(const char *, Tflag, Tflag, int, int);
 void unset(struct tbl *, int);
 const char *skip_varname(const char *, int);
@@ -1540,6 +1547,7 @@ char **makenv(void);
 #if !HAVE_ARC4RANDOM || !defined(MKSH_SMALL)
 void change_random(unsigned long);
 #endif
+void change_winsz(void);
 int array_ref_len(const char *);
 char *arrayname(const char *);
 void set_array(const char *, int, const char **);
@@ -1599,7 +1607,7 @@ EXTERN int tty_fd I__(-1);	/* dup'd tty file descriptor */
 EXTERN int tty_devtty;		/* true if tty_fd is from /dev/tty */
 EXTERN struct termios tty_state;	/* saved tty state */
 
-extern void tty_init(int);
+extern void tty_init(bool, bool);
 extern void tty_close(void);
 
 /* be sure not to interfere with anyone else's idea about EXTERN */

@@ -9094,6 +9094,7 @@ contrib/mksh/expr.c -text
 contrib/mksh/funcs.c -text
 contrib/mksh/histrap.c -text
 contrib/mksh/jobs.c -text
+contrib/mksh/lalloc.c -text
 contrib/mksh/lex.c -text
 contrib/mksh/main.c -text
 contrib/mksh/misc.c -text

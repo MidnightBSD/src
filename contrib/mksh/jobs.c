@@ -1,8 +1,8 @@
-/*	$OpenBSD: jobs.c,v 1.36 2007/09/06 19:57:47 otto Exp $	*/
+/*	$OpenBSD: jobs.c,v 1.37 2009/01/29 23:27:26 jaredy Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.42 2008/12/13 17:02:15 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/jobs.c,v 1.46 2009/03/26 11:22:53 tg Exp $");
 
 /* Order important! */
 #define PRUNNING	0
@@ -92,7 +92,11 @@ static int nzombie;		/* # of zombies owned by this process */
 static int32_t njobs;		/* # of jobs started */
 
 #ifndef CHILD_MAX
+#ifdef _POSIX_CHILD_MAX
 #define CHILD_MAX	_POSIX_CHILD_MAX
+#elif defined(__KLIBC__)
+#define CHILD_MAX	999	/* no limit :-) */
+#endif
 #endif
 
 /* held_sigchld is set if sigchld occurs before a job is completely started */
@@ -124,7 +128,7 @@ j_init(int mflagset)
 	sigprocmask(SIG_SETMASK, &sm_default, NULL);
 
 	(void)sigemptyset(&sm_sigchld);
-	sigaddset(&sm_sigchld, SIGCHLD);
+	(void)sigaddset(&sm_sigchld, SIGCHLD);
 
 	setsig(&sigtraps[SIGCHLD], j_sigchld,
 	    SS_RESTORE_ORIG|SS_FORCE|SS_SHTRAP);
@@ -155,7 +159,7 @@ j_init(int mflagset)
 	if (Flag(FMONITOR))
 		j_change();
 	else if (Flag(FTALKING))
-		tty_init(true);
+		tty_init(true, true);
 }
 
 /* job cleanup before shell exit */
@@ -217,7 +221,7 @@ j_change(void)
 
 		/* Don't call tcgetattr() 'til we own the tty process group */
 		if (use_tty)
-			tty_init(false);
+			tty_init(false, true);
 
 		/* no controlling tty, no SIGT* */
 		if ((ttypgrp_ok = use_tty && tty_fd >= 0 && tty_devtty)) {
@@ -285,7 +289,9 @@ j_change(void)
 
 /* execute tree in child subprocess */
 int
-exchild(struct op *t, int flags, /* used if XPCLOSE or XCCLOSE */ int close_fd)
+exchild(struct op *t, int flags,
+    volatile int *xerrok,
+    /* used if XPCLOSE or XCCLOSE */ int close_fd)
 {
 	static Proc	*last_proc;	/* for pipelines */
 
@@ -301,7 +307,7 @@ exchild(struct op *t, int flags, /* used if XPCLOSE or XCCLOSE */ int close_fd)
 		/* Clear XFORK|XPCLOSE|XCCLOSE|XCOPROC|XPIPEO|XPIPEI|XXCOM|XBGND
 		 * (also done in another execute() below)
 		 */
-		return execute(t, flags & (XEXEC | XERROK));
+		return execute(t, flags & (XEXEC | XERROK), xerrok);
 
 	/* no SIGCHLDs while messing with job and process lists */
 	sigprocmask(SIG_BLOCK, &sm_sigchld, &omask);
@@ -426,7 +432,8 @@ exchild(struct op *t, int flags, /* used if XPCLOSE or XCCLOSE */ int close_fd)
 		Flag(FTALKING) = 0;
 		tty_close();
 		cleartraps();
-		execute(t, (flags & XERROK) | XEXEC); /* no return */
+		/* no return */
+		execute(t, (flags & XERROK) | XEXEC, NULL);
 #ifndef MKSH_SMALL
 		if (t->type == TPIPE)
 			unwind(LLEAVE);

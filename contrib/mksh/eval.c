@@ -1,8 +1,8 @@
-/*	$OpenBSD: eval.c,v 1.33 2007/08/02 11:05:54 fgsch Exp $	*/
+/*	$OpenBSD: eval.c,v 1.34 2009/01/29 23:27:26 jaredy Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.51 2008/12/13 17:02:13 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.53 2009/03/22 17:47:35 tg Exp $");
 
 #ifdef MKSH_SMALL
 #define MKSH_NOPWNAM
@@ -314,7 +314,7 @@ expand(const char *cp,	/* input word */
 					switch (stype & 0x7f) {
 					case '0': {
 						char *beg, *mid, *end, *stg;
-						long from = 0, num = -1, flen;
+						mksh_ari_t from = 0, num = -1, flen;
 
 						/* ! DOBLANK,DOBRACE_,DOTILDE */
 						f = DOPAT | (f&DONTRUNCOMMAND) |
@@ -1069,7 +1069,7 @@ comsub(Expand *xp, const char *cp)
 			ksh_dup2(pv[1], 1, false);
 			close(pv[1]);
 		}
-		execute(t, XFORK|XXCOM|XPIPEO);
+		execute(t, XFORK|XXCOM|XPIPEO, NULL);
 		restfd(1, ofd1);
 		startlast();
 		xp->split = 1;	/* waitlast() */

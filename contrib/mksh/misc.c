@@ -1,4 +1,4 @@
-/*	$OpenBSD: misc.c,v 1.34 2008/07/12 12:33:42 miod Exp $	*/
+/*	$OpenBSD: misc.c,v 1.36 2009/03/03 20:01:01 millert Exp $	*/
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
 #include "sh.h"
@@ -6,7 +6,7 @@
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.93.2.1 2008/12/13 17:43:26 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.99 2009/03/22 18:09:16 tg Exp $");
 
 #undef USE_CHVT
 #if defined(TIOCSCTTY) && !defined(MKSH_SMALL)
@@ -111,7 +111,7 @@ const struct shoption options[] = {
 	{ "restricted",	'r',	    OF_CMDLINE },
 	{ "stdin",	's',	    OF_CMDLINE }, /* pseudo non-standard */
 	{ "trackall",	'h',		OF_ANY },
-	{ "utf8-hack",	'U',		OF_ANY }, /* non-standard */
+	{ "utf8-mode",	'U',		OF_ANY }, /* non-standard */
 	{ "verbose",	'v',		OF_ANY },
 #ifndef MKSH_NOVI
 	{ "vi",		  0,		OF_ANY },
@@ -485,6 +485,13 @@ gmatchx(const char *s, const char *p, bool isfile)
 
 	if (s == NULL || p == NULL)
 		return 0;
+
+#if 0
+	/* debugging output */
+	fprintf(stderr, "gmatchx:\n\tstring =`%s`\n\tpattern=`%s`\n", s, p);
+	fflush(stderr);
+#endif
+
 	se = s + strlen(s);
 	pe = p + strlen(p);
 	/* isfile is false iff no syntax check has been done on
@@ -936,13 +943,22 @@ print_columns(struct shf *shf, int n,
 	char *str = alloc(max_width + 1, ATEMP);
 	int i, r, c, rows, cols, nspace;
 
+	/* ensure x_cols is valid first */
+	if (x_cols < MIN_COLS)
+		change_winsz();
+
 	/* max_width + 1 for the space.  Note that no space
 	 * is printed after the last column to avoid problems
 	 * with terminals that have auto-wrap.
 	 */
 	cols = x_cols / (max_width + 1);
-	if (!cols)
-		cols = 1;
+	/* if we can only print one column anyway, skip the goo */
+	if (cols < 2) {
+		for (i = 0; i < n; ++i)
+			shf_fprintf(shf, "%s \n",
+			    (*func)(arg, i, str, max_width + 1));
+		goto out;
+	}
 	rows = (n + cols - 1) / cols;
 	if (prefcol && n && cols > rows) {
 		int tmp = rows;
@@ -969,6 +985,7 @@ print_columns(struct shf *shf, int n,
 		}
 		shf_putchar('\n', shf);
 	}
+ out:
 	afree(str, ATEMP);
 }
 
@@ -1371,6 +1388,11 @@ chvt(const char *fn)
 #endif
 
 #ifdef DEBUG
+
+char longsizes_are_okay[sizeof (long) == sizeof (unsigned long) ? 1 : -1];
+char arisize_is_okay[sizeof (mksh_ari_t) == 4 ? 1 : -1];
+char uarisize_is_okay[sizeof (mksh_uari_t) == 4 ? 1 : -1];
+
 char *
 strchr(char *p, int ch)
 {

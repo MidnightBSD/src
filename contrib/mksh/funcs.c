@@ -1,11 +1,11 @@
-/*	$OpenBSD: c_ksh.c,v 1.31 2008/05/17 23:31:52 sobrado Exp $	*/
-/*	$OpenBSD: c_sh.c,v 1.38 2008/07/23 16:34:38 jaredy Exp $	*/
-/*	$OpenBSD: c_test.c,v 1.17 2005/03/30 17:16:37 deraadt Exp $	*/
+/*	$OpenBSD: c_ksh.c,v 1.33 2009/02/07 14:03:24 kili Exp $	*/
+/*	$OpenBSD: c_sh.c,v 1.39 2009/01/29 23:27:26 jaredy Exp $	*/
+/*	$OpenBSD: c_test.c,v 1.18 2009/03/01 20:11:06 otto Exp $	*/
 /*	$OpenBSD: c_ulimit.c,v 1.17 2008/03/21 12:51:19 millert Exp $	*/
 
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.93 2008/12/13 17:02:14 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.100 2009/03/22 18:28:34 tg Exp $");
 
 /* A leading = means assignments before command are kept;
  * a leading * means a POSIX special builtin;
@@ -332,24 +332,31 @@ c_print(const char **wp)
 		 * by default.
 		 */
 		wp += 1;
-		while ((s = *wp) && *s == '-' && s[1]) {
-			while (*++s)
-				if (*s == 'n')
-					nflags &= ~PO_NL;
-				else if (*s == 'e')
-					nflags |= PO_EXPAND;
-				else if (*s == 'E')
-					nflags &= ~PO_EXPAND;
-				else
-					/* bad option: don't use nflags, print
-					 * argument
-					 */
+		if (Flag(FPOSIX)) {
+			if (*wp && strcmp(*wp, "-n") == 0) {
+				flags &= ~PO_NL;
+				wp++;
+			}
+		} else
+			while ((s = *wp) && *s == '-' && s[1]) {
+				while (*++s)
+					if (*s == 'n')
+						nflags &= ~PO_NL;
+					else if (*s == 'e')
+						nflags |= PO_EXPAND;
+					else if (*s == 'E')
+						nflags &= ~PO_EXPAND;
+					else
+						/*
+						 * bad option: don't use
+						 * nflags, print argument
+						 */
+						break;
+				if (*s)
 					break;
-			if (*s)
-				break;
-			wp++;
-			flags = nflags;
-		}
+				wp++;
+				flags = nflags;
+			}
 	} else {
 		int optc;
 		const char *opts = "Rnprsu,";
@@ -1183,7 +1190,7 @@ int
 c_let(const char **wp)
 {
 	int rv = 1;
-	long val;
+	mksh_ari_t val;
 
 	if (wp[1] == NULL) /* at&t ksh does this */
 		bi_errorf("no arguments");
@@ -1495,7 +1502,7 @@ c_bind(const char **wp)
 	wp += builtin_opt.optind;
 
 	if (*wp == NULL)	/* list all */
-		rv = x_bind((char*)NULL, (char*)NULL, 0, list);
+		rv = x_bind(NULL, NULL, 0, list);
 
 	for (; *wp != NULL; wp++) {
 		if ((cp = cstrchr(*wp, '=')) == NULL)
@@ -1524,7 +1531,7 @@ c_shift(const char **wp)
 {
 	struct block *l = e->loc;
 	int n;
-	long val;
+	mksh_ari_t val;
 	const char *arg;
 
 	if (ksh_getopt(wp, &builtin_opt, null) == '?')
@@ -2196,7 +2203,7 @@ c_times(const char **wp __unused)
  * time pipeline (really a statement, not a built-in command)
  */
 int
-timex(struct op *t, int f)
+timex(struct op *t, int f, volatile int *xerrok)
 {
 #define TF_NOARGS	BIT(0)
 #define TF_NOREAL	BIT(1)		/* don't report real time */
@@ -2222,7 +2229,7 @@ timex(struct op *t, int f)
 		 */
 		timerclear(&j_usrtime);
 		timerclear(&j_systime);
-		rv = execute(t->left, f | XTIME);
+		rv = execute(t->left, f | XTIME, xerrok);
 		if (t->left->type == TCOM)
 			tf |= t->left->str[0];
 		gettimeofday(&tv1, NULL);
@@ -2533,7 +2540,7 @@ test_eval(Test_env *te, Test_op op, const char *opnd1, const char *opnd2,
 	int i, s;
 	size_t k;
 	struct stat b1, b2;
-	long v1, v2;
+	mksh_ari_t v1, v2;
 
 	if (!do_eval)
 		return 0;
@@ -2755,15 +2762,22 @@ test_primary(Test_env *te, bool do_eval)
 		}
 		return rv;
 	}
-	if ((op = (*te->isa)(te, TM_UNOP))) {
-		/* unary expression */
-		opnd1 = (*te->getopnd)(te, op, do_eval);
-		if (!opnd1) {
-			(*te->error)(te, -1, "missing argument");
-			return 0;
-		}
+	/*
+	 * Binary should have precedence over unary in this case
+	 * so that something like test \( -f = -f \) is accepted
+	 */
+	if ((te->flags & TEF_DBRACKET) || (&te->pos.wp[1] < te->wp_end &&
+	    !test_isop(TM_BINOP, te->pos.wp[1]))) {
+		if ((op = (*te->isa)(te, TM_UNOP))) {
+			/* unary expression */
+			opnd1 = (*te->getopnd)(te, op, do_eval);
+			if (!opnd1) {
+				(*te->error)(te, -1, "missing argument");
+				return 0;
+			}
 
-		return (*te->eval)(te, op, opnd1, NULL, do_eval);
+			return (*te->eval)(te, op, opnd1, NULL, do_eval);
+		}
 	}
 	opnd1 = (*te->getopnd)(te, TO_NONOP, do_eval);
 	if (!opnd1) {
@@ -2965,7 +2979,7 @@ set_ulimit(const struct limits *l, const char *v, int how)
 	if (strcmp(v, "unlimited") == 0)
 		val = (rlim_t)RLIM_INFINITY;
 	else {
-		long rval;
+		mksh_ari_t rval;
 
 		if (!evaluate(v, &rval, KSH_RETURN_ERROR, false))
 			return (1);

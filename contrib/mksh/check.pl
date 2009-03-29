@@ -1,5 +1,5 @@
-# $MirOS: src/bin/mksh/check.pl,v 1.18 2008/07/14 14:53:23 tg Exp $
-# $OpenBSD: th,v 1.12 2005/05/28 04:53:47 millert Exp $
+# $MirOS: src/bin/mksh/check.pl,v 1.20 2009/03/22 16:59:18 tg Exp $
+# $OpenBSD: th,v 1.13 2006/05/18 21:27:23 miod Exp $
 #-
 # Example test:
 #		name: a-test
@@ -52,8 +52,8 @@
 #					missing, NAME is removed from the
 #					environment.  Programs are run with
 #					the following minimal environment:
-#					    USER, LOGNAME, HOME,
-#					    LD_LIBRARY_PATH, PATH, SHELL
+#					    HOME, LD_LIBRARY_PATH, LOGNAME,
+#					    PATH, SHELL, USER
 #					(values taken from the environment of
 #					the test harness).
 #					ENV is set to /nonexistant.
@@ -234,7 +234,7 @@ $all_tests = @ARGV == 0;
 
 # Set up a very minimal environment
 %new_env = ();
-foreach $env (('USER', 'LOGNAME', 'HOME', 'PATH', 'SHELL')) {
+foreach $env (('HOME', 'LD_LIBRARY_PATH', 'LOGNAME', 'PATH', 'SHELL', 'USER')) {
     $new_env{$env} = $ENV{$env} if defined $ENV{$env};
 }
 $new_env{'ENV'} = '/nonexistant';
@@ -921,7 +921,7 @@ read_test
 		    # format is: type perm "name"
 		    if ($val !~ /^[ \t]*(\S+)[ \t]+(\S+)[ \t]+([^ \t].*)/) {
 			print STDERR
-		    "$prog:$file:$.: bad paramter line for file-setup field\n";
+		    "$prog:$file:$.: bad parameter line for file-setup field\n";
 			return undef;
 		    }
 		    ($type, $perm, $rest) = ($1, $2, $3);
@@ -958,7 +958,7 @@ read_test
 		    # format is: type perm uid gid matchType "name"
 		    if ($val !~ /^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S.*)/) {
 			print STDERR
-		    "$prog:$file:$.: bad paramter line for file-result field\n";
+		    "$prog:$file:$.: bad parameter line for file-result field\n";
 			return undef;
 		    }
 		    ($type, $perm, $uid, $gid, $matchType, $rest)

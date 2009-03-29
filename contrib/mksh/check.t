@@ -1,4 +1,4 @@
-# $MirOS: src/bin/mksh/check.t,v 1.252 2008/12/13 17:02:11 tg Exp $
+# $MirOS: src/bin/mksh/check.t,v 1.266 2009/03/25 21:45:27 tg Exp $
 # $OpenBSD: bksl-nl.t,v 1.2 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: history.t,v 1.5 2001/01/28 23:04:56 niklas Exp $
 # $OpenBSD: read.t,v 1.3 2003/03/10 03:48:16 david Exp $
@@ -7,7 +7,7 @@
 # http://www.research.att.com/~gsf/public/ifs.sh
 
 expected-stdout:
-	@(#)MIRBSD KSH R36 2008/12/13
+	@(#)MIRBSD KSH R37 2009/03/25
 description:
 	Check version of shell.
 stdin:
@@ -239,6 +239,70 @@ stdin:
 expected-stdout:
 	6
 	6,5,3
+---
+name: arith-unsigned-1
+description:
+	Check if unsigned arithmetics work
+stdin:
+	# signed vs unsigned
+	print x1 $((-1)) $((#-1))
+	# calculating
+	typeset -i vs
+	typeset -Ui vu
+	vs=4123456789; vu=4123456789
+	print x2 $vs $vu
+	(( vs %= 2147483647 ))
+	(( vu %= 2147483647 ))
+	print x3 $vs $vu
+	vs=4123456789; vu=4123456789
+	(( # vs %= 2147483647 ))
+	(( # vu %= 2147483647 ))
+	print x4 $vs $vu
+	# make sure the calculation does not change unsigned flag
+	vs=4123456789; vu=4123456789
+	print x5 $vs $vu
+	# short form
+	print x6 $((# vs % 2147483647)) $((# vu % 2147483647))
+	# array refs
+	set -A va
+	va[1975973142]=right
+	va[4123456789]=wrong
+	print x7 ${va[#4123456789%2147483647]}
+expected-stdout:
+	x1 -1 4294967295
+	x2 -171510507 4123456789
+	x3 -171510507 4123456789
+	x4 1975973142 1975973142
+	x5 -171510507 4123456789
+	x6 1975973142 1975973142
+	x7 right
+---
+name: arith-limit32-1
+description:
+	Check if arithmetics are 32 bit
+stdin:
+	# signed vs unsigned
+	print x1 $((-1)) $((#-1))
+	# calculating
+	typeset -i vs
+	typeset -Ui vu
+	vs=2147483647; vu=2147483647
+	print x2 $vs $vu
+	let vs++ vu++
+	print x3 $vs $vu
+	vs=4294967295; vu=4294967295
+	print x4 $vs $vu
+	let vs++ vu++
+	print x5 $vs $vu
+	let vs++ vu++
+	print x6 $vs $vu
+expected-stdout:
+	x1 -1 4294967295
+	x2 2147483647 2147483647
+	x3 -2147483648 2147483648
+	x4 -1 4294967295
+	x5 0 0
+	x6 1 1
 ---
 name: bksl-nl-ign-1
 description:
@@ -3959,8 +4023,9 @@ description:
 	Check to make sure exec doesn't change environment if a program
 	isn't exec-ed
 stdin:
-	env > bar1
-	FOO=bar exec; env > bar2
+	sortprog=$(whence -p sort) || sortprog=cat
+	env | $sortprog >bar1
+	FOO=bar exec; env | $sortprog >bar2
 	cmp -s bar1 bar2
 ---
 name: xxx-what-do-you-call-this-1
@@ -4162,7 +4227,7 @@ expected-stderr:
 ---
 name: errexit-2
 description:
-	Check some "exit on error" edge conditions needed for make(1)
+	Check some "exit on error" edge conditions (POSIXly)
 stdin:
 	set -ex
 	if /usr/bin/env true; then
@@ -4170,10 +4235,11 @@ stdin:
 	fi
 	echo END
 expected-stdout:
+	END
 expected-stderr:
 	+ /usr/bin/env true
 	+ /usr/bin/env false
-expected-exit: e != 0
+	+ echo END
 ---
 name: errexit-3
 description:
@@ -4192,6 +4258,61 @@ expected-stdout:
 	EXIT
 expected-exit: e != 0
 ---
+name: errexit-4
+description:
+	"set -e" test suite (POSIX)
+stdin:
+	set -e
+	echo pre
+	if true ; then
+		false && echo foo
+	fi
+	echo bar
+expected-stdout:
+	pre
+	bar
+---
+name: errexit-5
+description:
+	"set -e" test suite (POSIX)
+stdin:
+	set -e
+	foo() {
+		while [ "$1" ]; do
+			for E in $x; do
+				[ "$1" = "$E" ] && { shift ; continue 2 ; }
+			done
+			x="$x $1"
+			shift
+		done
+		echo $x
+	}
+	echo pre
+	foo a b b c
+	echo post
+expected-stdout:
+	pre
+	a b c
+	post
+---
+name: errexit-6
+description:
+	"set -e" test suite (BSD make)
+category: os:mirbsd
+stdin:
+	mkdir zd zd/a zd/b
+	print 'all:\n\t@echo eins\n\t@exit 42\n' >zd/a/Makefile
+	print 'all:\n\t@echo zwei\n' >zd/b/Makefile
+	wd=$(pwd)
+	set -e
+	for entry in a b; do (  set -e;  if [[ -d $wd/zd/$entry.i386 ]]; then  _newdir_="$entry.i386";  else  _newdir_="$entry";  fi;  if [[ -z $_THISDIR_ ]]; then  _nextdir_="$_newdir_";  else  _nextdir_="$_THISDIR_/$_newdir_";  fi;  _makefile_spec_=;  [[ ! -f $wd/zd/$_newdir_/Makefile.bsd-wrapper ]]  || _makefile_spec_="-f Makefile.bsd-wrapper";  subskipdir=;  for skipdir in ; do  subentry=${skipdir#$entry};  if [[ $subentry != $skipdir ]]; then  if [[ -z $subentry ]]; then  echo "($_nextdir_ skipped)";  break;  fi;  subskipdir="$subskipdir ${subentry#/}";  fi;  done;  if [[ -z $skipdir || -n $subentry ]]; then  echo "===> $_nextdir_";  cd $wd/zd/$_newdir_;  make SKIPDIR="$subskipdir" $_makefile_spec_  _THISDIR_="$_nextdir_"   all;  fi;  ) done 2>&1 | sed "s!$wd!WD!g"
+expected-stdout:
+	===> a
+	eins
+	*** Error code 42
+	
+	Stop in WD/zd/a (line 2 of Makefile).
+---
 name: test-stlt-1
 description:
 	Check that test also can handle string1 < string2 etc.
@@ -4206,6 +4327,17 @@ expected-stdout:
 	ja
 	nein
 expected-stderr-pattern: !/unexpected op/
+---
+name: test-precedence-1
+description:
+	Check a weird precedence case (and POSIX echo)
+stdin:
+	test \( -f = -f \)
+	rv=$?
+	set -o posix
+	echo -e $rv
+expected-stdout:
+	-e 0
 ---
 name: mkshrc-1
 description:
@@ -5307,20 +5439,6 @@ stdin:
 expected-stdout:
 	bar
 	baz
----
-name: oksh-seterror
-description:
-	$OpenBSD: seterror.sh,v 1.1 2003/02/09 18:52:49 espie Exp $
-	set -e is supposed to abort the script for errors that
-	are not caught otherwise. pdksh fails this test.
-stdin:
-	set -e
-	for i in 1 2 3
-	do
-		false && true
-	done
-	true
-expected-fail: yes
 ---
 name: oksh-shcrash
 description:

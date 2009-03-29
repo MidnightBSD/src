@@ -1,7 +1,7 @@
-/*	$OpenBSD: main.c,v 1.44 2008/07/05 07:25:18 djm Exp $	*/
+/*	$OpenBSD: main.c,v 1.45 2009/01/29 23:27:26 jaredy Exp $	*/
 /*	$OpenBSD: tty.c,v 1.9 2006/03/14 22:08:01 deraadt Exp $	*/
 /*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
-/*	$OpenBSD: table.c,v 1.12 2005/12/11 20:31:21 otto Exp $	*/
+/*	$OpenBSD: table.c,v 1.13 2009/01/17 22:06:44 millert Exp $	*/
 
 #define	EXTERN
 #include "sh.h"
@@ -13,7 +13,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.116 2008/12/13 17:02:15 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.122 2009/03/22 17:47:37 tg Exp $");
 
 extern char **environ;
 
@@ -32,8 +32,10 @@ static const char initsubs[] = "${PS2=> } ${PS3=#? } ${PS4=+ }";
 static const char *initcoms[] = {
 	"typeset", "-r", initvsn, NULL,
 	"typeset", "-x", "SHELL", "PATH", "HOME", NULL,
-	"typeset", "-i10", "OPTIND=1", "PGRP", "PPID", "USER_ID", NULL,
-	"eval", "typeset -i10 RANDOM SECONDS=\"${SECONDS-0}\" TMOUT=\"${TMOUT-0}\"", NULL,
+	"typeset", "-i10", "COLUMNS=0", "LINES=0", "OPTIND=1", NULL,
+	"typeset", "-Ui10", "PGRP", "PPID", "RANDOM", "USER_ID", NULL,
+	"eval", "typeset -i10 SECONDS=\"${SECONDS-0}\" TMOUT=\"${TMOUT-0}\"",
+	NULL,
 	"alias", "integer=typeset -i", "local=typeset", NULL,
 	"alias",
 	"hash=alias -t",	/* not "alias -t --": hash -r needs to work */
@@ -124,7 +126,7 @@ main(int argc, const char *argv[])
 	initkeywords();
 
 	/* define built-in commands */
-	ktinit(&builtins, APERM, 64); /* must be 2^n (currently 40 builtins) */
+	ktinit(&builtins, APERM, 64); /* must be 2^n (currently 44 builtins) */
 	for (i = 0; mkshbuiltins[i].name != NULL; i++)
 		builtin(mkshbuiltins[i].name, mkshbuiltins[i].func);
 
@@ -248,9 +250,9 @@ main(int argc, const char *argv[])
 	    (!ksheuid && !strchr(str_val(vp), '#')))
 		/* setstr can't fail here */
 		setstr(vp, safe_prompt, KSH_RETURN_ERROR);
-	setint(global("PGRP"), (long)(kshpgrp = getpgrp()));
-	setint(global("PPID"), (long)ppid);
-	setint(global("USER_ID"), (long)ksheuid);
+	setint(global("PGRP"), (mksh_uari_t)(kshpgrp = getpgrp()));
+	setint(global("PPID"), (mksh_uari_t)ppid);
+	setint(global("USER_ID"), (mksh_uari_t)ksheuid);
 
 	/* Set this before parsing arguments */
 #if HAVE_SETRESUGID
@@ -564,7 +566,7 @@ shell(Source * volatile s, volatile int toplevel)
 			}
 		}
 		if (t && (!Flag(FNOEXEC) || (s->flags & SF_TTY)))
-			exstat = execute(t, 0);
+			exstat = execute(t, 0, NULL);
 
 		if (t != NULL && t->type != TEOF && interactive && really_exit)
 			really_exit = 0;
@@ -735,9 +737,9 @@ remove_temps(struct temp *tp)
  * foreground job completion and for setting up tty process group.
  */
 void
-tty_init(int init_ttystate)
+tty_init(bool init_ttystate, bool need_tty)
 {
-	int do_close = 1;
+	bool do_close = true;
 	int tfd;
 
 	if (tty_fd >= 0) {
@@ -753,26 +755,33 @@ tty_init(int init_ttystate)
 #endif
 	if ((tfd = open("/dev/tty", O_RDWR, 0)) < 0) {
 		tty_devtty = 0;
-		warningf(false, "No controlling tty (open /dev/tty: %s)",
-		    strerror(errno));
+		if (need_tty)
+			warningf(false,
+			    "No controlling tty (open /dev/tty: %s)",
+			    strerror(errno));
 	}
 	if (tfd < 0) {
-		do_close = 0;
+		do_close = false;
 		if (isatty(0))
 			tfd = 0;
 		else if (isatty(2))
 			tfd = 2;
 		else {
-			warningf(false, "Can't find tty file descriptor");
+			if (need_tty)
+				warningf(false,
+				    "Can't find tty file descriptor");
 			return;
 		}
 	}
 	if ((tty_fd = fcntl(tfd, F_DUPFD, FDBASE)) < 0) {
-		warningf(false, "j_ttyinit: dup of tty fd failed: %s",
-		    strerror(errno));
+		if (need_tty)
+			warningf(false, "j_ttyinit: dup of tty fd failed: %s",
+			    strerror(errno));
 	} else if (fcntl(tty_fd, F_SETFD, FD_CLOEXEC) < 0) {
-		warningf(false, "j_ttyinit: can't set close-on-exec flag: %s",
-		    strerror(errno));
+		if (need_tty)
+			warningf(false,
+			    "j_ttyinit: can't set close-on-exec flag: %s",
+			    strerror(errno));
 		close(tty_fd);
 		tty_fd = -1;
 	} else if (init_ttystate)
