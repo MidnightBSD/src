@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/sys/conf/NOTES,v 1.4 2008/12/13 16:04:55 laffer1 Exp $
 # $FreeBSD: src/sys/conf/NOTES,v 1.1454 2007/09/26 21:14:17 marius Exp $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
@@ -1435,7 +1435,7 @@ device		aic
 hint.aic.0.at="isa"
 device		ahb
 device		ahc
-device		ahd
+#device		ahd
 device		amd
 device		esp
 device		iscsi_initiator
@@ -1489,16 +1489,16 @@ options 	AHC_DEBUG_OPTS
 options 	AHC_REG_PRETTY_PRINT
 
 # Compile in aic79xx debugging code.
-options 	AHD_DEBUG
+#options 	AHD_DEBUG
 
 # Aic79xx driver debugging options.  Adds ~215k to driver.  See ahd(4).
-options 	AHD_DEBUG_OPTS=0xFFFFFFFF
+#options 	AHD_DEBUG_OPTS=0xFFFFFFFF
 
 # Print human-readable register definitions when debugging
-options 	AHD_REG_PRETTY_PRINT
+#options 	AHD_REG_PRETTY_PRINT
 
 # Bitmap of units to enable targetmode operations.
-options 	AHD_TMODE_ENABLE
+#options 	AHD_TMODE_ENABLE
 
 # The adw driver will attempt to use memory mapped I/O for all PCI
 # controllers that have it configured only if this option is set.
