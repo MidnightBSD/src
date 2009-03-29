@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/etc/root/dot.mkshrc,v 1.2 2009/03/29 02:51:27 laffer1 Exp $
 # $MirOS: src/bin/mksh/dot.mkshrc,v 1.39 2008/12/13 17:09:45 tg Rel $
 #-
 # ~/.mkshrc: mksh initialisation file for interactive shells
@@ -18,7 +18,7 @@ PS1='$(precmd)${USER:=$(ulimit -c 0;id -un 2>&-||print \?)}@${HOSTNAME%%.*}:$(
 export EDITOR HOSTNAME LESSHISTFILE=- MKSH=$(whence -p mksh) PS1 TERM USER
 alias ls=ls
 unalias ls
-alias l='ls -F'
+alias l='/bin/ls -F'
 alias la='l -a'
 alias ll='l -l'
 alias lo='l -alo'
@@ -183,6 +183,16 @@ function pushd {
 	fi
 	(( isnoglob )) || set +o noglob
 	dirs $fa
+}
+
+# ash (freebsd) compatibility
+
+function setvar {
+	if [[ -z $2 ]]; then eval unset $1
+	elif [[ $1 != +([a-zA-Z0-9_]) ]]; then print -u2 -r -- "setvar: $1: bad variable name"; return 1
+	else
+		eval export $1=\$2
+	fi
 }
 
 # strip comments (and leading/trailing whitespace if IFS is set) from
