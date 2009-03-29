@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Id: pdqreg.h,v 1.11 1997/03/21 21:16:04 thomas Exp
- * $FreeBSD: src/sys/dev/pdq/pdqreg.h,v 1.4 2002/03/29 11:22:19 mdodd Exp $
+ * $FreeBSD: src/sys/dev/pdq/pdqreg.h,v 1.5 2007/06/08 01:48:23 mjacob Exp $
  *
  */
 
@@ -523,7 +523,7 @@ struct _pdq_t {
 
 #define	PDQ_DB_BUSPA(pdq, m) \
 	((pdq)->pdq_pa_descriptor_block + \
-		((u_int8_t *) (m) - (u_int8_t *) (pdq)->pdq_dbp))
+		((volatile u_int8_t *) (m) - (u_int8_t *) (pdq)->pdq_dbp))
 
 
 typedef enum {

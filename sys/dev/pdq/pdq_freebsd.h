@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Id: pdqvar.h,v 1.21 1997/03/21 21:16:04 thomas Exp
- * $FreeBSD: src/sys/dev/pdq/pdq_freebsd.h,v 1.10 2005/06/10 16:49:13 brooks Exp $
+ * $FreeBSD: src/sys/dev/pdq/pdq_freebsd.h,v 1.13 2006/05/16 14:36:30 phk Exp $
  *
  */
 
@@ -62,7 +62,6 @@
 
 #include <vm/vm.h>              /* for vtophys */
 #include <vm/pmap.h>            /* for vtophys */
-#include <machine/clock.h>      /* for DELAY */
 
 #endif	/* PDQ_HWSUPPORT */
 
@@ -164,11 +163,7 @@ typedef struct _pdq_os_ctx_t {
 #define	PDQ_OS_CSR_FMT	"0x%x"
 
 #define	PDQ_OS_USEC_DELAY(n)		DELAY(n)
-#ifdef __alpha__
-#define	PDQ_OS_VA_TO_BUSPA(pdq, p)      alpha_XXX_dmamap((vm_offset_t)p)
-#else
 #define	PDQ_OS_VA_TO_BUSPA(pdq, p)	vtophys(p)
-#endif
 
 #define	PDQ_OS_MEMALLOC(n)		malloc(n, M_DEVBUF, M_NOWAIT)
 #define	PDQ_OS_MEMFREE(p, n)		free((void *) p, M_DEVBUF)
@@ -260,7 +255,7 @@ pdq_state_t	pdq_stop (pdq_t *pdq);
  * OS dependent functions provided by
  * pdq_ifsubr.c or pdq.c to the bus front ends
  */
-void		pdq_ifattach (pdq_softc_t *);
+void		pdq_ifattach (pdq_softc_t *, const pdq_uint8_t *);
 void		pdq_ifdetach (pdq_softc_t *);
 void		pdq_free (device_t);
 int		pdq_interrupt (pdq_t *pdq);

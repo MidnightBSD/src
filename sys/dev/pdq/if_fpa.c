@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pdq/if_fpa.c,v 1.25 2005/06/10 16:49:13 brooks Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pdq/if_fpa.c,v 1.27 2007/02/23 19:31:44 imp Exp $");
 
 /*
  * DEC PDQ FDDI Controller; code for BSD derived operating systems
@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD: src/sys/dev/pdq/if_fpa.c,v 1.25 2005/06/10 16:49:13 brooks E
 #include <sys/rman.h> 
 
 #include <net/if.h>
-#include <net/if_arp.h>
 #include <net/if_media.h> 
 #include <net/fddi.h>
 
@@ -158,7 +157,7 @@ pdq_pci_attach(device_t dev)
 	goto bad;
     }
 
-    error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
+    error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET, NULL,
 			   pdq_pci_ifintr, dev, &sc->irq_ih);
     if (error) {
 	device_printf(dev, "Failed to setup interrupt handler.\n");
@@ -166,9 +165,7 @@ pdq_pci_attach(device_t dev)
 	goto bad;
     }
 
-    bcopy((caddr_t) sc->sc_pdq->pdq_hwaddr.lanaddr_bytes,
-	  (caddr_t) IFP2ENADDR(sc->ifp), FDDI_ADDR_LEN);
-    pdq_ifattach(sc);
+    pdq_ifattach(sc, sc->sc_pdq->pdq_hwaddr.lanaddr_bytes);
 
     return (0);
 bad:

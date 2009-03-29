@@ -21,7 +21,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pdq/if_fea.c,v 1.28 2005/06/10 16:49:13 brooks Exp $
+ * $FreeBSD: src/sys/dev/pdq/if_fea.c,v 1.30 2007/02/23 20:11:25 piso Exp $
  */
 
 /*
@@ -43,7 +43,6 @@
 #include <sys/rman.h> 
 
 #include <net/if.h>
-#include <net/if_arp.h>
 #include <net/if_media.h>
 #include <net/fddi.h>
 
@@ -236,16 +235,14 @@ pdq_eisa_attach (dev)
 	}
 
 	error = bus_setup_intr(dev, sc->irq, INTR_TYPE_NET,
-		               pdq_eisa_ifintr, dev, &sc->irq_ih);
+		               NULL, pdq_eisa_ifintr, dev, &sc->irq_ih);
 	if (error) {
 		device_printf(dev, "Failed to setup interrupt handler.\n");
 		error = ENXIO;
 		goto bad;
 	}
 
-	bcopy((caddr_t) sc->sc_pdq->pdq_hwaddr.lanaddr_bytes,
-	      (caddr_t) IFP2ENADDR(sc->ifp), FDDI_ADDR_LEN);
-	pdq_ifattach(sc);
+	pdq_ifattach(sc, sc->sc_pdq->pdq_hwaddr.lanaddr_bytes);
 
 	return (0);
 bad:

@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  * Id: pdqvar.h,v 1.21 1997/03/21 21:16:04 thomas Exp
- * $FreeBSD: src/sys/dev/pdq/pdqvar.h,v 1.12 2005/06/10 16:49:13 brooks Exp $
+ * $FreeBSD: src/sys/dev/pdq/pdqvar.h,v 1.14 2006/05/16 14:36:30 phk Exp $
  *
  */
 
@@ -88,7 +88,6 @@ enum _pdq_type_t {
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 #include <machine/cpufunc.h>
-#include <machine/clock.h>
 #define	ifnet_ret_t void
 typedef int ioctl_cmd_t;
 typedef enum { PDQ_BUS_EISA, PDQ_BUS_PCI } pdq_bus_t;
@@ -165,7 +164,7 @@ typedef struct _pdq_os_ctx_t {
     struct ifmedia sc_ifmedia;
 #endif
     pdq_t *sc_pdq;
-#if defined(__alpha__) || defined(__i386__)
+#if defined(__i386__)
     pdq_bus_ioport_t sc_iobase;
 #endif
 #if defined(PDQ_IOMAPPED)

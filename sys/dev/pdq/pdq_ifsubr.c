@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pdq/pdq_ifsubr.c,v 1.26.2.2 2005/08/25 05:01:13 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pdq/pdq_ifsubr.c,v 1.30 2007/06/08 01:49:04 mjacob Exp $");
 
 /*
  * DEC PDQ FDDI Controller; code for BSD derived operating systems
@@ -242,7 +242,7 @@ pdq_os_transmit_done(
     struct mbuf *m)
 {
     pdq_softc_t *sc = pdq->pdq_os_ctx;
-#if NBPFILTER > 0
+#if defined(NBPFILTER) && NBPFILTER > 0
     if (PQD_IFNET(sc)->if_bpf != NULL)
 	PDQ_BPF_MTAP(sc, m);
 #endif
@@ -410,7 +410,7 @@ pdq_ifioctl(
 #endif
 
 void
-pdq_ifattach(pdq_softc_t *sc)
+pdq_ifattach(pdq_softc_t *sc, const pdq_uint8_t *llc)
 {
     struct ifnet *ifp;
 
@@ -441,7 +441,7 @@ pdq_ifattach(pdq_softc_t *sc)
     }
 #endif
   
-    fddi_ifattach(ifp, FDDI_BPF_SUPPORTED);
+    fddi_ifattach(ifp, llc, FDDI_BPF_SUPPORTED);
 }
 
 void
