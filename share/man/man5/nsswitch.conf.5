@@ -31,9 +31,9 @@
 .\" TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 .\" USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/nsswitch.conf.5,v 1.13 2005/04/24 20:24:59 bz Exp $
+.\" $FreeBSD: src/share/man/man5/nsswitch.conf.5,v 1.17.2.1 2007/10/19 00:18:19 bushman Exp $
 .\"
-.Dd April 24, 2005
+.Dd January 22, 2007
 .Dt NSSWITCH.CONF 5
 .Os
 .Sh NAME
@@ -48,9 +48,9 @@ file specifies how the
 .Pp
 The configuration file controls how a process looks up various databases
 containing information regarding hosts, users (passwords), groups, etc.
-Each database comes from a source (such as local files, DNS, and
-.Tn NIS ) ,
-and the order to look up the sources is specified in
+Each database comes from a source (such as local files, DNS,
+.Tn NIS ,
+and cache), and the order to look up the sources is specified in
 .Nm .
 .Pp
 Each entry in
@@ -93,6 +93,10 @@ and
 .Dq group
 databases.
 If this is present, it must be the only source for that entry.
+.It cache
+makes use of the
+.Xr nscd 8
+daemon.
 .El
 .Ss Databases
 The following databases are used by the following C library functions:
@@ -101,15 +105,45 @@ The following databases are used by the following C library functions:
 .It Sy Database
 .Sy "Used by"
 .It group
-.Xr getgrent 3
+.Xr getgrent 3 ,
+.Xr getgrent_r 3 ,
+.Xr getgrgid_r 3 ,
+.Xr getgrnam_r 3 ,
+.Xr setgrent 3 ,
+.Xr endgrent 3
 .It hosts
-.Xr gethostbyname 3
+.Xr getaddrinfo 3 ,
+.Xr gethostbyaddr 3 ,
+.Xr gethostbyaddr_r 3 ,
+.Xr gethostbyname 3 ,
+.Xr gethostbyname2 3 ,
+.Xr gethostbyname_r 3 ,
+.Xr getipnodebyaddr 3 ,
+.Xr getipnodebyname 3
 .It networks
-.Xr getnetbyname 3
+.Xr getnetbyaddr 3 ,
+.Xr getnetbyaddr_r 3 ,
+.Xr getnetbyname 3 ,
+.Xr getnetbyname_r 3
 .It passwd
-.Xr getpwent 3
+.Xr getpwent 3 ,
+.Xr getpwent_r 3 ,
+.Xr getpwnam_r 3 ,
+.Xr getpwuid_r 3 ,
+.Xr setpwent 3 ,
+.Xr endpwent 3
 .It shells
 .Xr getusershell 3
+.It services
+.Xr getservent 3
+.It rpc
+.Xr getrpcbyname 3 ,
+.Xr getrpcbynumber 3 ,
+.Xr getrpcent 3
+.It proto
+.Xr getprotobyname 3
+.Xr getprotobynumber 3 ,
+.Xr getprotoent 3
 .El
 .Ss Status codes
 The following status codes are available:
@@ -177,6 +211,25 @@ The default criteria is to return on
 .Dq success ,
 and continue on anything else (i.e,
 .Li "[success=return notfound=continue unavail=continue tryagain=continue]" ) .
+.Ss Cache
+You can enable caching for the particular database by specifying
+.Dq cache
+as the first source in the
+.Xr nsswitch.conf 5
+file.
+You should also enable caching for this database in
+.Xr nscd.conf 5 .
+If for the particular query
+.Dq cache
+source returns success, no further sources are queried.
+On the other hand, if there are no previously cached data, the
+query result will be placed into the cache right after
+all other sources are processed.
+Note, that
+.Dq cache
+requires
+.Xr nscd 8
+daemon to be running.
 .Ss Compat mode: +/- syntax
 In historical multi-source implementations, the
 .Sq +
@@ -231,7 +284,7 @@ will default to an entry of
 for the requested database.
 Exceptions are:
 .Pp
-.Bl -tag -width passwd_compat -compact
+.Bl -tag -width services_compat -compact
 .It Sy Database
 .Sy "Default source list"
 .It group
@@ -244,6 +297,10 @@ files dns
 compat
 .It passwd_compat
 nis
+.It services
+compat
+.It services_compat
+nis
 .El
 .Sh FILES
 .Bl -tag -width /etc/nsswitch.conf -compact
@@ -254,7 +311,7 @@ resides in
 .Pa /etc .
 .El
 .Sh EXAMPLES
-To lookup hosts in
+To lookup hosts in cache, then in
 .Pa /etc/hosts
 and then from the DNS, and lookup user information from
 .Tn NIS
@@ -262,7 +319,7 @@ then files, use:
 .Pp
 .Bl -tag -width passwd: -compact
 .It hosts:
-files dns
+cache files dns
 .It passwd:
 nis [notfound=return] files
 .It group:
@@ -276,13 +333,29 @@ This treats nis as the authoritative source of information, except
 when the server is down.
 .Sh NOTES
 If system got compiled with
-.Va NO_NIS
+.Va WITHOUT_NIS
 you have to remove
 .Sq nis
 entries.
+.Pp
+.Fx Ns 's
+.Lb libc
+provides stubs for compatibility with NSS modules
+written for the
+.Tn GNU
+C Library
+.Nm nsswitch
+interface.
+However, these stubs only support the use of the
+.Dq Li passwd
+and
+.Dq Li group
+databases.
 .Sh SEE ALSO
 .Xr nsdispatch 3 ,
+.Xr nscd.conf 5 ,
 .Xr resolv.conf 5 ,
+.Xr nscd 8 ,
 .Xr named 8 ,
 .Xr ypbind 8
 .Sh HISTORY

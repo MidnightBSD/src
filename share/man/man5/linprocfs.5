@@ -1,4 +1,4 @@
-.\" $FreeBSD: src/share/man/man5/linprocfs.5,v 1.13 2005/01/21 08:36:39 ru Exp $
+.\" $FreeBSD: src/share/man/man5/linprocfs.5,v 1.15 2006/09/18 15:24:19 ru Exp $
 .\" Written by Garrett Wollman
 .\" This file is in the public domain.
 .\"
@@ -65,11 +65,17 @@ The executable image for the current process.
 .It Pa /compat/linux/proc/self/mem
 The complete virtual address space of the current process.
 .El
+.Sh EXAMPLES
+To mount a
+.Nm
+file system on
+.Pa /compat/linux/proc :
+.Pp
+.Dl "mount -t linprocfs linproc /compat/linux/proc"
 .Sh SEE ALSO
 .Xr mount 2 ,
 .Xr unmount 2 ,
 .Xr procfs 5 ,
-.Xr mount_linprocfs 8 ,
 .Xr pseudofs 9
 .Sh HISTORY
 The

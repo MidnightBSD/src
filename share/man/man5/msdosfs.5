@@ -1,8 +1,8 @@
-.\" $FreeBSD: src/share/man/man5/msdosfs.5,v 1.4.12.1 2005/09/24 01:59:38 keramida Exp $
+.\" $FreeBSD: src/share/man/man5/msdosfs.5,v 1.6 2007/08/22 18:04:08 gabor Exp $
 .\" Written by Tom Rhodes
 .\" This file is in the public domain.
 .\"
-.Dd December 26, 2002
+.Dd Aug 22, 2007
 .Dt MSDOSFS 5
 .Os
 .Sh NAME
@@ -21,7 +21,7 @@ based file systems.
 .Pp
 The most common usage follows:
 .Pp
-.Dl "mount_msdosfs /dev/ad0sN /mnt"
+.Dl "mount -t msdosfs /dev/ad0sN /mnt"
 .Pp
 where
 .Ar N

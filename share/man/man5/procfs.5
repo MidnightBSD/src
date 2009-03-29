@@ -1,4 +1,4 @@
-.\" $FreeBSD: src/share/man/man5/procfs.5,v 1.32 2004/09/03 18:56:59 alfred Exp $
+.\" $FreeBSD: src/share/man/man5/procfs.5,v 1.33 2006/05/19 00:23:29 rodrigc Exp $
 .\" Written by Garrett Wollman
 .\" This file is in the public domain.
 .\"
@@ -244,11 +244,17 @@ the process current and maximum rlimit
 .It Pa /proc/curproc/status
 the process' current status
 .El
+.Sh EXAMPLES
+To mount a
+.Nm
+file system on
+.Pa /proc :
+.Pp
+.Dl "mount -t procfs proc /proc"
 .Sh SEE ALSO
 .Xr mount 2 ,
 .Xr sigaction 2 ,
 .Xr unmount 2 ,
-.Xr mount_procfs 8 ,
 .Xr procctl 8 ,
 .Xr pseudofs 9
 .Sh AUTHORS
