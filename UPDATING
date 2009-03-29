@@ -1,8 +1,5 @@
 Updating Information for MidnightBSD users
 
-Items affecting the mports and packages system can be found in
-/usr/mports/UPDATING. 
-
 20090328:
 	Bring in mksh R37 from CVS. The dot.mkshrc files for root 
 	and skel were changed.  mksh(1) now replaces ash aka sh(1)
@@ -679,4 +676,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.53 2009/03/27 21:17:12 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.54 2009/03/29 03:12:45 laffer1 Exp $
