@@ -387,8 +387,8 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
       else if (TARGET_ATHLON)					\
 	{							\
 	  builtin_define ("__tune_athlon__");			\
-	  /* Only plain "athlon" lacks SSE.  */			\
-	  if (last_tune_char != 'n')				\
+	  /* Plain "athlon" & "athlon-tbird" lacks SSE.  */	\
+	  if (last_tune_char != 'n' && last_tune_char != 'd')	\
 	    builtin_define ("__tune_athlon_sse__");		\
 	}							\
       else if (TARGET_K8)					\
@@ -451,8 +451,8 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
 	{							\
 	  builtin_define ("__athlon");				\
 	  builtin_define ("__athlon__");			\
-	  /* Only plain "athlon" lacks SSE.  */			\
-	  if (last_arch_char != 'n')				\
+	  /* Plain "athlon" & "athlon-tbird" lacks SSE.  */	\
+	  if (last_tune_char != 'n' && last_tune_char != 'd')	\
 	    builtin_define ("__athlon_sse__");			\
 	}							\
       else if (ix86_arch == PROCESSOR_K8)			\
@@ -536,7 +536,9 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
 #define SHORT_TYPE_SIZE 16
 #define INT_TYPE_SIZE 32
 #define FLOAT_TYPE_SIZE 32
+#ifndef LONG_TYPE_SIZE
 #define LONG_TYPE_SIZE BITS_PER_WORD
+#endif
 #define DOUBLE_TYPE_SIZE 64
 #define LONG_LONG_TYPE_SIZE 64
 

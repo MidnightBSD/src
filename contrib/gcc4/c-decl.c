@@ -19,6 +19,8 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
+/* $FreeBSD: src/contrib/gcc/c-decl.c,v 1.15 2007/05/19 02:12:19 kan Exp $ */
+
 /* Process declarations and symbol lookup for C front end.
    Also constructs types; the standard scalar types at initialization,
    and structure, union, array and enum types when they are declared.  */

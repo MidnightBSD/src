@@ -19,6 +19,8 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
+/* $FreeBSD: src/contrib/gcc/c-format.c,v 1.11 2007/05/19 02:16:45 kan Exp $ */
+
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -183,7 +185,7 @@ decode_format_attr (tree args, function_format_info *info, int validated_p)
   if (TREE_CODE (format_type_id) != IDENTIFIER_NODE)
     {
       gcc_assert (!validated_p);
-      error ("unrecognized format specifier");
+      error ("%Junrecognized format specifier", lang_hooks.decls.getdecls ());
       return false;
     }
   else
@@ -513,6 +515,26 @@ static const format_char_info print_char_table[] =
   { NULL,  0, 0, NOLENGTHS, NULL, NULL, NULL }
 };
 
+static const format_char_info fbsd_ext_char_info =
+{ NULL,   1, STD_EXT, { T89_C,  BADLEN,   BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN  }, "",      "cR", NULL };
+
+static const format_char_info fbsd_print_char_table[] =
+{
+  /* BSD conversion specifiers.  */
+  /* FreeBSD kernel extensions (src/sys/kern/subr_prf.c).
+     The format %b is supported to decode error registers.
+     Its usage is:	printf("reg=%b\n", regval, "<base><arg>*");
+     which produces:	reg=3<BITTWO,BITONE>
+     The format %D provides a hexdump given a pointer and separator string:
+     ("%6D", ptr, ":")		-> XX:XX:XX:XX:XX:XX
+     ("%*D", len, ptr, " ")	-> XX XX XX XX ...
+   */
+  { "D",   1, STD_EXT, { T89_V,  BADLEN,   BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN }, "-wp",      "cR", &fbsd_ext_char_info },
+  { "b",   0, STD_EXT, { T89_I,  BADLEN,   BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN  }, "-wp",      "",   &fbsd_ext_char_info },
+  { "ry",  0, STD_EXT, { T89_I,  BADLEN,   BADLEN,   T89_L,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN,  BADLEN  }, "-wp0 +#",  "i",  NULL  },
+  { NULL,  0, 0, NOLENGTHS, NULL, NULL }
+};
+
 static const format_char_info asm_fprintf_char_table[] =
 {
   /* C89 conversion specifiers.  */
@@ -759,6 +781,12 @@ static const format_kind_info format_types_orig[] =
     strfmon_flag_specs, strfmon_flag_pairs,
     FMT_FLAG_ARG_CONVERT, 'w', '#', 'p', 0, 'L',
     NULL, NULL
+  },
+  { "printf0",   printf_length_specs,  print_char_table, " +#0-'I", NULL, 
+    printf_flag_specs, printf_flag_pairs,
+    FMT_FLAG_ARG_CONVERT|FMT_FLAG_DOLLAR_MULTIPLE|FMT_FLAG_USE_DOLLAR|FMT_FLAG_EMPTY_PREC_OK|FMT_FLAG_NULL_FORMAT_OK,
+    'w', 0, 'p', 0, 'L',
+    &integer_type_node, &integer_type_node
   }
 };
 
@@ -1283,6 +1311,15 @@ check_format_arg (void *ctx, tree format_tree,
 
   if (integer_zerop (format_tree))
     {
+      /* FIXME: this warning should go away once Marc Espie's
+	 __attribute__((nonnull)) patch is in.  Instead, checking for
+	 nonnull attributes should probably change this function to act
+	 specially if info == NULL and add a res->number_null entry for
+	 that case, or maybe add a function pointer to be called at
+	 the end instead of hardcoding check_format_info_main.  */
+      if (!(format_types[info->format_type].flags & FMT_FLAG_NULL_FORMAT_OK))
+	warning (OPT_Wformat, "null format string");
+
       /* Skip to first argument to check, so we can see if this format
 	 has any arguments (it shouldn't).  */
       while (arg_num + 1 < info->first_arg_num)
@@ -1735,6 +1772,14 @@ check_format_info_main (format_check_results *res,
 	{
 	  while (fli->name != 0 && fli->name[0] != *format_chars)
 	    fli++;
+	  /*
+	   * Make sure FreeBSD's D format char takes preference
+	   * over new DD length specifier if FreeBSD format
+	   * extensions are requested.
+	   */
+	  if (fli->index == FMT_LEN_D && flag_format_extensions
+	    && fki->conversion_specs == print_char_table)
+	  	while (fli->name != 0) fli++;
 	  if (fli->name != 0)
 	    {
 	      format_chars++;
@@ -1818,6 +1863,14 @@ check_format_info_main (format_check_results *res,
       while (fci->format_chars != 0
 	     && strchr (fci->format_chars, format_char) == 0)
 	  ++fci;
+      if (fci->format_chars == 0 && flag_format_extensions
+	  && fki->conversion_specs == print_char_table)
+	{
+	  fci = fbsd_print_char_table;
+	  while (fci->format_chars != 0
+	         && strchr (fci->format_chars, format_char) == 0)
+	     ++fci;
+	}
       if (fci->format_chars == 0)
 	{
 	  if (ISGRAPH (format_char))
@@ -1935,7 +1988,7 @@ check_format_info_main (format_check_results *res,
 	    y2k_level = 2;
 	  if (y2k_level == 3)
 	    warning (OPT_Wformat_y2k, "%<%%%c%> yields only last 2 digits of "
-		     "year in some locales", format_char);
+		     "year in some locales on non-BSD systems", format_char);
 	  else if (y2k_level == 2)
 	    warning (OPT_Wformat_y2k, "%<%%%c%> yields only last 2 digits of "
 		     "year", format_char);

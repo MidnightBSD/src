@@ -1,5 +1,5 @@
 /* Base configuration file for all FreeBSD targets.
-   Copyright (C) 1999, 2000, 2001 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2000, 2001, 2002 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -26,6 +26,7 @@ Boston, MA 02110-1301, USA.  */
    Further work by David O'Brien <obrien@FreeBSD.org> and
    Loren J. Rittle <ljrittle@acm.org>.  */
 
+/* $FreeBSD: src/contrib/gcc/config/freebsd.h,v 1.41 2007/05/19 02:30:20 kan Exp $ */
 
 /* In case we need to know.  */
 #define USING_CONFIG_FREEBSD 1
@@ -61,7 +62,7 @@ Boston, MA 02110-1301, USA.  */
 
 /* All FreeBSD Architectures support the ELF object file format.  */
 #undef  OBJECT_FORMAT_ELF
-#define OBJECT_FORMAT_ELF
+#define OBJECT_FORMAT_ELF	1
 
 /* Don't assume anything about the header files.  */
 #undef  NO_IMPLICIT_EXTERN_C
@@ -72,16 +73,24 @@ Boston, MA 02110-1301, USA.  */
 #undef  WCHAR_TYPE
 #define WCHAR_TYPE "int"
 
+#ifdef FREEBSD_NATIVE
+#define LIBSTDCXX_PROFILE       "-lstdc++_p"
+#endif
 #define MATH_LIBRARY_PROFILE    "-lm_p"
 
 /* Code generation parameters.  */
+
+/* Writing `int' for a bitfield forces int alignment for the structure.  */
+/* XXX: ok for Alpha??  */
+#undef  PCC_BITFIELD_TYPE_MATTERS
+#define PCC_BITFIELD_TYPE_MATTERS 1
 
 /* Use periods rather than dollar signs in special g++ assembler names.
    This ensures the configuration knows our system correctly so we can link
    with libraries compiled with the native cc.  */
 #undef NO_DOLLAR_IN_LABEL
 
-/* Used by libgcc2.c.  We support file locking with fcntl / F_SETLKW.
-   This enables the test coverage code to use file locking when exiting a
-   program, which avoids race conditions if the program has forked.  */
+/* Define this so we can compile MS code for use with WINE.  */
+#define HANDLE_PRAGMA_PACK_PUSH_POP
+
 #define TARGET_POSIX_IO

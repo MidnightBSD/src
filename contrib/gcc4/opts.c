@@ -20,6 +20,8 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
+/* $FreeBSD: src/contrib/gcc/opts.c,v 1.5 2007/10/03 01:26:24 obrien Exp $ */
+
 #include "config.h"
 #include "system.h"
 #include "intl.h"
@@ -499,7 +501,10 @@ decode_options (unsigned int argc, const char **argv)
       flag_reorder_functions = 1;
       flag_tree_store_ccp = 1;
       flag_tree_store_copy_prop = 1;
-      flag_tree_vrp = 1;
+      /* XXX: some issues with ports have been traced to -ftree-vrp.
+         So remove it from -O2 and above.  Note that jdk1{5,6} are affected
+         and they build with w/-O3 - so we cannot just move it to -O3. */
+      // flag_tree_vrp = 1;
 
       if (!optimize_size)
 	{
@@ -515,7 +520,7 @@ decode_options (unsigned int argc, const char **argv)
       flag_gcse_after_reload = 1;
     }
 
-  if (optimize < 2 || optimize_size)
+  if (optimize_size)
     {
       align_loops = 1;
       align_jumps = 1;

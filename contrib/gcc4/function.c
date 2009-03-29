@@ -20,6 +20,8 @@ along with GCC; see the file COPYING.  If not, write to the Free
 Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301, USA.  */
 
+/* $FreeBSD: src/contrib/gcc/function.c,v 1.25 2007/08/14 03:04:42 kan Exp $ */
+
 /* This file handles the generation of rtl code from tree structure
    at the level of the function as a whole.
    It creates the rtl expressions for parameters and auto variables
@@ -4372,6 +4374,21 @@ expand_function_end (void)
 
   /* Output the label for the actual return from the function.  */
   emit_label (return_label);
+
+#ifdef TARGET_PROFILER_EPILOGUE
+  if (current_function_profile && TARGET_PROFILER_EPILOGUE)
+    {
+      static rtx mexitcount_libfunc;
+      static int initialized;
+
+      if (!initialized)
+	{
+	  mexitcount_libfunc = init_one_libfunc (".mexitcount");
+	  initialized = 0;
+	}
+      emit_library_call (mexitcount_libfunc, LCT_NORMAL, VOIDmode, 0);
+    }
+#endif
 
   if (USING_SJLJ_EXCEPTIONS)
     {

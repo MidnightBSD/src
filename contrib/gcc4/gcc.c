@@ -23,6 +23,8 @@ Software Foundation, 51 Franklin Street, Fifth Floor, Boston, MA
 This paragraph is here to try to keep Sun CC from dying.
 The number of chars here seems crucial!!!!  */
 
+/* $FreeBSD: src/contrib/gcc/gcc.c,v 1.43 2007/05/28 23:02:56 kan Exp $ */
+
 /* This program is the user interface to the C compiler and possibly to
 other compilers.  It is used because compilation is a complicated procedure
 which involves running several programs and passing temporary files between
@@ -697,6 +699,7 @@ proper position among the other output files.  */
    scripts which exist in user specified directories, or in standard
    directories.  */
 #ifndef LINK_COMMAND_SPEC
+#ifndef FREEBSD_NATIVE
 #define LINK_COMMAND_SPEC "\
 %{!fsyntax-only:%{!c:%{!M:%{!MM:%{!E:%{!S:\
     %(linker) %l " LINK_PIE_SPEC "%X %{o*} %{A} %{d} %{e*} %{m} %{N} %{n} %{r}\
@@ -706,6 +709,17 @@ proper position among the other output files.  */
     %{fprofile-arcs|fprofile-generate|coverage:-lgcov}\
     %{!nostdlib:%{!nodefaultlibs:%(link_ssp) %(link_gcc_c_sequence)}}\
     %{!A:%{!nostdlib:%{!nostartfiles:%E}}} %{T*} }}}}}}"
+#else
+#define LINK_COMMAND_SPEC "\
+%{!fsyntax-only:%{!c:%{!M:%{!MM:%{!E:%{!S:\
+    %(linker) %l " LINK_PIE_SPEC "%X %{o*} %{A} %{d} %{e*} %{m} %{N} %{n} %{r}\
+    %{s} %{t} %{u*} %{x} %{z} %{Z} %{!A:%{!nostdlib:%{!nostartfiles:%S}}}\
+    %{static:} %{L*} %(mfwrap) %(link_libgcc) %o\
+    %{fopenmp: -lgomp} %(mflib)\
+    %{fprofile-arcs|fprofile-generate|coverage:-lgcov}\
+    %{!nostdlib:%{!nodefaultlibs:%(link_ssp) %(link_gcc_c_sequence)}}\
+    %{!A:%{!nostdlib:%{!nostartfiles:%E}}} %{T*} }}}}}}"
+#endif
 #endif
 
 #ifndef LINK_LIBGCC_SPEC
@@ -1488,7 +1502,9 @@ static const char *const standard_startfile_prefix_2
 static const char *const tooldir_base_prefix = TOOLDIR_BASE_PREFIX;
 static const char *tooldir_prefix;
 
+#ifndef FREEBSD_NATIVE
 static const char *const standard_bindir_prefix = STANDARD_BINDIR_PREFIX;
+#endif	/* not FREEBSD_NATIVE */
 
 static const char *standard_libexec_prefix = STANDARD_LIBEXEC_PREFIX;
 
@@ -1619,7 +1635,8 @@ init_gcc_specs (struct obstack *obstack, const char *shared_name,
 {
   char *buf;
 
-  buf = concat ("%{static|static-libgcc:", static_name, " ", eh_name, "}"
+  buf = concat ("%{pg:",  static_name, " ", eh_name, "} %{!pg:",
+		"%{static|static-libgcc|pg:", static_name, " ", eh_name, "}"
 		"%{!static:%{!static-libgcc:"
 #if USE_LD_AS_NEEDED
 		"%{!shared-libgcc:",
@@ -1642,7 +1659,7 @@ init_gcc_specs (struct obstack *obstack, const char *shared_name,
 		"%{shared:", shared_name, "}"
 #endif
 #endif
-		"}}", NULL);
+		"}}}", NULL);
 
   obstack_grow (obstack, buf, strlen (buf));
   free (buf);
@@ -1735,8 +1752,13 @@ init_spec (void)
 			    " -lunwind"
 #endif
 			    ,
+#ifdef FREEBSD_NATIVE
+			    LIBGCC_STATIC_LIB_SPEC,
+			    LIBGCC_EH_STATIC_LIB_SPEC
+#else
 			    "-lgcc",
 			    "-lgcc_eh"
+#endif
 #ifdef USE_LIBUNWIND_EXCEPTIONS
 # ifdef HAVE_LD_STATIC_DYNAMIC
 			    " %{!static:-Bstatic} -lunwind %{!static:-Bdynamic}"
@@ -3361,6 +3383,7 @@ process_command (int argc, const char **argv)
      see if we can create it from the pathname specified in argv[0].  */
 
   gcc_libexec_prefix = standard_libexec_prefix;
+#ifndef FREEBSD_NATIVE
 #ifndef VMS
   /* FIXME: make_relative_prefix doesn't yet work for VMS.  */
   if (!gcc_exec_prefix)
@@ -3387,6 +3410,7 @@ process_command (int argc, const char **argv)
     }
 #else
 #endif
+#endif	/* not FREEBSD_NATIVE */
 
   if (gcc_exec_prefix)
     {
@@ -3510,6 +3534,44 @@ process_command (int argc, const char **argv)
 	  else
 	    endp++;
 	}
+    }
+
+  /* Options specified as if they appeared on the command line.  */
+  temp = getenv ("GCC_OPTIONS");
+  if ((temp) && (strlen (temp) > 0))
+    {
+      int len;
+      int optc = 1;
+      int new_argc;
+      const char **new_argv;
+      char *envopts;
+
+      while (isspace (*temp))
+	temp++;
+      len = strlen (temp);
+      envopts = (char *) xmalloc (len + 1);
+      strcpy (envopts, temp);
+
+      for (i = 0; i < (len - 1); i++)
+	if ((isspace (envopts[i])) && ! (isspace (envopts[i+1])))
+	  optc++;
+
+      new_argv = (const char **) alloca ((optc + argc) * sizeof(char *));
+
+      for (i = 0, new_argc = 1; new_argc <= optc; new_argc++)
+	{
+	  while (isspace (envopts[i]))
+	    i++;
+	  new_argv[new_argc] = envopts + i;
+	  while (!isspace (envopts[i]) && (envopts[i] != '\0'))
+	    i++;
+	  envopts[i++] = '\0';
+	}
+      for (i = 1; i < argc; i++)
+	new_argv[new_argc++] = argv[i];
+
+      argv = new_argv;
+      argc = new_argc;
     }
 
   /* Convert new-style -- options to old-style.  */
@@ -3937,6 +3999,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
     }
 
   /* Set up the search paths before we go looking for config files.  */
+#ifdef	FREEBSD_NATIVE
+  add_prefix (&exec_prefixes, PREFIX"/bin/", "BINUTILS",
+	      PREFIX_PRIORITY_LAST, 0, 0);
+#endif	/* FREEBSD_NATIVE */
 
   /* These come before the md prefixes so that we will find gcc's subcommands
      (such as cpp) rather than those of the host system.  */
@@ -3947,6 +4013,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
 	      PREFIX_PRIORITY_LAST, 1, 0);
   add_prefix (&exec_prefixes, standard_libexec_prefix, "BINUTILS",
 	      PREFIX_PRIORITY_LAST, 2, 0);
+#ifndef	FREEBSD_NATIVE
   add_prefix (&exec_prefixes, standard_exec_prefix, "BINUTILS",
 	      PREFIX_PRIORITY_LAST, 2, 0);
   add_prefix (&exec_prefixes, standard_exec_prefix_1, "BINUTILS",
@@ -3954,7 +4021,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
   add_prefix (&exec_prefixes, standard_exec_prefix_2, "BINUTILS",
 	      PREFIX_PRIORITY_LAST, 2, 0);
 #endif
+#endif
 
+#ifndef	FREEBSD_NATIVE
   add_prefix (&startfile_prefixes, standard_exec_prefix, "BINUTILS",
 	      PREFIX_PRIORITY_LAST, 1, 0);
   add_prefix (&startfile_prefixes, standard_exec_prefix_2, "BINUTILS",
@@ -4017,6 +4086,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
 	}
     }
 #endif
+#endif /* FREEBSD_NATIVE */
 
   /* More prefixes are enabled in main, after we read the specs file
      and determine whether this is cross-compilation or not.  */
@@ -6003,6 +6073,7 @@ is_directory (const char *path1, bool linker)
   *cp++ = '.';
   *cp = '\0';
 
+#ifndef FREEBSD_NATIVE
   /* Exclude directories that the linker is known to search.  */
   if (linker
       && IS_DIR_SEPARATOR (path[0])
@@ -6013,6 +6084,7 @@ is_directory (const char *path1, bool linker)
 	      && IS_DIR_SEPARATOR (path[4])
 	      && strncmp (path + 5, "lib", 3) == 0)))
     return 0;
+#endif /* FREEBSD_NATIVE */
 
   return (stat (path, &st) >= 0 && S_ISDIR (st.st_mode));
 }
@@ -6201,9 +6273,14 @@ main (int argc, char **argv)
 
   /* Read specs from a file if there is one.  */
 
+#ifdef FREEBSD_NATIVE
+  machine_suffix = "";
+  just_machine_suffix = "";
+#else	/* FREEBSD_NATIVE */
   machine_suffix = concat (spec_machine, dir_separator_str,
 			   spec_version, dir_separator_str, NULL);
   just_machine_suffix = concat (spec_machine, dir_separator_str, NULL);
+#endif /* FREEBSD_NATIVE */
 
   specs_file = find_a_file (&startfile_prefixes, "specs", R_OK, true);
   /* Read the specs file unless it is a default one.  */
@@ -6214,10 +6291,11 @@ main (int argc, char **argv)
 
   /* We need to check standard_exec_prefix/just_machine_suffix/specs
      for any override of as, ld and libraries.  */
-  specs_file = alloca (strlen (standard_exec_prefix)
-		       + strlen (just_machine_suffix) + sizeof ("specs"));
+  specs_file = (char *) alloca (strlen (FBSD_DATA_PREFIX)
+				+ strlen (just_machine_suffix)
+				+ sizeof ("specs"));
 
-  strcpy (specs_file, standard_exec_prefix);
+  strcpy (specs_file, FBSD_DATA_PREFIX);
   strcat (specs_file, just_machine_suffix);
   strcat (specs_file, "specs");
   if (access (specs_file, R_OK) == 0)
@@ -6326,6 +6404,7 @@ main (int argc, char **argv)
 		      NULL, PREFIX_PRIORITY_LAST, 0, 1);
 	}
 
+#ifndef FREEBSD_NATIVE
       if (*standard_startfile_prefix_1)
  	add_sysrooted_prefix (&startfile_prefixes,
 			      standard_startfile_prefix_1, "BINUTILS",
@@ -6334,6 +6413,7 @@ main (int argc, char **argv)
 	add_sysrooted_prefix (&startfile_prefixes,
 			      standard_startfile_prefix_2, "BINUTILS",
 			      PREFIX_PRIORITY_LAST, 0, 1);
+#endif
     }
 
   /* Process any user specified specs in the order given on the command
@@ -6369,7 +6449,11 @@ main (int argc, char **argv)
 
   if (print_search_dirs)
     {
+#ifndef	FREEBSD_NATIVE
       printf (_("install: %s%s\n"), standard_exec_prefix, machine_suffix);
+#else
+      printf (_("install: %s\n"), standard_exec_prefix);
+#endif
       printf (_("programs: %s\n"),
 	      build_search_list (&exec_prefixes, "", false, false));
       printf (_("libraries: %s\n"),
@@ -6482,7 +6566,7 @@ main (int argc, char **argv)
     }
 
   if (n_infiles == added_libraries)
-    fatal ("no input files");
+    fatal ("No input files specified");
 
   /* Make a place to record the compiler output file names
      that correspond to the input files.  */

@@ -24,6 +24,11 @@
 #undef	CPP_OS_DEFAULT_SPEC
 #define CPP_OS_DEFAULT_SPEC "%(cpp_os_freebsd)"
 
+#undef	CPP_OS_FREEBSD_SPEC
+#define CPP_OS_FREEBSD_SPEC	"\
+  -D__PPC__ -D__ppc__ -D__PowerPC__ -D__powerpc__ \
+  -Acpu=powerpc -Amachine=powerpc "
+
 #undef	STARTFILE_DEFAULT_SPEC
 #define STARTFILE_DEFAULT_SPEC "%(startfile_freebsd)"
 

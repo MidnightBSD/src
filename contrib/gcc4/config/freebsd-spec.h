@@ -18,6 +18,8 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
+/* $FreeBSD: src/contrib/gcc/config/freebsd-spec.h,v 1.23 2007/05/19 02:30:20 kan Exp $ */
+
 /* Common FreeBSD configuration. 
    All FreeBSD architectures should include this file, which will specify
    their commonalities.
@@ -57,6 +59,7 @@ Boston, MA 02110-1301, USA.  */
 	builtin_assert ("system=unix");					\
 	builtin_assert ("system=bsd");					\
 	builtin_assert ("system=FreeBSD");				\
+	FBSD_NATIVE_TARGET_OS_CPP_BUILTINS();				\
 	FBSD_TARGET_CPU_CPP_BUILTINS();					\
     }									\
   while (0)
@@ -64,34 +67,54 @@ Boston, MA 02110-1301, USA.  */
 /* Define the default FreeBSD-specific per-CPU hook code.  */
 #define FBSD_TARGET_CPU_CPP_BUILTINS() do {} while (0)
 
-/* Provide a CPP_SPEC appropriate for FreeBSD.  We just deal with the GCC 
-   option `-posix', and PIC issues.  */
+#ifdef FREEBSD_NATIVE
+#define FBSD_NATIVE_TARGET_OS_CPP_BUILTINS()				\
+  do {									\
+	builtin_define_with_int_value ("__FreeBSD_cc_version", FBSD_CC_VER); \
+  } while (0)
+#else
+#define FBSD_NATIVE_TARGET_OS_CPP_BUILTINS()				\
+  do {} while (0)
+#endif
+
+/* Provide a CPP_SPEC appropriate for FreeBSD.  We just deal with the GCC
+   option `-posix', and PIC issues.  Try to detect support for the
+   `long long' type.  Unfortunately the GCC spec parser will not allow us
+   to properly detect the "iso9899:1990" and "iso9899:199409" forms of
+   -std=c89.  Because of the ':' in the -std argument. :-(  I have left
+   them in the spec as a place holder in hopes someone knows a way to make
+   the detection of them work.  */
 
 #define FBSD_CPP_SPEC "							\
   %(cpp_cpu)								\
   %(cpp_arch)								\
+  %{!ansi:%{!std=c89:%{!std=iso9899.1990:%{!std=iso9899.199409:-D_LONGLONG}}}} \
   %{posix:-D_POSIX_SOURCE}"
 
-/* Provide a STARTFILE_SPEC appropriate for FreeBSD.  Here we add
-   the magical crtbegin.o file (see crtstuff.c) which provides part 
-	of the support for getting C++ file-scope static object constructed 
-	before entering `main'.  */
-   
-#define FBSD_STARTFILE_SPEC \
-  "%{!shared: \
-     %{pg:gcrt1.o%s} %{!pg:%{p:gcrt1.o%s} \
-		       %{!p:%{profile:gcrt1.o%s} \
-			 %{!profile:crt1.o%s}}}} \
-   crti.o%s %{!shared:crtbegin.o%s} %{shared:crtbeginS.o%s}"
+/* Provide a STARTFILE_SPEC appropriate for FreeBSD.  Here we add the magical
+   crtbegin.o file (see crtstuff.c) which provides part of the support for
+   getting C++ file-scope static object constructed before entering `main'.  */
 
-/* Provide a ENDFILE_SPEC appropriate for FreeBSD.  Here we tack on
-   the magical crtend.o file (see crtstuff.c) which provides part of 
-	the support for getting C++ file-scope static object constructed 
-	before entering `main', followed by a normal "finalizer" file, 
-	`crtn.o'.  */
+#define FBSD_STARTFILE_SPEC "\
+  %{!shared: \
+    %{pg:gcrt1.o%s} \
+    %{!pg: \
+      %{p:gcrt1.o%s} \
+      %{!p: \
+	%{profile:gcrt1.o%s} \
+	%{!profile:crt1.o%s}}}} \
+  crti.o%s \
+  %{static:crtbeginT.o%s;shared:crtbeginS.o%s;:crtbegin.o%s}"
 
-#define FBSD_ENDFILE_SPEC \
-  "%{!shared:crtend.o%s} %{shared:crtendS.o%s} crtn.o%s"
+/* Provide an ENDFILE_SPEC appropriate for FreeBSD/i386.  Here we tack on
+   our own magical crtend.o file (see crtstuff.c) which provides part of
+   the support for getting C++ file-scope static object constructed before
+   entering `main', followed by the normal "finalizer" file, `crtn.o'.  */
+
+#define FBSD_ENDFILE_SPEC "\
+  %{!shared:crtend.o%s} \
+  %{shared:crtendS.o%s} \
+  crtn.o%s "
 
 /* Provide a LIB_SPEC appropriate for FreeBSD as configured and as
    required by the user-land thread model.  Before __FreeBSD_version
@@ -120,7 +143,8 @@ is built with the --enable-threads configure-time option.}		\
     %{pg:  -lc_p}							\
   }"
 #else
-#if FBSD_MAJOR < 5
+#include <sys/param.h>
+#if __FreeBSD_version < 500016
 #define FBSD_LIB_SPEC "							\
   %{!shared:								\
     %{!pg:								\
@@ -130,17 +154,34 @@ is built with the --enable-threads configure-time option.}		\
       %{!pthread:-lc_p}							\
       %{pthread:-lc_r_p}}						\
   }"
-#else
+#elif __FreeBSD_version < 700022
 #define FBSD_LIB_SPEC "							\
   %{!shared:								\
     %{!pg: %{pthread:-lpthread} -lc}					\
     %{pg:  %{pthread:-lpthread_p} -lc_p}				\
   }"
+#else
+#define FBSD_LIB_SPEC "							\
+  %{!shared:								\
+    %{!pg: %{pthread:-lpthread} -lc}					\
+    %{pg:  %{pthread:-lpthread_p} -lc_p}}				\
+  %{shared:								\
+    %{pthread:-lpthread} -lc}						\
+  "
 #endif
 #endif
 
-#if FBSD_MAJOR < 6
+#if FBSD_MAJOR < 5
 #define FBSD_DYNAMIC_LINKER "/usr/libexec/ld-elf.so.1"
 #else
 #define FBSD_DYNAMIC_LINKER "/libexec/ld-elf.so.1"
+#endif
+
+#if defined(HAVE_LD_EH_FRAME_HDR)
+#define LINK_EH_SPEC "%{!static:--eh-frame-hdr} "
+#endif
+
+/* Use --as-needed -lgcc_s for eh support.  */
+#ifdef HAVE_LD_AS_NEEDED
+#define USE_LD_AS_NEEDED 1
 #endif

@@ -19,6 +19,8 @@ along with GCC; see the file COPYING.  If not, write to
 the Free Software Foundation, 51 Franklin Street, Fifth Floor,
 Boston, MA 02110-1301, USA.  */
 
+/* $FreeBSD: src/contrib/gcc/config/i386/i386.c,v 1.25 2007/08/14 03:04:42 kan Exp $ */
+
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -13957,6 +13959,7 @@ ix86_constant_alignment (tree exp, int align)
 	return 128;
     }
   else if (!optimize_size && TREE_CODE (exp) == STRING_CST
+      	   && !TARGET_NO_ALIGN_LONG_STRINGS
 	   && TREE_STRING_LENGTH (exp) >= 31 && align < BITS_PER_WORD)
     return BITS_PER_WORD;
 

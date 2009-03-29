@@ -1,3 +1,4 @@
+/* $FreeBSD: src/contrib/gcc/version.c,v 1.16 2007/08/14 03:04:42 kan Exp $ */
 #include "version.h"
 
 /* This is the trailing component of the string reported as the
@@ -8,7 +9,7 @@
    in parentheses.  You may also wish to include a number indicating
    the revision of your modified compiler.  */
 
-#define VERSUFFIX ""
+#define VERSUFFIX " [FreeBSD]"
 
 /* This is the location of the online document giving instructions for
    reporting bugs.  If you distribute a modified version of GCC,
