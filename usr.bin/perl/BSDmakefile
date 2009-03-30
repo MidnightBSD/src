@@ -1,5 +1,5 @@
 #
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.3 2009/03/19 01:46:50 ctriv Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.4 2009/03/26 21:49:00 ctriv Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -50,7 +50,7 @@ MANSECTIONS= 1 3
 install.man: convertpods finalmaninstall
 
 convertpods:
-	@cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR} ./perl installman --man1dir=${.OBJDIR}/rawmans/1 --man3dir=${.OBJDIR}/rawmans/3
+	@cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR} ./perl installman --destdir=${DESTDIR} --man1dir=${.OBJDIR}/rawmans/1 --man3dir=${.OBJDIR}/rawmans/3
 
 finalmaninstall:
 .for SEC in ${MANSECTIONS}
