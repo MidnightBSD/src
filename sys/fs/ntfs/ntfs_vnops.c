@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.4 2008/12/03 00:25:42 laffer1 Exp $ */
 /*	$NetBSD: ntfs_vnops.c,v 1.23 1999/10/31 19:45:27 jdolecek Exp $	*/
 
 /*-
@@ -82,6 +82,8 @@ static vop_cachedlookup_t	ntfs_lookup;
 static vop_fsync_t	ntfs_fsync;
 static vop_pathconf_t	ntfs_pathconf;
 static vop_vptofh_t	ntfs_vptofh;
+
+int ntfs_iconv_u2l(void *, const char **, size_t *, char **, size_t *);
 
 int	ntfs_prtactive = 1;	/* 1 => print out reclaim of active vnodes */
 
@@ -554,12 +556,20 @@ ntfs_readdir(ap)
 			if(!ntfs_isnamepermitted(ntmp,iep))
 				continue;
 
+#if 0
 			for(i=0, j=0; i<iep->ie_fnamelen; i++, j++) {
 				c = NTFS_U28(iep->ie_fname[i]);
 				if (c&0xFF00)
 					cde.d_name[j++] = (char)(c>>8);
 				cde.d_name[j] = (char)c&0xFF;
 			}
+#endif
+            const char *ibuf = (const char *)iep->ie_fname;
+            size_t ilen = iep->ie_fnamelen*2;
+            char *obuf = cde.d_name;
+            size_t olen = j = sizeof(cde.d_name)-1;
+            ntfs_iconv_u2l(ntmp->ntm_ic_u2l, &ibuf, &ilen, &obuf, &olen);
+            j -= olen;
 			cde.d_name[j] = '\0';
 			dprintf(("ntfs_readdir: elem: %d, fname:[%s] type: %d, flag: %d, ",
 				num, cde.d_name, iep->ie_fnametype,

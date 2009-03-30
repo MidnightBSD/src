@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/ntfs/ntfs_subr.c,v 1.3 2008/12/03 00:25:42 laffer1 Exp $ */
 /*	$NetBSD: ntfs_subr.c,v 1.23 1999/10/31 19:45:26 jdolecek Exp $	*/
 
 /*-
@@ -61,7 +61,6 @@ static int ntfs_ntlookupattr(struct ntfsmount *, const char *, int, int *, char 
 static int ntfs_findvattr(struct ntfsmount *, struct ntnode *, struct ntvattr **, struct ntvattr **, u_int32_t, const char *, size_t, cn_t);
 static int ntfs_uastricmp(struct ntfsmount *, const wchar *, size_t, const char *, size_t);
 static int ntfs_uastrcmp(struct ntfsmount *, const wchar *, size_t, const char *, size_t);
-
 /* table for mapping Unicode chars into uppercase; it's filled upon first
  * ntfs mount, freed upon last ntfs umount */
 static wchar *ntfs_toupper_tab;
@@ -75,6 +74,149 @@ struct iconv_functions *ntfs_iconv = NULL;
 #define NTFS_AALPCMP(aalp,type,name,namelen) (				\
   (aalp->al_type == type) && (aalp->al_namelen == namelen) &&		\
   !NTFS_UASTRCMP(aalp->al_name,aalp->al_namelen,name,namelen) )
+
+static int ntfs_iconv_u2w(const char **inbuf, size_t *inbytes,
+        char **outbuf, size_t *outbytes)
+{   
+    u_int8_t mark;
+    u_int16_t uc = 0;
+    char * obuf  = NULL;
+    const char *ibuf, *ibuf_end, *obuf_end;
+    if ((inbuf&&inbytes&&outbuf&&outbytes)
+            && (*inbuf&&*inbytes&&*outbuf&&*outbytes)){
+        ibuf = *inbuf;
+        ibuf_end = *inbuf+*inbytes;
+        obuf = *outbuf;
+        obuf_end = *outbuf+*outbytes;
+        int follow = 0;
+        while(ibuf<ibuf_end && &obuf[1]<obuf_end){
+            mark = (u_int8_t)*ibuf++;
+            if (mark<0xF0 && mark>0xE0){
+                /* 1110XXXX */
+                uc = mark&0x0F;
+                follow = 2;
+            }else if (mark<0xE0 && mark>0xC0){
+                /* 110XXXXX */
+                uc = mark&0x1F;
+                follow = 1;
+            }else if (mark<0x80){
+                /* 0XXXXXXX */
+                uc = mark;
+                follow = 0;
+            }else{
+                /* convert fail: 0xF0 0xE0 should NOT in UTF-8 seq */
+                printf("convert fail 0xF0 0xE0\n");
+                break;
+            }
+            if (&ibuf[follow] > ibuf_end){
+                /* unexpect input end */
+                break;
+            }
+            for (; follow>0; follow--){
+                /* 10XX.XXXX 0x80-0xBF*/
+                if ((*ibuf&0xC0) != 0x80){
+                    *outbytes = obuf_end - *outbuf;
+                    *inbytes = ibuf_end - *inbuf;
+                    printf("convert fail SEQ\n");
+                    return 0;
+                }
+                uc = (uc<<6)|(*ibuf++&0x3F);
+            }
+            *obuf++ = (uc);
+            *obuf++ = (uc>>8);
+            *outbuf = obuf;
+            *inbuf = ibuf;
+        }
+        *outbytes = obuf_end - *outbuf;
+        *inbytes = ibuf_end - *inbuf;
+    }
+    return 0;
+}
+
+static int ntfs_iconv_w2u(const char **inbuf, size_t *inbytes,
+        char **outbuf, size_t *outbytes)
+{
+    u_int16_t uc = 0;
+    char *obuf  = NULL;
+    const char *ibuf, *ibuf_end, *obuf_end;
+    if ((inbuf&&inbytes&&outbuf&&outbytes)
+            && (*inbuf&&*inbytes&&*outbuf&&*outbytes)){
+        ibuf = *inbuf;
+        ibuf_end = *inbuf+*inbytes;
+        obuf = *outbuf;
+        obuf_end = *outbuf+*outbytes;
+        int follow = 0;
+        while(&ibuf[1]<ibuf_end && obuf<obuf_end){
+            uc = (0xFF&*ibuf++);
+            uc |= (*ibuf++<<8);
+            if (uc < 0x80){
+                *obuf++ = (uc);
+                follow = 0;
+            }else if (uc < 0x800){
+                *obuf++ = (uc>>6)|0xC0;
+                follow = 1;
+            }else {
+                *obuf++ = (uc>>12)|0xE0;
+                follow = 2;
+            }
+            if (&obuf[follow] > obuf_end){
+                /*no output buffer */
+                break;
+            }
+            for (follow--;follow>=0;follow--){
+                int shift = follow*6;
+                u_int8_t ch = uc>>shift;
+                *obuf++ = (ch&0x3F)|0x80;
+            }
+            *outbuf = obuf;
+            *inbuf = ibuf;
+        }
+        *outbytes = obuf_end - *outbuf;
+        *inbytes = ibuf_end - *inbuf;
+    }
+    return 0;
+}
+
+
+static int ntfs_iconv_l2u(void *handle, const char **inbuf, size_t *inbytes,
+        char **outbuf, size_t *outbytes)
+{
+    int retval = 0;
+    if (handle == NULL)
+        return ntfs_iconv_u2w(inbuf, inbytes, outbuf, outbytes);
+
+    if ((outbuf&&outbytes)&&(*outbytes&&*outbuf)){
+        char *obuf = *outbuf;
+        retval = ntfs_iconv->convchr(handle, inbuf, inbytes, outbuf, outbytes);
+        char *obuf_end = *outbuf;
+        for (; &obuf[1]<obuf_end; obuf+=2){
+            char sw = obuf[0];
+            obuf[0] = obuf[1]; obuf[1] = sw;
+        }
+    }
+    return retval;
+}
+
+int ntfs_iconv_u2l(void *handle, const char **inbuf, size_t *inbytes,
+        char **outbuf, size_t *outbytes)
+{
+    char text[3];
+    char *ptext=NULL;
+
+    if (handle == NULL){
+        return ntfs_iconv_w2u(inbuf, inbytes, outbuf, outbytes);
+    }
+
+    if ((inbuf&&inbytes) && (*inbuf&&*inbytes)){ 
+        const char *ibuf_end = *inbuf+*inbytes;
+        for (char *ibuf=*inbuf; &ibuf[1]<ibuf_end&&ptext!=text; ibuf+=2){
+            ptext = text;
+            text[0] = ibuf[1]; text[1] = ibuf[0];
+            ntfs_iconv->convchr(handle, &ptext, inbytes, outbuf, outbytes);
+        }
+    }
+    return 0;
+}
 
 /*
  * 
@@ -675,8 +817,11 @@ ntfs_uastricmp(ntmp, ustr, ustrlen, astr, astrlen)
 	int res;
 	wchar wc;
 
-	if (ntmp->ntm_ic_l2u) {
+#define NTFS_ICONV_UTF8_ENABLE (1==1)
+
+	if (ntmp->ntm_ic_l2u || NTFS_ICONV_UTF8_ENABLE) {
 		for (i = 0, j = 0; i < ustrlen && j < astrlen; i++, j++) {
+#if 0
 			if (j < astrlen -1) {
 				wc = (wchar)astr[j]<<8 | (astr[j+1]&0xFF);
 				len = 2;
@@ -684,22 +829,52 @@ ntfs_uastricmp(ntmp, ustr, ustrlen, astr, astrlen)
 				wc = (wchar)astr[j]<<8 & 0xFF00;
 				len = 1;
 			}
+#endif
+            wchar wcode = '?';
+            char *optr = (char*)&wcode;
+            size_t olen = 2;
+            const char *iptr = &astr[j];
+            size_t ilen = astrlen-j;
+            len = ilen;
+            ntfs_iconv_l2u(ntmp->ntm_ic_l2u, &iptr, &ilen, &optr, &olen);
+            len -= ilen;
 			res = ((int) NTFS_TOUPPER(ustr[i])) -
-				((int)NTFS_TOUPPER(NTFS_82U(wc, &len)));
+				((int)NTFS_TOUPPER(wcode));
 			j += len - 1;
 			mbstrlen -= len - 1;
 
-			if (res)
+			if (res){
 				return res;
+            }
 		}
 	} else {
 		/*
 		 * We use NTFS_82U(NTFS_U28(c)) to get rid of unicode
 		 * symbols not covered by translation table
 		 */
+        printf("bad code!\n");
 		for (i = 0; i < ustrlen && i < astrlen; i++) {
-			res = ((int) NTFS_TOUPPER(NTFS_82U(NTFS_U28(ustr[i]), &len))) -
-				((int)NTFS_TOUPPER(NTFS_82U((wchar)astr[i], &len)));
+#if 1
+            wchar wcode='?', wcode2='?';
+            char obuf[4];
+            char *optr = obuf;
+            size_t olen = 4;
+            const char *iptr = (const char*)&ustr[i];
+            size_t ilen = 2;
+            ntfs_iconv_u2l(ntmp->ntm_ic_u2l, &iptr, &ilen, &optr, &olen);
+            iptr = obuf;
+            ilen = 4-olen;
+            optr = (char*)&wcode;
+            olen = 2;
+            ntfs_iconv_l2u(ntmp->ntm_ic_l2u, &iptr, &ilen, &optr, &olen);
+            iptr = &astr[i];
+            ilen = astrlen-i;
+            optr = (char*)&wcode2;
+            olen = 2;
+            ntfs_iconv_l2u(ntmp->ntm_ic_l2u, &iptr, &ilen, &optr, &olen);
+#endif
+			res = ((int) NTFS_TOUPPER(wcode)) -
+				((int)NTFS_TOUPPER(wcode2));
 			if (res)
 				return res;
 		}
@@ -718,23 +893,34 @@ ntfs_uastrcmp(ntmp, ustr, ustrlen, astr, astrlen)
 	const char *astr;
 	size_t astrlen;
 {
-	char u, l;
 	size_t i, j, mbstrlen = astrlen;
 	int res;
 	wchar wc;
 
 	for (i = 0, j = 0; (i < ustrlen) && (j < astrlen); i++, j++) {
 		res = 0;
-		wc = NTFS_U28(ustr[i]);
-		u = (char)(wc>>8);
-		l = (char)wc;
-		if (u != '\0' && j < astrlen -1) {
-			res = (int) (u - astr[j++]);
-			mbstrlen--;
-		}
-		res = (res<<8) + (int) (l - astr[j]);
-		if (res)
-			return res;
+        char obuf[3];
+        char *optr = obuf;
+        size_t olen = 3;
+        const char *iptr = &ustr[i];
+        size_t ilen = 2;
+        ntfs_iconv_u2l(ntmp->ntm_ic_u2l, &iptr, &ilen, &optr, &olen);
+        if (olen == 3){
+            obuf[0] = '?';
+            olen--;
+        }
+        int t = 0;
+        j--;
+        mbstrlen++;
+        while (olen < 3){
+            res = (int)(obuf[t] - astr[++j]);
+            if (res){
+                return res;
+            }
+            mbstrlen--;
+            olen++;
+            t++;
+        }
 	}
 	return (ustrlen - mbstrlen);
 }
@@ -2047,7 +2233,13 @@ ntfs_u28_init(
 	int i, j, h, l;
 
 	if (ntfs_iconv && cs_local) {
-		ntfs_iconv->open(cs_local, cs_ntfs, &ntmp->ntm_ic_u2l);
+        if (cs_local[0]=='U' && cs_local[1]=='T'
+                && cs_local[2]=='F' && cs_local[3]=='-'
+                && cs_local[4]=='8' && cs_local[5]=='\0'){
+            ntmp->ntm_ic_u2l = NULL;
+        }else{
+            ntfs_iconv->open(cs_local, cs_ntfs, &ntmp->ntm_ic_u2l);
+        }
 		return (0);
 	}
 
@@ -2105,7 +2297,13 @@ ntfs_82u_init(
 	int i;
 
 	if (ntfs_iconv && cs_local) {
-		ntfs_iconv->open(cs_ntfs, cs_local, &ntmp->ntm_ic_l2u);
+        if (cs_local[0]=='U' && cs_local[1]=='T'
+                && cs_local[2]=='F' && cs_local[3]=='-'
+                && cs_local[4]=='8' && cs_local[5]=='\0'){
+            ntmp->ntm_ic_l2u = NULL;
+        }else{
+            ntfs_iconv->open(cs_ntfs, cs_local, &ntmp->ntm_ic_l2u);
+        }
 		return (0);
 	}
 
@@ -2140,6 +2338,7 @@ ntfs_82u_uninit(struct ntfsmount *ntmp)
  * and substitutes a '_' for it if the result would be '\0';
  * something better has to be definitely though out
  */
+#if 0
 wchar
 ntfs_u28(
 	struct ntfsmount *ntmp, 
@@ -2204,4 +2403,4 @@ ntfs_82u(
 
 	return ('?');
 }
-
+#endif
