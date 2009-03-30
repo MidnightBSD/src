@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/msdosfs/msdosfs_vfsops.c,v 1.6 2008/12/03 00:25:42 laffer1 Exp $ */
 /* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vfsops.c,v 1.174 2007/08/15 17:40:09 jhb Exp $ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
@@ -132,10 +132,18 @@ update_mp(struct mount *mp, struct thread *td)
 				error = vfs_getopt(mp->mnt_optnew,
 				    "cs_dos", &dos, NULL);
 			if (!error) {
-				msdosfs_iconv->open(win, local, &pmp->pm_u2w);
-				msdosfs_iconv->open(local, win, &pmp->pm_w2u);
-				msdosfs_iconv->open(dos, local, &pmp->pm_u2d);
-				msdosfs_iconv->open(local, dos, &pmp->pm_d2u);
+                char *p = (char*)local;
+                if (p!=NULL && p[0]=='U'
+                        && p[1]=='T' && p[2]=='F'
+                        && p[3]=='-' && p[4]=='8' && p[5]=='\0'){
+                    pmp->pm_w2u = NULL;
+                    pmp->pm_u2w = NULL;
+                }else{
+                    msdosfs_iconv->open(win, local, &pmp->pm_u2w);
+                    msdosfs_iconv->open(local, win, &pmp->pm_w2u);
+                }
+                msdosfs_iconv->open(dos, local, &pmp->pm_u2d);
+                msdosfs_iconv->open(local, dos, &pmp->pm_d2u);
 			}
 			if (error != 0)
 				return (error);
