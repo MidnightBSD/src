@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.23 2009/03/27 22:05:03 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.24 2009/03/27 22:06:10 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -47,7 +47,6 @@ SUBDIR=	alias \
 	compress \
 	cpio \
 	csplit \
-	${_csup} \
 	ctags \
 	cut \
 	dc \
@@ -270,9 +269,6 @@ _calendar=	calendar
 .if ${MK_OPENSSL} != "no"
 _chkey=		chkey
 _newkey=	newkey
-.if ${MK_LIBTHR} != "no" || ${MK_LIBKSE} != "no"
-_csup=		csup
-.endif
 .endif
 
 .if ${MK_HESIOD} != "no"
