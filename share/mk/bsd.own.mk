@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.3 2008/09/03 02:23:05 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -287,6 +287,7 @@ WITH_IDEA=
 #
 .for var in \
     ACPI \
+    ASH \
     ASSERT_DEBUG \
     ATM \
     AUDIT \
