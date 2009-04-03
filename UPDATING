@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users
 
+200090403:
+	mksh was disconnected a few day ago do to bugs with
+	buildworld and mports.  Now, connect it back 
+	for use as /bin/sh with a conditional called
+	MK_ASH.  By default, ash is the standard /bin/sh
+	but we may change this later.  This will allow further
+	testing by users and developers of mksh without
+	causing an unpleasant default experience.  In the
+	long run, we need to fix mksh compatibility.
+
 20090328:
 	Bring in mksh R37 from CVS. The dot.mkshrc files for root 
 	and skel were changed.  mksh(1) now replaces ash aka sh(1)
@@ -676,4 +686,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.54 2009/03/29 03:12:45 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.55 2009/03/29 03:14:06 laffer1 Exp $
