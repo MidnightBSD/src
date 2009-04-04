@@ -1052,7 +1052,6 @@ ed_miibus_writereg(device_t dev, int phy, int reg, int data)
 	if (phy >= 0x11)
 		return;
 
-	printf("Writing phy %d reg %#x data %#x\n", phy, reg, data);
 	sc = device_get_softc(dev);
 	(*sc->mii_writebits)(sc, 0xffffffff, 32);
 	(*sc->mii_writebits)(sc, ED_MII_STARTDELIM, ED_MII_STARTDELIM_BITS);
