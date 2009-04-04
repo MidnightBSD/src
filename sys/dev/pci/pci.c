@@ -3553,6 +3553,11 @@ pci_write_config_method(device_t dev, device_t child, int reg,
 	struct pci_devinfo *dinfo = device_get_ivars(child);
 	pcicfgregs *cfg = &dinfo->cfg;
 
+	/* 0x1011: DEC, 0x0009: 21140, 0x10: PCIR_BARS, 0x28: PCIR_CIS */
+	if (dinfo->cfg.vendor == 0x1011 && dinfo->cfg.device == 0x0009)
+		if (reg >= 0x10 && reg < 0x28)
+			return;
+
 	PCIB_WRITE_CONFIG(device_get_parent(dev),
 	    cfg->bus, cfg->slot, cfg->func, reg, val, width);
 }
