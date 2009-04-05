@@ -1,4 +1,6 @@
-# $MidnightBSD: src/bin/mksh/Makefile,v 1.8 2009/03/30 15:33:04 laffer1 Exp $
+# $MidnightBSD: src/bin/mksh/Makefile,v 1.9 2009/04/03 05:29:51 laffer1 Exp $
+
+.include <bsd.own.mk>
 
 MKSHDIR= ${.CURDIR}/../../contrib/mksh
 .PATH: ${MKSHDIR}
