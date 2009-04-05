@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.12 2008/10/07 01:56:49 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.13 2008/12/09 18:37:20 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -87,7 +87,7 @@ CLEANDIR=	cleandir
 
 CVS?=		cvs
 CVSFLAGS?=	-r . -P -d -I!
-SUP?=		/usr/bin/csup
+SUP?=		/usr/local/bin/cvsup
 SUPFLAGS?=	-g -L 2
 .if defined(SUPHOST)
 SUPFLAGS+=	-h ${SUPHOST}
@@ -96,7 +96,7 @@ SUPFLAGS+=	-h ${SUPHOST}
 MAKEOBJDIRPREFIX?=	/usr/obj
 .if !defined(OSRELDATE)
 .if exists(/usr/include/osreldate.h)
-OSRELDATE!=	awk '/^\#define[[:space:]]*__FreeBSD_version/ { print $$3 }' \
+OSRELDATE!=	awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
 		/usr/include/osreldate.h
 .else
 OSRELDATE=	0
@@ -114,7 +114,7 @@ TARGET=		${TARGET_ARCH}
 TARGET?=	${MACHINE}
 TARGET_ARCH?=	${MACHINE_ARCH}
 
-KNOWN_ARCHES?=	amd64 arm i386 i386/pc98 ia64 powerpc sparc64 sparc64/sun4v
+KNOWN_ARCHES?=	amd64 i386 sparc64 sparc64/sun4v
 .if ${TARGET} == ${TARGET_ARCH}
 _t=		${TARGET}
 .else
