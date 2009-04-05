@@ -2,7 +2,7 @@ Updating Information for MidnightBSD users
 
 20090405:
 	xorg 7.4 wants to configure its input devices via hald which does not
-	yet work with USB2. If the keyboard/mouse does not work in xorg then
+	yet work with USB. If the keyboard/mouse does not work in xorg then
 	add
 		Option "AllowEmptyInput" "off"
 	to your ServerLayout section.  This will cause X to use the configured
@@ -694,4 +694,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.56 2009/04/03 06:28:03 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.57 2009/04/05 23:39:34 laffer1 Exp $
