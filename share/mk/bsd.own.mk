@@ -1,4 +1,4 @@
-# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.3 2008/09/03 02:23:05 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.own.mk,v 1.4 2009/04/03 05:30:46 laffer1 Exp $
 # $FreeBSD: src/share/mk/bsd.own.mk,v 1.67.2.2.2.2 2008/01/28 08:57:11 dougb Exp $
 #
 # The include file <bsd.own.mk> set common variables for owner,
@@ -203,6 +203,7 @@ WITHOUT_${var}=
 .if !defined(BURN_BRIDGES)
 .for var in \
     ACPI \
+    ASH \
     ATM \
     AUDIT \
     AUTHPF \
