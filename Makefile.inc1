@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.14 2009/04/05 22:48:21 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.15 2009/04/05 23:02:05 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -103,9 +103,14 @@ OSRELDATE=	0
 .endif
 .endif
 
+.if !defined(VERSION)
+VERSION!=	uname -srp
+VERSION+=	${OSRELDATE}
+.endif
+
 # Guess machine architecture from machine type, and vice versa.
 .if !defined(TARGET_ARCH) && defined(TARGET)
-TARGET_ARCH=	${TARGET:S/pc98/i386/:S/sun4v/sparc64/}
+TARGET_ARCH=	${TARGET:S/sun4v/sparc64/}
 .elif !defined(TARGET) && defined(TARGET_ARCH) && \
     ${TARGET_ARCH} != ${MACHINE_ARCH}
 TARGET=		${TARGET_ARCH}
@@ -202,6 +207,7 @@ CROSSENV=	MAKEOBJDIRPREFIX=${OBJTREE} \
 BMAKEENV=	INSTALL="sh ${.CURDIR}/tools/install.sh" \
 		PATH=${BPATH}:${PATH} \
 		WORLDTMP=${WORLDTMP} \
+		VERSION=${VERSION} \
 		MAKEFLAGS="-m ${.CURDIR}/tools/build/mk ${.MAKEFLAGS}"
 BMAKE=		MAKEOBJDIRPREFIX=${WORLDTMP} \
 		${BMAKEENV} ${MAKE} -f Makefile.inc1 \
@@ -235,7 +241,7 @@ WMAKE=		${WMAKEENV} ${MAKE} -f Makefile.inc1 DESTDIR=${WORLDTMP}
 LIB32TMP=	${OBJTREE}${.CURDIR}/lib32
 
 .if empty(TARGET_CPUTYPE)
-LIB32CPUTYPE=	k8
+LIB32CPUTYPE=	-march=i686 -mmmx -msse -msse2
 .else
 LIB32CPUTYPE=	${TARGET_CPUTYPE}
 .endif
