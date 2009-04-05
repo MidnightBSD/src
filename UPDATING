@@ -1,6 +1,14 @@
 Updating Information for MidnightBSD users
 
-200090403:
+20090405:
+	xorg 7.4 wants to configure its input devices via hald which does not
+	yet work with USB2. If the keyboard/mouse does not work in xorg then
+	add
+		Option "AllowEmptyInput" "off"
+	to your ServerLayout section.  This will cause X to use the configured
+	kbd and mouse sections from your xorg.conf
+
+20090403:
 	mksh was disconnected a few day ago do to bugs with
 	buildworld and mports.  Now, connect it back 
 	for use as /bin/sh with a conditional called
@@ -686,4 +694,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.55 2009/03/29 03:14:06 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.56 2009/04/03 06:28:03 laffer1 Exp $
