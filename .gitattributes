@@ -35100,6 +35100,7 @@ tools/build/mk/OptionalObsoleteFiles.inc -text
 tools/build/mk/bsd.lib.mk -text
 tools/build/mk/bsd.prog.mk -text
 tools/build/options/WITHOUT_ACPI -text
+tools/build/options/WITHOUT_ASH -text
 tools/build/options/WITHOUT_ASSERT_DEBUG -text
 tools/build/options/WITHOUT_ATM -text
 tools/build/options/WITHOUT_AUDIT -text
