@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.16 2009/04/05 23:35:06 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.17 2009/04/05 23:53:18 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -336,7 +336,7 @@ _worldtmp:
 .endfor
 .for _dir in \
     lib usr/bin usr/include usr/lib/compat/aout usr/libdata/ldscripts \
-    usr/libexec usr/sbin usr/share/misc
+    usr/libdata/pkgconfig usr/libexec usr/sbin usr/share/misc
 	mkdir -p ${WORLDTMP}/${_dir}
 .endfor
 	mtree -deU -f ${.CURDIR}/etc/mtree/BSD.include.dist \
