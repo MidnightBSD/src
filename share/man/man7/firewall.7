@@ -22,7 +22,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man7/firewall.7,v 1.25.2.1 2005/07/17 15:03:35 brueffer Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man7/firewall.7,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 .\"
 .Dd May 26, 2001
 .Dt FIREWALL 7
@@ -40,7 +40,7 @@ IP addresses and to isolate services such as NFS or SMBFS (Windows
 file sharing) within LAN segments.
 .Pp
 The
-.Fx
+.Mx
 firewalling system also has the capability to limit bandwidth using
 .Xr dummynet 4 .
 This feature can be useful when you need to guarantee a certain
@@ -56,7 +56,7 @@ you might want to limit bandwidth to prevent excessive bandwidth
 charges from your provider.
 .Pp
 Finally,
-.Fx
+.Mx
 firewalls may be used to divert packets or change the next-hop
 address for packets to help route them to the correct destination.
 Packet diversion is most often used to support NAT (network
@@ -97,7 +97,7 @@ If you enable firewalling in your
 when necessary.
 However,
 if you are paranoid you can compile IPFW directly into the
-.Fx
+.Mx
 kernel by using the
 .Sy IPFIREWALL
 option set.
@@ -125,7 +125,7 @@ may open a small window of opportunity during booting where your
 firewall passes all packets.
 Still, it is a good option to use
 while getting up to speed with
-.Fx
+.Mx
 firewalling.
 Get rid of it once you understand how it all works
 to close the loophole, though.
@@ -441,4 +441,8 @@ manual page was originally written by
 and first appeared
 in
 .Fx 4.3 ,
-May 2001.
+May 2001. It was later revised in 2009 by
+.An Lucas Holt
+for
+.Mx
+.
