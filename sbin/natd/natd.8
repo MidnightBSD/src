@@ -1,5 +1,6 @@
+.\" $MidnightBSD$
 .\" $FreeBSD: src/sbin/natd/natd.8,v 1.62 2005/01/15 12:28:00 ru Exp $
-.Dd February 28, 2003
+.Dd April 9, 2009
 .Dt NATD 8
 .Os
 .Sh NAME
@@ -42,7 +43,7 @@ utility provides a Network Address Translation facility for use
 with
 .Xr divert 4
 sockets under
-.Fx .
+.Mx .
 .Pp
 (If you need NAT on a PPP link,
 .Xr ppp 8
@@ -570,6 +571,12 @@ following lines will do:
 /sbin/ipfw add divert natd all from any to any via ed0
 /sbin/ipfw add pass all from any to any
 .Ed
+.Pp 
+As an alternative, you may enable firewall_enable="YES" and
+firewall_type="open" combined with natd_enable="YES" in 
+/etc/rc.conf to
+automatically create the appropriate firewall rules
+on system startup without making the script above.
 .Pp
 The second line depends on your interface (change
 .Ql ed0
