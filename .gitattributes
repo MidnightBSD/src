@@ -21187,6 +21187,9 @@ games/morse/morse.c -text
 games/number/Makefile -text
 games/number/number.6 -text
 games/number/number.c -text
+games/pig/Makefile -text
+games/pig/pig.6 -text
+games/pig/pig.c -text
 games/pom/Makefile -text
 games/pom/pom.6 -text
 games/pom/pom.c -text
