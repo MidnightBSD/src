@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 2/3/94
 # $FreeBSD: src/lib/libc/Makefile,v 1.73 2007/10/01 18:15:10 ru Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/lib/libc/Makefile,v 1.5 2008/10/30 20:59:09 laffer1 Exp $
 
 SHLIBDIR?= /lib
 
@@ -64,9 +64,6 @@ NOASM=
 .include "${.CURDIR}/rpc/Makefile.inc"
 .include "${.CURDIR}/uuid/Makefile.inc"
 .include "${.CURDIR}/xdr/Makefile.inc"
-.if ${MACHINE_ARCH} == "arm"
-.include "${.CURDIR}/softfloat/Makefile.inc"
-.endif
 .if ${MK_NIS} != "no"
 CFLAGS+= -DYP
 .include "${.CURDIR}/yp/Makefile.inc"

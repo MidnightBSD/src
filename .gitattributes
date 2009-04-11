@@ -22194,9 +22194,6 @@ lib/libc/amd64/sys/sbrk.S -text
 lib/libc/amd64/sys/setlogin.S -text
 lib/libc/amd64/sys/sigreturn.S -text
 lib/libc/amd64/sys/vfork.S -text
-lib/libc/arm/Symbol.map -text
-lib/libc/arm/gd_qnan.h -text
-lib/libc/arm/string/strlen.S -text
 lib/libc/compat-43/Makefile.inc -text
 lib/libc/compat-43/Symbol.map -text
 lib/libc/compat-43/creat.2 -text
@@ -22625,8 +22622,6 @@ lib/libc/i386/sys/sbrk.S -text
 lib/libc/i386/sys/setlogin.S -text
 lib/libc/i386/sys/sigreturn.S -text
 lib/libc/i386/sys/syscall.S -text
-lib/libc/ia64/Symbol.map -text
-lib/libc/ia64/gd_qnan.h -text
 lib/libc/include/fpmath.h -text
 lib/libc/include/isc/eventlib.h -text
 lib/libc/include/isc/list.h -text
@@ -22963,8 +22958,6 @@ lib/libc/posix1e/mac_set.3 -text
 lib/libc/posix1e/mac_set.c -text
 lib/libc/posix1e/mac_text.3 -text
 lib/libc/posix1e/posix1e.3 -text
-lib/libc/powerpc/Symbol.map -text
-lib/libc/powerpc/gd_qnan.h -text
 lib/libc/quad/Makefile.inc -text
 lib/libc/quad/Symbol.map -text
 lib/libc/quad/TESTS/Makefile -text
