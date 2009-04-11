@@ -1,6 +1,6 @@
 #!/bin/mksh
 #
-# $MidnightBSD: src/tools/man/makeman.sh,v 1.2 2009/04/11 20:38:17 laffer1 Exp $
+# $MidnightBSD: src/tools/man/makeman.sh,v 1.3 2009/04/11 20:49:30 laffer1 Exp $
 #
 # Copyright (C) 2009
 #         Lucas Holt. All rights reserved.
@@ -32,6 +32,7 @@
 DIR=$1
 OUT=$2
 MANPATHS="man1 man2 man3 man4 man5 man6 man7 man8 man9"
+TIDY=`which tidy`
 
 if [ -d "$DIR" ]; then
 	echo "Using $DIR for man files"
@@ -60,19 +61,22 @@ for manpath in $MANPATHS; do
 
 		# create section page
 		cp head.inc.html "$OUT/$manpath".html
+		echo "<ul>" >> "$OUT/$manpath".html
 
 		# generate man pages as html
 		for file in $DIR/$manpath/*.gz ; do
 			echo "$file"
 			MYNAME=`basename  "$file" .gz`
 			if [ -f "$file" ]; then
-				gunzip -q -c "$file" | groff -Thtml -m man  > "$OUT/$MYNAME".html
-				echo "<a href='$MYNAME.html'>$MYNAME</a><br>" >> "$OUT/$manpath".html
+				gunzip -q -c "$file" | groff -Thtml -m man  | $TIDY -q -asxhtml > "$OUT/$MYNAME".html
+				echo "<li><a href='$MYNAME.html'>$MYNAME</a></li>" >> "$OUT/$manpath".html
 			fi
 		done
+		echo "</ul>" >> "$OUT/$manpath".html
 
 		# append footer for section document.
 		cat foot.inc.html >> "$OUT/$manpath".html
+		sed -i -e 's/%%TITLE%%/Online Manual Pages/g' "$OUT/$manpath.html"
 	else
 		echo "$DIR/$manpath does not exist"
 	fi
