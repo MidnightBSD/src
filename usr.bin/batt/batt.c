@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.3 2008/12/06 15:11:57 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/batt/batt.c,v 1.4 2008/12/06 15:20:36 laffer1 Exp $ */
 /*- 
  * Copyright (c) 2008 Lucas Holt
  * All rights reserved.
@@ -71,7 +71,7 @@ main(int argc, char *argv[])
 	if (lflag) {
 		len = sizeof(life);
 		if (sysctlbyname("hw.acpi.battery.life", &life, &len, NULL, 0) < 0)
-			err(1, "ACPI not loaded or no battery found.");
+			errx(1, "ACPI not loaded or no battery found.");
 		if (cflag)
 			printf("%d ", life);
 		else
@@ -81,7 +81,7 @@ main(int argc, char *argv[])
 	if (tflag) {
 		len = sizeof(time);
 		if (sysctlbyname("hw.acpi.battery.time", &time, &len, NULL, 0) < 0)
-			err(1, "ACPI not loaded or no battery found.");
+			errx(1, "ACPI not loaded or no battery found.");
 		if (cflag)
 			printf("%d ", time);
 		else {
@@ -97,7 +97,7 @@ main(int argc, char *argv[])
 	if (uflag) {
 		len = sizeof(units);
         	if (sysctlbyname("hw.acpi.battery.units", &units, &len, NULL, 0) < 0)
-                	err(1, "ACPI not loaded or no battery found.");
+                	errx(1, "ACPI not loaded or no battery found.");
 		if (cflag)
 			printf("%d", units);
 		else {
