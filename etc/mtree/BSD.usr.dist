@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.10 2009/01/04 23:11:34 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.usr.dist,v 1.11 2009/03/23 02:35:46 ctriv Exp $
 # $FreeBSD: src/etc/mtree/BSD.usr.dist,v 1.312.2.1 2005/11/16 07:47:43 ru Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -31,8 +31,8 @@
         ..
         lint
         ..
-	pkgconfig
-	..
+        pkgconfig
+        ..
     ..
     libexec
         lpr
