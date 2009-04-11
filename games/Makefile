@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.2 (Berkeley) 3/31/94
 # $FreeBSD: src/games/Makefile,v 1.20 2002/10/20 11:18:56 markm Exp $
-# $MidnightBSD: src/games/Makefile,v 1.6 2009/04/11 17:01:11 laffer1 Exp $
+# $MidnightBSD: src/games/Makefile,v 1.7 2009/04/11 17:06:27 laffer1 Exp $
 
 SUBDIR= \
 	arithmetic \
@@ -18,6 +18,7 @@ SUBDIR= \
 	primes \
 	random \
 	trek \
+	wargames \
 	worm \
 	worms \
 	wump

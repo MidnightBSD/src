@@ -21261,6 +21261,9 @@ games/trek/utility.c -text
 games/trek/visual.c -text
 games/trek/warp.c -text
 games/trek/win.c -text
+games/wargames/Makefile -text
+games/wargames/wargames.6 -text
+games/wargames/wargames.sh -text
 games/worm/Makefile -text
 games/worm/worm.6 -text
 games/worm/worm.c -text
