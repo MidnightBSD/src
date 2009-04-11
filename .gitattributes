@@ -21261,6 +21261,17 @@ games/trek/utility.c -text
 games/trek/visual.c -text
 games/trek/warp.c -text
 games/trek/win.c -text
+games/worm/Makefile -text
+games/worm/worm.6 -text
+games/worm/worm.c -text
+games/worms/Makefile -text
+games/worms/worms.6 -text
+games/worms/worms.c -text
+games/wump/Makefile -text
+games/wump/pathnames.h -text
+games/wump/wump.6 -text
+games/wump/wump.c -text
+games/wump/wump.info -text
 gnu/COPYING -text
 gnu/COPYING.LIB -text
 gnu/Makefile -text
