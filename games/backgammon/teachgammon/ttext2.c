@@ -33,6 +33,7 @@
  * @(#)ttext2.c	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/games/backgammon/teachgammon/ttext2.c,v 1.3.2.1 2001/10/15 13:46:32 dd Exp $
  * $DragonFly: src/games/backgammon/teachgammon/ttext2.c,v 1.3 2006/08/08 16:36:11 pavalos Exp $
+ * $MidnightBSD$
  */
 
 #include "back.h"

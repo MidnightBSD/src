@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $DragonFly: src/games/backgammon/teachgammon/Makefile,v 1.3 2006/10/08 16:22:35 pavalos Exp $
+# $MidnightBSD$
 
 PROG=	teachgammon
 CFLAGS+=-DTEACHGAMMON_TEXT -DV7 -I${.CURDIR}/../common_source
@@ -8,7 +9,7 @@ SRCS=	allow.c board.c check.c data.c fancy.c init.c odds.c one.c save.c \
 DPADD=	${LIBTERMCAP}
 LDADD=	-ltermcap
 HIDEGAME=hidegame
-NOMAN=	noman
+NO_MAN=	noman
 
 .PATH:	${.CURDIR}/../common_source
 
