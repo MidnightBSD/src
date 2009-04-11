@@ -1,6 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 # $FreeBSD: src/games/backgammon/backgammon/Makefile,v 1.2.14.1 2001/04/25 09:28:44 ru Exp $
 # $DragonFly: src/games/backgammon/backgammon/Makefile,v 1.4 2006/10/08 16:22:35 pavalos Exp $
+# $MidnightBSD$
 
 PROG=	backgammon
 CFLAGS+=-DV7 -I${.CURDIR}/../common_source

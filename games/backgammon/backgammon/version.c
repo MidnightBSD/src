@@ -33,6 +33,7 @@
  * @(#)version.c	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/games/backgammon/backgammon/version.c,v 1.3 1999/11/30 03:48:23 billf Exp $
  * $DragonFly: src/games/backgammon/backgammon/version.c,v 1.2 2003/06/17 04:25:22 dillon Exp $
+ * $MidnightBSD$
  */
 
 const char	*const message[] = {

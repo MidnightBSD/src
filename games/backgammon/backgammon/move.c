@@ -33,6 +33,7 @@
  * @(#)move.c	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/games/backgammon/backgammon/move.c,v 1.5 1999/11/30 03:48:23 billf Exp $
  * $DragonFly: src/games/backgammon/backgammon/move.c,v 1.3 2006/08/08 16:36:11 pavalos Exp $
+ * $MidnightBSD$
  */
 
 #include "back.h"
