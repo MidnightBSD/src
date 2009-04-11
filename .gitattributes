@@ -21078,6 +21078,9 @@ etc/syslog.conf -text
 etc/termcap.small -text
 games/Makefile -text
 games/Makefile.inc -text
+games/arithmetic/Makefile -text
+games/arithmetic/arithmetic.6 -text
+games/arithmetic/arithmetic.c -text
 games/bcd/Makefile -text
 games/bcd/bcd.6 -text
 games/bcd/bcd.c -text
