@@ -1,6 +1,6 @@
 #!/bin/mksh
 #
-# $MidnightBSD$
+# $MidnightBSD: src/tools/man/makeman.sh,v 1.1 2009/04/11 19:33:46 laffer1 Exp $
 #
 # Copyright (C) 2009
 #         Lucas Holt. All rights reserved.
@@ -47,16 +47,36 @@ else
 	exit 1
 fi
 
+# create initial index file
+cp head.inc.html "$OUT"/index.html
+echo "<h2>Sections</h2><ul>" >> "$OUT"/index.html
+
+# interate through man paths /usr/share/man/man1, man2, ..., manN
 for manpath in $MANPATHS; do
 	if [ -d "$DIR/$manpath" ]; then
+		# add section to index
+		echo "<li><a href='$manpath.html'>$manpath</a></li>" >> "$OUT"/index.html
+
+		# create section page
+		cp head.inc.html "$OUT/$manpath".html
+
+		# generate man pages as html
 		for file in $DIR/$manpath/*.gz ; do
 			echo "$file"
 			MYNAME=`basename  "$file" .gz`
 			if [ -f "$file" ]; then
 				gunzip -q -c "$file" | groff -Thtml -m man  > "$OUT/$MYNAME".html
+				echo "<a href='$MYNAME.html'>$MYNAME</a><br>" >> "$OUT/$manpath".html
 			fi
 		done
+
+		# append footer for section document.
+		cat foot.inc.html >> "$OUT/$manpath".html
 	else
 		echo "$DIR/$manpath does not exist"
 	fi
 done
+
+# finish index document
+echo "</ul>" >> "$OUT"/index.html
+cat foot.inc.html >> "$OUT"/index.html
