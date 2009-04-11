@@ -1,6 +1,6 @@
 #!/bin/mksh
 #
-# $MidnightBSD: src/tools/man/makeman.sh,v 1.1 2009/04/11 19:33:46 laffer1 Exp $
+# $MidnightBSD: src/tools/man/makeman.sh,v 1.2 2009/04/11 20:38:17 laffer1 Exp $
 #
 # Copyright (C) 2009
 #         Lucas Holt. All rights reserved.
@@ -50,6 +50,7 @@ fi
 # create initial index file
 cp head.inc.html "$OUT"/index.html
 echo "<h2>Sections</h2><ul>" >> "$OUT"/index.html
+sed -i -e 's/%%TITLE%%/Online Manual Pages/g' "$OUT/index.html"
 
 # interate through man paths /usr/share/man/man1, man2, ..., manN
 for manpath in $MANPATHS; do
