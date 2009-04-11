@@ -33,6 +33,7 @@
  * @(#)init.c	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/games/backgammon/common_source/init.c,v 1.4 1999/11/30 03:48:26 billf Exp $
  * $DragonFly: src/games/backgammon/common_source/init.c,v 1.2 2003/06/17 04:25:22 dillon Exp $
+ * $MidnightBSD$
  */
 
 #include <sys/cdefs.h>

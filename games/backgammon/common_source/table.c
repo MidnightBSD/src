@@ -33,6 +33,7 @@
  * @(#)table.c	8.1 (Berkeley) 5/31/93
  * $FreeBSD: src/games/backgammon/common_source/table.c,v 1.5 1999/11/30 03:48:28 billf Exp $
  * $DragonFly: src/games/backgammon/common_source/table.c,v 1.4 2006/08/08 16:36:11 pavalos Exp $
+ * $MidnightBSD$
  */
 
 #include "back.h"

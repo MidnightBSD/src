@@ -32,6 +32,7 @@
  *
  *	@(#)back.h	8.1 (Berkeley) 5/31/93
  * $DragonFly: src/games/backgammon/common_source/back.h,v 1.2 2006/08/08 16:36:11 pavalos Exp $
+ * $MidnightBSD$
  */
 
 #include <sgtty.h>
