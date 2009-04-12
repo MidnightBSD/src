@@ -21143,6 +21143,11 @@ games/caesar/rot13.sh -text
 games/factor/Makefile -text
 games/factor/factor.6 -text
 games/factor/factor.c -text
+games/fish/Makefile -text
+games/fish/fish.6 -text
+games/fish/fish.c -text
+games/fish/fish.instr -text
+games/fish/pathnames.h -text
 games/fortune/Makefile -text
 games/fortune/Makefile.inc -text
 games/fortune/Notes -text
