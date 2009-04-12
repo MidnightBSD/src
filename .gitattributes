@@ -21290,6 +21290,9 @@ games/primes/pattern.c -text
 games/primes/pr_tbl.c -text
 games/primes/primes.c -text
 games/primes/primes.h -text
+games/rain/Makefile -text
+games/rain/rain.6 -text
+games/rain/rain.c -text
 games/random/Makefile -text
 games/random/random.6 -text
 games/random/random.c -text
