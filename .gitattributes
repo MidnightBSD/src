@@ -21242,6 +21242,9 @@ games/larn/bill.c -text
 games/larn/config.c -text
 games/larn/create.c -text
 games/larn/data.c -text
+games/larn/datfiles/larn.help -text
+games/larn/datfiles/larnmaze -text
+games/larn/datfiles/larnopts -text
 games/larn/diag.c -text
 games/larn/display.c -text
 games/larn/fortune.c -text
