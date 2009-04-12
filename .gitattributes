@@ -21168,6 +21168,11 @@ games/caesar/Makefile -text
 games/caesar/caesar.6 -text
 games/caesar/caesar.c -text
 games/caesar/rot13.sh -text
+games/dm/Makefile -text
+games/dm/dm.8 -text
+games/dm/dm.c -text
+games/dm/dm.conf.5 -text
+games/dm/pathnames.h -text
 games/factor/Makefile -text
 games/factor/factor.6 -text
 games/factor/factor.c -text
