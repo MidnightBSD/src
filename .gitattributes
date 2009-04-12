@@ -21273,6 +21273,10 @@ games/morse/morse.c -text
 games/number/Makefile -text
 games/number/number.6 -text
 games/number/number.c -text
+games/piano/Makefile -text
+games/piano/README -text
+games/piano/piano.6 -text
+games/piano/piano.c -text
 games/pig/Makefile -text
 games/pig/pig.6 -text
 games/pig/pig.c -text
