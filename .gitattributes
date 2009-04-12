@@ -21161,6 +21161,9 @@ games/battlestar/words.c -text
 games/bcd/Makefile -text
 games/bcd/bcd.6 -text
 games/bcd/bcd.c -text
+games/bs/Makefile -text
+games/bs/bs.6 -text
+games/bs/bs.c -text
 games/caesar/Makefile -text
 games/caesar/caesar.6 -text
 games/caesar/caesar.c -text
