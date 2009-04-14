@@ -35,6 +35,7 @@ __MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
+#include <sysexits.h>
 #include <string.h>
 #include <unistd.h>
 #include <mport.h>
@@ -44,27 +45,16 @@ static void usage(void);
 
 int main(int argc, char *argv[]) 
 {
-  int ch, force;
-  mportInstance *mport;
-  mportPackageMeta **packs;
-  const char *arg, *where = NULL;
-  force = 0;
-
+  int ch, i;
+  const char *outfile = NULL;
+  const char **inputfiles;
   if (argc == 1)
     usage();
     
-  while ((ch = getopt(argc, argv, "fo:n:")) != -1) {
+  while ((ch = getopt(argc, argv, "o:")) != -1) {
     switch (ch) {
-      case 'f':
-        force = 1;
-        break;
       case 'o':
-        where = "origin=%Q";
-        arg   = optarg;
-        break;
-      case 'n':
-        where = "pkg=%Q";
-        arg   = optarg;
+        outfile = optarg;
         break;
       case '?':
       default:
@@ -76,43 +66,33 @@ int main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-  if (arg == NULL)
+  if (outfile == NULL)
     usage();
 
-  mport = mport_instance_new();
+  if ((inputfiles = (const char **)malloc((argc + 1) * sizeof(char **))) == NULL)
+    err(EX_OSERR, "Couldn't allocate input array");
   
-  if (mport_instance_init(mport, NULL) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
+  for (i = 0; i < argc; i++) { 
+    if ((inputfiles[i] = strdup(argv[i])) == NULL)
+      err(EX_OSERR, "Couldn't allocate input filename");
   }
+  
+  inputfiles[i] = NULL;
 
-  if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
-  
-  if (packs == NULL) {
-    warnx("No packages installed matching '%s'", arg);
-    exit(3);
-  }
-  
-  while (*packs != NULL) {
-    if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
-      warnx("%s", mport_err_string());
-      exit(1);
-    }
-    packs++;
-  }
-
-  mport_instance_free(mport); 
-  
-  return 0;
+  if (mport_merge_primative(inputfiles, outfile) != MPORT_OK) 
+    errx(EX_SOFTWARE, "Could not merge package files: %s", mport_err_string());
+   
+  for (i = 0; i <= argc; i++) 
+    free((char *)inputfiles[i]);
+   
+  free(inputfiles); 
+    
+  return 0; 
 }
 
 
 static void usage() 
 {
-  fprintf(stderr, "Usage: mport.delete [-f] -n pkgname\n");
-  fprintf(stderr, "Usage: mport.delete [-f] -o origin\n");
+  fprintf(stderr, "Usage: mport.merge -o <outputfilename> <pkgfile1> <pkgfile2> ...\n");
   exit(2);
 }

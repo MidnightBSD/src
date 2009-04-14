@@ -1,4 +1,4 @@
-PROG= mport.query
+PROG= mport.updepends
 
 CFLAGS+=	-I${.CURDIR}/../../lib/libmport/
 WARNS?= 	4

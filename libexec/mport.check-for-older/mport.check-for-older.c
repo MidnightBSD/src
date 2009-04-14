@@ -44,19 +44,18 @@ static void usage(void);
 
 int main(int argc, char *argv[]) 
 {
-  int ch, force;
+  int ch;
   mportInstance *mport;
   mportPackageMeta **packs;
-  const char *arg, *where = NULL;
-  force = 0;
+  const char *arg, *where, *version = NULL;
 
   if (argc == 1)
     usage();
     
-  while ((ch = getopt(argc, argv, "fo:n:")) != -1) {
+  while ((ch = getopt(argc, argv, "v:o:n:")) != -1) {
     switch (ch) {
-      case 'f':
-        force = 1;
+      case 'v':
+        version = optarg;
         break;
       case 'o':
         where = "origin=%Q";
@@ -76,34 +75,37 @@ int main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-  if (arg == NULL)
+  if (arg == NULL || version == NULL)
     usage();
 
   mport = mport_instance_new();
   
   if (mport_instance_init(mport, NULL) != MPORT_OK) {
     warnx("%s", mport_err_string());
-    exit(1);
+    exit(10);
   }
 
   if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
     warnx("%s", mport_err_string());
-    exit(1);
+    exit(10);
   }
   
   if (packs == NULL) {
-    warnx("No packages installed matching '%s'", arg);
+    (void)printf("No packages installed matching '%s'\n", arg);
+    exit(2);
+  }
+  
+
+  if (packs[1] != NULL) {
+    warnx("Ambiguous package identifier: %s", arg);
     exit(3);
   }
   
-  while (*packs != NULL) {
-    if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
-      warnx("%s", mport_err_string());
-      exit(1);
-    }
-    packs++;
+  if (mport_version_cmp(packs[0]->version, version) >= 0) {
+    (void)printf("%s is installed, but installed version (%s) is not older than port (%s).\n", packs[0]->name, packs[0]->version, version);
+    exit(1);
   }
-
+  
   mport_instance_free(mport); 
   
   return 0;
@@ -112,7 +114,7 @@ int main(int argc, char *argv[])
 
 static void usage() 
 {
-  fprintf(stderr, "Usage: mport.delete [-f] -n pkgname\n");
-  fprintf(stderr, "Usage: mport.delete [-f] -o origin\n");
+  fprintf(stderr, "Usage: mport.check-for-older -n pkgname -v newversion \n");
+  fprintf(stderr, "Usage: mport.check-for-older -o origin -v newversion\n");
   exit(2);
 }

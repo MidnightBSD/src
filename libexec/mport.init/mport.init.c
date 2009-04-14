@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,61 +23,25 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.2 2008/01/05 22:20:02 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.install/mport.install.c,v 1.2 2008/01/05 22:20:02 ctriv Exp $");
 
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <err.h>
 #include <string.h>
-#include <unistd.h>
 #include <mport.h>
 
 
-static void usage(void);
 
-int main(int argc, char *argv[]) 
+int main(void)
 {
-  int ch, force;
   mportInstance *mport;
-  mportPackageMeta **packs;
-  const char *arg, *where = NULL;
-  force = 0;
-
-  if (argc == 1)
-    usage();
-    
-  while ((ch = getopt(argc, argv, "fo:n:")) != -1) {
-    switch (ch) {
-      case 'f':
-        force = 1;
-        break;
-      case 'o':
-        where = "origin=%Q";
-        arg   = optarg;
-        break;
-      case 'n':
-        where = "pkg=%Q";
-        arg   = optarg;
-        break;
-      case '?':
-      default:
-        usage();
-        break; 
-    }
-  } 
-
-  argc -= optind;
-  argv += optind;
-
-  if (arg == NULL)
-    usage();
 
   mport = mport_instance_new();
   
@@ -85,34 +49,12 @@ int main(int argc, char *argv[])
     warnx("%s", mport_err_string());
     exit(1);
   }
-
-  if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
-    warnx("%s", mport_err_string());
-    exit(1);
-  }
   
-  if (packs == NULL) {
-    warnx("No packages installed matching '%s'", arg);
-    exit(3);
-  }
-  
-  while (*packs != NULL) {
-    if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
-      warnx("%s", mport_err_string());
-      exit(1);
-    }
-    packs++;
-  }
-
   mport_instance_free(mport); 
   
   return 0;
 }
 
 
-static void usage() 
-{
-  fprintf(stderr, "Usage: mport.delete [-f] -n pkgname\n");
-  fprintf(stderr, "Usage: mport.delete [-f] -o origin\n");
-  exit(2);
-}
+    
+

@@ -1,4 +1,4 @@
-PROG= mport.query
+PROG= mport.check-for-older
 
 CFLAGS+=	-I${.CURDIR}/../../lib/libmport/
 WARNS?= 	4

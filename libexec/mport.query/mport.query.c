@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 
   where = build_where(argc, argv);
   
-  if (mport_get_meta_from_master(mport, &packs, where) != MPORT_OK) {
+  if (mport_pkgmeta_search_master(mport, &packs, where) != MPORT_OK) {
     warnx("(where: %s): %s", where, mport_err_string());
     exit(1);
   }
@@ -104,8 +104,7 @@ int main(int argc, char *argv[])
 
 static void usage() 
 {
-  fprintf(stderr, "Usage: mport.delete [-f] -n pkgname\n");
-  fprintf(stderr, "Usage: mport.delete [-f] -o origin\n");
+  fprintf(stderr, "Usage: mport.query [-q] <query statement>\n");
   exit(2);
 }
 

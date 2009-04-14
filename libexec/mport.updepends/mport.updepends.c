@@ -44,20 +44,17 @@ static void usage(void);
 
 int main(int argc, char *argv[]) 
 {
-  int ch, force;
+  int ch, i;
   mportInstance *mport;
   mportPackageMeta **packs;
+  mportPackageMeta **depends;
   const char *arg, *where = NULL;
-  force = 0;
 
   if (argc == 1)
     usage();
     
-  while ((ch = getopt(argc, argv, "fo:n:")) != -1) {
+  while ((ch = getopt(argc, argv, "o:n:")) != -1) {
     switch (ch) {
-      case 'f':
-        force = 1;
-        break;
       case 'o':
         where = "origin=%Q";
         arg   = optarg;
@@ -79,31 +76,47 @@ int main(int argc, char *argv[])
   if (arg == NULL)
     usage();
 
-  mport = mport_instance_new();
-  
+  if ((mport = mport_instance_new()) == NULL) {
+    warnx("Out of memory");
+    exit(1);
+  }
+
   if (mport_instance_init(mport, NULL) != MPORT_OK) {
     warnx("%s", mport_err_string());
     exit(1);
   }
 
+  
   if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
     warnx("%s", mport_err_string());
     exit(1);
   }
-  
+
   if (packs == NULL) {
-    warnx("No packages installed matching '%s'", arg);
+    exit(0);
+  }
+  
+  if (packs[1] != NULL) {
+    warnx("Ambiguous package identifier: %s", arg);
     exit(3);
   }
   
-  while (*packs != NULL) {
-    if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
-      warnx("%s", mport_err_string());
-      exit(1);
-    }
-    packs++;
+  if (mport_pkgmeta_get_updepends(mport, packs[0], &depends) != MPORT_OK) {
+    warnx("%s", mport_err_string());
+    exit(1);
   }
-
+  
+  if (depends == NULL) {
+    /* no depends, nothing to print. */
+    exit(0);
+  }
+  
+  i = 0;
+  while (depends[i] != NULL) {
+    (void)printf("%s\n", depends[i]->origin);
+    i++;
+  }
+  
   mport_instance_free(mport); 
   
   return 0;
@@ -112,7 +125,7 @@ int main(int argc, char *argv[])
 
 static void usage() 
 {
-  fprintf(stderr, "Usage: mport.delete [-f] -n pkgname\n");
-  fprintf(stderr, "Usage: mport.delete [-f] -o origin\n");
+  fprintf(stderr, "Usage: mport.updepends -n pkgname\n");
+  fprintf(stderr, "Usage: mport.updepends -o origin\n");
   exit(2);
 }

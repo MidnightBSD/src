@@ -23,13 +23,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $
+ * $MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.1 2008/04/26 18:00:39 ctriv Exp $
  */
 
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05 22:29:14 ctriv Exp $");
+__MBSDID("$MidnightBSD: src/libexec/mport.check-fake/mport.check-fake.c,v 1.1 2008/04/26 18:00:39 ctriv Exp $");
 
 
 #include <stdlib.h>
@@ -50,15 +50,15 @@ __MBSDID("$MidnightBSD: src/libexec/mport.delete/mport.delete.c,v 1.2 2008/01/05
 #endif
 
 static void usage(void);
-static int check_fake(mportPlist *, const char *, const char *, const char *);
+static int check_fake(mportAssetList *, const char *, const char *, const char *);
 static int grep_file(const char *, const char *);
 
 
 int main(int argc, char *argv[]) 
 {
   int ch, ret;
-  const char *skip = NULL, *prefix = NULL, *destdir = NULL, *plistfile = NULL;
-  mportPlist *plist;
+  const char *skip = NULL, *prefix = NULL, *destdir = NULL, *assetlistfile = NULL;
+  mportAssetList *assetlist;
   FILE *fp;
 
   while ((ch = getopt(argc, argv, "f:d:s:p:")) != -1) {
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
         destdir = optarg;
         break;
       case 'f':
-        plistfile = optarg;
+        assetlistfile = optarg;
         break;
       case '?':
       default:
@@ -85,24 +85,24 @@ int main(int argc, char *argv[])
   argc -= optind;
   argv += optind;
 
-  DIAG("plist = %s; destdir = %s; prefix = %s; skip = %s", plistfile, destdir, prefix, skip)
+  DIAG("assetlist = %s; destdir = %s; prefix = %s; skip = %s", assetlistfile, destdir, prefix, skip)
 
-  if (!prefix || !destdir || !plistfile) 
+  if (!prefix || !destdir || !assetlistfile) 
     usage();
   
-  if ((fp = fopen(plistfile, "r")) == NULL)
-    err(EX_NOINPUT, "Could not open plist file %s", plistfile);
+  if ((fp = fopen(assetlistfile, "r")) == NULL)
+    err(EX_NOINPUT, "Could not open assetlist file %s", assetlistfile);
       
-  if ((plist = mport_plist_new()) == NULL) 
-    err(EX_OSERR, "Could not not allocate plist");
+  if ((assetlist = mport_assetlist_new()) == NULL) 
+    err(EX_OSERR, "Could not not allocate assetlist");
   
-  if (mport_plist_parsefile(fp, plist) != MPORT_OK)
-    err(EX_DATAERR, "Invalid plist");
+  if (mport_parse_plistfile(fp, assetlist) != MPORT_OK)
+    err(EX_DATAERR, "Invalid assetlist");
 
   DIAG("running check_fake")
   
   printf("Checking %s\n", destdir);
-  ret = check_fake(plist, destdir, prefix, skip);
+  ret = check_fake(assetlist, destdir, prefix, skip);
   
   if (ret == 0) {
     printf("Fake succeeded.\n");
@@ -110,14 +110,14 @@ int main(int argc, char *argv[])
     printf("Fake failed.\n");
   }
   
-  mport_plist_free(plist);
+  mport_assetlist_free(assetlist);
   
   return ret;
 }
 
-static int check_fake(mportPlist *plist, const char *destdir, const char *prefix, const char *skip)
+static int check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, const char *skip)
 {
-  mportPlistEntry *e;
+  mportAssetListEntry *e;
   char cwd[FILENAME_MAX], file[FILENAME_MAX];
   char *anchored_skip;
   struct stat st;
@@ -145,8 +145,8 @@ static int check_fake(mportPlist *plist, const char *destdir, const char *prefix
 
   DIAG("Starting loop, cwd: %s", cwd)
   
-  STAILQ_FOREACH(e, plist, next) {
-    if (e->type == PLIST_CWD) {
+  STAILQ_FOREACH(e, assetlist, next) {
+    if (e->type == ASSET_CWD) {
         if (e->data == NULL) {
           DIAG("Setting cwd to '%s'", prefix)
           (void)strlcpy(cwd, prefix, FILENAME_MAX);
@@ -158,7 +158,7 @@ static int check_fake(mportPlist *plist, const char *destdir, const char *prefix
         break;
     }
     
-    if (e->type != PLIST_FILE)
+    if (e->type != ASSET_FILE)
       continue;
     
     (void)snprintf(file, FILENAME_MAX, "%s%s/%s", destdir, cwd, e->data);
@@ -253,7 +253,7 @@ static int grep_file(const char *filename, const char *destdir)
       
 static void usage() 
 {
-  errx(EX_USAGE, "Usage: mport.delete [-s skip] <-f plist> <-d destdir> <-p prefix>");
+  errx(EX_USAGE, "Usage: mport.delete [-s skip] <-f plistfile> <-d destdir> <-p prefix>");
   exit(EX_USAGE);
 }
 
