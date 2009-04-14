@@ -25706,9 +25706,7 @@ libexec/mknetid/parse_group.c -text
 libexec/mport.check-fake/Makefile -text
 libexec/mport.check-fake/mport.check-fake.c -text
 libexec/mport.check-for-older/Makefile -text
-libexec/mport.check-for-older/mport.check-for-older -text svneol=unset#unset
 libexec/mport.check-for-older/mport.check-for-older.c -text
-libexec/mport.check-for-older/mport.check-for-older.o -text svneol=unset#unset
 libexec/mport.create/Makefile -text
 libexec/mport.create/mport.create.c -text
 libexec/mport.delete/Makefile -text
