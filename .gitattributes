@@ -25720,9 +25720,7 @@ libexec/mport.merge/mport.merge.c -text
 libexec/mport.query/Makefile -text
 libexec/mport.query/mport.query.c -text
 libexec/mport.updepends/Makefile -text
-libexec/mport.updepends/mport.updepends -text svneol=unset#unset
 libexec/mport.updepends/mport.updepends.c -text
-libexec/mport.updepends/mport.updepends.o -text svneol=unset#unset
 libexec/mport.version_cmp/Makefile -text
 libexec/mport.version_cmp/mport.version_cmp.c -text
 libexec/pppoed/Makefile -text
