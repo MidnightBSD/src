@@ -1,6 +1,6 @@
-/* $MidnightBSD: src/lib/libmport/mport.h,v 1.9 2008/01/05 22:18:20 ctriv Exp $
+/* $MidnightBSD: src/lib/libmport/mport.h,v 1.10 2008/04/26 17:59:26 ctriv Exp $
  *
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,9 +31,6 @@
 
 
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.9 2008/01/05 22:18:20 ctriv Exp $");
-
-
 #include <archive.h>
 #include <sqlite3.h>
 #include <sys/queue.h>
@@ -66,117 +63,99 @@ void mport_set_progress_step_cb(mportInstance *, mport_progress_step_cb);
 void mport_set_progress_free_cb(mportInstance *, mport_progress_free_cb);
 void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
 
-void mport_call_msg_cb(mportInstance *, const char *, ...);
-
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
 void mport_default_progress_init_cb(void);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 
-
-
-/* Mport Bundle (a file containing packages) */
-typedef struct {
-  struct archive *archive;
-  char *filename;
-  struct links_table *links;
-} mportBundle;
-
-mportBundle* mport_bundle_new(void);
-int mport_bundle_init(mportBundle *, const char *);
-int mport_bundle_finish(mportBundle *);
-int mport_bundle_add_file(mportBundle *, const char *, const char *);
-
-
 /* For now this is just the FreeBSD list, this will change soon. */
-enum _PlistEntryType { 
-  PLIST_INVALID, PLIST_FILE, PLIST_CWD, PLIST_CHMOD, PLIST_CHOWN, PLIST_CHGRP,
-  PLIST_COMMENT, PLIST_IGNORE, PLIST_NAME, PLIST_EXEC, PLIST_UNEXEC,
-  PLIST_SRC, PLIST_DISPLY, PLIST_PKGDEP, PLIST_CONFLICTS, PLIST_MTREE,
-  PLIST_DIRRM, PLIST_DIRRMTRY, PLIST_IGNORE_INST, PLIST_OPTION, PLIST_ORIGIN,
-  PLIST_DEPORIGIN, PLIST_NOINST, PLIST_DISPLAY
+enum _AssetListEntryType { 
+  ASSET_INVALID, ASSET_FILE, ASSET_CWD, ASSET_CHMOD, ASSET_CHOWN, ASSET_CHGRP,
+  ASSET_COMMENT, ASSET_IGNORE, ASSET_NAME, ASSET_EXEC, ASSET_UNEXEC,
+  ASSET_SRC, ASSET_DISPLY, ASSET_PKGDEP, ASSET_CONFLICTS, ASSET_MTREE,
+  ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_IGNORE_INST, ASSET_OPTION, ASSET_ORIGIN,
+  ASSET_DEPORIGIN, ASSET_NOINST, ASSET_DISPLAY
 };
 
-typedef enum _PlistEntryType mportPlistEntryType;
+typedef enum _AssetListEntryType mportAssetListEntryType;
 
-struct _PlistEntry {
-  mportPlistEntryType type;
+struct _AssetListEntry {
+  mportAssetListEntryType type;
   char *data;
-  STAILQ_ENTRY(_PlistEntry) next;
+  STAILQ_ENTRY(_AssetListEntry) next;
 };
 
-STAILQ_HEAD(_Plist, _PlistEntry);
+STAILQ_HEAD(_AssetList, _AssetListEntry);
 
-typedef struct _Plist mportPlist;
-typedef struct _PlistEntry mportPlistEntry;
+typedef struct _AssetList mportAssetList;
+typedef struct _AssetListEntry mportAssetListEntry;
 
-mportPlist* mport_plist_new(void);
-void mport_plist_free(mportPlist *);
-int mport_plist_parsefile(FILE *, mportPlist *);
+mportAssetList* mport_assetlist_new(void);
+void mport_assetlist_free(mportAssetList *);
+int mport_parse_plistfile(FILE *, mportAssetList *);
 
 /* Package Meta-data structure */
 
 typedef struct {
-  char *pkg_filename;
   char *name;
   char *version;
   char *lang;
   char *options;
   char *comment;
-  char *sourcedir;
   char *desc;
   char *prefix;
+  char *origin;
+  char **categories;
+} mportPackageMeta;  
+
+
+mportPackageMeta * mport_pkgmeta_new(void);
+void mport_pkgmeta_free(mportPackageMeta *);
+void mport_pkgmeta_vec_free(mportPackageMeta **);
+int mport_pkgmeta_search_master(mportInstance *, mportPackageMeta ***, const char *, ...);
+int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
+int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
+
+
+
+typedef struct {
+  char *pkg_filename;
+  char *sourcedir;
   char **depends;
   char *mtree;
-  char *origin;
   char **conflicts;
   char *pkginstall;
   char *pkgdeinstall;
   char *pkgmessage;
-} mportPackageMeta;  
+} mportCreateExtras;  
 
-mportPackageMeta * mport_packagemeta_new(void);
-void mport_packagemeta_free(mportPackageMeta *);
-void mport_packagemeta_vec_free(mportPackageMeta **);
-
+mportCreateExtras * mport_createextras_new(void);
+void mport_createextras_free(mportCreateExtras *);
 
 /* Package creation */
-int mport_create_primative(mportPlist *, mportPackageMeta *);
+int mport_create_primative(mportAssetList *, mportPackageMeta *, mportCreateExtras *);
+
+/* Merge primative */
+int mport_merge_primative(const char **, const char *);
 
 /* Package installation */
 int mport_install_primative(mportInstance *, const char *, const char *);
 
+/* package updating */
+int mport_update_primative(mportInstance *, const char *);
+
 /* Package deletion */
 int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
-
-/* precondition checking */
-int mport_check_update_preconditions(mportInstance *, mportPackageMeta *);
-int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);
-
-/* schema */
-int mport_generate_master_schema(sqlite3 *);
-int mport_generate_stub_schema(sqlite3 *);
-
-/* Various database convience functions */
-int mport_attach_stub_db(sqlite3 *, const char *);
-int mport_detach_stub_db(sqlite3 *);
-int mport_get_meta_from_stub(sqlite3 *, mportPackageMeta ***);
-int mport_get_meta_from_master(mportInstance *, mportPackageMeta ***, const char *, ...);
-int mport_db_do(sqlite3 *, const char *, ...);
-int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);
-void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
 
 /* Errors */
 int mport_err_code(void);
 const char * mport_err_string(void);
 
-int mport_set_err(int, const char *);
-int mport_set_errx(int , const char *, ...);
 
 #define MPORT_OK			0
 #define MPORT_ERR_NO_MEM 		1
@@ -195,45 +174,13 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_NO_SUCH_PKG		14
 #define MPORT_ERR_CHECKSUM_MISMATCH	15
 #define MPORT_ERR_UPWARDS_DEPENDS	16
-
-#define RETURN_CURRENT_ERROR return mport_err_code()
-#define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
-#define SET_ERROR(code, msg) mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
-#define RETURN_ERRORX(code, fmt, ...) return mport_set_errx((code), "Error at %s:(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__)
-#define SET_ERRORX(code, fmt, ...) mport_set_errx((code), "Error at %s:(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__)
+#define MPORT_ERR_MALFORMED_BUNDLE	17
+#define MPORT_ERR_NOT_UPGRADABLE	18
 
 
 /* Utils */
-int mport_copy_file(const char *, const char *);
-int mport_rmtree(const char *);
-int mport_mkdir(const char *);
-int mport_rmdir(const char *, int);
-int mport_chdir(mportInstance *, const char *);
-int mport_file_exists(const char *);
-int mport_xsystem(mportInstance *mport, const char *, ...);
 void mport_parselist(char *, char ***);
-int mport_run_plist_exec(mportInstance *mport, const char *, const char *, const char *);
 
-
-
-/* Infrastructure files */
-#define MPORT_STUB_DB_FILE 	"+CONTENTS.db"
-#define MPORT_STUB_INFRA_DIR	"+INFRASTRUCTURE"
-#define MPORT_MTREE_FILE   	"mtree"
-#define MPORT_INSTALL_FILE 	"pkg-install"
-#define MPORT_DEINSTALL_FILE	"pkg-deinstall"
-#define MPORT_MESSAGE_FILE	"pkg-message"
-
-
-/* Instance files */
-#define MPORT_INST_DIR 		"/var/db/mport"
-#define MPORT_MASTER_DB_FILE	"/var/db/mport/master.db"
-#define MPORT_INST_INFRA_DIR	"/var/db/mport/infrastructure"
-
-/* Binaries we use */
-#define MPORT_MTREE_BIN		"/usr/sbin/mtree"
-#define MPORT_SH_BIN		"/bin/sh"
-#define MPORT_CHROOT_BIN	"/usr/sbin/chroot"
 
 #endif /* ! defined _MPORT_H */
 

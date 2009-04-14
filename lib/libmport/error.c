@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,17 +23,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.6 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/error.c,v 1.7 2008/04/26 17:59:26 ctriv Exp $
  */
 
 
 #include "mport.h"
+#include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 
 
-static int err;
+static int mport_err;
 static char err_msg[256];
 
 /* This goes with the error codes in mport.h */
@@ -53,31 +54,61 @@ static char *mport_err_defaults[] = {
   "Malformed depend.",
   "No such package.",
   "Checksum mismatch.",
-  "Packages depend on this package."
+  "Packages depend on this package.",
+  "Bundle file was malformed.",
+  "Package is not upgradable"
 };
   
 
-int mport_err_code() 
+/* mport_err_code()
+ *
+ * Return the current numeric error code. 
+ */
+MPORT_PUBLIC_API int mport_err_code() 
 {
-  return err;
+  return mport_err;
 }
 
-const char * mport_err_string()
+/* mport_err_string()
+ *
+ * Return the current error string (if any).  Do not free this memory, it is static. 
+ */
+MPORT_PUBLIC_API const char * mport_err_string()
 {
   return err_msg;
 }
 
+
+/* In general, don't use these - use the macros in mport_private.h */
+
+/* mport_set_error(code, msg)
+ *
+ * Set an error condition, with the given code and message.  A default message will
+ * be used if msg is NULL
+ */
 int mport_set_err(int code, const char *msg) 
 {
-  err = code;
-  if (msg != NULL) {
-    strlcpy(err_msg, msg, sizeof(err_msg));
-  } else {
-    strlcpy(err_msg, mport_err_defaults[code], sizeof(mport_err_defaults[code]));
+  mport_err = code;
+  
+  if (code == MPORT_OK) {
+    bzero(err_msg, sizeof(err_msg));
+  } else {  
+    if (msg != NULL) {
+      strlcpy(err_msg, msg, sizeof(err_msg));
+    } else {
+      strlcpy(err_msg, mport_err_defaults[code], sizeof(mport_err_defaults[code]));
+    }
   }
   return code;
 }
 
+
+/* mport_set_errx(code, fmt, arg1, arg2, ...)
+ *
+ * Like mport_set_error, but it has a printf() type formatting syntax.  
+ * There is no way to access the default error messages with this function,
+ * use mport_set_err() for that.
+ */
 int mport_set_errx(int code, const char *fmt, ...) 
 {
     va_list args;

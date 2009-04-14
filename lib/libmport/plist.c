@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.3 2007/09/28 03:01:31 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.4 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -34,27 +34,29 @@
 #include <string.h>
 #include <ctype.h>
 #include "mport.h"
+#include "mport_private.h"
+
 
 #define CMND_MAGIC_COOKIE '@'
 #define STRING_EQ(r,l) (strcmp((r),(l)) == 0)
 
-static mportPlistEntryType parse_command(const char*);
+static mportAssetListEntryType parse_command(const char*);
 
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
  */
-mportPlist* mport_plist_new() 
+MPORT_PUBLIC_API mportAssetList* mport_assetlist_new() 
 {
-  mportPlist *list = (mportPlist*)malloc(sizeof(mportPlist));
+  mportAssetList *list = (mportAssetList*)malloc(sizeof(mportAssetList));
   STAILQ_INIT(list);
   return list;
 }
 
 
 /* free all the entries in the list, and then the list itself. */
-void mport_plist_free(mportPlist *list) 
+MPORT_PUBLIC_API void mport_assetlist_free(mportAssetList *list) 
 {
-  mportPlistEntry *n;
+  mportAssetListEntry *n;
 
   while (!STAILQ_EMPTY(list)) {
      n = STAILQ_FIRST(list);
@@ -67,11 +69,11 @@ void mport_plist_free(mportPlist *list)
 }
 
 
-/* Parsers the contenst of the file and returns a plist data structure.
+/* Parses the contents of the given plistfile pointer.  Returns MPORT_OK on success, 
+ * an error code on failure.
  *
- * Returns NULL on failure.
  */
-int mport_plist_parsefile(FILE *fp, mportPlist *list)
+MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
 {
   size_t length;
   char *line;
@@ -94,7 +96,7 @@ int mport_plist_parsefile(FILE *fp, mportPlist *list)
     /* change the last \n to \0 */
     *(line + length - 1) = 0;
     
-    mportPlistEntry *entry = (mportPlistEntry *)malloc(sizeof(mportPlistEntry));
+    mportAssetListEntry *entry = (mportAssetListEntry *)malloc(sizeof(mportAssetListEntry));
     
     if (entry == NULL) {
       return MPORT_ERR_NO_MEM;
@@ -110,7 +112,7 @@ int mport_plist_parsefile(FILE *fp, mportPlist *list)
 
       entry->type = parse_command(cmnd);      
     } else {
-      entry->type = PLIST_FILE;
+      entry->type = ASSET_FILE;
     }
   
     
@@ -118,13 +120,13 @@ int mport_plist_parsefile(FILE *fp, mportPlist *list)
       /* line was just a directive, no data */
       entry->data = NULL;
     } else {    
-      if (entry->type == PLIST_COMMENT) {
+      if (entry->type == ASSET_COMMENT) {
         if (!strncmp(line, "ORIGIN:", 7)) {
           line += 7;
-          entry->type = PLIST_ORIGIN;
+          entry->type = ASSET_ORIGIN;
         } else if (!strncmp(line, "DEPORIGIN:", 10)) {
           line += 10;
-          entry->type = PLIST_DEPORIGIN;
+          entry->type = ASSET_DEPORIGIN;
         }
       }     
       
@@ -151,49 +153,49 @@ int mport_plist_parsefile(FILE *fp, mportPlist *list)
 
 
     
-static mportPlistEntryType parse_command(const char *s) 
+static mportAssetListEntryType parse_command(const char *s) 
 {
   /* This is in a rough frequency order */
   if (STRING_EQ(s, "comment"))
-    return PLIST_COMMENT;
+    return ASSET_COMMENT;
   if (STRING_EQ(s, "exec"))
-    return PLIST_EXEC;
+    return ASSET_EXEC;
   if (STRING_EQ(s, "unexec"))
-    return PLIST_UNEXEC;
+    return ASSET_UNEXEC;
   if (STRING_EQ(s, "dirrm"))
-    return PLIST_DIRRM;
+    return ASSET_DIRRM;
   if (STRING_EQ(s, "dirrmtry"))
-    return PLIST_DIRRMTRY;
+    return ASSET_DIRRMTRY;
   if (STRING_EQ(s, "cwd") || STRING_EQ(s, "cd"))
-    return PLIST_CWD;
+    return ASSET_CWD;
   if (STRING_EQ(s, "srcdir"))
-    return PLIST_SRC;
+    return ASSET_SRC;
   if (STRING_EQ(s, "mode"))
-    return PLIST_CHMOD;
+    return ASSET_CHMOD;
   if (STRING_EQ(s, "owner"))
-    return PLIST_CHOWN;
+    return ASSET_CHOWN;
   if (STRING_EQ(s, "group"))
-    return PLIST_CHGRP;
+    return ASSET_CHGRP;
   if (STRING_EQ(s, "noinst"))
-    return PLIST_NOINST;
+    return ASSET_NOINST;
   if (STRING_EQ(s, "ignore"))
-    return PLIST_IGNORE;
+    return ASSET_IGNORE;
   if (STRING_EQ(s, "ignore_inst"))
-    return PLIST_IGNORE_INST;
+    return ASSET_IGNORE_INST;
   if (STRING_EQ(s, "name"))
-    return PLIST_NAME;
+    return ASSET_NAME;
   if (STRING_EQ(s, "display"))
-    return PLIST_DISPLAY;
+    return ASSET_DISPLAY;
   if (STRING_EQ(s, "pkgdep"))
-    return PLIST_PKGDEP;
+    return ASSET_PKGDEP;
   if (STRING_EQ(s, "conflicts"))
-    return PLIST_CONFLICTS;
+    return ASSET_CONFLICTS;
   if (STRING_EQ(s, "mtree"))
-    return PLIST_MTREE;
+    return ASSET_MTREE;
   if (STRING_EQ(s, "option"))
-    return PLIST_OPTION;
+    return ASSET_OPTION;
   
-  return PLIST_INVALID;
+  return ASSET_INVALID;
 }
 
 

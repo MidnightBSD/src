@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/util.c,v 1.9 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.10 2008/04/26 17:59:26 ctriv Exp $
  */
 
 
@@ -36,49 +36,48 @@
 #include <unistd.h>
 #include <libgen.h>
 #include "mport.h"
+#include "mport_private.h"
 
-/* Package meta-data creation and destruction */
-mportPackageMeta* mport_packagemeta_new() 
+
+/* these two aren't really utilities, but there's no better place to put them */
+MPORT_PUBLIC_API mportCreateExtras* mport_createextras_new()
 {
-  /* we use calloc so any pointers that aren't set are NULL.
-     (calloc zero's out the memory region. */
-  return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
+  return (mportCreateExtras*)calloc(1, sizeof(mportCreateExtras));
 }
 
-void mport_packagemeta_free(mportPackageMeta *pack)
-{
-  free(pack->pkg_filename);
-  free(pack->comment);
-  free(pack->sourcedir);
-  free(pack->desc);
-  free(pack->prefix);
-  free(pack->depends);
-  free(pack->mtree);
-  free(pack->origin);
-  free(pack->conflicts);
-  free(pack->pkginstall);
-  free(pack->pkgdeinstall);
-  free(pack->pkgmessage);
-  
-  if (pack->conflicts != NULL)
-    free(*(pack->conflicts));
-  
-  if (pack->depends != NULL)
-    free(*(pack->depends));
-
-  free(pack);
-}
-
-/* free a vector of mportPackageMeta pointers */
-void mport_packagemeta_vec_free(mportPackageMeta **vec)
+MPORT_PUBLIC_API void mport_createextras_free(mportCreateExtras *extra)
 {
   int i;
-  for (i=0; *(vec + i) != NULL; i++) {
-    mport_packagemeta_free(*(vec + i));
+  
+  free(extra->pkg_filename);
+  free(extra->sourcedir);
+  free(extra->mtree);
+  free(extra->conflicts);
+  free(extra->pkginstall);
+  free(extra->pkgdeinstall);
+  free(extra->pkgmessage);
+
+  i = 0;
+  if (extra->conflicts != NULL)  {
+    while (extra->conflicts[i] != NULL)
+      free(extra->conflicts[i++]);
+  }
+
+  free(extra->conflicts);
+  
+  i = 0;
+  if (extra->depends != NULL) {
+    while (extra->depends[i] != NULL) {
+      free(extra->depends[i++]);
+    }
   }
   
-  free(vec);
+  free(extra->depends);
+
+  
+  free(extra);
 }
+
 
 /* a wrapper around chdir, to work with our error system */
 int mport_chdir(mportInstance *mport, const char *dir)
@@ -265,7 +264,7 @@ void mport_parselist(char *opt, char ***list)
 }
 
 /*
- * mport_run_plist_exec(fmt, cwd, last_file)
+ * mport_run_asset_exec(fmt, cwd, last_file)
  * 
  * handles a @exec or a @unexec directive in a plist.  This function
  * does the substitions and then runs the command.  last_file is 
@@ -277,7 +276,7 @@ void mport_parselist(char *opt, char ***list)
  * %B	Return the directory part ("dirname") of %D/%F
  * %f	Return the filename part of ("basename") %D/%F
  */
-int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
+int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
 {
   size_t l;
   size_t max = FILENAME_MAX * 2;

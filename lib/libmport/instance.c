@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/instance.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/instance.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
  */
 
 
@@ -35,17 +35,17 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "mport.h"
-
+#include "mport_private.h"
 
 /* allocate mem for a mportInstance */
-mportInstance * mport_instance_new() 
+MPORT_PUBLIC_API mportInstance * mport_instance_new() 
 {
- return (mportInstance *)malloc(sizeof(mportInstance)); 
+  return (mportInstance *)malloc(sizeof(mportInstance)); 
 }
  
 
 /* set up the master database, and related instance infrastructure. */
-int mport_instance_init(mportInstance *mport, const char *root)
+MPORT_PUBLIC_API int mport_instance_init(mportInstance *mport, const char *root)
 {
   char dir[FILENAME_MAX];
   
@@ -93,28 +93,28 @@ int mport_instance_init(mportInstance *mport, const char *root)
 
 
 /* Setters for the variable UI callbacks. */
-void mport_set_msg_cb(mportInstance *mport, mport_msg_cb cb) 
+MPORT_PUBLIC_API void mport_set_msg_cb(mportInstance *mport, mport_msg_cb cb) 
 {
   mport->msg_cb = cb;
 }
 
-void mport_set_progress_init_cb(mportInstance *mport, mport_progress_init_cb cb)
+MPORT_PUBLIC_API void mport_set_progress_init_cb(mportInstance *mport, mport_progress_init_cb cb)
 {
   mport->progress_init_cb = cb;
 }
 
-void mport_set_progress_step_cb(mportInstance *mport, mport_progress_step_cb cb)
+MPORT_PUBLIC_API void mport_set_progress_step_cb(mportInstance *mport, mport_progress_step_cb cb)
 {
   mport->progress_step_cb = cb;
 }
 
-void mport_set_progress_free_cb(mportInstance *mport, mport_progress_free_cb cb)
+MPORT_PUBLIC_API void mport_set_progress_free_cb(mportInstance *mport, mport_progress_free_cb cb)
 {
   mport->progress_free_cb = cb;
 }
 
 
-void mport_set_confirm_cb(mportInstance *mport, mport_confirm_cb cb) 
+MPORT_PUBLIC_API void mport_set_confirm_cb(mportInstance *mport, mport_confirm_cb cb) 
 {
   mport->confirm_cb = cb;
 }
@@ -139,7 +139,7 @@ void mport_call_msg_cb(mportInstance *mport, const char *fmt, ...)
 }
   
 
-int mport_instance_free(mportInstance *mport) 
+MPORT_PUBLIC_API int mport_instance_free(mportInstance *mport) 
 {
   if (sqlite3_close(mport->db) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));

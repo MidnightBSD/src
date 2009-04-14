@@ -24808,7 +24808,10 @@ lib/libmp/libmp.3 -text
 lib/libmp/mp.h -text
 lib/libmp/mpasbn.c -text
 lib/libmport/Makefile -text
-lib/libmport/bundle.c -text
+lib/libmport/bundle_read.c -text
+lib/libmport/bundle_read_install_pkg.c -text
+lib/libmport/bundle_read_update_pkg.c -text
+lib/libmport/bundle_write.c -text
 lib/libmport/check_preconditions.c -text
 lib/libmport/create_primative.c -text
 lib/libmport/db.c -text
@@ -24817,7 +24820,10 @@ lib/libmport/delete_primative.c -text
 lib/libmport/error.c -text
 lib/libmport/install_primative.c -text
 lib/libmport/instance.c -text
+lib/libmport/merge_primative.c -text
 lib/libmport/mport.h -text
+lib/libmport/mport_private.h -text
+lib/libmport/pkgmeta.c -text
 lib/libmport/plist.c -text
 lib/libmport/util.c -text
 lib/libmport/version_cmp.c -text

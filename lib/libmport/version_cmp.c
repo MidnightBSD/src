@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.2 2007/11/26 21:41:56 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/version_cmp.c,v 1.3 2008/04/26 17:59:26 ctriv Exp $
  */
 
 #include <string.h>
@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "mport.h"
+#include "mport_private.h"
 
 struct version {
   char *version;
@@ -42,7 +43,12 @@ static void parse_version(const char *, struct version *);
 static int cmp_versions(char *, char *);
 static int cmp_ints(int, int);
 
-int mport_version_cmp(const char *astr, const char *bstr)
+/* mport_version_cmp(version1, version2)
+ *
+ * Compare two given version strings.  Returns 0 if the versions
+ * are the same, -1 if version1 is less than version2, 1 otherwise.
+ */
+MPORT_PUBLIC_API int mport_version_cmp(const char *astr, const char *bstr)
 {
   struct version a;
   struct version b;
@@ -65,6 +71,8 @@ int mport_version_cmp(const char *astr, const char *bstr)
   return result;
 }
 
+
+/* version of mport_version_cmp() that is bound to the sqlite3 database. */
 void mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
   char *a, *b;

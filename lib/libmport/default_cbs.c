@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/default_cbs.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/default_cbs.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
  */
 
 
@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mport.h"
+#include "mport_private.h"
 
 void mport_default_msg_cb(const char *msg) 
 {

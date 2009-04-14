@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,21 +23,17 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/db.c,v 1.3 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/db.c,v 1.4 2008/04/26 17:59:26 ctriv Exp $
  */
 
 
 
 #include <sqlite3.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <string.h>
 #include "mport.h"
+#include "mport_private.h"
 
-
-static int populate_meta_from_stmt(mportPackageMeta *, sqlite3 *, sqlite3_stmt *);
-static int populate_vec_from_stmt(mportPackageMeta ***, int, sqlite3 *, sqlite3_stmt *);
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  * 
@@ -142,183 +138,6 @@ int mport_detach_stub_db(sqlite3 *db)
 
 
 
-/* mport_get_meta_from_stub(sqlite *db, mportPackageMeta ***pack)
- *
- * Allocates and populates a vector of mportPackageMeta structs from the stub database
- * connected to db. These structs represent all the packages in the stub database.
- * This does not populate the conflicts and depends fields.
- */
-int mport_get_meta_from_stub(sqlite3 *db, mportPackageMeta ***ref)
-{
-  sqlite3_stmt *stmt;
-  int len, ret;
-  
-  if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM stub.packages") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-
-  if (sqlite3_step(stmt) != SQLITE_ROW) {
-    sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
-  
-  len = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
-
-  if (len == 0) {
-    /* a stub should have packages! */
-    RETURN_ERROR(MPORT_ERR_INTERNAL, "stub database contains no packages.");
-  }
-    
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix FROM stub.packages") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  ret = populate_vec_from_stmt(ref, len, db, stmt);
-  
-  sqlite3_finalize(stmt);
-  
-  return ret;
-}
-
-
-/* mport_get_meta_from_master(mportInstance *mport, mportPacakgeMeta ***pack, const char *where, ...)
- *
- * Allocate and populate the package meta for the given package from the
- * master database.
- * 
- * 'where' and the vargs are used to be build a where clause.  For example to search by
- * name:
- * 
- * mport_get_meta_from_master(mport, &packvec, "pkg=%Q", name);
- *
- * or by origin
- *
- * mport_get_meta_from_master(mport, &packvec, "origin=%Q", origin);
- *
- * pack is set to NULL and MPORT_OK is returned if no packages where found.
- */
-int mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
-{
-  va_list args;
-  sqlite3_stmt *stmt;
-  int ret, len;
-  char *where;
-  sqlite3 *db = mport->db;
-  
-  va_start(args, fmt);
-  where = sqlite3_vmprintf(fmt, args);
-  va_end(args);
-    
-  if (where == NULL) 
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Could not build where clause");
-  
-  
-  if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-
-  if (sqlite3_step(stmt) != SQLITE_ROW) {
-    sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
-
-    
-  len = sqlite3_column_int(stmt, 0);
-  sqlite3_finalize(stmt);
-
-  if (len == 0) {
-    sqlite3_free(where);
-    *ref = NULL;
-    return MPORT_OK;
-  }
-
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix FROM packages WHERE %s", where) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-    
-    
-  ret = populate_vec_from_stmt(ref, len, db, stmt);
-
-  sqlite3_free(where);  
-  sqlite3_finalize(stmt);
-  
-  return ret;
-}
-  
-
-static int populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_stmt *stmt)
-{ 
-  mportPackageMeta **vec;
-  int done = 0;
-  vec  = (mportPackageMeta**)malloc((1+len) * sizeof(mportPackageMeta *));
-  *ref = vec;
-
-  while (!done) { 
-    switch (sqlite3_step(stmt)) {
-      case SQLITE_ROW:
-        *vec = mport_packagemeta_new();
-        if (*vec == NULL)
-          RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate meta."); 
-        if (populate_meta_from_stmt(*vec, db, stmt) != MPORT_OK)
-          RETURN_CURRENT_ERROR;
-        vec++;
-        break;
-      case SQLITE_DONE:
-        /* set the last cell in the array to null */
-        *vec = NULL;
-        done++;
-        break;
-      default:
-        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-        break; /* not reached */
-    }
-  }
-  
-  /* not reached */
-  return MPORT_OK;
-}
- 
- 
-static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt) 
-{  
-  const char *tmp = 0;
-
-  /* Copy pkg to pack->name */
-  if ((tmp = sqlite3_column_text(stmt, 0)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-
-  if ((pack->name = strdup(tmp)) == NULL)
-    return MPORT_ERR_NO_MEM;
-
-  /* Copy version to pack->version */
-  if ((tmp = sqlite3_column_text(stmt, 1)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  
-  if ((pack->version = strdup(tmp)) == NULL)
-    return MPORT_ERR_NO_MEM;
-  
-  /* Copy origin to pack->origin */
-  if ((tmp = sqlite3_column_text(stmt, 2)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  
-  if ((pack->origin = strdup(tmp)) == NULL)
-    return MPORT_ERR_NO_MEM;
-
-  /* Copy lang to pack->lang */
-  if ((tmp = sqlite3_column_text(stmt, 3)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  
-  if ((pack->lang = strdup(tmp)) == NULL)
-    return MPORT_ERR_NO_MEM;
-
-  /* Copy prefix to pack->prefix */
-  if ((tmp = sqlite3_column_text(stmt, 4)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  
-  if ((pack->prefix = strdup(tmp)) == NULL)
-    return MPORT_ERR_NO_MEM;
-
-  
-  return MPORT_OK;
-}
-
 
 
 #define RUN_SQL(db, sql) \
@@ -328,18 +147,19 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 
 int mport_generate_stub_schema(sqlite3 *db) 
 {
+  RUN_SQL(db, "CREATE TABLE meta      (field text NOT NULL, value text NOT NULL)");
+  RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
   RUN_SQL(db, "CREATE TABLE assets    (pkg text not NULL, type int NOT NULL, data text, checksum text)");
-  RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL)");
+  RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
-  RUN_SQL(db, "CREATE TABLE exdepends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)"); 
-
+  RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL)");
   return MPORT_OK;  
 }
 
 int mport_generate_master_schema(sqlite3 *db) 
 {
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int, status text default 'dirty')");
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text)");
   RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 
@@ -347,9 +167,13 @@ int mport_generate_master_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_pkg ON depends (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_dependpkgname ON depends (depend_pkgname)");
 
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL)");
+  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS log_pkg ON log (pkg, version)");
+
   RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
-  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_data ON assets (data)");
   
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL)");
+  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS categories_pkg ON categories (pkg, category)");
   return MPORT_OK;
 }
