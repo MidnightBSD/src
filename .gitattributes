@@ -35510,7 +35510,6 @@ tools/kerneldoc/subsys/Makefile -text
 tools/kerneldoc/subsys/README -text
 tools/kerneldoc/subsys/common-Doxyfile -text
 tools/kerneldoc/subsys/notreviewed.dox -text
-tools/lib32/README -text
 tools/make_libdeps.sh -text
 tools/man/foot.inc.html -text
 tools/man/head.inc.html -text
