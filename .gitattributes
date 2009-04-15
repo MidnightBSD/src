@@ -36171,6 +36171,10 @@ tools/tools/ath/athdebug/athdebug.c -text
 tools/tools/ath/athstats.c -text
 tools/tools/ath/athstats/Makefile -text
 tools/tools/ath/athstats/athstats.c -text
+tools/tools/ath/athstats/athstats.h -text
+tools/tools/ath/athstats/main.c -text
+tools/tools/ath/athstats/statfoo.c -text
+tools/tools/ath/athstats/statfoo.h -text
 tools/tools/backout_commit/backout_commit.rb -text
 tools/tools/commitsdb/make_commit_db -text
 tools/tools/commitsdb/query_commit_db -text

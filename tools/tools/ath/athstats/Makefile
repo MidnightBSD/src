@@ -1,7 +1,17 @@
-# $FreeBSD: src/tools/tools/ath/athstats/Makefile,v 1.1.2.1 2006/01/31 20:48:20 sam Exp $
+# $FreeBSD: src/tools/tools/ath/athstats/Makefile,v 1.4 2007/02/02 02:39:56 sam Exp $
 
 PROG=	athstats
+BINDIR=	/usr/local/bin
 NO_MAN=
-BINDIR?=/usr/local/bin
+
+SRCS=	main.c statfoo.c athstats.c
 
 .include <bsd.prog.mk>
+
+CFLAGS+= -I.
+CLEANFILES+= opt_ah.h
+
+athstats.o: opt_ah.h
+
+opt_ah.h:
+	touch opt_ah.h

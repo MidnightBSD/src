@@ -1,7 +1,7 @@
-# $FreeBSD: src/tools/tools/ath/athdebug/Makefile,v 1.1.2.1 2006/01/31 20:48:20 sam Exp $
+# $FreeBSD: src/tools/tools/ath/athdebug/Makefile,v 1.2 2006/03/15 10:46:36 ru Exp $
 
 PROG=	athdebug
+BINDIR=	/usr/local/bin
 NO_MAN=
-BINDIR?=/usr/local/bin
 
 .include <bsd.prog.mk>
