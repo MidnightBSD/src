@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/monetdef/pt_PT.ISO8859-1.src,v 1.2 2002/02/19 18:38:04 phantom Exp $
+# $FreeBSD: src/share/monetdef/pt_PT.ISO8859-1.src,v 1.3 2006/06/11 14:43:18 simon Exp $
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
@@ -7,8 +7,8 @@
 EUR 
 # currency_symbol
 Eu
-# mon_decimal_point (possibly incorrect for pt_PT)
-.
+# mon_decimal_point
+,
 # mon_thousands_sep
 .
 # mon_grouping, separated by ;

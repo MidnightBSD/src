@@ -28920,6 +28920,7 @@ share/monetdef/kk_KZ.UTF-8.src -text
 share/monetdef/ko_KR.UTF-8.src -text
 share/monetdef/ko_KR.eucKR.src -text
 share/monetdef/lt_LT.ISO8859-13.src -text
+share/monetdef/mn_MN.UTF-8.src -text
 share/monetdef/nl_BE.ISO8859-1.src -text
 share/monetdef/nl_NL.ISO8859-1.src -text
 share/monetdef/no_NO.ISO8859-1.src -text
@@ -28990,6 +28991,7 @@ share/msgdef/kk_KZ.PT154.src -text
 share/msgdef/kk_KZ.UTF-8.src -text
 share/msgdef/ko_KR.eucKR.src -text
 share/msgdef/lt_LT.ISO8859-13.src -text
+share/msgdef/mn_MN.UTF-8.src -text
 share/msgdef/nl_NL.ISO8859-1.src -text
 share/msgdef/no_NO.ISO8859-1.src -text
 share/msgdef/pl_PL.ISO8859-2.src -text
@@ -29043,6 +29045,7 @@ share/numericdef/ja_JP.eucJP.src -text
 share/numericdef/kk_KZ.PT154.src -text
 share/numericdef/ko_KR.eucKR.src -text
 share/numericdef/lt_LT.ISO8859-13.src -text
+share/numericdef/mn_MN.UTF-8.src -text
 share/numericdef/nl_NL.ISO8859-1.src -text
 share/numericdef/no_NO.ISO8859-1.src -text
 share/numericdef/pl_PL.ISO8859-2.src -text

@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/numericdef/Makefile,v 1.59 2005/03/04 14:24:30 ru Exp $
+# $FreeBSD: src/share/numericdef/Makefile,v 1.61 2006/11/09 18:10:34 des Exp $
 
 LOCALES=	af_ZA.ISO8859-1 \
 		am_ET.UTF-8 \
@@ -26,6 +26,7 @@ LOCALES=	af_ZA.ISO8859-1 \
 		kk_KZ.PT154 \
 		ko_KR.eucKR \
 		lt_LT.ISO8859-13 \
+		mn_MN.UTF-8 \
 		nl_NL.ISO8859-1 \
 		no_NO.ISO8859-1 \
 		pl_PL.ISO8859-2 \
@@ -70,6 +71,7 @@ DE_LINKS=	de_DE:de_AT de_DE:de_CH
 FR_LINKS=	fr_FR:fr_CA fr_FR:fr_CH
 GB_LINKS=	en_GB:en_AU en_GB:en_NZ
 IT_LINKS=	it_IT:it_CH
+NO_LINKS=	no_NO:nb_NO no_NO:nn_NO
 US_LINKS=	en_US:en_CA en_US:en_GB
 
 ARMSCII-8_UTF-8= hy_AM
@@ -91,9 +93,9 @@ eucKR_UTF-8=	ko_KR
 ISO8859-1_ISO8859-15= af_ZA ca_ES da_DK de_DE en_US es_ES eu_ES fi_FI \
 		fr_BE fr_FR is_IS it_CH it_IT nl_NL no_NO pt_PT sv_SE \
 		${BE_LINKS} ${DE_LINKS} ${FR_LINKS} ${GB_LINKS} \
-		${IT_LINKS} ${US_LINKS}
+		${IT_LINKS} ${NO_LINKS} ${US_LINKS}
 ISO8859-1_ISO8859-1= ${BE_LINKS} ${DE_LINKS} ${FR_LINKS} ${GB_LINKS} \
-		${IT_LINKS} ${US_LINKS}
+		${IT_LINKS} ${NO_LINKS} ${US_LINKS}
 ISO8859-1_US-ASCII= en_US ${GB_LINKS} ${US_LINKS}
 ISO8859-1_UTF-8= af_ZA ca_ES da_DK de_DE en_US es_ES eu_ES fi_FI fr_BE \
 		fr_FR is_IS it_IT nl_NL no_NO pt_BR pt_PT sv_SE
@@ -112,7 +114,7 @@ KOI8-U_ISO8859-5= uk_UA
 PT154_UTF-8=	kk_KZ
 US-ASCII_UTF-8=	en_US:he_IL
 UTF-8_UTF-8=	${BE_LINKS} ${DE_LINKS} ${FR_LINKS} ${GB_LINKS} en_GB:en_IE \
-		${IT_LINKS} ${US_LINKS}
+		${IT_LINKS} ${NO_LINKS} ${US_LINKS}
 
 SYMLINKS=
 .for enc1 in ${ENCODINGS}

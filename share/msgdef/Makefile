@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/msgdef/Makefile,v 1.62 2005/03/04 14:24:29 ru Exp $
+# $FreeBSD: src/share/msgdef/Makefile,v 1.65 2006/11/09 18:10:33 des Exp $
 
 LOCALES=	af_ZA.ISO8859-1 \
 		am_ET.UTF-8 \
@@ -32,9 +32,14 @@ LOCALES=	af_ZA.ISO8859-1 \
 		hy_AM.UTF-8 \
 		is_IS.ISO8859-1 \
 		it_IT.ISO8859-1 \
+		ja_JP.eucJP \
+		ja_JP.SJIS \
+		ja_JP.UTF-8 \
 		kk_KZ.PT154 \
 		kk_KZ.UTF-8 \
+		ko_KR.eucKR \
 		lt_LT.ISO8859-13 \
+		mn_MN.UTF-8 \
 		nl_NL.ISO8859-1 \
 		no_NO.ISO8859-1 \
 		pl_PL.ISO8859-2 \
@@ -55,10 +60,6 @@ LOCALES=	af_ZA.ISO8859-1 \
 		uk_UA.ISO8859-5 \
 		uk_UA.KOI8-U \
 		uk_UA.UTF-8 \
-		ko_KR.eucKR \
-		ja_JP.eucJP \
-		ja_JP.SJIS \
-		ja_JP.UTF-8 \
 		zh_CN.eucCN \
 		zh_CN.GB18030 \
 		zh_CN.GB2312 \
@@ -88,6 +89,7 @@ FR_LINKS=	fr_FR:fr_CA
 GB_LINKS=	en_GB:en_AU en_GB:en_NZ
 IT_LINKS=	it_IT:it_CH
 NL_LINKS=	nl_NL:nl_BE
+NO_LINKS=	no_NO:nb_NO no_NO:nn_NO
 PT_LINKS=	pt_PT:pt_BR
 
 ENCODINGS=	Big5 Big5HKSCS CP949 eucKR GB2312 GBK \
@@ -99,16 +101,16 @@ eucKR_CP949=	ko_KR
 eucKR_UTF-8=	ko_KR
 GB2312_GBK=	zh_CN
 ISO8859-1_ISO8859-1= ${DE_LINKS} ${FR_LINKS} ${GB_LINKS} ${IT_LINKS} \
-		${NL_LINKS} ${PT_LINKS}
+		${NL_LINKS} ${NO_LINKS} ${PT_LINKS}
 ISO8859-1_ISO8859-15= af_ZA ca_ES da_DK de_DE en_CA en_GB en_US es_ES \
 		eu_ES fi_FI fr_BE fr_CH fr_FR is_IS it_IT nl_NL no_NO \
 		pt_PT sv_SE \
 		${DE_LINKS} ${FR_LINKS} ${GB_LINKS} ${IT_LINKS} \
-		${NL_LINKS}
+		${NL_LINKS} ${NO_LINKS}
 ISO8859-1_US-ASCII= ${GB_LINKS} en_CA en_GB en_US
 ISO8859-1_UTF-8= af_ZA ca_ES da_DK de_DE en_CA en_GB en_US es_ES eu_ES \
-		fi_FI fr_BE fr_CH fr_FR is_IS it_IT nl_NL no_NO pt_PT \
-		sv_SE
+		fi_FI fr_BE fr_CH fr_FR is_IS it_IT nb_NO nl_NL nn_NO no_NO \
+		pt_PT sv_SE
 ISO8859-2_ISO8859-2= ${CZ_LINKS}
 ISO8859-2_UTF-8= cs_CZ hr_HR hu_HU pl_PL ro_RO sl_SI
 ISO8859-9_UTF-8= tr_TR
@@ -116,7 +118,7 @@ ISO8859-13_ISO8859-4= lt_LT
 ISO8859-13_UTF-8= lt_LT
 ISO8859-15_UTF-8= et_EE
 UTF-8_UTF-8=	${CZ_LINKS} ${DE_LINKS} ${FR_LINKS} ${GB_LINKS} en_GB:en_IE \
-		${IT_LINKS} ${NL_LINKS} ${PT_LINKS} zh_TW:zh_HK
+		${IT_LINKS} ${NL_LINKS} ${NO_LINKS} ${PT_LINKS} zh_TW:zh_HK
 
 SYMLINKS=
 .for enc1 in ${ENCODINGS}
