@@ -36255,9 +36255,6 @@ tools/tools/pciid/mk_pci_vendors.pl -text
 tools/tools/pirtool/Makefile -text
 tools/tools/pirtool/pirtable.h -text
 tools/tools/pirtool/pirtool.c -text
-tools/tools/recoverdisk/Makefile -text
-tools/tools/recoverdisk/README -text
-tools/tools/recoverdisk/recoverdisk.c -text
 tools/tools/release/chk_dokern.sh_and_drivers.conf -text
 tools/tools/scsi-defects/README -text
 tools/tools/scsi-defects/scsi-defects.pl -text
