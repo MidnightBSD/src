@@ -1,4 +1,4 @@
-#
+# $MidnightBSD$
 # $FreeBSD: src/tools/build/mk/OptionalObsoleteFiles.inc,v 1.11.4.1 2008/01/21 22:02:21 brueffer Exp $
 #
 # This file add support for the WITHOUT_* and WITH_* knobs in src.conf(5) to
