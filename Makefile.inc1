@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.17 2009/04/05 23:53:18 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.18 2009/04/06 03:11:07 ctriv Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -101,11 +101,6 @@ OSRELDATE!=	awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
 .else
 OSRELDATE=	0
 .endif
-.endif
-
-.if !defined(VERSION)
-VERSION!=	uname -srp
-VERSION+=	${OSRELDATE}
 .endif
 
 # Guess machine architecture from machine type, and vice versa.
