@@ -1,5 +1,6 @@
 #       @(#)Makefile    8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/info/Makefile,v 1.14 2004/12/21 08:46:53 ru Exp $
+# $MidnightBSD$
 
 NO_OBJ=
 
