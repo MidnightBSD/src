@@ -38368,6 +38368,8 @@ usr.sbin/fwcontrol/Makefile -text
 usr.sbin/fwcontrol/fwcontrol.8 -text
 usr.sbin/fwcontrol/fwcontrol.c -text
 usr.sbin/fwcontrol/fwdv.c -text
+usr.sbin/fwcontrol/fwmethods.h -text
+usr.sbin/fwcontrol/fwmpegts.c -text
 usr.sbin/getfmac/Makefile -text
 usr.sbin/getfmac/getfmac.8 -text
 usr.sbin/getfmac/getfmac.c -text
