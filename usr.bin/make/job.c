@@ -41,7 +41,7 @@
 
 #include <sys/cdefs.h>
 /* $FreeBSD: src/usr.bin/make/job.c,v 1.130 2008/09/29 16:13:28 ache Exp $ */
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/make/job.c,v 1.2 2008/09/29 20:36:53 laffer1 Exp $");
 
 /*-
  * job.c --
@@ -413,11 +413,7 @@ mkfifotemp(char *template)
 	 */
 	while (ptr >= template && *ptr == 'X') {
 		uint32_t rand_num =
-#if __FreeBSD_version < 800041
 			arc4random() % (sizeof(padchar) - 1);
-#else
-			arc4random_uniform(sizeof(padchar) - 1);
-#endif
 		*ptr-- = padchar[rand_num];
 	}
 	start = ptr + 1;
