@@ -31,8 +31,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $Id: dconschat.c,v 1.1.1.2 2006-02-25 02:38:27 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/dconschat/dconschat.c,v 1.9 2005/03/11 14:20:09 stefanf Exp $
+ * $Id: dconschat.c,v 1.2 2009-04-15 02:45:17 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/dconschat/dconschat.c,v 1.15 2007/07/12 13:08:00 simokawa Exp $
  */
 
 #include <sys/param.h>
@@ -78,15 +78,17 @@
 int verbose = 0;
 int tc_set = 0;
 int poll_hz = DCONS_POLL_HZ;
+static u_char abreak[3] = {13 /* CR */, 126 /* ~ */, 2 /* ^B */};
 
-#define IS_CONSOLE(p)	((p)->port == 0)
-#define IS_GDB(p)	((p)->port == 1)
+#define IS_CONSOLE(p)	((p)->port == DCONS_CON)
+#define IS_GDB(p)	((p)->port == DCONS_GDB)
 
 static struct dcons_state {
 	int fd;
 	kvm_t *kd;
 	int kq;
 	off_t paddr;
+	off_t reset;
 #define F_READY		(1 << 1)
 #define F_RD_ONLY	(1 << 2)
 #define F_ALT_BREAK	(1 << 3)
@@ -102,6 +104,7 @@ static struct dcons_state {
 	int escape_state;
 	struct dcons_port {
 		int port;
+		int sport;
 		struct dcons_ch o;
 		struct dcons_ch i;
 		u_int32_t optr;
@@ -115,7 +118,11 @@ static struct dcons_state {
 	struct timespec to;
 	struct timespec zero;
 	struct termios tsave;
+	struct termios traw;
+	char escape;
 } sc;
+
+static int dconschat_write_dcons(struct dcons_state *, int, char *, int);
 
 static int
 dread(struct dcons_state *dc, void *buf, size_t n, off_t offset)
@@ -145,9 +152,100 @@ dwrite(struct dcons_state *dc, void *buf, size_t n, off_t offset)
 }
 
 static void
+dconschat_reset_target(struct dcons_state *dc, struct dcons_port *p)
+{
+	char buf[PAGE_SIZE];
+	if (dc->reset == 0)
+		return;
+
+	snprintf(buf, PAGE_SIZE, "\r\n[dconschat reset target(addr=0x%zx)...]\r\n", dc->reset);
+	write(p->outfd, buf, strlen(buf));
+	bzero(&buf[0], PAGE_SIZE);
+	dwrite(dc, (void *)buf, PAGE_SIZE, dc->reset);
+}
+
+
+static void
+dconschat_suspend(struct dcons_state *dc, struct dcons_port *p)
+{
+	if (p->sport != 0)
+		return;
+
+	if (tc_set)
+		tcsetattr(STDIN_FILENO, TCSADRAIN, &dc->tsave);
+
+	printf("\n[dconschat suspend]\n");
+	kill(getpid(), SIGTSTP);
+
+	if (tc_set)
+		tcsetattr(STDIN_FILENO, TCSADRAIN, &dc->traw);
+}
+
+static void
+dconschat_sigchld(int s)
+{
+	struct kevent kev;
+	struct dcons_port *p;
+	char buf[256];
+
+	p = &sc.port[DCONS_CON];
+
+	snprintf(buf, 256, "\r\n[child exit]\r\n");
+	write(p->outfd, buf, strlen(buf));
+
+	if (tc_set)
+		tcsetattr(STDIN_FILENO, TCSADRAIN, &sc.traw);
+
+	EV_SET(&kev, p->infd, EVFILT_READ, EV_ADD, NOTE_LOWAT, 1, (void *)p);
+	kevent(sc.kq, &kev, 1, NULL, 0, &sc.zero);
+}
+
+static void
+dconschat_fork_gdb(struct dcons_state *dc, struct dcons_port *p)
+{
+	pid_t pid;
+	char buf[256], com[256];
+	struct kevent kev;
+
+	pid = fork();
+	if (pid < 0) {
+		snprintf(buf, 256, "\r\n[%s: fork failed]\r\n", __FUNCTION__);
+		write(p->outfd, buf, strlen(buf));
+	}
+
+
+	if (pid == 0) {
+		/* child */
+		if (tc_set)
+			tcsetattr(STDIN_FILENO, TCSADRAIN, &dc->tsave);
+
+		snprintf(com, sizeof(buf), "kgdb -r :%d kernel",
+			dc->port[DCONS_GDB].sport);
+		snprintf(buf, 256, "\n[fork %s]\n", com);
+		write(p->outfd, buf, strlen(buf));
+
+		execl("/bin/sh", "/bin/sh", "-c", com, 0);
+
+		snprintf(buf, 256, "\n[fork failed]\n");
+		write(p->outfd, buf, strlen(buf));
+
+		if (tc_set)
+			tcsetattr(STDIN_FILENO, TCSADRAIN, &dc->traw);
+
+		exit(0);
+	} else {
+		signal(SIGCHLD, dconschat_sigchld);
+		EV_SET(&kev, p->infd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+		kevent(sc.kq, &kev, 1, NULL, 0, &sc.zero);
+	}
+}
+
+
+static void
 dconschat_cleanup(int sig)
 {
 	struct dcons_state *dc;
+	int status;
 
 	dc = &sc;
 	if (tc_set != 0)
@@ -157,6 +255,7 @@ dconschat_cleanup(int sig)
 		printf("\n[dconschat exiting with signal %d ...]\n", sig);
 	else
 		printf("\n[dconschat exiting...]\n");
+	wait(&status);
 	exit(0);
 }
 
@@ -166,7 +265,7 @@ dconschat_get_crom(struct dcons_state *dc)
 {
 	off_t addr;
 	int i, state = 0;
-	u_int32_t buf, hi = 0, lo = 0;
+	u_int32_t buf, hi = 0, lo = 0, reset_hi = 0, reset_lo = 0;
 	struct csrreg *reg; 
 
 	reg = (struct csrreg *)&buf;
@@ -176,7 +275,7 @@ dconschat_get_crom(struct dcons_state *dc)
 		if (dread(dc, &buf, 4, addr + i) < 0) {
 			if (verbose)
 				warn("crom read faild");
-			return (-1);
+			goto out;
 		}
 		buf = ntohl(buf);
 		if (verbose)
@@ -193,21 +292,35 @@ dconschat_get_crom(struct dcons_state *dc)
 				state = 2;
 			break;
 		case 2:
-			if (reg->key == DCONS_CSR_KEY_HI)
+			switch (reg->key) {
+			case DCONS_CSR_KEY_HI:
 				hi = reg->val;
-			else if (reg->key == DCONS_CSR_KEY_LO) {
+				break;
+			case DCONS_CSR_KEY_LO:
 				lo = reg->val;
+				break;
+			case DCONS_CSR_KEY_RESET_HI:
+				reset_hi = reg->val;
+				break;
+			case DCONS_CSR_KEY_RESET_LO:
+				reset_lo = reg->val;
 				goto out;
+				break;
+			case 0x81:
+				break;
+			default:
+				state = 0;
 			}
 			break;
 		}
 	}
-	/* not found */
-	return (-1);
 out:
 	if (verbose)
 		printf("addr: %06x %06x\n", hi, lo); 
 	dc->paddr = ((off_t)hi << 24) | lo;
+	dc->reset = ((off_t)reset_hi << 24) | reset_lo;
+	if (dc->paddr == 0)
+		return (-1);
 	return (0);
 }
 #endif
@@ -263,11 +376,7 @@ dconschat_fetch_header(struct dcons_state *dc)
 	}
 	if (ntohl(dbuf.version) != DCONS_VERSION) {
 		snprintf(ebuf, sizeof(ebuf),
-#if __FreeBSD_version < 500000
-		    "wrong version %ld,%d",
-#else
 		    "wrong version %d,%d",
-#endif
 		    ntohl(dbuf.version), DCONS_VERSION);
 		/* XXX exit? */
 		dconschat_ready(dc, 0, ebuf);
@@ -299,13 +408,8 @@ dconschat_fetch_header(struct dcons_state *dc)
 
 		if (verbose) {
 			printf("port %d   size offset   gen   pos\n", j);
-#if __FreeBSD_version < 500000
-			printf("output: %5d %6ld %5d %5d\n"
-				"input : %5d %6ld %5d %5d\n",
-#else
 			printf("output: %5d %6d %5d %5d\n"
 				"input : %5d %6d %5d %5d\n",
-#endif
 			o->size, ntohl(dbuf.ooffset[j]), o->gen, o->pos,
 			i->size, ntohl(dbuf.ioffset[j]), i->gen, i->pos);
 		}
@@ -409,7 +513,7 @@ ok:
 		rlen = len;
 
 #if 1
-	if (verbose)
+	if (verbose == 1)
 		printf("[%d]", rlen); fflush(stdout);
 #endif
 
@@ -490,13 +594,14 @@ again:
 	return(0);
 }
 
+
 static int
 dconschat_write_socket(int fd, char *buf, int len)
 {
 	write(fd, buf, len);
 	if (verbose > 1) {
 		buf[len] = 0;
-		printf("[%s]", buf);
+		printf("<- %s\n", buf);
 	}
 	return (0);
 }
@@ -512,6 +617,7 @@ dconschat_init_socket(struct dcons_state *dc, int port, char *host, int sport)
 
 	p = &dc->port[port];
 	p->port = port;
+	p->sport = sport;
 	p->infd = p->outfd = -1;
 
 	if (sport < 0)
@@ -525,11 +631,9 @@ dconschat_init_socket(struct dcons_state *dc, int port, char *host, int sport)
 		p->s = -1;
 		if (tc_set == 0 &&
 		    tcgetattr(STDIN_FILENO, &dc->tsave) == 0) {
-			struct termios traw;
-
-			traw = dc->tsave;
-			cfmakeraw(&traw);
-			tcsetattr(STDIN_FILENO, TCSADRAIN, &traw);
+			dc->traw = dc->tsave;
+			cfmakeraw(&dc->traw);
+			tcsetattr(STDIN_FILENO, TCSADRAIN, &dc->traw);
 			tc_set = 1;
 		}
 		EV_SET(&kev, p->infd, EVFILT_READ, EV_ADD, NOTE_LOWAT, 1,
@@ -605,6 +709,16 @@ dconschat_accept_socket(struct dcons_state *dc, struct dcons_port *p)
 		p->skip_read = 0;
 	}
 #endif
+	/* discard backlog on GDB port */
+	if (IS_GDB(p)) {
+		char buf[2048];
+		int len;
+
+		while ((len = dconschat_read_dcons(dc, DCONS_GDB, &buf[0],
+				 2048)) > 0)
+			if (verbose)
+				printf("discard %d chars on GDB port\n", len);
+	}
 
 	p->infd = p->outfd = ns;
 	EV_SET(&kev, ns, EVFILT_READ, EV_ADD, NOTE_LOWAT, 1, (void *)p);
@@ -616,9 +730,11 @@ static int
 dconschat_read_filter(struct dcons_state *dc, struct dcons_port *p,
     u_char *sp, int slen, u_char *dp, int *dlen)
 {
-	static u_char abreak[3] = {13 /* CR */, 126 /* ~ */, 2 /* ^B */};
+	int skip;
+	char *buf;
 
 	while (slen > 0) {
+		skip = 0;
 		if (IS_CONSOLE(p)) {
 			if ((dc->flags & F_TELNET) != 0) {
 				/* XXX Telnet workarounds */
@@ -645,21 +761,53 @@ dconschat_read_filter(struct dcons_state *dc, struct dcons_port *p,
 			}
 			switch (dc->escape_state) {
 			case STATE1:
-				if (*sp == KEY_TILDE)
+				if (*sp == dc->escape) {
+					skip = 1;
 					dc->escape_state = STATE2;
-				else
+				} else
 					dc->escape_state = STATE0;
 				break;
 			case STATE2:
 				dc->escape_state = STATE0;
+				skip = 1;
 				if (*sp == '.')
 					dconschat_cleanup(0);
+				else if (*sp == CTRL('B')) {
+					bcopy(abreak, dp, 3);
+					dp += 3;
+					*dlen += 3;
+				}
+				else if (*sp == CTRL('G'))
+					dconschat_fork_gdb(dc, p);
+				else if ((*sp == CTRL('R'))
+						&& (dc->reset != 0)) {
+					dc->escape_state = STATE3;
+					buf = "\r\n[Are you sure to reset target? (y/N)]";
+					write(p->outfd, buf, strlen(buf));
+				} else if (*sp == CTRL('Z'))
+					dconschat_suspend(dc, p);
+				else {
+					skip = 0;
+					*dp++ = dc->escape;
+					(*dlen) ++;
+				}
+				break;
+			case STATE3:
+				dc->escape_state = STATE0;
+				skip = 1;
+				if (*sp == 'y')
+					dconschat_reset_target(dc, p);
+				else {
+					write(p->outfd, sp, 1);
+					write(p->outfd, "\r\n", 2);
+				}
+				break;
 			}
 			if (*sp == KEY_CR)
 				dc->escape_state = STATE1;
 		} else if (IS_GDB(p)) {
 			/* GDB: ^C -> CR+~+^B */
-			if (*sp == 0x3 && (dc->flags & F_ALT_BREAK) != 0) {
+			if (*sp == CTRL('C') && (dc->flags & F_ALT_BREAK) != 0) {
 				bcopy(abreak, dp, 3);
 				dp += 3;
 				sp ++;
@@ -669,8 +817,11 @@ dconschat_read_filter(struct dcons_state *dc, struct dcons_port *p,
 				break;
 			}
 		}
-		*dp++ = *sp++;
-		(*dlen) ++;
+		if (!skip) {
+			*dp++ = *sp;
+			(*dlen) ++;
+		}
+		sp ++;
 		slen --;
 	}
 	return (*dlen);
@@ -692,9 +843,8 @@ dconschat_read_socket(struct dcons_state *dc, struct dcons_port *p)
 			dconschat_write_dcons(dc, p->port, wbuf, wlen);
 			if (verbose > 1) {
 				wbuf[wlen] = 0;
-				printf("(%s)\n", wbuf);
-			}
-			if (verbose) {
+				printf("-> %s\n", wbuf);
+			} else if (verbose == 1) {
 				printf("(%d)", wlen);
 				fflush(stdout);
 			}
@@ -759,7 +909,8 @@ dconschat_proc_dcons(struct dcons_state *dc)
 		while ((len = dconschat_read_dcons(dc, port, buf,
 		    sizeof(buf))) > 0) {
 			dconschat_write_socket(p->outfd, buf, len);
-			dconschat_get_ptr(dc);
+			if ((err = dconschat_get_ptr(dc)))
+				return (err);
 		}
 		if ((dc->flags & F_ONE_SHOT) != 0 && len <= 0)
 			dconschat_cleanup(0);
@@ -771,13 +922,30 @@ static int
 dconschat_start_session(struct dcons_state *dc)
 {
 	int counter = 0;
+	int retry = 0;
+	int retry_unit_init = MAX(1, poll_hz / 10);
+	int retry_unit_offline = poll_hz * DCONS_POLL_OFFLINE;
+	int retry_unit = retry_unit_init;
+	int retry_max = retry_unit_offline / retry_unit;
 
 	while (1) {
-		if ((dc->flags & F_READY) == 0 &&
-			(++counter % (poll_hz * DCONS_POLL_OFFLINE)) == 0)
+		if (((dc->flags & F_READY) == 0) && ++counter > retry_unit) {
+			counter = 0;
+			retry ++;
+			if (retry > retry_max)
+				retry_unit = retry_unit_offline;
+			if (verbose) {
+				printf("%d/%d ", retry, retry_max);
+				fflush(stdout);
+			}
 			dconschat_fetch_header(dc);
-		if ((dc->flags & F_READY) != 0)
+		}
+		if ((dc->flags & F_READY) != 0) {
+			counter = 0;
+			retry = 0;
+			retry_unit = retry_unit_init;
 			dconschat_proc_dcons(dc);
+		}
 		dconschat_proc_socket(dc);
 	}
 	return (0);
@@ -829,7 +997,10 @@ main(int argc, char **argv)
 	port[0] = 0;	/* stdin/out for console */
 	port[1] = -1;	/* disable gdb port */
 
-	while ((ch = getopt(argc, argv, "a:bh:rt:u:vwC:G:M:N:RT1")) != -1) {
+	/* default escape char */
+	dc->escape = KEY_TILDE;
+
+	while ((ch = getopt(argc, argv, "a:be:h:rt:u:vwC:G:M:N:RT1")) != -1) {
 		switch(ch) {
 		case 'a':
 			dc->paddr = strtoull(optarg, NULL, 0);
@@ -837,6 +1008,9 @@ main(int argc, char **argv)
 			break;
 		case 'b':
 			dc->flags |= F_ALT_BREAK;
+			break;
+		case 'e':
+			dc->escape = optarg[0];
 			break;
 		case 'h':
 			poll_hz = strtoul(optarg, NULL, 0);
