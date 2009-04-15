@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/timedef/da_DK.ISO8859-1.src,v 1.11 2006/10/07 17:04:23 flz Exp $
+# $FreeBSD: src/share/timedef/nn_NO.UTF-8.src,v 1.1 2006/11/09 18:10:34 des Exp $
 #
 # WARNING: spaces may be essential at the end of lines
 # WARNING: empty lines are essential too
@@ -9,49 +9,49 @@ jan
 feb
 mar
 apr
-maj
+mai
 jun
 jul
 aug
 sep
 okt
 nov
-dec
+des
 #
 # Long months names
 #
 januar
 februar
-marts
+mars
 april
-maj
+mai
 juni
 juli
 august
 september
 oktober
 november
-december
+desember
 #
 # Short weekdays names
 #
-søn
-man
-tir
+sun
+mÃ¥n
+tys
 ons
 tor
 fre
-lør
+lau
 #
 # Long weekdays names
 #
-søndag
-mandag
-tirsdag
+sundag
+mÃ¥ndag
+tysdag
 onsdag
 torsdag
 fredag
-lørdag
+laurdag
 #
 # X_fmt
 #
@@ -81,16 +81,16 @@ pm
 #
 januar
 februar
-marts
+mars
 april
-maj
+mai
 juni
 juli
 august
 september
 oktober
 november
-december
+desember
 #
 # md_order
 #

@@ -29179,9 +29179,11 @@ share/syscons/keymaps/estonian.iso.kbd -text
 share/syscons/keymaps/estonian.iso15.kbd -text
 share/syscons/keymaps/finnish.cp850.kbd -text
 share/syscons/keymaps/finnish.iso.kbd -text
+share/syscons/keymaps/fr.dvorak.acc.kbd -text
 share/syscons/keymaps/fr.dvorak.kbd -text
 share/syscons/keymaps/fr.iso.acc.kbd -text
 share/syscons/keymaps/fr.iso.kbd -text
+share/syscons/keymaps/fr.macbook.acc.kbd -text
 share/syscons/keymaps/fr_CA.iso.acc.kbd -text
 share/syscons/keymaps/german.cp850.kbd -text
 share/syscons/keymaps/german.iso.acc.kbd -text
@@ -29335,7 +29337,10 @@ share/timedef/la_LN.ISO8859-1.src -text
 share/timedef/lt_LT.ISO8859-13.src -text
 share/timedef/lt_LT.ISO8859-4.src -text
 share/timedef/lt_LT.UTF-8.src -text
+share/timedef/mn_MN.UTF-8.src -text
 share/timedef/nl_NL.ISO8859-1.src -text
+share/timedef/nn_NO.ISO8859-1.src -text
+share/timedef/nn_NO.UTF-8.src -text
 share/timedef/no_NO.ISO8859-1.src -text
 share/timedef/no_NO.UTF-8.src -text
 share/timedef/pl_PL.ISO8859-2.src -text

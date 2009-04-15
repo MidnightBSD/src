@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/syscons/keymaps/INDEX.keymaps,v 1.54 2004/01/29 16:28:22 ache Exp $
+# $FreeBSD: src/share/syscons/keymaps/INDEX.keymaps,v 1.56 2007/07/13 08:29:24 roberto Exp $
 #
 # database for kbdmap(8) 
 #
@@ -134,10 +134,25 @@ fr.iso.acc.kbd:pt:Francês ISO-8859-1 (com acentos)
 fr.iso.acc.kbd:es:Francés ISO-8859-1 (con acentos)
 fr.iso.acc.kbd:uk:æÒÁÎÃÕÚØËÁ ISO-8859-1 (accent keys)
 
+fr.macbook.acc.kbd:en:French Macbook/Macbook Pro ISO-8859-15 (accent keys)
+fr.macbook.acc.kbd:de:Französisch Macbook/Macbook Pro ISO-8859-15 (mit Aksenten)
+fr.macbook.acc.kbd:fr:Français Macbook/Macbook Pro ISO-8859-15 (accent keys)
+fr.macbook.acc.kbd:pt:Francês Macbook/Macbook Pro ISO-8859-15 (com acentos)
+fr.macbook.acc.kbd:es:Francés Macbook/Macbook Pro ISO-8859-15 (con acentos)
+
 fr.dvorak.kbd:en:French Dvorak-like
 fr.dvorak.kbd:de:Französisch Dvorak
+fr.dvorak.kbd:fr:Français Dvorak
+fr.dvorak.kbd:pt:Francês Dvorak
 fr.dvorak.kbd:es:Francés Dvorak
 fr.dvorak.kbd:uk:French Dvorak-like
+
+fr.dvorak.acc.kbd:en:French Dvorak-like (accent keys)
+fr.dvorak.acc.kbd:de:Französisch Dvorak (mit Akzenten)
+fr.dvorak.acc.kbd:fr:Français Dvorak (accent keys)
+fr.dvorak.acc.kbd:pt:Francês Dvorak (com acentos)
+fr.dvorak.acc.kbd:es:Francés Dvorak (con acentos)
+fr.dvorak.acc.kbd:uk:French Dvorak-like (accent keys)
 
 fr_CA.iso.acc.kbd:en:French Canadian ISO-8859-1 (accent keys)
 fr_CA.iso.acc.kbd:de:Französisch Kanada ISO-8859-1 (mit Akzenten)

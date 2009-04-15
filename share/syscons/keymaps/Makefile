@@ -1,4 +1,4 @@
-# $FreeBSD: src/share/syscons/keymaps/Makefile,v 1.70 2004/12/21 08:46:55 ru Exp $
+# $FreeBSD: src/share/syscons/keymaps/Makefile,v 1.72 2007/07/13 08:29:24 roberto Exp $
 
 FILES=	INDEX.keymaps \
 	be.iso.kbd be.iso.acc.kbd \
@@ -12,7 +12,8 @@ FILES=	INDEX.keymaps \
 	el.iso07.kbd \
 	estonian.iso.kbd estonian.iso15.kbd estonian.cp850.kbd \
 	finnish.iso.kbd finnish.cp850.kbd \
-	fr.iso.kbd fr.iso.acc.kbd fr.dvorak.kbd \
+	fr.iso.kbd fr.iso.acc.kbd fr.dvorak.kbd fr.dvorak.acc.kbd \
+	fr.macbook.acc.kbd \
 	fr_CA.iso.acc.kbd \
 	german.iso.kbd german.iso.acc.kbd german.cp850.kbd \
 	gr.elot.acc.kbd gr.us101.acc.kbd \
