@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/gcore/elfcore.c,v 1.17 2004/07/12 20:19:40 rwatson Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/gcore/elfcore.c,v 1.19 2007/04/10 17:37:53 emaste Exp $");
 
 #include <sys/param.h>
 #include <sys/procfs.h>
@@ -130,7 +130,6 @@ elf_coredump(int efd __unused, int fd, pid_t pid)
 	 * Allocate memory for building the header, fill it up,
 	 * and write it out.
 	 */
-	hdr = malloc(hdrsize);
 	if ((hdr = malloc(hdrsize)) == NULL)
 		errx(1, "out of memory");
 	elf_corehdr(fd, pid, map, seginfo.count, hdr, hdrsize);
@@ -399,7 +398,7 @@ readhdrinfo(pid_t pid, prstatus_t *status, prfpregset_t *fpregset,
 	status->pr_statussz = sizeof(prstatus_t);
 	status->pr_gregsetsz = sizeof(gregset_t);
 	status->pr_fpregsetsz = sizeof(fpregset_t);
-	status->pr_osreldate = __FreeBSD_version;
+	status->pr_osreldate = __MidnightBSD_version;
 	status->pr_pid = pid;
 
 	memset(fpregset, 0, sizeof *fpregset);
@@ -495,15 +494,15 @@ readmap(pid_t pid)
 	linkp = &map;
 	while (pos < mapsize) {
 		vm_map_entry_t ent;
-		vm_offset_t start;
-		vm_offset_t end;
+		u_long start;
+		u_long end;
 		char prot[4];
 		char type[16];
 		int n;
 		int len;
 
 		len = 0;
-		n = sscanf(mapbuf + pos, "%x %x %*d %*d %*x %3[-rwx]"
+		n = sscanf(mapbuf + pos, "%lx %lx %*d %*d %*x %3[-rwx]"
 		    " %*d %*d %*x %*s %*s %16s %*s%*[\n]%n",
 		    &start, &end, prot, type, &len);
 		if (n != 4 || len == 0)
