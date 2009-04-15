@@ -9,7 +9,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/tools/tools/ministat/ministat.c,v 1.5.2.2 2006/02/27 22:34:36 wkoszek Exp $");
+__FBSDID("$FreeBSD: src/tools/tools/ministat/ministat.c,v 1.10 2006/08/28 08:27:02 phk Exp $");
 
 #include <stdio.h>
 #include <math.h>
@@ -134,6 +134,7 @@ static char symbol[MAX_DS] = { ' ', 'x', '+', '*', '%', '#', '@', 'O' };
 TAILQ_HEAD(pointlist, point);
 
 struct dataset {
+	char *name;
 	struct pointlist list;
 	double sy, syy;
 	int n;
@@ -399,13 +400,15 @@ PlotSet(struct dataset *ds, int val)
 		}
 		pl->data[j * pl->width + x] |= val;
 	}
-	x = ((Avg(ds) - Stddev(ds)) - pl->x0) / pl->dx;
-	m = ((Avg(ds) + Stddev(ds)) - pl->x0) / pl->dx;
-	pl->bar[bar][m] = '|';
-	pl->bar[bar][x] = '|';
-	for (i = x + 1; i < m; i++)
-		if (pl->bar[bar][i] == 0)
-			pl->bar[bar][i] = '_';
+	if (!isnan(Stddev(ds))) {
+		x = ((Avg(ds) - Stddev(ds)) - pl->x0) / pl->dx;
+		m = ((Avg(ds) + Stddev(ds)) - pl->x0) / pl->dx;
+		pl->bar[bar][m] = '|';
+		pl->bar[bar][x] = '|';
+		for (i = x + 1; i < m; i++)
+			if (pl->bar[bar][i] == 0)
+				pl->bar[bar][i] = '_';
+	}
 	x = (Median(ds) - pl->x0) / pl->dx;
 	pl->bar[bar][x] = 'M';
 	x = (Avg(ds) - pl->x0) / pl->dx;
@@ -463,13 +466,14 @@ DumpPlot(void)
 
 
 static struct dataset *
-ReadSet(char *n)
+ReadSet(char *n, int column, char *delim)
 {
 	FILE *f;
-	char buf[BUFSIZ], *p;
+	char buf[BUFSIZ], *p, *t;
 	struct dataset *s;
 	double d;
 	int line;
+	int i;
 
 	if (n == NULL) {
 		f = stdin;
@@ -483,18 +487,24 @@ ReadSet(char *n)
 	if (f == NULL)
 		err(1, "Cannot open %s", n);
 	s = NewSet();
+	s->name = strdup(n);
 	line = 0;
 	while (fgets(buf, sizeof buf, f) != NULL) {
 		line++;
-		p = strchr(buf, '#');
-		if (p != NULL)
-			*p = '\0';
-		p = buf + strlen(buf) - 1;
-		while (p >= buf && isspace(*p)) {
-			*p = '\0';
-			p--;
+
+		i = strlen(buf);
+		if (buf[i-1] == '\n')
+			buf[i-1] = '\0';
+		for (i = 1, t = strtok(buf, delim);
+		     t != NULL && *t != '#';
+		     i++, t = strtok(NULL, delim)) {
+			if (i == column)
+				break;
 		}
-		d = strtod(buf, &p);
+		if (t == NULL || *t == '#')
+			continue;
+
+		d = strtod(t, &p);
 		if (p != NULL && *p != '\0')
 			err(2, "Invalid data on line %d in %s\n", line, n);
 		if (*buf != '\0')
@@ -516,7 +526,7 @@ usage(char const *whine)
 
 	fprintf(stderr, "%s\n", whine);
 	fprintf(stderr,
-	    "Usage: ministat [ -c confidence ] [-ns] [-w width] [file [file ...]]\n");
+	    "Usage: ministat [-C column] [-c confidence] [-d delimiter(s)] [-ns] [-w width] [file [file ...]]\n");
 	fprintf(stderr, "\tconfidence = {");
 	for (i = 0; i < NCONF; i++) {
 		fprintf(stderr, "%s%g%%",
@@ -524,6 +534,8 @@ usage(char const *whine)
 		    studentpct[i]);
 	}
 	fprintf(stderr, "}\n");
+	fprintf(stderr, "\t-C : column number to extract (starts and defaults to 1)\n");
+	fprintf(stderr, "\t-d : delimiter(s) string, default to \" \\t\"\n");
 	fprintf(stderr, "\t-n : print summary statistics only, no graph/test\n");
 	fprintf(stderr, "\t-s : print avg/median/stddev bars on separate lines\n");
 	fprintf(stderr, "\t-w : width of graph/test output (default 74 or terminal width)\n");
@@ -536,8 +548,10 @@ main(int argc, char **argv)
 	struct dataset *ds[7];
 	int nds;
 	double a;
+	char *delim = " \t";
 	char *p;
 	int c, i, ci;
+	int column = 1;
 	int flag_s = 0;
 	int flag_n = 0;
 	int termwidth = 74;
@@ -553,8 +567,15 @@ main(int argc, char **argv)
 	}
 
 	ci = -1;
-	while ((c = getopt(argc, argv, "c:snw:")) != -1)
+	while ((c = getopt(argc, argv, "C:c:d:snw:")) != -1)
 		switch (c) {
+		case 'C':
+			column = strtol(optarg, &p, 10);
+			if (p != NULL && *p != '\0')
+				usage("Invalid column number.");
+			if (column <= 0)
+				usage("Column number should be positive.");
+			break;
 		case 'c':
 			a = strtod(optarg, &p);
 			if (p != NULL && *p != '\0')
@@ -564,6 +585,11 @@ main(int argc, char **argv)
 					ci = i;
 			if (ci == -1)
 				usage("No support for confidence level");
+			break;
+		case 'd':
+			if (*optarg == '\0')
+				usage("Can't use empty delimiter string");
+			delim = optarg;
 			break;
 		case 'n':
 			flag_n = 1;
@@ -588,18 +614,18 @@ main(int argc, char **argv)
 	argv += optind;
 
 	if (argc == 0) {
-		ds[0] = ReadSet(NULL);
-		printf("x stdin\n");
+		ds[0] = ReadSet("-", column, delim);
 		nds = 1;
 	} else {
 		if (argc > (MAX_DS - 1))
 			usage("Too many datasets.");
 		nds = argc;
-		for (i = 0; i < nds; i++) {
-			ds[i] = ReadSet(argv[i]);
-			printf("%c %s\n", symbol[i+1], argv[i]);
-		}
+		for (i = 0; i < nds; i++)
+			ds[i] = ReadSet(argv[i], column, delim);
 	}
+
+	for (i = 0; i < nds; i++) 
+		printf("%c %s\n", symbol[i+1], ds[i]->name);
 
 	if (!flag_n) {
 		SetupPlot(termwidth, flag_s, nds);

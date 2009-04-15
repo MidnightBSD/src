@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/tools/nanobsd/nanobsd.sh,v 1.7.2.5 2006/01/31 15:56:33 phk Exp $
+# $FreeBSD: src/tools/tools/nanobsd/nanobsd.sh,v 1.28 2007/08/26 14:57:08 phk Exp $
 #
 
 set -e
@@ -44,6 +44,9 @@ NANO_SRC=/usr/src
 
 # Where nanobsd additional files live under the source tree
 NANO_TOOLS=tools/tools/nanobsd
+
+# Where cust_pkg() finds packages to install
+NANO_PACKAGE_DIR=${NANO_SRC}/${NANO_TOOLS}/Pkg
 
 # Object tree directory
 # default is subdir of /usr/obj
@@ -75,10 +78,14 @@ NANO_NEWFS="-b 4096 -f 512 -i 8192 -O1 -U"
 NANO_DRIVE=ad0
 
 # Target media size in 512 bytes sectors
-NANO_MEDIASIZE=1048576
+NANO_MEDIASIZE=1000000
 
 # Number of code images on media (1 or 2)
 NANO_IMAGES=2
+
+# 0 -> Leave second image all zeroes so it compresses better.
+# 1 -> Initialize second image with a copy of the first
+NANO_INIT_IMG2=1
 
 # Size of code file system in 512 bytes sectors
 # If zero, size will be as large as possible.
@@ -100,8 +107,12 @@ NANO_RAM_ETCSIZE=10240
 NANO_RAM_TMPVARSIZE=10240
 
 # Media geometry, only relevant if bios doesn't understand LBA.
-NANO_SECTS=32
+NANO_SECTS=63
 NANO_HEADS=16
+
+# boot0 flags/options and configuration
+NANO_BOOT0CFG="-o packet -s 1 -m 3"
+NANO_BOOTLOADER="boot/boot0sio"
 
 #######################################################################
 # Not a variable at this time
@@ -154,7 +165,7 @@ build_kernel ( ) (
 
 	cd ${NANO_SRC}
 	${NANO_PMAKE} buildkernel \
-		__MAKE_CONF=${NANO_MAKE_CONF} KERNCONF=${NANO_KERNEL} \
+		__MAKE_CONF=${NANO_MAKE_CONF} KERNCONF=`basename ${NANO_KERNEL}` \
 		> ${MAKEOBJDIRPREFIX}/_.bk 2>&1
 )
 
@@ -192,7 +203,7 @@ install_etc ( ) (
 	echo "## install /etc"
 	echo "### log: ${MAKEOBJDIRPREFIX}/_.etc"
 
-	cd ${NANO_SRC}/etc
+	cd ${NANO_SRC}
 	${NANO_PMAKE} __MAKE_CONF=${NANO_MAKE_CONF} distribution \
 		DESTDIR=${NANO_WORLDDIR} \
 		> ${MAKEOBJDIRPREFIX}/_.etc 2>&1
@@ -205,7 +216,7 @@ install_kernel ( ) (
 	cd ${NANO_SRC}
 	${NANO_PMAKE} installkernel \
 		DESTDIR=${NANO_WORLDDIR} \
-		__MAKE_CONF=${NANO_MAKE_CONF} KERNCONF=${NANO_KERNEL} \
+		__MAKE_CONF=${NANO_MAKE_CONF} KERNCONF=`basename ${NANO_KERNEL}` \
 		> ${MAKEOBJDIRPREFIX}/_.ik 2>&1
 )
 
@@ -228,15 +239,19 @@ setup_nanobsd ( ) (
 	(
 	cd ${NANO_WORLDDIR}
 
-	# create diskless marker file
-	touch etc/diskless
-
-	# save config file for scripts
-	echo "NANO_DRIVE=${NANO_DRIVE}" > etc/nanobsd.conf
-
-	echo "/dev/${NANO_DRIVE}s1a / ufs ro 1 1" > etc/fstab
-	echo "/dev/${NANO_DRIVE}s3 /cfg ufs rw,noauto 2 2" >> etc/fstab
-	mkdir -p cfg
+	# Move /usr/local/etc to /etc/local so that the /cfg stuff
+	# can stomp on it.  Otherwise packages like ipsec-tools which
+	# have hardcoded paths under ${prefix}/etc are not tweakable.
+	if [ -d usr/local/etc ] ; then
+		(
+		mkdir etc/local
+		cd usr/local/etc
+		find . -print | cpio -dumpl ../../../etc/local
+		cd ..
+		rm -rf etc
+		ln -s ../../etc/local etc
+		)
+	fi
 
 	for d in var etc
 	do
@@ -260,6 +275,27 @@ setup_nanobsd ( ) (
 	ln -s var/tmp tmp
 
 	) > ${MAKEOBJDIRPREFIX}/_.dl 2>&1
+)
+
+setup_nanobsd_etc ( ) (
+	echo "## configure nanobsd /etc"
+
+	(
+	cd ${NANO_WORLDDIR}
+
+	# create diskless marker file
+	touch etc/diskless
+
+	# Make root filesystem R/O by default
+	echo "root_rw_mount=NO" >> etc/defaults/rc.conf
+
+	# save config file for scripts
+	echo "NANO_DRIVE=${NANO_DRIVE}" > etc/nanobsd.conf
+
+	echo "/dev/${NANO_DRIVE}s1a / ufs ro 1 1" > etc/fstab
+	echo "/dev/${NANO_DRIVE}s3 /cfg ufs rw,noauto 2 2" >> etc/fstab
+	mkdir -p cfg
+	)
 )
 
 prune_usr() (
@@ -356,8 +392,8 @@ create_i386_diskimage ( ) (
 	fdisk ${MD}
 	# XXX: params
 	# XXX: pick up cached boot* files, they may not be in image anymore.
-	boot0cfg -B -b ${NANO_WORLDDIR}/boot/boot0sio -o packet -s 1 -m 3 ${MD}
-	bsdlabel -w -B ${MD}s1
+	boot0cfg -B -b ${NANO_WORLDDIR}/${NANO_BOOTLOADER} ${NANO_BOOT0CFG} ${MD}
+	bsdlabel -w -B -b ${NANO_WORLDDIR}/boot/boot ${MD}s1
 	bsdlabel ${MD}s1
 
 	# Create first image
@@ -370,9 +406,16 @@ create_i386_diskimage ( ) (
 	( cd ${MNT} && du -k ) > ${MAKEOBJDIRPREFIX}/_.du
 	umount ${MNT}
 
-	if [ $NANO_IMAGES -gt 1 ] ; then
+	if [ $NANO_IMAGES -gt 1 -a $NANO_INIT_IMG2 -gt 0 ] ; then
 		# Duplicate to second image (if present)
 		dd if=/dev/${MD}s1 of=/dev/${MD}s2 bs=64k
+		mount /dev/${MD}s2a ${MNT}
+		for f in ${MNT}/etc/fstab ${MNT}/conf/base/etc/fstab
+		do
+			sed -i "" "s/${NANO_DRIVE}s1/${NANO_DRIVE}s2/g" $f
+		done
+		umount ${MNT}
+
 	fi
 	
 	# Create Config slice
@@ -448,6 +491,49 @@ cust_install_files () (
 )
 
 #######################################################################
+# Install packages from ${NANO_PACKAGE_DIR}
+
+cust_pkg () (
+
+	# Copy packages into chroot
+	mkdir -p ${NANO_WORLDDIR}/Pkg
+	cp ${NANO_PACKAGE_DIR}/* ${NANO_WORLDDIR}/Pkg
+
+	# Count & report how many we have to install
+	todo=`ls ${NANO_WORLDDIR}/Pkg | wc -l`
+	echo "=== TODO: $todo"
+	ls ${NANO_WORLDDIR}/Pkg
+	echo "==="
+	while true
+	do
+		# Record how may we have now
+		have=`ls ${NANO_WORLDDIR}/var/db/pkg | wc -l`
+
+		# Attempt to install more packages
+		# ...but no more than 200 at a time due to pkg_add's internal
+		# limitations.
+		chroot ${NANO_WORLDDIR} sh -c \
+			'ls Pkg/*tbz | xargs -n 200 pkg_add -F' || true
+
+		# See what that got us
+		now=`ls ${NANO_WORLDDIR}/var/db/pkg | wc -l`
+		echo "=== NOW $now"
+		ls ${NANO_WORLDDIR}/var/db/pkg
+		echo "==="
+
+
+		if [ $now -eq $todo ] ; then
+			echo "DONE $now packages"
+			break
+		elif [ $now -eq $have ] ; then
+			echo "FAILED: Nothing happened on this pass"
+			exit 2
+		fi
+	done
+	rm -rf ${NANO_WORLDDIR}/Pkg
+)
+
+#######################################################################
 # Convenience function:
 # 	Register $1 as customize function.
 
@@ -461,16 +547,30 @@ customize_cmd () {
 #
 #######################################################################
 
+usage () {
+	(
+	echo "Usage: $0 [-b/-k/-w] [-c config_file]"
+	echo "	-b	suppress builds (both kernel and world)"
+	echo "	-k	suppress buildkernel"
+	echo "	-w	suppress buildworld"
+	echo "	-c	specify config file"
+	) 1>&2
+	exit 2
+}
+
 #######################################################################
 # Parse arguments
 
-do_build=true
+do_kernel=true
+do_world=true
 
-args=`getopt bc:h $*`
+set +e
+args=`getopt bc:hkw $*`
 if [ $? -ne 0 ] ; then
-	echo "Usage: $0 [-c config file]" 1>&2
+	usage
 	exit 2
 fi
+set -e
 
 set -- $args
 for i
@@ -479,7 +579,12 @@ do
 	in
 	-b)
 		shift;
-		do_build=false
+		do_world=false
+		do_kernel=false
+		;;
+	-k)
+		shift;
+		do_kernel=false
 		;;
 	-c)
 		. "$2"
@@ -487,8 +592,11 @@ do
 		shift;
 		;;
 	-h)
-		echo "Usage: $0 [-b] [-c config file]"
-		exit 2
+		usage
+		;;
+	-w)
+		shift;
+		do_world=false
 		;;
 	--)
 		shift;
@@ -497,8 +605,8 @@ do
 done
 
 if [ $# -gt 0 ] ; then
-	echo "Extraneous arguments"
-	exit 2
+	echo "$0: Extraneous arguments supplied"
+	usage
 fi
 
 #######################################################################
@@ -543,23 +651,31 @@ export NANO_SECTS
 export NANO_SRC
 export NANO_TOOLS
 export NANO_WORLDDIR
+export NANO_BOOT0CFG
+export NANO_BOOTLOADER
 
 #######################################################################
 # And then it is as simple as that...
 
-if $do_build ; then
+if $do_world ; then
 	clean_build
 	make_conf_build
 	build_world
+else
+	echo "## Skipping buildworld (as instructed)"
+fi
+
+if $do_kernel ; then
 	build_kernel
 else
-	echo "## Skipping build steps (as instructed)"
+	echo "## Skipping buildkernel (as instructed)"
 fi
 
 clean_world
 make_conf_install
 install_world
 install_etc
+setup_nanobsd_etc
 install_kernel
 
 run_customize
