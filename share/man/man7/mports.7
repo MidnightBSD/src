@@ -1,4 +1,4 @@
-.\"
+.\" Copyright (c) 2009 Lucas Holt
 .\" Copyright (c) 1997 David E. O'Brien
 .\"
 .\" All rights reserved.
@@ -24,17 +24,17 @@
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .\" $FreeBSD: src/share/man/man7/ports.7,v 1.50.2.2 2005/08/10 20:43:27 jcamou Exp $
-.\" $MidnightBSD$
+.\" $MidnightBSD: src/share/man/man7/ports.7,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 .\"
-.Dd October 31, 2006
-.Dt PORTS 7
+.Dd April 15, 2009
+.Dt MPORTS 7
 .Os
 .Sh NAME
-.Nm ports
+.Nm mports
 .Nd contributed applications
 .Sh DESCRIPTION
 The
-.Fx
+.Mx
 Ports Collection
 offers a simple way for users and
 administrators to install applications.
@@ -58,7 +58,7 @@ simply type
 to install the application.
 .Pp
 It is possible to download and use ports from the
-.Fx
+.Mx
 repository
 that are newer than the installed system; however it is important to
 install the appropriate
@@ -348,13 +348,7 @@ Location of the mports tree.
 This is
 .Pa /usr/mports
 on
-.Fx
-and
-.Ox ,
-and
-.Pa /usr/pkgsrc
-on
-.Nx .
+.Mx .
 .It Va WRKDIRPREFIX
 Where to create any temporary files.
 Useful if
@@ -404,12 +398,12 @@ Try going to these sites for all files and patches, last.
 Where to get
 .Pa INDEX
 source built on
-.Fx
+.Mx
 cluster (for
 .Cm fetchindex
 target).
 Defaults to
-.Pa http://www.FreeBSD.org/ports/ .
+.Pa http://www.MidnightBSD.org/ports/ .
 .It Va FETCHINDEX
 Command to get
 .Pa INDEX
@@ -453,16 +447,10 @@ If defined, disable check for security vulnerabilities using
 when installing new ports.
 .El
 .Sh FILES
-.Bl -tag -width ".Pa /usr/ports/Mk/bsd.port.mk" -compact
-.It Pa /usr/ports
+.Bl -tag -width ".Pa /usr/mports/Mk/bsd.mport.mk" -compact
+.It Pa /usr/mports
 The default ports directory
-.No ( Fx
-and
-.Ox ) .
-.It Pa /usr/pkgsrc
-The default ports directory
-.Pq Nx .
-.It Pa /usr/ports/Mk/bsd.port.mk
+.It Pa /usr/mports/Mk/bsd.mport.mk
 The big Kahuna.
 .El
 .Sh SEE ALSO
@@ -492,14 +480,22 @@ appeared in
 It has since spread to
 .Nx
 and
-.Ox .
+.Ox
+with a major rewrite in 
+.Mx 0.1.1 .
 .Sh AUTHORS
 .An -nosplit
 This manual page was originated by
 .An David O'Brien .
+It was rewritten for
+.Mx
+by
+.An Lucas Holt .
 .Sh BUGS
-Ports documentation is split over four places \(em
-.Pa /usr/ports/Mk/bsd.port.mk ,
+Ports documentation is split over five places \(em
+.Pa /usr/mports/Mk/bsd.mport.mk ,
+.%B "The MidnightBSD website and wiki"
+http://www.midnightbsd.org/wiki ,
 .%B "The Porter's Handbook" ,
 the
 .Dq "Packages and Ports"

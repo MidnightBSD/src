@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/man/man7/Makefile,v 1.29.8.1 2006/01/25 13:22:58 harti Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/man/man7/Makefile,v 1.2 2006/10/31 19:20:02 laffer1 Exp $
 
 #MISSING: eqnchar.7 ms.7 term.7
 MAN=	ascii.7 \
@@ -16,8 +16,8 @@ MAN=	ascii.7 \
 	intro.7 \
 	maclabel.7 \
 	mailaddr.7 \
+	mports.7 \
 	operator.7 \
-	ports.7 \
 	release.7 \
 	sdoc.7 \
 	security.7 \
@@ -26,6 +26,6 @@ MAN=	ascii.7 \
 	tuning.7
 
 MLINKS=	intro.7 miscellaneous.7 \
-	ports.7 mports.7
+	mports.7 ports.7
 
 .include <bsd.prog.mk>
