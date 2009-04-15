@@ -29,12 +29,10 @@
 
 #include <sys/param.h>  /* __FreeBSD_version */
 
-#if __FreeBSD__ > 4
 #define	HAVE_ACL_GET_PERM 0
 #define	HAVE_ACL_GET_PERM_NP 1
 #define	HAVE_ACL_PERMSET_T 1
 #define	HAVE_ACL_USER 1
-#endif
 #undef	HAVE_ATTR_XATTR_H
 #define	HAVE_BZLIB_H 1
 #define	HAVE_CHFLAGS 1
@@ -72,9 +70,7 @@
 #define	HAVE_MEMMOVE 1
 #define	HAVE_MEMORY_H 1
 #define	HAVE_MEMSET 1
-#if __FreeBSD_version >= 450002 /* nl_langinfo introduced */
 #define	HAVE_NL_LANGINFO 1
-#endif
 #define	HAVE_PATHS_H 1
 #define	HAVE_PWD_H 1
 #define	HAVE_REGEX_H 1
