@@ -36281,9 +36281,6 @@ tools/tools/tinderbox/tinderbox.pl -text
 tools/tools/tinderbox/www/Makefile -text
 tools/tools/tinderbox/www/index.cgi -text
 tools/tools/tinderbox/www/tb.css -text
-tools/tools/upgrade/doupgrade.sh -text
-tools/tools/upgrade/getosreldate.sh -text
-tools/tools/upgrade/move_aout_libs.sh -text
 tools/tools/usb/print-usb-if-vids.sh -text
 tools/tools/vop_table/README -text
 tools/tools/vop_table/vop_table.pl -text
