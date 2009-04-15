@@ -33,8 +33,15 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/config.c,v 1.3 2004/01/26 10:27:18 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/config.c,v 1.6 2006/07/17 08:35:47 stefanf Exp $
  */
+
+#include <err.h>
+#include <errno.h>
+#include <netgraph.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "ngctl.h"
 
@@ -47,7 +54,7 @@ const struct ngcmd config_cmd = {
 	"config <path> [arguments]",
 	"get or set configuration of node at <path>",
 	NULL,
-	{}
+	{ NULL }
 };
 
 static int
@@ -62,7 +69,7 @@ ConfigCmd(int ac, char **av)
 
 	/* Get arguments */
 	if (ac < 2)
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	path = av[1];
 
 	*buf = '\0';
@@ -86,7 +93,7 @@ ConfigCmd(int ac, char **av)
 			break;
 		default:
 			warn("send msg");
-			return(CMDRTN_ERROR);
+			return (CMDRTN_ERROR);
 		}
 	} else {
 		if (NgRecvMsg(csock, resp, sizeof(sbuf), NULL) < 0
@@ -99,6 +106,6 @@ ConfigCmd(int ac, char **av)
 		printf("No config available for \"%s\"\n", path);
 	else
 		printf("Config for \"%s\":\n%s\n", path, status);
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 

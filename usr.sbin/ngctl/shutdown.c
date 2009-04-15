@@ -34,8 +34,12 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/shutdown.c,v 1.2 1999/11/30 02:45:32 archie Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/shutdown.c,v 1.4 2006/06/28 10:38:38 glebius Exp $
  */
+
+#include <err.h>
+#include <netgraph.h>
+#include <unistd.h>
 
 #include "ngctl.h"
 
@@ -60,16 +64,16 @@ ShutdownCmd(int ac, char **av)
 		path = av[1];
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Shutdown node */
 	if (NgSendMsg(csock, path, NGM_GENERIC_COOKIE,
 	    NGM_SHUTDOWN, NULL, 0) < 0) {
 		warn("shutdown");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 
 

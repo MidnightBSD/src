@@ -34,8 +34,14 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/list.c,v 1.6 2005/02/09 16:17:33 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/list.c,v 1.9 2007/02/06 08:48:28 kevlo Exp $
  */
+
+#include <err.h>
+#include <netgraph.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "ngctl.h"
 
@@ -67,7 +73,7 @@ ListCmd(int ac, char **av)
 
 	/* Get options */
 	optind = 1;
-	while ((ch = getopt(ac, av, "ln")) != EOF) {
+	while ((ch = getopt(ac, av, "ln")) != -1) {
 		switch (ch) {
 		case 'l':
 			list_hooks = 1;
@@ -77,7 +83,7 @@ ListCmd(int ac, char **av)
 			break;
 		case '?':
 		default:
-			return(CMDRTN_USAGE);
+			return (CMDRTN_USAGE);
 			break;
 		}
 	}
@@ -89,18 +95,18 @@ ListCmd(int ac, char **av)
 	case 0:
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Get list of nodes */
 	if (NgSendMsg(csock, ".", NGM_GENERIC_COOKIE,
 	    named_only ? NGM_LISTNAMES : NGM_LISTNODES, NULL, 0) < 0) {
 		warn("send msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
 	if (NgAllocRecvMsg(csock, &resp, NULL) < 0) {
 		warn("recv msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
 
 	/* Show each node */

@@ -34,28 +34,8 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/ngctl.h,v 1.12 2004/01/09 03:19:40 green Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/ngctl.h,v 1.13 2006/05/24 14:46:55 glebius Exp $
  */
-
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sysexits.h>
-#include <limits.h>
-#include <ctype.h>
-#include <errno.h>
-#include <err.h>
-
-#include <netgraph.h>
-#include <netgraph/ng_socket.h>
-#include <netgraph/ng_message.h>
 
 #define MAX_CMD_ALIAS	8
 

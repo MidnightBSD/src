@@ -34,8 +34,13 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/debug.c,v 1.2 2004/01/26 10:27:18 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/debug.c,v 1.5 2006/07/17 08:35:47 stefanf Exp $
  */
+
+#include <netgraph.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "ngctl.h"
 
@@ -49,7 +54,7 @@ const struct ngcmd debug_cmd = {
 	" debugging verbosity level. If the argument is ``+'' or ``-''"
 	" the debug level is incremented or decremented; otherwise,"
 	" it must be an absolute numerical level.",
-	{}
+	{ NULL }
 };
 
 static int
@@ -65,15 +70,15 @@ DebugCmd(int ac, char **av)
 		else if (!strcmp(av[1], "-"))
 			level = NgSetDebug(-1) - 1;
 		else if ((level = atoi(av[1])) < 0)
-			return(CMDRTN_USAGE);
+			return (CMDRTN_USAGE);
 		NgSetDebug(level);
 		break;
 	case 1:
 		printf("Current debug level is %d\n", NgSetDebug(-1));
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 

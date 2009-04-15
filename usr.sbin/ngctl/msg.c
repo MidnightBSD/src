@@ -35,8 +35,16 @@
  * OF SUCH DAMAGE.
  *
  * $Whistle: msg.c,v 1.2 1999/11/29 23:38:35 archie Exp $
- * $FreeBSD: src/usr.sbin/ngctl/msg.c,v 1.5 2004/01/27 21:52:52 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/msg.c,v 1.8 2006/09/21 01:48:47 kan Exp $
  */
+
+#include <err.h>
+#include <netgraph.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
+#include <unistd.h>
 
 #include "ngctl.h"
 
@@ -62,7 +70,7 @@ MsgCmd(int ac, char **av)
 
 	/* Get arguments */
 	if (ac < 3)
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	path = av[1];
 	cmdstr = av[2];
 
@@ -71,7 +79,7 @@ MsgCmd(int ac, char **av)
 		len += strlen(av[i]) + 1;
 	if ((buf = malloc(len)) == NULL) {
 		warn("malloc");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
 	for (*buf = '\0', i = 3; i < ac; i++) {
 		snprintf(buf + strlen(buf),
@@ -82,7 +90,7 @@ MsgCmd(int ac, char **av)
 	if (NgSendAsciiMsg(csock, path, "%s%s", cmdstr, buf) < 0) {
 		free(buf);
 		warn("send msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
 	free(buf);
 
@@ -106,7 +114,7 @@ MsgCmd(int ac, char **av)
 	}
 
 	/* Done */
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 
 /*
@@ -135,7 +143,7 @@ MsgRead()
 		if (m->header.arglen == 0)
 			printf("No arguments\n");
 		else
-			DumpAscii(m->data, m->header.arglen);
+			DumpAscii((const u_char *)m->data, m->header.arglen);
 		free(m);
 		return;
 	}

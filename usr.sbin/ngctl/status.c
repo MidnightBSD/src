@@ -34,8 +34,13 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/status.c,v 1.2 2004/01/26 10:27:18 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/status.c,v 1.5 2006/07/17 08:35:47 stefanf Exp $
  */
+
+#include <err.h>
+#include <errno.h>
+#include <netgraph.h>
+#include <stdio.h>
 
 #include "ngctl.h"
 
@@ -48,7 +53,7 @@ const struct ngcmd status_cmd = {
 	"status <path>",
 	"Get human readable status information from the node at <path>",
 	NULL,
-	{}
+	{ NULL }
 };
 
 static int
@@ -66,7 +71,7 @@ StatusCmd(int ac, char **av)
 		path = av[1];
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Get node status summary */
@@ -78,7 +83,7 @@ StatusCmd(int ac, char **av)
 			break;
 		default:
 			warn("send msg");
-			return(CMDRTN_ERROR);
+			return (CMDRTN_ERROR);
 		}
 	} else {
 		if (NgRecvMsg(csock, resp, sizeof(sbuf), NULL) < 0
@@ -91,6 +96,6 @@ StatusCmd(int ac, char **av)
 		printf("No status available for \"%s\"\n", path);
 	else
 		printf("Status for \"%s\":\n%s\n", path, status);
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 

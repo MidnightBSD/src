@@ -34,8 +34,14 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/types.c,v 1.4 2004/01/27 21:52:52 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/types.c,v 1.7 2006/07/17 08:35:47 stefanf Exp $
  */
+
+#include <err.h>
+#include <netgraph.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "ngctl.h"
 
@@ -46,7 +52,7 @@ const struct ngcmd types_cmd = {
 	"types",
 	"Show information about all installed node types",
 	NULL,
-	{}
+	{ NULL }
 };
 
 static int
@@ -62,18 +68,18 @@ TypesCmd(int ac, char **av __unused)
 	case 1:
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Get list of types */
 	if (NgSendMsg(csock, ".", NGM_GENERIC_COOKIE,
 	    NGM_LISTTYPES, NULL, 0) < 0) {
 		warn("send msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
 	if (NgAllocRecvMsg(csock, &resp, NULL) < 0) {
 		warn("recv msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
 
 	/* Show each type */

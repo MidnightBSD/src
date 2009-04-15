@@ -34,8 +34,13 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/name.c,v 1.2 2004/01/26 10:27:18 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/name.c,v 1.5 2006/07/17 08:35:47 stefanf Exp $
  */
+
+#include <err.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <netgraph.h>
 
 #include "ngctl.h"
 
@@ -46,7 +51,7 @@ const struct ngcmd name_cmd = {
 	"name <path> <name>",
 	"Assign name <name> to the node at <path>",
 	NULL,
-	{}
+	{ NULL }
 };
 
 static int
@@ -62,15 +67,15 @@ NameCmd(int ac, char **av)
 		snprintf(name.name, sizeof(name.name), "%s", av[2]);
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Send message */
 	if (NgSendMsg(csock, path, NGM_GENERIC_COOKIE,
 	    NGM_NAME, &name, sizeof(name)) < 0) {
 		warn("send msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 

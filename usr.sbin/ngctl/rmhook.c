@@ -34,8 +34,12 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/rmhook.c,v 1.3 2004/01/26 10:27:18 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/rmhook.c,v 1.5 2006/06/28 10:38:38 glebius Exp $
  */
+
+#include <err.h>
+#include <netgraph.h>
+#include <stdio.h>
 
 #include "ngctl.h"
 
@@ -68,15 +72,15 @@ RmHookCmd(int ac, char **av)
 		snprintf(rmh.ourhook, sizeof(rmh.ourhook), "%s", av[1]);
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Send message */
 	if (NgSendMsg(csock, path, NGM_GENERIC_COOKIE,
 	    NGM_RMHOOK, &rmh, sizeof(rmh)) < 0) {
 		warn("send msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 

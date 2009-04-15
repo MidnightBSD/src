@@ -34,9 +34,30 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/main.c,v 1.18 2005/02/04 20:09:11 maxim Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/main.c,v 1.23 2007/02/06 08:48:28 kevlo Exp $
  * $Whistle: main.c,v 1.12 1999/11/29 19:17:46 archie Exp $
  */
+
+#include <sys/param.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+
+#include <ctype.h>
+#include <err.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
+#include <unistd.h>
+#ifdef EDITLINE
+#include <signal.h>
+#include <histedit.h>
+#include <pthread.h>
+#endif
+
+#include <netgraph.h>
 
 #include "ngctl.h"
 
@@ -47,6 +68,7 @@
 
 /* Internal functions */
 static int	ReadFile(FILE *fp);
+static void	ReadSockets(fd_set *);
 static int	DoParseCommand(char *line);
 static int	DoCommand(int ac, char **av);
 static int	DoInteractive(void);
@@ -56,6 +78,11 @@ static void	Usage(const char *msg);
 static int	ReadCmd(int ac, char **av);
 static int	HelpCmd(int ac, char **av);
 static int	QuitCmd(int ac, char **av);
+#ifdef EDITLINE
+static sig_atomic_t	unblock;
+static pthread_mutex_t	mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t	cond = PTHREAD_COND_INITIALIZER;
+#endif
 
 /* List of commands */
 static const struct ngcmd *const cmds[] = {
@@ -120,7 +147,7 @@ main(int ac, char *av[])
 	snprintf(name, sizeof(name), "ngctl%d", getpid());
 
 	/* Parse command line */
-	while ((ch = getopt(ac, av, "df:n:")) != EOF) {
+	while ((ch = getopt(ac, av, "df:n:")) != -1) {
 		switch (ch) {
 		case 'd':
 			NgSetDebug(NgSetDebug(-1) + 1);
@@ -172,7 +199,7 @@ main(int ac, char *av[])
 		rtn = EX_OSERR;
 		break;
 	}
-	return(rtn);
+	return (rtn);
 }
 
 /*
@@ -189,14 +216,129 @@ ReadFile(FILE *fp)
 			continue;
 		if ((rtn = DoParseCommand(line)) != 0) {
 			warnx("line %d: error in file", num);
-			return(rtn);
+			return (rtn);
 		}
 	}
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
+}
+
+#ifdef EDITLINE
+/* Signal handler for Monitor() thread. */
+static void
+Unblock(int signal)
+{
+
+	unblock = 1;
 }
 
 /*
- * Interactive mode
+ * Thread that monitors csock and dsock while main thread
+ * can be blocked in el_gets().
+ */
+static void *
+Monitor(void *v)
+{
+	struct sigaction act;
+	const int maxfd = MAX(csock, dsock) + 1;
+
+	act.sa_handler = Unblock;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	sigaction(SIGUSR1, &act, NULL);
+
+	pthread_mutex_lock(&mutex);
+	for (;;) {
+		fd_set rfds;
+
+		/* See if any data or control messages are arriving. */
+		FD_ZERO(&rfds);
+		FD_SET(csock, &rfds);
+		FD_SET(dsock, &rfds);
+		unblock = 0;
+		if (select(maxfd, &rfds, NULL, NULL, NULL) <= 0) {
+			if (errno == EINTR) {
+				if (unblock == 1)
+					pthread_cond_wait(&cond, &mutex);
+				continue;
+			}
+			err(EX_OSERR, "select");
+		}
+		ReadSockets(&rfds);
+	}
+
+	return (NULL);
+}
+
+static char *
+Prompt(EditLine *el)
+{
+
+	return (PROMPT);
+}
+
+/*
+ * Here we start a thread, that will monitor the netgraph
+ * sockets and catch any unexpected messages or data on them,
+ * that can arrive while user edits his/her commands.
+ *
+ * Whenever we expect data on netgraph sockets, we send signal
+ * to monitoring thread. The signal forces it to exit select()
+ * system call and sleep on condvar until we wake it. While
+ * monitoring thread sleeps, we can do our work with netgraph
+ * sockets.
+ */
+static int
+DoInteractive(void)
+{
+	pthread_t monitor;
+	EditLine *el;
+	History *hist;
+	HistEvent hev = { 0, "" };
+
+	(*help_cmd.func)(0, NULL);
+	pthread_create(&monitor, NULL, Monitor, NULL);
+	el = el_init(getprogname(), stdin, stdout, stderr);
+	if (el == NULL)
+		return (CMDRTN_ERROR);
+	el_set(el, EL_PROMPT, Prompt);
+	el_set(el, EL_SIGNAL, 1);
+	el_set(el, EL_EDITOR, "emacs");
+	hist = history_init();
+	if (hist == NULL)
+		return (CMDRTN_ERROR);
+	history(hist, &hev, H_SETSIZE, 100);
+	history(hist, &hev, H_SETUNIQUE, 1);
+	el_set(el, EL_HIST, history, (const char *)hist);
+	el_source(el, NULL);
+
+	for (;;) {
+		const char *buf;
+		int count;
+
+		if ((buf = el_gets(el, &count)) == NULL) {
+			printf("\n");
+			break;
+		}
+		history(hist, &hev, H_ENTER, buf);
+		pthread_kill(monitor, SIGUSR1);
+		pthread_mutex_lock(&mutex);
+		if (DoParseCommand((char *)buf) == CMDRTN_QUIT)
+			break;
+		pthread_cond_signal(&cond);
+		pthread_mutex_unlock(&mutex);
+	}
+
+	history_end(hist);
+	el_end(el);
+	pthread_cancel(monitor);
+
+	return (CMDRTN_QUIT);
+}
+
+#else /* !EDITLINE */
+
+/*
+ * Interactive mode w/o libedit functionality.
  */
 static int
 DoInteractive(void)
@@ -230,27 +372,7 @@ DoInteractive(void)
 				printf("\n");
 		}
 
-		/* Display any incoming control message */
-		if (FD_ISSET(csock, &rfds))
-			MsgRead();
-
-		/* Display any incoming data packet */
-		if (FD_ISSET(dsock, &rfds)) {
-			u_char *buf;
-			char hook[NG_HOOKSIZ];
-			int rl;
-
-			/* Read packet from socket */
-			if ((rl = NgAllocRecvData(dsock, &buf, hook)) < 0)
-				err(EX_OSERR, "reading hook \"%s\"", hook);
-			if (rl == 0)
-				errx(EX_OSERR, "EOF from hook \"%s\"?", hook);
-
-			/* Write packet to stdout */
-			printf("Rec'd data packet on hook \"%s\":\n", hook);
-			DumpAscii(buf, rl);
-			free(buf);
-		}
+		ReadSockets(&rfds);
 
 		/* Get any user input */
 		if (FD_ISSET(0, &rfds)) {
@@ -264,7 +386,37 @@ DoInteractive(void)
 				break;
 		}
 	}
-	return(CMDRTN_QUIT);
+	return (CMDRTN_QUIT);
+}
+#endif /* !EDITLINE */
+
+/*
+ * Read and process data on netgraph control and data sockets.
+ */
+static void
+ReadSockets(fd_set *rfds)
+{
+	/* Display any incoming control message. */
+	if (FD_ISSET(csock, rfds))
+		MsgRead();
+
+	/* Display any incoming data packet. */
+	if (FD_ISSET(dsock, rfds)) {
+		char hook[NG_HOOKSIZ];
+		u_char *buf;
+		int rl;
+
+		/* Read packet from socket. */
+		if ((rl = NgAllocRecvData(dsock, &buf, hook)) < 0)
+			err(EX_OSERR, "reading hook \"%s\"", hook);
+		if (rl == 0)
+			errx(EX_OSERR, "EOF from hook \"%s\"?", hook);
+
+		/* Write packet to stdout. */
+		printf("Rec'd data packet on hook \"%s\":\n", hook);
+		DumpAscii(buf, rl);
+		free(buf);
+	}
 }
 
 /*
@@ -282,7 +434,7 @@ DoParseCommand(char *line)
 	    av[++ac] = strtok(NULL, WHITESPACE));
 
 	/* Do command */
-	return(DoCommand(ac, av));
+	return (DoCommand(ac, av));
 }
 
 /*
@@ -295,12 +447,12 @@ DoCommand(int ac, char **av)
 	int rtn;
 
 	if (ac == 0 || *av[0] == 0)
-		return(CMDRTN_OK);
+		return (CMDRTN_OK);
 	if ((cmd = FindCommand(av[0])) == NULL)
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	if ((rtn = (*cmd->func)(ac, av)) == CMDRTN_USAGE)
 		warnx("usage: %s", cmd->cmd);
-	return(rtn);
+	return (rtn);
 }
 
 /*
@@ -315,16 +467,16 @@ FindCommand(const char *string)
 		if (MatchCommand(cmds[k], string)) {
 			if (found != -1) {
 				warnx("\"%s\": ambiguous command", string);
-				return(NULL);
+				return (NULL);
 			}
 			found = k;
 		}
 	}
 	if (found == -1) {
 		warnx("\"%s\": unknown command", string);
-		return(NULL);
+		return (NULL);
 	}
-	return(cmds[found]);
+	return (cmds[found]);
 }
 
 /*
@@ -367,17 +519,17 @@ ReadCmd(int ac, char **av)
 	case 2:
 		if ((fp = fopen(av[1], "r")) == NULL) {
 			warn("%s", av[1]);
-			return(CMDRTN_ERROR);
+			return (CMDRTN_ERROR);
 		}
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Process it */
 	rtn = ReadFile(fp);
 	fclose(fp);
-	return(rtn);
+	return (rtn);
 }
 
 /*
@@ -403,7 +555,7 @@ HelpCmd(int ac, char **av)
 			*s = '\0';
 			printf("  %-10s %s\n", buf, cmd->desc);
 		}
-		return(CMDRTN_OK);
+		return (CMDRTN_OK);
 	default:
 		/* Show help on a specific command */
 		if ((cmd = FindCommand(av[1])) != NULL) {
@@ -446,7 +598,7 @@ HelpCmd(int ac, char **av)
 			}
 		}
 	}
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 
 /*
@@ -455,7 +607,7 @@ HelpCmd(int ac, char **av)
 static int
 QuitCmd(int ac __unused, char **av __unused)
 {
-	return(CMDRTN_QUIT);
+	return (CMDRTN_QUIT);
 }
 
 /*

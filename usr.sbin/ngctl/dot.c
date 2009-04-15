@@ -35,10 +35,15 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/dot.c,v 1.3 2004/01/27 21:52:52 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/dot.c,v 1.5 2007/02/06 08:48:28 kevlo Exp $
  */
 
+#include <err.h>
 #include <inttypes.h>
+#include <netgraph.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "ngctl.h"
 
@@ -65,7 +70,7 @@ DotCmd(int ac, char **av)
 
 	/* Get options */
 	optind = 1;
-	while ((ch = getopt(ac, av, "")) != EOF) {
+	while ((ch = getopt(ac, av, "")) != -1) {
 		switch (ch) {
 		case '?':
 		default:

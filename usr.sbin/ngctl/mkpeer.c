@@ -34,8 +34,12 @@
  * THIS SOFTWARE, EVEN IF WHISTLE COMMUNICATIONS IS ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ngctl/mkpeer.c,v 1.2 2004/01/26 10:27:18 ru Exp $
+ * $FreeBSD: src/usr.sbin/ngctl/mkpeer.c,v 1.5 2006/07/17 08:35:47 stefanf Exp $
  */
+
+#include <err.h>
+#include <netgraph.h>
+#include <stdio.h>
 
 #include "ngctl.h"
 
@@ -50,7 +54,7 @@ const struct ngcmd mkpeer_cmd = {
 	" connection are \"hook\" on the original node and \"peerhook\""
 	" on the new node."
 	" If \"path\" is omitted then \".\" is assumed.",
-	{}
+	{ NULL }
 };
 
 static int
@@ -72,15 +76,15 @@ MkPeerCmd(int ac, char **av)
 		snprintf(mkp.peerhook, sizeof(mkp.peerhook), "%s", av[3]);
 		break;
 	default:
-		return(CMDRTN_USAGE);
+		return (CMDRTN_USAGE);
 	}
 
 	/* Send message */
 	if (NgSendMsg(csock, path, NGM_GENERIC_COOKIE,
 	    NGM_MKPEER, &mkp, sizeof(mkp)) < 0) {
 		warn("send msg");
-		return(CMDRTN_ERROR);
+		return (CMDRTN_ERROR);
 	}
-	return(CMDRTN_OK);
+	return (CMDRTN_OK);
 }
 
