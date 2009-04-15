@@ -3,7 +3,7 @@
 /*
  * Japanese LOCALE_CTYPE definitions using EUC of JIS character sets
  *
- * $FreeBSD: src/share/mklocale/ja_JP.eucJP.src,v 1.3.16.1 2006/02/19 05:47:14 ume Exp $
+ * $FreeBSD: src/share/mklocale/ja_JP.eucJP.src,v 1.5 2007/05/09 21:34:51 ache Exp $
  */
 
 ENCODING	"EUC"
@@ -237,10 +237,9 @@ SWIDTH2		0xf2a1 - 0xf2fe
 SWIDTH2		0xf3a1 - 0xf3fe
 SWIDTH2		0xf4a1 - 0xf4a4
 
-/*
- * This is for Code Set 3, half-width kana
+/* We don't have codeset 3 and 4.
+   So codeset 3 is only dummy definition 
  */
-SPECIAL		0xa1 - 0xdf
-PHONOGRAM	0xa1 - 0xdf
-SWIDTH1		0xa1 - 0xdf
-CONTROL		0x84 - 0x97 0x9b - 0x9f 0xe0 - 0xfe
+PRINT        0xa1 - 0xfe
+SPECIAL      0xa1 - 0xfe
+SWIDTH1      0xa1 - 0xfe
