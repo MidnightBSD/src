@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.18 2009/04/06 03:11:07 ctriv Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.19 2009/04/15 01:25:11 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -888,6 +888,7 @@ _rescue= rescue/rescue
 build-tools:
 .for _tool in \
     bin/csh \
+    bin/mksh \
     bin/sh \
     ${_rescue} \
     lib/ncurses/ncurses \
