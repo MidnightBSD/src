@@ -36210,9 +36210,6 @@ tools/tools/kttcp/kttcp.c -text
 tools/tools/kttcp/sys/Makefile -text
 tools/tools/kttcp/sys/kttcp.c -text
 tools/tools/kttcp/sys/kttcpio.h -text
-tools/tools/mfc/Makefile -text
-tools/tools/mfc/mfc.awk -text
-tools/tools/mfc/mfc.sh -text
 tools/tools/mid/mid-build -text
 tools/tools/mid/mid-index -text
 tools/tools/mid/mid-master -text
