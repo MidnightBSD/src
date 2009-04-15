@@ -3,4 +3,4 @@
 /* #define AMU_BUILD_VERSION 1 */
 
 #include <sys/param.h>
-#define AMU_BUILD_VERSION __FreeBSD_version
+#define AMU_BUILD_VERSION __MidnightBSD_version
