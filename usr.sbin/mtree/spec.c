@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)spec.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mtree/spec.c,v 1.22 2005/03/29 11:44:17 tobez Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/mtree/spec.c,v 1.23 2006/07/03 10:55:21 maxim Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -235,6 +235,9 @@ set(char *t, NODE *ip)
 			if (*ep)
 				errx(1, "line %d: invalid link count %s",
 				lineno,  val);
+			break;
+		case F_OPT:
+			/* just set flag bit */
 			break;
 		case F_SIZE:
 			ip->st_size = strtoq(val, &ep, 10);

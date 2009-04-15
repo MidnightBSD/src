@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/ndiscvt.c,v 1.11.2.1 2005/10/27 17:06:47 wpaul Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/ndiscvt/ndiscvt.c,v 1.13 2006/09/21 01:47:32 kan Exp $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -377,7 +377,7 @@ main(int argc, char *argv[])
 
 	if (bin) {
 		sysfile = strdup(basename(sysfile));
-		ptr = sysfile;
+		ptr = (unsigned char *)sysfile;
 		while (*ptr) {
 			if (*ptr == '.')
 				*ptr = '_';

@@ -41,7 +41,7 @@
 static char sccsid[] = "@(#)trace.c	8.1 (Berkeley) 6/5/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/IPXrouted/trace.c,v 1.10 2003/11/15 17:10:56 trhodes Exp $";
+  "$FreeBSD: src/usr.sbin/IPXrouted/trace.c,v 1.11 2005/08/05 07:17:23 stefanf Exp $";
 #endif /* not lint */
 
 /*
@@ -66,13 +66,12 @@ int	tracing = 0;
 
 void dumpif(FILE *fd, struct interface *ifp);
 void dumptrace(FILE *fd, char *dir, struct ifdebug *ifd);
+static int iftraceinit(struct interface *ifp, struct ifdebug *ifd);
 
 void
 traceinit(ifp)
 	register struct interface *ifp;
 {
-	static int iftraceinit();
-
 	if (iftraceinit(ifp, &ifp->int_input) &&
 	    iftraceinit(ifp, &ifp->int_output))
 		return;

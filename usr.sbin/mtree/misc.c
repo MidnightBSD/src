@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)misc.c	8.1 (Berkeley) 6/6/93";
 #endif /*not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mtree/misc.c,v 1.16 2005/03/29 11:44:17 tobez Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/mtree/misc.c,v 1.17 2006/07/03 10:55:21 maxim Exp $");
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -66,6 +66,7 @@ static KEY keylist[] = {
 	{"mode",	F_MODE,		NEEDVALUE},
 	{"nlink",	F_NLINK,	NEEDVALUE},
 	{"nochange",	F_NOCHANGE,	0},
+	{"optional",	F_OPT,		0},
 #ifdef RMD160
 	{"ripemd160digest", F_RMD160,	NEEDVALUE},
 #endif

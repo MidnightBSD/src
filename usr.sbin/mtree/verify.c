@@ -33,7 +33,7 @@ static char sccsid[] = "@(#)verify.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/mtree/verify.c,v 1.23.8.1 2005/09/03 11:04:25 brian Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/mtree/verify.c,v 1.25 2006/07/03 10:55:21 maxim Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -158,6 +158,8 @@ miss(NODE *p, char *tail)
 	int serr;
 
 	for (; p; p = p->next) {
+		if (p->flags & F_OPT && !(p->flags & F_VISIT))
+			continue;
 		if (p->type != F_DIR && (dflag || p->flags & F_VISIT))
 			continue;
 		(void)strcpy(tail, p->name);

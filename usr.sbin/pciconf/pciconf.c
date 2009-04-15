@@ -29,12 +29,13 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/pciconf/pciconf.c,v 1.24.2.1 2005/12/14 09:13:46 des Exp $";
+  "$FreeBSD: src/usr.sbin/pciconf/pciconf.c,v 1.30 2007/10/04 22:27:08 se Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
 #include <sys/fcntl.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -46,6 +47,7 @@ static const char rcsid[] =
 #include <dev/pci/pcireg.h>
 
 #include "pathnames.h"
+#include "pciconf.h"
 
 struct pci_device_info
 {
@@ -64,10 +66,10 @@ struct pci_vendor_info
 
 TAILQ_HEAD(,pci_vendor_info)	pci_vendors;
 
-static void list_devs(int vendors);
+static void list_devs(int verbose, int caps);
 static void list_verbose(struct pci_conf *p);
-static char *guess_class(struct pci_conf *p);
-static char *guess_subclass(struct pci_conf *p);
+static const char *guess_class(struct pci_conf *p);
+static const char *guess_subclass(struct pci_conf *p);
 static int load_vendors(void);
 static void readit(const char *, const char *, int);
 static void writeit(const char *, const char *, const char *, int);
@@ -76,10 +78,10 @@ static void chkattached(const char *, int);
 static int exitstatus = 0;
 
 static void
-usage()
+usage(void)
 {
 	fprintf(stderr, "%s\n%s\n%s\n%s\n",
-		"usage: pciconf -l [-v]",
+		"usage: pciconf -l [-cv]",
 		"       pciconf -a selector",
 		"       pciconf -r [-b | -h] selector addr[:addr2]",
 		"       pciconf -w [-b | -h] selector addr value");
@@ -90,15 +92,19 @@ int
 main(int argc, char **argv)
 {
 	int c;
-	int listmode, readmode, writemode, attachedmode, verbose;
+	int listmode, readmode, writemode, attachedmode, caps, verbose;
 	int byte, isshort;
 
-	listmode = readmode = writemode = attachedmode = verbose = byte = isshort = 0;
+	listmode = readmode = writemode = attachedmode = caps = verbose = byte = isshort = 0;
 
-	while ((c = getopt(argc, argv, "alrwbhv")) != -1) {
+	while ((c = getopt(argc, argv, "aclrwbhv")) != -1) {
 		switch(c) {
 		case 'a':
 			attachedmode = 1;
+			break;
+
+		case 'c':
+			caps = 1;
 			break;
 
 		case 'l':
@@ -137,7 +143,7 @@ main(int argc, char **argv)
 		usage();
 
 	if (listmode) {
-		list_devs(verbose);
+		list_devs(verbose, caps);
 	} else if (attachedmode) {
 		chkattached(argv[optind],
 		       byte ? 1 : isshort ? 2 : 4);
@@ -155,7 +161,7 @@ main(int argc, char **argv)
 }
 
 static void
-list_devs(int verbose)
+list_devs(int verbose, int caps)
 {
 	int fd;
 	struct pci_conf_io pc;
@@ -165,7 +171,7 @@ list_devs(int verbose)
 	if (verbose)
 		load_vendors();
 
-	fd = open(_PATH_DEVPCI, O_RDONLY, 0);
+	fd = open(_PATH_DEVPCI, caps ? O_RDWR : O_RDONLY, 0);
 	if (fd < 0)
 		err(1, "%s", _PATH_DEVPCI);
 
@@ -197,13 +203,12 @@ list_devs(int verbose)
 			return;
 		}
 		for (p = conf; p < &conf[pc.num_matches]; p++) {
-
-			printf("%s%d@pci%d:%d:%d:\tclass=0x%06x card=0x%08x "
+			printf("%s%d@pci%d:%d:%d:%d:\tclass=0x%06x card=0x%08x "
 			       "chip=0x%08x rev=0x%02x hdr=0x%02x\n",
 			       (p->pd_name && *p->pd_name) ? p->pd_name :
 			       "none",
 			       (p->pd_name && *p->pd_name) ? (int)p->pd_unit :
-			       none_count++,
+			       none_count++, p->pc_sel.pc_domain,
 			       p->pc_sel.pc_bus, p->pc_sel.pc_dev,
 			       p->pc_sel.pc_func, (p->pc_class << 16) |
 			       (p->pc_subclass << 8) | p->pc_progif,
@@ -212,6 +217,8 @@ list_devs(int verbose)
 			       p->pc_revid, p->pc_hdr);
 			if (verbose)
 				list_verbose(p);
+			if (caps)
+				list_caps(fd, p);
 		}
 	} while (pc.status == PCI_GETCONF_MORE_DEVS);
 
@@ -223,11 +230,11 @@ list_verbose(struct pci_conf *p)
 {
 	struct pci_vendor_info	*vi;
 	struct pci_device_info	*di;
-	char *dp;
+	const char *dp;
 
 	TAILQ_FOREACH(vi, &pci_vendors, link) {
 		if (vi->id == p->pc_vendor) {
-			printf("    vendor   = '%s'\n", vi->desc);
+			printf("    vendor     = '%s'\n", vi->desc);
 			break;
 		}
 	}
@@ -236,15 +243,15 @@ list_verbose(struct pci_conf *p)
 	} else {
 		TAILQ_FOREACH(di, &vi->devs, link) {
 			if (di->id == p->pc_device) {
-				printf("    device   = '%s'\n", di->desc);
+				printf("    device     = '%s'\n", di->desc);
 				break;
 			}
 		}
 	}
 	if ((dp = guess_class(p)) != NULL)
-		printf("    class    = %s\n", dp);
+		printf("    class      = %s\n", dp);
 	if ((dp = guess_subclass(p)) != NULL)
-		printf("    subclass = %s\n", dp);
+		printf("    subclass   = %s\n", dp);
 }
 
 /*
@@ -254,7 +261,7 @@ static struct
 {
 	int	class;
 	int	subclass;
-	char	*desc;
+	const char *desc;
 } pci_nomatch_tab[] = {
 	{PCIC_OLD,		-1,			"old"},
 	{PCIC_OLD,		PCIS_OLD_NONVGA,	"non-VGA display device"},
@@ -337,7 +344,7 @@ static struct
 	{0, 0,		NULL}
 };
 
-static char *
+static const char *
 guess_class(struct pci_conf *p)
 {
 	int	i;
@@ -349,7 +356,7 @@ guess_class(struct pci_conf *p)
 	return(NULL);
 }
 
-static char *
+static const char *
 guess_subclass(struct pci_conf *p)
 {
 	int	i;
@@ -365,7 +372,7 @@ guess_subclass(struct pci_conf *p)
 static int
 load_vendors(void)
 {
-	char *dbf;
+	const char *dbf;
 	FILE *db;
 	struct pci_vendor_info *cv;
 	struct pci_device_info *cd;
@@ -458,43 +465,8 @@ load_vendors(void)
 	return(error);
 }
 
-
-static struct pcisel
-getsel(const char *str)
-{
-	char *ep = strchr(str, '@');
-	char *epbase;
-	struct pcisel sel;
-
-	if (ep == NULL)
-		ep = (char *)str;
-	else
-		ep++;
-
-	epbase = ep;
-
-	if (strncmp(ep, "pci", 3) == 0) {
-		ep += 3;
-		sel.pc_bus = strtoul(ep, &ep, 0);
-		if (!ep || *ep++ != ':')
-			errx(1, "cannot parse selector %s", str);
-		sel.pc_dev = strtoul(ep, &ep, 0);
-		if (!ep || *ep != ':') {
-			sel.pc_func = 0;
-		} else {
-			ep++;
-			sel.pc_func = strtoul(ep, &ep, 0);
-		}
-		if (*ep == ':')
-			ep++;
-	}
-	if (*ep != '\x0' || ep == epbase)
-		errx(1, "cannot parse selector %s", str);
-	return sel;
-}
-
-static void
-readone(int fd, struct pcisel *sel, long reg, int width)
+uint32_t
+read_config(int fd, struct pcisel *sel, long reg, int width)
 {
 	struct pci_io pi;
 
@@ -505,7 +477,53 @@ readone(int fd, struct pcisel *sel, long reg, int width)
 	if (ioctl(fd, PCIOCREAD, &pi) < 0)
 		err(1, "ioctl(PCIOCREAD)");
 
-	printf("%0*x", width*2, pi.pi_data);
+	return (pi.pi_data);
+}
+
+static struct pcisel
+getsel(const char *str)
+{
+	char *ep = strchr(str, '@');
+	char *epbase;
+	struct pcisel sel;
+	unsigned long selarr[4];
+	int i;
+
+	if (ep == NULL)
+		ep = (char *)str;
+	else
+		ep++;
+
+	epbase = ep;
+
+	if (strncmp(ep, "pci", 3) == 0) {
+		ep += 3;
+		i = 0;
+		do {
+			selarr[i++] = strtoul(ep, &ep, 10);
+		} while ((*ep == ':' || *ep == '.') && *++ep != '\0' && i < 4);
+
+		if (i > 2)
+			sel.pc_func = selarr[--i];
+		else
+			sel.pc_func = 0;
+		sel.pc_dev = selarr[--i];
+		sel.pc_bus = selarr[--i];
+		if (i > 0)
+			sel.pc_domain = selarr[--i];
+		else
+			sel.pc_domain = 0;
+	}
+	if (*ep != '\x0' || ep == epbase)
+		errx(1, "cannot parse selector %s", str);
+	return sel;
+}
+
+static void
+readone(int fd, struct pcisel *sel, long reg, int width)
+{
+
+	printf("%0*x", width*2, read_config(fd, sel, reg, width));
 }
 
 static void
@@ -559,7 +577,7 @@ writeit(const char *name, const char *reg, const char *data, int width)
 }
 
 static void
-chkattached (const char *name, int width)
+chkattached(const char *name, int width)
 {
 	int fd;
 	struct pci_io pi;

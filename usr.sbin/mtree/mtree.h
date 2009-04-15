@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mtree.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: src/usr.sbin/mtree/mtree.h,v 1.7 2005/03/29 11:44:17 tobez Exp $
+ * $FreeBSD: src/usr.sbin/mtree/mtree.h,v 1.8 2006/07/03 10:55:21 maxim Exp $
  */
 
 #include <string.h>
@@ -78,6 +78,7 @@ typedef struct _node {
 #define	F_RMD160 0x40000			/* RIPEMD160 digest */
 #define	F_FLAGS	0x80000				/* file flags */
 #define	F_SHA256	0x100000				/* SHA-256 digest */
+#define F_OPT	0x200000			/* existence optional */
 	u_int	flags;				/* items set */
 
 #define	F_BLOCK	0x001				/* block special */

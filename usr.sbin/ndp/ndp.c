@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.sbin/ndp/ndp.c,v 1.16.8.4 2005/11/05 10:56:06 suz Exp $	*/
+/*	$FreeBSD: src/usr.sbin/ndp/ndp.c,v 1.22 2007/03/06 09:32:40 kevlo Exp $	*/
 /*	$KAME: ndp.c,v 1.104 2003/06/27 07:48:39 itojun Exp $	*/
 
 /*
@@ -107,7 +107,6 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <err.h>
 #include "gmt2local.h"
 
 /* packing rule for routing socket */
@@ -334,7 +333,7 @@ file(name)
 	args[3] = &arg[3][0];
 	args[4] = &arg[4][0];
 	retval = 0;
-	while (fgets(line, 100, fp) != NULL) {
+	while (fgets(line, sizeof(line), fp) != NULL) {
 		i = sscanf(line, "%49s %49s %49s %49s %49s",
 		    arg[0], arg[1], arg[2], arg[3], arg[4]);
 		if (i < 2) {

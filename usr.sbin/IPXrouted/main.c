@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/IPXrouted/main.c,v 1.12 2005/05/11 02:45:49 jmallett Exp $
+ * $FreeBSD: src/usr.sbin/IPXrouted/main.c,v 1.13 2006/09/21 02:01:46 kan Exp $
  */
 
 #ifndef lint
@@ -276,7 +276,8 @@ process(fd, pkt_type)
 	int pkt_type;
 {
 	struct sockaddr from;
-	int fromlen = sizeof (from), cc, omask;
+	int  cc, omask;
+	socklen_t fromlen = sizeof (from);
 	struct ipx *ipxdp = (struct ipx *)packet;
 
 	cc = recvfrom(fd, packet, sizeof (packet), 0, &from, &fromlen);

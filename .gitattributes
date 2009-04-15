@@ -38776,6 +38776,7 @@ usr.sbin/mtree/test/test01.sh -text
 usr.sbin/mtree/test/test02.sh -text
 usr.sbin/mtree/test/test03.sh -text
 usr.sbin/mtree/test/test04.sh -text
+usr.sbin/mtree/test/test05.sh -text
 usr.sbin/mtree/verify.c -text
 usr.sbin/named-checkconf/Makefile -text
 usr.sbin/named-checkzone/Makefile -text
@@ -38906,9 +38907,11 @@ usr.sbin/pccard/pccardd/readcis.h -text
 usr.sbin/pccard/pccardd/server.c -text
 usr.sbin/pccard/pccardd/util.c -text
 usr.sbin/pciconf/Makefile -text
+usr.sbin/pciconf/cap.c -text
 usr.sbin/pciconf/pathnames.h -text
 usr.sbin/pciconf/pciconf.8 -text
 usr.sbin/pciconf/pciconf.c -text
+usr.sbin/pciconf/pciconf.h -text
 usr.sbin/periodic/Makefile -text
 usr.sbin/periodic/periodic.8 -text
 usr.sbin/periodic/periodic.sh -text

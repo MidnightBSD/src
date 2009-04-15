@@ -41,7 +41,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)nfsd.c	8.9 (Berkeley) 3/29/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/nfsd/nfsd.c,v 1.32 2005/01/23 21:34:00 rwatson Exp $";
+  "$FreeBSD: src/usr.sbin/nfsd/nfsd.c,v 1.34 2005/12/21 10:12:05 delphij Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -124,7 +124,8 @@ main(int argc, char **argv)
 	struct sockaddr_in6 inet6peer;
 	fd_set ready, sockbits;
 	fd_set v4bits, v6bits;
-	int ch, connect_type_cnt, i, len, maxsock, msgsock;
+	int ch, connect_type_cnt, i, maxsock, msgsock;
+	socklen_t len;
 	int on = 1, unregister, reregister, sock;
 	int tcp6sock, ip6flag, tcpflag, tcpsock;
 	int udpflag, ecode, s, srvcnt;
