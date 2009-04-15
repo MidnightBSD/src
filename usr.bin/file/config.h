@@ -60,9 +60,7 @@
 #define HAVE_SNPRINTF 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#if __FreeBSD_version >= 500019
 #define HAVE_STDINT_H 1
-#endif
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1
@@ -201,8 +199,10 @@
 
 /* Enable GNU extensions on systems that have them.  */
 #ifndef __FreeBSD__
+#ifndef __MidnightBSD__
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE 1
+#endif
 #endif
 #endif
 
