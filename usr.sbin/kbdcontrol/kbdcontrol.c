@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/kbdcontrol/kbdcontrol.c,v 1.48.8.1 2005/07/21 17:04:02 emax Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/kbdcontrol/kbdcontrol.c,v 1.51 2006/11/16 12:27:51 ru Exp $");
 
 #include <ctype.h>
 #include <err.h>
@@ -130,7 +130,7 @@ void		print_key_definition_line(FILE *fp, int scancode,
 			struct keyent_t *key);
 void		print_keymap(void);
 void		release_keyboard(void);
-void		mux_keyboard(int op, char *kbd);
+void		mux_keyboard(u_int op, char *kbd);
 void		set_bell_values(char *opt);
 void		set_functionkey(char *keynumstr, char *string);
 void		set_keyboard(char *device);
@@ -907,11 +907,11 @@ set_bell_values(char *opt)
 
 	bell = 0;
 	if (!strncmp(opt, "quiet.", 6)) {
-		bell = 2;
+		bell = CONS_QUIET_BELL;
 		opt += 6;
 	}
 	if (!strcmp(opt, "visual"))
-		bell |= 1;
+		bell |= CONS_VISUAL_BELL;
 	else if (!strcmp(opt, "normal"))
 		duration = 5, pitch = 800;
 	else if (!strcmp(opt, "off"))
@@ -936,7 +936,7 @@ badopt:
 	}
 
 	ioctl(0, CONS_BELLTYPE, &bell);
-	if ((bell & ~2) == 0)
+	if (!(bell & CONS_VISUAL_BELL))
 		fprintf(stderr, "[=%d;%dB", pitch, duration);
 }
 
@@ -1082,7 +1082,7 @@ release_keyboard(void)
 }
 
 void
-mux_keyboard(int op, char *kbd)
+mux_keyboard(u_int op, char *kbd)
 {
 	keyboard_info_t	info;
 	char		*unit, *ep;

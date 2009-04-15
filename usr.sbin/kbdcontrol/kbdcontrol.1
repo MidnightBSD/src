@@ -11,9 +11,9 @@
 .\"    documentation and/or other materials provided with the distribution.
 .\"
 .\"     @(#)kbdcontrol.1
-.\" $FreeBSD: src/usr.sbin/kbdcontrol/kbdcontrol.1,v 1.36.2.3 2005/12/29 20:15:27 sobomax Exp $
+.\" $FreeBSD: src/usr.sbin/kbdcontrol/kbdcontrol.1,v 1.42 2006/11/16 13:43:05 ru Exp $
 .\"
-.Dd January 7, 2005
+.Dd November 16, 2006
 .Dt KBDCONTROL 1
 .Os
 .Sh NAME
@@ -92,6 +92,10 @@ If
 is preceded by the word
 .Cm quiet. ,
 the bell will not be rung when the ringing process is in the background vty.
+The
+.Cm visual
+bell, when chosen, applies to all vtys; other bell types
+can be set individually for each vty.
 .It Fl r Xo
 .Ar delay . Ns Ar repeat | Ar speed
 .Xc
@@ -243,18 +247,15 @@ To switch back to the default keyboard, use this command.
 .Dl kbdcontrol -k /dev/kbd0
 .Pp
 To allow using both the second USB keyboard and the first AT keyboard
-at the same time on console via
+at the same time on console via the
 .Xr kbdmux 4
-driver use the following sequence of commands.
-.Pp
-.Dl kbdcontrol -K < /dev/console
-.Pp
-.Dl kbdcontrol -a atkbd0 < /dev/kbdmux0
-.Pp
-.Dl kbdcontrol -a ukbd1 < /dev/kbdmux0
-.Pp
-.Dl kbdcontrol -k /dev/kbdmux0 < /dev/console
-.Pp
+driver, use the following sequence of commands.
+.Bd -literal -offset indent
+kbdcontrol -K < /dev/console
+kbdcontrol -a atkbd0 < /dev/kbdmux0
+kbdcontrol -a ukbd1 < /dev/kbdmux0
+kbdcontrol -k /dev/kbdmux0 < /dev/console
+.Ed
 .Sh SEE ALSO
 .Xr kbdmap 1 ,
 .Xr vidcontrol 1 ,
