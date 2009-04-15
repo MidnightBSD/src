@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2005 Bruce M. Simpson.
+ * Copyright (c) 2002-2006 Bruce M. Simpson.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,10 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *        This product includes software developed by Bruce M. Simpson.
- * 4. Neither the name of Bruce M. Simpson nor the names of
+ * 3. Neither the name of Bruce M. Simpson nor the names of
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
@@ -29,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/tools/tools/pirtool/pirtable.h,v 1.2 2005/01/21 17:05:33 bms Exp $
+ * $FreeBSD: src/tools/tools/pirtool/pirtable.h,v 1.6 2007/01/11 05:00:30 imp Exp $
  */
 
 /*
@@ -48,35 +45,35 @@
 #define PIR_FUNC(x)	((x) & 0x7)
 
 typedef struct {
-	u_int8_t	bus;		/* bus number of this device */
-	u_int8_t	devfunc;	/* only upper 5 device bits valid */
-	u_int8_t	inta_link;	/* how INTA is linked */
-	u_int8_t	inta_irqs[2];	/* how INTA may be routed (bitset) */
-	u_int8_t	intb_link;
-	u_int8_t	intb_irqs[2];
-	u_int8_t	intc_link;
-	u_int8_t	intc_irqs[2];
-	u_int8_t	intd_link;
-	u_int8_t	intd_irqs[2];	/* how this pin may be routed */
-	u_int8_t	slot;		/* physical slot number on bus,
+	uint8_t		bus;		/* bus number of this device */
+	uint8_t		devfunc;	/* only upper 5 device bits valid */
+	uint8_t		inta_link;	/* how INTA is linked */
+	uint16_t	inta_irqs;	/* how INTA may be routed (bitset) */
+	uint8_t		intb_link;
+	uint16_t	intb_irqs;
+	uint8_t		intc_link;
+	uint16_t	intc_irqs;
+	uint8_t		intd_link;
+	uint16_t	intd_irqs;	/* how this pin may be routed */
+	uint8_t		slot;		/* physical slot number on bus,
 					 * slot 0 if motherboard */
-	u_int8_t	reserved00;	/* must be zero */
-} pir_entry_t __packed;
+	uint8_t		reserved00;	/* must be zero */
+} __packed pir_entry_t;
 
 typedef struct {
-	u_int32_t	signature;	/* $PIR */
-	u_int8_t	minor;		/* minor version (0) */
-	u_int8_t	major;		/* major version (1) */
-	u_int16_t	size;		/* total size of tab;e */
-	u_int8_t	bus;		/* Bus number of router */
-	u_int8_t	devfunc;	/* Dev/Func of router */
-	u_int16_t	excl_irqs;	/* PCI Exclusive IRQs */
-	u_int32_t	compatible;	/* Device/Vendor ID of a register
+	uint32_t	signature;	/* $PIR */
+	uint8_t		minor;		/* minor version (0) */
+	uint8_t		major;		/* major version (1) */
+	uint16_t	size;		/* total size of table */
+	uint8_t		bus;		/* Bus number of router */
+	uint8_t		devfunc;	/* Dev/Func of router */
+	uint16_t	excl_irqs;	/* PCI Exclusive IRQs */
+	uint32_t	compatible;	/* Device/Vendor ID of a register
 					 * compatible PCI IRQ router device */
-	u_int32_t	miniport_data;	/* Windows specific */
-	u_int8_t	reserved00[11]; /* Must be zero */
-	u_int8_t	checksum;	/* Inverse mod-256 sum of table bytes */
+	uint32_t	miniport_data;	/* Windows specific */
+	uint8_t		reserved00[11]; /* Must be zero */
+	uint8_t		checksum;	/* Inverse mod-256 sum of table bytes */
 	pir_entry_t	entry[1];	/* 1..N device entries */
-} pir_table_t __packed;
+} __packed pir_table_t;
 
 #endif /* _PIRTABLE_H */
