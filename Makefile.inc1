@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.19 2009/04/15 01:25:11 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.20 2009/04/15 02:01:29 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -857,7 +857,7 @@ bootstrap-tools:
     usr.bin/xinstall \
     ${_gensnmptree} \
     usr.sbin/config \
-    ${_crunchgen} \
+    ${_crunchgen}
 	${_+_}@${ECHODIR} "===> ${_tool} (obj,depend,all,install)"; \
 		cd ${.CURDIR}/${_tool}; \
 		${MAKE} DIRPRFX=${_tool}/ obj; \
@@ -888,7 +888,6 @@ _rescue= rescue/rescue
 build-tools:
 .for _tool in \
     bin/csh \
-    bin/mksh \
     bin/sh \
     ${_rescue} \
     lib/ncurses/ncurses \
