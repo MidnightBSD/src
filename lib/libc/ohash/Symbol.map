@@ -1,0 +1,21 @@
+/*
+ * $MidnightBSD$
+ */
+
+FBSD_1.0 {
+	ohash_init;
+	ohash_delete;
+	ohash_lookup_string;
+	ohash_lookup_interval;
+	ohash_lookup_memory;
+	ohash_find;
+	ohash_remove;
+	ohash_insert;
+	ohash_first;
+	ohash_next;
+	ohash_entries;
+	ohash_create_entry;
+	ohash_interval;
+	ohash_qlookupi;
+	ohash_qlookup;
+};

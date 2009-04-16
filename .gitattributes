@@ -23160,6 +23160,7 @@ lib/libc/nls/msgcat.c -text
 lib/libc/nls/pl_PL.ISO8859-2.msg -text
 lib/libc/nls/ru_RU.KOI8-R.msg -text
 lib/libc/ohash/Makefile.inc -text
+lib/libc/ohash/Symbol.map -text
 lib/libc/ohash/ohash_create_entry.c -text
 lib/libc/ohash/ohash_delete.c -text
 lib/libc/ohash/ohash_do.c -text
