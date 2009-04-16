@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rip6query/rip6query.c,v 1.7 2005/05/13 16:31:11 ume Exp $
+ * $FreeBSD: src/usr.sbin/rip6query/rip6query.c,v 1.8 2006/09/21 01:41:03 kan Exp $
  */
 
 #include <stdio.h>
@@ -74,10 +74,11 @@ main(argc, argv)
 {
 	struct netinfo6 *np;
 	struct sockaddr_in6 fsock;
-	int i, n, len, flen;
+	int i, n, len;
 	int c;
 	int ifidx = -1;
 	int error;
+	socklen_t flen;
 	char pbuf[10];
 	struct addrinfo hints, *res;
 
