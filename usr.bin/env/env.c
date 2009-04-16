@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/usr.bin/env/env.c,v 1.3 2008/12/29 17:50:21 laffer1 Exp $ */
+/* $MidnightBSD: src/usr.bin/env/env.c,v 1.4 2009/04/16 01:27:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -68,6 +68,7 @@ main(int argc, char **argv)
 	char *altpath, **ep, *p, **parg;
 	char *cleanenv[1];
 	int ch, want_clear;
+	int rtrn;
 
 	altpath = NULL;
 	want_clear = 0;
