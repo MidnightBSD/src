@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/usr.sbin/rtadvd/config.c,v 1.24.2.2 2006/03/24 14:53:53 suz Exp $	*/
+/*	$FreeBSD: src/usr.sbin/rtadvd/config.c,v 1.27 2006/03/23 14:39:38 suz Exp $	*/
 /*	$KAME: config.c,v 1.84 2003/08/05 12:34:23 itojun Exp $	*/
 
 /*
@@ -705,7 +705,7 @@ makeentry(buf, len, id, string)
  * Add a prefix to the list of specified interface and reconstruct
  * the outgoing packet.
  * The prefix must not be in the list.
- * XXX: other parameters of the prefix (e.g. lifetime) shoule be
+ * XXX: other parameters of the prefix (e.g. lifetime) should be
  * able to be specified.
  */
 static void

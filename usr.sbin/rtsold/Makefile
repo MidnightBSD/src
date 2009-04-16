@@ -12,14 +12,14 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 #
-# $FreeBSD: src/usr.sbin/rtsold/Makefile,v 1.11 2003/08/14 18:43:57 ume Exp $
+# $FreeBSD: src/usr.sbin/rtsold/Makefile,v 1.12 2006/07/27 15:31:12 yar Exp $
 
 PROG=	rtsold
 MAN=	rtsold.8
 MLINKS=	rtsold.8 rtsol.8
 SRCS=	rtsold.c rtsol.c if.c probe.c dump.c rtsock.c
 
-CFLAGS+= -DINET6 -DHAVE_ARC4RANDOM -DHAVE_POLL_H
+CFLAGS+= -DHAVE_ARC4RANDOM -DHAVE_POLL_H
 
 DPADD=	${LIBKVM}
 LDADD=	-lkvm
