@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/usr.bin/env/env.c,v 1.3 2008/12/29 17:50:21 laffer1 Exp $ */
 /*-
  * Copyright (c) 1988, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
@@ -71,7 +71,7 @@ main(int argc, char **argv)
 
 	altpath = NULL;
 	want_clear = 0;
-	while ((ch = getopt(argc, argv, "-iP:S:v")) != -1)
+	while ((ch = getopt(argc, argv, "-iP:S:u:v")) != -1)
 		switch(ch) {
 		case '-':
 		case 'i':
@@ -86,6 +86,13 @@ main(int argc, char **argv)
 			 * support for some simple substitutions"...
 			 */
 			split_spaces(optarg, &optind, &argc, &argv);
+			break;
+		case 'u':
+			if (env_verbosity)
+				fprintf(stderr, "#env unset:\t%s\n", optarg);
+			rtrn = unsetenv(optarg);
+			if (rtrn == -1)
+				err(EXIT_FAILURE, "unsetenv %s", optarg);
 			break;
 		case 'v':
 			env_verbosity++;
@@ -104,7 +111,7 @@ main(int argc, char **argv)
 			fprintf(stderr, "#env clearing environ\n");
 	}
 	for (argv += optind; *argv && (p = strchr(*argv, '=')); ++argv) {
-		*p=0;
+		*p='\0';
 		p++;
 		if (env_verbosity)
 			fprintf(stderr, "#env setenv:\t'%s' = '%s'\n", *argv, p);
@@ -134,7 +141,7 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr,
-	    "usage: env [-iv] [-P utilpath] [-S string] [name=value ...]"
-	    " [utility [argument ...]]\n");
+	    "usage: env [-iv] [-P utilpath] [-S string] [-u name]\n"
+	    "           [name=value ...] [utility [argument ...]]\n");
 	exit(1);
 }
