@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users
 
+20090415:
+	Created a Symbol.map for libc/ohash symbols
+
+	Updated several usr/bin usr/sbin utilities.
+
+	Corrected a bug with Makefile.inc1 causing the bootstrap
+	tools to fail.
+
 20090405:
 	xorg 7.4 wants to configure its input devices via hald which does not
 	yet work with USB. If the keyboard/mouse does not work in xorg then
@@ -694,4 +702,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.57 2009/04/05 23:39:34 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.58 2009/04/05 23:40:43 laffer1 Exp $
