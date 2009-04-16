@@ -1,4 +1,4 @@
-$MidnightBSD: src/etc/mtree/README,v 1.2 2006/08/28 01:35:55 laffer1 Exp $
+$MidnightBSD: src/etc/mtree/README,v 1.3 2007/10/13 01:50:52 laffer1 Exp $
 $FreeBSD: src/etc/mtree/README,v 1.7 2002/05/18 12:37:19 ru Exp $
 
 Note: If you modify these files, please keep hier(7) updated!
@@ -46,6 +46,3 @@ and keep them in good working order.
         are more complicated, but can often catch missing entries in these
         files.  I tend to run this more complete sanity check shortly after
         the target date for a new release is announced.
-
-        If you want details on it bug me about it via email to
-        rgrimes@FreeBSD.org.
