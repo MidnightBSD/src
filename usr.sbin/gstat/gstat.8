@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/gstat/gstat.8,v 1.7 2005/05/27 00:21:12 keramida Exp $
+.\" $FreeBSD: src/usr.sbin/gstat/gstat.8,v 1.9 2006/09/29 16:51:29 ru Exp $
 .\"
-.Dd March 3, 2003
+.Dd May 20, 2006
 .Dt GSTAT 8
 .Os
 .Sh NAME
@@ -33,6 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl acd
+.Op Fl f Ar filter
 .Op Fl I Ar interval
 .Sh DESCRIPTION
 The
@@ -56,6 +57,14 @@ producers.
 Enable display of statistics for delete
 .Pq Dv BIO_DELETE
 operations.
+.It Fl f Ar filter
+A regular expression that can be used to only show statistics for some
+devices.
+Only devices with the names matching
+.Ar filter
+will be displayed.
+The format of the regular expression is described in
+.Xr re_format 7 .
 .It Fl I Ar interval
 Refresh the
 .Nm
