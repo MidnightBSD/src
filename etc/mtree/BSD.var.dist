@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/mtree/BSD.var.dist,v 1.5 2007/10/13 01:52:22 laffer1 Exp $
+# $MidnightBSD: src/etc/mtree/BSD.var.dist,v 1.6 2008/11/19 20:57:32 laffer1 Exp $
 # $FreeBSD: src/etc/mtree/BSD.var.dist,v 1.71.2.1 2005/08/15 20:24:07 cperciva Exp $
 #
 # Please see the file src/etc/mtree/README before making changes to this file.
@@ -43,6 +43,8 @@
     empty           mode=0555 flags=schg
     ..
     games           gname=games mode=0775
+        larn
+        ..
     ..
     heimdal         mode=0700
     ..
