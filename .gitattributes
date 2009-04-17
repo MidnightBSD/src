@@ -24826,6 +24826,7 @@ lib/libmport/mport.h -text
 lib/libmport/mport_private.h -text
 lib/libmport/pkgmeta.c -text
 lib/libmport/plist.c -text
+lib/libmport/update_primative.c -text
 lib/libmport/util.c -text
 lib/libmport/version_cmp.c -text
 lib/libncp/CREDITS -text
