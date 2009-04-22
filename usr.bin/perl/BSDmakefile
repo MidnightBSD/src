@@ -1,5 +1,5 @@
 #
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.4 2009/03/26 21:49:00 ctriv Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.5 2009/03/30 20:08:27 ctriv Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -55,6 +55,7 @@ convertpods:
 finalmaninstall:
 .for SEC in ${MANSECTIONS}
 	@cd ${.OBJDIR}/rawmans/${SEC}; \
+	rm -f *.gz; \
 	for man in `ls`; do \
 		${MCOMPRESS_CMD} $$man > $$man${MCOMPRESS_EXT}; \
 		echo ${MINSTALL} $$man${MCOMPRESS_EXT} ${DESTDIR}${MANDIR}${SEC}/$$man${MCOMPRESS_EXT}; \
