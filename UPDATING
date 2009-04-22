@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users
 
+20090422:
+	OpenSSL security update
+
+	The function ASN1_STRING_print_ex does not properly validate the lengths
+of BMPString or UniversalString objects before attempting to print them.
+
 20090415:
 	Created a Symbol.map for libc/ohash symbols
 
@@ -702,4 +708,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.58 2009/04/05 23:40:43 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.59 2009/04/16 02:58:26 laffer1 Exp $
