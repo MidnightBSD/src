@@ -1,5 +1,5 @@
 #
-# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.5 2009/03/30 20:08:27 ctriv Exp $
+# $MidnightBSD: src/usr.bin/perl/BSDmakefile,v 1.6 2009/04/22 22:43:16 ctriv Exp $
 #
 # This makefile deals with binding perl's build system to our own.
 # It is called BSDmakefile because perl's configure makes a 'Makefile',
@@ -10,6 +10,10 @@
 .include <bsd.man.mk>
 
 SRCDIR= ${.CURDIR}/../../contrib/perl
+
+DPADD=${LIBC}
+
+
 
 #
 # mksymlinks is perl's way of building away from the src dir.  It builds a bunch of symlinks
@@ -26,10 +30,10 @@ PERL_MAKEFILE= Makefile
 all: perl
                 
 perl: ${PERL_MAKEFILE}
-	cd ${.OBJDIR} && ${MAKE} -f ${PERL_MAKEFILE}
+	cd ${.OBJDIR} && LD_LIBRARY_PATH=${DESTDIR}/lib ${MAKE} -f ${PERL_MAKEFILE}
 	
 ${PERL_MAKEFILE}:
-	cd ${.OBJDIR} && ${SRCDIR}/${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
+	cd ${.OBJDIR} && LD_LIBRARY_PATH=${DESTDIR}/lib ${SRCDIR}/${CONFIGURE_SCRIPT} ${CONFIGURE_ARGS}
 
 # if OBJDIR is ., then don't delete ourselves.            
 clean:
@@ -38,7 +42,7 @@ clean:
 install: install.perl install.man
 
 install.perl:
-	cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR} ./perl installperl --destdir=${DESTDIR} 
+	cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR}:${DESTDIR}/lib ./perl installperl --destdir=${DESTDIR} 
 
 
 
@@ -50,7 +54,7 @@ MANSECTIONS= 1 3
 install.man: convertpods finalmaninstall
 
 convertpods:
-	@cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR} ./perl installman --destdir=${DESTDIR} --man1dir=${.OBJDIR}/rawmans/1 --man3dir=${.OBJDIR}/rawmans/3
+	@cd ${.OBJDIR} && LD_LIBRARY_PATH=${.OBJDIR}:${DESTDIR}/lib ./perl installman --destdir=${DESTDIR} --man1dir=${.OBJDIR}/rawmans/1 --man3dir=${.OBJDIR}/rawmans/3
 
 finalmaninstall:
 .for SEC in ${MANSECTIONS}
