@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 1982, 1986, 1988, 1993
  *	The Regents of the University of California.
@@ -29,7 +28,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)mbuf.h	8.5 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/mbuf.h,v 1.217 2007/10/06 21:42:39 kmacy Exp $
+ * $FreeBSD: src/sys/sys/mbuf.h,v 1.217.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_MBUF_H_
@@ -170,30 +169,48 @@ struct mbuf {
 /*
  * mbuf flags.
  */
-#define	M_EXT		0x0001	/* has associated external storage */
-#define	M_PKTHDR	0x0002	/* start of record */
-#define	M_EOR		0x0004	/* end of record */
-#define	M_RDONLY	0x0008	/* associated data is marked read-only */
-#define	M_PROTO1	0x0010	/* protocol-specific */
-#define	M_PROTO2	0x0020	/* protocol-specific */
-#define	M_PROTO3	0x0040	/* protocol-specific */
-#define	M_PROTO4	0x0080	/* protocol-specific */
-#define	M_PROTO5	0x0100	/* protocol-specific */
-#define	M_NOTIFICATION	M_PROTO5/* SCTP notification */
-#define	M_SKIP_FIREWALL	0x4000	/* skip firewall processing */
-#define	M_FREELIST	0x8000	/* mbuf is on the free list */
+#define	M_EXT		0x00000001 /* has associated external storage */
+#define	M_PKTHDR	0x00000002 /* start of record */
+#define	M_EOR		0x00000004 /* end of record */
+#define	M_RDONLY	0x00000008 /* associated data is marked read-only */
+#define	M_PROTO1	0x00000010 /* protocol-specific */
+#define	M_PROTO2	0x00000020 /* protocol-specific */
+#define	M_PROTO3	0x00000040 /* protocol-specific */
+#define	M_PROTO4	0x00000080 /* protocol-specific */
+#define	M_PROTO5	0x00000100 /* protocol-specific */
+#define	M_BCAST		0x00000200 /* send/received as link-level broadcast */
+#define	M_MCAST		0x00000400 /* send/received as link-level multicast */
+#define	M_FRAG		0x00000800 /* packet is a fragment of a larger packet */
+#define	M_FIRSTFRAG	0x00001000 /* packet is first fragment */
+#define	M_LASTFRAG	0x00002000 /* packet is last fragment */
+#define	M_SKIP_FIREWALL	0x00004000 /* skip firewall processing */
+#define	M_FREELIST	0x00008000 /* mbuf is on the free list */
+#define	M_VLANTAG	0x00010000 /* ether_vtag is valid */
+#define	M_PROMISC	0x00020000 /* packet was not for us */
+#define	M_NOFREE	0x00040000 /* do not free mbuf, embedded in cluster */
+#define	M_PROTO6	0x00080000 /* protocol-specific */
+#define	M_PROTO7	0x00100000 /* protocol-specific */
+#define	M_PROTO8	0x00200000 /* protocol-specific */
+/*
+ * For RELENG_{6,7} steal these flags for limited multiple routing table
+ * support. In RELENG_8 and beyond, use just one flag and a tag.
+ */
+#define	M_FIB		0xF0000000 /* steal some bits to store fib number. */
+
+#define	M_NOTIFICATION	M_PROTO5    /* SCTP notification */
 
 /*
- * mbuf pkthdr flags (also stored in m_flags).
+ * Flags to purge when crossing layers.
  */
-#define	M_BCAST		0x0200	/* send/received as link-level broadcast */
-#define	M_MCAST		0x0400	/* send/received as link-level multicast */
-#define	M_FRAG		0x0800	/* packet is a fragment of a larger packet */
-#define	M_FIRSTFRAG	0x1000	/* packet is first fragment */
-#define	M_LASTFRAG	0x2000	/* packet is last fragment */
-#define	M_VLANTAG	0x10000	/* ether_vtag is valid */
-#define	M_PROMISC	0x20000	/* packet was not for us */
-#define	M_NOFREE	0x40000	/* do not free mbuf - it is embedded in the cluster */
+#define	M_PROTOFLAGS \
+    (M_PROTO1|M_PROTO2|M_PROTO3|M_PROTO4|M_PROTO5|M_PROTO6|M_PROTO7|M_PROTO8)
+
+/*
+ * Flags preserved when copying m_pkthdr.
+ */
+#define	M_COPYFLAGS \
+    (M_PKTHDR|M_EOR|M_RDONLY|M_PROTOFLAGS|M_SKIP_FIREWALL|M_BCAST|M_MCAST|\
+     M_FRAG|M_FIRSTFRAG|M_LASTFRAG|M_VLANTAG|M_PROMISC|M_FIB)
 
 /*
  * External buffer types: identify ext_buf type.
@@ -209,19 +226,6 @@ struct mbuf {
 #define	EXT_MOD_TYPE	200	/* custom module's ext_buf type */
 #define	EXT_DISPOSABLE	300	/* can throw this buffer away w/page flipping */
 #define	EXT_EXTREF	400	/* has externally maintained ref_cnt ptr */
-
-/*
- * Flags copied when copying m_pkthdr.
- */
-#define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_RDONLY|M_PROTO1|M_PROTO1|M_PROTO2|\
-			    M_PROTO3|M_PROTO4|M_PROTO5|M_SKIP_FIREWALL|\
-			    M_BCAST|M_MCAST|M_FRAG|M_FIRSTFRAG|M_LASTFRAG|\
-			    M_VLANTAG|M_PROMISC)
-
-/*
- * Flags to purge when crossing layers.
- */
-#define	M_PROTOFLAGS	(M_PROTO1|M_PROTO2|M_PROTO3|M_PROTO4|M_PROTO5)
 
 /*
  * Flags indicating hw checksum support and sw checksum requirements.  This
@@ -277,7 +281,7 @@ struct mbstat {
 	u_long	m_mlen;		/* length of data in an mbuf */
 	u_long	m_mhlen;	/* length of data in a header mbuf */
 
-	/* Number of mbtypes (gives # elems in mbtypes[] array: */
+	/* Number of mbtypes (gives # elems in mbtypes[] array) */
 	short	m_numtypes;
 
 	/* XXX: Sendfile stats should eventually move to their own struct */
@@ -744,6 +748,7 @@ int		 m_append(struct mbuf *, int, c_caddr_t);
 void		 m_cat(struct mbuf *, struct mbuf *);
 void		 m_extadd(struct mbuf *, caddr_t, u_int,
 		    void (*)(void *, void *), void *, int, int);
+struct mbuf	*m_collapse(struct mbuf *, int, int);
 void		 m_copyback(struct mbuf *, int, int, c_caddr_t);
 void		 m_copydata(const struct mbuf *, int, int, caddr_t);
 struct mbuf	*m_copym(struct mbuf *, int, int, int);
@@ -952,6 +957,19 @@ m_tag_find(struct mbuf *m, int type, struct m_tag *start)
 	return (SLIST_EMPTY(&m->m_pkthdr.tags) ? (struct m_tag *)NULL :
 	    m_tag_locate(m, MTAG_ABI_COMPAT, type, start));
 }
+
+/* XXX temporary FIB methods probably eventually use tags.*/
+#define M_FIBSHIFT    28
+#define M_FIBMASK	0x0F
+
+/* get the fib from an mbuf and if it is not set, return the default */
+#define M_GETFIB(_m) \
+    ((((_m)->m_flags & M_FIB) >> M_FIBSHIFT) & M_FIBMASK)
+
+#define M_SETFIB(_m, _fib) do {						\
+	_m->m_flags &= ~M_FIB;					   	\
+	_m->m_flags |= (((_fib) << M_FIBSHIFT) & M_FIB);  \
+} while (0) 
 
 #endif /* _KERNEL */
 
