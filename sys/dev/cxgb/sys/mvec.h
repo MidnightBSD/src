@@ -64,7 +64,6 @@ struct mbuf_vec {
 };
 
 int _m_explode(struct mbuf *);
-int _m_collapse(struct mbuf *, int maxbufs, struct mbuf **);
 void mb_free_vec(struct mbuf *m);
 
 static __inline void 
@@ -110,19 +109,6 @@ m_explode(struct mbuf *m)
 	return _m_explode(m); 
 } 
  
-static __inline int
-m_collapse(struct mbuf *m, int maxbufs, struct mbuf **mnew) 
-{
-#if (!defined(__sparc64__) && !defined(__sun4v__)) 	
-	if (m->m_next == NULL)
-#endif		
-	{
-		*mnew = m;
-		return (0);
-	}
-	return _m_collapse(m, maxbufs, mnew);
-} 
-
 static __inline struct mbuf *
 m_free_vec(struct mbuf *m)
 {
