@@ -27884,6 +27884,7 @@ share/man/man4/ahb.4 -text
 share/man/man4/ahc.4 -text
 share/man/man4/ahd.4 -text
 share/man/man4/aio.4 -text
+share/man/man4/ale.4 -text
 share/man/man4/altq.4 -text
 share/man/man4/amd.4 -text
 share/man/man4/amr.4 -text
@@ -27925,6 +27926,7 @@ share/man/man4/coretemp.4 -text
 share/man/man4/cpufreq.4 -text
 share/man/man4/crypto.4 -text
 share/man/man4/cue.4 -text
+share/man/man4/cxgb.4 -text
 share/man/man4/cy.4 -text
 share/man/man4/da.4 -text
 share/man/man4/dc.4 -text
