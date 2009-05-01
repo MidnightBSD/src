@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.19 2008/09/02 01:55:36 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.20 2009/01/21 03:34:05 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -51,6 +51,7 @@ BUILDNAME?=${BASE}-${DATE}-SNAP
 #
 # Where the CVS repository is
 #CVSROOT="/home/cvs"
+CVSROOT=:pserver:anonymous@ds9.midnightbsd.org:/home/cvs
 #
 # Non-zero if ${RELEASETAG} is in the form "RELENG_ver_RELEASE"; we
 # are building an official release.  Otherwise, we are building for
