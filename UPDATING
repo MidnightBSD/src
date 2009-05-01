@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users
 
+20090501:
+	Imported makefs utility from NetBSD/FreeBSD
+
 20090422:
 	OpenSSL security update
 
@@ -708,4 +711,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.59 2009/04/16 02:58:26 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.60 2009/04/22 18:10:40 laffer1 Exp $
