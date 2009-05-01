@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.17 2008/11/18 00:14:05 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.18 2008/11/18 00:16:12 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -81,6 +81,7 @@ SUBDIR=	ac \
 	${_lptcontrol} \
 	${_mailstats} \
 	mailwrapper \
+	makefs \
 	${_makemap} \
 	manctl \
 	memcontrol \
