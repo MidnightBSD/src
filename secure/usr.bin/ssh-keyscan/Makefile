@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/secure/usr.bin/ssh-keyscan/Makefile,v 1.9 2005/06/07 09:31:28 des Exp $
+# $MidnightBSD: src/secure/usr.bin/ssh-keyscan/Makefile,v 1.2 2006/10/10 18:52:38 laffer1 Exp $
 
 PROG=	ssh-keyscan
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h

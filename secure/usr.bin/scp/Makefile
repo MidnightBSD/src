@@ -1,5 +1,4 @@
-# $MidnightBSD$
-# $FreeBSD: src/secure/usr.bin/scp/Makefile,v 1.14 2005/06/07 09:31:26 des Exp $
+# $MidnightBSD: src/secure/usr.bin/scp/Makefile,v 1.3 2006/10/10 18:52:37 laffer1 Exp $
 
 PROG=	scp
 CFLAGS+=-I${SSHDIR} -include ssh_namespace.h
