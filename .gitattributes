@@ -18464,11 +18464,16 @@ crypto/openssh/CREDITS -text
 crypto/openssh/ChangeLog -text
 crypto/openssh/INSTALL -text
 crypto/openssh/LICENCE -text
+crypto/openssh/MIDNIGHTBSD-Xlist -text
+crypto/openssh/MIDNIGHTBSD-tricks -text
+crypto/openssh/MIDNIGHTBSD-upgrade -text
 crypto/openssh/Makefile.in -text
+crypto/openssh/Makefile.inc -text
 crypto/openssh/OVERVIEW -text
 crypto/openssh/PROTOCOL -text
 crypto/openssh/PROTOCOL.agent -text
 crypto/openssh/README -text
+crypto/openssh/README.compromised-keys -text
 crypto/openssh/README.dns -text
 crypto/openssh/README.platform -text
 crypto/openssh/README.privsep -text
@@ -18820,6 +18825,8 @@ crypto/openssh/ssh-keysign.c -text
 crypto/openssh/ssh-rand-helper.8 -text
 crypto/openssh/ssh-rand-helper.c -text
 crypto/openssh/ssh-rsa.c -text
+crypto/openssh/ssh-vulnkey.1 -text
+crypto/openssh/ssh-vulnkey.c -text
 crypto/openssh/ssh.1 -text
 crypto/openssh/ssh.c -text
 crypto/openssh/ssh.h -text
@@ -18827,6 +18834,7 @@ crypto/openssh/ssh1.h -text
 crypto/openssh/ssh2.h -text
 crypto/openssh/ssh_config -text
 crypto/openssh/ssh_config.5 -text
+crypto/openssh/ssh_namespace.h -text
 crypto/openssh/ssh_prng_cmds.in -text
 crypto/openssh/sshconnect.c -text
 crypto/openssh/sshconnect.h -text
@@ -18850,6 +18858,7 @@ crypto/openssh/umac.c -text
 crypto/openssh/umac.h -text
 crypto/openssh/uuencode.c -text
 crypto/openssh/uuencode.h -text
+crypto/openssh/version.c -text
 crypto/openssh/version.h -text
 crypto/openssh/xmalloc.c -text
 crypto/openssh/xmalloc.h -text

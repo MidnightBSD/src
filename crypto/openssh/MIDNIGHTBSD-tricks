@@ -1,0 +1,20 @@
+# $MidnightBSD: src/crypto/openssh/MIDNIGHTBSD-tricks,v 1.1 2007/03/13 22:31:25 laffer1 Exp $
+
+# Shell code to remove FreeBSD tags before merging
+grep -rl '\$MidnightBSD:' . | grep -v MIDNIGHTBSD >tags
+cat tags | while read f ; do
+    sed -i.orig -e '/\$MidnightBSD: src/crypto/openssh/MIDNIGHTBSD-tricks,v 1.1 2007/03/13 22:31:25 laffer1 Exp $f
+done
+
+# Shell + Perl code to add FreeBSD tags wherever an OpenBSD or Id tag occurs
+cat tags |
+xargs perl -n -i.orig -e 'print; s/\$(Id|OpenBSD): [^\$]*/\$MidnightBSD/ && print'
+
+# Shell code to reexpand FreeBSD tags
+cat tags | while read f ; do
+    id=$(cvs diff $f | grep '\$MidnightBSD:' |
+    sed 's/.*\(\$Fre[e]BSD:.*\$\).*/\1/') ;
+    if [ -n "$id" ] ; then
+        sed -i.orig -e "s@\\\$MidnightBSD\\\$@$id@" $f ;
+    fi ;
+done
