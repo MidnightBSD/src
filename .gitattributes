@@ -18516,6 +18516,8 @@ crypto/openssh/authfd.c -text
 crypto/openssh/authfd.h -text
 crypto/openssh/authfile.c -text
 crypto/openssh/authfile.h -text
+crypto/openssh/blacklist.DSA-1024 -text
+crypto/openssh/blacklist.RSA-2048 -text
 crypto/openssh/bufaux.c -text
 crypto/openssh/bufbn.c -text
 crypto/openssh/buffer.c -text
