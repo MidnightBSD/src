@@ -1,4 +1,4 @@
-#	$MidnightBSD$
+#	$MidnightBSD: src/crypto/openssh/sshd_config,v 1.9 2009/05/02 16:58:39 laffer1 Exp $
 #	$OpenBSD: sshd_config,v 1.80 2008/07/02 02:24:18 djm Exp $
 
 # This is the sshd server system-wide configuration file.  See
@@ -46,6 +46,7 @@ PermitRootLogin no
 
 #RSAAuthentication yes
 #PubkeyAuthentication yes
+#PermitBlacklistedKeys no
 #AuthorizedKeysFile	.ssh/authorized_keys
 
 # For this to work you will also need host keys in /etc/ssh/ssh_known_hosts
