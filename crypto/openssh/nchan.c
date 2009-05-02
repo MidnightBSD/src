@@ -1,4 +1,4 @@
-/* $OpenBSD: nchan.c,v 1.57 2006/08/03 03:34:42 deraadt Exp $ */
+/* $OpenBSD: nchan.c,v 1.62 2008/11/07 18:50:18 stevesk Exp $ */
 /*
  * Copyright (c) 1999, 2000, 2001, 2002 Markus Friedl.  All rights reserved.
  *
@@ -32,6 +32,7 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "ssh1.h"
 #include "ssh2.h"
 #include "buffer.h"
@@ -77,6 +78,7 @@ static void	chan_send_ieof1(Channel *);
 static void	chan_send_oclose1(Channel *);
 static void	chan_send_close2(Channel *);
 static void	chan_send_eof2(Channel *);
+static void	chan_send_eow2(Channel *);
 
 /* helper */
 static void	chan_shutdown_write(Channel *);
@@ -305,6 +307,17 @@ chan_rcvd_close2(Channel *c)
 		break;
 	}
 }
+void
+chan_rcvd_eow(Channel *c)
+{
+	debug2("channel %d: rcvd eow", c->self);
+	switch (c->istate) {
+	case CHAN_INPUT_OPEN:
+		chan_shutdown_read(c);
+		chan_set_istate(c, CHAN_INPUT_CLOSED);
+		break;
+	}
+}
 static void
 chan_rcvd_eof2(Channel *c)
 {
@@ -321,6 +334,8 @@ chan_write_failed2(Channel *c)
 	case CHAN_OUTPUT_OPEN:
 	case CHAN_OUTPUT_WAIT_DRAIN:
 		chan_shutdown_write(c);
+		if (strcmp(c->ctype, "session") == 0)
+			chan_send_eow2(c);
 		chan_set_ostate(c, CHAN_OUTPUT_CLOSED);
 		break;
 	default:
@@ -362,6 +377,23 @@ chan_send_close2(Channel *c)
 		packet_send();
 		c->flags |= CHAN_CLOSE_SENT;
 	}
+}
+static void
+chan_send_eow2(Channel *c)
+{
+	debug2("channel %d: send eow", c->self);
+	if (c->ostate == CHAN_OUTPUT_CLOSED) {
+		error("channel %d: must not sent eow on closed output",
+		    c->self);
+		return;
+	}
+	if (!(datafellows & SSH_NEW_OPENSSH))
+		return;
+	packet_start(SSH2_MSG_CHANNEL_REQUEST);
+	packet_put_int(c->remote_id);
+	packet_put_cstring("eow@openssh.com");
+	packet_put_char(0);
+	packet_send();
 }
 
 /* shared */
@@ -454,12 +486,12 @@ chan_shutdown_write(Channel *c)
 	if (c->sock != -1) {
 		if (shutdown(c->sock, SHUT_WR) < 0)
 			debug2("channel %d: chan_shutdown_write: "
-			    "shutdown() failed for fd%d: %.100s",
+			    "shutdown() failed for fd %d: %.100s",
 			    c->self, c->sock, strerror(errno));
 	} else {
 		if (channel_close_fd(&c->wfd) < 0)
 			logit("channel %d: chan_shutdown_write: "
-			    "close() failed for fd%d: %.100s",
+			    "close() failed for fd %d: %.100s",
 			    c->self, c->wfd, strerror(errno));
 	}
 }
@@ -478,13 +510,13 @@ chan_shutdown_read(Channel *c)
 		if (shutdown(c->sock, SHUT_RD) < 0
 		    && errno != ENOTCONN)
 			error("channel %d: chan_shutdown_read: "
-			    "shutdown() failed for fd%d [i%d o%d]: %.100s",
+			    "shutdown() failed for fd %d [i%d o%d]: %.100s",
 			    c->self, c->sock, c->istate, c->ostate,
 			    strerror(errno));
 	} else {
 		if (channel_close_fd(&c->rfd) < 0)
 			logit("channel %d: chan_shutdown_read: "
-			    "close() failed for fd%d: %.100s",
+			    "close() failed for fd %d: %.100s",
 			    c->self, c->rfd, strerror(errno));
 	}
 }

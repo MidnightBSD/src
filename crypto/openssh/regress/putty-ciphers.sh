@@ -1,4 +1,4 @@
-#	$OpenBSD: putty-ciphers.sh,v 1.1 2007/12/21 04:13:53 djm Exp $
+#	$OpenBSD: putty-ciphers.sh,v 1.3 2008/11/10 02:06:35 djm Exp $
 #	Placed in the Public Domain.
 
 tid="putty ciphers"
@@ -6,13 +6,12 @@ tid="putty ciphers"
 DATA=/bin/ls
 COPY=${OBJ}/copy
 
-set -e
-
 if test "x$REGRESS_INTEROP_PUTTY" != "xyes" ; then
-	fatal "putty interop tests not enabled"
+	echo "putty interop tests not enabled"
+	exit 0
 fi
 
-for c in aes blowfish 3des arcfour ; do
+for c in aes blowfish 3des arcfour aes128-ctr aes192-ctr aes256-ctr ; do
 	verbose "$tid: cipher $c"
 	cp ${OBJ}/.putty/sessions/localhost_proxy \
 	    ${OBJ}/.putty/sessions/cipher_$c

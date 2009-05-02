@@ -18470,6 +18470,8 @@ crypto/openssh/MIDNIGHTBSD-upgrade -text
 crypto/openssh/Makefile.in -text
 crypto/openssh/Makefile.inc -text
 crypto/openssh/OVERVIEW -text
+crypto/openssh/PROTOCOL -text
+crypto/openssh/PROTOCOL.agent -text
 crypto/openssh/README -text
 crypto/openssh/README.compromised-keys -text
 crypto/openssh/README.dns -text
@@ -18483,6 +18485,7 @@ crypto/openssh/WARNING.RNG -text
 crypto/openssh/aclocal.m4 -text
 crypto/openssh/acss.c -text
 crypto/openssh/acss.h -text
+crypto/openssh/addrmatch.c -text
 crypto/openssh/atomicio.c -text
 crypto/openssh/atomicio.h -text
 crypto/openssh/audit-bsm.c -text
@@ -18509,6 +18512,7 @@ crypto/openssh/auth1.c -text
 crypto/openssh/auth2-chall.c -text
 crypto/openssh/auth2-gss.c -text
 crypto/openssh/auth2-hostbased.c -text
+crypto/openssh/auth2-jpake.c -text
 crypto/openssh/auth2-kbdint.c -text
 crypto/openssh/auth2-none.c -text
 crypto/openssh/auth2-passwd.c -text
@@ -18575,6 +18579,8 @@ crypto/openssh/hostfile.c -text
 crypto/openssh/hostfile.h -text
 crypto/openssh/includes.h -text
 crypto/openssh/install-sh -text
+crypto/openssh/jpake.c -text
+crypto/openssh/jpake.h -text
 crypto/openssh/kex.c -text
 crypto/openssh/kex.h -text
 crypto/openssh/kexdh.c -text
@@ -18602,6 +18608,7 @@ crypto/openssh/misc.c -text
 crypto/openssh/misc.h -text
 crypto/openssh/mkinstalldirs -text
 crypto/openssh/moduli -text
+crypto/openssh/moduli.5 -text
 crypto/openssh/moduli.c -text
 crypto/openssh/monitor.c -text
 crypto/openssh/monitor.h -text
@@ -18613,6 +18620,7 @@ crypto/openssh/monitor_wrap.c -text
 crypto/openssh/monitor_wrap.h -text
 crypto/openssh/msg.c -text
 crypto/openssh/msg.h -text
+crypto/openssh/mux.c -text
 crypto/openssh/myproposal.h -text
 crypto/openssh/nchan.c -text
 crypto/openssh/nchan.ms -text
@@ -18638,12 +18646,15 @@ crypto/openssh/openbsd-compat/bsd-openpty.c -text
 crypto/openssh/openbsd-compat/bsd-poll.c -text
 crypto/openssh/openbsd-compat/bsd-poll.h -text
 crypto/openssh/openbsd-compat/bsd-snprintf.c -text
+crypto/openssh/openbsd-compat/bsd-statvfs.c -text
+crypto/openssh/openbsd-compat/bsd-statvfs.h -text
 crypto/openssh/openbsd-compat/bsd-waitpid.c -text
 crypto/openssh/openbsd-compat/bsd-waitpid.h -text
 crypto/openssh/openbsd-compat/daemon.c -text
 crypto/openssh/openbsd-compat/dirname.c -text
 crypto/openssh/openbsd-compat/fake-rfc2553.c -text
 crypto/openssh/openbsd-compat/fake-rfc2553.h -text
+crypto/openssh/openbsd-compat/fmt_scaled.c -text
 crypto/openssh/openbsd-compat/getcwd.c -text
 crypto/openssh/openbsd-compat/getgrouplist.c -text
 crypto/openssh/openbsd-compat/getopt.c -text
@@ -18712,6 +18723,7 @@ crypto/openssh/readconf.h -text
 crypto/openssh/readpass.c -text
 crypto/openssh/regress/Makefile -text
 crypto/openssh/regress/README.regress -text
+crypto/openssh/regress/addrmatch.sh -text
 crypto/openssh/regress/agent-getpeereid.sh -text
 crypto/openssh/regress/agent-ptrace.sh -text
 crypto/openssh/regress/agent-timeout.sh -text
@@ -18722,6 +18734,7 @@ crypto/openssh/regress/brokenkeys.sh -text
 crypto/openssh/regress/bsd.regress.mk -text
 crypto/openssh/regress/cfgmatch.sh -text
 crypto/openssh/regress/cipher-speed.sh -text
+crypto/openssh/regress/conch-ciphers.sh -text
 crypto/openssh/regress/connect-privsep.sh -text
 crypto/openssh/regress/connect.sh -text
 crypto/openssh/regress/dsa_ssh2.prv -text
@@ -18731,6 +18744,7 @@ crypto/openssh/regress/envpass.sh -text
 crypto/openssh/regress/exit-status.sh -text
 crypto/openssh/regress/forcecommand.sh -text
 crypto/openssh/regress/forwarding.sh -text
+crypto/openssh/regress/key-options.sh -text
 crypto/openssh/regress/keygen-change.sh -text
 crypto/openssh/regress/keyscan.sh -text
 crypto/openssh/regress/localcommand.sh -text
@@ -18781,6 +18795,7 @@ crypto/openssh/scard/Makefile.in -text
 crypto/openssh/scard/Ssh.bin -text svneol=unset#unset
 crypto/openssh/scard/Ssh.bin.uu -text
 crypto/openssh/scard/Ssh.java -text
+crypto/openssh/schnorr.c -text
 crypto/openssh/scp.1 -text
 crypto/openssh/scp.c -text
 crypto/openssh/servconf.c -text

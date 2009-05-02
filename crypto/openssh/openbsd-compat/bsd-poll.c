@@ -1,4 +1,4 @@
-/* $Id: bsd-poll.c,v 1.1.1.1 2008-04-06 04:40:38 laffer1 Exp $ */
+/* $Id: bsd-poll.c,v 1.1.1.2 2009-05-02 16:45:51 laffer1 Exp $ */
 
 /*
  * Copyright (c) 2004, 2005, 2007 Darren Tucker (dtucker at zip com au).
@@ -23,6 +23,7 @@
 # include <sys/select.h>
 #endif
 
+#include <stdlib.h>
 #include <errno.h>
 #include "bsd-poll.h"
 
@@ -45,11 +46,12 @@ poll(struct pollfd *fds, nfds_t nfds, int timeout)
 	struct timeval tv, *tvp = NULL;
 
 	for (i = 0; i < nfds; i++) {
+		fd = fds[i].fd;
 		if (fd >= FD_SETSIZE) {
 			errno = EINVAL;
 			return -1;
 		}
-		maxfd = MAX(maxfd, fds[i].fd);
+		maxfd = MAX(maxfd, fd);
 	}
 
 	nmemb = howmany(maxfd + 1 , NFDBITS);
