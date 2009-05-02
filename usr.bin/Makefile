@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.24 2009/03/27 22:06:10 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.25 2009/04/03 05:14:53 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -313,7 +313,7 @@ _usbhidctl=	usbhidctl
 _ncplist=	ncplist
 _ncplogin=	ncplogin
 .endif
-#_pcc=		pcc
+_pcc=		pcc
 _smbutil=	smbutil
 .endif
 
