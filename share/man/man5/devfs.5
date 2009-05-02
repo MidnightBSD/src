@@ -36,7 +36,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/devfs.5,v 1.17 2004/07/03 18:29:22 ru Exp $
+.\" $FreeBSD: src/share/man/man5/devfs.5,v 1.19 2006/09/18 15:24:19 ru Exp $
 .\"
 .Dd December 14, 1996
 .Dt DEVFS 5
@@ -76,8 +76,16 @@ The normal
 .Nm
 mount point.
 .El
+.Sh EXAMPLES
+To mount a
+.Nm
+volume located on
+.Pa /dev :
+.Pp
+.Dl "mount -t devfs devfs /dev"
 .Sh SEE ALSO
-.Xr mount_devfs 8
+.Xr devfs 8 ,
+.Xr mount 8
 .Sh HISTORY
 The
 .Nm
@@ -91,7 +99,4 @@ manual page first appeared in
 The
 .Nm
 manual page was written by
-.An Mike Pritchard Aq mpp@FreeBSD.org ,
-and was based on the
-.Xr mount_devfs 8
-manual page.
+.An Mike Pritchard Aq mpp@FreeBSD.org .

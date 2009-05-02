@@ -29,9 +29,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/hosts.equiv.5,v 1.20 2005/06/30 13:10:37 hmp Exp $
+.\" $FreeBSD: src/share/man/man5/hosts.equiv.5,v 1.21.4.1 2008/02/14 21:48:53 remko Exp $
 .\"
-.Dd February 11, 1996
+.Dd December 8, 2007
 .Dt HOSTS.EQUIV 5
 .Os
 .Sh NAME
@@ -80,7 +80,8 @@ indicates the beginning of
 a comment; characters up to the end of the line are
 not interpreted by routines which search the file.
 .Pp
-Host names are specified in the conventional
+Host names are specified in the conventional Internet DNS
+dotted-domains
 .Dq .\&
 (dot) notation using the
 .Xr inet_addr 3
@@ -136,6 +137,7 @@ except users from netgroup
 .Xr inet 3 ,
 .Xr innetgr 3 ,
 .Xr ruserok 3 ,
+.Xr netgroup 5 ,
 .Xr ifconfig 8 ,
 .Xr named 8 ,
 .Xr yp 8

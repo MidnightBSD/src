@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man5/devfs.rules.5,v 1.2 2005/06/16 18:46:17 ru Exp $
+.\" $FreeBSD: src/share/man/man5/devfs.rules.5,v 1.5 2006/09/18 15:24:19 ru Exp $
 .\"
-.Dd May 17, 2005
+.Dd January 30, 2006
 .Dt DEVFS.RULES 5
 .Os
 .Sh NAME
@@ -60,6 +60,27 @@ by the startup scripts of the system.
 It is important to put path elements that contain
 .Xr glob 3
 special characters between quotes.
+.Pp
+Rulesets should have a unique name and number.
+.Pp
+All rules that follow a ruleset declaration belong to that ruleset, until a
+new ruleset is started.
+.Pp
+One custom ruleset has to be enabled in
+.Pa /etc/rc.conf ,
+otherwise it will not be applied to the
+.Pa /dev
+file system by the default system startup process.
+For example, to enable a
+.Dq Li localrules
+ruleset for the
+.Pa /dev
+file system, you would have to use something like this in your
+.Pa rc.conf
+file:
+.Bd -literal -offset indent
+devfs_system_ruleset="localrules"
+.Ed
 .Sh FILES
 .Bl -tag -compact
 .It Pa /etc/devfs.rules
@@ -72,7 +93,12 @@ devices readable and writable by their owner and the
 .Dq Li usb
 group, the following rule may be used:
 .Pp
+.Dl "[localrules=10]"
 .Dl "add path 'da*s*' mode 0660 group usb"
+.Pp
+The first line declares and starts a new ruleset, with the name
+.Va localrules
+and the number 10.
 .Pp
 To make all the
 .Xr uscanner 4

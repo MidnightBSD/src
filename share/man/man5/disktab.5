@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)disktab.5	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: src/share/man/man5/disktab.5,v 1.14.2.1 2005/09/24 01:59:38 keramida Exp $
+.\" $FreeBSD: src/share/man/man5/disktab.5,v 1.17 2006/10/14 16:37:53 ru Exp $
 .\"
-.Dd June 5, 1993
+.Dd October 14, 2006
 .Dt DISKTAB 5
 .Os
 .Sh NAME
@@ -88,10 +88,7 @@ default
 .It "\&d[0-4]	num	Drive-type-dependent parameters"
 .It "\&bs	num	Boot block size, default"
 .Dv BBSIZE
-.It "\&b[0-1]	num	Boot block filenames; see"
-.Xr bsdlabel 8
-.It "\&sb	num	Superblock size, default"
-.Dv SBSIZE
+.It "\&sb	num	Superblock size, default 0"
 .It "\&ba	num	Block size for partition `a' (bytes)"
 .It "\&bd	num	Block size for partition `d' (bytes)"
 .It "\&be	num	Block size for partition `e' (bytes)"
@@ -137,6 +134,7 @@ file system, swap, etc)
 .El
 .Sh SEE ALSO
 .Xr getdiskbyname 3 ,
+.\" .Xr bsdlabel 5 ,
 .Xr bsdlabel 8 ,
 .Xr newfs 8
 .Sh HISTORY
