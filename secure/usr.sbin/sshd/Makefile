@@ -1,6 +1,4 @@
-# $MidnightBSD: src/secure/usr.sbin/sshd/Makefile,v 1.5 2008/04/06 06:34:28 laffer1 Exp $
-# $FreeBSD: src/secure/usr.sbin/sshd/Makefile,v 1.44 2005/06/07 09:31:28 des Exp $
-#
+# $MidnightBSD: src/secure/usr.sbin/sshd/Makefile,v 1.6 2008/11/06 21:46:21 laffer1 Exp $
 
 .include <bsd.own.mk>
 
