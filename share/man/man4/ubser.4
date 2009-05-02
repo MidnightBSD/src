@@ -1,7 +1,7 @@
 .\" Copyright (c) 2004 Bernd Walter <ticso@FreeBSD.org>
 .\"
 .\" $URL: https://devel.bwct.de/svn/projects/ubser/ubser.4 $
-.\" $Date: 2006-02-25 02:35:43 $
+.\" $Date: 2009-05-02 19:51:18 $
 .\" $Author: laffer1 $
 .\" $Rev: 1130 $
 .\"
@@ -26,16 +26,28 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ubser.4,v 1.5 2005/03/18 02:25:45 ticso Exp $
+.\" $FreeBSD: src/share/man/man4/ubser.4,v 1.6 2006/11/22 21:30:02 brueffer Exp $
 .\"
-.Dd September 12, 2004
+.Dd November 22, 2006
 .Dt UBSER 4
 .Os
 .Sh NAME
 .Nm ubser
 .Nd USB support for BWCT console serial adapters
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device ubser"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ubser_load="YES"
+.Ed
 .Sh HARDWARE
 The
 .Nm

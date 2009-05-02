@@ -25,16 +25,28 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/umass.4,v 1.40.2.2 2006/01/21 20:37:29 mnag Exp $
+.\" $FreeBSD: src/share/man/man4/umass.4,v 1.44 2006/11/22 21:30:02 brueffer Exp $
 .\"
-.Dd December 17, 2004
+.Dd November 22, 2006
 .Dt UMASS 4
 .Os
 .Sh NAME
 .Nm umass
 .Nd USB Mass Storage Devices driver
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device umass"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+umass_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -135,7 +147,7 @@ Panasonic USB2.0 Portable CD-RW Drive KXL-RW40AN (CDROM only)
 .It
 Panasonic floppy drive
 .It
-Qware BeatZkey! Pro
+Qware BeatZkey!\& Pro
 .It
 RATOC Systems USB2.0 Removable HDD Case U2-MDK1, U2-MDK1B
 .It

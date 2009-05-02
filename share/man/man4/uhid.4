@@ -34,16 +34,28 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/uhid.4,v 1.4.8.1 2005/08/07 15:49:53 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/uhid.4,v 1.8 2007/06/30 05:07:51 imp Exp $
 .\"
-.Dd July 12, 1998
+.Dd November 22, 2006
 .Dt UHID 4
 .Os
 .Sh NAME
 .Nm uhid
 .Nd USB generic HID support
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device uhid"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+uhid_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -65,8 +77,8 @@ The report descriptor is delivered
 without any processing.
 .Bd -literal
 struct usb_ctl_report_desc {
-    int     size;
-    u_char  data[1024];	/* filled data size will vary */
+    int     ucrd_size;
+    u_char  ucrd_data[1024];	/* filled data size will vary */
 };
 .Ed
 .It Dv USB_SET_IMMED Pq Vt int
@@ -94,8 +106,8 @@ or
 This call may fail if the device does not support this feature.
 .Bd -literal
 struct usb_ctl_report {
-	int report;
-	u_char	data[1024];	/* used data size will vary */
+	int ucr_report;
+	u_char	ucr_data[1024];	/* used data size will vary */
 };
 .Ed
 .It Dv USB_SET_REPORT Pq Vt "struct usb_ctl_report"
@@ -128,7 +140,6 @@ size prescribed by the report descriptor.
 .El
 .Sh SEE ALSO
 .Xr usbhidctl 1 ,
-.Xr uhidev 4 ,
 .Xr usb 4
 .Sh HISTORY
 The

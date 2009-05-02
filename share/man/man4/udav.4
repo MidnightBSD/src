@@ -30,7 +30,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/udav.4,v 1.3.2.2 2006/02/02 07:50:01 trhodes Exp $
+.\" $FreeBSD: src/share/man/man4/udav.4,v 1.8 2007/07/24 14:49:25 imp Exp $
 .\"
 .Dd July 16, 2005
 .Dt UDAV 4
@@ -43,6 +43,7 @@ To compile this driver into the kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
+.Cd "device ehci"
 .Cd "device uhci"
 .Cd "device ohci"
 .Cd "device usb"
@@ -64,6 +65,8 @@ driver supports the following adapters:
 .Bl -bullet -compact
 .It
 Corega FEther USB-TXC
+.It
+ShanTou ST268 USB NIC
 .El
 .Sh DESCRIPTION
 The
@@ -75,6 +78,7 @@ adapters based on the Davicom DM9601 chipset.
 For more information on configuring this device, see
 .Xr ifconfig 8 .
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,

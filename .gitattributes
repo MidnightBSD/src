@@ -27898,6 +27898,7 @@ share/man/man4/aio.4 -text
 share/man/man4/ale.4 -text
 share/man/man4/altq.4 -text
 share/man/man4/amd.4 -text
+share/man/man4/amdsmb.4 -text
 share/man/man4/amr.4 -text
 share/man/man4/an.4 -text
 share/man/man4/arcmsr.4 -text
@@ -27952,10 +27953,12 @@ share/man/man4/divert.4 -text
 share/man/man4/dpt.4 -text
 share/man/man4/dummynet.4 -text
 share/man/man4/ed.4 -text
+share/man/man4/edsc.4 -text
 share/man/man4/ef.4 -text
 share/man/man4/ehci.4 -text
 share/man/man4/em.4 -text
 share/man/man4/en.4 -text
+share/man/man4/enc.4 -text
 share/man/man4/esp.4 -text
 share/man/man4/exca.4 -text
 share/man/man4/faith.4 -text
@@ -27982,9 +27985,12 @@ share/man/man4/hatm.4 -text
 share/man/man4/hfa.4 -text
 share/man/man4/hifn.4 -text
 share/man/man4/hme.4 -text
+share/man/man4/hptiop.4 -text
 share/man/man4/hptmv.4 -text
+share/man/man4/hptrr.4 -text
 share/man/man4/hwpmc.4 -text
 share/man/man4/ichsmb.4 -text
+share/man/man4/ichwd.4 -text
 share/man/man4/icmp.4 -text
 share/man/man4/icmp6.4 -text
 share/man/man4/ida.4 -text
@@ -28004,9 +28010,11 @@ share/man/man4/intro.4 -text
 share/man/man4/ip.4 -text
 share/man/man4/ip6.4 -text
 share/man/man4/ipfirewall.4 -text
+share/man/man4/ipmi.4 -text
 share/man/man4/ips.4 -text
 share/man/man4/ipsec.4 -text
 share/man/man4/ipw.4 -text
+share/man/man4/iscsi_initiator.4 -text
 share/man/man4/isp.4 -text
 share/man/man4/ispfw.4 -text
 share/man/man4/iwi.4 -text
@@ -28017,6 +28025,7 @@ share/man/man4/keyboard.4 -text
 share/man/man4/kld.4 -text
 share/man/man4/ktr.4 -text
 share/man/man4/kue.4 -text
+share/man/man4/lagg.4 -text
 share/man/man4/le.4 -text
 share/man/man4/led.4 -text
 share/man/man4/lge.4 -text
@@ -28114,12 +28123,15 @@ share/man/man4/mfi.4 -text
 share/man/man4/miibus.4 -text
 share/man/man4/mlx.4 -text
 share/man/man4/mly.4 -text
+share/man/man4/mmc.4 -text
+share/man/man4/mmcsd.4 -text
 share/man/man4/mn.4 -text
 share/man/man4/mouse.4 -text
 share/man/man4/mpt.4 -text
 share/man/man4/msk.4 -text
 share/man/man4/mtio.4 -text
 share/man/man4/multicast.4 -text
+share/man/man4/mxge.4 -text
 share/man/man4/my.4 -text
 share/man/man4/natm.4 -text
 share/man/man4/natmip.4 -text
@@ -28128,6 +28140,7 @@ share/man/man4/ncv.4 -text
 share/man/man4/netgraph.4 -text
 share/man/man4/netintro.4 -text
 share/man/man4/nfe.4 -text
+share/man/man4/nfsmb.4 -text
 share/man/man4/ng_UI.4 -text
 share/man/man4/ng_async.4 -text
 share/man/man4/ng_atm.4 -text
@@ -28138,8 +28151,10 @@ share/man/man4/ng_bpf.4 -text
 share/man/man4/ng_bridge.4 -text
 share/man/man4/ng_bt3c.4 -text
 share/man/man4/ng_btsocket.4 -text
+share/man/man4/ng_car.4 -text
 share/man/man4/ng_ccatm.4 -text
 share/man/man4/ng_cisco.4 -text
+share/man/man4/ng_deflate.4 -text
 share/man/man4/ng_device.4 -text
 share/man/man4/ng_echo.4 -text
 share/man/man4/ng_eiface.4 -text
@@ -28167,6 +28182,7 @@ share/man/man4/ng_one2many.4 -text
 share/man/man4/ng_ppp.4 -text
 share/man/man4/ng_pppoe.4 -text
 share/man/man4/ng_pptpgre.4 -text
+share/man/man4/ng_pred1.4 -text
 share/man/man4/ng_rfc1490.4 -text
 share/man/man4/ng_socket.4 -text
 share/man/man4/ng_source.4 -text
@@ -28174,6 +28190,7 @@ share/man/man4/ng_split.4 -text
 share/man/man4/ng_sppp.4 -text
 share/man/man4/ng_sscfu.4 -text
 share/man/man4/ng_sscop.4 -text
+share/man/man4/ng_tag.4 -text
 share/man/man4/ng_tcpmss.4 -text
 share/man/man4/ng_tee.4 -text
 share/man/man4/ng_tty.4 -text
@@ -28187,6 +28204,7 @@ share/man/man4/nmdm.4 -text
 share/man/man4/nsp.4 -text
 share/man/man4/null.4 -text
 share/man/man4/nve.4 -text
+share/man/man4/nxge.4 -text
 share/man/man4/ohci.4 -text
 share/man/man4/orm.4 -text
 share/man/man4/pass.4 -text
@@ -28217,6 +28235,7 @@ share/man/man4/rndtest.4 -text
 share/man/man4/route.4 -text
 share/man/man4/rp.4 -text
 share/man/man4/rue.4 -text
+share/man/man4/rum.4 -text
 share/man/man4/sa.4 -text
 share/man/man4/safe.4 -text
 share/man/man4/sbp.4 -text
@@ -28227,6 +28246,7 @@ share/man/man4/sched_4bsd.4 -text
 share/man/man4/sched_ule.4 -text
 share/man/man4/screen.4 -text
 share/man/man4/scsi.4 -text
+share/man/man4/sctp.4 -text
 share/man/man4/sem.4 -text
 share/man/man4/ses.4 -text
 share/man/man4/sf.4 -text
@@ -28247,10 +28267,14 @@ share/man/man4/snd_cs4281.4 -text
 share/man/man4/snd_csa.4 -text
 share/man/man4/snd_ds1.4 -text
 share/man/man4/snd_emu10k1.4 -text
+share/man/man4/snd_emu10kx.4 -text
+share/man/man4/snd_envy24.4 -text
+share/man/man4/snd_envy24ht.4 -text
 share/man/man4/snd_es137x.4 -text
 share/man/man4/snd_ess.4 -text
 share/man/man4/snd_fm801.4 -text
 share/man/man4/snd_gusc.4 -text
+share/man/man4/snd_hda.4 -text
 share/man/man4/snd_ich.4 -text
 share/man/man4/snd_maestro.4 -text
 share/man/man4/snd_maestro3.4 -text
@@ -28258,6 +28282,7 @@ share/man/man4/snd_mss.4 -text
 share/man/man4/snd_neomagic.4 -text
 share/man/man4/snd_sbc.4 -text
 share/man/man4/snd_solo.4 -text
+share/man/man4/snd_spicds.4 -text
 share/man/man4/snd_t4dwave.4 -text
 share/man/man4/snd_uaudio.4 -text
 share/man/man4/snd_via8233.4 -text
@@ -28271,6 +28296,7 @@ share/man/man4/sppp.4 -text
 share/man/man4/ste.4 -text
 share/man/man4/stf.4 -text
 share/man/man4/stg.4 -text
+share/man/man4/stge.4 -text
 share/man/man4/sym.4 -text
 share/man/man4/syncache.4 -text
 share/man/man4/syncer.4 -text
@@ -28290,6 +28316,7 @@ share/man/man4/twa.4 -text
 share/man/man4/twe.4 -text
 share/man/man4/tx.4 -text
 share/man/man4/txp.4 -text
+share/man/man4/uark.4 -text
 share/man/man4/uart.4 -text
 share/man/man4/ubsa.4 -text
 share/man/man4/ubsec.4 -text
@@ -28301,11 +28328,11 @@ share/man/man4/udav.4 -text
 share/man/man4/udbp.4 -text
 share/man/man4/udp.4 -text
 share/man/man4/ufm.4 -text
+share/man/man4/ufoma.4 -text
 share/man/man4/uftdi.4 -text
 share/man/man4/ugen.4 -text
 share/man/man4/uhci.4 -text
 share/man/man4/uhid.4 -text
-share/man/man4/uhidev.4 -text
 share/man/man4/ukbd.4 -text
 share/man/man4/ulpt.4 -text
 share/man/man4/umass.4 -text
@@ -28339,6 +28366,7 @@ share/man/man4/wlan_ccmp.4 -text
 share/man/man4/wlan_tkip.4 -text
 share/man/man4/wlan_wep.4 -text
 share/man/man4/wlan_xauth.4 -text
+share/man/man4/wpi.4 -text
 share/man/man4/xe.4 -text
 share/man/man4/xl.4 -text
 share/man/man4/xpt.4 -text

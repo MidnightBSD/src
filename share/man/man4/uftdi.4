@@ -34,17 +34,29 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/uftdi.4,v 1.7 2005/04/08 18:12:07 brueffer Exp $
+.\" $FreeBSD: src/share/man/man4/uftdi.4,v 1.11 2007/05/05 08:23:05 phk Exp $
 .\"
-.Dd April 8, 2004
+.Dd November 22, 2006
 .Dt UFTDI 4
 .Os
 .Sh NAME
 .Nm uftdi
 .Nd USB support for serial adapters based on the FT8U100AX and FT8U232AM chips
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device uftdi"
 .Cd "device ucom"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+uftdi_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -64,11 +76,17 @@ driver supports the following adapters:
 .It
 B&B Electronics USB->RS422/485 adapter
 .It
+Elexol USB MOD1
+.It
 HP USB-Serial adapter shipped with some HP laptops
 .It
 Inland UAS111
 .It
 QVS USC-1000
+.It
+Buffalo PC-OP-RS / Kurouto-shikou KURO-RS universal remote
+.It
+Prologix GPIB-USB Controller
 .El
 .Sh SEE ALSO
 .Xr tty 4 ,

@@ -34,17 +34,29 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/umodem.4,v 1.5.2.1 2005/09/24 01:59:37 keramida Exp $
+.\" $FreeBSD: src/share/man/man4/umodem.4,v 1.10 2007/08/21 13:20:13 sanpei Exp $
 .\"
-.Dd August 19, 2004
+.Dd November 22, 2006
 .Dt UMODEM 4
 .Os
 .Sh NAME
 .Nm umodem
 .Nd USB modem support
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device umodem"
 .Cd "device ucom"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+umodem_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -71,7 +83,15 @@ driver include:
 .It
 3Com 5605
 .It
+Curitel PC5740 Wireless Modem
+.It
+Kyocera AH-K3001V Mobile Phone(WILLCOM)
+.It
+Kyocera WX320K Mobile Phone(WILLCOM)
+.It
 Metricom Ricochet GS USB wireless modem
+.It
+Sierra MC5720 Wireless Modem
 .It
 Yamaha Broadband Wireless Router RTW65b
 .It

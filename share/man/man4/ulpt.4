@@ -34,16 +34,28 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ulpt.4,v 1.7 2004/09/26 13:38:38 simon Exp $
+.\" $FreeBSD: src/share/man/man4/ulpt.4,v 1.8 2006/11/22 21:30:02 brueffer Exp $
 .\"
-.Dd September 26, 2004
+.Dd November 22, 2006
 .Dt ULPT 4
 .Os
 .Sh NAME
 .Nm ulpt
 .Nd USB printer support
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device ulpt"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ulpt_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm

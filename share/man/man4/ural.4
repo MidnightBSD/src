@@ -1,4 +1,4 @@
-.\" Copyright (c) 2005
+.\" Copyright (c) 2005, 2006
 .\"     Damien Bergamini <damien.bergamini@free.fr>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -13,9 +13,9 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: src/share/man/man4/ural.4,v 1.3.2.4 2006/02/02 07:50:01 trhodes Exp $
+.\" $FreeBSD: src/share/man/man4/ural.4,v 1.15 2007/09/10 17:54:14 brueffer Exp $
 .\"
-.Dd July 16, 2005
+.Dd September 10, 2007
 .Os
 .Dt URAL 4
 .Sh NAME
@@ -32,6 +32,7 @@ kernel configuration file:
 .Cd "device usb"
 .Cd "device ural"
 .Cd "device wlan"
+.Cd "device wlan_amrr"
 .Ed
 .Pp
 Alternatively, to load the driver as a
@@ -54,36 +55,38 @@ transceiver that can operate in the 2.4GHz and 5.2GHz bands (802.11a).
 .Sh HARDWARE
 The
 .Nm
-driver supports the following adapters:
+driver supports USB 2.0 wireless adapters based on the Ralink Technology
+RT2500USB chipset, including:
 .Pp
 .Bl -column -compact ".Li Atlantis Land A02-PCM-W54" "Bus"
 .It Em Card Ta Em Bus
-.It Li "AMIT WL532U" Ta USB
-.It Li "ASUS WL-167g" Ta USB
-.It Li "Belkin F5D7050 v2000" Ta USB
-.It Li "Buffalo WLI-U2-KG54-AI" Ta USB
-.It Li "CNet CWD-854" Ta USB
-.It Li "Compex WLU54G 2A1100" Ta USB
-.It Li "Conceptronic C54RU" Ta USB
-.It Li "D-Link DWL-G122 b1" Ta USB
-.It Li "Dynalink WLG25USB" Ta USB
-.It Li "E-Tech WGUS02" Ta USB
-.It Li "Gigabyte GN-WBKG" Ta USB
-.It Li "Hercules HWGUSB2-54" Ta USB
-.It Li "KCORP LifeStyle KLS-685" Ta USB
-.It Li "Linksys WUSB54G v4" Ta USB
-.It Li "Linksys WUSB54GP v4" Ta USB
-.It Li "MSI MS-6861" Ta USB
-.It Li "MSI MS-6865" Ta USB
-.It Li "MSI MS-6869" Ta USB
-.It Li "OvisLink Evo-W54USB" Ta USB
-.It Li "SerComm UB801R" Ta USB
-.It Li "SparkLAN WL-685R" Ta USB
-.It Li "Surecom EP-9001-g" Ta USB
-.It Li "Sweex LC100060" Ta USB
-.It Li "Tonze UW-6200C" Ta USB
-.It Li "Zinwell ZWX-G261" Ta USB
-.It Li "Zonet ZEW2500P" Ta USB
+.It "AMIT WL532U" Ta USB
+.It "ASUS WL-167g" Ta USB
+.It "Belkin F5D7050 v2000" Ta USB
+.It "Buffalo WLI-U2-KG54-AI" Ta USB
+.It "CNet CWD-854" Ta USB
+.It "Compex WLU54G 2A1100" Ta USB
+.It "Conceptronic C54RU" Ta USB
+.It "D-Link DWL-G122 b1" Ta USB
+.It "Dynalink WLG25USB" Ta USB
+.It "E-Tech WGUS02" Ta USB
+.It "Gigabyte GN-WBKG" Ta USB
+.It "Hercules HWGUSB2-54" Ta USB
+.It "KCORP LifeStyle KLS-685" Ta USB
+.It "Linksys WUSB54G v4" Ta USB
+.It "Linksys WUSB54GP v4" Ta USB
+.It "MSI MS-6861" Ta USB
+.It "MSI MS-6865" Ta USB
+.It "MSI MS-6869" Ta USB
+.It "NovaTech NV-902" Ta USB
+.It "OvisLink Evo-W54USB" Ta USB
+.It "SerComm UB801R" Ta USB
+.It "SparkLAN WL-685R" Ta USB
+.It "Surecom EP-9001-g" Ta USB
+.It "Sweex LC100060" Ta USB
+.It "Tonze UW-6200C" Ta USB
+.It "Zinwell ZWX-G261" Ta USB
+.It "Zonet ZEW2500P" Ta USB
 .El
 .Pp
 An up to date list can be found at
@@ -101,13 +104,13 @@ Join a specific BSS network with network name
 Join a specific BSS network with 40-bit WEP encryption:
 .Bd -literal -offset indent
 ifconfig ural0 inet 192.168.0.20 netmask 0xffffff00 ssid my_net \e
-    wepmode on wepkey 0x1234567890
+    wepmode on wepkey 0x1234567890 weptxkey 1
 .Ed
 .Pp
 Join a specific BSS network with 104-bit WEP encryption:
 .Bd -literal -offset indent
 ifconfig ural0 inet 192.168.0.20 netmask 0xffffff00 ssid my_net \e
-    wepmode on wepkey 0x01020304050607080910111213
+    wepmode on wepkey 0x01020304050607080910111213 weptxkey 1
 .Ed
 .Sh DIAGNOSTICS
 .Bl -diag
@@ -116,10 +119,12 @@ The driver will reset the hardware.
 This should not happen.
 .El
 .Sh SEE ALSO
+.Xr altq 4 ,
 .Xr arp 4 ,
 .Xr netintro 4 ,
 .Xr usb 4 ,
 .Xr wlan 4 ,
+.Xr wlan_amrr 4 ,
 .Xr ifconfig 8
 .Rs
 .%T "Ralink Technology"
@@ -134,7 +139,8 @@ driver first appeared in
 .Pp
 The
 .Nm
-driver does not support automatic adaptation of the transmit speed.
+driver does not support automatic adaptation of the transmit speed in IBSS
+and HostAP operating modes.
 .Sh AUTHORS
 The
 .Nm

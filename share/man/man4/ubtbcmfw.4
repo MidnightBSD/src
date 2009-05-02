@@ -22,17 +22,29 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Id: ubtbcmfw.4,v 1.1.1.2 2006-02-25 02:35:43 laffer1 Exp $
-.\" $FreeBSD: src/share/man/man4/ubtbcmfw.4,v 1.6 2005/01/21 08:36:37 ru Exp $
+.\" $Id: ubtbcmfw.4,v 1.2 2009-05-02 19:51:18 laffer1 Exp $
+.\" $FreeBSD: src/share/man/man4/ubtbcmfw.4,v 1.8 2006/12/14 16:40:57 mpp Exp $
 .\"
-.Dd April 28, 2003
+.Dd November 22, 2006
 .Dt UBTBCMFW 4
 .Os
 .Sh NAME
 .Nm ubtbcmfw
 .Nd Firmware driver for Broadcom BCM2033 chip based Bluetooth USB devices
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device ubtbcmfw"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+ubtbcmfw_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -62,7 +74,7 @@ To perform I/O on a bulk endpoint,
 .Xr write 2
 should be used.
 All I/O operations on a bulk endpoint are unbuffered.
-Outgoing bulk endpoint is always enpoint 2.
+Outgoing bulk endpoint is always endpoint 2.
 .Pp
 The control endpoint (endpoint 0) handles the following
 .Xr ioctl 2

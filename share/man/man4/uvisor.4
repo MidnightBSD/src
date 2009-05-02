@@ -34,17 +34,29 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/uvisor.4,v 1.6.2.1 2005/12/12 19:54:14 bmah Exp $
+.\" $FreeBSD: src/share/man/man4/uvisor.4,v 1.9 2006/11/22 21:30:02 brueffer Exp $
 .\"
-.Dd September 12, 2004
+.Dd November 22, 2006
 .Dt UVISOR 4
 .Os
 .Sh NAME
 .Nm uvisor
 .Nd "USB support for the PalmOS based PDAs"
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device uvisor"
 .Cd "device ucom"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+uvisor_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -69,6 +81,8 @@ The
 driver supports the following devices:
 .Pp
 .Bl -bullet -compact
+.It
+Aceeca Mez1000 RDA
 .It
 Handspring Treo
 .It

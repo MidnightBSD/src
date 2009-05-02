@@ -25,16 +25,28 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/share/man/man4/usb.4,v 1.32 2005/04/20 07:33:09 simon Exp $
+.\" $FreeBSD: src/share/man/man4/usb.4,v 1.36 2007/07/24 14:51:21 imp Exp $
 .\"
-.Dd April 20, 2005
+.Dd November 22, 2006
 .Dt USB 4
 .Os
 .Sh NAME
 .Nm usb
 .Nd Universal Serial Bus
 .Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
 .Cd "device usb"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+usb_load="YES"
+.Ed
 .Pp
 .In dev/usb/usb.h
 .In dev/usb/usbhid.h
@@ -306,7 +318,7 @@ All
 events are reported via the
 .Pa /dev/usb
 device.
-This devices can be opened for reading and each
+This device can be opened for reading and each
 .Xr read 2
 will yield an event record (if something has happened).
 The
@@ -392,12 +404,15 @@ specifications can be found at:
 .D1 Pa http://www.usb.org/developers/docs/
 .Pp
 .Xr aue 4 ,
+.Xr axe 4 ,
 .Xr cue 4 ,
 .Xr ehci 4 ,
 .Xr kue 4 ,
 .Xr ohci 4 ,
 .Xr pci 4 ,
+.Xr rue 4 ,
 .Xr ucom 4 ,
+.Xr udav 4 ,
 .Xr ugen 4 ,
 .Xr uhci 4 ,
 .Xr uhid 4 ,
@@ -409,7 +424,6 @@ specifications can be found at:
 .Xr urio 4 ,
 .Xr uscanner 4 ,
 .Xr uvscom 4 ,
-.Xr usbd 8 ,
 .Xr usbdevs 8
 .Sh HISTORY
 The

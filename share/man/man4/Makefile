@@ -1,10 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/18/93
 # $FreeBSD: src/share/man/man4/Makefile,v 1.320.2.9 2006/02/13 11:45:21 marius Exp $
-# $MidnightBSD: src/share/man/man4/Makefile,v 1.15 2009/03/29 16:32:48 laffer1 Exp $
+# $MidnightBSD: src/share/man/man4/Makefile,v 1.16 2009/04/25 19:25:42 laffer1 Exp $
 
 MAN=	aac.4 \
 	acpi.4 \
-	acpi_dock.4 \
+	${_acpi_dock.4} \
 	acpi_thermal.4 \
 	acpi_video.4 \
 	adv.4 \
@@ -18,9 +18,10 @@ MAN=	aac.4 \
 	ale.4 \
 	altq.4 \
 	amd.4 \
+	${_amdsmb.4} \
 	amr.4 \
-	arcmsr.4 \
 	an.4 \
+	arcmsr.4 \
 	asr.4 \
 	ata.4 \
 	atapicam.4 \
@@ -40,7 +41,6 @@ MAN=	aac.4 \
 	bktr.4 \
 	blackhole.4 \
 	bpf.4 \
-	bridge.4 \
 	bt.4 \
 	bwi.4 \
 	cardbus.4 \
@@ -53,7 +53,7 @@ MAN=	aac.4 \
 	cm.4 \
 	cnw.4 \
 	coda.4 \
-	coretemp.4 \
+	${_coretemp.4} \
 	cpufreq.4 \
 	crypto.4 \
 	cue.4 \
@@ -72,10 +72,12 @@ MAN=	aac.4 \
 	dpt.4 \
 	dummynet.4 \
 	ed.4 \
+	edsc.4 \
 	ef.4 \
 	ehci.4 \
 	em.4 \
 	en.4 \
+	enc.4 \
 	esp.4 \
 	exca.4 \
 	faith.4 \
@@ -102,16 +104,19 @@ MAN=	aac.4 \
 	hfa.4 \
 	hifn.4 \
 	hme.4 \
-	hptmv.4 \
+	${_hptiop.4} \
+	${_hptmv.4} \
+	${_hptrr.4} \
 	hwpmc.4 \
 	ichsmb.4 \
+	${_ichwd.4} \
 	icmp.4 \
 	icmp6.4 \
 	ida.4 \
 	idt.4 \
 	ieee80211.4 \
-	ifmib.4 \
 	if_bridge.4 \
+	ifmib.4 \
 	iic.4 \
 	iicbb.4 \
 	iicbus.4 \
@@ -124,9 +129,11 @@ MAN=	aac.4 \
 	ip.4 \
 	ip6.4 \
 	ipfirewall.4 \
+	${_ipmi.4} \
 	ips.4 \
 	ipsec.4 \
 	ipw.4 \
+	iscsi_initiator.4 \
 	isp.4 \
 	ispfw.4 \
 	iwi.4 \
@@ -137,6 +144,7 @@ MAN=	aac.4 \
 	kld.4 \
 	ktr.4 \
 	kue.4 \
+	lagg.4 \
 	le.4 \
 	led.4 \
 	lge.4 \
@@ -164,12 +172,15 @@ MAN=	aac.4 \
 	miibus.4 \
 	mlx.4 \
 	mly.4 \
+	mmc.4 \
+	mmcsd.4 \
 	mn.4 \
 	mouse.4 \
 	mpt.4 \
 	msk.4 \
 	mtio.4 \
 	multicast.4 \
+	mxge.4 \
 	my.4 \
 	natm.4 \
 	natmip.4 \
@@ -177,7 +188,8 @@ MAN=	aac.4 \
 	ncv.4 \
 	netgraph.4 \
 	netintro.4 \
-	nfe.4 \
+	${_nfe.4} \
+	${_nfsmb.4} \
 	ng_async.4 \
 	ng_atm.4 \
 	ngatmbase.4 \
@@ -188,8 +200,10 @@ MAN=	aac.4 \
 	ng_bridge.4 \
 	ng_bt3c.4 \
 	ng_btsocket.4 \
+	ng_car.4 \
 	ng_ccatm.4 \
 	ng_cisco.4 \
+	ng_deflate.4 \
 	ng_device.4 \
 	nge.4 \
 	ng_echo.4 \
@@ -205,8 +219,8 @@ MAN=	aac.4 \
 	ng_hole.4 \
 	ng_hub.4 \
 	ng_iface.4 \
-	ng_ip_input.4 \
 	ng_ipfw.4 \
+	ng_ip_input.4 \
 	ng_ksocket.4 \
 	ng_l2cap.4 \
 	ng_l2tp.4 \
@@ -218,6 +232,7 @@ MAN=	aac.4 \
 	ng_ppp.4 \
 	ng_pppoe.4 \
 	ng_pptpgre.4 \
+	ng_pred1.4 \
 	ng_rfc1490.4 \
 	ng_socket.4 \
 	ng_source.4 \
@@ -225,6 +240,7 @@ MAN=	aac.4 \
 	ng_sppp.4 \
 	ng_sscfu.4 \
 	ng_sscop.4 \
+	ng_tag.4 \
 	ng_tcpmss.4 \
 	ng_tee.4 \
 	ng_tty.4 \
@@ -237,6 +253,7 @@ MAN=	aac.4 \
 	nsp.4 \
 	null.4 \
 	${_nve.4} \
+	${_nxge.4} \
 	ohci.4 \
 	orm.4 \
 	pass.4 \
@@ -267,6 +284,7 @@ MAN=	aac.4 \
 	route.4 \
 	rp.4 \
 	rue.4 \
+	rum.4 \
 	sa.4 \
 	safe.4 \
 	sbp.4 \
@@ -276,6 +294,7 @@ MAN=	aac.4 \
 	sched_4bsd.4 \
 	sched_ule.4 \
 	screen.4 \
+	sctp.4 \
 	scsi.4 \
 	sem.4 \
 	ses.4 \
@@ -297,10 +316,14 @@ MAN=	aac.4 \
 	snd_csa.4 \
 	snd_ds1.4 \
 	snd_emu10k1.4 \
+	snd_emu10kx.4 \
+	snd_envy24.4 \
+	snd_envy24ht.4 \
 	snd_es137x.4 \
 	snd_ess.4 \
 	snd_fm801.4 \
 	snd_gusc.4 \
+	snd_hda.4 \
 	snd_ich.4 \
 	snd_maestro.4 \
 	snd_maestro3.4 \
@@ -308,6 +331,7 @@ MAN=	aac.4 \
 	snd_neomagic.4 \
 	snd_sbc.4 \
 	snd_solo.4 \
+	snd_spicds.4 \
 	snd_t4dwave.4 \
 	snd_uaudio.4 \
 	snd_via8233.4 \
@@ -321,6 +345,7 @@ MAN=	aac.4 \
 	ste.4 \
 	stf.4 \
 	stg.4 \
+	stge.4 \
 	sym.4 \
 	syncache.4 \
 	syncer.4 \
@@ -340,6 +365,7 @@ MAN=	aac.4 \
 	twe.4 \
 	tx.4 \
 	txp.4 \
+	uark.4 \
 	uart.4 \
 	ubsa.4 \
 	ubsec.4 \
@@ -351,11 +377,11 @@ MAN=	aac.4 \
 	udbp.4 \
 	udp.4 \
 	ufm.4 \
+	ufoma.4 \
 	uftdi.4 \
 	ugen.4 \
 	uhci.4 \
 	uhid.4 \
-	uhidev.4 \
 	ukbd.4 \
 	ulpt.4 \
 	umass.4 \
@@ -389,6 +415,7 @@ MAN=	aac.4 \
 	wlan_tkip.4 \
 	wlan_wep.4 \
 	wlan_xauth.4 \
+	${_wpi.4} \
 	xe.4 \
 	xl.4 \
 	xpt.4 \
@@ -405,6 +432,7 @@ MLINKS+=ata.4 acd.4 \
 MLINKS+=aue.4 if_aue.4
 MLINKS+=awi.4 if_awi.4
 MLINKS+=axe.4 if_axe.4
+MLINKS+=bce.4 if_bce.4
 MLINKS+=bfe.4 if_bfe.4
 MLINKS+=bge.4 if_bge.4
 MLINKS+=bktr.4 brooktree.4
@@ -415,6 +443,7 @@ MLINKS+=dc.4 if_dc.4
 MLINKS+=de.4 if_de.4
 MLINKS+=disc.4 if_disc.4
 MLINKS+=ed.4 if_ed.4
+MLINKS+=edsc.4 if_edsc.4
 MLINKS+=ef.4 if_ef.4
 MLINKS+=em.4 if_em.4
 MLINKS+=en.4 if_en.4
@@ -434,25 +463,33 @@ MLINKS+=gif.4 if_gif.4
 MLINKS+=gre.4 if_gre.4
 MLINKS+=hatm.4 if_hatm.4
 MLINKS+=hme.4 if_hme.4
+MLINKS+=${_hptrr.4} ${_rr232x.4}
 MLINKS+=idt.4 if_idt.4
+MLINKS+=if_bridge.4 bridge.4
 MLINKS+=ip.4 rawip.4
 MLINKS+=ipfirewall.4 ipaccounting.4 \
 	ipfirewall.4 ipacct.4 \
 	ipfirewall.4 ipfw.4
 MLINKS+=ipw.4 if_ipw.4
 MLINKS+=iwi.4 if_iwi.4
+MLINKS+=ixgb.4 if_ixgb.4
 MLINKS+=kue.4 if_kue.4
+MLINKS+=lagg.4 trunk.4
+MLINKS+=le.4 if_le.4
 MLINKS+=lge.4 if_lge.4
 MLINKS+=lo.4 loop.4
 MLINKS+=lp.4 plip.4
 MLINKS+=md.4 vn.4
 MLINKS+=mem.4 kmem.4
 MLINKS+=mn.4 if_mn.4
+MLINKS+=mxge.4 if_mxge.4
 MLINKS+=my.4 if_my.4
 MLINKS+=netintro.4 net.4 \
 	netintro.4 networking.4
+MLINKS+=${_nfe.4} ${_if_nfe.4}
 MLINKS+=nge.4 if_nge.4
 MLINKS+=${_nve.4} ${_if_nve.4}
+MLINKS+=${_nxge.4} ${_if_nxge.4}
 MLINKS+=patm.4 if_patm.4
 MLINKS+=pccbb.4 cbb.4
 MLINKS+=pcm.4 snd.4 \
@@ -463,6 +500,7 @@ MLINKS+=ral.4 if_ral.4
 MLINKS+=re.4 if_re.4
 MLINKS+=rl.4 if_rl.4
 MLINKS+=rue.4 if_rue.4
+MLINKS+=rum.4 if_rum.4
 MLINKS+=sbsh.4 if_sbsh.4
 MLINKS+=scsi.4 CAM.4 \
 	scsi.4 cam.4 \
@@ -474,13 +512,18 @@ MLINKS+=sk.4 if_sk.4
 MLINKS+=sl.4 if_sl.4
 MLINKS+=smp.4 SMP.4
 MLINKS+=sn.4 if_sn.4
+MLINKS+=snd_envy24.4 snd_ak452x.4
+MLINKS+=snd_sbc.4 snd_sb16.4 \
+	snd_sbc.4 snd_sb8.4
 MLINKS+=${_spkr.4} ${_speaker.4}
 MLINKS+=splash.4 screensaver.4
 MLINKS+=ste.4 if_ste.4
 MLINKS+=stf.4 if_stf.4
+MLINKS+=stge.4 if_stge.4
 MLINKS+=syncache.4 syncookies.4
 MLINKS+=syscons.4 sc.4
 MLINKS+=tap.4 if_tap.4
+MLINKS+=tdfx.4 tdfx_linux.4
 MLINKS+=ti.4 if_ti.4
 MLINKS+=tl.4 if_tl.4
 MLINKS+=tun.4 if_tun.4
@@ -494,14 +537,32 @@ MLINKS+=vpo.4 imm.4
 MLINKS+=vr.4 if_vr.4
 MLINKS+=wb.4 if_wb.4
 MLINKS+=wi.4 if_wi.4
+MLINKS+=${_wpi.4} ${_if_wpi.4}
 MLINKS+=xe.4 if_xe.4
 MLINKS+=xl.4 if_xl.4
+MLINKS+=watchdog.4 SW_WATCHDOG.4
 
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+_acpi_dock.4=	acpi_dock.4
+_amdsmb.4=	amdsmb.4
+_coretemp.4=	coretemp.4
+_hptiop.4=	hptiop.4
+_hptmv.4=	hptmv.4
+_hptrr.4=	hptrr.4
+_ichwd.4=	ichwd.4
+_if_nfe.4=	if_nfe.4
 _if_nve.4=	if_nve.4
+_if_nxge.4=	if_nxge.4
+_if_wpi.4=	if_wpi.4
+_ipmi.4=	ipmi.4
+_nfsmb.4=	nfsmb.4
+_nfe.4=		nfe.4
 _nve.4=		nve.4
+_nxge.4=	nxge.4
+_rr232x.4=	rr232x.4
 _spkr.4=	spkr.4
 _speaker.4=	speaker.4
+_wpi.4=		wpi.4
 .endif
 
 .if exists(${.CURDIR}/man4.${MACHINE_ARCH})
