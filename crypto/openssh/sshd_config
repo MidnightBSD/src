@@ -1,3 +1,4 @@
+#	$MidnightBSD$
 #	$OpenBSD: sshd_config,v 1.80 2008/07/02 02:24:18 djm Exp $
 
 # This is the sshd server system-wide configuration file.  See
@@ -38,7 +39,7 @@ Protocol 2
 # Authentication:
 
 #LoginGraceTime 2m
-#PermitRootLogin yes
+PermitRootLogin no
 #StrictModes yes
 #MaxAuthTries 6
 #MaxSessions 10
