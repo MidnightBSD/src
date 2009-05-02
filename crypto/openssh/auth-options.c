@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-options.c,v 1.41 2008/03/26 21:28:14 djm Exp $ */
+/* $OpenBSD: auth-options.c,v 1.44 2009/01/22 10:09:16 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "match.h"
 #include "log.h"
@@ -225,8 +226,19 @@ auth_parse_options(struct passwd *pw, char *opts, char *file, u_long linenum)
 			}
 			patterns[i] = '\0';
 			opts++;
-			if (match_host_and_ip(remote_host, remote_ip,
-			    patterns) != 1) {
+			switch (match_host_and_ip(remote_host, remote_ip,
+			    patterns)) {
+			case 1:
+				xfree(patterns);
+				/* Host name matches. */
+				goto next_option;
+			case -1:
+				debug("%.100s, line %lu: invalid criteria",
+				    file, linenum);
+				auth_debug_add("%.100s, line %lu: "
+				    "invalid criteria", file, linenum);
+				/* FALLTHROUGH */
+			case 0:
 				xfree(patterns);
 				logit("Authentication tried for %.100s with "
 				    "correct key but not from a permitted "
@@ -235,17 +247,15 @@ auth_parse_options(struct passwd *pw, char *opts, char *file, u_long linenum)
 				auth_debug_add("Your host '%.200s' is not "
 				    "permitted to use this key for login.",
 				    remote_host);
-				/* deny access */
-				return 0;
+				break;
 			}
-			xfree(patterns);
-			/* Host name matches. */
-			goto next_option;
+			/* deny access */
+			return 0;
 		}
 		cp = "permitopen=\"";
 		if (strncasecmp(opts, cp, strlen(cp)) == 0) {
 			char *host, *p;
-			u_short port;
+			int port;
 			char *patterns = xmalloc(strlen(opts) + 1);
 
 			opts += strlen(cp);
@@ -283,7 +293,7 @@ auth_parse_options(struct passwd *pw, char *opts, char *file, u_long linenum)
 				goto bad_option;
 			}
 			host = cleanhostname(host);
-			if (p == NULL || (port = a2port(p)) == 0) {
+			if (p == NULL || (port = a2port(p)) <= 0) {
 				debug("%.100s, line %lu: Bad permitopen port "
 				    "<%.100s>", file, linenum, p ? p : "");
 				auth_debug_add("%.100s, line %lu: "

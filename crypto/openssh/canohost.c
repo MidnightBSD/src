@@ -1,4 +1,4 @@
-/* $OpenBSD: canohost.c,v 1.62 2007/12/27 14:22:08 dtucker Exp $ */
+/* $OpenBSD: canohost.c,v 1.64 2009/02/12 03:00:56 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -89,7 +89,7 @@ get_remote_hostname(int sock, int use_dns)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_DGRAM;	/*dummy*/
 	hints.ai_flags = AI_NUMERICHOST;
-	if (getaddrinfo(name, "0", &hints, &ai) == 0) {
+	if (getaddrinfo(name, NULL, &hints, &ai) == 0) {
 		logit("Nasty PTR record \"%s\" is set up for %s, ignoring",
 		    name, ntop);
 		freeaddrinfo(ai);
@@ -342,7 +342,7 @@ get_remote_name_or_ip(u_int utmp_len, int use_dns)
 
 /* Returns the local/remote port for the socket. */
 
-static int
+int
 get_sock_port(int sock, int local)
 {
 	struct sockaddr_storage from;

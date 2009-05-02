@@ -1,4 +1,4 @@
-/* $Id: fake-rfc2553.h,v 1.5 2008-04-06 04:50:38 laffer1 Exp $ */
+/* $Id: fake-rfc2553.h,v 1.6 2009-05-02 16:51:51 laffer1 Exp $ */
 
 /*
  * Copyright (C) 2000-2003 Damien Miller.  All rights reserved.
@@ -77,6 +77,7 @@ struct sockaddr_in6 {
 	u_int16_t	sin6_port;
 	u_int32_t	sin6_flowinfo;
 	struct in6_addr	sin6_addr;
+	u_int32_t	sin6_scope_id;
 };
 #endif /* !HAVE_STRUCT_SOCKADDR_IN6 */
 
@@ -127,6 +128,9 @@ struct sockaddr_in6 {
 #endif
 #ifndef EAI_SYSTEM
 # define EAI_SYSTEM	(INT_MAX - 4)
+#endif
+#ifndef EAI_FAMILY
+# define EAI_FAMILY	(INT_MAX - 5)
 #endif
 
 #ifndef HAVE_STRUCT_ADDRINFO

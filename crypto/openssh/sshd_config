@@ -1,5 +1,4 @@
-# 	$MidnightBSD: src/crypto/openssh/sshd_config,v 1.6 2007/10/27 05:22:07 laffer1 Exp $
-#	$OpenBSD: sshd_config,v 1.77 2008/02/08 23:24:07 djm Exp $
+#	$OpenBSD: sshd_config,v 1.80 2008/07/02 02:24:18 djm Exp $
 
 # This is the sshd server system-wide configuration file.  See
 # sshd_config(5) for more information.
@@ -29,7 +28,7 @@ Protocol 2
 
 # Lifetime and size of ephemeral version 1 server key
 #KeyRegenerationInterval 1h
-#ServerKeyBits 768
+#ServerKeyBits 1024
 
 # Logging
 # obsoletes QuietMode and FascistLogging
@@ -39,9 +38,10 @@ Protocol 2
 # Authentication:
 
 #LoginGraceTime 2m
-PermitRootLogin no
+#PermitRootLogin yes
 #StrictModes yes
 #MaxAuthTries 6
+#MaxSessions 10
 
 #RSAAuthentication yes
 #PubkeyAuthentication yes
@@ -85,6 +85,7 @@ PermitRootLogin no
 # and ChallengeResponseAuthentication to 'no'.
 #UsePAM no
 
+#AllowAgentForwarding yes
 #AllowTcpForwarding yes
 #GatewayPorts no
 #X11Forwarding no

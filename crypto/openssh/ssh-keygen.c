@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh-keygen.c,v 1.165 2008/01/19 22:37:19 djm Exp $ */
+/* $OpenBSD: ssh-keygen.c,v 1.173 2009/02/21 19:32:04 tobias Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1994 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -72,6 +72,8 @@ int change_comment = 0;
 
 int quiet = 0;
 
+int log_level = SYSLOG_LEVEL_INFO;
+
 /* Flag indicating that we want to hash a known_hosts file */
 int hash_hosts = 0;
 /* Flag indicating that we want lookup a host in known_hosts file */
@@ -133,7 +135,7 @@ ask_filename(struct passwd *pw, const char *prompt)
 			name = _PATH_SSH_CLIENT_ID_RSA;
 			break;
 		default:
-			fprintf(stderr, "bad key type");
+			fprintf(stderr, "bad key type\n");
 			exit(1);
 			break;
 		}
@@ -419,7 +421,7 @@ do_convert_from_ssh2(struct passwd *pw)
 		 PEM_write_RSAPrivateKey(stdout, k->rsa, NULL, NULL, 0, NULL, NULL)) :
 	    key_write(k, stdout);
 	if (!ok) {
-		fprintf(stderr, "key write failed");
+		fprintf(stderr, "key write failed\n");
 		exit(1);
 	}
 	key_free(k);
@@ -504,7 +506,7 @@ do_fingerprint(struct passwd *pw)
 {
 	FILE *f;
 	Key *public;
-	char *comment = NULL, *cp, *ep, line[16*1024], *fp;
+	char *comment = NULL, *cp, *ep, line[16*1024], *fp, *ra;
 	int i, skip = 0, num = 0, invalid = 1;
 	enum fp_rep rep;
 	enum fp_type fptype;
@@ -522,9 +524,14 @@ do_fingerprint(struct passwd *pw)
 	public = key_load_public(identity_file, &comment);
 	if (public != NULL) {
 		fp = key_fingerprint(public, fptype, rep);
-		printf("%u %s %s\n", key_size(public), fp, comment);
+		ra = key_fingerprint(public, fptype, SSH_FP_RANDOMART);
+		printf("%u %s %s (%s)\n", key_size(public), fp, comment,
+		    key_type(public));
+		if (log_level >= SYSLOG_LEVEL_VERBOSE)
+			printf("%s\n", ra);
 		key_free(public);
 		xfree(comment);
+		xfree(ra);
 		xfree(fp);
 		exit(0);
 	}
@@ -582,8 +589,12 @@ do_fingerprint(struct passwd *pw)
 			}
 			comment = *cp ? cp : comment;
 			fp = key_fingerprint(public, fptype, rep);
-			printf("%u %s %s\n", key_size(public), fp,
-			    comment ? comment : "no comment");
+			ra = key_fingerprint(public, fptype, SSH_FP_RANDOMART);
+			printf("%u %s %s (%s)\n", key_size(public), fp,
+			    comment ? comment : "no comment", key_type(public));
+			if (log_level >= SYSLOG_LEVEL_VERBOSE)
+				printf("%s\n", ra);
+			xfree(ra);
 			xfree(fp);
 			key_free(public);
 			invalid = 0;
@@ -600,12 +611,29 @@ do_fingerprint(struct passwd *pw)
 static void
 print_host(FILE *f, const char *name, Key *public, int hash)
 {
-	if (hash && (name = host_hash(name, NULL, 0)) == NULL)
-		fatal("hash_host failed");
-	fprintf(f, "%s ", name);
-	if (!key_write(public, f))
-		fatal("key_write failed");
-	fprintf(f, "\n");
+	if (print_fingerprint) {
+		enum fp_rep rep;
+		enum fp_type fptype;
+		char *fp, *ra;
+
+		fptype = print_bubblebabble ? SSH_FP_SHA1 : SSH_FP_MD5;
+		rep =    print_bubblebabble ? SSH_FP_BUBBLEBABBLE : SSH_FP_HEX;
+		fp = key_fingerprint(public, fptype, rep);
+		ra = key_fingerprint(public, fptype, SSH_FP_RANDOMART);
+		printf("%u %s %s (%s)\n", key_size(public), fp, name,
+		    key_type(public));
+		if (log_level >= SYSLOG_LEVEL_VERBOSE)
+			printf("%s\n", ra);
+		xfree(ra);
+		xfree(fp);
+	} else {
+		if (hash && (name = host_hash(name, NULL, 0)) == NULL)
+			fatal("hash_host failed");
+		fprintf(f, "%s ", name);
+		if (!key_write(public, f))
+			fatal("key_write failed");
+		fprintf(f, "\n");
+	}
 }
 
 static void
@@ -987,11 +1015,11 @@ do_change_comment(struct passwd *pw)
 	}
 	f = fdopen(fd, "w");
 	if (f == NULL) {
-		printf("fdopen %s failed", identity_file);
+		printf("fdopen %s failed\n", identity_file);
 		exit(1);
 	}
 	if (!key_write(public, f))
-		fprintf(stderr, "write key failed");
+		fprintf(stderr, "write key failed\n");
 	key_free(public);
 	fprintf(f, " %s\n", new_comment);
 	fclose(f);
@@ -1058,7 +1086,6 @@ main(int argc, char **argv)
 	int opt, type, fd, download = 0;
 	u_int32_t memory = 0, generator_wanted = 0, trials = 100;
 	int do_gen_candidates = 0, do_screen_candidates = 0;
-	int log_level = SYSLOG_LEVEL_INFO;
 	BIGNUM *start = NULL;
 	FILE *f;
 	const char *errstr;
@@ -1231,6 +1258,10 @@ main(int argc, char **argv)
 		printf("Can only have one of -p and -c.\n");
 		usage();
 	}
+	if (print_fingerprint && (delete_host || hash_hosts)) {
+		printf("Cannot use -l with -D or -R.\n");
+		usage();
+	}
 	if (delete_host || hash_hosts || find_host)
 		do_known_hosts(pw, rr_hostname);
 	if (print_fingerprint || print_bubblebabble)
@@ -1335,7 +1366,7 @@ main(int argc, char **argv)
 		printf("Generating public/private %s key pair.\n", key_type_name);
 	private = key_generate(type, bits);
 	if (private == NULL) {
-		fprintf(stderr, "key_generate failed");
+		fprintf(stderr, "key_generate failed\n");
 		exit(1);
 	}
 	public  = key_from_private(private);
@@ -1395,7 +1426,7 @@ passphrase_again:
 	if (identity_comment) {
 		strlcpy(comment, identity_comment, sizeof(comment));
 	} else {
-		/* Create default commend field for the passphrase. */
+		/* Create default comment field for the passphrase. */
 		snprintf(comment, sizeof comment, "%s@%s", pw->pw_name, hostname);
 	}
 
@@ -1425,20 +1456,25 @@ passphrase_again:
 	}
 	f = fdopen(fd, "w");
 	if (f == NULL) {
-		printf("fdopen %s failed", identity_file);
+		printf("fdopen %s failed\n", identity_file);
 		exit(1);
 	}
 	if (!key_write(public, f))
-		fprintf(stderr, "write key failed");
+		fprintf(stderr, "write key failed\n");
 	fprintf(f, " %s\n", comment);
 	fclose(f);
 
 	if (!quiet) {
 		char *fp = key_fingerprint(public, SSH_FP_MD5, SSH_FP_HEX);
+		char *ra = key_fingerprint(public, SSH_FP_MD5,
+		    SSH_FP_RANDOMART);
 		printf("Your public key has been saved in %s.\n",
 		    identity_file);
 		printf("The key fingerprint is:\n");
 		printf("%s %s\n", fp, comment);
+		printf("The key's randomart image is:\n");
+		printf("%s\n", ra);
+		xfree(ra);
 		xfree(fp);
 	}
 

@@ -1,4 +1,4 @@
-/* $OpenBSD: pathnames.h,v 1.16 2006/03/25 22:22:43 djm Exp $ */
+/* $OpenBSD: pathnames.h,v 1.17 2008/12/29 02:23:26 stevesk Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -43,8 +43,6 @@
 /* Backwards compatibility */
 #define _PATH_DH_PRIMES			SSHDIR "/primes"
 
-#define _PATH_BLACKLIST			SSHDIR "/blacklist"
-
 #ifndef _PATH_SSH_PROGRAM
 #define _PATH_SSH_PROGRAM		"/usr/bin/ssh"
 #endif
@@ -56,7 +54,7 @@
 #define _PATH_SSH_DAEMON_PID_FILE	_PATH_SSH_PIDDIR "/sshd.pid"
 
 /*
- * The directory in user\'s home directory in which the files reside. The
+ * The directory in user's home directory in which the files reside. The
  * directory should be world-readable (though not all files are).
  */
 #define _PATH_SSH_USER_DIR		".ssh"
@@ -79,9 +77,9 @@
 #define _PATH_SSH_CLIENT_ID_RSA		".ssh/id_rsa"
 
 /*
- * Configuration file in user\'s home directory.  This file need not be
+ * Configuration file in user's home directory.  This file need not be
  * readable by anyone but the user him/herself, but does not contain anything
- * particularly secret.  If the user\'s home directory resides on an NFS
+ * particularly secret.  If the user's home directory resides on an NFS
  * volume where root is mapped to nobody, this may need to be world-readable.
  */
 #define _PATH_SSH_USER_CONFFILE		".ssh/config"
@@ -89,7 +87,7 @@
 /*
  * File containing a list of those rsa keys that permit logging in as this
  * user.  This file need not be readable by anyone but the user him/herself,
- * but does not contain anything particularly secret.  If the user\'s home
+ * but does not contain anything particularly secret.  If the user's home
  * directory resides on an NFS volume where root is mapped to nobody, this
  * may need to be world-readable.  (This file is read by the daemon which is
  * running as root.)
@@ -119,7 +117,7 @@
  * Default location of askpass
  */
 #ifndef _PATH_SSH_ASKPASS_DEFAULT
-#define _PATH_SSH_ASKPASS_DEFAULT	"/usr/local/bin/ssh-askpass"
+#define _PATH_SSH_ASKPASS_DEFAULT	"/usr/X11R6/bin/ssh-askpass"
 #endif
 
 /* Location of ssh-keysign for hostbased authentication */

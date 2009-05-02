@@ -1,4 +1,4 @@
-/* $OpenBSD: misc.c,v 1.67 2008/01/01 08:47:04 dtucker Exp $ */
+/* $OpenBSD: misc.c,v 1.71 2009/02/21 19:32:04 tobias Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2005,2006 Damien Miller.  All rights reserved.
@@ -221,23 +221,19 @@ pwcopy(struct passwd *pw)
 
 /*
  * Convert ASCII string to TCP/IP port number.
- * Port must be >0 and <=65535.
- * Return 0 if invalid.
+ * Port must be >=0 and <=65535.
+ * Return -1 if invalid.
  */
 int
 a2port(const char *s)
 {
-	long port;
-	char *endp;
+	long long port;
+	const char *errstr;
 
-	errno = 0;
-	port = strtol(s, &endp, 0);
-	if (s == endp || *endp != '\0' ||
-	    (errno == ERANGE && (port == LONG_MIN || port == LONG_MAX)) ||
-	    port <= 0 || port > 65535)
-		return 0;
-
-	return port;
+	port = strtonum(s, 0, 65535, &errstr);
+	if (errstr != NULL)
+		return -1;
+	return (int)port;
 }
 
 int
@@ -534,7 +530,7 @@ tilde_expand_filename(const char *filename, uid_t uid)
 		if ((pw = getpwnam(user)) == NULL)
 			fatal("tilde_expand_filename: No such user %s", user);
 	} else if ((pw = getpwuid(uid)) == NULL)	/* ~/path */
-		fatal("tilde_expand_filename: No such uid %d", uid);
+		fatal("tilde_expand_filename: No such uid %ld", (long)uid);
 
 	if (strlcpy(ret, pw->pw_dir, sizeof(ret)) >= sizeof(ret))
 		fatal("tilde_expand_filename: Path too long");
@@ -718,7 +714,8 @@ sanitise_stdfd(void)
 	int nullfd, dupfd;
 
 	if ((nullfd = dupfd = open(_PATH_DEVNULL, O_RDWR)) == -1) {
-		fprintf(stderr, "Couldn't open /dev/null: %s", strerror(errno));
+		fprintf(stderr, "Couldn't open /dev/null: %s\n",
+		    strerror(errno));
 		exit(1);
 	}
 	while (++dupfd <= 2) {
@@ -726,7 +723,7 @@ sanitise_stdfd(void)
 		if (fcntl(dupfd, F_GETFL, 0) >= 0)
 			continue;
 		if (dup2(nullfd, dupfd) == -1) {
-			fprintf(stderr, "dup2: %s", strerror(errno));
+			fprintf(stderr, "dup2: %s\n", strerror(errno));
 			exit(1);
 		}
 	}
@@ -832,3 +829,23 @@ put_u16(void *vp, u_int16_t v)
 	p[0] = (u_char)(v >> 8) & 0xff;
 	p[1] = (u_char)v & 0xff;
 }
+
+void
+ms_subtract_diff(struct timeval *start, int *ms)
+{
+	struct timeval diff, finish;
+
+	gettimeofday(&finish, NULL);
+	timersub(&finish, start, &diff);	
+	*ms -= (diff.tv_sec * 1000) + (diff.tv_usec / 1000);
+}
+
+void
+ms_to_timeval(struct timeval *tv, int ms)
+{
+	if (ms < 0)
+		ms = 0;
+	tv->tv_sec = ms / 1000;
+	tv->tv_usec = (ms % 1000) * 1000;
+}
+

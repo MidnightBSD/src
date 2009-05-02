@@ -34,9 +34,8 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $MidnightBSD: src/crypto/openssh/sshd_config.5,v 1.5 2008/04/06 04:55:23 laffer1 Exp $
-.\" $OpenBSD: sshd_config.5,v 1.84 2008/03/25 11:58:02 djm Exp $
-.Dd $Mdocdate: March 27 2008 $
+.\" $OpenBSD: sshd_config.5,v 1.102 2009/02/22 23:59:25 djm Exp $
+.Dd $Mdocdate: February 22 2009 $
 .Dt SSHD_CONFIG 5
 .Os
 .Sh NAME
@@ -96,6 +95,15 @@ Valid arguments are
 (use IPv6 only).
 The default is
 .Dq any .
+.It Cm AllowAgentForwarding
+Specifies whether
+.Xr ssh-agent 1
+forwarding is permitted.
+The default is
+.Dq yes .
+Note that disabling agent forwarding does not improve security
+unless users are also denied shell access, as they can always install
+their own forwarders.
 .It Cm AllowGroups
 This keyword can be followed by a list of group name patterns, separated
 by spaces.
@@ -232,9 +240,9 @@ and
 .Dq cast128-cbc .
 The default is:
 .Bd -literal -offset 3n
-aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,arcfour128,
-arcfour256,arcfour,aes192-cbc,aes256-cbc,aes128-ctr,
-aes192-ctr,aes256-ctr
+aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128,
+aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,aes192-cbc,
+aes256-cbc,arcfour
 .Ed
 .It Cm ClientAliveCountMax
 Sets the number of client alive messages (see below) which may be
@@ -549,6 +557,7 @@ line are satisfied, the keywords on the following lines override those
 set in the global section of the config file, until either another
 .Cm Match
 line or the end of the file.
+.Pp
 The arguments to
 .Cm Match
 are one or more criteria-pattern pairs.
@@ -558,24 +567,52 @@ The available criteria are
 .Cm Host ,
 and
 .Cm Address .
+The match patterns may consist of single entries or comma-separated
+lists and may use the wildcard and negation operators described in the
+.Sx PATTERNS
+section of
+.Xr ssh_config 5 .
+.Pp
+The patterns in an
+.Cm Address
+criteria may additionally contain addresses to match in CIDR
+address/masklen format, e.g.\&
+.Dq 192.0.2.0/24
+or
+.Dq 3ffe:ffff::/32 .
+Note that the mask length provided must be consistent with the address -
+it is an error to specify a mask length that is too long for the address
+or one with bits set in this host portion of the address.
+For example,
+.Dq 192.0.2.0/33
+and
+.Dq 192.0.2.0/8
+respectively.
+.Pp
 Only a subset of keywords may be used on the lines following a
 .Cm Match
 keyword.
 Available keywords are
+.Cm AllowAgentForwarding ,
 .Cm AllowTcpForwarding ,
 .Cm Banner ,
+.Cm ChrootDirectory ,
 .Cm ForceCommand ,
 .Cm GatewayPorts ,
-.Cm GSSApiAuthentication ,
+.Cm GSSAPIAuthentication ,
+.Cm HostbasedAuthentication ,
 .Cm KbdInteractiveAuthentication ,
 .Cm KerberosAuthentication ,
+.Cm MaxAuthTries ,
+.Cm MaxSessions ,
 .Cm PasswordAuthentication ,
+.Cm PermitEmptyPasswords ,
 .Cm PermitOpen ,
 .Cm PermitRootLogin ,
 .Cm RhostsRSAAuthentication ,
 .Cm RSAAuthentication ,
 .Cm X11DisplayOffset ,
-.Cm X11Forwarding ,
+.Cm X11Forwarding
 and
 .Cm X11UseLocalHost .
 .It Cm MaxAuthTries
@@ -584,6 +621,9 @@ connection.
 Once the number of failures reaches half this value,
 additional failures are logged.
 The default is 6.
+.It Cm MaxSessions
+Specifies the maximum number of open sessions permitted per network connection.
+The default is 10.
 .It Cm MaxStartups
 Specifies the maximum number of concurrent unauthenticated connections to the
 SSH daemon.
@@ -612,20 +652,6 @@ are refused if the number of unauthenticated connections reaches
 Specifies whether password authentication is allowed.
 The default is
 .Dq yes .
-.It Cm PermitBlacklistedKeys
-Specifies whether
-.Xr sshd 8
-should allow keys recorded in its blacklist of known-compromised keys (see
-.Xr ssh-vulnkey 1 ) .
-If
-.Dq yes ,
-then attempts to authenticate with compromised keys will be logged but
-accepted.
-If
-.Dq no ,
-then attempts to authenticate with compromised keys will be rejected.
-The default is
-.Dq no .
 .It Cm PermitEmptyPasswords
 When password authentication is allowed, it specifies whether the
 server allows login to accounts with empty password strings.
@@ -787,7 +813,7 @@ The default is
 This option applies to protocol version 1 only.
 .It Cm ServerKeyBits
 Defines the number of bits in the ephemeral protocol version 1 server key.
-The minimum value is 512, and the default is 768.
+The minimum value is 512, and the default is 1024.
 .It Cm StrictModes
 Specifies whether
 .Xr sshd 8

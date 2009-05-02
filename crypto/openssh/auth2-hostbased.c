@@ -1,4 +1,4 @@
-/* $OpenBSD: auth2-hostbased.c,v 1.11 2006/08/03 03:34:41 deraadt Exp $ */
+/* $OpenBSD: auth2-hostbased.c,v 1.12 2008/07/17 08:51:07 djm Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  *
@@ -40,7 +40,6 @@
 #include "compat.h"
 #include "key.h"
 #include "hostfile.h"
-#include "authfile.h"
 #include "auth.h"
 #include "canohost.h"
 #ifdef GSSAPI
@@ -142,23 +141,9 @@ int
 hostbased_key_allowed(struct passwd *pw, const char *cuser, char *chost,
     Key *key)
 {
-	char *fp;
 	const char *resolvedname, *ipaddr, *lookup;
 	HostStatus host_status;
 	int len;
-
-	if (blacklisted_key(key)) {
-		fp = key_fingerprint(key, SSH_FP_MD5, SSH_FP_HEX);
-		if (options.permit_blacklisted_keys)
-			logit("Public key %s blacklisted (see "
-			    "ssh-vulnkey(1)); continuing anyway", fp);
-		else
-			logit("Public key %s blacklisted (see "
-			    "ssh-vulnkey(1))", fp);
-		xfree(fp);
-		if (!options.permit_blacklisted_keys)
-			return 0;
-	}
 
 	resolvedname = get_canonical_hostname(options.use_dns);
 	ipaddr = get_remote_ipaddr();
@@ -166,15 +151,16 @@ hostbased_key_allowed(struct passwd *pw, const char *cuser, char *chost,
 	debug2("userauth_hostbased: chost %s resolvedname %s ipaddr %s",
 	    chost, resolvedname, ipaddr);
 
+	if (((len = strlen(chost)) > 0) && chost[len - 1] == '.') {
+		debug2("stripping trailing dot from chost %s", chost);
+		chost[len - 1] = '\0';
+	}
+
 	if (options.hostbased_uses_name_from_packet_only) {
 		if (auth_rhosts2(pw, cuser, chost, chost) == 0)
 			return 0;
 		lookup = chost;
 	} else {
-		if (((len = strlen(chost)) > 0) && chost[len - 1] == '.') {
-			debug2("stripping trailing dot from chost %s", chost);
-			chost[len - 1] = '\0';
-		}
 		if (strcasecmp(resolvedname, chost) != 0)
 			logit("userauth_hostbased mismatch: "
 			    "client sends %s, but we resolve %s to %s",

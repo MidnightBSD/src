@@ -1,4 +1,4 @@
-/* $OpenBSD: sftp.c,v 1.99 2008/01/20 00:38:30 djm Exp $ */
+/* $OpenBSD: sftp.c,v 1.107 2009/02/02 11:15:14 dtucker Exp $ */
 /*
  * Copyright (c) 2001-2004 Damien Miller <djm@openbsd.org>
  *
@@ -25,6 +25,9 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif
 
 #include <ctype.h>
 #include <errno.h>
@@ -43,6 +46,14 @@ typedef void EditLine;
 #include <string.h>
 #include <unistd.h>
 #include <stdarg.h>
+
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
+
+#ifdef HAVE_LIBUTIL_H
+# include <libutil.h>
+#endif
 
 #include "xmalloc.h"
 #include "log.h"
@@ -64,7 +75,7 @@ int batchmode = 0;
 size_t copy_buffer_len = 32768;
 
 /* Number of concurrent outstanding requests */
-size_t num_requests = 16;
+size_t num_requests = 64;
 
 /* PID of ssh transport process */
 static pid_t sshpid = -1;
@@ -104,6 +115,7 @@ extern char *__progname;
 #define I_CHGRP		2
 #define I_CHMOD		3
 #define I_CHOWN		4
+#define I_DF		24
 #define I_GET		5
 #define I_HELP		6
 #define I_LCHDIR	7
@@ -136,6 +148,7 @@ static const struct CMD cmds[] = {
 	{ "chgrp",	I_CHGRP },
 	{ "chmod",	I_CHMOD },
 	{ "chown",	I_CHOWN },
+	{ "df",		I_DF },
 	{ "dir",	I_LS },
 	{ "exit",	I_QUIT },
 	{ "get",	I_GET },
@@ -194,34 +207,37 @@ cmd_interrupt(int signo)
 static void
 help(void)
 {
-	printf("Available commands:\n");
-	printf("cd path                       Change remote directory to 'path'\n");
-	printf("lcd path                      Change local directory to 'path'\n");
-	printf("chgrp grp path                Change group of file 'path' to 'grp'\n");
-	printf("chmod mode path               Change permissions of file 'path' to 'mode'\n");
-	printf("chown own path                Change owner of file 'path' to 'own'\n");
-	printf("help                          Display this help text\n");
-	printf("get remote-path [local-path]  Download file\n");
-	printf("lls [ls-options [path]]       Display local directory listing\n");
-	printf("ln oldpath newpath            Symlink remote file\n");
-	printf("lmkdir path                   Create local directory\n");
-	printf("lpwd                          Print local working directory\n");
-	printf("ls [path]                     Display remote directory listing\n");
-	printf("lumask umask                  Set local umask to 'umask'\n");
-	printf("mkdir path                    Create remote directory\n");
-	printf("progress                      Toggle display of progress meter\n");
-	printf("put local-path [remote-path]  Upload file\n");
-	printf("pwd                           Display remote working directory\n");
-	printf("exit                          Quit sftp\n");
-	printf("quit                          Quit sftp\n");
-	printf("rename oldpath newpath        Rename remote file\n");
-	printf("rmdir path                    Remove remote directory\n");
-	printf("rm path                       Delete remote file\n");
-	printf("symlink oldpath newpath       Symlink remote file\n");
-	printf("version                       Show SFTP version\n");
-	printf("!command                      Execute 'command' in local shell\n");
-	printf("!                             Escape to local shell\n");
-	printf("?                             Synonym for help\n");
+	printf("Available commands:\n"
+	    "bye                                Quit sftp\n"
+	    "cd path                            Change remote directory to 'path'\n"
+	    "chgrp grp path                     Change group of file 'path' to 'grp'\n"
+	    "chmod mode path                    Change permissions of file 'path' to 'mode'\n"
+	    "chown own path                     Change owner of file 'path' to 'own'\n"
+	    "df [-hi] [path]                    Display statistics for current directory or\n"
+	    "                                   filesystem containing 'path'\n"
+	    "exit                               Quit sftp\n"
+	    "get [-P] remote-path [local-path]  Download file\n"
+	    "help                               Display this help text\n"
+	    "lcd path                           Change local directory to 'path'\n"
+	    "lls [ls-options [path]]            Display local directory listing\n"
+	    "lmkdir path                        Create local directory\n"
+	    "ln oldpath newpath                 Symlink remote file\n"
+	    "lpwd                               Print local working directory\n"
+	    "ls [-1aflnrSt] [path]              Display remote directory listing\n"
+	    "lumask umask                       Set local umask to 'umask'\n"
+	    "mkdir path                         Create remote directory\n"
+	    "progress                           Toggle display of progress meter\n"
+	    "put [-P] local-path [remote-path]  Upload file\n"
+	    "pwd                                Display remote working directory\n"
+	    "quit                               Quit sftp\n"
+	    "rename oldpath newpath             Rename remote file\n"
+	    "rm path                            Delete remote file\n"
+	    "rmdir path                         Remove remote directory\n"
+	    "symlink oldpath newpath            Symlink remote file\n"
+	    "version                            Show SFTP version\n"
+	    "!command                           Execute 'command' in local shell\n"
+	    "!                                  Escape to local shell\n"
+	    "?                                  Synonym for help\n");
 }
 
 static void
@@ -349,7 +365,7 @@ infer_path(const char *p, char **ifp)
 static int
 parse_getput_flags(const char *cmd, char **argv, int argc, int *pflag)
 {
-	extern int optind, optreset, opterr;
+	extern int opterr, optind, optopt, optreset;
 	int ch;
 
 	optind = optreset = 1;
@@ -363,7 +379,7 @@ parse_getput_flags(const char *cmd, char **argv, int argc, int *pflag)
 			*pflag = 1;
 			break;
 		default:
-			error("%s: Invalid flag -%c", cmd, ch);
+			error("%s: Invalid flag -%c", cmd, optopt);
 			return -1;
 		}
 	}
@@ -374,7 +390,7 @@ parse_getput_flags(const char *cmd, char **argv, int argc, int *pflag)
 static int
 parse_ls_flags(char **argv, int argc, int *lflag)
 {
-	extern int optind, optreset, opterr;
+	extern int opterr, optind, optopt, optreset;
 	int ch;
 
 	optind = optreset = 1;
@@ -413,7 +429,34 @@ parse_ls_flags(char **argv, int argc, int *lflag)
 			*lflag |= LS_TIME_SORT;
 			break;
 		default:
-			error("ls: Invalid flag -%c", ch);
+			error("ls: Invalid flag -%c", optopt);
+			return -1;
+		}
+	}
+
+	return optind;
+}
+
+static int
+parse_df_flags(const char *cmd, char **argv, int argc, int *hflag, int *iflag)
+{
+	extern int opterr, optind, optopt, optreset;
+	int ch;
+
+	optind = optreset = 1;
+	opterr = 0;
+
+	*hflag = *iflag = 0;
+	while ((ch = getopt(argc, argv, "hi")) != -1) {
+		switch (ch) {
+		case 'h':
+			*hflag = 1;
+			break;
+		case 'i':
+			*iflag = 1;
+			break;
+		default:
+			error("%s: Invalid flag -%c", cmd, optopt);
 			return -1;
 		}
 	}
@@ -797,6 +840,56 @@ do_globbed_ls(struct sftp_conn *conn, char *path, char *strip_path,
 	return (0);
 }
 
+static int
+do_df(struct sftp_conn *conn, char *path, int hflag, int iflag)
+{
+	struct sftp_statvfs st;
+	char s_used[FMT_SCALED_STRSIZE];
+	char s_avail[FMT_SCALED_STRSIZE];
+	char s_root[FMT_SCALED_STRSIZE];
+	char s_total[FMT_SCALED_STRSIZE];
+
+	if (do_statvfs(conn, path, &st, 1) == -1)
+		return -1;
+	if (iflag) {
+		printf("     Inodes        Used       Avail      "
+		    "(root)    %%Capacity\n");
+		printf("%11llu %11llu %11llu %11llu         %3llu%%\n",
+		    (unsigned long long)st.f_files,
+		    (unsigned long long)(st.f_files - st.f_ffree),
+		    (unsigned long long)st.f_favail,
+		    (unsigned long long)st.f_ffree,
+		    (unsigned long long)(100 * (st.f_files - st.f_ffree) /
+		    st.f_files));
+	} else if (hflag) {
+		strlcpy(s_used, "error", sizeof(s_used));
+		strlcpy(s_avail, "error", sizeof(s_avail));
+		strlcpy(s_root, "error", sizeof(s_root));
+		strlcpy(s_total, "error", sizeof(s_total));
+		fmt_scaled((st.f_blocks - st.f_bfree) * st.f_frsize, s_used);
+		fmt_scaled(st.f_bavail * st.f_frsize, s_avail);
+		fmt_scaled(st.f_bfree * st.f_frsize, s_root);
+		fmt_scaled(st.f_blocks * st.f_frsize, s_total);
+		printf("    Size     Used    Avail   (root)    %%Capacity\n");
+		printf("%7sB %7sB %7sB %7sB         %3llu%%\n",
+		    s_total, s_used, s_avail, s_root,
+		    (unsigned long long)(100 * (st.f_blocks - st.f_bfree) /
+		    st.f_blocks));
+	} else {
+		printf("        Size         Used        Avail       "
+		    "(root)    %%Capacity\n");
+		printf("%12llu %12llu %12llu %12llu         %3llu%%\n",
+		    (unsigned long long)(st.f_frsize * st.f_blocks / 1024),
+		    (unsigned long long)(st.f_frsize *
+		    (st.f_blocks - st.f_bfree) / 1024),
+		    (unsigned long long)(st.f_frsize * st.f_bavail / 1024),
+		    (unsigned long long)(st.f_frsize * st.f_bfree / 1024),
+		    (unsigned long long)(100 * (st.f_blocks - st.f_bfree) /
+		    st.f_blocks));
+	}
+	return 0;
+}
+
 /*
  * Undo escaping of glob sequences in place. Used to undo extra escaping
  * applied in makeargv() when the string is destined for a function that
@@ -972,7 +1065,7 @@ makeargv(const char *arg, int *argcp)
 }
 
 static int
-parse_args(const char **cpp, int *pflag, int *lflag, int *iflag,
+parse_args(const char **cpp, int *pflag, int *lflag, int *iflag, int *hflag,
     unsigned long *n_arg, char **path1, char **path2)
 {
 	const char *cmd, *cp = *cpp;
@@ -1016,7 +1109,7 @@ parse_args(const char **cpp, int *pflag, int *lflag, int *iflag,
 	}
 
 	/* Get arguments and parse flags */
-	*lflag = *pflag = *n_arg = 0;
+	*lflag = *pflag = *hflag = *n_arg = 0;
 	*path1 = *path2 = NULL;
 	optidx = 1;
 	switch (cmdnum) {
@@ -1067,6 +1160,18 @@ parse_args(const char **cpp, int *pflag, int *lflag, int *iflag,
 		/* Only "rm" globs */
 		if (cmdnum != I_RM)
 			undo_glob_escape(*path1);
+		break;
+	case I_DF:
+		if ((optidx = parse_df_flags(cmd, argv, argc, hflag,
+		    iflag)) == -1)
+			return -1;
+		/* Default to current directory if no path specified */
+		if (argc - optidx < 1)
+			*path1 = NULL;
+		else {
+			*path1 = xstrdup(argv[optidx]);
+			undo_glob_escape(*path1);
+		}
 		break;
 	case I_LS:
 		if ((optidx = parse_ls_flags(argv, argc, lflag)) == -1)
@@ -1130,15 +1235,15 @@ parse_dispatch_command(struct sftp_conn *conn, const char *cmd, char **pwd,
     int err_abort)
 {
 	char *path1, *path2, *tmp;
-	int pflag, lflag, iflag, cmdnum, i;
-	unsigned long n_arg;
+	int pflag = 0, lflag = 0, iflag = 0, hflag = 0, cmdnum, i;
+	unsigned long n_arg = 0;
 	Attrib a, *aa;
 	char path_buf[MAXPATHLEN];
 	int err = 0;
 	glob_t g;
 
 	path1 = path2 = NULL;
-	cmdnum = parse_args(&cmd, &pflag, &lflag, &iflag, &n_arg,
+	cmdnum = parse_args(&cmd, &pflag, &lflag, &iflag, &hflag, &n_arg,
 	    &path1, &path2);
 
 	if (iflag != 0)
@@ -1232,6 +1337,13 @@ parse_dispatch_command(struct sftp_conn *conn, const char *cmd, char **pwd,
 		path1 = make_absolute(path1, *pwd);
 		err = do_globbed_ls(conn, path1, tmp, lflag);
 		break;
+	case I_DF:
+		/* Default to current directory if no path specified */
+		if (path1 == NULL)
+			path1 = xstrdup(*pwd);
+		path1 = make_absolute(path1, *pwd);
+		err = do_df(conn, path1, hflag, iflag);
+		break;
 	case I_LCHDIR:
 		if (chdir(path1) == -1) {
 			error("Couldn't change local directory to "
@@ -1275,17 +1387,19 @@ parse_dispatch_command(struct sftp_conn *conn, const char *cmd, char **pwd,
 		remote_glob(conn, path1, GLOB_NOCHECK, NULL, &g);
 		for (i = 0; g.gl_pathv[i] && !interrupted; i++) {
 			if (!(aa = do_stat(conn, g.gl_pathv[i], 0))) {
-				if (err != 0 && err_abort)
+				if (err_abort) {
+					err = -1;
 					break;
-				else
+				} else
 					continue;
 			}
 			if (!(aa->flags & SSH2_FILEXFER_ATTR_UIDGID)) {
 				error("Can't get current ownership of "
 				    "remote file \"%s\"", g.gl_pathv[i]);
-				if (err != 0 && err_abort)
+				if (err_abort) {
+					err = -1;
 					break;
-				else
+				} else
 					continue;
 			}
 			aa->flags &= SSH2_FILEXFER_ATTR_UIDGID;
@@ -1557,8 +1671,8 @@ usage(void)
 	    "usage: %s [-1Cv] [-B buffer_size] [-b batchfile] [-F ssh_config]\n"
 	    "            [-o ssh_option] [-P sftp_server_path] [-R num_requests]\n"
 	    "            [-S program] [-s subsystem | sftp_server] host\n"
-	    "       %s [[user@]host[:file [file]]]\n"
-	    "       %s [[user@]host[:dir[/]]]\n"
+	    "       %s [user@]host[:file ...]\n"
+	    "       %s [user@]host[:dir[/]]\n"
 	    "       %s -b batchfile [user@]host\n", __progname, __progname, __progname, __progname);
 	exit(1);
 }
