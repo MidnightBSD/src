@@ -18547,6 +18547,7 @@ crypto/openssh/compat.h -text
 crypto/openssh/compress.c -text
 crypto/openssh/compress.h -text
 crypto/openssh/config.guess -text
+crypto/openssh/config.h -text
 crypto/openssh/config.sub -text
 crypto/openssh/configure.ac -text
 crypto/openssh/crc32.c -text
