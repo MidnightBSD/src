@@ -1,11 +1,11 @@
-# $MidnightBSD: src/etc/ssh/Makefile,v 1.2 2008/05/30 20:28:33 laffer1 Exp $
+# $MidnightBSD: src/etc/ssh/Makefile,v 1.3 2008/05/30 22:50:50 laffer1 Exp $
 
-NO_OBJ=	
+NO_OBJ=
 
-FILES=	${.CURDIR}/../../crypto/openssh/ssh_config \
+FILESDIR=      /etc/ssh
+MYFILES=	${.CURDIR}/../../crypto/openssh/ssh_config \
 	${.CURDIR}/../../crypto/openssh/sshd_config \
 	${.CURDIR}/../../crypto/openssh/moduli 
-FILESDIR=	/etc/ssh
 FILESOWN=	${BINOWN}
 FILESGRP=	${BINGRP}
 
@@ -30,5 +30,9 @@ short.${bl:T}: ${bl}
 	grep -v '^#' ${.ALLSRC} | /usr/bin/cut -d ' ' -f 2 | /usr/bin/cut -b13- | /usr/bin/sort >> ${.TARGET}
 .endfor
 
-.include <bsd.prog.mk>
+distribution:
+.for me in ${MYFILES}
+	cp ${me} ${DESTDIR}${FILESDIR}
+.endfor
 
+.include <bsd.prog.mk>
