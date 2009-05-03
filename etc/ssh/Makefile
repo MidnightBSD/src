@@ -1,4 +1,6 @@
-# $MidnightBSD: src/etc/ssh/Makefile,v 1.3 2008/05/30 22:50:50 laffer1 Exp $
+# $MidnightBSD: src/etc/ssh/Makefile,v 1.4 2009/05/03 21:01:08 laffer1 Exp $
+
+.include <bsd.own.mk>
 
 NO_OBJ=
 
@@ -30,9 +32,10 @@ short.${bl:T}: ${bl}
 	grep -v '^#' ${.ALLSRC} | /usr/bin/cut -d ' ' -f 2 | /usr/bin/cut -b13- | /usr/bin/sort >> ${.TARGET}
 .endfor
 
-distribution:
-.for me in ${MYFILES}
-	cp ${me} ${DESTDIR}${FILESDIR}
-.endfor
+install:
+.if ${MK_OPENSSH} != "no"
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
+		${MYFILES} ${DESTDIR}/etc/ssh
+.endif
 
 .include <bsd.prog.mk>
