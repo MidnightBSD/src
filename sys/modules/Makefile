@@ -1,5 +1,5 @@
 # $FreeBSD: src/sys/modules/Makefile,v 1.450.2.9 2006/02/13 11:39:01 marius Exp $
-# $MidnightBSD: src/sys/modules/Makefile,v 1.13 2008/11/18 19:26:20 laffer1 Exp $
+# $MidnightBSD: src/sys/modules/Makefile,v 1.14 2009/05/02 16:19:10 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -9,6 +9,7 @@ SUBDIR=	${_3dfx} \
 	accf_data \
 	accf_http \
 	${_acpi} \
+	ae \
 	${_agp} \
 	aha \
 	${_ahb} \
