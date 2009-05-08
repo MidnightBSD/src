@@ -1,11 +1,9 @@
 # $MidnightBSD: src/etc/ssh/Makefile,v 1.4 2009/05/03 21:01:08 laffer1 Exp $
 
-.include <bsd.own.mk>
-
 NO_OBJ=
 
 FILESDIR=      /etc/ssh
-MYFILES=	${.CURDIR}/../../crypto/openssh/ssh_config \
+FILES=	${.CURDIR}/../../crypto/openssh/ssh_config \
 	${.CURDIR}/../../crypto/openssh/sshd_config \
 	${.CURDIR}/../../crypto/openssh/moduli 
 FILESOWN=	${BINOWN}
@@ -31,11 +29,5 @@ short.${bl:T}: ${bl}
 
 	grep -v '^#' ${.ALLSRC} | /usr/bin/cut -d ' ' -f 2 | /usr/bin/cut -b13- | /usr/bin/sort >> ${.TARGET}
 .endfor
-
-install:
-.if ${MK_OPENSSH} != "no"
-	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
-		${MYFILES} ${DESTDIR}/etc/ssh
-.endif
 
 .include <bsd.prog.mk>
