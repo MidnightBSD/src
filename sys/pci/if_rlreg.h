@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.4 2008/12/03 00:11:14 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998-2003
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -154,6 +154,7 @@
 #define RL_HWREV_8169_8110SB	0x10000000
 #define RL_HWREV_8169_8110SC	0x18000000
 #define RL_HWREV_8168_SPIN1	0x30000000
+#define RL_HWREV_8168_8111C	0x3c000000
 #define RL_HWREV_8100E		0x30800000
 #define RL_HWREV_8101E		0x34000000
 #define RL_HWREV_8168_SPIN2	0x38000000

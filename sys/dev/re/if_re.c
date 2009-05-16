@@ -184,6 +184,8 @@ static struct rl_type re_devs[] = {
 		"RealTek 8168/8111B PCIe Gigabit Ethernet" },
 	{ RT_VENDORID, RT_DEVICEID_8168, RL_HWREV_8168_SPIN3,
 		"RealTek 8168/8111B PCIe Gigabit Ethernet" },
+	{ RT_VENDORID, RT_DEVICEID_8168, RL_HWREV_8168_8111C,
+		"RealTek 8168/8111C PCIe Gigabit Ethernet"},
 	{ RT_VENDORID, RT_DEVICEID_8169, RL_HWREV_8169,
 		"RealTek 8169 Gigabit Ethernet" },
 	{ RT_VENDORID, RT_DEVICEID_8169, RL_HWREV_8169S,
@@ -226,6 +228,7 @@ static struct rl_hwrev re_hwrevs[] = {
 	{ RL_HWREV_8101E, RL_8169, "8101E"},
 	{ RL_HWREV_8168_SPIN2, RL_8169, "8168"},
 	{ RL_HWREV_8168_SPIN3, RL_8169, "8168"},
+	{ RL_HWREV_8168_8111C, RL_8169, "8168"},
 	{ 0, 0, NULL }
 };
 
@@ -692,6 +695,7 @@ re_setmulti(sc)
 	case RL_HWREV_8168_SPIN1:
 	case RL_HWREV_8168_SPIN2:
 	case RL_HWREV_8168_SPIN3:
+	case RL_HWREV_8168_8111C:
 		CSR_WRITE_4(sc, RL_MAR0, bswap32(hashes[1]));
 		CSR_WRITE_4(sc, RL_MAR4, bswap32(hashes[0]));
 		break;
@@ -1268,12 +1272,21 @@ re_attach(dev)
 	        sc->rl_eewidth = RL_9346_ADDR_LEN;
 
 	/*
-	 * Get station address from the EEPROM.
+	 * Get station address from ID registers.
 	 */
-	re_read_eeprom(sc, (caddr_t)as, RL_EE_EADDR, 3);
-	for (i = 0; i < ETHER_ADDR_LEN / 2; i++)
-		as[i] = le16toh(as[i]);
-	bcopy(as, eaddr, sizeof(eaddr));
+	if (hwrev == RL_HWREV_8168_8111C) {
+		device_printf(dev, "reading stations address\n");
+		for (i = 0; i < ETHER_ADDR_LEN; i++)
+			eaddr[i] = CSR_READ_1(sc, RL_IDR0 + i);
+	} else {
+		/*
+		 * Get station address from the EEPROM.
+		 */
+		re_read_eeprom(sc, (caddr_t)as, RL_EE_EADDR, 3);
+		for (i = 0; i < ETHER_ADDR_LEN / 2; i++)
+			as[i] = le16toh(as[i]);
+		bcopy(as, eaddr, sizeof(eaddr));
+	}
 
 	if (sc->rl_type == RL_8169) {
 		/* Set RX length mask */
@@ -1330,6 +1343,7 @@ re_attach(dev)
 			case RL_HWREV_8169_8110SC:
 			case RL_HWREV_8168_SPIN2:
 			case RL_HWREV_8168_SPIN3:
+			case RL_HWREV_8168_8111C:
 				re_gmii_writereg(dev, 1, 0x1f, 0);
 				re_gmii_writereg(dev, 1, 0x0e, 0);
 				break;
