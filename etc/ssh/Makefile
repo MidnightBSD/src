@@ -1,11 +1,11 @@
-# $MidnightBSD: src/etc/ssh/Makefile,v 1.4 2009/05/03 21:01:08 laffer1 Exp $
+# $MidnightBSD: src/etc/ssh/Makefile,v 1.6 2009/05/08 17:14:21 laffer1 Exp $
 
 NO_OBJ=
 
 FILESDIR=      /etc/ssh
-FILES=	${.CURDIR}/../../crypto/openssh/ssh_config \
-	${.CURDIR}/../../crypto/openssh/sshd_config \
-	${.CURDIR}/../../crypto/openssh/moduli 
+#FILES=	${.CURDIR}/../../crypto/openssh/ssh_config \
+#	${.CURDIR}/../../crypto/openssh/sshd_config \
+#	${.CURDIR}/../../crypto/openssh/moduli 
 FILESOWN=	${BINOWN}
 FILESGRP=	${BINGRP}
 
