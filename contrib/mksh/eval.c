@@ -1,8 +1,28 @@
 /*	$OpenBSD: eval.c,v 1.34 2009/01/29 23:27:26 jaredy Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.53 2009/03/22 17:47:35 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/eval.c,v 1.57 2009/05/16 18:40:05 tg Exp $");
 
 #ifdef MKSH_SMALL
 #define MKSH_NOPWNAM
@@ -51,6 +71,35 @@ static char *tilde(char *);
 static char *homedir(char *);
 #endif
 static void alt_expand(XPtrV *, char *, char *, char *, int);
+static size_t utflen(const char *);
+static void utfincptr(const char *, mksh_ari_t *);
+
+/* UTFMODE functions */
+static size_t
+utflen(const char *s)
+{
+	size_t n;
+
+	if (UTFMODE) {
+		n = 0;
+		while (*s) {
+			s += utf_ptradj(s);
+			++n;
+		}
+	} else
+		n = strlen(s);
+	return (n);
+}
+
+static void
+utfincptr(const char *s, mksh_ari_t *lp)
+{
+	const char *cp = s;
+
+	while ((*lp)--)
+		cp += utf_ptradj(cp);
+	*lp = cp - s;
+}
 
 /* compile and expand word */
 char *
@@ -137,13 +186,13 @@ evalonestr(const char *cp, int f)
 
 /* for nested substitution: ${var:=$var2} */
 typedef struct SubType {
+	struct tbl *var;	/* variable for ${var..} */
+	struct SubType *prev;	/* old type */
+	struct SubType *next;	/* poped type (to avoid re-allocating) */
 	short	stype;		/* [=+-?%#] action after expanded word */
 	short	base;		/* begin position of expanded word */
 	short	f;		/* saved value of f (DOPAT, etc) */
 	short	quote;		/* saved value of quote (for ${..[%#]..}) */
-	struct tbl *var;	/* variable for ${var..} */
-	struct SubType *prev;	/* old type */
-	struct SubType *next;	/* poped type (to avoid re-allocating) */
 } SubType;
 
 void
@@ -314,7 +363,7 @@ expand(const char *cp,	/* input word */
 					switch (stype & 0x7f) {
 					case '0': {
 						char *beg, *mid, *end, *stg;
-						mksh_ari_t from = 0, num = -1, flen;
+						mksh_ari_t from = 0, num = -1, flen, finc = 0;
 
 						/* ! DOBLANK,DOBRACE_,DOTILDE */
 						f = DOPAT | (f&DONTRUNCOMMAND) |
@@ -347,15 +396,20 @@ expand(const char *cp,	/* input word */
 						}
 						afree(beg, ATEMP);
 						beg = str_val(st->var);
-						flen = strlen(beg);
+						flen = utflen(beg);
 						if (from < 0) {
 							if (-from < flen)
-								beg += flen + from;
+								finc = flen + from;
 						} else
-							beg += from < flen ? from : flen;
-						flen = strlen(beg);
+							finc = from < flen ? from : flen;
+//						if (UTFMODE)
+							utfincptr(beg, &finc);
+						beg += finc;
+						flen = utflen(beg);
 						if (num < 0 || num > flen)
 							num = flen;
+//						if (UTFMODE)
+							utfincptr(beg, &num);
 						strndupx(x.str, beg, num, ATEMP);
 						goto do_CSUBST;
 					}
@@ -372,16 +426,6 @@ expand(const char *cp,	/* input word */
 						s = wdcopy(sp, ATEMP);
 						p = s + (wdscan(sp, ADELIM) - sp);
 						d = s + (wdscan(sp, CSUBST) - sp);
-#if 0
-						fprintf(stderr,
-						    "D: s=%p 〈%s〉\n"
-						    "   p=%p 〈%s〉\n"
-						    "   d=%p 〈%s〉\n",
-						    s, wdstrip(s, true, false),
-						    p, wdstrip(p, true, false),
-						    d, wdstrip(d, true, false));
-						fflush(stderr);
-#endif
 						if (p >= d)
 							goto unwind_substsyn;
 						p[-2] = EOS;
@@ -411,12 +455,6 @@ expand(const char *cp,	/* input word */
 							else
 								s++;
 						*d = '\0';
-#if 0
-						fprintf(stderr,
-						    "D: 〔%s｜%s〕→〔%s〕\n",
-						    tpat0, pat, rrep);
-						fflush(stderr);
-#endif
 						afree(tpat0, ATEMP);
 
 						/* reject empty pattern */
@@ -443,12 +481,6 @@ expand(const char *cp,	/* input word */
 							tpat2 = tpat1 + 2;
 						}
  again_repl:
-#if 0
-						fprintf(stderr,
-						    "D: 「%s」 ← 〔%s｜%s〕\n",
-						    s, tpat0, rrep);
-						fflush(stderr);
-#endif
 						/* this would not be necessary if gmatchx would return
 						 * the start and end values of a match found, like re*
 						 */
@@ -913,7 +945,7 @@ varsub(Expand *xp, const char *sp, const char *word,
 		else {
 			p = str_val(global(sp));
 			zero_ok = p != null;
-			c = strlen(p);
+			c = utflen(p);
 		}
 		if (Flag(FNOUNSET) && c == 0 && !zero_ok)
 			errorf("%s: parameter not set", sp);

@@ -1,11 +1,31 @@
 /*	$OpenBSD: c_ksh.c,v 1.33 2009/02/07 14:03:24 kili Exp $	*/
-/*	$OpenBSD: c_sh.c,v 1.39 2009/01/29 23:27:26 jaredy Exp $	*/
+/*	$OpenBSD: c_sh.c,v 1.40 2009/05/05 17:59:55 millert Exp $	*/
 /*	$OpenBSD: c_test.c,v 1.18 2009/03/01 20:11:06 otto Exp $	*/
 /*	$OpenBSD: c_ulimit.c,v 1.17 2008/03/21 12:51:19 millert Exp $	*/
 
+/*-
+ * Copyright (c) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.100 2009/03/22 18:28:34 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/funcs.c,v 1.107 2009/05/16 18:40:06 tg Exp $");
 
 /* A leading = means assignments before command are kept;
  * a leading * means a POSIX special builtin;
@@ -51,8 +71,10 @@ const struct builtin mkshbuiltins[] = {
 	{"=typeset", c_typeset},
 	{"+unalias", c_unalias},
 	{"whence", c_whence},
+#ifndef MKSH_UNEMPLOYED
 	{"+bg", c_fgbg},
 	{"+fg", c_fgbg},
+#endif
 	{"bind", c_bind},
 #if HAVE_MKNOD
 	{"mknod", c_mknod},
@@ -70,8 +92,8 @@ struct kill_info {
 };
 
 static const struct t_op {
-	char	op_text[4];
-	Test_op	op_num;
+	char op_text[4];
+	Test_op op_num;
 } u_ops[] = {
 	{"-a",	TO_FILAXST },
 	{"-b",	TO_FILBDEV },
@@ -1238,6 +1260,7 @@ c_jobs(const char **wp)
 	return rv;
 }
 
+#ifndef MKSH_UNEMPLOYED
 int
 c_fgbg(const char **wp)
 {
@@ -1258,6 +1281,7 @@ c_fgbg(const char **wp)
 		rv = j_resume("%%", bg);
 	return bg ? 0 : rv;
 }
+#endif
 
 /* format a single kill item */
 static char *
@@ -2184,17 +2208,13 @@ c_times(const char **wp __unused)
 {
 	struct rusage usage;
 
-#ifdef RUSAGE_SELF
-	(void) getrusage(RUSAGE_SELF, &usage);
+	getrusage(RUSAGE_SELF, &usage);
 	p_time(shl_stdout, 0, &usage.ru_utime, 0, NULL, " ");
 	p_time(shl_stdout, 0, &usage.ru_stime, 0, NULL, "\n");
-#endif
 
-#ifdef RUSAGE_CHILDREN
-	(void) getrusage(RUSAGE_CHILDREN, &usage);
+	getrusage(RUSAGE_CHILDREN, &usage);
 	p_time(shl_stdout, 0, &usage.ru_utime, 0, NULL, " ");
 	p_time(shl_stdout, 0, &usage.ru_stime, 0, NULL, "\n");
-#endif
 
 	return 0;
 }
@@ -2208,9 +2228,6 @@ timex(struct op *t, int f, volatile int *xerrok)
 #define TF_NOARGS	BIT(0)
 #define TF_NOREAL	BIT(1)		/* don't report real time */
 #define TF_POSIX	BIT(2)		/* report in posix format */
-#if !defined(RUSAGE_SELF) || !defined(RUSAGE_CHILDREN)
-	return (0);
-#else
 	int rv = 0, tf = 0;
 	struct rusage ru0, ru1, cru0, cru1;
 	struct timeval usrtime, systime, tv0, tv1;
@@ -2267,7 +2284,6 @@ timex(struct op *t, int f, volatile int *xerrok)
 	shf_flush(shl_out);
 
 	return (rv);
-#endif
 }
 
 void
@@ -2348,7 +2364,7 @@ c_mknod(const char **wp)
 		}
 	}
 	argv = &wp[builtin_opt.optind];
-	if (argv[0] == '\0')
+	if (argv[0] == NULL)
 		goto c_mknod_usage;
 	for (argc = 0; argv[argc]; argc++)
 		;
@@ -2402,6 +2418,10 @@ c_mknod(const char **wp)
 		umask(oldmode);
 	return (rv);
  c_mknod_usage:
+#if 0
+	/* XXX doesn't help */
+	builtin_argv0 = NULL;
+#endif
 	bi_errorf("usage: mknod [-m mode] name [b | c] major minor");
 	bi_errorf("usage: mknod [-m mode] name p");
 	return (1);
@@ -2471,7 +2491,7 @@ c_test(const char **wp)
 	if (argc <= 5) {
 		const char **owp = wp;
 		int invert = 0;
-		Test_op	op;
+		Test_op op;
 		const char *opnd1, *opnd2;
 
 		while (--argc >= 0) {
@@ -2855,6 +2875,7 @@ ptest_error(Test_env *te, int ofs, const char *msg)
 		bi_errorf("%s", msg);
 }
 
+#ifdef RLIM_INFINITY
 #define SOFT	0x1
 #define HARD	0x2
 
@@ -2867,10 +2888,12 @@ struct limits {
 
 static void print_ulimit(const struct limits *, int);
 static int set_ulimit(const struct limits *, const char *, int);
+#endif
 
 int
 c_ulimit(const char **wp)
 {
+#ifdef RLIM_INFINITY
 	static const struct limits limits[] = {
 		/* do not use options -H, -S or -a or change the order */
 #ifdef RLIMIT_CPU
@@ -2967,9 +2990,11 @@ c_ulimit(const char **wp)
 		shprintf("%-20s ", l->name);
 		print_ulimit(l, how);
 	}
+#endif
 	return (0);
 }
 
+#ifdef RLIM_INFINITY
 static int
 set_ulimit(const struct limits *l, const char *v, int how)
 {
@@ -3033,6 +3058,7 @@ print_ulimit(const struct limits *l, int how)
 	else
 		shprintf("%ld\n", (long)(val / l->factor));
 }
+#endif
 
 int
 c_rename(const char **wp)

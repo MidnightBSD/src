@@ -1,9 +1,28 @@
 #!/bin/sh
-srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.377 2009/03/23 08:54:12 tg Exp $'
+srcversion='$MirOS: src/bin/mksh/Build.sh,v 1.393 2009/05/16 18:40:03 tg Stab $'
+#-
+# Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+#	Thorsten Glaser <tg@mirbsd.org>
+#
+# Provided that these terms and disclaimer and all copyright notices
+# are retained or reproduced in an accompanying document, permission
+# is granted to deal in this work without restriction, including un-
+# limited rights to use, publicly perform, distribute, sell, modify,
+# merge, give away, or sublicence.
+#
+# This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+# the utmost extent permitted by applicable law, neither express nor
+# implied; without malicious intent or gross negligence. In no event
+# may a licensor, author or contributor be held liable for indirect,
+# direct, other damage, loss, or other issues arising in any way out
+# of dealing in the work, even if advised of the possibility of such
+# damage or existence of a defect, except proven that it results out
+# of said person's immediate fault when using the work as intended.
 #-
 # Environment used: CC CFLAGS CPPFLAGS LDFLAGS LIBS NOWARN NROFF TARGET_OS
 # CPPFLAGS recognised:	MKSH_SMALL MKSH_ASSUME_UTF8 MKSH_NOPWNAM MKSH_NOVI
-#			MKSH_CLS_STRING MKSH_BINSHREDUCED
+#			MKSH_CLS_STRING MKSH_BINSHREDUCED MKSH_UNEMPLOYED
+#			MKSH_CONSERVATIVE_FDS MKSH_MIDNIGHTBSD01ASH_COMPAT
 
 LC_ALL=C
 export LC_ALL
@@ -282,11 +301,11 @@ __setkey_r' >crypt.exp
 	: ${LIBS='-lcrypt'}
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
-BSD/OS)
-	: ${HAVE_SETLOCALE_CTYPE=0}
-	;;
 BeOS|Haiku)
 	warn=' and will currently not work'
+	;;
+BSD/OS)
+	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 CYGWIN*)
 	: ${HAVE_SETLOCALE_CTYPE=0}
@@ -322,10 +341,9 @@ Linux)
 MidnightBSD)
 	;;
 Minix)
-	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_POSIX_1_SOURCE=2"
-	warn=' and will currently not work'
-#	warn=" but might work with the GNU tools"
-#	warn="$warn${nl}but not with ACK - /usr/bin/cc - yet)"
+	CPPFLAGS="$CPPFLAGS -DMKSH_UNEMPLOYED -DMKSH_CONSERVATIVE_FDS"
+	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_POSIX_1_SOURCE=2 -D_MINIX"
+	oldish_ed=no-stderr-ed		# /usr/bin/ed(!) is broken
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 MirBSD)
@@ -345,12 +363,12 @@ Plan9)
 	CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE -D_LIMITS_EXTENSION"
 	CPPFLAGS="$CPPFLAGS -D_BSD_EXTENSION -D_SUSV2_SOURCE"
 	warn=' and will currently not work'
-	CPPFLAGS="$CPPFLAGS -DMKSH_ASSUME_UTF8"
+	CPPFLAGS="$CPPFLAGS -DMKSH_ASSUME_UTF8 -DMKSH_UNEMPLOYED"
 	;;
 PW32*)
 	HAVE_SIG_T=0	# incompatible
 	warn=' and will currently not work'
-	# missing: killpg() getrlimit()
+	# missing: killpg()
 	: ${HAVE_SETLOCALE_CTYPE=0}
 	;;
 QNX)
@@ -383,10 +401,13 @@ UWIN*)
 esac
 
 case " $CPPFLAGS " in
-*\ -DMKSH_ASSUME_UTF8=0\ *)
-	;;
-*\ -DMKSH_ASSUME_UTF8*)
+*\ -DMKSH_ASSUME_UTF8\ *|*\ -DMKSH_ASSUME_UTF8=*)
 	: ${HAVE_SETLOCALE_CTYPE=0}
+	;;
+esac
+case " $CPPFLAGS " in
+*\ -DMKSH_CONSERVATIVE_FDS\ *|*\ -DMKSH_CONSERVATIVE_FDS=*)
+	check_categories=$check_categories,convfds
 	;;
 esac
 
@@ -432,8 +453,8 @@ $e $bi$me: Scanning for functions... please ignore any errors.$ao
 # Compiler: which one?
 #
 # notes:
-# – ICC defines __GNUC__ too
-# – GCC defines __hpux too
+# - ICC defines __GNUC__ too
+# - GCC defines __hpux too
 # - LLVM+clang defines __GNUC__ too
 # - nwcc defines __GNUC__ too
 CPP="$CC -E"
@@ -444,6 +465,8 @@ ct=icc
 ct=xlc
 #elif defined(__SUNPRO_C)
 ct=sunpro
+#elif defined(__ACK__)
+ct=ack
 #elif defined(__BORLANDC__)
 ct=bcc
 #elif defined(__WATCOMC__)
@@ -496,6 +519,10 @@ eval `cat x`
 rm -f x
 echo 'int main(void) { return (0); }' >scn.c
 case $ct in
+ack)
+	# work around "the famous ACK const bug"
+	CPPFLAGS="-Dconst= $CPPFLAGS"
+	;;
 adsp)
 	echo >&2 'Warning: Analog Devices C++ compiler for Blackfin, TigerSHARC
     and SHARC (21000) DSPs detected. This compiler has not yet
@@ -883,6 +910,7 @@ if test 0 = $HAVE_MKSH_FULL; then
 
 	: ${HAVE_MKNOD=0}
 	check_categories=$check_categories,smksh
+	check_categories=$check_categories,convfds
 fi
 if test 1 = $HAVE_MKSH_REDUCED; then
 	check_categories=$check_categories,binsh
@@ -899,7 +927,7 @@ ac_header libgen.h
 ac_header libutil.h sys/types.h
 ac_header paths.h
 ac_header stdbool.h
-ac_header strings.h
+ac_header strings.h sys/types.h
 ac_header grp.h sys/types.h
 ac_header ulimit.h sys/types.h
 ac_header values.h
@@ -1067,7 +1095,17 @@ ac_testn flock_ex '' 'flock and mmap' <<-'EOF'
 	#include <fcntl.h>
 	#include <stdlib.h>
 	int main(void) { return ((void *)mmap(NULL, flock(0, LOCK_EX),
-	    PROT_READ, MAP_PRIVATE, 0, 0) == (void *)NULL ? 1 : 0); }
+	    PROT_READ, MAP_PRIVATE, 0, 0) == (void *)NULL ? 1 :
+	    munmap(NULL, 0)); }
+EOF
+
+ac_test getrusage <<-'EOF'
+	#define MKSH_INCLUDES_ONLY
+	#include "sh.h"
+	int main(void) {
+		struct rusage ru;
+		return (getrusage(RUSAGE_SELF + RUSAGE_CHILDREN, &ru));
+	}
 EOF
 
 ac_test mknod '' 'if to use mknod(), makedev() and friends' <<-'EOF'
@@ -1107,6 +1145,7 @@ ac_test realpath mksh_full 0 <<-'EOF'
 EOF
 
 ac_test revoke mksh_full 0 <<-'EOF'
+	#include <sys/types.h>
 	#if HAVE_LIBUTIL_H
 	#include <libutil.h>
 	#endif
@@ -1128,7 +1167,7 @@ EOF
 
 ac_test setmode mknod 1 <<-'EOF'
 	#if defined(__MSVCRT__) || defined(__CYGWIN__)
-	/* force a failure: Win32 setmode() is not what we want… */
+	/* force a failure: Win32 setmode() is not what we want... */
 	int main(void) { return (thiswillneverbedefinedIhope()); }
 	#else
 	#include <unistd.h>
@@ -1152,6 +1191,7 @@ ac_test setgroups setresugid 0 <<-'EOF'
 EOF
 
 ac_test strcasestr <<-'EOF'
+	#include <sys/types.h>
 	#include <stddef.h>
 	#include <string.h>
 	#if HAVE_STRINGS_H
@@ -1278,7 +1318,7 @@ mksh_cfg: NSIG' >scn.c
 		test $nr -gt 0 && test $nr -le $NSIG || continue
 		case $sigseen in
 		*:$nr:*) ;;
-		*)	echo "		{ $nr, \"$name\" },"
+		*)	echo "		{ \"$name\", $nr },"
 			sigseen=$sigseen$nr:
 			$printf "$name=$nr " >&2
 			;;
@@ -1290,8 +1330,8 @@ fi
 
 addsrcs HAVE_SETMODE setmode.c
 addsrcs HAVE_STRLCPY strlcpy.c
+test 0 = "$HAVE_SETMODE" && CPPFLAGS="$CPPFLAGS -DHAVE_CONFIG_H -DCONFIG_H_FILENAME=\\\"sh.h\\\""
 test 1 = "$HAVE_CAN_VERB" && CFLAGS="$CFLAGS -verbose"
-CPPFLAGS="$CPPFLAGS -DHAVE_CONFIG_H -DCONFIG_H_FILENAME=\\\"sh.h\\\""
 
 objs=
 case $curdir in

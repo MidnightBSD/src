@@ -1,8 +1,28 @@
 /*	$OpenBSD: syn.c,v 1.28 2008/07/23 16:34:38 jaredy Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.32 2008/12/13 17:02:17 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/syn.c,v 1.35 2009/05/16 16:59:41 tg Exp $");
 
 struct nesting_state {
 	int start_token;	/* token than began nesting (eg, FOR) */
@@ -44,10 +64,10 @@ static struct nesting_state nesting;	/* \n changed to ; */
 static int reject;		/* token(cf) gets symbol again */
 static int symbol;		/* yylex value */
 
-#define	REJECT		(reject = 1)
-#define	ACCEPT		(reject = 0)
-#define	token(cf)	((reject) ? (ACCEPT, symbol) : (symbol = yylex(cf)))
-#define	tpeek(cf)	((reject) ? (symbol) : (REJECT, symbol = yylex(cf)))
+#define REJECT		(reject = 1)
+#define ACCEPT		(reject = 0)
+#define token(cf)	((reject) ? (ACCEPT, symbol) : (symbol = yylex(cf)))
+#define tpeek(cf)	((reject) ? (symbol) : (REJECT, symbol = yylex(cf)))
 #define musthave(c,cf)	do { if (token(cf) != (c)) syntaxerr(NULL); } while (0)
 
 static void
@@ -107,8 +127,7 @@ static struct op *
 c_list(int multi)
 {
 	struct op *t = NULL, *p, *tl = NULL;
-	int c;
-	int have_sep;
+	int c, have_sep;
 
 	while (1) {
 		p = andor();
@@ -145,7 +164,7 @@ synio(int cf)
 {
 	struct ioword *iop;
 	static struct ioword *nextiop = NULL;
-	int ishere;
+	bool ishere;
 
 	if (nextiop != NULL) {
 		iop = nextiop;
@@ -581,7 +600,7 @@ function_body(char *name,
 {
 	char *sname, *p;
 	struct op *t;
-	int old_func_parse;
+	bool old_func_parse;
 
 	sname = wdstrip(name, false, false);
 	/* Check for valid characters in name.  posix and ksh93 say only

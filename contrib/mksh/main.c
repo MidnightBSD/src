@@ -3,6 +3,26 @@
 /*	$OpenBSD: io.c,v 1.22 2006/03/17 16:30:13 millert Exp $	*/
 /*	$OpenBSD: table.c,v 1.13 2009/01/17 22:06:44 millert Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #define	EXTERN
 #include "sh.h"
 
@@ -13,7 +33,7 @@
 #include <locale.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/main.c,v 1.122 2009/03/22 17:47:37 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/main.c,v 1.128 2009/05/16 21:00:51 tg Exp $");
 
 extern char **environ;
 
@@ -40,8 +60,11 @@ static const char *initcoms[] = {
 	"alias",
 	"hash=alias -t",	/* not "alias -t --": hash -r needs to work */
 	"type=whence -v",
+#ifndef notyet_MKSH_UNEMPLOYED
+	/* the alias list must be constant, for the regression test suite */
 	"stop=kill -STOP",
 	"suspend=kill -STOP $$",
+#endif
 	"autoload=typeset -fu",
 	"functions=typeset -f",
 	"history=fc -l",
@@ -272,6 +295,11 @@ main(int argc, const char *argv[])
 		s = pushs(SSTRING, ATEMP);
 		if (!(s->start = s->str = argv[argi++]))
 			errorf("-c requires an argument");
+#ifdef MKSH_MIDNIGHTBSD01ASH_COMPAT
+		/* compatibility to MidnightBSD 0.1 /bin/sh (not desired) */
+		if (Flag(FPOSIX) && argv[argi] && !strcmp(argv[argi], "--"))
+			++argi;
+#endif
 		if (argv[argi])
 			kshname = argv[argi++];
 	} else if (argi < argc && !Flag(FSTDIN)) {
@@ -304,10 +332,8 @@ main(int argc, const char *argv[])
 		reset_nonblock(0);
 
 	/* initialise job control */
-	i = Flag(FMONITOR) != 127;
-	Flag(FMONITOR) = 0;
-	j_init(i);
-	/* Do this after j_init(), as tty_fd is not initialised 'til then */
+	j_init();
+	/* Do this after j_init(), as tty_fd is not initialised until then */
 	if (Flag(FTALKING)) {
 #ifndef MKSH_ASSUME_UTF8
 #define isuc(x)	(((x) != NULL) && \
@@ -614,15 +640,23 @@ void
 newenv(int type)
 {
 	struct env *ep;
+	char *cp;
 
-	ep = alloc(sizeof (struct env), ATEMP);
-	ep->type = type;
-	ep->flags = 0;
+	/*
+	 * struct env includes ALLOC_ITEM for alignment constraints
+	 * so first get the actually used memory, then assign it
+	 */
+	cp = alloc(sizeof (struct env) - ALLOC_SIZE, ATEMP);
+	ep = (void *)(cp - ALLOC_SIZE);	/* undo what alloc() did */
+	/* initialise public members of struct env (not the ALLOC_ITEM) */
 	ainit(&ep->area);
+	ep->oenv = e;
 	ep->loc = e->loc;
 	ep->savefd = NULL;
-	ep->oenv = e;
 	ep->temps = NULL;
+	ep->type = type;
+	ep->flags = 0;
+	/* jump buffer is invalid because flags == 0 */
 	e = ep;
 }
 
@@ -630,6 +664,7 @@ void
 quitenv(struct shf *shf)
 {
 	struct env *ep = e;
+	char *cp;
 	int fd;
 
 	if (ep->oenv && ep->oenv->loc != ep->loc)
@@ -678,7 +713,10 @@ quitenv(struct shf *shf)
 	reclaim();
 
 	e = e->oenv;
-	afree(ep, ATEMP);
+
+	/* free the struct env - tricky due to the ALLOC_ITEM inside */
+	cp = (void *)ep;
+	afree(cp + ALLOC_SIZE, ATEMP);
 }
 
 /* Called after a fork to cleanup stuff left over from parents environment */

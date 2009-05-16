@@ -1,8 +1,28 @@
 /*	$OpenBSD: var.c,v 1.34 2007/10/15 02:16:35 deraadt Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/var.c,v 1.69 2009/03/14 18:12:55 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/var.c,v 1.72 2009/05/16 16:59:42 tg Exp $");
 
 /*
  * Variables
@@ -15,13 +35,13 @@ __RCSID("$MirOS: src/bin/mksh/var.c,v 1.69 2009/03/14 18:12:55 tg Exp $");
  */
 static struct tbl vtemp;
 static struct table specials;
-static char	*formatstr(struct tbl *, const char *);
-static void	export(struct tbl *, const char *);
-static int	special(const char *);
-static void	unspecial(const char *);
-static void	getspec(struct tbl *);
-static void	setspec(struct tbl *);
-static void	unsetspec(struct tbl *);
+static char *formatstr(struct tbl *, const char *);
+static void export(struct tbl *, const char *);
+static int special(const char *);
+static void unspecial(const char *);
+static void getspec(struct tbl *);
+static void setspec(struct tbl *);
+static void unsetspec(struct tbl *);
 static struct tbl *arraysearch(struct tbl *, uint32_t);
 static const char *array_index_calc(const char *, bool *, uint32_t *);
 static int rnd_get(void);
@@ -857,11 +877,11 @@ char **
 makenv(void)
 {
 	struct block *l;
-	XPtrV env;
+	XPtrV denv;
 	struct tbl *vp, **vpp;
 	int i;
 
-	XPinit(env, 64);
+	XPinit(denv, 64);
 	for (l = e->loc; l != NULL; l = l->next)
 		for (vpp = l->vars.tbls, i = l->vars.size; --i >= 0; )
 			if ((vp = *vpp++) != NULL &&
@@ -884,10 +904,10 @@ makenv(void)
 					/* setstr can't fail here */
 					setstr(vp, val, KSH_RETURN_ERROR);
 				}
-				XPput(env, vp->val.s);
+				XPput(denv, vp->val.s);
 			}
-	XPput(env, NULL);
-	return (char **) XPclose(env);
+	XPput(denv, NULL);
+	return ((char **)XPclose(denv));
 }
 
 /*

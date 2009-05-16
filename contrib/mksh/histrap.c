@@ -1,16 +1,36 @@
 /*	$OpenBSD: history.c,v 1.36 2008/05/20 00:30:30 fgsch Exp $	*/
 /*	$OpenBSD: trap.c,v 1.22 2005/03/30 17:16:37 deraadt Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 #if HAVE_PERSISTENT_HISTORY
 #include <sys/file.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.77 2009/02/20 13:25:09 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/histrap.c,v 1.81 2009/05/16 18:40:06 tg Exp $");
 
 /*-
  * MirOS: This is the default mapping type, and need not be specified.
- * IRIX doesn’t have this constant.
+ * IRIX doesn't have this constant.
  */
 #ifndef MAP_FILE
 #define MAP_FILE	0
@@ -980,11 +1000,11 @@ sprinkle(int fd)
 
 #if !HAVE_SYS_SIGNAME
 static const struct mksh_sigpair {
-	int nr;
 	const char *const name;
+	int nr;
 } mksh_sigpairs[] = {
 #include "signames.inc"
-	{ 0, NULL }
+	{ NULL, 0 }
 };
 #endif
 

@@ -1,14 +1,26 @@
+/*-
+ * Copyright © 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un‐
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided “AS IS” and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person’s immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.7 2009/03/24 18:34:39 tg Exp $");
-
-#ifndef SIZE_MAX
-#ifdef SIZE_T_MAX
-#define SIZE_MAX	SIZE_T_MAX
-#else
-#define SIZE_MAX	((size_t)-1)
-#endif
-#endif
+__RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.10 2009/05/16 16:59:37 tg Exp $");
 
 /* build with CPPFLAGS+= -DUSE_REALLOC_MALLOC=0 on ancient systems */
 #if defined(USE_REALLOC_MALLOC) && (USE_REALLOC_MALLOC == 0)
@@ -17,18 +29,21 @@ __RCSID("$MirOS: src/bin/mksh/lalloc.c,v 1.7 2009/03/24 18:34:39 tg Exp $");
 #define remalloc(p,n)	realloc((p), (n))
 #endif
 
-static struct lalloc *findptr(struct lalloc **, char *, Area *);
+static ALLOC_ITEM *findptr(ALLOC_ITEM **, char *, Area *);
 
 void
 ainit(Area *ap)
 {
+	/* area pointer is an ALLOC_ITEM, just the head of the list */
 	ap->next = NULL;
 }
 
-static struct lalloc *
-findptr(struct lalloc **lpp, char *ptr, Area *ap)
+static ALLOC_ITEM *
+findptr(ALLOC_ITEM **lpp, char *ptr, Area *ap)
 {
-	*lpp = (struct lalloc *)(ptr - sizeof (struct lalloc));
+	/* get address of ALLOC_ITEM from user item */
+	*lpp = (ALLOC_ITEM *)(ptr - ALLOC_SIZE);
+	/* search for allocation item in group list */
 	while (ap->next != *lpp)
 		if ((ap = ap->next) == NULL)
 			internal_errorf("rogue pointer %p", ptr);
@@ -38,32 +53,37 @@ findptr(struct lalloc **lpp, char *ptr, Area *ap)
 void *
 aresize(void *ptr, size_t numb, Area *ap)
 {
-	struct lalloc *lp = NULL;
+	ALLOC_ITEM *lp = NULL;
 
+	/* resizing (true) or newly allocating? */
 	if (ptr != NULL) {
-		struct lalloc *pp;
+		ALLOC_ITEM *pp;
 
 		pp = findptr(&lp, ptr, ap);
 		pp->next = lp->next;
 	}
 
-	if ((numb >= SIZE_MAX - sizeof (struct lalloc)) ||
-	    (lp = remalloc(lp, numb + sizeof (struct lalloc))) == NULL)
+	if ((numb >= SIZE_MAX - ALLOC_SIZE) ||
+	    (lp = remalloc(lp, numb + ALLOC_SIZE)) == NULL)
 		internal_errorf("cannot allocate %lu data bytes",
 		    (unsigned long)numb);
+	/* this only works because Area is an ALLOC_ITEM */
 	lp->next = ap->next;
 	ap->next = lp;
-	return ((char *)lp + sizeof (struct lalloc));
+	/* return user item address */
+	return ((char *)lp + ALLOC_SIZE);
 }
 
 void
 afree(void *ptr, Area *ap)
 {
 	if (ptr != NULL) {
-		struct lalloc *lp, *pp;
+		ALLOC_ITEM *lp, *pp;
 
 		pp = findptr(&lp, ptr, ap);
+		/* unhook */
 		pp->next = lp->next;
+		/* now free ALLOC_ITEM */
 		free(lp);
 	}
 }
@@ -71,10 +91,13 @@ afree(void *ptr, Area *ap)
 void
 afreeall(Area *ap)
 {
-	struct lalloc *lp;
+	ALLOC_ITEM *lp;
 
+	/* traverse group (linked list) */
 	while ((lp = ap->next) != NULL) {
+		/* make next ALLOC_ITEM head of list */
 		ap->next = lp->next;
+		/* free old head */
 		free(lp);
 	}
 }

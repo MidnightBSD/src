@@ -8,6 +8,26 @@
 /*	$OpenBSD: c_test.h,v 1.4 2004/12/20 11:34:26 otto Exp $	*/
 /*	$OpenBSD: tty.h,v 1.5 2004/12/20 11:34:26 otto Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #ifdef __dietlibc__
 #define _BSD_SOURCE	/* live, BSD, live! */
 #endif
@@ -102,13 +122,27 @@
 #define __SCCSID(x)	__IDSTRING(sccsid,x)
 
 #ifdef EXTERN
-__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.286 2009/03/25 21:45:28 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/sh.h,v 1.300 2009/05/16 21:00:52 tg Exp $");
 #endif
-#define MKSH_VERSION "R37 2009/03/25"
+#define MKSH_VERSION "R38 2009/05/16"
 
 #ifndef MKSH_INCLUDES_ONLY
 
 /* extra types */
+
+#if !HAVE_GETRUSAGE
+#undef rusage
+#undef RUSAGE_SELF
+#undef RUSAGE_CHILDREN
+#define rusage mksh_rusage
+#define RUSAGE_SELF	0
+#define RUSAGE_CHILDREN	-1
+
+struct rusage {
+	struct timeval ru_utime;
+	struct timeval ru_stime;
+};
+#endif
 
 #if !HAVE_RLIM_T
 typedef long rlim_t;
@@ -168,6 +202,13 @@ typedef int bool;
 #ifndef PATH_MAX
 #define PATH_MAX	1024
 #endif
+#ifndef SIZE_MAX
+#ifdef SIZE_T_MAX
+#define SIZE_MAX	SIZE_T_MAX
+#else
+#define SIZE_MAX	((size_t)-1)
+#endif
+#endif
 #ifndef S_ISLNK
 #define S_ISLNK(m)	((m & 0170000) == 0120000)
 #endif
@@ -214,6 +255,10 @@ extern uint32_t arc4random_pushb(void *, size_t);
 
 #if !HAVE_FLOCK_DECL
 extern int flock(int, int);
+#endif
+
+#if !HAVE_GETRUSAGE
+extern int getrusage(int, struct rusage *);
 #endif
 
 #if !HAVE_REVOKE_DECL
@@ -267,7 +312,7 @@ typedef int32_t mksh_ari_t;
 typedef uint32_t mksh_uari_t;
 
 /* these shall be smaller than 100 */
-#ifdef MKSH_SMALL
+#if defined(MKSH_SMALL) || defined(MKSH_CONSERVATIVE_FDS)
 #define NUFILE		32	/* Number of user-accessible files */
 #define FDBASE		10	/* First file usable by Shell */
 #else
@@ -345,13 +390,7 @@ char *ucstrstr(char *, const char *);
 #define strnul(s)	((s) + strlen(s))
 
 #define utf_ptradjx(src, dst) do {					\
-	size_t utf_ptradjx_len;						\
-									\
-	if (!UTFMODE ||							\
-	    *(const unsigned char *)(src) < 0xC2 ||			\
-	    (utf_ptradjx_len = utf_mbtowc(NULL, (src))) == (size_t)-1)	\
-		utf_ptradjx_len = 1;					\
-	(dst) = (src) + utf_ptradjx_len;				\
+	(dst) = (src) + utf_ptradj(src);				\
 } while (/* CONSTCOND */ 0)
 
 #ifdef MKSH_SMALL
@@ -398,9 +437,19 @@ char *ucstrstr(char *, const char *);
 /*
  * simple grouping allocator
  */
-typedef struct lalloc {
+
+/* 1. internal structure */
+struct lalloc {
 	struct lalloc *next;
-} Area;
+};
+
+/* 2. sizes */
+#define ALLOC_ITEM	struct lalloc
+#define ALLOC_SIZE	(sizeof (ALLOC_ITEM))
+
+/* 3. group structure (only the same for lalloc.c) */
+typedef struct lalloc Area;
+
 
 EXTERN Area aperm;		/* permanent object space */
 #define APERM	&aperm
@@ -410,10 +459,11 @@ EXTERN Area aperm;		/* permanent object space */
  * parsing & execution environment
  */
 extern struct env {
+	ALLOC_ITEM __alloc_i;	/* internal, do not touch */
 	Area area;		/* temporary allocation area */
+	struct env *oenv;	/* link to previous environment */
 	struct block *loc;	/* local variables and functions */
 	short *savefd;		/* original redirected fds */
-	struct env *oenv;	/* link to previous environment */
 	struct temp *temps;	/* temp files */
 	sigjmp_buf jbuf;	/* long jump back to env creator */
 	short type;		/* environment type - see below */
@@ -494,7 +544,9 @@ enum sh_flag {
 	FNOGLOB,	/* -f: don't do file globbing */
 	FNOHUP,		/* -H: don't kill running jobs when login shell exits */
 	FNOLOG,		/* don't save functions in history (ignored) */
+#ifndef MKSH_UNEMPLOYED
 	FNOTIFY,	/* -b: asynchronous job completion notification */
+#endif
 	FNOUNSET,	/* -u: using an unset var is an error */
 	FPHYSICAL,	/* -o physical: don't do logical cds/pwds */
 	FPOSIX,		/* -o posix (try to be more compatible) */
@@ -534,9 +586,9 @@ typedef enum temp_type Temp_type;
 struct temp {
 	struct temp *next;
 	struct shf *shf;
+	char *name;
 	int pid;	/* pid of process parsed here-doc */
 	Temp_type type;
-	char *name;
 };
 
 /*
@@ -552,14 +604,14 @@ EXTERN int shl_stdout_ok;
  * trap handlers
  */
 typedef struct trap {
-	int signal;		/* signal number */
 	const char *name;	/* short name */
 	const char *mess;	/* descriptive name */
 	char *trap;		/* trap command */
-	volatile sig_atomic_t set; /* trap pending */
-	int flags;		/* TF_* */
 	sig_t cursig;		/* current handler (valid if TF_ORIG_* set) */
 	sig_t shtrap;		/* shell signal handler */
+	int signal;		/* signal number */
+	int flags;		/* TF_* */
+	volatile sig_atomic_t set; /* trap pending */
 } Trap;
 
 /* values for Trap.flags */
@@ -643,9 +695,9 @@ EXTERN int ifs0 I__(' ');	/* for "$*" */
 #define GI_MINUSMINUS	BIT(2)	/* arguments were ended with -- */
 
 typedef struct {
+	const char	*optarg;
 	int		optind;
 	int		uoptind;/* what user sees in $OPTIND */
-	const char	*optarg;
 	int		flags;	/* see GF_* */
 	int		info;	/* see GI_* */
 	unsigned int	p;	/* 0 or index into argv[optind - 1] */
@@ -659,12 +711,12 @@ EXTERN Getopt user_opt;		/* parsing state for getopts builtin command */
 
 typedef int32_t Coproc_id; /* something that won't (realisticly) wrap */
 struct coproc {
+	void *job;	/* 0 or job of co-process using input pipe */
 	int read;	/* pipe from co-process's stdout */
 	int readw;	/* other side of read (saved temporarily) */
 	int write;	/* pipe to co-process's stdin */
-	Coproc_id id;	/* id of current output pipe */
 	int njobs;	/* number of live jobs using output pipe */
-	void *job;	/* 0 or job of co-process using input pipe */
+	Coproc_id id;	/* id of current output pipe */
 };
 EXTERN struct coproc coproc;
 
@@ -750,18 +802,18 @@ int shf_putc(int, struct shf *);
 
 
 struct shf {
-	int flags;		/* see SHF_* */
+	Area *areap;		/* area shf/buf were allocated in */
 	unsigned char *rp;	/* read: current position in buffer */
+	unsigned char *wp;	/* write: current position in buffer */
+	unsigned char *buf;	/* buffer */
+	int flags;		/* see SHF_* */
 	int rbsize;		/* size of buffer (1 if SHF_UNBUF) */
 	int rnleft;		/* read: how much data left in buffer */
-	unsigned char *wp;	/* write: current position in buffer */
 	int wbsize;		/* size of buffer (0 if SHF_UNBUF) */
 	int wnleft;		/* write: how much space left in buffer */
-	unsigned char *buf;	/* buffer */
 	int fd;			/* file descriptor */
 	int errno_;		/* saved value of errno after error */
 	int bsize;		/* actual size of buf */
-	Area *areap;		/* area shf/buf were allocated in */
 };
 
 extern struct shf shf_iob[];
@@ -859,8 +911,8 @@ struct tbl {			/* table item */
 
 /* Argument info. Used for $#, $* for shell, functions, includes, etc. */
 struct arg_info {
-	int flags;	/* AF_* */
 	const char **argv;
+	int flags;	/* AF_* */
 	int argc_;
 	int skip;	/* first arg is argv[0], second is argv[1 + skip] */
 };
@@ -871,14 +923,14 @@ struct arg_info {
 struct block {
 	Area area;		/* area to allocate things */
 	const char **argv;
-	int argc;
-	int flags;		/* see BF_* */
-	struct table vars;	/* local variables */
-	struct table funs;	/* local functions */
-	Getopt getopts_state;
 	char *error;		/* error handler */
 	char *exit;		/* exit handler */
 	struct block *next;	/* enclosing block */
+	struct table vars;	/* local variables */
+	struct table funs;	/* local functions */
+	Getopt getopts_state;
+	int argc;
+	int flags;		/* see BF_* */
 };
 
 /* Values for struct block.flags */
@@ -888,8 +940,8 @@ struct block {
  * Used by ktwalk() and ktnext() routines.
  */
 struct tstate {
-	int left;
 	struct tbl **next;
+	int left;
 };
 
 EXTERN struct table taliases;	/* tracked aliases */
@@ -1158,7 +1210,6 @@ typedef struct XPtrV {
 typedef struct source Source;
 struct source {
 	const char *str;	/* input pointer */
-	int	type;		/* input type */
 	const char *start;	/* start of current buffer */
 	union {
 		const char **strv; /* string [] */
@@ -1166,13 +1217,14 @@ struct source {
 		struct tbl *tblp;  /* alias (SF_HASALIAS) */
 		char *freeme;	   /* also for SREREAD */
 	} u;
+	const char *file;	/* input file name */
+	int	type;		/* input type */
 	int	line;		/* line number */
 	int	errline;	/* line the error occurred on (0 if not set) */
-	const char *file;	/* input file name */
 	int	flags;		/* SF_* */
 	Area	*areap;
-	XString	xs;		/* input buffer */
 	Source *next;		/* stacked source */
+	XString	xs;		/* input buffer */
 	char	ugbuf[2];	/* buffer for ungetsc() (SREREAD) and
 				 * alias (SALIAS) */
 };
@@ -1280,6 +1332,7 @@ size_t utf_wctomb(char *, unsigned int);
 int utf_widthadj(const char *, const char **);
 int utf_mbswidth(const char *);
 const char *utf_skipcols(const char *, int);
+size_t utf_ptradj(const char *);
 /* eval.c */
 char *substitute(const char *, int);
 char **eval(const char **, int);
@@ -1315,7 +1368,9 @@ int c_alias(const char **);
 int c_unalias(const char **);
 int c_let(const char **);
 int c_jobs(const char **);
+#ifndef MKSH_UNEMPLOYED
 int c_fgbg(const char **);
+#endif
 int c_kill(const char **);
 void getopts_reset(int);
 int c_getopts(const char **);
@@ -1380,15 +1435,19 @@ void restore_pipe(int);
 int setsig(Trap *, sig_t, int);
 void setexecsig(Trap *, int);
 /* jobs.c */
-void j_init(int);
+void j_init(void);
 void j_exit(void);
+#ifndef MKSH_UNEMPLOYED
 void j_change(void);
+#endif
 int exchild(struct op *, int, volatile int *, int);
 void startlast(void);
 int waitlast(void);
 int waitfor(const char *, int *);
 int j_kill(const char *, int);
+#ifndef MKSH_UNEMPLOYED
 int j_resume(const char *, int);
+#endif
 int j_jobs(const char *, int, int);
 int j_njobs(void);
 void j_notify(void);
@@ -1585,7 +1644,6 @@ typedef enum Test_meta Test_meta;
 
 typedef struct test_env Test_env;
 struct test_env {
-	int flags;		/* TEF_* */
 	union {
 		const char **wp;/* used by ptest_* */
 		XPtrV *av;	/* used by dbtestp_* */
@@ -1595,6 +1653,7 @@ struct test_env {
 	const char *(*getopnd) (Test_env *, Test_op, bool);
 	int (*eval)(Test_env *, Test_op, const char *, const char *, bool);
 	void (*error)(Test_env *, int, const char *);
+	int flags;		/* TEF_* */
 };
 
 extern const char *const dbtest_tokens[];

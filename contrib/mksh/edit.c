@@ -3,9 +3,29 @@
 /*	$OpenBSD: emacs.c,v 1.41 2007/08/02 10:50:25 fgsch Exp $	*/
 /*	$OpenBSD: vi.c,v 1.23 2006/04/10 14:38:59 jaredy Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.156 2009/03/17 13:56:47 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/edit.c,v 1.164 2009/05/16 16:59:33 tg Exp $");
 
 /* tty driver characters we are interested in */
 typedef struct {
@@ -763,6 +783,18 @@ utf_skipcols(const char *p, int cols)
 	return (p);
 }
 
+size_t
+utf_ptradj(const char *src)
+{
+	register size_t n;
+
+	if (!UTFMODE ||
+	    *(const unsigned char *)(src) < 0xC2 ||
+	    (n = utf_mbtowc(NULL, src)) == (size_t)-1)
+		n = 1;
+	return (n);
+}
+
 /* UTF-8 hack: low-level functions */
 
 /* --- begin of wcwidth.c excerpt --- */
@@ -1008,7 +1040,7 @@ static unsigned char x_bound[(X_TABSZ * X_NTABS + 7) / 8];
 static char *killstack[KILLSIZE];
 static int killsp, killtp;
 static int x_curprefix;
-static char *macroptr;
+static char *macroptr = NULL;	/* bind key macro active? */
 #ifndef MKSH_NOVI
 static int cur_col;		/* current column on line */
 static int pwidth;		/* width of prompt */
@@ -1036,6 +1068,7 @@ static void x_zotc2(int);
 static void x_zotc3(char **);
 static void x_load_hist(char **);
 static int x_search(char *, int, int);
+static int x_search_dir(int);
 static int x_match(char *, char *);
 static void x_redraw(int);
 static void x_push(int);
@@ -1114,6 +1147,8 @@ static void bind_if_not_bound(int, int, int);
 #define XFUNC_comment 53
 #define XFUNC_version 54
 #define XFUNC_edit_line 55
+#define XFUNC_search_hist_up 56
+#define XFUNC_search_hist_dn 57
 
 /* XFUNC_* must be < 128 */
 
@@ -1173,6 +1208,8 @@ static int x_set_arg(int);
 static int x_comment(int);
 static int x_version(int);
 static int x_edit_line(int);
+static int x_search_hist_up(int);
+static int x_search_hist_down(int);
 
 static const struct x_ftab x_ftab[] = {
 	{ x_abort,		"abort",			0 },
@@ -1231,6 +1268,8 @@ static const struct x_ftab x_ftab[] = {
 	{ x_comment,		"comment",			0 },
 	{ x_version,		"version",			0 },
 	{ x_edit_line,		"edit-line",			XF_ARG },
+	{ x_search_hist_up,	"search-history-up",		0 },
+	{ x_search_hist_down,	"search-history-down",		0 },
 	{ 0,			NULL,				0 }
 };
 
@@ -1320,6 +1359,8 @@ static struct x_defbindings const x_defbindings[] = {
 	{ XFUNC_mv_end | 0x80,		2,	  '8'	},
 	{ XFUNC_mv_end,			2,	  'F'	},
 	{ XFUNC_del_char | 0x80,	2,	  '3'	},
+	{ XFUNC_search_hist_up | 0x80,	2,	  '5'	},
+	{ XFUNC_search_hist_dn | 0x80,	2,	  '6'	},
 	/* more non-standard ones */
 	{ XFUNC_edit_line,		2,	  'e'	}
 };
@@ -1406,7 +1447,6 @@ x_emacs(char *buf, size_t len)
 	xlp_valid = true;
 	xmp = NULL;
 	x_curprefix = 0;
-	macroptr = NULL;
 	x_histp = histptr + 1;
 	x_last_command = XFUNC_error;
 
@@ -1431,6 +1471,10 @@ x_emacs(char *buf, size_t len)
 			if ((i = x_e_getc()) != '~')
 				x_e_ungetc(i);
 		}
+
+		/* avoid bind key macro recursion */
+		if (macroptr && f == XFUNC_ins_string)
+			f = XFUNC_insert;
 
 		if (!(x_ftab[f].xf_flags & XF_PREFIX) &&
 		    x_last_command != XFUNC_set_arg) {
@@ -1517,15 +1561,11 @@ x_insert(int c)
 static int
 x_ins_string(int c)
 {
-	if (macroptr) {
-		x_e_putc2(7);
-		return KSTD;
-	}
 	macroptr = x_atab[c >> 8][c & 255];
-	if (macroptr && !*macroptr) {
-		/* XXX bell? */
-		macroptr = NULL;
-	}
+	/*
+	 * we no longer need to bother checking if macroptr is
+	 * not NULL but first char is NUL; x_e_getc() does it
+	 */
 	return KSTD;
 }
 
@@ -1730,7 +1770,7 @@ x_bword(void)
 	}
 	x_goto(cp);
 	for (cp = xcp; cp < (xcp + nb); ++nc)
-		utf_ptradjx(cp, cp);
+		cp += utf_ptradj(cp);
 	return nc;
 }
 
@@ -1751,7 +1791,7 @@ x_fword(int move)
 			cp++;
 	}
 	for (cp2 = xcp; cp2 < cp; ++nc)
-		utf_ptradjx(cp2, cp2);
+		cp2 += utf_ptradj(cp2);
 	if (move)
 		x_goto(cp);
 	return nc;
@@ -2156,6 +2196,38 @@ x_search(char *pat, int sameline, int offset)
 	x_e_putc2(7);
 	x_histp = histptr;
 	return -1;
+}
+
+/* anchored search up from current line */
+static int
+x_search_hist_up(int c __unused)
+{
+	return (x_search_dir(-1));
+}
+
+/* anchored search down from current line */
+static int
+x_search_hist_down(int c __unused)
+{
+	return (x_search_dir(1));
+}
+
+/* anchored search in the indicated direction */
+static int
+x_search_dir(int search_dir /* should've been bool */)
+{
+	char **hp = x_histp + search_dir;
+	size_t curs = xcp - xbuf;
+
+	while (histptr >= hp && hp >= history) {
+		if (strncmp(xbuf, *hp, curs) == 0) {
+			x_load_hist(hp);
+			x_goto(xbuf + curs);
+			break;
+		}
+		hp += search_dir;
+	}
+	return (KSTD);
 }
 
 /* return position of first match of pattern in string, else -1 */
@@ -2893,14 +2965,16 @@ x_e_getc(void)
 	if (unget_char >= 0) {
 		c = unget_char;
 		unget_char = -1;
-	} else if (macroptr) {
-		c = (unsigned char)*macroptr++;
-		if (!*macroptr)
-			macroptr = NULL;
-	} else
-		c = x_getc();
+		return (c);
+	}
 
-	return (c);
+	if (macroptr) {
+		if ((c = (unsigned char)*macroptr++))
+			return (c);
+		macroptr = NULL;
+	}
+
+	return (x_getc());
 }
 
 static void
@@ -3361,8 +3435,8 @@ x_mode(bool onoff)
 #define Ctrl(c)		(c&0x1f)
 
 struct edstate {
-	int	winleft;
 	char	*cbuf;
+	int	winleft;
 	int	cbufsize;
 	int	linelen;
 	int	cursor;
@@ -3484,7 +3558,7 @@ static void		restore_edstate(struct edstate *old, struct edstate *new);
 static void		free_edstate(struct edstate *old);
 
 static struct edstate	ebuf;
-static struct edstate	undobuf = { 0, undocbuf, LINE, 0, 0 };
+static struct edstate	undobuf = { undocbuf, 0, LINE, 0, 0 };
 
 static struct edstate	*es;			/* current editor state */
 static struct edstate	*undo;

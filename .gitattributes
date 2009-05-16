@@ -10361,6 +10361,7 @@ contrib/lukemftpd/src/version.h -text
 contrib/lukemftpd/todo -text
 contrib/mksh/Build.sh -text
 contrib/mksh/MIDNIGHTBSD-upgrade -text
+contrib/mksh/Makefile -text
 contrib/mksh/check.pl -text
 contrib/mksh/check.t -text
 contrib/mksh/copyright -text

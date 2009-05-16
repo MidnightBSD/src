@@ -1,8 +1,28 @@
 /*	$OpenBSD: exec.c,v 1.49 2009/01/29 23:27:26 jaredy Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
 
-__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.53 2009/03/22 18:28:34 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/exec.c,v 1.56 2009/05/16 18:40:05 tg Exp $");
 
 static int comexec(struct op *, struct tbl *volatile, const char **,
     int volatile, volatile int *);
@@ -752,7 +772,7 @@ scriptexec(struct op *tp, const char **ap)
 		    (fd == /* ECOFF_M68K */ 0x0150 || fd == 0x5001) ||
 		    (fd == /* ECOFF_SH */   0x0500 || fd == 0x0005) ||
 		    (fd == 0x7F45 && buf[2] == 'L' && buf[3] == 'F') ||
-		    (fd == /* “MZ” */ 0x4D5A) ||
+		    (fd == /* "MZ" */ 0x4D5A) ||
 		    (fd == /* gzip */ 0x1F8B))
 			errorf("%s: not executable: magic %04X", tp->str, fd);
 	}
@@ -811,13 +831,13 @@ int
 define(const char *name, struct op *t)
 {
 	struct tbl *tp;
-	int was_set = 0;
+	bool was_set = false;
 
 	while (1) {
 		tp = findfunc(name, hash(name), true);
 
 		if (tp->flag & ISSET)
-			was_set = 1;
+			was_set = true;
 		/* If this function is currently being executed, we zap this
 		 * table entry so findfunc() won't see it
 		 */
@@ -836,7 +856,7 @@ define(const char *name, struct op *t)
 
 	if (t == NULL) {		/* undefine */
 		ktdelete(tp);
-		return was_set ? 0 : 1;
+		return (was_set ? 0 : 1);
 	}
 
 	tp->val.t = tcopy(t->left, tp->areap);

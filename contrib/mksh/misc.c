@@ -1,12 +1,35 @@
-/*	$OpenBSD: misc.c,v 1.36 2009/03/03 20:01:01 millert Exp $	*/
+/*	$OpenBSD: misc.c,v 1.37 2009/04/19 20:34:05 sthen Exp $	*/
 /*	$OpenBSD: path.c,v 1.12 2005/03/30 17:16:37 deraadt Exp $	*/
 
+/*-
+ * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *	Thorsten Glaser <tg@mirbsd.org>
+ *
+ * Provided that these terms and disclaimer and all copyright notices
+ * are retained or reproduced in an accompanying document, permission
+ * is granted to deal in this work without restriction, including un-
+ * limited rights to use, publicly perform, distribute, sell, modify,
+ * merge, give away, or sublicence.
+ *
+ * This work is provided "AS IS" and WITHOUT WARRANTY of any kind, to
+ * the utmost extent permitted by applicable law, neither express nor
+ * implied; without malicious intent or gross negligence. In no event
+ * may a licensor, author or contributor be held liable for indirect,
+ * direct, other damage, loss, or other issues arising in any way out
+ * of dealing in the work, even if advised of the possibility of such
+ * damage or existence of a defect, except proven that it results out
+ * of said person's immediate fault when using the work as intended.
+ */
+
 #include "sh.h"
+#if !HAVE_GETRUSAGE
+#include <sys/times.h>
+#endif
 #if HAVE_GRP_H
 #include <grp.h>
 #endif
 
-__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.99 2009/03/22 18:09:16 tg Exp $");
+__RCSID("$MirOS: src/bin/mksh/misc.c,v 1.106 2009/05/16 18:40:07 tg Exp $");
 
 #undef USE_CHVT
 #if defined(TIOCSCTTY) && !defined(MKSH_SMALL)
@@ -97,13 +120,19 @@ const struct shoption options[] = {
 	{ "keyword",	'k',		OF_ANY },
 	{ "login",	'l',	    OF_CMDLINE },
 	{ "markdirs",	'X',		OF_ANY },
+#ifndef MKSH_UNEMPLOYED
 	{ "monitor",	'm',		OF_ANY },
+#else
+	{ NULL,		'm',		0      }, /* needed */
+#endif
 	{ "noclobber",	'C',		OF_ANY },
 	{ "noexec",	'n',		OF_ANY },
 	{ "noglob",	'f',		OF_ANY },
 	{ "nohup",	  0,		OF_ANY },
 	{ "nolog",	  0,		OF_ANY }, /* no effect */
+#ifndef MKSH_UNEMPLOYED
 	{ "notify",	'b',		OF_ANY },
+#endif
 	{ "nounset",	'u',		OF_ANY },
 	{ "physical",	  0,		OF_ANY }, /* non-standard */
 	{ "posix",	  0,		OF_ANY }, /* non-standard */
@@ -216,10 +245,13 @@ change_flag(enum sh_flag f,
 
 	oldval = Flag(f);
 	Flag(f) = newval ? 1 : 0;	/* needed for tristates */
+#ifndef MKSH_UNEMPLOYED
 	if (f == FMONITOR) {
 		if (what != OF_CMDLINE && newval != oldval)
 			j_change();
-	} else if ((
+	} else
+#endif
+	  if ((
 #ifndef MKSH_NOVI
 	    f == FVI ||
 #endif
@@ -485,12 +517,6 @@ gmatchx(const char *s, const char *p, bool isfile)
 
 	if (s == NULL || p == NULL)
 		return 0;
-
-#if 0
-	/* debugging output */
-	fprintf(stderr, "gmatchx:\n\tstring =`%s`\n\tpattern=`%s`\n", s, p);
-	fflush(stderr);
-#endif
 
 	se = s + strlen(s);
 	pe = p + strlen(p);
@@ -1096,19 +1122,18 @@ make_path(const char *cwd, const char *file,
     XString *xsp,
     int *phys_pathp)
 {
-	int	rval = 0;
-	int	use_cdpath = 1;
-	char	*plist;
-	int	len;
-	int	plen = 0;
-	char	*xp = Xstring(*xsp, xp);
+	int rval = 0;
+	bool use_cdpath = true;
+	char *plist;
+	int len, plen = 0;
+	char *xp = Xstring(*xsp, xp);
 
 	if (!file)
 		file = null;
 
 	if (file[0] == '/') {
 		*phys_pathp = 0;
-		use_cdpath = 0;
+		use_cdpath = false;
 	} else {
 		if (file[0] == '.') {
 			char c = file[1];
@@ -1116,12 +1141,12 @@ make_path(const char *cwd, const char *file,
 			if (c == '.')
 				c = file[2];
 			if (c == '/' || c == '\0')
-				use_cdpath = 0;
+				use_cdpath = false;
 		}
 
 		plist = *cdpathp;
 		if (!plist)
-			use_cdpath = 0;
+			use_cdpath = false;
 		else if (use_cdpath) {
 			char *pend;
 
@@ -1131,7 +1156,7 @@ make_path(const char *cwd, const char *file,
 			*cdpathp = *pend ? pend + 1 : NULL;
 		}
 
-		if ((use_cdpath == 0 || !plen || plist[0] != '/') &&
+		if ((!use_cdpath || !plen || plist[0] != '/') &&
 		    (cwd && *cwd)) {
 			len = strlen(cwd);
 			XcheckN(*xsp, xp, len);
@@ -1168,11 +1193,9 @@ make_path(const char *cwd, const char *file,
 void
 simplify_path(char *pathl)
 {
-	char	*cur;
-	char	*t;
-	int	isrooted;
-	char	*very_start = pathl;
-	char	*start;
+	char *cur, *t;
+	bool isrooted;
+	char *very_start = pathl, *start;
 
 	if (!*pathl)
 		return;
@@ -1463,5 +1486,39 @@ char *
 strdup_(const char *src, Area *ap)
 {
 	return (src == NULL ? NULL : strndup_(src, strlen(src), ap));
+}
+#endif
+
+#if !HAVE_GETRUSAGE
+#define INVTCK(r,t)	do {						\
+	r.tv_usec = ((t) % (1000000 / CLK_TCK)) * (1000000 / CLK_TCK);	\
+	r.tv_sec = (t) / CLK_TCK;					\
+} while (/* CONSTCOND */ 0)
+
+int
+getrusage(int what, struct rusage *ru)
+{
+	struct tms tms;
+	clock_t u, s;
+
+	if (/* ru == NULL || */ times(&tms) == (clock_t)-1)
+		return (-1);
+
+	switch (what) {
+	case RUSAGE_SELF:
+		u = tms.tms_utime;
+		s = tms.tms_stime;
+		break;
+	case RUSAGE_CHILDREN:
+		u = tms.tms_cutime;
+		s = tms.tms_cstime;
+		break;
+	default:
+		errno = EINVAL;
+		return (-1);
+	}
+	INVTCK(ru->ru_utime, u);
+	INVTCK(ru->ru_stime, s);
+	return (0);
 }
 #endif
