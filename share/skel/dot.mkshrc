@@ -1,4 +1,4 @@
-# $MidnightBSD: src/etc/root/dot.mkshrc,v 1.2 2009/03/29 02:51:27 laffer1 Exp $
+# $MidnightBSD: src/share/skel/dot.mkshrc,v 1.5 2009/03/29 02:52:03 laffer1 Exp $
 # $MirOS: src/bin/mksh/dot.mkshrc,v 1.39 2008/12/13 17:09:45 tg Rel $
 #-
 # ~/.mkshrc: mksh initialisation file for interactive shells
@@ -12,9 +12,9 @@ function precmd {
 	(( e )) && print -n "$e|"
 }
 PS1='$(precmd)${USER:=$(ulimit -c 0;id -un 2>&-||print \?)}@${HOSTNAME%%.*}:$(
-	typeset p=~ d=${PWD:-?}; typeset -i n=${COLUMNS:-80}/3
-	[[ $p = ?(*/) ]] || d=${d/#$p/~}; (( n=n<7?7:n )); (( ${#d}>n )) && {
-	p=...; d=${d:(-n)}; } || p=; print -nr -- "$p$d") '"$PS1 "
+	typeset d=${PWD:-?} n p=~; [[ $p = ?(*/) ]] || d=${d/#$p/~}
+	(( ${#d} > (n = (COLUMNS/3 < 7 ? 7 : COLUMNS/3)) )) && {
+	d=${d:(-n)}; p=...; } || p=; print -nr -- "$p$d") '"$PS1 "
 export EDITOR HOSTNAME LESSHISTFILE=- MKSH=$(whence -p mksh) PS1 TERM USER
 alias ls=ls
 unalias ls
