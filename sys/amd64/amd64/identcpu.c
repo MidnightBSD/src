@@ -261,6 +261,9 @@ printcpuinfo(void)
 			 * General-Purpose and System Instructions
 			 * http://www.amd.com/us-en/assets/content_type/white_papers_and_tech_docs/24594.pdf
 			 *
+			 * BIOS and Kernel Developer's Guide (BKDG) For AMD Family 10h Processors
+			 * http://www.amd.com/us-en/assets/content_type/white_papers_and_tech_docs/31116.pdf
+			 *
 			 * IA-32 Intel Architecture Software Developer's Manual,
 			 * Volume 2A: Instruction Set Reference, A-M
 			 * ftp://download.intel.com/design/Pentium4/manuals/25366617.pdf
@@ -311,12 +314,12 @@ printcpuinfo(void)
 				"\003SVM"	/* Secure Virtual Mode */
 				"\004ExtAPIC"	/* Extended APIC register */
 				"\005CR8"	/* CR8 in legacy mode */
-				"\006<b5>"
-				"\007<b6>"
-				"\010<b7>"
+				"\006ABM"	/* LZCNT Instruction */
+				"\007SSE4A"	/* SSE4A Instructions */
+				"\010MisAlign"	/* Misaligned SSE Mode */
 				"\011Prefetch"	/* 3DNow! Prefetch/PrefetchW */
-				"\012<b9>"
-				"\013<b10>"
+				"\012OSVW"	/* OS Visible Work-around */
+				"\013IBS"	/* Instruction Based Sampling */
 				"\014<b11>"
 				"\015<b12>"
 				"\016<b13>"
