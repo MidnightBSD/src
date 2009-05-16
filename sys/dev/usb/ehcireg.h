@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/ehcireg.h,v 1.3 2008/12/02 22:43:14 laffer1 Exp $ */
 /*	$NetBSD: ehcireg.h,v 1.18 2004/10/22 10:38:17 augustss Exp $	*/
 /*	$FreeBSD: src/sys/dev/usb/ehcireg.h,v 1.8 2005/09/18 11:45:39 netchild Exp $	*/
 
@@ -72,9 +72,8 @@
 #define EHCI_EECP_ID(x)		((x) & 0xff)
 
 /* Legacy support extended capability */
-#define EHCI_LEGSUP_LEGSUP	0x01
-#define  EHCI_LEGSUP_OSOWNED	0x01000000 /* OS owned semaphore */
-#define  EHCI_LEGSUP_BIOSOWNED	0x00010000 /* BIOS owned semaphore */
+#define	EHCI_LEGSUP_OS_SEM	0x03	/* OS owned semaphore */
+#define	EHCI_LEGSUP_BIOS_SEM	0x02	/* BIOS owned semaphore */
 #define EHCI_LEGSUP_USBLEGCTLSTS 0x04
 
 /*** EHCI capability registers ***/
