@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/vge/if_vge.c,v 1.5 2008/12/02 22:43:16 laffer1 Exp $ */
 /*-
  * Copyright (c) 2004
  *	Bill Paul <wpaul@windriver.com>.  All rights reserved.
@@ -169,7 +169,7 @@ static void vge_stop		(struct vge_softc *);
 static void vge_watchdog	(struct ifnet *);
 static int vge_suspend		(device_t);
 static int vge_resume		(device_t);
-static void vge_shutdown	(device_t);
+static int vge_shutdown	(device_t);
 static int vge_ifmedia_upd	(struct ifnet *);
 static void vge_ifmedia_sts	(struct ifnet *, struct ifmediareq *);
 
@@ -2375,7 +2375,7 @@ vge_resume(dev)
  * Stop all chip I/O so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 vge_shutdown(dev)
 	device_t		dev;
 {
@@ -2384,4 +2384,6 @@ vge_shutdown(dev)
 	sc = device_get_softc(dev);
 
 	vge_stop(sc);
+
+	return (0);
 }
