@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/ehci_pci.c,v 1.5 2009/05/16 22:25:47 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/ehci_pci.c,v 1.6 2009/05/17 21:41:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -579,8 +579,9 @@ ehci_pci_takecontroller(device_t self)
 static void
 ehci_pci_givecontroller(device_t self)
 {
+#if 0
 	ehci_softc_t *sc = device_get_softc(self);
-	u_int32_t cparams, eec, legsup;
+	u_int32_t cparams, eec;
 	int eecp;
 
 	cparams = EREAD4(sc, EHCI_HCCPARAMS);
@@ -589,9 +590,9 @@ ehci_pci_givecontroller(device_t self)
 		eec = pci_read_config(self, eecp, 4);
 		if (EHCI_EECP_ID(eec) != EHCI_EC_LEGSUP)
 			continue;
-		legsup = eec;
-		pci_write_config(self, eecp, legsup & ~EHCI_LEGSUP_OSOWNED, 4);
+		pci_write_config(self, eecp + EHCI_LEGSUP_OS_SEM, 0, 1);
 	}
+#endif
 }
 
 static device_method_t ehci_methods[] = {
