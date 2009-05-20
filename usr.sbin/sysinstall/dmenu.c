@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/dmenu.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/dmenu.c,v 1.3 2009/05/20 23:33:31 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/dmenu.c,v 1.45 2003/09/17 03:45:30 marcel Exp $
  *
  * Copyright (c) 1995
@@ -170,19 +170,23 @@ dmenuToggleVariable(dialogMenuItem *tmp)
 int
 dmenuISetVariable(dialogMenuItem *tmp)
 {
-    char *ans, *var;
+    char *ans, *p, *var;
 
-    if (!(var = (char *)tmp->data)) {
+    if (!(var = strdup((char *)tmp->data))) {
 	msgConfirm("Incorrect data field for `%s'!", tmp->title);
 	return DITEM_FAILURE;
     }
+    if ((p = index(var, '=')) != NULL)
+        *p = '\0';
     ans = msgGetInput(variable_get(var), tmp->title, 1);
-    if (!ans)
+    if (!ans) {
+        free(var);
 	return DITEM_FAILURE;
-    else if (!*ans)
+    } else if (!*ans)
 	variable_unset(var);
     else
 	variable_set2(var, ans, *var != '_');
+    free(var);
     return DITEM_SUCCESS;
 }
 
@@ -262,7 +266,7 @@ dmenuVarsCheck(dialogMenuItem *item)
 int
 dmenuRadioCheck(dialogMenuItem *item)
 {
-    return (*((unsigned int *)item->data) == item->aux);
+    return (*((int *)item->data) == item->aux);
 }
 
 static int
