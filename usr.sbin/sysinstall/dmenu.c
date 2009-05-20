@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD$ 
+ * $MidnightBSD: src/usr.sbin/sysinstall/dmenu.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $ 
  * $FreeBSD: src/usr.sbin/sysinstall/dmenu.c,v 1.45 2003/09/17 03:45:30 marcel Exp $
  *
  * Copyright (c) 1995
@@ -36,6 +36,7 @@
  */
 
 #include "sysinstall.h"
+#include <sys/param.h>
 #include <errno.h>
 
 #define MAX_MENU		15
@@ -109,6 +110,21 @@ dmenuSetVariables(dialogMenuItem *tmp)
     }
     free(copy);
     return DITEM_SUCCESS;
+}
+
+int
+dmenuSetCountryVariable(dialogMenuItem *tmp)
+{
+    variable_set((char *)tmp->data, FALSE);
+#ifdef WITH_SYSCONS
+    /* Don't prompt the user for a keymap if they're using the default locale. */
+    if (!strcmp(variable_get(VAR_COUNTRY), DEFAULT_COUNTRY))
+	return DITEM_SUCCESS;
+
+    return keymapMenuSelect(tmp);
+#else
+    return DITEM_SUCCESS;
+#endif
 }
 
 int
@@ -263,6 +279,60 @@ menu_height(DMenu *menu, int n)
 	    --max;
     }
     return n > max ? max : n;
+}
+
+/* Find a menu item that matches any field. */
+int
+dmenuFindItem(DMenu *menu, const char *prompt, const char *title, void *data)
+{
+    dialogMenuItem *items = menu->items;
+    int i;
+
+    for (i = 0; items[i].prompt; ++i)
+	if ((prompt && !strcmp(items[i].prompt, prompt)) ||
+		(title && !strcmp(items[i].title, title)) ||
+		(data && items[i].data == data))
+	    return i;
+
+    return -1;
+}
+
+/* Set the default item for a menu by index and scroll to it. */
+void
+dmenuSetDefaultIndex(DMenu *menu, int *choice, int *scroll, int *curr, int *max)
+{
+    int nitem;
+    int height;
+
+    *curr = *max = 0;
+
+    for (nitem = 0; menu->items[nitem].prompt; ++nitem);
+
+    height = menu_height(menu, nitem);
+    if (*choice > height)
+    {
+	*scroll = MIN(nitem - height, *choice);
+	*choice = *choice - *scroll;
+    }
+    else
+	*scroll = 0;
+}
+
+/* Set the default menu item that matches any field and scroll to it. */
+Boolean
+dmenuSetDefaultItem(DMenu *menu, const char *prompt, const char *title, void *data,
+		    int *choice, int *scroll, int *curr, int *max)
+{
+    if ((*choice = dmenuFindItem(menu, prompt, title, data)) != -1)
+    {
+	dmenuSetDefaultIndex(menu, choice, scroll, curr, max);
+	return TRUE;
+    }
+    else
+    {
+	*choice = *scroll = *curr = *max = 0;
+	return FALSE;
+    }
 }
 
 /* Traverse over an internal menu */

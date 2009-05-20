@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.13 2009/05/20 21:51:48 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.14 2009/05/20 22:24:27 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -144,6 +144,7 @@ DMenu MenuIndex = {
     NULL,
     { { " Anon FTP",		"Configure anonymous FTP logins.",	dmenuVarCheck, configAnonFTP, NULL, "anon_ftp" },
       { " Commit",		"Commit any pending actions (dangerous!)", NULL, installCustomCommit },
+      { " Country",		"Set the system's country",		NULL, configCountry },
 #ifdef WITH_SYSCONS
       { " Console settings",	"Customize system console behavior.",	NULL, dmenuSubmenu, NULL, &MenuSyscons },
 #endif
@@ -207,7 +208,7 @@ DMenu MenuIndex = {
 #ifndef PC98
       { " Syscons, Font",	"The console screen font.",	  NULL, dmenuSubmenu, NULL, &MenuSysconsFont },
 #endif
-      { " Syscons, Keymap",	"The console keymap configuration menu.", NULL, dmenuSubmenu, NULL, &MenuSysconsKeymap },
+      { " Syscons, Keymap",	"The console keymap configuration menu.", NULL, keymapMenuSelect },
       { " Syscons, Keyrate",	"The console key rate configuration menu.", NULL, dmenuSubmenu, NULL, &MenuSysconsKeyrate },
       { " Syscons, Saver",	"The console screen saver configuration menu.",	NULL, dmenuSubmenu, NULL, &MenuSysconsSaver },
 #ifndef PC98
@@ -222,6 +223,9 @@ DMenu MenuIndex = {
       { " User Management",	"Add user and group information.",	NULL, dmenuSubmenu, NULL, &MenuUsermgmt },
       { NULL } },
 };
+
+/* The country menu */
+#include "countries.h"
 
 /* The initial installation menu */
 DMenu MenuInitial = {
@@ -242,7 +246,7 @@ DMenu MenuInitial = {
       { "Configure",	"Do post-install configuration of MidnightBSD",	NULL, dmenuSubmenu, NULL, &MenuConfigure },
       { "Doc",	"Copyright, Shortcut, etc.",	NULL, dmenuSubmenu, NULL, &MenuDocumentation },
 #ifdef WITH_SYSCONS
-      { "Keymap",	"Select keyboard type",				NULL, dmenuSubmenu, NULL, &MenuSysconsKeymap },
+      { "Keymap",	"Select keyboard type",				NULL, keymapMenuSelect },
 #endif
       { "Options",	"View/Set various installation options",	NULL, optionsEditor },
       { "Fixit",	"Repair mode with CDROM/DVD/floppy or start shell",	NULL, dmenuSubmenu, NULL, &MenuFixit },
@@ -931,10 +935,6 @@ DMenu MenuMTA = {
         dmenuVarCheck, dmenuSetVariable, NULL, "sendmail_enable=YES" },
       { "Sendmail local",    "Use sendmail, but do not listen on the network",
         dmenuVarCheck, dmenuSetVariable, NULL, "sendmail_enable=NO" },
-      { "Postfix",            "Use the Postfix MTA",
-      NULL, configMTAPostfix, NULL, NULL },
-      { "Exim",               "Use the Exim MTA",
-      NULL, configMTAExim, NULL, NULL },
       { "None",               "Do not install an MTA",
         dmenuVarCheck, dmenuSetVariable, NULL, "sendmail_enable=NONE" },
       { "X Exit",             "Exit this menu (returning to previous)",

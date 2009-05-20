@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.5 2007/07/27 21:32:46 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.6 2008/01/21 16:06:30 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -98,6 +98,7 @@
 #define VAR_BOOTMGR			"bootManager"
 #define VAR_BROWSER_BINARY		"browserBinary"
 #define VAR_BROWSER_PACKAGE		"browserPackage"
+#define VAR_COUNTRY			"country"
 #define VAR_CPIO_VERBOSITY		"cpioVerbose"
 #define VAR_DEBUG			"debug"
 #define VAR_DESKSTYLE			"_deskStyle"
@@ -199,6 +200,11 @@
 #define VAR_TERM			"TERM"
 #define VAR_CONSTERM                    "_consterm"
 
+#ifdef PC98
+#define DEFAULT_COUNTRY		"jp"
+#else
+#define DEFAULT_COUNTRY		"us"
+#endif
 #define DEFAULT_TAPE_BLOCKSIZE	"20"
 
 /* One MB worth of blocks */
@@ -415,6 +421,7 @@ extern unsigned int	SrcDists;		/* Which src distributions we want		*/
 extern unsigned int	XOrgDists;		/* Which X.Org dists we want			*/
 extern int		BootMgr;		/* Which boot manager to use 			*/
 extern int		StatusLine;		/* Where to print our status messages		*/
+extern DMenu		MenuCountry;		/* Country menu				*/
 extern DMenu		MenuInitial;		/* Initial installation menu			*/
 extern DMenu		MenuFixit;		/* Fixit repair menu				*/
 #if defined(__i386__) || defined(__amd64__)
@@ -513,13 +520,12 @@ extern int	configSaverTimeout(dialogMenuItem *self);
 extern int	configLinux(dialogMenuItem *self);
 #endif
 extern int	configNTP(dialogMenuItem *self);
+extern int	configCountry(dialogMenuItem *self);
 extern int	configUsers(dialogMenuItem *self);
 extern int	configRouter(dialogMenuItem *self);
 extern int	configPCNFSD(dialogMenuItem *self);
 extern int	configInetd(dialogMenuItem *self);
 extern int	configNFSServer(dialogMenuItem *self);
-extern int	configMTAPostfix(dialogMenuItem *self);
-extern int	configMTAExim(dialogMenuItem *self);
 extern int	configRpcBind(dialogMenuItem *self);
 extern int	configWriteRC_conf(dialogMenuItem *self);
 extern int	configSecurelevel(dialogMenuItem *self);
@@ -595,11 +601,16 @@ extern int	dmenuSystemCommandBox(dialogMenuItem *tmp);
 extern int	dmenuExit(dialogMenuItem *tmp);
 extern int	dmenuISetVariable(dialogMenuItem *tmp);
 extern int	dmenuSetVariable(dialogMenuItem *tmp);
+extern int	dmenuSetCountryVariable(dialogMenuItem *tmp);
 extern int	dmenuSetKmapVariable(dialogMenuItem *tmp);
 extern int	dmenuSetVariables(dialogMenuItem *tmp);
 extern int	dmenuToggleVariable(dialogMenuItem *tmp);
 extern int	dmenuSetFlag(dialogMenuItem *tmp);
 extern int	dmenuSetValue(dialogMenuItem *tmp);
+extern int	dmenuFindItem(DMenu *menu, const char *prompt, const char *title, void *data);
+extern void	dmenuSetDefaultIndex(DMenu *menu, int *choice, int *scroll, int *curr, int *max);
+extern int	dmenuSetDefaultItem(DMenu *menu, const char *prompt, const char *title, void *data,
+				    int *choice, int *scroll, int *curr, int *max);
 extern Boolean	dmenuOpen(DMenu *menu, int *choice, int *scroll, int *curr, int *max, Boolean buttons);
 extern Boolean	dmenuOpenSimple(DMenu *menu, Boolean buttons);
 extern int	dmenuVarCheck(dialogMenuItem *item);
@@ -667,6 +678,7 @@ extern Boolean	copySelf(void);
 extern int	kget(char *out);
 
 /* keymap.c */
+extern int	keymapMenuSelect(dialogMenuItem *self);
 extern int	loadKeymap(const char *lang);
 
 /* label.c */

@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.5 2009/05/20 22:24:27 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.6 2009/05/20 23:16:31 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/sysinstall/Makefile,v 1.134.2.1 2005/10/07 15:56:30 nyan Exp $
 
 PROG=	sysinstall
@@ -9,7 +9,7 @@ SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	label.c main.c makedevs.c media.c menus.c misc.c modules.c \
 	mouse.c msg.c network.c nfs.c options.c package.c \
 	system.c tape.c tcpip.c termcap.c ttys.c ufs.c user.c \
-	variable.c wizard.c keymap.h
+	variable.c wizard.c keymap.h countries.h
 
 CFLAGS+= -DUSE_GZIP=1
 CFLAGS+= -I${.CURDIR}/../../gnu/lib/libdialog -I.
@@ -18,7 +18,7 @@ DPADD=	${LIBDIALOG} ${LIBNCURSES} ${LIBUTIL} ${LIBDISK} ${LIBFTPIO}
 LDADD=	-ldialog -lncurses -lutil -ldisk -lftpio
 
 CLEANFILES=	makedevs.c rtermcap
-CLEANFILES+=	keymap.tmp keymap.h
+CLEANFILES+=	keymap.tmp keymap.h countries.tmp countries.h
 
 .if exists(${.CURDIR}/../../share/termcap/termcap.src)
 RTERMCAP=	TERMCAP=${.CURDIR}/../../share/termcap/termcap.src ./rtermcap
@@ -88,5 +88,26 @@ keymap.h:
 	done
 	( echo "	{ 0 }"; echo "};" ; echo "" ) >> keymap.tmp
 	mv keymap.tmp keymap.h
+
+countries.h: ${.CURDIR}/../../share/misc/iso3166
+	rm -f countries.tmp
+	awk 'BEGIN { \
+	    FS = "\t"; \
+	    num = 1; \
+	    print "DMenu MenuCountry = {"; \
+	    print "    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,"; \
+	    print "    \"Country Selection\","; \
+	    print "    \"Please choose a country, region, or group.\\n\""; \
+	    print "    \"Select an item using [SPACE] or [ENTER].\","; \
+	    printf "    NULL,\n    NULL,\n    { "; \
+	} \
+	/^[[:space:]]*#/ {next;} \
+	{if (num > 1) {printf "      ";} \
+	    print "{ \"" num "\", \"" $$4 "\"" \
+	    ", dmenuVarCheck, dmenuSetCountryVariable" \
+	    ", NULL, VAR_COUNTRY \"=" tolower($$1) "\" },"; \
+	    ++num;} \
+	END {print "      { NULL } }\n};\n";}' < ${.ALLSRC} > countries.tmp
+	mv countries.tmp ${.TARGET}
 
 .include <bsd.prog.mk>
