@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  * $FreeBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.264.2.2 2006/01/31 22:03:19 jkim Exp $
- * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.6 2008/01/21 16:06:30 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/sysinstall.h,v 1.7 2009/05/20 23:33:31 laffer1 Exp $
  */
 
 #ifndef _SYSINSTALL_H_INCLUDE
@@ -806,9 +806,6 @@ extern int	packageAdd(dialogMenuItem *self);
 extern int	package_add(char *name);
 extern int	package_extract(Device *dev, char *name, Boolean depended);
 extern Boolean	package_installed(char *name);
-
-/* pccard.c */
-extern void	pccardInitialize(void);
 
 /* system.c */
 extern void	systemInitialize(int argc, char **argv);

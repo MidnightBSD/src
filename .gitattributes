@@ -39520,7 +39520,6 @@ usr.sbin/sysinstall/network.c -text
 usr.sbin/sysinstall/nfs.c -text
 usr.sbin/sysinstall/options.c -text
 usr.sbin/sysinstall/package.c -text
-usr.sbin/sysinstall/pccard.c -text
 usr.sbin/sysinstall/rtermcap.c -text
 usr.sbin/sysinstall/sysinstall.8 -text
 usr.sbin/sysinstall/sysinstall.h -text
