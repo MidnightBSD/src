@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.11 2008/05/02 07:18:57 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.12 2008/05/30 13:28:15 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -818,6 +818,10 @@ DMenu MenuStartup = {
 #ifdef __i386__
       { " APM",		"Auto-power management services (typically laptops)",
 	dmenuVarCheck,	dmenuToggleVariable, NULL, "apm_enable=YES" },
+#endif
+#ifndef __SPARC64__
+    { " powerd",	"Enable system power control utility",
+        dmenuVarCheck,  dmenuToggleVariable, NULL, "powerd_enable=YES" },
 #endif
 #ifdef PCCARD_ARCH
       { " pccard",	"Enable PCCARD (AKA PCMCIA) services (also laptops)",
