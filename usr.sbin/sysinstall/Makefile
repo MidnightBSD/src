@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.3 2008/05/02 07:18:57 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.4 2008/05/10 04:24:03 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/sysinstall/Makefile,v 1.134.2.1 2005/10/07 15:56:30 nyan Exp $
 
 .if ${MACHINE_ARCH} != "ia64"
@@ -12,7 +12,7 @@ SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	ftp.c globals.c http.c index.c install.c installUpgrade.c keymap.c \
 	label.c main.c makedevs.c media.c menus.c misc.c modules.c \
 	mouse.c msg.c network.c nfs.c options.c package.c \
-	system.c tape.c tcpip.c termcap.c ttys.c ufs.c usb.c user.c \
+	system.c tape.c tcpip.c termcap.c ttys.c ufs.c user.c \
 	variable.c ${_wizard} keymap.h
 
 CFLAGS+= -DUSE_GZIP=1

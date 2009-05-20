@@ -39530,7 +39530,6 @@ usr.sbin/sysinstall/tcpip.c -text
 usr.sbin/sysinstall/termcap.c -text
 usr.sbin/sysinstall/ttys.c -text
 usr.sbin/sysinstall/ufs.c -text
-usr.sbin/sysinstall/usb.c -text
 usr.sbin/sysinstall/user.c -text
 usr.sbin/sysinstall/variable.c -text
 usr.sbin/sysinstall/wizard.c -text

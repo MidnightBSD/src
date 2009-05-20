@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.12 2008/05/30 13:28:15 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.13 2009/05/20 21:51:48 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -831,10 +831,6 @@ DMenu MenuStartup = {
       { " pccard ifconfig",	"List of PCCARD ethernet devices to configure",
 	dmenuVarCheck, dmenuISetVariable, NULL, "pccard_ifconfig" },
 #endif
-      { " usbd", "Enable USB daemon (detect USB attach / detach)",
-        dmenuVarCheck, dmenuToggleVariable, NULL, "usbd_enable=YES" },
-      { " usbd flags", "Set default flags to usbd (if enabled)", 
-        dmenuVarCheck, dmenuISetVariable, NULL, "usbd_flags" },
       { " ",		" -- ", NULL,	NULL, NULL, NULL, ' ', ' ', ' ' },
       { " Startup dirs",	"Set the list of dirs to look for startup scripts",
 	dmenuVarCheck, dmenuISetVariable, NULL, "local_startup" },

@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.3 2007/02/20 02:43:34 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.4 2007/07/17 13:01:48 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/main.c,v 1.71 2003/08/20 06:27:21 imp Exp $
  *
  * Copyright (c) 1995
@@ -39,6 +39,8 @@
 #include <sys/signal.h>
 #include <sys/fcntl.h>
 #include <sys/sysctl.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 const char *StartName;		/* Initial contents of argv[0] */
 
@@ -54,6 +56,7 @@ main(int argc, char **argv)
 {
     int choice, scroll, curr, max, status;
     char titlestr[80], *arch, *osrel, *ostype;
+    struct rlimit rlim;
     
     /* Record name to be able to restart */
     StartName = argv[0];
@@ -70,6 +73,20 @@ main(int argc, char **argv)
 	fprintf(stderr, "Error: This utility should only be run as root.\n");
 	return 1;
     }
+
+    /*
+     * Given what it does sysinstall (and stuff sysinstall runs like
+     * pkg_add) shouldn't be subject to process limits.  Better to just
+     * let them have what they think they need than have them blow
+     * their brains out during an install (in sometimes strange and
+     * mysterious ways).
+     */
+
+    rlim.rlim_cur = rlim.rlim_max = RLIM_INFINITY;
+    if (setrlimit(RLIMIT_DATA, &rlim) != 0)
+	fprintf(stderr, "Warning: setrlimit() of datasize failed.\n");
+    if (setrlimit(RLIMIT_STACK, &rlim) != 0)
+	fprintf(stderr, "Warning: setrlimit() of stacksize failed.\n");
 
 #ifdef PC98
     {
@@ -122,12 +139,6 @@ main(int argc, char **argv)
 	pvariable_set("pccardInitialize=1");
     }
 #endif
-
-    /* Initialize USB, if we haven't already done so. */
-    if (!pvariable_get("usbInitialize")) {
-	usbInitialize();
-	pvariable_set("usbInitialize=1");
-    }
 
     /* Probe for all relevant devices on the system */
     deviceGetAll();
