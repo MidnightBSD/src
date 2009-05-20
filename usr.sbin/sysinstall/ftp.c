@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.4.2.1 2008/08/30 16:15:42 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/ftp.c,v 1.5 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/ftp.c,v 1.45 2002/10/14 13:06:13 nyan Exp $
  *
  * Copyright (c) 1995
@@ -125,7 +125,7 @@ try:
 
 	pw = getpwuid(getuid());
 	user = pw ? pw->pw_name : "ftp";
-	snprintf(password, sizeof(password), "%s@%s", user, variable_get(VAR_HOSTNAME));
+	sprintf(password, "%s@%s", user, variable_get(VAR_HOSTNAME));
     }
     af = variable_cmp(VAR_IPV6_ENABLE, "YES") ? AF_INET : AF_UNSPEC;
     msgNotify("Logging in to %s@%s..", login_name, hostname);
