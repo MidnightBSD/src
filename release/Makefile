@@ -1,4 +1,4 @@
-# $MidnightBSD: src/release/Makefile,v 1.20 2009/01/21 03:34:05 laffer1 Exp $
+# $MidnightBSD: src/release/Makefile,v 1.21 2009/05/01 17:36:02 laffer1 Exp $
 # $FreeBSD: src/release/Makefile,v 1.887.2.6 2006/02/14 01:58:21 hrs Exp $
 #
 # make release [BUILDNAME=somename] CHROOTDIR=/some/dir CVSROOT=/cvs/dir \
@@ -102,7 +102,7 @@ RELEASEPORTSMODULE?=	mports
 #
 # Setting this also disables building of release note documentation
 # (RELNOTESng).
-#NODOC=  YES
+NODOC=  YES
 #NOPORTS=  YES
 
 # When retrieving mports using the pkg_add -r method, set your proxies to these.
