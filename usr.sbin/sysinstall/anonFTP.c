@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.5.2.1 2008/08/30 16:15:42 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.6 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/anonFTP.c,v 1.35.2.1 2006/01/20 13:00:32 ceri Exp $
  *
  * Copyright (c) 1995
@@ -209,7 +209,7 @@ anonftpOpenDialog(void)
 	     ANONFTP_DIALOG_HEIGHT - 11, ANONFTP_DIALOG_WIDTH - 17,
 	     dialog_attr, border_attr);
     wattrset(ds_win, dialog_attr);
-    snprintf(title, sizeof(title), " Path Configuration ");
+    sprintf(title, " Path Configuration ");
     mvwaddstr(ds_win, ANONFTP_DIALOG_Y + 7, ANONFTP_DIALOG_X + 22, title);
     
     /** Initialize the config Data Structure **/
