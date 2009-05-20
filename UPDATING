@@ -1,7 +1,16 @@
 Updating Information for MidnightBSD users
 
+20090520:
+	The powerd daemon no longer starts automatically to improve
+	compatibility with many systems.  However, there is a new
+	installer option in the startup section to enable it. This
+	makes it easier to enable for users that have working systems. I		thought it was only a problem on older hardware, but it freaks
+	out my new Phenom too.
+
 20090502:
 	OpenSSH 5.2p1 import
+
+	ale(4) connected to the build. (kernel module only)
 
 20090501:
 	Imported makefs utility from NetBSD/FreeBSD
@@ -714,4 +723,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.61 2009/05/01 17:46:43 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.62 2009/05/02 19:07:25 laffer1 Exp $
