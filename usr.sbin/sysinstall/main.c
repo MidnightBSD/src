@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated for what's essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.4 2007/07/17 13:01:48 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/main.c,v 1.5 2009/05/20 22:24:27 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/main.c,v 1.71 2003/08/20 06:27:21 imp Exp $
  *
  * Copyright (c) 1995
@@ -87,15 +87,6 @@ main(int argc, char **argv)
 	fprintf(stderr, "Warning: setrlimit() of datasize failed.\n");
     if (setrlimit(RLIMIT_STACK, &rlim) != 0)
 	fprintf(stderr, "Warning: setrlimit() of stacksize failed.\n");
-
-#ifdef PC98
-    {
-	/* XXX */
-	char *p = getenv("TERM");
-	if (p && strcmp(p, "cons25") == 0)
-	    setenv("TERM", "cons25w", 1);
-    }
-#endif
 
     /* Set up whatever things need setting up */
     systemInitialize(argc, argv);
