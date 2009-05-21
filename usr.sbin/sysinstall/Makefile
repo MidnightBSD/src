@@ -1,4 +1,4 @@
-# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.6 2009/05/20 23:16:31 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/sysinstall/Makefile,v 1.7 2009/05/20 23:33:31 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/sysinstall/Makefile,v 1.134.2.1 2005/10/07 15:56:30 nyan Exp $
 
 PROG=	sysinstall
@@ -8,7 +8,7 @@ SRCS=	anonFTP.c cdrom.c command.c config.c devices.c dhcp.c \
 	ftp.c globals.c http.c index.c install.c installUpgrade.c keymap.c \
 	label.c main.c makedevs.c media.c menus.c misc.c modules.c \
 	mouse.c msg.c network.c nfs.c options.c package.c \
-	system.c tape.c tcpip.c termcap.c ttys.c ufs.c user.c \
+	system.c tcpip.c termcap.c ttys.c ufs.c user.c \
 	variable.c wizard.c keymap.h countries.h
 
 CFLAGS+= -DUSE_GZIP=1

@@ -39524,7 +39524,6 @@ usr.sbin/sysinstall/rtermcap.c -text
 usr.sbin/sysinstall/sysinstall.8 -text
 usr.sbin/sysinstall/sysinstall.h -text
 usr.sbin/sysinstall/system.c -text
-usr.sbin/sysinstall/tape.c -text
 usr.sbin/sysinstall/tcpip.c -text
 usr.sbin/sysinstall/termcap.c -text
 usr.sbin/sysinstall/ttys.c -text

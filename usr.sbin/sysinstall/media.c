@@ -4,7 +4,7 @@
  * This is probably the last attempt in the `sysinstall' line, the next
  * generation being slated to essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.6.2.1 2008/08/30 16:15:42 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/media.c,v 1.7 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/media.c,v 1.121.12.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -259,61 +259,6 @@ mediaSetDOS(dialogMenuItem *self)
     return (mediaDevice ? DITEM_LEAVE_MENU : DITEM_FAILURE);
 }
 
-static int
-tapeHook(dialogMenuItem *self)
-{
-    return genericHook(self, DEVICE_TYPE_TAPE);
-}
-
-/*
- * Return 1 if we successfully found and set the installation type to
- * be a tape drive.
- */
-int
-mediaSetTape(dialogMenuItem *self)
-{
-    Device **devs;
-    int cnt;
-
-    mediaClose();
-    devs = deviceFind(NULL, DEVICE_TYPE_TAPE);
-    cnt = deviceCount(devs);
-    if (!cnt) {
-	msgConfirm("No tape drive devices found!  Please check that your system's configuration\n"
-		   "is correct.  For more information, consult the hardware guide in the Doc\n"
-		   "menu.");
-	return DITEM_FAILURE | DITEM_CONTINUE;
-    }
-    else if (cnt > 1) {
-	DMenu *menu;
-	int status;
-
-	menu = deviceCreateMenu(&MenuMediaTape, DEVICE_TYPE_TAPE, tapeHook, NULL);
-	if (!menu)
-	    msgFatal("Unable to create tape drive menu!  Something is seriously wrong.");
-	status = dmenuOpenSimple(menu, FALSE);
-	free(menu);
-	if (!status)
-	    return DITEM_FAILURE;
-    }
-    else
-	mediaDevice = devs[0];
-    if (mediaDevice) {
-	char *val;
-
-	val = msgGetInput("/var/tmp", "Please enter the name of a temporary directory containing\n"
-			  "sufficient space for holding the contents of this tape (or\n"
-			  "tapes).  The contents of this directory will be removed\n"
-			  "after installation, so be sure to specify a directory that\n"
-			  "can be erased afterwards!\n");
-	if (!val)
-	    mediaDevice = NULL;
-	else
-	    mediaDevice->private = strdup(val);
-    }
-    return (mediaDevice ? DITEM_LEAVE_MENU : DITEM_FAILURE);
-}
-
 /*
  * Return 0 if we successfully found and set the installation type to
  * be an ftp server
@@ -324,7 +269,8 @@ mediaSetFTP(dialogMenuItem *self)
     static Device ftpDevice;
     char *cp, hbuf[MAXHOSTNAMELEN], *hostname, *dir;
     struct addrinfo hints, *res;
-    int af, urllen;
+    int af;
+    size_t  urllen;
     extern int FtpPort;
     static Device *networkDev = NULL;
 
@@ -553,7 +499,7 @@ mediaSetNFS(dialogMenuItem *self)
     static Device *networkDev = NULL;
     char *cp, *idx;
     char hostname[MAXPATHLEN];
-    int pathlen;
+    size_t pathlen;
 
     mediaClose();
     cp = variable_get_value(VAR_NFS_PATH, "Please enter the full NFS file specification for the remote\n"
@@ -662,11 +608,9 @@ mediaExtractDistBegin(char *dir, int *fd, int *zpid, int *cpid)
 	    dup2(1, 2);
 	}
 	if (strlen(cpioVerbosity()))
-	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "-C", 
-                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
+	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), (char *)0);
 	else
-	    i = execl(cpio, cpio, "-idum", "-C", 
-                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
+	    i = execl(cpio, cpio, "-idum", (char *)0);
 	if (isDebug())
 	    msgDebug("%s command returns %d status\n", cpio, i);
 	exit(i);
@@ -753,11 +697,9 @@ mediaExtractDist(char *dir, char *dist, FILE *fp)
 	    dup2(1, 2);
 	}
 	if (strlen(cpioVerbosity()))
-	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), "-C", 
-                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
+	    i = execl(cpio, cpio, "-idum", cpioVerbosity(), (char *)0); 
 	else
-	    i = execl(cpio, cpio, "-idum", "-C", 
-                mediaBufferSize(mediaTapeBlocksize()), (char *)0);
+	    i = execl(cpio, cpio, "-idum", (char *)0);
 	if (isDebug())
 	    msgDebug("%s command returns %d status\n", cpio, i);
 	exit(i);

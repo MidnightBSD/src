@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  * 
- * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.7.2.2 2008/08/30 16:33:16 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/devices.c,v 1.8 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/devices.c,v 1.160.2.1 2005/07/28 01:17:12 grehan Exp $
  *
  * Copyright (c) 1995
@@ -70,8 +70,6 @@ static struct _devname {
     { DEVICE_TYPE_CDROM,	"matcd%d",	"Matsushita CDROM ('sound blaster' type)", 46, 0, 8, 4 		},
 #endif
     { DEVICE_TYPE_CDROM,	"acd%d",	"ATAPI/IDE CDROM",	117, 0, 8, 4				},
-    { DEVICE_TYPE_TAPE, 	"sa%d",		"SCSI tape drive",	14, 0, 16, 4				},
-    { DEVICE_TYPE_TAPE, 	"rwt%d",	"Wangtek tape drive",	10, 0, 1, 4				},
     { DEVICE_TYPE_DISK, 	"da%d",		"SCSI disk device",	13, 65538, 8, 16			},
     { DEVICE_TYPE_DISK, 	"ad%d",		"ATA/IDE disk device",	116, 65538, 8, 16			},
     { DEVICE_TYPE_DISK, 	"ar%d",		"ATA/IDE RAID device",	157, 65538, 8, 16			},
@@ -360,20 +358,6 @@ skipif:
 					 mediaShutdownCDROM, NULL);
 		    if (isDebug())
 			msgDebug("Found a CDROM device for %s\n", try);
-		}
-		break;
-
-	    case DEVICE_TYPE_TAPE:
-		fd = deviceTry(device_names[i], try, j);
-		if (fd >= 0) {
-		    char n[BUFSIZ];
-
-		    close(fd);
-		    snprintf(n, sizeof n, device_names[i].name, j);
-		    deviceRegister(strdup(n), device_names[i].description, strdup(try),
-				   DEVICE_TYPE_TAPE, TRUE, mediaInitTape, mediaGetTape, mediaShutdownTape, NULL);
-		    if (isDebug())
-			msgDebug("Found a TAPE device for %s\n", try);
 		}
 		break;
 

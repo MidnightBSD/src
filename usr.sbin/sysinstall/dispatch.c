@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/dispatch.c,v 1.47.2.1 2006/01/31 22:03:18 jkim Exp $
  *
  * Copyright (c) 1995
@@ -71,10 +71,8 @@ static struct _word {
     { "distSetCustom",		distSetCustom		},
     { "distUnsetCustom",	distUnsetCustom		},
     { "distSetDeveloper",	distSetDeveloper	},
-    { "distSetXDeveloper",	distSetXDeveloper	},
     { "distSetKernDeveloper",	distSetKernDeveloper	},
     { "distSetUser",		distSetUser		},
-    { "distSetXUser",		distSetXUser		},
     { "distSetMinimum",		distSetMinimum		},
     { "distSetEverything",	distSetEverything	},
     { "distSetSrc",		distSetSrc		},
@@ -98,7 +96,6 @@ static struct _word {
     { "mediaSetCDROM",		mediaSetCDROM		},
     { "mediaSetFloppy",		mediaSetFloppy		},
     { "mediaSetDOS",		mediaSetDOS		},
-    { "mediaSetTape",		mediaSetTape		},
     { "mediaSetFTP",		mediaSetFTP		},
     { "mediaSetFTPActive",	mediaSetFTPActive	},
     { "mediaSetFTPPassive",	mediaSetFTPPassive	},

@@ -35,7 +35,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.14 2009/05/20 22:24:27 laffer1 Exp $";
+  "$MidnightBSD: src/usr.sbin/sysinstall/menus.c,v 1.15 2009/05/20 23:33:31 laffer1 Exp $";
 #endif
 
 #include "sysinstall.h"
@@ -180,7 +180,6 @@ DMenu MenuIndex = {
       { " Install, Custom",	"The custom installation menu",		NULL, dmenuSubmenu, NULL, &MenuInstallCustom },
       { " Label",		"The disk Label editor",		NULL, diskLabelEditor },
       { " Media",		"Top level media selection menu.",	NULL, dmenuSubmenu, NULL, &MenuMedia },
-      { " Media, Tape",		"Select tape installation media.",	NULL, mediaSetTape },
       { " Media, NFS",		"Select NFS installation media.",	NULL, mediaSetNFS },
       { " Media, Floppy",	"Select floppy installation media.",	NULL, mediaSetFloppy },
       { " Media, CDROM/DVD",	"Select CDROM/DVD installation media.",	NULL, mediaSetCDROM },
@@ -453,20 +452,6 @@ DMenu MenuMediaFTP = {
       { NULL } }
 };
 
-DMenu MenuMediaTape = {
-    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "Choose a tape drive type",
-    "MidnightBSD can be installed from tape drive, though this installation\n"
-    "method requires a certain amount of temporary storage in addition\n"
-    "to the space required by the distribution itself (tape drives make\n"
-    "poor random-access devices, so we extract _everything_ on the tape\n"
-    "in one pass).  If you have sufficient space for this, then you should\n"
-    "select one of the following tape devices detected on your system.",
-    "Press F1 to read the installation guide",
-    "INSTALL",
-    { { NULL } },
-};
-
 DMenu MenuNetworkDevice = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
     "Network interface information required",
@@ -511,7 +496,6 @@ DMenu MenuMedia = {
       { "6 NFS",		"Install over NFS",			NULL, mediaSetNFS },
       { "7 File System",	"Install from an existing filesystem",	NULL, mediaSetUFS },
       { "8 Floppy",		"Install from a floppy disk set",	NULL, mediaSetFloppy },
-      { "9 Tape",		"Install from SCSI or QIC tape",	NULL, mediaSetTape },
       { "X Options",		"Go to the Options screen",		NULL, optionsEditor },
       { NULL } },
 };
@@ -712,22 +696,6 @@ DMenu MenuInstallCustom = {
 };
 
 #if defined(__i386__) || defined(__amd64__)
-#ifdef PC98
-/* IPL type menu */
-DMenu MenuIPLType = {
-    DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
-    "overwrite me",		/* will be disk specific label */
-    "If you want a MidnightBSD Boot Manager, select \"BootMgr\".  If you would\n"
-    "prefer your Boot Manager to remain untouched then select \"None\".\n\n",
-    "Press F1 to read about drive setup",
-    "drives",
-    { { "BootMgr",	"Install the MidnightBSD Boot Manager",
-	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr },
-      { "None",		"Leave the IPL untouched",
-	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 1 },
-      { NULL } },
-};
-#else
 /* MBR type menu */
 DMenu MenuMBRType = {
     DMENU_NORMAL_TYPE | DMENU_SELECTION_RETURNS,
@@ -740,7 +708,7 @@ DMenu MenuMBRType = {
     "If you do not want a boot selector, or wish to replace an existing\n"
     "one, select \"standard\".  If you would prefer your Master Boot\n"
     "Record to remain untouched then select \"None\".\n\n"
-    "  NOTE:  PC-DOS users will almost certainly require \"None\"!",
+    "  NOTE:  Vista and PC-DOS users will almost certainly require \"None\"!",
     "Press F1 to read about drive setup",
     "drives",
     { { "BootMgr",	"Install the MidnightBSD Boot Manager",
@@ -751,7 +719,6 @@ DMenu MenuMBRType = {
 	dmenuRadioCheck, dmenuSetValue, NULL, &BootMgr, '(', '*', ')', 2 },
       { NULL } },
 };
-#endif /* PC98 */
 #endif /* __i386__ */
 
 /* Final configuration menu */
@@ -826,14 +793,6 @@ DMenu MenuStartup = {
 #ifndef __SPARC64__
     { " powerd",	"Enable system power control utility",
         dmenuVarCheck,  dmenuToggleVariable, NULL, "powerd_enable=YES" },
-#endif
-#ifdef PCCARD_ARCH
-      { " pccard",	"Enable PCCARD (AKA PCMCIA) services (also laptops)",
-	dmenuVarCheck, dmenuToggleVariable, NULL, "pccard_enable=YES" },
-      { " pccard mem",	"Set PCCARD memory address (if enabled)",
-	dmenuVarCheck, dmenuISetVariable, NULL, "pccard_mem" },
-      { " pccard ifconfig",	"List of PCCARD ethernet devices to configure",
-	dmenuVarCheck, dmenuISetVariable, NULL, "pccard_ifconfig" },
 #endif
       { " ",		" -- ", NULL,	NULL, NULL, NULL, ' ', ' ', ' ' },
       { " Startup dirs",	"Set the list of dirs to look for startup scripts",
