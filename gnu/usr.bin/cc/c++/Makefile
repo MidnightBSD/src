@@ -1,17 +1,18 @@
-# $FreeBSD: src/gnu/usr.bin/cc/c++/Makefile,v 1.23 2004/12/21 08:46:58 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/gnu/usr.bin/cc/c++/Makefile,v 1.24 2007/05/19 04:25:56 kan Exp $
 
 .include "../Makefile.inc"
 .include "../Makefile.fe"
 
-.PATH: ${GCCDIR}/cp ${GCCDIR}
+.PATH: ${GCCDIR}/cp
 
 PROG=	c++
-SRCS=	gcc.c g++spec.c
+SRCS+=	g++spec.c
 LINKS=	${BINDIR}/c++ ${BINDIR}/g++
 LINKS+=	${BINDIR}/c++ ${BINDIR}/CC
 NO_MAN=
 
-DPADD=	${LIBCC_INT}
-LDADD=	${LIBCC_INT}
+DPADD=	${LIBCPP} ${LIBIBERTY}
+LDADD=	${LIBCPP} ${LIBIBERTY}
 
 .include <bsd.prog.mk>

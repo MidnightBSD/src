@@ -1,21 +1,10 @@
-# $FreeBSD: src/gnu/usr.bin/cc/Makefile.tgt,v 1.8.8.1 2006/09/29 01:50:03 obrien Exp $
+# $MidnightBSD$
+# $FreeBSD: src/gnu/usr.bin/cc/Makefile.tgt,v 1.11 2007/05/19 04:25:56 kan Exp $
 
 TARGET_ARCH?=	${MACHINE_ARCH}
 
-.if ${TARGET_ARCH} == "alpha"
-GCC_CPU=	alpha
-.elif ${TARGET_ARCH} == "arm"
-GCC_CPU=	arm
-.if defined(TARGET_BIG_ENDIAN)
-CFLAGS+=	-DTARGET_ENDIAN_DEFAULT=ARM_FLAG_BIG_END
-.endif
-.elif ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
+.if ${TARGET_ARCH} == "i386" || ${TARGET_ARCH} == "amd64"
 GCC_CPU=	i386
-.elif ${TARGET_ARCH} == "ia64"
-TARGET_CPU_DEFAULT= MASK_GNU_AS|MASK_GNU_LD
-GCC_CPU=	ia64
-.elif ${TARGET_ARCH} == "powerpc"
-GCC_CPU=	rs6000
 .elif ${TARGET_ARCH} == "sparc64"
 GCC_CPU=	sparc
 TARGET_CPU_DEFAULT= TARGET_CPU_ultrasparc

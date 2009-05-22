@@ -1,16 +1,18 @@
-# $FreeBSD: src/gnu/usr.bin/cc/c++filt/Makefile,v 1.20 2004/12/21 08:46:58 ru Exp $
+# $MidnightBSD$
+# $FreeBSD: src/gnu/usr.bin/cc/c++filt/Makefile,v 1.22 2007/05/19 04:25:57 kan Exp $
 
 .include "../Makefile.inc"
+.include "../Makefile.fe"
 
-.PATH: ${GCCDIR}
+.PATH: ${GCCLIB}/libiberty
 
 PROG=	c++filt
 SRCS=	cp-demangle.c
 NO_MAN=
 
-CFLAGS+= -DSTANDALONE_DEMANGLER -DIN_GCC -DVERSION=\"$(version)\"
+CFLAGS+= -DSTANDALONE_DEMANGLER -DVERSION=\"$(GCC_VERSION)\"
 
-DPADD=	${LIBCC_INT}
-LDADD=	${LIBCC_INT}
+DPADD=	${LIBIBERTY}
+LDADD=	${LIBIBERTY}
 
 .include <bsd.prog.mk>

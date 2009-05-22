@@ -1,30 +1,26 @@
-# $FreeBSD: src/gnu/usr.bin/cc/Makefile,v 1.38 2004/11/07 22:49:20 kan Exp $
+# $MidnightBSD$
+# $FreeBSD: src/gnu/usr.bin/cc/Makefile,v 1.41 2007/05/19 04:25:56 kan Exp $
+
+.include <bsd.own.mk>
 
 # The order of some of these are rather important.  Some depend on previous
 # subdirs.
 
-SUBDIR= cc_tools cc_int cc cc1 include protoize doc
+SUBDIR= cc_tools libiberty libcpp libdecnumber cc_int cc cc1 include doc
 
-.if !defined(NO_CPP)
+.if ${MK_CPP} != "no"
 SUBDIR+= cpp
 .endif
 
-.if !defined(NO_CXX)
+.if ${MK_CXX} != "no"
 SUBDIR+= cc1plus c++ c++filt
-.if !defined(NO_COLLECT2)
-#SUBDIR+= collect2
-.endif
 .endif
 
-.if !defined(NO_OBJC)
+.if ${MK_OBJC} != "no"
 SUBDIR+= cc1obj
 .endif
 
-.if !defined(NO_FORTRAN)
-SUBDIR+= f77 f771 f77doc
-.endif
-
-.if !defined(NO_GCOV)
+.if ${MK_GCOV} != "no"
 SUBDIR+= gcov
 .endif
 
