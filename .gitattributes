@@ -21501,6 +21501,8 @@ gnu/lib/libg2c/config.h -text
 gnu/lib/libg2c/g2c.h -text
 gnu/lib/libgcc/Makefile -text
 gnu/lib/libgcov/Makefile -text
+gnu/lib/libgomp/Makefile -text
+gnu/lib/libgomp/config.h -text
 gnu/lib/libiberty/Makefile -text
 gnu/lib/libiberty/config.h -text
 gnu/lib/libobjc/Makefile -text
