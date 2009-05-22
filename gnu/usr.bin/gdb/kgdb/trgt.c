@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt.c,v 1.2.2.2 2005/09/15 05:32:10 marcel Exp $");
+__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt.c,v 1.5 2006/10/16 20:06:32 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -53,9 +53,8 @@ kgdb_kernbase (void)
 {
 	static CORE_ADDR kernbase;
 	struct minimal_symbol *sym;
- 
-	if (kernbase == 0)
-	{
+
+	if (kernbase == 0) {
 		sym = lookup_minimal_symbol ("kernbase", NULL, NULL);
 		if (sym == NULL) {
 			kernbase = KERNBASE;
@@ -174,6 +173,32 @@ kgdb_set_proc_cmd (char *arg, int from_tty)
 	kgdb_switch_to_thread(thr);
 }
 
+static void
+kgdb_set_tid_cmd (char *arg, int from_tty)
+{
+	CORE_ADDR addr;
+	struct kthr *thr;
+
+	if (!arg)
+		error_no_arg ("TID or thread address for the new context");
+
+	if (kvm == NULL)
+		error ("no kernel core file");
+
+	addr = (CORE_ADDR) parse_and_eval_address (arg);
+
+	if (!INKERNEL (addr)) {
+		thr = kgdb_thr_lookup_tid((int)addr);
+		if (thr == NULL)
+			error ("invalid TID");
+	} else {
+		thr = kgdb_thr_lookup_taddr(addr);
+		if (thr == NULL)
+			error("invalid thread address");
+	}
+	kgdb_switch_to_thread(thr);
+}
+
 void
 kgdb_target(void)
 {
@@ -205,9 +230,10 @@ kgdb_target(void)
 		ti = add_thread(ptid_build(kt->pid, 0, kt->tid));
 		kt = kgdb_thr_next(kt);
 	}
-	if (curkthr != NULL)
+	if (curkthr != 0)
 		inferior_ptid = ptid_build(curkthr->pid, 0, curkthr->tid);
-
 	add_com ("proc", class_obscure, kgdb_set_proc_cmd,
 	   "Set current process context");
+	add_com ("tid", class_obscure, kgdb_set_tid_cmd,
+	   "Set current thread context");
 }

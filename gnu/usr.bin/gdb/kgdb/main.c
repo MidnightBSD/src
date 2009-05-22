@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/main.c,v 1.7.2.3 2005/11/05 19:13:08 marcel Exp $");
+__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/main.c,v 1.11 2006/01/04 23:17:52 kan Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -302,7 +302,7 @@ main(int argc, char *argv[])
 	struct stat st;
 	struct captured_main_args args;
 	char *s;
-	int a, ch, quiet;
+	int a, ch, quiet, writecore;
 
 	dumpnr = -1;
 
@@ -327,8 +327,9 @@ main(int argc, char *argv[])
 	}
 
 	quiet = 0;
+	writecore = 0;
 
-	while ((ch = getopt(argc, argv, "ac:d:fn:qr:v")) != -1) {
+	while ((ch = getopt(argc, argv, "ac:d:fn:qr:vw")) != -1) {
 		switch (ch) {
 		case 'a':
 			annotation_level++;
@@ -371,6 +372,9 @@ main(int argc, char *argv[])
 			break;
 		case 'v':	/* increase verbosity. */
 			verbose++;
+			break;
+		case 'w':	/* core file is writeable. */
+			writecore = 1;
 			break;
 		case '?':
 		default:
@@ -464,7 +468,8 @@ main(int argc, char *argv[])
 	}
 
 	if (remote == NULL) {
-		kvm = kvm_openfiles(kernel, vmcore, NULL, O_RDONLY, kvm_err);
+		kvm = kvm_openfiles(kernel, vmcore, NULL,
+		    writecore ? O_RDWR : O_RDONLY, kvm_err);
 		if (kvm == NULL)
 			errx(1, kvm_err);
 		atexit(kgdb_atexit);

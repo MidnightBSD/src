@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/gnu/usr.bin/gdb/kgdb/kgdb.h,v 1.2.2.1 2005/09/15 05:32:10 marcel Exp $
+ * $FreeBSD: src/gnu/usr.bin/gdb/kgdb/kgdb.h,v 1.5.2.1 2007/11/21 16:43:46 jhb Exp $
  */
 
 #ifndef _KGDB_H_
@@ -32,7 +32,6 @@
 struct thread_info;
 
 extern kvm_t *kvm;
-extern int verbose;
 
 struct kthr {
 	struct kthr	*next;
@@ -42,6 +41,7 @@ struct kthr {
 	uintptr_t	pcb;
 	int		tid;
 	int		pid;
+	u_char		cpu;
 };
 
 extern struct kthr *curkthr;
@@ -61,5 +61,7 @@ struct kthr *kgdb_thr_lookup_taddr(uintptr_t);
 struct kthr *kgdb_thr_next(struct kthr *);
 struct kthr *kgdb_thr_select(struct kthr *);
 char        *kgdb_thr_extra_thread_info(int);
+
+uintptr_t kgdb_lookup(const char *sym);
 
 #endif /* _KGDB_H_ */

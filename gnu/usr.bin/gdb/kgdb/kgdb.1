@@ -22,8 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/gnu/usr.bin/gdb/kgdb/kgdb.1,v 1.7.2.1 2005/09/15 05:32:10 marcel Exp $
-.Dd March 2, 2005
+.\" $FreeBSD: src/gnu/usr.bin/gdb/kgdb/kgdb.1,v 1.10 2006/10/21 17:39:35 ru Exp $
+.\"
+.Dd October 11, 2006
 .Os
 .Dt KGDB 1
 .Sh NAME
@@ -34,6 +35,7 @@
 .Op Fl a | Fl f | Fl fullname
 .Op Fl q | Fl quiet
 .Op Fl v
+.Op Fl w
 .Op Fl d Ar crashdir
 .Op Fl c Ar core | Fl n Ar dumpnr | Fl r Ar device
 .Op Ar kernel Op Ar core
@@ -67,6 +69,13 @@ The
 form is supported for compatibility as well.
 .It Fl v
 Increase verbosity.
+.It Fl w
+Opens kmem-based targets in read-write mode.
+(This is identical to what
+.Fl -wcore
+used to do in previous
+gdb versions for
+.Fx . )
 .It Fl d Ar crashdir
 Use
 .Ar crashdir

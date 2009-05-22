@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.9.2.1 2005/09/15 05:32:11 marcel Exp $
+# $FreeBSD: src/gnu/usr.bin/gdb/libgdb/Makefile,v 1.11 2006/04/10 09:00:19 ru Exp $
 
 TARGET_ARCH?= ${MACHINE_ARCH}
 
@@ -64,6 +64,8 @@ GENSRCS= frame-unwind-kluge.c version.c
 frame-unwind-kluge.c: frame-unwind.diff
 	cat ${CNTRB_GDB}/gdb/frame-unwind.c > ${.TARGET}
 	patch ${.TARGET} ${.ALLSRC}
+
+CLEANFILES= frame-unwind-kluge.c.orig
 
 version.c:
 	echo '#include "version.h"' >  ${.TARGET}

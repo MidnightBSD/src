@@ -25,12 +25,14 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_sparc64.c,v 1.6 2005/09/11 06:52:14 marcel Exp $");
+__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_arm.c,v 1.3 2006/10/16 20:07:23 jhb Exp $");
 
 #include <sys/types.h>
-#include <machine/asm.h>
+#ifndef CROSS_DEBUGGER
 #include <machine/pcb.h>
 #include <machine/frame.h>
+#include <machine/armreg.h>
+#endif
 #include <err.h>
 #include <kvm.h>
 #include <string.h>
@@ -41,16 +43,17 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/trgt_sparc64.c,v 1.6 2005/09/11 06:
 #include <inferior.h>
 #include <regcache.h>
 #include <frame-unwind.h>
-#include <sparc-tdep.h>
-#include <sparc64-tdep.h>
+#include <arm-tdep.h>
 
 #include "kgdb.h"
 
 void
 kgdb_trgt_fetch_registers(int regno __unused)
 {
+#ifndef CROSS_DEBUGGER
 	struct kthr *kt;
 	struct pcb pcb;
+	int i, reg;
 
 	kt = kgdb_thr_lookup_tid(ptid_get_tid(inferior_ptid));
 	if (kt == NULL)
@@ -59,12 +62,25 @@ kgdb_trgt_fetch_registers(int regno __unused)
 		warnx("kvm_read: %s", kvm_geterr(kvm));
 		memset(&pcb, 0, sizeof(pcb));
 	}
-
-	supply_register(SPARC_SP_REGNUM, (char *)&pcb.pcb_sp);
-	sparc_supply_rwindow(current_regcache, pcb.pcb_sp, -1);
-	supply_register(SPARC64_PC_REGNUM, (char *)&pcb.pcb_pc);
-	pcb.pcb_pc += 4;
-	supply_register(SPARC64_NPC_REGNUM, (char *)&pcb.pcb_pc);
+	for (i = ARM_A1_REGNUM + 8; i <= ARM_SP_REGNUM; i++) {
+		supply_register(i, (char *)&pcb.un_32.pcb32_r8 +
+		    (i - (ARM_A1_REGNUM + 8 )) * 4);
+	}
+	if (pcb.un_32.pcb32_sp != 0) {
+		for (i = 0; i < 4; i++) {
+			if (kvm_read(kvm, pcb.un_32.pcb32_sp + (i) * 4,
+			    &reg, 4) != 4) {
+				warnx("kvm_read: %s", kvm_geterr(kvm));
+				break;
+			}
+			supply_register(ARM_A1_REGNUM + 4 + i, (char *)&reg);
+		}
+		if (kvm_read(kvm, pcb.un_32.pcb32_sp + 4 * 4, &reg, 4) != 4)
+			warnx("kvm_read :%s", kvm_geterr(kvm));
+		else
+			supply_register(ARM_PC_REGNUM, (char *)&reg);
+	}
+#endif
 }
 
 void
@@ -73,10 +89,31 @@ kgdb_trgt_store_registers(int regno __unused)
 	fprintf_unfiltered(gdb_stderr, "XXX: %s\n", __func__);
 }
 
+#ifndef CROSS_DEBUGGER
 struct kgdb_frame_cache {
-	CORE_ADDR	pc;
-	CORE_ADDR	sp;
 	CORE_ADDR	fp;
+	CORE_ADDR	sp;
+};
+
+static int kgdb_trgt_frame_offset[26] = {
+	offsetof(struct trapframe, tf_r0),
+	offsetof(struct trapframe, tf_r1),
+	offsetof(struct trapframe, tf_r2),
+	offsetof(struct trapframe, tf_r3),
+	offsetof(struct trapframe, tf_r4),
+	offsetof(struct trapframe, tf_r5),
+	offsetof(struct trapframe, tf_r6),
+	offsetof(struct trapframe, tf_r7),
+	offsetof(struct trapframe, tf_r8),
+	offsetof(struct trapframe, tf_r9),
+	offsetof(struct trapframe, tf_r10),
+	offsetof(struct trapframe, tf_r11),
+	offsetof(struct trapframe, tf_r12),
+	offsetof(struct trapframe, tf_svc_sp),
+	offsetof(struct trapframe, tf_svc_lr),
+	offsetof(struct trapframe, tf_pc),
+	-1, -1, -1, -1, -1, -1, -1, -1, -1,
+	offsetof(struct trapframe, tf_spsr)
 };
 
 static struct kgdb_frame_cache *
@@ -89,17 +126,17 @@ kgdb_trgt_frame_cache(struct frame_info *next_frame, void **this_cache)
 	if (cache == NULL) {
 		cache = FRAME_OBSTACK_ZALLOC(struct kgdb_frame_cache);
 		*this_cache = cache;
-		cache->pc = frame_func_unwind(next_frame);
-		frame_unwind_register(next_frame, SPARC_SP_REGNUM, buf);
+		frame_unwind_register(next_frame, ARM_SP_REGNUM, buf);
 		cache->sp = extract_unsigned_integer(buf,
-		    register_size(current_gdbarch, SPARC_SP_REGNUM));
-		frame_unwind_register(next_frame, SPARC_FP_REGNUM, buf);
+		    register_size(current_gdbarch, ARM_SP_REGNUM));
+		frame_unwind_register(next_frame, ARM_FP_REGNUM, buf);
 		cache->fp = extract_unsigned_integer(buf,
-		    register_size(current_gdbarch, SPARC_FP_REGNUM));
-		cache->fp += BIAS - sizeof(struct trapframe);
+		    register_size(current_gdbarch, ARM_FP_REGNUM));
 	}
 	return (cache);
 }
+
+static int is_undef;
 
 static void
 kgdb_trgt_trapframe_this_id(struct frame_info *next_frame, void **this_cache,
@@ -108,7 +145,7 @@ kgdb_trgt_trapframe_this_id(struct frame_info *next_frame, void **this_cache,
 	struct kgdb_frame_cache *cache;
 
 	cache = kgdb_trgt_frame_cache(next_frame, this_cache);
-	*this_id = frame_id_build(cache->sp, cache->pc);
+	*this_id = frame_id_build(cache->fp, 0);
 }
 
 static void
@@ -119,6 +156,7 @@ kgdb_trgt_trapframe_prev_register(struct frame_info *next_frame,
 	char dummy_valuep[MAX_REGISTER_SIZE];
 	struct kgdb_frame_cache *cache;
 	int ofs, regsz;
+	int is_undefined = 0;
 
 	regsz = register_size(current_gdbarch, regnum);
 
@@ -130,41 +168,30 @@ kgdb_trgt_trapframe_prev_register(struct frame_info *next_frame,
 	*lvalp = not_lval;
 	*realnump = -1;
 
+	ofs = (regnum >= 0 && regnum <= ARM_PS_REGNUM)
+	    ? kgdb_trgt_frame_offset[regnum] : -1;
+	if (ofs == -1)
+		return;
+
 	cache = kgdb_trgt_frame_cache(next_frame, this_cache);
 
-	switch (regnum) {
-	case SPARC_SP_REGNUM:
-		ofs = offsetof(struct trapframe, tf_sp);
-		break;
-	case SPARC64_PC_REGNUM:
-		ofs = offsetof(struct trapframe, tf_tpc);
-		break;
-	case SPARC64_NPC_REGNUM:
-		ofs = offsetof(struct trapframe, tf_tnpc);
-		break;
-	case SPARC_O0_REGNUM:
-	case SPARC_O1_REGNUM:
-	case SPARC_O2_REGNUM:
-	case SPARC_O3_REGNUM:
-	case SPARC_O4_REGNUM:
-	case SPARC_O5_REGNUM:
-	case SPARC_O7_REGNUM:
-		ofs = offsetof(struct trapframe, tf_out) +
-		    (regnum - SPARC_O0_REGNUM) * 8;
-		break;
-	default:
-		if (regnum >= SPARC_L0_REGNUM && regnum <= SPARC_I7_REGNUM) {
-			ofs = (regnum - SPARC_L0_REGNUM) * 8;
-			*addrp = cache->sp + BIAS + ofs;
-			*lvalp = lval_memory;
-			target_read_memory(*addrp, valuep, regsz);
-		}
-		return;
-	}
+	if (is_undef && (regnum == ARM_SP_REGNUM || regnum == ARM_PC_REGNUM)) {
+		*addrp = cache->sp + offsetof(struct trapframe, tf_spsr);
+		target_read_memory(*addrp, valuep, regsz);
+		is_undefined = 1;
+		ofs = kgdb_trgt_frame_offset[ARM_SP_REGNUM];
 
-	*addrp = cache->fp + ofs;
+	}
+	*addrp = cache->sp + ofs;
 	*lvalp = lval_memory;
 	target_read_memory(*addrp, valuep, regsz);
+
+	if (is_undefined) {
+		*addrp = *(unsigned int *)valuep + (regnum == ARM_SP_REGNUM ?
+		    0 : 8);
+		target_read_memory(*addrp, valuep, regsz);
+
+	}
 }
 
 static const struct frame_unwind kgdb_trgt_trapframe_unwind = {
@@ -172,23 +199,34 @@ static const struct frame_unwind kgdb_trgt_trapframe_unwind = {
         &kgdb_trgt_trapframe_this_id,
         &kgdb_trgt_trapframe_prev_register
 };
+#endif
 
 const struct frame_unwind *
 kgdb_trgt_trapframe_sniffer(struct frame_info *next_frame)
 {
+#ifndef CROSS_DEBUGGER
 	char *pname;
 	CORE_ADDR pc;
 
-	pc = frame_func_unwind(next_frame);
+	pc = frame_pc_unwind(next_frame);
 	pname = NULL;
 	find_pc_partial_function(pc, &pname, NULL, NULL);
-	if (pname == NULL)
+	if (pname == NULL) {
+		is_undef = 0;
 		return (NULL);
-	if (strcmp(pname, "tl0_intr") == 0 ||
-	    strcmp(pname, "tl0_trap") == 0 ||
-	    strcmp(pname, "tl1_intr") == 0 ||
-	    strcmp(pname, "tl1_trap") == 0)
+	}
+	if (!strcmp(pname, "undefinedinstruction"))
+		is_undef = 1;
+	if (strcmp(pname, "Laddress_exception_entry") == 0 ||
+	    strcmp(pname, "undefined_entry") == 0 ||
+	    strcmp(pname, "exception_exit") == 0 ||
+	    strcmp(pname, "Laddress_exception_msg") == 0 ||
+	    strcmp(pname, "irq_entry") == 0)
 		return (&kgdb_trgt_trapframe_unwind);
-	/* printf("%s: %lx =%s\n", __func__, pc, pname); */
+	if (!strcmp(pname, "undefinedinstruction"))
+		is_undef = 1;
+	else
+		is_undef = 0;
+#endif
 	return (NULL);
 }

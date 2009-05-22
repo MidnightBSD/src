@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.2.2.1 2005/09/15 05:32:10 marcel Exp $");
+__FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.7.2.1 2007/11/21 16:43:46 jhb Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -41,15 +41,19 @@ __FBSDID("$FreeBSD: src/gnu/usr.bin/gdb/kgdb/kthr.c,v 1.2.2.1 2005/09/15 05:32:1
 #include <frame-unwind.h>
 
 #include "kgdb.h"
+#include <machine/pcb.h>
 
 static uintptr_t dumppcb;
 static int dumptid;
 
+static uintptr_t stoppcbs;
+static __cpumask_t stopped_cpus;
+
 static struct kthr *first;
 struct kthr *curkthr;
 
-static uintptr_t
-lookup(const char *sym)
+uintptr_t
+kgdb_lookup(const char *sym)
 {
 	struct nlist nl[2];
 
@@ -76,37 +80,56 @@ kgdb_thr_init(void)
 	struct kthr *kt;
 	uintptr_t addr, paddr;
 
-	addr = lookup("_allproc");
+	addr = kgdb_lookup("_allproc");
 	if (addr == 0)
 		return (NULL);
 	kvm_read(kvm, addr, &paddr, sizeof(paddr));
 
-	dumppcb = lookup("_dumppcb");
+	dumppcb = kgdb_lookup("_dumppcb");
 	if (dumppcb == 0)
 		return (NULL);
 
-	addr = lookup("_dumptid");
+	addr = kgdb_lookup("_dumptid");
 	if (addr != 0)
 		kvm_read(kvm, addr, &dumptid, sizeof(dumptid));
 	else
 		dumptid = -1;
 
+	addr =  kgdb_lookup("_stopped_cpus");
+	if (addr != 0)
+		kvm_read(kvm, addr, &stopped_cpus, sizeof(stopped_cpus));
+	else
+		stopped_cpus = 0;
+
+	stoppcbs = kgdb_lookup("_stoppcbs");
+
 	while (paddr != 0) {
-		if (kvm_read(kvm, paddr, &p, sizeof(p)) != sizeof(p))
+		if (kvm_read(kvm, paddr, &p, sizeof(p)) != sizeof(p)) {
 			warnx("kvm_read: %s", kvm_geterr(kvm));
+			break;
+		}
 		addr = (uintptr_t)TAILQ_FIRST(&p.p_threads);
 		while (addr != 0) {
-			if (kvm_read(kvm, addr, &td, sizeof(td)) != sizeof(td))
+			if (kvm_read(kvm, addr, &td, sizeof(td)) !=
+			    sizeof(td)) {
 				warnx("kvm_read: %s", kvm_geterr(kvm));
+				break;
+			}
 			kt = malloc(sizeof(*kt));
 			kt->next = first;
 			kt->kaddr = addr;
-			kt->pcb = (td.td_tid == dumptid) ? dumppcb :
-			    (uintptr_t)td.td_pcb;
+			if (td.td_tid == dumptid)
+				kt->pcb = dumppcb;
+			else if (td.td_state == TDS_RUNNING && ((1 << td.td_oncpu) & stopped_cpus)
+				&& stoppcbs != 0)
+				kt->pcb = (uintptr_t) stoppcbs + sizeof(struct pcb) * td.td_oncpu;
+			else
+				kt->pcb = (uintptr_t)td.td_pcb;
 			kt->kstack = td.td_kstack;
 			kt->tid = td.td_tid;
 			kt->pid = p.p_pid;
 			kt->paddr = paddr;
+			kt->cpu = td.td_oncpu;
 			first = kt;
 			addr = (uintptr_t)TAILQ_NEXT(&td, td_plist);
 		}

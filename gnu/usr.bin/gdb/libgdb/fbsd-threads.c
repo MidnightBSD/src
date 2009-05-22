@@ -1,4 +1,4 @@
-/* $FreeBSD: src/gnu/usr.bin/gdb/libgdb/fbsd-threads.c,v 1.13.2.1 2006/02/16 02:40:56 davidxu Exp $ */
+/* $FreeBSD: src/gnu/usr.bin/gdb/libgdb/fbsd-threads.c,v 1.16 2007/02/20 18:10:13 emaste Exp $ */
 /* FreeBSD libthread_db assisted debugging support.
    Copyright 1999, 2000, 2001 Free Software Foundation, Inc.
 
@@ -22,6 +22,7 @@
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
+#include <signal.h>
 
 #include "proc_service.h"
 #include "thread_db.h"
@@ -960,18 +961,21 @@ fbsd_thread_store_registers (int regno)
       err = td_thr_getgregs_p (&th, gregset);
       if (err != TD_OK)
         error ("%s: td_thr_getgregs %s", __func__, thread_db_err_str (err));
-      err = td_thr_getfpregs_p (&th, &fpregset);
+#ifdef PT_GETXMMREGS
+      err = td_thr_getxmmregs_p (&th, xmmregs);
       if (err != TD_OK)
-        error ("%s: td_thr_getfpgregs %s", __func__, thread_db_err_str (err));
+        {
+#endif
+          err = td_thr_getfpregs_p (&th, &fpregset);
+          if (err != TD_OK)
+            error ("%s: td_thr_getfpgregs %s", __func__, thread_db_err_str (err));
+#ifdef PT_GETXMMREGS
+        }
+#endif
       supply_register (regno, old_value);
     }
 
   fill_gregset (gregset, regno);
-  fill_fpregset (&fpregset, regno);
-#ifdef PT_GETXMMREGS
-  i387_fill_fxsave (xmmregs, regno);
-#endif
-
   err = td_thr_setgregs_p (&th, gregset);
   if (err != TD_OK)
     error ("Cannot store general-purpose registers for thread %d: Thread ID=%d, %s",
@@ -979,11 +983,13 @@ fbsd_thread_store_registers (int regno)
            thread_db_err_str (err));
 
 #ifdef PT_GETXMMREGS
+  i387_fill_fxsave (xmmregs, regno);
   err = td_thr_setxmmregs_p (&th, xmmregs);
   if (err == TD_OK)
     return;
 #endif
 
+  fill_fpregset (&fpregset, regno);
   err = td_thr_setfpregs_p (&th, &fpregset);
   if (err != TD_OK)
     error ("Cannot store floating-point registers for thread %d: Thread ID=%d, %s",
@@ -1270,6 +1276,46 @@ fbsd_thread_tsd_cmd (char *exp, int from_tty)
     td_ta_tsd_iter_p (thread_agent, tsd_cb, NULL);
 }
 
+static void
+fbsd_print_sigset (sigset_t *set)
+{
+  int i;
+
+  for (i = 1; i <= _SIG_MAXSIG; ++i) {
+     if (sigismember(set, i)) {
+       if (i < sizeof(sys_signame)/sizeof(sys_signame[0]))
+         printf_filtered("%s ", sys_signame[i]);
+       else
+         printf_filtered("sig%d ", i);
+     }
+  }
+  printf_filtered("\n");
+}
+
+static void
+fbsd_thread_signal_cmd (char *exp, int from_tty)
+{
+  td_thrhandle_t th;
+  td_thrinfo_t ti;
+  td_err_e err;
+
+  if (!fbsd_thread_active || !IS_THREAD(inferior_ptid))
+    return;
+
+  err = td_ta_map_id2thr_p (thread_agent, GET_THREAD (inferior_ptid), &th);
+  if (err != TD_OK)
+    return;
+
+  err = td_thr_get_info_p (&th, &ti);
+  if (err != TD_OK)
+    return;
+
+  printf_filtered("signal mask:\n");
+  fbsd_print_sigset(&ti.ti_sigmask);
+  printf_filtered("signal pending:\n");
+  fbsd_print_sigset(&ti.ti_pending);
+}
+
 static int
 ignore (CORE_ADDR addr, char *contents)
 {
@@ -1476,6 +1522,10 @@ _initialize_thread_db (void)
             "for the process.\n",
            &thread_cmd_list);
 
+      add_cmd ("signal", class_run, fbsd_thread_signal_cmd,
+            "Show the thread signal info.\n",
+           &thread_cmd_list);
+
       memcpy (&orig_core_ops, &core_ops, sizeof (struct target_ops));
       memcpy (&core_ops, &fbsd_core_ops, sizeof (struct target_ops));
       add_target (&core_ops);
@@ -1639,4 +1689,18 @@ ps_lcontinue(struct ps_prochandle *ph, lwpid_t lwpid)
   if (ptrace (PT_RESUME, lwpid, 0, 0) == -1)
     return PS_ERR;
   return PS_OK;   
+}
+
+ps_err_e
+ps_linfo(struct ps_prochandle *ph, lwpid_t lwpid, void *info)
+{
+  if (fbsd_thread_core) {
+    /* XXX should verify lwpid and make a pseudo lwp info */
+    memset(info, 0, sizeof(struct ptrace_lwpinfo));
+    return PS_OK;
+  }
+
+  if (ptrace (PT_LWPINFO, lwpid, info, sizeof(struct ptrace_lwpinfo)) == -1)
+    return PS_ERR;
+  return PS_OK;
 }
