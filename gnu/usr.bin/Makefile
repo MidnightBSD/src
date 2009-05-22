@@ -1,5 +1,7 @@
-# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.6 2007/08/25 18:59:43 archite Exp $
+# $MidnightBSD: src/gnu/usr.bin/Makefile,v 1.7 2008/08/25 02:34:27 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/Makefile,v 1.84 2005/03/21 05:30:58 kientzle Exp $
+
+.include <bsd.own.mk>
 
 SUBDIR= ${_binutils} \
 	${_cc} \
@@ -11,27 +13,40 @@ SUBDIR= ${_binutils} \
 	${_gperf} \
 	grep \
 	${_groff} \
-	man \
+	${_man} \
 	patch \
-	rcs \
+	${_rcs} \
 	sort \
-	texinfo
+	${_texinfo}
  
-.if !defined(NO_CXX)
+.if ${MK_CXX} != "no"
 _gperf=		gperf
+.if ${MK_GROFF} != "no"
 _groff=		groff
 .endif
+.endif
 
-.if !defined(NO_CVS)
+.if ${MK_CVS} != "no"
 _cvs=		cvs
 .endif
 
-.if !defined(NO_TOOLCHAIN)
+.if ${MK_MAN} != "no"
+_man=		man
+.endif
+
+.if ${MK_INFO} != "no"
+_texinfo=	texinfo
+.endif
+
+.if ${MK_TOOLCHAIN} != "no"
 _binutils=	binutils
 _cc=		cc
-.if !defined(NO_GDB)
+.if ${MK_GDB} != "no"
 _gdb=		gdb
 .endif
+.endif
+.if ${MK_RCS} != "no"
+_rcs=		rcs
 .endif
 
 .include <bsd.subdir.mk>
