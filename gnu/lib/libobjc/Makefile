@@ -1,42 +1,46 @@
 # $MidnightBSD$
-# $FreeBSD: src/gnu/lib/libobjc/Makefile,v 1.26.2.2 2005/08/19 02:49:54 cperciva Exp $
+# $FreeBSD: src/gnu/lib/libobjc/Makefile,v 1.31.2.2 2007/11/20 20:48:01 kensmith Exp $
 
 OBJCDIR=${.CURDIR}/../../../contrib/libobjc
-GCCDIR=	${.CURDIR}/../../../contrib/gcc
+GCCDIR=	${.CURDIR}/../../../contrib/gcc4
+GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
 
 .PATH: ${OBJCDIR}/objc ${OBJCDIR}
 
 LIB=		objc
-SHLIB_MAJOR=	2
-NO_MAN=
+SHLIB_MAJOR=	3
 
-SRCS=   archive.c class.c encoding.c gc.c hash.c init.c misc.c \
-	nil_method.c objects.c sarray.c selector.c sendmsg.c \
-	thr.c thr-posix.c \
-	NXConstStr.m Object.m Protocol.m linking.m
+SRCS=	archive.c class.c encoding.c gc.c hash.c init.c linking.m misc.c \
+	nil_method.c NXConstStr.m Object.m objects.c Protocol.m sarray.c \
+	selector.c sendmsg.c thr.c thr-objc.c exception.c
 
-INCS=	encoding.h hash.h objc-api.h objc-list.h objc.h runtime.h \
+INCS=	encoding.h hash.h objc-api.h objc-decls.h objc-list.h objc.h runtime.h \
 	sarray.h thr.h typedstream.h NXConstStr.h Object.h Protocol.h
 INCSDIR=${INCLUDEDIR}/objc
 
-OBJCFLAGS= -fgnu-runtime ${CFLAGS}
 CFLAGS+= -DHAVE_GTHR_DEFAULT -DIN_GCC -DIN_TARGET_LIBS
 CFLAGS+= -I. -I${.CURDIR}/../../usr.bin/cc/cc_tools
-CFLAGS+= -I${OBJCDIR}/objc -I${OBJCDIR} 
+CFLAGS+= -I${OBJCDIR}/objc -I${OBJCDIR}
 CFLAGS+= -I${GCCDIR}/config -I${GCCDIR}
-CFLAGS+= -frandom-seed=RepeatabilityConsideredGood
+CFLAGS+= -I${GCCLIB}/include
+CFLAGS+= -fexceptions -frandom-seed=RepeatabilityConsideredGood
+OBJCFLAGS= -fgnu-runtime ${CFLAGS}
 
-GENHDRS=	runtime-info.h tconfig.h tm.h
-CLEANFILES+=	${GENHDRS}
-SRCS+=		${GENHDRS}
-
-${OBJS}: ${GENHDRS}
+GENHDRS= runtime-info.h
 
 runtime-info.h:
 	`${CC} --print-prog-name=cc1obj` -print-objc-runtime-info \
 	    < /dev/null > ${.TARGET}
 
-tconfig.h tm.h : ${.CURDIR}/../../usr.bin/cc/cc_tools/Makefile
+.for H in tconfig.h tm.h config.h options.h gthr-default.h unwind.h
+$H: ${.CURDIR}/../../usr.bin/cc/cc_tools/Makefile
 	${MAKE} -f ${.ALLSRC} MFILE=${.ALLSRC} GCCDIR=${GCCDIR} ${.TARGET}
+GENHDRS+=	$H
+.endfor
+
+CLEANFILES+=	${GENHDRS} cs-* optionlist
+SRCS+=		${GENHDRS}
+
+${OBJS}: ${GENHDRS}
 
 .include <bsd.lib.mk>

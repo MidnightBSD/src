@@ -21500,7 +21500,6 @@ gnu/lib/libg2c/Makefile -text
 gnu/lib/libg2c/config.h -text
 gnu/lib/libg2c/g2c.h -text
 gnu/lib/libgcc/Makefile -text
-gnu/lib/libgcc_r/Makefile -text
 gnu/lib/libgcov/Makefile -text
 gnu/lib/libiberty/Makefile -text
 gnu/lib/libiberty/config.h -text
@@ -21526,6 +21525,9 @@ gnu/lib/libregex/regex.h -text
 gnu/lib/libregex/regex_internal.c -text
 gnu/lib/libregex/regex_internal.h -text
 gnu/lib/libregex/regexec.c -text
+gnu/lib/libssp/Makefile -text
+gnu/lib/libssp/config.h -text
+gnu/lib/libssp/libssp_nonshared/Makefile -text
 gnu/lib/libstdc++/Makefile -text
 gnu/lib/libstdc++/config.h -text
 gnu/lib/libstdc++/doc/Makefile -text

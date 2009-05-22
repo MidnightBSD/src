@@ -1,9 +1,9 @@
-# $MidnightBSD: src/gnu/lib/Makefile,v 1.2 2007/07/26 20:27:46 laffer1 Exp $
+# $MidnightBSD: src/gnu/lib/Makefile,v 1.3 2008/11/11 16:00:04 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/Makefile,v 1.40 2004/08/14 03:23:24 kan Exp $
 
 .include <bsd.own.mk>
 
-SUBDIR= csu libgcc libgcov libdialog libregex libreadline
+SUBDIR= csu libgcc libgcov libdialog libgomp libregex libreadline
 
 # libsupc++ uses libstdc++ headers, although 'make includes' should
 # have taken care of that already.
@@ -15,8 +15,8 @@ SUBDIR+= libstdc++ libsupc++
 SUBDIR+= libobjc
 .endif
 
-.if !defined(NO_FORTRAN)
-SUBDIR+= libg2c
+.if ${MK_SSP} != "no"
+SUBDIR+= libssp
 .endif
 
 .include <bsd.subdir.mk>
