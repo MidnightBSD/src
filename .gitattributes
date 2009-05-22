@@ -8719,13 +8719,16 @@ contrib/libobjc/README -text
 contrib/libobjc/README.threads -text
 contrib/libobjc/THREADS -text
 contrib/libobjc/THREADS.MACH -text
+contrib/libobjc/acinclude.m4 -text
 contrib/libobjc/aclocal.m4 -text
 contrib/libobjc/archive.c -text
 contrib/libobjc/class.c -text
 contrib/libobjc/config.h.in -text
 contrib/libobjc/configure -text
+contrib/libobjc/configure.ac -text
 contrib/libobjc/configure.in -text
 contrib/libobjc/encoding.c -text
+contrib/libobjc/exception.c -text
 contrib/libobjc/gc.c -text
 contrib/libobjc/hash.c -text
 contrib/libobjc/init.c -text
@@ -8741,6 +8744,7 @@ contrib/libobjc/objc/Protocol.h -text
 contrib/libobjc/objc/encoding.h -text
 contrib/libobjc/objc/hash.h -text
 contrib/libobjc/objc/objc-api.h -text
+contrib/libobjc/objc/objc-decls.h -text
 contrib/libobjc/objc/objc-list.h -text
 contrib/libobjc/objc/objc.h -text
 contrib/libobjc/objc/runtime.h -text
