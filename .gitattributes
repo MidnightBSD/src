@@ -5901,8 +5901,11 @@ contrib/gdb/gdb/config/nm-lynx.h -text
 contrib/gdb/gdb/config/nm-nbsd.h -text
 contrib/gdb/gdb/config/nm-nbsdaout.h -text
 contrib/gdb/gdb/config/nm-sysv4.h -text
+contrib/gdb/gdb/config/powerpc/fbsd.mh -text
+contrib/gdb/gdb/config/powerpc/fbsd.mt -text
 contrib/gdb/gdb/config/powerpc/nbsd.mh -text
 contrib/gdb/gdb/config/powerpc/nbsd.mt -text
+contrib/gdb/gdb/config/powerpc/nm-fbsd.h -text
 contrib/gdb/gdb/config/powerpc/nm-nbsd.h -text
 contrib/gdb/gdb/config/powerpc/ppc-eabi.mt -text
 contrib/gdb/gdb/config/powerpc/ppc-sim.mt -text
@@ -5912,6 +5915,15 @@ contrib/gdb/gdb/config/powerpc/tm-ppcle-eabi.h -text
 contrib/gdb/gdb/config/powerpc/tm-ppcle-sim.h -text
 contrib/gdb/gdb/config/powerpc/tm-vxworks.h -text
 contrib/gdb/gdb/config/powerpc/vxworks.mt -text
+contrib/gdb/gdb/config/rs6000/nm-rs6000.h -text
+contrib/gdb/gdb/config/rs6000/nm-rs6000ly.h -text
+contrib/gdb/gdb/config/rs6000/rs6000.mh -text
+contrib/gdb/gdb/config/rs6000/rs6000.mt -text
+contrib/gdb/gdb/config/rs6000/rs6000lynx.mh -text
+contrib/gdb/gdb/config/rs6000/rs6000lynx.mt -text
+contrib/gdb/gdb/config/rs6000/tm-rs6000.h -text
+contrib/gdb/gdb/config/rs6000/tm-rs6000ly.h -text
+contrib/gdb/gdb/config/rs6000/xm-rs6000.h -text
 contrib/gdb/gdb/config/s390/s390.mh -text
 contrib/gdb/gdb/config/s390/s390.mt -text
 contrib/gdb/gdb/config/sparc/fbsd.mh -text
@@ -6238,6 +6250,9 @@ contrib/gdb/gdb/ppc-bdm.c -text
 contrib/gdb/gdb/ppc-sysv-tdep.c -text
 contrib/gdb/gdb/ppc-tdep.h -text
 contrib/gdb/gdb/ppcbug-rom.c -text
+contrib/gdb/gdb/ppcfbsd-nat.c -text
+contrib/gdb/gdb/ppcfbsd-tdep.c -text
+contrib/gdb/gdb/ppcfbsd-tdep.h -text
 contrib/gdb/gdb/ppcnbsd-nat.c -text
 contrib/gdb/gdb/ppcnbsd-tdep.c -text
 contrib/gdb/gdb/ppcnbsd-tdep.h -text
@@ -6288,6 +6303,8 @@ contrib/gdb/gdb/remote.c -text
 contrib/gdb/gdb/remote.h -text
 contrib/gdb/gdb/reply_mig_hack.awk -text
 contrib/gdb/gdb/rom68k-rom.c -text
+contrib/gdb/gdb/rs6000-nat.c -text
+contrib/gdb/gdb/rs6000-tdep.c -text
 contrib/gdb/gdb/s390-nat.c -text
 contrib/gdb/gdb/s390-tdep.c -text
 contrib/gdb/gdb/s390-tdep.h -text
