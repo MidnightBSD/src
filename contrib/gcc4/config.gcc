@@ -421,7 +421,7 @@ case ${target} in
     *-*-freebsd6 | *-*-freebsd[6].*)
       tm_defines="${tm_defines} FBSD_MAJOR=6" ;;
     *-*-freebsd7 | *-*-freebsd[7].*)
-      tm_defines="${tm_defines} FBSD_MAJOR=7" ;;
+      tm_defines="${tm_defines} FBSD_MAJOR=7 MNBSD_MAJOR=1" ;;
     *-*-freebsd8 | *-*-freebsd[8].*)
       tm_defines="${tm_defines} FBSD_MAJOR=8" ;;
     *-*-freebsd9 | *-*-freebsd[9].*)
