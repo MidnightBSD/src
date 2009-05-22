@@ -53,12 +53,14 @@ Boston, MA 02110-1301, USA.  */
 #define FBSD_TARGET_OS_CPP_BUILTINS()					\
   do									\
     {									\
+	builtin_define_with_int_value ("__MidnightBSD__", 0);		\
 	builtin_define_with_int_value ("__FreeBSD__", FBSD_MAJOR);	\
 	builtin_define_std ("unix");					\
 	builtin_define ("__KPRINTF_ATTRIBUTE__");		       	\
 	builtin_assert ("system=unix");					\
 	builtin_assert ("system=bsd");					\
 	builtin_assert ("system=FreeBSD");				\
+	builtin_assert ("system=MidnightBSD");				\
 	FBSD_NATIVE_TARGET_OS_CPP_BUILTINS();				\
 	FBSD_TARGET_CPU_CPP_BUILTINS();					\
     }									\

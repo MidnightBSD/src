@@ -392,7 +392,7 @@ case ${target} in
   # the generic ELF configuration of FreeBSD (i.e. it must be
   # ordered before that section).
   ;;
-*-*-freebsd*)
+*-*-freebsd* | *-*-midnightbsd*)
   # This is the generic ELF configuration of FreeBSD.  Later
   # machine-specific sections may refine and add to this
   # configuration.
@@ -426,6 +426,8 @@ case ${target} in
       tm_defines="${tm_defines} FBSD_MAJOR=8" ;;
     *-*-freebsd9 | *-*-freebsd[9].*)
       tm_defines="${tm_defines} FBSD_MAJOR=9" ;;
+    *-*-midnightbsd0 | *-*-midnightbsd[0].*)
+      tm_defines="${tm_defines} MNBSD_MAJOR=1" ;;
     *)
       echo 'Please update *-*-freebsd* in gcc/config.gcc'
       exit 1
