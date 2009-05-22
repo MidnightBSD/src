@@ -1,4 +1,4 @@
-# $FreeBSD: src/gnu/usr.bin/binutils/as/Makefile,v 1.16 2004/12/21 09:59:40 ru Exp $
+# $FreeBSD: src/gnu/usr.bin/binutils/as/Makefile,v 1.18 2006/10/09 04:52:14 kmacy Exp $
 
 
 # BINDIR
@@ -25,7 +25,8 @@ SRCS+=	tc-i386.c
 .elif ${TARGET_ARCH} == "powerpc"
 SRCS+=	tc-ppc.c
 .elif ${TARGET_ARCH} == "sparc64"
-SRCS+=	tc-sparc.c
+# change back to tc-sparc.c when new binutils is imported
+SRCS+=	tc-sparc-fixed.c
 .else
 SRCS+=	tc-${TARGET_ARCH}.c
 .endif
@@ -34,6 +35,9 @@ SRCS+=	tc-${TARGET_ARCH}.c
 CFLAGS+= -DDEFAULT_ARCH=\"v9-64\"
 .else
 CFLAGS+= -DDEFAULT_ARCH=\"${BINUTILS_ARCH}\"
+.endif
+.if defined(TARGET_BIG_ENDIAN)
+CFLAGS+= -DTARGET_BYTES_BIG_ENDIAN=1
 .endif
 CFLAGS+= -DTARGET_CPU=\"${BINUTILS_ARCH}\"
 CFLAGS+= -DTARGET_CANONICAL=\"${TARGET_TUPLE}\"

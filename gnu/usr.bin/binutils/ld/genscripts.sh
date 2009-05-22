@@ -9,7 +9,7 @@
 # sparc-sun-sunos4.1.3 sparc-sun-sunos4.1.3 sun4 "" sun3 sparc-sun-sunos4.1.3
 # produces sun3.x sun3.xbn sun3.xn sun3.xr sun3.xu em_sun3.c
 #
-# $FreeBSD: src/gnu/usr.bin/binutils/ld/genscripts.sh,v 1.6 2004/06/16 07:09:37 obrien Exp $
+# $FreeBSD: src/gnu/usr.bin/binutils/ld/genscripts.sh,v 1.9 2007/09/19 14:19:32 obrien Exp $
 #
 # This is a cut-down version of the GNU script. Instead of jumping through
 # hoops for all possible combinations of paths, just use the libdir
@@ -37,7 +37,12 @@ CUSTOMIZER_SCRIPT=$3
 # FSF BU ver 2.15 which allows for a more generic emulparams processing.
 # To reduce the diff, I also include the ${EMULATION_NAME} parameter in uses
 # of 'CUSTOMIZER_SCRIPT'.
+
+# XXX: arm hack : until those file are merged back into the FSF repo, just
+# use the version in this directory.
+if !(test -f ${CUSTOMIZER_SCRIPT}"";) then
 CUSTOMIZER_SCRIPT="${srcdir}/emulparams/${EMULATION_NAME}.sh"
+fi
 
 # Include the emulation-specific parameters:
 . ${CUSTOMIZER_SCRIPT} ${EMULATION_NAME}
@@ -49,8 +54,12 @@ else
 fi
 
 # Set some flags for the emultempl scripts.  USE_LIBPATH will
-# be set for any libpath-using emulation.
-      USE_LIBPATH=yes
+# be set for any libpath-using emulation; NATIVE will be set for a
+# emulation to enable 'LD_LIBRARY_PATH=/foo:/bar ld -lfooz'
+    if [ "x${host}" = "x${target}" ] ; then
+      NATIVE=yes
+    fi
+  USE_LIBPATH=yes
 
 # Set the library search path, for libraries named by -lfoo.
 # If LIB_PATH is defined (e.g., by Makefile) and non-empty, it is used.

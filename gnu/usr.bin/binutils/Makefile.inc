@@ -1,6 +1,4 @@
-#
-# $FreeBSD: src/gnu/usr.bin/binutils/Makefile.inc,v 1.8 2004/02/24 19:23:28 johan Exp $
-#
+# $FreeBSD: src/gnu/usr.bin/binutils/Makefile.inc,v 1.9 2006/09/12 19:24:01 obrien Exp $
 
 .if (${TARGET_ARCH} == "alpha")
 WARNS?=	2

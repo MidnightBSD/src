@@ -1,8 +1,12 @@
-# $FreeBSD: src/gnu/usr.bin/binutils/ld/Makefile,v 1.31 2004/12/21 09:59:40 ru Exp $
+# $FreeBSD: src/gnu/usr.bin/binutils/ld/Makefile,v 1.32 2007/09/26 01:31:28 marcel Exp $
 
 .include "../Makefile.inc0"
 
 .PATH: ${SRCDIR}/ld
+
+.if ${TARGET_ARCH} == "ia64"
+CFLAGS+= -O1
+.endif
 
 PROG=	ld
 SCRIPTDIR= /usr/libdata/ldscripts
