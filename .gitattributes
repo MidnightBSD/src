@@ -4039,6 +4039,10 @@ contrib/gcc4/FSFChangeLog -text
 contrib/gcc4/FSFChangeLog.10 -text
 contrib/gcc4/FSFChangeLog.11 -text
 contrib/gcc4/LANGUAGES -text
+contrib/gcc4/MIDNIGHTBSD-Xlist -text
+contrib/gcc4/MIDNIGHTBSD-deletelist -text
+contrib/gcc4/MIDNIGHTBSD-libiberty -text
+contrib/gcc4/MIDNIGHTBSD-upgrade -text
 contrib/gcc4/Makefile.in -text
 contrib/gcc4/ONEWS -text
 contrib/gcc4/README.Portability -text
