@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)lorder.1	8.2 (Berkeley) 4/28/95
-.\" $FreeBSD: src/usr.bin/lorder/lorder.1,v 1.7 2004/07/03 00:24:42 ru Exp $
+.\" $FreeBSD: src/usr.bin/lorder/lorder.1,v 1.10 2006/10/25 09:40:07 ru Exp $
 .\"
-.Dd April 28, 1995
+.Dd October 25, 2006
 .Dt LORDER 1
 .Os
 .Sh NAME
@@ -47,6 +47,7 @@ The
 utility uses
 .Xr nm 1
 to determine interdependencies in the list of object files
+and library archives
 specified on the command line.
 The
 .Nm
@@ -58,9 +59,24 @@ The output is normally used with
 when a library is created to determine the optimum ordering of the
 object modules so that all references may be resolved in a single
 pass of the loader.
+.Pp
+When linking static binaries,
+.Nm
+and
+.Xr tsort 1
+can be used to properly order library archives automatically.
+.Sh ENVIRONMENT
+.Bl -tag -width indent
+.It Ev NM
+Path to the
+.Xr nm 1
+binary, defaults to
+.Dq Li nm .
+.El
 .Sh EXAMPLES
 .Bd -literal -offset indent
 ar cr library.a `lorder ${OBJS} | tsort`
+cc -o foo ${OBJS} `lorder ${STATIC_LIBS} | tsort`
 .Ed
 .Sh SEE ALSO
 .Xr ar 1 ,
