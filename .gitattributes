@@ -9879,7 +9879,6 @@ contrib/libstdc++/src/istream.cc -text
 contrib/libstdc++/src/limits.cc -text
 contrib/libstdc++/src/list.cc -text
 contrib/libstdc++/src/locale-inst.cc -text
-contrib/libstdc++/src/locale-misc-inst.cc -text
 contrib/libstdc++/src/locale.cc -text
 contrib/libstdc++/src/locale_facets.cc -text
 contrib/libstdc++/src/locale_init.cc -text
