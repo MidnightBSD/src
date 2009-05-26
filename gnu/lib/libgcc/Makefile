@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/lib/libgcc/Makefile,v 1.6 2009/05/22 00:27:12 laffer1 Exp $
 # $FreeBSD: src/gnu/lib/libgcc/Makefile,v 1.58 2007/08/14 20:49:57 kan Exp $
 GCCDIR=	${.CURDIR}/../../../contrib/gcc4
 GCCLIB=	${.CURDIR}/../../../contrib/gcclibs
@@ -94,38 +94,6 @@ LIB2_DIVMOD_FUNCS = _divdi3 _moddi3 _udivdi3 _umoddi3 _udiv_w_sdiv _udivmoddi4
 #	Platform specific bits.
 #	When upgrading GCC, get the following definitions from config/<cpu>/t-*
 #
-.if ${TARGET_ARCH} == "arm"
-#	from config/arm/t-strongarm-elf
-CFLAGS+=	-Dinhibit_libc -fno-inline
-LIB1ASMSRC =	lib1funcs.asm
-LIB1ASMFUNCS =  _dvmd_tls _bb_init_func
-LIB2FUNCS_EXTRA = floatunsidf.c floatunsisf.c
-
-# Not now
-#LIB1ASMFUNCS =  _udivsi3 _divsi3 _umodsi3 _modsi3 _dvmd_tls _bb_init_func
-#LIB1ASMFUNCS+=	_call_via_rX _interwork_call_via_rX \
-#	_lshrdi3 _ashrdi3 _ashldi3 \
-#	_negdf2 _addsubdf3 _muldivdf3 _cmpdf2 _unorddf2 _fixdfsi _fixunsdfsi \
-#	_truncdfsf2 _negsf2 _addsubsf3 _muldivsf3 _cmpsf2 _unordsf2 \
-#	_fixsfsi _fixunssfsi _floatdidf _floatdisf
-.endif
-
-.if ${TARGET_ARCH} == "ia64"
-#	from config/ia64/t-ia64
-LIB1ASMSRC   = lib1funcs.asm
-LIB1ASMFUNCS = __divxf3 __divdf3 __divsf3 \
-	__divdi3 __moddi3 __udivdi3 __umoddi3 \
-	__divsi3 __modsi3 __udivsi3 __umodsi3 __save_stack_nonlocal \
-	__nonlocal_goto __restore_stack_nonlocal __trampoline \
-	_fixtfdi _fixunstfdi _floatditf
-LIB2ADDEH = unwind-ia64.c unwind-sjlj.c unwind-c.c
-.endif
-
-.if ${TARGET_ARCH} == "powerpc"
-#	from config/rs6000/t-ppccomm
-LIB2FUNCS_EXTRA = tramp.asm darwin-ldouble.c
-LIB2FUNCS_STATIC_EXTRA = eabi.asm
-.endif
 
 .if ${TARGET_ARCH} == "sparc64"
 #	from config/sparc/t-elf
@@ -174,8 +142,7 @@ OBJ_GRPS =	STD DIV
 #
 # Floating point emulation functions
 #
-.if ${TARGET_ARCH} == "armNOT_YET" || ${TARGET_ARCH} == "powerpc" || \
-    ${TARGET_ARCH} == "sparc64"
+.if ${TARGET_ARCH} == "sparc64"
 
 FPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES -DFLOAT
 DPBIT_CFLAGS =	-DFINE_GRAINED_LIBRARIES
