@@ -9253,8 +9253,6 @@ contrib/libstdc++/include/backward/tempbuf.h -text
 contrib/libstdc++/include/backward/tree.h -text
 contrib/libstdc++/include/backward/vector.h -text
 contrib/libstdc++/include/bits/allocator.h -text
-contrib/libstdc++/include/bits/allocator_traits.h -text
-contrib/libstdc++/include/bits/atomicity.h -text
 contrib/libstdc++/include/bits/basic_ios.h -text
 contrib/libstdc++/include/bits/basic_ios.tcc -text
 contrib/libstdc++/include/bits/basic_string.h -text
@@ -9264,7 +9262,6 @@ contrib/libstdc++/include/bits/c++config -text
 contrib/libstdc++/include/bits/char_traits.h -text
 contrib/libstdc++/include/bits/codecvt.h -text
 contrib/libstdc++/include/bits/concept_check.h -text
-contrib/libstdc++/include/bits/concurrence.h -text
 contrib/libstdc++/include/bits/cpp_type_traits.h -text
 contrib/libstdc++/include/bits/deque.tcc -text
 contrib/libstdc++/include/bits/fstream.tcc -text
@@ -9307,7 +9304,6 @@ contrib/libstdc++/include/bits/stl_relops.h -text
 contrib/libstdc++/include/bits/stl_set.h -text
 contrib/libstdc++/include/bits/stl_stack.h -text
 contrib/libstdc++/include/bits/stl_tempbuf.h -text
-contrib/libstdc++/include/bits/stl_threads.h -text
 contrib/libstdc++/include/bits/stl_tree.h -text
 contrib/libstdc++/include/bits/stl_uninitialized.h -text
 contrib/libstdc++/include/bits/stl_vector.h -text
@@ -9315,7 +9311,6 @@ contrib/libstdc++/include/bits/stream_iterator.h -text
 contrib/libstdc++/include/bits/streambuf.tcc -text
 contrib/libstdc++/include/bits/streambuf_iterator.h -text
 contrib/libstdc++/include/bits/stringfwd.h -text
-contrib/libstdc++/include/bits/type_traits.h -text
 contrib/libstdc++/include/bits/valarray_after.h -text
 contrib/libstdc++/include/bits/valarray_array.h -text
 contrib/libstdc++/include/bits/valarray_array.tcc -text
@@ -9408,8 +9403,6 @@ contrib/libstdc++/include/ext/bitmap_allocator.h -text
 contrib/libstdc++/include/ext/codecvt_specializations.h -text
 contrib/libstdc++/include/ext/concurrence.h -text
 contrib/libstdc++/include/ext/debug_allocator.h -text
-contrib/libstdc++/include/ext/demangle.h -text
-contrib/libstdc++/include/ext/enc_filebuf.h -text
 contrib/libstdc++/include/ext/functional -text
 contrib/libstdc++/include/ext/hash_fun.h -text
 contrib/libstdc++/include/ext/hash_map -text
@@ -9736,7 +9729,6 @@ contrib/libstdc++/include/std/std_string.h -text
 contrib/libstdc++/include/std/std_utility.h -text
 contrib/libstdc++/include/std/std_valarray.h -text
 contrib/libstdc++/include/std/std_vector.h -text
-contrib/libstdc++/include/stdc++.h -text
 contrib/libstdc++/include/tr1/array -text
 contrib/libstdc++/include/tr1/bind_iterate.h -text
 contrib/libstdc++/include/tr1/bind_repeat.h -text
