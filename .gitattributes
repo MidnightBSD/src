@@ -21247,7 +21247,6 @@ gnu/usr.bin/cc/cc1plus/Makefile -text
 gnu/usr.bin/cc/cc_int/Makefile -text
 gnu/usr.bin/cc/cc_tools/Makefile -text
 gnu/usr.bin/cc/cc_tools/Makefile.dep -text
-gnu/usr.bin/cc/cc_tools/arm.md.diff -text
 gnu/usr.bin/cc/cc_tools/auto-host.h -text
 gnu/usr.bin/cc/cc_tools/freebsd-native.h -text
 gnu/usr.bin/cc/cc_tools/freebsd.opt -text
