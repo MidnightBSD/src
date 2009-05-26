@@ -1285,7 +1285,7 @@ extern	int	bcopywrap __P((void *, void *, size_t));
 #else /* #ifndef _KERNEL */
 # ifdef BSD
 #  if (defined(__NetBSD__) && (__NetBSD_Version__ < 399000000)) || \
-      defined(__osf__) || defined(__MidnightBSD__) || \
+      defined(__osf__) || \
       (defined(__FreeBSD_version) && (__FreeBSD_version < 500043))
 #   include <sys/select.h>
 #  else
