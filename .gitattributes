@@ -4425,6 +4425,9 @@ contrib/gcc4/config/memcmp.c -text
 contrib/gcc4/config/memcpy.c -text
 contrib/gcc4/config/memmove.c -text
 contrib/gcc4/config/memset.c -text
+contrib/gcc4/config/midnightbsd-nthr.h -text
+contrib/gcc4/config/midnightbsd-spec.h -text
+contrib/gcc4/config/midnightbsd.h -text
 contrib/gcc4/config/mips/24k.md -text
 contrib/gcc4/config/mips/3000.md -text
 contrib/gcc4/config/mips/4000.md -text
@@ -4780,6 +4783,8 @@ contrib/gcc4/config/t-libunwind -text
 contrib/gcc4/config/t-libunwind-elf -text
 contrib/gcc4/config/t-linux -text
 contrib/gcc4/config/t-lynx -text
+contrib/gcc4/config/t-midnightbsd -text
+contrib/gcc4/config/t-midnightbsd-thread -text
 contrib/gcc4/config/t-netbsd -text
 contrib/gcc4/config/t-openbsd -text
 contrib/gcc4/config/t-openbsd-thread -text
