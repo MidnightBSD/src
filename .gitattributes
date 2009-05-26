@@ -21192,15 +21192,9 @@ gnu/usr.bin/binutils/gdbreplay/Makefile -text
 gnu/usr.bin/binutils/gdbserver/Makefile -text
 gnu/usr.bin/binutils/gdbserver/low-fbsd.c -text
 gnu/usr.bin/binutils/ld/Makefile -text
-gnu/usr.bin/binutils/ld/Makefile.alpha -text
 gnu/usr.bin/binutils/ld/Makefile.amd64 -text
-gnu/usr.bin/binutils/ld/Makefile.arm -text
 gnu/usr.bin/binutils/ld/Makefile.i386 -text
-gnu/usr.bin/binutils/ld/Makefile.ia64 -text
-gnu/usr.bin/binutils/ld/Makefile.powerpc -text
 gnu/usr.bin/binutils/ld/Makefile.sparc64 -text
-gnu/usr.bin/binutils/ld/armelf_fbsd.sh -text
-gnu/usr.bin/binutils/ld/armelfb_fbsd.sh -text
 gnu/usr.bin/binutils/ld/config.h -text
 gnu/usr.bin/binutils/ld/genscripts.sh -text
 gnu/usr.bin/binutils/libbfd/Makefile -text
