@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/m4/gnum4.c,v 1.9 2004/05/18 15:53:58 stefanf Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/m4/gnum4.c,v 1.10 2007/09/21 01:55:11 kevlo Exp $");
 
 /*
  * functions needed to support gnu-m4 extensions, including a fake freezing
@@ -133,7 +133,7 @@ dopath(struct input_file *i, const char *filename)
 
 	for (pe = first; pe; pe = pe->next) {
 		snprintf(path, sizeof(path), "%s/%s", pe->name, filename);
-		if ((f = fopen(path, "r")) != 0) {
+		if ((f = fopen(path, "r")) != NULL) {
 			set_input(i, f, path);
 			return i;
 		}
