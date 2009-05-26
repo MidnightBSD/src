@@ -37,7 +37,7 @@
 #if defined(__RCSID) && !defined(lint)
 __RCSID("$NetBSD: xlint.c,v 1.27 2002/01/31 19:09:33 tv Exp $");
 #endif
-__FBSDID("$FreeBSD: src/usr.bin/xlint/xlint/xlint.c,v 1.26 2003/10/26 03:34:13 peter Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/xlint/xlint/xlint.c,v 1.27 2006/09/21 02:05:38 kan Exp $");
 
 #include <sys/param.h>
 #include <sys/wait.h>
@@ -403,7 +403,8 @@ main(int argc, char *argv[])
 			break;
 
 		case 'p':
-			appcstrg(&lcflags, "-Wtraditional -Wno-system-headers");
+			appcstrg(&lcflags, "-Wtraditional");
+			appcstrg(&lcflags, "-Wno-system-headers");
 			appcstrg(&l1flags, "-p");
 			appcstrg(&l2flags, "-p");
 			if (*deflibs != NULL) {
