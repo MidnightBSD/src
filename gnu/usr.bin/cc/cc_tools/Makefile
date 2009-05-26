@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.3 2009/05/22 00:51:25 laffer1 Exp $
 # $FreeBSD: src/gnu/usr.bin/cc/cc_tools/Makefile,v 1.88 2007/05/28 00:25:07 kan Exp $
 
 .include <bsd.own.mk>
@@ -46,6 +46,8 @@ TARGET_INC+=	${GCC_CPU}/x86-64.h
 TARGET_INC+=	${GCC_CPU}/freebsd.h
 TARGET_INC+=	${GCC_CPU}/freebsd64.h
 TARGET_INC+=	freebsd64-fix.h
+TARGET_INC+=	${GCC_CPU}/freebsd.h
+.elif ${TARGET_ARCH} == "i386"
 TARGET_INC+=	${GCC_CPU}/freebsd.h
 .endif
 TARGET_INC+=	defaults.h
@@ -301,7 +303,7 @@ GENSRCS+=	multilib.h
 
 configargs.h:
 	echo 'static const char configuration_arguments[] ='	> ${.TARGET}
-	echo '	"FreeBSD/${TARGET_ARCH} system compiler";'	>> ${.TARGET}
+	echo '	"MidnightBSD/${TARGET_ARCH} system compiler";'	>> ${.TARGET}
 	echo 'static const char thread_model[] = "posix";'	>> ${.TARGET}
 	echo 'static const struct {'				>> ${.TARGET}
 	echo '	const char *name, *value;'			>> ${.TARGET}
