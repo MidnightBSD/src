@@ -9016,7 +9016,6 @@ contrib/libstdc++/ChangeLog-2006 -text
 contrib/libstdc++/Makefile.am -text
 contrib/libstdc++/Makefile.in -text
 contrib/libstdc++/README -text
-contrib/libstdc++/acconfig.h -text
 contrib/libstdc++/acinclude.m4 -text
 contrib/libstdc++/aclocal.m4 -text
 contrib/libstdc++/config.h.in -text
