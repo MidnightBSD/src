@@ -10,7 +10,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -26,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: src/usr.bin/id/id.c,v 1.26 2005/04/29 10:11:18 robert Exp $ */
+
 #ifndef lint
 static const char copyright[] =
 "@(#) Copyright (c) 1991, 1993\n\
@@ -39,10 +43,14 @@ static char sccsid[] = "@(#)id.c	8.2 (Berkeley) 2/16/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-__MBSDID("$MidnightBSD$");
+__FBSDID("$FreeBSD: src/usr.bin/id/id.c,v 1.33.2.1 2007/10/30 13:17:02 csjp Exp $");
 
 #include <sys/param.h>
 #include <sys/mac.h>
+
+#ifdef USE_BSM_AUDIT
+#include <bsm/audit.h>
+#endif
 
 #include <err.h>
 #include <errno.h>
@@ -56,6 +64,7 @@ __MBSDID("$MidnightBSD$");
 void	id_print(struct passwd *, int, int, int);
 void	pline(struct passwd *);
 void	pretty(struct passwd *);
+void	auditid(void);
 void	group(struct passwd *, int);
 void	maclabel(void);
 void	usage(void);
@@ -69,9 +78,11 @@ main(int argc, char *argv[])
 	struct group *gr;
 	struct passwd *pw;
 	int Gflag, Mflag, Pflag, ch, gflag, id, nflag, pflag, rflag, uflag;
+	int Aflag;
 	const char *myname;
 
 	Gflag = Mflag = Pflag = gflag = nflag = pflag = rflag = uflag = 0;
+	Aflag = 0;
 
 	myname = strrchr(argv[0], '/');
 	myname = (myname != NULL) ? myname + 1 : argv[0];
@@ -85,8 +96,13 @@ main(int argc, char *argv[])
 	}
 
 	while ((ch = getopt(argc, argv,
-	    (isgroups || iswhoami) ? "" : "PGMgnpru")) != -1)
+	    (isgroups || iswhoami) ? "" : "APGMagnpru")) != -1)
 		switch(ch) {
+#ifdef USE_BSM_AUDIT
+		case 'A':
+			Aflag = 1;
+			break;
+#endif
 		case 'G':
 			Gflag = 1;
 			break;
@@ -95,6 +111,8 @@ main(int argc, char *argv[])
 			break;
 		case 'P':
 			Pflag = 1;
+			break;
+		case 'a':
 			break;
 		case 'g':
 			gflag = 1;
@@ -121,7 +139,7 @@ main(int argc, char *argv[])
 	if (iswhoami && argc > 0)
 		usage();
 
-	switch(Gflag + Pflag + gflag + pflag + uflag) {
+	switch(Aflag + Gflag + Mflag + Pflag + gflag + pflag + uflag) {
 	case 1:
 		break;
 	case 0:
@@ -136,6 +154,13 @@ main(int argc, char *argv[])
 
 	if (Mflag && pw != NULL)
 		usage();
+
+#ifdef USE_BSM_AUDIT
+	if (Aflag) {
+		auditid();
+		exit(0);
+	}
+#endif
 
 	if (gflag) {
 		id = pw ? pw->pw_gid : rflag ? getgid() : getegid();
@@ -180,8 +205,8 @@ main(int argc, char *argv[])
 	}
 	else {
 		id = getuid();
-		if ((pw = getpwuid(id)) != NULL)
-			id_print(pw, 0, 1, 1);
+		pw = getpwuid(id);
+		id_print(pw, 0, 1, 1);
 	}
 	exit(0);
 }
@@ -236,10 +261,16 @@ id_print(struct passwd *pw, int use_ggl, int p_euid, int p_egid)
 	gid_t groups[NGROUPS + 1];
 	const char *fmt;
 
-	uid = pw->pw_uid;
-	gid = pw->pw_gid;
+	if (pw != NULL) {
+		uid = pw->pw_uid;
+		gid = pw->pw_gid;
+	}
+	else {
+		uid = getuid();
+		gid = getgid();
+	}
 
-	if (use_ggl) {
+	if (use_ggl && pw != NULL) {
 		ngroups = NGROUPS + 1;
 		getgrouplist(pw->pw_name, gid, groups, &ngroups);
 	}
@@ -247,10 +278,13 @@ id_print(struct passwd *pw, int use_ggl, int p_euid, int p_egid)
 		ngroups = getgroups(NGROUPS + 1, groups);
 	}
 
-	printf("uid=%u(%s)", uid, pw->pw_name);
+	if (pw != NULL)
+		printf("uid=%u(%s)", uid, pw->pw_name);
+	else 
+		printf("uid=%u", getuid());
 	printf(" gid=%u", gid);
-        if ((gr = getgrgid(gid)))
-                (void)printf("(%s)", gr->gr_name);
+	if ((gr = getgrgid(gid)))
+		(void)printf("(%s)", gr->gr_name);
 	if (p_euid && (euid = geteuid()) != uid) {
 		(void)printf(" euid=%u", euid);
 		if ((pw = getpwuid(euid)))
@@ -266,13 +300,61 @@ id_print(struct passwd *pw, int use_ggl, int p_euid, int p_egid)
 		if (lastgid == (gid = groups[cnt]))
 			continue;
 		printf(fmt, gid);
-		fmt = ", %u";
+		fmt = ",%u";
 		if ((gr = getgrgid(gid)))
 			printf("(%s)", gr->gr_name);
 		lastgid = gid;
 	}
 	printf("\n");
 }
+
+#ifdef USE_BSM_AUDIT
+void
+auditid(void)
+{
+	auditinfo_t auditinfo;
+	auditinfo_addr_t ainfo_addr;
+	int ret, extended;
+
+	extended = 0;
+	ret = getaudit(&auditinfo);
+	if (ret < 0 && errno == E2BIG) {
+		if (getaudit_addr(&ainfo_addr, sizeof(ainfo_addr)) < 0)
+			err(1, "getaudit_addr");
+		extended = 1;
+	} else if (ret < 0)
+		err(1, "getaudit");
+	if (extended != 0) {
+		(void) printf("auid=%d\n"
+		    "mask.success=0x%08x\n"
+		    "mask.failure=0x%08x\n"
+		    "asid=%d\n"
+		    "termid_addr.port=0x%08x\n"
+		    "termid_addr.addr[0]=0x%08x\n"
+		    "termid_addr.addr[1]=0x%08x\n"
+		    "termid_addr.addr[2]=0x%08x\n"
+		    "termid_addr.addr[3]=0x%08x\n",
+			ainfo_addr.ai_auid, ainfo_addr.ai_mask.am_success,
+			ainfo_addr.ai_mask.am_failure, ainfo_addr.ai_asid,
+			ainfo_addr.ai_termid.at_port,
+			ainfo_addr.ai_termid.at_addr[0],
+			ainfo_addr.ai_termid.at_addr[1],
+			ainfo_addr.ai_termid.at_addr[2],
+			ainfo_addr.ai_termid.at_addr[3]);
+	} else {
+		(void) printf("auid=%d\n"
+		    "mask.success=0x%08x\n"
+		    "mask.failure=0x%08x\n"
+		    "asid=%d\n"
+		    "termid.port=0x%08x\n"
+		    "termid.machine=0x%08x\n",
+			auditinfo.ai_auid, auditinfo.ai_mask.am_success,
+			auditinfo.ai_mask.am_failure,
+			auditinfo.ai_asid, auditinfo.ai_termid.port,
+			auditinfo.ai_termid.machine);
+	}
+}
+#endif
 
 void
 group(struct passwd *pw, int nflag)
@@ -378,8 +460,13 @@ usage(void)
 	else if (iswhoami)
 		(void)fprintf(stderr, "usage: whoami\n");
 	else
-		(void)fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
+		(void)fprintf(stderr, "%s\n%s%s\n%s\n%s\n%s\n%s\n%s\n",
 		    "usage: id [user]",
+#ifdef USE_BSM_AUDIT
+		    "       id -A\n",
+#else
+		    "",
+#endif
 		    "       id -G [-n] [user]",
 		    "       id -M",
 		    "       id -P [user]",
