@@ -1,3 +1,4 @@
+/* $MidnightBSD$ */
 /* $FreeBSD: src/lib/libc/sys/stack_protector.c,v 1.2 2007/06/05 08:24:34 des Exp $ */
 /* $NetBSD: stack_protector.c,v 1.4 2006/11/22 17:23:25 christos Exp $	*/
 /* $OpenBSD: stack_protector.c,v 1.10 2006/03/31 05:34:44 deraadt Exp $	*/
@@ -27,9 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/sys/stack_protector.c,v 1.2 2007/06/05 08:24:34 des Exp $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
