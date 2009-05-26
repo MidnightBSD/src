@@ -138,7 +138,7 @@ Boston, MA 02110-1301, USA.  */
 
 #ifdef FBSD_NO_THREADS
 #define FBSD_LIB_SPEC "							\
-  %{pthread: %eThe -pthread option is only supported on FreeBSD when gcc \
+  %{pthread: %eThe -pthread option is only supported on MidnightBSD when gcc \
 is built with the --enable-threads configure-time option.}		\
   %{!shared:								\
     %{!pg: -lc}								\
@@ -146,17 +146,7 @@ is built with the --enable-threads configure-time option.}		\
   }"
 #else
 #include <sys/param.h>
-#if __FreeBSD_version < 500016
-#define FBSD_LIB_SPEC "							\
-  %{!shared:								\
-    %{!pg:								\
-      %{!pthread:-lc}							\
-      %{pthread:-lc_r}}							\
-    %{pg:								\
-      %{!pthread:-lc_p}							\
-      %{pthread:-lc_r_p}}						\
-  }"
-#elif __FreeBSD_version < 700022
+#if __MidnightBSD_version < 3004
 #define FBSD_LIB_SPEC "							\
   %{!shared:								\
     %{!pg: %{pthread:-lpthread} -lc}					\
@@ -173,11 +163,7 @@ is built with the --enable-threads configure-time option.}		\
 #endif
 #endif
 
-#if FBSD_MAJOR < 5
-#define FBSD_DYNAMIC_LINKER "/usr/libexec/ld-elf.so.1"
-#else
 #define FBSD_DYNAMIC_LINKER "/libexec/ld-elf.so.1"
-#endif
 
 #if defined(HAVE_LD_EH_FRAME_HDR)
 #define LINK_EH_SPEC "%{!static:--eh-frame-hdr} "
