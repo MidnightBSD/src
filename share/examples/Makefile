@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD: src/share/examples/Makefile,v 1.5 2009/01/04 22:59:14 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.6 2009/01/05 05:31:06 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -13,7 +13,6 @@ LDIRS=	IPv6 \
 	find_interface \
 	ibcs2 \
 	ipfw \
-	isdn \
 	kld \
 	libvgl \
 	mdoc \
