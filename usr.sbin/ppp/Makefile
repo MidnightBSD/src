@@ -1,4 +1,6 @@
-# $FreeBSD: src/usr.sbin/ppp/Makefile,v 1.109 2004/12/21 12:49:24 ru Exp $
+# $FreeBSD: src/usr.sbin/ppp/Makefile,v 1.110 2006/03/17 18:54:42 ru Exp $
+
+.include <bsd.own.mk>
 
 PROG=	ppp
 MAN=	ppp.8
@@ -13,7 +15,6 @@ WARNS?=	3
 CFLAGS+=-DRELEASE_CRUNCH
 PPP_NO_ATM=
 PPP_NO_DES=
-PPP_NO_I4B=
 PPP_NO_KLDLOAD=
 PPP_NO_NAT=
 PPP_NO_PAM=
@@ -21,13 +22,10 @@ PPP_NO_RADIUS=
 PPP_NO_SUID=
 .endif
 
-.if defined(NO_ATM)
+.if ${MK_ATM} == "no"
 PPP_NO_ATM=
 .endif
-.if defined(NO_I4B)
-PPP_NO_I4B=
-.endif
-.if defined(NO_PAM)
+.if ${MK_PAM_SUPPORT} == "no"
 PPP_NO_PAM=
 .endif
 
@@ -58,7 +56,7 @@ CFLAGS+=-DPPP_CONFDIR=\"${PPP_CONFDIR}\"
 CFLAGS+=-DNOKLDLOAD
 .endif
 
-.if defined(NO_INET6)
+.if ${MK_INET6_SUPPORT} == "no"
 CFLAGS+=-DNOINET6
 .endif
 
@@ -82,7 +80,7 @@ CFLAGS+=-DNOSUID
 SRCS+=	id.c
 .endif
 
-.if defined(RELEASE_CRUNCH) || defined(NO_CRYPT) || defined(NO_OPENSSL) || \
+.if defined(RELEASE_CRUNCH) || ${MK_OPENSSL} == "no" || \
     defined(PPP_NO_DES)
 CFLAGS+=-DNODES
 .else
@@ -97,12 +95,6 @@ CFLAGS+=-DNORADIUS
 SRCS+=	radius.c
 LDADD+=	-lradius
 DPADD+= ${LIBRADIUS}
-.endif
-
-.if defined(PPP_NO_I4B) || ${MACHINE_ARCH} != "i386"
-CFLAGS+=-DNOI4B
-.else
-SRCS+=	i4b.c
 .endif
 
 .if defined(PPP_NO_NETGRAPH)

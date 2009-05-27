@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/command.c,v 1.305 2005/02/08 10:38:24 brian Exp $
+ * $FreeBSD: src/usr.sbin/ppp/command.c,v 1.307 2007/05/25 13:45:48 novel Exp $
  */
 
 #include <sys/param.h>
@@ -144,6 +144,7 @@
 #define	VAR_IPV6CPRETRY	37
 #define	VAR_RAD_ALIVE	38
 #define	VAR_PPPOE	39
+#define	VAR_PORT_ID	40
 
 /* ``accept|deny|disable|enable'' masks */
 #define NEG_HISMASK (1)
@@ -545,7 +546,6 @@ command_Expand(char **nargv, int argc, char const *const *oargv,
   for (; arg < argc; arg++) {
     nargv[arg] = strdup(oargv[arg]);
     nargv[arg] = subst(nargv[arg], "AUTHNAME", bundle->cfg.auth.name);
-    nargv[arg] = subst(nargv[arg], "COMPILATIONDATE", __DATE__);
     nargv[arg] = substip(nargv[arg], "DNS0", bundle->ncp.ipcp.ns.dns[0]);
     nargv[arg] = substip(nargv[arg], "DNS1", bundle->ncp.ipcp.ns.dns[1]);
     nargv[arg] = subst(nargv[arg], "ENDDISC",
@@ -955,7 +955,7 @@ ShowStopped(struct cmdargs const *arg)
 static int
 ShowVersion(struct cmdargs const *arg)
 {
-  prompt_Printf(arg->prompt, "PPP Version %s - %s\n", Version, __DATE__);
+  prompt_Printf(arg->prompt, "PPP Version %s\n", Version);
   return 0;
 }
 
@@ -1132,10 +1132,7 @@ command_Expand_Interpret(char *buff, int nb, char *argv[MAXARGS], int offset)
 {
   char buff2[LINE_LEN-offset];
 
-  if (InterpretArg(buff, buff2, sizeof buff2) == NULL) {
-    log_Printf(LogWARN, "Failed to expand command '%s': too long for the destination buffer\n", buff);
-    return -1;
-  }
+  InterpretArg(buff, buff2);
   strncpy(buff, buff2, LINE_LEN - offset - 1);
   buff[LINE_LEN - offset - 1] = '\0';
 
@@ -2315,6 +2312,29 @@ SetVariable(struct cmdargs const *arg)
     }
     break;
 
+#ifndef NORADIUS
+  case VAR_PORT_ID:
+    if (strcasecmp(argp, "default") == 0)
+	    arg->bundle->radius.port_id_type = RPI_DEFAULT;
+    else if (strcasecmp(argp, "pid") == 0)
+	    arg->bundle->radius.port_id_type = RPI_PID;
+    else if (strcasecmp(argp, "ifnum") == 0)
+	    arg->bundle->radius.port_id_type = RPI_IFNUM; 
+    else if (strcasecmp(argp, "tunnum") == 0)
+	    arg->bundle->radius.port_id_type = RPI_TUNNUM;
+    else {
+	   log_Printf(LogWARN,
+		"RADIUS port id must be one of \"default\", \"pid\", \"ifnum\" or \"tunnum\"\n");
+	   res = 1;
+    }
+
+    if (arg->bundle->radius.port_id_type && !arg->bundle->radius.cfg.file) {
+	    log_Printf(LogWARN, "rad_port_id requires radius to be configured\n");
+	    res = 1;
+    }
+
+    break;
+#endif
   }
 
   return res;
@@ -2419,7 +2439,9 @@ static struct cmdtab const SetCommands[] = {
   "RADIUS Config", "set radius cfgfile", (const void *)VAR_RADIUS},
   {"rad_alive", NULL, SetVariable, LOCAL_AUTH,
   "Raduis alive interval", "set rad_alive value",
-  (const void *)VAR_RAD_ALIVE},  
+  (const void *)VAR_RAD_ALIVE},
+  {"rad_port_id", NULL, SetVariable, LOCAL_AUTH,
+  "NAS-Port-Id", "set rad_port_id [default|pid|ifnum|tunnum]", (const void *)VAR_PORT_ID},
 #endif
   {"reconnect", NULL, datalink_SetReconnect, LOCAL_AUTH | LOCAL_CX,
   "Reconnect timeout", "set reconnect value ntries", NULL},

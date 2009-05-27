@@ -29,7 +29,6 @@ struct ccp;
 struct cmdargs;
 
 /* Device types (don't use zero, it'll be confused with NULL in physical2iov */
-#define I4B_DEVICE	1
 #define TTY_DEVICE	2
 #define TCP_DEVICE	3
 #define UDP_DEVICE	4

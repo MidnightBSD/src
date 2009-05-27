@@ -38750,8 +38750,6 @@ usr.sbin/ppp/fsm.c -text
 usr.sbin/ppp/fsm.h -text
 usr.sbin/ppp/hdlc.c -text
 usr.sbin/ppp/hdlc.h -text
-usr.sbin/ppp/i4b.c -text
-usr.sbin/ppp/i4b.h -text
 usr.sbin/ppp/id.c -text
 usr.sbin/ppp/id.h -text
 usr.sbin/ppp/iface.c -text

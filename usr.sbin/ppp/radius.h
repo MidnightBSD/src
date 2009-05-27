@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/radius.h,v 1.21 2005/01/27 14:09:33 brian Exp $
+ * $FreeBSD: src/usr.sbin/ppp/radius.h,v 1.22 2007/05/25 13:45:49 novel Exp $
  */
 
 #define	MPPE_POLICY_ALLOWED	1
@@ -31,6 +31,11 @@
 
 #define	MPPE_TYPE_40BIT		2
 #define	MPPE_TYPE_128BIT	4
+
+#define	RPI_DEFAULT		1
+#define	RPI_PID			2
+#define	RPI_IFNUM		3
+#define	RPI_TUNNUM		4
 
 struct radius {
   struct fdescriptor desc;	/* We're a sort of (selectable) fdescriptor */
@@ -70,6 +75,7 @@ struct radius {
     struct pppTimer timer;	/* for this long */
     int interval;
   } alive;
+  short unsigned int port_id_type;
 };
 
 struct radacct {

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/server.c,v 1.43 2004/09/05 01:46:52 brian Exp $
+ * $FreeBSD: src/usr.sbin/ppp/server.c,v 1.44 2006/09/18 03:50:30 ume Exp $
  */
 
 #include <sys/param.h>
@@ -345,6 +345,13 @@ server_TcpOpen(struct bundle *bundle, u_short port)
     log_Printf(LogERROR, "Tcp: socket: %s\n", strerror(errno));
     goto failed;
   }
+
+#ifndef NOINET6
+  if (probe.ipv6_available) {
+    int off = 0;
+    setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&off, sizeof(off));
+  }
+#endif
 
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &s, sizeof s);
   if (bind(s, (struct sockaddr *)&ss, sz) < 0) {

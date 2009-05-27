@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/fsm.h,v 1.28 2004/09/05 01:46:51 brian Exp $
+ * $FreeBSD: src/usr.sbin/ppp/fsm.h,v 1.29 2007/01/05 00:33:00 ticso Exp $
  */
 
 /*
@@ -164,7 +164,7 @@ struct fsmheader {
 struct fsm_opt_hdr {
   u_char id;
   u_char len;
-};
+} __packed;
 
 #define MAX_FSM_OPT_LEN 52
 struct fsm_opt {

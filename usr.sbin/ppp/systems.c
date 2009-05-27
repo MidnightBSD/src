@@ -66,7 +66,7 @@ CloseSecret(FILE *fp)
 
 /* Move string from ``from'' to ``to'', interpreting ``~'' and $.... */
 const char *
-InterpretArg(const char *from, char *to, size_t tosiz)
+InterpretArg(const char *from, char *to)
 {
   char *ptr, *startto, *endto;
   struct passwd *pwd;
@@ -76,14 +76,12 @@ InterpretArg(const char *from, char *to, size_t tosiz)
 
   instring = 0;
   startto = to;
-  endto = to + tosiz - 1;
+  endto = to + LINE_LEN - 1;
 
   while(issep(*from))
     from++;
 
   while (*from != '\0') {
-    if (to >= endto)
-      return NULL;
     switch (*from) {
       case '"':
         instring = !instring;
@@ -99,8 +97,6 @@ InterpretArg(const char *from, char *to, size_t tosiz)
             *to++ = '\\';	/* Pass the escapes on, maybe skipping \# */
             break;
         }
-        if (to >= endto)
-          return NULL;
         *to++ = *from++;
         break;
       case '$':
@@ -131,13 +127,9 @@ InterpretArg(const char *from, char *to, size_t tosiz)
             *ptr++ = *from;
           *ptr = '\0';
         }
-        if (to >= endto)
-          return NULL;
         if (*to == '\0')
           *to++ = '$';
         else if ((env = getenv(to)) != NULL) {
-          if ((size_t) (endto - to) < strlen(env))
-            return NULL;
           strncpy(to, env, endto - to);
           *endto = '\0';
           to += strlen(to);
@@ -150,24 +142,19 @@ InterpretArg(const char *from, char *to, size_t tosiz)
         if (len == 0)
           pwd = getpwuid(ID0realuid());
         else {
-          if ((size_t) (endto - to) < len)
-            return NULL;
           strncpy(to, from, len);
           to[len] = '\0';
           pwd = getpwnam(to);
         }
-        if (to >= endto)
-          return NULL;
         if (pwd == NULL)
           *to++ = '~';
         else {
-          if ((size_t) (endto - to) < strlen(pwd->pw_dir))
-            return NULL;
           strncpy(to, pwd->pw_dir, endto - to);
           *endto = '\0';
           to += strlen(to);
           from += len;
         }
+        endpwent();
         break;
 
       default:
@@ -192,16 +179,12 @@ InterpretArg(const char *from, char *to, size_t tosiz)
 #define CTRL_INCLUDE (1)
 
 static int
-DecodeCtrlCommand(char *line, char *arg, size_t argsiz)
+DecodeCtrlCommand(char *line, char *arg)
 {
   const char *end;
 
   if (!strncasecmp(line, "include", 7) && issep(line[7])) {
-  end = InterpretArg(line+8, arg, argsiz);
-    if (end == NULL) {
-      log_Printf(LogWARN, "Failed to expand command '%s': too long for the destination buffer\n", line);
-      return CTRL_UNKNOWN;
-    }
+    end = InterpretArg(line+8, arg);
     if (*end && *end != '#')
       log_Printf(LogWARN, "usage: !include filename\n");
     else
@@ -370,7 +353,7 @@ ReadSystem(struct bundle *bundle, const char *name, const char *file,
       break;
 
     case '!':
-      switch (DecodeCtrlCommand(cp+1, arg, LINE_LEN)) {
+      switch (DecodeCtrlCommand(cp+1, arg)) {
       case CTRL_INCLUDE:
         log_Printf(LogCOMMAND, "%s: Including \"%s\"\n", filename, arg);
         n = ReadSystem(bundle, name, arg, prompt, cx, how);

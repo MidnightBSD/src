@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/ppp/lcp.c,v 1.109 2005/01/10 09:48:51 brian Exp $
+ * $FreeBSD: src/usr.sbin/ppp/lcp.c,v 1.110 2006/09/06 06:23:55 brian Exp $
  */
 
 #include <sys/param.h>
@@ -792,6 +792,9 @@ LcpDecodeConfig(struct fsm *fp, u_char *cp, u_char *end, int mode_type,
         break;
       case MODE_REJ:
         lcp->his_reject |= (1 << opt->hdr.id);
+        /* Set the MTU to what we want anyway - the peer won't care! */
+        if (lcp->his_mru > lcp->want_mru)
+          lcp->his_mru = lcp->want_mru;
         break;
       }
       break;
