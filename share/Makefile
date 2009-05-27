@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
 # $FreeBSD: src/share/Makefile,v 1.37 2007/06/26 19:40:03 remko Exp $
-# $MidnightBSD$
+# $MidnightBSD: src/share/Makefile,v 1.3 2008/10/31 20:36:16 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -52,10 +52,6 @@ _me=		me
 
 .if ${MK_EXAMPLES} != "no"
 _examples=	examples
-.endif
-
-.if ${MK_I4B} != "no"
-_isdn=		isdn
 .endif
 
 .if ${MK_DICT} != "no"
