@@ -1,6 +1,6 @@
 #	from: @(#)Makefile	5.11 (Berkeley) 5/21/91
 # $FreeBSD: src/etc/Makefile,v 1.343.2.3 2005/11/16 07:24:02 ru Exp $
-# $MidnightBSD: src/etc/Makefile,v 1.16 2008/12/09 21:54:04 laffer1 Exp $
+# $MidnightBSD: src/etc/Makefile,v 1.17 2009/05/16 20:27:36 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -128,9 +128,6 @@ distribution:
 	    ${BSM_ETC_RESTRICTED_FILES} ${BSM_ETC_DIR}
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 0500 \
 	    ${BSM_ETC_EXEC_FILES} ${BSM_ETC_DIR}
-.if ${MK_I4B} != "no"
-	${_+_}cd ${.CURDIR}/isdn; ${MAKE} install
-.endif
 .if ${MK_BIND_MTREE} != "no"
 	@if [ ! -e ${DESTDIR}/etc/namedb ]; then \
 		set -x; \
