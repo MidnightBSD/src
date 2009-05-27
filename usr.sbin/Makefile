@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	5.20 (Berkeley) 6/12/93
 # $FreeBSD: src/usr.sbin/Makefile,v 1.332.2.3 2005/12/15 23:30:11 pjd Exp $
-# $MidnightBSD: src/usr.sbin/Makefile,v 1.18 2008/11/18 00:16:12 laffer1 Exp $
+# $MidnightBSD: src/usr.sbin/Makefile,v 1.19 2009/05/01 17:46:00 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -59,7 +59,6 @@ SUBDIR=	ac \
 	getfmac \
 	getpmac \
 	gstat \
-	${_i4b} \
 	ifmcstat \
 	inetd \
 	iostat \
@@ -295,9 +294,6 @@ _apm=		apm
 _apmd=		apmd
 _asf=		asf
 _btxld=		btxld
-.if ${MK_I4B} != "no"
-_i4b=		i4b
-.endif
 _kgmon=		kgmon
 _kgzip=		kgzip
 _lptcontrol=	lptcontrol
