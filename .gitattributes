@@ -32734,12 +32734,6 @@ sys/i386/include/float.h -text
 sys/i386/include/floatingpoint.h -text
 sys/i386/include/frame.h -text
 sys/i386/include/gdb_machdep.h -text
-sys/i386/include/i4b_cause.h -text
-sys/i386/include/i4b_debug.h -text
-sys/i386/include/i4b_ioctl.h -text
-sys/i386/include/i4b_rbch_ioctl.h -text
-sys/i386/include/i4b_tel_ioctl.h -text
-sys/i386/include/i4b_trace.h -text
 sys/i386/include/ieeefp.h -text
 sys/i386/include/if_wl_wavelan.h -text
 sys/i386/include/in_cksum.h -text
@@ -35087,7 +35081,6 @@ tools/build/options/WITHOUT_GPIB -text
 tools/build/options/WITHOUT_GROFF -text
 tools/build/options/WITHOUT_GSSAPI -text
 tools/build/options/WITHOUT_HTML -text
-tools/build/options/WITHOUT_I4B -text
 tools/build/options/WITHOUT_INET6 -text
 tools/build/options/WITHOUT_INET6_SUPPORT -text
 tools/build/options/WITHOUT_INFO -text

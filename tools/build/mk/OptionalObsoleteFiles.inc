@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/tools/build/mk/OptionalObsoleteFiles.inc,v 1.2 2009/04/15 01:53:06 laffer1 Exp $
 # $FreeBSD: src/tools/build/mk/OptionalObsoleteFiles.inc,v 1.11.4.1 2008/01/21 22:02:21 brueffer Exp $
 #
 # This file add support for the WITHOUT_* and WITH_* knobs in src.conf(5) to
@@ -409,7 +409,6 @@ OLD_FILES+=usr/share/man/man8/zpool.8.gz
 # to be filled in
 #.endif
 
-.if ${MK_I4B} == no
 OLD_FILES+=usr/sbin/dtmfdecode
 OLD_FILES+=usr/sbin/g711conv
 OLD_FILES+=usr/sbin/isdnd
@@ -464,7 +463,6 @@ OLD_FILES+=usr/share/man/man8/isdnphone.8.gz
 OLD_FILES+=usr/share/man/man8/isdntel.8.gz
 OLD_FILES+=usr/share/man/man8/isdntelctl.8.gz
 OLD_FILES+=usr/share/man/man8/isdntrace.8.gz
-.endif
 
 .if ${MK_INET6} == no
 OLD_FILES+=rescue/ping6

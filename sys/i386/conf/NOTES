@@ -4,7 +4,7 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $MidnightBSD: src/sys/i386/conf/NOTES,v 1.7 2008/12/13 03:03:42 laffer1 Exp $
+# $MidnightBSD: src/sys/i386/conf/NOTES,v 1.8 2009/01/20 17:39:34 laffer1 Exp $
 # $FreeBSD: src/sys/i386/conf/NOTES,v 1.1244.2.3.2.1 2008/02/06 03:24:28 scottl Exp $
 #
 
@@ -982,7 +982,6 @@ options 	FB_INSTALL_CDEV		# install a CDEV entry in /dev
 options 	PECOFF_SUPPORT
 options 	PECOFF_DEBUG
 
-options 	I4B_SMP_WORKAROUND
 options 	I586_PMC_GUPROF=0x70000
 options 	KBDIO_DEBUG=2
 options 	KBD_MAXRETRY=4
