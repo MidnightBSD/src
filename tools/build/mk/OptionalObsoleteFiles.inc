@@ -1,4 +1,4 @@
-# $MidnightBSD: src/tools/build/mk/OptionalObsoleteFiles.inc,v 1.2 2009/04/15 01:53:06 laffer1 Exp $
+# $MidnightBSD: src/tools/build/mk/OptionalObsoleteFiles.inc,v 1.3 2009/05/27 05:58:42 laffer1 Exp $
 # $FreeBSD: src/tools/build/mk/OptionalObsoleteFiles.inc,v 1.11.4.1 2008/01/21 22:02:21 brueffer Exp $
 #
 # This file add support for the WITHOUT_* and WITH_* knobs in src.conf(5) to
@@ -408,61 +408,6 @@ OLD_FILES+=usr/share/man/man8/zpool.8.gz
 #.if ${MK_HTML} == no
 # to be filled in
 #.endif
-
-OLD_FILES+=usr/sbin/dtmfdecode
-OLD_FILES+=usr/sbin/g711conv
-OLD_FILES+=usr/sbin/isdnd
-OLD_FILES+=usr/sbin/isdndebug
-OLD_FILES+=usr/sbin/isdndecode
-OLD_FILES+=usr/sbin/isdnmonitor
-OLD_FILES+=usr/sbin/isdnphone
-OLD_FILES+=usr/sbin/isdntel
-OLD_FILES+=usr/sbin/isdntelctl
-OLD_FILES+=usr/sbin/isdntrace
-OLD_FILES+=usr/share/isdn/0.al
-OLD_FILES+=usr/share/isdn/1.al
-OLD_FILES+=usr/share/isdn/2.al
-OLD_FILES+=usr/share/isdn/3.al
-OLD_FILES+=usr/share/isdn/4.al
-OLD_FILES+=usr/share/isdn/5.al
-OLD_FILES+=usr/share/isdn/6.al
-OLD_FILES+=usr/share/isdn/7.al
-OLD_FILES+=usr/share/isdn/8.al
-OLD_FILES+=usr/share/isdn/9.al
-OLD_FILES+=usr/share/isdn/beep.al
-OLD_FILES+=usr/share/isdn/msg.al
-OLD_FILES+=usr/share/man/man1/dtmfdecode.1.gz
-OLD_FILES+=usr/share/man/man1/g711conv.1.gz
-OLD_FILES+=usr/share/man/man4/i4b.4.gz
-OLD_FILES+=usr/share/man/man4/i4bcapi.4.gz
-OLD_FILES+=usr/share/man/man4/i4bctl.4.gz
-OLD_FILES+=usr/share/man/man4/i4bing.4.gz
-OLD_FILES+=usr/share/man/man4/i4bipr.4.gz
-OLD_FILES+=usr/share/man/man4/i4bisppp.4.gz
-OLD_FILES+=usr/share/man/man4/i4bq921.4.gz
-OLD_FILES+=usr/share/man/man4/i4bq931.4.gz
-OLD_FILES+=usr/share/man/man4/i4brbch.4.gz
-OLD_FILES+=usr/share/man/man4/i4btel.4.gz
-OLD_FILES+=usr/share/man/man4/i4btrc.4.gz
-OLD_FILES+=usr/share/man/man4/iavc.4.gz
-OLD_FILES+=usr/share/man/man4/isic.4.gz
-OLD_FILES+=usr/share/man/man4/ifpi.4.gz
-OLD_FILES+=usr/share/man/man4/ifpi2.4.gz
-OLD_FILES+=usr/share/man/man4/ifpnp.4.gz
-OLD_FILES+=usr/share/man/man4/ihfc.4.gz
-OLD_FILES+=usr/share/man/man4/itjc.4.gz
-OLD_FILES+=usr/share/man/man4/iwic.4.gz
-OLD_FILES+=usr/share/man/man5/isdnd.rc.5.gz
-OLD_FILES+=usr/share/man/man5/isdnd.rates.5.gz
-OLD_FILES+=usr/share/man/man5/isdnd.acct.5.gz
-OLD_FILES+=usr/share/man/man8/isdnd.8.gz
-OLD_FILES+=usr/share/man/man8/isdndebug.8.gz
-OLD_FILES+=usr/share/man/man8/isdndecode.8.gz
-OLD_FILES+=usr/share/man/man8/isdnmonitor.8.gz
-OLD_FILES+=usr/share/man/man8/isdnphone.8.gz
-OLD_FILES+=usr/share/man/man8/isdntel.8.gz
-OLD_FILES+=usr/share/man/man8/isdntelctl.8.gz
-OLD_FILES+=usr/share/man/man8/isdntrace.8.gz
 
 .if ${MK_INET6} == no
 OLD_FILES+=rescue/ping6
