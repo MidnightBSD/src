@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/ObsoleteFiles.inc,v 1.25.2.3 2006/02/16 07:25:23 avatar Exp $
-# $MidnightBSD: src/ObsoleteFiles.inc,v 1.18 2009/03/25 18:06:48 laffer1 Exp $
+# $MidnightBSD: src/ObsoleteFiles.inc,v 1.19 2009/04/03 05:18:17 laffer1 Exp $
 #
 # This file lists old files (OLD_FILES), libraries (OLD_LIBS) and
 # directories (OLD_DIRS) which should get removed at an update. Recently
@@ -15,6 +15,61 @@
 # The file is partitioned: OLD_FILES first, then OLD_LIBS and OLD_DIRS last.
 #
 
+#20090525:
+OLD_FILES+=usr/sbin/dtmfdecode
+OLD_FILES+=usr/sbin/g711conv
+OLD_FILES+=usr/sbin/isdnd
+OLD_FILES+=usr/sbin/isdndebug
+OLD_FILES+=usr/sbin/isdndecode
+OLD_FILES+=usr/sbin/isdnmonitor
+OLD_FILES+=usr/sbin/isdnphone
+OLD_FILES+=usr/sbin/isdntel
+OLD_FILES+=usr/sbin/isdntelctl
+OLD_FILES+=usr/sbin/isdntrace
+OLD_FILES+=usr/share/isdn/0.al
+OLD_FILES+=usr/share/isdn/1.al
+OLD_FILES+=usr/share/isdn/2.al
+OLD_FILES+=usr/share/isdn/3.al
+OLD_FILES+=usr/share/isdn/4.al
+OLD_FILES+=usr/share/isdn/5.al
+OLD_FILES+=usr/share/isdn/6.al
+OLD_FILES+=usr/share/isdn/7.al
+OLD_FILES+=usr/share/isdn/8.al
+OLD_FILES+=usr/share/isdn/9.al
+OLD_FILES+=usr/share/isdn/beep.al
+OLD_FILES+=usr/share/isdn/msg.al
+OLD_FILES+=usr/share/man/man1/dtmfdecode.1.gz
+OLD_FILES+=usr/share/man/man1/g711conv.1.gz
+OLD_FILES+=usr/share/man/man4/i4b.4.gz
+OLD_FILES+=usr/share/man/man4/i4bcapi.4.gz
+OLD_FILES+=usr/share/man/man4/i4bctl.4.gz
+OLD_FILES+=usr/share/man/man4/i4bing.4.gz
+OLD_FILES+=usr/share/man/man4/i4bipr.4.gz
+OLD_FILES+=usr/share/man/man4/i4bisppp.4.gz
+OLD_FILES+=usr/share/man/man4/i4bq921.4.gz
+OLD_FILES+=usr/share/man/man4/i4bq931.4.gz
+OLD_FILES+=usr/share/man/man4/i4brbch.4.gz
+OLD_FILES+=usr/share/man/man4/i4btel.4.gz
+OLD_FILES+=usr/share/man/man4/i4btrc.4.gz
+OLD_FILES+=usr/share/man/man4/iavc.4.gz
+OLD_FILES+=usr/share/man/man4/isic.4.gz
+OLD_FILES+=usr/share/man/man4/ifpi.4.gz
+OLD_FILES+=usr/share/man/man4/ifpi2.4.gz
+OLD_FILES+=usr/share/man/man4/ifpnp.4.gz
+OLD_FILES+=usr/share/man/man4/ihfc.4.gz
+OLD_FILES+=usr/share/man/man4/itjc.4.gz
+OLD_FILES+=usr/share/man/man4/iwic.4.gz
+OLD_FILES+=usr/share/man/man5/isdnd.rc.5.gz
+OLD_FILES+=usr/share/man/man5/isdnd.rates.5.gz
+OLD_FILES+=usr/share/man/man5/isdnd.acct.5.gz
+OLD_FILES+=usr/share/man/man8/isdnd.8.gz
+OLD_FILES+=usr/share/man/man8/isdndebug.8.gz
+OLD_FILES+=usr/share/man/man8/isdndecode.8.gz
+OLD_FILES+=usr/share/man/man8/isdnmonitor.8.gz
+OLD_FILES+=usr/share/man/man8/isdnphone.8.gz
+OLD_FILES+=usr/share/man/man8/isdntel.8.gz
+OLD_FILES+=usr/share/man/man8/isdntelctl.8.gz
+OLD_FILES+=usr/share/man/man8/isdntrace.8.gz
 # 20090403:
 OLD_FILES+=usr/share/man/man1/csup.1.gz
 OLD_FILES+=usr/bin/csup
