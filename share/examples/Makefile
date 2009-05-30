@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/examples/Makefile,v 1.48 2005/01/12 20:55:01 keramida Exp $
-# $MidnightBSD: src/share/examples/Makefile,v 1.6 2009/01/05 05:31:06 laffer1 Exp $
+# $MidnightBSD: src/share/examples/Makefile,v 1.7 2009/05/27 05:51:16 laffer1 Exp $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -63,35 +63,6 @@ XFILES=	IPv6/USAGE \
 	ibcs2/README \
 	ibcs2/hello.uu \
 	ipfw/change_rules.sh \
-	isdn/FAQ \
-	isdn/KERNEL \
-	isdn/Overview \
-	isdn/README \
-	isdn/ROADMAP \
-	isdn/ReleaseNotes \
-	isdn/Resources \
-	isdn/SupportedCards \
-	isdn/ThankYou \
-	isdn/contrib/README \
-	isdn/contrib/anleitung.ppp \
-	isdn/contrib/answer.c \
-	isdn/contrib/answer.sh \
-	isdn/contrib/convert.sh \
-	isdn/contrib/hplay.c \
-	isdn/contrib/i4b-ppp-newbie.txt \
-	isdn/contrib/isdnctl \
-	isdn/contrib/isdnd_acct \
-	isdn/contrib/isdnd_acct.pl \
-	isdn/contrib/isdntelmux.c \
-	isdn/contrib/mrtg-isp0.sh \
-	isdn/i4brunppp/Makefile \
-	isdn/i4brunppp/README \
-	isdn/i4brunppp/i4brunppp-isdnd.rc \
-	isdn/i4brunppp/i4brunppp.8 \
-	isdn/i4brunppp/i4brunppp.c \
-	isdn/v21/Makefile \
-	isdn/v21/README \
-	isdn/v21/v21modem.c \
 	kld/Makefile \
 	kld/cdev/Makefile \
 	kld/cdev/README \
@@ -133,9 +104,7 @@ XFILES=	IPv6/USAGE \
 	ppi/Makefile \
 	ppi/ppilcd.c \
 	ppp/chap-auth \
-	ppp/isdnd.rc \
 	ppp/login-auth \
-	ppp/ppp.conf.isdn \
 	ppp/ppp.conf.sample \
 	ppp/ppp.conf.span-isp \
 	ppp/ppp.conf.span-isp.working \
