@@ -1,5 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/libexec/Makefile,v 1.77 2007/07/03 12:46:04 mlaier Exp $
+# $MidnightBSD$
 
 .include <bsd.own.mk>
 
@@ -13,6 +14,16 @@ SUBDIR=	atrun \
 	${_mail.local} \
 	makekey \
 	${_mknetid} \
+	mport.check-fake \
+	mport.check-for-older \
+	mport.create \
+	mport.delete \
+	mport.init \
+	mport.install \
+	mport.merge \
+	mport.query \
+	mport.updepends \
+	mport.version_cmp \
 	pppoed \
 	pt_chown \
 	rbootd \
