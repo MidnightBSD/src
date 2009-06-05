@@ -25350,6 +25350,8 @@ libexec/mport.merge/Makefile -text
 libexec/mport.merge/mport.merge.c -text
 libexec/mport.query/Makefile -text
 libexec/mport.query/mport.query.c -text
+libexec/mport.update/Makefile -text
+libexec/mport.update/mport.update.c -text
 libexec/mport.updepends/Makefile -text
 libexec/mport.updepends/mport.updepends.c -text
 libexec/mport.version_cmp/Makefile -text
