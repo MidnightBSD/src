@@ -76,14 +76,14 @@ MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *o
   char *dbfile;
   
   if ((table = (struct table_entry **)calloc(TABLE_SIZE, sizeof(struct table_entry *))) == NULL)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate hash table.");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate hash table.");
   
   DIAG("mport_merge_primative(%p, %s)", filenames, outfile)
   
   if (mkdtemp(tmpdir) == NULL)
-    RETURN_ERROR(MPORT_ERR_FILEIO, "Couldn't make temp directory.");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't make temp directory.");
   if (asprintf(&dbfile, "%s/%s", tmpdir, "merged.db") == -1)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't build merge database name.");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't build merge database name.");
   
   DIAG("Building stub")
 
@@ -95,7 +95,7 @@ MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *o
     
   /* set up the bundle, and add our new stub database to it. */
   if ((bundle = mport_bundle_write_new()) == NULL)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't alloca bundle struct.");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't alloca bundle struct.");
   if (mport_bundle_write_init(bundle, outfile) != MPORT_OK)
     RETURN_CURRENT_ERROR;
    
@@ -139,10 +139,10 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   sqlite3_stmt *stmt;
   
   if (asprintf(&tmpdbfile, "%s/%s", tmpdir, "pkg.db") == -1)
-    RETURN_ERROR(MPORT_ERR_FILEIO, "Couldn't make stub db tempfile.");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't make stub db tempfile.");
   
   if (sqlite3_open(dbfile, db) != SQLITE_OK)
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
   
   if (mport_generate_stub_schema(*db) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -190,7 +190,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
       } else if (ret == SQLITE_DONE) {
         break;
       } else {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
         sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
       }
@@ -216,7 +216,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM packages"))
     RETURN_CURRENT_ERROR;  
   if (sqlite3_step(stmt) != SQLITE_ROW) {
-    SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+    SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -228,7 +228,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
     RETURN_CURRENT_ERROR;  
     
   if (sqlite3_step(stmt) != SQLITE_ROW) {
-    SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+    SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
   }
@@ -237,16 +237,16 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   sqlite3_finalize(stmt);
   
   if (pkgs != unsort) 
-    RETURN_ERRORX(MPORT_ERR_INTERNAL, "Sorted (%i) and unsorted (%i) counts do no match.", pkgs, unsort);
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Sorted (%i) and unsorted (%i) counts do no match.", pkgs, unsort);
     
       
   /* Close the stub database handle, and reopen as read only to insure that we don't
    * try to change it after this point 
    */    
   if (sqlite3_close(*db) != SQLITE_OK)
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
   if (sqlite3_open_v2(dbfile, db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
   
   return MPORT_OK;
 }
@@ -272,7 +272,7 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
     if (sret == SQLITE_DONE) {
       goto DONE;
     } else if (sret != SQLITE_ROW) {
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       goto DONE;
     } 
     
@@ -281,14 +281,14 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
     match = find_in_table(table, pkgname);
     
     if (match == NULL) {
-      ret = SET_ERRORX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in filename table.", pkgname);
+      ret = SET_ERRORX(MPORT_ERR_FATAL, "Couldn't find package '%s' in filename table.", pkgname);
       goto DONE;
     }
     
     filename = match->file;
     
     if ((inbundle = mport_bundle_read_new()) == NULL) {
-      SET_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate bundle");
+      SET_ERROR(MPORT_ERR_FATAL, "Couldn't allocate bundle");
       goto DONE;
     }
 
@@ -306,7 +306,7 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
     }
     if (archive_read_data_skip(inbundle->archive) != ARCHIVE_OK) {
       mport_bundle_read_finish(NULL, inbundle);
-      ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(inbundle->archive));
+      ret = SET_ERRORX(MPORT_ERR_FATAL, "Unable to read %s: %s", filename, archive_error_string(inbundle->archive));
       goto DONE;
     }
     
@@ -358,7 +358,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
       break;
     
     if (ret != SQLITE_ROW) {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -368,13 +368,13 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
     
     if (cur == NULL) {
       sqlite3_finalize(stmt);
-      RETURN_ERRORX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in bundle hash table", pkgname);
+      RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't find package '%s' in bundle hash table", pkgname);
     }
     
     file = cur->file;
         
     if ((inbundle = mport_bundle_read_new()) == NULL)
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
         
     
     if (mport_bundle_read_init(inbundle, file) != MPORT_OK) {
@@ -401,7 +401,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
         sqlite3_finalize(files);
         break;
       } else if (fret != SQLITE_ROW) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
         mport_bundle_read_finish(NULL, inbundle);
@@ -418,7 +418,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
       } 
       
       if (strcmp(file, archive_entry_pathname(entry)) != 0) {
-        SET_ERRORX(MPORT_ERR_INTERNAL, "Plist to archive mismatch in package %s: found '%s', expected '%s'", pkgname, archive_entry_pathname(entry), file);
+        SET_ERRORX(MPORT_ERR_FATAL, "Plist to archive mismatch in package %s: found '%s', expected '%s'", pkgname, archive_entry_pathname(entry), file);
         mport_bundle_read_finish(NULL, inbundle);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
@@ -454,38 +454,38 @@ static int extract_stub_db(const char *filename, const char *destfile)
   struct archive_entry *entry;
   
   if (a == NULL)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, "Couldn't allocate read archive struct");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate read archive struct");
 
   archive_read_support_format_tar(a);
   archive_read_support_compression_bzip2(a);
     
   if (archive_read_open_filename(a, filename, 10240) != ARCHIVE_OK) {
-    SET_ERRORX(MPORT_ERR_ARCHIVE, "Could not open %s: %s", filename, archive_error_string(a));
+    SET_ERRORX(MPORT_ERR_FATAL, "Could not open %s: %s", filename, archive_error_string(a));
     archive_read_finish(a);
     RETURN_CURRENT_ERROR;
   }
   
   if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-    SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    SET_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
     archive_read_finish(a);
     RETURN_CURRENT_ERROR;
   }
   
   if (strcmp(archive_entry_pathname(entry), MPORT_STUB_DB_FILE) != 0) {
     archive_read_finish(a);
-    RETURN_ERROR(MPORT_ERR_MALFORMED_BUNDLE, "Invalid bundle file: stub database is not the first file");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Invalid bundle file: stub database is not the first file");
   }
     
   archive_entry_set_pathname(entry, destfile);
   
   if (archive_read_extract(a, entry, 0) != ARCHIVE_OK) {
-    SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    SET_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
     archive_read_finish(a);
     RETURN_CURRENT_ERROR;
   }
   
   if (archive_read_finish(a) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(a));
     
   return MPORT_OK;
 }
@@ -498,7 +498,7 @@ static int insert_into_table(struct table_entry **table, char *name, const char 
   int hash = SuperFastHash(name) % TABLE_SIZE;
   
   if ((node = (struct table_entry *)malloc(sizeof(struct table_entry))) == NULL)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate table entry");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate table entry");
 
   node->name     = strdup(name);
   node->file     = strdup(file);

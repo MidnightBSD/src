@@ -68,9 +68,10 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
 }
 
 
-void mport_default_progress_init_cb()
+void mport_default_progress_init_cb(const char *title)
 {
   /* do nothing */
+  (void)puts(title);
   return;
 }
 

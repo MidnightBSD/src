@@ -42,7 +42,7 @@ MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *fi
   int i;
   
   if ((bundle = mport_bundle_read_new()) == NULL)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   
   if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -57,7 +57,7 @@ MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *fi
     pkg = pkgs[i];
 
     if (
-        (mport_check_update_preconditions(mport, pkg) != MPORT_OK) 
+        (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_UPGRADEABLE|MPORT_PRECHECK_CONFLICTS|MPORT_PRECHECK_DEPENDS) != MPORT_OK) 
                       ||
         (set_prefix_to_installed(mport, pkg) != MPORT_OK) 
                       || 
@@ -91,15 +91,15 @@ static int set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
       if (strcmp(prefix, pkg->prefix) != 0) {
         free(pkg->prefix);
         if ((pkg->prefix = strdup(pkg->prefix)) == NULL) {
-          ret = MPORT_ERR_NO_MEM;
+          ret = MPORT_ERR_FATAL;
         }
       }
       break;
     case SQLITE_DONE:
-      ret = SET_ERRORX(MPORT_ERR_INTERNAL, "%s not in master db, after passing precondition check!", pkg->name);
+      ret = SET_ERRORX(MPORT_ERR_FATAL, "%s not in master db, after passing precondition check!", pkg->name);
       break;
     default:
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
 

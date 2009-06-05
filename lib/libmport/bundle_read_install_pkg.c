@@ -101,13 +101,13 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
       sqlite3_finalize(count);
       break;
     default:
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(count);
       RETURN_CURRENT_ERROR;
   }
   
-  (mport->progress_init_cb)();
-  
+
+  mport_call_progress_init_cb(mport, "Installing %s-%s", pkg->name, pkg->version);  
 
   /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
   /* Note that this will be marked as dirty by default */  
@@ -140,7 +140,7 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
       break;
     
     if (ret != SQLITE_ROW) {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       goto ERROR;
     }
     
@@ -180,44 +180,44 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
     
     /* insert this assest into the master database */
     if (sqlite3_bind_int(insert, 1, (int)type) != SQLITE_OK) {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));    
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));    
       goto ERROR;
     }
     if (type == ASSET_FILE) {
       /* don't put the root in the database! */
       if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         goto ERROR;
       }
       if (sqlite3_bind_text(insert, 3, checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         goto ERROR;
       }
     } else if (type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
       (void)snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
       if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         goto ERROR;
       }
       
       if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         goto ERROR;
       }
     } else {  
       if (sqlite3_bind_text(insert, 2, data, -1, SQLITE_STATIC) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         goto ERROR;
       }
       
       if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         goto ERROR;
       }
     }
      
     if (sqlite3_step(insert) != SQLITE_DONE) {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       goto ERROR;
     }
                         
@@ -280,7 +280,7 @@ static int run_mtree(mportInstance *mport, mportBundleRead *bundle, mportPackage
   
   if (mport_file_exists(file)) {
     if ((ret = mport_xsystem(mport, "%s -U -f %s -d -e -p %s >/dev/null", MPORT_MTREE_BIN, file, pkg->prefix)) != 0) 
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s returned non-zero: %i", MPORT_MTREE_BIN, ret);
+      RETURN_ERRORX(MPORT_ERR_FATAL, "%s returned non-zero: %i", MPORT_MTREE_BIN, ret);
   }
   
   return MPORT_OK;
@@ -296,10 +296,10 @@ static int run_pkg_install(mportInstance *mport, mportBundleRead *bundle, mportP
  
   if (mport_file_exists(file)) {
     if (chmod(file, 755) != 0)
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "chmod(%s, 755): %s", file, strerror(errno));
+      RETURN_ERRORX(MPORT_ERR_FATAL, "chmod(%s, 755): %s", file, strerror(errno));
       
     if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pkg->prefix, file, pkg->name, mode)) != 0)
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
+      RETURN_ERRORX(MPORT_ERR_FATAL, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
   }
   
  return MPORT_OK;
@@ -321,15 +321,15 @@ static int display_pkg_msg(mportInstance *mport, mportBundleRead *bundle, mportP
     return MPORT_OK;
     
   if ((file = fopen(filename, "r")) == NULL) 
-    RETURN_ERRORX(MPORT_ERR_FILEIO, "Couldn't open %s: %s", filename, strerror(errno));
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
   
   if ((buf = (char *)malloc((st.st_size + 1) * sizeof(char))) == NULL)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
   
   if (fread(buf, 1, st.st_size, file) != st.st_size) {
     free(buf);
-    RETURN_ERRORX(MPORT_ERR_FILEIO, "Read error: %s", strerror(errno));
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
   }
   
   buf[st.st_size] = 0;

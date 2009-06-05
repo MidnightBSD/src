@@ -54,17 +54,17 @@ mportBundleRead * mport_bundle_read_new()
 int mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
 {
   if ((bundle->filename = strdup(filename)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't dup filename");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
     
   if ((bundle->archive = archive_read_new()) == NULL)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't dup filename");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
     
   
   archive_read_support_format_tar(bundle->archive);
   archive_read_support_compression_bzip2(bundle->archive);
   
   if (archive_read_open_filename(bundle->archive, bundle->filename, 10240) != ARCHIVE_OK) {
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
   }
   
   return MPORT_OK;    
@@ -81,7 +81,7 @@ int mport_bundle_read_finish(mportInstance *mport, mportBundleRead *bundle)
   int ret = MPORT_OK;
     
   if (archive_read_finish(bundle->archive) != ARCHIVE_OK)
-    ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+    ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
   if (bundle->stub_attached && (mport != NULL)) {
     if (mport_detach_stub_db(mport->db) != MPORT_OK)
@@ -120,10 +120,10 @@ int mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep
   struct archive_entry *entry;
      
   if (tmpdir == NULL)
-    RETURN_ERROR(MPORT_ERR_FILEIO, strerror(errno));
+    RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
   
   if ((*dirnamep = strdup(tmpdir)) == NULL) 
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   
   while (1) {
     if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
@@ -196,7 +196,7 @@ int mport_bundle_read_next_entry(mportBundleRead *bundle, struct archive_entry *
     if (ret == ARCHIVE_RETRY) continue;
 
     if (ret == ARCHIVE_FATAL) 
-      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+      RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
     /* ret was warn or OK, we're done */
     break;
@@ -218,7 +218,7 @@ int mport_bundle_read_next_entry(mportBundleRead *bundle, struct archive_entry *
 int mport_bundle_read_extract_next_file(mportBundleRead *bundle, struct archive_entry *entry)
 {
   if (archive_read_extract(bundle->archive, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) 
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
   
   return MPORT_OK;
 }
@@ -256,14 +256,14 @@ int mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bu
       bundle_version = sqlite3_column_int(stmt, 0);
       
       if (bundle_version > MPORT_BUNDLE_VERSION) {
-        RETURN_ERRORX(MPORT_ERR_MALFORMED_BUNDLE, "%s: bundle is version %i; this version of mport only supports up to version %i", bundle->filename, bundle_version, MPORT_BUNDLE_VERSION);
+        RETURN_ERRORX(MPORT_ERR_FATAL, "%s: bundle is version %i; this version of mport only supports up to version %i", bundle->filename, bundle_version, MPORT_BUNDLE_VERSION);
       }
       break;
     case SQLITE_DONE:
-      RETURN_ERRORX(MPORT_ERR_MALFORMED_BUNDLE, "%s: no stub.meta table, or no bundle_format_version field", bundle->filename);    
+      RETURN_ERRORX(MPORT_ERR_FATAL, "%s: no stub.meta table, or no bundle_format_version field", bundle->filename);    
       break;
     default:
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
   

@@ -65,17 +65,17 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
 
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
-      total   = sqlite3_column_int(stmt, 0) + 2;
+      total   = sqlite3_column_int(stmt, 0) + 1;
       current = 0;
       sqlite3_finalize(stmt);
       break;
     default:
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
   }
   
-  (mport->progress_init_cb)();
+  mport_call_progress_init_cb(mport, "Deleteing %s-%s", pack->name, pack->version);
 
   if (mport_db_do(mport->db, "UPDATE packages SET status='dirty' WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -96,7 +96,7 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
       
     if (ret != SQLITE_ROW) {
       /* some error occured */
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -184,13 +184,6 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
   (mport->progress_step_cb)(++current, total, "DB Updated");
 
   
-  /* clean up the master database file, we don't want to frag it */
-  if (mport_db_do(mport->db, "VACUUM") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-
-  (mport->progress_step_cb)(++current, total, "DB Defragged");
-
-  
   (mport->progress_free_cb)();
 
   mport_pkgmeta_logevent(mport, pack, "Package deleted");
@@ -208,10 +201,10 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
 
   if (mport_file_exists(file)) {
     if (chmod(file, 755) != 0)
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "chmod(%s, 755): %s", file, strerror(errno));
+      RETURN_ERRORX(MPORT_ERR_FATAL, "chmod(%s, 755): %s", file, strerror(errno));
       
     if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pack->prefix, file, pack->name, mode)) != 0)
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
+      RETURN_ERRORX(MPORT_ERR_FATAL, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
   }
   
   return MPORT_OK;
@@ -228,7 +221,7 @@ static int delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack)
   
   if (mport_file_exists(dir)) {
     if ((ret = mport_rmtree(dir)) != MPORT_OK) 
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "mport_rmtree(%s) failed.",  dir);
+      RETURN_ERRORX(MPORT_ERR_FATAL, "mport_rmtree(%s) failed.",  dir);
   }
   
   return MPORT_OK;
@@ -255,14 +248,14 @@ static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pac
         if ((mport->confirm_cb)(msg, "Delete", "Don't delete", 0) != MPORT_OK) {
           sqlite3_finalize(stmt);
           free(msg);
-          RETURN_ERRORX(MPORT_ERR_UPWARDS_DEPENDS, "%s depend on %s", depends, pack->name);
+          RETURN_ERRORX(MPORT_ERR_FATAL, "%s depend on %s", depends, pack->name);
         }
         free(msg);
       }
       
       break;    
     default:
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
   }

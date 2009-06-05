@@ -37,13 +37,16 @@
 #include <stdio.h>
 
 typedef void (*mport_msg_cb)(const char *);
-typedef void (*mport_progress_init_cb)(void);
+typedef void (*mport_progress_init_cb)(const char *);
 typedef void (*mport_progress_step_cb)(int, int, const char *);
 typedef void (*mport_progress_free_cb)(void);
 typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
 
 /* Mport Instance (an installed copy of the mport system) */
+#define MPORT_INST_HAVE_INDEX 1
+
 typedef struct {
+  int flags;
   sqlite3 *db;
   char *root;
   mport_msg_cb msg_cb;
@@ -65,7 +68,7 @@ void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
 
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
-void mport_default_progress_init_cb(void);
+void mport_default_progress_init_cb(const char *);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 
@@ -118,6 +121,21 @@ int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPack
 int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 
 
+/* index */
+typedef struct {
+  char *pkgname;
+  char *version;
+  char *comment;
+  char *www;
+  char *bundlefile;
+} mportIndexEntry;
+
+int mport_index_load(mportInstance *);
+int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry ***);
+void mport_index_entry_free_vec(mportIndexEntry **);
+void mport_index_entry_free(mportIndexEntry *);
+
+/* Package creation */
 
 typedef struct {
   char *pkg_filename;
@@ -133,13 +151,13 @@ typedef struct {
 mportCreateExtras * mport_createextras_new(void);
 void mport_createextras_free(mportCreateExtras *);
 
-/* Package creation */
 int mport_create_primative(mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 
 /* Merge primative */
 int mport_merge_primative(const char **, const char *);
 
 /* Package installation */
+int mport_install(mportInstance *, const char *, const char *);
 int mport_install_primative(mportInstance *, const char *, const char *);
 
 /* package updating */
@@ -158,25 +176,7 @@ const char * mport_err_string(void);
 
 
 #define MPORT_OK			0
-#define MPORT_ERR_NO_MEM 		1
-#define MPORT_ERR_FILEIO 		2
-#define MPORT_ERR_MALFORMED_PLIST 	3
-#define MPORT_ERR_SQLITE		4
-#define MPORT_ERR_FILE_NOT_FOUND	5
-#define MPORT_ERR_SYSCALL_FAILED	6
-#define MPORT_ERR_ARCHIVE		7
-#define MPORT_ERR_INTERNAL		8
-#define MPORT_ERR_ALREADY_INSTALLED	9
-#define MPORT_ERR_CONFLICTS		10
-#define MPORT_ERR_MISSING_DEPEND	11
-#define MPORT_ERR_MALFORMED_VERSION	12
-#define MPORT_ERR_MALFORMED_DEPEND	13
-#define MPORT_ERR_NO_SUCH_PKG		14
-#define MPORT_ERR_CHECKSUM_MISMATCH	15
-#define MPORT_ERR_UPWARDS_DEPENDS	16
-#define MPORT_ERR_MALFORMED_BUNDLE	17
-#define MPORT_ERR_NOT_UPGRADABLE	18
-
+#define MPORT_ERR_FATAL 		1
 
 /* Utils */
 void mport_parselist(char *, char ***);

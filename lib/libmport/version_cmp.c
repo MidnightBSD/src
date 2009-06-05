@@ -91,6 +91,37 @@ void mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value 
   free(b);
 }  
 
+
+/* Returns 0 if baseline meets the given requirement, -1 if the requirement
+ * was not met, and a value greater than 0 on error.  some examples:
+ *
+ * mport_version_require_check("0.2.1", ">=2.0") == 0
+ * mport_version_require_check("4.1.2", ">5.1")  == -1
+ * mport_version_require_check("3.1.4", "|")     > 0
+ */
+int mport_version_require_check(char *baseline, char *require)
+{
+  int ret = 0;
+  
+  if (require[0] == '<') {
+    if (require[1] == '=') {
+      ret = (mport_version_cmp(baseline, &require[2]) <= 0) ? 0 : -1;
+    } else {
+      ret = (mport_version_cmp(baseline, &require[1]) < 0) ? 0 : -1;
+    }
+  } else if (require[0] == '>') {
+    if (require[1] == '=') {
+      ret = (mport_version_cmp(baseline, &require[2]) >= 0) ? 0 : -1;
+    } else {
+      ret = (mport_version_cmp(baseline, &require[1]) > 0) ? 0 : -1;
+    }
+  } else {
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
+  }
+  
+  return ret;
+}
+
 static void parse_version(const char *in, struct version *v) 
 {
   char *s = strdup(in);

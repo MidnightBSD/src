@@ -40,7 +40,7 @@ MPORT_PUBLIC_API int mport_install_primative(mportInstance *mport, const char *f
   int i;
   
   if ((bundle = mport_bundle_read_new()) == NULL)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   
   if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -58,10 +58,10 @@ MPORT_PUBLIC_API int mport_install_primative(mportInstance *mport, const char *f
       /* override the default prefix with the given prefix */
       free(pkg->prefix);
       if ((pkg->prefix = strdup(prefix)) == NULL) /* all hope is lost! bail */
-        return MPORT_ERR_NO_MEM;
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
 
-    if ((mport_check_install_preconditions(mport, pkg) != MPORT_OK) 
+    if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED|MPORT_PRECHECK_DEPENDS|MPORT_PRECHECK_CONFLICTS) != MPORT_OK) 
                       || 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) 
     {

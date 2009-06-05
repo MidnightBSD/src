@@ -89,10 +89,10 @@ mportBundleWrite* mport_bundle_write_new()
 int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
 {
   if ((bundle->filename = strdup(filename)) == NULL)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't dup filename");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
    
   if ((bundle->archive = archive_write_new()) == NULL) 
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate archive struct");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate archive struct");
 
   archive_write_set_compression_bzip2(bundle->archive);
   archive_write_set_format_pax(bundle->archive);
@@ -100,7 +100,7 @@ int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
   bundle->links = NULL; 
 
   if (archive_write_open_filename(bundle->archive, bundle->filename) != ARCHIVE_OK) {
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive)); 
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive)); 
   }
   
   return MPORT_OK;
@@ -117,7 +117,7 @@ int mport_bundle_write_finish(mportBundleWrite *bundle)
   int ret = MPORT_OK;
   
   if (archive_write_finish(bundle->archive) != ARCHIVE_OK)
-    ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+    ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
   free_linktable(bundle->links);      
   free(bundle->filename);
@@ -141,7 +141,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
   char buff[BUFF_SIZE];
 
   if (lstat(filename, &st) != 0) {
-    RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Unable to stat %s: %s", filename, strerror(errno));
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to stat %s: %s", filename, strerror(errno));
   }
 
   entry = archive_entry_new();
@@ -159,7 +159,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
     linklen = readlink(filename, linkdata, PATH_MAX);
     
     if (linklen < 0) 
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+      RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
       
     linkdata[linklen] = '\0';
     
@@ -177,18 +177,18 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
   }
   /* make sure we can open the file before its header is put in the archive */
   else if ((fd = open(filename, O_RDONLY)) == -1) {
-   RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+   RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
   }
     
   if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
   
   /* write the data to the archive if there is data to write */
   if (archive_entry_size(entry) > 0) {
     len = read(fd, buff, sizeof(buff));
     while (len > 0) {
       if (archive_write_data(bundle->archive, buff, len) != len) {
-        SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+        SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
         break;
       }
       len = read(fd, buff, sizeof(buff));
@@ -215,19 +215,19 @@ int mport_bundle_write_add_entry(mportBundleWrite *bundle, mportBundleRead *inbu
   size_t size, bytes_to_write;
 
   if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
   size = archive_entry_size(entry);
 
   while (size > 0) {  
     if (archive_read_data(inbundle->archive, buff, sizeof(buff)) < ARCHIVE_OK) 
-      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(inbundle->archive));
+      RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(inbundle->archive));
 
     /* don't write the whole buffer if it isn't full */
     bytes_to_write = size < sizeof(buff) ? size : sizeof(buff);
 
     if (archive_write_data(bundle->archive, buff, bytes_to_write) < 0)
-      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+      RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
     size -= bytes_to_write;
   }  
@@ -249,7 +249,7 @@ static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry
 
   if (links == NULL) {
     if ((bundle->links = calloc(1, sizeof(struct links_table))) == NULL)
-      RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate links table");
+      RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate links table");
     
     links = bundle->links;
     links->nbuckets = LINK_TABLE_SIZE;
@@ -257,7 +257,7 @@ static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry
     links->buckets  = calloc(links->nbuckets, sizeof(links->buckets[0]));
     
     if (links->buckets == NULL) {
-      RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate links table mapping");
+      RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate links table mapping");
     }
   }
 
@@ -290,7 +290,7 @@ static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry
       links->buckets  = new_buckets;
       links->nbuckets = new_size;
     } else {
-      RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't expand hard links hash table.");
+      RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't expand hard links hash table.");
     }
   }
    
@@ -330,7 +330,7 @@ static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry
   if (node != NULL)
     node->name = strdup(archive_entry_pathname(entry));
   if ((node == NULL) || (node->name == NULL))
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't add file to the links hashtable.");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't add file to the links hashtable.");
   
   if (links->buckets[hash] != NULL)
     links->buckets[hash]->previous = node;

@@ -38,26 +38,7 @@ static int mport_err;
 static char err_msg[256];
 
 /* This goes with the error codes in mport.h */
-static char *mport_err_defaults[] = {
-  NULL,
-  "Out of memory.",
-  "File I/O Error.",
-  "Malformed packing list.",
-  "SQLite error.",
-  "File not found."
-  "System call failed.",
-  "libarchive error.",
-  "Package already installed.",
-  "Package conflicts with priviously installed package.",
-  "A depend is missing.",
-  "Malformed version.",
-  "Malformed depend.",
-  "No such package.",
-  "Checksum mismatch.",
-  "Packages depend on this package.",
-  "Bundle file was malformed.",
-  "Package is not upgradable"
-};
+static char *default_error_msg = "An error occured.";
   
 
 /* mport_err_code()
@@ -96,7 +77,7 @@ int mport_set_err(int code, const char *msg)
     if (msg != NULL) {
       strlcpy(err_msg, msg, sizeof(err_msg));
     } else {
-      strlcpy(err_msg, mport_err_defaults[code], sizeof(mport_err_defaults[code]));
+      strlcpy(err_msg, default_error_msg, sizeof(err_msg));
     }
   }
   return code;

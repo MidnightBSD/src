@@ -47,7 +47,7 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
   mport_pkgmeta_logevent(mport, pkg, "Begining update");
 
   if ((fd = mkstemp(tmpfile)) == -1) {
-    RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't make tmp file: %s", strerror(errno));
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
   }
   
   close(fd);
@@ -130,35 +130,35 @@ static int build_create_extras_copy_metafiles(mportInstance *mport, mportPackage
   char file[FILENAME_MAX];
   
   if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_MTREE_FILE) < 0)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
    
   if (mport_file_exists(file)) {
     if ((extra->mtree = strdup(file)) == NULL) 
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
     
   if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_INSTALL_FILE) < 0)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
    
   if (mport_file_exists(file)) {
     if ((extra->pkginstall = strdup(file)) == NULL) 
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
     
   if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_DEINSTALL_FILE) < 0)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
    
   if (mport_file_exists(file)) {
     if ((extra->pkgdeinstall = strdup(file)) == NULL) 
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
     
   if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_MESSAGE_FILE) < 0)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
    
   if (mport_file_exists(file)) {
     if ((extra->pkgmessage = strdup(file)) == NULL) 
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   }
 
   
@@ -181,15 +181,15 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
       count = sqlite3_column_int(stmt, 0);
       break;
     case SQLITE_DONE:
-      RETURN_ERROR(MPORT_ERR_INTERNAL, "SQLite returned no rows for a COUNT(*) select.");
+      RETURN_ERROR(MPORT_ERR_FATAL, "SQLite returned no rows for a COUNT(*) select.");
       break;
     default:
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
   
   if ((extra->depends = (char **)calloc(count + 1, sizeof(char *))) == NULL)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   
   if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_pkgversion, depend_port FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -200,7 +200,7 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
     
     if (ret == SQLITE_ROW) {
       if (asprintf(&entry, "%s:%s:%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 1)) == -1)
-        return MPORT_ERR_NO_MEM;  
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");  
         
       extra->depends[i] = entry;
       i++;
@@ -209,7 +209,7 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
       break;
     } else {
       sqlite3_finalize(stmt);
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
     }
   }
   

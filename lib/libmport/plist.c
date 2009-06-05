@@ -84,7 +84,7 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
          wack the last char in the string. */
       length++;
       if ((line = realloc(line, length)) == NULL) {
-        return MPORT_ERR_NO_MEM;
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
       }
     }
     
@@ -99,16 +99,15 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
     mportAssetListEntry *entry = (mportAssetListEntry *)malloc(sizeof(mportAssetListEntry));
     
     if (entry == NULL) {
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
        
     if (*line == CMND_MAGIC_COOKIE) {
       line++;
       char *cmnd = strsep(&line, " \t");
       
-      if (cmnd == NULL) {
-        return MPORT_ERR_MALFORMED_PLIST;
-      }   
+      if (cmnd == NULL) 
+        RETURN_ERROR(MPORT_ERR_FATAL, "Malformed plist file.");
 
       entry->type = parse_command(cmnd);      
     } else {
@@ -132,7 +131,7 @@ MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
       
       entry->data = (char  *)malloc(strlen(line) + 1);
       if (entry->data == NULL) {
-        return MPORT_ERR_NO_MEM;
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
       }
 
       char *pos = line + strlen(line) - 1;

@@ -36,33 +36,32 @@ static int check_depends(mportInstance *mport, mportPackageMeta *);
 static int check_if_older_installed(mportInstance *, mportPackageMeta *);
 
 
-/* check to see if the package is already installed, if it has any
- * conflicts, and that all its depends are installed.
+/* Run the checks requested by the flags given.
+ *
+ * Flags:
+ *   MPORT_PRECHECK_INSTALLED  -- Fail if the package is installed
+ *   MPORT_PRECHECK_UPGRADABLE -- Fail if an older version is not installed
+ *   MPORT_PRECHECK_CONFLICTS  -- Fail if the package has a conflict
+ *   MPORT_PRECHECK_DEPENDS    -- Fail if the the depends are no resolved
+ *
+ * The checks are run in the order listed above.  The first failure
+ * encountered is the one reported.   
+ *
+ * This function expects that the stub database for the given package is
+ * connected.
  */
-int mport_check_install_preconditions(mportInstance *mport, mportPackageMeta *pack) 
+ 
+int mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, int flags) 
 {
-  if (check_if_installed(mport->db, pack) != MPORT_OK)
+  if (flags & MPORT_PRECHECK_INSTALLED && check_if_installed(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_conflicts(mport->db, pack) != MPORT_OK)
+  if (flags & MPORT_PRECHECK_UPGRADEABLE && check_if_older_installed(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_depends(mport, pack) != MPORT_OK)
+  if (flags & MPORT_PRECHECK_CONFLICTS && check_conflicts(mport->db, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  if (flags & MPORT_PRECHECK_DEPENDS && check_depends(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
-  return MPORT_OK;
-}
-
-
-int mport_check_update_preconditions(mportInstance *mport, mportPackageMeta *pack) 
-{
-  if (
-    (check_if_older_installed(mport, pack) != MPORT_OK)
-                        ||
-    (check_conflicts(mport->db, pack) != MPORT_OK)
-                        ||
-    (check_depends(mport, pack) != MPORT_OK)
-  )
-      RETURN_CURRENT_ERROR;
-  
   return MPORT_OK;
 }
 
@@ -84,14 +83,14 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
       /* Row was found */
       inst_version = sqlite3_column_text(stmt, 0);
       
-      SET_ERRORX(MPORT_ERR_ALREADY_INSTALLED, "%s (version %s) is already installed.", pack->name, inst_version);
+      SET_ERRORX(MPORT_ERR_FATAL, "%s (version %s) is already installed.", pack->name, inst_version);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
 
       break;
     default:
       /* Some sort of sqlite error */
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
   }
@@ -116,14 +115,14 @@ static int check_conflicts(sqlite3 *db, mportPackageMeta *pack)
         inst_name    = sqlite3_column_text(stmt, 0);
         inst_version = sqlite3_column_text(stmt, 1);
         
-        SET_ERRORX(MPORT_ERR_CONFLICTS, "Installed package %s-%s conflicts with %s", inst_name, inst_version, pack->name);
+        SET_ERRORX(MPORT_ERR_FATAL, "Installed package %s-%s conflicts with %s", inst_name, inst_version, pack->name);
         sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
     } else if (ret == SQLITE_DONE) {
       /* No conflicts */
       break;
     } else {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -158,7 +157,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       depend_version = sqlite3_column_text(stmt, 1);
       
       if (sqlite3_bind_text(lookup, 1, depend_pkg, -1, SQLITE_STATIC) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         sqlite3_finalize(lookup); sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
       }
@@ -171,31 +170,13 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
           if (depend_version == NULL)
             /* no minimum version */
             break;
-
-          /* break out the compare op at the front of the version string */          
-          if (depend_version[0] == '<') {
-            if (depend_version[1] == '=') {
-              depend_version += 2;
-              ok = (mport_version_cmp(inst_version, depend_version) <= 0);
-            } else {
-              depend_version++;
-              ok = (mport_version_cmp(inst_version, depend_version) < 0);
-            }
-          } else if (depend_version[0] == '>') {
-            if (depend_version[1] == '=') {
-              depend_version += 2;
-              ok = (mport_version_cmp(inst_version, depend_version) >= 0);
-            } else {
-              depend_version++;
-              ok = (mport_version_cmp(inst_version, depend_version) > 0);
-            }
-          } else {
-            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend version for %s: %s", depend_pkg, depend_version);
-          }
-
-          if (!ok) {
-            SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
+            
+          ok = mport_version_require_check((char *)inst_version, (char *)depend_version);
+          
+          if (ok > 0) {
+            RETURN_CURRENT_ERROR;
+          } else if (ok == -1) {
+            SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
             sqlite3_finalize(lookup); sqlite3_finalize(stmt);
             RETURN_CURRENT_ERROR;
           }
@@ -204,12 +185,12 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
         case SQLITE_DONE:
           /* this depend isn't installed. */
            /* this depend isn't installed. */
-           SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
+           SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
            RETURN_CURRENT_ERROR;
           break;
         default:
-          SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+          SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
           sqlite3_finalize(lookup); sqlite3_finalize(stmt);
           RETURN_CURRENT_ERROR;
       }
@@ -220,7 +201,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       /* No more depends to check. */
       break;
     } else {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(lookup); sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -243,10 +224,10 @@ static int check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
       ret = MPORT_OK;
       break;
     case SQLITE_DONE:
-      ret = SET_ERRORX(MPORT_ERR_NOT_UPGRADABLE, "No older version of %s installed", pkg->name);
+      ret = SET_ERRORX(MPORT_ERR_FATAL, "No older version of %s installed", pkg->name);
       break;
     default:
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
   

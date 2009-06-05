@@ -36,6 +36,7 @@
 #define DIAG(...) 
 #endif
 
+#include <osreldate.h>
 
 #define MPORT_PUBLIC_API 
 
@@ -44,10 +45,15 @@
 
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
+void mport_call_progress_init_cb(mportInstance *, const char *, ...);
+
 
 /* precondition checking */
-int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);
-int mport_check_update_preconditions(mportInstance *, mportPackageMeta *);
+#define MPORT_PRECHECK_INSTALLED   1
+#define MPORT_PRECHECK_DEPENDS     2
+#define MPORT_PRECHECK_CONFLICTS   4
+#define MPORT_PRECHECK_UPGRADEABLE 8
+int mport_check_preconditions(mportInstance *, mportPackageMeta *, int);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
@@ -74,6 +80,8 @@ int mport_chdir(mportInstance *, const char *);
 int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
 int mport_run_asset_exec(mportInstance *mport, const char *, const char *, const char *);
+void mport_free_vec(void *);
+
 
 
 /* Mport Bundle (a file containing packages) */
@@ -112,9 +120,9 @@ int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPacka
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 
-/* sqlite version compare function */
+/* version compare functions */
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
-
+int mport_version_require_check(char *, char *);
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
@@ -133,16 +141,54 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_DEINSTALL_FILE	"pkg-deinstall"
 #define MPORT_MESSAGE_FILE	"pkg-message"
 
-
 /* Instance files */
 #define MPORT_INST_DIR 		"/var/db/mport"
 #define MPORT_MASTER_DB_FILE	"/var/db/mport/master.db"
 #define MPORT_INST_INFRA_DIR	"/var/db/mport/infrastructure"
+#define MPORT_INDEX_FILE	"/var/db/mport/index.db"
+#define MPORT_FETCH_STAGING_DIR "/var/db/mport/downloads"
+
+
+#if defined(__i386__)
+#define MPORT_ARCH "i386"
+#elif defined(__amd64__)
+#define MPORT_ARCH "amd64"
+#elif defined(__sparc64__)
+#define MPORT_ARCH "sparc64"
+#else
+#error "Unable to detect arch!"
+#endif
+
+#if __MidnightBSD_version >= 3000
+#define MPORT_OSVERSION "0.3"
+#elif __MidnightBSD_version < 3000 && __MidnightBSD_version >= 2000
+#define MPORT_OSVERSION "0.2"
+#else
+#error "libmport only supports MidnightBSD versions 0.2 and greater."
+#endif
+
+
+/* fetch stuff */
+#define MPORT_URL_PATH			MPORT_ARCH "/" MPORT_OSVERSION
+#define MPORT_INDEX_URL_PATH		MPORT_URL_PATH "/index.db.bz2"
+#define MPORT_BOOTSTRAP_INDEX_URL 	"http://index.mport.midnightbsd.org/" MPORT_URL_PATH "/index.db.bz2"
+
+int mport_fetch_index(mportInstance *);
+int mport_fetch_bootstrap_index(mportInstance *);
+int mport_fetch_bundle(mportInstance *, const char *);
+
+/* a few index things */
+int mport_index_get_mirror_list(mportInstance *, char ***);
+
+#define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", func);
+#define MPORT_MAX_INDEX_AGE 3600 * 24 * 7 /* two weeks */
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"
 #define MPORT_SH_BIN		"/bin/sh"
 #define MPORT_CHROOT_BIN	"/usr/sbin/chroot"
+
+#define MPORT_URL_MAX		512
 
 
 #endif /* _MPORT_PRIV_H_ */

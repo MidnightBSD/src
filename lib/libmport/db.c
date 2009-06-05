@@ -53,12 +53,12 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
   va_end(args);
   
   if (sql == NULL)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate memory for sql statement");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
   
 
   if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
     sqlite3_free(sql);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
   }
   
   sqlite3_free(sql);
@@ -84,10 +84,10 @@ int mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
   va_end(args);
   
   if (sql == NULL)
-    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate memory for sql statement");
+    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate memory for sql statement");
   
   if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
-    SET_ERRORX(MPORT_ERR_SQLITE, "sql error preparing '%s': %s", sql, sqlite3_errmsg(db));
+    SET_ERRORX(MPORT_ERR_FATAL, "sql error preparing '%s': %s", sql, sqlite3_errmsg(db));
     sqlite3_free(sql);
     RETURN_CURRENT_ERROR;
   }
