@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/error.c,v 1.7 2008/04/26 17:59:26 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/install.c,v 1.1 2009/06/05 00:02:21 laffer1 Exp $
  */
 
 
@@ -168,8 +168,8 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
           
           if (check == -1) {
             /* we need to upgrade */
-            if (mport_upgrade(mport, dname) != MPORT_OK)
-              RETURN_CURRENT_ERROR;
+           /* if (mport_upgrade(mport, dname) != MPORT_OK)
+              RETURN_CURRENT_ERROR; */
           } else if (check > 0) {
             RETURN_CURRENT_ERROR;
           }
