@@ -93,7 +93,8 @@ int main(int argc, char *argv[])
   }
 
   if (packs == NULL) {
-    exit(0);
+    warnx("No packages installed matching '%s'", arg);
+    exit(3);
   }
   
   if (packs[1] != NULL) {

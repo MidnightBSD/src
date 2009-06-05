@@ -82,17 +82,17 @@ int main(int argc, char *argv[])
   
   if (mport_instance_init(mport, NULL) != MPORT_OK) {
     warnx("%s", mport_err_string());
-    exit(10);
+    exit(1);
   }
 
   if (mport_pkgmeta_search_master(mport, &packs, where, arg) != MPORT_OK) {
     warnx("%s", mport_err_string());
-    exit(10);
+    exit(1);
   }
   
   if (packs == NULL) {
     (void)printf("No packages installed matching '%s'\n", arg);
-    exit(2);
+    exit(1);
   }
   
 
