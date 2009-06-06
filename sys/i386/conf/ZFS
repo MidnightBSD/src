@@ -1,0 +1,10 @@
+# ZFS - A kernel with options to facilitate use of ZFS.
+#       requires 2GB+ RAM
+#
+# $MidnightBSD: src/sys/i386/conf/ALTQ,v 1.1 2006/09/27 12:58:48 archite Exp $
+
+include GENERIC
+
+ident		ZFS-GENERIC
+
+options		KVA_PAGES=512
