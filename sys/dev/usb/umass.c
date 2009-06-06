@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.4 2008/12/02 22:43:15 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 MAEKAWA Masahide <bishop@rr.iij4u.or.jp>,
  *		      Nick Hibma <n_hibma@freebsd.org>
@@ -374,6 +374,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_CENTURY, USB_PRODUCT_CENTURY_EX35QUAT, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  FORCE_SHORT_INQUIRY | NO_START_STOP | IGNORE_RESIDUE
+	},
+	{ USB_VENDOR_CYPRESS, USB_PRODUCT_CYPRESS_XX6830, RID_WILDCARD,
+		UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+		NO_GETMAXLUN | NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_DESKNOTE, USB_PRODUCT_DESKNOTE_UCR_61S2B, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
