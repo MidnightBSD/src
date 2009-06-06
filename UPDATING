@@ -1,5 +1,20 @@
 Updating Information for MidnightBSD users
 
+20090606:
+	Remove PCC from the base system.  This compiler will not work
+	as a system compiler for us as we've got some userland investment
+	in C++ code and may have Objective-C in the future.  We're stuck
+	with a solution that supports these three languages at a minimum.
+
+	I had wanted to keep it as an optional compiler because it is
+	fast, however too many users want to try to use it for the base
+	system which makes no sense.
+
+	A hack was added for Cypress based usb hard drive enclosures to
+	the kernel.  This should cut down on commands it claims to support
+	but does not (at the cam layer).  Found while testing ZFS on
+	an external device.
+
 20090520:
 	The powerd daemon no longer starts automatically to improve
 	compatibility with many systems.  However, there is a new
@@ -723,4 +738,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.62 2009/05/02 19:07:25 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.63 2009/05/20 21:56:43 laffer1 Exp $
