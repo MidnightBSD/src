@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.5 2009/06/06 03:50:38 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.6 2009/06/06 04:01:35 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 MAEKAWA Masahide <bishop@rr.iij4u.or.jp>,
  *		      Nick Hibma <n_hibma@freebsd.org>
@@ -324,6 +324,12 @@ struct umass_devdescr_t {
 	 * sector number.
 	 */
 #	define READ_CAPACITY_OFFBY1	0x2000
+	/*
+	 * Handle failing SCSI synchronize cache commands for
+	 * IDE Bridges since it cannnot be done in the CAM layer.
+	 * Note this fakes a success.
+	 */
+#	define NO_SYNCHRONIZE_CACHE	0x4000
 };
 
 static struct umass_devdescr_t umass_devdescrs[] = {
@@ -377,7 +383,7 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	},
 	{ USB_VENDOR_CYPRESS, USB_PRODUCT_CYPRESS_XX6830XX, RID_WILDCARD,
 		UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
-		NO_GETMAXLUN
+		NO_GETMAXLUN | NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_DESKNOTE, USB_PRODUCT_DESKNOTE_UCR_61S2B, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
