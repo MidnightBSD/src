@@ -1,6 +1,6 @@
 #	From: @(#)Makefile	8.3 (Berkeley) 1/7/94
 # $FreeBSD: src/usr.bin/Makefile,v 1.279.2.1 2005/08/15 18:34:20 cperciva Exp $
-# $MidnightBSD: src/usr.bin/Makefile,v 1.25 2009/04/03 05:14:53 laffer1 Exp $
+# $MidnightBSD: src/usr.bin/Makefile,v 1.26 2009/05/02 19:30:54 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -152,7 +152,6 @@ SUBDIR=	alias \
 	passwd \
 	paste \
 	pathchk \
-	${_pcc} \
 	perl \
 	pr \
 	printenv \
@@ -313,7 +312,6 @@ _usbhidctl=	usbhidctl
 _ncplist=	ncplist
 _ncplogin=	ncplogin
 .endif
-_pcc=		pcc
 _smbutil=	smbutil
 .endif
 
