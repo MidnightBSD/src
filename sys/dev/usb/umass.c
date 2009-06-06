@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.6 2009/06/06 04:01:35 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/dev/usb/umass.c,v 1.7 2009/06/06 04:34:08 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 MAEKAWA Masahide <bishop@rr.iij4u.or.jp>,
  *		      Nick Hibma <n_hibma@freebsd.org>
@@ -2884,6 +2884,15 @@ umass_cam_action(struct cam_sim *sim, union ccb *ccb)
 
 				memcpy(csio->data_ptr, &fake_inq_data,
 				    sizeof(fake_inq_data));
+				csio->scsi_status = SCSI_STATUS_OK;
+				ccb->ccb_h.status = CAM_REQ_CMP;
+				xpt_done(ccb);
+				return;
+			}
+			if ((sc->quirks & NO_SYNCHRONIZE_CACHE) &&
+			    rcmd[0] == SYNCHRONIZE_CACHE) {
+				struct ccb_scsiio *csio = &ccb->csio;
+
 				csio->scsi_status = SCSI_STATUS_OK;
 				ccb->ccb_h.status = CAM_REQ_CMP;
 				xpt_done(ccb);
