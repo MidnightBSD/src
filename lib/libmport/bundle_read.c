@@ -129,6 +129,9 @@ int mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep
     if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
       RETURN_CURRENT_ERROR;     
  
+    if (entry == NULL)
+      break;
+ 
     file = archive_entry_pathname(entry);
        
     if (*file == '+') {
@@ -178,6 +181,9 @@ int mport_bundle_read_skip_metafiles(mportBundleRead *bundle)
  * mport_bundle_read_next_entry(bundle, &entry)
  *
  * sets entry to the next file entry in the bundle.
+ *
+ * If the end the archive is reached, then this function will return MPORT_OK
+ * and entry will be set to NULL.
  */
 int mport_bundle_read_next_entry(mportBundleRead *bundle, struct archive_entry **entryp)
 {
@@ -199,9 +205,12 @@ int mport_bundle_read_next_entry(mportBundleRead *bundle, struct archive_entry *
       RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
     /* ret was warn or OK, we're done */
+    if (ret == ARCHIVE_EOF) 
+      *entryp = NULL;  
+
     break;
   }
-  
+    
   return MPORT_OK;
 }  
 
