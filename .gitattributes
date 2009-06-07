@@ -26743,6 +26743,8 @@ secure/lib/libcrypto/man/x509.3 -text
 secure/lib/libcrypto/opensslconf-amd64.h -text
 secure/lib/libcrypto/opensslconf-i386.h -text
 secure/lib/libcrypto/opensslconf-sparc64.h -text
+secure/lib/libnetpgp/Makefile -text
+secure/lib/libnetpgp/config.h -text
 secure/lib/libssh/Makefile -text
 secure/lib/libssl/Makefile -text
 secure/lib/libssl/Makefile.man -text
