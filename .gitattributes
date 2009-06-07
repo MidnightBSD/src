@@ -26837,6 +26837,7 @@ secure/usr.bin/bdes/Makefile -text
 secure/usr.bin/bdes/bdes.1 -text
 secure/usr.bin/bdes/bdes.c -text
 secure/usr.bin/bdes/bdes.ps -text
+secure/usr.bin/netpgp/Makefile -text
 secure/usr.bin/openssl/Makefile -text
 secure/usr.bin/openssl/Makefile.man -text
 secure/usr.bin/openssl/man/CA.pl.1 -text
