@@ -1,6 +1,6 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 # $FreeBSD: src/lib/Makefile,v 1.205.2.1 2005/07/28 13:47:18 rwatson Exp $
-# $MidnightBSD: src/lib/Makefile,v 1.9 2008/10/31 20:32:46 laffer1 Exp $
+# $MidnightBSD: src/lib/Makefile,v 1.10 2009/05/31 17:51:52 laffer1 Exp $
 
 .include <bsd.own.mk>
 
@@ -25,6 +25,7 @@
 # libypclnt must be built before libpam.
 # libkse must be built before libsqlite3
 # libbz2 must be built before libarchive
+# libmport must be built after libsqlite3
 # Otherwise, the SUBDIR list should be in alphabetical order.
 
 SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf libkvm msun libmd \
@@ -35,11 +36,11 @@ SUBDIR=	${_csu} libc libbsm libcom_err libcrypt libelf libkvm msun libmd \
 	libedit libexpat libfetch libftpio libgeom ${_libgpib} \
 	${_libgssapi} libipsec \
 	libipx libkiconv libmagic libmemstat ${_libmilter} ${_libmp} \
-	libmport ${_libncp} ${_libngatm} libopie libpam libpcap \
+	${_libncp} ${_libngatm} libopie libpam libpcap \
 	libpmc ${_libkse} librt ${_libsdp} ${_libsm} ${_libsmb} ${_libsmdb} \
 	${_libsmutil} libstand libtelnet ${_libthr} libthread_db libufs \
 	libugidfw ${_libusbhid} ${_libvgl} libwrap liby libz ${_bind} \
-	libsqlite3
+	libsqlite3 libmport
 
 .if exists(${.CURDIR}/csu/${MACHINE_ARCH}-elf)
 _csu=csu/${MACHINE_ARCH}-elf
