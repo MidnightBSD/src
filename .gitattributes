@@ -24402,6 +24402,10 @@ lib/libfetch/ftp.c -text
 lib/libfetch/ftp.errors -text
 lib/libfetch/http.c -text
 lib/libfetch/http.errors -text
+lib/libffi/Makefile -text
+lib/libffi/ffi.h -text
+lib/libffi/fficonfig.h -text
+lib/libffi/libffi.pc -text
 lib/libftpio/Makefile -text
 lib/libftpio/ftp.errors -text
 lib/libftpio/ftpio.3 -text

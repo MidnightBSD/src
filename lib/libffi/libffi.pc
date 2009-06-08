@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include/libffi
+
+Name: libffi
+Description: Library supporting Foreign Function Interfaces
+Version: 3.0.8
+Libs: -L${libdir} -lffi
+Cflags: -I${includedir}
