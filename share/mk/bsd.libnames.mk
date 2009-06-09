@@ -1,5 +1,5 @@
 # $FreeBSD: src/share/mk/bsd.libnames.mk,v 1.94.2.1 2005/07/24 16:17:25 rwatson Exp $
-# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.5 2008/10/14 21:13:54 laffer1 Exp $
+# $MidnightBSD: src/share/mk/bsd.libnames.mk,v 1.6 2009/06/08 00:47:50 laffer1 Exp $
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -83,6 +83,7 @@ LIBMENU?=	${DESTDIR}${LIBDIR}/libmenu.a
 LIBMILTER?=	${DESTDIR}${LIBDIR}/libmilter.a
 .endif
 LIBMP?=		${DESTDIR}${LIBDIR}/libmp.a
+LIBMPORT?=	${DESTDIR}${LIBDIR}/libmport.a
 .if ${MK_NCP} != "no"
 LIBNCP?=	${DESTDIR}${LIBDIR}/libncp.a
 .endif
@@ -118,7 +119,6 @@ LIBPAM+=	${LIBYPCLNT}
 MINUSLPAM+=	-lypclnt
 .endif
 .endif
-
 LIBPANEL?=	${DESTDIR}${LIBDIR}/libpanel.a
 LIBPCAP?=	${DESTDIR}${LIBDIR}/libpcap.a
 LIBPMC?=	${DESTDIR}${LIBDIR}/libpmc.a
