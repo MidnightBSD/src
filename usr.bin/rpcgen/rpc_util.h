@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.bin/rpcgen/rpc_util.h,v 1.6 2002/07/21 12:55:04 charnier Exp $
+ * $FreeBSD: src/usr.bin/rpcgen/rpc_util.h,v 1.12 2005/11/13 21:17:24 dwmalone Exp $
  */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -80,7 +80,7 @@ struct list {
 typedef struct list list;
 
 struct xdrfunc {
-	char *name;
+	const char *name;
 	int pointerp;
 	struct xdrfunc *next;
 };
@@ -97,8 +97,8 @@ struct commandline {
 	int Ssflag;		/* produce server sample code */
 	int Scflag;		/* produce client sample code */
 	int makefileflag;       /* Generate a template Makefile */
-	char *infile;		/* input module name */
-	char *outfile;		/* output module name */
+	const char *infile;	/* input module name */
+	const char *outfile;	/* output module name */
 };
 
 #define	PUT 1
@@ -111,8 +111,9 @@ struct commandline {
 extern char curline[MAXLINESIZE];
 extern char *where;
 extern int linenum;
+extern int tirpc_socket;
 
-extern char *infilename;
+extern const char *infilename;
 extern FILE *fout;
 extern FILE *fin;
 
@@ -131,10 +132,9 @@ extern int pmflag;
 extern int tblflag;
 extern int logflag;
 extern int newstyle;
-extern int Cflag;     /* ANSI-C/C++ flag */
 extern int CCflag;     /* C++ flag */
 extern int tirpcflag; /* flag for generating tirpc code */
-extern int inline; /* if this is 0, then do not generate inline code */
+extern int inline_size; /* if this is 0, then do not generate inline code */
 extern int mtflag;
 
 /*
@@ -151,67 +151,80 @@ extern pid_t childpid;
 /*
  * rpc_util routines
  */
-void reinitialize();
-void crash();
-void add_type(int len, char *type);
-void storeval();
+void reinitialize(void);
+void crash(void);
+void add_type(int len, const char *type);
+void storeval(list **lstp, definition *val);
 void *xmalloc(size_t size);
 void *xrealloc(void *ptr, size_t size);
-char *xstrdup(const char *str);
+char *xstrdup(const char *);
+char *make_argname(const char *pname, const char *vname);
 
 #define	STOREVAL(list,item)	\
 	storeval(list,item)
 
-definition *findval();
+definition *findval(list *lst, const char *val, int (*cmp)(definition *, const char *));
 
 #define	FINDVAL(list,item,finder) \
 	findval(list, item, finder)
 
-char *fixtype();
-char *stringfix();
-char *locase();
-void pvname_svc();
-void pvname();
-void ptype();
-int isvectordef();
-int streq();
-void error();
-void expected1();
-void expected2();
-void expected3();
-void tabify();
-void record_open();
-bas_type *find_type();
+const char *fixtype(const char *type);
+const char *stringfix(const char *type);
+char *locase(const char *str);
+void pvname_svc(const char *pname, const char *vnum);
+void pvname(const char *pname, const char *vnum);
+void ptype(const char *prefix, const char *type, int follow);
+int isvectordef(const char *type, relation rel);
+int streq(const char *a, const char *b);
+void error(const char *msg);
+void expected1(tok_kind exp1);
+void expected2(tok_kind exp1, tok_kind exp2);
+void expected3(tok_kind exp1, tok_kind exp2, tok_kind exp3);
+void tabify(FILE *f, int tab);
+void record_open(const char *file);
+bas_type *find_type(const char *type);
+
 /*
  * rpc_cout routines
  */
-void cprint();
-void emit();
+void emit(definition *def);
 
 /*
  * rpc_hout routines
  */
-void print_datadef();
-void print_funcdef();
-void print_xdr_func_def();
+void pdeclaration(const char *name, declaration *dec, int tab, const char *separator);
+void print_datadef(definition *def, int headeronly);
+void print_funcdef(definition *def, int headeronly);
+void print_xdr_func_def(const char* name, int pointerp);
 
 /*
  * rpc_svcout routines
  */
-void write_most();
-void write_register();
-void write_rest();
-void write_programs();
-void write_svc_aux();
-void write_inetd_register();
-void write_netid_register();
-void write_nettype_register();
+void write_most(const char *infile, int netflag, int nomain);
+void write_rest(void);
+void write_programs(const char *storage);
+void write_svc_aux(int nomain);
+void write_inetd_register(const char *transp);
+void write_netid_register(const char *transp);
+void write_nettype_register(const char *transp);
+int nullproc(proc_list *proc);
+
 /*
  * rpc_clntout routines
  */
-void write_stubs();
+void write_stubs(void);
+void printarglist(proc_list *proc, const char *result, const char *addargname,
+    const char *addargtype);
 
 /*
  * rpc_tblout routines
  */
-void write_tables();
+void write_tables(void);
+
+/*
+ * rpc_sample routines
+ */
+void write_sample_svc(definition *);
+int write_sample_clnt(definition *);
+void write_sample_clnt_main(void);
+void add_sample_msg(void);

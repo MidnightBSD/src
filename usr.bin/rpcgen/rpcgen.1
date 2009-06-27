@@ -1,8 +1,8 @@
 .\" @(#)rpcgen.1 1.35 93/06/02 SMI
-.\" $FreeBSD: src/usr.bin/rpcgen/rpcgen.1,v 1.22 2005/01/15 11:20:51 ru Exp $
+.\" $FreeBSD: src/usr.bin/rpcgen/rpcgen.1,v 1.24 2005/09/02 18:37:34 stefanf Exp $
 .\" Copyright 1985-1993 Sun Microsystems, Inc.
 .\"
-.Dd March 28, 1993
+.Dd September 2, 2005
 .Dt RPCGEN 1
 .Os
 .Sh NAME
@@ -258,11 +258,8 @@ Compile into
 .Tn XDR
 routines.
 .It Fl C
-Generate header and stub files which can be used with
-.Tn ANSI
-C compilers.
-Headers generated with this flag can also be
-used with C++ programs.
+Generate ANSI C code.
+This is always done, the flag is only provided for backwards compatibility.
 .It Fl D Ns Ar name
 .It Fl D Ns Ar name=value
 .\".It Fl D Ns Ar name Ns Op Ar =value
@@ -345,7 +342,7 @@ To create a server that exits immediately upon servicing a request,
 use
 .Fl K Ar 0 .
 To create a server that never exits, the appropriate argument is
-.Fl k Ar -1 .
+.Fl K Ar -1 .
 .Pp
 When monitoring for a server,
 some portmonitors

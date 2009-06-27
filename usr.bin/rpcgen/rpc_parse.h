@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.bin/rpcgen/rpc_parse.h,v 1.5 2002/07/21 12:55:04 charnier Exp $
+ * $FreeBSD: src/usr.bin/rpcgen/rpc_parse.h,v 1.7 2005/11/13 21:17:24 dwmalone Exp $
  */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -76,7 +76,7 @@ enum defkind {
 };
 typedef enum defkind defkind;
 
-typedef char *const_def;
+typedef const char *const_def;
 
 enum relation {
 	REL_VECTOR,	/* fixed length array */
@@ -87,16 +87,16 @@ enum relation {
 typedef enum relation relation;
 
 struct typedef_def {
-	char *old_prefix;
-	char *old_type;
+	const char *old_prefix;
+	const char *old_type;
 	relation rel;
-	char *array_max;
+	const char *array_max;
 };
 typedef struct typedef_def typedef_def;
 
 struct enumval_list {
-	char *name;
-	char *assignment;
+	const char *name;
+	const char *assignment;
 	struct enumval_list *next;
 };
 typedef struct enumval_list enumval_list;
@@ -107,11 +107,11 @@ struct enum_def {
 typedef struct enum_def enum_def;
 
 struct declaration {
-	char *prefix;
-	char *type;
-	char *name;
+	const char *prefix;
+	const char *type;
+	const char *name;
 	relation rel;
-	char *array_max;
+	const char *array_max;
 };
 typedef struct declaration declaration;
 
@@ -127,7 +127,7 @@ struct struct_def {
 typedef struct struct_def struct_def;
 
 struct case_list {
-	char *case_name;
+	const char *case_name;
 	int contflag;
 	declaration case_decl;
 	struct case_list *next;
@@ -149,32 +149,32 @@ struct arg_list {
 typedef struct arg_list arg_list;
 
 struct proc_list {
-	char *proc_name;
-	char *proc_num;
+	const char *proc_name;
+	const char *proc_num;
 	arg_list args;
 	int arg_num;
-	char *res_type;
-	char *res_prefix;
+	const char *res_type;
+	const char *res_prefix;
 	struct proc_list *next;
 };
 typedef struct proc_list proc_list;
 
 struct version_list {
-	char *vers_name;
-	char *vers_num;
+	const char *vers_name;
+	const char *vers_num;
 	proc_list *procs;
 	struct version_list *next;
 };
 typedef struct version_list version_list;
 
 struct program_def {
-	char *prog_num;
+	const char *prog_num;
 	version_list *versions;
 };
 typedef struct program_def program_def;
 
 struct definition {
-	char *def_name;
+	const char *def_name;
 	defkind def_kind;
 	union {
 		const_def co;
@@ -187,12 +187,12 @@ struct definition {
 };
 typedef struct definition definition;
 
-definition *get_definition();
+definition *get_definition(void);
 
 
 struct bas_type
 {
-  char *name;
+  const char *name;
   int length;
   struct bas_type *next;
 };

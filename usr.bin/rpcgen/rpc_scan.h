@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/usr.bin/rpcgen/rpc_scan.h,v 1.5 2002/07/21 12:55:04 charnier Exp $
+ * $FreeBSD: src/usr.bin/rpcgen/rpc_scan.h,v 1.7 2005/11/13 21:17:24 dwmalone Exp $
  */
 /*
  * Sun RPC is a product of Sun Microsystems, Inc. and is provided for
@@ -119,7 +119,7 @@ typedef enum tok_kind tok_kind;
  */
 struct token {
 	tok_kind kind;
-	char *str;
+	const char *str;
 };
 typedef struct token token;
 
@@ -127,10 +127,10 @@ typedef struct token token;
 /*
  * routine interface
  */
-void scan();
-void scan2();
-void scan3();
-void scan_num();
-void peek();
-int peekscan();
-void get_token();
+void scan(tok_kind expect, token *tokp);
+void scan2(tok_kind expect1, tok_kind expect2, token *tokp);
+void scan3(tok_kind expect1, tok_kind expect2, tok_kind expect3, token *tokp);
+void scan_num(token *tokp);
+void peek(token *tokp);
+int peekscan(tok_kind expect, token *tokp);
+void get_token(token *tokp);

@@ -35,7 +35,7 @@ static char sccsid[] = "@(#)rpc_tblout.c 1.4 89/02/22 (C) 1988 SMI";
 #endif
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.bin/rpcgen/rpc_tblout.c,v 1.9 2005/05/31 20:00:29 stefanf Exp $");
+__FBSDID("$FreeBSD: src/usr.bin/rpcgen/rpc_tblout.c,v 1.12 2005/11/13 21:17:24 dwmalone Exp $");
 
 /*
  * rpc_tblout.c, Dispatch table outputter for the RPC protocol compiler
@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: src/usr.bin/rpcgen/rpc_tblout.c,v 1.9 2005/05/31 20:00:29 st
 #include <stdio.h>
 #include <string.h>
 #include "rpc_parse.h"
+#include "rpc_scan.h"
 #include "rpc_util.h"
 
 #define TABSIZE		8
@@ -63,12 +64,11 @@ static char null_entry[] = "\n\t(char *(*)())0,\n\
 
 static char tbl_nproc[] = "int %s_nproc =\n\tsizeof(%s_table)/sizeof(%s_table[0]);\n\n";
 
-extern int nullproc( proc_list * );
 static void write_table( definition * );
-static void printit( char *, char * );
+static void printit(const  char *, const char *);
 
 void
-write_tables()
+write_tables(void)
 {
 	list *l;
 	definition *def;
@@ -83,8 +83,7 @@ write_tables()
 }
 
 static void
-write_table(def)
-	definition *def;
+write_table(definition *def)
 {
 	version_list *vp;
 	proc_list *proc;
@@ -121,7 +120,7 @@ write_table(def)
 			f_print(fout, "\n\t(char *(*)())RPCGEN_ACTION(");
 
 			/* routine to invoke */
-			if( Cflag && !newstyle )
+			if( !newstyle )
 			  pvname_svc(proc->proc_name, vp->vers_num);
 			else {
 			  if( newstyle )
@@ -148,9 +147,7 @@ write_table(def)
 }
 
 static void
-printit(prefix, type)
-	char *prefix;
-	char *type;
+printit(const char *prefix, const char *type)
 {
 	int len;
 	int tabs;
