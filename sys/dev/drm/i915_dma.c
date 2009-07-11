@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/i915_dma.c,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /* i915_dma.c -- DMA support for the I915 -*- linux-c -*-
  */
 /*-
@@ -38,7 +38,8 @@ __FBSDID("$FreeBSD: src/sys/dev/drm/i915_dma.c,v 1.6 2007/08/21 12:52:57 kib Exp
 #define IS_I965G(dev)  (dev->pci_device == 0x2972 || \
 			dev->pci_device == 0x2982 || \
 			dev->pci_device == 0x2992 || \
-			dev->pci_device == 0x29A2)
+			dev->pci_device == 0x29A2 || \
+			dev->pci_device == 0x2A12 )
 
 
 /* Really want an OS-independent resettable timer.  Would like to have

@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/drm/drm_pciids.h,v 1.4 2008/12/03 00:30:44 laffer1 Exp $ */
 /*
  * $FreeBSD: src/sys/dev/drm/drm_pciids.h,v 1.7 2006/09/07 23:04:47 anholt Exp $
  */
@@ -294,6 +294,8 @@
 	{0x8086, 0x2982, 0, "Intel i965G"}, \
 	{0x8086, 0x2992, 0, "Intel i965Q"}, \
 	{0x8086, 0x29A2, 0, "Intel i965G"}, \
+	{0x8086, 0x2A02, 0, "Intel i965GM"}, \
+	{0x8086, 0x2A12, 0, "Intel i965GME"}, \
 	{0, 0, 0, NULL}
 
 #define imagine_PCI_IDS \
