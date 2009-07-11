@@ -1,4 +1,4 @@
-# $MidnightBSD: src/lib/libffi/Makefile,v 1.2 2009/06/09 00:48:55 laffer1 Exp $
+# $MidnightBSD: src/lib/libffi/Makefile,v 1.3 2009/06/14 21:16:34 laffer1 Exp $
 
 FFI_DIST?=	${.CURDIR}/../../contrib/libffi
 SHLIB_MAJOR=    1
@@ -14,5 +14,9 @@ CFLAGS+=-I${.CURDIR} -I${FFI_DIST}/src -I${FFI_DIST}/src/x86 -I${FFI_DIST}/inclu
 
 MAN=	${FFI_DIST}/man/ffi.3 ${FFI_DIST}/man/ffi_call.3 \
 	${FFI_DIST}/man/ffi_prep_cif.3
+
+afterinstall:
+	${INSTALL} ${SHLINSTALLFLAGS} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+		${_INSTALLFLAGS} ${.CURDIR}/libffi.pc ${DESTDIR}/usr/libdata/pkgconfig/libffi.pc
 
 .include <bsd.lib.mk>
