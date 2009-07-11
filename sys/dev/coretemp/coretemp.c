@@ -1,6 +1,6 @@
 /* $MidnightBSD$ */
 /*-
- * Copyright (c) 2007 Rui Paulo <rpaulo@FreeBSD.org>
+ * Copyright (c) 2007, 2008 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,9 +23,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/dev/coretemp/coretemp.c,v 1.2 2007/08/23 10:53:03 des Exp $
- *
  */
 
 /*
@@ -34,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/coretemp/coretemp.c,v 1.2 2007/08/23 10:53:03 des Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/coretemp/coretemp.c,v 1.2.4.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -97,8 +94,8 @@ coretemp_identify(driver_t *driver, device_t parent)
 	if (device_find_child(parent, "coretemp", -1) != NULL)
 		return;
 
-	/* Check that CPUID is supported and the vendor is Intel.*/
-	if (cpu_high == 0 || strcmp(cpu_vendor, "GenuineIntel"))
+	/* Check that CPUID 0x06 is supported and the vendor is Intel.*/
+	if (cpu_high < 6 || strcmp(cpu_vendor, "GenuineIntel"))
 		return;
 	/*
 	 * CPUID 0x06 returns 1 if the processor has on-die thermal
@@ -143,6 +140,15 @@ coretemp_attach(device_t dev)
 	/* extended model */
 	cpu_model += ((cpu_id >> 16) & 0xf) << 4;
 	cpu_mask = cpu_id & 15;
+
+	/*
+	 * Some CPUs, namely the PIII, don't have thermal sensors, but
+	 * report them when the CPUID check is performed in
+	 * coretemp_identify(). This leads to a later GPF when the sensor
+	 * is queried via a MSR, so we stop here.
+	 */
+	if (cpu_model < 0xe)
+		return (ENXIO);
 
 	/*
 	 * Check for errata AE18.
