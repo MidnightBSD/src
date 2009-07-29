@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: update.c,v 1.1.1.5 2009-03-25 17:51:25 laffer1 Exp $ */
+/* $Id: update.c,v 1.2 2009-07-29 15:29:23 laffer1 Exp $ */
 
 #include <config.h>
 
@@ -865,7 +865,11 @@ temp_check(isc_mem_t *mctx, dns_diff_t *temp, dns_db_t *db,
 			if (type == dns_rdatatype_rrsig ||
 			    type == dns_rdatatype_sig)
 				covers = dns_rdata_covers(&t->rdata);
-			else
+			else if (type == dns_rdatatype_any) {
+				dns_db_detachnode(db, &node);
+				dns_diff_clear(&trash);
+				return (DNS_R_NXRRSET);
+			} else
 				covers = 0;
 
 			/*
