@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users
 
+20090729:
+	Patch for Bind 9 security vulnerability. a dynmaic update packet 
+	can trigger an assertion and cause named to exit
+
 20090606:
 	Remove PCC from the base system.  This compiler will not work
 	as a system compiler for us as we've got some userland investment
@@ -738,4 +742,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.63 2009/05/20 21:56:43 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.64 2009/06/06 23:44:24 laffer1 Exp $
