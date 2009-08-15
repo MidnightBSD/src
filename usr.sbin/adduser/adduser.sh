@@ -24,7 +24,7 @@
 #
 #       Email: Mike Makonnen <mtm@FreeBSD.Org>
 #
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/adduser/adduser.sh,v 1.3 2008/04/28 04:13:27 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/adduser/adduser.sh,v 1.30.2.1 2007/10/28 21:06:34 mtm Exp $
 #
 
@@ -805,7 +805,7 @@ input_interactive() {
 #### END SUBROUTINE DEFINITION ####
 
 THISCMD=`/usr/bin/basename $0`
-DEFAULTSHELL=/bin/sh
+DEFAULTSHELL=/bin/mksh
 ADDUSERCONF="${ADDUSERCONF:-/etc/adduser.conf}"
 PWCMD="${PWCMD:-/usr/sbin/pw}"
 MAILCMD="${MAILCMD:-mail}"
