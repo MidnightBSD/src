@@ -226,6 +226,9 @@ static struct rl_hwrev re_hwrevs[] = {
 	{ RL_HWREV_8101, RL_8139, "8101"},
 	{ RL_HWREV_8100E, RL_8169, "8100E"},
 	{ RL_HWREV_8101E, RL_8169, "8101E"},
+	{ RL_HWREV_8102E, RL_8169, "8102E"},
+	{ RL_HWREV_8102EL, RL_8169, "8102EL"},
+	{ RL_HWREV_8102EL_SPIN1, RL_8169, "8102EL"},
 	{ RL_HWREV_8168_SPIN2, RL_8169, "8168"},
 	{ RL_HWREV_8168_SPIN3, RL_8169, "8168"},
 	{ RL_HWREV_8168_8111C, RL_8169, "8168"},
@@ -1231,7 +1234,19 @@ re_attach(dev)
 	RL_UNLOCK(sc);
 
 	hw_rev = re_hwrevs;
-	hwrev = CSR_READ_4(sc, RL_TXCFG) & RL_TXCFG_HWREV;
+	hwrev = CSR_READ_4(sc, RL_TXCFG);
+	switch (hwrev & 0x70000000) {
+	case 0x00000000:
+	case 0x10000000:
+		device_printf(dev, "Chip rev. 0x%08x\n", hwrev & 0xfc800000);
+		hwrev &= (RL_TXCFG_HWREV | 0x80000000);
+		break;
+	default:
+		device_printf(dev, "Chip rev. 0x%08x\n", hwrev & 0x7c800000);
+		hwrev &= RL_TXCFG_HWREV;
+		break;
+	}
+	device_printf(dev, "MAC rev. 0x%08x\n", hwrev & 0x00700000);
 	while (hw_rev->rl_desc != NULL) {
 		if (hw_rev->rl_rev == hwrev) {
 			sc->rl_type = hw_rev->rl_type;

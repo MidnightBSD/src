@@ -1,4 +1,4 @@
-/* $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.5 2009/05/16 18:16:48 laffer1 Exp $ */
+/* $MidnightBSD: src/sys/pci/if_rlreg.h,v 1.6 2009/05/20 16:34:45 laffer1 Exp $ */
 /*-
  * Copyright (c) 1997, 1998-2003
  *	Bill Paul <wpaul@ctr.columbia.edu>.  All rights reserved.
@@ -149,14 +149,17 @@
 /* Known revision codes. */
 
 #define RL_HWREV_8169		0x00000000
-#define RL_HWREV_8110S		0x00800000
-#define RL_HWREV_8169S		0x04000000
+#define RL_HWREV_8169S		0x00800000
+#define RL_HWREV_8110S		0x04000000
 #define RL_HWREV_8169_8110SB	0x10000000
 #define RL_HWREV_8169_8110SC	0x18000000
+#define RL_HWREV_8102EL		0x24800000
+#define RL_HWREV_8102EL_SPIN1	0x24c00000
 #define RL_HWREV_8168_SPIN1	0x30000000
 #define RL_HWREV_8168_8111C	0x3c000000
 #define RL_HWREV_8100E		0x30800000
 #define RL_HWREV_8101E		0x34000000
+#define RL_HWREV_8102E		0x34800000
 #define RL_HWREV_8168_SPIN2	0x38000000
 #define RL_HWREV_8168_SPIN3	0x38400000
 #define RL_HWREV_8139		0x60000000
@@ -169,6 +172,8 @@
 #define RL_HWREV_8139CPLUS	0x74800000
 #define RL_HWREV_8101		0x74c00000
 #define RL_HWREV_8100		0x78800000
+#define RL_HWREV_8169_8110SBL	0x7CC00000
+#define RL_HWREV_8169_8110SCE	0x98000000
 
 #define RL_TXDMA_16BYTES	0x00000000
 #define RL_TXDMA_32BYTES	0x00000100
