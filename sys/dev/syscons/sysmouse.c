@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/dev/syscons/sysmouse.c,v 1.2 2008/12/02 22:43:11 laffer1 Exp $ */
 /*-
  * Copyright (c) 1999 Kazutaka YOKOTA <yokota@zodiac.mech.utsunomiya-u.ac.jp>
  * All rights reserved.
@@ -246,7 +246,7 @@ sm_attach_mouse(void *unused)
 	/* sysmouse doesn't have scr_stat */
 }
 
-SYSINIT(sysmouse, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sm_attach_mouse, NULL)
+SYSINIT(sysmouse, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, sm_attach_mouse, NULL);
 
 int
 sysmouse_event(mouse_info_t *info)
