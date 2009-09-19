@@ -1,6 +1,6 @@
 #
 # $FreeBSD: src/Makefile.inc1,v 1.499.2.7 2006/01/07 19:40:08 netchild Exp $
-# $MidnightBSD: src/Makefile.inc1,v 1.22 2009/06/09 21:27:26 laffer1 Exp $
+# $MidnightBSD: src/Makefile.inc1,v 1.23 2009/09/19 21:53:58 laffer1 Exp $
 #
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
@@ -235,11 +235,11 @@ WMAKE=		${WMAKEENV} ${MAKE} -f Makefile.inc1 DESTDIR=${WORLDTMP}
 LIB32TMP=	${OBJTREE}${.CURDIR}/lib32
 
 .if empty(TARGET_CPUTYPE)
-LIB32CPUFLAGS=	-march=i686 -mmmx -msse -msse2
+LIB32CPUTYPE=	k8
 .else
-LIB32CPUFLAGS=	-march=${TARGET_CPUTYPE}
+LIB32CPUTYPE=	${TARGET_CPUTYPE}
 .endif
-LIB32FLAGS=	-m32 ${LIB32CPUFLAGS} -mfancy-math-387 -DCOMPAT_32BIT \
+LIB32FLAGS=	-m32 -march=${LIB32CPUTYPE} -mfancy-math-387 -DCOMPAT_32BIT \
 		-iprefix ${LIB32TMP}/usr/ \
 		-L${LIB32TMP}/usr/lib32 \
 		-B${LIB32TMP}/usr/lib32
