@@ -8973,7 +8973,6 @@ contrib/libobjc/class.c -text
 contrib/libobjc/config.h.in -text
 contrib/libobjc/configure -text
 contrib/libobjc/configure.ac -text
-contrib/libobjc/configure.in -text
 contrib/libobjc/encoding.c -text
 contrib/libobjc/exception.c -text
 contrib/libobjc/gc.c -text
