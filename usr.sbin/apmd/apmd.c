@@ -29,7 +29,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/usr.sbin/apmd/apmd.c,v 1.8 2005/03/24 01:26:40 mdodd Exp $";
+  "$FreeBSD: src/usr.sbin/apmd/apmd.c,v 1.9 2007/02/05 07:35:23 kevlo Exp $";
 #endif /* not lint */
 
 #include <assert.h>
@@ -650,7 +650,7 @@ main(int ac, char* av[])
 	char	*prog;
 	int	logopt = LOG_NDELAY | LOG_PID;
 
-	while ((ch = getopt(ac, av, "df:sv")) != EOF) {
+	while ((ch = getopt(ac, av, "df:sv")) != -1) {
 		switch (ch) {
 		case 'd':
 			daemonize = 0;

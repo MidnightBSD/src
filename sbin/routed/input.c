@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/routed/input.c,v 1.13 2005/05/31 20:28:48 stefanf Exp $
+ * $FreeBSD: src/sbin/routed/input.c,v 1.14 2005/08/05 09:58:49 stefanf Exp $
  */
 
 #include "defs.h"
@@ -34,10 +34,10 @@
 #ifdef __NetBSD__
 __RCSID("$NetBSD$");
 #elif defined(__FreeBSD__)
-__RCSID("$FreeBSD: src/sbin/routed/input.c,v 1.13 2005/05/31 20:28:48 stefanf Exp $");
+__RCSID("$FreeBSD: src/sbin/routed/input.c,v 1.14 2005/08/05 09:58:49 stefanf Exp $");
 #else
-__RCSID("$Revision: 1.1.1.2 $");
-#ident "$Revision: 1.1.1.2 $"
+__RCSID("$Revision: 1.2 $");
+#ident "$Revision: 1.2 $"
 #endif
 
 static void input(struct sockaddr_in *, struct interface *, struct interface *,
@@ -55,7 +55,8 @@ read_rip(int sock,
 {
 	struct sockaddr_in from;
 	struct interface *aifp;
-	int fromlen, cc;
+	socklen_t fromlen;
+	int cc;
 #ifdef USE_PASSIFNAME
 	static struct msg_limit  bad_name;
 	struct {
@@ -80,7 +81,7 @@ read_rip(int sock,
 		}
 		if (fromlen != sizeof(struct sockaddr_in))
 			logbad(1,"impossible recvfrom(rip) fromlen=%d",
-			       fromlen);
+			       (int)fromlen);
 
 		/* aifp is the "authenticated" interface via which the packet
 		 *	arrived.  In fact, it is only the interface on which

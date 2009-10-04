@@ -11,18 +11,18 @@
 # AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
-# $FreeBSD: src/sbin/rtsol/Makefile,v 1.11 2004/12/21 08:47:08 ru Exp $
+#
+# $FreeBSD: src/sbin/rtsol/Makefile,v 1.14 2006/07/27 18:28:14 yar Exp $
 
 SRCDIR=	${.CURDIR}/../../usr.sbin/rtsold
 
+.PATH:	${SRCDIR}
+
 PROG=	rtsol
 SRCS=	rtsold.c rtsol.c if.c probe.c rtsock.c
-
-CFLAGS+=-DINET6 -DHAVE_ARC4RANDOM -DHAVE_POLL_H -DSMALL
+NO_MAN=
 WARNS?=	0
 
-NO_MAN=
-
-.PATH:	${SRCDIR}
+CFLAGS+= -DHAVE_ARC4RANDOM -DHAVE_POLL_H -DSMALL
 
 .include <bsd.prog.mk>

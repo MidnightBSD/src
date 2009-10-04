@@ -1,13 +1,21 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/5/93
-# $FreeBSD: src/sbin/route/Makefile,v 1.20 2004/02/23 20:13:56 johan Exp $
+# $FreeBSD: src/sbin/route/Makefile,v 1.21 2006/07/27 13:26:29 yar Exp $
+
+.include <bsd.own.mk>
 
 PROG=	route
 MAN=	route.8
 SRCS=	route.c keywords.h
-CFLAGS+=-I. -Wall -DNS
-CFLAGS+=-DINET6
 WARNS?=	0
 CLEANFILES+=keywords.h _keywords.tmp
+
+CFLAGS+= -DNS
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+
+CFLAGS+= -I.
 
 keywords.h: keywords
 	sed -e '/^#/d' -e '/^$$/d' ${.CURDIR}/keywords > _keywords.tmp

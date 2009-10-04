@@ -38,12 +38,9 @@ static const char copyright[] =
 static char sccsid[] = "@(#)from: sysctl.c	8.1 (Berkeley) 6/6/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/sysctl/sysctl.c,v 1.67.2.1 2005/09/22 15:30:21 rwatson Exp $";
+  "$FreeBSD: src/sbin/sysctl/sysctl.c,v 1.86 2007/06/11 13:02:15 bde Exp $";
 #endif /* not lint */
 
-#ifdef __i386__
-#include <sys/reboot.h>		/* used for bootdev parsing */
-#endif
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -54,6 +51,7 @@ static const char rcsid[] =
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,18 +64,19 @@ static int	qflag, xflag;
 static int	oidfmt(int *, int, char *, u_int *);
 static void	parse(char *);
 static int	show_var(int *, int);
-static int	sysctl_all (int *oid, int len);
+static int	sysctl_all(int *oid, int len);
 static int	name2oid(char *, int *);
 
-static void	set_T_dev_t (char *, void **, size_t *);
+static void	set_T_dev_t(char *, void **, size_t *);
+static int	set_IK(char *, int *);
 
 static void
 usage(void)
 {
 
 	(void)fprintf(stderr, "%s\n%s\n",
-	    "usage: sysctl [-bdehNnox] name[=value] ...",
-	    "       sysctl [-bdehNnox] -a");
+	    "usage: sysctl [-bdehNnoqx] name[=value] ...",
+	    "       sysctl [-bdehNnoqx] -a");
 	exit(1);
 }
 
@@ -232,10 +231,17 @@ parse(char *string)
 
 		switch (kind & CTLTYPE) {
 			case CTLTYPE_INT:
-				intval = (int)strtol(newval, &endptr, 0);
-				if (endptr == newval || *endptr != '\0')
-					errx(1, "invalid integer '%s'",
-					    newval);
+				if (strcmp(fmt, "IK") == 0) {
+					if (!set_IK(newval, &intval))
+						errx(1, "invalid value '%s'",
+						    (char *)newval);
+ 				} else {
+					intval = (int)strtol(newval, &endptr,
+					    0);
+					if (endptr == newval || *endptr != '\0')
+						errx(1, "invalid integer '%s'",
+						    (char *)newval);
+				}
 				newval = &intval;
 				newsize = sizeof(intval);
 				break;
@@ -243,25 +249,25 @@ parse(char *string)
 				uintval = (int) strtoul(newval, &endptr, 0);
 				if (endptr == newval || *endptr != '\0')
 					errx(1, "invalid unsigned integer '%s'",
-					    newval);
+					    (char *)newval);
 				newval = &uintval;
-				newsize = sizeof uintval;
+				newsize = sizeof(uintval);
 				break;
 			case CTLTYPE_LONG:
 				longval = strtol(newval, &endptr, 0);
 				if (endptr == newval || *endptr != '\0')
 					errx(1, "invalid long integer '%s'",
-					    newval);
+					    (char *)newval);
 				newval = &longval;
-				newsize = sizeof longval;
+				newsize = sizeof(longval);
 				break;
 			case CTLTYPE_ULONG:
 				ulongval = strtoul(newval, &endptr, 0);
 				if (endptr == newval || *endptr != '\0')
 					errx(1, "invalid unsigned long integer"
-					    " '%s'", newval);
+					    " '%s'", (char *)newval);
 				newval = &ulongval;
-				newsize = sizeof ulongval;
+				newsize = sizeof(ulongval);
 				break;
 			case CTLTYPE_STRING:
 				break;
@@ -272,7 +278,7 @@ parse(char *string)
 				break;
 			case CTLTYPE_OPAQUE:
 				if (strcmp(fmt, "T,dev_t") == 0) {
-					set_T_dev_t ((char*)newval, &newval, &newsize);
+					set_T_dev_t (newval, &newval, &newsize);
 					break;
 				}
 				/* FALLTHROUGH */
@@ -318,9 +324,10 @@ static int
 S_clockinfo(int l2, void *p)
 {
 	struct clockinfo *ci = (struct clockinfo*)p;
+
 	if (l2 != sizeof(*ci)) {
 		warnx("S_clockinfo %d != %d", l2, sizeof(*ci));
-		return (0);
+		return (1);
 	}
 	printf(hflag ? "{ hz = %'d, tick = %'d, profhz = %'d, stathz = %'d }" :
 		"{ hz = %d, tick = %d, profhz = %d, stathz = %d }",
@@ -335,7 +342,7 @@ S_loadavg(int l2, void *p)
 
 	if (l2 != sizeof(*tv)) {
 		warnx("S_loadavg %d != %d", l2, sizeof(*tv));
-		return (0);
+		return (1);
 	}
 	printf(hflag ? "{ %'.2f %'.2f %'.2f }" : "{ %.2f %.2f %.2f }",
 		(double)tv->ldavg[0]/(double)tv->fscale,
@@ -353,7 +360,7 @@ S_timeval(int l2, void *p)
 
 	if (l2 != sizeof(*tv)) {
 		warnx("S_timeval %d != %d", l2, sizeof(*tv));
-		return (0);
+		return (1);
 	}
 	printf(hflag ? "{ sec = %'ld, usec = %'ld } " :
 		"{ sec = %ld, usec = %ld } ",
@@ -375,7 +382,7 @@ S_vmtotal(int l2, void *p)
 
 	if (l2 != sizeof(*v)) {
 		warnx("S_vmtotal %d != %d", l2, sizeof(*v));
-		return (0);
+		return (1);
 	}
 
 	printf(
@@ -383,22 +390,19 @@ S_vmtotal(int l2, void *p)
 	    " (values in kilobytes)\n");
 	printf("===============================================\n");
 	printf(
-	    "Processes:\t\t(RUNQ: %hu Disk Wait: %hu Page Wait: "
-	    "%hu Sleep: %hu)\n",
+	    "Processes:\t\t(RUNQ: %hd Disk Wait: %hd Page Wait: "
+	    "%hd Sleep: %hd)\n",
 	    v->t_rq, v->t_dw, v->t_pw, v->t_sl);
 	printf(
-	    "Virtual Memory:\t\t(Total: %luK, Active %lldK)\n",
-	    (unsigned long)v->t_vm / 1024,
-	    (long long)v->t_avm * pageKilo);
-	printf("Real Memory:\t\t(Total: %lldK Active %lldK)\n",
-	    (long long)v->t_rm * pageKilo, (long long)v->t_arm * pageKilo);
-	printf("Shared Virtual Memory:\t(Total: %lldK Active: %lldK)\n",
-	    (long long)v->t_vmshr * pageKilo,
-	    (long long)v->t_avmshr * pageKilo);
-	printf("Shared Real Memory:\t(Total: %lldK Active: %lldK)\n",
-	    (long long)v->t_rmshr * pageKilo,
-	    (long long)v->t_armshr * pageKilo);
-	printf("Free Memory Pages:\t%lldK\n", (long long)v->t_free * pageKilo);
+	    "Virtual Memory:\t\t(Total: %dK, Active %dK)\n",
+	    v->t_vm * pageKilo, v->t_avm * pageKilo);
+	printf("Real Memory:\t\t(Total: %dK Active %dK)\n",
+	    v->t_rm * pageKilo, v->t_arm * pageKilo);
+	printf("Shared Virtual Memory:\t(Total: %dK Active: %dK)\n",
+	    v->t_vmshr * pageKilo, v->t_avmshr * pageKilo);
+	printf("Shared Real Memory:\t(Total: %dK Active: %dK)\n",
+	    v->t_rmshr * pageKilo, v->t_armshr * pageKilo);
+	printf("Free Memory Pages:\t%dK\n", v->t_free * pageKilo);
 
 	return (0);
 }
@@ -407,9 +411,10 @@ static int
 T_dev_t(int l2, void *p)
 {
 	dev_t *d = (dev_t *)p;
+
 	if (l2 != sizeof(*d)) {
 		warnx("T_dev_T %d != %d", l2, sizeof(*d));
-		return (0);
+		return (1);
 	}
 	if ((int)(*d) != -1) {
 		if (minor(*d) > 255 || minor(*d) < 0)
@@ -423,7 +428,7 @@ T_dev_t(int l2, void *p)
 }
 
 static void
-set_T_dev_t (char *path, void **val, size_t *size)
+set_T_dev_t(char *path, void **val, size_t *size)
 {
 	static struct stat statb;
 
@@ -439,8 +444,35 @@ set_T_dev_t (char *path, void **val, size_t *size)
 	} else {
 		statb.st_rdev = NODEV;
 	}
-	*val = (char*) &statb.st_rdev;
-	*size = sizeof statb.st_rdev;
+	*val = (void *) &statb.st_rdev;
+	*size = sizeof(statb.st_rdev);
+}
+
+static int
+set_IK(char *str, int *val)
+{
+	float temp;
+	int len, kelv;
+	char *p, *endptr;
+
+	if ((len = strlen(str)) == 0)
+		return (0);
+	p = &str[len - 1];
+	if (*p == 'C' || *p == 'F') {
+		*p = '\0';
+		temp = strtof(str, &endptr);
+		if (endptr == str || *endptr != '\0')
+			return (0);
+		if (*p == 'F')
+			temp = (temp - 32) * 5 / 9;
+		kelv = temp * 10 + 2732;
+	} else {
+		kelv = (int)strtol(str, &endptr, 10);
+		if (endptr == str || *endptr != '\0')
+			return (0);
+	}
+	*val = kelv;
+	return (1);
 }
 
 /*
@@ -465,7 +497,7 @@ name2oid(char *name, int *oidp)
 	j = CTL_MAXNAME * sizeof(int);
 	i = sysctl(oid, 2, oidp, &j, name, strlen(name));
 	if (i < 0)
-		return i;
+		return (i);
 	j /= sizeof(int);
 	return (j);
 }
@@ -492,7 +524,7 @@ oidfmt(int *oid, int len, char *fmt, u_int *kind)
 
 	if (fmt)
 		strcpy(fmt, (char *)(buf + sizeof(u_int)));
-	return 0;
+	return (0);
 }
 
 /*
@@ -506,10 +538,14 @@ oidfmt(int *oid, int len, char *fmt, u_int *kind)
 static int
 show_var(int *oid, int nlen)
 {
-	u_char buf[BUFSIZ], *val, *p;
-	char name[BUFSIZ], *fmt, *sep;
+	u_char buf[BUFSIZ], *val, *oval, *p;
+	char name[BUFSIZ], *fmt;
+	const char *sep, *sep1;
 	int qoid[CTL_MAXNAME+2];
-	int i;
+	uintmax_t umv;
+	intmax_t mv;
+	int i, hexlen;
+	size_t intlen;
 	size_t j, len;
 	u_int kind;
 	int (*func)(int, void *);
@@ -549,14 +585,21 @@ show_var(int *oid, int nlen)
 	i = sysctl(oid, nlen, 0, &j, 0, 0);
 	j += j; /* we want to be sure :-) */
 
-	val = alloca(j + 1);
+	val = oval = malloc(j + 1);
+	if (val == NULL) {
+		warnx("malloc failed");
+		return (1);
+	}
 	len = j;
 	i = sysctl(oid, nlen, val, &len, 0, 0);
-	if (i || !len)
+	if (i || !len) {
+		free(oval);
 		return (1);
+	}
 
 	if (bflag) {
 		fwrite(val, 1, len, stdout);
+		free(oval);
 		return (0);
 	}
 	val[len] = '\0';
@@ -568,56 +611,60 @@ show_var(int *oid, int nlen)
 		if (!nflag)
 			printf("%s%s", name, sep);
 		printf("%.*s", len, p);
+		free(oval);
 		return (0);
 
 	case 'I':
-		if (!nflag)
-			printf("%s%s", name, sep);
-		fmt++;
-		val = "";
-		while (len >= sizeof(int)) {
-			fputs(val, stdout);
-			if(*fmt == 'U')
-				printf(hflag ? "%'u" : "%u", *(unsigned int *)p);
-			else if (*fmt == 'K') {
-				if (*(int *)p < 0)
-					printf("%d", *(int *)p);
-				else
-					printf("%d.%dC", (*(int *)p - 2732) / 10, (*(int *)p - 2732) % 10);
-			} else
-				printf(hflag ? "%'d" : "%d", *(int *)p);
-			val = " ";
-			len -= sizeof(int);
-			p += sizeof(int);
-		}
-		return (0);
-
 	case 'L':
+	case 'Q':
 		if (!nflag)
 			printf("%s%s", name, sep);
-		fmt++;
-		val = "";
-		while (len >= sizeof(long)) {
-			fputs(val, stdout);
-			if(*fmt == 'U')
-				printf(hflag ? "%'lu" : "%lu", *(unsigned long *)p);
-			else if (*fmt == 'K') {
-				if (*(long *)p < 0)
-					printf("%ld", *(long *)p);
-				else
-					printf("%ld.%ldC", (*(long *)p - 2732) / 10, (*(long *)p - 2732) % 10);
-			} else
-				printf(hflag ? "%'ld" : "%ld", *(long *)p);
-			val = " ";
-			len -= sizeof(long);
-			p += sizeof(long);
+		switch (*fmt) {
+		case 'I': intlen = sizeof(int); break;
+		case 'L': intlen = sizeof(long); break;
+		case 'Q': intlen = sizeof(quad_t); break;
 		}
+		hexlen = 2 + (intlen * CHAR_BIT + 3) / 4;
+		sep1 = "";
+		while (len >= intlen) {
+			switch (*fmt) {
+			case 'I':
+				umv = *(u_int *)p;
+				mv = *(int *)p;
+				break;
+			case 'L':
+				umv = *(u_long *)p;
+				mv = *(long *)p;
+				break;
+			case 'Q':
+				umv = *(u_quad_t *)p;
+				mv = *(quad_t *)p;
+				break;
+			}
+			fputs(sep1, stdout);
+			if (fmt[1] == 'U')
+				printf(hflag ? "%'ju" : "%ju", umv);
+			else if (fmt[1] == 'X')
+				printf("%#0*jx", hexlen, umv);
+			else if (fmt[1] == 'K') {
+				if (mv < 0)
+					printf("%jd", mv);
+				else
+					printf("%.1fC", (mv - 2732.0) / 10);
+			} else
+				printf(hflag ? "%'jd" : "%jd", mv);
+			sep1 = " ";
+			len -= intlen;
+			p += intlen;
+		}
+		free(oval);
 		return (0);
 
 	case 'P':
 		if (!nflag)
 			printf("%s%s", name, sep);
 		printf("%p", *(void **)p);
+		free(oval);
 		return (0);
 
 	case 'T':
@@ -638,12 +685,16 @@ show_var(int *oid, int nlen)
 		if (func) {
 			if (!nflag)
 				printf("%s%s", name, sep);
-			return ((*func)(len, p));
+			i = (*func)(len, p);
+			free(oval);
+			return (i);
 		}
 		/* FALLTHROUGH */
 	default:
-		if (!oflag && !xflag)
+		if (!oflag && !xflag) {
+			free(oval);
 			return (1);
+		}
 		if (!nflag)
 			printf("%s%s", name, sep);
 		printf("Format:%s Length:%d Dump:0x", fmt, len);
@@ -651,13 +702,15 @@ show_var(int *oid, int nlen)
 			printf("%02x", *p++);
 		if (!xflag && len > 16)
 			printf("...");
+		free(oval);
 		return (0);
 	}
+	free(oval);
 	return (1);
 }
 
 static int
-sysctl_all (int *oid, int len)
+sysctl_all(int *oid, int len)
 {
 	int name1[22], name2[22];
 	int i, j;
@@ -678,19 +731,19 @@ sysctl_all (int *oid, int len)
 		j = sysctl(name1, l1, name2, &l2, 0, 0);
 		if (j < 0) {
 			if (errno == ENOENT)
-				return 0;
+				return (0);
 			else
 				err(1, "sysctl(getnext) %d %d", j, l2);
 		}
 
 		l2 /= sizeof(int);
 
-		if (l2 < len)
-			return 0;
+		if (len < 0 || l2 < (unsigned int)len)
+			return (0);
 
 		for (i = 0; i < len; i++)
 			if (name2[i] != oid[i])
-				return 0;
+				return (0);
 
 		i = show_var(name2, l2);
 		if (!i && !bflag)
