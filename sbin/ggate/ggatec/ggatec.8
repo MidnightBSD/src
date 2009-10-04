@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sbin/ggate/ggatec/ggatec.8,v 1.5.2.1 2005/08/04 18:05:33 pjd Exp $
+.\" $FreeBSD: src/sbin/ggate/ggatec/ggatec.8,v 1.9 2006/09/18 11:55:10 ru Exp $
 .\"
 .Dd April 26, 2004
 .Dt GGATEC 8
@@ -84,7 +84,9 @@ daemon and create a
 .Nm ggate
 provider related to the given remote file or device.
 .It Cm rescue
-If ggatec process died/has been killed, you can save situation with this
+If
+.Nm
+process died/has been killed, you can save situation with this
 command, which creates new connection to the
 .Xr ggated 8
 daemon and will handle pending and future requests.
@@ -157,7 +159,7 @@ should be called with the
 .Fl v
 option.
 .Sh EXAMPLES
-Made use of CD-ROM device from remote host.
+Make use of CD-ROM device from remote host.
 .Bd -literal -offset indent
 server# cat /etc/gg.exports
 client RO /dev/acd0

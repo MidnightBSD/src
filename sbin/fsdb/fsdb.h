@@ -27,11 +27,10 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/fsdb/fsdb.h,v 1.10 2002/07/30 13:01:25 phk Exp $
+ * $FreeBSD: src/sbin/fsdb/fsdb.h,v 1.12 2006/10/31 22:07:29 pjd Exp $
  */
 
-extern int bread(int fd, char *buf, ufs2_daddr_t blk, long size);
-extern void bwrite(int fd, char *buf, ufs2_daddr_t blk, long size);
+extern int blread(int fd, char *buf, ufs2_daddr_t blk, long size);
 extern void rwerror(const char *mesg, ufs2_daddr_t blk);
 extern int reply(const char *question);
 
@@ -48,6 +47,7 @@ struct cmdtable {
 	unsigned int flags;
 #define	FL_RO	0x0000		/* for symmetry */
 #define	FL_WR	0x0001		/* wants to write */
+#define	FL_ST	0x0002		/* resplit final string if argc > maxargc */
 	int (*handler)(int argc, char *argv[]);
 };
 extern union dinode *curinode;

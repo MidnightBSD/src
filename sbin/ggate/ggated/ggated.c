@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/ggate/ggated/ggated.c,v 1.7 2005/07/10 21:10:20 pjd Exp $
+ * $FreeBSD: src/sbin/ggate/ggated/ggated.c,v 1.9 2006/12/18 11:12:00 pjd Exp $
  */
 
 #include <stdio.h>
@@ -60,7 +60,7 @@
 
 struct ggd_connection {
 	off_t		 c_mediasize;
-	off_t		 c_sectorsize;
+	unsigned	 c_sectorsize;
 	unsigned	 c_flags;	/* flags (RO/RW) */
 	int		 c_diskfd;
 	int		 c_sendfd;

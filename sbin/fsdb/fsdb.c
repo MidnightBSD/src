@@ -30,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/fsdb/fsdb.c,v 1.29.2.1 2005/10/09 03:45:28 delphij Exp $";
+  "$FreeBSD: src/sbin/fsdb/fsdb.c,v 1.35 2006/10/31 22:07:29 pjd Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -52,6 +52,13 @@ static const char rcsid[] =
 
 static void usage(void) __dead2;
 int cmdloop(void);
+static int compare_blk32(uint32_t *wantedblk, uint32_t curblk);
+static int compare_blk64(uint64_t *wantedblk, uint64_t curblk);
+static int founddatablk(uint64_t blk);
+static int find_blks32(uint32_t *buf, int size, uint32_t *blknum);
+static int find_blks64(uint64_t *buf, int size, uint64_t *blknum);
+static int find_indirblks32(uint32_t blk, int ind_level, uint32_t *blknum);
+static int find_indirblks64(uint64_t blk, int ind_level, uint64_t *blknum);
 
 static void 
 usage(void)
@@ -129,6 +136,7 @@ CMDFUNC(uplink);			/* incr link */
 CMDFUNC(downlink);			/* decr link */
 CMDFUNC(linkcount);			/* set link count */
 CMDFUNC(quit);				/* quit */
+CMDFUNC(findblk);			/* find block */
 CMDFUNC(ls);				/* list directory */
 CMDFUNC(rm);				/* remove name */
 CMDFUNC(ln);				/* add name */
@@ -140,6 +148,7 @@ CMDFUNC(chgen);				/* change generation */
 CMDFUNC(chowner);			/* change owner */
 CMDFUNC(chgroup);			/* Change group */
 CMDFUNC(back);				/* pop back to last ino */
+CMDFUNC(chbtime);			/* Change btime */
 CMDFUNC(chmtime);			/* Change mtime */
 CMDFUNC(chctime);			/* Change ctime */
 CMDFUNC(chatime);			/* Change atime */
@@ -151,8 +160,8 @@ struct cmdtable cmds[] = {
 	{ "?", "Print out help", 1, 1, FL_RO, helpfn },
 	{ "inode", "Set active inode to INUM", 2, 2, FL_RO, focus },
 	{ "clri", "Clear inode INUM", 2, 2, FL_WR, zapi },
-	{ "lookup", "Set active inode by looking up NAME", 2, 2, FL_RO, focusname },
-	{ "cd", "Set active inode by looking up NAME", 2, 2, FL_RO, focusname },
+	{ "lookup", "Set active inode by looking up NAME", 2, 2, FL_RO | FL_ST, focusname },
+	{ "cd", "Set active inode by looking up NAME", 2, 2, FL_RO | FL_ST, focusname },
 	{ "back", "Go to previous active inode", 1, 1, FL_RO, back },
 	{ "active", "Print active inode", 1, 1, FL_RO, active },
 	{ "print", "Print active inode", 1, 1, FL_RO, active },
@@ -160,12 +169,13 @@ struct cmdtable cmds[] = {
 	{ "uplink", "Increment link count", 1, 1, FL_WR, uplink },
 	{ "downlink", "Decrement link count", 1, 1, FL_WR, downlink },
 	{ "linkcount", "Set link count to COUNT", 2, 2, FL_WR, linkcount },
+	{ "findblk", "Find inode owning disk block(s)", 2, 33, FL_RO, findblk},
 	{ "ls", "List current inode as directory", 1, 1, FL_RO, ls },
-	{ "rm", "Remove NAME from current inode directory", 2, 2, FL_WR, rm },
-	{ "del", "Remove NAME from current inode directory", 2, 2, FL_WR, rm },
-	{ "ln", "Hardlink INO into current inode directory as NAME", 3, 3, FL_WR, ln },
+	{ "rm", "Remove NAME from current inode directory", 2, 2, FL_WR | FL_ST, rm },
+	{ "del", "Remove NAME from current inode directory", 2, 2, FL_WR | FL_ST, rm },
+	{ "ln", "Hardlink INO into current inode directory as NAME", 3, 3, FL_WR | FL_ST, ln },
 	{ "chinum", "Change dir entry number INDEX to INUM", 3, 3, FL_WR, chinum },
-	{ "chname", "Change dir entry number INDEX to NAME", 3, 3, FL_WR, chname },
+	{ "chname", "Change dir entry number INDEX to NAME", 3, 3, FL_WR | FL_ST, chname },
 	{ "chtype", "Change type of current inode to TYPE", 2, 2, FL_WR, newtype },
 	{ "chmod", "Change mode of current inode to MODE", 2, 2, FL_WR, chmode },
 	{ "chlen", "Change length of current inode to LENGTH", 2, 2, FL_WR, chlen },
@@ -173,6 +183,7 @@ struct cmdtable cmds[] = {
 	{ "chgrp", "Change group of current inode to GROUP", 2, 2, FL_WR, chgroup },
 	{ "chflags", "Change flags of current inode to FLAGS", 2, 2, FL_WR, chaflags },
 	{ "chgen", "Change generation number of current inode to GEN", 2, 2, FL_WR, chgen },
+	{ "btime", "Change btime of current inode to BTIME", 2, 2, FL_WR, chbtime },
 	{ "mtime", "Change mtime of current inode to MTIME", 2, 2, FL_WR, chmtime },
 	{ "ctime", "Change ctime of current inode to CTIME", 2, 2, FL_WR, chctime },
 	{ "atime", "Change atime of current inode to ATIME", 2, 2, FL_WR, chatime },
@@ -188,11 +199,11 @@ helpfn(int argc, char *argv[])
     struct cmdtable *cmdtp;
 
     printf("Commands are:\n%-10s %5s %5s   %s\n",
-	   "command", "min argc", "max argc", "what");
+	   "command", "min args", "max args", "what");
     
     for (cmdtp = cmds; cmdtp->cmd; cmdtp++)
 	printf("%-10s %5u %5u   %s\n",
-	       cmdtp->cmd, cmdtp->minargc, cmdtp->maxargc, cmdtp->helptxt);
+		cmdtp->cmd, cmdtp->minargc-1, cmdtp->maxargc-1, cmdtp->helptxt);
     return 0;
 }
 
@@ -223,7 +234,7 @@ cmdloop(void)
     printactive(0);
 
     hist = history_init();
-    history(hist, &he, H_EVENT, 100);	/* 100 elt history buffer */
+    history(hist, &he, H_SETSIZE, 100);	/* 100 elt history buffer */
 
     elptr = el_init("fsdb", stdin, stdout, stderr);
     el_set(elptr, EL_EDITOR, "emacs");
@@ -255,7 +266,8 @@ cmdloop(void)
 		    else if (cmd_argc >= cmdp->minargc &&
 			cmd_argc <= cmdp->maxargc)
 			rval = (*cmdp->handler)(cmd_argc, cmd_argv);
-		    else if (cmd_argc >= cmdp->minargc) {
+		    else if (cmd_argc >= cmdp->minargc &&
+			(cmdp->flags & FL_ST) == FL_ST) {
 			strcpy(line, elline);
 			cmd_argv = recrack(line, &cmd_argc, cmdp->maxargc);
 			rval = (*cmdp->handler)(cmd_argc, cmd_argv);
@@ -411,6 +423,262 @@ CMDFUNCSTART(ls)
     ckinode(curinode, &idesc);
     curinode = ginode(curinum);
 
+    return 0;
+}
+
+static int findblk_numtofind;
+static int wantedblksize;
+
+CMDFUNCSTART(findblk)
+{
+    ino_t inum, inosused;
+    uint32_t *wantedblk32;
+    uint64_t *wantedblk64;
+    struct cg *cgp = &cgrp;
+    int c, i, is_ufs2;
+
+    wantedblksize = (argc - 1);
+    is_ufs2 = sblock.fs_magic == FS_UFS2_MAGIC;
+    ocurrent = curinum;
+
+    if (is_ufs2) {
+	wantedblk64 = calloc(wantedblksize, sizeof(uint64_t));
+	if (wantedblk64 == NULL)
+	    err(1, "malloc");
+	for (i = 1; i < argc; i++)
+	    wantedblk64[i - 1] = dbtofsb(&sblock, strtoull(argv[i], NULL, 0));
+    } else {
+	wantedblk32 = calloc(wantedblksize, sizeof(uint32_t));
+	if (wantedblk32 == NULL)
+	    err(1, "malloc");
+	for (i = 1; i < argc; i++)
+	    wantedblk32[i - 1] = dbtofsb(&sblock, strtoull(argv[i], NULL, 0));
+    }
+    findblk_numtofind = wantedblksize;
+    /*
+     * sblock.fs_ncg holds a number of cylinder groups.
+     * Iterate over all cylinder groups.
+     */
+    for (c = 0; c < sblock.fs_ncg; c++) {
+	/*
+	 * sblock.fs_ipg holds a number of inodes per cylinder group.
+	 * Calculate a highest inode number for a given cylinder group.
+	 */
+	inum = c * sblock.fs_ipg;
+	/* Read cylinder group. */
+	getblk(&cgblk, cgtod(&sblock, c), sblock.fs_cgsize);
+	memcpy(cgp, cgblk.b_un.b_cg, sblock.fs_cgsize);
+	/*
+	 * Get a highest used inode number for a given cylinder group.
+	 * For UFS1 all inodes initialized at the newfs stage.
+	 */
+	if (is_ufs2)
+	    inosused = cgp->cg_initediblk;
+	else
+	    inosused = sblock.fs_ipg;
+
+	for (; inosused > 0; inum++, inosused--) {
+	    /* Skip magic inodes: 0, WINO, ROOTINO. */
+	    if (inum < ROOTINO)
+		continue;
+	    /*
+	     * Check if the block we are looking for is just an inode block.
+	     *
+	     * ino_to_fsba() - get block containing inode from its number.
+	     * INOPB() - get a number of inodes in one disk block.
+	     */
+	    if (is_ufs2 ?
+		compare_blk64(wantedblk64, ino_to_fsba(&sblock, inum)) :
+		compare_blk32(wantedblk32, ino_to_fsba(&sblock, inum))) {
+		printf("block %llu: inode block (%d-%d)\n",
+		    (unsigned long long)fsbtodb(&sblock,
+			ino_to_fsba(&sblock, inum)),
+		    (inum / INOPB(&sblock)) * INOPB(&sblock),
+		    (inum / INOPB(&sblock) + 1) * INOPB(&sblock));
+		findblk_numtofind--;
+		if (findblk_numtofind == 0)
+		    goto end;
+	    }
+	    /* Get on-disk inode aka dinode. */
+	    curinum = inum;
+	    curinode = ginode(inum);
+	    /* Find IFLNK dinode with allocated data blocks. */
+	    switch (DIP(curinode, di_mode) & IFMT) {
+	    case IFDIR:
+	    case IFREG:
+		if (DIP(curinode, di_blocks) == 0)
+		    continue;
+		break;
+	    case IFLNK:
+		{
+		    uint64_t size = DIP(curinode, di_size);
+		    if (size > 0 && size < sblock.fs_maxsymlinklen &&
+			DIP(curinode, di_blocks) == 0)
+			continue;
+		    else
+			break;
+		}
+	    default:
+		continue;
+	    }
+	    /* Look through direct data blocks. */
+	    if (is_ufs2 ?
+		find_blks64(curinode->dp2.di_db, NDADDR, wantedblk64) :
+		find_blks32(curinode->dp1.di_db, NDADDR, wantedblk32))
+		goto end;
+	    for (i = 0; i < NIADDR; i++) {
+		/*
+		 * Does the block we are looking for belongs to the
+		 * indirect blocks?
+		 */
+		if (is_ufs2 ?
+		    compare_blk64(wantedblk64, curinode->dp2.di_ib[i]) :
+		    compare_blk32(wantedblk32, curinode->dp1.di_ib[i]))
+		    if (founddatablk(is_ufs2 ? curinode->dp2.di_ib[i] :
+			curinode->dp1.di_ib[i]))
+			goto end;
+		/*
+		 * Search through indirect, double and triple indirect
+		 * data blocks.
+		 */
+		if (is_ufs2 ? (curinode->dp2.di_ib[i] != 0) :
+		    (curinode->dp1.di_ib[i] != 0))
+		    if (is_ufs2 ?
+			find_indirblks64(curinode->dp2.di_ib[i], i,
+			    wantedblk64) :
+			find_indirblks32(curinode->dp1.di_ib[i], i,
+			    wantedblk32))
+			goto end;
+	    }
+	}
+    }
+end:
+    curinum = ocurrent;
+    curinode = ginode(curinum);
+    return 0;
+}
+
+static int
+compare_blk32(uint32_t *wantedblk, uint32_t curblk)
+{
+    int i;
+
+    for (i = 0; i < wantedblksize; i++) {
+	if (wantedblk[i] != 0 && wantedblk[i] == curblk) {
+	    wantedblk[i] = 0;
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+static int
+compare_blk64(uint64_t *wantedblk, uint64_t curblk)
+{
+    int i;
+
+    for (i = 0; i < wantedblksize; i++) {
+	if (wantedblk[i] != 0 && wantedblk[i] == curblk) {
+	    wantedblk[i] = 0;
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+static int
+founddatablk(uint64_t blk)
+{
+
+    printf("%llu: data block of inode %d\n",
+	(unsigned long long)fsbtodb(&sblock, blk), curinum);
+    findblk_numtofind--;
+    if (findblk_numtofind == 0)
+	return 1;
+    return 0;
+}
+
+static int
+find_blks32(uint32_t *buf, int size, uint32_t *wantedblk)
+{
+    int blk;
+    for (blk = 0; blk < size; blk++) {
+	if (buf[blk] == 0)
+	    continue;
+	if (compare_blk32(wantedblk, buf[blk])) {
+	    if (founddatablk(buf[blk]))
+		return 1;
+	}
+    }
+    return 0;
+}
+
+static int
+find_indirblks32(uint32_t blk, int ind_level, uint32_t *wantedblk)
+{
+#define MAXNINDIR      (MAXBSIZE / sizeof(uint32_t))
+    uint32_t idblk[MAXNINDIR];
+    int i;
+
+    blread(fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
+    if (ind_level <= 0) {
+	if (find_blks32(idblk, sblock.fs_bsize / sizeof(uint32_t), wantedblk))
+	    return 1;
+    } else {
+	ind_level--;
+	for (i = 0; i < sblock.fs_bsize / sizeof(uint32_t); i++) {
+	    if (compare_blk32(wantedblk, idblk[i])) {
+		if (founddatablk(idblk[i]))
+		    return 1;
+	    }
+	    if (idblk[i] != 0)
+		if (find_indirblks32(idblk[i], ind_level, wantedblk))
+		    return 1;
+	}
+    }
+#undef MAXNINDIR
+    return 0;
+}
+
+static int
+find_blks64(uint64_t *buf, int size, uint64_t *wantedblk)
+{
+    int blk;
+    for (blk = 0; blk < size; blk++) {
+	if (buf[blk] == 0)
+	    continue;
+	if (compare_blk64(wantedblk, buf[blk])) {
+	    if (founddatablk(buf[blk]))
+		return 1;
+	}
+    }
+    return 0;
+}
+
+static int
+find_indirblks64(uint64_t blk, int ind_level, uint64_t *wantedblk)
+{
+#define MAXNINDIR      (MAXBSIZE / sizeof(uint64_t))
+    uint64_t idblk[MAXNINDIR];
+    int i;
+
+    blread(fsreadfd, (char *)idblk, fsbtodb(&sblock, blk), (int)sblock.fs_bsize);
+    if (ind_level <= 0) {
+	if (find_blks64(idblk, sblock.fs_bsize / sizeof(uint64_t), wantedblk))
+	    return 1;
+    } else {
+	ind_level--;
+	for (i = 0; i < sblock.fs_bsize / sizeof(uint64_t); i++) {
+	    if (compare_blk64(wantedblk, idblk[i])) {
+		if (founddatablk(idblk[i]))
+		    return 1;
+	    }
+	    if (idblk[i] != 0)
+		if (find_indirblks64(idblk[i], ind_level, wantedblk))
+		    return 1;
+	}
+    }
+#undef MAXNINDIR
     return 0;
 }
 
@@ -863,6 +1131,22 @@ badformat:
 	warnx("date/time out of range");
 	return 1;
     }
+    return 0;
+}
+
+CMDFUNCSTART(chbtime)
+{
+    time_t secs;
+    int32_t nsecs;
+
+    if (dotime(argv[1], &secs, &nsecs))
+	return 1;
+    if (sblock.fs_magic == FS_UFS1_MAGIC)
+	return 1;
+    curinode->dp2.di_birthtime = _time_to_time64(secs);
+    curinode->dp2.di_birthnsec = nsecs;
+    inodirty();
+    printactive(0);
     return 0;
 }
 

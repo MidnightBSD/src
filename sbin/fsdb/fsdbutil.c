@@ -30,7 +30,7 @@
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/fsdb/fsdbutil.c,v 1.18 2003/11/13 19:08:43 johan Exp $";
+  "$FreeBSD: src/sbin/fsdb/fsdbutil.c,v 1.20 2006/08/23 22:44:00 ceri Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -98,7 +98,7 @@ argcount(struct cmdtable *cmdp, int argc, char *argv[])
 {
     if (cmdp->minargc == cmdp->maxargc)
 	warnx("command `%s' takes %u arguments, got %u", cmdp->cmd,
-	    cmdp->minargc-1, argc);
+	    cmdp->minargc-1, argc-1);
     else
 	warnx("command `%s' takes from %u to %u arguments",
 	      cmdp->cmd, cmdp->minargc-1, cmdp->maxargc-1);
@@ -156,6 +156,12 @@ printstat(const char *cp, ino_t inum, union dinode *dp)
     }
     printf("I=%lu MODE=%o SIZE=%ju", (u_long)inum, DIP(dp, di_mode),
 	(uintmax_t)DIP(dp, di_size));
+    if (sblock.fs_magic != FS_UFS1_MAGIC) {
+	t = _time64_to_time(dp->dp2.di_birthtime);
+	p = ctime(&t);
+	printf("\n\tBTIME=%15.15s %4.4s [%d nsec]", &p[4], &p[20],
+	   dp->dp2.di_birthnsec);
+    }
     if (sblock.fs_magic == FS_UFS1_MAGIC)
 	t = _time32_to_time(dp->dp1.di_mtime);
     else

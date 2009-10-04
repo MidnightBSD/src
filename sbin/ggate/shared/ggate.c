@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/ggate/shared/ggate.c,v 1.5 2005/07/08 21:28:26 pjd Exp $
+ * $FreeBSD: src/sbin/ggate/shared/ggate.c,v 1.9 2007/04/06 11:19:48 pjd Exp $
  */
 
 #include <stdio.h>
@@ -149,10 +149,10 @@ g_gate_mediasize(int fd)
 	return (mediasize);
 }
 
-size_t
+unsigned
 g_gate_sectorsize(int fd)
 {
-	size_t secsize;
+	unsigned secsize;
 	struct stat sb;
 
 	if (fstat(fd, &sb) == -1)
@@ -222,6 +222,16 @@ g_gate_load_module(void)
 	}
 }
 
+/*
+ * When we send from ggatec packets larger than 32kB, performance drops
+ * significantly (eg. to 256kB/s over 1Gbit/s link). This is not a problem
+ * when data is send from ggated. I don't know why, so for now I limit
+ * size of packets send from ggatec to 32kB by defining MAX_SEND_SIZE
+ * in ggatec Makefile.
+ */
+#ifndef	MAX_SEND_SIZE
+#define	MAX_SEND_SIZE	MAXPHYS
+#endif
 ssize_t
 g_gate_send(int s, const void *buf, size_t len, int flags)
 {
@@ -229,7 +239,7 @@ g_gate_send(int s, const void *buf, size_t len, int flags)
 	const unsigned char *p = buf;
 
 	while (len > 0) {
-		done2 = send(s, p, len, flags);
+		done2 = send(s, p, MIN(len, MAX_SEND_SIZE), flags);
 		if (done2 == 0)
 			break;
 		else if (done2 == -1) {
@@ -250,8 +260,12 @@ g_gate_send(int s, const void *buf, size_t len, int flags)
 ssize_t
 g_gate_recv(int s, void *buf, size_t len, int flags)
 {
+	ssize_t done;
 
-	return (recv(s, buf, len, flags));
+	do {
+		done = recv(s, buf, len, flags);
+	} while (done == -1 && errno == EAGAIN);
+	return (done);
 }
 
 int nagle = 1;
@@ -280,7 +294,7 @@ g_gate_socket_settings(int sfd)
 	bsize = sndbuf;
 	if (setsockopt(sfd, SOL_SOCKET, SO_SNDBUF, &bsize, sizeof(bsize)) == -1)
 		g_gate_xlog("setsockopt(SO_SNDBUF): %s.", strerror(errno));
-	tv.tv_sec = 1;
+	tv.tv_sec = 8;
 	tv.tv_usec = 0;
 	if (setsockopt(sfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1) {
 		g_gate_log(LOG_ERR, "setsockopt(SO_SNDTIMEO) error: %s.",

@@ -47,7 +47,7 @@ All rights reserved.\n";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/growfs/growfs.c,v 1.24 2005/01/16 14:37:30 charnier Exp $");
+__FBSDID("$FreeBSD: src/sbin/growfs/growfs.c,v 1.25 2006/07/17 20:48:36 stefanf Exp $");
 
 /* ********************************************************** INCLUDES ***** */
 #include <sys/param.h>
@@ -631,7 +631,6 @@ cond_bl_upd(ufs2_daddr_t *block, struct gfs_bpp *field, int fsi, int fso,
 
 	DBG_ENTER;
 
-	f = field;
 	for (f = field; f->old != 0; f++) {
 		src = *block;
 		if (fragstoblks(&sblock, src) != f->old)

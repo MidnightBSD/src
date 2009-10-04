@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/ggate/ggatec/ggatec.c,v 1.6 2005/07/10 21:10:20 pjd Exp $
+ * $FreeBSD: src/sbin/ggate/ggatec/ggatec.c,v 1.7 2006/03/12 09:27:51 pjd Exp $
  */
 
 #include <stdio.h>
@@ -457,8 +457,10 @@ g_gatec_create(void)
 	snprintf(ggioc.gctl_info, sizeof(ggioc.gctl_info), "%s:%u %s", host,
 	    port, path);
 	g_gate_ioctl(G_GATE_CMD_CREATE, &ggioc);
-	if (unit == -1)
+	if (unit == -1) {
 		printf("%s%u\n", G_GATE_PROVIDER_NAME, ggioc.gctl_unit);
+		fflush(stdout);
+	}
 	unit = ggioc.gctl_unit;
 
 	mydaemon();
