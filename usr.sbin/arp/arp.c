@@ -42,7 +42,7 @@ static char const sccsid[] = "@(#)from: arp.c	8.2 (Berkeley) 1/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/arp/arp.c,v 1.58.2.3 2006/02/16 12:40:27 glebius Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/arp/arp.c,v 1.65 2007/03/06 09:32:40 kevlo Exp $");
 
 /*
  * arp - display, set, and delete arp table entries
@@ -224,7 +224,7 @@ file(char *name)
 	args[3] = &arg[3][0];
 	args[4] = &arg[4][0];
 	retval = 0;
-	while(fgets(line, 100, fp) != NULL) {
+	while(fgets(line, sizeof(line), fp) != NULL) {
 		if ((p = strchr(line, '#')) != NULL)
 			*p = '\0';
 		for (p = line; isblank(*p); p++);
@@ -627,8 +627,8 @@ usage(void)
 		"       arp [-n] [-i interface] -a",
 		"       arp -d hostname [pub]",
 		"       arp -d [-i interface] -a",
-		"       arp -s hostname ether_addr [temp] [pub]",
-		"       arp -S hostname ether_addr [temp] [pub]",
+		"       arp -s hostname ether_addr [temp] [pub [only]]",
+		"       arp -S hostname ether_addr [temp] [pub [only]]",
 		"       arp -f filename");
 	exit(1);
 }
@@ -761,9 +761,9 @@ get_ether_addr(in_addr_t ipaddr, struct ether_addr *hwaddr)
 	for (ifr = ifc.ifc_req; ifr < ifend; ifr = NEXTIFR(ifr) ) {
 		if (ifr->ifr_addr.sa_family != AF_INET)
 			continue;
-		/* XXX can't we use *ifr instead of ifreq ? */
 		strncpy(ifreq.ifr_name, ifr->ifr_name,
 			sizeof(ifreq.ifr_name));
+		ifreq.ifr_addr = ifr->ifr_addr;
 		/*
 		 * Check that the interface is up,
 		 * and not point-to-point or loopback.

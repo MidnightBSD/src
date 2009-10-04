@@ -37803,6 +37803,10 @@ usr.sbin/arp/arp.c -text
 usr.sbin/asf/Makefile -text
 usr.sbin/asf/asf.8 -text
 usr.sbin/asf/asf.c -text
+usr.sbin/asf/asf.h -text
+usr.sbin/asf/asf_kld.c -text
+usr.sbin/asf/asf_kvm.c -text
+usr.sbin/asf/asf_prog.c -text
 usr.sbin/atm/Makefile -text
 usr.sbin/atm/Makefile.inc -text
 usr.sbin/atm/atmarpd/Makefile -text
