@@ -11,4 +11,3 @@ CCSRCS=\
 HDRS=\
   $(srcdir)/table.h
 NAMEPREFIX=$(g)
-
