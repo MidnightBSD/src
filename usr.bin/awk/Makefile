@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.bin/awk/Makefile,v 1.12 2005/05/17 14:54:33 ru Exp $
+# $FreeBSD: src/usr.bin/awk/Makefile,v 1.14 2006/10/25 21:23:20 ru Exp $
 
 AWKSRC=	${.CURDIR}/../../contrib/one-true-awk
 .PATH: ${AWKSRC}
@@ -29,7 +29,7 @@ CLEANFILES+=	nawk.1
 nawk.1: awk.1
 	cat ${.ALLSRC} > ${.TARGET}
 
-.for f in b.c main.c run.c
+.for f in b.c lib.c main.c run.c tran.c
 ${f}: ${AWKSRC}/${f} ${.CURDIR}/${f}.diff
 	patch -s -b .orig -o ${.TARGET} < ${.CURDIR}/${f}.diff ${AWKSRC}/${f}
 CLEANFILES+= ${f}

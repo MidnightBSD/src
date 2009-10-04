@@ -36225,8 +36225,10 @@ usr.bin/atm/Makefile.inc -text
 usr.bin/atm/sscop/Makefile -text
 usr.bin/awk/Makefile -text
 usr.bin/awk/b.c.diff -text
+usr.bin/awk/lib.c.diff -text
 usr.bin/awk/main.c.diff -text
 usr.bin/awk/run.c.diff -text
+usr.bin/awk/tran.c.diff -text
 usr.bin/banner/Makefile -text
 usr.bin/banner/banner.6 -text
 usr.bin/banner/banner.c -text
