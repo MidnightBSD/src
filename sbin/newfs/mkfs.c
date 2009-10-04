@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)mkfs.c	8.11 (Berkeley) 5/3/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/newfs/mkfs.c,v 1.89 2005/02/20 11:32:49 delphij Exp $");
+__FBSDID("$FreeBSD: src/sbin/newfs/mkfs.c,v 1.92 2006/10/31 21:52:27 pjd Exp $");
 
 #include <err.h>
 #include <grp.h>
@@ -135,6 +135,8 @@ mkfs(struct partition *pp, char *fsys)
 		sblock.fs_flags |= FS_DOSOFTDEP;
 	if (Lflag)
 		strlcpy(sblock.fs_volname, volumelabel, MAXVOLLEN);
+	if (Jflag)
+		sblock.fs_flags |= FS_GJOURNAL;
 	if (lflag)
 		sblock.fs_flags |= FS_MULTILABEL;
 	/*

@@ -48,7 +48,7 @@ static char sccsid[] = "@(#)newfs.c	8.13 (Berkeley) 5/1/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/newfs/newfs.c,v 1.80 2005/01/22 14:37:57 ru Exp $");
+__FBSDID("$FreeBSD: src/sbin/newfs/newfs.c,v 1.82 2007/03/02 20:07:59 pjd Exp $");
 
 /*
  * newfs: friendly front end to mkfs
@@ -117,6 +117,7 @@ int	Oflag = 2;		/* file system format (1 => UFS1, 2 => UFS2) */
 int	Rflag;			/* regression test */
 int	Uflag;			/* enable soft updates for file system */
 int	Eflag = 0;		/* exit in middle of newfs for testing */
+int	Jflag;			/* enable gjournal for file system */
 int	lflag;			/* enable multilabel for file system */
 int	nflag;			/* do not create .snap directory */
 quad_t	fssize;			/* file system size */
@@ -156,10 +157,13 @@ main(int argc, char *argv[])
 	off_t mediasize;
 
 	while ((ch = getopt(argc, argv,
-	    "EL:NO:RS:T:Ua:b:c:d:e:f:g:h:i:lm:no:s:")) != -1)
+	    "EJL:NO:RS:T:Ua:b:c:d:e:f:g:h:i:lm:no:s:")) != -1)
 		switch (ch) {
 		case 'E':
 			Eflag++;
+			break;
+		case 'J':
+			Jflag = 1;
 			break;
 		case 'L':
 			volumelabel = optarg;
@@ -417,6 +421,7 @@ usage()
 	    getprogname(),
 	    " [device-type]");
 	fprintf(stderr, "where fsoptions are:\n");
+	fprintf(stderr, "\t-J Enable journaling via gjournal\n");
 	fprintf(stderr, "\t-L volume label to add to superblock\n");
 	fprintf(stderr,
 	    "\t-N do not create file system, just print out parameters\n");

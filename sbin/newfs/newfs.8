@@ -26,7 +26,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)newfs.8	8.6 (Berkeley) 5/3/95
-.\" $FreeBSD: src/sbin/newfs/newfs.8,v 1.69 2005/01/22 14:36:51 ru Exp $
+.\" $FreeBSD: src/sbin/newfs/newfs.8,v 1.70 2006/10/31 21:52:27 pjd Exp $
 .\"
 .Dd January 21, 2005
 .Dt NEWFS 8
@@ -36,7 +36,7 @@
 .Nd construct a new UFS1/UFS2 file system
 .Sh SYNOPSIS
 .Nm
-.Op Fl NUln
+.Op Fl JNUln
 .Op Fl L Ar volname
 .Op Fl O Ar filesystem-type
 .Op Fl S Ar sector-size
@@ -77,6 +77,8 @@ has numerous options to allow the defaults to be selectively overridden.
 .Pp
 The following options define the general layout policies:
 .Bl -tag -width indent
+.It Fl J
+Enable journaling on the new file system via gjournal.
 .It Fl L Ar volname
 Add a volume label to the new file system.
 .It Fl N

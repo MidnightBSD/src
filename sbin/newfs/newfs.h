@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/newfs/newfs.h,v 1.17 2005/01/21 22:20:25 wes Exp $
+ * $FreeBSD: src/sbin/newfs/newfs.h,v 1.18 2006/10/31 21:52:27 pjd Exp $
  */
 
 #include <libufs.h>
@@ -49,6 +49,7 @@ extern int	Oflag;		/* build UFS1 format file system */
 extern int	Rflag;		/* regression test */
 extern int	Uflag;		/* enable soft updates for file system */
 extern int	Eflag;		/* exit as if error, for testing */
+extern int	Jflag;		/* enable gjournal for file system */
 extern int	lflag;		/* enable multilabel MAC for file system */
 extern int	nflag;		/* do not create .snap directory */
 extern quad_t	fssize;		/* file system size */
