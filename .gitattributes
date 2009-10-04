@@ -15854,8 +15854,6 @@ contrib/smbfs/lib/smb/rcfile_priv.h -text
 contrib/smbfs/lib/smb/rq.c -text
 contrib/smbfs/lib/smb/subr.c -text
 contrib/smbfs/mount_smbfs/Makefile -text
-contrib/smbfs/mount_smbfs/getmntopts.c -text
-contrib/smbfs/mount_smbfs/mntopts.h -text
 contrib/smbfs/mount_smbfs/mount_smbfs.8 -text
 contrib/smbfs/mount_smbfs/mount_smbfs.c -text
 contrib/smbfs/smbutil/Makefile -text

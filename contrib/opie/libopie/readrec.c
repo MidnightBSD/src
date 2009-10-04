@@ -14,6 +14,8 @@ you didn't get a copy, you may request one from <license@inner.net>.
 		support. Fixed a debug message typo. Keep going after bogus
                 records. Set read flag.
 	Created by cmetz for OPIE 2.3.
+
+$FreeBSD: src/contrib/opie/libopie/readrec.c,v 1.2 2005/07/29 09:59:24 ache Exp $
 */
 #include "opie_cfg.h"
 
@@ -94,7 +96,7 @@ int __opiereadrec FUNCTION((opie), struct opie *opie)
   FILE *f = NULL;
   int rval = -1;
 
-  if (!(f = __opieopen(KEY_FILE, 0, 0644))) {
+  if (!(f = __opieopen(KEY_FILE, 0, 0600))) {
 #if DEBUG
     syslog(LOG_DEBUG, "__opiereadrec: __opieopen(KEY_FILE..) failed!");
 #endif /* DEBUG */
