@@ -16147,7 +16147,6 @@ contrib/tcpdump/packetdat.awk -text
 contrib/tcpdump/parsenfsfh.c -text
 contrib/tcpdump/pcap-missing.h -text
 contrib/tcpdump/pcap_dump_ftell.c -text
-contrib/tcpdump/pf.h -text
 contrib/tcpdump/pmap_prot.h -text
 contrib/tcpdump/ppp.h -text
 contrib/tcpdump/print-802_11.c -text
