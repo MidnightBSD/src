@@ -25642,11 +25642,6 @@ libexec/getty/main.c -text
 libexec/getty/pathnames.h -text
 libexec/getty/subr.c -text
 libexec/getty/ttys.5 -text
-libexec/lukemftpd/Makefile -text
-libexec/lukemftpd/config.h -text
-libexec/lukemftpd/nbsd2fbsd.h -text
-libexec/lukemftpd/nbsd_pidfile.h -text
-libexec/lukemftpd/util.h -text
 libexec/mail.local/Makefile -text
 libexec/makekey/Makefile -text
 libexec/makekey/makekey.8 -text
