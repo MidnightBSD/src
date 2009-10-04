@@ -34,7 +34,7 @@ static char sccsid[] = "@(#)restore.c	8.3 (Berkeley) 9/13/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/restore/restore.c,v 1.18 2005/05/29 15:57:00 charnier Exp $");
+__FBSDID("$FreeBSD: src/sbin/restore/restore.c,v 1.19 2006/12/05 11:18:51 dwmalone Exp $");
 
 #include <sys/types.h>
 
@@ -687,6 +687,17 @@ createfiles(void)
 		 */
 		if (first > last)
 			return;
+		if (Dflag) {
+			if (curfile.ino == maxino)
+				return;
+			if((ep = lookupino(curfile.ino)) != NULL &&
+			    (ep->e_flags & (NEW|EXTRACT))) {
+				goto justgetit;
+			} else {
+				skipfile();
+				continue;
+			}
+		}
 		/*
 		 * Reject any volumes with inodes greater than the last
 		 * one needed, so that we can quickly skip backwards to
@@ -749,6 +760,7 @@ createfiles(void)
 			ep = lookupino(next);
 			if (ep == NULL)
 				panic("corrupted symbol table\n");
+justgetit:
 			(void) extractfile(myname(ep));
 			ep->e_flags &= ~NEW;
 			if (volno != curvol)

@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)restore.8	8.4 (Berkeley) 5/1/95
-.\" $FreeBSD: src/sbin/restore/restore.8,v 1.50 2005/03/18 17:49:08 imp Exp $
+.\" $FreeBSD: src/sbin/restore/restore.8,v 1.53 2006/12/05 11:18:51 dwmalone Exp $
 .\"
-.Dd May 1, 1995
+.Dd October 12, 2006
 .Dt RESTORE 8
 .Os
 .Sh NAME
@@ -38,32 +38,32 @@
 .Sh SYNOPSIS
 .Nm
 .Fl i
-.Op Fl dhmNuvy
+.Op Fl dDhmNuvy
 .Op Fl b Ar blocksize
 .Op Fl f Ar file | Fl P Ar pipecommand
 .Op Fl s Ar fileno
 .Nm
 .Fl R
-.Op Fl dNuvy
+.Op Fl dDNuvy
 .Op Fl b Ar blocksize
 .Op Fl f Ar file | Fl P Ar pipecommand
 .Op Fl s Ar fileno
 .Nm
 .Fl r
-.Op Fl dNuvy
+.Op Fl dDNuvy
 .Op Fl b Ar blocksize
 .Op Fl f Ar file | Fl P Ar pipecommand
 .Op Fl s Ar fileno
 .Nm
 .Fl t
-.Op Fl dhNuvy
+.Op Fl dDhNuvy
 .Op Fl b Ar blocksize
 .Op Fl f Ar file | Fl P Ar pipecommand
 .Op Fl s Ar fileno
 .Op Ar
 .Nm
 .Fl x
-.Op Fl dhmNuvy
+.Op Fl dDhmNuvy
 .Op Fl b Ar blocksize
 .Op Fl f Ar file | Fl P Ar pipecommand
 .Op Fl s Ar fileno
@@ -278,6 +278,12 @@ option is not specified,
 tries to determine the media block size dynamically.
 .It Fl d
 Sends verbose debugging output to the standard error.
+.It Fl D
+This puts
+.Nm
+into degraded mode,
+causing restore to operate less efficiently
+but to try harder to read corrupted backups.
 .It Fl f Ar file
 Read the backup from
 .Ar file ;
@@ -406,9 +412,6 @@ Most checks are self-explanatory or can ``never happen''.
 Common errors are given below.
 .Pp
 .Bl -tag -width Ds -compact
-.It Converting to new file system format.
-A dump tape created from the old file system has been loaded.
-It is automatically converted to the new file system format.
 .Pp
 .It <filename>: not found on tape
 The specified file name was listed in the tape directory,
@@ -461,7 +464,10 @@ utility appeared in
 The
 .Nm
 utility can get confused when doing incremental restores from
-dumps that were made on active file systems.
+dumps that were made on active file systems without the
+.Fl L
+option (see
+.Xr dump 8 ) .
 .Pp
 A level zero dump must be done after a full restore.
 Because restore runs in user code,

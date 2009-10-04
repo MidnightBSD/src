@@ -40,7 +40,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/restore/main.c,v 1.26 2005/05/29 15:57:00 charnier Exp $");
+__FBSDID("$FreeBSD: src/sbin/restore/main.c,v 1.27 2006/12/05 11:18:51 dwmalone Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -60,7 +60,7 @@ __FBSDID("$FreeBSD: src/sbin/restore/main.c,v 1.26 2005/05/29 15:57:00 charnier 
 #include "restore.h"
 #include "extern.h"
 
-int	bflag = 0, cvtflag = 0, dflag = 0, vflag = 0, yflag = 0;
+int	bflag = 0, cvtflag = 0, dflag = 0, Dflag = 0, vflag = 0, yflag = 0;
 int	hflag = 1, mflag = 1, Nflag = 0;
 int	uflag = 0;
 int	pipecmd = 0;
@@ -97,7 +97,7 @@ main(int argc, char *argv[])
 
 	inputdev = NULL;
 	obsolete(&argc, &argv);
-	while ((ch = getopt(argc, argv, "b:df:himNP:Rrs:tuvxy")) != -1)
+	while ((ch = getopt(argc, argv, "b:dDf:himNP:Rrs:tuvxy")) != -1)
 		switch(ch) {
 		case 'b':
 			/* Change default tape blocksize. */
@@ -110,6 +110,9 @@ main(int argc, char *argv[])
 			break;
 		case 'd':
 			dflag = 1;
+			break;
+		case 'D':
+			Dflag = 1;
 			break;
 		case 'f':
 			if (pipecmd)

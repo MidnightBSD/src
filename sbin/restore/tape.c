@@ -39,14 +39,17 @@ static char sccsid[] = "@(#)tape.c	8.9 (Berkeley) 5/1/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/restore/tape.c,v 1.44 2005/05/29 15:57:00 charnier Exp $");
+__FBSDID("$FreeBSD: src/sbin/restore/tape.c,v 1.49 2007/03/06 08:13:20 mckusick Exp $");
 
 #include <sys/param.h>
 #include <sys/file.h>
 #include <sys/mtio.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/extattr.h>
+#include <sys/acl.h>
 
+#include <ufs/ufs/extattr.h>
 #include <ufs/ufs/dinode.h>
 #include <protocols/dumprestore.h>
 
@@ -54,6 +57,7 @@ __FBSDID("$FreeBSD: src/sbin/restore/tape.c,v 1.44 2005/05/29 15:57:00 charnier 
 #include <limits.h>
 #include <paths.h>
 #include <setjmp.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,6 +78,7 @@ static int	blkcnt;
 static int	numtrec;
 static char	*tapebuf;
 static union	u_spcl endoftapemark;
+static long	byteslide = 0;
 static long	blksread;		/* blocks read since last header */
 static int64_t	tapeaddr = 0;		/* current TP_BSIZE tape record */
 static long	tapesread;
@@ -92,10 +97,16 @@ int		oldinofmt;	/* FreeBSD 1 inode format needs cvt */
 
 #define	FLUSHTAPEBUF()	blkcnt = ntrec + 1
 
+char *namespace_names[] = EXTATTR_NAMESPACE_NAMES;
+
 static void	 accthdr(struct s_spcl *);
 static int	 checksum(int *);
 static void	 findinode(struct s_spcl *);
 static void	 findtapeblksize(void);
+static char	*setupextattr(int);
+static void	 xtrattr(char *, long);
+static void	 set_extattr_link(char *, void *, int);
+static void	 set_extattr_fd(int, char *, void *, int);
 static int	 gethead(struct s_spcl *);
 static void	 readtape(char *);
 static void	 setdumpnum(void);
@@ -170,12 +181,13 @@ newtapebuf(long size)
 	if (size <= tapebufsize)
 		return;
 	if (tapebuf != NULL)
-		free(tapebuf);
-	tapebuf = malloc(size * TP_BSIZE);
+		free(tapebuf - TP_BSIZE);
+	tapebuf = malloc((size+1) * TP_BSIZE);
 	if (tapebuf == NULL) {
 		fprintf(stderr, "Cannot allocate space for tape buffer\n");
 		done(1);
 	}
+	tapebuf += TP_BSIZE;
 	tapebufsize = size;
 }
 
@@ -268,7 +280,7 @@ setup(void)
 		panic("no memory for active inode map\n");
 	usedinomap = map;
 	curfile.action = USING;
-	getfile(xtrmap, xtrmapskip);
+	getfile(xtrmap, xtrmapskip, xtrmapskip);
 	if (spcl.c_type != TS_BITS) {
 		fprintf(stderr, "Cannot find file dump list\n");
 		done(1);
@@ -278,7 +290,7 @@ setup(void)
 		panic("no memory for file dump list\n");
 	dumpmap = map;
 	curfile.action = USING;
-	getfile(xtrmap, xtrmapskip);
+	getfile(xtrmap, xtrmapskip, xtrmapskip);
 	/*
 	 * If there may be whiteout entries on the tape, pretend that the
 	 * whiteout inode exists, so that the whiteout entries can be
@@ -551,9 +563,13 @@ int
 extractfile(char *name)
 {
 	int flags;
+	uid_t uid;
+	gid_t gid;
 	mode_t mode;
+	int extsize;
 	struct timeval mtimep[2], ctimep[2];
 	struct entry *ep;
+	char *buf;
 
 	curfile.name = name;
 	curfile.action = USING;
@@ -565,6 +581,9 @@ extractfile(char *name)
 	ctimep[0].tv_usec = curfile.atime_nsec / 1000;
 	ctimep[1].tv_sec = curfile.birthtime_sec;
 	ctimep[1].tv_usec = curfile.birthtime_nsec / 1000;
+	extsize = curfile.extsize;
+	uid = curfile.uid;
+	gid = curfile.gid;
 	mode = curfile.mode;
 	flags = curfile.file_flags;
 	switch (mode & IFMT) {
@@ -593,17 +612,21 @@ extractfile(char *name)
 	case IFLNK:
 		lnkbuf[0] = '\0';
 		pathlen = 0;
-		getfile(xtrlnkfile, xtrlnkskip);
+		buf = setupextattr(extsize);
+		getfile(xtrlnkfile, xtrattr, xtrlnkskip);
 		if (pathlen == 0) {
 			vprintf(stdout,
 			    "%s: zero length symbolic link (ignored)\n", name);
 			return (GOOD);
 		}
 		if (linkit(lnkbuf, name, SYMLINK) == GOOD) {
-			(void) lchown(name, curfile.uid, curfile.gid);
+			if (extsize > 0)
+				set_extattr_link(name, buf, extsize);
+			(void) lchown(name, uid, gid);
 			(void) lchmod(name, mode);
 			(void) lutimes(name, ctimep);
 			(void) lutimes(name, mtimep);
+			(void) lchflags(name, flags);
 			return (GOOD);
 		}
 		return (FAIL);
@@ -614,20 +637,26 @@ extractfile(char *name)
 			skipfile();
 			return (GOOD);
 		}
-		if (uflag && !Nflag)
-			(void)unlink(name);
-		if (mkfifo(name, mode) < 0) {
+		if (uflag)
+			(void) unlink(name);
+		if (mkfifo(name, 0600) < 0) {
 			fprintf(stderr, "%s: cannot create fifo: %s\n",
 			    name, strerror(errno));
 			skipfile();
 			return (FAIL);
 		}
-		(void) chown(name, curfile.uid, curfile.gid);
+		if (extsize == 0) {
+			skipfile();
+		} else {
+			buf = setupextattr(extsize);
+			getfile(xtrnull, xtrattr, xtrnull);
+			set_extattr_file(name, buf, extsize);
+		}
+		(void) chown(name, uid, gid);
 		(void) chmod(name, mode);
 		(void) utimes(name, ctimep);
 		(void) utimes(name, mtimep);
 		(void) chflags(name, flags);
-		skipfile();
 		return (GOOD);
 
 	case IFCHR:
@@ -638,19 +667,26 @@ extractfile(char *name)
 			return (GOOD);
 		}
 		if (uflag)
-			(void)unlink(name);
-		if (mknod(name, mode, (int)curfile.rdev) < 0) {
+			(void) unlink(name);
+		if (mknod(name, (mode & (IFCHR | IFBLK)) | 0600,
+		    (int)curfile.rdev) < 0) {
 			fprintf(stderr, "%s: cannot create special file: %s\n",
 			    name, strerror(errno));
 			skipfile();
 			return (FAIL);
 		}
-		(void) chown(name, curfile.uid, curfile.gid);
+		if (extsize == 0) {
+			skipfile();
+		} else {
+			buf = setupextattr(extsize);
+			getfile(xtrnull, xtrattr, xtrnull);
+			set_extattr_file(name, buf, extsize);
+		}
+		(void) chown(name, uid, gid);
 		(void) chmod(name, mode);
 		(void) utimes(name, ctimep);
 		(void) utimes(name, mtimep);
 		(void) chflags(name, flags);
-		skipfile();
 		return (GOOD);
 
 	case IFREG:
@@ -660,24 +696,206 @@ extractfile(char *name)
 			return (GOOD);
 		}
 		if (uflag)
-			(void)unlink(name);
+			(void) unlink(name);
 		if ((ofile = open(name, O_WRONLY | O_CREAT | O_TRUNC,
-		    0666)) < 0) {
+		    0600)) < 0) {
 			fprintf(stderr, "%s: cannot create file: %s\n",
 			    name, strerror(errno));
 			skipfile();
 			return (FAIL);
 		}
-		(void) fchown(ofile, curfile.uid, curfile.gid);
+		buf = setupextattr(extsize);
+		getfile(xtrfile, xtrattr, xtrskip);
+		if (extsize > 0)
+			set_extattr_fd(ofile, name, buf, extsize);
+		(void) fchown(ofile, uid, gid);
 		(void) fchmod(ofile, mode);
-		getfile(xtrfile, xtrskip);
+		(void) futimes(ofile, ctimep);
+		(void) futimes(ofile, mtimep);
+		(void) fchflags(ofile, flags);
 		(void) close(ofile);
-		(void) utimes(name, ctimep);
-		(void) utimes(name, mtimep);
-		(void) chflags(name, flags);
 		return (GOOD);
 	}
 	/* NOTREACHED */
+}
+
+/*
+ * Set attributes for a file.
+ */
+void
+set_extattr_file(char *name, void *buf, int size)
+{
+	struct extattr *eap, *eaend;
+
+	vprintf(stdout, "Set attributes for %s:", name);
+	eaend = buf + size;
+	for (eap = buf; eap < eaend; eap = EXTATTR_NEXT(eap)) {
+		/*
+		 * Make sure this entry is complete.
+		 */
+		if (EXTATTR_NEXT(eap) > eaend || eap->ea_length <= 0) {
+			dprintf(stdout, "\n\t%scorrupted",
+				eap == buf ? "" : "remainder ");
+			break;
+		}
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_EMPTY)
+			continue;
+		vprintf(stdout, "\n\t%s, (%d bytes), %*s",
+			namespace_names[eap->ea_namespace], eap->ea_length,
+			eap->ea_namelength, eap->ea_name);
+		/*
+		 * First we try the general attribute setting interface.
+		 * However, some attributes can only be set by root or
+		 * by using special interfaces (for example, ACLs).
+		 */
+		if (extattr_set_file(name, eap->ea_namespace, eap->ea_name,
+		    EXTATTR_CONTENT(eap), EXTATTR_CONTENT_SIZE(eap)) != -1) {
+			dprintf(stdout, " (set using extattr_set_file)");
+			continue;
+		}
+		/*
+		 * If the general interface refuses to set the attribute,
+		 * then we try all the specialized interfaces that we
+		 * know about.
+		 */
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_SYSTEM &&
+		    !strcmp(eap->ea_name, POSIX1E_ACL_ACCESS_EXTATTR_NAME)) {
+			if (acl_set_file(name, ACL_TYPE_ACCESS,
+			    EXTATTR_CONTENT(eap)) != -1) {
+				dprintf(stdout, " (set using acl_set_file)");
+				continue;
+			}
+		}
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_SYSTEM &&
+		    !strcmp(eap->ea_name, POSIX1E_ACL_DEFAULT_EXTATTR_NAME)) {
+			if (acl_set_file(name, ACL_TYPE_DEFAULT,
+			    EXTATTR_CONTENT(eap)) != -1) {
+				dprintf(stdout, " (set using acl_set_file)");
+				continue;
+			}
+		}
+		vprintf(stdout, " (unable to set)");
+	}
+	vprintf(stdout, "\n");
+}
+
+/*
+ * Set attributes for a symbolic link.
+ */
+static void
+set_extattr_link(char *name, void *buf, int size)
+{
+	struct extattr *eap, *eaend;
+
+	vprintf(stdout, "Set attributes for %s:", name);
+	eaend = buf + size;
+	for (eap = buf; eap < eaend; eap = EXTATTR_NEXT(eap)) {
+		/*
+		 * Make sure this entry is complete.
+		 */
+		if (EXTATTR_NEXT(eap) > eaend || eap->ea_length <= 0) {
+			dprintf(stdout, "\n\t%scorrupted",
+				eap == buf ? "" : "remainder ");
+			break;
+		}
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_EMPTY)
+			continue;
+		vprintf(stdout, "\n\t%s, (%d bytes), %*s",
+			namespace_names[eap->ea_namespace], eap->ea_length,
+			eap->ea_namelength, eap->ea_name);
+		/*
+		 * First we try the general attribute setting interface.
+		 * However, some attributes can only be set by root or
+		 * by using special interfaces (for example, ACLs).
+		 */
+		if (extattr_set_link(name, eap->ea_namespace, eap->ea_name,
+		    EXTATTR_CONTENT(eap), EXTATTR_CONTENT_SIZE(eap)) != -1) {
+			dprintf(stdout, " (set using extattr_set_link)");
+			continue;
+		}
+		/*
+		 * If the general interface refuses to set the attribute,
+		 * then we try all the specialized interfaces that we
+		 * know about.
+		 */
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_SYSTEM &&
+		    !strcmp(eap->ea_name, POSIX1E_ACL_ACCESS_EXTATTR_NAME)) {
+			if (acl_set_link_np(name, ACL_TYPE_ACCESS,
+			    EXTATTR_CONTENT(eap)) != -1) {
+				dprintf(stdout, " (set using acl_set_link_np)");
+				continue;
+			}
+		}
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_SYSTEM &&
+		    !strcmp(eap->ea_name, POSIX1E_ACL_DEFAULT_EXTATTR_NAME)) {
+			if (acl_set_link_np(name, ACL_TYPE_DEFAULT,
+			    EXTATTR_CONTENT(eap)) != -1) {
+				dprintf(stdout, " (set using acl_set_link_np)");
+				continue;
+			}
+		}
+		vprintf(stdout, " (unable to set)");
+	}
+	vprintf(stdout, "\n");
+}
+
+/*
+ * Set attributes on a file descriptor.
+ */
+static void
+set_extattr_fd(int fd, char *name, void *buf, int size)
+{
+	struct extattr *eap, *eaend;
+
+	vprintf(stdout, "Set attributes for %s:", name);
+	eaend = buf + size;
+	for (eap = buf; eap < eaend; eap = EXTATTR_NEXT(eap)) {
+		/*
+		 * Make sure this entry is complete.
+		 */
+		if (EXTATTR_NEXT(eap) > eaend || eap->ea_length <= 0) {
+			dprintf(stdout, "\n\t%scorrupted",
+				eap == buf ? "" : "remainder ");
+			break;
+		}
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_EMPTY)
+			continue;
+		vprintf(stdout, "\n\t%s, (%d bytes), %*s",
+			namespace_names[eap->ea_namespace], eap->ea_length,
+			eap->ea_namelength, eap->ea_name);
+		/*
+		 * First we try the general attribute setting interface.
+		 * However, some attributes can only be set by root or
+		 * by using special interfaces (for example, ACLs).
+		 */
+		if (extattr_set_fd(fd, eap->ea_namespace, eap->ea_name,
+		    EXTATTR_CONTENT(eap), EXTATTR_CONTENT_SIZE(eap)) != -1) {
+			dprintf(stdout, " (set using extattr_set_fd)");
+			continue;
+		}
+		/*
+		 * If the general interface refuses to set the attribute,
+		 * then we try all the specialized interfaces that we
+		 * know about.
+		 */
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_SYSTEM &&
+		    !strcmp(eap->ea_name, POSIX1E_ACL_ACCESS_EXTATTR_NAME)) {
+			if (acl_set_fd(fd, EXTATTR_CONTENT(eap)) != -1) {
+				dprintf(stdout, " (set using acl_set_fd)");
+				continue;
+			}
+		}
+		if (eap->ea_namespace == EXTATTR_NAMESPACE_SYSTEM &&
+		    !strcmp(eap->ea_name, POSIX1E_ACL_DEFAULT_EXTATTR_NAME)) {
+			if (acl_set_file(name, ACL_TYPE_DEFAULT,
+			    EXTATTR_CONTENT(eap)) != -1) {
+				dprintf(stdout, " (set using acl_set_file)");
+				continue;
+			}
+		}
+		vprintf(stdout, " (unable to set)");
+	}
+	vprintf(stdout, "\n");
 }
 
 /*
@@ -699,7 +917,7 @@ skipfile(void)
 {
 
 	curfile.action = SKIP;
-	getfile(xtrnull, xtrnull);
+	getfile(xtrnull, xtrnull, xtrnull);
 }
 
 /*
@@ -709,15 +927,20 @@ skipfile(void)
  * to the skip function.
  */
 void
-getfile(void (*fill)(char *, long), void (*skip)(char *, long))
+getfile(void (*datafill)(char *, long), void (*attrfill)(char *, long),
+	void (*skip)(char *, long))
 {
 	int i;
-	int curblk = 0;
-	quad_t size = spcl.c_size;
+	off_t size;
+	int curblk, attrsize;
+	void (*fillit)(char *, long);
 	static char clearedbuf[MAXBSIZE];
 	char buf[MAXBSIZE / TP_BSIZE][TP_BSIZE];
 	char junk[TP_BSIZE];
 
+	curblk = 0;
+	size = spcl.c_size;
+	attrsize = spcl.c_extsize;
 	if (spcl.c_type == TS_END)
 		panic("ran off end of tape\n");
 	if (spcl.c_magic != FS_UFS2_MAGIC)
@@ -725,18 +948,33 @@ getfile(void (*fill)(char *, long), void (*skip)(char *, long))
 	if (!gettingfile && setjmp(restart) != 0)
 		return;
 	gettingfile++;
+	fillit = datafill;
+	if (size == 0 && attrsize > 0) {
+		fillit = attrfill;
+		size = attrsize;
+		attrsize = 0;
+	}
 loop:
 	for (i = 0; i < spcl.c_count; i++) {
+		if (!readmapflag && i > TP_NINDIR) {
+			if (Dflag) {
+				fprintf(stderr, "spcl.c_count = %jd\n",
+				    (intmax_t)spcl.c_count);
+				break;
+			} else
+				panic("spcl.c_count = %jd\n",
+				    (intmax_t)spcl.c_count);
+		}
 		if (readmapflag || spcl.c_addr[i]) {
 			readtape(&buf[curblk++][0]);
 			if (curblk == fssize / TP_BSIZE) {
-				(*fill)((char *)buf, (long)(size > TP_BSIZE ?
+				(*fillit)((char *)buf, (long)(size > TP_BSIZE ?
 				     fssize : (curblk - 1) * TP_BSIZE + size));
 				curblk = 0;
 			}
 		} else {
 			if (curblk > 0) {
-				(*fill)((char *)buf, (long)(size > TP_BSIZE ?
+				(*fillit)((char *)buf, (long)(size > TP_BSIZE ?
 				     curblk * TP_BSIZE :
 				     (curblk - 1) * TP_BSIZE + size));
 				curblk = 0;
@@ -745,9 +983,34 @@ loop:
 				TP_BSIZE : size));
 		}
 		if ((size -= TP_BSIZE) <= 0) {
-			for (i++; i < spcl.c_count; i++)
+			if (size > -TP_BSIZE && curblk > 0) {
+				(*fillit)((char *)buf,
+					(long)((curblk * TP_BSIZE) + size));
+				curblk = 0;
+			}
+			if (attrsize > 0) {
+				fillit = attrfill;
+				size = attrsize;
+				attrsize = 0;
+				continue;
+			}
+			if (spcl.c_count - i > 1)
+				dprintf(stdout, "skipping %d junk block(s)\n",
+					spcl.c_count - i - 1);
+			for (i++; i < spcl.c_count; i++) {
+				if (!readmapflag && i > TP_NINDIR) {
+					if (Dflag) {
+						fprintf(stderr,
+						    "spcl.c_count = %jd\n",
+						    (intmax_t)spcl.c_count);
+						break;
+					} else 
+						panic("spcl.c_count = %jd\n",
+						    (intmax_t)spcl.c_count);
+				}
 				if (readmapflag || spcl.c_addr[i])
 					readtape(junk);
+			}
 			break;
 		}
 	}
@@ -759,9 +1022,52 @@ loop:
 			curfile.name, blksread);
 	}
 	if (curblk > 0)
-		(*fill)((char *)buf, (long)((curblk * TP_BSIZE) + size));
+		panic("getfile: lost data\n");
 	findinode(&spcl);
 	gettingfile = 0;
+}
+
+/*
+ * These variables are shared between the next two functions.
+ */
+static int extbufsize = 0;
+static char *extbuf;
+static int extloc;
+
+/*
+ * Allocate a buffer into which to extract extended attributes.
+ */
+static char *
+setupextattr(int extsize)
+{
+
+	extloc = 0;
+	if (extsize <= extbufsize)
+		return (extbuf);
+	if (extbufsize > 0)
+		free(extbuf);
+	if ((extbuf = malloc(extsize)) != NULL) {
+		extbufsize = extsize;
+		return (extbuf);
+	}
+	extbufsize = 0;
+	extbuf = NULL;
+	fprintf(stderr, "Cannot extract %d bytes %s for inode %d, name %s\n",
+	    extsize, "of extended attributes", curfile.ino, curfile.name);
+	return (NULL);
+}
+
+/*
+ * Extract the next block of extended attributes.
+ */
+static void
+xtrattr(char *buf, long size)
+{
+
+	if (extloc + size > extbufsize)
+		panic("overrun attribute buffer\n");
+	memmove(&extbuf[extloc], buf, size);
+	extloc += size;
 }
 
 /*
@@ -866,15 +1172,19 @@ xtrnull(char *buf, long size)
 static void
 readtape(char *buf)
 {
-	long rd, newvol, i;
+	long rd, newvol, i, oldnumtrec;
 	int cnt, seek_failed;
 
-	if (blkcnt < numtrec) {
-		memmove(buf, &tapebuf[(blkcnt++ * TP_BSIZE)], (long)TP_BSIZE);
+	if (blkcnt + (byteslide > 0) < numtrec) {
+		memmove(buf, &tapebuf[(blkcnt++ * TP_BSIZE) + byteslide], (long)TP_BSIZE);
 		blksread++;
 		tapeaddr++;
 		return;
 	}
+	if (numtrec > 0)
+		memmove(&tapebuf[-TP_BSIZE],
+		    &tapebuf[(numtrec-1) * TP_BSIZE], (long)TP_BSIZE);
+	oldnumtrec = numtrec;
 	for (i = 0; i < ntrec; i++)
 		((struct s_spcl *)&tapebuf[i * TP_BSIZE])->c_magic = 0;
 	if (numtrec == 0)
@@ -975,8 +1285,12 @@ getmore:
 		terminateinput();
 		memmove(&tapebuf[rd], &endoftapemark, (long)TP_BSIZE);
 	}
-	blkcnt = 0;
-	memmove(buf, &tapebuf[(blkcnt++ * TP_BSIZE)], (long)TP_BSIZE);
+	if (oldnumtrec == 0)
+		blkcnt = 0;
+	else
+		blkcnt -= oldnumtrec;
+	memmove(buf,
+	    &tapebuf[(blkcnt++ * TP_BSIZE) + byteslide], (long)TP_BSIZE);
 	blksread++;
 	tapeaddr++;
 }
@@ -1063,6 +1377,8 @@ gethead(struct s_spcl *buf)
 	}
 	if (checksum((int *)buf) == FAIL)
 		return (FAIL);
+	if (_time64_to_time(buf->c_date) != dumpdate)
+		fprintf(stderr, "Header with wrong dumpdate.\n");
 	if (Bcvt) {
 		swabst((u_char *)"8l4s1q8l2q17l", (u_char *)buf);
 		swabst((u_char *)"l",(u_char *) &buf->c_level);
@@ -1219,8 +1535,17 @@ findinode(struct s_spcl *header)
 				if (header->c_addr[i])
 					readtape(buf);
 			while (gethead(header) == FAIL ||
-			    _time64_to_time(header->c_date) != dumpdate)
+			    _time64_to_time(header->c_date) != dumpdate) {
 				skipcnt++;
+				if (Dflag) {
+					byteslide++;
+					if (byteslide < TP_BSIZE) {
+						blkcnt--;
+						blksread--;
+					} else 
+						byteslide = 0;
+				}
+			}
 			break;
 
 		case TS_INODE:
@@ -1235,6 +1560,7 @@ findinode(struct s_spcl *header)
 			curfile.mtime_nsec = header->c_mtimensec;
 			curfile.birthtime_sec = header->c_birthtime;
 			curfile.birthtime_nsec = header->c_birthtimensec;
+			curfile.extsize = header->c_extsize;
 			curfile.size = header->c_size;
 			curfile.ino = header->c_inumber;
 			break;
@@ -1257,18 +1583,36 @@ findinode(struct s_spcl *header)
 			break;
 
 		case TS_TAPE:
-			panic("unexpected tape header\n");
-			/* NOTREACHED */
+			if (Dflag)
+				fprintf(stderr, "unexpected tape header\n");
+			else
+				panic("unexpected tape header\n");
 
 		default:
-			panic("unknown tape header type %d\n", spcl.c_type);
-			/* NOTREACHED */
+			if (Dflag)
+				fprintf(stderr, "unknown tape header type %d\n",
+				    spcl.c_type);
+			else
+				panic("unknown tape header type %d\n",
+				    spcl.c_type);
+			while (gethead(header) == FAIL ||
+			    _time64_to_time(header->c_date) != dumpdate) {
+				skipcnt++;
+				if (Dflag) {
+					byteslide++;
+					if (byteslide < TP_BSIZE) {
+						blkcnt--;
+						blksread--;
+					} else 
+						byteslide = 0;
+				}
+			}
 
 		}
 	} while (htype == TS_ADDR);
 	if (skipcnt > 0)
-		fprintf(stderr, "resync restore, skipped %ld blocks\n",
-		    skipcnt);
+		fprintf(stderr, "resync restore, skipped %ld %s\n",
+		    skipcnt, Dflag ? "bytes" : "blocks");
 	skipcnt = 0;
 }
 

@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)restore.h	8.3 (Berkeley) 9/13/94
- * $FreeBSD: src/sbin/restore/restore.h,v 1.10 2005/04/03 05:18:28 imp Exp $
+ * $FreeBSD: src/sbin/restore/restore.h,v 1.12 2007/02/26 08:15:56 mckusick Exp $
  */
 
 /*
@@ -40,6 +40,7 @@
  */
 extern int	bflag;		/* set input block size */
 extern int	dflag;		/* print out debugging info */
+extern int	Dflag;		/* degraded mode - try hard to get stuff back */
 extern int	hflag;		/* restore heirarchies */
 extern int	mflag;		/* restore by name instead of inode number */
 extern int	Nflag;		/* do not write the disk */
@@ -114,6 +115,7 @@ struct context {
 	int	atime_nsec;	/* access time nanoseconds */
 	int	mtime_nsec;	/* modified time nanoseconds */
 	int	birthtime_nsec;	/* creation time nanoseconds */
+	int	extsize;	/* size of extended attribute data */
 	off_t	size;		/* size of file */
 	char	*name;		/* name of file */
 } curfile;
