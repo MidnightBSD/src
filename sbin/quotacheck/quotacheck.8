@@ -29,10 +29,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)quotacheck.8	8.1 (Berkeley) 6/5/93
-.\" $FreeBSD: src/sbin/quotacheck/quotacheck.8,v 1.16 2005/02/10 09:19:32 ru Exp $
-.\" $MidnightBSD$
+.\" $FreeBSD: src/sbin/quotacheck/quotacheck.8,v 1.19 2007/01/25 19:54:03 mpp Exp $
 .\"
-.Dd October 18, 2006
+.Dd January 25, 2007
 .Dt QUOTACHECK 8
 .Os
 .Sh NAME
@@ -77,7 +76,7 @@ are to be checked.
 .It Fl l Ar maxrun
 Specifies the maximum number of concurrent file systems
 to check in parallel.
-If this option is omited, or if
+If this option is omitted, or if
 .Ar maxrun
 is zero, parallel passes are run as per
 .Xr fsck 8 .
@@ -138,6 +137,8 @@ with the variable
 .Ar enable_quotas
 in
 .Pa /etc/rc.conf .
+The kernel must also be built with 
+.Cd "options QUOTA" .
 .Pp
 The
 .Nm
@@ -160,6 +161,7 @@ default file systems
 .Xr quota 1 ,
 .Xr quotactl 2 ,
 .Xr fstab 5 ,
+.Xr rc.conf 5 ,
 .Xr edquota 8 ,
 .Xr fsck 8 ,
 .Xr quotaon 8 ,
@@ -169,3 +171,12 @@ The
 .Nm
 utility appeared in
 .Bx 4.2 .
+.Sh BUGS
+The quota system will ignore UIDs or GIDs that would be negative
+when evaluated as a signed value.
+Typically those types of ids can appear in the file system from NFS
+mounts or archive files from other operating systems.
+Extremely large UIDs or GIDs will cause
+.Nm
+to run for an unreasonable amount of time and also produce extremely
+large quota data files.
