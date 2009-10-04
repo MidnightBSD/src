@@ -23571,7 +23571,6 @@ lib/libc/stdlib/atol.c -text
 lib/libc/stdlib/atoll.c -text
 lib/libc/stdlib/bsearch.3 -text
 lib/libc/stdlib/bsearch.c -text
-lib/libc/stdlib/calloc.c -text
 lib/libc/stdlib/div.3 -text
 lib/libc/stdlib/div.c -text
 lib/libc/stdlib/exit.3 -text
