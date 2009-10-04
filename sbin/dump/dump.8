@@ -27,7 +27,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)dump.8	8.3 (Berkeley) 5/1/95
-.\" $FreeBSD: src/sbin/dump/dump.8,v 1.70.2.2 2006/02/24 15:13:33 keramida Exp $
+.\" $FreeBSD: src/sbin/dump/dump.8,v 1.75 2006/09/18 11:55:09 ru Exp $
 .\"
 .Dd February 24, 2006
 .Dt DUMP 8
@@ -473,6 +473,17 @@ to find group
 Dump exits with zero status on success.
 Startup errors are indicated with an exit code of 1;
 abnormal termination is indicated with an exit code of 3.
+.Sh EXAMPLES
+Dumps the
+.Pa /u
+file system to DVDs using
+.Nm growisofs .
+Uses a 16MB cache, creates a snapshot of the dump, and records the
+.Pa dumpdates
+file.
+.Bd -literal
+/sbin/dump -0u  -L -C16 -B4589840 -P 'growisofs -Z /dev/cd0=/dev/fd/0' /u
+.Ed
 .Sh DIAGNOSTICS
 Many, and verbose.
 .Sh SEE ALSO
