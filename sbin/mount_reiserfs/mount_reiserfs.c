@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sbin/mount_reiserfs/mount_reiserfs.c,v 1.3 2005/06/10 09:51:42 delphij Exp $
+ * $FreeBSD: src/sbin/mount_reiserfs/mount_reiserfs.c,v 1.4 2005/11/13 01:45:32 rodrigc Exp $
  */
 
 #include <sys/param.h>
@@ -52,6 +52,7 @@ main(int argc, char *argv[])
 	struct iovec *iov;
 	int ch, mntflags, iovlen;
 	char *dev, *dir, mntpath[MAXPATHLEN];
+	char fstype[] = "reiserfs";
 
 	mntflags = 0;
 	while ((ch = getopt(argc, argv, "o:")) != -1) {
@@ -87,9 +88,9 @@ main(int argc, char *argv[])
 	 * in mntopts.h. */
 	iov = NULL;
 	iovlen = 0;
-	build_iovec(&iov, &iovlen, "fstype", "reiserfs", -1);
-	build_iovec(&iov, &iovlen, "fspath", mntpath, -1);
-	build_iovec(&iov, &iovlen, "from", dev, -1);
+	build_iovec(&iov, &iovlen, "fstype", fstype, (size_t)-1);
+	build_iovec(&iov, &iovlen, "fspath", mntpath, (size_t)-1);
+	build_iovec(&iov, &iovlen, "from", dev, (size_t)-1);
 
 	if (nmount(iov, iovlen, mntflags) < 0)
 		err(EX_OSERR, "%s", dev);

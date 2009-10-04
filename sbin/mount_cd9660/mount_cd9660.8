@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount_cd9660.8	8.3 (Berkeley) 3/27/94
-.\" $FreeBSD: src/sbin/mount_cd9660/mount_cd9660.8,v 1.28 2005/02/13 22:25:16 ru Exp $
+.\" $FreeBSD: src/sbin/mount_cd9660/mount_cd9660.8,v 1.30 2005/11/18 10:32:11 ru Exp $
 .\"
-.Dd September 26, 2003
+.Dd October 3, 2005
 .Dt MOUNT_CD9660 8
 .Os
 .Sh NAME
@@ -133,7 +133,7 @@ Be verbose about the starting sector decisions made.
 .Sh EXAMPLES
 The following command can be used to mount a Kodak Photo-CD:
 .Pp
-.Dl "mount_cd9660 -o rw -v -s 0 /dev/cd0c /cdrom"
+.Dl "mount_cd9660 -o rw -v -s 0 /dev/cd0 /cdrom"
 .Sh SEE ALSO
 .Xr cdcontrol 1 ,
 .Xr mount 2 ,

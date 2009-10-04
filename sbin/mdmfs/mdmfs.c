@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/mdmfs/mdmfs.c,v 1.23.2.1 2005/11/04 19:37:14 rse Exp $");
+__FBSDID("$FreeBSD: src/sbin/mdmfs/mdmfs.c,v 1.33 2007/05/14 19:23:13 remko Exp $");
 
 #include <sys/param.h>
 #include <sys/mdioctl.h>
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: src/sbin/mdmfs/mdmfs.c,v 1.23.2.1 2005/11/04 19:37:14 rse Ex
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <unistd.h>
 
 typedef enum { false, true } bool;
@@ -61,13 +62,14 @@ struct mtpt_info {
 	bool		 mi_have_mode;
 };
 
-static	bool compat;		/* Full compatibility with mount_mfs? */
 static	bool debug;		/* Emit debugging information? */
 static	bool loudsubs;		/* Suppress output from helper programs? */
 static	bool norun;		/* Actually run the helper programs? */
 static	int unit;      		/* The unit we're working with. */
 static	const char *mdname;	/* Name of memory disk device (e.g., "md"). */
+static	const char *mdsuffix;	/* Suffix of memory disk device (e.g., ".uzip"). */
 static	size_t mdnamelen;	/* Length of mdname. */
+static	const char *path_mdconfig =_PATH_MDCONFIG;
 
 static void	 argappend(char **, const char *, ...) __printflike(2, 3);
 static void	 debugprintf(const char *, ...) __printflike(1, 2);
@@ -89,7 +91,7 @@ main(int argc, char **argv)
 	    *mount_arg;
 	enum md_types mdtype;		/* The type of our memory disk. */
 	bool have_mdtype;
-	bool detach, softdep, autounit;
+	bool detach, softdep, autounit, newfs;
 	char *mtpoint, *unitstr;
 	char *p;
 	int ch;
@@ -101,6 +103,7 @@ main(int argc, char **argv)
 	detach = true;
 	softdep = true;
 	autounit = false;
+	newfs = true;
 	have_mdtype = false;
 	mdtype = MD_SWAP;
 	mdname = MD_NAME;
@@ -117,11 +120,14 @@ main(int argc, char **argv)
 
 	/* If we were started as mount_mfs or mfs, imply -C. */
 	if (strcmp(getprogname(), "mount_mfs") == 0 ||
-	    strcmp(getprogname(), "mfs") == 0)
-		compat = true;
+	    strcmp(getprogname(), "mfs") == 0) {
+		/* Make compatibility assumptions. */
+		mi.mi_mode = 01777;
+		mi.mi_have_mode = true;
+	}
 
 	while ((ch = getopt(argc, argv,
-	    "a:b:Cc:Dd:e:F:f:hi:LlMm:Nn:O:o:p:Ss:t:Uv:w:X")) != -1)
+	    "a:b:Cc:Dd:E:e:F:f:hi:LlMm:NnO:o:Pp:Ss:t:Uv:w:X")) != -1)
 		switch (ch) {
 		case 'a':
 			argappend(&newfs_arg, "-a %s", optarg);
@@ -130,20 +136,19 @@ main(int argc, char **argv)
 			argappend(&newfs_arg, "-b %s", optarg);
 			break;
 		case 'C':
-			if (compat)
-				usage();
-			compat = true;
+			/* Ignored for compatibility. */
 			break;
 		case 'c':
 			argappend(&newfs_arg, "-c %s", optarg);
 			break;
 		case 'D':
-			if (compat)
-				usage();
 			detach = false;
 			break;
 		case 'd':
 			argappend(&newfs_arg, "-d %s", optarg);
+			break;
+		case 'E':
+			path_mdconfig = optarg;
 			break;
 		case 'e':
 			argappend(&newfs_arg, "-e %s", optarg);
@@ -165,8 +170,6 @@ main(int argc, char **argv)
 			argappend(&newfs_arg, "-i %s", optarg);
 			break;
 		case 'L':
-			if (compat)
-				usage();
 			loudsubs = true;
 			break;
 		case 'l':
@@ -182,12 +185,10 @@ main(int argc, char **argv)
 			argappend(&newfs_arg, "-m %s", optarg);
 			break;
 		case 'N':
-			if (compat)
-				usage();
 			norun = true;
 			break;
 		case 'n':
-			argappend(&newfs_arg, "-n %s", optarg);
+			argappend(&newfs_arg, "-n");
 			break;
 		case 'O':
 			argappend(&newfs_arg, "-o %s", optarg);
@@ -195,9 +196,10 @@ main(int argc, char **argv)
 		case 'o':
 			argappend(&mount_arg, "-o %s", optarg);
 			break;
+		case 'P':
+			newfs = false;
+			break;
 		case 'p':
-			if (compat)
-				usage();
 			if ((set = setmode(optarg)) == NULL)
 				usage();
 			mi.mi_mode = getmode(set, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -205,8 +207,6 @@ main(int argc, char **argv)
 			free(set);
 			break;
 		case 'S':
-			if (compat)
-				usage();
 			softdep = false;
 			break;
 		case 's':
@@ -219,13 +219,9 @@ main(int argc, char **argv)
 			argappend(&newfs_arg, "-O %s", optarg);
 			break;
 		case 'w':
-			if (compat)
-				usage();
 			extract_ugid(optarg, &mi);
 			break;
 		case 'X':
-			if (compat)
-				usage();
 			debug = true;
 			break;
 		default:
@@ -236,26 +232,22 @@ main(int argc, char **argv)
 	if (argc < 2)
 		usage();
 
-	/* Make compatibility assumptions. */
-	if (compat) {
-		mi.mi_mode = 01777;
-		mi.mi_have_mode = true;
-	}
-
 	/* Derive 'unit' (global). */
 	unitstr = argv[0];
 	if (strncmp(unitstr, "/dev/", 5) == 0)
 		unitstr += 5;
 	if (strncmp(unitstr, mdname, mdnamelen) == 0)
 		unitstr += mdnamelen;
-	if (*unitstr == '\0') {
+	if (!isdigit(*unitstr)) {
 		autounit = true;
 		unit = -1;
+		mdsuffix = unitstr;
 	} else {
 		ul = strtoul(unitstr, &p, 10);
-		if (ul == ULONG_MAX || *p != '\0')
+		if (ul == ULONG_MAX)
 			errx(1, "bad device unit: %s", unitstr);
 		unit = ul;
+		mdsuffix = p;	/* can be empty */
 	}
 
 	mtpoint = argv[1];
@@ -263,6 +255,8 @@ main(int argc, char **argv)
 		mdtype = MD_SWAP;
 	if (softdep)
 		argappend(&newfs_arg, "-U");
+	if (mdtype != MD_VNODE && !newfs)
+		errx(1, "-P requires a vnode-backed disk");
 
 	/* Do the work. */
 	if (detach && !autounit)
@@ -271,7 +265,8 @@ main(int argc, char **argv)
 		do_mdconfig_attach_au(mdconfig_arg, mdtype);
 	else
 		do_mdconfig_attach(mdconfig_arg, mdtype);
-	do_newfs(newfs_arg);
+	if (newfs)
+		do_newfs(newfs_arg);
 	do_mount(mount_arg, mtpoint);
 	do_mtptsetup(mtpoint, &mi);
 
@@ -346,7 +341,7 @@ do_mdconfig_attach(const char *args, const enum md_types mdtype)
 	default:
 		abort();
 	}
-	rv = run(NULL, "%s -a %s%s -u %s%d", _PATH_MDCONFIG, ta, args,
+	rv = run(NULL, "%s -a %s%s -u %s%d", path_mdconfig, ta, args,
 	    mdname, unit);
 	if (rv)
 		errx(1, "mdconfig (attach) exited with error code %d", rv);
@@ -380,13 +375,13 @@ do_mdconfig_attach_au(const char *args, const enum md_types mdtype)
 	default:
 		abort();
 	}
-	rv = run(&fd, "%s -a %s%s", _PATH_MDCONFIG, ta, args);
+	rv = run(&fd, "%s -a %s%s", path_mdconfig, ta, args);
 	if (rv)
 		errx(1, "mdconfig (attach) exited with error code %d", rv);
 
 	/* Receive the unit number. */
 	if (norun) {	/* Since we didn't run, we can't read.  Fake it. */
-		unit = -1;
+		unit = 0;
 		return;
 	}
 	sfd = fdopen(fd, "r");
@@ -419,7 +414,7 @@ do_mdconfig_detach(void)
 {
 	int rv;
 
-	rv = run(NULL, "%s -d -u %s%d", _PATH_MDCONFIG, mdname, unit);
+	rv = run(NULL, "%s -d -u %s%d", path_mdconfig, mdname, unit);
 	if (rv && debug)	/* This is allowed to fail. */
 		warnx("mdconfig (detach) exited with error code %d (ignored)",
 		      rv);
@@ -433,8 +428,8 @@ do_mount(const char *args, const char *mtpoint)
 {
 	int rv;
 
-	rv = run(NULL, "%s%s /dev/%s%d %s", _PATH_MOUNT, args,
-	    mdname, unit, mtpoint);
+	rv = run(NULL, "%s%s /dev/%s%d%s %s", _PATH_MOUNT, args,
+	    mdname, unit, mdsuffix, mtpoint);
 	if (rv)
 		errx(1, "mount exited with error code %d", rv);
 }
@@ -588,12 +583,13 @@ run(int *ofd, const char *cmdline, ...)
 	argv = (char **)malloc(sizeof(*argv) * (argc + 1));
 	assert(argv != NULL);
 	for (p = cmd, argvp = argv; (*argvp = strsep(&p, " ")) != NULL;)
-		if (**argv != '\0')
+		if (**argvp != '\0')
 			if (++argvp >= &argv[argc]) {
 				*argvp = NULL;
 				break;
 			}
 	assert(*argv);
+	/* The argv array ends up NULL-terminated here. */
 
 	/* Make sure the above loop works as expected. */
 	if (debug) {
@@ -658,23 +654,13 @@ run(int *ofd, const char *cmdline, ...)
 static void
 usage(void)
 {
-	const char *name;
 
-	if (compat)
-		name = getprogname();
-	else
-		name = "mdmfs";
-	if (!compat)
-		fprintf(stderr,
-"usage: %s [-DLlMNSUX] [-a maxcontig] [-b block-size] [-c cylinders]\n"
-"\t[-d rotdelay] [-e maxbpg] [-F file] [-f frag-size] [-i bytes]\n"
-"\t[-m percent-free] [-n rotational-positions] [-O optimization]\n"
-"\t[-o mount-options] [-p permissions] [-s size] [-v version]\n"
-"\t[-w user:group] md-device mount-point\n", name);
 	fprintf(stderr,
-"usage: %s -C [-lNU] [-a maxcontig] [-b block-size] [-c cylinders]\n"
-"\t[-d rotdelay] [-e maxbpg] [-F file] [-f frag-size] [-i bytes]\n"
-"\t[-m percent-free] [-n rotational-positions] [-O optimization]\n"
-"\t[-o mount-options] [-s size] [-v version] md-device mount-point\n", name);
+"usage: %s [-DLlMNnPSUX] [-a maxcontig] [-b block-size]\n"
+"\t[-c blocks-per-cylinder-group][-d max-extent-size] [-E path-mdconfig]\n"
+"\t[-e maxbpg] [-F file] [-f frag-size] [-i bytes] [-m percent-free]\n"
+"\t[-O optimization] [-o mount-options]\n"
+"\t[-p permissions] [-s size] [-v version] [-w user:group]\n"
+"\tmd-device mount-point\n", getprogname());
 	exit(1);
 }

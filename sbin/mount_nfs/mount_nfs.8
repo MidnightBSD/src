@@ -26,9 +26,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)mount_nfs.8	8.3 (Berkeley) 3/29/95
-.\" $FreeBSD: src/sbin/mount_nfs/mount_nfs.8,v 1.43 2005/02/10 09:19:30 ru Exp $
+.\" $FreeBSD: src/sbin/mount_nfs/mount_nfs.8,v 1.47 2007/03/05 14:47:54 thomas Exp $
 .\"
-.Dd May 11, 2003
+.Dd December 25, 2005
 .Dt MOUNT_NFS 8
 .Os
 .Sh NAME
@@ -52,7 +52,7 @@
 The
 .Nm
 utility calls the
-.Xr mount 2
+.Xr nmount 2
 system call to prepare and graft a remote NFS file system
 .Pq Ar rhost : Ns Ar path
 on to the file system tree at the point
@@ -93,6 +93,8 @@ then version 2).
 Note that NFS version 2 has a file size limit of 2 gigabytes.
 .It Fl 3
 Use the NFS Version 3 protocol.
+.It Fl 4
+Use the NFS Version 4 protocol.
 .It Fl D
 Set the
 .Dq "dead server threshold"
@@ -143,9 +145,8 @@ There is a 60 second delay between each attempt.
 Use TCP transport instead of UDP.
 This is recommended for servers that are not on the same LAN cable as
 the client.
-(NB: This is NOT supported by most
-.No non- Ns Bx
-servers.)
+Not all NFS servers support this method, especially older ones;
+caution should be observed in these cases.
 .It Fl U
 Force the mount protocol to use UDP transport, even for TCP NFS mounts.
 (Necessary for some old
@@ -245,6 +246,9 @@ compatibility with historic versions of
 .It Cm bg
 Same as
 .Fl b .
+.It Cm fg
+Same as not specifying
+.Fl b .
 .It Cm conn
 Same as not specifying
 .Fl c .
@@ -274,6 +278,9 @@ Same as
 .Fl P .
 .It Cm soft
 Same as
+.Fl s .
+.It Cm hard
+Same as not specifying
 .Fl s .
 .It Cm tcp
 Same as
@@ -330,20 +337,10 @@ when mounting servers that do not support TCP mounts.
 Set the retransmit timeout count for soft mounts to the specified value.
 .El
 .Sh SEE ALSO
-.Xr mount 2 ,
+.Xr nmount 2 ,
 .Xr unmount 2 ,
 .Xr fstab 5 ,
 .Xr mount 8 ,
 .Xr nfsd 8 ,
 .Xr nfsiod 8 ,
 .Xr showmount 8
-.Sh BUGS
-Due to the way that Sun RPC is implemented on top of UDP (unreliable datagram)
-transport, tuning such mounts is really a black art that can only be expected
-to have limited success.
-For clients mounting servers that are not on the same
-LAN cable or that tend to be overloaded,
-TCP transport is strongly recommended,
-but unfortunately this is restricted to mostly
-.Bx 4.4
-servers.

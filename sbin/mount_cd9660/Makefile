@@ -1,5 +1,5 @@
 #	@(#)Makefile	8.3 (Berkeley) 3/27/94
-# $FreeBSD: src/sbin/mount_cd9660/Makefile,v 1.10 2004/12/21 09:59:42 ru Exp $
+# $FreeBSD: src/sbin/mount_cd9660/Makefile,v 1.11 2005/11/13 01:40:36 rodrigc Exp $
 
 PROG=	mount_cd9660
 SRCS=	mount_cd9660.c getmntopts.c
@@ -9,7 +9,7 @@ LDADD=	-lkiconv
 
 MOUNT=	${.CURDIR}/../mount
 CFLAGS+= -I${MOUNT}
-WARNS?=	0
+WARNS?=	6
 
 # Needs to be dynamically linked for optional dlopen() access to
 # userland libiconv

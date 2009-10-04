@@ -31,7 +31,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)mount_null.8	8.6 (Berkeley) 5/1/95
-.\" $FreeBSD: src/sbin/mount_nullfs/mount_nullfs.8,v 1.30.2.1 2006/01/23 00:32:03 kris Exp $
+.\" $FreeBSD: src/sbin/mount_nullfs/mount_nullfs.8,v 1.32 2006/04/19 19:21:42 brueffer Exp $
 .\"
 .Dd May 1, 1995
 .Dt MOUNT_NULLFS 8
@@ -168,6 +168,7 @@ For example, imagine mounting a null layer with
 .Bd -literal -offset indent
 mount_nullfs /usr/include /dev/layer/null
 .Ed
+.Pp
 Changing directory to
 .Pa /dev/layer/null
 will assign
