@@ -3798,7 +3798,6 @@ contrib/file/Magdir/archive -text
 contrib/file/Magdir/asterix -text
 contrib/file/Magdir/att3b -text
 contrib/file/Magdir/audio -text
-contrib/file/Magdir/bFLT -text
 contrib/file/Magdir/basis -text
 contrib/file/Magdir/bflt -text
 contrib/file/Magdir/blender -text
@@ -3811,7 +3810,6 @@ contrib/file/Magdir/c64 -text
 contrib/file/Magdir/cad -text
 contrib/file/Magdir/cafebabe -text
 contrib/file/Magdir/cddb -text
-contrib/file/Magdir/chi -text
 contrib/file/Magdir/chord -text
 contrib/file/Magdir/cisco -text
 contrib/file/Magdir/citrus -text
@@ -3824,7 +3822,6 @@ contrib/file/Magdir/console -text
 contrib/file/Magdir/convex -text
 contrib/file/Magdir/cracklib -text
 contrib/file/Magdir/ctags -text
-contrib/file/Magdir/cvs -text
 contrib/file/Magdir/dact -text
 contrib/file/Magdir/database -text
 contrib/file/Magdir/diamond -text
@@ -3854,7 +3851,6 @@ contrib/file/Magdir/gimp -text
 contrib/file/Magdir/gnu -text
 contrib/file/Magdir/grace -text
 contrib/file/Magdir/gringotts -text
-contrib/file/Magdir/hdf -text
 contrib/file/Magdir/hitachi-sh -text
 contrib/file/Magdir/hp -text
 contrib/file/Magdir/human68k -text
@@ -3862,7 +3858,6 @@ contrib/file/Magdir/ibm370 -text
 contrib/file/Magdir/ibm6000 -text
 contrib/file/Magdir/iff -text
 contrib/file/Magdir/images -text
-contrib/file/Magdir/impulse -text
 contrib/file/Magdir/intel -text
 contrib/file/Magdir/interleaf -text
 contrib/file/Magdir/island -text
@@ -3969,7 +3964,6 @@ contrib/file/Magdir/vms -text
 contrib/file/Magdir/vmware -text
 contrib/file/Magdir/vorbis -text
 contrib/file/Magdir/vxl -text
-contrib/file/Magdir/wordperfect -text
 contrib/file/Magdir/wordprocessors -text
 contrib/file/Magdir/xdelta -text
 contrib/file/Magdir/xenix -text
@@ -3982,7 +3976,6 @@ contrib/file/Makefile.in -text
 contrib/file/Makefile.std -text
 contrib/file/PORTING -text
 contrib/file/README -text
-contrib/file/acconfig.h -text
 contrib/file/acinclude.m4 -text
 contrib/file/aclocal.m4 -text
 contrib/file/apprentice.c -text
@@ -4006,7 +3999,6 @@ contrib/file/magic.h -text
 contrib/file/magic.man -text
 contrib/file/magic.mime -text
 contrib/file/magic2mime -text
-contrib/file/missing -text
 contrib/file/mkinstalldirs -text
 contrib/file/names.h -text
 contrib/file/patchlevel.h -text
@@ -4014,7 +4006,6 @@ contrib/file/print.c -text
 contrib/file/readelf.c -text
 contrib/file/readelf.h -text
 contrib/file/softmagic.c -text
-contrib/file/stamp-h.in -text
 contrib/file/tar.h -text
 contrib/file/test.c -text
 contrib/gcc4/BASE-VER -text
