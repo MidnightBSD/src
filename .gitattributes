@@ -7681,8 +7681,6 @@ contrib/hostapd/hostapd.vlan -text
 contrib/hostapd/hostapd.wpa_psk -text
 contrib/hostapd/hostapd_cli.1 -text
 contrib/hostapd/hostapd_cli.c -text
-contrib/hostapd/hostapd_ctrl.c -text
-contrib/hostapd/hostapd_ctrl.h -text
 contrib/hostapd/hw_features.c -text
 contrib/hostapd/hw_features.h -text
 contrib/hostapd/iapp.c -text
