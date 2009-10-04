@@ -3017,7 +3017,6 @@ contrib/bsnmp/snmp_ntp/NTP-MIB.txt -text
 contrib/bsnmp/snmp_ntp/NTP-PROXY-MIB.txt -text
 contrib/bsnmp/snmp_ntp/ntp_tree.def -text
 contrib/bsnmp/snmp_ntp/snmp_ntp.c -text
-contrib/bsnmp/snmpd/.gdbinit -text
 contrib/bsnmp/snmpd/BEGEMOT-MIB.txt -text
 contrib/bsnmp/snmpd/BEGEMOT-SNMPD.txt -text
 contrib/bsnmp/snmpd/FOKUS-MIB.txt -text
