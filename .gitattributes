@@ -6529,6 +6529,7 @@ contrib/gdtoa/hd_init.c -text
 contrib/gdtoa/hexnan.c -text
 contrib/gdtoa/makefile -text
 contrib/gdtoa/misc.c -text
+contrib/gdtoa/qnan.c -text
 contrib/gdtoa/smisc.c -text
 contrib/gdtoa/strtoIQ.c -text
 contrib/gdtoa/strtoId.c -text
@@ -6540,6 +6541,7 @@ contrib/gdtoa/strtoIxL.c -text
 contrib/gdtoa/strtod.c -text
 contrib/gdtoa/strtodI.c -text
 contrib/gdtoa/strtodg.c -text
+contrib/gdtoa/strtodnrp.c -text
 contrib/gdtoa/strtof.c -text
 contrib/gdtoa/strtopQ.c -text
 contrib/gdtoa/strtopd.c -text
