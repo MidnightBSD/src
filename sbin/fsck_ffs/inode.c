@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)inode.c	8.8 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/inode.c,v 1.37 2004/10/08 20:44:47 truckman Exp $");
+__FBSDID("$FreeBSD: src/sbin/fsck_ffs/inode.c,v 1.38 2006/10/31 22:06:56 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/stdint.h>
@@ -329,10 +329,10 @@ getnextinode(ino_t inumber)
 			lastinum += fullcnt;
 		}
 		/*
-		 * If bread returns an error, it will already have zeroed
+		 * If blread returns an error, it will already have zeroed
 		 * out the buffer, so we do not need to do so here.
 		 */
-		(void)bread(fsreadfd, inodebuf, dblk, size);
+		(void)blread(fsreadfd, inodebuf, dblk, size);
 		nextinop = inodebuf;
 	}
 	dp = (union dinode *)nextinop;

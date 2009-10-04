@@ -39,7 +39,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.44 2005/02/10 09:19:29 ru Exp $");
+__FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.47 2007/09/19 01:24:19 rodrigc Exp $");
 
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -48,16 +48,17 @@ __FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.44 2005/02/10 09:19:29 ru Exp $
 #include <sys/mount.h>
 #include <sys/resource.h>
 #include <sys/sysctl.h>
+#include <sys/uio.h>
 #include <sys/disklabel.h>
 
 #include <ufs/ufs/dinode.h>
-#include <ufs/ufs/ufsmount.h>
 #include <ufs/ffs/fs.h>
 
 #include <err.h>
 #include <errno.h>
 #include <fstab.h>
 #include <grp.h>
+#include <mntopts.h>
 #include <paths.h>
 #include <stdint.h>
 #include <string.h>
@@ -67,6 +68,7 @@ __FBSDID("$FreeBSD: src/sbin/fsck_ffs/main.c,v 1.44 2005/02/10 09:19:29 ru Exp $
 static void usage(void) __dead2;
 static int argtoi(int flag, const char *req, const char *str, int base);
 static int checkfilesys(char *filesys);
+static int chkdoreload(struct statfs *mntp);
 static struct statfs *getmntpt(const char *);
 
 int
@@ -191,15 +193,22 @@ static int
 checkfilesys(char *filesys)
 {
 	ufs2_daddr_t n_ffree, n_bfree;
-	struct ufs_args args;
 	struct dups *dp;
 	struct statfs *mntp;
 	struct stat snapdir;
 	struct group *grp;
 	ufs2_daddr_t blks;
-	int cylno, ret;
+	struct iovec *iov;
+	char errmsg[255];
+	int iovlen;
+	int fflags;
+	int cylno;
 	ino_t files;
 	size_t size;
+
+	iov = NULL;
+	iovlen = 0;
+	errmsg[0] = '\0';
 
 	cdevname = filesys;
 	if (debug && preen)
@@ -236,6 +245,31 @@ checkfilesys(char *filesys)
 		    (mntp != NULL && (sblock.fs_flags & FS_UNCLEAN) == 0))
 			exit(7);	/* Filesystem clean, report it now */
 		exit(0);
+	}
+	if (preen && skipclean) {
+		/*
+		 * If file system is gjournaled, check it here.
+		 */
+		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || readsb(0) == 0)
+			exit(3);	/* Cannot read superblock */
+		close(fsreadfd);
+		if ((sblock.fs_flags & FS_GJOURNAL) != 0) {
+			//printf("GJournaled file system detected on %s.\n",
+			//    filesys);
+			if (sblock.fs_clean == 1) {
+				pwarn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
+				exit(0);
+			}
+			if ((sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
+				gjournal_check(filesys);
+				if (chkdoreload(mntp) == 0)
+					exit(0);
+				exit(4);
+			} else {
+				pfatal("UNEXPECTED INCONSISTENCY, %s\n",
+				    "CANNOT RUN FAST FSCK\n");
+			}
+		}
 	}
 	/*
 	 * If we are to do a background check:
@@ -304,16 +338,27 @@ checkfilesys(char *filesys)
 		if (bkgrdflag) {
 			snprintf(snapname, sizeof snapname,
 			    "%s/.snap/fsck_snapshot", mntp->f_mntonname);
-			memset(&args, 0, sizeof args);
-			args.fspec = snapname;
-			while (mount("ffs", mntp->f_mntonname,
-			    mntp->f_flags | MNT_UPDATE | MNT_SNAPSHOT,
-			    &args) < 0) {
+			fflags = mntp->f_flags;
+			/*
+			 * XXX: Need to kick out MNT_ROOTFS until we fix
+			 * nmount().
+			 */
+			fflags &= ~MNT_ROOTFS;
+			fflags = fflags | MNT_UPDATE | MNT_SNAPSHOT;
+			build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
+			build_iovec(&iov, &iovlen, "from", snapname,
+			    (size_t)-1);
+			build_iovec(&iov, &iovlen, "fspath", mntp->f_mntonname,
+			    (size_t)-1);
+			build_iovec(&iov, &iovlen, "errmsg", errmsg,
+			    sizeof(errmsg));
+
+			while (nmount(iov, iovlen, fflags) < 0) {
 				if (errno == EEXIST && unlink(snapname) == 0)
 					continue;
 				bkgrdflag = 0;
-				pfatal("CANNOT CREATE SNAPSHOT %s: %s\n",
-				    snapname, strerror(errno));
+				pfatal("CANNOT CREATE SNAPSHOT %s: %s %s\n",
+				    snapname, strerror(errno), errmsg);
 				break;
 			}
 			if (bkgrdflag != 0)
@@ -437,7 +482,7 @@ checkfilesys(char *filesys)
 		 * Write out the duplicate super blocks
 		 */
 		for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-			bwrite(fswritefd, (char *)&sblock,
+			blwrite(fswritefd, (char *)&sblock,
 			    fsbtodb(&sblock, cgsblock(&sblock, cylno)),
 			    SBLOCKSIZE);
 	}
@@ -460,29 +505,57 @@ checkfilesys(char *filesys)
 		printf("\n***** FILE SYSTEM WAS MODIFIED *****\n");
 	if (rerun)
 		printf("\n***** PLEASE RERUN FSCK *****\n");
-	if (mntp != NULL) {
-		/*
-		 * We modified a mounted file system.  Do a mount update on
-		 * it unless it is read-write, so we can continue using it
-		 * as safely as possible.
-		 */
-		if (mntp->f_flags & MNT_RDONLY) {
-			args.fspec = 0;
-			args.export.ex_flags = 0;
-			args.export.ex_root = 0;
-			ret = mount("ufs", mntp->f_mntonname,
-			    mntp->f_flags | MNT_UPDATE | MNT_RELOAD, &args);
-			if (ret == 0)
-				return (0);
-			pwarn("mount reload of '%s' failed: %s\n\n",
-			    mntp->f_mntonname, strerror(errno));
-		}
+	if (chkdoreload(mntp) != 0) {
 		if (!fsmodified)
 			return (0);
 		if (!preen)
 			printf("\n***** REBOOT NOW *****\n");
 		sync();
 		return (4);
+	}
+	return (0);
+}
+
+static int
+chkdoreload(struct statfs *mntp)
+{
+	struct iovec *iov;
+	int iovlen;
+	int fflags;
+	char errmsg[255];
+
+	if (mntp == NULL)
+		return (0);
+
+	iov = NULL;
+	iovlen = 0;
+	errmsg[0] = '\0';
+	fflags = mntp->f_flags;
+	/*
+	 * We modified a mounted file system.  Do a mount update on
+	 * it unless it is read-write, so we can continue using it
+	 * as safely as possible.
+	 */
+	if (mntp->f_flags & MNT_RDONLY) {
+		/*
+		 * XXX: Need to kick out MNT_ROOTFS until we fix
+		 * nmount().
+		 */
+		fflags &= ~MNT_ROOTFS;
+		fflags = fflags | MNT_UPDATE | MNT_RELOAD;
+		build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
+		build_iovec(&iov, &iovlen, "from", mntp->f_mntfromname,
+		    (size_t)-1);
+		build_iovec(&iov, &iovlen, "fspath", mntp->f_mntonname,
+		    (size_t)-1);
+		build_iovec(&iov, &iovlen, "errmsg", errmsg,
+		    sizeof(errmsg));
+		if (nmount(iov, iovlen, fflags) == 0) {
+			return (0);
+		}
+		pwarn("mount reload of '%s' failed: %s %s\n\n",
+		    mntp->f_mntonname, strerror(errno), errmsg);
+		return (1);
 	}
 	return (0);
 }

@@ -33,7 +33,7 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fsck_ffs/pass5.c,v 1.42 2005/03/07 08:42:49 delphij Exp $");
+__FBSDID("$FreeBSD: src/sbin/fsck_ffs/pass5.c,v 1.43 2006/10/31 22:06:56 pjd Exp $");
 
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -164,6 +164,7 @@ pass5(void)
 			pfatal("CG %d: BAD MAGIC NUMBER\n", c);
 		newcg->cg_time = cg->cg_time;
 		newcg->cg_old_time = cg->cg_old_time;
+		newcg->cg_unrefs = cg->cg_unrefs;
 		newcg->cg_cgx = c;
 		dbase = cgbase(fs, c);
 		dmax = dbase + fs->fs_fpg;
