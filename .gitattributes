@@ -9020,7 +9020,6 @@ contrib/libpcap/CHANGES -text
 contrib/libpcap/CREDITS -text
 contrib/libpcap/FILES -text
 contrib/libpcap/FREEBSD-upgrade -text
-contrib/libpcap/INSTALL -text
 contrib/libpcap/INSTALL.txt -text
 contrib/libpcap/LICENSE -text
 contrib/libpcap/Makefile.in -text
@@ -9062,7 +9061,6 @@ contrib/libpcap/gencode.h -text
 contrib/libpcap/grammar.y -text
 contrib/libpcap/inet.c -text
 contrib/libpcap/install-sh -text
-contrib/libpcap/lbl/gnuc.h -text
 contrib/libpcap/lbl/os-aix4.h -text
 contrib/libpcap/lbl/os-hpux11.h -text
 contrib/libpcap/lbl/os-osf4.h -text
@@ -9101,7 +9099,6 @@ contrib/libpcap/pcap.3 -text
 contrib/libpcap/pcap.c -text
 contrib/libpcap/pcap.h -text
 contrib/libpcap/pcap1.h -text
-contrib/libpcap/pf.h -text
 contrib/libpcap/ppp.h -text
 contrib/libpcap/savefile.c -text
 contrib/libpcap/scanner.l -text
