@@ -38,7 +38,7 @@ static const char copyright[] =
 static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/1/95";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/sbin/dump/main.c,v 1.63 2005/04/18 15:08:29 imp Exp $";
+  "$FreeBSD: src/sbin/dump/main.c,v 1.65 2006/10/12 20:22:31 ru Exp $";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -312,8 +312,8 @@ main(int argc, char *argv[])
 	dt = fstabsearch(disk);
 	if (dt != NULL) {
 		disk = rawname(dt->fs_spec);
-		if (disk == NULL)
-			errx(X_STARTUP, "%s: unknown file system", dt->fs_spec);
+ 		if (disk == NULL)
+ 			errx(X_STARTUP, "%s: unknown file system", dt->fs_spec);
 		(void)strncpy(spcl.c_dev, dt->fs_spec, NAMELEN);
 		(void)strncpy(spcl.c_filesys, dt->fs_file, NAMELEN);
 	} else {
@@ -691,7 +691,10 @@ obsolete(int *argcp, char **argvp[])
 	argv = *argvp;
 	argc = *argcp;
 
-	/* Return if no arguments or first argument has leading dash or slash. */
+	/*
+	 * Return if no arguments or first argument has leading
+	 * dash or slash.
+	 */
 	ap = argv[1];
 	if (argc == 1 || *ap == '-' || *ap == '/')
 		return;

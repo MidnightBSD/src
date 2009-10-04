@@ -1,6 +1,6 @@
-.\" $FreeBSD: src/sbin/fdisk/fdisk.8,v 1.36 2004/07/02 21:45:01 ru Exp $
+.\" $FreeBSD: src/sbin/fdisk/fdisk.8,v 1.39 2007/04/30 18:29:36 maxim Exp $
 .\"
-.Dd April 18, 2002
+.Dd April 30, 2007
 .Dt FDISK 8
 .Os
 .Sh NAME
@@ -8,7 +8,7 @@
 .Nd PC slice table maintenance utility
 .Sh SYNOPSIS
 .Nm
-.Op Fl BIaistu
+.Op Fl BIaipstu
 .Op Fl b Ar bootcode
 .Op Fl 1234
 .Op Ar disk
@@ -75,7 +75,7 @@ Set slice values using the file
 .Ar configfile .
 The
 .Ar configfile
-always modifies existing slices, unless
+only modifies explicitly specified slices, unless
 .Fl i
 is also given, in which case all existing slices are deleted (marked
 as
@@ -100,16 +100,21 @@ table (as you are in the interactive mode).
 Use with caution!
 .It Fl i
 Initialize sector 0 of the disk.
-This implies
-.Fl u ,
-unless
-.Fl f
-is given.
+Existing slice entries will be cleared
+(marked as unused) before editing.
+(Compare with
+.Fl u . )
 .It Fl I
-Initialize the contents of sector 0
+Initialize sector 0 slice table
 for one
 .Fx
 slice covering the entire disk.
+.It Fl p
+Print a slice table in
+.Nm
+configuration file format and exit; see
+.Sx CONFIGURATION FILE ,
+below.
 .It Fl s
 Print summary information and exit.
 .It Fl t
@@ -120,7 +125,7 @@ option to see what would be written to the slice table.
 Implies
 .Fl v .
 .It Fl u
-Is used for updating (editing) sector 0 of the disk.
+Update (edit) the disk's sector 0 slice table.
 Ignored if
 .Fl f
 is given.
@@ -257,13 +262,15 @@ and
 flags is that
 the
 .Fl u
-flag just edits (updates) the fields as they appear on the disk,
+flag edits (updates) the existing slice parameters
 while the
 .Fl i
 flag is used to
 .Dq initialize
-sector 0;
-it will set up the last BIOS slice to use the whole disk for
+them (old values will be ignored);
+if you edit the first slice,
+.Fl i
+will also set it up to use the whole disk for
 .Fx
 and make it active.
 .Sh NOTES
@@ -281,8 +288,6 @@ If you hand craft your disk layout,
 please make sure that the
 .Fx
 slice starts on a cylinder boundary.
-A number of decisions made later may assume this.
-(This might not be necessary later.)
 .Pp
 Editing an existing slice will most likely result in the loss of
 all data in that slice.
@@ -413,7 +418,6 @@ for 2503871 sectors (note: these numbers will be rounded upwards and
 downwards to correspond to head and cylinder boundaries):
 .Pp
 .Dl "p       1       165     1       2503871"
-.Pp
 .It Ic a Ar slice
 Make
 .Ar slice

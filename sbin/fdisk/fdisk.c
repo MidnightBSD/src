@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sbin/fdisk/fdisk.c,v 1.79.2.2 2005/10/05 01:16:39 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sbin/fdisk/fdisk.c,v 1.84 2007/05/06 18:48:30 andre Exp $");
 
 #include <sys/disk.h>
 #include <sys/disklabel.h>
@@ -120,6 +120,7 @@ static int s_flag  = 0;		/* Print a summary and exit */
 static int t_flag  = 0;		/* test only */
 static char *f_flag = NULL;	/* Read config info from file */
 static int v_flag  = 0;		/* Be verbose */
+static int print_config_flag = 0;
 
 static struct part_type
 {
@@ -192,6 +193,7 @@ static struct part_type
 	,{0xA7, "NeXTSTEP"}
 	,{0xA9, "NetBSD"}
 	,{0xAC, "IBM JFS"}
+	,{0xAF, "HFS+"}
 	,{0xB7, "BSDI BSD/386 file system"}
 	,{0xB8, "BSDI BSD/386 swap"}
 	,{0xBE, "Solaris x86 boot"}
@@ -247,7 +249,7 @@ main(int argc, char *argv[])
 	int	partition = -1;
 	struct	dos_partition *partp;
 
-	while ((c = getopt(argc, argv, "BIab:f:istuv1234")) != -1)
+	while ((c = getopt(argc, argv, "BIab:f:ipstuv1234")) != -1)
 		switch (c) {
 		case 'B':
 			B_flag = 1;
@@ -266,6 +268,9 @@ main(int argc, char *argv[])
 			break;
 		case 'i':
 			i_flag = 1;
+			break;
+		case 'p':
+			print_config_flag = 1;
 			break;
 		case 's':
 			s_flag = 1;
@@ -317,10 +322,33 @@ main(int argc, char *argv[])
 	/* (abu)use mboot.bootinst to probe for the sector size */
 	if ((mboot.bootinst = malloc(MAX_SEC_SIZE)) == NULL)
 		err(1, "cannot allocate buffer to determine disk sector size");
-	read_disk(0, mboot.bootinst);
+	if (read_disk(0, mboot.bootinst) == -1)
+		errx(1, "could not detect sector size");
 	free(mboot.bootinst);
 	mboot.bootinst = NULL;
 
+	if (print_config_flag) {
+		if (read_s0())
+			err(1, "read_s0");
+
+		printf("# %s\n", disk);
+		printf("g c%d h%d s%d\n", dos_cyls, dos_heads, dos_sectors);
+
+		for (i = 0; i < NDOSPART; i++) {
+			partp = ((struct dos_partition *)&mboot.parts) + i;
+
+			if (partp->dp_start == 0 && partp->dp_size == 0)
+				continue;
+
+			printf("p %d 0x%02x %lu %lu\n", i + 1, partp->dp_typ,
+			    (u_long)partp->dp_start, (u_long)partp->dp_size);
+
+			/* Fill flags for the partition. */
+			if (partp->dp_flag & 0x80)
+				printf("a %d\n", i + 1);
+		}
+		exit(0);
+	}
 	if (s_flag) {
 		if (read_s0())
 			err(1, "read_s0");
@@ -412,7 +440,7 @@ static void
 usage()
 {
 	fprintf(stderr, "%s%s",
-		"usage: fdisk [-BIaistu] [-b bootcode] [-1234] [disk]\n",
+		"usage: fdisk [-BIaipstu] [-b bootcode] [-1234] [disk]\n",
  		"       fdisk -f configfile [-itv] [disk]\n");
         exit(1);
 }
@@ -811,6 +839,8 @@ get_params()
 	error = ioctl(fd, DIOCGSECTORSIZE, &u);
 	if (error != 0 || u == 0)
 		u = 512;
+	else
+		secsize = u;
 
 	error = ioctl(fd, DIOCGMEDIASIZE, &o);
 	if (error == 0) {
@@ -1395,7 +1425,7 @@ get_rootdisk(void)
 	if (statfs("/", &rootfs) == -1)
 		err(1, "statfs(\"/\")");
 
-	if ((rv = regcomp(&re, "^(/dev/[a-z]+[0-9]+)([sp][0-9]+)?[a-h]?$",
+	if ((rv = regcomp(&re, "^(/dev/[a-z/]+[0-9]+)([sp][0-9]+)?[a-h]?$",
 		    REG_EXTENDED)) != 0)
 		errx(1, "regcomp() failed (%d)", rv);
 	if ((rv = regexec(&re, rootfs.f_mntfromname, NMATCHES, rm, 0)) != 0)

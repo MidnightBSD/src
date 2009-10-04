@@ -28,7 +28,7 @@
  *
  *	@(#)dump.h	8.2 (Berkeley) 4/28/95
  *
- * $FreeBSD: src/sbin/dump/dump.h,v 1.27 2004/12/02 13:56:53 maxim Exp $
+ * $FreeBSD: src/sbin/dump/dump.h,v 1.28 2007/02/26 08:15:56 mckusick Exp $
  */
 
 /*
@@ -105,8 +105,6 @@ int	mapfiles(ino_t maxino, long *tapesize);
 int	mapdirs(ino_t maxino, long *tapesize);
 
 /* file dumping routines */
-void	ufs1_blksout(ufs1_daddr_t *blkp, int frags, ino_t ino);
-void	ufs2_blksout(ufs2_daddr_t *blkp, int frags, ino_t ino);
 void	bread(ufs2_daddr_t blkno, char *buf, int size);
 ssize_t cread(int fd, void *buf, size_t nbytes, off_t offset);
 void	dumpino(union dinode *dp, ino_t ino);
