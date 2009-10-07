@@ -38145,6 +38145,12 @@ usr.sbin/ctm/mkCTM/ctm_conf.src-special -text
 usr.sbin/ctm/mkCTM/dequeue -text
 usr.sbin/ctm/mkCTM/mkCTM -text
 usr.sbin/ctm/mkCTM/mkctm.c -text
+usr.sbin/cxgbtool/Makefile -text
+usr.sbin/cxgbtool/cxgbtool.c -text
+usr.sbin/cxgbtool/reg_defs.c -text
+usr.sbin/cxgbtool/reg_defs_t3.c -text
+usr.sbin/cxgbtool/reg_defs_t3b.c -text
+usr.sbin/cxgbtool/version.h -text
 usr.sbin/daemon/Makefile -text
 usr.sbin/daemon/daemon.8 -text
 usr.sbin/daemon/daemon.c -text
