@@ -23,9 +23,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/watchdogd/watchdog.8,v 1.6 2005/01/18 20:02:45 ru Exp $
+.\" $FreeBSD: src/usr.sbin/watchdogd/watchdog.8,v 1.8 2006/09/29 17:57:04 ru Exp $
 .\"
-.Dd February 28, 2004
+.Dd September 2, 2006
 .Dt WATCHDOG 8
 .Os
 .Sh NAME
@@ -50,6 +50,7 @@ The
 option
 specifies the desired timeout period in seconds, a value of
 zero will disable the watchdog.
+The default timeout is 16 seconds.
 .Sh SEE ALSO
 .Xr watchdog 4 ,
 .Xr watchdogd 8 ,
