@@ -1,5 +1,5 @@
 /*	$NetBSD: lockd.c,v 1.7 2000/08/12 18:08:44 thorpej Exp $	*/
-/*	$FreeBSD: src/usr.sbin/rpc.lockd/lockd.c,v 1.18 2004/07/16 19:30:59 mr Exp $ */
+/*	$FreeBSD: src/usr.sbin/rpc.lockd/lockd.c,v 1.20 2007/04/03 20:58:28 matteo Exp $ */
 
 /*
  * Copyright (c) 1995
@@ -92,13 +92,17 @@ main(argc, argv)
 	char **argv;
 {
 	SVCXPRT *transp;
-	int ch, i, maxindex, s;
+	int ch, i, maxindex, r, s, sock;
+	struct sockaddr_in sin;
+	struct sockaddr_in6 sin6;
+	char *endptr;
 	struct sigaction sigalarm;
 	int grace_period = 30;
 	struct netconfig *nconf;
 	int maxrec = RPC_MAXDATASIZE;
+	in_port_t svcport = 0;
 
-	while ((ch = getopt(argc, argv, "d:g:")) != (-1)) {
+	while ((ch = getopt(argc, argv, "d:g:p:")) != (-1)) {
 		switch (ch) {
 		case 'd':
 			debug_level = atoi(optarg);
@@ -113,6 +117,13 @@ main(argc, argv)
 				usage();
 				/* NOTREACHED */
 			}
+			break;
+		case 'p':
+			endptr = NULL;
+			svcport = (in_port_t)strtoul(optarg, &endptr, 10);
+			if (endptr == NULL || *endptr != '\0' ||
+			    svcport == 0 || svcport >= IPPORT_MAX)
+				usage();
 			break;
 		default:
 		case '?':
@@ -141,16 +152,81 @@ main(argc, argv)
 		maxindex = 4;
 	}
 
+	if (svcport != 0) {
+		bzero(&sin, sizeof(struct sockaddr_in));
+		sin.sin_len = sizeof(struct sockaddr_in);
+		sin.sin_family = AF_INET;
+		sin.sin_port = htons(svcport);
+
+		bzero(&sin6, sizeof(struct sockaddr_in6));
+		sin6.sin6_len = sizeof(struct sockaddr_in6);
+		sin6.sin6_family = AF_INET6;
+		sin6.sin6_port = htons(svcport);
+	}
+
 	rpc_control(RPC_SVC_CONNMAXREC_SET, &maxrec);
 
 	for (i = 0; i < maxindex; i++) {
 		nconf = getnetconfigent(transports[i]);
 		if (nconf == NULL)
-			errx(1, "cannot get %s netconf: %s.", transports[i],
-			    nc_sperror());
+		    errx(1, "cannot get %s netconf: %s.", transports[i],
+			nc_sperror());
 
-		transp = svc_tli_create(RPC_ANYFD, nconf, NULL,
-		    RPC_MAXDATASIZE, RPC_MAXDATASIZE);
+		if (svcport != 0) {
+		    if (strcmp(nconf->nc_netid, "udp6") == 0) {
+			sock = socket(AF_INET6, SOCK_DGRAM,
+			    IPPROTO_UDP);
+			if (sock != -1) {
+			    r = bindresvport_sa(sock, 
+			        (struct sockaddr *)&sin6);
+			    if (r != 0) {
+				syslog(LOG_ERR, "bindresvport: %m");
+				exit(1);
+			    }
+			}
+		    }
+		    else if (strcmp(nconf->nc_netid, "udp") == 0) {
+			sock = socket(AF_INET, SOCK_DGRAM,
+			    IPPROTO_UDP);
+			if (sock != -1) {
+			    r = bindresvport(sock, &sin);
+			    if (r != 0) {
+				syslog(LOG_ERR, "bindresvport: %m");
+				exit(1);
+			    }
+			}
+		    }
+		    else if (strcmp(nconf->nc_netid, "tcp6") == 0) {
+			sock = socket(AF_INET6, SOCK_STREAM,
+			    IPPROTO_TCP);
+			if (sock != -1) {
+			    r = bindresvport_sa(sock, 
+			        (struct sockaddr *)&sin6);
+			    if (r != 0) {
+				syslog(LOG_ERR, "bindresvport: %m");
+				exit(1);
+			    }
+			}
+		    }
+		    else if (strcmp(nconf->nc_netid, "tcp") == 0) {
+			sock = socket(AF_INET, SOCK_STREAM,
+			    IPPROTO_TCP);
+			if (sock != -1) {
+			    r = bindresvport(sock, &sin);
+			    if (r != 0) {
+				syslog(LOG_ERR, "bindresvport: %m");
+				exit(1);
+			    }
+			}
+		    }
+
+		    transp = svc_tli_create(sock, nconf, NULL,
+		    	RPC_MAXDATASIZE, RPC_MAXDATASIZE);
+		} else {
+		    transp = svc_tli_create(RPC_ANYFD, nconf, NULL,
+		    	RPC_MAXDATASIZE, RPC_MAXDATASIZE);
+		}
+
 		if (transp == NULL) {
 			errx(1, "cannot create %s service.", transports[i]);
 			/* NOTREACHED */
@@ -203,7 +279,7 @@ main(argc, argv)
 		exit(1);
 	}
 	grace_expired = 0;
-	alarm(10);
+	alarm(grace_period);
 
 	init_nsm();
 
@@ -223,7 +299,8 @@ sigalarm_handler(void)
 void
 usage()
 {
-	errx(1, "usage: rpc.lockd [-d <debuglevel>] [-g <grace period>]");
+	errx(1, "usage: rpc.lockd [-d <debuglevel>]"
+	    " [-g <grace period>] [-p <port>]");
 }
 
 /*

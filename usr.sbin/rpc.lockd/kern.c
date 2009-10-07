@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/rpc.lockd/kern.c,v 1.16 2005/05/20 13:01:47 charnier Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/rpc.lockd/kern.c,v 1.21 2006/08/17 05:55:20 maxim Exp $");
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -136,6 +136,9 @@ client_request(void)
 		syslog(LOG_ERR, "open: %s: %m", _PATH_NFSLCKDEV);
 		goto err;
 	}
+
+	signal(SIGPIPE, SIG_IGN);
+
 	/*
 	 * Create a separate process, the client code is really a separate
 	 * daemon that shares a lot of code.
@@ -144,8 +147,10 @@ client_request(void)
 	case -1:
 		err(1, "fork");
 	case 0:
+		setproctitle("client");
 		break;
 	default:
+		setproctitle("server");
 		return (child);
 	}
 
@@ -231,12 +236,17 @@ set_auth(cl, xucred)
 	CLIENT *cl;
 	struct xucred *xucred;
 {
+	int ngroups;
+
+	ngroups = xucred->cr_ngroups - 1;
+	if (ngroups > NGRPS)
+		ngroups = NGRPS;
         if (cl->cl_auth != NULL)
                 cl->cl_auth->ah_ops->ah_destroy(cl->cl_auth);
         cl->cl_auth = authunix_create(hostname,
                         xucred->cr_uid,
                         xucred->cr_groups[0],
-                        xucred->cr_ngroups - 1,
+                        ngroups,
                         &xucred->cr_groups[1]);
 }
 

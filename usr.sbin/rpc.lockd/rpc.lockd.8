@@ -31,9 +31,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/rpc.lockd/rpc.lockd.8,v 1.16 2005/02/09 18:04:41 ru Exp $
+.\" $FreeBSD: src/usr.sbin/rpc.lockd/rpc.lockd.8,v 1.17 2007/04/03 20:58:28 matteo Exp $
 .\"
-.Dd September 24, 1995
+.Dd April 3, 2007
 .Dt RPC.LOCKD 8
 .Os
 .Sh NAME
@@ -43,6 +43,7 @@
 .Nm
 .Op Fl d Ar debug_level
 .Op Fl g Ar grace period
+.Op Fl p Ar port
 .Sh DESCRIPTION
 The
 .Nm
@@ -83,6 +84,12 @@ During the grace period
 only accepts requests from hosts which are reinitialising locks which
 existed before the server restart.
 Default is 30 seconds.
+.It Fl p
+The
+.Fl p
+option allow to force the daemon to bind to the specified
+.Ar port ,
+for both AF_INET and AF_INET6 address families.
 .El
 .Pp
 Error conditions are logged to syslog, irrespective of the debug level,
