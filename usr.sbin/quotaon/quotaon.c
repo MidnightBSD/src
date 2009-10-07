@@ -42,7 +42,7 @@ static char sccsid[] = "@(#)quotaon.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/quotaon/quotaon.c,v 1.10 2004/08/07 04:28:54 imp Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/quotaon/quotaon.c,v 1.12 2007/02/04 06:33:14 mpp Exp $");
 
 /*
  * Turn quota on/off for a filesystem.
@@ -177,8 +177,8 @@ quotaonoff(fs, offmode, type, qfpathname)
 		return (1);
 	}
 	if (vflag)
-		printf("%s: %s quotas turned on\n", fs->fs_file,
-		    qfextension[type]);
+		printf("%s: %s quotas turned on with data file %s\n", 
+		    fs->fs_file, qfextension[type], qfpathname);
 	return (0);
 }
 
@@ -203,18 +203,21 @@ oneof(target, list, cnt)
  */
 int
 hasquota(fs, type, qfnamep)
-	register struct fstab *fs;
+	struct fstab *fs;
 	int type;
 	char **qfnamep;
 {
-	register char *opt;
+	char *opt;
 	char *cp;
+	struct statfs sfb;
 	static char initname, usrname[100], grpname[100];
 	static char buf[BUFSIZ];
 
 	if (!initname) {
-		sprintf(usrname, "%s%s", qfextension[USRQUOTA], qfname);
-		sprintf(grpname, "%s%s", qfextension[GRPQUOTA], qfname);
+		(void)snprintf(usrname, sizeof(usrname), "%s%s", 
+		    qfextension[USRQUOTA], qfname);
+		(void)snprintf(grpname, sizeof(grpname), "%s%s",
+		    qfextension[GRPQUOTA], qfname);
 		initname = 1;
 	}
 	strcpy(buf, fs->fs_mntops);
@@ -228,12 +231,22 @@ hasquota(fs, type, qfnamep)
 	}
 	if (!opt)
 		return (0);
-	if (cp) {
+	if (cp)
 		*qfnamep = cp;
-		return (1);
+	else {
+		(void)snprintf(buf, sizeof(buf), "%s/%s.%s", fs->fs_file,
+		    qfname, qfextension[type]);
+		*qfnamep = buf;
 	}
-	(void) sprintf(buf, "%s/%s.%s", fs->fs_file, qfname, qfextension[type]);
-	*qfnamep = buf;
+	if (statfs(fs->fs_file, &sfb) != 0) {
+		warn("cannot statfs mount point %s", fs->fs_file);
+		return (0);
+	}
+	if (strcmp(fs->fs_file, sfb.f_mntonname)) {
+		warnx("%s not mounted for %s quotas", fs->fs_file,
+		    type == USRQUOTA ? "user" : "group");
+		return (0);
+	}
 	return (1);
 }
 
