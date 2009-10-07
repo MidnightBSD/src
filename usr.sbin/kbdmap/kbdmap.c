@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/kbdmap/kbdmap.c,v 1.3.2.1 2006/01/12 01:25:38 flz Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/kbdmap/kbdmap.c,v 1.6 2007/08/27 21:56:42 murray Exp $");
 
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -288,7 +288,7 @@ do_kbdcontrol(struct keymap *km)
 	if (!x11)
 		system(kbd_cmd);
 
-	printf("keymap=%s\n", km->keym);
+	fprintf(stderr, "keymap=%s\n", km->keym);
 	free(kbd_cmd);
 }
 
@@ -382,7 +382,7 @@ show_dialog(struct keymap **km_sorted, int num_keymaps)
 	fp = fopen(tmp_name, "r");
 	if (fp) {
 		char choice[64];
-		if (fgets(choice, 64, fp) != NULL) {
+		if (fgets(choice, sizeof(choice), fp) != NULL) {
 			/* Find key for desc */
 			for (i=0; i<num_keymaps; i++) {
 				if (!strcmp(choice, km_sorted[i]->desc)) {
