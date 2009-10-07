@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/fdcontrol/fdcontrol.c,v 1.13 2005/01/08 15:46:05 delphij Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/fdcontrol/fdcontrol.c,v 1.14 2005/10/26 22:23:52 peter Exp $");
 
 #include <sys/fdcio.h>
 #include <sys/file.h>
@@ -120,7 +120,6 @@ main(int argc, char **argv)
 		mode = O_RDONLY | O_NONBLOCK;
 	else
 		mode = O_RDWR;
-mode = O_RDONLY | O_NONBLOCK;
 
 	if((fd = open(argv[0], mode)) < 0)
 		err(EX_UNAVAILABLE, "open(%s)", argv[0]);
