@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/fdread/fdread.c,v 1.6 2005/01/08 15:46:06 delphij Exp $
+ * $FreeBSD: src/usr.sbin/fdread/fdread.c,v 1.8 2006/07/20 09:38:46 stefanf Exp $
  */
 
 #include <sys/types.h>
@@ -149,7 +149,7 @@ main(int argc, char **argv)
 			err(EX_OSERR, "cannot create output file %s", fname);
 	}
 
-	if ((fd = open(_devname, O_RDONLY)) == -1)
+	if ((fd = open(_devname, O_RDWR)) == -1)
 		err(EX_OSERR, "cannot open device %s", _devname);
 
 	return (numids? doreadid(fd, numids, trackno): doread(fd, of, _devname));
@@ -300,7 +300,7 @@ doread(int fd, FILE *of, const char *_devname)
 int
 doreadid(int fd, unsigned int numids, unsigned int trackno)
 {
-	int rv = 0, status, fdopts;
+	int rv = 0, fdopts;
 	unsigned int i;
 	struct fdc_readid info;
 	struct fdc_status fdcs;
@@ -316,7 +316,7 @@ doreadid(int fd, unsigned int numids, unsigned int trackno)
 	for (i = 0; i < numids; i++) {
 		info.cyl = trackno / fdt.heads;
 		info.head = fdt.heads > 1? trackno % fdt.heads: 0;
-		if ((status = ioctl(fd, FD_READID, &info)) == 0) {
+		if (ioctl(fd, FD_READID, &info) == 0) {
 			printf("C = %d, H = %d, R = %d, N = %d\n",
 			       info.cyl, info.head, info.sec, info.secshift);
 		} else {
