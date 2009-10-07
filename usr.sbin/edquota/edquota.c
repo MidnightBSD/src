@@ -41,15 +41,18 @@ static const char copyright[] =
 static char sccsid[] = "@(#)edquota.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 #endif
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/edquota/edquota.c,v 1.23 2004/08/07 04:27:50 imp Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/edquota/edquota.c,v 1.26 2007/02/04 06:33:14 mpp Exp $");
 
 /*
  * Disk quota editor.
  */
+
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+#include <sys/mount.h>
 #include <sys/wait.h>
 #include <ufs/ufs/quota.h>
 #include <ctype.h>
@@ -114,6 +117,8 @@ main(int argc, char **argv)
 		errx(1, "permission denied");
 	quotatype = USRQUOTA;
 	protoprivs = NULL;
+	curprivs = NULL;
+	protoname = NULL;
 	while ((ch = getopt(argc, argv, "ugtf:p:e:")) != -1) {
 		switch(ch) {
 		case 'f':
@@ -252,7 +257,7 @@ main(int argc, char **argv)
 		if (writetimes(protoprivs, tmpfd, quotatype) == 0)
 			exit(1);
 		if (editit(tmpfil) && readtimes(protoprivs, tmpfil))
-			putprivs(0, quotatype, protoprivs);
+			putprivs(0L, quotatype, protoprivs);
 		freeprivs(protoprivs);
 		close(tmpfd);
 		unlink(tmpfil);
@@ -339,7 +344,7 @@ getprivs(id, quotatype, fspath)
 	static int warned = 0;
 
 	setfsent();
-	quphead = (struct quotause *)0;
+	quphead = quptail = NULL;
 	qcmd = QCMD(Q_GETQUOTA, quotatype);
 	while ((fs = getfsent())) {
 		if (fspath && *fspath && strcmp(fspath, fs->fs_spec) &&
@@ -371,7 +376,13 @@ getprivs(id, quotatype, fspath)
 				    getentry(quotagroup, GRPQUOTA));
 				(void) fchmod(fd, 0640);
 			}
-			lseek(fd, (long)(id * sizeof(struct dqblk)), L_SET);
+			if (lseek(fd, (off_t)id * sizeof(struct dqblk),
+			    L_SET) < 0) {
+				warn("seek error on %s", qfpathname);
+				close(fd);
+				free(qup);
+				continue;
+			}
 			switch (read(fd, &qup->dqblk, sizeof(struct dqblk))) {
 			case 0:			/* EOF */
 				/*
@@ -417,21 +428,70 @@ putprivs(id, quotatype, quplist)
 {
 	register struct quotause *qup;
 	int qcmd, fd;
+	struct dqblk dqbuf;
 
 	qcmd = QCMD(Q_SETQUOTA, quotatype);
 	for (qup = quplist; qup; qup = qup->next) {
 		if (quotactl(qup->fsname, qcmd, id, &qup->dqblk) == 0)
 			continue;
-		if ((fd = open(qup->qfname, O_WRONLY)) < 0) {
+		if ((fd = open(qup->qfname, O_RDWR)) < 0) {
 			warn("%s", qup->qfname);
-		} else {
-			lseek(fd, (long)id * (long)sizeof (struct dqblk), 0);
-			if (write(fd, &qup->dqblk, sizeof (struct dqblk)) !=
-			    sizeof (struct dqblk)) {
-				warn("%s", qup->qfname);
-			}
-			close(fd);
+			continue;
 		}
+		if (lseek(fd, (off_t)id * sizeof(struct dqblk), L_SET) < 0) {
+			warn("seek error on %s", qup->qfname);
+			close(fd);
+			continue;
+		}
+		switch (read(fd, &dqbuf, sizeof(struct dqblk))) {
+		case 0:			/* EOF */
+			/*
+			 * Convert implicit 0 quota (EOF)
+			 * into an explicit one (zero'ed dqblk)
+			 */
+			bzero(&dqbuf, sizeof(struct dqblk));
+			break;
+
+		case sizeof(struct dqblk):	/* OK */
+			break;
+
+		default:		/* ERROR */
+			warn("read error in %s", qup->qfname);
+			close(fd);
+			continue;
+		}
+		/*
+		 * Reset time limit if have a soft limit and were
+		 * previously under it, but are now over it
+		 * or if there previously was no soft limit, but 
+		 * now have one and are over it.
+		 */
+		if (dqbuf.dqb_bsoftlimit && id != 0 &&
+		    dqbuf.dqb_curblocks < dqbuf.dqb_bsoftlimit &&
+		    dqbuf.dqb_curblocks >= qup->dqblk.dqb_bsoftlimit)
+			qup->dqblk.dqb_btime = 0;
+		if (dqbuf.dqb_bsoftlimit == 0 && id != 0 &&
+		    dqbuf.dqb_curblocks >= qup->dqblk.dqb_bsoftlimit)
+			qup->dqblk.dqb_btime = 0;
+		if (dqbuf.dqb_isoftlimit && id != 0 &&
+		    dqbuf.dqb_curinodes < dqbuf.dqb_isoftlimit &&
+		    dqbuf.dqb_curinodes >= qup->dqblk.dqb_isoftlimit)
+			qup->dqblk.dqb_itime = 0;
+		if (dqbuf.dqb_isoftlimit == 0 && id !=0 &&
+		    dqbuf.dqb_curinodes >= qup->dqblk.dqb_isoftlimit)
+			qup->dqblk.dqb_itime = 0;
+		qup->dqblk.dqb_curinodes = dqbuf.dqb_curinodes;
+		qup->dqblk.dqb_curblocks = dqbuf.dqb_curblocks;
+		if (lseek(fd, (off_t)id * sizeof(struct dqblk), L_SET) < 0) {
+			warn("seek error on %s", qup->qfname);
+			close(fd);
+			continue;
+		}
+		if (write(fd, &qup->dqblk, sizeof (struct dqblk)) !=
+		    sizeof (struct dqblk)) {
+			warn("%s", qup->qfname);
+			}
+		close(fd);
 	}
 }
 
@@ -810,18 +870,21 @@ alldigits(s)
  */
 int
 hasquota(fs, type, qfnamep)
-	register struct fstab *fs;
+	struct fstab *fs;
 	int type;
 	char **qfnamep;
 {
-	register char *opt;
+	char *opt;
 	char *cp;
+	struct statfs sfb;
 	static char initname, usrname[100], grpname[100];
 	static char buf[BUFSIZ];
 
 	if (!initname) {
-		sprintf(usrname, "%s%s", qfextension[USRQUOTA], qfname);
-		sprintf(grpname, "%s%s", qfextension[GRPQUOTA], qfname);
+		(void)snprintf(usrname, sizeof(usrname), "%s%s",
+		    qfextension[USRQUOTA], qfname);
+		(void)snprintf(grpname, sizeof(grpname), "%s%s",
+		    qfextension[GRPQUOTA], qfname);
 		initname = 1;
 	}
 	strcpy(buf, fs->fs_mntops);
@@ -835,11 +898,22 @@ hasquota(fs, type, qfnamep)
 	}
 	if (!opt)
 		return (0);
-	if (cp) {
+	if (cp)
 		*qfnamep = cp;
-		return (1);
+	else {
+		(void)snprintf(buf, sizeof(buf), "%s/%s.%s", fs->fs_file,
+		    qfname, qfextension[type]);
+		*qfnamep = buf;
 	}
-	(void) sprintf(buf, "%s/%s.%s", fs->fs_file, qfname, qfextension[type]);
-	*qfnamep = buf;
+	if (statfs(fs->fs_file, &sfb) != 0) {
+		warn("cannot statfs mount point %s", fs->fs_file);
+		return (0);
+	}
+	if (strcmp(fs->fs_file, sfb.f_mntonname)) {
+		warnx("%s not mounted for %s quotas", fs->fs_file,
+		    type == USRQUOTA ? "user" : "group");
+		sleep(3);
+		return (0);
+	}
 	return (1);
 }
