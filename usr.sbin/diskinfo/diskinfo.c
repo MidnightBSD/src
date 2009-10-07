@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/diskinfo/diskinfo.c,v 1.8 2005/01/11 10:53:09 ru Exp $
+ * $FreeBSD: src/usr.sbin/diskinfo/diskinfo.c,v 1.9 2007/05/06 00:25:21 pjd Exp $
  */
 
 #include <stdio.h>
@@ -57,7 +57,7 @@ int
 main(int argc, char **argv)
 {
 	int i, ch, fd, error;
-	char buf[BUFSIZ];
+	char buf[BUFSIZ], ident[DISK_IDENT_SIZE];
 	off_t	mediasize;
 	u_int	sectorsize, fwsectors, fwheads;
 
@@ -104,6 +104,9 @@ main(int argc, char **argv)
 		error = ioctl(fd, DIOCGFWHEADS, &fwheads);
 		if (error)
 			fwheads = 0;
+		error = ioctl(fd, DIOCGIDENT, ident);
+		if (error)
+			ident[0] = '\0';
 		if (!opt_v) {
 			printf("%s", argv[i]);
 			printf("\t%u", sectorsize);
@@ -130,6 +133,8 @@ main(int argc, char **argv)
 				printf("\t%-12u\t# Heads according to firmware.\n", fwheads);
 				printf("\t%-12u\t# Sectors according to firmware.\n", fwsectors);
 			} 
+			if (ident[0] != '\0')
+				printf("\t%-12s\t# Disk ident.\n", ident);
 		}
 		printf("\n");
 		if (opt_c)

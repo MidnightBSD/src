@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/eeprom/ofw_options.c,v 1.3 2004/08/15 20:18:54 marius Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/eeprom/ofw_options.c,v 1.4 2006/09/01 20:07:15 marius Exp $");
 
 /*
  * Handlers for Open Firmware /options node.
@@ -70,9 +70,8 @@ static struct ofwo_extabent ofwo_extab[] = {
 	{ NULL,				NULL }
 };
 
-static int		ofwo_setpass(int);
-static int		ofwo_setstr(int, const void *, int, const char *,
-			    const char *);
+static int	ofwo_setpass(int);
+static int	ofwo_setstr(int, const void *, int, const char *, const char *);
 
 static __inline void
 ofwo_printprop(const char *prop, const char* buf, int buflen)
