@@ -37862,6 +37862,7 @@ usr.sbin/bluetooth/bthidcontrol/hid.c -text
 usr.sbin/bluetooth/bthidcontrol/sdp.c -text
 usr.sbin/bluetooth/bthidd/Makefile -text
 usr.sbin/bluetooth/bthidd/bthid_config.h -text
+usr.sbin/bluetooth/bthidd/bthidd.8 -text
 usr.sbin/bluetooth/bthidd/bthidd.c -text
 usr.sbin/bluetooth/bthidd/bthidd.conf.sample -text
 usr.sbin/bluetooth/bthidd/bthidd.h -text
