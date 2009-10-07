@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rfcomm_pppd.c,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/rfcomm_pppd/rfcomm_pppd.c,v 1.5 2004/08/05 16:32:41 emax Exp $
+ * $Id: rfcomm_pppd.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/rfcomm_pppd/rfcomm_pppd.c,v 1.6 2006/09/21 02:32:28 emax Exp $
  */
 
 #include <bluetooth.h>
@@ -301,8 +301,8 @@ main(int argc, char *argv[])
 		}
 		
 		for (done = 0; !done; ) {
-			int	len = sizeof(sock_addr);
-			int	s1 = accept(s, (struct sockaddr *) &sock_addr, &len);
+			socklen_t	len = sizeof(sock_addr);
+			int		s1 = accept(s, (struct sockaddr *) &sock_addr, &len);
 
 			if (s1 < 0) {
 				syslog(LOG_ERR, "Could not accept connection " \

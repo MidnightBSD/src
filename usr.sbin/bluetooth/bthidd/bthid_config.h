@@ -1,7 +1,9 @@
 /*
  * bthid_config.h
- *
- * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+ */
+
+/*-
+ * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bthid_config.h,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidd/bthid_config.h,v 1.2 2004/11/18 18:05:15 emax Exp $
+ * $Id: bthid_config.h,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/bthidd/bthid_config.h,v 1.3 2006/09/07 21:47:49 emax Exp $
  */
 
 #ifndef _BTHID_CONFIG_H_
@@ -44,24 +46,25 @@ struct hid_device
 	unsigned		reconnect_initiate   : 1;
 	unsigned		battery_power        : 1;
 	unsigned		normally_connectable : 1;
-	unsigned		reserved             : 12;
+	unsigned		keyboard             : 1;
+	unsigned		reserved             : 11;
 	report_desc_t		desc;		/* HID report descriptor */
 	LIST_ENTRY(hid_device)	next;		/* link to the next */
 };
 typedef struct hid_device	hid_device_t;
 typedef struct hid_device *	hid_device_p;
 
-extern char	*config_file;
-extern char	*hids_file;
+extern char const	*config_file;
+extern char const	*hids_file;
 
-int		read_config_file	(void);
+int32_t		read_config_file	(void);
 void		clean_config		(void);
 hid_device_p	get_hid_device		(bdaddr_p bdaddr);
 hid_device_p	get_next_hid_device	(hid_device_p d);
 void		print_hid_device	(hid_device_p hid_device, FILE *f);
 
-int		read_hids_file		(void);
-int		write_hids_file		(void);
+int32_t		read_hids_file		(void);
+int32_t		write_hids_file		(void);
 
 #endif /* ndef _BTHID_CONFIG_H_ */
 

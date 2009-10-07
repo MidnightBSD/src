@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sdp.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/sdp.c,v 1.1.8.1 2006/02/19 15:39:04 markus Exp $
+ * $Id: sdp.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/sdp.c,v 1.2 2006/02/10 19:54:17 markus Exp $
  */
 
 #include <sys/queue.h>

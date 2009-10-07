@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hid.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/hid.c,v 1.1 2004/04/10 00:18:00 emax Exp $
+ * $Id: hid.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/bthidcontrol/hid.c,v 1.2 2006/10/31 00:26:58 markus Exp $
  */
 
 #include <sys/queue.h>
@@ -38,6 +38,8 @@
 #include <usbhid.h>
 #include "bthid_config.h"
 #include "bthidcontrol.h"
+
+extern uint32_t verbose;
 
 static void hid_dump_descriptor	(report_desc_t r);
 static void hid_dump_item	(char const *label, struct hid_item *h);
@@ -153,6 +155,9 @@ hid_dump_descriptor(report_desc_t r)
 static void
 hid_dump_item(char const *label, struct hid_item *h)
 {
+	if ((h->flags & HIO_CONST) && !verbose)
+		return;
+
 	fprintf(stdout,
 "%s id=%u size=%u count=%u page=%s usage=%s%s%s%s%s%s%s%s%s%s",
 		label, (uint8_t) h->report_ID, h->report_size, h->report_count,

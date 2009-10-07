@@ -1,7 +1,9 @@
 /*
  * bthidd.c
- *
- * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+ */
+
+/*-
+ * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: bthidd.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidd/bthidd.c,v 1.3 2004/11/18 18:05:15 emax Exp $
+ * $Id: bthidd.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/bthidd/bthidd.c,v 1.5 2006/09/07 21:47:49 emax Exp $
  */
 
 #include <sys/time.h>
@@ -42,40 +44,40 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <usbhid.h>
-#include "bthidd.h"
 #include "bthid_config.h"
+#include "bthidd.h"
 
-static int	write_pid_file	(char const *file);
-static int	remove_pid_file	(char const *file);
-static int	elapsed		(int tval);
-static void	sighandler	(int s);
+static int32_t	write_pid_file	(char const *file);
+static int32_t	remove_pid_file	(char const *file);
+static int32_t	elapsed		(int32_t tval);
+static void	sighandler	(int32_t s);
 static void	usage		(void);
 
 /*
  * bthidd
  */
 
-static int	done = 0; /* are we done? */
+static int32_t	done = 0; /* are we done? */
 
-int
-main(int argc, char *argv[])
+int32_t
+main(int32_t argc, char *argv[])
 {
 	struct bthid_server	 srv;
 	struct sigaction	 sa;
-	char const		*pid_file = BTHIDD_PIDFILE, *ep = NULL;
-	int			 opt, detach, tval;
+	char const		*pid_file = BTHIDD_PIDFILE;
+	char			*ep;
+	int32_t			 opt, detach, tval;
 
 	memset(&srv, 0, sizeof(srv));
-	memcpy(&srv.bdaddr, NG_HCI_BDADDR_ANY, sizeof(srv.bdaddr));
-	srv.windex = -1;
+	memset(&srv.bdaddr, 0, sizeof(srv.bdaddr));
 	detach = 1;
 	tval = 10; /* sec */
 
-	while ((opt = getopt(argc, argv, "a:c:dH:hp:s:t:")) != -1) {
+	while ((opt = getopt(argc, argv, "a:c:dH:hp:t:")) != -1) {
 		switch (opt) {
 		case 'a': /* BDADDR */
 			if (!bt_aton(optarg, &srv.bdaddr)) {
-				struct hostent  *he = NULL;
+				struct hostent  *he;
 
 				if ((he = bt_gethostbyname(optarg)) == NULL)
 					errx(1, "%s: %s", optarg, hstrerror(h_errno));
@@ -100,19 +102,9 @@ main(int argc, char *argv[])
 			pid_file = optarg;
 			break;
 
-		case 's': /* switch script */
-			srv.script = optarg;
-			break;
-
 		case 't': /* rescan interval */
 			tval = strtol(optarg, (char **) &ep, 10);
 			if (*ep != '\0' || tval <= 0)
-				usage();
-			break;
-
-		case 'u': /* wired keyboard index */
-			srv.windex = strtol(optarg, (char **) &ep, 10);
-			if (*ep != '\0' || srv.windex < 0)
 				usage();
 			break;
 
@@ -183,10 +175,10 @@ main(int argc, char *argv[])
  * Write pid file
  */
 
-static int
+static int32_t
 write_pid_file(char const *file)
 {
-	FILE	*pid = NULL;
+	FILE	*pid;
 
 	assert(file != NULL);
 
@@ -206,7 +198,7 @@ write_pid_file(char const *file)
  * Remote pid file
  */
 
-static int
+static int32_t
 remove_pid_file(char const *file)
 {
 	assert(file != NULL);
@@ -224,10 +216,10 @@ remove_pid_file(char const *file)
  * Returns true if desired time interval has elapsed
  */
 
-static int
-elapsed(int tval)
+static int32_t
+elapsed(int32_t tval)
 {
-	static struct timeval	last = { 0, };
+	static struct timeval	last = { 0, 0 };
 	struct timeval		now;
 
 	gettimeofday(&now, NULL);
@@ -245,7 +237,7 @@ elapsed(int tval)
  */
 
 static void
-sighandler(int s)
+sighandler(int32_t s)
 {
 	syslog(LOG_NOTICE, "Got signal %d, total number of signals %d",
 		s, ++ done);
@@ -267,9 +259,7 @@ usage(void)
 "	-H file		specify known HIDs file name\n" \
 "	-h		display this message\n" \
 "	-p file		specify PID file name\n" \
-"	-s script	specify keyboard switching script\n" \
 "	-t tval		specify client rescan interval (sec)\n" \
-"	-u unit		specify wired keyboard unit\n" \
 "", BTHIDD_IDENT);
 	exit(255);
 }

@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hcsecd.c,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hcsecd/hcsecd.c,v 1.3 2004/04/09 23:58:53 emax Exp $
+ * $Id: hcsecd.c,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/hcsecd/hcsecd.c,v 1.5 2006/09/21 17:16:37 emax Exp $
  */
 
 #include <sys/queue.h>
@@ -65,7 +65,8 @@ static void usage
 int
 main(int argc, char *argv[])
 {
-	int					 n, detach, sock, size;
+	int					 n, detach, sock;
+	socklen_t				 size;
 	struct sigaction			 sa;
 	struct sockaddr_hci			 addr;
 	struct ng_btsocket_hci_raw_filter	 filter;
@@ -281,8 +282,8 @@ send_pin_code_reply(int sock, struct sockaddr_hci *addr,
 
 		cp = (ng_hci_pin_code_rep_cp *)(cmd + 1);
 		memcpy(&cp->bdaddr, bdaddr, sizeof(cp->bdaddr));
-		strncpy(cp->pin, pin, sizeof(cp->pin));
-		cp->pin_size = strlen(cp->pin);
+		strncpy((char *) cp->pin, pin, sizeof(cp->pin));
+		cp->pin_size = strlen((char const *) cp->pin);
 
 		syslog(LOG_DEBUG, "Sending PIN_Code_Reply to '%s' " \
 				"for remote bdaddr %s",

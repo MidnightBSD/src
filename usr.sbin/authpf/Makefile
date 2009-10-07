@@ -1,4 +1,4 @@
-# $FreeBSD: src/usr.sbin/authpf/Makefile,v 1.3 2005/05/04 08:57:12 mlaier Exp $
+# $FreeBSD: src/usr.sbin/authpf/Makefile,v 1.4 2006/09/21 18:16:22 kan Exp $
 
 .PATH:	${.CURDIR}/../../contrib/pf/authpf
 .PATH:	${.CURDIR}/../../contrib/pf/pfctl
@@ -11,7 +11,7 @@ BINMODE= 6555
 
 SRCS=   authpf.c
 
-CFLAGS+= -I${.CURDIR}/../../contrib/pf/pfctl -Wall -Werror
+CFLAGS+= -I${.CURDIR}/../../contrib/pf/pfctl
 
 # XXX ALTQ:
 CFLAGS+= -DENABLE_ALTQ

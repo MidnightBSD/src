@@ -25,16 +25,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: node.c,v 1.3 2007-01-19 04:34:15 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/node.c,v 1.3 2003/10/12 22:04:23 emax Exp $
+ * $Id: node.c,v 1.4 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/hccontrol/node.c,v 1.4 2006/05/22 17:58:09 markus Exp $
  */
 
 #include <sys/ioctl.h>
 #include <bluetooth.h>
 #include <errno.h>
+#include <netgraph/ng_message.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "hccontrol.h"
 
 /* Send Read_Node_State command to the node */
@@ -441,6 +443,33 @@ hci_write_node_role_switch(int s, int argc, char **argv)
 	return (OK);
 } /* hci_write_node_role_switch */
 
+/* Send Read_Node_List command to the node */
+int
+hci_read_node_list(int s, int argc, char **argv)
+{
+	struct ng_btsocket_hci_raw_node_list_names	r;
+	int						i;
+
+	r.num_names = MAX_NODE_NUM;
+	r.names = (struct nodeinfo*)calloc(MAX_NODE_NUM, sizeof(struct nodeinfo));
+	if (r.names == NULL)
+		return (ERROR);
+
+	if (ioctl(s, SIOC_HCI_RAW_NODE_LIST_NAMES, &r, sizeof(r)) < 0) {
+		free(r.names);
+		return (ERROR);
+	}
+
+	fprintf(stdout, "Name            ID       Num hooks\n");
+	for (i = 0; i < r.num_names; ++i)
+		fprintf(stdout, "%-15s %08x %9d\n",
+		    r.names[i].name, r.names[i].id, r.names[i].hooks);
+
+	free(r.names);
+
+	return (OK);
+} /* hci_read_node_list */
+
 struct hci_command	node_commands[] = {
 {
 "read_node_state",
@@ -566,6 +595,11 @@ struct hci_command	node_commands[] = {
 "this parameter to zero will prevent Role Switch and thus accepting device\n" \
 "will remain Slave",
 &hci_write_node_role_switch
+},
+{
+"read_node_list",
+"Get a list of HCI nodes, their Netgraph IDs and connected hooks.",
+&hci_read_node_list
 },
 {
 NULL,

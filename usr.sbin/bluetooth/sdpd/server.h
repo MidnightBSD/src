@@ -25,8 +25,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: server.h,v 1.1.1.2 2006-02-25 02:38:25 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/sdpd/server.h,v 1.1.8.1 2005/12/13 00:35:56 emax Exp $
+ * $Id: server.h,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/sdpd/server.h,v 1.2 2005/12/06 17:56:36 emax Exp $
  */
 
 #ifndef _SERVER_H_

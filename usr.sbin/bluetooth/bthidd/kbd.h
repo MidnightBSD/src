@@ -1,7 +1,9 @@
 /*
  * kbd.h
- *
- * Copyright (c) 2004 Maksim Yevmenkin <m_evmenkin@yahoo.com>
+ */
+
+/*-
+ * Copyright (c) 2006 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,17 +27,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: kbd.h,v 1.1.1.2 2006-02-25 02:38:24 laffer1 Exp $
- * $FreeBSD: src/usr.sbin/bluetooth/bthidd/kbd.h,v 1.1 2004/11/18 18:05:15 emax Exp $
+ * $Id: kbd.h,v 1.2 2009-10-07 02:26:32 laffer1 Exp $
+ * $FreeBSD: src/usr.sbin/bluetooth/bthidd/kbd.h,v 1.2 2006/09/07 21:47:49 emax Exp $
  */
 
 #ifndef _KBD_H_
 #define _KBD_H_
 
-int	kbd_maxkey	(void);
-int	kbd_process_keys(bthid_session_p s);
-int	kbd_get_index_fd(int fd);
-int	kbd_get_index	(char const *device);
-int	kbd_switch	(char const *script, int index);
+int32_t	kbd_maxkey	  (void);
+int32_t	kbd_process_keys  (bthid_session_p s);
+int32_t	kbd_status_changed(bthid_session_p s, uint8_t *data, int32_t len);
 
 #endif /* ndef _KBD_H_ */
