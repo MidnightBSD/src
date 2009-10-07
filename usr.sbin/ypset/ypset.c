@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/ypset/ypset.c,v 1.15 2004/10/17 19:33:33 stefanf Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/ypset/ypset.c,v 1.16 2007/02/28 22:49:12 jmallett Exp $");
 
 #include <err.h>
 #include <netdb.h>
@@ -101,7 +101,7 @@ bind_tohost(struct sockaddr_in *sin, char *dom, char *server)
 		(xdrproc_t)xdr_ypbind_setdom, &ypsd,
 		(xdrproc_t)xdr_void, NULL, tv);
 	if (r) {
-		warnx("sorry, cannot ypset for domain %s on host", dom);
+		warnx("sorry, cannot ypset for domain %s on host - make sure ypbind was started with -ypset or -ypsetme", dom);
 		clnt_destroy(client);
 		return (YPERR_YPBIND);
 	}
