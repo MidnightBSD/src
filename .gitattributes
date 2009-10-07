@@ -38639,6 +38639,9 @@ usr.sbin/ofwdump/ofwdump.c -text
 usr.sbin/ofwdump/pathnames.h -text
 usr.sbin/pccard/Makefile -text
 usr.sbin/pccard/Makefile.inc -text
+usr.sbin/pccard/dumpcis/Makefile -text
+usr.sbin/pccard/dumpcis/dumpcis.8 -text
+usr.sbin/pccard/dumpcis/main.c -text
 usr.sbin/pccard/pccardc/Makefile -text
 usr.sbin/pccard/pccardc/beep.c -text
 usr.sbin/pccard/pccardc/dumpcis.c -text
@@ -38654,17 +38657,8 @@ usr.sbin/pccard/pccardc/rdmap.c -text
 usr.sbin/pccard/pccardc/rdreg.c -text
 usr.sbin/pccard/pccardc/wrattr.c -text
 usr.sbin/pccard/pccardc/wrreg.c -text
-usr.sbin/pccard/pccardd/Makefile -text
-usr.sbin/pccard/pccardd/cardd.c -text
-usr.sbin/pccard/pccardd/cardd.h -text
-usr.sbin/pccard/pccardd/file.c -text
-usr.sbin/pccard/pccardd/pccard.conf.5 -text
-usr.sbin/pccard/pccardd/pccardd.8 -text
-usr.sbin/pccard/pccardd/pccardd.c -text
 usr.sbin/pccard/pccardd/readcis.c -text
 usr.sbin/pccard/pccardd/readcis.h -text
-usr.sbin/pccard/pccardd/server.c -text
-usr.sbin/pccard/pccardd/util.c -text
 usr.sbin/pciconf/Makefile -text
 usr.sbin/pciconf/cap.c -text
 usr.sbin/pciconf/pathnames.h -text
