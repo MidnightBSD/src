@@ -1,4 +1,4 @@
-# $MidnightBSD$
+# $MidnightBSD: src/usr.sbin/cron/cron/Makefile,v 1.2 2007/08/18 07:37:09 laffer1 Exp $
 # $FreeBSD: src/usr.sbin/cron/cron/Makefile,v 1.15 2001/07/20 06:19:40 obrien Exp $
 
 PROG=	cron
@@ -8,6 +8,6 @@ SRCS=	cron.c database.c do_command.c job.c user.c popen.c
 CFLAGS+= -DLOGIN_CAP -DPAM
 
 DPADD=	${LIBCRON} ${LIBPAM} ${LIBUTIL}
-LDADD=	${LIBCRON} -lpam -lutil
+LDADD=	${LIBCRON} ${MINUSLPAM} -lutil
 
 .include <bsd.prog.mk>
