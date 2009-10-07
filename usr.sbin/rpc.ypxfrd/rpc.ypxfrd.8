@@ -28,7 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/rpc.ypxfrd/rpc.ypxfrd.8,v 1.16 2005/02/13 22:25:32 ru Exp $
+.\" $FreeBSD: src/usr.sbin/rpc.ypxfrd/rpc.ypxfrd.8,v 1.17 2006/11/02 07:36:33 maxim Exp $
 .\"
 .Dd June 2, 1996
 .Dt RPC.YPXFRD 8
@@ -104,8 +104,11 @@ utility uses the same access restriction mechanism as
 .Xr ypserv 8 .
 This means that slave servers will only be permitted to transfer
 files if the rules in the
-.Xr securenets 5
-database permit it.
+.Pa securenets
+database permit it (see
+.Xr ypserv 8
+for more information on
+.Pa securenets ) .
 Furthermore, only slave servers using reserved
 ports will be allowed to transfer the
 .Pa master.passwd
