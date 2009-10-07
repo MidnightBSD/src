@@ -1,5 +1,5 @@
 /*	$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $	*/
-/* $FreeBSD: src/usr.sbin/crunch/crunchide/crunchide.c,v 1.10 2002/05/25 13:39:20 ru Exp $ */
+/* $FreeBSD: src/usr.sbin/crunch/crunchide/crunchide.c,v 1.11 2007/03/06 09:32:40 kevlo Exp $ */
 /*
  * Copyright (c) 1997 Christopher G. Demetriou.  All rights reserved.
  * Copyright (c) 1994 University of Maryland
@@ -191,7 +191,7 @@ void add_file_to_keep_list(char *filename)
 	usage();
     }
 
-    while(fgets(symbol, 1024, keepf)) {
+    while(fgets(symbol, sizeof(symbol), keepf)) {
 	len = strlen(symbol);
 	if(len && symbol[len-1] == '\n')
 	    symbol[len-1] = '\0';
