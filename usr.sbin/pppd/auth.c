@@ -33,7 +33,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/usr.sbin/pppd/auth.c,v 1.28 2003/10/26 06:01:06 peter Exp $";
+static char rcsid[] = "$FreeBSD: src/usr.sbin/pppd/auth.c,v 1.29 2007/03/15 09:16:54 kevlo Exp $";
 #endif
 
 #include <stdio.h>
@@ -1615,7 +1615,7 @@ auth_script(script)
     struct passwd *pw;
     char struid[32];
     char *user_name;
-    char *argv[8];
+    char *argv[7];
 
     if ((pw = getpwuid(getuid())) != NULL && pw->pw_name != NULL)
 	user_name = pw->pw_name;

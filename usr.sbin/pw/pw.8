@@ -22,9 +22,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/usr.sbin/pw/pw.8,v 1.37 2005/01/18 20:02:41 ru Exp $
+.\" $FreeBSD: src/usr.sbin/pw/pw.8,v 1.41 2007/03/30 11:23:10 le Exp $
 .\"
-.Dd January 11, 2004
+.Dd March 30, 2007
 .Dt PW 8
 .Os
 .Sh NAME
@@ -46,6 +46,7 @@
 .Op Fl g Ar group
 .Op Fl G Ar grouplist
 .Op Fl m
+.Op Fl M Ar mode
 .Op Fl k Ar dir
 .Op Fl w Ar method
 .Op Fl s Ar shell
@@ -68,6 +69,7 @@
 .Op Fl g Ar group
 .Op Fl G Ar grouplist
 .Op Fl k Ar dir
+.Op Fl M Ar mode
 .Op Fl u Ar min , Ns Ar max
 .Op Fl i Ar min , Ns Ar max
 .Op Fl w Ar method
@@ -97,6 +99,7 @@
 .Op Fl G Ar grouplist
 .Op Fl l Ar name
 .Op Fl m
+.Op Fl M Ar mode
 .Op Fl k Ar dir
 .Op Fl w Ar method
 .Op Fl s Ar shell
@@ -428,6 +431,11 @@ The new home directory is populated with the contents of the
 .Ar skeleton
 directory, which typically contains a set of shell configuration files that the
 user may personalize to taste.
+Files in this directory are usually named
+.Pa dot . Ns Aq Ar config
+where the
+.Pa dot
+prefix will be stripped.
 When
 .Fl m
 is used on an account with
@@ -444,6 +452,16 @@ option (see below), bearing the name of the new account.
 This can be overridden by the
 .Fl d
 option on the command line, if desired.
+.It Fl M Ar mode
+Create the user's home directory with the specified
+.Ar mode ,
+modified by the current
+.Xr umask 2 .
+If omitted, it is derived from the parent process'
+.Xr umask 2 .
+This option is only useful in combination with the
+.Fl m
+flag.
 .It Fl k Ar dir
 Set the
 .Ar skeleton
@@ -598,6 +616,9 @@ Set the default
 directory, from which prototype shell and other initialization files are copied when
 .Nm
 creates a user's home directory.
+See description of
+.Fl k
+for naming conventions of these files.
 .It Xo
 .Fl u Ar min , Ns Ar max ,
 .Fl i Ar min , Ns Ar max
@@ -951,6 +972,7 @@ No base home directory configured.
 .Sh SEE ALSO
 .Xr chpass 1 ,
 .Xr passwd 1 ,
+.Xr umask 2 ,
 .Xr group 5 ,
 .Xr login.conf 5 ,
 .Xr passwd 5 ,

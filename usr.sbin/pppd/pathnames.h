@@ -1,7 +1,7 @@
 /*
  * define path names
  *
- * $FreeBSD: src/usr.sbin/pppd/pathnames.h,v 1.10 2001/07/31 16:09:29 asmodai Exp $
+ * $FreeBSD: src/usr.sbin/pppd/pathnames.h,v 1.11 2006/11/12 17:36:58 ume Exp $
  */
 
 #ifdef HAVE_PATHS_H
@@ -25,6 +25,11 @@
 #define _PATH_PEERFILES	"/etc/ppp/peers/"
 #define _PATH_PPPDENY  "/etc/ppp/ppp.deny"
 #define _PATH_PPPSHELLS	"/etc/ppp/ppp.shells"
+
+#ifdef INET6
+#define _PATH_IPV6UP	"/etc/ppp/ipv6-up"
+#define _PATH_IPV6DOWN	"/etc/ppp/ipv6-down"
+#endif
 
 #ifdef IPX_CHANGE
 #define _PATH_IPXUP	"/etc/ppp/ipx-up"

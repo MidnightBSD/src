@@ -38886,10 +38886,14 @@ usr.sbin/pppd/chap.h -text
 usr.sbin/pppd/chap_ms.c -text
 usr.sbin/pppd/chap_ms.h -text
 usr.sbin/pppd/demand.c -text
+usr.sbin/pppd/eui64.c -text
+usr.sbin/pppd/eui64.h -text
 usr.sbin/pppd/fsm.c -text
 usr.sbin/pppd/fsm.h -text
 usr.sbin/pppd/ipcp.c -text
 usr.sbin/pppd/ipcp.h -text
+usr.sbin/pppd/ipv6cp.c -text
+usr.sbin/pppd/ipv6cp.h -text
 usr.sbin/pppd/ipxcp.c -text
 usr.sbin/pppd/ipxcp.h -text
 usr.sbin/pppd/lcp.c -text

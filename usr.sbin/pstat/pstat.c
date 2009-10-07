@@ -46,7 +46,7 @@ static char sccsid[] = "@(#)pstat.c	8.16 (Berkeley) 5/9/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/pstat/pstat.c,v 1.95.2.1 2005/11/20 00:40:03 rwatson Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/pstat/pstat.c,v 1.102 2007/07/04 00:00:40 scf Exp $");
 
 #include <sys/param.h>
 #include <sys/time.h>
@@ -83,7 +83,7 @@ enum {
 static struct nlist nl[] = {
 	{ .n_name = "_constty" },
 	{ .n_name = "_maxfiles" },
-	{ .n_name = "_nfiles" },
+	{ .n_name = "_openfiles" },
 	{ .n_name = "_tty_list" },
 	{ .n_name = "" }
 };
@@ -122,11 +122,11 @@ main(int argc, char *argv[])
 		opts = argv[0];
 	if (!strcmp(opts, "swapinfo")) {
 		swapflag = 1;
-		opts = "hkM:N:";
-		usagestr = "swapinfo [-hk] [-M core [-N system]]";
+		opts = "ghkmM:N:";
+		usagestr = "swapinfo [-ghkm] [-M core [-N system]]";
 	} else {
-		opts = "TM:N:hfknst";
-		usagestr = "pstat [-Tfhknst] [-M core [-N system]]";
+		opts = "TM:N:fghkmnst";
+		usagestr = "pstat [-Tfghkmnst] [-M core [-N system]]";
 	}
 
 	while ((ch = getopt(argc, argv, opts)) != -1)
@@ -134,11 +134,17 @@ main(int argc, char *argv[])
 		case 'f':
 			fileflag = 1;
 			break;
+		case 'g':
+			setenv("BLOCKSIZE", "1G", 1);
+			break;
 		case 'h':
 			humanflag = 1;
 			break;
 		case 'k':
-			putenv("BLOCKSIZE=1K");
+			setenv("BLOCKSIZE", "1K", 1);
+			break;
+		case 'm':
+			setenv("BLOCKSIZE", "1M", 1);
 			break;
 		case 'M':
 			memf = optarg;

@@ -1,4 +1,6 @@
-# $FreeBSD: src/usr.sbin/pppd/Makefile,v 1.29 2004/12/21 10:16:04 ru Exp $
+# $FreeBSD: src/usr.sbin/pppd/Makefile,v 1.31 2006/11/12 17:36:58 ume Exp $
+
+.include <bsd.own.mk>
 
 # I once used this extensively, but no longer have a modem.  Feel free
 # to ask me questions about it, but I disclaim ownership now.  -Peter
@@ -30,11 +32,16 @@ DPADD+=	${LIBPCAP}
 LDADD+=	-lpcap
 
 # MS-CHAP support.  Requires the DES library.
-.if !defined(NO_CRYPT) && !defined(NO_OPENSSL) && !defined(RELEASE_CRUNCH)
+.if ${MK_OPENSSL} != "no" && !defined(RELEASE_CRUNCH)
 CFLAGS+= -DCHAPMS
 SRCS+=	chap_ms.c
 LDADD+=	-lcrypto
 DPADD+=	${LIBCRYPTO}
+.endif
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+=-DINET6
+SRCS+=	eui64.c ipv6cp.c
 .endif
 
 .if defined(RELEASE_CRUNCH)

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/pw/pw.h,v 1.14 2005/02/10 09:05:27 stefanf Exp $
+ * $FreeBSD: src/usr.sbin/pw/pw.h,v 1.15 2007/03/30 11:23:10 le Exp $
  */
 
 #include <stdio.h>
@@ -81,6 +81,7 @@ struct userconf
 	char	*newmail;		/* Mail to send to new accounts */
 	char	*logfile;		/* Where to log changes */
 	char	*home;			/* Where to create home directory */
+	mode_t	homemode;		/* Home directory permissions */
 	char	*shelldir;		/* Where shells are located */
 	char	**shells;		/* List of shells */
 	char	*shell_default;		/* Default shell */

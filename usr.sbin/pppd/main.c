@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static char rcsid[] = "$FreeBSD: src/usr.sbin/pppd/main.c,v 1.21 2003/05/12 18:51:31 peter Exp $";
+static char rcsid[] = "$FreeBSD: src/usr.sbin/pppd/main.c,v 1.22 2006/11/12 17:36:58 ume Exp $";
 #endif
 
 #include <stdio.h>
@@ -46,6 +46,9 @@ static char rcsid[] = "$FreeBSD: src/usr.sbin/pppd/main.c,v 1.21 2003/05/12 18:5
 #include "fsm.h"
 #include "lcp.h"
 #include "ipcp.h"
+#ifdef INET6
+#include "ipv6cp.h"
+#endif
 #include "upap.h"
 #include "chap.h"
 #include "ccp.h"
@@ -152,6 +155,9 @@ struct protent *protocols[] = {
     &cbcp_protent,
 #endif
     &ipcp_protent,
+#ifdef INET6
+    &ipv6cp_protent,
+#endif
     &ccp_protent,
 #ifdef IPX_CHANGE
     &ipxcp_protent,

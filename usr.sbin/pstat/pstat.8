@@ -33,9 +33,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)pstat.8	8.5 (Berkeley) 5/13/94
-.\" $FreeBSD: src/usr.sbin/pstat/pstat.8,v 1.47 2005/03/21 16:36:05 keramida Exp $
+.\" $FreeBSD: src/usr.sbin/pstat/pstat.8,v 1.49 2007/04/03 08:16:05 ru Exp $
 .\"
-.Dd March 21, 2005
+.Dd April 1, 2007
 .Dt PSTAT 8
 .Os
 .Sh NAME
@@ -44,10 +44,10 @@
 .Nd display system data structures
 .Sh SYNOPSIS
 .Nm
-.Op Fl Tfhknst
+.Op Fl Tfghkmnst
 .Op Fl M Ar core Op Fl N Ar system
 .Nm swapinfo
-.Op Fl hk
+.Op Fl ghkm
 .Op Fl M Ar core Op Fl N Ar system
 .Sh DESCRIPTION
 The
@@ -60,8 +60,10 @@ If invoked as
 the
 .Fl s
 option is implied, and only the
-.Fl k
-option is legal.
+.Fl k , m , g ,
+and
+.Fl h
+options are legal.
 .Pp
 If the
 .Fl M
@@ -84,6 +86,14 @@ Use unit suffixes when printing swap partition sizes:
 Byte, Kilobyte, Megabyte, Gigabyte, Terabyte and Petabyte.
 .It Fl k
 Print sizes in kilobytes, regardless of the setting of the
+.Ev BLOCKSIZE
+environment variable.
+.It Fl m
+Print sizes in megabytes, regardless of the setting of the
+.Ev BLOCKSIZE
+environment variable.
+.It Fl g
+Print sizes in gigabytes, regardless of the setting of the
 .Ev BLOCKSIZE
 environment variable.
 .It Fl T
