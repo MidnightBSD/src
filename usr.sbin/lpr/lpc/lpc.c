@@ -45,7 +45,7 @@ static char sccsid[] = "@(#)lpc.c	8.3 (Berkeley) 4/28/95";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-__FBSDID("$FreeBSD: src/usr.sbin/lpr/lpc/lpc.c,v 1.30 2005/02/22 02:56:42 delphij Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/lpr/lpc/lpc.c,v 1.31 2005/10/19 16:37:52 stefanf Exp $");
 
 #include <sys/param.h>
 
@@ -167,7 +167,7 @@ cmdscanner(void)
 			if (!el) {
 				el = el_init("lpc", stdin, stdout, stderr);
 				hist = history_init();
-				history(hist, &he, H_EVENT, 100);
+				history(hist, &he, H_SETSIZE, 100);
 				el_set(el, EL_HIST, history, hist);
 				el_set(el, EL_EDITOR, "emacs");
 				el_set(el, EL_PROMPT, lpc_prompt);
