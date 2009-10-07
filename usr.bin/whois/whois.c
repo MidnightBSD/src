@@ -41,7 +41,7 @@ static char sccsid[] = "@(#)whois.c	8.1 (Berkeley) 6/6/93";
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/usr.bin/whois/whois.c,v 1.46 2007/04/14 14:32:48 ache Exp $");
-__MBSDID("$MidnightBSD$");
+__MBSDID("$MidnightBSD: src/usr.bin/whois/whois.c,v 1.3 2009/03/27 22:15:05 laffer1 Exp $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -69,7 +69,6 @@ __MBSDID("$MidnightBSD$");
 #define	PNICHOST	"whois.apnic.net"
 #define	MNICHOST	"whois.ra.net"
 #define	QNICHOST_TAIL	".whois-servers.net"
-#define	SNICHOST	"whois.6bone.net"
 #define	BNICHOST	"whois.registro.br"
 #define NORIDHOST	"whois.norid.no"
 #define	IANAHOST	"whois.iana.org"
@@ -161,8 +160,10 @@ main(int argc, char *argv[])
 			warnx("-R is deprecated; use '-c ru' instead");
 			country = "ru";
 			break;
+		/* Remove in FreeBSD 10 */
 		case '6':
-			host = SNICHOST;
+			errx(EX_USAGE,
+				"-6 is deprecated; use -[aAflr] instead");
 			break;
 		case '?':
 		default:
