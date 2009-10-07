@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/usr.sbin/rpc.statd/file.c,v 1.7 2003/10/26 06:14:10 peter Exp $
+ * $FreeBSD: src/usr.sbin/rpc.statd/file.c,v 1.8 2007/08/13 15:04:39 truckman Exp $
  *
  */
 
@@ -159,7 +159,7 @@ void init_file(const char *filename)
     mmap(NULL, 0x10000000, PROT_READ | PROT_WRITE, MAP_SHARED, status_fd, 0);
 
   if (status_info == (FileLayout *) MAP_FAILED)
-    warn("unable to mmap() status file");
+    err(1, "unable to mmap() status file");
 
   status_file_len = lseek(status_fd, 0L, SEEK_END);
 
