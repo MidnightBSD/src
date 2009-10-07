@@ -30,11 +30,12 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/usr.sbin/devinfo/devinfo.c,v 1.5 2004/01/04 15:51:32 charnier Exp $");
+__FBSDID("$FreeBSD: src/usr.sbin/devinfo/devinfo.c,v 1.6.2.1 2007/10/31 16:17:24 jhb Exp $");
 
 #include <sys/types.h>
 #include <err.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include "devinfo.h"
 
@@ -64,7 +65,7 @@ print_resource(struct devinfo_res *res)
 	int			hexmode;
 
 	rman = devinfo_handle_to_rman(res->dr_rman);
-	hexmode =  (rman->dm_size > 100) || (rman->dm_size == 0);
+	hexmode =  (rman->dm_size > 1000) || (rman->dm_size == 0);
 	printf(hexmode ? "0x%lx" : "%lu", res->dr_start);
 	if (res->dr_size > 1)
 		printf(hexmode ? "-0x%lx" : "-%lu",
@@ -208,7 +209,10 @@ main(int argc, char *argv[])
 			vflag++;
 			break;
 		default:
-			errx(1, "usage: %s [-ruv]", argv[0]);
+			fprintf(stderr, "%s\n%s\n",
+			    "usage: devinfo [-rv]",
+			    "       devinfo -u");
+			exit(1);
 		}
 	}
 
