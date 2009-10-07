@@ -1,6 +1,8 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/6/93
-# $FreeBSD: src/usr.sbin/syslogd/Makefile,v 1.12 2004/02/05 22:44:25 ru Exp $
+# $FreeBSD: src/usr.sbin/syslogd/Makefile,v 1.13 2006/07/27 14:52:12 yar Exp $
 # $MidnightBSD$
+
+.include <bsd.own.mk>
 
 .PATH: ${.CURDIR}/../../usr.bin/wall
 
@@ -12,6 +14,11 @@ DPADD=	${LIBUTIL}
 LDADD=	-lutil
 
 WARNS?=	1
-CFLAGS+=-DINET6 -I${.CURDIR}/../../usr.bin/wall
+
+.if ${MK_INET6_SUPPORT} != "no"
+CFLAGS+= -DINET6
+.endif
+
+CFLAGS+= -I${.CURDIR}/../../usr.bin/wall
 
 .include <bsd.prog.mk>
