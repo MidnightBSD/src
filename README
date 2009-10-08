@@ -1,6 +1,6 @@
 This is the top level of the MidnightBSD source directory.  This file
 was last revised on:
-$MidnightBSD: src/README,v 1.5 2006/05/22 06:14:15 laffer1 Exp $
+$MidnightBSD: src/README,v 1.6 2006/09/09 23:31:34 laffer1 Exp $
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
@@ -37,6 +37,8 @@ pure reference and documentation file.
 Source Roadmap:
 ---------------
 bin		System/user commands.
+
+cddl		Various commands and libraries under the Sun CDDL license.
 
 contrib		Packages contributed by 3rd parties.
 
