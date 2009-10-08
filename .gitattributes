@@ -39216,13 +39216,6 @@ usr.sbin/tcpdump/Makefile -text
 usr.sbin/tcpdump/Makefile.inc -text
 usr.sbin/tcpdump/tcpdump/Makefile -text
 usr.sbin/tcpdump/tcpdump/config.h -text
-usr.sbin/tcpdump/tcpslice/Makefile -text
-usr.sbin/tcpdump/tcpslice/gwtm2secs.c -text
-usr.sbin/tcpdump/tcpslice/search.c -text
-usr.sbin/tcpdump/tcpslice/tcpslice.1 -text
-usr.sbin/tcpdump/tcpslice/tcpslice.c -text
-usr.sbin/tcpdump/tcpslice/tcpslice.h -text
-usr.sbin/tcpdump/tcpslice/util.c -text
 usr.sbin/timed/Makefile -text
 usr.sbin/timed/SMM.doc/timed/Makefile -text
 usr.sbin/timed/SMM.doc/timed/date -text
