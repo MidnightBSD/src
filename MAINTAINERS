@@ -1,4 +1,4 @@
-$MidnightBSD: src/MAINTAINERS,v 1.5 2008/03/22 06:25:19 laffer1 Exp $
+$MidnightBSD: src/MAINTAINERS,v 1.6 2008/08/24 00:12:26 laffer1 Exp $
 
 The source tree is a community effort.  However, some folks go to the
 trouble of looking after particular areas of the tree.  In return for
@@ -27,8 +27,8 @@ ahd(4)		laffer1	Pre-commit review requested.
 NEWCARD		laffer1	Pre-commit review requested.
 OLDCARD		laffer1	Pre-commit review requested.
 pci bus		laffer1	Pre-commit review requested.
-telnet		archite	Heads-up appreciated. Try not to break it.
-secure/*	archite	Heads-up appreciated. Try not to break it.
+telnet		laffer1	Heads-up appreciated. Try not to break it.
+secure/*	laffer1	Heads-up appreciated. Try not to break it.
 kerberos5	laffer1  Pre-commit review requested.
 heimdal		laffer1	Pre-commit review requested.
 cdboot		laffer1	Pre-commit review requested.
@@ -64,8 +64,8 @@ etc/sendmail	laffer1	Pre-commit review requested.
 dhcp		laffer1	Pre-commit review requested.
 libfetch	laffer1	Advance notification requested.
 fetch		laffer1	Advance notification requested.
-libpam		archite	Pre-commit review requested.
-openssh		archite	Pre-commit review requested.
+libpam		laffer1	Pre-commit review requested.
+openssh		laffer1	Pre-commit review requested.
 pseudofs	laffer1	Advance notification requested.
 procfs		laffer1	Advance notification requested.
 linprocfs	laffer1	Advance notification requested.
@@ -74,7 +74,7 @@ lpr		laffer1	Pre-commit review requested, particularly for
 newsyslog(8)	laffer1	Heads-up appreciated.  I'm going thru the PR's for it.
 pkill		laffer1	Heads-up appreciated.
 ps		laffer1	Try not to break it.
-cvs		laffer1, archite	Heads-up appreciated, try not to break it.
+cvs		laffer1	Heads-up appreciated, try not to break it.
 ncurses		laffer1	Heads-up appreciated, try not to break it.
 nvi		laffer1	Try not to break it.
 libz		laffer1	Try not to break it.
@@ -96,11 +96,10 @@ nwfs		laffer1 In case of functional changes pre-commit review
 			requested.
 contrib/smbfs	laffer1	Open for in-tree committs. In case of functional
 			changes pre-commit review requested.
-contrib/pf	archite	Pre-commit review requested.
+contrib/pf	laffer1	Pre-commit review requested.
 binutils	laffer1	Pre-commit review requested.
 file		laffer1	Pre-commit review requested.
 contrib/bzip2	laffer1	Pre-commit review required.
-lukemftpd 	laffer1	Pre-commit review required.
 geom_concat	laffer1	Pre-commit review preferred.
 geom_gate	laffer1	Pre-commit review preferred.
 geom_label	laffer1	Pre-commit review preferred.
@@ -114,7 +113,9 @@ nfs		laffer1	Will be happy to review code, but not mandatory.
 rpc.lockd	laffer1	Will be happy to review code, but not mandatory.
 truss		laffer1	Will be happy to review code, but not mandatory.
 rpc		laffer1	Pre-commit review requested.
-pkg_install	wintellect,laffer1	Pre-commit review or approval from portmgr@ requested.
+pkg_install	ctriv,laffer1	Pre-commit review or approval from portmgr@ requested.
+libmport	ctriv Pre-commit review preferred.
+mport tools	ctriv Pre-commit review preferred.
 linux emul	laffer1	Pre-commit review preferred.
 
 Following are the entries from the Makefiles, and a few other sources.
