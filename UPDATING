@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+20091006:
+	Update timezone data with tzdata2009n with the Pakistan and
+	Argentina changes.
+
+	Sync several userland utilities with versions from FreeBSD 7.0 in
+	sbin and usr.sbin.
+
 20090919:
 	Update timezone data with tzdate2009m from September 2009.
 
@@ -745,4 +752,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.65 2009/07/29 15:31:29 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.66 2009/09/19 15:02:27 laffer1 Exp $
