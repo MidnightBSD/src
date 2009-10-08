@@ -1,6 +1,6 @@
 This is the top level of the MidnightBSD source directory.  This file
 was last revised on:
-$MidnightBSD: src/README,v 1.6 2006/09/09 23:31:34 laffer1 Exp $
+$MidnightBSD: src/README,v 1.7 2009/10/08 01:30:06 laffer1 Exp $
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
@@ -58,6 +58,8 @@ kerberos5	Kerberos5 (Heimdal) package.
 lib		System libraries.
 
 libexec		System daemons.
+
+nrelease	Release building from DragonFly.  Used for making live CDs.
 
 release		Release building Makefile & associated tools.
 
