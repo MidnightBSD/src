@@ -30,9 +30,9 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)timed.8	8.1 (Berkeley) 6/6/93
-.\" $FreeBSD: src/usr.sbin/timed/timed/timed.8,v 1.16 2003/10/04 15:43:22 naddy Exp $
+.\" $FreeBSD: src/usr.sbin/timed/timed/timed.8,v 1.16.24.1 2008/02/14 21:48:24 remko Exp $
 .\"
-.Dd June 6, 1993
+.Dd February 11, 2008
 .Dt TIMED 8
 .Os
 .Sh NAME
@@ -77,19 +77,44 @@ are used by
 This option may be specified multiple times
 to add more than one network to the list.
 .It Fl F Ar host ...
+.in +2
+.ti -2
+-
 Create a list of trusted hosts.
-The
+.ti -2
+-
+Can take one or more parameters.
+.ti -2
+-
 .Nm
-utility will only accept trusted hosts as masters.
+will only accept trusted hosts as masters.
 If it finds an untrusted host claiming to be master,
 .Nm
 will suppress incoming messages from that host
 and call for a new election.
-This option implies the
+.ti -2
+-
+Use real host names (resolvable by RDNS) not aliases (eg in 
+.Xr named 8
+parlance: use A names, not C names).
+.ti -2
+-
+Use full names eg time1.domain.com not time1.
+.ti -2
+-
+.Fl F
+automatically includes the functionality of 
 .Fl M
-option.
-If this option is not specified,
-all hosts on the connected networks are treated as trustworthy.
+( so
+.Fl M
+does not need to asserted).
+.ti -2
+-
+If 
+.Fl F
+is not specified,
+all hosts on connected networks are treated as trustworthy.
+.in -2
 .It Fl M
 Allow this host to become a
 .Nm
@@ -261,7 +286,7 @@ log file for master
 .Xr icmp 4 ,
 .Xr networks 5 ,
 .Xr ntpd 8 ,
-.Xr rdate 8,
+.Xr rdate.8,
 .Xr timedc 8
 .Rs
 .%T "TSP: The Time Synchronization Protocol for UNIX 4.3BSD"
