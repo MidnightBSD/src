@@ -29,7 +29,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: subr.c,v 1.1.1.2 2006-02-25 02:34:00 laffer1 Exp $
+ * $Id: subr.c,v 1.2 2009-10-09 02:43:50 laffer1 Exp $
  */
 
 #include <sys/param.h>
@@ -74,7 +74,7 @@ smb_lib_init(void)
 
 	if (smblib_initialized)
 		return 0;
-#if __FreeBSD_version > 400000
+#if (defined(__MidnightBSD_version) || __FreeBSD_version > 400000)
 	error = sysctlbyname("net.smb.version", &kv, &kvlen, NULL, 0);
 	if (error) {
 		warnx("%s: can't find kernel module\n", __FUNCTION__);
