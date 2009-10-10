@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ntfs_subr.h,v 1.8 1999/10/10 14:48:37 jdolecek Exp $	*/
 
 /*-

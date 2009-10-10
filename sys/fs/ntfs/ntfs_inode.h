@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*	$NetBSD: ntfs_inode.h,v 1.8 1999/10/31 19:45:26 jdolecek Exp $	*/
 
 /*-

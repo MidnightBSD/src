@@ -1,4 +1,3 @@
-/* $MidnightBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.3 2008/12/03 00:25:42 laffer1 Exp $ */
 /*	$NetBSD: ntfs_vfsops.c,v 1.23 1999/11/15 19:38:14 jdolecek Exp $	*/
 
 /*-
@@ -28,6 +27,7 @@
  *
  * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.88 2007/09/21 23:50:15 rodrigc Exp $
  */
+
 
 #include <sys/param.h>
 #include <sys/systm.h>
