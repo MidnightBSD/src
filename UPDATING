@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users
 
+20091010:
+	amd64 users should use WITHOUT_LIB32=yes in /etc/make.conf for now
+	to test current.
+
+	Revert unicode filename fixes from ntfs code.  This was causing chaos
+	on amd64 systems.
+
 20091006:
 	Update timezone data with tzdata2009n with the Pakistan and
 	Argentina changes.
@@ -752,4 +759,4 @@ Contact Warner Losh if you have any questions about your use of
 this document.
 
 $FreeBSD: src/UPDATING,v 1.416.2.18 2006/02/22 11:51:57 yar Exp $
-$MidnightBSD: src/UPDATING,v 1.66 2009/09/19 15:02:27 laffer1 Exp $
+$MidnightBSD: src/UPDATING,v 1.67 2009/10/08 01:27:04 laffer1 Exp $
