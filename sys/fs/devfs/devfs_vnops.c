@@ -1,4 +1,4 @@
-/* $MidnightBSD$ */
+/* $MidnightBSD: src/sys/fs/devfs/devfs_vnops.c,v 1.3 2008/12/03 00:25:41 laffer1 Exp $ */
 /*-
  * Copyright (c) 2000-2004
  *	Poul-Henning Kamp.  All rights reserved.
@@ -806,6 +806,7 @@ devfs_open(struct vop_open_args *ap)
 	     ("Could not vnode bypass device on fdops %p", fp->f_ops));
 	fp->f_data = dev;
 	fp->f_ops = &devfs_ops_f;
+	fp->f_vnode = vp;
 	FILE_UNLOCK(fp);
 	return (error);
 }
