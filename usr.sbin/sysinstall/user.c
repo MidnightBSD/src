@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD$
+ * $MidnightBSD: src/usr.sbin/sysinstall/user.c,v 1.2 2006/08/14 11:52:13 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/user.c,v 1.19 2004/03/11 11:58:16 bde Exp $
  *
  * Copyright (c) 1996
@@ -103,7 +103,7 @@ static Layout groupLayout[] = {
     { 18, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 /* The user configuration menu. */
@@ -148,7 +148,7 @@ static Layout userLayout[] = {
     { 18, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 /* whine */

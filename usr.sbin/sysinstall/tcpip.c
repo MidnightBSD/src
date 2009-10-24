@@ -1,5 +1,5 @@
 /*
- * $MidnightBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.4.2.1 2008/08/30 16:15:42 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.5 2008/09/02 01:30:29 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/tcpip.c,v 1.132.2.2 2006/02/12 15:23:50 delphij Exp $
  *
  * Copyright (c) 1995
@@ -105,7 +105,7 @@ static Layout layout[] = {
     { 19, 35, 0, 0,
       "CANCEL", "Select this if you wish to cancel this screen",
       &cancelbutton, BUTTONOBJ, NULL },
-    { 0 },
+    LAYOUT_END,
 };
 
 #define _validByte(b) ((b) >= 0 && (b) <= 255)
@@ -495,7 +495,7 @@ tcpOpenDialog(Device *devp)
     dialog_clear_norefresh();
 
     /* Modify the help line for PLIP config */
-    if (!strncmp(devp->name, "plip", 2))
+    if (!strncmp(devp->name, "plip", 4))
 	layout[LAYOUT_EXTRAS].help = 
          "For PLIP configuration, you must enter the peer's IP address here.";
 

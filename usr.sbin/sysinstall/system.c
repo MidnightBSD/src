@@ -4,7 +4,7 @@
  * This is probably the last program in the `sysinstall' line - the next
  * generation being essentially a complete rewrite.
  *
- * $MidnightBSD: src/usr.sbin/sysinstall/system.c,v 1.3 2007/07/27 21:32:46 laffer1 Exp $
+ * $MidnightBSD: src/usr.sbin/sysinstall/system.c,v 1.4 2008/05/02 07:18:57 laffer1 Exp $
  * $FreeBSD: src/usr.sbin/sysinstall/system.c,v 1.124.2.1 2005/08/17 13:32:29 kensmith Exp $
  *
  * Jordan Hubbard
@@ -242,7 +242,7 @@ systemShutdown(int status)
 #if defined(__sparc64__)
 	reboot(RB_HALT);
 #else
-	reboot(0);
+	reboot(RB_AUTOBOOT);
 #endif
     }
     else
@@ -514,7 +514,7 @@ systemCreateHoloshell(void)
 	    else {
 	        (void)waitpid(ehs_pid, &waitstatus, 0); /* we only wait for
 							   shell to finish 
-							   it serial mode
+							   in serial mode
 							   since there is no
 							   virtual console */
 	        systemResumeDialog();
